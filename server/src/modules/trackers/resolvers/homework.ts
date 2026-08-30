@@ -62,6 +62,7 @@ import {
 } from "../services/HomeworkSummaryService";
 import {
   assertCanWrite,
+  assertCanWriteAny,
   assertCanRead,
   assertCanConfirmHomework,
   allowedSubjectCodesForSection,
@@ -324,7 +325,13 @@ builder.mutationField("updateHomeworkItem", (t) =>
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       const target = await HomeworkItem.findById(args.itemId).select("sectionId subject").lean();
       if (!target) throw new Error("HomeworkItem not found");
-      await assertCanWrite(ctx, target.sectionId.toString(), await resolveSubjectId(target.subject));
+      // Fixing what was declared is the declaring duty, not a new one (ACS-4, D-#592).
+      await assertCanWrite(
+        ctx,
+        target.sectionId.toString(),
+        await resolveSubjectId(target.subject),
+        "declare_homework",
+      );
       const res = await updateSvc({
         itemId: args.itemId,
         description: args.description ?? undefined,
@@ -366,7 +373,13 @@ builder.mutationField("deleteHomeworkItem", (t) =>
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       const target = await HomeworkItem.findById(args.itemId).select("sectionId subject").lean();
       if (!target) throw new Error("HomeworkItem not found");
-      await assertCanWrite(ctx, target.sectionId.toString(), await resolveSubjectId(target.subject));
+      // Deleting a mis-declared item is the declaring duty (ACS-4, D-#592).
+      await assertCanWrite(
+        ctx,
+        target.sectionId.toString(),
+        await resolveSubjectId(target.subject),
+        "declare_homework",
+      );
       return deleteSvc(args.itemId);
     },
   }),
@@ -433,7 +446,13 @@ builder.mutationField("removeNoHomework", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanWrite(ctx, args.sectionId, await resolveSubjectId(args.subject));
+      // Same duty as the declareNoHomework marker it removes (ACS-4, D-#592).
+      await assertCanWrite(
+        ctx,
+        args.sectionId,
+        await resolveSubjectId(args.subject),
+        "declare_homework",
+      );
       return removeNilSvc({ classId: args.classId, subject: args.subject, date: args.date });
     },
   }),
@@ -478,7 +497,14 @@ builder.mutationField("issueHomeworkItem", (t) =>
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       const item = await HomeworkItem.findById(args.itemId).select("subject").lean();
-      await assertCanWrite(ctx, args.sectionId, item?.subject ? await resolveSubjectId(item.subject) : undefined);
+      // Issuing is the second half of giving the work out — the declaring duty
+      // (ACS-4, D-#592); its assignment twin, deliverAssignment, is already tagged.
+      await assertCanWrite(
+        ctx,
+        args.sectionId,
+        item?.subject ? await resolveSubjectId(item.subject) : undefined,
+        "declare_homework",
+      );
       return issueSvc(
         args.itemId,
         args.roster.map((r) => ({ studentId: r.studentId, present: r.present })),
@@ -543,7 +569,10 @@ builder.mutationField("markHomeworkRecordsDue", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanWrite(ctx, args.sectionId);
+      // The manual counterpart of the overnight auto-due sweep: it opens the
+      // collection window, so it rides the collection duty (ACS-4, D-#592). No
+      // subject is resolvable here, so a subject_dept delegation still fails closed.
+      await assertCanWrite(ctx, args.sectionId, undefined, "submit_homework");
       return markRecordsDueSvc(args.sectionId, [...args.recordIds], ctx.auth.userId as string);
     },
   }),
@@ -1227,7 +1256,14 @@ builder.mutationField("revertHomeworkRecord", (t) =>
       }
       if (!admin) {
         const item = await HomeworkItem.findById(record.hwItemId).select("subject").lean();
-        await assertCanWrite(ctx, args.sectionId, item?.subject ? await resolveSubjectId(item.subject) : undefined);
+        // Any homework duty on the section — the service already limits a non-admin
+        // to their OWN action, same Dhaka day (ACS-4, D-#592).
+        await assertCanWriteAny(
+          ctx,
+          args.sectionId,
+          item?.subject ? await resolveSubjectId(item.subject) : undefined,
+          ["declare_homework", "submit_homework", "check_homework"],
+        );
       }
       return revertHomeworkRecordSvc({
         recordId: args.recordId,
@@ -1422,7 +1458,8 @@ builder.mutationField("homeworkReturnPass", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertItemWriteScope(ctx, args.sectionId, args.itemId);
+      // Handing the checked work back is the tail of checking it (ACS-4, D-#592).
+      await assertItemWriteScope(ctx, args.sectionId, args.itemId, "check_homework");
       return returnPassSvc(
         args.itemId,
         args.entries.map((e) => ({ recordId: e.recordId, returned: e.returned })),

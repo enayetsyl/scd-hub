@@ -94,6 +94,7 @@ import { isAdminStaff } from "../../foundation/services/RoleScope";
 import { myAssignmentLifecycle as myAssignmentLifecycleSvc, type AsTeacherLifecycleRow } from "../services/AssignmentLifecycleService";
 import {
   assertCanWrite,
+  assertCanWriteAny,
   assertCanRead,
   assertGuardianOfStudent,
   allowedSubjectCodesForSection,
@@ -1074,10 +1075,13 @@ builder.mutationField("removeNoAssignment", (t) =>
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       const schedule = await AssignmentSchedule.findOne({ academicYearId: args.academicYearId });
       const entry = schedule?.entries.id(args.entryId);
+      // Same duty as the declaration it removes (declareNoAssignment) — a delegate
+      // who may mark "none this week" must be able to take it back (ACS-4, D-#592).
       await assertCanWrite(
         ctx,
         args.sectionId,
         entry?.subject ? await resolveSubjectId(entry.subject) : undefined,
+        "declare_assignment",
       );
       return removeNoAssignmentSvc({
         academicYearId: args.academicYearId,
@@ -1116,7 +1120,14 @@ const UpdateAssignmentResultRef = builder
 async function assertCanWriteOnItem(ctx: AppContext, itemId: string) {
   const item = await AssignmentItem.findById(itemId).select("sectionId subject").lean();
   if (!item) throw new Error("AssignmentItem not found");
-  await assertCanWrite(ctx, item.sectionId.toString(), await resolveSubjectId(item.subject));
+  // Editing or deleting what was delivered is the delivery duty, not a new one
+  // (ACS-4, D-#592): whoever may deliver must be able to fix a wrong delivery.
+  await assertCanWrite(
+    ctx,
+    item.sectionId.toString(),
+    await resolveSubjectId(item.subject),
+    "declare_assignment",
+  );
 }
 
 builder.mutationField("updateAssignmentItem", (t) =>
@@ -1388,7 +1399,14 @@ builder.mutationField("redeliverAssignmentRecord", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanWrite(ctx, args.sectionId, await assignmentRecordSubjectId(args.recordId));
+      // Handing the assignment to a student who was absent IS delivering it, just
+      // later — the same duty as deliverAssignment (ACS-4, D-#592).
+      await assertCanWrite(
+        ctx,
+        args.sectionId,
+        await assignmentRecordSubjectId(args.recordId),
+        "declare_assignment",
+      );
       await assertRecordInSection(args.recordId, args.sectionId);
       return redeliverSvc(args.recordId, ctx.auth.userId as string);
     },
@@ -1581,7 +1599,14 @@ builder.mutationField("revertAssignmentRecord", (t) =>
       const admin = isAdminStaff(ctx.auth);
       await assertRecordInSection(args.recordId, args.sectionId);
       if (!admin) {
-        await assertCanWrite(ctx, args.sectionId, await assignmentRecordSubjectId(args.recordId));
+        // Any assignment duty on the section — the service already limits a
+        // non-admin to their OWN action, same Dhaka day (ACS-4, D-#592).
+        await assertCanWriteAny(
+          ctx,
+          args.sectionId,
+          await assignmentRecordSubjectId(args.recordId),
+          ["declare_assignment", "submit_assignment", "check_assignment"],
+        );
       }
       return revertAssignmentRecordSvc({
         recordId: args.recordId,
@@ -1806,7 +1831,13 @@ builder.mutationField("assignmentReturnPass", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanWrite(ctx, args.sectionId, await assignmentItemSubjectId(args.itemId));
+      // Handing the checked work back is the tail of checking it (ACS-4, D-#592).
+      await assertCanWrite(
+        ctx,
+        args.sectionId,
+        await assignmentItemSubjectId(args.itemId),
+        "check_assignment",
+      );
       await assertItemInSection(args.itemId, args.sectionId);
       return asReturnPassSvc(
         args.itemId,
@@ -1864,7 +1895,14 @@ builder.mutationField("issueAssignmentResubmission", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanWrite(ctx, args.sectionId, await assignmentRecordSubjectId(args.recordId));
+      // "Do it again" is a judgement about checked work — the checking duty
+      // (ACS-4, D-#592).
+      await assertCanWrite(
+        ctx,
+        args.sectionId,
+        await assignmentRecordSubjectId(args.recordId),
+        "check_assignment",
+      );
       await assertRecordInSection(args.recordId, args.sectionId);
       return resubSvc(args.recordId, ctx.auth.userId as string);
     },

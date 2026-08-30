@@ -50,7 +50,12 @@ import {
   composeTeacherScope,
   type ScopeItem,
 } from "../modules/foundation/services/ScopeGrantService";
-import { assertCanWrite, assertCanConfirmHomework, ForbiddenError } from "../middleware/authz";
+import {
+  assertCanWrite,
+  assertCanWriteAny,
+  assertCanConfirmHomework,
+  ForbiddenError,
+} from "../middleware/authz";
 import { DELEGATED_ACTIONS, DELEGATED_ACTION_BUILD_STATUS } from "@scd/shared";
 import type { AppContext } from "../context";
 
@@ -451,5 +456,80 @@ describe("assertCanConfirmHomework + delegation (the ACS-3 fold)", () => {
   test("an ordinary teacher with none of the above is still refused", async () => {
     mockSectionFindById.mockResolvedValue({ classId: CLASS_1, classTeacherId: "someone-else" });
     await expect(assertCanConfirmHomework(ctx, SECTION_A)).rejects.toThrow(ForbiddenError);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 8. ACS-4 (D-#592): the UNDO gate — any duty, because undo has no duty of its own
+// ---------------------------------------------------------------------------
+
+describe("assertCanWriteAny — the revert gate", () => {
+  const ctx = { auth: { userId: "tazkir", role: "TEACHER" } } as unknown as AppContext;
+  const HW_DUTIES = ["declare_homework", "submit_homework", "check_homework"] as const;
+
+  beforeEach(() => {
+    mockGrantFind.mockReset();
+    mockSectionFindById.mockReset();
+  });
+
+  test("holding ANY ONE of the listed duties passes — the submit-only delegate can undo", async () => {
+    mockGrantFind.mockResolvedValue([
+      { _id: "d1", kind: "delegation", active: true, extent: "whole_school", actions: ["submit_homework"] },
+    ]);
+    await expect(assertCanWriteAny(ctx, SECTION_B, SUBJ_ENG, HW_DUTIES)).resolves.toBeUndefined();
+  });
+
+  test("...and so can the check-only delegate", async () => {
+    mockGrantFind.mockResolvedValue([
+      { _id: "d1", kind: "delegation", active: true, extent: "whole_school", actions: ["check_homework"] },
+    ]);
+    await expect(assertCanWriteAny(ctx, SECTION_B, SUBJ_ENG, HW_DUTIES)).resolves.toBeUndefined();
+  });
+
+  test("a delegation for the OTHER tracker does not open this one's undo", async () => {
+    mockGrantFind.mockResolvedValue([
+      { _id: "d1", kind: "delegation", active: true, extent: "whole_school", actions: ["check_assignment"] },
+    ]);
+    await expect(assertCanWriteAny(ctx, SECTION_B, SUBJ_ENG, HW_DUTIES)).rejects.toThrow(ForbiddenError);
+  });
+
+  test("no grant at all is still refused", async () => {
+    mockGrantFind.mockResolvedValue([]);
+    await expect(assertCanWriteAny(ctx, SECTION_B, SUBJ_ENG, HW_DUTIES)).rejects.toThrow(ForbiddenError);
+  });
+
+  test("an ordinary teaching grant still passes, unchanged by the widening", async () => {
+    mockGrantFind.mockResolvedValue([
+      { _id: "t1", kind: "teaching", active: true, classId: CLASS_1, sectionId: SECTION_A, subjectId: SUBJ_BAN },
+    ]);
+    await expect(assertCanWriteAny(ctx, SECTION_A, SUBJ_BAN, HW_DUTIES)).resolves.toBeUndefined();
+    // ...and NOT on a section they do not teach.
+    await expect(assertCanWriteAny(ctx, SECTION_B, SUBJ_BAN, HW_DUTIES)).rejects.toThrow(ForbiddenError);
+  });
+
+  test("the class-shaped extent still fails closed, and costs ONE Section lookup for the whole list", async () => {
+    mockGrantFind.mockResolvedValue([
+      { _id: "d1", kind: "delegation", active: true, extent: "grade_class", classId: CLASS_1, actions: ["check_homework"] },
+    ]);
+    mockSectionFindById.mockResolvedValue({ classId: CLASS_2 });
+    await expect(assertCanWriteAny(ctx, SECTION_B, SUBJ_BAN, HW_DUTIES)).rejects.toThrow(ForbiddenError);
+    expect(mockSectionFindById).toHaveBeenCalledTimes(1);
+  });
+
+  test("OFFICE and GUARDIAN are refused; PRINCIPAL passes — same posture as assertCanWrite", async () => {
+    mockGrantFind.mockResolvedValue([]);
+    const office = { auth: { userId: "o", role: "OFFICE" } } as unknown as AppContext;
+    const guardian = { auth: { userId: "g", role: "GUARDIAN" } } as unknown as AppContext;
+    const principal = { auth: { userId: "p", role: "PRINCIPAL" } } as unknown as AppContext;
+    await expect(assertCanWriteAny(office, SECTION_A, SUBJ_BAN, HW_DUTIES)).rejects.toThrow(ForbiddenError);
+    await expect(assertCanWriteAny(guardian, SECTION_A, SUBJ_BAN, HW_DUTIES)).rejects.toThrow(ForbiddenError);
+    await expect(assertCanWriteAny(principal, SECTION_A, SUBJ_BAN, HW_DUTIES)).resolves.toBeUndefined();
+  });
+
+  test("an EMPTY action list is the plain pre-ACS-1 check — a delegation never satisfies it", async () => {
+    mockGrantFind.mockResolvedValue([
+      { _id: "d1", kind: "delegation", active: true, extent: "whole_school", actions: ["check_homework"] },
+    ]);
+    await expect(assertCanWriteAny(ctx, SECTION_B, SUBJ_ENG, [])).rejects.toThrow(ForbiddenError);
   });
 });
