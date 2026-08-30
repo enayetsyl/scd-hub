@@ -48,7 +48,13 @@ builder.mutationField("attachHomeworkQuestionFile", (t) =>
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       const item = await requireItem(args.hwItemId);
-      await assertCanWrite(ctx, item.sectionId.toString(), await resolveSubjectId(item.subject));
+      // The question file is part of the work being given out (ACS-4, D-#592).
+      await assertCanWrite(
+        ctx,
+        item.sectionId.toString(),
+        await resolveSubjectId(item.subject),
+        "declare_homework",
+      );
       return attachQuestionFile(args.hwItemId, args.fileId, ctx.auth.userId);
     },
   }),
@@ -69,7 +75,13 @@ builder.mutationField("attachHomeworkAnswerFile", (t) =>
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       const rec = await requireRecord(args.recordId);
       const item = await HomeworkItem.findById(rec.hwItemId).select("subject").lean();
-      await assertCanWrite(ctx, rec.sectionId.toString(), item?.subject ? await resolveSubjectId(item.subject) : undefined);
+      // The checked-answer file is part of checking the work (ACS-4, D-#592).
+      await assertCanWrite(
+        ctx,
+        rec.sectionId.toString(),
+        item?.subject ? await resolveSubjectId(item.subject) : undefined,
+        "check_homework",
+      );
       return attachAnswerFile(args.recordId, args.fileId, ctx.auth.userId);
     },
   }),
