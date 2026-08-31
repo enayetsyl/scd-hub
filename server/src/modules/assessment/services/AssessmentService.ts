@@ -11,6 +11,7 @@
  *   supervisory-only grant → assertCanWrite throws ForbiddenError (read-only).
  *   PRINCIPAL → allowed (assertCanWrite bypasses for PRINCIPAL).
  */
+import { setExamMinutes, setDurationMinutes } from "@scd/shared";
 import type { Types } from "mongoose";
 import { AssessmentSet } from "../models/AssessmentSet";
 import { ContentArtifact } from "../../content/models/ContentArtifact";
@@ -202,12 +203,25 @@ export async function createSetWithQuestions(
       artifactId: artifact._id as Types.ObjectId,
       qid: (payload.qid as string | undefined) ?? artifactId,
       marks: typeof payload.marks === "number" ? payload.marks : 1,
+      questionType: (payload.question_type as string | undefined) ?? null,
       subject: artifact.subject,
       classLevel: artifact.classLevel,
     };
   });
 
   const totalMarks = items.reduce((sum, item) => sum + item.marks, 0);
+  /**
+   * The set's time estimate, FROZEN here (QT-1, D-#593).
+   *
+   * Derived live everywhere else, but SNAPSHOT onto the set at assembly: a teacher who told
+   * a class "45 minutes" must not have that rewritten because somebody later edited a rate.
+   * Same reasoning as the frozen letter snapshot (D-#542).
+   *
+   * Ceiled on the SUM via the shared helper, never per question, and the APP computed the
+   * figure it showed with the same function — so what was displayed is what is saved.
+   */
+  const examMinutes = setExamMinutes(items);
+  const estimatedDuration = setDurationMinutes(input.setType, items);
   const now = new Date();
   const trimmedName = input.name?.trim();
 
@@ -223,10 +237,13 @@ export async function createSetWithQuestions(
     createdBy: input.actorId,
     assembledBy: input.actorId,
     assembledAt: now,
+    examMinutes,
+    // A typed CT duration is the teacher's own call and always wins; otherwise the estimate
+    // stands, so a homework carries a duration without anyone having to type one.
     durationMinutes:
       input.setType === "CT" && input.durationMinutes != null
         ? input.durationMinutes
-        : undefined,
+        : estimatedDuration,
     dueDate:
       (input.setType === "HW" || input.setType === "AS") && input.dueDate
         ? new Date(input.dueDate)
@@ -410,4 +427,4 @@ export async function assembleSet(input: AssembleInput): Promise<AssembleResult>
     totalMarks,
     assembledAt: now.toISOString(),
   };
-}
+}undefined

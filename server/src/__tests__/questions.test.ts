@@ -928,7 +928,12 @@ describe("F6/F10 — createSetWithQuestions (transactional one-step create)", ()
     expect(items.map((i) => i.qid)).toEqual(["QP-A", "QP-B"]); // input order, not DB order
     expect(arg.totalMarks).toBe(7);
     expect((arg.dueDate as Date).toISOString()).toBe("2026-07-20T00:00:00.000Z");
-    expect(arg.durationMinutes).toBeUndefined();
+    // QT-1 (D-#593): a homework now carries a duration WITHOUT anyone typing one — that is
+    // the whole point of the feature, so the old `toBeUndefined()` is superseded rather
+    // than deleted. This fixture has no `question_type`, so it also pins the fallback path:
+    // 7 marks × 1.25 (default rate) = 8.75 → ceil 9 exam minutes → ×2 for HW = 18.
+    expect(arg.examMinutes).toBe(9);
+    expect(arg.durationMinutes).toBe(18);
     expect(arg.name).toBe("ভগ্নাংশ অনুশীলন");
     expect(arg.assembledAt).toBeInstanceOf(Date);
   });

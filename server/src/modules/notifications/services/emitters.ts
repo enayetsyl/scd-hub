@@ -1588,7 +1588,7 @@ export async function emitWorkClaimFiled(ev: WorkClaimNotifyEvent): Promise<void
 }
 
 /**
- * WC-7: the claim has changed hands — tell its NEW owner at once (D-#593).
+ * WC-7: the claim has changed hands — tell its NEW owner at once (D-#594).
  *
  * Same `WORK_CLAIM_FILED` kind, because to this teacher that is exactly what it is:
  * work they have just been handed and must answer. Only the dedupe key and the
