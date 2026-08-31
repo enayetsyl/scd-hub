@@ -7,7 +7,12 @@ import React, { useState } from "react";
 import { View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
-import { QUESTION_QUERY, SET_QUESTION_IMPORTANT, RESTORE_QUESTION } from "../../graphql/operations";
+import {
+  QUESTION_QUERY,
+  SET_QUESTION_IMPORTANT,
+  RESTORE_QUESTION,
+  QUESTION_USAGE,
+} from "../../graphql/operations";
 import { QuestionEditSheet } from "../../components/QuestionEditSheet";
 import { useAuth } from "../../auth/AuthContext";
 import type { QuestionsStackParamList } from "../../navigation/types";
@@ -29,6 +34,7 @@ import {
   STR,
   subjectLabel,
   classLevelLabel,
+  setTypeLabel,
   difficultyLabel,
   paperRoleLabel,
   curationTagLabel,
@@ -111,6 +117,21 @@ export default function QuestionPreviewScreen({ route }: Props): React.ReactElem
   const [notice, setNotice] = useState<string | null>(null);
   const basket = useBasket();
   const [{ data, fetching, error }, refetch] = useQuery({ query: QUESTION_QUERY, variables: { id } });
+
+  /**
+   * Where this question has already been used (QU-1, D-#608).
+   *
+   * The bank row shows a COUNT; this shows the rows, because a count alone cannot answer
+   * the actual question. “Class 5 last month” is a reason not to reuse it and “class 3 two
+   * years ago” is not — only the date and the section say which.
+   */
+  const [usageQ] = useQuery({
+    query: QUESTION_USAGE,
+    // Reads `data` not `q`: hooks must run before the fetching/error early returns below.
+    variables: { qid: data?.question?.qid ?? "" },
+    pause: !data?.question?.qid,
+  });
+  const uses = usageQ.data?.questionUsage ?? [];
 
   if (fetching) return <Loader label={STR.loading} />;
   if (error) {
@@ -262,6 +283,34 @@ export default function QuestionPreviewScreen({ route }: Props): React.ReactElem
             )}
           </View>
         )
+      ) : null}
+
+      {/* Where it has already been used (QU-1). Shown only when there IS a history — a
+          permanent “not used yet” on every unused question would be noise on 11,785 rows,
+          and the absence of the block already says it. */}
+      {uses.length > 0 ? (
+        <Card>
+          <Muted style={{ fontWeight: "700" }}>{STR.quUsedInTitle}</Muted>
+          {uses.map((u) => (
+            <View key={u.setId} style={{ paddingVertical: space(1) }}>
+              <Body>
+                {/* Name first when there is one — that is what a teacher recognises — and
+                    the set TYPE when there is not, since `name` is optional on the model. */}
+                {u.setName ?? setTypeLabel(u.setType)}
+              </Body>
+              <Muted>
+                {[
+                  u.setName ? setTypeLabel(u.setType) : null,
+                  u.classLevel != null ? classLevelLabel(u.classLevel) : u.className,
+                  u.sectionName,
+                  u.usedOn ? u.usedOn.slice(0, 10) : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </Muted>
+            </View>
+          ))}
+        </Card>
       ) : null}
       {notice ? <Notice tone="ok" message={notice} /> : null}
     </Screen>
