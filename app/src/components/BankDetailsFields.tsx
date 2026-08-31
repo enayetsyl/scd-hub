@@ -61,7 +61,7 @@ export default function BankDetailsFields({
           <Field label={`${STR.stfBankAccountName} *`} value={value.bankAccountName} onChangeText={set("bankAccountName")} />
           <Field label={`${STR.stfBankName} *`} value={value.bankName} onChangeText={set("bankName")} />
           <Field label={`${STR.stfBankBranch} *`} value={value.bankBranch} onChangeText={set("bankBranch")} />
-          {/* D-#595. The routing number was added to the schema and to the flat edit
+          {/* D-#596. The routing number was added to the schema and to the flat edit
               form, but NOT here — and this component is what the join wizard and the pay
               screen render, so it could not be typed on either path anyone actually
               uses. The column existed, the advice pack read it, and nothing could fill
