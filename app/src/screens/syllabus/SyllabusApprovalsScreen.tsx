@@ -6,9 +6,15 @@
  *   subject teacher  reads the rows waiting on THEM (`mySyllabusApprovals`) and
  *                    approves or sends back with a reason. They cannot edit —
  *                    the banner says so before they go looking for a pencil.
- *   Principal        additionally sees this exam × class's rows sitting at
- *                    PRINCIPAL_REVIEW and publishes them, with publish blocked
- *                    and the reason NAMED when the distribution does not total 100.
+ *   Office +         additionally see the whole exam's coverage board, WHO each
+ *   Principal        row is with, and can move a row still in TEACHER_REVIEW to a
+ *                    different routine holder. Publishing is the Principal's
+ *                    alone (§7.4) — Office holds `exam:manage` and is still
+ *                    refused server-side, so the button is offered to neither.
+ *
+ * The board gate is `can("exam:manage")`, not `isRole("PRINCIPAL")`: the server
+ * has always allowed admin staff, and gating the screen tighter meant the desk
+ * that WRITES every syllabus could not see the coverage of what it had written.
  *
  * A teacher with nothing waiting sees an empty state, never an error.
  */
@@ -18,11 +24,14 @@ import { useMutation, useQuery } from "urql";
 import {
   MY_SYLLABUS_APPROVALS,
   EXAM_SYLLABUS_BOARD,
+  EXAM_SYLLABUS_APPROVER,
   APPROVE_EXAM_SYLLABUS,
   SEND_BACK_EXAM_SYLLABUS,
   PUBLISH_EXAM_SYLLABUS,
+  REASSIGN_EXAM_SYLLABUS,
   type SyllabusT,
 } from "../../graphql/examSyllabus";
+import { TEACHERS_QUERY } from "../../graphql/operations";
 import {
   Screen,
   Body,
@@ -52,19 +61,38 @@ import { SYLLABUS_FULL_MARKS } from "@scd/shared";
 function ApprovalCard({
   row,
   mode,
+  canPublish,
   onDone,
 }: {
   row: SyllabusT;
-  mode: "teacher" | "principal";
+  /** "manage" is Office AND Principal — both hold `exam:manage`. */
+  mode: "teacher" | "manage";
+  /** Publish rides the PRINCIPAL role alone (§7.4); Office manages but cannot release. */
+  canPublish?: boolean;
   onDone: () => void;
 }): React.ReactElement {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [err, setErr] = useState<string | null>(null);
+  const [moveTo, setMoveTo] = useState<string | null>(null);
 
   const [, approve] = useMutation(APPROVE_EXAM_SYLLABUS);
   const [, sendBack] = useMutation(SEND_BACK_EXAM_SYLLABUS);
   const [, publish] = useMutation(PUBLISH_EXAM_SYLLABUS);
+  const [, reassign] = useMutation(REASSIGN_EXAM_SYLLABUS);
+
+  // Who the ROUTINE allows, and their names. Both are manage-only reads, and the
+  // approver query needs `exam:manage` — so a teacher's card must not fire them.
+  const isManage = mode === "manage";
+  const [approverQ] = useQuery({
+    query: EXAM_SYLLABUS_APPROVER,
+    variables: { classId: row.classId, subject: row.subject },
+    pause: !isManage,
+  });
+  const [teachersQ] = useQuery({ query: TEACHERS_QUERY, pause: !isManage });
+  const holders = approverQ.data?.examSyllabusApprover.holders ?? [];
+  const teacherName = (id: string): string =>
+    (teachersQ.data?.teachers ?? []).find((t) => t.id === id)?.name ?? id;
 
   const balanced = row.totalMarks === SYLLABUS_FULL_MARKS;
 
@@ -83,7 +111,12 @@ function ApprovalCard({
       {err ? <ErrorBanner message={err} /> : null}
 
       <View style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
+        {/* Class FIRST, then subject. A teacher holding one subject in three
+            classes gets three cards whose only difference is this line, and the
+            screen shipped showing the subject alone — three identical "ইংরেজি"
+            headings with no way to tell which class was being signed off. */}
         <Body style={{ ...typeScale.bodyStrong, flex: 1 }}>
+          {row.classLabel ? `${row.classLabel} — ` : ""}
           {routineSubjectLabel(row.subject)}
         </Body>
         <Badge
@@ -133,6 +166,13 @@ function ApprovalCard({
               actions belong to one stage each. Offering প্রকাশ করুন on a row that is
               still with Office or with the teacher is a button whose only possible
               outcome is the server's refusal. */}
+          {/* WHO holds it, on every stage that has an answer. The board's শি glyph
+              says "with a teacher" and never which one, so this was the one thing
+              the screen could not tell Office without opening the routine. */}
+          {row.approverUserId ? (
+            <Muted>{`${STR.syHeldBy}: ${teacherName(row.approverUserId)}`}</Muted>
+          ) : null}
+
           {row.status === "DRAFT" ? (
             <Notice
               message={`${STR.syWithOffice} — ${STR.syNoActionNeeded}`}
@@ -145,6 +185,37 @@ function ApprovalCard({
               {row.status === "TEACHER_REVIEW" ? (
                 <Notice message={STR.syAwaitingTeacher} tone="info" />
               ) : null}
+
+              {/* Moving it to another teacher is offered ONLY while it is still
+                  with one. After sign-off the approval is already given, and
+                  re-pointing the row would credit it to someone who never read
+                  it — so the stage says why rather than hiding the control. */}
+              {row.status === "TEACHER_REVIEW" ? (
+                <>
+                  <Select
+                    label={STR.syReassignTo}
+                    value={moveTo}
+                    options={holders.map((h) => ({
+                      label: teacherName(h.userId),
+                      value: h.userId,
+                      hint: `${bnNum(h.periods)} ${STR.syPeriods}`,
+                    }))}
+                    onChange={setMoveTo}
+                  />
+                  <Button
+                    title={STR.syReassign}
+                    variant="secondary"
+                    // Nothing chosen, or the same teacher it is already with:
+                    // the server treats that as a no-op, so do not offer it.
+                    disabled={!moveTo || moveTo === row.approverUserId}
+                    onPress={() =>
+                      run(() => reassign({ id: row.id!, approverUserId: moveTo! }))
+                    }
+                  />
+                </>
+              ) : (
+                <Muted>{STR.syReassignOnlyTeacherStage}</Muted>
+              )}
               {!balanced ? <Notice message={STR.syBlockedSum} tone="warn" /> : null}
               <Field
                 label={STR.sySendBackReason}
@@ -165,9 +236,12 @@ function ApprovalCard({
                 <View style={{ flex: 1 }}>
                   <Button
                     // Publish belongs to PRINCIPAL_REVIEW alone; a row still with
-                    // the teacher can only be recalled, not released.
+                    // the teacher can only be recalled, not released. And it rides
+                    // the PRINCIPAL role — Office holds exam:manage and is still
+                    // refused server-side (§7.4), so offering it here would be a
+                    // button whose only outcome is a refusal.
                     title={row.status === "TEACHER_REVIEW" ? STR.syRecall : STR.syPublish}
-                    disabled={row.status === "TEACHER_REVIEW" || !balanced}
+                    disabled={row.status === "TEACHER_REVIEW" || !balanced || !canPublish}
                     onPress={() => run(() => publish({ id: row.id! }))}
                   />
                 </View>
@@ -181,7 +255,12 @@ function ApprovalCard({
 }
 
 export default function SyllabusApprovalsScreen(): React.ReactElement {
-  const { isRole } = useAuth();
+  const { isRole, can } = useAuth();
+  // The BOARD is Office's too — `examSyllabusBoard` has always allowed admin staff,
+  // and the screen gated it tighter than the server, so the desk that writes every
+  // syllabus could not see the coverage of what it had written.
+  const canManage = can("exam:manage");
+  // Publishing stays the Principal's alone (§7.4).
   const isPrincipal = isRole("PRINCIPAL");
 
   const [mineQ, refetchMine] = useQuery({ query: MY_SYLLABUS_APPROVALS });
@@ -199,7 +278,7 @@ export default function SyllabusApprovalsScreen(): React.ReactElement {
   const [boardQ, refetchBoard] = useQuery({
     query: EXAM_SYLLABUS_BOARD,
     variables: { examId: pick.examId ?? "" },
-    pause: !isPrincipal || !pick.examId,
+    pause: !canManage || !pick.examId,
   });
   const board = useMemo<MatrixRow[]>(
     () =>
@@ -239,7 +318,7 @@ export default function SyllabusApprovalsScreen(): React.ReactElement {
         </View>
       )}
 
-      {isPrincipal ? (
+      {canManage ? (
         <View style={{ marginTop: space(5), gap: space(3) }}>
           <Body style={typeScale.sectionTitle}>{STR.syTitle}</Body>
           <Select
@@ -271,7 +350,13 @@ export default function SyllabusApprovalsScreen(): React.ReactElement {
           {/* A cell opens its row in place. Publish and send-back are the SAME
               controls the teacher stage uses — one card, two audiences. */}
           {openCell ? (
-            <ApprovalCard key={openCell.id ?? openCell.subject} row={openCell} mode="principal" onDone={reload} />
+            <ApprovalCard
+              key={openCell.id ?? openCell.subject}
+              row={openCell}
+              mode="manage"
+              canPublish={isPrincipal}
+              onDone={reload}
+            />
           ) : null}
         </View>
       ) : null}

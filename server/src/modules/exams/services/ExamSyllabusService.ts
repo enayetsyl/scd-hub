@@ -263,6 +263,63 @@ async function loadOr404(id: string): Promise<IExamSyllabus> {
   return doc;
 }
 
+/**
+ * Move a syllabus already WITH a teacher to a different teacher, without
+ * disturbing its stage.
+ *
+ * Before this existed the only route was ফেরত দিন → খসড়া → re-submit, which
+ * made an ordinary staffing change look like the first teacher's work had been
+ * rejected and left a send-back reason in the record saying so.
+ *
+ * TEACHER_REVIEW only, deliberately:
+ *   DRAFT             has no holder to move — submit is where the teacher is chosen.
+ *   PRINCIPAL_REVIEW  has been signed off. Re-pointing it there would transfer
+ *   and beyond        accountability for an approval somebody has already given,
+ *                     and the new teacher would be recorded as having approved
+ *                     something they never read.
+ *
+ * The routine check is the same one submit runs (D-#366): a teacher who does not
+ * teach the pair cannot be seated, whoever types the request.
+ */
+export async function reassignSyllabusApprover(
+  ctx: AppContext,
+  id: string,
+  approverUserId: string,
+): Promise<IExamSyllabus> {
+  assertCanManage(ctx);
+  const auth = requireAuth(ctx);
+  const doc = await loadOr404(id);
+
+  if (doc.status !== "TEACHER_REVIEW") {
+    throw new ForbiddenError(
+      "কেবল শিক্ষকের কাছে থাকা সিলেবাস অন্য শিক্ষকের কাছে পাঠানো যায়",
+    );
+  }
+  if (!(await isRoutineHolder(approverUserId, doc.classId, doc.subject))) {
+    throw new ForbiddenError("রুটিন অনুযায়ী এই শিক্ষক এই শ্রেণিতে এই বিষয় পড়ান না");
+  }
+
+  const previous = doc.approverUserId?.toString() ?? null;
+  if (previous === approverUserId) return doc; // already there; not an error
+
+  doc.approverUserId = new Types.ObjectId(approverUserId);
+  doc.updatedBy = new Types.ObjectId(auth.userId);
+  await doc.save();
+
+  await writeAudit({
+    eventKind: "EXAM_SYLLABUS_REASSIGNED",
+    actorId: auth.userId,
+    actorRole: auth.role,
+    targetId: doc._id,
+    targetKind: "ExamSyllabus",
+    // BOTH ends: "who has it now" is answerable from the row, but "who was it
+    // taken from" exists nowhere else once the field is overwritten.
+    meta: { fromUserId: previous, toUserId: approverUserId, subject: doc.subject },
+  });
+
+  return doc;
+}
+
 /** DRAFT → TEACHER_REVIEW. `approverUserId` must be a real routine holder. */
 export async function submitSyllabusToTeacher(
   ctx: AppContext,

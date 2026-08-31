@@ -25,6 +25,10 @@ export interface SyllabusT {
   id: string | null;
   examId: string;
   classId: string;
+  /** The class's Bangla name. Carried per ROW because `mySyllabusApprovals` spans classes. */
+  classLabel: string;
+  /** The teacher this row was sent to, once sent. Null while it is still a draft. */
+  approverUserId: string | null;
   subject: string;
   bodyMd: string;
   marks: SyllabusMarkRowT[];
@@ -57,7 +61,7 @@ export interface SyllabusApproverT {
 }
 
 const SYLLABUS_FIELDS = `
-  id examId classId subject bodyMd questionTypes examDateKey status sendBackReason
+  id examId classId classLabel approverUserId subject bodyMd questionTypes examDateKey status sendBackReason
   isMine writtenMarks oralMarks totalMarks pending
   marks { seq label itemType component count marksEach total }
 `;
@@ -190,6 +194,15 @@ export const SEND_BACK_EXAM_SYLLABUS = gql<
 >`
   mutation SendBackExamSyllabus($id: String!, $reason: String!) {
     sendBackExamSyllabus(id: $id, reason: $reason) { ${SYLLABUS_FIELDS} }
+  }
+`;
+
+export const REASSIGN_EXAM_SYLLABUS = gql<
+  { reassignExamSyllabus: SyllabusT },
+  { id: string; approverUserId: string }
+>`
+  mutation ReassignExamSyllabus($id: String!, $approverUserId: String!) {
+    reassignExamSyllabus(id: $id, approverUserId: $approverUserId) { ${SYLLABUS_FIELDS} }
   }
 `;
 
