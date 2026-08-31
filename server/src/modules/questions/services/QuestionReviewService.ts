@@ -137,6 +137,15 @@ async function loadQuestion(artifactId: string): Promise<LeanQuestion> {
 // ---------------------------------------------------------------------------
 
 export interface AssignQuestionReviewInput {
+  /**
+   * Bypass the “already held / already reviewed” refusal (D-#569).
+   *
+   * Set ONLY by callers that have already established the question is assignable:
+   * `assignQuestionReviewByChapter` (which pre-filters and REPORTS what it skipped) and
+   * `clearQuestionCondition` (whose whole job is to open a fresh round on a question whose
+   * latest round is a submitted APPROVE_WITH_CONDITION — the one legitimate re-round).
+   */
+  allowReassign?: boolean;
   artifactId: string;
   reviewerId: string;
   assignedBy: string;
@@ -150,6 +159,36 @@ export async function assignQuestionReview(input: AssignQuestionReviewInput): Pr
   const key = threadKeyOf(artifact);
   const addr = addressKeyOf(artifact);
   const qid = qidOf(artifact);
+
+  /**
+   * Refuse a question somebody is ALREADY working on, or has already ruled on (D-#569).
+   *
+   * The supersede below is what makes this necessary: re-assigning silently cancels the open
+   * round, so a stray tap on the per-question picker discarded a reviewer’s work in progress
+   * and her queue just quietly shrank. `assignQuestionReviewByChapter` has skipped these
+   * three cases since it shipped and REPORTS the counts; the single/bulk picker did not, and
+   * showed a warning badge instead — information where a refusal belonged.
+   */
+  if (!input.allowReassign) {
+    if (artifact.reviewStatus === "gold") {
+      throw new ReviewError("This question is already published — it is not assignable");
+    }
+    if (artifact.reviewStatus === "reviewed") {
+      throw new ReviewError(
+        "This question has already been reviewed and is waiting to be published — " +
+          "reassigning it would discard that verdict",
+      );
+    }
+    const openNow = await ReviewAssignment.countDocuments({
+      ...key,
+      status: { $in: ["assigned", "submitted"] },
+    });
+    if (openNow > 0) {
+      throw new ReviewError(
+        "This question is already assigned to a reviewer — cancel that round before reassigning",
+      );
+    }
+  }
 
   // One open round per question at a time (the D-#40 rule, per-qid here).
   await supersedeOpenRounds(key, "superseded_by_new_round", input.assignedBy, input.actorRole);
@@ -245,6 +284,9 @@ export async function clearQuestionCondition(input: {
     reviewerId: String(last.reviewerId),
     assignedBy: input.actorId,
     actorRole: input.actorRole,
+    // The one legitimate re-round: the condition is cleared and the SAME reviewer
+    // rules again on the corrected question (D-#525/#569).
+    allowReassign: true,
   });
   await notifyAssigned(String(last.reviewerId), [round], round.id);
   return round;
@@ -295,6 +337,8 @@ export async function assignQuestionReviewBulk(input: {
           reviewerId: input.reviewerId,
           assignedBy: input.assignedBy,
           actorRole: input.actorRole,
+        // Pre-filtered above into `eligible`, and what was skipped is REPORTED.
+        allowReassign: true,
         }),
       );
     } catch (err) {
@@ -1379,6 +1423,121 @@ export async function questionCoverage(args: {
     reviewed,
     published,
   };
+}
+
+// ---------------------------------------------------------------------------
+// questionReviewerSlices + myReviewChapters (QR-14, D-#568)
+// ---------------------------------------------------------------------------
+
+/** One (reviewer × subject × class × chapter) slice — “who received what”. */
+export interface ReviewerSliceDTO {
+  reviewerId: string;
+  reviewerName: string | null;
+  subject: string;
+  classLevel: number;
+  /** As stored on the round: a STRING whatever form the artifact used (QR-6). */
+  chapter: string;
+  /** Rounds in this slice — NOT distinct questions, so the slices sum to the card. */
+  assigned: number;
+  /** Rounds that carry a verdict. */
+  decided: number;
+  /** Rounds still owed: status `assigned`, no verdict yet. */
+  pending: number;
+}
+
+/**
+ * Which slices each reviewer holds, and how far through each they are (QR-14).
+ *
+ * The progress card said how much a reviewer held IN TOTAL; the owner runs one chapter per
+ * reviewer and needed to see WHICH chapters, without tapping through every subject × class
+ * combination and reading the headline each time.
+ *
+ * Counts ROUNDS, deliberately, so the slice rows sum to the number on the card above them.
+ * The coverage strip counts distinct questions because it is measuring the BANK; this is
+ * measuring the WORK, and a question sent back for a second round is a second piece of work.
+ *
+ * One grouped aggregate, no join: subject, classLevel and addressNumber are all denormalised
+ * onto the round at assign time.
+ */
+export async function questionReviewerSlices(args: {
+  classLevel?: number | null;
+  subject?: string | null;
+  chapter?: number | null;
+}): Promise<ReviewerSliceDTO[]> {
+  const rows = (await ReviewAssignment.aggregate([
+    { $match: progressScope(args) },
+    {
+      $group: {
+        _id: {
+          reviewerId: "$reviewerId",
+          subject: "$subject",
+          classLevel: "$classLevel",
+          chapter: "$addressNumber",
+        },
+        assigned: { $sum: 1 },
+        pending: { $sum: { $cond: [{ $eq: ["$status", "assigned"] }, 1, 0] } },
+        decided: { $sum: { $cond: [{ $ifNull: ["$verdict", false] }, 1, 0] } },
+      },
+    },
+  ])) as unknown as {
+    _id: { reviewerId: Types.ObjectId; subject: string; classLevel: number; chapter: unknown };
+    assigned: number;
+    pending: number;
+    decided: number;
+  }[];
+  if (rows.length === 0) return [];
+
+  const reviewerIds = [...new Set(rows.map((r) => r._id.reviewerId.toString()))];
+  const users = await User.find({ _id: { $in: reviewerIds } }).select({ name: 1 }).lean();
+  const nameOf = new Map(users.map((u) => [u._id.toString(), u.name]));
+
+  return rows
+    .map((r) => ({
+      reviewerId: r._id.reviewerId.toString(),
+      reviewerName: nameOf.get(r._id.reviewerId.toString()) ?? null,
+      subject: r._id.subject,
+      classLevel: r._id.classLevel,
+      chapter: r._id.chapter == null ? "" : String(r._id.chapter),
+      assigned: r.assigned,
+      decided: r.decided,
+      pending: r.pending,
+    }))
+    // Subject, then class, then chapter NUMERICALLY — a string sort puts “10” before “9”.
+    .sort(
+      (a, b) =>
+        a.subject.localeCompare(b.subject) ||
+        a.classLevel - b.classLevel ||
+        (Number(a.chapter) || 0) - (Number(b.chapter) || 0),
+    );
+}
+
+/**
+ * The chapters a reviewer actually HOLDS (QR-14, D-#568).
+ *
+ * Her queue filter used to read `questionChapters`, which walks the BANK and is publish-
+ * gated for a TEACHER — so she was offered only chapters that already contained a PUBLISHED
+ * question. Her job is to review DRAFTS so they can become published, which made the filter
+ * offer exactly the chapters whose work was already done, and none of the work she was given.
+ */
+export async function myReviewChapters(
+  reviewerId: string,
+  args: { subject?: string | null; classLevel?: number | null } = {},
+): Promise<number[]> {
+  const match: Record<string, unknown> = {
+    // An ObjectId, not the raw string — `distinct` does not cast either (the QR-11 trap).
+    reviewerId: new Types.ObjectId(reviewerId),
+    docType: QUESTION_DOC_TYPE,
+    status: { $in: ["assigned", "submitted"] },
+  };
+  if (args.subject) match.subject = args.subject;
+  if (args.classLevel != null) match.classLevel = args.classLevel;
+  const raw = (await ReviewAssignment.distinct("addressNumber", match)) as unknown[];
+  const nums = new Set<number>();
+  for (const v of raw) {
+    const n = typeof v === "number" ? v : Number(String(v).trim());
+    if (Number.isInteger(n) && n > 0) nums.add(n);
+  }
+  return [...nums].sort((a, b) => a - b);
 }
 
 function progressScope(args: {

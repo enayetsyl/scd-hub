@@ -39,6 +39,8 @@ export interface StaffProfileInput {
   nameBn?: string | null;
   category?: string | null;
   designation?: string | null;
+  weeklyHours?: string | null;
+  routingNo?: string | null;
   employmentType?: string | null;
   employmentStatus?: string | null;
   joiningDate?: string | null;
@@ -123,6 +125,8 @@ export function buildPatch(input: StaffProfileInput): Record<string, unknown> {
   put("nameBn", clean(input.nameBn));
   put("category", assertEnum(clean(input.category) as HrCategory | undefined, HR_CATEGORIES, "category"));
   put("designation", clean(input.designation));
+  put("weeklyHours", clean(input.weeklyHours));
+  put("routingNo", clean(input.routingNo));
   put("employmentType", assertEnum(clean(input.employmentType) as EmploymentType | undefined, EMPLOYMENT_TYPES, "employmentType"));
   put("employmentStatus", assertEnum(clean(input.employmentStatus) as EmploymentStatus | undefined, EMPLOYMENT_STATUSES, "employmentStatus"));
   put("joiningDate", parseDate(input.joiningDate, "joiningDate"));

@@ -45,6 +45,43 @@ function todayKey(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+const MONTHS_EN = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+/** "2026-08-29" -> "29 August, 2026", the letters' own date format. */
+function longDate(dateKey: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateKey);
+  if (!m) return dateKey;
+  const idx = Number(m[2]) - 1;
+  if (idx < 0 || idx > 11) return dateKey;
+  return `${Number(m[3])} ${MONTHS_EN[idx]}, ${m[1]}`;
+}
+
+/**
+ * The standard confirmation wording, offered as a DRAFT to edit (D-#590).
+ *
+ * It mirrors what the renderer falls back to when the box is left empty, so pressing
+ * the button and pressing nothing produce the same letter — the difference is only
+ * whether the issuer can see and change the words before they are frozen.
+ */
+export function defaultConfirmationBody(
+  staff: { name: string; nameBn?: string | null; designation?: string | null; monthlySalary?: number | null },
+  confirmationDate: string,
+): string {
+  const salary =
+    staff.monthlySalary && staff.monthlySalary > 0
+      ? ` Your monthly remuneration remains Tk. ${staff.monthlySalary.toLocaleString("en-US")}.`
+      : "";
+  return (
+    `With reference to your service as ${staff.designation ?? ""} at the School for Community ` +
+    `Development (SCD), the management is pleased to confirm your employment with effect from ` +
+    `${longDate(confirmationDate)}, insha'Allah.${salary} All other terms and conditions of your ` +
+    `appointment remain unchanged.`
+  );
+}
+
 export default function ConfirmEmploymentScreen({ route, navigation }: Props): React.ReactElement {
   const { staff } = route.params;
   const [{ data, fetching }] = useQuery({
@@ -58,6 +95,9 @@ export default function ConfirmEmploymentScreen({ route, navigation }: Props): R
   const [withLetter, setWithLetter] = React.useState(true);
   const [busy, setBusy] = React.useState(false);
   const [failure, setFailure] = React.useState<string | null>(null);
+  // Confirmed, but the letter did not come out (D-#574). Not a failure — a different
+  // outcome, and one the operator has to see or she will assume a letter was filed.
+  const [letterFailure, setLetterFailure] = React.useState<string | null>(null);
 
   const p = data?.confirmationPreview;
   const remainingAfter = p ? Math.max(0, p.poolRemaining - p.fromPool) : 0;
@@ -87,9 +127,26 @@ export default function ConfirmEmploymentScreen({ route, navigation }: Props): R
       setFailure(friendlyError(res.error));
       return;
     }
-    const letterId = res.data.confirmStaffEmployment.letterId;
+    const { letterId, letterError } = res.data.confirmStaffEmployment;
+    if (letterError) {
+      // Stay put. The confirmation stands and is audited; the letter can be issued
+      // from কাগজপত্র once the reason is fixed.
+      setLetterFailure(letterError);
+      return;
+    }
     if (letterId && PDF_SUPPORTED) await openPdf(`/pdf/staff-letter/${letterId}`);
     navigation.goBack();
+  }
+
+  if (letterFailure) {
+    return (
+      <Screen scroll>
+        <H2>{`${STR.stfConfirmTitle} — ${staff.nameBn || staff.name}`}</H2>
+        <Notice tone="ok" message={STR.stfConfirmedNoLetterOk} />
+        <Notice tone="warn" message={`${STR.stfConfirmedNoLetter} ${letterFailure}`} />
+        <Button title={STR.close} variant="secondary" onPress={() => navigation.goBack()} />
+      </Screen>
+    );
   }
 
   return (
@@ -139,13 +196,24 @@ export default function ConfirmEmploymentScreen({ route, navigation }: Props): R
           <Chip label={STR.stfNo} selected={!withLetter} onPress={() => setWithLetter(false)} />
         </ChipRow>
         {withLetter ? (
-          <Field
-            label={STR.stfExtraText}
-            value={extraText}
-            onChangeText={setExtraText}
-            placeholder={STR.stfExtraTextPlaceholder}
-            multiline
-          />
+          <>
+            {/* The WHOLE body, not an appendix (D-#590). What is typed here is what the
+                letter says — the system adds nothing above or below it. The button
+                below fills in the standard wording as a starting point; leaving the box
+                empty prints that same wording. */}
+            <Field
+              label={STR.stfConfirmBody}
+              value={extraText}
+              onChangeText={setExtraText}
+              placeholder={STR.stfConfirmBodyPlaceholder}
+              multiline
+            />
+            <Button
+              title={STR.stfConfirmBodyDraft}
+              variant="secondary"
+              onPress={() => setExtraText(defaultConfirmationBody(staff, confirmationDate))}
+            />
+          </>
         ) : null}
       </Card>
 

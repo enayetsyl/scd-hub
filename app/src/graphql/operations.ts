@@ -291,6 +291,10 @@ export interface StaffT {
   nameBn: string | null;
   category: string;
   designation: string | null;
+  /** Contracted weekly hours as the letter states them, e.g. "25 (5*5)" (D-#584). */
+  weeklyHours: string | null;
+  /** The bank's routing number — a BEFTN transfer cannot be instructed without it (D-#591). */
+  routingNo: string | null;
   employmentType: string;
   employmentStatus: string;
   joiningDate: string | null;
@@ -322,6 +326,8 @@ export interface StaffT {
 
 export interface StaffProfileInputT {
   schoolId?: string; name?: string; nameBn?: string; category?: string; designation?: string;
+  weeklyHours?: string;
+  routingNo?: string;
   employmentType?: string; employmentStatus?: string; joiningDate?: string; biometricId?: string;
   gender?: string; dob?: string; bloodGroup?: string; maritalStatus?: string; nationality?: string;
   qualification?: string; majoredIn?: string; studiedAt?: string; fatherName?: string;
@@ -381,6 +387,8 @@ export const STAFF_QUERY = gql<{ staff: StaffT[] }, { category?: string | null }
       nameBn
       category
       designation
+      weeklyHours
+      routingNo
       employmentType
       employmentStatus
       joiningDate
@@ -5854,7 +5862,7 @@ export interface ChildAssignmentT {
   isResubmission: boolean;
   /** D-#478: WHAT the assignment is. Null only for pre-D-#478 items. */
   description: string | null;
-  attachmentIds: string[];
+  attachmentIds: string[];
   canClaim: boolean;
   claim: GuardianWorkClaimT | null;
 }
@@ -6667,12 +6675,51 @@ export interface StaffPayT {
   paymentMethod: string | null;
 }
 
+/** One recorded salary change (D-#587). */
+export interface StaffPayChangeT {
+  id: string;
+  effectiveFrom: string;
+  monthlySalary: number;
+  previousSalary: number | null;
+  note: string | null;
+}
+
+export const STAFF_PAY_HISTORY_QUERY = gql<
+  { staffPayHistory: StaffPayChangeT[] },
+  { staffProfileId: string }
+>`
+  query StaffPayHistory($staffProfileId: String!) {
+    staffPayHistory(staffProfileId: $staffProfileId) {
+      id effectiveFrom monthlySalary previousSalary note
+    }
+  }
+`;
+
 export const SET_STAFF_PAY = gql<
   { setStaffPay: StaffPayT },
-  { staffProfileId: string; monthlySalary?: number | null; paymentMethod?: string | null }
+  {
+    staffProfileId: string;
+    monthlySalary?: number | null;
+    paymentMethod?: string | null;
+    /** YYYY-MM — the month the new figure takes effect (D-#587). */
+    effectiveFrom?: string | null;
+    payChangeNote?: string | null;
+  }
 >`
-  mutation SetStaffPay($staffProfileId: String!, $monthlySalary: Float, $paymentMethod: String) {
-    setStaffPay(staffProfileId: $staffProfileId, monthlySalary: $monthlySalary, paymentMethod: $paymentMethod) {
+  mutation SetStaffPay(
+    $staffProfileId: String!
+    $monthlySalary: Float
+    $paymentMethod: String
+    $effectiveFrom: String
+    $payChangeNote: String
+  ) {
+    setStaffPay(
+      staffProfileId: $staffProfileId
+      monthlySalary: $monthlySalary
+      paymentMethod: $paymentMethod
+      effectiveFrom: $effectiveFrom
+      payChangeNote: $payChangeNote
+    ) {
       id monthlySalary paymentMethod
     }
   }
@@ -6696,12 +6743,43 @@ export const PAYROLL_RUNS_QUERY = gql<{ payrollRuns: PayrollRunT[] }, NoVars>`
   }
 `;
 
+/** One manual line on a payslip — an addition (arrears, bonus) or a deduction. */
+export interface PayLineInputT {
+  type: string;
+  amount: number;
+  note?: string | null;
+}
+
+/** Per-staff overrides for ONE run (D-#585). The server has taken these since HR-3. */
+export interface StaffPayrollAdjustmentInputT {
+  staffProfileId: string;
+  payableDays?: number | null;
+  latenessDeduction?: number | null;
+  manualDeductions?: PayLineInputT[];
+  manualAdditions?: PayLineInputT[];
+}
+
 export const PREPARE_PAYROLL_RUN = gql<
   { preparePayrollRun: PayrollRunT },
-  { monthKey: string; workingDays: number; note?: string | null }
+  {
+    monthKey: string;
+    workingDays: number;
+    note?: string | null;
+    adjustments?: StaffPayrollAdjustmentInputT[];
+  }
 >`
-  mutation PreparePayrollRun($monthKey: String!, $workingDays: Int!, $note: String) {
-    preparePayrollRun(monthKey: $monthKey, workingDays: $workingDays, note: $note) { ${PAYROLL_RUN_FIELDS} }
+  mutation PreparePayrollRun(
+    $monthKey: String!
+    $workingDays: Int!
+    $note: String
+    $adjustments: [StaffPayrollAdjustmentInput!]
+  ) {
+    preparePayrollRun(
+      monthKey: $monthKey
+      workingDays: $workingDays
+      note: $note
+      adjustments: $adjustments
+    ) { ${PAYROLL_RUN_FIELDS} }
   }
 `;
 
@@ -6760,15 +6838,69 @@ export interface PaymentExportRowT {
   name: string;
   paymentMethod: string;
   account: string | null;
+  accountName: string | null;
+  bankName: string | null;
+  bankBranch: string | null;
   netPay: number;
+  /** Non-null = cannot be paid, and why (D-#579). Never silently dropped. */
+  blockedReason: string | null;
 }
+
+/** One line on a bank advice sheet (D-#591). */
+export interface AdviceRowT {
+  staffProfileId: string;
+  name: string;
+  accountName: string | null;
+  account: string | null;
+  bankName: string | null;
+  bankBranch: string | null;
+  routingNo: string | null;
+  amount: number;
+  blockedReason: string | null;
+}
+
+export interface AdviceGroupT {
+  channel: string;
+  rows: AdviceRowT[];
+  blocked: AdviceRowT[];
+  total: number;
+}
+
+export interface PaymentAdviceT {
+  monthKey: string;
+  paymentInfo: string;
+  letterDate: string;
+  ready: boolean;
+  missing: string[];
+  groups: AdviceGroupT[];
+}
+
+const ADVICE_ROW_FIELDS = `staffProfileId name accountName account bankName bankBranch routingNo amount blockedReason`;
+
+export const PAYMENT_ADVICE_QUERY = gql<
+  { paymentAdvice: PaymentAdviceT },
+  { runId: string }
+>`
+  query PaymentAdvice($runId: String!) {
+    paymentAdvice(runId: $runId) {
+      monthKey paymentInfo letterDate ready missing
+      groups {
+        channel total
+        rows { ${ADVICE_ROW_FIELDS} }
+        blocked { ${ADVICE_ROW_FIELDS} }
+      }
+    }
+  }
+`;
 
 export const PAYROLL_PAYMENT_EXPORT_QUERY = gql<
   { payrollPaymentExport: PaymentExportRowT[] },
   { runId: string }
 >`
   query PayrollPaymentExport($runId: String!) {
-    payrollPaymentExport(runId: $runId) { staffProfileId name paymentMethod account netPay }
+    payrollPaymentExport(runId: $runId) {
+      staffProfileId name paymentMethod account accountName bankName bankBranch netPay blockedReason
+    }
   }
 `;
 
@@ -7713,6 +7845,34 @@ export const STAFF_LETTERS_QUERY = gql<
   }
 `;
 
+/** The Bangla নিয়োগ চুক্তিপত্র's own fields (D-#586). */
+export interface SupportContractInputT {
+  role: string;
+  dutiesBn: string[];
+  workingHoursBn: string;
+  foodAllowance?: number | null;
+  permanentAddressBn?: string | null;
+  presentAddressBn?: string | null;
+  contactBn?: string | null;
+}
+
+export interface SupportContractDefaultsT {
+  role: string;
+  titleBn: string;
+  workingHoursBn: string;
+  dutiesBn: string[];
+}
+
+/** The starting draft for a contract — the form loads it and the operator EDITS. */
+export const SUPPORT_CONTRACT_DEFAULTS_QUERY = gql<
+  { supportContractDefaults: SupportContractDefaultsT },
+  { role: string }
+>`
+  query SupportContractDefaults($role: String!) {
+    supportContractDefaults(role: $role) { role titleBn workingHoursBn dutiesBn }
+  }
+`;
+
 export const ISSUE_STAFF_LETTER = gql<
   { issueStaffLetter: StaffLetterT },
   {
@@ -7725,6 +7885,8 @@ export const ISSUE_STAFF_LETTER = gql<
     designation?: string | null;
     weeklyHours?: string | null;
     extraText?: string | null;
+    /** Required when kind is `support_contract` (D-#586). */
+    contract?: SupportContractInputT | null;
   }
 >`
   mutation IssueStaffLetter(
@@ -7737,6 +7899,7 @@ export const ISSUE_STAFF_LETTER = gql<
     $designation: String
     $weeklyHours: String
     $extraText: String
+    $contract: SupportContractInput
   ) {
     issueStaffLetter(
       staffProfileId: $staffProfileId
@@ -7748,6 +7911,7 @@ export const ISSUE_STAFF_LETTER = gql<
       designation: $designation
       weeklyHours: $weeklyHours
       extraText: $extraText
+      contract: $contract
     ) {
       id staffProfileId kind refNo issuedOn status extraText voidReason
       salaryMode monthlySalary designation effectiveFrom letterDate annualLeaveDays
@@ -7774,6 +7938,8 @@ export interface StaffLeavePoolT {
   remainingDays: number;
   overridden: boolean;
   proRated: boolean;
+  /** True while the person has no confirmation date — the pool exists but cannot be drawn (D-#576). */
+  onProbation: boolean;
 }
 
 export const STAFF_LEAVE_POOL_QUERY = gql<
@@ -7782,7 +7948,7 @@ export const STAFF_LEAVE_POOL_QUERY = gql<
 >`
   query StaffLeavePool($staffProfileId: String!) {
     staffLeavePool(staffProfileId: $staffProfileId) {
-      academicYearId allowanceDays carriedOverDays takenDays remainingDays overridden proRated
+      academicYearId allowanceDays carriedOverDays takenDays remainingDays overridden proRated onProbation
     }
   }
 `;
@@ -7790,7 +7956,7 @@ export const STAFF_LEAVE_POOL_QUERY = gql<
 export const MY_LEAVE_POOL_QUERY = gql<{ myLeavePool: StaffLeavePoolT }, Record<string, never>>`
   query MyLeavePool {
     myLeavePool {
-      academicYearId allowanceDays carriedOverDays takenDays remainingDays overridden proRated
+      academicYearId allowanceDays carriedOverDays takenDays remainingDays overridden proRated onProbation
     }
   }
 `;
@@ -7941,6 +8107,8 @@ export interface ConfirmationResultT {
   settledToSalary: number;
   poolRemainingAfter: number;
   letterId: string | null;
+  /** Set when the confirmation SUCCEEDED but the letter could not be issued (D-#574). */
+  letterError: string | null;
 }
 
 export const CONFIRM_STAFF_EMPLOYMENT = gql<
@@ -7960,7 +8128,7 @@ export const CONFIRM_STAFF_EMPLOYMENT = gql<
       issueLetter: $issueLetter
     ) {
       staffProfileId confirmationDate heldDays settledFromPool settledToSalary
-      poolRemainingAfter letterId
+      poolRemainingAfter letterId letterError
     }
   }
 `;
@@ -7970,17 +8138,33 @@ export interface HrPolicyT {
   lateDaysPerCharge: number;
   latenessRuleEnabled: boolean;
   probationDebtEnabled: boolean;
+  /** How long probation runs here — six months, not the Dhaka branch's three (D-#586). */
+  probationMonths: number;
   signatoryName: string;
   signatoryTitle: string;
   weeklyHoursText: string;
+  /** The Bangla contract block. Empty until set once — the contract refuses without it. */
+  orgRegistrationNo: string;
+  orgAddress: string;
+  orgPhone: string;
+  orgEmail: string;
+  schoolBankName: string;
+  schoolBankBranch: string;
+  schoolAccountNo: string;
+  employerNameBn: string;
+  employerAddressBn: string;
+  signatoryNameBn: string;
+  signatoryTitleBn: string;
   letterRefPrefix: string;
 }
 
 export const HR_POLICY_QUERY = gql<{ hrPolicy: HrPolicyT }, Record<string, never>>`
   query HrPolicy {
     hrPolicy {
-      annualLeaveDays lateDaysPerCharge latenessRuleEnabled probationDebtEnabled
+      annualLeaveDays lateDaysPerCharge latenessRuleEnabled probationDebtEnabled probationMonths
       signatoryName signatoryTitle weeklyHoursText letterRefPrefix
+      employerNameBn employerAddressBn signatoryNameBn signatoryTitleBn
+      orgRegistrationNo orgAddress orgPhone orgEmail schoolBankName schoolBankBranch schoolAccountNo
     }
   }
 `;
@@ -8037,9 +8221,21 @@ export const SET_HR_POLICY = gql<
     lateDaysPerCharge?: number | null;
     latenessRuleEnabled?: boolean | null;
     probationDebtEnabled?: boolean | null;
+    probationMonths?: number | null;
     signatoryName?: string | null;
     signatoryTitle?: string | null;
     weeklyHoursText?: string | null;
+    orgRegistrationNo?: string | null;
+    orgAddress?: string | null;
+    orgPhone?: string | null;
+    orgEmail?: string | null;
+    schoolBankName?: string | null;
+    schoolBankBranch?: string | null;
+    schoolAccountNo?: string | null;
+    employerNameBn?: string | null;
+    employerAddressBn?: string | null;
+    signatoryNameBn?: string | null;
+    signatoryTitleBn?: string | null;
     letterRefPrefix?: string | null;
   }
 >`
@@ -8048,9 +8244,21 @@ export const SET_HR_POLICY = gql<
     $lateDaysPerCharge: Int
     $latenessRuleEnabled: Boolean
     $probationDebtEnabled: Boolean
+    $probationMonths: Int
     $signatoryName: String
     $signatoryTitle: String
     $weeklyHoursText: String
+    $orgRegistrationNo: String
+    $orgAddress: String
+    $orgPhone: String
+    $orgEmail: String
+    $schoolBankName: String
+    $schoolBankBranch: String
+    $schoolAccountNo: String
+    $employerNameBn: String
+    $employerAddressBn: String
+    $signatoryNameBn: String
+    $signatoryTitleBn: String
     $letterRefPrefix: String
   ) {
     setHrPolicy(
@@ -8058,9 +8266,21 @@ export const SET_HR_POLICY = gql<
       lateDaysPerCharge: $lateDaysPerCharge
       latenessRuleEnabled: $latenessRuleEnabled
       probationDebtEnabled: $probationDebtEnabled
+      probationMonths: $probationMonths
       signatoryName: $signatoryName
       signatoryTitle: $signatoryTitle
       weeklyHoursText: $weeklyHoursText
+      orgRegistrationNo: $orgRegistrationNo
+      orgAddress: $orgAddress
+      orgPhone: $orgPhone
+      orgEmail: $orgEmail
+      schoolBankName: $schoolBankName
+      schoolBankBranch: $schoolBankBranch
+      schoolAccountNo: $schoolAccountNo
+      employerNameBn: $employerNameBn
+      employerAddressBn: $employerAddressBn
+      signatoryNameBn: $signatoryNameBn
+      signatoryTitleBn: $signatoryTitleBn
       letterRefPrefix: $letterRefPrefix
     ) {
       annualLeaveDays lateDaysPerCharge latenessRuleEnabled probationDebtEnabled
@@ -8180,5 +8400,38 @@ export const STAFF_PROFILE_QUERY = gql<
       maritalStatus qualification fatherName motherName spouseName phone whatsapp email
       presentAddress permanentAddress biometricId nid bankAccount bankAccountName bankName bankBranch active
     }
+  }
+`;
+
+/** Which slices each reviewer holds — who received what (QR-14, D-#568). */
+export interface ReviewerSliceT {
+  reviewerId: string;
+  reviewerName: string | null;
+  subject: string;
+  classLevel: number;
+  chapter: string;
+  assigned: number;
+  decided: number;
+  pending: number;
+}
+
+export const QUESTION_REVIEWER_SLICES = gql<
+  { questionReviewerSlices: ReviewerSliceT[] },
+  { classLevel?: number | null; subject?: string | null; chapter?: number | null }
+>`
+  query QuestionReviewerSlices($classLevel: Int, $subject: String, $chapter: Int) {
+    questionReviewerSlices(classLevel: $classLevel, subject: $subject, chapter: $chapter) {
+      reviewerId reviewerName subject classLevel chapter assigned decided pending
+    }
+  }
+`;
+
+/** The chapters the CALLER holds rounds for — her queue filter (QR-14, D-#568). */
+export const MY_REVIEW_CHAPTERS = gql<
+  { myReviewChapters: number[] },
+  { subject?: string | null; classLevel?: number | null }
+>`
+  query MyReviewChapters($subject: String, $classLevel: Int) {
+    myReviewChapters(subject: $subject, classLevel: $classLevel)
   }
 `;

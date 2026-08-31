@@ -157,6 +157,13 @@ export function notificationTarget(
         ? { tab: "GuardianHomeTab", screen: "GuardianHome" }
         : { tab: "RevisionTab", screen: "RevisionHome" };
 
+    case "STAFF_LEAVE_SUBMITTED":
+      // The notification exists to get someone to DECIDE. Without this case it fell to
+      // `default: null`, so the row was a dead end — the Principal read "X applied for
+      // leave", tapped it, went nowhere, and then walked to ছুটি ব্যবস্থাপনা by hand
+      // (D-#582). That screen opens on the আবেদিত filter, which is this application.
+      return { tab: "HrTab", screen: "LeaveAdmin" };
+
     default:
       return null;
   }

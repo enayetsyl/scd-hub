@@ -58,6 +58,14 @@ export function CreateSetSheet({
   const [dueDate, setDueDate] = useState("");
   const [duration, setDuration] = useState("");
   const [busy, setBusy] = useState(false);
+  /**
+   * The server’s refusal, rendered INSIDE the sheet (D-#570).
+   *
+   * It was reported only as a toast — which renders behind an open modal, so a real refusal
+   * (“this question was withdrawn”) looked like a dead button. Same failure as D-#536: the
+   * server answered clearly every time and the UI had nowhere to show it.
+   */
+  const [failure, setFailure] = useState<string | null>(null);
   const [, createMut] = useMutation(CREATE_SET_WITH_QUESTIONS);
 
   const isCt = setType === "CT";
@@ -75,6 +83,7 @@ export function CreateSetSheet({
   async function onCreate(): Promise<void> {
     if (!canSubmit) return;
     setBusy(true);
+    setFailure(null);
 
     let dueIso: string | null = null;
     if (!isCt && dueDate.trim()) {
@@ -101,7 +110,9 @@ export function CreateSetSheet({
     if (res.error || !res.data?.createSetWithQuestions) {
       // Never discard the result: the sheet stays open with the selection intact
       // so a flaky connection costs a retry, not the whole set (F10).
-      toast.show(friendlyError(res.error), "danger");
+      const reason = friendlyError(res.error);
+      setFailure(reason);
+      toast.show(reason, "danger");
       return;
     }
 
@@ -217,6 +228,8 @@ export function CreateSetSheet({
             </View>
           </ScrollView>
 
+          {/* Beside the button that was refused — not a toast behind the sheet. */}
+          {failure ? <Notice message={failure} tone="danger" /> : null}
           <Button
             title={busy ? STR.saving : STR.create}
             onPress={() => void onCreate()}

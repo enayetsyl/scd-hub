@@ -6,7 +6,7 @@ import {
   StaffProfileError,
   type StaffProfileInput,
 } from "../services/StaffProfileService";
-import { GraphQLError } from "graphql";
+import { expectedGraphQLError } from "../../../observability/sentry";
 import type { Types } from "mongoose";
 
 /**
@@ -17,13 +17,13 @@ import type { Types } from "mongoose";
  */
 type StaffShape = Pick<
   IStaffProfile,
-  | "schoolId" | "name" | "nameBn" | "category" | "designation"
+  | "schoolId" | "name" | "nameBn" | "category" | "designation" | "weeklyHours"
   | "employmentType" | "employmentStatus" | "joiningDate" | "confirmationDate" | "biometricId"
   | "gender" | "dob" | "bloodGroup" | "maritalStatus" | "nationality"
   | "qualification" | "majoredIn" | "studiedAt"
   | "fatherName" | "motherName" | "spouseName"
   | "phone" | "whatsapp" | "email" | "presentAddress" | "permanentAddress"
-  | "nid" | "bankAccount" | "bankAccountName" | "bankName" | "bankBranch"
+  | "nid" | "bankAccount" | "bankAccountName" | "bankName" | "bankBranch" | "routingNo"
   | "monthlySalary" | "paymentMethod" | "active"
 > & { _id: Types.ObjectId };
 
@@ -39,6 +39,8 @@ StaffRef.implement({
     nameBn: t.string({ nullable: true, resolve: (s) => s.nameBn ?? null }),
     category: t.exposeString("category"),
     designation: t.string({ nullable: true, resolve: (s) => s.designation ?? null }),
+    weeklyHours: t.string({ nullable: true, resolve: (s) => s.weeklyHours ?? null }),
+    routingNo: t.string({ nullable: true, resolve: (s) => s.routingNo ?? null }),
     employmentType: t.exposeString("employmentType"),
     employmentStatus: t.exposeString("employmentStatus"),
     joiningDate: t.string({ nullable: true, resolve: (s) => iso(s.joiningDate) }),
@@ -133,6 +135,8 @@ const StaffProfileInputRef = builder.inputType("StaffProfileInput", {
     nameBn: t.string({ required: false }),
     category: t.string({ required: false }),
     designation: t.string({ required: false }),
+    weeklyHours: t.string({ required: false }),
+    routingNo: t.string({ required: false }),
     employmentType: t.string({ required: false }),
     employmentStatus: t.string({ required: false }),
     joiningDate: t.string({ required: false }),
@@ -164,7 +168,7 @@ const StaffProfileInputRef = builder.inputType("StaffProfileInput", {
 
 /** A refusal the Principal can act on, not a stack trace. */
 function mapStaffError(err: unknown): never {
-  if (err instanceof StaffProfileError) throw new GraphQLError(err.message);
+  if (err instanceof StaffProfileError) throw expectedGraphQLError(err.message);
   throw err as Error;
 }
 
@@ -177,7 +181,7 @@ builder.mutationField("createStaffProfile", (t) =>
     authScopes: { hasPermission: "staff:manage" },
     args: { input: t.arg({ type: StaffProfileInputRef, required: true }) },
     resolve: async (_root, args, ctx) => {
-      if (!ctx.auth) throw new GraphQLError("Unauthenticated");
+      if (!ctx.auth) throw expectedGraphQLError("Unauthenticated");
       try {
         return (await createStaffProfile(args.input as StaffProfileInput, {
           userId: ctx.auth.userId,
@@ -202,7 +206,7 @@ builder.mutationField("updateStaffProfile", (t) =>
       input: t.arg({ type: StaffProfileInputRef, required: true }),
     },
     resolve: async (_root, args, ctx) => {
-      if (!ctx.auth) throw new GraphQLError("Unauthenticated");
+      if (!ctx.auth) throw expectedGraphQLError("Unauthenticated");
       try {
         return (await updateStaffProfile(args.staffProfileId, args.input as StaffProfileInput, {
           userId: ctx.auth.userId,

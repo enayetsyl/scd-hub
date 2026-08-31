@@ -20,9 +20,21 @@ export interface HrPolicyView {
   lateDaysPerCharge: number;
   latenessRuleEnabled: boolean;
   probationDebtEnabled: boolean;
+  probationMonths: number;
   signatoryName: string;
   signatoryTitle: string;
   weeklyHoursText: string;
+  orgRegistrationNo: string;
+  orgAddress: string;
+  orgPhone: string;
+  orgEmail: string;
+  schoolBankName: string;
+  schoolBankBranch: string;
+  schoolAccountNo: string;
+  employerNameBn: string;
+  employerAddressBn: string;
+  signatoryNameBn: string;
+  signatoryTitleBn: string;
   letterRefPrefix: string;
 }
 
@@ -35,11 +47,25 @@ export async function getHrPolicy(): Promise<HrPolicyView> {
     lateDaysPerCharge: row.lateDaysPerCharge ?? HR_POLICY_DEFAULTS.lateDaysPerCharge,
     latenessRuleEnabled: row.latenessRuleEnabled ?? HR_POLICY_DEFAULTS.latenessRuleEnabled,
     probationDebtEnabled: row.probationDebtEnabled ?? HR_POLICY_DEFAULTS.probationDebtEnabled,
+    probationMonths: row.probationMonths ?? HR_POLICY_DEFAULTS.probationMonths,
     // Empty strings fall back too, not just absent fields: a cleared text box must
     // read as "use the default", never as an unsigned letter.
     signatoryName: row.signatoryName || HR_POLICY_DEFAULTS.signatoryName,
     signatoryTitle: row.signatoryTitle || HR_POLICY_DEFAULTS.signatoryTitle,
     weeklyHoursText: row.weeklyHoursText || HR_POLICY_DEFAULTS.weeklyHoursText,
+    // These four default to EMPTY, so `||` would be a no-op — `??` keeps a set value
+    // and an unset one reads as "", which the support contract refuses on.
+    orgRegistrationNo: row.orgRegistrationNo ?? HR_POLICY_DEFAULTS.orgRegistrationNo,
+    orgAddress: row.orgAddress ?? HR_POLICY_DEFAULTS.orgAddress,
+    orgPhone: row.orgPhone ?? HR_POLICY_DEFAULTS.orgPhone,
+    orgEmail: row.orgEmail ?? HR_POLICY_DEFAULTS.orgEmail,
+    schoolBankName: row.schoolBankName ?? HR_POLICY_DEFAULTS.schoolBankName,
+    schoolBankBranch: row.schoolBankBranch ?? HR_POLICY_DEFAULTS.schoolBankBranch,
+    schoolAccountNo: row.schoolAccountNo ?? HR_POLICY_DEFAULTS.schoolAccountNo,
+    employerNameBn: row.employerNameBn ?? HR_POLICY_DEFAULTS.employerNameBn,
+    employerAddressBn: row.employerAddressBn ?? HR_POLICY_DEFAULTS.employerAddressBn,
+    signatoryNameBn: row.signatoryNameBn ?? HR_POLICY_DEFAULTS.signatoryNameBn,
+    signatoryTitleBn: row.signatoryTitleBn ?? HR_POLICY_DEFAULTS.signatoryTitleBn,
     letterRefPrefix: row.letterRefPrefix || HR_POLICY_DEFAULTS.letterRefPrefix,
   };
 }
@@ -49,9 +75,21 @@ export interface SetHrPolicyInput {
   lateDaysPerCharge?: number;
   latenessRuleEnabled?: boolean;
   probationDebtEnabled?: boolean;
+  probationMonths?: number;
   signatoryName?: string;
   signatoryTitle?: string;
   weeklyHoursText?: string;
+  orgRegistrationNo?: string;
+  orgAddress?: string;
+  orgPhone?: string;
+  orgEmail?: string;
+  schoolBankName?: string;
+  schoolBankBranch?: string;
+  schoolAccountNo?: string;
+  employerNameBn?: string;
+  employerAddressBn?: string;
+  signatoryNameBn?: string;
+  signatoryTitleBn?: string;
   letterRefPrefix?: string;
   actorId: string;
 }
@@ -68,6 +106,10 @@ export async function setHrPolicy(input: SetHrPolicyInput): Promise<HrPolicyView
   if (input.lateDaysPerCharge !== undefined && input.lateDaysPerCharge < 1) {
     throw new LeaveError("lateDaysPerCharge must be ≥ 1");
   }
+  // Zero months is a school with no probation at all, which is allowed; negative is not.
+  if (input.probationMonths !== undefined && input.probationMonths < 0) {
+    throw new LeaveError("probationMonths must be ≥ 0");
+  }
 
   const current = await getHrPolicy();
   const next: HrPolicyView = {
@@ -75,9 +117,21 @@ export async function setHrPolicy(input: SetHrPolicyInput): Promise<HrPolicyView
     lateDaysPerCharge: input.lateDaysPerCharge ?? current.lateDaysPerCharge,
     latenessRuleEnabled: input.latenessRuleEnabled ?? current.latenessRuleEnabled,
     probationDebtEnabled: input.probationDebtEnabled ?? current.probationDebtEnabled,
+    probationMonths: input.probationMonths ?? current.probationMonths,
     signatoryName: input.signatoryName ?? current.signatoryName,
     signatoryTitle: input.signatoryTitle ?? current.signatoryTitle,
     weeklyHoursText: input.weeklyHoursText ?? current.weeklyHoursText,
+    orgRegistrationNo: input.orgRegistrationNo ?? current.orgRegistrationNo,
+    orgAddress: input.orgAddress ?? current.orgAddress,
+    orgPhone: input.orgPhone ?? current.orgPhone,
+    orgEmail: input.orgEmail ?? current.orgEmail,
+    schoolBankName: input.schoolBankName ?? current.schoolBankName,
+    schoolBankBranch: input.schoolBankBranch ?? current.schoolBankBranch,
+    schoolAccountNo: input.schoolAccountNo ?? current.schoolAccountNo,
+    employerNameBn: input.employerNameBn ?? current.employerNameBn,
+    employerAddressBn: input.employerAddressBn ?? current.employerAddressBn,
+    signatoryNameBn: input.signatoryNameBn ?? current.signatoryNameBn,
+    signatoryTitleBn: input.signatoryTitleBn ?? current.signatoryTitleBn,
     letterRefPrefix: input.letterRefPrefix ?? current.letterRefPrefix,
   };
 

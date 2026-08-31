@@ -258,7 +258,7 @@ export async function computeFinalSettlement(input: ComputeSettlementInput): Pro
       type: "unpaid_leave",
       amount: Math.round(rate * heldProbationDays),
       days: heldProbationDays,
-      note: "শিক্ষানবিশকালীন জমা ছুটি (D-#540)",
+      note: "প্রবেশনকালীন জমা ছুটি (D-#540)",
     });
   }
 

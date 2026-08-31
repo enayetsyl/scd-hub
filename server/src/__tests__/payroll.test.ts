@@ -70,12 +70,26 @@ jest.mock("../modules/hr/models/LatenessCharge", () => ({
     updateMany: jest.fn().mockResolvedValue({ modifiedCount: 0 }),
   },
 }));
+// D-#587 — payroll now resolves the salary EFFECTIVE in the month being run. Mocked
+// empty by default, which is the state of every staff member who has never had a
+// change recorded: the run then uses the profile's current figure, and every existing
+// assertion in this file must still hold to the taka.
+const mockPayChangeFind = jest.fn(() => [] as unknown[]);
+jest.mock("../modules/hr/models/StaffPayChange", () => ({
+  StaffPayChange: {
+    find: () => ({ sort: () => ({ select: () => ({ lean: async () => mockPayChangeFind() }) }) }),
+    findOne: () => ({ sort: () => ({ select: () => ({ lean: async () => null }) }) }),
+    create: jest.fn().mockResolvedValue({ _id: "x" }),
+  },
+}));
 jest.mock("../modules/platform/services/AuditService", () => ({
   writeAudit: (p: unknown) => mockWriteAudit(p),
 }));
 
 import { assertMonthKey, dayRate, computePayslip, PayrollError } from "../modules/hr/services/payrollMath";
 import { preparePayrollRun, approvePayrollRun, cancelPayrollRun, paymentExport } from "../modules/hr/services/PayrollService";
+import ExcelJS from "exceljs";
+import { buildPaymentWorkbook } from "../modules/hr/routes/paymentExportCsv";
 import { issueAdvance, settleAdvance } from "../modules/hr/services/AdvanceService";
 import { splitLatenessCharge } from "../modules/hr/services/LatenessService";
 import { HR_POLICY_DEFAULTS } from "@scd/shared";
@@ -310,17 +324,137 @@ describe("cancelPayrollRun", () => {
 
 // ===========================================================================
 describe("paymentExport (§4.6)", () => {
-  test("locked run → net per non-cash staff, account joined", async () => {
-    const sA = oid();
+  const locked = () =>
     mockRunFindById.mockReturnValue({ lean: async () => ({ _id: oid(), status: "approved_locked" }) });
+
+  test("locked run → net per non-cash staff, full disbursement details joined", async () => {
+    const sA = oid();
+    locked();
     mockSlipFind.mockReturnValue([{ staffProfileId: sA, snapshotName: "A", paymentMethod: "bank", netPay: 26000 }]);
-    mockStaffFind.mockResolvedValue([{ _id: sA, bankAccount: "12345" }]);
+    mockStaffFind.mockResolvedValue([
+      { _id: sA, bankAccount: "12345", bankAccountName: "A", bankName: "IBBL", bankBranch: "Uttara" },
+    ]);
     const rows = await paymentExport(oid().toString());
-    expect(rows).toEqual([{ staffProfileId: sA.toString(), name: "A", paymentMethod: "bank", account: "12345", netPay: 26000 }]);
+    expect(rows).toEqual([
+      {
+        staffProfileId: sA.toString(),
+        name: "A",
+        paymentMethod: "bank",
+        account: "12345",
+        accountName: "A",
+        bankName: "IBBL",
+        bankBranch: "Uttara",
+        netPay: 26000,
+        blockedReason: null,
+      },
+    ]);
   });
+
+  // D-#579 — these three used to be indistinguishable from payable rows.
+  test("no account number → BLOCKED, and still returned so the person is visible", async () => {
+    const sA = oid();
+    locked();
+    mockSlipFind.mockReturnValue([{ staffProfileId: sA, snapshotName: "A", paymentMethod: "bkash", netPay: 9000 }]);
+    mockStaffFind.mockResolvedValue([{ _id: sA }]);
+    const rows = await paymentExport(oid().toString());
+    expect(rows).toHaveLength(1);
+    expect(rows[0].blockedReason).toBe("অ্যাকাউন্ট নম্বর নেই");
+  });
+
+  test("a ৳0 net is blocked — a bank upload cannot accept it", async () => {
+    const sA = oid();
+    locked();
+    mockSlipFind.mockReturnValue([{ staffProfileId: sA, snapshotName: "A", paymentMethod: "bkash", netPay: 0 }]);
+    mockStaffFind.mockResolvedValue([{ _id: sA, bankAccount: "017…" }]);
+    const rows = await paymentExport(oid().toString());
+    expect(rows[0].blockedReason).toBe("নিট বেতন শূন্য");
+  });
+
+  test("a bank transfer needs name + bank + branch; bKash needs only the number", async () => {
+    const bankOnly = oid();
+    const bkash = oid();
+    locked();
+    mockSlipFind.mockReturnValue([
+      { staffProfileId: bankOnly, snapshotName: "A", paymentMethod: "bank", netPay: 100 },
+      { staffProfileId: bkash, snapshotName: "B", paymentMethod: "bkash", netPay: 100 },
+    ]);
+    mockStaffFind.mockResolvedValue([
+      { _id: bankOnly, bankAccount: "12345" }, // number alone — not payable by transfer
+      { _id: bkash, bankAccount: "017…" }, // a number IS the whole instruction here
+    ]);
+    const rows = await paymentExport(oid().toString());
+    expect(rows.find((r) => r.name === "A")!.blockedReason).toBe("ব্যাংকের নাম/শাখা/হিসাবধারীর নাম অসম্পূর্ণ");
+    expect(rows.find((r) => r.name === "B")!.blockedReason).toBeNull();
+  });
+
   test("export refused on a non-locked run", async () => {
     mockRunFindById.mockReturnValue({ lean: async () => ({ _id: oid(), status: "prepared" }) });
     await expect(paymentExport(oid().toString())).rejects.toThrow(/locked run/i);
+  });
+});
+
+// ===========================================================================
+describe("the payment workbook (D-#579, format corrected in D-#590)", () => {
+  const ROWS = [
+    {
+      name: "মোঃ করিম, জুনিয়র",
+      paymentMethod: "bank",
+      account: "0011002200330",
+      accountName: "Md Karim",
+      bankName: "IBBL",
+      bankBranch: "Sylhet",
+      netPay: 26000,
+    },
+    {
+      name: "Test Support Helper",
+      paymentMethod: "bkash",
+      account: "01900000002",
+      accountName: null,
+      bankName: null,
+      bankBranch: null,
+      netPay: 10000,
+    },
+  ];
+
+  /** Read the file back the way Excel would, rather than trusting what we wrote. */
+  async function reopen() {
+    const buf = await buildPaymentWorkbook(ROWS);
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(buf as unknown as ArrayBuffer);
+    return wb.getWorksheet("Payment")!;
+  }
+
+  test("the ACCOUNT keeps its leading zeros — the whole reason this is not a CSV", async () => {
+    const ws = await reopen();
+    // The prod bug: 0011002200330 opened as 11002200330 and 01900000002 as 1900000002.
+    expect(ws.getCell("C2").value).toBe("0011002200330");
+    expect(ws.getCell("C3").value).toBe("01900000002");
+  });
+
+  test("the account cell is TEXT, so Excel cannot re-convert it on open", async () => {
+    const ws = await reopen();
+    expect(ws.getCell("C2").numFmt).toBe("@");
+    expect(typeof ws.getCell("C2").value).toBe("string");
+  });
+
+  test("net pay stays a NUMBER — the office sums that column", async () => {
+    const ws = await reopen();
+    expect(ws.getCell("G2").value).toBe(26000);
+    expect(typeof ws.getCell("G2").value).toBe("number");
+  });
+
+  test("a Bangla name with a comma survives, and bKash's empty bank fields stay empty", async () => {
+    const ws = await reopen();
+    expect(ws.getCell("A2").value).toBe("মোঃ করিম, জুনিয়র");
+    expect(ws.getCell("D3").value ?? "").toBe("");
+    expect(ws.getCell("E3").value ?? "").toBe("");
+  });
+
+  test("the header row is present and in the bank sheet's order", async () => {
+    const ws = await reopen();
+    expect(ws.getRow(1).values).toEqual(
+      expect.arrayContaining(["Name", "Method", "Account", "Account name", "Bank", "Branch", "Net pay"]),
+    );
   });
 });
 
@@ -361,5 +495,95 @@ describe("advances (qard hasan, D-#27)", () => {
     mockAdvFindById.mockResolvedValue(advance2);
     await settleAdvance(advance2._id.toString(), true, ACTOR);
     expect(advance2.status).toBe("written_off");
+  });
+});
+
+// ===========================================================================
+describe("a mid-year raise (D-#587)", () => {
+  const alice = oid();
+
+  beforeEach(() => {
+    mockRunFindOne.mockResolvedValue(null);
+    mockRunCreate.mockImplementation(async (d: Record<string, unknown>) => ({ ...d, _id: oid() }));
+    mockLeaveFind.mockReturnValue([]);
+    mockAdvFind.mockReturnValue([]);
+    mockSlipInsert.mockImplementation(async (docs: unknown[]) => docs);
+    // Her CURRENT salary is 6,000 — she was raised from 5,000.
+    mockStaffFind.mockResolvedValue([
+      { _id: alice, name: "Alice", category: "teacher", monthlySalary: 6000, paymentMethod: "bank" },
+    ]);
+  });
+
+  async function grossFor(monthKey: string): Promise<number> {
+    const { payslips } = await preparePayrollRun({
+      monthKey,
+      workingDays: 30,
+      actorId: ACTOR,
+    });
+    return (payslips[0] as unknown as { grossSalary: number }).grossSalary;
+  }
+
+  /** The rows exactly as stored — the resolver now reads them ALL and picks in JS, so
+   *  the mock must carry `effectiveFrom` rather than pretend the query pre-filtered. */
+  const HISTORY = {
+    joinedThenRaised: [
+      { staffProfileId: alice, effectiveFrom: "2025-07", monthlySalary: 5000, previousSalary: null },
+      { staffProfileId: alice, effectiveFrom: "2026-07", monthlySalary: 6000, previousSalary: 5000 },
+    ],
+    // The PROD SHAPE that broke it (D-#590): the initial figure was dated at the month
+    // it was TYPED (2026-08), later than the backdated raise it is supposed to precede.
+    initialRowDatedLate: [
+      { staffProfileId: alice, effectiveFrom: "2026-07", monthlySalary: 6000, previousSalary: 5000 },
+      { staffProfileId: alice, effectiveFrom: "2026-08", monthlySalary: 5000, previousSalary: null },
+    ],
+  };
+
+  test("with NO recorded change, every month pays the profile's figure — today's behaviour", async () => {
+    mockPayChangeFind.mockReturnValue([]);
+    expect(await grossFor("2026-05")).toBe(6000);
+    expect(await grossFor("2026-09")).toBe(6000);
+  });
+
+  test("a raise effective in July pays 6,000 from July and 5,000 before it", async () => {
+    mockPayChangeFind.mockReturnValue(HISTORY.joinedThenRaised);
+    expect(await grossFor("2026-06")).toBe(5000);
+    // The latest change already in effect wins. Getting this backwards would pay the
+    // raise a month early, every month.
+    expect(await grossFor("2026-07")).toBe(6000);
+    expect(await grossFor("2026-08")).toBe(6000);
+  });
+
+  test("a month BEFORE every recorded change pays what came before it — never the profile", async () => {
+    // The profile holds 6,000 by now. Re-running an old month must not pay the raise.
+    mockPayChangeFind.mockReturnValue([HISTORY.joinedThenRaised[1]]); // only the raise row
+    expect(await grossFor("2026-03")).toBe(5000); // its previousSalary
+  });
+
+  test("an initial row with no previousSalary IS the figure that applied before it", async () => {
+    mockPayChangeFind.mockReturnValue([HISTORY.joinedThenRaised[0]]); // 2025-07 → 5000, prev null
+    expect(await grossFor("2025-01")).toBe(5000);
+  });
+
+  /**
+   * The prod failure, kept as a test: the wizard dated her initial 5,000 at the month of
+   * ENTRY (2026-08), after the July raise to 6,000. Ordering by effectiveFrom then let
+   * the initial row outrank the raise and August paid the OLD salary.
+   *
+   * The primary fix is that the first row is dated from JOINING (covered in
+   * payHistory.test.ts). This asserts the consequence a payslip would show if such a
+   * pair ever existed again: August genuinely has a 5,000 row in effect, so 5,000 is
+   * the honest answer for that data — and July, which only the raise covers, is 6,000.
+   */
+  test("with the prod row-shape, the resolution is at least self-consistent", async () => {
+    mockPayChangeFind.mockReturnValue(HISTORY.initialRowDatedLate);
+    expect(await grossFor("2026-07")).toBe(6000);
+    expect(await grossFor("2026-08")).toBe(5000);
+  });
+
+  test("the day rate follows the effective salary, so leave is docked at the right rate", async () => {
+    mockPayChangeFind.mockReturnValue(HISTORY.joinedThenRaised);
+    const { payslips } = await preparePayrollRun({ monthKey: "2026-06", workingDays: 30, actorId: ACTOR });
+    // 5000 / 30 = 167, not 6000 / 30 = 200.
+    expect((payslips[0] as unknown as { dayRate: number }).dayRate).toBe(167);
   });
 });

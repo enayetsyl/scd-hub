@@ -12,6 +12,12 @@
  */
 import { builder } from "../../../schema";
 import { StaffProfile } from "../../foundation/models/StaffProfile";
+import { recordPayChange, payHistoryForStaff } from "../services/PayHistoryService";
+import {
+  paymentAdvice,
+  type AdviceGroup,
+  type AdviceRow,
+} from "../services/PaymentAdviceService";
 import { writeAudit } from "../../platform/services/AuditService";
 import type { PaymentMethod } from "@scd/shared";
 import {
@@ -106,9 +112,99 @@ PaymentExportRowRef.implement({
     name: t.exposeString("name"),
     paymentMethod: t.exposeString("paymentMethod"),
     account: t.string({ nullable: true, resolve: (r) => r.account }),
+    accountName: t.string({ nullable: true, resolve: (r) => r.accountName }),
+    bankName: t.string({ nullable: true, resolve: (r) => r.bankName }),
+    bankBranch: t.string({ nullable: true, resolve: (r) => r.bankBranch }),
     netPay: t.exposeFloat("netPay"),
+    // Non-null = this line CANNOT be paid, and why. Shown apart from the payable
+    // list rather than dropped, so a missing salary is visible (D-#579).
+    blockedReason: t.string({ nullable: true, resolve: (r) => r.blockedReason }),
   }),
 });
+
+/**
+ * The salary-advice pack as DATA, so the screen can show the three lists before anyone
+ * downloads the PDF (D-#591) — and, more importantly, show who is BLOCKED while there
+ * is still time to fix it.
+ *
+ * `ready`/`missing` describe the letterhead, not the staff: the PDF route refuses when
+ * the school's own bank details are unset, and the screen should say so rather than
+ * hand the operator a download that returns a 400.
+ */
+const AdviceRowRef = builder.objectRef<AdviceRow>("PaymentAdviceRow");
+AdviceRowRef.implement({
+  fields: (t) => ({
+    staffProfileId: t.exposeString("staffProfileId"),
+    name: t.exposeString("name"),
+    accountName: t.string({ nullable: true, resolve: (r) => r.accountName }),
+    account: t.string({ nullable: true, resolve: (r) => r.account }),
+    bankName: t.string({ nullable: true, resolve: (r) => r.bankName }),
+    bankBranch: t.string({ nullable: true, resolve: (r) => r.bankBranch }),
+    routingNo: t.string({ nullable: true, resolve: (r) => r.routingNo }),
+    amount: t.exposeFloat("amount"),
+    blockedReason: t.string({ nullable: true, resolve: (r) => r.blockedReason }),
+  }),
+});
+
+const AdviceGroupRef = builder.objectRef<AdviceGroup>("PaymentAdviceGroup");
+AdviceGroupRef.implement({
+  fields: (t) => ({
+    channel: t.exposeString("channel"),
+    total: t.exposeFloat("total"),
+    rows: t.field({ type: [AdviceRowRef], resolve: (g) => g.rows }),
+    blocked: t.field({ type: [AdviceRowRef], resolve: (g) => g.blocked }),
+  }),
+});
+
+interface AdviceView {
+  monthKey: string;
+  paymentInfo: string;
+  letterDate: string;
+  ready: boolean;
+  missing: string[];
+  groups: AdviceGroup[];
+}
+const AdviceRef = builder.objectRef<AdviceView>("PaymentAdvice");
+AdviceRef.implement({
+  description:
+    "The bank advice pack for a locked run (D-#591): own-bank, BEFTN, bKash and cash, " +
+    "each with its payable rows, its total and anyone it cannot pay.",
+  fields: (t) => ({
+    monthKey: t.exposeString("monthKey"),
+    paymentInfo: t.exposeString("paymentInfo"),
+    letterDate: t.exposeString("letterDate"),
+    ready: t.exposeBoolean("ready"),
+    missing: t.exposeStringList("missing"),
+    groups: t.field({ type: [AdviceGroupRef], resolve: (a) => a.groups }),
+  }),
+});
+
+builder.queryField("paymentAdvice", (t) =>
+  t.field({
+    type: AdviceRef,
+    description: "The bank advice pack for a LOCKED run (D-#591). Requires payroll:manage.",
+    authScopes: { hasPermission: "payroll:manage" },
+    args: { runId: t.arg.string({ required: true }) },
+    resolve: async (_root, args) => {
+      const a = await paymentAdvice(args.runId);
+      const p = a.policy;
+      const missing = [
+        !p.employerNameBn.trim() ? "প্রতিষ্ঠানের নাম (বাংলা)" : "",
+        !p.orgAddress.trim() ? "ঠিকানা" : "",
+        !p.schoolBankName.trim() ? "স্কুলের ব্যাংকের নাম" : "",
+        !p.schoolAccountNo.trim() ? "স্কুলের হিসাব নম্বর" : "",
+      ].filter(Boolean);
+      return {
+        monthKey: a.monthKey,
+        paymentInfo: a.paymentInfo,
+        letterDate: a.letterDate,
+        ready: missing.length === 0,
+        missing,
+        groups: a.groups,
+      };
+    },
+  }),
+);
 
 const PayLineInputRef = builder.inputType("PayLineInput", {
   description: "A manual deduction/addition line (arrears/bonus/clawback/statutory/other).",
@@ -129,6 +225,46 @@ const StaffAdjustmentInputRef = builder.inputType("StaffPayrollAdjustmentInput",
     manualAdditions: t.field({ type: [PayLineInputRef], required: false }),
   }),
 });
+
+interface PayChangeShape {
+  id: string;
+  effectiveFrom: string;
+  monthlySalary: number;
+  previousSalary: number | null;
+  note: string | null;
+}
+const PayChangeRef = builder.objectRef<PayChangeShape>("StaffPayChange");
+PayChangeRef.implement({
+  description:
+    "One recorded salary change: the figure, the month it takes effect, and what it " +
+    "replaced (D-#587). Payroll pays the figure effective in the month being run.",
+  fields: (t) => ({
+    id: t.exposeString("id"),
+    effectiveFrom: t.exposeString("effectiveFrom"),
+    monthlySalary: t.exposeFloat("monthlySalary"),
+    previousSalary: t.float({ nullable: true, resolve: (r) => r.previousSalary }),
+    note: t.string({ nullable: true, resolve: (r) => r.note }),
+  }),
+});
+
+builder.queryField("staffPayHistory", (t) =>
+  t.field({
+    type: [PayChangeRef],
+    description: "A staff member's recorded salary changes, newest first. payroll:manage.",
+    authScopes: { hasPermission: "payroll:manage" },
+    args: { staffProfileId: t.arg.string({ required: true }) },
+    resolve: async (_root, args) => {
+      const rows = await payHistoryForStaff(args.staffProfileId);
+      return rows.map((r) => ({
+        id: r._id.toString(),
+        effectiveFrom: r.effectiveFrom,
+        monthlySalary: r.monthlySalary,
+        previousSalary: r.previousSalary ?? null,
+        note: r.note ?? null,
+      }));
+    },
+  }),
+);
 
 interface StaffPayView { id: string; monthlySalary: number | null; paymentMethod: string | null }
 const StaffPayRef = builder.objectRef<StaffPayView>("StaffPay");
@@ -153,10 +289,15 @@ builder.mutationField("setStaffPay", (t) =>
       staffProfileId: t.arg.string({ required: true }),
       monthlySalary: t.arg.float({ required: false }),
       paymentMethod: t.arg.string({ required: false }),
+      /** YYYY-MM — the month the new figure takes effect (D-#587). Defaults to now. */
+      effectiveFrom: t.arg.string({ required: false }),
+      /** Why it changed, for the history row. */
+      payChangeNote: t.arg.string({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
       const staff = await StaffProfile.findById(args.staffProfileId);
       if (!staff) throw new Error("Staff profile not found");
+      const previousSalary = staff.monthlySalary ?? null;
       // A caller that MEANT to set a salary but sent a non-number must be told so, not
       // silently given a payment-method-only save. Found in the 2026-08-26 prod E2E
       // test: `Number("Tk. 6000,")` is NaN, JSON serialises NaN as null, null reads
@@ -172,6 +313,23 @@ builder.mutationField("setStaffPay", (t) =>
       }
       if (args.paymentMethod != null) staff.paymentMethod = args.paymentMethod as PaymentMethod;
       await staff.save();
+
+      // A CHANGED figure gets a history row with the month it takes effect (D-#587).
+      // Re-saving the same number is not a change and writes nothing — otherwise a
+      // payment-method edit would leave a trail of identical "raises".
+      if (args.monthlySalary != null && args.monthlySalary !== previousSalary) {
+        await recordPayChange({
+          staffProfileId: staff._id.toString(),
+          monthlySalary: args.monthlySalary,
+          effectiveFrom: args.effectiveFrom ?? null,
+          previousSalary,
+          // The FIRST row is dated from her joining month, not today (D-#590).
+          joiningMonth: staff.joiningDate ? staff.joiningDate.toISOString().slice(0, 7) : null,
+          note: args.payChangeNote ?? null,
+          actorId: ctx.auth!.userId,
+        });
+      }
+
       await writeAudit({
         eventKind: "STAFF_PAY_SET",
         actorId: ctx.auth!.userId,

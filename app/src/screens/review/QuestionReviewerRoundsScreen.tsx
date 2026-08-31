@@ -32,12 +32,15 @@ import {
   ChipRow,
   Badge,
   Button,
+  Notice,
   Loader,
   EmptyState,
   ErrorBanner,
 } from "../../components/ui";
 import { STR, subjectLabel, classLevelLabel, reviewStatusLabel, bnNum } from "../../lib/labels";
 import { AnswerCarrier } from "../../components/QuestionAnswer";
+import { QuestionEditSheet } from "../../components/QuestionEditSheet";
+import { useAuth } from "../../auth/AuthContext";
 import { parsePayload } from "../../lib/question";
 import { friendlyError } from "../../lib/errors";
 import { useColors } from "../../theme";
@@ -65,6 +68,18 @@ export default function QuestionReviewerRoundsScreen({
   const [offset, setOffset] = useState(0);
   const [rounds, setRounds] = useState<QuestionReviewRoundT[]>([]);
   const [lastPageSize, setLastPageSize] = useState<number | null>(null);
+
+  /**
+   * Correct the question from HERE (QR-15, D-#572).
+   *
+   * This is the screen where a condition is actually read — the reviewer’s বাক্য সহ কারণ
+   * sits under the answer she objected to. The publish queue got সম্পাদনা in QR-8; this
+   * drill-down did not, so reading the condition here meant navigating away to act on it.
+   */
+  const { can } = useAuth();
+  const mayManage = can("question:manage");
+  const [editing, setEditing] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const [{ data, fetching, error }, refetch] = useQuery({
     query: QUESTION_REVIEWER_ROUNDS,
@@ -126,6 +141,7 @@ export default function QuestionReviewerRoundsScreen({
     >
       <H2>{reviewerName ?? "—"}</H2>
       {scope !== "" ? <Muted>{scope}</Muted> : null}
+      {notice ? <Notice tone="ok" message={notice} /> : null}
 
       <View style={{ height: space(3) }} />
       <ChipRow>
@@ -159,12 +175,23 @@ export default function QuestionReviewerRoundsScreen({
       ) : (
         <>
           {rounds.map((r) => (
-            <Card
-              key={r.id}
-              onPress={() =>
-                navigation.navigate("QuestionReviewThread", { artifactId: r.artifactId })
-              }
-            >
+            <React.Fragment key={r.id}>
+              <Card
+                /**
+                 * NOT pressable while this row is being edited (D-#573).
+                 *
+                 * The whole card navigates to the review thread, and the edit sheet used to
+                 * render INSIDE it — so a paste into a field bubbled up and threw the editor
+                 * away mid-sentence. The sheet is now a SIBLING of the card, and the card
+                 * stops listening while it is open: either alone would fix the symptom, but
+                 * a tappable card sitting under an open editor is wrong regardless.
+                 */
+                onPress={
+                  editing === r.id
+                    ? undefined
+                    : () => navigation.navigate("QuestionReviewThread", { artifactId: r.artifactId })
+                }
+              >
               <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center" }}>
                 <Body style={{ fontWeight: "700" }}>{r.qid ?? r.addressNumber}</Body>
                 {r.questionType ? (
@@ -190,7 +217,39 @@ export default function QuestionReviewerRoundsScreen({
               {r.reason ? (
                 <Muted style={{ marginTop: space(1) }}>{`${STR.qrReason}: ${r.reason}`}</Muted>
               ) : null}
-            </Card>
+
+              {/* The condition is READ here, so it should be actionable here (D-#572).
+                  The publish queue got this in QR-8; this drill-down did not, so acting on
+                  a condition meant navigating away from the screen that showed it. */}
+              {mayManage ? (
+                <Button
+                  title={STR.qeEdit}
+                  variant="ghost"
+                  onPress={() => setEditing(editing === r.id ? null : r.id)}
+                />
+              ) : null}
+              </Card>
+
+              {/* OUTSIDE the card on purpose (D-#573): the card navigates on press, so a
+                  paste into a field inside it bubbled up and threw the editor away. */}
+              {mayManage && editing === r.id ? (
+                <QuestionEditSheet
+                  artifactId={r.artifactId}
+                  payload={parsePayload(r.payloadJson)}
+                  isPublished={r.artifactReviewStatus === "gold"}
+                  onDone={(message) => {
+                    setEditing(null);
+                    setNotice(message);
+                    setRounds([]);
+                    setOffset(0);
+                    setLastPageSize(null);
+                    refetch({ requestPolicy: "network-only" });
+                    refetchCount({ requestPolicy: "network-only" });
+                  }}
+                  onCancel={() => setEditing(null)}
+                />
+              ) : null}
+            </React.Fragment>
           ))}
           {hasMore ? (
             <View style={{ marginTop: space(3) }}>
@@ -206,4 +265,4 @@ export default function QuestionReviewerRoundsScreen({
       )}
     </Screen>
   );
-}
+}undefined

@@ -23,9 +23,9 @@
  *
  * Permissions are the SAME ones the plan loop uses — D-#508 adds none.
  */
-import { GraphQLError } from "graphql";
 import { builder } from "../../../schema";
 import { ForbiddenError } from "../../../middleware/authz";
+import { expectedGraphQLError } from "../../../observability/sentry";
 import { isAdminStaff } from "../../foundation/services/RoleScope";
 import { ReviewError } from "../../content/services/ReviewService";
 import {
@@ -38,6 +38,9 @@ import {
   publishQuestion as publishSvc,
   publishQuestionBulk as publishBulkSvc,
   questionCoverage as coverageSvc,
+  questionReviewerSlices as slicesSvc,
+  myReviewChapters as myChaptersSvc,
+  type ReviewerSliceDTO,
   type QuestionCoverageDTO,
   listMyQuestionReviews,
   countMyQuestionReviews,
@@ -143,7 +146,7 @@ function mapReviewError(err: unknown): never {
   if (err instanceof ReviewError) {
     if (err.message.startsWith("FORBIDDEN")) throw new ForbiddenError(err.message);
     const closed = /not open for submission/i.test(err.message);
-    throw new GraphQLError(
+    throw expectedGraphQLError(
       closed
         ? "This review round is closed — the question was published or a newer version was imported."
         : err.message,
@@ -808,6 +811,65 @@ builder.queryField("questionCoverage", (t) =>
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       return coverageSvc({ subject: args.subject, classLevel: args.classLevel, chapter: args.chapter });
+    },
+  }),
+);
+
+const ReviewerSliceRef = builder.objectRef<ReviewerSliceDTO>("ReviewerSlice");
+ReviewerSliceRef.implement({
+  description:
+    "One (reviewer × subject × class × chapter) slice — who received what (QR-14, D-#568). " +
+    "Counts ROUNDS, not distinct questions, so a reviewer’s slices sum to the total on their " +
+    "progress card. Identity-plane; behind the ADR-005 firewall.",
+  fields: (t) => ({
+    reviewerId: t.exposeString("reviewerId"),
+    reviewerName: t.string({ nullable: true, resolve: (r) => r.reviewerName }),
+    subject: t.exposeString("subject"),
+    classLevel: t.exposeInt("classLevel"),
+    chapter: t.exposeString("chapter"),
+    assigned: t.exposeInt("assigned"),
+    decided: t.exposeInt("decided"),
+    pending: t.exposeInt("pending"),
+  }),
+});
+
+builder.queryField("questionReviewerSlices", (t) =>
+  t.field({
+    type: [ReviewerSliceRef],
+    description:
+      "Which subject/class/chapter slices each reviewer holds, and how far through each " +
+      "(QR-14, D-#568). The progress card gave only a total, so ‘which chapters did I give " +
+      "her’ meant tapping through every subject × class combination. Requires " +
+      "content:assign_review.",
+    authScopes: { hasPermission: "content:assign_review" },
+    args: {
+      classLevel: t.arg.int({ required: false }),
+      subject: t.arg.string({ required: false }),
+      chapter: t.arg.int({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      return slicesSvc({ classLevel: args.classLevel, subject: args.subject, chapter: args.chapter });
+    },
+  }),
+);
+
+builder.queryField("myReviewChapters", (t) =>
+  t.field({
+    type: ["Int"],
+    description:
+      "The chapters the CALLER actually holds rounds for (QR-14, D-#568). Her queue filter " +
+      "used to read `questionChapters`, which walks the bank and is publish-gated for a " +
+      "teacher — so she was offered only chapters whose work was already done. Requires " +
+      "content:review.",
+    authScopes: { hasPermission: "content:review" },
+    args: {
+      subject: t.arg.string({ required: false }),
+      classLevel: t.arg.int({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      return myChaptersSvc(ctx.auth.userId, { subject: args.subject, classLevel: args.classLevel });
     },
   }),
 );

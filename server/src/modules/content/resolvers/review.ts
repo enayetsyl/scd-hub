@@ -13,9 +13,9 @@
  *
  * The Principal sign-off (reviewed→gold) + inbox/thread queries land in PR-2.
  */
-import { GraphQLError } from "graphql";
 import { builder } from "../../../schema";
 import { ForbiddenError } from "../../../middleware/authz";
+import { expectedGraphQLError } from "../../../observability/sentry";
 import { isAdminStaff } from "../../foundation/services/RoleScope";
 import {
   assignPlanReview as assignSvc,
@@ -74,7 +74,7 @@ function mapReviewError(err: unknown): never {
       throw new ForbiddenError(err.message);
     }
     const closed = /not open for submission/i.test(err.message);
-    throw new GraphQLError(
+    throw expectedGraphQLError(
       closed
         ? "This review round is closed — the plan was signed off or a newer version was imported."
         : err.message,
