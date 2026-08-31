@@ -48,6 +48,7 @@ jest.mock("../modules/platform/services/AuditService", () => ({
 import {
   reassignClaimsForSubject,
   reassignAllOpenClaims,
+  SYSTEM_ACTOR_ID,
 } from "../modules/trackers/services/ClaimReassignService";
 
 const oid = () => new mongoose.Types.ObjectId();
@@ -174,6 +175,51 @@ describe("reassignAllOpenClaims — the daily safety net", () => {
     expect(mockClaimFind.mock.calls[0][0]).toEqual({ status: "PENDING" });
     expect(res).toEqual({ examined: 2, moved: 2 });
     expect(mockEmitHandover).toHaveBeenCalledTimes(2);
+  });
+});
+
+/**
+ * The audit rows must be STORABLE, not merely requested.
+ *
+ * `writeAudit` swallows its own failures on purpose — a log write must never take
+ * down the request — so an unstorable row is lost in silence. The first production
+ * sweep moved 18 claims correctly and wrote 0 audit rows, because `actorId` was the
+ * string "system" and `Audit.actorId` is an ObjectId. The old test asserted that
+ * writeAudit was CALLED, which was true and useless.
+ *
+ * So these validate the captured payload against the real Audit schema. No database:
+ * `validateSync` runs the same casts mongoose would run on save.
+ */
+describe("the audit row it writes can actually be stored", () => {
+  test("the payload passes the real Audit schema", async () => {
+    const claim = claimDoc(OLD_TEACHER);
+    mockClaimFind.mockResolvedValue([claim]);
+    mockResolve.mockResolvedValue({ teacherId: NEW_TEACHER, source: "GRANT" });
+
+    await reassignClaimsForSubject(SECTION, SUBJECT_ID, "6a2f7c1af97c0ab0f571a14b");
+
+    const { Audit } = jest.requireActual<{ Audit: new (d: unknown) => { validateSync(): unknown } }>(
+      "../modules/platform/models/Audit",
+    );
+    const payload = mockAudit.mock.calls[0][0];
+    expect(new Audit({ ...payload, eventAt: new Date() }).validateSync()).toBeUndefined();
+  });
+
+  test("the SWEEP's own actor casts — the exact production failure", async () => {
+    const claim = claimDoc(OLD_TEACHER);
+    mockClaimFind.mockResolvedValue([claim]);
+    mockResolve.mockResolvedValue({ teacherId: NEW_TEACHER, source: "GRANT" });
+
+    // no actorId: the daily sweep has no human behind it
+    await reassignAllOpenClaims();
+
+    const { Audit } = jest.requireActual<{ Audit: new (d: unknown) => { validateSync(): unknown } }>(
+      "../modules/platform/models/Audit",
+    );
+    const payload = mockAudit.mock.calls[0][0];
+    expect(payload.actorId).toBe(SYSTEM_ACTOR_ID);
+    // "system" would fail here with a CastError, exactly as it did in production
+    expect(new Audit({ ...payload, eventAt: new Date() }).validateSync()).toBeUndefined();
   });
 });
 

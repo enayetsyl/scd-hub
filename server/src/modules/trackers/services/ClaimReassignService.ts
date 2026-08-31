@@ -22,6 +22,19 @@ import { resolveClaimRecipient } from "./ClaimRecipient";
 import { emitWorkClaimReassigned } from "../../notifications/services/emitters";
 import { writeAudit } from "../../platform/services/AuditService";
 
+/**
+ * The actor on a handover nobody asked for — the daily sweep's own moves.
+ *
+ * It must be a CASTABLE ObjectId, not a word. `Audit.actorId` is
+ * `Schema.Types.ObjectId`, and `writeAudit` swallows its own failures by design (a
+ * log write must never take down the request), so the string "system" produced a
+ * cast error on every row and lost all 18 handover audits from the first
+ * production sweep — silently, with the claims themselves moving correctly. The
+ * all-zero id is the convention already in use for exactly this
+ * (`HW_AUTO_ISSUE_ACTOR_ID`): valid to cast, and never a real user.
+ */
+export const SYSTEM_ACTOR_ID = "000000000000000000000000";
+
 export interface ReassignResult {
   examined: number;
   moved: number;
@@ -81,7 +94,7 @@ export async function reassignClaimsForSubject(
 
       await writeAudit({
         eventKind: "WORK_CLAIM_REASSIGNED",
-        actorId: actorId ?? "system",
+        actorId: actorId ?? SYSTEM_ACTOR_ID,
         targetId: claim._id.toString(),
         targetKind: "GuardianWorkClaim",
         meta: {
@@ -104,7 +117,9 @@ export async function reassignClaimsForSubject(
  * change that never went through `grantTeaching` — a routine edit, a deactivated
  * user, a directly-edited grant — still self-heals within a day.
  */
-export async function reassignAllOpenClaims(actorId = "system"): Promise<ReassignResult> {
+export async function reassignAllOpenClaims(
+  actorId: string = SYSTEM_ACTOR_ID,
+): Promise<ReassignResult> {
   const out: ReassignResult = { examined: 0, moved: 0 };
   try {
     const claims = await GuardianWorkClaim.find({ status: "PENDING" });
