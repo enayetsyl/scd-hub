@@ -25,26 +25,21 @@
 import { readFileSync } from "fs";
 import path from "path";
 
-const SERVICE = readFileSync(
-  path.resolve(__dirname, "../modules/exams/services/ExamSyllabusReadService.ts"),
-  "utf8",
-);
-const CLASS_MODEL = readFileSync(
-  path.resolve(__dirname, "../modules/foundation/models/Class.ts"),
-  "utf8",
-);
-const SCREEN = readFileSync(
-  path.resolve(__dirname, "../../../app/src/screens/syllabus/SyllabusApprovalsScreen.tsx"),
-  "utf8",
-);
-const RESOLVER = readFileSync(
-  path.resolve(__dirname, "../modules/exams/resolvers/examSyllabus.ts"),
-  "utf8",
-);
-const APP_GQL = readFileSync(
-  path.resolve(__dirname, "../../../app/src/graphql/examSyllabus.ts"),
-  "utf8",
-);
+/**
+ * Read a source file with its line endings NORMALISED.
+ *
+ * Not cosmetic: a Windows checkout gives CRLF, so a pattern written with a bare
+ * newline silently stops matching — this suite failed on exactly that after a
+ * fresh worktree checkout, while passing in CI.
+ */
+const read = (rel: string): string =>
+  readFileSync(path.resolve(__dirname, rel), "utf8").split("\r\n").join("\n");
+
+const SERVICE = read("../modules/exams/services/ExamSyllabusReadService.ts");
+const CLASS_MODEL = read("../modules/foundation/models/Class.ts");
+const SCREEN = read("../../../app/src/screens/syllabus/SyllabusApprovalsScreen.tsx");
+const RESOLVER = read("../modules/exams/resolvers/examSyllabus.ts");
+const APP_GQL = read("../../../app/src/graphql/examSyllabus.ts");
 
 describe("the class name is read from the field that exists", () => {
   test("Class stores its name as nameBn, and has no `label`", () => {

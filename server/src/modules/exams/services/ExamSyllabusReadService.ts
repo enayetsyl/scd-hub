@@ -44,6 +44,15 @@ export interface SyllabusShape {
    * sees three identical "ইংরেজি" cards with nothing to tell them apart.
    */
   classLabel: string;
+  /**
+   * The teacher this row was SENT TO, once it has been sent. Exposed so Office
+   * and the Principal can see who holds a subject without opening it — the
+   * board's শি glyph says "with a teacher" and never which one.
+   *
+   * The id only; the app already resolves names from its teachers query, and
+   * resolving here would be a user lookup per row on a whole-school board.
+   */
+  approverUserId: string | null;
   subject: RoutineSubject;
   bodyMd: string;
   marks: ISyllabusMarkRow[];
@@ -104,6 +113,7 @@ function toShape(
     examDateKey?: string | null;
     status: SyllabusStatus;
     sendBackReason?: string | null;
+    approverUserId?: Types.ObjectId | null;
   },
   isMine: boolean,
   classLabel: string,
@@ -113,6 +123,7 @@ function toShape(
     examId: row.examId.toString(),
     classId: row.classId.toString(),
     classLabel,
+    approverUserId: row.approverUserId?.toString() ?? null,
     subject: row.subject,
     bodyMd: row.bodyMd,
     marks: row.marks,
@@ -138,6 +149,8 @@ function placeholder(
     examId,
     classId,
     classLabel,
+    // Nothing is stored yet, so nobody holds it.
+    approverUserId: null,
     subject,
     bodyMd: "",
     marks: [],
