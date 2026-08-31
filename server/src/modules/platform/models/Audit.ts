@@ -237,6 +237,7 @@ export type AuditEventKind =
   | "WORK_CLAIM_ACCEPTED"     // closed by the teacher’s ordinary submit pass (resolution AUTO)
   | "WORK_CLAIM_REJECTED"     // the one manual close — reason is a picker value, never free text
   | "WORK_CLAIM_NUDGED"       // Office re-fired the teacher’s notification (Office cannot resolve)
+  | "WORK_CLAIM_REASSIGNED"   // teaching changed hands; the open claim followed it (WC-7)
   | "WORK_CLAIM_EXPIRED"      // 7 school days with no answer — leaves the queue, stays here
   | "PERMISSION_DENIED";
 
