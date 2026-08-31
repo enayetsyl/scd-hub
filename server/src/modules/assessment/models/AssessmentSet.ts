@@ -37,6 +37,14 @@ export interface IAssessmentSet extends Document {
   /** CT only */
   totalMarks?: number;
   /** CT only — minutes */
+  /**
+   * Exam minutes for this set, FROZEN at assembly (QT-1, D-#593).
+   *
+   * `durationMinutes` is what the set CLAIMS to take (doubled for homework); this is the
+   * exam-time basis it came from. Stored so a later edit to the rate table cannot rewrite
+   * a duration a class was already told.
+   */
+  examMinutes?: number;
   durationMinutes?: number;
   /** HW / AS only */
   dueDate?: Date;
@@ -66,6 +74,7 @@ const AssessmentSetSchema = new Schema<IAssessmentSet>(
     status: { type: String, enum: ["draft", "assembled"], required: true, default: "draft" },
     basketItems: { type: [BasketItemSchema], default: [] },
     totalMarks: { type: Number },
+    examMinutes: { type: Number },
     durationMinutes: { type: Number },
     dueDate: { type: Date },
     createdBy: { type: Schema.Types.ObjectId, required: true },

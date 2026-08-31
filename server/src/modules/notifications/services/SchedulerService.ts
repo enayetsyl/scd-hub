@@ -62,6 +62,7 @@ import {
   runWorkClaimRung,
   expireStaleWorkClaims,
 } from "../../trackers/services/WorkClaimSweepService";
+import { reassignAllOpenClaims } from "../../trackers/services/ClaimReassignService";
 import {
   sweepHomeworkAutoChase,
   HW_AUTO_CHASE_MINUTES,
@@ -372,6 +373,20 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
   // --- Guardian work claims (GC-5, D-#554): 11:30 → Office, 13:00 → Principal.
   // ONE digest row per recipient per rung per day, carrying the count. A claim
   // still open tomorrow appears in tomorrow's rows too — that IS the chasing.
+  // WC-7 safety net, once a day and just BEFORE the first rung: re-resolve every
+  // open claim, so a change that never went through `grantTeaching` — a routine
+  // edit, a deactivated user, a hand-edited grant — still reaches whoever can
+  // actually act, and the rung that follows counts against the new owner.
+  await family("work claim reassign sweep", async () => {
+    if (!windowOpen(nowMin, WORK_CLAIM_OFFICE_RUNG_MIN)) return;
+    await runOnce(dateKey, "WCREASSIGN", async () => {
+      const res = await reassignAllOpenClaims();
+      if (res.moved > 0) {
+        console.log(`[scheduler] work claims reassigned: ${res.moved}/${res.examined}`);
+      }
+    });
+  });
+
   await family("work claim rungs", async () => {
     const rung = WORK_CLAIM_RUNGS.find((r) => windowOpen(nowMin, r.min));
     if (!rung) return;
