@@ -22,6 +22,7 @@ import {
   saveSyllabus,
   saveExamClassNote,
   submitSyllabusToTeacher,
+  reassignSyllabusApprover,
   approveSyllabusAsTeacher,
   sendBackSyllabus,
   publishSyllabus,
@@ -70,6 +71,7 @@ SyllabusRef.implement({
     examId: t.exposeString("examId"),
     classId: t.exposeString("classId"),
     classLabel: t.exposeString("classLabel"),
+    approverUserId: t.string({ nullable: true, resolve: (r) => r.approverUserId }),
     subject: t.exposeString("subject"),
     bodyMd: t.exposeString("bodyMd"),
     marks: t.field({ type: [MarkRowRef], resolve: (r) => r.marks }),
@@ -314,6 +316,29 @@ builder.mutationFields((t) => ({
     },
     resolve: async (_root, args, ctx) => {
       const doc = await submitSyllabusToTeacher(ctx, args.id, args.approverUserId ?? null);
+      return (await syllabusDetail(
+        ctx,
+        doc.examId.toString(),
+        doc.classId.toString(),
+        doc.subject,
+      ))!;
+    },
+  }),
+
+  reassignExamSyllabus: t.field({
+    type: SyllabusRef,
+    description:
+      "Move a TEACHER_REVIEW row to a DIFFERENT routine holder, without changing its stage. " +
+      "The alternative was send-back → re-submit, which recorded an ordinary staffing change as " +
+      "a rejection of the first teacher's work. Refused once the teacher has signed off: that " +
+      "would hand their approval to somebody who never read it.",
+    authScopes: { hasPermission: "exam:manage" },
+    args: {
+      id: t.arg.string({ required: true }),
+      approverUserId: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      const doc = await reassignSyllabusApprover(ctx, args.id, args.approverUserId);
       return (await syllabusDetail(
         ctx,
         doc.examId.toString(),

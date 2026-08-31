@@ -223,6 +223,7 @@ export type AuditEventKind =
   | "EXAM_SYLLABUS_SAVED"             // Office wrote/edited a syllabus row — prose, mark rows, question types
   | "EXAM_SYLLABUS_SUBMITTED"         // sent to the named SUBJECT TEACHER for sign-off (approverUserId in meta)
   | "EXAM_SYLLABUS_TEACHER_APPROVED"  // the subject teacher signed it off (D-#533)
+  | "EXAM_SYLLABUS_REASSIGNED"        // Office/Principal moved a TEACHER_REVIEW row to a different routine holder (D-#610)
   | "EXAM_SYLLABUS_TEACHER_BYPASSED"  // the Principal signed off IN THE TEACHER'S PLACE — no routine holder (§7.2).
                                       // A DISTINCT kind on purpose: folding it into _TEACHER_APPROVED would make the
                                       // stage decorative the first time it was inconvenient, and leave no way to ask
