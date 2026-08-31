@@ -394,67 +394,162 @@ describe("paymentExport (§4.6)", () => {
 });
 
 // ===========================================================================
-describe("the payment workbook (D-#579, format corrected in D-#590)", () => {
-  const ROWS = [
-    {
-      name: "মোঃ করিম, জুনিয়র",
-      paymentMethod: "bank",
-      account: "0011002200330",
-      accountName: "Md Karim",
-      bankName: "IBBL",
-      bankBranch: "Sylhet",
-      netPay: 26000,
-    },
-    {
-      name: "Test Support Helper",
-      paymentMethod: "bkash",
-      account: "01900000002",
-      accountName: null,
-      bankName: null,
-      bankBranch: null,
-      netPay: 10000,
-    },
-  ];
+describe("the payment workbook (D-#579; format D-#590; rebuilt D-#601)", () => {
+  const BLOCKED = {
+    staffProfileId: "s9",
+    name: "Test BEFTN Teacher",
+    accountName: "Test BEFTN Teacher",
+    account: "Al-Arafah Islami Bank", // the bank's NAME, typed into the account box
+    bankName: "Al-Arafah Islami Bank",
+    bankBranch: "Zindabazar",
+    routingNo: null,
+    amount: 12000,
+    blockedReason: "রাউটিং নম্বর নেই",
+  };
+
+  const ADVICE = {
+    monthKey: "2026-08",
+    paymentInfo: "SCD Aug '26 Salary",
+    letterDate: "2026-09-01",
+    policy: {} as never,
+    groups: [
+      {
+        channel: "internal" as const,
+        total: 26000,
+        blocked: [],
+        rows: [
+          {
+            staffProfileId: "s1",
+            name: "মোঃ করিম, জুনিয়র",
+            accountName: "Md Karim",
+            account: "0011002200330",
+            bankName: "Islami Bank Bangladesh PLC",
+            bankBranch: "Sylhet",
+            routingNo: null,
+            amount: 26000,
+            blockedReason: null,
+          },
+        ],
+      },
+      {
+        channel: "beftn" as const,
+        total: 12000,
+        blocked: [BLOCKED],
+        rows: [
+          {
+            staffProfileId: "s2",
+            name: "Test BEFTN Teacher two",
+            accountName: "Test BEFTN Teacher Two",
+            account: "0231120145584",
+            bankName: "Al-Arafah Islami Bank",
+            bankBranch: "Sylhet",
+            routingNo: "015914152",
+            amount: 12000,
+            blockedReason: null,
+          },
+        ],
+      },
+      // In use for nobody this month: it must not produce a worksheet at all.
+      { channel: "bkash" as const, total: 0, blocked: [], rows: [] },
+      {
+        channel: "cash" as const,
+        total: 8000,
+        blocked: [],
+        rows: [
+          {
+            staffProfileId: "s3",
+            name: "Test Cash Staff",
+            accountName: null,
+            account: null,
+            bankName: null,
+            bankBranch: null,
+            routingNo: null,
+            amount: 8000,
+            blockedReason: null,
+          },
+        ],
+      },
+    ],
+  };
 
   /** Read the file back the way Excel would, rather than trusting what we wrote. */
   async function reopen() {
-    const buf = await buildPaymentWorkbook(ROWS);
+    const buf = await buildPaymentWorkbook(ADVICE as never);
     const wb = new ExcelJS.Workbook();
     await wb.xlsx.load(buf as unknown as ArrayBuffer);
-    return wb.getWorksheet("Payment")!;
+    return wb;
   }
 
   test("the ACCOUNT keeps its leading zeros — the whole reason this is not a CSV", async () => {
-    const ws = await reopen();
-    // The prod bug: 0011002200330 opened as 11002200330 and 01900000002 as 1900000002.
-    expect(ws.getCell("C2").value).toBe("0011002200330");
-    expect(ws.getCell("C3").value).toBe("01900000002");
+    const wb = await reopen();
+    // The prod bug: 0011002200330 opened as 11002200330.
+    expect(wb.getWorksheet("Own bank (internal)")!.getCell("C2").value).toBe("0011002200330");
+    expect(wb.getWorksheet("Other banks (BEFTN)")!.getCell("C2").value).toBe("0231120145584");
   });
 
   test("the account cell is TEXT, so Excel cannot re-convert it on open", async () => {
-    const ws = await reopen();
+    const ws = (await reopen()).getWorksheet("Own bank (internal)")!;
     expect(ws.getCell("C2").numFmt).toBe("@");
     expect(typeof ws.getCell("C2").value).toBe("string");
   });
 
-  test("net pay stays a NUMBER — the office sums that column", async () => {
-    const ws = await reopen();
-    expect(ws.getCell("G2").value).toBe(26000);
-    expect(typeof ws.getCell("G2").value).toBe("number");
+  test("the ROUTING NUMBER is on the BEFTN sheet, as text, with its leading zero", async () => {
+    const ws = (await reopen()).getWorksheet("Other banks (BEFTN)")!;
+    expect(ws.getRow(1).values).toEqual(expect.arrayContaining(["Routing no"]));
+    expect(ws.getCell("F2").value).toBe("015914152");
+    expect(ws.getCell("F2").numFmt).toBe("@");
   });
 
-  test("a Bangla name with a comma survives, and bKash's empty bank fields stay empty", async () => {
-    const ws = await reopen();
+  test("the amount stays a NUMBER — the office sums that column", async () => {
+    const ws = (await reopen()).getWorksheet("Own bank (internal)")!;
+    expect(ws.getCell("D2").value).toBe(26000);
+    expect(typeof ws.getCell("D2").value).toBe("number");
+  });
+
+  test("a Bangla name with a comma survives", async () => {
+    const ws = (await reopen()).getWorksheet("Own bank (internal)")!;
     expect(ws.getCell("A2").value).toBe("মোঃ করিম, জুনিয়র");
-    expect(ws.getCell("D3").value ?? "").toBe("");
-    expect(ws.getCell("E3").value ?? "").toBe("");
   });
 
-  test("the header row is present and in the bank sheet's order", async () => {
-    const ws = await reopen();
-    expect(ws.getRow(1).values).toEqual(
-      expect.arrayContaining(["Name", "Method", "Account", "Account name", "Bank", "Branch", "Net pay"]),
-    );
+  /**
+   * THE REGRESSION THIS REBUILD EXISTS FOR (D-#601). The spreadsheet and the PDF were
+   * built from different queries with different ideas of "payable": the older one never
+   * read the routing number, so a teacher the PDF refused was row 2 of the file the
+   * office would have paid from — with her bank's name in the account field.
+   */
+  test("a person the pack cannot pay is NOT on a payable sheet", async () => {
+    const wb = await reopen();
+    const ws = wb.getWorksheet("Other banks (BEFTN)")!;
+    const names: unknown[] = [];
+    ws.eachRow((row) => names.push(row.getCell("A").value));
+    expect(names).not.toContain("Test BEFTN Teacher");
+    expect(names).toContain("Test BEFTN Teacher two");
+  });
+
+  test("…she is on the 'Cannot pay' sheet instead, with the reason", async () => {
+    const ws = (await reopen()).getWorksheet("Cannot pay")!;
+    expect(ws.getCell("A2").value).toBe("Test BEFTN Teacher");
+    expect(ws.getCell("B2").value).toBe("Other banks (BEFTN)");
+    expect(ws.getCell("C2").value).toBe("রাউটিং নম্বর নেই");
+  });
+
+  test("one sheet per channel IN USE — and none for a channel nobody is paid by", async () => {
+    const wb = await reopen();
+    const names = wb.worksheets.map((w) => w.name);
+    expect(names).toEqual(["Own bank (internal)", "Other banks (BEFTN)", "Cash", "Cannot pay"]);
+    expect(names).not.toContain("bKash");
+  });
+
+  test("cash people are IN the file, on their own sheet, with no account column", async () => {
+    const ws = (await reopen()).getWorksheet("Cash")!;
+    expect(ws.getCell("A2").value).toBe("Test Cash Staff");
+    expect(ws.getRow(1).values).not.toEqual(expect.arrayContaining(["Account"]));
+  });
+
+  test("each sheet carries the total the covering letter quotes", async () => {
+    const wb = await reopen();
+    expect(wb.getWorksheet("Own bank (internal)")!.getCell("D3").value).toBe(26000);
+    expect(wb.getWorksheet("Other banks (BEFTN)")!.getCell("G3").value).toBe(12000);
   });
 });
 
