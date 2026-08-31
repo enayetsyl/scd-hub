@@ -44,6 +44,10 @@ const NotificationRefsRef = builder.objectRef<NotificationRefs>("NotificationRef
     // D-#301: observation deep-link — the CO-3 kinds carry it; the app opens
     // ObservationDetail directly instead of a list screen.
     observationId: t.string({ nullable: true, resolve: (r) => r.observationId ?? null }),
+    // WC-6: the claim kinds were stored with these refs but never exposed, so the
+    // app could not deep-link them and every claim notification was a dead-end tap.
+    workClaimId: t.string({ nullable: true, resolve: (r) => r.workClaimId ?? null }),
+    workClaimTracker: t.string({ nullable: true, resolve: (r) => r.workClaimTracker ?? null }),
   }),
 });
 
