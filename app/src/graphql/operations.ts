@@ -5929,6 +5929,10 @@ export interface NotificationRefsT {
   hour: number | null;
   /** D-#301: CO-3 observation kinds carry the id for the detail deep-link. */
   observationId: string | null;
+  /** WC-6: the guardian work-claim kinds. The tracker says which list to open —
+   *  বাড়ির কাজ and অ্যাসাইনমেন্ট are separate tabs. */
+  workClaimId: string | null;
+  workClaimTracker: string | null;
 }
 
 export interface NotificationT {
@@ -5947,6 +5951,7 @@ const NOTIFICATION_FIELDS = `
     classNoteId slotId date groupType groupId hwItemId studentId sectionId
     reviewAssignmentId artifactId substitutionId loanId rung
     audienceKey periodNumber tier hour observationId
+    workClaimId workClaimTracker
   }
 `;
 

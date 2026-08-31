@@ -229,7 +229,7 @@ export default function HrPolicyScreen(): React.ReactElement {
       {/* --- the Bangla contract block ------------------------------------- */}
       <Card>
         <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.stfLetterContract}</Body>
-        <Muted>{STR.stfContractPolicyMissing}</Muted>
+        <Muted>{STR.stfPolicyContractNote}</Muted>
         <Field label={STR.stfEmployerNameBn} value={employerNameBn} onChangeText={setEmployerNameBn} />
         <Field
           label={STR.stfEmployerAddressBn}
@@ -244,7 +244,7 @@ export default function HrPolicyScreen(): React.ReactElement {
       {/* --- the salary-advice letterhead + the school's own bank (D-#591) ------ */}
       <Card>
         <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.stfPolicyLetterhead}</Body>
-        <Muted>{STR.stfAdviceNotReady}</Muted>
+        <Muted>{STR.stfPolicyLetterheadNote}</Muted>
         <Field label={STR.stfOrgRegistrationNo} value={orgRegistrationNo} onChangeText={setOrgRegistrationNo} />
         <Field label={STR.stfOrgAddress} value={orgAddress} onChangeText={setOrgAddress} />
         <Field label={STR.stfOrgPhone} value={orgPhone} onChangeText={setOrgPhone} />

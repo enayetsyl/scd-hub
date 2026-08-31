@@ -81,6 +81,10 @@ export interface NotificationRefs {
   /** Guardian work claim (GC-1, D-#551..#554) — deep-link: the teacher roster pass /
    *  the Office queue / the guardian record card, depending on the recipient. */
   workClaimId?: string;
+  /** The claim's tracker (HOMEWORK | ASSIGNMENT). Carried so a guardian's tap opens
+   *  the right list — বাড়ির কাজ and অ্যাসাইনমেন্ট are separate tabs, and the kind
+   *  alone cannot say which one the claim was about (WC-6). */
+  workClaimTracker?: string;
 }
 
 export interface INotification extends Document {
@@ -141,6 +145,7 @@ const RefsSchema = new Schema<NotificationRefs>(
     // but absent here is silently STRIPPED by mongoose on write (the recorded
     // ctQuestionRequestId bug). GC-1.
     workClaimId: { type: String },
+    workClaimTracker: { type: String },
   },
   { _id: false },
 );

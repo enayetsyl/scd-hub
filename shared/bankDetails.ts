@@ -12,6 +12,17 @@ export interface BankDetails {
   bankAccountName: string;
   bankName: string;
   bankBranch: string;
+  /**
+   * The receiving bank's routing number (D-#592).
+   *
+   * OPTIONAL here, deliberately. A transfer to the school's OWN bank is an internal
+   * instruction that has no routing column at all, so requiring it would block the
+   * majority of staff for a field their sheet never prints. A BEFTN transfer to any
+   * other bank DOES need it — and the advice pack blocks that row, on the screen and
+   * on the document, naming the missing number. The demand is made where the channel
+   * is known, not here where it is not.
+   */
+  routingNo: string;
 }
 
 export const EMPTY_BANK_DETAILS: BankDetails = {
@@ -19,6 +30,7 @@ export const EMPTY_BANK_DETAILS: BankDetails = {
   bankAccountName: "",
   bankName: "",
   bankBranch: "",
+  routingNo: "",
 };
 
 /**
