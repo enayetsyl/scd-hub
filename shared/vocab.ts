@@ -1323,6 +1323,12 @@ export const NOTIFICATION_KINDS = [
   // coming (subject, chapter, date, marks, minutes) while there is still time to revise.
   // App-native, NO wire twin: it is a delivery notice, not import-contract vocabulary.
   "CLASS_TEST_UPCOMING",
+  // D-#603: the 08:00 school-day DIGEST of class-test reports past their deadline,
+  // to OFFICE + PRINCIPAL only. Deliberately ONE rolled-up row per recipient per
+  // day, not one per pending exam — a per-item fan-out would put 20+ rows in the
+  // office inbox every morning, which is how a channel stops being read at all.
+  // App-native, NO wire twin.
+  "CLASS_TEST_OVERDUE_DIGEST",
   "VOCAB_RESULT",
   "STUDENT_COMMENT",
   // MR-6: the monthly progress report reached the family. Fired on RELEASE and again
@@ -1420,6 +1426,7 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   LIBRARY_OVERDUE: "বই ফেরত বকেয়া",
   CLASS_TEST_RESULT: "ক্লাস টেস্টের ফলাফল",
   CLASS_TEST_UPCOMING: "আসন্ন ক্লাস টেস্ট",
+  CLASS_TEST_OVERDUE_DIGEST: "বিলম্বিত ক্লাস টেস্ট রিপোর্ট",
   VOCAB_RESULT: "ভোকাবুলারি টেস্টের ফলাফল",
   MONTHLY_REPORT: "মাসিক অগ্রগতি রিপোর্ট",
   STUDENT_COMMENT: "শিক্ষকের পর্যবেক্ষণ",
@@ -1465,6 +1472,7 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   LIBRARY_OVERDUE: "Book overdue",
   CLASS_TEST_RESULT: "Class-test result",
   CLASS_TEST_UPCOMING: "Upcoming class test",
+  CLASS_TEST_OVERDUE_DIGEST: "Overdue class-test reports",
   VOCAB_RESULT: "Vocabulary-test result",
   MONTHLY_REPORT: "Monthly progress report",
   STUDENT_COMMENT: "Teacher's comment",
@@ -2057,6 +2065,8 @@ export const MESSAGE_TEMPLATE_KEYS = [
   "class_test.result.excellent.body",
   "class_test.result.absent.body",
   "class_test.overdue_chase.wa",
+  "class_test.overdue_digest.title",
+  "class_test.overdue_digest.body",
   "student_comment.notify.title",
   "student_comment.notify.body",
   "finance.fee_due.chase.title",
@@ -2466,6 +2476,22 @@ export const MESSAGE_TEMPLATE_REGISTRY: Record<MessageTemplateKey, MessageTempla
     bnDefault:
       "আসসালামু আলাইকুম {TeacherName}। আপনার {Count}টি ক্লাস টেস্টের ফলাফল নির্ধারিত সময়ের মধ্যে জমা পড়েনি:\n\n{ExamList}\n\n" +
       "অনুগ্রহ করে দ্রুত ফলাফল এন্ট্রি ও প্রকাশ করুন। মাআসসালামাহ — অফিস।",
+    defaultLangMode: "BN",
+  },
+  // --- D-#603: the 08:00 school-day digest to OFFICE + PRINCIPAL. ONE row per
+  //     recipient per day carrying the two counts; the per-exam detail lives on the
+  //     dashboard the row deep-links to, never in the inbox. ---
+  "class_test.overdue_digest.title": {
+    group: "classTest", labelBn: "ক্লাস টেস্ট — বিলম্বিত রিপোর্ট ডাইজেস্ট (শিরোনাম)", placeholders: [],
+    bnDefault: "বিলম্বিত ক্লাস টেস্ট রিপোর্ট", defaultLangMode: "BN",
+  },
+  "class_test.overdue_digest.body": {
+    group: "classTest", labelBn: "ক্লাস টেস্ট — বিলম্বিত রিপোর্ট ডাইজেস্ট (ইনবক্স)",
+    placeholders: ["Count", "AwaitingSubmit", "AwaitingPublish"],
+    bnDefault:
+      "{Count}টি ক্লাস টেস্ট রিপোর্ট নির্ধারিত সময় পেরিয়ে গেছে — " +
+      "{AwaitingSubmit}টি শিক্ষকের জমার অপেক্ষায়, {AwaitingPublish}টি প্রকাশের অপেক্ষায়। " +
+      "বিস্তারিত দেখতে ক্লাস টেস্ট ড্যাশবোর্ডে যান।",
     defaultLangMode: "BN",
   },
   // --- Daily student-comment guardian delivery (CM-2, §6/J-CM1 — the per-comment

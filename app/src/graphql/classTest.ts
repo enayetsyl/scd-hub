@@ -369,7 +369,17 @@ export interface ClassTestReportStatusRowT {
   absentCount: number;
   pendingCount: number;
   complete: boolean;
+  /** D-#603 handoff state: rows handed off by the teacher / released to guardians. */
+  submittedCount: number;
+  publishedCount: number;
+  submitComplete: boolean;
+  publishComplete: boolean;
+  /** Past deadline and NOT published — stays true through the approval leg. */
   overdue: boolean;
+  /** The teacher owns this delay (not submitted yet). */
+  teacherOverdue: boolean;
+  /** Office/Principal own it (submitted, not published). */
+  publishOverdue: boolean;
   schoolDaysLate: number;
   state: string;
 }
@@ -407,7 +417,9 @@ export const CLASS_TEST_REPORTS_STATUS_QUERY = gql<
   query ClassTestReportsStatus(${REPORTS_ARG_DEFS}) {
     classTestReportsStatus(${REPORTS_ARG_USE}) {
       testId ctId subject testNumber classLevel sectionId subjectGroupId teacherId teacherName submittedAt publishedAt examDate deadline deadlineDays
-      rosterCount enteredCount presentCount absentCount pendingCount complete overdue schoolDaysLate state
+      rosterCount enteredCount presentCount absentCount pendingCount complete
+      submittedCount publishedCount submitComplete publishComplete
+      overdue teacherOverdue publishOverdue schoolDaysLate state
     }
   }
 `;
@@ -423,6 +435,9 @@ export interface ClassTestDashboardT {
   inProgress: number;
   notStarted: number;
   overdue: number;
+  /** D-#603: the delay split by owner; the two sum to `overdue`. */
+  awaitingSubmit: number;
+  awaitingPublish: number;
   completionRatePct: number | null;
   overdueByTeacher: ClassTestOverdueByTeacherT[];
 }
@@ -433,7 +448,7 @@ export const CLASS_TEST_DASHBOARD_QUERY = gql<
 >`
   query ClassTestDashboard(${SUMMARY_ARG_DEFS}) {
     classTestPrincipalDashboard(${SUMMARY_ARG_USE}) {
-      logged complete inProgress notStarted overdue completionRatePct
+      logged complete inProgress notStarted overdue awaitingSubmit awaitingPublish completionRatePct
       overdueByTeacher { teacherId teacherName overdueCount }
     }
   }
@@ -667,6 +682,24 @@ export const CT_QUESTION_COUNTS = gql<
 >`
   query CtQuestionCounts {
     ctQuestionCounts { pending inReview }
+  }
+`;
+
+/** D-#603: overdue-report counters for the ড্যাশবোর্ড drawer leaf + the dashboard
+ *  tiles. Role-scoped server-side — a teacher gets their OWN reports, Office and
+ *  Principal get the school. Deliberately its own tiny query: it is polled, and
+ *  the full Reports-Status document is far too heavy to sit behind a badge. */
+export interface ClassTestOverdueCountsT {
+  overdue: number;
+  awaitingSubmit: number;
+  awaitingPublish: number;
+}
+export const CLASS_TEST_OVERDUE_COUNTS = gql<
+  { classTestOverdueCounts: ClassTestOverdueCountsT },
+  Record<string, never>
+>`
+  query ClassTestOverdueCounts {
+    classTestOverdueCounts { overdue awaitingSubmit awaitingPublish }
   }
 `;
 
