@@ -15,11 +15,14 @@ import { makeStyles, radius, space, typeScale } from "../theme";
 export function SelectionTray({
   count,
   totalMarks,
+  examMinutes,
   onCreate,
   onClear,
 }: {
   count: number;
   totalMarks: number;
+  /** Basket exam minutes (QT-1, D-#593); the sheet doubles it for homework. */
+  examMinutes?: number;
   onCreate: () => void;
   onClear: () => void;
 }): React.ReactElement | null {
@@ -40,7 +43,7 @@ export function SelectionTray({
         <Text style={styles.clearGlyph}>✕</Text>
       </Pressable>
       <Text style={styles.summary} numberOfLines={1}>
-        {selectionSummaryLabel(count, totalMarks)}
+        {selectionSummaryLabel(count, totalMarks, examMinutes)}
       </Text>
       <Button title={STR.qbCreateSet} onPress={onCreate} />
     </View>

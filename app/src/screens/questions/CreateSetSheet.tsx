@@ -10,7 +10,7 @@
  * Class-mismatch guard ported from BasketScreen: a Class-5 selection cannot land
  * on a Class-3 section.
  */
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Modal, Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useMutation } from "urql";
@@ -28,6 +28,7 @@ import {
   selectionSummaryLabel,
 } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { setDurationMinutes } from "@scd/shared";
 import { useBasket } from "../../state/BasketContext";
 import { useSectionContext } from "../../state/SectionContext";
 import { useToast } from "../../state/ToastContext";
@@ -70,6 +71,16 @@ export function CreateSetSheet({
 
   const isCt = setType === "CT";
 
+  /**
+   * The set's own time estimate (QT-1, D-#593).
+   *
+   * `setDurationMinutes` scales the basket's exam minutes by what is being BUILT: a class
+   * test is an exam so it stays ×1, homework and assignments double. Computed from the
+   * SAME shared helper the server uses to snapshot the set, so the figure shown here and
+   * the figure saved cannot disagree.
+   */
+  const estimatedMinutes = setType ? setDurationMinutes(setType, basket.items) : 0;
+
   // Guard (ported from BasketScreen): the selection's class level must match the
   // target section's class — a set targets exactly one section.
   const basketLevels = Array.from(new Set(basket.items.map((i) => i.classLevel)));
@@ -79,6 +90,12 @@ export function CreateSetSheet({
     basketLevels.some((l) => l !== selection.classLevel);
 
   const canSubmit = !!setType && hasSection && basket.count > 0 && !classMismatch && !busy;
+
+  // Prefill, never overwrite: the estimate is a starting point and the teacher’s own
+  // number always wins once they have typed one.
+  useEffect(() => {
+    if (isCt && duration.trim() === "" && estimatedMinutes > 0) setDuration(String(estimatedMinutes));
+  }, [isCt, duration, estimatedMinutes]);
 
   async function onCreate(): Promise<void> {
     if (!canSubmit) return;
