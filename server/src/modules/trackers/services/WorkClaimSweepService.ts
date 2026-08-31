@@ -22,6 +22,7 @@ import { WORK_CLAIM_WINDOW_SCHOOL_DAYS } from "@scd/shared";
 import { GuardianWorkClaim } from "../models/GuardianWorkClaim";
 import { emitWorkClaimEscalation } from "../../notifications/services/emitters";
 import { writeAudit } from "../../platform/services/AuditService";
+import { SYSTEM_ACTOR_ID } from "./ClaimReassignService";
 import { dateKeyOf } from "../../attendance/dates";
 
 export interface WorkClaimRungResult {
@@ -92,7 +93,7 @@ export async function expireStaleWorkClaims(at: Date = new Date()): Promise<numb
     await claim.save();
     await writeAudit({
       eventKind: "WORK_CLAIM_EXPIRED",
-      actorId: "system",
+      actorId: SYSTEM_ACTOR_ID,
       targetId: claim._id.toString(),
       targetKind: "GuardianWorkClaim",
       meta: {
