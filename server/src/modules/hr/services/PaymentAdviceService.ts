@@ -70,13 +70,31 @@ const NO_BRANCH = "শাখার নাম নেই";
 const NO_ROUTING = "রাউটিং নম্বর নেই";
 const ZERO_NET = "নিট বেতন শূন্য";
 
-/** Bank names differ by spacing, case and "Ltd/PLC" — compare on letters and digits. */
+/**
+ * Bank names differ by spacing, case and punctuation — compare on letters and digits.
+ *
+ * EQUALITY ONLY, not containment (D-#597). The first cut also matched when either name
+ * contained the other, to forgive "Islami Bank" vs "Islami Bank Bangladesh PLC". But
+ * half the banks here share a word: with the school's own name shortened to
+ * "Islami Bank", every staff member at AL-ARAFAH Islami Bank, Social Islami Bank and
+ * EXIM matched it and moved to the INTERNAL sheet — which carries no routing column, so
+ * they would have looked perfectly payable while the instruction was unissuable. The
+ * school's own name is free text on the HR-policy screen, so that was one edit away.
+ *
+ * Being too strict fails the safe way round: an unmatched name lands on the BEFTN sheet,
+ * where a missing routing number blocks the row loudly instead of misrouting it quietly.
+ */
 export function sameBank(a?: string | null, b?: string | null): boolean {
   const norm = (v?: string | null): string =>
-    (v ?? "").toLowerCase().replace(/[^a-z0-9ঀ-৿]/g, "");
+    (v ?? "")
+      .toLowerCase()
+      .replace(/[^a-z0-9ঀ-৿]/g, "")
+      // Only the corporate suffix is forgiven, and only at the end: "…Ltd." and "…PLC"
+      // are the same bank, whereas a shorter NAME is a different bank.
+      .replace(/(limited|ltd|plc|pcl)$/, "");
   const x = norm(a);
   const y = norm(b);
-  return x !== "" && y !== "" && (x === y || x.includes(y) || y.includes(x));
+  return x !== "" && y !== "" && x === y;
 }
 
 /** Which document this person's pay belongs on. */
