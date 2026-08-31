@@ -194,6 +194,46 @@ export async function assertCanWrite(
 }
 
 /**
+ * The UNDO gate (ACS-4, D-#592). `revertAssignmentRecord` / `revertHomeworkRecord`
+ * pop whatever the caller last did, so no single duty names them: a delegate who
+ * holds only `submit_homework` must be able to undo a mis-tapped submission pass,
+ * and one who holds only `check_homework` must be able to undo a wrong result.
+ * Naming one action would have re-created the very bug this slice fixes, one duty
+ * over.
+ *
+ * Safe to widen because the REVERT SERVICE, not this gate, decides what may be
+ * popped: a non-admin caller may undo only their OWN action, on the same Dhaka day
+ * (D-#338). So holding any one duty on the section buys the right to undo your own
+ * work there — never anyone else's.
+ *
+ * Passes if ANY listed action satisfies the write gate. An empty list is the plain
+ * pre-ACS-1 check, identical to `assertCanWrite` with no action.
+ */
+export async function assertCanWriteAny(
+  ctx: AppContext,
+  sectionId: string,
+  subjectId: string | undefined,
+  actions: readonly DelegatedAction[],
+): Promise<void> {
+  if (ctx.auth?.role === "PRINCIPAL") return;
+  if (ctx.auth?.role === "OFFICE" || ctx.auth?.role === "GUARDIAN") throw new ForbiddenError();
+  const scopes = await resolveTeacherScopes(ctx);
+  // One Section lookup at most, shared across every action tried — the class is a
+  // property of the section, not of the duty being asked about.
+  let classId: string | undefined;
+  let classResolved = false;
+  for (const action of actions.length > 0 ? actions : [undefined]) {
+    if (!classResolved && delegationNeedsClassId(scopes, action)) {
+      const section = await Section.findById(sectionId).select("classId").lean();
+      classId = section?.classId ? section.classId.toString() : undefined;
+      classResolved = true;
+    }
+    if (canWrite(scopes, sectionId, subjectId, { action, classId })) return;
+  }
+  throw new ForbiddenError();
+}
+
+/**
  * Assert the caller is the section's CLASS TEACHER — the section's **daily
  * coordinator** (D-#42). This is the GENERAL coordinator gate (CT-1/CT1.1), reused
  * by every coordinator-only action: homework reconciliation today, and the future

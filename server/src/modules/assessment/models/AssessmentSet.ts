@@ -38,7 +38,7 @@ export interface IAssessmentSet extends Document {
   totalMarks?: number;
   /** CT only — minutes */
   /**
-   * Exam minutes for this set, FROZEN at assembly (QT-1, D-#592).
+   * Exam minutes for this set, FROZEN at assembly (QT-1, D-#593).
    *
    * `durationMinutes` is what the set CLAIMS to take (doubled for homework); this is the
    * exam-time basis it came from. Stored so a later edit to the rate table cannot rewrite

@@ -72,7 +72,7 @@ export function CreateSetSheet({
   const isCt = setType === "CT";
 
   /**
-   * The set's own time estimate (QT-1, D-#592).
+   * The set's own time estimate (QT-1, D-#593).
    *
    * `setDurationMinutes` scales the basket's exam minutes by what is being BUILT: a class
    * test is an exam so it stays ×1, homework and assignments double. Computed from the

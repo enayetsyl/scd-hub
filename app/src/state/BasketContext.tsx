@@ -14,7 +14,7 @@ export interface BasketEntry {
   /** Short label for display (question text or qid). */
   label: string;
   subject: string;
-  /** Drives the time estimate (QT-1, D-#592) — the rate is per (subject × type). */
+  /** Drives the time estimate (QT-1, D-#593) — the rate is per (subject × type). */
   questionType: string | null;
   /** Content class level (1..5) — used to guard against assigning to a mismatched section. */
   classLevel: number;
@@ -25,7 +25,7 @@ interface BasketContextValue {
   count: number;
   totalMarks: number;
   /**
-   * Exam minutes for the basket AS A WHOLE (QT-1, D-#592).
+   * Exam minutes for the basket AS A WHOLE (QT-1, D-#593).
    *
    * Computed with the SAME shared helper the server snapshots onto the set, so the number
    * the teacher reads while choosing cannot differ from the one that is saved. Ceiled on

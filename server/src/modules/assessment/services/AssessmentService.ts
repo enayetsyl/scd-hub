@@ -211,7 +211,7 @@ export async function createSetWithQuestions(
 
   const totalMarks = items.reduce((sum, item) => sum + item.marks, 0);
   /**
-   * The set's time estimate, FROZEN here (QT-1, D-#592).
+   * The set's time estimate, FROZEN here (QT-1, D-#593).
    *
    * Derived live everywhere else, but SNAPSHOT onto the set at assembly: a teacher who told
    * a class "45 minutes" must not have that rewritten because somebody later edited a rate.
