@@ -32,6 +32,7 @@ import {
   ChipRow,
   Badge,
   Button,
+  Field,
   Notice,
   Loader,
   EmptyState,
@@ -40,7 +41,9 @@ import {
 import { STR, subjectLabel, classLevelLabel, reviewStatusLabel, bnNum } from "../../lib/labels";
 import { AnswerCarrier } from "../../components/QuestionAnswer";
 import { QuestionEditSheet } from "../../components/QuestionEditSheet";
+import { CLEAR_QUESTION_CONDITION } from "../../graphql/operations";
 import { useAuth } from "../../auth/AuthContext";
+import { useMutation } from "urql";
 import { parsePayload } from "../../lib/question";
 import { friendlyError } from "../../lib/errors";
 import { useColors } from "../../theme";
@@ -80,6 +83,45 @@ export default function QuestionReviewerRoundsScreen({
   const mayManage = can("question:manage");
   const [editing, setEditing] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [failure, setFailure] = useState<string | null>(null);
+
+  /**
+   * Release a condition from HERE (QR-17, D-#604).
+   *
+   * QR-15 put the EDIT on this screen and stopped there, so a Principal could correct the
+   * answer where the condition is read and still had to navigate to প্রশ্ন প্রকাশ to act
+   * on it. Reading a condition, fixing it and releasing it are one action to the person
+   * doing them.
+   *
+   * This does NOT publish (D-#525): it opens a FRESH round for the same reviewer, so the
+   * person who set the condition is the person who confirms it was met. The row then leaves
+   * this list — its latest round is no longer a submitted APPROVE_WITH_CONDITION — which is
+   * why the notice has to say where it went.
+   */
+  const [clearFor, setClearFor] = useState<string | null>(null);
+  const [clearNote, setClearNote] = useState("");
+  const [clearBusy, setClearBusy] = useState(false);
+  const [, clearCondition] = useMutation(CLEAR_QUESTION_CONDITION);
+
+  async function clearConditionOn(r: QuestionReviewRoundT): Promise<void> {
+    setClearBusy(true);
+    setFailure(null);
+    const note = clearNote.trim();
+    const res = await clearCondition({ artifactId: r.artifactId, note: note === "" ? null : note });
+    setClearBusy(false);
+    if (res.error) {
+      setFailure(friendlyError(res.error));
+      return;
+    }
+    setClearFor(null);
+    setClearNote("");
+    setNotice(STR.qrConditionCleared);
+    setRounds([]);
+    setOffset(0);
+    setLastPageSize(null);
+    refetch({ requestPolicy: "network-only" });
+    refetchCount({ requestPolicy: "network-only" });
+  }
 
   const [{ data, fetching, error }, refetch] = useQuery({
     query: QUESTION_REVIEWER_ROUNDS,
@@ -142,6 +184,7 @@ export default function QuestionReviewerRoundsScreen({
       <H2>{reviewerName ?? "—"}</H2>
       {scope !== "" ? <Muted>{scope}</Muted> : null}
       {notice ? <Notice tone="ok" message={notice} /> : null}
+      {failure ? <ErrorBanner message={failure} /> : null}
 
       <View style={{ height: space(3) }} />
       <ChipRow>
@@ -227,6 +270,51 @@ export default function QuestionReviewerRoundsScreen({
                   variant="ghost"
                   onPress={() => setEditing(editing === r.id ? null : r.id)}
                 />
+              ) : null}
+
+              {/* Release the condition from here too (QR-17). Only on the CONDITIONAL
+                  bucket — there is no condition to clear on an approved or rejected round,
+                  and offering it there would be a button that can only fail.
+
+                  Confirm-with-hint rather than a bare tap, matching the publish queue: this
+                  is NOT reversible from the UI. Once cleared, the only way forward is the
+                  reviewer ruling on the new round. */}
+              {mayManage && bucket === "APPROVE_WITH_CONDITION" ? (
+                clearFor === r.id ? (
+                  <View style={{ marginTop: space(2) }}>
+                    <Muted>{STR.qrClearConditionHint}</Muted>
+                    <Field
+                      label={STR.qrClearNote}
+                      value={clearNote}
+                      onChangeText={setClearNote}
+                      multiline
+                    />
+                    <View style={{ flexDirection: "row", gap: space(2), marginTop: space(2) }}>
+                      <Button
+                        title={STR.qrClearCondition}
+                        loading={clearBusy}
+                        onPress={() => void clearConditionOn(r)}
+                      />
+                      <Button
+                        title={STR.cancel}
+                        variant="ghost"
+                        onPress={() => {
+                          setClearFor(null);
+                          setClearNote("");
+                        }}
+                      />
+                    </View>
+                  </View>
+                ) : (
+                  <Button
+                    title={STR.qrClearCondition}
+                    variant="secondary"
+                    onPress={() => {
+                      setClearFor(r.id);
+                      setClearNote("");
+                    }}
+                  />
+                )
               ) : null}
               </Card>
 
