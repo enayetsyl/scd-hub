@@ -3892,6 +3892,8 @@ const STR_BN = {
   ctEntered: "এন্ট্রি",
   ctPending: "বাকি",
   ctSchoolDaysLate: "স্কুল-দিন বিলম্ব",
+  // D-#606: the deadline day itself — due now, but not yet late by any school day.
+  ctDueToday: "আজ শেষ দিন",
   ctDeadline: "সময়সীমা",
   ctState: "অবস্থা",
   ctClassSubjectTitle: "শ্রেণি×বিষয় বিশ্লেষণ",
@@ -8018,6 +8020,7 @@ const STR_EN: StrTable = {
   ctEntered: "Entered",
   ctPending: "Pending",
   ctSchoolDaysLate: "School-days late",
+  ctDueToday: "Due today",
   ctDeadline: "Deadline",
   ctState: "State",
   ctClassSubjectTitle: "ClassÃ—subject analysis",
