@@ -71,7 +71,7 @@ describe("both screens actually apply the rule", () => {
 });
 
 // ===========================================================================
-describe("the routing number reaches the screens that collect bank details (D-#595)", () => {
+describe("the routing number reaches the screens that collect bank details (D-#596)", () => {
   const read = (rel: string): string => readFileSync(path.resolve(__dirname, rel), "utf8");
 
   /**
