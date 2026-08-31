@@ -1579,6 +1579,7 @@ export async function emitWorkClaimFiled(ev: WorkClaimNotifyEvent): Promise<void
         `অভিভাবক জানিয়েছেন। খাতা নিয়ে অ্যাপে জমা লিখে দিন।`,
       refs: {
         workClaimId: ev.claimId,
+        workClaimTracker: ev.tracker,
         studentId: ev.studentId,
         sectionId: ev.sectionId,
       },
@@ -1611,6 +1612,7 @@ export async function emitWorkClaimReassigned(ev: WorkClaimNotifyEvent): Promise
         `অভিভাবক আগেই জানিয়েছেন। বিষয়টি এখন আপনার, তাই খাতা নিয়ে অ্যাপে জমা লিখে দিন।`,
       refs: {
         workClaimId: ev.claimId,
+        workClaimTracker: ev.tracker,
         studentId: ev.studentId,
         sectionId: ev.sectionId,
       },
@@ -1636,6 +1638,7 @@ export async function emitWorkClaimNudge(ev: WorkClaimNotifyEvent, at: Date): Pr
         `দেওয়া হলো: খাতা নিয়ে জমা লিখে দিন, অথবা কারণসহ নাকচ করুন।`,
       refs: {
         workClaimId: ev.claimId,
+        workClaimTracker: ev.tracker,
         studentId: ev.studentId,
         sectionId: ev.sectionId,
       },
@@ -1679,6 +1682,7 @@ export async function emitWorkClaimResolved(claim: {
         : `${trackerLabelBn(claim.tracker)} (${claim.workId}) — শিক্ষক: ${reasonBn ?? "নাকচ"}।`,
       refs: {
         workClaimId: claim._id.toString(),
+        workClaimTracker: claim.tracker,
         studentId: claim.studentId.toString(),
         sectionId: claim.sectionId.toString(),
       },
