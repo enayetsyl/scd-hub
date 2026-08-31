@@ -24,7 +24,7 @@ import * as path from "path";
 import type { Router, Request, Response } from "express";
 import { Router as createRouter } from "express";
 import { callerHasPermission, type PaymentChannel } from "@scd/shared";
-import { mixedText } from "../../../routes/pdfRenderer";
+import { mixedText, mixedTextInBox } from "../../../routes/pdfRenderer";
 import { buildContext } from "../../../context";
 import { paymentAdvice, type AdviceGroup, type PaymentAdvice } from "../services/PaymentAdviceService";
 import { takaFigure, takaInWords } from "../services/takaWords";
@@ -133,7 +133,26 @@ paymentAdvicePdfRouter.get("/:runId", async (req: Request, res: Response) => {
 
 const GREEN = "#3F6C45";
 
-async function renderAdvicePack(advice: PaymentAdvice): Promise<Buffer> {
+/**
+ * Scale a hand-laid-out column set to the printable width (D-#599).
+ *
+ * The widths are taken from the school's own Word template and total 598pt. An A4 page
+ * with 48pt margins gives 499.3pt. Nothing complained: pdfkit drew the cells exactly
+ * where it was told, off the edge of the paper, and the pack the owner downloaded had
+ * its last column — the staff member's NAME, on all three sheets — severed. Proportions
+ * are what the template is really specifying, so keep those and fit the page.
+ *
+ * Exported for the test: the arithmetic is the fix, so the test has to run THIS, not a
+ * copy of it that agrees with itself.
+ */
+export function fitColumns<T extends { w: number }>(cols: T[], width: number): T[] {
+  const total = cols.reduce((sum, c) => sum + c.w, 0);
+  if (total <= 0) return cols;
+  const scale = width / total;
+  return cols.map((c) => ({ ...c, w: c.w * scale }));
+}
+
+export async function renderAdvicePack(advice: PaymentAdvice): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
     const doc = new PDFDocument({
@@ -153,7 +172,14 @@ async function renderAdvicePack(advice: PaymentAdvice): Promise<Buffer> {
       // Nothing payable and nothing blocked = the channel is not in use this month.
       if (g.rows.length === 0 && g.blocked.length === 0) continue;
 
-      const bankChannel = g.channel === "internal" || g.channel === "beftn";
+      // A covering letter is an INSTRUCTION to move money, signed in the school's name.
+      // With nothing payable on the channel there is nothing to instruct, and the first
+      // cut still wrote one: the owner's August pack carried a letter to the branch
+      // manager asking him to "arrange payment Tk. 0/- (Zero Only)" because the only two
+      // BEFTN staff were blocked for a missing routing number. The SHEET still prints —
+      // it is the worklist naming who cannot be paid and why — but no letter (D-#598).
+      const bankChannel =
+        (g.channel === "internal" || g.channel === "beftn") && g.rows.length > 0;
       if (bankChannel) {
         if (!first) doc.addPage();
         drawLetter(doc, advice, g);
@@ -203,11 +229,20 @@ function footer(doc: PDFKit.PDFDocument, advice: PaymentAdvice): void {
   doc.save();
   doc.moveTo(doc.page.margins.left, y - 6).lineTo(doc.page.margins.left + width, y - 6).lineWidth(0.5).stroke("#999999");
   doc.fontSize(8).fillColor("#333333");
-  doc.text(`Address: ${p.orgAddress}`, doc.page.margins.left, y, { width, align: "center" });
+  // mixedTextInBox, not doc.text (D-#600). Raw text draws in whatever font is current,
+  // and letterhead() ends on the Bangla school name — so the Bengali face was left
+  // active and this block's plain-ASCII address, phone and email came out as a row of
+  // .notdef boxes on every page of the pack. The font has to be chosen per script run,
+  // which is exactly what this helper is for.
+  mixedTextInBox(doc, `Address: ${p.orgAddress}`, doc.page.margins.left, y, width, {
+    align: "center",
+  });
   const contact = [p.orgPhone && `Phone: ${p.orgPhone}`, p.orgEmail && `Email: ${p.orgEmail}`]
     .filter(Boolean)
     .join("      ");
-  if (contact) doc.text(contact, doc.page.margins.left, y + 10, { width, align: "center" });
+  if (contact) {
+    mixedTextInBox(doc, contact, doc.page.margins.left, y + 10, width, { align: "center" });
+  }
   doc.restore();
 }
 
@@ -261,7 +296,7 @@ function drawSheet(doc: PDFKit.PDFDocument, advice: PaymentAdvice, g: AdviceGrou
   doc.moveDown(0.8);
 
   const beftn = g.channel === "beftn";
-  const cols = beftn
+  const rawCols = beftn
     ? [
         { key: "sl", label: "Sl", w: 26 },
         { key: "bankName", label: "Bank name", w: 92 },
@@ -280,6 +315,8 @@ function drawSheet(doc: PDFKit.PDFDocument, advice: PaymentAdvice, g: AdviceGrou
         { key: "info", label: "Payment Info", w: 110 },
         { key: "name", label: "Teachers/Admin", w: 112 },
       ];
+
+  const cols = fitColumns(rawCols, width);
 
   const startX = doc.page.margins.left;
   doc.fontSize(8);
@@ -305,8 +342,12 @@ function drawSheet(doc: PDFKit.PDFDocument, advice: PaymentAdvice, g: AdviceGrou
       doc.save().rect(x, y, w, height).lineWidth(0.5).stroke("#999999").restore();
       doc.fillColor(opts.header ? "#FFFFFF" : "#000000");
       const numeric = cols[i].key === "amount";
-      doc.text(text, x + 3, y + 6, {
-        width: w - 6,
+      // Per-script fonts here too (D-#600). Cells were drawn with raw doc.text, so a
+      // cell inherited whichever font the previous mixedText call left behind. Every
+      // name on this pack in the owner's test was English, which is the only reason it
+      // looked fine — the real roster is Bangla, and those names would have printed as
+      // boxes on the sheet the bank is asked to pay from.
+      mixedTextInBox(doc, text, x + 3, y + 6, w - 6, {
         align: numeric ? "right" : "left",
         lineBreak: false,
         ellipsis: true,
@@ -347,6 +388,12 @@ function drawSheet(doc: PDFKit.PDFDocument, advice: PaymentAdvice, g: AdviceGrou
 
   // Anyone this sheet CANNOT pay, said out loud on the document itself.
   if (g.blocked.length > 0) {
+    // Back to the left margin first. Every cell was drawn at an explicit x, so doc.x is
+    // still parked inside the LAST column — and text that inherits it starts three
+    // quarters of the way across the page and runs off the edge, which is where the
+    // owner's "Not included" list went: clipped mid-name, on the one section whose whole
+    // job is to be read (D-#599).
+    doc.x = startX;
     doc.moveDown(1);
     doc.fontSize(9).fillColor("#B3261E");
     mixedText(doc, "Not included — details incomplete:", { width });

@@ -221,7 +221,7 @@ export default function StaffPayEditScreen({ route, navigation }: Props): React.
         </Card>
       ) : null}
 
-      <View style={{ flexDirection: "row", gap: space(2) }}>
+      <View style={{ flexDirection: "row", gap: space(2), marginTop: space(2) }}>
         <Button title={STR.cancel} variant="secondary" onPress={() => navigation.goBack()} />
         <Button title={STR.save} loading={busy} disabled={!canSave} onPress={() => void onSave()} />
       </View>

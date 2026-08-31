@@ -42,7 +42,7 @@ import type { ClassTestStackParamList } from "../../navigation/types";
 type Nav = NativeStackNavigationProp<ClassTestStackParamList>;
 
 /** null = all logged tests (the default drill-down scope).
- *  D-#597 adds two OWNER-scoped slices of `overdue`: they are not report states
+ *  D-#603 adds two OWNER-scoped slices of `overdue`: they are not report states
  *  (the row's state is still "overdue" in both), they answer "whose move is it?" */
 type StateFilter =
   | "complete"
@@ -151,7 +151,7 @@ export default function ClassTestDashboardScreen(): React.ReactElement {
               <Kpi label={STR.ctInProgress} value={bnNum(d.inProgress)} selected={stateFilter === "in_progress"} onPress={() => pickState("in_progress")} />
               <Kpi label={STR.ctNotStarted} value={bnNum(d.notStarted)} selected={stateFilter === "not_started"} onPress={() => pickState("not_started")} />
               <Kpi label={STR.ctOverdue} value={bnNum(d.overdue)} selected={stateFilter === "overdue"} onPress={() => pickState("overdue")} />
-              {/* D-#597: the same delay, split by whose move it is. Both drill into
+              {/* D-#603: the same delay, split by whose move it is. Both drill into
                   the `overdue` list, so the two always add up to the tile above. */}
               <Kpi
                 label={STR.ctAwaitingSubmit}
@@ -229,7 +229,7 @@ export default function ClassTestDashboardScreen(): React.ReactElement {
                     <Muted style={{ marginTop: space(1) }}>
                       {STR.ctEntered} {bnNum(r.enteredCount)}/{bnNum(r.rosterCount)} · {STR.ctPending} {bnNum(r.pendingCount)}
                       {r.overdue ? ` · ${STR.ctSchoolDaysLate} ${bnNum(r.schoolDaysLate)}` : ""}
-                      {/* D-#597: a red chip alone no longer says who is holding it up. */}
+                      {/* D-#603: a red chip alone no longer says who is holding it up. */}
                       {r.overdue
                         ? ` · ${r.teacherOverdue ? STR.ctAwaitingSubmit : STR.ctAwaitingPublish}`
                         : ""}

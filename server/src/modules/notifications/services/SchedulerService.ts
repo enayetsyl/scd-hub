@@ -127,7 +127,7 @@ export const WORK_CLAIM_RUNGS = [
   { min: WORK_CLAIM_PRINCIPAL_RUNG_MIN, role: "PRINCIPAL" },
 ] as const;
 
-/** Class-test overdue digest (D-#597) — 08:00 to OFFICE + PRINCIPAL, FULL school
+/** Class-test overdue digest (D-#603) — 08:00 to OFFICE + PRINCIPAL, FULL school
  *  days only. FULL and not merely "not OFF/HOLIDAY": the deadline that makes a
  *  report late counts FULL days only, so firing on a QURAN_ONLY Saturday would
  *  report a number that did not move since Thursday. */
@@ -173,7 +173,7 @@ export const schedulerDedupeKeys = {
     `HWPR:${dateKey}:${rungMin}:${sectionId}:${recipientId}`,
   homeworkPendingEscalation: (dateKey: string, rungMin: number, sectionId: string, recipientId: string) =>
     `HWPE:${dateKey}:${rungMin}:${sectionId}:${recipientId}`,
-  /** D-#597. The RECIPIENT is part of the key on purpose: a date-only key would let
+  /** D-#603. The RECIPIENT is part of the key on purpose: a date-only key would let
    *  the first office user's copy swallow the Principal's, so only one of them would
    *  ever be told. Same trap as the entity-only keys elsewhere. */
   classTestOverdueDigest: (dateKey: string, recipientId: string) => `CTOD:${dateKey}:${recipientId}`,
@@ -237,7 +237,7 @@ export interface TickSummary {
   hwAutoChased: number;
   /** Weekly guardian homework-digest notifications emitted (D-#452). */
   hwWeeklyDigestEmitted: number;
-  /** 08:00 class-test overdue digests emitted to Office/Principal (D-#597). */
+  /** 08:00 class-test overdue digests emitted to Office/Principal (D-#603). */
   ctOverdueDigestEmitted: number;
 }
 
@@ -596,7 +596,7 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
     }
   });
 
-  // --- Class-test overdue digest (D-#597) — 08:00, FULL days, Office + Principal.
+  // --- Class-test overdue digest (D-#603) — 08:00, FULL days, Office + Principal.
   //
   // ONE rolled-up row per recipient per day, NOT one per pending exam: a per-item
   // fan-out would drop 20+ rows into the office inbox every morning, and a channel

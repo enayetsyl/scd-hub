@@ -91,7 +91,7 @@ jest.mock("../modules/trackers/services/WorkClaimSweepService", () => ({
 jest.mock("../modules/trackers/services/HomeworkDueSweepService", () => ({
   sweepHomeworkDue: (d: unknown) => mockSweepHomeworkDue(d),
 }));
-// The 08:00 class-test overdue digest (D-#597) — mocked for the same reason as the
+// The 08:00 class-test overdue digest (D-#603) — mocked for the same reason as the
 // sweeps above: `overdueCounts` is a real aggregate over every printed exam, and
 // this suite is DB-free. Its own maths is covered in classTestSummary.test.ts.
 jest.mock("../modules/trackers/services/ClassTestSummaryService", () => ({
@@ -357,10 +357,10 @@ describe("homework pending-confirm ladder", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Class-test overdue digest (D-#597) — 08:00, FULL days, Office + Principal
+// Class-test overdue digest (D-#603) — 08:00, FULL days, Office + Principal
 // ---------------------------------------------------------------------------
 
-describe("class-test overdue digest (D-#597)", () => {
+describe("class-test overdue digest (D-#603)", () => {
   const OFFICE = { _id: { toString: () => "office-1" } };
   const PRINCIPAL = { _id: { toString: () => "principal-1" } };
 

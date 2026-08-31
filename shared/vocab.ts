@@ -1323,7 +1323,7 @@ export const NOTIFICATION_KINDS = [
   // coming (subject, chapter, date, marks, minutes) while there is still time to revise.
   // App-native, NO wire twin: it is a delivery notice, not import-contract vocabulary.
   "CLASS_TEST_UPCOMING",
-  // D-#597: the 08:00 school-day DIGEST of class-test reports past their deadline,
+  // D-#603: the 08:00 school-day DIGEST of class-test reports past their deadline,
   // to OFFICE + PRINCIPAL only. Deliberately ONE rolled-up row per recipient per
   // day, not one per pending exam — a per-item fan-out would put 20+ rows in the
   // office inbox every morning, which is how a channel stops being read at all.
@@ -2478,7 +2478,7 @@ export const MESSAGE_TEMPLATE_REGISTRY: Record<MessageTemplateKey, MessageTempla
       "অনুগ্রহ করে দ্রুত ফলাফল এন্ট্রি ও প্রকাশ করুন। মাআসসালামাহ — অফিস।",
     defaultLangMode: "BN",
   },
-  // --- D-#597: the 08:00 school-day digest to OFFICE + PRINCIPAL. ONE row per
+  // --- D-#603: the 08:00 school-day digest to OFFICE + PRINCIPAL. ONE row per
   //     recipient per day carrying the two counts; the per-exam detail lives on the
   //     dashboard the row deep-links to, never in the inbox. ---
   "class_test.overdue_digest.title": {

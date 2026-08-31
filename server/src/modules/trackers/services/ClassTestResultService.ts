@@ -256,7 +256,7 @@ export interface ExamReportStatus {
   publishedCount: number;
   /** Every roster row handed off by the teacher. */
   submitComplete: boolean;
-  /** Every roster row published — the real finish line (D-#597). */
+  /** Every roster row published — the real finish line (D-#603). */
   publishComplete: boolean;
   /** Past deadline and NOT yet published — the card's বিলম্বিত chip. Stays true
    *  through the approval leg, so entering marks no longer clears the delay. */
@@ -280,7 +280,7 @@ export interface ReportOwnershipInput {
 }
 
 /**
- * The one place the delay is split between its two owners (D-#597). Both the
+ * The one place the delay is split between its two owners (D-#603). Both the
  * single-exam read and the batched CT-4 aggregate call this, so the rule can
  * never drift between the card and the dashboard.
  *
@@ -310,7 +310,7 @@ export function deriveReportOwnership(i: ReportOwnershipInput): {
 
 /**
  * The per-exam completion + deadline/overdue read (CT-2). `now` is passed in (§9 —
- * deterministic). Overdue means past-deadline and NOT PUBLISHED (D-#597) — entering
+ * deterministic). Overdue means past-deadline and NOT PUBLISHED (D-#603) — entering
  * every mark no longer stops the clock; only release to guardians does.
  */
 export async function examReportStatus(testId: string, now: Date = new Date()): Promise<ExamReportStatus> {

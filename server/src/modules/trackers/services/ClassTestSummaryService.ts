@@ -92,7 +92,7 @@ export type ReportState = "not_started" | "in_progress" | "complete" | "overdue"
 
 /** Mutually-exclusive bucket (priority: complete > overdue > in_progress > not_started).
  *
- *  D-#597: `complete` is now PUBLISH-complete, not entry-complete. Entering every
+ *  D-#603: `complete` is now PUBLISH-complete, not entry-complete. Entering every
  *  mark used to win this race and paint the row green while guardians had still
  *  seen nothing; the finish line is release. `overdue` correspondingly means
  *  past-deadline-and-unpublished (examReportStatus), so a fully-entered but
@@ -177,7 +177,7 @@ function examStatusFrom(
 }
 
 /** `withTeacherNames: false` skips the User lookup — the drawer/dashboard badge
- *  counters poll every 60s and only ever tally, never render a name (D-#597). */
+ *  counters poll every 60s and only ever tally, never render a name (D-#603). */
 export async function reportsStatus(
   filter: SummaryFilter,
   opts: { withTeacherNames?: boolean } = {},
@@ -196,7 +196,7 @@ export async function reportsStatus(
       ? new Map<string, string>()
       : await loadUserNames([...new Set(exams.map(accountableOf))]);
   // ONE pass for the CT-8 handoff state: newest submit/publish stamps AND the row
-  // COUNTS the D-#597 ownership split needs. `$max` skips null/missing, so the
+  // COUNTS the D-#603 ownership split needs. `$max` skips null/missing, so the
   // stamps are unchanged from the two filtered aggregates this replaces; the
   // counts have to see every row, which is why the $match no longer filters.
   // A row is "handed off" if submittedAt is set OR it is already published —
@@ -328,13 +328,13 @@ export interface OverdueByTeacherRow {
 export interface PrincipalDashboard {
   /** Total PRINTED (official) exams in scope. */
   logged: number;
-  /** D-#597: PUBLISH-complete (released to guardians), not merely entry-complete —
+  /** D-#603: PUBLISH-complete (released to guardians), not merely entry-complete —
    *  so `completionRatePct` now measures delivery, not data entry. */
   complete: number;
   inProgress: number;
   notStarted: number;
   overdue: number;
-  /** D-#597 split of `overdue` by who is answerable. The two are disjoint and
+  /** D-#603 split of `overdue` by who is answerable. The two are disjoint and
    *  sum to `overdue`: before submit it is the teacher's, after it is ours. */
   awaitingSubmit: number;
   awaitingPublish: number;
@@ -359,7 +359,7 @@ export async function principalDashboard(filter: SummaryFilter): Promise<Princip
     if (r.state === "complete") complete++;
     else if (r.state === "overdue") {
       overdue++;
-      // D-#597: attribute to the stage it is actually stuck in.
+      // D-#603: attribute to the stage it is actually stuck in.
       if (r.teacherOverdue) {
         awaitingSubmit++;
         overdueByTeacherId.set(r.teacherId, (overdueByTeacherId.get(r.teacherId) ?? 0) + 1);
@@ -391,7 +391,7 @@ export async function principalDashboard(filter: SummaryFilter): Promise<Princip
 }
 
 // ---------------------------------------------------------------------------
-// 2b. Overdue counters (D-#597) — the drawer badge, the dashboard tiles and the
+// 2b. Overdue counters (D-#603) — the drawer badge, the dashboard tiles and the
 //     08:00 Office/Principal digest all read THIS, so the number in the sidebar,
 //     the number on the dashboard and the number in the notification can never
 //     disagree. Name-free (see reportsStatus opts) because none of them show one.
@@ -809,7 +809,7 @@ export interface OverdueChaseList {
  * interpolated per teacher; renderTemplate/getEffectiveTemplate is never called in a
  * loop. The Office acts on this — the teacher never chases themselves (resolver-gated).
  *
- * D-#597: filters on `teacherOverdue`, NOT `state === "overdue"`. Since the chip now
+ * D-#603: filters on `teacherOverdue`, NOT `state === "overdue"`. Since the chip now
  * stays red until publish, `state` also covers exams the teacher has already
  * submitted and that are sitting in OUR approval queue — nudging them for those
  * would chase the wrong person for work they cannot do.

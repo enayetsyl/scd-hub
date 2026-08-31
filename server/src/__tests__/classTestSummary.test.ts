@@ -29,7 +29,7 @@ const leanChain = (val: unknown) => {
 };
 
 // examReportStatus is the reused CT-2 dependency — mock it so CT-4 logic is isolated.
-// `deriveReportOwnership` (D-#597) is a PURE helper from the same module and is kept
+// `deriveReportOwnership` (D-#603) is a PURE helper from the same module and is kept
 // REAL: stubbing it would let the ownership split drift between the two call sites,
 // which is the exact divergence extracting it was meant to prevent.
 const mockExamReportStatus = jest.fn();
@@ -111,7 +111,7 @@ type ExamCounts = {
   roster: number;
   entered: number;
   present?: number;
-  /** D-#597 handoff state. Default 0 = the teacher has not proposed release yet. */
+  /** D-#603 handoff state. Default 0 = the teacher has not proposed release yet. */
   submitted?: number;
   published?: number;
 };
@@ -124,7 +124,7 @@ function withCounts(exams: ExamCounts[], submitted: Array<{ _id: unknown; latest
   );
   const latestOf = (id: { toString(): string }) =>
     submitted.find((s) => String(s._id) === String(id))?.latest ?? null;
-  // TWO aggregates now run against results: the D-#597 handoff pass (stamps +
+  // TWO aggregates now run against results: the D-#603 handoff pass (stamps +
   // counts) and the status counts. Both $match on testId alone, so they are told
   // apart by their $group shape, not their filter.
   mockResAggregate.mockImplementation((pipeline: unknown) => {
@@ -177,7 +177,7 @@ describe("reportStateOf (4-way partition)", () => {
     expect(reportStateOf({ publishComplete: false, overdue: false, enteredCount: 0 })).toBe("not_started");
   });
 
-  // D-#597: the regression that motivated the change — every mark entered, nothing
+  // D-#603: the regression that motivated the change — every mark entered, nothing
   // released. This used to return "complete" and the card went green while guardians
   // had seen nothing.
   test("entry-complete but UNPUBLISHED past the deadline stays overdue", () => {
@@ -185,7 +185,7 @@ describe("reportStateOf (4-way partition)", () => {
   });
 });
 
-describe("deriveReportOwnership (D-#597 — one clock, two owners)", () => {
+describe("deriveReportOwnership (D-#603 — one clock, two owners)", () => {
   const base = { rosterCount: 10, submittedCount: 0, publishedCount: 0, pastDeadline: true, schoolDaysLate: 3 };
 
   test("before the deadline nobody is late", () => {
@@ -307,7 +307,7 @@ describe("reportsStatus / principalDashboard", () => {
     const e1 = exam({ _id: oid(), testNumber: 1 });
     const e2 = exam({ _id: oid(), testNumber: 2 });
     mockCtFind.mockReturnValue(leanChain([e1, e2]));
-    // e1 done — entered AND released (D-#597: publication, not entry, is what
+    // e1 done — entered AND released (D-#603: publication, not entry, is what
     // makes a row complete); e2 incomplete and long past its deadline.
     withCounts(
       [
@@ -343,10 +343,10 @@ describe("reportsStatus / principalDashboard", () => {
   });
 
   test("principalDashboard tallies the KPI partition + completion rate + overdue-by-teacher", async () => {
-    // The four states come from the DATA now: complete = fully PUBLISHED (D-#597);
+    // The four states come from the DATA now: complete = fully PUBLISHED (D-#603);
     // overdue = unpublished and past deadline (the 10 July exams); in_progress /
     // not_started = incomplete but still inside the deadline (a 19 July exam, NOW
-    // being the 20th). `eWait` is the D-#597 case: the teacher has submitted
+    // being the 20th). `eWait` is the D-#603 case: the teacher has submitted
     // everything and it is OUR approval that is late.
     const RECENT = { examDate: new Date(2026, 6, 19) };
     const eDone = exam({ _id: oid(), requestedBy: T_A });
@@ -388,7 +388,7 @@ describe("reportsStatus / principalDashboard", () => {
     expect(d.overdueByTeacher.map((r) => r.teacherName).sort()).toEqual(["Ustadh A", "Ustadh B"]);
   });
 
-  test("overdueCounts mirrors the dashboard split (D-#597 — one number everywhere)", async () => {
+  test("overdueCounts mirrors the dashboard split (D-#603 — one number everywhere)", async () => {
     const eOver = exam({ _id: oid(), requestedBy: T_A });
     const eWait = exam({ _id: oid(), requestedBy: T_B });
     mockCtFind.mockReturnValue(leanChain([eOver, eWait]));
@@ -551,14 +551,14 @@ describe("overdueChaseList", () => {
   test("empty chase list when nothing is overdue", async () => {
     const e1 = exam({ _id: oid() });
     mockCtFind.mockReturnValue(leanChain([e1]));
-    // D-#597: published ⇒ never overdue (entry alone no longer clears the clock).
+    // D-#603: published ⇒ never overdue (entry alone no longer clears the clock).
     withCounts([{ id: e1._id, sectionId: SECTION, roster: 10, entered: 10, submitted: 10, published: 10 }]);
     const list = await overdueChaseList({ asOf: NOW });
     expect(list.entries).toEqual([]);
     expect(list.unreachableCount).toBe(0);
   });
 
-  // The misattribution D-#597 had to avoid: the chip stays red until publish, so
+  // The misattribution D-#603 had to avoid: the chip stays red until publish, so
   // `state === "overdue"` now also covers exams sitting in OUR approval queue.
   // Chasing the teacher for those nags the wrong person for work they cannot do.
   test("a submitted-but-unpublished exam is NOT chased to the teacher", async () => {

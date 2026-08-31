@@ -144,7 +144,7 @@ export function notificationTarget(
         ? { tab: "GuardianHomeTab", screen: "GuardianHome" }
         : { tab: "ClassTestTab", screen: "ClassTestHome" };
     case "CLASS_TEST_OVERDUE_DIGEST":
-      // D-#597: the digest carries only counts, so the row MUST land on the
+      // D-#603: the digest carries only counts, so the row MUST land on the
       // dashboard that lists which exams they are. Office/Principal only — a
       // guardian can never receive this kind.
       return { tab: "ClassTestTab", screen: "ClassTestDashboard" };

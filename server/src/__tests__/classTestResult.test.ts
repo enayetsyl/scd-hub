@@ -395,7 +395,7 @@ describe("examReportStatus (per-exam completion + deadline/overdue)", () => {
     expect(st.schoolDaysLate).toBe(2); // Tue, Wed
   });
 
-  // D-#597 supersedes the old "complete ⇒ never overdue" rule (D-#120). Entry
+  // D-#603 supersedes the old "complete ⇒ never overdue" rule (D-#120). Entry
   // completeness is no longer the finish line: until the marks are RELEASED the
   // guardian has seen nothing, so the delay keeps running — it just changes owner.
   test("entry-complete but unsubmitted stays overdue, and it is the TEACHER's delay", async () => {
@@ -435,7 +435,7 @@ describe("examReportStatus (per-exam completion + deadline/overdue)", () => {
     });
   });
 
-  test("published clears the delay entirely — the real finish line (D-#597)", async () => {
+  test("published clears the delay entirely — the real finish line (D-#603)", async () => {
     mockCtFindById.mockReturnValue(leanChain(printedTest({ examDate: D(7, 9) })));
     mockStudentCount.mockResolvedValue(3);
     const released = { submittedAt: D(7, 13), publishedAt: D(7, 14) };

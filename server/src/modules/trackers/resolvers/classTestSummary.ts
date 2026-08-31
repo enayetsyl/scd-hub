@@ -152,7 +152,7 @@ ReportStatusRowRef.implement({
     submitComplete: t.exposeBoolean("submitComplete"),
     publishComplete: t.exposeBoolean("publishComplete"),
     overdue: t.exposeBoolean("overdue", {
-      description: "Past deadline and NOT yet published (D-#597) — entering marks no longer clears it.",
+      description: "Past deadline and NOT yet published (D-#603) — entering marks no longer clears it.",
     }),
     teacherOverdue: t.exposeBoolean("teacherOverdue", {
       description: "The teacher's share of the delay: past deadline, not yet submitted.",
@@ -213,10 +213,10 @@ DashboardRef.implement({
     notStarted: t.exposeInt("notStarted"),
     overdue: t.exposeInt("overdue"),
     awaitingSubmit: t.exposeInt("awaitingSubmit", {
-      description: "Overdue and still with the teacher (D-#597) — the chase-list population.",
+      description: "Overdue and still with the teacher (D-#603) — the chase-list population.",
     }),
     awaitingPublish: t.exposeInt("awaitingPublish", {
-      description: "Overdue and waiting on Office/Principal approval (D-#597).",
+      description: "Overdue and waiting on Office/Principal approval (D-#603).",
     }),
     completionRatePct: t.int({ nullable: true, resolve: (r) => r.completionRatePct }),
     overdueByTeacher: t.field({ type: [OverdueByTeacherRef], resolve: (r) => r.overdueByTeacher }),
@@ -244,13 +244,13 @@ builder.queryField("classTestPrincipalDashboard", (t) =>
 );
 
 // ---------------------------------------------------------------------------
-// 2b. Overdue counters — the drawer badge + dashboard tiles (D-#597)
+// 2b. Overdue counters — the drawer badge + dashboard tiles (D-#603)
 // ---------------------------------------------------------------------------
 
 const OverdueCountsRef = builder.objectRef<OverdueCounts>("ClassTestOverdueCounts");
 OverdueCountsRef.implement({
   description:
-    "Overdue class-test report counters (D-#597). Role-scoped: Principal/Office see the school, " +
+    "Overdue class-test report counters (D-#603). Role-scoped: Principal/Office see the school, " +
     "a teacher sees only their OWN reports — a school-wide number on a teacher's drawer is noise they cannot act on.",
   fields: (t) => ({
     overdue: t.exposeInt("overdue"),
@@ -263,7 +263,7 @@ builder.queryField("classTestOverdueCounts", (t) =>
   t.field({
     type: OverdueCountsRef,
     description:
-      "Counters behind the ক্লাস টেস্ট drawer badge and the dashboard's delay tiles (D-#597). " +
+      "Counters behind the ক্লাস টেস্ট drawer badge and the dashboard's delay tiles (D-#603). " +
       "Polled — deliberately name-free so it costs one query less than the full Reports Status.",
     authScopes: { authenticated: true },
     args: {

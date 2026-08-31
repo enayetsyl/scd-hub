@@ -369,7 +369,7 @@ export interface ClassTestReportStatusRowT {
   absentCount: number;
   pendingCount: number;
   complete: boolean;
-  /** D-#597 handoff state: rows handed off by the teacher / released to guardians. */
+  /** D-#603 handoff state: rows handed off by the teacher / released to guardians. */
   submittedCount: number;
   publishedCount: number;
   submitComplete: boolean;
@@ -435,7 +435,7 @@ export interface ClassTestDashboardT {
   inProgress: number;
   notStarted: number;
   overdue: number;
-  /** D-#597: the delay split by owner; the two sum to `overdue`. */
+  /** D-#603: the delay split by owner; the two sum to `overdue`. */
   awaitingSubmit: number;
   awaitingPublish: number;
   completionRatePct: number | null;
@@ -685,7 +685,7 @@ export const CT_QUESTION_COUNTS = gql<
   }
 `;
 
-/** D-#597: overdue-report counters for the ড্যাশবোর্ড drawer leaf + the dashboard
+/** D-#603: overdue-report counters for the ড্যাশবোর্ড drawer leaf + the dashboard
  *  tiles. Role-scoped server-side — a teacher gets their OWN reports, Office and
  *  Principal get the school. Deliberately its own tiny query: it is polled, and
  *  the full Reports-Status document is far too heavy to sit behind a badge. */

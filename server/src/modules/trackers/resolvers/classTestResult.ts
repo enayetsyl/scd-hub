@@ -118,7 +118,7 @@ ExamReportStatusRef.implement({
     submitComplete: t.exposeBoolean("submitComplete"),
     publishComplete: t.exposeBoolean("publishComplete"),
     overdue: t.exposeBoolean("overdue", {
-      description: "Past deadline and NOT yet published (D-#597) — entering marks no longer clears it.",
+      description: "Past deadline and NOT yet published (D-#603) — entering marks no longer clears it.",
     }),
     teacherOverdue: t.exposeBoolean("teacherOverdue", {
       description: "The teacher's share of the delay: past deadline, not yet submitted.",

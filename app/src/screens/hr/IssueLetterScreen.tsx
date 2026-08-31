@@ -284,7 +284,7 @@ export default function IssueLetterScreen({ route, navigation }: Props): React.R
 
       <Notice tone="warn" message={STR.stfIssueWarning} />
       <Divider />
-      <View style={{ flexDirection: "row", gap: space(2) }}>
+      <View style={{ flexDirection: "row", gap: space(2), marginTop: space(2) }}>
         <Button title={STR.cancel} variant="secondary" onPress={() => navigation.goBack()} />
         <Button title={STR.stfIssueAndPdf} loading={busy} disabled={!canSubmit} onPress={() => void onSubmit()} />
       </View>

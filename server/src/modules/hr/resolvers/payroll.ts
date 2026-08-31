@@ -467,7 +467,12 @@ builder.queryField("payslipsForRun", (t) =>
 builder.queryField("payrollPaymentExport", (t) =>
   t.field({
     type: [PaymentExportRowRef],
-    description: "Net-pay-per-staff export for bank/bKash bulk upload (cash excluded; locked run only, §4.6). Requires payroll:manage.",
+    description:
+      "DEPRECATED (D-#601) — use `paymentAdvice`, which the workbook and the PDF pack " +
+      "both derive from. This field has its own idea of payable and never reads the " +
+      "routing number, so it reports a BEFTN row the advice pack refuses; that " +
+      "disagreement is what the rebuild removed. No client uses it. " +
+      "Net-pay-per-staff export for bank/bKash bulk upload (cash excluded; locked run only, §4.6). Requires payroll:manage.",
     authScopes: { hasPermission: "payroll:manage" },
     args: { runId: t.arg.string({ required: true }) },
     resolve: async (_root, args) => paymentExport(args.runId),

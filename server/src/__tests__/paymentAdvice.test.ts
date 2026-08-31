@@ -43,13 +43,30 @@ describe("which sheet a person belongs on", () => {
   test("bank names match through spacing, case and Ltd/PLC noise", () => {
     expect(sameBank("islami bank bangladesh plc", SCHOOL_BANK)).toBe(true);
     expect(sameBank("Islami Bank Bangladesh Ltd.", "Islami Bank Bangladesh")).toBe(true);
-    expect(sameBank("Islami Bank", SCHOOL_BANK)).toBe(true);
+    expect(sameBank("  ISLAMI BANK BANGLADESH  PLC. ", SCHOOL_BANK)).toBe(true);
   });
 
   test("a different bank never matches, and a blank never matches anything", () => {
     expect(sameBank("Pubali Bank", SCHOOL_BANK)).toBe(false);
     expect(sameBank("", SCHOOL_BANK)).toBe(false);
     expect(sameBank(null, null)).toBe(false);
+  });
+
+  /**
+   * D-#597. This is where the old rule was wrong, and the old test asserted the wrong
+   * thing: it matched when either name CONTAINED the other, so `sameBank("Islami Bank",
+   * SCHOOL_BANK)` was true and looked like sensible forgiveness. Half the banks here
+   * share a word. The school's own bank name is free text on the HR-policy screen, so
+   * shortening it to "Islami Bank" would have matched AL-ARAFAH Islami Bank, Social
+   * Islami Bank and EXIM — moving those staff onto the internal sheet, which has no
+   * routing column, so they would have read as payable while being unissuable.
+   */
+  test("a SHORTER name is a different bank — containment must not match", () => {
+    expect(sameBank("Al-Arafah Islami Bank", SCHOOL_BANK)).toBe(false);
+    expect(sameBank("Social Islami Bank", SCHOOL_BANK)).toBe(false);
+    expect(sameBank("Islami Bank", SCHOOL_BANK)).toBe(false);
+    // And the trap in its original form: the letterhead name typed short.
+    expect(channelFor("bank", "Al-Arafah Islami Bank", "Islami Bank")).toBe("beftn");
   });
 
   test("an UNSET school bank puts everyone on BEFTN — the sheet that demands more, not less", () => {

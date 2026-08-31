@@ -300,7 +300,7 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
   }, [canClassTestBadge, refetchCtCounts]);
   const ctCounts = ctCountsQ.data?.ctQuestionCounts;
 
-  // D-#597: a THIRD Class-Test badge — class-test reports past their deadline and
+  // D-#603: a THIRD Class-Test badge — class-test reports past their deadline and
   // not yet published. Server-scoped: Office/Principal see the school, a teacher
   // sees only their own. Blue, because red and yellow already mean "question paper
   // owed" and "paper in review" on this same row, and the delay is a different
@@ -423,7 +423,7 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
         if (ctCounts.pending > 0) out.push({ count: ctCounts.pending, bg: colors.error });
         if (ctCounts.inReview > 0) out.push({ count: ctCounts.inReview, bg: colors.warning });
       }
-      // D-#597 — overdue reports (blue), last so the question-pipeline badges keep
+      // D-#603 — overdue reports (blue), last so the question-pipeline badges keep
       // the positions the office already reads them in.
       if (canCtOverdueBadge && ctOverdue > 0) out.push({ count: ctOverdue, bg: colors.info });
       return out;

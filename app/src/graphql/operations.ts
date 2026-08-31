@@ -8066,6 +8066,8 @@ export interface StaffHubPayslipT {
   id: string;
   monthKey: string;
   grossSalary: number;
+  /** The rate payroll ACTUALLY used that month — salary ÷ that run's working days. */
+  dayRate: number;
   netPay: number;
   totalDeductions: number;
   totalAdditions: number;
@@ -8079,7 +8081,7 @@ export const STAFF_PAYSLIPS_QUERY = gql<
 >`
   query StaffPayslips($staffProfileId: String!) {
     staffPayslips(staffProfileId: $staffProfileId) {
-      id monthKey grossSalary netPay totalDeductions totalAdditions unpaidLeaveDays
+      id monthKey grossSalary dayRate netPay totalDeductions totalAdditions unpaidLeaveDays
       deductions { type amount days note }
     }
   }
