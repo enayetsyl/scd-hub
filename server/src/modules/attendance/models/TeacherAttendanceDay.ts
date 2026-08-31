@@ -12,7 +12,7 @@ import { TEACHER_ATTENDANCE_STATUSES, type TeacherAttendanceStatus } from "@scd/
  * `status` is read off the sheet's legend (§4): ✔ PRESENT, 𝓛 LATE (symbol only,
  * no grace computation), ✘ → LEAVE iff a staff leave record covers the date else
  * ABSENT (until a staff-leave source exists, ✘ = ABSENT — AT1.4), ℞ LEAVE
- * (D-#609 — it was read as "regular" and dropped, so leave could never be stored).
+ * (D-#611 — it was read as "regular" and dropped, so leave could never be stored).
  */
 export interface ITeacherAttendanceDay extends Document {
   _id: Types.ObjectId;
@@ -27,7 +27,7 @@ export interface ITeacherAttendanceDay extends Document {
   /** The sheet's shift text (e.g. "Syl Morning Shift 7:00-12:00"). */
   shift?: string;
   /**
-   * Half a day's leave (℞◑ / ℞◐ on the sheet), D-#609. Only meaningful with
+   * Half a day's leave (℞◑ / ℞◐ on the sheet), D-#611. Only meaningful with
    * `status: "LEAVE"`. Absent means a whole day, so existing rows need no migration.
    */
   halfDay?: boolean;

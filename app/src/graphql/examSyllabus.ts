@@ -25,6 +25,8 @@ export interface SyllabusT {
   id: string | null;
   examId: string;
   classId: string;
+  /** The class's Bangla name. Carried per ROW because `mySyllabusApprovals` spans classes. */
+  classLabel: string;
   subject: string;
   bodyMd: string;
   marks: SyllabusMarkRowT[];
@@ -57,7 +59,7 @@ export interface SyllabusApproverT {
 }
 
 const SYLLABUS_FIELDS = `
-  id examId classId subject bodyMd questionTypes examDateKey status sendBackReason
+  id examId classId classLabel subject bodyMd questionTypes examDateKey status sendBackReason
   isMine writtenMarks oralMarks totalMarks pending
   marks { seq label itemType component count marksEach total }
 `;

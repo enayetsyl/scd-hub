@@ -11,7 +11,7 @@
  * staff hub all started their year in June. The school also exports a year-to-date
  * report in the identical layout, one column per day; this walks it.
  *
- * It is also the correction path for D-#609: a day already imported gets REPLACED
+ * It is also the correction path for D-#611: a day already imported gets REPLACED
  * (AT1.5), so re-running it over June–August rewrites the days whose ✘ was later
  * reclassified as ℞ leave in the biometric system, which the daily upload could never
  * have known about.

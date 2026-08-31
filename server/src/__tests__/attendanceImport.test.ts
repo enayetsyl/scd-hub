@@ -118,7 +118,7 @@ describe("parseDayCell — the §4 legend", () => {
   });
 
   /**
-   * D-#609. This test used to assert `℞ → SKIP` on the reading that ℞ meant "regular",
+   * D-#611. This test used to assert `℞ → SKIP` on the reading that ℞ meant "regular",
    * and it is why the bug survived: the mistake was in the legend, so a test written
    * from the same legend agreed with it. What settled it was the year-to-date export —
    * ℞ carries half-day marks that only reconcile against the report's own totals as
@@ -424,11 +424,11 @@ describe("commitImport (AT1.2/AT1.4/AT1.5)", () => {
   });
 
   /**
-   * The prod symptom of D-#609, kept as a regression: on a day that WAS imported, the
+   * The prod symptom of D-#611, kept as a regression: on a day that WAS imported, the
    * person marked ℞ had no row at all while 22 colleagues did — dropped so completely
    * that they left the month's denominator too, and ছুটিতে could only read zero.
    */
-  test("℞ rows are STORED as LEAVE, not dropped (D-#609)", async () => {
+  test("℞ rows are STORED as LEAVE, not dropped (D-#611)", async () => {
     const file = await buildFileBase64([
       ["Sylhet", "", "Afia Loskor", "…", "℞", "1"],
       ["Sylhet", "", "Akter Hossen", "…", "✔ 06:53 AM", "1"],

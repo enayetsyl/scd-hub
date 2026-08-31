@@ -11,7 +11,7 @@
  *
  * Legend (§4): ✔ present · 𝓛 late (read the symbol — no grace computation) ·
  * ✘ not present (LEAVE-vs-ABSENT is resolved by the service, AT1.4) · ℞ LEAVE,
- * with ◑/◐ marking half a day (D-#609 — AT-1 read this as "regular" and dropped it).
+ * with ◑/◐ marking half a day (D-#611 — AT-1 read this as "regular" and dropped it).
  *
  * The same layout is exported year-to-date, with one dated column per day;
  * `parseAttendanceGridRange` reads all of them (D-#610).
@@ -36,7 +36,7 @@ export interface ParsedAttendanceRow {
   mark: ParsedMark;
   punchIn?: string;
   punchOut?: string;
-  /** ℞◑ / ℞◐ — half a day's leave. The report's own totals carry the .5 (D-#609). */
+  /** ℞◑ / ℞◐ — half a day's leave. The report's own totals carry the .5 (D-#611). */
   halfDay?: boolean;
 }
 
@@ -83,7 +83,7 @@ export function parseDayCell(
   cellText: string,
 ): Pick<ParsedAttendanceRow, "mark" | "punchIn" | "punchOut" | "halfDay"> {
   /**
-   * ℞ IS LEAVE, not "regular" (D-#609).
+   * ℞ IS LEAVE, not "regular" (D-#611).
    *
    * AT-1 read the legend as "℞ ignored" and mapped it to SKIP, so a leave day was
    * dropped at parse and never stored — not even as an absence. The owner found it

@@ -83,7 +83,12 @@ function ApprovalCard({
       {err ? <ErrorBanner message={err} /> : null}
 
       <View style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
+        {/* Class FIRST, then subject. A teacher holding one subject in three
+            classes gets three cards whose only difference is this line, and the
+            screen shipped showing the subject alone — three identical "ইংরেজি"
+            headings with no way to tell which class was being signed off. */}
         <Body style={{ ...typeScale.bodyStrong, flex: 1 }}>
+          {row.classLabel ? `${row.classLabel} — ` : ""}
           {routineSubjectLabel(row.subject)}
         </Body>
         <Badge

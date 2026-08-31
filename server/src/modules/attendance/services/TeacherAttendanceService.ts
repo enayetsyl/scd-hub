@@ -98,7 +98,7 @@ function statusOf(row: ParsedAttendanceRow): TeacherAttendanceStatus | null {
       return "LATE";
     // ℞ is the sheet SAYING leave, which is stronger evidence than the ✘-plus-a-leave-
     // record inference below — that one exists for days the biometric system never
-    // knew about (D-#609).
+    // knew about (D-#611).
     case "LEAVE":
       return "LEAVE";
     case "CROSS":
