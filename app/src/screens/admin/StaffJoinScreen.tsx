@@ -253,6 +253,7 @@ export default function StaffJoinScreen({ navigation }: Props): React.ReactEleme
           bankAccountName: bank.bankAccountName.trim(),
           bankName: bank.bankName.trim(),
           bankBranch: bank.bankBranch.trim(),
+          routingNo: bank.routingNo.trim(),
         },
       });
       if (upd.error) {
