@@ -1,3 +1,4 @@
+import { reassignClaimsForSubject } from "../../trackers/services/ClaimReassignService";
 import type { Types } from "mongoose";
 import { DELEGATED_ACTIONS, isDelegatedActionActive, type DelegatedAction } from "@scd/shared";
 import { ScopeGrant, type SupervisoryExtent } from "../models/ScopeGrant";
@@ -496,6 +497,11 @@ export async function grantTeaching(input: GrantTeachingInput): Promise<string> 
     meta: { teacherId: input.teacherId, classId, sectionId: input.sectionId, subjectId: input.subjectId, kind: "teaching" },
   });
 
+  // BUG-WC-7: teaching just changed hands, so open claims for this
+  // (section x subject) must follow it — and the new teacher is told AT ONCE
+  // rather than waiting for tomorrow's 11:30 rung (owner ruling 2026-08-30).
+  await reassignClaimsForSubject(input.sectionId, input.subjectId, input.assignedBy);
+
   return grantId;
 }
 
@@ -511,6 +517,12 @@ export async function revokeTeaching(grantId: string, revokedBy: string): Promis
     targetKind: "TeachingGrant",
     meta: { kind: "teaching" },
   });
+
+  // The other half of WC-7: revoking is how a subject is taken AWAY, and the
+  // claims left behind would otherwise sit with someone who can no longer act.
+  if (grant.sectionId && grant.subjectId) {
+    await reassignClaimsForSubject(grant.sectionId, grant.subjectId, revokedBy);
+  }
 }
 
 /** Active teaching grants for a section (the subject-teacher roster), newest first. */

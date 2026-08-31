@@ -61,6 +61,10 @@ const dedupeKeys = {
    *  this family with a day suffix so a nudge can re-notify without colliding. */
   workClaimFiled: (claimId: string) => `WCF:${claimId}`,
   workClaimNudged: (claimId: string, dateKey: string) => `WCN:${claimId}:${dateKey}`,
+  /** WC-7: a handover is keyed per claim PER RECIPIENT. `workClaimFiled` is keyed on
+   *  the claim alone, so re-emitting it for a new owner would be deduped against the
+   *  original filing and the new teacher would be told nothing at all. */
+  workClaimReassigned: (claimId: string, teacherId: string) => `WCRA:${claimId}:${teacherId}`,
   /** ONE digest row per recipient per rung per day (D-#554) — never one per claim.
    *  At hours-scale escalation the per-claim shape would put N rows a day into the
    *  Principal's inbox instead of one, and an unreadable inbox is an ignored one. */
@@ -1579,6 +1583,38 @@ export async function emitWorkClaimFiled(ev: WorkClaimNotifyEvent): Promise<void
         sectionId: ev.sectionId,
       },
       dedupeKey: dedupeKeys.workClaimFiled(ev.claimId),
+    });
+  });
+}
+
+/**
+ * WC-7: the claim has changed hands — tell its NEW owner at once (D-#593).
+ *
+ * Same `WORK_CLAIM_FILED` kind, because to this teacher that is exactly what it is:
+ * work they have just been handed and must answer. Only the dedupe key and the
+ * wording differ — the key carries the recipient, so the handover is not swallowed
+ * by the original filing, and it repeats for each new owner but never for the same
+ * one twice.
+ */
+export async function emitWorkClaimReassigned(ev: WorkClaimNotifyEvent): Promise<void> {
+  return bestEffort("work claim reassigned", async () => {
+    const student = (await Student.findById(ev.studentId).select("nameBn name").lean()) as
+      | { nameBn?: string; name?: string }
+      | null;
+    const who = student?.nameBn || student?.name || "একজন শিক্ষার্থী";
+    await emit({
+      recipientUserId: ev.teacherId,
+      kind: "WORK_CLAIM_FILED",
+      titleBn: "অভিভাবকের জানানো কাজ এখন আপনার দায়িত্বে",
+      bodyBn:
+        `${who} — ${trackerLabelBn(ev.tracker)} (${ev.workId}) বাড়িতে সম্পন্ন হয়েছে বলে ` +
+        `অভিভাবক আগেই জানিয়েছেন। বিষয়টি এখন আপনার, তাই খাতা নিয়ে অ্যাপে জমা লিখে দিন।`,
+      refs: {
+        workClaimId: ev.claimId,
+        studentId: ev.studentId,
+        sectionId: ev.sectionId,
+      },
+      dedupeKey: dedupeKeys.workClaimReassigned(ev.claimId, ev.teacherId),
     });
   });
 }
