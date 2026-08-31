@@ -22,7 +22,7 @@ import type { Role } from "@scd/shared";
 import { STR } from "../lib/labels";
 import { bnNum } from "../lib/labels";
 import { PRINT_QUEUE_COUNTS } from "../graphql/printing";
-import { CT_QUESTION_COUNTS } from "../graphql/classTest";
+import { CT_QUESTION_COUNTS, CLASS_TEST_OVERDUE_COUNTS } from "../graphql/classTest";
 import { STAFF_LEAVE_PENDING_COUNT, COMMENT_REVIEW_COUNT, OBSERVATION_COUNTS } from "../graphql/operations";
 import { MY_SYLLABUS_APPROVAL_COUNT } from "../graphql/examSyllabus";
 import { subscribeLiveEvents } from "../lib/liveEvents";
@@ -300,6 +300,27 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
   }, [canClassTestBadge, refetchCtCounts]);
   const ctCounts = ctCountsQ.data?.ctQuestionCounts;
 
+  // D-#597: a THIRD Class-Test badge — class-test reports past their deadline and
+  // not yet published. Server-scoped: Office/Principal see the school, a teacher
+  // sees only their own. Blue, because red and yellow already mean "question paper
+  // owed" and "paper in review" on this same row, and the delay is a different
+  // pipeline entirely. The field is unrefusable (returns 0), so it is safe to poll
+  // from every role — but it is still paused for guardians and read with `?.`.
+  const canCtOverdueBadge = !!role && role !== "GUARDIAN";
+  const ctOverdueContext = React.useMemo(() => ({ additionalTypenames: ["ClassTestResult"] }), []);
+  const [ctOverdueQ, refetchCtOverdue] = useQuery({
+    query: CLASS_TEST_OVERDUE_COUNTS,
+    pause: !canCtOverdueBadge,
+    requestPolicy: "cache-and-network",
+    context: ctOverdueContext,
+  });
+  React.useEffect(() => {
+    if (!canCtOverdueBadge) return;
+    const id = setInterval(() => refetchCtOverdue({ requestPolicy: "network-only" }), 60_000);
+    return () => clearInterval(id);
+  }, [canCtOverdueBadge, refetchCtOverdue]);
+  const ctOverdue = ctOverdueQ.data?.classTestOverdueCounts?.overdue ?? 0;
+
   // Owner 2026-07-26: Staff drawer badge — leave applications awaiting approval
   // (Principal/Office, leave:manage). Refreshes on any StaffLeaveApplication mutation.
   const canLeaveBadge = can("leave:manage");
@@ -396,10 +417,15 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
       if (printCounts.printed > 0) out.push({ count: printCounts.printed, bg: colors.warning });
       return out;
     }
-    if (route === "ClassTestTab" && canClassTestBadge && ctCounts) {
+    if (route === "ClassTestTab" && (canClassTestBadge || canCtOverdueBadge)) {
       const out: Array<{ count: number; bg: string }> = [];
-      if (ctCounts.pending > 0) out.push({ count: ctCounts.pending, bg: colors.error });
-      if (ctCounts.inReview > 0) out.push({ count: ctCounts.inReview, bg: colors.warning });
+      if (canClassTestBadge && ctCounts) {
+        if (ctCounts.pending > 0) out.push({ count: ctCounts.pending, bg: colors.error });
+        if (ctCounts.inReview > 0) out.push({ count: ctCounts.inReview, bg: colors.warning });
+      }
+      // D-#597 — overdue reports (blue), last so the question-pipeline badges keep
+      // the positions the office already reads them in.
+      if (canCtOverdueBadge && ctOverdue > 0) out.push({ count: ctOverdue, bg: colors.info });
       return out;
     }
     if (route === "HrTab" && canLeaveBadge && leavePending > 0) {

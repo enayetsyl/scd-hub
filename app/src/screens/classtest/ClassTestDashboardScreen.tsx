@@ -41,8 +41,28 @@ import type { ClassTestStackParamList } from "../../navigation/types";
 
 type Nav = NativeStackNavigationProp<ClassTestStackParamList>;
 
-/** null = all logged tests (the default drill-down scope). */
-type StateFilter = "complete" | "in_progress" | "not_started" | "overdue" | null;
+/** null = all logged tests (the default drill-down scope).
+ *  D-#597 adds two OWNER-scoped slices of `overdue`: they are not report states
+ *  (the row's state is still "overdue" in both), they answer "whose move is it?" */
+type StateFilter =
+  | "complete"
+  | "in_progress"
+  | "not_started"
+  | "overdue"
+  | "awaiting_submit"
+  | "awaiting_publish"
+  | null;
+
+/** The two owner slices read the ownership flags; everything else is the state. */
+const matchesStateFilter = (
+  r: { state: string; teacherOverdue: boolean; publishOverdue: boolean },
+  f: StateFilter,
+): boolean => {
+  if (f === null) return true;
+  if (f === "awaiting_submit") return r.teacherOverdue;
+  if (f === "awaiting_publish") return r.publishOverdue;
+  return r.state === f;
+};
 
 
 const stateTone = (s: string): "ok" | "danger" | "brand" | "muted" =>
@@ -97,7 +117,7 @@ export default function ClassTestDashboardScreen(): React.ReactElement {
   const d = dashQ.data?.classTestPrincipalDashboard ?? null;
   const chase = chaseQ.data?.classTestOverdueChase ?? null;
   const allRows = rowsQ.data?.classTestReportsStatus ?? [];
-  const stateRows = stateFilter ? allRows.filter((r) => r.state === stateFilter) : allRows;
+  const stateRows = stateFilter ? allRows.filter((r) => matchesStateFilter(r, stateFilter)) : allRows;
   const filtered = publishFilter ? stateRows.filter((r) => matchesCtPublishFilter(r, publishFilter)) : stateRows;
   // Release backlog → overdue → in hand → done (lib/ctDashboardOrder), then 50 a page.
   const rows = ctOrderRows(filtered);
@@ -131,6 +151,20 @@ export default function ClassTestDashboardScreen(): React.ReactElement {
               <Kpi label={STR.ctInProgress} value={bnNum(d.inProgress)} selected={stateFilter === "in_progress"} onPress={() => pickState("in_progress")} />
               <Kpi label={STR.ctNotStarted} value={bnNum(d.notStarted)} selected={stateFilter === "not_started"} onPress={() => pickState("not_started")} />
               <Kpi label={STR.ctOverdue} value={bnNum(d.overdue)} selected={stateFilter === "overdue"} onPress={() => pickState("overdue")} />
+              {/* D-#597: the same delay, split by whose move it is. Both drill into
+                  the `overdue` list, so the two always add up to the tile above. */}
+              <Kpi
+                label={STR.ctAwaitingSubmit}
+                value={bnNum(d.awaitingSubmit)}
+                selected={stateFilter === "awaiting_submit"}
+                onPress={() => pickState("awaiting_submit")}
+              />
+              <Kpi
+                label={STR.ctAwaitingPublish}
+                value={bnNum(d.awaitingPublish)}
+                selected={stateFilter === "awaiting_publish"}
+                onPress={() => pickState("awaiting_publish")}
+              />
               <Kpi label={STR.ctCompletionRate} value={d.completionRatePct == null ? "—" : `${bnNum(d.completionRatePct)}%`} />
             </View>
 
@@ -195,6 +229,10 @@ export default function ClassTestDashboardScreen(): React.ReactElement {
                     <Muted style={{ marginTop: space(1) }}>
                       {STR.ctEntered} {bnNum(r.enteredCount)}/{bnNum(r.rosterCount)} · {STR.ctPending} {bnNum(r.pendingCount)}
                       {r.overdue ? ` · ${STR.ctSchoolDaysLate} ${bnNum(r.schoolDaysLate)}` : ""}
+                      {/* D-#597: a red chip alone no longer says who is holding it up. */}
+                      {r.overdue
+                        ? ` · ${r.teacherOverdue ? STR.ctAwaitingSubmit : STR.ctAwaitingPublish}`
+                        : ""}
                       {r.submittedAt
                         ? ` · ${STR.ctSubmittedBadge} ${isoDateLabel(r.submittedAt)}`
                         : ""}

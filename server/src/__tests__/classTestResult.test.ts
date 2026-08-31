@@ -395,14 +395,65 @@ describe("examReportStatus (per-exam completion + deadline/overdue)", () => {
     expect(st.schoolDaysLate).toBe(2); // Tue, Wed
   });
 
-  test("a complete exam is never overdue, even past the deadline (D-#120)", async () => {
+  // D-#597 supersedes the old "complete ⇒ never overdue" rule (D-#120). Entry
+  // completeness is no longer the finish line: until the marks are RELEASED the
+  // guardian has seen nothing, so the delay keeps running — it just changes owner.
+  test("entry-complete but unsubmitted stays overdue, and it is the TEACHER's delay", async () => {
     mockCtFindById.mockReturnValue(leanChain(printedTest({ examDate: D(7, 9) })));
     mockStudentCount.mockResolvedValue(3);
     mockResFind.mockReturnValue(leanChain([{ status: "PRESENT" }, { status: "PRESENT" }, { status: "ABSENT" }]));
     const st = await examReportStatus(TEST_OID.toString(), D(7, 20));
-    expect(st.complete).toBe(true);
-    expect(st.overdue).toBe(false);
-    expect(st.schoolDaysLate).toBe(0);
+    expect(st).toMatchObject({
+      complete: true,
+      submitComplete: false,
+      publishComplete: false,
+      overdue: true,
+      teacherOverdue: true,
+      publishOverdue: false,
+    });
+    expect(st.schoolDaysLate).toBeGreaterThan(0);
+  });
+
+  test("submitted but unpublished moves the delay to Office/Principal", async () => {
+    mockCtFindById.mockReturnValue(leanChain(printedTest({ examDate: D(7, 9) })));
+    mockStudentCount.mockResolvedValue(3);
+    const submitted = { submittedAt: D(7, 13), publishedAt: null };
+    mockResFind.mockReturnValue(
+      leanChain([
+        { status: "PRESENT", ...submitted },
+        { status: "PRESENT", ...submitted },
+        { status: "ABSENT", ...submitted },
+      ]),
+    );
+    const st = await examReportStatus(TEST_OID.toString(), D(7, 20));
+    expect(st).toMatchObject({
+      submitComplete: true,
+      publishComplete: false,
+      overdue: true,
+      teacherOverdue: false,
+      publishOverdue: true,
+    });
+  });
+
+  test("published clears the delay entirely — the real finish line (D-#597)", async () => {
+    mockCtFindById.mockReturnValue(leanChain(printedTest({ examDate: D(7, 9) })));
+    mockStudentCount.mockResolvedValue(3);
+    const released = { submittedAt: D(7, 13), publishedAt: D(7, 14) };
+    mockResFind.mockReturnValue(
+      leanChain([
+        { status: "PRESENT", ...released },
+        { status: "PRESENT", ...released },
+        { status: "ABSENT", ...released },
+      ]),
+    );
+    const st = await examReportStatus(TEST_OID.toString(), D(7, 20));
+    expect(st).toMatchObject({
+      publishComplete: true,
+      overdue: false,
+      teacherOverdue: false,
+      publishOverdue: false,
+      schoolDaysLate: 0,
+    });
   });
 });
 

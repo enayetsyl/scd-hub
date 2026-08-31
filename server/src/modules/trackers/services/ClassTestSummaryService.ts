@@ -30,7 +30,7 @@ import { SubjectGroup } from "../../routine/models/SubjectGroup";
 import { SubjectGroupMembership } from "../../routine/models/SubjectGroupMembership";
 import { User } from "../../foundation/models/User";
 import { deriveScore } from "../classTestScoring";
-import { examReportStatus, type ExamReportStatus } from "./ClassTestResultService";
+import { examReportStatus, deriveReportOwnership, type ExamReportStatus } from "./ClassTestResultService";
 import { buildIsOpenDayForRange, deriveOverdue, type IsOpenDay } from "../classTestCalendar";
 import { getEffectiveTemplate, interpolate, type EffectiveTemplate } from "../../templates/services/MessageTemplateService";
 
@@ -91,9 +91,14 @@ function classBn(level: number): string {
 export type ReportState = "not_started" | "in_progress" | "complete" | "overdue";
 
 /** Mutually-exclusive bucket (priority: complete > overdue > in_progress > not_started).
- *  `overdue` already means incomplete-AND-past-deadline (examReportStatus, D-#120). */
-export function reportStateOf(s: { complete: boolean; overdue: boolean; enteredCount: number }): ReportState {
-  if (s.complete) return "complete";
+ *
+ *  D-#597: `complete` is now PUBLISH-complete, not entry-complete. Entering every
+ *  mark used to win this race and paint the row green while guardians had still
+ *  seen nothing; the finish line is release. `overdue` correspondingly means
+ *  past-deadline-and-unpublished (examReportStatus), so a fully-entered but
+ *  unreleased exam stays বিলম্বিত instead of flipping to সম্পূর্ণ. */
+export function reportStateOf(s: { publishComplete: boolean; overdue: boolean; enteredCount: number }): ReportState {
+  if (s.publishComplete) return "complete";
   if (s.overdue) return "overdue";
   if (s.enteredCount > 0) return "in_progress";
   return "not_started";
@@ -128,9 +133,17 @@ export interface ReportStatusRow extends ExamReportStatus {
  */
 function examStatusFrom(
   exam: IClassTest,
-  io: { now: Date; isOpenDay: IsOpenDay; rosterCount: number; enteredCount: number; presentCount: number },
+  io: {
+    now: Date;
+    isOpenDay: IsOpenDay;
+    rosterCount: number;
+    enteredCount: number;
+    presentCount: number;
+    submittedCount: number;
+    publishedCount: number;
+  },
 ): ExamReportStatus {
-  const { now, isOpenDay, rosterCount, enteredCount, presentCount } = io;
+  const { now, isOpenDay, rosterCount, enteredCount, presentCount, submittedCount, publishedCount } = io;
   const complete = rosterCount > 0 && enteredCount >= rosterCount;
   const { deadline, overdue, schoolDaysLate } = deriveOverdue(
     new Date(exam.examDate),
@@ -138,6 +151,13 @@ function examStatusFrom(
     now,
     isOpenDay,
   );
+  const owned = deriveReportOwnership({
+    rosterCount,
+    submittedCount,
+    publishedCount,
+    pastDeadline: overdue,
+    schoolDaysLate,
+  });
   return {
     testId: exam._id.toString(),
     ctId: exam.ctId,
@@ -150,12 +170,18 @@ function examStatusFrom(
     absentCount: enteredCount - presentCount,
     pendingCount: Math.max(0, rosterCount - enteredCount),
     complete,
-    overdue: overdue && !complete,
-    schoolDaysLate: overdue && !complete ? schoolDaysLate : 0,
+    submittedCount,
+    publishedCount,
+    ...owned,
   };
 }
 
-export async function reportsStatus(filter: SummaryFilter): Promise<ReportStatusRow[]> {
+/** `withTeacherNames: false` skips the User lookup — the drawer/dashboard badge
+ *  counters poll every 60s and only ever tally, never render a name (D-#597). */
+export async function reportsStatus(
+  filter: SummaryFilter,
+  opts: { withTeacherNames?: boolean } = {},
+): Promise<ReportStatusRow[]> {
   const now = filter.asOf ?? new Date();
   const exams = await loadPrintedExams(filter);
   if (exams.length === 0) return [];
@@ -165,17 +191,38 @@ export async function reportsStatus(filter: SummaryFilter): Promise<ReportStatus
   // row (the D-#351 rule, now applied to class tests).
   const accountableOf = (e: IClassTest): string =>
     (e.teacherId ?? e.requestedBy).toString();
-  const teacherNames = await loadUserNames([...new Set(exams.map(accountableOf))]);
-  const submitted = (await ClassTestResult.aggregate([
-    { $match: { testId: { $in: exams.map((e) => e._id) }, submittedAt: { $ne: null } } },
-    { $group: { _id: "$testId", latest: { $max: "$submittedAt" } } },
-  ])) as Array<{ _id: Types.ObjectId; latest: Date }>;
-  const submittedByTest = new Map(submitted.map((s) => [s._id.toString(), s.latest]));
-  const published = (await ClassTestResult.aggregate([
-    { $match: { testId: { $in: exams.map((e) => e._id) }, publishedAt: { $ne: null } } },
-    { $group: { _id: "$testId", latest: { $max: "$publishedAt" } } },
-  ])) as Array<{ _id: Types.ObjectId; latest: Date }>;
-  const publishedByTest = new Map(published.map((p) => [p._id.toString(), p.latest]));
+  const teacherNames =
+    opts.withTeacherNames === false
+      ? new Map<string, string>()
+      : await loadUserNames([...new Set(exams.map(accountableOf))]);
+  // ONE pass for the CT-8 handoff state: newest submit/publish stamps AND the row
+  // COUNTS the D-#597 ownership split needs. `$max` skips null/missing, so the
+  // stamps are unchanged from the two filtered aggregates this replaces; the
+  // counts have to see every row, which is why the $match no longer filters.
+  // A row is "handed off" if submittedAt is set OR it is already published —
+  // `publishExam` stamps every row, so a published row need not carry a submit.
+  const notNull = (f: string) => ({ $ne: [f, null] });
+  const handoff = (await ClassTestResult.aggregate([
+    { $match: { testId: { $in: exams.map((e) => e._id) } } },
+    {
+      $group: {
+        _id: "$testId",
+        submittedLatest: { $max: "$submittedAt" },
+        publishedLatest: { $max: "$publishedAt" },
+        submittedCount: {
+          $sum: { $cond: [{ $or: [notNull("$submittedAt"), notNull("$publishedAt")] }, 1, 0] },
+        },
+        publishedCount: { $sum: { $cond: [notNull("$publishedAt"), 1, 0] } },
+      },
+    },
+  ])) as Array<{
+    _id: Types.ObjectId;
+    submittedLatest: Date | null;
+    publishedLatest: Date | null;
+    submittedCount: number;
+    publishedCount: number;
+  }>;
+  const handoffByTest = new Map(handoff.map((h) => [h._id.toString(), h]));
 
   // ONE calendar and ONE roster/result pass for the WHOLE exam set.
   //
@@ -236,6 +283,7 @@ export async function reportsStatus(filter: SummaryFilter): Promise<ReportStatus
 
   const rows: ReportStatusRow[] = [];
   for (const exam of exams) {
+    const ho = handoffByTest.get(exam._id.toString());
     const status = examStatusFrom(exam, {
       now,
       isOpenDay,
@@ -244,10 +292,12 @@ export async function reportsStatus(filter: SummaryFilter): Promise<ReportStatus
         : rosterBySection.get(exam.sectionId!.toString()) ?? 0,
       enteredCount: enteredByTest.get(exam._id.toString()) ?? 0,
       presentCount: presentByTest.get(exam._id.toString()) ?? 0,
+      submittedCount: ho?.submittedCount ?? 0,
+      publishedCount: ho?.publishedCount ?? 0,
     });
     const teacherId = accountableOf(exam);
-    const sub = submittedByTest.get(exam._id.toString());
-    const pub = publishedByTest.get(exam._id.toString());
+    const sub = ho?.submittedLatest ?? null;
+    const pub = ho?.publishedLatest ?? null;
     rows.push({
       ...status,
       subject: exam.subject,
@@ -278,12 +328,20 @@ export interface OverdueByTeacherRow {
 export interface PrincipalDashboard {
   /** Total PRINTED (official) exams in scope. */
   logged: number;
+  /** D-#597: PUBLISH-complete (released to guardians), not merely entry-complete —
+   *  so `completionRatePct` now measures delivery, not data entry. */
   complete: number;
   inProgress: number;
   notStarted: number;
   overdue: number;
+  /** D-#597 split of `overdue` by who is answerable. The two are disjoint and
+   *  sum to `overdue`: before submit it is the teacher's, after it is ours. */
+  awaitingSubmit: number;
+  awaitingPublish: number;
   /** complete / logged, 0–100 (null when nothing is logged). */
   completionRatePct: number | null;
+  /** Only TEACHER-owned delays (`teacherOverdue`) — an exam the teacher has already
+   *  submitted is waiting on Office/Principal and must not land in their column. */
   overdueByTeacher: OverdueByTeacherRow[];
 }
 
@@ -294,12 +352,18 @@ export async function principalDashboard(filter: SummaryFilter): Promise<Princip
   let inProgress = 0;
   let notStarted = 0;
   let overdue = 0;
+  let awaitingSubmit = 0;
+  let awaitingPublish = 0;
   const overdueByTeacherId = new Map<string, number>();
   for (const r of rows) {
     if (r.state === "complete") complete++;
     else if (r.state === "overdue") {
       overdue++;
-      overdueByTeacherId.set(r.teacherId, (overdueByTeacherId.get(r.teacherId) ?? 0) + 1);
+      // D-#597: attribute to the stage it is actually stuck in.
+      if (r.teacherOverdue) {
+        awaitingSubmit++;
+        overdueByTeacherId.set(r.teacherId, (overdueByTeacherId.get(r.teacherId) ?? 0) + 1);
+      } else awaitingPublish++;
     } else if (r.state === "in_progress") inProgress++;
     else notStarted++;
   }
@@ -319,9 +383,41 @@ export async function principalDashboard(filter: SummaryFilter): Promise<Princip
     inProgress,
     notStarted,
     overdue,
+    awaitingSubmit,
+    awaitingPublish,
     completionRatePct: logged === 0 ? null : Math.round((complete / logged) * 100),
     overdueByTeacher,
   };
+}
+
+// ---------------------------------------------------------------------------
+// 2b. Overdue counters (D-#597) — the drawer badge, the dashboard tiles and the
+//     08:00 Office/Principal digest all read THIS, so the number in the sidebar,
+//     the number on the dashboard and the number in the notification can never
+//     disagree. Name-free (see reportsStatus opts) because none of them show one.
+// ---------------------------------------------------------------------------
+
+export interface OverdueCounts {
+  /** Past deadline and unpublished — what the বিলম্বিত chip counts. */
+  overdue: number;
+  /** …of which still with the teacher. */
+  awaitingSubmit: number;
+  /** …of which waiting on Office/Principal approval. */
+  awaitingPublish: number;
+}
+
+export async function overdueCounts(filter: SummaryFilter): Promise<OverdueCounts> {
+  const rows = await reportsStatus(filter, { withTeacherNames: false });
+  let overdue = 0;
+  let awaitingSubmit = 0;
+  let awaitingPublish = 0;
+  for (const r of rows) {
+    if (!r.overdue) continue;
+    overdue++;
+    if (r.teacherOverdue) awaitingSubmit++;
+    else awaitingPublish++;
+  }
+  return { overdue, awaitingSubmit, awaitingPublish };
 }
 
 async function loadUserNames(ids: string[]): Promise<Map<string, string>> {
@@ -712,10 +808,15 @@ export interface OverdueChaseList {
  * N+1 guard: the chase template is resolved ONCE (getEffectiveTemplate) and
  * interpolated per teacher; renderTemplate/getEffectiveTemplate is never called in a
  * loop. The Office acts on this — the teacher never chases themselves (resolver-gated).
+ *
+ * D-#597: filters on `teacherOverdue`, NOT `state === "overdue"`. Since the chip now
+ * stays red until publish, `state` also covers exams the teacher has already
+ * submitted and that are sitting in OUR approval queue — nudging them for those
+ * would chase the wrong person for work they cannot do.
  */
 export async function overdueChaseList(filter: SummaryFilter): Promise<OverdueChaseList> {
   const rows = await reportsStatus(filter);
-  const overdueRows = rows.filter((r) => r.state === "overdue");
+  const overdueRows = rows.filter((r) => r.teacherOverdue);
 
   // Group overdue exams by the report author (teacher).
   const byTeacher = new Map<string, ReportStatusRow[]>();

@@ -247,14 +247,71 @@ export interface ExamReportStatus {
   pendingCount: number;
   /** Every active student has a result row. */
   complete: boolean;
-  /** Past deadline AND not complete (D-#120 clock idle until the exam date). */
+  /** Rows the teacher has HANDED OFF — `submittedAt` set, or already published
+   *  (`publishExam` stamps every row, so a published row need not carry a
+   *  submittedAt). A send-back/recall `$unset`s submittedAt, which returns the
+   *  row — and the delay — to the teacher automatically. */
+  submittedCount: number;
+  /** Rows visible to a guardian (`publishedAt` set). */
+  publishedCount: number;
+  /** Every roster row handed off by the teacher. */
+  submitComplete: boolean;
+  /** Every roster row published — the real finish line (D-#597). */
+  publishComplete: boolean;
+  /** Past deadline and NOT yet published — the card's বিলম্বিত chip. Stays true
+   *  through the approval leg, so entering marks no longer clears the delay. */
   overdue: boolean;
+  /** Past deadline and not handed off — the TEACHER's delay (drives the chase
+   *  list and overdueByTeacher). Clears the moment they hit submit. */
+  teacherOverdue: boolean;
+  /** Past deadline, handed off, still unpublished — the OFFICE/PRINCIPAL's delay. */
+  publishOverdue: boolean;
+  schoolDaysLate: number;
+}
+
+/** Inputs to the ownership split — the counts, plus the raw calendar verdict. */
+export interface ReportOwnershipInput {
+  rosterCount: number;
+  submittedCount: number;
+  publishedCount: number;
+  /** `now > deadline`, straight from `deriveOverdue` (no completeness applied). */
+  pastDeadline: boolean;
   schoolDaysLate: number;
 }
 
 /**
+ * The one place the delay is split between its two owners (D-#597). Both the
+ * single-exam read and the batched CT-4 aggregate call this, so the rule can
+ * never drift between the card and the dashboard.
+ *
+ * The clock runs from ONE deadline (`deadlineDays` school-days after the exam)
+ * and stops only at PUBLISH; who is answerable for it flips at submit.
+ */
+export function deriveReportOwnership(i: ReportOwnershipInput): {
+  submitComplete: boolean;
+  publishComplete: boolean;
+  overdue: boolean;
+  teacherOverdue: boolean;
+  publishOverdue: boolean;
+  schoolDaysLate: number;
+} {
+  const submitComplete = i.rosterCount > 0 && i.submittedCount >= i.rosterCount;
+  const publishComplete = i.rosterCount > 0 && i.publishedCount >= i.rosterCount;
+  const overdue = i.pastDeadline && !publishComplete;
+  return {
+    submitComplete,
+    publishComplete,
+    overdue,
+    teacherOverdue: overdue && !submitComplete,
+    publishOverdue: overdue && submitComplete,
+    schoolDaysLate: overdue ? i.schoolDaysLate : 0,
+  };
+}
+
+/**
  * The per-exam completion + deadline/overdue read (CT-2). `now` is passed in (§9 —
- * deterministic). Overdue requires BOTH past-deadline and incomplete results.
+ * deterministic). Overdue means past-deadline and NOT PUBLISHED (D-#597) — entering
+ * every mark no longer stops the clock; only release to guardians does.
  */
 export async function examReportStatus(testId: string, now: Date = new Date()): Promise<ExamReportStatus> {
   const test = await loadTest(testId);
@@ -270,8 +327,10 @@ export async function examReportStatus(testId: string, now: Date = new Date()): 
       subjectGroupId: test.subjectGroupId ? test.subjectGroupId.toString() : null,
       subject: test.subject,
     }),
-    ClassTestResult.find({ testId: new Types.ObjectId(testId) }).select("status").lean() as Promise<
-      Array<{ status: ClassTestAttendanceStatus }>
+    ClassTestResult.find({ testId: new Types.ObjectId(testId) })
+      .select("status submittedAt publishedAt")
+      .lean() as Promise<
+      Array<{ status: ClassTestAttendanceStatus; submittedAt?: Date | null; publishedAt?: Date | null }>
     >,
   ]);
   const rosterCountValue = roster;
@@ -281,12 +340,21 @@ export async function examReportStatus(testId: string, now: Date = new Date()): 
   const absentCount = enteredCount - presentCount;
   const pendingCount = Math.max(0, rosterCountValue - enteredCount);
   const complete = rosterCountValue > 0 && enteredCount >= rosterCountValue;
+  const submittedCount = results.filter((r) => r.submittedAt != null || r.publishedAt != null).length;
+  const publishedCount = results.filter((r) => r.publishedAt != null).length;
 
   const { deadline, overdue, schoolDaysLate } = await resolveClassTestOverdue(
     new Date(test.examDate),
     test.deadlineDays,
     now,
   );
+  const owned = deriveReportOwnership({
+    rosterCount: rosterCountValue,
+    submittedCount,
+    publishedCount,
+    pastDeadline: overdue,
+    schoolDaysLate,
+  });
 
   return {
     testId,
@@ -300,8 +368,9 @@ export async function examReportStatus(testId: string, now: Date = new Date()): 
     absentCount,
     pendingCount,
     complete,
-    overdue: overdue && !complete,
-    schoolDaysLate: overdue && !complete ? schoolDaysLate : 0,
+    submittedCount,
+    publishedCount,
+    ...owned,
   };
 }
 
