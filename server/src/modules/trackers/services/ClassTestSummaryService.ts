@@ -201,7 +201,17 @@ export async function reportsStatus(
   // counts have to see every row, which is why the $match no longer filters.
   // A row is "handed off" if submittedAt is set OR it is already published —
   // `publishExam` stamps every row, so a published row need not carry a submit.
-  const notNull = (f: string) => ({ $ne: [f, null] });
+  //
+  // `$ifNull` is LOAD-BEARING (D-#614). In the QUERY language `{publishedAt:
+  // {$ne: null}}` also matches a MISSING field, which is why the two `$match`-
+  // filtered aggregates this replaced were correct. In an AGGREGATION EXPRESSION
+  // the semantics differ: a missing field evaluates to `missing`, and
+  // `{$ne: ["$publishedAt", null]}` is TRUE for it. Without the coercion every
+  // never-published row counted as published, so `publishComplete` was true for
+  // every exam and D-#603's whole point — a report stays বিলম্বিত until it is
+  // released — silently did nothing. Measured on prod 2026-08-31: 12 of 12 rows
+  // reported published on an exam with no `publishedAt` field at all.
+  const notNull = (f: string) => ({ $ne: [{ $ifNull: [f, null] }, null] });
   const handoff = (await ClassTestResult.aggregate([
     { $match: { testId: { $in: exams.map((e) => e._id) } } },
     {
