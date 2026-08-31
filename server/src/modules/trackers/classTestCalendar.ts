@@ -66,14 +66,29 @@ export function schoolDaysBetween(from: Date, to: Date, isOpenDay: IsOpenDay): n
 
 export interface OverdueState {
   deadline: Date;
-  /** True iff `now` is strictly past the deadline (D-#120: the clock is idle until
-   *  the exam date passes — a deadline ≥ examDate guarantees that naturally). */
+  /** True from the deadline day ITSELF onward (D-#606), not the day after. */
   overdue: boolean;
-  /** OPEN school-days between the deadline and `now` (0 until overdue). */
+  /** OPEN school-days between the deadline and `now`. 0 on the deadline day —
+   *  the report is due, not yet late by any days (D-#606). */
   schoolDaysLate: number;
 }
 
-/** Pure overdue derivation from a passed-in `now` (§9 — time inputs injected). */
+/**
+ * Pure overdue derivation from a passed-in `now` (§9 — time inputs injected).
+ *
+ * D-#606: the comparison is `>=`, so a report is overdue ON its deadline day.
+ * It used to be `>`, which gave a silent extra day: with Fri/Sat closed, a
+ * Thursday exam's two school days land on Sun+Mon, and the row stayed green all
+ * of Monday — the day it was actually due — turning "two days" into five
+ * calendar days. Owner ruling 2026-08-31, from the prod dashboard.
+ *
+ * The `afterExam` guard preserves the D-#120 property that the clock is idle
+ * until the exam date has passed. For `deadlineDays >= 1` the deadline is always
+ * after the exam date, so it changes nothing; it matters only for
+ * `deadlineDays === 0` (permitted by the model, and per-exam editable), where
+ * `>=` alone would mark the report late at 00:00 on the exam's own day — before
+ * the exam has even been sat.
+ */
 export function deriveOverdue(
   examDate: Date,
   deadlineDays: number,
@@ -81,7 +96,9 @@ export function deriveOverdue(
   isOpenDay: IsOpenDay,
 ): OverdueState {
   const deadline = deadlineFrom(examDate, deadlineDays, isOpenDay);
-  const overdue = atMidnight(now).getTime() > deadline.getTime();
+  const today = atMidnight(now).getTime();
+  const afterExam = today > atMidnight(examDate).getTime();
+  const overdue = today >= deadline.getTime() && afterExam;
   return {
     deadline,
     overdue,
