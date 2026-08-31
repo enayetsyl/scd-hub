@@ -69,6 +69,7 @@ SyllabusRef.implement({
     id: t.string({ nullable: true, resolve: (r) => r.id }),
     examId: t.exposeString("examId"),
     classId: t.exposeString("classId"),
+    classLabel: t.exposeString("classLabel"),
     subject: t.exposeString("subject"),
     bodyMd: t.exposeString("bodyMd"),
     marks: t.field({ type: [MarkRowRef], resolve: (r) => r.marks }),
