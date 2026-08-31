@@ -25,6 +25,7 @@ const FILLED = {
   bankAccountName: "Parul Begum",
   bankName: "IBBL",
   bankBranch: "Uttara",
+  routingNo: "",
 };
 
 describe("detailsForMethod", () => {
@@ -66,5 +67,52 @@ describe("both screens actually apply the rule", () => {
     expect(src).toContain("detailsForMethod");
     // Guard against the import surviving while the call is refactored away.
     expect(src).toMatch(/detailsForMethod\(\s*b/);
+  });
+});
+
+// ===========================================================================
+describe("the routing number reaches the screens that collect bank details (D-#595)", () => {
+  const read = (rel: string): string => readFileSync(path.resolve(__dirname, rel), "utf8");
+
+  /**
+   * The field existed on the model, in GraphQL and in the advice pack, and on the flat
+   * EDIT form — but not in `BankDetailsFields`, which is what the join wizard and the
+   * pay screen render. So the column could not be typed on either path anyone uses:
+   * D-#577's lesson ("an argument the schema accepts is not a feature until a screen
+   * sends it") repeated by the person who wrote it down. Found by the owner driving
+   * prod: "i couldn't find routing number field".
+   */
+  test("the shared component renders it — the join wizard and the pay screen both use it", () => {
+    const src = read("../../../app/src/components/BankDetailsFields.tsx");
+    expect(src).toContain("stfRoutingNo");
+    expect(src).toMatch(/value=\{value\.routingNo\}/);
+  });
+
+  test("both screens SAVE it, not just show it", () => {
+    for (const rel of [
+      "../../../app/src/screens/admin/StaffJoinScreen.tsx",
+      "../../../app/src/screens/hr/StaffPayEditScreen.tsx",
+    ]) {
+      expect(read(rel)).toMatch(/routingNo: bank\.routingNo\.trim\(\)/);
+    }
+  });
+
+  test("the pay screen SEEDS it from the record, so an edit does not blank it", () => {
+    const src = read("../../../app/src/screens/hr/StaffPayEditScreen.tsx");
+    expect(src).toMatch(/routingNo: staff\.routingNo \?\? ""/);
+  });
+
+  test("it is NOT required for completeness — an internal transfer has no routing column", () => {
+    // Requiring it here would block every staff member at the school's own bank for a
+    // field their advice sheet never prints. The demand is made where the channel is
+    // known (PaymentAdviceService), not here where it is not.
+    expect(isBankDetailsComplete("bank", { ...FILLED, routingNo: "" })).toBe(true);
+    expect(isBankDetailsComplete("bkash", { ...EMPTY_BANK_DETAILS, bankAccount: "017", routingNo: "" })).toBe(true);
+  });
+
+  test("switching method keeps the routing number, like the other bank-only fields", () => {
+    const next = detailsForMethod({ ...FILLED, routingNo: "015914152" }, "bank", "bkash");
+    expect(next.routingNo).toBe("015914152");
+    expect(next.bankAccount).toBe("");
   });
 });

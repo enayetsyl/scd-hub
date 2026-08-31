@@ -103,6 +103,7 @@ export default function StaffPayEditScreen({ route, navigation }: Props): React.
     bankAccountName: staff.bankAccountName ?? "",
     bankName: staff.bankName ?? "",
     bankBranch: staff.bankBranch ?? "",
+    routingNo: staff.routingNo ?? "",
   });
   const [bankTouched, setBankTouched] = React.useState(false);
   // A raise is dated: entering it in September does not make it a September raise.
@@ -147,6 +148,7 @@ export default function StaffPayEditScreen({ route, navigation }: Props): React.
           bankAccountName: bank.bankAccountName.trim(),
           bankName: bank.bankName.trim(),
           bankBranch: bank.bankBranch.trim(),
+          routingNo: bank.routingNo.trim(),
         },
       });
       if (res.error) { setBusy(false); setFailure(friendlyError(res.error)); return; }
