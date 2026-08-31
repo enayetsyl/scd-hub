@@ -25,6 +25,8 @@ import type { Role } from "@scd/shared";
 import {
   reportsStatus,
   principalDashboard,
+  overdueCounts,
+  type OverdueCounts,
   classSubjectAnalysis,
   studentProfile,
   overdueChaseList,
@@ -145,7 +147,19 @@ ReportStatusRowRef.implement({
     absentCount: t.exposeInt("absentCount"),
     pendingCount: t.exposeInt("pendingCount"),
     complete: t.exposeBoolean("complete"),
-    overdue: t.exposeBoolean("overdue"),
+    submittedCount: t.exposeInt("submittedCount"),
+    publishedCount: t.exposeInt("publishedCount"),
+    submitComplete: t.exposeBoolean("submitComplete"),
+    publishComplete: t.exposeBoolean("publishComplete"),
+    overdue: t.exposeBoolean("overdue", {
+      description: "Past deadline and NOT yet published (D-#603) — entering marks no longer clears it.",
+    }),
+    teacherOverdue: t.exposeBoolean("teacherOverdue", {
+      description: "The teacher's share of the delay: past deadline, not yet submitted.",
+    }),
+    publishOverdue: t.exposeBoolean("publishOverdue", {
+      description: "Office/Principal's share: submitted by the teacher, still unpublished past the deadline.",
+    }),
     schoolDaysLate: t.exposeInt("schoolDaysLate"),
     state: t.exposeString("state"),
   }),
@@ -198,6 +212,12 @@ DashboardRef.implement({
     inProgress: t.exposeInt("inProgress"),
     notStarted: t.exposeInt("notStarted"),
     overdue: t.exposeInt("overdue"),
+    awaitingSubmit: t.exposeInt("awaitingSubmit", {
+      description: "Overdue and still with the teacher (D-#603) — the chase-list population.",
+    }),
+    awaitingPublish: t.exposeInt("awaitingPublish", {
+      description: "Overdue and waiting on Office/Principal approval (D-#603).",
+    }),
     completionRatePct: t.int({ nullable: true, resolve: (r) => r.completionRatePct }),
     overdueByTeacher: t.field({ type: [OverdueByTeacherRef], resolve: (r) => r.overdueByTeacher }),
   }),
@@ -219,6 +239,57 @@ builder.queryField("classTestPrincipalDashboard", (t) =>
     resolve: async (_root, args, ctx) => {
       assertDashboardAdmin(ctx);
       return principalDashboard(filterFromArgs(args));
+    },
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// 2b. Overdue counters — the drawer badge + dashboard tiles (D-#603)
+// ---------------------------------------------------------------------------
+
+const OverdueCountsRef = builder.objectRef<OverdueCounts>("ClassTestOverdueCounts");
+OverdueCountsRef.implement({
+  description:
+    "Overdue class-test report counters (D-#603). Role-scoped: Principal/Office see the school, " +
+    "a teacher sees only their OWN reports — a school-wide number on a teacher's drawer is noise they cannot act on.",
+  fields: (t) => ({
+    overdue: t.exposeInt("overdue"),
+    awaitingSubmit: t.exposeInt("awaitingSubmit"),
+    awaitingPublish: t.exposeInt("awaitingPublish"),
+  }),
+});
+
+builder.queryField("classTestOverdueCounts", (t) =>
+  t.field({
+    type: OverdueCountsRef,
+    description:
+      "Counters behind the ক্লাস টেস্ট drawer badge and the dashboard's delay tiles (D-#603). " +
+      "Polled — deliberately name-free so it costs one query less than the full Reports Status.",
+    authScopes: { authenticated: true },
+    args: {
+      academicYearId: t.arg.string({ required: false }),
+      classLevel: t.arg.int({ required: false }),
+      sectionId: t.arg.string({ required: false }),
+      subject: t.arg.string({ required: false }),
+      asOf: t.arg.string({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      const role = ctx.auth.role as Role;
+      const admin = isAdminStaff(ctx.auth);
+      // Returns ZEROES rather than throwing for a role with nothing to see. This
+      // field feeds a drawer badge that every signed-in client polls, and a badge
+      // probe that CAN be refused is what white-screened the app in 791e5fe — the
+      // same reason mySyllabusApprovalCount is unrefusable. It leaks nothing: a
+      // count of zero is what such a caller would legitimately be told anyway.
+      const blind = !admin && (role === "GUARDIAN" || !callerHasPermission(ctx.auth, "tracker:read"));
+      if (blind) return { overdue: 0, awaitingSubmit: 0, awaitingPublish: 0 };
+      // A teacher's badge counts only what they are accountable for (the same
+      // `teacherId ?? requestedBy` attribution the dashboard uses).
+      return overdueCounts({
+        ...filterFromArgs(args),
+        teacherId: admin ? undefined : (ctx.auth.userId as string),
+      });
     },
   }),
 );

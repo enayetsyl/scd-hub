@@ -113,7 +113,19 @@ ExamReportStatusRef.implement({
     absentCount: t.exposeInt("absentCount"),
     pendingCount: t.exposeInt("pendingCount"),
     complete: t.exposeBoolean("complete"),
-    overdue: t.exposeBoolean("overdue"),
+    submittedCount: t.exposeInt("submittedCount"),
+    publishedCount: t.exposeInt("publishedCount"),
+    submitComplete: t.exposeBoolean("submitComplete"),
+    publishComplete: t.exposeBoolean("publishComplete"),
+    overdue: t.exposeBoolean("overdue", {
+      description: "Past deadline and NOT yet published (D-#603) — entering marks no longer clears it.",
+    }),
+    teacherOverdue: t.exposeBoolean("teacherOverdue", {
+      description: "The teacher's share of the delay: past deadline, not yet submitted.",
+    }),
+    publishOverdue: t.exposeBoolean("publishOverdue", {
+      description: "Office/Principal's share: submitted by the teacher, still unpublished past the deadline.",
+    }),
     schoolDaysLate: t.exposeInt("schoolDaysLate"),
   }),
 });
