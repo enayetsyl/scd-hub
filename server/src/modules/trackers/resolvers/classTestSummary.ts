@@ -253,6 +253,10 @@ OverdueCountsRef.implement({
     "Overdue class-test report counters (D-#603). Role-scoped: Principal/Office see the school, " +
     "a teacher sees only their OWN reports — a school-wide number on a teacher's drawer is noise they cannot act on.",
   fields: (t) => ({
+    open: t.exposeInt("open", {
+      description:
+        "Exam sat and results not yet published (D-#615) — the whole outstanding pile. `overdue` is a strict subset.",
+    }),
     overdue: t.exposeInt("overdue"),
     awaitingSubmit: t.exposeInt("awaitingSubmit"),
     awaitingPublish: t.exposeInt("awaitingPublish"),
@@ -283,7 +287,7 @@ builder.queryField("classTestOverdueCounts", (t) =>
       // same reason mySyllabusApprovalCount is unrefusable. It leaks nothing: a
       // count of zero is what such a caller would legitimately be told anyway.
       const blind = !admin && (role === "GUARDIAN" || !callerHasPermission(ctx.auth, "tracker:read"));
-      if (blind) return { overdue: 0, awaitingSubmit: 0, awaitingPublish: 0 };
+      if (blind) return { open: 0, overdue: 0, awaitingSubmit: 0, awaitingPublish: 0 };
       // A teacher's badge counts only what they are accountable for (the same
       // `teacherId ?? requestedBy` attribution the dashboard uses).
       return overdueCounts({
