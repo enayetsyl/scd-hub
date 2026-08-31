@@ -19,7 +19,12 @@
  */
 import { Types } from "mongoose";
 import type { TeacherAttendanceStatus } from "@scd/shared";
-import { parseEmployeeAttendanceXlsx, type ParsedAttendanceRow } from "../excel";
+import {
+  parseEmployeeAttendanceXlsx,
+  parseEmployeeAttendanceXlsxRange,
+  type ParsedAttendanceRow,
+  type ParsedSheet,
+} from "../excel";
 import { normalizeName, matchName, indexProfilesByName } from "../reconcile";
 import { TeacherAttendanceDay, type ITeacherAttendanceDay } from "../models/TeacherAttendanceDay";
 import { StaffNameAlias } from "../models/StaffNameAlias";
@@ -37,7 +42,7 @@ export class AttendanceImportError extends Error {
 export interface PreviewRow {
   name: string;
   shift: string | null;
-  /** Resolved status for storable rows; null when skipped (℞ / no symbol). */
+  /** Resolved status for storable rows; null when skipped (no symbol at all). */
   status: TeacherAttendanceStatus | null;
   punchIn: string | null;
   punchOut: string | null;
@@ -91,6 +96,11 @@ function statusOf(row: ParsedAttendanceRow): TeacherAttendanceStatus | null {
       return "PRESENT";
     case "LATE":
       return "LATE";
+    // ℞ is the sheet SAYING leave, which is stronger evidence than the ✘-plus-a-leave-
+    // record inference below — that one exists for days the biometric system never
+    // knew about (D-#611).
+    case "LEAVE":
+      return "LEAVE";
     case "CROSS":
       return resolveCrossMark();
     case "SKIP":
@@ -184,7 +194,21 @@ export async function commitImport(
 
   const { byName, aliases } = await loadMatchIndexes();
   const ignored = new Set(ignoreNames.map(normalizeName));
+  return commitOneSheet(parsed, byName, aliases, ignored, actorId);
+}
 
+/**
+ * Write ONE parsed day. Split out of `commitImport` so the range import (D-#610) runs
+ * the identical path per day — matching, dedupe, wholesale replace and audit — rather
+ * than a parallel implementation that could drift from the daily upload's behaviour.
+ */
+async function commitOneSheet(
+  parsed: ParsedSheet,
+  byName: Map<string, string[]>,
+  aliases: Map<string, string>,
+  ignored: Set<string>,
+  actorId: string,
+): Promise<ImportCommit> {
   const docs: Array<Partial<ITeacherAttendanceDay>> = [];
   const unresolved: string[] = [];
   let skipped = 0;
@@ -213,6 +237,7 @@ export async function commitImport(
       punchIn: row.punchIn,
       punchOut: row.punchOut,
       shift: row.shift,
+      halfDay: row.halfDay,
       importedBy: new Types.ObjectId(actorId),
     });
   }
@@ -257,6 +282,161 @@ export async function commitImport(
     ignored: ignoredCount,
     replaced: existing > 0,
   };
+}
+
+export interface RangePreview {
+  fromDateKey: string;
+  toDateKey: string;
+  days: number;
+  /** Rows that would be written, by status. */
+  byStatus: Record<string, number>;
+  /** Days already holding rows — a commit REPLACES those (AT1.5). */
+  alreadyImported: string[];
+  /** Names on the sheet with no profile and no alias; a commit would abort on these. */
+  unmatched: string[];
+  /** Cells with no symbol at all — no school that day, nothing to store. */
+  skipped: number;
+}
+
+/**
+ * What a range import WOULD do. Persists nothing (D-#610).
+ *
+ * Same parse and same matching as the commit, so the dry run cannot flatter the real
+ * thing — a backfill of five months across a live roster is not something to find out
+ * about afterwards.
+ */
+export async function previewRangeImport(
+  fileBase64: string,
+  opts: { from?: string; to?: string; reference?: Date } = {},
+): Promise<RangePreview> {
+  const sheets = (
+    await parseEmployeeAttendanceXlsxRange(Buffer.from(fileBase64, "base64"), opts.reference ?? new Date())
+  ).filter((s) => (!opts.from || s.dateKey >= opts.from) && (!opts.to || s.dateKey <= opts.to));
+  if (sheets.length === 0) throw new AttendanceImportError("No dated columns fall in that range");
+
+  const { byName, aliases } = await loadMatchIndexes();
+  const byStatus: Record<string, number> = {};
+  const unmatched = new Set<string>();
+  let skipped = 0;
+
+  for (const sheet of sheets) {
+    for (const row of sheet.rows) {
+      const status = statusOf(row);
+      if (status === null) { skipped++; continue; }
+      byStatus[status] = (byStatus[status] ?? 0) + 1;
+      if (matchName(normalizeName(row.name), byName, aliases).kind !== "matched") unmatched.add(row.name);
+    }
+  }
+
+  const existing = await TeacherAttendanceDay.distinct("dateKey", {
+    dateKey: { $in: sheets.map((s) => s.dateKey) },
+  });
+
+  return {
+    fromDateKey: sheets[0].dateKey,
+    toDateKey: sheets[sheets.length - 1].dateKey,
+    days: sheets.length,
+    byStatus,
+    alreadyImported: (existing as string[]).sort(),
+    unmatched: [...unmatched].sort(),
+    skipped,
+  };
+}
+
+export interface RangeImportResult {
+  /** Per-day outcomes, oldest first. */
+  days: ImportCommit[];
+  fromDateKey: string;
+  toDateKey: string;
+  imported: number;
+  replaced: number;
+}
+
+/**
+ * Import EVERY dated column of a year-to-date export (D-#610).
+ *
+ * `from`/`to` clip the range inclusively, because the usual job is a backfill: the
+ * school's report covers 1 Jan onwards, and only the part before the daily uploads
+ * began is missing. Days outside the window are parsed and then left alone — no
+ * delete, no write — so a backfill cannot disturb what is already imported.
+ *
+ * Each day still goes through `commitOneSheet`, so a day inside the window is replaced
+ * wholesale exactly as a daily re-upload would replace it (AT1.5). That is deliberate:
+ * re-running the range over an already-imported stretch is how a day whose ✘ was later
+ * reclassified as ℞ leave gets corrected.
+ *
+ * Name matching runs ONCE for the whole range rather than per day — 154 days × 24 rows
+ * is 3,700 matches, and the roster does not change between two columns of one export.
+ */
+export async function commitRangeImport(
+  fileBase64: string,
+  mappings: AliasMapping[],
+  ignoreNames: string[],
+  actorId: string,
+  opts: { from?: string; to?: string; reference?: Date } = {},
+): Promise<RangeImportResult> {
+  const sheets = await parseEmployeeAttendanceXlsxRange(
+    Buffer.from(fileBase64, "base64"),
+    opts.reference ?? new Date(),
+  );
+
+  for (const m of mappings) {
+    const aliasNorm = normalizeName(m.name);
+    const staff = await StaffProfile.findById(m.staffProfileId).lean();
+    if (!staff) throw new AttendanceImportError(`Mapping target staff profile not found: ${m.name}`);
+    await StaffNameAlias.updateOne(
+      { aliasNorm },
+      {
+        $set: { alias: m.name.trim(), staffProfileId: new Types.ObjectId(m.staffProfileId) },
+        $setOnInsert: { createdBy: new Types.ObjectId(actorId) },
+      },
+      { upsert: true },
+    );
+  }
+
+  const { byName, aliases } = await loadMatchIndexes();
+  const ignored = new Set(ignoreNames.map(normalizeName));
+
+  const wanted = sheets.filter(
+    (s) => (!opts.from || s.dateKey >= opts.from) && (!opts.to || s.dateKey <= opts.to),
+  );
+  if (wanted.length === 0) {
+    throw new AttendanceImportError(
+      `No dated columns fall in ${opts.from ?? "the start"}..${opts.to ?? "the end"} — the sheet covers ` +
+        `${sheets[0].dateKey}..${sheets[sheets.length - 1].dateKey}`,
+    );
+  }
+
+  const days: ImportCommit[] = [];
+  for (const sheet of wanted) {
+    days.push(await commitOneSheet(sheet, byName, aliases, ignored, actorId));
+  }
+
+  const result: RangeImportResult = {
+    days,
+    fromDateKey: wanted[0].dateKey,
+    toDateKey: wanted[wanted.length - 1].dateKey,
+    imported: days.reduce((n, d) => n + d.imported, 0),
+    replaced: days.filter((d) => d.replaced).length,
+  };
+
+  // One audit line for the range, on top of each day's own (ADR-008 is append-only,
+  // so the per-day rows stay; this one answers "who backfilled January?").
+  await writeAudit({
+    eventKind: "ATTENDANCE_IMPORTED",
+    actorId,
+    targetKind: "TeacherAttendanceDay",
+    meta: {
+      range: true,
+      fromDateKey: result.fromDateKey,
+      toDateKey: result.toDateKey,
+      days: days.length,
+      imported: result.imported,
+      replaced: result.replaced,
+    },
+  });
+
+  return result;
 }
 
 export interface TeacherDayRecord {
