@@ -30,7 +30,7 @@ import { dateKeyOf } from "../../attendance/dates";
 import { parseDateKey } from "./dates";
 import { dayRate, computePayslip, type PayLineInput } from "./payrollMath";
 import { pendingExitDebt, settleOnExit } from "./ProbationDebtService";
-import { balancesForStaff } from "./LeaveEntitlementService";
+import { balancesForStaff, pooledBalanceForStaff } from "./LeaveEntitlementService";
 import { activeAdvanceByStaff } from "./AdvanceService";
 import { resolveUserIdForStaff } from "./staffMatch";
 import {
@@ -253,6 +253,33 @@ export async function computeFinalSettlement(input: ComputeSettlementInput): Pro
   // figure the Principal actually approves.
   const heldProbationDays = await pendingExitDebt(c.staffProfileId.toString());
   const deductions: PayLineInput[] = [...(input.manualDeductions ?? [])];
+
+  /**
+   * AN OVERDRAWN LEAVE BALANCE IS RECOVERED HERE, AND ONLY HERE (D-#616).
+   *
+   * Leave and lateness both draw the pool and the pool may go negative; payroll never
+   * turns that into a salary deduction while someone is employed. The debt is real
+   * though, and this is the last payslip — so the final settlement is where it lands,
+   * exactly as the probation-held debt above does.
+   *
+   * The two do not overlap. Held probation days never entered the pool at all (there was
+   * no pool to enter), so they are counted separately; a negative balance is days that
+   * DID draw a pool and took it past zero.
+   *
+   * An earlier agreed recovery (D-#617) has already moved the balance back up, so
+   * whatever remains negative here is genuinely still owed.
+   */
+  const pool = await pooledBalanceForStaff(c.staffProfileId.toString(), ayId ?? null);
+  const overdrawnDays = pool.remainingDays < 0 ? Math.abs(pool.remainingDays) : 0;
+  if (overdrawnDays > 0) {
+    deductions.push({
+      type: "unpaid_leave",
+      amount: Math.round(rate * overdrawnDays),
+      days: overdrawnDays,
+      note: "ঋণাত্মক ছুটির জমা (D-#616)",
+    });
+  }
+
   if (heldProbationDays > 0) {
     deductions.push({
       type: "unpaid_leave",

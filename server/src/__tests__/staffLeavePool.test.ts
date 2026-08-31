@@ -38,6 +38,20 @@ jest.mock("../modules/hr/models/StaffLeaveEntitlement", () => ({
 jest.mock("../modules/hr/models/StaffLeaveApplication", () => ({
   StaffLeaveApplication: { find: () => ({ select: () => ({ lean: async () => mockAppFind() }) }) },
 }));
+// D-#616 — the pool counts lateness charges as taken, so this model must answer.
+const mockLatenessFind = jest.fn(() => [] as unknown[]);
+jest.mock("../modules/hr/models/LatenessCharge", () => ({
+  LatenessCharge: { find: () => ({ select: () => ({ lean: async () => mockLatenessFind() }) }) },
+}));
+// D-#617 — an agreed recovery credits the pool back, so takenPooledDays reads this.
+const mockRecoveryFind = jest.fn(() => [] as unknown[]);
+jest.mock("../modules/hr/models/LeaveBalanceRecovery", () => ({
+  LeaveBalanceRecovery: {
+    find: () => ({ select: () => ({ lean: async () => mockRecoveryFind() }) }),
+    findOneAndUpdate: jest.fn().mockResolvedValue({}),
+    deleteOne: jest.fn().mockResolvedValue({}),
+  },
+}));
 jest.mock("../modules/hr/models/HrPolicy", () => ({
   HrPolicy: { findOne: () => ({ lean: async () => null }) }, // absent → HR_POLICY_DEFAULTS
 }));
@@ -45,7 +59,7 @@ jest.mock("../modules/platform/services/AuditService", () => ({
   writeAudit: jest.fn().mockResolvedValue(undefined),
 }));
 
-import { pooledBalanceForStaff } from "../modules/hr/services/LeaveEntitlementService";
+import { pooledBalanceForStaff, leaveYearWindow } from "../modules/hr/services/LeaveEntitlementService";
 import { HR_POLICY_DEFAULTS } from "@scd/shared";
 
 const YEAR = {
@@ -60,6 +74,8 @@ beforeEach(() => {
   mockYearFindOne.mockResolvedValue(YEAR);
   mockEntFind.mockReturnValue([]);
   mockAppFind.mockReturnValue([]);
+  mockLatenessFind.mockReturnValue([]);
+  mockRecoveryFind.mockReturnValue([]);
 });
 
 describe("pooledBalanceForStaff — onProbation (D-#576)", () => {
@@ -97,13 +113,104 @@ describe("pooledBalanceForStaff — onProbation (D-#576)", () => {
     expect(pool.onProbation).toBe(true);
   });
 
-  test("the single profile read serves BOTH the probation flag and the joining-date pro-ration", async () => {
+  /**
+   * D-#618 retired pro-ration. It existed because the leave year was the SCHOOL'S and a
+   * mid-year joiner had only part of it; the year now starts at each staff member's own
+   * confirmation, so it is never partial and there is nothing to pro-rate. A probationer
+   * has not started one at all, and their allowance is shown in full — it is what they
+   * WILL get on confirmation, which is also when their held leave settles against it.
+   */
+  test("a mid-year joiner is NOT pro-rated — their leave year starts at confirmation", async () => {
     mockStaffFindById.mockResolvedValue({ joiningDate: new Date("2026-07-02"), confirmationDate: null });
     const pool = await pooledBalanceForStaff(oid().toString());
     expect(pool.onProbation).toBe(true);
-    expect(pool.proRated).toBe(true);
-    expect(pool.allowanceDays).toBeLessThan(HR_POLICY_DEFAULTS.annualLeaveDays);
-    // One query, not two — the joining date came from the same document.
+    expect(pool.proRated).toBe(false);
+    expect(pool.allowanceDays).toBe(HR_POLICY_DEFAULTS.annualLeaveDays);
+    expect(pool.leaveYearStart).toBeNull();
+    // One query, not two — the confirmation date came from the same document.
     expect(mockStaffFindById).toHaveBeenCalledTimes(1);
+  });
+
+  test("a confirmed staff member gets their own anniversary window (D-#618)", async () => {
+    mockStaffFindById.mockResolvedValue({
+      joiningDate: new Date("2024-06-24"),
+      confirmationDate: new Date("2024-06-24"),
+    });
+    const pool = await pooledBalanceForStaff(oid().toString());
+    expect(pool.onProbation).toBe(false);
+    // Whatever today is, the window runs 24 June → 23 June and contains it.
+    expect(pool.leaveYearStart).toMatch(/-06-24$/);
+    expect(pool.leaveYearEnd).toMatch(/-06-23$/);
+  });
+});
+
+describe("leaveYearWindow — the staff member's own year (D-#618)", () => {
+  const ON = new Date("2026-08-31T00:00:00Z");
+
+  test("the period runs anniversary → anniversary, and contains today", () => {
+    expect(leaveYearWindow("2024-06-24", ON)).toEqual({ start: "2026-06-24", end: "2027-06-23" });
+    // Confirmed 1 Jan: the window happens to match the calendar year.
+    expect(leaveYearWindow("2023-01-01", ON)).toEqual({ start: "2026-01-01", end: "2026-12-31" });
+  });
+
+  test("before this year's anniversary the period began LAST year", () => {
+    // Confirmed 30 Dec; on 31 Aug 2026 the 2026 anniversary has not arrived.
+    expect(leaveYearWindow("2025-12-30", ON)).toEqual({ start: "2025-12-30", end: "2026-12-29" });
+  });
+
+  test("the first period starts at confirmation itself, not a year earlier", () => {
+    expect(leaveYearWindow("2026-08-01", ON)).toEqual({ start: "2026-08-01", end: "2027-07-31" });
+    // Confirmed today: the year starts today.
+    expect(leaveYearWindow("2026-08-31", ON)!.start).toBe("2026-08-31");
+  });
+
+  test("the day before an anniversary is still the OLD period", () => {
+    expect(leaveYearWindow("2025-09-01", ON)).toEqual({ start: "2025-09-01", end: "2026-08-31" });
+  });
+
+  test("no confirmation date → no period has begun", () => {
+    expect(leaveYearWindow(null, ON)).toBeNull();
+    expect(leaveYearWindow(undefined, ON)).toBeNull();
+    expect(leaveYearWindow("not-a-date", ON)).toBeNull();
+  });
+});
+
+describe("what counts as TAKEN against the pool", () => {
+  const CONFIRMED = { joiningDate: new Date("2023-01-01"), confirmationDate: new Date("2023-01-01") };
+
+  /**
+   * D-#616. LatenessService computed `paidFromLeave`, stored it and showed it — and
+   * the pool never read it, so "1 day taken from leave" left the balance where it was.
+   * Now that a charge can no longer fall through to salary, this is the only place it
+   * lands: if the pool stops counting charges, lateness costs nothing at all.
+   */
+  test("lateness charges count as taken, not just leave applications (D-#616)", async () => {
+    mockStaffFindById.mockResolvedValue(CONFIRMED);
+    mockAppFind.mockReturnValue([{ paidDays: 3, days: 3 }]);
+    mockLatenessFind.mockReturnValue([{ paidFromLeave: 2 }, { paidFromLeave: 1 }]);
+    const pool = await pooledBalanceForStaff(oid().toString());
+    expect(pool.takenDays).toBe(6); // 3 leave + 3 lateness
+    expect(pool.remainingDays).toBe(HR_POLICY_DEFAULTS.annualLeaveDays - 6);
+  });
+
+  /**
+   * D-#617. Money came off the payslip; if the balance did not move with it the same
+   * days would be collected again at exit.
+   */
+  test("an AGREED recovery gives the days back (D-#617)", async () => {
+    mockStaffFindById.mockResolvedValue(CONFIRMED);
+    mockAppFind.mockReturnValue([{ paidDays: 25, days: 25 }]);
+    mockRecoveryFind.mockReturnValue([{ days: 5 }]);
+    const pool = await pooledBalanceForStaff(oid().toString());
+    expect(pool.takenDays).toBe(20); // 25 taken, 5 settled from salary
+    expect(pool.remainingDays).toBe(0);
+  });
+
+  test("an overdrawn pool reports a NEGATIVE balance rather than zero (D-#612)", async () => {
+    mockStaffFindById.mockResolvedValue(CONFIRMED);
+    mockAppFind.mockReturnValue([{ paidDays: 31, days: 31 }]);
+    const pool = await pooledBalanceForStaff(oid().toString());
+    expect(pool.remainingDays).toBe(HR_POLICY_DEFAULTS.annualLeaveDays - 31);
+    expect(pool.remainingDays).toBeLessThan(0);
   });
 });
