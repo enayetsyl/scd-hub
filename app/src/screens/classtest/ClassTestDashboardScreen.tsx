@@ -228,7 +228,13 @@ export default function ClassTestDashboardScreen(): React.ReactElement {
                     </View>
                     <Muted style={{ marginTop: space(1) }}>
                       {STR.ctEntered} {bnNum(r.enteredCount)}/{bnNum(r.rosterCount)} · {STR.ctPending} {bnNum(r.pendingCount)}
-                      {r.overdue ? ` · ${STR.ctSchoolDaysLate} ${bnNum(r.schoolDaysLate)}` : ""}
+                      {/* D-#606: on the deadline day itself the row is due but zero
+                          days late — "স্কুল-দিন বিলম্ব ০" reads as a bug, so say আজ শেষ দিন. */}
+                      {r.overdue
+                        ? r.schoolDaysLate > 0
+                          ? ` · ${STR.ctSchoolDaysLate} ${bnNum(r.schoolDaysLate)}`
+                          : ` · ${STR.ctDueToday}`
+                        : ""}
                       {/* D-#603: a red chip alone no longer says who is holding it up. */}
                       {r.overdue
                         ? ` · ${r.teacherOverdue ? STR.ctAwaitingSubmit : STR.ctAwaitingPublish}`
