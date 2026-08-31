@@ -184,15 +184,36 @@ describe("classTestCalendar (pure)", () => {
     expect(schoolDaysBetween(D(7, 16), D(7, 9), isOpen)).toBe(0);
   });
 
-  test("deriveOverdue: not overdue at/before the deadline, overdue after + counts late days", () => {
+  // D-#606 moved this boundary: overdue is now `>=` the deadline, so the deadline
+  // DAY counts. The old `>` gave a silent extra day — with Fri/Sat closed, a
+  // Thursday exam's two school days land Sun+Mon and the row stayed green all of
+  // Monday, the day it was actually due, stretching "two days" to five calendar days.
+  test("deriveOverdue: overdue ON the deadline day (D-#606), and counts late days after", () => {
     const exam = D(7, 9); // Thu; deadline = Mon 07-13
-    const onTime = deriveOverdue(exam, 2, D(7, 13), isOpen);
-    expect(onTime.overdue).toBe(false);
-    expect(onTime.schoolDaysLate).toBe(0);
+    const before = deriveOverdue(exam, 2, D(7, 12), isOpen); // Sun — one day short
+    expect(before.overdue).toBe(false);
+    expect(before.schoolDaysLate).toBe(0);
+
+    const dueDay = deriveOverdue(exam, 2, D(7, 13), isOpen); // Mon — the deadline itself
+    expect(dueDay.overdue).toBe(true);
+    expect(dueDay.schoolDaysLate).toBe(0); // due, not yet late by any school day
 
     const late = deriveOverdue(exam, 2, D(7, 15), isOpen); // Wed
     expect(late.overdue).toBe(true);
     expect(late.schoolDaysLate).toBe(2); // Tue, Wed
+  });
+
+  // The D-#120 property survives the `>=`: the clock stays idle until the exam
+  // date has passed. Only reachable with deadlineDays 0 (the model permits it and
+  // it is per-exam editable) — without the guard the report would be "late" at
+  // 00:00 on the exam's own day, before it has been sat.
+  test("deriveOverdue: deadlineDays 0 is never overdue ON the exam day (D-#120 kept)", () => {
+    const exam = D(7, 9); // Thu
+    const sameDay = deriveOverdue(exam, 0, D(7, 9), isOpen);
+    expect(sameDay.overdue).toBe(false);
+
+    const nextOpen = deriveOverdue(exam, 0, D(7, 10), isOpen); // Fri (closed) still counts as past
+    expect(nextOpen.overdue).toBe(true);
   });
 });
 
