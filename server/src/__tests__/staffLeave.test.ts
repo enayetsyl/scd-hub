@@ -157,6 +157,7 @@ import {
 } from "../modules/hr/services/dates";
 import {
   computeRemaining,
+  pooledCarryForward,
   proRateAllowance,
 } from "../modules/hr/services/LeaveEntitlementService";
 import {
@@ -209,9 +210,34 @@ describe("the shared annual pool (SH-3, D-#539)", () => {
     expect(HR_POLICY_DEFAULTS.annualLeaveDays).toBe(20);
   });
 
-  test("computeRemaining floors at zero — an over-drawn pool is 0, never negative", () => {
-    expect(computeRemaining(20, 0, 25)).toBe(0);
+  /**
+   * D-#612. This asserted a floor at zero, which was right while a carry-forward could
+   * only be positive — you cannot take more PAID leave than you have. It stops being
+   * right once a YEAR can end overdrawn: a teacher took 51 days against a 20-day
+   * allowance, and flooring would forgive the 31-day debt instead of carrying it.
+   * The floor belongs at the point of use, and splitLeaveDays already has it.
+   */
+  test("computeRemaining can go NEGATIVE — an overdrawn year is a debt, not a zero", () => {
+    expect(computeRemaining(20, 0, 25)).toBe(-5);
     expect(computeRemaining(20, 3, 10)).toBe(13);
+    // The real case: 20 allowed, 31 carried as a deficit, nothing taken yet.
+    expect(computeRemaining(20, -31, 0)).toBe(-11);
+  });
+
+  test("pooledCarryForward: a deficit beats the generous read (D-#612)", () => {
+    // Leave is one pool but entitlements are per type, so several rows can carry a
+    // number. A 0 for an unused type must not reduce the pool...
+    expect(pooledCarryForward([15, 0, 0])).toBe(15);
+    expect(pooledCarryForward([])).toBe(0);
+    // ...but a negative is never accidental, so it wins, deepest first.
+    expect(pooledCarryForward([0, -31, 0])).toBe(-31);
+    expect(pooledCarryForward([15, -31])).toBe(-31);
+    expect(pooledCarryForward([-5, -31])).toBe(-31);
+  });
+
+  test("...but a negative balance still yields ZERO paid days, never negative ones", () => {
+    expect(splitLeaveDays("casual", 3, -11)).toMatchObject({ paidDays: 0, unpaidDays: 3 });
+    expect(splitLeaveDays("casual", 3, 0)).toMatchObject({ paidDays: 0, unpaidDays: 3 });
   });
 
   test("a mid-year joiner's pool is pro-rated, not granted in full", () => {
@@ -237,9 +263,9 @@ describe("pure leave math", () => {
     expect(rangeCovers("2026-06-10", "2026-06-12", "2026-06-11")).toBe(true);
     expect(rangeCovers("2026-06-10", "2026-06-12", "2026-06-13")).toBe(false);
   });
-  test("computeRemaining floors at 0", () => {
+  test("computeRemaining goes negative when the pool is overdrawn (D-#612)", () => {
     expect(computeRemaining(10, 2, 5)).toBe(7);
-    expect(computeRemaining(3, 0, 9)).toBe(0);
+    expect(computeRemaining(3, 0, 9)).toBe(-6);
   });
   test("proRateAllowance: full year, mid-year, edges", () => {
     const ys = new Date("2026-01-01T00:00:00Z");

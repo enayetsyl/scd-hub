@@ -22,7 +22,8 @@ export interface IStaffLeaveEntitlement extends Document {
   leaveType: LeaveType;
   /** Granted allowance for this year (days). Admin-set; pro-rated for mid-year joiners. */
   allowanceDays: number;
-  /** Carried-over prior-year remaining (uncapped, §3.4). Admin-set / rolled forward. */
+  /** Carried-over prior-year remaining (uncapped, §3.4). Admin-set / rolled forward.
+   *  MAY BE NEGATIVE — a year ended overdrawn and the debt rolls on (D-#612). */
   carriedOverDays: number;
   note?: string;
   grantedBy: Types.ObjectId;
@@ -36,7 +37,8 @@ const StaffLeaveEntitlementSchema = new Schema<IStaffLeaveEntitlement>(
     academicYearId: { type: Schema.Types.ObjectId, ref: "AcademicYear", required: true },
     leaveType: { type: String, enum: LEAVE_TYPES, required: true },
     allowanceDays: { type: Number, required: true, min: 0, default: 0 },
-    carriedOverDays: { type: Number, required: true, min: 0, default: 0 },
+    // NO min (D-#612): a year can end overdrawn, and that deficit carries forward.
+    carriedOverDays: { type: Number, required: true, default: 0 },
     note: { type: String, trim: true },
     grantedBy: { type: Schema.Types.ObjectId, required: true },
   },
