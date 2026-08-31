@@ -1,6 +1,6 @@
 # STATUS
 
-- 2026-08-31 (cont. 5): **BUILT — who holds a syllabus, and moving it to another teacher (D-#610), branch `feat/syllabus-reassign`, stacked on `fix/syllabus-class-label`.** Two asks from the owner, both about the sign-off chain being opaque to the desk that drives it.
+- 2026-08-31 (cont. 5): **BUILT — who holds a syllabus, and moving it to another teacher (D-#613), branch `feat/syllabus-reassign`, stacked on `fix/syllabus-class-label`.** Two asks from the owner, both about the sign-off chain being opaque to the desk that drives it.
   **Neither existed.** `approverUserId` was written on every row and exposed on nothing, so the board's শি glyph said "with a teacher" and never which one. And there was no reassign path at all — the only route was ফেরত দিন → খসড়া → re-submit, which records an ordinary staffing change as a rejection of the first teacher's work and demands a mandatory reason saying so.
   **The stage restriction is the design, not a limitation.** TEACHER_REVIEW only: DRAFT has no holder to move, and after sign-off, re-pointing the row would credit a teacher's approval to somebody who never read the syllabus — the exact property the two-stage chain exists to guarantee. The screen says why rather than hiding the control. Routine check is the same one submit runs, so this is not a back door around D-#366.
   **The audit records both ends.** The moment `approverUserId` is overwritten the previous holder exists nowhere else, and "who was it taken from" is the only interesting half of a reassign.

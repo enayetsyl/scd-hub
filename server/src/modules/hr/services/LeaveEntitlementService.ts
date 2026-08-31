@@ -19,9 +19,41 @@ import { LeaveError, roundLeaveDays } from "./dates";
 
 // --- pure helpers ----------------------------------------------------------
 
-/** remaining = max(0, allowance + carriedOver − taken). */
+/**
+ * remaining = allowance + carriedOver − taken. MAY BE NEGATIVE (D-#612).
+ *
+ * It used to floor at zero, which was right while `carriedOverDays` could only be
+ * positive: you cannot take more paid leave than you have, so a shortfall was always
+ * someone's arithmetic slip. It stops being right once a year can END overdrawn. One
+ * teacher took 51 days against a 20-day allowance in 2025; the owner's instruction is
+ * that the other 31 carry into 2026 as a debt he works off.
+ *
+ * Flooring here would quietly forgive it: he would show "0 days left" — indistinguishable
+ * from someone who simply used their allowance — take no paid leave for a year, and start
+ * the NEXT year at zero rather than still owing 11. The floor belongs at the point of USE,
+ * and it is already there: `splitLeaveDays` does `max(0, min(days, remaining))`, so a
+ * negative balance yields zero paid days rather than negative ones.
+ */
 export function computeRemaining(allowanceDays: number, carriedOverDays: number, takenDays: number): number {
-  return Math.max(0, allowanceDays + carriedOverDays - takenDays);
+  return allowanceDays + carriedOverDays - takenDays;
+}
+
+/**
+ * The pooled carry-forward across a staff member's per-type entitlement rows (D-#612).
+ *
+ * Leave is ONE pool (D-#539) but entitlements are stored per type, so up to three rows
+ * can carry a number. "Highest wins" protects against a 0-day row for a type nobody uses
+ * silently reducing the pool — a zero can be an accident of setup.
+ *
+ * A NEGATIVE cannot be an accident: zero is the default and the column could not even
+ * hold a negative until now, so any negative is a deliberate year-end deficit. Reading
+ * it generously would forgive the debt the admin had just entered, which is the whole
+ * point of recording it. So a deficit wins, and the deepest one wins outright.
+ */
+export function pooledCarryForward(values: number[]): number {
+  const deficits = values.filter((n) => n < 0);
+  if (deficits.length > 0) return Math.min(...deficits);
+  return values.reduce((max, n) => Math.max(max, n), 0);
 }
 
 /** Pro-rate an annual allowance for a mid-year joiner: full year → full allowance;
@@ -65,7 +97,9 @@ export async function upsertEntitlement(input: UpsertEntitlementInput) {
     allowanceDays: input.allowanceDays,
     grantedBy: new Types.ObjectId(input.actorId),
   };
-  if (input.carriedOverDays !== undefined) set.carriedOverDays = Math.max(0, input.carriedOverDays);
+  // A NEGATIVE carry-forward is kept as given (D-#612) — this used to clamp to 0, so
+  // an admin entering a year-end deficit got a silent zero and no error.
+  if (input.carriedOverDays !== undefined) set.carriedOverDays = input.carriedOverDays;
   if (input.note !== undefined) set.note = input.note;
 
   const row = await StaffLeaveEntitlement.findOneAndUpdate(
@@ -263,7 +297,7 @@ export async function pooledBalanceForStaff(
     leaveType: { $in: [...POOLED_LEAVE_TYPES] },
   }).lean();
 
-  const carriedOverDays = overrides.reduce((max, e) => Math.max(max, e.carriedOverDays ?? 0), 0);
+  const carriedOverDays = pooledCarryForward(overrides.map((e) => e.carriedOverDays ?? 0));
   const overridden = overrides.length > 0;
 
   let allowanceDays: number;

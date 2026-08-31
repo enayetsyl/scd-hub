@@ -1,5 +1,5 @@
 /**
- * Moving a syllabus from one teacher to another (D-#610).
+ * Moving a syllabus from one teacher to another (D-#613).
  *
  * Before this existed the only route was ফেরত দিন → খসড়া → re-submit. That works,
  * but it records an ordinary staffing change as a REJECTION of the first

@@ -11,6 +11,7 @@ import mongoose from "mongoose";
 import ExcelJS from "exceljs";
 import {
   parseAttendanceGrid,
+  parseAttendanceGridRange,
   parseDayCell,
   inferSheetDate,
   parseEmployeeAttendanceXlsx,
@@ -116,9 +117,27 @@ describe("parseDayCell — the §4 legend", () => {
     expect(parseDayCell("✘").mark).toBe("CROSS");
   });
 
-  test("℞ → SKIP (ignored, §4); empty cell also SKIPs", () => {
-    expect(parseDayCell("℞ 07:00 AM").mark).toBe("SKIP");
+  /**
+   * D-#611. This test used to assert `℞ → SKIP` on the reading that ℞ meant "regular",
+   * and it is why the bug survived: the mistake was in the legend, so a test written
+   * from the same legend agreed with it. What settled it was the year-to-date export —
+   * ℞ carries half-day marks that only reconcile against the report's own totals as
+   * 0.5, and 106 of its 117 ℞ cells have no punch at all — plus the owner confirming
+   * that one person's 30 ℞ days were her unpaid leave.
+   */
+  test("℞ → LEAVE, and ℞◑ / ℞◐ is half a day", () => {
+    expect(parseDayCell("℞").mark).toBe("LEAVE");
+    expect(parseDayCell("℞ 07:00 AM").mark).toBe("LEAVE");
+    expect(parseDayCell("℞").halfDay).toBeUndefined();
+    expect(parseDayCell("℞◑ 06:45 AM 07:30 PM").halfDay).toBe(true);
+    expect(parseDayCell("℞◐ 06:00 AM 03:45 PM").halfDay).toBe(true);
+    // A half-day mark on anything else is not a half day of leave.
+    expect(parseDayCell("✔◑ 07:00 AM").halfDay).toBeUndefined();
+  });
+
+  test("an empty cell still SKIPs — no school that day", () => {
     expect(parseDayCell("").mark).toBe("SKIP");
+    expect(parseDayCell("‌").mark).toBe("SKIP");
   });
 });
 
@@ -210,6 +229,74 @@ describe("parseEmployeeAttendanceXlsx — exceljs round-trip", () => {
     await expect(parseEmployeeAttendanceXlsx(Buffer.from("not an xlsx"))).rejects.toThrow(
       AttendanceParseError,
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Pure: the year-to-date range parser (D-#610)
+// ---------------------------------------------------------------------------
+
+/** The same locked layout, with one dated column per day. */
+const RANGE_HEADER = [
+  "Branch", "Shift", "Name", "Summary",
+  "Jan     27     Tue", "Jun     11     Thu", "Jan     2     Fri",
+  "WD", "✔", "✘", "𝓛", "℞",
+];
+const rangeGrid = (rows: string[][]) => [
+  ["Employee Attendance Report - School for Community Development"],
+  RANGE_HEADER,
+  ...rows,
+];
+
+describe("parseAttendanceGridRange — the year-to-date export", () => {
+  const REF = new Date(2026, 5, 12);
+
+  test("reads EVERY dated column, oldest first", () => {
+    const sheets = parseAttendanceGridRange(
+      rangeGrid([["Sylhet", "", "Afia Loskor", "…", "✔ 06:43 AM", "℞", "✘", "1"]]),
+      REF,
+    );
+    expect(sheets.map((s) => s.dateKey)).toEqual(["2026-01-02", "2026-01-27", "2026-06-11"]);
+    // The export orders its columns oddly — the school's runs Jan 27 → Aug 31 and then
+    // wraps back to Jan 1 → Jan 26 — so the sort is what makes a backfill sequential.
+    expect(sheets.map((s) => s.rows[0].mark)).toEqual(["CROSS", "PRESENT", "LEAVE"]);
+  });
+
+  test("the summary columns (WD / ✔ / ✘ / 𝓛 / ℞) are not mistaken for dates", () => {
+    const sheets = parseAttendanceGridRange(
+      rangeGrid([["Sylhet", "", "Afia Loskor", "…", "✔", "✔", "✔", "131", "128", "5", "28", "9.5"]]),
+      REF,
+    );
+    expect(sheets).toHaveLength(3);
+  });
+
+  test("each column's year is inferred on its own, so a range can straddle December", () => {
+    const header = ["Branch", "Shift", "Name", "Summary", "Dec     30     Tue", "Jan     2     Fri"];
+    const sheets = parseAttendanceGridRange(
+      [["title"], header, ["Sylhet", "", "Afia Loskor", "…", "✔", "✔"]],
+      new Date(2026, 0, 5),
+    );
+    expect(sheets.map((s) => s.dateKey)).toEqual(["2025-12-30", "2026-01-02"]);
+  });
+
+  test("two columns for one date is refused rather than silently picking one", () => {
+    const header = ["Branch", "Shift", "Name", "Summary", "Jun     11     Thu", "Jun     11     Thu"];
+    expect(() =>
+      parseAttendanceGridRange([["t"], header, ["Sylhet", "", "Afia Loskor", "…", "✔", "✘"]], REF),
+    ).toThrow(AttendanceParseError);
+  });
+
+  test("the DAILY path still refuses a multi-day file — the snapshot contract is unchanged", () => {
+    // AT1.5 rests on one upload replacing one day; a year-to-date file must not go
+    // through the daily door and quietly overwrite whichever date it happened to pick.
+    expect(() => parseAttendanceGrid(rangeGrid([["Sylhet", "", "A", "…", "✔", "✔", "✔"]]), REF)).toThrow(
+      /single-day snapshot/,
+    );
+  });
+
+  test("a single-column file parses identically through both doors", () => {
+    const one = grid([["Sylhet", "", "Afia Loskor", "…", "✔ 06:43 AM", "1"]]);
+    expect(parseAttendanceGridRange(one, REF)).toEqual([parseAttendanceGrid(one, REF)]);
   });
 });
 
@@ -336,13 +423,29 @@ describe("commitImport (AT1.2/AT1.4/AT1.5)", () => {
     expect(res.replaced).toBe(true);
   });
 
-  test("℞ rows are skipped, never stored (§4)", async () => {
+  /**
+   * The prod symptom of D-#611, kept as a regression: on a day that WAS imported, the
+   * person marked ℞ had no row at all while 22 colleagues did — dropped so completely
+   * that they left the month's denominator too, and ছুটিতে could only read zero.
+   */
+  test("℞ rows are STORED as LEAVE, not dropped (D-#611)", async () => {
     const file = await buildFileBase64([
       ["Sylhet", "", "Afia Loskor", "…", "℞", "1"],
       ["Sylhet", "", "Akter Hossen", "…", "✔ 06:53 AM", "1"],
     ]);
     const res = await commitImport(file, [], [], ACTOR, new Date(2026, 5, 12));
-    expect(res).toMatchObject({ imported: 1, skipped: 1 });
+    expect(res).toMatchObject({ imported: 2, skipped: 0 });
+    const stored = mockDayInsertMany.mock.calls.at(-1)![0] as Array<{ status: string }>;
+    expect(stored.map((d) => d.status).sort()).toEqual(["LEAVE", "PRESENT"]);
+  });
+
+  test("a half-day leave carries halfDay through to the stored row", async () => {
+    const file = await buildFileBase64([
+      ["Sylhet", "", "Afia Loskor", "…", "℞◑ 07:30 AM 09:00 AM", "1"],
+    ]);
+    await commitImport(file, [], [], ACTOR, new Date(2026, 5, 12));
+    const stored = mockDayInsertMany.mock.calls.at(-1)![0] as Array<{ status: string; halfDay?: boolean }>;
+    expect(stored[0]).toMatchObject({ status: "LEAVE", halfDay: true });
   });
 });
 
