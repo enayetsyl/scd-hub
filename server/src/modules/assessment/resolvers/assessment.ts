@@ -68,6 +68,8 @@ interface AssessmentSetShape {
   basketItems: BasketItemShape[];
   totalMarks?: number | null;
   durationMinutes?: number | null;
+  /** Exam-time basis, frozen at assembly (QT-1). `durationMinutes` is what the set CLAIMS. */
+  examMinutes?: number | null;
   dueDate?: string | null;
   createdBy: string;
   assembledBy?: string | null;
@@ -89,6 +91,15 @@ AssessmentSetRef.implement({
     basketItems: t.field({ type: [BasketItemRef], resolve: (s) => s.basketItems }),
     totalMarks: t.float({ nullable: true, resolve: (s) => s.totalMarks ?? null }),
     durationMinutes: t.int({ nullable: true, resolve: (s) => s.durationMinutes ?? null }),
+    /**
+     * The exam-time basis this set's duration came from (QT-2, D-#607).
+     *
+     * QT-1 snapshot it and never exposed it, so the value was written and unreadable. Both
+     * numbers are shown together because they answer different questions: `examMinutes` is
+     * how long the questions take, `durationMinutes` is how long THIS set claims to take —
+     * for homework the second is double the first, and seeing only one hides that.
+     */
+    examMinutes: t.int({ nullable: true, resolve: (s) => s.examMinutes ?? null }),
     dueDate: t.string({ nullable: true, resolve: (s) => s.dueDate ?? null }),
     createdBy: t.exposeString("createdBy"),
     assembledBy: t.string({ nullable: true, resolve: (s) => s.assembledBy ?? null }),
@@ -139,6 +150,7 @@ function setToShape(doc: LeanSet, payloadById?: Map<string, string>): Assessment
     })),
     totalMarks: typeof doc.totalMarks === "number" ? doc.totalMarks : null,
     durationMinutes: typeof doc.durationMinutes === "number" ? doc.durationMinutes : null,
+    examMinutes: typeof doc.examMinutes === "number" ? doc.examMinutes : null,
     dueDate: doc.dueDate ? (doc.dueDate as unknown as Date).toISOString() : null,
     createdBy: doc.createdBy.toString(),
     assembledBy: doc.assembledBy?.toString() ?? null,

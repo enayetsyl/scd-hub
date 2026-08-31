@@ -158,6 +158,10 @@ export default function SetDetailScreen({ route, navigation }: Props): React.Rea
         <Row label={STR.setType} value={setTypeLabel(s.setType)} />
         <Row label={STR.status} value={assembled ? STR.statusAssembled : STR.statusDraft} />
         <Row label={STR.totalMarks} value={bnNum(s.totalMarks ?? s.basketItems.reduce((a, b) => a + b.marks, 0))} />
+        {/* BOTH, because they answer different questions (QT-2, D-#607): examMinutes is how
+            long the questions take, durationMinutes is how long THIS set claims to take. For
+            homework the second is double the first, and showing only one hides that. */}
+        {s.examMinutes != null ? <Row label={STR.examMinutes} value={bnNum(s.examMinutes)} /> : null}
         {s.durationMinutes != null ? <Row label={STR.durationMinutes} value={bnNum(s.durationMinutes)} /> : null}
         {s.dueDate ? <Row label={STR.dueDate} value={s.dueDate.slice(0, 10)} /> : null}
       </Card>

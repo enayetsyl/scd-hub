@@ -1502,6 +1502,8 @@ export interface AssessmentSetT {
   basketItems: BasketItemT[];
   totalMarks: number | null;
   durationMinutes: number | null;
+  /** Exam-time basis behind `durationMinutes` (QT-2, D-#607). */
+  examMinutes: number | null;
   dueDate: string | null;
   createdBy: string;
   assembledBy: string | null;
@@ -1525,6 +1527,7 @@ export const CREATE_SET = gql<
       basketItems { artifactId qid marks }
       totalMarks
       durationMinutes
+      examMinutes
       dueDate
       createdBy
       assembledBy
@@ -1580,6 +1583,7 @@ export const CREATE_SET_WITH_QUESTIONS = gql<
       basketItems { artifactId qid marks }
       totalMarks
       durationMinutes
+      examMinutes
       dueDate
       createdBy
       assembledBy
@@ -1605,6 +1609,7 @@ export const ADD_QUESTION_TO_SET = gql<
       basketItems { artifactId qid marks }
       totalMarks
       durationMinutes
+      examMinutes
       dueDate
       createdBy
       assembledBy
@@ -1630,6 +1635,7 @@ export const RENAME_SET = gql<
       basketItems { artifactId qid marks }
       totalMarks
       durationMinutes
+      examMinutes
       dueDate
       createdBy
       assembledBy
@@ -1655,6 +1661,7 @@ export const REMOVE_QUESTION_FROM_SET = gql<
       basketItems { artifactId qid marks payloadJson }
       totalMarks
       durationMinutes
+      examMinutes
       dueDate
       createdBy
       assembledBy
@@ -1700,6 +1707,7 @@ export const ASSESSMENT_SET_QUERY = gql<{ assessmentSet: AssessmentSetT | null }
       basketItems { artifactId qid marks payloadJson }
       totalMarks
       durationMinutes
+      examMinutes
       dueDate
       createdBy
       assembledBy
@@ -1725,6 +1733,7 @@ export const ASSESSMENT_SETS_QUERY = gql<
       basketItems { artifactId qid marks }
       totalMarks
       durationMinutes
+      examMinutes
       dueDate
       createdBy
       assembledBy
@@ -7798,6 +7807,8 @@ export interface ChildUpcomingClassTestT {
   examDate: string;
   totalMarks: number | null;
   durationMinutes: number | null;
+  /** Exam-time basis behind `durationMinutes` (QT-2, D-#607). */
+  examMinutes: number | null;
   daysAway: number;
 }
 
