@@ -89,4 +89,14 @@ AssessmentSetSchema.index({ sectionId: 1, status: 1 });
 AssessmentSetSchema.index({ classId: 1, status: 1 });
 AssessmentSetSchema.index({ createdBy: 1, status: 1 });
 
+/**
+ * “Where has this question been used?” (QU-1, D-#608).
+ *
+ * On the QID, not the artifactId: a re-import creates a NEW artifact row for the same
+ * question, so a set assembled last term points at the OLD row. Keyed on artifactId the
+ * history would look empty exactly when it matters most — the same reasoning that anchors
+ * review rounds on the qid (QR-1).
+ */
+AssessmentSetSchema.index({ "basketItems.qid": 1 });
+
 export const AssessmentSet = model<IAssessmentSet>("AssessmentSet", AssessmentSetSchema);

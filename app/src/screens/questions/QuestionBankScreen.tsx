@@ -12,7 +12,7 @@
  * Add-to-set mode (route.params.addToSetId, from SetDetail's draft edit) keeps
  * the old per-row add button and skips selection/tray entirely.
  */
-import React, { useEffect, useState } from "react";
+import React, { useMemo, useEffect, useState } from "react";
 import { FlatList, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useNavigation, type NavigationProp } from "@react-navigation/native";
@@ -24,6 +24,7 @@ import { QueryGate } from "../../components/QueryGate";
 import { SearchField } from "../../components/SearchField";
 import { FilterBar, type FilterChip } from "../../components/FilterBar";
 import { useAuth } from "../../auth/AuthContext";
+import { QUESTION_USAGE_COUNTS } from "../../graphql/operations";
 import { FilterSheet } from "../../components/FilterSheet";
 import { SelectableCard } from "../../components/SelectableCard";
 import { SelectionTray } from "../../components/SelectionTray";
@@ -180,6 +181,28 @@ export default function QuestionBankScreen({ navigation, route }: Props): React.
   const gatedToPublished = !can("question:manage");
   const loadingMore = fetching && qb.after !== null;
 
+  /**
+   * How many sets each visible question is already in (QU-1, D-#608).
+   *
+   * ONE batched query for the whole loaded window, not one per row. Keyed on the qid, so a
+   * question re-imported since it was used still shows its history. `pause` on an empty
+   * list keeps a fresh bank from firing a query with no ids.
+   */
+  const usageQids = useMemo(
+    () => qb.items.map((q) => q.qid).filter((q): q is string => !!q),
+    [qb.items],
+  );
+  const [usageQ] = useQuery({
+    query: QUESTION_USAGE_COUNTS,
+    variables: { qids: usageQids },
+    pause: usageQids.length === 0,
+  });
+  const usageByQid = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const r of usageQ.data?.questionUsageCounts ?? []) m.set(r.qid, r.count);
+    return m;
+  }, [usageQ.data]);
+
   function renderCardBody(q: QuestionListItem): React.ReactElement {
     const text = questionText(q.payloadJson);
     return (
@@ -195,6 +218,11 @@ export default function QuestionBankScreen({ navigation, route }: Props): React.
           {/* A retired row can only appear under the retired lens, so the badge is not
               redundant with the filter chip — it is what marks the list as NOT the bank. */}
           {q.retired ? <Badge text={STR.qeRetired} tone="danger" /> : null}
+          {/* Already in a set (QU-1) — the count is the warning; the WHERE is on the
+              preview, because a date and a section are what decide whether reuse matters. */}
+          {(usageByQid.get(q.qid ?? "") ?? 0) > 0 ? (
+            <Badge text={`${bnNum(usageByQid.get(q.qid ?? "") ?? 0)} ${STR.quUsedIn}`} tone="info" />
+          ) : null}
         </View>
         {/* Grapheme-safe clamp (F15): numberOfLines, NEVER a substring — a
             code-unit slice can cut a Bangla conjunct mid-cluster. */}
