@@ -8453,3 +8453,34 @@ export const MY_REVIEW_CHAPTERS = gql<
     myReviewChapters(subject: $subject, classLevel: $classLevel)
   }
 `;
+
+/** Where a question has already been used (QU-1, D-#608). */
+export interface QuestionUseT {
+  setId: string;
+  setName: string | null;
+  setType: string;
+  status: string;
+  classLevel: number | null;
+  className: string | null;
+  sectionName: string | null;
+  usedOn: string | null;
+}
+
+/** Badge counts for a whole bank page — one query, not one per row. */
+export const QUESTION_USAGE_COUNTS = gql<
+  { questionUsageCounts: { qid: string; count: number }[] },
+  { qids: string[] }
+>`
+  query QuestionUsageCounts($qids: [String!]!) {
+    questionUsageCounts(qids: $qids) { qid count }
+  }
+`;
+
+/** The full list for ONE question, newest use first. */
+export const QUESTION_USAGE = gql<{ questionUsage: QuestionUseT[] }, { qid: string }>`
+  query QuestionUsage($qid: String!) {
+    questionUsage(qid: $qid) {
+      setId setName setType status classLevel className sectionName usedOn
+    }
+  }
+`;

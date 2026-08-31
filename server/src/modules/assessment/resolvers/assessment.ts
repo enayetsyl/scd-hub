@@ -25,6 +25,11 @@ import {
   type RecentSetItem,
 } from "../services/AssessmentService";
 import { AssessmentSet } from "../models/AssessmentSet";
+import {
+  questionUsage as usageSvc,
+  questionUsageCounts as usageCounts,
+  type QuestionUseDTO,
+} from "../services/QuestionUsageService";
 import { ContentArtifact } from "../../content/models/ContentArtifact";
 import { assertCanWrite, assertCanRead, ForbiddenError } from "../../../middleware/authz";
 import type { Types, FlattenMaps } from "mongoose";
@@ -471,6 +476,71 @@ builder.queryField("myRecentSets", (t) =>
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       const limit = Math.min(Math.max(args.limit ?? 2, 1), 10);
       return listMyRecentSets(ctx.auth.userId as string, limit);
+    },
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Question usage (QU-1, D-#608) — where has this question already been used?
+// ---------------------------------------------------------------------------
+
+const QuestionUsageCountRef = builder
+  .objectRef<{ qid: string; count: number }>("QuestionUsageCount");
+QuestionUsageCountRef.implement({
+  description: "How many sets one question appears in. Batched for a whole bank page.",
+  fields: (t) => ({
+    qid: t.exposeString("qid"),
+    count: t.exposeInt("count"),
+  }),
+});
+
+const QuestionUseRef = builder.objectRef<QuestionUseDTO>("QuestionUse");
+QuestionUseRef.implement({
+  description:
+    "One set a question appears in (QU-1). `setName` is null when the set was never named — " +
+    "the field is optional on the model — and the client falls back to the set type.",
+  fields: (t) => ({
+    setId: t.exposeString("setId"),
+    setName: t.string({ nullable: true, resolve: (u) => u.setName }),
+    setType: t.exposeString("setType"),
+    status: t.exposeString("status"),
+    classLevel: t.int({ nullable: true, resolve: (u) => u.classLevel }),
+    className: t.string({ nullable: true, resolve: (u) => u.className }),
+    sectionName: t.string({ nullable: true, resolve: (u) => u.sectionName }),
+    usedOn: t.string({ nullable: true, resolve: (u) => u.usedOn }),
+  }),
+});
+
+builder.queryField("questionUsageCounts", (t) =>
+  t.field({
+    type: [QuestionUsageCountRef],
+    description:
+      "How many sets each question already appears in (QU-1). Keyed on the QID, not the " +
+      "artifactId: a re-import creates a new artifact row for the same question, so a set " +
+      "assembled last term points at the old one and the history would read as empty. " +
+      "Returns only qids WITH uses — an absent qid means zero. Requires set:read.",
+    authScopes: { hasPermission: "set:read" },
+    args: { qids: t.arg.stringList({ required: true }) },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      const counts = await usageCounts(args.qids);
+      return [...counts.entries()].map(([qid, count]) => ({ qid, count }));
+    },
+  }),
+);
+
+builder.queryField("questionUsage", (t) =>
+  t.field({
+    type: [QuestionUseRef],
+    description:
+      "Every set ONE question appears in, newest use first (QU-1). The date is what decides " +
+      "whether reuse is a problem — due date if the set had one, else assembled, else " +
+      "created. Requires set:read.",
+    authScopes: { hasPermission: "set:read" },
+    args: { qid: t.arg.string({ required: true }) },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      return usageSvc(args.qid);
     },
   }),
 );
