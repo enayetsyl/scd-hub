@@ -37,6 +37,13 @@ export interface SyllabusShape {
   id: string | null;
   examId: string;
   classId: string;
+  /**
+   * The class's Bangla name, carried on the ROW and not only on the enclosing
+   * `ClassSyllabusView`. `mySyllabusApprovals` returns a flat list spanning
+   * classes, so without this a teacher holding one subject in three classes
+   * sees three identical "ইংরেজি" cards with nothing to tell them apart.
+   */
+  classLabel: string;
   subject: RoutineSubject;
   bodyMd: string;
   marks: ISyllabusMarkRow[];
@@ -99,11 +106,13 @@ function toShape(
     sendBackReason?: string | null;
   },
   isMine: boolean,
+  classLabel: string,
 ): SyllabusShape {
   return {
     id: row._id.toString(),
     examId: row.examId.toString(),
     classId: row.classId.toString(),
+    classLabel,
     subject: row.subject,
     bodyMd: row.bodyMd,
     marks: row.marks,
@@ -122,11 +131,13 @@ function placeholder(
   classId: string,
   subject: RoutineSubject,
   isMine: boolean,
+  classLabel: string,
 ): SyllabusShape {
   return {
     id: null,
     examId,
     classId,
+    classLabel,
     subject,
     bodyMd: "",
     marks: [],
@@ -195,8 +206,8 @@ export async function classSyllabus(
   const admin = isAdminStaff(ctx.auth);
   const publishedOnly = !admin;
 
-  const cls = (await Class.findById(classId).select("label level").lean()) as unknown as {
-    label?: string;
+  const cls = (await Class.findById(classId).select("nameBn level").lean()) as unknown as {
+    nameBn?: string;
     level?: number;
   } | null;
   if (!cls) throw new ForbiddenError("শ্রেণি পাওয়া যায়নি");
@@ -213,7 +224,7 @@ export async function classSyllabus(
     mine === null ? false : mine.has(`${cls.level ?? 0}:${s}`);
 
   const bySubject = new Map<string, SyllabusShape>();
-  for (const r of rows) bySubject.set(r.subject, toShape(r, isMineFor(r.subject)));
+  for (const r of rows) bySubject.set(r.subject, toShape(r, isMineFor(r.subject), cls.nameBn ?? ""));
 
   if (admin) {
     // Office/Principal need EVERY subject the class sits, whether or not a row
@@ -234,7 +245,7 @@ export async function classSyllabus(
       if (bySubject.has(code)) continue;
       bySubject.set(
         code,
-        placeholder(examId, classId, code as RoutineSubject, isMineFor(code as RoutineSubject)),
+        placeholder(examId, classId, code as RoutineSubject, isMineFor(code as RoutineSubject), cls.nameBn ?? ""),
       );
     }
   } else if (mine !== null) {
@@ -243,7 +254,7 @@ export async function classSyllabus(
     for (const code of ROUTINE_SUBJECTS) {
       if (bySubject.has(code)) continue;
       if (isMineFor(code)) {
-        bySubject.set(code, placeholder(examId, classId, code, true));
+        bySubject.set(code, placeholder(examId, classId, code, true, cls.nameBn ?? ""));
       }
     }
   }
@@ -265,7 +276,7 @@ export async function classSyllabus(
   return {
     examId,
     classId,
-    classLabel: cls.label ?? "",
+    classLabel: cls.nameBn ?? "",
     classLevel: cls.level ?? 0,
     questionTypes: note?.questionTypes ?? [],
     noteMd: note?.noteMd ?? "",
@@ -292,11 +303,12 @@ export async function syllabusDetail(
   }
 
   const mine = await myPairKeys(ctx);
-  const cls = (await Class.findById(classId).select("level").lean()) as unknown as {
+  const cls = (await Class.findById(classId).select("nameBn level").lean()) as unknown as {
+    nameBn?: string;
     level?: number;
   } | null;
   const isMine = mine === null ? false : mine.has(`${cls?.level ?? 0}:${subject}`);
-  return toShape(row, isMine);
+  return toShape(row, isMine, cls?.nameBn ?? "");
 }
 
 /**
@@ -320,8 +332,8 @@ export async function guardianChildSyllabus(
 
   const classId = student.classId.toString();
 
-  const cls = (await Class.findById(classId).select("label level").lean()) as unknown as {
-    label?: string;
+  const cls = (await Class.findById(classId).select("nameBn level").lean()) as unknown as {
+    nameBn?: string;
     level?: number;
   } | null;
 
@@ -341,13 +353,13 @@ export async function guardianChildSyllabus(
 
   const order = new Map(ROUTINE_SUBJECTS.map((s, i) => [s, i]));
   const subjects = rows
-    .map((r) => toShape(r, false))
+    .map((r) => toShape(r, false, cls?.nameBn ?? ""))
     .sort((a, b) => (order.get(a.subject) ?? 99) - (order.get(b.subject) ?? 99));
 
   return {
     examId,
     classId,
-    classLabel: cls?.label ?? "",
+    classLabel: cls?.nameBn ?? "",
     classLevel: cls?.level ?? 0,
     questionTypes: note?.questionTypes ?? [],
     noteMd: note?.noteMd ?? "",
@@ -366,8 +378,19 @@ export async function mySyllabusApprovals(ctx: AppContext): Promise<SyllabusShap
     approverUserId: new Types.ObjectId(ctx.auth.userId),
     status: "TEACHER_REVIEW",
   }).lean()) as unknown as Array<Parameters<typeof toShape>[0]>;
+  if (rows.length === 0) return [];
 
-  return rows.map((r) => toShape(r, true));
+  // ONE read for the whole inbox rather than a class lookup per row: a teacher
+  // holding the same subject in several classes is the normal case here, not
+  // the exception, so the ids repeat.
+  const classes = (await Class.find({
+    _id: { $in: [...new Set(rows.map((r) => r.classId.toString()))].map((id) => new Types.ObjectId(id)) },
+  })
+    .select("nameBn")
+    .lean()) as unknown as Array<{ _id: Types.ObjectId; nameBn?: string }>;
+  const nameById = new Map(classes.map((c) => [c._id.toString(), c.nameBn ?? ""]));
+
+  return rows.map((r) => toShape(r, true, nameById.get(r.classId.toString()) ?? ""));
 }
 
 /**
@@ -404,9 +427,9 @@ export async function examSyllabusBoard(
     throw new ForbiddenError("সিলেবাস বোর্ড দেখার অনুমতি নেই");
   }
 
-  const classes = (await Class.find({}).select("label level").lean()) as unknown as Array<{
+  const classes = (await Class.find({}).select("nameBn level").lean()) as unknown as Array<{
     _id: Types.ObjectId;
-    label?: string;
+    nameBn?: string;
     level?: number;
   }>;
 
@@ -421,11 +444,13 @@ export async function examSyllabusBoard(
   }>;
   const noteByClass = new Map(notes.map((n) => [n.classId.toString(), n]));
 
+  const nameById = new Map(classes.map((c) => [c._id.toString(), c.nameBn ?? ""]));
+
   const byClass = new Map<string, SyllabusShape[]>();
   for (const r of rows) {
     const k = r.classId.toString();
     const list = byClass.get(k) ?? [];
-    list.push(toShape(r, false));
+    list.push(toShape(r, false, nameById.get(k) ?? ""));
     byClass.set(k, list);
   }
 
@@ -440,7 +465,7 @@ export async function examSyllabusBoard(
       return {
         examId,
         classId: k,
-        classLabel: c.label ?? "",
+        classLabel: c.nameBn ?? "",
         classLevel: c.level ?? 0,
         questionTypes: note?.questionTypes ?? [],
         noteMd: note?.noteMd ?? "",
