@@ -467,8 +467,24 @@ function PayrollTab({ staff, onSetPay }: { staff: StaffT; onSetPay: () => void }
   const p = pol?.hrPolicy;
   const l = late?.staffLatenessPreview;
   const salary = staff.monthlySalary;
-  // Indicative only — payroll computes the real rate from the run's working days.
-  const dayRate = salary != null && salary > 0 ? Math.round(salary / 26) : null;
+  /**
+   * The rate payroll ACTUALLY used, when there is one (D-#602).
+   *
+   * This used to be salary ÷ 26 with a comment admitting payroll computes it
+   * differently. Payroll divides by the RUN'S working days — 22 in August — so the hub
+   * showed ৳462 for someone whose payslip that same month said ৳545. It carried
+   * "(আনুমানিক)", but an estimate that is always ~18% low is not an estimate of the
+   * deduction anyone will actually see, and this is the number a teacher is quoted
+   * before a day is docked.
+   *
+   * Payslips arrive newest month first, so [0] is the most recent locked run. Before
+   * anyone's first payslip there is nothing real to show: 26 is still a guess, so it is
+   * labelled as one and the basis is spelled out underneath.
+   */
+  const lastSlip = slips.length > 0 ? slips[0] : null;
+  const exactDayRate = lastSlip?.dayRate ?? null;
+  const dayRate =
+    exactDayRate ?? (salary != null && salary > 0 ? Math.round(salary / 26) : null);
 
   return (
     <View>
@@ -479,7 +495,19 @@ function PayrollTab({ staff, onSetPay }: { staff: StaffT; onSetPay: () => void }
         </View>
         <Row label={STR.stfMonthlySalary} value={salary != null ? taka(salary) : "—"} />
         <Row label={STR.stfPaymentMethod} value={staff.paymentMethod ? paymentMethodLabel(staff.paymentMethod) : "—"} />
-        {dayRate != null ? <Row label={STR.stfDayRate} value={taka(dayRate)} /> : null}
+        {dayRate != null ? (
+          <>
+            <Row
+              label={exactDayRate != null ? STR.hrPayDayRate : STR.stfDayRate}
+              value={taka(dayRate)}
+            />
+            <Muted>
+              {exactDayRate != null
+                ? `${STR.stfDayRateFrom} ${bnNum(lastSlip!.monthKey)}`
+                : STR.stfDayRateBasis}
+            </Muted>
+          </>
+        ) : null}
         {staff.bankAccount ? <Row label={staff.paymentMethod === "bkash" ? STR.stfBkashNumber : STR.bankAccount} value={staff.bankAccount} /> : null}
         {salary == null ? <Notice tone="warn" message={STR.stfNoSalaryYet} /> : null}
         {/* Setting pay used to mean leaving the hub entirely for the payroll screens —
