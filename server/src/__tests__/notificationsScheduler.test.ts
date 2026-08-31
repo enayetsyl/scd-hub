@@ -27,6 +27,7 @@ const mockDispatchAttendance = jest.fn();
 const mockDispatchLibrary = jest.fn();
 const mockPendingHomework = jest.fn();
 const mockSweepHomeworkDue = jest.fn();
+const mockOverdueCounts = jest.fn();
 const mockSweepHomeworkAutoChase = jest.fn();
 const mockIsDigestDay = jest.fn();
 const mockDispatchDigest = jest.fn();
@@ -90,6 +91,12 @@ jest.mock("../modules/trackers/services/WorkClaimSweepService", () => ({
 jest.mock("../modules/trackers/services/HomeworkDueSweepService", () => ({
   sweepHomeworkDue: (d: unknown) => mockSweepHomeworkDue(d),
 }));
+// The 08:00 class-test overdue digest (D-#603) — mocked for the same reason as the
+// sweeps above: `overdueCounts` is a real aggregate over every printed exam, and
+// this suite is DB-free. Its own maths is covered in classTestSummary.test.ts.
+jest.mock("../modules/trackers/services/ClassTestSummaryService", () => ({
+  overdueCounts: (f: unknown) => mockOverdueCounts(f),
+}));
 // The 17:30 end-of-due-day system chase (owner ruling 2026-08-04) — mocked so the
 // scheduler test stays DB-free (the sweep is covered in homeworkChaseSweep.test.ts).
 jest.mock("../modules/trackers/services/HomeworkChaseSweepService", () => ({
@@ -143,6 +150,7 @@ beforeEach(() => {
   mockDispatchLibrary.mockResolvedValue({ dueSoonEmitted: 0, overdueEmitted: 0 });
   mockPendingHomework.mockResolvedValue([]);
   mockSweepHomeworkDue.mockResolvedValue(0);
+  mockOverdueCounts.mockResolvedValue({ overdue: 0, awaitingSubmit: 0, awaitingPublish: 0 });
   mockSweepHomeworkAutoChase.mockResolvedValue(0);
   mockIsDigestDay.mockResolvedValue(false);
   mockDispatchDigest.mockResolvedValue({ students: 0, notified: 0 });
@@ -345,6 +353,70 @@ describe("homework pending-confirm ladder", () => {
     mockPendingHomework.mockResolvedValue([pendingSection({ classTeacherId: null })]);
     const s = await runSchedulerTick(at(13, 0));
     expect(s.hwPendingEmitted).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Class-test overdue digest (D-#603) — 08:00, FULL days, Office + Principal
+// ---------------------------------------------------------------------------
+
+describe("class-test overdue digest (D-#603)", () => {
+  const OFFICE = { _id: { toString: () => "office-1" } };
+  const PRINCIPAL = { _id: { toString: () => "principal-1" } };
+
+  it("sends ONE digest per recipient at 08:00, not one per pending exam", async () => {
+    mockOverdueCounts.mockResolvedValue({ overdue: 7, awaitingSubmit: 5, awaitingPublish: 2 });
+    mockUserFind.mockResolvedValue([OFFICE, PRINCIPAL]);
+
+    const s = await runSchedulerTick(at(8, 0));
+    expect(s.ctOverdueDigestEmitted).toBe(2); // two people, seven exams → two rows
+    const kinds = mockEmit.mock.calls.map((c) => c[0].kind);
+    expect(kinds.filter((k: string) => k === "CLASS_TEST_OVERDUE_DIGEST")).toHaveLength(2);
+  });
+
+  it("puts the RECIPIENT in the dedupe key so the second person is not swallowed", async () => {
+    mockOverdueCounts.mockResolvedValue({ overdue: 3, awaitingSubmit: 3, awaitingPublish: 0 });
+    mockUserFind.mockResolvedValue([OFFICE, PRINCIPAL]);
+
+    await runSchedulerTick(at(8, 0));
+    const keys = mockEmit.mock.calls
+      .filter((c) => c[0].kind === "CLASS_TEST_OVERDUE_DIGEST")
+      .map((c) => c[0].dedupeKey);
+    expect(keys).toEqual([`CTOD:${DATE}:office-1`, `CTOD:${DATE}:principal-1`]);
+    expect(new Set(keys).size).toBe(2);
+  });
+
+  it("stays silent when nothing is overdue", async () => {
+    mockOverdueCounts.mockResolvedValue({ overdue: 0, awaitingSubmit: 0, awaitingPublish: 0 });
+    mockUserFind.mockResolvedValue([OFFICE]);
+    const s = await runSchedulerTick(at(8, 0));
+    expect(s.ctOverdueDigestEmitted).toBe(0);
+  });
+
+  it("queries ONCE per day, not once per tick in the 30-minute stale window", async () => {
+    mockOverdueCounts.mockResolvedValue({ overdue: 4, awaitingSubmit: 4, awaitingPublish: 0 });
+    mockUserFind.mockResolvedValue([OFFICE]);
+
+    await runSchedulerTick(at(8, 0));
+    await runSchedulerTick(at(8, 1));
+    await runSchedulerTick(at(8, 20));
+    expect(mockOverdueCounts).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not fire before 08:00", async () => {
+    mockOverdueCounts.mockResolvedValue({ overdue: 4, awaitingSubmit: 4, awaitingPublish: 0 });
+    mockUserFind.mockResolvedValue([OFFICE]);
+    await runSchedulerTick(at(7, 45));
+    expect(mockOverdueCounts).not.toHaveBeenCalled();
+  });
+
+  // The deadline that makes a report late counts FULL days only, so a Saturday
+  // digest would report a number that has not moved since Thursday.
+  it.each(["OFF", "HOLIDAY", "QURAN_ONLY"] as const)("does NOT run on a %s day", async (dayType) => {
+    mockResolveDayType.mockResolvedValue(dayType);
+    mockOverdueCounts.mockResolvedValue({ overdue: 4, awaitingSubmit: 4, awaitingPublish: 0 });
+    await runSchedulerTick(at(8, 0));
+    expect(mockOverdueCounts).not.toHaveBeenCalled();
   });
 });
 

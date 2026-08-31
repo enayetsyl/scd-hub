@@ -58,6 +58,7 @@ import { runDueOffboardingRevocations } from "../../hr/services/OffboardingServi
 import { runObservationEscalation } from "../../classroom-observation/services/ObservationEscalationService";
 import { pendingHomeworkSections } from "../../trackers/services/HomeworkReconciliationService";
 import { sweepHomeworkDue } from "../../trackers/services/HomeworkDueSweepService";
+import { overdueCounts } from "../../trackers/services/ClassTestSummaryService";
 import {
   runWorkClaimRung,
   expireStaleWorkClaims,
@@ -126,6 +127,15 @@ export const WORK_CLAIM_RUNGS = [
   { min: WORK_CLAIM_PRINCIPAL_RUNG_MIN, role: "PRINCIPAL" },
 ] as const;
 
+/** Class-test overdue digest (D-#603) — 08:00 to OFFICE + PRINCIPAL, FULL school
+ *  days only. FULL and not merely "not OFF/HOLIDAY": the deadline that makes a
+ *  report late counts FULL days only, so firing on a QURAN_ONLY Saturday would
+ *  report a number that did not move since Thursday. */
+export const CT_OVERDUE_DIGEST_MINUTES = 8 * 60;
+/** Who gets it. Teachers are deliberately absent — the owner scoped this to the
+ *  two roles who can act on BOTH halves of the split (chase, and approve). */
+export const CT_OVERDUE_DIGEST_ROLES = ["OFFICE", "PRINCIPAL"] as const;
+
 /** Weekly guardian homework digest (D-#452) — 17:00 on the LAST OPEN day of the
  *  Sun–Thu school week (normally Thursday). */
 export const HW_WEEKLY_DIGEST_MINUTES = 17 * 60;
@@ -163,6 +173,10 @@ export const schedulerDedupeKeys = {
     `HWPR:${dateKey}:${rungMin}:${sectionId}:${recipientId}`,
   homeworkPendingEscalation: (dateKey: string, rungMin: number, sectionId: string, recipientId: string) =>
     `HWPE:${dateKey}:${rungMin}:${sectionId}:${recipientId}`,
+  /** D-#603. The RECIPIENT is part of the key on purpose: a date-only key would let
+   *  the first office user's copy swallow the Principal's, so only one of them would
+   *  ever be told. Same trap as the entity-only keys elsewhere. */
+  classTestOverdueDigest: (dateKey: string, recipientId: string) => `CTOD:${dateKey}:${recipientId}`,
   // ATT:{date}:{tier}:{section}:{recipient} lives in AttendanceReminderService;
   // LIBDS/LIBOD live in LibraryReminderService — one registry per emitting module.
 } as const;
@@ -223,6 +237,8 @@ export interface TickSummary {
   hwAutoChased: number;
   /** Weekly guardian homework-digest notifications emitted (D-#452). */
   hwWeeklyDigestEmitted: number;
+  /** 08:00 class-test overdue digests emitted to Office/Principal (D-#603). */
+  ctOverdueDigestEmitted: number;
 }
 
 const subjectBn = (subject: string): string =>
@@ -259,6 +275,7 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
     hwAutoIssued: 0,
     hwAutoChased: 0,
     hwWeeklyDigestEmitted: 0,
+    ctOverdueDigestEmitted: 0,
   };
 
   // --- Classroom-observation response escalation (CO-3) — the teacher-response ladder
@@ -578,6 +595,48 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
       }
     }
   });
+
+  // --- Class-test overdue digest (D-#603) — 08:00, FULL days, Office + Principal.
+  //
+  // ONE rolled-up row per recipient per day, NOT one per pending exam: a per-item
+  // fan-out would drop 20+ rows into the office inbox every morning, and a channel
+  // that noisy stops being read. The counts are the message; the per-exam detail is
+  // one tap away on the dashboard the row deep-links to.
+  if (dayType === "FULL") {
+    await family("class-test overdue digest", async () => {
+      if (!windowOpen(nowMin, CT_OVERDUE_DIGEST_MINUTES)) return;
+      // runOnce, not just the emit dedupe: the 30-minute stale window spans ~30
+      // ticks, and `overdueCounts` is a real aggregate over every printed exam.
+      // The dedupeKey would suppress the 29 duplicate NOTIFICATIONS but not the 29
+      // duplicate QUERIES. runOnce only marks after a clean pass, so a failure
+      // still retries on the next tick.
+      await runOnce(dateKey, "CTOD", async () => {
+        const counts = await overdueCounts({ asOf: now });
+        if (counts.overdue === 0) return; // nothing late ⇒ say nothing
+
+        const titleBn = await renderTemplate("class_test.overdue_digest.title");
+        const bodyBn = await renderTemplate("class_test.overdue_digest.body", {
+          Count: counts.overdue,
+          AwaitingSubmit: counts.awaitingSubmit,
+          AwaitingPublish: counts.awaitingPublish,
+        });
+        const recipients = (await User.find(actingAsFilter([...CT_OVERDUE_DIGEST_ROLES]))
+          .select("_id")
+          .lean()) as unknown as Array<{ _id: IdLike }>;
+        for (const recipient of recipients) {
+          const res = await emit({
+            recipientUserId: recipient._id.toString(),
+            kind: "CLASS_TEST_OVERDUE_DIGEST",
+            titleBn,
+            bodyBn,
+            refs: { date: dateKey },
+            dedupeKey: schedulerDedupeKeys.classTestOverdueDigest(dateKey, recipient._id.toString()),
+          });
+          if (res.created) summary.ctOverdueDigestEmitted += 1;
+        }
+      });
+    });
+  }
 
   // --- Attendance tiers (D-#96/#99) — CALL the AT-4 engine, one truth.
   // FULL days only (the dispatcher gates again itself — belt and braces).

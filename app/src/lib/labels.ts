@@ -3870,6 +3870,9 @@ const STR_BN = {
   ctInProgress: "চলমান",
   ctNotStarted: "শুরু হয়নি",
   ctOverdue: "বিলম্বিত",
+  // D-#603: the delay split by owner — before submit it is the teacher's, after it is the office's.
+  ctAwaitingSubmit: "জমার অপেক্ষায়",
+  ctAwaitingPublish: "প্রকাশের অপেক্ষায়",
   ctCompletionRate: "সম্পূর্ণতার হার",
   ctOverdueByTeacher: "শিক্ষকভিত্তিক বিলম্বিত রিপোর্ট",
   ctNoOverdue: "কোনো বিলম্বিত রিপোর্ট নেই।",
@@ -7990,6 +7993,8 @@ const STR_EN: StrTable = {
   ctInProgress: "In progress",
   ctNotStarted: "Not started",
   ctOverdue: "Overdue",
+  ctAwaitingSubmit: "Awaiting submission",
+  ctAwaitingPublish: "Awaiting publish",
   ctCompletionRate: "Completion rate",
   ctOverdueByTeacher: "Overdue reports by teacher",
   ctNoOverdue: "No overdue reports.",
