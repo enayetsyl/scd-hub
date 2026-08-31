@@ -211,13 +211,16 @@ export default function ConfirmEmploymentScreen({ route, navigation }: Props): R
             <Button
               title={STR.stfConfirmBodyDraft}
               variant="secondary"
+              style={{ marginTop: space(2) }}
               onPress={() => setExtraText(defaultConfirmationBody(staff, confirmationDate))}
             />
           </>
         ) : null}
       </Card>
 
-      <View style={{ flexDirection: "row", gap: space(2) }}>
+      {/* Clear of the card above: the action row sat flush against it, so the last
+          control in the form and the button that commits it read as one block. */}
+      <View style={{ flexDirection: "row", gap: space(2), marginTop: space(2) }}>
         <Button title={STR.cancel} variant="secondary" onPress={() => navigation.goBack()} />
         <Button title={STR.stfConfirmAction} loading={busy} disabled={!dateOk} onPress={() => void onConfirm()} />
       </View>
