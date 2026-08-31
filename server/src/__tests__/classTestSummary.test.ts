@@ -388,6 +388,38 @@ describe("reportsStatus / principalDashboard", () => {
     expect(d.overdueByTeacher.map((r) => r.teacherName).sort()).toEqual(["Ustadh A", "Ustadh B"]);
   });
 
+  // D-#614. This one is STRUCTURAL on purpose, and it is worth saying why.
+  //
+  // The bug was MongoDB semantics, not logic: in an aggregation EXPRESSION a
+  // missing field is `missing`, and `{$ne: ["$publishedAt", null]}` is TRUE for
+  // it — so every never-published row counted as published, `publishComplete`
+  // was true everywhere, and D-#603 silently did nothing on real data. The query
+  // language behaves the opposite way, which is why the `$match`-filtered
+  // aggregates this replaced were correct.
+  //
+  // No mock can reproduce that: this suite stubs `aggregate`, so the pipeline is
+  // never executed by a real server and a behavioural assertion would pass with
+  // the bug present. Pinning the emitted pipeline is the only guard available
+  // short of an integration DB — it fails the moment someone "simplifies" the
+  // `$ifNull` away, which is exactly how the defect was introduced.
+  test("the handoff pipeline coerces MISSING to null before comparing (D-#614)", async () => {
+    const e1 = exam({ _id: oid() });
+    mockCtFind.mockReturnValue(leanChain([e1]));
+    withCounts([{ id: e1._id, sectionId: SECTION, roster: 10, entered: 10 }]);
+
+    await reportsStatus({ asOf: NOW });
+
+    const pipelines = mockResAggregate.mock.calls.map((c) => JSON.stringify(c[0]));
+    const handoff = pipelines.find((p) => p.includes("submittedLatest"));
+    expect(handoff).toBeDefined();
+    // Both stamp comparisons must go through $ifNull ...
+    expect(handoff).toContain('{"$ifNull":["$publishedAt",null]}');
+    expect(handoff).toContain('{"$ifNull":["$submittedAt",null]}');
+    // ... and the bare form must not appear anywhere in it.
+    expect(handoff).not.toContain('{"$ne":["$publishedAt",null]}');
+    expect(handoff).not.toContain('{"$ne":["$submittedAt",null]}');
+  });
+
   test("overdueCounts mirrors the dashboard split (D-#603 — one number everywhere)", async () => {
     const eOver = exam({ _id: oid(), requestedBy: T_A });
     const eWait = exam({ _id: oid(), requestedBy: T_B });
