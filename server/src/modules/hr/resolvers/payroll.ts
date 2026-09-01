@@ -228,6 +228,9 @@ const StaffAdjustmentInputRef = builder.inputType("StaffPayrollAdjustmentInput",
     // only at exit, so this only ever appears because someone asked and was told yes.
     leaveRecoveryDays: t.float({ required: false }),
     leaveRecoveryNote: t.string({ required: false }),
+    // D-#622 — a ONE-OFF advance recovers only when this says so; an installment
+    // keeps running unless it turns it off for the month.
+    recoverAdvance: t.boolean({ required: false }),
   }),
 });
 
@@ -378,6 +381,7 @@ builder.mutationField("preparePayrollRun", (t) =>
           manualAdditions: (a.manualAdditions ?? []).map((l) => ({ type: l.type as IPayLine["type"], amount: l.amount, note: l.note ?? undefined })),
           leaveRecoveryDays: a.leaveRecoveryDays ?? undefined,
           leaveRecoveryNote: a.leaveRecoveryNote ?? undefined,
+          recoverAdvance: a.recoverAdvance ?? undefined,
         })),
       });
       return run;

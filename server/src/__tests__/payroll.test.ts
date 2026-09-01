@@ -97,7 +97,7 @@ jest.mock("../modules/platform/services/AuditService", () => ({
 }));
 
 import { assertMonthKey, dayRate, computePayslip, PayrollError } from "../modules/hr/services/payrollMath";
-import { preparePayrollRun, approvePayrollRun, cancelPayrollRun, paymentExport } from "../modules/hr/services/PayrollService";
+import { preparePayrollRun, approvePayrollRun, cancelPayrollRun, paymentExport, recoverAdvance } from "../modules/hr/services/PayrollService";
 import ExcelJS from "exceljs";
 import { buildPaymentWorkbook } from "../modules/hr/routes/paymentExportCsv";
 import { issueAdvance, settleAdvance } from "../modules/hr/services/AdvanceService";
@@ -696,5 +696,34 @@ describe("a mid-year raise (D-#587)", () => {
     const { payslips } = await preparePayrollRun({ monthKey: "2026-06", workingDays: 30, actorId: ACTOR });
     // 5000 / 30 = 167, not 6000 / 30 = 200.
     expect((payslips[0] as unknown as { dayRate: number }).dayRate).toBe(167);
+  });
+});
+
+describe("whether a run recovers an advance (D-#622)", () => {
+  /**
+   * A one-shot takes the ENTIRE outstanding balance the first time any run touches the
+   * person — for a large qard that is most of a month's pay. The owner's rule is that
+   * it must be chosen each time: "at the time of payroll run there should be option to
+   * adjust or not; if adjust is clicked then will be adjusted otherwise not". The
+   * immediate case was a Tk 10,000 one-shot he did not want taken in August, where the
+   * only way to stop it would have been to edit the loan itself.
+   */
+  test("a ONE-SHOT recovers only when the run asks for it", () => {
+    const oneShot = { recoveryMode: "one_shot" };
+    expect(recoverAdvance(oneShot, undefined)).toBe(false);
+    expect(recoverAdvance(oneShot, {})).toBe(false);
+    expect(recoverAdvance(oneShot, { recoverAdvance: true })).toBe(true);
+  });
+
+  test("an INSTALLMENT keeps running — it is a standing arrangement", () => {
+    const inst = { recoveryMode: "installments" };
+    expect(recoverAdvance(inst, undefined)).toBe(true);
+    // ...but a month can still be skipped deliberately.
+    expect(recoverAdvance(inst, { recoverAdvance: false })).toBe(false);
+  });
+
+  test("no advance, nothing to recover", () => {
+    expect(recoverAdvance(null, { recoverAdvance: true })).toBe(false);
+    expect(recoverAdvance(undefined, undefined)).toBe(false);
   });
 });
