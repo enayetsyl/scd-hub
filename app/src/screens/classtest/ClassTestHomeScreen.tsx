@@ -32,7 +32,7 @@ export default function ClassTestHomeScreen(): React.ReactElement {
   const [myQ, refetchMy] = useQuery({ query: MY_CLASS_TESTS_QUERY, variables: {} });
   const mine = myQ.data?.myClassTests ?? [];
 
-  // D-#619: the Dashboard button carries its own counts. Paused for non-admins —
+  // D-#620: the Dashboard button carries its own counts. Paused for non-admins —
   // they do not see the button at all — and read with `?.` so a slow or failed
   // fetch degrades to the plain label rather than blocking the hub.
   const [ctCountsQ] = useQuery({
@@ -88,7 +88,7 @@ export default function ClassTestHomeScreen(): React.ReactElement {
             <Button title={STR.arHomeNav} variant="secondary" onPress={() => nav.navigate("ArchiveHome")} />
             {isAdmin ? (
               <Button
-                // D-#619: the two numbers the owner reads this button for — the
+                // D-#620: the two numbers the owner reads this button for — the
                 // outstanding pile and the late subset of it — so the hub answers
                 // "is anything waiting on me?" without a tap. Counts are appended
                 // only once loaded; the button never renders a placeholder zero.

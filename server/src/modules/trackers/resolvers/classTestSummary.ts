@@ -255,7 +255,7 @@ OverdueCountsRef.implement({
   fields: (t) => ({
     open: t.exposeInt("open", {
       description:
-        "Exam sat and results not yet published (D-#619) — the whole outstanding pile. `overdue` is a strict subset.",
+        "Exam sat and results not yet published (D-#620) — the whole outstanding pile. `overdue` is a strict subset.",
     }),
     overdue: t.exposeInt("overdue"),
     awaitingSubmit: t.exposeInt("awaitingSubmit"),

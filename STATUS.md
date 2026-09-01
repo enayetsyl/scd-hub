@@ -1,6 +1,6 @@
 # STATUS
 
-- 2026-08-31 (cont. 7): **BUILT — the Class Test hub's Dashboard button carries its counts (D-#619), branch `feat/ct-dashboard-button-counts`, stacked on `fix/ct-overdue-missing-field-count`.** Owner ask, same message as the D-#614 report: *"In the dashboard button i want the number of items open and number overdue."*
+- 2026-08-31 (cont. 7): **BUILT — the Class Test hub's Dashboard button carries its counts (D-#620), branch `feat/ct-dashboard-button-counts`, stacked on `fix/ct-overdue-missing-field-count`.** Owner ask, same message as the D-#614 report: *"In the dashboard button i want the number of items open and number overdue."*
   **"Open" needed a ruling, and the owner gave one:** *exam taken and result not yet published* — NOT "not started". So it is defined on the EXAM being sat, not on marks being entered: an exam sat today with nothing entered is outstanding work, an exam still in the future is not, and the comparison is date-only so today's exam counts the same day. `overdue` is a strict subset, which is what makes the pair readable — the whole pile, and the late part of it.
   **Stacked deliberately.** It builds on D-#614 because both touch `overdueCounts`, and shipping the button on top of the broken count would have printed a confidently wrong number on the hub.
   **Degrades quietly.** The query is paused for non-admins (who never see the button) and read with `?.`; until it resolves the button shows its plain label rather than a placeholder zero.

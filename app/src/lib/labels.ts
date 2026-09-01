@@ -3896,7 +3896,7 @@ const STR_BN = {
   ctSchoolDaysLate: "স্কুল-দিন বিলম্ব",
   // D-#606: the deadline day itself — due now, but not yet late by any school day.
   ctDueToday: "আজ শেষ দিন",
-  // D-#619: the Dashboard button summary — outstanding pile, and the late subset.
+  // D-#620: the Dashboard button summary — outstanding pile, and the late subset.
   ctOpenCount: "খোলা",
   ctDeadline: "সময়সীমা",
   ctState: "অবস্থা",

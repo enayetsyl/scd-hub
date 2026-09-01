@@ -690,7 +690,7 @@ export const CT_QUESTION_COUNTS = gql<
  *  Principal get the school. Deliberately its own tiny query: it is polled, and
  *  the full Reports-Status document is far too heavy to sit behind a badge. */
 export interface ClassTestOverdueCountsT {
-  /** D-#619: exam sat and results not yet published — the whole outstanding
+  /** D-#620: exam sat and results not yet published — the whole outstanding
    *  pile. `overdue` is a strict subset of it. */
   open: number;
   overdue: number;

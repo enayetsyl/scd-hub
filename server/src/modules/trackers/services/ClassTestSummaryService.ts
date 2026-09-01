@@ -410,7 +410,7 @@ export async function principalDashboard(filter: SummaryFilter): Promise<Princip
 export interface OverdueCounts {
   /** Owner's definition (2026-08-31): the exam has been SAT and the results are
    *  not yet published — the whole outstanding pile, late or not. `overdue` is a
-   *  strict subset: an exam is only ever late after it is open (D-#619). */
+   *  strict subset: an exam is only ever late after it is open (D-#620). */
   open: number;
   /** Past deadline and unpublished — what the বিলম্বিত chip counts. */
   overdue: number;
