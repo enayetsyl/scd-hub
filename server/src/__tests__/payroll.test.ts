@@ -47,6 +47,16 @@ jest.mock("../modules/hr/models/Payslip", () => ({
     deleteMany: (q: unknown) => mockSlipDelete(q),
   },
 }));
+// D-#617 — preparing a run upserts (or clears) an agreed leave-balance recovery.
+const mockRecoveryUpsert = jest.fn().mockResolvedValue({});
+const mockRecoveryDelete = jest.fn().mockResolvedValue({});
+jest.mock("../modules/hr/models/LeaveBalanceRecovery", () => ({
+  LeaveBalanceRecovery: {
+    find: () => ({ select: () => ({ lean: async () => [] }) }),
+    findOneAndUpdate: (q: unknown, u: unknown, o: unknown) => mockRecoveryUpsert(q, u, o),
+    deleteOne: (q: unknown) => mockRecoveryDelete(q),
+  },
+}));
 jest.mock("../modules/hr/models/AdvanceLoan", () => ({
   AdvanceLoan: {
     find: (q: unknown) => ({ lean: () => mockAdvFind(q) }),
@@ -156,21 +166,27 @@ describe("the lateness rule (SH-4, D-#541 — pure)", () => {
     expect(splitLatenessCharge(7, N, 20)).toMatchObject({ chargedDays: 2, forgivenLates: 1 });
   });
 
-  test("the charge comes off the leave pool FIRST, then salary", () => {
-    // Pool covers it entirely.
+  /**
+   * D-#616 changed the second half of the owner's original rule. It was "first leave
+   * deduct then salary deduct"; it is now leave only, with the balance free to go
+   * negative and salary touched at exit or by agreement. So there is no split left to
+   * test — the whole charge lands on the pool whatever the pool holds.
+   */
+  test("the whole charge goes to the leave pool — never to salary (D-#616)", () => {
     expect(splitLatenessCharge(6, N, 20)).toMatchObject({ chargedDays: 2, paidFromLeave: 2, chargedToSalary: 0 });
-    // Pool covers one of the two.
-    expect(splitLatenessCharge(6, N, 1)).toMatchObject({ chargedDays: 2, paidFromLeave: 1, chargedToSalary: 1 });
-    // Empty pool → straight to salary. This is the probationer's case: they have no
-    // pool at all, so every third late is money.
-    expect(splitLatenessCharge(3, N, 0)).toMatchObject({ chargedDays: 1, paidFromLeave: 0, chargedToSalary: 1 });
+    // A pool that cannot cover it no longer spills into pay; the balance goes negative.
+    expect(splitLatenessCharge(6, N, 1)).toMatchObject({ chargedDays: 2, paidFromLeave: 2, chargedToSalary: 0 });
+    // The probationer's case: no pool at all, and still nothing reaches their salary.
+    expect(splitLatenessCharge(3, N, 0)).toMatchObject({ chargedDays: 1, paidFromLeave: 1, chargedToSalary: 0 });
+    expect(splitLatenessCharge(3, N, -11)).toMatchObject({ chargedDays: 1, paidFromLeave: 1, chargedToSalary: 0 });
   });
 
-  test("a fractional pool cannot absorb a whole charged day (D-#361 partial days are 1/3)", () => {
-    // 2/3 of a day left is not a day. Floor it, or the balance is left with an
-    // unexplainable stub and the payslip is short by a third of a day-rate.
-    expect(splitLatenessCharge(3, N, 0.67)).toMatchObject({ paidFromLeave: 0, chargedToSalary: 1 });
-    expect(splitLatenessCharge(3, N, 1.33)).toMatchObject({ paidFromLeave: 1, chargedToSalary: 0 });
+  test("the pool balance no longer changes the outcome — only the late COUNT does", () => {
+    // Flooring a fractional pool mattered while the remainder became salary. It cannot
+    // now: 3 lates are one charged day against the balance at any pool value.
+    for (const pool of [0.67, 1.33, 0, 20, -5]) {
+      expect(splitLatenessCharge(3, N, pool)).toMatchObject({ paidFromLeave: 1, chargedToSalary: 0 });
+    }
   });
 
   test("no lates → nothing charged; a negative count is treated as zero", () => {

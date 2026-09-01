@@ -430,6 +430,8 @@ builder.queryField("myLeavePool", (t) =>
       if (!sid) {
         return {
           academicYearId: null,
+          leaveYearStart: null,
+          leaveYearEnd: null,
           allowanceDays: 0,
           carriedOverDays: 0,
           takenDays: 0,

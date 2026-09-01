@@ -23,13 +23,22 @@ export interface StaffPayrollAdjustment {
   latenessDeduction?: number | null;
   manualDeductions?: PayLineInput[];
   manualAdditions?: PayLineInput[];
+  /** Days of a negative leave balance settled by agreement this month (D-#617). */
+  leaveRecoveryDays?: number | null;
+  leaveRecoveryNote?: string | null;
 }
 
 /** One row as the form holds it, before validation. */
 export interface AdjRow {
   key: string;
   staffProfileId: string;
-  sign: "addition" | "deduction";
+  /**
+   * "leave_recovery" is not a money line: the AMOUNT is read as DAYS of a negative
+   * leave balance the staff member agreed to settle, and the server turns it into both
+   * a deduction and a credit back to the balance (D-#617). Keeping it in the same row
+   * shape means the office enters it where they already enter everything else.
+   */
+  sign: "addition" | "deduction" | "leave_recovery";
   type: string | null;
   amount: string;
   note: string;
@@ -39,6 +48,8 @@ const AMOUNT = /^\d+(\.\d+)?$/;
 
 /** A row that can be sent: a person, a type, and a numeric amount. */
 export function rowComplete(r: AdjRow): boolean {
+  // A recovery row carries days in `amount` and needs no money type.
+  if (r.sign === "leave_recovery") return r.staffProfileId !== "" && AMOUNT.test(r.amount.trim());
   return r.staffProfileId !== "" && r.type !== null && AMOUNT.test(r.amount.trim());
 }
 
@@ -61,7 +72,11 @@ export function buildAdjustments(rows: AdjRow[]): StaffPayrollAdjustment[] {
       adj = { staffProfileId: r.staffProfileId, manualAdditions: [], manualDeductions: [] };
       byStaff.set(r.staffProfileId, adj);
     }
-    if (r.sign === "addition") adj.manualAdditions!.push(line);
+    if (r.sign === "leave_recovery") {
+      // Days, not taka — and the server prices them at that month's day-rate.
+      adj.leaveRecoveryDays = line.amount;
+      adj.leaveRecoveryNote = line.note ?? null;
+    } else if (r.sign === "addition") adj.manualAdditions!.push(line);
     else adj.manualDeductions!.push(line);
   }
   return [...byStaff.values()];

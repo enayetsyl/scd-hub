@@ -49,16 +49,28 @@ export interface LatenessSplit {
 export function splitLatenessCharge(
   lateCount: number,
   lateDaysPerCharge: number,
-  poolRemaining: number,
+  _poolRemaining: number,
 ): LatenessSplit {
   if (lateDaysPerCharge < 1) throw new Error("lateDaysPerCharge must be ≥ 1");
   const chargedDays = Math.floor(Math.max(0, lateCount) / lateDaysPerCharge);
   const forgivenLates = Math.max(0, lateCount) - chargedDays * lateDaysPerCharge;
-  const paidFromLeave = Math.max(0, Math.min(chargedDays, Math.floor(Math.max(0, poolRemaining))));
+  /**
+   * THE WHOLE CHARGE GOES TO THE LEAVE BALANCE (D-#616).
+   *
+   * It used to take from the pool only as far as the pool went and bill the rest to
+   * salary — "first leave deduct then salary deduct". The owner has since drawn the
+   * line differently: leave and lateness are settled against the BALANCE, which may
+   * run negative, and salary is touched only at exit or by explicit agreement
+   * (D-#617). So there is no automatic salary half any more.
+   *
+   * `poolRemaining` is kept in the signature and ignored: the caller reads it for
+   * display, and dropping the parameter would ripple through call sites for no gain
+   * while making it harder to restore the split if the policy ever changes back.
+   */
   return {
     chargedDays,
-    paidFromLeave,
-    chargedToSalary: chargedDays - paidFromLeave,
+    paidFromLeave: chargedDays,
+    chargedToSalary: 0,
     forgivenLates,
   };
 }
