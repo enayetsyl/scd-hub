@@ -135,10 +135,14 @@ describe("settleOnConfirmation debits the POOL, not just the ledger (D-#590)", (
     ]);
     const res = await settleOnConfirmation(staffId, 1, ACTOR);
 
-    expect(res).toMatchObject({ heldDays: 4, fromPool: 1, toSalary: 3 });
+    // D-#621: the pool absorbs ALL of it and goes negative. It used to take what
+    // the pool held (1) and push the other 3 to salary as unpaid leave — the one
+    // place the pre-D-#616 rule survived, and the one that contradicted the
+    // confirmation letter's promise not to deduct for probation days.
+    expect(res).toMatchObject({ heldDays: 4, fromPool: 4, toSalary: 0 });
     expect(mockLeaveUpdate).toHaveBeenCalledWith(
       { _id: leaveA },
-      { $set: { paidDays: 1, unpaidDays: 3, probationHeld: false } },
+      { $set: { paidDays: 4, unpaidDays: 0, probationHeld: false } },
     );
   });
 
@@ -149,14 +153,15 @@ describe("settleOnConfirmation debits the POOL, not just the ledger (D-#590)", (
     ]);
     await settleOnConfirmation(staffId, 3, ACTOR);
 
-    // Pool of 3: the March leave takes 2, the June leave takes the last 1.
+    // Each leave is stamped its OWN days in full (D-#621) — a pool of 3 against 5
+    // held days simply ends 2 overdrawn. Nothing splits off as unpaid.
     expect(mockLeaveUpdate).toHaveBeenCalledWith(
       { _id: leaveA },
       { $set: { paidDays: 2, unpaidDays: 0, probationHeld: false } },
     );
     expect(mockLeaveUpdate).toHaveBeenCalledWith(
       { _id: leaveB },
-      { $set: { paidDays: 1, unpaidDays: 2, probationHeld: false } },
+      { $set: { paidDays: 3, unpaidDays: 0, probationHeld: false } },
     );
   });
 
