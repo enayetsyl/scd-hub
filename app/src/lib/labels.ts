@@ -3562,6 +3562,15 @@ const STR_BN = {
   stfPolicyRefPrefix: "পত্রের রেফারেন্স প্রিফিক্স",
   stfPolicyLettersNote: "এখানে বদলালে শুধু নতুন পত্রে প্রভাব পড়বে — আগে ইস্যু করা পত্র অপরিবর্তিত থাকবে।",
   stfPolicySaved: "নীতিমালা সংরক্ষিত হয়েছে",
+  stfPolicyAdviceLetter: "ব্যাংকে পাঠানো বেতনের চিঠির বয়ান",
+  stfPolicyAdviceLetterNote:
+    "চিঠির লেখা এখানে বদলানো যায়। টাকার অঙ্ক, কথায় টাকা, মাস ও হিসাব নম্বর প্লেসহোল্ডার হিসেবেই রাখুন — প্রতিটি রানের প্রকৃত তথ্য সেখানে বসবে, ফলে চিঠির অঙ্ক শিটের সঙ্গে কখনও অমিল হবে না।",
+  stfPolicyAdviceLetterBody: "চিঠির বয়ান",
+  stfPolicyAdviceLetterTokens: "ব্যবহারযোগ্য প্লেসহোল্ডার",
+  stfPolicyAdviceLetterPreview: "নমুনা তথ্য দিয়ে প্রিভিউ",
+  stfPolicyAdviceLetterUnknown:
+    "অচেনা প্লেসহোল্ডার — এগুলো চিঠিতে হুবহু ছাপা হতো, তাই সংরক্ষণ করা যাবে না:",
+  stfPolicyAdviceLetterReset: "ডিফল্ট বয়ান ফিরিয়ে আনুন",
   stfPolicyEffectWarn: "এই সংখ্যা বদলালে সব কর্মীর ছুটির হিসাব নতুন করে গণনা হবে।",
   stfMyPayslips: "আমার পে-স্লিপ",
   stfMyNoPayslips: "এখনো কোনো পে-স্লিপ ইস্যু হয়নি।",
@@ -7704,6 +7713,15 @@ const STR_EN: StrTable = {
   stfPolicyRefPrefix: "Letter reference prefix",
   stfPolicyLettersNote: "Changes here affect NEW letters only — letters already issued keep what they were signed with.",
   stfPolicySaved: "Policy saved",
+  stfPolicyAdviceLetter: "Wording of the salary letter to the bank",
+  stfPolicyAdviceLetterNote:
+    "Edit the letter's wording here. Leave the amount, amount-in-words, month and account number as placeholders — each run fills in its own figures, so the letter can never quote a total that disagrees with the sheet.",
+  stfPolicyAdviceLetterBody: "Letter body",
+  stfPolicyAdviceLetterTokens: "Placeholders you can use",
+  stfPolicyAdviceLetterPreview: "Preview, with sample figures",
+  stfPolicyAdviceLetterUnknown:
+    "Unknown placeholder — this would print to the bank verbatim, so it cannot be saved:",
+  stfPolicyAdviceLetterReset: "Restore the default wording",
   stfPolicyEffectWarn: "Changing this recomputes every staff member's leave balance.",
   stfMyPayslips: "My payslips",
   stfMyNoPayslips: "No payslip issued yet.",

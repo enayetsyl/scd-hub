@@ -51,6 +51,12 @@ export interface IHrPolicy extends Document {
   signatoryNameBn: string;
   signatoryTitleBn: string;
   letterRefPrefix: string;
+  /**
+   * The salary-advice covering letter's body, with `{{...}}` placeholders for the
+   * figures (D-#624). Stored VERBATIM — a blank line in it is a paragraph break the
+   * renderer honours, so this one is not trimmed on the way in.
+   */
+  adviceLetterBody: string;
   updatedBy?: Types.ObjectId | null;
   createdAt: Date;
   updatedAt: Date;
@@ -79,6 +85,7 @@ const HrPolicySchema = new Schema<IHrPolicy>(
     signatoryNameBn: { type: String, trim: true },
     signatoryTitleBn: { type: String, trim: true },
     letterRefPrefix: { type: String, trim: true },
+    adviceLetterBody: { type: String },
     updatedBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
   },
   { timestamps: true },

@@ -58,6 +58,8 @@
 
 // --- A.1 MIRRORED ENUMS (must match the envelope JSON Schema) ----------------
 
+import { DEFAULT_ADVICE_LETTER_BODY } from "./adviceLetter";
+
 /** Subject codes. MIRROR of envelope `subject`. */
 export const SUBJECTS = ["BAN", "ENG", "MATH", "SCI", "BGS"] as const;
 export type Subject = (typeof SUBJECTS)[number];
@@ -867,6 +869,13 @@ export const HR_POLICY_DEFAULTS = {
   signatoryTitleBn: "",
   /** Ref-no prefix: `${prefix}/${year}/${seq}` → "SCD/HR/2026/0052". */
   letterRefPrefix: "SCD/HR",
+  /**
+   * The salary-advice covering letter's wording (D-#624). Defaults to the text the
+   * renderer used to hard-code, so no issued letter moves until someone edits the box.
+   * `DEFAULT_ADVICE_LETTER_BODY` in /shared/adviceLetter.ts says why the FIGURES in it
+   * stay placeholders rather than typed text.
+   */
+  adviceLetterBody: DEFAULT_ADVICE_LETTER_BODY,
 } as const;
 
 /** The leave types that draw the ONE shared annual pool (D-#539). Everything else is

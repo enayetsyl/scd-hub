@@ -28,6 +28,7 @@ import { mixedText, mixedTextInBox } from "../../../routes/pdfRenderer";
 import { buildContext } from "../../../context";
 import { paymentAdvice, type AdviceGroup, type PaymentAdvice } from "../services/PaymentAdviceService";
 import { takaFigure, takaInWords } from "../services/takaWords";
+import { renderAdviceLetterBody, DEFAULT_ADVICE_LETTER_BODY } from "@scd/shared";
 import { PayrollError } from "../services/payrollMath";
 import { writeAudit } from "../../platform/services/AuditService";
 
@@ -132,6 +133,23 @@ paymentAdvicePdfRouter.get("/:runId", async (req: Request, res: Response) => {
 // ---------------------------------------------------------------------------
 
 const GREEN = "#3F6C45";
+
+/** Padding above and below the text in a table cell. */
+export const CELL_PAD = 5;
+
+/**
+ * A row is as tall as its tallest cell needs, never shorter than 20pt (D-#623).
+ *
+ * Exported so the rule is tested directly rather than through a rendered page: the
+ * failure it prevents — a wrapped second line drawn outside its own border, on top of
+ * the row beneath — is invisible to any assertion about the PDF as a whole. It was
+ * found by the owner reading his own August pack, where one teacher's name sat across
+ * the next teacher's.
+ */
+export function rowHeightFor(measuredHeights: number[], pad: number = CELL_PAD): number {
+  const tallest = Math.max(...measuredHeights, 10);
+  return Math.max(20, Math.ceil(tallest) + pad * 2);
+}
 
 /**
  * Scale a hand-laid-out column set to the printable width (D-#599).
@@ -246,6 +264,35 @@ function footer(doc: PDFKit.PDFDocument, advice: PaymentAdvice): void {
   doc.restore();
 }
 
+/**
+ * The covering letter's paragraphs: the school's WORDING carrying this run's FIGURES (D-#624).
+ *
+ * Exported, and separate from the drawing, because the text of a letter cannot be read back
+ * out of the rendered PDF — `mixedText` embeds subset fonts, so on the page every glyph is an
+ * index rather than a character. A rule that cannot be asserted through the artefact gets
+ * asserted directly instead; the artefact itself was checked once by rendering it and reading
+ * it back with a PDF text extractor.
+ *
+ * The split is the whole design. Whatever wording the school types, the amount, the amount in
+ * words, the month and the account number come from the RUN — so an edited letter can never
+ * quote a total that disagrees with the sheet stapled behind it. The `||` is a guard rather
+ * than a duplicate of the service default: a policy object assembled anywhere else must still
+ * print the standard letter rather than throw halfway through a pack the school is waiting on.
+ */
+export function letterParagraphs(advice: PaymentAdvice, g: AdviceGroup): string[] {
+  const p = advice.policy;
+  return renderAdviceLetterBody(p.adviceLetterBody || DEFAULT_ADVICE_LETTER_BODY, {
+    school: p.employerNameBn.trim() || "School for Community Development",
+    account: p.schoolAccountNo,
+    bank: p.schoolBankName,
+    branch: p.schoolBankBranch,
+    amount: takaFigure(g.total),
+    amountWords: takaInWords(g.total),
+    month: monthTitle(advice.monthKey),
+    staffCount: String(g.rows.length),
+  });
+}
+
 /** The covering letter for one bank channel. */
 function drawLetter(doc: PDFKit.PDFDocument, advice: PaymentAdvice, g: AdviceGroup): void {
   const p = advice.policy;
@@ -266,16 +313,11 @@ function drawLetter(doc: PDFKit.PDFDocument, advice: PaymentAdvice, g: AdviceGro
   mixedText(doc, "Dear Muhtaram,", { width });
   doc.moveDown(0.5);
 
-  mixedText(
-    doc,
-    `We “${p.employerNameBn.trim() || "School for Community Development"}” are clients of your bank. ` +
-      `Our bearing account number ${p.schoolAccountNo}. Requesting you to arrange payment ` +
-      `Tk. ${takaFigure(g.total)}/- (${takaInWords(g.total)}) for our payable Teachers salary payment ` +
-      `online transfer as per attached Salary Advice Sheet - ${monthTitle(advice.monthKey)}.`,
-    { width, align: "justify", lineGap: 1.5 },
-  );
-  doc.moveDown(1);
-  mixedText(doc, "We anticipate your full cooperation in this regard.", { width });
+  const paragraphs = letterParagraphs(advice, g);
+  paragraphs.forEach((para, i) => {
+    if (i > 0) doc.moveDown(1);
+    mixedText(doc, para, { width, align: "justify", lineGap: 1.5 });
+  });
   doc.moveDown(1.5);
   mixedText(doc, "Ma’assalamah,", { width });
   mixedText(doc, p.employerNameBn.trim() || "School for Community Development", { width });
@@ -325,7 +367,27 @@ function drawSheet(doc: PDFKit.PDFDocument, advice: PaymentAdvice, g: AdviceGrou
     cells: string[],
     opts: { header?: boolean; bold?: boolean } = {},
   ): void => {
-    const height = 20;
+    /**
+     * THE ROW GROWS TO ITS TALLEST CELL (D-#623).
+     *
+     * The height was fixed at 20pt while a cell that did not fit wrapped to 21.2pt, so
+     * the second line was drawn OUTSIDE its own border and landed on top of the row
+     * below: on the owner's August pack "Mahmudur Rahman Tazkir" sat across the next
+     * teacher's name, and two bank names did the same. `lineBreak: false, ellipsis`
+     * was being passed and did not take effect through the per-script writer.
+     *
+     * Truncating would have been the smaller change and the wrong one. This is a payment
+     * instruction: a bank matches on the full name, and "Mahmudur Rahman Tazk…" is not a
+     * name. D-#599 made the collision likely by scaling the columns 17% narrower to fit
+     * the page — correct in itself, but it left the fixed height behind.
+     */
+    const pad = 5;
+    const needed = Math.max(
+      ...cells.map((text, i) => (text ? doc.heightOfString(text, { width: cols[i].w - 6 }) : 0)),
+      10,
+    );
+    const height = Math.max(20, Math.ceil(needed) + pad * 2);
+
     // Keep the table off the footer.
     if (doc.y + height > doc.page.height - doc.page.margins.bottom - 40) {
       doc.addPage();
@@ -347,11 +409,9 @@ function drawSheet(doc: PDFKit.PDFDocument, advice: PaymentAdvice, g: AdviceGrou
       // name on this pack in the owner's test was English, which is the only reason it
       // looked fine — the real roster is Bangla, and those names would have printed as
       // boxes on the sheet the bank is asked to pay from.
-      mixedTextInBox(doc, text, x + 3, y + 6, w - 6, {
-        align: numeric ? "right" : "left",
-        lineBreak: false,
-        ellipsis: true,
-      });
+      //
+      // Wrapping is now ALLOWED, because the row was measured to hold it.
+      mixedTextInBox(doc, text, x + 3, y + pad, w - 6, { align: numeric ? "right" : "left" });
       x += w;
     });
     doc.fillColor("#000000");

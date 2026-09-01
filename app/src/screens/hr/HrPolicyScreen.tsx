@@ -32,6 +32,12 @@ import {
   Loader,
   Notice,
 } from "../../components/ui";
+import {
+  ADVICE_LETTER_PLACEHOLDERS,
+  DEFAULT_ADVICE_LETTER_BODY,
+  renderAdviceLetterBody,
+  unknownLetterPlaceholders,
+} from "@scd/shared";
 import { STR, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
@@ -62,6 +68,7 @@ export default function HrPolicyScreen(): React.ReactElement {
   const [schoolBankName, setSchoolBankName] = React.useState("");
   const [schoolBankBranch, setSchoolBankBranch] = React.useState("");
   const [schoolAccountNo, setSchoolAccountNo] = React.useState("");
+  const [adviceLetterBody, setAdviceLetterBody] = React.useState("");
 
   const [busy, setBusy] = React.useState(false);
   const [notice, setNotice] = React.useState<string | null>(null);
@@ -93,16 +100,44 @@ export default function HrPolicyScreen(): React.ReactElement {
     setSchoolBankName(p.schoolBankName);
     setSchoolBankBranch(p.schoolBankBranch);
     setSchoolAccountNo(p.schoolAccountNo);
+    setAdviceLetterBody(p.adviceLetterBody);
   }, [p]);
 
   const poolChanged = !!p && Number(annualLeaveDays) !== p.annualLeaveDays;
+
+  const unknownTokens = React.useMemo(
+    () => unknownLetterPlaceholders(adviceLetterBody),
+    [adviceLetterBody],
+  );
+  /**
+   * The preview runs the SAME renderer the PDF does, over sample FIGURES. That split is
+   * the point: the wording being previewed is exactly what will print, while the numbers
+   * are placeholders here and come from the run there — so no one can read this box as a
+   * promise about an amount.
+   */
+  const letterPreview = React.useMemo(
+    () =>
+      renderAdviceLetterBody(adviceLetterBody, {
+        school: employerNameBn.trim() || "School for Community Development",
+        account: schoolAccountNo.trim() || "—",
+        bank: schoolBankName.trim() || "—",
+        branch: schoolBankBranch.trim() || "—",
+        amount: "240,500",
+        amountWords: "Two Lac Forty Thousand Five Hundred Only",
+        month: "August 2026",
+        staffCount: "25",
+      }),
+    [adviceLetterBody, employerNameBn, schoolAccountNo, schoolBankName, schoolBankBranch],
+  );
   const canSave =
     Number(annualLeaveDays) >= 0 &&
     Number(lateDaysPerCharge) >= 1 &&
     // 0 is a school with no probation; blank or text is a mistake, not a zero.
     /^\d+$/.test(probationMonths.trim()) &&
     signatoryName.trim() !== "" &&
-    signatoryTitle.trim() !== "";
+    signatoryTitle.trim() !== "" &&
+    // A placeholder nobody can fill prints to a bank verbatim (D-#624).
+    unknownTokens.length === 0;
 
   async function onSave(): Promise<void> {
     setBusy(true);
@@ -129,6 +164,7 @@ export default function HrPolicyScreen(): React.ReactElement {
       schoolBankName: schoolBankName.trim(),
       schoolBankBranch: schoolBankBranch.trim(),
       schoolAccountNo: schoolAccountNo.trim(),
+      adviceLetterBody: adviceLetterBody.trim(),
     });
     setBusy(false);
     if (res.error) {
@@ -252,6 +288,43 @@ export default function HrPolicyScreen(): React.ReactElement {
         <Field label={STR.stfSchoolBankName} value={schoolBankName} onChangeText={setSchoolBankName} />
         <Field label={STR.stfSchoolBankBranch} value={schoolBankBranch} onChangeText={setSchoolBankBranch} />
         <Field label={STR.stfSchoolAccountNo} value={schoolAccountNo} onChangeText={setSchoolAccountNo} />
+      </Card>
+
+      {/* --- the covering letter's wording, as data (D-#624) ------------------ */}
+      <Card>
+        <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.stfPolicyAdviceLetter}</Body>
+        <Muted>{STR.stfPolicyAdviceLetterNote}</Muted>
+        <Field
+          label={STR.stfPolicyAdviceLetterBody}
+          value={adviceLetterBody}
+          onChangeText={setAdviceLetterBody}
+          multiline
+        />
+        <Muted style={{ marginTop: space(2) }}>
+          {STR.stfPolicyAdviceLetterTokens}:{" "}
+          {ADVICE_LETTER_PLACEHOLDERS.map((t) => `{{${t}}}`).join("  ")}
+        </Muted>
+        {unknownTokens.length > 0 ? (
+          <Notice
+            tone="danger"
+            message={`${STR.stfPolicyAdviceLetterUnknown} ${unknownTokens
+              .map((t) => `{{${t}}}`)
+              .join(", ")}`}
+          />
+        ) : null}
+        <Divider />
+        <Body style={{ fontWeight: "700" }}>{STR.stfPolicyAdviceLetterPreview}</Body>
+        {letterPreview.map((para, i) => (
+          <Body key={i} style={{ marginTop: space(2) }}>
+            {para}
+          </Body>
+        ))}
+        <Button
+          title={STR.stfPolicyAdviceLetterReset}
+          variant="secondary"
+          style={{ marginTop: space(3) }}
+          onPress={() => setAdviceLetterBody(DEFAULT_ADVICE_LETTER_BODY)}
+        />
       </Card>
 
       <View style={{ marginTop: space(2) }}>

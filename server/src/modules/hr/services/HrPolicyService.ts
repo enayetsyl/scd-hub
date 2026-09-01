@@ -10,7 +10,11 @@
  * Identity/operational plane, behind the ADR-005 firewall (NO corpus path).
  */
 import { Types } from "mongoose";
-import { HR_POLICY_DEFAULTS } from "@scd/shared";
+import {
+  HR_POLICY_DEFAULTS,
+  ADVICE_LETTER_PLACEHOLDERS,
+  unknownLetterPlaceholders,
+} from "@scd/shared";
 import { HrPolicy } from "../models/HrPolicy";
 import { writeAudit } from "../../platform/services/AuditService";
 import { LeaveError } from "./dates";
@@ -36,6 +40,7 @@ export interface HrPolicyView {
   signatoryNameBn: string;
   signatoryTitleBn: string;
   letterRefPrefix: string;
+  adviceLetterBody: string;
 }
 
 /** The effective policy: the stored singleton merged over the PRD defaults. */
@@ -67,6 +72,9 @@ export async function getHrPolicy(): Promise<HrPolicyView> {
     signatoryNameBn: row.signatoryNameBn ?? HR_POLICY_DEFAULTS.signatoryNameBn,
     signatoryTitleBn: row.signatoryTitleBn ?? HR_POLICY_DEFAULTS.signatoryTitleBn,
     letterRefPrefix: row.letterRefPrefix || HR_POLICY_DEFAULTS.letterRefPrefix,
+    // `||`, so clearing the box restores the wording the letter has always had — an
+    // empty body would otherwise print a bank letter with no request in it.
+    adviceLetterBody: row.adviceLetterBody || HR_POLICY_DEFAULTS.adviceLetterBody,
   };
 }
 
@@ -91,6 +99,7 @@ export interface SetHrPolicyInput {
   signatoryNameBn?: string;
   signatoryTitleBn?: string;
   letterRefPrefix?: string;
+  adviceLetterBody?: string;
   actorId: string;
 }
 
@@ -109,6 +118,17 @@ export async function setHrPolicy(input: SetHrPolicyInput): Promise<HrPolicyView
   // Zero months is a school with no probation at all, which is allowed; negative is not.
   if (input.probationMonths !== undefined && input.probationMonths < 0) {
     throw new LeaveError("probationMonths must be ≥ 0");
+  }
+  // A placeholder nobody can fill would print to a BANK verbatim — "Tk. {{amont}}/-"
+  // over the school's name. Refuse it here, while it is still a text box (D-#624).
+  if (input.adviceLetterBody !== undefined) {
+    const unknown = unknownLetterPlaceholders(input.adviceLetterBody);
+    if (unknown.length > 0) {
+      throw new LeaveError(
+        `Unknown placeholder(s) in the advice letter: ${unknown.map((u) => `{{${u}}}`).join(", ")}. ` +
+          `Available: ${ADVICE_LETTER_PLACEHOLDERS.map((p) => `{{${p}}}`).join(", ")}`,
+      );
+    }
   }
 
   const current = await getHrPolicy();
@@ -133,6 +153,7 @@ export async function setHrPolicy(input: SetHrPolicyInput): Promise<HrPolicyView
     signatoryNameBn: input.signatoryNameBn ?? current.signatoryNameBn,
     signatoryTitleBn: input.signatoryTitleBn ?? current.signatoryTitleBn,
     letterRefPrefix: input.letterRefPrefix ?? current.letterRefPrefix,
+    adviceLetterBody: input.adviceLetterBody ?? current.adviceLetterBody,
   };
 
   await HrPolicy.findOneAndUpdate(
