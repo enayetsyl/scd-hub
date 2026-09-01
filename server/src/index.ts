@@ -21,6 +21,7 @@ import { pdfRouter } from "./routes/pdf";
 import { syllabusPdfRouter } from "./modules/exams/routes/syllabusPdf";
 import { staffLetterPdfRouter } from "./modules/hr/routes/staffLetterPdf";
 import { paymentExportCsvRouter } from "./modules/hr/routes/paymentExportCsv";
+import { payrollRegisterXlsxRouter } from "./modules/hr/routes/payrollRegisterXlsx";
 import { paymentAdvicePdfRouter } from "./modules/hr/routes/paymentAdvicePdf";
 import { setPdfRouter } from "./modules/assessment/routes/setPdf";
 import { englishDrivePdfRouter } from "./modules/english-drive/routes/englishDrivePdf";
@@ -209,6 +210,7 @@ app.use("/export/monthly-comments", monthlyCommentExportRouter);
 // prefix would have 200'd the SPA's index.html instead of reaching the server.
 app.use("/export/payment", paymentExportCsvRouter);
 app.use("/export/payment-advice", paymentAdvicePdfRouter);
+app.use("/export/payroll-register", payrollRegisterXlsxRouter);
 app.use("/pdf/archive-cover", archiveCoverPdfRouter);
 app.use("/pdf/syllabus", syllabusPdfRouter);
 app.use("/pdf/staff-letter", staffLetterPdfRouter);

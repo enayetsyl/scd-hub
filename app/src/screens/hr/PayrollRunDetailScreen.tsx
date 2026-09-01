@@ -41,6 +41,7 @@ import {
   payAdditionTypeLabel,
   payLineNote,
 } from "../../lib/labels";
+import { downloadFile, PDF_SUPPORTED } from "../../lib/pdf";
 import { friendlyError } from "../../lib/errors";
 import { useConfirm } from "../../state/ConfirmContext";
 import { space } from "../../theme/tokens";
@@ -66,6 +67,17 @@ export default function PayrollRunDetailScreen({ route, navigation }: Props): Re
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [ok, setOk] = React.useState<string | null>(null);
+
+  async function downloadRegister(): Promise<void> {
+    setBusy(true);
+    setError(null);
+    try {
+      await downloadFile(`/export/payroll-register/${runId}`, `payroll-register-${monthKey}.xlsx`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+    setBusy(false);
+  }
 
   const [{ data, fetching, error: qErr }, refetch] = useQuery({
     query: PAYSLIPS_FOR_RUN_QUERY,
@@ -136,6 +148,25 @@ export default function PayrollRunDetailScreen({ route, navigation }: Props): Re
       {status === "approved_locked" ? (
         <Card onPress={() => navigation.navigate("PaymentExport", { runId, monthKey })}>
           <Body style={{ fontWeight: "700" }}>{STR.hrPaymentExport}</Body>
+        </Card>
+      ) : null}
+
+      {/* The accounting register (D-#625). Offered on a DRAFT run too: checking the
+          arithmetic before approving is the point, and a run that cannot be inspected
+          until it is frozen gets approved unread. Not for a cancelled run — its
+          payslips are gone. */}
+      {status !== "cancelled" && PDF_SUPPORTED ? (
+        <Card>
+          <Body style={{ fontWeight: "700" }}>{STR.stfRegisterDownload}</Body>
+          <Muted>{STR.stfRegisterNote}</Muted>
+          <Button
+            title={STR.stfRegisterDownload}
+            variant="secondary"
+            style={{ marginTop: space(2) }}
+            onPress={() => void downloadRegister()}
+            loading={busy}
+            disabled={busy}
+          />
         </Card>
       ) : null}
 
