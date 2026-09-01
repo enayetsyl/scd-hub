@@ -157,16 +157,31 @@ export async function settleOnConfirmation(
     .lean()) as unknown as IProbationLeaveDebt[];
 
   const heldDays = rows.reduce((s, r) => s + r.days, 0);
-  const fromPool = Math.max(0, Math.min(heldDays, poolRemaining));
-  const toSalary = heldDays - fromPool;
+  /**
+   * THE POOL ABSORBS ALL OF IT, EVEN PAST ZERO (D-#621).
+   *
+   * This used to cap at `poolRemaining` and push the remainder to salary as ordinary
+   * unpaid leave. That was right under the old rule; since D-#616 leave is settled
+   * against the BALANCE and never automatically against salary, and this was the one
+   * place the old behaviour survived.
+   *
+   * It surfaced on a real confirmation. A teacher's letter says his 16 probation days
+   * and 12 lateness days are "adjusted against the entitlement that begins now" and
+   * that the school "did not deduct your salary for those days" — but 10 lateness days
+   * had already consumed half his allowance, so settlement pooled 10 of the 16 and left
+   * 6 as unpaid leave that the August run would have deducted. The letter promises the
+   * opposite of what the code did.
+   *
+   * `toSalary` stays in the result and is now always 0 for a confirmation; the EXIT
+   * path (`settleOnExit`) is where a debt legitimately becomes money.
+   */
+  const fromPool = heldDays;
+  const toSalary = 0;
 
-  // Oldest debt first, so a partially-absorbed set is settled in the order it was
-  // incurred rather than arbitrarily — the ledger reads the way a person would explain it.
-  let poolLeft = fromPool;
+  // Oldest debt first, so the ledger reads in the order the days were incurred.
   const now = new Date();
   for (const r of rows) {
-    const pooled = Math.max(0, Math.min(r.days, poolLeft));
-    poolLeft -= pooled;
+    const pooled = r.days;
 
     /**
      * THE LEAVE ITSELF IS RE-STAMPED, not just the ledger row (D-#590).
@@ -179,16 +194,14 @@ export async function settleOnConfirmation(
      * they simply left the accounting. Found by the owner driving prod: "3 leave
      * didn't adjust".
      *
-     * So the days the pool absorbs BECOME PAID LEAVE, which is what "settled from the
-     * pool" has always meant, and the pool then debits them by its ordinary rule. The
-     * remainder stays unpaid with the held flag CLEARED, so it is ordinary unpaid
-     * leave that payroll will collect if its month is ever run; for a month already
-     * locked, `toSalary` is returned for the office to put on the next run as a
-     * deduction (D-#110, and D-#585 made that possible).
+     * So the held days BECOME PAID LEAVE and the pool debits them by its ordinary rule
+     * — all of them, taking the balance negative if that is where it lands (D-#621).
+     * None of it becomes unpaid: an overdrawn balance is recovered at exit, or earlier
+     * by agreement, never by a deduction nobody asked for.
      */
     await StaffLeaveApplication.updateOne(
       { _id: r.leaveApplicationId },
-      { $set: { paidDays: pooled, unpaidDays: r.days - pooled, probationHeld: false } },
+      { $set: { paidDays: pooled, unpaidDays: 0, probationHeld: false } },
     );
 
     await ProbationLeaveDebt.updateOne(

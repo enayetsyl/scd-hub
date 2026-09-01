@@ -367,7 +367,15 @@ describe("confirmEmployment — the settlement ledger (D-#540)", () => {
     expect(res.poolRemainingAfter).toBe(4);
   });
 
-  test("held days OVER the pool: the pool absorbs what it can, the excess falls to salary", async () => {
+  /**
+   * D-#621 reversed this. It asserted that the excess "falls to salary", which was
+   * right under the old rule and is what the code did — until a real confirmation
+   * showed the letter promising the opposite: the school "did not deduct your salary
+   * for those days; instead they are adjusted against the entitlement that begins now".
+   * The pool absorbs the whole debt and goes negative; salary is reached at exit, or
+   * earlier by agreement, never automatically.
+   */
+  test("held days OVER the pool: the pool absorbs ALL of it and goes negative", async () => {
     mockStaffFindById.mockResolvedValue(liveStaff());
     mockDebtFind.mockReturnValue([{ _id: oid(), days: 12 }]);
     mockPooledBalance.mockResolvedValue({ allowanceDays: 10, remainingDays: 10 });
@@ -378,9 +386,9 @@ describe("confirmEmployment — the settlement ledger (D-#540)", () => {
       issueLetter: false,
       actorId: ACTOR,
     });
-    expect(res.settlement.fromPool).toBe(10);
-    expect(res.settlement.toSalary).toBe(2);
-    expect(res.poolRemainingAfter).toBe(0);
+    expect(res.settlement.fromPool).toBe(12);
+    expect(res.settlement.toSalary).toBe(0);
+    expect(res.poolRemainingAfter).toBe(-2);
   });
 
   test("stamps the date + flips the status, and audits with the ledger", async () => {
