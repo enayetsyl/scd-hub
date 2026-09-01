@@ -28,6 +28,7 @@ import { mixedText, mixedTextInBox } from "../../../routes/pdfRenderer";
 import { buildContext } from "../../../context";
 import { paymentAdvice, type AdviceGroup, type PaymentAdvice } from "../services/PaymentAdviceService";
 import { takaFigure, takaInWords } from "../services/takaWords";
+import { renderAdviceLetterBody, DEFAULT_ADVICE_LETTER_BODY } from "@scd/shared";
 import { PayrollError } from "../services/payrollMath";
 import { writeAudit } from "../../platform/services/AuditService";
 
@@ -263,6 +264,35 @@ function footer(doc: PDFKit.PDFDocument, advice: PaymentAdvice): void {
   doc.restore();
 }
 
+/**
+ * The covering letter's paragraphs: the school's WORDING carrying this run's FIGURES (D-#624).
+ *
+ * Exported, and separate from the drawing, because the text of a letter cannot be read back
+ * out of the rendered PDF — `mixedText` embeds subset fonts, so on the page every glyph is an
+ * index rather than a character. A rule that cannot be asserted through the artefact gets
+ * asserted directly instead; the artefact itself was checked once by rendering it and reading
+ * it back with a PDF text extractor.
+ *
+ * The split is the whole design. Whatever wording the school types, the amount, the amount in
+ * words, the month and the account number come from the RUN — so an edited letter can never
+ * quote a total that disagrees with the sheet stapled behind it. The `||` is a guard rather
+ * than a duplicate of the service default: a policy object assembled anywhere else must still
+ * print the standard letter rather than throw halfway through a pack the school is waiting on.
+ */
+export function letterParagraphs(advice: PaymentAdvice, g: AdviceGroup): string[] {
+  const p = advice.policy;
+  return renderAdviceLetterBody(p.adviceLetterBody || DEFAULT_ADVICE_LETTER_BODY, {
+    school: p.employerNameBn.trim() || "School for Community Development",
+    account: p.schoolAccountNo,
+    bank: p.schoolBankName,
+    branch: p.schoolBankBranch,
+    amount: takaFigure(g.total),
+    amountWords: takaInWords(g.total),
+    month: monthTitle(advice.monthKey),
+    staffCount: String(g.rows.length),
+  });
+}
+
 /** The covering letter for one bank channel. */
 function drawLetter(doc: PDFKit.PDFDocument, advice: PaymentAdvice, g: AdviceGroup): void {
   const p = advice.policy;
@@ -283,16 +313,11 @@ function drawLetter(doc: PDFKit.PDFDocument, advice: PaymentAdvice, g: AdviceGro
   mixedText(doc, "Dear Muhtaram,", { width });
   doc.moveDown(0.5);
 
-  mixedText(
-    doc,
-    `We “${p.employerNameBn.trim() || "School for Community Development"}” are clients of your bank. ` +
-      `Our bearing account number ${p.schoolAccountNo}. Requesting you to arrange payment ` +
-      `Tk. ${takaFigure(g.total)}/- (${takaInWords(g.total)}) for our payable Teachers salary payment ` +
-      `online transfer as per attached Salary Advice Sheet - ${monthTitle(advice.monthKey)}.`,
-    { width, align: "justify", lineGap: 1.5 },
-  );
-  doc.moveDown(1);
-  mixedText(doc, "We anticipate your full cooperation in this regard.", { width });
+  const paragraphs = letterParagraphs(advice, g);
+  paragraphs.forEach((para, i) => {
+    if (i > 0) doc.moveDown(1);
+    mixedText(doc, para, { width, align: "justify", lineGap: 1.5 });
+  });
   doc.moveDown(1.5);
   mixedText(doc, "Ma’assalamah,", { width });
   mixedText(doc, p.employerNameBn.trim() || "School for Community Development", { width });

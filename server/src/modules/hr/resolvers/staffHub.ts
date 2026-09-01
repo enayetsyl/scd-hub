@@ -102,6 +102,7 @@ HrPolicyRef.implement({
     signatoryNameBn: t.exposeString("signatoryNameBn"),
     signatoryTitleBn: t.exposeString("signatoryTitleBn"),
     letterRefPrefix: t.exposeString("letterRefPrefix"),
+    adviceLetterBody: t.exposeString("adviceLetterBody"),
   }),
 });
 
@@ -500,6 +501,7 @@ builder.mutationField("setHrPolicy", (t) =>
       signatoryNameBn: t.arg.string({ required: false }),
       signatoryTitleBn: t.arg.string({ required: false }),
       letterRefPrefix: t.arg.string({ required: false }),
+      adviceLetterBody: t.arg.string({ required: false }),
     },
     resolve: async (_r, args, ctx) => {
       require_(ctx, "payroll:manage");
@@ -524,6 +526,7 @@ builder.mutationField("setHrPolicy", (t) =>
         signatoryNameBn: args.signatoryNameBn ?? undefined,
         signatoryTitleBn: args.signatoryTitleBn ?? undefined,
         letterRefPrefix: args.letterRefPrefix ?? undefined,
+        adviceLetterBody: args.adviceLetterBody ?? undefined,
         actorId: ctx.auth!.userId,
       });
     },

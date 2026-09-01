@@ -8179,13 +8179,14 @@ export interface HrPolicyT {
   signatoryNameBn: string;
   signatoryTitleBn: string;
   letterRefPrefix: string;
+  adviceLetterBody: string;
 }
 
 export const HR_POLICY_QUERY = gql<{ hrPolicy: HrPolicyT }, Record<string, never>>`
   query HrPolicy {
     hrPolicy {
       annualLeaveDays lateDaysPerCharge latenessRuleEnabled probationDebtEnabled probationMonths
-      signatoryName signatoryTitle weeklyHoursText letterRefPrefix
+      signatoryName signatoryTitle weeklyHoursText letterRefPrefix adviceLetterBody
       employerNameBn employerAddressBn signatoryNameBn signatoryTitleBn
       orgRegistrationNo orgAddress orgPhone orgEmail schoolBankName schoolBankBranch schoolAccountNo
     }
@@ -8260,6 +8261,7 @@ export const SET_HR_POLICY = gql<
     signatoryNameBn?: string | null;
     signatoryTitleBn?: string | null;
     letterRefPrefix?: string | null;
+    adviceLetterBody?: string | null;
   }
 >`
   mutation SetHrPolicy(
@@ -8283,6 +8285,7 @@ export const SET_HR_POLICY = gql<
     $signatoryNameBn: String
     $signatoryTitleBn: String
     $letterRefPrefix: String
+    $adviceLetterBody: String
   ) {
     setHrPolicy(
       annualLeaveDays: $annualLeaveDays
@@ -8305,9 +8308,10 @@ export const SET_HR_POLICY = gql<
       signatoryNameBn: $signatoryNameBn
       signatoryTitleBn: $signatoryTitleBn
       letterRefPrefix: $letterRefPrefix
+      adviceLetterBody: $adviceLetterBody
     ) {
       annualLeaveDays lateDaysPerCharge latenessRuleEnabled probationDebtEnabled
-      signatoryName signatoryTitle weeklyHoursText letterRefPrefix
+      signatoryName signatoryTitle weeklyHoursText letterRefPrefix adviceLetterBody
     }
   }
 `;
