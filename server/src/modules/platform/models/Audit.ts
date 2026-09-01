@@ -76,6 +76,7 @@ export type AuditEventKind =
   | "PAYROLL_APPROVED"            // a run approved + LOCKED by the Principal, advances decremented (HR-3, H4.2)
   | "PAYROLL_CANCELLED"           // a prepared run discarded before approval (HR-3)
   | "PAYROLL_PAYMENT_EXPORTED"    // the payment CSV (names + account numbers) downloaded (D-#579)
+  | "PAYROLL_REGISTER_EXPORTED"   // the accounting register (every salary in the school) downloaded (D-#625)
   | "ADVANCE_ISSUED"              // a qard-hasan advance/loan issued (Principal-approved, HR-3, H4.5/D-#27)
   | "ADVANCE_SETTLED"             // an advance fully settled / written off (HR-3, H4.5)
   | "OBSERVATION_SUBMITTED"       // a performance observation submitted (supervisor or admin, HR-4, H5.1/H5.2, D-#28)
