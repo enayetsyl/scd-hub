@@ -3464,6 +3464,9 @@ const STR_BN = {
   stfExportTotal: "মোট",
   stfExportCsv: "CSV ফাইল ডাউনলোড",
   stfExportWebOnly: "ফাইল ডাউনলোড শুধু ওয়েব ব্রাউজারে কাজ করে।",
+  stfRegisterDownload: "হিসাবের রেজিস্টার (Excel)",
+  stfRegisterNote:
+    "প্রত্যেকের মোট বেতন, কর্তন, সংযোজন ও নিট বেতন — হিসাবরক্ষণের জন্য। অনুমোদনের আগেই যাচাই করা যায়।",
   // A badge names a STATE. `stfVoidLetter` is a button ("বাতিল করুন") and
   // `stfLetterIssued` is a toast sentence; both were being shown as badges.
   stfLetterStatusVoid: "বাতিল",
@@ -7617,6 +7620,9 @@ const STR_EN: StrTable = {
   stfExportTotal: "Total",
   stfExportCsv: "Download CSV",
   stfExportWebOnly: "File download works in a web browser only.",
+  stfRegisterDownload: "Accounting register (Excel)",
+  stfRegisterNote:
+    "Every person's gross, deductions, additions and net pay — for accounts. Can be checked before the run is approved.",
   stfLetterStatusVoid: "Void",
   stfLetterStatusIssued: "Issued",
   stfNoCredentialRow: "No login record for this staff member (they may be inactive).",
