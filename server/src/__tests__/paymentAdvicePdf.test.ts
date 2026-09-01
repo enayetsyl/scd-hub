@@ -9,7 +9,7 @@
  * letter that should not exist shows up as a page that should not exist — and the raw
  * PDF is searched for the /Type /Page objects rather than trusting a return value.
  */
-import { renderAdvicePack, fitColumns } from "../modules/hr/routes/paymentAdvicePdf";
+import { renderAdvicePack, fitColumns, rowHeightFor, CELL_PAD } from "../modules/hr/routes/paymentAdvicePdf";
 import type { PaymentAdvice, AdviceRow } from "../modules/hr/services/PaymentAdviceService";
 
 const POLICY = {
@@ -143,5 +143,39 @@ describe("the sheet fits the page it is printed on (D-#599)", () => {
     );
     expect(pdf.byteLength).toBeGreaterThan(1000);
     expect(pageCount(pdf)).toBe(2);
+  });
+});
+
+describe("a table row is as tall as its tallest cell (D-#623)", () => {
+  /**
+   * The owner's August pack: "Mahmudur Rahman Tazkir" is 100pt of text in a 74pt
+   * column, so it wrapped to 21.2pt inside a row fixed at 20pt — and the second line
+   * was drawn outside its own border, on top of the next teacher's name. Two bank
+   * names and the Payment Info column did the same. D-#599 made it likely by scaling
+   * the columns 17% narrower to fit the page, which left the fixed height behind.
+   */
+  test("a cell that wraps makes the row grow", () => {
+    // One line of 8pt text measures 10.6pt: 11 + 5 above + 5 below = 21.
+    expect(rowHeightFor([10.6])).toBe(21);
+    // Two lines measure 21.2pt, and the row grows to hold them instead of spilling.
+    expect(rowHeightFor([21.2])).toBe(32);
+    expect(rowHeightFor([21.2])).toBeGreaterThan(rowHeightFor([10.6]));
+  });
+
+  test("the TALLEST cell decides, not the first or the last", () => {
+    expect(rowHeightFor([10, 31.8, 10])).toBe(rowHeightFor([31.8]));
+    expect(rowHeightFor([10, 10, 10])).toBe(20);
+  });
+
+  test("an empty row still has a height — no zero-height borders", () => {
+    expect(rowHeightFor([])).toBe(20);
+    expect(rowHeightFor([0, 0])).toBe(20);
+  });
+
+  test("the text always fits inside the row it was measured for", () => {
+    for (const h of [10.6, 21.2, 31.8, 42.4]) {
+      // drawn at y + CELL_PAD, so the last line must end before y + height
+      expect(CELL_PAD + h).toBeLessThanOrEqual(rowHeightFor([h]));
+    }
   });
 });
