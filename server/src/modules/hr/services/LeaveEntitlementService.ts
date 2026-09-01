@@ -47,6 +47,12 @@ export interface LeaveYearWindow {
   start: string;
   /** Last day of it, YYYY-MM-DD (inclusive). */
   end: string;
+  /**
+   * True while this is the staff member's FIRST period — the one that begins at
+   * confirmation. Everything they accrued on probation is counted against it
+   * (D-#619), so the reads widen the lower bound when this is set.
+   */
+  isFirst: boolean;
 }
 
 /**
@@ -84,7 +90,14 @@ export function leaveYearWindow(
 
   const nextStart = new Date(Date.UTC(start.getUTCFullYear() + 1, start.getUTCMonth(), start.getUTCDate()));
   const end = new Date(nextStart.getTime() - 24 * 60 * 60 * 1000);
-  return { start: start.toISOString().slice(0, 10), end: end.toISOString().slice(0, 10) };
+  const startKey = start.toISOString().slice(0, 10);
+  return {
+    start: startKey,
+    end: end.toISOString().slice(0, 10),
+    // The first period is the one that opens ON the confirmation date; every later
+    // anniversary starts after it.
+    isFirst: startKey === c.toISOString().slice(0, 10),
+  };
 }
 
 /**
@@ -277,10 +290,27 @@ export async function takenPooledDays(
     leaveType: { $in: [...POOLED_LEAVE_TYPES] },
     status: "approved",
   };
-  // The entitlement period is the staff member's anniversary year when they have one
-  // (D-#618); the academic year remains the fallback for a staff member with no
-  // confirmation date, so nothing regresses for a probationer.
-  if (window) q.fromKey = { $gte: window.start, $lte: window.end };
+  /**
+   * The entitlement period is the staff member's anniversary year when they have one
+   * (D-#618); the academic year remains the fallback for a probationer, so nothing
+   * regresses for someone who has not started a period yet.
+   *
+   * THE FIRST PERIOD REACHES BACK (D-#619). Probation leave is HELD, not paid, and it
+   * settles against the pool at confirmation (D-#540) — but it is DATED during
+   * probation, which is before the window opens. Left as a plain window filter, the
+   * settlement re-stamped the applications as paid and then counted none of them: the
+   * ledger moved and the balance did not, which is D-#590 arriving again through the
+   * back door of my own D-#618. Pre-confirmation lateness charges had the same problem.
+   *
+   * Both belong to the first year — the appointment letter says so in as many words:
+   * "leave taken during probation is unpaid; the school did not deduct your salary for
+   * those days; instead they are adjusted against the entitlement that begins now." So
+   * for the first period the lower bound is dropped and everything earlier counts.
+   * Later periods keep the closed window, because by then the probation history has
+   * already been absorbed and must not be charged twice.
+   */
+  const openLowerBound = window?.isFirst === true;
+  if (window) q.fromKey = openLowerBound ? { $lte: window.end } : { $gte: window.start, $lte: window.end };
   else q.academicYearId = new Types.ObjectId(academicYearId);
   if (excludeId) q._id = { $ne: new Types.ObjectId(excludeId) };
   const rows = await StaffLeaveApplication.find(q).select("paidDays days").lean();
@@ -298,7 +328,11 @@ export async function takenPooledDays(
    * nothing at all.
    */
   const chargeQ: Record<string, unknown> = { staffProfileId: new Types.ObjectId(staffProfileId) };
-  if (window) chargeQ.monthKey = { $gte: window.start.slice(0, 7), $lte: window.end.slice(0, 7) };
+  if (window) {
+    chargeQ.monthKey = openLowerBound
+      ? { $lte: window.end.slice(0, 7) }
+      : { $gte: window.start.slice(0, 7), $lte: window.end.slice(0, 7) };
+  }
   const charges = await LatenessCharge.find(chargeQ).select("paidFromLeave").lean();
   const fromLateness = charges.reduce((sum, c) => sum + (c.paidFromLeave ?? 0), 0);
 
@@ -310,7 +344,11 @@ export async function takenPooledDays(
    * same days could be collected again at exit.
    */
   const recQ: Record<string, unknown> = { staffProfileId: new Types.ObjectId(staffProfileId) };
-  if (window) recQ.monthKey = { $gte: window.start.slice(0, 7), $lte: window.end.slice(0, 7) };
+  if (window) {
+    recQ.monthKey = openLowerBound
+      ? { $lte: window.end.slice(0, 7) }
+      : { $gte: window.start.slice(0, 7), $lte: window.end.slice(0, 7) };
+  }
   const recoveries = await LeaveBalanceRecovery.find(recQ).select("days").lean();
   const recovered = recoveries.reduce((sum, r) => sum + (r.days ?? 0), 0);
 

@@ -31,7 +31,7 @@ import { SubjectGroupMembership } from "../../routine/models/SubjectGroupMembers
 import { User } from "../../foundation/models/User";
 import { deriveScore } from "../classTestScoring";
 import { examReportStatus, deriveReportOwnership, type ExamReportStatus } from "./ClassTestResultService";
-import { buildIsOpenDayForRange, deriveOverdue, type IsOpenDay } from "../classTestCalendar";
+import { atMidnight, buildIsOpenDayForRange, deriveOverdue, type IsOpenDay } from "../classTestCalendar";
 import { getEffectiveTemplate, interpolate, type EffectiveTemplate } from "../../templates/services/MessageTemplateService";
 
 // ---------------------------------------------------------------------------
@@ -408,6 +408,10 @@ export async function principalDashboard(filter: SummaryFilter): Promise<Princip
 // ---------------------------------------------------------------------------
 
 export interface OverdueCounts {
+  /** Owner's definition (2026-08-31): the exam has been SAT and the results are
+   *  not yet published — the whole outstanding pile, late or not. `overdue` is a
+   *  strict subset: an exam is only ever late after it is open (D-#620). */
+  open: number;
   /** Past deadline and unpublished — what the বিলম্বিত chip counts. */
   overdue: number;
   /** …of which still with the teacher. */
@@ -417,17 +421,24 @@ export interface OverdueCounts {
 }
 
 export async function overdueCounts(filter: SummaryFilter): Promise<OverdueCounts> {
+  const now = filter.asOf ?? new Date();
   const rows = await reportsStatus(filter, { withTeacherNames: false });
+  const today = atMidnight(now).getTime();
+  let open = 0;
   let overdue = 0;
   let awaitingSubmit = 0;
   let awaitingPublish = 0;
   for (const r of rows) {
+    // "Taken" is date-only: an exam sat TODAY counts, because the paper has been
+    // written even though its deadline is days away. A future-dated exam does not.
+    const taken = today >= atMidnight(new Date(r.examDate)).getTime();
+    if (taken && !r.publishComplete) open++;
     if (!r.overdue) continue;
     overdue++;
     if (r.teacherOverdue) awaitingSubmit++;
     else awaitingPublish++;
   }
-  return { overdue, awaitingSubmit, awaitingPublish };
+  return { open, overdue, awaitingSubmit, awaitingPublish };
 }
 
 async function loadUserNames(ids: string[]): Promise<Map<string, string>> {

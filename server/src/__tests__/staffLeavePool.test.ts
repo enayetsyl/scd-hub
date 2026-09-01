@@ -148,24 +148,24 @@ describe("leaveYearWindow — the staff member's own year (D-#618)", () => {
   const ON = new Date("2026-08-31T00:00:00Z");
 
   test("the period runs anniversary → anniversary, and contains today", () => {
-    expect(leaveYearWindow("2024-06-24", ON)).toEqual({ start: "2026-06-24", end: "2027-06-23" });
+    expect(leaveYearWindow("2024-06-24", ON)).toEqual({ start: "2026-06-24", end: "2027-06-23", isFirst: false });
     // Confirmed 1 Jan: the window happens to match the calendar year.
-    expect(leaveYearWindow("2023-01-01", ON)).toEqual({ start: "2026-01-01", end: "2026-12-31" });
+    expect(leaveYearWindow("2023-01-01", ON)).toEqual({ start: "2026-01-01", end: "2026-12-31", isFirst: false });
   });
 
   test("before this year's anniversary the period began LAST year", () => {
     // Confirmed 30 Dec; on 31 Aug 2026 the 2026 anniversary has not arrived.
-    expect(leaveYearWindow("2025-12-30", ON)).toEqual({ start: "2025-12-30", end: "2026-12-29" });
+    expect(leaveYearWindow("2025-12-30", ON)).toEqual({ start: "2025-12-30", end: "2026-12-29", isFirst: true });
   });
 
   test("the first period starts at confirmation itself, not a year earlier", () => {
-    expect(leaveYearWindow("2026-08-01", ON)).toEqual({ start: "2026-08-01", end: "2027-07-31" });
+    expect(leaveYearWindow("2026-08-01", ON)).toEqual({ start: "2026-08-01", end: "2027-07-31", isFirst: true });
     // Confirmed today: the year starts today.
     expect(leaveYearWindow("2026-08-31", ON)!.start).toBe("2026-08-31");
   });
 
   test("the day before an anniversary is still the OLD period", () => {
-    expect(leaveYearWindow("2025-09-01", ON)).toEqual({ start: "2025-09-01", end: "2026-08-31" });
+    expect(leaveYearWindow("2025-09-01", ON)).toEqual({ start: "2025-09-01", end: "2026-08-31", isFirst: true });
   });
 
   test("no confirmation date → no period has begun", () => {
@@ -212,5 +212,47 @@ describe("what counts as TAKEN against the pool", () => {
     const pool = await pooledBalanceForStaff(oid().toString());
     expect(pool.remainingDays).toBe(HR_POLICY_DEFAULTS.annualLeaveDays - 31);
     expect(pool.remainingDays).toBeLessThan(0);
+  });
+});
+
+describe("the FIRST leave year absorbs the probation period (D-#619)", () => {
+  const CONFIRMED_AUG = { joiningDate: new Date("2026-01-01"), confirmationDate: new Date("2026-08-01") };
+
+  test("the first window is flagged; a later anniversary is not", () => {
+    expect(leaveYearWindow("2026-08-01", new Date("2026-08-31T00:00:00Z"))!.isFirst).toBe(true);
+    // A year on, the same person is in their SECOND period.
+    expect(leaveYearWindow("2026-08-01", new Date("2027-09-01T00:00:00Z"))!.isFirst).toBe(false);
+  });
+
+  /**
+   * The real case. A teacher confirmed 1 Aug 2026 took 16 days of held probation leave
+   * (dated Jan–Apr) and accrued 12 lateness charge-days. Both are dated BEFORE his
+   * window opens. Under a plain window filter the settlement re-stamped the leave as
+   * paid and then counted none of it — the ledger moved and the balance did not, which
+   * is D-#590 arriving again through D-#618's back door.
+   *
+   * His letter states the intended answer outright: 28 days against 20 allowed.
+   */
+  test("probation leave and lateness dated BEFORE confirmation still count", async () => {
+    mockStaffFindById.mockResolvedValue(CONFIRMED_AUG);
+    mockAppFind.mockReturnValue([{ paidDays: 16, days: 16 }]);   // settled probation leave
+    mockLatenessFind.mockReturnValue([{ paidFromLeave: 12 }]);    // Jan–Aug lateness
+    const pool = await pooledBalanceForStaff(oid().toString());
+    expect(pool.leaveYearStart).toBe("2026-08-01");
+    expect(pool.takenDays).toBe(28);
+    expect(pool.remainingDays).toBe(-8); // 20 − 28, exactly as his letter says
+  });
+
+  test("a LATER year keeps the closed window, so probation is not charged twice", async () => {
+    // Same person, read a year on: the first period's history must not follow them.
+    mockStaffFindById.mockResolvedValue({
+      joiningDate: new Date("2020-01-01"),
+      confirmationDate: new Date("2020-01-01"),
+    });
+    mockAppFind.mockReturnValue([]);
+    mockLatenessFind.mockReturnValue([]);
+    const pool = await pooledBalanceForStaff(oid().toString());
+    expect(pool.takenDays).toBe(0);
+    expect(pool.remainingDays).toBe(HR_POLICY_DEFAULTS.annualLeaveDays);
   });
 });
