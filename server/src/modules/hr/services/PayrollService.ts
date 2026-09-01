@@ -22,6 +22,7 @@ import { StaffLeaveApplication } from "../models/StaffLeaveApplication";
 import { PayrollRun, type IPayrollRun } from "../models/PayrollRun";
 import { Payslip, type IPayslip } from "../models/Payslip";
 import { AdvanceLoan } from "../models/AdvanceLoan";
+import { LeaveBalanceRecovery } from "../models/LeaveBalanceRecovery";
 import { salariesEffectiveIn } from "./PayHistoryService";
 import { writeAudit } from "../../platform/services/AuditService";
 import { assertMonthKey, dayRate, computePayslip, PayrollError, type PayLineInput } from "./payrollMath";
@@ -36,6 +37,15 @@ export interface StaffAdjustment {
   latenessDeduction?: number;
   manualDeductions?: PayLineInput[];
   manualAdditions?: PayLineInput[];
+  /**
+   * Days of a NEGATIVE leave balance the staff member has agreed to settle out of this
+   * month's pay (D-#617). Optional and off by default: an overdrawn balance is never
+   * recovered from salary automatically, only at exit or by agreement. Partial is the
+   * normal case — the office asks, the teacher agrees to some or all of it.
+   */
+  leaveRecoveryDays?: number;
+  /** The office's note on that agreement — it was made verbally, so this is the record. */
+  leaveRecoveryNote?: string;
 }
 
 export interface PreparePayrollInput {
@@ -131,12 +141,50 @@ export async function preparePayrollRun(input: PreparePayrollInput): Promise<{ r
       payrollRunId: run._id,
     });
     const latenessDeduction = adj?.latenessDeduction ?? (latenessRow?.amount || undefined);
+
+    /**
+     * An AGREED recovery of a negative leave balance (D-#617). It becomes an ordinary
+     * payslip deduction AND a `LeaveBalanceRecovery` row, which `takenPooledDays`
+     * subtracts so the balance actually moves back up. Both halves or neither: money off
+     * the payslip with the balance still negative would let the same days be collected
+     * again at exit.
+     *
+     * Upserted per (staff, run) so re-preparing the run replaces rather than stacks.
+     */
+    const recoveryDays = Math.max(0, adj?.leaveRecoveryDays ?? 0);
+    const recoveryDeductions: PayLineInput[] = [...(adj?.manualDeductions ?? [])];
+    if (recoveryDays > 0) {
+      const amount = Math.round(rate * recoveryDays);
+      recoveryDeductions.push({
+        type: "unpaid_leave",
+        amount,
+        days: recoveryDays,
+        note: adj?.leaveRecoveryNote?.trim() || "ঋণাত্মক ছুটির জমা সমন্বয় (সম্মতিক্রমে)",
+      });
+      await LeaveBalanceRecovery.findOneAndUpdate(
+        { staffProfileId: new Types.ObjectId(sid), payrollRunId: run._id },
+        {
+          $set: {
+            monthKey: input.monthKey,
+            days: recoveryDays,
+            amount,
+            note: adj?.leaveRecoveryNote?.trim(),
+            agreedBy: new Types.ObjectId(input.actorId),
+          },
+        },
+        { upsert: true, setDefaultsOnInsert: true },
+      );
+    } else {
+      // Dropping the days from a re-prepare must also drop the credit.
+      await LeaveBalanceRecovery.deleteOne({ staffProfileId: new Types.ObjectId(sid), payrollRunId: run._id });
+    }
+
     const computed = computePayslip({
       grossSalary: gross,
       dayRate: rate,
       unpaidLeaveDays: leaveDays.get(sid) ?? 0,
       latenessDeduction,
-      manualDeductions: adj?.manualDeductions,
+      manualDeductions: recoveryDeductions,
       manualAdditions: adj?.manualAdditions,
       advance: advance
         ? {

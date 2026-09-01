@@ -435,9 +435,9 @@ describe("reportsStatus / principalDashboard", () => {
     expect(mockUserFind).not.toHaveBeenCalled();
   });
 
-  // D-#615: "open" is the owner's definition — exam SAT and results not yet
+  // D-#619: "open" is the owner's definition — exam SAT and results not yet
   // published. It is the superset the Dashboard button shows beside `overdue`.
-  test("open counts every sat-but-unpublished exam, late or not (D-#615)", async () => {
+  test("open counts every sat-but-unpublished exam, late or not (D-#619)", async () => {
     const past = exam({ _id: oid() }); // 10 July — long past its deadline
     const recent = exam({ _id: oid(), examDate: new Date(2026, 6, 19) }); // sat, deadline ahead
     const future = exam({ _id: oid(), examDate: new Date(2026, 6, 30) }); // not sat yet
@@ -458,7 +458,7 @@ describe("reportsStatus / principalDashboard", () => {
     expect(c.overdue).toBeLessThanOrEqual(c.open);
   });
 
-  test("an exam sat TODAY is already open (D-#615 — the paper has been written)", async () => {
+  test("an exam sat TODAY is already open (D-#619 — the paper has been written)", async () => {
     const today = exam({ _id: oid(), examDate: NOW });
     mockCtFind.mockReturnValue(leanChain([today]));
     withCounts([{ id: today._id, sectionId: SECTION, roster: 10, entered: 0 }]);

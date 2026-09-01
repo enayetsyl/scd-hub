@@ -3524,6 +3524,8 @@ const STR_BN = {
   stfAdjustmentSign: "যোগ না কর্তন",
   stfAdjustmentAddition: "যোগ",
   stfAdjustmentDeduction: "কর্তন",
+  stfAdjustmentLeaveRecovery: "ঋণাত্মক ছুটি সমন্বয়",
+  stfAdjustmentRecoveryDays: "কত দিন সমন্বয় হবে",
   stfAdjustmentType: "ধরন",
   stfAdjustmentAmount: "টাকার অঙ্ক",
   stfAdjustmentReason: "কারণ (পে-স্লিপে ছাপা হবে)",
@@ -3894,7 +3896,7 @@ const STR_BN = {
   ctSchoolDaysLate: "স্কুল-দিন বিলম্ব",
   // D-#606: the deadline day itself — due now, but not yet late by any school day.
   ctDueToday: "আজ শেষ দিন",
-  // D-#615: the Dashboard button summary — outstanding pile, and the late subset.
+  // D-#619: the Dashboard button summary — outstanding pile, and the late subset.
   ctOpenCount: "খোলা",
   ctDeadline: "সময়সীমা",
   ctState: "অবস্থা",
@@ -7662,6 +7664,8 @@ const STR_EN: StrTable = {
   stfAdjustmentSign: "Addition or deduction",
   stfAdjustmentAddition: "Addition",
   stfAdjustmentDeduction: "Deduction",
+  stfAdjustmentLeaveRecovery: "Negative leave recovery",
+  stfAdjustmentRecoveryDays: "Days to recover",
   stfAdjustmentType: "Type",
   stfAdjustmentAmount: "Amount",
   stfAdjustmentReason: "Reason (printed on the payslip)",
