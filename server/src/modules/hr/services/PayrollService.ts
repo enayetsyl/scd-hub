@@ -38,6 +38,14 @@ export interface StaffAdjustment {
   manualDeductions?: PayLineInput[];
   manualAdditions?: PayLineInput[];
   /**
+   * Whether this run recovers the staff member's outstanding advance (D-#622).
+   *
+   * Left undefined it follows the advance's own arrangement — see `recoverAdvance`.
+   * `true` recovers a one-off this month; `false` skips a recovery that would
+   * otherwise happen.
+   */
+  recoverAdvance?: boolean;
+  /**
    * Days of a NEGATIVE leave balance the staff member has agreed to settle out of this
    * month's pay (D-#617). Optional and off by default: an overdrawn balance is never
    * recovered from salary automatically, only at exit or by agreement. Partial is the
@@ -46,6 +54,30 @@ export interface StaffAdjustment {
   leaveRecoveryDays?: number;
   /** The office's note on that agreement — it was made verbally, so this is the record. */
   leaveRecoveryNote?: string;
+}
+
+/**
+ * Does THIS run recover THIS person's advance? (D-#622)
+ *
+ * An INSTALLMENT arrangement is a standing agreement — a fixed amount every month —
+ * so it keeps running unless the operator explicitly turns it off for a month.
+ *
+ * A ONE-SHOT is the opposite: it takes the entire outstanding balance the first time
+ * any run touches the person, which for a large qard is most of a month's pay. The
+ * owner's rule is that it must be CHOSEN each time — *"at the time of payroll run there
+ * should be option to adjust or not; if adjust is clicked then will be adjusted
+ * otherwise not"*. So a one-shot recovers only when asked, never by default.
+ *
+ * The immediate case: a ৳10,000 one-shot against a ৳35,000 salary that the owner did
+ * not want taken in August. Before this the only way to stop it was to edit the loan.
+ */
+export function recoverAdvance(
+  advance: { recoveryMode: string } | null | undefined,
+  adj: { recoverAdvance?: boolean } | undefined,
+): boolean {
+  if (!advance) return false;
+  if (adj?.recoverAdvance !== undefined) return adj.recoverAdvance;
+  return advance.recoveryMode !== "one_shot";
 }
 
 export interface PreparePayrollInput {
@@ -186,12 +218,12 @@ export async function preparePayrollRun(input: PreparePayrollInput): Promise<{ r
       latenessDeduction,
       manualDeductions: recoveryDeductions,
       manualAdditions: adj?.manualAdditions,
-      advance: advance
+      advance: recoverAdvance(advance, adj)
         ? {
-            advanceId: advance._id.toString(),
-            recoveryMode: advance.recoveryMode,
-            installmentAmount: advance.installmentAmount,
-            balance: advance.balance,
+            advanceId: advance!._id.toString(),
+            recoveryMode: advance!.recoveryMode,
+            installmentAmount: advance!.installmentAmount,
+            balance: advance!.balance,
           }
         : null,
     });

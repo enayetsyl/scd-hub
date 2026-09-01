@@ -26,6 +26,12 @@ export interface StaffPayrollAdjustment {
   /** Days of a negative leave balance settled by agreement this month (D-#617). */
   leaveRecoveryDays?: number | null;
   leaveRecoveryNote?: string | null;
+  /**
+   * Recover the outstanding advance in THIS run (D-#622). A one-off recovers only
+   * when this is true — it takes the whole balance, so it is chosen, not assumed;
+   * an installment keeps running unless this is false.
+   */
+  recoverAdvance?: boolean | null;
 }
 
 /** One row as the form holds it, before validation. */
@@ -38,7 +44,7 @@ export interface AdjRow {
    * a deduction and a credit back to the balance (D-#617). Keeping it in the same row
    * shape means the office enters it where they already enter everything else.
    */
-  sign: "addition" | "deduction" | "leave_recovery";
+  sign: "addition" | "deduction" | "leave_recovery" | "advance_recovery";
   type: string | null;
   amount: string;
   note: string;
@@ -72,7 +78,10 @@ export function buildAdjustments(rows: AdjRow[]): StaffPayrollAdjustment[] {
       adj = { staffProfileId: r.staffProfileId, manualAdditions: [], manualDeductions: [] };
       byStaff.set(r.staffProfileId, adj);
     }
-    if (r.sign === "leave_recovery") {
+    if (r.sign === "advance_recovery") {
+      // The row IS the instruction — the amount is the loan's own balance, not typed.
+      adj.recoverAdvance = true;
+    } else if (r.sign === "leave_recovery") {
       // Days, not taka — and the server prices them at that month's day-rate.
       adj.leaveRecoveryDays = line.amount;
       adj.leaveRecoveryNote = line.note ?? null;
