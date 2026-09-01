@@ -57,13 +57,15 @@ export async function previewConfirmation(
 ): Promise<{ heldDays: number; poolAllowance: number; poolRemaining: number; fromPool: number; toSalary: number }> {
   const held = await heldDebtForStaff(staffProfileId);
   const pool = await pooledBalanceForStaff(staffProfileId);
-  const fromPool = Math.max(0, Math.min(held.totalDays, pool.remainingDays));
+  // The preview must promise what the button will DO (D-#621): the pool absorbs the
+  // whole debt and may end negative, so nothing falls to salary. Leaving the old
+  // capped split here would show the Principal a salary charge that never arrives.
   return {
     heldDays: held.totalDays,
     poolAllowance: pool.allowanceDays,
     poolRemaining: pool.remainingDays,
-    fromPool,
-    toSalary: held.totalDays - fromPool,
+    fromPool: held.totalDays,
+    toSalary: 0,
   };
 }
 
@@ -113,7 +115,11 @@ export async function confirmEmployment(
   // 2. Settle the held debt against the pool the person has just been granted.
   const pool = await pooledBalanceForStaff(input.staffProfileId);
   const settlement = await settleOnConfirmation(input.staffProfileId, pool.remainingDays, input.actorId);
-  const poolRemainingAfter = Math.max(0, pool.remainingDays - settlement.fromPool);
+  // NOT floored (D-#621). The pool absorbs the whole probation debt and may end
+  // negative; clamping here would tell the Principal "0 days left" at the moment of
+  // confirmation while the balance they are about to see reads −2, and would hide
+  // exactly the case worth knowing about.
+  const poolRemainingAfter = pool.remainingDays - settlement.fromPool;
 
   // 3. The letter, from the same data — NON-FATAL (D-#574).
   //
