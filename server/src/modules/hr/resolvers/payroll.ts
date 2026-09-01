@@ -223,6 +223,11 @@ const StaffAdjustmentInputRef = builder.inputType("StaffPayrollAdjustmentInput",
     latenessDeduction: t.float({ required: false }),
     manualDeductions: t.field({ type: [PayLineInputRef], required: false }),
     manualAdditions: t.field({ type: [PayLineInputRef], required: false }),
+    // D-#617 — days of a negative leave balance the staff member AGREED to settle from
+    // this month's pay. Never automatic: an overdrawn balance is otherwise collected
+    // only at exit, so this only ever appears because someone asked and was told yes.
+    leaveRecoveryDays: t.float({ required: false }),
+    leaveRecoveryNote: t.string({ required: false }),
   }),
 });
 
@@ -371,6 +376,8 @@ builder.mutationField("preparePayrollRun", (t) =>
           latenessDeduction: a.latenessDeduction ?? undefined,
           manualDeductions: (a.manualDeductions ?? []).map((l) => ({ type: l.type as IPayLine["type"], amount: l.amount, note: l.note ?? undefined })),
           manualAdditions: (a.manualAdditions ?? []).map((l) => ({ type: l.type as IPayLine["type"], amount: l.amount, note: l.note ?? undefined })),
+          leaveRecoveryDays: a.leaveRecoveryDays ?? undefined,
+          leaveRecoveryNote: a.leaveRecoveryNote ?? undefined,
         })),
       });
       return run;

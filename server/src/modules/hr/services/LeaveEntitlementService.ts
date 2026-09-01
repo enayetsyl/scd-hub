@@ -12,6 +12,8 @@ import { LEAVE_TYPES, LEAVE_TYPE_RULES, POOLED_LEAVE_TYPES, type LeaveType } fro
 import { StaffLeaveEntitlement } from "../models/StaffLeaveEntitlement";
 import { StaffLeaveApplication } from "../models/StaffLeaveApplication";
 import { StaffProfile } from "../../foundation/models/StaffProfile";
+import { LatenessCharge } from "../models/LatenessCharge";
+import { LeaveBalanceRecovery } from "../models/LeaveBalanceRecovery";
 import { AcademicYear } from "../../foundation/models/AcademicYear";
 import { writeAudit } from "../../platform/services/AuditService";
 import { getHrPolicy } from "./HrPolicyService";
@@ -30,12 +32,59 @@ import { LeaveError, roundLeaveDays } from "./dates";
  *
  * Flooring here would quietly forgive it: he would show "0 days left" — indistinguishable
  * from someone who simply used their allowance — take no paid leave for a year, and start
- * the NEXT year at zero rather than still owing 11. The floor belongs at the point of USE,
- * and it is already there: `splitLeaveDays` does `max(0, min(days, remaining))`, so a
- * negative balance yields zero paid days rather than negative ones.
+ * the NEXT year at zero rather than still owing 11.
+ *
+ * Since D-#616 nothing floors it downstream either: pooled leave and lateness both draw
+ * the balance in full and the deficit is recovered at exit, or earlier by agreement, so
+ * the negative IS the record rather than a number to be clamped away.
  */
 export function computeRemaining(allowanceDays: number, carriedOverDays: number, takenDays: number): number {
   return allowanceDays + carriedOverDays - takenDays;
+}
+
+export interface LeaveYearWindow {
+  /** First day of the current entitlement period, YYYY-MM-DD. */
+  start: string;
+  /** Last day of it, YYYY-MM-DD (inclusive). */
+  end: string;
+}
+
+/**
+ * The leave year is the STAFF MEMBER'S OWN, anchored on confirmation (D-#618).
+ *
+ * It used to be the school's academic year, with the allowance pro-rated for anyone who
+ * joined part-way through. The owner's rule is different and simpler: the 20 days begin
+ * when someone becomes permanent, and renew on each anniversary of that date. So a
+ * teacher confirmed on 24 June carries 24 Jun → 23 Jun, and gets a fresh 20 days each
+ * 24 June rather than each 1 January.
+ *
+ * Pro-ration disappears with it: a year that starts at confirmation is never partial.
+ *
+ * Returns null while there is no confirmation date. That is not "no leave" — a
+ * probationer's leave is HELD and settles against the first year's allowance when they
+ * are confirmed (D-#540) — it is "no entitlement period has begun yet".
+ */
+export function leaveYearWindow(
+  confirmationDate: Date | string | null | undefined,
+  asOf: Date = new Date(),
+): LeaveYearWindow | null {
+  if (!confirmationDate) return null;
+  const c = new Date(confirmationDate);
+  if (Number.isNaN(c.getTime())) return null;
+
+  const month = c.getUTCMonth();
+  const day = c.getUTCDate();
+  const on = new Date(Date.UTC(asOf.getUTCFullYear(), asOf.getUTCMonth(), asOf.getUTCDate()));
+
+  // This year's anniversary; if it has not happened yet, the period began last year.
+  let start = new Date(Date.UTC(on.getUTCFullYear(), month, day));
+  if (start.getTime() > on.getTime()) start = new Date(Date.UTC(on.getUTCFullYear() - 1, month, day));
+  // Before the very first anniversary the period still starts at confirmation itself.
+  if (start.getTime() < c.getTime()) start = new Date(Date.UTC(c.getUTCFullYear(), month, day));
+
+  const nextStart = new Date(Date.UTC(start.getUTCFullYear() + 1, start.getUTCMonth(), start.getUTCDate()));
+  const end = new Date(nextStart.getTime() - 24 * 60 * 60 * 1000);
+  return { start: start.toISOString().slice(0, 10), end: end.toISOString().slice(0, 10) };
 }
 
 /**
@@ -221,21 +270,58 @@ export async function takenPooledDays(
   staffProfileId: string,
   academicYearId: string,
   excludeId?: string,
+  window?: LeaveYearWindow | null,
 ): Promise<number> {
   const q: Record<string, unknown> = {
     staffProfileId: new Types.ObjectId(staffProfileId),
-    academicYearId: new Types.ObjectId(academicYearId),
     leaveType: { $in: [...POOLED_LEAVE_TYPES] },
     status: "approved",
   };
+  // The entitlement period is the staff member's anniversary year when they have one
+  // (D-#618); the academic year remains the fallback for a staff member with no
+  // confirmation date, so nothing regresses for a probationer.
+  if (window) q.fromKey = { $gte: window.start, $lte: window.end };
+  else q.academicYearId = new Types.ObjectId(academicYearId);
   if (excludeId) q._id = { $ne: new Types.ObjectId(excludeId) };
   const rows = await StaffLeaveApplication.find(q).select("paidDays days").lean();
   // Summed EXACTLY (a partial day is 1/3, D-#361); rounded only where displayed.
-  return rows.reduce((sum, r) => sum + (r.paidDays ?? 0), 0);
+  const fromLeave = rows.reduce((sum, r) => sum + (r.paidDays ?? 0), 0);
+
+  /**
+   * LATENESS COUNTS AGAINST THE POOL TOO (D-#616).
+   *
+   * `LatenessService` computed `paidFromLeave`, stored it on the charge and showed it —
+   * and the pool never read it, so "1 day taken from leave" left the balance exactly
+   * where it was. The same shape as the probation-settlement bug (D-#590): a ledger
+   * ticked, a balance unmoved. Now that a charge can no longer fall through to salary,
+   * this is the ONLY place it lands, so the omission would have meant lateness costing
+   * nothing at all.
+   */
+  const chargeQ: Record<string, unknown> = { staffProfileId: new Types.ObjectId(staffProfileId) };
+  if (window) chargeQ.monthKey = { $gte: window.start.slice(0, 7), $lte: window.end.slice(0, 7) };
+  const charges = await LatenessCharge.find(chargeQ).select("paidFromLeave").lean();
+  const fromLateness = charges.reduce((sum, c) => sum + (c.paidFromLeave ?? 0), 0);
+
+  /**
+   * An AGREED recovery gives days back (D-#617). The staff member settled part of a
+   * negative balance out of a month's salary, so those days are no longer owed — they
+   * come OFF `taken`, which is what pushes the balance back up. Without this the
+   * payslip would take the money and the balance would still read negative, and the
+   * same days could be collected again at exit.
+   */
+  const recQ: Record<string, unknown> = { staffProfileId: new Types.ObjectId(staffProfileId) };
+  if (window) recQ.monthKey = { $gte: window.start.slice(0, 7), $lte: window.end.slice(0, 7) };
+  const recoveries = await LeaveBalanceRecovery.find(recQ).select("days").lean();
+  const recovered = recoveries.reduce((sum, r) => sum + (r.days ?? 0), 0);
+
+  return fromLeave + fromLateness - recovered;
 }
 
 export interface PooledBalanceView {
   academicYearId: string | null;
+  /** The staff member's own entitlement period (D-#618); null before confirmation. */
+  leaveYearStart: string | null;
+  leaveYearEnd: string | null;
   allowanceDays: number;
   carriedOverDays: number;
   takenDays: number;
@@ -271,6 +357,8 @@ export async function pooledBalanceForStaff(
 
   const zero: PooledBalanceView = {
     academicYearId: null,
+    leaveYearStart: null,
+    leaveYearEnd: null,
     allowanceDays: 0,
     carriedOverDays: 0,
     takenDays: 0,
@@ -300,25 +388,34 @@ export async function pooledBalanceForStaff(
   const carriedOverDays = pooledCarryForward(overrides.map((e) => e.carriedOverDays ?? 0));
   const overridden = overrides.length > 0;
 
+  /**
+   * The entitlement period is the staff member's own anniversary year (D-#618), not the
+   * academic year. `proRated` is now always false and kept only so the field does not
+   * vanish from the GraphQL view: a year that begins at confirmation is never partial,
+   * which is what made pro-ration necessary in the first place.
+   */
+  const window = leaveYearWindow(profile?.confirmationDate ?? null);
+
   let allowanceDays: number;
-  let proRated = false;
   if (overridden) {
     allowanceDays = overrides.reduce((max, e) => Math.max(max, e.allowanceDays ?? 0), 0);
   } else {
-    const joined = profile?.joiningDate ?? null;
-    allowanceDays = proRateAllowance(policy.annualLeaveDays, joined, year.startDate, year.endDate);
-    proRated = allowanceDays !== policy.annualLeaveDays;
+    // No window means no entitlement period has begun — a probationer's allowance is
+    // what they WILL get, so the figure is shown in full rather than as zero.
+    allowanceDays = policy.annualLeaveDays;
   }
 
-  const takenDays = await takenPooledDays(staffProfileId, yearId);
+  const takenDays = await takenPooledDays(staffProfileId, yearId, undefined, window);
   return {
     academicYearId: yearId,
+    leaveYearStart: window?.start ?? null,
+    leaveYearEnd: window?.end ?? null,
     allowanceDays,
     carriedOverDays,
     takenDays: roundLeaveDays(takenDays),
     remainingDays: roundLeaveDays(computeRemaining(allowanceDays, carriedOverDays, takenDays)),
     overridden,
-    proRated,
+    proRated: false,
     onProbation,
   };
 }

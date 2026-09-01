@@ -125,16 +125,19 @@ export default function PreparePayrollScreen({ navigation }: Props): React.React
               options={[
                 { label: STR.stfAdjustmentAddition, value: "addition" },
                 { label: STR.stfAdjustmentDeduction, value: "deduction" },
+                { label: STR.stfAdjustmentLeaveRecovery, value: "leave_recovery" },
               ]}
               // Switching side must clear the type: an addition type is not a valid
               // deduction type, and the server would reject it at prepare.
               onChange={(v) =>
                 patch(r.key, {
                   sign: (v ?? "addition") as AdjRow["sign"],
-                  type: v === "deduction" ? null : "arrears",
+                  // A recovery row has no money type — its amount is DAYS (D-#617).
+                  type: v === "addition" ? "arrears" : null,
                 })
               }
             />
+            {r.sign !== "leave_recovery" ? (
             <Select
               label={STR.stfAdjustmentType}
               value={r.type}
@@ -145,8 +148,9 @@ export default function PreparePayrollScreen({ navigation }: Props): React.React
               onChange={(v) => patch(r.key, { type: v })}
               placeholder={STR.stfAdjustmentType}
             />
+            ) : null}
             <Field
-              label={STR.stfAdjustmentAmount}
+              label={r.sign === "leave_recovery" ? STR.stfAdjustmentRecoveryDays : STR.stfAdjustmentAmount}
               value={r.amount}
               onChangeText={(v) => patch(r.key, { amount: v })}
               keyboardType="numeric"

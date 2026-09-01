@@ -58,25 +58,35 @@ export interface LeaveSplit {
   exceedWarning: string | null;
 }
 
-/** The §3.2/§3.3 paid/unpaid split. Unpaid/event-capped types are wholly unpaid
- *  (maternity D-#23, hajj, LWP). Balance-tracked paid types draw the remaining
- *  balance; any excess is unpaid (LWP) and only WARNS. */
+/**
+ * The paid/unpaid split (§3.2/§3.3, rewritten by D-#616).
+ *
+ * Unpaid/event-capped types are wholly unpaid — maternity (D-#23), hajj, and LWP,
+ * which is what you file when the school has DECIDED not to pay for the days.
+ *
+ * BALANCE-TRACKED LEAVE NOW ALWAYS DRAWS THE POOL, even past zero. It used to cap the
+ * paid part at the remaining balance and turn the excess into unpaid days, which
+ * payroll then deducted from salary automatically. The owner's rule is that leave and
+ * lateness are settled against the LEAVE BALANCE and nothing else: the balance may run
+ * negative, and it is recovered only at exit, or earlier by explicit agreement with the
+ * teacher (D-#617). An automatic salary deduction is exactly what must not happen —
+ * someone who overdraws their leave finds out from their balance, not their payslip.
+ *
+ * So `unpaidDays` is 0 for a pooled type and the pool absorbs the whole thing. The
+ * warning stays, because "you are going past your balance" is still worth saying at the
+ * moment of approval; only its wording changes, since the days are no longer unpaid.
+ */
 export function splitLeaveDays(leaveType: LeaveType, days: number, remainingBalance: number): LeaveSplit {
   const rules = LEAVE_TYPE_RULES[leaveType];
   if (!rules.paid || !rules.balanceTracked) {
     return { paidDays: 0, unpaidDays: days, exceedWarning: null };
   }
-  const paidDays = Math.max(0, Math.min(days, remainingBalance));
-  const unpaidDays = days - paidDays;
-  // Bangla, and about the POOL rather than the type. This string is stored on the
-  // application and shown verbatim to the applicant and the approver, and it read
-  // "Exceeds casual balance by 2 day(s) — recorded as unpaid (LWP). (§3.3)" — English,
-  // a section number, and a per-type balance that stopped existing at D-#539.
+  const overdrawn = Math.max(0, days - Math.max(0, remainingBalance));
   const exceedWarning =
-    unpaidDays > 0
-      ? `ছুটির জমার চেয়ে ${bnNum(roundLeaveDays(unpaidDays))} দিন বেশি — এই দিনগুলো অবৈতনিক হিসেবে গণ্য হবে।`
+    overdrawn > 0
+      ? `ছুটির জমার চেয়ে ${bnNum(roundLeaveDays(overdrawn))} দিন বেশি — জমা ঋণাত্মক হবে, বেতন থেকে কাটা হবে না।`
       : null;
-  return { paidDays, unpaidDays, exceedWarning };
+  return { paidDays: days, unpaidDays: 0, exceedWarning };
 }
 
 // --- balance lookups used by the approve path -------------------------------

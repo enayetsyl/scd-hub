@@ -24,6 +24,8 @@ const mockAdvanceFindById = jest.fn();
 const mockRevokeAllGrants = jest.fn().mockResolvedValue(0);
 const mockResolveUserId = jest.fn();
 const mockBalancesForStaff = jest.fn().mockResolvedValue([]);
+/** D-#616 — default a healthy pool so existing settlement expectations are unchanged. */
+const mockPooledBalance = jest.fn().mockResolvedValue({ remainingDays: 5 });
 const mockActiveAdvanceByStaff = jest.fn().mockResolvedValue(new Map());
 const mockWriteAudit = jest.fn().mockResolvedValue(undefined);
 /** SH-3 (D-#540): held probation-leave rows. Default "nothing held" keeps every
@@ -84,6 +86,9 @@ jest.mock("../modules/hr/services/staffMatch", () => ({
 }));
 jest.mock("../modules/hr/services/LeaveEntitlementService", () => ({
   balancesForStaff: (s: unknown, y: unknown) => mockBalancesForStaff(s, y),
+  // D-#616 — the settlement now also recovers an overdrawn pool, so it reads the
+  // balance. Defaulted to a healthy pool so the existing expectations are unchanged.
+  pooledBalanceForStaff: (s: unknown, y: unknown) => mockPooledBalance(s, y),
 }));
 jest.mock("../modules/hr/services/AdvanceService", () => ({
   activeAdvanceByStaff: () => mockActiveAdvanceByStaff(),
@@ -114,6 +119,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockRevokeAllGrants.mockResolvedValue(0);
   mockBalancesForStaff.mockResolvedValue([]);
+  mockPooledBalance.mockResolvedValue({ remainingDays: 5 });
   mockActiveAdvanceByStaff.mockResolvedValue(new Map());
 });
 
@@ -330,6 +336,49 @@ describe("final settlement (H6.4, D-#29)", () => {
     expect(held).toBeDefined();
     expect(held!.amount).toBe(6000); // 6 × (30000/30)
     expect(s.netPay).toBe(24000);
+  });
+
+  /**
+   * D-#616. Leave and lateness draw the pool and the pool may go negative; payroll
+   * never turns that into a salary deduction while someone is employed. The exit is
+   * where it is finally collected — so if this stops working, an overdrawn balance
+   * costs the school money silently.
+   */
+  test("an OVERDRAWN leave balance is recovered at exit, at day-rate (D-#616)", async () => {
+    const staffId = oid();
+    const c: Record<string, unknown> = {
+      _id: oid(), staffProfileId: staffId, status: "access_revoked",
+      clearanceItems: [{ status: "done" }],
+      save: jest.fn(), markModified: jest.fn(),
+    };
+    mockCaseFindById.mockResolvedValue(c);
+    mockStaffFindById.mockResolvedValue({ _id: staffId, monthlySalary: 30000 });
+    mockPooledBalance.mockResolvedValue({ remainingDays: -11 });
+    mockDebtFind.mockReturnValue([]); // no probation debt — isolate the overdrawn pool
+
+    await computeFinalSettlement({ caseId: (c._id as mongoose.Types.ObjectId).toString(), workingDays: 30, actorId: oid().toString() });
+
+    const s = c.settlement as { deductions: Array<{ type: string; amount: number; days?: number }>; netPay: number };
+    const owed = s.deductions.find((d) => d.days === 11);
+    expect(owed).toBeDefined();
+    expect(owed!.amount).toBe(11000); // 11 × (30000/30)
+    expect(s.netPay).toBe(19000);
+  });
+
+  test("a healthy pool adds nothing — only a NEGATIVE balance is collected", async () => {
+    const staffId = oid();
+    const c: Record<string, unknown> = {
+      _id: oid(), staffProfileId: staffId, status: "access_revoked",
+      clearanceItems: [{ status: "done" }], save: jest.fn(), markModified: jest.fn(),
+    };
+    mockCaseFindById.mockResolvedValue(c);
+    mockStaffFindById.mockResolvedValue({ _id: staffId, monthlySalary: 30000 });
+    mockPooledBalance.mockResolvedValue({ remainingDays: 7 });
+    mockDebtFind.mockReturnValue([]);
+    await computeFinalSettlement({ caseId: (c._id as mongoose.Types.ObjectId).toString(), workingDays: 30, actorId: oid().toString() });
+    const s = c.settlement as { deductions: unknown[]; netPay: number };
+    expect(s.deductions).toHaveLength(0);
+    expect(s.netPay).toBe(30000);
   });
 
   test("computing the settlement does NOT settle the debt — only releasing it does", async () => {

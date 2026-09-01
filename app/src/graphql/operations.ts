@@ -6771,6 +6771,9 @@ export interface StaffPayrollAdjustmentInputT {
   latenessDeduction?: number | null;
   manualDeductions?: PayLineInputT[];
   manualAdditions?: PayLineInputT[];
+  /** Days of a negative leave balance settled by agreement this month (D-#617). */
+  leaveRecoveryDays?: number | null;
+  leaveRecoveryNote?: string | null;
 }
 
 export const PREPARE_PAYROLL_RUN = gql<

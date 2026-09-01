@@ -83,6 +83,22 @@ jest.mock("../modules/hr/models/StaffLeaveEntitlement", () => ({
     findOneAndUpdate: jest.fn(),
   },
 }));
+// D-#616 — the pool now also counts lateness charges, so this model has to answer.
+const mockLatenessFind = jest.fn();
+jest.mock("../modules/hr/models/LatenessCharge", () => ({
+  LatenessCharge: {
+    find: (q: unknown) => ({ select: () => ({ lean: () => mockLatenessFind(q) }) }),
+  },
+}));
+// D-#617 — an agreed recovery credits the pool back, so takenPooledDays reads this.
+const mockRecoveryFind = jest.fn(() => []);
+jest.mock("../modules/hr/models/LeaveBalanceRecovery", () => ({
+  LeaveBalanceRecovery: {
+    find: () => ({ select: () => ({ lean: async () => mockRecoveryFind() }) }),
+    findOneAndUpdate: jest.fn().mockResolvedValue({}),
+    deleteOne: jest.fn().mockResolvedValue({}),
+  },
+}));
 jest.mock("../modules/hr/models/StaffCoverSlot", () => ({
   StaffCoverSlot: {
     create: (d: unknown) => mockSlotCreate(d),
@@ -179,7 +195,11 @@ import { LEAVE_TYPE_RULES, PARTIAL_DAY_FRACTION, HR_POLICY_DEFAULTS } from "@scd
 
 const ACTOR = oid().toString();
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  jest.clearAllMocks();
+  // No lateness charges unless a test says otherwise — the pool reads them since D-#616.
+  mockLatenessFind.mockResolvedValue([]);
+});
 
 // ===========================================================================
 describe("isProbationLeave — the date pivot (SH-3, D-#540)", () => {
@@ -235,9 +255,17 @@ describe("the shared annual pool (SH-3, D-#539)", () => {
     expect(pooledCarryForward([-5, -31])).toBe(-31);
   });
 
-  test("...but a negative balance still yields ZERO paid days, never negative ones", () => {
-    expect(splitLeaveDays("casual", 3, -11)).toMatchObject({ paidDays: 0, unpaidDays: 3 });
-    expect(splitLeaveDays("casual", 3, 0)).toMatchObject({ paidDays: 0, unpaidDays: 3 });
+  /**
+   * D-#616 reversed this. It used to assert that an overdrawn pool made the days
+   * UNPAID, which payroll then deducted from salary automatically. The owner's rule
+   * is that leave is settled against the BALANCE and salary is touched only at exit
+   * or by agreement — so the days stay paid and the balance goes further negative.
+   */
+  test("a negative balance still draws the pool — the deficit deepens, pay is untouched", () => {
+    expect(splitLeaveDays("casual", 3, -11)).toMatchObject({ paidDays: 3, unpaidDays: 0 });
+    expect(splitLeaveDays("casual", 3, 0)).toMatchObject({ paidDays: 3, unpaidDays: 0 });
+    // LWP is unaffected: it MEANS unpaid, and is what you file to withhold pay.
+    expect(splitLeaveDays("unpaid_lwp", 3, 20)).toMatchObject({ paidDays: 0, unpaidDays: 3 });
   });
 
   test("a mid-year joiner's pool is pro-rated, not granted in full", () => {
@@ -283,12 +311,13 @@ describe("splitLeaveDays (§3.2/§3.3 exceed-warns-not-blocks)", () => {
   test("paid type within balance → all paid, no warning", () => {
     expect(splitLeaveDays("casual", 3, 5)).toEqual({ paidDays: 3, unpaidDays: 0, exceedWarning: null });
   });
-  test("paid type over balance → excess unpaid + warning (never blocks)", () => {
+  test("paid type over balance → still paid, balance goes negative, and it WARNS (D-#616)", () => {
     const s = splitLeaveDays("casual", 5, 2);
-    expect(s.paidDays).toBe(2);
-    expect(s.unpaidDays).toBe(3);
+    expect(s.paidDays).toBe(5);
+    expect(s.unpaidDays).toBe(0);
     // The warning is Bangla and speaks of the POOL, not a per-type balance (D-#580).
-    expect(s.exceedWarning).toContain("অবৈতনিক");
+    // It now says the balance goes negative rather than that the days are unpaid.
+    expect(s.exceedWarning).toContain("ঋণাত্মক");
     expect(s.exceedWarning).toContain("৩ দিন বেশি");
   });
   test("maternity is wholly unpaid (D-#23)", () => {
@@ -509,9 +538,9 @@ describe("decideLeave", () => {
     mockEntFind.mockResolvedValue([{ leaveType: "casual", allowanceDays: 2, carriedOverDays: 0 }]);
     mockLeaveFind.mockReturnValue(leanChain([]));
     const res = await decideLeave(app._id.toString(), "approve", ACTOR);
-    expect(res.paidDays).toBe(2);
-    expect(res.unpaidDays).toBe(3);
-    expect(res.exceedWarning).toContain("অবৈতনিক");
+    expect(res.paidDays).toBe(5);
+    expect(res.unpaidDays).toBe(0);
+    expect(res.exceedWarning).toContain("ঋণাত্মক");
   });
 
   /** D-#539: this is the whole point of the pool. Under the old per-type model, sick
@@ -525,8 +554,12 @@ describe("decideLeave", () => {
     // 18 days already taken as CASUAL this year. Only 2 remain, for any pooled type.
     mockLeaveFind.mockReturnValue(leanChain([{ paidDays: 18, days: 18 }]));
     const res = await decideLeave(app._id.toString(), "approve", ACTOR);
-    expect(res.paidDays).toBe(2);
-    expect(res.unpaidDays).toBe(2);
+    // The point of the pool is unchanged: sick sees the 18 casual days already
+    // taken. Since D-#616 the excess no longer splits off as unpaid — all 4 draw
+    // the pool and it ends 2 days overdrawn.
+    expect(res.paidDays).toBe(4);
+    expect(res.unpaidDays).toBe(0);
+    expect(res.exceedWarning).toContain("ঋণাত্মক");
   });
 
   test("approve maternity → wholly unpaid (D-#23)", async () => {
