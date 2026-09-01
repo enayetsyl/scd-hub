@@ -6774,6 +6774,8 @@ export interface StaffPayrollAdjustmentInputT {
   /** Days of a negative leave balance settled by agreement this month (D-#617). */
   leaveRecoveryDays?: number | null;
   leaveRecoveryNote?: string | null;
+  /** Recover the outstanding advance in this run (D-#622) — a one-off only when true. */
+  recoverAdvance?: boolean | null;
 }
 
 export const PREPARE_PAYROLL_RUN = gql<

@@ -126,6 +126,7 @@ export default function PreparePayrollScreen({ navigation }: Props): React.React
                 { label: STR.stfAdjustmentAddition, value: "addition" },
                 { label: STR.stfAdjustmentDeduction, value: "deduction" },
                 { label: STR.stfAdjustmentLeaveRecovery, value: "leave_recovery" },
+                { label: STR.stfAdjustmentAdvanceRecovery, value: "advance_recovery" },
               ]}
               // Switching side must clear the type: an addition type is not a valid
               // deduction type, and the server would reject it at prepare.
@@ -137,25 +138,32 @@ export default function PreparePayrollScreen({ navigation }: Props): React.React
                 })
               }
             />
-            {r.sign !== "leave_recovery" ? (
-            <Select
-              label={STR.stfAdjustmentType}
-              value={r.type}
-              options={(r.sign === "addition" ? PAY_ADDITION_TYPES : PAY_DEDUCTION_TYPES).map((t) => ({
-                label: r.sign === "addition" ? payAdditionTypeLabel(t) : payDeductionTypeLabel(t),
-                value: t,
-              }))}
-              onChange={(v) => patch(r.key, { type: v })}
-              placeholder={STR.stfAdjustmentType}
-            />
+            {/* Neither recovery kind is a money LINE, so neither picks a money type. */}
+            {r.sign === "addition" || r.sign === "deduction" ? (
+              <Select
+                label={STR.stfAdjustmentType}
+                value={r.type}
+                options={(r.sign === "addition" ? PAY_ADDITION_TYPES : PAY_DEDUCTION_TYPES).map((t) => ({
+                  label: r.sign === "addition" ? payAdditionTypeLabel(t) : payDeductionTypeLabel(t),
+                  value: t,
+                }))}
+                onChange={(v) => patch(r.key, { type: v })}
+                placeholder={STR.stfAdjustmentType}
+              />
             ) : null}
-            <Field
-              label={r.sign === "leave_recovery" ? STR.stfAdjustmentRecoveryDays : STR.stfAdjustmentAmount}
-              value={r.amount}
-              onChangeText={(v) => patch(r.key, { amount: v })}
-              keyboardType="numeric"
-              placeholder="0"
-            />
+            {r.sign === "advance_recovery" ? (
+              // The loan's own outstanding balance IS the amount — there is nothing to
+              // type, and a field here would only invite a figure that disagrees with it.
+              <Muted>{STR.stfAdjustmentAdvanceRecoveryHint}</Muted>
+            ) : (
+              <Field
+                label={r.sign === "leave_recovery" ? STR.stfAdjustmentRecoveryDays : STR.stfAdjustmentAmount}
+                value={r.amount}
+                onChangeText={(v) => patch(r.key, { amount: v })}
+                keyboardType="numeric"
+                placeholder="0"
+              />
+            )}
             <Field
               label={STR.stfAdjustmentReason}
               value={r.note}
