@@ -1,5 +1,11 @@
 # STATUS
 
+- 2026-08-31 (cont. 7): **BUILT — the Class Test hub's Dashboard button carries its counts (D-#620), branch `feat/ct-dashboard-button-counts`, stacked on `fix/ct-overdue-missing-field-count`.** Owner ask, same message as the D-#614 report: *"In the dashboard button i want the number of items open and number overdue."*
+  **"Open" needed a ruling, and the owner gave one:** *exam taken and result not yet published* — NOT "not started". So it is defined on the EXAM being sat, not on marks being entered: an exam sat today with nothing entered is outstanding work, an exam still in the future is not, and the comparison is date-only so today's exam counts the same day. `overdue` is a strict subset, which is what makes the pair readable — the whole pile, and the late part of it.
+  **Stacked deliberately.** It builds on D-#614 because both touch `overdueCounts`, and shipping the button on top of the broken count would have printed a confidently wrong number on the hub.
+  **Degrades quietly.** The query is paused for non-admins (who never see the button) and read with `?.`; until it resolves the button shows its plain label rather than a placeholder zero.
+  **Gate GREEN (executed):** server `tsc` clean, app `tsc` clean, classTestSummary suite 39/39.
+  **NOT DONE:** not yet merged; nothing driven at the running app.
 - 2026-09-01: **BUILT + PROMOTED + LOADED — the leave-balance model, and the payroll data behind it (D-#611..618).** Two days of owner-driven work on the staff hub, all of it live.
   **The chain started from one question the owner asked of a screen:** *"why taken is not showing anything. She took lots of leave this year"*. It did not, for two reasons that turned out to be four separate defects.
   **℞ was being discarded at parse (D-#611).** AT-1 read the biometric legend as "℞ ignored"; ℞ is LEAVE, and the vendor's own dashboard labels it "Avg. Leave". So a leave day was dropped entirely — on imported days the person on leave had NO ROW while 22 colleagues did, which also removed them from the month's denominator, and ছুটিতে could only ever read zero. Settled by the year-to-date export: ℞ carries half-day marks that only reconcile as 0.5, and 106 of its 117 cells have no punch. The unit test that "covered" this asserted ℞ → SKIP — written from the same misread legend.

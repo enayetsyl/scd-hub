@@ -430,9 +430,42 @@ describe("reportsStatus / principalDashboard", () => {
     ]);
 
     const c = await overdueCounts({ asOf: NOW });
-    expect(c).toEqual({ overdue: 2, awaitingSubmit: 1, awaitingPublish: 1 });
+    expect(c).toEqual({ open: 2, overdue: 2, awaitingSubmit: 1, awaitingPublish: 1 });
     // Name-free: the badge poll must not pay for a User lookup.
     expect(mockUserFind).not.toHaveBeenCalled();
+  });
+
+  // D-#620: "open" is the owner's definition — exam SAT and results not yet
+  // published. It is the superset the Dashboard button shows beside `overdue`.
+  test("open counts every sat-but-unpublished exam, late or not (D-#620)", async () => {
+    const past = exam({ _id: oid() }); // 10 July — long past its deadline
+    const recent = exam({ _id: oid(), examDate: new Date(2026, 6, 19) }); // sat, deadline ahead
+    const future = exam({ _id: oid(), examDate: new Date(2026, 6, 30) }); // not sat yet
+    const done = exam({ _id: oid() });
+    mockCtFind.mockReturnValue(leanChain([past, recent, future, done]));
+    withCounts([
+      { id: past._id, sectionId: SECTION, roster: 10, entered: 0 },
+      { id: recent._id, sectionId: SECTION, roster: 10, entered: 4 },
+      { id: future._id, sectionId: SECTION, roster: 10, entered: 0 },
+      { id: done._id, sectionId: SECTION, roster: 10, entered: 10, submitted: 10, published: 10 },
+    ]);
+
+    const c = await overdueCounts({ asOf: NOW });
+    // past + recent are open; `future` is not sat, `done` is published.
+    expect(c.open).toBe(2);
+    // Only `past` is late — so overdue is a STRICT subset of open.
+    expect(c.overdue).toBe(1);
+    expect(c.overdue).toBeLessThanOrEqual(c.open);
+  });
+
+  test("an exam sat TODAY is already open (D-#620 — the paper has been written)", async () => {
+    const today = exam({ _id: oid(), examDate: NOW });
+    mockCtFind.mockReturnValue(leanChain([today]));
+    withCounts([{ id: today._id, sectionId: SECTION, roster: 10, entered: 0 }]);
+
+    const c = await overdueCounts({ asOf: NOW });
+    expect(c.open).toBe(1);
+    expect(c.overdue).toBe(0); // its deadline is still days away
   });
 
   test("completionRatePct is null when nothing is logged", async () => {

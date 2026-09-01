@@ -9,7 +9,7 @@ import { ScrollView, View } from "react-native";
 import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
-import { MY_CLASS_TESTS_QUERY } from "../../graphql/classTest";
+import { MY_CLASS_TESTS_QUERY, CLASS_TEST_OVERDUE_COUNTS } from "../../graphql/classTest";
 import { ARCHIVE_LOCATIONS_QUERY } from "../../graphql/archive";
 import { Screen, Card, Body, Muted, Button, Badge } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
@@ -31,6 +31,17 @@ export default function ClassTestHomeScreen(): React.ReactElement {
 
   const [myQ, refetchMy] = useQuery({ query: MY_CLASS_TESTS_QUERY, variables: {} });
   const mine = myQ.data?.myClassTests ?? [];
+
+  // D-#620: the Dashboard button carries its own counts. Paused for non-admins —
+  // they do not see the button at all — and read with `?.` so a slow or failed
+  // fetch degrades to the plain label rather than blocking the hub.
+  const [ctCountsQ] = useQuery({
+    query: CLASS_TEST_OVERDUE_COUNTS,
+    variables: {},
+    pause: !isAdmin,
+    requestPolicy: "cache-and-network",
+  });
+  const ctCounts = ctCountsQ.data?.classTestOverdueCounts;
 
   // AR-1: one batched "where are the scripts?" lookup for the visible PRINTED
   // tests — never a per-row query. A missing entry means nothing is filed yet.
@@ -76,7 +87,19 @@ export default function ClassTestHomeScreen(): React.ReactElement {
             {/* AR-1: the answer-script archive hub (physical storage + retrieval). */}
             <Button title={STR.arHomeNav} variant="secondary" onPress={() => nav.navigate("ArchiveHome")} />
             {isAdmin ? (
-              <Button title={STR.ctDashboardNav} variant="secondary" onPress={() => nav.navigate("ClassTestDashboard")} />
+              <Button
+                // D-#620: the two numbers the owner reads this button for — the
+                // outstanding pile and the late subset of it — so the hub answers
+                // "is anything waiting on me?" without a tap. Counts are appended
+                // only once loaded; the button never renders a placeholder zero.
+                title={
+                  ctCounts
+                    ? `${STR.ctDashboardNav} · ${STR.ctOpenCount} ${bnNum(ctCounts.open)} · ${STR.ctOverdue} ${bnNum(ctCounts.overdue)}`
+                    : STR.ctDashboardNav
+                }
+                variant="secondary"
+                onPress={() => nav.navigate("ClassTestDashboard")}
+              />
             ) : null}
           </View>
         </Card>
