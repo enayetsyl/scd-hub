@@ -97,8 +97,12 @@ describe("the reassign service", () => {
 
 describe("the approvals screen", () => {
   test("shows who a row is with", () => {
+    // The label itself moved on — `syHeldBy` said "with X" at every stage and so
+    // described an already-approved row as still waiting. Wording is pinned by
+    // syllabusApprovalWording.test.ts; here we only require that the person is
+    // named at all.
     expect(SCREEN).toMatch(/row\.approverUserId/);
-    expect(SCREEN).toMatch(/STR\.syHeldBy/);
+    expect(SCREEN).toMatch(/STR\.syAwaitingTeacherFrom|STR\.syApprovedBy/);
   });
 
   test("offers the move only while the row is with a teacher", () => {
