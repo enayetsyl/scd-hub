@@ -149,6 +149,13 @@ export default function MonthlyPendingWorkScreen(): React.ReactElement {
                 {p.classTestsUnmarked > 0 ? (
                   <Tally label={`${STR.mrClassTest} — ${STR.mpUnmarked}`} value={p.classTestsUnmarked} tone={colors.error} />
                 ) : null}
+                {p.classTestsNotSubmitted > 0 ? (
+                  <Tally
+                    label={`${STR.mrClassTest} — ${STR.mpCtUnsubmitted}`}
+                    value={p.classTestsNotSubmitted}
+                    tone={colors.error}
+                  />
+                ) : null}
                 {/* Below the line: real, but it holds no report open and belongs to
                     the family, not the teacher. */}
                 <Muted style={{ fontWeight: "700", marginTop: space(2) }}>{STR.mpNotBlocking}</Muted>
@@ -169,7 +176,11 @@ export default function MonthlyPendingWorkScreen(): React.ReactElement {
                       </Body>
                       <Muted>
                         {bnNum(t.dateKey)} — {t.teacherName} — {t.ctId}
-                        {t.results === 0 ? ` — ${STR.mpNoResults}` : ` — ${bnNum(t.unmarked)} ${STR.mpUnmarked}`}
+                        {t.results === 0
+                          ? ` — ${STR.mpNoResults}`
+                          : t.unmarked > 0
+                            ? ` — ${bnNum(t.unmarked)} ${STR.mpUnmarked}`
+                            : ` — ${STR.mpCtUnsubmitted}`}
                       </Muted>
                     </View>
                   ))}

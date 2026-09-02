@@ -172,6 +172,7 @@ export interface PendingClassTestT {
   teacherName: string;
   results: number;
   unmarked: number;
+  submitted: boolean;
 }
 
 export interface PendingRowT {
@@ -198,6 +199,7 @@ export interface PendingWorkT {
   assignmentNotSubmitted: number;
   classTestsNoResults: number;
   classTestsUnmarked: number;
+  classTestsNotSubmitted: number;
   byTeacher: PendingGroupT[];
   bySection: PendingGroupT[];
   classTests: PendingClassTestT[];
@@ -210,10 +212,10 @@ export const MONTHLY_PENDING_WORK_QUERY = gql<{ monthlyPendingWork: PendingWorkT
       periodKey
       homeworkItems homeworkToCheck homeworkAwaiting homeworkNotSubmitted
       assignmentItems assignmentToCheck assignmentAwaiting assignmentNotSubmitted
-      classTestsNoResults classTestsUnmarked
+      classTestsNoResults classTestsUnmarked classTestsNotSubmitted
       byTeacher { key items toCheck awaiting notSubmitted }
       bySection { key items toCheck awaiting notSubmitted }
-      classTests { ctId sectionLabel subject dateKey status teacherName results unmarked }
+      classTests { ctId sectionLabel subject dateKey status teacherName results unmarked submitted }
       rows { kind teacherName sectionLabel subject dateKey ref toCheck awaiting notSubmitted }
     }
   }

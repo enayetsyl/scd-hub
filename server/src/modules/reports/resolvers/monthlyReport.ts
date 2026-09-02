@@ -432,6 +432,7 @@ const PendingClassTestRef = builder.objectRef<PendingClassTest>("MonthlyPendingC
     teacherName: t.exposeString("teacherName"),
     results: t.exposeInt("results"),
     unmarked: t.exposeInt("unmarked"),
+    submitted: t.exposeBoolean("submitted"),
   }),
 });
 
@@ -451,6 +452,7 @@ const PendingWorkRef = builder.objectRef<MonthlyPendingWork>("MonthlyPendingWork
     assignmentNotSubmitted: t.int({ resolve: (p) => p.totals.assignmentNotSubmitted }),
     classTestsNoResults: t.int({ resolve: (p) => p.totals.classTestsNoResults }),
     classTestsUnmarked: t.int({ resolve: (p) => p.totals.classTestsUnmarked }),
+    classTestsNotSubmitted: t.int({ resolve: (p) => p.totals.classTestsNotSubmitted }),
     byTeacher: t.field({ type: [PendingGroupRef], resolve: (p) => p.byTeacher }),
     bySection: t.field({ type: [PendingGroupRef], resolve: (p) => p.bySection }),
     classTests: t.field({ type: [PendingClassTestRef], resolve: (p) => p.classTests }),
