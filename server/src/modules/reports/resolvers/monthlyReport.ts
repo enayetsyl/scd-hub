@@ -29,6 +29,7 @@ import {
   assertGuardianOfStudent,
 } from "../../../middleware/authz";
 import { assertReportRead } from "../../trackers/resolvers/classTestSummary";
+import { isAdminStaff } from "../../foundation/services/RoleScope";
 import { Section } from "../../foundation/models/Section";
 import { Student } from "../../foundation/models/Student";
 import { MonthlyReport, type IMonthlyReport } from "../models/MonthlyReport";
@@ -69,7 +70,13 @@ import {
 function assertRelease(ctx: AppContext): { isPrincipal: boolean; actorId: string } {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
   const role = ctx.auth.role as Role;
-  if (!callerHasPermission(ctx.auth, "report:release") || (role !== "PRINCIPAL" && role !== "OFFICE")) {
+  // Template-aware (D-#474): an OFFICE template added on top of TEACHER already hands
+  // the caller the report:release PERMISSION via effectivePermissions — a bare role
+  // comparison here would silently ignore that grant, the exact D-#467/#468 pattern.
+  // isPrincipal stays PRIMARY-role-only on purpose: the override/revoke/reopen powers
+  // built on top of this gate (assertPrincipal below) are Principal-only BY ROLE,
+  // not by template, so an office-by-template caller must not inherit them.
+  if (!callerHasPermission(ctx.auth, "report:release") || !isAdminStaff(ctx.auth)) {
     throw new ForbiddenError("মাসিক রিপোর্ট প্রকাশ অফিস/অধ্যক্ষের কাজ");
   }
   return { isPrincipal: role === "PRINCIPAL", actorId: ctx.auth.userId as string };
