@@ -8,9 +8,13 @@
  * this screen and the coverage percentage ever disagreed, the office would have no way
  * to tell which one was lying.
  *
- * A class test is unsettled when it has NO results at all, or a PRESENT result with no
- * marks. A CANCELLED test is not pending: nobody owes anything on a test that did not
- * happen.
+ * A class test is unsettled when it has NO results at all, a PRESENT result with no
+ * marks, OR (found live, D-#632 — matched against a real August month) results that
+ * are entered and fully marked but never carried through CT-8's teacher-submits step.
+ * A test the teacher forgot to submit is still owed, no matter how clean the marks
+ * already sitting in it are — the office cannot approve/publish what was never
+ * submitted. A CANCELLED test is not pending: nobody owes anything on a test that did
+ * not happen.
  *
  * Read-only and derived (D-#85). Identity plane — names teachers and sections, so no
  * corpus path (ADR-005).
@@ -81,6 +85,32 @@ export interface PendingClassTest {
   teacherName: string;
   results: number;
   unmarked: number;
+  /** Every entered result carries `submittedAt` (CT-8's teacher-submits gate). A test
+   *  can be fully marked and still owe this — the office cannot approve/publish what
+   *  a teacher never submitted, so it stays pending regardless of `unmarked`. */
+  submitted: boolean;
+}
+
+/** The slice of a ClassTestResult row this predicate needs. */
+export interface ClassTestResultLike {
+  status: string;
+  marks?: number | null;
+  submittedAt?: Date | null;
+}
+
+/**
+ * PURE. Has this test been carried all the way through CT-8's teacher-submits step?
+ * `submitExam` stamps `submittedAt` on every one of a test's result rows in one bulk
+ * update, so "every row has it" and "any row has it" agree in practice — checking
+ * every row is the version that cannot be fooled by a row entered AFTER a submit.
+ *
+ * Deliberately does NOT look at `unmarked`: a PRESENT row is validated to carry marks
+ * at entry (`enterResult`), so a submitted test with an unmarked PRESENT row should not
+ * occur — and if it ever does via old/backfilled data, `submitted` still answers the
+ * question this predicate exists for ("does the office still owe a look at this?").
+ */
+export function classTestSettled(results: readonly ClassTestResultLike[]): boolean {
+  return results.length > 0 && results.every((r) => r.submittedAt != null);
 }
 
 export interface MonthlyPendingWork {
@@ -96,6 +126,9 @@ export interface MonthlyPendingWork {
     assignmentNotSubmitted: number;
     classTestsNoResults: number;
     classTestsUnmarked: number;
+    /** Fully entered AND fully marked, but the teacher never hit submit — the CT-8
+     *  gate the office cannot see past. Disjoint from classTestsUnmarked. */
+    classTestsNotSubmitted: number;
   };
   byTeacher: PendingGroup[];
   bySection: PendingGroup[];
@@ -245,10 +278,15 @@ export async function monthlyPendingWork(periodKey: string): Promise<MonthlyPend
     // A cancelled test is not pending — nobody owes marks on an exam that did not run.
     if (t.status === "CANCELLED") continue;
     const results = (await ClassTestResult.find({ testId: t._id })
-      .select("status marks")
-      .lean()) as unknown as Array<{ status: string; marks?: number | null }>;
+      .select("status marks submittedAt")
+      .lean()) as unknown as ClassTestResultLike[];
     const unmarked = results.filter((r) => r.status === "PRESENT" && (r.marks === null || r.marks === undefined)).length;
-    if (results.length > 0 && unmarked === 0) continue;
+    // The old check here was `results.length > 0 && unmarked === 0` — settled the
+    // moment whatever HAD been entered was itself clean, even with most of the
+    // roster still untouched and never submitted. classTestSettled asks the real
+    // question: has this gone all the way through CT-8's teacher-submits step.
+    const submitted = classTestSettled(results);
+    if (submitted) continue;
     classTests.push({
       ctId: t.ctId,
       teacherId: String(t.teacherId ?? t.requestedBy ?? ""),
@@ -259,6 +297,7 @@ export async function monthlyPendingWork(periodKey: string): Promise<MonthlyPend
       teacherName: userName.get(String(t.teacherId ?? t.requestedBy)) ?? "—",
       results: results.length,
       unmarked,
+      submitted,
     });
   }
   classTests.sort((a, b) => b.dateKey.localeCompare(a.dateKey));
@@ -279,6 +318,7 @@ export async function monthlyPendingWork(periodKey: string): Promise<MonthlyPend
       assignmentNotSubmitted: sum("ASSIGNMENT", "notSubmitted"),
       classTestsNoResults: classTests.filter((t) => t.results === 0).length,
       classTestsUnmarked: classTests.reduce((n, t) => n + t.unmarked, 0),
+      classTestsNotSubmitted: classTests.filter((t) => t.results > 0 && t.unmarked === 0).length,
     },
     // The teacher key carries the stream, because "82 to check" means a different
     // afternoon's work depending on whether it is homework or assignments.
@@ -334,7 +374,11 @@ export function chaseItemsBlock(
     for (const t of tests) {
       out.push(
         `• ${t.sectionLabel} — ${sub(t.subject)} — ${dm(t.dateKey)} — ${
-          t.results === 0 ? "কোনো ফলাফল নেই" : `${bnNum(t.unmarked)} জনের নম্বর বাকি`
+          t.results === 0
+            ? "কোনো ফলাফল নেই"
+            : t.unmarked > 0
+              ? `${bnNum(t.unmarked)} জনের নম্বর বাকি`
+              : "ফলাফল জমা দেওয়া হয়নি"
         }`,
       );
     }

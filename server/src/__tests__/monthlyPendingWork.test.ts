@@ -13,6 +13,7 @@
  */
 import {
   chaseItemsBlock,
+  classTestSettled,
   countOutstanding,
   groupPending,
   type PendingClassTest,
@@ -38,6 +39,46 @@ const row = (p: Partial<PendingRow>): PendingRow => ({
   awaiting: 0,
   notSubmitted: 0,
   ...p,
+});
+
+describe("classTestSettled — a class test is done only once the teacher SUBMITS it (D-#632)", () => {
+  // Owner, comparing the Class Test Dashboard against this screen: tests overdue and
+  // visibly unsettled on the dashboard were missing from the monthly pending list.
+  // Root cause: the old check was `results.length > 0 && unmarked === 0` — true the
+  // moment whatever HAD been entered was itself clean, even with most of the roster
+  // never touched and the test never submitted for review.
+
+  test("REPRODUCES THE BUG: partially entered, every entered row cleanly marked, never submitted — the OLD check would have called this settled", () => {
+    // 5 of a 17-student roster entered, all 5 correctly marked (no PRESENT-with-null-
+    // marks row exists) — so `unmarked === 0` is true, which is exactly what let this
+    // slip through before. It must NOT read as settled.
+    const results = Array.from({ length: 5 }, () => ({ status: "PRESENT", marks: 40, submittedAt: null }));
+    expect(classTestSettled(results)).toBe(false);
+  });
+
+  test("fully entered and fully marked, but the teacher never hit submit — still owed", () => {
+    const results = Array.from({ length: 17 }, () => ({ status: "PRESENT", marks: 40, submittedAt: null }));
+    expect(classTestSettled(results)).toBe(false);
+  });
+
+  test("fully entered, fully marked, AND submitted — genuinely settled", () => {
+    const submittedAt = new Date("2026-08-20T10:00:00.000Z");
+    const results = Array.from({ length: 17 }, () => ({ status: "PRESENT", marks: 40, submittedAt }));
+    expect(classTestSettled(results)).toBe(true);
+  });
+
+  test("zero results at all — not settled (results.length === 0 is the existing no-results case)", () => {
+    expect(classTestSettled([])).toBe(false);
+  });
+
+  test("a row entered AFTER a submit (mixed submittedAt) is not fully settled — every row must carry it", () => {
+    const submittedAt = new Date("2026-08-20T10:00:00.000Z");
+    const results = [
+      { status: "PRESENT", marks: 40, submittedAt },
+      { status: "PRESENT", marks: 35, submittedAt: null },
+    ];
+    expect(classTestSettled(results)).toBe(false);
+  });
 });
 
 describe("pending work — three buckets, because they need three different people", () => {
@@ -187,14 +228,16 @@ describe("teacher chase — the message only asks for what is theirs", () => {
     expect(chaseItemsBlock(many(3), [], labels)).not.toContain("আরও");
   });
 
-  test("class tests come first, and distinguish nothing-entered from marks-missing", () => {
+  test("class tests come first, and distinguish nothing-entered from marks-missing from not-submitted", () => {
     const tests: PendingClassTest[] = [
-      { ctId: "CT-1", teacherId: "t1", sectionLabel: "C3", subject: "MATH", dateKey: "2026-07-21", status: "PRINTED", teacherName: "T", results: 0, unmarked: 0 },
-      { ctId: "CT-2", teacherId: "t1", sectionLabel: "C4", subject: "ENG", dateKey: "2026-07-23", status: "PRINTED", teacherName: "T", results: 12, unmarked: 4 },
+      { ctId: "CT-1", teacherId: "t1", sectionLabel: "C3", subject: "MATH", dateKey: "2026-07-21", status: "PRINTED", teacherName: "T", results: 0, unmarked: 0, submitted: false },
+      { ctId: "CT-2", teacherId: "t1", sectionLabel: "C4", subject: "ENG", dateKey: "2026-07-23", status: "PRINTED", teacherName: "T", results: 12, unmarked: 4, submitted: false },
+      { ctId: "CT-3", teacherId: "t1", sectionLabel: "C5", subject: "BAN", dateKey: "2026-07-24", status: "PRINTED", teacherName: "T", results: 17, unmarked: 0, submitted: false },
     ];
     const block = chaseItemsBlock(many(1), tests, labels);
     expect(block).toContain("কোনো ফলাফল নেই");
     expect(block).toContain("৪ জনের নম্বর বাকি");
+    expect(block).toContain("ফলাফল জমা দেওয়া হয়নি");
     expect(block.indexOf("ক্লাস টেস্ট")).toBeLessThan(block.indexOf("বাড়ির কাজ"));
   });
 
