@@ -49,7 +49,7 @@ import SyllabusView from "../../components/SyllabusView";
 import SyllabusMatrix, { type MatrixRow } from "../../components/SyllabusMatrix";
 import { ROUTINE_SUBJECTS } from "@scd/shared";
 import { useAuth } from "../../auth/AuthContext";
-import { STR, bnNum, routineSubjectLabel, examTermLabel } from "../../lib/labels";
+import { STR, bnNum, routineSubjectLabel, examTermLabel, isoDateTimeLabel } from "../../lib/labels";
 import { useState as useLocalState } from "react";
 import { useSyllabusPickers } from "../../lib/useSyllabusPickers";
 import { usePullRefresh } from "../../lib/useRefresh";
@@ -63,6 +63,7 @@ function ApprovalCard({
   mode,
   canPublish,
   onDone,
+  onStale,
 }: {
   row: SyllabusT;
   /** "manage" is Office AND Principal — both hold `exam:manage`. */
@@ -70,6 +71,8 @@ function ApprovalCard({
   /** Publish rides the PRINCIPAL role alone (§7.4); Office manages but cannot release. */
   canPublish?: boolean;
   onDone: () => void;
+  /** Re-read the lists WITHOUT closing the card — used when a call fails. */
+  onStale: () => void;
 }): React.ReactElement {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
@@ -101,6 +104,17 @@ function ApprovalCard({
     const res = await fn();
     if (res.error) {
       setErr(friendlyError(res.error as never));
+      // Refresh on failure TOO, not only on success.
+      //
+      // The queue is filtered to rows that are still TEACHER_REVIEW, so a card
+      // whose row has moved on is a card that can no longer be acted on — every
+      // further press hits a refusal about a stage the teacher cannot see. That
+      // is what turned one phantom error into a teacher pressing অনুমোদন twice
+      // 2ms apart and another sending the same row back three times in twelve
+      // seconds: the failed call left the stale card sitting there.
+      //
+      // If the row genuinely is still theirs the card stays, error and all.
+      onStale();
       return;
     }
     onDone();
@@ -166,11 +180,23 @@ function ApprovalCard({
               actions belong to one stage each. Offering প্রকাশ করুন on a row that is
               still with Office or with the teacher is a button whose only possible
               outcome is the server's refusal. */}
-          {/* WHO holds it, on every stage that has an answer. The board's শি glyph
-              says "with a teacher" and never which one, so this was the one thing
-              the screen could not tell Office without opening the routine. */}
-          {row.approverUserId ? (
-            <Muted>{`${STR.syHeldBy}: ${teacherName(row.approverUserId)}`}</Muted>
+          {/* WHO, and — the part the first version got backwards — WHETHER they
+              have signed yet.
+
+              Showing `approverUserId` under a flat "যার কাছে আছে" made an already
+              approved row read as still waiting on the teacher, which is the
+              opposite of the truth. Who it was SENT TO and who SIGNED IT are two
+              different questions, and only the second is answered by
+              teacherApprovedBy. */}
+          {row.teacherApprovedBy ? (
+            <Muted>
+              {row.teacherBypass
+                ? STR.syApprovedByBypass
+                : `${STR.syApprovedBy}: ${teacherName(row.teacherApprovedBy)}`}
+              {row.teacherApprovedAt ? ` · ${isoDateTimeLabel(row.teacherApprovedAt)}` : ""}
+            </Muted>
+          ) : row.approverUserId ? (
+            <Muted>{`${STR.syAwaitingTeacherFrom}: ${teacherName(row.approverUserId)}`}</Muted>
           ) : null}
 
           {row.status === "DRAFT" ? (
@@ -297,6 +323,11 @@ export default function SyllabusApprovalsScreen(): React.ReactElement {
     refetchMine({ requestPolicy: "network-only" });
     refetchBoard({ requestPolicy: "network-only" });
   });
+  /** Refetch both lists but leave the open card alone. */
+  const refetchAll = (): void => {
+    refetchMine({ requestPolicy: "network-only" });
+    refetchBoard({ requestPolicy: "network-only" });
+  };
   const reload = (): void => {
     refetchMine({ requestPolicy: "network-only" });
     refetchBoard({ requestPolicy: "network-only" });
@@ -313,7 +344,13 @@ export default function SyllabusApprovalsScreen(): React.ReactElement {
       ) : (
         <View style={{ gap: space(3) }}>
           {mine.map((row) => (
-            <ApprovalCard key={row.id ?? row.subject} row={row} mode="teacher" onDone={reload} />
+            <ApprovalCard
+              key={row.id ?? row.subject}
+              row={row}
+              mode="teacher"
+              onDone={reload}
+              onStale={refetchAll}
+            />
           ))}
         </View>
       )}
@@ -356,6 +393,7 @@ export default function SyllabusApprovalsScreen(): React.ReactElement {
               mode="manage"
               canPublish={isPrincipal}
               onDone={reload}
+              onStale={refetchAll}
             />
           ) : null}
         </View>
