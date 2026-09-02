@@ -148,4 +148,20 @@ describe("a ref the deep-link reads must survive the whole wire", () => {
     // only the fallback for a row with no exam id.
     expect(source).toContain('screen: "ClassTestPublish"');
   });
+
+  test("the CT-8 publish notice opens the exam's results, not the tab home", () => {
+    // The teacher is being told the marks reached guardians; ClassTestResultsView is
+    // the screen that shows what was released. ClassTestHome stays the fallback.
+    expect(source).toContain('screen: "ClassTestResultsView"');
+  });
+
+  test("both halves of the loop are id-driven, not kind-driven", () => {
+    // Guards the shape rather than the destination: if either arm is ever flattened
+    // back to a bare `return {tab, screen}`, the recipient silently lands on a list
+    // again — which is the whole bug, twice.
+    for (const kind of ["CT_RESULT_SUBMITTED", "CT_RESULT_PUBLISHED"]) {
+      const arm = source.slice(source.indexOf(`case "${kind}":`));
+      expect(arm.slice(0, arm.indexOf("case ", 1))).toContain("refs?.classTestId");
+    }
+  });
 });

@@ -39,7 +39,7 @@ export interface PrintRequestT {
   sectionNameBn: string | null;
   subject: string | null;
   /** PQ-5: set when this job prints a CLASS TEST's paper — cancelling it retires the
-   *  exam too, so the queue confirms with that spelled out (D-#627). */
+   *  exam too, so the queue confirms with that spelled out (D-#628). */
   classTestId: string | null;
   notes: string | null;
   status: string;

@@ -1224,7 +1224,7 @@ const STR_BN = {
   prMarkPrinted: "ছাপা হয়েছে",
   prMarkDelivered: "ডেলিভারি হয়েছে",
   prCancel: "বাতিল",
-  // D-#627: a CLASS-TEST job is not just paper — cancelling it retires the exam, so the
+  // D-#628: a CLASS-TEST job is not just paper — cancelling it retires the exam, so the
   // confirm says exactly that instead of the generic "are you sure".
   prCancelConfirmTitle: "প্রিন্ট অনুরোধ বাতিল করবেন?",
   prCancelConfirmBody: "কাজটি কিউ থেকে সরে যাবে। ফিরিয়ে আনা যাবে না — প্রয়োজনে নতুন অনুরোধ করতে হবে।",
@@ -3875,7 +3875,7 @@ const STR_BN = {
   ctRetireConfirmBody: "পরীক্ষাটি ড্যাশবোর্ড ও বকেয়া তালিকা থেকে সরে যাবে। রেকর্ড মুছে যায় না — প্রয়োজনে ফিরিয়ে আনা যাবে।",
   ctRetiredBadge: "প্রত্যাহৃত",
   ctRetiredNotice: "এই পরীক্ষাটি প্রত্যাহার করা হয়েছে",
-  // D-#627: a retirement now says who did it, when, and why.
+  // D-#628: a retirement now says who did it, when, and why.
   ctRetiredBy: "প্রত্যাহার করেছেন",
   ctRetiredReasonLabel: "কারণ",
   ctRestoreExam: "ফিরিয়ে আনুন",

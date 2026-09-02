@@ -439,7 +439,7 @@ describe("PQ-5 — a class-test job mirrors onto its ClassTest", () => {
     );
   });
 
-  // D-#627: the retirement this mirror performs must not be anonymous. Three ISLAM
+  // D-#628: the retirement this mirror performs must not be anonymous. Three ISLAM
   // exams were retired this way on 2026-08-30 while their paper jobs were cleared from
   // the queue, days after the exams had been sat; the teacher lost mark entry and no
   // screen could say who had done it, when, or why.

@@ -651,7 +651,7 @@ describe("retireClassTest / restoreClassTest", () => {
     deadlineDays: 2,
     requestedBy: new mongoose.Types.ObjectId(TEACHER_ID),
     requestedAt: new Date(),
-    // The teacher's own note — what the exam covered. D-#627: a retirement must not
+    // The teacher's own note — what the exam covered. D-#628: a retirement must not
     // eat it (the reason used to be written straight over this field).
     notes: "অধ্যায়: ১২ · সময়: 40 মিনিট",
     save: jest.fn().mockResolvedValue(undefined),
@@ -664,7 +664,7 @@ describe("retireClassTest / restoreClassTest", () => {
     const actor = oid().toString();
     const res = await retireClassTest(doc._id.toString(), "  answer papers lost  ", actor);
     expect(res.status).toBe("CANCELLED");
-    // D-#627: the reason has its OWN field, and the teacher's note survives.
+    // D-#628: the reason has its OWN field, and the teacher's note survives.
     expect(res.cancelReason).toBe("answer papers lost"); // trimmed
     expect(res.notes).toBe("অধ্যায়: ১২ · সময়: 40 মিনিট");
     expect(res.cancelledBy).toBe(actor);
@@ -711,7 +711,7 @@ describe("retireClassTest / restoreClassTest", () => {
     );
   });
 
-  // D-#627: undoing the retirement undoes its stamps too — a restored exam that still
+  // D-#628: undoing the retirement undoes its stamps too — a restored exam that still
   // reads "retired by X because Y" is a live exam wearing a retirement.
   test("restore CLEARS the retirement stamps", async () => {
     const doc = {

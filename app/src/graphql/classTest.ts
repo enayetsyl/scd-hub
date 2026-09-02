@@ -40,7 +40,7 @@ export interface ClassTestT {
   requestedAt: string;
   printedBy: string | null;
   printedAt: string | null;
-  /** D-#627 — who/when/why a retired exam was retired (null on a live one). */
+  /** D-#628 — who/when/why a retired exam was retired (null on a live one). */
   cancelledAt: string | null;
   cancelReason: string | null;
   cancelledByName: string | null;

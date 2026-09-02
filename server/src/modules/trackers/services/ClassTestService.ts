@@ -200,7 +200,7 @@ export interface ClassTestShape {
   requestedAt: string;
   printedBy: string | null;
   printedAt: string | null;
-  /** D-#627 — who/when/why a retired exam was retired, so the retired list can say it. */
+  /** D-#628 — who/when/why a retired exam was retired, so the retired list can say it. */
   cancelledBy: string | null;
   cancelledAt: string | null;
   cancelReason: string | null;
@@ -612,7 +612,7 @@ export async function retireClassTest(id: string, reason: string, actorId: strin
 
   const priorStatus = doc.status;
   doc.status = "CANCELLED";
-  // D-#627: the reason lands in its OWN field. It used to overwrite `notes` — the
+  // D-#628: the reason lands in its OWN field. It used to overwrite `notes` — the
   // teacher's chapter/duration line ("অধ্যায়: ১২ · সময়: 40 মিনিট"), destroyed by a
   // retirement and not restored by an undo.
   doc.cancelReason = trimmed;
@@ -762,7 +762,7 @@ export async function restoreClassTest(id: string, actorId: string): Promise<Cla
     throw new Error(`Only a retired exam can be restored (this one is ${doc.status})`);
   }
   doc.status = "PRINTED";
-  // D-#627: the retirement is undone, so its stamps go with it — a restored exam must
+  // D-#628: the retirement is undone, so its stamps go with it — a restored exam must
   // not keep showing "retired by X because Y". Cleared on the in-memory doc (what this
   // call returns) AND $unset explicitly, rather than trusting an assignment of
   // `undefined` to reach the database as an unset.

@@ -126,7 +126,7 @@ PrintRequestRef.implement({
     subject: t.string({ nullable: true, resolve: (v) => v.doc.subject ?? null }),
     /** PQ-5: the class test this job prints the paper for, when it has one. The queue
      *  warns before cancelling such a job — cancelling it RETIRES the exam too, which
-     *  takes mark entry away from the teacher (D-#627). */
+     *  takes mark entry away from the teacher (D-#628). */
     classTestId: t.string({ nullable: true, resolve: (v) => v.doc.classTestId?.toString() ?? null }),
     notes: t.string({ nullable: true, resolve: (v) => v.doc.notes ?? null }),
     status: t.string({ resolve: (v) => v.doc.status }),

@@ -190,7 +190,7 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
             <Badge text={STR.ctRetiredBadge} tone="muted" />
           </View>
           <Notice message={STR.ctRetiredNotice} tone="warn" />
-          {/* D-#627: WHO / WHEN / WHY, so the admin deciding whether to restore is not
+          {/* D-#628: WHO / WHEN / WHY, so the admin deciding whether to restore is not
               guessing. `notes` is the fallback for rows retired before the reason had a
               field of its own (it used to overwrite the teacher's note). */}
           {test.cancelledByName || test.cancelledAt ? (

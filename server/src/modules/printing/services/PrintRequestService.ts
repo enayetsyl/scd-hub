@@ -278,7 +278,7 @@ async function require_(id: string): Promise<IPrintRequest> {
  * lifecycle — its `PRINTED` status is what makes it the official exam (CT-1) — but the
  * Office now advances it from the unified queue, so the two must not drift.
  *
- * The CANCELLED mirror STAMPS who/when/why (D-#627). It used to set `status` alone, so
+ * The CANCELLED mirror STAMPS who/when/why (D-#628). It used to set `status` alone, so
  * withdrawing a paper job retired the exam anonymously: on 2026-08-30 three ISLAM exams
  * that had already been SAT (CT-C3/C4/C5-ISLAM-0001) were retired this way while their
  * jobs were cleared from the queue, and the teacher lost mark entry with nothing on any

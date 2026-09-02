@@ -114,7 +114,7 @@ ClassTestRef.implement({
     requestedAt: t.exposeString("requestedAt"),
     printedBy: t.string({ nullable: true, resolve: (r) => r.printedBy }),
     printedAt: t.string({ nullable: true, resolve: (r) => r.printedAt }),
-    /** D-#627 — a retirement must be able to explain itself: who, when, why. Only a
+    /** D-#628 — a retirement must be able to explain itself: who, when, why. Only a
      *  CANCELLED row carries them, and only it pays the name lookup. */
     cancelledAt: t.string({ nullable: true, resolve: (r) => r.cancelledAt }),
     cancelReason: t.string({ nullable: true, resolve: (r) => r.cancelReason }),
