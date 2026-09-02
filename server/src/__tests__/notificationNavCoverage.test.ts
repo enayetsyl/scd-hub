@@ -105,3 +105,47 @@ describe("a work-claim tap can reach the right list", () => {
     expect(model).toContain("workClaimTracker: { type: String }");
   });
 });
+
+describe("a ref the deep-link reads must survive the whole wire", () => {
+  // The CT-8 submit notice repeated WC-6 exactly: `classTestId`/`ctId` were written
+  // onto the row and stored, but neither the GraphQL type nor the app's selection
+  // named them — so the approver's tap fell through to the dashboard and they had to
+  // re-find the exam by hand. Rather than assert one more kind by name, assert the
+  // RULE: every ref the switch branches on is selected by the app and exposed by the
+  // server. A ref nobody selects is always `null`, and a `null` ref silently takes
+  // the fallback branch — which is why both bugs looked like a working deep-link.
+  const ops = readFileSync(path.resolve(__dirname, "../../../app/src/graphql/operations.ts"), "utf8");
+  const resolver = readFileSync(
+    path.resolve(__dirname, "../modules/notifications/resolvers/notifications.ts"),
+    "utf8",
+  );
+  const model = readFileSync(
+    path.resolve(__dirname, "../modules/notifications/models/Notification.ts"),
+    "utf8",
+  );
+  const refsRead = [...new Set([...source.matchAll(/\brefs\??\.(\w+)/g)].map((m) => m[1]))];
+  const selection = ops.slice(ops.indexOf("const NOTIFICATION_FIELDS"), ops.indexOf("MY_NOTIFICATIONS_QUERY"));
+
+  test("the reader found some refs at all (guard against an empty sweep)", () => {
+    expect(refsRead).toContain("classTestId");
+    expect(refsRead.length).toBeGreaterThan(4);
+  });
+
+  test("the app selects every ref it navigates on", () => {
+    expect(refsRead.filter((r) => !selection.includes(r))).toEqual([]);
+  });
+
+  test("the server exposes every ref the app navigates on", () => {
+    expect(refsRead.filter((r) => !resolver.includes(`${r}: t.`))).toEqual([]);
+  });
+
+  test("and mongoose declares them — an undeclared ref is stripped on write", () => {
+    expect(refsRead.filter((r) => !model.includes(`${r}: { type:`))).toEqual([]);
+  });
+
+  test("the CT-8 submit notice opens the exam, not the dashboard", () => {
+    // The approve / send-back buttons live on ClassTestPublish; the dashboard is
+    // only the fallback for a row with no exam id.
+    expect(source).toContain('screen: "ClassTestPublish"');
+  });
+});

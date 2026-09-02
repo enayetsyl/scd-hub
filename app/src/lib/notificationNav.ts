@@ -97,11 +97,19 @@ export function notificationTarget(
     case "CT_QUESTION_OFFICE":
       return { tab: "ClassTestTab", screen: "CtQuestionQueue" };
 
-    // CT-8 submit/approve loop: the approver (Principal/Office) lands on the
-    // dashboard (submitted badge + per-test drill-down); the teacher lands on
-    // their class-test home where the published exam lives.
+    // CT-8 submit/approve loop: the approver (Principal/Office) lands ON the exam's
+    // publish screen — approve / send back is right there. This used to open the
+    // dashboard, which made the approver re-find the test by hand. No id on the row
+    // → the dashboard, as before. The teacher lands on their class-test home where
+    // the published exam lives.
     case "CT_RESULT_SUBMITTED":
-      return { tab: "ClassTestTab", screen: "ClassTestDashboard" };
+      return refs?.classTestId
+        ? {
+            tab: "ClassTestTab",
+            screen: "ClassTestPublish",
+            params: { testId: refs.classTestId, title: refs.ctId ?? "" },
+          }
+        : { tab: "ClassTestTab", screen: "ClassTestDashboard" };
     case "CT_RESULT_PUBLISHED":
       return { tab: "ClassTestTab", screen: "ClassTestHome" };
 
