@@ -29,6 +29,10 @@ export interface SyllabusT {
   classLabel: string;
   /** The teacher this row was sent to, once sent. Null while it is still a draft. */
   approverUserId: string | null;
+  /** Who signed it off and when — NOT the same question as who it was sent to. */
+  teacherApprovedBy: string | null;
+  teacherApprovedAt: string | null;
+  teacherBypass: boolean;
   subject: string;
   bodyMd: string;
   marks: SyllabusMarkRowT[];
@@ -61,7 +65,7 @@ export interface SyllabusApproverT {
 }
 
 const SYLLABUS_FIELDS = `
-  id examId classId classLabel approverUserId subject bodyMd questionTypes examDateKey status sendBackReason
+  id examId classId classLabel approverUserId teacherApprovedBy teacherApprovedAt teacherBypass subject bodyMd questionTypes examDateKey status sendBackReason
   isMine writtenMarks oralMarks totalMarks pending
   marks { seq label itemType component count marksEach total }
 `;

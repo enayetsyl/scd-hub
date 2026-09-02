@@ -32,6 +32,7 @@ import {
 import {
   classSyllabus,
   syllabusDetail,
+  syllabusAfterWrite,
   guardianChildSyllabus,
   mySyllabusApprovals,
   mySyllabusApprovalCount,
@@ -72,6 +73,9 @@ SyllabusRef.implement({
     classId: t.exposeString("classId"),
     classLabel: t.exposeString("classLabel"),
     approverUserId: t.string({ nullable: true, resolve: (r) => r.approverUserId }),
+    teacherApprovedBy: t.string({ nullable: true, resolve: (r) => r.teacherApprovedBy }),
+    teacherApprovedAt: t.string({ nullable: true, resolve: (r) => r.teacherApprovedAt }),
+    teacherBypass: t.exposeBoolean("teacherBypass"),
     subject: t.exposeString("subject"),
     bodyMd: t.exposeString("bodyMd"),
     marks: t.field({ type: [MarkRowRef], resolve: (r) => r.marks }),
@@ -295,12 +299,7 @@ builder.mutationFields((t) => ({
         questionTypes: args.questionTypes as SyllabusShape["questionTypes"],
         examDateKey: args.examDateKey ?? null,
       });
-      return (await syllabusDetail(
-        ctx,
-        doc.examId.toString(),
-        doc.classId.toString(),
-        doc.subject,
-      ))!;
+      return syllabusAfterWrite(ctx, doc);
     },
   }),
 
@@ -316,12 +315,7 @@ builder.mutationFields((t) => ({
     },
     resolve: async (_root, args, ctx) => {
       const doc = await submitSyllabusToTeacher(ctx, args.id, args.approverUserId ?? null);
-      return (await syllabusDetail(
-        ctx,
-        doc.examId.toString(),
-        doc.classId.toString(),
-        doc.subject,
-      ))!;
+      return syllabusAfterWrite(ctx, doc);
     },
   }),
 
@@ -339,12 +333,7 @@ builder.mutationFields((t) => ({
     },
     resolve: async (_root, args, ctx) => {
       const doc = await reassignSyllabusApprover(ctx, args.id, args.approverUserId);
-      return (await syllabusDetail(
-        ctx,
-        doc.examId.toString(),
-        doc.classId.toString(),
-        doc.subject,
-      ))!;
+      return syllabusAfterWrite(ctx, doc);
     },
   }),
 
@@ -357,12 +346,7 @@ builder.mutationFields((t) => ({
     args: { id: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       const doc = await approveSyllabusAsTeacher(ctx, args.id);
-      return (await syllabusDetail(
-        ctx,
-        doc.examId.toString(),
-        doc.classId.toString(),
-        doc.subject,
-      ))!;
+      return syllabusAfterWrite(ctx, doc);
     },
   }),
 
@@ -376,12 +360,7 @@ builder.mutationFields((t) => ({
     },
     resolve: async (_root, args, ctx) => {
       const doc = await sendBackSyllabus(ctx, args.id, args.reason);
-      return (await syllabusDetail(
-        ctx,
-        doc.examId.toString(),
-        doc.classId.toString(),
-        doc.subject,
-      ))!;
+      return syllabusAfterWrite(ctx, doc);
     },
   }),
 
@@ -394,12 +373,7 @@ builder.mutationFields((t) => ({
     args: { id: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       const doc = await publishSyllabus(ctx, args.id);
-      return (await syllabusDetail(
-        ctx,
-        doc.examId.toString(),
-        doc.classId.toString(),
-        doc.subject,
-      ))!;
+      return syllabusAfterWrite(ctx, doc);
     },
   }),
 }));

@@ -53,6 +53,19 @@ export interface SyllabusShape {
    * resolving here would be a user lookup per row on a whole-school board.
    */
   approverUserId: string | null;
+  /**
+   * WHO signed it off, and WHEN — distinct from `approverUserId`, which is only
+   * who it was sent TO.
+   *
+   * The screen showed the approver alone and labelled it "যার কাছে আছে" at every
+   * stage, so a row the teacher had already approved still read as waiting on
+   * them — the opposite of the truth. Whether the sign-off has happened is not
+   * derivable from `approverUserId`; it needs these.
+   */
+  teacherApprovedBy: string | null;
+  teacherApprovedAt: string | null;
+  /** The §7.2 case: the Principal signed in the teacher's place, routine naming nobody. */
+  teacherBypass: boolean;
   subject: RoutineSubject;
   bodyMd: string;
   marks: ISyllabusMarkRow[];
@@ -114,6 +127,9 @@ function toShape(
     status: SyllabusStatus;
     sendBackReason?: string | null;
     approverUserId?: Types.ObjectId | null;
+    teacherApprovedBy?: Types.ObjectId | null;
+    teacherApprovedAt?: Date | null;
+    teacherBypass?: boolean;
   },
   isMine: boolean,
   classLabel: string,
@@ -124,6 +140,9 @@ function toShape(
     classId: row.classId.toString(),
     classLabel,
     approverUserId: row.approverUserId?.toString() ?? null,
+    teacherApprovedBy: row.teacherApprovedBy?.toString() ?? null,
+    teacherApprovedAt: row.teacherApprovedAt?.toISOString() ?? null,
+    teacherBypass: row.teacherBypass ?? false,
     subject: row.subject,
     bodyMd: row.bodyMd,
     marks: row.marks,
@@ -151,6 +170,9 @@ function placeholder(
     classLabel,
     // Nothing is stored yet, so nobody holds it.
     approverUserId: null,
+    teacherApprovedBy: null,
+    teacherApprovedAt: null,
+    teacherBypass: false,
     subject,
     bodyMd: "",
     marks: [],
@@ -322,6 +344,40 @@ export async function syllabusDetail(
   } | null;
   const isMine = mine === null ? false : mine.has(`${cls?.level ?? 0}:${subject}`);
   return toShape(row, isMine, cls?.nameBn ?? "");
+}
+
+/**
+ * The row a caller has JUST WRITTEN, shaped for the mutation's response.
+ *
+ * NOT `syllabusDetail`. That read is published-only for anyone who is not
+ * Principal/Office — and a teacher approving a syllabus is BY DEFINITION acting
+ * on an unpublished one, because approval is the step BEFORE publication. Every
+ * teacher approve and send-back therefore threw
+ * "এই সিলেবাস এখনও প্রকাশ করা হয়নি" *after* the write had already committed: the
+ * status moved, the audit row was written, and the teacher saw a red banner and
+ * pressed the button again. The prod audit log shows exactly that — one teacher
+ * approving the same row twice 2ms apart, another sending one back three times
+ * in twelve seconds.
+ *
+ * There is no permission decision being skipped here. The service that produced
+ * `doc` has already authorised THIS actor for THIS row; re-deriving the right to
+ * see it from `publishedAt` asks a different question than the one that was
+ * just answered. `isMine` and `classLabel` are still resolved per caller.
+ */
+export async function syllabusAfterWrite(
+  ctx: AppContext,
+  doc: Parameters<typeof toShape>[0],
+): Promise<SyllabusShape> {
+  if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+
+  const classId = doc.classId.toString();
+  const mine = await myPairKeys(ctx);
+  const cls = (await Class.findById(classId).select("nameBn level").lean()) as unknown as {
+    nameBn?: string;
+    level?: number;
+  } | null;
+  const isMine = mine === null ? false : mine.has(`${cls?.level ?? 0}:${doc.subject}`);
+  return toShape(doc, isMine, cls?.nameBn ?? "");
 }
 
 /**
