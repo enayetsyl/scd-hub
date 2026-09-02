@@ -97,13 +97,32 @@ export function notificationTarget(
     case "CT_QUESTION_OFFICE":
       return { tab: "ClassTestTab", screen: "CtQuestionQueue" };
 
-    // CT-8 submit/approve loop: the approver (Principal/Office) lands on the
-    // dashboard (submitted badge + per-test drill-down); the teacher lands on
-    // their class-test home where the published exam lives.
+    // CT-8 submit/approve loop, both halves on the exam itself rather than on a list
+    // the recipient then has to search. Each falls back to its old list screen when
+    // the row carries no exam id.
+    //   SUBMITTED → the approver (Principal/Office) lands on the publish screen,
+    //   where approve / send back are. It used to open the dashboard, which made
+    //   them re-find the test by hand.
+    //   PUBLISHED → the exam's teacher lands on the read-only results view: the
+    //   notice tells them the marks reached guardians, and this is the screen that
+    //   shows what was released. NOT the publish screen — nothing is left for them
+    //   to do there once it is out.
     case "CT_RESULT_SUBMITTED":
-      return { tab: "ClassTestTab", screen: "ClassTestDashboard" };
+      return refs?.classTestId
+        ? {
+            tab: "ClassTestTab",
+            screen: "ClassTestPublish",
+            params: { testId: refs.classTestId, title: refs.ctId ?? "" },
+          }
+        : { tab: "ClassTestTab", screen: "ClassTestDashboard" };
     case "CT_RESULT_PUBLISHED":
-      return { tab: "ClassTestTab", screen: "ClassTestHome" };
+      return refs?.classTestId
+        ? {
+            tab: "ClassTestTab",
+            screen: "ClassTestResultsView",
+            params: { testId: refs.classTestId, title: refs.ctId ?? "" },
+          }
+        : { tab: "ClassTestTab", screen: "ClassTestHome" };
 
     // Guardian chase/result/delivery kinds → the child's screen; the staff
     // fallbacks are defensive (these kinds are guardian-addressed today).

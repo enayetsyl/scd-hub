@@ -1224,6 +1224,13 @@ const STR_BN = {
   prMarkPrinted: "ছাপা হয়েছে",
   prMarkDelivered: "ডেলিভারি হয়েছে",
   prCancel: "বাতিল",
+  // D-#628: a CLASS-TEST job is not just paper — cancelling it retires the exam, so the
+  // confirm says exactly that instead of the generic "are you sure".
+  prCancelConfirmTitle: "প্রিন্ট অনুরোধ বাতিল করবেন?",
+  prCancelConfirmBody: "কাজটি কিউ থেকে সরে যাবে। ফিরিয়ে আনা যাবে না — প্রয়োজনে নতুন অনুরোধ করতে হবে।",
+  prCancelCtConfirmTitle: "এটি একটি ক্লাস টেস্টের প্রশ্নপত্র",
+  prCancelCtConfirmBody:
+    "এই অনুরোধ বাতিল করলে ক্লাস টেস্টটিও প্রত্যাহৃত হবে — শিক্ষক আর ওই পরীক্ষার নম্বর দিতে পারবেন না। পরীক্ষা হয়ে গিয়ে থাকলে বাতিল করবেন না; শুধু কাগজের কাজটি বন্ধ করতে হলে 'ছাপা হয়েছে' দিন।",
   prNoJobs: "কোনো কাজ নেই",
   prCreated: "অনুরোধ পাঠানো হয়েছে",
   prRequester: "অনুরোধকারী",
@@ -3868,6 +3875,9 @@ const STR_BN = {
   ctRetireConfirmBody: "পরীক্ষাটি ড্যাশবোর্ড ও বকেয়া তালিকা থেকে সরে যাবে। রেকর্ড মুছে যায় না — প্রয়োজনে ফিরিয়ে আনা যাবে।",
   ctRetiredBadge: "প্রত্যাহৃত",
   ctRetiredNotice: "এই পরীক্ষাটি প্রত্যাহার করা হয়েছে",
+  // D-#628: a retirement now says who did it, when, and why.
+  ctRetiredBy: "প্রত্যাহার করেছেন",
+  ctRetiredReasonLabel: "কারণ",
   ctRestoreExam: "ফিরিয়ে আনুন",
   ctRetiredList: "প্রত্যাহৃত পরীক্ষা",
   ctRetireBlocked: "নম্বর দেওয়া পরীক্ষা প্রত্যাহার করা যায় না — আগে প্রকাশ বাতিল করে নম্বর সরান।",
@@ -5389,6 +5399,11 @@ const STR_EN: StrTable = {
   prMarkPrinted: "Mark printed",
   prMarkDelivered: "Mark delivered",
   prCancel: "Cancel",
+  prCancelConfirmTitle: "Cancel this print job?",
+  prCancelConfirmBody: "It leaves the queue. This cannot be undone — a new request would be needed.",
+  prCancelCtConfirmTitle: "This is a class test's question paper",
+  prCancelCtConfirmBody:
+    "Cancelling this job RETIRES the class test too — the teacher will no longer be able to enter its marks. If the exam has already been sat, do not cancel: mark it printed to close the paper job instead.",
   prNoJobs: "Nothing here",
   prCreated: "Print request sent",
   prRequester: "Requested by",
@@ -8023,6 +8038,8 @@ const STR_EN: StrTable = {
   ctRetireConfirmBody: "It leaves the dashboard and the overdue lists. The record is not deleted — it can be restored.",
   ctRetiredBadge: "Retired",
   ctRetiredNotice: "This exam has been retired",
+  ctRetiredBy: "Retired by",
+  ctRetiredReasonLabel: "Reason",
   ctRestoreExam: "Restore",
   ctRetiredList: "Retired exams",
   ctRetireBlocked: "An exam with marks cannot be retired — unpublish and remove the marks first.",

@@ -83,6 +83,16 @@ export interface IClassTest extends Document {
   requestedAt: Date;
   printedBy?: Types.ObjectId;
   printedAt?: Date;
+  /** WHO/WHEN/WHY this exam went CANCELLED (retired or withdrawn). Written by every
+   *  route into CANCELLED — the deliberate `retireClassTest`, the Office's
+   *  `cancelRequest`, and the print-queue mirror — and cleared on restore. Without
+   *  these a retirement was anonymous: a prod exam (CT-C3/C4/C5-ISLAM-0001,
+   *  2026-08-30) was retired as a side effect of a print-queue cancel and the retired
+   *  list could not say by whom, when, or why. `cancelReason` also stops the
+   *  retire reason from CLOBBERING the teacher's own `notes` (chapter/duration). */
+  cancelledBy?: Types.ObjectId;
+  cancelledAt?: Date;
+  cancelReason?: string;
   notes?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -112,6 +122,9 @@ const ClassTestSchema = new Schema<IClassTest>(
     requestedAt: { type: Date, required: true, default: () => new Date() },
     printedBy: { type: Schema.Types.ObjectId },
     printedAt: { type: Date },
+    cancelledBy: { type: Schema.Types.ObjectId },
+    cancelledAt: { type: Date },
+    cancelReason: { type: String, trim: true },
     notes: { type: String, trim: true },
   },
   { timestamps: true },
