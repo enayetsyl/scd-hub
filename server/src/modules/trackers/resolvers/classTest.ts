@@ -43,6 +43,7 @@ import {
 } from "../../../middleware/authz";
 import { assertAnchorRead, assertAnchorWrite, groupNameBn } from "../classTestAnchor";
 import { Subject } from "../../foundation/models/Subject";
+import { User } from "../../foundation/models/User";
 import type { Types } from "mongoose";
 import { isAdminStaff } from "../../foundation/services/RoleScope";
 
@@ -113,6 +114,18 @@ ClassTestRef.implement({
     requestedAt: t.exposeString("requestedAt"),
     printedBy: t.string({ nullable: true, resolve: (r) => r.printedBy }),
     printedAt: t.string({ nullable: true, resolve: (r) => r.printedAt }),
+    /** D-#628 — a retirement must be able to explain itself: who, when, why. Only a
+     *  CANCELLED row carries them, and only it pays the name lookup. */
+    cancelledAt: t.string({ nullable: true, resolve: (r) => r.cancelledAt }),
+    cancelReason: t.string({ nullable: true, resolve: (r) => r.cancelReason }),
+    cancelledByName: t.string({
+      nullable: true,
+      resolve: async (r) => {
+        if (!r.cancelledBy) return null;
+        const u = (await User.findById(r.cancelledBy).select("name").lean()) as { name?: string } | null;
+        return u?.name ?? null;
+      },
+    }),
     notes: t.string({ nullable: true, resolve: (r) => r.notes }),
   }),
 });

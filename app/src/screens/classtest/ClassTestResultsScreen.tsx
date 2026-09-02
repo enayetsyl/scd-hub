@@ -21,7 +21,7 @@ import {
   UPDATE_CLASS_TEST_DETAILS,
 } from "../../graphql/classTest";
 import { Screen, Card, Body, Muted, Button, Badge, Chip, Field, Loader, Notice } from "../../components/ui";
-import { STR, hwSubjectLabel, ctUnitLabel, bnNum } from "../../lib/labels";
+import { STR, hwSubjectLabel, ctUnitLabel, bnNum, isoDateLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useAuth } from "../../auth/AuthContext";
 import { useToast } from "../../state/ToastContext";
@@ -190,7 +190,20 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
             <Badge text={STR.ctRetiredBadge} tone="muted" />
           </View>
           <Notice message={STR.ctRetiredNotice} tone="warn" />
-          {test.notes ? <Muted>{test.notes}</Muted> : null}
+          {/* D-#628: WHO / WHEN / WHY, so the admin deciding whether to restore is not
+              guessing. `notes` is the fallback for rows retired before the reason had a
+              field of its own (it used to overwrite the teacher's note). */}
+          {test.cancelledByName || test.cancelledAt ? (
+            <Muted>
+              {STR.ctRetiredBy}: {test.cancelledByName ?? "—"}
+              {test.cancelledAt ? ` · ${isoDateLabel(test.cancelledAt)}` : ""}
+            </Muted>
+          ) : null}
+          {(test.cancelReason ?? test.notes) ? (
+            <Muted>
+              {STR.ctRetiredReasonLabel}: {test.cancelReason ?? test.notes}
+            </Muted>
+          ) : null}
           {isAdmin ? (
             <View style={{ marginTop: space(3) }}>
               <Button
