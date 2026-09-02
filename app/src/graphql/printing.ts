@@ -38,6 +38,9 @@ export interface PrintRequestT {
   sectionId: string | null;
   sectionNameBn: string | null;
   subject: string | null;
+  /** PQ-5: set when this job prints a CLASS TEST's paper — cancelling it retires the
+   *  exam too, so the queue confirms with that spelled out (D-#627). */
+  classTestId: string | null;
   notes: string | null;
   status: string;
   requestedBy: string;
@@ -52,7 +55,7 @@ const PRINT_REQUEST_FIELDS = `
   id title purpose sourceType setId contentArtifactId fileIds linkUrl
   files { id name mime }
   colour sides copies copiesMode copiesClassId copiesClassLevel effectiveCopies copiesPending
-  neededByKey classId classLevel sectionId sectionNameBn subject notes status
+  neededByKey classId classLevel sectionId sectionNameBn subject classTestId notes status
   requestedBy requesterName requestedAt printedAt deliveredAt cancelReason
 `;
 

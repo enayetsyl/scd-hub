@@ -270,7 +270,24 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
             variant="danger"
             disabled={busy}
             onPress={async () => {
-              if (!(await confirmAction({ confirmLabel: STR.prCancel }))) return;
+              // D-#627: cancelling a CLASS-TEST job mirrors onto the exam and retires it,
+              // taking mark entry away from the teacher. The confirm must say so — a
+              // generic "are you sure" cost three ISLAM exams on 2026-08-30, cleared from
+              // the queue days AFTER they had been sat.
+              const ok = await confirmAction(
+                r.classTestId
+                  ? {
+                      title: STR.prCancelCtConfirmTitle,
+                      message: STR.prCancelCtConfirmBody,
+                      confirmLabel: STR.prCancel,
+                    }
+                  : {
+                      title: STR.prCancelConfirmTitle,
+                      message: STR.prCancelConfirmBody,
+                      confirmLabel: STR.prCancel,
+                    },
+              );
+              if (!ok) return;
               await run(() => cancelRequest({ id: r.id }), STR.prCancelledOk);
             }}
           />

@@ -40,10 +40,14 @@ export interface ClassTestT {
   requestedAt: string;
   printedBy: string | null;
   printedAt: string | null;
+  /** D-#627 — who/when/why a retired exam was retired (null on a live one). */
+  cancelledAt: string | null;
+  cancelReason: string | null;
+  cancelledByName: string | null;
   notes: string | null;
 }
 
-const CLASS_TEST_FIELDS = `id ctId academicYearId classLevel classId sectionId subjectGroupId groupNameBn subject testNumber examDate totalMarks passMark source setId questionFileId status deadlineDays teacherId requestedBy requestedAt printedBy printedAt notes`;
+const CLASS_TEST_FIELDS = `id ctId academicYearId classLevel classId sectionId subjectGroupId groupNameBn subject testNumber examDate totalMarks passMark source setId questionFileId status deadlineDays teacherId requestedBy requestedAt printedBy printedAt cancelledAt cancelReason cancelledByName notes`;
 
 /** The exam's own roster (D-#507) — the section's students, or the Arabic group's
  *  members with the class·section each comes from. Replaces `studentsInSection` on

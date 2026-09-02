@@ -261,6 +261,11 @@ export async function createPrintRequest(input: CreatePrintRequestInput): Promis
   return doc;
 }
 
+/** Why a mirrored exam is retired — shown on the retired exam's own screen, so the
+ *  admin restoring it can see this was a print-queue withdrawal, not a decision about
+ *  the exam. Bangla: it is read by teachers/admins on screen (AGENTS language rule). */
+export const CANCEL_VIA_PRINT_QUEUE_BN = "প্রিন্ট অনুরোধ বাতিল করায় পরীক্ষাটিও প্রত্যাহত হয়েছে";
+
 /** Load a request or fail loudly. */
 async function require_(id: string): Promise<IPrintRequest> {
   const doc = await PrintRequest.findById(id);
@@ -272,6 +277,13 @@ async function require_(id: string): Promise<IPrintRequest> {
  * Mirror a transition onto the linked ClassTest (PQ-5). The class test keeps its own
  * lifecycle — its `PRINTED` status is what makes it the official exam (CT-1) — but the
  * Office now advances it from the unified queue, so the two must not drift.
+ *
+ * The CANCELLED mirror STAMPS who/when/why (D-#627). It used to set `status` alone, so
+ * withdrawing a paper job retired the exam anonymously: on 2026-08-30 three ISLAM exams
+ * that had already been SAT (CT-C3/C4/C5-ISLAM-0001) were retired this way while their
+ * jobs were cleared from the queue, and the teacher lost mark entry with nothing on any
+ * screen saying what had happened. The queue now warns before this, and the stamp makes
+ * the retired list able to explain itself.
  */
 async function mirrorToClassTest(
   doc: IPrintRequest,
@@ -282,7 +294,12 @@ async function mirrorToClassTest(
   const stamps =
     status === "PRINTED"
       ? { status, printedBy: new Types.ObjectId(actorId), printedAt: new Date() }
-      : { status };
+      : {
+          status,
+          cancelledBy: new Types.ObjectId(actorId),
+          cancelledAt: new Date(),
+          cancelReason: CANCEL_VIA_PRINT_QUEUE_BN,
+        };
   await ClassTest.updateOne({ _id: doc.classTestId, status: "REQUESTED" }, { $set: stamps });
   await writeAudit({
     eventKind: status === "PRINTED" ? "CLASS_TEST_PRINTED" : "CLASS_TEST_CANCELLED",

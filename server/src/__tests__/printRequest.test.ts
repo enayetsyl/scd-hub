@@ -118,6 +118,7 @@ import {
   markPrinted,
   markDelivered,
   cancelPrintRequest,
+  CANCEL_VIA_PRINT_QUEUE_BN,
   validateSource,
   isPrintableUrl,
   effectiveCopiesFor,
@@ -436,6 +437,35 @@ describe("PQ-5 — a class-test job mirrors onto its ClassTest", () => {
     expect(mockWriteAudit).toHaveBeenCalledWith(
       expect.objectContaining({ eventKind: "CLASS_TEST_CANCELLED", targetKind: "ClassTest" }),
     );
+  });
+
+  // D-#627: the retirement this mirror performs must not be anonymous. Three ISLAM
+  // exams were retired this way on 2026-08-30 while their paper jobs were cleared from
+  // the queue, days after the exams had been sat; the teacher lost mark entry and no
+  // screen could say who had done it, when, or why.
+  test("the cancel mirror STAMPS who/when/why on the retired exam", async () => {
+    const doc = docStub({ classTestId: CT });
+    mockFindById.mockResolvedValue(doc);
+    await cancelPrintRequest(doc._id.toString(), OFFICE, { isOffice: true });
+    const [, update] = mockClassTestUpdateOne.mock.calls.at(-1) as [
+      unknown,
+      { $set: Record<string, unknown> },
+    ];
+    expect(update.$set.cancelledBy).toEqual(new mongoose.Types.ObjectId(OFFICE));
+    expect(update.$set.cancelledAt).toBeInstanceOf(Date);
+    expect(update.$set.cancelReason).toBe(CANCEL_VIA_PRINT_QUEUE_BN);
+  });
+
+  test("the PRINTED mirror carries no cancel stamps", async () => {
+    const doc = docStub({ classTestId: CT });
+    mockFindById.mockResolvedValue(doc);
+    await markPrinted(doc._id.toString(), OFFICE);
+    const [, update] = mockClassTestUpdateOne.mock.calls.at(-1) as [
+      unknown,
+      { $set: Record<string, unknown> },
+    ];
+    expect(update.$set).not.toHaveProperty("cancelledBy");
+    expect(update.$set).not.toHaveProperty("cancelReason");
   });
 
   test("an ordinary job (no classTestId) never touches ClassTest", async () => {
