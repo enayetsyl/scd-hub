@@ -9,6 +9,16 @@ import { getItem, setItem, removeItem } from "./storage";
 
 const TOKEN_KEY = "scd_token";
 
+/**
+ * The Principal's OWN token, parked here while they work inside someone else's account
+ * ("View as", VA-1, D-#638).
+ *
+ * It is a separate key rather than in-memory state on purpose: a reload, a crash or a
+ * killed app during a borrowed session must still be able to hand the Principal their own
+ * account back. Boot checks this key before trusting `scd_token`.
+ */
+const REAL_TOKEN_KEY = "scd_token_real";
+
 let current: string | null = null;
 
 export function getToken(): string | null {
@@ -26,4 +36,15 @@ export async function persistToken(token: string | null): Promise<void> {
   current = token;
   if (token) await setItem(TOKEN_KEY, token);
   else await removeItem(TOKEN_KEY);
+}
+
+/** The Principal's parked token, if a View-as session is (or was) in progress. */
+export async function getRealToken(): Promise<string | null> {
+  return getItem(REAL_TOKEN_KEY);
+}
+
+/** Park (or, with null, discard) the Principal's own token. */
+export async function persistRealToken(token: string | null): Promise<void> {
+  if (token) await setItem(REAL_TOKEN_KEY, token);
+  else await removeItem(REAL_TOKEN_KEY);
 }

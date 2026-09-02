@@ -6,8 +6,15 @@
  */
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react";
 import { useClient } from "urql";
-import { ME_QUERY, STAFF_LOGIN, GUARDIAN_LOGIN, type MeUser } from "../graphql/operations";
-import { hydrateToken, persistToken } from "../lib/tokenStore";
+import {
+  ME_QUERY,
+  STAFF_LOGIN,
+  GUARDIAN_LOGIN,
+  START_IMPERSONATION,
+  END_IMPERSONATION,
+  type MeUser,
+} from "../graphql/operations";
+import { hydrateToken, persistToken, getRealToken, persistRealToken, getToken } from "../lib/tokenStore";
 import { getItem, setItem, removeItem } from "../lib/storage";
 import { clearNavState } from "../lib/navState";
 import { friendlyError } from "../lib/errors";
@@ -19,6 +26,27 @@ type Status = "loading" | "authed" | "anon";
 
 /** Where the chosen hat is persisted, so a reload/relaunch keeps the user in it. */
 const VIEW_MODE_KEY = "scd_view_mode";
+
+/** Who the Principal is currently viewing as, and until when (VA-1, D-#638). */
+const VIEW_AS_KEY = "scd_view_as";
+
+/** The borrowed session, as the banner needs to render it. */
+export interface ViewAsSession {
+  name: string;
+  role: Role;
+  /** Epoch ms. The server's TTL, resolved to wall-clock at the moment of the swap. */
+  expiresAt: number;
+}
+
+function parseViewAs(raw: string | null): ViewAsSession | null {
+  if (!raw) return null;
+  try {
+    const v = JSON.parse(raw) as ViewAsSession;
+    return v && typeof v.name === "string" && typeof v.expiresAt === "number" ? v : null;
+  } catch {
+    return null;
+  }
+}
 
 interface AuthContextValue {
   status: Status;
@@ -58,6 +86,15 @@ interface AuthContextValue {
   setViewMode: (mode: Role | null) => void;
   login: (email: string, password: string) => Promise<{ ok: boolean; message?: string }>;
   logout: () => Promise<void>;
+  /** The account being borrowed right now, or null in one's own account (VA-1, D-#638). */
+  viewAs: ViewAsSession | null;
+  /** True while wearing someone else's account. Gates the banner AND every device-bound
+   *  side effect — see the push-registration guard below. */
+  isImpersonating: boolean;
+  /** Open another account's view. Principal only; the server is the gate. */
+  startViewAs: (targetId: string, targetKind: "STAFF" | "GUARDIAN") => Promise<{ ok: boolean; message?: string }>;
+  /** Hand the Principal their own account back. Also the expiry path. */
+  returnToSelf: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -69,6 +106,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
   const [rawPermissions, setRawPermissions] = useState<string[]>([]);
   const [templates, setTemplates] = useState<Role[]>([]);
   const [storedMode, setStoredMode] = useState<Role | null>(null);
+  const [viewAs, setViewAs] = useState<ViewAsSession | null>(null);
 
   const resolveMe = useCallback(async (): Promise<MeUser | null> => {
     const res = await client.query(ME_QUERY, {}, { requestPolicy: "network-only" }).toPromise();
@@ -97,7 +135,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const token = await hydrateToken();
+      let token = await hydrateToken();
+
+      /**
+       * Recover from a View-as session that outlived the app (VA-1, G5). A crash, a
+       * reload or a relaunch must never strand the Principal in someone else's account
+       * — or, worse, log them out because a borrowed token had quietly expired.
+       *
+       * A parked token that is past its window (or has no session record at all) is
+       * simply taken back before anything else runs.
+       */
+      const parked = await getRealToken();
+      if (parked) {
+        const saved = parseViewAs(await getItem(VIEW_AS_KEY));
+        if (!token || !saved || saved.expiresAt <= Date.now()) {
+          await persistToken(parked);
+          await persistRealToken(null);
+          await removeItem(VIEW_AS_KEY);
+          await clearNavState();
+          token = parked;
+        } else if (!cancelled) {
+          setViewAs(saved);
+        }
+      }
+
       if (!token) {
         if (!cancelled) setStatus("anon");
         return;
@@ -117,11 +178,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
     };
   }, [resolveMe]);
 
-  // Register this device for push once authenticated (AT-4, D-#65). Best-effort;
-  // never blocks the session (web/simulator/denied → silent no-op).
+  /**
+   * Register this device for push once authenticated (AT-4, D-#65). Best-effort;
+   * never blocks the session (web/simulator/denied → silent no-op).
+   *
+   * NOT while impersonating (VA-1, G4). This effect fires on every transition to
+   * `authed`, so a borrowed session would bind the PRINCIPAL's device to the teacher's
+   * user id — her উপস্থিতি রিমাইন্ডার would then ring on his phone, and the unregister
+   * on the way out would delete her real registration. A View-as session is a look at
+   * someone's account, never a claim on their notifications.
+   */
   useEffect(() => {
-    if (status === "authed") void registerPushToken(client);
-  }, [status, client]);
+    if (status === "authed" && !viewAs) void registerPushToken(client);
+  }, [status, client, viewAs]);
 
   const login = useCallback(
     async (email: string, password: string) => {
@@ -158,12 +227,94 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
     [client, resolveMe],
   );
 
+  /**
+   * Swap into another account (VA-1, D-#638).
+   *
+   * Order matters: park the real token BEFORE overwriting it, and never call
+   * `unregisterPushToken` on the way in or out — that path belongs to a real logout, and
+   * running it here would deactivate the borrowed account's own device (G4).
+   */
+  const startViewAs = useCallback(
+    async (targetId: string, targetKind: "STAFF" | "GUARDIAN") => {
+      const res = await client.mutation(START_IMPERSONATION, { targetId, targetKind }).toPromise();
+      if (res.error) return { ok: false, message: friendlyError(res.error) };
+      const started = res.data?.startImpersonation;
+      if (!started) return { ok: false, message: STR.viewAsFailed };
+
+      const own = getToken();
+      if (own) await persistRealToken(own);
+      await persistToken(started.token);
+
+      const session: ViewAsSession = {
+        name: started.name,
+        role: started.role as Role,
+        expiresAt: Date.now() + started.expiresInSeconds * 1000,
+      };
+      await setItem(VIEW_AS_KEY, JSON.stringify(session));
+
+      // The borrowed account renders a different tab set, and a persisted tree or a
+      // leftover hat can name a route it does not have (G5).
+      await removeItem(VIEW_MODE_KEY);
+      await clearNavState();
+      setStoredMode(null);
+      setViewAs(session);
+
+      const me = await resolveMe();
+      if (!me) {
+        // The token was refused — put the Principal straight back rather than leaving
+        // them in a half-swapped state.
+        const parked = await getRealToken();
+        if (parked) await persistToken(parked);
+        await persistRealToken(null);
+        await removeItem(VIEW_AS_KEY);
+        setViewAs(null);
+        await resolveMe();
+        return { ok: false, message: STR.viewAsFailed };
+      }
+      setUser(me);
+      setStatus("authed");
+      return { ok: true };
+    },
+    [client, resolveMe],
+  );
+
+  /** Give the Principal their own account back. Also the expiry path. */
+  const returnToSelf = useCallback(async () => {
+    const parked = await getRealToken();
+    // Best-effort END row, sent while the borrowed token still works. A failure here
+    // must not trap anyone in the wrong account, so it is deliberately unguarded.
+    try {
+      await client.mutation(END_IMPERSONATION, {}).toPromise();
+    } catch {
+      /* the START row and the TTL already bound the session */
+    }
+    await persistToken(parked);
+    await persistRealToken(null);
+    await removeItem(VIEW_AS_KEY);
+    await clearNavState();
+    setViewAs(null);
+    if (!parked) {
+      // Nothing to go back to (should not happen) — a login is better than a blank app.
+      setUser(null);
+      setStatus("anon");
+      return;
+    }
+    const me = await resolveMe();
+    setUser(me);
+    setStatus(me ? "authed" : "anon");
+  }, [client, resolveMe]);
+
   const logout = useCallback(async () => {
     // N4.1: deactivate this device's push token while the session still works.
     await unregisterPushToken(client);
     await persistToken(null);
     // The hat is per-account: the next login on this device may be someone else.
     await removeItem(VIEW_MODE_KEY);
+    // A logout from inside a View-as session ends the session too — leaving a parked
+    // token behind would hand the next person to log in the Principal's own account.
+    await persistRealToken(null);
+    await removeItem(VIEW_AS_KEY);
+    setViewAs(null);
     setUser(null);
     setRawPermissions([]);
     setTemplates([]);
@@ -225,6 +376,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
         setViewMode,
         login,
         logout,
+        viewAs,
+        isImpersonating: viewAs !== null,
+        startViewAs,
+        returnToSelf,
       }}
     >
       {children}

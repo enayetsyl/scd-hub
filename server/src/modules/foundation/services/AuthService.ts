@@ -16,11 +16,19 @@ export interface AuthTokenPayload {
   additionalTemplates?: Role[];
   grantedPermissions?: Permission[];
   revokedPermissions?: Permission[];
+  /** "View as" (VA-1, D-#638): the Principal behind a borrowed token. Never set at login. */
+  impersonatorId?: string;
+  impersonatorRole?: Role;
 }
 
-function signToken(payload: AuthTokenPayload): string {
+/** Mint a session token. `expiresIn` is the ordinary 8h day unless a caller shortens it —
+ *  a borrowed "View as" token is deliberately short-lived (ImpersonationService). */
+export function signToken(
+  payload: AuthTokenPayload,
+  expiresIn: jwt.SignOptions["expiresIn"] = "8h",
+): string {
   const secret = process.env.JWT_SECRET ?? "dev-secret";
-  return jwt.sign(payload, secret, { expiresIn: "8h" });
+  return jwt.sign(payload, secret, { expiresIn });
 }
 
 export async function hashPassword(plain: string): Promise<string> {

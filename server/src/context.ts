@@ -12,6 +12,15 @@ export interface AuthPayload extends AccessProfile {
   additionalTemplates?: Role[];
   grantedPermissions?: Permission[];
   revokedPermissions?: Permission[];
+  /**
+   * "View as" (VA-1, D-#638). Set only on a borrowed token: the Principal who minted it.
+   * `userId`/`role` stay the BORROWED account's — every scope check in the app reads them
+   * (`classTeacherId === ctx.auth.userId`), so a token carrying the Principal's id would
+   * show them their own empty section list instead of the teacher's. This claim is what
+   * the audit log uses to name the real actor, and what blocks a second hop (G2).
+   */
+  impersonatorId?: string;
+  impersonatorRole?: Role;
 }
 
 export interface AppContext {
@@ -25,7 +34,7 @@ export function buildContext(req: Request, res: Response): AppContext {
   return { req, res, auth: verifyTokenFromRequest(req) };
 }
 
-function verifyTokenFromRequest(req: Request): AuthPayload | null {
+export function verifyTokenFromRequest(req: Request): AuthPayload | null {
   const header = req.headers.authorization ?? "";
   if (!header.startsWith("Bearer ")) return null;
   const token = header.slice(7);
@@ -43,6 +52,8 @@ function verifyTokenFromRequest(req: Request): AuthPayload | null {
       additionalTemplates: payload.additionalTemplates,
       grantedPermissions: payload.grantedPermissions,
       revokedPermissions: payload.revokedPermissions,
+      impersonatorId: payload.impersonatorId,
+      impersonatorRole: payload.impersonatorRole,
     };
   } catch {
     return null;
