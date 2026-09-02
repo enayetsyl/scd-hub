@@ -5942,6 +5942,9 @@ export interface NotificationRefsT {
    *  বাড়ির কাজ and অ্যাসাইনমেন্ট are separate tabs. */
   workClaimId: string | null;
   workClaimTracker: string | null;
+  /** CT-8 submit notice — deep-links to ClassTestPublish. */
+  classTestId: string | null;
+  ctId: string | null;
 }
 
 export interface NotificationT {
@@ -5961,6 +5964,7 @@ const NOTIFICATION_FIELDS = `
     reviewAssignmentId artifactId substitutionId loanId rung
     audienceKey periodNumber tier hour observationId
     workClaimId workClaimTracker
+    classTestId ctId
   }
 `;
 
