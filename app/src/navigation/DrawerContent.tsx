@@ -16,6 +16,7 @@
 import React from "react";
 import { Pressable, Text, View } from "react-native";
 import { DrawerContentScrollView, type DrawerContentComponentProps } from "@react-navigation/drawer";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "urql";
 import type { Role } from "@scd/shared";
 
@@ -233,6 +234,7 @@ const NAV: NavSection[] = [...STAFF_NAV, ...GUARDIAN_NAV];
 
 export default function DrawerContent(props: DrawerContentComponentProps): React.ReactElement {
   const colors = useColors();
+  const insets = useSafeAreaInsets();
   const basket = useBasket();
   const { role, can } = useAuth();
   const present = React.useMemo(() => new Set(props.state.routeNames), [props.state.routeNames]);
@@ -562,8 +564,14 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
     );
   };
 
+  // D-#636: `paddingTop: 0` killed the safe-area inset DrawerContentScrollView
+  // applies by default, so on a phone the "SCD Hub" title rendered UNDER the status
+  // bar — the clock and the battery icon sat on top of the words (owner screenshot,
+  // Android, 2026-09-03). The zero was there to close a gap the inset leaves on web,
+  // where `insets.top` is 0 anyway, so paying the real inset fixes the phone without
+  // reopening that gap.
   return (
-    <DrawerContentScrollView {...props} contentContainerStyle={{ paddingTop: 0 }}>
+    <DrawerContentScrollView {...props} contentContainerStyle={{ paddingTop: insets.top }}>
       <View
         style={{
           paddingVertical: space(4),

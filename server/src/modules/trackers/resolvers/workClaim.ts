@@ -70,6 +70,10 @@ interface WorkClaimRow {
   teacherName: string;
   claimedAt: string;
   actionDateKey: string;
+  /** D-#635: the WORK's own date (the record's due date at file time) — "which
+   *  day's homework is this?", the question the queue could not answer. Null on a
+   *  claim filed against a record that carried no due date. */
+  dueDateKey: string | null;
   note: string | null;
   status: string;
   statusLabelBn: string;
@@ -97,6 +101,7 @@ const WorkClaimRowRef = builder.objectRef<WorkClaimRow>("WorkClaimRow").implemen
     teacherName: t.exposeString("teacherName"),
     claimedAt: t.exposeString("claimedAt"),
     actionDateKey: t.exposeString("actionDateKey"),
+    dueDateKey: t.string({ nullable: true, resolve: (r) => r.dueDateKey }),
     note: t.string({ nullable: true, resolve: (r) => r.note }),
     status: t.exposeString("status"),
     statusLabelBn: t.exposeString("statusLabelBn"),
@@ -165,6 +170,7 @@ async function toRows(claims: Array<Record<string, any>>, now: Date): Promise<Wo
       teacherName: tName.get(c.teacherId.toString()) ?? "",
       claimedAt: new Date(c.claimedAt).toISOString(),
       actionDateKey: c.actionDateKey,
+      dueDateKey: c.dueDate ? dateKeyOf(new Date(c.dueDate)) : null,
       note: c.note ?? null,
       status: c.status,
       statusLabelBn: WORK_CLAIM_STATUS_LABELS_BN[c.status as never] ?? c.status,
