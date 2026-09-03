@@ -1647,7 +1647,10 @@ QuestionUsageRef.implement({
 builder.queryField("homeworkSummary", (t) =>
   t.field({
     type: HomeworkSummaryRef,
-    description: "Homework roll-up for a class: chase list + thresholds, open resubmissions, completion health, topic touches. Read-scope enforced.",
+    description:
+      "Homework roll-up for a class: chase list + thresholds, open resubmissions, completion health, " +
+      "topic touches. Read-scope enforced. D-#641: a TEACHER's roll-up covers only the homework " +
+      "attributed to them (D-#351); Principal/Office read the class-wide numbers.",
     authScopes: { hasPermission: "tracker:read" },
     args: {
       sectionId: t.arg.string({ required: true }),
@@ -1656,7 +1659,14 @@ builder.queryField("homeworkSummary", (t) =>
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       await assertCanViewHomeworkDay(ctx, args.sectionId, args.classId);
-      return homeworkSummarySvc(args.classId);
+      // D-#641 (BUG-019), completing D-#634: every number a teacher sees on this
+      // screen is now their own. The section's homework CONFIRMER is a teacher too
+      // and lands here as well — their class-wide reconcile duty is served by the
+      // reconcile screen and its own alerts, not by a roll-up that silently
+      // re-attributes colleagues' backlog to the person reading it.
+      return homeworkSummarySvc(args.classId, {
+        teacherId: isAdminStaff(ctx.auth) ? null : (ctx.auth.userId as string),
+      });
     },
   }),
 );
