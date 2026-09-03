@@ -24,6 +24,7 @@ import { HomeworkStudentRecord } from "../models/HomeworkStudentRecord";
 import { HomeworkItem } from "../models/HomeworkItem";
 import { HomeworkReconciliation } from "../models/HomeworkReconciliation";
 import { isTerminalState } from "../lifecycle";
+import { resolveSubjectTeachers } from "../subjectTeacher";
 
 // §7.2–7.4 thresholds (confirmed A-01 / D-#34)
 export const CHASE_ATTENTION = 2;
@@ -149,6 +150,40 @@ export interface ClassOverviewResult {
   overCeilingDaysThisWeek: number;
 }
 
+/**
+ * The subset of `itemIds` whose ACCOUNTABLE teacher is `teacherId` — the routine's
+ * subject teacher for the item's section × subject on its own date (D-#351, the
+ * same rule the lifecycle report and the class-test tracker attribute by), falling
+ * back to the declarer when the routine names nobody for that cell. One routine
+ * query for the whole batch (resolveSubjectTeachers).
+ */
+async function itemsAttributedTo(itemIds: string[], teacherId: string): Promise<Set<string>> {
+  if (itemIds.length === 0) return new Set();
+  const items = (await HomeworkItem.find({ _id: { $in: itemIds } })
+    .select("sectionId subject dateGiven declaredBy")
+    .lean()) as unknown as Array<{
+    _id: { toString(): string };
+    sectionId: { toString(): string };
+    subject: string;
+    dateGiven: Date;
+    declaredBy: { toString(): string };
+  }>;
+  const resolved = await resolveSubjectTeachers(
+    items.map((i) => ({
+      key: i._id.toString(),
+      sectionId: i.sectionId.toString(),
+      subject: i.subject,
+      on: new Date(i.dateGiven),
+    })),
+  );
+  const out = new Set<string>();
+  for (const i of items) {
+    const k = i._id.toString();
+    if ((resolved.get(k) ?? i.declaredBy.toString()) === teacherId) out.add(k);
+  }
+  return out;
+}
+
 /** Sun-00:00 → Sat-23:59:59 (UTC) window containing `asOfMillis`. */
 function weekRange(asOfMillis: number): { start: Date; end: Date } {
   const d = new Date(asOfMillis);
@@ -156,13 +191,31 @@ function weekRange(asOfMillis: number): { start: Date; end: Date } {
   return { start: new Date(startMs), end: new Date(startMs + 7 * DAY_MS - 1) };
 }
 
+export interface ClassOverviewOpts {
+  /** D-#634: count only the homework ATTRIBUTED to this teacher (the routine's
+   *  subject teacher, D-#351, falling back to the declarer). Omit for the
+   *  school-wide numbers Principal/Office read. */
+  teacherId?: string | null;
+}
+
 export async function homeworkClassOverview(
   classIds: string[],
   asOfMillis: number,
+  opts: ClassOverviewOpts = {},
 ): Promise<ClassOverviewResult[]> {
   if (classIds.length === 0) return [];
 
-  const records = await HomeworkStudentRecord.find({ classId: { $in: classIds } }).lean();
+  let records = await HomeworkStudentRecord.find({ classId: { $in: classIds } }).lean();
+  // D-#634: a teacher's dashboard answers "what do I owe?", so the record set is
+  // narrowed to the items that are HIS before anything is counted. Attribution is
+  // resolved over the items these records already reference — a far smaller set
+  // than every item the class was ever given, and no extra work at all for the
+  // unscoped (admin) read.
+  if (opts.teacherId) {
+    const itemIds = [...new Set(records.map((r) => r.hwItemId.toString()))];
+    const mine = await itemsAttributedTo(itemIds, opts.teacherId);
+    records = records.filter((r) => mine.has(r.hwItemId.toString()));
+  }
   const { start, end } = weekRange(asOfMillis);
   const items = await HomeworkItem.find({
     classId: { $in: classIds },
