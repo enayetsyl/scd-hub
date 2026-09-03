@@ -476,6 +476,17 @@ check("access:manage is declared + BUILD",
 check("access:manage = PRINCIPAL ONLY (verifier-proven exact-holder set — Office/Teacher/Guardian never, §7)",
   V.roleHasPermission("PRINCIPAL", "access:manage") &&
   !["TEACHER", "OFFICE", "GUARDIAN"].some((r) => V.roleHasPermission(r, "access:manage")));
+// user:view_as — "View as" (VA-1, D-#638) made GRANTABLE by D-#639. The reversal is kept narrow by
+// three invariants, all of which must hold together or the grant surface widens silently.
+check("user:view_as is declared + BUILD (VA-1, D-#638/#639)",
+  V.PERMISSIONS.includes("user:view_as") && V.PERMISSION_BUILD_STATUS["user:view_as"] === "build");
+check("user:view_as is on the PRINCIPAL template and NO other role template (only an explicit AC-1 grant reaches a non-Principal, D-#639)",
+  V.roleHasPermission("PRINCIPAL", "user:view_as") &&
+  !["TEACHER", "OFFICE", "GUARDIAN"].some((r) => V.roleHasPermission(r, "user:view_as")));
+check("user:view_as is NOT reserved — reserving it would make the D-#639 grant inert (it is subtracted for every non-Principal login)",
+  !V.RESERVED_PERMISSIONS.includes("user:view_as"));
+check("no ASSIGNABLE_TEMPLATE carries user:view_as (an added OFFICE/TEACHER hat must not hand over everyone else's account, D-#468/#639)",
+  !V.ASSIGNABLE_TEMPLATES.some((r) => V.roleHasPermission(r, "user:view_as")));
 // RESERVED_PERMISSIONS — exactly the five, all real perms, none reachable by a non-Principal template (the structural backstop, §5)
 check("RESERVED_PERMISSIONS is exactly the five (§5/§8)",
   eq(V.RESERVED_PERMISSIONS, ["payroll:approve", "performance:signoff", "chat:oversee", "template:manage", "access:manage"]));

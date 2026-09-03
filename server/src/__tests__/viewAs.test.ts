@@ -3,7 +3,9 @@
  *
  * Covers the guardrails that are decisions rather than plumbing:
  *   G2 — no nesting, no self, no Principal target, no account its owner cannot use either
- *   G3 — the gate reads the DATABASE role, never a permission and never the token's role
+ *   G3 — the gate reads the DATABASE row, never the token's claims. Since D-#639 what it
+ *        reads there is the `user:view_as` PERMISSION, so the owner can hand the same view
+ *        to a named individual; the invariants that keep that narrow are pinned here too.
  *   G6 — nothing is subtracted: the borrowed token carries the target's own access
  *   G7 — starting a session is NOT a login, so it cannot make a quiet family look active
  *
@@ -11,7 +13,13 @@
  */
 import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
-import { PERMISSIONS } from "@scd/shared";
+import {
+  ASSIGNABLE_TEMPLATES,
+  PERMISSIONS,
+  RESERVED_PERMISSIONS,
+  roleHasPermission,
+  type Role,
+} from "@scd/shared";
 
 const oid = () => new mongoose.Types.ObjectId();
 
@@ -126,37 +134,107 @@ beforeEach(() => {
 // G3 — the gate is the database role, not a permission and not the token
 // ---------------------------------------------------------------------------
 
-describe("G3 — only a Principal in the database may start a session", () => {
-  test("a teacher is refused", async () => {
-    await expect(start({ callerUserId: TEACHER.toString() })).rejects.toThrow(/প্রধান শিক্ষক/);
+describe("G3 — the gate is the `user:view_as` permission, read from the database", () => {
+  /** An OFFICE account that has been handed `user:view_as` through the AC-1 editor. */
+  const OFFICE = oid();
+  const officeDoc = {
+    _id: OFFICE,
+    role: "OFFICE",
+    active: true,
+    name: "Office",
+    additionalTemplates: [],
+    grantedPermissions: [],
+    revokedPermissions: [],
+  };
+  const withCaller = (doc: Record<string, unknown>) =>
+    mockUserFindById.mockImplementation(async (id: unknown) => {
+      const key = String(id);
+      if (key === String(doc._id)) return doc;
+      if (key === TEACHER.toString()) return teacherDoc;
+      return null;
+    });
+
+  test("a teacher holding nothing is refused", async () => {
+    await expect(start({ callerUserId: TEACHER.toString() })).rejects.toThrow(/অনুমতি আপনার নেই/);
     expect(mockWriteAudit).not.toHaveBeenCalled();
   });
 
-  test("an OFFICE account holding EVERY permission is still refused", async () => {
-    // The point of G3: impersonation is not grantable. If it were a Permission, the AC-1
-    // per-user override system could hand it to an office desk by accident.
-    const office = oid();
-    mockUserFindById.mockImplementation(async (id: unknown) =>
-      String(id) === office.toString()
-        ? { _id: office, role: "OFFICE", active: true, grantedPermissions: [...PERMISSIONS] }
-        : null,
+  test("a plain OFFICE account is refused — the permission is on no template but PRINCIPAL's", async () => {
+    withCaller(officeDoc);
+    await expect(start({ callerUserId: OFFICE.toString() })).rejects.toThrow(/অনুমতি আপনার নেই/);
+    expect(mockWriteAudit).not.toHaveBeenCalled();
+  });
+
+  test("an OFFICE account GRANTED user:view_as may start a session (D-#639, the owner's ask)", async () => {
+    // D-#638 refused this outright. D-#639 reverses it: the owner wants to hand the same
+    // view to a named individual. The grant is the whole gate, so it is tested directly.
+    withCaller({ ...officeDoc, grantedPermissions: ["user:view_as"] });
+    const res = await start({ callerUserId: OFFICE.toString() });
+    expect(res.userId).toBe(TEACHER.toString());
+    expect(mockWriteAudit).toHaveBeenCalledWith(
+      expect.objectContaining({ eventKind: "IMPERSONATION_START" }),
     );
-    await expect(start({ callerUserId: office.toString() })).rejects.toThrow(/প্রধান শিক্ষক/);
   });
 
-  test("impersonation is deliberately NOT a member of the Permission enum", () => {
-    // Keeping it out of the enum is what keeps it out of the grant surface — and out of
-    // the two-place contract sync. If someone adds it, this test says why not to.
-    expect([...PERMISSIONS].filter((p) => /impersonat|view.?as/i.test(p))).toEqual([]);
+  test("the borrowed token names the grantee's REAL role, so the audit does not claim PRINCIPAL", async () => {
+    // The audit inversion writes `impersonatorRole` verbatim. If this carried a hardcoded
+    // PRINCIPAL, an office grantee's rows would libel the Principal for their actions.
+    withCaller({ ...officeDoc, grantedPermissions: ["user:view_as"] });
+    const res = await start({ callerUserId: OFFICE.toString() });
+    const payload = payloadOf(res.token);
+    expect(payload.impersonatorId).toBe(OFFICE.toString());
+    expect(payload.impersonatorRole).toBe("OFFICE");
   });
 
-  test("a deactivated Principal is refused", async () => {
+  test("a REVOKED user:view_as beats the PRINCIPAL template — it can be taken back from anyone", async () => {
+    withCaller({ ...principalDoc, revokedPermissions: ["user:view_as"] });
+    await expect(start()).rejects.toThrow(/অনুমতি আপনার নেই/);
+    expect(mockWriteAudit).not.toHaveBeenCalled();
+  });
+
+  test("the token's own claims cannot gate the mint — only the database row can", async () => {
+    // A client presents its permission arrays inside the JWT. `assertMayViewAs` ignores
+    // them entirely and re-reads the User, so a forged/stale claim buys nothing.
+    withCaller(officeDoc); // DB says: no grant
+    await expect(
+      start({ callerUserId: OFFICE.toString() }),
+    ).rejects.toThrow(/অনুমতি আপনার নেই/);
+  });
+
+  test("a grantee still cannot climb into a Principal's account (the refusal that now matters most)", async () => {
+    const otherPrincipal = oid();
+    mockUserFindById.mockImplementation(async (id: unknown) => {
+      const key = String(id);
+      if (key === OFFICE.toString()) return { ...officeDoc, grantedPermissions: ["user:view_as"] };
+      if (key === otherPrincipal.toString())
+        return { _id: otherPrincipal, role: "PRINCIPAL", active: true, name: "P2", additionalTemplates: [] };
+      return null;
+    });
+    await expect(
+      start({ callerUserId: OFFICE.toString(), targetId: otherPrincipal.toString() }),
+    ).rejects.toThrow(/প্রধান শিক্ষকের অ্যাকাউন্ট/);
+    expect(mockWriteAudit).not.toHaveBeenCalled();
+  });
+
+  test("user:view_as is grantable but reaches a non-Principal ONLY by explicit grant (D-#639)", () => {
+    // The three invariants that keep the D-#638 reversal narrow. The verifier checks these
+    // too; they are restated here because this service is what they protect.
+    expect([...PERMISSIONS]).toContain("user:view_as");
+    expect(roleHasPermission("PRINCIPAL", "user:view_as")).toBe(true);
+    expect(["TEACHER", "OFFICE", "GUARDIAN"].some((r) => roleHasPermission(r as Role, "user:view_as"))).toBe(false);
+    // Reserving it would subtract it from every non-Principal login, making the grant inert.
+    expect([...RESERVED_PERMISSIONS]).not.toContain("user:view_as");
+    // And no template a Principal may ADD carries it (the D-#468 widening path stays shut).
+    expect(ASSIGNABLE_TEMPLATES.some((r) => roleHasPermission(r, "user:view_as"))).toBe(false);
+  });
+
+  test("a deactivated holder is refused", async () => {
     mockUserFindById.mockResolvedValue({ ...principalDoc, active: false });
-    await expect(start()).rejects.toThrow(/প্রধান শিক্ষক/);
+    await expect(start()).rejects.toThrow(/অনুমতি আপনার নেই/);
   });
 
   test("a malformed caller id is refused before any query runs", async () => {
-    await expect(start({ callerUserId: "not-an-id" })).rejects.toThrow(/প্রধান শিক্ষক/);
+    await expect(start({ callerUserId: "not-an-id" })).rejects.toThrow(/অনুমতি আপনার নেই/);
     expect(mockUserFindById).not.toHaveBeenCalled();
   });
 });
@@ -409,9 +487,9 @@ describe("the picker lists who can be entered, and says why not", () => {
     expect(q.$or[0].name?.source).toBe("a\\.\\*b\\(");
   });
 
-  test("the picker is Principal-only, like the mint", async () => {
+  test("the picker takes the same permission as the mint, so it cannot leak the roster", async () => {
     await expect(
       listImpersonationTargets({ callerUserId: TEACHER.toString(), kind: "STAFF" }),
-    ).rejects.toThrow(/প্রধান শিক্ষক/);
+    ).rejects.toThrow(/অনুমতি আপনার নেই/);
   });
 });

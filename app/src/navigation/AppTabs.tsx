@@ -392,7 +392,7 @@ function HeaderBell(): React.ReactElement {
  */
 function AvatarMenu(): React.ReactElement {
   const [open, setOpen] = React.useState(false);
-  const { user, logout, templates, viewMode, setViewMode, primaryRole, isImpersonating } = useAuth();
+  const { user, logout, templates, viewMode, setViewMode, isImpersonating, can } = useAuth();
   const { lang, toggle } = useLanguage();
   const navigation = useNavigation();
   const colors = useColors();
@@ -470,12 +470,16 @@ function AvatarMenu(): React.ReactElement {
                 </Text>
               </View>
             ) : null}
-            {/* VA-1 (D-#638) — open someone else's account view. Offered on the PRIMARY
-                role, never on `role`: that one follows the chosen hat, and a
-                client-influenced value has no business gating a token mint (G3). The
-                server re-checks the database regardless. Hidden while already inside a
-                borrowed session, which the server also refuses (G2, no second hop). */}
-            {primaryRole === "PRINCIPAL" && !isImpersonating ? (
+            {/* VA-1 (D-#638) — open someone else's account view. Offered on the
+                `user:view_as` PERMISSION since D-#639, so a per-user AC-1 grant lights the
+                row for a non-Principal; gating it on the role here would have left a
+                grantee holding the permission with no way to reach the screen (the
+                finance:manage lesson, D-#221). `can` reads the caller's own effective
+                permissions, so an added TEACHER/OFFICE template cannot conjure it — no
+                template carries it. This is display only: the server re-reads the database
+                and re-checks the same permission before minting (G3). Hidden while already
+                inside a borrowed session, which the server also refuses (G2, no second hop). */}
+            {can("user:view_as") && !isImpersonating ? (
               <View style={{ borderBottomWidth: 1, borderBottomColor: colors.border, paddingBottom: space(1) }}>
                 <MenuRow
                   icon="👁"
