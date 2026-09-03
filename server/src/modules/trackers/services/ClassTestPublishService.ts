@@ -360,6 +360,25 @@ export async function submitExam(testId: string, actorId: string): Promise<Submi
   if ((await ClassTestResult.countDocuments({ testId: oid })) === 0) {
     throw new ClassTestResultError("No results entered for this exam — nothing to submit");
   }
+
+  // D-#640: is there anything here that is actually NOT submitted yet? A row that
+  // is unsubmitted, or one the office sent back for another look. If not, this
+  // press changes nothing, and the work below would do two harmful things: move
+  // every row's `submittedAt` forward (making the teacher look later than they
+  // were, since the reports read the newest stamp), and — because the dedupe key
+  // is anchored on that stamp so a genuine re-submit CAN re-notify (D-#628 lesson)
+  // — put a second identical "অনুমোদন করুন" row in every approver's inbox. The
+  // owner saw exactly that on prod: CT-C4-ENG-0004 twice, one minute apart, from
+  // a teacher pressing a button that gave no sign the first press had landed.
+  // The button now goes inert once everything is in (D-#633); this makes the
+  // no-op harmless no matter what the caller does.
+  const actionable = await ClassTestResult.countDocuments({
+    testId: oid,
+    publishedAt: null,
+    $or: [{ submittedAt: null }, { sendBackAt: { $ne: null } }],
+  });
+  if (actionable === 0) return { testId, count: 0 };
+
   const submittedAt = new Date();
   const res = await ClassTestResult.updateMany(
     { testId: oid, publishedAt: null },
