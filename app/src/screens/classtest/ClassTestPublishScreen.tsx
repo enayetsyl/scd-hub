@@ -108,6 +108,12 @@ export default function ClassTestPublishScreen({ route }: Props): React.ReactEle
   // Exam-level status: any pending (submitted, not published) row?
   const anySubmitted = results.some((r) => r.submittedAt && !r.publishedAt);
   const anyPublished = results.some((r) => !!r.publishedAt);
+  // The teacher's leg is DONE once EVERY entered row carries a submittedAt (a
+  // published row was submitted first). A live "প্রকাশের জন্য জমা দিন" button after
+  // that reads as "your submission never landed" — the owner's report. It goes
+  // inert and says so; Recall is the way back, and a row entered AFTER the submit
+  // leaves this false so the rest can still be sent.
+  const allSubmitted = hasResults && results.every((r) => !!r.submittedAt || !!r.publishedAt);
   const sentBackReason = results.find((r) => r.sendBackReason)?.sendBackReason ?? null;
 
   return (
@@ -133,7 +139,12 @@ export default function ClassTestPublishScreen({ route }: Props): React.ReactEle
             </View>
           ) : (
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: space(2) }}>
-              <Button title={STR.ctSubmitForRelease} onPress={() => void run(() => submitExam({ testId }), STR.ctSubmittedForApproval)} loading={busy} disabled={busy || blockEmpty} />
+              <Button
+                title={allSubmitted ? STR.ctSubmittedForApproval : STR.ctSubmitForRelease}
+                onPress={() => void run(() => submitExam({ testId }), STR.ctSubmittedForApproval)}
+                loading={busy}
+                disabled={busy || blockEmpty || allSubmitted}
+              />
               <Button title={STR.ctRecall} variant="ghost" onPress={() => void run(() => recallExam({ testId }), STR.ctRecall)} disabled={busy} />
             </View>
           )}
@@ -141,6 +152,13 @@ export default function ClassTestPublishScreen({ route }: Props): React.ReactEle
           {/* Say WHY the action is unavailable — a disabled button with no reason is
               its own support ticket. */}
           {blockEmpty ? <Muted style={{ marginTop: space(2) }}>{STR.ctNoResultsYet}</Muted> : null}
+          {/* Same rule for the teacher's own disabled submit: say that it is already in,
+              and name the way back (recall) rather than leaving a dead button. */}
+          {!isAdmin && allSubmitted && !blockEmpty ? (
+            <Muted style={{ marginTop: space(2) }}>
+              {anyPublished ? STR.ctPublishedBadge : STR.ctSubmittedLocked}
+            </Muted>
+          ) : null}
 
           {/* Admin send-back reason (D-A: reason required) */}
           {isAdmin && sendBackOpen ? (

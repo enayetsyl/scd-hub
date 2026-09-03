@@ -143,8 +143,15 @@ export default function TodayScreen(): React.ReactElement {
     variables: { teacherId: user?.id ?? null },
     pause: !canFileTests || !user?.id,
   });
+  // The teacher's OWN leg ends at SUBMIT, not at release. `state` has been
+  // publish-anchored since D-#603 (`complete` === publishComplete, and `overdue`
+  // stays true until the office publishes), so filtering on it kept a test the
+  // teacher had entered 17/17 AND submitted sitting in her red "ফলাফল এন্ট্রি বাকি"
+  // stack for as long as the office sat on it — blaming her for the office's leg.
+  // `submitComplete` is that boundary (deriveReportOwnership), and the office's
+  // share is already tracked separately as publishOverdue.
   const ctPending = (ctPendingQ.data?.classTestReportsStatus ?? []).filter(
-    (r) => r.state !== "complete" && dateKey(new Date(r.examDate)) <= date,
+    (r) => !r.submitComplete && dateKey(new Date(r.examDate)) <= date,
   );
 
   // Owner 2026-07-25: the teacher's OWN homework lifecycle at a glance — totals +
@@ -517,10 +524,10 @@ export default function TodayScreen(): React.ReactElement {
               <AlertCard
                 key={r.testId}
                 icon="flask-conical"
-                tone={r.state === "overdue" ? "error" : "gold"}
+                tone={r.teacherOverdue ? "error" : "gold"}
                 title={`${STR.tdCtResultPending}: ${hwSubjectLabel(r.subject)} · ${STR.ctTestNumber} ${bnNum(r.testNumber)}`}
                 sub={`${bnNum(dateKey(new Date(r.examDate)))} · ${STR.ctEntered} ${bnNum(r.enteredCount)}/${bnNum(r.rosterCount)}${
-                  r.overdue ? ` · ${STR.ctSchoolDaysLate} ${bnNum(r.schoolDaysLate)}` : ""
+                  r.teacherOverdue ? ` · ${STR.ctSchoolDaysLate} ${bnNum(r.schoolDaysLate)}` : ""
                 }`}
                 onPress={() =>
                   nav.navigate("ClassTestTab", {
