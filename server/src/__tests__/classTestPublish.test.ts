@@ -384,6 +384,58 @@ describe("CT-8 approval gate", () => {
     );
   });
 
+  // D-#640 — a submit that changes nothing is a no-op, notification included.
+  // `countDocuments` is called twice by submitExam: first "are there any rows at
+  // all", then the D-#640 "is anything actually unsubmitted (or sent back)". The
+  // second carries `$or`, so the mock answers by query shape.
+  const isActionableProbe = (q: unknown): boolean =>
+    !!q && typeof q === "object" && "$or" in (q as Record<string, unknown>);
+
+  test("a second submit that changes nothing does NOT re-stamp and does NOT re-notify", async () => {
+    // Every row already submitted, none sent back — the prod case: the teacher
+    // pressed জমা দিন twice and every approver got the same notice twice.
+    mockResCount.mockImplementation((q: unknown) => Promise.resolve(isActionableProbe(q) ? 0 : 3));
+    const out = await submitExam(TEST_OID.toString(), ACTOR);
+    expect(out).toEqual({ testId: TEST_OID.toString(), count: 0 });
+    expect(mockResUpdateMany).not.toHaveBeenCalled(); // the stamp does not move
+    expect(mockEmit).not.toHaveBeenCalled();
+    expect(mockWriteAudit).not.toHaveBeenCalled(); // nor an audit row for a no-op
+  });
+
+  test("a re-submit after a RECALL still notifies (rows are unsubmitted again)", async () => {
+    mockResCount.mockImplementation((q: unknown) => Promise.resolve(isActionableProbe(q) ? 3 : 3));
+    mockResUpdateMany.mockResolvedValue({ modifiedCount: 3 });
+    await submitExam(TEST_OID.toString(), ACTOR);
+    expect(mockEmit).toHaveBeenCalledWith(expect.objectContaining({ kind: "CT_RESULT_SUBMITTED" }));
+  });
+
+  test("a re-submit after a SEND-BACK still notifies (submitted, but sent back)", async () => {
+    // The office returned it: rows carry submittedAt AND sendBackAt, so the $or's
+    // second arm is what makes this actionable. Losing that arm would silence the
+    // one notification the office is actually waiting for.
+    mockResCount.mockImplementation((q: unknown) => Promise.resolve(isActionableProbe(q) ? 2 : 3));
+    mockResUpdateMany.mockResolvedValue({ modifiedCount: 2 });
+    await submitExam(TEST_OID.toString(), ACTOR);
+    expect(mockEmit).toHaveBeenCalledWith(expect.objectContaining({ kind: "CT_RESULT_SUBMITTED" }));
+    expect(mockResUpdateMany).toHaveBeenCalledWith(
+      expect.objectContaining({ testId: TEST_OID, publishedAt: null }),
+      expect.objectContaining({ $unset: expect.objectContaining({ sendBackReason: "" }) }),
+    );
+  });
+
+  test("the actionable probe asks for unsubmitted OR sent-back, among unpublished rows", async () => {
+    mockResCount.mockImplementation((q: unknown) => Promise.resolve(isActionableProbe(q) ? 1 : 3));
+    mockResUpdateMany.mockResolvedValue({ modifiedCount: 1 });
+    await submitExam(TEST_OID.toString(), ACTOR);
+    expect(mockResCount).toHaveBeenCalledWith(
+      expect.objectContaining({
+        testId: TEST_OID,
+        publishedAt: null,
+        $or: [{ submittedAt: null }, { sendBackAt: { $ne: null } }],
+      }),
+    );
+  });
+
   test("recallExam clears the submission back to draft + audits RECALLED", async () => {
     mockResUpdateMany.mockResolvedValue({ modifiedCount: 2 });
     const out = await recallExam(TEST_OID.toString(), ACTOR);
