@@ -100,9 +100,11 @@ export function notificationTarget(
     // CT-8 submit/approve loop, both halves on the exam itself rather than on a list
     // the recipient then has to search. Each falls back to its old list screen when
     // the row carries no exam id.
-    //   SUBMITTED → the approver (Principal/Office) lands on the publish screen,
-    //   where approve / send back are. It used to open the dashboard, which made
-    //   them re-find the test by hand.
+    //   SUBMITTED → the approver (Principal/Office) lands on the exam's RESULTS
+    //   screen (D-#637, owner 2026-09-03). It used to open the publish screen, which
+    //   offers অনুমোদন / ফেরত with the marks themselves nowhere in sight — the
+    //   approver's first act is to READ what the teacher entered, and the results
+    //   screen carries "প্রকাশ করুন" straight through to publish once they have.
     //   PUBLISHED → the exam's teacher lands on the read-only results view: the
     //   notice tells them the marks reached guardians, and this is the screen that
     //   shows what was released. NOT the publish screen — nothing is left for them
@@ -111,7 +113,7 @@ export function notificationTarget(
       return refs?.classTestId
         ? {
             tab: "ClassTestTab",
-            screen: "ClassTestPublish",
+            screen: "ClassTestResults",
             params: { testId: refs.classTestId, title: refs.ctId ?? "" },
           }
         : { tab: "ClassTestTab", screen: "ClassTestDashboard" };

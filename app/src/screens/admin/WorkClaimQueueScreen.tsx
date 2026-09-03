@@ -16,7 +16,7 @@ import { useMutation, useQuery } from "urql";
 import { Screen, H1, Body, Muted, Card, Badge, Button, EmptyState, Notice, Divider } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
 import { space } from "../../theme/tokens";
-import { STR } from "../../lib/labels";
+import { STR, bnNum } from "../../lib/labels";
 import { usePullRefresh } from "../../lib/useRefresh";
 import {
   WORK_CLAIM_QUEUE_QUERY,
@@ -91,8 +91,12 @@ export default function WorkClaimQueueScreen(): React.ReactElement {
                       </Body>
                       <Badge text={r.checkpointLabelBn} tone={toneFor(r.checkpoint)} />
                     </View>
+                    {/* D-#635: WHICH DAY's homework this is. Without it the row named
+                        the work only by its id, and staff had to open the tracker to
+                        find out whether the claim was about today or last week. */}
                     <Muted>
-                      {r.subject} · {r.workId} · {r.teacherName}
+                      {r.subject} · {r.workId}
+                      {r.dueDateKey ? ` · ${bnNum(r.dueDateKey)}` : ""} · {r.teacherName}
                     </Muted>
                     {r.note ? <Body>{r.note}</Body> : null}
                     {r.nudgedToday ? (

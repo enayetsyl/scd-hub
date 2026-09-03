@@ -143,10 +143,14 @@ describe("a ref the deep-link reads must survive the whole wire", () => {
     expect(refsRead.filter((r) => !model.includes(`${r}: { type:`))).toEqual([]);
   });
 
-  test("the CT-8 submit notice opens the exam, not the dashboard", () => {
-    // The approve / send-back buttons live on ClassTestPublish; the dashboard is
-    // only the fallback for a row with no exam id.
-    expect(source).toContain('screen: "ClassTestPublish"');
+  test("the CT-8 submit notice opens the exam's RESULTS, not the dashboard", () => {
+    // D-#637: the approver's first act is to read the marks, and the results screen
+    // carries the publish button through to approval. The publish screen alone shows
+    // অনুমোদন / ফেরত with the marks nowhere in sight. The dashboard is only the
+    // fallback for a row with no exam id. Asserted INSIDE the arm, so the string
+    // cannot be satisfied by some other case further down the switch.
+    const arm = source.slice(source.indexOf('case "CT_RESULT_SUBMITTED":'));
+    expect(arm.slice(0, arm.indexOf("case ", 1))).toContain('screen: "ClassTestResults"');
   });
 
   test("the CT-8 publish notice opens the exam's results, not the tab home", () => {

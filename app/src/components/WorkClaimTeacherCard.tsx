@@ -18,7 +18,7 @@ import type { WorkClaimRejectReason } from "@scd/shared";
 import { Body, Muted, Card, Badge, Button, Notice, Divider } from "./ui";
 import { space } from "../theme/tokens";
 import { useColors } from "../theme";
-import { STR } from "../lib/labels";
+import { STR, bnNum } from "../lib/labels";
 import { REJECT_WORK_CLAIM, type WorkClaimRowT } from "../graphql/operations";
 
 export function WorkClaimTeacherCard({
@@ -81,7 +81,12 @@ export function WorkClaimTeacherCard({
             <Muted>
               “{STR.wcButton}” · {r.claimedAt.slice(0, 10)} · {r.checkpointLabelBn}
             </Muted>
-            <Muted>{r.workId}</Muted>
+            {/* D-#635: the work's OWN date beside its id — the teacher's first question
+                about a claim is which day's homework the parent means. */}
+            <Muted>
+              {r.workId}
+              {r.dueDateKey ? ` · ${bnNum(r.dueDateKey)}` : ""}
+            </Muted>
             {r.note ? <Body>{r.note}</Body> : null}
             <Muted>{STR.wcTeacherHint}</Muted>
             <Button title={STR.wcReject} variant="secondary" onPress={() => setTarget(r)} />

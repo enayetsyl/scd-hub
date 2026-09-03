@@ -8371,6 +8371,8 @@ export interface WorkClaimRowT {
   teacherName: string;
   claimedAt: string;
   actionDateKey: string;
+  /** D-#635: the WORK's own date — which day's homework the claim is about. */
+  dueDateKey: string | null;
   note: string | null;
   status: string;
   statusLabelBn: string;
@@ -8382,7 +8384,7 @@ export interface WorkClaimRowT {
 const WORK_CLAIM_ROW_FIELDS = `
   claimId tracker workId subject
   studentId studentNameBn sectionId sectionNameBn
-  teacherId teacherName claimedAt actionDateKey note
+  teacherId teacherName claimedAt actionDateKey dueDateKey note
   status statusLabelBn checkpoint checkpointLabelBn nudgedToday
 `;
 
