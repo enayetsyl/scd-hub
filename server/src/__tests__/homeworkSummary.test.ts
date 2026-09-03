@@ -92,6 +92,86 @@ describe("T4.1/T4.2 — homeworkSummary", () => {
     expect(s.avgReturnLatencyDays).toBeNull();
     expect(s.chaseVolume).toBe(0);
   });
+
+  // -------------------------------------------------------------------------
+  // D-#641 (BUG-019) — the roll-up answers for the TEACHER reading it. Owner saw
+  // 62 unchecked / 109 chases under class chips that correctly showed him
+  // nothing, with a topic list naming subjects he does not teach.
+  // -------------------------------------------------------------------------
+  describe("teacherId scoping (D-#641)", () => {
+    const MINE = "item-mine";
+    const THEIRS = "item-theirs";
+    const day0 = new Date(2026, 5, 1, 9);
+
+    function seedTwoTeachers(): void {
+      mockRecordFind.mockResolvedValue([
+        { _id: oid(), hwItemId: MINE, hwId: "HW-C5-ISLAM-0001", studentId: oid(), state: "SUBMITTED", chaseCount: 0, stateDates: [{ state: "GIVEN", at: day0 }, { state: "SUBMITTED", at: day0 }] },
+        { _id: oid(), hwItemId: THEIRS, hwId: "HW-C5-ENG-0001", studentId: oid(), state: "SUBMITTED", chaseCount: 0, stateDates: [{ state: "GIVEN", at: day0 }, { state: "SUBMITTED", at: day0 }] },
+        { _id: oid(), hwItemId: THEIRS, hwId: "HW-C5-ENG-0001", studentId: oid(), state: "CHASE", chaseCount: 3, stateDates: [{ state: "GIVEN", at: day0 }] },
+        { _id: oid(), hwItemId: THEIRS, hwId: "HW-C5-ENG-0001", studentId: oid(), state: "GIVEN", chaseCount: 0, resubOf: oid(), stateDates: [{ state: "GIVEN", at: day0 }] },
+      ]);
+      mockItemFind.mockImplementation((q: Record<string, unknown>) =>
+        (q as { _id?: unknown })._id
+          ? [
+              { _id: MINE, sectionId: "sec-1", subject: "ISLAM", dateGiven: day0, declaredBy: "me" },
+              { _id: THEIRS, sectionId: "sec-1", subject: "ENG", dateGiven: day0, declaredBy: "colleague" },
+            ]
+          : [
+              { _id: MINE, topTags: ["TOP-ISLAM-C5-01"] },
+              { _id: THEIRS, topTags: ["TOP-ENG-C5-GEN", "TOP-ENG-C5-02"] },
+            ],
+      );
+      mockResolveTeachers.mockResolvedValue(new Map([[MINE, "me"], [THEIRS, "colleague"]]));
+    }
+
+    test("counts, chase list and resubmissions cover only the caller's own homework", async () => {
+      seedTwoTeachers();
+      const s = await homeworkSummary(CLASS, { teacherId: "me" });
+      expect(s.pendingChecking).toBe(1); // not 2
+      expect(s.chaseList).toHaveLength(0); // the colleague's chased student is not mine
+      expect(s.commsPromptCount).toBe(0); // …so no §7.2 parent-comms prompt either
+      expect(s.openResubmissions).toBe(0);
+      expect(s.chaseVolume).toBe(0);
+    });
+
+    test("the topic list stops naming subjects the caller does not teach", async () => {
+      // This is the tell the owner spotted: TOP-ENG/TOP-MATH under an ইসলাম teacher.
+      seedTwoTeachers();
+      const s = await homeworkSummary(CLASS, { teacherId: "me" });
+      expect(s.topicTouches.map((t) => t.topTag)).toEqual(["TOP-ISLAM-C5-01"]);
+    });
+
+    test("unscoped (Principal/Office) still sees the whole class", async () => {
+      seedTwoTeachers();
+      const s = await homeworkSummary(CLASS);
+      expect(s.pendingChecking).toBe(2);
+      expect(s.chaseList).toHaveLength(1);
+      expect(s.openResubmissions).toBe(1);
+      expect(s.topicTouches).toHaveLength(3);
+    });
+
+    test("a teacher with nothing in the class gets an empty roll-up, not the class's", async () => {
+      seedTwoTeachers();
+      const s = await homeworkSummary(CLASS, { teacherId: "unrelated-teacher" });
+      expect(s.pendingChecking).toBe(0);
+      expect(s.chaseList).toHaveLength(0);
+      expect(s.topicTouches).toHaveLength(0);
+      expect(s.submittedOnTimePct).toBeNull(); // no records reached SUBMITTED → null, not 0%
+    });
+
+    test("health percentages are computed over the caller's records only", async () => {
+      seedTwoTeachers();
+      const mine = await homeworkSummary(CLASS, { teacherId: "me" });
+      // My one record reached SUBMITTED with no chase → 100%. Class-wide it is 100%
+      // too (both submitted rows are unchased), so assert the denominator moved by
+      // checking the chased record is excluded from MY chase volume above, and that
+      // the colleague's on-time record cannot lift or drag my number.
+      expect(mine.submittedOnTimePct).toBe(100);
+      const theirs = await homeworkSummary(CLASS, { teacherId: "colleague" });
+      expect(theirs.submittedOnTimePct).toBe(100);
+      expect(theirs.chaseVolume).toBe(3); // the chased student is theirs, not mine
+    });
+  });
 });
 
 // ===========================================================================

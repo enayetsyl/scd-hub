@@ -75,9 +75,31 @@ export interface HomeworkSummaryResult {
   topicTouches: { topTag: string; count: number }[];
 }
 
-export async function homeworkSummary(classId: string): Promise<HomeworkSummaryResult> {
-  const records = await HomeworkStudentRecord.find({ classId }).lean();
-  const items = await HomeworkItem.find({ classId, status: "issued" }).lean();
+export async function homeworkSummary(
+  classId: string,
+  opts: ClassOverviewOpts = {},
+): Promise<HomeworkSummaryResult> {
+  let records = await HomeworkStudentRecord.find({ classId }).lean();
+  let items = await HomeworkItem.find({ classId, status: "issued" }).lean();
+
+  // D-#641 (BUG-019): the same narrowing D-#634 gave the class chips and Today's
+  // rows. Left class-wide then "for the section's confirmer", this fold ended up
+  // reporting 62 unchecked / 109 chases under chips that correctly showed the
+  // viewing teacher nothing — and its own topic list gave the scope away, naming
+  // TOP-ENG / TOP-MATH / TOP-BAN for a teacher who only teaches ইসলাম শিক্ষা.
+  // Records AND items are narrowed together, so the health percentages and the
+  // topic touches describe the same homework as the counts above them.
+  if (opts.teacherId) {
+    const ids = [
+      ...new Set([
+        ...records.map((r) => r.hwItemId.toString()),
+        ...items.map((i) => i._id.toString()),
+      ]),
+    ];
+    const mine = await itemsAttributedTo(ids, opts.teacherId);
+    records = records.filter((r) => mine.has(r.hwItemId.toString()));
+    items = items.filter((i) => mine.has(i._id.toString()));
+  }
 
   const chaseList: ChaseEntry[] = records
     .filter((r) => r.state === "CHASE")
