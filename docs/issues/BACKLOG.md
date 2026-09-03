@@ -24,6 +24,24 @@ intake/fix procedures live in [README.md](README.md). To add one: paste the issu
 
 ---
 
+## BUG-019 — Homework "সারসংক্ষেপ" fold is class-wide on a teacher's own screen
+- **Status:** open
+- **Severity:** medium
+- **Platform:** web
+- **Area:** homework
+- **Reported:** 2026-09-03
+- **Screenshot:** —
+
+**Repro:** View as Md Abdul Kuddus (ইসলাম শিক্ষা teacher) → বাড়ির কাজ → pick শ্রেণি ৫ → open the সারসংক্ষেপ fold.
+
+**Expected:** The summary describes the signed-in teacher's own homework, like every other number on the screen now does.
+
+**Actual:** It describes the whole class: দেখা বাকি ৬২, চলমান পুনঃজমা ১৭, চলমান রিমাইন্ডার ১০৯, সময়মতো জমা ৬৯%, ফেরত গড় ৫.৭ দিন. His own two ইসলাম শিক্ষা items are fully checked and returned, so none of the 62 is his. The fold's own "টপিক কতবার এসেছে" list proves the scope — TOP-ENG-C5-GEN (২৯), TOP-MATH-C5-06, TOP-BAN-C5-07, TOP-SCI-C5-06 — other teachers' subjects.
+
+**Notes:** `homeworkSummary(classId)` takes a class id and nothing else: all teachers, all subjects, all sections of the class, and no date window. D-#634 scoped the class chips and Today's rows to the caller (`homeworkClassOverview`'s new `teacherId`, D-#351 attribution) but deliberately left this fold class-wide "for the section's confirmer" — which now reads as an inconsistency directly under self-scoped chips that show nothing. Owner ruling 2026-09-03: it should show the signed-in teacher's own summary. Same mechanism as D-#634 — thread `teacherId` into `homeworkSummary` and pass the caller unless `isAdminStaff`; decide what the section's homework CONFIRMER should see (they are not admin staff but do own the class-wide reconcile duty). `chaseList` feeds the §7.2 attention/comms thresholds, so check those still read correctly once scoped.
+
+**Fix ref:** —
+
 ## BUG-018 — Guardian weekly routine omits Quran/Arabic (no group memberships + no admin UI to create them)
 - **Status:** fixed (2026-07-07) — screen shipped; **data entry still required by the school**
 - **Severity:** high
