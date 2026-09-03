@@ -290,6 +290,28 @@ describe("myDay — homework counts (homeworkClassOverview parity)", () => {
     expect(r.homework).toEqual({ pendingChecking: 0, openResubmissions: 0, activeChases: 0 });
     expect(mockOverview).not.toHaveBeenCalled();
   });
+
+  // D-#634: read-scope is broad (a subject teacher reads every section they teach
+  // in), so an unscoped sum answered "how much homework does this class owe, from
+  // ALL its teachers?" — 201 pending checks on the Today screen of a teacher with
+  // one. The counts are attributed to the caller unless the caller is admin staff.
+  test("a TEACHER's counts are scoped to their own attributed homework", async () => {
+    const sec = { _id: oid(), classId: oid() };
+    mockSectionFind.mockResolvedValue([sec]);
+    mockConfirm.mockRejectedValue(new Error("not a confirmer"));
+    mockRead.mockResolvedValue(undefined);
+    await myDayFor(ctxFor("TEACHER", "teacher-9"), "2026-07-01");
+    expect(mockOverview.mock.calls[0][2]).toEqual({ teacherId: "teacher-9" });
+  });
+
+  test("a PRINCIPAL keeps the school-wide counts (their own work IS the whole pile)", async () => {
+    const sec = { _id: oid(), classId: oid() };
+    mockSectionFind.mockResolvedValue([sec]);
+    mockConfirm.mockRejectedValue(new Error("not a confirmer"));
+    mockRead.mockResolvedValue(undefined);
+    await myDayFor(ctxFor("PRINCIPAL", "head-1"), "2026-07-01");
+    expect(mockOverview.mock.calls[0][2]).toEqual({ teacherId: null });
+  });
 });
 
 describe("myDay — attendancePending", () => {

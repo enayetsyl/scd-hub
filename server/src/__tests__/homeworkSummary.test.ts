@@ -14,12 +14,21 @@ import mongoose from "mongoose";
 const mockRecordFind = jest.fn();
 const mockItemFind = jest.fn();
 const mockReconFind = jest.fn();
+const mockResolveTeachers = jest.fn();
 
 jest.mock("../modules/trackers/models/HomeworkStudentRecord", () => ({
   HomeworkStudentRecord: { find: (q: unknown) => ({ lean: () => mockRecordFind(q) }) },
 }));
 jest.mock("../modules/trackers/models/HomeworkItem", () => ({
-  HomeworkItem: { find: (q: unknown) => ({ lean: () => mockItemFind(q) }) },
+  HomeworkItem: {
+    // `.select(…).lean()` is the D-#634 attribution read; the pre-existing callers
+    // go straight to `.lean()`. Both land on the same mock, which branches on the
+    // query it is handed.
+    find: (q: unknown) => ({ lean: () => mockItemFind(q), select: () => ({ lean: () => mockItemFind(q) }) }),
+  },
+}));
+jest.mock("../modules/trackers/subjectTeacher", () => ({
+  resolveSubjectTeachers: (...a: unknown[]) => mockResolveTeachers(...a),
 }));
 jest.mock("../modules/trackers/models/HomeworkReconciliation", () => ({
   HomeworkReconciliation: { find: (q: unknown) => ({ lean: () => mockReconFind(q) }) },
@@ -128,6 +137,82 @@ describe("homeworkClassOverview (per-class cumulative counts)", () => {
   test("no classIds → [] (no DB hit)", async () => {
     const res = await homeworkClassOverview([], Date.now());
     expect(res).toEqual([]);
+  });
+
+  // -------------------------------------------------------------------------
+  // D-#634 — teacher-scoped badges. The unscoped counts above are the class's
+  // whole pile, from every teacher who ever gave it homework; a teacher's
+  // dashboard has to answer "what do I owe?" instead.
+  // -------------------------------------------------------------------------
+  describe("teacherId scoping (D-#634)", () => {
+    const C1 = "class-1";
+    const MINE = "item-mine";
+    const THEIRS = "item-theirs";
+    const day0 = new Date(2026, 5, 1, 9);
+
+    /** Two items in one class: one taught by ME, one by a colleague. */
+    function seedTwoTeachers(): void {
+      mockRecordFind.mockResolvedValue([
+        { classId: C1, hwItemId: MINE, state: "SUBMITTED", chaseCount: 0, stateDates: [{ state: "SUBMITTED", at: day0 }] },
+        { classId: C1, hwItemId: THEIRS, state: "SUBMITTED", chaseCount: 0, stateDates: [{ state: "SUBMITTED", at: day0 }] },
+        { classId: C1, hwItemId: THEIRS, state: "SUBMITTED", chaseCount: 0, stateDates: [{ state: "SUBMITTED", at: day0 }] },
+        { classId: C1, hwItemId: THEIRS, state: "CHASE", chaseCount: 2, stateDates: [{ state: "GIVEN", at: day0 }] },
+        { classId: C1, hwItemId: MINE, state: "DUE", chaseCount: 0, resubOf: oid(), stateDates: [{ state: "GIVEN", at: day0 }] },
+      ]);
+      mockItemFind.mockImplementation((q: Record<string, unknown>) =>
+        // The attribution read asks by _id; the ceiling read asks by class + week.
+        q && (q as { _id?: unknown })._id
+          ? [
+              { _id: MINE, sectionId: "sec-1", subject: "MATH", dateGiven: day0, declaredBy: "someone-else" },
+              { _id: THEIRS, sectionId: "sec-1", subject: "ENG", dateGiven: day0, declaredBy: "colleague" },
+            ]
+          : [{ classId: C1, dateGiven: new Date(2026, 5, 1), timeDecl: 200 }],
+      );
+      // The routine says MATH is mine, ENG is the colleague's (D-#351).
+      mockResolveTeachers.mockResolvedValue(new Map([[MINE, "me"], [THEIRS, "colleague"]]));
+    }
+
+    test("counts only the records on items attributed to that teacher", async () => {
+      seedTwoTeachers();
+      const [scoped] = await homeworkClassOverview([C1], new Date(2026, 5, 3).getTime(), { teacherId: "me" });
+      expect(scoped.pendingChecking).toBe(1); // not 3
+      expect(scoped.activeChases).toBe(0); // the colleague's chase is not mine
+      expect(scoped.openResubmissions).toBe(1);
+    });
+
+    test("the same class, unscoped, still returns the whole pile", async () => {
+      seedTwoTeachers();
+      const [all] = await homeworkClassOverview([C1], new Date(2026, 5, 3).getTime());
+      expect(all.pendingChecking).toBe(3);
+      expect(all.activeChases).toBe(1);
+    });
+
+    test("falls back to the declarer when the routine names nobody for the cell", async () => {
+      seedTwoTeachers();
+      mockResolveTeachers.mockResolvedValue(new Map()); // unscheduled catch-up subject
+      const [scoped] = await homeworkClassOverview([C1], new Date(2026, 5, 3).getTime(), {
+        teacherId: "colleague",
+      });
+      expect(scoped.pendingChecking).toBe(2); // THEIRS, via declaredBy
+    });
+
+    test("the over-ceiling day count stays a CLASS fact, not a per-teacher one", async () => {
+      seedTwoTeachers();
+      const [scoped] = await homeworkClassOverview([C1], new Date(2026, 5, 3).getTime(), { teacherId: "me" });
+      // 200 minutes were given to these children that day, whoever gave them.
+      expect(scoped.overCeilingDaysThisWeek).toBe(1);
+    });
+
+    test("a teacher with nothing in the class gets zeroes, not the class's numbers", async () => {
+      seedTwoTeachers();
+      const [scoped] = await homeworkClassOverview([C1], new Date(2026, 5, 3).getTime(), {
+        teacherId: "unrelated-teacher",
+      });
+      expect(scoped.pendingChecking).toBe(0);
+      expect(scoped.activeChases).toBe(0);
+      expect(scoped.openResubmissions).toBe(0);
+      expect(scoped.onTimePct).toBeNull();
+    });
   });
 });
 

@@ -43,6 +43,7 @@ import {
   type ReturningStudent,
 } from "../../trackers/services/ReturnFromLeaveService";
 import { homeworkClassOverview } from "../../trackers/services/HomeworkSummaryService";
+import { isAdminStaff } from "../../foundation/services/RoleScope";
 import { myMarkingUnits } from "../../attendance/services/StudentAttendanceService";
 import { classPresenceForDate, type ClassPresence } from "../../attendance/services/AttendanceReportService";
 import { pendingWorkFor, type PendingAlert, type AssignmentPrep } from "./PendingAlertService";
@@ -211,7 +212,13 @@ export async function myDayFor(ctx: AppContext, dateStr: string): Promise<MyDayR
       }
     }
     if (authorized.size > 0) {
-      const overview = await homeworkClassOverview([...authorized], Date.now());
+      // D-#634: Today's "অসমাপ্ত কাজ" rows are the CALLER's outstanding work, so a
+      // teacher's counts are attributed to them (D-#351) instead of summing every
+      // teacher's homework across every class they may read. Principal/Office keep
+      // the school-wide totals — for them that IS their own work.
+      const overview = await homeworkClassOverview([...authorized], Date.now(), {
+        teacherId: isAdminStaff(auth) ? null : (auth.userId as string),
+      });
       for (const o of overview) {
         homework.pendingChecking += o.pendingChecking;
         homework.openResubmissions += o.openResubmissions;
