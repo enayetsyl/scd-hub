@@ -319,7 +319,12 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
     const id = setInterval(() => refetchCtOverdue({ requestPolicy: "network-only" }), 60_000);
     return () => clearInterval(id);
   }, [canCtOverdueBadge, refetchCtOverdue]);
-  const ctOverdue = ctOverdueQ.data?.classTestOverdueCounts?.overdue ?? 0;
+  // D-#633: a TEACHER's badge counts only the delay that is still hers —
+  // `awaitingSubmit` — not `overdue`, which keeps counting an exam she has already
+  // submitted for as long as the office has not published it. Office/Principal own
+  // the whole pile, so their badge stays on `overdue`.
+  const ctOverdueCounts = ctOverdueQ.data?.classTestOverdueCounts;
+  const ctOverdue = (can("roster:manage") ? ctOverdueCounts?.overdue : ctOverdueCounts?.awaitingSubmit) ?? 0;
 
   // Owner 2026-07-26: Staff drawer badge — leave applications awaiting approval
   // (Principal/Office, leave:manage). Refreshes on any StaffLeaveApplication mutation.

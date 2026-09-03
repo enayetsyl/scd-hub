@@ -54,6 +54,11 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
     for (const r of results) m.set(r.studentId, r);
     return m;
   }, [results]);
+  // CT-8 exam-level state, on the screen the teacher actually works in: the
+  // per-student rows already say "অনুমোদনের অপেক্ষায়", but nothing here answered
+  // "did my submit go through?" for the exam as a whole (owner report 2026-09-03).
+  const anyPublished = results.some((r) => !!r.publishedAt);
+  const allSubmitted = results.length > 0 && results.every((r) => !!r.submittedAt || !!r.publishedAt);
 
   // Who may correct the details: Principal/Office, or the exam's OWN teacher — the
   // accountable subject teacher or whoever filed it (the same "mine" listMyClassTests
@@ -239,12 +244,23 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
             {ctUnitLabel(test)} · {hwSubjectLabel(test.subject)} · {STR.ctTotalMarks}{" "}
             {bnNum(test.totalMarks)} · {STR.ctPassMark} {bnNum(test.passMark)}
           </Muted>
+          {/* Exam-level submit/publish state — the answer to "did my submit land?".
+              Published wins over submitted: a published exam was submitted first. */}
+          {anyPublished || allSubmitted ? (
+            <View style={{ flexDirection: "row", marginTop: space(2) }}>
+              <Badge
+                text={anyPublished ? STR.ctPublishedBadge : STR.ctPendingApproval}
+                tone={anyPublished ? "ok" : "brand"}
+              />
+            </View>
+          ) : null}
           <View style={{ marginTop: space(2) }}>
             <Button
               // A teacher can only SUBMIT for approval on the next screen — labelling
               // their button "Publish results" promised something they cannot do
-              // (owner ask 2026-08-03). Admins really do publish.
-              title={isAdmin ? STR.ctPublishTitle : STR.ctSubmitShort}
+              // (owner ask 2026-08-03). Admins really do publish. Once it IS submitted,
+              // the label stops asking for a submit that has already happened.
+              title={isAdmin ? STR.ctPublishTitle : allSubmitted ? STR.ctSubmittedForApproval : STR.ctSubmitShort}
               variant="secondary"
               onPress={() => nav.navigate("ClassTestPublish", { testId, title })}
             />
