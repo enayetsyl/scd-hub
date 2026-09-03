@@ -241,6 +241,11 @@ export type AuditEventKind =
   | "WORK_CLAIM_NUDGED"       // Office re-fired the teacher’s notification (Office cannot resolve)
   | "WORK_CLAIM_REASSIGNED"   // teaching changed hands; the open claim followed it (WC-7)
   | "WORK_CLAIM_EXPIRED"      // 7 school days with no answer — leaves the queue, stays here
+  // "View as" (VA-1, D-#638). Deliberately NOT LOGIN_SUCCESS: the guardian-engagement
+  // report counts guardian logins to find families that have gone quiet, and a Principal
+  // checking a family's view is not that family showing up (G7).
+  | "IMPERSONATION_START"     // Principal opened someone else's account view; target = the account
+  | "IMPERSONATION_END"       // returned to their own account (or the borrowed token expired)
   | "PERMISSION_DENIED";
 
 export interface IAudit extends Document {
@@ -248,6 +253,12 @@ export interface IAudit extends Document {
   eventKind: AuditEventKind;
   actorId?: Types.ObjectId;
   actorRole?: string;
+  /**
+   * The borrowed account, when the row was written inside a "View as" session (D-#638).
+   * `actorId` names the Principal who acted; this names whose account they acted through.
+   * Absent on every ordinary row, which is all rows written before VA-1.
+   */
+  onBehalfOf?: Types.ObjectId;
   targetId?: Types.ObjectId;
   targetKind?: string;
   /** ISO timestamp of the event. Populated by the server — never user-supplied. */
@@ -262,6 +273,7 @@ const AuditSchema = new Schema<IAudit>(
     eventKind: { type: String, required: true },
     actorId: { type: Schema.Types.ObjectId },
     actorRole: { type: String },
+    onBehalfOf: { type: Schema.Types.ObjectId },
     targetId: { type: Schema.Types.ObjectId },
     targetKind: { type: String },
     eventAt: { type: Date, required: true, default: () => new Date() },

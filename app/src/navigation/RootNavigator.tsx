@@ -16,6 +16,7 @@ import { AppTabs, LoginScreen } from "./AppTabs";
 import NotificationCenterScreen from "../screens/notifications/NotificationCenterScreen";
 import NotificationDetailScreen from "../screens/notifications/NotificationDetailScreen";
 import ReportProblemScreen from "../screens/common/ReportProblemScreen";
+import ViewAsScreen from "../screens/admin/ViewAsScreen";
 
 const RootStack = createNativeStackNavigator();
 
@@ -67,6 +68,22 @@ export function RootNavigator(): React.ReactElement {
                 headerShown: true,
                 presentation: "modal",
                 title: STR.reportTitle,
+                headerStyle: { backgroundColor: colors.primary },
+                headerTintColor: colors.onPrimary,
+                headerTitleStyle: { fontFamily: fonts.bold },
+              }}
+            />
+            {/* VA-1: "View as" — the Principal picks whose account view to open. A root
+                modal so it is reachable from the account menu on every tab, and takes no
+                route params (a param-requiring screen registered here would become an
+                initial route the tab cannot render). */}
+            <RootStack.Screen
+              name="ViewAs"
+              component={ViewAsScreen}
+              options={{
+                headerShown: true,
+                presentation: "modal",
+                title: STR.viewAsMenu,
                 headerStyle: { backgroundColor: colors.primary },
                 headerTintColor: colors.onPrimary,
                 headerTitleStyle: { fontFamily: fonts.bold },

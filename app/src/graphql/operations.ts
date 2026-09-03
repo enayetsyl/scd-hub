@@ -84,6 +84,68 @@ export const GUARDIAN_LOGIN = gql<
   }
 `;
 
+// ---------------------------------------------------------------------------
+// "View as" — the Principal opens someone else's account view (VA-1, D-#638)
+// ---------------------------------------------------------------------------
+
+export interface ImpersonationTargetT {
+  id: string;
+  kind: "STAFF" | "GUARDIAN";
+  name: string;
+  role: string;
+  /** Staff: their sections. Guardian: one line per child, "<নাম> · <শাখা>". */
+  lines: string[];
+  eligible: boolean;
+  reason: string | null;
+}
+
+export const IMPERSONATION_TARGETS = gql<
+  { impersonationTargets: ImpersonationTargetT[] },
+  { kind: string; search?: string | null }
+>`
+  query ImpersonationTargets($kind: String!, $search: String) {
+    impersonationTargets(kind: $kind, search: $search) {
+      id
+      kind
+      name
+      role
+      lines
+      eligible
+      reason
+    }
+  }
+`;
+
+export interface ImpersonationResultT {
+  token: string;
+  userId: string;
+  role: string;
+  name: string;
+  expiresInSeconds: number;
+}
+
+export const START_IMPERSONATION = gql<
+  { startImpersonation: ImpersonationResultT },
+  { targetId: string; targetKind: string }
+>`
+  mutation StartImpersonation($targetId: String!, $targetKind: String!) {
+    startImpersonation(targetId: $targetId, targetKind: $targetKind) {
+      token
+      userId
+      role
+      name
+      expiresInSeconds
+    }
+  }
+`;
+
+/** Sent with the BORROWED token — it is what stamps the IMPERSONATION_END audit row. */
+export const END_IMPERSONATION = gql<{ endImpersonation: boolean }, Record<string, never>>`
+  mutation EndImpersonation {
+    endImpersonation
+  }
+`;
+
 // ===========================================================================
 // Foundation: subjects / classes / sections / students / scopes
 // ===========================================================================
@@ -8371,6 +8433,8 @@ export interface WorkClaimRowT {
   teacherName: string;
   claimedAt: string;
   actionDateKey: string;
+  /** D-#635: the WORK's own date — which day's homework the claim is about. */
+  dueDateKey: string | null;
   note: string | null;
   status: string;
   statusLabelBn: string;
@@ -8382,7 +8446,7 @@ export interface WorkClaimRowT {
 const WORK_CLAIM_ROW_FIELDS = `
   claimId tracker workId subject
   studentId studentNameBn sectionId sectionNameBn
-  teacherId teacherName claimedAt actionDateKey note
+  teacherId teacherName claimedAt actionDateKey dueDateKey note
   status statusLabelBn checkpoint checkpointLabelBn nudgedToday
 `;
 

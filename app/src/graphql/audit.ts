@@ -11,6 +11,9 @@ export interface AuditRowT {
   actorId: string | null;
   actorName: string | null;
   actorRole: string | null;
+  /** "View as" rows (D-#638): the account the Principal acted through. */
+  onBehalfOfId: string | null;
+  onBehalfOfName: string | null;
   targetKind: string | null;
   targetId: string | null;
   metaJson: string | null;
@@ -22,7 +25,7 @@ export const AUDIT_LOG_QUERY = gql<
 >`
   query AuditLog($before: String, $limit: Int, $eventKind: String, $actorRole: String) {
     auditLog(before: $before, limit: $limit, eventKind: $eventKind, actorRole: $actorRole) {
-      id eventKind eventAt actorId actorName actorRole targetKind targetId metaJson
+      id eventKind eventAt actorId actorName actorRole onBehalfOfId onBehalfOfName targetKind targetId metaJson
     }
   }
 `;

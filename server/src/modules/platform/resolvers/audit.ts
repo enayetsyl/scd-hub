@@ -21,6 +21,9 @@ AuditRowRef.implement({
     eventAt: t.exposeString("eventAt"),
     actorId: t.string({ nullable: true, resolve: (r) => r.actorId }),
     actorName: t.string({ nullable: true, resolve: (r) => r.actorName }),
+    // Non-null only on a row written inside a "View as" session (D-#638).
+    onBehalfOfId: t.string({ nullable: true, resolve: (r) => r.onBehalfOfId }),
+    onBehalfOfName: t.string({ nullable: true, resolve: (r) => r.onBehalfOfName }),
     actorRole: t.string({ nullable: true, resolve: (r) => r.actorRole }),
     targetKind: t.string({ nullable: true, resolve: (r) => r.targetKind }),
     targetId: t.string({ nullable: true, resolve: (r) => r.targetId }),

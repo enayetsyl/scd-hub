@@ -1687,7 +1687,9 @@ builder.queryField("homeworkClassOverview", (t) =>
     type: [ClassOverviewRef],
     description:
       "Per-class cumulative homework counts for the dashboard. Each (classId, sectionId) ref is " +
-      "authorized via read-scope; refs the caller cannot read are silently skipped. Requires tracker:read.",
+      "authorized via read-scope; refs the caller cannot read are silently skipped. Requires tracker:read. " +
+      "D-#634: a TEACHER's badges count only the homework attributed to them (D-#351); Principal/Office " +
+      "read the class-wide numbers.",
     authScopes: { hasPermission: "tracker:read" },
     args: {
       refs: t.arg({ type: [HomeworkClassRefInput], required: true }),
@@ -1703,7 +1705,13 @@ builder.queryField("homeworkClassOverview", (t) =>
           // A stale/over-broad ref must not break the whole dashboard — skip it.
         }
       }
-      return classOverviewSvc(authorized, Date.now());
+      // D-#634: read-scope is broad on purpose (a subject teacher can READ every
+      // section they teach in), so the unscoped count answered "how much homework
+      // does this class owe, from all its teachers?" — a number no teacher can act
+      // on, and a wildly discouraging one. Their own share is the actionable number.
+      return classOverviewSvc(authorized, Date.now(), {
+        teacherId: isAdminStaff(ctx.auth) ? null : (ctx.auth.userId as string),
+      });
     },
   }),
 );

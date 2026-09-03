@@ -392,7 +392,7 @@ function HeaderBell(): React.ReactElement {
  */
 function AvatarMenu(): React.ReactElement {
   const [open, setOpen] = React.useState(false);
-  const { user, logout, templates, viewMode, setViewMode } = useAuth();
+  const { user, logout, templates, viewMode, setViewMode, primaryRole, isImpersonating } = useAuth();
   const { lang, toggle } = useLanguage();
   const navigation = useNavigation();
   const colors = useColors();
@@ -468,6 +468,20 @@ function AvatarMenu(): React.ReactElement {
                 <Text style={{ ...typeScale.bodyStrong, color: colors.textPrimary }} numberOfLines={1}>
                   {name}
                 </Text>
+              </View>
+            ) : null}
+            {/* VA-1 (D-#638) — open someone else's account view. Offered on the PRIMARY
+                role, never on `role`: that one follows the chosen hat, and a
+                client-influenced value has no business gating a token mint (G3). The
+                server re-checks the database regardless. Hidden while already inside a
+                borrowed session, which the server also refuses (G2, no second hop). */}
+            {primaryRole === "PRINCIPAL" && !isImpersonating ? (
+              <View style={{ borderBottomWidth: 1, borderBottomColor: colors.border, paddingBottom: space(1) }}>
+                <MenuRow
+                  icon="👁"
+                  label={STR.viewAsMenu}
+                  onPress={() => (navigation as unknown as { navigate: (n: string) => void }).navigate("ViewAs")}
+                />
               </View>
             ) : null}
             {/* Row shows the language it switches TO (matches the old toggle's intent). */}
@@ -1392,6 +1406,78 @@ function GuardianAssignmentsNavigator(): React.ReactElement {
 
 const Drawer = createDrawerNavigator<TabParamList>();
 
+/** mm:ss for the banner countdown; clamps at zero rather than going negative. */
+function remainingLabel(msLeft: number): string {
+  const total = Math.max(0, Math.floor(msLeft / 1000));
+  const mm = Math.floor(total / 60);
+  const ss = total % 60;
+  return `${mm}:${ss < 10 ? "0" : ""}${ss}`;
+}
+
+/**
+ * The View-as banner (VA-1, D-#638). Renders nothing in one's own account.
+ *
+ * It owns the expiry as well as the display: the borrowed token dies on the server after
+ * its TTL, and without this the app would sit in a session whose every request had begun
+ * to fail. On reaching zero it hands the Principal their own account back — it does NOT
+ * log anyone out, which is the failure mode that would cost real work.
+ */
+function ViewAsBanner(): React.ReactElement | null {
+  const { viewAs, returnToSelf } = useAuth();
+  const colors = useColors();
+  const [now, setNow] = React.useState(() => Date.now());
+
+  React.useEffect(() => {
+    if (!viewAs) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [viewAs]);
+
+  const expired = viewAs !== null && viewAs.expiresAt <= now;
+  React.useEffect(() => {
+    if (expired) void returnToSelf();
+  }, [expired, returnToSelf]);
+
+  if (!viewAs) return null;
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        gap: space(2),
+        paddingVertical: space(2),
+        paddingHorizontal: space(3),
+        backgroundColor: colors.warningContainer,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.warning,
+      }}
+      accessibilityRole="alert"
+    >
+      <Text style={{ fontSize: 16 }}>👁</Text>
+      <Text style={{ ...typeScale.bodyStrong, color: colors.textPrimary, flex: 1 }} numberOfLines={1}>
+        {STR.viewAsBanner} {viewAs.name}
+      </Text>
+      <Text style={{ ...typeScale.caption, color: colors.textSecondary }}>
+        {remainingLabel(viewAs.expiresAt - now)}
+      </Text>
+      <Pressable
+        onPress={() => void returnToSelf()}
+        accessibilityRole="button"
+        hitSlop={8}
+        style={{
+          borderWidth: 1,
+          borderColor: colors.warning,
+          borderRadius: radius.sm,
+          paddingHorizontal: space(2),
+          paddingVertical: space(1),
+        }}
+      >
+        <Text style={{ ...typeScale.button, color: colors.textPrimary }}>{STR.viewAsReturn}</Text>
+      </Pressable>
+    </View>
+  );
+}
+
 export function AppTabs(): React.ReactElement {
   // `isRole` rather than `role ===` for the gates below (D-#467): with a view mode on it
   // answers for the chosen hat, and with none it answers for EVERY template the login
@@ -1559,6 +1645,11 @@ export function AppTabs(): React.ReactElement {
 
   return (
     <GuardianChildProvider enabled={role === "GUARDIAN"}>
+      {/* VA-1 (D-#638): while the Principal is inside someone else's account this sits
+          above everything and never scrolls away. Nothing is refused during a View-as
+          session (the owner's G6 decision), so being unmistakably told whose account you
+          are in IS the safeguard. */}
+      <ViewAsBanner />
       <Drawer.Navigator
         // The grouped/collapsible sidebar; route names are unchanged so notification
         // deep-links + cross-screen navigation keep working (see DrawerContent).

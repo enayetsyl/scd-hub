@@ -157,6 +157,13 @@ export default function AuditLogScreen(): React.ReactElement {
                       {r.actorName ?? (r.actorRole ? r.actorId ?? "—" : STR.audSystem)}
                     </Body>
                     {r.actorRole ? <Badge text={r.actorRole} tone={roleTone(r.actorRole)} /> : null}
+                    {/* A row written inside a View-as session names the Principal above,
+                        and the account they acted through here (D-#638). */}
+                    {r.onBehalfOfId ? (
+                      <Muted>
+                        {STR.audOnBehalfOf} {r.onBehalfOfName ?? r.onBehalfOfId}
+                      </Muted>
+                    ) : null}
                     {r.targetKind ? <Muted>→ {r.targetKind}</Muted> : null}
                   </View>
                   {r.metaJson ? <Muted style={{ marginTop: 2 }}>{metaSummary(r.metaJson)}</Muted> : null}

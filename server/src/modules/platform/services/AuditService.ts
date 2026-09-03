@@ -1,5 +1,6 @@
 import type { Types } from "mongoose";
 import { Audit, type AuditEventKind } from "../models/Audit";
+import { currentAuditActor } from "./auditActor";
 
 interface AuditParams {
   eventKind: AuditEventKind;
@@ -11,12 +12,38 @@ interface AuditParams {
   meta?: Record<string, unknown>;
 }
 
+/**
+ * Attribute a row to the human who actually caused it (D-#638).
+ *
+ * Ordinary request: returns the params untouched — no store, no change, and every
+ * existing row keeps the shape it has always had.
+ *
+ * Inside a "View as" session: the row names the PRINCIPAL and the borrowed account moves
+ * to `onBehalfOf`. The owner's rule is that the log says who moved something, not whose
+ * account it moved through, and inverting here means it holds for every event kind the
+ * app has — not just the ones someone remembered to update.
+ *
+ * `onBehalfOf` prefers the call site's own `actorId` over the token's subject: a few
+ * writes name a target other than the caller, and the row should record the account the
+ * write was actually attributed to before the inversion.
+ */
+function attribute(params: AuditParams): AuditParams & { onBehalfOf?: Types.ObjectId | string } {
+  const override = currentAuditActor();
+  if (!override) return params;
+  return {
+    ...params,
+    actorId: override.impersonatorId,
+    actorRole: override.impersonatorRole,
+    onBehalfOf: params.actorId ?? override.onBehalfOf,
+  };
+}
+
 /** Fire-and-forget append to the audit log. Never throws — a log failure must
  *  never take down the main request. Failures are logged to stderr only. */
 export async function writeAudit(params: AuditParams): Promise<void> {
   try {
     await Audit.create({
-      ...params,
+      ...attribute(params),
       eventAt: new Date(),
     });
   } catch (err) {
@@ -40,7 +67,7 @@ export async function writeAuditMany(rows: AuditParams[]): Promise<void> {
   try {
     const eventAt = new Date();
     await Audit.insertMany(
-      rows.map((r) => ({ ...r, eventAt })),
+      rows.map((r) => ({ ...attribute(r), eventAt })),
       { ordered: false },
     );
   } catch (err) {

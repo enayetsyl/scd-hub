@@ -20,6 +20,9 @@ export interface AuditRowShape {
   actorId: string | null;
   actorName: string | null;
   actorRole: string | null;
+  /** "View as" rows only (D-#638): the account the Principal acted through. */
+  onBehalfOfId: string | null;
+  onBehalfOfName: string | null;
   targetKind: string | null;
   targetId: string | null;
   metaJson: string | null;
@@ -49,7 +52,14 @@ export async function auditLog(input: AuditLogInput = {}): Promise<AuditRowShape
     .lean()) as unknown as IAudit[];
 
   // Actor names: staff live in Users, guardians in Guardians — try both.
-  const actorIds = [...new Set(rows.map((r) => r.actorId?.toString()).filter(Boolean))] as string[];
+  // Both ids resolve through the same lookup: on a "View as" row the actor is the
+  // Principal and `onBehalfOf` is the borrowed account, so the viewer can read
+  // "<Principal> (as <teacher>)" without a second query (D-#638).
+  const actorIds = [
+    ...new Set(
+      rows.flatMap((r) => [r.actorId?.toString(), r.onBehalfOf?.toString()]).filter(Boolean),
+    ),
+  ] as string[];
   const [users, guardians] = await Promise.all([
     User.find({ _id: { $in: actorIds } }).select("name").lean() as unknown as Promise<
       Array<{ _id: Types.ObjectId; name?: string }>
@@ -69,6 +79,8 @@ export async function auditLog(input: AuditLogInput = {}): Promise<AuditRowShape
     actorId: r.actorId ? r.actorId.toString() : null,
     actorName: r.actorId ? nameById.get(r.actorId.toString()) ?? null : null,
     actorRole: r.actorRole ?? null,
+    onBehalfOfId: r.onBehalfOf ? r.onBehalfOf.toString() : null,
+    onBehalfOfName: r.onBehalfOf ? nameById.get(r.onBehalfOf.toString()) ?? null : null,
     targetKind: r.targetKind ?? null,
     targetId: r.targetId ? r.targetId.toString() : null,
     metaJson: r.meta && Object.keys(r.meta).length > 0 ? JSON.stringify(r.meta) : null,
