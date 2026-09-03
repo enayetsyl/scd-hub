@@ -10,7 +10,8 @@ import { createYoga, maskError } from "graphql-yoga";
 import { GraphQLError } from "graphql";
 import { connectDb } from "./db";
 import { connectBookDb, BookDbNotConfiguredError } from "./bookDb";
-import { buildContext } from "./context";
+import { buildContext, verifyTokenFromRequest } from "./context";
+import { runWithAuditActor } from "./modules/platform/services/auditActor";
 
 // Import all resolvers (side-effects: register on builder). One list, shared with the
 // schema-validation gate — see registerResolvers.ts.
@@ -38,6 +39,29 @@ import { registerWebPushChannel } from "./modules/notifications/services/webPush
 import { startNotificationTicker, getTickerHealth } from "./modules/notifications/services/SchedulerService";
 
 const app = express();
+
+/**
+ * "View as" audit attribution (VA-1, D-#638). When the caller's token carries an
+ * impersonator, every audit row this request writes names the PRINCIPAL and records the
+ * borrowed account in `onBehalfOf`.
+ *
+ * It sits here, above GraphQL AND the REST routers, because both write audit rows; and it
+ * works by wrapping the rest of the request rather than by touching `writeAudit`'s ~700
+ * call sites, so a call site added tomorrow is attributed correctly without knowing this
+ * feature exists. An ordinary request installs no store and is completely unaffected.
+ */
+app.use((req, _res, next) => {
+  const auth = verifyTokenFromRequest(req);
+  if (!auth?.impersonatorId) return next();
+  return runWithAuditActor(
+    {
+      impersonatorId: auth.impersonatorId,
+      impersonatorRole: auth.impersonatorRole ?? "PRINCIPAL",
+      onBehalfOf: auth.userId,
+    },
+    next,
+  );
+});
 
 // Health endpoints (thin HTTP surface, ADR-003)
 app.get("/healthz", (_req, res) => res.json({ ok: true }));

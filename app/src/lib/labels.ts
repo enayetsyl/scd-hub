@@ -1319,6 +1319,20 @@ const STR_BN = {
   accountMenu: "অ্যাকাউন্ট মেনু",
   openMenu: "মেনু খুলুন",
   // View switcher for a two-hat login (D-#467)
+  // VA-1 (D-#638) — "View as". Deliberately echoes viewModeLabel below it: the two menu
+  // rows sit together and ask related questions (which hat / whose account).
+  viewAsMenu: "কার হয়ে দেখবেন",
+  viewAsStaffTab: "শিক্ষক ও অফিস",
+  viewAsGuardianTab: "অভিভাবক",
+  viewAsSearch: "নাম, ফোন বা শিক্ষার্থীর নাম",
+  viewAsEmpty: "কাউকে পাওয়া যায়নি",
+  viewAsBanner: "দেখছেন",
+  viewAsReturn: "ফিরে যান",
+  viewAsReturnTitle: "নিজের অ্যাকাউন্টে ফিরে যাবেন?",
+  viewAsReturnBody: "এই সময়ে আপনি যা করেছেন তা সংরক্ষিত থাকবে, এবং লগে আপনার নামেই থাকবে।",
+  viewAsExpired: "সময় শেষ — নিজের অ্যাকাউন্টে ফিরে আসা হয়েছে",
+  viewAsFailed: "ভিউ খোলা যায়নি",
+  viewAsCancel: "বাতিল",
   viewModeLabel: "কোন ভূমিকায় দেখবেন",
   // Workspace subject fold (D-#469): one control over the not-my-subject groups
   wsOtherSubjects: "অন্য বিষয়",
@@ -4208,6 +4222,8 @@ const STR_BN = {
   audLoadMore: "আরও দেখুন",
   audNoRows: "কোনো রেকর্ড নেই",
   audSystem: "সিস্টেম",
+  /** Precedes the borrowed account on a View-as row (D-#638). */
+  audOnBehalfOf: "— যার হয়ে:",
   // Guardian engagement (GE-1..GE-3, D-#464/#465)
   geTitle: "অভিভাবকদের ব্যবহার",
   geSubtitle: "কোন অভিভাবক নিয়মিত অ্যাপ দেখেন, কোনটি কেউ খোলেননি",
@@ -5512,6 +5528,18 @@ const STR_EN: StrTable = {
   accountMenu: "Account menu",
   openMenu: "Open menu",
   // View switcher for a two-hat login (D-#467)
+  viewAsMenu: "View as someone else",
+  viewAsStaffTab: "Staff & office",
+  viewAsGuardianTab: "Guardians",
+  viewAsSearch: "Name, phone or student name",
+  viewAsEmpty: "Nobody found",
+  viewAsBanner: "Viewing as",
+  viewAsReturn: "Return",
+  viewAsReturnTitle: "Return to your own account?",
+  viewAsReturnBody: "Everything you changed is saved, and the log records it as you.",
+  viewAsExpired: "Session ended — back in your own account",
+  viewAsFailed: "Could not open that view",
+  viewAsCancel: "Cancel",
   viewModeLabel: "View as",
   // Workspace subject fold (D-#469): one control over the not-my-subject groups
   wsOtherSubjects: "Other subjects",
@@ -8367,6 +8395,7 @@ const STR_EN: StrTable = {
   audLoadMore: "Load more",
   audNoRows: "No records",
   audSystem: "System",
+  audOnBehalfOf: "— as:",
   // Guardian engagement (GE-1..GE-3, D-#464/#465)
   geTitle: "Guardian engagement",
   geSubtitle: "Which families use the app, and which screens nobody opens",
