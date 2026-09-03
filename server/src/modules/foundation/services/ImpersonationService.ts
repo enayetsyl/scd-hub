@@ -16,9 +16,14 @@
  * 2. Nothing is subtracted. The owner's decision is that whatever the teacher or guardian
  *    can do, the Principal can do through them — no denylist, no read-only mode. The
  *    safeguard is that the log names the Principal, not that the app refuses.
+ *
+ * Since D-#639 the gate is the `user:view_as` permission rather than the PRINCIPAL role,
+ * so the owner can hand the same view to a named individual through the AC-1 editor. The
+ * audit inversion follows the holder, not the office: `impersonatorRole` is whatever the
+ * borrower's real role is, so an OFFICE grantee's rows read OFFICE, not PRINCIPAL.
  */
 import { Types } from "mongoose";
-import type { Role } from "@scd/shared";
+import { callerHasPermission, type Permission, type Role } from "@scd/shared";
 import { User } from "../models/User";
 import { Guardian } from "../models/Guardian";
 import { GuardianLink } from "../models/GuardianLink";
@@ -50,7 +55,7 @@ export interface ImpersonationResult extends AuthResult {
   expiresInSeconds: number;
 }
 
-const NOT_PRINCIPAL = "শুধু প্রধান শিক্ষক অন্য কারও ভিউ দেখতে পারেন।";
+const NOT_ALLOWED = "অন্য কারও ভিউ দেখার অনুমতি আপনার নেই।";
 const ALREADY_VIEWING = "আপনি এখন অন্য একটি অ্যাকাউন্টের ভিউতে আছেন। আগে নিজের অ্যাকাউন্টে ফিরে যান।";
 const TARGET_MISSING = "অ্যাকাউন্টটি পাওয়া যায়নি।";
 const TARGET_PRINCIPAL = "প্রধান শিক্ষকের অ্যাকাউন্টের ভিউ দেখা যায় না।";
@@ -59,20 +64,42 @@ const TARGET_INACTIVE = "অ্যাকাউন্টটি নিষ্ক্
 const TARGET_NO_LOGIN = "এই অভিভাবকের লগইন চালু নেই।";
 
 /**
- * The caller must be a Principal *in the database*, not merely by token claim (G3).
+ * The caller must hold `user:view_as` *in the database*, not merely by token claim (G3):
+ * the token's own permission arrays are client-presented, and a token mint must not be
+ * gated on a value the client influenced.
  *
- * Deliberately NOT a `Permission`: keeping it out of the enum keeps it out of the AC-1
- * per-user grant surface, so it can never be handed to an office account by accident —
- * and it means no `/shared/vocab.ts` edit and no two-place contract sync.
+ * D-#638 originally gated this on the PRIMARY role being PRINCIPAL, deliberately keeping
+ * it out of the `Permission` enum so it could never reach the AC-1 grant surface. D-#639
+ * reverses that on the owner's ask: he wants to hand a named individual the same view.
+ * What keeps the reversal narrow is that the permission is NOT in RESERVED_PERMISSIONS
+ * (it would be unreachable if it were) but IS absent from every assignable template:
  *
- * Also deliberately the PRIMARY role, not `isAdminStaff`: an added OFFICE/PRINCIPAL
- * template widens what someone may DO in their own account (D-#468); it should not hand
- * them everyone else's account as well.
+ *   - only the PRINCIPAL template carries it, and PRINCIPAL is not in ASSIGNABLE_TEMPLATES,
+ *     so the D-#468 "added OFFICE template widens what you may do" path cannot reach it;
+ *   - the AC-1 editor that writes grants rides `access:manage`, which IS reserved, so a
+ *     Principal login is still the only thing that can hand it out;
+ *   - `revokedPermissions` still wins, so it can be taken back from anyone, Principal
+ *     included.
+ *
+ * Every refusal below is unchanged and now matters more, particularly TARGET_PRINCIPAL:
+ * a grantee must not be able to climb into the Principal's own account.
  */
-async function assertPrincipal(callerUserId: string): Promise<{ id: Types.ObjectId; role: Role }> {
-  if (!Types.ObjectId.isValid(callerUserId)) throw new Error(NOT_PRINCIPAL);
-  const caller = await User.findById(callerUserId).select("role active").lean();
-  if (!caller || caller.active === false || caller.role !== "PRINCIPAL") throw new Error(NOT_PRINCIPAL);
+async function assertMayViewAs(callerUserId: string): Promise<{ id: Types.ObjectId; role: Role }> {
+  if (!Types.ObjectId.isValid(callerUserId)) throw new Error(NOT_ALLOWED);
+  const caller = await User.findById(callerUserId)
+    .select("role active additionalTemplates grantedPermissions revokedPermissions")
+    .lean();
+  if (!caller || caller.active === false) throw new Error(NOT_ALLOWED);
+  const may = callerHasPermission(
+    {
+      role: caller.role as Role,
+      additionalTemplates: (caller.additionalTemplates ?? []) as Role[],
+      grantedPermissions: (caller.grantedPermissions ?? []) as Permission[],
+      revokedPermissions: (caller.revokedPermissions ?? []) as Permission[],
+    },
+    "user:view_as",
+  );
+  if (!may) throw new Error(NOT_ALLOWED);
   return { id: caller._id as Types.ObjectId, role: caller.role as Role };
 }
 
@@ -131,7 +158,7 @@ export async function listImpersonationTargets(input: {
   search?: string | null;
   limit?: number | null;
 }): Promise<ImpersonationTarget[]> {
-  const caller = await assertPrincipal(input.callerUserId);
+  const caller = await assertMayViewAs(input.callerUserId);
   const limit = Math.min(Math.max(input.limit ?? 50, 1), 200);
   const rx = searchClause(input.search);
 
@@ -232,7 +259,7 @@ export async function startImpersonation(input: {
   targetKind: ImpersonationKind;
 }): Promise<ImpersonationResult> {
   if (input.alreadyImpersonating) throw new Error(ALREADY_VIEWING);
-  const caller = await assertPrincipal(input.callerUserId);
+  const caller = await assertMayViewAs(input.callerUserId);
   if (!Types.ObjectId.isValid(input.targetId)) throw new Error(TARGET_MISSING);
 
   const ttl = `${IMPERSONATION_TTL_MINUTES}m` as `${number}m`;

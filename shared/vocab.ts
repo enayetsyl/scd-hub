@@ -3677,6 +3677,12 @@ export const PERMISSIONS = [
   "guardian:link",
   "message:dispatch",      // wa.me / notices manual send (R-T2)
   "user:manage",
+  "user:view_as",          // "View as" — open another account's view (VA-1, D-#638; made grantable by D-#639).
+                           // Deliberately NOT reserved: the owner's whole ask was to hand it to a named
+                           // individual. It is still Principal-only to GRANT, because the AC-1 editor itself
+                           // rides `access:manage`, which IS reserved. And no added TEACHER/OFFICE template
+                           // carries it (only the PRINCIPAL template does, and PRINCIPAL is not assignable),
+                           // so an explicit per-user grant is the ONLY way it reaches a non-Principal.
   "audit:read",            // Principal reads; audit is system-appended, never user-written
   "template:manage",       // PRINCIPAL ONLY — edit/reset the generated-message templates (Message Templates, D-#129; verifier-proven exact-holder set, the payroll:approve posture)
   "access:manage",         // PRINCIPAL ONLY — the per-user permission editor: tune additional templates / per-user grants / revokes (Access Control AC-1, D-#193/#212; RESERVED-locked, verifier-proven exact-holder set, the template:manage posture)
@@ -3752,6 +3758,7 @@ export const PERMISSION_BUILD_STATUS: Record<Permission, "build" | "pipeline"> =
   "guardian:link": "build",
   "message:dispatch": "build",
   "user:manage": "build",
+  "user:view_as": "build",    // "View as" (VA-1, D-#638); grantable per user since D-#639
   "audit:read": "build",
   "template:manage": "build", // Message Templates MT-1 (Principal-only edit/reset, D-#129)
   "access:manage": "build",   // Access Control AC-1 (Principal-only per-user permission editor, D-#193/#212)
@@ -3791,6 +3798,8 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "roster:manage", "staff:manage", "leave:manage", "payroll:manage", "payroll:approve",
     "performance:manage", "performance:signoff", "guardian:link", "message:dispatch",
     "user:manage", "audit:read",
+    "user:view_as",          // "View as" (VA-1, D-#638). On the PRINCIPAL template so he holds it by role;
+                             // anyone else needs an explicit AC-1 grant (D-#639) — no template carries it.
     "template:manage",       // PRINCIPAL ONLY (D-#129) — Office/Teacher/Guardian never get it
     "access:manage",         // PRINCIPAL ONLY (Access Control AC-1, D-#193/#212) — RESERVED-locked; Office/Teacher/Guardian never get it
     "observation:upload", "observation:read", "observation:manage", // classroom observation (CO-1, D-#195) — NOT observation:review (the observer is an assigned TEACHER, D-#147)
@@ -4050,6 +4059,10 @@ export const PERMISSION_LABELS_BN: Record<Permission, PermissionLabel> = {
   "guardian:link": { name: "অভিভাবক লগইন সংযুক্ত", desc: "অভিভাবক অ্যাকাউন্ট লিংক করা" },
   "message:dispatch": { name: "বার্তা পাঠানো", desc: "wa.me ও নোটিশ ম্যানুয়াল প্রেরণ" },
   "user:manage": { name: "ইউজার লগইন পরিচালনা", desc: "স্টাফ অ্যাকাউন্ট তৈরি ও পরিচালনা" },
+  "user:view_as": {
+    name: "কার হয়ে দেখা",
+    desc: "শিক্ষক বা অভিভাবকের অ্যাকাউন্টের ভিউ খোলা; ওই সময়ের সব কাজ অডিট লগে আপনার নামেই থাকবে",
+  },
   "audit:read": { name: "অডিট লগ পড়া", desc: "নিরাপত্তা ও অডিট লগ পড়া" },
   "template:manage": { name: "বার্তা টেমপ্লেট সম্পাদনা (সংরক্ষিত)", desc: "জেনারেটেড-বার্তা টেমপ্লেট সম্পাদনা ও রিসেট" },
   "access:manage": { name: "অনুমতি পরিচালনা (সংরক্ষিত)", desc: "প্রতি-ইউজার অনুমতি সম্পাদনা" },
@@ -4106,6 +4119,10 @@ export const PERMISSION_LABELS_EN: Record<Permission, PermissionLabel> = {
   "guardian:link": { name: "Link guardian", desc: "Link guardian logins" },
   "message:dispatch": { name: "Dispatch messages", desc: "wa.me and notice manual send" },
   "user:manage": { name: "Manage users", desc: "Create and manage staff accounts" },
+  "user:view_as": {
+    name: "View as",
+    desc: "Open a teacher's or guardian's account view; every action is logged under your own name",
+  },
   "audit:read": { name: "Read audit log", desc: "Read the security/audit log" },
   "template:manage": { name: "Manage templates (reserved)", desc: "Edit and reset message templates" },
   "access:manage": { name: "Manage access (reserved)", desc: "The per-user permission editor" },
