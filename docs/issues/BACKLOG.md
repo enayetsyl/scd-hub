@@ -25,7 +25,7 @@ intake/fix procedures live in [README.md](README.md). To add one: paste the issu
 ---
 
 ## BUG-019 — Homework "সারসংক্ষেপ" fold is class-wide on a teacher's own screen
-- **Status:** open
+- **Status:** fixed (2026-09-03) — D-#641, on prod
 - **Severity:** medium
 - **Platform:** web
 - **Area:** homework
@@ -40,7 +40,7 @@ intake/fix procedures live in [README.md](README.md). To add one: paste the issu
 
 **Notes:** `homeworkSummary(classId)` takes a class id and nothing else: all teachers, all subjects, all sections of the class, and no date window. D-#634 scoped the class chips and Today's rows to the caller (`homeworkClassOverview`'s new `teacherId`, D-#351 attribution) but deliberately left this fold class-wide "for the section's confirmer" — which now reads as an inconsistency directly under self-scoped chips that show nothing. Owner ruling 2026-09-03: it should show the signed-in teacher's own summary. Same mechanism as D-#634 — thread `teacherId` into `homeworkSummary` and pass the caller unless `isAdminStaff`; decide what the section's homework CONFIRMER should see (they are not admin staff but do own the class-wide reconcile duty). `chaseList` feeds the §7.2 attention/comms thresholds, so check those still read correctly once scoped.
 
-**Fix ref:** —
+**Fix ref:** D-#641 (PR #782, promoted to prod in #783). `homeworkSummary` takes the same optional `teacherId` as `homeworkClassOverview` and narrows BOTH the records and the issued items through `itemsAttributedTo`, so the counts, the health percentages, the chase list and the topic touches all describe one population instead of three. The resolver passes the caller unless `isAdminStaff`. The confirmer question is decided in this entry's favour: a section's homework confirmer sees their OWN roll-up too — their class-wide reconcile duty is served by the reconcile screen and its alerts, not by a roll-up that re-attributes colleagues' backlog to whoever is reading it. §7.2 `attentionCount`/`commsPromptCount` narrow with the chase list, so a teacher is no longer prompted about a colleague's chase. 5 new tests; gate 238 suites / 4308 jest tests.
 
 ## BUG-018 — Guardian weekly routine omits Quran/Arabic (no group memberships + no admin UI to create them)
 - **Status:** fixed (2026-07-07) — screen shipped; **data entry still required by the school**
