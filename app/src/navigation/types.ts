@@ -125,6 +125,8 @@ export type AssignmentStackParamList = {
   StudentProfile: StudentProfileParams;
   AssignmentHome: undefined;
   AssignmentSchedule: undefined;
+  /** AS-T7 (D-#643): the last-period handout board (office + last-period teacher). */
+  AssignmentHandout: undefined;
   /** `weekNumber` is the CONTINUOUS term-anchored index (the server key). `month` +
    *  `weekOfMonth` carry the human label the Assignments home shows ("July · Week 4")
    *  so a detail screen never prints a different week number for the same week — both

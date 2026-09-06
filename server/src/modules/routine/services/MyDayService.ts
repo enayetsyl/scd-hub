@@ -47,6 +47,10 @@ import { isAdminStaff } from "../../foundation/services/RoleScope";
 import { myMarkingUnits } from "../../attendance/services/StudentAttendanceService";
 import { classPresenceForDate, type ClassPresence } from "../../attendance/services/AttendanceReportService";
 import { pendingWorkFor, type PendingAlert, type AssignmentPrep } from "./PendingAlertService";
+import {
+  myHandoutSections,
+  type HandoutSection,
+} from "../../trackers/services/AssignmentHandoutService";
 import { StaffCoverSlot } from "../../hr/models/StaffCoverSlot";
 import { liveWindow } from "../liveWindow";
 
@@ -85,6 +89,10 @@ export interface MyDayResult {
    *  hand back out and the work to collect. Derived every load — no stored row.
    *  Empty for a caller with no reach; NEVER an error (the D-#535 rule). */
   returningStudents: ReturningStudent[];
+  /** AS-T7 (D-#643): sections whose LAST period the caller takes on a DELIVERY day
+   *  — the assignment packets to collect from the office and hand out there. [] on
+   *  every other day, and [] rather than an error for a caller without reach. */
+  assignmentHandout: HandoutSection[];
 }
 
 export async function myDayFor(ctx: AppContext, dateStr: string): Promise<MyDayResult> {
@@ -311,5 +319,19 @@ export async function myDayFor(ctx: AppContext, dateStr: string): Promise<MyDayR
     returningStudents = [];
   }
 
-  return { date: dateKey, dayType, slots, homework, attendancePending, alerts, assignmentPrep, classPresence, classTeacherOf, returningStudents };
+  // 7. AS-T7 (D-#643) — the assignment packets the caller hands out today, because
+  //    they take a section's LAST period on the delivery day. Gated on tracker:read
+  //    (a guardian login contributes nothing) and, like every other card here,
+  //    degrades to an empty list rather than sinking the dashboard.
+  let assignmentHandout: HandoutSection[] = [];
+  if (callerHasPermission(auth, "tracker:read")) {
+    try {
+      assignmentHandout = await myHandoutSections(auth.userId, d);
+    } catch (err) {
+      console.error("[myDay] assignment-handout card failed; rendering empty:", err);
+      assignmentHandout = [];
+    }
+  }
+
+  return { date: dateKey, dayType, slots, homework, attendancePending, alerts, assignmentPrep, classPresence, classTeacherOf, returningStudents, assignmentHandout };
 }
