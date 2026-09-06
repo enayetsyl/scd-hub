@@ -7,6 +7,11 @@ import { gql } from "urql";
 export interface AuditRowT {
   id: string;
   eventKind: string;
+  /** Readable name + family, resolved server-side beside the kind union (AL-1,
+   *  D-#645) — there is no app-side mirror to fall out of date. */
+  labelBn: string;
+  labelEn: string;
+  group: string;
   eventAt: string;
   actorId: string | null;
   actorName: string | null;
@@ -21,11 +26,33 @@ export interface AuditRowT {
 
 export const AUDIT_LOG_QUERY = gql<
   { auditLog: AuditRowT[] },
-  { before?: string | null; limit?: number | null; eventKind?: string | null; actorRole?: string | null }
+  {
+    before?: string | null;
+    limit?: number | null;
+    eventKind?: string | null;
+    actorRole?: string | null;
+    from?: string | null;
+    to?: string | null;
+  }
 >`
-  query AuditLog($before: String, $limit: Int, $eventKind: String, $actorRole: String) {
-    auditLog(before: $before, limit: $limit, eventKind: $eventKind, actorRole: $actorRole) {
-      id eventKind eventAt actorId actorName actorRole onBehalfOfId onBehalfOfName targetKind targetId metaJson
+  query AuditLog(
+    $before: String
+    $limit: Int
+    $eventKind: String
+    $actorRole: String
+    $from: String
+    $to: String
+  ) {
+    auditLog(
+      before: $before
+      limit: $limit
+      eventKind: $eventKind
+      actorRole: $actorRole
+      from: $from
+      to: $to
+    ) {
+      id eventKind labelBn labelEn group eventAt actorId actorName actorRole
+      onBehalfOfId onBehalfOfName targetKind targetId metaJson
     }
   }
 `;

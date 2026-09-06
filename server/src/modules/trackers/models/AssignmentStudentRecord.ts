@@ -93,6 +93,8 @@ AssignmentStudentRecordSchema.index({ asItemId: 1, state: 1 });
 // Office chase list (AS-T4) scans by state across items.
 AssignmentStudentRecordSchema.index({ state: 1, dueDate: 1 });
 AssignmentStudentRecordSchema.index({ resubOf: 1 });
+// The person-activity timeline (AL-1, D-#645) — the HomeworkStudentRecord twin.
+AssignmentStudentRecordSchema.index({ "stateDates.by": 1, "stateDates.at": -1 });
 
 export const AssignmentStudentRecord = model<IAssignmentStudentRecord>(
   "AssignmentStudentRecord",
