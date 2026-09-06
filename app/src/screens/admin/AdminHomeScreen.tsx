@@ -102,6 +102,16 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
         </Card>
       ) : null}
 
+      {/* AL-1 (D-#645): the same audit:read gate, read the other way round — the
+          audit log is the whole school newest-first, this is ONE person over a
+          window, with the tracker passes the audit log never carried. */}
+      {canAudit ? (
+        <Card onPress={() => navigation.navigate("PersonActivity")}>
+          <Body style={{ fontWeight: "700" }}>{STR.actTitle}</Body>
+          <Muted>{STR.actSubtitle}</Muted>
+        </Card>
+      ) : null}
+
       {/* SH-1 (D-#414): same gate as the audit log — `audit:read` is Principal-only, and
           infrastructure headroom is a Principal decision (prune, archive, or pay). */}
       {canAudit ? (

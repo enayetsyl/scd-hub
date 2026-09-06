@@ -101,6 +101,11 @@ HomeworkStudentRecordSchema.index({ hwItemId: 1, studentId: 1 });
 HomeworkStudentRecordSchema.index({ studentId: 1, state: 1 });
 HomeworkStudentRecordSchema.index({ hwItemId: 1, state: 1 });
 HomeworkStudentRecordSchema.index({ resubOf: 1 });
+// "What did this person do, and when" (AL-1, D-#645). Compound over two fields of
+// the SAME array of subdocuments, which is a legal multikey index (the parallel-
+// array restriction applies to two DIFFERENT arrays). Without it the person
+// timeline collection-scans every record ever issued.
+HomeworkStudentRecordSchema.index({ "stateDates.by": 1, "stateDates.at": -1 });
 
 export const HomeworkStudentRecord = model<IHomeworkStudentRecord>(
   "HomeworkStudentRecord",

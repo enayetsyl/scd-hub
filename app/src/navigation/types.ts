@@ -459,6 +459,10 @@ export type AdminStackParamList = {
   AccessControlEdit: { userId: string; name: string; role: string };
   // Owner ask 2026-07-20: the Principal's audit-log viewer (audit:read).
   AuditLog: undefined;
+  // AL-1 (D-#645): one person's complete timeline. Params are OPTIONAL — the
+  // screen opens on its own picker — so it is safe wherever it is registered,
+  // but it is still not registered first (the StaffHub note above).
+  PersonActivity: { personId?: string } | undefined;
   WorkClaimQueue: undefined;
   // GE-1/GE-3 (D-#464/#465): the guardian-engagement report, same audit:read gate.
   GuardianEngagement: undefined;
