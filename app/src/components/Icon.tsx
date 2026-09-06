@@ -25,6 +25,7 @@ import {
   FlaskConical,
   GraduationCap,
   Hand,
+  Package,
   SquarePen,
   Star,
 } from "lucide-react-native";
@@ -41,6 +42,7 @@ const MAP = {
   "flask-conical": FlaskConical,
   "graduation-cap": GraduationCap,
   hand: Hand,
+  package: Package,
   "square-pen": SquarePen,
   star: Star,
 } as const;

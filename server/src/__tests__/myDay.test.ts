@@ -97,6 +97,12 @@ jest.mock("../modules/attendance/services/AttendanceReportService", () => ({
 jest.mock("../modules/attendance/services/StudentAttendanceService", () => ({
   myMarkingUnits: (...a: unknown[]) => mockMarking(...a),
 }));
+// AS-T7 (D-#643): the handout card is a seam here — its own join is pinned in
+// assignmentHandout.test.ts. Mocked so this suite never reaches a real model.
+const mockMyHandout = jest.fn();
+jest.mock("../modules/trackers/services/AssignmentHandoutService", () => ({
+  myHandoutSections: (...a: unknown[]) => mockMyHandout(...a),
+}));
 
 import { myDayFor } from "../modules/routine/services/MyDayService";
 
@@ -117,6 +123,7 @@ beforeEach(() => {
   mockCoverSlotFind.mockResolvedValue([]);
   mockMySubFind.mockResolvedValue([]);
   mockPendingAlerts.mockResolvedValue({ alerts: [], assignmentPrep: null });
+  mockMyHandout.mockResolvedValue([]);
   mockClassPresence.mockResolvedValue([]);
   mockCtSectionFind.mockResolvedValue([]);
   mockClassFind.mockResolvedValue([]);
@@ -372,6 +379,26 @@ describe("myDay — permission degradation (guardian/office render, never error)
     const r = await myDayFor(ctxFor("TEACHER"), "2026-07-01");
     expect(r.alerts).toEqual([{ kind: "attendance", count: 2, oldestDateKey: "2026-06-29" }]);
     expect(r.assignmentPrep).toEqual(prep);
+  });
+
+  test("AS-T7: the handout list passes through for tracker:read, and is [] for a guardian", async () => {
+    const sections = [{ sectionId: "sA", packets: [{ subject: "BAN" }] }];
+    mockMyHandout.mockResolvedValue(sections);
+    const teacher = await myDayFor(ctxFor("TEACHER"), "2026-07-01");
+    expect(teacher.assignmentHandout).toEqual(sections);
+    expect(mockMyHandout).toHaveBeenCalledWith("user-1", expect.any(Date));
+
+    mockMyHandout.mockClear();
+    const guardian = await myDayFor(ctxFor("GUARDIAN"), "2026-07-01");
+    expect(guardian.assignmentHandout).toEqual([]);
+    expect(mockMyHandout).not.toHaveBeenCalled(); // no tracker:read
+  });
+
+  test("AS-T7: a failing handout read empties the card instead of sinking the dashboard", async () => {
+    mockMyHandout.mockRejectedValue(new Error("no schedule"));
+    const r = await myDayFor(ctxFor("TEACHER"), "2026-07-01");
+    expect(r.assignmentHandout).toEqual([]);
+    expect(r.date).toBe("2026-07-01");
   });
 
   test("unauthenticated rejects", async () => {

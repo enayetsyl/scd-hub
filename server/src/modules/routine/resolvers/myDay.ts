@@ -17,6 +17,7 @@ import type {
 } from "../../trackers/services/ReturnFromLeaveService";
 import type { PendingAlert, AssignmentPrep, AssignmentPrepCell } from "../services/PendingAlertService";
 import type { ClassPresence } from "../../attendance/services/AttendanceReportService";
+import { HandoutSectionRef } from "../../trackers/resolvers/assignmentHandout";
 
 const AssignmentPrepCellRef = builder.objectRef<AssignmentPrepCell>("AssignmentPrepCell").implement({
   description: "One (class × subject) still needing an assignment prepared for the delivery week.",
@@ -151,6 +152,14 @@ const MyDayRef = builder.objectRef<MyDayResult>("MyDay").implement({
         "to collect (RL-1). Scoped to the caller's reach; [] rather than an error " +
         "for a caller with none.",
       resolve: (r) => r.returningStudents ?? [],
+    }),
+    assignmentHandout: t.field({
+      type: [HandoutSectionRef],
+      description:
+        "AS-T7 (D-#643): the sections whose LAST period the caller takes today, with the " +
+        "assignment packets to collect from the office and hand out there. Delivery day " +
+        "only — [] on every other day, and [] for a caller who takes no last period.",
+      resolve: (r) => r.assignmentHandout ?? [],
     }),
   }),
 });
