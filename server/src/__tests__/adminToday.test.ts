@@ -19,6 +19,16 @@ jest.mock("../modules/trackers/services/ReconReportService", () => ({
   reconciliationReport: (...a: unknown[]) => mockRecon(...a),
 }));
 
+// AS-T7 (D-#643) — the handout card composes this read like every other block.
+const mockHandoutBoard = jest.fn();
+jest.mock("../modules/trackers/services/AssignmentHandoutService", () => ({
+  handoutBoard: (...a: unknown[]) => mockHandoutBoard(...a),
+  packetCount: (sections: Array<{ packets: unknown[] }>) =>
+    sections.reduce((n, s) => n + s.packets.length, 0),
+  unprintedCount: (sections: Array<{ packets: Array<{ printRequested: boolean }> }>) =>
+    sections.reduce((n, s) => n + s.packets.filter((p) => !p.printRequested).length, 0),
+}));
+
 const mockLifecycle = jest.fn();
 jest.mock("../modules/trackers/services/HomeworkLifecycleReportService", () => ({
   homeworkLifecycleReport: (...a: unknown[]) => mockLifecycle(...a),
@@ -125,6 +135,13 @@ beforeEach(() => {
   mockPrintQueue.mockResolvedValue([]);
   mockCtrDistinct.mockResolvedValue([]);
   mockPrintCounts.mockResolvedValue({ requested: 0, printed: 0 });
+  mockHandoutBoard.mockResolvedValue({
+    date: "2026-07-14",
+    weekNumber: 3,
+    deliveryDateKey: "2026-07-16",
+    isDeliveryToday: false,
+    sections: [],
+  });
 });
 
 const CARD_KEYS = [
@@ -132,6 +149,7 @@ const CARD_KEYS = [
   "hwCycle",
   "hwLifecycle",
   "assignments",
+  "handout",
   "leave",
   "observations",
   "comments",
@@ -140,7 +158,7 @@ const CARD_KEYS = [
 ];
 
 describe("D-#316 adminToday", () => {
-  test("returns the nine cards in registry order, one recon fetch for two cards", async () => {
+  test("returns the ten cards in registry order, one recon fetch for two cards", async () => {
     const cards = await adminToday("2026-07-14");
     expect(cards.map((c) => c.key)).toEqual(CARD_KEYS);
     expect(mockRecon).toHaveBeenCalledTimes(1);
@@ -214,6 +232,63 @@ describe("D-#316 adminToday", () => {
       value: 0,
       tone: "ok",
     });
+  });
+
+  test("AS-T7 handout card counts packets and puts a teacher-less section first, in danger", async () => {
+    mockHandoutBoard.mockResolvedValue({
+      date: "2026-07-16",
+      weekNumber: 3,
+      deliveryDateKey: "2026-07-16",
+      isDeliveryToday: true,
+      sections: [
+        {
+          sectionId: "s1",
+          sectionNameBn: "ক",
+          classId: "c1",
+          classLevel: 3,
+          lastPeriodNumber: 8,
+          lastPeriodSubject: "MATH",
+          handoutTeacherId: "t1",
+          handoutTeacherName: "হামিদা",
+          isCover: false,
+          packets: [
+            { entryId: "e1", subject: "BANGLA", printRequested: true },
+            { entryId: "e2", subject: "MATH", printRequested: false },
+          ],
+          nilPackets: [],
+        },
+        {
+          sectionId: "s2",
+          sectionNameBn: "খ",
+          classId: "c2",
+          classLevel: 2,
+          lastPeriodNumber: null,
+          lastPeriodSubject: null,
+          handoutTeacherId: null,
+          handoutTeacherName: null,
+          isCover: false,
+          packets: [{ entryId: "e3", subject: "ENGLISH", printRequested: true }],
+          nilPackets: [],
+        },
+      ],
+    });
+    const handout = (await adminToday("2026-07-16")).find((c) => c.key === "handout")!;
+    expect(handout.badges).toEqual([
+      { key: "handoutPackets", value: 3, tone: "info" },
+      { key: "handoutSections", value: 2, tone: "info" },
+      { key: "handoutUnprinted", value: 1, tone: "warn" },
+      { key: "handoutNoTeacher", value: 1, tone: "danger" },
+    ]);
+    // The section nobody is scheduled to hand out leads, in danger tone.
+    expect(handout.rows[0]).toEqual({ title: "C2 — খ", subtitle: null, value: "— · 1", tone: "danger" });
+    expect(handout.rows[1]).toEqual({ title: "C3 — ক", subtitle: "হামিদা", value: "P8 · 2 (1⚠)", tone: "warn" });
+  });
+
+  test("a handout-board failure yields the error card, not a 500", async () => {
+    mockHandoutBoard.mockRejectedValue(new Error("no schedule"));
+    const cards = await adminToday("2026-07-14");
+    expect(cards.find((c) => c.key === "handout")!.badges).toEqual([{ key: "error", value: 1, tone: "danger" }]);
+    expect(cards.find((c) => c.key === "attendance")!.badges.length).toBeGreaterThan(0);
   });
 
   test("an invalid date key throws before any module runs", async () => {

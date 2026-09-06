@@ -219,6 +219,7 @@ export default function TodayScreen(): React.ReactElement {
   const alerts = day?.alerts ?? [];
   const ctOf = day?.classTeacherOf ?? [];
   const prep = day?.assignmentPrep ?? null;
+  const handout = day?.assignmentHandout ?? [];
 
   // ONE always-on minute tick drives both the amber countdown and the timeline's
   // past/current highlighting (the old interval only ran while `prep` existed).
@@ -293,6 +294,7 @@ export default function TodayScreen(): React.ReactElement {
     slots.length === 0 &&
     alerts.length === 0 &&
     !prep &&
+    handout.length === 0 &&
     ctPending.length === 0 &&
     counts.every((c) => c === 0) &&
     !day.attendancePending;
@@ -542,6 +544,52 @@ export default function TodayScreen(): React.ReactElement {
               />
             ))}
           </View>
+        ) : null}
+
+        {/* AS-T7 (D-#643) — শেষ পিরিয়ডে বিতরণ: the packets this teacher collects from
+            the office and hands out, because a section's LAST period today is theirs.
+            Server returns [] on every day that is not the delivery day, so the card's
+            mere presence is the signal that today is the day. */}
+        {handout.length > 0 ? (
+          <Card onPress={() => nav.navigate("AssignmentTab", { screen: "AssignmentHandout", initial: false })}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: space(2), marginBottom: space(1) }}>
+              <Icon name="package" size={18} color={colors.textPrimary} />
+              <Body style={{ fontWeight: "700", flex: 1 }}>{STR.hoTodayTitle}</Body>
+              <Icon name="chevron-right" size={20} color={colors.textSecondary} />
+            </View>
+            <Muted style={{ marginBottom: space(2) }}>{STR.hoCollect}</Muted>
+            {handout.map((sec) => (
+              <View key={sec.sectionId} style={{ marginBottom: space(2) }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: space(1), flexWrap: "wrap" }}>
+                  <Body style={{ fontWeight: "700" }}>
+                    {classLevelLabel(sec.classLevel)}
+                    {sec.sectionNameBn ? ` — ${sec.sectionNameBn}` : ""}
+                  </Body>
+                  {sec.lastPeriodNumber ? (
+                    <Muted>
+                      {STR.hoPeriodWord} {bnNum(sec.lastPeriodNumber)}
+                    </Muted>
+                  ) : null}
+                  {sec.isCover ? <Badge text={STR.hoCover} tone="info" /> : null}
+                  <Badge text={`${bnNum(sec.packets.length)} ${STR.hoSubjectsWord}`} tone="brand" />
+                </View>
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(1), marginTop: space(1) }}>
+                  {sec.packets.map((p) => (
+                    <Badge
+                      key={p.entryId}
+                      text={p.printRequested ? hwSubjectLabel(p.subject) : `${hwSubjectLabel(p.subject)} ⚠`}
+                      tone={p.printRequested ? "muted" : "warn"}
+                    />
+                  ))}
+                </View>
+                {sec.nilPackets.length > 0 ? (
+                  <Muted style={{ marginTop: space(1) }}>
+                    {STR.hoNilTitle}: {sec.nilPackets.map((p) => hwSubjectLabel(p.subject)).join(", ")}
+                  </Muted>
+                ) : null}
+              </View>
+            ))}
+          </Card>
         ) : null}
 
         {/* আমার পিরিয়ড — horizontal timeline; current slot highlighted */}

@@ -290,3 +290,78 @@ section per week**, mirroring the homework daily-ceiling gate (HW-T2,
 2. Deliver creates a DRAFT (no records); confirm issues records; trim adjusts a DRAFT's minutes.
 3. Confirm/trim gated `assertCanConfirmAssignmentWeek` = section class-teacher OR `roster:manage`.
 4. AJ-1…AJ-8 still pass, updated for the two-phase flow; counts remain derived (no typed count).
+
+## 12. AS-T7 — Last-period handout board [build contract, D-#643, 2026-09-06]
+
+**The instruction this implements** (owner, SCD Sylhet Teachers group, 2026-09-05):
+every Thursday all assignments are handed out in the **last period**. The teacher
+taking that period collects the packets from the office and **cross-checks how many
+subjects' assignments are being given out**; the subject teacher's duty stays what it
+was — prepare the paper and send it to the office for printing.
+
+**The gap.** Nothing in the app told either side WHAT the stack should contain. The
+rotation that decides it (`AssignmentSchedule`, D-#86) was only ever shown to the
+SUBJECT teacher, as the D-#280 prep countdown. The person actually standing in front
+of the section at the end of the day, and the desk handing the papers over, both had
+to remember it.
+
+**Decisions (D-#643).**
+1. **Anchor — the section's last non-break SECTION period on the delivery day**,
+   cover-overlaid through BOTH mechanisms (`RoutineSubstitution` R-4 and the HR
+   `StaffCoverSlot`, exactly the pair `MyDayService` reconciles). Cross-grade
+   Quran/Arabic group periods (D-#48) are NOT candidates: the section's students are
+   split across several groups there, so no one teacher faces the whole section — and
+   a handout has to reach it at once.
+2. **Read-only.** No tick-off, no stored "collected" row. The cross-check happens with
+   paper in hand; a checkbox nobody is required to fill would read as a record and be
+   worth less than the list itself.
+3. **Nil-declared cells are NAMED, not dropped** — a subject that is missing on
+   purpose is the one thing that stops the count turning into a hunt for a lost paper.
+4. **Print status rides the existing D-#459 match** (a live, non-CANCELLED
+   `ASSIGNMENT` `PrintRequest` for that section × subject × delivery date). A packet
+   with none is flagged, not hidden.
+5. **A section with expected packets but no resolvable last period is still shown**,
+   with a null teacher, in danger tone. That is the office's warning; hiding it would
+   make the papers vanish quietly.
+6. **Teacher card = delivery day only; office board = the whole week.** "Carry these
+   into the last period" is a today instruction, and a list shown a day early is a
+   list acted on a day early. Preparation, by contrast, is exactly what looks ahead.
+7. **No new permission, no vocab or contract change.** The board rides
+   `assertStaffScheduleRead` (Principal/Office as unscoped staff, or `tracker:read`) —
+   the same gate as `expectedAssignmentsForWeek`; the Today field self-gates on
+   `tracker:read` and degrades to `[]`.
+
+**Shape.**
+- `AssignmentHandoutService.handoutBoard(date, forTeacherId?)` — joins the week's
+  expected cells → the sections' last periods → names + print status. Returns an EMPTY
+  board (never throws) when the year, the schedule or the week yields nothing.
+- `myDay.assignmentHandout` — the caller's sections, delivery day only.
+- `assignmentHandoutBoard(date)` — the whole-school board.
+- `adminToday` gains a `handout` card (packets / sections / not-printed / no-teacher),
+  rows led by any teacher-less section.
+- App: a card on `TodayScreen` (class · section · N subjects · per-subject chips,
+  amber when unprinted) and `AssignmentHandoutScreen` — the board, with a day stepper.
+
+**Journeys (Given/When/Then).**
+- **AJ-11 (the cross-check).** Given Thursday is the resolved delivery day and Class 4
+  has Bangla, Maths and BGS in this week's rotation, When the teacher who takes Class
+  4's period 8 opens Today, Then the card names those three subjects and the count 3.
+- **AJ-12 (not the last period).** Given the same section, When its period-2 teacher
+  opens Today, Then no handout card renders.
+- **AJ-13 (cover).** Given period 8 of Class 4 is covered today, When the covering
+  teacher opens Today, Then the packets are on THEIR card and not on the absent
+  teacher's.
+- **AJ-14 (nil).** Given Maths declared "no assignment this week", When either side
+  reads the board, Then Maths is listed under "এই সপ্তাহে অ্যাসাইনমেন্ট নেই" and the
+  packet count is 2, not 3.
+- **AJ-15 (office).** Given two sections deliver this week and one has no last-period
+  teacher, When the office opens Today, Then the handout card leads with that section
+  in danger tone and the badges carry packets / sections / not-printed / no-teacher.
+
+**Acceptance gate.**
+1. The handout teacher resolves from the last SECTION period, both cover mechanisms.
+2. Nil cells never enter the packet count; unprinted packets are flagged.
+3. `myDay.assignmentHandout` is empty on a non-delivery day and for an earlier-period
+   teacher; the board still shows the week (preparation).
+4. No year / no schedule / a throwing week ⇒ empty board, no error, dashboard renders.
+5. No vocab or wire-contract change — verifier green; no new permission string.

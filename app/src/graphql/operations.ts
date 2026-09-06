@@ -3281,6 +3281,63 @@ export interface ClassTeacherSectionT {
   nameBn: string;
   classLevel: number;
 }
+/** AS-T7 (D-#643) — one printed packet to hand out in the last period. */
+export interface HandoutPacketT {
+  entryId: string;
+  subject: string;
+  subjectTeacherId: string;
+  subjectTeacherName: string | null;
+  delivered: boolean;
+  asId: string | null;
+  description: string | null;
+  /** A live ASSIGNMENT print request exists for this cell's delivery date. */
+  printRequested: boolean;
+}
+export interface HandoutSectionT {
+  sectionId: string;
+  sectionNameBn: string;
+  classId: string;
+  classLevel: number;
+  lastPeriodNumber: number | null;
+  lastPeriodSubject: string | null;
+  handoutTeacherId: string | null;
+  handoutTeacherName: string | null;
+  isCover: boolean;
+  packets: HandoutPacketT[];
+  /** Subjects that declared "no assignment this week" — named so the count adds up. */
+  nilPackets: HandoutPacketT[];
+}
+export interface HandoutBoardT {
+  date: string;
+  weekNumber: number;
+  deliveryDateKey: string | null;
+  isDeliveryToday: boolean;
+  sections: HandoutSectionT[];
+}
+const HANDOUT_PACKET_FIELDS = `
+  entryId subject subjectTeacherId subjectTeacherName delivered asId description printRequested
+`;
+const HANDOUT_SECTION_FIELDS = `
+  sectionId sectionNameBn classId classLevel
+  lastPeriodNumber lastPeriodSubject handoutTeacherId handoutTeacherName isCover
+  packets { ${HANDOUT_PACKET_FIELDS} }
+  nilPackets { ${HANDOUT_PACKET_FIELDS} }
+`;
+/** The office/whole-school handout board for the week containing `date` (AS-T7). */
+export const ASSIGNMENT_HANDOUT_BOARD_QUERY = gql<
+  { assignmentHandoutBoard: HandoutBoardT },
+  { date: string }
+>`
+  query AssignmentHandoutBoard($date: String!) {
+    assignmentHandoutBoard(date: $date) {
+      date
+      weekNumber
+      deliveryDateKey
+      isDeliveryToday
+      sections { ${HANDOUT_SECTION_FIELDS} }
+    }
+  }
+`;
 export interface MyDayT {
   date: string;
   dayType: string;
@@ -3292,6 +3349,8 @@ export interface MyDayT {
   classPresence: ClassPresenceT[];
   classTeacherOf: ClassTeacherSectionT[];
   returningStudents: ReturningStudentT[];
+  /** AS-T7: sections whose last period the caller takes on a delivery day. */
+  assignmentHandout: HandoutSectionT[];
 }
 // D-#316 — the Principal/Office Today dashboard (generic cards).
 export interface AdminCardBadgeT {
@@ -3394,6 +3453,7 @@ export const MY_DAY_QUERY = gql<{ myDay: MyDayT }, { date: string }>`
         studentId studentNameBn sectionId source daysAbsent leaveEndedKey
         items { recordId tracker workId subject state description chaseCount group }
       }
+      assignmentHandout { ${HANDOUT_SECTION_FIELDS} }
     }
   }
 `;

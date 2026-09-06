@@ -92,6 +92,7 @@ import HomeworkReconcileScreen from "../screens/homework/HomeworkReconcileScreen
 import HomeworkWorkspaceScreen from "../screens/homework/HomeworkWorkspaceScreen";
 import HomeworkRollupsScreen from "../screens/homework/HomeworkRollupsScreen";
 import AssignmentHomeScreen from "../screens/assignment/AssignmentHomeScreen";
+import AssignmentHandoutScreen from "../screens/assignment/AssignmentHandoutScreen";
 import AssignmentScheduleScreen from "../screens/assignment/AssignmentScheduleScreen";
 import DeliverAssignmentScreen from "../screens/assignment/DeliverAssignmentScreen";
 // RP-4 (D-#356): the roster-pass workspace replaces Collect + Checking. The two
@@ -749,6 +750,7 @@ function AssignmentNavigator(): React.ReactElement {
     <AssignmentStack.Navigator screenOptions={stackOptions}>
       <AssignmentStack.Screen name="AssignmentHome" component={AssignmentHomeScreen} options={{ title: STR.tabAssignment }} />
       <AssignmentStack.Screen name="AssignmentSchedule" component={AssignmentScheduleScreen} options={{ title: STR.asScheduleTitle }} />
+      <AssignmentStack.Screen name="AssignmentHandout" component={AssignmentHandoutScreen} options={{ title: STR.hoBoardTitle }} />
       <AssignmentStack.Screen name="DeliverAssignment" component={DeliverAssignmentScreen} options={{ title: STR.asDeliverTitle }} />
       <AssignmentStack.Screen name="AssignmentWorkspace" component={AssignmentWorkspaceScreen} options={{ title: STR.asWorkspaceTitle }} />
       <AssignmentStack.Screen name="AssignmentReconcile" component={AssignmentReconcileScreen} options={{ title: STR.asReconcileTitle }} />

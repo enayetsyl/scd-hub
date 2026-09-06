@@ -444,6 +444,11 @@ export default function AssignmentHomeScreen({ navigation }: Props): React.React
                     onPress={() => navigation.navigate("AssignmentGift", { academicYearId: yearId })}
                   />
                 ) : null}
+                {/* AS-T7 (D-#643): who carries which packets into the last period.
+                    Office reaches it under roster:manage — it holds no tracker:read. */}
+                {canTrackerRead || canSchedule ? (
+                  <Chip label={`📦 ${STR.hoBoardTitle}`} onPress={() => navigation.navigate("AssignmentHandout")} />
+                ) : null}
               </ChipRow>
             </Card>
           </>

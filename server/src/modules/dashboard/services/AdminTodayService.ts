@@ -28,6 +28,11 @@ import { StudentComment } from "../../comments/models/StudentComment";
 import { listPrintQueue } from "../../trackers/services/ClassTestService";
 import { ClassTestResult } from "../../trackers/models/ClassTestResult";
 import { printQueueCounts } from "../../printing/services/PrintRequestService";
+import {
+  handoutBoard,
+  packetCount,
+  unprintedCount,
+} from "../../trackers/services/AssignmentHandoutService";
 
 export interface AdminCardBadge {
   key: string;
@@ -44,8 +49,8 @@ export interface AdminCardRow {
 }
 
 export interface AdminTodayCard {
-  /** attendance | hwCycle | hwLifecycle | assignments | leave | observations |
-   *  comments | classTests | print — the app maps key → icon/title/target. */
+  /** attendance | hwCycle | hwLifecycle | assignments | handout | leave |
+   *  observations | comments | classTests | print — the app maps key → icon/title/target. */
   key: string;
   badges: AdminCardBadge[];
   rows: AdminCardRow[];
@@ -183,6 +188,46 @@ async function assignmentsCard(recon: ReconReport): Promise<AdminTodayCard> {
         { key: "deliverPending", value: recon.asMisses.length, tone: recon.asMisses.length > 0 ? "warn" : "ok" },
       ],
       ...cap([...declareRows, ...deliverRows]),
+    };
+  });
+}
+
+/**
+ * AS-T7 (D-#643) — the handout board: which section gets how many packets, and which
+ * teacher collects them from this desk. The office's half of the cross-check.
+ *
+ * Rows carry the LAST-PERIOD teacher, not the subject teacher: the subject teacher's
+ * duty (prepare + send to print) is already the `assignments` card above, and the name
+ * the office needs at the counter is the person who will walk up to it. A section with
+ * no resolvable last period is shown FIRST and in danger tone — its papers have nobody
+ * to collect them, which is the one thing the desk cannot discover on the day.
+ */
+async function handoutCard(dateKey: string): Promise<AdminTodayCard> {
+  return safe("handout", async () => {
+    const board = await handoutBoard(parseDateKey(dateKey));
+    const sections = board.sections;
+    const packets = packetCount(sections);
+    const unprinted = unprintedCount(sections);
+    const orphans = sections.filter((s) => !s.handoutTeacherId);
+    const rows = [...orphans, ...sections.filter((s) => s.handoutTeacherId)].map((s) => {
+      const missing = s.packets.filter((p) => !p.printRequested).length;
+      return {
+        title: `${lvl(s.classLevel)} — ${s.sectionNameBn}`,
+        subtitle: s.handoutTeacherName ?? null,
+        value: `${s.lastPeriodNumber ? `P${s.lastPeriodNumber}` : "—"} · ${s.packets.length}${
+          missing > 0 ? ` (${missing}⚠)` : ""
+        }`,
+        tone: !s.handoutTeacherId ? "danger" : missing > 0 ? "warn" : "ok",
+      };
+    });
+    return {
+      badges: [
+        { key: "handoutPackets", value: packets, tone: "info" },
+        { key: "handoutSections", value: sections.length, tone: "info" },
+        { key: "handoutUnprinted", value: unprinted, tone: unprinted > 0 ? "warn" : "ok" },
+        { key: "handoutNoTeacher", value: orphans.length, tone: orphans.length > 0 ? "danger" : "ok" },
+      ],
+      ...cap(rows),
     };
   });
 }
@@ -352,6 +397,7 @@ export async function adminToday(dateKey: string, now = new Date()): Promise<Adm
     hwCycleCard(dateKey, recon),
     hwLifecycleCard(weekAgoKey, dateKey),
     assignmentsCard(recon),
+    handoutCard(dateKey),
     leaveCard(dateKey),
     observationsCard(),
     commentsCard(dateKey),
