@@ -22,16 +22,27 @@ import { DateField } from "../../components/DateField";
 import { STR, routineSubjectLabel, dayOfWeekLabel, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useConfirm } from "../../state/ConfirmContext";
-import { space } from "../../theme/tokens";
+import { useColors } from "../../theme";
+import { radius, space } from "../../theme/tokens";
 import { dateKey } from "../../lib/dates";
 
 const todayISO = (): string => dateKey();
+
+/**
+ * The availability picker is a long name→button list, so on a desktop-width canvas a
+ * full-width row strands the কভার নিয়োগ button ~1200px from the teacher it belongs to
+ * and the eye loses the line (owner report, 2026-09-06). The row is capped and
+ * zebra-striped instead: unchanged on a phone (where the cap never bites), trackable
+ * on the web.
+ */
+const AVAIL_ROW_MAX_WIDTH = 560;
 
 type Props = NativeStackScreenProps<RoutineStackParamList, "CoverManage">;
 
 export default function CoverManageScreen({ route }: Props): React.ReactElement {
   const { groupType, groupId, title } = route.params;
   const { confirmAction } = useConfirm();
+  const colors = useColors();
   const [date, setDate] = useState(todayISO());
   const [sel, setSel] = useState<{ slotId: string; period: number } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -121,8 +132,21 @@ export default function CoverManageScreen({ route }: Props): React.ReactElement 
               <View style={{ marginTop: space(2), gap: space(1) }}>
                 <Muted style={{ fontWeight: "700" }}>{STR.rtAvailableTeachers}</Muted>
                 {availQ.fetching ? <Loader /> : null}
-                {availQ.data?.teacherAvailability.map((a) => (
-                  <View key={a.teacherId} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space(2) }}>
+                {availQ.data?.teacherAvailability.map((a, i) => (
+                  <View
+                    key={a.teacherId}
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: space(2),
+                      width: "100%",
+                      maxWidth: AVAIL_ROW_MAX_WIDTH,
+                      paddingVertical: space(2),
+                      paddingHorizontal: space(2),
+                      borderRadius: radius.sm,
+                      backgroundColor: i % 2 === 1 ? colors.surfaceAlt : "transparent",
+                    }}
+                  >
                     <View style={{ flex: 1 }}>
                       <Body>{a.name}</Body>
                       <Muted>
