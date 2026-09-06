@@ -209,6 +209,23 @@ export function notificationTarget(
     case "STUDENT_RETURNED":
       return { tab: "HomeTab", screen: "Today" };
 
+    // D-#644 — the exam syllabus. A guardian's own screen is their child's class,
+    // so it takes no params; staff open the row itself, and SyllabusDetail is
+    // addressed by the (exam × class × subject) triple the refs carry. Without all
+    // three, fall back to the list rather than navigating to a broken screen.
+    case "EXAM_SYLLABUS_PUBLISHED":
+      if (guardian) return { tab: "GuardianSyllabusTab", screen: "ChildSyllabus" };
+      return refs?.examId && refs?.classId && refs?.subject
+        ? {
+            tab: "SyllabusTab",
+            screen: "SyllabusDetail",
+            params: { examId: refs.examId, classId: refs.classId, subject: refs.subject },
+          }
+        : { tab: "SyllabusTab", screen: "SyllabusHome" };
+    // Principal-addressed: the queue of syllabuses waiting on their signature.
+    case "EXAM_SYLLABUS_AWAITING_PUBLISH":
+      return { tab: "SyllabusTab", screen: "SyllabusApprovals" };
+
     case "STAFF_LEAVE_SUBMITTED":
       // The notification exists to get someone to DECIDE. Without this case it fell to
       // `default: null`, so the row was a dead end — the Principal read "X applied for

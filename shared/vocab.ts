@@ -1417,6 +1417,16 @@ export const NOTIFICATION_KINDS = [
   // fired when attendance CONFIRMS the return (owner ruling 2026-08-25). The leave
   // register records an intention; only attendance records what happened.
   "STUDENT_RETURNED",
+  // Exam syllabus (SY-5/SY-6 seam, D-#644; app-native, NO wire twin).
+  //   PUBLISHED        → the login-enabled guardians of the class, on PUBLISH — the
+  //                      first moment `publishedAt` lets them open it (D-#533's gate).
+  //                      Deliberately NOT on teacher sign-off: that row sits at
+  //                      PRINCIPAL_REVIEW, which guardianChildSyllabus refuses, and
+  //                      §7.3 can still send it back to DRAFT.
+  //   AWAITING_PUBLISH → the Principal, on the teacher's sign-off: the publish gate
+  //                      is theirs alone (assertCanPublish), so nobody else can act.
+  "EXAM_SYLLABUS_PUBLISHED",
+  "EXAM_SYLLABUS_AWAITING_PUBLISH",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
@@ -1465,6 +1475,8 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   WORK_CLAIM_ESCALATED: "অভিভাবকের জানানো নিষ্পন্ন হয়নি",
   WORK_CLAIM_RESOLVED: "আপনার জানানোর উত্তর এসেছে",
   STUDENT_RETURNED: "ছুটি শেষে ফিরেছে",
+  EXAM_SYLLABUS_PUBLISHED: "পরীক্ষার সিলেবাস প্রকাশিত",
+  EXAM_SYLLABUS_AWAITING_PUBLISH: "সিলেবাস প্রকাশের অপেক্ষায়",
 };
 export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   BELL_REMINDER: "Bell reminder",
@@ -1511,6 +1523,8 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   WORK_CLAIM_ESCALATED: "Guardian claim unresolved",
   WORK_CLAIM_RESOLVED: "Your report has an answer",
   STUDENT_RETURNED: "Back after an absence",
+  EXAM_SYLLABUS_PUBLISHED: "Exam syllabus published",
+  EXAM_SYLLABUS_AWAITING_PUBLISH: "Syllabus awaiting publication",
 };
 
 /**
@@ -2117,6 +2131,14 @@ export const MESSAGE_TEMPLATE_KEYS = [
   "teachingNote.comment.body",
   "teachingNote.commentAddressed.title",
   "teachingNote.commentAddressed.body",
+  // Exam syllabus (D-#644). The guardian pair fires on PUBLISH; the staff pair
+  // tells the Principal a syllabus is waiting on the one signature that releases
+  // it. No `.wa` variant — the syllabus reaches a guardian in the portal, and the
+  // wa.me lane is not part of this seam.
+  "syllabus.published.title",
+  "syllabus.published.body",
+  "syllabus.awaitingPublish.title",
+  "syllabus.awaitingPublish.body",
 ] as const;
 export type MessageTemplateKey = (typeof MESSAGE_TEMPLATE_KEYS)[number];
 
@@ -2625,6 +2647,28 @@ export const MESSAGE_TEMPLATE_REGISTRY: Record<MessageTemplateKey, MessageTempla
     group: "teachingNote", labelBn: "পরামর্শ সমাধান হয়েছে — বার্তা",
     placeholders: ["title", "className", "subject"],
     bnDefault: "“{title}” ({className} · {subject}) নোটে আপনার দেওয়া পরামর্শটি সমাধান হয়েছে বলে চিহ্নিত করা হয়েছে।",
+    defaultLangMode: "BN",
+  },
+
+  // --- Exam syllabus (D-#644) ---
+  "syllabus.published.title": {
+    group: "syllabus", labelBn: "পরীক্ষার সিলেবাস প্রকাশিত — শিরোনাম", placeholders: [],
+    bnDefault: "পরীক্ষার সিলেবাস প্রকাশিত হয়েছে", defaultLangMode: "BN",
+  },
+  "syllabus.published.body": {
+    group: "syllabus", labelBn: "পরীক্ষার সিলেবাস প্রকাশিত — বার্তা",
+    placeholders: ["examName", "className", "subject"],
+    bnDefault: "{examName} — {className}-এর {subject} বিষয়ের সিলেবাস ও মানবন্টন প্রকাশিত হয়েছে। অ্যাপে দেখুন।",
+    defaultLangMode: "BN",
+  },
+  "syllabus.awaitingPublish.title": {
+    group: "syllabus", labelBn: "সিলেবাস প্রকাশের অপেক্ষায় — শিরোনাম", placeholders: [],
+    bnDefault: "সিলেবাস প্রকাশের অপেক্ষায়", defaultLangMode: "BN",
+  },
+  "syllabus.awaitingPublish.body": {
+    group: "syllabus", labelBn: "সিলেবাস প্রকাশের অপেক্ষায় — বার্তা",
+    placeholders: ["examName", "className", "subject", "teacherName"],
+    bnDefault: "{examName} — {className}-এর {subject} সিলেবাস {teacherName} অনুমোদন করেছেন। প্রকাশ করলে অভিভাবকেরা দেখতে পাবেন।",
     defaultLangMode: "BN",
   },
 };

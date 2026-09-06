@@ -6007,6 +6007,12 @@ export interface NotificationRefsT {
   /** CT-8 submit notice — deep-links to ClassTestPublish. */
   classTestId: string | null;
   ctId: string | null;
+  /** D-#644 exam syllabus. Staff open SyllabusDetail, which is addressed by the
+   *  (exam × class × subject) triple rather than by the row id. */
+  syllabusId: string | null;
+  examId: string | null;
+  classId: string | null;
+  subject: string | null;
 }
 
 export interface NotificationT {
@@ -6027,6 +6033,7 @@ const NOTIFICATION_FIELDS = `
     audienceKey periodNumber tier hour observationId
     workClaimId workClaimTracker
     classTestId ctId
+    syllabusId examId classId subject
   }
 `;
 

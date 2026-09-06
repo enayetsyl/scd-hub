@@ -149,6 +149,18 @@ const dedupeKeys = {
    *  rung anywhere in the week is a no-op for the inbox; next Sunday's key is new. */
   hwWeeklyDigest: (weekStartKey: string, studentId: string, guardianId: string) =>
     `HWWD:${weekStartKey}:${studentId}:${guardianId}`,
+  /** Per syllabus + guardian (D-#644). Per-GUARDIAN, not per-syllabus: an
+   *  entity-only key would swallow the re-emit to a guardian who was linked to the
+   *  class after the first publish (the recorded dedupe-scope trap). NOT versioned —
+   *  §7.3 sends an edited row back to DRAFT, so a re-publish is a new release of the
+   *  same row and SHOULD reach the family again; the `publishedAt` stamp carries that
+   *  (there is no publish counter on the row, and the stamp moves on every publish). */
+  syllabusPublished: (syllabusId: string, publishedAtKey: string, guardianId: string) =>
+    `SYLPUB:${syllabusId}:${publishedAtKey}:${guardianId}`,
+  /** Per syllabus + sign-off stamp + principal (D-#644): a second sign-off after a
+   *  send-back is a new stamp → a new key → the Principal is told again. */
+  syllabusAwaitingPublish: (syllabusId: string, approvedAtKey: string, userId: string) =>
+    `SYLAWP:${syllabusId}:${approvedAtKey}:${userId}`,
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -1769,5 +1781,151 @@ export async function emitStudentReturned(ev: StudentReturnedEvent): Promise<voi
         ev.teacherId.toString(),
       ),
     });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// D-#644 — exam syllabus: publish → the class's guardians;
+//                          teacher sign-off → the Principal
+// ---------------------------------------------------------------------------
+
+export interface SyllabusPublishedEvent {
+  syllabusId: IdLike;
+  examId: IdLike;
+  classId: IdLike;
+  subject: string;
+  /** The publish stamp — discriminates a re-publish after a §7.3 send-back. */
+  publishedAt: Date;
+  examName: string;
+  className: string;
+}
+
+/**
+ * A published syllabus → every login-enabled guardian of a student in that CLASS.
+ *
+ * The class, not a section: `ExamSyllabus` is keyed (exam × class × subject) and
+ * `guardianChildSyllabus` reads the child's CLASS, so the recipient set has to be
+ * drawn the same way or a family would be told about a syllabus their child's
+ * screen doesn't list (or worse, miss one it does).
+ *
+ * Fires on PUBLISH and nowhere else (owner ruling, 2026-09-06). A teacher's
+ * sign-off leaves the row at PRINCIPAL_REVIEW, which the guardian read refuses on
+ * `publishedAt` — notifying there would have been a tap into an empty screen, and
+ * §7.3 can still pull the row back to DRAFT afterwards.
+ */
+export async function emitSyllabusPublished(ev: SyllabusPublishedEvent): Promise<void> {
+  return bestEffort("syllabus published", async () => {
+    const students = (await Student.find({ classId: ev.classId, active: true })
+      .select("_id")
+      .lean()) as unknown as Array<{ _id: IdLike }>;
+    if (students.length === 0) return;
+
+    const links = (await GuardianLink.find({
+      studentId: { $in: students.map((s) => s._id) },
+      active: { $ne: false }, // missing = active (pre-GP-1 rows)
+    })
+      .select("guardianId")
+      .lean()) as unknown as Array<{ guardianId: IdLike }>;
+    const guardianIds = [...new Set(links.map((l) => l.guardianId.toString()))];
+    if (guardianIds.length === 0) return;
+
+    // Login-enabled only — a contact-only guardian has no inbox (D-#31/#72).
+    const guardians = (await Guardian.find({ _id: { $in: guardianIds }, loginEnabled: true, active: true })
+      .select("_id")
+      .lean()) as unknown as Array<{ _id: IdLike }>;
+    if (guardians.length === 0) return;
+
+    const subjectBn = (ROUTINE_SUBJECT_LABELS_BN as Record<string, string>)[ev.subject] ?? ev.subject;
+    const titleBn = await renderTemplate("syllabus.published.title");
+    const bodyBn = await renderTemplate("syllabus.published.body", {
+      examName: ev.examName,
+      className: ev.className,
+      subject: subjectBn,
+    });
+    const publishedAtKey = ev.publishedAt.toISOString();
+    const refs = {
+      syllabusId: ev.syllabusId.toString(),
+      examId: ev.examId.toString(),
+      classId: ev.classId.toString(),
+      subject: ev.subject,
+    };
+    // One upsert per guardian, in parallel: this is awaited inside the publish
+    // mutation, and a class's families are serial round-trips to Atlas otherwise.
+    await Promise.all(
+      guardians.map((g) =>
+        emit({
+          recipientGuardianId: g._id.toString(),
+          kind: "EXAM_SYLLABUS_PUBLISHED",
+          titleBn,
+          bodyBn,
+          refs,
+          dedupeKey: dedupeKeys.syllabusPublished(
+            ev.syllabusId.toString(),
+            publishedAtKey,
+            g._id.toString(),
+          ),
+        }),
+      ),
+    );
+  });
+}
+
+export interface SyllabusAwaitingPublishEvent {
+  syllabusId: IdLike;
+  examId: IdLike;
+  classId: IdLike;
+  subject: string;
+  /** The sign-off stamp — a re-approval after a send-back re-notifies. */
+  approvedAt: Date;
+  examName: string;
+  className: string;
+  /** The teacher who signed off (or the Principal, on the §7.2 bypass). */
+  teacherName: string;
+}
+
+/**
+ * A teacher's sign-off → the Principal, because publishing is theirs alone
+ * (`assertCanPublish` is a role check, deliberately not a grantable permission).
+ * Office holds `exam:manage` and still cannot release, so telling Office here would
+ * be telling someone who cannot act.
+ *
+ * This is the other half of the owner's 2026-09-06 ruling: guardians hear at
+ * publish, so the sign-off has to reach the one desk that can get it there.
+ */
+export async function emitSyllabusAwaitingPublish(ev: SyllabusAwaitingPublishEvent): Promise<void> {
+  return bestEffort("syllabus awaiting publish", async () => {
+    const principals = (await User.find(actingAsFilter(["PRINCIPAL"]))
+      .select("_id")
+      .lean()) as unknown as Array<{ _id: IdLike }>;
+    if (principals.length === 0) return;
+
+    const subjectBn = (ROUTINE_SUBJECT_LABELS_BN as Record<string, string>)[ev.subject] ?? ev.subject;
+    const titleBn = await renderTemplate("syllabus.awaitingPublish.title");
+    const bodyBn = await renderTemplate("syllabus.awaitingPublish.body", {
+      examName: ev.examName,
+      className: ev.className,
+      subject: subjectBn,
+      teacherName: ev.teacherName,
+    });
+    const approvedAtKey = ev.approvedAt.toISOString();
+    for (const p of principals) {
+      await emit({
+        recipientUserId: p._id.toString(),
+        kind: "EXAM_SYLLABUS_AWAITING_PUBLISH",
+        titleBn,
+        bodyBn,
+        refs: {
+          syllabusId: ev.syllabusId.toString(),
+          examId: ev.examId.toString(),
+          classId: ev.classId.toString(),
+          subject: ev.subject,
+        },
+        dedupeKey: dedupeKeys.syllabusAwaitingPublish(
+          ev.syllabusId.toString(),
+          approvedAtKey,
+          p._id.toString(),
+        ),
+      });
+    }
   });
 }
