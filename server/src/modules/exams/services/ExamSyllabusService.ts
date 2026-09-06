@@ -31,6 +31,12 @@ import { isAdminStaff, isPrincipalStaff } from "../../foundation/services/RoleSc
 import { writeAudit } from "../../platform/services/AuditService";
 import { RoutineSlot } from "../../routine/models/RoutineSlot";
 import { assertNotMojibake } from "../../platform/services/encodingGuard";
+import { Class } from "../../foundation/models/Class";
+import { User } from "../../foundation/models/User";
+import {
+  emitSyllabusPublished,
+  emitSyllabusAwaitingPublish,
+} from "../../notifications/services/emitters";
 import { Exam } from "../models/Exam";
 import { ExamClassNote, type IExamClassNote } from "../models/ExamClassNote";
 import {
@@ -69,6 +75,20 @@ function assertCanPublish(ctx: AppContext): void {
   if (!isPrincipalStaff(auth)) {
     throw new ForbiddenError("সিলেবাস প্রকাশ কেবল প্রধান শিক্ষক করতে পারেন");
   }
+}
+
+/**
+ * The two human names a syllabus notification needs (D-#644): the exam as the
+ * school calls it and the class as a parent reads it. Both are best-effort — a
+ * missing row falls back to a plain string rather than failing the emit, because
+ * the notification must never be the reason a publish or a sign-off fails.
+ */
+async function syllabusNames(
+  examId: Types.ObjectId,
+  classId: Types.ObjectId,
+): Promise<{ examName: string; className: string }> {
+  const [exam, klass] = await Promise.all([Exam.findById(examId), Class.findById(classId)]);
+  return { examName: exam?.name ?? "পরীক্ষা", className: klass?.nameBn ?? "শ্রেণি" };
 }
 
 // ---------------------------------------------------------------------------
@@ -421,6 +441,22 @@ export async function approveSyllabusAsTeacher(
     meta: { subject: doc.subject, bypass },
   });
 
+  // D-#644: the sign-off is done, and the only thing standing between this
+  // syllabus and the families is the Principal's publish — tell them. Best-effort
+  // inside the emitter; a notification failure never rolls back the transition.
+  const names = await syllabusNames(doc.examId, doc.classId);
+  const approver = await User.findById(auth.userId);
+  await emitSyllabusAwaitingPublish({
+    syllabusId: doc._id,
+    examId: doc.examId,
+    classId: doc.classId,
+    subject: doc.subject,
+    approvedAt: doc.teacherApprovedAt ?? new Date(),
+    examName: names.examName,
+    className: names.className,
+    teacherName: approver?.name ?? "শিক্ষক",
+  });
+
   return doc;
 }
 
@@ -503,6 +539,21 @@ export async function publishSyllabus(ctx: AppContext, id: string): Promise<IExa
     targetId: doc._id,
     targetKind: "ExamSyllabus",
     meta: { subject: doc.subject, classId: doc.classId.toString() },
+  });
+
+  // D-#644 — the owner's ruling: the family hears HERE, at the one transition that
+  // makes the row readable to them (`publishedAt` is the guardian predicate,
+  // D-#533). Every login-enabled guardian of a child in this class, once per
+  // publish; a §7.3 send-back and re-publish is a new release and notifies again.
+  const names = await syllabusNames(doc.examId, doc.classId);
+  await emitSyllabusPublished({
+    syllabusId: doc._id,
+    examId: doc.examId,
+    classId: doc.classId,
+    subject: doc.subject,
+    publishedAt: doc.publishedAt ?? new Date(),
+    examName: names.examName,
+    className: names.className,
   });
 
   return doc;

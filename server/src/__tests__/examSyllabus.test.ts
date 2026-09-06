@@ -64,6 +64,23 @@ jest.mock("../modules/platform/services/AuditService", () => ({
   writeAudit: (p: unknown) => mockAudit(p),
 }));
 
+// D-#644 — the two notification seams. Mocked here so this suite stays DB-free
+// (the service now reads Class + User for the message's human names) and so the
+// CALL SITES can be asserted: which transition emits, and with what.
+const mockEmitPublished = jest.fn();
+const mockEmitAwaiting = jest.fn();
+jest.mock("../modules/notifications/services/emitters", () => ({
+  emitSyllabusPublished: (ev: unknown) => mockEmitPublished(ev),
+  emitSyllabusAwaitingPublish: (ev: unknown) => mockEmitAwaiting(ev),
+}));
+
+jest.mock("../modules/foundation/models/Class", () => ({
+  Class: { findById: jest.fn(async () => ({ nameBn: "তৃতীয় শ্রেণি" })) },
+}));
+jest.mock("../modules/foundation/models/User", () => ({
+  User: { findById: jest.fn(async () => ({ name: "Roksana Begum" })) },
+}));
+
 import {
   saveExamClassNote,
   routineHoldersFor,
@@ -400,6 +417,35 @@ describe("approveSyllabusAsTeacher", () => {
     expect(mockAudit.mock.calls[0][0].eventKind).toBe("EXAM_SYLLABUS_TEACHER_APPROVED");
   });
 
+  // D-#644 — the sign-off's own notification goes to the PRINCIPAL, not to the
+  // families: the row is at PRINCIPAL_REVIEW, which the guardian read refuses.
+  test("the sign-off tells the Principal it is waiting on them — and tells no guardian", async () => {
+    const doc = docFor({
+      status: "TEACHER_REVIEW",
+      approverUserId: new mongoose.Types.ObjectId(ROKSANA),
+    });
+    mockSyllabusFindById.mockReturnValue(doc);
+    await approveSyllabusAsTeacher(TEACHER, "s1");
+    expect(mockEmitAwaiting).toHaveBeenCalledTimes(1);
+    const ev = mockEmitAwaiting.mock.calls[0][0];
+    expect(String(ev.syllabusId)).toBe(String(doc._id));
+    expect(String(ev.classId)).toBe(CLASS);
+    expect(ev.subject).toBe("ARABIC");
+    expect(ev.approvedAt).toBe(doc.teacherApprovedAt); // keys the dedupe
+    expect(ev.teacherName).toBe("Roksana Begum");
+    expect(mockEmitPublished).not.toHaveBeenCalled();
+  });
+
+  test("a refused sign-off notifies nobody", async () => {
+    const doc = docFor({
+      status: "TEACHER_REVIEW",
+      approverUserId: new mongoose.Types.ObjectId(ROKSANA),
+    });
+    mockSyllabusFindById.mockReturnValue(doc);
+    await expect(approveSyllabusAsTeacher(ctxFor("TEACHER", OUTSIDER), "s1")).rejects.toThrow();
+    expect(mockEmitAwaiting).not.toHaveBeenCalled();
+  });
+
   test("a DIFFERENT teacher — even one who teaches the pair — cannot sign off another's row", async () => {
     const doc = docFor({
       status: "TEACHER_REVIEW",
@@ -503,6 +549,32 @@ describe("publishSyllabus", () => {
     expect(doc.publishedAt).toBeInstanceOf(Date);
     expect(String(doc.publishedBy)).toBe(PRINCIPAL_ID);
     expect(mockAudit.mock.calls[0][0].eventKind).toBe("EXAM_SYLLABUS_PUBLISHED");
+  });
+
+  // D-#644 — the owner's ruling: the guardians hear at PUBLISH, because that is the
+  // transition `guardianChildSyllabus` reads (`publishedAt`), and nowhere earlier.
+  test("publishing notifies the class's guardians, carrying the deep-link triple", async () => {
+    const doc = docFor({ status: "PRINCIPAL_REVIEW" });
+    mockSyllabusFindById.mockReturnValue(doc);
+    await publishSyllabus(PRINCIPAL, "s1");
+    expect(mockEmitPublished).toHaveBeenCalledTimes(1);
+    const ev = mockEmitPublished.mock.calls[0][0];
+    expect(String(ev.syllabusId)).toBe(String(doc._id));
+    expect(String(ev.examId)).toBe(String(doc.examId));
+    expect(String(ev.classId)).toBe(CLASS);
+    expect(ev.subject).toBe("ARABIC");
+    expect(ev.publishedAt).toBe(doc.publishedAt); // the stamp that keys the dedupe
+    expect(ev.examName).toBe("বার্ষিক পরীক্ষা ২০২৬");
+    expect(ev.className).toBe("তৃতীয় শ্রেণি");
+    // The guardian leg is the ONLY one this transition fires.
+    expect(mockEmitAwaiting).not.toHaveBeenCalled();
+  });
+
+  test("a refused publish notifies nobody", async () => {
+    const doc = docFor({ status: "PRINCIPAL_REVIEW" });
+    mockSyllabusFindById.mockReturnValue(doc);
+    await expect(publishSyllabus(OFFICE, "s1")).rejects.toThrow();
+    expect(mockEmitPublished).not.toHaveBeenCalled();
   });
 
   test("OFFICE holds exam:manage and is STILL refused — publish rides the role (§7.4)", async () => {

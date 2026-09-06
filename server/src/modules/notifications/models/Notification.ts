@@ -85,6 +85,15 @@ export interface NotificationRefs {
    *  the right list — বাড়ির কাজ and অ্যাসাইনমেন্ট are separate tabs, and the kind
    *  alone cannot say which one the claim was about (WC-6). */
   workClaimTracker?: string;
+  /** Exam syllabus (D-#644). `syllabusId` names the row; the staff deep-link needs
+   *  the (exam × class × subject) triple, because SyllabusDetail is addressed by the
+   *  triple rather than by the row id. A guardian's tap needs none of them — their
+   *  screen is their own child's class — but they ride along for both recipients so
+   *  the row explains itself in the inbox. */
+  syllabusId?: string;
+  examId?: string;
+  classId?: string;
+  subject?: string;
 }
 
 export interface INotification extends Document {
@@ -146,6 +155,11 @@ const RefsSchema = new Schema<NotificationRefs>(
     // ctQuestionRequestId bug). GC-1.
     workClaimId: { type: String },
     workClaimTracker: { type: String },
+    // D-#644 syllabus seam — same lockstep rule as above.
+    syllabusId: { type: String },
+    examId: { type: String },
+    classId: { type: String },
+    subject: { type: String },
   },
   { _id: false },
 );
