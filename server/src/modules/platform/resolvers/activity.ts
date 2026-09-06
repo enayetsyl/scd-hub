@@ -9,12 +9,15 @@ import { builder } from "../../../schema";
 import {
   activityPeople,
   activityPerson,
+  activityRowDetail,
   personActivity,
   personActivityDays,
   ACTIVITY_SOURCES,
   type ActivityPersonShape,
   type ActivityRowShape,
   type ActivityDayShape,
+  type ActivityRowDetailShape,
+  type ActivityStudentShape,
   type PersonActivityResult,
 } from "../services/ActivityService";
 import { ACTIVITY_GROUPS, ACTIVITY_GROUP_LABELS, type ActivityGroup } from "../auditLabels";
@@ -51,8 +54,48 @@ ActivityRowRef.implement({
     targetKind: t.string({ nullable: true, resolve: (r) => r.targetKind }),
     targetId: t.string({ nullable: true, resolve: (r) => r.targetId }),
     targetLabel: t.string({ nullable: true, resolve: (r) => r.targetLabel }),
+    // AL-2: where the work was, so the reader need not decode HW-C3-ENG-0020.
+    subject: t.string({ nullable: true, resolve: (r) => r.subject }),
+    classLevel: t.int({ nullable: true, resolve: (r) => r.classLevel }),
+    sectionName: t.string({ nullable: true, resolve: (r) => r.sectionName }),
+    itemDate: t.string({ nullable: true, resolve: (r) => r.itemDate }),
     metaJson: t.string({ nullable: true, resolve: (r) => r.metaJson }),
     viaViewAs: t.exposeBoolean("viaViewAs"),
+  }),
+});
+
+const ActivityStudentRef = builder.objectRef<ActivityStudentShape>("ActivityStudent");
+ActivityStudentRef.implement({
+  description: "One student inside a folded tracker pass, with the exact stamp for them.",
+  fields: (t) => ({
+    id: t.exposeString("id"),
+    name: t.exposeString("name"),
+    rollNumber: t.string({ nullable: true, resolve: (r) => r.rollNumber }),
+    at: t.exposeString("at"),
+  }),
+});
+
+const ActivityRowDetailRef = builder.objectRef<ActivityRowDetailShape>("ActivityRowDetail");
+ActivityRowDetailRef.implement({
+  description:
+    "What one timeline row is made of (AL-2). For a tracker pass: the item and the " +
+    "students it touched, each with their own stamp. For an audit event: the target " +
+    "resolved to a name where its kind is resolvable, plus the stored detail.",
+  fields: (t) => ({
+    rowId: t.exposeString("rowId"),
+    source: t.string({ resolve: (r) => r.source }),
+    itemCode: t.string({ nullable: true, resolve: (r) => r.itemCode }),
+    subject: t.string({ nullable: true, resolve: (r) => r.subject }),
+    classLevel: t.int({ nullable: true, resolve: (r) => r.classLevel }),
+    sectionName: t.string({ nullable: true, resolve: (r) => r.sectionName }),
+    itemDate: t.string({ nullable: true, resolve: (r) => r.itemDate }),
+    dueDate: t.string({ nullable: true, resolve: (r) => r.dueDate }),
+    description: t.string({ nullable: true, resolve: (r) => r.description }),
+    targetLabel: t.string({ nullable: true, resolve: (r) => r.targetLabel }),
+    targetKind: t.string({ nullable: true, resolve: (r) => r.targetKind }),
+    metaJson: t.string({ nullable: true, resolve: (r) => r.metaJson }),
+    students: t.field({ type: [ActivityStudentRef], resolve: (r) => r.students }),
+    studentsTruncated: t.exposeBoolean("studentsTruncated"),
   }),
 });
 
@@ -161,6 +204,23 @@ builder.queryField("personActivityDays", (t) =>
     },
     resolve: async (_root, args) =>
       personActivityDays({ personId: args.personId, from: args.from, to: args.to }),
+  }),
+);
+
+builder.queryField("activityRowDetail", (t) =>
+  t.field({
+    type: ActivityRowDetailRef,
+    nullable: true,
+    description:
+      "The detail behind one timeline row — `rowId` is the id that row already carries. " +
+      "Null when the row is not on this person's timeline. Requires audit:read.",
+    authScopes: { hasPermission: "audit:read" },
+    args: {
+      personId: t.arg.string({ required: true }),
+      rowId: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args) =>
+      activityRowDetail({ personId: args.personId, rowId: args.rowId }),
   }),
 );
 

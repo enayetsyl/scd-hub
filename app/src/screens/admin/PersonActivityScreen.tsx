@@ -25,6 +25,7 @@ import {
   ACTIVITY_GROUPS_QUERY,
   ACTIVITY_PEOPLE_QUERY,
   ACTIVITY_PERSON_QUERY,
+  ACTIVITY_ROW_DETAIL_QUERY,
   PERSON_ACTIVITY_DAYS_QUERY,
   PERSON_ACTIVITY_QUERY,
   type ActivityRowT,
@@ -43,6 +44,7 @@ import {
   Select,
   Divider,
   EmptyState,
+  Loader,
   Notice,
 } from "../../components/ui";
 import { DateField } from "../../components/DateField";
@@ -50,8 +52,11 @@ import { QueryGate } from "../../components/QueryGate";
 import {
   STR,
   bnNum,
+  classLevelLabel,
   dhakaDateKey,
   fullDateLabel,
+  hwSubjectLabel,
+  isoDateLabel,
   isoTimeLabel,
   getActiveLang,
   roleViewLabel,
@@ -93,6 +98,122 @@ function metaLines(metaJson: string | null): string[] {
   }
 }
 
+/** One timeline row. Its own component because the expand is a LAZY query —
+ *  a 500-row window would otherwise fetch every student list nobody opened. */
+function ActivityRowCard({
+  row,
+  personId,
+  lang,
+}: {
+  row: ActivityRowT;
+  personId: string;
+  lang: string;
+}): React.ReactElement {
+  const [open, setOpen] = useState(false);
+  const [detailQ] = useQuery({
+    query: ACTIVITY_ROW_DETAIL_QUERY,
+    variables: { personId, rowId: row.id },
+    pause: !open,
+  });
+  const detail = detailQ.data?.activityRowDetail ?? null;
+
+  // "তৃতীয় শ্রেণি · ইংরেজি · শাখা ক" — the address of the work, from the item.
+  const place = [
+    row.classLevel != null ? classLevelLabel(row.classLevel) : null,
+    row.subject ? hwSubjectLabel(row.subject) : null,
+    row.sectionName,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  // A pass spread over time is worth showing as a span; one instant is not.
+  const span =
+    row.firstAt && row.firstAt !== row.at
+      ? `${isoTimeLabel(row.firstAt)}–${isoTimeLabel(row.at)}`
+      : isoTimeLabel(row.at);
+
+  const metaRows = detail?.metaJson ? metaLines(detail.metaJson) : metaLines(row.metaJson);
+
+  return (
+    <Card onPress={() => setOpen((v) => !v)}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
+        <Muted>{span}</Muted>
+        <Body style={{ fontWeight: "700", flexShrink: 1 }}>
+          {lang === "en" ? row.labelEn : row.labelBn}
+        </Body>
+        <Badge text={sourceLabel(row.source)} tone={sourceTone(row.source)} />
+      </View>
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          gap: space(2),
+          marginTop: space(1),
+          flexWrap: "wrap",
+        }}
+      >
+        {row.count > 1 ? <Badge text={`${bnNum(row.count)} ${STR.actStudents}`} tone="ok" /> : null}
+        {place !== "" ? <Body style={{ flexShrink: 1 }}>{place}</Body> : null}
+        {row.targetLabel ? <Muted>{row.targetLabel}</Muted> : null}
+        {row.targetLabel == null && row.targetKind ? <Muted>→ {row.targetKind}</Muted> : null}
+        {row.viaViewAs ? <Badge text={STR.actViaViewAs} tone="warn" /> : null}
+      </View>
+
+      {!open ? (
+        <Muted style={{ marginTop: space(1) }}>{STR.actTapForDetails}</Muted>
+      ) : detailQ.fetching && detail == null ? (
+        <Loader label={STR.loading} />
+      ) : (
+        <View style={{ marginTop: space(2) }}>
+          <Divider />
+          {detail?.description ? (
+            <Body style={{ marginTop: space(1) }}>{detail.description}</Body>
+          ) : null}
+          {detail?.itemDate ? (
+            <Muted>
+              {STR.actItemDate}: {isoDateLabel(detail.itemDate)}
+              {detail.dueDate ? ` · ${STR.actDueDate}: ${isoDateLabel(detail.dueDate)}` : ""}
+            </Muted>
+          ) : null}
+          {detail?.targetLabel ? (
+            <Muted>
+              {detail.targetKind ?? ""}: {detail.targetLabel}
+            </Muted>
+          ) : null}
+          {metaRows.map((l) => (
+            <Muted key={l}>{l}</Muted>
+          ))}
+
+          {detail && detail.students.length > 0 ? (
+            <View style={{ marginTop: space(2) }}>
+              <Muted>{STR.actStudentList}</Muted>
+              {detail.students.map((st) => (
+                <View
+                  key={st.id}
+                  style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}
+                >
+                  <Muted>{isoTimeLabel(st.at)}</Muted>
+                  <Body style={{ flexShrink: 1 }}>{st.name}</Body>
+                  {st.rollNumber ? <Muted>#{bnNum(st.rollNumber)}</Muted> : null}
+                </View>
+              ))}
+              {detail.studentsTruncated ? <Muted>{STR.actStudentsTruncated}</Muted> : null}
+            </View>
+          ) : null}
+
+          {detail != null &&
+          detail.students.length === 0 &&
+          metaRows.length === 0 &&
+          !detail.description &&
+          !detail.targetLabel ? (
+            <Muted style={{ marginTop: space(1) }}>{STR.actNoDetail}</Muted>
+          ) : null}
+        </View>
+      )}
+    </Card>
+  );
+}
+
 export default function PersonActivityScreen({ route }: Props): React.ReactElement {
   const preselected = route.params?.personId ?? null;
   const [personId, setPersonId] = useState<string | null>(preselected);
@@ -101,7 +222,6 @@ export default function PersonActivityScreen({ route }: Props): React.ReactEleme
   const [to, setTo] = useState(dhakaDateKey());
   const [group, setGroup] = useState("");
   const [source, setSource] = useState("");
-  const [openRows, setOpenRows] = useState<Record<string, boolean>>({});
 
   const lang = getActiveLang();
 
@@ -207,10 +327,7 @@ export default function PersonActivityScreen({ route }: Props): React.ReactEleme
         <Button
           title={STR.actChange}
           variant="secondary"
-          onPress={() => {
-            setPersonId(null);
-            setOpenRows({});
-          }}
+          onPress={() => setPersonId(null)}
         />
       </Card>
 
@@ -287,52 +404,9 @@ export default function PersonActivityScreen({ route }: Props): React.ReactEleme
                 <Badge text={bnNum(b.rows.length)} tone="muted" />
               </View>
               <Divider />
-              {b.rows.map((r) => {
-                const open = openRows[r.id] === true;
-                const lines = metaLines(r.metaJson);
-                return (
-                  <Card key={r.id}>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
-                      <Muted>{isoTimeLabel(r.at)}</Muted>
-                      <Body style={{ fontWeight: "700", flexShrink: 1 }}>
-                        {lang === "en" ? r.labelEn : r.labelBn}
-                      </Body>
-                      <Badge text={sourceLabel(r.source)} tone={sourceTone(r.source)} />
-                    </View>
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        gap: space(2),
-                        marginTop: space(1),
-                        flexWrap: "wrap",
-                      }}
-                    >
-                      {r.count > 1 ? (
-                        <Badge text={`${bnNum(r.count)} ${STR.actStudents}`} tone="ok" />
-                      ) : null}
-                      {r.targetLabel ? <Muted>{r.targetLabel}</Muted> : null}
-                      {r.targetLabel == null && r.targetKind ? <Muted>→ {r.targetKind}</Muted> : null}
-                      {r.viaViewAs ? <Badge text={STR.actViaViewAs} tone="warn" /> : null}
-                    </View>
-                    {lines.length > 0 ? (
-                      open ? (
-                        <View style={{ marginTop: space(1) }}>
-                          {lines.map((l) => (
-                            <Muted key={l}>{l}</Muted>
-                          ))}
-                        </View>
-                      ) : (
-                        <Button
-                          title={STR.actDetails}
-                          variant="secondary"
-                          onPress={() => setOpenRows((p) => ({ ...p, [r.id]: true }))}
-                        />
-                      )
-                    ) : null}
-                  </Card>
-                );
-              })}
+              {b.rows.map((r) => (
+                <ActivityRowCard key={r.id} row={r} personId={personId} lang={lang} />
+              ))}
             </View>
           ))}
         </>

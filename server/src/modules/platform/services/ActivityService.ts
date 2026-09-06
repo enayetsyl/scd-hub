@@ -32,10 +32,14 @@
  * counts (`personActivityDays`) exist so they can see which days are worth
  * opening before they narrow.
  *
- * PII: this is the operational plane. It reads identity (Users, Guardians,
- * Students are NOT read here — only counts) and the trackers' identity-bearing
- * Layer-B records. It imports nothing from `modules/corpus` and is never
- * imported by it, so the ADR-005 firewall is untouched.
+ * PII: this is the operational plane. It reads identity (Users, Guardians, and
+ * — since AL-2's expand — the Students named inside one pass) and the trackers'
+ * identity-bearing Layer-B records. That is allowed here and nowhere near the
+ * firewall: ADR-005 forbids the CORPUS plane from joining back to identity, and
+ * this module imports nothing from `modules/corpus` and is never imported by it.
+ * The reader is the Principal under `audit:read`, who can already open any of
+ * these rosters directly; the expand saves them the trip, it does not widen what
+ * they may see.
  */
 import { Types, type PipelineStage } from "mongoose";
 import { LIFECYCLE_STATE_LABELS_BN, LIFECYCLE_STATE_LABELS_EN } from "@scd/shared";
@@ -44,6 +48,11 @@ import { User } from "../../foundation/models/User";
 import { Guardian } from "../../foundation/models/Guardian";
 import { HomeworkStudentRecord } from "../../trackers/models/HomeworkStudentRecord";
 import { AssignmentStudentRecord } from "../../trackers/models/AssignmentStudentRecord";
+import { HomeworkItem } from "../../trackers/models/HomeworkItem";
+import { AssignmentItem } from "../../trackers/models/AssignmentItem";
+import { Student } from "../../foundation/models/Student";
+import { Class } from "../../foundation/models/Class";
+import { Section } from "../../foundation/models/Section";
 import { auditKindLabel, kindsInGroup, type ActivityGroup, ACTIVITY_GROUPS } from "../auditLabels";
 import { dhakaDayKey } from "../../../lib/dhakaDay";
 
@@ -85,8 +94,15 @@ export interface ActivityRowShape {
   count: number;
   targetKind: string | null;
   targetId: string | null;
-  /** Human handle for the thing acted on — HW_ID/AS_ID + subject for tracker rows. */
+  /** Human handle for the thing acted on — the HW_ID/AS_ID for tracker rows. */
   targetLabel: string | null;
+  /** Tracker rows only (AL-2): WHERE the work was, resolved from the item so the
+   *  reader does not have to decode `HW-C3-ENG-0020` in their head. */
+  subject: string | null;
+  classLevel: number | null;
+  sectionName: string | null;
+  /** The item's own date — dateGiven (homework) / deliveryDate (assignment). */
+  itemDate: string | null;
   metaJson: string | null;
   /** Written inside a "View as" session (D-#638) — the Principal acting through
    *  this account, NOT this person. Shown, never hidden: a timeline that quietly
@@ -243,13 +259,51 @@ export async function activityPerson(personId: string): Promise<ActivityPersonSh
   return null;
 }
 
+interface TrackerItemJoin {
+  subject?: string;
+  classId?: Types.ObjectId;
+  sectionId?: Types.ObjectId;
+  dateGiven?: Date;
+  deliveryDate?: Date;
+  description?: string;
+  dueDate?: Date;
+}
+
 interface TrackerFoldRow {
   _id: { item: Types.ObjectId; state: string; day: string };
   count: number;
   firstAt: Date;
   lastAt: Date;
   code?: string;
-  subject?: string;
+  item?: TrackerItemJoin;
+}
+
+/** Class level + section name for a batch of ids, resolved once per read rather
+ *  than once per row (the AuditQueryService name-join pattern). */
+interface PlaceNames {
+  levelByClassId: Map<string, number>;
+  nameBySectionId: Map<string, string>;
+}
+
+const EMPTY_PLACES: PlaceNames = { levelByClassId: new Map(), nameBySectionId: new Map() };
+
+async function resolvePlaces(rows: TrackerFoldRow[]): Promise<PlaceNames> {
+  const classIds = [...new Set(rows.map((r) => r.item?.classId?.toString()).filter(Boolean))] as string[];
+  const sectionIds = [...new Set(rows.map((r) => r.item?.sectionId?.toString()).filter(Boolean))] as string[];
+  if (classIds.length === 0 && sectionIds.length === 0) return EMPTY_PLACES;
+  const [classes, sections] = await Promise.all([
+    Class.find({ _id: { $in: classIds } }).select("level").lean() as unknown as Promise<
+      Array<{ _id: Types.ObjectId; level?: number }>
+    >,
+    Section.find({ _id: { $in: sectionIds } }).select("nameBn").lean() as unknown as Promise<
+      Array<{ _id: Types.ObjectId; nameBn?: string }>
+    >,
+  ]);
+  const levelByClassId = new Map<string, number>();
+  for (const c of classes) if (typeof c.level === "number") levelByClassId.set(c._id.toString(), c.level);
+  const nameBySectionId = new Map<string, string>();
+  for (const sec of sections) if (sec.nameBn) nameBySectionId.set(sec._id.toString(), sec.nameBn);
+  return { levelByClassId, nameBySectionId };
 }
 
 /** The fold pipeline, identical in shape for both trackers — only the field
@@ -260,6 +314,7 @@ function trackerPipeline(
   end: Date,
   itemField: string,
   codeField: string,
+  itemCollection: string,
   limit: number,
 ): PipelineStage[] {
   const range = { $gte: start, $lte: end };
@@ -286,6 +341,17 @@ function trackerPipeline(
     },
     { $sort: { lastAt: -1 } },
     { $limit: limit },
+    // AFTER the limit, never before: at most `limit` items are joined, not every
+    // record the person has ever touched.
+    {
+      $lookup: {
+        from: itemCollection,
+        localField: "_id.item",
+        foreignField: "_id",
+        as: "item",
+      },
+    },
+    { $unwind: { path: "$item", preserveNullAndEmptyArrays: true } },
   ];
 }
 
@@ -296,9 +362,10 @@ async function homeworkRows(
   limit: number,
 ): Promise<ActivityRowShape[]> {
   const folded = (await HomeworkStudentRecord.aggregate(
-    trackerPipeline(actorId, start, end, "hwItemId", "hwId", limit),
+    trackerPipeline(actorId, start, end, "hwItemId", "hwId", HomeworkItem.collection.name, limit),
   )) as unknown as TrackerFoldRow[];
-  return folded.map((f) => trackerRow(f, "HOMEWORK"));
+  const places = await resolvePlaces(folded);
+  return folded.map((f) => trackerRow(f, "HOMEWORK", places));
 }
 
 async function assignmentRows(
@@ -308,12 +375,17 @@ async function assignmentRows(
   limit: number,
 ): Promise<ActivityRowShape[]> {
   const folded = (await AssignmentStudentRecord.aggregate(
-    trackerPipeline(actorId, start, end, "asItemId", "asId", limit),
+    trackerPipeline(actorId, start, end, "asItemId", "asId", AssignmentItem.collection.name, limit),
   )) as unknown as TrackerFoldRow[];
-  return folded.map((f) => trackerRow(f, "ASSIGNMENT"));
+  const places = await resolvePlaces(folded);
+  return folded.map((f) => trackerRow(f, "ASSIGNMENT", places));
 }
 
-function trackerRow(f: TrackerFoldRow, source: "HOMEWORK" | "ASSIGNMENT"): ActivityRowShape {
+function trackerRow(
+  f: TrackerFoldRow,
+  source: "HOMEWORK" | "ASSIGNMENT",
+  places: PlaceNames = EMPTY_PLACES,
+): ActivityRowShape {
   const state = f._id.state;
   const stateBn =
     (LIFECYCLE_STATE_LABELS_BN as Record<string, string | undefined>)[state] ?? state;
@@ -336,9 +408,22 @@ function trackerRow(f: TrackerFoldRow, source: "HOMEWORK" | "ASSIGNMENT"): Activ
     targetKind: source === "HOMEWORK" ? "HomeworkItem" : "AssignmentItem",
     targetId: f._id.item.toString(),
     targetLabel: f.code ?? null,
+    subject: f.item?.subject ?? null,
+    classLevel: f.item?.classId ? places.levelByClassId.get(f.item.classId.toString()) ?? null : null,
+    sectionName: f.item?.sectionId
+      ? places.nameBySectionId.get(f.item.sectionId.toString()) ?? null
+      : null,
+    itemDate: itemDateOf(f.item),
     metaJson: null,
     viaViewAs: false,
   };
+}
+
+/** Homework calls it `dateGiven`, assignments `deliveryDate`; the reader wants
+ *  "the day this work belongs to" either way. */
+function itemDateOf(item?: TrackerItemJoin): string | null {
+  const d = item?.dateGiven ?? item?.deliveryDate;
+  return d ? new Date(d).toISOString() : null;
 }
 
 async function auditRows(
@@ -380,6 +465,10 @@ async function auditRows(
       targetKind: r.targetKind ?? null,
       targetId: r.targetId ? r.targetId.toString() : null,
       targetLabel: null,
+      subject: null,
+      classLevel: null,
+      sectionName: null,
+      itemDate: null,
       metaJson: r.meta && Object.keys(r.meta).length > 0 ? JSON.stringify(r.meta) : null,
       viaViewAs: r.onBehalfOf != null && r.onBehalfOf.toString() === actorId.toString(),
     };
@@ -490,4 +579,253 @@ export async function personActivityDays(input: {
   for (const d of asDays) bump(d._id, "assignment", d.n);
 
   return [...byDay.values()].sort((a, b) => (a.day < b.day ? 1 : a.day > b.day ? -1 : 0));
+}
+
+
+// ---------------------------------------------------------------------------
+// AL-2 — the expand: what ONE row is actually made of.
+//
+// Kept as its own lazy read rather than folded into `personActivity`: a window
+// of 500 rows would otherwise join and return ~15,000 student sub-documents to
+// render a list nobody has opened yet. One row is opened at a time, so one row
+// is fetched at a time.
+// ---------------------------------------------------------------------------
+
+export interface ActivityStudentShape {
+  id: string;
+  name: string;
+  rollNumber: string | null;
+  /** The exact stamp for THIS student in THIS pass — a pass spread over an hour
+   *  shows as an hour of individual times, not one rounded moment. */
+  at: string;
+}
+
+export interface ActivityRowDetailShape {
+  rowId: string;
+  source: ActivitySource;
+  /** Tracker: HW_ID/AS_ID. */
+  itemCode: string | null;
+  subject: string | null;
+  classLevel: number | null;
+  sectionName: string | null;
+  itemDate: string | null;
+  dueDate: string | null;
+  /** The teacher's own description of the work. */
+  description: string | null;
+  /** Audit: the target resolved to a name, where its kind is one we can resolve. */
+  targetLabel: string | null;
+  targetKind: string | null;
+  metaJson: string | null;
+  students: ActivityStudentShape[];
+  /** More students than the cap — the list is a sample, and says so. */
+  studentsTruncated: boolean;
+}
+
+/** A section is ~30 students; 200 is a ceiling that no real pass reaches, and
+ *  stops a malformed row from streaming a whole collection. */
+const DETAIL_STUDENT_CAP = 200;
+
+/**
+ * Puts a NAME to an audit row's target. Deliberately a short allow-list rather
+ * than a lookup over every collection: 219 event kinds point at dozens of
+ * models, and a half-guessed join that returns the wrong name is worse than the
+ * raw id, which is at least honestly opaque.
+ */
+async function resolveAuditTarget(
+  targetKind: string | null | undefined,
+  targetId: Types.ObjectId | null | undefined,
+): Promise<string | null> {
+  if (!targetKind || !targetId) return null;
+  const id = targetId;
+  switch (targetKind) {
+    case "Student": {
+      const d = (await Student.findById(id).select("name nameBn rollNumber").lean()) as
+        | { name?: string; nameBn?: string; rollNumber?: string }
+        | null;
+      if (!d) return null;
+      const nm = d.nameBn ?? d.name ?? null;
+      return nm && d.rollNumber ? `${nm} (${d.rollNumber})` : nm;
+    }
+    case "User": {
+      const d = (await User.findById(id).select("name").lean()) as { name?: string } | null;
+      return d?.name ?? null;
+    }
+    case "Guardian": {
+      const d = (await Guardian.findById(id).select("name").lean()) as { name?: string } | null;
+      return d?.name ?? null;
+    }
+    case "Section": {
+      const d = (await Section.findById(id).select("nameBn").lean()) as { nameBn?: string } | null;
+      return d?.nameBn ?? null;
+    }
+    case "Class": {
+      const d = (await Class.findById(id).select("nameBn").lean()) as { nameBn?: string } | null;
+      return d?.nameBn ?? null;
+    }
+    case "HomeworkItem": {
+      const d = (await HomeworkItem.findById(id).select("hwId").lean()) as { hwId?: string } | null;
+      return d?.hwId ?? null;
+    }
+    case "AssignmentItem": {
+      const d = (await AssignmentItem.findById(id).select("asId").lean()) as { asId?: string } | null;
+      return d?.asId ?? null;
+    }
+    default:
+      // Unresolvable kinds keep the raw id on screen — opaque, but never wrong.
+      return null;
+  }
+}
+
+interface StudentStampRow {
+  studentId: Types.ObjectId;
+  at: Date;
+  student?: { name?: string; nameBn?: string; rollNumber?: string };
+}
+
+async function trackerRowDetail(
+  source: "HOMEWORK" | "ASSIGNMENT",
+  actorId: Types.ObjectId,
+  itemId: Types.ObjectId,
+  state: string,
+  day: string,
+): Promise<ActivityRowDetailShape | null> {
+  const start = dayStartInstant(day);
+  const end = dayEndInstant(day);
+  if (Number.isNaN(start.getTime())) return null;
+  const range = { $gte: start, $lte: end };
+
+  const isHw = source === "HOMEWORK";
+  const recordModel = isHw ? HomeworkStudentRecord : AssignmentStudentRecord;
+  const itemField = isHw ? "hwItemId" : "asItemId";
+  // Each `findById` is issued on a CONCRETE model: a `HomeworkItem | AssignmentItem`
+  // variable is a union of two overload sets and tsc cannot call it.
+  const ITEM_FIELDS = "hwId asId subject classId sectionId dateGiven deliveryDate dueDate description";
+
+  const [item, stamps] = await Promise.all([
+    (isHw
+      ? HomeworkItem.findById(itemId).select(ITEM_FIELDS).lean()
+      : AssignmentItem.findById(itemId).select(ITEM_FIELDS).lean()) as unknown as Promise<
+      | ({
+          hwId?: string;
+          asId?: string;
+          dueDate?: Date;
+          description?: string;
+        } & TrackerItemJoin)
+      | null
+    >,
+    recordModel.aggregate([
+      { $match: { [itemField]: itemId, "stateDates.by": actorId, "stateDates.at": range } },
+      { $unwind: "$stateDates" },
+      {
+        $match: {
+          "stateDates.by": actorId,
+          "stateDates.state": state,
+          "stateDates.at": range,
+        },
+      },
+      { $sort: { "stateDates.at": 1 } },
+      { $limit: DETAIL_STUDENT_CAP + 1 },
+      {
+        $lookup: {
+          from: Student.collection.name,
+          localField: "studentId",
+          foreignField: "_id",
+          as: "student",
+        },
+      },
+      { $unwind: { path: "$student", preserveNullAndEmptyArrays: true } },
+      { $project: { _id: 0, studentId: 1, at: "$stateDates.at", student: 1 } },
+    ]) as unknown as Promise<StudentStampRow[]>,
+  ]);
+
+  const truncated = stamps.length > DETAIL_STUDENT_CAP;
+  const shown = truncated ? stamps.slice(0, DETAIL_STUDENT_CAP) : stamps;
+
+  const places = await resolvePlaces([
+    {
+      _id: { item: itemId, state, day },
+      count: 0,
+      firstAt: start,
+      lastAt: start,
+      item: item ?? undefined,
+    },
+  ]);
+
+  return {
+    rowId: `${source}:${itemId.toString()}:${state}:${day}`,
+    source,
+    itemCode: (isHw ? item?.hwId : item?.asId) ?? null,
+    subject: item?.subject ?? null,
+    classLevel: item?.classId ? places.levelByClassId.get(item.classId.toString()) ?? null : null,
+    sectionName: item?.sectionId
+      ? places.nameBySectionId.get(item.sectionId.toString()) ?? null
+      : null,
+    itemDate: itemDateOf(item ?? undefined),
+    dueDate: item?.dueDate ? new Date(item.dueDate).toISOString() : null,
+    description: item?.description ?? null,
+    targetLabel: null,
+    targetKind: isHw ? "HomeworkItem" : "AssignmentItem",
+    metaJson: null,
+    students: shown.map((r) => ({
+      id: r.studentId.toString(),
+      name: r.student?.nameBn ?? r.student?.name ?? "—",
+      rollNumber: r.student?.rollNumber ?? null,
+      at: new Date(r.at).toISOString(),
+    })),
+    studentsTruncated: truncated,
+  };
+}
+
+/**
+ * The detail behind one timeline row. `rowId` is the id the row already carries:
+ * the fold key for a tracker pass, the audit `_id` for an event.
+ * Gate: `audit:read` (Principal) — enforced at the resolver.
+ */
+export async function activityRowDetail(input: {
+  personId: string;
+  rowId: string;
+}): Promise<ActivityRowDetailShape | null> {
+  if (!Types.ObjectId.isValid(input.personId)) return null;
+  const actorId = new Types.ObjectId(input.personId);
+
+  const parts = input.rowId.split(":");
+  if (parts.length === 4 && (parts[0] === "HOMEWORK" || parts[0] === "ASSIGNMENT")) {
+    const [source, itemId, state, day] = parts;
+    if (!Types.ObjectId.isValid(itemId) || !DAY_RE.test(day)) return null;
+    return trackerRowDetail(
+      source as "HOMEWORK" | "ASSIGNMENT",
+      actorId,
+      new Types.ObjectId(itemId),
+      state,
+      day,
+    );
+  }
+
+  if (!Types.ObjectId.isValid(input.rowId)) return null;
+  const row = (await Audit.findById(new Types.ObjectId(input.rowId)).lean()) as unknown as IAudit | null;
+  if (!row) return null;
+  // The row must actually belong to this person's timeline. The caller holds
+  // audit:read and could read it directly anyway — but a detail endpoint that
+  // answers for a row it was not asked about is a contract nobody can reason on.
+  const belongs =
+    row.actorId?.toString() === actorId.toString() ||
+    row.onBehalfOf?.toString() === actorId.toString();
+  if (!belongs) return null;
+
+  return {
+    rowId: row._id.toString(),
+    source: "AUDIT",
+    itemCode: null,
+    subject: null,
+    classLevel: null,
+    sectionName: null,
+    itemDate: null,
+    dueDate: null,
+    description: null,
+    targetLabel: await resolveAuditTarget(row.targetKind, row.targetId),
+    targetKind: row.targetKind ?? null,
+    metaJson: row.meta && Object.keys(row.meta).length > 0 ? JSON.stringify(row.meta) : null,
+    students: [],
+    studentsTruncated: false,
+  };
 }

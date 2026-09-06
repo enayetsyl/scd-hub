@@ -1,4 +1,4 @@
-# Test plan — কার্যক্রম / person activity (AL-1, D-#645)
+# Test plan — কার্যক্রম / person activity (AL-1 D-#645, AL-2 D-#646)
 
 Shipped to prod 2026-09-06 via PR #791 (→ `dev`) and PR #792 (→ `main`). Prod deploy
 green (run 34038531633). `activityPeople` / `activityPerson` / `personActivity` /
@@ -74,6 +74,11 @@ headers cover only days he actually worked (a day with nothing does not appear).
 *"বাড়ির কাজে “জমা হয়েছে” চিহ্নিত করেছেন"* with a `HW-…` code and a `২৮ জন শিক্ষার্থী`
 badge. Note the HW code, the state and the count. Now open that same homework item the
 normal way (বাড়ির কাজ → the item) and count how many students are actually in that state.
+
+**Since AL-2 this is much easier: tap the card.** The expand lists the students by name
+with the time each one was marked, so you can compare name-by-name rather than only
+count-to-count. A name in the expanded list that is *not* in that state on the item itself
+is the interesting case — see the revert note below before reporting it.
 **Expect:** the two numbers agree.
 **Pass when:** they match exactly.
 **If they do not:** note the person, the date, the HW code and both numbers, and report it.
@@ -100,11 +105,13 @@ August, the retroactive read is broken and the whole design call was wrong.
 screen deliberately title-cases what it cannot name rather than hiding the row. Report
 which code.
 
-### T6 — বিস্তারিত opens the detail
-**Do:** On an audit row that shows a **বিস্তারিত** button, press it.
-**Expect:** the event's stored detail, one `key: value` per line.
-**Pass when:** the panel opens and stays open. Rows with no stored detail correctly show no
-button.
+### T6 — An audit row opens its stored detail
+**Do:** Tap an audit row (the whole card is the target since AL-2 — the old
+**বিস্তারিত** button is gone).
+**Expect:** the event's stored detail, one `key: value` per line, plus the target's name
+where its kind is resolvable (T16).
+**Pass when:** the panel opens, and tapping again closes it. A row with nothing stored says
+so in words rather than opening an empty panel.
 
 ### T7 — Narrowing to a single day agrees with the totals
 **Do:** Note **মোট কাজ** for the ৭ দিন window. Now set both শুরুর তারিখ and শেষ তারিখ to
@@ -165,6 +172,32 @@ holiday week.
 দিন।"*
 **Pass when:** you get that empty state, not a spinner and not an error banner.
 
+### T15 — The row says where the work was (AL-2)
+**Do:** Look at any tracker row.
+**Expect:** beside the `HW-…`/`AS-…` code, the address of the work in words —
+*তৃতীয় শ্রেণি · ইংরেজি · ক* (class · subject · section) — and, where a pass took more than
+a moment, a time **span** (`15:31–15:38`) rather than a single time.
+**Pass when:** you can tell what class and subject a row is about without decoding the code.
+**Note:** a row whose item has since been deleted correctly shows the code alone, with no
+address. That is the row surviving, not a bug.
+
+### T16 — The card expands (AL-2) ⭐
+**Do:** Tap anywhere on a row — the whole card is the target now; there is no separate
+button.
+**Expect, for a tracker row:** the teacher's description of the work, the work/due dates,
+and **the students it touched, each with their own timestamp**.
+**Expect, for an audit row:** the stored detail, plus the target resolved to a **name**
+where it is a student, staff member, guardian, section, class, or homework/assignment item.
+**Pass when:** it opens, shows real names, and tapping again closes it.
+**Deliberate:** targets of other kinds (a payroll run, a class test) still show a raw id.
+The allow-list resolves seven kinds; anything else stays opaque rather than risking a wrong
+name. Not a bug — but tell me which kinds you hit most and I will add them.
+
+### T17 — A single-student row now says who
+**Do:** Find a row with **no** count badge (count = 1) — the screenshot that prompted AL-2
+had three of them. Tap it.
+**Pass when:** the one student is named.
+
 ---
 
 ## 3. Performance note (first run only)
@@ -187,8 +220,8 @@ Do not file these as bugs — they are scope, recorded here so a tester knows th
 - **Roughly 89 mutations that still write no audit row at all** — the largest clusters are
   routine edits, parts of attendance, and assessment. They are invisible here because they
   are invisible everywhere; closing those gaps is separate work.
-- **Student-level detail inside a tracker pass.** You get the item, the state and the count,
-  not the 28 names. Open the item itself for those.
+- **A jump from a student in the expanded list to that student's profile.** The names are
+  text, not links, for now.
 - **Export.** No CSV or PDF of a timeline.
 - **A tappable calendar.** The per-day counts drive the summary; you narrow with the date
   fields.

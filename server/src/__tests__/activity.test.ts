@@ -20,12 +20,14 @@ const oid = (): mongoose.Types.ObjectId => new mongoose.Types.ObjectId();
 
 const mockAuditFind = jest.fn();
 const mockAuditAggregate = jest.fn();
+const mockAuditById = jest.fn();
 jest.mock("../modules/platform/models/Audit", () => ({
   Audit: {
     find: (q: unknown) => ({
       sort: () => ({ limit: (n: number) => ({ lean: async () => mockAuditFind(q, n) }) }),
     }),
     aggregate: async (p: unknown) => mockAuditAggregate(p),
+    findById: (id: unknown) => ({ lean: async () => mockAuditById(id) }),
   },
 }));
 const mockHwAggregate = jest.fn();
@@ -35,6 +37,35 @@ jest.mock("../modules/trackers/models/HomeworkStudentRecord", () => ({
 const mockAsAggregate = jest.fn();
 jest.mock("../modules/trackers/models/AssignmentStudentRecord", () => ({
   AssignmentStudentRecord: { aggregate: async (p: unknown) => mockAsAggregate(p) },
+}));
+const mockHwItemById = jest.fn();
+jest.mock("../modules/trackers/models/HomeworkItem", () => ({
+  HomeworkItem: {
+    collection: { name: "homeworkitems" },
+    findById: () => ({ select: () => ({ lean: async () => mockHwItemById() }) }),
+  },
+}));
+const mockAsItemById = jest.fn();
+jest.mock("../modules/trackers/models/AssignmentItem", () => ({
+  AssignmentItem: {
+    collection: { name: "assignmentitems" },
+    findById: () => ({ select: () => ({ lean: async () => mockAsItemById() }) }),
+  },
+}));
+const mockStudentById = jest.fn();
+jest.mock("../modules/foundation/models/Student", () => ({
+  Student: {
+    collection: { name: "students" },
+    findById: () => ({ select: () => ({ lean: async () => mockStudentById() }) }),
+  },
+}));
+const mockClassFind = jest.fn();
+jest.mock("../modules/foundation/models/Class", () => ({
+  Class: { find: (q: unknown) => ({ select: () => ({ lean: async () => mockClassFind(q) }) }) },
+}));
+const mockSectionFind = jest.fn();
+jest.mock("../modules/foundation/models/Section", () => ({
+  Section: { find: (q: unknown) => ({ select: () => ({ lean: async () => mockSectionFind(q) }) }) },
 }));
 const mockUserFind = jest.fn();
 const mockUserById = jest.fn();
@@ -60,6 +91,7 @@ jest.mock("../modules/foundation/models/Guardian", () => ({
 import {
   activityPeople,
   activityPerson,
+  activityRowDetail,
   personActivity,
   personActivityDays,
   resolveWindow,
@@ -87,6 +119,12 @@ beforeEach(() => {
   mockGuardianFind.mockReturnValue([]);
   mockUserById.mockReturnValue(null);
   mockGuardianById.mockReturnValue(null);
+  mockAuditById.mockReturnValue(null);
+  mockHwItemById.mockReturnValue(null);
+  mockAsItemById.mockReturnValue(null);
+  mockStudentById.mockReturnValue(null);
+  mockClassFind.mockReturnValue([]);
+  mockSectionFind.mockReturnValue([]);
 });
 
 describe("RBAC — the timeline adds no permission", () => {
@@ -431,5 +469,195 @@ describe("activityPeople / activityPerson", () => {
   test("an unknown person is null, not an exception", async () => {
     expect(await activityPerson(oid().toString())).toBeNull();
     expect(await activityPerson("nope")).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// AL-2 — the row carries where the work was, and the expand says what it was.
+// ---------------------------------------------------------------------------
+
+const CLASS_ID = oid();
+const SECTION_ID = oid();
+const STUDENT_A = oid();
+const STUDENT_B = oid();
+
+describe("AL-2 — the enriched row", () => {
+  test("the item is joined AFTER the limit, not before", async () => {
+    await personActivity({ personId: PERSON.toString(), from: "2026-08-01", to: "2026-08-31" });
+    const [pipeline] = mockHwAggregate.mock.calls[0];
+    const limitAt = pipeline.findIndex((st: Record<string, unknown>) => "$limit" in st);
+    const lookupAt = pipeline.findIndex((st: Record<string, unknown>) => "$lookup" in st);
+    expect(limitAt).toBeGreaterThan(-1);
+    expect(lookupAt).toBeGreaterThan(limitAt); // at most `limit` items are joined
+    expect(pipeline[lookupAt].$lookup.from).toBe("homeworkitems");
+  });
+
+  test("class level, subject and section ride the row", async () => {
+    mockHwAggregate.mockReturnValue([
+      {
+        _id: { item: ITEM, state: "SUBMITTED", day: "2026-08-12" },
+        count: 15,
+        firstAt: new Date("2026-08-12T09:30:00.000Z"),
+        lastAt: new Date("2026-08-12T09:38:00.000Z"),
+        code: "HW-C3-ENG-0020",
+        item: { subject: "ENG", classId: CLASS_ID, sectionId: SECTION_ID, dateGiven: new Date("2026-08-11T00:00:00.000Z") },
+      },
+    ]);
+    mockClassFind.mockReturnValue([{ _id: CLASS_ID, level: 3 }]);
+    mockSectionFind.mockReturnValue([{ _id: SECTION_ID, nameBn: "ক" }]);
+
+    const { rows } = await personActivity({
+      personId: PERSON.toString(),
+      from: "2026-08-01",
+      to: "2026-08-31",
+    });
+    expect(rows[0]).toMatchObject({
+      subject: "ENG",
+      classLevel: 3,
+      sectionName: "ক",
+      targetLabel: "HW-C3-ENG-0020",
+    });
+    expect(rows[0].itemDate).toBe("2026-08-11T00:00:00.000Z");
+    // firstAt != at, so the app can render the pass as a span rather than a moment.
+    expect(rows[0].firstAt).not.toBe(rows[0].at);
+  });
+
+  test("an item that no longer resolves leaves the fields null, never crashes the row", async () => {
+    mockHwAggregate.mockReturnValue([
+      {
+        _id: { item: ITEM, state: "CHECKED", day: "2026-08-12" },
+        count: 2,
+        firstAt: new Date("2026-08-12T09:00:00.000Z"),
+        lastAt: new Date("2026-08-12T09:00:00.000Z"),
+      },
+    ]);
+    const { rows } = await personActivity({
+      personId: PERSON.toString(),
+      from: "2026-08-01",
+      to: "2026-08-31",
+    });
+    expect(rows[0]).toMatchObject({ subject: null, classLevel: null, sectionName: null, itemDate: null });
+    expect(mockClassFind).not.toHaveBeenCalled(); // nothing to resolve → no query
+  });
+});
+
+describe("AL-2 — activityRowDetail", () => {
+  test("a fold key opens the pass and names every student with their own stamp", async () => {
+    mockHwItemById.mockReturnValue({
+      hwId: "HW-C3-ENG-0020",
+      subject: "ENG",
+      classId: CLASS_ID,
+      sectionId: SECTION_ID,
+      dateGiven: new Date("2026-08-11T00:00:00.000Z"),
+      dueDate: new Date("2026-08-12T00:00:00.000Z"),
+      description: "Unit 4 exercises",
+    });
+    mockClassFind.mockReturnValue([{ _id: CLASS_ID, level: 3 }]);
+    mockSectionFind.mockReturnValue([{ _id: SECTION_ID, nameBn: "ক" }]);
+    mockHwAggregate.mockReturnValue([
+      { studentId: STUDENT_A, at: new Date("2026-08-12T09:30:00.000Z"), student: { nameBn: "রায়হান", rollNumber: "07" } },
+      { studentId: STUDENT_B, at: new Date("2026-08-12T09:38:00.000Z"), student: { name: "Ayesha" } },
+    ]);
+
+    const d = await activityRowDetail({
+      personId: PERSON.toString(),
+      rowId: `HOMEWORK:${ITEM.toString()}:SUBMITTED:2026-08-12`,
+    });
+    expect(d).toMatchObject({
+      source: "HOMEWORK",
+      itemCode: "HW-C3-ENG-0020",
+      subject: "ENG",
+      classLevel: 3,
+      sectionName: "ক",
+      description: "Unit 4 exercises",
+      studentsTruncated: false,
+    });
+    expect(d?.students.map((st) => st.name)).toEqual(["রায়হান", "Ayesha"]);
+    expect(d?.students[0].rollNumber).toBe("07");
+    expect(d?.students[0].at).toBe("2026-08-12T09:30:00.000Z");
+
+    // The stamp match must pin the STATE as well as the actor and the day —
+    // without it the expand would list every student the item ever touched.
+    const [pipeline] = mockHwAggregate.mock.calls[0];
+    const stateMatch = pipeline.find(
+      (st: Record<string, unknown>) =>
+        "$match" in st &&
+        (st.$match as Record<string, unknown>)["stateDates.state"] !== undefined,
+    );
+    expect(stateMatch.$match["stateDates.state"]).toBe("SUBMITTED");
+  });
+
+  test("a malformed fold key is null, not a scan", async () => {
+    expect(
+      await activityRowDetail({ personId: PERSON.toString(), rowId: "HOMEWORK:nope:SUBMITTED:2026-08-12" }),
+    ).toBeNull();
+    expect(
+      await activityRowDetail({ personId: PERSON.toString(), rowId: `HOMEWORK:${ITEM.toString()}:SUBMITTED:12-08-2026` }),
+    ).toBeNull();
+    expect(mockHwAggregate).not.toHaveBeenCalled();
+  });
+
+  test("an audit row resolves its target to a name", async () => {
+    const auditId = oid();
+    mockAuditById.mockReturnValue({
+      _id: auditId,
+      eventKind: "STUDENT_COMMENT_RECORDED",
+      eventAt: new Date("2026-08-12T04:00:00.000Z"),
+      actorId: PERSON,
+      targetKind: "Student",
+      targetId: STUDENT_A,
+      meta: { sentiment: "positive" },
+    });
+    mockStudentById.mockReturnValue({ nameBn: "রায়হান", rollNumber: "07" });
+
+    const d = await activityRowDetail({ personId: PERSON.toString(), rowId: auditId.toString() });
+    expect(d).toMatchObject({
+      source: "AUDIT",
+      targetKind: "Student",
+      targetLabel: "রায়হান (07)",
+      metaJson: JSON.stringify({ sentiment: "positive" }),
+    });
+    expect(d?.students).toEqual([]);
+  });
+
+  test("an unresolvable target keeps the row rather than inventing a name", async () => {
+    const auditId = oid();
+    mockAuditById.mockReturnValue({
+      _id: auditId,
+      eventKind: "PAYROLL_APPROVED",
+      eventAt: new Date("2026-08-12T04:00:00.000Z"),
+      actorId: PERSON,
+      targetKind: "PayrollRun",
+      targetId: oid(),
+      meta: {},
+    });
+    const d = await activityRowDetail({ personId: PERSON.toString(), rowId: auditId.toString() });
+    expect(d?.targetLabel).toBeNull();
+    expect(d?.targetKind).toBe("PayrollRun");
+    expect(d?.metaJson).toBeNull(); // empty meta is null, not "{}"
+  });
+
+  test("a row belonging to someone else is refused", async () => {
+    const auditId = oid();
+    mockAuditById.mockReturnValue({
+      _id: auditId,
+      eventKind: "LOGIN_SUCCESS",
+      eventAt: new Date("2026-08-12T04:00:00.000Z"),
+      actorId: OTHER,
+    });
+    expect(await activityRowDetail({ personId: PERSON.toString(), rowId: auditId.toString() })).toBeNull();
+  });
+
+  test("a View-as row IS on the borrowed account's timeline, so its detail opens", async () => {
+    const auditId = oid();
+    mockAuditById.mockReturnValue({
+      _id: auditId,
+      eventKind: "LOGIN_SUCCESS",
+      eventAt: new Date("2026-08-12T04:00:00.000Z"),
+      actorId: OTHER,
+      onBehalfOf: PERSON,
+    });
+    const d = await activityRowDetail({ personId: PERSON.toString(), rowId: auditId.toString() });
+    expect(d?.rowId).toBe(auditId.toString());
   });
 });

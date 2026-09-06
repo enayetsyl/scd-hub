@@ -4266,6 +4266,13 @@ const STR_BN = {
   actDetails: "বিস্তারিত",
   actInactive: "নিষ্ক্রিয় অ্যাকাউন্ট",
   actOpenTimeline: "এই ব্যক্তির সব কার্যক্রম",
+  // AL-2: the expandable card.
+  actTapForDetails: "বিস্তারিত দেখতে চাপ দিন",
+  actStudentList: "যে শিক্ষার্থীদের ক্ষেত্রে:",
+  actStudentsTruncated: "…আরও শিক্ষার্থী আছে, সবাইকে দেখানো যায়নি",
+  actNoDetail: "এই কাজের আর কোনো বিস্তারিত সংরক্ষিত নেই",
+  actItemDate: "কাজের তারিখ",
+  actDueDate: "জমার তারিখ",
   // Guardian engagement (GE-1..GE-3, D-#464/#465)
   geTitle: "অভিভাবকদের ব্যবহার",
   geSubtitle: "কোন অভিভাবক নিয়মিত অ্যাপ দেখেন, কোনটি কেউ খোলেননি",
@@ -8490,6 +8497,13 @@ const STR_EN: StrTable = {
   actDetails: "Details",
   actInactive: "Inactive account",
   actOpenTimeline: "This person's full activity",
+  // AL-2: the expandable card.
+  actTapForDetails: "Tap for details",
+  actStudentList: "Students:",
+  actStudentsTruncated: "…more students than could be listed",
+  actNoDetail: "No further detail was stored for this action",
+  actItemDate: "Work date",
+  actDueDate: "Due",
   // Guardian engagement (GE-1..GE-3, D-#464/#465)
   geTitle: "Guardian engagement",
   geSubtitle: "Which families use the app, and which screens nobody opens",
