@@ -399,6 +399,18 @@ export function isoDateTimeLabel(iso?: string | null): string {
   return bnNum(`${y}-${mo}-${da} ${hh}:${mi}`);
 }
 
+/** Dhaka wall-clock time only, for a row already sitting under a date header:
+ *  "১০:৩০". Same fixed-offset arithmetic as `isoDateTimeLabel` — no `Intl`. */
+export function isoTimeLabel(iso?: string | null): string {
+  if (!iso) return DASH;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return bnNum(iso);
+  const s = new Date(d.getTime() + 6 * 3600 * 1000);
+  const hh = String(s.getUTCHours()).padStart(2, "0");
+  const mi = String(s.getUTCMinutes()).padStart(2, "0");
+  return bnNum(`${hh}:${mi}`);
+}
+
 export const subjectLabel = (code?: string | null): string =>
   (code && pick(SUBJECT_LABELS_BN, SUBJECT_LABELS_EN)[code as Subject]) || code || DASH;
 
@@ -4224,6 +4236,36 @@ const STR_BN = {
   audSystem: "সিস্টেম",
   /** Precedes the borrowed account on a View-as row (D-#638). */
   audOnBehalfOf: "— যার হয়ে:",
+  // Person activity (AL-1, D-#645) — one named person's complete timeline.
+  actTitle: "কার্যক্রম",
+  actSubtitle: "একজন ব্যক্তি কোন দিন কী কী করেছেন — সব রেকর্ড এক জায়গায়",
+  actHint:
+    "অডিট লগের ঘটনার সঙ্গে বাড়ির কাজ ও অ্যাসাইনমেন্টে দেওয়া প্রতিটি ধাপ একসঙ্গে দেখানো হয়। শুধু প্রধান শিক্ষক দেখতে পারেন।",
+  actPickPerson: "কার কার্যক্রম দেখবেন?",
+  actSearchPerson: "নাম দিয়ে খুঁজুন",
+  actNoPeople: "এই নামে কাউকে পাওয়া যায়নি",
+  actChange: "অন্য কাউকে দেখুন",
+  actFrom: "শুরুর তারিখ",
+  actTo: "শেষ তারিখ",
+  actRange7: "৭ দিন",
+  actRange30: "৩০ দিন",
+  actRangeMonth: "এই মাস",
+  actGroup: "কাজের ধরন",
+  actSource: "উৎস",
+  actSourceAUDIT: "অডিট ঘটনা",
+  actSourceHOMEWORK: "বাড়ির কাজ",
+  actSourceASSIGNMENT: "অ্যাসাইনমেন্ট",
+  actNoRows: "এই সময়ে কোনো কার্যক্রম নেই",
+  actNoRowsHint: "তারিখের সীমা বাড়িয়ে দেখুন, অথবা ফিল্টার তুলে দিন।",
+  actTruncated:
+    "এই সময়ে এত বেশি কাজ হয়েছে যে সব দেখানো যাচ্ছে না — তারিখের সীমা ছোট করুন।",
+  actTotal: "মোট কাজ",
+  actDaysActive: "কর্মদিবস",
+  actStudents: "জন শিক্ষার্থী",
+  actViaViewAs: "প্রধান শিক্ষক এই অ্যাকাউন্টে ঢুকে করেছেন",
+  actDetails: "বিস্তারিত",
+  actInactive: "নিষ্ক্রিয় অ্যাকাউন্ট",
+  actOpenTimeline: "এই ব্যক্তির সব কার্যক্রম",
   // Guardian engagement (GE-1..GE-3, D-#464/#465)
   geTitle: "অভিভাবকদের ব্যবহার",
   geSubtitle: "কোন অভিভাবক নিয়মিত অ্যাপ দেখেন, কোনটি কেউ খোলেননি",
@@ -8419,6 +8461,35 @@ const STR_EN: StrTable = {
   audNoRows: "No records",
   audSystem: "System",
   audOnBehalfOf: "— as:",
+  // Person activity (AL-1, D-#645) — one named person's complete timeline.
+  actTitle: "Activity",
+  actSubtitle: "What one person did, day by day — every record in one place",
+  actHint:
+    "Audit events and every homework/assignment pass are shown together. Principal only.",
+  actPickPerson: "Whose activity?",
+  actSearchPerson: "Search by name",
+  actNoPeople: "Nobody found by that name",
+  actChange: "Pick someone else",
+  actFrom: "From",
+  actTo: "To",
+  actRange7: "7 days",
+  actRange30: "30 days",
+  actRangeMonth: "This month",
+  actGroup: "Kind of work",
+  actSource: "Source",
+  actSourceAUDIT: "Audit events",
+  actSourceHOMEWORK: "Homework",
+  actSourceASSIGNMENT: "Assignments",
+  actNoRows: "No activity in this window",
+  actNoRowsHint: "Widen the date range, or clear the filters.",
+  actTruncated: "Too much activity in this window to show it all — narrow the date range.",
+  actTotal: "Total actions",
+  actDaysActive: "Active days",
+  actStudents: "students",
+  actViaViewAs: "Done by the Principal through this account",
+  actDetails: "Details",
+  actInactive: "Inactive account",
+  actOpenTimeline: "This person's full activity",
   // Guardian engagement (GE-1..GE-3, D-#464/#465)
   geTitle: "Guardian engagement",
   geSubtitle: "Which families use the app, and which screens nobody opens",

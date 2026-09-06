@@ -18,6 +18,10 @@ AuditRowRef.implement({
   fields: (t) => ({
     id: t.exposeString("id"),
     eventKind: t.exposeString("eventKind"),
+    // Readable name + family, resolved beside the union (AL-1, D-#645).
+    labelBn: t.exposeString("labelBn"),
+    labelEn: t.exposeString("labelEn"),
+    group: t.string({ resolve: (r) => r.group }),
     eventAt: t.exposeString("eventAt"),
     actorId: t.string({ nullable: true, resolve: (r) => r.actorId }),
     actorName: t.string({ nullable: true, resolve: (r) => r.actorName }),
@@ -36,13 +40,16 @@ builder.queryField("auditLog", (t) =>
     type: [AuditRowRef],
     description:
       "Newest-first page of the audit log; `before` (ISO instant) pages older rows; optional " +
-      "eventKind/actorRole filters. Requires audit:read (Principal).",
+      "eventKind/actorRole/actorId filters and a from/to Dhaka-day window. Requires audit:read (Principal).",
     authScopes: { hasPermission: "audit:read" },
     args: {
       before: t.arg.string({ required: false }),
       limit: t.arg.int({ required: false }),
       eventKind: t.arg.string({ required: false }),
       actorRole: t.arg.string({ required: false }),
+      actorId: t.arg.string({ required: false }),
+      from: t.arg.string({ required: false }),
+      to: t.arg.string({ required: false }),
     },
     resolve: async (_root, args) =>
       auditLog({
@@ -50,6 +57,9 @@ builder.queryField("auditLog", (t) =>
         limit: args.limit,
         eventKind: args.eventKind,
         actorRole: args.actorRole,
+        actorId: args.actorId,
+        from: args.from,
+        to: args.to,
       }),
   }),
 );
