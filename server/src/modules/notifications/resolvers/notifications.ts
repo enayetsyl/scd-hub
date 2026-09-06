@@ -52,6 +52,12 @@ const NotificationRefsRef = builder.objectRef<NotificationRefs>("NotificationRef
     // neither was exposed, so the app had no exam id to deep-link with.
     classTestId: t.string({ nullable: true, resolve: (r) => r.classTestId ?? null }),
     ctId: t.string({ nullable: true, resolve: (r) => r.ctId ?? null }),
+    // D-#644: the syllabus deep-link triple. Exposed WITH the kinds that carry it —
+    // storing a ref the app cannot read is the WC-6 dead-end tap all over again.
+    syllabusId: t.string({ nullable: true, resolve: (r) => r.syllabusId ?? null }),
+    examId: t.string({ nullable: true, resolve: (r) => r.examId ?? null }),
+    classId: t.string({ nullable: true, resolve: (r) => r.classId ?? null }),
+    subject: t.string({ nullable: true, resolve: (r) => r.subject ?? null }),
   }),
 });
 
