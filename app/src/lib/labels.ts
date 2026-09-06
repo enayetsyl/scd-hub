@@ -5219,6 +5219,29 @@ const STR_BN = {
   syNoActionNeeded: "এখন আপনার কিছু করার নেই",
   syAwaitingTeacher: "শিক্ষকের অনুমোদনের অপেক্ষায়",
   syRecall: "ফেরত আনুন",
+
+  // --- AS-T7 (D-#643): শেষ পিরিয়ডে অ্যাসাইনমেন্ট বিতরণ ---
+  hoTodayTitle: "শেষ পিরিয়ডে অ্যাসাইনমেন্ট বিতরণ",
+  hoBoardTitle: "অ্যাসাইনমেন্ট বিতরণ বোর্ড",
+  hoCollect: "অফিস থেকে সংগ্রহ করে মিলিয়ে নিন",
+  hoSubjectsWord: "টি বিষয়",
+  hoPeriodWord: "পিরিয়ড",
+  hoDeliveryDate: "বিতরণের তারিখ",
+  hoDeliveryToday: "আজ বিতরণ",
+  hoNoTeacher: "শেষ পিরিয়ডের শিক্ষক নির্ধারিত নেই",
+  hoCover: "প্রক্সি",
+  hoNotPrinted: "প্রিন্ট অনুরোধ নেই",
+  hoNilTitle: "এই সপ্তাহে অ্যাসাইনমেন্ট নেই",
+  hoEntered: "এন্ট্রি হয়েছে",
+  hoNotEntered: "এন্ট্রি বাকি",
+  hoEmptyWeek: "এই সপ্তাহে বিতরণের কিছু নেই",
+  hoWeekWord: "সপ্তাহ",
+  hoOpenBoard: "পুরো বোর্ড দেখুন",
+  dcHandout: "অ্যাসাইনমেন্ট বিতরণ",
+  dcbHandoutPackets: "বিষয়",
+  dcbHandoutSections: "শাখা",
+  dcbHandoutUnprinted: "প্রিন্ট বাকি",
+  dcbHandoutNoTeacher: "শিক্ষক নেই",
 } as const;
 
 type StrTable = Record<keyof typeof STR_BN, string>;
@@ -9381,6 +9404,29 @@ const STR_EN: StrTable = {
   syNoActionNeeded: "Nothing for you to do here yet",
   syAwaitingTeacher: "Waiting on the subject teacher",
   syRecall: "Recall",
+
+  // --- AS-T7 (D-#643): last-period assignment handout ---
+  hoTodayTitle: "Assignments to hand out in your last period",
+  hoBoardTitle: "Assignment handout board",
+  hoCollect: "Collect from the office and cross-check",
+  hoSubjectsWord: "subject(s)",
+  hoPeriodWord: "period",
+  hoDeliveryDate: "Delivery date",
+  hoDeliveryToday: "Handed out today",
+  hoNoTeacher: "No last-period teacher resolved",
+  hoCover: "Cover",
+  hoNotPrinted: "No print request",
+  hoNilTitle: "No assignment this week",
+  hoEntered: "Entered",
+  hoNotEntered: "Not entered",
+  hoEmptyWeek: "Nothing to hand out this week",
+  hoWeekWord: "Week",
+  hoOpenBoard: "Open the full board",
+  dcHandout: "Assignment handout",
+  dcbHandoutPackets: "Subjects",
+  dcbHandoutSections: "Sections",
+  dcbHandoutUnprinted: "Not printed",
+  dcbHandoutNoTeacher: "No teacher",
 };
 
 /** UI chrome strings — resolves to the active language at read time (Proxy). Use
