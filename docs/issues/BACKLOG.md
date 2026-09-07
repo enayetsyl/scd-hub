@@ -24,6 +24,24 @@ intake/fix procedures live in [README.md](README.md). To add one: paste the issu
 
 ---
 
+## BUG-020 — Teacher cannot reject a guardian's "done at home" report: "Unexpected error."
+- **Status:** fixed (2026-09-07) — D-#646
+- **Severity:** high
+- **Platform:** web (prod, scdhub.shafayet.me)
+- **Area:** trackers / guardian work claim
+- **Reported:** 2026-09-07
+- **Screenshot:** —
+
+**Repro:** Sign in as a teacher (reported by Nuha Kalam Tamany) → Today → অভিভাবকের জানানো card → নাকচ on Afizah Binte Iman · HW-C3-MATH-0020 → pick অন্যান্য → leave the reason box empty → নাকচ করুন.
+
+**Expected:** "অন্যান্য কারণ বাছাই করলে কারণটি লিখতে হবে" — the guard's own sentence, which tells the teacher exactly what to do next.
+
+**Actual:** A red "Unexpected error." banner. The teacher retried, concluded the feature was broken, and reported it over WhatsApp: "কোনভাবে রিজেক্ট হচ্ছে না, উস্তাজ".
+
+**Notes:** Not a fault at all — the server guard fired correctly and its message was thrown away in transit. `WorkClaimError` was registered in `EXPECTED_ERROR_NAMES` (so it is correctly kept out of GlitchTip) but missing from the mask's separate hand-copied `EXPOSED_DOMAIN_ERRORS` list in `server/src/index.ts`, so Yoga replaced every one of its messages with the catch-all. All three reject guards and all five guardian file guards were affected the same way, as were seven other classes (StaffProfileError, CommentImportError, ObservationRotaError, MonthlyCommentError, MonthlyReportConfigError, MonthlyReportError, PrintRequestError). Second occurrence of the same drift — LetterError was D-#536, 2026-08-26.
+
+**Fix ref:** D-#646. The mask now reads `EXPECTED_ERROR_NAMES` directly (moved to `server/src/observability/errorMask.ts`), so the duplicate list is gone and registration — which `expectedErrorRegistry.test.ts` already enforces — exposes the message too. New `errorMask.test.ts` asserts every registered class survives the mask and that runtime/driver types still do not. The reject sheet also says the rule inline now, before spending the mutation.
+
 ## BUG-019 — Homework "সারসংক্ষেপ" fold is class-wide on a teacher's own screen
 - **Status:** fixed (2026-09-03) — D-#641, on prod
 - **Severity:** medium

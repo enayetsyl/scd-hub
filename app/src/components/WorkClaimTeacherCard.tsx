@@ -40,6 +40,13 @@ export function WorkClaimTeacherCard({
 
   const submit = async () => {
     if (!target) return;
+    // The server enforces this too, in the teacher's own language — but a round trip to
+    // learn that an empty box is empty is a dead end the teacher has to guess their way
+    // out of. Say it here, next to the box, before spending the mutation.
+    if (reason === "OTHER" && !note.trim()) {
+      setError(STR.wcRejectNoteRequired);
+      return;
+    }
     setBusy(true);
     setError(null);
     const res = await reject({ claimId: target.claimId, reason, note: note.trim() || null });
@@ -111,7 +118,7 @@ export function WorkClaimTeacherCard({
                 {WORK_CLAIM_REJECT_REASONS.map((code) => (
                   <Pressable
                     key={code}
-                    onPress={() => setReason(code)}
+                    onPress={() => { setReason(code); setError(null); }}
                     style={{ flexDirection: "row", alignItems: "center", gap: space(2), paddingVertical: space(2) }}
                   >
                     <View
@@ -137,7 +144,7 @@ export function WorkClaimTeacherCard({
               {reason === "OTHER" ? (
                 <TextInput
                   value={note}
-                  onChangeText={(v) => setNote(v.slice(0, 200))}
+                  onChangeText={(v) => { setNote(v.slice(0, 200)); setError(null); }}
                   placeholder={STR.wcRejectNotePlaceholder}
                   placeholderTextColor={colors.textDisabled}
                   multiline

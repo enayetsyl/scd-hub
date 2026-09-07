@@ -5,9 +5,11 @@ import "dotenv/config";
 // before express/yoga — so unhandled errors are captured and http is instrumented.
 // No-op unless SENTRY_DSN is set, so dev/jest are unchanged.
 import { sentryYogaPlugin, sentryEnabled, Sentry } from "./observability/sentry";
+// D-#256/#259 — surface deliberate domain-refusal messages instead of Yoga's flat
+// "Unexpected error."; keyed off the SAME registry sentry.ts uses (see errorMask.ts).
+import { maskErrorExposingDomain } from "./observability/errorMask";
 import express from "express";
-import { createYoga, maskError } from "graphql-yoga";
-import { GraphQLError } from "graphql";
+import { createYoga } from "graphql-yoga";
 import { connectDb } from "./db";
 import { connectBookDb, BookDbNotConfiguredError } from "./bookDb";
 import { buildContext, verifyTokenFromRequest } from "./context";
@@ -100,76 +102,6 @@ if (process.env.SENTRY_DEBUG_ROUTE === "1" && process.env.NODE_ENV !== "producti
 }
 
 const schema = builder.toSchema();
-
-/**
- * Error-message exposure (D-#256, broadened in D-#259 2026-06-17).
- *
- * Goal: every screen shows a MEANINGFUL message for a deliberate validation/business
- * failure — never a flat "Unexpected error". So a thrown error's `.message` is surfaced
- * to the client when it is one of OURS:
- *   • a module domain-error class (the named set below — e.g. FinanceError, ReviewError), OR
- *   • a *bare* `Error` (constructor.name === "Error"). Across the codebase a bare `Error`
- *     is only ever produced by our own intentional `throw new Error("…")` in services/
- *     resolvers (the tracker/routine/foundation modules throw these by the hundred), so
- *     its message is safe and human-meaningful by construction.
- *
- * Everything else stays MASKED (fail-closed): runtime/driver/auth error TYPES carry
- * internal detail and must never leak. They are never a bare `Error` and never in the
- * domain set, so the default already masks them; RUNTIME_ERROR_NAMES re-asserts it
- * explicitly (defence-in-depth) so e.g. a Mongoose `ValidationError` can't slip through.
- */
-const EXPOSED_DOMAIN_ERRORS = new Set<string>([
-  "ForbiddenError", "ReviewError", "AccessControlError", "ChatAttachmentError",
-  "DriveUnavailableError", "ChatError", "Ref11ValidationError", "QuranValidationError",
-  "StudentCommentError", "ParentMeetingError", "MeetingCommentError", "SectionMergeError",
-  "ClassroomObservationError", "AttendanceImportError", "AttendanceError", "PushDeviceError",
-  "AttendanceReminderError", "VocabError", "LeaveError", "PerformanceError",
-  "OffboardingError", "PayrollError", "MessageTemplateError", "AttendanceParseError",
-  "FinanceError", "LibraryError", "RevisionError", "ClassTestResultError",
-  // Book production. The gate's REASONS are the whole point of refusing a build —
-  // masked as "Unexpected error" they are worse than useless, because the caller is
-  // told something broke when the system is working exactly as designed (D-#437).
-  "BuildGateError", "ReviewRuleError", "PatchShapeError", "AuthorChatError",
-  "CommentRuleError",
-  // Staff letters (SH-1). Found in the 2026-08-26 prod E2E test: refusing to print a
-  // paid letter with no salary on record is the guard working, and its message says
-  // exactly what to do — "set the monthly salary first, or issue it as honorary".
-  // Unregistered, Yoga masked it to "Unexpected error." and the operator was left to
-  // guess, three steps away from the mistake. The D-#536 failure, repeated.
-  "LetterError",
-]);
-
-/**
- * Runtime/driver/auth error types whose messages may carry internal detail — ALWAYS
- * masked, even though our intentional bare `Error` messages are surfaced.
- */
-const RUNTIME_ERROR_NAMES = new Set<string>([
-  "MongoError", "MongoServerError", "MongoNetworkError", "MongoServerSelectionError",
-  "MongoBulkWriteError", "MongooseError", "ValidationError", "CastError", "StrictModeError",
-  "MissingSchemaError", "DivergentArrayError", "JsonWebTokenError", "TokenExpiredError",
-  "NotBeforeError", "TypeError", "RangeError", "ReferenceError", "SyntaxError", "EvalError",
-  "URIError",
-]);
-
-/** True when the error is one of OURS (a domain class or a bare intentional Error). */
-function isExposableDomainError(err: Error): boolean {
-  const name = err.constructor.name;
-  if (RUNTIME_ERROR_NAMES.has(name)) return false;
-  return name === "Error" || EXPOSED_DOMAIN_ERRORS.has(name);
-}
-
-/**
- * Surface intentional domain-error messages instead of the catch-all "Unexpected error"
- * Yoga otherwise applies to every thrown Error. Anything else falls back to the default
- * mask, so internal details never reach the client.
- */
-function maskErrorExposingDomain(error: unknown, message: string, isDev?: boolean): Error {
-  const original = (error as { originalError?: unknown })?.originalError;
-  if (original instanceof Error && isExposableDomainError(original)) {
-    return new GraphQLError(original.message);
-  }
-  return maskError(error, message, isDev);
-}
 
 const yoga = createYoga({
   schema,
