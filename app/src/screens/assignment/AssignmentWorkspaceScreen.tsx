@@ -51,6 +51,7 @@ import { Screen, Body, Muted, Card, Badge, Button, Field, Chip, ChipRow, Notice,
 import { STR, bnNum, hwSubjectLabel, hwResultLabel, classLevelLabel, lifecycleStateLabel, dhakaDateKey } from "../../lib/labels";
 import { namesOrCount } from "../../lib/nameList";
 import { attachToExisting } from "../../lib/attachRows";
+import { useAuth } from "../../auth/AuthContext";
 import { friendlyError } from "../../lib/errors";
 import { usePullRefresh } from "../../lib/useRefresh";
 import { space } from "../../theme/tokens";
@@ -400,6 +401,13 @@ function ItemCard({
   const [showResub, setShowResub] = useState(false);
   const [showUndoCheck, setShowUndoCheck] = useState(false);
   const [showReturned, setShowReturned] = useState(false);
+  // Undo on an EARLIER return is Principal/Office only, and that is the SERVER's rule
+  // rather than a UI preference: the D-#338 policy (owner, 2026-07-19) lets the acting
+  // teacher revert their own last action until the end of that Dhaka day, and lets
+  // admin revert at any time. Offering a teacher the button here would hand them one
+  // that always refuses — the same dishonest rendering the D-#388 read-out avoids.
+  const { role } = useAuth();
+  const canRevertPrior = role === "PRINCIPAL" || role === "OFFICE";
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const submitRows = group.rows.filter((r) => SUBMIT_STATES.has(r.state));
@@ -727,6 +735,15 @@ function ItemCard({
                 >
                   <Body style={{ flexShrink: 1 }}>✓ {r.studentName}</Body>
                   <Muted>{r.result ? hwResultLabel(r.result) : dhakaDateKey(r.lastStateAt)}</Muted>
+                  {canRevertPrior && r.stampCount > 1 ? (
+                    <Button
+                      title={STR.revertAction}
+                      variant="ghost"
+                      onPress={() => void onUndoReturn(r.id)}
+                      loading={busyId === r.id}
+                      disabled={busyId !== null}
+                    />
+                  ) : null}
                 </View>
               ))
             : null}
