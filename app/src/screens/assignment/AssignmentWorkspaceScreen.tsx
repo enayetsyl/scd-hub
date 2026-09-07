@@ -49,6 +49,7 @@ import { useTaughtSubjects } from "../../lib/useTaughtSubjects";
 import type { AssignmentStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Badge, Button, Field, Chip, ChipRow, Notice, Loader, EmptyState } from "../../components/ui";
 import { STR, bnNum, hwSubjectLabel, hwResultLabel, classLevelLabel, lifecycleStateLabel, dhakaDateKey } from "../../lib/labels";
+import { namesOrCount } from "../../lib/nameList";
 import { friendlyError } from "../../lib/errors";
 import { usePullRefresh } from "../../lib/useRefresh";
 import { space } from "../../theme/tokens";
@@ -537,7 +538,7 @@ function ItemCard({
       {/* Redeliver toggle — OUTSIDE the header Pressable on purpose: nested pressables
           would let one tap both open the drill and fold the card. */}
       {absentRows.length > 0 ? (
-        <Button title={`${STR.asRedeliver} · ${bnNum(absentRows.length)}`} variant="ghost" onPress={() => setShowAbsent((v) => !v)} />
+        <Button title={`${STR.asRedeliver} · ${namesOrCount(absentRows.map((r) => r.studentName), bnNum(absentRows.length))}`} variant="ghost" onPress={() => setShowAbsent((v) => !v)} />
       ) : null}
 
       {showAbsent && absentRows.length > 0 ? (

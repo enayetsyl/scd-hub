@@ -61,6 +61,7 @@ import {
   dateHeaderLabel,
   dhakaDateKey,
 } from "../../lib/labels";
+import { namesOrCount } from "../../lib/nameList";
 import { friendlyError } from "../../lib/errors";
 import { usePullRefresh } from "../../lib/useRefresh";
 import { useSectionContext } from "../../state/SectionContext";
@@ -528,7 +529,7 @@ function ItemCard({
           pressables would let one tap both open the drill and fold the card. */}
       {absentRows.length > 0 ? (
         <Button
-          title={`${STR.hwAbsentAtIssue} · ${bnNum(absentRows.length)}`}
+          title={`${STR.hwAbsentAtIssue} · ${namesOrCount(absentRows.map((r) => r.studentName), bnNum(absentRows.length))}`}
           variant="ghost"
           onPress={() => setShowAbsent((v) => !v)}
         />
