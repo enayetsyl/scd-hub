@@ -50,6 +50,7 @@ import type { AssignmentStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Badge, Button, Field, Chip, ChipRow, Notice, Loader, EmptyState } from "../../components/ui";
 import { STR, bnNum, hwSubjectLabel, hwResultLabel, classLevelLabel, lifecycleStateLabel, dhakaDateKey } from "../../lib/labels";
 import { namesOrCount } from "../../lib/nameList";
+import { attachToExisting } from "../../lib/attachRows";
 import { friendlyError } from "../../lib/errors";
 import { usePullRefresh } from "../../lib/useRefresh";
 import { space } from "../../theme/tokens";
@@ -82,7 +83,13 @@ interface ItemGroup {
   rows: AsOpenRecordT[];
 }
 
-function groupByItem(records: readonly AsOpenRecordT[]): ItemGroup[] {
+function groupByItem(
+  records: readonly AsOpenRecordT[],
+  /** Rows that JOIN a group which already exists — they never create one, so an item
+   *  whose only remaining rows are earlier returns stays in the completed fold where
+   *  it belongs, instead of being resurrected onto the open deck (D-#648). */
+  attach: readonly AsOpenRecordT[] = [],
+): ItemGroup[] {
   const order: string[] = [];
   const map = new Map<string, ItemGroup>();
   for (const r of records) {
@@ -102,6 +109,7 @@ function groupByItem(records: readonly AsOpenRecordT[]): ItemGroup[] {
     }
     g.rows.push(r);
   }
+  attachToExisting(map, attach, (r) => r.asItemId);
   return order
     .map((id) => map.get(id)!)
     .sort((a, b) => {
@@ -165,6 +173,17 @@ export default function AssignmentWorkspaceScreen({ route }: Props): React.React
   // returned card", 2026-08-02); it now lives in a collapsed fold at the foot.
   const openItemIds = new Set(records.map((r) => r.asItemId));
   const doneRecords = all.filter((r) => !openItemIds.has(r.asItemId));
+  // D-#648: an item that still has open work keeps its EARLIER returns off the deck
+  // (the filter above), and it is not "done" either — so those students were fetched
+  // and then rendered nowhere, while the header still counted them. The card's own
+  // "ফেরত" number came from the server tally, which carries no identity. Hand the rows
+  // back to the card so the count has names behind it.
+  const priorReturnedOpen = all.filter(
+    (r) =>
+      r.state === "RETURNED" &&
+      dhakaDayOf(r.lastStateAt) !== today &&
+      openItemIds.has(r.asItemId),
+  );
 
   // Subject filter (owner ask 2026-08-02) — the homework workspace's twin. Anyone who
   // sees several subjects on one class (Principal/Office, a class teacher, a teacher
@@ -229,7 +248,7 @@ export default function AssignmentWorkspaceScreen({ route }: Props): React.React
 
   const renderCards = (recs: AsOpenRecordT[], opts?: SubjectFoldRenderOpts): React.ReactNode => (
     <CardGrid>
-      {groupByItem(recs).map((g) => (
+      {groupByItem(recs, opts?.readOnly ? [] : priorReturnedOpen).map((g) => (
         <ItemCard
           key={g.asItemId}
           group={g}
@@ -380,12 +399,23 @@ function ItemCard({
   const [showChase, setShowChase] = useState(false);
   const [showResub, setShowResub] = useState(false);
   const [showUndoCheck, setShowUndoCheck] = useState(false);
+  const [showReturned, setShowReturned] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const submitRows = group.rows.filter((r) => SUBMIT_STATES.has(r.state));
   const checkRows = group.rows.filter((r) => r.state === "SUBMITTED");
   const returnRows = group.rows.filter((r) => RETURN_STATES.has(r.state));
-  const returnedRows = group.rows.filter((r) => r.state === "RETURNED");
+  // Today's returns are the confirmation list (with Undo, D-#338). Earlier ones reach
+  // an open card only through `priorReturnedOpen` and go in the collapsed fold below —
+  // read-only, because reopening a week-old return is a different decision from undoing
+  // a mistake made minutes ago.
+  const cardToday = dhakaDayOf(new Date().toISOString());
+  const returnedTodayRows = group.rows.filter(
+    (r) => r.state === "RETURNED" && dhakaDayOf(r.lastStateAt) === cardToday,
+  );
+  const returnedPriorRows = group.rows.filter(
+    (r) => r.state === "RETURNED" && dhakaDayOf(r.lastStateAt) !== cardToday,
+  );
   const absentRows = group.rows.filter((r) => r.state === "ABSENT_REDELIVER");
   const chaseRows = submitRows.filter((r) => r.state === "CHASE");
   const checkedRows = group.rows.filter((r) => r.state === "CHECKED");
@@ -662,12 +692,12 @@ function ItemCard({
       ) : null}
 
       {/* Same-day confirmation of what was handed back (with Undo); clears next day. */}
-      {returnedRows.length > 0 ? (
+      {returnedTodayRows.length > 0 ? (
         <View style={{ marginTop: space(3) }}>
           <Muted style={{ fontWeight: "700", marginBottom: space(1) }}>
-            ── {STR.hwReturnedHeading} ({bnNum(returnedRows.length)}) ──
+            ── {STR.hwReturnedHeading} ({bnNum(returnedTodayRows.length)}) ──
           </Muted>
-          {returnedRows.map((r) => (
+          {returnedTodayRows.map((r) => (
             <View key={r.id} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", minHeight: 40 }}>
               <Body style={{ flexShrink: 1 }}>
                 ✓ {r.studentName}
@@ -678,6 +708,28 @@ function ItemCard({
               ) : null}
             </View>
           ))}
+        </View>
+      ) : null}
+
+      {/* Earlier returns — collapsed, so the deck stays about work still to do. */}
+      {returnedPriorRows.length > 0 ? (
+        <View style={{ marginTop: space(3) }}>
+          <Button
+            title={`${showReturned ? "▾" : "▸"} ${STR.hwReturnedHeading} (${bnNum(returnedPriorRows.length)})`}
+            variant="ghost"
+            onPress={() => setShowReturned((v) => !v)}
+          />
+          {showReturned
+            ? returnedPriorRows.map((r) => (
+                <View
+                  key={r.id}
+                  style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", minHeight: 40 }}
+                >
+                  <Body style={{ flexShrink: 1 }}>✓ {r.studentName}</Body>
+                  <Muted>{r.result ? hwResultLabel(r.result) : dhakaDateKey(r.lastStateAt)}</Muted>
+                </View>
+              ))
+            : null}
         </View>
       ) : null}
         </>
