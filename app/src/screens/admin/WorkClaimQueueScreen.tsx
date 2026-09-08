@@ -16,7 +16,7 @@ import { useMutation, useQuery } from "urql";
 import { Screen, H1, Body, Muted, Card, Badge, Button, EmptyState, Notice, Divider } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
 import { space } from "../../theme/tokens";
-import { STR, bnNum } from "../../lib/labels";
+import { STR, bnNum, classLevelLabel } from "../../lib/labels";
 import { usePullRefresh } from "../../lib/useRefresh";
 import {
   WORK_CLAIM_QUEUE_QUERY,
@@ -86,8 +86,14 @@ export default function WorkClaimQueueScreen(): React.ReactElement {
                         gap: space(2),
                       }}
                     >
+                      {/* D-#651: the CLASS, not just the section. Every class has a
+                          "মূল", and this desk reads all of them at once — a row naming
+                          only the section makes two different children's claims look
+                          like the same section's. */}
                       <Body style={{ fontWeight: "700", flexShrink: 1 }}>
-                        {r.studentNameBn} · {r.sectionNameBn}
+                        {r.studentNameBn}
+                        {r.classLevel != null ? ` · ${classLevelLabel(r.classLevel)}` : ""}
+                        {r.sectionNameBn ? ` — ${r.sectionNameBn}` : ""}
                       </Body>
                       <Badge text={r.checkpointLabelBn} tone={toneFor(r.checkpoint)} />
                     </View>

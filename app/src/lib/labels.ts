@@ -1790,6 +1790,12 @@ const STR_BN = {
   wcReclaimHint: "একবারই আবার জানানো যাবে।",
   wcMaxChars: "সর্বোচ্চ ২০০ অক্ষর",
   // GC-4 — the teacher card + reject sheet
+  // Which tracker the claim is about. Without it the id is the only clue, and the
+  // owner searched a day's বাড়ির কাজ for what was actually an অ্যাসাইনমেন্ট.
+  wcTrackerHomework: "বাড়ির কাজ",
+  wcTrackerAssignment: "অ্যাসাইনমেন্ট",
+  wcClaimedOn: "জানিয়েছেন",
+  wcWorkDue: "জমার তারিখ",
   wcTeacherCardTitle: "অভিভাবকের জানানো",
   wcTeacherHint: "খাতা নিয়ে জমা নেওয়ার তালিকায় জমা লিখে দিলেই এটি নিষ্পন্ন হয়ে যাবে।",
   wcReject: "নাকচ",
@@ -6047,6 +6053,10 @@ const STR_EN: StrTable = {
   wcMaxChars: "200 characters max",
   wcTeacherCardTitle: "Guardian reports",
   wcTeacherHint: "Recording the student as submitted in the roster pass closes this automatically.",
+  wcTrackerHomework: "Homework",
+  wcTrackerAssignment: "Assignment",
+  wcClaimedOn: "Reported",
+  wcWorkDue: "Due",
   wcReject: "Reject",
   wcRejectTitle: "Why can this not be recorded?",
   wcRejectConfirm: "Reject",
