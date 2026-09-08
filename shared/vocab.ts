@@ -86,6 +86,40 @@ export type RosterClassLevel = (typeof ROSTER_CLASS_LEVELS)[number];
 export const ROSTER_CLASS_LEVEL_MIN = -1;
 export const ROSTER_CLASS_LEVEL_MAX = 5;
 
+/** The class segment of every minted tracker id (HW_ID / AS_ID / CT_ID / TOP code).
+ *
+ *  Classes 1–5 are `C1`..`C5`. The two pre-primary levels are LETTERED — `CN` for
+ *  Nursery, `CK` for KG — because their numeric levels are -1 and 0, which mint
+ *  `AS-C-1-BAN-0007` (a second `-` inside a `-`-delimited id: ambiguous to read
+ *  and to split) and `AS-C0-BAN-0007` (reads as "class zero", and the owner read
+ *  a real KG claim as Nursery because of it).
+ *
+ *  Ids minted BEFORE this change carry `C0` / `C-1`. `parseClassToken` accepts
+ *  both spellings forever — an id is a permanent handle printed on paper forms
+ *  and quoted by guardians, so the old spelling can never stop resolving. */
+const PRE_PRIMARY_TOKENS: Record<number, string> = { [-1]: "CN", [0]: "CK" };
+
+export function classToken(level: number): string {
+  return PRE_PRIMARY_TOKENS[level] ?? `C${level}`;
+}
+
+/** Inverse of `classToken`, tolerant of the legacy numeric spelling. Returns null
+ *  for anything that is not a class token, so callers can tell "not an id of this
+ *  shape" from "class -1". */
+export function parseClassToken(token: string): number | null {
+  if (token === "CN") return -1;
+  if (token === "CK") return 0;
+  const m = /^C(-?\d+)$/.exec(token);
+  if (!m) return null;
+  const n = Number(m[1]);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Regex SOURCE (not a RegExp — callers embed it) matching one class token in
+ *  either spelling, with the level in a capture group. Keep in step with
+ *  `parseClassToken`; `server/src/__tests__/classToken.test.ts` pins the pair. */
+export const CLASS_TOKEN_PATTERN = "C(N|K|-?\\d+)";
+
 /** Bangla display labels for every roster class level. */
 export const ROSTER_CLASS_LABELS_BN: Record<RosterClassLevel, string> = {
   [-1]: "নার্সারি",

@@ -2,7 +2,8 @@
  * AssignmentService (AS-T2, D-#85/D-#86) — delivery + collection lifecycle on
  * the SHARED engine (trackers/lifecycle.ts, D-#37 — its second consumer).
  *
- *   generateAsId            — atomic AS-C{class}-{SUBJECT}-{nnnn} (D-#34 pattern)
+ *   generateAsId            — atomic AS-{CLASS}-{SUBJECT}-{nnnn} (D-#34 pattern;
+ *                             CLASS is C1..C5 / CK / CN — see `classToken`)
  *   deliverAssignmentItem   — materialize a schedule entry for a week (item) +
  *                             spawn per-student records: present → GIVEN,
  *                             absent → ABSENT_REDELIVER. Dates resolved
@@ -23,7 +24,7 @@
 import type { LifecycleState, HwSubject } from "@scd/shared";
 import { acceptClaimsForRecords } from "./WorkClaimService";
 import { emitWorkClaimResolved } from "../../notifications/services/emitters";
-import { AS_WEEKLY_CEILING_MIN } from "@scd/shared";
+import { AS_WEEKLY_CEILING_MIN, classToken } from "@scd/shared";
 import { Types } from "mongoose";
 import { StoredFile } from "../../platform/models/StoredFile";
 import { AssignmentItem, type IAssignmentItem } from "../models/AssignmentItem";
@@ -54,7 +55,7 @@ export async function generateAsId(
     { new: true, upsert: true },
   );
   const n = String(counter.seq).padStart(4, "0");
-  return `AS-C${classLevel}-${subject}-${n}`;
+  return `AS-${classToken(classLevel)}-${subject}-${n}`;
 }
 
 // ---------------------------------------------------------------------------

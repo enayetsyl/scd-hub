@@ -19,7 +19,7 @@
  * Time inputs are passed in as epoch millis so callers (resolvers) supply "now"
  * and the math stays deterministic/testable.
  */
-import { HW_DAILY_CEILING_MIN } from "@scd/shared";
+import { HW_DAILY_CEILING_MIN, CLASS_TOKEN_PATTERN } from "@scd/shared";
 import { HomeworkStudentRecord } from "../models/HomeworkStudentRecord";
 import { HomeworkItem } from "../models/HomeworkItem";
 import { HomeworkReconciliation } from "../models/HomeworkReconciliation";
@@ -35,9 +35,13 @@ export const TRIM_PATTERN_RATIO = 0.3;
 
 const DAY_MS = 86_400_000;
 
-/** Subject is encoded in HW_ID = HW-C{class}-{SUBJECT}-{nnnn}, where class may be signed. */
+/** Subject is encoded in HW_ID = HW-{CLASS}-{SUBJECT}-{nnnn}. CLASS is `CK`/`CN` for
+ *  pre-primary and `C1`..`C5` otherwise, but legacy ids spell pre-primary numerically
+ *  (`HW-C0-…`, `HW-C-1-…`) — hence the two-spelling token and the signed number. */
+const HW_ID_RE = new RegExp(`^HW-${CLASS_TOKEN_PATTERN}-([A-Z]+)-(\\d{4})$`);
+
 function subjectOfHwId(hwId: string): string {
-  const match = hwId.match(/^HW-C(-?\d+)-([A-Z]+)-(\d{4})$/);
+  const match = hwId.match(HW_ID_RE);
   if (match) return match[2] ?? "?";
   return hwId.split("-")[2] ?? "?";
 }

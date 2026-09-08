@@ -17,6 +17,8 @@ import {
   HW_DEFAULT_TIME_DECL_MIN,
   ROSTER_CLASS_LEVEL_MIN,
   ROSTER_CLASS_LEVEL_MAX,
+  CLASS_TOKEN_PATTERN,
+  classToken,
 } from "@scd/shared";
 import type { HwSubject, LifecycleState, HwResult } from "@scd/shared";
 import { Types } from "mongoose";
@@ -41,8 +43,12 @@ import { emitHwParentComms, emitHwGuardianChase, emitWorkClaimResolved } from ".
 
 const GENERIC_TOPIC_LABEL_BN = "সাধারণ (নির্দিষ্ট অধ্যায় নয়)";
 
+/** Matches a synthetic generic-topic code in EITHER class spelling — `TOP-BAN-CK-GEN`
+ *  as minted now, and `TOP-BAN-C0-GEN` as minted before the CK/CN change. */
+const GENERIC_TOPIC_CODE_RE = new RegExp(`^TOP-[A-Z]+-${CLASS_TOKEN_PATTERN}-GEN$`);
+
 function genericTopicCode(subject: string, classLevel: number): string {
-  return `TOP-${subject}-C${classLevel}-GEN`;
+  return `TOP-${subject}-${classToken(classLevel)}-GEN`;
 }
 
 function genericTopicDTO(subject: string, classLevel: number): HomeworkTopicDTO {
@@ -63,8 +69,10 @@ function genericTopicDTO(subject: string, classLevel: number): HomeworkTopicDTO 
 
 /**
  * Next HW_ID for (year × class × subject): atomic $inc on the sequence counter,
- * formatted HW-C{class}-{SUBJECT}-{nnnn} (4-digit zero-padded). Year-reset is
- * automatic — a new academicYearId is a new counter key starting at 1.
+ * formatted HW-{CLASS}-{SUBJECT}-{nnnn} (4-digit zero-padded), where CLASS is
+ * C1..C5 / CK / CN (see `classToken`). Year-reset is automatic — a new
+ * academicYearId is a new counter key starting at 1. The counter is keyed on the
+ * NUMERIC level, so re-spelling the token does not restart any number line.
  */
 export async function generateHwId(
   academicYearId: string,
@@ -77,7 +85,7 @@ export async function generateHwId(
     { new: true, upsert: true },
   );
   const n = String(counter.seq).padStart(4, "0");
-  return `HW-C${classLevel}-${subject}-${n}`;
+  return `HW-${classToken(classLevel)}-${subject}-${n}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -333,6 +341,11 @@ async function assertKnownTopTags(
     .lean();
   const knownCodes = new Set(knownTopics.map((t) => t.code));
   knownCodes.add(genericTopicCode(subject, classLevel));
+  // A pre-primary item declared before the CK/CN change carries the numeric
+  // spelling on `topTags`. Editing such an item re-validates its EXISTING tags,
+  // so refusing the old code here would make those items uneditable — a data
+  // migration that has not run yet must never lock a teacher out of their work.
+  knownCodes.add(`TOP-${subject}-C${classLevel}-GEN`);
   const unknownTags = wantedTags.filter((c) => !knownCodes.has(c));
   if (unknownTags.length > 0) {
     throw new Error(`Unknown topic(s) for ${subject} C${classLevel}: ${unknownTags.join(", ")}`);
@@ -655,7 +668,7 @@ export async function topicLabelByCode(codes: string[]): Promise<Map<string, str
   const byCode = new Map(topics.map((t) => [t.code, t.labelBn]));
   for (const code of uniq) {
     if (byCode.has(code)) continue;
-    if (/^TOP-[A-Z]+-C-?\d+-GEN$/.test(code)) byCode.set(code, GENERIC_TOPIC_LABEL_BN);
+    if (GENERIC_TOPIC_CODE_RE.test(code)) byCode.set(code, GENERIC_TOPIC_LABEL_BN);
   }
   return byCode;
 }
