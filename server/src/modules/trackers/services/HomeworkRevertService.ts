@@ -5,10 +5,11 @@
  * timestamp per action) and restore the previous state, cleaning up the
  * popped stamps' side effects.
  *
- * Policy (owner, 2026-07-19): the ACTING teacher may revert their own last
- * action until end of that Dhaka day; Principal/Office (`admin`) anytime.
- * Blocked for everyone when downstream work exists (a spawned resubmission
- * that has progressed / carries an answer file).
+ * Policy (owner 2026-07-19, widened 2026-09-08 by D-#650): the ACTING teacher
+ * may revert their own last action for up to REVERT_WINDOW_DAYS (30) Dhaka
+ * days; Principal/Office (`admin`) anytime. Blocked for everyone when
+ * downstream work exists (a spawned resubmission that has progressed / carries
+ * an answer file).
  *
  * Accepted, deliberately NOT blocked (documented):
  *  - guardian notifications already sent (chase / results) cannot be unsent;
@@ -22,8 +23,7 @@
  */
 import type { LifecycleState, HwResult } from "@scd/shared";
 import { HomeworkStudentRecord } from "../models/HomeworkStudentRecord";
-import { popActionGroup } from "../lifecycle";
-import { isSameDhakaDay } from "../../../lib/dhakaDay";
+import { popActionGroup, assertTeacherMayRevert } from "../lifecycle";
 import { writeAudit } from "../../platform/services/AuditService";
 
 export interface HwRevertInput {
@@ -52,17 +52,11 @@ export async function revertHomeworkRecord(input: HwRevertInput): Promise<HwReve
   const { popped, restored } = popActionGroup(rec.stateDates, rec.state);
 
   if (!input.admin) {
-    // Own-action gate: a stamped foreign actor blocks; unstamped (pre-D-#338 /
-    // system) stamps fall back to write-scope-only (the resolver already
-    // enforced section+subject write scope).
-    const foreign = popped.some((s) => s.by && s.by.toString() !== input.actorId);
-    if (foreign) {
-      throw new Error("এই ধাপটি অন্য শিক্ষক করেছেন — তিনি অথবা অফিস/অধ্যক্ষ ফেরাতে পারবেন");
-    }
-    const now = input.now ?? new Date();
-    if (!isSameDhakaDay(new Date(popped[popped.length - 1].at), now)) {
-      throw new Error("শুধু সেই দিনের কাজ সেদিনই ফেরানো যায় — অফিস/অধ্যক্ষের সাহায্য নিন");
-    }
+    // Own-action + age gate (assertTeacherMayRevert): a stamped foreign actor
+    // blocks; unstamped (pre-D-#338 / system) stamps fall back to
+    // write-scope-only (the resolver already enforced section+subject write
+    // scope); own work is undoable for REVERT_WINDOW_DAYS Dhaka days (D-#650).
+    assertTeacherMayRevert(popped, input.actorId, input.now ?? new Date());
   }
 
   // Downstream guard + side-effect cleanup, newest popped stamp first.

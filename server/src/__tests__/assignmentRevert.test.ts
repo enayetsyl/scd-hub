@@ -235,29 +235,52 @@ describe("revertAssignmentRecord", () => {
     expect(res.state).toBe("GIVEN");
   });
 
-  test("Dhaka same-day gate blocks a next-day teacher revert; admin bypasses", async () => {
+  test("D-#650 window: a next-day teacher revert now passes", async () => {
     const stamps = [
       { state: "GIVEN", at: T0 },
       { state: "SUBMITTED", at: new Date("2026-07-18T23:30:00+06:00"), by: ACTOR },
     ];
-    const after = new Date("2026-07-19T00:10:00+06:00");
     mockFindById.mockResolvedValue(
       makeRec({ state: "SUBMITTED", result: undefined, marks: undefined, feedback: undefined, stateDates: stamps }),
     );
-    await expect(
-      revertAssignmentRecord({ recordId: REC_ID.toString(), actorId: ACTOR.toString(), admin: false, now: after }),
-    ).rejects.toThrow(/সেদিনই/);
+    const res = await revertAssignmentRecord({
+      recordId: REC_ID.toString(),
+      actorId: ACTOR.toString(),
+      admin: false,
+      now: new Date("2026-07-19T00:10:00+06:00"),
+    });
+    expect(res.state).toBe("GIVEN");
+  });
 
-    mockFindById.mockResolvedValue(
+  test("D-#650 window: day 30 passes, day 31 is refused; admin bypasses", async () => {
+    const rec = () =>
       makeRec({
         state: "SUBMITTED",
         result: undefined,
         marks: undefined,
         feedback: undefined,
-        stateDates: stamps.map((s) => ({ ...s })),
-      }),
-    );
-    const res = await revertAssignmentRecord({ recordId: REC_ID.toString(), actorId: ACTOR.toString(), admin: true, now: after });
+        stateDates: [
+          { state: "GIVEN", at: T0 },
+          { state: "SUBMITTED", at: new Date("2026-07-19T10:00:00+06:00"), by: ACTOR },
+        ],
+      });
+    mockFindById.mockResolvedValue(rec());
+    const ok = await revertAssignmentRecord({
+      recordId: REC_ID.toString(),
+      actorId: ACTOR.toString(),
+      admin: false,
+      now: new Date("2026-08-18T09:00:00+06:00"),
+    });
+    expect(ok.state).toBe("GIVEN");
+
+    const tooOld = new Date("2026-08-19T00:05:00+06:00");
+    mockFindById.mockResolvedValue(rec());
+    await expect(
+      revertAssignmentRecord({ recordId: REC_ID.toString(), actorId: ACTOR.toString(), admin: false, now: tooOld }),
+    ).rejects.toThrow(/পুরোনো/);
+
+    mockFindById.mockResolvedValue(rec());
+    const res = await revertAssignmentRecord({ recordId: REC_ID.toString(), actorId: ACTOR.toString(), admin: true, now: tooOld });
     expect(res.state).toBe("GIVEN");
   });
 

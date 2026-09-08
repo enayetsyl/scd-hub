@@ -1236,7 +1236,7 @@ builder.mutationField("revertHomeworkRecord", (t) =>
     description:
       "Undo the last lifecycle ACTION on a record (D-#338): pops the trailing same-timestamp stamp " +
       "group, restores the previous state, cleans side effects (untouched spawned resubmission " +
-      "deleted; result cleared; chaseCount decremented). Acting teacher: own action, same Dhaka day; " +
+      "deleted; result cleared; chaseCount decremented). Acting teacher: own action, up to 30 Dhaka days old (D-#650); " +
       "Principal/Office: anytime. authenticated+role-gated (OFFICE holds no tracker:*, D-#196).",
     authScopes: { authenticated: true },
     args: {
@@ -1257,7 +1257,7 @@ builder.mutationField("revertHomeworkRecord", (t) =>
       if (!admin) {
         const item = await HomeworkItem.findById(record.hwItemId).select("subject").lean();
         // Any homework duty on the section — the service already limits a non-admin
-        // to their OWN action, same Dhaka day (ACS-4, D-#592).
+        // to their OWN action, at most 30 Dhaka days old (ACS-4, D-#592, D-#650).
         await assertCanWriteAny(
           ctx,
           args.sectionId,

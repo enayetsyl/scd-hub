@@ -258,23 +258,49 @@ describe("revertHomeworkRecord", () => {
     expect(res.state).toBe("GIVEN");
   });
 
-  test("Dhaka same-day gate: 23:30 action cannot be reverted at 00:10 next day; admin can", async () => {
+  test("D-#650 window: yesterday's 23:30 action is still undoable the next morning", async () => {
     const lateStamp = [
       { state: "GIVEN", at: T0 },
       { state: "DUE", at: new Date("2026-07-18T23:30:00+06:00"), by: ACTOR },
     ];
-    const after = new Date("2026-07-19T00:10:00+06:00");
     mockFindById.mockResolvedValue(makeRec({ state: "DUE", result: undefined, stateDates: lateStamp }));
-    await expect(
-      revertHomeworkRecord({ recordId: REC_ID.toString(), actorId: ACTOR.toString(), admin: false, now: after }),
-    ).rejects.toThrow(/সেদিনই/);
-
-    mockFindById.mockResolvedValue(makeRec({ state: "DUE", result: undefined, stateDates: lateStamp.map((s) => ({ ...s })) }));
-    const res = await revertHomeworkRecord({ recordId: REC_ID.toString(), actorId: ACTOR.toString(), admin: true, now: after });
+    const res = await revertHomeworkRecord({
+      recordId: REC_ID.toString(),
+      actorId: ACTOR.toString(),
+      admin: false,
+      now: new Date("2026-07-19T00:10:00+06:00"),
+    });
     expect(res.state).toBe("GIVEN");
   });
 
-  test("unstamped (pre-D-#338) action falls back to write-scope-only same-day revert", async () => {
+  test("D-#650 window: the 30th Dhaka day passes, the 31st is refused; admin unbounded", async () => {
+    const stamps = () => [
+      { state: "GIVEN", at: T0 },
+      { state: "DUE", at: new Date("2026-07-19T10:00:00+06:00"), by: ACTOR },
+    ];
+    // Day 30 — the boundary is inclusive.
+    mockFindById.mockResolvedValue(makeRec({ state: "DUE", result: undefined, stateDates: stamps() }));
+    const ok = await revertHomeworkRecord({
+      recordId: REC_ID.toString(),
+      actorId: ACTOR.toString(),
+      admin: false,
+      now: new Date("2026-08-18T09:00:00+06:00"),
+    });
+    expect(ok.state).toBe("GIVEN");
+
+    // Day 31 — over the window, even a minute into the day.
+    const tooOld = new Date("2026-08-19T00:05:00+06:00");
+    mockFindById.mockResolvedValue(makeRec({ state: "DUE", result: undefined, stateDates: stamps() }));
+    await expect(
+      revertHomeworkRecord({ recordId: REC_ID.toString(), actorId: ACTOR.toString(), admin: false, now: tooOld }),
+    ).rejects.toThrow(/পুরোনো/);
+
+    mockFindById.mockResolvedValue(makeRec({ state: "DUE", result: undefined, stateDates: stamps() }));
+    const res = await revertHomeworkRecord({ recordId: REC_ID.toString(), actorId: ACTOR.toString(), admin: true, now: tooOld });
+    expect(res.state).toBe("GIVEN");
+  });
+
+  test("unstamped (pre-D-#338) action falls back to write-scope-only revert", async () => {
     const rec = makeRec({
       state: "SUBMITTED",
       result: undefined,

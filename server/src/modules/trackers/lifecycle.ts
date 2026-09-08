@@ -22,6 +22,8 @@
  */
 import { LIFECYCLE_STATES } from "@scd/shared";
 import type { LifecycleState } from "@scd/shared";
+import { dhakaDaysApart } from "../../lib/dhakaDay";
+import { bnNum } from "../../lib/bnNum";
 
 /** The 6 stages, by number (handoff §3). */
 export type LifecycleStage = 1 | 2 | 3 | 4 | 5 | 6;
@@ -139,4 +141,36 @@ export function popActionGroup<T extends StateStampLike>(
     popped: stateDates.slice(start) as T[],
     restored: stateDates[start - 1],
   };
+}
+
+/**
+ * How many Dhaka calendar days a teacher may reach back to undo their OWN last
+ * action (D-#650, widening D-#338's same-day window — a teacher who spots a
+ * mistake days later was being sent to the office for a self-inflicted typo).
+ * Principal/Office stay unbounded.
+ */
+export const REVERT_WINDOW_DAYS = 30;
+
+/**
+ * The non-admin revert gate, shared by both trackers so the two can never drift:
+ *  - a stamp carrying a FOREIGN `by` blocks (that teacher, or the office, reverts it);
+ *    unstamped legacy/system stamps fall through to write-scope-only (the resolver
+ *    has already enforced section+subject write scope);
+ *  - the action must be at most REVERT_WINDOW_DAYS Dhaka days old.
+ * Throws the Bangla message the app surfaces verbatim; returns void when allowed.
+ */
+export function assertTeacherMayRevert(
+  popped: readonly StateStampLike[],
+  actorId: string,
+  now: Date,
+): void {
+  if (popped.some((s) => s.by && String(s.by) !== actorId)) {
+    throw new Error("এই ধাপটি অন্য শিক্ষক করেছেন — তিনি অথবা অফিস/অধ্যক্ষ ফেরাতে পারবেন");
+  }
+  const age = dhakaDaysApart(new Date(popped[popped.length - 1].at), now);
+  if (age > REVERT_WINDOW_DAYS) {
+    throw new Error(
+      `${bnNum(REVERT_WINDOW_DAYS)} দিনের বেশি পুরোনো কাজ ফেরানো যায় না — অফিস/অধ্যক্ষের সাহায্য নিন`,
+    );
+  }
 }

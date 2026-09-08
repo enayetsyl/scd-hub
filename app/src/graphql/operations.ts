@@ -2637,7 +2637,7 @@ export const HOMEWORK_ITEM_TALLIES = gql<
 `;
 
 // D-#338 — undo the last lifecycle action on one record (server is the gate:
-// own-action + same-Dhaka-day for teachers, anytime for Principal/Office).
+// own-action within 30 Dhaka days for teachers per D-#650, anytime for Principal/Office).
 export const REVERT_HW_RECORD = gql<
   { revertHomeworkRecord: { recordId: string; hwId: string; state: string; poppedStates: string[]; deletedResubmissionId: string | null } },
   { sectionId: string; recordId: string }

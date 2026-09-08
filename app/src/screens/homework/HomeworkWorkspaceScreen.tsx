@@ -60,6 +60,7 @@ import {
   lifecycleStateLabel,
   dateHeaderLabel,
   dhakaDateKey,
+  withinUndoWindow,
 } from "../../lib/labels";
 import { namesOrCount } from "../../lib/nameList";
 import { attachToExisting } from "../../lib/attachRows";
@@ -253,6 +254,9 @@ export default function HomeworkWorkspaceScreen({ navigation }: Props): React.Re
           tally={tallyByItem.get(g.hwItemId) ?? null}
           readOnly={!!opts?.readOnly}
           viewOnlyNote={opts?.viewOnlyNote}
+          /* Completed-fold cards keep an undo (D-#650) — but only on a subject this
+             caller teaches; on another teacher's subject the server refuses anyway. */
+          undoable={!!opts?.undoable && (!taught || taught.has(g.subject))}
           base={base}
           open={openItemId === g.hwItemId}
           onToggle={() => setOpenItemId((id) => (id === g.hwItemId ? null : g.hwItemId))}
@@ -330,9 +334,10 @@ export default function HomeworkWorkspaceScreen({ navigation }: Props): React.Re
               <SubjectFold key={selection.sectionId ?? ""} records={shown} taught={taught} render={renderCards} />
             )}
             {/* Finished items — every student returned, so no stage is left to run.
-                Collapsed by default and read-only: a teacher's undo is same-Dhaka-day
-                only (HomeworkRevertService), so on older work every control would
-                refuse; Office/Principal correct it from the records/roll-ups. */}
+                Collapsed by default and rendered as a roster read-out, but each row keeps
+                its ⤺ UNDO (D-#650): a teacher's revert window is 30 Dhaka days, so a
+                mis-marked student found a week later is fixed here rather than by the
+                office. Older than that, Office/Principal still can. */}
             {shownDone.length > 0 ? (
               <View style={{ marginTop: space(3) }}>
                 <Button
@@ -342,7 +347,7 @@ export default function HomeworkWorkspaceScreen({ navigation }: Props): React.Re
                 />
                 {showDone ? (
                   <View style={{ marginTop: space(2) }}>
-                    {renderCards(shownDone, { readOnly: true, viewOnlyNote: STR.wsCompletedNote })}
+                    {renderCards(shownDone, { readOnly: true, viewOnlyNote: STR.wsCompletedNote, undoable: true })}
                   </View>
                 ) : null}
               </View>
@@ -363,6 +368,7 @@ function ItemCard({
   tally,
   readOnly,
   viewOnlyNote,
+  undoable,
   base,
   open,
   onToggle,
@@ -378,6 +384,9 @@ function ItemCard({
   readOnly: boolean;
   /** Why this card is view-only; defaults to the not-my-subject line. */
   viewOnlyNote?: string;
+  /** Read-only card that still offers the per-row undo (D-#650 — the completed
+   *  fold on a subject the caller teaches). Ignored when readOnly is false. */
+  undoable?: boolean;
   base: { sectionId: string; classId: string };
   /** Accordion: owned by the screen so only ONE card can be open (D-#371 refinement). */
   open: boolean;
@@ -390,19 +399,22 @@ function ItemCard({
   const [, returnPass] = useMutation(HOMEWORK_RETURN_PASS);
   const [, transition] = useMutation(TRANSITION_HOMEWORK_RECORD);
   const [, revertRecord] = useMutation(REVERT_HW_RECORD);
+  const { confirmAction } = useConfirm();
   const [submitBusy, setSubmitBusy] = useState(false);
   const [returnBusy, setReturnBusy] = useState(false);
   const [showAbsent, setShowAbsent] = useState(false);
   const [showChase, setShowChase] = useState(false);
   const [showUndoCheck, setShowUndoCheck] = useState(false);
   const [showReturned, setShowReturned] = useState(false);
-  // Undo on an EARLIER return is Principal/Office only, and that is the SERVER's rule
-  // rather than a UI preference: the D-#338 policy (owner, 2026-07-19) lets the acting
-  // teacher revert their own last action until the end of that Dhaka day, and lets
-  // admin revert at any time. Offering a teacher the button here would hand them one
-  // that always refuses — the same dishonest rendering the D-#388 read-out avoids.
+  // Undo on an EARLIER return follows the SERVER's rule rather than a UI preference,
+  // so we never render a button that always refuses (the D-#388 posture). D-#650 widened
+  // that rule: the acting teacher may undo their OWN last action for 30 Dhaka days
+  // (previously same-day only, which is why this fold used to be admin-only), and
+  // Principal/Office stay unbounded. A foreign actor is still refused server-side —
+  // that one the client cannot know, so the message carries it.
   const { role } = useAuth();
-  const canRevertPrior = role === "PRINCIPAL" || role === "OFFICE";
+  const isAdminStaff = role === "PRINCIPAL" || role === "OFFICE";
+  const canRevertPrior = (lastStateAt: string): boolean => isAdminStaff || withinUndoWindow(lastStateAt);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const submitRows = group.rows.filter((r) => SUBMIT_STATES.has(r.state));
@@ -471,6 +483,13 @@ function ItemCard({
     onDone();
   }
 
+  /** Undo on OLDER work (the earlier-returns fold and the completed fold, D-#650):
+   *  asks first, because nothing else on those read-out rows is tappable. */
+  async function onUndoDone(recordId: string): Promise<void> {
+    if (!(await confirmAction({ title: STR.revertConfirmTitle, message: STR.revertConfirmBody, confirmLabel: STR.revertAction }))) return;
+    await onUndoReturn(recordId);
+  }
+
   /** Undo the last recorded step for one student (D-#338). Used by BOTH the
    *  same-day returned list and the ③ ফেরত step's "checked by mistake" list. */
   async function onUndoReturn(recordId: string): Promise<void> {
@@ -537,7 +556,9 @@ function ItemCard({
            grants matching section AND subject), so every control below would 403 —
            showing a roster read-out instead of dead buttons is the honest rendering. */
         <View style={{ marginTop: space(2) }}>
-          <Muted style={{ fontStyle: "italic" }}>{viewOnlyNote ?? STR.foldViewOnly}</Muted>
+          <Muted style={{ fontStyle: "italic" }}>
+            {undoable ? STR.wsCompletedUndoNote : (viewOnlyNote ?? STR.foldViewOnly)}
+          </Muted>
           <View style={{ marginTop: space(2) }}>
             {group.rows.map((r) => (
               <View
@@ -557,6 +578,17 @@ function ItemCard({
                   {lifecycleStateLabel(r.state)}
                   {r.result ? ` · ${hwResultLabel(r.result)}` : ""}
                 </Muted>
+                {/* D-#650: finished work stays correctable for 30 days. `stampCount > 1`
+                    means there IS a step to pop (the issue stamp is never popped). */}
+                {undoable && r.stampCount > 1 && canRevertPrior(r.lastStateAt) ? (
+                  <Button
+                    title={STR.revertAction}
+                    variant="ghost"
+                    onPress={() => void onUndoDone(r.id)}
+                    loading={busyId === r.id}
+                    disabled={busyId !== null}
+                  />
+                ) : null}
               </View>
             ))}
           </View>
@@ -720,11 +752,11 @@ function ItemCard({
                 >
                   <Body style={{ flexShrink: 1 }}>✓ {r.studentName}</Body>
                   <Muted>{dhakaDateKey(r.lastStateAt)}</Muted>
-                  {canRevertPrior && r.stampCount > 1 ? (
+                  {canRevertPrior(r.lastStateAt) && r.stampCount > 1 ? (
                     <Button
                       title={STR.revertAction}
                       variant="ghost"
-                      onPress={() => void onUndoReturn(r.id)}
+                      onPress={() => void onUndoDone(r.id)}
                       loading={busyId === r.id}
                       disabled={busyId !== null}
                     />

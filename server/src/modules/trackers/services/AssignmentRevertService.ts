@@ -3,8 +3,8 @@
  * HomeworkRevertService: pop the last ACTION off one assignment student
  * record's stateDates and restore the previous state.
  *
- * Same policy/guards as homework (see HomeworkRevertService header). Module
- * nuances:
+ * Same policy/guards as homework (see HomeworkRevertService header — teacher's
+ * own work for 30 Dhaka days per D-#650, admin anytime). Module nuances:
  *  - popping CHECKED clears result AND marks AND feedback;
  *  - popping RESUBMIT alone (undo of issueAssignmentResubmission) restores
  *    CHECKED and must KEEP result/marks/feedback — the check was an earlier,
@@ -14,8 +14,7 @@
  */
 import type { LifecycleState, HwResult } from "@scd/shared";
 import { AssignmentStudentRecord } from "../models/AssignmentStudentRecord";
-import { popActionGroup } from "../lifecycle";
-import { isSameDhakaDay } from "../../../lib/dhakaDay";
+import { popActionGroup, assertTeacherMayRevert } from "../lifecycle";
 import { writeAudit } from "../../platform/services/AuditService";
 
 export interface AsRevertInput {
@@ -44,14 +43,7 @@ export async function revertAssignmentRecord(input: AsRevertInput): Promise<AsRe
   const { popped, restored } = popActionGroup(rec.stateDates, rec.state);
 
   if (!input.admin) {
-    const foreign = popped.some((s) => s.by && s.by.toString() !== input.actorId);
-    if (foreign) {
-      throw new Error("এই ধাপটি অন্য শিক্ষক করেছেন — তিনি অথবা অফিস/অধ্যক্ষ ফেরাতে পারবেন");
-    }
-    const now = input.now ?? new Date();
-    if (!isSameDhakaDay(new Date(popped[popped.length - 1].at), now)) {
-      throw new Error("শুধু সেই দিনের কাজ সেদিনই ফেরানো যায় — অফিস/অধ্যক্ষের সাহায্য নিন");
-    }
+    assertTeacherMayRevert(popped, input.actorId, input.now ?? new Date());
   }
 
   let deletedResubmissionId: string | null = null;

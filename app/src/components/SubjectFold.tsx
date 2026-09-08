@@ -33,6 +33,11 @@ export interface SubjectFoldRenderOpts {
    *  the same read-only card but is view-only for a different reason (the work is
    *  finished, not someone else's subject), so it supplies its own line. */
   viewOnlyNote?: string;
+  /** Read-only card that may still carry an UNDO per row (D-#650): the completed-work
+   *  fold, on a subject the caller teaches. A teacher's revert window is now 30 days,
+   *  so finished work is correctable in place instead of only through the office.
+   *  Never set for the not-my-subject fold — those writes genuinely 403. */
+  undoable?: boolean;
 }
 
 interface Props<T extends { subject: string }> {
