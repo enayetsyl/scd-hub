@@ -23,6 +23,7 @@ import { isAdminStaff } from "../../foundation/services/RoleScope";
 import { GuardianWorkClaim } from "../models/GuardianWorkClaim";
 import { Student } from "../../foundation/models/Student";
 import { Section } from "../../foundation/models/Section";
+import { Class } from "../../foundation/models/Class";
 import { User } from "../../foundation/models/User";
 import { rejectWorkClaim as rejectSvc } from "../services/WorkClaimService";
 import type { GuardianWorkClaimView } from "../services/WorkClaimView";
@@ -66,6 +67,12 @@ interface WorkClaimRow {
   studentNameBn: string;
   sectionId: string;
   sectionNameBn: string;
+  /** The claim's class. Section names REPEAT across classes — every class at this
+   *  school has a "মূল" — so a row that names only the section is genuinely
+   *  ambiguous: a Nursery class teacher read a KG claim as one of her own. Carried
+   *  as id + level so the card can both LABEL the class and navigate to it. */
+  classId: string;
+  classLevel: number | null;
   teacherId: string;
   teacherName: string;
   claimedAt: string;
@@ -97,6 +104,8 @@ const WorkClaimRowRef = builder.objectRef<WorkClaimRow>("WorkClaimRow").implemen
     studentNameBn: t.exposeString("studentNameBn"),
     sectionId: t.exposeString("sectionId"),
     sectionNameBn: t.exposeString("sectionNameBn"),
+    classId: t.exposeString("classId"),
+    classLevel: t.int({ nullable: true, resolve: (r) => r.classLevel }),
     teacherId: t.exposeString("teacherId"),
     teacherName: t.exposeString("teacherName"),
     claimedAt: t.exposeString("claimedAt"),
@@ -140,7 +149,7 @@ async function toRows(claims: Array<Record<string, any>>, now: Date): Promise<Wo
   if (claims.length === 0) return [];
   const todayKey = dateKeyOf(now);
 
-  // Three batched lookups, never one per row (the D-#476 lesson).
+  // Four batched lookups, never one per row (the D-#476 lesson).
   const students = (await Student.find({ _id: { $in: claims.map((c) => c.studentId) } })
     .select("nameBn name")
     .lean()) as unknown as Array<{ _id: Types.ObjectId; nameBn?: string; name?: string }>;
@@ -150,10 +159,16 @@ async function toRows(claims: Array<Record<string, any>>, now: Date): Promise<Wo
   const teachers = (await User.find({ _id: { $in: claims.map((c) => c.teacherId) } })
     .select("name")
     .lean()) as unknown as Array<{ _id: Types.ObjectId; name?: string }>;
+  const classes = (await Class.find({ _id: { $in: claims.map((c) => c.classId) } })
+    .select("classLevel")
+    .lean()) as unknown as Array<{ _id: Types.ObjectId; classLevel?: number }>;
 
   const sName = new Map(students.map((s) => [s._id.toString(), s.nameBn || s.name || ""]));
   const secName = new Map(sections.map((s) => [s._id.toString(), s.nameBn || s.code || ""]));
   const tName = new Map(teachers.map((u) => [u._id.toString(), u.name || ""]));
+  // KG is classLevel 0 and Nursery is -1, so `?? null` — never `|| null`, which
+  // would erase KG into "no class".
+  const cLevel = new Map(classes.map((c) => [c._id.toString(), c.classLevel ?? null]));
 
   const rows = claims.map((c) => {
     const checkpoint = checkpointOf(c as never, todayKey);
@@ -166,6 +181,8 @@ async function toRows(claims: Array<Record<string, any>>, now: Date): Promise<Wo
       studentNameBn: sName.get(c.studentId.toString()) ?? "",
       sectionId: c.sectionId.toString(),
       sectionNameBn: secName.get(c.sectionId.toString()) ?? "",
+      classId: c.classId.toString(),
+      classLevel: cLevel.get(c.classId.toString()) ?? null,
       teacherId: c.teacherId.toString(),
       teacherName: tName.get(c.teacherId.toString()) ?? "",
       claimedAt: new Date(c.claimedAt).toISOString(),

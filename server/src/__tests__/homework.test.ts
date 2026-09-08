@@ -369,20 +369,20 @@ describe("T1.1 — declareHomeworkItem validations (handoff §2.1)", () => {
     expect(topics).toHaveLength(1);
     expect(topics[0]).toEqual(
       expect.objectContaining({
-        code: "TOP-ISLAM-C-1-GEN",
+        code: "TOP-ISLAM-CN-GEN",
         labelBn: expect.stringContaining("সাধারণ"),
         classLevel: -1,
         subject: "ISLAM",
       }),
     );
 
-    const labels = await topicLabelByCode(["TOP-ISLAM-C-1-GEN"]);
-    expect(labels.get("TOP-ISLAM-C-1-GEN")).toContain("সাধারণ");
+    const labels = await topicLabelByCode(["TOP-ISLAM-CN-GEN"]);
+    expect(labels.get("TOP-ISLAM-CN-GEN")).toContain("সাধারণ");
 
     const res = await declareHomeworkItem(
-      validDeclareInput({ subject: "ISLAM", classLevel: -1, topTags: ["TOP-ISLAM-C-1-GEN"] }),
+      validDeclareInput({ subject: "ISLAM", classLevel: -1, topTags: ["TOP-ISLAM-CN-GEN"] }),
     );
-    expect(res.topTags).toEqual(["TOP-ISLAM-C-1-GEN"]);
+    expect(res.topTags).toEqual(["TOP-ISLAM-CN-GEN"]);
   });
 
   test("accepts KG classLevel 0 with a generic topic fallback", async () => {
@@ -391,32 +391,32 @@ describe("T1.1 — declareHomeworkItem validations (handoff §2.1)", () => {
     const topics = await listHomeworkTopics("ISLAM", 0);
     expect(topics[0]).toEqual(
       expect.objectContaining({
-        code: "TOP-ISLAM-C0-GEN",
+        code: "TOP-ISLAM-CK-GEN",
         classLevel: 0,
       }),
     );
 
     const res = await declareHomeworkItem(
-      validDeclareInput({ subject: "ISLAM", classLevel: 0, topTags: ["TOP-ISLAM-C0-GEN"] }),
+      validDeclareInput({ subject: "ISLAM", classLevel: 0, topTags: ["TOP-ISLAM-CK-GEN"] }),
     );
-    expect(res.hwId).toBe("HW-C0-ISLAM-0001");
+    expect(res.hwId).toBe("HW-CK-ISLAM-0001");
   });
 
-  test("accepts Nursery classLevel -1 with a generic topic fallback and signed HW IDs", async () => {
+  test("accepts Nursery classLevel -1 with a generic topic fallback and CN-tokened HW IDs", async () => {
     mockTopicFind.mockResolvedValue([]);
 
     const topics = await listHomeworkTopics("ISLAM", -1);
     expect(topics[0]).toEqual(
       expect.objectContaining({
-        code: "TOP-ISLAM-C-1-GEN",
+        code: "TOP-ISLAM-CN-GEN",
         classLevel: -1,
       }),
     );
 
     const res = await declareHomeworkItem(
-      validDeclareInput({ subject: "ISLAM", classLevel: -1, topTags: ["TOP-ISLAM-C-1-GEN"] }),
+      validDeclareInput({ subject: "ISLAM", classLevel: -1, topTags: ["TOP-ISLAM-CN-GEN"] }),
     );
-    expect(res.hwId).toBe("HW-C-1-ISLAM-0001");
+    expect(res.hwId).toBe("HW-CN-ISLAM-0001");
   });
 
   test("TIME_DECL: 0 is valid; >40 is allowed (band warns, never blocks — §2.1/T2.5); negative rejected", async () => {

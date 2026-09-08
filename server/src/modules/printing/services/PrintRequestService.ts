@@ -831,8 +831,10 @@ function classLevelFromText(raw: string): number | null {
   if (glued) return Number(glued[1]);
   const dashed = /-C([1-5])-/i.exec(text);
   if (dashed) return Number(dashed[1]);
-  if (/\bnursery\b|নার্সারি/i.test(text)) return -1;
-  if (/\bK\.?\s?G\b|\bC0\b|কেজি/i.test(text)) return 0;
+  // `CN`/`CK` are the minted id tokens; `C-1`/`C0` are the same two classes as
+  // spelled by ids minted before that change, and both still circulate on paper.
+  if (/\bnursery\b|\bCN\b|\bC-1\b|নার্সারি/i.test(text)) return -1;
+  if (/\bK\.?\s?G\b|\bCK\b|\bC0\b|কেজি/i.test(text)) return 0;
   return null;
 }
 

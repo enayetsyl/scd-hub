@@ -8496,6 +8496,11 @@ export interface WorkClaimRowT {
   studentNameBn: string;
   sectionId: string;
   sectionNameBn: string;
+  /** Section names repeat across classes ("মূল" exists in every one), so a row
+   *  naming only the section is ambiguous — the class is what disambiguates it,
+   *  and what the roster-pass tap navigates to. */
+  classId: string;
+  classLevel: number | null;
   teacherId: string;
   teacherName: string;
   claimedAt: string;
@@ -8512,7 +8517,7 @@ export interface WorkClaimRowT {
 
 const WORK_CLAIM_ROW_FIELDS = `
   claimId tracker workId subject
-  studentId studentNameBn sectionId sectionNameBn
+  studentId studentNameBn sectionId sectionNameBn classId classLevel
   teacherId teacherName claimedAt actionDateKey dueDateKey note
   status statusLabelBn checkpoint checkpointLabelBn nudgedToday
 `;

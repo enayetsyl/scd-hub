@@ -23,6 +23,7 @@ import { Types } from "mongoose";
 import {
   HW_SUBJECTS,
   CLASS_TEST_SOURCES,
+  classToken,
 } from "@scd/shared";
 import type { HwSubject, ClassTestSource } from "@scd/shared";
 import { ClassTest, type IClassTest } from "../models/ClassTest";
@@ -57,7 +58,7 @@ export async function generateCtId(
     { new: true, upsert: true },
   );
   const n = String(counter.seq).padStart(4, "0");
-  return `CT-C${classLevel}-${subject}-${n}`;
+  return `CT-${classToken(classLevel)}-${subject}-${n}`;
 }
 
 /**
