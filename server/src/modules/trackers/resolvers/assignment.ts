@@ -1587,7 +1587,7 @@ builder.mutationField("revertAssignmentRecord", (t) =>
       "Undo the last lifecycle ACTION on an assignment record (D-#338): pops the trailing " +
       "same-timestamp stamp group and restores the previous state (untouched spawned resubmission " +
       "deleted; result/marks/feedback cleared on a CHECKED pop; chaseCount decremented). Acting " +
-      "teacher: own action, same Dhaka day; Principal/Office: anytime.",
+      "teacher: own action, up to 30 Dhaka days old (D-#650); Principal/Office: anytime.",
     authScopes: { authenticated: true },
     args: {
       sectionId: t.arg.string({ required: true }),
@@ -1600,7 +1600,7 @@ builder.mutationField("revertAssignmentRecord", (t) =>
       await assertRecordInSection(args.recordId, args.sectionId);
       if (!admin) {
         // Any assignment duty on the section — the service already limits a
-        // non-admin to their OWN action, same Dhaka day (ACS-4, D-#592).
+        // non-admin to their OWN action, at most 30 Dhaka days old (ACS-4, D-#592, D-#650).
         await assertCanWriteAny(
           ctx,
           args.sectionId,

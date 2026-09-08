@@ -382,6 +382,22 @@ export function dhakaDateKey(input?: string | Date | null): string {
   return `${y}-${m}-${dd}`;
 }
 
+/** How many Dhaka days back a TEACHER may undo their own tracker step (D-#650 —
+ *  mirrors the server's REVERT_WINDOW_DAYS). Principal/Office are unbounded. */
+export const UNDO_WINDOW_DAYS = 30;
+
+/** True when a step stamped at `iso` is still inside the teacher undo window, so the
+ *  button we render is one the server will actually honour (the D-#388 posture: never
+ *  offer a control that always refuses). */
+export function withinUndoWindow(iso?: string | null, now?: Date): boolean {
+  const stamped = dhakaDateKey(iso);
+  if (!stamped) return false;
+  const days = Math.round(
+    (Date.parse(`${dhakaDateKey(now ?? new Date())}T00:00:00Z`) - Date.parse(`${stamped}T00:00:00Z`)) / 86_400_000,
+  );
+  return days <= UNDO_WINDOW_DAYS;
+}
+
 /** Compact Dhaka date+time for a full ISO timestamp: "২০২৬-০৭-১৭ ১৪:৩০".
  *  Deterministic replacement for `toLocaleString()` (device-ICU; Hermes-Intl crash
  *  vector on some Android Go devices, owner 2026-07-27). Fixed Dhaka offset — every
@@ -1592,6 +1608,8 @@ const STR_BN = {
   /** The finished-work fold at the foot of both workspaces (owner ask 2026-08-02). */
   wsCompletedFold: "সম্পন্ন কাজ",
   wsCompletedNote: "সবার কাজ ফেরত দেওয়া হয়েছে — শুধু দেখা",
+  /** Same fold, on a subject the caller teaches: undo reaches back 30 days (D-#650). */
+  wsCompletedUndoNote: "সবার কাজ ফেরত দেওয়া হয়েছে — ভুল হলে শেষ ধাপটি আনডু করা যাবে",
   hwPassSubmit: "জমা",
   hwPassSubmitCommit: "জমা নিশ্চিত করুন",
   hwPassSubmitted: "জমা",
@@ -5851,6 +5869,7 @@ const STR_EN: StrTable = {
   foldViewOnly: "View only — the subject teacher handles this",
   wsCompletedFold: "Completed work",
   wsCompletedNote: "Everyone's work has been returned — view only",
+  wsCompletedUndoNote: "Everyone's work has been returned — a wrong last step can still be undone",
   hwPassSubmit: "Submission",
   hwPassSubmitCommit: "Confirm submissions",
   hwPassSubmitted: "Submitted",

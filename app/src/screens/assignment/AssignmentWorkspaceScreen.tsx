@@ -48,7 +48,7 @@ import { useSectionContext } from "../../state/SectionContext";
 import { useTaughtSubjects } from "../../lib/useTaughtSubjects";
 import type { AssignmentStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Badge, Button, Field, Chip, ChipRow, Notice, Loader, EmptyState } from "../../components/ui";
-import { STR, bnNum, hwSubjectLabel, hwResultLabel, classLevelLabel, lifecycleStateLabel, dhakaDateKey } from "../../lib/labels";
+import { STR, bnNum, hwSubjectLabel, hwResultLabel, classLevelLabel, lifecycleStateLabel, dhakaDateKey, withinUndoWindow } from "../../lib/labels";
 import { namesOrCount } from "../../lib/nameList";
 import { attachToExisting } from "../../lib/attachRows";
 import { useAuth } from "../../auth/AuthContext";
@@ -256,6 +256,9 @@ export default function AssignmentWorkspaceScreen({ route }: Props): React.React
           tally={tallyByItem.get(g.asItemId) ?? null}
           readOnly={!!opts?.readOnly}
           viewOnlyNote={opts?.viewOnlyNote}
+          /* Completed-fold cards keep an undo (D-#650) — but only on a subject this
+             caller teaches; on someone else's subject the server refuses anyway. */
+          undoable={!!opts?.undoable && (!taught || taught.has(g.subject))}
           sectionId={sectionId}
           open={openItemId === g.asItemId}
           onToggle={() => setOpenItemId((id) => (id === g.asItemId ? null : g.asItemId))}
@@ -337,10 +340,10 @@ export default function AssignmentWorkspaceScreen({ route }: Props): React.React
               <SubjectFold key={sectionId} records={shown} taught={taught} render={renderCards} />
             )}
             {/* Finished items — every student returned, so no stage is left to run.
-                Collapsed by default and rendered read-only: a teacher's undo is
-                same-Dhaka-day only (AssignmentRevertService), so on week-old work
-                every control would refuse. Office/Principal correct it from the
-                week grid. */}
+                Collapsed by default and rendered as a roster read-out, but each row
+                keeps its ⤺ UNDO (D-#650): the teacher's revert window is 30 Dhaka
+                days, so a mis-marked student found a week later is fixed here rather
+                than by the office. Older than that, Office/Principal still can. */}
             {shownDone.length > 0 ? (
               <View style={{ marginTop: space(3) }}>
                 <Button
@@ -350,7 +353,11 @@ export default function AssignmentWorkspaceScreen({ route }: Props): React.React
                 />
                 {showDone ? (
                   <View style={{ marginTop: space(2) }}>
-                    {renderCards(shownDone, { readOnly: true, viewOnlyNote: STR.wsCompletedNote })}
+                    {renderCards(shownDone, {
+                      readOnly: true,
+                      viewOnlyNote: STR.wsCompletedNote,
+                      undoable: true,
+                    })}
                   </View>
                 ) : null}
               </View>
@@ -367,6 +374,7 @@ function ItemCard({
   tally,
   readOnly,
   viewOnlyNote,
+  undoable,
   sectionId,
   open,
   onToggle,
@@ -384,6 +392,9 @@ function ItemCard({
   readOnly: boolean;
   /** Why this card is view-only; defaults to the not-my-subject line. */
   viewOnlyNote?: string;
+  /** Read-only card that still offers the per-row ⤺ UNDO (D-#650 — the completed
+   *  fold on a subject the caller teaches). Ignored when `readOnly` is false. */
+  undoable?: boolean;
   sectionId: string;
   onDone: () => void;
   onNotify: (ok: string | null, err: string | null) => void;
@@ -394,6 +405,7 @@ function ItemCard({
   const [, transition] = useMutation(TRANSITION_AS_RECORD);
   const [, resub] = useMutation(ISSUE_AS_RESUBMISSION);
   const [, revertRecord] = useMutation(REVERT_AS_RECORD);
+  const { confirmAction } = useConfirm();
   const [submitBusy, setSubmitBusy] = useState(false);
   const [returnBusy, setReturnBusy] = useState(false);
   const [showAbsent, setShowAbsent] = useState(false);
@@ -401,13 +413,15 @@ function ItemCard({
   const [showResub, setShowResub] = useState(false);
   const [showUndoCheck, setShowUndoCheck] = useState(false);
   const [showReturned, setShowReturned] = useState(false);
-  // Undo on an EARLIER return is Principal/Office only, and that is the SERVER's rule
-  // rather than a UI preference: the D-#338 policy (owner, 2026-07-19) lets the acting
-  // teacher revert their own last action until the end of that Dhaka day, and lets
-  // admin revert at any time. Offering a teacher the button here would hand them one
-  // that always refuses — the same dishonest rendering the D-#388 read-out avoids.
+  // Undo on an EARLIER return follows the SERVER's rule rather than a UI preference,
+  // so we never render a button that always refuses (the D-#388 posture). D-#650 widened
+  // that rule: the acting teacher may undo their OWN last action for 30 Dhaka days
+  // (previously same-day only, which is why this fold used to be admin-only), and
+  // Principal/Office stay unbounded. A foreign actor is still refused server-side —
+  // that one the client cannot know, so the message carries it.
   const { role } = useAuth();
-  const canRevertPrior = role === "PRINCIPAL" || role === "OFFICE";
+  const isAdminStaff = role === "PRINCIPAL" || role === "OFFICE";
+  const canRevertPrior = (lastStateAt: string): boolean => isAdminStaff || withinUndoWindow(lastStateAt);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const submitRows = group.rows.filter((r) => SUBMIT_STATES.has(r.state));
@@ -485,7 +499,14 @@ function ItemCard({
     onDone();
   }
 
-  /** Undo a same-day return (D-#338) — puts the student back into ফেরত. */
+  /** Undo from the completed fold (D-#650): old work, so it asks first — nothing
+   *  else on that card can be tapped by accident. */
+  async function onUndoDone(recordId: string): Promise<void> {
+    if (!(await confirmAction({ title: STR.revertConfirmTitle, message: STR.revertConfirmBody, confirmLabel: STR.revertAction }))) return;
+    await onUndoReturn(recordId);
+  }
+
+  /** Undo the last recorded step (D-#338) — puts the student back a stage. */
   async function onUndoReturn(recordId: string): Promise<void> {
     setBusyId(recordId);
     const res = await revertRecord({ sectionId, recordId });
@@ -546,7 +567,9 @@ function ItemCard({
            matching section AND subject), so a roster read-out is the honest rendering
            rather than controls that would 403. Twin of the homework workspace. */
         <View style={{ marginTop: space(2) }}>
-          <Muted style={{ fontStyle: "italic" }}>{viewOnlyNote ?? STR.foldViewOnly}</Muted>
+          <Muted style={{ fontStyle: "italic" }}>
+            {undoable ? STR.wsCompletedUndoNote : (viewOnlyNote ?? STR.foldViewOnly)}
+          </Muted>
           <View style={{ marginTop: space(2) }}>
             {group.rows.map((r) => (
               <View
@@ -567,6 +590,17 @@ function ItemCard({
                   {r.result ? ` · ${hwResultLabel(r.result)}` : ""}
                   {r.marks != null ? ` · ${bnNum(r.marks)}${r.totalMarks != null ? `/${bnNum(r.totalMarks)}` : ""}` : ""}
                 </Muted>
+                {/* D-#650: finished work stays correctable for 30 days. `stampCount > 1`
+                    means there IS a step to pop (the issue stamp is never popped). */}
+                {undoable && r.stampCount > 1 && canRevertPrior(r.lastStateAt) ? (
+                  <Button
+                    title={STR.revertAction}
+                    variant="ghost"
+                    onPress={() => void onUndoDone(r.id)}
+                    loading={busyId === r.id}
+                    disabled={busyId !== null}
+                  />
+                ) : null}
               </View>
             ))}
           </View>
@@ -735,11 +769,11 @@ function ItemCard({
                 >
                   <Body style={{ flexShrink: 1 }}>✓ {r.studentName}</Body>
                   <Muted>{r.result ? hwResultLabel(r.result) : dhakaDateKey(r.lastStateAt)}</Muted>
-                  {canRevertPrior && r.stampCount > 1 ? (
+                  {canRevertPrior(r.lastStateAt) && r.stampCount > 1 ? (
                     <Button
                       title={STR.revertAction}
                       variant="ghost"
-                      onPress={() => void onUndoReturn(r.id)}
+                      onPress={() => void onUndoDone(r.id)}
                       loading={busyId === r.id}
                       disabled={busyId !== null}
                     />
