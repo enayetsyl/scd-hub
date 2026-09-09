@@ -133,6 +133,7 @@ export const AUDIT_KIND_LABELS: Record<AuditEventKind, AuditKindLabel> = {
   REVIEW_SUBMITTED: { bn: "পর্যালোচনার মতামত দিয়েছেন", en: "Submitted a review verdict", group: "CONTENT" },
   REVIEW_CANCELLED: { bn: "পর্যালোচনা বাতিল করেছেন", en: "Cancelled a review round", group: "CONTENT" },
   REVIEW_CONDITION_CLEARED: { bn: "শর্তসাপেক্ষ অনুমোদনের শর্ত নিষ্পত্তি করেছেন", en: "Cleared a review condition", group: "CONTENT" },
+  REVIEW_REASSIGNED: { bn: "পর্যালোচনার অধ্যায় অন্য শিক্ষককে দিয়েছেন", en: "Moved review chapters to another reviewer", group: "CONTENT" },
   PLAN_APPROVED: { bn: "পরিকল্পনা অনুমোদন করেছেন", en: "Approved a plan", group: "CONTENT" },
   QUESTION_PUBLISHED: { bn: "প্রশ্ন প্রকাশ করেছেন", en: "Published a question", group: "CONTENT" },
   QUESTION_EDITED: { bn: "প্রশ্ন সংশোধন করেছেন", en: "Edited a question", group: "CONTENT" },

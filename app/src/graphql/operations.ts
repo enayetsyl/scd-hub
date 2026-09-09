@@ -1331,6 +1331,46 @@ export const ASSIGN_QUESTION_REVIEW_BY_CHAPTER = gql<
   }
 `;
 
+/** Move whole chapters from one reviewer to another (QR-15, D-#650). Untouched rounds only. */
+export const MOVE_QUESTION_REVIEW_CHAPTER = gql<
+  {
+    moveQuestionReviewChapter: {
+      moved: number;
+      skippedDecided: number;
+      held: number;
+      chapters: number[];
+    };
+  },
+  {
+    subject: string;
+    classLevel: number;
+    chapters: number[];
+    fromReviewerId: string;
+    toReviewerId: string;
+  }
+>`
+  mutation MoveQuestionReviewChapter(
+    $subject: String!
+    $classLevel: Int!
+    $chapters: [Int!]!
+    $fromReviewerId: String!
+    $toReviewerId: String!
+  ) {
+    moveQuestionReviewChapter(
+      subject: $subject
+      classLevel: $classLevel
+      chapters: $chapters
+      fromReviewerId: $fromReviewerId
+      toReviewerId: $toReviewerId
+    ) {
+      moved
+      skippedDecided
+      held
+      chapters
+    }
+  }
+`;
+
 export const SUBMIT_QUESTION_REVIEW = gql<
   { submitQuestionReview: QuestionReviewRoundT },
   { assignmentId: string; verdict: string; reason?: string | null }

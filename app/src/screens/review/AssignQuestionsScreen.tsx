@@ -8,6 +8,12 @@
  *
  * Bulk is the normal path here: the Principal slices a subject/class and sends the lot.
  * Per-question failures come back collected rather than aborting the batch.
+ *
+ * The MOVE section (QR-15, D-#650) is the other half of the same job: assign-by-chapter
+ * refuses to touch a chapter somebody already holds (the D-#525 skip), so re-pointing it at
+ * a second reviewer reports "0 assigned" and nothing changes. Moving is therefore its own
+ * action, with its own from-reviewer picker and its own confirmation, and it shows exactly
+ * what the losing reviewer holds before anything is taken away.
  */
 import React, { useState, useMemo, useCallback } from "react";
 import { View, Pressable, ScrollView, RefreshControl } from "react-native";
@@ -19,7 +25,9 @@ import {
   ASSIGNABLE_QUESTIONS,
   ASSIGN_QUESTION_REVIEW_BULK,
   ASSIGN_QUESTION_REVIEW_BY_CHAPTER,
+  MOVE_QUESTION_REVIEW_CHAPTER,
   QUESTION_CHAPTERS_QUERY,
+  QUESTION_REVIEWER_SLICES,
   TEACHERS_QUERY,
 } from "../../graphql/operations";
 import type { ReviewStackParamList } from "../../navigation/types";
@@ -94,6 +102,64 @@ export default function AssignQuestionsScreen({ navigation }: Props): React.Reac
         (skipped > 0 ? ` · ${STR.qrChapterSkipped}: ${bnNum(skipped)}` : ""),
     );
     setChapters([]);
+    refetch({ requestPolicy: "network-only" });
+  }
+
+  // --- move a chapter to another reviewer (QR-15, D-#650) --------------------------
+  const [fromReviewerId, setFromReviewerId] = useState<string | null>(null);
+  const [moveChapters, setMoveChapters] = useState<number[]>([]);
+  const [confirmMove, setConfirmMove] = useState(false);
+  const [, moveChapter] = useMutation(MOVE_QUESTION_REVIEW_CHAPTER);
+
+  // What the losing reviewer actually HOLDS — not what the bank contains. Offering her the
+  // bank's chapters would invite a move of a chapter she was never given, which reports
+  // "0 moved" and reads as a broken button.
+  const [{ data: sliceData }, refetchSlices] = useQuery({
+    query: QUESTION_REVIEWER_SLICES,
+    variables: { subject, classLevel, chapter: null },
+    pause: !subject || classLevel == null || !fromReviewerId,
+  });
+  const fromSlices = useMemo(
+    () =>
+      (sliceData?.questionReviewerSlices ?? [])
+        .filter((s) => s.reviewerId === fromReviewerId && s.pending > 0)
+        .map((s) => ({ chapter: Number(s.chapter), pending: s.pending, assigned: s.assigned }))
+        .filter((s) => Number.isInteger(s.chapter)),
+    [sliceData, fromReviewerId],
+  );
+  // The number the confirmation quotes. `pending` is the round count still owed, which is
+  // exactly what the server will move — a decided round stays with whoever decided it.
+  const movePending = useMemo(
+    () => fromSlices.filter((s) => moveChapters.includes(s.chapter)).reduce((n, s) => n + s.pending, 0),
+    [fromSlices, moveChapters],
+  );
+
+  async function moveTheChapters(): Promise<void> {
+    if (!fromReviewerId || !reviewerId || !subject || classLevel == null || moveChapters.length === 0) return;
+    setBusy(true);
+    setFailure(null);
+    const res = await moveChapter({
+      subject,
+      classLevel,
+      chapters: moveChapters,
+      fromReviewerId,
+      toReviewerId: reviewerId,
+    });
+    setBusy(false);
+    setConfirmMove(false);
+    if (res.error || !res.data) {
+      setFailure(friendlyError(res.error));
+      return;
+    }
+    const r = res.data.moveQuestionReviewChapter;
+    // Report what stayed behind as well as what moved: "0 moved" out of a chapter she was
+    // half-way through is the correct answer, and is indistinguishable from a bug alone.
+    setNotice(
+      `${STR.qrMoved}: ${bnNum(r.moved)}/${bnNum(r.held)}` +
+        (r.skippedDecided > 0 ? ` · ${STR.qrMoveKept}: ${bnNum(r.skippedDecided)}` : ""),
+    );
+    setMoveChapters([]);
+    refetchSlices({ requestPolicy: "network-only" });
     refetch({ requestPolicy: "network-only" });
   }
 
@@ -234,6 +300,87 @@ export default function AssignQuestionsScreen({ navigation }: Props): React.Reac
               disabled={!reviewerId || chapters.length === 0}
               onPress={() => void assignChapters()}
             />
+          </>
+        ) : null}
+
+        {/* --- move a chapter to another reviewer (QR-15, D-#650) ------------------- */}
+        {subject && classLevel != null ? (
+          <>
+            <Divider />
+            <Muted style={{ fontWeight: "700" }}>{STR.qrMoveTitle}</Muted>
+            <Muted>{STR.qrMoveHint}</Muted>
+
+            <Muted style={{ marginTop: space(2) }}>{STR.qrMoveFrom}</Muted>
+            <ChipRow>
+              {teachers.map((t) => (
+                <Chip
+                  key={t.id}
+                  label={t.name}
+                  selected={fromReviewerId === t.id}
+                  onPress={() => {
+                    setFromReviewerId(fromReviewerId === t.id ? null : t.id);
+                    setMoveChapters([]);
+                    setConfirmMove(false);
+                  }}
+                />
+              ))}
+            </ChipRow>
+
+            {fromReviewerId ? (
+              fromSlices.length === 0 ? (
+                <EmptyState message={STR.qrMoveNone} />
+              ) : (
+                <>
+                  <Muted>{STR.qrMoveHolds}</Muted>
+                  <ChipRow>
+                    {fromSlices.map((s) => (
+                      <Chip
+                        key={s.chapter}
+                        label={`${bnNum(s.chapter)} (${bnNum(s.pending)})`}
+                        selected={moveChapters.includes(s.chapter)}
+                        onPress={() => {
+                          setConfirmMove(false);
+                          setMoveChapters((prev) =>
+                            prev.includes(s.chapter)
+                              ? prev.filter((x) => x !== s.chapter)
+                              : [...prev, s.chapter].sort((a, b) => a - b),
+                          );
+                        }}
+                      />
+                    ))}
+                  </ChipRow>
+
+                  {/* The receiving reviewer is the one already picked above, so the move
+                      cannot silently target somebody the Principal did not choose. */}
+                  <Muted>{`${STR.qrMoveTo}: ${
+                    teachers.find((t) => t.id === reviewerId)?.name ?? STR.rvPickReviewer
+                  }`}</Muted>
+
+                  {confirmMove ? (
+                    <Card style={{ marginTop: space(2) }}>
+                      <Body style={{ fontWeight: "700" }}>
+                        {bnNum(movePending)}
+                        {STR.qrMoveConfirm}
+                      </Body>
+                      <Muted>{STR.qrMoveHint}</Muted>
+                      <View style={{ flexDirection: "row", gap: space(2), marginTop: space(2) }}>
+                        <Button title={STR.qrMoveGo} loading={busy} onPress={() => void moveTheChapters()} />
+                        <Button title={STR.cancel} variant="ghost" onPress={() => setConfirmMove(false)} />
+                      </View>
+                    </Card>
+                  ) : (
+                    <Button
+                      title={STR.qrMoveGo}
+                      variant="secondary"
+                      disabled={
+                        busy || !reviewerId || reviewerId === fromReviewerId || moveChapters.length === 0
+                      }
+                      onPress={() => setConfirmMove(true)}
+                    />
+                  )}
+                </>
+              )
+            ) : null}
           </>
         ) : null}
 
