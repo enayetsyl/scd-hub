@@ -3,6 +3,9 @@
  *
  * Mutations:
  *   assignQuestionReview / assignQuestionReviewBulk — content:assign_review (Principal/Office)
+ *   moveQuestionReviewChapter — content:assign_review. Move whole chapters from one reviewer
+ *                          to another (QR-15, D-#650). UNTOUCHED rounds only; a decided round
+ *                          stays with whoever decided it.
  *   submitQuestionReview — content:review (the ASSIGNED reviewer only). Reason optional.
  *   publishQuestion / publishQuestionBulk — content:promote_gold (Principal-locked)
  *   publishQuestionsMatching — content:promote_gold. Publish everything matching the inbox
@@ -32,6 +35,7 @@ import {
   assignQuestionReviewOne as assignSvc,
   assignQuestionReviewBulk as assignBulkSvc,
   assignQuestionReviewByChapter as assignByChapterSvc,
+  moveQuestionReviewChapter as moveChapterSvc,
   clearQuestionCondition as clearConditionSvc,
   submitQuestionReview as submitSvc,
   submitQuestionReviewBulk as submitBulkSvc,
@@ -253,6 +257,62 @@ builder.mutationField("assignQuestionReviewByChapter", (t) =>
           chapters: args.chapters,
           reviewerId: args.reviewerId,
           assignedBy: ctx.auth.userId,
+          actorRole: ctx.auth.role,
+        });
+      } catch (err) {
+        return mapReviewError(err);
+      }
+    },
+  }),
+);
+
+const ChapterMoveResultRef = builder
+  .objectRef<{
+    moved: number;
+    skippedDecided: number;
+    held: number;
+    chapters: number[];
+  }>("QuestionChapterMoveResult");
+ChapterMoveResultRef.implement({
+  description:
+    "Outcome of moving whole chapters from one reviewer to another (QR-15, D-#650). `held` " +
+    "is every open round the losing reviewer had in those chapters, so `moved` is always " +
+    "read against a denominator rather than reported bare.",
+  fields: (t) => ({
+    moved: t.exposeInt("moved"),
+    skippedDecided: t.exposeInt("skippedDecided"),
+    held: t.exposeInt("held"),
+    chapters: t.exposeIntList("chapters"),
+  }),
+});
+
+builder.mutationField("moveQuestionReviewChapter", (t) =>
+  t.field({
+    type: ChapterMoveResultRef,
+    description:
+      "Move whole CHAPTERS of question review from one reviewer to another (QR-15, D-#650). " +
+      "Only UNTOUCHED rounds move; anything the losing reviewer has already ruled on stays " +
+      "hers and is reported as `skippedDecided`. Separate from assignQuestionReviewByChapter " +
+      "so that mutation's D-#525 skip-the-busy rule stays the default. " +
+      "Requires content:assign_review.",
+    authScopes: { hasPermission: "content:assign_review" },
+    args: {
+      subject: t.arg.string({ required: true }),
+      classLevel: t.arg.int({ required: true }),
+      chapters: t.arg.intList({ required: true }),
+      fromReviewerId: t.arg.string({ required: true }),
+      toReviewerId: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      try {
+        return await moveChapterSvc({
+          subject: args.subject,
+          classLevel: args.classLevel,
+          chapters: args.chapters,
+          fromReviewerId: args.fromReviewerId,
+          toReviewerId: args.toReviewerId,
+          actorId: ctx.auth.userId,
           actorRole: ctx.auth.role,
         });
       } catch (err) {

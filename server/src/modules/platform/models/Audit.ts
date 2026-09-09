@@ -21,6 +21,9 @@ export type AuditEventKind =
   | "REVIEW_CANCELLED"    // an open review round was cancelled/superseded (D-#40)
   | "REVIEW_CONDITION_CLEARED" // a question's APPROVE_WITH_CONDITION hold was cleared and
                               // sent back to the same reviewer for another round (D-#525)
+  | "REVIEW_REASSIGNED"   // untouched rounds changed hands wholesale — a chapter moved from
+                          // one reviewer to another (QR-15, D-#650). meta names BOTH
+                          // reviewers, the chapters and what was left behind as decided.
   | "PLAN_APPROVED"       // Principal sign-off: reviewed → gold (D-#38; PR-2)
   | "QUESTION_PUBLISHED"  // Principal publish: a question reaches the teachers' shelf (D-#508)
   // Question corrections (D-#548). meta carries the qid, WHICH fields moved, and their
