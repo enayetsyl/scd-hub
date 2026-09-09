@@ -1202,6 +1202,166 @@ export async function assignQuestionReviewByChapter(input: {
   };
 }
 
+// ---------------------------------------------------------------------------
+// moveQuestionReviewChapter (QR-15, D-#650)
+// ---------------------------------------------------------------------------
+
+/**
+ * Move whole chapters from one reviewer to another (QR-15, D-#650).
+ *
+ * Before this, a chapter could not change hands AT ALL. `assignQuestionReviewByChapter`
+ * SKIPS anything with an open round (D-#525), so re-running it at a second reviewer reports
+ * "0 assigned / 360 skipped" and changes nothing; and since D-#569 the per-question path
+ * REFUSES outright ("already assigned to a reviewer — cancel that round before reassigning")
+ * unless its internal `allowReassign` waiver is set, which no caller exposes. Both guards are
+ * right: they exist so a stray tap cannot discard work in progress. What was missing is the
+ * DELIBERATE act — the Principal deciding a reviewer is over-loaded and a chapter must move.
+ *
+ * So this is a SEPARATE mutation, not a `force` flag on the assign path: the D-#525 skip and
+ * the D-#569 refusal stay the default for every accidental route, and moving work is
+ * something you have to ask for by name.
+ *
+ * Only UNTOUCHED rounds move — `status: "assigned"` with no verdict. A round the losing
+ * reviewer has already ruled on stays hers whatever its chapter: the verdict is her work,
+ * `questionReviewerProgress` buckets by verdict for exactly that reason (D-#537), and the
+ * question it belongs to no longer needs a reviewer. Those are counted and reported as
+ * `skippedDecided`, never silently left behind.
+ *
+ * IN PLACE, not supersede-and-recreate. Superseding 2,474 untouched rounds would leave the
+ * losing reviewer's progress card reading "2,474 closed undecided" for ever — she would look
+ * like someone who abandoned four chapters, when in fact she was never given the chance to
+ * start them. A round with no verdict carries no work to preserve, so it simply changes
+ * hands; `assignedBy`/`assignedAt` are re-stamped so the new reviewer's clock starts now.
+ *
+ * No artifact join: subject, classLevel and addressNumber are denormalised onto the round at
+ * assign time (the same reason `questionReviewerSlices` needs no lookup), and `addressNumber`
+ * is stored as a STRING whatever form the artifact used (QR-6/QR-13), so one form matches.
+ *
+ * Audited as ONE summary row naming both reviewers, the chapters and the counts. The reverse
+ * of a move is the opposite move, which is exact under the operating model of one holder per
+ * chapter; it would also drag along anything the receiving reviewer independently held in
+ * those chapters, so the audit row — not a blind re-run — is what a reversal should be read
+ * against.
+ */
+export async function moveQuestionReviewChapter(input: {
+  subject: string;
+  classLevel: number;
+  chapters: readonly number[];
+  fromReviewerId: string;
+  toReviewerId: string;
+  actorId: string;
+  actorRole: string;
+}): Promise<{
+  moved: number;
+  skippedDecided: number;
+  held: number;
+  chapters: number[];
+}> {
+  const chapters = [...new Set(input.chapters.filter((c) => Number.isInteger(c)))].sort((a, b) => a - b);
+  if (chapters.length === 0) throw new ReviewError("Pick at least one chapter");
+  if (input.fromReviewerId === input.toReviewerId) {
+    throw new ReviewError("Pick a different reviewer to move the work to");
+  }
+
+  const fromId = toObjectId(input.fromReviewerId, "from reviewer");
+  const toId = toObjectId(input.toReviewerId, "to reviewer");
+
+  // Both reviewers must exist. The assign path can afford not to check — it reads the
+  // artifact first and fails there — but this one writes straight to the rounds, so an id
+  // that matches nobody would move a chapter into a void and report success.
+  const users = await User.find({ _id: { $in: [fromId, toId] } }).select({ name: 1 }).lean();
+  const nameOf = new Map(users.map((u) => [u._id.toString(), u.name]));
+  if (!nameOf.has(input.fromReviewerId)) throw new ReviewError("Unknown reviewer to move from");
+  if (!nameOf.has(input.toReviewerId)) throw new ReviewError("Unknown reviewer to move to");
+
+  // Every OPEN round the losing reviewer holds in these chapters — the denominator the
+  // caller is shown, so "12 moved" out of a chapter she held is never mistaken for a bug.
+  const scope = {
+    docType: QUESTION_DOC_TYPE,
+    subject: input.subject,
+    classLevel: input.classLevel,
+    addressNumber: { $in: chapters.map((c) => String(c)) },
+    reviewerId: fromId,
+    status: { $in: ["assigned", "submitted"] },
+  };
+  const held = await ReviewAssignment.countDocuments(scope);
+  if (held === 0) return { moved: 0, skippedDecided: 0, held: 0, chapters };
+
+  // `verdict: null` matches both unset and null, and is belt-and-braces beside
+  // `status: "assigned"`: a round that somehow carries a verdict is work, and does not move.
+  const res = await ReviewAssignment.updateMany(
+    { ...scope, status: "assigned", verdict: null },
+    { $set: { reviewerId: toId, assignedBy: toObjectId(input.actorId, "actor"), assignedAt: new Date() } },
+  );
+  const moved = res.modifiedCount ?? 0;
+  const skippedDecided = held - moved;
+
+  await writeAudit({
+    eventKind: "REVIEW_REASSIGNED",
+    actorId: input.actorId,
+    actorRole: input.actorRole,
+    targetId: input.toReviewerId,
+    targetKind: "ReviewAssignment",
+    meta: {
+      byChapter: true,
+      subject: input.subject,
+      classLevel: input.classLevel,
+      chapters,
+      fromReviewerId: input.fromReviewerId,
+      fromReviewerName: nameOf.get(input.fromReviewerId) ?? null,
+      toReviewerId: input.toReviewerId,
+      toReviewerName: nameOf.get(input.toReviewerId) ?? null,
+      moved,
+      skippedDecided,
+      held,
+    },
+  });
+
+  // ONE notification for the whole move, to the reviewer who just gained the work. The
+  // losing reviewer is NOT notified: there is no kind for "work taken back", and inventing
+  // one is a /shared/vocab change this slice does not need — the Principal tells her.
+  if (moved > 0) {
+    await emitQuestionReviewAssigned({
+      reviewerId: input.toReviewerId,
+      subject: input.subject,
+      classLevel: input.classLevel,
+      count: moved,
+      sampleAssignmentId: await sampleRoundId(toId, input.subject, input.classLevel, chapters),
+      // Distinct per move, so two moves to the same reviewer are two notifications rather
+      // than one silently swallowed by the dedupe key (which is recipient + stamp).
+      batchStamp: `move:${chapters.join(",")}:${Date.now()}`,
+    });
+  }
+
+  return { moved, skippedDecided, held, chapters };
+}
+
+/** One id from the moved set, so the notification can deep-link into the queue. */
+async function sampleRoundId(
+  reviewerId: Types.ObjectId,
+  subject: string,
+  classLevel: number,
+  chapters: readonly number[],
+): Promise<string> {
+  const one = (await ReviewAssignment.findOne({
+    docType: QUESTION_DOC_TYPE,
+    reviewerId,
+    subject,
+    classLevel,
+    addressNumber: { $in: chapters.map((c) => String(c)) },
+    status: "assigned",
+  })
+    .select({ _id: 1 })
+    .lean()) as unknown as { _id: Types.ObjectId } | null;
+  return one ? one._id.toString() : "none";
+}
+
+/** A ReviewError, not a mongoose CastError, when an id is not an id. */
+function toObjectId(raw: string, what: string): Types.ObjectId {
+  if (!Types.ObjectId.isValid(raw)) throw new ReviewError(`Not a valid ${what} id`);
+  return new Types.ObjectId(raw);
+}
+
 export async function listAssignableQuestions(args: {
   subject?: string | null;
   classLevel?: number | null;
