@@ -496,9 +496,13 @@ export interface ScopeGrantT {
   proxyStatus: string | null;
   extent: string | null;
   explicitSet: Array<{ classId: string; subjectId: string }> | null;
+  /** delegation-only (ACS-1, D-#484). Absent/null = open-ended. The server enforces it
+   *  at REQUEST time and leaves `active` true on a lapsed grant (D-#488), so a reader
+   *  that trusts `active` alone would offer a class the server then refuses. */
+  expiresAt: string | null;
 }
 
-const SCOPE_GRANT_FIELDS = `id kind active teacherId classId sectionId subjectId coveringTeacherId absentTeacherId startDate durationDays proxyStatus extent explicitSet { classId subjectId }`;
+const SCOPE_GRANT_FIELDS = `id kind active teacherId classId sectionId subjectId coveringTeacherId absentTeacherId startDate durationDays proxyStatus extent explicitSet { classId subjectId } expiresAt`;
 
 export const MY_SCOPES_QUERY = gql<{ myScopes: ScopeGrantT[] }, NoVars>`
   query MyScopes {
