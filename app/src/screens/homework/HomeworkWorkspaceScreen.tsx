@@ -86,6 +86,10 @@ function dhakaDayOf(iso: string): string {
   return dhakaDateKey(iso);
 }
 
+/** What `renderCards` accepts. A superset of what SubjectFold passes: the fold only ever
+ *  asks for `readOnly` (D-#388), while the completed-work fold also asks for the undo. */
+type CardRenderOpts = SubjectFoldRenderOpts & { allowUndo?: boolean };
+
 interface ItemGroup {
   hwItemId: string;
   hwId: string;
@@ -244,7 +248,7 @@ export default function HomeworkWorkspaceScreen({ navigation }: Props): React.Re
   // The finished-work fold — collapsed by default, so the daily deck stays the deck.
   const [showDone, setShowDone] = useState(false);
 
-  const renderCards = (recs: HwOpenRecordT[], opts?: SubjectFoldRenderOpts): React.ReactNode => (
+  const renderCards = (recs: HwOpenRecordT[], opts?: CardRenderOpts): React.ReactNode => (
     <CardGrid>
       {groupByItem(recs, opts?.readOnly ? [] : priorReturnedOpen).map((g) => (
         <ItemCard
@@ -252,6 +256,11 @@ export default function HomeworkWorkspaceScreen({ navigation }: Props): React.Re
           group={g}
           tally={tallyByItem.get(g.hwItemId) ?? null}
           readOnly={!!opts?.readOnly}
+          // Only the completed fold asks for undo, and then only on a subject this
+          // login actually carries. `taught === null` means "do not fold at all"
+          // (Principal/Office, class-teacher-only) — the same posture the open deck
+          // already takes for those logins, so the affordance stays consistent.
+          allowUndo={!!opts?.allowUndo && (taught === null || taught.has(g.subject))}
           viewOnlyNote={opts?.viewOnlyNote}
           base={base}
           open={openItemId === g.hwItemId}
@@ -330,9 +339,11 @@ export default function HomeworkWorkspaceScreen({ navigation }: Props): React.Re
               <SubjectFold key={selection.sectionId ?? ""} records={shown} taught={taught} render={renderCards} />
             )}
             {/* Finished items — every student returned, so no stage is left to run.
-                Collapsed by default and read-only: a teacher's undo is same-Dhaka-day
-                only (HomeworkRevertService), so on older work every control would
-                refuse; Office/Principal correct it from the records/roll-ups. */}
+                Collapsed by default and read-only for the LIFECYCLE passes: there is
+                no stage left to run, and a teacher's re-marking of old work is a
+                different decision. Undo is the exception (`allowUndo`) — a card lands
+                here the instant the last student is returned, so without it a return
+                made by mistake seconds ago would have nowhere to go. */}
             {shownDone.length > 0 ? (
               <View style={{ marginTop: space(3) }}>
                 <Button
@@ -342,7 +353,11 @@ export default function HomeworkWorkspaceScreen({ navigation }: Props): React.Re
                 />
                 {showDone ? (
                   <View style={{ marginTop: space(2) }}>
-                    {renderCards(shownDone, { readOnly: true, viewOnlyNote: STR.wsCompletedNote })}
+                    {renderCards(shownDone, {
+                      readOnly: true,
+                      allowUndo: true,
+                      viewOnlyNote: STR.wsCompletedNote,
+                    })}
                   </View>
                 ) : null}
               </View>
@@ -362,6 +377,7 @@ function ItemCard({
   group,
   tally,
   readOnly,
+  allowUndo,
   viewOnlyNote,
   base,
   open,
@@ -376,6 +392,10 @@ function ItemCard({
   /** D-#388: a FOLDED (not-my-subject) card — oversight only, no lifecycle controls.
    *  The completed-work fold reuses it for finished items. */
   readOnly: boolean;
+  /** Read-only because the work is FINISHED, not because it belongs to someone else —
+   *  so a mistaken return still has a way back. Off for the D-#388 not-my-subject fold,
+   *  where the server would refuse the write anyway. */
+  allowUndo: boolean;
   /** Why this card is view-only; defaults to the not-my-subject line. */
   viewOnlyNote?: string;
   base: { sectionId: string; classId: string };
@@ -421,6 +441,13 @@ function ItemCard({
   );
   // Awaiting return AND carrying an undoable step — the "checked by mistake" list.
   const undoCheckRows = returnRows.filter((r) => r.stampCount > 1);
+  /** May THIS row's return be undone from a read-only (finished-work) card? The entry
+   *  stamp never pops, so stampCount > 1 is what makes a record undoable at all. */
+  const canUndoRow = (r: HwOpenRecordT): boolean =>
+    allowUndo &&
+    r.state === "RETURNED" &&
+    r.stampCount > 1 &&
+    (canRevertPrior || dhakaDayOf(r.lastStateAt) === cardToday);
   const absentRows = group.rows.filter((r) => r.state === "ABSENT_REDELIVER");
   const chaseRows = submitRows.filter((r) => r.state === "CHASE");
 
@@ -557,6 +584,21 @@ function ItemCard({
                   {lifecycleStateLabel(r.state)}
                   {r.result ? ` · ${hwResultLabel(r.result)}` : ""}
                 </Muted>
+                {/* Owner report (prod, 2026-09-13): returning the LAST student empties
+                    the card of open rows, so it drops straight into the completed fold —
+                    which rendered read-only, taking the same-day undo away seconds after
+                    the mistake was made. The undo belongs here too, on the same terms as
+                    the open deck's: same Dhaka day for the acting teacher, any day for
+                    Principal/Office (the server's D-#338 rule, mirrored honestly). */}
+                {canUndoRow(r) ? (
+                  <Button
+                    title={STR.revertAction}
+                    variant="ghost"
+                    onPress={() => void onUndoReturn(r.id)}
+                    loading={busyId === r.id}
+                    disabled={busyId !== null}
+                  />
+                ) : null}
               </View>
             ))}
           </View>
