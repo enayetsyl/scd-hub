@@ -64,6 +64,17 @@ jest.mock("../modules/foundation/models/User", () => ({
   User: { find: (q: unknown) => mockUserFind(q) },
 }));
 
+// A group-anchored upload loads the group to check it exists and is on the subject's
+// own track (D-#655). Mocked like every other model here — these tests are DB-free.
+const mockSubjectGroupFindById = jest.fn();
+jest.mock("../modules/routine/models/SubjectGroup", () => ({
+  SubjectGroup: {
+    findById: (id: unknown) => ({
+      select: () => ({ lean: async () => mockSubjectGroupFindById(id) }),
+    }),
+  },
+}));
+
 // Import AFTER mocks
 import { validateQuranPayload, QuranValidationError, type QuranPayloadInput } from "../modules/classroom-observation/quran";
 import {
@@ -95,6 +106,8 @@ beforeEach(() => {
   mockWriteAudit.mockResolvedValue(undefined);
   mockEmit.mockResolvedValue(undefined);
   mockUserFind.mockReturnValue({ select: () => ({ lean: async () => [{ _id: oid() }] }) });
+  // These are QURAN sessions, so a group anchor resolves to a quran-track group.
+  mockSubjectGroupFindById.mockResolvedValue({ _id: oid(), track: "quran" });
   mockCreate.mockImplementation(async (doc: Record<string, unknown>) => ({
     _id: oid(),
     ...doc,

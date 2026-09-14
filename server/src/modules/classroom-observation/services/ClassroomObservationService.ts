@@ -52,6 +52,7 @@ import { validateQuranPayload, type QuranPayloadInput } from "../quran";
 import { writeAudit } from "../../platform/services/AuditService";
 import { emit } from "../../notifications/services/NotificationService";
 import { User } from "../../foundation/models/User";
+import { SubjectGroup } from "../../routine/models/SubjectGroup";
 import { actingAsFilter } from "../../foundation/services/RoleScope";
 
 export class ClassroomObservationError extends Error {}
@@ -262,6 +263,46 @@ function assertAnchor(input: {
   };
 }
 
+/** The SubjectGroup track each group-taught subject belongs to (D-#48/#56). Quran and
+ *  Arabic are SEPARATE cross-grade tracks, not one religious bucket. Mirrors the app's
+ *  pure `app/src/lib/observationAnchor.ts`, which filters the upload picker. */
+const GROUP_TRACK_BY_SUBJECT: Record<string, "quran" | "arabic"> = {
+  QURAN: "quran",
+  ARABIC: "arabic",
+};
+
+/**
+ * The anchor group must EXIST, and for a group-taught subject it must be on that
+ * subject's OWN track (owner report, 2026-09-14).
+ *
+ * `assertAnchor` is pure: it casts the id and checks form ↔ subject, but never loads
+ * the group — so until here nothing had ever confirmed the group was real. While the
+ * upload form's group field was a free-text ObjectId box, any 24-hex string was taken
+ * and stored, and an Arabic session could be anchored to a Hifz group.
+ *
+ * A GENERAL subject anchored to a group is deliberately still allowed: general
+ * subjects have no track of their own, they are section-anchored in practice, and
+ * refusing the combination would be a new rejection whose effect on rows already
+ * stored has not been checked. Only the two claims that are unambiguously wrong —
+ * a group that does not exist, and a cross-track group — are refused here.
+ */
+async function assertGroupMatchesSubject(
+  subjectGroupId: Types.ObjectId | null,
+  subject: string,
+): Promise<void> {
+  if (!subjectGroupId) return; // section-anchored: nothing to check
+  const group = await SubjectGroup.findById(subjectGroupId).select("track").lean();
+  if (!group) {
+    throw new ClassroomObservationError("সাবজেক্ট-গ্রুপটি পাওয়া যায়নি");
+  }
+  const expected = GROUP_TRACK_BY_SUBJECT[subject];
+  if (expected && group.track !== expected) {
+    throw new ClassroomObservationError(
+      "পর্যবেক্ষণের বিষয় ও সাবজেক্ট-গ্রুপের ট্র্যাক মেলেনি — কুরআন পর্যবেক্ষণ কুরআন গ্রুপে, আরবি পর্যবেক্ষণ আরবি গ্রুপে দিতে হবে",
+    );
+  }
+}
+
 // ---------------------------------------------------------------------------
 // uploadObservation (J1 — Principal/Office upload + assign)
 // ---------------------------------------------------------------------------
@@ -292,6 +333,7 @@ export async function uploadObservation(input: UploadObservationInput): Promise<
     sectionId: input.sectionId,
     subjectGroupId: input.subjectGroupId,
   });
+  await assertGroupMatchesSubject(anchor.subjectGroupId, anchor.subject);
 
   let observerId: Types.ObjectId | null = null;
   let state: ObservationState = "UPLOADED";
