@@ -1,0 +1,259 @@
+/**
+ * ScholarshipDeclareScreen (SC-1) — declare a paper's structure.
+ *
+ * The app does not author the questions; this records the skeleton the marks hang off.
+ * The running Σ is shown against the full marks at all times and the declare button
+ * stays disabled until they match, so the server's refusal (D-#656) is never the first
+ * time the teacher hears about it.
+ *
+ * Subjects are multi-select because প্রাথমিক বিজ্ঞান + বাংলাদেশ ও বিশ্বপরিচয় is ONE
+ * paper of 50+50 (D-#664); each item then names which half it belongs to.
+ */
+import React, { useMemo, useState } from "react";
+import { View } from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp, NativeStackScreenProps } from "@react-navigation/native-stack";
+import { useMutation, useQuery } from "urql";
+import { DECLARE_SCHOLARSHIP_PAPER, SCHOLARSHIP_TOPICS_QUERY } from "../../graphql/scholarship";
+import {
+  Screen,
+  Card,
+  Body,
+  Muted,
+  Badge,
+  Button,
+  Chip,
+  ChipRow,
+  Field,
+  Select,
+  Notice,
+  Divider,
+} from "../../components/ui";
+import { STR, bnNum, hwSubjectLabel } from "../../lib/labels";
+import { friendlyError } from "../../lib/errors";
+import { useToast } from "../../state/ToastContext";
+import { space } from "../../theme";
+import type { ScholarshipStackParamList } from "../../navigation/types";
+
+type Props = NativeStackScreenProps<ScholarshipStackParamList, "ScholarshipDeclare">;
+type Nav = NativeStackNavigationProp<ScholarshipStackParamList>;
+
+const SUBJECTS = ["ENG", "BAN", "MATH", "SCI", "BGS"] as const;
+const ITEM_TYPES = [
+  "mcq",
+  "short_answer",
+  "true_false",
+  "fill_blank",
+  "matching",
+  "descriptive",
+  "creative",
+  "oral",
+  "practical",
+  "other",
+] as const;
+
+interface DraftItem {
+  itemNo: number;
+  label: string;
+  subject: string;
+  topicCode: string;
+  chapters: string;
+  itemType: string;
+  marks: string;
+}
+
+/** Half marks are legal (the English paper's item 10 is 0.5 × 10); work in halves so a
+ *  ten-item sum lands on exactly 5 rather than 4.999999999999999. */
+function sumMarks(values: number[]): number {
+  return values.reduce((a, b) => a + Math.round(b * 2), 0) / 2;
+}
+
+export default function ScholarshipDeclareScreen({ route }: Props): React.ReactElement {
+  const { sectionId, classLevel } = route.params;
+  const nav = useNavigation<Nav>();
+  const toast = useToast();
+
+  const [subjects, setSubjects] = useState<string[]>(["ENG"]);
+  const [name, setName] = useState("");
+  const [paperDate, setPaperDate] = useState("");
+  const [totalMarks, setTotalMarks] = useState("100");
+  const [sourceNote, setSourceNote] = useState("");
+  const [items, setItems] = useState<DraftItem[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const [{ data: topicData }] = useQuery({
+    query: SCHOLARSHIP_TOPICS_QUERY,
+    variables: { classLevel, subject: null },
+  });
+  const [, declare] = useMutation(DECLARE_SCHOLARSHIP_PAPER);
+
+  const allTopics = (topicData?.scholarshipTopics ?? []) as {
+    code: string;
+    labelBn: string;
+    subject: string;
+  }[];
+
+  const total = Number(totalMarks) || 0;
+  const sum = useMemo(() => sumMarks(items.map((i) => Number(i.marks) || 0)), [items]);
+  const balanced = items.length > 0 && sum === total && total > 0;
+
+  function toggleSubject(s: string): void {
+    setSubjects((prev) => {
+      const next = prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s];
+      return next.length === 0 ? prev : next;
+    });
+  }
+
+  function addItem(): void {
+    setItems((prev) => [
+      ...prev,
+      {
+        itemNo: prev.length + 1,
+        label: "",
+        subject: subjects[0],
+        topicCode: "",
+        chapters: "",
+        itemType: "short_answer",
+        marks: "",
+      },
+    ]);
+  }
+
+  function patch(idx: number, key: keyof DraftItem, value: string): void {
+    setItems((prev) => prev.map((it, i) => (i === idx ? { ...it, [key]: value } : it)));
+  }
+
+  function remove(idx: number): void {
+    // Renumber so the printed item numbers stay 1..N with no gap — the mark-entry grid
+    // reads these numbers as its columns.
+    setItems((prev) => prev.filter((_, i) => i !== idx).map((it, i) => ({ ...it, itemNo: i + 1 })));
+  }
+
+  async function onDeclare(): Promise<void> {
+    setBusy(true);
+    setError(null);
+    const res = await declare({
+      sectionId,
+      subjects,
+      name: name.trim(),
+      paperDate: paperDate.trim() || null,
+      totalMarks: total,
+      sourceNote: sourceNote.trim() || null,
+      items: items.map((i) => ({
+        itemNo: i.itemNo,
+        label: i.label.trim(),
+        subject: i.subject,
+        topicCode: i.topicCode,
+        chapters: i.chapters
+          .split(/[,\s]+/)
+          .map((c) => Number(c.trim()))
+          .filter((n) => Number.isInteger(n) && n > 0),
+        itemType: i.itemType,
+        marks: Number(i.marks) || 0,
+      })),
+    });
+    setBusy(false);
+    if (res.error) {
+      setError(friendlyError(res.error));
+      return;
+    }
+    toast.show(STR.scDeclared);
+    nav.goBack();
+  }
+
+  return (
+    <Screen scroll>
+      <Muted>{STR.scSubjects}</Muted>
+      <ChipRow>
+        {SUBJECTS.map((s) => (
+          <Chip
+            key={s}
+            label={hwSubjectLabel(s)}
+            selected={subjects.includes(s)}
+            onPress={() => toggleSubject(s)}
+          />
+        ))}
+      </ChipRow>
+
+      <Field label={STR.scPaperName} value={name} onChangeText={setName} />
+      <Field label={`${STR.scPaperDate} (YYYY-MM-DD)`} value={paperDate} onChangeText={setPaperDate} />
+      <Field label={STR.scTotalMarks} value={totalMarks} onChangeText={setTotalMarks} keyboardType="number-pad" />
+      <Field label={STR.scSourceNote} value={sourceNote} onChangeText={setSourceNote} />
+
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space(3) }}>
+        <Body style={{ fontWeight: "700" }}>{STR.scItems}</Body>
+        <Badge text={`${bnNum(sum)} / ${bnNum(total)}`} tone={balanced ? "ok" : "warn"} />
+      </View>
+      <Muted>{STR.scSumHint}</Muted>
+
+      {items.length === 0 ? <Muted>{STR.scNoItems}</Muted> : null}
+
+      {items.map((it, idx) => {
+        // Only this item's own subject's topics — a topic from another subject is
+        // refused by the server and would corrupt that subject's roll-up (D-#659).
+        const options = allTopics
+          .filter((t) => t.subject === it.subject)
+          .map((t) => ({ value: t.code, label: t.labelBn }));
+        return (
+          <Card key={idx}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", gap: space(3) }}>
+              <Body style={{ fontWeight: "700" }}>{bnNum(it.itemNo)}</Body>
+              <Button title={STR.scRemove} variant="ghost" onPress={() => remove(idx)} />
+            </View>
+            <Field label={STR.scItemLabel} value={it.label} onChangeText={(v) => patch(idx, "label", v)} />
+            {subjects.length > 1 ? (
+              <ChipRow>
+                {subjects.map((s) => (
+                  <Chip
+                    key={s}
+                    label={hwSubjectLabel(s)}
+                    selected={it.subject === s}
+                    onPress={() => {
+                      patch(idx, "subject", s);
+                      patch(idx, "topicCode", "");
+                    }}
+                  />
+                ))}
+              </ChipRow>
+            ) : null}
+            <Select
+              label={STR.scItemTopic}
+              value={it.topicCode}
+              options={options}
+              onChange={(v) => patch(idx, "topicCode", v)}
+            />
+            <Select
+              label={STR.scItemType}
+              value={it.itemType}
+              options={ITEM_TYPES.map((t) => ({ value: t, label: t }))}
+              onChange={(v) => patch(idx, "itemType", v)}
+            />
+            <Field
+              label={STR.scItemChapters}
+              value={it.chapters}
+              onChangeText={(v) => patch(idx, "chapters", v)}
+              keyboardType="number-pad"
+            />
+            <Field
+              label={STR.scItemMarks}
+              value={it.marks}
+              onChangeText={(v) => patch(idx, "marks", v)}
+              keyboardType="decimal-pad"
+            />
+          </Card>
+        );
+      })}
+
+      <Button title={STR.scAddItem} variant="secondary" onPress={addItem} />
+      <Divider />
+      {error ? <Notice message={error} tone="danger" /> : null}
+      <Button
+        title={STR.scDeclareAction}
+        onPress={() => void onDeclare()}
+        loading={busy}
+        disabled={busy || !balanced || !name.trim()}
+      />
+    </Screen>
+  );
+}

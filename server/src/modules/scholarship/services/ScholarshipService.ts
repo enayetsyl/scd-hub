@@ -14,6 +14,7 @@ import {
   type HwSubject,
   type SyllabusItemType,
   type ScholarshipAttendanceStatus,
+  type ScholarshipTopicAxis,
 } from "@scd/shared";
 import { ScholarshipPaper, type IScholarshipPaper } from "../models/ScholarshipPaper";
 import { ScholarshipScore } from "../models/ScholarshipScore";
@@ -352,4 +353,262 @@ export async function enterScores(
     meta: { paperId: paper.paperId, students: rows.length },
   });
   return rows.length;
+}
+
+// ---------------------------------------------------------------------------
+// The topic catalogue (SC-0)
+// ---------------------------------------------------------------------------
+
+export interface SaveTopicInput {
+  subject: HwSubject;
+  classLevel: number;
+  code?: string;
+  labelBn: string;
+  axis: ScholarshipTopicAxis;
+  chapters?: number[];
+  order?: number;
+}
+
+/** `TOP-SCH-{SUBJECT}-C{class}-{SLUG}`. Derived from the label only when the caller does
+ *  not supply a code, and never rewritten afterwards — the code is what every item ever
+ *  tagged with this topic points at, so renaming a topic edits `labelBn` alone. */
+export function topicCodeFor(subject: HwSubject, classLevel: number, labelBn: string): string {
+  const slug =
+    labelBn
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 24) || `T${Date.now().toString(36).toUpperCase()}`;
+  return `TOP-SCH-${subject}-C${classLevel}-${slug}`;
+}
+
+export async function saveTopic(input: SaveTopicInput, actor: Actor): Promise<string> {
+  if (actor.role !== "PRINCIPAL" && actor.role !== "OFFICE" && actor.role !== "TEACHER") {
+    throw new Error("এই কাজটি করার অনুমতি নেই।");
+  }
+  if (!input.labelBn?.trim()) throw new Error("টপিকের নাম লেখা হয়নি।");
+  const code = input.code?.trim() || topicCodeFor(input.subject, input.classLevel, input.labelBn);
+  await ScholarshipTopic.findOneAndUpdate(
+    { subject: input.subject, classLevel: input.classLevel, code },
+    {
+      $set: {
+        labelBn: input.labelBn.trim(),
+        axis: input.axis,
+        chapters: input.chapters ?? [],
+        order: input.order ?? 0,
+        active: true,
+      },
+      $setOnInsert: { createdBy: new Types.ObjectId(actor.userId) },
+    },
+    { upsert: true, new: true },
+  );
+  await writeAudit({
+    eventKind: "SCHOLARSHIP_TOPIC_SAVED",
+    actorId: actor.userId,
+    actorRole: actor.role,
+    targetKind: "ScholarshipTopic",
+    meta: { code, subject: input.subject, classLevel: input.classLevel, axis: input.axis },
+  });
+  return code;
+}
+
+/** Soft retire only. A hard delete would strand every historical item tagged with this
+ *  code and silently drop its marks out of the analysis (the D-#548 posture). */
+export async function retireTopic(
+  subject: HwSubject,
+  classLevel: number,
+  code: string,
+  actor: Actor,
+): Promise<void> {
+  if (actor.role !== "PRINCIPAL" && actor.role !== "OFFICE") {
+    throw new Error("টপিক বাতিল করার অনুমতি নেই।");
+  }
+  await ScholarshipTopic.updateOne({ subject, classLevel, code }, { $set: { active: false } });
+  await writeAudit({
+    eventKind: "SCHOLARSHIP_TOPIC_RETIRED",
+    actorId: actor.userId,
+    actorRole: actor.role,
+    targetKind: "ScholarshipTopic",
+    meta: { code, subject, classLevel },
+  });
+}
+
+export interface TopicView {
+  code: string;
+  labelBn: string;
+  subject: HwSubject;
+  axis: ScholarshipTopicAxis;
+  chapters: number[];
+  order: number;
+  active: boolean;
+}
+
+export async function listTopics(
+  classLevel: number,
+  subject?: HwSubject,
+  includeRetired = false,
+): Promise<TopicView[]> {
+  const q: Record<string, unknown> = { classLevel };
+  if (subject) q.subject = subject;
+  if (!includeRetired) q.active = true;
+  const rows = (await ScholarshipTopic.find(q)
+    .sort({ subject: 1, order: 1, code: 1 })
+    .lean()) as TopicView[];
+  return rows.map((r) => ({
+    code: r.code,
+    labelBn: r.labelBn,
+    subject: r.subject,
+    axis: r.axis,
+    chapters: r.chapters ?? [],
+    order: r.order ?? 0,
+    active: r.active !== false,
+  }));
+}
+
+// ---------------------------------------------------------------------------
+// Reads (SC-1/SC-2 surfaces)
+// ---------------------------------------------------------------------------
+
+export interface PaperListRow {
+  id: string;
+  paperId: string;
+  name: string;
+  subjects: HwSubject[];
+  paperDate: string | null;
+  totalMarks: number;
+  itemCount: number;
+  status: string;
+  scoredCount: number;
+  presentCount: number;
+  classPercent: number | null;
+}
+
+/** The list screen. `classPercent` is the mean over PRESENT rows only (D-#660) and is
+ *  null until somebody has been scored — never 0, which would read as a disastrous
+ *  paper rather than an unscored one. */
+export async function listPapers(sectionId: string, subject?: HwSubject): Promise<PaperListRow[]> {
+  const q: Record<string, unknown> = { sectionId: new Types.ObjectId(sectionId) };
+  if (subject) q.subjects = subject;
+  const papers = (await ScholarshipPaper.find(q)
+    .sort({ paperDate: -1, createdAt: -1 })
+    .lean()) as unknown as IScholarshipPaper[];
+  if (papers.length === 0) return [];
+
+  const scores = (await ScholarshipScore.find({ paperId: { $in: papers.map((p) => p._id) } })
+    .select("paperId status itemMarks")
+    .lean()) as { paperId: Types.ObjectId; status: string; itemMarks: { marks: number }[] }[];
+  const byPaper = new Map<string, typeof scores>();
+  for (const s of scores) {
+    const k = String(s.paperId);
+    byPaper.set(k, [...(byPaper.get(k) ?? []), s]);
+  }
+
+  return papers.map((p) => {
+    const rows = byPaper.get(String(p._id)) ?? [];
+    const present = rows.filter((r) => r.status === "PRESENT");
+    const earned = sumMarks(present.flatMap((r) => r.itemMarks.map((m) => m.marks)));
+    const available = present.length * p.totalMarks;
+    return {
+      id: String(p._id),
+      paperId: p.paperId,
+      name: p.name,
+      subjects: p.subjects,
+      paperDate: p.paperDate ? p.paperDate.toISOString() : null,
+      totalMarks: p.totalMarks,
+      itemCount: p.items.length,
+      status: p.status,
+      scoredCount: rows.length,
+      presentCount: present.length,
+      classPercent: available > 0 ? Math.round((earned / available) * 1000) / 10 : null,
+    };
+  });
+}
+
+export interface PaperDetailView {
+  id: string;
+  paperId: string;
+  name: string;
+  subjects: HwSubject[];
+  sectionId: string;
+  classLevel: number;
+  paperDate: string | null;
+  totalMarks: number;
+  durationMinutes: number | null;
+  sourceNote: string | null;
+  status: string;
+  items: {
+    itemNo: number;
+    label: string;
+    subject: HwSubject;
+    topicCode: string;
+    topicLabel: string;
+    chapters: number[];
+    itemType: string;
+    marks: number;
+  }[];
+  roster: {
+    studentId: string;
+    nameBn: string;
+    status: string | null;
+    itemMarks: { itemNo: number; marks: number }[];
+    total: number | null;
+  }[];
+}
+
+/** Paper + its declared items + the SECTION ROSTER already joined to whatever scores
+ *  exist. The entry grid needs every student, scored or not — a roster built from the
+ *  score rows alone would silently omit anyone not yet marked, which is exactly the set
+ *  the teacher opened the screen to deal with. */
+export async function paperDetail(id: string): Promise<PaperDetailView | null> {
+  const p = (await ScholarshipPaper.findById(id).lean()) as IScholarshipPaper | null;
+  if (!p) return null;
+  const [students, scores, topics] = await Promise.all([
+    Student.find({ sectionId: p.sectionId }).select("name nameBn").sort({ nameBn: 1, name: 1 }).lean() as Promise<
+      { _id: Types.ObjectId; name: string; nameBn?: string }[]
+    >,
+    ScholarshipScore.find({ paperId: p._id }).select("studentId status itemMarks").lean() as Promise<
+      { studentId: Types.ObjectId; status: string; itemMarks: { itemNo: number; marks: number }[] }[]
+    >,
+    ScholarshipTopic.find({ classLevel: p.classLevel }).select("code labelBn").lean() as Promise<
+      { code: string; labelBn: string }[]
+    >,
+  ]);
+  const byStudent = new Map(scores.map((s) => [String(s.studentId), s]));
+  const topicLabel = new Map(topics.map((t) => [t.code, t.labelBn]));
+
+  return {
+    id: String(p._id),
+    paperId: p.paperId,
+    name: p.name,
+    subjects: p.subjects,
+    sectionId: String(p.sectionId),
+    classLevel: p.classLevel,
+    paperDate: p.paperDate ? p.paperDate.toISOString() : null,
+    totalMarks: p.totalMarks,
+    durationMinutes: p.durationMinutes ?? null,
+    sourceNote: p.sourceNote ?? null,
+    status: p.status,
+    items: p.items.map((i) => ({
+      itemNo: i.itemNo,
+      label: i.label,
+      subject: i.subject,
+      topicCode: i.topicCode,
+      topicLabel: topicLabel.get(i.topicCode) ?? i.topicCode,
+      chapters: i.chapters ?? [],
+      itemType: i.itemType,
+      marks: i.marks,
+    })),
+    roster: students.map((s) => {
+      const row = byStudent.get(String(s._id));
+      const marks = row?.status === "PRESENT" ? row.itemMarks : [];
+      return {
+        studentId: String(s._id),
+        nameBn: s.nameBn?.trim() || s.name,
+        status: row?.status ?? null,
+        itemMarks: marks,
+        total: row?.status === "PRESENT" ? sumMarks(marks.map((m) => m.marks)) : null,
+      };
+    }),
+  };
 }

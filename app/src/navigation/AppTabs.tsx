@@ -36,6 +36,7 @@ import type {
   EnglishDriveStackParamList,
   TeachingNotesStackParamList,
   SyllabusStackParamList,
+  ScholarshipStackParamList,
   GuardianSyllabusStackParamList,
   RevisionStackParamList,
   FinanceStackParamList,
@@ -193,6 +194,12 @@ import SyllabusApprovalsScreen from "../screens/syllabus/SyllabusApprovalsScreen
 import SyllabusClassNoteScreen from "../screens/syllabus/SyllabusClassNoteScreen";
 import SyllabusExamsScreen from "../screens/syllabus/SyllabusExamsScreen";
 import ChildSyllabusScreen from "../screens/guardian/ChildSyllabusScreen";
+import ScholarshipHomeScreen from "../screens/scholarship/ScholarshipHomeScreen";
+import ScholarshipDeclareScreen from "../screens/scholarship/ScholarshipDeclareScreen";
+import ScholarshipMarksScreen from "../screens/scholarship/ScholarshipMarksScreen";
+import ScholarshipStudentScreen from "../screens/scholarship/ScholarshipStudentScreen";
+import ScholarshipClassScreen from "../screens/scholarship/ScholarshipClassScreen";
+import ScholarshipTopicsScreen from "../screens/scholarship/ScholarshipTopicsScreen";
 import TeachingNoteDocScreen from "../screens/teachingnotes/TeachingNoteDocScreen";
 import TeachingNoteUploadScreen from "../screens/teachingnotes/TeachingNoteUploadScreen";
 import TeachingNoteOpenCommentsScreen from "../screens/teachingnotes/TeachingNoteOpenCommentsScreen";
@@ -1115,6 +1122,49 @@ function SyllabusNavigator(): React.ReactElement {
   );
 }
 
+const ScholarshipStack = createNativeStackNavigator<ScholarshipStackParamList>();
+function ScholarshipNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    // ScholarshipHome stays FIRST: the first registered screen is the stack's initial
+    // route, and every other screen here requires params — a param-requiring screen in
+    // that position crashes the tab at runtime, which neither tsc nor `expo export`
+    // catches (the recorded RN trap).
+    <ScholarshipStack.Navigator screenOptions={stackOptions}>
+      <ScholarshipStack.Screen
+        name="ScholarshipHome"
+        component={ScholarshipHomeScreen}
+        options={{ title: STR.scTitle }}
+      />
+      <ScholarshipStack.Screen
+        name="ScholarshipDeclare"
+        component={ScholarshipDeclareScreen}
+        options={{ title: STR.scDeclare }}
+      />
+      <ScholarshipStack.Screen
+        name="ScholarshipMarks"
+        component={ScholarshipMarksScreen}
+        options={({ route }) => ({ title: route.params.title || STR.scMarks })}
+      />
+      <ScholarshipStack.Screen
+        name="ScholarshipStudent"
+        component={ScholarshipStudentScreen}
+        options={({ route }) => ({ title: route.params.name || STR.scAnalysis })}
+      />
+      <ScholarshipStack.Screen
+        name="ScholarshipClass"
+        component={ScholarshipClassScreen}
+        options={{ title: STR.scClassAnalysis }}
+      />
+      <ScholarshipStack.Screen
+        name="ScholarshipTopics"
+        component={ScholarshipTopicsScreen}
+        options={{ title: STR.scTopics }}
+      />
+    </ScholarshipStack.Navigator>
+  );
+}
+
 const GuardianSyllabusStack = createNativeStackNavigator<GuardianSyllabusStackParamList>();
 function GuardianSyllabusNavigator(): React.ReactElement {
   const stackOptions = useStackOptions();
@@ -1618,6 +1668,7 @@ export function AppTabs(): React.ReactElement {
   // so no probe query is needed for the tab itself — one less permission-carrying
   // drawer request, which is the shape that white-screened the app in 791e5fe.
   const canSyllabus = can("exam:read") || can("exam:manage");
+  const canScholarship = can("scholarship:read") || can("scholarship:manage");
   const canReports = isRole("PRINCIPAL") || isRole("OFFICE");
   // GP-2 (D-#68): the GUARDIAN role holds ONLY guardian:read_child, so every
   // staff gate above is false for guardians — the guardian tab set is all they see.
@@ -1633,7 +1684,7 @@ export function AppTabs(): React.ReactElement {
     canAssignment || canReview || canRoutine || canAttendance || canPrint || canLibrary ||
     canChat || canVocab || canClassTest || canComments || canObservation || canFreeMixing ||
     canEnglishDrive || canTeachingNotes || canRevision || canFinance || canHr || canReports ||
-    canSupportBook || canAdmin || canGuardian || canSyllabus;
+    canSupportBook || canAdmin || canGuardian || canSyllabus || canScholarship;
   if (!hasAnyTab) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: space(6), backgroundColor: colors.bg }}>
@@ -1708,6 +1759,7 @@ export function AppTabs(): React.ReactElement {
         {canEnglishDrive ? <Drawer.Screen name="EnglishDriveTab" component={EnglishDriveNavigator} /> : null}
         {canTeachingNotes ? <Drawer.Screen name="TeachingNotesTab" component={TeachingNotesNavigator} /> : null}
         {canSyllabus ? <Drawer.Screen name="SyllabusTab" component={SyllabusNavigator} /> : null}
+        {canScholarship ? <Drawer.Screen name="ScholarshipTab" component={ScholarshipNavigator} /> : null}
         {canRevision ? <Drawer.Screen name="RevisionTab" component={RevisionNavigator} /> : null}
         {canFinance ? <Drawer.Screen name="FinanceTab" component={FinanceNavigator} /> : null}
         {canHr ? <Drawer.Screen name="HrTab" component={HrNavigator} /> : null}

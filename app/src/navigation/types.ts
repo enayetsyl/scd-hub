@@ -389,6 +389,19 @@ export type SyllabusStackParamList = {
 export type GuardianSyllabusStackParamList = {
   ChildSyllabus: undefined;
 };
+
+/** Scholarship practice papers (SC-0..SC-4, docs/prd-scholarship-practice.md).
+ *  ScholarshipHome MUST stay first — the first registered screen is the stack's
+ *  initial route, and every other screen here requires params (the RN trap that
+ *  neither tsc nor `expo export` catches). */
+export type ScholarshipStackParamList = {
+  ScholarshipHome: undefined;
+  ScholarshipDeclare: { sectionId: string; classLevel: number };
+  ScholarshipMarks: { paperId: string; title?: string };
+  ScholarshipStudent: { sectionId: string; classLevel: number; studentId: string; name?: string };
+  ScholarshipClass: { sectionId: string; classLevel: number; subject?: string };
+  ScholarshipTopics: { classLevel: number };
+};
 export type TeachingNotesStackParamList = {
   TeachingNotesHome: undefined;
   TeachingNoteDoc: { noteId: string; title?: string };
@@ -553,6 +566,7 @@ export type TabParamList = {
   EnglishDriveTab: NavigatorScreenParams<EnglishDriveStackParamList>;
   TeachingNotesTab: NavigatorScreenParams<TeachingNotesStackParamList>;
   SyllabusTab: NavigatorScreenParams<SyllabusStackParamList>;
+  ScholarshipTab: NavigatorScreenParams<ScholarshipStackParamList>;
   GuardianSyllabusTab: NavigatorScreenParams<GuardianSyllabusStackParamList>;
   RevisionTab: NavigatorScreenParams<RevisionStackParamList>;
   FinanceTab: NavigatorScreenParams<FinanceStackParamList>;
