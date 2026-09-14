@@ -247,6 +247,12 @@ export type AuditEventKind =
   // "View as" (VA-1, D-#638). Deliberately NOT LOGIN_SUCCESS: the guardian-engagement
   // report counts guardian logins to find families that have gone quiet, and a Principal
   // checking a family's view is not that family showing up (G7).
+  // scholarship practice papers (SC-0.., D-#656)
+  | "SCHOLARSHIP_TOPIC_SAVED"   // a topic added or edited in the per-(subject, class) catalogue
+  | "SCHOLARSHIP_TOPIC_RETIRED"  // soft retire — historical items tagged with it keep resolving
+  | "SCHOLARSHIP_PAPER_DECLARED" // a practice paper and its item structure declared; meta carries the item count + total
+  | "SCHOLARSHIP_PAPER_UPDATED"  // the item list or header edited after declaration; meta names WHICH fields moved
+  | "SCHOLARSHIP_SCORES_ENTERED" // per-item marks written for one or more students on one paper
   | "IMPERSONATION_START"     // Principal opened someone else's account view; target = the account
   | "IMPERSONATION_END"       // returned to their own account (or the borrowed token expired)
   | "PERMISSION_DENIED";

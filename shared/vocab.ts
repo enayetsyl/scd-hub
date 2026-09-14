@@ -3760,6 +3760,15 @@ export const PERMISSIONS = [
                            // The SUBJECT-TEACHER sign-off is likewise NOT a permission: it is routine-derived in the
                            // resolver (D-#533), the CO-1 assigned-observer posture.
   "exam:read",             // read a syllabus, ROW-SCOPED in the resolver (published rows for staff; Office/Principal see drafts). Staff-internal — GUARDIAN reads via guardian:read_child (§4)
+  // scholarship practice papers + topic-wise weakness analysis (SC-0.., D-#656)
+  "scholarship:manage",    // declare a practice paper and its items, maintain the topic catalogue, enter per-item marks.
+                           // Held by TEACHER as a BASE permission, so it is NOT the scope: a teacher may only touch a
+                           // paper whose class × subject she holds in the ROUTINE, checked in the service (the CT-1 /
+                           // D-#521 posture). Unscoped it would be a write on every class's papers — the QR-9 lesson.
+  "scholarship:read",      // read practice papers and the weakness analysis, ROW-SCOPED in the resolver. RELEASE to a
+                           // guardian is deliberately NOT a permission — it rides the PRINCIPAL role inside the resolver
+                           // (the exam:manage / D-#397 posture), so authoring can be delegated without the release.
+                           // Staff-internal — GUARDIAN reads a released analysis via guardian:read_child (SC-5).
   // guardian portal (ACTIVE since GP-1, D-#68)
   "guardian:read_child",   // reads linked children's permitted operational slices
 ] as const;
@@ -3821,6 +3830,8 @@ export const PERMISSION_BUILD_STATUS: Record<Permission, "build" | "pipeline"> =
   "book:manage": "build",         // SB-1
   "exam:manage": "build",         // SY-1 (exam row + syllabus authoring/publish)
   "exam:read": "build",           // SY-1 (row-scoped syllabus read)
+  "scholarship:manage": "build",  // SC-0/SC-1/SC-2 (topic catalogue, paper declaration, mark entry)
+  "scholarship:read": "build",    // SC-3/SC-4 (per-student + class weakness analysis)
   "guardian:read_child": "build", // ACTIVATED by Guardian Portal GP-1 (D-#68; was pipeline since Slice 0)
 };
 
@@ -3858,6 +3869,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "book:read", "book:author", "book:illustrate", "book:review",
     "book:review_senior", "book:assemble", "book:manage",
     "exam:manage", "exam:read", // exam syllabus (SY-1, D-#533) — the Principal is the publish gate
+    "scholarship:manage", "scholarship:read", // scholarship practice papers (SC-1, D-#656); RELEASE to a guardian rides this role
   ],
   // Row-scoped to own sections (SCOPE_RULES). Consumes content, assembles sets,
   // fills trackers; authors nothing in-app (no content:import). message:dispatch
@@ -3876,6 +3888,9 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "observation:review",    // the assigned senior-teacher observer scores+comments — gated to observerId in the resolver (CO-1, D-#147)
     "observation:read",      // read own observations as observer + own (observed) at/after REVIEWED — row-scoped in the resolver (CO-1)
     "exam:read",             // read PUBLISHED syllabuses for the classes they teach (SY-6, D-#533). NOT exam:manage — the subject-teacher SIGN-OFF is routine-derived in the resolver, not a permission
+    "scholarship:manage", "scholarship:read", // declare + score a practice paper for the class × subject she holds in the
+                             // ROUTINE, and read its analysis. The routine check is in the service, NOT here (D-#656) —
+                             // this is a TEACHER base permission, so an unscoped write would reach every class.
   ],
   // Roster, guardian linkage, messaging dispatch (REQ §2), plus content import (the
   // publisher seam), plan-review assignment (D-#39), and routine authoring (D-#46).
@@ -3899,6 +3914,8 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "exam:manage", "exam:read", // exam syllabus: create the exam, write and submit a syllabus (SY-1/SY-4). PUBLISH
                              // is refused to Office BY STATE, not by permission — the row must reach
                              // PRINCIPAL_REVIEW and only the Principal moves it on (D-#533, §7.4).
+    "scholarship:manage", "scholarship:read", // the desk declares and scores a practice paper on a teacher's behalf
+                             // (SC-1). RELEASE to a guardian is refused to Office by ROLE, not by permission (D-#656).
   ],
   // Guardian portal v1 (GP-1, D-#68): the single grant is ACTIVE — guardian-scoped
   // resolvers read linked children only (assertGuardianOfStudent, link-scoped).
@@ -4125,6 +4142,8 @@ export const PERMISSION_LABELS_BN: Record<Permission, PermissionLabel> = {
   "book:manage": { name: "বই পরিচালনা", desc: "বই তৈরি, নীতিমালা ও দায়িত্ব বণ্টন" },
   "exam:manage": { name: "পরীক্ষার সিলেবাস ব্যবস্থাপনা", desc: "পরীক্ষা তৈরি, সিলেবাস ও মানবন্টন লেখা এবং অনুমোদনে পাঠানো — প্রকাশ কেবল প্রধান শিক্ষক" },
   "exam:read": { name: "পরীক্ষার সিলেবাস দেখা", desc: "প্রকাশিত সিলেবাস ও মানবন্টন দেখা" },
+  "scholarship:manage": { name: "বৃত্তি অনুশীলন ব্যবস্থাপনা", desc: "অনুশীলন প্রশ্ন ঘোষণা, টপিক তালিকা রক্ষণাবেক্ষণ ও আইটেমভিত্তিক নম্বর লেখা" },
+  "scholarship:read": { name: "বৃত্তি অনুশীলন বিশ্লেষণ দেখা", desc: "অনুশীলন প্রশ্ন ও কোন শিক্ষার্থী কোন টপিকে দুর্বল তার বিশ্লেষণ দেখা" },
   "guardian:read_child": { name: "সন্তানের তথ্য দেখা (অভিভাবক প্লেন)", desc: "অভিভাবক প্লেন — স্টাফকে দেওয়া যায় না" },
 };
 
@@ -4185,6 +4204,8 @@ export const PERMISSION_LABELS_EN: Record<Permission, PermissionLabel> = {
   "book:manage": { name: "Manage book production", desc: "Create books, policy versions, assignments" },
   "exam:manage": { name: "Manage exam syllabus", desc: "Create an exam, write the syllabus and mark distribution, send for approval — publish is Principal-only" },
   "exam:read": { name: "Read exam syllabus", desc: "Read published syllabuses and mark distributions" },
+  "scholarship:manage": { name: "Manage scholarship practice", desc: "Declare a practice paper and its items, maintain the topic catalogue, enter per-item marks" },
+  "scholarship:read": { name: "Read scholarship analysis", desc: "Read practice papers and the topic-wise weakness analysis" },
   "guardian:read_child": { name: "Read child (guardian plane)", desc: "Guardian plane — not grantable to staff" },
 };
 
@@ -4476,3 +4497,58 @@ export const WORK_CLAIM_MAX_ATTEMPTS = 2;
  *  the existing 60s ticker, which already fires at arbitrary HH:MM. */
 export const WORK_CLAIM_OFFICE_RUNG_MIN = 11 * 60 + 30;
 export const WORK_CLAIM_PRINCIPAL_RUNG_MIN = 13 * 60;
+
+// ---------------------------------------------------------------------------
+// Scholarship practice papers (SC-0.., docs/prd-scholarship-practice.md, D-#656)
+// ---------------------------------------------------------------------------
+
+/** A practice paper's lifecycle. DRAFT while the item list is still being built,
+ *  DECLARED once the items total the full marks, SCORED once at least one student's
+ *  marks are in, PUBLISHED once a guardian may see their own child's analysis (SC-5).
+ *  App-native: NOT mirrored to the import contract, so no two-place contract sync. */
+export const SCHOLARSHIP_PAPER_STATUSES = ["DRAFT", "DECLARED", "SCORED", "PUBLISHED"] as const;
+export type ScholarshipPaperStatus = (typeof SCHOLARSHIP_PAPER_STATUSES)[number];
+
+export const SCHOLARSHIP_PAPER_STATUS_LABELS_BN: Record<ScholarshipPaperStatus, string> = {
+  DRAFT: "খসড়া",
+  DECLARED: "ঘোষিত",
+  SCORED: "নম্বর হয়েছে",
+  PUBLISHED: "অভিভাবককে দেওয়া",
+};
+
+/** Whether a student sat the paper. Deliberately the same two values as
+ *  `CLASS_TEST_ATTENDANCE_STATUSES` — an ABSENT row carries no marks and is excluded
+ *  from every denominator, personal and class (D-#660). */
+export const SCHOLARSHIP_ATTENDANCE_STATUSES = ["PRESENT", "ABSENT"] as const;
+export type ScholarshipAttendanceStatus = (typeof SCHOLARSHIP_ATTENDANCE_STATUSES)[number];
+
+/** What a topic MEANS in a given subject (D-#665). In ENG/BAN the printed items are
+ *  skills (article, tense, WH-question), so the topic axis is a skill. In SCI/BGS the
+ *  five items are FORMATS repeated over content, so the axis is the content chapter —
+ *  "weak at MCQ" is not actionable, "weak on জীবনের জন্য পানি" is. One catalogue, two
+ *  shapes of row; the analysis never branches on subject, it reads this. */
+export const SCHOLARSHIP_TOPIC_AXES = ["skill", "content"] as const;
+export type ScholarshipTopicAxis = (typeof SCHOLARSHIP_TOPIC_AXES)[number];
+
+export const SCHOLARSHIP_TOPIC_AXIS_LABELS_BN: Record<ScholarshipTopicAxis, string> = {
+  skill: "দক্ষতা",
+  content: "অধ্যায়",
+};
+
+/** The reliability floor (D-#662): below this many AVAILABLE marks on an axis value,
+ *  the analysis reports "যথেষ্ট তথ্য নেই" and refuses to compute a percentage at all.
+ *  Without it the first paper yields the loudest signal it will ever yield — one
+ *  5-mark article item, 1 earned, "২০% — সবচেয়ে দুর্বল" — from a sample of one
+ *  question. The EX-3 "blank, never 0" refusal, applied to an axis instead of a row. */
+export const SCHOLARSHIP_MIN_MARKS_FOR_VERDICT = 15;
+
+/** Absolute bands, against the scholarship bar rather than the class (D-#663).
+ *  below WEAK → দুর্বল · below GOOD → মোটামুটি · at/above GOOD → ভালো. */
+export const SCHOLARSHIP_BAND_WEAK_BELOW = 50;
+export const SCHOLARSHIP_BAND_GOOD_AT_OR_ABOVE = 70;
+
+/** Relative flag (D-#663): this student's percent minus the class mean on the same
+ *  axis value. At or below this the gap is flagged even when the absolute band is
+ *  acceptable — and the two disagreeing is itself information (a whole class below
+ *  the bar is a teaching problem, not a student one). */
+export const SCHOLARSHIP_CLASS_GAP_FLAG = -15;
