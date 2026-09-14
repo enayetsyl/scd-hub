@@ -46,6 +46,7 @@ export interface GiftStudentRowT {
   schoolId: string;
   rollNumber: string | null;
   classId: string;
+  className: string;
   sectionId: string;
   weeks: GiftWeekT[];
   wonWeeks: number[];
@@ -104,6 +105,7 @@ export const ASSIGNMENT_GIFT_REPORT = gql<
         schoolId
         rollNumber
         classId
+        className
         sectionId
         weeks {
           weekNumber

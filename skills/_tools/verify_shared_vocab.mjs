@@ -34,7 +34,7 @@ check("default-deny: unknown role", V.roleHasPermission("GHOST", "content:read")
 check("PRINCIPAL has user:manage + audit:read", V.roleHasPermission("PRINCIPAL", "user:manage") && V.roleHasPermission("PRINCIPAL", "audit:read"));
 check("TEACHER lacks user:manage / audit:read / content:import", !["user:manage","audit:read","content:import"].some((p) => V.roleHasPermission("TEACHER", p)));
 check("TEACHER can read content + assemble + write trackers", ["content:read","set:assemble","tracker:write"].every((p) => V.roleHasPermission("TEACHER", p)));
-check("OFFICE = roster/staff/leave/payroll/performance/guardian/message/import/assign_review/question(read+manage)/routine/attendance/library/chat/observation/finance/report/exam/scholarship", eq(V.permissionsForRole("OFFICE"), ["roster:manage","staff:manage","leave:manage","payroll:manage","performance:manage","guardian:link","message:dispatch","content:import","content:assign_review","question:read","question:manage","routine:read","routine:manage","attendance:manage","library:read","library:manage","chat:read","chat:write","chat:manage","observation:upload","observation:read","observation:manage","finance:manage","report:release","exam:manage","exam:read","scholarship:manage","scholarship:read"]));
+check("OFFICE = roster/staff/leave/payroll/performance/guardian/message/import/assign_review/question(read+manage)/routine/attendance/library/chat/observation/finance/report/gift/exam/scholarship", eq(V.permissionsForRole("OFFICE"), ["roster:manage","staff:manage","leave:manage","payroll:manage","performance:manage","guardian:link","message:dispatch","content:import","content:assign_review","question:read","question:manage","routine:read","routine:manage","attendance:manage","library:read","library:manage","chat:read","chat:write","chat:manage","observation:upload","observation:read","observation:manage","finance:manage","report:release","gift:manage","exam:manage","exam:read","scholarship:manage","scholarship:read"]));
 // question:manage is the desk's correction power, NOT a teaching one (D-#548): Office and the
 // Principal hold it; a TEACHER — reviewer included — must still go through a review verdict.
 check("question:manage is Principal + Office only; TEACHER and GUARDIAN never", V.roleHasPermission("PRINCIPAL","question:manage") && V.roleHasPermission("OFFICE","question:manage") && !V.roleHasPermission("TEACHER","question:manage") && !V.roleHasPermission("GUARDIAN","question:manage"));
@@ -751,6 +751,15 @@ check("the reliability floor is a real positive mark count (D-#662)",
 check("the absolute bands are ordered and inside 0..100, and the class-gap flag is negative (D-#663)",
   V.SCHOLARSHIP_BAND_WEAK_BELOW > 0 && V.SCHOLARSHIP_BAND_WEAK_BELOW < V.SCHOLARSHIP_BAND_GOOD_AT_OR_ABOVE &&
   V.SCHOLARSHIP_BAND_GOOD_AT_OR_ABOVE <= 100 && V.SCHOLARSHIP_CLASS_GAP_FLAG < 0);
+
+// --- AG-3 weekly gift: the Office desk reaches the gift WITHOUT a tracker grant (D-#666) ---
+check("gift:manage is PRINCIPAL + OFFICE only — TEACHER and GUARDIAN never (they reach the report via tracker:read, section-scoped)",
+  V.roleHasPermission("PRINCIPAL","gift:manage") && V.roleHasPermission("OFFICE","gift:manage") &&
+  !V.roleHasPermission("TEACHER","gift:manage") && !V.roleHasPermission("GUARDIAN","gift:manage"));
+check("gift:manage exists as its OWN permission — the Office must not need tracker:read to hand out a gift (D-#554 stands)",
+  V.PERMISSIONS.includes("gift:manage") && !V.ROLE_PERMISSIONS.OFFICE.some((p) => p.startsWith("tracker:")));
+check("TEACHER keeps tracker:read — the gift report stays reachable for a class teacher (D-#479)",
+  V.roleHasPermission("TEACHER","tracker:read"));
 
 console.log(`\nRESULT: ${fails === 0 ? "PASS — all checks green" : fails + " FAILED"}`);
 process.exit(fails === 0 ? 0 : 1);
