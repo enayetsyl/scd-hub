@@ -752,7 +752,7 @@ check("the absolute bands are ordered and inside 0..100, and the class-gap flag 
   V.SCHOLARSHIP_BAND_WEAK_BELOW > 0 && V.SCHOLARSHIP_BAND_WEAK_BELOW < V.SCHOLARSHIP_BAND_GOOD_AT_OR_ABOVE &&
   V.SCHOLARSHIP_BAND_GOOD_AT_OR_ABOVE <= 100 && V.SCHOLARSHIP_CLASS_GAP_FLAG < 0);
 
-// --- AG-3 weekly gift: the Office desk reaches the gift WITHOUT a tracker grant (D-#666) ---
+// --- AG-3 weekly gift: the Office desk reaches the gift WITHOUT a tracker grant (D-#667) ---
 check("gift:manage is PRINCIPAL + OFFICE only — TEACHER and GUARDIAN never (they reach the report via tracker:read, section-scoped)",
   V.roleHasPermission("PRINCIPAL","gift:manage") && V.roleHasPermission("OFFICE","gift:manage") &&
   !V.roleHasPermission("TEACHER","gift:manage") && !V.roleHasPermission("GUARDIAN","gift:manage"));

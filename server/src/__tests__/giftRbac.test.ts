@@ -1,5 +1,5 @@
 /**
- * Who may reach the weekly gift (AG-3, D-#666 — owner ask 2026-09-14: the Office
+ * Who may reach the weekly gift (AG-3, D-#667 — owner ask 2026-09-14: the Office
  * desk hands out the gifts and could not see the report at all).
  *
  * The Office holds NO tracker permission and must keep holding none — D-#554 is

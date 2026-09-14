@@ -3,7 +3,7 @@
  * Today screen: this week's winners grouped class-wise, each with "উপহার দেওয়া হয়েছে"
  * so the desk never leaves Today to do the job.
  *
- * Only for `gift:manage` holders (Principal + Office, D-#666). A teacher keeps the
+ * Only for `gift:manage` holders (Principal + Office, D-#667). A teacher keeps the
  * full গিফট রিপোর্ট screen, which is section-scoped — this card is the school-wide
  * desk view and would be refused for them server-side anyway.
  *

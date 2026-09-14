@@ -1,7 +1,7 @@
 /**
  * Assignment gift & streak resolvers (AG-3, D-#479–#483).
  *
- * RBAC (D-#483, widened by D-#666). Every field takes `tracker:read` OR
+ * RBAC (D-#483, widened by D-#667). Every field takes `tracker:read` OR
  * `gift:manage`, because the two callers arrive by different routes:
  *   - a TEACHER holds `tracker:read` and is section-scoped in the resolver body;
  *   - the OFFICE desk — the people who physically hand the gifts out — holds

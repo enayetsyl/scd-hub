@@ -117,7 +117,7 @@ export default function TodayScreen(): React.ReactElement {
   const canSets = can("set:read");
   const canTrackers = can("tracker:read");
   const canHr = !!role && role !== "GUARDIAN";
-  // AG-3 — the desk that physically hands out the gifts (Principal + Office, D-#666).
+  // AG-3 — the desk that physically hands out the gifts (Principal + Office, D-#667).
   const canGift = can("gift:manage");
 
   // D-#318: the teacher's OWN sections' attendance at a glance (admins land on
@@ -683,7 +683,7 @@ export default function TodayScreen(): React.ReactElement {
         <ReturningStudentsCard rows={q.data?.myDay?.returningStudents ?? []} />
 
         {/* AG-3 — 🎁 সাপ্তাহিক উপহার: this week's winners class-wise, handed over from
-            here. Office/Principal only (`gift:manage`, D-#666) — a teacher keeps the
+            here. Office/Principal only (`gift:manage`, D-#667) — a teacher keeps the
             section-scoped উপহার রিপোর্ট screen, which this school-wide view is not. */}
         {canGift ? <GiftHandoverCard /> : null}
 
