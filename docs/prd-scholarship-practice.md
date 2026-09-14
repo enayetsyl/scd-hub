@@ -1,6 +1,6 @@
 # PRD — Scholarship practice papers & topic-wise weakness analysis (`scholarship` module)
 
-**Status:** build contract, not yet built. Slices SC-0..SC-6.
+**Status:** SC-0..SC-4 BUILT and in production (2026-09-14). SC-5/SC-6 contracted, unbuilt.
 **Decision block:** D-#656–#665, reserved against `origin/dev@929596d3` (2026-09-14, max D-#655).
 **Owner ask (2026-09-14):** "I will prepare scholarship-exam-style questions for each subject and
 give them to students on different days. I want to declare a question which may have different
@@ -12,7 +12,7 @@ topic or in which chapter."
 
 | Slice | What it is | Blocks |
 |---|---|---|
-| SC-0 | `ScholarshipTopic` catalogue + English (skill) and Science/BGS (content) seeds | everything |
+| SC-0 | `ScholarshipTopic` catalogue + the five-subject skill seed | everything |
 | SC-1 | Declare a paper: header + its items (topic × chapters × type × marks) | SC-2 |
 | SC-2 | Mark entry: roster × item grid, one number per cell | SC-3 |
 | SC-3 | Per-student analysis: topic + chapter weakness | SC-4 |
@@ -67,7 +67,7 @@ vocab verifier does, and every addition needs its BN + EN permission label and i
 ```
 SCHOLARSHIP_PAPER_STATUSES      = ["DRAFT", "DECLARED", "SCORED", "PUBLISHED"]
 SCHOLARSHIP_ATTENDANCE_STATUSES = ["PRESENT", "ABSENT"]   // mirrors CLASS_TEST_ATTENDANCE_STATUSES
-SCHOLARSHIP_TOPIC_AXES          = ["skill", "content"]    // D-#665
+SCHOLARSHIP_TOPIC_AXES          = ["skill", "content"]    // D-#665/#666
 SCHOLARSHIP_MIN_MARKS_FOR_VERDICT = 15                    // the reliability floor, D-#662
 SCHOLARSHIP_BAND_WEAK_BELOW = 50 · SCHOLARSHIP_BAND_GOOD_AT_OR_ABOVE = 70 · SCHOLARSHIP_CLASS_GAP_FLAG = -15
 "scholarship:manage"  → declare a paper, maintain topics, enter marks  (Principal, Office, TEACHER)
@@ -101,7 +101,7 @@ join this to the corpus plane. The firewall test must keep passing untouched.
 ```
 { subject: HwSubject, classLevel: number,
   code: "TOP-ENG-C5-ARTICLE", labelBn: "ব্যাকরণ — article",
-  axis: "skill" | "content",        // D-#665 — skill for ENG/BAN, content for SCI/BGS
+  axis: "skill" | "content",        // D-#665/#666 — every seeded topic is a skill today
   order: number, active: boolean }
 ```
 
@@ -118,9 +118,12 @@ Seed for English (the paper structure in `scholarship/PROMPT_C5_ENG_question_gen
 suffix/prefix · WH-question · বাক্য সাজানো · যতিচিহ্ন ও বড় হাতের অক্ষর · ফরম পূরণ ও সংখ্যা ·
 ক্রিয়ার রূপ · চিঠি/দরখাস্ত/ইমেইল · রচনা.
 
-**প্রাথমিক বিজ্ঞান and বাংলাদেশ ও বিশ্বপরিচয় are seeded in the same slice** (owner ask,
-2026-09-14) — as `axis: "content"` rows read from the question bank's own Class-5 chapter list per
-§5.2.2, never typed from memory. বাংলা and গণিত follow when their first paper is declared.
+**All five subjects are seeded in the same slice** (owner ask, 2026-09-14): বাংলা 15, English 14,
+গণিত 11 from their own item tables, and প্রাথমিক বিজ্ঞান / বাংলাদেশ ও বিশ্বপরিচয় 6 each — their
+ANSWER FORMS, per the owner ruling in §5.2.2 (D-#666). 69 topics in all.
+
+`content` remains a legal axis and nothing seeds it today; it exists for a subject whose topics are
+genuinely chapters, and the analysis reads the field rather than branching on subject either way.
 
 ### 5.2 `ScholarshipPaper` — the declared paper (SC-1)
 
@@ -189,20 +192,32 @@ visible, but it is not enforced — a 20-mark practice drill covering only Scien
 In English and বাংলা the printed items **are** skills — article, tense, WH-question, যতিচিহ্ন,
 যুক্তবর্ণ বিভাজন. Tagging them with a skill topic is the whole point.
 
-In প্রাথমিক বিজ্ঞান and বাংলাদেশ ও বিশ্বপরিচয় the five items are **formats**, not skills: MCQ,
-শূন্যস্থান/সত্য-মিথ্যা, মিলকরণ, সংক্ষিপ্ত উত্তর, বিস্তৃত উত্তর — each repeated over whatever
-content the setter chose. "Weak at MCQ" is not a finding a teacher can act on; "weak on
-জীবনের জন্য পানি" is. For those two subjects the topic axis is therefore the **content chapter**,
-and the item type carries the format.
+In প্রাথমিক বিজ্ঞান and বাংলাদেশ ও বিশ্বপরিচয় the five items are **answer forms**: MCQ,
+শূন্যস্থান, সত্য-মিথ্যা, মিলকরণ, সংক্ষিপ্ত উত্তর, বিস্তৃত উত্তর — each repeated over whatever
+content the setter chose.
+
+**The first cut made those the CHAPTER, and the owner overruled it (D-#666, 2026-09-14).** The
+reasoning here had been that a format is not actionable. The paper says otherwise: in a 50-mark
+half, বিস্তৃত উত্তর alone is **24 marks** and সংক্ষিপ্ত another **12**, so "she loses most of her
+marks on বিস্তৃত" is a finding about long-form writing that can be taught, and মিলকরণ against
+বহুনির্বাচনি separates recognition from recall. The owner's own objection was also the decisive
+one structurally: with chapters as the topic, the টপিক view and the অধ্যায় view showed **identical
+rows**, so one of the two axes was doing no work.
+
+So for those two subjects the topic axis is the **answer form**, `axis: "skill"`. Chapters are not
+lost — every declared item still carries its own `chapters`, so the chapter axis keeps working and
+the two views now say different things.
 
 This does not contradict D-#657 — it is one catalogue, and only its contents differ per subject.
 `ScholarshipTopic.axis: "skill" | "content"` records which, so the picker and the analysis heading
 read correctly (`দুর্বল টপিক` vs `দুর্বল অধ্যায়`) without the analysis code branching on subject.
 
-**Science/BGS topics are never invented here.** The seed reads the real chapter list out of the
-existing question bank (`ContentArtifact`, `subject ∈ {SCI, BGS}`, `classLevel 5`, `current: true`)
-so the names match what the school already uses on its own questions. English and বাংলা skill
-topics have no such source and are seeded from the circular's item tables.
+**Every topic now comes from the circular's own signed tables** — including SCI/BGS, whose six
+answer-form skills are read straight off their five-row table. The seed carries an explicit ASCII
+`key` per topic rather than deriving the code from the array position: the code is what every item
+ever tagged with a topic points at, so it must survive both reordering (a position-derived code
+silently re-points existing items the first time a row is inserted) and renaming (a label-derived
+one would move on exactly the edit `labelBn` exists to allow).
 
 ### 5.3 `ScholarshipScore` — the missing row (SC-2)
 
