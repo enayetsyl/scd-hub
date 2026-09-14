@@ -1289,6 +1289,8 @@ const STR_BN = {
   prHistoryCapped: "সাম্প্রতিক কাজগুলো দেখানো হচ্ছে — এর চেয়ে পুরনো কিছু বাদ পড়তে পারে।",
   // PQ-7 — teacher + date filtering, and an honest note when the list is cut short
   prPickTeacher: "শিক্ষক বেছে নিন",
+  // PQ-10 — the teacher chip opens on the reader's own prints
+  prMine: "আমার পাঠানো",
   prPrintedBetween: "কোন সময়ে ছাপা",
   prFromDate: "শুরুর তারিখ",
   prToDate: "শেষ তারিখ",
@@ -5562,6 +5564,8 @@ const STR_EN: StrTable = {
   prHistoryCapped: "Showing recent jobs — prints older than this window may be missing.",
   // PQ-7 — teacher + date filtering, and an honest note when the list is cut short
   prPickTeacher: "Pick a teacher",
+  // PQ-10 — the teacher chip opens on the reader's own prints
+  prMine: "Sent by me",
   prPrintedBetween: "Printed between",
   prFromDate: "From",
   prToDate: "To",

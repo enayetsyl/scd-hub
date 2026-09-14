@@ -10,10 +10,15 @@
  * A row opens its source the right way: an assembled set renders via `/pdf/set/:id`,
  * an upload streams through `GET /files/:id`, a link opens externally, a plan opens
  * in the plan viewer.
+ *
+ * The Office list must never go stale — a withdrawn job left on screen gets printed.
+ * Three independent refresh paths keep it honest: the D-#295 SSE nudge (web), a 60s
+ * poll while the queue is open, and a refetch on every focus (see below).
  */
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { useFocusEffect } from "@react-navigation/native";
 import { useQuery, useMutation } from "urql";
 import { PRINT_COLOUR_LABELS_EN, PRINT_SIDES_LABELS_EN } from "@scd/shared";
 import type { Role } from "@scd/shared";
@@ -47,6 +52,10 @@ const BUCKETS = ["REQUESTED", "PRINTED", "DELIVERED"] as const;
 
 /** D-#461: the queue pages — DELIVERED runs to hundreds of rows over a term. */
 const PAGE_SIZE = 25;
+
+/** How often the open queue re-reads itself when the SSE stream cannot carry the nudge
+ *  (native, or a dropped web stream). Matches the drawer badge's long-standing cadence. */
+const QUEUE_POLL_MS = 60_000;
 
 /** Today as a `YYYY-MM-DD` key — the default day for the print-gap glance (D-#459). */
 function todayKey(): string {
@@ -122,10 +131,10 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
   const [, markDelivered] = useMutation(MARK_PRINT_REQUEST_DELIVERED);
   const [, cancelRequest] = useMutation(CANCEL_PRINT_REQUEST);
 
-  const refresh = (): void => {
+  const refresh = useCallback((): void => {
     if (isOffice) refetchQueue({ requestPolicy: "network-only" });
     if (canRequest) refetchMine({ requestPolicy: "network-only" });
-  };
+  }, [isOffice, canRequest, refetchQueue, refetchMine]);
 
   // D-#295: the Office's open queue refreshes the instant a job is filed or
   // advanced on ANY device (SSE push; web only — native relies on focus refetch).
@@ -135,6 +144,32 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
       refetchQueue({ requestPolicy: "network-only" });
     });
   }, [isOffice, refetchQueue]);
+
+  /*
+   * Owner report (prod): a teacher filed a job, withdrew it, and the Office printed it
+   * anyway — the withdrawn row was still sitting on their screen. The cancel DOES
+   * publish its `print_queue` nudge, but `subscribeLiveEvents` is WEB ONLY (React
+   * Native cannot stream a fetch body), so on the Android build this list had no
+   * refresh path at all beyond mount; on web it also goes quiet whenever the stream
+   * drops. The drawer BADGE has polled every 60s since D-#295 — which is why the count
+   * could fall while the list it belongs to still showed the job.
+   *
+   * Two plain fallbacks, neither depending on the stream: the same 60s poll while the
+   * queue is actually on screen, and a refetch every time the screen regains focus.
+   * The server already refuses to mark a CANCELLED job printed, so this closes the
+   * remaining half — the Office seeing stale paper-work before they walk to the printer.
+   */
+  useEffect(() => {
+    if (!isOffice || view !== "QUEUE") return;
+    const id = setInterval(() => refetchQueue({ requestPolicy: "network-only" }), QUEUE_POLL_MS);
+    return () => clearInterval(id);
+  }, [isOffice, view, refetchQueue]);
+
+  useFocusEffect(
+    useCallback(() => {
+      refresh();
+    }, [refresh]),
+  );
 
   // A set/plan PDF is RENDERED on demand and an upload streams through the server, so an
   // Open can take seconds. Without this the button looked dead and a double-tap opened

@@ -21,6 +21,7 @@ import {
   MY_SECTIONS_AS_CLASS_TEACHER_QUERY,
   type ClassT,
 } from "../graphql/operations";
+import { delegatedClassReach } from "../lib/delegatedExtent";
 import { Body, Muted, Badge, Loader, EmptyState, ErrorBanner } from "./ui";
 import { STR, bnNum, getActiveLang } from "../lib/labels";
 import { friendlyError } from "../lib/errors";
@@ -42,8 +43,9 @@ function shortClassLabel(level: number): string {
 }
 
 /** The caller's accessible classes, grouped with their accessible sections —
- *  teaching scopes ∪ class-teacher sections ∪ routine section slots; admins
- *  (roster:manage / homework supervisor) see every active class. */
+ *  teaching scopes ∪ class-teacher sections ∪ routine section slots ∪ the extent of
+ *  any live DELEGATION grant (ACS-1); admins (roster:manage / homework supervisor)
+ *  see every active class. */
 export function useAccessibleClasses(): {
   myClasses: MyClass[];
   fetching: boolean;
@@ -78,8 +80,20 @@ export function useAccessibleClasses(): {
     for (const slot of routineData?.myRoutineSlots ?? []) {
       if (slot.groupType === "section" && slot.groupId) ids.add(slot.groupId);
     }
+    // A DELEGATION reaches its classes through an EXTENT, never a sectionId (D-#484),
+    // so the loop above — which keys on `sectionId` — sees nothing of one. See
+    // `delegatedClassReach` for why only three of the four extents qualify and why
+    // expiry has to be re-checked despite `active`.
+    const reach = delegatedClassReach(scopeData?.myScopes ?? []);
+
     return classes
-      .map((cls) => ({ cls, sections: cls.sections.filter((s) => ids.has(s.id)) }))
+      .map((cls) => ({
+        cls,
+        sections:
+          reach.wholeSchool || reach.classIds.has(cls.id)
+            ? cls.sections.filter((s) => s.active || ids.has(s.id))
+            : cls.sections.filter((s) => ids.has(s.id)),
+      }))
       .filter((x) => x.sections.length > 0)
       .sort((a, b) => a.cls.level - b.cls.level);
     // eslint-disable-next-line react-hooks/exhaustive-deps

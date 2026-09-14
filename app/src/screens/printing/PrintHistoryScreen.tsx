@@ -16,6 +16,10 @@
  * job with a class. Added a teacher filter (Office view) and a printed-on date window,
  * which narrows server-side so it can reach past the page window. And a page cut short by
  * the limit now says so instead of passing a short list off as the whole history.
+ *
+ * PQ-10 (owner ask): the Office view OPENS on the reader's own prints rather than on the
+ * whole school — one press on "সব" widens it again. It changes nothing for a teacher,
+ * whose scope is already themselves.
  */
 import React, { useEffect, useMemo, useState } from "react";
 import { View } from "react-native";
@@ -84,6 +88,8 @@ export default function PrintHistoryScreen({ navigation }: Props): React.ReactEl
   const [subjectFilter, setSubjectFilter] = useState<string>(ANY);
   const [purposeFilter, setPurposeFilter] = useState<string>(ANY);
   const [teacherFilter, setTeacherFilter] = useState<string>(ANY);
+  // PQ-10: whether the own-prints default below has already had its one shot.
+  const [teacherDefaulted, setTeacherDefaulted] = useState(false);
   // PQ-7: the printed-on window. Empty = open-ended; a half-typed date is simply not sent.
   const [fromKey, setFromKey] = useState("");
   const [toKey, setToKey] = useState("");
@@ -168,8 +174,33 @@ export default function PrintHistoryScreen({ navigation }: Props): React.ReactEl
   const teacherOptions = useMemo(() => {
     const seen = new Map<string, string>();
     for (const r of rows) r.requesterIds.forEach((id, i) => seen.set(id, r.requesterNames[i] ?? "—"));
-    return [...seen.entries()].sort((a, b) => a[1].localeCompare(b[1]));
-  }, [rows]);
+    // PQ-10: the reader's own chip sorts first — it is the default selection, so it must
+    // not be somewhere down a twenty-name row.
+    return [...seen.entries()].sort((a, b) => {
+      if (user && a[0] === user.id) return -1;
+      if (user && b[0] === user.id) return 1;
+      return a[1].localeCompare(b[1]);
+    });
+  }, [rows, user]);
+
+  // PQ-10 (owner ask) — the Office view opens on the READER'S OWN prints. Everyone with
+  // `roster:manage` sees every requester here, and the usual reason to come to this screen
+  // is "put back what I sent", which meant scrolling past the whole school first. A
+  // teacher needs none of this: their scope is already themselves, server-side.
+  //
+  // One shot, and only once a page has actually landed: mid-fetch `teacherOptions` is
+  // empty, so defaulting off that would pin the chip to nothing. It is skipped entirely
+  // when the reader has printed nothing (opening on an empty list reads as a broken
+  // screen) or when they are the only requester in the page — the chip row is hidden at
+  // one option, and a filter with no way to clear it is a trap.
+  useEffect(() => {
+    if (teacherDefaulted || !isOffice || !user) return;
+    if (historyQ.fetching || !historyQ.data) return;
+    setTeacherDefaulted(true);
+    if (teacherOptions.length > 1 && teacherOptions.some(([id]) => id === user.id)) {
+      setTeacherFilter(user.id);
+    }
+  }, [teacherDefaulted, isOffice, user, historyQ.fetching, historyQ.data, teacherOptions]);
 
   // A narrowed date window can remove the very option a chip is pinned to; drop such a
   // selection rather than leave an invisible filter hiding every row. Only once the new
@@ -377,7 +408,9 @@ export default function PrintHistoryScreen({ navigation }: Props): React.ReactEl
             {teacherOptions.map(([id, name]) => (
               <Chip
                 key={id}
-                label={name}
+                // PQ-10: the reader's own chip says so — it is the one lit on arrival,
+                // and a name alone would not explain why the list is already narrowed.
+                label={user && id === user.id ? STR.prMine : name}
                 selected={teacherFilter === id}
                 onPress={() => setTeacherFilter(id)}
               />
