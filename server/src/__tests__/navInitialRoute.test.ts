@@ -23,7 +23,16 @@ import { readFileSync } from "fs";
 import path from "path";
 
 /** Screens whose route params are required — they can never be an initial route. */
-const PARAM_REQUIRING_SCREENS = ["StudentProfile"];
+const PARAM_REQUIRING_SCREENS = [
+  "StudentProfile",
+  // Scholarship practice (SC-1..SC-4): every screen but ScholarshipHome destructures
+  // required params on mount, so any of them landing first would take the tab down.
+  "ScholarshipDeclare",
+  "ScholarshipMarks",
+  "ScholarshipStudent",
+  "ScholarshipClass",
+  "ScholarshipTopics",
+];
 
 const APP_TABS = path.resolve(__dirname, "../../../app/src/navigation/AppTabs.tsx");
 

@@ -34,7 +34,7 @@ check("default-deny: unknown role", V.roleHasPermission("GHOST", "content:read")
 check("PRINCIPAL has user:manage + audit:read", V.roleHasPermission("PRINCIPAL", "user:manage") && V.roleHasPermission("PRINCIPAL", "audit:read"));
 check("TEACHER lacks user:manage / audit:read / content:import", !["user:manage","audit:read","content:import"].some((p) => V.roleHasPermission("TEACHER", p)));
 check("TEACHER can read content + assemble + write trackers", ["content:read","set:assemble","tracker:write"].every((p) => V.roleHasPermission("TEACHER", p)));
-check("OFFICE = roster/staff/leave/payroll/performance/guardian/message/import/assign_review/question(read+manage)/routine/attendance/library/chat/observation/finance/report/exam", eq(V.permissionsForRole("OFFICE"), ["roster:manage","staff:manage","leave:manage","payroll:manage","performance:manage","guardian:link","message:dispatch","content:import","content:assign_review","question:read","question:manage","routine:read","routine:manage","attendance:manage","library:read","library:manage","chat:read","chat:write","chat:manage","observation:upload","observation:read","observation:manage","finance:manage","report:release","exam:manage","exam:read"]));
+check("OFFICE = roster/staff/leave/payroll/performance/guardian/message/import/assign_review/question(read+manage)/routine/attendance/library/chat/observation/finance/report/exam/scholarship", eq(V.permissionsForRole("OFFICE"), ["roster:manage","staff:manage","leave:manage","payroll:manage","performance:manage","guardian:link","message:dispatch","content:import","content:assign_review","question:read","question:manage","routine:read","routine:manage","attendance:manage","library:read","library:manage","chat:read","chat:write","chat:manage","observation:upload","observation:read","observation:manage","finance:manage","report:release","exam:manage","exam:read","scholarship:manage","scholarship:read"]));
 // question:manage is the desk's correction power, NOT a teaching one (D-#548): Office and the
 // Principal hold it; a TEACHER — reviewer included — must still go through a review verdict.
 check("question:manage is Principal + Office only; TEACHER and GUARDIAN never", V.roleHasPermission("PRINCIPAL","question:manage") && V.roleHasPermission("OFFICE","question:manage") && !V.roleHasPermission("TEACHER","question:manage") && !V.roleHasPermission("GUARDIAN","question:manage"));
@@ -718,6 +718,39 @@ check("OFFICE still holds NO tracker permission — the Office nudges and can ne
   !V.ROLE_PERMISSIONS.OFFICE.some((p) => p.startsWith("tracker:")));
 check("GUARDIAN gains no new permission for filing a claim (D-#551)",
   eq(V.ROLE_PERMISSIONS.GUARDIAN, ["guardian:read_child"]));
+
+console.log("=== S. scholarship practice papers (SC-0.., D-#656..#665) ===");
+// The TEACHER holds scholarship:manage as a BASE permission, so the permission is NOT the
+// scope — the routine check lives in the service. This pins the posture, not the scope.
+check("scholarship:manage + scholarship:read held by PRINCIPAL, OFFICE and TEACHER (D-#656)",
+  ["PRINCIPAL", "OFFICE", "TEACHER"].every((r) =>
+    V.roleHasPermission(r, "scholarship:manage") && V.roleHasPermission(r, "scholarship:read")));
+check("GUARDIAN holds NO scholarship permission — a released analysis is read under guardian:read_child (SC-5)",
+  !V.roleHasPermission("GUARDIAN", "scholarship:manage") && !V.roleHasPermission("GUARDIAN", "scholarship:read"));
+// The exam:manage / D-#397 posture: RELEASE rides the PRINCIPAL role inside the resolver, so
+// authoring can be delegated to Office or a senior teacher without handing over the release.
+check("NO scholarship:publish permission exists — release rides the PRINCIPAL role, not a permission (D-#656)",
+  !V.PERMISSIONS.some((p) => p.startsWith("scholarship:") && p !== "scholarship:manage" && p !== "scholarship:read"));
+check("paper statuses are exactly DRAFT/DECLARED/SCORED/PUBLISHED",
+  eq(V.SCHOLARSHIP_PAPER_STATUSES, ["DRAFT", "DECLARED", "SCORED", "PUBLISHED"]));
+check("status labels are total over the statuses (BN)",
+  V.SCHOLARSHIP_PAPER_STATUSES.every((s) => (V.SCHOLARSHIP_PAPER_STATUS_LABELS_BN[s] ?? "").length > 0));
+check("attendance mirrors the class-test pair exactly — PRESENT/ABSENT (D-#660)",
+  eq(V.SCHOLARSHIP_ATTENDANCE_STATUSES, V.CLASS_TEST_ATTENDANCE_STATUSES));
+check("topic axes are exactly skill/content, each labelled (D-#665)",
+  eq(V.SCHOLARSHIP_TOPIC_AXES, ["skill", "content"]) &&
+  V.SCHOLARSHIP_TOPIC_AXES.every((a) => (V.SCHOLARSHIP_TOPIC_AXIS_LABELS_BN[a] ?? "").length > 0));
+// SYLLABUS_ITEM_TYPES is app-native; QUESTION_TYPES is MIRRORED to the envelope schema. The
+// scholarship item type reuses the former by design (D-#658), so the bank's import contract
+// never moves for a reason that has nothing to do with importing. Pins the two apart.
+check("scholarship reuses SYLLABUS_ITEM_TYPES and adds NO item-type enum of its own (D-#658)",
+  V.SYLLABUS_ITEM_TYPES.includes("mcq") && V.SYLLABUS_ITEM_TYPES.includes("fill_blank") &&
+  V.SYLLABUS_ITEM_TYPES.length > V.QUESTION_TYPES.length);
+check("the reliability floor is a real positive mark count (D-#662)",
+  Number.isInteger(V.SCHOLARSHIP_MIN_MARKS_FOR_VERDICT) && V.SCHOLARSHIP_MIN_MARKS_FOR_VERDICT > 0);
+check("the absolute bands are ordered and inside 0..100, and the class-gap flag is negative (D-#663)",
+  V.SCHOLARSHIP_BAND_WEAK_BELOW > 0 && V.SCHOLARSHIP_BAND_WEAK_BELOW < V.SCHOLARSHIP_BAND_GOOD_AT_OR_ABOVE &&
+  V.SCHOLARSHIP_BAND_GOOD_AT_OR_ABOVE <= 100 && V.SCHOLARSHIP_CLASS_GAP_FLAG < 0);
 
 console.log(`\nRESULT: ${fails === 0 ? "PASS — all checks green" : fails + " FAILED"}`);
 process.exit(fails === 0 ? 0 : 1);

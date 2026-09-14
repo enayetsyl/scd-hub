@@ -103,6 +103,15 @@ const STAFF_NAV: NavSection[] = [
       { route: "SyllabusTab", labelKey: "syApprovals", icon: "✅", screen: "SyllabusApprovals" },
     ],
   },
+  {
+    type: "group",
+    titleKey: "scDrawerGroup",
+    icon: "🎓",
+    items: [
+      { route: "ScholarshipTab", labelKey: "scPapers", icon: "🎓", screen: "ScholarshipHome" },
+      { route: "ScholarshipTab", labelKey: "scTopics", icon: "🏷️", screen: "ScholarshipTopics", perms: ["scholarship:manage"] },
+    ],
+  },
   { type: "item", route: "AttendanceTab", labelKey: "tabAttendance", icon: "🙋" },
   { type: "item", route: "PrintTab", labelKey: "tabPrint", icon: "🖨️" },
   // Class Notes became a GROUP (owner ask 2026-08-17): the teacher's own periods,

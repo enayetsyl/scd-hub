@@ -42,6 +42,7 @@ export const ACTIVITY_GROUPS = [
   "HR",
   "FINANCE",
   "WORK_CLAIM",
+  "SCHOLARSHIP",
   "OTHER",
 ] as const;
 export type ActivityGroup = (typeof ACTIVITY_GROUPS)[number];
@@ -68,6 +69,7 @@ export const ACTIVITY_GROUP_LABELS: Record<ActivityGroup, { bn: string; en: stri
   HR: { bn: "কর্মী ও এইচআর", en: "Staff & HR" },
   FINANCE: { bn: "আর্থিক", en: "Finance" },
   WORK_CLAIM: { bn: "অভিভাবকের দাবি", en: "Guardian work claim" },
+  SCHOLARSHIP: { bn: "বৃত্তি অনুশীলন", en: "Scholarship practice" },
   OTHER: { bn: "অন্যান্য", en: "Other" },
 };
 
@@ -343,6 +345,11 @@ export const AUDIT_KIND_LABELS: Record<AuditEventKind, AuditKindLabel> = {
   WORK_CLAIM_NUDGED: { bn: "শিক্ষককে আবার মনে করিয়ে দিয়েছেন", en: "Nudged the teacher on a claim", group: "WORK_CLAIM" },
   WORK_CLAIM_REASSIGNED: { bn: "দাবির দায়িত্ব অন্য শিক্ষককে দিয়েছেন", en: "Reassigned a work claim", group: "WORK_CLAIM" },
   WORK_CLAIM_EXPIRED: { bn: "উত্তর না আসায় দাবির মেয়াদ শেষ", en: "A work claim expired", group: "WORK_CLAIM" },
+  SCHOLARSHIP_TOPIC_SAVED: { bn: "বৃত্তি অনুশীলনের টপিক লিখেছেন", en: "Saved a scholarship topic", group: "SCHOLARSHIP" },
+  SCHOLARSHIP_TOPIC_RETIRED: { bn: "বৃত্তি অনুশীলনের টপিক বাতিল করেছেন", en: "Retired a scholarship topic", group: "SCHOLARSHIP" },
+  SCHOLARSHIP_PAPER_DECLARED: { bn: "অনুশীলন প্রশ্ন ঘোষণা করেছেন", en: "Declared a practice paper", group: "SCHOLARSHIP" },
+  SCHOLARSHIP_PAPER_UPDATED: { bn: "অনুশীলন প্রশ্ন সম্পাদনা করেছেন", en: "Edited a practice paper", group: "SCHOLARSHIP" },
+  SCHOLARSHIP_SCORES_ENTERED: { bn: "অনুশীলনের নম্বর লিখেছেন", en: "Entered practice marks", group: "SCHOLARSHIP" },
 };
 
 const FALLBACK_GROUP: ActivityGroup = "OTHER";
