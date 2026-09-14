@@ -19,6 +19,7 @@ import {
   TEACHERS_QUERY,
   ACADEMIC_YEARS_QUERY,
   CLASSES_QUERY,
+  SUBJECT_GROUPS_QUERY,
 } from "../../graphql/operations";
 import { DateField } from "../../components/DateField";
 import {
@@ -38,6 +39,7 @@ import {
   hwSubjectLabel,
 } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { groupTrackForSubject, isGroupTaughtSubject } from "../../lib/observationAnchor";
 import { space } from "../../theme/tokens";
 import type { ObservationStackParamList } from "../../navigation/types";
 
@@ -75,7 +77,7 @@ export default function UploadObservationScreen(): React.ReactElement {
   const [classDate, setClassDate] = useState("");
   const [anchor, setAnchor] = useState<"SECTION" | "SUBJECT_GROUP">("SECTION");
   const [sectionId, setSectionId] = useState<string | null>(null);
-  const [subjectGroupId, setSubjectGroupId] = useState("");
+  const [subjectGroupId, setSubjectGroupId] = useState<string | null>(null);
   const [periodNumber, setPeriodNumber] = useState("");
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [observerId, setObserverId] = useState<string | null>(null);
@@ -96,6 +98,13 @@ export default function UploadObservationScreen(): React.ReactElement {
     query: CLASSES_QUERY,
     variables: { academicYearId: currentYearId ?? "" },
     pause: !currentYearId,
+  });
+
+  // Anchor groups for the picked subject's track; `null` track = every live group.
+  const groupTrack = groupTrackForSubject(subject);
+  const [groupsQ] = useQuery({
+    query: SUBJECT_GROUPS_QUERY,
+    variables: { track: groupTrack },
   });
 
   // Flatten all active sections into Select options "ClassName — SectionCode"
@@ -125,10 +134,36 @@ export default function UploadObservationScreen(): React.ReactElement {
       .map((t) => ({ label: t.name, value: t.id }));
   }, [teachersQ.data, teacherId]);
 
+  // The group's own name is what the uploader knows it by; the code + level ride
+  // along as the search hint so two same-named levels stay distinguishable.
+  const subjectGroupOptions = useMemo(() => {
+    return (groupsQ.data?.subjectGroups ?? []).map((g) => ({
+      label: g.nameBn?.trim() || g.code,
+      value: g.id,
+      hint: `${g.code} · ${g.level}`,
+    }));
+  }, [groupsQ.data]);
+
   // Reset subject when form changes
   function handleFormChange(v: string | null) {
     setForm(v);
     setSubject(null);
+    setSubjectGroupId(null);
+  }
+
+  /**
+   * Quran and Arabic sit in cross-grade groups, never in a class section, so picking
+   * one moves the anchor for the uploader. The group is ALWAYS dropped on a subject
+   * change: the list is re-filtered by track, and keeping the old id would silently
+   * anchor an Arabic observation to a Quran group the session never sat.
+   */
+  function handleSubjectChange(v: string | null) {
+    setSubject(v);
+    setSubjectGroupId(null);
+    if (isGroupTaughtSubject(v)) {
+      setAnchor("SUBJECT_GROUP");
+      setSectionId(null);
+    }
   }
 
   // --- mutations ---
@@ -142,8 +177,7 @@ export default function UploadObservationScreen(): React.ReactElement {
       return setError(STR.errGeneric);
     }
     if (anchor === "SECTION" && !sectionId) return setError(STR.errGeneric);
-    if (anchor === "SUBJECT_GROUP" && !subjectGroupId.trim())
-      return setError(STR.errGeneric);
+    if (anchor === "SUBJECT_GROUP" && !subjectGroupId) return setError(STR.errGeneric);
 
     setBusy(true);
     const res = await upload({
@@ -152,8 +186,7 @@ export default function UploadObservationScreen(): React.ReactElement {
       teacherId,
       classDate: classDate.trim(),
       sectionId: anchor === "SECTION" ? sectionId : null,
-      subjectGroupId:
-        anchor === "SUBJECT_GROUP" ? subjectGroupId.trim() : null,
+      subjectGroupId: anchor === "SUBJECT_GROUP" ? subjectGroupId : null,
       periodNumber: periodNumber.trim() ? Number(periodNumber) : null,
       recordingId: null,
       observerId: observerId ?? null,
@@ -229,7 +262,7 @@ export default function UploadObservationScreen(): React.ReactElement {
               label={STR.obsSubject}
               value={subject}
               options={subjectOptions(form)}
-              onChange={setSubject}
+              onChange={handleSubjectChange}
               placeholder={STR.obsPickForm}
             />
 
@@ -290,10 +323,16 @@ export default function UploadObservationScreen(): React.ReactElement {
                 placeholder={STR.obsPickSection}
               />
             ) : (
-              <Field
+              <Select
                 label={STR.obsSubjectGroupId}
                 value={subjectGroupId}
-                onChangeText={setSubjectGroupId}
+                options={subjectGroupOptions}
+                onChange={setSubjectGroupId}
+                placeholder={STR.obsPickSubjectGroup}
+                // Mid-fetch the list is legitimately empty — saying "none exists"
+                // there reads as a broken feature rather than as a pending load.
+                emptyText={groupsQ.fetching ? STR.loading : STR.obsNoSubjectGroups}
+                searchable
               />
             )}
 

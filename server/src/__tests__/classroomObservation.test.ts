@@ -86,6 +86,17 @@ jest.mock("../modules/foundation/models/User", () => ({
   User: { find: (q: unknown) => mockUserFind(q) },
 }));
 
+// The anchor group is loaded to check it EXISTS and is on the subject's own track.
+// Default: every group id resolves to a quran-track group; the track tests override it.
+const mockSubjectGroupFindById = jest.fn();
+jest.mock("../modules/routine/models/SubjectGroup", () => ({
+  SubjectGroup: {
+    findById: (id: unknown) => ({
+      select: () => ({ lean: async () => mockSubjectGroupFindById(id) }),
+    }),
+  },
+}));
+
 // Import AFTER mocks
 import { validateRef11Payload, Ref11ValidationError, type Ref11PayloadInput } from "../modules/classroom-observation/ref11";
 import {
@@ -128,6 +139,8 @@ beforeEach(() => {
   // find().select().lean() → one manager/principal recipient by default.
   mockUserFind.mockReturnValue({ select: () => ({ lean: async () => [{ _id: oid() }] }) });
   mockFindOne.mockReturnValue(leanChain(null)); // no duplicate co-reviewer by default
+  // A group anchor resolves to a live quran-track group unless a test says otherwise.
+  mockSubjectGroupFindById.mockResolvedValue({ _id: oid(), track: "quran" });
   mockCreate.mockImplementation(async (doc: Record<string, unknown>) => ({
     _id: oid(),
     ...doc,
@@ -345,6 +358,115 @@ describe("uploadObservation", () => {
   test("rejects a bad classDate / form", async () => {
     await expect(uploadObservation({ ...base, classDate: "14-06-2026" })).rejects.toThrow(/YYYY-MM-DD/);
     await expect(uploadObservation({ ...base, form: "NOPE" })).rejects.toThrow(/form must be one of/);
+  });
+});
+
+// ===========================================================================
+// The anchor GROUP must exist and match the subject's track (owner report 2026-09-14)
+// ===========================================================================
+
+describe("uploadObservation — subject-group anchor track guard", () => {
+  const groupBase = {
+    teacherId: TEACHER.toString(),
+    classDate: "2026-06-14",
+    actorId: OFFICE.toString(),
+    sectionId: undefined,
+  };
+
+  test("an ARABIC observation anchors to an arabic-track group", async () => {
+    // The case the owner could not do at all: Arabic is taught in cross-grade groups,
+    // never in a class section, so this is its ONLY legal anchor.
+    mockSubjectGroupFindById.mockResolvedValue({ _id: oid(), track: "arabic" });
+    const res = await uploadObservation({
+      ...groupBase,
+      form: "REF11",
+      subject: "ARABIC",
+      subjectGroupId: oid().toString(),
+    });
+    expect(res.subject).toBe("ARABIC");
+    expect(res.subjectGroupId).not.toBeNull();
+    expect(res.sectionId).toBeNull();
+  });
+
+  test("a QURAN observation anchors to a quran-track group", async () => {
+    mockSubjectGroupFindById.mockResolvedValue({ _id: oid(), track: "quran" });
+    const res = await uploadObservation({
+      ...groupBase,
+      form: "QURAN",
+      subject: "QURAN",
+      subjectGroupId: oid().toString(),
+    });
+    expect(res.subject).toBe("QURAN");
+    expect(res.subjectGroupId).not.toBeNull();
+  });
+
+  test("an ARABIC observation is REFUSED on a quran-track group", async () => {
+    // Quran and Arabic are separate tracks, not one religious bucket. Before this
+    // guard the row was stored, anchored to a session that never happened.
+    mockSubjectGroupFindById.mockResolvedValue({ _id: oid(), track: "quran" });
+    await expect(
+      uploadObservation({
+        ...groupBase,
+        form: "REF11",
+        subject: "ARABIC",
+        subjectGroupId: oid().toString(),
+      }),
+    ).rejects.toThrow(/ট্র্যাক মেলেনি/);
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  test("a QURAN observation is REFUSED on an arabic-track group", async () => {
+    mockSubjectGroupFindById.mockResolvedValue({ _id: oid(), track: "arabic" });
+    await expect(
+      uploadObservation({
+        ...groupBase,
+        form: "QURAN",
+        subject: "QURAN",
+        subjectGroupId: oid().toString(),
+      }),
+    ).rejects.toThrow(/ট্র্যাক মেলেনি/);
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  test("a group id that exists nowhere is REFUSED", async () => {
+    // While the field was a free-text ObjectId box, any 24-hex string was accepted
+    // and stored — `assertAnchor` only ever cast it.
+    mockSubjectGroupFindById.mockResolvedValue(null);
+    await expect(
+      uploadObservation({
+        ...groupBase,
+        form: "REF11",
+        subject: "ARABIC",
+        subjectGroupId: oid().toString(),
+      }),
+    ).rejects.toThrow(/পাওয়া যায়নি/);
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  test("a SECTION-anchored observation never loads a group", async () => {
+    // The guard must not cost a query on the ordinary path.
+    await uploadObservation({
+      ...groupBase,
+      form: "REF11",
+      subject: "MATH",
+      sectionId: SECTION.toString(),
+      subjectGroupId: null,
+    });
+    expect(mockSubjectGroupFindById).not.toHaveBeenCalled();
+  });
+
+  test("a general subject on a group is still allowed (deliberate)", async () => {
+    // General subjects have no track of their own. Refusing this would be a NEW
+    // rejection whose effect on already-stored rows has not been checked, so the
+    // guard stops at the two unambiguous errors.
+    mockSubjectGroupFindById.mockResolvedValue({ _id: oid(), track: "quran" });
+    const res = await uploadObservation({
+      ...groupBase,
+      form: "REF11",
+      subject: "MATH",
+      subjectGroupId: oid().toString(),
+    });
+    expect(res.subject).toBe("MATH");
   });
 });
 
