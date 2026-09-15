@@ -1,6 +1,6 @@
 # Class 5 English — scholarship paper structure (owner-approved)
 
-**Status: APPROVED by the owner, 2026-09-15 (D-#670/#669). This is the source of truth for
+**Status: APPROVED by the owner, 2026-09-15 (D-#670/#672). This is the source of truth for
 generating a Class 5 English scholarship question paper and for the `ENG` half of the
 `ScholarshipTopic` catalogue. Do not re-derive it from the circular's prose.**
 
@@ -111,6 +111,9 @@ renaming a stored field to carry a single subject's language would be a migratio
 
 - `server/scripts/seed-scholarship-topics.ts` — the machine-readable twin of the table above.
   Re-seed with `--commit --prune` after any change here, or retired rows stay in the picker.
+- `docs/scholarship-eng-writing-prompts.md` — the owner's prompt bank for questions 13 and 14, and
+  the ledger of which have been used. **Take the next unused prompt of each kind and tick it in the
+  same commit as the paper**; never invent a writing prompt while the bank has unused rows (D-#676).
 - `docs/prd-scholarship-practice.md` §5.2.3 — the decision record for this structure.
 - `scholarship/PROMPT_C5_ENG_question_generator.md` — the question-generator prompt. **That
   folder is gitignored**, so it exists only on the machine that holds it; this file is the
