@@ -5,8 +5,11 @@
  * 2026 প্রশ্নপত্র কাঠামো (memo 38.04.0000.801.06.314.24, 08 July 2026). Typed here from
  * the signed tables, because there is no machine-readable copy of them in the repo.
  *
- *  - বাংলা (15) · English (14) · গণিত (11) — the circular's item tables name the skills
- *    outright (article, tense, WH-question, লসাগু ও গসাগু, শতকরা…).
+ *  - বাংলা (15) · English (24) · গণিত (11) — the circular's item tables name the skills
+ *    outright (article, tense, WH-question, লসাগু ও গসাগু, শতকরা…). English is 24 rather
+ *    than its 14 printed items because SEVEN of them offer alternatives, and it is the
+ *    only subject labelled in English — see the ENG block and
+ *    `docs/scholarship-eng-paper-structure.md` (D-#670/#669).
  *  - প্রাথমিক বিজ্ঞান · বাংলাদেশ ও বিশ্বপরিচয় (6 each) — their tables name ANSWER FORMS,
  *    and the owner ruled that the form IS the skill for these two (D-#666). The paper
  *    backs it: in a 50-mark half, বিস্তৃত উত্তর alone is 24 marks and সংক্ষিপ্ত another
@@ -50,31 +53,79 @@ interface Seed {
   key: string;
   labelBn: string;
   axis: ScholarshipTopicAxis;
+  /** What the blueprint says the item is worth, where it fixes one (D-#672). Reference
+   *  only; a declared paper's authority is the marks typed per item. */
+  marks?: number;
 }
 
-const skill = (subject: HwSubject, key: string, labelBn: string): Seed => ({
+const skill = (subject: HwSubject, key: string, labelBn: string, marks?: number): Seed => ({
   subject,
   key,
   labelBn,
   axis: "skill",
+  marks,
 });
 
-/** English — the 14 items of the 2026 structure, collapsed to the skills they test. */
+/**
+ * English — the 2026 structure's 14 printed items, expanded to 24 topics (D-#670/#669).
+ *
+ * **This list is the owner-approved structure. Do not re-derive it from the circular's
+ * prose — read `docs/scholarship-eng-paper-structure.md`, which is the narrative twin of
+ * this array and the thing a question generator is pointed at.**
+ *
+ * 1. **The labels are ENGLISH.** The house rule is Bangla for teacher-facing content, and
+ *    every other subject here keeps it. The English paper is the exception the rule
+ *    already implies: its items are PRINTED in English, so `ব্যাকরণ — article` made the
+ *    teacher translate backwards to find the row matching the question in front of her.
+ *    The field is still named `labelBn` — it is the one display label, and renaming a
+ *    stored field to carry one subject's language would be a migration for nothing.
+ *
+ * 2. **A printed item that offers alternatives is one topic PER ALTERNATIVE.** Seven do:
+ *    1 (matching · true/false) · 6 (parts of speech · tense) · 7 (affixes · articles) ·
+ *    9 (jumbled words · jumbled sentences) · 11 (form · cardinal · ordinal · time) ·
+ *    13 (letter · application · email) · 14 (free · guided composition). The setter picks
+ *    ONE per paper, so a student's marks only ever land on one side — merging them would
+ *    average a skill she was tested on with one she never saw, and that average is
+ *    precisely the finding this module exists to produce.
+ *
+ * 3. **The other seven items are NOT split** (2, 3, 4, 5, 8, 10, 12). The model papers
+ *    give these an `.a`/`.b` too, but both halves are the SAME question with different
+ *    material — a device for printing two papers from one unit, not a choice of skill.
+ *    Splitting them would invent a distinction the blueprint does not make.
+ *
+ * `marks` is what the blueprint says the item carries. They do NOT sum to 100: an item
+ * contributes its marks once per alternative, so English is **168 across 24 rows** while
+ * any one printed paper is 100. Reference only — a declared paper is still checked
+ * against the marks the teacher types per item.
+ *
+ * The trailing `Qn ·x` comment is the circular's own item number and part letter — the
+ * mapping back to the printed paper, which the sequential list position cannot carry.
+ */
 const ENG: Seed[] = [
-  skill("ENG", "VOCAB", "শব্দভাণ্ডার ও শব্দার্থ"),
-  skill("ENG", "COMPREHENSION", "পাঠ্যবই — পাঠ-অনুধাবন"),
-  skill("ENG", "UNSEEN", "অদেখা অনুচ্ছেদ"),
-  skill("ENG", "PARTS-OF-SPEECH", "ব্যাকরণ — parts of speech"),
-  skill("ENG", "TENSE", "ব্যাকরণ — tense"),
-  skill("ENG", "ARTICLE", "ব্যাকরণ — article"),
-  skill("ENG", "AFFIX", "suffix ও prefix"),
-  skill("ENG", "WH-QUESTION", "WH-question তৈরি"),
-  skill("ENG", "REARRANGE", "বাক্য ও গল্প সাজানো"),
-  skill("ENG", "PUNCTUATION", "যতিচিহ্ন ও বড় হাতের অক্ষর"),
-  skill("ENG", "FORM-NUMBERS", "ফরম পূরণ ও সংখ্যা"),
-  skill("ENG", "VERB-FORM", "ক্রিয়ার সঠিক রূপ"),
-  skill("ENG", "LETTER", "চিঠি · দরখাস্ত · ইমেইল"),
-  skill("ENG", "COMPOSITION", "রচনা লিখন"),
+  skill("ENG", "MATCH-MEANING", "Match the given words with their meanings", 5), //     Q1 ·a
+  skill("ENG", "TRUE-FALSE", "Indicate True/False", 5), //                              Q1 ·b
+  skill("ENG", "SENTENCE-MAKING", "Make meaningful sentences with the given words", 5), // Q2
+  skill("ENG", "COMPREHENSION-SEEN", "Answer the questions — textbook passage", 18), // Q3
+  skill("ENG", "UNSEEN-CLOZE", "Fill in the blanks from the box — unseen text", 5), //  Q4
+  skill("ENG", "COMPREHENSION-UNSEEN", "Answer the questions — unseen text", 9), //     Q5
+  skill("ENG", "PARTS-OF-SPEECH", "Identify the parts of speech of the underlined words", 5), // Q6 ·a
+  skill("ENG", "TENSE", "Change the tenses as directed", 5), //                         Q6 ·b
+  skill("ENG", "AFFIX", "Complete the text adding suffixes and prefixes", 6), //        Q7 ·a
+  skill("ENG", "ARTICLE", "Fill in the gaps with a, an or the", 6), //                  Q7 ·b
+  skill("ENG", "WH-QUESTION", "Make WH questions from the given statements", 5), //     Q8
+  skill("ENG", "REARRANGE-WORDS", "Rearrange the words to make meaningful sentences", 7), // Q9 ·a
+  skill("ENG", "REARRANGE-SENTENCES", "Rearrange the sentences to form a story", 7), // Q9 ·b
+  skill("ENG", "PUNCTUATION", "Rewrite using correct capitalization and punctuation", 5), // Q10
+  skill("ENG", "FORM-FILL", "Read the information and fill out the form", 5), //        Q11 ·a
+  skill("ENG", "CARDINAL-NUMBERS", "Fill in the blanks with cardinal numbers", 5), //   Q11 ·b
+  skill("ENG", "ORDINAL-NUMBERS", "Fill in the blanks with ordinal numbers", 5), //     Q11 ·c
+  skill("ENG", "TIME-INFO", "Fill in the blanks using information related to time", 5), // Q11 ·d
+  skill("ENG", "VERB-FORM", "Complete the sentences using the correct forms of verbs", 5), // Q12
+  skill("ENG", "LETTER", "Write a letter", 10), //                                      Q13 ·a
+  skill("ENG", "APPLICATION", "Write an application", 10), //                           Q13 ·b
+  skill("ENG", "EMAIL", "Write an email", 10), //                                       Q13 ·c
+  skill("ENG", "COMPOSITION", "Write a short composition (free)", 10), //               Q14 ·a
+  skill("ENG", "COMPOSITION-GUIDED", "Write a guided composition by answering given questions", 10), // Q14 ·b
 ];
 
 /** বাংলা — the 15 items of the 2026 structure. */
@@ -139,7 +190,12 @@ function codeOf(subject: HwSubject, key: string): string {
  *
  * What it is for: the first prod seed wrote 29 CHAPTER topics for SCI/BGS, which D-#666
  * replaced. Without a prune those sit in the picker for ever, offering an axis the owner
- * ruled against.
+ * ruled against. D-#670/#669 add five more — the English rows `VOCAB`, `COMPREHENSION`,
+ * `UNSEEN`, `REARRANGE` and `FORM-NUMBERS`, whose Bangla labels or merged wording were
+ * replaced by the English items they stood for. The nine ENG keys whose skill is
+ * unchanged (`PARTS-OF-SPEECH`, `TENSE`, `ARTICLE`, `AFFIX`, `WH-QUESTION`,
+ * `PUNCTUATION`, `VERB-FORM`, `LETTER`, `COMPOSITION`) are deliberately REUSED, so a
+ * paper already tagged with one keeps its marks and simply reads in English from now on.
  */
 async function pruneUnseeded(
   subjects: readonly HwSubject[],
@@ -198,7 +254,18 @@ async function main(): Promise<void> {
     if (!COMMIT) continue;
     await ScholarshipTopic.findOneAndUpdate(
       { subject: s.subject, classLevel: CLASS_LEVEL, code },
-      { $set: { labelBn: s.labelBn, axis: s.axis, chapters: [], order, active: true } },
+      {
+      $set: {
+        labelBn: s.labelBn,
+        axis: s.axis,
+        chapters: [],
+        // undefined is stripped from $set, so a subject with no fixed marks keeps
+        // whatever it had rather than being reset to null on every re-seed.
+        marks: s.marks,
+        order,
+        active: true,
+      },
+    },
       { upsert: true },
     );
     written++;
