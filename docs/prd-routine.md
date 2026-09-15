@@ -161,6 +161,7 @@ an app-native `/shared/vocab.ts` addition, vocab verifier + `/shared` build + `t
 | **R-3** | Views: group grid + my-routine + admin editor (live conflict feedback) | R3.* | Needs R-2. Mirrors the Slice-4 frontend pattern. |
 | **R-4** | Substitution / cover + **proxy-manage availability view** + guardian read | R4.* | Needs R-2 + proxy grants (D-#20/#22). |
 | **R-5** | Routine-driven trigger schedule + class-note / daily-diary | R5.* | Needs R-2 (slots) + HW-T1 (declaration). Delivery via push pipeline. |
+| **R-7** | **Live class board** — who is teaching each class right now, and which class has nobody | R7.* | Needs R-2 (slots) + R-4 (cover) + HR leave fan-out (PXG-1). Read-only; no new stored state. |
 | (cross-cut) | Plane split + firewall + Bangla labels | R6.* | Verified in **every** slice; J5.6 stays green. |
 
 ## 6. Journeys & acceptance criteria
@@ -254,6 +255,43 @@ an app-native `/shared/vocab.ts` addition, vocab verifier + `/shared` build + `t
 - **R5.5 Delivery is pipeline** — Then trigger **delivery** (push) is wired to the messaging/push pipeline
   when it lands; until then the trigger schedule + class-note records are built/tested and surfaced
   in-app. **No premature push infra.**
+
+### R7 — Live class board  *(slice R-7; owner ask 2026-09-15, D-#670)*
+> "In the today section of office and principal show the current live class with teacher name — if a
+> proxy is approved then the proxy name, if not approved an alert that the class is without a teacher;
+> updated as the period progresses. Also an option to see class-wise period-wise teacher/proxy teacher
+> name for other management decisions."
+
+- **R7.1 Effective teacher per meeting** — Given a date, When the board resolves a routine slot, Then
+  the cell names the **routine's** teacher, and the **cover** teacher instead when a cover is
+  **approved** — either an R4.2 `RoutineSubstitution` (an admin act, approved by construction) or an
+  **`approved`** `StaffCoverSlot` from the HR leave fan-out. The absent teacher stays named beside the
+  cover, never replaced by it.
+- **R7.2 A proposal is not a cover** — Given a `StaffCoverSlot` in `needs_cover`/`proposed`, Then the
+  cell is **UNCOVERED** (the alert) and the proposed name is carried **beside** the alert, so the admin
+  can approve from it. Only `approved` clears the alert. *(This is the owner's "if not proxy approved".)*
+- **R7.3 Absence without a fan-out row still counts** — Given an **approved** leave covering the date
+  (period-scoped for a partial day, D-#361) and no cover slot, Then UNCOVERED. Given an **applied,
+  undecided** leave and no fan-out row, Then **not** an absence — the teacher is still expected.
+  Given the biometric sheet (AT-1) marking them **ABSENT** for the date with no leave, Then UNCOVERED;
+  before that day's sheet is imported the signal is silent, never a guess.
+- **R7.4 A slot naming no teacher is visible** — Given a routine slot with no `teacherId`, Then the cell
+  is **UNASSIGNED** and counts toward the day's uncovered total (an authoring gap, not a silent pass).
+- **R7.5 It follows the clock** — Given the day's `ScheduleWindow` + period grid, Then every cell carries
+  computed `startTime`/`endTime` for **that date's** season and day-start (a winter 07:15/07:30 start
+  slides the whole board, D-#55), the running period is marked, and the Today card re-derives the live
+  period from the device clock every 30 s — rolling to the next period, and refetching on the minute
+  change, without the user reloading.
+- **R7.6 The day board** — Given `routine:manage`, When they open the class board for a date, Then rows =
+  every group with a slot that day, columns = the periods, each cell = subject + the effective teacher,
+  uncovered cells listed first as a decision list and filterable ("শুধু শিক্ষকবিহীন"). Distinct from the
+  R3 **master grid**, which is the weekly TEMPLATE and knows nothing about a date, leave or cover.
+- **R7.7 RBAC** — Given a caller without `routine:manage` (every TEACHER and GUARDIAN by role), When they
+  query the board, Then denied; the Today card is gated on the **same permission**, so a per-user grant
+  (D-#193) reaches it and no role can see the card but not the data (or the reverse).
+- **R7.8 No new stored state** — Then the board is derived per read from routine + cover + leave +
+  attendance rows; it writes nothing, adds no model, no vocab enum (the status is computed, not stored —
+  the `adminToday` badge-key precedent) and no wire-contract change.
 
 ### R6 — Plane split, firewall & labels  *(cross-cutting; every slice)*
 - **R6.1 Identity-plane only** — Then no routine resolver writes to/reads from the corpus plane; no

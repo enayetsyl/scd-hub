@@ -32,7 +32,7 @@ const tabsSrc = readFileSync(APPTABS, "utf8");
 const RETURN_AT = src.search(/\n {2}return \(/);
 
 /** Cards Today is expected to render. Add a row when a new card is added. */
-const CARDS = ["WorkClaimTeacherCard", "ReturningStudentsCard", "GiftHandoverCard"];
+const CARDS = ["WorkClaimTeacherCard", "ReturningStudentsCard", "GiftHandoverCard", "LiveClassCard"];
 
 describe("TodayScreen — every card is inside the render", () => {
   test("the component has a top-level return", () => {
@@ -82,6 +82,28 @@ describe("AdminTodayScreen — the admin-only cards reach the roles that hold th
     const line = adminSrc.split(/\r?\n/).find((l) => l.includes("<GiftHandoverCard")) ?? "";
     expect(line).toContain("canGift");
     expect(adminSrc).toMatch(/const canGift = can\("gift:manage"\)/);
+  });
+
+  /**
+   * D-#670: the live class card answers "who is teaching what RIGHT NOW", and the two
+   * roles that need it (Principal, Office) land on the admin screen — the exact shape
+   * of the D-#668 miss. It is gated on `routine:manage`, the same permission the
+   * `liveClassBoard` resolver requires, so the card and the server can never disagree
+   * about who may see it.
+   */
+  test("the live class card is on the ADMIN screen, gated on routine:manage", () => {
+    const usage = adminSrc.indexOf("<LiveClassCard");
+    expect(usage).toBeGreaterThan(0);
+    expect(usage).toBeGreaterThan(ADMIN_RETURN_AT);
+    const line = adminSrc.split(/\r?\n/).find((l) => l.includes("<LiveClassCard")) ?? "";
+    expect(line).toContain("canLiveBoard");
+    expect(adminSrc).toMatch(/const canLiveBoard = can\("routine:manage"\)/);
+  });
+
+  test("the live class card is on the teacher screen too, on the same permission", () => {
+    const line = src.split(/\r?\n/).find((l) => l.includes("<LiveClassCard")) ?? "";
+    expect(line).toContain("canLiveBoard");
+    expect(src).toMatch(/const canLiveBoard = can\("routine:manage"\)/);
   });
 
   test("it stays on the teacher screen as well — the permission, not the role, decides", () => {

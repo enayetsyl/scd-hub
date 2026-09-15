@@ -54,6 +54,7 @@ import { QueryGate } from "../../components/QueryGate";
 import { WorkClaimTeacherCard } from "../../components/WorkClaimTeacherCard";
 import { ReturningStudentsCard } from "../../components/ReturningStudentsCard";
 import { GiftHandoverCard } from "../../components/GiftHandoverCard";
+import { LiveClassCard } from "../../components/LiveClassCard";
 import { Icon, type IconName } from "../../components/Icon";
 import {
   STR,
@@ -119,6 +120,9 @@ export default function TodayScreen(): React.ReactElement {
   const canHr = !!role && role !== "GUARDIAN";
   // AG-3 — the desk that physically hands out the gifts (Principal + Office, D-#667).
   const canGift = can("gift:manage");
+  // D-#670 — the live class board follows the PERMISSION, not the role: a per-user
+  // routine:manage grant (D-#193) lands on THIS screen, not the admin dashboard.
+  const canLiveBoard = can("routine:manage");
 
   // D-#318: the teacher's OWN sections' attendance at a glance (admins land on
   // the card dashboard instead, so no pause needed beyond the guardian gate).
@@ -594,6 +598,10 @@ export default function TodayScreen(): React.ReactElement {
             ))}
           </Card>
         ) : null}
+
+        {/* D-#670 — classes running right now, for a holder of routine:manage who is
+            routed to the teacher Today screen rather than the admin dashboard. */}
+        {canLiveBoard ? <LiveClassCard /> : null}
 
         {/* আমার পিরিয়ড — horizontal timeline; current slot highlighted */}
         <H2>{STR.myPeriods}</H2>

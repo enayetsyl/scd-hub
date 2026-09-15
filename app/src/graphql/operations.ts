@@ -3764,6 +3764,79 @@ export const ROUTINE_MASTER_WEEK_QUERY = gql<{ routineMasterWeek: RoutineMasterT
   query RoutineMasterWeek { routineMasterWeek { ${ROUTINE_MASTER_FIELDS} } }
 `;
 
+/** D-#670 — the live class board: class × period, who actually takes each meeting.
+ *  `status` is ON_DUTY | COVERED | UNCOVERED | UNASSIGNED; `phase` past|current|upcoming
+ *  (the app RE-derives phase from the device clock every minute — see LiveClassCard). */
+export interface LiveClassCellT {
+  slotId: string;
+  groupType: string;
+  groupId: string;
+  groupName: string | null;
+  classLevel: number | null;
+  periodNumber: number;
+  startTime: string | null;
+  endTime: string | null;
+  subject: string;
+  track: string;
+  teacherId: string | null;
+  teacherName: string | null;
+  coverTeacherId: string | null;
+  coverTeacherName: string | null;
+  pendingCoverTeacherName: string | null;
+  coverSlotStatus: string | null;
+  absenceReason: string | null;
+  status: string;
+  phase: string;
+}
+export interface LiveBoardPeriodT {
+  periodNumber: number;
+  startTime: string;
+  endTime: string;
+  isBreak: boolean;
+  phase: string;
+}
+export interface LiveBoardRowT {
+  groupType: string;
+  groupId: string;
+  label: string;
+  sublabel: string | null;
+  classLevel: number | null;
+}
+export interface LiveClassBoardT {
+  date: string;
+  dayType: string;
+  season: string;
+  dayStartHHMM: string;
+  nowHHMM: string;
+  periods: LiveBoardPeriodT[];
+  rows: LiveBoardRowT[];
+  cells: LiveClassCellT[];
+  liveCount: number;
+  uncoveredNowCount: number;
+  uncoveredTodayCount: number;
+}
+export const LIVE_CLASS_BOARD_QUERY = gql<{ liveClassBoard: LiveClassBoardT }, { date: string }>`
+  query LiveClassBoard($date: String!) {
+    liveClassBoard(date: $date) {
+      date
+      dayType
+      season
+      dayStartHHMM
+      nowHHMM
+      periods { periodNumber startTime endTime isBreak phase }
+      rows { groupType groupId label sublabel classLevel }
+      cells {
+        slotId groupType groupId groupName classLevel periodNumber startTime endTime
+        subject track teacherId teacherName coverTeacherId coverTeacherName
+        pendingCoverTeacherName coverSlotStatus absenceReason status phase
+      }
+      liveCount
+      uncoveredNowCount
+      uncoveredTodayCount
+    }
+  }
+`;
+
 export interface SubjectGroupT {
   id: string;
   track: string;
