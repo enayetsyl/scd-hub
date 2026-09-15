@@ -43,19 +43,33 @@ Its machine-readable twin is the `ENG` array in
 **24 rows · 168 marks.** Any one printed paper — one part chosen per question — totals
 **100**: 5 + 5 + 18 + 5 + 9 + 5 + 6 + 5 + 7 + 5 + 5 + 5 + 10 + 10. Time 2 hours 30 minutes.
 
-## The two kinds of "part", and why only one of them makes a topic
+## Which items have parts — on the paper AND in the catalogue
 
-**Form alternatives — items 1, 6, 7, 9, 11, 13, 14.** The blueprint permits either wording,
-and the setter picks ONE per paper. Each alternative is a **different ability**, so each gets
-its own topic row: a student's marks only ever land on one side, and merging them would
-average a skill she was tested on with one she never saw — the exact false finding the
-weakness analysis exists to prevent.
+**Seven items offer a choice of wording the blueprint permits: 1, 6, 7, 9, 11, 13, 14.** The
+setter prints ONE part. Each alternative is a **different ability**, so each gets its own topic
+row: a student's marks only ever land on one side, and merging them would average a skill she was
+tested on with one she never saw — the exact false finding the weakness analysis exists to
+prevent. Item 11 has four parts, item 13 has three, the rest two.
 
-**Set A / Set B — items 2, 3, 4, 5, 8, 10, 12.** A model paper gives these an `.a`/`.b` too,
-but both halves are the *same question* with different material (question 2 is "Make
-meaningful sentences with the given words" both times, with five different words). It is a
-device for printing two papers from one unit, **not** a choice of skill, so these stay one
-topic row each. Splitting them would invent a distinction the blueprint does not make.
+**The other seven items — 2, 3, 4, 5, 8, 10, 12 — have no alternative.** They are printed once,
+with no part letter, and they are one topic row each.
+
+**A generated paper therefore carries exactly 24 labelled questions**, matching the 24 catalogue
+rows one for one. Choosing one part per item gives the 14-question paper the student sits, and it
+totals 100.
+
+> **The dropped "Set A / Set B" convention.** The earlier model papers in `scholarship/`
+> (`C5_ENG_Model_Question_Unit01_2026_alternatives.docx` and the first cut of the approved paper)
+> gave *every* question an `.a`/`.b`, labelling items 2, 3, 4, 5, 8, 10 and 12 "Set A / Set B" —
+> the same question twice with different material, so one unit could yield two papers. **The owner
+> dropped that on 2026-09-15:** *"we agreed that question 2 is single but why you made 2a and 2b…
+> 8 should be only 1 not a and b."* A paper carries parts only where the blueprint offers a
+> choice. To make a second paper, set it from a different unit. Note this convention never
+> affected the catalogue — those items were always one topic row each — but a generator following
+> the old rule produces 31 labelled questions instead of 24, so the rule is recorded here.
+
+**One unseen text, not two.** Because items 4 and 5 are single, a paper needs exactly one text
+from outside the textbook, serving both.
 
 ## Item notes the structure alone does not carry
 
@@ -70,8 +84,9 @@ topic row each. Splitting them would invent a distinction the blueprint does not
   A numbers item must make the student *work the number out* — never print the numeral
   beside the blank that asks for it.
 - **Item 13 has three parts**, not two: letter, application, email.
-- Items 6–14 are skill items and should draw their words, sentences and examples from the
-  unit being examined, even though they are not bound to it.
+- **Items 6–14 are skill items, set on NEITHER passage.** They are not connected to the reading
+  text at all — which is part of why they need no second "set". Their words, sentences and
+  examples should still be drawn from the unit being examined, per the question policy.
 
 ## Marks are reference, not the paper's authority
 
