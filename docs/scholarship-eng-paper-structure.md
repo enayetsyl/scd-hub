@@ -1,6 +1,6 @@
 # Class 5 English — scholarship paper structure (owner-approved)
 
-**Status: APPROVED by the owner, 2026-09-15 (D-#667/#669). This is the source of truth for
+**Status: APPROVED by the owner, 2026-09-15 (D-#670/#669). This is the source of truth for
 generating a Class 5 English scholarship question paper and for the `ENG` half of the
 `ScholarshipTopic` catalogue. Do not re-derive it from the circular's prose.**
 

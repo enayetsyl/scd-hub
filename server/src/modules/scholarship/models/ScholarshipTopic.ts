@@ -41,7 +41,7 @@ export interface IScholarshipTopic extends Document {
    *  question bank's own chapter list. Empty for `skill` rows — a skill spans the book. */
   chapters: number[];
   /**
-   * What this item is worth on the printed paper, when the blueprint fixes it (D-#669).
+   * What this item is worth on the printed paper, when the blueprint fixes it (D-#672).
    *
    * REFERENCE only — the authority on a declared paper is still the marks the teacher
    * types per item, and `Σ(items) = totalMarks` is checked against those. This is what

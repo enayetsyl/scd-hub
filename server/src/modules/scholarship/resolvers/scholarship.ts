@@ -66,7 +66,7 @@ TopicRef.implement({
     axis: t.exposeString("axis"),
     chapters: t.exposeIntList("chapters"),
     // Nullable BY DESIGN: the structure fixes no mark for a hand-added topic or a
-    // SCI/BGS answer form, and a 0 there would read as a worthless item (D-#669).
+    // SCI/BGS answer form, and a 0 there would read as a worthless item (D-#672).
     marks: t.exposeFloat("marks", { nullable: true }),
     order: t.exposeInt("order"),
     active: t.exposeBoolean("active"),

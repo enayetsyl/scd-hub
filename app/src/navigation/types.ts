@@ -401,7 +401,7 @@ export type ScholarshipStackParamList = {
   ScholarshipStudent: { sectionId: string; classLevel: number; studentId: string; name?: string };
   ScholarshipClass: { sectionId: string; classLevel: number; subject?: string };
   /** `classLevel` is OPTIONAL: the drawer leaf deep-links here with NO params, so a
-   *  required one made the screen throw on mount (D-#668). The screen falls back to the
+   *  required one made the screen throw on mount (D-#671). The screen falls back to the
    *  caller's own accessible classes. */
   ScholarshipTopics: { classLevel?: number } | undefined;
 };

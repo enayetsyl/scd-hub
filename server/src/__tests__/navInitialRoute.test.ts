@@ -26,7 +26,7 @@ import path from "path";
  *  drawer leaf may deep-link to one (see the second invariant below).
  *
  *  `ScholarshipTopics` was here and is deliberately NOT any more: the drawer leaf had to
- *  reach it, so D-#668 made its param optional instead of removing the leaf. */
+ *  reach it, so D-#671 made its param optional instead of removing the leaf. */
 const PARAM_REQUIRING_SCREENS = [
   "StudentProfile",
   // Scholarship practice (SC-1..SC-4): every screen but ScholarshipHome and
@@ -109,7 +109,7 @@ describe("AppTabs navigator registration", () => {
  * `route.params === undefined` exactly as an initial route does. SC-0's `টপিক তালিকা`
  * leaf pointed at `ScholarshipTopics`, which destructured `{ classLevel }` — the drawer
  * entry crashed to the error boundary in production while the same screen reached from
- * the papers list (which passes `classLevel`) worked perfectly (D-#668).
+ * the papers list (which passes `classLevel`) worked perfectly (D-#671).
  *
  * The initial-route test could not see it: `ScholarshipTopics` is registered sixth in its
  * stack, so it was never an initial route and the existing tripwire stayed green.

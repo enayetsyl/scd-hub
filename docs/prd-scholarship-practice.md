@@ -102,7 +102,7 @@ join this to the corpus plane. The firewall test must keep passing untouched.
 { subject: HwSubject, classLevel: number,
   code: "TOP-SCH-ENG-C5-ARTICLE", labelBn: "Fill in the gaps with a, an or the",
   axis: "skill" | "content",        // D-#665/#666 — every seeded topic is a skill today
-  marks?: number,                   // D-#669 — what the blueprint says the item carries
+  marks?: number,                   // D-#672 — what the blueprint says the item carries
   order: number, active: boolean }
 ```
 
@@ -115,7 +115,7 @@ chapter. Overloading the homework catalogue would either pollute the homework pi
 are not homework topics, or force the analysis onto an axis that cannot answer the question.
 
 Seed for English: its 14 printed items expanded to **24 topics**, in English, each carrying the
-marks the blueprint fixes (D-#667/#669, §5.2.3). **The approved table lives in
+marks the blueprint fixes (D-#670/#669, §5.2.3). **The approved table lives in
 `docs/scholarship-eng-paper-structure.md`** — that file and the `ENG` array in the seed are the
 two halves of one source of truth, and neither is re-derived from the circular's prose.
 
@@ -220,7 +220,7 @@ ever tagged with a topic points at, so it must survive both reordering (a positi
 silently re-points existing items the first time a row is inserted) and renaming (a label-derived
 one would move on exactly the edit `labelBn` exists to allow).
 
-### 5.2.3 English is labelled in English, an "or" item is one topic per alternative, and the catalogue carries marks (D-#667/#669)
+### 5.2.3 English is labelled in English, an "or" item is one topic per alternative, and the catalogue carries marks (D-#670/#669)
 
 Owner, reading the seeded catalogue on prod: *"the english topic list recorded in bangla but it
 should be in english"*, and *"there are 14 questions but some questions as variation ... so for topic
@@ -247,7 +247,7 @@ given words" both times, with five different words. That is a device for printin
 unit, **not** a choice of skill. Splitting them would invent a distinction the blueprint does not make
 and scatter one ability's marks over two rows.
 
-**Marks are on the catalogue, and deliberately do not sum to 100** (D-#669). `ScholarshipTopic.marks`
+**Marks are on the catalogue, and deliberately do not sum to 100** (D-#672). `ScholarshipTopic.marks`
 records what the blueprint says an item carries, so the list can be read against the paper in front of
 you. An item contributes its marks once *per alternative*, so English totals **168 across 24 rows**
 while any one printed paper is 100. It is reference only: a declared paper is still checked against the

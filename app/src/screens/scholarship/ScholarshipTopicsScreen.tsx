@@ -6,7 +6,7 @@
  * ENG/BAN, content (a chapter) for SCI/BGS — the picker says which so the analysis
  * heading can read দক্ষতা or অধ্যায় without branching on subject.
  *
- * `classLevel` is OPTIONAL (D-#668). The drawer leaf reaches this screen through
+ * `classLevel` is OPTIONAL (D-#671). The drawer leaf reaches this screen through
  * `navigate("ScholarshipTab", { screen: "ScholarshipTopics" })` and carries no params at
  * all, so the screen has to be able to choose a class itself — see the picker below.
  *

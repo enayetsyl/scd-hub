@@ -444,7 +444,7 @@ export interface TopicView {
   chapters: number[];
   /** What the blueprint says this item is worth; null when the structure fixes no mark
    *  (a hand-added topic, every SCI/BGS answer form). Reference only — a declared paper's
-   *  authority is the marks typed per item (D-#669). */
+   *  authority is the marks typed per item (D-#672). */
   marks: number | null;
   order: number;
   active: boolean;
