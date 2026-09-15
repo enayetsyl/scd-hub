@@ -659,12 +659,15 @@ export interface CtQuestionRequestT {
   requestedAt: string;
   confirmedAt: string | null;
   classTestId: string | null;
+  cancelledAt: string | null;
+  cancelReason: string | null;
 }
 
 const CT_QUESTION_FIELDS = `
   id classLevel sectionId subject chapter testNumber totalMarks durationMinutes examDate status
   rounds { fileId note sentBy sentAt teacherComment respondedAt }
   currentFileId requestedBy requesterName requestedAt confirmedAt classTestId
+  cancelledAt cancelReason
 `;
 
 export const MY_CT_QUESTION_REQUESTS = gql<{ myCtQuestionRequests: CtQuestionRequestT[] }, Record<string, never>>`
@@ -762,5 +765,49 @@ export const REQUEST_CT_QUESTION_PRINT = gql<
       request { ${CT_QUESTION_FIELDS} }
       ctId
     }
+  }
+`;
+
+// Correct / withdraw / remove (owner ask 2026-09-15). The teacher owns the first
+// two on their OWN request; the office owns the third on anyone's.
+
+export const EDIT_CT_QUESTION_REQUEST = gql<
+  { editCtQuestionRequest: CtQuestionRequestT },
+  { id: string; chapter: string; totalMarks: number; durationMinutes: number; examDate: string }
+>`
+  mutation EditCtQuestionRequest(
+    $id: String!
+    $chapter: String!
+    $totalMarks: Int!
+    $durationMinutes: Int!
+    $examDate: String!
+  ) {
+    editCtQuestionRequest(
+      id: $id
+      chapter: $chapter
+      totalMarks: $totalMarks
+      durationMinutes: $durationMinutes
+      examDate: $examDate
+    ) {
+      ${CT_QUESTION_FIELDS}
+    }
+  }
+`;
+
+export const CANCEL_CT_QUESTION_REQUEST = gql<
+  { cancelCtQuestionRequest: CtQuestionRequestT },
+  { id: string; reason?: string | null }
+>`
+  mutation CancelCtQuestionRequest($id: String!, $reason: String) {
+    cancelCtQuestionRequest(id: $id, reason: $reason) { ${CT_QUESTION_FIELDS} }
+  }
+`;
+
+export const DELETE_CT_QUESTION_REQUEST = gql<
+  { deleteCtQuestionRequest: boolean },
+  { id: string; reason?: string | null }
+>`
+  mutation DeleteCtQuestionRequest($id: String!, $reason: String) {
+    deleteCtQuestionRequest(id: $id, reason: $reason)
   }
 `;

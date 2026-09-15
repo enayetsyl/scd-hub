@@ -7,6 +7,11 @@
  *   myCtQuestionRequests — tracker:write teacher; create + print re-verify the
  *   section write-scope; review/print are ROW-gated to the requester in the service.
  *   sendCtQuestionForReview / ctQuestionQueue — roster:manage (Principal/Office).
+ *   editCtQuestionRequest / cancelCtQuestionRequest — tracker:write teacher, ROW-gated
+ *   to the requester in the service; edit re-verifies the section write-scope.
+ *   deleteCtQuestionRequest — roster:manage (Principal/Office). OFFICE deliberately
+ *   holds no tracker permission (D-#554), so the teacher's verbs and the office's verb
+ *   land on different people by construction; the PRINCIPAL holds both.
  */
 import { builder } from "../../../schema";
 import type { AppContext } from "../../../context";
@@ -19,6 +24,9 @@ import {
   sendCtQuestionForReview,
   reviewCtQuestion,
   requestCtQuestionPrint,
+  editCtQuestionRequest,
+  cancelCtQuestionRequest,
+  deleteCtQuestionRequest,
   myCtQuestionRequests,
   ctQuestionQueue,
   ctQuestionCounts,
@@ -76,6 +84,8 @@ CtQuestionRequestRef.implement({
     requestedAt: t.exposeString("requestedAt"),
     confirmedAt: t.string({ nullable: true, resolve: (r) => r.confirmedAt }),
     classTestId: t.string({ nullable: true, resolve: (r) => r.classTestId }),
+    cancelledAt: t.string({ nullable: true, resolve: (r) => r.cancelledAt }),
+    cancelReason: t.string({ nullable: true, resolve: (r) => r.cancelReason }),
   }),
 });
 
@@ -186,6 +196,86 @@ builder.mutationField("requestCtQuestionPrint", (t) =>
         copies: args.copies ?? null,
         copiesMode: args.copiesMode ?? null,
         actorId: ctx.auth.userId as string,
+      });
+    },
+  }),
+);
+
+builder.mutationField("editCtQuestionRequest", (t) =>
+  t.field({
+    type: CtQuestionRequestRef,
+    description:
+      "The requesting teacher corrects a mistake in the details — chapter, total marks, duration " +
+      "and exam date. Subject, class/section and the test number are the request's address and " +
+      "cannot be moved. Allowed only while the office still owes a paper (REQUESTED / " +
+      "CHANGES_REQUESTED); the office is notified that the spec changed. Row-gated to the " +
+      "requester; re-verifies the section write-scope.",
+    authScopes: { hasPermission: "tracker:write" },
+    args: {
+      id: t.arg.string({ required: true }),
+      chapter: t.arg.string({ required: true }),
+      totalMarks: t.arg.int({ required: true }),
+      durationMinutes: t.arg.int({ required: true }),
+      examDate: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      const doc = await ClassTestQuestionRequest.findById(args.id).select("sectionId subject").lean();
+      if (!doc) throw new Error("অনুরোধটি পাওয়া যায়নি");
+      await assertCanWrite(ctx, doc.sectionId.toString(), await resolveSubjectId(doc.subject as string));
+      return editCtQuestionRequest({
+        id: args.id,
+        chapter: args.chapter,
+        totalMarks: args.totalMarks,
+        durationMinutes: args.durationMinutes,
+        examDate: args.examDate,
+        actorId: ctx.auth.userId as string,
+      });
+    },
+  }),
+);
+
+builder.mutationField("cancelCtQuestionRequest", (t) =>
+  t.field({
+    type: CtQuestionRequestRef,
+    description:
+      "The requesting teacher withdraws a request filed by mistake (status CANCELLED). The row " +
+      "stays visible on both lists so the office sees the withdrawal rather than a card vanishing. " +
+      "Allowed before CONFIRMED only. Row-gated to the requester.",
+    authScopes: { hasPermission: "tracker:write" },
+    args: {
+      id: t.arg.string({ required: true }),
+      reason: t.arg.string({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      return cancelCtQuestionRequest({
+        id: args.id,
+        reason: args.reason ?? null,
+        actorId: ctx.auth.userId as string,
+      });
+    },
+  }),
+);
+
+builder.mutationField("deleteCtQuestionRequest", (t) =>
+  t.field({
+    type: "Boolean",
+    description:
+      "Office/Principal soft-deletes a question request (active:false) — it leaves both lists and " +
+      "the requesting teacher is notified. Refused while the request has a live ClassTest hanging " +
+      "off it (cancel the print job first). Requires roster:manage.",
+    authScopes: { authenticated: true },
+    args: {
+      id: t.arg.string({ required: true }),
+      reason: t.arg.string({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      assertOffice(ctx);
+      return deleteCtQuestionRequest({
+        id: args.id,
+        reason: args.reason ?? null,
+        actorId: ctx.auth!.userId as string,
       });
     },
   }),
