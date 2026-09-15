@@ -16,6 +16,8 @@ import { DAYS_OF_WEEK } from "@scd/shared";
 import { ADMIN_TODAY_QUERY, type AdminTodayCardT } from "../../graphql/operations";
 import type { TabParamList } from "../../navigation/types";
 import { Screen, H2, Body, Muted, Card, Badge, Loader, ErrorBanner } from "../../components/ui";
+import { GiftHandoverCard } from "../../components/GiftHandoverCard";
+import { useAuth } from "../../auth/AuthContext";
 import { STR, bnNum, dayOfWeekLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { usePullRefresh } from "../../lib/useRefresh";
@@ -98,6 +100,9 @@ export default function AdminTodayScreen(): React.ReactElement {
   const nav = useNavigation<NavigationProp<TabParamList>>();
   const date = dateKey();
   const [open, setOpen] = useState<Record<string, boolean>>({});
+  // AG-3 — the desk that physically hands out the weekly gift (Principal + Office).
+  const { can } = useAuth();
+  const canGift = can("gift:manage");
 
   const [q, refetch] = useQuery({ query: ADMIN_TODAY_QUERY, variables: { date }, requestPolicy: "cache-and-network" });
   const cards = q.data?.adminToday ?? [];
@@ -182,6 +187,13 @@ export default function AdminTodayScreen(): React.ReactElement {
         {q.fetching && cards.length === 0 ? <Loader label={STR.loading} /> : null}
 
         {cards.map(renderCard)}
+
+        {/* AG-3 — 🎁 সাপ্তাহিক উপহার: this week's winners class-wise, handed over from
+            here. This is THE screen for it: `adminDash` in AppTabs routes PRINCIPAL and
+            OFFICE here (D-#316), and they are exactly the two roles holding
+            `gift:manage`. It first shipped on TodayScreen, which only TEACHERS reach,
+            so it rendered for nobody. */}
+        {canGift ? <GiftHandoverCard /> : null}
 
         {/* Static launcher card — the Reports hub (client-side, no server data). */}
         <Card onPress={() => goTo({ icon: "📊", titleKey: "dcReports", target: { tab: "ReportsTab", screen: "ReportsHome" } })}>

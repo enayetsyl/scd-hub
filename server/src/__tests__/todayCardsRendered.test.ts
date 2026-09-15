@@ -21,6 +21,12 @@ import path from "path";
 const SCREEN = path.resolve(__dirname, "../../../app/src/screens/home/TodayScreen.tsx");
 const src = readFileSync(SCREEN, "utf8");
 
+const ADMIN_SCREEN = path.resolve(__dirname, "../../../app/src/screens/home/AdminTodayScreen.tsx");
+const adminSrc = readFileSync(ADMIN_SCREEN, "utf8");
+
+const APPTABS = path.resolve(__dirname, "../../../app/src/navigation/AppTabs.tsx");
+const tabsSrc = readFileSync(APPTABS, "utf8");
+
 /** The component's own top-level `return (` — column 2, i.e. one indent inside the
  *  function. Nested returns inside callbacks are indented further and are not this. */
 const RETURN_AT = src.search(/\n {2}return \(/);
@@ -47,5 +53,41 @@ describe("TodayScreen — every card is inside the render", () => {
     const line = src.split(/\r?\n/).find((l) => l.includes("<GiftHandoverCard")) ?? "";
     expect(line).toContain("canGift");
     expect(src).toMatch(/const canGift = can\("gift:manage"\)/);
+  });
+});
+
+/**
+ * The lesson from the D-#667 miss: being inside the render is NECESSARY but not
+ * SUFFICIENT. The gift card shipped correctly placed inside TodayScreen's return —
+ * and rendered for nobody, because `adminDash` in AppTabs routes PRINCIPAL and OFFICE
+ * to AdminTodayScreen, and they are the only two roles holding `gift:manage`. Position
+ * was right; AUDIENCE was wrong, and no test asked about audience.
+ */
+describe("AdminTodayScreen — the admin-only cards reach the roles that hold them", () => {
+  const ADMIN_RETURN_AT = adminSrc.search(/\n {2}return \(/);
+
+  test("AppTabs still routes PRINCIPAL and OFFICE to AdminTodayScreen (D-#316)", () => {
+    // If this routing ever changes, the assertion below is measuring the wrong screen.
+    expect(tabsSrc).toMatch(/adminDash\s*=\s*role === "PRINCIPAL" \|\| role === "OFFICE"/);
+    expect(tabsSrc).toMatch(/component=\{adminDash \? AdminTodayScreen : TodayScreen\}/);
+  });
+
+  test("the gift card is on the ADMIN screen — the one Principal/Office actually land on", () => {
+    const usage = adminSrc.indexOf("<GiftHandoverCard");
+    expect(usage).toBeGreaterThan(0);
+    expect(usage).toBeGreaterThan(ADMIN_RETURN_AT);
+  });
+
+  test("it is gated on gift:manage there too", () => {
+    const line = adminSrc.split(/\r?\n/).find((l) => l.includes("<GiftHandoverCard")) ?? "";
+    expect(line).toContain("canGift");
+    expect(adminSrc).toMatch(/const canGift = can\("gift:manage"\)/);
+  });
+
+  test("it stays on the teacher screen as well — the permission, not the role, decides", () => {
+    // `gift:manage` is role-granted today, but AC-1/D-#193 allows a per-USER grant, and
+    // such a teacher would still be routed to TodayScreen. The card follows the
+    // permission so that case is not silently unreachable.
+    expect(src).toContain("<GiftHandoverCard");
   });
 });
