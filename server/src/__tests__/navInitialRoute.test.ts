@@ -22,19 +22,24 @@
 import { readFileSync } from "fs";
 import path from "path";
 
-/** Screens whose route params are required — they can never be an initial route. */
+/** Screens whose route params are required — they can never be an initial route, and no
+ *  drawer leaf may deep-link to one (see the second invariant below).
+ *
+ *  `ScholarshipTopics` was here and is deliberately NOT any more: the drawer leaf had to
+ *  reach it, so D-#668 made its param optional instead of removing the leaf. */
 const PARAM_REQUIRING_SCREENS = [
   "StudentProfile",
-  // Scholarship practice (SC-1..SC-4): every screen but ScholarshipHome destructures
-  // required params on mount, so any of them landing first would take the tab down.
+  // Scholarship practice (SC-1..SC-4): every screen but ScholarshipHome and
+  // ScholarshipTopics destructures required params on mount, so any of them landing
+  // first would take the tab down.
   "ScholarshipDeclare",
   "ScholarshipMarks",
   "ScholarshipStudent",
   "ScholarshipClass",
-  "ScholarshipTopics",
 ];
 
 const APP_TABS = path.resolve(__dirname, "../../../app/src/navigation/AppTabs.tsx");
+const DRAWER_CONTENT = path.resolve(__dirname, "../../../app/src/navigation/DrawerContent.tsx");
 
 interface NavigatorBlock {
   stack: string;
@@ -92,6 +97,33 @@ describe("AppTabs navigator registration", () => {
     const offenders = navigators
       .filter((n) => PARAM_REQUIRING_SCREENS.includes(n.screensInOrder[0]))
       .map((n) => `${n.stack} starts with ${n.screensInOrder[0]}`);
+    expect(offenders).toEqual([]);
+  });
+});
+
+/**
+ * The SECOND way a screen mounts without params — and the one that actually shipped.
+ *
+ * `DrawerContent` deep-links a leaf with `navigate(leaf.route, { screen: leaf.screen,
+ * initial: false })` and passes **no `params`**, so the target mounts with
+ * `route.params === undefined` exactly as an initial route does. SC-0's `টপিক তালিকা`
+ * leaf pointed at `ScholarshipTopics`, which destructured `{ classLevel }` — the drawer
+ * entry crashed to the error boundary in production while the same screen reached from
+ * the papers list (which passes `classLevel`) worked perfectly (D-#668).
+ *
+ * The initial-route test could not see it: `ScholarshipTopics` is registered sixth in its
+ * stack, so it was never an initial route and the existing tripwire stayed green.
+ */
+const drawerSource = readFileSync(DRAWER_CONTENT, "utf8");
+const drawerLeafScreens = [...drawerSource.matchAll(/\bscreen:\s*"([^"]+)"/g)].map((m) => m[1]);
+
+describe("DrawerContent deep-linked leaves", () => {
+  test("the parser actually found the leaves (guards against a silent pass)", () => {
+    expect(drawerLeafScreens.length).toBeGreaterThan(10);
+  });
+
+  test("no drawer leaf deep-links to a screen that requires route params", () => {
+    const offenders = drawerLeafScreens.filter((s) => PARAM_REQUIRING_SCREENS.includes(s));
     expect(offenders).toEqual([]);
   });
 });
