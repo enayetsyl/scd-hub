@@ -97,9 +97,13 @@ export async function assertMayManage(
 
 export interface DeclareItemInput {
   itemNo: number;
-  label: string;
+  /** The number printed on the paper, when it differs from `itemNo` (D-#675). */
+  questionNo?: number;
+  /** `a`/`b`/`c`/`d` where the question offers alternatives (D-#675). */
+  part?: string;
+  label?: string;
   subject: HwSubject;
-  topicCode: string;
+  topicCode?: string;
   chapters?: number[];
   itemType: SyllabusItemType;
   marks: number;
@@ -108,7 +112,8 @@ export interface DeclareItemInput {
 export interface DeclarePaperInput {
   sectionId: string;
   subjects: HwSubject[];
-  name: string;
+  /** OPTIONAL since D-#675 — a blank name is generated from the paper id. */
+  name?: string;
   paperDate?: Date;
   totalMarks: number;
   durationMinutes?: number;
@@ -152,7 +157,6 @@ export async function validateItems(
     if (!Number.isInteger(it.itemNo) || it.itemNo < 1) return "আইটেম নম্বর ১ বা তার বেশি হতে হবে।";
     if (seen.has(it.itemNo)) return `আইটেম ${it.itemNo} একাধিকবার আছে।`;
     seen.add(it.itemNo);
-    if (!it.label?.trim()) return `আইটেম ${it.itemNo}-এর নাম লেখা হয়নি।`;
     // D-#664: a combined Science + BGS paper is one sitting with two halves, so the
     // subject lives on the item. An item naming a subject the paper does not cover
     // would put its marks into a roll-up nobody is looking at.
@@ -162,8 +166,14 @@ export async function validateItems(
     if (!SYLLABUS_ITEM_TYPES.includes(it.itemType)) {
       return `আইটেম ${it.itemNo}-এর ধরন অজানা।`;
     }
-    if (!isHalfStep(it.marks) || it.marks <= 0) {
+    if (!isHalfStep(it.marks) || it.marks < 0) {
       return `আইটেম ${it.itemNo}-এর নম্বর ০.৫-এর গুণিতক হতে হবে।`;
+    }
+    if (it.part && !/^[a-dA-D]$/.test(it.part.trim())) {
+      return `আইটেম ${it.itemNo}-এর অংশ a, b, c বা d হতে হবে।`;
+    }
+    if (it.questionNo !== undefined && (!Number.isInteger(it.questionNo) || it.questionNo < 1)) {
+      return `আইটেম ${it.itemNo}-এর প্রশ্ন নম্বর ঠিক নেই।`;
     }
     if ((it.chapters ?? []).some((c) => !Number.isInteger(c) || c < 1)) {
       return `আইটেম ${it.itemNo}-এর অধ্যায় নম্বর ঠিক নেই।`;
@@ -173,7 +183,7 @@ export async function validateItems(
   // Every topic must already exist for ITS OWN item's subject — an item tagged with a
   // topic from another subject would corrupt that subject's roll-up silently, and a
   // typo'd code would create a bucket of one that never matches anything again.
-  const codes = [...new Set(items.map((i) => i.topicCode))];
+  const codes = [...new Set(items.map((i) => i.topicCode).filter((c): c is string => !!c?.trim()))];
   const rows = (await ScholarshipTopic.find({
     classLevel,
     code: { $in: codes },
@@ -182,19 +192,39 @@ export async function validateItems(
     .lean()) as { code: string; subject: HwSubject }[];
   const bySubject = new Map(rows.map((r) => [`${r.subject}::${r.code}`, true]));
   for (const it of items) {
+    // An item with NO topic is legal (D-#675) — it just misses the topic axis. A topic
+    // that is NAMED must exist for that item's subject, because a typo'd code creates a
+    // bucket of one that silently never matches anything again.
+    if (!it.topicCode?.trim()) continue;
     if (!bySubject.has(`${it.subject}::${it.topicCode}`)) {
       return `আইটেম ${it.itemNo}-এর টপিক (${it.topicCode}) ${it.subject} বিষয়ের তালিকায় নেই।`;
     }
   }
 
-  // The Σ guard (D-#656, the ExamSyllabus validateMarkRows posture). Refuse the paper;
-  // never store one whose parts do not add up, because every percentage the analysis
-  // ever prints is a fraction of these numbers.
-  const sum = sumMarks(items.map((i) => i.marks));
-  if (sum !== totalMarks) {
-    return `আইটেমের যোগফল ${sum}, কিন্তু পূর্ণমান ${totalMarks}।`;
-  }
   return null;
+}
+
+/**
+ * The Σ NOTE — advisory since D-#675, where D-#656 made it a refusal.
+ *
+ * It was refused on the reasoning that "every percentage the analysis prints is a
+ * fraction of these numbers". That turned out to be false, and the code says so: a topic
+ * percentage divides by the marks of the items a student was actually MARKED on
+ * (`if (earned === undefined) continue` in the analysis), and the class average divides
+ * by `totalMarks`, which the teacher types. Neither reads Σ(items).
+ *
+ * What the refusal DID do was make the owner's real case impossible: a paper that lists
+ * every alternative — 24 items for C5 English's 14 printed questions — sums to 168 while
+ * the student still sits 100. Refusing that stored nothing at all, which is strictly
+ * worse than storing a paper whose optional parts out-total the sitting.
+ *
+ * So it is still computed and still shown, because on a paper meant to be one part per
+ * question a mismatch is a real typo signal. It just never blocks the write.
+ */
+export function marksNote(totalMarks: number, items: readonly DeclareItemInput[]): string | null {
+  const sum = sumMarks(items.map((i) => i.marks));
+  if (sum === totalMarks) return null;
+  return `আইটেমের যোগফল ${sum}, কিন্তু পূর্ণমান ${totalMarks}।`;
 }
 
 export async function declarePaper(
@@ -214,7 +244,6 @@ export async function declarePaper(
   const on = input.paperDate ?? new Date();
   await assertMayManage(actor, input.sectionId, input.subjects, on);
 
-  if (!input.name?.trim()) throw new Error("প্রশ্নপত্রের নাম লেখা হয়নি।");
   if (!Number.isFinite(input.totalMarks) || input.totalMarks <= 0) {
     throw new Error("পূর্ণমান ঠিক নেই।");
   }
@@ -222,6 +251,10 @@ export async function declarePaper(
   if (complaint) throw new Error(complaint);
 
   const paperId = await generatePaperId(klass.academicYearId, klass.level, input.subjects);
+  // A blank name is filled from the generated id rather than refused (D-#675): the paper
+  // id is unique and already carries the class and subjects, so it names the row well
+  // enough for a list, and the teacher can rename it afterwards.
+  const name = input.name?.trim() || paperId;
   const paper = await ScholarshipPaper.create({
     paperId,
     academicYearId: klass.academicYearId,
@@ -229,14 +262,20 @@ export async function declarePaper(
     classId: section.classId,
     sectionId: new Types.ObjectId(input.sectionId),
     subjects: input.subjects,
-    name: input.name.trim(),
+    name,
     paperDate: input.paperDate,
     totalMarks: input.totalMarks,
     durationMinutes: input.durationMinutes,
     sourceNote: input.sourceNote?.trim(),
     questionFileId: input.questionFileId ? new Types.ObjectId(input.questionFileId) : undefined,
     status: "DECLARED",
-    items: input.items.map((i) => ({ ...i, chapters: i.chapters ?? [], label: i.label.trim() })),
+    items: input.items.map((i) => ({
+      ...i,
+      chapters: i.chapters ?? [],
+      label: i.label?.trim() ?? "",
+      topicCode: i.topicCode?.trim() ?? "",
+      part: i.part?.trim().toLowerCase() || undefined,
+    })),
     declaredBy: new Types.ObjectId(actor.userId),
     declaredAt: new Date(),
   });
@@ -546,6 +585,8 @@ export interface PaperDetailView {
   status: string;
   items: {
     itemNo: number;
+    questionNo: number | null;
+    part: string | null;
     label: string;
     subject: HwSubject;
     topicCode: string;
@@ -598,7 +639,11 @@ export async function paperDetail(id: string): Promise<PaperDetailView | null> {
     status: p.status,
     items: p.items.map((i) => ({
       itemNo: i.itemNo,
-      label: i.label,
+      questionNo: i.questionNo ?? null,
+      part: i.part || null,
+      // A blank label falls back to the topic's own words, then to the code — the entry
+      // grid's column header must never be empty (D-#675).
+      label: i.label?.trim() || topicLabel.get(i.topicCode) || `${i.itemNo}`,
       subject: i.subject,
       topicCode: i.topicCode,
       topicLabel: topicLabel.get(i.topicCode) ?? i.topicCode,

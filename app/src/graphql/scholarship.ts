@@ -57,6 +57,8 @@ export const SCHOLARSHIP_PAPER_QUERY = gql`
       status
       items {
         itemNo
+        questionNo
+        part
         label
         subject
         topicCode
@@ -192,7 +194,7 @@ export const DECLARE_SCHOLARSHIP_PAPER = gql`
   mutation DeclareScholarshipPaper(
     $sectionId: String!
     $subjects: [String!]!
-    $name: String!
+    $name: String
     $paperDate: String
     $totalMarks: Float!
     $durationMinutes: Int

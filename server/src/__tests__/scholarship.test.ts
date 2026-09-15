@@ -92,6 +92,7 @@ import {
   subjectKeyOf,
   sumMarks,
   validateItems,
+  marksNote,
   type DeclareItemInput,
 } from "../modules/scholarship/services/ScholarshipService";
 
@@ -148,7 +149,7 @@ describe("mark arithmetic", () => {
 });
 
 // ---------------------------------------------------------------------------
-// validateItems — the Σ guard and its neighbours
+// validateItems — the hard guards, and the Σ NOTE that is no longer one of them
 // ---------------------------------------------------------------------------
 
 describe("validateItems", () => {
@@ -156,12 +157,50 @@ describe("validateItems", () => {
     await expect(validateItems(["ENG"], 100, engItems(), 5)).resolves.toBeNull();
   });
 
-  it("refuses a paper whose items do NOT total the full marks, naming the real sum", async () => {
+  it("ACCEPTS a paper whose items do not total the full marks (D-#675)", async () => {
+    // D-#656 refused this. The refusal made the owner's real case impossible — a paper
+    // listing every alternative is 24 items for 14 printed questions and sums to 168
+    // while the student still sits 100 — and it protected no calculation: a topic
+    // percentage divides by the marks of the items a student was MARKED on, and the
+    // class average divides by totalMarks. Neither reads Σ(items).
     const items = engItems();
-    items[2].marks = 80; // 5 + 6 + 80 = 91
-    const msg = await validateItems(["ENG"], 100, items, 5);
-    expect(msg).toContain("91");
-    expect(msg).toContain("100");
+    items[2].marks = 80; // 5 + 6 + 80 = 91, not 100
+    await expect(validateItems(["ENG"], 100, items, 5)).resolves.toBeNull();
+  });
+
+  it("still REPORTS the mismatch through marksNote, naming the real sum", async () => {
+    // Gone as a refusal, kept as a signal: on a paper meant to be one part per question
+    // a mismatch is a typo, and the teacher should see it while typing.
+    const items = engItems();
+    items[2].marks = 80;
+    const note = marksNote(100, items);
+    expect(note).toContain("91");
+    expect(note).toContain("100");
+    expect(marksNote(91, items)).toBeNull();
+  });
+
+  it("accepts an item with NO topic, and still refuses one whose named topic is unknown", async () => {
+    // An untagged item misses the topic axis and nothing else (D-#675); refusing the
+    // paper over it only ever cost the teacher the record.
+    const items = engItems();
+    items[0].topicCode = "";
+    await expect(validateItems(["ENG"], 100, items, 5)).resolves.toBeNull();
+  });
+
+  it("accepts a blank item label and a question number with a part letter", async () => {
+    const items = engItems();
+    items[0].label = "";
+    items[0].questionNo = 1;
+    items[0].part = "a";
+    items[1].questionNo = 1;
+    items[1].part = "b";
+    await expect(validateItems(["ENG"], 100, items, 5)).resolves.toBeNull();
+  });
+
+  it("refuses a part letter outside a-d", async () => {
+    const items = engItems();
+    items[0].part = "z";
+    await expect(validateItems(["ENG"], 100, items, 5)).resolves.toContain("a, b, c");
   });
 
   it("refuses a duplicated item number", async () => {
@@ -326,13 +365,20 @@ describe("declarePaper", () => {
     expect(doc.status).toBe("DECLARED");
   });
 
-  it("refuses to store a paper whose marks do not add up", async () => {
+  it("STORES a paper whose marks do not add up, and one with no name (D-#675)", async () => {
+    // Both refusals are gone. The Σ one made a paper listing every alternative
+    // impossible to record at all; the name one cost the record over a field the paper
+    // id can supply. A stored paper that is slightly wrong beats no paper.
     const items = engItems();
-    items[0].marks = 4; // 99
+    items[0].marks = 4; // 99, not 100
     await expect(
-      declarePaper({ sectionId, subjects: ["ENG"], name: "x", totalMarks: 100, items }, principal),
-    ).rejects.toThrow("99");
-    expect(mockPaperCreate).not.toHaveBeenCalled();
+      declarePaper({ sectionId, subjects: ["ENG"], totalMarks: 100, items }, principal),
+    ).resolves.toBeDefined();
+    expect(mockPaperCreate).toHaveBeenCalledTimes(1);
+    // The blank name is filled from the generated paper id, never stored empty.
+    const created = mockPaperCreate.mock.calls[0][0] as { name: string; paperId: string };
+    expect(created.name).toBe(created.paperId);
+    expect(created.name).not.toBe("");
   });
 
   it("audits the declaration with the item count and total", async () => {

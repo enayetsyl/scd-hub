@@ -28,6 +28,7 @@ import {
   retireTopic,
   saveTopic,
   validateItems,
+  marksNote,
   type PaperDetailView,
   type PaperListRow,
   type TopicView,
@@ -96,10 +97,14 @@ PaperRowRef.implement({
 const PaperItemRef = builder.objectRef<PaperDetailView["items"][number]>("ScholarshipPaperItem");
 PaperItemRef.implement({
   description:
-    "One declared item. EXACTLY one topic, ZERO OR MORE chapters (D-#659), and its own subject — " +
-    "a combined Science + BGS paper is one paper with items on both sides (D-#664).",
+    "One declared item. AT MOST one topic, ZERO OR MORE chapters (D-#659), and its own subject — " +
+    "a combined Science + BGS paper is one paper with items on both sides (D-#664). `questionNo` " +
+    "and `part` carry the number PRINTED on the paper when a question has alternatives: a paper " +
+    "listing every alternative has more items than printed questions (D-#675).",
   fields: (t) => ({
     itemNo: t.exposeInt("itemNo"),
+    questionNo: t.exposeInt("questionNo", { nullable: true }),
+    part: t.exposeString("part", { nullable: true }),
     label: t.exposeString("label"),
     subject: t.exposeString("subject"),
     topicCode: t.exposeString("topicCode"),
@@ -234,13 +239,17 @@ ClassAnalysisRef.implement({
 
 const ItemInput = builder.inputType("ScholarshipItemInput", {
   description:
-    "One declared item. `subject` must be one the paper covers; `topicCode` must exist for THAT " +
-    "subject; `marks` steps by 0.5. Σ over the list must equal the paper's totalMarks.",
+    "One declared item. `subject` must be one the paper covers; a `topicCode`, IF given, must " +
+    "exist for THAT subject; `marks` steps by 0.5. Σ over the list is reported but NOT enforced " +
+    "(D-#675) — a paper listing every alternative out-totals the sitting by design. `questionNo` " +
+    "+ `part` are the number printed on the paper (`1` + `a`).",
   fields: (t) => ({
     itemNo: t.int({ required: true }),
-    label: t.string({ required: true }),
+    questionNo: t.int({ required: false }),
+    part: t.string({ required: false }),
+    label: t.string({ required: false }),
     subject: t.string({ required: true }),
-    topicCode: t.string({ required: true }),
+    topicCode: t.string({ required: false }),
     chapters: t.intList({ required: false }),
     itemType: t.string({ required: true }),
     marks: t.float({ required: true }),
@@ -350,7 +359,9 @@ builder.queryFields((t) => ({
     nullable: true,
     description:
       "Dry-run the declaration guards and return the Bangla complaint, or null when the paper is " +
-      "sound — so the app can show the same message live while the item list is still being typed.",
+      "sound — so the app can show the same message live while the item list is still being typed. " +
+      "A Σ mismatch is reported here but does NOT refuse the write (D-#675); it is a typo signal " +
+      "on a one-part-per-question paper and expected on one listing every alternative.",
     authScopes: { hasPermission: "scholarship:manage" },
     args: {
       classLevel: t.arg.int({ required: true }),
@@ -358,21 +369,27 @@ builder.queryFields((t) => ({
       totalMarks: t.arg.float({ required: true }),
       items: t.arg({ type: [ItemInput], required: true }),
     },
-    resolve: async (_r, args) =>
-      validateItems(
+    resolve: async (_r, args) => {
+      const mapped = args.items.map((i) => ({
+        itemNo: i.itemNo,
+        questionNo: i.questionNo ?? undefined,
+        part: i.part ?? undefined,
+        label: i.label ?? "",
+        subject: i.subject as HwSubject,
+        topicCode: i.topicCode ?? "",
+        chapters: i.chapters ?? [],
+        itemType: i.itemType as PaperDetailView["items"][number]["itemType"] as never,
+        marks: i.marks,
+      }));
+      const hard = await validateItems(
         args.subjects as HwSubject[],
         args.totalMarks,
-        args.items.map((i) => ({
-          itemNo: i.itemNo,
-          label: i.label,
-          subject: i.subject as HwSubject,
-          topicCode: i.topicCode,
-          chapters: i.chapters ?? [],
-          itemType: i.itemType as PaperDetailView["items"][number]["itemType"] as never,
-          marks: i.marks,
-        })),
+        mapped,
         args.classLevel,
-      ),
+      );
+      // Hard complaint first; the Σ mismatch is only reported once nothing else is wrong.
+      return hard ?? marksNote(args.totalMarks, mapped);
+    },
   }),
 }));
 
@@ -429,13 +446,14 @@ builder.mutationFields((t) => ({
   declareScholarshipPaper: t.field({
     type: "String",
     description:
-      "Declare a paper and its item structure. Refuses unless the items total the full marks. " +
-      "Returns the new paper's id.",
+      "Declare a paper and its item structure. The items need NOT total the full marks (D-#675) — " +
+      "a paper listing every alternative out-totals the sitting by design. Returns the new " +
+      "paper's id.",
     authScopes: { hasPermission: "scholarship:manage" },
     args: {
       sectionId: t.arg.string({ required: true }),
       subjects: t.arg.stringList({ required: true }),
-      name: t.arg.string({ required: true }),
+      name: t.arg.string({ required: false }),
       paperDate: t.arg.string({ required: false }),
       totalMarks: t.arg.float({ required: true }),
       durationMinutes: t.arg.int({ required: false }),
@@ -447,16 +465,18 @@ builder.mutationFields((t) => ({
         {
           sectionId: args.sectionId,
           subjects: args.subjects as HwSubject[],
-          name: args.name,
+          name: args.name ?? undefined,
           paperDate: args.paperDate ? new Date(args.paperDate) : undefined,
           totalMarks: args.totalMarks,
           durationMinutes: args.durationMinutes ?? undefined,
           sourceNote: args.sourceNote ?? undefined,
           items: args.items.map((i) => ({
             itemNo: i.itemNo,
-            label: i.label,
+            questionNo: i.questionNo ?? undefined,
+            part: i.part ?? undefined,
+            label: i.label ?? "",
             subject: i.subject as HwSubject,
-            topicCode: i.topicCode,
+            topicCode: i.topicCode ?? "",
             chapters: i.chapters ?? [],
             itemType: i.itemType as never,
             marks: i.marks,
