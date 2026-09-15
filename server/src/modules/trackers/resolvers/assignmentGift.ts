@@ -1,11 +1,19 @@
 /**
  * Assignment gift & streak resolvers (AG-3, D-#479–#483).
  *
- * RBAC composes EXISTING permissions — no new permission, no `/shared/vocab.ts`
- * edit, therefore no two-place contract sync (D-#483):
- *   - READ (`assignmentGiftReport`): `tracker:read`. Principal/Office are
- *     unscoped staff and see every class; any other caller must name a section
- *     and pass `assertCanRead` on it — the established staff-read pattern.
+ * RBAC (D-#483, widened by D-#667). Every field takes `tracker:read` OR
+ * `gift:manage`, because the two callers arrive by different routes:
+ *   - a TEACHER holds `tracker:read` and is section-scoped in the resolver body;
+ *   - the OFFICE desk — the people who physically hand the gifts out — holds
+ *     `gift:manage` and NO tracker permission at all. That is deliberate: D-#554
+ *     ("the Office nudges and can never resolve a claim") is asserted by the vocab
+ *     verifier, so widening `tracker:read` to the Office was never an option and a
+ *     narrow permission was minted instead. Do NOT collapse these gates back to a
+ *     single `hasPermission` — either one alone locks out one of the two callers
+ *     (`giftRbac.test.ts` fails if you do).
+ *   - READ (`assignmentGiftReport`): Principal/Office are unscoped staff and see
+ *     every class; any other caller must name a section and pass `assertCanRead`
+ *     on it — the established staff-read pattern.
  *   - TICK (`recordGiftHandover` / `undoGiftHandover`): Principal/Office
  *     (`isAdminStaff`) OR the section's assigned class teacher — the D-#42/#45
  *     daily-coordinator gate. `assertCanWrite` is deliberately NOT used: it
@@ -140,6 +148,9 @@ const GiftStudentRowRef = builder.objectRef<GiftStudentRow>("GiftStudentRow").im
     schoolId: t.exposeString("schoolId"),
     rollNumber: t.string({ nullable: true, resolve: (r) => r.rollNumber }),
     classId: t.exposeString("classId"),
+    className: t.exposeString("className", {
+      description: "The class's Bangla name — the heading the Office's Today card groups winners under.",
+    }),
     sectionId: t.exposeString("sectionId"),
     weeks: t.field({ type: [GiftWeekRef], resolve: (r) => r.weeks }),
     wonWeeks: t.intList({ resolve: (r) => r.wonWeeks }),
@@ -193,7 +204,7 @@ builder.queryField("assignmentGiftReport", (t) =>
       "Who submitted every Thursday-given assignment by its Sunday (weekly gift) and who has a " +
       "4-week run (higher gift). Principal/Office see every class; a teacher must name a section " +
       "they can read.",
-    authScopes: { hasPermission: "tracker:read" },
+    authScopes: { hasAnyPermission: ["tracker:read", "gift:manage"] },
     args: {
       academicYearId: t.arg.string({ required: true }),
       weekFrom: t.arg.int({ required: false }),
@@ -224,7 +235,7 @@ builder.mutationField("recordGiftHandover", (t) =>
     description:
       "Record that the gift was physically given. Entitlement is RE-DERIVED here and the call is " +
       "refused if the student is not currently a winner for that week (D-#479). Idempotent.",
-    authScopes: { hasPermission: "tracker:read" },
+    authScopes: { hasAnyPermission: ["tracker:read", "gift:manage"] },
     args: {
       academicYearId: t.arg.string({ required: true }),
       studentId: t.arg.string({ required: true }),
@@ -251,7 +262,7 @@ builder.mutationField("recordGiftHandover", (t) =>
 builder.mutationField("undoGiftHandover", (t) =>
   t.boolean({
     description: "Undo a mis-tick. True when a handover row was actually removed.",
-    authScopes: { hasPermission: "tracker:read" },
+    authScopes: { hasAnyPermission: ["tracker:read", "gift:manage"] },
     args: {
       academicYearId: t.arg.string({ required: true }),
       studentId: t.arg.string({ required: true }),
