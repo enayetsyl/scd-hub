@@ -113,14 +113,16 @@ Deliberately a **new catalogue, not `HomeworkTopic`** (D-#657): `HomeworkTopic` 
 chapter. Overloading the homework catalogue would either pollute the homework picker with skills that
 are not homework topics, or force the analysis onto an axis that cannot answer the question.
 
-Seed for English (the paper structure in `scholarship/PROMPT_C5_ENG_question_generator.md` §2):
-শব্দভাণ্ডার · পাঠ-অনুধাবন · অদেখা অনুচ্ছেদ · ব্যাকরণ—parts of speech · ব্যাকরণ—tense · ব্যাকরণ—article ·
-suffix/prefix · WH-question · বাক্য সাজানো · যতিচিহ্ন ও বড় হাতের অক্ষর · ফরম পূরণ ও সংখ্যা ·
-ক্রিয়ার রূপ · চিঠি/দরখাস্ত/ইমেইল · রচনা.
+Seed for English (the paper structure in `scholarship/PROMPT_C5_ENG_question_generator.md` §2) —
+its 14 printed items expanded to **20 topics**, in English (D-#667, §5.2.3):
+Match words with meanings · True/False · Make sentences · Answer the questions (textbook) ·
+Fill in the blanks from a box (unseen) · Answer the questions (unseen) · Parts of speech · Tense ·
+Suffix & prefix · Article · WH-question · Rearrange words · Rearrange sentences · Capitalization &
+punctuation · Form / numbers · Verb forms · Letter · Application · Email · Composition.
 
-**All five subjects are seeded in the same slice** (owner ask, 2026-09-14): বাংলা 15, English 14,
+**All five subjects are seeded in the same slice** (owner ask, 2026-09-14): বাংলা 15, English 20,
 গণিত 11 from their own item tables, and প্রাথমিক বিজ্ঞান / বাংলাদেশ ও বিশ্বপরিচয় 6 each — their
-ANSWER FORMS, per the owner ruling in §5.2.2 (D-#666). 69 topics in all.
+ANSWER FORMS, per the owner ruling in §5.2.2 (D-#666). **75 topics** in all.
 
 `content` remains a legal axis and nothing seeds it today; it exists for a subject whose topics are
 genuinely chapters, and the analysis reads the field rather than branching on subject either way.
@@ -218,6 +220,40 @@ answer-form skills are read straight off their five-row table. The seed carries 
 ever tagged with a topic points at, so it must survive both reordering (a position-derived code
 silently re-points existing items the first time a row is inserted) and renaming (a label-derived
 one would move on exactly the edit `labelBn` exists to allow).
+
+### 5.2.3 English is labelled in English, and an "or" item is two topics (D-#667)
+
+Owner, reading the seeded catalogue on prod: *"the english topic list recorded in bangla but it
+should be in english"*, and *"as there are 14 questions but some questions as variation like 1, 6, 7,
+9, 13 has optional so for topic list for question 1 should be 1. Match the given words with their
+meanings / 2. Indicate true/false"*.
+
+**Language.** AGENTS.md asks for Bangla in teacher-facing content and every other subject keeps it.
+English is the exception the rule already implies: its items are *printed* in English on the paper,
+so `ব্যাকরণ — article` forced the teacher to translate backwards to find the row matching the
+question in front of her. The stored field stays `labelBn` — it is the one display label, and
+renaming a stored field to carry a single subject's language would be a migration bought for nothing.
+
+**Alternatives.** Items 1, 6, 7, 9 and 13 of the circular each join *separate abilities* with "or":
+matching vs true/false, parts of speech vs tense, affixes vs articles, words-into-a-sentence vs
+sentences-into-a-story, letter vs application vs email. The setter picks ONE per paper, so a
+student's marks only ever land on one side; a merged row would average a skill she was tested on
+with one she never saw — which is exactly the false finding this module exists to prevent. 14 printed
+items → 20 topics.
+
+**Items 11 and 14 print a slash and are deliberately NOT split.** Item 11 (fill out a form / fill in
+blanks with time and cardinal/ordinal numbers) and item 14 (composition, free or guided) offer the
+same ability with a different prompt, so one row still answers "what can she not do".
+
+**Ten of the fourteen codes are REUSED** (`PARTS-OF-SPEECH`, `TENSE`, `ARTICLE`, `AFFIX`,
+`WH-QUESTION`, `PUNCTUATION`, `FORM-NUMBERS`, `VERB-FORM`, `LETTER`, `COMPOSITION`) so any paper
+already tagged with one keeps its marks and simply reads in English from now on. The four whose
+meaning genuinely changed (`VOCAB`, `COMPREHENSION`, `UNSEEN`, `REARRANGE`) are soft-retired by
+`--prune`, never deleted — a hard delete would strand a tagged item's marks (the D-#548 posture).
+
+**Numbering is positional, not `order`.** The catalogue screen numbers rows 1..n by their place in
+the rendered list. `order` is per-subject and goes gappy the moment a topic is retired, and the
+number a teacher matches against her question paper is "the nth row I can see".
 
 ### 5.3 `ScholarshipScore` — the missing row (SC-2)
 

@@ -5,8 +5,10 @@
  * 2026 প্রশ্নপত্র কাঠামো (memo 38.04.0000.801.06.314.24, 08 July 2026). Typed here from
  * the signed tables, because there is no machine-readable copy of them in the repo.
  *
- *  - বাংলা (15) · English (14) · গণিত (11) — the circular's item tables name the skills
- *    outright (article, tense, WH-question, লসাগু ও গসাগু, শতকরা…).
+ *  - বাংলা (15) · English (20) · গণিত (11) — the circular's item tables name the skills
+ *    outright (article, tense, WH-question, লসাগু ও গসাগু, শতকরা…). English is 20 rather
+ *    than its 14 printed items because five of them offer alternatives, and it is the
+ *    only subject labelled in English — see the ENG block for both rulings (D-#667).
  *  - প্রাথমিক বিজ্ঞান · বাংলাদেশ ও বিশ্বপরিচয় (6 each) — their tables name ANSWER FORMS,
  *    and the owner ruled that the form IS the skill for these two (D-#666). The paper
  *    backs it: in a 50-mark half, বিস্তৃত উত্তর alone is 24 marks and সংক্ষিপ্ত another
@@ -59,22 +61,54 @@ const skill = (subject: HwSubject, key: string, labelBn: string): Seed => ({
   axis: "skill",
 });
 
-/** English — the 14 items of the 2026 structure, collapsed to the skills they test. */
+/**
+ * English — the 2026 structure's 14 printed items, expanded to 20 topics (D-#667).
+ *
+ * Two owner corrections, both read off the seeded catalogue on prod:
+ *
+ * 1. **The labels are ENGLISH.** The house rule is Bangla for teacher-facing content,
+ *    and every other subject here keeps it. The English paper is the exception the rule
+ *    already implies: its items are PRINTED in English, so `ব্যাকরণ — article` made the
+ *    teacher translate backwards to find the row matching the question in front of her.
+ *    The field is still named `labelBn` — it is the one display label, and renaming a
+ *    stored field to carry one subject's language would be a migration for nothing.
+ *
+ * 2. **An item printing two alternatives is TWO topics.** Items 1, 6, 7, 9 and 13 join
+ *    separate abilities with "or": matching vs true/false, parts of speech vs tense,
+ *    affixes vs articles, words-into-a-sentence vs sentences-into-a-story, and letter vs
+ *    application vs email. The setter picks ONE per paper, so a student's marks only ever
+ *    land on one side — merging them would average a skill she was tested on with one she
+ *    never saw, and that average is precisely the finding this module exists to produce.
+ *
+ * Item 11 (`fill out a form` / `fill in the blanks` with time and cardinal/ordinal
+ * numbers) and item 14 (composition, free `or` guided) also print a slash and are
+ * deliberately NOT split: both alternatives there are the same ability with a different
+ * prompt, so the topic still answers "what can she not do".
+ *
+ * The trailing `Qn` comment is the circular's own item number — the mapping back to the
+ * printed paper, which the sequential list position no longer carries.
+ */
 const ENG: Seed[] = [
-  skill("ENG", "VOCAB", "শব্দভাণ্ডার ও শব্দার্থ"),
-  skill("ENG", "COMPREHENSION", "পাঠ্যবই — পাঠ-অনুধাবন"),
-  skill("ENG", "UNSEEN", "অদেখা অনুচ্ছেদ"),
-  skill("ENG", "PARTS-OF-SPEECH", "ব্যাকরণ — parts of speech"),
-  skill("ENG", "TENSE", "ব্যাকরণ — tense"),
-  skill("ENG", "ARTICLE", "ব্যাকরণ — article"),
-  skill("ENG", "AFFIX", "suffix ও prefix"),
-  skill("ENG", "WH-QUESTION", "WH-question তৈরি"),
-  skill("ENG", "REARRANGE", "বাক্য ও গল্প সাজানো"),
-  skill("ENG", "PUNCTUATION", "যতিচিহ্ন ও বড় হাতের অক্ষর"),
-  skill("ENG", "FORM-NUMBERS", "ফরম পূরণ ও সংখ্যা"),
-  skill("ENG", "VERB-FORM", "ক্রিয়ার সঠিক রূপ"),
-  skill("ENG", "LETTER", "চিঠি · দরখাস্ত · ইমেইল"),
-  skill("ENG", "COMPOSITION", "রচনা লিখন"),
+  skill("ENG", "MATCH-MEANING", "Match the given words with their meanings"), //       Q1 ·a
+  skill("ENG", "TRUE-FALSE", "Indicate True/False"), //                                Q1 ·b
+  skill("ENG", "SENTENCE-MAKING", "Make meaningful sentences with the given words"), // Q2
+  skill("ENG", "COMPREHENSION-SEEN", "Answer the questions — textbook passage"), //    Q3
+  skill("ENG", "UNSEEN-CLOZE", "Fill in the blanks from the box — unseen passage"), // Q4
+  skill("ENG", "COMPREHENSION-UNSEEN", "Answer the questions — unseen passage"), //    Q5
+  skill("ENG", "PARTS-OF-SPEECH", "Identify the parts of speech of the underlined words"), // Q6 ·a
+  skill("ENG", "TENSE", "Change the tenses as directed"), //                           Q6 ·b
+  skill("ENG", "AFFIX", "Complete the text adding suffixes and prefixes"), //          Q7 ·a
+  skill("ENG", "ARTICLE", "Fill in the gaps with a, an or the"), //                    Q7 ·b
+  skill("ENG", "WH-QUESTION", "Make WH questions from the given statements"), //       Q8
+  skill("ENG", "REARRANGE-WORDS", "Rearrange the words to make meaningful sentences"), // Q9 ·a
+  skill("ENG", "REARRANGE-SENTENCES", "Rearrange the sentences to form a story"), //   Q9 ·b
+  skill("ENG", "PUNCTUATION", "Rewrite using correct capitalization and punctuation"), // Q10
+  skill("ENG", "FORM-NUMBERS", "Fill out the form / fill in the blanks with numbers"), // Q11
+  skill("ENG", "VERB-FORM", "Complete the sentences using the correct forms of verbs"), // Q12
+  skill("ENG", "LETTER", "Write a letter"), //                                         Q13 ·a
+  skill("ENG", "APPLICATION", "Write an application"), //                              Q13 ·b
+  skill("ENG", "EMAIL", "Write an email"), //                                          Q13 ·c
+  skill("ENG", "COMPOSITION", "Write a short composition"), //                         Q14
 ];
 
 /** বাংলা — the 15 items of the 2026 structure. */
@@ -139,7 +173,12 @@ function codeOf(subject: HwSubject, key: string): string {
  *
  * What it is for: the first prod seed wrote 29 CHAPTER topics for SCI/BGS, which D-#666
  * replaced. Without a prune those sit in the picker for ever, offering an axis the owner
- * ruled against.
+ * ruled against. D-#667 adds four more — the English rows `VOCAB`, `COMPREHENSION`,
+ * `UNSEEN` and `REARRANGE`, whose Bangla labels were replaced by the English items they
+ * stood for. The ten ENG keys whose skill is unchanged (`PARTS-OF-SPEECH`, `TENSE`,
+ * `ARTICLE`, `AFFIX`, `WH-QUESTION`, `PUNCTUATION`, `FORM-NUMBERS`, `VERB-FORM`,
+ * `LETTER`, `COMPOSITION`) are deliberately REUSED, so a paper already tagged with one
+ * keeps its marks and simply reads in English from now on.
  */
 async function pruneUnseeded(
   subjects: readonly HwSubject[],
