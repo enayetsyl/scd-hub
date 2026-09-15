@@ -21,9 +21,12 @@ import {
 } from "../../notifications/services/emitters";
 import {
   ClassTestQuestionRequest,
+  CT_QUESTION_EDITABLE,
+  CT_QUESTION_CANCELLABLE,
   type IClassTestQuestionRequest,
   type ICtQuestionRound,
 } from "../models/ClassTestQuestionRequest";
+import { ClassTest } from "../models/ClassTest";
 import { Section } from "../../foundation/models/Section";
 import { Class } from "../../foundation/models/Class";
 import { User } from "../../foundation/models/User";
@@ -61,6 +64,8 @@ export interface CtQuestionRequestShape {
   requestedAt: string;
   confirmedAt: string | null;
   classTestId: string | null;
+  cancelledAt: string | null;
+  cancelReason: string | null;
 }
 
 function shape(d: IClassTestQuestionRequest, requesterName: string | null = null): CtQuestionRequestShape {
@@ -89,7 +94,32 @@ function shape(d: IClassTestQuestionRequest, requesterName: string | null = null
     requestedAt: new Date(d.requestedAt).toISOString(),
     confirmedAt: d.confirmedAt ? new Date(d.confirmedAt).toISOString() : null,
     classTestId: d.classTestId ? d.classTestId.toString() : null,
+    cancelledAt: d.cancelledAt ? new Date(d.cancelledAt).toISOString() : null,
+    cancelReason: d.cancelReason ?? null,
   };
+}
+
+/**
+ * The detail fields a teacher supplies, validated identically wherever they are
+ * written — filing the request (create) and correcting it (edit) must not drift
+ * apart, or a value rejected on the way in becomes settable on the way back.
+ */
+function validateDetails(input: {
+  chapter: string;
+  totalMarks: number;
+  durationMinutes: number;
+  examDate: string;
+}): { chapter: string; examDate: Date } {
+  if (!input.chapter || input.chapter.trim() === "") throw new Error("অধ্যায় নম্বর লিখুন");
+  if (!Number.isInteger(input.totalMarks) || input.totalMarks < 1) {
+    throw new Error("পূর্ণমান একটি ধনাত্মক সংখ্যা হতে হবে");
+  }
+  if (!Number.isInteger(input.durationMinutes) || input.durationMinutes < 1) {
+    throw new Error("সময় (মিনিট) একটি ধনাত্মক সংখ্যা হতে হবে");
+  }
+  const examDate = new Date(input.examDate);
+  if (Number.isNaN(examDate.getTime())) throw new Error("পরীক্ষার তারিখ সঠিক নয়");
+  return { chapter: input.chapter.trim(), examDate };
 }
 
 // ---------------------------------------------------------------------------
@@ -110,15 +140,7 @@ export async function createCtQuestionRequest(input: CreateCtQuestionInput): Pro
   if (!(HW_SUBJECTS as readonly string[]).includes(input.subject)) {
     throw new Error(`Unknown subject: ${input.subject}`);
   }
-  if (!input.chapter || input.chapter.trim() === "") throw new Error("অধ্যায় নম্বর লিখুন");
-  if (!Number.isInteger(input.totalMarks) || input.totalMarks < 1) {
-    throw new Error("পূর্ণমান একটি ধনাত্মক সংখ্যা হতে হবে");
-  }
-  if (!Number.isInteger(input.durationMinutes) || input.durationMinutes < 1) {
-    throw new Error("সময় (মিনিট) একটি ধনাত্মক সংখ্যা হতে হবে");
-  }
-  const examDate = new Date(input.examDate);
-  if (Number.isNaN(examDate.getTime())) throw new Error("পরীক্ষার তারিখ সঠিক নয়");
+  const { chapter, examDate } = validateDetails(input);
 
   // Year/level/class derived from the section — never client-supplied (D-#143).
   const section = (await Section.findById(input.sectionId).select("classId").lean()) as {
@@ -144,7 +166,7 @@ export async function createCtQuestionRequest(input: CreateCtQuestionInput): Pro
     classId: section.classId,
     sectionId: new Types.ObjectId(input.sectionId),
     subject: input.subject,
-    chapter: input.chapter.trim(),
+    chapter,
     testNumber,
     totalMarks: input.totalMarks,
     durationMinutes: input.durationMinutes,
@@ -190,6 +212,7 @@ export interface SendCtQuestionInput {
 export async function sendCtQuestionForReview(input: SendCtQuestionInput): Promise<CtQuestionRequestShape> {
   const doc = await ClassTestQuestionRequest.findById(input.id);
   if (!doc || doc.active === false) throw new Error("অনুরোধটি পাওয়া যায়নি");
+  if (doc.status === "CANCELLED") throw new Error("অনুরোধটি শিক্ষক বাতিল করেছেন");
   if (doc.status === "CONFIRMED" || doc.status === "PRINT_REQUESTED") {
     throw new Error("চূড়ান্ত হয়ে যাওয়া প্রশ্নে আর নতুন সংস্করণ পাঠানো যায় না");
   }
@@ -357,6 +380,209 @@ export async function requestCtQuestionPrint(input: PrintCtQuestionInput): Promi
 }
 
 // ---------------------------------------------------------------------------
+// Teacher: correct a mistake in the details (owner ask 2026-09-15)
+// ---------------------------------------------------------------------------
+
+export interface EditCtQuestionInput {
+  id: string;
+  chapter: string;
+  totalMarks: number;
+  durationMinutes: number;
+  examDate: string;
+  actorId: string;
+}
+
+/**
+ * Correct the four DETAIL fields. Subject, class/section and `testNumber` are the
+ * request's address and are deliberately not editable — see the model header.
+ *
+ * Only while the office still owes a paper (`REQUESTED` / `CHANGES_REQUESTED`).
+ * Once a paper is `IN_REVIEW` the teacher already has the right tool — the
+ * change-request round — and silently moving the spec under a paper the office
+ * has already written would be the worse outcome of the two.
+ */
+export async function editCtQuestionRequest(input: EditCtQuestionInput): Promise<CtQuestionRequestShape> {
+  const { chapter, examDate } = validateDetails(input);
+
+  const doc = await ClassTestQuestionRequest.findById(input.id);
+  if (!doc || doc.active === false) throw new Error("অনুরোধটি পাওয়া যায়নি");
+  if (doc.requestedBy.toString() !== input.actorId) {
+    throw new Error("শুধু অনুরোধকারী শিক্ষকই অনুরোধটি সংশোধন করতে পারেন");
+  }
+  if (!CT_QUESTION_EDITABLE.includes(doc.status)) {
+    throw new Error("প্রশ্নপত্র তৈরি শুরু হয়ে যাওয়ায় আর সংশোধন করা যাচ্ছে না");
+  }
+
+  const before = {
+    chapter: doc.chapter,
+    totalMarks: doc.totalMarks,
+    durationMinutes: doc.durationMinutes,
+    examDate: new Date(doc.examDate).toISOString(),
+  };
+  doc.chapter = chapter;
+  doc.totalMarks = input.totalMarks;
+  doc.durationMinutes = input.durationMinutes;
+  doc.examDate = examDate;
+  await doc.save();
+
+  const after = {
+    chapter,
+    totalMarks: input.totalMarks,
+    durationMinutes: input.durationMinutes,
+    examDate: examDate.toISOString(),
+  };
+  await writeAudit({
+    eventKind: "CT_QUESTION_EDITED",
+    actorId: input.actorId,
+    targetId: doc._id,
+    targetKind: "ClassTestQuestionRequest",
+    meta: { before, after },
+  });
+
+  // The office may be part-way through typing the paper against the OLD spec —
+  // a correction they are not told about is worse than no correction at all.
+  const subjectBn = HW_SUBJECT_LABELS_BN[doc.subject as HwSubject] ?? doc.subject;
+  await emitCtQuestionOffice({
+    requestId: doc._id.toString(),
+    titleBn: "অনুরোধ সংশোধন করা হয়েছে",
+    bodyBn:
+      `${subjectBn} · শ্রেণি ${doc.classLevel} · টেস্ট ${doc.testNumber} — ` +
+      `অধ্যায় ${doc.chapter} · পূর্ণমান ${doc.totalMarks} · সময় ${doc.durationMinutes} মিনিট · ` +
+      `তারিখ ${dhakaDayKey(examDate)}`,
+    // A FRESH token per correction, deliberately — this is the one event here that
+    // must never be deduped. An entity-only key swallows the second correction
+    // outright, and a timestamp is not enough either: two corrections inside the
+    // same millisecond collide, and the office keeps working from the first one's
+    // numbers with nothing on screen to say otherwise.
+    dedupeSuffix: `edited:${new Types.ObjectId().toString()}`,
+  });
+
+  return shape(doc);
+}
+
+// ---------------------------------------------------------------------------
+// Teacher: withdraw a request filed by mistake (owner ask 2026-09-15)
+// ---------------------------------------------------------------------------
+
+export interface CancelCtQuestionInput {
+  id: string;
+  reason?: string | null;
+  actorId: string;
+}
+
+/**
+ * Withdraw, do not erase. The row keeps its place on both lists with a
+ * `CANCELLED` badge so the office — who may already be working on it — SEES the
+ * withdrawal instead of watching a card disappear. Terminal.
+ */
+export async function cancelCtQuestionRequest(
+  input: CancelCtQuestionInput,
+): Promise<CtQuestionRequestShape> {
+  const doc = await ClassTestQuestionRequest.findById(input.id);
+  if (!doc || doc.active === false) throw new Error("অনুরোধটি পাওয়া যায়নি");
+  if (doc.requestedBy.toString() !== input.actorId) {
+    throw new Error("শুধু অনুরোধকারী শিক্ষকই অনুরোধটি বাতিল করতে পারেন");
+  }
+  if (doc.status === "CANCELLED") throw new Error("অনুরোধটি আগেই বাতিল করা হয়েছে");
+  if (!CT_QUESTION_CANCELLABLE.includes(doc.status)) {
+    throw new Error("চূড়ান্ত হয়ে যাওয়ার পর বাতিল করতে অফিসে জানান");
+  }
+
+  const reason = (input.reason ?? "").trim() || null;
+  const previous = doc.status;
+  doc.status = "CANCELLED";
+  doc.cancelledBy = new Types.ObjectId(input.actorId);
+  doc.cancelledAt = new Date();
+  doc.cancelReason = reason;
+  await doc.save();
+
+  await writeAudit({
+    eventKind: "CT_QUESTION_CANCELLED",
+    actorId: input.actorId,
+    targetId: doc._id,
+    targetKind: "ClassTestQuestionRequest",
+    meta: { previousStatus: previous, reason },
+  });
+
+  const subjectBn = HW_SUBJECT_LABELS_BN[doc.subject as HwSubject] ?? doc.subject;
+  await emitCtQuestionOffice({
+    requestId: doc._id.toString(),
+    titleBn: "অনুরোধ বাতিল করেছেন শিক্ষক",
+    bodyBn:
+      `${subjectBn} · শ্রেণি ${doc.classLevel} · টেস্ট ${doc.testNumber}` +
+      `${reason ? ` — ${reason}` : ""}`,
+    dedupeSuffix: "cancelled",
+  });
+
+  return shape(doc);
+}
+
+// ---------------------------------------------------------------------------
+// Office / Principal: remove a row that should not exist (owner ask 2026-09-15)
+// ---------------------------------------------------------------------------
+
+export interface DeleteCtQuestionInput {
+  id: string;
+  reason?: string | null;
+  actorId: string;
+}
+
+/**
+ * The soft delete `active` was always shaped for — every read filters it and
+ * every write refuses it; only the writer was missing.
+ *
+ * Refused once the request has become a real class test, UNLESS that class test
+ * has itself been cancelled. A `PRINT_REQUESTED` row has a `ClassTest` and a
+ * print-queue job hanging off it, and hiding the origin while the exam is still
+ * live would leave the press printing a paper with no traceable request. The
+ * print queue's own cancel is the right door, and it leaves the class test
+ * `CANCELLED` — which is exactly the case this allows through.
+ */
+export async function deleteCtQuestionRequest(input: DeleteCtQuestionInput): Promise<boolean> {
+  const doc = await ClassTestQuestionRequest.findById(input.id);
+  if (!doc || doc.active === false) throw new Error("অনুরোধটি পাওয়া যায়নি");
+
+  if (doc.status === "PRINT_REQUESTED" && doc.classTestId) {
+    const test = (await ClassTest.findById(doc.classTestId).select("status").lean()) as {
+      status: string;
+    } | null;
+    if (test && test.status !== "CANCELLED") {
+      throw new Error("এই অনুরোধ থেকে ক্লাস টেস্ট তৈরি হয়েছে — আগে প্রিন্ট সারি থেকে সেটি বাতিল করুন");
+    }
+  }
+
+  const reason = (input.reason ?? "").trim() || null;
+  doc.active = false;
+  doc.deletedBy = new Types.ObjectId(input.actorId);
+  doc.deletedAt = new Date();
+  doc.deleteReason = reason;
+  await doc.save();
+
+  await writeAudit({
+    eventKind: "CT_QUESTION_DELETED",
+    actorId: input.actorId,
+    targetId: doc._id,
+    targetKind: "ClassTestQuestionRequest",
+    meta: { status: doc.status, subject: doc.subject, testNumber: doc.testNumber, reason },
+  });
+
+  // The requesting teacher's card is about to vanish from their own list — they
+  // find out from us, or they find out by noticing an absence, which is not a way
+  // to find out.
+  const subjectBn = HW_SUBJECT_LABELS_BN[doc.subject as HwSubject] ?? doc.subject;
+  await emitCtQuestionTeacher(doc.requestedBy.toString(), {
+    requestId: doc._id.toString(),
+    titleBn: "অনুরোধটি অফিস মুছে দিয়েছে",
+    bodyBn:
+      `${subjectBn} · শ্রেণি ${doc.classLevel} · টেস্ট ${doc.testNumber}` +
+      `${reason ? ` — ${reason}` : ""}`,
+    dedupeSuffix: "deleted",
+  });
+
+  return true;
+}
+
+// ---------------------------------------------------------------------------
 // Lists
 // ---------------------------------------------------------------------------
 
@@ -366,6 +592,8 @@ const STATUS_ORDER: Record<string, number> = {
   REQUESTED: 2,
   CONFIRMED: 3,
   PRINT_REQUESTED: 4,
+  // Withdrawn work is the one bucket nobody is waiting on — it sinks to the bottom.
+  CANCELLED: 5,
 };
 
 /** The teacher's own requests — action-needed first, then newest. */
@@ -389,6 +617,7 @@ const QUEUE_ORDER: Record<string, number> = {
   IN_REVIEW: 2,
   CONFIRMED: 3,
   PRINT_REQUESTED: 4,
+  CANCELLED: 5,
 };
 
 /**
