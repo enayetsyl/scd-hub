@@ -490,6 +490,12 @@ export default function TodayScreen(): React.ReactElement {
         <View style={{ height: space(2) }} />
       )}
 
+      {/* D-#670 — classes running right now, for a holder of routine:manage who is
+          routed to the teacher Today screen rather than the admin dashboard. OUTSIDE the
+          QueryGate on purpose: it carries its own query, and the school-wide board must
+          not disappear because the CALLER's own day happens to be empty. */}
+      {canLiveBoard ? <LiveClassCard /> : null}
+
       <QueryGate
         result={q}
         onRetry={refetchAll}
@@ -598,10 +604,6 @@ export default function TodayScreen(): React.ReactElement {
             ))}
           </Card>
         ) : null}
-
-        {/* D-#670 — classes running right now, for a holder of routine:manage who is
-            routed to the teacher Today screen rather than the admin dashboard. */}
-        {canLiveBoard ? <LiveClassCard /> : null}
 
         {/* আমার পিরিয়ড — horizontal timeline; current slot highlighted */}
         <H2>{STR.myPeriods}</H2>
