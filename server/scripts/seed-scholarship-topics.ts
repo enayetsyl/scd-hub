@@ -9,7 +9,7 @@
  *    outright (article, tense, WH-question, লসাগু ও গসাগু, শতকরা…). English is 24 rather
  *    than its 14 printed items because SEVEN of them offer alternatives, and it is the
  *    only subject labelled in English — see the ENG block and
- *    `docs/scholarship-eng-paper-structure.md` (D-#670/#669).
+ *    `docs/scholarship-eng-paper-structure.md` (D-#670/#672).
  *  - প্রাথমিক বিজ্ঞান · বাংলাদেশ ও বিশ্বপরিচয় (6 each) — their tables name ANSWER FORMS,
  *    and the owner ruled that the form IS the skill for these two (D-#666). The paper
  *    backs it: in a 50-mark half, বিস্তৃত উত্তর alone is 24 marks and সংক্ষিপ্ত another
@@ -67,7 +67,7 @@ const skill = (subject: HwSubject, key: string, labelBn: string, marks?: number)
 });
 
 /**
- * English — the 2026 structure's 14 printed items, expanded to 24 topics (D-#670/#669).
+ * English — the 2026 structure's 14 printed items, expanded to 24 topics (D-#670/#672).
  *
  * **This list is the owner-approved structure. Do not re-derive it from the circular's
  * prose — read `docs/scholarship-eng-paper-structure.md`, which is the narrative twin of
@@ -190,7 +190,7 @@ function codeOf(subject: HwSubject, key: string): string {
  *
  * What it is for: the first prod seed wrote 29 CHAPTER topics for SCI/BGS, which D-#666
  * replaced. Without a prune those sit in the picker for ever, offering an axis the owner
- * ruled against. D-#670/#669 add five more — the English rows `VOCAB`, `COMPREHENSION`,
+ * ruled against. D-#670/#672 add five more — the English rows `VOCAB`, `COMPREHENSION`,
  * `UNSEEN`, `REARRANGE` and `FORM-NUMBERS`, whose Bangla labels or merged wording were
  * replaced by the English items they stood for. The nine ENG keys whose skill is
  * unchanged (`PARTS-OF-SPEECH`, `TENSE`, `ARTICLE`, `AFFIX`, `WH-QUESTION`,
