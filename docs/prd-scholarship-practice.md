@@ -121,7 +121,13 @@ two halves of one source of truth, and neither is re-derived from the circular's
 
 **All five subjects are seeded in the same slice** (owner ask, 2026-09-14): বাংলা 15, English 24,
 গণিত 11 from their own item tables, and প্রাথমিক বিজ্ঞান / বাংলাদেশ ও বিশ্বপরিচয় 6 each — their
-ANSWER FORMS, per the owner ruling in §5.2.2 (D-#666). **79 topics** in all.
+ANSWER FORMS, per the owner ruling in §5.2.2 (D-#666). **62 topics** in all — 24 + 15 + 11 + 6 + 6,
+confirmed by the seed's own output on the first real prod run (2026-09-15).
+
+> This line read **69** from D-#665 until that run, and the number was wrong from D-#666 onward.
+> 69 was right while SCI/BGS held **29 chapter rows** read out of the question bank; D-#666 replaced
+> those with six answer forms each and never corrected the total, so every later edit (75, then 79)
+> added a delta to a stale base. Trust the seed's printed count, not an arithmetic in prose.
 
 `content` remains a legal axis and nothing seeds it today; it exists for a subject whose topics are
 genuinely chapters, and the analysis reads the field rather than branching on subject either way.
