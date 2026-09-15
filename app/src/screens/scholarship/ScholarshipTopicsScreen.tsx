@@ -55,6 +55,7 @@ export default function ScholarshipTopicsScreen({ route }: Props): React.ReactEl
   const [pickedLevel, setPickedLevel] = useState<number | null>(null);
   const [label, setLabel] = useState("");
   const [chapters, setChapters] = useState("");
+  const [marks, setMarks] = useState("");
   const [axis, setAxis] = useState<"skill" | "content">("skill");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -80,6 +81,7 @@ export default function ScholarshipTopicsScreen({ route }: Props): React.ReactEl
     labelBn: string;
     axis: string;
     chapters: number[];
+    marks: number | null;
   }[];
 
   function pickSubject(s: string): void {
@@ -95,12 +97,15 @@ export default function ScholarshipTopicsScreen({ route }: Props): React.ReactEl
       .split(/[,\s]+/)
       .map((c) => Number(c.trim()))
       .filter((n) => Number.isInteger(n) && n > 0);
+    // Blank means "the structure fixes no mark here" — sent as undefined, never 0.
+    const marksNum = Number(marks.trim());
     const res = await saveTopic({
       subject,
       classLevel,
       labelBn: label.trim(),
       axis,
       chapters: nums,
+      marks: marks.trim() && Number.isFinite(marksNum) && marksNum >= 0 ? marksNum : undefined,
       order: topics.length + 1,
     });
     setBusy(false);
@@ -110,6 +115,7 @@ export default function ScholarshipTopicsScreen({ route }: Props): React.ReactEl
     }
     setLabel("");
     setChapters("");
+    setMarks("");
     toast.show(STR.scTopicSaved);
     refetch({ requestPolicy: "network-only" });
   }
@@ -170,6 +176,13 @@ export default function ScholarshipTopicsScreen({ route }: Props): React.ReactEl
               tone={t.axis === "content" ? "info" : "brand"}
             />
           </View>
+          {/* Marks are shown only where the blueprint fixes one — a topic with none is
+              silent rather than showing 0, which would read as a worthless item. */}
+          {typeof t.marks === "number" ? (
+            <Muted>
+              {bnNum(t.marks)} {STR.scItemMarks}
+            </Muted>
+          ) : null}
           {t.chapters.length > 0 ? (
             <Muted>
               {STR.scChapterShort} {t.chapters.map((c) => bnNum(c)).join(", ")}
@@ -182,6 +195,7 @@ export default function ScholarshipTopicsScreen({ route }: Props): React.ReactEl
         <Body style={{ fontWeight: "700" }}>{STR.scAddTopic}</Body>
         <Field label={STR.scTopicLabel} value={label} onChangeText={setLabel} />
         <Field label={STR.scItemChapters} value={chapters} onChangeText={setChapters} keyboardType="number-pad" />
+        <Field label={STR.scItemMarks} value={marks} onChangeText={setMarks} keyboardType="decimal-pad" />
         <Muted>{STR.scTopicAxis}</Muted>
         <ChipRow>
           <Chip label={STR.scAxisSkill} selected={axis === "skill"} onPress={() => setAxis("skill")} />

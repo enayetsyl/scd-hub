@@ -16,6 +16,7 @@ export const SCHOLARSHIP_TOPICS_QUERY = gql`
       subject
       axis
       chapters
+      marks
       order
       active
     }

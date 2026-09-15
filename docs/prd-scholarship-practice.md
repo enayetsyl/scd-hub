@@ -100,8 +100,9 @@ join this to the corpus plane. The firewall test must keep passing untouched.
 
 ```
 { subject: HwSubject, classLevel: number,
-  code: "TOP-ENG-C5-ARTICLE", labelBn: "ব্যাকরণ — article",
+  code: "TOP-SCH-ENG-C5-ARTICLE", labelBn: "Fill in the gaps with a, an or the",
   axis: "skill" | "content",        // D-#665/#666 — every seeded topic is a skill today
+  marks?: number,                   // D-#669 — what the blueprint says the item carries
   order: number, active: boolean }
 ```
 
@@ -113,16 +114,14 @@ Deliberately a **new catalogue, not `HomeworkTopic`** (D-#657): `HomeworkTopic` 
 chapter. Overloading the homework catalogue would either pollute the homework picker with skills that
 are not homework topics, or force the analysis onto an axis that cannot answer the question.
 
-Seed for English (the paper structure in `scholarship/PROMPT_C5_ENG_question_generator.md` §2) —
-its 14 printed items expanded to **20 topics**, in English (D-#667, §5.2.3):
-Match words with meanings · True/False · Make sentences · Answer the questions (textbook) ·
-Fill in the blanks from a box (unseen) · Answer the questions (unseen) · Parts of speech · Tense ·
-Suffix & prefix · Article · WH-question · Rearrange words · Rearrange sentences · Capitalization &
-punctuation · Form / numbers · Verb forms · Letter · Application · Email · Composition.
+Seed for English: its 14 printed items expanded to **24 topics**, in English, each carrying the
+marks the blueprint fixes (D-#667/#669, §5.2.3). **The approved table lives in
+`docs/scholarship-eng-paper-structure.md`** — that file and the `ENG` array in the seed are the
+two halves of one source of truth, and neither is re-derived from the circular's prose.
 
-**All five subjects are seeded in the same slice** (owner ask, 2026-09-14): বাংলা 15, English 20,
+**All five subjects are seeded in the same slice** (owner ask, 2026-09-14): বাংলা 15, English 24,
 গণিত 11 from their own item tables, and প্রাথমিক বিজ্ঞান / বাংলাদেশ ও বিশ্বপরিচয় 6 each — their
-ANSWER FORMS, per the owner ruling in §5.2.2 (D-#666). **75 topics** in all.
+ANSWER FORMS, per the owner ruling in §5.2.2 (D-#666). **79 topics** in all.
 
 `content` remains a legal axis and nothing seeds it today; it exists for a subject whose topics are
 genuinely chapters, and the analysis reads the field rather than branching on subject either way.
@@ -221,35 +220,46 @@ ever tagged with a topic points at, so it must survive both reordering (a positi
 silently re-points existing items the first time a row is inserted) and renaming (a label-derived
 one would move on exactly the edit `labelBn` exists to allow).
 
-### 5.2.3 English is labelled in English, and an "or" item is two topics (D-#667)
+### 5.2.3 English is labelled in English, an "or" item is one topic per alternative, and the catalogue carries marks (D-#667/#669)
 
 Owner, reading the seeded catalogue on prod: *"the english topic list recorded in bangla but it
-should be in english"*, and *"as there are 14 questions but some questions as variation like 1, 6, 7,
-9, 13 has optional so for topic list for question 1 should be 1. Match the given words with their
-meanings / 2. Indicate true/false"*.
+should be in english"*, and *"there are 14 questions but some questions as variation ... so for topic
+list for question 1 should be 1. Match the given words with their meanings / 2. Indicate true/false"*.
+The final structure was then settled item by item with the owner and **approved on 2026-09-15** — it
+lives in `docs/scholarship-eng-paper-structure.md`, whose table is the twin of the seed's `ENG` array.
 
 **Language.** AGENTS.md asks for Bangla in teacher-facing content and every other subject keeps it.
-English is the exception the rule already implies: its items are *printed* in English on the paper,
-so `ব্যাকরণ — article` forced the teacher to translate backwards to find the row matching the
-question in front of her. The stored field stays `labelBn` — it is the one display label, and
-renaming a stored field to carry a single subject's language would be a migration bought for nothing.
+English is the exception the rule already implies: its items are *printed* in English, so
+`ব্যাকরণ — article` forced the teacher to translate backwards to find the row matching the question in
+front of her. The stored field stays `labelBn` — it is the one display label, and renaming a stored
+field to carry a single subject's language would be a migration bought for nothing.
 
-**Alternatives.** Items 1, 6, 7, 9 and 13 of the circular each join *separate abilities* with "or":
-matching vs true/false, parts of speech vs tense, affixes vs articles, words-into-a-sentence vs
-sentences-into-a-story, letter vs application vs email. The setter picks ONE per paper, so a
-student's marks only ever land on one side; a merged row would average a skill she was tested on
-with one she never saw — which is exactly the false finding this module exists to prevent. 14 printed
-items → 20 topics.
+**Seven items offer alternatives, and each alternative is its own topic** — 1, 6, 7, 9, 11, 13, 14.
+The setter picks ONE per paper, so a student's marks only ever land on one side; a merged row would
+average a skill she was tested on with one she never saw — which is exactly the false finding this
+module exists to prevent. Item 11 has **four** parts (form · cardinal · ordinal · time) and item 13
+**three** (letter · application · email). 14 printed items → **24 topics**.
 
-**Items 11 and 14 print a slash and are deliberately NOT split.** Item 11 (fill out a form / fill in
-blanks with time and cardinal/ordinal numbers) and item 14 (composition, free or guided) offer the
-same ability with a different prompt, so one row still answers "what can she not do".
+**The other seven items are NOT split** (2, 3, 4, 5, 8, 10, 12), and this is the distinction that
+took a round of review to get right. A model paper gives these an `.a`/`.b` as well, but both halves
+are the *same question* with different material — question 2 is "Make meaningful sentences with the
+given words" both times, with five different words. That is a device for printing two papers from one
+unit, **not** a choice of skill. Splitting them would invent a distinction the blueprint does not make
+and scatter one ability's marks over two rows.
 
-**Ten of the fourteen codes are REUSED** (`PARTS-OF-SPEECH`, `TENSE`, `ARTICLE`, `AFFIX`,
-`WH-QUESTION`, `PUNCTUATION`, `FORM-NUMBERS`, `VERB-FORM`, `LETTER`, `COMPOSITION`) so any paper
-already tagged with one keeps its marks and simply reads in English from now on. The four whose
-meaning genuinely changed (`VOCAB`, `COMPREHENSION`, `UNSEEN`, `REARRANGE`) are soft-retired by
-`--prune`, never deleted — a hard delete would strand a tagged item's marks (the D-#548 posture).
+**Marks are on the catalogue, and deliberately do not sum to 100** (D-#669). `ScholarshipTopic.marks`
+records what the blueprint says an item carries, so the list can be read against the paper in front of
+you. An item contributes its marks once *per alternative*, so English totals **168 across 24 rows**
+while any one printed paper is 100. It is reference only: a declared paper is still checked against the
+marks the teacher types per item (`Σ(items) = totalMarks`), which is the authority and stays so. The
+field is **optional** — a hand-added topic and every SCI/BGS answer-form row have no fixed mark — and
+the UI shows nothing rather than 0, because a 0 reads as a worthless item.
+
+**Nine of the fourteen original codes are REUSED** (`PARTS-OF-SPEECH`, `TENSE`, `ARTICLE`, `AFFIX`,
+`WH-QUESTION`, `PUNCTUATION`, `VERB-FORM`, `LETTER`, `COMPOSITION`) so any paper already tagged with
+one keeps its marks and simply reads in English from now on. The five whose meaning genuinely changed
+(`VOCAB`, `COMPREHENSION`, `UNSEEN`, `REARRANGE`, `FORM-NUMBERS`) are soft-retired by `--prune`, never
+deleted — a hard delete would strand a tagged item's marks (the D-#548 posture).
 
 **Numbering is positional, not `order`.** The catalogue screen numbers rows 1..n by their place in
 the rendered list. `order` is per-subject and goes gappy the moment a topic is retired, and the
