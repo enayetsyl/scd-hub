@@ -54,6 +54,11 @@ const ITEM_TYPES = [
 
 interface DraftItem {
   itemNo: number;
+  /** The number PRINTED on the paper. Separate from itemNo because a paper that lists
+   *  every alternative has more items than printed questions (D-#675). */
+  questionNo: string;
+  /** a / b / c / d, for a question that offers alternatives. */
+  part: string;
   label: string;
   subject: string;
   topicCode: string;
@@ -92,11 +97,14 @@ export default function ScholarshipDeclareScreen({ route }: Props): React.ReactE
     code: string;
     labelBn: string;
     subject: string;
+    marks: number | null;
   }[];
 
   const total = Number(totalMarks) || 0;
   const sum = useMemo(() => sumMarks(items.map((i) => Number(i.marks) || 0)), [items]);
-  const balanced = items.length > 0 && sum === total && total > 0;
+  // Shown, never enforced (D-#675). A paper listing every alternative sums higher than
+  // the sitting on purpose, so this is a hint, not a gate.
+  const balanced = sum === total && total > 0;
 
   function toggleSubject(s: string): void {
     setSubjects((prev) => {
@@ -110,6 +118,8 @@ export default function ScholarshipDeclareScreen({ route }: Props): React.ReactE
       ...prev,
       {
         itemNo: prev.length + 1,
+        questionNo: "",
+        part: "",
         label: "",
         subject: subjects[0],
         topicCode: "",
@@ -117,6 +127,33 @@ export default function ScholarshipDeclareScreen({ route }: Props): React.ReactE
         itemType: "short_answer",
         marks: "",
       },
+    ]);
+  }
+
+  /**
+   * Add ONE item per topic in the catalogue, prefilled from it.
+   *
+   * The catalogue is already the paper's shape — for C5 English its 24 rows ARE the 14
+   * printed questions with their alternatives, in order, carrying the blueprint's marks
+   * (D-#672). Typing that by hand is 24 dropdowns and 24 numbers, which is how a test
+   * paper stops being worth declaring at all. Rows are appended, never replacing what is
+   * already there, and every field stays editable — delete the parts you did not print.
+   */
+  function addAllTopics(): void {
+    const rows = allTopics.filter((t) => t.subject === subjects[0]);
+    setItems((prev) => [
+      ...prev,
+      ...rows.map((t, i) => ({
+        itemNo: prev.length + i + 1,
+        questionNo: "",
+        part: "",
+        label: t.labelBn,
+        subject: subjects[0],
+        topicCode: t.code,
+        chapters: "",
+        itemType: "short_answer",
+        marks: t.marks != null ? String(t.marks) : "",
+      })),
     ]);
   }
 
@@ -142,6 +179,8 @@ export default function ScholarshipDeclareScreen({ route }: Props): React.ReactE
       sourceNote: sourceNote.trim() || null,
       items: items.map((i) => ({
         itemNo: i.itemNo,
+        questionNo: Number(i.questionNo) > 0 ? Number(i.questionNo) : null,
+        part: i.part.trim() || null,
         label: i.label.trim(),
         subject: i.subject,
         topicCode: i.topicCode,
@@ -183,9 +222,9 @@ export default function ScholarshipDeclareScreen({ route }: Props): React.ReactE
 
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space(3) }}>
         <Body style={{ fontWeight: "700" }}>{STR.scItems}</Body>
-        <Badge text={`${bnNum(sum)} / ${bnNum(total)}`} tone={balanced ? "ok" : "warn"} />
+        <Badge text={`${bnNum(sum)} / ${bnNum(total)}`} tone={balanced ? "ok" : "info"} />
       </View>
-      <Muted>{STR.scSumHint}</Muted>
+      <Muted>{STR.scSumNote}</Muted>
 
       {items.length === 0 ? <Muted>{STR.scNoItems}</Muted> : null}
 
@@ -200,6 +239,19 @@ export default function ScholarshipDeclareScreen({ route }: Props): React.ReactE
             <View style={{ flexDirection: "row", justifyContent: "space-between", gap: space(3) }}>
               <Body style={{ fontWeight: "700" }}>{bnNum(it.itemNo)}</Body>
               <Button title={STR.scRemove} variant="ghost" onPress={() => remove(idx)} />
+            </View>
+            <View style={{ flexDirection: "row", gap: space(3) }}>
+              <View style={{ flex: 1 }}>
+                <Field
+                  label={STR.scItemQuestionNo}
+                  value={it.questionNo}
+                  onChangeText={(v) => patch(idx, "questionNo", v)}
+                  keyboardType="number-pad"
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Field label={STR.scItemPart} value={it.part} onChangeText={(v) => patch(idx, "part", v)} />
+              </View>
             </View>
             <Field label={STR.scItemLabel} value={it.label} onChangeText={(v) => patch(idx, "label", v)} />
             {subjects.length > 1 ? (
@@ -246,13 +298,17 @@ export default function ScholarshipDeclareScreen({ route }: Props): React.ReactE
       })}
 
       <Button title={STR.scAddItem} variant="secondary" onPress={addItem} />
+      <Button title={STR.scAddAllParts} variant="ghost" onPress={addAllTopics} />
       <Divider />
       {error ? <Notice message={error} tone="danger" /> : null}
+      {/* NOTHING is mandatory but having at least one item (D-#675): no name, no
+          per-item label, no topic, and no balanced total. A paper with no items at all
+          cannot be marked, so that one stays. */}
       <Button
         title={STR.scDeclareAction}
         onPress={() => void onDeclare()}
         loading={busy}
-        disabled={busy || !balanced || !name.trim()}
+        disabled={busy || items.length === 0}
       />
     </Screen>
   );

@@ -40,6 +40,8 @@ type Nav = NativeStackNavigationProp<ScholarshipStackParamList>;
 
 interface PaperItem {
   itemNo: number;
+  questionNo: number | null;
+  part: string | null;
   label: string;
   subject: string;
   topicLabel: string;
@@ -51,6 +53,19 @@ interface RosterRow {
   status: string | null;
   total: number | null;
   itemMarks: { itemNo: number; marks: number }[];
+}
+
+/**
+ * The number as the PAPER prints it — `৭` or `১.a` — falling back to the storage key.
+ *
+ * `itemNo` is unique-per-paper and sequential; on a paper that declares every
+ * alternative it runs 1..24 while the paper in front of the teacher says 1.a … 14.b
+ * (D-#675). Marking against a column numbered differently from the question is how
+ * marks land on the wrong item.
+ */
+function printedNo(it: { itemNo: number; questionNo: number | null; part: string | null }): string {
+  const n = bnNum(it.questionNo ?? it.itemNo);
+  return it.part ? `${n}.${it.part}` : n;
 }
 
 export default function ScholarshipMarksScreen({ route }: Props): React.ReactElement {
@@ -180,7 +195,7 @@ export default function ScholarshipMarksScreen({ route }: Props): React.ReactEle
               <View style={{ flexDirection: "row", justifyContent: "space-between", gap: space(3) }}>
                 <View style={{ flexShrink: 1 }}>
                   <Body>
-                    {bnNum(it.itemNo)}. {it.label}
+                    {printedNo(it)}. {it.label}
                   </Body>
                   <Muted>
                     {it.topicLabel}

@@ -130,7 +130,15 @@ export function tallyStudent(
       // report a weakness that is really an unfinished marking pass.
       const earned = got.get(item.itemNo);
       if (earned === undefined) continue;
-      const keys = axis === "topic" ? [item.topicCode] : item.chapters.map(String);
+      // An item declared without a topic (D-#675) simply misses the TOPIC axis — an
+      // empty key would collect every untagged item of every subject into one bucket
+      // and print it as a skill. Its marks still reach the chapter axis and the total.
+      const keys =
+        axis === "topic"
+          ? item.topicCode?.trim()
+            ? [item.topicCode]
+            : []
+          : item.chapters.map(String);
       for (const key of keys) {
         const t = out.get(key) ?? emptyTally(item.subject);
         t.earned.push(earned);
