@@ -5,11 +5,12 @@
  * 2026 প্রশ্নপত্র কাঠামো (memo 38.04.0000.801.06.314.24, 08 July 2026). Typed here from
  * the signed tables, because there is no machine-readable copy of them in the repo.
  *
- *  - বাংলা (15) · English (24) · গণিত (11) — the circular's item tables name the skills
+ *  - বাংলা (21) · English (24) · গণিত (11) — the circular's item tables name the skills
  *    outright (article, tense, WH-question, লসাগু ও গসাগু, শতকরা…). English is 24 rather
  *    than its 14 printed items because SEVEN of them offer alternatives, and it is the
  *    only subject labelled in English — see the ENG block and
- *    `docs/scholarship-eng-paper-structure.md` (D-#670/#672).
+ *    `docs/scholarship-eng-paper-structure.md` (D-#670/#672). বাংলা is 21 for the same
+ *    reason, in Bangla, per `docs/scholarship-ban-paper-structure.md` (D-#677).
  *  - প্রাথমিক বিজ্ঞান · বাংলাদেশ ও বিশ্বপরিচয় (6 each) — their tables name ANSWER FORMS,
  *    and the owner ruled that the form IS the skill for these two (D-#666). The paper
  *    backs it: in a 50-mark half, বিস্তৃত উত্তর alone is 24 marks and সংক্ষিপ্ত another
@@ -56,14 +57,32 @@ interface Seed {
   /** What the blueprint says the item is worth, where it fixes one (D-#672). Reference
    *  only; a declared paper's authority is the marks typed per item. */
   marks?: number;
+  /**
+   * The number of the PRINTED item this row is an alternative of (D-#678).
+   *
+   * Seed-file metadata, deliberately not stored: it exists so the arithmetic can be
+   * CHECKED rather than asserted. Rows sharing a `q` are mutually exclusive on paper, so
+   * two things must hold and are verified — every row in a group carries the SAME marks,
+   * and the groups sum to exactly 100. Together those prove that *every* way of choosing
+   * one part per item prints a 100-mark paper, which is the claim the catalogue's larger
+   * total (168 for English, 137 for বাংলা) otherwise invites doubt about.
+   */
+  q?: number;
 }
 
-const skill = (subject: HwSubject, key: string, labelBn: string, marks?: number): Seed => ({
+const skill = (
+  subject: HwSubject,
+  key: string,
+  labelBn: string,
+  marks?: number,
+  q?: number,
+): Seed => ({
   subject,
   key,
   labelBn,
   axis: "skill",
   marks,
+  q,
 });
 
 /**
@@ -102,49 +121,78 @@ const skill = (subject: HwSubject, key: string, labelBn: string, marks?: number)
  * mapping back to the printed paper, which the sequential list position cannot carry.
  */
 const ENG: Seed[] = [
-  skill("ENG", "MATCH-MEANING", "Match the given words with their meanings", 5), //     Q1 ·a
-  skill("ENG", "TRUE-FALSE", "Indicate True/False", 5), //                              Q1 ·b
-  skill("ENG", "SENTENCE-MAKING", "Make meaningful sentences with the given words", 5), // Q2
-  skill("ENG", "COMPREHENSION-SEEN", "Answer the questions — textbook passage", 18), // Q3
-  skill("ENG", "UNSEEN-CLOZE", "Fill in the blanks from the box — unseen text", 5), //  Q4
-  skill("ENG", "COMPREHENSION-UNSEEN", "Answer the questions — unseen text", 9), //     Q5
-  skill("ENG", "PARTS-OF-SPEECH", "Identify the parts of speech of the underlined words", 5), // Q6 ·a
-  skill("ENG", "TENSE", "Change the tenses as directed", 5), //                         Q6 ·b
-  skill("ENG", "AFFIX", "Complete the text adding suffixes and prefixes", 6), //        Q7 ·a
-  skill("ENG", "ARTICLE", "Fill in the gaps with a, an or the", 6), //                  Q7 ·b
-  skill("ENG", "WH-QUESTION", "Make WH questions from the given statements", 5), //     Q8
-  skill("ENG", "REARRANGE-WORDS", "Rearrange the words to make meaningful sentences", 7), // Q9 ·a
-  skill("ENG", "REARRANGE-SENTENCES", "Rearrange the sentences to form a story", 7), // Q9 ·b
-  skill("ENG", "PUNCTUATION", "Rewrite using correct capitalization and punctuation", 5), // Q10
-  skill("ENG", "FORM-FILL", "Read the information and fill out the form", 5), //        Q11 ·a
-  skill("ENG", "CARDINAL-NUMBERS", "Fill in the blanks with cardinal numbers", 5), //   Q11 ·b
-  skill("ENG", "ORDINAL-NUMBERS", "Fill in the blanks with ordinal numbers", 5), //     Q11 ·c
-  skill("ENG", "TIME-INFO", "Fill in the blanks using information related to time", 5), // Q11 ·d
-  skill("ENG", "VERB-FORM", "Complete the sentences using the correct forms of verbs", 5), // Q12
-  skill("ENG", "LETTER", "Write a letter", 10), //                                      Q13 ·a
-  skill("ENG", "APPLICATION", "Write an application", 10), //                           Q13 ·b
-  skill("ENG", "EMAIL", "Write an email", 10), //                                       Q13 ·c
-  skill("ENG", "COMPOSITION", "Write a short composition (free)", 10), //               Q14 ·a
-  skill("ENG", "COMPOSITION-GUIDED", "Write a guided composition by answering given questions", 10), // Q14 ·b
+  skill("ENG", "MATCH-MEANING", "Match the given words with their meanings", 5, 1), //     Q1 ·a
+  skill("ENG", "TRUE-FALSE", "Indicate True/False", 5, 1), //                              Q1 ·b
+  skill("ENG", "SENTENCE-MAKING", "Make meaningful sentences with the given words", 5, 2), // Q2
+  skill("ENG", "COMPREHENSION-SEEN", "Answer the questions — textbook passage", 18, 3), // Q3
+  skill("ENG", "UNSEEN-CLOZE", "Fill in the blanks from the box — unseen text", 5, 4), //  Q4
+  skill("ENG", "COMPREHENSION-UNSEEN", "Answer the questions — unseen text", 9, 5), //     Q5
+  skill("ENG", "PARTS-OF-SPEECH", "Identify the parts of speech of the underlined words", 5, 6), // Q6 ·a
+  skill("ENG", "TENSE", "Change the tenses as directed", 5, 6), //                         Q6 ·b
+  skill("ENG", "AFFIX", "Complete the text adding suffixes and prefixes", 6, 7), //        Q7 ·a
+  skill("ENG", "ARTICLE", "Fill in the gaps with a, an or the", 6, 7), //                  Q7 ·b
+  skill("ENG", "WH-QUESTION", "Make WH questions from the given statements", 5, 8), //     Q8
+  skill("ENG", "REARRANGE-WORDS", "Rearrange the words to make meaningful sentences", 7, 9), // Q9 ·a
+  skill("ENG", "REARRANGE-SENTENCES", "Rearrange the sentences to form a story", 7, 9), // Q9 ·b
+  skill("ENG", "PUNCTUATION", "Rewrite using correct capitalization and punctuation", 5, 10), // Q10
+  skill("ENG", "FORM-FILL", "Read the information and fill out the form", 5, 11), //        Q11 ·a
+  skill("ENG", "CARDINAL-NUMBERS", "Fill in the blanks with cardinal numbers", 5, 11), //   Q11 ·b
+  skill("ENG", "ORDINAL-NUMBERS", "Fill in the blanks with ordinal numbers", 5, 11), //     Q11 ·c
+  skill("ENG", "TIME-INFO", "Fill in the blanks using information related to time", 5, 11), // Q11 ·d
+  skill("ENG", "VERB-FORM", "Complete the sentences using the correct forms of verbs", 5, 12), // Q12
+  skill("ENG", "LETTER", "Write a letter", 10, 13), //                                      Q13 ·a
+  skill("ENG", "APPLICATION", "Write an application", 10, 13), //                           Q13 ·b
+  skill("ENG", "EMAIL", "Write an email", 10, 13), //                                       Q13 ·c
+  skill("ENG", "COMPOSITION", "Write a short composition (free)", 10, 14), //               Q14 ·a
+  skill("ENG", "COMPOSITION-GUIDED", "Write a guided composition by answering given questions", 10, 14), // Q14 ·b
 ];
 
-/** বাংলা — the 15 items of the 2026 structure. */
+/**
+ * বাংলা — the 2026 structure's 15 printed items, expanded to 21 topics (D-#677).
+ *
+ * Same ruling as English (D-#672), applied to the বাংলা table by the owner: a printed
+ * item that joins SEPARATE abilities with a slash is one topic per alternative, because
+ * the setter prints one and a student's marks land on that side alone. Five items do:
+ *
+ *   ৬  বিপরীত শব্দ / সমার্থক শব্দ              → 2
+ *   ৯  কবিতা / গদ্য অনুচ্ছেদের মূলভাব            → 2
+ *   ১০ ভাষারীতি পরিবর্তন / পদ নির্ণয় / ক্রিয়ার কাল → 3
+ *   ১৪ ফরম পূরণ / আবেদনপত্র                   → 2
+ *   ১৫ রচনা লিখন — সূত্রসহ / উন্মুক্ত            → 2
+ *
+ * The labels stay BANGLA. English is labelled in English only because the English paper
+ * prints its items in English (D-#670); বাংলা prints its own, so the house rule applies
+ * unchanged.
+ *
+ * `marks` do not sum to 100 — an item counts once per alternative, so বাংলা is **137
+ * across 21 rows** while any one printed paper is 100.
+ *
+ * Item ১১ (প্রশ্ন তৈরিকরণ / বিরামচিহ্ন প্রয়োগ) ALSO prints a slash and is deliberately
+ * left as one row: the owner listed 6, 9, 10, 14 and 15 and not this one. It is the open
+ * question on this table — splitting it is one line if the owner wants it.
+ */
 const BAN: Seed[] = [
-  skill("BAN", "POEM-RECALL", "কবিতা মুখস্থ লিখন"),
-  skill("BAN", "WORD-MEANING", "শব্দার্থ লিখন"),
-  skill("BAN", "SENTENCE", "বাক্য গঠন"),
-  skill("BAN", "FILL-BLANK", "শূন্যস্থান পূরণ"),
-  skill("BAN", "MCQ", "বহুনির্বাচনি"),
-  skill("BAN", "ANTONYM-SYNONYM", "বিপরীত ও সমার্থক শব্দ"),
-  skill("BAN", "SHORT-ANSWER", "সংক্ষিপ্ত-উত্তর প্রশ্ন"),
-  skill("BAN", "LONG-ANSWER", "বিস্তৃত-উত্তর প্রশ্ন"),
-  skill("BAN", "MAIN-IDEA", "মূলভাব লিখন"),
-  skill("BAN", "GRAMMAR-FORMS", "ভাষারীতি · পদ নির্ণয় · ক্রিয়ার কাল"),
-  skill("BAN", "QUESTION-MAKING", "প্রশ্ন তৈরিকরণ ও বিরামচিহ্ন"),
-  skill("BAN", "CONJUNCT", "যুক্তবর্ণ বিভাজন ও শব্দ গঠন"),
-  skill("BAN", "ONE-WORD", "এককথায় প্রকাশ"),
-  skill("BAN", "FORM-APPLICATION", "ফরম পূরণ ও আবেদনপত্র"),
-  skill("BAN", "COMPOSITION", "রচনা লিখন"),
+  skill("BAN", "POEM-RECALL", "কবিতা মুখস্থ লিখন", 10, 1), //                       ১
+  skill("BAN", "WORD-MEANING", "শব্দার্থ লিখন", 5, 2), //                            ২
+  skill("BAN", "SENTENCE", "বাক্য গঠন", 5, 3), //                                    ৩
+  skill("BAN", "FILL-BLANK", "শূন্যস্থান পূরণ", 5, 4), //                             ৪
+  skill("BAN", "MCQ", "বহুনির্বাচনি", 5, 5), //                                      ৫
+  skill("BAN", "ANTONYM", "বিপরীত শব্দ লিখন", 5, 6), //                             ৬ ·ক
+  skill("BAN", "SYNONYM", "সমার্থক শব্দ লিখন", 5, 6), //                             ৬ ·খ
+  skill("BAN", "SHORT-ANSWER", "সংক্ষিপ্ত-উত্তর প্রশ্ন", 8, 7), //                      ৭
+  skill("BAN", "LONG-ANSWER", "বিস্তৃত-উত্তর প্রশ্ন", 15, 8), //                       ৮
+  skill("BAN", "MAIN-IDEA-POEM", "কবিতার মূলভাব লিখন", 5, 9), //                    ৯ ·ক
+  skill("BAN", "MAIN-IDEA-PROSE", "গদ্যাংশের মূলভাব লিখন", 5, 9), //                 ৯ ·খ
+  skill("BAN", "LANGUAGE-STYLE", "ভাষারীতি পরিবর্তন", 5, 10), //                      ১০ ·ক
+  skill("BAN", "PARTS-OF-SPEECH", "পদ নির্ণয়", 5, 10), //                            ১০ ·খ
+  skill("BAN", "VERB-TENSE", "ক্রিয়ার কাল", 5, 10), //                               ১০ ·গ
+  skill("BAN", "QUESTION-MAKING", "প্রশ্ন তৈরিকরণ ও বিরামচিহ্ন প্রয়োগ", 5, 11), //       ১১
+  skill("BAN", "CONJUNCT", "যুক্তবর্ণ বিভাজন ও শব্দ গঠন", 5, 12), //                    ১২
+  skill("BAN", "ONE-WORD", "এককথায় প্রকাশ", 5, 13), //                              ১৩
+  skill("BAN", "FORM-FILL", "ফরম পূরণ", 5, 14), //                                    ১৪ ·ক
+  skill("BAN", "APPLICATION", "আবেদনপত্র লিখন", 5, 14), //                            ১৪ ·খ
+  skill("BAN", "COMPOSITION-GUIDED", "রচনা লিখন (সূত্রসহ)", 12, 15), //               ১৫ ·ক
+  skill("BAN", "COMPOSITION", "রচনা লিখন (উন্মুক্ত)", 12, 15), //                      ১৫ ·খ
 ];
 
 /** গণিত — items 4–11 name the topic outright; items 1–3 are format rows spanning the
@@ -190,7 +238,8 @@ function codeOf(subject: HwSubject, key: string): string {
  *
  * What it is for: the first prod seed wrote 29 CHAPTER topics for SCI/BGS, which D-#666
  * replaced. Without a prune those sit in the picker for ever, offering an axis the owner
- * ruled against. D-#670/#672 add five more — the English rows `VOCAB`, `COMPREHENSION`,
+ * ruled against. D-#677 adds four BANGLA rows whose items were split — `ANTONYM-SYNONYM`,
+ * `MAIN-IDEA`, `GRAMMAR-FORMS` and `FORM-APPLICATION`. D-#670/#672 add five more — the English rows `VOCAB`, `COMPREHENSION`,
  * `UNSEEN`, `REARRANGE` and `FORM-NUMBERS`, whose Bangla labels or merged wording were
  * replaced by the English items they stood for. The nine ENG keys whose skill is
  * unchanged (`PARTS-OF-SPEECH`, `TENSE`, `ARTICLE`, `AFFIX`, `WH-QUESTION`,
