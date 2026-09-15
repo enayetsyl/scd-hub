@@ -32,6 +32,10 @@ import {
 import { ACADEMIC_YEARS_QUERY } from "../graphql/operations";
 import { groupWinnersByClass, giftTotals } from "../lib/giftGrouping";
 
+/** `dueDate` arrives as a full ISO timestamp; the desk wants the day. Same slice the
+ *  উপহার রিপোর্ট screen uses, so the two never disagree about a due date. */
+const dayOnly = (iso?: string | null): string => (iso ? iso.slice(0, 10) : "—");
+
 /** Self-contained: it resolves its own academic year so Today only has to decide
  *  WHETHER to render it, not feed it. */
 export function GiftHandoverCard(): React.ReactElement | null {
@@ -43,6 +47,13 @@ export function GiftHandoverCard(): React.ReactElement | null {
   }, [yearsQ.data]);
   // null = let the server pick the latest week with issued work; ◀/▶ then pin it.
   const [weekTo, setWeekTo] = React.useState<number | null>(null);
+  /**
+   * The newest week that exists, captured from the FIRST (unpinned) report and then
+   * held. It cannot be read from `report.weekTo` on later renders: the server ECHOES
+   * the requested `weekTo` back, so once ◀ pins a week the report's own `weekTo` is
+   * that same week — comparing them disabled ▶ permanently, including on first load.
+   */
+  const [latestWeek, setLatestWeek] = React.useState<number | null>(null);
   const [openClassId, setOpenClassId] = React.useState<string | null>(null);
   const [busyKey, setBusyKey] = React.useState<string | null>(null);
 
@@ -65,6 +76,13 @@ export function GiftHandoverCard(): React.ReactElement | null {
   const report = reportQ.data?.assignmentGiftReport ?? null;
   const week = weekTo ?? report?.weekTo ?? 0;
   const weekMeta = report?.weekDueDates.find((w) => w.weekNumber === week) ?? null;
+
+  // Latch the ceiling once, from the unpinned first load.
+  React.useEffect(() => {
+    if (latestWeek === null && weekTo === null && report && report.weekTo > 0) {
+      setLatestWeek(report.weekTo);
+    }
+  }, [report, latestWeek, weekTo]);
 
   const groups = React.useMemo(
     () => groupWinnersByClass(report?.students ?? [], week),
@@ -127,13 +145,19 @@ export function GiftHandoverCard(): React.ReactElement | null {
           <Body style={{ fontWeight: "600" }}>
             {STR.agWeek} {bnNum(week)}
           </Body>
-          {weekMeta?.dueDate ? <Muted>{weekMeta.dueDate}</Muted> : null}
+          {weekMeta?.dueDate ? (
+            <Muted>
+              {STR.agDue}: {dayOnly(weekMeta.dueDate)}
+            </Muted>
+          ) : null}
         </View>
         <Button
           title="▶"
           variant="ghost"
           onPress={() => setWeekTo(week + 1)}
-          disabled={week >= (report.weekTo ?? week)}
+          // Against the LATCHED ceiling, never `report.weekTo` — the server echoes the
+          // requested week back, so that comparison is always true (D-#669).
+          disabled={latestWeek === null || week >= latestWeek}
         />
       </View>
 
