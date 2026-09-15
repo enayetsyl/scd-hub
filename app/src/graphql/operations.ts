@@ -3764,7 +3764,7 @@ export const ROUTINE_MASTER_WEEK_QUERY = gql<{ routineMasterWeek: RoutineMasterT
   query RoutineMasterWeek { routineMasterWeek { ${ROUTINE_MASTER_FIELDS} } }
 `;
 
-/** D-#670 — the live class board: class × period, who actually takes each meeting.
+/** D-#674 — the live class board: class × period, who actually takes each meeting.
  *  `status` is ON_DUTY | COVERED | UNCOVERED | UNASSIGNED; `phase` past|current|upcoming
  *  (the app RE-derives phase from the device clock every minute — see LiveClassCard). */
 export interface LiveClassCellT {

@@ -1,5 +1,5 @@
 /**
- * LiveClassCard (D-#670, owner ask 2026-09-15) — "which classes are running RIGHT NOW,
+ * LiveClassCard (D-#674, owner ask 2026-09-15) — "which classes are running RIGHT NOW,
  * and who is standing in front of each one?" on the Principal/Office Today screen.
  *
  * One row per period running this minute: the class, the subject, and the teacher —

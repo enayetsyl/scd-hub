@@ -1,5 +1,5 @@
 /**
- * LiveClassBoardScreen (D-#670) — the whole day, class by class and period by period,
+ * LiveClassBoardScreen (D-#674) — the whole day, class by class and period by period,
  * with the name of whoever actually takes each meeting: the routine's own teacher, the
  * APPROVED cover teacher, or a red cell saying nobody does.
  *

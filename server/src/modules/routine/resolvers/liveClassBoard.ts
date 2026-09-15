@@ -1,6 +1,6 @@
 /**
  * liveClassBoard resolver — the Principal/Office "who is teaching what right now"
- * read (D-#670). One gated query serves both surfaces the owner asked for: the Today
+ * read (D-#674). One gated query serves both surfaces the owner asked for: the Today
  * card (the periods running this minute) and the full class × period day board.
  *
  * Gate: `routine:manage` — held by PRINCIPAL and OFFICE only, and permission-shaped
@@ -20,7 +20,7 @@ import {
 const LiveClassCellRef = builder.objectRef<LiveClassCell>("LiveClassCell").implement({
   description:
     "One class meeting on the board: the routine's teacher, the APPROVED cover teacher " +
-    "when there is one, and whether anybody is actually taking it (D-#670).",
+    "when there is one, and whether anybody is actually taking it (D-#674).",
   fields: (t) => ({
     slotId: t.exposeString("slotId"),
     groupType: t.exposeString("groupType"),
@@ -65,7 +65,7 @@ const LiveBoardRowRef = builder.objectRef<LiveBoardRow>("LiveBoardRow").implemen
 });
 
 const LiveClassBoardRef = builder.objectRef<LiveClassBoard>("LiveClassBoard").implement({
-  description: "The day's class × period board with the live period marked (D-#670).",
+  description: "The day's class × period board with the live period marked (D-#674).",
   fields: (t) => ({
     date: t.exposeString("date"),
     dayType: t.exposeString("dayType"),
@@ -86,7 +86,7 @@ builder.queryField("liveClassBoard", (t) =>
     type: LiveClassBoardRef,
     description:
       "Class-wise, period-wise teacher/cover board for a date, with the currently " +
-      "running period marked — the Principal/Office live-class view (D-#670).",
+      "running period marked — the Principal/Office live-class view (D-#674).",
     authScopes: { hasPermission: "routine:manage" },
     args: { date: t.arg.string({ required: true }) },
     resolve: (_root, args) => liveClassBoard(args.date),

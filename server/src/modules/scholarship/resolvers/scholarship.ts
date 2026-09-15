@@ -65,6 +65,9 @@ TopicRef.implement({
     subject: t.exposeString("subject"),
     axis: t.exposeString("axis"),
     chapters: t.exposeIntList("chapters"),
+    // Nullable BY DESIGN: the structure fixes no mark for a hand-added topic or a
+    // SCI/BGS answer form, and a 0 there would read as a worthless item (D-#672).
+    marks: t.exposeFloat("marks", { nullable: true }),
     order: t.exposeInt("order"),
     active: t.exposeBoolean("active"),
   }),
@@ -389,6 +392,7 @@ builder.mutationFields((t) => ({
       labelBn: t.arg.string({ required: true }),
       axis: t.arg.string({ required: true }),
       chapters: t.arg.intList({ required: false }),
+      marks: t.arg.float({ required: false }),
       order: t.arg.int({ required: false }),
     },
     resolve: async (_r, args, ctx) =>
@@ -400,6 +404,7 @@ builder.mutationFields((t) => ({
           labelBn: args.labelBn,
           axis: args.axis as ScholarshipTopicAxis,
           chapters: args.chapters ?? [],
+          marks: args.marks ?? undefined,
           order: args.order ?? 0,
         },
         actorOf(ctx),

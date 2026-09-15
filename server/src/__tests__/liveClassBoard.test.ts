@@ -1,5 +1,5 @@
 /**
- * Live class board (D-#670) — "who is standing in front of each class right now?"
+ * Live class board (D-#674) — "who is standing in front of each class right now?"
  *
  * The rules under test are the ones the owner's ask turns on, and every one of them
  * is invisible to `tsc`:

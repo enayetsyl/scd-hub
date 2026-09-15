@@ -366,6 +366,7 @@ export interface SaveTopicInput {
   labelBn: string;
   axis: ScholarshipTopicAxis;
   chapters?: number[];
+  marks?: number | null;
   order?: number;
 }
 
@@ -396,6 +397,7 @@ export async function saveTopic(input: SaveTopicInput, actor: Actor): Promise<st
         labelBn: input.labelBn.trim(),
         axis: input.axis,
         chapters: input.chapters ?? [],
+        marks: typeof input.marks === "number" ? input.marks : undefined,
         order: input.order ?? 0,
         active: true,
       },
@@ -440,6 +442,10 @@ export interface TopicView {
   subject: HwSubject;
   axis: ScholarshipTopicAxis;
   chapters: number[];
+  /** What the blueprint says this item is worth; null when the structure fixes no mark
+   *  (a hand-added topic, every SCI/BGS answer form). Reference only — a declared paper's
+   *  authority is the marks typed per item (D-#672). */
+  marks: number | null;
   order: number;
   active: boolean;
 }
@@ -461,6 +467,7 @@ export async function listTopics(
     subject: r.subject,
     axis: r.axis,
     chapters: r.chapters ?? [],
+    marks: typeof r.marks === "number" ? r.marks : null,
     order: r.order ?? 0,
     active: r.active !== false,
   }));

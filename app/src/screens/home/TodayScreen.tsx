@@ -120,7 +120,7 @@ export default function TodayScreen(): React.ReactElement {
   const canHr = !!role && role !== "GUARDIAN";
   // AG-3 — the desk that physically hands out the gifts (Principal + Office, D-#667).
   const canGift = can("gift:manage");
-  // D-#670 — the live class board follows the PERMISSION, not the role: a per-user
+  // D-#674 — the live class board follows the PERMISSION, not the role: a per-user
   // routine:manage grant (D-#193) lands on THIS screen, not the admin dashboard.
   const canLiveBoard = can("routine:manage");
 
@@ -490,7 +490,7 @@ export default function TodayScreen(): React.ReactElement {
         <View style={{ height: space(2) }} />
       )}
 
-      {/* D-#670 — classes running right now, for a holder of routine:manage who is
+      {/* D-#674 — classes running right now, for a holder of routine:manage who is
           routed to the teacher Today screen rather than the admin dashboard. OUTSIDE the
           QueryGate on purpose: it carries its own query, and the school-wide board must
           not disappear because the CALLER's own day happens to be empty. */}

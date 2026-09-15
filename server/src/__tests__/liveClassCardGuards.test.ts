@@ -1,5 +1,5 @@
 /**
- * Live class board — the app-side rules that `tsc` cannot see (D-#670).
+ * Live class board — the app-side rules that `tsc` cannot see (D-#674).
  *
  * Three of them would ship green and behave wrongly, and each has a precedent in this
  * repo's own history (D-#667/#668/#669 — placement, audience, and a well-typed

@@ -85,7 +85,7 @@ describe("AdminTodayScreen — the admin-only cards reach the roles that hold th
   });
 
   /**
-   * D-#670: the live class card answers "who is teaching what RIGHT NOW", and the two
+   * D-#674: the live class card answers "who is teaching what RIGHT NOW", and the two
    * roles that need it (Principal, Office) land on the admin screen — the exact shape
    * of the D-#668 miss. It is gated on `routine:manage`, the same permission the
    * `liveClassBoard` resolver requires, so the card and the server can never disagree

@@ -256,7 +256,7 @@ an app-native `/shared/vocab.ts` addition, vocab verifier + `/shared` build + `t
   when it lands; until then the trigger schedule + class-note records are built/tested and surfaced
   in-app. **No premature push infra.**
 
-### R7 — Live class board  *(slice R-7; owner ask 2026-09-15, D-#670)*
+### R7 — Live class board  *(slice R-7; owner ask 2026-09-15, D-#674)*
 > "In the today section of office and principal show the current live class with teacher name — if a
 > proxy is approved then the proxy name, if not approved an alert that the class is without a teacher;
 > updated as the period progresses. Also an option to see class-wise period-wise teacher/proxy teacher

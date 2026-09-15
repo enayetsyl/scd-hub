@@ -859,7 +859,7 @@ export const periodTrackLabel = (v?: string | null): string =>
   (v && pick(PERIOD_TRACK_LABELS_BN, PERIOD_TRACK_LABELS_EN)[v as PeriodTrack]) || v || DASH;
 
 /**
- * Live class board cell status (D-#670). NOT a vocab enum: the status is DERIVED per
+ * Live class board cell status (D-#674). NOT a vocab enum: the status is DERIVED per
  * read from the routine + cover + leave rows and is never stored, so it has no place
  * in `/shared/vocab.ts` — the adminToday badge-key precedent (language-free wire keys,
  * labelled here).
@@ -879,7 +879,7 @@ export const liveClassStatusLabel = (v?: string | null): string => {
   }
 };
 
-/** Why the routine's own teacher is not taking a period (D-#670). */
+/** Why the routine's own teacher is not taking a period (D-#674). */
 export const absenceReasonLabel = (v?: string | null): string => {
   switch (v) {
     case "leave":
@@ -2777,7 +2777,7 @@ const STR_BN = {
   rtNoCovers: "কোনো কভার নেই।",
   rtCoveringFor: "কভার করছেন",
 
-  // Live class board (D-#670) — which class is running now, and who is taking it
+  // Live class board (D-#674) — which class is running now, and who is taking it
   lcbNowTitle: "এখন যে ক্লাসগুলো চলছে",
   lcbBoardTitle: "আজকের ক্লাস বোর্ড",
   lcbBoardOpen: "সারাদিনের বোর্ড দেখুন",
@@ -5405,6 +5405,7 @@ const STR_BN = {
   scClassAvg: "ক্লাস গড়",
   scNoPapers: "এই শাখায় এখনো কোনো অনুশীলন প্রশ্ন নেই।",
   scNoTopics: "এই বিষয়ে এখনো কোনো টপিক নেই — আগে টপিক যোগ করুন।",
+  scNoClassReach: "আপনার কোনো শ্রেণিতে প্রবেশাধিকার নেই, তাই টপিক তালিকা দেখানো যাচ্ছে না।",
   scNoAnalysis: "বিশ্লেষণের মতো যথেষ্ট নম্বর এখনো নেই।",
   scStatusDraft: "খসড়া",
   scStatusDeclared: "ঘোষিত",
@@ -7129,7 +7130,7 @@ const STR_EN: StrTable = {
   rtNoCovers: "No covers.",
   rtCoveringFor: "Covering for",
 
-  // Live class board (D-#670) — which class is running now, and who is taking it
+  // Live class board (D-#674) — which class is running now, and who is taking it
   lcbNowTitle: "Classes running now",
   lcbBoardTitle: "Today's class board",
   lcbBoardOpen: "Open the whole-day board",
@@ -9730,6 +9731,7 @@ const STR_EN: StrTable = {
   scClassAvg: "Class average",
   scNoPapers: "No practice papers for this section yet.",
   scNoTopics: "No topics for this subject yet — add one first.",
+  scNoClassReach: "You do not have access to any class, so there is no topic list to show.",
   scNoAnalysis: "Not enough marks for an analysis yet.",
   scStatusDraft: "Draft",
   scStatusDeclared: "Declared",
