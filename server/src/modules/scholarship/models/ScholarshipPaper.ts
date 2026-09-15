@@ -32,14 +32,29 @@ import { HW_SUBJECTS, SYLLABUS_ITEM_TYPES, SCHOLARSHIP_PAPER_STATUSES } from "@s
 import type { HwSubject, SyllabusItemType, ScholarshipPaperStatus } from "@scd/shared";
 
 export interface IScholarshipItem {
-  /** 1..N — the number printed on the paper, and the key marks are entered against. */
+  /** 1..N — the UNIQUE key marks are entered against. Not necessarily the number
+   *  printed on the paper: a paper that lists every alternative has 24 items for 14
+   *  printed questions, so the printed number lives in `questionNo` (D-#675). */
   itemNo: number;
+  /** The number printed on the paper (1..14 for C5 English). Optional — older papers
+   *  and simple ones have none, and then `itemNo` IS the printed number. */
+  questionNo?: number;
+  /** The part letter where the question offers alternatives: `a`, `b`, `c`, `d`.
+   *  Empty for a question printed without parts (D-#675). */
+  part?: string;
+  /** Free text. OPTIONAL (D-#675) — falls back to the topic's own label when blank, so
+   *  a teacher entering a paper quickly is not made to retype what the topic says. */
   label: string;
   /** ALWAYS set, and validated to be one of the paper's `subjects` (D-#664). */
   subject: HwSubject;
-  /** EXACTLY ONE topic (D-#659). Two topics on one item would make a lost mark
+  /** AT MOST ONE topic (D-#659). Two topics on one item would make a lost mark
    *  unattributable without inventing a weighting; an item that genuinely spans two
-   *  skills is declared as two items, even where the paper prints it as one. */
+   *  skills is declared as two items, even where the paper prints it as one.
+   *
+   *  OPTIONAL since D-#675: an item may be declared without a topic. It then simply
+   *  does not appear on the TOPIC axis — its marks still count toward the paper total
+   *  and toward any chapter it names. Refusing the paper over it only ever cost the
+   *  teacher the record; an untagged item is a smaller loss than an untyped paper. */
   topicCode: string;
   /** ZERO OR MORE chapters (D-#659) — the owner's "may cover one or more chapter".
    *  A multi-chapter item counts IN FULL toward each chapter it lists (D-#661). */
@@ -80,9 +95,11 @@ export interface IScholarshipPaper extends Document {
 const ScholarshipItemSchema = new Schema<IScholarshipItem>(
   {
     itemNo: { type: Number, required: true, min: 1 },
-    label: { type: String, required: true, trim: true },
+    questionNo: { type: Number, min: 1 },
+    part: { type: String, trim: true, maxlength: 2 },
+    label: { type: String, trim: true, default: "" },
     subject: { type: String, enum: HW_SUBJECTS, required: true },
-    topicCode: { type: String, required: true, trim: true },
+    topicCode: { type: String, trim: true, default: "" },
     chapters: { type: [Number], default: [] },
     itemType: { type: String, enum: SYLLABUS_ITEM_TYPES, required: true },
     marks: { type: Number, required: true, min: 0 },
