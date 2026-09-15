@@ -17,6 +17,7 @@ import { ADMIN_TODAY_QUERY, type AdminTodayCardT } from "../../graphql/operation
 import type { TabParamList } from "../../navigation/types";
 import { Screen, H2, Body, Muted, Card, Badge, Loader, ErrorBanner } from "../../components/ui";
 import { GiftHandoverCard } from "../../components/GiftHandoverCard";
+import { LiveClassCard } from "../../components/LiveClassCard";
 import { useAuth } from "../../auth/AuthContext";
 import { STR, bnNum, dayOfWeekLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
@@ -103,6 +104,8 @@ export default function AdminTodayScreen(): React.ReactElement {
   // AG-3 — the desk that physically hands out the weekly gift (Principal + Office).
   const { can } = useAuth();
   const canGift = can("gift:manage");
+  // D-#674 — the live class board follows the PERMISSION the server gates on.
+  const canLiveBoard = can("routine:manage");
 
   const [q, refetch] = useQuery({ query: ADMIN_TODAY_QUERY, variables: { date }, requestPolicy: "cache-and-network" });
   const cards = q.data?.adminToday ?? [];
@@ -185,6 +188,12 @@ export default function AdminTodayScreen(): React.ReactElement {
           <ErrorBanner message={friendlyError(q.error)} onRetry={() => refetch({ requestPolicy: "network-only" })} />
         ) : null}
         {q.fetching && cards.length === 0 ? <Loader label={STR.loading} /> : null}
+
+        {/* D-#674 — which classes are running RIGHT NOW and who is taking them. First,
+            above the day's summary cards: it is the only card on this screen whose
+            answer changes every period, and an uncovered class is the one thing here
+            that needs a decision within the hour. */}
+        {canLiveBoard ? <LiveClassCard /> : null}
 
         {cards.map(renderCard)}
 

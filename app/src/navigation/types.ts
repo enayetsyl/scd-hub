@@ -167,6 +167,8 @@ export type RoutineStackParamList = {
   RoutineHome: undefined;
   MyRoutine: undefined;
   RoutineMaster: undefined;
+  /** D-#674 — the DATE's class × period board: who actually takes each meeting. */
+  LiveClassBoard: undefined;
   GroupRoutine: { groupType: string; groupId: string; title: string };
   RoutineEditor: { groupType: string; groupId: string; title: string };
   CoverManage: { groupType: string; groupId: string; title: string };

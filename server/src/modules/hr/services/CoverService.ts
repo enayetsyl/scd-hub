@@ -149,10 +149,20 @@ export async function fanOutCoverSlots(
  *  `periodNumber` (D-#361) narrows the question to ONE meeting: a teacher on a partial
  *  day is in the building for the rest of it, so someone taking the first two periods
  *  off is a perfectly good cover for period six. Omit it and any partial-day leave
- *  counts as out (the conservative read, for callers with no period in hand). */
-export async function userIdsOnLeave(dateKey: string, periodNumber?: number): Promise<Set<string>> {
+ *  counts as out (the conservative read, for callers with no period in hand).
+ *
+ *  `statuses` narrows WHICH leaves count, and the default is what the cover pickers
+ *  need. The live class board passes `["approved"]` instead: it answers "is this class
+ *  running without a teacher RIGHT NOW", and an applied-but-undecided leave means the
+ *  teacher is still expected in the building — asserting an absence from it would put a
+ *  red alert on a class whose teacher is standing in it. */
+export async function userIdsOnLeave(
+  dateKey: string,
+  periodNumber?: number,
+  statuses: readonly string[] = ["applied", "approved"],
+): Promise<Set<string>> {
   const leaves = await StaffLeaveApplication.find({
-    status: { $in: ["applied", "approved"] },
+    status: { $in: statuses },
     fromKey: { $lte: dateKey },
     toKey: { $gte: dateKey },
   })

@@ -858,6 +858,41 @@ export const dayOfWeekLabel = (v?: string | null): string =>
 export const periodTrackLabel = (v?: string | null): string =>
   (v && pick(PERIOD_TRACK_LABELS_BN, PERIOD_TRACK_LABELS_EN)[v as PeriodTrack]) || v || DASH;
 
+/**
+ * Live class board cell status (D-#674). NOT a vocab enum: the status is DERIVED per
+ * read from the routine + cover + leave rows and is never stored, so it has no place
+ * in `/shared/vocab.ts` — the adminToday badge-key precedent (language-free wire keys,
+ * labelled here).
+ */
+export const liveClassStatusLabel = (v?: string | null): string => {
+  switch (v) {
+    case "ON_DUTY":
+      return STR.lcbStatusOnDuty;
+    case "COVERED":
+      return STR.lcbStatusCovered;
+    case "UNCOVERED":
+      return STR.lcbStatusUncovered;
+    case "UNASSIGNED":
+      return STR.lcbStatusUnassigned;
+    default:
+      return v || DASH;
+  }
+};
+
+/** Why the routine's own teacher is not taking a period (D-#674). */
+export const absenceReasonLabel = (v?: string | null): string => {
+  switch (v) {
+    case "leave":
+      return STR.lcbOnLeave;
+    case "leave_pending":
+      return STR.lcbLeavePending;
+    case "attendance_absent":
+      return STR.lcbAbsentSheet;
+    default:
+      return "";
+  }
+};
+
 /** Quran/Arabic group gender (boys/girls/mixed). Labels come from vocab.ts. */
 export const groupGenderLabel = (v?: string | null): string =>
   (v && pick(GROUP_GENDER_LABELS_BN, GROUP_GENDER_LABELS_EN)[v as GroupGender]) || v || DASH;
@@ -2741,6 +2776,30 @@ const STR_BN = {
   rtCovered: "কভার করা হয়েছে",
   rtNoCovers: "কোনো কভার নেই।",
   rtCoveringFor: "কভার করছেন",
+
+  // Live class board (D-#674) — which class is running now, and who is taking it
+  lcbNowTitle: "এখন যে ক্লাসগুলো চলছে",
+  lcbBoardTitle: "আজকের ক্লাস বোর্ড",
+  lcbBoardOpen: "সারাদিনের বোর্ড দেখুন",
+  lcbBoardHint: "প্রতিটি শ্রেণির প্রতিটি পিরিয়ডে কে ক্লাস নিচ্ছেন — কভার শিক্ষকসহ।",
+  lcbNoneLive: "এই মুহূর্তে কোনো ক্লাস চলছে না।",
+  lcbNoBoard: "আজ কোনো ক্লাস নেই।",
+  lcbNoTeacher: "শিক্ষক নেই",
+  lcbUncoveredTitle: "শিক্ষকবিহীন ক্লাস",
+  lcbCoverPrefix: "কভার",
+  lcbProposedNotApproved: "প্রস্তাবিত — অনুমোদিত নয়",
+  lcbUnassigned: "রুটিনে শিক্ষক দেওয়া নেই",
+  lcbOnLeave: "ছুটিতে",
+  lcbLeavePending: "ছুটির আবেদন অনুমোদনের অপেক্ষায়",
+  lcbAbsentSheet: "হাজিরায় অনুপস্থিত",
+  lcbUncoveredToday: "আজ শিক্ষকবিহীন",
+  lcbAllStaffed: "সব ক্লাসেই শিক্ষক আছেন।",
+  lcbAssignCover: "কভার ঠিক করুন",
+  lcbOnlyUncovered: "শুধু শিক্ষকবিহীন",
+  lcbStatusOnDuty: "নিজ শিক্ষক",
+  lcbStatusCovered: "কভার শিক্ষক",
+  lcbStatusUncovered: "শিক্ষক নেই",
+  lcbStatusUnassigned: "শিক্ষক দেওয়া নেই",
 
   // Holidays (D-#50) — ad-hoc closures that override the day type
   hxTitle: "ছুটির দিন",
@@ -7070,6 +7129,30 @@ const STR_EN: StrTable = {
   rtCovered: "Covered",
   rtNoCovers: "No covers.",
   rtCoveringFor: "Covering for",
+
+  // Live class board (D-#674) — which class is running now, and who is taking it
+  lcbNowTitle: "Classes running now",
+  lcbBoardTitle: "Today's class board",
+  lcbBoardOpen: "Open the whole-day board",
+  lcbBoardHint: "Who is taking every period of every class today — cover teachers included.",
+  lcbNoneLive: "No class is running right now.",
+  lcbNoBoard: "No classes today.",
+  lcbNoTeacher: "No teacher",
+  lcbUncoveredTitle: "Classes without a teacher",
+  lcbCoverPrefix: "Cover",
+  lcbProposedNotApproved: "Proposed — not approved",
+  lcbUnassigned: "No teacher set in the routine",
+  lcbOnLeave: "On leave",
+  lcbLeavePending: "Leave awaiting approval",
+  lcbAbsentSheet: "Absent on the attendance sheet",
+  lcbUncoveredToday: "Uncovered today",
+  lcbAllStaffed: "Every class has a teacher.",
+  lcbAssignCover: "Arrange cover",
+  lcbOnlyUncovered: "Uncovered only",
+  lcbStatusOnDuty: "Own teacher",
+  lcbStatusCovered: "Cover teacher",
+  lcbStatusUncovered: "No teacher",
+  lcbStatusUnassigned: "Not assigned",
 
   // Holidays (D-#50) — ad-hoc closures that override the day type
   hxTitle: "Holidays",
