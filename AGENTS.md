@@ -89,7 +89,10 @@ auto-deploys (`.github/workflows`, `scripts/deploy.sh`). So:
   prd-routine.md      ← Routine/Timetable module build contract: rooms+period-defs+slots+conflict-engine, slices R-1..3 (D-#46/#47)
   prd-class-teacher.md ← Class-teacher → section daily-coordinator gate (attendance/leave/report-card/comms), slice CT-1 now (D-#45)
   scholarship-eng-paper-structure.md ← OWNER-APPROVED C5 English paper shape: 14 items → 24 topic rows + marks.
-                        Read before generating an English scholarship question or touching the ENG seed (D-#670/#669)
+                        Read before generating an English scholarship question or touching the ENG seed (D-#670/#672)
+  scholarship-eng-writing-prompts.md ← the owner's bank of letter/application/email/composition prompts for
+                        Q13–Q14, AND the ledger of which are used. Take the next unused one and tick it in
+                        the same commit as the paper; never repeat one (D-#676)
   architecture.md     ← how (modules, data planes, the ADRs)
   glossary.md         ← canonical terminology (read before naming anything)
   import-contract.md  ← the envelope contract narrative

@@ -115,7 +115,7 @@ chapter. Overloading the homework catalogue would either pollute the homework pi
 are not homework topics, or force the analysis onto an axis that cannot answer the question.
 
 Seed for English: its 14 printed items expanded to **24 topics**, in English, each carrying the
-marks the blueprint fixes (D-#670/#669, §5.2.3). **The approved table lives in
+marks the blueprint fixes (D-#670/#672, §5.2.3). **The approved table lives in
 `docs/scholarship-eng-paper-structure.md`** — that file and the `ENG` array in the seed are the
 two halves of one source of truth, and neither is re-derived from the circular's prose.
 
@@ -226,7 +226,7 @@ ever tagged with a topic points at, so it must survive both reordering (a positi
 silently re-points existing items the first time a row is inserted) and renaming (a label-derived
 one would move on exactly the edit `labelBn` exists to allow).
 
-### 5.2.3 English is labelled in English, an "or" item is one topic per alternative, and the catalogue carries marks (D-#670/#669)
+### 5.2.3 English is labelled in English, an "or" item is one topic per alternative, and the catalogue carries marks (D-#670/#672)
 
 Owner, reading the seeded catalogue on prod: *"the english topic list recorded in bangla but it
 should be in english"*, and *"there are 14 questions but some questions as variation ... so for topic
