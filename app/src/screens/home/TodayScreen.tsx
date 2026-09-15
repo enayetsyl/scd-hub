@@ -53,6 +53,7 @@ import { Screen, H1, H2, Body, Muted, Card, Badge, Button, EmptyState, Notice } 
 import { QueryGate } from "../../components/QueryGate";
 import { WorkClaimTeacherCard } from "../../components/WorkClaimTeacherCard";
 import { ReturningStudentsCard } from "../../components/ReturningStudentsCard";
+import { GiftHandoverCard } from "../../components/GiftHandoverCard";
 import { Icon, type IconName } from "../../components/Icon";
 import {
   STR,
@@ -116,6 +117,8 @@ export default function TodayScreen(): React.ReactElement {
   const canSets = can("set:read");
   const canTrackers = can("tracker:read");
   const canHr = !!role && role !== "GUARDIAN";
+  // AG-3 — the desk that physically hands out the gifts (Principal + Office, D-#667).
+  const canGift = can("gift:manage");
 
   // D-#318: the teacher's OWN sections' attendance at a glance (admins land on
   // the card dashboard instead, so no pause needed beyond the guardian gate).
@@ -678,6 +681,11 @@ export default function TodayScreen(): React.ReactElement {
 
         {/* RL-1 — ছুটি শেষে ফিরেছে: who is back today, and what to ask them for. */}
         <ReturningStudentsCard rows={q.data?.myDay?.returningStudents ?? []} />
+
+        {/* AG-3 — 🎁 সাপ্তাহিক উপহার: this week's winners class-wise, handed over from
+            here. Office/Principal only (`gift:manage`, D-#667) — a teacher keeps the
+            section-scoped উপহার রিপোর্ট screen, which this school-wide view is not. */}
+        {canGift ? <GiftHandoverCard /> : null}
 
         {/* D-#318: the teacher's OWN sections' attendance at a glance — tap for names. */}
         {!canManage && mySections.length > 0 ? (

@@ -3694,6 +3694,11 @@ export const PERMISSIONS = [
   "tracker:read",
   "tracker:write",
   "tracker:export",
+  // assignment weekly gift (AG-1/AG-2, D-#479–#483). Its OWN permission rather than a
+  // tracker grant: the Office hands out the physical gifts but must keep holding NO
+  // tracker permission (D-#554 — the Office nudges and never resolves tracker work).
+  // Teachers reach the same report through `tracker:read`, section-scoped, unchanged.
+  "gift:manage",           // read the gift report school-wide + tick/untick a handover (Principal/Office)
   // routine / timetable (app-native; D-#46)
   "routine:read",          // read the routine (Principal/Teacher/Office; guardian read rides guardian:read_child — narrow slot, D-#69)
   "routine:manage",        // build/edit calendar, rooms, groups, grids, slots (Principal/Office)
@@ -3791,6 +3796,7 @@ export const PERMISSION_BUILD_STATUS: Record<Permission, "build" | "pipeline"> =
   "tracker:read": "build",
   "tracker:write": "build",
   "tracker:export": "build",
+  "gift:manage": "build",
   "routine:read": "build",
   "routine:manage": "build",
   "attendance:mark": "build",
@@ -3845,6 +3851,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "question:read", "question:select", "question:manage",
     "set:read", "set:assemble", "set:export",
     "tracker:read", "tracker:write", "tracker:export",
+    "gift:manage",           // hand out the assignment weekly gift (AG-1, D-#479–#483) — Principal + Office
     "routine:read", "routine:manage",
     "attendance:manage", // NOT attendance:mark — Principal assigns markers, doesn't mark (D-#64)
     "library:read", "library:manage",
@@ -3911,6 +3918,10 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "report:release",        // monthly progress report: release/re-release, individually or in a batch (D-#397).
                              // NOT the overrides — a coverage-block override, a revoke and a hard-lock reopen are
                              // Principal-only by role, so a bulk mistake has exactly one owner.
+    "gift:manage",           // the assignment weekly gift: read the report school-wide and tick the physical
+                             // handover (AG-1, D-#479–#483). Its OWN permission, NOT tracker:read — D-#554's
+                             // "the Office holds no tracker permission" stands; handing out a gift is a desk
+                             // job, resolving tracker work is not.
     "exam:manage", "exam:read", // exam syllabus: create the exam, write and submit a syllabus (SY-1/SY-4). PUBLISH
                              // is refused to Office BY STATE, not by permission — the row must reach
                              // PRINCIPAL_REVIEW and only the Principal moves it on (D-#533, §7.4).
@@ -4100,6 +4111,7 @@ export const PERMISSION_LABELS_BN: Record<Permission, PermissionLabel> = {
   "tracker:read": { name: "ট্র্যাকার দেখা", desc: "ট্র্যাকার রিপোর্ট পড়া" },
   "tracker:write": { name: "ট্র্যাকার এন্ট্রি", desc: "ট্র্যাকারে এন্ট্রি ও আপডেট" },
   "tracker:export": { name: "ট্র্যাকার এক্সপোর্ট", desc: "ট্র্যাকার রিপোর্ট রপ্তানি" },
+  "gift:manage": { name: "উপহার পরিচালনা", desc: "সাপ্তাহিক উপহারের বিজয়ী তালিকা দেখা ও উপহার দেওয়া হয়েছে চিহ্নিত করা" },
   "routine:read": { name: "রুটিন দেখা", desc: "ক্লাস রুটিন ও টাইমটেবিল পড়া" },
   "routine:manage": { name: "রুটিন পরিচালনা", desc: "ক্যালেন্ডার, রুম, গ্রিড ও স্লট সম্পাদনা" },
   "attendance:mark": { name: "হাজিরা মার্ক", desc: "সেকশনের অনুপস্থিতি মার্ক করা" },
@@ -4162,6 +4174,7 @@ export const PERMISSION_LABELS_EN: Record<Permission, PermissionLabel> = {
   "tracker:read": { name: "Read trackers", desc: "View tracker reports" },
   "tracker:write": { name: "Write trackers", desc: "Enter and update tracker rows" },
   "tracker:export": { name: "Export trackers", desc: "Export tracker reports" },
+  "gift:manage": { name: "Manage gifts", desc: "See the weekly gift winners and mark a gift as given" },
   "routine:read": { name: "Read routine", desc: "View the class routine/timetable" },
   "routine:manage": { name: "Manage routine", desc: "Edit calendar, rooms, grids, slots" },
   "attendance:mark": { name: "Mark attendance", desc: "Mark a section's absentees" },

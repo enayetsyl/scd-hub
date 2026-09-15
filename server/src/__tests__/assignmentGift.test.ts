@@ -29,6 +29,7 @@ const mockAwardDelete = jest.fn();
 const mockStudentFind = jest.fn();
 const mockStudentFindById = jest.fn();
 const mockClassFindById = jest.fn();
+const mockClassFind = jest.fn();
 const mockUserFind = jest.fn();
 const mockUserFindById = jest.fn();
 
@@ -65,6 +66,9 @@ jest.mock("../modules/foundation/models/Student", () => ({
 }));
 jest.mock("../modules/foundation/models/Class", () => ({
   Class: {
+    // `find` backs the class-NAME join for the class-wise grouping (AG-3); `findById`
+    // reads the level at handover. Both are needed — the report calls find().
+    find: (q: unknown) => ({ select: () => ({ lean: () => Promise.resolve(mockClassFind(q)) }) }),
     findById: (id: unknown) => ({
       select: () => ({ lean: () => Promise.resolve(mockClassFindById(id)) }),
     }),
@@ -182,6 +186,8 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockAwardFind.mockReturnValue([]);
   mockUserFind.mockReturnValue([]);
+  // The class-name join for the AG-3 class-wise grouping.
+  mockClassFind.mockImplementation(() => [{ _id: CLASS, nameBn: "শ্রেণি ৩" }]);
   mockStudentFind.mockImplementation(() => [
     { _id: ALICE, name: "Alice", schoolId: "0001", rollNumber: "1", classId: CLASS, sectionId: SECTION },
     { _id: BOB, name: "Bob", schoolId: "0002", rollNumber: "2", classId: CLASS, sectionId: SECTION },

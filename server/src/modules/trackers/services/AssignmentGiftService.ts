@@ -110,6 +110,11 @@ export interface GiftStudentRow {
   rollNumber: string | null;
   classId: string;
   sectionId: string;
+  /** The class's Bangla name, for grouping the winners class-wise on the Office's
+   *  Today card (AG-3). Resolved here rather than client-side: the desk reads this
+   *  report to hand out gifts, so the heading it groups under belongs to the report.
+   *  Falls back to "" when the class row is missing — never to the raw ObjectId. */
+  className: string;
   /** Only the weeks inside [weekFrom, weekTo] — the streak is derived over the
    *  student's WHOLE history up to weekTo, not just this window. */
   weeks: GiftWeek[];
@@ -321,6 +326,16 @@ export async function assignmentGiftReport(filter: GiftFilter): Promise<GiftRepo
   ]);
   const studentById = new Map(students.map((s) => [s._id.toString(), s]));
 
+  // Class NAMES for the class-wise grouping (AG-3). One query over the distinct
+  // classes actually present in the report — not per student.
+  const classIds = [...new Set(students.map((s) => s.classId.toString()))];
+  const classRows = classIds.length
+    ? ((await Class.find({ _id: { $in: classIds } })
+        .select("nameBn")
+        .lean()) as unknown as Array<{ _id: Types.ObjectId; nameBn?: string }>)
+    : [];
+  const classNameById = new Map(classRows.map((c) => [c._id.toString(), c.nameBn ?? ""]));
+
   const handoverUserIds = [...new Set(awards.map((a) => a.handedOverBy.toString()))];
   const handoverNames = handoverUserIds.length
     ? ((await User.find({ _id: { $in: handoverUserIds } })
@@ -432,6 +447,7 @@ export async function assignmentGiftReport(filter: GiftFilter): Promise<GiftRepo
       schoolId: student.schoolId,
       rollNumber: student.rollNumber ?? null,
       classId: student.classId.toString(),
+      className: classNameById.get(student.classId.toString()) ?? "",
       sectionId: student.sectionId.toString(),
       weeks: windowWeeks,
       wonWeeks,
