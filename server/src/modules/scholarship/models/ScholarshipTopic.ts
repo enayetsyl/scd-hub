@@ -40,6 +40,20 @@ export interface IScholarshipTopic extends Document {
   /** For `content` rows: the curriculum chapter this topic IS, when it came from the
    *  question bank's own chapter list. Empty for `skill` rows — a skill spans the book. */
   chapters: number[];
+  /**
+   * What this item is worth on the printed paper, when the blueprint fixes it (D-#672).
+   *
+   * REFERENCE only — the authority on a declared paper is still the marks the teacher
+   * types per item, and `Σ(items) = totalMarks` is checked against those. This is what
+   * the structure SAYS the item carries, so the catalogue can be read against the paper
+   * in front of you without holding the circular open beside it.
+   *
+   * Optional because it is not a property of a topic in general: a hand-added topic, and
+   * every SCI/BGS answer-form row, has no fixed mark. The per-subject marks therefore do
+   * NOT sum to the paper total — an item offering alternatives contributes its marks once
+   * per alternative (English is 168 across 24 rows, while any one printed paper is 100).
+   */
+  marks?: number;
   /** Display order in the picker; ties break on `code`. */
   order: number;
   /** Soft retire. A retired topic disappears from the picker but keeps resolving for
@@ -59,6 +73,7 @@ const ScholarshipTopicSchema = new Schema<IScholarshipTopic>(
     labelBn: { type: String, required: true, trim: true },
     axis: { type: String, enum: SCHOLARSHIP_TOPIC_AXES, required: true },
     chapters: { type: [Number], default: [] },
+    marks: { type: Number, min: 0 },
     order: { type: Number, required: true, default: 0 },
     active: { type: Boolean, required: true, default: true },
     createdBy: { type: Schema.Types.ObjectId },
