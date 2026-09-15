@@ -119,10 +119,13 @@ marks the blueprint fixes (D-#670/#672, §5.2.3). **The approved table lives in
 `docs/scholarship-eng-paper-structure.md`** — that file and the `ENG` array in the seed are the
 two halves of one source of truth, and neither is re-derived from the circular's prose.
 
-**All five subjects are seeded in the same slice** (owner ask, 2026-09-14): বাংলা 15, English 24,
+বাংলা follows the same ruling on its own table — 15 printed items → **21 topics**, in Bangla, with
+marks (D-#677, `docs/scholarship-ban-paper-structure.md`).
+
+**All five subjects are seeded in the same slice** (owner ask, 2026-09-14): বাংলা 21, English 24,
 গণিত 11 from their own item tables, and প্রাথমিক বিজ্ঞান / বাংলাদেশ ও বিশ্বপরিচয় 6 each — their
-ANSWER FORMS, per the owner ruling in §5.2.2 (D-#666). **62 topics** in all — 24 + 15 + 11 + 6 + 6,
-confirmed by the seed's own output on the first real prod run (2026-09-15).
+ANSWER FORMS, per the owner ruling in §5.2.2 (D-#666). **68 topics** in all — 24 + 21 + 11 + 6 + 6.
+**Confirm it against the seed's own printed count on the next run**, never against this arithmetic.
 
 > This line read **69** from D-#665 until that run, and the number was wrong from D-#666 onward.
 > 69 was right while SCI/BGS held **29 chapter rows** read out of the question bank; D-#666 replaced
