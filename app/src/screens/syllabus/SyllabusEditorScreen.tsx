@@ -20,6 +20,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useMutation, useQuery } from "urql";
 import {
   EXAM_SYLLABUS_DETAIL,
+  EXAM_SYLLABUS_LEVEL_DETAIL,
   EXAM_SYLLABUS_APPROVER,
   SAVE_EXAM_SYLLABUS,
   SUBMIT_EXAM_SYLLABUS,
@@ -98,13 +99,27 @@ function num(v: string): number | null {
 
 export default function SyllabusEditorScreen({ route, navigation }: Props): React.ReactElement {
   const colors = useColors();
-  const { examId, classId, subject } = route.params;
+  const { examId, classId, track, level, subject } = route.params;
 
-  const [detailQ, refetchDetail] = useQuery({
+  // Class-anchored or LEVEL-anchored (D-#685). Both hooks always run — hooks
+  // cannot be conditional — with the inapplicable one paused, so exactly one
+  // request goes out and the editor writes to exactly one address.
+  const byLevel = Boolean(track && level);
+
+  const [classQ, refetchClass] = useQuery({
     query: EXAM_SYLLABUS_DETAIL,
-    variables: { examId, classId, subject },
+    variables: { examId, classId: classId ?? "", subject },
+    pause: byLevel,
   });
-  const stored = detailQ.data?.examSyllabusDetail ?? null;
+  const [levelQ, refetchLevel] = useQuery({
+    query: EXAM_SYLLABUS_LEVEL_DETAIL,
+    variables: { examId, track: track ?? "", level: level ?? "" },
+    pause: !byLevel,
+  });
+  const detailQ = byLevel ? levelQ : classQ;
+  const refetchDetail = byLevel ? refetchLevel : refetchClass;
+  const stored =
+    (byLevel ? levelQ.data?.examSyllabusLevelDetail : classQ.data?.examSyllabusDetail) ?? null;
 
   const [tab, setTab] = useState<"body" | "marks">("body");
   const [bodyMd, setBodyMd] = useState("");
@@ -128,9 +143,14 @@ export default function SyllabusEditorScreen({ route, navigation }: Props): Reac
     setExamDateKey(stored.examDateKey ?? "");
   }, [stored?.id, stored?.status]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // The picker has to ask the LEVEL question for a level row: a `subjectgroup`
+  // routine slot carries no class, so the class lookup would offer every Quran and
+  // Arabic teacher in the school rather than the ones who hold this level.
   const [approverQ] = useQuery({
     query: EXAM_SYLLABUS_APPROVER,
-    variables: { classId, subject },
+    variables: byLevel
+      ? { classId: null, subject, track, level }
+      : { classId, subject, track: null, level: null },
   });
   const holders = approverQ.data?.examSyllabusApprover.holders ?? [];
   const defaultApprover = approverQ.data?.examSyllabusApprover.defaultUserId ?? null;
@@ -177,7 +197,11 @@ export default function SyllabusEditorScreen({ route, navigation }: Props): Reac
     setErr(null);
     const res = await save({
       examId,
-      classId,
+      // Exactly one anchor. Sending both is refused by the server, and sending
+      // neither would write a row no reader can ever reach.
+      classId: byLevel ? null : classId,
+      subjectTrack: byLevel ? track : null,
+      subjectLevel: byLevel ? level : null,
       subject,
       bodyMd,
       marks: rows.map((r, i) => ({ ...toDraft(r), seq: i + 1 })),

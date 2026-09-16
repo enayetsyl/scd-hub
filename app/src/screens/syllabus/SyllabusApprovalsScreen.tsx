@@ -24,6 +24,7 @@ import { useMutation, useQuery } from "urql";
 import {
   MY_SYLLABUS_APPROVALS,
   EXAM_SYLLABUS_BOARD,
+  EXAM_SYLLABUS_LEVELS,
   EXAM_SYLLABUS_APPROVER,
   APPROVE_EXAM_SYLLABUS,
   SEND_BACK_EXAM_SYLLABUS,
@@ -89,7 +90,9 @@ function ApprovalCard({
   const isManage = mode === "manage";
   const [approverQ] = useQuery({
     query: EXAM_SYLLABUS_APPROVER,
-    variables: { classId: row.classId, subject: row.subject },
+    variables: row.subjectLevel
+      ? { classId: null, subject: row.subject, track: row.subjectTrack, level: row.subjectLevel }
+      : { classId: row.classId, subject: row.subject, track: null, level: null },
     pause: !isManage,
   });
   const [teachersQ] = useQuery({ query: TEACHERS_QUERY, pause: !isManage });
@@ -130,7 +133,12 @@ function ApprovalCard({
             screen shipped showing the subject alone — three identical "ইংরেজি"
             headings with no way to tell which class was being signed off. */}
         <Body style={{ ...typeScale.bodyStrong, flex: 1 }}>
-          {row.classLabel ? `${row.classLabel} — ` : ""}
+          {/* A LEVEL row has no class; its level label answers the same question
+              (D-#685) — without it a teacher holding two Arabic levels would get
+              two identical "আরবি" headings. */}
+          {row.classLabel || row.levelLabel
+            ? `${row.classLabel || row.levelLabel} — `
+            : ""}
           {routineSubjectLabel(row.subject)}
         </Body>
         <Badge
@@ -306,14 +314,32 @@ export default function SyllabusApprovalsScreen(): React.ReactElement {
     variables: { examId: pick.examId ?? "" },
     pause: !canManage || !pick.examId,
   });
+  // The LEVEL rows sit on no class, so without this the Principal would have no
+  // publish surface for Quran or Arabic at all — the one screen that releases a
+  // syllabus would simply never list them (D-#685).
+  const [levelsQ, refetchLevels] = useQuery({
+    query: EXAM_SYLLABUS_LEVELS,
+    variables: { examId: pick.examId ?? "" },
+    pause: !canManage || !pick.examId,
+  });
+
   const board = useMemo<MatrixRow[]>(
-    () =>
-      (boardQ.data?.examSyllabusBoard ?? []).map((c) => ({
+    () => [
+      ...(boardQ.data?.examSyllabusBoard ?? []).map((c) => ({
         classId: c.classId,
         classLabel: c.classLabel,
         subjects: c.subjects,
       })),
-    [boardQ.data?.examSyllabusBoard],
+      // One matrix row per level, named by its groups. A level with nothing written
+      // yet carries no subjects and renders empty — the same "still missing"
+      // reading the class rows give.
+      ...(levelsQ.data?.examSyllabusLevels ?? []).map((lv) => ({
+        classId: `${lv.track}:${lv.level}`,
+        classLabel: lv.label,
+        subjects: lv.row ? [lv.row] : [],
+      })),
+    ],
+    [boardQ.data?.examSyllabusBoard, levelsQ.data?.examSyllabusLevels],
   );
 
   /** The cell the Principal opened, if any. */
@@ -322,6 +348,7 @@ export default function SyllabusApprovalsScreen(): React.ReactElement {
   const refresh = usePullRefresh(mineQ.fetching || boardQ.fetching, () => {
     refetchMine({ requestPolicy: "network-only" });
     refetchBoard({ requestPolicy: "network-only" });
+    refetchLevels({ requestPolicy: "network-only" });
   });
   /** Refetch both lists but leave the open card alone. */
   const refetchAll = (): void => {
@@ -331,6 +358,7 @@ export default function SyllabusApprovalsScreen(): React.ReactElement {
   const reload = (): void => {
     refetchMine({ requestPolicy: "network-only" });
     refetchBoard({ requestPolicy: "network-only" });
+    refetchLevels({ requestPolicy: "network-only" });
     setOpenCell(null);
   };
 

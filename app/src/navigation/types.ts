@@ -380,10 +380,26 @@ export type EnglishDriveStackParamList = {
  */
 export type SyllabusStackParamList = {
   SyllabusHome: undefined;
-  SyllabusDetail: { examId: string; classId: string; subject: string; title?: string };
+  /** A syllabus is addressed by CLASS or by LEVEL, never both (D-#685): pass
+   *  `classId`, or `track`+`level` for Quran/Arabic from class one up. */
+  SyllabusDetail: {
+    examId: string;
+    classId?: string;
+    track?: string;
+    level?: string;
+    subject: string;
+    title?: string;
+  };
   SyllabusEntry: undefined;
   SyllabusExams: undefined;
-  SyllabusEditor: { examId: string; classId: string; subject: string; title?: string };
+  SyllabusEditor: {
+    examId: string;
+    classId?: string;
+    track?: string;
+    level?: string;
+    subject: string;
+    title?: string;
+  };
   SyllabusApprovals: undefined;
   SyllabusClassNote: { examId: string; classId: string; title?: string };
 };

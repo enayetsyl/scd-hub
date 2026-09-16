@@ -1871,12 +1871,22 @@ export async function emitStudentReturned(ev: StudentReturnedEvent): Promise<voi
 export interface SyllabusPublishedEvent {
   syllabusId: IdLike;
   examId: IdLike;
-  classId: IdLike;
+  /** Null on a Quran/Arabic LEVEL syllabus, which belongs to no single class. */
+  classId: IdLike | null;
   subject: string;
   /** The publish stamp — discriminates a re-publish after a §7.3 send-back. */
   publishedAt: Date;
   examName: string;
+  /** The class name, or the level label ("বুক ২ (বালক) + বুক ২ (বালিকা)"). */
   className: string;
+  /**
+   * The exact students to notify, when they cannot be derived from a class.
+   * A LEVEL syllabus spans several classes and only SOME children of each, so
+   * `classId` cannot answer "whose parents care about this paper" — the group
+   * memberships can. Without this the emitter would find no students and the
+   * families of a published level syllabus would simply never hear.
+   */
+  studentIds?: IdLike[];
 }
 
 /**
@@ -1894,9 +1904,11 @@ export interface SyllabusPublishedEvent {
  */
 export async function emitSyllabusPublished(ev: SyllabusPublishedEvent): Promise<void> {
   return bestEffort("syllabus published", async () => {
-    const students = (await Student.find({ classId: ev.classId, active: true })
-      .select("_id")
-      .lean()) as unknown as Array<{ _id: IdLike }>;
+    const students = ev.studentIds
+      ? ev.studentIds.map((id) => ({ _id: id }))
+      : ((await Student.find({ classId: ev.classId, active: true })
+          .select("_id")
+          .lean()) as unknown as Array<{ _id: IdLike }>);
     if (students.length === 0) return;
 
     const links = (await GuardianLink.find({
@@ -1922,10 +1934,13 @@ export async function emitSyllabusPublished(ev: SyllabusPublishedEvent): Promise
       subject: subjectBn,
     });
     const publishedAtKey = ev.publishedAt.toISOString();
+    // A LEVEL syllabus has no class, and the deep link already falls back to the
+    // syllabus list when the triple is incomplete — so the key is simply absent
+    // rather than carrying an empty string that would navigate to a dead screen.
     const refs = {
       syllabusId: ev.syllabusId.toString(),
       examId: ev.examId.toString(),
-      classId: ev.classId.toString(),
+      ...(ev.classId ? { classId: ev.classId.toString() } : {}),
       subject: ev.subject,
     };
     // One upsert per guardian, in parallel: this is awaited inside the publish
@@ -1952,7 +1967,8 @@ export async function emitSyllabusPublished(ev: SyllabusPublishedEvent): Promise
 export interface SyllabusAwaitingPublishEvent {
   syllabusId: IdLike;
   examId: IdLike;
-  classId: IdLike;
+  /** Null on a LEVEL syllabus (Quran/Arabic from class one up) — see `className`. */
+  classId: IdLike | null;
   subject: string;
   /** The sign-off stamp — a re-approval after a send-back re-notifies. */
   approvedAt: Date;
@@ -1996,7 +2012,7 @@ export async function emitSyllabusAwaitingPublish(ev: SyllabusAwaitingPublishEve
         refs: {
           syllabusId: ev.syllabusId.toString(),
           examId: ev.examId.toString(),
-          classId: ev.classId.toString(),
+          ...(ev.classId ? { classId: ev.classId.toString() } : {}),
           subject: ev.subject,
         },
         dedupeKey: dedupeKeys.syllabusAwaitingPublish(

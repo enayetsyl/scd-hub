@@ -14,7 +14,12 @@ import React, { useMemo } from "react";
 import { RefreshControl, Pressable, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
-import { EXAM_SYLLABUS_CLASS, type SyllabusT } from "../../graphql/examSyllabus";
+import {
+  EXAM_SYLLABUS_CLASS,
+  EXAM_SYLLABUS_LEVELS,
+  type SyllabusT,
+  type SyllabusLevelRowT,
+} from "../../graphql/examSyllabus";
 import type { SyllabusStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Select, Badge, Button, EmptyState, Notice } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
@@ -44,6 +49,12 @@ function statusChip(row: SyllabusT): { label: string; tone: Tone } {
   }
 }
 
+/** The same derived state as statusChip, for a level row whose syllabus may not exist yet. */
+function levelChip(lv: SyllabusLevelRowT): { label: string; tone: Tone } {
+  if (!lv.row) return { label: STR.syNotWritten, tone: "warn" };
+  return statusChip(lv.row);
+}
+
 export default function SyllabusEntryScreen({ navigation }: Props): React.ReactElement {
   const colors = useColors();
   const pick = useSyllabusPickers();
@@ -55,9 +66,21 @@ export default function SyllabusEntryScreen({ navigation }: Props): React.ReactE
   });
   const view = syllabusQ.data?.examSyllabusClass ?? null;
 
+  // The level board is a property of the EXAM, not of the picked class: from class
+  // one up Quran and Arabic are taught in cross-grade level groups, so they appear
+  // once here rather than on each class (D-#685). It does not move when the class
+  // picker does.
+  const [levelsQ, refetchLevels] = useQuery({
+    query: EXAM_SYLLABUS_LEVELS,
+    variables: { examId: pick.examId ?? "" },
+    pause: !pick.examId,
+  });
+  const levels = levelsQ.data?.examSyllabusLevels ?? [];
+
   const refresh = usePullRefresh(syllabusQ.fetching, () => {
     pick.refetch();
     refetch({ requestPolicy: "network-only" });
+    refetchLevels({ requestPolicy: "network-only" });
   });
 
   // Coverage counts the subjects that actually have a distribution, not the rows
@@ -162,6 +185,47 @@ export default function SyllabusEntryScreen({ navigation }: Props): React.ReactE
               })}
             </Card>
             )}
+
+            {levels.length > 0 ? (
+              <Card>
+                <Body style={{ ...typeScale.bodyStrong }}>{STR.syLevels}</Body>
+                <Muted>{STR.syLevelsHint}</Muted>
+                {levels.map((lv) => {
+                  const chip = levelChip(lv);
+                  return (
+                    <Pressable
+                      key={`${lv.track}:${lv.level}`}
+                      onPress={() =>
+                        navigation.navigate("SyllabusEditor", {
+                          examId: view.examId,
+                          track: lv.track,
+                          level: lv.level,
+                          subject: lv.subject,
+                          title: `${lv.label} — ${routineSubjectLabel(lv.subject)}`,
+                        })
+                      }
+                      accessibilityLabel={lv.label}
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: space(2),
+                        paddingVertical: space(3),
+                        borderBottomWidth: 1,
+                        borderBottomColor: colors.border,
+                      }}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <Body>{lv.label}</Body>
+                        <Muted>
+                          {`${routineSubjectLabel(lv.subject)} · ${bnNum(lv.memberCount)} ${STR.syLevelStudents}`}
+                        </Muted>
+                      </View>
+                      <Badge tone={chip.tone} text={chip.label} />
+                    </Pressable>
+                  );
+                })}
+              </Card>
+            ) : null}
           </View>
         ) : null}
       </QueryGate>

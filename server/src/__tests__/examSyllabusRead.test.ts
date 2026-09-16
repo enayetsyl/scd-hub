@@ -55,10 +55,26 @@ jest.mock("../modules/exams/models/ExamClassNote", () => ({
   },
 }));
 
+const mockClass = jest.fn(() => ({ nameBn: "শ্রেণি ৩", level: 3 }) as unknown);
 jest.mock("../modules/foundation/models/Class", () => ({
   Class: {
-    findById: () => ({ select: () => ({ lean: async () => ({ label: "শ্রেণি ৩", level: 3 }) }) }),
+    findById: () => ({ select: () => ({ lean: async () => mockClass() }) }),
     find: () => ({ select: () => ({ lean: async () => [] }) }),
+  },
+}));
+
+// Quran/Arabic level groups. Empty by default — every class-board test here is
+// about class-wise subjects, and a level row must never depend on them.
+const mockGroups = jest.fn(() => [] as unknown[]);
+const mockMemberships = jest.fn(() => [] as unknown[]);
+jest.mock("../modules/routine/models/SubjectGroup", () => ({
+  SubjectGroup: {
+    find: () => ({ select: () => ({ lean: async () => mockGroups() }) }),
+  },
+}));
+jest.mock("../modules/routine/models/SubjectGroupMembership", () => ({
+  SubjectGroupMembership: {
+    find: () => ({ select: () => ({ lean: async () => mockMemberships() }) }),
   },
 }));
 
@@ -179,15 +195,48 @@ describe("classSyllabus", () => {
 
   test("a teacher's OWN unpublished subject appears as a pending placeholder, not absent", async () => {
     mockSyllabusFind.mockReturnValue([]); // nothing published for this class
-    mockScope.mockResolvedValue([{ classLevel: 3, subject: "ARABIC" }]);
+    mockScope.mockResolvedValue([{ classLevel: 3, subject: "ENG" }]);
     const view = await classSyllabus(ctxFor("TEACHER", TEACHER_ID), EXAM.toString(), CLASS.toString());
-    const arabic = view.subjects.find((s) => s.subject === "ARABIC");
-    // Absent would read as "this class does not sit Arabic"; pending reads as
+    const eng = view.subjects.find((s) => s.subject === "ENG");
+    // Absent would read as "this class does not sit English"; pending reads as
     // "not ready yet", which is the truth.
-    expect(arabic).toBeDefined();
-    expect(arabic!.pending).toBe(true);
-    expect(arabic!.id).toBeNull();
-    expect(arabic!.isMine).toBe(true);
+    expect(eng).toBeDefined();
+    expect(eng!.pending).toBe(true);
+    expect(eng!.id).toBeNull();
+    expect(eng!.isMine).toBe(true);
+  });
+
+  // D-#685 — from class one up these two are taught in cross-grade LEVEL groups,
+  // so no single class board can show one paper that is right for the class.
+  test("QURAN and ARABIC are OFF a class board from class one up, for the teacher who holds them", async () => {
+    mockSyllabusFind.mockReturnValue([]);
+    mockScope.mockResolvedValue([
+      { classLevel: 3, subject: "ARABIC" },
+      { classLevel: 3, subject: "QURAN" },
+    ]);
+    const view = await classSyllabus(ctxFor("TEACHER", TEACHER_ID), EXAM.toString(), CLASS.toString());
+    expect(view.subjects.find((s) => s.subject === "ARABIC")).toBeUndefined();
+    expect(view.subjects.find((s) => s.subject === "QURAN")).toBeUndefined();
+  });
+
+  test("...and off the OFFICE board too, which is the writing surface", async () => {
+    mockSyllabusFind.mockReturnValue([]);
+    mockScope.mockResolvedValue(null);
+    mockRoutineSlots.mockReturnValue([]); // no routine → the full-subject fallback
+    const view = await classSyllabus(ctxFor("OFFICE"), EXAM.toString(), CLASS.toString());
+    expect(view.subjects.find((s) => s.subject === "ARABIC")).toBeUndefined();
+    expect(view.subjects.find((s) => s.subject === "QURAN")).toBeUndefined();
+    expect(view.subjects.find((s) => s.subject === "BAN")).toBeDefined();
+  });
+
+  test("below class one they STAY class-wise — নার্সারি and কেজি have no level groups", async () => {
+    mockSyllabusFind.mockReturnValue([]);
+    mockScope.mockResolvedValue(null);
+    mockRoutineSlots.mockReturnValue([]);
+    mockClass.mockReturnValueOnce({ nameBn: "নার্সারি", level: -1 });
+    const view = await classSyllabus(ctxFor("OFFICE"), EXAM.toString(), CLASS.toString());
+    expect(view.subjects.find((s) => s.subject === "ARABIC")).toBeDefined();
+    expect(view.subjects.find((s) => s.subject === "QURAN")).toBeDefined();
   });
 
   test("a subject the teacher does NOT teach and that is unpublished stays absent", async () => {
@@ -383,7 +432,10 @@ describe("classSyllabus with NO syllabus rows yet", () => {
       "../modules/exams/services/ExamSyllabusReadService"
     );
     const view = await classSyllabus(ctxFor("OFFICE"), EXAM.toString(), CLASS.toString());
-    expect(view.subjects.map((s) => s.subject).sort()).toEqual(["ARABIC", "BAN", "MATH"]);
+    // ARABIC is in this class's routine and is still NOT offered here: from class
+    // one up it is taught in cross-grade level groups, so it belongs on the level
+    // board, not on any one class's (D-#685).
+    expect(view.subjects.map((s) => s.subject).sort()).toEqual(["BAN", "MATH"]);
     // Every one is a placeholder waiting to be written — not a saved row.
     expect(view.subjects.every((s) => s.pending && s.id === null)).toBe(true);
   });
@@ -422,7 +474,7 @@ describe("classSyllabus with NO syllabus rows yet", () => {
       EXAM.toString(),
       CLASS.toString(),
     );
-    expect(view.subjects.length).toBe(3);
+    expect(view.subjects.length).toBe(2);
   });
 
   test("a TEACHER still sees only their own pairs — the fix does not widen their board", async () => {
