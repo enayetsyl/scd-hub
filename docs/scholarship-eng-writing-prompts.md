@@ -45,8 +45,8 @@ questions supplied. Two different titles per paper, one for each form.
 
 | # | Title | Used by |
 |---|---|---|
-| 1 | My Home District | |
-| 2 | A Field Trip I Enjoyed | |
+| 1 | My Home District | **Unit 2 model paper (2026-09-16)** — 14.a |
+| 2 | A Field Trip I Enjoyed | **Unit 2 model paper (2026-09-16)** — 14.b |
 | 3 | My Favourite Hobby | |
 | 4 | Our School Garden | |
 | 5 | Nakshi Kantha | |
@@ -59,7 +59,7 @@ questions supplied. Two different titles per paper, one for each form.
 
 | # | Prompt | Used by |
 |---|---|---|
-| 1 | Write a letter to your father about your preparation for the upcoming primary scholarship examination. | |
+| 1 | Write a letter to your father about your preparation for the upcoming primary scholarship examination. | **Unit 2 model paper (2026-09-16)** — 13.a |
 | 2 | Write a letter to your cousin congratulating him/her on his/her success in the primary scholarship examination. | |
 | 3 | Write a letter to your friend about your school garden. | |
 | 4 | You are an elected member of the school council. Now write a letter to your friend about your future plans for your school. | |
@@ -80,7 +80,7 @@ Every one is addressed to the Head Teacher / Headmaster.
 | # | Prompt | Used by |
 |---|---|---|
 | 1 | Write an application to your Head Teacher requesting a library membership card. | **Unit 1 model paper (2026-09-15)** — see the note below |
-| 2 | Your mother is ill and you need to take care of her. Write an application to your Head Teacher for leave in advance. | |
+| 2 | Your mother is ill and you need to take care of her. Write an application to your Head Teacher for leave in advance. | **Unit 2 model paper (2026-09-16)** — 13.b |
 | 3 | Write an application to your Head Teacher asking for permission to attend the Junior Math Olympiad competition. | |
 | 4 | Write an application to the Headmaster for morning class. | |
 | 5 | Write an application to your Head Teacher praying for the allotment of a piece of land for gardening in the school compound. | |
@@ -89,7 +89,7 @@ Every one is addressed to the Head Teacher / Headmaster.
 
 | # | Prompt | Used by |
 |---|---|---|
-| 1 | Recently you have received an email from an Indonesian boy, Intan. He described his country and wanted to know about yours. Now write a reply email describing your country. | |
+| 1 | Recently you have received an email from an Indonesian boy, Intan. He described his country and wanted to know about yours. Now write a reply email describing your country. | **Unit 2 model paper (2026-09-16)** — 13.c |
 | 2 | You visited your relatives at Uttara in Dhaka by Metro Rail. Now write an email to your friend describing your experience of travelling by Metro Rail. | |
 | 3 | Write an email to your friend about your school sports day. | |
 | 4 | Write an email inviting your friend Keya to attend your birthday party. | |
