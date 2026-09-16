@@ -198,21 +198,17 @@ function RecordBlock({
   const { openingId, runOpen } = useFileOpen();
   return (
     <View style={{ marginTop: space(2) }}>
-      {/* The guardian status is a SENTENCE, not a chip word ("বাড়ির কাজ জমা দেওয়ার সময়
-          হয়েছে", worded for parents), so it gets its own full-width line.
-          Sitting beside the title it crushed that column to a few pixels — flexShrink is
-          0 by default in RN, so the badge never yielded and the only shrinkable child
-          took the whole squeeze, wrapping the subject and hwId one character per line. */}
-      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space(2) }}>
-        <View style={{ flexShrink: 1 }}>
-          <Body style={{ fontWeight: "700" }}>{subjectLabel(r.subject)}</Body>
-          <Muted>{r.hwId}</Muted>
-        </View>
-        {/* D-#682: say what actually happened — "পুনঃজমা" is the tracker's word for
-            the state, not an explanation to a parent of why a script is back in the
-            bag. D-#685 moved it into a shared component so the three cards a parent
-            opens FIRST say the same thing this one does. */}
-        <HandBackBadges handedBack={!!r.resubOf} redelivered={r.redelivered} />
+      {/* The title owns its line. Nothing sits beside it: the guardian status is a
+          SENTENCE, not a chip word ("বাড়ির কাজ জমা দেওয়ার সময় হয়েছে", worded for
+          parents), and next to the title it crushed that column to a few pixels —
+          flexShrink is 0 by default in RN, so the badge never yielded and the only
+          shrinkable child took the whole squeeze, wrapping the subject and hwId one
+          character per line. D-#685 briefly put the hand-back badge back up here and
+          hit the other end of the same problem: on a wide screen space-between threw
+          it a screen-width away from everything it relates to. */}
+      <View style={{ flexShrink: 1 }}>
+        <Body style={{ fontWeight: "700" }}>{subjectLabel(r.subject)}</Body>
+        <Muted>{r.hwId}</Muted>
       </View>
       {/* A resubmission now sits on the day it came HOME (D-#682), so name the
           declaration it descends from — otherwise the parent loses the thread
@@ -228,7 +224,18 @@ function RecordBlock({
           to go find the class note for the date it was given. It sits ABOVE the status
           line because it is the thing they opened the app to learn. */}
       {r.description ? <Body style={{ marginTop: space(1) }}>{r.description}</Body> : null}
-      <View style={{ marginTop: space(2) }}>
+      {/* ONE badge row (D-#686). These three answer a single question — what is
+          happening with this piece of work — but the card used to scatter them:
+          the hand-back badge pinned to the far right of the title row, the status
+          badge here, the chase count below the timeline. On a phone that reads as
+          three remarks; on desktop web the hand-back badge sat a screen-width away
+          from the status it qualifies, so "বাড়ির কাজ আনেনি" looked like a verdict
+          on new work. Kept BELOW the description, because D-#478 put the
+          description above the status line deliberately — it is the thing the
+          parent opened the app to learn. Result/top-up stay by the timeline: they
+          are what CAME of the work, not what is happening to it. */}
+      <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: space(2), marginTop: space(2) }}>
+        <HandBackBadges handedBack={!!r.resubOf} redelivered={r.redelivered} />
         <Badge
           text={hwGuardianStatusLabel(r.state)}
           /* Three steps, not two: amber "due today" → red "did not bring it" → green for
@@ -236,6 +243,9 @@ function RecordBlock({
              child had not done the work, which read as both wrong and alarming. */
           tone={r.state === "CHASE" ? "danger" : r.state === "DUE" ? "warn" : "brand"}
         />
+        {r.chaseCount > 0 ? (
+          <Badge text={`${lifecycleStateLabel("CHASE")} ×${bnNum(r.chaseCount)}`} tone="danger" />
+        ) : null}
       </View>
 
       {/* Stage timeline (GP-J4) */}
@@ -251,10 +261,9 @@ function RecordBlock({
         <StageRow label={lifecycleStateLabel("RETURNED")} at={r.returnedAt} />
       </View>
 
+      {/* What CAME of the work. The chase count moved up into the status row
+          (D-#686) — it describes what is happening now, not the outcome. */}
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: space(2) }}>
-        {r.chaseCount > 0 ? (
-          <Badge text={`${lifecycleStateLabel("CHASE")} ×${bnNum(r.chaseCount)}`} tone="danger" />
-        ) : null}
         {r.result ? (
           <Badge text={hwResultLabel(r.result)} tone={r.result === "CORRECT" ? "ok" : r.result === "WRONG" ? "danger" : "warn"} />
         ) : null}
