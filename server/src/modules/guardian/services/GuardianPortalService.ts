@@ -34,6 +34,7 @@ import { GuardianLink } from "../../foundation/models/GuardianLink";
 import { GuardianWorkClaim } from "../../trackers/models/GuardianWorkClaim";
 import {
   workClaimEligible,
+  workClaimHoldNoteBn,
   workClaimViewOf2,
   workClaimViewOf,
   type GuardianWorkClaimView,
@@ -159,7 +160,14 @@ export interface GuardianHomeworkRecord {
   hwId: string;
   subject: HwSubject;
   subjectLabelBn: string;
+  /** The day THIS record reached the child (D-#682) — the record's own GIVEN
+   *  stamp, so a resubmission or a re-delivery lands on the day it came home
+   *  rather than on the original declaration's date. */
   dateGiven: string;
+  /** The day the ITEM was declared. Equals `dateGiven` for an ordinary record. */
+  itemDateGiven: string;
+  /** Absent at issue, handed out later (ABSENT_REDELIVER → GIVEN). */
+  redelivered: boolean;
   state: LifecycleState;
   stateLabelBn: string;
   givenAt: string | null;
@@ -186,6 +194,9 @@ export interface GuardianHomeworkRecord {
   /** GC-3: may a guardian file "done at home" against this record right now?
    *  Server-computed so the app never has to know the D-#553 rule. */
   canClaim: boolean;
+  /** Why the button is absent when the same-day floor is what is holding it
+   *  (D-#683) — a sentence for the parent, null whenever nothing is held. */
+  claimHoldBn: string | null;
   /** The latest claim on this record, if any. */
   claim: GuardianWorkClaimView | null;
   /** Declare-form multi-attachments on the item (≤5) — empty when none. */
@@ -294,6 +305,14 @@ function lastStampAt(
     if (stateDates[i].state === state) return new Date(stateDates[i].at).toISOString();
   }
   return null;
+}
+
+/** Whether the record ever passed through a state, however long ago. */
+function everReached(
+  stateDates: Array<{ state: string; at: Date }>,
+  state: string,
+): boolean {
+  return stateDates.some((s) => s.state === state);
 }
 
 const idStr = (x: { toString(): string }) => x.toString();
@@ -739,7 +758,8 @@ export async function childHomework(
 
   // The claim window, resolved ONCE for the whole page (D-#553) — the same
   // helper fileWorkClaim uses, so the button and the guard agree exactly.
-  const earliestClaimable = await earliestClaimableDueDate(new Date());
+  const now = new Date();
+  const earliestClaimable = await earliestClaimableDueDate(now);
 
   // ONE query for every record's claim, not one per row — the D-#476 lesson.
   // Latest-first so the map keeps the most recent attempt per record.
@@ -763,7 +783,16 @@ export async function childHomework(
   for (const r of records) {
     const item = itemById.get(r.hwItemId.toString());
     if (!item) continue;
-    const given = new Date(item.dateGiven);
+    // D-#682: the day THIS RECORD reached the child, not the day the item was
+    // declared. They differ exactly twice, and both are the cases that were
+    // invisible: a resubmission (a new record on an old HW_ID, handed back when
+    // the teacher marked the first attempt WRONG) and a re-delivery to a child
+    // who was absent. Keying the parent's list on the item's date filed both
+    // under the ORIGINAL declaration — out of the 7-day home window entirely,
+    // or buried a fortnight back on the full screen — so families never saw the
+    // work come home and the tracker chased them for not returning it.
+    const givenStamp = lastStampAt(r.stateDates, "GIVEN");
+    const given = new Date(givenStamp ?? item.dateGiven);
     if (given < start || given > end) continue;
     out.push({
       recordId: idStr(r._id),
@@ -771,6 +800,11 @@ export async function childHomework(
       subject: item.subject,
       subjectLabelBn: HW_SUBJECT_LABELS_BN[item.subject] ?? item.subject,
       dateGiven: given.toISOString(),
+      // When the item was first declared — kept so the card can still say which
+      // declaration a resubmission descends from.
+      itemDateGiven: new Date(item.dateGiven).toISOString(),
+      // The child was absent at issue and the teacher handed it out later.
+      redelivered: everReached(r.stateDates, "ABSENT_REDELIVER") && !!givenStamp,
       state: r.state,
       stateLabelBn: LIFECYCLE_STATE_LABELS_BN[r.state] ?? r.state,
       givenAt: lastStampAt(r.stateDates, "GIVEN"),
@@ -792,13 +826,16 @@ export async function childHomework(
       questionFileId: item.questionFileId ? item.questionFileId.toString() : null,
       answerFileId: r.answerFileId ? r.answerFileId.toString() : null,
       attachmentIds: (item.attachmentIds ?? []).map((id) => id.toString()),
-      canClaim: workClaimEligible(r.state, claimByRecord.get(idStr(r._id)), attemptsByRecord.get(idStr(r._id)) ?? 0, r.dueDate, earliestClaimable),
+      canClaim: workClaimEligible(r.state, claimByRecord.get(idStr(r._id)), attemptsByRecord.get(idStr(r._id)) ?? 0, r.dueDate, earliestClaimable, now),
+      claimHoldBn: workClaimHoldNoteBn(r.dueDate, now),
       claim: workClaimViewOf2(claimByRecord.get(idStr(r._id)), attemptsByRecord.get(idStr(r._id)) ?? 0),
     });
   }
 
-  // Newest day first; inside a day group by HW_ID so a resubmission chain
-  // (same hwId, resubOf set) renders adjacent (GP-J5).
+  // Newest day first; inside a day group by HW_ID. A resubmission no longer
+  // sorts next to the attempt it replaces — since D-#682 it carries its OWN
+  // hand-out date and belongs on the day it came home. The tie-break stays for
+  // the case that still matters: two rows on the SAME day (GP-J5).
   out.sort(
     (a, b) =>
       b.dateGiven.localeCompare(a.dateGiven) ||

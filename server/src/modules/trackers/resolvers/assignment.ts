@@ -751,6 +751,7 @@ interface ChildAssignmentShape {
   attachmentIds?: string[];
   /** GC-3 — the guardian “done at home” control (D-#551/#553). */
   canClaim?: boolean;
+  claimHoldBn?: string | null;
   claim?: GuardianWorkClaimView | null;
 }
 const ChildAssignmentRef = builder.objectRef<ChildAssignmentShape>("ChildAssignment");
@@ -773,6 +774,7 @@ ChildAssignmentRef.implement({
     isResubmission: t.exposeBoolean("isResubmission"),
     description: t.string({ nullable: true, resolve: (r) => r.description ?? null }),
     canClaim: t.boolean({ resolve: (r) => r.canClaim ?? false }),
+    claimHoldBn: t.string({ nullable: true, resolve: (r) => r.claimHoldBn ?? null }),
     claim: t.field({
       type: GuardianWorkClaimGqlRef,
       nullable: true,

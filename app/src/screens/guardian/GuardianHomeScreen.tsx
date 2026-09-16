@@ -523,6 +523,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
                 tracker="HOMEWORK"
                 recordId={r.recordId}
                 canClaim={r.canClaim}
+                claimHoldBn={r.claimHoldBn}
                 claim={r.claim}
                 subjectLabel={subjectLabel(r.subject)}
                 workId={r.hwId}
@@ -552,6 +553,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
                 tracker="ASSIGNMENT"
                 recordId={a.recordId}
                 canClaim={a.canClaim}
+                claimHoldBn={a.claimHoldBn}
                 claim={a.claim}
                 subjectLabel={hwSubjectLabel(a.subject)}
                 workId={a.asId}

@@ -17,7 +17,7 @@
  * Write-scope (subject teacher checks own subject) is enforced by the resolver.
  */
 import { Types } from "mongoose";
-import { HW_RESULTS, HW_DAILY_CEILING_MIN } from "@scd/shared";
+import { HW_RESULTS, HW_DAILY_CEILING_MIN, HW_SUBJECT_LABELS_BN } from "@scd/shared";
 import type { HwResult } from "@scd/shared";
 import { HomeworkStudentRecord } from "../models/HomeworkStudentRecord";
 import { HomeworkItem } from "../models/HomeworkItem";
@@ -25,6 +25,7 @@ import { ContentArtifact } from "../../content/models/ContentArtifact";
 import { assertTransition, isTerminalState } from "../lifecycle";
 import { resolveHomeworkDueDateByItem } from "../homeworkDueDate";
 import { listDailyItems } from "./HomeworkService";
+import { emitHwResubmitIssued } from "../../notifications/services/emitters";
 
 export interface TopupInput {
   /** Pool question ids selected (never authored) for the top-up (§5.1). */
@@ -172,6 +173,22 @@ export async function checkRecord(input: CheckRecordInput): Promise<CheckRecordR
       topupTime: created.topupTime ?? null,
       dueDate: created.dueDate ? created.dueDate.toISOString() : null,
     };
+
+    // D-#682: tell the family the script came home to redo. A resubmission is a
+    // new record on an OLD HW_ID, so nothing else in the system announces it —
+    // before this the first word a parent got was the chase for not returning
+    // it. Best-effort inside the emitter: a notification problem must never
+    // fail the teacher's check.
+    const item = await HomeworkItem.findById(rec.hwItemId).lean();
+    await emitHwResubmitIssued({
+      recordId: created._id,
+      hwItemId: rec.hwItemId,
+      hwId: created.hwId,
+      studentId: rec.studentId,
+      sectionId: rec.sectionId,
+      subjectLabelBn: item ? HW_SUBJECT_LABELS_BN[item.subject] ?? item.subject : "",
+      dueDate: created.dueDate ?? null,
+    });
   }
 
   await rec.save();
