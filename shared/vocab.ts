@@ -2204,9 +2204,16 @@ export const MESSAGE_TEMPLATE_REGISTRY: Record<MessageTemplateKey, MessageTempla
     group: "homework", labelBn: "পুনরায় করতে দেওয়া — শিরোনাম", placeholders: [],
     bnDefault: "বাড়ির কাজ পুনরায় করতে দেওয়া হয়েছে", defaultLangMode: "BN",
   },
+  // The body names the DAY the script went home rather than saying "আজ" (D-#684).
+  // "আজ" is true for a live spawn and false for anything replayed afterwards — the
+  // D-#682 catch-up sent 123 of these over a backlog reaching back to July, so 104
+  // families read "it went home today" beside a due date already two weeks past.
+  // A dated sentence is correct in both cases, and the due date is stated rather
+  // than commanded ("জমা দেওয়ার তারিখ", not "আবার জমা দিতে হবে") so a row that is
+  // already overdue does not instruct a parent to meet a deadline that has gone.
   "homework.resubmitIssued.body": {
-    group: "homework", labelBn: "পুনরায় করতে দেওয়া — বার্তা", placeholders: ["hwId", "subject", "dueDate"],
-    bnDefault: "আপনার সন্তানের {subject} বাড়ির কাজ {hwId} শিক্ষক দেখে পুনরায় করতে ফেরত দিয়েছেন। খাতাটি আজ বাসায় গেছে — {dueDate} তারিখে আবার জমা দিতে হবে।", defaultLangMode: "BN",
+    group: "homework", labelBn: "পুনরায় করতে দেওয়া — বার্তা", placeholders: ["hwId", "subject", "handedBack", "dueDate"],
+    bnDefault: "আপনার সন্তানের {subject} বাড়ির কাজ {hwId} শিক্ষক দেখে পুনরায় করতে ফেরত দিয়েছেন। খাতাটি {handedBack} তারিখে বাসায় পাঠানো হয়েছে — জমা দেওয়ার তারিখ {dueDate}।", defaultLangMode: "BN",
   },
   // --- Homework auto-issue (D-#314) ---
   "homework.autoIssued.title": {

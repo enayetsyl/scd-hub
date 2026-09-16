@@ -115,6 +115,28 @@ describe("T3.1 — RESULT recording + auto/judgment spawn", () => {
     expect(ev.studentId).toBe(r.studentId);
     expect(ev.subjectLabelBn).toBe("ইংরেজি");
     expect(ev.dueDate).toBeInstanceOf(Date);
+    // D-#684: the notice dates the hand-back rather than saying "আজ", so the
+    // event must carry WHEN it went home — the check's own timestamp here.
+    expect(ev.handedBackAt).toBeInstanceOf(Date);
+  });
+
+  test("the hand-back date is the CHECK's timestamp, not the clock at send", async () => {
+    // The bug this guards: a replay that stamps itself with today tells a family
+    // a July script came home this morning (D-#684).
+    const backdated = new Date("2026-07-02T09:00:00");
+    const r = rec({ state: "SUBMITTED" });
+    mockRecFindById.mockResolvedValue(r);
+    mockItemFindById.mockResolvedValue({ subject: "ENG" });
+
+    await checkRecord({
+      recordId: REC_ID.toString(),
+      result: "WRONG",
+      actorId: ACTOR,
+      at: backdated,
+    });
+
+    const ev = mockEmitResubmitIssued.mock.calls[0][0];
+    expect(ev.handedBackAt.getTime()).toBe(backdated.getTime());
   });
 
   test("CORRECT advances to CHECKED, no resubmission — and no hand-back notice", async () => {
