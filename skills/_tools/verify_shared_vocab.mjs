@@ -132,6 +132,16 @@ check("HW_CHASE is a registered NotificationKind (per-chase guardian notify, ext
 check("ASSIGNMENT_CHASE is a registered NotificationKind (AS-T4 per-chase guardian notify, extends §C.5, D-#88/#94)", V.NOTIFICATION_KINDS.includes("ASSIGNMENT_CHASE"));
 check("homework.chase.* guardian-message template keys registered (title + body — MT registry, D-#131/#260)",
   ["homework.chase.title","homework.chase.body"].every((k) => V.MESSAGE_TEMPLATE_KEYS.includes(k) && V.MESSAGE_TEMPLATE_REGISTRY[k]));
+check("homework.resubmitIssued.* template keys registered (title + body — MT registry, D-#682)",
+  ["homework.resubmitIssued.title","homework.resubmitIssued.body"].every((k) => V.MESSAGE_TEMPLATE_KEYS.includes(k) && V.MESSAGE_TEMPLATE_REGISTRY[k]));
+// D-#684: the first catch-up run sent 123 of these across a backlog reaching back
+// to July, and the body said "খাতাটি আজ বাসায় গেছে" — true only for a live spawn.
+// The body must DATE the hand-back, so the same sentence is honest whenever it is
+// sent. Asserted on the default because that is what every family actually read.
+check("the resubmission notice dates the hand-back instead of claiming 'আজ' (D-#684)",
+  V.MESSAGE_TEMPLATE_REGISTRY["homework.resubmitIssued.body"].placeholders.includes("handedBack")
+  && V.MESSAGE_TEMPLATE_REGISTRY["homework.resubmitIssued.body"].bnDefault.includes("{handedBack}")
+  && !V.MESSAGE_TEMPLATE_REGISTRY["homework.resubmitIssued.body"].bnDefault.includes("আজ"));
 check("EXAM_SYLLABUS_PUBLISHED + EXAM_SYLLABUS_AWAITING_PUBLISH are registered NotificationKinds (syllabus publish → guardians, sign-off → Principal; extends §C.5, D-#644)",
   V.NOTIFICATION_KINDS.includes("EXAM_SYLLABUS_PUBLISHED") && V.NOTIFICATION_KINDS.includes("EXAM_SYLLABUS_AWAITING_PUBLISH"));
 check("syllabus.{published,awaitingPublish}.* template keys registered (title + body each — MT registry, D-#131/#643)",

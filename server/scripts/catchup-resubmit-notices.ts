@@ -116,6 +116,10 @@ async function main(): Promise<void> {
         studentId: r.studentId,
         sectionId: r.sectionId,
         subjectLabelBn: label,
+        // The record's OWN GIVEN stamp, never `new Date()`. A replay that stamps
+        // itself with today tells a family a July script went home this morning
+        // — which is exactly what the first run of this script did (D-#684).
+        handedBackAt: when ?? new Date(),
         dueDate: r.dueDate ?? null,
       });
       sent++;
