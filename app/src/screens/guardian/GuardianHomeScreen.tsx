@@ -29,6 +29,7 @@ import { QueryGate } from "../../components/QueryGate";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
 import { WorkClaimBlock } from "../../components/WorkClaimBlock";
+import { HandBackBadges } from "../../components/HandBackBadges";
 import { useRecordView } from "../../lib/useRecordView";
 import { useNotifications } from "../../state/NotificationContext";
 import { CHILD_TRAJECTORY_QUERY } from "../../graphql/wholePicture";
@@ -509,6 +510,10 @@ export default function GuardianHomeScreen(): React.ReactElement {
                   <Body style={{ fontWeight: "700", flexShrink: 1 }}>{subjectLabel(r.subject)}</Body>
                   <Badge text={hwGuardianStatusLabel(r.state)} tone={r.state === "CHASE" ? "danger" : "warn"} />
                 </View>
+                {/* D-#685: on its own line — "বাড়ির কাজ আনেনি" beside nothing else
+                    reads as an accusation about NEW work, when this is a script the
+                    school handed back. */}
+                <HandBackBadges handedBack={!!r.resubOf} redelivered={r.redelivered} spaced />
                 {r.description ? <Body>{r.description}</Body> : null}
                 <Muted>
                   {isoDateLabel(r.dateGiven.slice(0, 10))}
@@ -673,6 +678,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
              child had not done the work, which read as both wrong and alarming. */
           tone={r.state === "CHASE" ? "danger" : r.state === "DUE" ? "warn" : "brand"}
         />
+                        <HandBackBadges handedBack={!!r.resubOf} redelivered={r.redelivered} spaced />
                       </View>
                     </View>
                   ))}

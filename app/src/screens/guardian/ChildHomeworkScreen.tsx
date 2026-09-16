@@ -55,6 +55,7 @@ import { STR, bnNum, lifecycleStateLabel, hwGuardianStatusLabel, subjectLabel, h
 import { openStoredFile, FILE_VIEW_SUPPORTED, FileUploadError } from "../../lib/files";
 import { useFileOpen } from "../../lib/useFileOpen";
 import { WorkClaimBlock } from "../../components/WorkClaimBlock";
+import { HandBackBadges } from "../../components/HandBackBadges";
 import { usePullRefresh } from "../../lib/useRefresh";
 import { space } from "../../theme/tokens";
 import {
@@ -207,11 +208,11 @@ function RecordBlock({
           <Body style={{ fontWeight: "700" }}>{subjectLabel(r.subject)}</Body>
           <Muted>{r.hwId}</Muted>
         </View>
-        {/* Short enough to stay inline. D-#682: say what actually happened —
-            "পুনঃজমা" is the tracker's word for the state, not an explanation to a
-            parent of why a script is back in the bag. */}
-        {r.resubOf ? <Badge text={STR.gpHandedBack} tone="warn" /> : null}
-        {r.redelivered ? <Badge text={STR.gpRedelivered} tone="info" /> : null}
+        {/* D-#682: say what actually happened — "পুনঃজমা" is the tracker's word for
+            the state, not an explanation to a parent of why a script is back in the
+            bag. D-#685 moved it into a shared component so the three cards a parent
+            opens FIRST say the same thing this one does. */}
+        <HandBackBadges handedBack={!!r.resubOf} redelivered={r.redelivered} />
       </View>
       {/* A resubmission now sits on the day it came HOME (D-#682), so name the
           declaration it descends from — otherwise the parent loses the thread
@@ -350,6 +351,10 @@ interface PendingRow {
   canClaim: boolean;
   claimHoldBn: string | null;
   claim: GuardianWorkClaimT | null;
+  /** D-#685: the outstanding card must say a script was handed back, not just
+   *  that it was not brought. */
+  handedBack: boolean;
+  redelivered: boolean;
 }
 
 /**
@@ -382,6 +387,8 @@ function buildPending(records: GuardianHwRecordT[], assignments: ChildAssignment
       canClaim: r.canClaim,
       claimHoldBn: r.claimHoldBn,
       claim: r.claim,
+      handedBack: !!r.resubOf,
+      redelivered: r.redelivered,
     }));
 
   const asgn: PendingRow[] = assignments
@@ -402,6 +409,8 @@ function buildPending(records: GuardianHwRecordT[], assignments: ChildAssignment
       canClaim: a.canClaim,
       claimHoldBn: a.claimHoldBn,
       claim: a.claim,
+      handedBack: a.isResubmission,
+      redelivered: false,
     }));
 
   return [...hw, ...asgn].sort((a, b) => b.dateGiven.localeCompare(a.dateGiven));
@@ -436,6 +445,7 @@ function PendingRowView({
         </Body>
         <Badge text={row.labelBn} tone={row.tone} />
       </View>
+      <HandBackBadges handedBack={row.handedBack} redelivered={row.redelivered} spaced />
       <Muted>
         {STR.gpGivenOn} {bnNum(row.dateGiven)}
         {row.dueDate ? ` · ${STR.gpDueOn} ${bnNum(row.dueDate)}` : ""}
