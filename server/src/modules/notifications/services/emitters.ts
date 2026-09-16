@@ -391,6 +391,10 @@ export interface HwResubmitIssuedEvent {
   studentId: IdLike;
   sectionId: IdLike;
   subjectLabelBn: string;
+  /** The day the script actually went home. REQUIRED, and not defaulted to now:
+   *  a replay over old records must say when each one really travelled, not when
+   *  the replay ran (D-#684). */
+  handedBackAt: Date;
   /** When the resubmission is due back. */
   dueDate: Date | null;
 }
@@ -426,7 +430,8 @@ export async function emitHwResubmitIssued(ev: HwResubmitIssuedEvent): Promise<v
     const bodyBn = await renderTemplate("homework.resubmitIssued.body", {
       hwId: ev.hwId,
       subject: ev.subjectLabelBn,
-      dueDate: ev.dueDate ? dateKeyOf(ev.dueDate) : "",
+      handedBack: dateKeyOf(ev.handedBackAt),
+      dueDate: ev.dueDate ? dateKeyOf(ev.dueDate) : "—",
     });
     await Promise.all(
       guardians.map((g) =>

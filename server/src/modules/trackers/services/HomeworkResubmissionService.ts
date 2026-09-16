@@ -187,6 +187,7 @@ export async function checkRecord(input: CheckRecordInput): Promise<CheckRecordR
       studentId: rec.studentId,
       sectionId: rec.sectionId,
       subjectLabelBn: item ? HW_SUBJECT_LABELS_BN[item.subject] ?? item.subject : "",
+      handedBackAt: at, // the check's own timestamp — the moment it went home
       dueDate: created.dueDate ?? null,
     });
   }
