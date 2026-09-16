@@ -15,13 +15,12 @@
  * current view mode hides, so drop the mode first and navigate once the drawer has
  * re-rendered with the full tab set.
  */
-import React, { useState } from "react";
+import React from "react";
 import { ScrollView, View } from "react-native";
 import { useQuery } from "urql";
 import { MY_NOTIFICATIONS_QUERY, type NotificationT } from "../../graphql/operations";
 import { useAuth } from "../../auth/AuthContext";
 import { notificationTarget, type NotificationTarget } from "../../lib/notificationNav";
-import { navigationRef } from "../../navigation/navigationRef";
 import { Screen, Card, Body, Muted, Badge, Button, Loader, EmptyState } from "../../components/ui";
 import { STR, notificationKindLabel, bnNum } from "../../lib/labels";
 import { space } from "../../theme/tokens";
@@ -40,19 +39,6 @@ function longTime(iso: string): string {
   );
 }
 
-/** Is this drawer tab currently mounted? A D-#467 view mode hides the tabs of the hat
- *  the user is not wearing. Reads the live navigator rather than re-deriving AppTabs'
- *  gate list, so the two can never drift. Unknown answers TRUE — navigate and let the
- *  navigator decide, which is exactly the pre-D-#467 behaviour. */
-function drawerHasTab(tab: string): boolean {
-  if (!navigationRef.isReady()) return true;
-  const root = navigationRef.getRootState() as
-    | { routes?: Array<{ name?: string; state?: { routeNames?: string[] } }> }
-    | undefined;
-  const names = root?.routes?.find((r) => r.name === "App")?.state?.routeNames;
-  return !names || names.includes(tab);
-}
-
 export default function NotificationDetailScreen({
   navigation,
   route,
@@ -60,9 +46,8 @@ export default function NotificationDetailScreen({
   navigation: RootNav;
   route: { params?: { id?: string } };
 }): React.ReactElement {
-  const { role, viewMode, setViewMode } = useAuth();
+  const { role } = useAuth();
   const id = route.params?.id;
-  const [pendingTarget, setPendingTarget] = useState<NotificationTarget | null>(null);
 
   // The inbox query is already warm in the cache, so this resolves without a
   // round-trip in the normal flow (and refetches by itself if opened cold).
@@ -88,14 +73,6 @@ export default function NotificationDetailScreen({
     [navigation],
   );
 
-  // Runs after the hat switch has re-rendered the drawer, so the target tab exists.
-  React.useEffect(() => {
-    if (pendingTarget && !viewMode) {
-      go(pendingTarget);
-      setPendingTarget(null);
-    }
-  }, [pendingTarget, viewMode, go]);
-
   if (fetching && !row) {
     return (
       <Screen>
@@ -115,11 +92,6 @@ export default function NotificationDetailScreen({
 
   const onOpenTarget = (): void => {
     if (!target) return;
-    if (viewMode && !drawerHasTab(target.tab)) {
-      setPendingTarget(target);
-      setViewMode(null);
-      return;
-    }
     go(target);
   };
 

@@ -1367,9 +1367,8 @@ const STR_BN = {
   stepWord: "ধাপ",
   accountMenu: "অ্যাকাউন্ট মেনু",
   openMenu: "মেনু খুলুন",
-  // View switcher for a two-hat login (D-#467)
-  // VA-1 (D-#638) — "View as". Deliberately echoes viewModeLabel below it: the two menu
-  // rows sit together and ask related questions (which hat / whose account).
+  // VA-1 (D-#638) — "View as" (whose account am I borrowing). Distinct from the removed
+  // D-#467 hat switcher, which asked which of your own roles to view.
   viewAsMenu: "কার হয়ে দেখবেন",
   viewAsStaffTab: "শিক্ষক ও অফিস",
   viewAsGuardianTab: "অভিভাবক",
@@ -1382,7 +1381,6 @@ const STR_BN = {
   viewAsExpired: "সময় শেষ — নিজের অ্যাকাউন্টে ফিরে আসা হয়েছে",
   viewAsFailed: "ভিউ খোলা যায়নি",
   viewAsCancel: "বাতিল",
-  viewModeLabel: "কোন ভূমিকায় দেখবেন",
   // Workspace subject fold (D-#469): one control over the not-my-subject groups
   wsOtherSubjects: "অন্য বিষয়",
   tdMyAsLifecycle: "আমার অ্যাসাইনমেন্ট লাইফসাইকেল",
@@ -1393,7 +1391,6 @@ const STR_BN = {
   gpTestInDays: "দিন পরে",
   gpChapter: "অধ্যায়",
   gpMarks: "পূর্ণমান",
-  viewModeAll: "সব একসাথে",
 
   // Auth
   login: "লগইন",
@@ -5776,7 +5773,6 @@ const STR_EN: StrTable = {
   viewAsExpired: "Session ended — back in your own account",
   viewAsFailed: "Could not open that view",
   viewAsCancel: "Cancel",
-  viewModeLabel: "View as",
   // Workspace subject fold (D-#469): one control over the not-my-subject groups
   wsOtherSubjects: "Other subjects",
   tdMyAsLifecycle: "My assignment lifecycle",
@@ -5787,7 +5783,6 @@ const STR_EN: StrTable = {
   gpTestInDays: "days away",
   gpChapter: "Chapter",
   gpMarks: "Total marks",
-  viewModeAll: "Everything",
 
   // Auth
   login: "Log in",
