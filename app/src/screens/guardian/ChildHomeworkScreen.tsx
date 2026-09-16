@@ -55,7 +55,7 @@ import { STR, bnNum, lifecycleStateLabel, hwGuardianStatusLabel, subjectLabel, h
 import { openStoredFile, FILE_VIEW_SUPPORTED, FileUploadError } from "../../lib/files";
 import { useFileOpen } from "../../lib/useFileOpen";
 import { WorkClaimBlock } from "../../components/WorkClaimBlock";
-import { HandBackBadges } from "../../components/HandBackBadges";
+import { HandBackBadges, handBackOnly } from "../../components/HandBackBadges";
 import { usePullRefresh } from "../../lib/useRefresh";
 import { space } from "../../theme/tokens";
 import {
@@ -236,16 +236,25 @@ function RecordBlock({
           are what CAME of the work, not what is happening to it. */}
       <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: space(2), marginTop: space(2) }}>
         <HandBackBadges handedBack={!!r.resubOf} redelivered={r.redelivered} />
-        <Badge
-          text={hwGuardianStatusLabel(r.state)}
-          /* Three steps, not two: amber "due today" → red "did not bring it" → green for
-             everything already handed in. DUE used to render GREEN while saying the
-             child had not done the work, which read as both wrong and alarming. */
-          tone={r.state === "CHASE" ? "danger" : r.state === "DUE" ? "warn" : "brand"}
-        />
-        {r.chaseCount > 0 ? (
-          <Badge text={`${lifecycleStateLabel("CHASE")} ×${bnNum(r.chaseCount)}`} tone="danger" />
-        ) : null}
+        {/* D-#687: on a handed-back record this is ALL the family is told. The
+            status and the chase count describe the ladder the school is running,
+            not something the child did — and on this very card the chase came
+            from the 17:30 system sweep, which fires when nobody ran the
+            submission pass. */}
+        {handBackOnly(!!r.resubOf, r.redelivered) ? null : (
+          <>
+            <Badge
+              text={hwGuardianStatusLabel(r.state)}
+              /* Three steps, not two: amber "due today" → red "did not bring it" → green for
+                 everything already handed in. DUE used to render GREEN while saying the
+                 child had not done the work, which read as both wrong and alarming. */
+              tone={r.state === "CHASE" ? "danger" : r.state === "DUE" ? "warn" : "brand"}
+            />
+            {r.chaseCount > 0 ? (
+              <Badge text={`${lifecycleStateLabel("CHASE")} ×${bnNum(r.chaseCount)}`} tone="danger" />
+            ) : null}
+          </>
+        )}
       </View>
 
       {/* Stage timeline (GP-J4) */}
@@ -452,7 +461,10 @@ function PendingRowView({
           {subjectLabel(row.subject)}
           {row.kind === "ASSIGNMENT" ? ` · ${STR.gpAssignmentWord}` : ""}
         </Body>
-        <Badge text={row.labelBn} tone={row.tone} />
+        {/* D-#687: a handed-back row says only that, never the chase status. */}
+        {handBackOnly(row.handedBack, row.redelivered) ? null : (
+          <Badge text={row.labelBn} tone={row.tone} />
+        )}
       </View>
       <HandBackBadges handedBack={row.handedBack} redelivered={row.redelivered} spaced />
       <Muted>
