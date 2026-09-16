@@ -79,6 +79,39 @@ paper already tagged with one keeps its marks. Four are soft-retired by `--prune
 they stood for was split: `ANTONYM-SYNONYM`, `MAIN-IDEA`, `GRAMMAR-FORMS`, `FORM-APPLICATION`.
 Never hard-deleted — that would strand a tagged item's marks (the D-#548 posture).
 
+## No item may answer another item (D-#682)
+
+**A skill item may borrow the unit's names and setting. It may never restate a fact that a
+passage item tests.**
+
+This is the defect that got past three finished papers at once. The skill items (6–14) need a
+sentence to work on, and the passage is the nearest source of sentences — so the WH-question item
+ended up printing *"Rupa could not borrow a book because she had no library card"* while question
+3(c) asked *"Why has Rupa not borrowed any book today?"*, and the true/false item asked whether
+she had borrowed two storybooks. Four of five true/false answers, and one of the 18-mark
+comprehension answers, were readable off other questions without opening the passage.
+
+It is easy to miss by eye because each item looks correct on its own. Run the checker:
+
+```
+node skills/_tools/check_answer_leak.mjs <paper.md>
+```
+
+It reports the distinctive words any fact item shares with any carrier sentence. **A shared NAME is
+expected and fine** — skill items are supposed to use the unit's characters. A shared name **plus a
+shared predicate** is the leak. It is a flag, not a verdict: read every pair.
+
+Three consequences worth stating, because each one bit:
+
+- **The জুম্বল/rearrange item counts as a carrier too.** "The students clean the garden" handed over
+  one of the three things question 3(d) asks for.
+- **A printed passage answers everything in it.** The বাংলা মূলভাব item prints a paragraph; nothing
+  else on that paper may test a fact from *that* paragraph. The occupations paragraph and the
+  এককথায় প্রকাশ item could not coexist, so the latter moved off the lesson entirely — it is a skill
+  item and never had to come from the lesson.
+- **Two items must not test the same fact.** The বাংলা fill-in and the MCQ both asked which
+  community lives in ময়মনসিংহ, and the fill-in's word box contained the answer.
+
 ## Related
 
 - `server/scripts/seed-scholarship-topics.ts` — the machine-readable twin. Re-seed with
