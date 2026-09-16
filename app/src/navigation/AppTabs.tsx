@@ -60,7 +60,7 @@ import { TEACHING_NOTE_MY_SCOPE } from "../graphql/teachingNotes";
 import { useLanguage } from "../state/LanguageContext";
 import { useSidebar, DRAWER_PERMANENT_MIN_WIDTH } from "../state/SidebarContext";
 import { useNotifications } from "../state/NotificationContext";
-import { STR, bnNum, roleViewLabel } from "../lib/labels";
+import { STR, bnNum } from "../lib/labels";
 import { appVersionLabel } from "../lib/appUpdate";
 import { fonts, radius, space, typeScale, useColors } from "../theme";
 
@@ -402,7 +402,7 @@ function HeaderBell(): React.ReactElement {
  */
 function AvatarMenu(): React.ReactElement {
   const [open, setOpen] = React.useState(false);
-  const { user, logout, templates, viewMode, setViewMode, isImpersonating, can } = useAuth();
+  const { user, logout, isImpersonating, can } = useAuth();
   const { lang, toggle } = useLanguage();
   const navigation = useNavigation();
   const colors = useColors();
@@ -499,36 +499,6 @@ function AvatarMenu(): React.ReactElement {
               </View>
             ) : null}
             {/* Row shows the language it switches TO (matches the old toggle's intent). */}
-            {/* D-#467 view switcher — only for a login that actually wears two hats
-                (e.g. a teacher who also runs the office desk). Purely presentational:
-                it narrows which tabs are OFFERED, never what the server allows. */}
-            {templates.length > 1 ? (
-              <View style={{ borderBottomWidth: 1, borderBottomColor: colors.border, paddingBottom: space(1) }}>
-                <Text
-                  style={{
-                    ...typeScale.caption,
-                    color: colors.textSecondary,
-                    paddingHorizontal: space(4),
-                    paddingTop: space(2),
-                  }}
-                >
-                  {STR.viewModeLabel}
-                </Text>
-                <MenuRow
-                  icon={viewMode === null ? "✅" : "▫️"}
-                  label={STR.viewModeAll}
-                  onPress={() => setViewMode(null)}
-                />
-                {templates.map((t) => (
-                  <MenuRow
-                    key={t}
-                    icon={viewMode === t ? "✅" : "▫️"}
-                    label={roleViewLabel(t)}
-                    onPress={() => setViewMode(t)}
-                  />
-                ))}
-              </View>
-            ) : null}
             <MenuRow icon="🌐" label={lang === "bn" ? "English" : "বাংলা"} onPress={toggle} />
             <MenuRow
               icon="🐞"

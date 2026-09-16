@@ -32,10 +32,9 @@ export interface MeUser {
  *  be a second chance to be out of sync. Navigation has historically gated on the role
  *  TEMPLATE; that misses per-user grants (AC-1), which is how everyone but the Principal
  *  reaches the book-production screens (D-#405). */
-/** `myTemplates` rides the same round-trip for the same reason: the app cannot tell a
- *  template-derived permission from a per-user grant without knowing which templates the
- *  caller holds, and that distinction is what keeps the D-#467 view switcher from hiding
- *  grant-only screens (see viewModePermissions). Length > 1 ⇒ offer the switcher. */
+/** `myTemplates` rides the same round-trip: it is what `isRole` reads, so a login holding
+ *  both TEACHER and OFFICE answers true to either and sees both surfaces at once. A bare
+ *  `role === "OFFICE"` reads only the primary role and would hide half of that. */
 export const ME_QUERY = gql<
   { me: MeUser | null; myPermissions: string[]; myTemplates: string[] },
   NoVars
