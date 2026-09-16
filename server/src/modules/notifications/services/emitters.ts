@@ -57,6 +57,12 @@ const dedupeKeys = {
    *  re-chasing the same student the same day is a no-op for the inbox (once/day). */
   hwGuardianChase: (hwItemId: string, studentId: string, dateKey: string, guardianId: string) =>
     `HWCG:${hwItemId}:${studentId}:${dateKey}:${guardianId}`,
+  /** Per resubmission record + guardian (D-#682). The record is created once, so
+   *  the id alone would already be unique — the guardian is in the key anyway,
+   *  because an entity-only key silently swallows the re-emit to a guardian who
+   *  was linked to the child after the first send. */
+  hwResubmitIssued: (recordId: string, guardianId: string) =>
+    `HWRI:${recordId}:${guardianId}`,
   /** Per claim: the teacher is told once when it is filed. The Office NUDGE reuses
    *  this family with a day suffix so a nudge can re-notify without colliding. */
   workClaimFiled: (claimId: string) => `WCF:${claimId}`,
@@ -367,6 +373,74 @@ export async function emitHwGuardianChase(ev: HwGuardianChaseEvent): Promise<voi
             dateKey,
             g._id.toString(),
           ),
+        }),
+      ),
+    );
+  });
+}
+
+// ---------------------------------------------------------------------------
+// D-#682 — a resubmission was handed back → the child's guardians
+// ---------------------------------------------------------------------------
+
+export interface HwResubmitIssuedEvent {
+  /** The NEW resubmission record (not the attempt it replaces). */
+  recordId: IdLike;
+  hwItemId: IdLike;
+  hwId: string;
+  studentId: IdLike;
+  sectionId: IdLike;
+  subjectLabelBn: string;
+  /** When the resubmission is due back. */
+  dueDate: Date | null;
+}
+
+/**
+ * Tell the family the script came home to be done again.
+ *
+ * Without this the resubmission is silent: it is a NEW record on an OLD HW_ID, so
+ * no declaration notice covers it, and the first thing the parent ever hears is
+ * the CHASE for not returning work they were never told about. That is exactly
+ * how a nursery guardian ended up reading "জমা হয়নি" for a script the teacher had
+ * handed back that morning.
+ */
+export async function emitHwResubmitIssued(ev: HwResubmitIssuedEvent): Promise<void> {
+  return bestEffort("HW resubmission issued", async () => {
+    const links = (await GuardianLink.find({
+      studentId: ev.studentId,
+      active: { $ne: false }, // missing = active (pre-GP-1 rows)
+    })
+      .select("guardianId")
+      .lean()) as unknown as Array<{ guardianId: IdLike }>;
+    const guardianIds = [...new Set(links.map((l) => l.guardianId.toString()))];
+    if (guardianIds.length === 0) return;
+
+    // Login-enabled only — contact-only guardians have no inbox (D-#31/#72).
+    const guardians = (await Guardian.find({ _id: { $in: guardianIds }, loginEnabled: true, active: true })
+      .select("_id")
+      .lean()) as unknown as Array<{ _id: IdLike }>;
+    if (guardians.length === 0) return;
+
+    // Rendered ONCE for the event, then emitted per guardian (the MT N+1 guard).
+    const titleBn = await renderTemplate("homework.resubmitIssued.title");
+    const bodyBn = await renderTemplate("homework.resubmitIssued.body", {
+      hwId: ev.hwId,
+      subject: ev.subjectLabelBn,
+      dueDate: ev.dueDate ? dateKeyOf(ev.dueDate) : "",
+    });
+    await Promise.all(
+      guardians.map((g) =>
+        emit({
+          recipientGuardianId: g._id.toString(),
+          kind: "HW_RESUBMIT_ISSUED",
+          titleBn,
+          bodyBn,
+          refs: {
+            hwItemId: ev.hwItemId.toString(),
+            studentId: ev.studentId.toString(),
+            sectionId: ev.sectionId.toString(),
+          },
+          dedupeKey: dedupeKeys.hwResubmitIssued(ev.recordId.toString(), g._id.toString()),
         }),
       ),
     );

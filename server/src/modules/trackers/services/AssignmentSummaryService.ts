@@ -17,6 +17,7 @@ import { AssignmentSchedule } from "../models/AssignmentSchedule";
 import { GuardianWorkClaim } from "../models/GuardianWorkClaim";
 import {
   workClaimEligible,
+  workClaimHoldNoteBn,
   earliestClaimableDueDate,
   workClaimViewOf2,
   type GuardianWorkClaimView,
@@ -253,6 +254,8 @@ export interface ChildAssignmentEntry {
   description: string | null;
   /** GC-3: may a guardian file "done at home" on this row right now? */
   canClaim: boolean;
+  /** Why the button is absent under the same-day floor (D-#683); null otherwise. */
+  claimHoldBn: string | null;
   claim: GuardianWorkClaimView | null;
   /** Delivery-pass attachments on the item (≤5, D-#298) — empty when none. */
   attachmentIds: string[];
@@ -283,7 +286,7 @@ export async function childAssignments(
   const today = atMidnight(asOf).getTime();
 
   // The claim window, resolved ONCE for the whole list (D-#553).
-  const earliestClaimable = await earliestClaimableDueDate(new Date());
+  const earliestClaimable = await earliestClaimableDueDate(asOf);
 
   // ONE query for every record's claim (the D-#476 lesson), latest first.
   const claimRows = (await GuardianWorkClaim.find({
@@ -309,7 +312,8 @@ export async function childAssignments(
         : 0;
     return {
       recordId: r._id.toString(),
-      canClaim: workClaimEligible(r.state as never, claimByRecord.get(r._id.toString()), attemptsByRecord.get(r._id.toString()) ?? 0, r.dueDate, earliestClaimable),
+      canClaim: workClaimEligible(r.state as never, claimByRecord.get(r._id.toString()), attemptsByRecord.get(r._id.toString()) ?? 0, r.dueDate, earliestClaimable, asOf),
+      claimHoldBn: workClaimHoldNoteBn(r.dueDate, asOf),
       claim: workClaimViewOf2(claimByRecord.get(r._id.toString()), attemptsByRecord.get(r._id.toString()) ?? 0),
       asId: r.asId,
       subject: item?.subject ?? "?",

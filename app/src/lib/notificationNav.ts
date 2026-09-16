@@ -129,6 +129,10 @@ export function notificationTarget(
     // Guardian chase/result/delivery kinds → the child's screen; the staff
     // fallbacks are defensive (these kinds are guardian-addressed today).
     case "HW_CHASE":
+    // D-#682: the resubmission notice lands on the same list. It is the notice
+    // that MUST navigate — the whole failure it fixes was a parent who could not
+    // find the handed-back script anywhere in the app.
+    case "HW_RESUBMIT_ISSUED":
       return guardian
         ? { tab: "GuardianHomeworkTab", screen: "ChildHomework" }
         : { tab: "HomeworkTab", screen: "HomeworkHome" };

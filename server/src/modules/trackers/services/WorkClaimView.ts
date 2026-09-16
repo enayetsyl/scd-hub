@@ -10,6 +10,7 @@ import {
   WORK_CLAIM_ELIGIBLE_STATES,
   WORK_CLAIM_MAX_ATTEMPTS,
   WORK_CLAIM_WINDOW_SCHOOL_DAYS,
+  WORK_CLAIM_SAME_DAY_MIN,
   WORK_CLAIM_STATUS_LABELS_BN,
   WORK_CLAIM_REJECT_REASON_LABELS_BN,
 } from "@scd/shared";
@@ -59,6 +60,46 @@ export async function earliestClaimableDueDate(at: Date): Promise<Date> {
 }
 
 /**
+ * The same-day floor (D-#683): work due TODAY cannot be claimed before 14:00.
+ *
+ * A record flips GIVEN → DUE on the first scheduler tick of its due day, so
+ * without this the button is live at 00:01 — before the child has carried the
+ * work to school and before any teacher could have collected it. Parents were
+ * filing at dawn and burning both escalation rungs by lunchtime.
+ *
+ * Only TODAY's work is held. Yesterday's DUE/CHASE row is exactly what the
+ * ladder is for and stays claimable around the clock.
+ *
+ * Local wall-clock on both sides, matching `dateKeyOf` and the ticker (D-#73).
+ */
+export function workClaimSameDayHold(
+  dueDate: Date | string | null | undefined,
+  at: Date,
+): boolean {
+  if (!dueDate) return false;
+  const due = dueDate instanceof Date ? dueDate : new Date(dueDate);
+  if (Number.isNaN(due.getTime())) return false;
+  const sameDay =
+    due.getFullYear() === at.getFullYear() &&
+    due.getMonth() === at.getMonth() &&
+    due.getDate() === at.getDate();
+  if (!sameDay) return false;
+  return at.getHours() * 60 + at.getMinutes() < WORK_CLAIM_SAME_DAY_MIN;
+}
+
+/** The parent-facing reason the button is absent, or null when it is not held.
+ *  Server-rendered like every other *Bn field so the two screens cannot word
+ *  the same rule differently. */
+export function workClaimHoldNoteBn(
+  dueDate: Date | string | null | undefined,
+  at: Date,
+): string | null {
+  return workClaimSameDayHold(dueDate, at)
+    ? "আজকের কাজের জন্য দুপুর ২টার পর জানানো যাবে — এখনও ক্লাসে জমা নেওয়ার সময় বাকি আছে"
+    : null;
+}
+
+/**
  * The D-#553 rule, computed SERVER-SIDE so no screen re-implements it: an
  * eligible state, no claim currently open, and at least one attempt left.
  */
@@ -68,6 +109,7 @@ export function workClaimEligible(
   attempts: number,
   dueDate?: Date | string | null,
   earliestDue?: Date,
+  at: Date = new Date(),
 ): boolean {
   if (!WORK_CLAIM_ELIGIBLE_STATES.includes(state)) return false;
   if (latest && latest.status === "PENDING") return false;
@@ -79,6 +121,9 @@ export function workClaimEligible(
     const due = dueDate instanceof Date ? dueDate : new Date(dueDate);
     if (due.getTime() < earliestDue.getTime()) return false;
   }
+  // Same reasoning as the window above: the read path must refuse exactly what
+  // fileWorkClaim refuses, or the parent taps a button into an error (D-#683).
+  if (workClaimSameDayHold(dueDate, at)) return false;
   return true;
 }
 

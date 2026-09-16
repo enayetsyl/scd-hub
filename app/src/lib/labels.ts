@@ -1888,6 +1888,17 @@ const STR_BN = {
   gpAssignmentWord: "অ্যাসাইনমেন্ট",
   gpGivenOn: "দেওয়া হয়েছে",
   gpDueOn: "জমার তারিখ",
+  // The stage timeline's due row. It used to borrow the DUE lifecycle label
+  // ("জমা দেওয়া হয়নি") against a due DATE, so a script handed back this morning
+  // showed a line reading "not submitted" — which is what parents reported.
+  // A deadline is not a verdict (D-#682).
+  gpStageDueDate: "জমা দেওয়ার তারিখ",
+  /** Badge on a record the child received late (absent at issue). */
+  gpRedelivered: "পুনরায় দেওয়া হয়েছে",
+  /** Badge on a resubmission — the teacher handed the script back to redo. */
+  gpHandedBack: "পুনরায় করতে দেওয়া হয়েছে",
+  /** On a resubmission card: which day's declaration it descends from. */
+  gpFromDeclaration: "মূল ঘোষণা",
   gpLateBy: "দেরি",
   gpDaysWord: "দিন",
   gpPendingWord: "বাকি আছে",
@@ -3611,12 +3622,12 @@ const STR_BN = {
   stfPayChangeReason: "কারণ",
   stfPayHistory: "বেতনের ইতিহাস",
   stfPayHistoryNote: "প্রতিটি পরিবর্তন কোন মাস থেকে কার্যকর হয়েছে। পে-রোল যে মাসের হিসাব করছে, সেই মাসে কার্যকর বেতনই ব্যবহার করে।",
-  // --- D-#590 ---
+  // --- D-#682 ---
   stfConfirmBody: "পত্রের মূল বক্তব্য",
   stfConfirmBodyPlaceholder: "এখানে যা লিখবেন, পত্রে হুবহু তাই ছাপা হবে। খালি রাখলে প্রচলিত বয়ান ছাপা হবে।",
   stfConfirmBodyDraft: "প্রচলিত বয়ান বসান",
   stfJoinSupportContractNote: "সহায়ক কর্মী ইংরেজি নিয়োগপত্র নয়, বাংলা নিয়োগ চুক্তিপত্রে স্বাক্ষর করেন। পরের ধাপে দায়িত্বসমূহ দেখে নিয়ে চুক্তিপত্র তৈরি করুন।",
-  // --- D-#591: the bank advice pack ---
+  // --- D-#683: the bank advice pack ---
   stfRoutingNo: "রাউটিং নম্বর",
   stfRoutingNoHint: "অন্য ব্যাংকে (BEFTN) পাঠাতে লাগবে। নিজ ব্যাংকে লাগে না।",
   stfAdviceDownload: "ব্যাংকের চিঠি ও শিট (PDF)",
@@ -6267,6 +6278,10 @@ const STR_EN: StrTable = {
   gpAssignmentWord: "Assignment",
   gpGivenOn: "Given",
   gpDueOn: "Due",
+  gpStageDueDate: "Due date",
+  gpRedelivered: "Given again",
+  gpHandedBack: "Handed back to redo",
+  gpFromDeclaration: "Originally declared",
   gpLateBy: "Late by",
   gpDaysWord: "days",
   gpPendingWord: "Pending",
@@ -7977,12 +7992,12 @@ const STR_EN: StrTable = {
   stfPayChangeReason: "Reason",
   stfPayHistory: "Salary history",
   stfPayHistoryNote: "When each change took effect. Payroll uses the salary effective in the month it is running.",
-  // --- D-#590 ---
+  // --- D-#682 ---
   stfConfirmBody: "Letter body",
   stfConfirmBodyPlaceholder: "Whatever you write here is printed verbatim. Leave it empty for the standard wording.",
   stfConfirmBodyDraft: "Insert the standard wording",
   stfJoinSupportContractNote: "Support staff sign the Bangla contract, not the English appointment letter. Review the duties on the next screen and issue it.",
-  // --- D-#591: the bank advice pack ---
+  // --- D-#683: the bank advice pack ---
   stfRoutingNo: "Routing number",
   stfRoutingNoHint: "Needed to send by BEFTN to another bank. Not needed for our own bank.",
   stfAdviceDownload: "Bank letter + advice sheet (PDF)",

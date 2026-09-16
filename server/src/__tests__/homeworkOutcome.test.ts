@@ -14,6 +14,7 @@ const mockItemFindById = jest.fn();
 const mockArtifactFindOne = jest.fn();
 const mockEmitChase = jest.fn().mockResolvedValue(undefined);
 const mockEmitParentComms = jest.fn().mockResolvedValue(undefined);
+const mockEmitResubmitIssued = jest.fn().mockResolvedValue(undefined);
 
 // GC-2: the submit edge now closes any open guardian claim, and the chase edge
 // asks whether one is open. This suite is DB-free, so the claim model is stubbed
@@ -39,6 +40,9 @@ jest.mock("../modules/content/models/ContentArtifact", () => ({
 jest.mock("../modules/notifications/services/emitters", () => ({
   emitHwGuardianChase: (...a: unknown[]) => mockEmitChase(...a),
   emitHwParentComms: (...a: unknown[]) => mockEmitParentComms(...a),
+  // D-#682: the outcome fast-forward reaches checkRecord, which now tells the
+  // family a script was handed back. Asserted in homeworkResubmission.test.ts.
+  emitHwResubmitIssued: (...a: unknown[]) => mockEmitResubmitIssued(...a),
 }));
 // Routine-aware due date (2026-08-04 ruling) — mocked to the old rule; the
 // routine/holiday walk is covered by homeworkDueDate.test.ts.

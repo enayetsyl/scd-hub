@@ -1,9 +1,14 @@
 /**
  * ChildHomeworkScreen (GP-2) — the selected child's homework over a date range,
  * ONE CARD PER DAY, FULL lifecycle per record (GP-J4/J5): stage timeline, chase
- * count, result, resubmission chain (same HW_ID adjacent, পুনঃজমা badge),
- * top-up, and the প্রশ্নপত্র / উত্তরপত্র viewers when files exist (streamed via
- * GET /files/:id — web-only viewing, mirroring the PDF path).
+ * count, result, top-up, and the প্রশ্নপত্র / উত্তরপত্র viewers when files exist
+ * (streamed via GET /files/:id — web-only viewing, mirroring the PDF path).
+ *
+ * D-#682 — a resubmission is filed on the day it CAME HOME, not beside the
+ * attempt it replaces. Chain-adjacency was the old arrangement and it is what
+ * hid handed-back scripts: the item's declaration date could be weeks old, so
+ * the work fell outside the window a parent actually looks at. The card names
+ * its parent declaration instead, which keeps the thread without the burial.
  *
  * GP-9 (D-#506) — a day's card now answers the whole day, subject by subject.
  * Before, it listed only the subjects that DECLARED homework, and the class's
@@ -202,9 +207,20 @@ function RecordBlock({
           <Body style={{ fontWeight: "700" }}>{subjectLabel(r.subject)}</Body>
           <Muted>{r.hwId}</Muted>
         </View>
-        {/* Short enough to stay inline. */}
-        {r.resubOf ? <Badge text={lifecycleStateLabel("RESUBMIT")} tone="warn" /> : null}
+        {/* Short enough to stay inline. D-#682: say what actually happened —
+            "পুনঃজমা" is the tracker's word for the state, not an explanation to a
+            parent of why a script is back in the bag. */}
+        {r.resubOf ? <Badge text={STR.gpHandedBack} tone="warn" /> : null}
+        {r.redelivered ? <Badge text={STR.gpRedelivered} tone="info" /> : null}
       </View>
+      {/* A resubmission now sits on the day it came HOME (D-#682), so name the
+          declaration it descends from — otherwise the parent loses the thread
+          back to the original class note. */}
+      {r.resubOf && r.itemDateGiven.slice(0, 10) !== r.dateGiven.slice(0, 10) ? (
+        <Muted>
+          {STR.gpFromDeclaration}: {bnNum(r.itemDateGiven.slice(0, 10))}
+        </Muted>
+      ) : null}
       {/* D-#478: WHAT the work was. The teacher's description has been mandatory at
           declare since D-#317 and childHomework has always fetched it — it was simply
           never rendered, so a parent reading তাগাদা saw an id and a red badge and had
@@ -224,7 +240,11 @@ function RecordBlock({
       {/* Stage timeline (GP-J4) */}
       <View style={{ marginTop: space(2) }}>
         <StageRow label={lifecycleStateLabel("GIVEN")} at={r.givenAt} />
-        <StageRow label={lifecycleStateLabel("DUE")} at={r.dueDate} />
+        {/* A DEADLINE, not a state. It carries r.dueDate — which exists from the
+            moment the work is GIVEN — so labelling it with the DUE lifecycle
+            string printed "জমা দেওয়া হয়নি" against work nobody was late with
+            (D-#682). */}
+        <StageRow label={STR.gpStageDueDate} at={r.dueDate} />
         <StageRow label={lifecycleStateLabel("SUBMITTED")} at={r.submittedAt} />
         <StageRow label={lifecycleStateLabel("CHECKED")} at={r.checkedAt} />
         <StageRow label={lifecycleStateLabel("RETURNED")} at={r.returnedAt} />
@@ -289,6 +309,7 @@ function RecordBlock({
         tracker="HOMEWORK"
         recordId={r.recordId}
         canClaim={r.canClaim}
+        claimHoldBn={r.claimHoldBn}
         claim={r.claim}
         subjectLabel={subjectLabel(r.subject)}
         workId={r.hwId}
@@ -327,6 +348,7 @@ interface PendingRow {
   workId: string;
   tracker: "HOMEWORK" | "ASSIGNMENT";
   canClaim: boolean;
+  claimHoldBn: string | null;
   claim: GuardianWorkClaimT | null;
 }
 
@@ -338,9 +360,13 @@ interface PendingRow {
  */
 function buildPending(records: GuardianHwRecordT[], assignments: ChildAssignmentT[]): PendingRow[] {
   const hw: PendingRow[] = records
-    // A resubmission re-issues the same item; counting both would show one piece
-    // of work twice.
-    .filter((r) => r.resubOf === null && TODO_HW_STATES.has(r.state))
+    // D-#682: resubmissions used to be filtered out here (`r.resubOf === null`)
+    // to avoid showing one piece of work twice. But the attempt a resubmission
+    // descends from is in RESUBMIT by then, and RESUBMIT is not a TODO state —
+    // so the pair could never BOTH match, and the filter only ever removed the
+    // live half. A handed-back script sat in DUE/CHASE, chased the family
+    // weekly, and never once appeared in the card headed "এখনো বাকি".
+    .filter((r) => TODO_HW_STATES.has(r.state))
     .map((r) => ({
       key: `hw:${r.recordId}`,
       kind: "HW" as const,
@@ -354,6 +380,7 @@ function buildPending(records: GuardianHwRecordT[], assignments: ChildAssignment
       workId: r.hwId,
       tracker: "HOMEWORK" as const,
       canClaim: r.canClaim,
+      claimHoldBn: r.claimHoldBn,
       claim: r.claim,
     }));
 
@@ -373,6 +400,7 @@ function buildPending(records: GuardianHwRecordT[], assignments: ChildAssignment
       workId: a.asId,
       tracker: "ASSIGNMENT" as const,
       canClaim: a.canClaim,
+      claimHoldBn: a.claimHoldBn,
       claim: a.claim,
     }));
 
@@ -431,6 +459,7 @@ function PendingRowView({
       tracker={row.tracker}
       recordId={row.recordId}
       canClaim={row.canClaim}
+      claimHoldBn={row.claimHoldBn}
       claim={row.claim}
       subjectLabel={subjectLabel(row.subject)}
       workId={row.workId}
