@@ -354,7 +354,7 @@ export interface StaffT {
   designation: string | null;
   /** Contracted weekly hours as the letter states them, e.g. "25 (5*5)" (D-#584). */
   weeklyHours: string | null;
-  /** The bank's routing number — a BEFTN transfer cannot be instructed without it (D-#591). */
+  /** The bank's routing number — a BEFTN transfer cannot be instructed without it (D-#683). */
   routingNo: string | null;
   employmentType: string;
   employmentStatus: string;
@@ -4158,7 +4158,13 @@ export interface GuardianHwRecordT {
   hwId: string;
   subject: string;
   subjectLabelBn: string;
+  /** The day THIS record reached the child (D-#682) — a resubmission or a
+   *  re-delivery carries the day it came home, not the original declaration. */
   dateGiven: string;
+  /** The day the ITEM was declared; equals dateGiven on an ordinary record. */
+  itemDateGiven: string;
+  /** Absent at issue, handed out later. */
+  redelivered: boolean;
   state: string;
   stateLabelBn: string;
   givenAt: string | null;
@@ -4181,6 +4187,8 @@ export interface GuardianHwRecordT {
   attachmentIds: string[];
   /** GC-3: may a guardian file "done at home" on this row right now? */
   canClaim: boolean;
+  /** Why the button is absent under the same-day floor (D-#683); null otherwise. */
+  claimHoldBn: string | null;
   claim: GuardianWorkClaimT | null;
 }
 
@@ -4207,12 +4215,12 @@ export const CHILD_HOMEWORK_QUERY = gql<
 >`
   query ChildHomework($studentId: String!, $from: String!, $to: String!) {
     childHomework(studentId: $studentId, from: $from, to: $to) {
-      recordId hwId subject subjectLabelBn dateGiven state stateLabelBn
+      recordId hwId subject subjectLabelBn dateGiven itemDateGiven redelivered state stateLabelBn
       givenAt dueDate submittedAt checkedAt returnedAt
       chaseCount result resultLabelBn description qCount timeDecl resubOf
       topupFlag topupQCount topupTimeMin
       questionFileId answerFileId attachmentIds
-      canClaim
+      canClaim claimHoldBn
       claim { ${WORK_CLAIM_FIELDS} }
     }
   }
@@ -6111,6 +6119,8 @@ export interface ChildAssignmentT {
   description: string | null;
   attachmentIds: string[];
   canClaim: boolean;
+  /** Why the button is absent under the same-day floor (D-#683); null otherwise. */
+  claimHoldBn: string | null;
   claim: GuardianWorkClaimT | null;
 }
 
@@ -6123,7 +6133,7 @@ export const CHILD_ASSIGNMENTS = gql<
   query ChildAssignments($studentId: String!, $limit: Int, $offset: Int) {
     childAssignments(studentId: $studentId, limit: $limit, offset: $offset) {
       recordId asId subject weekNumber state pending daysLate deliveryDate dueDate
-      canClaim
+      canClaim claimHoldBn
       claim { ${WORK_CLAIM_FIELDS} }
       marks totalMarks result feedback isResubmission description attachmentIds
     }
@@ -7114,7 +7124,7 @@ export interface PaymentExportRowT {
   blockedReason: string | null;
 }
 
-/** One line on a bank advice sheet (D-#591). */
+/** One line on a bank advice sheet (D-#683). */
 export interface AdviceRowT {
   staffProfileId: string;
   name: string;

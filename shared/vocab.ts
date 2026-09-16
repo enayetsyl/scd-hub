@@ -745,7 +745,7 @@ export const CLEARANCE_ITEM_STATUS_LABELS_EN: Record<ClearanceItemStatus, string
  * its own is what lets one renderer stay faithful to each without either drifting.
  */
 /**
- * How a month's pay actually leaves the school (D-#591).
+ * How a month's pay actually leaves the school (D-#683).
  *
  * The bank needs THREE different documents, and the split is not the same as
  * `paymentMethod`: a bank transfer to the school's OWN bank is an internal transfer
@@ -846,7 +846,7 @@ export const HR_POLICY_DEFAULTS = {
    * issue until these are set once in HR নীতিমালা.
    */
   /**
-   * The salary-advice letterhead and the school's own bank (D-#591), EMPTY by default.
+   * The salary-advice letterhead and the school's own bank (D-#683), EMPTY by default.
    *
    * Every one of these is printed on a letter that goes to a bank over the school's
    * name, and none of them can be guessed from another deployment's paperwork. The
@@ -1318,6 +1318,11 @@ export const NOTIFICATION_KINDS = [
   // channel rides emit()), deduped once per student+item per day. Distinct from
   // HW_PARENT_COMMS, which nudges the CLASS TEACHER at the 3rd chase.
   "HW_CHASE",
+  // A resubmission was spawned and the script handed back (app-native, NO wire
+  // twin — D-#682). Without this the family is never told: the resubmission is a
+  // NEW record on the same HW_ID, so no declaration notice fires for it and the
+  // only message they ever get is the CHASE that follows when it is not returned.
+  "HW_RESUBMIT_ISSUED",
   // Assignment-tracker per-chase guardian notify (app-native, NO wire twin — the
   // AS-T4 twin of HW_CHASE, D-#88/#94). Ladder steps 1–2 push the student's
   // login-enabled guardians an in-app reminder (via emit()); contact-only
@@ -1438,6 +1443,7 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   CLASS_NOTE_PUBLISHED: "পাঠ নোট প্রকাশিত",
   HW_PARENT_COMMS: "অভিভাবক যোগাযোগের স্মরণিকা",
   HW_CHASE: "বাড়ির কাজ জমার স্মরণিকা",
+  HW_RESUBMIT_ISSUED: "বাড়ির কাজ পুনরায় করতে দেওয়া হয়েছে",
   ASSIGNMENT_CHASE: "অ্যাসাইনমেন্ট জমার স্মরণিকা",
   REVIEW_ASSIGNED: "পর্যালোচনার দায়িত্ব",
   COVER_ASSIGNED: "কাভার ক্লাসের দায়িত্ব",
@@ -1486,6 +1492,7 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   CLASS_NOTE_PUBLISHED: "Class note published",
   HW_PARENT_COMMS: "Parent-contact prompt",
   HW_CHASE: "Homework reminder",
+  HW_RESUBMIT_ISSUED: "Homework given back to redo",
   ASSIGNMENT_CHASE: "Assignment reminder",
   REVIEW_ASSIGNED: "Review assigned",
   COVER_ASSIGNED: "Cover assigned",
@@ -2052,6 +2059,8 @@ export const MESSAGE_TEMPLATE_KEYS = [
   "homework.parentComms.body",
   "homework.chase.title",
   "homework.chase.body",
+  "homework.resubmitIssued.title",
+  "homework.resubmitIssued.body",
   "homework.autoIssued.title",
   "homework.autoIssued.body",
   "review.assigned.title",
@@ -2189,6 +2198,15 @@ export const MESSAGE_TEMPLATE_REGISTRY: Record<MessageTemplateKey, MessageTempla
   "homework.chase.body": {
     group: "homework", labelBn: "বাড়ির কাজ জমার স্মরণিকা — বার্তা", placeholders: ["hwId", "chaseCount"],
     bnDefault: "আপনার সন্তানের বাড়ির কাজ {hwId} এখনও জমা হয়নি — অনুগ্রহ করে আজই জমা দিতে উৎসাহিত করুন। (স্মরণ {chaseCount} বার)", defaultLangMode: "BN",
+  },
+  // --- Resubmission handed back (D-#682) ---
+  "homework.resubmitIssued.title": {
+    group: "homework", labelBn: "পুনরায় করতে দেওয়া — শিরোনাম", placeholders: [],
+    bnDefault: "বাড়ির কাজ পুনরায় করতে দেওয়া হয়েছে", defaultLangMode: "BN",
+  },
+  "homework.resubmitIssued.body": {
+    group: "homework", labelBn: "পুনরায় করতে দেওয়া — বার্তা", placeholders: ["hwId", "subject", "dueDate"],
+    bnDefault: "আপনার সন্তানের {subject} বাড়ির কাজ {hwId} শিক্ষক দেখে পুনরায় করতে ফেরত দিয়েছেন। খাতাটি আজ বাসায় গেছে — {dueDate} তারিখে আবার জমা দিতে হবে।", defaultLangMode: "BN",
   },
   // --- Homework auto-issue (D-#314) ---
   "homework.autoIssued.title": {
@@ -4510,6 +4528,20 @@ export const WORK_CLAIM_MAX_ATTEMPTS = 2;
  *  the existing 60s ticker, which already fires at arbitrary HH:MM. */
 export const WORK_CLAIM_OFFICE_RUNG_MIN = 11 * 60 + 30;
 export const WORK_CLAIM_PRINCIPAL_RUNG_MIN = 13 * 60;
+
+/** The same-day floor, minutes-from-midnight (D-#683, owner ruling 2026-09-16).
+ *
+ *  A record flips GIVEN → DUE on the FIRST scheduler tick of its due day — about
+ *  00:01 — so until now the "done at home" button went live at midnight, hours
+ *  before the child had carried the work to school. Parents were filing at dawn
+ *  against work nobody had had the chance to collect, and the claim then burned
+ *  both escalation rungs (11:30 Office, 13:00 Principal) the same morning.
+ *
+ *  So: a claim on work due TODAY waits until 14:00. Older DUE/CHASE work is
+ *  unaffected — there the school HAS had its chance and the parent's report is
+ *  exactly the signal the ladder is for. 14:00 also sits after both rungs, so a
+ *  same-day claim now always lands on the next school day's action list. */
+export const WORK_CLAIM_SAME_DAY_MIN = 14 * 60;
 
 // ---------------------------------------------------------------------------
 // Scholarship practice papers (SC-0.., docs/prd-scholarship-practice.md, D-#656)

@@ -27,6 +27,10 @@ export interface WorkClaimBlockProps {
   recordId: string;
   /** Server-computed (D-#553) — the app never re-implements the eligibility rule. */
   canClaim: boolean;
+  /** Server-worded reason the button is held back (D-#683), or null. Rendered in
+   *  the button's place: a control that silently vanishes at midnight and
+   *  reappears at 2pm reads as a bug, not as a rule. */
+  claimHoldBn?: string | null;
   claim: GuardianWorkClaimT | null;
   /** Label for the work, shown in the confirmation sheet. */
   subjectLabel: string;
@@ -39,6 +43,7 @@ export function WorkClaimBlock({
   tracker,
   recordId,
   canClaim,
+  claimHoldBn,
   claim,
   subjectLabel,
   workId,
@@ -123,6 +128,14 @@ export function WorkClaimBlock({
             {claim?.canReclaim ? STR.wcReclaimHint : STR.wcButtonHint}
           </Muted>
         </View>
+      ) : null}
+
+      {/* --- the same-day hold (D-#683) -----------------------------------
+          Only when nothing else is already occupying this slot: a parent who has
+          a claim open is being told about THAT, and does not need the rule for a
+          button they are not looking for. */}
+      {!canClaim && claimHoldBn && !claim ? (
+        <Notice tone="info" message={claimHoldBn} />
       ) : null}
 
       {/* --- the confirmation sheet --------------------------------------- */}

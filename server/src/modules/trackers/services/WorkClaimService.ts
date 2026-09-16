@@ -6,7 +6,7 @@
  * The teacher remains the only author of the tracker.
  *
  * The four ways a claim leaves PENDING:
- *   fileWorkClaim        — creates it (five guards, §6.1)
+ *   fileWorkClaim        — creates it (six guards, §6.1)
  *   acceptClaimsForRecords — AUTOMATIC, called from the teacher's ordinary submit
  *                          path; no second tap exists for the teacher (D-#552)
  *   rejectWorkClaim      — the ONLY manual close, and it demands a picker reason
@@ -35,7 +35,7 @@ import { AssignmentItem } from "../models/AssignmentItem";
 import { resolveDayType } from "../../routine/calendar";
 import { dateKeyOf } from "../../attendance/dates";
 import { resolveClaimRecipient } from "./ClaimRecipient";
-import { earliestClaimableDueDate } from "./WorkClaimView";
+import { earliestClaimableDueDate, workClaimHoldNoteBn } from "./WorkClaimView";
 import { GuardianLink } from "../../foundation/models/GuardianLink";
 import { writeAudit } from "../../platform/services/AuditService";
 
@@ -166,7 +166,7 @@ async function subjectOf(tracker: WorkClaimTracker, itemId: Types.ObjectId): Pro
 }
 
 // ---------------------------------------------------------------------------
-// file (D-#553 — the five guards)
+// file (D-#553 — the six guards)
 // ---------------------------------------------------------------------------
 
 export interface FileWorkClaimInput {
@@ -238,6 +238,13 @@ export async function fileWorkClaim(
       throw new WorkClaimError("জানানোর সময়সীমা পেরিয়ে গেছে");
     }
   }
+
+  // (6) the same-day floor (D-#683). Work due TODAY waits until 14:00 — the
+  //     record went DUE at the day's first tick, hours before the child could
+  //     have handed anything in, and a dawn claim burned both rungs by lunch.
+  //     Same helper the read path uses, so canClaim and this cannot disagree.
+  const holdNote = workClaimHoldNoteBn(record.dueDate, at);
+  if (holdNote) throw new WorkClaimError(holdNote);
 
   const actionDateKey = await resolveActionDateKey(at);
   const subject = await subjectOf(input.tracker, record.itemId);
