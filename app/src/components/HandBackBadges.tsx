@@ -21,6 +21,23 @@ import { Badge } from "./ui";
 import { space } from "../theme/tokens";
 import { STR } from "../lib/labels";
 
+/**
+ * True when the card should show ONLY that the work came back, and suppress the
+ * lifecycle status and chase count entirely (owner ruling 2026-09-16, D-#687).
+ *
+ * The reason is that on a handed-back record the status is not a statement about
+ * the child. `HW-C-1-ENG-0018` was chased at 17:30 by `sweepHomeworkAutoChase`
+ * with no `by` on the stamp — a system sweep that fires precisely when nobody ran
+ * the submission pass — and the card rendered that as "বাড়ির কাজ আনেনি", a
+ * teacher's accusation, against a script the school had handed back three days
+ * earlier. The honest thing to tell a family about a returned script is that it
+ * was returned; the chase ladder behind it is the school's business, not a
+ * verdict on the child.
+ */
+export function handBackOnly(handedBack: boolean, redelivered: boolean): boolean {
+  return handedBack || redelivered;
+}
+
 export interface HandBackBadgesProps {
   /** True when this record re-issues an earlier attempt (the teacher's hand-back).
    *  A boolean, not the parent id: the assignment tracker carries the same fact as
