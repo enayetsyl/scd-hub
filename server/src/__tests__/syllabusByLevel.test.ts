@@ -172,6 +172,19 @@ describe("the split unique indexes", () => {
     expect(line).toBeDefined();
     expect(line).not.toContain("default: null");
   });
+
+  test("a migration exists, because Mongoose CANNOT make this change on its own", () => {
+    // The class index keeps its key pattern and therefore its auto-generated name;
+    // only the options changed. `createIndex` answers IndexOptionsConflict, the
+    // error is emitted on the model rather than thrown at the write, and the deploy
+    // looks clean while the OLD non-partial index still rejects every level row
+    // after the first. Without the drop, the split buys nothing.
+    const script = read("../../scripts/migrate-syllabus-level-index.ts");
+    expect(script).toContain("examId_1_classId_1_subject_1");
+    expect(script).toMatch(/ExamSyllabus\.syncIndexes\(\)/);
+    // And it must verify the outcome rather than trust syncIndexes' silence.
+    expect(script).toMatch(/are NOT both present/);
+  });
 });
 
 describe("the approver set", () => {
