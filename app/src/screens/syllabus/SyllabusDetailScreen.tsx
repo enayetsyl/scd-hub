@@ -23,7 +23,7 @@ type Props = NativeStackScreenProps<SyllabusStackParamList, "SyllabusDetail">;
 export default function SyllabusDetailScreen({ route }: Props): React.ReactElement {
   const { examId, classId, track, level, subject } = route.params;
 
-  // A syllabus is addressed by class OR by level (D-#685). Both hooks are always
+  // A syllabus is addressed by class OR by level (D-#688). Both hooks are always
   // called — hooks cannot be conditional — and the one that does not apply is
   // paused, so exactly one request goes out.
   const byLevel = Boolean(track && level);

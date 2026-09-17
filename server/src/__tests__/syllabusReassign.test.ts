@@ -57,7 +57,7 @@ describe("the reassign service", () => {
   test("only a routine holder of the pair can be seated (D-#366)", () => {
     // Through holdersForRow, not the class-only lookup: a LEVEL row (Quran/Arabic
     // from class one up) has no class, and asking the class question about it
-    // would offer every Quran and Arabic teacher in the school (D-#685).
+    // would offer every Quran and Arabic teacher in the school (D-#688).
     expect(FN).toMatch(/holdersForRow\(doc\)/);
     expect(FN).toMatch(/\.userId === approverUserId/);
   });

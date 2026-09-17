@@ -42,7 +42,7 @@ export default function SyllabusHomeScreen({ navigation }: Props): React.ReactEl
   const view = syllabusQ.data?.examSyllabusClass ?? null;
 
   // Quran and Arabic from class one up are taught in cross-grade LEVEL groups, so
-  // they are not on any single class's grid (D-#685). The level query is
+  // they are not on any single class's grid (D-#688). The level query is
   // exam:manage — for everyone else it simply returns nothing and the section is
   // not rendered, which is why the error is swallowed rather than shown.
   const [levelsQ, refetchLevels] = useQuery({

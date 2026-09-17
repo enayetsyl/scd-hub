@@ -68,7 +68,7 @@ export default function SyllabusEntryScreen({ navigation }: Props): React.ReactE
 
   // The level board is a property of the EXAM, not of the picked class: from class
   // one up Quran and Arabic are taught in cross-grade level groups, so they appear
-  // once here rather than on each class (D-#685). It does not move when the class
+  // once here rather than on each class (D-#688). It does not move when the class
   // picker does.
   const [levelsQ, refetchLevels] = useQuery({
     query: EXAM_SYLLABUS_LEVELS,

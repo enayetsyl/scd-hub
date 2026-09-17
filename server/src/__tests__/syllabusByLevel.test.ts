@@ -1,5 +1,5 @@
 /**
- * Level-keyed exam syllabuses (D-#685).
+ * Level-keyed exam syllabuses (D-#688).
  *
  * Quran and Arabic from class one up are taught in cross-grade LEVEL groups, not
  * classes: চতুর্থ শ্রেণি alone spans five Quran levels, and বুক ২ (বালিকা) holds

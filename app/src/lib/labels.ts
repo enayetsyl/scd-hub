@@ -5275,7 +5275,7 @@ const STR_BN = {
   syStatPrincipal: "আপনার কাছে",
   syStatPublished: "প্রকাশিত",
   syBlockedSum: "মানবন্টন মেলেনি — প্রকাশ করা যাবে না।",
-  // --- Level-keyed Quran/Arabic syllabuses (D-#685) ---
+  // --- Level-keyed Quran/Arabic syllabuses (D-#688) ---
   syLevels: "কুরআন ও আরবি (লেভেল অনুযায়ী)",
   syLevelsHint: "প্রথম শ্রেণি থেকে কুরআন ও আরবি লেভেল অনুযায়ী পড়ানো হয় — শ্রেণি অনুযায়ী নয়। তাই এই সিলেবাসগুলো এখানে, শ্রেণির তালিকায় নয়।",
   syLevelStudents: "জন শিক্ষার্থী",
@@ -9631,7 +9631,7 @@ const STR_EN: StrTable = {
   syStatPrincipal: "With you",
   syStatPublished: "Published",
   syBlockedSum: "The mark distribution does not add up — this cannot be published.",
-  // --- Level-keyed Quran/Arabic syllabuses (D-#685) ---
+  // --- Level-keyed Quran/Arabic syllabuses (D-#688) ---
   syLevels: "Quran & Arabic (by level)",
   syLevelsHint:
     "From class one up, Quran and Arabic are taught by level rather than by class — so these syllabuses live here, not on the class list.",

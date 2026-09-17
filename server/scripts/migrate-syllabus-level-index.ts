@@ -1,5 +1,5 @@
 /**
- * One-time migration for D-#685: make the `examsyllabuses` unique indexes PARTIAL.
+ * One-time migration for D-#688: make the `examsyllabuses` unique indexes PARTIAL.
  *
  * Why this cannot be left to Mongoose. The class index keeps the same key pattern
  * — `{examId, classId, subject}` — and therefore the same auto-generated NAME

@@ -206,7 +206,7 @@ describe("classSyllabus", () => {
     expect(eng!.isMine).toBe(true);
   });
 
-  // D-#685 — from class one up these two are taught in cross-grade LEVEL groups,
+  // D-#688 — from class one up these two are taught in cross-grade LEVEL groups,
   // so no single class board can show one paper that is right for the class.
   test("QURAN and ARABIC are OFF a class board from class one up, for the teacher who holds them", async () => {
     mockSyllabusFind.mockReturnValue([]);
@@ -434,7 +434,7 @@ describe("classSyllabus with NO syllabus rows yet", () => {
     const view = await classSyllabus(ctxFor("OFFICE"), EXAM.toString(), CLASS.toString());
     // ARABIC is in this class's routine and is still NOT offered here: from class
     // one up it is taught in cross-grade level groups, so it belongs on the level
-    // board, not on any one class's (D-#685).
+    // board, not on any one class's (D-#688).
     expect(view.subjects.map((s) => s.subject).sort()).toEqual(["BAN", "MATH"]);
     // Every one is a placeholder waiting to be written — not a saved row.
     expect(view.subjects.every((s) => s.pending && s.id === null)).toBe(true);

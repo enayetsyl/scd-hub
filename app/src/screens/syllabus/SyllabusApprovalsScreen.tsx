@@ -134,7 +134,7 @@ function ApprovalCard({
             headings with no way to tell which class was being signed off. */}
         <Body style={{ ...typeScale.bodyStrong, flex: 1 }}>
           {/* A LEVEL row has no class; its level label answers the same question
-              (D-#685) — without it a teacher holding two Arabic levels would get
+              (D-#688) — without it a teacher holding two Arabic levels would get
               two identical "আরবি" headings. */}
           {row.classLabel || row.levelLabel
             ? `${row.classLabel || row.levelLabel} — `
@@ -316,7 +316,7 @@ export default function SyllabusApprovalsScreen(): React.ReactElement {
   });
   // The LEVEL rows sit on no class, so without this the Principal would have no
   // publish surface for Quran or Arabic at all — the one screen that releases a
-  // syllabus would simply never list them (D-#685).
+  // syllabus would simply never list them (D-#688).
   const [levelsQ, refetchLevels] = useQuery({
     query: EXAM_SYLLABUS_LEVELS,
     variables: { examId: pick.examId ?? "" },

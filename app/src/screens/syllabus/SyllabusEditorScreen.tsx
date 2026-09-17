@@ -101,7 +101,7 @@ export default function SyllabusEditorScreen({ route, navigation }: Props): Reac
   const colors = useColors();
   const { examId, classId, track, level, subject } = route.params;
 
-  // Class-anchored or LEVEL-anchored (D-#685). Both hooks always run — hooks
+  // Class-anchored or LEVEL-anchored (D-#688). Both hooks always run — hooks
   // cannot be conditional — with the inapplicable one paused, so exactly one
   // request goes out and the editor writes to exactly one address.
   const byLevel = Boolean(track && level);

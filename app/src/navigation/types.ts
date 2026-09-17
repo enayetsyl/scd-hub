@@ -380,7 +380,7 @@ export type EnglishDriveStackParamList = {
  */
 export type SyllabusStackParamList = {
   SyllabusHome: undefined;
-  /** A syllabus is addressed by CLASS or by LEVEL, never both (D-#685): pass
+  /** A syllabus is addressed by CLASS or by LEVEL, never both (D-#688): pass
    *  `classId`, or `track`+`level` for Quran/Arabic from class one up. */
   SyllabusDetail: {
     examId: string;

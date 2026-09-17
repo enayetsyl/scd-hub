@@ -73,7 +73,7 @@ SyllabusRef.implement({
   fields: (t) => ({
     id: t.string({ nullable: true, resolve: (r) => r.id }),
     examId: t.exposeString("examId"),
-    // Nullable since D-#685: a LEVEL row (Quran/Arabic from class one up) has no
+    // Nullable since D-#688: a LEVEL row (Quran/Arabic from class one up) has no
     // class. The notification deep-link already falls back to the syllabus list
     // when the (exam × class × subject) triple is incomplete.
     classId: t.string({ nullable: true, resolve: (r) => r.classId }),
@@ -224,7 +224,7 @@ builder.queryFields((t) => ({
     description:
       "Every Quran/Arabic level that has students, with its syllabus row — the level counterpart " +
       "of the class board. These subjects are taught in cross-grade level groups from class one " +
-      "up, so they do not appear on any single class's board (D-#685).",
+      "up, so they do not appear on any single class's board (D-#688).",
     authScopes: { hasPermission: "exam:manage" },
     args: { examId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => examSyllabusLevels(ctx, args.examId),
