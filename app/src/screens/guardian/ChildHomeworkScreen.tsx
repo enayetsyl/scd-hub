@@ -55,6 +55,7 @@ import { STR, bnNum, lifecycleStateLabel, hwGuardianStatusLabel, subjectLabel, h
 import { openStoredFile, FILE_VIEW_SUPPORTED, FileUploadError } from "../../lib/files";
 import { useFileOpen } from "../../lib/useFileOpen";
 import { WorkClaimBlock } from "../../components/WorkClaimBlock";
+import { HandBackBadges, handBackOnly } from "../../components/HandBackBadges";
 import { usePullRefresh } from "../../lib/useRefresh";
 import { space } from "../../theme/tokens";
 import {
@@ -197,21 +198,17 @@ function RecordBlock({
   const { openingId, runOpen } = useFileOpen();
   return (
     <View style={{ marginTop: space(2) }}>
-      {/* The guardian status is a SENTENCE, not a chip word ("বাড়ির কাজ জমা দেওয়ার সময়
-          হয়েছে", worded for parents), so it gets its own full-width line.
-          Sitting beside the title it crushed that column to a few pixels — flexShrink is
-          0 by default in RN, so the badge never yielded and the only shrinkable child
-          took the whole squeeze, wrapping the subject and hwId one character per line. */}
-      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space(2) }}>
-        <View style={{ flexShrink: 1 }}>
-          <Body style={{ fontWeight: "700" }}>{subjectLabel(r.subject)}</Body>
-          <Muted>{r.hwId}</Muted>
-        </View>
-        {/* Short enough to stay inline. D-#682: say what actually happened —
-            "পুনঃজমা" is the tracker's word for the state, not an explanation to a
-            parent of why a script is back in the bag. */}
-        {r.resubOf ? <Badge text={STR.gpHandedBack} tone="warn" /> : null}
-        {r.redelivered ? <Badge text={STR.gpRedelivered} tone="info" /> : null}
+      {/* The title owns its line. Nothing sits beside it: the guardian status is a
+          SENTENCE, not a chip word ("বাড়ির কাজ জমা দেওয়ার সময় হয়েছে", worded for
+          parents), and next to the title it crushed that column to a few pixels —
+          flexShrink is 0 by default in RN, so the badge never yielded and the only
+          shrinkable child took the whole squeeze, wrapping the subject and hwId one
+          character per line. D-#685 briefly put the hand-back badge back up here and
+          hit the other end of the same problem: on a wide screen space-between threw
+          it a screen-width away from everything it relates to. */}
+      <View style={{ flexShrink: 1 }}>
+        <Body style={{ fontWeight: "700" }}>{subjectLabel(r.subject)}</Body>
+        <Muted>{r.hwId}</Muted>
       </View>
       {/* A resubmission now sits on the day it came HOME (D-#682), so name the
           declaration it descends from — otherwise the parent loses the thread
@@ -227,14 +224,37 @@ function RecordBlock({
           to go find the class note for the date it was given. It sits ABOVE the status
           line because it is the thing they opened the app to learn. */}
       {r.description ? <Body style={{ marginTop: space(1) }}>{r.description}</Body> : null}
-      <View style={{ marginTop: space(2) }}>
-        <Badge
-          text={hwGuardianStatusLabel(r.state)}
-          /* Three steps, not two: amber "due today" → red "did not bring it" → green for
-             everything already handed in. DUE used to render GREEN while saying the
-             child had not done the work, which read as both wrong and alarming. */
-          tone={r.state === "CHASE" ? "danger" : r.state === "DUE" ? "warn" : "brand"}
-        />
+      {/* ONE badge row (D-#686). These three answer a single question — what is
+          happening with this piece of work — but the card used to scatter them:
+          the hand-back badge pinned to the far right of the title row, the status
+          badge here, the chase count below the timeline. On a phone that reads as
+          three remarks; on desktop web the hand-back badge sat a screen-width away
+          from the status it qualifies, so "বাড়ির কাজ আনেনি" looked like a verdict
+          on new work. Kept BELOW the description, because D-#478 put the
+          description above the status line deliberately — it is the thing the
+          parent opened the app to learn. Result/top-up stay by the timeline: they
+          are what CAME of the work, not what is happening to it. */}
+      <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: space(2), marginTop: space(2) }}>
+        <HandBackBadges handedBack={!!r.resubOf} redelivered={r.redelivered} />
+        {/* D-#687: on a handed-back record this is ALL the family is told. The
+            status and the chase count describe the ladder the school is running,
+            not something the child did — and on this very card the chase came
+            from the 17:30 system sweep, which fires when nobody ran the
+            submission pass. */}
+        {handBackOnly(!!r.resubOf, r.redelivered) ? null : (
+          <>
+            <Badge
+              text={hwGuardianStatusLabel(r.state)}
+              /* Three steps, not two: amber "due today" → red "did not bring it" → green for
+                 everything already handed in. DUE used to render GREEN while saying the
+                 child had not done the work, which read as both wrong and alarming. */
+              tone={r.state === "CHASE" ? "danger" : r.state === "DUE" ? "warn" : "brand"}
+            />
+            {r.chaseCount > 0 ? (
+              <Badge text={`${lifecycleStateLabel("CHASE")} ×${bnNum(r.chaseCount)}`} tone="danger" />
+            ) : null}
+          </>
+        )}
       </View>
 
       {/* Stage timeline (GP-J4) */}
@@ -250,10 +270,9 @@ function RecordBlock({
         <StageRow label={lifecycleStateLabel("RETURNED")} at={r.returnedAt} />
       </View>
 
+      {/* What CAME of the work. The chase count moved up into the status row
+          (D-#686) — it describes what is happening now, not the outcome. */}
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: space(2) }}>
-        {r.chaseCount > 0 ? (
-          <Badge text={`${lifecycleStateLabel("CHASE")} ×${bnNum(r.chaseCount)}`} tone="danger" />
-        ) : null}
         {r.result ? (
           <Badge text={hwResultLabel(r.result)} tone={r.result === "CORRECT" ? "ok" : r.result === "WRONG" ? "danger" : "warn"} />
         ) : null}
@@ -350,6 +369,10 @@ interface PendingRow {
   canClaim: boolean;
   claimHoldBn: string | null;
   claim: GuardianWorkClaimT | null;
+  /** D-#685: the outstanding card must say a script was handed back, not just
+   *  that it was not brought. */
+  handedBack: boolean;
+  redelivered: boolean;
 }
 
 /**
@@ -382,6 +405,8 @@ function buildPending(records: GuardianHwRecordT[], assignments: ChildAssignment
       canClaim: r.canClaim,
       claimHoldBn: r.claimHoldBn,
       claim: r.claim,
+      handedBack: !!r.resubOf,
+      redelivered: r.redelivered,
     }));
 
   const asgn: PendingRow[] = assignments
@@ -402,6 +427,8 @@ function buildPending(records: GuardianHwRecordT[], assignments: ChildAssignment
       canClaim: a.canClaim,
       claimHoldBn: a.claimHoldBn,
       claim: a.claim,
+      handedBack: a.isResubmission,
+      redelivered: false,
     }));
 
   return [...hw, ...asgn].sort((a, b) => b.dateGiven.localeCompare(a.dateGiven));
@@ -434,8 +461,12 @@ function PendingRowView({
           {subjectLabel(row.subject)}
           {row.kind === "ASSIGNMENT" ? ` · ${STR.gpAssignmentWord}` : ""}
         </Body>
-        <Badge text={row.labelBn} tone={row.tone} />
+        {/* D-#687: a handed-back row says only that, never the chase status. */}
+        {handBackOnly(row.handedBack, row.redelivered) ? null : (
+          <Badge text={row.labelBn} tone={row.tone} />
+        )}
       </View>
+      <HandBackBadges handedBack={row.handedBack} redelivered={row.redelivered} spaced />
       <Muted>
         {STR.gpGivenOn} {bnNum(row.dateGiven)}
         {row.dueDate ? ` · ${STR.gpDueOn} ${bnNum(row.dueDate)}` : ""}

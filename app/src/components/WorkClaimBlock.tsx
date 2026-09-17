@@ -16,7 +16,7 @@ import { useMutation } from "urql";
 import { Body, Muted, Badge, Button, Notice, Card } from "./ui";
 import { space } from "../theme/tokens";
 import { useColors } from "../theme";
-import { STR } from "../lib/labels";
+import { STR, bnNum } from "../lib/labels";
 import { FILE_CHILD_WORK_CLAIM, type GuardianWorkClaimT } from "../graphql/operations";
 
 const MAX_NOTE = 200;
@@ -93,7 +93,9 @@ export function WorkClaimBlock({
               text={claim.statusLabelBn}
               tone={status === "ACCEPTED" ? "ok" : status === "PENDING" ? "warn" : "info"}
             />
-            <Muted>{claim.claimedAt.slice(0, 10)}</Muted>
+            {/* D-#686: Bangla digits, like every other date on the card. This one
+                line rendered 2026-09-16 beside ২০২৬-০৯-১৪ in the timeline above it. */}
+            <Muted>{bnNum(claim.claimedAt.slice(0, 10))}</Muted>
           </View>
 
           {status === "PENDING" ? (

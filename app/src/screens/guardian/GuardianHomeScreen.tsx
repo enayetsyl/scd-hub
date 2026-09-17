@@ -29,6 +29,7 @@ import { QueryGate } from "../../components/QueryGate";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
 import { WorkClaimBlock } from "../../components/WorkClaimBlock";
+import { HandBackBadges, handBackOnly } from "../../components/HandBackBadges";
 import { useRecordView } from "../../lib/useRecordView";
 import { useNotifications } from "../../state/NotificationContext";
 import { CHILD_TRAJECTORY_QUERY } from "../../graphql/wholePicture";
@@ -507,8 +508,15 @@ export default function GuardianHomeScreen(): React.ReactElement {
               <Pressable accessibilityRole="button" onPress={goHomework} style={{ marginTop: space(2) }}>
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space(2) }}>
                   <Body style={{ fontWeight: "700", flexShrink: 1 }}>{subjectLabel(r.subject)}</Body>
-                  <Badge text={hwGuardianStatusLabel(r.state)} tone={r.state === "CHASE" ? "danger" : "warn"} />
+                  {/* D-#687: handed back => that is the whole message. */}
+                  {handBackOnly(!!r.resubOf, r.redelivered) ? null : (
+                    <Badge text={hwGuardianStatusLabel(r.state)} tone={r.state === "CHASE" ? "danger" : "warn"} />
+                  )}
                 </View>
+                {/* D-#685: on its own line — "বাড়ির কাজ আনেনি" beside nothing else
+                    reads as an accusation about NEW work, when this is a script the
+                    school handed back. */}
+                <HandBackBadges handedBack={!!r.resubOf} redelivered={r.redelivered} spaced />
                 {r.description ? <Body>{r.description}</Body> : null}
                 <Muted>
                   {isoDateLabel(r.dateGiven.slice(0, 10))}
@@ -666,13 +674,17 @@ export default function GuardianHomeScreen(): React.ReactElement {
                         </Muted>
                       </View>
                       <View style={{ marginTop: space(1) }}>
-                        <Badge
-          text={hwGuardianStatusLabel(r.state)}
-          /* Three steps, not two: amber "due today" → red "did not bring it" → green for
-             everything already handed in. DUE used to render GREEN while saying the
-             child had not done the work, which read as both wrong and alarming. */
-          tone={r.state === "CHASE" ? "danger" : r.state === "DUE" ? "warn" : "brand"}
-        />
+                        {/* D-#687: handed back => that is the whole message. */}
+                        {handBackOnly(!!r.resubOf, r.redelivered) ? null : (
+                          <Badge
+                            text={hwGuardianStatusLabel(r.state)}
+                            /* Three steps, not two: amber "due today" → red "did not bring it" → green for
+                               everything already handed in. DUE used to render GREEN while saying the
+                               child had not done the work, which read as both wrong and alarming. */
+                            tone={r.state === "CHASE" ? "danger" : r.state === "DUE" ? "warn" : "brand"}
+                          />
+                        )}
+                        <HandBackBadges handedBack={!!r.resubOf} redelivered={r.redelivered} spaced />
                       </View>
                     </View>
                   ))}
