@@ -10,7 +10,7 @@ import React from "react";
 import { RefreshControl } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
-import { EXAM_SYLLABUS_DETAIL } from "../../graphql/examSyllabus";
+import { EXAM_SYLLABUS_DETAIL, EXAM_SYLLABUS_LEVEL_DETAIL } from "../../graphql/examSyllabus";
 import type { SyllabusStackParamList } from "../../navigation/types";
 import { Screen, EmptyState } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
@@ -21,13 +21,28 @@ import { usePullRefresh } from "../../lib/useRefresh";
 type Props = NativeStackScreenProps<SyllabusStackParamList, "SyllabusDetail">;
 
 export default function SyllabusDetailScreen({ route }: Props): React.ReactElement {
-  const { examId, classId, subject } = route.params;
+  const { examId, classId, track, level, subject } = route.params;
 
-  const [detailQ, refetch] = useQuery({
+  // A syllabus is addressed by class OR by level (D-#688). Both hooks are always
+  // called — hooks cannot be conditional — and the one that does not apply is
+  // paused, so exactly one request goes out.
+  const byLevel = Boolean(track && level);
+
+  const [classQ, refetchClass] = useQuery({
     query: EXAM_SYLLABUS_DETAIL,
-    variables: { examId, classId, subject },
+    variables: { examId, classId: classId ?? "", subject },
+    pause: byLevel,
   });
-  const row = detailQ.data?.examSyllabusDetail ?? null;
+  const [levelQ, refetchLevel] = useQuery({
+    query: EXAM_SYLLABUS_LEVEL_DETAIL,
+    variables: { examId, track: track ?? "", level: level ?? "" },
+    pause: !byLevel,
+  });
+
+  const detailQ = byLevel ? levelQ : classQ;
+  const refetch = byLevel ? refetchLevel : refetchClass;
+  const row =
+    (byLevel ? levelQ.data?.examSyllabusLevelDetail : classQ.data?.examSyllabusDetail) ?? null;
   const refresh = usePullRefresh(detailQ.fetching, () => refetch({ requestPolicy: "network-only" }));
 
   return (

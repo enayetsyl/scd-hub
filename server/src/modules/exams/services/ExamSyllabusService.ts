@@ -30,6 +30,8 @@ import { ForbiddenError } from "../../../middleware/authz";
 import { isAdminStaff, isPrincipalStaff } from "../../foundation/services/RoleScope";
 import { writeAudit } from "../../platform/services/AuditService";
 import { RoutineSlot } from "../../routine/models/RoutineSlot";
+import { SubjectGroup } from "../../routine/models/SubjectGroup";
+import { SubjectGroupMembership } from "../../routine/models/SubjectGroupMembership";
 import { assertNotMojibake } from "../../platform/services/encodingGuard";
 import { Class } from "../../foundation/models/Class";
 import { User } from "../../foundation/models/User";
@@ -42,6 +44,7 @@ import { ExamClassNote, type IExamClassNote } from "../models/ExamClassNote";
 import {
   ExamSyllabus,
   validateMarkRows,
+  validateSyllabusAnchor,
   type IExamSyllabus,
   type ISyllabusMarkRow,
 } from "../models/ExamSyllabus";
@@ -89,6 +92,37 @@ async function syllabusNames(
 ): Promise<{ examName: string; className: string }> {
   const [exam, klass] = await Promise.all([Exam.findById(examId), Class.findById(classId)]);
   return { examName: exam?.name ?? "পরীক্ষা", className: klass?.nameBn ?? "শ্রেণি" };
+}
+
+/**
+ * Who a LEVEL syllabus is actually for: every student in any group at that
+ * level, plus a label naming those groups.
+ *
+ * Both gender groups of a level sit the same paper, so both are included and
+ * both are named — a বালিকা parent should not be told her daughter's syllabus
+ * is "বুক ২ (বালক)".
+ */
+async function levelAudience(
+  track: string,
+  level: string,
+): Promise<{ label: string; studentIds: Types.ObjectId[] }> {
+  const groups = (await SubjectGroup.find({ track, level, active: { $ne: false } })
+    .select("nameBn")
+    .lean()) as unknown as Array<{ _id: Types.ObjectId; nameBn?: string }>;
+  if (groups.length === 0) return { label: level, studentIds: [] };
+
+  const members = (await SubjectGroupMembership.find({
+    groupId: { $in: groups.map((g) => g._id) },
+  })
+    .select("studentId")
+    .lean()) as unknown as Array<{ studentId: Types.ObjectId }>;
+
+  return {
+    label: groups.map((g) => g.nameBn ?? level).join(" + "),
+    studentIds: [...new Set(members.map((m) => m.studentId.toString()))].map(
+      (id) => new Types.ObjectId(id),
+    ),
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -139,6 +173,71 @@ export async function routineHoldersFor(
 }
 
 /**
+ * The routine teachers of a LEVEL — every teacher with a slot on any group at
+ * that level, most periods first.
+ *
+ * The class-based `routineHoldersFor` cannot answer this: it matches EVERY
+ * `subjectgroup` slot regardless of group, so asking it about আরবি would offer
+ * every Arabic and Quran teacher in the school. This one is exact.
+ */
+export async function routineHoldersForLevel(
+  track: string,
+  level: string,
+): Promise<RoutineHolder[]> {
+  const groups = (await SubjectGroup.find({ track, level, active: { $ne: false } })
+    .select("_id")
+    .lean()) as unknown as Array<{ _id: Types.ObjectId }>;
+  if (groups.length === 0) return [];
+
+  const slots = (await RoutineSlot.find({
+    groupType: "subjectgroup",
+    groupId: { $in: groups.map((g) => g._id) },
+    active: { $ne: false },
+    teacherId: { $ne: null },
+  })
+    .select("teacherId")
+    .lean()) as unknown as Array<{ teacherId?: Types.ObjectId | null }>;
+
+  const counts = new Map<string, number>();
+  for (const s of slots) {
+    if (!s.teacherId) continue;
+    const k = s.teacherId.toString();
+    counts.set(k, (counts.get(k) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .map(([userId, periods]) => ({ userId, periods }))
+    .sort((a, b) => b.periods - a.periods || a.userId.localeCompare(b.userId));
+}
+
+/**
+ * What a syllabus row needs to carry for its approver set to be derivable.
+ *
+ * `classId` is widened to accept a plain string so the resolver can ask the same
+ * question about arguments off the wire as the service asks about a loaded row —
+ * one shape, so the picker and the gate can never diverge.
+ */
+export interface SyllabusAnchor {
+  classId?: Types.ObjectId | string | null;
+  subject: RoutineSubject;
+  subjectTrack?: "quran" | "arabic" | string | null;
+  subjectLevel?: string | null;
+}
+
+/**
+ * The approver set for ONE row, whichever way it is anchored.
+ *
+ * Every gate in the chain — submit, reassign, approve, the §7.2 bypass — asks
+ * this same question, and each of them asking it its own way is how a level row
+ * would end up assignable to a teacher who does not hold the level. One
+ * dispatch, so all four stay in agreement.
+ */
+export async function holdersForRow(row: SyllabusAnchor): Promise<RoutineHolder[]> {
+  return row.subjectLevel
+    ? routineHoldersForLevel(row.subjectTrack ?? "", row.subjectLevel)
+    : routineHoldersFor(row.classId!, row.subject);
+}
+
+/**
  * The teacher Office is offered when sending for sign-off — the routine holder
  * with the most periods for the pair (§7.1). `null` when nobody holds it, which
  * is what routes the row to the §7.2 bypass rather than stranding it.
@@ -167,7 +266,11 @@ export async function isRoutineHolder(
 
 export interface SaveSyllabusInput {
   examId: string;
-  classId: string;
+  /** The class anchor. Omitted on a LEVEL row, where `subjectLevel` takes its place. */
+  classId?: string | null;
+  /** The level anchor (Quran/Arabic from class one up). Mutually exclusive with `classId`. */
+  subjectTrack?: "quran" | "arabic" | null;
+  subjectLevel?: string | null;
   subject: RoutineSubject;
   bodyMd: string;
   marks: ISyllabusMarkRow[];
@@ -201,19 +304,35 @@ export async function saveSyllabus(
   const markError = validateMarkRows(input.marks);
   if (markError) throw new ForbiddenError(markError);
 
+  // Class XOR level, checked before anything is written: a row anchored to
+  // neither is invisible to every reader, and one anchored to both would appear
+  // twice and let the two copies drift.
+  const anchorError = validateSyllabusAnchor(input);
+  if (anchorError) throw new ForbiddenError(anchorError);
+  const byLevel = input.subjectLevel != null;
+
   const exam = await Exam.findById(input.examId);
   if (!exam) throw new ForbiddenError("পরীক্ষা পাওয়া যায়নি");
 
-  const existing = await ExamSyllabus.findOne({
-    examId: input.examId,
-    classId: input.classId,
-    subject: input.subject,
-  });
+  // The level address is (exam × track × level) WITHOUT the subject: a level
+  // belongs to exactly one track, so track+level already names one paper, and
+  // including the subject would let "QURAN @ Book 2" and "ARABIC @ Book 2" both
+  // exist as separate rows for the same children.
+  const existing = await ExamSyllabus.findOne(
+    byLevel
+      ? { examId: input.examId, subjectTrack: input.subjectTrack, subjectLevel: input.subjectLevel }
+      : { examId: input.examId, classId: input.classId, subject: input.subject },
+  );
 
   if (!existing) {
     const created = await ExamSyllabus.create({
       examId: new Types.ObjectId(input.examId),
-      classId: new Types.ObjectId(input.classId),
+      // Set one key or the other, never both to null — the partial unique indexes
+      // key on whether the field EXISTS, so a stored null would make every level
+      // row collide with every class row.
+      ...(byLevel
+        ? { subjectTrack: input.subjectTrack, subjectLevel: input.subjectLevel }
+        : { classId: new Types.ObjectId(input.classId!) }),
       subject: input.subject,
       bodyMd: input.bodyMd,
       marks: input.marks,
@@ -229,7 +348,14 @@ export async function saveSyllabus(
       actorRole: auth.role,
       targetId: created._id,
       targetKind: "ExamSyllabus",
-      meta: { examId: input.examId, classId: input.classId, subject: input.subject, created: true },
+      meta: {
+        examId: input.examId,
+        classId: input.classId ?? null,
+        subjectTrack: input.subjectTrack ?? null,
+        subjectLevel: input.subjectLevel ?? null,
+        subject: input.subject,
+        created: true,
+      },
     });
     return created;
   }
@@ -264,7 +390,9 @@ export async function saveSyllabus(
     targetKind: "ExamSyllabus",
     meta: {
       examId: input.examId,
-      classId: input.classId,
+      classId: input.classId ?? null,
+      subjectTrack: input.subjectTrack ?? null,
+      subjectLevel: input.subjectLevel ?? null,
       subject: input.subject,
       clearedApproval: contentChanged && hadApproval,
     },
@@ -315,7 +443,7 @@ export async function reassignSyllabusApprover(
       "কেবল শিক্ষকের কাছে থাকা সিলেবাস অন্য শিক্ষকের কাছে পাঠানো যায়",
     );
   }
-  if (!(await isRoutineHolder(approverUserId, doc.classId, doc.subject))) {
+  if (!(await holdersForRow(doc)).some((h) => h.userId === approverUserId)) {
     throw new ForbiddenError("রুটিন অনুযায়ী এই শিক্ষক এই শ্রেণিতে এই বিষয় পড়ান না");
   }
 
@@ -356,7 +484,8 @@ export async function submitSyllabusToTeacher(
   const markError = validateMarkRows(doc.marks);
   if (markError) throw new ForbiddenError(markError);
 
-  const chosen = approverUserId ?? (await defaultApproverFor(doc.classId, doc.subject));
+  const holders = await holdersForRow(doc);
+  const chosen = approverUserId ?? holders[0]?.userId ?? null;
   if (!chosen) {
     throw new ForbiddenError(
       "রুটিনে এই শ্রেণি ও বিষয়ের কোনো শিক্ষক নেই — প্রধান শিক্ষক সরাসরি অনুমোদন করতে পারবেন।",
@@ -364,7 +493,7 @@ export async function submitSyllabusToTeacher(
   }
   // Never accept a typed name: an approver who does not teach the subject makes the
   // sign-off meaningless, and D-#366 forbids silently seating an accountable teacher.
-  if (!(await isRoutineHolder(chosen, doc.classId, doc.subject))) {
+  if (!holders.some((h) => h.userId === chosen)) {
     throw new ForbiddenError("রুটিন অনুযায়ী এই শিক্ষক এই শ্রেণিতে এই বিষয় পড়ান না");
   }
 
@@ -411,14 +540,14 @@ export async function approveSyllabusAsTeacher(
   }
 
   const isNamed = doc.approverUserId?.toString() === auth.userId;
-  const holder = await isRoutineHolder(auth.userId, doc.classId, doc.subject);
+  const rowHolders = await holdersForRow(doc);
+  const holder = rowHolders.some((h) => h.userId === auth.userId);
   let bypass = false;
 
   if (!(isNamed && holder)) {
     // The bypass is available ONLY when the routine genuinely names nobody. A
     // Principal cannot short-circuit a teacher who does exist and is waiting.
-    const holders = await routineHoldersFor(doc.classId, doc.subject);
-    if (isPrincipalStaff(auth) && holders.length === 0) {
+    if (isPrincipalStaff(auth) && rowHolders.length === 0) {
       bypass = true;
     } else {
       throw new ForbiddenError("এই সিলেবাস অনুমোদনের অনুমতি নেই — আপনি এই বিষয়ের শিক্ষক নন");
@@ -444,12 +573,21 @@ export async function approveSyllabusAsTeacher(
   // D-#644: the sign-off is done, and the only thing standing between this
   // syllabus and the families is the Principal's publish — tell them. Best-effort
   // inside the emitter; a notification failure never rolls back the transition.
-  const names = await syllabusNames(doc.examId, doc.classId);
+  //
+  // A LEVEL syllabus has no class, so the Principal is told which GROUPS the
+  // paper is for instead — "বুক ২ (বালক) + বুক ২ (বালিকা)". Passing a class name
+  // here would be inventing one.
+  const names = doc.subjectLevel
+    ? {
+        examName: (await Exam.findById(doc.examId))?.name ?? "পরীক্ষা",
+        className: (await levelAudience(doc.subjectTrack ?? "", doc.subjectLevel)).label,
+      }
+    : await syllabusNames(doc.examId, doc.classId!);
   const approver = await User.findById(auth.userId);
   await emitSyllabusAwaitingPublish({
     syllabusId: doc._id,
     examId: doc.examId,
-    classId: doc.classId,
+    classId: doc.classId ?? null,
     subject: doc.subject,
     approvedAt: doc.teacherApprovedAt ?? new Date(),
     examName: names.examName,
@@ -538,22 +676,38 @@ export async function publishSyllabus(ctx: AppContext, id: string): Promise<IExa
     actorRole: auth.role,
     targetId: doc._id,
     targetKind: "ExamSyllabus",
-    meta: { subject: doc.subject, classId: doc.classId.toString() },
+    meta: {
+      subject: doc.subject,
+      classId: doc.classId?.toString() ?? null,
+      subjectLevel: doc.subjectLevel ?? null,
+    },
   });
 
   // D-#644 — the owner's ruling: the family hears HERE, at the one transition that
   // makes the row readable to them (`publishedAt` is the guardian predicate,
   // D-#533). Every login-enabled guardian of a child in this class, once per
   // publish; a §7.3 send-back and re-publish is a new release and notifies again.
-  const names = await syllabusNames(doc.examId, doc.classId);
+  //
+  // A LEVEL syllabus has no class, and its children are scattered across four or
+  // five of them — so the recipients come from the group memberships instead.
+  // Deriving them from a class would notify the wrong families and miss the right
+  // ones.
+  const level = doc.subjectLevel
+    ? await levelAudience(doc.subjectTrack ?? "", doc.subjectLevel)
+    : null;
+  const names = level
+    ? { examName: (await Exam.findById(doc.examId))?.name ?? "পরীক্ষা", className: level.label }
+    : await syllabusNames(doc.examId, doc.classId!);
+
   await emitSyllabusPublished({
     syllabusId: doc._id,
     examId: doc.examId,
-    classId: doc.classId,
+    classId: doc.classId ?? null,
     subject: doc.subject,
     publishedAt: doc.publishedAt ?? new Date(),
     examName: names.examName,
     className: names.className,
+    ...(level ? { studentIds: level.studentIds } : {}),
   });
 
   return doc;

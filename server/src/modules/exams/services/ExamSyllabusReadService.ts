@@ -30,13 +30,16 @@ import { Student } from "../../foundation/models/Student";
 import { Class } from "../../foundation/models/Class";
 import { myTeachingNoteScope } from "../../teaching-notes/services/TeachingNoteService";
 import { RoutineSlot } from "../../routine/models/RoutineSlot";
+import { SubjectGroup } from "../../routine/models/SubjectGroup";
+import { SubjectGroupMembership } from "../../routine/models/SubjectGroupMembership";
 import { ExamSyllabus, type ISyllabusMarkRow } from "../models/ExamSyllabus";
 import { ExamClassNote } from "../models/ExamClassNote";
 
 export interface SyllabusShape {
   id: string | null;
   examId: string;
-  classId: string;
+  /** Null on a LEVEL row — those are anchored by track+level instead. */
+  classId: string | null;
   /**
    * The class's Bangla name, carried on the ROW and not only on the enclosing
    * `ClassSyllabusView`. `mySyllabusApprovals` returns a flat list spanning
@@ -44,6 +47,16 @@ export interface SyllabusShape {
    * sees three identical "ইংরেজি" cards with nothing to tell them apart.
    */
   classLabel: string;
+  /**
+   * Set instead of `classId`/`classLabel` on a LEVEL row (Quran/Arabic from
+   * class one up). `levelLabel` is what a reader sees — "বুক ২", "হিফজ ১" —
+   * and it does for these rows exactly what `classLabel` does for class rows:
+   * without it, a teacher holding two Arabic levels would get two identical
+   * "আরবি" cards, which is the D-#609 mistake all over again.
+   */
+  subjectTrack: string | null;
+  subjectLevel: string | null;
+  levelLabel: string;
   /**
    * The teacher this row was SENT TO, once it has been sent. Exposed so Office
    * and the Principal can see who holds a subject without opening it — the
@@ -118,7 +131,9 @@ function toShape(
   row: {
     _id: Types.ObjectId;
     examId: Types.ObjectId;
-    classId: Types.ObjectId;
+    classId?: Types.ObjectId | null;
+    subjectTrack?: string | null;
+    subjectLevel?: string | null;
     subject: RoutineSubject;
     bodyMd: string;
     marks: ISyllabusMarkRow[];
@@ -133,12 +148,16 @@ function toShape(
   },
   isMine: boolean,
   classLabel: string,
+  levelLabel = "",
 ): SyllabusShape {
   return {
     id: row._id.toString(),
     examId: row.examId.toString(),
-    classId: row.classId.toString(),
+    classId: row.classId?.toString() ?? null,
     classLabel,
+    subjectTrack: row.subjectTrack ?? null,
+    subjectLevel: row.subjectLevel ?? null,
+    levelLabel,
     approverUserId: row.approverUserId?.toString() ?? null,
     teacherApprovedBy: row.teacherApprovedBy?.toString() ?? null,
     teacherApprovedAt: row.teacherApprovedAt?.toISOString() ?? null,
@@ -168,6 +187,10 @@ function placeholder(
     examId,
     classId,
     classLabel,
+    // Placeholders only ever stand in for a CLASS subject.
+    subjectTrack: null,
+    subjectLevel: null,
+    levelLabel: "",
     // Nothing is stored yet, so nobody holds it.
     approverUserId: null,
     teacherApprovedBy: null,
@@ -261,6 +284,14 @@ export async function classSyllabus(
   const bySubject = new Map<string, SyllabusShape>();
   for (const r of rows) bySubject.set(r.subject, toShape(r, isMineFor(r.subject), cls.nameBn ?? ""));
 
+  // From class one up, Quran and Arabic are not this class's papers to show: the
+  // children of one class sit five different Quran levels, so a single বাংলা-style
+  // button here could only ever be right for some of them. They live on the LEVEL
+  // board instead (`examSyllabusLevels`). Below class one they ARE class-wise
+  // (নার্সারি, কেজি) and stay exactly as they were.
+  const levelTaught = (cls.level ?? 0) >= 1;
+  const onLevelBoard = (code: string) => levelTaught && (code === "QURAN" || code === "ARABIC");
+
   if (admin) {
     // Office/Principal need EVERY subject the class sits, whether or not a row
     // exists yet — this list is the writing surface, and a subject with no row is
@@ -278,6 +309,7 @@ export async function classSyllabus(
     if (taught.size === 0) taught = new Set<string>(ROUTINE_SUBJECTS);
     for (const code of taught) {
       if (bySubject.has(code)) continue;
+      if (onLevelBoard(code)) continue;
       bySubject.set(
         code,
         placeholder(examId, classId, code as RoutineSubject, isMineFor(code as RoutineSubject), cls.nameBn ?? ""),
@@ -288,6 +320,7 @@ export async function classSyllabus(
     // placeholders — "not ready" rather than "does not exist".
     for (const code of ROUTINE_SUBJECTS) {
       if (bySubject.has(code)) continue;
+      if (onLevelBoard(code)) continue;
       if (isMineFor(code)) {
         bySubject.set(code, placeholder(examId, classId, code, true, cls.nameBn ?? ""));
       }
@@ -347,6 +380,43 @@ export async function syllabusDetail(
 }
 
 /**
+ * One LEVEL syllabus, for the detail screen — the (exam × track × level) address
+ * that replaces (exam × class × subject) for Quran and Arabic.
+ *
+ * Same published-only gate as `syllabusDetail`, with one addition: a guardian is
+ * refused outright. A parent reaches their child's level through
+ * `guardianChildSyllabus`, which resolves it from the child's own membership;
+ * letting them name a level directly would let any parent read any level's paper,
+ * including one their child is not in.
+ */
+export async function syllabusLevelDetail(
+  ctx: AppContext,
+  examId: string,
+  track: string,
+  level: string,
+): Promise<SyllabusShape | null> {
+  if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+  if (ctx.auth.role === "GUARDIAN") throw new ForbiddenError("এই সিলেবাস দেখার অনুমতি নেই");
+  const admin = isAdminStaff(ctx.auth);
+
+  const row = (await ExamSyllabus.findOne({
+    examId,
+    subjectTrack: track,
+    subjectLevel: level,
+  }).lean()) as unknown as (Parameters<typeof toShape>[0] & { publishedAt?: Date | null }) | null;
+  if (!row) return null;
+  if (!admin && !row.publishedAt) {
+    throw new ForbiddenError("এই সিলেবাস এখনও প্রকাশ করা হয়নি");
+  }
+
+  // "Mine" for a level row is holding it in the routine — there is no
+  // (classLevel × subject) pair key to test, and the row already records who it
+  // was sent to.
+  const isMine = row.approverUserId?.toString() === ctx.auth.userId;
+  return toShape(row, isMine, "", await levelLabelFor(track, level));
+}
+
+/**
  * The row a caller has JUST WRITTEN, shaped for the mutation's response.
  *
  * NOT `syllabusDetail`. That read is published-only for anyone who is not
@@ -370,14 +440,37 @@ export async function syllabusAfterWrite(
 ): Promise<SyllabusShape> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
 
-  const classId = doc.classId.toString();
   const mine = await myPairKeys(ctx);
+
+  // A LEVEL row has no class to look up, and no (classLevel × subject) pair key
+  // either — "mine" for a Quran/Arabic level is holding it in the routine, which
+  // is exactly what `approverUserId` already records.
+  if (doc.subjectLevel) {
+    const label = await levelLabelFor(doc.subjectTrack ?? "", doc.subjectLevel);
+    const isMine = doc.approverUserId?.toString() === ctx.auth.userId;
+    return toShape(doc, isMine, "", label);
+  }
+
+  const classId = doc.classId!.toString();
   const cls = (await Class.findById(classId).select("nameBn level").lean()) as unknown as {
     nameBn?: string;
     level?: number;
   } | null;
   const isMine = mine === null ? false : mine.has(`${cls?.level ?? 0}:${doc.subject}`);
   return toShape(doc, isMine, cls?.nameBn ?? "");
+}
+
+/**
+ * The human name of one level — both gender groups of it, joined, because they
+ * sit the same paper. Falls back to the raw level string so a card never renders
+ * a bare subject name with nothing to tell two levels apart.
+ */
+export async function levelLabelFor(track: string, level: string): Promise<string> {
+  const groups = (await SubjectGroup.find({ track, level })
+    .select("nameBn")
+    .lean()) as unknown as Array<{ nameBn?: string }>;
+  if (groups.length === 0) return level;
+  return groups.map((g) => g.nameBn ?? level).join(" + ");
 }
 
 /**
@@ -420,10 +513,16 @@ export async function guardianChildSyllabus(
     noteMd?: string;
   } | null;
 
+  // THIS child's Quran/Arabic levels, which are not derivable from their class:
+  // চতুর্থ শ্রেণি alone spans five Quran levels. Without this the parent of a
+  // Hifz 3 child would be shown nothing, or — worse — another level's paper.
+  const levelRows = await publishedLevelRowsForStudent(examId, studentId);
+
   const order = new Map(ROUTINE_SUBJECTS.map((s, i) => [s, i]));
-  const subjects = rows
-    .map((r) => toShape(r, false, cls?.nameBn ?? ""))
-    .sort((a, b) => (order.get(a.subject) ?? 99) - (order.get(b.subject) ?? 99));
+  const subjects = [
+    ...rows.map((r) => toShape(r, false, cls?.nameBn ?? "")),
+    ...levelRows,
+  ].sort((a, b) => (order.get(a.subject) ?? 99) - (order.get(b.subject) ?? 99));
 
   return {
     examId,
@@ -435,6 +534,123 @@ export async function guardianChildSyllabus(
     subjects,
   };
 }
+
+/**
+ * The PUBLISHED level syllabuses for one student, resolved through their
+ * Quran/Arabic group memberships.
+ *
+ * A student has at most one group per track (the unique (studentId, track)
+ * index guarantees it), so this returns at most two rows. A child in no group —
+ * every নার্সারি and কেজি child — gets none, which is right: below class one
+ * these subjects are taught class-wise and already come through the class rows.
+ */
+async function publishedLevelRowsForStudent(
+  examId: string,
+  studentId: string,
+): Promise<SyllabusShape[]> {
+  const memberships = (await SubjectGroupMembership.find({ studentId })
+    .select("groupId")
+    .lean()) as unknown as Array<{ groupId: Types.ObjectId }>;
+  if (memberships.length === 0) return [];
+
+  const groups = (await SubjectGroup.find({
+    _id: { $in: memberships.map((m) => m.groupId) },
+  })
+    .select("track level nameBn")
+    .lean()) as unknown as Array<{ track: string; level: string; nameBn?: string }>;
+  if (groups.length === 0) return [];
+
+  const rows = (await ExamSyllabus.find({
+    examId,
+    publishedAt: { $ne: null },
+    $or: groups.map((g) => ({ subjectTrack: g.track, subjectLevel: g.level })),
+  }).lean()) as unknown as Array<Parameters<typeof toShape>[0]>;
+
+  return rows.map((r) => {
+    // Label from the child's OWN group, so a বালিকা reader sees "বুক ২ (বালিকা)"
+    // even though the paper itself is shared with the boys' group.
+    const g = groups.find((x) => x.track === r.subjectTrack && x.level === r.subjectLevel);
+    return toShape(r, false, "", g?.nameBn ?? r.subjectLevel ?? "");
+  });
+}
+
+/**
+ * Every Quran/Arabic LEVEL that has students, with its syllabus row if one
+ * exists — the Principal's counterpart to the class board.
+ *
+ * Driven by the GROUPS rather than by the syllabus rows, so a level with no
+ * syllabus yet appears as a gap instead of being invisible. Levels with no
+ * members are skipped: prod carries an empty "হিফজ ১ (mixed)" beside the real
+ * boys'/girls' groups, and a leftover ZZTEST group, neither of which anyone
+ * should be asked to write a paper for.
+ */
+export async function examSyllabusLevels(
+  ctx: AppContext,
+  examId: string,
+): Promise<Array<{
+  track: string;
+  level: string;
+  label: string;
+  groupNames: string[];
+  memberCount: number;
+  subject: RoutineSubject;
+  row: SyllabusShape | null;
+}>> {
+  if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+  if (!isAdminStaff(ctx.auth)) throw new ForbiddenError("সিলেবাস বোর্ড দেখার অনুমতি নেই");
+
+  const groups = (await SubjectGroup.find({ active: { $ne: false } })
+    .select("track level nameBn")
+    .lean()) as unknown as Array<{
+    _id: Types.ObjectId;
+    track: string;
+    level: string;
+    nameBn?: string;
+  }>;
+
+  const counts = new Map<string, number>();
+  for (const m of (await SubjectGroupMembership.find({}).select("groupId").lean()) as unknown as Array<{
+    groupId: Types.ObjectId;
+  }>) {
+    const k = m.groupId.toString();
+    counts.set(k, (counts.get(k) ?? 0) + 1);
+  }
+
+  // One entry per (track, level) — the boys' and girls' groups of a level share
+  // one paper, so they share one entry and their names are listed together.
+  const byLevel = new Map<string, { track: string; level: string; names: string[]; members: number }>();
+  for (const g of groups) {
+    const members = counts.get(g._id.toString()) ?? 0;
+    if (members === 0) continue;
+    const key = g.track + "::" + g.level;
+    const e = byLevel.get(key) ?? { track: g.track, level: g.level, names: [], members: 0 };
+    e.names.push(g.nameBn ?? g.level);
+    e.members += members;
+    byLevel.set(key, e);
+  }
+
+  const rows = (await ExamSyllabus.find({
+    examId,
+    subjectLevel: { $exists: true },
+  }).lean()) as unknown as Array<Parameters<typeof toShape>[0]>;
+
+  return [...byLevel.values()]
+    .sort((a, b) => a.track.localeCompare(b.track) || a.level.localeCompare(b.level))
+    .map((e) => {
+      const label = e.names.join(" + ");
+      const found = rows.find((r) => r.subjectTrack === e.track && r.subjectLevel === e.level);
+      return {
+        track: e.track,
+        level: e.level,
+        label,
+        groupNames: e.names,
+        memberCount: e.members,
+        subject: (e.track === "quran" ? "QURAN" : "ARABIC") as RoutineSubject,
+        row: found ? toShape(found, false, "", label) : null,
+      };
+    });
+}
+
 
 /** The teacher's "waiting on you" inbox — the drawer badge's source. */
 export async function mySyllabusApprovals(ctx: AppContext): Promise<SyllabusShape[]> {
@@ -452,14 +668,41 @@ export async function mySyllabusApprovals(ctx: AppContext): Promise<SyllabusShap
   // ONE read for the whole inbox rather than a class lookup per row: a teacher
   // holding the same subject in several classes is the normal case here, not
   // the exception, so the ids repeat.
+  const classIds = rows.map((r) => r.classId).filter((id): id is Types.ObjectId => id != null);
   const classes = (await Class.find({
-    _id: { $in: [...new Set(rows.map((r) => r.classId.toString()))].map((id) => new Types.ObjectId(id)) },
+    _id: { $in: [...new Set(classIds.map((id) => id.toString()))].map((id) => new Types.ObjectId(id)) },
   })
     .select("nameBn")
     .lean()) as unknown as Array<{ _id: Types.ObjectId; nameBn?: string }>;
   const nameById = new Map(classes.map((c) => [c._id.toString(), c.nameBn ?? ""]));
 
-  return rows.map((r) => toShape(r, true, nameById.get(r.classId.toString()) ?? ""));
+  // Level rows have no class to name. One teacher can hold two Arabic levels,
+  // so without a label their cards would be two identical "আরবি" headings —
+  // the same failure D-#609 fixed for classes.
+  const levelRows = rows.filter((r) => r.subjectLevel != null);
+  const labelByLevel = new Map<string, string>();
+  if (levelRows.length > 0) {
+    const groups = (await SubjectGroup.find({
+      $or: levelRows.map((r) => ({ track: r.subjectTrack, level: r.subjectLevel })),
+    })
+      .select("track level nameBn")
+      .lean()) as unknown as Array<{ track: string; level: string; nameBn?: string }>;
+    for (const g of groups) {
+      const k = g.track + "::" + g.level;
+      const seen = labelByLevel.get(k);
+      // Both gender groups of a level share the paper, so both names are shown.
+      labelByLevel.set(k, seen ? seen + " + " + (g.nameBn ?? g.level) : (g.nameBn ?? g.level));
+    }
+  }
+
+  return rows.map((r) =>
+    toShape(
+      r,
+      true,
+      r.classId ? (nameById.get(r.classId.toString()) ?? "") : "",
+      r.subjectLevel ? (labelByLevel.get(r.subjectTrack + "::" + r.subjectLevel) ?? r.subjectLevel) : "",
+    ),
+  );
 }
 
 /**

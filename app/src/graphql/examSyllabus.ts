@@ -24,9 +24,14 @@ export interface SyllabusT {
   /** Null on a `pending` placeholder — nothing is stored for it yet. */
   id: string | null;
   examId: string;
-  classId: string;
+  /** Null on a LEVEL row — Quran/Arabic from class one up are keyed by track+level. */
+  classId: string | null;
   /** The class's Bangla name. Carried per ROW because `mySyllabusApprovals` spans classes. */
   classLabel: string;
+  subjectTrack: string | null;
+  subjectLevel: string | null;
+  /** What a level row shows in place of `classLabel` — "বুক ২ (বালক) + বুক ২ (বালিকা)". */
+  levelLabel: string;
   /** The teacher this row was sent to, once sent. Null while it is still a draft. */
   approverUserId: string | null;
   /** Who signed it off and when — NOT the same question as who it was sent to. */
@@ -65,7 +70,7 @@ export interface SyllabusApproverT {
 }
 
 const SYLLABUS_FIELDS = `
-  id examId classId classLabel approverUserId teacherApprovedBy teacherApprovedAt teacherBypass subject bodyMd questionTypes examDateKey status sendBackReason
+  id examId classId classLabel subjectTrack subjectLevel levelLabel approverUserId teacherApprovedBy teacherApprovedAt teacherBypass subject bodyMd questionTypes examDateKey status sendBackReason
   isMine writtenMarks oralMarks totalMarks pending
   marks { seq label itemType component count marksEach total }
 `;
@@ -103,6 +108,46 @@ export const EXAM_SYLLABUS_DETAIL = gql<
   }
 `;
 
+/**
+ * One LEVEL syllabus — the (exam × track × level) address that replaces
+ * (exam × class × subject) for Quran and Arabic from class one up.
+ */
+export const EXAM_SYLLABUS_LEVEL_DETAIL = gql<
+  { examSyllabusLevelDetail: SyllabusT | null },
+  { examId: string; track: string; level: string }
+>`
+  query ExamSyllabusLevelDetail($examId: String!, $track: String!, $level: String!) {
+    examSyllabusLevelDetail(examId: $examId, track: $track, level: $level) { ${SYLLABUS_FIELDS} }
+  }
+`;
+
+export interface SyllabusLevelRowT {
+  track: string;
+  level: string;
+  /** Both gender groups of the level, joined — they sit the same paper. */
+  label: string;
+  groupNames: string[];
+  memberCount: number;
+  subject: string;
+  row: SyllabusT | null;
+}
+
+/**
+ * The level counterpart of the class board. Driven by the GROUPS, so a level
+ * nobody has written yet shows as a gap instead of being invisible.
+ */
+export const EXAM_SYLLABUS_LEVELS = gql<
+  { examSyllabusLevels: SyllabusLevelRowT[] },
+  { examId: string }
+>`
+  query ExamSyllabusLevels($examId: String!) {
+    examSyllabusLevels(examId: $examId) {
+      track level label groupNames memberCount subject
+      row { ${SYLLABUS_FIELDS} }
+    }
+  }
+`;
+
 export const GUARDIAN_CHILD_SYLLABUS = gql<
   { guardianChildSyllabus: ClassSyllabusT },
   { examId: string; studentId: string }
@@ -127,10 +172,10 @@ export const EXAM_SYLLABUS_APPROVER = gql<
   {
     examSyllabusApprover: { holders: SyllabusApproverT[]; defaultUserId: string | null };
   },
-  { classId: string; subject: string }
+  { classId?: string | null; subject: string; track?: string | null; level?: string | null }
 >`
-  query ExamSyllabusApprover($classId: String!, $subject: String!) {
-    examSyllabusApprover(classId: $classId, subject: $subject) {
+  query ExamSyllabusApprover($classId: String, $subject: String!, $track: String, $level: String) {
+    examSyllabusApprover(classId: $classId, subject: $subject, track: $track, level: $level) {
       holders { userId periods }
       defaultUserId
     }
@@ -139,7 +184,10 @@ export const EXAM_SYLLABUS_APPROVER = gql<
 
 export interface SaveSyllabusVars {
   examId: string;
-  classId: string;
+  /** Exactly one of `classId` or `subjectLevel` — the server refuses both and neither. */
+  classId?: string | null;
+  subjectTrack?: string | null;
+  subjectLevel?: string | null;
   subject: string;
   bodyMd: string;
   marks: Array<{
@@ -158,7 +206,9 @@ export interface SaveSyllabusVars {
 export const SAVE_EXAM_SYLLABUS = gql<{ saveExamSyllabus: SyllabusT }, SaveSyllabusVars>`
   mutation SaveExamSyllabus(
     $examId: String!
-    $classId: String!
+    $classId: String
+    $subjectTrack: String
+    $subjectLevel: String
     $subject: String!
     $bodyMd: String!
     $marks: [SyllabusMarkRowInput!]!
@@ -168,6 +218,8 @@ export const SAVE_EXAM_SYLLABUS = gql<{ saveExamSyllabus: SyllabusT }, SaveSylla
     saveExamSyllabus(
       examId: $examId
       classId: $classId
+      subjectTrack: $subjectTrack
+      subjectLevel: $subjectLevel
       subject: $subject
       bodyMd: $bodyMd
       marks: $marks

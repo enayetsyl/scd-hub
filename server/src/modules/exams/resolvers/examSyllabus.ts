@@ -28,6 +28,7 @@ import {
   publishSyllabus,
   routineHoldersFor,
   defaultApproverFor,
+  holdersForRow,
 } from "../services/ExamSyllabusService";
 import {
   classSyllabus,
@@ -37,6 +38,8 @@ import {
   mySyllabusApprovals,
   mySyllabusApprovalCount,
   examSyllabusBoard,
+  examSyllabusLevels,
+  syllabusLevelDetail,
   type SyllabusShape,
   type ClassSyllabusView,
 } from "../services/ExamSyllabusReadService";
@@ -70,8 +73,14 @@ SyllabusRef.implement({
   fields: (t) => ({
     id: t.string({ nullable: true, resolve: (r) => r.id }),
     examId: t.exposeString("examId"),
-    classId: t.exposeString("classId"),
+    // Nullable since D-#688: a LEVEL row (Quran/Arabic from class one up) has no
+    // class. The notification deep-link already falls back to the syllabus list
+    // when the (exam × class × subject) triple is incomplete.
+    classId: t.string({ nullable: true, resolve: (r) => r.classId }),
     classLabel: t.exposeString("classLabel"),
+    subjectTrack: t.string({ nullable: true, resolve: (r) => r.subjectTrack }),
+    subjectLevel: t.string({ nullable: true, resolve: (r) => r.subjectLevel }),
+    levelLabel: t.exposeString("levelLabel"),
     approverUserId: t.string({ nullable: true, resolve: (r) => r.approverUserId }),
     teacherApprovedBy: t.string({ nullable: true, resolve: (r) => r.teacherApprovedBy }),
     teacherApprovedAt: t.string({ nullable: true, resolve: (r) => r.teacherApprovedAt }),
@@ -127,6 +136,25 @@ ApproverOptionsRef.implement({
   fields: (t) => ({
     holders: t.field({ type: [ApproverRef], resolve: (r) => r.holders }),
     defaultUserId: t.string({ nullable: true, resolve: (r) => r.defaultUserId }),
+  }),
+});
+
+const LevelBoardRowRef = builder.objectRef<Awaited<ReturnType<typeof examSyllabusLevels>>[number]>(
+  "SyllabusLevelBoardRow",
+);
+LevelBoardRowRef.implement({
+  description:
+    "One Quran/Arabic LEVEL of an exam, with its syllabus row if one exists. Driven by the GROUPS " +
+    "rather than by the rows, so a level nobody has written yet shows as a gap instead of being " +
+    "invisible. Levels with no members are omitted.",
+  fields: (t) => ({
+    track: t.exposeString("track"),
+    level: t.exposeString("level"),
+    label: t.exposeString("label"),
+    groupNames: t.stringList({ resolve: (r) => r.groupNames }),
+    memberCount: t.exposeInt("memberCount"),
+    subject: t.exposeString("subject"),
+    row: t.field({ type: SyllabusRef, nullable: true, resolve: (r) => r.row }),
   }),
 });
 
@@ -191,6 +219,33 @@ builder.queryFields((t) => ({
       syllabusDetail(ctx, args.examId, args.classId, args.subject as RoutineSubject),
   }),
 
+  examSyllabusLevels: t.field({
+    type: [LevelBoardRowRef],
+    description:
+      "Every Quran/Arabic level that has students, with its syllabus row — the level counterpart " +
+      "of the class board. These subjects are taught in cross-grade level groups from class one " +
+      "up, so they do not appear on any single class's board (D-#688).",
+    authScopes: { hasPermission: "exam:manage" },
+    args: { examId: t.arg.string({ required: true }) },
+    resolve: async (_root, args, ctx) => examSyllabusLevels(ctx, args.examId),
+  }),
+
+  examSyllabusLevelDetail: t.field({
+    type: SyllabusRef,
+    nullable: true,
+    description:
+      "One LEVEL syllabus, addressed by (exam × track × level). Refuses an unpublished row to " +
+      "anyone but Principal/Office, and refuses guardians outright — a parent reaches their " +
+      "child's level through guardianChildSyllabus, which resolves it from the child's membership.",
+    authScopes: { authenticated: true },
+    args: {
+      examId: t.arg.string({ required: true }),
+      track: t.arg.string({ required: true }),
+      level: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => syllabusLevelDetail(ctx, args.examId, args.track, args.level),
+  }),
+
   guardianChildSyllabus: t.field({
     type: ClassSyllabusRef,
     description:
@@ -223,16 +278,27 @@ builder.queryFields((t) => ({
 
   examSyllabusApprover: t.field({
     type: ApproverOptionsRef,
-    description: "The routine holders for a (class × subject), most periods first (§7.1).",
+    description:
+      "The routine holders for a (class × subject) — or, with `track`+`level` instead of `classId`, for a " +
+      "Quran/Arabic LEVEL. Most periods first (§7.1). Asking the class question about a level " +
+      "would offer every Quran and Arabic teacher in the school, because a `subjectgroup` slot " +
+      "carries no class.",
     authScopes: { hasPermission: "exam:manage" },
     args: {
-      classId: t.arg.string({ required: true }),
+      classId: t.arg.string({ required: false }),
       subject: t.arg.string({ required: true }),
+      track: t.arg.string({ required: false }),
+      level: t.arg.string({ required: false }),
     },
-    resolve: async (_root, args) => ({
-      holders: await routineHoldersFor(args.classId, args.subject as RoutineSubject),
-      defaultUserId: await defaultApproverFor(args.classId, args.subject as RoutineSubject),
-    }),
+    resolve: async (_root, args) => {
+      const holders = await holdersForRow({
+        classId: args.classId ?? null,
+        subject: args.subject as RoutineSubject,
+        subjectTrack: args.track ?? null,
+        subjectLevel: args.level ?? null,
+      });
+      return { holders, defaultUserId: holders[0]?.userId ?? null };
+    },
   }),
 }));
 
@@ -274,7 +340,9 @@ builder.mutationFields((t) => ({
     authScopes: { hasPermission: "exam:manage" },
     args: {
       examId: t.arg.string({ required: true }),
-      classId: t.arg.string({ required: true }),
+      classId: t.arg.string({ required: false }),
+      subjectTrack: t.arg.string({ required: false }),
+      subjectLevel: t.arg.string({ required: false }),
       subject: t.arg.string({ required: true }),
       bodyMd: t.arg.string({ required: true }),
       marks: t.arg({ type: [MarkRowInput], required: true }),
@@ -284,7 +352,9 @@ builder.mutationFields((t) => ({
     resolve: async (_root, args, ctx) => {
       const doc = await saveSyllabus(ctx, {
         examId: args.examId,
-        classId: args.classId,
+        classId: args.classId ?? null,
+        subjectTrack: (args.subjectTrack ?? null) as "quran" | "arabic" | null,
+        subjectLevel: args.subjectLevel ?? null,
         subject: args.subject as RoutineSubject,
         bodyMd: args.bodyMd,
         marks: args.marks.map((m) => ({
