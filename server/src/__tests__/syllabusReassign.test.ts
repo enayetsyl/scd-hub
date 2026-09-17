@@ -55,7 +55,11 @@ describe("the reassign service", () => {
   });
 
   test("only a routine holder of the pair can be seated (D-#366)", () => {
-    expect(FN).toMatch(/isRoutineHolder\(approverUserId, doc\.classId, doc\.subject\)/);
+    // Through holdersForRow, not the class-only lookup: a LEVEL row (Quran/Arabic
+    // from class one up) has no class, and asking the class question about it
+    // would offer every Quran and Arabic teacher in the school (D-#688).
+    expect(FN).toMatch(/holdersForRow\(doc\)/);
+    expect(FN).toMatch(/\.userId === approverUserId/);
   });
 
   test("it is exam:manage, so Office can do it and not only the Principal", () => {

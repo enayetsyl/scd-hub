@@ -54,7 +54,26 @@ export interface ISyllabusMarkRow {
 export interface IExamSyllabus extends Document {
   _id: Types.ObjectId;
   examId: Types.ObjectId;
-  classId: Types.ObjectId;
+  /**
+   * The class this syllabus belongs to — for every general subject, and for
+   * Quran/Arabic BELOW class one, which are taught class-wise (নার্সারি, কেজি).
+   * Null on a LEVEL row; see `subjectLevel`.
+   */
+  classId?: Types.ObjectId | null;
+  /**
+   * Quran and Arabic from class one upward are taught in cross-grade LEVEL
+   * groups, not classes — চতুর্থ শ্রেণি alone spans five Quran levels, and
+   * বুক ২ (বালিকা) holds children from four different classes. A class-keyed
+   * syllabus for those subjects would have to be five papers at once, and its
+   * মানবন্টন could only ever be right for one of them.
+   *
+   * Keyed on the LEVEL and not on the `SubjectGroup`, because the boys' and
+   * girls' groups of one level sit the SAME paper (owner ruling): the gender
+   * split is a teaching arrangement, exactly as sections are under a class.
+   * `subjectLevel` matches `SubjectGroup.level` ("Book 2", "Hifz 1", "Qaida").
+   */
+  subjectTrack?: "quran" | "arabic" | null;
+  subjectLevel?: string | null;
   subject: RoutineSubject;
   bodyMd: string;
   marks: ISyllabusMarkRow[];
@@ -105,7 +124,11 @@ const MarkRowSchema = new Schema<ISyllabusMarkRow>(
 const ExamSyllabusSchema = new Schema<IExamSyllabus>(
   {
     examId: { type: Schema.Types.ObjectId, ref: "Exam", required: true },
-    classId: { type: Schema.Types.ObjectId, ref: "Class", required: true },
+    // NOT `default: null` — the partial indexes below key off whether the field
+    // EXISTS, and a stored null would make every class row look like a level row.
+    classId: { type: Schema.Types.ObjectId, ref: "Class" },
+    subjectTrack: { type: String, enum: ["quran", "arabic"] },
+    subjectLevel: { type: String, trim: true },
     subject: { type: String, required: true },
     bodyMd: { type: String, default: "" },
     marks: { type: [MarkRowSchema], default: [] },
@@ -132,14 +155,56 @@ const ExamSyllabusSchema = new Schema<IExamSyllabus>(
   { timestamps: true },
 );
 
-/** One syllabus per (exam × class × subject) — the whole identity of the row. */
-ExamSyllabusSchema.index({ examId: 1, classId: 1, subject: 1 }, { unique: true });
+/**
+ * A row is identified EITHER by class or by level, never both, so the old single
+ * unique index is split in two — each one partial, so it only constrains its own
+ * kind of row.
+ *
+ * Without the split, every level row would carry `classId: null` and the old
+ * index would allow exactly ONE Arabic row across the whole exam. Four levels
+ * need four rows.
+ */
+ExamSyllabusSchema.index(
+  { examId: 1, classId: 1, subject: 1 },
+  { unique: true, partialFilterExpression: { classId: { $exists: true } } },
+);
+ExamSyllabusSchema.index(
+  { examId: 1, subjectTrack: 1, subjectLevel: 1 },
+  { unique: true, partialFilterExpression: { subjectLevel: { $exists: true } } },
+);
 /** The Office coverage board and the guardian read are both "this exam, this class". */
 ExamSyllabusSchema.index({ examId: 1, classId: 1, status: 1 });
 /** The teacher's "waiting on you" inbox. */
 ExamSyllabusSchema.index({ approverUserId: 1, status: 1 });
 
 export const EXAM_SYLLABUS_FULL_MARKS = SYLLABUS_FULL_MARKS;
+
+/**
+ * A syllabus is anchored to a CLASS or to a LEVEL — exactly one.
+ *
+ * The partial indexes already stop duplicates, but they cannot stop a row that
+ * is anchored to neither (invisible to every reader) or to both (it would appear
+ * twice and the two copies could drift). Checked in code so the failure is a
+ * sentence rather than a duplicate-key error.
+ */
+export function validateSyllabusAnchor(row: {
+  classId?: unknown;
+  subjectTrack?: unknown;
+  subjectLevel?: unknown;
+}): string | null {
+  const byClass = row.classId != null;
+  const byLevel = row.subjectLevel != null;
+  if (byClass && byLevel) {
+    return "একটি সিলেবাস শ্রেণি অথবা লেভেল — যেকোনো একটির সাথে যুক্ত হবে, দুটোর সাথে নয়।";
+  }
+  if (!byClass && !byLevel) {
+    return "সিলেবাসটি কোন শ্রেণি বা কোন লেভেলের, তা দিতে হবে।";
+  }
+  if (byLevel && row.subjectTrack == null) {
+    return "লেভেলভিত্তিক সিলেবাসে ট্র্যাক (কুরআন / আরবি) দিতে হবে।";
+  }
+  return null;
+}
 
 /**
  * The shape validation both the model and the resolvers run. Returns a Bangla

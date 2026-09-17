@@ -5275,6 +5275,11 @@ const STR_BN = {
   syStatPrincipal: "আপনার কাছে",
   syStatPublished: "প্রকাশিত",
   syBlockedSum: "মানবন্টন মেলেনি — প্রকাশ করা যাবে না।",
+  // --- Level-keyed Quran/Arabic syllabuses (D-#688) ---
+  syLevels: "কুরআন ও আরবি (লেভেল অনুযায়ী)",
+  syLevelsHint: "প্রথম শ্রেণি থেকে কুরআন ও আরবি লেভেল অনুযায়ী পড়ানো হয় — শ্রেণি অনুযায়ী নয়। তাই এই সিলেবাসগুলো এখানে, শ্রেণির তালিকায় নয়।",
+  syLevelStudents: "জন শিক্ষার্থী",
+  syNoLevels: "কোনো লেভেল গ্রুপে এখনও শিক্ষার্থী নেই।",
   qrLoadMore: "আরও দেখুন",
   // --- Reviewer progress (QR-5, D-#537) ---
   qcTitle: "এই অংশের সামগ্রিক চিত্র",
@@ -9626,6 +9631,12 @@ const STR_EN: StrTable = {
   syStatPrincipal: "With you",
   syStatPublished: "Published",
   syBlockedSum: "The mark distribution does not add up — this cannot be published.",
+  // --- Level-keyed Quran/Arabic syllabuses (D-#688) ---
+  syLevels: "Quran & Arabic (by level)",
+  syLevelsHint:
+    "From class one up, Quran and Arabic are taught by level rather than by class — so these syllabuses live here, not on the class list.",
+  syLevelStudents: "students",
+  syNoLevels: "No level group has students yet.",
   qrLoadMore: "Load more",
   // --- Reviewer progress (QR-5, D-#537) ---
   qcTitle: "This slice at a glance",
