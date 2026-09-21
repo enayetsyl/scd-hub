@@ -152,11 +152,12 @@ const ENG: Seed[] = [
  *
  * Same ruling as English (D-#672), applied to the বাংলা table by the owner: a printed
  * item that joins SEPARATE abilities with a slash is one topic per alternative, because
- * the setter prints one and a student's marks land on that side alone. Five items do:
+ * the setter prints one and a student's marks land on that side alone. SIX items do:
  *
  *   ৬  বিপরীত শব্দ / সমার্থক শব্দ              → 2
  *   ৯  কবিতা / গদ্য অনুচ্ছেদের মূলভাব            → 2
  *   ১০ ভাষারীতি পরিবর্তন / পদ নির্ণয় / ক্রিয়ার কাল → 3
+ *   ১১ প্রশ্ন তৈরিকরণ / বিরামচিহ্ন প্রয়োগ         → 2
  *   ১৪ ফরম পূরণ / আবেদনপত্র                   → 2
  *   ১৫ রচনা লিখন — সূত্রসহ / উন্মুক্ত            → 2
  *
@@ -164,12 +165,19 @@ const ENG: Seed[] = [
  * prints its items in English (D-#670); বাংলা prints its own, so the house rule applies
  * unchanged.
  *
- * `marks` do not sum to 100 — an item counts once per alternative, so বাংলা is **137
- * across 21 rows** while any one printed paper is 100.
+ * `marks` do not sum to 100 — an item counts once per alternative, so বাংলা is **142
+ * across 22 rows** while any one printed paper is 100.
  *
- * Item ১১ (প্রশ্ন তৈরিকরণ / বিরামচিহ্ন প্রয়োগ) ALSO prints a slash and is deliberately
- * left as one row: the owner listed 6, 9, 10, 14 and 15 and not this one. It is the open
- * question on this table — splitting it is one line if the owner wants it.
+ * ITEM ১১ WAS SPLIT on 2026-09-20 (owner instruction). The কাঠামো prints
+ * *"প্রশ্ন তৈরিকরণ / প্রদত্ত অনুচ্ছেদে বিরামচিহ্ন প্রয়োগ"* and annotates it
+ * **"দুইটির যেকোনো একটি"** — it is the SIXTH either/or slot, and the list this file was
+ * first seeded from named only five. A combined row averaged two different lessons into
+ * one percentage, so a weak row could not tell a teacher what to re-teach.
+ *
+ * ITEM ১২ (যুক্তবর্ণ বিভাজন **ও** শব্দ গঠন) IS NOT SPLIT, and the difference is in the
+ * source: it carries no "যেকোনো একটি" note. The **ও** means both tasks are printed
+ * inside one 5-mark item, so the two are not alternatives and a student sits both. One
+ * row measures what the paper actually tests (owner ruling, 2026-09-20).
  */
 const BAN: Seed[] = [
   skill("BAN", "POEM-RECALL", "কবিতা মুখস্থ লিখন", 10, 1), //                       ১
@@ -186,8 +194,9 @@ const BAN: Seed[] = [
   skill("BAN", "LANGUAGE-STYLE", "ভাষারীতি পরিবর্তন", 5, 10), //                      ১০ ·ক
   skill("BAN", "PARTS-OF-SPEECH", "পদ নির্ণয়", 5, 10), //                            ১০ ·খ
   skill("BAN", "VERB-TENSE", "ক্রিয়ার কাল", 5, 10), //                               ১০ ·গ
-  skill("BAN", "QUESTION-MAKING", "প্রশ্ন তৈরিকরণ ও বিরামচিহ্ন প্রয়োগ", 5, 11), //       ১১
-  skill("BAN", "CONJUNCT", "যুক্তবর্ণ বিভাজন ও শব্দ গঠন", 5, 12), //                    ১২
+  skill("BAN", "QUESTION-MAKING", "প্রশ্ন তৈরিকরণ", 5, 11), //                         ১১ ·ক
+  skill("BAN", "PUNCTUATION-BN", "বিরামচিহ্ন প্রয়োগ", 5, 11), //                       ১১ ·খ
+  skill("BAN", "CONJUNCT", "যুক্তবর্ণ বিভাজন ও শব্দ গঠন", 5, 12), //                    ১২ (একটিই — ও, অথবা নয়)
   skill("BAN", "ONE-WORD", "এককথায় প্রকাশ", 5, 13), //                              ১৩
   skill("BAN", "FORM-FILL", "ফরম পূরণ", 5, 14), //                                    ১৪ ·ক
   skill("BAN", "APPLICATION", "আবেদনপত্র লিখন", 5, 14), //                            ১৪ ·খ
@@ -245,6 +254,18 @@ function codeOf(subject: HwSubject, key: string): string {
  * unchanged (`PARTS-OF-SPEECH`, `TENSE`, `ARTICLE`, `AFFIX`, `WH-QUESTION`,
  * `PUNCTUATION`, `VERB-FORM`, `LETTER`, `COMPOSITION`) are deliberately REUSED, so a
  * paper already tagged with one keeps its marks and simply reads in English from now on.
+ *
+ * The 2026-09-20 ১১ split RETIRES NOTHING. `QUESTION-MAKING` is reused with a NARROWED
+ * label (প্রশ্ন তৈরিকরণ ও বিরামচিহ্ন প্রয়োগ → প্রশ্ন তৈরিকরণ) and `PUNCTUATION-BN` is new,
+ * so `--prune` has nothing to deactivate on this run.
+ *
+ * Narrowing a LIVE code is normally wrong — a বিরামচিহ্ন mark already stored under the
+ * combined code would silently start reading as প্রশ্ন তৈরিকরণ. It was checked against
+ * prod on 2026-09-20, not assumed: **every score row belongs to the English paper, and
+ * no BAN topic carries a mark at all.** (Prod had 6 score rows by then, not the 0 it had
+ * three days earlier — so this is a fact with a short shelf life.) Re-check before any
+ * further narrowing; once a বাংলা paper is scored, the honest move is a NEW code for both
+ * halves instead.
  */
 async function pruneUnseeded(
   subjects: readonly HwSubject[],
