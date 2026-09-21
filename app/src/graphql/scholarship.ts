@@ -94,6 +94,18 @@ export const SCHOLARSHIP_STUDENT_QUERY = gql`
       totalEarned
       totalAvailable
       overallPercent
+      papers {
+        paperId
+        label
+        date
+        earned
+        available
+        percent
+        rank {
+          rank
+          of
+        }
+      }
       topics {
         key
         label
@@ -106,6 +118,15 @@ export const SCHOLARSHIP_STUDENT_QUERY = gql`
         classGap
         behindClass
         paperCount
+        series {
+          paperId
+          label
+          percent
+        }
+        classRank {
+          rank
+          of
+        }
       }
       chapters {
         key
@@ -119,6 +140,15 @@ export const SCHOLARSHIP_STUDENT_QUERY = gql`
         classGap
         behindClass
         paperCount
+        series {
+          paperId
+          label
+          percent
+        }
+        classRank {
+          rank
+          of
+        }
       }
     }
   }

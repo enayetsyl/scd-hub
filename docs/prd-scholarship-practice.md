@@ -1,6 +1,7 @@
 # PRD — Scholarship practice papers & topic-wise weakness analysis (`scholarship` module)
 
-**Status:** SC-0..SC-4 BUILT and in production (2026-09-14). SC-5/SC-6 contracted, unbuilt.
+**Status:** SC-0..SC-4 BUILT and in production (2026-09-14); **SC-7 BUILT 2026-09-21**. SC-5/SC-6
+contracted, unbuilt.
 **Decision block:** D-#656–#665, reserved against `origin/dev@929596d3` (2026-09-14, max D-#655).
 **Owner ask (2026-09-14):** "I will prepare scholarship-exam-style questions for each subject and
 give them to students on different days. I want to declare a question which may have different
@@ -19,6 +20,7 @@ topic or in which chapter."
 | SC-4 | Class analysis: heat-map, trend across papers | — |
 | SC-5 | Guardian release (publish gate) | SC-3 |
 | SC-6 | Analysis PDF / print | SC-3 |
+| SC-7 | The second door through the floor, per-topic trend, class position, paper-by-paper list | — |
 
 **SC-0..SC-3 is the minimum that answers the owner's question.** SC-4..SC-6 are additive and each
 stands alone.
@@ -325,7 +327,7 @@ does **not** sum to the paper total, by design — it answers "how does she do o
 chapter 2", which is the question actually asked. The topic axis, with exactly one topic per item,
 *does* sum to the total, and is the axis that reconciles.
 
-### 6.2 The reliability floor (D-#662) — the rule that stops the feature lying
+### 6.2 The reliability floor (D-#662, amended by D-#691 — read §6.5) — the rule that stops the feature lying
 
 **No topic is called weak on fewer than 15 available marks.** Below that it reports
 `যথেষ্ট তথ্য নেই` — not a percentage, not a colour, not a rank.
@@ -358,6 +360,53 @@ the top.
 **SC-4 — class.** Topic × student heat-map, one cell per pair, `যথেষ্ট তথ্য নেই` cells rendered
 distinctly from weak cells (grey, not red) — a floor breach must never look like a failure. Plus a
 per-topic class mean row, which is what identifies a re-teach.
+
+### 6.5 SC-7 — the second door, the trend, and the place (D-#691/#692, 2026-09-21)
+
+Two English papers were scored and the owner opened the payoff screen. It ranked correctly and
+told him nothing he could act on: **17 of 24 topic rows sat under the floor**, and the three worst
+results in the whole profile were among them — cardinal numbers 0/10, time-information 0/10,
+rearrange-sentences 0/14. Each is a 5-mark item, so the 15-mark floor would have gone on hiding
+them until a third paper.
+
+**The second door (D-#691).** `hasVerdict(available, papers)` opens on `available >= 15` **OR**
+`papers >= SCHOLARSHIP_MIN_PAPERS_FOR_VERDICT` (2). §6.2 stands unchanged for the case it argued —
+one sitting, however lopsided, is still refused — and the mark floor itself is untouched. What is
+added is the case §6.2 did not consider: the same small item asked twice is two independent
+readings, and two readings agreeing is evidence of a kind the mark count cannot represent. Sample
+SIZE remains the mark count; this is sample INDEPENDENCE.
+
+Who asks which gate:
+
+| surface | gate | why |
+|---|---|---|
+| student topic/chapter row | marks **or** papers | the child's own evidence on that topic |
+| heat-map cell | marks **or** papers | same child, same topic — the two screens must agree |
+| class mean row | marks only | the cohort's marks pooled clear 15 long before any one child's do, so the second door would never fire; and a paper count taken from one student is the wrong number for a figure about everybody |
+| trend point | neither | a point is not a verdict (below) |
+
+**The trend (D-#692).** Every axis row carries `series` — one point per sitting, oldest first,
+each the **raw unfloored** percent of that paper alone. A point is a reading, not a judgement, and
+the row above it already carries the judgement; blanking the points would leave a row that says
+দুর্বল with nothing to show for it. The line is drawn from the second sitting only: one dot is not
+a direction. `loadScope` sorts papers by `paperDate` so the series never runs backwards.
+
+**The place (D-#692).** `rankAxis` gives every student a `{rank, of}` per axis value and
+`paperResults` does the same per paper.
+
+- **`of` counts the students who SAT it**, not the section. Four of eight sat Unit 2; "৫ম of 8"
+  would describe a race four of them never entered. A child with no marks on a topic is absent
+  from its ranking, not last — not sitting is not losing.
+- **Ties share a place and the next is skipped** (1, 2, 2, 4). Separating equal percents by an
+  arbitrary tiebreak states a fact the marks do not contain.
+- **An `insufficient` row gets no rank.** A rank is a comparison of percentages; printing one on a
+  row that has just refused its percentage would put the hidden number back on screen and undo
+  D-#662 through the side door.
+
+**The paper-by-paper list**, promised in §6.4 and missing from SC-3, now opens the screen: her
+total and her place on each sitting, oldest first. A paper she did not sit is absent rather than
+present as a zero (D-#660), and a paper whose items are all still unmarked is absent too — an
+unfinished marking pass is not a result.
 
 ## §7 — Journeys
 

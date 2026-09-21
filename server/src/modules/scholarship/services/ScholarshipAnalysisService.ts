@@ -11,11 +11,14 @@
  *
  * Two refusals are deliberate and are what make the output trustworthy:
  *
- *  - **The reliability floor** (D-#662). Under `SCHOLARSHIP_MIN_MARKS_FOR_VERDICT`
- *    available marks there is NO percentage, no band and no rank — the row reports
- *    `insufficient`. Without it the first paper yields the loudest signal the feature
- *    will ever produce (one 5-mark item, 1 earned, "20% — weakest") off a sample of one
- *    question. The EX-3 "blank, never 0" posture, moved from a row to an axis.
+ *  - **The reliability floor** (D-#662, amended by D-#691). Under
+ *    `SCHOLARSHIP_MIN_MARKS_FOR_VERDICT` available marks there is NO percentage, no band
+ *    and no rank — the row reports `insufficient`. Without it the first paper yields the
+ *    loudest signal the feature will ever produce (one 5-mark item, 1 earned, "20% —
+ *    weakest") off a sample of one question. The EX-3 "blank, never 0" posture, moved
+ *    from a row to an axis. A SECOND door was added at D-#691: a topic set on
+ *    `SCHOLARSHIP_MIN_PAPERS_FOR_VERDICT` separate papers also earns a verdict, because
+ *    two sittings agreeing is evidence the mark count cannot see.
  *  - **ABSENT contributes to neither side** (D-#660), personal or class. A student who
  *    did not sit a paper is not a zero on it.
  *
@@ -33,6 +36,7 @@ import {
   SCHOLARSHIP_BAND_WEAK_BELOW,
   SCHOLARSHIP_CLASS_GAP_FLAG,
   SCHOLARSHIP_MIN_MARKS_FOR_VERDICT,
+  SCHOLARSHIP_MIN_PAPERS_FOR_VERDICT,
   type HwSubject,
 } from "@scd/shared";
 import { ScholarshipPaper, type IScholarshipPaper } from "../models/ScholarshipPaper";
@@ -41,6 +45,30 @@ import { ScholarshipTopic } from "../models/ScholarshipTopic";
 import { Student } from "../../foundation/models/Student";
 
 export type Band = "weak" | "fair" | "good" | "insufficient";
+
+/** One paper's reading of one axis value — a point on the trend line (SC-7). The
+ *  percent here is the RAW arithmetic of that single sitting, deliberately unfloored:
+ *  a trend point is not a verdict, and the row it hangs under already carries the
+ *  verdict. Hiding the points would leave a row that says "weak" with nothing to show
+ *  for it. */
+export interface SeriesPoint {
+  paperId: string;
+  /** The paper's human name, for the point's accessibility label. */
+  label: string;
+  earned: number;
+  available: number;
+  percent: number;
+}
+
+/** A position among the students who actually sat this axis value (SC-7). Ties share a
+ *  place and the next place is skipped (1, 2, 2, 4) — the standard competition rule, so
+ *  two children on the same percent are never separated by an arbitrary tiebreak. */
+export interface RankView {
+  rank: number;
+  /** How many students the rank is OUT OF. Never the section size: a child who has not
+   *  sat a paper covering this topic is not someone to be ahead of. */
+  of: number;
+}
 
 export interface AxisRow {
   /** Topic code, or the chapter number as a string. */
@@ -61,6 +89,10 @@ export interface AxisRow {
   behindClass: boolean;
   /** Papers this student actually sat that carried at least one matching item. */
   paperCount: number;
+  /** Oldest paper first. Empty on the class heat-map, which has no single student. */
+  series: SeriesPoint[];
+  /** Null under the floor — an unranked row must not also claim a place (D-#662). */
+  classRank: RankView | null;
 }
 
 /** Float-safe: half marks are legal, so work in halves and divide once. */
@@ -68,20 +100,47 @@ function sum(values: readonly number[]): number {
   return values.reduce((a, b) => a + Math.round(b * 2), 0) / 2;
 }
 
-export function bandOf(percent: number | null, available: number): Band {
-  if (available < SCHOLARSHIP_MIN_MARKS_FOR_VERDICT || percent === null) return "insufficient";
+/**
+ * The two doors through the floor (D-#662 + D-#691).
+ *
+ * MARKS is the original and still the main one: enough marks have been put on this axis
+ * value to read a percentage off it, however many sittings they came from. One 18-mark
+ * comprehension item passes on its first outing, because it IS the evidence — and four
+ * 1-mark gaps spread over four papers still do not carry a verdict on their marks alone.
+ *
+ * PAPERS is the second door, added at D-#691: the same small item set TWICE is two
+ * independent readings, and two readings that agree say something one cannot. A 5-mark
+ * item asked a fortnight apart, 0 both times, is a fact about the child, not a sample of
+ * one bad guess. D-#662 refused to count papers and was right about the case it argued;
+ * this is the case it did not argue.
+ *
+ * `papers` defaults to 1, so every caller with no paper count in hand (the class pool, a
+ * single heat-map cell) keeps the pure marks rule it was written against.
+ */
+export function hasVerdict(available: number, papers = 1): boolean {
+  if (available <= 0) return false;
+  return (
+    available >= SCHOLARSHIP_MIN_MARKS_FOR_VERDICT || papers >= SCHOLARSHIP_MIN_PAPERS_FOR_VERDICT
+  );
+}
+
+export function bandOf(percent: number | null, available: number, papers = 1): Band {
+  if (!hasVerdict(available, papers) || percent === null) return "insufficient";
   if (percent < SCHOLARSHIP_BAND_WEAK_BELOW) return "weak";
   if (percent < SCHOLARSHIP_BAND_GOOD_AT_OR_ABOVE) return "fair";
   return "good";
 }
 
-/**
- * The floor is checked on AVAILABLE marks, not on how many papers were sat: one 18-mark
- * comprehension item carries more evidence than four 1-mark gaps, and counting papers
- * would call the first case insufficient and the second reliable — backwards.
- */
-export function percentOf(earned: number, available: number): number | null {
-  if (available < SCHOLARSHIP_MIN_MARKS_FOR_VERDICT) return null;
+export function percentOf(earned: number, available: number, papers = 1): number | null {
+  if (!hasVerdict(available, papers)) return null;
+  return Math.round((earned / available) * 1000) / 10;
+}
+
+/** The raw arithmetic with no floor at all. Used for a trend point and for ordering a
+ *  rank — neither is a verdict about a topic, and both compare things already known to
+ *  be comparable (one sitting against another, one child against her classmates on the
+ *  very same items). */
+function rawPercent(earned: number, available: number): number | null {
   if (available <= 0) return null;
   return Math.round((earned / available) * 1000) / 10;
 }
@@ -90,6 +149,9 @@ interface Tally {
   earned: number[];
   available: number[];
   papers: Set<string>;
+  /** The same marks split by sitting, insertion-ordered — which is paper order, because
+   *  `loadScope` sorts the papers chronologically. This is what the trend line reads. */
+  byPaper: Map<string, { earned: number; available: number }>;
   subject: HwSubject;
 }
 
@@ -97,11 +159,15 @@ const emptyTally = (subject: HwSubject): Tally => ({
   earned: [],
   available: [],
   papers: new Set(),
+  byPaper: new Map(),
   subject,
 });
 
 export interface PaperWithScores {
-  paper: Pick<IScholarshipPaper, "_id" | "items">;
+  /** `name`/`paperDate` are optional so the pure-maths tests can build a paper from its
+   *  items alone; the reads always supply them, and a trend point falls back to the id. */
+  paper: Pick<IScholarshipPaper, "_id" | "items"> &
+    Partial<Pick<IScholarshipPaper, "name" | "paperDate">>;
   /** One row per student who has a score on this paper. */
   scores: Pick<IScholarshipScore, "studentId" | "status" | "itemMarks">[];
 }
@@ -144,6 +210,12 @@ export function tallyStudent(
         t.earned.push(earned);
         t.available.push(item.marks);
         t.papers.add(String(paper._id));
+        const pid = String(paper._id);
+        const p = t.byPaper.get(pid) ?? { earned: 0, available: 0 };
+        t.byPaper.set(pid, {
+          earned: sum([p.earned, earned]),
+          available: sum([p.available, item.marks]),
+        });
         out.set(key, t);
       }
     }
@@ -182,20 +254,37 @@ export function rankRows(rows: readonly AxisRow[]): AxisRow[] {
   });
 }
 
+/** What `buildRows` needs from outside the two tallies. Both are optional: the class
+ *  heat-map builds rows without either, and the existing SC-3/SC-4 behaviour is what
+ *  you get when neither is supplied. */
+export interface RowContext {
+  /** paperId → that paper's human name, for a trend point's label. */
+  paperName?: (paperId: string) => string;
+  /** axis key → this student's place among the students who sat it. */
+  rankOf?: (key: string) => RankView | null;
+}
+
 export function buildRows(
   studentTally: Map<string, Tally>,
   classTally: Map<string, { earned: number; available: number }>,
   labelOf: (key: string, subject: HwSubject) => string,
+  ctx: RowContext = {},
 ): AxisRow[] {
   const rows: AxisRow[] = [];
   for (const [key, t] of studentTally) {
     const earned = sum(t.earned);
     const available = sum(t.available);
-    const percent = percentOf(earned, available);
+    const papers = t.papers.size;
+    const percent = percentOf(earned, available, papers);
     const cls = classTally.get(key);
+    // The class mean keeps the pure marks rule. Its denominator is the whole cohort's
+    // marks pooled, so it clears the floor long before any one student does — the
+    // second door would never fire here, and passing a paper count from one student
+    // into a figure about everybody would be the wrong number anyway.
     const classPercent = cls ? percentOf(cls.earned, cls.available) : null;
     const classGap =
       percent !== null && classPercent !== null ? Math.round(percent - classPercent) : null;
+    const band = bandOf(percent, available, papers);
     rows.push({
       key,
       label: labelOf(key, t.subject),
@@ -203,14 +292,139 @@ export function buildRows(
       earned,
       available,
       percent,
-      band: bandOf(percent, available),
+      band,
       classPercent,
       classGap,
       behindClass: classGap !== null && classGap <= SCHOLARSHIP_CLASS_GAP_FLAG,
-      paperCount: t.papers.size,
+      paperCount: papers,
+      series: [...t.byPaper].map(([paperId, p]) => ({
+        paperId,
+        label: ctx.paperName?.(paperId) ?? paperId,
+        earned: p.earned,
+        available: p.available,
+        percent: rawPercent(p.earned, p.available) ?? 0,
+      })),
+      // An `insufficient` row shows no percent, so it must show no place either — a
+      // rank IS a comparison of percentages, and printing one would smuggle the number
+      // back onto a row that has just refused to give it (D-#662).
+      classRank: band === "insufficient" ? null : (ctx.rankOf?.(key) ?? null),
     });
   }
   return rankRows(rows);
+}
+
+/**
+ * Competition ranking over an already-scored field: highest percent is 1st, ties share a
+ * place, and the place after a tie is skipped (1, 2, 2, 4).
+ *
+ * Only entries with a percent are ranked. A student with no marks on this axis value is
+ * not last — she is not in the race, and the `of` count says so, which is why a rank is
+ * always printed with its denominator.
+ */
+export function rankBy(entries: readonly { id: string; percent: number | null }[]): Map<string, RankView> {
+  const scored = entries.filter((e): e is { id: string; percent: number } => e.percent !== null);
+  const sorted = [...scored].sort((a, b) => b.percent - a.percent);
+  const out = new Map<string, RankView>();
+  let place = 0;
+  let previous: number | null = null;
+  sorted.forEach((e, i) => {
+    if (previous === null || e.percent !== previous) place = i + 1;
+    previous = e.percent;
+    out.set(e.id, { rank: place, of: sorted.length });
+  });
+  return out;
+}
+
+/** Every student's place on every axis value, in one pass over the cohort. */
+export function rankAxis(
+  data: readonly PaperWithScores[],
+  studentIds: readonly string[],
+  axis: "topic" | "chapter",
+): Map<string, Map<string, RankView>> {
+  const perStudent = new Map(studentIds.map((id) => [id, tallyStudent(data, id, axis)]));
+  const keys = new Set<string>();
+  for (const tally of perStudent.values()) for (const k of tally.keys()) keys.add(k);
+
+  const out = new Map<string, Map<string, RankView>>();
+  for (const key of keys) {
+    const entries = studentIds.map((id) => {
+      const t = perStudent.get(id)?.get(key);
+      return {
+        id,
+        percent: t ? rawPercent(sum(t.earned), sum(t.available)) : null,
+      };
+    });
+    out.set(key, rankBy(entries));
+  }
+  return out;
+}
+
+/** One paper as one student sat it: her total on it, and where that put her. */
+export interface PaperResult {
+  paperId: string;
+  label: string;
+  date: string | null;
+  earned: number;
+  available: number;
+  percent: number | null;
+  rank: RankView | null;
+}
+
+/**
+ * The paper-by-paper list PRD §6.4 contracted and SC-3 shipped without.
+ *
+ * Totals ride the TOPIC axis for the same reason the overall figure does — it is the
+ * axis that partitions, so it reconciles to the paper total (D-#659/#661). A paper the
+ * student did not sit is absent from the list entirely rather than showing as a zero
+ * (D-#660).
+ */
+export function paperResults(
+  data: readonly PaperWithScores[],
+  studentId: string,
+  studentIds: readonly string[],
+  meta: (paperId: string) => { label: string; date: string | null },
+): PaperResult[] {
+  const totalsOn = (paperData: PaperWithScores, id: string): { earned: number; available: number } | null => {
+    const row = paperData.scores.find((s) => String(s.studentId) === id);
+    if (!row || row.status !== "PRESENT") return null;
+    const got = new Map(row.itemMarks.map((m) => [m.itemNo, m.marks]));
+    const earned: number[] = [];
+    const available: number[] = [];
+    for (const item of paperData.paper.items) {
+      const mark = got.get(item.itemNo);
+      if (mark === undefined) continue;
+      earned.push(mark);
+      available.push(item.marks);
+    }
+    if (available.length === 0) return null;
+    return { earned: sum(earned), available: sum(available) };
+  };
+
+  const out: PaperResult[] = [];
+  for (const paperData of data) {
+    const mine = totalsOn(paperData, studentId);
+    if (!mine) continue;
+    const paperId = String(paperData.paper._id);
+    const ranks = rankBy(
+      studentIds.map((id) => {
+        const t = totalsOn(paperData, id);
+        return { id, percent: t ? rawPercent(t.earned, t.available) : null };
+      }),
+    );
+    const { label, date } = meta(paperId);
+    out.push({
+      paperId,
+      label,
+      date,
+      earned: mine.earned,
+      available: mine.available,
+      // A whole paper is never under the floor in practice, but the rule is the rule:
+      // ask the same gate everything else asks rather than inventing an exception.
+      percent: percentOf(mine.earned, mine.available),
+      rank: ranks.get(studentId) ?? null,
+    });
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------------------
@@ -231,9 +445,12 @@ export async function loadScope(scope: AnalysisScope): Promise<PaperWithScores[]
     status: { $in: ["SCORED", "PUBLISHED"] },
   };
   if (scope.subject) q.subjects = scope.subject;
+  // Oldest first: the trend line reads the tallies in insertion order, and a series that
+  // ran in storage order would draw the child's progress backwards on some papers.
   const papers = (await ScholarshipPaper.find(q)
-    .select("_id items")
-    .lean()) as Pick<IScholarshipPaper, "_id" | "items">[];
+    .select("_id items name paperDate")
+    .sort({ paperDate: 1, _id: 1 })
+    .lean()) as PaperWithScores["paper"][];
   if (papers.length === 0) return [];
   const scores = (await ScholarshipScore.find({
     paperId: { $in: papers.map((p) => p._id) },
@@ -279,6 +496,8 @@ export interface StudentAnalysis {
   totalEarned: number;
   totalAvailable: number;
   overallPercent: number | null;
+  /** Oldest paper first — her score on each sitting and her place on it (SC-7). */
+  papers: PaperResult[];
 }
 
 export async function studentAnalysis(
@@ -292,15 +511,31 @@ export async function studentAnalysis(
   const ids = roster.map((s) => String(s._id));
   const labelOf = await labelLookup(scope.classLevel);
 
+  const meta = new Map(
+    data.map(({ paper }) => [
+      String(paper._id),
+      {
+        label: paper.name ?? String(paper._id),
+        date: paper.paperDate ? new Date(paper.paperDate).toISOString().slice(0, 10) : null,
+      },
+    ]),
+  );
+  const paperName = (paperId: string): string => meta.get(paperId)?.label ?? paperId;
+
+  const topicRanks = rankAxis(data, ids, "topic");
+  const chapterRanks = rankAxis(data, ids, "chapter");
+
   const topics = buildRows(
     tallyStudent(data, studentId, "topic"),
     tallyClass(data, ids, "topic"),
     labelOf,
+    { paperName, rankOf: (k) => topicRanks.get(k)?.get(studentId) ?? null },
   );
   const chapters = buildRows(
     tallyStudent(data, studentId, "chapter"),
     tallyClass(data, ids, "chapter"),
     (k) => k,
+    { paperName, rankOf: (k) => chapterRanks.get(k)?.get(studentId) ?? null },
   );
 
   // The overall figure rides the TOPIC axis, the one that partitions (D-#659/#661) —
@@ -320,6 +555,7 @@ export async function studentAnalysis(
     totalEarned,
     totalAvailable,
     overallPercent: totalAvailable > 0 ? Math.round((totalEarned / totalAvailable) * 1000) / 10 : null,
+    papers: paperResults(data, studentId, ids, (id) => meta.get(id) ?? { label: id, date: null }),
   };
 }
 
@@ -352,11 +588,18 @@ export async function classAnalysis(
   axis: "topic" | "chapter" = "topic",
 ): Promise<ClassAnalysis> {
   const data = narrowToSubject(await loadScope(scope), scope.subject);
+  // `nameBn` is sparse in the source roster — 74 of 91 students have none — so it must
+  // fall back to `name` exactly as the paper roster does (ScholarshipService). Without
+  // the fallback every heat-map card on a real section renders "—" and the teacher
+  // cannot tell which column is which child.
   const roster = (await Student.find({ sectionId: new Types.ObjectId(scope.sectionId) })
-    .select("_id nameBn")
-    .sort({ nameBn: 1 })
-    .lean()) as { _id: Types.ObjectId; nameBn?: string }[];
-  const students = roster.map((s) => ({ id: String(s._id), nameBn: s.nameBn ?? "—" }));
+    .select("_id name nameBn")
+    .sort({ nameBn: 1, name: 1 })
+    .lean()) as { _id: Types.ObjectId; name?: string; nameBn?: string }[];
+  const students = roster.map((s) => ({
+    id: String(s._id),
+    nameBn: s.nameBn?.trim() || s.name || "—",
+  }));
   const labelOf = await labelLookup(scope.classLevel);
 
   const perStudent = new Map(students.map((s) => [s.id, tallyStudent(data, s.id, axis)]));
@@ -377,8 +620,12 @@ export async function classAnalysis(
       subject = t.subject;
       const earned = sum(t.earned);
       const available = sum(t.available);
-      const percent = percentOf(earned, available);
-      return { studentId: s.id, percent, band: bandOf(percent, available), available };
+      // Same two doors as the per-student row (D-#691). A cell and the student screen
+      // are the same child on the same topic; if one of them showed a number and the
+      // other an em dash, one of the two screens would be lying.
+      const papers = t.papers.size;
+      const percent = percentOf(earned, available, papers);
+      return { studentId: s.id, percent, band: bandOf(percent, available, papers), available };
     });
     return {
       key,
