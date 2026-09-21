@@ -4620,6 +4620,9 @@ const STR_BN = {
   obsMyReviewsHint: "আপনি যেসব ক্লাস পর্যালোচনা করেছেন — ভিডিওসহ আবার দেখুন।",
   obsReviewTitle: "পর্যবেক্ষণ রিভিউ",
   obsReview: "রিভিউ করুন",
+  obsWriteReviewHint: "এই পর্যবেক্ষণ আপনার উপর বরাদ্দ — ফর্মটি খুলে স্কোর ও মন্তব্য লিখুন।",
+  obsNoReviewPerm:
+    "এই পর্যবেক্ষণ আপনার উপর বরাদ্দ, কিন্তু আপনার অ্যাকাউন্টে রিভিউ করার অনুমতি নেই। প্রিন্সিপালকে অনুমতি যোগ করতে বলুন।",
   obsDomainScores: "ডোমেইন স্কোর (১–৪)",
   obsDomainNote: "মন্তব্য",
   obsGates: "গেট",
@@ -8989,6 +8992,9 @@ const STR_EN: StrTable = {
   obsMyReviewsHint: "Classes you have reviewed — reopen them with their footage.",
   obsReviewTitle: "Review observation",
   obsReview: "Review",
+  obsWriteReviewHint: "This observation is assigned to you — open the form to score it and write your comments.",
+  obsNoReviewPerm:
+    "This observation is assigned to you, but your account does not hold the review permission. Ask the Principal to add it.",
   obsDomainScores: "Domain scores (1–4)",
   obsDomainNote: "Note",
   obsGates: "Gates",

@@ -745,8 +745,14 @@ export async function examSyllabusBoard(
     level?: number;
   }>;
 
+  // `classId` is NULLABLE since D-#685 — a Quran/Arabic LEVEL row sits on no
+  // class. The cast used to assert it was always there, and one level row made
+  // `r.classId.toString()` throw for the whole query, which emptied the class
+  // board on the Principal's screen while the level board beside it kept
+  // rendering. The level rows belong to `examSyllabusLevels`; here they are
+  // simply not class rows.
   const rows = (await ExamSyllabus.find({ examId }).lean()) as unknown as Array<
-    Parameters<typeof toShape>[0] & { classId: Types.ObjectId }
+    Parameters<typeof toShape>[0] & { classId?: Types.ObjectId | null }
   >;
 
   const notes = (await ExamClassNote.find({ examId }).lean()) as unknown as Array<{
@@ -760,6 +766,7 @@ export async function examSyllabusBoard(
 
   const byClass = new Map<string, SyllabusShape[]>();
   for (const r of rows) {
+    if (!r.classId) continue;
     const k = r.classId.toString();
     const list = byClass.get(k) ?? [];
     list.push(toShape(r, false, nameById.get(k) ?? ""));
