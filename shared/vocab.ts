@@ -1356,6 +1356,11 @@ export const NOTIFICATION_KINDS = [
   "OBSERVATION_RESPONSE_REMINDER",
   "OBSERVATION_ESCALATED",
   "OBSERVATION_RESPONDED",
+  // The observer is TOLD they have been assigned. Until now assignment wrote an audit
+  // row and nothing else: the only trace an observer ever got was a drawer badge they
+  // had to notice by themselves, which is how a REF-11 sat unreviewed for a week.
+  // App-native, NO wire twin.
+  "OBSERVATION_ASSIGNED",
   // CO-8 publish gate (D-#271): the manager nudge fired at REVIEWED — a review is
   // waiting for Principal/Office to publish it to the observed teacher. App-native.
   "OBSERVATION_READY_TO_PUBLISH",
@@ -1459,6 +1464,7 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   OBSERVATION_RESPONSE_REMINDER: "পর্যবেক্ষণে সাড়া দেওয়ার তাগিদ",
   OBSERVATION_ESCALATED: "পর্যবেক্ষণে সাড়া বকেয়া",
   OBSERVATION_RESPONDED: "পর্যবেক্ষণে শিক্ষকের সাড়া",
+  OBSERVATION_ASSIGNED: "আপনাকে পর্যবেক্ষণ দেওয়া হয়েছে",
   OBSERVATION_READY_TO_PUBLISH: "পর্যবেক্ষণ প্রকাশের অপেক্ষায়",
   FINANCE_FEE_DUE: "ফি বকেয়ার তাগিদ",
   SR_ABSENT: "শনিবার রিভিশনে অনুপস্থিত",
@@ -1508,6 +1514,7 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   OBSERVATION_RESPONSE_REMINDER: "Observation response reminder",
   OBSERVATION_ESCALATED: "Observation escalated",
   OBSERVATION_RESPONDED: "Observation responded",
+  OBSERVATION_ASSIGNED: "Observation assigned to you",
   OBSERVATION_READY_TO_PUBLISH: "Observation ready to publish",
   FINANCE_FEE_DUE: "Fee due reminder",
   SR_ABSENT: "Saturday revision — absent",

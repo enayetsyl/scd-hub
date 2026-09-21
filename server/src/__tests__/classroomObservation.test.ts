@@ -318,6 +318,26 @@ describe("uploadObservation", () => {
     expect(kinds).toContain("CLASSROOM_OBSERVATION_ASSIGNED");
   });
 
+  // Upload-with-observer is the ROUTINE way a review is handed out (the upload screen
+  // picks the observer there and then), so it needs the notice as much as a later
+  // reassignment does — and it is the path that had no coverage at all.
+  test("upload WITH an observer notifies them", async () => {
+    await uploadObservation({ ...base, observerId: OBSERVER.toString() });
+    expect(mockEmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: "OBSERVATION_ASSIGNED",
+        recipientUserId: OBSERVER.toString(),
+      }),
+    );
+  });
+
+  test("upload without an observer notifies nobody — there is no one to tell yet", async () => {
+    await uploadObservation(base);
+    expect(mockEmit).not.toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "OBSERVATION_ASSIGNED" }),
+    );
+  });
+
   test("upload without an observer stays UPLOADED (no assign audit)", async () => {
     const res = await uploadObservation(base);
     expect(res.state).toBe("UPLOADED");
@@ -496,6 +516,69 @@ describe("assignObserver", () => {
     await expect(
       assignObserver({ observationId: oid().toString(), observerId: OBSERVER.toString(), actorId: OFFICE.toString() }),
     ).rejects.toThrow(/uploaded\/assigned/);
+  });
+
+  /**
+   * Assignment used to write an audit row and tell the observer nothing — the only
+   * trace was a drawer badge they had to notice unprompted, which is how an assigned
+   * REF-11 sits untouched while everyone believes the reviewer was told.
+   */
+  test("the OBSERVER is notified — not the observed teacher, not the office", async () => {
+    mockFindById.mockResolvedValue(makeDoc({ state: "UPLOADED", observerId: null, assignedAt: null }));
+    await assignObserver({
+      observationId: oid().toString(),
+      observerId: OBSERVER.toString(),
+      actorId: OFFICE.toString(),
+    });
+    expect(mockEmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: "OBSERVATION_ASSIGNED",
+        recipientUserId: OBSERVER.toString(),
+      }),
+    );
+    // The deep link needs the row; without it the app can only drop them on a list.
+    const call = mockEmit.mock.calls.find((c) => c[0].kind === "OBSERVATION_ASSIGNED")![0];
+    expect(call.refs.observationId).toBeTruthy();
+  });
+
+  /**
+   * The dedupe key must carry the observer AND the assignment stamp. An entity-only
+   * key silently swallows the re-emit — so moving a row from one observer to another,
+   * or back again, would assign work nobody is ever told about.
+   */
+  test("reassigning to a DIFFERENT observer notifies them too (the key is not entity-only)", async () => {
+    const first = makeDoc({ state: "UPLOADED", observerId: null, assignedAt: null });
+    mockFindById.mockResolvedValue(first);
+    await assignObserver({
+      observationId: String(first._id),
+      observerId: OBSERVER.toString(),
+      actorId: OFFICE.toString(),
+    });
+    const other = oid();
+    mockFindById.mockResolvedValue(makeDoc({ _id: first._id, state: "ASSIGNED", observerId: OBSERVER }));
+    await assignObserver({
+      observationId: String(first._id),
+      observerId: other.toString(),
+      actorId: OFFICE.toString(),
+    });
+
+    const keys = mockEmit.mock.calls
+      .filter((c) => c[0].kind === "OBSERVATION_ASSIGNED")
+      .map((c) => c[0].dedupeKey as string);
+    expect(keys).toHaveLength(2);
+    expect(new Set(keys).size).toBe(2);
+    expect(keys[1]).toContain(other.toString());
+  });
+
+  test("a failed emit never undoes the assignment", async () => {
+    mockFindById.mockResolvedValue(makeDoc({ state: "UPLOADED", observerId: null, assignedAt: null }));
+    mockEmit.mockRejectedValueOnce(new Error("inbox down"));
+    const res = await assignObserver({
+      observationId: oid().toString(),
+      observerId: OBSERVER.toString(),
+      actorId: OFFICE.toString(),
+    });
+    expect(res.state).toBe("ASSIGNED");
   });
 });
 
@@ -840,6 +923,25 @@ describe("requestCoReview (CO-9)", () => {
     const kinds = mockWriteAudit.mock.calls.map((c) => (c[0] as { eventKind: string }).eventKind);
     expect(kinds).toContain("CLASSROOM_OBSERVATION_ASSIGNED");
     expect(kinds).not.toContain("CLASSROOM_OBSERVATION_SUPERSEDED");
+  });
+
+  // A co-reviewer is added to someone ELSE's finished review — there is no other way
+  // they would ever learn a second opinion was wanted from them.
+  test("the co-reviewer is notified of the sibling row", async () => {
+    const source = withRec();
+    mockFindById.mockResolvedValue(source);
+    const second = oid();
+    await requestCoReview({
+      sourceObservationId: String(source._id),
+      observerId: second.toString(),
+      actorId: OFFICE.toString(),
+    });
+    expect(mockEmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: "OBSERVATION_ASSIGNED",
+        recipientUserId: second.toString(),
+      }),
+    );
   });
 
   test("refuses when the source has no recording (attach footage first)", async () => {
