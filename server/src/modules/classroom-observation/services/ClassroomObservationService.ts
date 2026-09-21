@@ -44,6 +44,7 @@ import { Types, type FilterQuery } from "mongoose";
 import {
   OBSERVATION_FORMS,
   HW_SUBJECTS,
+  HW_SUBJECT_LABELS_BN,
 } from "@scd/shared";
 import type { ObservationForm, ObservationState } from "@scd/shared";
 import { ClassroomObservation, type IClassroomObservation } from "../models/ClassroomObservation";
@@ -379,6 +380,7 @@ export async function uploadObservation(input: UploadObservationInput): Promise<
       targetKind: "ClassroomObservation",
       meta: { observerId: observerId.toString(), teacherId: input.teacherId },
     });
+    await emitObservationAssigned(doc);
   }
 
   return shape(doc);
@@ -423,6 +425,7 @@ export async function assignObserver(input: AssignObserverInput): Promise<Classr
     targetKind: "ClassroomObservation",
     meta: { observerId: observerId.toString(), teacherId: doc.teacherId.toString() },
   });
+  await emitObservationAssigned(doc);
 
   return shape(doc);
 }
@@ -516,6 +519,45 @@ async function emitObservationReleased(doc: IClassroomObservation): Promise<void
     });
   } catch (err) {
     console.error("OBSERVATION_RELEASED emit failed (never blocks the release):", err);
+  }
+}
+
+/**
+ * Best-effort "you have been assigned an observation" notice to the OBSERVER.
+ *
+ * Every one of the four assignment paths (upload-with-observer, reassign, re-request,
+ * co-review) wrote an audit row and told the observer nothing. The only trace they got
+ * was the drawer's `toReview` badge — something they had to notice unprompted, on a tab
+ * they may not open for days — which is how an assigned REF-11 sits untouched and reads
+ * as the app refusing to let them review.
+ *
+ * The dedupe key carries the observer AND `assignedAt`. The observer alone is not
+ * enough: reassigning a row away and back is a NEW instruction, and an entity-only key
+ * swallows exactly that. `assignedAt` changes on every assignment, so each distinct
+ * assignment notifies once and a retry of the same one is silent.
+ *
+ * Swallows its own failure — an assignment that committed must never be undone because
+ * an inbox row could not be written.
+ */
+async function emitObservationAssigned(doc: IClassroomObservation): Promise<void> {
+  if (!doc.observerId) return;
+  try {
+    const obsId = doc._id.toString();
+    const observerId = doc.observerId.toString();
+    const stamp = (doc.assignedAt ?? new Date()).getTime();
+    await emit({
+      recipientUserId: observerId,
+      kind: "OBSERVATION_ASSIGNED",
+      titleBn: "আপনাকে একটি শ্রেণি পর্যবেক্ষণ দেওয়া হয়েছে",
+      // The model types `subject` as the broad string it stores, so the label map is
+      // read as one — an unknown code falls back to itself rather than printing
+      // "undefined" into a teacher's inbox.
+      bodyBn: `${(HW_SUBJECT_LABELS_BN as Record<string, string>)[doc.subject] ?? doc.subject} · ${doc.classDate} — পর্যবেক্ষণটি খুলে রিভিউ করুন।`,
+      refs: { observationId: obsId, teacherId: doc.teacherId.toString() },
+      dedupeKey: `OBSASSIGN:${obsId}:${observerId}:${stamp}`,
+    });
+  } catch (err) {
+    console.error("OBSERVATION_ASSIGNED emit failed (never blocks the assignment):", err);
   }
 }
 
@@ -993,6 +1035,7 @@ export async function requestReReview(input: RequestReReviewInput): Promise<Clas
     targetKind: "ClassroomObservation",
     meta: { observerId: observerId.toString(), teacherId: prior.teacherId.toString(), reReviewOf: prior._id.toString() },
   });
+  await emitObservationAssigned(fresh);
 
   return shape(fresh);
 }
@@ -1068,6 +1111,7 @@ export async function requestCoReview(input: RequestCoReviewInput): Promise<Clas
       recordingId: source.recordingId.toString(),
     },
   });
+  await emitObservationAssigned(fresh);
 
   return shape(fresh);
 }
