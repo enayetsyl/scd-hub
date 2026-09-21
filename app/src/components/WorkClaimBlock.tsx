@@ -16,7 +16,7 @@ import { useMutation } from "urql";
 import { Body, Muted, Badge, Button, Notice, Card } from "./ui";
 import { space } from "../theme/tokens";
 import { useColors } from "../theme";
-import { STR } from "../lib/labels";
+import { STR, bnNum } from "../lib/labels";
 import { FILE_CHILD_WORK_CLAIM, type GuardianWorkClaimT } from "../graphql/operations";
 
 const MAX_NOTE = 200;
@@ -27,6 +27,10 @@ export interface WorkClaimBlockProps {
   recordId: string;
   /** Server-computed (D-#553) — the app never re-implements the eligibility rule. */
   canClaim: boolean;
+  /** Server-worded reason the button is held back (D-#683), or null. Rendered in
+   *  the button's place: a control that silently vanishes at midnight and
+   *  reappears at 2pm reads as a bug, not as a rule. */
+  claimHoldBn?: string | null;
   claim: GuardianWorkClaimT | null;
   /** Label for the work, shown in the confirmation sheet. */
   subjectLabel: string;
@@ -39,6 +43,7 @@ export function WorkClaimBlock({
   tracker,
   recordId,
   canClaim,
+  claimHoldBn,
   claim,
   subjectLabel,
   workId,
@@ -88,7 +93,9 @@ export function WorkClaimBlock({
               text={claim.statusLabelBn}
               tone={status === "ACCEPTED" ? "ok" : status === "PENDING" ? "warn" : "info"}
             />
-            <Muted>{claim.claimedAt.slice(0, 10)}</Muted>
+            {/* D-#686: Bangla digits, like every other date on the card. This one
+                line rendered 2026-09-16 beside ২০২৬-০৯-১৪ in the timeline above it. */}
+            <Muted>{bnNum(claim.claimedAt.slice(0, 10))}</Muted>
           </View>
 
           {status === "PENDING" ? (
@@ -123,6 +130,14 @@ export function WorkClaimBlock({
             {claim?.canReclaim ? STR.wcReclaimHint : STR.wcButtonHint}
           </Muted>
         </View>
+      ) : null}
+
+      {/* --- the same-day hold (D-#683) -----------------------------------
+          Only when nothing else is already occupying this slot: a parent who has
+          a claim open is being told about THAT, and does not need the rule for a
+          button they are not looking for. */}
+      {!canClaim && claimHoldBn && !claim ? (
+        <Notice tone="info" message={claimHoldBn} />
       ) : null}
 
       {/* --- the confirmation sheet --------------------------------------- */}

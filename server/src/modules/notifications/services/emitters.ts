@@ -57,6 +57,12 @@ const dedupeKeys = {
    *  re-chasing the same student the same day is a no-op for the inbox (once/day). */
   hwGuardianChase: (hwItemId: string, studentId: string, dateKey: string, guardianId: string) =>
     `HWCG:${hwItemId}:${studentId}:${dateKey}:${guardianId}`,
+  /** Per resubmission record + guardian (D-#682). The record is created once, so
+   *  the id alone would already be unique — the guardian is in the key anyway,
+   *  because an entity-only key silently swallows the re-emit to a guardian who
+   *  was linked to the child after the first send. */
+  hwResubmitIssued: (recordId: string, guardianId: string) =>
+    `HWRI:${recordId}:${guardianId}`,
   /** Per claim: the teacher is told once when it is filed. The Office NUDGE reuses
    *  this family with a day suffix so a nudge can re-notify without colliding. */
   workClaimFiled: (claimId: string) => `WCF:${claimId}`,
@@ -367,6 +373,79 @@ export async function emitHwGuardianChase(ev: HwGuardianChaseEvent): Promise<voi
             dateKey,
             g._id.toString(),
           ),
+        }),
+      ),
+    );
+  });
+}
+
+// ---------------------------------------------------------------------------
+// D-#682 — a resubmission was handed back → the child's guardians
+// ---------------------------------------------------------------------------
+
+export interface HwResubmitIssuedEvent {
+  /** The NEW resubmission record (not the attempt it replaces). */
+  recordId: IdLike;
+  hwItemId: IdLike;
+  hwId: string;
+  studentId: IdLike;
+  sectionId: IdLike;
+  subjectLabelBn: string;
+  /** The day the script actually went home. REQUIRED, and not defaulted to now:
+   *  a replay over old records must say when each one really travelled, not when
+   *  the replay ran (D-#684). */
+  handedBackAt: Date;
+  /** When the resubmission is due back. */
+  dueDate: Date | null;
+}
+
+/**
+ * Tell the family the script came home to be done again.
+ *
+ * Without this the resubmission is silent: it is a NEW record on an OLD HW_ID, so
+ * no declaration notice covers it, and the first thing the parent ever hears is
+ * the CHASE for not returning work they were never told about. That is exactly
+ * how a nursery guardian ended up reading "জমা হয়নি" for a script the teacher had
+ * handed back that morning.
+ */
+export async function emitHwResubmitIssued(ev: HwResubmitIssuedEvent): Promise<void> {
+  return bestEffort("HW resubmission issued", async () => {
+    const links = (await GuardianLink.find({
+      studentId: ev.studentId,
+      active: { $ne: false }, // missing = active (pre-GP-1 rows)
+    })
+      .select("guardianId")
+      .lean()) as unknown as Array<{ guardianId: IdLike }>;
+    const guardianIds = [...new Set(links.map((l) => l.guardianId.toString()))];
+    if (guardianIds.length === 0) return;
+
+    // Login-enabled only — contact-only guardians have no inbox (D-#31/#72).
+    const guardians = (await Guardian.find({ _id: { $in: guardianIds }, loginEnabled: true, active: true })
+      .select("_id")
+      .lean()) as unknown as Array<{ _id: IdLike }>;
+    if (guardians.length === 0) return;
+
+    // Rendered ONCE for the event, then emitted per guardian (the MT N+1 guard).
+    const titleBn = await renderTemplate("homework.resubmitIssued.title");
+    const bodyBn = await renderTemplate("homework.resubmitIssued.body", {
+      hwId: ev.hwId,
+      subject: ev.subjectLabelBn,
+      handedBack: dateKeyOf(ev.handedBackAt),
+      dueDate: ev.dueDate ? dateKeyOf(ev.dueDate) : "—",
+    });
+    await Promise.all(
+      guardians.map((g) =>
+        emit({
+          recipientGuardianId: g._id.toString(),
+          kind: "HW_RESUBMIT_ISSUED",
+          titleBn,
+          bodyBn,
+          refs: {
+            hwItemId: ev.hwItemId.toString(),
+            studentId: ev.studentId.toString(),
+            sectionId: ev.sectionId.toString(),
+          },
+          dedupeKey: dedupeKeys.hwResubmitIssued(ev.recordId.toString(), g._id.toString()),
         }),
       ),
     );
@@ -1792,12 +1871,22 @@ export async function emitStudentReturned(ev: StudentReturnedEvent): Promise<voi
 export interface SyllabusPublishedEvent {
   syllabusId: IdLike;
   examId: IdLike;
-  classId: IdLike;
+  /** Null on a Quran/Arabic LEVEL syllabus, which belongs to no single class. */
+  classId: IdLike | null;
   subject: string;
   /** The publish stamp — discriminates a re-publish after a §7.3 send-back. */
   publishedAt: Date;
   examName: string;
+  /** The class name, or the level label ("বুক ২ (বালক) + বুক ২ (বালিকা)"). */
   className: string;
+  /**
+   * The exact students to notify, when they cannot be derived from a class.
+   * A LEVEL syllabus spans several classes and only SOME children of each, so
+   * `classId` cannot answer "whose parents care about this paper" — the group
+   * memberships can. Without this the emitter would find no students and the
+   * families of a published level syllabus would simply never hear.
+   */
+  studentIds?: IdLike[];
 }
 
 /**
@@ -1815,9 +1904,11 @@ export interface SyllabusPublishedEvent {
  */
 export async function emitSyllabusPublished(ev: SyllabusPublishedEvent): Promise<void> {
   return bestEffort("syllabus published", async () => {
-    const students = (await Student.find({ classId: ev.classId, active: true })
-      .select("_id")
-      .lean()) as unknown as Array<{ _id: IdLike }>;
+    const students = ev.studentIds
+      ? ev.studentIds.map((id) => ({ _id: id }))
+      : ((await Student.find({ classId: ev.classId, active: true })
+          .select("_id")
+          .lean()) as unknown as Array<{ _id: IdLike }>);
     if (students.length === 0) return;
 
     const links = (await GuardianLink.find({
@@ -1843,10 +1934,13 @@ export async function emitSyllabusPublished(ev: SyllabusPublishedEvent): Promise
       subject: subjectBn,
     });
     const publishedAtKey = ev.publishedAt.toISOString();
+    // A LEVEL syllabus has no class, and the deep link already falls back to the
+    // syllabus list when the triple is incomplete — so the key is simply absent
+    // rather than carrying an empty string that would navigate to a dead screen.
     const refs = {
       syllabusId: ev.syllabusId.toString(),
       examId: ev.examId.toString(),
-      classId: ev.classId.toString(),
+      ...(ev.classId ? { classId: ev.classId.toString() } : {}),
       subject: ev.subject,
     };
     // One upsert per guardian, in parallel: this is awaited inside the publish
@@ -1873,7 +1967,8 @@ export async function emitSyllabusPublished(ev: SyllabusPublishedEvent): Promise
 export interface SyllabusAwaitingPublishEvent {
   syllabusId: IdLike;
   examId: IdLike;
-  classId: IdLike;
+  /** Null on a LEVEL syllabus (Quran/Arabic from class one up) — see `className`. */
+  classId: IdLike | null;
   subject: string;
   /** The sign-off stamp — a re-approval after a send-back re-notifies. */
   approvedAt: Date;
@@ -1917,7 +2012,7 @@ export async function emitSyllabusAwaitingPublish(ev: SyllabusAwaitingPublishEve
         refs: {
           syllabusId: ev.syllabusId.toString(),
           examId: ev.examId.toString(),
-          classId: ev.classId.toString(),
+          ...(ev.classId ? { classId: ev.classId.toString() } : {}),
           subject: ev.subject,
         },
         dedupeKey: dedupeKeys.syllabusAwaitingPublish(

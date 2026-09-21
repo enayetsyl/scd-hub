@@ -919,7 +919,19 @@ describe("childHomework", () => {
     const records = await childHomework(STUDENT_ID.toString(), FROM, TO);
 
     expect(records).toHaveLength(2); // the out-of-range record is filtered
-    const [original, resub] = records; // same day → original (no resubOf) first
+    // D-#682: the resubmission carries its OWN hand-out day (4 June), not the
+    // item's declaration day (2 June), so it now sorts FIRST — newest first. It
+    // used to inherit 2 June and sit beside the attempt it replaced, which is
+    // how a handed-back script vanished from the parent's recent view.
+    const [resub, original] = records;
+    expect(original.dateGiven.slice(0, 10)).toBe("2026-06-02");
+    expect(resub.dateGiven.slice(0, 10)).toBe("2026-06-04");
+    // Both still name the declaration they descend from — the SAME one, which
+    // is the point of keeping the field. (Compared to each other rather than to
+    // a literal: the fixture's dateGiven is local midnight, and toISOString
+    // shifts that back a day at +06:00 — the trap noted above.)
+    expect(resub.itemDateGiven).toBe(original.itemDateGiven);
+    expect(original.itemDateGiven).toBe(new Date(2026, 5, 2).toISOString());
     expect(original).toMatchObject({
       hwId: "HW-C2-MATH-0009",
       subjectLabelBn: "গণিত",

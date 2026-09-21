@@ -188,6 +188,8 @@ const GuardianHomeworkRecordRef = builder
       subject: t.exposeString("subject"),
       subjectLabelBn: t.exposeString("subjectLabelBn"),
       dateGiven: t.exposeString("dateGiven"),
+      itemDateGiven: t.exposeString("itemDateGiven"),
+      redelivered: t.exposeBoolean("redelivered"),
       state: t.exposeString("state"),
       stateLabelBn: t.exposeString("stateLabelBn"),
       givenAt: t.string({ nullable: true, resolve: (r) => r.givenAt }),
@@ -209,6 +211,7 @@ const GuardianHomeworkRecordRef = builder
       answerFileId: t.string({ nullable: true, resolve: (r) => r.answerFileId }),
       attachmentIds: t.field({ type: ["String"], resolve: (r) => r.attachmentIds ?? [] }),
       canClaim: t.exposeBoolean("canClaim"),
+      claimHoldBn: t.string({ nullable: true, resolve: (r) => r.claimHoldBn }),
       claim: t.field({
         type: GuardianWorkClaimGqlRef,
         nullable: true,

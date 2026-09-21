@@ -18,7 +18,7 @@ import React from "react";
 import { RefreshControl, Pressable, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
-import { EXAM_SYLLABUS_CLASS } from "../../graphql/examSyllabus";
+import { EXAM_SYLLABUS_CLASS, EXAM_SYLLABUS_LEVELS } from "../../graphql/examSyllabus";
 import type { SyllabusStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Select, EmptyState, Badge } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
@@ -41,9 +41,21 @@ export default function SyllabusHomeScreen({ navigation }: Props): React.ReactEl
   });
   const view = syllabusQ.data?.examSyllabusClass ?? null;
 
+  // Quran and Arabic from class one up are taught in cross-grade LEVEL groups, so
+  // they are not on any single class's grid (D-#688). The level query is
+  // exam:manage — for everyone else it simply returns nothing and the section is
+  // not rendered, which is why the error is swallowed rather than shown.
+  const [levelsQ, refetchLevels] = useQuery({
+    query: EXAM_SYLLABUS_LEVELS,
+    variables: { examId: pick.examId ?? "" },
+    pause: !pick.examId,
+  });
+  const levels = levelsQ.data?.examSyllabusLevels ?? [];
+
   const refresh = usePullRefresh(syllabusQ.fetching, () => {
     pick.refetch();
     refetchSyllabus({ requestPolicy: "network-only" });
+    refetchLevels({ requestPolicy: "network-only" });
   });
 
   if (!pick.loading && pick.exams.length === 0) {
@@ -139,6 +151,60 @@ export default function SyllabusHomeScreen({ navigation }: Props): React.ReactEl
                 })}
               </View>
             )}
+
+            {levels.length > 0 ? (
+              <View style={{ gap: space(2) }}>
+                <Body style={{ ...typeScale.bodyStrong }}>{STR.syLevels}</Body>
+                <Muted>{STR.syLevelsHint}</Muted>
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2) }}>
+                  {levels.map((lv) => {
+                    const disabled = !lv.row || lv.row.status !== "PUBLISHED";
+                    return (
+                      <Pressable
+                        key={`${lv.track}:${lv.level}`}
+                        disabled={disabled}
+                        onPress={() =>
+                          navigation.navigate("SyllabusDetail", {
+                            examId: view.examId,
+                            track: lv.track,
+                            level: lv.level,
+                            subject: lv.subject,
+                            title: `${lv.label} — ${routineSubjectLabel(lv.subject)}`,
+                          })
+                        }
+                        accessibilityLabel={lv.label}
+                        style={{
+                          flexGrow: 1,
+                          flexBasis: "46%",
+                          minHeight: 64,
+                          justifyContent: "center",
+                          borderRadius: radius.md,
+                          borderWidth: 1,
+                          borderColor: colors.border,
+                          backgroundColor: disabled ? colors.surfaceAlt : colors.surface,
+                          paddingVertical: space(3),
+                          paddingHorizontal: space(3),
+                        }}
+                      >
+                        <Body
+                          style={{
+                            ...typeScale.bodyStrong,
+                            color: disabled ? colors.textDisabled : colors.textPrimary,
+                          }}
+                        >
+                          {lv.label}
+                        </Body>
+                        <Muted>
+                          {disabled
+                            ? STR.syNotPublished
+                            : `${routineSubjectLabel(lv.subject)} · ${bnNum(lv.row!.totalMarks)}`}
+                        </Muted>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+            ) : null}
           </View>
         ) : null}
       </QueryGate>

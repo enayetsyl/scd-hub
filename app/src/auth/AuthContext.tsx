@@ -20,7 +20,7 @@ import { clearNavState } from "../lib/navState";
 import { friendlyError } from "../lib/errors";
 import { registerPushToken, unregisterPushToken } from "../lib/push";
 import { STR } from "../lib/labels";
-import { viewModePermissions, type Permission, type Role } from "@scd/shared";
+import { type Role } from "@scd/shared";
 
 type Status = "loading" | "authed" | "anon";
 
@@ -51,39 +51,31 @@ function parseViewAs(raw: string | null): ViewAsSession | null {
 interface AuthContextValue {
   status: Status;
   user: MeUser | null;
-  /** The role the UI should behave as — the active view mode when one is chosen,
-   *  otherwise the account's primary role. The ~13 `role === "OFFICE"`-style checks in
-   *  the app read this, which is how office-only surfaces (the Reports tab, the office
-   *  landing dashboard) follow the chosen hat instead of the primary role alone. */
+  /** The account's primary role — the one that must pick exactly ONE behaviour (which
+   *  dashboard component renders, which landing screen). For a VISIBILITY gate on a
+   *  two-hat login prefer `isRole`, which honours both templates; a bare
+   *  `role === "OFFICE"` hides office surfaces from a teacher who also runs the desk. */
   role: Role | null;
-  /** The account's PRIMARY role, unaffected by the view mode. Use this only where the
-   *  account itself is the subject (e.g. "who am I really"), never for gating. */
+  /** Identical to `role`. Kept as a distinct name for the call sites that mean "who am
+   *  I really" rather than "how should this screen behave". */
   primaryRole: Role | null;
   /** The caller's OWN effective permissions (role template(s) + grants − revocations),
-   *  NARROWED to the active view mode when one is set. Prefer `can()` over
-   *  `roleHasPermission(role, …)` for any NEW gate: the template alone is blind to
-   *  per-user grants (AC-1), which is how the book-production roles are assigned
-   *  (D-#405). Empty until `me` resolves. */
+   *  exactly as the server resolved them. Prefer `can()` over `roleHasPermission(role, …)`
+   *  for any NEW gate: the template alone is blind to per-user grants (AC-1), which is how
+   *  the book-production roles are assigned (D-#405). Empty until `me` resolves. */
   permissions: string[];
   /** Should this screen/tile be OFFERED? Never the authorization gate — every resolver
    *  re-checks server-side; this only avoids showing a door that will not open. */
   can: (perm: string) => boolean;
-  /** The role templates this login holds (primary first). More than one ⇒ the account
-   *  wears two hats and the view switcher is offered (D-#467). */
+  /** The role templates this login holds (primary first). A two-hat account holds two;
+   *  every one of them is in force at once (D-#467 superseded — see `isRole`). */
   templates: Role[];
-  /** "Does this login act as role R right now?" — the template-aware replacement for a
-   *  bare `role === "OFFICE"` VISIBILITY gate. With a hat on, only that hat answers true;
-   *  with no hat (the "everything" view) ANY held template does, so a teacher who is also
-   *  the office desk sees the office-only surfaces (the Reports tab) that a primary-role
-   *  comparison hid from them. Use `role` instead when the code must pick exactly ONE
-   *  behaviour (e.g. which dashboard component to render). */
+  /** "Does this login act as role R?" — the template-aware replacement for a bare
+   *  `role === "OFFICE"` VISIBILITY gate. ANY held template answers true, so a teacher
+   *  who also runs the office desk sees the office-only surfaces (the Reports tab) that
+   *  a primary-role comparison hid from them. Use `role` instead when the code must pick
+   *  exactly ONE behaviour (e.g. which dashboard component to render). */
   isRole: (r: Role) => boolean;
-  /** The hat currently being worn, or null for "show everything" (the default, and the
-   *  only possibility for a single-template login). */
-  viewMode: Role | null;
-  /** Switch hats. A mode outside `templates` is ignored — a view mode can only ever
-   *  narrow what the app offers, never widen it. */
-  setViewMode: (mode: Role | null) => void;
   login: (email: string, password: string) => Promise<{ ok: boolean; message?: string }>;
   logout: () => Promise<void>;
   /** The account being borrowed right now, or null in one's own account (VA-1, D-#638). */
@@ -105,7 +97,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
   const [user, setUser] = useState<MeUser | null>(null);
   const [rawPermissions, setRawPermissions] = useState<string[]>([]);
   const [templates, setTemplates] = useState<Role[]>([]);
-  const [storedMode, setStoredMode] = useState<Role | null>(null);
   const [viewAs, setViewAs] = useState<ViewAsSession | null>(null);
 
   const resolveMe = useCallback(async (): Promise<MeUser | null> => {
@@ -117,19 +108,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
     return res.data?.me ?? null;
   }, [client]);
 
-  // Hydrate the persisted hat. It is NOT validated here — `viewMode` below re-checks it
-  // against the templates the server just reported, so a mode that is no longer held
-  // (the Principal removed the extra template) simply stops applying, with no boot-order
-  // race between this read and the `me` round-trip.
+  // The D-#467 hat switcher is gone: a two-hat login now always sees both jobs at once.
+  // This clears any hat a device is still holding from the old build — without it, a
+  // person who had picked শিক্ষক or অফিস would stay narrowed to that half forever, with
+  // no UI left to widen it again. Safe to delete once no install predates this release.
   useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      const saved = await getItem(VIEW_MODE_KEY);
-      if (!cancelled && saved) setStoredMode(saved as Role);
-    })();
-    return () => {
-      cancelled = true;
-    };
+    void removeItem(VIEW_MODE_KEY);
   }, []);
 
   useEffect(() => {
@@ -252,11 +236,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
       };
       await setItem(VIEW_AS_KEY, JSON.stringify(session));
 
-      // The borrowed account renders a different tab set, and a persisted tree or a
-      // leftover hat can name a route it does not have (G5).
-      await removeItem(VIEW_MODE_KEY);
+      // The borrowed account renders a different tab set, and a persisted tree can name
+      // a route it does not have (G5).
       await clearNavState();
-      setStoredMode(null);
       setViewAs(session);
 
       const me = await resolveMe();
@@ -308,8 +290,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
     // N4.1: deactivate this device's push token while the session still works.
     await unregisterPushToken(client);
     await persistToken(null);
-    // The hat is per-account: the next login on this device may be someone else.
-    await removeItem(VIEW_MODE_KEY);
     // A logout from inside a View-as session ends the session too — leaving a parked
     // token behind would hand the next person to log in the Principal's own account.
     await persistRealToken(null);
@@ -318,45 +298,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
     setUser(null);
     setRawPermissions([]);
     setTemplates([]);
-    setStoredMode(null);
     setStatus("anon");
   }, [client]);
 
-  // The hat actually in force. A stored mode the caller does not (or no longer) holds
-  // resolves to null ⇒ "show everything", i.e. exactly the pre-D-#467 behaviour.
-  const viewMode = storedMode && templates.includes(storedMode) ? storedMode : null;
-
-  const setViewMode = useCallback(
-    (mode: Role | null) => {
-      const next = mode && templates.includes(mode) ? mode : null;
-      setStoredMode(next);
-      if (next) void setItem(VIEW_MODE_KEY, next);
-      else void removeItem(VIEW_MODE_KEY);
-      // The restored (web) nav tree may name a tab the new hat does not render; drop it
-      // so the keyed remount lands on the mode's own initial route instead.
-      void clearNavState();
-    },
-    [templates],
-  );
-
-  // The offered set = the effective set narrowed to the active hat (per-user grants
-  // survive every hat — see viewModePermissions). Always a SUBSET of what the server
-  // reported, so the mode can never offer a door the caller could not already open.
-  const permissions = useMemo(
-    () => [...viewModePermissions(rawPermissions as Permission[], templates, viewMode)] as string[],
-    [rawPermissions, templates, viewMode],
-  );
+  // What the app offers = exactly what the server reported this caller may do. There is
+  // no longer a hat to narrow it (the D-#467 switcher is gone), so this is the effective
+  // set verbatim. The server was always the only gate; nothing about authority changes.
+  const permissions = useMemo(() => [...rawPermissions], [rawPermissions]);
 
   const can = useCallback((perm: string) => permissions.includes(perm), [permissions]);
 
   const isRole = useCallback(
-    (r: Role) => {
-      if (viewMode) return viewMode === r;
-      // No hat chosen: every template the login holds counts. Falls back to the primary
-      // role while `me` is still resolving, so boot behaviour is unchanged.
-      return templates.length > 0 ? templates.includes(r) : user?.role === r;
-    },
-    [viewMode, templates, user],
+    // Every template the login holds counts at once, so a teacher who also runs the
+    // office desk sees both surfaces. Falls back to the primary role while `me` is
+    // still resolving, so boot behaviour is unchanged.
+    (r: Role) => (templates.length > 0 ? templates.includes(r) : user?.role === r),
+    [templates, user],
   );
 
   return (
@@ -364,16 +321,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
       value={{
         status,
         user,
-        // The active hat drives the role-equality checks; the account's own role is
-        // still available as primaryRole.
-        role: viewMode ?? user?.role ?? null,
+        role: user?.role ?? null,
         primaryRole: user?.role ?? null,
         permissions,
         can,
         templates,
         isRole,
-        viewMode,
-        setViewMode,
         login,
         logout,
         viewAs,

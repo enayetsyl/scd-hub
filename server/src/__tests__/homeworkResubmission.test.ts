@@ -34,6 +34,11 @@ jest.mock("../modules/content/models/ContentArtifact", () => ({
 jest.mock("../modules/trackers/services/HomeworkService", () => ({
   listDailyItems: (...a: unknown[]) => mockList(...a),
 }));
+// D-#682: the hand-back notice. The service uses exactly this one export.
+const mockEmitResubmitIssued = jest.fn();
+jest.mock("../modules/notifications/services/emitters", () => ({
+  emitHwResubmitIssued: (ev: unknown) => mockEmitResubmitIssued(ev),
+}));
 // Routine-aware due date (2026-08-04 ruling) — mocked to the old rule; the
 // routine/holiday walk is covered by homeworkDueDate.test.ts.
 jest.mock("../modules/trackers/homeworkDueDate", () => {
@@ -92,13 +97,56 @@ describe("T3.1 — RESULT recording + auto/judgment spawn", () => {
     expect(res.resubmission!.state).toBe("GIVEN");
   });
 
-  test("CORRECT advances to CHECKED, no resubmission", async () => {
+  // D-#682. A resubmission is a new record on an OLD HW_ID, so no declaration
+  // notice covers it: without this emit the first thing the family ever heard
+  // was the chase for not returning work nobody had told them about.
+  test("a spawn tells the family the script came home", async () => {
+    const r = rec({ state: "SUBMITTED" });
+    mockRecFindById.mockResolvedValue(r);
+    mockItemFindById.mockResolvedValue({ subject: "ENG" });
+
+    const res = await checkRecord({ recordId: REC_ID.toString(), result: "WRONG", actorId: ACTOR });
+
+    expect(mockEmitResubmitIssued).toHaveBeenCalledTimes(1);
+    const ev = mockEmitResubmitIssued.mock.calls[0][0];
+    // The NEW record, not the attempt it replaces — the dedupe key rides this.
+    expect(ev.recordId.toString()).toBe(res.resubmission!.recordId);
+    expect(ev.recordId.toString()).not.toBe(REC_ID.toString());
+    expect(ev.studentId).toBe(r.studentId);
+    expect(ev.subjectLabelBn).toBe("ইংরেজি");
+    expect(ev.dueDate).toBeInstanceOf(Date);
+    // D-#684: the notice dates the hand-back rather than saying "আজ", so the
+    // event must carry WHEN it went home — the check's own timestamp here.
+    expect(ev.handedBackAt).toBeInstanceOf(Date);
+  });
+
+  test("the hand-back date is the CHECK's timestamp, not the clock at send", async () => {
+    // The bug this guards: a replay that stamps itself with today tells a family
+    // a July script came home this morning (D-#684).
+    const backdated = new Date("2026-07-02T09:00:00");
+    const r = rec({ state: "SUBMITTED" });
+    mockRecFindById.mockResolvedValue(r);
+    mockItemFindById.mockResolvedValue({ subject: "ENG" });
+
+    await checkRecord({
+      recordId: REC_ID.toString(),
+      result: "WRONG",
+      actorId: ACTOR,
+      at: backdated,
+    });
+
+    const ev = mockEmitResubmitIssued.mock.calls[0][0];
+    expect(ev.handedBackAt.getTime()).toBe(backdated.getTime());
+  });
+
+  test("CORRECT advances to CHECKED, no resubmission — and no hand-back notice", async () => {
     const r = rec({ state: "SUBMITTED" });
     mockRecFindById.mockResolvedValue(r);
     const res = await checkRecord({ recordId: REC_ID.toString(), result: "CORRECT", actorId: ACTOR });
     expect(r.state).toBe("CHECKED");
     expect(res.resubmission).toBeNull();
     expect(mockRecCreate).not.toHaveBeenCalled();
+    expect(mockEmitResubmitIssued).not.toHaveBeenCalled();
   });
 
   test("PARTIAL does NOT spawn by default", async () => {

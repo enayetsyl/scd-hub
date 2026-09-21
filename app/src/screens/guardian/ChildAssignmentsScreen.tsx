@@ -144,6 +144,7 @@ export default function ChildAssignmentsScreen(): React.ReactElement {
                 tracker="ASSIGNMENT"
                 recordId={a.recordId}
                 canClaim={a.canClaim}
+                claimHoldBn={a.claimHoldBn}
                 claim={a.claim}
                 subjectLabel={hwSubjectLabel(a.subject)}
                 workId={a.asId}

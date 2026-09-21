@@ -74,6 +74,7 @@ import {
 import {
   workClaimEligible,
   earliestClaimableDueDate,
+  workClaimSameDayHold,
 } from "../modules/trackers/services/WorkClaimView";
 
 const oid = () => new mongoose.Types.ObjectId();
@@ -327,10 +328,81 @@ describe("the claim window is ONE rule — canClaim and fileWorkClaim cannot dis
   });
 
   test("with no window supplied the predicate still answers the other three rules", async () => {
-    expect(workClaimEligible("GIVEN", undefined, 0)).toBe(false);
-    expect(workClaimEligible("CHASE", { status: "PENDING" }, 0)).toBe(false);
-    expect(workClaimEligible("CHASE", undefined, 2)).toBe(false);
-    expect(workClaimEligible("CHASE", undefined, 0)).toBe(true);
+    // `at` is pinned to an afternoon so the same-day floor (D-#683) cannot make
+    // these assertions depend on the wall clock the suite happens to run at.
+    const afternoon = new Date("2026-08-26T15:00:00");
+    expect(workClaimEligible("GIVEN", undefined, 0, null, undefined, afternoon)).toBe(false);
+    expect(workClaimEligible("CHASE", { status: "PENDING" }, 0, null, undefined, afternoon)).toBe(false);
+    expect(workClaimEligible("CHASE", undefined, 2, null, undefined, afternoon)).toBe(false);
+    expect(workClaimEligible("CHASE", undefined, 0, null, undefined, afternoon)).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// D-#683 — the same-day floor
+// ---------------------------------------------------------------------------
+
+describe("the 14:00 same-day floor (D-#683)", () => {
+  // Wed 26 Aug. The record flips DUE at the day's first tick (~00:01), so every
+  // one of these morning times is a moment the button used to be live.
+  const DUE_TODAY = new Date("2026-08-26T00:00:00");
+  const input = {
+    tracker: "HOMEWORK" as const,
+    recordId: RECORD.toString(),
+    guardianId: GUARDIAN.toString(),
+    actorUserId: USER.toString(),
+  };
+
+  test.each([
+    ["00:01, one minute after the due sweep", "2026-08-26T00:01:00"],
+    ["07:30, the child still at breakfast", "2026-08-26T07:30:00"],
+    ["13:59, one minute short", "2026-08-26T13:59:00"],
+  ])("work due TODAY is held at %s", (_label, iso) => {
+    expect(workClaimSameDayHold(DUE_TODAY, new Date(iso))).toBe(true);
+  });
+
+  test.each([
+    ["14:00 exactly — the boundary is inclusive", "2026-08-26T14:00:00"],
+    ["18:00, the evening", "2026-08-26T18:00:00"],
+  ])("work due TODAY is claimable at %s", (_label, iso) => {
+    expect(workClaimSameDayHold(DUE_TODAY, new Date(iso))).toBe(false);
+  });
+
+  test("YESTERDAY's work is claimable at dawn — the ladder is exactly what it is for", () => {
+    const yesterday = new Date("2026-08-25T00:00:00");
+    expect(workClaimSameDayHold(yesterday, new Date("2026-08-26T06:00:00"))).toBe(false);
+  });
+
+  test("a record with no due date is never held", () => {
+    expect(workClaimSameDayHold(null, new Date("2026-08-26T06:00:00"))).toBe(false);
+    expect(workClaimSameDayHold(undefined, new Date("2026-08-26T06:00:00"))).toBe(false);
+  });
+
+  test("canClaim and fileWorkClaim agree — no button that errors when tapped", async () => {
+    const morning = new Date("2026-08-26T07:30:00");
+    const earliest = await earliestClaimableDueDate(morning);
+
+    expect(workClaimEligible("DUE", undefined, 0, DUE_TODAY, earliest, morning)).toBe(false);
+
+    mockHwFindById.mockResolvedValue(hwRecord({ state: "DUE", dueDate: DUE_TODAY }));
+    await expect(fileWorkClaim({ ...input, at: morning })).rejects.toThrow(/দুপুর ২টার পর/);
+  });
+
+  test("the same record files fine after 14:00", async () => {
+    const afternoon = new Date("2026-08-26T14:05:00");
+    const earliest = await earliestClaimableDueDate(afternoon);
+
+    expect(workClaimEligible("DUE", undefined, 0, DUE_TODAY, earliest, afternoon)).toBe(true);
+
+    mockHwFindById.mockResolvedValue(hwRecord({ state: "DUE", dueDate: DUE_TODAY }));
+    await expect(fileWorkClaim({ ...input, at: afternoon })).resolves.toBeDefined();
+  });
+
+  test("a claim filed after the floor lands on the NEXT school day — both rungs are already past", async () => {
+    // 14:00 is after the Office (11:30) and Principal (13:00) rungs, so a
+    // same-day filing can no longer burn the whole ladder before lunch.
+    const key = await resolveActionDateKey(new Date("2026-08-26T14:05:00"));
+    expect(key).toBe("2026-08-27");
   });
 });
 
