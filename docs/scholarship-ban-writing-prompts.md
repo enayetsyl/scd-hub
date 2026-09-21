@@ -311,7 +311,7 @@ The photographs caught fragments of neighbouring entries with no readable সং
 they are **not in the bank** and must not be used until the owner supplies their সংকেত, because the
 whole point of this file is that the cue words are the guide's, not ours.
 
-## No item may answer another item (D-#682)
+## No item may answer another item (D-#689)
 
 The রচনা title is a carrier like any other item. A রচনা on **বৃক্ষরোপণ** on the same paper as a
 মূলভাব passage about trees, or a শ্রমের মর্যাদা রচনা beside a সংক্ষিপ্ত-উত্তর item on the same

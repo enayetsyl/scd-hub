@@ -107,7 +107,7 @@ Bangla label made the teacher translate backwards to find the row matching the q
 front of her. The stored field is still called `labelBn` — it is the one display label, and
 renaming a stored field to carry a single subject's language would be a migration for nothing.
 
-## No item may answer another item (D-#682)
+## No item may answer another item (D-#689)
 
 **A skill item may borrow the unit's names and setting. It may never restate a fact that a
 passage item tests.**

@@ -147,7 +147,7 @@ The third rule is sharper than it sounds, and the পাঠ ৩ paper needed fou
 They come from the poem and always will; a single word out of context gives no line order and no
 phrasing, which is what item ১ actually marks. **The line is between a word and a line.**
 
-## No item may answer another item (D-#682)
+## No item may answer another item (D-#689)
 
 **A skill item may borrow the unit's names and setting. It may never restate a fact that a
 passage item tests.**
