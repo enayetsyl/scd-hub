@@ -19,6 +19,7 @@ import type { AppContext } from "../context";
 const oid = () => new mongoose.Types.ObjectId();
 
 const CLASS = oid();
+const OTHER_CLASS = oid();
 const EXAM = oid();
 const TEACHER_ID = oid().toString();
 
@@ -56,10 +57,11 @@ jest.mock("../modules/exams/models/ExamClassNote", () => ({
 }));
 
 const mockClass = jest.fn(() => ({ nameBn: "শ্রেণি ৩", level: 3 }) as unknown);
+const mockClassList = jest.fn(() => [] as unknown[]);
 jest.mock("../modules/foundation/models/Class", () => ({
   Class: {
     findById: () => ({ select: () => ({ lean: async () => mockClass() }) }),
-    find: () => ({ select: () => ({ lean: async () => [] }) }),
+    find: () => ({ select: () => ({ lean: async () => mockClassList() }) }),
   },
 }));
 
@@ -376,6 +378,37 @@ describe("examSyllabusBoard", () => {
     await expect(
       examSyllabusBoard(ctxFor("GUARDIAN"), EXAM.toString()),
     ).rejects.toThrow();
+  });
+
+  /**
+   * The prod bug (D-#685 fallout): the exam's row list now contains LEVEL rows,
+   * which carry NO classId. The board grouped by `r.classId.toString()`, so one
+   * Quran level threw for the WHOLE query — and because the screen renders the
+   * class board and the level board from two queries, the Principal was left
+   * looking at a matrix of nothing but Quran/Arabic levels. Every general
+   * subject vanished from the one screen that publishes it.
+   */
+  test("a LEVEL row in the exam does not take the class rows down with it", async () => {
+    mockClassList.mockReturnValue([
+      { _id: CLASS, nameBn: "শ্রেণি ৩", level: 3 },
+      { _id: OTHER_CLASS, nameBn: "নার্সারি", level: -1 },
+    ]);
+    mockSyllabusFind.mockReturnValue([
+      row(),
+      // A Quran level row: keyed by track+level, sitting on no class at all.
+      row({ classId: null, subject: "QURAN", subjectTrack: "quran", subjectLevel: "Hifz 1" }),
+    ]);
+
+    const { examSyllabusBoard } = await import(
+      "../modules/exams/services/ExamSyllabusReadService"
+    );
+    const board = await examSyllabusBoard(ctxFor("PRINCIPAL"), EXAM.toString());
+
+    // Roster order, both classes present, and the class row still carries its subject.
+    expect(board.map((c) => c.classLabel)).toEqual(["নার্সারি", "শ্রেণি ৩"]);
+    expect(board.find((c) => c.classId === CLASS.toString())?.subjects).toHaveLength(1);
+    // The level row belongs to `examSyllabusLevels`, not to any class bucket.
+    expect(board.flatMap((c) => c.subjects).some((s) => s.subject === "QURAN")).toBe(false);
   });
 });
 
