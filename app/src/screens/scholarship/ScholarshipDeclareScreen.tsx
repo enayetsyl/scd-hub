@@ -52,6 +52,8 @@ const ITEM_TYPES = [
   "other",
 ] as const;
 
+type LessonKind = "POEM" | "PROSE" | null;
+
 interface DraftItem {
   itemNo: number;
   /** The number PRINTED on the paper. Separate from itemNo because a paper that lists
@@ -84,6 +86,8 @@ export default function ScholarshipDeclareScreen({ route }: Props): React.ReactE
   const [totalMarks, setTotalMarks] = useState("100");
   const [sourceNote, setSourceNote] = useState("");
   const [items, setItems] = useState<DraftItem[]>([]);
+  /** বাংলা only: a poem lesson and a prose lesson cannot carry the same items. */
+  const [lessonKind, setLessonKind] = useState<LessonKind>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -113,6 +117,82 @@ export default function ScholarshipDeclareScreen({ route }: Props): React.ReactE
     });
   }
 
+  /**
+   * Choosing কবিতা / গদ্য adds and removes the two rows the lesson type decides.
+   *
+   * বাংলা item ৯ is an either/or — ৯(ক) কবিতার মূলভাব or ৯(খ) গদ্যাংশের মূলভাব — and
+   * item ১ (কবিতা মুখস্থ লিখন) exists only where there is a poem. So a prose lesson can
+   * never carry rows ১ and ১০, and a poem lesson can never carry row ১১.
+   *
+   * Why this is worth a control rather than a note: an item declared but never sat is
+   * harmless ONLY while its mark box is left empty — a typed 0 lands as `earned 0 /
+   * available 10` and reports 0% on কবিতা মুখস্থ, the one topic that can never be
+   * refilled from a prose chapter. Removing the row makes that mistake impossible
+   * instead of merely unlikely.
+   *
+   * Switching is symmetric: it drops what the new kind cannot carry AND puts back what
+   * it can, at the row's own place in the catalogue order, so toggling twice is not a
+   * one-way door.
+   */
+  function dropsFor(kind: LessonKind): readonly string[] {
+    if (kind === "POEM") return ["MAIN-IDEA-PROSE"];
+    if (kind === "PROSE") return ["POEM-RECALL", "MAIN-IDEA-POEM"];
+    return [];
+  }
+
+  function keepsFor(kind: LessonKind): readonly string[] {
+    if (kind === "POEM") return ["POEM-RECALL", "MAIN-IDEA-POEM"];
+    if (kind === "PROSE") return ["MAIN-IDEA-PROSE"];
+    return [];
+  }
+
+  function chooseLessonKind(kind: LessonKind): void {
+    const next = kind === lessonKind ? null : kind;
+    setLessonKind(next);
+    if (!next) return;
+
+    const banTopics = allTopics.filter((t) => t.subject === "BAN");
+    const rank = (code: string): number => banTopics.findIndex((t) => t.code === code);
+
+    setItems((prev) => {
+      let rows = prev.filter(
+        (it) => !dropsFor(next).some((sfx) => it.topicCode.endsWith(sfx)),
+      );
+      for (const sfx of keepsFor(next)) {
+        if (rows.some((it) => it.topicCode.endsWith(sfx))) continue;
+        const t = banTopics.find((x) => x.code.endsWith(sfx));
+        if (!t) continue;
+        const row: DraftItem = {
+          itemNo: 0,
+          questionNo: "",
+          part: "",
+          label: t.labelBn,
+          subject: "BAN",
+          topicCode: t.code,
+          chapters: "",
+          itemType: "short_answer",
+          marks: t.marks != null ? String(t.marks) : "",
+        };
+        const at = rows.findIndex(
+          (it) => it.subject === "BAN" && rank(it.topicCode) > rank(t.code),
+        );
+        rows = at === -1 ? [...rows, row] : [...rows.slice(0, at), row, ...rows.slice(at)];
+      }
+      // Dropping rows shifts every itemNo after the gap, and the mark-entry grid falls
+      // back to itemNo when questionNo is empty — so শব্দার্থ would print as "১" while
+      // the paper calls it ২. Stamp the catalogue position so the printed number survives
+      // the removal (the whole point of numbering the papers 1–22).
+      return rows.map((it, i) => ({
+        ...it,
+        itemNo: i + 1,
+        questionNo:
+          it.subject === "BAN" && rank(it.topicCode) >= 0
+            ? String(rank(it.topicCode) + 1)
+            : it.questionNo,
+      }));
+    });
+  }
+
   function addItem(): void {
     setItems((prev) => [
       ...prev,
@@ -138,14 +218,24 @@ export default function ScholarshipDeclareScreen({ route }: Props): React.ReactE
    * (D-#672). Typing that by hand is 24 dropdowns and 24 numbers, which is how a test
    * paper stops being worth declaring at all. Rows are appended, never replacing what is
    * already there, and every field stays editable — delete the parts you did not print.
+   *
+   * A chosen `lessonKind` filters here too, so "add all" on a গদ্য lesson never puts the
+   * two কবিতা rows in to begin with.
    */
   function addAllTopics(): void {
-    const rows = allTopics.filter((t) => t.subject === subjects[0]);
+    const rows = allTopics.filter(
+      (t) => t.subject === subjects[0] && !dropsFor(lessonKind).some((sfx) => t.code.endsWith(sfx)),
+    );
+    // With no lessonKind the list is the whole catalogue, so itemNo already equals the
+    // printed number and questionNo can stay empty. Once a kind has pruned it, the two
+    // diverge and the catalogue position has to be written down.
+    const catalogue = allTopics.filter((t) => t.subject === subjects[0]);
     setItems((prev) => [
       ...prev,
       ...rows.map((t, i) => ({
         itemNo: prev.length + i + 1,
-        questionNo: "",
+        questionNo:
+          lessonKind === null ? "" : String(catalogue.findIndex((x) => x.code === t.code) + 1),
         part: "",
         label: t.labelBn,
         subject: subjects[0],
@@ -214,6 +304,28 @@ export default function ScholarshipDeclareScreen({ route }: Props): React.ReactE
           />
         ))}
       </ChipRow>
+
+      {/* বাংলা only — no other subject has an item that depends on the lesson being a
+          poem. Hidden rather than disabled so an English paper never shows a control
+          that cannot apply to it. */}
+      {subjects.includes("BAN") ? (
+        <>
+          <Muted>{STR.scLessonKind}</Muted>
+          <ChipRow>
+            <Chip
+              label={STR.scLessonPoem}
+              selected={lessonKind === "POEM"}
+              onPress={() => chooseLessonKind("POEM")}
+            />
+            <Chip
+              label={STR.scLessonProse}
+              selected={lessonKind === "PROSE"}
+              onPress={() => chooseLessonKind("PROSE")}
+            />
+          </ChipRow>
+          <Muted>{STR.scLessonKindNote}</Muted>
+        </>
+      ) : null}
 
       <Field label={STR.scPaperName} value={name} onChangeText={setName} />
       <Field label={`${STR.scPaperDate} (YYYY-MM-DD)`} value={paperDate} onChangeText={setPaperDate} />
