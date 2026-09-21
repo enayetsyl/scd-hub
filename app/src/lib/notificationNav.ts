@@ -71,6 +71,14 @@ export function notificationTarget(
       return refs?.observationId
         ? { tab: "ObservationTab", screen: "ObservationDetail", params: { observationId: refs.observationId } }
         : { tab: "ObservationTab", screen: "MyObservations" };
+    // Observer-facing: the row they have just been handed. The detail screen carries
+    // the রিভিউ করুন button for the assigned observer, so this lands them ON the work;
+    // without the ref, their own queue is the honest fallback — never the hub, which
+    // would make them hunt for which row was meant.
+    case "OBSERVATION_ASSIGNED":
+      return refs?.observationId
+        ? { tab: "ObservationTab", screen: "ObservationDetail", params: { observationId: refs.observationId } }
+        : { tab: "ObservationTab", screen: "ObservationReviewQueue" };
     case "OBSERVATION_RESPONDED":
     case "OBSERVATION_ESCALATED":
     case "OBSERVATION_READY_TO_PUBLISH":
