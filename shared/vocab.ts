@@ -4601,6 +4601,18 @@ export const SCHOLARSHIP_TOPIC_AXIS_LABELS_BN: Record<ScholarshipTopicAxis, stri
  *  question. The EX-3 "blank, never 0" refusal, applied to an axis instead of a row. */
 export const SCHOLARSHIP_MIN_MARKS_FOR_VERDICT = 15;
 
+/** The second door through the floor (D-#691, amending D-#662). A topic also earns a
+ *  verdict once it has been set on this many SEPARATE papers, whatever the marks add up
+ *  to. D-#662 refused to count papers, and was right about the case it argued: one
+ *  18-mark comprehension item is more evidence than four 1-mark gaps, so papers alone
+ *  can never be the test. But the case it did not argue is a 5-mark item repeated —
+ *  cardinal numbers, 0/5 on one paper and 0/5 on the next. That is two independent
+ *  readings a fortnight apart agreeing, and the mark floor calls it "যথেষ্ট তথ্য নেই"
+ *  for a third paper while the child cannot count. Sample SIZE stays the mark count;
+ *  this adds sample INDEPENDENCE, which the mark count cannot see. Either door opens
+ *  the row — neither weakens the other. */
+export const SCHOLARSHIP_MIN_PAPERS_FOR_VERDICT = 2;
+
 /** Absolute bands, against the scholarship bar rather than the class (D-#663).
  *  below WEAK → দুর্বল · below GOOD → মোটামুটি · at/above GOOD → ভালো. */
 export const SCHOLARSHIP_BAND_WEAK_BELOW = 50;
