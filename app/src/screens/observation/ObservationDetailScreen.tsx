@@ -70,6 +70,7 @@ export default function ObservationDetailScreen({ route, navigation }: Props): R
   const { user, role, can } = useAuth();
   const canUpload = can("observation:upload");
   const canManage = can("observation:manage");
+  const canReview = can("observation:review");
 
   const [obsQ, refetchObs] = useQuery({ query: CLASSROOM_OBSERVATION_QUERY, variables: { id: observationId } });
   const obs = obsQ.data?.classroomObservation ?? null;
@@ -255,6 +256,36 @@ export default function ObservationDetailScreen({ route, navigation }: Props): R
           <Row label={STR.obsSubject} value={hwSubjectLabel(obs.subject)} />
           <Row label={STR.obsClassDate} value={isoDateLabel(obs.classDate)} />
         </Card>
+
+        {/* CO-1: the assigned observer's way IN. The review form has only ever been
+            reachable from the review queue on the Observation hub — but the notification,
+            every list row and the footage itself land HERE, so an observer opened the row
+            they had been assigned, found the video and nowhere to write a word about it,
+            and read that as the app refusing to let them review. The queue still exists;
+            this is the same door where they are already standing.
+            Without the permission the row is a dead end, so say WHY rather than hide the
+            card: an assignment the account cannot act on is the Principal's to fix. */}
+        {isObserver && obs.state === "ASSIGNED" && !obs.cancelledAt ? (
+          <Card>
+            {canReview ? (
+              <>
+                <Muted style={{ marginBottom: space(2) }}>{STR.obsWriteReviewHint}</Muted>
+                <Button
+                  title={STR.obsReview}
+                  onPress={() =>
+                    navigation.navigate("ReviewObservation", {
+                      observationId,
+                      form: obs.form,
+                      title: `${obsFormLabel(obs.form)} · ${hwSubjectLabel(obs.subject)}`,
+                    })
+                  }
+                />
+              </>
+            ) : (
+              <Notice message={STR.obsNoReviewPerm} tone="warn" />
+            )}
+          </Card>
+        ) : null}
 
         {/* CO-15 (D-#428): Principal/Office cancel a PLANNED review — UPLOADED/ASSIGNED
             only. Deliberately a SEPARATE card from publish/withhold below, and the two
