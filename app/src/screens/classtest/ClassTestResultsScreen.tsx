@@ -21,7 +21,8 @@ import {
   UPDATE_CLASS_TEST_DETAILS,
 } from "../../graphql/classTest";
 import { Screen, Card, Body, Muted, Button, Badge, Chip, Field, Loader, Notice } from "../../components/ui";
-import { STR, hwSubjectLabel, ctUnitLabel, bnNum, isoDateLabel } from "../../lib/labels";
+import { DateField } from "../../components/DateField";
+import { STR, hwSubjectLabel, ctUnitLabel, bnNum, isoDateLabel, dhakaDateKey } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useAuth } from "../../auth/AuthContext";
 import { useToast } from "../../state/ToastContext";
@@ -76,15 +77,27 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
   const [editOpen, setEditOpen] = useState(false);
   const [editTotal, setEditTotal] = useState("");
   const [editPass, setEditPass] = useState("");
+  // Owner ask 2026-09-22: the exam DATE belongs in this form too — the comment above
+  // has always claimed it, but the field was never rendered, so a mis-typed date had
+  // no path but a script.
+  const [editDate, setEditDate] = useState("");
   const [editBusy, setEditBusy] = useState(false);
 
   async function onSaveDetails(): Promise<void> {
     setError(null);
     setEditBusy(true);
+    // The date is sent ONLY when the picker actually moved off the prefill. Sending it
+    // unchanged looks harmless — the server compares before it guards — but that
+    // comparison is on the stored Date, and a key→Date round-trip only lands back on
+    // the same instant while the row is stored at UTC midnight. A row stored at Dhaka
+    // midnight would read as "the date is changing" and refuse a total-marks fix that
+    // has nothing to do with the date. Not sending it cannot be wrong.
+    const dateMoved = !!test && !!editDate.trim() && editDate.trim() !== dhakaDateKey(test.examDate);
     const res = await updateDetails({
       id: testId,
       totalMarks: editTotal.trim() ? Number(editTotal) : null,
       passMark: editPass.trim() ? Number(editPass) : null,
+      examDate: dateMoved ? editDate.trim() : null,
     });
     setEditBusy(false);
     if (res.error || !res.data?.updateClassTestDetails) return setError(friendlyError(res.error));
@@ -270,14 +283,24 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
               32-mark paper had been recorded as 42, and there was no update path at all,
               only a script). Open to Principal/Office AND the exam's own teacher, so a
               teacher can fix their own typo. Once marks exist the server refuses the
-              TOTAL (it is the denominator of every percentage) but still allows the PASS
-              MARK while every result is DRAFT — see updateClassTestDetails. */}
+              TOTAL (it is the denominator of every percentage) and the DATE, but still
+              allows the PASS MARK while every result is DRAFT — see
+              updateClassTestDetails. A REQUESTED test never reaches this screen (the
+              status guard above), so its date is changed from the Class Test hub. */}
           {canEditDetails ? (
             <View style={{ marginTop: space(3) }}>
               {editOpen ? (
                 <>
                   <Field label={STR.ctTotalMarks} value={editTotal} onChangeText={setEditTotal} keyboardType="number-pad" />
                   <Field label={STR.ctPassMark} value={editPass} onChangeText={setEditPass} keyboardType="number-pad" />
+                  {/* The date moves only while no mark exists (the server refuses it
+                      otherwise, and that refusal lands in the Notice below). */}
+                  <DateField
+                    label={STR.ctExamDate}
+                    value={editDate}
+                    onChange={setEditDate}
+                    helper={STR.ctChangeDateHelp}
+                  />
                   {/* The server's refusal (marks already entered, results already
                       published, pass mark above the total) has to land HERE, beside the
                       Save button. The only other Notice on this screen sits in the
@@ -297,6 +320,11 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
                     setError(null); // don't reopen onto a stale refusal from a previous attempt
                     setEditTotal(String(test.totalMarks));
                     setEditPass(String(test.passMark));
+                    // dhakaDateKey, not `examDate.slice(0, 10)`: the slice is only
+                    // right while the row happens to be stored at UTC midnight, and
+                    // reads a day early for any row stored at Dhaka midnight. Same
+                    // helper the rest of the app reads exam dates with.
+                    setEditDate(dhakaDateKey(test.examDate));
                     setEditOpen(true);
                   }}
                 />
