@@ -9,8 +9,10 @@
  * Two rules are enforced here rather than in a resolver, because a row that
  * violates either is wrong no matter which caller wrote it:
  *
- *   1. `Σ marks[].total === 100`, in EVERY class (D-#532). One universal guard,
- *      not a per-class-band lookup — what FILLS the 100 stays per subject.
+ *   1. `Σ marks[].total === fullMarks` (D-#532, amended by D-#694). Still ONE
+ *      guard rather than a per-class-band lookup — but the total is the paper's
+ *      own, because নার্সারি sits 50-mark কুরআন and আরবি beside 100-mark বাংলা.
+ *      `fullMarks` defaults to 100, so everything else is unchanged.
  *   2. A row tagged with a report-card `component` (CT/ADAB) carries NO
  *      count/marksEach (D-#531): its number comes from the paper, and typing it
  *      twice is how the syllabus a parent reads and the report card the same

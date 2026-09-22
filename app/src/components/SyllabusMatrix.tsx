@@ -21,13 +21,17 @@ import { STR, routineSubjectLabel } from "../lib/labels";
 import { useColors } from "../theme";
 import { space, typeScale } from "../theme/tokens";
 
-/** One cell's state. `blocked` is DERIVED, not stored: a row whose rows do not
- *  reach 100 cannot be published however far along the chain it is. */
+/** One cell's state. `blocked` is DERIVED, not stored: a row whose marks do not
+ *  reach its own পূর্ণমান cannot be published however far along the chain it is. */
 export type CellState = "published" | "principal" | "teacher" | "draft" | "blocked" | "none";
 
 export function cellStateFor(row: SyllabusT | undefined): CellState {
   if (!row || row.pending) return "none";
-  if (row.marks.length > 0 && row.totalMarks !== 100) return "blocked";
+  // Against the total THIS paper declares, not a literal 100 (D-#694). The
+  // pre-primary কুরআন and আরবি papers are out of 50, and a hard 100 here marked
+  // them "cannot be published" on the Principal's board while every other surface
+  // showed them as fine.
+  if (row.marks.length > 0 && row.totalMarks !== (row.fullMarks || 100)) return "blocked";
   switch (row.status) {
     case "PUBLISHED":
       return "published";

@@ -42,6 +42,8 @@ const READ_SERVICE = read("../modules/exams/services/ExamSyllabusReadService.ts"
 const RESOLVER = read("../modules/exams/resolvers/examSyllabus.ts");
 const EDITOR = read("../../../app/src/screens/syllabus/SyllabusEditorScreen.tsx");
 const APPROVALS = read("../../../app/src/screens/syllabus/SyllabusApprovalsScreen.tsx");
+const MATRIX = read("../../../app/src/components/SyllabusMatrix.tsx");
+const ENTRY = read("../../../app/src/screens/syllabus/SyllabusEntryScreen.tsx");
 
 const row = (label: string, count: number, marksEach: number): ISyllabusMarkRow => ({
   seq: 1,
@@ -174,5 +176,24 @@ describe("the app compares against the same number the server does", () => {
   test("it is on the wire in both directions", () => {
     expect(RESOLVER).toMatch(/fullMarks: t\.exposeInt\("fullMarks"\)/);
     expect(RESOLVER).toMatch(/fullMarks: t\.arg\.int\(\{ required: false \}\)/);
+  });
+
+  test("the Principal's MATRIX uses it too — the surface that was missed", () => {
+    // Shipped wrong: the matrix kept a literal 100, so the two নার্সারি papers
+    // showed ✕ "cannot be published" on the Principal's board while the card, the
+    // editor and the server all read them as fine. The board is the surface the
+    // Principal actually acts from, so it was the one that mattered most.
+    expect(MATRIX).toMatch(/row\.totalMarks !== \(row\.fullMarks \|\| 100\)/);
+  });
+
+  test("no syllabus surface compares a total to a bare 100 any more", () => {
+    // The sweep, kept as a test: any new literal here is the same bug again.
+    for (const [name, src] of [
+      ["matrix", MATRIX], ["editor", EDITOR], ["approvals", APPROVALS], ["entry", ENTRY],
+    ] as const) {
+      const bare = src.split("\n").filter((l) =>
+        /totalMarks\s*[!=]==?\s*100\b/.test(l) || /sum\s*[!=]==?\s*100\b/.test(l));
+      expect({ name, bare }).toEqual({ name, bare: [] });
+    }
   });
 });

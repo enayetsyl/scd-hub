@@ -185,6 +185,11 @@ export default function ScholarshipHomeScreen(): React.ReactElement {
                 }
               />
               <Button
+                title={STR.scCandidates}
+                variant="ghost"
+                onPress={() => nav.navigate("ScholarshipCandidates", { sectionId: activeSection.id })}
+              />
+              <Button
                 title={STR.scTopics}
                 variant="ghost"
                 onPress={() => nav.navigate("ScholarshipTopics", { classLevel: activeSection.classLevel })}

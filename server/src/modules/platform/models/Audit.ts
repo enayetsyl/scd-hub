@@ -216,6 +216,8 @@ export type AuditEventKind =
   | "MONTHLY_REPORT_UNLOCKED"      // a hard-locked month reopened with a reason (Principal only, MR-3, D-#398)
   | "MONTHLY_COMMENTS_EXPORTED"    // de-identified comment pack streamed for Desktop authoring (MR-8, D-#415)
   | "SCHOLARSHIP_ANALYSIS_EXPORTED" // one NAMED student's topic weakness streamed as .md (SC-8, D-#695)
+  | "SCHOLARSHIP_CANDIDATE_ADDED"    // a child entered for the scholarship examination (SC-9, D-#697)
+  | "SCHOLARSHIP_CANDIDATE_REMOVED"  // a child taken out of it; her marks are KEPT, only scoped out
   | "MONTHLY_COMMENTS_IMPORTED"    // a comment envelope pasted back — counts + per-row refusals in meta (MR-8, D-#415)
   // Answer-script archive (AR-1..AR-3, prd-script-archive §5/§7, D-#443–#447)
   | "SCRIPT_BUNDLE_FILED"          // a test's scripts filed into a box (teacher tracker:write / Office roster:manage)

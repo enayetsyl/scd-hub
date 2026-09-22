@@ -201,6 +201,7 @@ import ScholarshipMarksScreen from "../screens/scholarship/ScholarshipMarksScree
 import ScholarshipStudentScreen from "../screens/scholarship/ScholarshipStudentScreen";
 import ScholarshipClassScreen from "../screens/scholarship/ScholarshipClassScreen";
 import ScholarshipTopicsScreen from "../screens/scholarship/ScholarshipTopicsScreen";
+import ScholarshipCandidatesScreen from "../screens/scholarship/ScholarshipCandidatesScreen";
 import TeachingNoteDocScreen from "../screens/teachingnotes/TeachingNoteDocScreen";
 import TeachingNoteUploadScreen from "../screens/teachingnotes/TeachingNoteUploadScreen";
 import TeachingNoteOpenCommentsScreen from "../screens/teachingnotes/TeachingNoteOpenCommentsScreen";
@@ -1127,6 +1128,11 @@ function ScholarshipNavigator(): React.ReactElement {
         name="ScholarshipClass"
         component={ScholarshipClassScreen}
         options={{ title: STR.scClassAnalysis }}
+      />
+      <ScholarshipStack.Screen
+        name="ScholarshipCandidates"
+        component={ScholarshipCandidatesScreen}
+        options={{ title: STR.scCandidates }}
       />
       <ScholarshipStack.Screen
         name="ScholarshipTopics"
