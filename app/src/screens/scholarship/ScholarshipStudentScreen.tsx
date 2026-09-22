@@ -27,11 +27,14 @@ import {
   Badge,
   Chip,
   ChipRow,
+  Button,
   Loader,
   EmptyState,
   Notice,
 } from "../../components/ui";
 import { MiniLineChart } from "../../components/MiniCharts";
+import { downloadFile, PDF_SUPPORTED } from "../../lib/pdf";
+import { useToast } from "../../state/ToastContext";
 import { STR, bnNum, hwSubjectLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { radius, space, useColors } from "../../theme";
@@ -86,8 +89,10 @@ export function bandLabel(band: string): string {
 export default function ScholarshipStudentScreen({ route }: Props): React.ReactElement {
   const { sectionId, classLevel, studentId, name } = route.params;
   const colors = useColors();
+  const toast = useToast();
   const [subject, setSubject] = useState<string | null>(null);
   const [axis, setAxis] = useState<"topic" | "chapter">("topic");
+  const [downloading, setDownloading] = useState(false);
 
   const [{ data, fetching, error }] = useQuery({
     query: SCHOLARSHIP_STUDENT_QUERY,
@@ -121,6 +126,32 @@ export default function ScholarshipStudentScreen({ route }: Props): React.ReactE
   }
 
   const rows = (axis === "topic" ? a?.topics : a?.chapters) ?? [];
+
+  /**
+   * Download this student × this subject as Markdown, to hand to a model for tailored
+   * practice (SC-8).
+   *
+   * ONE SUBJECT, so the button waits for a subject chip rather than guessing. With no
+   * chip the screen pools every subject into one ranking, which is a fine thing to look
+   * at and a useless thing to generate practice from — "weakest topic" across English
+   * and Bangla together answers no question anybody asks.
+   */
+  async function onDownload(): Promise<void> {
+    if (!subject) return;
+    setDownloading(true);
+    try {
+      const file = `${(name ?? "student").replace(/[^A-Za-z0-9._-]+/g, "-").toLowerCase()}-${subject.toLowerCase()}.md`;
+      await downloadFile(
+        `/export/scholarship-analysis?sectionId=${encodeURIComponent(sectionId)}&classLevel=${classLevel}&studentId=${encodeURIComponent(studentId)}&subject=${subject}`,
+        file,
+      );
+      toast.show(STR.scExportDone);
+    } catch (e) {
+      toast.show(e instanceof Error ? e.message : STR.scExportWebOnly);
+    } finally {
+      setDownloading(false);
+    }
+  }
 
   return (
     <Screen scroll>
@@ -245,6 +276,21 @@ export default function ScholarshipStudentScreen({ route }: Props): React.ReactE
       ))}
 
       {rows.length > 0 ? <Notice message={STR.scFloorHint} tone="info" /> : null}
+
+      {/* Web only, like every other export — `downloadFile` drives an anchor, which
+          does not exist in RN. Hidden rather than shown-and-failing on a phone. */}
+      {PDF_SUPPORTED && a && a.papersSat > 0 ? (
+        <View style={{ marginTop: space(2), gap: space(2) }}>
+          <Button
+            title={STR.scExportMd}
+            variant="secondary"
+            onPress={() => void onDownload()}
+            loading={downloading}
+            disabled={downloading || !subject}
+          />
+          {!subject ? <Muted>{STR.scExportPickSubject}</Muted> : null}
+        </View>
+      ) : null}
     </Screen>
   );
 }
