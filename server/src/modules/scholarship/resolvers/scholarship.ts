@@ -40,6 +40,9 @@ import {
   type ClassAnalysis,
   type ClassAxisRow,
   type ClassCell,
+  type PaperResult,
+  type RankView,
+  type SeriesPoint,
   type StudentAnalysis,
 } from "../services/ScholarshipAnalysisService";
 
@@ -156,6 +159,32 @@ PaperDetailRef.implement({
   }),
 });
 
+const SeriesPointRef = builder.objectRef<SeriesPoint>("ScholarshipSeriesPoint");
+SeriesPointRef.implement({
+  description:
+    "One sitting's reading of one topic — a point on the trend line. Its percent is the raw " +
+    "arithmetic of that paper alone, unfloored: a point is not a verdict, and the row above it " +
+    "already carries one (D-#691).",
+  fields: (t) => ({
+    paperId: t.exposeString("paperId"),
+    label: t.exposeString("label"),
+    earned: t.exposeFloat("earned"),
+    available: t.exposeFloat("available"),
+    percent: t.exposeFloat("percent"),
+  }),
+});
+
+const RankRef = builder.objectRef<RankView>("ScholarshipRank");
+RankRef.implement({
+  description:
+    "A place among the students who actually sat this — never the section size. Ties share a " +
+    "place and the next is skipped (1, 2, 2, 4).",
+  fields: (t) => ({
+    rank: t.exposeInt("rank"),
+    of: t.exposeInt("of"),
+  }),
+});
+
 const AxisRowRef = builder.objectRef<AxisRow>("ScholarshipAxisRow");
 AxisRowRef.implement({
   description:
@@ -173,6 +202,24 @@ AxisRowRef.implement({
     classGap: t.int({ nullable: true, resolve: (r) => r.classGap }),
     behindClass: t.exposeBoolean("behindClass"),
     paperCount: t.exposeInt("paperCount"),
+    series: t.field({ type: [SeriesPointRef], resolve: (r) => r.series }),
+    classRank: t.field({ type: RankRef, nullable: true, resolve: (r) => r.classRank }),
+  }),
+});
+
+const PaperResultRef = builder.objectRef<PaperResult>("ScholarshipPaperResult");
+PaperResultRef.implement({
+  description:
+    "One paper as this student sat it, oldest first. A paper she did not sit is absent from the " +
+    "list rather than present as a zero (D-#660).",
+  fields: (t) => ({
+    paperId: t.exposeString("paperId"),
+    label: t.exposeString("label"),
+    date: t.string({ nullable: true, resolve: (r) => r.date }),
+    earned: t.exposeFloat("earned"),
+    available: t.exposeFloat("available"),
+    percent: t.float({ nullable: true, resolve: (r) => r.percent }),
+    rank: t.field({ type: RankRef, nullable: true, resolve: (r) => r.rank }),
   }),
 });
 
@@ -189,6 +236,7 @@ StudentAnalysisRef.implement({
     totalEarned: t.exposeFloat("totalEarned"),
     totalAvailable: t.exposeFloat("totalAvailable"),
     overallPercent: t.float({ nullable: true, resolve: (r) => r.overallPercent }),
+    papers: t.field({ type: [PaperResultRef], resolve: (r) => r.papers }),
   }),
 });
 

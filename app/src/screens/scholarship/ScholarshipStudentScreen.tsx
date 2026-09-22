@@ -6,7 +6,13 @@
  * topic the whole class is below is a teaching problem, not hers.
  *
  * A row under the floor renders GREY with no percentage at all (D-#662), and never red:
- * "not enough data" must not be mistakable for "failing".
+ * "not enough data" must not be mistakable for "failing". Since D-#691 a topic set on two
+ * separate papers clears that floor whatever its marks add up to, which is what lets a
+ * 5-mark item failed twice finally say so.
+ *
+ * SC-7 adds the two halves PRD §6.4 contracted and SC-3 shipped without: a per-topic
+ * trend across the sittings, and the paper-by-paper list — plus her place among the
+ * students who actually sat each thing.
  */
 import React, { useState } from "react";
 import { View } from "react-native";
@@ -25,6 +31,7 @@ import {
   EmptyState,
   Notice,
 } from "../../components/ui";
+import { MiniLineChart } from "../../components/MiniCharts";
 import { STR, bnNum, hwSubjectLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { radius, space, useColors } from "../../theme";
@@ -44,6 +51,29 @@ interface Row {
   classPercent: number | null;
   classGap: number | null;
   behindClass: boolean;
+  series: { paperId: string; label: string; percent: number }[];
+  classRank: RankView | null;
+}
+
+interface RankView {
+  rank: number;
+  of: number;
+}
+
+interface PaperResult {
+  paperId: string;
+  label: string;
+  date: string | null;
+  earned: number;
+  available: number;
+  percent: number | null;
+  rank: RankView | null;
+}
+
+/** "অবস্থান ৩/৬" — the place is never printed without what it is out of, because 1st of
+ *  2 and 1st of 8 are not the same news and only the denominator says which one it is. */
+export function rankText(r: { rank: number; of: number }): string {
+  return `${STR.scRankLabel} ${bnNum(r.rank)}/${bnNum(r.of)}`;
 }
 
 export function bandLabel(band: string): string {
@@ -72,6 +102,7 @@ export default function ScholarshipStudentScreen({ route }: Props): React.ReactE
         overallPercent: number | null;
         topics: Row[];
         chapters: Row[];
+        papers: PaperResult[];
       }
     | undefined;
 
@@ -102,6 +133,41 @@ export default function ScholarshipStudentScreen({ route }: Props): React.ReactE
           </Muted>
         ) : null}
       </Card>
+
+      {/* Paper by paper, oldest first (SC-7). Above the topic rows on purpose: "how did
+          she do, and where did that put her" is the question a teacher opens this
+          screen with, and the topic breakdown is the answer to the next one. */}
+      {a && a.papers.length > 0 ? (
+        <Card>
+          <Body style={{ fontWeight: "700" }}>{STR.scPaperWise}</Body>
+          {a.papers.map((p) => (
+            <View
+              key={p.paperId}
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: space(3),
+                marginTop: space(2),
+              }}
+            >
+              <View style={{ flexShrink: 1 }}>
+                <Body>{p.label}</Body>
+                <Muted>
+                  {bnNum(p.earned)} / {bnNum(p.available)} {STR.scItemMarks}
+                  {p.date ? ` · ${p.date}` : ""}
+                </Muted>
+              </View>
+              <View style={{ alignItems: "flex-end" }}>
+                <Body style={{ fontWeight: "700" }}>
+                  {p.percent === null ? "—" : `${bnNum(p.percent)}%`}
+                </Body>
+                {p.rank ? <Muted>{rankText(p.rank)}</Muted> : null}
+              </View>
+            </View>
+          ))}
+        </Card>
+      ) : null}
 
       <ChipRow>
         {SUBJECTS.map((s) => (
@@ -156,7 +222,25 @@ export default function ScholarshipStudentScreen({ route }: Props): React.ReactE
               {r.classGap !== null ? ` (${r.classGap > 0 ? "+" : ""}${bnNum(r.classGap)})` : ""}
             </Muted>
             {r.behindClass ? <Badge text={STR.scBehindClass} tone="warn" /> : null}
+            {r.classRank ? <Badge text={rankText(r.classRank)} tone="muted" /> : null}
           </View>
+
+          {/* The trend only appears from the SECOND sitting: a single dot is not a
+              direction, and drawing one would suggest a movement nobody measured. */}
+          {r.series.length > 1 ? (
+            <View style={{ marginTop: space(2) }}>
+              <Muted>
+                {STR.scTrend} · {r.series.map((p) => `${bnNum(p.percent)}%`).join(" → ")}
+              </Muted>
+              <MiniLineChart
+                height={44}
+                points={r.series.map((p) => ({ label: p.label, value: p.percent }))}
+                accessibilityLabel={`${r.label}: ${r.series
+                  .map((p) => `${p.label} ${p.percent}%`)
+                  .join(", ")}`}
+              />
+            </View>
+          ) : null}
         </View>
       ))}
 

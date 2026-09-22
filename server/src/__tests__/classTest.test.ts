@@ -70,6 +70,12 @@ jest.mock("../modules/printing/services/PrintRequestService", () => ({
 jest.mock("../modules/printing/models/PrintRequest", () => ({
   PrintRequest: { updateOne: (q: unknown, u: unknown) => mockPrUpdateOne(q, u) },
 }));
+// A moved exam date also re-points the archive's denormalised copy (the retrieval
+// index) — see updateClassTestDetails.
+const mockBundleUpdateMany = jest.fn().mockResolvedValue({});
+jest.mock("../modules/archive/models/ScriptBundle", () => ({
+  ScriptBundle: { updateMany: (q: unknown, u: unknown) => mockBundleUpdateMany(q, u) },
+}));
 
 const mockCtUpdateOne = jest.fn().mockResolvedValue({});
 const mockSectionFindById = jest.fn();
@@ -148,6 +154,7 @@ import {
   restoreClassTest,
   updateClassTestDetails,
 } from "../modules/trackers/services/ClassTestService";
+import { dateKeyOf } from "../modules/attendance/dates";
 import { filesRouter, FILE_ERRORS_BN } from "../routes/files";
 
 // ---------------------------------------------------------------------------
@@ -188,6 +195,7 @@ beforeEach(() => {
   mockCtUpdateOne.mockResolvedValue({});
   mockCreatePrintRequest.mockResolvedValue({ _id: "print-req-1" });
   mockPrUpdateOne.mockResolvedValue({});
+  mockBundleUpdateMany.mockResolvedValue({});
   jest.clearAllMocks();
   mockSeqUpdate.mockResolvedValue({ seq: 1 });
   mockSectionFindById.mockReturnValue(leanChain({ classId: CLASS_OID }));
@@ -889,6 +897,121 @@ describe("updateClassTestDetails", () => {
     const doc = makeDoc({ status: "CANCELLED" });
     mockCtFindById.mockReturnValue(findByIdResult(doc));
     await expect(updateClassTestDetails({ ...admin(doc), totalMarks: 32 })).rejects.toThrow(/retired/);
+  });
+
+  // -------------------------------------------------------------------------
+  // examDate — the teacher's own fix for a postponed or mis-typed exam date
+  // (owner ask 2026-09-22). Free before the first mark, refused after, and the two
+  // DENORMALISED copies of the date have to follow it.
+  // -------------------------------------------------------------------------
+
+  test("the exam date moves before any mark, and the audit records before → after", async () => {
+    const doc = makeDoc();
+    mockCtFindById.mockReturnValue(findByIdResult(doc));
+    mockCtResultCount.mockResolvedValue(0);
+    const res = await updateClassTestDetails({ ...admin(doc), examDate: "2026-08-06" });
+    expect(res.examDate.slice(0, 10)).toBe("2026-08-06");
+    expect(res.totalMarks).toBe(42); // untouched — only the date was supplied
+    expect(doc.save).toHaveBeenCalled();
+    expect(mockWriteAudit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventKind: "CLASS_TEST_DETAILS_EDITED",
+        meta: expect.objectContaining({
+          from: expect.objectContaining({ examDate: new Date("2026-07-30").toISOString() }),
+          to: expect.objectContaining({ examDate: new Date("2026-08-06").toISOString() }),
+        }),
+      }),
+    );
+  });
+
+  test("the exam's OWN teacher may move the date without roster:manage", async () => {
+    const doc = makeDoc();
+    mockCtFindById.mockReturnValue(findByIdResult(doc));
+    mockCtResultCount.mockResolvedValue(0);
+    const res = await updateClassTestDetails({
+      id: doc._id.toString(),
+      actorId: OWNER.toString(),
+      canManage: false,
+      examDate: "2026-08-06",
+    });
+    expect(res.examDate.slice(0, 10)).toBe("2026-08-06");
+  });
+
+  test("a still-REQUESTED print job is re-pointed at the new day — it must not print for the abandoned one", async () => {
+    const PR_ID = oid();
+    const doc = makeDoc({ status: "REQUESTED", printRequestId: PR_ID });
+    mockCtFindById.mockReturnValue(findByIdResult(doc));
+    mockCtResultCount.mockResolvedValue(0);
+    await updateClassTestDetails({ ...admin(doc), examDate: "2026-08-06" });
+    // The `status: "REQUESTED"` clause is the guard: an already-PRINTED job's
+    // neededByKey is the record of the day it was actually printed for, so the
+    // filter — not an if — is what keeps it from being rewritten.
+    expect(mockPrUpdateOne).toHaveBeenCalledWith(
+      { _id: PR_ID, status: "REQUESTED" },
+      { $set: { neededByKey: dateKeyOf(new Date("2026-08-06")) } },
+    );
+  });
+
+  test("a filed script bundle's denormalised examDate follows the move", async () => {
+    const doc = makeDoc();
+    mockCtFindById.mockReturnValue(findByIdResult(doc));
+    mockCtResultCount.mockResolvedValue(0);
+    await updateClassTestDetails({ ...admin(doc), examDate: "2026-08-06" });
+    expect(mockBundleUpdateMany).toHaveBeenCalledWith(
+      { "source.kind": "CLASS_TEST", "source.refId": doc._id },
+      { $set: { examDate: new Date("2026-08-06") } },
+    );
+  });
+
+  test("nothing is re-pointed when the date did not actually change", async () => {
+    const doc = makeDoc();
+    mockCtFindById.mockReturnValue(findByIdResult(doc));
+    mockCtResultCount.mockResolvedValue(0);
+    // Re-saving the SAME date while correcting the total: the date is unchanged, so
+    // neither denormalised copy is touched.
+    await updateClassTestDetails({ ...admin(doc), examDate: "2026-07-30", totalMarks: 32 });
+    expect(mockPrUpdateOne).not.toHaveBeenCalled();
+    expect(mockBundleUpdateMany).not.toHaveBeenCalled();
+  });
+
+  test("a test with no print job (registered official, D-#339) needs no queue update", async () => {
+    const doc = makeDoc(); // no printRequestId
+    mockCtFindById.mockReturnValue(findByIdResult(doc));
+    mockCtResultCount.mockResolvedValue(0);
+    await updateClassTestDetails({ ...admin(doc), examDate: "2026-08-06" });
+    expect(mockPrUpdateOne).not.toHaveBeenCalled();
+  });
+
+  test("the exam date is REFUSED once any result exists — clear the marks first", async () => {
+    const doc = makeDoc({ printRequestId: oid() });
+    mockCtFindById.mockReturnValue(findByIdResult(doc));
+    mockCtResultCount.mockResolvedValue(9);
+    await expect(updateClassTestDetails({ ...admin(doc), examDate: "2026-08-06" })).rejects.toThrow(
+      /9 result\(s\) entered/,
+    );
+    expect(doc.save).not.toHaveBeenCalled();
+    // The refusal must be total: no half-applied move onto the queue row either.
+    expect(mockPrUpdateOne).not.toHaveBeenCalled();
+    expect(mockBundleUpdateMany).not.toHaveBeenCalled();
+  });
+
+  test("re-saving the SAME date with marks present is a no-op, not a refusal", async () => {
+    const doc = makeDoc();
+    mockCtFindById.mockReturnValue(findByIdResult(doc));
+    mockCtResultCount.mockResolvedValue(9); // marks exist, but the date is not moving
+    const res = await updateClassTestDetails({ ...admin(doc), examDate: "2026-07-30" });
+    expect(res.examDate.slice(0, 10)).toBe("2026-07-30");
+    expect(doc.save).toHaveBeenCalled();
+  });
+
+  test("an unparseable date is refused before anything is written", async () => {
+    const doc = makeDoc();
+    mockCtFindById.mockReturnValue(findByIdResult(doc));
+    mockCtResultCount.mockResolvedValue(0);
+    await expect(updateClassTestDetails({ ...admin(doc), examDate: "not-a-date" })).rejects.toThrow(
+      /Invalid exam date/,
+    );
+    expect(doc.save).not.toHaveBeenCalled();
   });
 });
 

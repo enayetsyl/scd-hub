@@ -3,18 +3,29 @@
  * the caller's own class tests (myClassTests). Every action is re-gated server-side;
  * links the role can't perform are hidden (the server stays the gate — its Bangla
  * deny still surfaces if reached).
+ *
+ * It also owns the ONE path to change a still-REQUESTED exam's date (owner ask
+ * 2026-09-22): a postponed exam is by definition not printed yet, and the results
+ * screen — where the PRINTED date edit lives — turns a non-PRINTED test away.
  */
 import React from "react";
 import { ScrollView, View } from "react-native";
 import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { useQuery } from "urql";
-import { MY_CLASS_TESTS_QUERY, CLASS_TEST_OVERDUE_COUNTS } from "../../graphql/classTest";
+import { useQuery, useMutation } from "urql";
+import {
+  MY_CLASS_TESTS_QUERY,
+  CLASS_TEST_OVERDUE_COUNTS,
+  UPDATE_CLASS_TEST_DETAILS,
+} from "../../graphql/classTest";
 import { ARCHIVE_LOCATIONS_QUERY } from "../../graphql/archive";
-import { Screen, Card, Body, Muted, Button, Badge } from "../../components/ui";
+import { Screen, Card, Body, Muted, Button, Badge, Notice } from "../../components/ui";
+import { DateField } from "../../components/DateField";
 import { QueryGate } from "../../components/QueryGate";
 import { useAuth } from "../../auth/AuthContext";
-import { STR, hwSubjectLabel, classTestStatusLabel, bnNum, isoDateLabel } from "../../lib/labels";
+import { useToast } from "../../state/ToastContext";
+import { friendlyError } from "../../lib/errors";
+import { STR, hwSubjectLabel, classTestStatusLabel, bnNum, isoDateLabel, dhakaDateKey } from "../../lib/labels";
 import { space } from "../../theme/tokens";
 import type { ClassTestStackParamList, TabParamList } from "../../navigation/types";
 
@@ -58,6 +69,39 @@ export default function ClassTestHomeScreen(): React.ReactElement {
     () => new Map((locsQ.data?.archiveLocationsForTests ?? []).map((l) => [l.testId, l])),
     [locsQ.data],
   );
+
+  // Change the exam date of a test that is still waiting to print (owner ask
+  // 2026-09-22 — a postponed exam). This hub is the ONLY place a REQUESTED test can
+  // be edited from: the results screen turns a non-PRINTED test away at the door, so
+  // until now the very case that needs a new date had no path but a script. Every row
+  // in `myClassTests` is one the caller owns (teacherId or requestedBy — the same
+  // ownership `updateClassTestDetails` checks), so the button follows the list; the
+  // server re-gates anyway and its Bangla refusal lands in the Notice below.
+  const toast = useToast();
+  const [, updateDetails] = useMutation(UPDATE_CLASS_TEST_DETAILS);
+  const [dateEditId, setDateEditId] = React.useState<string | null>(null);
+  const [dateValue, setDateValue] = React.useState("");
+  const [dateBusy, setDateBusy] = React.useState(false);
+  const [dateError, setDateError] = React.useState<string | null>(null);
+
+  async function onSaveDate(id: string, currentExamDate: string): Promise<void> {
+    if (!dateValue.trim()) return;
+    // Unchanged → close, don't write. Saves a no-change audit row, and keeps the
+    // key→Date round-trip out of the server's "is the date moving?" comparison
+    // (see the note in ClassTestResultsScreen.onSaveDetails).
+    if (dateValue.trim() === dhakaDateKey(currentExamDate)) {
+      setDateEditId(null);
+      return;
+    }
+    setDateError(null);
+    setDateBusy(true);
+    const res = await updateDetails({ id, examDate: dateValue.trim() });
+    setDateBusy(false);
+    if (res.error || !res.data?.updateClassTestDetails) return setDateError(friendlyError(res.error));
+    setDateEditId(null);
+    toast.show(STR.ctEditSaved, "ok");
+    refetchMy({ requestPolicy: "network-only" });
+  }
 
   return (
     <Screen padded={false}>
@@ -192,6 +236,50 @@ export default function ClassTestHomeScreen(): React.ReactElement {
                         }
                       />
                     ) : null}
+                  </View>
+                ) : null}
+                {/* Still waiting to print → the date can still move. Hidden once
+                    PRINTED (that edit lives in the results screen's details form,
+                    beside the marks it has to agree with) and once CANCELLED (the
+                    server refuses a retired exam outright). */}
+                {t.status === "REQUESTED" && (canWrite || canPrint) ? (
+                  <View style={{ marginTop: space(2) }}>
+                    {dateEditId === t.id ? (
+                      <>
+                        <DateField
+                          label={STR.ctExamDate}
+                          value={dateValue}
+                          onChange={setDateValue}
+                          helper={STR.ctChangeDateHelp}
+                        />
+                        {dateError ? <Notice message={dateError} tone="danger" /> : null}
+                        <View style={{ flexDirection: "row", gap: space(2) }}>
+                          <Button
+                            title={STR.save}
+                            onPress={() => void onSaveDate(t.id, t.examDate)}
+                            loading={dateBusy}
+                            disabled={dateBusy || !dateValue.trim()}
+                          />
+                          <Button
+                            title={STR.cancel}
+                            variant="ghost"
+                            onPress={() => setDateEditId(null)}
+                            disabled={dateBusy}
+                          />
+                        </View>
+                      </>
+                    ) : (
+                      <Button
+                        title={STR.ctChangeDate}
+                        variant="ghost"
+                        onPress={() => {
+                          setDateError(null); // never reopen onto a previous row's refusal
+                          // dhakaDateKey, not an ISO slice — see ClassTestResultsScreen.
+                          setDateValue(dhakaDateKey(t.examDate));
+                          setDateEditId(t.id);
+                        }}
+                      />
+                    )}
                   </View>
                 ) : null}
               </View>
