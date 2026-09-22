@@ -437,6 +437,20 @@ export interface AnalysisScope {
   subject?: HwSubject;
 }
 
+/**
+ * The section's SITTING candidates (D-#697).
+ *
+ * `scholarshipExcluded` is checked with `$ne: true` rather than `false`, because the
+ * field is absent on every student who has never been touched — the exception carries
+ * the flag, so an equality test would return nobody at all.
+ */
+export function sittingFilter(sectionId: string | Types.ObjectId): Record<string, unknown> {
+  return {
+    sectionId: typeof sectionId === "string" ? new Types.ObjectId(sectionId) : sectionId,
+    scholarshipExcluded: { $ne: true },
+  };
+}
+
 /** Every SCORED/PUBLISHED paper in scope, with its scores. DRAFT and DECLARED papers
  *  carry no marks yet and would only add empty denominators. */
 export async function loadScope(scope: AnalysisScope): Promise<PaperWithScores[]> {
@@ -505,7 +519,10 @@ export async function studentAnalysis(
   studentId: string,
 ): Promise<StudentAnalysis> {
   const data = narrowToSubject(await loadScope(scope), scope.subject);
-  const roster = (await Student.find({ sectionId: new Types.ObjectId(scope.sectionId) })
+  // EXCLUDED children are not in the pool (D-#697). A child the school never entered for
+  // the examination is not someone to be ahead of or behind, so she must not sit inside a
+  // class mean, nor inside the "of N" that a rank is counted out of.
+  const roster = (await Student.find(sittingFilter(scope.sectionId))
     .select("_id")
     .lean()) as { _id: Types.ObjectId }[];
   const ids = roster.map((s) => String(s._id));
@@ -592,7 +609,7 @@ export async function classAnalysis(
   // fall back to `name` exactly as the paper roster does (ScholarshipService). Without
   // the fallback every heat-map card on a real section renders "—" and the teacher
   // cannot tell which column is which child.
-  const roster = (await Student.find({ sectionId: new Types.ObjectId(scope.sectionId) })
+  const roster = (await Student.find(sittingFilter(scope.sectionId))
     .select("_id name nameBn")
     .sort({ nameBn: 1, name: 1 })
     .lean()) as { _id: Types.ObjectId; name?: string; nameBn?: string }[];

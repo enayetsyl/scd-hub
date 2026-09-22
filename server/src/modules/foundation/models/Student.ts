@@ -22,6 +22,11 @@ export interface IStudent extends Document {
   phone?: string;
   address?: string;
   bloodGroup?: string;
+  /** TRUE for a child the school is NOT entering for the primary scholarship examination
+   *  (D-#697). Absent means sitting — most of class five does, so the EXCEPTION carries
+   *  the flag and no existing roster needs backfilling. It scopes the scholarship module
+   *  only: she stays in every class list, tracker, attendance and report. */
+  scholarshipExcluded?: boolean;
   active: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -40,6 +45,7 @@ const StudentSchema = new Schema<IStudent>(
     phone: { type: String, trim: true },
     address: { type: String, trim: true },
     bloodGroup: { type: String, trim: true },
+    scholarshipExcluded: { type: Boolean },
     active: { type: Boolean, default: true },
   },
   { timestamps: true },

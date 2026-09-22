@@ -422,6 +422,7 @@ export type ScholarshipStackParamList = {
    *  required one made the screen throw on mount (D-#671). The screen falls back to the
    *  caller's own accessible classes. */
   ScholarshipTopics: { classLevel?: number } | undefined;
+  ScholarshipCandidates: { sectionId: string };
 };
 export type TeachingNotesStackParamList = {
   TeachingNotesHome: undefined;

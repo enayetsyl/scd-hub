@@ -29,6 +29,9 @@ import {
   saveTopic,
   validateItems,
   marksNote,
+  listCandidates,
+  setCandidateSitting,
+  type CandidateView,
   type PaperDetailView,
   type PaperListRow,
   type TopicView,
@@ -321,6 +324,21 @@ const ScoreRowInput = builder.inputType("ScholarshipScoreRowInput", {
   }),
 });
 
+const CandidateRef = builder.objectRef<CandidateView>("ScholarshipCandidate");
+CandidateRef.implement({
+  description:
+    "One child on the section roster, and whether the school is entering her for the scholarship " +
+    "examination (D-#697). scoredPapers is carried so that removing someone who ALREADY has marks " +
+    "is a visible choice rather than a silent one — the marks are kept either way.",
+  fields: (t) => ({
+    studentId: t.exposeString("studentId"),
+    nameBn: t.exposeString("nameBn"),
+    rollNumber: t.string({ nullable: true, resolve: (r) => r.rollNumber }),
+    sitting: t.exposeBoolean("sitting"),
+    scoredPapers: t.exposeInt("scoredPapers"),
+  }),
+});
+
 // ---------------------------------------------------------------------------
 // Queries
 // ---------------------------------------------------------------------------
@@ -337,6 +355,16 @@ builder.queryFields((t) => ({
     },
     resolve: async (_r, args) =>
       listTopics(args.classLevel, (args.subject ?? undefined) as HwSubject | undefined, args.includeRetired ?? false),
+  }),
+
+  scholarshipCandidates: t.field({
+    type: [CandidateRef],
+    description:
+      "The WHOLE section roster with each child's sitting flag — the one read that does not " +
+      "apply the exclusion, because this is the screen where it is decided.",
+    authScopes: { hasPermission: "scholarship:read" },
+    args: { sectionId: t.arg.string({ required: true }) },
+    resolve: async (_r, args) => listCandidates(args.sectionId),
   }),
 
   scholarshipPapers: t.field({
@@ -489,6 +517,19 @@ builder.mutationFields((t) => ({
       await retireTopic(args.subject as HwSubject, args.classLevel, args.code, actorOf(ctx));
       return true;
     },
+  }),
+
+  setScholarshipCandidate: t.field({
+    type: CandidateRef,
+    description:
+      "Enter a child for the scholarship examination, or take her out of it (D-#697). Taking her " +
+      "out never deletes a mark — the flag scopes the module, it does not purge.",
+    authScopes: { hasPermission: "scholarship:manage" },
+    args: {
+      studentId: t.arg.string({ required: true }),
+      sitting: t.arg.boolean({ required: true }),
+    },
+    resolve: async (_r, args, ctx) => setCandidateSitting(args.studentId, args.sitting, actorOf(ctx)),
   }),
 
   declareScholarshipPaper: t.field({

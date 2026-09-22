@@ -1,7 +1,7 @@
 # PRD — Scholarship practice papers & topic-wise weakness analysis (`scholarship` module)
 
 **Status:** SC-0..SC-4 BUILT and in production (2026-09-14); **SC-7 BUILT 2026-09-21**;
-**SC-8 BUILT 2026-09-22**. SC-5/SC-6 contracted, unbuilt.
+**SC-8 and SC-9 BUILT 2026-09-22**. SC-5/SC-6 contracted, unbuilt.
 **Decision block:** D-#656–#665, reserved against `origin/dev@929596d3` (2026-09-14, max D-#655).
 **Owner ask (2026-09-14):** "I will prepare scholarship-exam-style questions for each subject and
 give them to students on different days. I want to declare a question which may have different
@@ -22,6 +22,7 @@ topic or in which chapter."
 | SC-6 | Analysis PDF / print | SC-3 |
 | SC-7 | The second door through the floor, per-topic trend, class position, paper-by-paper list | — |
 | SC-8 | Class-five-only picker; one student × one subject as Markdown, for generating practice | — |
+| SC-9 | Who is SITTING the examination — the module scoped to entered candidates; full names on the heat-map | — |
 
 **SC-0..SC-3 is the minimum that answers the owner's question.** SC-4..SC-6 are additive and each
 stands alone.
@@ -451,6 +452,55 @@ generate practice from; it would also lose the combined Science + BGS narrowing 
 
 Web-only, like every other export — `downloadFile` drives an anchor, which does not exist in React
 Native. Hidden on a phone rather than shown and failing.
+
+### 6.7 SC-9 — who is sitting the examination (D-#697/#698, 2026-09-22)
+
+The module had assumed a **section** and an **examination cohort** were the same thing. They are
+not: the primary scholarship examination is sat by some of class five, and the school chooses.
+
+A child who was never entered was appearing in three places she did not belong:
+
+1. a column of em dashes across the whole class heat-map;
+2. inside the `of N` that every SC-7 rank is counted out of;
+3. as a row on every mark grid, to be remembered and skipped on each paper.
+
+**`Student.scholarshipExcluded`**, applied by `sittingFilter()` in four places:
+
+| read / write | why it must apply |
+|---|---|
+| `classAnalysis` roster | the heat-map's columns |
+| `studentAnalysis` pool | the class mean, and every rank denominator |
+| `paperDetail` roster | the mark grid |
+| `enterScores` gate | **presentation is not a gate** — a stale screen or a replayed mutation would otherwise store marks where no read will ever look at them |
+
+**The flag marks the exception, not the rule.** Most of class five sits the examination, so an
+absent field means sitting and no existing roster needs backfilling. The filter therefore asks
+`{ $ne: true }`. `=== false` would match nobody at all on a roster where the field has never been
+written — the whole module would come back empty, and it would look like a data loss rather than a
+query bug.
+
+**`listCandidates` is the one read that does NOT apply the filter**, because it is the screen where
+the distinction is made.
+
+**Removing is a scope, not a purge.** Score rows survive untouched, so re-entering a child brings
+every mark back into the analysis. The screen prints `scoredPapers` per row so that removing
+someone who already has marks is a visible choice made *before* the tap rather than a discovery
+after it.
+
+**Principal/Office only**, like retiring a topic. Who sits a public examination is not scoped by
+who teaches English, and reusing `assertMayManage` with an empty subject list would have refused
+every teacher *by accident* — a rule nobody could read off the code.
+
+### 6.8 The heat-map prints full names (D-#698)
+
+The header rendered `nameBn.slice(0, 3)`. On the real Class-5 roster that gave two adjacent columns
+both reading **"Reh"** — Reham Bint Mustafa and Rehana Bint Mustafa — and every number beneath them
+was unreadable, with nothing on screen to say so.
+
+No truncation length is safe: four letters separates those two, and fails on Rahim / Rahima. The
+column widens from 44 to 84 and the name wraps over two or three short lines; `CELL_H` keeps the
+data cells at 44, since one constant for both would have made every row three times taller. The
+table already scrolled horizontally.
 
 ## §7 — Journeys
 
