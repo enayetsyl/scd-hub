@@ -27,6 +27,7 @@ import {
   Notice,
 } from "../../components/ui";
 import { useAccessibleClasses, type MyClass } from "../../components/ClassSectionDashboard";
+import { SCHOLARSHIP_CLASS_LEVELS } from "@scd/shared";
 import { STR, bnNum, classLevelLabel, hwSubjectLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useAuth } from "../../auth/AuthContext";
@@ -58,16 +59,21 @@ export default function ScholarshipHomeScreen(): React.ReactElement {
   const [subject, setSubject] = useState<string | null>(null);
 
   // Flatten to the sections the caller can actually reach — the picker must never offer
-  // a section whose reads the server will refuse.
+  // a section whose reads the server will refuse — and then narrow to the classes this
+  // module is FOR (D-#696). The scholarship exam is sat in class five; offering নার্সারি
+  // through class four gave seven chips of which six led to an empty screen, and made
+  // the one that works something you had to tap on every visit (it sorted first).
   const sections = useMemo(
     () =>
-      myClasses.flatMap((c: MyClass) =>
-        c.sections.map((s) => ({
-          id: s.id,
-          classLevel: c.cls.level,
-          label: `${classLevelLabel(c.cls.level)} · ${s.nameBn ?? s.code}`,
-        })),
-      ),
+      myClasses
+        .flatMap((c: MyClass) =>
+          c.sections.map((s) => ({
+            id: s.id,
+            classLevel: c.cls.level,
+            label: `${classLevelLabel(c.cls.level)} · ${s.nameBn ?? s.code}`,
+          })),
+        )
+        .filter((s) => SCHOLARSHIP_CLASS_LEVELS.includes(s.classLevel)),
     [myClasses],
   );
 
@@ -83,6 +89,17 @@ export default function ScholarshipHomeScreen(): React.ReactElement {
   const papers = data?.scholarshipPapers ?? [];
 
   if (classesFetching) return <Screen><Loader /></Screen>;
+
+  // Narrowing the picker created a state that could not happen before: a teacher with
+  // no class-five section now has NOTHING to select, the papers query stays paused, and
+  // the screen would render as a blank page with a subject row. Say why instead.
+  if (sections.length === 0) {
+    return (
+      <Screen>
+        <EmptyState message={STR.scClassFiveOnly} />
+      </Screen>
+    );
+  }
 
   return (
     <Screen scroll>

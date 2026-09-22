@@ -4623,3 +4623,11 @@ export const SCHOLARSHIP_BAND_GOOD_AT_OR_ABOVE = 70;
  *  acceptable — and the two disagreeing is itself information (a whole class below
  *  the bar is a teaching problem, not a student one). */
 export const SCHOLARSHIP_CLASS_GAP_FLAG = -15;
+
+/** The classes this module is for (D-#696). The primary scholarship examination is sat
+ *  in class five, so the section picker offers class-five sections and nothing else —
+ *  a domain fact, not a data accident, which is why it is a constant rather than a
+ *  query over whichever levels happen to have a catalogue today. Everything downstream
+ *  (the topic catalogue, every declared paper, the analysis) is already class-five only.
+ *  Add a level here and the picker widens; nothing else needs to know. */
+export const SCHOLARSHIP_CLASS_LEVELS: readonly number[] = [5];
