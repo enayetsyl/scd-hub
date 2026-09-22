@@ -39,6 +39,8 @@ export interface SyllabusT {
   teacherApprovedAt: string | null;
   teacherBypass: boolean;
   subject: string;
+  /** What this paper is out of — 100 almost everywhere, 50 for pre-primary কুরআন/আরবি. */
+  fullMarks: number;
   bodyMd: string;
   marks: SyllabusMarkRowT[];
   questionTypes: string[];
@@ -70,7 +72,7 @@ export interface SyllabusApproverT {
 }
 
 const SYLLABUS_FIELDS = `
-  id examId classId classLabel subjectTrack subjectLevel levelLabel approverUserId teacherApprovedBy teacherApprovedAt teacherBypass subject bodyMd questionTypes examDateKey status sendBackReason
+  id examId classId classLabel subjectTrack subjectLevel levelLabel fullMarks approverUserId teacherApprovedBy teacherApprovedAt teacherBypass subject bodyMd questionTypes examDateKey status sendBackReason
   isMine writtenMarks oralMarks totalMarks pending
   marks { seq label itemType component count marksEach total }
 `;
@@ -189,6 +191,7 @@ export interface SaveSyllabusVars {
   subjectTrack?: string | null;
   subjectLevel?: string | null;
   subject: string;
+  fullMarks?: number | null;
   bodyMd: string;
   marks: Array<{
     seq: number;
@@ -210,6 +213,7 @@ export const SAVE_EXAM_SYLLABUS = gql<{ saveExamSyllabus: SyllabusT }, SaveSylla
     $subjectTrack: String
     $subjectLevel: String
     $subject: String!
+    $fullMarks: Int
     $bodyMd: String!
     $marks: [SyllabusMarkRowInput!]!
     $questionTypes: [String!]!
@@ -221,6 +225,7 @@ export const SAVE_EXAM_SYLLABUS = gql<{ saveExamSyllabus: SyllabusT }, SaveSylla
       subjectTrack: $subjectTrack
       subjectLevel: $subjectLevel
       subject: $subject
+      fullMarks: $fullMarks
       bodyMd: $bodyMd
       marks: $marks
       questionTypes: $questionTypes

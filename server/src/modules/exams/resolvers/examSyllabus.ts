@@ -86,6 +86,7 @@ SyllabusRef.implement({
     teacherApprovedAt: t.string({ nullable: true, resolve: (r) => r.teacherApprovedAt }),
     teacherBypass: t.exposeBoolean("teacherBypass"),
     subject: t.exposeString("subject"),
+    fullMarks: t.exposeInt("fullMarks"),
     bodyMd: t.exposeString("bodyMd"),
     marks: t.field({ type: [MarkRowRef], resolve: (r) => r.marks }),
     questionTypes: t.stringList({ resolve: (r) => r.questionTypes }),
@@ -344,6 +345,7 @@ builder.mutationFields((t) => ({
       subjectTrack: t.arg.string({ required: false }),
       subjectLevel: t.arg.string({ required: false }),
       subject: t.arg.string({ required: true }),
+      fullMarks: t.arg.int({ required: false }),
       bodyMd: t.arg.string({ required: true }),
       marks: t.arg({ type: [MarkRowInput], required: true }),
       questionTypes: t.arg.stringList({ required: true }),
@@ -356,6 +358,7 @@ builder.mutationFields((t) => ({
         subjectTrack: (args.subjectTrack ?? null) as "quran" | "arabic" | null,
         subjectLevel: args.subjectLevel ?? null,
         subject: args.subject as RoutineSubject,
+        fullMarks: args.fullMarks ?? null,
         bodyMd: args.bodyMd,
         marks: args.marks.map((m) => ({
           seq: m.seq,

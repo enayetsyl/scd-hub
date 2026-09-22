@@ -21,7 +21,7 @@
  * list is indistinguishable from a broken query.
  */
 import { Types } from "mongoose";
-import { ROUTINE_SUBJECTS } from "@scd/shared";
+import { ROUTINE_SUBJECTS, SYLLABUS_FULL_MARKS } from "@scd/shared";
 import type { RoutineSubject, SyllabusItemType, SyllabusStatus } from "@scd/shared";
 import type { AppContext } from "../../../context";
 import { ForbiddenError, assertGuardianOfStudent } from "../../../middleware/authz";
@@ -87,6 +87,12 @@ export interface SyllabusShape {
   status: SyllabusStatus;
   /** True when the caller teaches this (class × subject) — sorts and outlines it. */
   isMine: boolean;
+  /**
+   * What THIS paper is out of — 100 almost everywhere, 50 for the pre-primary
+   * কুরআন and আরবি papers (D-#694). Carried on the row so the app can badge
+   * "Σ / ৫০" without having to know which papers are the exceptions.
+   */
+  fullMarks: number;
   /** Derived, never stored (D-#85): the sheet's "লিখিত-৯০ মৌখিক-১০" header line. */
   writtenMarks: number;
   oralMarks: number;
@@ -135,6 +141,7 @@ function toShape(
     subjectTrack?: string | null;
     subjectLevel?: string | null;
     subject: RoutineSubject;
+    fullMarks?: number | null;
     bodyMd: string;
     marks: ISyllabusMarkRow[];
     questionTypes: SyllabusItemType[];
@@ -163,6 +170,9 @@ function toShape(
     teacherApprovedAt: row.teacherApprovedAt?.toISOString() ?? null,
     teacherBypass: row.teacherBypass ?? false,
     subject: row.subject,
+    // Every row stored before D-#694 has no fullMarks and was, by the rule of the
+    // day, a 100-mark paper.
+    fullMarks: row.fullMarks ?? SYLLABUS_FULL_MARKS,
     bodyMd: row.bodyMd,
     marks: row.marks,
     questionTypes: row.questionTypes,
@@ -197,6 +207,7 @@ function placeholder(
     teacherApprovedAt: null,
     teacherBypass: false,
     subject,
+    fullMarks: SYLLABUS_FULL_MARKS,
     bodyMd: "",
     marks: [],
     questionTypes: [],
