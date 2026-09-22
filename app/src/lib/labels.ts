@@ -4002,6 +4002,10 @@ const STR_BN = {
   ctSubmitShort: "জমা দিন",
   ctEditDetails: "পরীক্ষার তথ্য সংশোধন",
   ctEditSaved: "সংশোধন সংরক্ষিত হয়েছে",
+  /** Owner ask 2026-09-22: a postponed or mis-typed exam date, fixed by the
+   *  teacher — on their own REQUESTED test, before any mark is entered. */
+  ctChangeDate: "পরীক্ষার তারিখ পরিবর্তন",
+  ctChangeDateHelp: "নম্বর এন্ট্রি শুরুর আগে তারিখ পরিবর্তন করা যাবে। ছাপার অপেক্ষায় থাকলে প্রিন্টের তারিখও বদলে যাবে।",
   ctRetireExam: "পরীক্ষা প্রত্যাহার",
   ctRetireReason: "প্রত্যাহারের কারণ",
   ctRetireConfirmTitle: "পরীক্ষাটি প্রত্যাহার করবেন?",
@@ -8387,6 +8391,8 @@ const STR_EN: StrTable = {
   ctSubmitShort: "Submit",
   ctEditDetails: "Edit exam details",
   ctEditSaved: "Changes saved",
+  ctChangeDate: "Change exam date",
+  ctChangeDateHelp: "The date can move until the first mark is entered. While the paper is still waiting to print, the print day moves with it.",
   ctRetireExam: "Retire exam",
   ctRetireReason: "Reason for retiring",
   ctRetireConfirmTitle: "Retire this exam?",

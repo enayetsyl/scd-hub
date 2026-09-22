@@ -40,6 +40,7 @@ import { StoredFile } from "../../platform/models/StoredFile";
 import { writeAudit } from "../../platform/services/AuditService";
 import { createPrintRequest } from "../../printing/services/PrintRequestService";
 import { PrintRequest } from "../../printing/models/PrintRequest";
+import { ScriptBundle } from "../../archive/models/ScriptBundle";
 import { resolveSubjectTeacher } from "../subjectTeacher";
 
 // ---------------------------------------------------------------------------
@@ -657,7 +658,12 @@ export interface UpdateClassTestDetailsInput {
  *   - `totalMarks` — still REFUSED. It is the denominator of every percentage (D-#121),
  *     so changing it under existing marks silently re-grades every student and shifts
  *     numbers already published to guardians. Clear the marks first, deliberately.
- *   - `examDate` — still REFUSED (it anchors the D-#120 school-day deadline).
+ *   - `examDate` — still REFUSED (it anchors the D-#120 school-day deadline). BEFORE any
+ *     mark it moves freely, which is the case that matters: a postponed or mis-typed
+ *     exam date, fixed by the teacher on their own (owner ask 2026-09-22). Moving it
+ *     re-points the two places the date is DENORMALISED — the linked print job's
+ *     `neededByKey` (while that job is still REQUESTED) and any filed script bundle —
+ *     so the print queue and the archive never keep pointing at the abandoned day.
  *   - `passMark` — ALLOWED while every result is still DRAFT. pass/fail is DERIVED and
  *     never stored (D-#85), so no stored row needs re-grading; the badges recompute on
  *     the next read. Refused once any result is SUBMITTED or RELEASED, because D-#277's
@@ -737,6 +743,27 @@ export async function updateClassTestDetails(input: UpdateClassTestDetailsInput)
   doc.totalMarks = nextTotal;
   doc.passMark = nextPass;
   await doc.save();
+
+  // A moved date that leaves its two DENORMALISED copies behind is worse than no
+  // edit at all — the postponed exam would still print for the old day:
+  //  - the linked print job's `neededByKey` is the queue's "use day", and a
+  //    CLASS_PRESENT copy count is resolved against the presence of THAT day
+  //    (PrintRequest.ts). Only re-pointed while the job is still REQUESTED — once
+  //    printed, that key is the record of the day it was actually printed for.
+  //  - a filed script bundle's `examDate` is the archive's retrieval index (it is
+  //    denormalised at filing). Rare (filing with zero marks entered) but cheap.
+  if (dateChanging) {
+    if (doc.printRequestId) {
+      await PrintRequest.updateOne(
+        { _id: doc.printRequestId, status: "REQUESTED" },
+        { $set: { neededByKey: dateKeyOf(doc.examDate) } },
+      );
+    }
+    await ScriptBundle.updateMany(
+      { "source.kind": "CLASS_TEST", "source.refId": doc._id },
+      { $set: { examDate: doc.examDate } },
+    );
+  }
 
   await writeAudit({
     eventKind: "CLASS_TEST_DETAILS_EDITED",
