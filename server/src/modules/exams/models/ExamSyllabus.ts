@@ -75,6 +75,14 @@ export interface IExamSyllabus extends Document {
   subjectTrack?: "quran" | "arabic" | null;
   subjectLevel?: string | null;
   subject: RoutineSubject;
+  /**
+   * What this paper is out of. 100 almost everywhere, and the default — but the
+   * pre-primary কুরআন and আরবি papers are sat out of 50 (owner, 2026-09-22), and a
+   * universal 100 made those two impossible to store at all rather than merely
+   * awkward. Per ROW, not per class band: নার্সারি sits 50-mark কুরআন beside
+   * 100-mark বাংলা, so the number belongs to the paper.
+   */
+  fullMarks: number;
   bodyMd: string;
   marks: ISyllabusMarkRow[];
   questionTypes: SyllabusItemType[];
@@ -130,6 +138,7 @@ const ExamSyllabusSchema = new Schema<IExamSyllabus>(
     subjectTrack: { type: String, enum: ["quran", "arabic"] },
     subjectLevel: { type: String, trim: true },
     subject: { type: String, required: true },
+    fullMarks: { type: Number, default: SYLLABUS_FULL_MARKS, min: 1 },
     bodyMd: { type: String, default: "" },
     marks: { type: [MarkRowSchema], default: [] },
     questionTypes: { type: [String], enum: SYLLABUS_ITEM_TYPES, default: [] },
@@ -211,10 +220,22 @@ export function validateSyllabusAnchor(row: {
  * error string, or null when the rows are valid.
  *
  * Exported as a pure function so the app can run the SAME check for its live
- * Σ badge — two independent implementations of "does this add to 100" is how the
+ * Σ badge — two independent implementations of "does this add up" is how the
  * button says green and the server says no.
+ *
+ * `fullMarks` defaults to 100, so every existing caller and every stored row is
+ * unaffected. It is a PARAMETER rather than a constant because the school sits
+ * pre-primary কুরআন and আরবি out of 50 (D-#694); D-#532 chose one universal guard
+ * over a per-class-band lookup, and that reasoning still holds — this is not a
+ * band lookup, it is the paper stating its own total.
  */
-export function validateMarkRows(rows: ISyllabusMarkRow[]): string | null {
+export function validateMarkRows(
+  rows: ISyllabusMarkRow[],
+  fullMarks: number = SYLLABUS_FULL_MARKS,
+): string | null {
+  if (!Number.isInteger(fullMarks) || fullMarks < 1) {
+    return "পূর্ণমান একটি ধনাত্মক পূর্ণসংখ্যা হতে হবে।";
+  }
   if (!rows.length) return "মানবন্টন যোগ করুন — অন্তত একটি সারি প্রয়োজন।";
 
   for (const r of rows) {
@@ -234,8 +255,8 @@ export function validateMarkRows(rows: ISyllabusMarkRow[]): string | null {
   }
 
   const sum = rows.reduce((a, r) => a + r.total, 0);
-  if (sum !== SYLLABUS_FULL_MARKS) {
-    return `মানবন্টনের যোগফল ${sum} — ${SYLLABUS_FULL_MARKS} হতে হবে।`;
+  if (sum !== fullMarks) {
+    return `মানবন্টনের যোগফল ${sum} — ${fullMarks} হতে হবে।`;
   }
   return null;
 }

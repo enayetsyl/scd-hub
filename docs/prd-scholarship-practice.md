@@ -409,9 +409,9 @@ total and her place on each sitting, oldest first. A paper she did not sit is ab
 present as a zero (D-#660), and a paper whose items are all still unmarked is absent too — an
 unfinished marking pass is not a result.
 
-### 6.6 SC-8 — class-five only, and the Markdown export (D-#694/#695, 2026-09-22)
+### 6.6 SC-8 — class-five only, and the Markdown export (D-#696/#695, 2026-09-22)
 
-**The picker (D-#694).** `SCHOLARSHIP_CLASS_LEVELS = [5]`. The papers screen flattened every
+**The picker (D-#696).** `SCHOLARSHIP_CLASS_LEVELS = [5]`. The papers screen flattened every
 section the caller could reach, so it offered নার্সারি through class five — six chips leading to a
 screen that could never hold anything, with the working one sorted last-but-one and needing a tap
 every visit. The constant is a domain fact (the primary scholarship examination is sat in class

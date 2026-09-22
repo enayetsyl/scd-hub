@@ -60,7 +60,7 @@ export default function ScholarshipHomeScreen(): React.ReactElement {
 
   // Flatten to the sections the caller can actually reach — the picker must never offer
   // a section whose reads the server will refuse — and then narrow to the classes this
-  // module is FOR (D-#694). The scholarship exam is sat in class five; offering নার্সারি
+  // module is FOR (D-#696). The scholarship exam is sat in class five; offering নার্সারি
   // through class four gave seven chips of which six led to an empty screen, and made
   // the one that works something you had to tap on every visit (it sorted first).
   const sections = useMemo(
