@@ -24,6 +24,7 @@ import { Section } from "../../foundation/models/Section";
 import { Class } from "../../foundation/models/Class";
 import { Student } from "../../foundation/models/Student";
 import { resolveSubjectTeacher } from "../../trackers/subjectTeacher";
+import { sittingFilter } from "./ScholarshipAnalysisService";
 import { writeAudit } from "../../platform/services/AuditService";
 
 // ---------------------------------------------------------------------------
@@ -332,9 +333,13 @@ export async function enterScores(
   // id creates a score row for a child in another class, which then shows up in this
   // class's mean and in no roster anywhere — invisible from both ends.
   const ids = [...new Set(rows.map((r) => r.studentId))];
+  // The gate is the SITTING roster, not the section's (D-#697): hiding an excluded child
+  // from the grid is presentation, and a write that arrives for her anyway — a stale
+  // screen, a replayed mutation — must be refused rather than quietly stored where
+  // nothing will ever read it.
   const onRoster = (await Student.find({
+    ...sittingFilter(paper.sectionId),
     _id: { $in: ids.map((i) => new Types.ObjectId(i)) },
-    sectionId: paper.sectionId,
   })
     .select("_id")
     .lean()) as { _id: Types.ObjectId }[];
@@ -475,6 +480,85 @@ export async function retireTopic(
   });
 }
 
+/** One child on the scholarship roster: is the school entering her or not (D-#697)? */
+export interface CandidateView {
+  studentId: string;
+  nameBn: string;
+  rollNumber: string | null;
+  sitting: boolean;
+  /** Papers she already has a score row on. Shown because excluding a child who has
+   *  ALREADY been scored hides marks that exist, and the screen must say so before it
+   *  is done rather than after. */
+  scoredPapers: number;
+}
+
+/** The WHOLE section, sitting and excluded alike — this is the screen where the
+ *  distinction is made, so it is the one read that must not apply it. */
+export async function listCandidates(sectionId: string): Promise<CandidateView[]> {
+  const students = (await Student.find({ sectionId: new Types.ObjectId(sectionId) })
+    .select("name nameBn rollNumber scholarshipExcluded")
+    .sort({ nameBn: 1, name: 1 })
+    .lean()) as {
+    _id: Types.ObjectId;
+    name: string;
+    nameBn?: string;
+    rollNumber?: string;
+    scholarshipExcluded?: boolean;
+  }[];
+  const counts = await ScholarshipScore.aggregate<{ _id: Types.ObjectId; n: number }>([
+    { $match: { studentId: { $in: students.map((s) => s._id) } } },
+    { $group: { _id: "$studentId", n: { $sum: 1 } } },
+  ]);
+  const byStudent = new Map(counts.map((c) => [String(c._id), c.n]));
+  return students.map((s) => ({
+    studentId: String(s._id),
+    nameBn: s.nameBn?.trim() || s.name,
+    rollNumber: s.rollNumber ?? null,
+    sitting: s.scholarshipExcluded !== true,
+    scoredPapers: byStudent.get(String(s._id)) ?? 0,
+  }));
+}
+
+/**
+ * Enter a child for the examination, or take her out of it (D-#697).
+ *
+ * Taking her out NEVER deletes a score. The flag is a scope, not a purge: if she is put
+ * back — a decision the school is entitled to change — every mark she had is still
+ * there and the analysis simply includes her again.
+ */
+export async function setCandidateSitting(
+  studentId: string,
+  sitting: boolean,
+  actor: Actor,
+): Promise<CandidateView> {
+  const student = (await Student.findById(studentId)
+    .select("_id sectionId")
+    .lean()) as { _id: Types.ObjectId; sectionId: Types.ObjectId } | null;
+  if (!student) throw new Error("শিক্ষার্থী পাওয়া যায়নি।");
+  // The desk's decision, not a subject teacher's — the same gate `retireTopic` takes.
+  // Who the school enters for a public examination is not scoped by who teaches English,
+  // and `assertMayManage` with no subject would refuse every teacher by accident rather
+  // than by intent, which is a rule nobody could read off the code.
+  if (actor.role !== "PRINCIPAL" && actor.role !== "OFFICE") {
+    throw new Error("বৃত্তি পরীক্ষার তালিকা বদলানোর অনুমতি নেই।");
+  }
+  await Student.updateOne(
+    { _id: student._id },
+    sitting ? { $unset: { scholarshipExcluded: "" } } : { $set: { scholarshipExcluded: true } },
+  );
+  await writeAudit({
+    eventKind: sitting ? "SCHOLARSHIP_CANDIDATE_ADDED" : "SCHOLARSHIP_CANDIDATE_REMOVED",
+    actorId: actor.userId,
+    actorRole: actor.role,
+    targetKind: "Student",
+    targetId: String(student._id),
+    meta: { sectionId: String(student.sectionId) },
+  });
+  const row = (await listCandidates(String(student.sectionId))).find((c) => c.studentId === studentId);
+  if (!row) throw new Error("শিক্ষার্থী পাওয়া যায়নি।");
+  return row;
+}
+
 export interface TopicView {
   code: string;
   labelBn: string;
@@ -612,7 +696,10 @@ export async function paperDetail(id: string): Promise<PaperDetailView | null> {
   const p = (await ScholarshipPaper.findById(id).lean()) as IScholarshipPaper | null;
   if (!p) return null;
   const [students, scores, topics] = await Promise.all([
-    Student.find({ sectionId: p.sectionId }).select("name nameBn").sort({ nameBn: 1, name: 1 }).lean() as Promise<
+    // Only the children the school entered (D-#697). An excluded child on the mark grid
+    // is a row the teacher must remember to skip on every paper, and one mistyped 0
+    // there would put her into the class mean she was removed from.
+    Student.find(sittingFilter(p.sectionId)).select("name nameBn").sort({ nameBn: 1, name: 1 }).lean() as Promise<
       { _id: Types.ObjectId; name: string; nameBn?: string }[]
     >,
     ScholarshipScore.find({ paperId: p._id }).select("studentId status itemMarks").lean() as Promise<

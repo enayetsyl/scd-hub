@@ -26,7 +26,12 @@ type Props = NativeStackScreenProps<ScholarshipStackParamList, "ScholarshipClass
 type Nav = NativeStackNavigationProp<ScholarshipStackParamList>;
 
 const SUBJECTS = ["ENG", "BAN", "MATH", "SCI", "BGS"] as const;
-const CELL = 44;
+/** The cell is 44 high but 84 wide: a full name has to fit across two or three short
+ *  lines in the header, and the header column and the data column must be the same
+ *  width or every number sits under the wrong child. The table already scrolls
+ *  horizontally, so the extra width costs nothing but a longer scroll. */
+const CELL = 84;
+const CELL_H = 44;
 const LABEL_W = 128;
 
 interface Cell {
@@ -99,15 +104,25 @@ export default function ScholarshipClassScreen({ route }: Props): React.ReactEle
       {rows.length > 0 ? (
         <ScrollView horizontal showsHorizontalScrollIndicator>
           <View>
-            {/* Header: the student initials, one per column. */}
-            <View style={{ flexDirection: "row" }}>
+            {/* Header: the student's FULL name, one per column (D-#698).
+                It used to print `nameBn.slice(0, 3)`, which on this very roster gave two
+                adjacent columns both reading "Reh" — Reham and Rehana — with no way to
+                tell which child's marks you were looking at. Three letters cannot be
+                trusted to separate names, and the table is the wrong place to guess. */}
+            <View style={{ flexDirection: "row", alignItems: "flex-end" }}>
               <View style={{ width: LABEL_W }} />
               {students.map((s) => (
                 <View
                   key={s.id}
-                  style={{ width: CELL, alignItems: "center", justifyContent: "center", paddingVertical: space(1) }}
+                  style={{
+                    width: CELL,
+                    alignItems: "center",
+                    justifyContent: "flex-end",
+                    paddingVertical: space(1),
+                    paddingHorizontal: 2,
+                  }}
                 >
-                  <Muted>{s.nameBn.slice(0, 3)}</Muted>
+                  <Muted style={{ fontSize: 11, lineHeight: 14, textAlign: "center" }}>{s.nameBn}</Muted>
                 </View>
               ))}
             </View>
@@ -125,7 +140,7 @@ export default function ScholarshipClassScreen({ route }: Props): React.ReactEle
                     key={c.studentId}
                     style={{
                       width: CELL - 2,
-                      height: CELL,
+                      height: CELL_H,
                       margin: 1,
                       borderRadius: radius.sm,
                       backgroundColor: cellBg(c.band),

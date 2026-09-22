@@ -249,3 +249,26 @@ export const ENTER_SCHOLARSHIP_SCORES = gql`
     enterScholarshipScores(paperId: $paperId, rows: $rows)
   }
 `;
+
+/** SC-9 — the whole section roster with each child's sitting flag (D-#697). */
+export const SCHOLARSHIP_CANDIDATES_QUERY = gql`
+  query ScholarshipCandidates($sectionId: String!) {
+    scholarshipCandidates(sectionId: $sectionId) {
+      studentId
+      nameBn
+      rollNumber
+      sitting
+      scoredPapers
+    }
+  }
+`;
+
+export const SET_SCHOLARSHIP_CANDIDATE = gql`
+  mutation SetScholarshipCandidate($studentId: String!, $sitting: Boolean!) {
+    setScholarshipCandidate(studentId: $studentId, sitting: $sitting) {
+      studentId
+      sitting
+      scoredPapers
+    }
+  }
+`;

@@ -484,6 +484,19 @@ describe("enterScores", () => {
     ).rejects.toThrow("তালিকায় নেই");
   });
 
+  it("gates on the SITTING roster, not the section's (D-#697)", async () => {
+    // Hiding an excluded child from the grid is presentation. A write that arrives for
+    // her anyway — a stale screen, a replayed mutation — has to be refused, or her marks
+    // land somewhere no read will ever look at them again.
+    mockStudentFind.mockReturnValue(leanChain([]));
+    await expect(
+      enterScores(String(paperOid), [{ studentId, status: "PRESENT", itemMarks: [] }], principal),
+    ).rejects.toThrow("তালিকায় নেই");
+    expect(mockStudentFind.mock.calls[0][0]).toMatchObject({
+      scholarshipExcluded: { $ne: true },
+    });
+  });
+
   it("does not demote a paper that is already SCORED", async () => {
     mockPaperFindById.mockReturnValue(leanChain(paper("SCORED")));
     await enterScores(String(paperOid), [{ studentId, status: "ABSENT" }], principal);
