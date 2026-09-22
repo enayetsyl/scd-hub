@@ -32,6 +32,7 @@ import { archiveCoverPdfRouter } from "./modules/archive/routes/archiveCoverPdf"
 import { studentProfilePdfRouter } from "./modules/trackers/routes/studentProfilePdf";
 import { monthlyReportPdfRouter } from "./modules/reports/routes/monthlyReportPdf";
 import { monthlyCommentExportRouter } from "./modules/reports/routes/monthlyCommentExport";
+import { scholarshipAnalysisExportRouter } from "./modules/scholarship/routes/scholarshipAnalysisExport";
 import { filesRouter } from "./routes/files";
 import { triggersRouter } from "./routes/triggers";
 import { eventsRouter } from "./routes/events";
@@ -167,6 +168,7 @@ app.use("/export/monthly-comments", monthlyCommentExportRouter);
 app.use("/export/payment", paymentExportCsvRouter);
 app.use("/export/payment-advice", paymentAdvicePdfRouter);
 app.use("/export/payroll-register", payrollRegisterXlsxRouter);
+app.use("/export/scholarship-analysis", scholarshipAnalysisExportRouter);
 app.use("/pdf/archive-cover", archiveCoverPdfRouter);
 app.use("/pdf/syllabus", syllabusPdfRouter);
 app.use("/pdf/staff-letter", staffLetterPdfRouter);

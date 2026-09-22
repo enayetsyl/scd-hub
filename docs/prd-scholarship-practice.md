@@ -1,7 +1,7 @@
 # PRD — Scholarship practice papers & topic-wise weakness analysis (`scholarship` module)
 
-**Status:** SC-0..SC-4 BUILT and in production (2026-09-14); **SC-7 BUILT 2026-09-21**. SC-5/SC-6
-contracted, unbuilt.
+**Status:** SC-0..SC-4 BUILT and in production (2026-09-14); **SC-7 BUILT 2026-09-21**;
+**SC-8 BUILT 2026-09-22**. SC-5/SC-6 contracted, unbuilt.
 **Decision block:** D-#656–#665, reserved against `origin/dev@929596d3` (2026-09-14, max D-#655).
 **Owner ask (2026-09-14):** "I will prepare scholarship-exam-style questions for each subject and
 give them to students on different days. I want to declare a question which may have different
@@ -21,6 +21,7 @@ topic or in which chapter."
 | SC-5 | Guardian release (publish gate) | SC-3 |
 | SC-6 | Analysis PDF / print | SC-3 |
 | SC-7 | The second door through the floor, per-topic trend, class position, paper-by-paper list | — |
+| SC-8 | Class-five-only picker; one student × one subject as Markdown, for generating practice | — |
 
 **SC-0..SC-3 is the minimum that answers the owner's question.** SC-4..SC-6 are additive and each
 stands alone.
@@ -407,6 +408,49 @@ a direction. `loadScope` sorts papers by `paperDate` so the series never runs ba
 total and her place on each sitting, oldest first. A paper she did not sit is absent rather than
 present as a zero (D-#660), and a paper whose items are all still unmarked is absent too — an
 unfinished marking pass is not a result.
+
+### 6.6 SC-8 — class-five only, and the Markdown export (D-#696/#695, 2026-09-22)
+
+**The picker (D-#696).** `SCHOLARSHIP_CLASS_LEVELS = [5]`. The papers screen flattened every
+section the caller could reach, so it offered নার্সারি through class five — six chips leading to a
+screen that could never hold anything, with the working one sorted last-but-one and needing a tap
+every visit. The constant is a domain fact (the primary scholarship examination is sat in class
+five), not a cache of what the catalogue happens to contain, which is why it is not a query: a
+query fails open on an empty catalogue and offers everything again. Widening the module to another
+class means adding a level here and nothing else.
+
+**The export (D-#695).**
+
+```
+GET /export/scholarship-analysis?sectionId=…&classLevel=5&studentId=…&subject=ENG  →  text/markdown
+```
+
+Streamed, never stored; `studentAnalysis()` reused unchanged so the file and the screen cannot
+disagree. `scholarship:read` is re-asserted in the route — a route is a second front door, and a
+permission that lives only in the GraphQL layer is not a permission. The student's section is
+checked to be her own, because exporting her against another section would rank her against
+children she never sat with and every position in the file would be a fiction.
+
+**It is written for a model, not for a person**, and three sections exist only because of that:
+
+| in the file | why it is there |
+|---|---|
+| "How to read this", before any number | A model handed a table of percentages treats every row as equally meaningful. It states that ABSENT and unmarked items count toward **neither** side (D-#660), and that the floor's rule is 15 marks **or** 2 papers (D-#691). |
+| "Not enough evidence yet", a separate section | An under-floor row is an **unknown, not a weakness**. Left in the main table it is the most likely way this output goes wrong — practice drilled on a topic that was simply never tested enough. It says "do not treat these as weaknesses" in as many words. |
+| "The shape of a real paper" — the catalogue with each item's marks | Knowing a child is weak at rearranging sentences does not say the item is seven marks and seven strips. Without the blueprint the generated practice is the right topic at the wrong size. |
+
+**The child is NAMED** (owner ruling, 2026-09-22), unlike the de-identified monthly-comment pack
+(D-#415). One file per child goes into a chat window and the owner keeps them apart by name; this
+is the operational plane, where a paper's scores name students already; and the reader on the other
+end teaches her. Audited as `SCHOLARSHIP_ANALYSIS_EXPORTED` with the student as target — a named
+performance record leaving the building is what ADR-008 exists to log.
+
+**One subject at a time**, and the button waits for a subject chip. With no subject the screen
+pools every subject into one ranking, which is a reasonable thing to look at and a useless thing to
+generate practice from; it would also lose the combined Science + BGS narrowing (D-#664).
+
+Web-only, like every other export — `downloadFile` drives an anchor, which does not exist in React
+Native. Hidden on a phone rather than shown and failing.
 
 ## §7 — Journeys
 

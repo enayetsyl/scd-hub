@@ -353,6 +353,7 @@ export const AUDIT_KIND_LABELS: Record<AuditEventKind, AuditKindLabel> = {
   SCHOLARSHIP_PAPER_DECLARED: { bn: "অনুশীলন প্রশ্ন ঘোষণা করেছেন", en: "Declared a practice paper", group: "SCHOLARSHIP" },
   SCHOLARSHIP_PAPER_UPDATED: { bn: "অনুশীলন প্রশ্ন সম্পাদনা করেছেন", en: "Edited a practice paper", group: "SCHOLARSHIP" },
   SCHOLARSHIP_SCORES_ENTERED: { bn: "অনুশীলনের নম্বর লিখেছেন", en: "Entered practice marks", group: "SCHOLARSHIP" },
+  SCHOLARSHIP_ANALYSIS_EXPORTED: { bn: "শিক্ষার্থীর বিশ্লেষণ নামিয়েছেন", en: "Downloaded a student's analysis", group: "SCHOLARSHIP" },
 };
 
 const FALLBACK_GROUP: ActivityGroup = "OTHER";
