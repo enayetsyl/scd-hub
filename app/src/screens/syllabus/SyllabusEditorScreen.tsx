@@ -126,6 +126,9 @@ export default function SyllabusEditorScreen({ route, navigation }: Props): Reac
   const [rows, setRows] = useState<Draft[]>([]);
   const [questionTypes, setQuestionTypes] = useState<string[]>([]);
   const [examDateKey, setExamDateKey] = useState("");
+  // What the paper is out of. 100 for almost everything; the pre-primary কুরআন and
+  // আরবি papers are sat out of 50 (D-#694), so it is typed per paper.
+  const [fullMarks, setFullMarks] = useState(SYLLABUS_FULL_MARKS);
   const [approverUserId, setApproverUserId] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -140,6 +143,7 @@ export default function SyllabusEditorScreen({ route, navigation }: Props): Reac
     // spread carries it into local state and then back out as mutation input.
     setRows(stored.marks.length ? stored.marks.map(toDraft) : [emptyRow(1)]);
     setQuestionTypes(stored.questionTypes);
+    setFullMarks(stored.fullMarks || SYLLABUS_FULL_MARKS);
     setExamDateKey(stored.examDateKey ?? "");
   }, [stored?.id, stored?.status]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -167,7 +171,9 @@ export default function SyllabusEditorScreen({ route, navigation }: Props): Reac
   const [, submit] = useMutation(SUBMIT_EXAM_SYLLABUS);
 
   const sum = useMemo(() => rows.reduce((a, r) => a + (r.total || 0), 0), [rows]);
-  const balanced = sum === SYLLABUS_FULL_MARKS;
+  // Against THIS paper's total, not the constant — the server runs the same
+  // comparison, so the button cannot say green while the server says no.
+  const balanced = sum === fullMarks;
 
   function patch(i: number, next: Partial<Draft>): void {
     setRows((prev) =>
@@ -203,6 +209,7 @@ export default function SyllabusEditorScreen({ route, navigation }: Props): Reac
       subjectTrack: byLevel ? track : null,
       subjectLevel: byLevel ? level : null,
       subject,
+      fullMarks,
       bodyMd,
       marks: rows.map((r, i) => ({ ...toDraft(r), seq: i + 1 })),
       questionTypes,
@@ -295,6 +302,20 @@ export default function SyllabusEditorScreen({ route, navigation }: Props): Reac
               setSaved(false);
             }}
           />
+          {/* What the paper is out of. Typed rather than derived from the class,
+              because নার্সারি sits a 50-mark কুরআন beside a 100-mark বাংলা — the
+              number belongs to the paper, not to the class band (D-#694). */}
+          <Field
+            label={STR.syFullMarksField}
+            value={String(fullMarks)}
+            onChangeText={(v) => {
+              const n = num(v);
+              setFullMarks(n && n > 0 ? n : 0);
+              setSaved(false);
+            }}
+            keyboardType="number-pad"
+          />
+          <Muted>{STR.syFullMarksHint}</Muted>
           <Body style={{ ...typeScale.bodyStrong, marginTop: space(3) }}>{STR.syQuestionTypes}</Body>
           <ChipRow>
             {SYLLABUS_ITEM_TYPES.map((qt) => (
@@ -327,7 +348,11 @@ export default function SyllabusEditorScreen({ route, navigation }: Props): Reac
                 merely looks close is what a submit-time error would let through. */}
             <Badge
               tone={balanced ? "ok" : "warn"}
-              text={balanced ? STR.syFullMarks : `${STR.sySumIs} ${bnNum(sum)}`}
+              text={
+                balanced
+                  ? `${STR.syTotal} ${bnNum(fullMarks)}`
+                  : `${STR.sySumIs} ${bnNum(sum)} / ${bnNum(fullMarks)}`
+              }
             />
           </View>
 
@@ -457,7 +482,7 @@ export default function SyllabusEditorScreen({ route, navigation }: Props): Reac
         />
         {/* Always say WHY it is disabled. A greyed primary action with no reason
             is the state this screen shipped in. */}
-        {!balanced ? <Muted>{STR.syMustBe100}</Muted> : null}
+        {!balanced ? <Muted>{`${STR.sySumMustBe} ${bnNum(fullMarks)}`}</Muted> : null}
         {balanced && holders.length === 0 ? <Muted>{STR.syNoApprover}</Muted> : null}
       </View>
     </Screen>

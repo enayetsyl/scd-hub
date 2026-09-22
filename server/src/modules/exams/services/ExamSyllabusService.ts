@@ -272,6 +272,8 @@ export interface SaveSyllabusInput {
   subjectTrack?: "quran" | "arabic" | null;
   subjectLevel?: string | null;
   subject: RoutineSubject;
+  /** What the paper is out of. Omitted means 100 — see the model (D-#694). */
+  fullMarks?: number | null;
   bodyMd: string;
   marks: ISyllabusMarkRow[];
   questionTypes: SyllabusItemType[];
@@ -301,7 +303,8 @@ export async function saveSyllabus(
   assertNotMojibake(input.bodyMd);
   for (const r of input.marks) assertNotMojibake(r.label);
 
-  const markError = validateMarkRows(input.marks);
+  const fullMarks = input.fullMarks ?? SYLLABUS_FULL_MARKS;
+  const markError = validateMarkRows(input.marks, fullMarks);
   if (markError) throw new ForbiddenError(markError);
 
   // Class XOR level, checked before anything is written: a row anchored to
@@ -334,6 +337,7 @@ export async function saveSyllabus(
         ? { subjectTrack: input.subjectTrack, subjectLevel: input.subjectLevel }
         : { classId: new Types.ObjectId(input.classId!) }),
       subject: input.subject,
+      fullMarks,
       bodyMd: input.bodyMd,
       marks: input.marks,
       questionTypes: input.questionTypes,
@@ -360,12 +364,20 @@ export async function saveSyllabus(
     return created;
   }
 
+  // A change to what the paper is OUT OF is a content change like any other — a
+  // teacher who signed off a 100-mark paper has not signed off a 50-mark one.
+  //
+  // The ?? is load-bearing, not defensive: every row stored before this field
+  // existed has fullMarks undefined, so a bare !== would read "undefined vs 100"
+  // as a change and clear the sign-off on the first save of ANY existing row.
   const contentChanged =
     existing.bodyMd !== input.bodyMd ||
+    (existing.fullMarks ?? SYLLABUS_FULL_MARKS) !== fullMarks ||
     JSON.stringify(existing.marks) !== JSON.stringify(input.marks);
   const hadApproval = existing.status !== "DRAFT";
 
   existing.bodyMd = input.bodyMd;
+  existing.fullMarks = fullMarks;
   existing.marks = input.marks;
   existing.questionTypes = input.questionTypes;
   existing.examDateKey = input.examDateKey ?? null;
@@ -481,7 +493,7 @@ export async function submitSyllabusToTeacher(
   if (doc.status !== "DRAFT") {
     throw new ForbiddenError("কেবল খসড়া সিলেবাস অনুমোদনে পাঠানো যায়");
   }
-  const markError = validateMarkRows(doc.marks);
+  const markError = validateMarkRows(doc.marks, doc.fullMarks);
   if (markError) throw new ForbiddenError(markError);
 
   const holders = await holdersForRow(doc);
@@ -661,7 +673,7 @@ export async function publishSyllabus(ctx: AppContext, id: string): Promise<IExa
 
   // Re-checked at the gate, not trusted from write time — a row could have been
   // written before a rule changed, and the printed sheet is the thing at stake.
-  const markError = validateMarkRows(doc.marks);
+  const markError = validateMarkRows(doc.marks, doc.fullMarks);
   if (markError) throw new ForbiddenError(markError);
 
   doc.status = "PUBLISHED";
