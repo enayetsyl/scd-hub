@@ -100,7 +100,10 @@ function ApprovalCard({
   const teacherName = (id: string): string =>
     (teachersQ.data?.teachers ?? []).find((t) => t.id === id)?.name ?? id;
 
-  const balanced = row.totalMarks === SYLLABUS_FULL_MARKS;
+  // Against the total this paper declares. Comparing to the constant would have
+  // shown the pre-primary 50-mark কুরআন and আরবি papers as permanently unbalanced,
+  // and the Principal could never have published them (D-#694).
+  const balanced = row.totalMarks === (row.fullMarks || SYLLABUS_FULL_MARKS);
 
   async function run(fn: () => Promise<{ error?: unknown }>): Promise<void> {
     setErr(null);
@@ -143,7 +146,11 @@ function ApprovalCard({
         </Body>
         <Badge
           tone={balanced ? "ok" : "warn"}
-          text={balanced ? STR.syFullMarks : `${STR.sySumIs} ${bnNum(row.totalMarks)}`}
+          text={
+            balanced
+              ? `${STR.syTotal} ${bnNum(row.fullMarks || SYLLABUS_FULL_MARKS)}`
+              : `${STR.sySumIs} ${bnNum(row.totalMarks)} / ${bnNum(row.fullMarks || SYLLABUS_FULL_MARKS)}`
+          }
         />
       </View>
 

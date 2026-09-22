@@ -175,8 +175,8 @@ export default function SyllabusEntryScreen({ navigation }: Props): React.ReactE
                           otherwise the distribution state. */}
                       <Muted>
                         {s.marks.length === 0
-                          ? STR.syMustBe100
-                          : `${STR.syMarks} ${bnNum(s.totalMarks)} · ${bnNum(s.marks.length)}`}
+                          ? `${STR.sySumMustBe} ${bnNum(s.fullMarks)}`
+                          : `${STR.syMarks} ${bnNum(s.totalMarks)} / ${bnNum(s.fullMarks)} · ${bnNum(s.marks.length)}`}
                       </Muted>
                     </View>
                     <Badge tone={chip.tone} text={chip.label} />

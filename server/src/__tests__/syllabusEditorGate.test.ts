@@ -48,7 +48,10 @@ describe("submit gate", () => {
   test("every disabled reason is explained on screen", () => {
     // An unbalanced sheet says so, and a subject the routine has no teacher for
     // says so. A grey primary action with no reason is the state this shipped in.
-    expect(SRC).toMatch(/!balanced \? <Muted>\{STR\.syMustBe100\}/);
+    // The reason now NAMES the total, because it is no longer always 100 — the
+    // pre-primary কুরআন and আরবি papers are out of 50 (D-#694), and "must add up
+    // to 100" was actively wrong on them.
+    expect(SRC).toMatch(/!balanced \? <Muted>\{`\$\{STR\.sySumMustBe\} \$\{bnNum\(fullMarks\)\}`\}/);
     expect(SRC).toMatch(/holders\.length === 0 \? <Muted>\{STR\.syNoApprover\}/);
   });
 });
