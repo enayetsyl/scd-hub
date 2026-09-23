@@ -1,0 +1,557 @@
+<title>What Moves the Marks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bitter:wght@500;600;700&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  color-scheme: light;
+  --plane:#f3f3ef;
+  --surface:#fbfbf9;
+  --surface-2:#eeeeea;
+  --ink:#16171a;
+  --ink-2:#55565a;
+  --muted:#8a8b86;
+  --rule:#dedfd8;
+  --grid:#e4e5de;
+  --axis:#c2c3bc;
+  --accent:#2a78d6;
+  --s1:#2a78d6;
+  --s2:#eb6834;
+  --s3:#1baf7a;
+  --flat:#9a9b95;
+  --critical:#d03b3b;
+  --good:#0ca30c;
+  --ring:rgba(11,11,11,.10);
+  --shadow:0 1px 2px rgba(16,17,26,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --plane:#0e0f10;
+    --surface:#17181a;
+    --surface-2:#202124;
+    --ink:#f4f4f2;
+    --ink-2:#b9bab6;
+    --muted:#85867f;
+    --rule:#2c2d30;
+    --grid:#282a2c;
+    --axis:#3a3c3e;
+    --accent:#6da7ec;
+    --s1:#3987e5;
+    --s2:#d95926;
+    --s3:#199e70;
+    --flat:#7a7b75;
+    --critical:#e66767;
+    --good:#0ca30c;
+    --ring:rgba(255,255,255,.10);
+    --shadow:0 1px 2px rgba(0,0,0,.4);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --plane:#0e0f10;
+  --surface:#17181a;
+  --surface-2:#202124;
+  --ink:#f4f4f2;
+  --ink-2:#b9bab6;
+  --muted:#85867f;
+  --rule:#2c2d30;
+  --grid:#282a2c;
+  --axis:#3a3c3e;
+  --accent:#6da7ec;
+  --s1:#3987e5;
+  --s2:#d95926;
+  --s3:#199e70;
+  --flat:#7a7b75;
+  --critical:#e66767;
+  --good:#0ca30c;
+  --ring:rgba(255,255,255,.10);
+  --shadow:0 1px 2px rgba(0,0,0,.4);
+}
+
+body{
+  background:var(--plane);
+  color:var(--ink);
+  font-family:"Source Sans 3", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size:16.5px;
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1060px;margin:0 auto;padding-inline:20px;padding-block:0 72px;}
+.prose{max-width:66ch;}
+h1,h2,h3{font-family:Bitter, Georgia, "Times New Roman", serif;font-weight:600;text-wrap:balance;margin:0;}
+h1{font-size:clamp(2rem,5.4vw,3.1rem);line-height:1.08;letter-spacing:-.015em;font-weight:700;}
+h2{font-size:clamp(1.3rem,3vw,1.62rem);line-height:1.2;margin-block:0 .5rem;}
+h3{font-size:1.06rem;line-height:1.3;margin-block:0 .35rem;}
+p{margin:0 0 1rem;}
+a{color:var(--accent);}
+strong{font-weight:600;}
+
+/* ---------- masthead ---------- */
+header.top{padding-block:46px 30px;border-bottom:1px solid var(--rule);}
+.eyebrow{font-size:.74rem;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:.9rem;}
+.dek{font-size:1.14rem;color:var(--ink-2);max-width:60ch;margin-top:1rem;}
+
+.facts{display:flex;flex-wrap:wrap;gap:0;margin-top:30px;border:1px solid var(--rule);border-radius:3px;background:var(--surface);overflow:hidden;}
+.fact{flex:1 1 150px;padding:14px 18px;border-right:1px solid var(--rule);}
+.fact:last-child{border-right:0;}
+.fact b{display:block;font-family:Bitter,Georgia,serif;font-size:1.5rem;font-weight:600;line-height:1.1;font-variant-numeric:tabular-nums;}
+.fact span{display:block;font-size:.8rem;color:var(--muted);margin-top:2px;}
+
+/* ---------- verdict ---------- */
+.verdict{margin-block:38px;padding:22px 24px 22px 26px;background:var(--surface);border:1px solid var(--rule);border-left:3px solid var(--accent);border-radius:3px;}
+.verdict p{font-size:1.16rem;line-height:1.5;margin:0;max-width:62ch;}
+.verdict p + p{margin-top:.8rem;font-size:1rem;color:var(--ink-2);}
+
+section{margin-block:52px;}
+.sec-head{margin-bottom:1.2rem;}
+.sec-head .kicker{font-size:.74rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:600;margin-bottom:.45rem;}
+
+/* ---------- figures ---------- */
+figure{margin:0;background:var(--surface);border:1px solid var(--rule);border-radius:3px;padding:20px 20px 16px;box-shadow:var(--shadow);}
+figcaption{font-size:.88rem;color:var(--ink-2);margin-top:14px;padding-top:12px;border-top:1px solid var(--rule);max-width:70ch;}
+.fig-title{font-family:Bitter,Georgia,serif;font-weight:600;font-size:1rem;margin-bottom:2px;}
+.fig-sub{font-size:.83rem;color:var(--muted);margin-bottom:14px;}
+.chart-host{width:100%;}
+.chart-host svg{display:block;width:100%;height:auto;font-family:ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+@media (max-width:760px){.pair{grid-template-columns:1fr;}}
+
+.legend{display:flex;flex-wrap:wrap;gap:8px 18px;margin-bottom:12px;}
+.legend span{display:inline-flex;align-items:center;gap:7px;font-size:.84rem;color:var(--ink-2);}
+.swatch{width:11px;height:11px;border-radius:2px;flex:none;}
+
+/* ---------- table ---------- */
+.tablewrap{overflow-x:auto;background:var(--surface);border:1px solid var(--rule);border-radius:3px;}
+table{border-collapse:collapse;width:100%;font-size:.92rem;min-width:600px;}
+th,td{padding:9px 14px;text-align:right;border-bottom:1px solid var(--rule);font-variant-numeric:tabular-nums;white-space:nowrap;}
+th:first-child,td:first-child{text-align:left;font-variant-numeric:normal;}
+thead th{font-size:.74rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;border-bottom:1px solid var(--axis);}
+tbody tr:last-child td{border-bottom:0;}
+tr.hi td{background:var(--surface-2);}
+tr.hi td:first-child{font-weight:600;}
+.pos{color:var(--good);font-weight:600;}
+.neg{color:var(--critical);}
+.dim{color:var(--muted);}
+
+/* ---------- notes ---------- */
+.notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px;}
+.note{background:var(--surface);border:1px solid var(--rule);border-radius:3px;padding:16px 18px;}
+.note h3{font-size:.95rem;}
+.note p{font-size:.92rem;color:var(--ink-2);margin:0;}
+
+ol.actions{counter-reset:a;list-style:none;padding:0;margin:0;max-width:66ch;}
+ol.actions li{counter-increment:a;position:relative;padding-left:40px;margin-bottom:16px;}
+ol.actions li::before{content:counter(a);position:absolute;left:0;top:1px;width:25px;height:25px;border-radius:50%;background:var(--surface);border:1px solid var(--axis);color:var(--ink-2);font-size:.82rem;font-weight:600;display:grid;place-items:center;font-variant-numeric:tabular-nums;}
+ol.actions b{display:block;}
+ol.actions span{color:var(--ink-2);font-size:.95rem;}
+
+footer{margin-top:60px;padding-top:22px;border-top:1px solid var(--rule);font-size:.85rem;color:var(--muted);max-width:74ch;}
+footer p{margin-bottom:.6rem;}
+
+#tip{position:fixed;pointer-events:none;opacity:0;transition:opacity .1s;background:var(--ink);color:var(--plane);font-size:.8rem;line-height:1.45;padding:7px 10px;border-radius:3px;z-index:50;font-variant-numeric:tabular-nums;max-width:220px;}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important;}}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+</style>
+
+<div id="tip" role="status" aria-live="polite"></div>
+
+<div class="wrap">
+
+<header class="top">
+  <div class="eyebrow">Term review &middot; {{window.from}} &rarr; {{window.to}}</div>
+  <h1>What Moves the Marks</h1>
+  <p class="dek">Every class test, homework record, assignment record and attendance day this term, checked against one question: which of these actually goes with how a child scores?</p>
+  <div class="facts">
+    <div class="fact"><b>{{counts.students}}</b><span>students on roll</span></div>
+    <div class="fact"><b>{{counts.tests}}</b><span>class tests printed</span></div>
+    <div class="fact"><b>{{counts.papers}}</b><span>test papers marked</span></div>
+    <div class="fact"><b>{{counts.trackerRecords}}</b><span>homework &amp; assignment records</span></div>
+    <div class="fact"><b>{{counts.attDays}}</b><span>attendance days per child</span></div>
+  </div>
+</header>
+
+<div class="verdict">
+  <p><strong>Written work predicts results. Attendance, on its own, does not.</strong> A child in the top third for homework submission averages {{tertiles.hwDone.2.res:0}}% in class tests; a child in the bottom third averages {{tertiles.hwDone.0.res:0}}%. Move the same children by attendance instead and the three groups land within {{tertileDiff.att:0}} marks of each other.</p>
+  <p>The one exception is real and worth acting on: below about 85% attendance, children fall behind — and in Class 4 and Class 5 attendance tracks results as strongly as homework does.</p>
+</div>
+
+<section>
+  <div class="sec-head">
+    <div class="kicker">The comparison</div>
+    <h2>Five things we record. Four of them predict.</h2>
+  </div>
+  <p class="prose">Each bar is how closely a measure moves with a child&rsquo;s average class-test score across the {{counts.withResult}} children who sat at least three tests. Longer means the two rise and fall together more tightly.</p>
+  <figure>
+    <div class="fig-title">How closely each measure tracks class-test results</div>
+    <div class="fig-sub">Correlation with a child&rsquo;s average score &middot; {{counts.withResult}} children, Nursery and KG excluded (they sit no class tests)</div>
+    <div class="legend">
+      <span><i class="swatch" style="background:var(--s1)"></i>Statistically clear (p &lt; 0.001)</span>
+      <span><i class="swatch" style="background:var(--flat)"></i>Not distinguishable from chance</span>
+    </div>
+    <div class="chart-host" id="c-strength"></div>
+    <figcaption>Homework <em>quality</em> — the teacher&rsquo;s right / partly right / wrong judgment — is the single best predictor. Attendance is the outlier: it barely moves with results at all.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <div class="sec-head">
+    <div class="kicker">Side by side</div>
+    <h2>The same {{counts.withResult}} children, plotted twice</h2>
+  </div>
+  <p class="prose">One dot per child. Left: how much homework they hand in. Right: how often they are in school. Same children, same vertical axis, very different pictures.</p>
+  <div class="pair">
+    <figure>
+      <div class="fig-title">Homework submitted &rarr; test result</div>
+      <div class="fig-sub">A clear upward slope</div>
+      <div class="chart-host" id="c-hw"></div>
+    </figure>
+    <figure>
+      <div class="fig-title">Attendance &rarr; test result</div>
+      <div class="fig-sub">Almost flat, and crowded to the right</div>
+      <div class="chart-host" id="c-att"></div>
+    </figure>
+  </div>
+  <p class="prose" style="margin-top:16px">Part of why the right-hand chart is flat: <strong>most children attend very well.</strong> Half are above {{%headline.attMedian:0}}% and a tenth at {{%headline.attP90:0}}%, so attendance barely separates one child from another. Homework spreads them from {{%headline.hwMin:0}}% to {{%headline.hwMax:0}}% — plenty of room to show a difference.</p>
+</section>
+
+<section>
+  <div class="sec-head">
+    <div class="kicker">Thirds</div>
+    <h2>Split the school three ways</h2>
+  </div>
+  <figure>
+    <div class="fig-title">Average class-test result, by where a child sits on each measure</div>
+    <div class="fig-sub">{{counts.withResult}} children sorted into equal thirds, three times over</div>
+    <div class="legend">
+      <span><i class="swatch" style="background:var(--s1)"></i>Homework submitted</span>
+      <span><i class="swatch" style="background:var(--s2)"></i>Assignments submitted</span>
+      <span><i class="swatch" style="background:var(--s3)"></i>Attendance</span>
+    </div>
+    <div class="chart-host" id="c-tertile"></div>
+    <figcaption>Between the bottom and top third, homework opens a gap of {{tertileDiff.hwDone:0}} marks and assignments {{tertileDiff.asDone:0}}. Attendance opens {{tertileDiff.att:0}}.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <div class="sec-head">
+    <div class="kicker">The exception</div>
+    <h2>Attendance matters — but only below 85%</h2>
+  </div>
+  <p class="prose">Averaging attendance across the whole school hides the shape of it. Broken into bands, the effect is not a gradient. It is a cliff edge, and it sits low.</p>
+  <figure>
+    <div class="fig-title">Average class-test result, by attendance band</div>
+    <div class="fig-sub">Number of children shown above each bar &middot; the 85% line marks where results drop</div>
+    <div class="chart-host" id="c-band"></div>
+    <figcaption>A child at 95% attendance does no better than one at 88%. The children below 85% average <strong>{{headline.below85.lo:1}}</strong> against <strong>{{headline.below85.hi:1}}</strong> for everyone else. Two honest cautions: that is only {{headline.below85.nLo}} children (p = {{headline.below85.p:3}}); and those same children also hand in less homework ({{%headline.below85.hwLo:0}}% against {{%headline.below85.hwHi:0}}%). Once homework is accounted for, chronic absence costs about <strong>{{headline.chronicCost:1}}</strong> marks.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <div class="sec-head">
+    <div class="kicker">By class</div>
+    <h2>It does not work the same way in every class</h2>
+  </div>
+  <div class="tablewrap">
+    <table>
+      <caption class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Attendance, homework and results by class level, with the correlation between each measure and results</caption>
+      <thead>
+        <tr><th scope="col">Class</th><th scope="col">Children</th><th scope="col">Attendance</th><th scope="col">Homework in</th><th scope="col">Avg result</th><th scope="col">Attendance &rarr; result</th><th scope="col">Homework &rarr; result</th></tr>
+      </thead>
+      <tbody id="lvlbody"></tbody>
+    </table>
+  </div>
+  <p class="prose" style="margin-top:16px"><strong>Class 4 and Class 5 are where attendance bites.</strong> Taken together ({{c45.n}} children, r = {{c45.r:2}}), attendance and results move together strongly — as strongly as homework does, and it holds up when the one child who has effectively stopped attending is removed. In Classes 1 and 2 there is no measurable link at all. Class 3 runs slightly backwards, and is the weakest class in the school on every measure at once.</p>
+</section>
+
+<section>
+  <div class="sec-head">
+    <div class="kicker">In marks</div>
+    <h2>What a difference is actually worth</h2>
+  </div>
+  <p class="prose">Comparing a child near the bottom of each measure with one near the top, this is the gap in class-test marks:</p>
+  <figure>
+    <div class="fig-title">Marks separating a low performer from a high one on each measure</div>
+    <div class="fig-sub">10th percentile compared with 90th percentile, in percentage points of class-test marks</div>
+    <div class="chart-host" id="c-effect"></div>
+    <figcaption>Attendance is worth {{effectMarks.att:1}} marks across its whole usable range. Every written-work measure is worth four to five times that.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <div class="sec-head">
+    <div class="kicker">Reading it honestly</div>
+    <h2>What this does and does not show</h2>
+  </div>
+  <div class="notes">
+    <div class="note">
+      <h3>It is an early warning, not just a summary</h3>
+      <p>Rebuilt using only homework settled <em>before</em> each exam, the link holds. A slipping homework record predicts the next test — it is visible in advance, not only in hindsight.</p>
+    </div>
+    <div class="note">
+      <h3>Homework and assignments are one thing, not two</h3>
+      <p>The two submission rates move together almost perfectly. Treat them as a single &ldquo;does this child do written work at home&rdquo; signal rather than two separate levers.</p>
+    </div>
+    <div class="note">
+      <h3>The same teacher judges both</h3>
+      <p>Homework <em>quality</em> and test marks come from the same hand, so some of that link may be one teacher&rsquo;s view of a child showing up twice. Plain submission — a clerical fact — still predicts strongly on its own.</p>
+    </div>
+    <div class="note">
+      <h3>It is one term and 66 children</h3>
+      <p>This shows that diligent children score well. It does not prove that pushing a reluctant child into submitting homework will raise their marks. Use it to spot children, not to justify pressure.</p>
+    </div>
+    <div class="note">
+      <h3>Leave applications are effectively unused</h3>
+      <p>{{headline.absenceDays}} absence-days this term; <strong>{{headline.leaveCovered}}</strong> had an approved leave application behind them. So the system cannot currently tell an authorised absence from an unexplained one.</p>
+    </div>
+    <div class="note">
+      <h3>Three children have stopped coming</h3>
+      <p>Present 2, 8 and 14 days out of 60 — all still active on the roll, all still being issued homework, none with a leave application. They quietly distort every class average.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <div class="kicker">What to do</div>
+    <h2>Five things that follow from this</h2>
+  </div>
+  <ol class="actions">
+    <li><b>Set the attendance alert at 85%, not 95%.</b><span>Moving a child from 95% to 98% buys nothing measurable. The children below 85% are the ones falling behind.</span></li>
+    <li><b>Treat a slipping homework record as the early warning.</b><span>It is the strongest signal in the data and it is visible before the test, especially in Classes 3 to 5.</span></li>
+    <li><b>Watch the chase counter.</b><span>Children chased repeatedly for missing work score markedly lower. Repeated chasing is a symptom worth escalating, not a routine step.</span></li>
+    <li><b>In Class 4 and Class 5, treat absence as academic.</b><span>These are the classes nearest the scholarship exam, and the only ones where attendance clearly tracks results.</span></li>
+    <li><b>Resolve the three long-term absentees.</b><span>Either bring them back or take them off roll — and stop issuing homework nobody can submit.</span></li>
+  </ol>
+</section>
+
+<footer>
+  <p><strong>Method.</strong> Attendance is read through the app&rsquo;s own unit roll-up, so Classes 1–5 are counted from the Quran-group capture taken in the first period and Nursery/KG from the section capture — the same figures the attendance reports show. Homework and assignment &ldquo;submitted&rdquo; means a record reaching SUBMITTED, CHECKED, RESUBMIT or RETURNED; &ldquo;not submitted&rdquo; means it sat in CHASE or DUE. Records in ABSENT_REDELIVER are excluded from both, since they describe an absence rather than a choice. Quality scores CORRECT as 1, PARTIAL as 0.5, WRONG as 0.</p>
+  <p>Results are a child&rsquo;s average percentage across every printed class test they sat; cancelled tests and papers marked ABSENT are excluded. Every finding was re-checked against a version that standardises each score within its own test, removing test difficulty and class ability — the written-work findings survive that, and so does the absence of an attendance effect.</p>
+  <p>All figures from the production database on {{generatedAt}}. No child is named anywhere in this page.</p>
+</footer>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var NS="http://www.w3.org/2000/svg";
+  var tip=document.getElementById("tip");
+  function el(n,a){var e=document.createElementNS(NS,n);for(var k in a){if(a[k]!=null)e.setAttribute(k,a[k]);}return e;}
+  function txt(x,y,s,o){o=o||{};var t=el("text",{x:x,y:y,fill:o.fill||"var(--muted)","font-size":o.size||11,"text-anchor":o.anchor||"start","font-weight":o.weight||400});t.textContent=s;if(o.tab)t.setAttribute("style","font-variant-numeric:tabular-nums");return t;}
+  function svg(host,w,h){var s=el("svg",{viewBox:"0 0 "+w+" "+h,role:"img"});host.appendChild(s);return s;}
+  function showTip(e,html){tip.innerHTML=html;tip.style.opacity=1;moveTip(e);}
+  function moveTip(e){var x=e.clientX+14,y=e.clientY+14;var r=tip.getBoundingClientRect();if(x+r.width>window.innerWidth-8)x=e.clientX-r.width-14;if(y+r.height>window.innerHeight-8)y=e.clientY-r.height-14;tip.style.left=x+"px";tip.style.top=y+"px";}
+  function hideTip(){tip.style.opacity=0;}
+  function hover(node,html){
+    node.addEventListener("mouseenter",function(e){showTip(e,html);});
+    node.addEventListener("mousemove",moveTip);
+    node.addEventListener("mouseleave",hideTip);
+  }
+
+  /* ---------------- 1. strength bars ---------------- */
+  (function(){
+    var LAB={
+      hwQual:{k:"Homework quality",note:"right / partly right / wrong, as marked by the teacher"},
+      asQual:{k:"Assignment quality",note:"same three-point scale on weekly assignments"},
+      hwDone:{k:"Homework submitted",note:"share of set homework that came back"},
+      asDone:{k:"Assignments submitted",note:"share of set assignments that came back"},
+      att:{k:"Attendance",note:"days present out of days marked"}
+    };
+    var data={{@corr}}.filter(function(c){return c.r!=null;})
+      .sort(function(a,b){return Math.abs(b.r)-Math.abs(a.r);})
+      .map(function(c){var l=LAB[c.key]||{k:c.key,note:""};return {k:l.k,v:c.r,sig:c.sig,note:l.note};});
+    var host=document.getElementById("c-strength");
+    var W=720,rowH=42,padL=178,padR=54,padT=26,H=padT+data.length*rowH+30;
+    var s=svg(host,W,H);
+    s.appendChild(el("title",{})).textContent="Correlation between each measure and class-test results";
+    var maxV=Math.max(0.5,Math.ceil(Math.max.apply(null,data.map(function(d){return Math.abs(d.v);}))*10)/10+0.05), plotW=W-padL-padR;
+    var ticks=[];for(var tk=0;tk<=maxV-0.04;tk+=0.1)ticks.push(+tk.toFixed(1));
+    ticks.forEach(function(t){
+      var x=padL+t/maxV*plotW;
+      s.appendChild(el("line",{x1:x,y1:padT-8,x2:x,y2:padT+data.length*rowH-8,stroke:t===0?"var(--axis)":"var(--grid)","stroke-width":1}));
+      s.appendChild(txt(x,H-26,t.toFixed(1),{anchor:"middle",size:10.5,tab:true}));
+    });
+    s.appendChild(txt(padL+plotW/2,H-8,"weaker  →  stronger",{anchor:"middle",size:10.5}));
+    data.forEach(function(d,i){
+      var y=padT+i*rowH, bh=17;
+      var w=d.v/maxV*plotW;
+      var col=d.sig?"var(--s1)":"var(--flat)";
+      s.appendChild(txt(padL-12,y+bh-3,d.k,{anchor:"end",size:12.5,fill:"var(--ink)",weight:d.sig?600:400}));
+      var r=el("rect",{x:padL,y:y,width:Math.max(w,2),height:bh,rx:3,ry:3,fill:col});
+      s.appendChild(r);
+      hover(r,"<b>"+d.k+"</b><br>correlation "+d.v.toFixed(2)+"<br>"+d.note);
+      s.appendChild(txt(padL+w+8,y+bh-3,d.v.toFixed(2),{size:12,fill:"var(--ink)",weight:600,tab:true}));
+      if(!d.sig)s.appendChild(txt(padL+w+40,y+bh-3,"not significant",{size:10.5,fill:"var(--muted)"}));
+    });
+  })();
+
+  /* ---------------- 2. scatters ---------------- */
+  var STUDENTS={{@students}};
+  function scatter(hostId,xi,xLabel,xMin){
+    var host=document.getElementById(hostId);
+    var W=440,H=330,padL=44,padR=16,padT=14,padB=46;
+    var pw=W-padL-padR, ph=H-padT-padB;
+    var s=svg(host,W,H);
+    s.appendChild(el("title",{})).textContent=xLabel+" against class-test result, one dot per child";
+    var xLo=xMin,xHi=100,yLo=0,yHi=100;
+    var X=function(v){return padL+(v-xLo)/(xHi-xLo)*pw;};
+    var Y=function(v){return padT+ph-(v-yLo)/(yHi-yLo)*ph;};
+    [0,25,50,75,100].forEach(function(t){
+      s.appendChild(el("line",{x1:padL,y1:Y(t),x2:padL+pw,y2:Y(t),stroke:t===0?"var(--axis)":"var(--grid)","stroke-width":1}));
+      s.appendChild(txt(padL-8,Y(t)+4,t,{anchor:"end",size:10.5,tab:true}));
+    });
+    var xt=[];for(var v=Math.ceil(xLo/20)*20;v<=100;v+=20)xt.push(v);
+    xt.forEach(function(t){
+      s.appendChild(el("line",{x1:X(t),y1:padT,x2:X(t),y2:padT+ph,stroke:"var(--grid)","stroke-width":1}));
+      s.appendChild(txt(X(t),H-padB+18,t+"%",{anchor:"middle",size:10.5,tab:true}));
+    });
+    s.appendChild(txt(padL+pw/2,H-8,xLabel,{anchor:"middle",size:11.5,fill:"var(--ink-2)"}));
+    s.appendChild(txt(2,padT-3,"result %",{anchor:"start",size:10.5}));
+    /* trend line */
+    var pts=STUDENTS.filter(function(r){return r[xi]!=null;});
+    var n=pts.length,sx=0,sy=0;
+    pts.forEach(function(r){sx+=r[xi];sy+=r[4];});
+    var mx=sx/n,my=sy/n,num=0,den=0;
+    pts.forEach(function(r){num+=(r[xi]-mx)*(r[4]-my);den+=(r[xi]-mx)*(r[xi]-mx);});
+    var slope=num/den, icpt=my-slope*mx;
+    var x1=Math.max(xLo,Math.min.apply(null,pts.map(function(r){return r[xi];})));
+    var x2=Math.max.apply(null,pts.map(function(r){return r[xi];}));
+    s.appendChild(el("line",{x1:X(x1),y1:Y(slope*x1+icpt),x2:X(x2),y2:Y(slope*x2+icpt),stroke:"var(--ink-2)","stroke-width":2,"stroke-dasharray":"5 4","stroke-linecap":"round",opacity:.8}));
+    pts.forEach(function(r){
+      var cx=X(r[xi]),cy=Y(r[4]);
+      s.appendChild(el("circle",{cx:cx,cy:cy,r:5.6,fill:"var(--surface)"}));
+      var c=el("circle",{cx:cx,cy:cy,r:4.4,fill:"var(--s1)","fill-opacity":.72,stroke:"var(--s1)","stroke-width":1});
+      s.appendChild(c);
+      var cls=r[0]<=0?(r[0]===0?"KG":"Nursery"):"Class "+r[0];
+      hover(c,"<b>"+cls+"</b><br>"+xLabel+": "+r[xi]+"%<br>test result: "+r[4]+"%");
+    });
+    return slope;
+  }
+  scatter("c-hw",2,"homework submitted",0);
+  scatter("c-att",1,"attendance",30);
+
+  /* ---------------- 3. tertiles ---------------- */
+  (function(){
+    var groups=["Bottom third","Middle third","Top third"];
+    var T={{@tertiles}};
+    var pick=function(a){return (T[a]||[]).map(function(g){return g.res;});};
+    var series=[
+      {k:"Homework submitted",c:"var(--s1)",v:pick("hwDone")},
+      {k:"Assignments submitted",c:"var(--s2)",v:pick("asDone")},
+      {k:"Attendance",c:"var(--s3)",v:pick("att")}
+    ];
+    var host=document.getElementById("c-tertile");
+    var W=720,H=340,padL=46,padR=16,padT=22,padB=54;
+    var pw=W-padL-padR,ph=H-padT-padB;
+    var s=svg(host,W,H);
+    s.appendChild(el("title",{})).textContent="Average class-test result by tertile on each measure";
+    var yHi=80;
+    var Y=function(v){return padT+ph-v/yHi*ph;};
+    [0,20,40,60,80].forEach(function(t){
+      s.appendChild(el("line",{x1:padL,y1:Y(t),x2:padL+pw,y2:Y(t),stroke:t===0?"var(--axis)":"var(--grid)","stroke-width":1}));
+      s.appendChild(txt(padL-8,Y(t)+4,t,{anchor:"end",size:10.5,tab:true}));
+    });
+    s.appendChild(txt(padL-8,padT-6,"result %",{anchor:"end",size:10.5}));
+    var gw=pw/groups.length, bw=Math.min(52,(gw-34)/3);
+    groups.forEach(function(g,gi){
+      var gx=padL+gi*gw;
+      series.forEach(function(se,si){
+        var x=gx+(gw-(bw*3+8))/2+si*(bw+4);
+        var v=se.v[gi], y=Y(v);
+        var r=el("rect",{x:x,y:y,width:bw,height:padT+ph-y,rx:3,ry:3,fill:se.c});
+        s.appendChild(r);
+        hover(r,"<b>"+se.k+"</b><br>"+g.toLowerCase()+"<br>average result "+v.toFixed(1)+"%");
+        s.appendChild(txt(x+bw/2,y-7,v.toFixed(0),{anchor:"middle",size:12,fill:"var(--ink)",weight:600,tab:true}));
+      });
+      s.appendChild(txt(gx+gw/2,padT+ph+20,g,{anchor:"middle",size:12,fill:"var(--ink)"}));
+      if(gi>0)s.appendChild(el("line",{x1:gx,y1:padT,x2:gx,y2:padT+ph+8,stroke:"var(--rule)","stroke-width":1}));
+    });
+    s.appendChild(txt(padL+pw/2,H-10,"children ranked into equal thirds on each measure separately",{anchor:"middle",size:10.5}));
+  })();
+
+  /* ---------------- 4. attendance bands ---------------- */
+  (function(){
+    var bands={{@bands}}.map(function(b,i){
+      var lo=Math.round(b.lo*100),hi=Math.round(Math.min(b.hi,1)*100);
+      return {k:i===0?("under "+hi+"%"):(lo+"\u2013"+hi+"%"),n:b.n,v:b.mean,lo:b.lo};
+    }).filter(function(b){return b.n>0;});
+    var host=document.getElementById("c-band");
+    var W=720,H=330,padL=46,padR=16,padT=30,padB=58;
+    var pw=W-padL-padR,ph=H-padT-padB;
+    var s=svg(host,W,H);
+    s.appendChild(el("title",{})).textContent="Average class-test result by attendance band";
+    var yHi=80,Y=function(v){return padT+ph-v/yHi*ph;};
+    [0,20,40,60,80].forEach(function(t){
+      s.appendChild(el("line",{x1:padL,y1:Y(t),x2:padL+pw,y2:Y(t),stroke:t===0?"var(--axis)":"var(--grid)","stroke-width":1}));
+      s.appendChild(txt(padL-8,Y(t)+4,t,{anchor:"end",size:10.5,tab:true}));
+    });
+    s.appendChild(txt(padL-8,padT-8,"result %",{anchor:"end",size:10.5}));
+    var bw=pw/bands.length;
+    bands.forEach(function(b,i){
+      var x=padL+i*bw+10,w=bw-20,y=Y(b.v);
+      var r=el("rect",{x:x,y:y,width:w,height:padT+ph-y,rx:3,ry:3,fill:b.lo<0.85?"var(--flat)":"var(--s1)"});
+      s.appendChild(r);
+      hover(r,"<b>"+b.k+" attendance</b><br>"+b.n+" children<br>average result "+b.v.toFixed(1)+"%");
+      s.appendChild(txt(x+w/2,y-20,b.n+(b.n===1?" child":" children"),{anchor:"middle",size:10,fill:"var(--muted)"}));
+      s.appendChild(txt(x+w/2,y-6,b.v.toFixed(1),{anchor:"middle",size:12.5,fill:"var(--ink)",weight:600,tab:true}));
+      s.appendChild(txt(x+w/2,padT+ph+18,b.k,{anchor:"middle",size:11,fill:"var(--ink)"}));
+    });
+    var ci=bands.findIndex(function(b){return b.lo>=0.85;});var cx=padL+(ci<0?bands.length:ci)*bw;
+    s.appendChild(el("line",{x1:cx,y1:padT-14,x2:cx,y2:padT+ph,stroke:"var(--critical)","stroke-width":2,"stroke-dasharray":"4 3"}));
+    s.appendChild(txt(cx+6,padT-16,"85% — results drop below this line",{size:11,fill:"var(--critical)",weight:600}));
+    s.appendChild(txt(padL+pw/2,H-10,"attendance band",{anchor:"middle",size:11.5,fill:"var(--ink-2)"}));
+  })();
+
+  /* ---------------- 5. effect size ---------------- */
+  (function(){
+    var ELAB={asQual:"Assignment quality",asDone:"Assignments submitted",hwDone:"Homework submitted",hwQual:"Homework quality",att:"Attendance"};
+    var data={{@effect}}.slice().sort(function(a,b){return b.marks-a.marks;})
+      .map(function(e){return {k:ELAB[e.key]||e.key,v:e.marks,att:e.key==="att"};});
+    var host=document.getElementById("c-effect");
+    var W=720,rowH=40,padL=178,padR=56,padT=22,H=padT+data.length*rowH+34;
+    var s=svg(host,W,H);
+    s.appendChild(el("title",{})).textContent="Marks separating the 10th from the 90th percentile on each measure";
+    var maxV=Math.max(10,Math.ceil(Math.max.apply(null,data.map(function(d){return d.v;}))/5)*5),pw=W-padL-padR;
+    var eticks=[];for(var et=0;et<=maxV;et+=maxV/5)eticks.push(et);
+    eticks.forEach(function(t){
+      var x=padL+t/maxV*pw;
+      s.appendChild(el("line",{x1:x,y1:padT-8,x2:x,y2:padT+data.length*rowH-10,stroke:t===0?"var(--axis)":"var(--grid)","stroke-width":1}));
+      s.appendChild(txt(x,H-22,String(Math.round(t)),{anchor:"middle",size:10.5,tab:true}));
+    });
+    s.appendChild(txt(padL+pw/2,H-6,"difference in class-test marks (percentage points)",{anchor:"middle",size:10.5}));
+    data.forEach(function(d,i){
+      var y=padT+i*rowH,bh=17,w=d.v/maxV*pw;
+      var last=d.att;
+      s.appendChild(txt(padL-12,y+bh-3,d.k,{anchor:"end",size:12.5,fill:"var(--ink)",weight:last?400:600}));
+      var r=el("rect",{x:padL,y:y,width:Math.max(w,2),height:bh,rx:3,ry:3,fill:last?"var(--flat)":"var(--s1)"});
+      s.appendChild(r);
+      hover(r,"<b>"+d.k+"</b><br>"+d.v.toFixed(1)+" marks between a low and a high child");
+      s.appendChild(txt(padL+w+8,y+bh-3,d.v.toFixed(1)+" marks",{size:12,fill:"var(--ink)",weight:600,tab:true}));
+    });
+  })();
+
+  /* ---------------- 6. class table ---------------- */
+  (function(){
+    var L={{@levels}};
+    var order=Object.keys(L).map(Number).sort(function(a,b){return a-b;});
+    var names={"-1":"Nursery","0":"KG","1":"Class 1","2":"Class 2","3":"Class 3","4":"Class 4","5":"Class 5"};
+    var body=document.getElementById("lvlbody");
+    order.forEach(function(k){
+      var d=L[k]; if(!d)return;
+      var tr=document.createElement("tr");
+      if(k===4||k===5)tr.className="hi";
+      function cell(html,cls){var td=document.createElement("td");td.innerHTML=html;if(cls)td.className=cls;tr.appendChild(td);}
+      var th=document.createElement("td");th.textContent=names[k];tr.appendChild(th);
+      cell(d.n);
+      cell((d.att*100).toFixed(0)+"%");
+      cell((d.hw*100).toFixed(0)+"%");
+      cell(d.res!=null?d.res.toFixed(0)+"%":"<span class='dim'>no tests</span>");
+      cell(d.rAtt==null?"<span class='dim'>&mdash;</span>":(d.rAtt>=0.5?"<span class='pos'>+"+d.rAtt.toFixed(2)+"</span>":(d.rAtt<0?"<span class='neg'>"+d.rAtt.toFixed(2)+"</span>":"+"+d.rAtt.toFixed(2))));
+      cell(d.rHw==null?"<span class='dim'>&mdash;</span>":(d.rHw>=0.5?"<span class='pos'>+"+d.rHw.toFixed(2)+"</span>":(d.rHw<0?"<span class='neg'>"+d.rHw.toFixed(2)+"</span>":"+"+d.rHw.toFixed(2))));
+      body.appendChild(tr);
+    });
+  })();
+})();
+</script>
