@@ -1,0 +1,537 @@
+<title>নম্বর কীসে বাড়ে</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+Bengali:wght@500;600;700&family=Noto+Sans+Bengali:wght@400;500;600&display=swap">
+<style>
+:root{
+  color-scheme: light;
+  --plane:#f3f3ef;
+  --surface:#fbfbf9;
+  --surface-2:#eeeeea;
+  --ink:#16171a;
+  --ink-2:#55565a;
+  --muted:#8a8b86;
+  --rule:#dedfd8;
+  --grid:#e4e5de;
+  --axis:#c2c3bc;
+  --accent:#2a78d6;
+  --s1:#2a78d6;
+  --s2:#eb6834;
+  --s3:#1baf7a;
+  --flat:#9a9b95;
+  --critical:#d03b3b;
+  --good:#0ca30c;
+  --shadow:0 1px 2px rgba(16,17,26,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --plane:#0e0f10;
+    --surface:#17181a;
+    --surface-2:#202124;
+    --ink:#f4f4f2;
+    --ink-2:#b9bab6;
+    --muted:#85867f;
+    --rule:#2c2d30;
+    --grid:#282a2c;
+    --axis:#3a3c3e;
+    --accent:#6da7ec;
+    --s1:#3987e5;
+    --s2:#d95926;
+    --s3:#199e70;
+    --flat:#7a7b75;
+    --critical:#e66767;
+    --good:#0ca30c;
+    --shadow:0 1px 2px rgba(0,0,0,.4);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --plane:#0e0f10;
+  --surface:#17181a;
+  --surface-2:#202124;
+  --ink:#f4f4f2;
+  --ink-2:#b9bab6;
+  --muted:#85867f;
+  --rule:#2c2d30;
+  --grid:#282a2c;
+  --axis:#3a3c3e;
+  --accent:#6da7ec;
+  --s1:#3987e5;
+  --s2:#d95926;
+  --s3:#199e70;
+  --flat:#7a7b75;
+  --critical:#e66767;
+  --good:#0ca30c;
+  --shadow:0 1px 2px rgba(0,0,0,.4);
+}
+
+body{
+  background:var(--plane);
+  color:var(--ink);
+  font-family:"Noto Sans Bengali", "Hind Siliguri", "Nirmala UI", "Vrinda", sans-serif;
+  font-size:16.5px;
+  line-height:1.78;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1060px;margin:0 auto;padding-inline:20px;padding-block:0 72px;}
+.prose{max-width:60ch;}
+h1,h2,h3{font-family:"Noto Serif Bengali", "Noto Sans Bengali", serif;font-weight:600;text-wrap:balance;margin:0;line-height:1.35;}
+h1{font-size:clamp(1.95rem,5vw,2.95rem);line-height:1.22;letter-spacing:-.01em;font-weight:700;}
+h2{font-size:clamp(1.28rem,3vw,1.6rem);margin-block:0 .5rem;}
+h3{font-size:1.04rem;margin-block:0 .35rem;}
+p{margin:0 0 1rem;}
+a{color:var(--accent);}
+strong{font-weight:600;}
+
+header.top{padding-block:46px 30px;border-bottom:1px solid var(--rule);}
+.eyebrow{font-size:.78rem;letter-spacing:.06em;color:var(--muted);font-weight:600;margin-bottom:.9rem;}
+.dek{font-size:1.1rem;color:var(--ink-2);max-width:54ch;margin-top:1rem;}
+
+.facts{display:flex;flex-wrap:wrap;gap:0;margin-top:30px;border:1px solid var(--rule);border-radius:3px;background:var(--surface);overflow:hidden;}
+.fact{flex:1 1 160px;padding:14px 18px;border-right:1px solid var(--rule);}
+.fact:last-child{border-right:0;}
+.fact b{display:block;font-family:"Noto Serif Bengali",serif;font-size:1.5rem;font-weight:600;line-height:1.3;}
+.fact span{display:block;font-size:.82rem;color:var(--muted);margin-top:2px;line-height:1.5;}
+
+.verdict{margin-block:38px;padding:22px 24px 22px 26px;background:var(--surface);border:1px solid var(--rule);border-left:3px solid var(--accent);border-radius:3px;}
+.verdict p{font-size:1.12rem;line-height:1.75;margin:0;max-width:58ch;}
+.verdict p + p{margin-top:.8rem;font-size:1rem;color:var(--ink-2);}
+
+section{margin-block:52px;}
+.sec-head{margin-bottom:1.2rem;}
+.sec-head .kicker{font-size:.78rem;letter-spacing:.05em;color:var(--accent);font-weight:600;margin-bottom:.4rem;}
+
+figure{margin:0;background:var(--surface);border:1px solid var(--rule);border-radius:3px;padding:20px 20px 16px;box-shadow:var(--shadow);}
+figcaption{font-size:.9rem;color:var(--ink-2);margin-top:14px;padding-top:12px;border-top:1px solid var(--rule);max-width:64ch;line-height:1.7;}
+.fig-title{font-family:"Noto Serif Bengali",serif;font-weight:600;font-size:1rem;margin-bottom:2px;}
+.fig-sub{font-size:.85rem;color:var(--muted);margin-bottom:14px;line-height:1.6;}
+.chart-host{width:100%;}
+.chart-host svg{display:block;width:100%;height:auto;font-family:"Noto Sans Bengali","Nirmala UI",sans-serif;}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+@media (max-width:760px){.pair{grid-template-columns:1fr;}}
+
+.legend{display:flex;flex-wrap:wrap;gap:8px 18px;margin-bottom:12px;}
+.legend span{display:inline-flex;align-items:center;gap:7px;font-size:.86rem;color:var(--ink-2);}
+.swatch{width:11px;height:11px;border-radius:2px;flex:none;}
+
+.tablewrap{overflow-x:auto;background:var(--surface);border:1px solid var(--rule);border-radius:3px;}
+table{border-collapse:collapse;width:100%;font-size:.93rem;min-width:660px;}
+th,td{padding:9px 14px;text-align:right;border-bottom:1px solid var(--rule);white-space:nowrap;}
+th:first-child,td:first-child{text-align:left;}
+thead th{font-size:.78rem;color:var(--muted);font-weight:600;border-bottom:1px solid var(--axis);line-height:1.4;white-space:normal;}
+tbody tr:last-child td{border-bottom:0;}
+tr.hi td{background:var(--surface-2);}
+tr.hi td:first-child{font-weight:600;}
+.pos{color:var(--good);font-weight:600;}
+.neg{color:var(--critical);}
+.dim{color:var(--muted);}
+
+.notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(255px,1fr));gap:14px;}
+.note{background:var(--surface);border:1px solid var(--rule);border-radius:3px;padding:16px 18px;}
+.note h3{font-size:.97rem;}
+.note p{font-size:.93rem;color:var(--ink-2);margin:0;line-height:1.7;}
+
+ol.actions{counter-reset:a;list-style:none;padding:0;margin:0;max-width:62ch;}
+ol.actions li{counter-increment:a;position:relative;padding-left:42px;margin-bottom:18px;}
+ol.actions li::before{content:counter(a, bengali);position:absolute;left:0;top:4px;width:26px;height:26px;border-radius:50%;background:var(--surface);border:1px solid var(--axis);color:var(--ink-2);font-size:.85rem;font-weight:600;display:grid;place-items:center;}
+ol.actions b{display:block;}
+ol.actions span{color:var(--ink-2);font-size:.95rem;}
+
+footer{margin-top:60px;padding-top:22px;border-top:1px solid var(--rule);font-size:.87rem;color:var(--muted);max-width:66ch;line-height:1.75;}
+footer p{margin-bottom:.6rem;}
+
+#tip{position:fixed;pointer-events:none;opacity:0;transition:opacity .1s;background:var(--ink);color:var(--plane);font-size:.82rem;line-height:1.6;padding:7px 11px;border-radius:3px;z-index:50;max-width:230px;}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important;}}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+</style>
+
+<div id="tip" role="status" aria-live="polite"></div>
+
+<div class="wrap">
+
+<header class="top">
+  <div class="eyebrow">টার্ম পর্যালোচনা &middot; {{window.from}} &rarr; {{window.to}}</div>
+  <h1>নম্বর কীসে বাড়ে</h1>
+  <p class="dek">এই টার্মের সব ক্লাস টেস্ট, বাড়ির কাজ, অ্যাসাইনমেন্ট আর উপস্থিতির হিসাব মিলিয়ে একটাই প্রশ্ন দেখা হয়েছে — শিক্ষার্থীর ফলাফলের সঙ্গে আসলে কোনটা মেলে?</p>
+  <div class="facts">
+    <div class="fact"><b>{{counts.students}}</b><span>শিক্ষার্থী</span></div>
+    <div class="fact"><b>{{counts.tests}}</b><span>ক্লাস টেস্ট</span></div>
+    <div class="fact"><b>{{counts.papers}}</b><span>খাতা দেখা হয়েছে</span></div>
+    <div class="fact"><b>{{counts.trackerRecords}}</b><span>বাড়ির কাজ ও অ্যাসাইনমেন্টের রেকর্ড</span></div>
+    <div class="fact"><b>{{counts.attDays}}</b><span>প্রতি শিক্ষার্থীর উপস্থিতির দিন</span></div>
+  </div>
+</header>
+
+<div class="verdict">
+  <p><strong>লিখিত কাজ ফলাফলের আগাম ইঙ্গিত দেয়। উপস্থিতি একা দেয় না।</strong> বাড়ির কাজ জমা দেওয়ায় উপরের এক-তৃতীয়াংশ শিক্ষার্থীর ক্লাস টেস্টের গড় {{tertiles.hwDone.2.res:0}}%, নিচের এক-তৃতীয়াংশের {{tertiles.hwDone.0.res:0}}%। একই শিক্ষার্থীদের উপস্থিতি দিয়ে তিন ভাগে ভাগ করলে তিন দলের গড় {{tertileDiff.att:0}} নম্বরের মধ্যেই থেকে যায়।</p>
+  <p>তবে একটা ব্যতিক্রম আছে, আর সেটা কাজে লাগানোর মতো: উপস্থিতি ৮৫%-এর নিচে নামলে শিক্ষার্থী পিছিয়ে পড়ে — আর চতুর্থ ও পঞ্চম শ্রেণিতে উপস্থিতি বাড়ির কাজের মতোই জোরালোভাবে ফলাফলের সঙ্গে চলে।</p>
+</div>
+
+<section>
+  <div class="sec-head">
+    <div class="kicker">তুলনা</div>
+    <h2>আমরা পাঁচটা জিনিস রাখি। চারটা ফলাফলের ইঙ্গিত দেয়।</h2>
+  </div>
+  <p class="prose">যে {{counts.withResult}} জন শিক্ষার্থী অন্তত তিনটি ক্লাস টেস্ট দিয়েছে, তাদের গড় নম্বরের সঙ্গে প্রতিটি হিসাব কতটা মিলে চলে — দাগ যত লম্বা, দুটো তত বেশি একসঙ্গে ওঠানামা করে।</p>
+  <figure>
+    <div class="fig-title">কোন হিসাব ফলাফলের সঙ্গে কতটা মেলে</div>
+    <div class="fig-sub">{{counts.withResult}} জন শিক্ষার্থী &middot; নার্সারি ও কেজি বাদ (তারা ক্লাস টেস্ট দেয় না)</div>
+    <div class="legend">
+      <span><i class="swatch" style="background:var(--s1)"></i>স্পষ্ট সম্পর্ক</span>
+      <span><i class="swatch" style="background:var(--flat)"></i>আকস্মিকতা থেকে আলাদা করা যায় না</span>
+    </div>
+    <div class="chart-host" id="c-strength"></div>
+    <figcaption>বাড়ির কাজের <em>মান</em> — শিক্ষকের দেওয়া সঠিক / আংশিক / ভুল রায় — সবচেয়ে ভালো ইঙ্গিত দেয়। উপস্থিতি এখানে আলাদা: ফলাফলের সঙ্গে এর নড়াচড়া প্রায় নেই বললেই চলে।</figcaption>
+  </figure>
+</section>
+
+<section>
+  <div class="sec-head">
+    <div class="kicker">পাশাপাশি</div>
+    <h2>একই {{counts.withResult}} জন, দু’বার আঁকা</h2>
+  </div>
+  <p class="prose">প্রতিটি বিন্দু একজন শিক্ষার্থী। বাঁয়ে — সে কতটা বাড়ির কাজ জমা দেয়। ডানে — সে কতটা নিয়মিত স্কুলে আসে। একই শিক্ষার্থী, একই খাড়া মাপকাঠি, কিন্তু ছবি দুটো আলাদা।</p>
+  <div class="pair">
+    <figure>
+      <div class="fig-title">বাড়ির কাজ জমা &rarr; ফলাফল</div>
+      <div class="fig-sub">স্পষ্ট ঊর্ধ্বমুখী ঢাল</div>
+      <div class="chart-host" id="c-hw"></div>
+    </figure>
+    <figure>
+      <div class="fig-title">উপস্থিতি &rarr; ফলাফল</div>
+      <div class="fig-sub">প্রায় সমান, আর সব ডান পাশে জমা</div>
+      <div class="chart-host" id="c-att"></div>
+    </figure>
+  </div>
+  <p class="prose" style="margin-top:16px">ডান পাশের ছবিটা সমান থাকার একটা বড় কারণ — <strong>আমাদের শিক্ষার্থীরা এমনিতেই ভালো উপস্থিত থাকে।</strong> অর্ধেকের বেশি {{%headline.attMedian:0}}%-এর উপরে, দশ ভাগের এক ভাগ {{%headline.attP90:0}}%-এ। তাই উপস্থিতি দিয়ে একজনকে আরেকজন থেকে আলাদা করা যায় না। বাড়ির কাজ তাদের {{%headline.hwMin:0}}% থেকে {{%headline.hwMax:0}}% পর্যন্ত ছড়িয়ে দেয় — পার্থক্য দেখানোর জায়গা সেখানে আছে।</p>
+</section>
+
+<section>
+  <div class="sec-head">
+    <div class="kicker">তিন ভাগ</div>
+    <h2>পুরো স্কুলকে তিন ভাগে ভাগ করলে</h2>
+  </div>
+  <figure>
+    <div class="fig-title">প্রতিটি হিসাবে কে কোথায় আছে, সেই অনুযায়ী ক্লাস টেস্টের গড়</div>
+    <div class="fig-sub">{{counts.withResult}} জন শিক্ষার্থীকে প্রতিবার আলাদা করে সমান তিন ভাগে সাজানো হয়েছে</div>
+    <div class="legend">
+      <span><i class="swatch" style="background:var(--s1)"></i>বাড়ির কাজ জমা</span>
+      <span><i class="swatch" style="background:var(--s2)"></i>অ্যাসাইনমেন্ট জমা</span>
+      <span><i class="swatch" style="background:var(--s3)"></i>উপস্থিতি</span>
+    </div>
+    <div class="chart-host" id="c-tertile"></div>
+    <figcaption>বাড়ির কাজে নিচের আর উপরের ভাগের ব্যবধান {{tertileDiff.hwDone:0}} নম্বর, অ্যাসাইনমেন্টে {{tertileDiff.asDone:0}} নম্বর। উপস্থিতিতে ব্যবধান মাত্র {{tertileDiff.att:0}} নম্বর।</figcaption>
+  </figure>
+</section>
+
+<section>
+  <div class="sec-head">
+    <div class="kicker">ব্যতিক্রম</div>
+    <h2>উপস্থিতি গুরুত্বপূর্ণ — তবে ৮৫%-এর নিচে</h2>
+  </div>
+  <p class="prose">পুরো স্কুলের গড় ধরলে উপস্থিতির আসল চেহারা চাপা পড়ে যায়। ধাপে ধাপে ভাগ করলে দেখা যায়, এটা ধীরে ধীরে বাড়ে না — একটা জায়গায় এসে হঠাৎ পড়ে যায়, আর সেই জায়গাটা বেশ নিচে।</p>
+  <figure>
+    <div class="fig-title">উপস্থিতির ধাপ অনুযায়ী ক্লাস টেস্টের গড়</div>
+    <div class="fig-sub">প্রতিটি দাগের উপরে শিক্ষার্থীর সংখ্যা &middot; ৮৫%-এর দাগে ফলাফল পড়ে যায়</div>
+    <div class="chart-host" id="c-band"></div>
+    <figcaption>৯৫% উপস্থিতির শিক্ষার্থী ৮৮% উপস্থিতির শিক্ষার্থীর চেয়ে ভালো করে না। কিন্তু ৮৫%-এর নিচে যারা, তাদের গড় <strong>{{headline.below85.lo:1}}</strong>, বাকিদের <strong>{{headline.below85.hi:1}}</strong>। দুটো কথা সৎভাবে বলা দরকার: এরা মাত্র {{headline.below85.nLo}} জন (p = {{headline.below85.p:3}}), তাই পরিসংখ্যানগতভাবে এটা একেবারে নিশ্চিত নয়; আর এই শিক্ষার্থীরাই বাড়ির কাজও কম জমা দেয় ({{%headline.below85.hwLo:0}}%, বাকিদের {{%headline.below85.hwHi:0}}%)। বাড়ির কাজের হিসাব বাদ দিলে অনিয়মিত উপস্থিতির দাম দাঁড়ায় <strong>{{headline.chronicCost:1}}</strong> নম্বরের মতো।</figcaption>
+  </figure>
+</section>
+
+<section>
+  <div class="sec-head">
+    <div class="kicker">শ্রেণি অনুযায়ী</div>
+    <h2>সব শ্রেণিতে এটা একরকম কাজ করে না</h2>
+  </div>
+  <div class="tablewrap">
+    <table>
+      <thead>
+        <tr><th scope="col">শ্রেণি</th><th scope="col">শিক্ষার্থী</th><th scope="col">উপস্থিতি</th><th scope="col">বাড়ির কাজ জমা</th><th scope="col">গড় ফলাফল</th><th scope="col">উপস্থিতি → ফলাফল</th><th scope="col">বাড়ির কাজ → ফলাফল</th></tr>
+      </thead>
+      <tbody id="lvlbody"></tbody>
+    </table>
+  </div>
+  <p class="prose" style="margin-top:16px"><strong>চতুর্থ ও পঞ্চম শ্রেণিতেই উপস্থিতির প্রভাব আসল।</strong> দুই শ্রেণি একসঙ্গে ধরলে ({{c45.n}} জন, r = {{c45.r:2}}) উপস্থিতি আর ফলাফল জোরালোভাবে একসঙ্গে চলে — বাড়ির কাজের মতোই — এবং যে শিক্ষার্থী কার্যত স্কুলে আসা বন্ধ করে দিয়েছে তাকে বাদ দিলেও সম্পর্কটা থাকে। প্রথম ও দ্বিতীয় শ্রেণিতে কোনো সম্পর্কই পাওয়া যায়নি। তৃতীয় শ্রেণি উল্টো দিকে চলে, আর সে শ্রেণিটাই একসঙ্গে সব হিসাবে সবচেয়ে দুর্বল।</p>
+</section>
+
+<section>
+  <div class="sec-head">
+    <div class="kicker">নম্বরের হিসাবে</div>
+    <h2>পার্থক্যটা আসলে কত নম্বরের</h2>
+  </div>
+  <p class="prose">প্রতিটি হিসাবে নিচের দিকের একজন শিক্ষার্থীর সঙ্গে উপরের দিকের একজনের তুলনা করলে ক্লাস টেস্টে এই ব্যবধান দাঁড়ায়:</p>
+  <figure>
+    <div class="fig-title">প্রতিটি হিসাবে কম ও বেশি — দুই শিক্ষার্থীর মাঝে নম্বরের ব্যবধান</div>
+    <div class="fig-sub">নিচের ১০% ও উপরের ১০% শিক্ষার্থীর তুলনা, ক্লাস টেস্টের শতকরা নম্বরে</div>
+    <div class="chart-host" id="c-effect"></div>
+    <figcaption>উপস্থিতির পুরো পরিসরে ব্যবধান {{effectMarks.att:1}} নম্বর। লিখিত কাজের প্রতিটি হিসাবে তার চার-পাঁচ গুণ।</figcaption>
+  </figure>
+</section>
+
+<section>
+  <div class="sec-head">
+    <div class="kicker">সৎভাবে পড়া</div>
+    <h2>এটা কী দেখায়, আর কী দেখায় না</h2>
+  </div>
+  <div class="notes">
+    <div class="note">
+      <h3>এটা আগাম সতর্কবার্তা, শুধু হিসাব নয়</h3>
+      <p>প্রতিটি পরীক্ষার <em>আগে</em> শেষ হওয়া বাড়ির কাজ দিয়ে আলাদা করে হিসাব করেও সম্পর্কটা টিকে যায়। অর্থাৎ বাড়ির কাজ পিছিয়ে পড়া পরের পরীক্ষার আভাস দেয় — ফল বেরোনোর পরে নয়, আগেই দেখা যায়।</p>
+    </div>
+    <div class="note">
+      <h3>বাড়ির কাজ ও অ্যাসাইনমেন্ট আসলে একটাই জিনিস</h3>
+      <p>দুটোর জমা দেওয়ার হার প্রায় হুবহু একসঙ্গে চলে। তাই এগুলোকে দুটো আলাদা হাতিয়ার না ভেবে “শিক্ষার্থী বাড়িতে লিখিত কাজ করে কি না” — একটাই সংকেত ধরা ভালো।</p>
+    </div>
+    <div class="note">
+      <h3>একই শিক্ষক দুটোই বিচার করেন</h3>
+      <p>বাড়ির কাজের <em>মান</em> আর পরীক্ষার খাতা একই হাতে দেখা হয়, তাই কিছুটা হলেও একজন শিক্ষকের মতামত দু’বার আসতে পারে। তবে শুধু জমা দেওয়ার হিসাব — যেটা কারও রায় নয় — একাই জোরালো ইঙ্গিত দেয়।</p>
+    </div>
+    <div class="note">
+      <h3>এটা এক টার্ম ও ৬৬ জনের হিসাব</h3>
+      <p>এটা দেখায় যে পরিশ্রমী শিক্ষার্থীরা ভালো করে। এটা প্রমাণ করে না যে অনিচ্ছুক শিক্ষার্থীকে চাপ দিয়ে কাজ জমা করালে তার নম্বর বাড়বে। শিক্ষার্থী চিহ্নিত করতে ব্যবহার করুন, চাপ দেওয়ার যুক্তি হিসেবে নয়।</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <div class="kicker">করণীয়</div>
+    <h2>এখান থেকে যে চারটি কাজ আসে</h2>
+  </div>
+  <ol class="actions">
+    <li><b>উপস্থিতির সতর্কসীমা ৯৫% নয়, ৮৫% ধরুন।</b><span>৯৫% থেকে ৯৮%-এ তোলা থেকে মাপা যায় এমন কোনো লাভ নেই। যারা ৮৫%-এর নিচে, পিছিয়ে পড়ছে তারাই।</span></li>
+    <li><b>বাড়ির কাজ পিছিয়ে পড়াকেই আগাম সতর্কবার্তা ধরুন।</b><span>এটাই সবচেয়ে শক্ত সংকেত, আর পরীক্ষার আগেই চোখে পড়ে — বিশেষ করে তৃতীয় থেকে পঞ্চম শ্রেণিতে।</span></li>
+    <li><b>রিমাইন্ডারের সংখ্যার দিকে নজর রাখুন।</b><span>যাদের বারবার রিমাইন্ডার দিতে হয়, তাদের নম্বর স্পষ্টভাবে কম। বারবার রিমাইন্ডার রুটিন কাজ নয় — এটা উপরে জানানোর মতো লক্ষণ।</span></li>
+    <li><b>চতুর্থ ও পঞ্চম শ্রেণিতে অনুপস্থিতিকে পড়ালেখার সমস্যা হিসেবে দেখুন।</b><span>বৃত্তি পরীক্ষার সবচেয়ে কাছের এই দুই শ্রেণিতেই উপস্থিতি স্পষ্টভাবে ফলাফলের সঙ্গে চলে।</span></li>
+  </ol>
+</section>
+
+<footer>
+  <p><strong>পদ্ধতি।</strong> উপস্থিতি অ্যাপের নিজস্ব হিসাব থেকেই নেওয়া — প্রথম থেকে পঞ্চম শ্রেণির হিসাব দিনের প্রথম ঘণ্টার কুরআন গ্রুপ থেকে, আর নার্সারি ও কেজির হিসাব শাখা থেকে; অর্থাৎ উপস্থিতির রিপোর্টে যে সংখ্যা দেখা যায়, ঠিক সেটাই। বাড়ির কাজ ও অ্যাসাইনমেন্টে “জমা হয়েছে” মানে রেকর্ড জমা হয়েছে, দেখা হয়েছে, পুনঃজমা বা ফেরত দেওয়া হয়েছে পর্যন্ত পৌঁছেছে; “জমা হয়নি” মানে সেটা রিমাইন্ডার বা জমা-হয়নি অবস্থায় পড়ে আছে। অনুপস্থিত/পুনঃপ্রদান অবস্থার রেকর্ড দুই দিক থেকেই বাদ — ওটা শিক্ষার্থীর সিদ্ধান্ত নয়, অনুপস্থিতির ফল। মানের হিসাবে সঠিক = ১, আংশিক = ০.৫, ভুল = ০।</p>
+  <p>ফলাফল বলতে শিক্ষার্থীর দেওয়া প্রতিটি ছাপা ক্লাস টেস্টের গড় শতকরা নম্বর; বাতিল হওয়া টেস্ট ও অনুপস্থিত চিহ্নিত খাতা বাদ। প্রতিটি সিদ্ধান্ত আরেকভাবেও যাচাই করা হয়েছে — যেখানে প্রতিটি নম্বরকে তার নিজের টেস্টের ভেতরেই মেপে টেস্টের কঠিনতা ও শ্রেণির মান বাদ দেওয়া হয়েছে। লিখিত কাজের সিদ্ধান্তগুলো তাতেও টিকে যায়, আর উপস্থিতির সম্পর্ক না থাকাও টিকে যায়।</p>
+  <p>সব হিসাব {{generatedAt}} তারিখে প্রোডাকশন ডেটাবেস থেকে নেওয়া। এই পাতায় কোনো শিক্ষার্থীর নাম নেই।</p>
+</footer>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var NS="http://www.w3.org/2000/svg";
+  var tip=document.getElementById("tip");
+  var BN="০১২৩৪৫৬৭৮৯";
+  function bn(v){return String(v).replace(/[0-9]/g,function(d){return BN[+d];});}
+  function el(n,a){var e=document.createElementNS(NS,n);for(var k in a){if(a[k]!=null)e.setAttribute(k,a[k]);}return e;}
+  function txt(x,y,s,o){o=o||{};var t=el("text",{x:x,y:y,fill:o.fill||"var(--muted)","font-size":o.size||11,"text-anchor":o.anchor||"start","font-weight":o.weight||400});t.textContent=s;return t;}
+  function svg(host,w,h){var s=el("svg",{viewBox:"0 0 "+w+" "+h,role:"img"});host.appendChild(s);return s;}
+  function moveTip(e){var x=e.clientX+14,y=e.clientY+14;var r=tip.getBoundingClientRect();if(x+r.width>window.innerWidth-8)x=e.clientX-r.width-14;if(y+r.height>window.innerHeight-8)y=e.clientY-r.height-14;tip.style.left=x+"px";tip.style.top=y+"px";}
+  function hover(node,html){
+    node.addEventListener("mouseenter",function(e){tip.innerHTML=html;tip.style.opacity=1;moveTip(e);});
+    node.addEventListener("mousemove",moveTip);
+    node.addEventListener("mouseleave",function(){tip.style.opacity=0;});
+  }
+
+  /* ---------------- 1. strength ---------------- */
+  (function(){
+    var LAB={
+      hwQual:{k:"বাড়ির কাজের মান",note:"শিক্ষকের দেওয়া সঠিক / আংশিক / ভুল রায়"},
+      asQual:{k:"অ্যাসাইনমেন্টের মান",note:"একই তিন পর্যায়ের মাপ"},
+      hwDone:{k:"বাড়ির কাজ জমা",note:"দেওয়া কাজের কতটুকু ফিরে এসেছে"},
+      asDone:{k:"অ্যাসাইনমেন্ট জমা",note:"দেওয়া অ্যাসাইনমেন্টের কতটুকু ফিরে এসেছে"},
+      att:{k:"উপস্থিতি",note:"হাজিরা নেওয়া দিনের মধ্যে উপস্থিত দিন"}
+    };
+    var data={{@corr}}.filter(function(c){return c.r!=null;})
+      .sort(function(a,b){return Math.abs(b.r)-Math.abs(a.r);})
+      .map(function(c){var l=LAB[c.key]||{k:c.key,note:""};return {k:l.k,v:c.r,sig:c.sig,note:l.note};});
+    var host=document.getElementById("c-strength");
+    var W=760,rowH=44,padL=238,padR=58,padT=26,H=padT+data.length*rowH+34;
+    var s=svg(host,W,H);
+    s.appendChild(el("title",{})).textContent="ফলাফলের সঙ্গে সম্পর্ক";
+    var maxV=Math.max(0.5,Math.ceil(Math.max.apply(null,data.map(function(d){return Math.abs(d.v);}))*10)/10+0.05),pw=W-padL-padR;
+    var sticks=[];for(var tk=0;tk<=maxV-0.04;tk+=0.1)sticks.push(+tk.toFixed(1));
+    sticks.forEach(function(t){
+      var x=padL+t/maxV*pw;
+      s.appendChild(el("line",{x1:x,y1:padT-8,x2:x,y2:padT+data.length*rowH-10,stroke:t===0?"var(--axis)":"var(--grid)","stroke-width":1}));
+      s.appendChild(txt(x,H-24,bn(t.toFixed(1)),{anchor:"middle",size:10.5}));
+    });
+    s.appendChild(txt(padL+pw/2,H-5,"দুর্বল  →  শক্তিশালী",{anchor:"middle",size:10.5}));
+    data.forEach(function(d,i){
+      var y=padT+i*rowH,bh=17,w=d.v/maxV*pw;
+      s.appendChild(txt(padL-12,y+bh-2,d.k,{anchor:"end",size:12.5,fill:"var(--ink)",weight:d.sig?600:400}));
+      var r=el("rect",{x:padL,y:y,width:Math.max(w,2),height:bh,rx:3,ry:3,fill:d.sig?"var(--s1)":"var(--flat)"});
+      s.appendChild(r);
+      hover(r,"<b>"+d.k+"</b><br>"+bn(d.v.toFixed(2))+"<br>"+d.note);
+      s.appendChild(txt(padL+w+8,y+bh-2,bn(d.v.toFixed(2)),{size:12,fill:"var(--ink)",weight:600}));
+    });
+  })();
+
+  /* ---------------- 2. scatters ---------------- */
+  var STUDENTS={{@students}};
+  var CLSBN={"-1":"নার্সারি","0":"কেজি","1":"প্রথম শ্রেণি","2":"দ্বিতীয় শ্রেণি","3":"তৃতীয় শ্রেণি","4":"চতুর্থ শ্রেণি","5":"পঞ্চম শ্রেণি"};
+  function scatter(hostId,xi,xLabel,xMin){
+    var host=document.getElementById(hostId);
+    var W=440,H=336,padL=42,padR=16,padT=18,padB=50;
+    var pw=W-padL-padR,ph=H-padT-padB;
+    var s=svg(host,W,H);
+    s.appendChild(el("title",{})).textContent=xLabel;
+    var X=function(v){return padL+(v-xMin)/(100-xMin)*pw;};
+    var Y=function(v){return padT+ph-v/100*ph;};
+    [0,25,50,75,100].forEach(function(t){
+      s.appendChild(el("line",{x1:padL,y1:Y(t),x2:padL+pw,y2:Y(t),stroke:t===0?"var(--axis)":"var(--grid)","stroke-width":1}));
+      s.appendChild(txt(padL-8,Y(t)+4,bn(t),{anchor:"end",size:10.5}));
+    });
+    for(var v=Math.ceil(xMin/20)*20;v<=100;v+=20){
+      s.appendChild(el("line",{x1:X(v),y1:padT,x2:X(v),y2:padT+ph,stroke:"var(--grid)","stroke-width":1}));
+      s.appendChild(txt(X(v),H-padB+18,bn(v)+"%",{anchor:"middle",size:10.5}));
+    }
+    s.appendChild(txt(padL+pw/2,H-8,xLabel,{anchor:"middle",size:11.5,fill:"var(--ink-2)"}));
+    s.appendChild(txt(2,padT-5,"ফলাফল %",{anchor:"start",size:10.5}));
+    var pts=STUDENTS.filter(function(r){return r[xi]!=null;});
+    var n=pts.length,sx=0,sy=0;
+    pts.forEach(function(r){sx+=r[xi];sy+=r[4];});
+    var mx=sx/n,my=sy/n,num=0,den=0;
+    pts.forEach(function(r){num+=(r[xi]-mx)*(r[4]-my);den+=(r[xi]-mx)*(r[xi]-mx);});
+    var sl=num/den,ic=my-sl*mx;
+    var x1=Math.max(xMin,Math.min.apply(null,pts.map(function(r){return r[xi];})));
+    var x2=Math.max.apply(null,pts.map(function(r){return r[xi];}));
+    s.appendChild(el("line",{x1:X(x1),y1:Y(sl*x1+ic),x2:X(x2),y2:Y(sl*x2+ic),stroke:"var(--ink-2)","stroke-width":2,"stroke-dasharray":"5 4","stroke-linecap":"round",opacity:.8}));
+    pts.forEach(function(r){
+      var cx=X(r[xi]),cy=Y(r[4]);
+      s.appendChild(el("circle",{cx:cx,cy:cy,r:5.6,fill:"var(--surface)"}));
+      var c=el("circle",{cx:cx,cy:cy,r:4.4,fill:"var(--s1)","fill-opacity":.72,stroke:"var(--s1)","stroke-width":1});
+      s.appendChild(c);
+      hover(c,"<b>"+CLSBN[r[0]]+"</b><br>"+xLabel+": "+bn(r[xi])+"%<br>ফলাফল: "+bn(r[4])+"%");
+    });
+  }
+  scatter("c-hw",2,"বাড়ির কাজ জমা",0);
+  scatter("c-att",1,"উপস্থিতি",30);
+
+  /* ---------------- 3. tertiles ---------------- */
+  (function(){
+    var groups=["নিচের এক-তৃতীয়াংশ","মাঝের এক-তৃতীয়াংশ","উপরের এক-তৃতীয়াংশ"];
+    var T={{@tertiles}};
+    var pick=function(a){return (T[a]||[]).map(function(g){return g.res;});};
+    var series=[
+      {k:"বাড়ির কাজ জমা",c:"var(--s1)",v:pick("hwDone")},
+      {k:"অ্যাসাইনমেন্ট জমা",c:"var(--s2)",v:pick("asDone")},
+      {k:"উপস্থিতি",c:"var(--s3)",v:pick("att")}
+    ];
+    var host=document.getElementById("c-tertile");
+    var W=760,H=346,padL=44,padR=16,padT=24,padB=58;
+    var pw=W-padL-padR,ph=H-padT-padB;
+    var s=svg(host,W,H);
+    s.appendChild(el("title",{})).textContent="তিন ভাগ অনুযায়ী গড়";
+    var yHi=80,Y=function(v){return padT+ph-v/yHi*ph;};
+    [0,20,40,60,80].forEach(function(t){
+      s.appendChild(el("line",{x1:padL,y1:Y(t),x2:padL+pw,y2:Y(t),stroke:t===0?"var(--axis)":"var(--grid)","stroke-width":1}));
+      s.appendChild(txt(padL-8,Y(t)+4,bn(t),{anchor:"end",size:10.5}));
+    });
+    s.appendChild(txt(2,padT-8,"ফলাফল %",{anchor:"start",size:10.5}));
+    var gw=pw/3,bw=Math.min(54,(gw-40)/3);
+    groups.forEach(function(g,gi){
+      var gx=padL+gi*gw;
+      series.forEach(function(se,si){
+        var x=gx+(gw-(bw*3+8))/2+si*(bw+4);
+        var v=se.v[gi],y=Y(v);
+        var r=el("rect",{x:x,y:y,width:bw,height:padT+ph-y,rx:3,ry:3,fill:se.c});
+        s.appendChild(r);
+        hover(r,"<b>"+se.k+"</b><br>"+g+"<br>গড় ফলাফল "+bn(v.toFixed(1))+"%");
+        s.appendChild(txt(x+bw/2,y-7,bn(v.toFixed(0)),{anchor:"middle",size:12,fill:"var(--ink)",weight:600}));
+      });
+      s.appendChild(txt(gx+gw/2,padT+ph+22,g,{anchor:"middle",size:11.5,fill:"var(--ink)"}));
+      if(gi>0)s.appendChild(el("line",{x1:gx,y1:padT,x2:gx,y2:padT+ph+8,stroke:"var(--rule)","stroke-width":1}));
+    });
+  })();
+
+  /* ---------------- 4. bands ---------------- */
+  (function(){
+    var bands={{@bands}}.map(function(b,i){
+      var lo=bn(Math.round(b.lo*100)),hi=bn(Math.round(Math.min(b.hi,1)*100));
+      return {k:i===0?(hi+"%-এর নিচে"):(lo+"–"+hi+"%"),n:b.n,v:b.mean,lo:b.lo};
+    }).filter(function(b){return b.n>0;});
+    var host=document.getElementById("c-band");
+    var W=760,H=340,padL=44,padR=16,padT=34,padB=60;
+    var pw=W-padL-padR,ph=H-padT-padB;
+    var s=svg(host,W,H);
+    s.appendChild(el("title",{})).textContent="উপস্থিতির ধাপ অনুযায়ী গড়";
+    var yHi=80,Y=function(v){return padT+ph-v/yHi*ph;};
+    [0,20,40,60,80].forEach(function(t){
+      s.appendChild(el("line",{x1:padL,y1:Y(t),x2:padL+pw,y2:Y(t),stroke:t===0?"var(--axis)":"var(--grid)","stroke-width":1}));
+      s.appendChild(txt(padL-8,Y(t)+4,bn(t),{anchor:"end",size:10.5}));
+    });
+    s.appendChild(txt(2,padT-12,"ফলাফল %",{anchor:"start",size:10.5}));
+    var bw=pw/bands.length;
+    bands.forEach(function(b,i){
+      var x=padL+i*bw+11,w=bw-22,y=Y(b.v);
+      var r=el("rect",{x:x,y:y,width:w,height:padT+ph-y,rx:3,ry:3,fill:b.lo<0.85?"var(--flat)":"var(--s1)"});
+      s.appendChild(r);
+      hover(r,"<b>"+b.k+" উপস্থিতি</b><br>"+bn(b.n)+" জন শিক্ষার্থী<br>গড় "+bn(b.v.toFixed(1))+"%");
+      s.appendChild(txt(x+w/2,y-21,bn(b.n)+" জন",{anchor:"middle",size:10,fill:"var(--muted)"}));
+      s.appendChild(txt(x+w/2,y-6,bn(b.v.toFixed(1)),{anchor:"middle",size:12.5,fill:"var(--ink)",weight:600}));
+      s.appendChild(txt(x+w/2,padT+ph+20,b.k,{anchor:"middle",size:11,fill:"var(--ink)"}));
+    });
+    var ci=bands.findIndex(function(b){return b.lo>=0.85;});var cx=padL+(ci<0?bands.length:ci)*bw;
+    s.appendChild(el("line",{x1:cx,y1:padT-16,x2:cx,y2:padT+ph,stroke:"var(--critical)","stroke-width":2,"stroke-dasharray":"4 3"}));
+    s.appendChild(txt(cx+7,padT-18,"৮৫% — এর নিচে ফলাফল পড়ে যায়",{size:11,fill:"var(--critical)",weight:600}));
+    s.appendChild(txt(padL+pw/2,H-8,"উপস্থিতির ধাপ",{anchor:"middle",size:11.5,fill:"var(--ink-2)"}));
+  })();
+
+  /* ---------------- 5. effect ---------------- */
+  (function(){
+    var ELAB={
+      asQual:"অ্যাসাইনমেন্টের মান",asDone:"অ্যাসাইনমেন্ট জমা",
+      hwDone:"বাড়ির কাজ জমা",hwQual:"বাড়ির কাজের মান",att:"উপস্থিতি"
+    };
+    var data={{@effect}}.slice().sort(function(a,b){return b.marks-a.marks;})
+      .map(function(e){return {k:ELAB[e.key]||e.key,v:e.marks,att:e.key==="att"};});
+    var host=document.getElementById("c-effect");
+    var W=760,rowH=42,padL=238,padR=76,padT=22,H=padT+data.length*rowH+36;
+    var s=svg(host,W,H);
+    s.appendChild(el("title",{})).textContent="নম্বরের ব্যবধান";
+    var maxV=Math.max(10,Math.ceil(Math.max.apply(null,data.map(function(d){return d.v;}))/5)*5),pw=W-padL-padR;
+    var eticks=[];for(var et=0;et<=maxV;et+=maxV/5)eticks.push(et);
+    eticks.forEach(function(t){
+      var x=padL+t/maxV*pw;
+      s.appendChild(el("line",{x1:x,y1:padT-8,x2:x,y2:padT+data.length*rowH-12,stroke:t===0?"var(--axis)":"var(--grid)","stroke-width":1}));
+      s.appendChild(txt(x,H-24,bn(Math.round(t)),{anchor:"middle",size:10.5}));
+    });
+    s.appendChild(txt(padL+pw/2,H-4,"ক্লাস টেস্টে নম্বরের ব্যবধান (শতকরা পয়েন্ট)",{anchor:"middle",size:10.5}));
+    data.forEach(function(d,i){
+      var y=padT+i*rowH,bh=17,w=d.v/maxV*pw,last=d.att;
+      s.appendChild(txt(padL-12,y+bh-2,d.k,{anchor:"end",size:12.5,fill:"var(--ink)",weight:last?400:600}));
+      var r=el("rect",{x:padL,y:y,width:Math.max(w,2),height:bh,rx:3,ry:3,fill:last?"var(--flat)":"var(--s1)"});
+      s.appendChild(r);
+      hover(r,"<b>"+d.k+"</b><br>"+bn(d.v.toFixed(1))+" নম্বরের ফারাক");
+      s.appendChild(txt(padL+w+8,y+bh-2,bn(d.v.toFixed(1))+" নম্বর",{size:12,fill:"var(--ink)",weight:600}));
+    });
+  })();
+
+  /* ---------------- 6. table ---------------- */
+  (function(){
+    var L={{@levels}};
+    var body=document.getElementById("lvlbody");
+    Object.keys(L).map(Number).sort(function(a,b){return a-b;}).forEach(function(k){
+      var d=L[k]; if(!d)return;
+      var tr=document.createElement("tr");
+      if(k===4||k===5)tr.className="hi";
+      function cell(html,cls){var td=document.createElement("td");td.innerHTML=html;if(cls)td.className=cls;tr.appendChild(td);}
+      cell(CLSBN[k]);
+      cell(bn(d.n));
+      cell(bn((d.att*100).toFixed(0))+"%");
+      cell(bn((d.hw*100).toFixed(0))+"%");
+      cell(d.res!=null?bn(d.res.toFixed(0))+"%":"<span class='dim'>কোনো টেস্ট নেই</span>");
+      function corr(v){
+        if(v==null)return "<span class='dim'>&mdash;</span>";
+        var t=(v<0?"−":"+")+bn(Math.abs(v).toFixed(2));
+        if(v>=0.5)return "<span class='pos'>"+t+"</span>";
+        if(v<0)return "<span class='neg'>"+t+"</span>";
+        return t;
+      }
+      cell(corr(d.rAtt));
+      cell(corr(d.rHw));
+      body.appendChild(tr);
+    });
+  })();
+})();
+</script>

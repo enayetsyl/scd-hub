@@ -68,3 +68,6 @@ Thumbs.db
 
 # ---- Local-only operator notes (VM access etc. — IP/creds never commit, deployment §0) ----
 *.local.md
+
+# term-correlation-study: pulled prod data + rendered pages (real student data)
+skills/term-correlation-study/out/
