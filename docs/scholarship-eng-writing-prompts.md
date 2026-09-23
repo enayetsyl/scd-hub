@@ -7,6 +7,10 @@ tasks, and the owner keeps a fixed bank of prompts for them. The rule is:
 
 > **Take the next UNUSED prompt of each kind, in listed order. Never repeat one.**
 
+**That rule now has an exception.** The bank emptied at Unit 6 and the owner answered
+*"repeat the letters"*, so **question-13 prompts may be repeated when nothing unused is left** —
+see *When the bank is empty* below. Composition titles may NOT.
+
 And a second rule, added 2026-09-23: **the rows here are bare tasks — wrap each one in its
 persona before it goes on a paper.** See *The bank rows are BARE* below; the application needs a
 name, a class AND a school, the letter and the email need only a name.
@@ -101,8 +105,8 @@ Every one is addressed to the Head Teacher / Headmaster.
 
 | # | Prompt | Used by |
 |---|---|---|
-| 1 | Write an application to your Head Teacher requesting a library membership card. | **Unit 1 model paper (2026-09-15)** — see the note below |
-| 2 | Your mother is ill and you need to take care of her. Write an application to your Head Teacher for leave in advance. | **Unit 2 model paper (2026-09-16)** — 13.b |
+| 1 | Write an application to your Head Teacher requesting a library membership card. | **Unit 1 model paper (2026-09-15)** — see the note below · **REPEATED on Unit 6 (2026-09-23)** — 13.b |
+| 2 | Your mother is ill and you need to take care of her. Write an application to your Head Teacher for leave in advance. | **Unit 2 model paper (2026-09-16)** — 13.b · **REPEATED on Unit 7 (2026-09-23)** — 13.b |
 | 3 | Write an application to your Head Teacher asking for permission to attend the Junior Math Olympiad competition. | **Unit 3 model paper (2026-09-16)** — 13.b |
 | 4 | Write an application to the Headmaster for morning class. | **Unit 4 model paper (2026-09-19)** — 13.b |
 | 5 | Write an application to your Head Teacher praying for the allotment of a piece of land for gardening in the school compound. | **Unit 5 model paper (2026-09-23)** — 13.b |
@@ -112,13 +116,52 @@ Every one is addressed to the Head Teacher / Headmaster.
 | # | Prompt | Used by |
 |---|---|---|
 | 1 | Recently you have received an email from an Indonesian boy, Intan. He described his country and wanted to know about yours. Now write a reply email describing your country. | **Unit 2 model paper (2026-09-16)** — 13.c |
-| 2 | You visited your relatives at Uttara in Dhaka by Metro Rail. Now write an email to your friend describing your experience of travelling by Metro Rail. | **Unit 3 model paper (2026-09-16)** — 13.c |
+| 2 | You visited your relatives at Uttara in Dhaka by Metro Rail. Now write an email to your friend describing your experience of travelling by Metro Rail. | **Unit 3 model paper (2026-09-16)** — 13.c · **REPEATED on Unit 7 (2026-09-23)** — 13.c |
 | 3 | Write an email to your friend about your school sports day. | **Unit 4 model paper (2026-09-19)** — 13.c |
 | 4 | Write an email inviting your friend Keya to attend your birthday party. | **Unit 5 model paper (2026-09-23)** — 13.c |
 | 5 | You have recently visited Mirpur Zoo. Write an email to your friend about the animals you saw there and how you enjoyed everything. | **Unit 6 model paper (2026-09-23)** — 13.c |
 
 ---
 
+
+
+## When the bank is empty: repeats are allowed for question 13 (owner, 2026-09-23)
+
+The bank emptied at Unit 6. Asked for more prompts, the owner answered **"repeat the letters"**.
+
+**So the never-repeat rule is now conditional, and only for question 13** — letter, application and
+email. It is NOT lifted for composition titles, which is why Unit 6 still prints no 14.b and Unit 7
+prints no question 14 at all.
+
+**How a repeat is chosen**, in order:
+
+1. Prefer the prompt the children met **longest ago** — the whole cost of a repeat is recognition,
+   and time is the only thing that reduces it.
+2. Break that rule for **fit**: Unit 7's email is row 2 (Metro Rail, Unit 3) and not the older
+   row 1, because row 1 is the Intan-and-Indonesia prompt, which belongs to Unit 6's text and would
+   read oddly on a Sundarbans paper.
+3. Never repeat a prompt on the paper **immediately** following its first use.
+
+**Every repeat is marked twice.** In the ledger, the row keeps its first `Used by` entry and gains
+a `REPEATED on …` entry after it — the first use is never overwritten, because "when did this child
+last see this task" is the question the ledger exists to answer. On the paper itself, the prompt
+carries a visible note naming the paper and date it was last set, so the teacher knows before
+printing that some children may recognise it.
+
+**Repeats so far:**
+
+| Kind | Row | First set | Repeated on |
+|---|---|---|---|
+| Application | 1 — library membership card | Unit 1 (2026-09-15) | **Unit 6** (2026-09-23) 13.b |
+| Application | 2 — mother ill, leave in advance | Unit 2 (2026-09-16) | **Unit 7** (2026-09-23) 13.b |
+| Email | 2 — Metro Rail journey | Unit 3 (2026-09-16) | **Unit 7** (2026-09-23) 13.c |
+
+**This is a stopgap, not the new normal.** Eight letters remain unused and no letter has been
+repeated; applications and emails are being recycled from a pool of five each, so by Unit 9 a child
+will be meeting the same application for the third time. Fresh prompts from the owner end the
+recycling.
+
+---
 
 ## The bank rows are BARE — the persona is the generator's job (owner, 2026-09-23)
 
