@@ -7,6 +7,10 @@ tasks, and the owner keeps a fixed bank of prompts for them. The rule is:
 
 > **Take the next UNUSED prompt of each kind, in listed order. Never repeat one.**
 
+And a second rule, added 2026-09-23: **the rows here are bare tasks — wrap each one in its
+persona before it goes on a paper.** See *The bank rows are BARE* below; the application needs a
+name, a class AND a school, the letter and the email need only a name.
+
 So it is a ledger, not a list. When you generate a paper, tick the rows you used **in the same
 commit as the paper** and name the paper in the Used-by column. A bank with no ledger is a bank
 that gets repeated, because "which ones have I used" is exactly the fact no one remembers and no
@@ -106,6 +110,49 @@ Every one is addressed to the Head Teacher / Headmaster.
 | 3 | Write an email to your friend about your school sports day. | **Unit 4 model paper (2026-09-19)** — 13.c |
 | 4 | Write an email inviting your friend Keya to attend your birthday party. | |
 | 5 | You have recently visited Mirpur Zoo. Write an email to your friend about the animals you saw there and how you enjoyed everything. | |
+
+---
+
+
+## The bank rows are BARE — the persona is the generator's job (owner, 2026-09-23)
+
+> *"in the english question application usually question should mention person's name, school name
+> in the question."*
+
+Every row in this bank is a bare task — *"Write an application to your Head Teacher asking for
+permission to attend the Junior Math Olympiad competition."* **That is not what goes on the paper.**
+The owner-approved Unit 1 paper wraps each kind in a persona, and it is a different wrap per kind:
+
+| item | what the stem must supply | Unit 1's wording |
+|---|---|---|
+| 13.a letter | **a name**, plus who the recipient is and where they live | `Suppose, you are Rupa. Your friend Mitu lives in Rangpur and has never been to a public library.` |
+| **13.b application** | **a name + class + school + district** | `Suppose, you are Rupa, a student of Class Five at Shahjalal Government Primary School, Sylhet.` |
+| 13.c email | **a name**, plus who the recipient is | `Suppose, you are Omar.` |
+
+**Why the application takes more than the other two.** It is the only one with a sender block, a
+subject line and a signature. Given no name and no school, every child invents both — there is then
+no fixed model answer, and two correct scripts cannot be marked the same way. A letter and an email
+need only a name to sign off with.
+
+Use the school names already in circulation rather than inventing one each time: *Shahjalal
+Government Primary School, Sylhet* is the one Unit 1 used.
+
+**Units 2, 3 and 4 do not have this.** They were generated straight from the bare rows, so their
+13.b prints the task with no persona at all. Those three papers have been distributed and are not
+being reissued for it; every paper from Unit 5 on must carry it.
+
+Two more things the Unit 1 pattern carries on **all three** forms and which are easy to drop:
+
+- a **`Cover:` line** naming the four points the answer must touch;
+- the bracketed reminder — *[Write: date, address, salutation, main points, closing. Remember to use
+  capital letters, punctuation marks, correct spelling and correct sentence structure.]* The
+  application's version of that list is the longer one: it adds **address of the receiver** and
+  **subject**.
+
+**The web was checked on 2026-09-23 and did not settle this.** The reachable model-test sites print
+letter prompts with no persona at all, and none exposed a real NAPE application stem. What decided
+it is the owner's instruction and his own approved Unit 1 paper, which is the stronger evidence for
+this school anyway — do not re-open it from a search.
 
 ---
 
