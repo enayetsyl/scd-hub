@@ -18,7 +18,9 @@
  *    weakest") off a sample of one question. The EX-3 "blank, never 0" posture, moved
  *    from a row to an axis. A SECOND door was added at D-#691: a topic set on
  *    `SCHOLARSHIP_MIN_PAPERS_FOR_VERDICT` separate papers also earns a verdict, because
- *    two sittings agreeing is evidence the mark count cannot see.
+ *    two sittings agreeing is evidence the mark count cannot see. A THIRD at D-#699:
+ *    **earning ZERO always earns a verdict**, whatever the size — the floor guards
+ *    against ranking a noisy estimate, and a zero is not an estimate.
  *  - **ABSENT contributes to neither side** (D-#660), personal or class. A student who
  *    did not sit a paper is not a zero on it.
  *
@@ -117,22 +119,28 @@ function sum(values: readonly number[]): number {
  * `papers` defaults to 1, so every caller with no paper count in hand (the class pool, a
  * single heat-map cell) keeps the pure marks rule it was written against.
  */
-export function hasVerdict(available: number, papers = 1): boolean {
+export function hasVerdict(available: number, papers = 1, earned?: number): boolean {
   if (available <= 0) return false;
+  // THE THIRD DOOR (D-#699): scoring NOTHING is not a small sample, it is an exact
+  // result. The floor exists to stop the app ranking a noisy ESTIMATE — 1 out of 5
+  // read as "20%, weakest topic" — and at zero there is nothing to estimate: she was
+  // asked and got none of it. Hiding that under "যথেষ্ট তথ্য নেই" told the teacher
+  // there was no evidence when the evidence was as clear as it ever gets.
+  if (earned === 0) return true;
   return (
     available >= SCHOLARSHIP_MIN_MARKS_FOR_VERDICT || papers >= SCHOLARSHIP_MIN_PAPERS_FOR_VERDICT
   );
 }
 
-export function bandOf(percent: number | null, available: number, papers = 1): Band {
-  if (!hasVerdict(available, papers) || percent === null) return "insufficient";
+export function bandOf(percent: number | null, available: number, papers = 1, earned?: number): Band {
+  if (!hasVerdict(available, papers, earned) || percent === null) return "insufficient";
   if (percent < SCHOLARSHIP_BAND_WEAK_BELOW) return "weak";
   if (percent < SCHOLARSHIP_BAND_GOOD_AT_OR_ABOVE) return "fair";
   return "good";
 }
 
 export function percentOf(earned: number, available: number, papers = 1): number | null {
-  if (!hasVerdict(available, papers)) return null;
+  if (!hasVerdict(available, papers, earned)) return null;
   return Math.round((earned / available) * 1000) / 10;
 }
 
@@ -284,7 +292,7 @@ export function buildRows(
     const classPercent = cls ? percentOf(cls.earned, cls.available) : null;
     const classGap =
       percent !== null && classPercent !== null ? Math.round(percent - classPercent) : null;
-    const band = bandOf(percent, available, papers);
+    const band = bandOf(percent, available, papers, earned);
     rows.push({
       key,
       label: labelOf(key, t.subject),
@@ -642,7 +650,7 @@ export async function classAnalysis(
       // other an em dash, one of the two screens would be lying.
       const papers = t.papers.size;
       const percent = percentOf(earned, available, papers);
-      return { studentId: s.id, percent, band: bandOf(percent, available, papers), available };
+      return { studentId: s.id, percent, band: bandOf(percent, available, papers, earned), available };
     });
     return {
       key,
