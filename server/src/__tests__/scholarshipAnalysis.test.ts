@@ -87,11 +87,13 @@ describe("percentOf and the reliability floor", () => {
   });
 
   it("opens the PAPERS door on a second sitting, however few the marks (D-#691)", () => {
-    // A 5-mark item asked twice a fortnight apart, 0 both times. Ten marks never reach
+    // A 5-mark item asked twice a fortnight apart, 2 of 10 earned. Ten marks never reach
     // the mark floor, but two independent readings agreeing is not a sample of one.
-    expect(percentOf(0, 10)).toBeNull();
-    expect(percentOf(0, 10, 2)).toBe(0);
-    expect(bandOf(percentOf(0, 10, 2), 10, 2)).toBe("weak");
+    // NOTE the score is deliberately NON-ZERO: a zero would pass through D-#699's door
+    // on the first sitting and this test would prove nothing about paper counting.
+    expect(percentOf(2, 10)).toBeNull();
+    expect(percentOf(2, 10, 2)).toBe(20);
+    expect(bandOf(percentOf(2, 10, 2), 10, 2)).toBe("weak");
   });
 
   it("keeps ONE sitting shut whatever its marks say", () => {
@@ -101,9 +103,28 @@ describe("percentOf and the reliability floor", () => {
     expect(bandOf(percentOf(1, 5, 1), 5, 1)).toBe("insufficient");
   });
 
-  it("refuses a verdict on zero available marks through either door", () => {
+  it("refuses a verdict on zero AVAILABLE marks through any door", () => {
+    // Nothing was asked, so nothing is known — the opposite case to a zero EARNED.
     expect(hasVerdict(0, 9)).toBe(false);
     expect(percentOf(0, 0, 9)).toBeNull();
+  });
+
+  it("opens the ZERO door on any size, because a zero is not an estimate (D-#699)", () => {
+    // One 10-mark writing task, nothing earned. Ten marks never reach the mark floor and
+    // one sitting never reaches the paper floor, so both earlier doors stay shut — and
+    // the row used to report "not enough evidence" about a child who scored nothing.
+    expect(hasVerdict(10, 1, 0)).toBe(true);
+    expect(percentOf(0, 10, 1)).toBe(0);
+    expect(bandOf(percentOf(0, 10, 1), 10, 1, 0)).toBe("weak");
+    // Down to a single mark: she was asked, and got none of it.
+    expect(percentOf(0, 1, 1)).toBe(0);
+  });
+
+  it("does NOT open it for a small non-zero score — that is still an estimate", () => {
+    // The case D-#662 exists for: 1 out of 5 is 20% and could be one bad guess.
+    expect(hasVerdict(5, 1, 1)).toBe(false);
+    expect(percentOf(1, 5, 1)).toBeNull();
+    expect(bandOf(percentOf(1, 5, 1), 5, 1, 1)).toBe("insufficient");
   });
 
   it("bands on the scholarship bar: <50 weak, <70 fair, >=70 good", () => {
@@ -257,6 +278,19 @@ describe("buildRows", () => {
     expect(comp.behindClass).toBe(false);
   });
 
+  it("brings a ZERO row into the weaknesses, however small (D-#699)", () => {
+    // One sitting, one 5-mark article item, nothing earned. Before D-#699 this sank to
+    // the bottom of the list labelled "যথেষ্ট তথ্য নেই" — the app telling the teacher it
+    // knew nothing about the one topic it knew the most about.
+    const data = [paper("p1", [present(A, [{ itemNo: 2, marks: 0 }])])];
+    const rows = buildRows(tallyStudent(data, A, "topic"), tallyClass(data, [A], "topic"), label);
+    const art = rows.find((r) => r.key === ART)!;
+    expect(art.available).toBe(5);
+    expect(art.percent).toBe(0);
+    expect(art.band).toBe("weak");
+    expect(rows[0].key).toBe(ART); // weakest first — a zero leads
+  });
+
   it("reports an under-floor topic with no percentage and no class gap to rank on", () => {
     const data = [paper("p1", [present(A, [{ itemNo: 2, marks: 1 }])])];
     const rows = buildRows(tallyStudent(data, A, "topic"), tallyClass(data, [A], "topic"), label);
@@ -282,12 +316,15 @@ describe("buildRows", () => {
   });
 
   it("clears the floor on the SECOND paper now, without waiting for 15 marks (D-#691)", () => {
-    const data = ["p1", "p2"].map((id) => paper(id, [present(A, [{ itemNo: 2, marks: 0 }])]));
+    // 1 of 5 twice. NON-ZERO on purpose: a zero clears on the first sitting through
+    // D-#699's door, and this test would then pass without the paper count doing any
+    // work at all.
+    const data = ["p1", "p2"].map((id) => paper(id, [present(A, [{ itemNo: 2, marks: 1 }])]));
     const rows = buildRows(tallyStudent(data, A, "topic"), tallyClass(data, [A], "topic"), label);
     const art = rows.find((r) => r.key === ART)!;
     expect(art.available).toBe(10); // under the 15-mark floor
     expect(art.paperCount).toBe(2);
-    expect(art.percent).toBe(0);
+    expect(art.percent).toBe(20);
     expect(art.band).toBe("weak");
     // And it now leads the list, which is the whole point of the amendment.
     expect(rows[0].key).toBe(ART);

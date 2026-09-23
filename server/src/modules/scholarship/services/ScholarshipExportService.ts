@@ -126,7 +126,10 @@ export function buildAnalysisMarkdown(input: ExportInput): string {
     `- A paper she was absent for, and an item nobody has marked yet, count toward **neither** side. They are not zeros.`,
   );
   L.push(
-    `- A row needs **${SCHOLARSHIP_MIN_MARKS_FOR_VERDICT} available marks, or ${SCHOLARSHIP_MIN_PAPERS_FOR_VERDICT} separate papers**, before it is given a band. Below that it is listed under "Not enough evidence yet" — that is an **unknown, not a weakness**, and it should not be treated as a gap to drill.`,
+    `- A row is given a band once it has **${SCHOLARSHIP_MIN_MARKS_FOR_VERDICT} available marks**, or has been set on **${SCHOLARSHIP_MIN_PAPERS_FOR_VERDICT} separate papers**, or **she scored nothing on it**. Anything else is listed under "Not enough evidence yet" — that is an **unknown, not a weakness**, and it should not be treated as a gap to drill.`,
+  );
+  L.push(
+    `- A **0%** row is a real result, not a missing one: she was asked and earned none of it. Check how many marks it rests on before deciding how hard to drill it — a zero on one 10-mark task can also mean she ran out of time.`,
   );
   L.push(
     `- "vs class" is her percent minus the class mean on the same row. A low percent where the whole class is low is a **teaching** problem, not hers — expect those to need re-teaching rather than extra practice.`,

@@ -329,7 +329,7 @@ does **not** sum to the paper total, by design — it answers "how does she do o
 chapter 2", which is the question actually asked. The topic axis, with exactly one topic per item,
 *does* sum to the total, and is the axis that reconciles.
 
-### 6.2 The reliability floor (D-#662, amended by D-#691 — read §6.5) — the rule that stops the feature lying
+### 6.2 The reliability floor (D-#662, amended by D-#691 and D-#699 — read §6.5 and §6.9) — the rule that stops the feature lying
 
 **No topic is called weak on fewer than 15 available marks.** Below that it reports
 `যথেষ্ট তথ্য নেই` — not a percentage, not a colour, not a rank.
@@ -501,6 +501,47 @@ No truncation length is safe: four letters separates those two, and fails on Rah
 column widens from 44 to 84 and the name wraps over two or three short lines; `CELL_H` keeps the
 data cells at 44, since one constant for both would have made every row three times taller. The
 table already scrolled horizontally.
+
+### 6.9 The third door — a zero is a result (D-#699, 2026-09-23)
+
+**The floor guards against ranking a noisy ESTIMATE.** §6.2's worked example is one 5-mark item,
+1 earned, read as *"20% — সবচেয়ে দুর্বল"*: a figure that could be one bad guess and would lead a
+list titled "weakest topics" off a sample of one question. That reasoning stands and is untouched.
+
+**It does not reach a zero.** At zero there is nothing to estimate — she was asked and earned none
+of it. The percentage is not a guess that more marks would sharpen; it is the exact bottom of the
+scale, and more marks can only move it up. Reporting it as `যথেষ্ট তথ্য নেই` told the teacher the
+app knew nothing about the topic it knew the most about.
+
+**The case that exposed it.** Ibrahim Hossain: 72.9% overall, first in the class on three papers,
+and **five writing rows reading 0/10** — one sitting each, ten marks each, so both existing doors
+stayed shut and all five sank to the bottom of his profile as unknowns. His screen said he had one
+weakness. He had five, and they are the five the whole class is worst at.
+
+So `hasVerdict` gains a third condition:
+
+```
+earned === 0  &&  available > 0     →  verdict
+```
+
+| case | verdict? | why |
+|---|---|---|
+| 0 out of 10, one sitting | **yes** | asked, earned nothing — exact |
+| 1 out of 5, one sitting | no | an estimate off one question (§6.2) |
+| 0 available | **no** | nothing was asked, so nothing is known — the opposite case |
+| class mean pooling to 0 | marks rule only | a cohort at zero is a different fact from one child at zero, and is not what that row reports |
+
+A zero row takes its percent (0), its band (weak), its rank, and its place at the **top** of the
+list, since weakest-first is the sort.
+
+**The caution moved into the output rather than the gate.** A zero on a single 10-mark task can
+also mean the child ran out of time — this school has already seen exactly that, in Zulqarnain's
+Unit 3 — so the export says so in as many words and every row prints the marks it rests on.
+
+**Two existing tests had to be rewritten, and that is the tell.** Both had used a ZERO as their
+example of a small sample, so after this change they would have passed without the paper-count door
+doing any work at all. They now use 1-of-5 and 2-of-10, and a negative check confirmed the two new
+tests fail when the third door is removed.
 
 ## §7 — Journeys
 
