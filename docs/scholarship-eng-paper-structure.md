@@ -83,7 +83,11 @@ from outside the textbook, serving both.
   filling blanks that need cardinal numbers, ordinal numbers, or information about time.
   A numbers item must make the student *work the number out* — never print the numeral
   beside the blank that asks for it.
-- **Item 13 has three parts**, not two: letter, application, email.
+- **Item 13 has three parts**, not two: letter, application, email. **Each one is wrapped in a
+  persona, and the application takes the longest wrap** — *Suppose, you are <name>, a student of
+  Class Five at <school>, <district>* — because it alone has a sender block, a subject line and a
+  signature. A letter and an email need only a name. The prompt bank stores BARE tasks, so the
+  wrap is the generator's job every time: see `docs/scholarship-eng-writing-prompts.md`.
 - **Items 6–14 are skill items, set on NEITHER passage.** They are not connected to the reading
   text at all — which is part of why they need no second "set". Their words, sentences and
   examples should still be drawn from the unit being examined, per the question policy.
