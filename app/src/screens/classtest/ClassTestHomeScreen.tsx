@@ -35,10 +35,12 @@ export default function ClassTestHomeScreen(): React.ReactElement {
   const nav = useNavigation<Nav>();
   // PQ-5: the print queue is a sibling TAB now, not a screen in this stack.
   const tabNav = useNavigation<NavigationProp<TabParamList>>();
-  const { role, can } = useAuth();
+  const { isRole, can } = useAuth();
   const canWrite = can("tracker:write");
   const canPrint = can("roster:manage");
-  const isAdmin = role === "PRINCIPAL" || role === "OFFICE";
+  // Template-aware (D-#467), mirroring the server's isAdminStaff: a teacher who also holds
+  // the OFFICE template must see the dashboard, not just a primary-role PRINCIPAL/OFFICE.
+  const isAdmin = isRole("PRINCIPAL") || isRole("OFFICE");
 
   const [myQ, refetchMy] = useQuery({ query: MY_CLASS_TESTS_QUERY, variables: {} });
   const mine = myQ.data?.myClassTests ?? [];
