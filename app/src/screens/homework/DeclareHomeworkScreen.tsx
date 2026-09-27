@@ -36,7 +36,7 @@ import {
   type MultiUploadResult,
 } from "../../lib/files";
 import type { HomeworkStackParamList } from "../../navigation/types";
-import { Screen, Body, Muted, Card, Field, Button, Chip, ChipRow, EmptyState } from "../../components/ui";
+import { Screen, breakAnywhere, Body, Muted, Card, Field, Button, Chip, ChipRow, EmptyState } from "../../components/ui";
 import { UploadDropZone } from "../../components/UploadDropZone";
 import { DateField } from "../../components/DateField";
 import { MoreOptions } from "../../components/MoreOptions";
@@ -451,10 +451,10 @@ export default function DeclareHomeworkScreen({ navigation, route }: Props): Rea
           {files.map((f, i) => (
             <View key={f.fileId} style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
               <Pressable
-                style={{ flex: 1 }}
+                style={{ flex: 1, minWidth: 0 }}
                 onPress={() => void openStoredFile(f.fileId).catch(() => toast.show(STR.errGeneric, "danger"))}
               >
-                <Body>📎 {f.originalName}</Body>
+                <Body style={breakAnywhere}>📎 {f.originalName}</Body>
               </Pressable>
               <Button
                 title={STR.remove}

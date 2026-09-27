@@ -172,6 +172,12 @@ export function Body({
     </Text>
   );
 }
+/** Lets a long unbroken token (a filename like `C3_ENG_VocabPool_U18_v2.xlsx.pdf`) wrap
+ *  mid-word on web. Browsers only break at spaces, so without this the token sets the
+ *  text's min-content width and shoves a sibling button off the card. Native already
+ *  character-wraps an over-long word. Pair with `flex: 1, minWidth: 0` in a row. */
+export const breakAnywhere = (Platform.OS === "web" ? { overflowWrap: "anywhere" } : {}) as TextStyle;
+
 export function Muted({
   children,
   style,
@@ -228,7 +234,7 @@ export function Button({
       {loading ? (
         <ActivityIndicator color={isDisabled ? colors.textDisabled : v.fg} size="small" />
       ) : (
-        <Text style={[styles.btnText, { color: isDisabled ? colors.textDisabled : v.fg }]}>
+        <Text style={[styles.btnText, breakAnywhere, { color: isDisabled ? colors.textDisabled : v.fg }]}>
           {title}
         </Text>
       )}

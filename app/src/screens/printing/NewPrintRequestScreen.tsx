@@ -38,7 +38,7 @@ import {
 import { CREATE_PRINT_REQUEST } from "../../graphql/printing";
 import { ACADEMIC_YEARS_QUERY, CLASSES_QUERY } from "../../graphql/operations";
 import type { PrintStackParamList } from "../../navigation/types";
-import { Screen, H2, Body, Muted, Card, Field, Chip, ChipRow, Button, Notice } from "../../components/ui";
+import { Screen, breakAnywhere, H2, Body, Muted, Card, Field, Chip, ChipRow, Button, Notice } from "../../components/ui";
 import { DateField } from "../../components/DateField";
 import { STR, classLevelLabel, routineSubjectLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
@@ -365,7 +365,7 @@ export default function NewPrintRequestScreen({ route, navigation }: Props): Rea
                     key={f.fileId}
                     style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space(2) }}
                   >
-                    <Muted style={{ flex: 1 }}>📄 {f.originalName}</Muted>
+                    <Muted style={[{ flex: 1, minWidth: 0 }, breakAnywhere]}>📄 {f.originalName}</Muted>
                     <Button
                       title={STR.prRemove}
                       variant="danger"
