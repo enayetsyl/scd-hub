@@ -17,7 +17,7 @@ import {
   type BatchItemVerdictT,
 } from "../../graphql/operations";
 import type { AdminStackParamList } from "../../navigation/types";
-import { Screen, H2, Body, Muted, Card, Badge, Button, Chip, ChipRow, Field, Notice, Divider } from "../../components/ui";
+import { Screen, breakAnywhere, H2, Body, Muted, Card, Badge, Button, Chip, ChipRow, Field, Notice, Divider } from "../../components/ui";
 import { FileDropZone } from "../../components/FileDropZone";
 import { STR, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
@@ -230,7 +230,7 @@ export default function ImportScreen(_props: Props): React.ReactElement {
               key={f.filename}
               style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: space(1) }}
             >
-              <Body style={{ flex: 1 }}>{f.filename}</Body>
+              <Body style={[{ flex: 1, minWidth: 0 }, breakAnywhere]}>{f.filename}</Body>
               <Muted style={{ marginHorizontal: space(2) }}>{bnNum(Math.max(1, Math.round(f.content.length / 1024)))} KB</Muted>
               <Button title={STR.removeFile} variant="ghost" onPress={() => removeFile(f.filename)} />
             </View>

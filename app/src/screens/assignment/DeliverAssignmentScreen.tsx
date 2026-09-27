@@ -20,7 +20,7 @@ import {
 } from "../../lib/files";
 import { UploadDropZone } from "../../components/UploadDropZone";
 import type { AssignmentStackParamList } from "../../navigation/types";
-import { Screen, Body, Muted, Card, Badge, Button, Field, Loader, EmptyState, Notice } from "../../components/ui";
+import { Screen, breakAnywhere, Body, Muted, Card, Badge, Button, Field, Loader, EmptyState, Notice } from "../../components/ui";
 import { STR, bnNum, hwSubjectLabel, classLevelLabel, monthLabel } from "../../lib/labels";
 import { isLikelyObjectId } from "../../lib/validate";
 import { friendlyError } from "../../lib/errors";
@@ -179,10 +179,10 @@ export default function DeliverAssignmentScreen({ route, navigation }: Props): R
           {files.map((f, i) => (
             <View key={f.fileId} style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
               <Pressable
-                style={{ flex: 1 }}
+                style={{ flex: 1, minWidth: 0 }}
                 onPress={() => void openStoredFile(f.fileId).catch(() => setError(STR.errGeneric))}
               >
-                <Body>📎 {f.originalName}</Body>
+                <Body style={breakAnywhere}>📎 {f.originalName}</Body>
               </Pressable>
               <Button
                 title={STR.remove}
