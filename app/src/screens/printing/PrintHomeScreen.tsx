@@ -32,7 +32,7 @@ import {
 } from "../../graphql/printing";
 import { RECON_REPORT_QUERY } from "../../graphql/operations";
 import type { PrintStackParamList } from "../../navigation/types";
-import { Screen, H2, Body, Muted, Card, Chip, ChipRow, Button, Badge, Loader, EmptyState, ErrorBanner, Field } from "../../components/ui";
+import { Screen, breakAnywhere, H2, Body, Muted, Card, Chip, ChipRow, Button, Badge, Loader, EmptyState, ErrorBanner, Field } from "../../components/ui";
 import { DateField } from "../../components/DateField";
 import { STR, bnNum, classLevelLabel, hwSubjectLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
@@ -252,7 +252,7 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
               key={f.id}
               style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space(2) }}
             >
-              <Muted style={{ flex: 1 }}>📄 {f.name}</Muted>
+              <Muted style={[{ flex: 1, minWidth: 0 }, breakAnywhere]}>📄 {f.name}</Muted>
               <Button
                 title={STR.prOpen}
                 variant="secondary"

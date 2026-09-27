@@ -6,7 +6,7 @@
  */
 import React, { useState } from "react";
 import { Pressable, View } from "react-native";
-import { Body, Muted, Button } from "./ui";
+import { Body, Muted, Button, breakAnywhere } from "./ui";
 import {
   pickAndUploadClassNoteAttachment,
   uploadClassNoteWebFile,
@@ -86,8 +86,8 @@ export function ClassNoteAttachments({
       </Muted>
       {value.map((a, i) => (
         <View key={a.fileId} style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
-          <Pressable style={{ flex: 1 }} onPress={() => void openStoredFile(a.fileId).catch(() => toast.show(STR.errGeneric, "danger"))}>
-            <Body>📎 {a.name}</Body>
+          <Pressable style={{ flex: 1, minWidth: 0 }} onPress={() => void openStoredFile(a.fileId).catch(() => toast.show(STR.errGeneric, "danger"))}>
+            <Body style={breakAnywhere}>📎 {a.name}</Body>
           </Pressable>
           <Button title={STR.remove} variant="ghost" onPress={() => onChange(value.filter((_, j) => j !== i))} />
         </View>

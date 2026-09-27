@@ -36,7 +36,7 @@ import {
 import { ACADEMIC_YEARS_QUERY, CLASSES_QUERY } from "../../graphql/operations";
 import type { PrintStackParamList } from "../../navigation/types";
 import {
-  Screen,
+  Screen, breakAnywhere,
   H2,
   Body,
   Muted,
@@ -475,7 +475,7 @@ export default function PrintHistoryScreen({ navigation }: Props): React.ReactEl
                     key={f.id}
                     style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space(2) }}
                   >
-                    <Muted style={{ flex: 1 }}>📄 {f.name}</Muted>
+                    <Muted style={[{ flex: 1, minWidth: 0 }, breakAnywhere]}>📄 {f.name}</Muted>
                     <Button
                       title={STR.prOpen}
                       variant="secondary"
