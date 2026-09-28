@@ -64,8 +64,8 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
   // Who may correct the details: Principal/Office, or the exam's OWN teacher — the
   // accountable subject teacher or whoever filed it (the same "mine" listMyClassTests
   // uses). The server enforces this too; this only decides whether the button shows.
-  const canEditDetails =
-    isAdmin || (!!user && !!test && (test.teacherId === user.id || test.requestedBy === user.id));
+  const ownsTest = !!user && !!test && (test.teacherId === user.id || test.requestedBy === user.id);
+  const canEditDetails = isAdmin || ownsTest;
 
   const [, enter] = useMutation(ENTER_CLASS_TEST_RESULT);
   const [, retire] = useMutation(RETIRE_CLASS_TEST);
@@ -272,8 +272,10 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
               // A teacher can only SUBMIT for approval on the next screen — labelling
               // their button "Publish results" promised something they cannot do
               // (owner ask 2026-08-03). Admins really do publish. Once it IS submitted,
-              // the label stops asking for a submit that has already happened.
-              title={isAdmin ? STR.ctPublishTitle : allSubmitted ? STR.ctSubmittedForApproval : STR.ctSubmitShort}
+              // the label stops asking for a submit that has already happened. The
+              // test's own teacher reads the teacher label even with an OFFICE template —
+              // their first job on the next screen is the submit.
+              title={isAdmin && !ownsTest ? STR.ctPublishTitle : allSubmitted ? STR.ctSubmittedForApproval : STR.ctSubmitShort}
               variant="secondary"
               onPress={() => nav.navigate("ClassTestPublish", { testId, title })}
             />
