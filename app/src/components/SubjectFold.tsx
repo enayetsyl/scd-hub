@@ -16,6 +16,7 @@
  * coordinator, D-#42/#45) and the server still decides what may be read at all.
  * Exception: with no own-subject records the group opens itself, because a screen
  * that is empty except for a closed toggle reads as "nothing to do" when there is.
+ * In that case the first subject inside opens as well, for the same reason.
  */
 import React, { useState } from "react";
 import { View } from "react-native";
@@ -84,15 +85,18 @@ export function SubjectFold<T extends { subject: string }>({
         </View>
       ) : null}
       {othersOpen
-        ? foldOrder.map((subject) => {
+        ? foldOrder.map((subject, i) => {
             const rows = folded.get(subject)!;
-            const isOpen = !!open[subject];
+            // Same reasoning one level down: with nothing of their own here, the FIRST
+            // subject opens too — otherwise the screen is still two taps from any card
+            // (owner report, Class 5 homework filtered to English, 2026-09-28).
+            const isOpen = open[subject] ?? (visible.length === 0 && i === 0);
             return (
               <View key={subject} style={{ marginTop: space(2) }}>
                 <Button
                   title={`${isOpen ? "▾" : "▸"} ${hwSubjectLabel(subject)} (${bnNum(rows.length)})`}
                   variant="secondary"
-                  onPress={() => setOpen((m) => ({ ...m, [subject]: !m[subject] }))}
+                  onPress={() => setOpen((m) => ({ ...m, [subject]: !isOpen }))}
                 />
                 {isOpen ? <View style={{ marginTop: space(2) }}>{render(rows, { readOnly: true })}</View> : null}
               </View>
