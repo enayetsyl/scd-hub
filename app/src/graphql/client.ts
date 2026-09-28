@@ -1,5 +1,5 @@
 import { Platform } from "react-native";
-import { createClient, cacheExchange, fetchExchange, mapExchange, getOperationName } from "urql";
+import { createClient, type Client, cacheExchange, fetchExchange, mapExchange, getOperationName } from "urql";
 import { getToken } from "../lib/tokenStore";
 import { isKnownOffline } from "../lib/netStatus";
 import { captureAppError } from "../observability/sentry";
@@ -68,13 +68,44 @@ const errorReportExchange = mapExchange({
   },
 });
 
-export const urqlClient = createClient({
-  url: API_URL,
-  exchanges: [cacheExchange, errorReportExchange, fetchExchange],
-  // Token is read synchronously per request from the in-memory holder, which is
-  // hydrated from SecureStore/localStorage at boot (see lib/tokenStore).
-  fetchOptions: () => {
-    const token = getToken();
-    return token ? { headers: { Authorization: `Bearer ${token}` } } : {};
-  },
-});
+function makeClient(): Client {
+  return createClient({
+    url: API_URL,
+    exchanges: [cacheExchange, errorReportExchange, fetchExchange],
+    // Token is read synchronously per request from the in-memory holder, which is
+    // hydrated from SecureStore/localStorage at boot (see lib/tokenStore).
+    fetchOptions: () => {
+      const token = getToken();
+      return token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+    },
+  });
+}
+
+/**
+ * The client is REPLACED, not reused, whenever the signed-in identity changes (login,
+ * logout, entering or leaving "View as").
+ *
+ * The document cache is keyed by query + variables, never by who asked. With one client
+ * for the app's lifetime, a borrowed session answered `myScopes`, the workspace lists and
+ * every other already-seen query from the PREVIOUS account's cache: the Principal viewing
+ * as the English teacher still got their own teaching grants back, so the English cards
+ * rendered folded and read-only and nothing could be entered (owner report, 2026-09-28).
+ * urql exposes no cache reset, so a fresh client is the reset; `App` re-provides it and
+ * every mounted query re-runs against it.
+ */
+let current = makeClient();
+const listeners = new Set<() => void>();
+
+export function getUrqlClient(): Client {
+  return current;
+}
+
+export function resetUrqlClient(): void {
+  current = makeClient();
+  listeners.forEach((l) => l());
+}
+
+export function subscribeUrqlClient(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}

@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useSyncExternalStore } from "react";
 import { Platform, useColorScheme } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import * as SplashScreen from "expo-splash-screen";
@@ -9,7 +9,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { NavigationContainer } from "@react-navigation/native";
 import { Provider as UrqlProvider } from "urql";
 
-import { urqlClient } from "./src/graphql/client";
+import { getUrqlClient, subscribeUrqlClient } from "./src/graphql/client";
 import { initSentry, Sentry } from "./src/observability/sentry";
 import { AppErrorFallback } from "./src/observability/AppErrorFallback";
 import { getItem, setItem } from "./src/lib/storage";
@@ -135,6 +135,8 @@ function ThemedNavigation(): React.ReactElement | null {
 }
 
 function App(): React.ReactElement | null {
+  // Swapped on every identity change so no account reads another's cache (see client.ts).
+  const urqlClient = useSyncExternalStore(subscribeUrqlClient, getUrqlClient);
   // Only the three faces the type scale uses (§5) — requiring the package
   // index would bundle every weight.
   const [fontsLoaded] = useFonts({

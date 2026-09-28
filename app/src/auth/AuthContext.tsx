@@ -5,7 +5,6 @@
  * lib/tokenStore and never exposed here.
  */
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react";
-import { useClient } from "urql";
 import {
   ME_QUERY,
   STAFF_LOGIN,
@@ -17,6 +16,7 @@ import {
 import { hydrateToken, persistToken, getRealToken, persistRealToken, getToken } from "../lib/tokenStore";
 import { getItem, setItem, removeItem } from "../lib/storage";
 import { clearNavState } from "../lib/navState";
+import { getUrqlClient, resetUrqlClient } from "../graphql/client";
 import { friendlyError } from "../lib/errors";
 import { registerPushToken, unregisterPushToken } from "../lib/push";
 import { STR } from "../lib/labels";
@@ -91,8 +91,17 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+/**
+ * Every identity change goes through here: the new token AND a fresh urql client, so the
+ * next account never reads the previous one's cached answers (see graphql/client.ts —
+ * a View-as session was acting on the Principal's own cached teaching grants).
+ */
+async function switchToken(token: string | null): Promise<void> {
+  await persistToken(token);
+  resetUrqlClient();
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }): React.ReactElement {
-  const client = useClient();
   const [status, setStatus] = useState<Status>("loading");
   const [user, setUser] = useState<MeUser | null>(null);
   const [rawPermissions, setRawPermissions] = useState<string[]>([]);
@@ -100,13 +109,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
   const [viewAs, setViewAs] = useState<ViewAsSession | null>(null);
 
   const resolveMe = useCallback(async (): Promise<MeUser | null> => {
-    const res = await client.query(ME_QUERY, {}, { requestPolicy: "network-only" }).toPromise();
+    const res = await getUrqlClient().query(ME_QUERY, {}, { requestPolicy: "network-only" }).toPromise();
     // One query, all three answers — see ME_QUERY. Permissions/templates are set even
     // when `me` comes back null so a rejected session never leaves a stale set behind.
     setRawPermissions(res.data?.myPermissions ?? []);
     setTemplates((res.data?.myTemplates ?? []) as Role[]);
     return res.data?.me ?? null;
-  }, [client]);
+  }, []);
 
   // The D-#467 hat switcher is gone: a two-hat login now always sees both jobs at once.
   // This clears any hat a device is still holding from the old build — without it, a
@@ -173,20 +182,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
    * someone's account, never a claim on their notifications.
    */
   useEffect(() => {
-    if (status === "authed" && !viewAs) void registerPushToken(client);
-  }, [status, client, viewAs]);
+    if (status === "authed" && !viewAs) void registerPushToken(getUrqlClient());
+  }, [status, viewAs]);
 
   const login = useCallback(
     async (email: string, password: string) => {
       const id = email.trim();
-      const res = await client.mutation(STAFF_LOGIN, { email: id, password }).toPromise();
+      const res = await getUrqlClient().mutation(STAFF_LOGIN, { email: id, password }).toPromise();
       if (res.error) return { ok: false, message: friendlyError(res.error) };
       let auth = res.data?.staffLogin ?? null;
       // Guardian family fallback (GP-2, J5.2/D-#59): no staff account matched —
       // try the flexible guardian login with the same identifier (phone unless
       // it looks like an email).
       if (!auth) {
-        const gres = await client
+        const gres = await getUrqlClient()
           .mutation(GUARDIAN_LOGIN, {
             identifier: id,
             identifierKind: id.includes("@") ? "email" : "phone",
@@ -198,7 +207,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
       }
       if (!auth) return { ok: false, message: STR.loginInvalid };
 
-      await persistToken(auth.token);
+      await switchToken(auth.token);
       const me = await resolveMe();
       if (!me) {
         await persistToken(null);
@@ -208,7 +217,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
       setStatus("authed");
       return { ok: true };
     },
-    [client, resolveMe],
+    [resolveMe],
   );
 
   /**
@@ -220,14 +229,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
    */
   const startViewAs = useCallback(
     async (targetId: string, targetKind: "STAFF" | "GUARDIAN") => {
-      const res = await client.mutation(START_IMPERSONATION, { targetId, targetKind }).toPromise();
+      const res = await getUrqlClient().mutation(START_IMPERSONATION, { targetId, targetKind }).toPromise();
       if (res.error) return { ok: false, message: friendlyError(res.error) };
       const started = res.data?.startImpersonation;
       if (!started) return { ok: false, message: STR.viewAsFailed };
 
       const own = getToken();
       if (own) await persistRealToken(own);
-      await persistToken(started.token);
+      await switchToken(started.token);
 
       const session: ViewAsSession = {
         name: started.name,
@@ -246,7 +255,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
         // The token was refused — put the Principal straight back rather than leaving
         // them in a half-swapped state.
         const parked = await getRealToken();
-        if (parked) await persistToken(parked);
+        if (parked) await switchToken(parked);
         await persistRealToken(null);
         await removeItem(VIEW_AS_KEY);
         setViewAs(null);
@@ -257,7 +266,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
       setStatus("authed");
       return { ok: true };
     },
-    [client, resolveMe],
+    [resolveMe],
   );
 
   /** Give the Principal their own account back. Also the expiry path. */
@@ -266,11 +275,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
     // Best-effort END row, sent while the borrowed token still works. A failure here
     // must not trap anyone in the wrong account, so it is deliberately unguarded.
     try {
-      await client.mutation(END_IMPERSONATION, {}).toPromise();
+      await getUrqlClient().mutation(END_IMPERSONATION, {}).toPromise();
     } catch {
       /* the START row and the TTL already bound the session */
     }
-    await persistToken(parked);
+    await switchToken(parked);
     await persistRealToken(null);
     await removeItem(VIEW_AS_KEY);
     await clearNavState();
@@ -284,12 +293,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
     const me = await resolveMe();
     setUser(me);
     setStatus(me ? "authed" : "anon");
-  }, [client, resolveMe]);
+  }, [resolveMe]);
 
   const logout = useCallback(async () => {
     // N4.1: deactivate this device's push token while the session still works.
-    await unregisterPushToken(client);
-    await persistToken(null);
+    await unregisterPushToken(getUrqlClient());
+    await switchToken(null);
     // A logout from inside a View-as session ends the session too — leaving a parked
     // token behind would hand the next person to log in the Principal's own account.
     await persistRealToken(null);
@@ -299,7 +308,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
     setRawPermissions([]);
     setTemplates([]);
     setStatus("anon");
-  }, [client]);
+  }, []);
 
   // What the app offers = exactly what the server reported this caller may do. There is
   // no longer a hat to narrow it (the D-#467 switcher is gone), so this is the effective
