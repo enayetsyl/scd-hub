@@ -36,11 +36,18 @@ type Props = NativeStackScreenProps<ClassTestStackParamList, "ClassTestPublish">
 export default function ClassTestPublishScreen({ route }: Props): React.ReactElement {
   const { testId, title } = route.params;
   // CT-8 role split: teacher submits; Office/Principal (roster:manage) approve + send WhatsApp.
-  const { role, can } = useAuth();
+  const { role, can, user } = useAuth();
   const isAdmin = can("roster:manage");
 
   const [testQ] = useQuery({ query: CLASS_TEST_QUERY, variables: { id: testId } });
   const test = testQ.data?.classTest ?? null;
+  // A teacher who also holds the OFFICE template carries roster:manage, and this screen
+  // used to offer EITHER the teacher's submit OR the office's approve — so on their OWN
+  // test they saw only Approve, which the server refuses until someone submits (owner
+  // report 2026-09-28: Tazkir, Class 5 English Test 5, "I don't have submit option").
+  // The test's own teacher always gets the teacher leg; the office leg sits beside it.
+  const ownsTest = !!test && !!user && (test.teacherId === user.id || test.requestedBy === user.id);
+  const showTeacherLeg = !isAdmin || ownsTest;
   const [studentsQ] = useQuery({ query: STUDENTS_QUERY, variables: { sectionId: test?.sectionId ?? "" }, pause: !test });
   const nameById = useMemo(() => {
     const m = new Map<string, string>();
@@ -131,13 +138,7 @@ export default function ClassTestPublishScreen({ route }: Props): React.ReactEle
             </Muted>
           ) : null}
 
-          {isAdmin ? (
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: space(2) }}>
-              <Button title={STR.ctApproveRelease} onPress={onApprove} loading={busy} disabled={busy || blockEmpty} />
-              <Button title={STR.ctSendBack} variant="secondary" onPress={() => setSendBackOpen((v) => !v)} disabled={busy} />
-              <Button title={STR.ctUnpublishAll} variant="ghost" onPress={() => void run(() => unpublishExam({ testId }), STR.ctUnpublishedBadge)} disabled={busy} />
-            </View>
-          ) : (
+          {showTeacherLeg ? (
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: space(2) }}>
               <Button
                 title={allSubmitted ? STR.ctSubmittedForApproval : STR.ctSubmitForRelease}
@@ -147,14 +148,21 @@ export default function ClassTestPublishScreen({ route }: Props): React.ReactEle
               />
               <Button title={STR.ctRecall} variant="ghost" onPress={() => void run(() => recallExam({ testId }), STR.ctRecall)} disabled={busy} />
             </View>
-          )}
+          ) : null}
+          {isAdmin ? (
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: space(2) }}>
+              <Button title={STR.ctApproveRelease} onPress={onApprove} loading={busy} disabled={busy || blockEmpty} />
+              <Button title={STR.ctSendBack} variant="secondary" onPress={() => setSendBackOpen((v) => !v)} disabled={busy} />
+              <Button title={STR.ctUnpublishAll} variant="ghost" onPress={() => void run(() => unpublishExam({ testId }), STR.ctUnpublishedBadge)} disabled={busy} />
+            </View>
+          ) : null}
 
           {/* Say WHY the action is unavailable — a disabled button with no reason is
               its own support ticket. */}
           {blockEmpty ? <Muted style={{ marginTop: space(2) }}>{STR.ctNoResultsYet}</Muted> : null}
           {/* Same rule for the teacher's own disabled submit: say that it is already in,
               and name the way back (recall) rather than leaving a dead button. */}
-          {!isAdmin && allSubmitted && !blockEmpty ? (
+          {showTeacherLeg && allSubmitted && !blockEmpty ? (
             <Muted style={{ marginTop: space(2) }}>
               {anyPublished ? STR.ctPublishedBadge : STR.ctSubmittedLocked}
             </Muted>
