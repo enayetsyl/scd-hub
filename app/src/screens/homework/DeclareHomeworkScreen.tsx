@@ -9,7 +9,7 @@
  * them). Issued items additionally lock TIME_DECL / Q_COUNT / pool / revision
  * (server re-gates): only description, topics and attachments stay editable.
  */
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
@@ -157,12 +157,24 @@ export default function DeclareHomeworkScreen({ navigation, route }: Props): Rea
 
   // Topic picker — load the catalog for the chosen (subject, class); a topic code is
   // subject-specific, so clear the selection whenever the subject changes.
-  const [topicsQ] = useQuery({
+  const [topicsQ, refetchTopics] = useQuery({
     query: HOMEWORK_TOPICS_QUERY,
     variables: { subject: subject ?? "", classLevel: classLevel ?? 0 },
     pause: !subject || classLevel == null,
   });
   const topics = topicsQ.data?.homeworkTopics ?? [];
+  // A catalog of ONE is not a choice — pick it. Nursery/KG, Arabic, Islamic Studies,
+  // English 1-4 and BGS/Science 1-2 offer only the general topic (prod, 2026-09-29),
+  // and a lone unselected chip ends in a "Topics required" refusal (same fix as the
+  // Class Notes form).
+  useEffect(() => {
+    // Match subject + class too: right after a subject change the query can still hold
+    // the PREVIOUS subject's catalog, and picking its code would declare a wrong topic.
+    const only = topics.length === 1 ? topics[0] : null;
+    if (only && only.subject === subject && only.classLevel === classLevel && selectedTopics.length === 0) {
+      setSelectedTopics([only.code]);
+    }
+  }, [topics, subject, classLevel, selectedTopics.length]);
   function chooseSubject(s: string): void {
     setSubject(s);
     setSelectedTopics([]);
@@ -413,6 +425,12 @@ export default function DeclareHomeworkScreen({ navigation, route }: Props): Rea
             <Muted>{STR.hwPickSubjectFirst}</Muted>
           ) : topicsQ.fetching ? (
             <Muted>{STR.hwTopicsLoading}</Muted>
+          ) : topicsQ.error ? (
+            // A failed fetch used to render an EMPTY chip row with no reason given.
+            <View style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
+              <Muted style={{ flexShrink: 1, color: colors.error }}>⚠ {friendlyError(topicsQ.error)}</Muted>
+              <Button title={STR.retry} variant="ghost" onPress={() => refetchTopics({ requestPolicy: "network-only" })} />
+            </View>
           ) : (
             <ChipRow>
               {topics.map((tp) => (
