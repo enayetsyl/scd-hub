@@ -124,12 +124,21 @@ function PeriodNoteCard({ slot, date }: { slot: RoutineSlotT; date: string }): R
   const nilForSubject = (nilQ.data?.homeworkNilDeclarations ?? []).find((n) => n.subject === slot.subject) ?? null;
 
   // Topic catalog for (subject, classLevel) — the same read the declare screen uses.
-  const [topicsQ] = useQuery({
+  const [topicsQ, refetchTopics] = useQuery({
     query: HOMEWORK_TOPICS_QUERY,
     variables: { subject: slot.subject, classLevel: slot.classLevel ?? 0 },
     pause: !open || !mayDeclare || slot.classLevel == null,
   });
   const topicOptions = topicsQ.data?.homeworkTopics ?? [];
+
+  // A catalog of ONE (English Class 1-4 has only the general topic) is not a choice —
+  // pick it, rather than leave a lone unlabelled chip the teacher reads as a note and
+  // then a "Topics required" refusal on Publish (owner report, Class 4, 2026-09-29).
+  useEffect(() => {
+    if (hwMode === "DECLARE" && topicOptions.length === 1 && topics.length === 0) {
+      setTopics([topicOptions[0].code]);
+    }
+  }, [hwMode, topicOptions, topics.length]);
 
   // Exactly one declared item → link silently; the Select appears only for >1.
   useEffect(() => {
@@ -303,10 +312,24 @@ function PeriodNoteCard({ slot, date }: { slot: RoutineSlotT; date: string }): R
 
               {hwMode === "DECLARE" ? (
                 <>
+                  {/* The Publish refusal names "Topics", so the field must be labelled
+                      so here too — the declare screen always had this heading. */}
+                  <Body style={{ fontWeight: "700" }}>{STR.hwTopTags}</Body>
                   {slot.classLevel == null ? (
                     <Muted>{STR.hwNoClassLevel}</Muted>
                   ) : topicsQ.fetching ? (
                     <Muted>{STR.hwTopicsLoading}</Muted>
+                  ) : topicsQ.error ? (
+                    // A failed fetch used to render an EMPTY chip row — no topic to pick,
+                    // no reason, no way back but reopening the screen.
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
+                      <Muted style={{ flexShrink: 1, color: "#b00020" }}>⚠ {friendlyError(topicsQ.error)}</Muted>
+                      <Button
+                        title={STR.retry}
+                        variant="ghost"
+                        onPress={() => refetchTopics({ requestPolicy: "network-only" })}
+                      />
+                    </View>
                   ) : (
                     <ChipRow>
                       {topicOptions.map((tp) => (
