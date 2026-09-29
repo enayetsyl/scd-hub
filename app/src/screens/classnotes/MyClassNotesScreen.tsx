@@ -135,10 +135,11 @@ function PeriodNoteCard({ slot, date }: { slot: RoutineSlotT; date: string }): R
   // pick it, rather than leave a lone unlabelled chip the teacher reads as a note and
   // then a "Topics required" refusal on Publish (owner report, Class 4, 2026-09-29).
   useEffect(() => {
-    if (hwMode === "DECLARE" && topicOptions.length === 1 && topics.length === 0) {
-      setTopics([topicOptions[0].code]);
+    const only = topicOptions.length === 1 ? topicOptions[0] : null;
+    if (hwMode === "DECLARE" && only && only.subject === slot.subject && topics.length === 0) {
+      setTopics([only.code]);
     }
-  }, [hwMode, topicOptions, topics.length]);
+  }, [hwMode, topicOptions, topics.length, slot.subject]);
 
   // Exactly one declared item → link silently; the Select appears only for >1.
   useEffect(() => {
