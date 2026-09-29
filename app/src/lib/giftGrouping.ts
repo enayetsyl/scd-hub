@@ -49,7 +49,8 @@ export interface GiftClassGroup {
   classId: string;
   className: string;
   winners: GiftWinner[];
-  /** Winners in this class still awaiting their weekly gift. */
+  /** Gifts in this class still to hand out: weekly ones, plus higher gifts for
+   *  winners whose 4-week block closes this week. */
   outstanding: number;
 }
 
@@ -92,7 +93,11 @@ export function groupWinnersByClass(rows: GiftRowLike[], weekNumber: number): Gi
   const groups = [...byClass.values()];
   for (const g of groups) {
     g.winners.sort((a, b) => a.studentName.localeCompare(b.studentName, "bn"));
-    g.outstanding = g.winners.filter((w) => !w.given).length;
+    // Two gifts can be owed to one student: the weekly one, and the higher gift when this
+    // week closes a 4-week block. Both are handed out from the Today card, so both count.
+    g.outstanding =
+      g.winners.filter((w) => !w.given).length +
+      g.winners.filter((w) => w.streakMilestone && !w.streakGiven).length;
   }
   groups.sort((a, b) => a.className.localeCompare(b.className, "bn"));
   return groups;

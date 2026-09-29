@@ -199,9 +199,10 @@ export function GiftHandoverCard(): React.ReactElement | null {
                 {open
                   ? g.winners.map((w) => {
                       const busy = busyKey === `${w.studentId}:WEEKLY`;
+                      const streakBusy = busyKey === `${w.studentId}:STREAK`;
                       return (
+                        <View key={w.studentId}>
                         <View
-                          key={w.studentId}
                           style={{
                             flexDirection: "row",
                             justifyContent: "space-between",
@@ -238,6 +239,42 @@ export function GiftHandoverCard(): React.ReactElement | null {
                               loading={busy}
                             />
                           )}
+                        </View>
+                        {/* The higher gift (D-#483) is a SECOND handover, recorded as STREAK.
+                            This card used to show only the 🌟 — so the desk, which works from
+                            Today, could not hand it out at all; only the full report screen
+                            could (owner report, Akmol, 2026-09-29). */}
+                        {w.streakMilestone ? (
+                          <View
+                            style={{
+                              flexDirection: "row",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              gap: space(2),
+                              marginTop: space(1),
+                              paddingLeft: space(3),
+                            }}
+                          >
+                            <Muted style={{ flexShrink: 1 }}>🏆 {STR.agHigherGift}</Muted>
+                            {w.streakGiven ? (
+                              <View style={{ alignItems: "flex-end" }}>
+                                <Badge text={`✅ ${STR.agHandedOver}`} tone="ok" maxWidthPct={100} />
+                                <Button
+                                  title={STR.agUndoHandover}
+                                  variant="ghost"
+                                  onPress={() => onToggle(w.studentId, "STREAK", true)}
+                                  disabled={streakBusy}
+                                />
+                              </View>
+                            ) : (
+                              <Button
+                                title={STR.agMarkHandedOver}
+                                onPress={() => onToggle(w.studentId, "STREAK", false)}
+                                loading={streakBusy}
+                              />
+                            )}
+                          </View>
+                        ) : null}
                         </View>
                       );
                     })
