@@ -53,6 +53,7 @@ import { Screen, H1, H2, Body, Muted, Card, Badge, Button, EmptyState, Notice } 
 import { QueryGate } from "../../components/QueryGate";
 import { WorkClaimTeacherCard } from "../../components/WorkClaimTeacherCard";
 import { ReturningStudentsCard } from "../../components/ReturningStudentsCard";
+import { TodayWorkCard } from "../../components/TodayWorkCard";
 import { GiftHandoverCard } from "../../components/GiftHandoverCard";
 import { LiveClassCard } from "../../components/LiveClassCard";
 import { Icon, type IconName } from "../../components/Icon";
@@ -604,6 +605,10 @@ export default function TodayScreen(): React.ReactElement {
             ))}
           </Card>
         ) : null}
+
+        {/* WB-4 (D-#701) — আজকের কাজ: the work board's open cards for today, with a
+            link to the board. Self-contained; owner ask on the first prod test. */}
+        <TodayWorkCard />
 
         {/* আমার পিরিয়ড — horizontal timeline; current slot highlighted */}
         <H2>{STR.myPeriods}</H2>
