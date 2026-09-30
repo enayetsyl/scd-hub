@@ -92,7 +92,9 @@ export function notificationTarget(
     case "OBSERVATION_RESPONDED":
     case "OBSERVATION_ESCALATED":
     case "OBSERVATION_READY_TO_PUBLISH":
-      // Manager-facing (Principal/Office).
+    case "OBSERVATION_REJECTED":
+      // Manager-facing (Principal/Office). A rejection lands on the row, where the
+      // reason and the Restore action are.
       return refs?.observationId
         ? { tab: "ObservationTab", screen: "ObservationDetail", params: { observationId: refs.observationId } }
         : { tab: "ObservationTab", screen: "ObservationHome" };

@@ -36,6 +36,7 @@ import {
   withholdObservation,
   releaseObservationHold,
   cancelObservation,
+  editObservationReview,
   restoreCancelledObservation,
   requestReReview,
   requestCoReview,
@@ -157,6 +158,9 @@ ObservationRef.implement({
     cancelledAt: t.string({ nullable: true, resolve: (r) => r.cancelledAt }),
     cancelledBy: t.string({ nullable: true, resolve: (r) => r.cancelledBy }),
     cancelledReason: t.string({ nullable: true, resolve: (r) => r.cancelledReason }),
+    rejectedByObserver: t.boolean({ resolve: (r) => r.rejectedByObserver }),
+    reviewEditedAt: t.string({ nullable: true, resolve: (r) => r.reviewEditedAt }),
+    reviewEditedBy: t.string({ nullable: true, resolve: (r) => r.reviewEditedBy }),
     domains: t.field({ type: [DomainScoreRef], resolve: (r) => r.domains }),
     gates: t.field({ type: [GateScoreRef], resolve: (r) => r.gates }),
     oneStrength: t.string({ nullable: true, resolve: (r) => r.oneStrength }),
@@ -386,6 +390,77 @@ builder.mutationField("reviewClassroomObservation", (t) =>
             }
           : undefined,
         actorId: actor.userId,
+      });
+    },
+  }),
+);
+
+builder.mutationField("editClassroomObservationReview", (t) =>
+  t.field({
+    type: ObservationRef,
+    description:
+      "Principal/Office edit a REVIEWED review BEFORE publishing (the Comments reviewer-edit twin). Same payload " +
+      "and validation as reviewClassroomObservation, per the row's form. The observer's original is snapshotted on " +
+      "the first edit and every edit is audited with the fields it changed. Refused once published or cancelled. " +
+      "Requires observation:manage.",
+    authScopes: { hasPermission: "observation:manage" },
+    args: {
+      observationId: t.arg.string({ required: true }),
+      domains: t.arg({ type: [DomainInputType], required: false }),
+      gates: t.arg({ type: [GateInputType], required: false }),
+      oneStrength: t.arg.string({ required: false }),
+      growthFocus: t.arg.string({ required: false }),
+      priorFocusProgress: t.arg.string({ required: false }),
+      priorFocusNote: t.arg.string({ required: false }),
+      overallSuggestion: t.arg.string({ required: false }),
+      quran: t.arg({ type: QuranPayloadInputType, required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      const actor = actorOf(ctx);
+      return editObservationReview({
+        observationId: args.observationId,
+        domains: (args.domains ?? []).map((d) => ({ domain: d.domain, level: d.level, note: d.note })),
+        gates: (args.gates ?? []).map((g) => ({ gate: g.gate, result: g.result, breachNote: g.breachNote ?? null })),
+        oneStrength: args.oneStrength ?? "",
+        growthFocus: args.growthFocus ?? "",
+        priorFocusProgress: args.priorFocusProgress ?? undefined,
+        priorFocusNote: args.priorFocusNote ?? undefined,
+        overallSuggestion: args.overallSuggestion ?? undefined,
+        quran: args.quran
+          ? {
+              ratings: args.quran.ratings.map((r) => ({ criterion: r.criterion, score: r.score, note: r.note ?? null })),
+              compliance: args.quran.compliance.map((c) => ({ item: c.item, yesNo: c.yesNo })),
+              strengths: args.quran.strengths,
+              improvements: args.quran.improvements,
+              suggestions: args.quran.suggestions,
+            }
+          : undefined,
+        actorId: actor.userId,
+      });
+    },
+  }),
+);
+
+builder.mutationField("rejectClassroomObservation", (t) =>
+  t.field({
+    type: ObservationRef,
+    description:
+      "The ASSIGNED observer rejects a video they cannot review (a class test was recorded, the footage is blank), " +
+      "with a REQUIRED reason. Stored as the CO-15 cancel stamp, so the row leaves the observer's queue and the " +
+      "toReview count and shows under the Cancelled filter; Principal/Office are notified and may restore it. " +
+      "Only an ASSIGNED row, only by its own observer. Requires observation:review. Audited.",
+    authScopes: { hasPermission: "observation:review" },
+    args: {
+      observationId: t.arg.string({ required: true }),
+      reason: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      const actor = actorOf(ctx);
+      return cancelObservation({
+        observationId: args.observationId,
+        reason: args.reason,
+        actorId: actor.userId,
+        byObserver: true,
       });
     },
   }),

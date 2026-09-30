@@ -8,7 +8,7 @@ import React, { useMemo, useState } from "react";
 import { View } from "react-native";
 import type { ProfileClassTestT } from "../../../graphql/studentProfile";
 import { Badge, Body, Card, Chip, ChipRow, Loader, Muted, Notice } from "../../../components/ui";
-import { MiniBarChart, type BarDatum } from "../../../components/MiniBarChart";
+import { AxisBarChart, type AxisBarDatum } from "../../../components/AxisBarChart";
 import { STR, bnNum, ctTrendGlyph, hwSubjectLabel, isoDateLabel } from "../../../lib/labels";
 import { space, useColors } from "../../../theme";
 import { DataTable, SectionTitle, StatTile, TileRow, ToneText, pctText, toneForPct, withN } from "./parts";
@@ -81,12 +81,12 @@ export function ClassTestTab({
     () => [...(profile?.results ?? [])].sort((a, b) => new Date(b.examDate).getTime() - new Date(a.examDate).getTime()),
     [profile],
   );
-  const chart: BarDatum[] = useMemo(
+  const chart: AxisBarDatum[] = useMemo(
     () =>
       [...newestFirst]
         .reverse()
         .filter((r) => r.subject === subject && r.percent != null)
-        .map((r) => ({ label: bnNum(r.testNumber), value: r.percent ?? 0, pass: r.pass })),
+        .map((r) => ({ label: `#${bnNum(r.testNumber)}`, value: r.percent ?? 0, pass: r.pass })),
     [newestFirst, subject],
   );
 
@@ -107,7 +107,10 @@ export function ClassTestTab({
     ...profile.bySubject,
     ...[...missedBySubject.keys()]
       .filter((s) => !profile.bySubject.some((b) => b.subject === s))
-      .map((s) => ({ subject: s, examsTaken: 0, avgPercent: null, latestPercent: null, previousPercent: null, trend: "flat" })),
+      .map((s) => ({
+        subject: s, examsTaken: 0, avgPercent: null, latestPercent: null, previousPercent: null, trend: "flat",
+        classAvgPercent: null, classHighestPercent: null,
+      })),
   ];
   const listTitle = [subject ? hwSubjectLabel(subject) : null, missedOnly ? STR.spCtNotAttendedList : null]
     .filter(Boolean)
@@ -122,6 +125,13 @@ export function ClassTestTab({
           value={pctText(a.avgPercent)}
           sub={`${STR.ctExamsTaken} ${bnNum(a.examsPresent)}`}
           tone={toneForPct(a.avgPercent, 80, 50)}
+        />
+        {/* The class alongside the student: the mean and the best of every classmate's
+            own average over the same tests. */}
+        <StatTile
+          label={STR.spClassAvg}
+          value={pctText(a.classAvgPercent)}
+          sub={`${STR.spClassHighest} ${pctText(a.classHighestPercent)}`}
         />
         <StatTile
           label={STR.spCtNotAttended}
@@ -167,6 +177,8 @@ export function ClassTestTab({
             { label: STR.spColTaken, width: 70, align: "right" },
             { label: STR.spColMissed, width: 70, align: "right" },
             { label: STR.ctAvgPercent, width: 100, align: "right" },
+            { label: STR.spClassAvg, width: 100, align: "right" },
+            { label: STR.spClassHighest, width: 100, align: "right" },
             { label: STR.spColLatest, width: 90, align: "right" },
             { label: STR.ctTrajectory, width: 80, align: "center" },
           ]}
@@ -181,6 +193,8 @@ export function ClassTestTab({
                 {bnNum(missedBySubject.get(b.subject) ?? 0)}
               </ToneText>,
               <ToneText key="a" tone={toneForPct(b.avgPercent, 80, 50)}>{pctText(b.avgPercent)}</ToneText>,
+              pctText(b.classAvgPercent),
+              pctText(b.classHighestPercent),
               <ToneText key="l" tone={toneForPct(b.latestPercent, 80, 50)}>{pctText(b.latestPercent)}</ToneText>,
               <ToneText key="t" tone={trendTone(b.trend)}>{ctTrendGlyph(b.trend)}</ToneText>,
             ],
@@ -198,7 +212,16 @@ export function ClassTestTab({
             </ChipRow>
           ) : null}
         </View>
-        {subject && !missedOnly && chart.length > 0 ? <MiniBarChart data={chart} /> : null}
+        {subject && !missedOnly && chart.length > 0 ? (
+          <AxisBarChart
+            data={chart}
+            accessibilityLabel={hwSubjectLabel(subject)}
+            reference={(() => {
+              const row = subjectRows.find((b) => b.subject === subject);
+              return row?.classAvgPercent != null ? { value: row.classAvgPercent, label: STR.spClassAvg } : null;
+            })()}
+          />
+        ) : null}
         {shown.length === 0 ? <Muted>{STR.spNoItemsFilter}</Muted> : null}
         {shown.map((r) => (
           <TestRow key={r.testId} r={r} />

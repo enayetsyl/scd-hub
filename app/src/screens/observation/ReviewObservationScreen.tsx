@@ -16,7 +16,7 @@
  * sign-off). The server validates the right payload per the row's form + gates the
  * caller to the assigned observerId — the Bangla deny surfaces inline.
  */
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ScrollView, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -32,6 +32,8 @@ import {
 } from "@scd/shared";
 import {
   REVIEW_CLASSROOM_OBSERVATION,
+  EDIT_CLASSROOM_OBSERVATION_REVIEW,
+  CLASSROOM_OBSERVATION_QUERY,
   OBSERVATION_RECORDING_QUERY,
   OBSERVATION_PRIOR_FOCUS_CONTEXT_QUERY,
 } from "../../graphql/observation";
@@ -67,6 +69,9 @@ export default function ReviewObservationScreen({ route }: Props): React.ReactEl
   const nav = useNavigation<Props["navigation"]>();
   const { observationId, form, title } = route.params;
   const isQuran = form === "QURAN";
+  // Principal/Office editing a REVIEWED, unpublished review (the Comments reviewer-edit
+  // twin): prefilled from the server, saved via editClassroomObservationReview.
+  const isEdit = route.params.mode === "edit";
 
   // REF-11 state
   const [domainLevels, setDomainLevels] = useState<Record<string, string | null>>({});
@@ -91,6 +96,8 @@ export default function ReviewObservationScreen({ route }: Props): React.ReactEl
   const [ok, setOk] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [, review] = useMutation(REVIEW_CLASSROOM_OBSERVATION);
+  const [, editReview] = useMutation(EDIT_CLASSROOM_OBSERVATION_REVIEW);
+  const save = (vars: Parameters<typeof review>[0]) => (isEdit ? editReview(vars) : review(vars));
 
   // ---- local draft autosave (owner ask 2026-08-03) -------------------------
   // A review is a lot of typing and it is only ever sent on submit, so a dropped
@@ -155,7 +162,8 @@ export default function ReviewObservationScreen({ route }: Props): React.ReactEl
   // Keyed by observation AND user: a shared device must not show one observer the
   // other's unfinished words.
   const draft = useFormDraft(
-    user ? `obs-review:${observationId}:${user.id}` : null,
+    // Edit mode keeps no local draft: the form is the server's review, prefilled below.
+    user && !isEdit ? `obs-review:${observationId}:${user.id}` : null,
     draftSnapshot,
     applyDraft,
   );
@@ -173,6 +181,33 @@ export default function ReviewObservationScreen({ route }: Props): React.ReactEl
   });
   const prior = priorQ.data?.observationPriorFocusContext ?? null;
 
+  // Edit mode: load the review as it stands and fill the form ONCE — a refetch must never
+  // overwrite what the editor has typed since.
+  const [obsQ] = useQuery({ query: CLASSROOM_OBSERVATION_QUERY, variables: { id: observationId }, pause: !isEdit });
+  const prefilled = useRef(false);
+  useEffect(() => {
+    const o = obsQ.data?.classroomObservation;
+    if (!isEdit || !o || prefilled.current) return;
+    prefilled.current = true;
+    setDomainLevels(Object.fromEntries(o.domains.map((d) => [d.domain, String(d.level)])));
+    setDomainNotes(Object.fromEntries(o.domains.map((d) => [d.domain, d.note ?? ""])));
+    setGateResults(Object.fromEntries(o.gates.map((g) => [g.gate, g.result])));
+    setBreachNotes(Object.fromEntries(o.gates.map((g) => [g.gate, g.breachNote ?? ""])));
+    setOneStrength(o.oneStrength ?? "");
+    setGrowthFocus(o.growthFocus ?? "");
+    setPriorFocusProgress(o.priorFocusProgress ?? null);
+    setPriorFocusNote(o.priorFocusNote ?? "");
+    setOverallSuggestion(o.overallSuggestion ?? "");
+    if (o.quran) {
+      setQuranScores(Object.fromEntries(o.quran.ratings.map((r) => [r.criterion, String(r.score)])));
+      setQuranNotes(Object.fromEntries(o.quran.ratings.map((r) => [r.criterion, r.note ?? ""])));
+      setCompliance(Object.fromEntries(o.quran.compliance.map((c) => [c.item, c.yesNo])));
+      setStrengths(o.quran.strengths ?? "");
+      setImprovements(o.quran.improvements ?? "");
+      setSuggestions(o.quran.suggestions ?? "");
+    }
+  }, [isEdit, obsQ.data]);
+
   async function onSubmit(): Promise<void> {
     setError(null);
     setOk(null);
@@ -188,7 +223,7 @@ export default function ReviewObservationScreen({ route }: Props): React.ReactEl
         setBusy(false);
         return setError(STR.errGeneric);
       }
-      res = await review({
+      res = await save({
         observationId,
         quran: {
           ratings,
@@ -217,7 +252,7 @@ export default function ReviewObservationScreen({ route }: Props): React.ReactEl
         setBusy(false);
         return setError(STR.errGeneric);
       }
-      res = await review({
+      res = await save({
         observationId,
         domains,
         gates,
@@ -225,8 +260,10 @@ export default function ReviewObservationScreen({ route }: Props): React.ReactEl
         growthFocus: growthFocus.trim(),
         // Carry-forward is only meaningful against a prior focus (CO-10) — with no
         // prior the fields are hidden, so never send stale state.
-        priorFocusProgress: prior ? priorFocusProgress ?? null : null,
-        priorFocusNote: prior ? priorFocusNote.trim() || null : null,
+        // Edit mode carries the stored values through even if the prior-focus card did
+        // not load, so saving an edit can never silently erase them.
+        priorFocusProgress: prior || isEdit ? priorFocusProgress ?? null : null,
+        priorFocusNote: prior || isEdit ? priorFocusNote.trim() || null : null,
         // CO-16: never required — an empty box is sent as null, not "".
         overallSuggestion: overallSuggestion.trim() || null,
       });
@@ -237,7 +274,7 @@ export default function ReviewObservationScreen({ route }: Props): React.ReactEl
       // Submitted for real — drop the local draft, or coming back here would restore
       // a draft of something already sent.
       draft.clear();
-      setOk(STR.obsReviewSaved);
+      setOk(isEdit ? STR.obsReviewEditSaved : STR.obsReviewSaved);
       nav.navigate("ObservationDetail", { observationId, title });
     }
   }
@@ -247,6 +284,7 @@ export default function ReviewObservationScreen({ route }: Props): React.ReactEl
       <ScrollView contentContainerStyle={{ padding: space(4) }} keyboardShouldPersistTaps="handled">
         {ok ? <Notice message={ok} tone="ok" /> : null}
         {error ? <Notice message={error} tone="danger" /> : null}
+        {isEdit ? <Notice message={STR.obsEditingNotice} tone="info" /> : null}
         <Card>
           <Body style={{ fontWeight: "700" }}>{title}</Body>
           {recording ? (
@@ -430,7 +468,7 @@ export default function ReviewObservationScreen({ route }: Props): React.ReactEl
           ) : null}
         </View>
 
-        <Button title={STR.obsSubmitReview} onPress={onSubmit} loading={busy} disabled={busy} />
+        <Button title={isEdit ? STR.obsSaveEdit : STR.obsSubmitReview} onPress={onSubmit} loading={busy} disabled={busy} />
         <View style={{ height: space(6) }} />
       </ScrollView>
     </Screen>

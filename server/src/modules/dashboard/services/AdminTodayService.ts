@@ -264,8 +264,9 @@ async function leaveCard(dateKey: string): Promise<AdminTodayCard> {
 async function observationsCard(): Promise<AdminTodayCard> {
   return safe("observations", async () => {
     const [uploaded, assigned, reviewed, responded, awaitingPublish, newest] = await Promise.all([
-      ClassroomObservation.countDocuments({ state: "UPLOADED" }),
-      ClassroomObservation.countDocuments({ state: "ASSIGNED" }),
+      // A cancelled (or observer-rejected) plan is not outstanding work (CO-15).
+      ClassroomObservation.countDocuments({ state: "UPLOADED", cancelledAt: null }),
+      ClassroomObservation.countDocuments({ state: "ASSIGNED", cancelledAt: null }),
       ClassroomObservation.countDocuments({ state: "REVIEWED" }),
       ClassroomObservation.countDocuments({ state: "TEACHER_RESPONDED" }),
       // CO-12 (D-#369): withheld rows are a closed decision, not outstanding work.
