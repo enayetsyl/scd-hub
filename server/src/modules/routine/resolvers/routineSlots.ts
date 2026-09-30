@@ -27,6 +27,7 @@ import {
   coversForDate,
 } from "../services/RoutineCoverService";
 import { liveWindow } from "../liveWindow";
+import { parseDateKey } from "../../attendance/dates";
 import { enrichRoutineSlots } from "../slotView";
 import { routineMasterGrid, routineMasterWeek, type MasterColumn, type MasterRow, type MasterConflict, type RoutineMaster } from "../routineMaster";
 import type { AvailabilityRow } from "../cover";
@@ -228,7 +229,9 @@ builder.queryField("routineMasterWeek", (t) =>
   t.field({
     type: [RoutineMasterRef],
     authScopes: { hasPermission: "routine:manage" },
-    resolve: async () => routineMasterWeek(),
+    // Optional YYYY-MM-DD: preview the routine in force on that date (default today).
+    args: { date: t.arg.string({ required: false }) },
+    resolve: async (_r, args) => routineMasterWeek(args.date ? parseDateKey(args.date) : new Date()),
   }),
 );
 

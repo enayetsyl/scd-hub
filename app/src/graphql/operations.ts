@@ -3821,8 +3821,8 @@ export const REASSIGN_ROUTINE_SUBJECT_TEACHER = gql<
     }
   }
 `;
-export const ROUTINE_MASTER_WEEK_QUERY = gql<{ routineMasterWeek: RoutineMasterT[] }, NoVars>`
-  query RoutineMasterWeek { routineMasterWeek { ${ROUTINE_MASTER_FIELDS} } }
+export const ROUTINE_MASTER_WEEK_QUERY = gql<{ routineMasterWeek: RoutineMasterT[] }, { date?: string | null }>`
+  query RoutineMasterWeek($date: String) { routineMasterWeek(date: $date) { ${ROUTINE_MASTER_FIELDS} } }
 `;
 
 /** D-#674 — the live class board: class × period, who actually takes each meeting.

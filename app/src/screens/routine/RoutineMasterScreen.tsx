@@ -30,6 +30,7 @@ import { useConfirm } from "../../state/ConfirmContext";
 import { useColors, type ThemeColors } from "../../theme";
 import { space } from "../../theme/tokens";
 import { dateKey } from "../../lib/dates";
+import { DateField } from "../../components/DateField";
 
 const DAYS = ["SUN", "MON", "TUE", "WED", "THU"] as const;
 const GROUP_W = 150;
@@ -59,7 +60,8 @@ function DayGrid({
   m: RoutineMasterT;
   c: ThemeColors;
   showDayHeader: boolean;
-  onPick: (t: EditTarget) => void;
+  /** null = view-only (cells are not tappable). */
+  onPick: ((t: EditTarget) => void) | null;
 }): React.ReactElement {
   const cellBy = useMemo(() => {
     const map = new Map<string, RoutineMasterSlotT>();
@@ -119,11 +121,11 @@ function DayGrid({
                 return (
                   <Pressable
                     key={col.periodNumber}
-                    disabled={col.isBreak}
+                    disabled={col.isBreak || !onPick}
                     onPress={() =>
-                      onPick({ groupType: row.groupType, groupId: row.groupId, rowLabel: row.label, day: m.day, period: col.periodNumber, slot: slot ?? null })
+                      onPick?.({ groupType: row.groupType, groupId: row.groupId, rowLabel: row.label, day: m.day, period: col.periodNumber, slot: slot ?? null })
                     }
-                    style={({ pressed }) => (pressed && !col.isBreak ? { opacity: 0.6 } : undefined)}
+                    style={({ pressed }) => (pressed && !col.isBreak && onPick ? { opacity: 0.6 } : undefined)}
                   >
                     <View style={[cellBase, { width: PERIOD_W, backgroundColor: bg }]}>
                       {slot ? (
@@ -281,7 +283,11 @@ function EditSlotModal({
 export default function RoutineMasterScreen(): React.ReactElement {
   const c = useColors();
   const [day, setDay] = useState<string>("ALL");
-  const [{ data, fetching, error }, refetch] = useQuery({ query: ROUTINE_MASTER_WEEK_QUERY });
+  // Which date's routine to show — a future date previews a saved-but-not-yet-live
+  // change. Edits always take effect from today, so any other date is view-only.
+  const [date, setDate] = useState<string>(todayISO());
+  const viewOnly = date !== todayISO();
+  const [{ data, fetching, error }, refetch] = useQuery({ query: ROUTINE_MASTER_WEEK_QUERY, variables: { date } });
   const [edit, setEdit] = useState<EditTarget | null>(null);
   const [notice, setNotice] = useState<{ msg: string; tone: "ok" | "warn" } | null>(null);
   const week = data?.routineMasterWeek ?? [];
@@ -302,7 +308,8 @@ export default function RoutineMasterScreen(): React.ReactElement {
             <Chip key={d} label={dayOfWeekLabel(d)} selected={day === d} onPress={() => setDay(d)} />
           ))}
         </ChipRow>
-        <Muted>{STR.rtTapToEdit}</Muted>
+        <DateField label={STR.rtMasterDate} value={date} onChange={(v) => setDate(v || todayISO())} />
+        {viewOnly ? <Notice message={STR.rtMasterViewOnly} tone="warn" /> : <Muted>{STR.rtTapToEdit}</Muted>}
         {notice ? <Notice message={notice.msg} tone={notice.tone} /> : null}
       </View>
 
@@ -318,7 +325,7 @@ export default function RoutineMasterScreen(): React.ReactElement {
           {shown.map((m, i) => (
             <View key={m.day} style={{ gap: space(2) }}>
               {i > 0 ? <Divider /> : null}
-              <DayGrid m={m} c={c} showDayHeader={day === "ALL"} onPick={(t) => { setNotice(null); setEdit(t); }} />
+              <DayGrid m={m} c={c} showDayHeader={day === "ALL"} onPick={viewOnly ? null : (t) => { setNotice(null); setEdit(t); }} />
             </View>
           ))}
         </ScrollView>
