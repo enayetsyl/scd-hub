@@ -341,9 +341,11 @@ async function bindRoutineGrant(
     source: "routine",
   }).lean();
   if (existing) {
+    // A slot justifies the grant again, so any lapse a future-dated retirement
+    // stamped on it is void.
     await ScopeGrant.updateOne(
       { _id: existing._id },
-      { $set: { active: true, classId: new Types.ObjectId(classId) } },
+      { $set: { active: true, classId: new Types.ObjectId(classId) }, $unset: { expiresAt: "" } },
     );
   } else {
     await ScopeGrant.create({
@@ -450,6 +452,25 @@ async function unbindIfOrphaned(
     active: true,
   }).lean();
   if (!grant) return;
+
+  // A FUTURE-dated retirement: the slot still runs until `on`, so the teacher must
+  // keep writing for it until then. Stamp the lapse instead of deactivating now —
+  // deactivating immediately locked six teachers out of their own periods for the
+  // rest of the day when the C4/C5 split was applied at noon for the next day
+  // (owner report 2026-09-30). The grant lapses at request time (composeTeacherScope).
+  const lapseAt = startOfDay(on);
+  if (lapseAt.getTime() > startOfDay(new Date()).getTime()) {
+    await ScopeGrant.updateOne({ _id: grant._id }, { $set: { expiresAt: lapseAt } });
+    await writeAudit({
+      eventKind: "SCOPE_GRANT_REVOKE",
+      actorId,
+      targetId: grant._id,
+      targetKind: "RoutineTeachingGrant",
+      meta: { source: "routine", teacherId, sectionId, subject: subjectCode, effectiveFrom: lapseAt.toISOString() },
+    });
+    return;
+  }
+
   await ScopeGrant.updateOne({ _id: grant._id }, { $set: { active: false } });
   await writeAudit({
     eventKind: "SCOPE_GRANT_REVOKE",

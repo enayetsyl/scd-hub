@@ -31,6 +31,8 @@ jest.mock("../modules/foundation/models/Subject", () => ({
 }));
 jest.mock("../modules/foundation/models/ScopeGrant", () => ({
   ScopeGrant: { find: (q: unknown) => ({ select: () => ({ lean: () => mockGrantFind(q) }) }) },
+  // The expiry filter is exercised in delegationScope; an empty fragment keeps these queries as asserted.
+  notExpired: () => ({}),
 }));
 jest.mock("../modules/foundation/models/User", () => ({
   User: { findOne: (q: unknown) => ({ select: () => ({ lean: () => mockUserFindOne(q) }) }) },

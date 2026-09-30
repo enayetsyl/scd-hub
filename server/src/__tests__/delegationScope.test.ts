@@ -244,6 +244,21 @@ describe("composeTeacherScope + delegation (D-#488 request-time expiry)", () => 
     const { scopes } = await composeTeacherScope("teacher-1", NOW);
     expect(scopes).toHaveLength(0);
   });
+
+  // A future-dated routine retirement stamps `expiresAt` on the TEACHING grant
+  // instead of deactivating it (C4/C5 split regression, 2026-09-30).
+  const teaching = { _id: "t1", kind: "teaching", active: true, classId: "c1", sectionId: "s1", subjectId: "sub1" };
+  test("a teaching grant whose stamped lapse is still ahead composes", async () => {
+    mockGrantFind.mockResolvedValue([{ ...teaching, expiresAt: new Date("2026-08-16T00:00:00+06:00") }]);
+    const { scopes } = await composeTeacherScope("teacher-1", NOW);
+    expect(scopes).toEqual([{ kind: "teaching", classId: "c1", sectionId: "s1", subjectId: "sub1" }]);
+  });
+
+  test("a teaching grant past its stamped lapse is inert", async () => {
+    mockGrantFind.mockResolvedValue([{ ...teaching, expiresAt: new Date("2026-08-15T00:00:00+06:00") }]);
+    const { scopes } = await composeTeacherScope("teacher-1", NOW);
+    expect(scopes).toHaveLength(0);
+  });
 });
 
 // ---------------------------------------------------------------------------

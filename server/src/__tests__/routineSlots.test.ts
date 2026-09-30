@@ -322,6 +322,29 @@ describe("R2.5 deleteRoutineSlot unbinds only when orphaned", () => {
     await deleteRoutineSlot(slotDoc._id.toString(), ACTOR);
     expect(mockGrantUpdateOne).not.toHaveBeenCalled();
   });
+  test("a FUTURE-dated retirement keeps the grant active and stamps the lapse (C4/C5 split regression)", async () => {
+    // The slot still runs until the effective date, so the teacher must keep write
+    // access until then — deactivating now locked teachers out of their own periods.
+    const now = new Date();
+    const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    mockSlotFindById.mockResolvedValue(slotDoc);
+    mockSlotFindOne.mockResolvedValue(null); // orphaned as of tomorrow
+    mockGrantFindOne.mockResolvedValue({ _id: new mongoose.Types.ObjectId() });
+    await deleteRoutineSlot(slotDoc._id.toString(), ACTOR, tomorrow);
+    expect(mockGrantUpdateOne).toHaveBeenCalledWith(expect.anything(), { $set: { expiresAt: tomorrow } });
+    expect(mockGrantUpdateOne).not.toHaveBeenCalledWith(expect.anything(), { $set: { active: false } });
+  });
+});
+
+describe("re-binding a routine grant voids a stamped lapse", () => {
+  test("reactivating an existing routine grant unsets expiresAt", async () => {
+    mockGrantFindOne.mockResolvedValueOnce({ _id: new mongoose.Types.ObjectId() }); // prior authority
+    mockGrantFindOne.mockResolvedValueOnce({ _id: new mongoose.Types.ObjectId() }); // existing routine grant
+    await createRoutineSlot(baseInput());
+    const [, update] = mockGrantUpdateOne.mock.calls[0];
+    expect(update.$set.active).toBe(true);
+    expect(update.$unset).toEqual({ expiresAt: "" });
+  });
 });
 
 // ---------------------------------------------------------------------------

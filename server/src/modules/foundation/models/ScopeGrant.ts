@@ -38,6 +38,10 @@ interface TeachingGrant extends BaseGrant {
   classId: Types.ObjectId;
   sectionId: Types.ObjectId;
   subjectId: Types.ObjectId;
+  /** Set when a routine retirement is dated in the FUTURE: the slot still runs until
+   *  then, so the grant stays active and lapses at request time on this instant
+   *  (the delegation pattern, D-#488). Absent = open-ended. */
+  expiresAt?: Date;
 }
 
 /** Supervisory grant — read-only oversight extent (D-#17). */
@@ -142,3 +146,10 @@ ScopeGrantSchema.index({ teacherId: 1, kind: 1, active: 1 });
 ScopeGrantSchema.index({ coveringTeacherId: 1, proxyStatus: 1 });
 
 export const ScopeGrant = model<IScopeGrant>("ScopeGrant", ScopeGrantSchema);
+
+/** Query fragment: grants with no `expiresAt`, or one still in the future. Every
+ *  reader of teaching grants needs it — a future-dated routine retirement leaves the
+ *  grant `active` and stamps the lapse here instead. */
+export function notExpired(now: Date = new Date()): Record<string, unknown> {
+  return { $or: [{ expiresAt: { $exists: false } }, { expiresAt: null }, { expiresAt: { $gt: now } }] };
+}

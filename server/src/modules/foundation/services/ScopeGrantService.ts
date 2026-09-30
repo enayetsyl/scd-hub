@@ -1,7 +1,7 @@
 import { reassignClaimsForSubject } from "../../trackers/services/ClaimReassignService";
 import type { Types } from "mongoose";
 import { DELEGATED_ACTIONS, isDelegatedActionActive, type DelegatedAction } from "@scd/shared";
-import { ScopeGrant, type SupervisoryExtent } from "../models/ScopeGrant";
+import { ScopeGrant, notExpired, type SupervisoryExtent } from "../models/ScopeGrant";
 import { Section } from "../models/Section";
 import { writeAudit } from "../../platform/services/AuditService";
 import { dhakaDayStart } from "../../../lib/dhakaDay";
@@ -120,6 +120,9 @@ export async function composeTeacherScope(
 
   for (const g of grants) {
     if (g.kind === "teaching") {
+      // A future-dated routine retirement stamps the lapse instead of deactivating.
+      const tg = g as { expiresAt?: Date };
+      if (tg.expiresAt && new Date(tg.expiresAt) <= now) continue;
       scopes.push({
         kind: "teaching",
         classId: g.classId!.toString(),
@@ -527,7 +530,9 @@ export async function revokeTeaching(grantId: string, revokedBy: string): Promis
 
 /** Active teaching grants for a section (the subject-teacher roster), newest first. */
 export async function teachingGrantsForSection(sectionId: string): Promise<ScopeGrantView[]> {
-  const grants = await ScopeGrant.find({ kind: "teaching", sectionId, active: true }).sort({ createdAt: -1 }).lean();
+  const grants = await ScopeGrant.find({ kind: "teaching", sectionId, active: true, ...notExpired() })
+    .sort({ createdAt: -1 })
+    .lean();
   return grants.map(grantView);
 }
 
