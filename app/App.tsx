@@ -25,6 +25,7 @@ import { ConfirmProvider } from "./src/state/ConfirmContext";
 import { RootNavigator } from "./src/navigation/RootNavigator";
 import { WebPushGate } from "./src/components/WebPushGate";
 import { UpdateGate } from "./src/components/UpdateGate";
+import { AnnouncementPopup } from "./src/components/AnnouncementPopup";
 import { navigationRef, openNotificationCenter } from "./src/navigation/navigationRef";
 import { useNavigationTheme } from "./src/theme";
 
@@ -190,6 +191,14 @@ function App(): React.ReactElement | null {
                                 (web; native has its own Expo-push prompt). */}
                             <WebPushGate>
                               <ThemedNavigation />
+                              {/* Mounted BESIDE the navigator, not inside a screen:
+                                  the announcement is for the first open of the day
+                                  whichever tab the guardian lands on, and a popup
+                                  owned by one screen would miss every other entry
+                                  point (a push tap, a deep link, a reload on a
+                                  sub-screen). Renders null for staff and whenever
+                                  nothing is live (D-#700). */}
+                              <AnnouncementPopup />
                             </WebPushGate>
                           </UpdateGate>
                         </ConfirmProvider>
