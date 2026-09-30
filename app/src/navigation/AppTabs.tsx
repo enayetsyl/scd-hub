@@ -17,6 +17,7 @@ import type {
   HomeStackParamList,
   ClassNotesStackParamList,
   PrintStackParamList,
+  WorkBoardStackParamList,
   ContentStackParamList,
   QuestionsStackParamList,
   SetsStackParamList,
@@ -70,6 +71,12 @@ import AdminTodayScreen from "../screens/home/AdminTodayScreen";
 import MyClassNotesScreen from "../screens/classnotes/MyClassNotesScreen";
 import AllClassNotesScreen from "../screens/classnotes/AllClassNotesScreen";
 import PrintHomeScreen from "../screens/printing/PrintHomeScreen";
+import WorkBoardScreen from "../screens/workboard/WorkBoardScreen";
+import TaskDetailScreen from "../screens/workboard/TaskDetailScreen";
+import TaskFormScreen from "../screens/workboard/TaskFormScreen";
+import AssignedByMeScreen from "../screens/workboard/AssignedByMeScreen";
+import LoadGridScreen from "../screens/workboard/LoadGridScreen";
+import TaskTemplatesScreen from "../screens/workboard/TaskTemplatesScreen";
 import NewPrintRequestScreen from "../screens/printing/NewPrintRequestScreen";
 import PrintHistoryScreen from "../screens/printing/PrintHistoryScreen";
 import ContentTreeScreen from "../screens/content/ContentTreeScreen";
@@ -650,6 +657,23 @@ function PrintNavigator(): React.ReactElement {
       <PrintStack.Screen name="NewPrintRequest" component={NewPrintRequestScreen} options={{ title: STR.prNew }} />
       <PrintStack.Screen name="PrintHistory" component={PrintHistoryScreen} options={{ title: STR.prHistory }} />
     </PrintStack.Navigator>
+  );
+}
+
+// Work board (WB-1..WB-3, D-#701): my board + task detail/form for every staff login;
+// assigned-by-me, the load grid and someone else's board re-gate on tasks:assign server-side.
+const WorkBoardStack = createNativeStackNavigator<WorkBoardStackParamList>();
+function WorkBoardNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    <WorkBoardStack.Navigator screenOptions={stackOptions}>
+      <WorkBoardStack.Screen name="WorkBoard" component={WorkBoardScreen} options={{ title: STR.wbMyBoard }} />
+      <WorkBoardStack.Screen name="TaskDetail" component={TaskDetailScreen} options={{ title: STR.wbTaskDetail }} />
+      <WorkBoardStack.Screen name="TaskForm" component={TaskFormScreen} options={{ title: STR.wbNewTask }} />
+      <WorkBoardStack.Screen name="AssignedByMe" component={AssignedByMeScreen} options={{ title: STR.wbAssignedByMe }} />
+      <WorkBoardStack.Screen name="LoadGrid" component={LoadGridScreen} options={{ title: STR.wbLoad }} />
+      <WorkBoardStack.Screen name="TaskTemplates" component={TaskTemplatesScreen} options={{ title: STR.wbTemplates }} />
+    </WorkBoardStack.Navigator>
   );
 }
 
@@ -1725,6 +1749,8 @@ export function AppTabs(): React.ReactElement {
         {/* UX-8: same gate as the DailyNote path (routine:read). */}
         {canRoutine ? <Drawer.Screen name="ClassNotesTab" component={ClassNotesNavigator} /> : null}
         {canPrint ? <Drawer.Screen name="PrintTab" component={PrintNavigator} /> : null}
+        {/* WB-1 (D-#701): every staff login has a board; GUARDIAN never. */}
+        {canHome ? <Drawer.Screen name="WorkBoardTab" component={WorkBoardNavigator} /> : null}
         {canLibrary ? <Drawer.Screen name="LibraryTab" component={LibraryNavigator} /> : null}
         {canChat ? <Drawer.Screen name="ChatTab" component={ChatNavigator} /> : null}
         {canVocab ? <Drawer.Screen name="VocabTab" component={VocabNavigator} /> : null}

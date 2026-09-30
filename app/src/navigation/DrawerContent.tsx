@@ -26,6 +26,7 @@ import { PRINT_QUEUE_COUNTS } from "../graphql/printing";
 import { CT_QUESTION_COUNTS, CLASS_TEST_OVERDUE_COUNTS } from "../graphql/classTest";
 import { STAFF_LEAVE_PENDING_COUNT, COMMENT_REVIEW_COUNT, OBSERVATION_COUNTS } from "../graphql/operations";
 import { MY_SYLLABUS_APPROVAL_COUNT } from "../graphql/examSyllabus";
+import { MY_WORK_BOARD_COUNTS } from "../graphql/workBoard";
 import { subscribeLiveEvents } from "../lib/liveEvents";
 import { useAuth } from "../auth/AuthContext";
 import { useBasket } from "../state/BasketContext";
@@ -114,6 +115,19 @@ const STAFF_NAV: NavSection[] = [
   },
   { type: "item", route: "AttendanceTab", labelKey: "tabAttendance", icon: "🙋" },
   { type: "item", route: "PrintTab", labelKey: "tabPrint", icon: "🖨️" },
+  // Work board (WB-1..WB-3, D-#701). My board is every staff login; the other three
+  // leaves are the assigner's (tasks:assign), gated per leaf like Syllabus.
+  {
+    type: "group",
+    titleKey: "wbTab",
+    icon: "🗂️",
+    items: [
+      { route: "WorkBoardTab", labelKey: "wbMyBoard", icon: "✅", screen: "WorkBoard" },
+      { route: "WorkBoardTab", labelKey: "wbAssignedByMe", icon: "📤", screen: "AssignedByMe", perms: ["tasks:assign"] },
+      { route: "WorkBoardTab", labelKey: "wbLoad", icon: "📊", screen: "LoadGrid", perms: ["tasks:assign"] },
+      { route: "WorkBoardTab", labelKey: "wbTemplates", icon: "🔁", screen: "TaskTemplates" },
+    ],
+  },
   // Class Notes became a GROUP (owner ask 2026-08-17): the teacher's own periods,
   // and the filtered archive of every note they may see. Both leaves live in the
   // one ClassNotesTab stack — the Reports-group deep-link shape.
@@ -354,6 +368,20 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
   }, [canLeaveBadge, refetchLeaveCount]);
   const leavePending = leaveCountQ.data?.staffLeavePendingCount ?? 0;
 
+  // Work board badge (WB-1, D-#701): red = overdue cards, amber = open today.
+  const canWorkBoardBadge = !!role && role !== "GUARDIAN";
+  const [wbCountsQ, refetchWbCounts] = useQuery({
+    query: MY_WORK_BOARD_COUNTS,
+    pause: !canWorkBoardBadge,
+    requestPolicy: "cache-and-network",
+  });
+  React.useEffect(() => {
+    if (!canWorkBoardBadge) return;
+    const id = setInterval(() => refetchWbCounts({ requestPolicy: "network-only" }), 120_000);
+    return () => clearInterval(id);
+  }, [canWorkBoardBadge, refetchWbCounts]);
+  const wbCounts = wbCountsQ.data?.myWorkBoardCounts;
+
   // Exam syllabus (SY-5): how many syllabuses await THIS caller's subject-teacher
   // sign-off. The field is `authenticated: true` and returns 0 for every role, so
   // unlike the observation probe that white-screened the app in 791e5fe it CANNOT
@@ -446,6 +474,12 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
     }
     if (route === "HrTab" && canLeaveBadge && leavePending > 0) {
       return [{ count: leavePending, bg: colors.error }];
+    }
+    if (route === "WorkBoardTab" && screen === "WorkBoard" && wbCounts) {
+      const out: Array<{ count: number; bg: string }> = [];
+      if (wbCounts.overdue > 0) out.push({ count: wbCounts.overdue, bg: colors.error });
+      if (wbCounts.openToday > 0) out.push({ count: wbCounts.openToday, bg: colors.warning });
+      return out;
     }
     if (route === "CommentsTab" && canCommentBadge && commentPending > 0) {
       return [{ count: commentPending, bg: colors.error }];

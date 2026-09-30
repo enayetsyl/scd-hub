@@ -120,6 +120,17 @@ jest.mock("../modules/trackers/services/HomeworkAutoIssueService", () => ({
 jest.mock("../modules/notifications/services/NotificationService", () => ({
   emit: (input: unknown) => mockEmit(input),
 }));
+// Work board (WB-1/WB-2, D-#701): the three task jobs are DB-backed; stubbed here like
+// every other family so this suite stays about the tick's own gating and ordering.
+jest.mock("../modules/workboard/services/TaskTemplateService", () => ({
+  materializeTaskTemplates: () => Promise.resolve(0),
+}));
+jest.mock("../modules/workboard/services/TaskSweepService", () => ({
+  dispatchTaskDigest: () => Promise.resolve(0),
+  dispatchTaskOverdue: () => Promise.resolve(0),
+  TASK_DIGEST_MINUTES: 7 * 60 + 30,
+  TASK_OVERDUE_MINUTES: 16 * 60,
+}));
 
 import {
   runSchedulerTick,

@@ -51,6 +51,7 @@ const NotificationRefsRef = builder.objectRef<NotificationRefs>("NotificationRef
     // Same shape of bug as WC-6: the CT-8 submit notice stored both of these but
     // neither was exposed, so the app had no exam id to deep-link with.
     classTestId: t.string({ nullable: true, resolve: (r) => r.classTestId ?? null }),
+    taskId: t.string({ nullable: true, resolve: (r) => r.taskId ?? null }),
     ctId: t.string({ nullable: true, resolve: (r) => r.ctId ?? null }),
     // D-#644: the syllabus deep-link triple. Exposed WITH the kinds that carry it —
     // storing a ref the app cannot read is the WC-6 dead-end tap all over again.
