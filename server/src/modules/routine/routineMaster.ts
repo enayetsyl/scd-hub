@@ -25,8 +25,10 @@ export interface RoutineMaster {
   conflicts: MasterConflict[];
 }
 
-export async function routineMasterGrid(day: string): Promise<RoutineMaster> {
-  const raw = (await RoutineSlot.find({ dayOfWeek: day, active: true, ...liveWindow() })
+/** `on` = the date whose routine is shown (default today) — a future date previews a
+ *  routine change that is already saved but not yet in force. */
+export async function routineMasterGrid(day: string, on: Date = new Date()): Promise<RoutineMaster> {
+  const raw = (await RoutineSlot.find({ dayOfWeek: day, active: true, ...liveWindow(on) })
     .sort({ periodNumber: 1 })
     .lean()) as unknown as IRoutineSlot[];
   const slots = await enrichRoutineSlots(raw);
@@ -77,8 +79,8 @@ export async function routineMasterGrid(day: string): Promise<RoutineMaster> {
   return { day, columns, rows, slots, conflicts };
 }
 
-/** The full teaching week (Sun–Thu), one master grid per day. */
-export async function routineMasterWeek(): Promise<RoutineMaster[]> {
+/** The full teaching week (Sun–Thu) as in force on `on`, one master grid per day. */
+export async function routineMasterWeek(on: Date = new Date()): Promise<RoutineMaster[]> {
   const days = ["SUN", "MON", "TUE", "WED", "THU"];
-  return Promise.all(days.map((d) => routineMasterGrid(d)));
+  return Promise.all(days.map((d) => routineMasterGrid(d, on)));
 }

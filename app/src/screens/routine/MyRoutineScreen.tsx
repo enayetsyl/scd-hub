@@ -3,7 +3,7 @@
  * groups, grouped by day with today highlighted, plus a "notes to publish today"
  * prompt (the class-note reminder surface; push delivery is deferred). `routine:read`.
  */
-import React from "react";
+import React, { useState } from "react";
 import { View, ScrollView } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
@@ -16,20 +16,29 @@ import { STR, routineSubjectLabel, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
 import { dateKey } from "../../lib/dates";
+import { DateField } from "../../components/DateField";
 
 const todayISO = (): string => dateKey();
+/** Weekday index (0 = Sunday) of a YYYY-MM-DD key, read as a local date. */
+const weekdayOfKey = (key: string): number => {
+  const [y, m, d] = key.split("-").map(Number);
+  return new Date(y, m - 1, d).getDay();
+};
 
 type Props = NativeStackScreenProps<RoutineStackParamList, "MyRoutine">;
 
 export default function MyRoutineScreen({ navigation }: Props): React.ReactElement {
-  const [q] = useQuery({ query: MY_ROUTINE_QUERY });
+  // Which date's week to show — past or future routine changes (default today).
+  const [date, setDate] = useState<string>(todayISO());
+  const [q] = useQuery({ query: MY_ROUTINE_QUERY, variables: { date } });
   const [promptsQ] = useQuery({ query: MY_CLASS_NOTE_PROMPTS_QUERY, variables: { date: todayISO() } });
-  const today = DAYS_OF_WEEK[new Date().getDay()];
+  const today = DAYS_OF_WEEK[weekdayOfKey(date)];
   const prompts = promptsQ.data?.myClassNotePrompts ?? [];
 
   return (
     <Screen padded={false}>
       <ScrollView contentContainerStyle={{ padding: space(4), gap: space(3) }}>
+        <DateField label={STR.rtRoutineForDate} value={date} onChange={(v) => setDate(v || todayISO())} />
         {prompts.length > 0 ? (
           <Card>
             <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.rtNotesToPublish}</Body>

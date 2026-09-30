@@ -27,6 +27,7 @@ import {
   coversForDate,
 } from "../services/RoutineCoverService";
 import { liveWindow } from "../liveWindow";
+import { parseDateKey } from "../../attendance/dates";
 import { enrichRoutineSlots } from "../slotView";
 import { routineMasterGrid, routineMasterWeek, type MasterColumn, type MasterRow, type MasterConflict, type RoutineMaster } from "../routineMaster";
 import type { AvailabilityRow } from "../cover";
@@ -126,13 +127,15 @@ builder.queryField("routineSlots", (t) =>
     args: {
       groupType: t.arg.string({ required: true }),
       groupId: t.arg.string({ required: true }),
+      // Optional YYYY-MM-DD: the routine in force on that date (default today).
+      date: t.arg.string({ required: false }),
     },
     resolve: async (_r, args) => {
       const slots = await RoutineSlot.find({
         groupType: args.groupType,
         groupId: args.groupId,
         active: true,
-        ...liveWindow(),
+        ...liveWindow(args.date ? parseDateKey(args.date) : new Date()),
       })
         .sort({ dayOfWeek: 1, periodNumber: 1 })
         .lean();
@@ -145,8 +148,11 @@ builder.queryField("myRoutineSlots", (t) =>
   t.field({
     type: [RoutineSlotRef],
     authScopes: { hasPermission: "routine:read" },
-    resolve: async (_r, _args, ctx) => {
-      const slots = await RoutineSlot.find({ teacherId: ctx.auth!.userId, active: true, ...liveWindow() })
+    // Optional YYYY-MM-DD: the teacher's week as in force on that date (default today).
+    args: { date: t.arg.string({ required: false }) },
+    resolve: async (_r, args, ctx) => {
+      const on = args.date ? parseDateKey(args.date) : new Date();
+      const slots = await RoutineSlot.find({ teacherId: ctx.auth!.userId, active: true, ...liveWindow(on) })
         .sort({ dayOfWeek: 1, periodNumber: 1 })
         .lean();
       return enrichRoutineSlots(slots) as unknown as IRoutineSlot[];
@@ -228,7 +234,9 @@ builder.queryField("routineMasterWeek", (t) =>
   t.field({
     type: [RoutineMasterRef],
     authScopes: { hasPermission: "routine:manage" },
-    resolve: async () => routineMasterWeek(),
+    // Optional YYYY-MM-DD: preview the routine in force on that date (default today).
+    args: { date: t.arg.string({ required: false }) },
+    resolve: async (_r, args) => routineMasterWeek(args.date ? parseDateKey(args.date) : new Date()),
   }),
 );
 
