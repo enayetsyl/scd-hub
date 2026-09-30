@@ -27,7 +27,7 @@ import { RoutineSlot } from "../../routine/models/RoutineSlot";
 import { Section } from "../../foundation/models/Section";
 import { Subject } from "../../foundation/models/Subject";
 import { User } from "../../foundation/models/User";
-import { ScopeGrant } from "../../foundation/models/ScopeGrant";
+import { ScopeGrant, notExpired } from "../../foundation/models/ScopeGrant";
 
 /** The all-zero ObjectId that historical records carry instead of a real user. */
 export const NULL_OBJECT_ID = "000000000000000000000000";
@@ -67,6 +67,7 @@ async function grantHolders(
     sectionId,
     subjectId: (subjectRow as { _id: Types.ObjectId })._id,
     active: true,
+    ...notExpired(),
   })
     .select("teacherId")
     .lean()) as unknown as Array<{ teacherId: Types.ObjectId }>;

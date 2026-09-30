@@ -26,7 +26,7 @@ import { ROUTINE_SUBJECTS, ROUTINE_SUBJECT_LABELS_BN, POSTING_POLICIES } from "@
 import type { PostingPolicy, RoutineSubject } from "@scd/shared";
 import { User } from "../../foundation/models/User";
 import { Section, type ISection } from "../../foundation/models/Section";
-import { ScopeGrant } from "../../foundation/models/ScopeGrant";
+import { ScopeGrant, notExpired } from "../../foundation/models/ScopeGrant";
 import { RoutineSlot } from "../../routine/models/RoutineSlot";
 import { liveWindow } from "../../routine/liveWindow";
 import { writeAudit } from "../../platform/services/AuditService";
@@ -153,6 +153,7 @@ async function sectionMemberIds(section: ISection): Promise<string[]> {
     kind: "teaching",
     sectionId: section._id,
     active: true,
+    ...notExpired(),
   })
     .select("teacherId")
     .lean();

@@ -287,6 +287,16 @@ export interface ReportOwnershipInput {
  * The clock runs from ONE deadline (`deadlineDays` school-days after the exam)
  * and stops only at PUBLISH; who is answerable for it flips at submit.
  */
+/** The denominator an exam's completion is judged against. Normally the anchor's
+ *  CURRENT roster; but when that section has since been emptied (a boys/girls split
+ *  or a merge moves every student out), the exam is judged by the students who sat
+ *  it — its result rows. Otherwise `rosterCount > 0` can never hold and every past,
+ *  fully-published exam there reads "overdue, entered 12/0" forever (owner report
+ *  2026-09-30, after the C4/C5 split). PURE. */
+export function effectiveRosterCount(currentRoster: number, enteredCount: number): number {
+  return currentRoster > 0 ? currentRoster : enteredCount;
+}
+
 export function deriveReportOwnership(i: ReportOwnershipInput): {
   submitComplete: boolean;
   publishComplete: boolean;
@@ -333,9 +343,8 @@ export async function examReportStatus(testId: string, now: Date = new Date()): 
       Array<{ status: ClassTestAttendanceStatus; submittedAt?: Date | null; publishedAt?: Date | null }>
     >,
   ]);
-  const rosterCountValue = roster;
-
   const enteredCount = results.length;
+  const rosterCountValue = effectiveRosterCount(roster, enteredCount);
   const presentCount = results.filter((r) => r.status === "PRESENT").length;
   const absentCount = enteredCount - presentCount;
   const pendingCount = Math.max(0, rosterCountValue - enteredCount);

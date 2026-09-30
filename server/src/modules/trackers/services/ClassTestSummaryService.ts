@@ -30,7 +30,12 @@ import { SubjectGroup } from "../../routine/models/SubjectGroup";
 import { SubjectGroupMembership } from "../../routine/models/SubjectGroupMembership";
 import { User } from "../../foundation/models/User";
 import { deriveScore } from "../classTestScoring";
-import { examReportStatus, deriveReportOwnership, type ExamReportStatus } from "./ClassTestResultService";
+import {
+  examReportStatus,
+  deriveReportOwnership,
+  effectiveRosterCount,
+  type ExamReportStatus,
+} from "./ClassTestResultService";
 import { atMidnight, buildIsOpenDayForRange, deriveOverdue, type IsOpenDay } from "../classTestCalendar";
 import { getEffectiveTemplate, interpolate, type EffectiveTemplate } from "../../templates/services/MessageTemplateService";
 
@@ -143,7 +148,8 @@ function examStatusFrom(
     publishedCount: number;
   },
 ): ExamReportStatus {
-  const { now, isOpenDay, rosterCount, enteredCount, presentCount, submittedCount, publishedCount } = io;
+  const { now, isOpenDay, enteredCount, presentCount, submittedCount, publishedCount } = io;
+  const rosterCount = effectiveRosterCount(io.rosterCount, enteredCount);
   const complete = rosterCount > 0 && enteredCount >= rosterCount;
   const { deadline, overdue, schoolDaysLate } = deriveOverdue(
     new Date(exam.examDate),

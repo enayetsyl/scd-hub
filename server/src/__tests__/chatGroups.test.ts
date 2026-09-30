@@ -86,6 +86,8 @@ jest.mock("../modules/foundation/models/ScopeGrant", () => ({
   ScopeGrant: {
     find: (q: unknown) => ({ select: () => ({ lean: () => mockGrantFind(q) }), lean: () => mockGrantFind(q) }),
   },
+  // The expiry filter is exercised in delegationScope; an empty fragment keeps these queries as asserted.
+  notExpired: () => ({}),
 }));
 
 const mockSlotFind = jest.fn();
