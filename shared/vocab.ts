@@ -4772,6 +4772,12 @@ export const WORK_CARD_KINDS = [
   "CLASS_TEST_MARKS",
   "VIDEO_REVIEW",
   "PLAN_REVIEW",
+  // Owner 2026-09-30 ("when a video is uploaded assigned to Mahzabin… when a chapter
+  // assigned to Kaynat for review"): a classroom observation handed to an observer, and
+  // the question-review queue as ONE card per reviewer (thousands of rounds, never one
+  // card each).
+  "OBSERVATION",
+  "QUESTION_REVIEW",
   "PRINT_JOB",
   "LEAVE_APPROVAL",
 ] as const;
@@ -4784,6 +4790,8 @@ export const WORK_CARD_KIND_LABELS_BN: Record<WorkCardKind, string> = {
   CLASS_TEST_MARKS: "নম্বর এন্ট্রি",
   VIDEO_REVIEW: "ভিডিও পর্যবেক্ষণ",
   PLAN_REVIEW: "পরিকল্পনা রিভিউ",
+  OBSERVATION: "শ্রেণি পর্যবেক্ষণ",
+  QUESTION_REVIEW: "প্রশ্ন রিভিউ",
   PRINT_JOB: "প্রিন্ট",
   LEAVE_APPROVAL: "ছুটির অনুমোদন",
 };
@@ -4795,6 +4803,8 @@ export const WORK_CARD_KIND_LABELS_EN: Record<WorkCardKind, string> = {
   CLASS_TEST_MARKS: "Enter marks",
   VIDEO_REVIEW: "Video review",
   PLAN_REVIEW: "Plan review",
+  OBSERVATION: "Classroom observation",
+  QUESTION_REVIEW: "Question review",
   PRINT_JOB: "Print job",
   LEAVE_APPROVAL: "Leave approval",
 };
@@ -4806,6 +4816,10 @@ export const WORK_EFFORT_MIN = {
   classTestPerStudent: 1,
   videoReview: 30,
   planReview: 20,
+  /** A classroom observation the observer owes a review on. */
+  observation: 30,
+  /** Per question in the reviewer's queue (one card carries the whole queue). */
+  questionPerItem: 2,
   printJob: 10,
   leaveApproval: 5,
   /** A period whose grid times cannot be resolved. */
