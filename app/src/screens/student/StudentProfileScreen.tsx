@@ -23,6 +23,7 @@ import { useQuery } from "urql";
 import {
   STUDENT_PROFILE_ASSIGNMENT_QUERY,
   STUDENT_PROFILE_ATTENDANCE_QUERY,
+  STUDENT_PROFILE_CLASS_ATTENDANCE_QUERY,
   STUDENT_PROFILE_CLASS_TEST_QUERY,
   STUDENT_PROFILE_COMMENTS_QUERY,
   STUDENT_PROFILE_HEADER_QUERY,
@@ -112,6 +113,13 @@ export default function StudentProfileScreen(): React.ReactElement {
     query: STUDENT_WHOLE_PICTURE_QUERY,
     variables: { studentId },
     pause: !studentId || !onTab("dashboard"),
+  });
+  // Class comparison for the attendance tab only — a sweep over every classmate, so it
+  // never runs for the dashboard.
+  const [classAttQ] = useQuery({
+    query: STUDENT_PROFILE_CLASS_ATTENDANCE_QUERY,
+    variables: yearVars,
+    pause: !headerReady || !onTab("attendance"),
   });
   const [attQ] = useQuery({
     query: STUDENT_PROFILE_ATTENDANCE_QUERY,
@@ -267,6 +275,7 @@ export default function StudentProfileScreen(): React.ReactElement {
       case "attendance":
         return (
           <AttendanceTab
+            classComparison={classAttQ.data?.studentProfileClassAttendance ?? null}
             attendance={attQ.data?.studentProfileAttendance ?? null}
             fetching={attQ.fetching || !headerReady}
             error={err(attQ.error)}

@@ -5276,6 +5276,13 @@ const STR_BN = {
   spCtNotAttendedList: "যে টেস্টে অংশ নেয়নি",
   spColTaken: "দিয়েছে",
   spColMissed: "দেয়নি",
+  spClassAvg: "শ্রেণির গড়",
+  spClassHighest: "শ্রেণির সর্বোচ্চ",
+  spNotOnTime: "সময়মতো জমা দেয়নি",
+  spNotOnTimeSub: "মোট {n}টির মধ্যে",
+  spColLate: "দেরিতে",
+  spVsClassYear: "শ্রেণির সাথে তুলনা (এ বছর)",
+  spThisStudent: "এই শিক্ষার্থী",
 
   // --- Monthly progress report (MR-5b, prd-monthly-report) ---
   mrConsoleTitle: "মাসিক অগ্রগতি রিপোর্ট",
@@ -9811,6 +9818,13 @@ const STR_EN: StrTable = {
   spCtNotAttendedList: "Tests not attended",
   spColTaken: "Taken",
   spColMissed: "Missed",
+  spClassAvg: "Class average",
+  spClassHighest: "Class highest",
+  spNotOnTime: "Not submitted on time",
+  spNotOnTimeSub: "of {n}",
+  spColLate: "Late",
+  spVsClassYear: "Compared with the class (this year)",
+  spThisStudent: "This student",
 
   // --- Monthly progress report (MR-5b) ---
   mrConsoleTitle: "Monthly progress report",
