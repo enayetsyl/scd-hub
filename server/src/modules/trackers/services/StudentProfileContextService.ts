@@ -33,7 +33,9 @@ import { GuardianLink } from "../../foundation/models/GuardianLink";
 import { AcademicYear } from "../../foundation/models/AcademicYear";
 import { StudentLeaveApplication } from "../../attendance/models/StudentLeaveApplication";
 import { studentAttendanceHistory } from "../../attendance/services/AttendanceReportService";
-import { dateKeyOf } from "../../attendance/dates";
+import { dateKeyOf, dateKeysBetween, parseDateKey } from "../../attendance/dates";
+import { HolidayException } from "../../routine/models/HolidayException";
+import { dayTypeFor } from "../../routine/calendar";
 import { studentComments, type StudentCommentShape } from "../../comments/services/StudentCommentService";
 import {
   studentCommentTimeline,
@@ -64,6 +66,8 @@ export interface ProfileAcademicYear {
 
 export interface StudentProfileHeader {
   studentId: string;
+  /** The school's student ID ("0059") — what the office reads a child by. */
+  schoolId: string;
   name: string;
   nameBn: string | null;
   rollNumber: string | null;
@@ -71,6 +75,7 @@ export interface StudentProfileHeader {
   dob: string | null;
   bloodGroup: string | null;
   phone: string | null;
+  address: string | null;
   classLevel: number;
   sectionId: string;
   sectionNameBn: string | null;
@@ -102,9 +107,11 @@ export async function studentProfileHeader(
   now: Date = new Date(),
 ): Promise<StudentProfileHeader> {
   const student = (await Student.findById(studentId)
-    .select("name nameBn rollNumber gender dob bloodGroup phone classId sectionId")
+    .select("schoolId name nameBn rollNumber gender dob bloodGroup phone address classId sectionId")
     .lean()) as unknown as {
     _id: Types.ObjectId;
+    schoolId: string;
+    address?: string;
     name: string;
     nameBn?: string;
     rollNumber?: string;
@@ -155,6 +162,8 @@ export async function studentProfileHeader(
 
   return {
     studentId: student._id.toString(),
+    schoolId: student.schoolId,
+    address: student.address ?? null,
     name: student.name,
     nameBn: student.nameBn ?? null,
     rollNumber: student.rollNumber ?? null,
@@ -199,6 +208,15 @@ export interface ProfileLeave {
   daysInWindow: number;
 }
 
+/** A day in the window with no attendance expected — the calendar paints these apart
+ *  from an unmarked school day. */
+export interface ProfileOffDay {
+  dateKey: string;
+  /** `OFF` (Friday) | `QURAN_ONLY` (Saturday) | `HOLIDAY` (a HolidayException). */
+  dayType: string;
+  holidayNameBn: string | null;
+}
+
 export interface StudentProfileAttendance {
   studentId: string;
   fromKey: string;
@@ -216,6 +234,32 @@ export interface StudentProfileAttendance {
   monthly: ProfileAttendanceMonth[];
   days: ProfileAttendanceDay[];
   leaves: ProfileLeave[];
+  offDays: ProfileOffDay[];
+}
+
+/** Every non-teaching day in [fromKey, toKey]: Fridays, Saturdays and holidays, via the
+ *  one calendar rule (`dayTypeFor`). Attendance is only taken on FULL days, so these
+ *  are exactly the days a calendar must not read as "not marked". PURE — holidays are
+ *  passed in as local date keys. A range too long to walk returns no off days rather
+ *  than failing the whole attendance read. */
+export function offDaysOf(
+  fromKey: string,
+  toKey: string,
+  holidays: readonly { fromKey: string; toKey: string; nameBn: string }[],
+): ProfileOffDay[] {
+  let keys: string[];
+  try {
+    keys = dateKeysBetween(fromKey, toKey, 800);
+  } catch {
+    return [];
+  }
+  const out: ProfileOffDay[] = [];
+  for (const key of keys) {
+    const holiday = holidays.find((h) => h.fromKey <= key && key <= h.toKey) ?? null;
+    const dayType = dayTypeFor(parseDateKey(key), holiday !== null);
+    if (dayType !== "FULL") out.push({ dateKey: key, dayType, holidayNameBn: holiday?.nameBn ?? null });
+  }
+  return out;
 }
 
 /** Longest run of consecutive absent entries. PURE (days must be date-ordered). */
@@ -289,6 +333,19 @@ export async function studentProfileAttendance(
     submittedAt: Date;
   }>;
 
+  const holidayDocs = (await HolidayException.find({
+    active: true,
+    fromDate: { $lte: new Date(parseDateKey(toKey).getTime() + 86_400_000 - 1) },
+    toDate: { $gte: parseDateKey(fromKey) },
+  })
+    .select("fromDate toDate nameBn")
+    .lean()) as unknown as Array<{ fromDate: Date; toDate: Date; nameBn: string }>;
+  const holidays = holidayDocs.map((h) => ({
+    fromKey: dateKeyOf(new Date(h.fromDate)),
+    toKey: dateKeyOf(new Date(h.toDate)),
+    nameBn: h.nameBn,
+  }));
+
   return {
     studentId,
     fromKey,
@@ -309,6 +366,7 @@ export async function studentProfileAttendance(
       submittedAt: new Date(l.submittedAt).toISOString(),
       daysInWindow: leaveDaysInWindow(l, fromKey, toKey),
     })),
+    offDays: offDaysOf(fromKey, toKey, holidays),
   };
 }
 

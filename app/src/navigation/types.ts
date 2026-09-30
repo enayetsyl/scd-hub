@@ -35,8 +35,8 @@ export type StudentProfileParams = {
   studentId: string;
   /** Shown until the header read lands; the profile re-labels itself from the server. */
   studentName?: string;
-  /** Which panel to open (defaults to attendance) — lets an entry point land the
-   *  teacher on the plane they were already looking at. */
+  /** Which tab to open (defaults to the Dashboard; "comments" opens Complaints) —
+   *  lets an entry point land the teacher on the plane they were already looking at. */
   initialPanel?: StudentProfilePanelKey;
 };
 

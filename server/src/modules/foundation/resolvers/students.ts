@@ -2,6 +2,12 @@ import { builder } from "../../../schema";
 import { Student, type IStudent } from "../models/Student";
 import { GuardianLink } from "../models/GuardianLink";
 import { Guardian } from "../models/Guardian";
+import {
+  loadStudentDirectory,
+  type DirectoryGroup,
+  type DirectoryGuardian,
+  type DirectoryRow,
+} from "../services/StudentDirectoryService";
 import type { Types } from "mongoose";
 
 type StudentShape = Pick<
@@ -76,6 +82,55 @@ builder.queryField("studentsInSection", (t) =>
     },
     resolve: async (_root, args) =>
       Student.find({ sectionId: args.sectionId, active: true }).sort({ name: 1 }).lean(),
+  }),
+);
+
+// The whole-school student table (Office/Principal) — one batched read, flat rows.
+const DirectoryGroupRef = builder.objectRef<DirectoryGroup>("DirectoryGroup");
+DirectoryGroupRef.implement({
+  fields: (t) => ({
+    id: t.exposeString("id"),
+    code: t.exposeString("code"),
+    level: t.exposeString("level"),
+    gender: t.exposeString("gender"),
+    nameBn: t.exposeString("nameBn"),
+  }),
+});
+
+const DirectoryGuardianRef = builder.objectRef<DirectoryGuardian>("DirectoryGuardian");
+DirectoryGuardianRef.implement({
+  fields: (t) => ({
+    relation: t.exposeString("relation"),
+    name: t.exposeString("name"),
+    phone: t.exposeString("phone"),
+  }),
+});
+
+const DirectoryRowRef = builder.objectRef<DirectoryRow>("StudentDirectoryRow");
+DirectoryRowRef.implement({
+  description: "One active student as a directory-table row: class, section, Quran/Arabic group, guardian phones.",
+  fields: (t) => ({
+    id: t.exposeString("id"),
+    schoolId: t.exposeString("schoolId"),
+    name: t.exposeString("name"),
+    nameBn: t.string({ nullable: true, resolve: (r) => r.nameBn }),
+    classId: t.exposeString("classId"),
+    classLevel: t.int({ nullable: true, resolve: (r) => r.classLevel }),
+    classNameBn: t.string({ nullable: true, resolve: (r) => r.classNameBn }),
+    sectionId: t.exposeString("sectionId"),
+    sectionCode: t.string({ nullable: true, resolve: (r) => r.sectionCode }),
+    sectionNameBn: t.string({ nullable: true, resolve: (r) => r.sectionNameBn }),
+    quranGroup: t.field({ type: DirectoryGroupRef, nullable: true, resolve: (r) => r.quranGroup }),
+    arabicGroup: t.field({ type: DirectoryGroupRef, nullable: true, resolve: (r) => r.arabicGroup }),
+    guardians: t.field({ type: [DirectoryGuardianRef], resolve: (r) => r.guardians }),
+  }),
+});
+
+builder.queryField("studentDirectory", (t) =>
+  t.field({
+    type: [DirectoryRowRef],
+    authScopes: { hasPermission: "roster:manage" },
+    resolve: () => loadStudentDirectory(),
   }),
 );
 

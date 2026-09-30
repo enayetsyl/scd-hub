@@ -12,8 +12,9 @@
  * on a light-mode device (owner report 2026-08-02). Paper is paper in both
  * schemes: keep every colour in these tables on this one surface.
  *
- * Shared by ClassNoteReportScreen (the date roll-up) and AllClassNotesScreen
- * (the note archive) so the two tables cannot drift apart.
+ * Shared by ClassNoteReportScreen (the date roll-up), AllClassNotesScreen
+ * (the note archive) and RosterScreen (the student table) so the tables cannot
+ * drift apart.
  */
 export const REPORT_PAPER = {
   headerBg: "#4f9cf9",
@@ -27,4 +28,11 @@ export const REPORT_PAPER = {
   /** Mirrors lightColors.textPrimary / textSecondary — pinned, not theme-resolved. */
   text: "#182420",
   textMuted: "#46554E",
+  /** A tappable cell (the student table's name → profile); darker than headerBg
+   *  so it still reads on the white rows. */
+  link: "#1a66c9",
+  /** A toned value in a cell (good / watch / bad), readable on both row colours. */
+  toneOk: "#15803d",
+  toneWarn: "#b45309",
+  toneDanger: "#b91c1c",
 } as const;

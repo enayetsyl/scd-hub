@@ -43,6 +43,7 @@ import {
   type ProfileCommentTally,
   type ProfileGuardian,
   type ProfileLeave,
+  type ProfileOffDay,
   type StudentProfileAttendance,
   type StudentProfileComments,
   type StudentProfileHeader,
@@ -245,9 +246,11 @@ const HeaderRef = builder.objectRef<HeaderWithView>("StudentProfileHeader").impl
   description: "Who the child is: roster identity, section/class, guardians to phone, class teacher.",
   fields: (t) => ({
     studentId: t.exposeString("studentId"),
+    schoolId: t.exposeString("schoolId"),
     name: t.exposeString("name"),
     nameBn: t.string({ nullable: true, resolve: (h) => h.nameBn }),
     rollNumber: t.string({ nullable: true, resolve: (h) => h.rollNumber }),
+    address: t.string({ nullable: true, resolve: (h) => h.address }),
     gender: t.string({ nullable: true, resolve: (h) => h.gender }),
     dob: t.string({ nullable: true, resolve: (h) => h.dob }),
     bloodGroup: t.string({ nullable: true, resolve: (h) => h.bloodGroup }),
@@ -294,6 +297,15 @@ const LeaveRef = builder.objectRef<ProfileLeave>("StudentProfileLeave").implemen
   }),
 });
 
+const OffDayRef = builder.objectRef<ProfileOffDay>("StudentProfileOffDay").implement({
+  description: "A day with no attendance expected: Friday (OFF), Saturday (QURAN_ONLY) or a holiday.",
+  fields: (t) => ({
+    dateKey: t.exposeString("dateKey"),
+    dayType: t.exposeString("dayType"),
+    holidayNameBn: t.string({ nullable: true, resolve: (d) => d.holidayNameBn }),
+  }),
+});
+
 const AttendanceRef = builder.objectRef<StudentProfileAttendance>("StudentProfileAttendance").implement({
   description:
     "Presence over the window: totals, the uncovered-absence count, the longest absent run, " +
@@ -313,6 +325,7 @@ const AttendanceRef = builder.objectRef<StudentProfileAttendance>("StudentProfil
     monthly: t.field({ type: [AttendanceMonthRef], resolve: (a) => a.monthly }),
     days: t.field({ type: [AttendanceDayRef], resolve: (a) => a.days }),
     leaves: t.field({ type: [LeaveRef], resolve: (a) => a.leaves }),
+    offDays: t.field({ type: [OffDayRef], resolve: (a) => a.offDays }),
   }),
 });
 

@@ -30,6 +30,7 @@ export interface ProfileAcademicYearT {
 
 export interface ProfileHeaderT {
   studentId: string;
+  schoolId: string;
   name: string;
   nameBn: string | null;
   rollNumber: string | null;
@@ -37,6 +38,7 @@ export interface ProfileHeaderT {
   dob: string | null;
   bloodGroup: string | null;
   phone: string | null;
+  address: string | null;
   classLevel: number;
   sectionId: string;
   sectionNameBn: string | null;
@@ -52,7 +54,7 @@ export const STUDENT_PROFILE_HEADER_QUERY = gql<
 >`
   query StudentProfileHeader($studentId: String!) {
     studentProfileHeader(studentId: $studentId) {
-      studentId name nameBn rollNumber gender dob bloodGroup phone
+      studentId schoolId name nameBn rollNumber gender dob bloodGroup phone address
       classLevel sectionId sectionNameBn classTeacherName fullView
       guardians { guardianId name relation phone primary }
       academicYear { academicYearId label fromKey toKey }
@@ -178,6 +180,8 @@ export interface ProfileAttendanceT {
     submittedAt: string;
     daysInWindow: number;
   }>;
+  /** Fridays (OFF), Saturdays (QURAN_ONLY) and holidays in the window — no attendance expected. */
+  offDays: Array<{ dateKey: string; dayType: string; holidayNameBn: string | null }>;
 }
 
 export const STUDENT_PROFILE_ATTENDANCE_QUERY = gql<
@@ -191,6 +195,7 @@ export const STUDENT_PROFILE_ATTENDANCE_QUERY = gql<
       monthly { monthKey markedDays absentDays presentPct }
       days { dateKey absent leaveCovered }
       leaves { leaveId fromKey toKey reason submittedAt daysInWindow }
+      offDays { dateKey dayType holidayNameBn }
     }
   }
 `;
