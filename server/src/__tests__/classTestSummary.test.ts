@@ -93,7 +93,7 @@ import {
   overdueChaseList,
   overdueCounts,
 } from "../modules/trackers/services/ClassTestSummaryService";
-import { deriveReportOwnership } from "../modules/trackers/services/ClassTestResultService";
+import { deriveReportOwnership, effectiveRosterCount } from "../modules/trackers/services/ClassTestResultService";
 import { interpolate } from "../modules/templates/services/MessageTemplateService";
 import { MESSAGE_TEMPLATE_REGISTRY } from "@scd/shared";
 
@@ -182,6 +182,29 @@ describe("reportStateOf (4-way partition)", () => {
   // had seen nothing.
   test("entry-complete but UNPUBLISHED past the deadline stays overdue", () => {
     expect(reportStateOf({ publishComplete: false, overdue: true, enteredCount: 17 })).toBe("overdue");
+  });
+});
+
+describe("effectiveRosterCount — an emptied section is judged by who sat the exam", () => {
+  test("the current roster wins while the section has students", () => {
+    expect(effectiveRosterCount(14, 12)).toBe(14);
+  });
+  test("an emptied section (boys/girls split moved everyone out) falls back to the result rows", () => {
+    expect(effectiveRosterCount(0, 12)).toBe(12);
+  });
+  test("a fully-published exam on an emptied section is complete, not overdue (the 12/0 regression)", () => {
+    const o = deriveReportOwnership({
+      rosterCount: effectiveRosterCount(0, 12),
+      submittedCount: 12,
+      publishedCount: 12,
+      pastDeadline: true,
+      schoolDaysLate: 40,
+    });
+    expect(o.publishComplete).toBe(true);
+    expect(o.overdue).toBe(false);
+  });
+  test("nothing entered on an empty section stays not-complete", () => {
+    expect(effectiveRosterCount(0, 0)).toBe(0);
   });
 });
 
