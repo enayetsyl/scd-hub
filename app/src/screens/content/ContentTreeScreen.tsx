@@ -72,7 +72,9 @@ export default function ContentTreeScreen({ navigation }: Props): React.ReactEle
   const [classLevel, setClassLevel] = useState<number | null>(null);
   const [curationTag, setCurationTag] = useState<string | null>(null);
   const [docType, setDocType] = useState<string | null>(null);
-  const [currentOnly, setCurrentOnly] = useState(false);
+  // Current only by default: a re-import supersedes the old version (it stays as history),
+  // and listing both by default read as a duplicate plan (owner report 2026-09-30).
+  const [currentOnly, setCurrentOnly] = useState(true);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   // One-line summary of the active filters, shown in the collapsed accordion header
@@ -84,7 +86,7 @@ export default function ContentTreeScreen({ navigation }: Props): React.ReactEle
         classLevel != null ? classLevelLabel(classLevel) : null,
         docType ? docTypeLabel(docType) : null,
         curationTag ? curationTagLabel(curationTag) : null,
-        currentOnly ? "Current only" : null,
+        currentOnly ? null : STR.contentAllVersions,
       ]
         .filter(Boolean)
         .join(" · "),
@@ -189,8 +191,8 @@ export default function ContentTreeScreen({ navigation }: Props): React.ReactEle
           </FilterGroup>
 
           <FilterGroup title="Version view" width={groupWidth}>
-            <Chip label="Current only" selected={currentOnly} onPress={() => setCurrentOnly(true)} />
-            <Chip label="All versions" selected={!currentOnly} onPress={() => setCurrentOnly(false)} />
+            <Chip label={STR.contentCurrentOnly} selected={currentOnly} onPress={() => setCurrentOnly(true)} />
+            <Chip label={STR.contentAllVersions} selected={!currentOnly} onPress={() => setCurrentOnly(false)} />
           </FilterGroup>
 
           <FilterGroup title={STR.curationTag} width={groupWidth}>
@@ -244,6 +246,8 @@ export default function ContentTreeScreen({ navigation }: Props): React.ReactEle
                       </View>
                       <View style={{ flexDirection: "row", alignItems: "center", gap: space(2), marginTop: space(1) }}>
                         <Badge text={docTypeLabel(a.docType)} tone="info" />
+                        {/* Under "All versions", say which copy was replaced by a later import. */}
+                        {!a.current ? <Badge text={STR.contentOlderVersion} tone="muted" /> : null}
                         <Muted>{curationTagLabel(a.curationTag)}</Muted>
                       </View>
                     </Card>

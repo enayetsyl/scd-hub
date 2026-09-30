@@ -58,6 +58,7 @@ export default function AssignmentHomeScreen({ navigation }: Props): React.React
   const { role, user, can } = useAuth();
   const canTrackerRead = can("tracker:read");
   const canSchedule = can("roster:manage");
+  const canGift = can("gift:manage");
   const isFollowUpAdmin = role === "PRINCIPAL" || role === "OFFICE";
   const toast = useToast();
 
@@ -438,7 +439,10 @@ export default function AssignmentHomeScreen({ navigation }: Props): React.React
                     onPress={() => navigation.navigate("AssignmentRollups", { academicYearId: yearId })}
                   />
                 ) : null}
-                {canTrackerRead ? (
+                {/* AG-1 (D-#479–#483): the Office hands the gifts out under gift:manage and
+                    holds NO tracker permission (D-#554) — the server accepts either, so must
+                    this chip. Owner 2026-09-30, viewing as Akmol: the button was missing. */}
+                {canTrackerRead || canGift ? (
                   <Chip
                     label={`🎁 ${STR.agTitle}`}
                     onPress={() => navigation.navigate("AssignmentGift", { academicYearId: yearId })}
