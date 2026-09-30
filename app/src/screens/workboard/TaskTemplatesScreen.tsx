@@ -11,7 +11,7 @@ import { SET_TASK_TEMPLATE_ACTIVE, TASK_TEMPLATES_QUERY, type TaskTemplateT } fr
 import type { WorkBoardStackParamList } from "../../navigation/types";
 import { Screen, Card, Body, Muted, Button, Badge, EmptyState, Notice } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
-import { STR, bnNum, daySlotLabel, taskRecurrenceLabel, weekdayShortLabel } from "../../lib/labels";
+import { STR, bnNum, daySlotLabel, taskRecurrenceLabel, weekOfMonthLabel, weekdayShortLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { minutesLabel } from "../../lib/workBoardNav";
 import { space } from "../../theme/tokens";
@@ -21,6 +21,9 @@ type Props = NativeStackScreenProps<WorkBoardStackParamList, "TaskTemplates">;
 function scheduleLabel(t: TaskTemplateT): string {
   if (t.recurrence === "WEEKLY") return `${taskRecurrenceLabel(t.recurrence)} · ${t.weekdays.map(weekdayShortLabel).join(", ")}`;
   if (t.recurrence === "MONTHLY") return `${taskRecurrenceLabel(t.recurrence)} · ${bnNum(t.monthDay ?? 0)}`;
+  if (t.recurrence === "MONTHLY_WEEKDAY") {
+    return `${taskRecurrenceLabel(t.recurrence)} · ${weekOfMonthLabel(t.weekOfMonth ?? 1)} ${t.weekdays[0] != null ? weekdayShortLabel(t.weekdays[0]) : ""}`;
+  }
   return taskRecurrenceLabel(t.recurrence);
 }
 

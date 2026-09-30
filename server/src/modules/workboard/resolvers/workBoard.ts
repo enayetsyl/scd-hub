@@ -223,6 +223,8 @@ const TaskTemplateRef = builder.objectRef<TemplateView>("TaskTemplate").implemen
     recurrence: t.field({ type: TaskRecurrenceEnum, resolve: (v) => v.doc.recurrence }),
     weekdays: t.intList({ resolve: (v) => v.doc.weekdays ?? [] }),
     monthDay: t.int({ nullable: true, resolve: (v) => v.doc.monthDay ?? null }),
+    /** MONTHLY_WEEKDAY: 1..4, 5 = last. */
+    weekOfMonth: t.int({ nullable: true, resolve: (v) => v.doc.weekOfMonth ?? null }),
     active: t.boolean({ resolve: (v) => v.doc.active }),
   }),
 });
@@ -277,6 +279,7 @@ const TaskTemplateInputType = builder.inputType("TaskTemplateInput", {
     recurrence: t.field({ type: TaskRecurrenceEnum, required: true }),
     weekdays: t.intList({ required: false }),
     monthDay: t.int({ required: false }),
+    weekOfMonth: t.int({ required: false }),
   }),
 });
 

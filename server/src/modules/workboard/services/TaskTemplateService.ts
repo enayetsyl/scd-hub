@@ -28,6 +28,7 @@ export interface TaskTemplateInput {
   recurrence: TaskRecurrence;
   weekdays?: number[] | null;
   monthDay?: number | null;
+  weekOfMonth?: number | null;
 }
 
 function daysInMonth(d: Date): number {
@@ -36,7 +37,7 @@ function daysInMonth(d: Date): number {
 
 /** Does this template produce a task on `date` (already known to be a SCHOOL day)? */
 export function templateDueOn(
-  t: Pick<ITaskTemplate, "recurrence" | "weekdays" | "monthDay">,
+  t: Pick<ITaskTemplate, "recurrence" | "weekdays" | "monthDay"> & { weekOfMonth?: number | null },
   date: Date,
 ): boolean {
   switch (t.recurrence) {
@@ -49,6 +50,17 @@ export function templateDueOn(
       const last = daysInMonth(date);
       const target = Math.min(t.monthDay, last);
       return date.getDate() === target;
+    }
+    case "MONTHLY_WEEKDAY": {
+      // "the first Saturday": weekday must match, and this must be the Nth such
+      // weekday of the month (N = ceil(date / 7)); 5 means the LAST one, which is
+      // whichever occurrence has no same-weekday date 7 days later in the month.
+      const weekday = (t.weekdays ?? [])[0];
+      if (weekday == null || !t.weekOfMonth) return false;
+      if (date.getDay() !== weekday) return false;
+      const nth = Math.ceil(date.getDate() / 7);
+      if (t.weekOfMonth === 5) return date.getDate() + 7 > daysInMonth(date);
+      return nth === t.weekOfMonth;
     }
     default:
       return false;
@@ -70,6 +82,12 @@ export async function createTaskTemplate(authIn: AuthPayload | null, input: Task
   if (input.recurrence === "MONTHLY" && (!input.monthDay || input.monthDay < 1 || input.monthDay > 31)) {
     throw new Error("মাসের তারিখ ১ থেকে ৩১-এর মধ্যে দিন");
   }
+  if (input.recurrence === "MONTHLY_WEEKDAY") {
+    if (weekdays.length !== 1) throw new Error("সপ্তাহের ঠিক একটি দিন বাছুন");
+    if (!input.weekOfMonth || !Number.isInteger(input.weekOfMonth) || input.weekOfMonth < 1 || input.weekOfMonth > 5) {
+      throw new Error("মাসের কততম সপ্তাহ, তা বাছুন");
+    }
+  }
   if (!Types.ObjectId.isValid(input.assigneeUserId)) throw new Error("কাকে দেবেন তা বাছুন");
   const u = await User.findById(input.assigneeUserId).select("role active").lean();
   if (!u || !u.active || u.role === "GUARDIAN") throw new Error("এই ব্যক্তিকে কাজ দেওয়া যায় না");
@@ -86,6 +104,7 @@ export async function createTaskTemplate(authIn: AuthPayload | null, input: Task
     recurrence: input.recurrence,
     weekdays,
     monthDay: input.recurrence === "MONTHLY" ? input.monthDay ?? undefined : undefined,
+    weekOfMonth: input.recurrence === "MONTHLY_WEEKDAY" ? input.weekOfMonth ?? undefined : undefined,
     active: true,
   });
   await writeAudit({

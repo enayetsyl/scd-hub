@@ -107,7 +107,8 @@ other row-gate in the app.
 - **WB-1 (server + app) — manual tasks.** `Task`, `TaskService`, resolvers, my board, task detail,
   new-task form, assigned-by-me, five notification kinds, `TASK_WRITE` audit. *(built)*
 - **WB-2 (server + app) — auto cards + templates.** Eight adapters in `WorkBoardService`,
-  `TaskTemplate` + morning materialisation, drawer badge. *(built)*
+  `TaskTemplate` + morning materialisation, drawer badge. *(built)* Recurrences: every school day,
+  weekly, monthly on a date, **monthly on a weekday** (the Nth or last Saturday…; owner ask 2026-09-30).
 - **WB-3 (server + app) — load grid.** `LoadService`, `workLoadGrid`, `assignableStaff` with
   today's load, the Sat–Thu grid screen with per-category colouring, drill-down to a person's
   day, move / reassign from the task. *(built)*
