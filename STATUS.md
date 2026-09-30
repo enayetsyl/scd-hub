@@ -1,5 +1,7 @@
 # STATUS
 
+- 2026-09-30 (cont. 5): **FIXED — Gift report chip hidden from the Office login, branch `fix/gift-report-office` off `origin/dev`.** Akmol (OFFICE, `gift:manage`, no `tracker:read`) had no 🎁 button on Assignments; the chip gated on `tracker:read` alone while the resolvers accept either. One-line gate fix (`canTrackerRead || canGift`); the 4-week Higher-gift block is a section of the same screen. D-#702 (office cards to the desk, leave-cover pulls) was promoted to prod via #911 → #912 earlier this session.
+
 - 2026-09-30 (cont. 4): **BUILT — office-queue cards to the desk only + leave-cover pulls (D-#702), branch `feat/wb-office-cover` off `origin/dev` (after #908 merged to dev; NOT promoted — owner: merge to dev only).** Prod read (SSH, read-only): Akmol is the one OFFICE-role login; Tazkir and Akter Hossen are TEACHER logins carrying the OFFICE template (so they already hold `tasks:assign` — no grant needed — but were also receiving the 4 open print jobs). Now: desk cards → primary OFFICE only; desk on approved leave → backups (OFFICE/PRINCIPAL template or role) see them with a pull button; `WorkCardPull` moves a card to the puller alone; release gives it back. `OfficeCoverService` holds the pure rules (tested) and the leave join. Self-tasks for everyone were already there.
   **Now / next:** PR → `dev`; promote on the owner's word. Open question for the owner: should the Principal see leave applications by default (as the approver), or only while the desk is away — currently the latter, same as print.
 
