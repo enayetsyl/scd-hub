@@ -148,6 +148,30 @@ describe("groupWinnersByClass", () => {
     expect(groups[0].outstanding).toBe(2);
   });
 
+  test("an unhanded higher gift counts as outstanding, alongside the weekly one", () => {
+    // The Today card hands out BOTH gifts; a badge that ignored the higher gift read ✅
+    // while a 4-week winner was still owed one.
+    const groups = groupWinnersByClass(
+      [
+        row({ studentId: "a", studentName: "Abdullah", streakMilestoneWeeks: [10], awards: [{ kind: "WEEKLY", weekNumber: 10 }] }),
+        row({ studentId: "b", studentName: "Bilal", streakMilestoneWeeks: [10] }),
+        row({
+          studentId: "c",
+          studentName: "Asila",
+          streakMilestoneWeeks: [10],
+          awards: [
+            { kind: "WEEKLY", weekNumber: 10 },
+            { kind: "STREAK", weekNumber: 10 },
+          ],
+        }),
+      ],
+      10,
+    );
+    // a: weekly given, streak owed (1) · b: both owed (2) · c: nothing owed (0)
+    expect(groups[0].outstanding).toBe(3);
+    expect(giftTotals(groups)).toEqual({ winners: 3, outstanding: 3 });
+  });
+
   test("no winners at all is an empty list, not a crash", () => {
     expect(groupWinnersByClass([], 10)).toEqual([]);
     expect(giftTotals([])).toEqual({ winners: 0, outstanding: 0 });
