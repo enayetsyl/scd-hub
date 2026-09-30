@@ -646,6 +646,12 @@ export interface WorkBoardCounts {
 export async function boardCountsFor(user: BoardUser, now = new Date()): Promise<WorkBoardCounts> {
   const todayKey = dateKeyOf(now);
   const cards = await boardFor([user], todayKey, todayKey, now);
+  // Only cards DATED today count as "open today": a marks card whose deadline is
+  // still ahead sits on a future day and would otherwise inflate the badge above
+  // what the board's আজ view shows (prod, 2026-09-30: badge 14 vs tile 11).
   const open = cards.filter((c) => c.status !== "DONE");
-  return { openToday: open.filter((c) => !c.overdue).length, overdue: open.filter((c) => c.overdue).length };
+  return {
+    openToday: open.filter((c) => !c.overdue && c.dateKey === todayKey).length,
+    overdue: open.filter((c) => c.overdue).length,
+  };
 }
