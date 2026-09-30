@@ -103,13 +103,14 @@ const input = (over: Partial<SheetInput> = {}): SheetInput => ({
       },
     ],
     bySubject: [
-      { subject: "ENG", examsTaken: 3, avgPercent: 68.3, latestPercent: 70, previousPercent: 62, trend: "up" },
+      { subject: "ENG", examsTaken: 3, avgPercent: 68.3, latestPercent: 70, previousPercent: 62, trend: "up", classAvgPercent: null, classHighestPercent: null },
     ],
     analytics: {
       examsPresent: 3, avgPercent: 68.3, consistency: 4.2, slope: 3.1, trajectory: "up",
       atRisk: false, streakKind: "pass", streakLength: 3,
       bestSubject: "ENG", weakestSubject: "MATH",
       recurringWeaknesses: [{ tag: "বানান দুর্বল", count: 2 }],
+      classAvgPercent: null, classHighestPercent: null,
       latestRank: 2, latestRankOf: 7,
     },
   },
