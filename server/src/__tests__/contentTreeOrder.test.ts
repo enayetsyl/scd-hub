@@ -93,3 +93,34 @@ describe("compareForTree — the ordering Mongo used to give", () => {
     expect(sorted(sorted(xs))).toEqual(sorted(xs));
   });
 });
+
+// ---------------------------------------------------------------------------
+// Grouped tree order (owner report 2026-09-30): a chapter with only session plans must
+// sit in NUMBER order, not after every chapter that has a chapter plan.
+// ---------------------------------------------------------------------------
+import { sortTreeNodes } from "../modules/content/resolvers/content";
+
+describe("sortTreeNodes", () => {
+  const ch = (number: string, anchorWord = "পাঠ") => ({ anchorWord, number, title: null, artifacts: [] as string[] });
+
+  test("chapters sort numerically — a session-only chapter 3 lands between 2 and 22, not after 52", () => {
+    // The order grouping produced: chapter-plan chapters first, session-only ones after.
+    const [node] = sortTreeNodes([{ subject: "BAN", classLevel: 1, chapters: [ch("1"), ch("2"), ch("22"), ch("52"), ch("3")] }]);
+    expect(node.chapters.map((c) => c.number)).toEqual(["1", "2", "3", "22", "52"]);
+  });
+
+  test("subject/class groups sort by subject then class", () => {
+    const out = sortTreeNodes([
+      { subject: "MATH", classLevel: 1, chapters: [] },
+      { subject: "BAN", classLevel: 2, chapters: [] },
+      { subject: "BAN", classLevel: 1, chapters: [] },
+    ]);
+    expect(out.map((n) => `${n.subject}${n.classLevel}`)).toEqual(["BAN1", "BAN2", "MATH1"]);
+  });
+
+  test("artifacts inside a chapter keep their order (chapter plan before its sessions)", () => {
+    const c = { anchorWord: "পাঠ", number: "3", artifacts: ["chapter_plan", "session 1", "session 2"] };
+    const [node] = sortTreeNodes([{ subject: "BAN", classLevel: 1, chapters: [c] }]);
+    expect(node.chapters[0].artifacts).toEqual(["chapter_plan", "session 1", "session 2"]);
+  });
+});
