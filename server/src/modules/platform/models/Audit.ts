@@ -261,6 +261,7 @@ export type AuditEventKind =
   | "SCHOLARSHIP_SCORES_ENTERED" // per-item marks written for one or more students on one paper
   | "IMPERSONATION_START"     // Principal opened someone else's account view; target = the account
   | "IMPERSONATION_END"       // returned to their own account (or the borrowed token expired)
+  | "TASK_WRITE"              // work board (WB-1, D-#701): a manual task/template created, moved, re-statused, reassigned, blocked, cancelled — meta.action
   | "PERMISSION_DENIED";
 
 export interface IAudit extends Document {

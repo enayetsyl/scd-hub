@@ -1437,6 +1437,19 @@ export const NOTIFICATION_KINDS = [
   //                      is theirs alone (assertCanPublish), so nobody else can act.
   "EXAM_SYLLABUS_PUBLISHED",
   "EXAM_SYLLABUS_AWAITING_PUBLISH",
+  // Work board (WB-1, D-#701; app-native, NO wire twin). Manual tasks only — auto cards
+  // keep the reminders their source modules already send (class-note prompt, homework
+  // chase, print request), so nothing is told twice.
+  //   ASSIGNED   → the assignee, the instant a task lands on their board (or is handed over)
+  //   DUE_DIGEST → each staff member with open work, 07:30 on a school day: today's count
+  //   OVERDUE    → assignee AND assigner, 16:00 on a school day, once per task per day
+  //   DONE       → the assigner, when the assignee finishes (self-assigned: nobody)
+  //   BLOCKED    → the assigner, when the assignee marks the task stuck with a reason
+  "TASK_ASSIGNED",
+  "TASK_DUE_DIGEST",
+  "TASK_OVERDUE",
+  "TASK_DONE",
+  "TASK_BLOCKED",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
@@ -1489,6 +1502,11 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   STUDENT_RETURNED: "ছুটি শেষে ফিরেছে",
   EXAM_SYLLABUS_PUBLISHED: "পরীক্ষার সিলেবাস প্রকাশিত",
   EXAM_SYLLABUS_AWAITING_PUBLISH: "সিলেবাস প্রকাশের অপেক্ষায়",
+  TASK_ASSIGNED: "নতুন কাজ",
+  TASK_DUE_DIGEST: "আজকের কাজ",
+  TASK_OVERDUE: "কাজ বকেয়া",
+  TASK_DONE: "কাজ শেষ",
+  TASK_BLOCKED: "কাজ আটকে আছে",
 };
 export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   BELL_REMINDER: "Bell reminder",
@@ -1539,6 +1557,11 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   STUDENT_RETURNED: "Back after an absence",
   EXAM_SYLLABUS_PUBLISHED: "Exam syllabus published",
   EXAM_SYLLABUS_AWAITING_PUBLISH: "Syllabus awaiting publication",
+  TASK_ASSIGNED: "New task",
+  TASK_DUE_DIGEST: "Today's tasks",
+  TASK_OVERDUE: "Task overdue",
+  TASK_DONE: "Task done",
+  TASK_BLOCKED: "Task blocked",
 };
 
 /**
@@ -3806,6 +3829,11 @@ export const PERMISSIONS = [
                            // guardian is deliberately NOT a permission — it rides the PRINCIPAL role inside the resolver
                            // (the exam:manage / D-#397 posture), so authoring can be delegated without the release.
                            // Staff-internal — GUARDIAN reads a released analysis via guardian:read_child (SC-5).
+  // work board (WB-1, D-#701): put a task on SOMEONE ELSE's board, read anyone's board,
+  // the load grid and the templates. Everyone creates tasks for THEMSELVES with no
+  // permission at all. Principal + Office by template; a teacher-admin (Taskir/Akhtar)
+  // reaches it by AC-1 grant — the D-#405 posture.
+  "tasks:assign",
   // guardian portal (ACTIVE since GP-1, D-#68)
   "guardian:read_child",   // reads linked children's permitted operational slices
 ] as const;
@@ -3870,6 +3898,7 @@ export const PERMISSION_BUILD_STATUS: Record<Permission, "build" | "pipeline"> =
   "exam:read": "build",           // SY-1 (row-scoped syllabus read)
   "scholarship:manage": "build",  // SC-0/SC-1/SC-2 (topic catalogue, paper declaration, mark entry)
   "scholarship:read": "build",    // SC-3/SC-4 (per-student + class weakness analysis)
+  "tasks:assign": "build",        // WB-1 (D-#701): assign tasks, read others' boards, the load grid
   "guardian:read_child": "build", // ACTIVATED by Guardian Portal GP-1 (D-#68; was pipeline since Slice 0)
 };
 
@@ -3898,6 +3927,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "access:manage",         // PRINCIPAL ONLY (Access Control AC-1, D-#193/#212) — RESERVED-locked; Office/Teacher/Guardian never get it
     "observation:upload", "observation:read", "observation:manage", // classroom observation (CO-1, D-#195) — NOT observation:review (the observer is an assigned TEACHER, D-#147)
     "finance:manage",        // finance/accounting (FIN-1, D-#221) — Principal+Office
+    "tasks:assign",          // work board (WB-1, D-#701): assign to anyone, read every board + the load grid
     "report:release",        // monthly progress report: release/re-release + the MR-2 thresholds. The Principal
                              // ALSO holds the three override powers by role (D-#397) — see the permission's note.
     // Book production — ALL SEVEN (D-#424, owner ruling). The Principal can author,
@@ -3959,6 +3989,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
                              // PRINCIPAL_REVIEW and only the Principal moves it on (D-#533, §7.4).
     "scholarship:manage", "scholarship:read", // the desk declares and scores a practice paper on a teacher's behalf
                              // (SC-1). RELEASE to a guardian is refused to Office by ROLE, not by permission (D-#656).
+    "tasks:assign",          // work board (WB-1, D-#701): the desk puts work on colleagues' boards and reads the load grid
   ],
   // Guardian portal v1 (GP-1, D-#68): the single grant is ACTIVE — guardian-scoped
   // resolvers read linked children only (assertGuardianOfStudent, link-scoped).
@@ -4188,6 +4219,7 @@ export const PERMISSION_LABELS_BN: Record<Permission, PermissionLabel> = {
   "exam:read": { name: "পরীক্ষার সিলেবাস দেখা", desc: "প্রকাশিত সিলেবাস ও মানবন্টন দেখা" },
   "scholarship:manage": { name: "বৃত্তি অনুশীলন ব্যবস্থাপনা", desc: "অনুশীলন প্রশ্ন ঘোষণা, টপিক তালিকা রক্ষণাবেক্ষণ ও আইটেমভিত্তিক নম্বর লেখা" },
   "scholarship:read": { name: "বৃত্তি অনুশীলন বিশ্লেষণ দেখা", desc: "অনুশীলন প্রশ্ন ও কোন শিক্ষার্থী কোন টপিকে দুর্বল তার বিশ্লেষণ দেখা" },
+  "tasks:assign": { name: "কাজ দেওয়া", desc: "অন্যের বোর্ডে কাজ দেওয়া, সবার বোর্ড ও কাজের চাপ দেখা" },
   "guardian:read_child": { name: "সন্তানের তথ্য দেখা (অভিভাবক প্লেন)", desc: "অভিভাবক প্লেন — স্টাফকে দেওয়া যায় না" },
 };
 
@@ -4251,6 +4283,7 @@ export const PERMISSION_LABELS_EN: Record<Permission, PermissionLabel> = {
   "exam:read": { name: "Read exam syllabus", desc: "Read published syllabuses and mark distributions" },
   "scholarship:manage": { name: "Manage scholarship practice", desc: "Declare a practice paper and its items, maintain the topic catalogue, enter per-item marks" },
   "scholarship:read": { name: "Read scholarship analysis", desc: "Read practice papers and the topic-wise weakness analysis" },
+  "tasks:assign": { name: "Assign tasks", desc: "Put work on other people's boards, read every board and the load grid" },
   "guardian:read_child": { name: "Read child (guardian plane)", desc: "Guardian plane — not grantable to staff" },
 };
 
@@ -4631,3 +4664,140 @@ export const SCHOLARSHIP_CLASS_GAP_FLAG = -15;
  *  (the topic catalogue, every declared paper, the analysis) is already class-five only.
  *  Add a level here and the picker widens; nothing else needs to know. */
 export const SCHOLARSHIP_CLASS_LEVELS: readonly number[] = [5];
+
+// ===========================================================================
+// Work board (WB-1, D-#701) — one board per staff member: MANUAL tasks (a Task
+// row, typed by a person) beside AUTO cards (projections over records other
+// modules already keep — a routine period, a proxy class, homework awaiting
+// checking, class-test marks, a video/plan review, a print job, a leave
+// application). An auto card is never stored and never edited on the board: it
+// finishes when its SOURCE record changes (class note published, marks saved…).
+// ===========================================================================
+
+/** Manual-task status: three columns. "Blocked" is a FLAG on a TODO/DOING task
+ *  (with a reason), not a fourth state — owner ruling 2026-09-30. */
+export const TASK_STATUSES = ["TODO", "DOING", "DONE"] as const;
+export type TaskStatus = (typeof TASK_STATUSES)[number];
+export const TASK_STATUS_LABELS_BN: Record<TaskStatus, string> = {
+  TODO: "করতে হবে",
+  DOING: "চলছে",
+  DONE: "শেষ",
+};
+export const TASK_STATUS_LABELS_EN: Record<TaskStatus, string> = {
+  TODO: "To do",
+  DOING: "Doing",
+  DONE: "Done",
+};
+
+/** Priority is set by the ASSIGNER; the board sorts overdue → priority → slot. */
+export const TASK_PRIORITIES = ["URGENT", "NORMAL", "LATER"] as const;
+export type TaskPriority = (typeof TASK_PRIORITIES)[number];
+export const TASK_PRIORITY_LABELS_BN: Record<TaskPriority, string> = {
+  URGENT: "জরুরি",
+  NORMAL: "সাধারণ",
+  LATER: "পরে",
+};
+export const TASK_PRIORITY_LABELS_EN: Record<TaskPriority, string> = {
+  URGENT: "Urgent",
+  NORMAL: "Normal",
+  LATER: "Later",
+};
+
+/** Which part of the school day a card sits in. Auto cards derive it from their
+ *  clock time (a period's start); manual tasks carry it (ANY = no preference). */
+export const DAY_SLOTS = ["MORNING", "MIDDAY", "AFTERNOON", "ANY"] as const;
+export type DaySlot = (typeof DAY_SLOTS)[number];
+export const DAY_SLOT_LABELS_BN: Record<DaySlot, string> = {
+  MORNING: "সকাল",
+  MIDDAY: "দুপুর",
+  AFTERNOON: "বিকাল",
+  ANY: "যেকোনো সময়",
+};
+export const DAY_SLOT_LABELS_EN: Record<DaySlot, string> = {
+  MORNING: "Morning",
+  MIDDAY: "Midday",
+  AFTERNOON: "Afternoon",
+  ANY: "Any time",
+};
+/** Clock boundaries (minutes of the Dhaka day) used to place a timed auto card. */
+export const DAY_SLOT_BOUNDARIES_MIN = { middayFrom: 11 * 60, afternoonFrom: 13 * 60 + 30 } as const;
+
+/** A recurring task is a TaskTemplate; the scheduler materialises one Task per
+ *  matching SCHOOL day (never on OFF/HOLIDAY — the class-note prompt posture). */
+export const TASK_RECURRENCES = ["SCHOOL_DAYS", "WEEKLY", "MONTHLY"] as const;
+export type TaskRecurrence = (typeof TASK_RECURRENCES)[number];
+export const TASK_RECURRENCE_LABELS_BN: Record<TaskRecurrence, string> = {
+  SCHOOL_DAYS: "প্রতি স্কুল দিন",
+  WEEKLY: "প্রতি সপ্তাহে",
+  MONTHLY: "মাসের নির্দিষ্ট তারিখে",
+};
+export const TASK_RECURRENCE_LABELS_EN: Record<TaskRecurrence, string> = {
+  SCHOOL_DAYS: "Every school day",
+  WEEKLY: "Weekly",
+  MONTHLY: "Monthly on a date",
+};
+
+/** Every card kind the board can show. TASK is the manual row; the rest are auto. */
+export const WORK_CARD_KINDS = [
+  "TASK",
+  "PERIOD",
+  "COVER",
+  "HOMEWORK_CHECK",
+  "CLASS_TEST_MARKS",
+  "VIDEO_REVIEW",
+  "PLAN_REVIEW",
+  "PRINT_JOB",
+  "LEAVE_APPROVAL",
+] as const;
+export type WorkCardKind = (typeof WORK_CARD_KINDS)[number];
+export const WORK_CARD_KIND_LABELS_BN: Record<WorkCardKind, string> = {
+  TASK: "কাজ",
+  PERIOD: "ক্লাস",
+  COVER: "প্রক্সি ক্লাস",
+  HOMEWORK_CHECK: "বাড়ির কাজ দেখা",
+  CLASS_TEST_MARKS: "নম্বর এন্ট্রি",
+  VIDEO_REVIEW: "ভিডিও পর্যবেক্ষণ",
+  PLAN_REVIEW: "পরিকল্পনা রিভিউ",
+  PRINT_JOB: "প্রিন্ট",
+  LEAVE_APPROVAL: "ছুটির অনুমোদন",
+};
+export const WORK_CARD_KIND_LABELS_EN: Record<WorkCardKind, string> = {
+  TASK: "Task",
+  PERIOD: "Class period",
+  COVER: "Proxy class",
+  HOMEWORK_CHECK: "Check homework",
+  CLASS_TEST_MARKS: "Enter marks",
+  VIDEO_REVIEW: "Video review",
+  PLAN_REVIEW: "Plan review",
+  PRINT_JOB: "Print job",
+  LEAVE_APPROVAL: "Leave approval",
+};
+
+/** Derived effort for auto cards (owner ruling 2026-09-30: derived, never typed).
+ *  A period's minutes come from its grid; these are the per-unit rates for the rest. */
+export const WORK_EFFORT_MIN = {
+  homeworkPerCopy: 2,
+  classTestPerStudent: 1,
+  videoReview: 30,
+  planReview: 20,
+  printJob: 10,
+  leaveApproval: 5,
+  /** A period whose grid times cannot be resolved. */
+  periodFallback: 40,
+} as const;
+
+/** Load colours are PER CATEGORY (owner ruling 2026-09-30): open minutes on a day
+ *  at or above `amber` colour amber, at or above `red` colour red. */
+export const WORK_LOAD_THRESHOLDS_MIN: Record<HrCategory, { amber: number; red: number }> = {
+  teacher: { amber: 300, red: 390 },
+  assistant_hifz: { amber: 300, red: 390 },
+  office_accounts: { amber: 360, red: 450 },
+  support: { amber: 360, red: 450 },
+};
+export type LoadLevel = "ok" | "amber" | "red";
+export function loadLevelFor(category: HrCategory | null | undefined, minutes: number): LoadLevel {
+  const t = WORK_LOAD_THRESHOLDS_MIN[category ?? "teacher"] ?? WORK_LOAD_THRESHOLDS_MIN.teacher;
+  if (minutes >= t.red) return "red";
+  if (minutes >= t.amber) return "amber";
+  return "ok";
+}

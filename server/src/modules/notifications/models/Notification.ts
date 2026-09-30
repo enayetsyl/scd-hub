@@ -55,6 +55,8 @@ export interface NotificationRefs {
   /** Parents'-meeting timing notice (deep-link: GuardianMeetingSlot; CM-4, D-#176). */
   parentMeetingId?: string;
   meetingSlotId?: string;
+  /** Work-board manual task (deep-link: TaskDetail; WB-1, D-#701). */
+  taskId?: string;
   /** Classroom-observation release / response / escalation (deep-link: ObservationDetail; CO-3). */
   observationId?: string;
   teacherId?: string;
@@ -135,6 +137,7 @@ const RefsSchema = new Schema<NotificationRefs>(
     hour: { type: Number },
     vocabTestId: { type: String },
     classTestId: { type: String },
+    taskId: { type: String },
     studentCommentId: { type: String },
     parentMeetingId: { type: String },
     meetingSlotId: { type: String },

@@ -356,6 +356,8 @@ export const AUDIT_KIND_LABELS: Record<AuditEventKind, AuditKindLabel> = {
   SCHOLARSHIP_CANDIDATE_ADDED: { bn: "বৃত্তি পরীক্ষার তালিকায় যোগ করেছেন", en: "Entered a student for the scholarship exam", group: "SCHOLARSHIP" },
   SCHOLARSHIP_CANDIDATE_REMOVED: { bn: "বৃত্তি পরীক্ষার তালিকা থেকে বাদ দিয়েছেন", en: "Removed a student from the scholarship exam", group: "SCHOLARSHIP" },
   SCHOLARSHIP_ANALYSIS_EXPORTED: { bn: "শিক্ষার্থীর বিশ্লেষণ নামিয়েছেন", en: "Downloaded a student's analysis", group: "SCHOLARSHIP" },
+  // Work board (WB-1, D-#701)
+  TASK_WRITE: { bn: "কাজের বোর্ডে কাজ বদলেছেন", en: "Changed a work-board task", group: "HR" },
 };
 
 const FALLBACK_GROUP: ActivityGroup = "OTHER";

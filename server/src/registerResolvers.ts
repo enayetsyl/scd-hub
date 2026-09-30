@@ -32,6 +32,7 @@ import "./modules/trackers/resolvers/assignment";
 import "./modules/trackers/resolvers/assignmentHandout";
 import "./modules/trackers/resolvers/assignmentGift";
 import "./modules/printing/resolvers/printRequest";
+import "./modules/workboard/resolvers/workBoard";
 import "./modules/trackers/resolvers/wholePicture";
 import "./modules/trackers/resolvers/studentProfile";
 import "./modules/trackers/resolvers/workClaim";
