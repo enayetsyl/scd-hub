@@ -5287,6 +5287,9 @@ const STR_BN = {
   syLevelsHint: "প্রথম শ্রেণি থেকে কুরআন ও আরবি লেভেল অনুযায়ী পড়ানো হয় — শ্রেণি অনুযায়ী নয়। তাই এই সিলেবাসগুলো এখানে, শ্রেণির তালিকায় নয়।",
   syLevelStudents: "জন শিক্ষার্থী",
   syNoLevels: "কোনো লেভেল গ্রুপে এখনও শিক্ষার্থী নেই।",
+  // --- Guardian announcement popup (D-#700) ---
+  anLater: "পরে দেখব",
+  anOpen: "দেখুন",
   // --- Per-paper পূর্ণমান (D-#694) ---
   syFullMarksField: "পূর্ণমান",
   syFullMarksHint: "সাধারণত ১০০। প্রাক-প্রাথমিকের কুরআন ও আরবি ৫০ নম্বরের।",
@@ -9679,6 +9682,9 @@ const STR_EN: StrTable = {
     "From class one up, Quran and Arabic are taught by level rather than by class — so these syllabuses live here, not on the class list.",
   syLevelStudents: "students",
   syNoLevels: "No level group has students yet.",
+  // --- Guardian announcement popup (D-#700) ---
+  anLater: "Later",
+  anOpen: "Open",
   // --- Per-paper full marks (D-#694) ---
   syFullMarksField: "Full marks",
   syFullMarksHint: "Usually 100. Pre-primary Quran and Arabic are out of 50.",
