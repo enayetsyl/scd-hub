@@ -67,6 +67,11 @@ export interface ClassroomObservationT {
   cancelledAt: string | null;
   cancelledBy: string | null;
   cancelledReason: string | null;
+  /** The cancel was the assigned observer rejecting the video, not a manager call-off. */
+  rejectedByObserver: boolean;
+  /** Set when Principal/Office edited the review before publishing. */
+  reviewEditedAt: string | null;
+  reviewEditedBy: string | null;
   domains: ObsDomainScoreT[];
   gates: ObsGateScoreT[];
   oneStrength: string | null;
@@ -89,7 +94,7 @@ export interface ClassroomObservationT {
 }
 
 const QURAN_PAYLOAD_FIELDS = `quran { ratings { criterion score note } compliance { item yesNo } strengths improvements suggestions }`;
-const OBSERVATION_FIELDS = `id form routineSlotId sectionId subjectGroupId subject teacherId classDate periodNumber observerId state createdBy assignedAt reviewedAt publishedAt publishedBy withheldAt withheldBy withheldReason cancelledAt cancelledBy cancelledReason domains { domain level note } gates { gate result breachNote } oneStrength growthFocus prevObservationId priorFocusProgress priorFocusNote overallSuggestion ${QURAN_PAYLOAD_FIELDS} recordingId hasFairnessRating fairnessRating usefulnessRating teacherResponse supersededById createdAt updatedAt`;
+const OBSERVATION_FIELDS = `id form routineSlotId sectionId subjectGroupId subject teacherId classDate periodNumber observerId state createdBy assignedAt reviewedAt publishedAt publishedBy withheldAt withheldBy withheldReason cancelledAt cancelledBy cancelledReason rejectedByObserver reviewEditedAt reviewEditedBy domains { domain level note } gates { gate result breachNote } oneStrength growthFocus prevObservationId priorFocusProgress priorFocusNote overallSuggestion ${QURAN_PAYLOAD_FIELDS} recordingId hasFairnessRating fairnessRating usefulnessRating teacherResponse supersededById createdAt updatedAt`;
 
 export const CLASSROOM_OBSERVATION_QUERY = gql<
   { classroomObservation: ClassroomObservationT | null },
@@ -297,6 +302,46 @@ export const REVIEW_CLASSROOM_OBSERVATION = gql<
       oneStrength: $oneStrength, growthFocus: $growthFocus, priorFocusProgress: $priorFocusProgress,
       priorFocusNote: $priorFocusNote, overallSuggestion: $overallSuggestion, quran: $quran
     ) { ${OBSERVATION_FIELDS} }
+  }
+`;
+
+/** Principal/Office edit a REVIEWED review before publishing — same payload as a review;
+ *  the observer's original is kept server-side. */
+export const EDIT_CLASSROOM_OBSERVATION_REVIEW = gql<
+  { editClassroomObservationReview: ClassroomObservationT },
+  {
+    observationId: string;
+    domains?: Ref11DomainInput[] | null;
+    gates?: Ref11GateInput[] | null;
+    oneStrength?: string | null;
+    growthFocus?: string | null;
+    priorFocusProgress?: string | null;
+    priorFocusNote?: string | null;
+    overallSuggestion?: string | null;
+    quran?: QuranReviewInput | null;
+  }
+>`
+  mutation EditClassroomObservationReview(
+    $observationId: String!, $domains: [Ref11DomainInput!], $gates: [Ref11GateInput!],
+    $oneStrength: String, $growthFocus: String, $priorFocusProgress: String,
+    $priorFocusNote: String, $overallSuggestion: String, $quran: QuranReviewInput
+  ) {
+    editClassroomObservationReview(
+      observationId: $observationId, domains: $domains, gates: $gates,
+      oneStrength: $oneStrength, growthFocus: $growthFocus, priorFocusProgress: $priorFocusProgress,
+      priorFocusNote: $priorFocusNote, overallSuggestion: $overallSuggestion, quran: $quran
+    ) { ${OBSERVATION_FIELDS} }
+  }
+`;
+
+/** The assigned observer rejects a video they cannot review (class test, blank footage).
+ *  Reason required; stored as a cancel, so the Principal can restore it. */
+export const REJECT_CLASSROOM_OBSERVATION = gql<
+  { rejectClassroomObservation: ClassroomObservationT },
+  { observationId: string; reason: string }
+>`
+  mutation RejectClassroomObservation($observationId: String!, $reason: String!) {
+    rejectClassroomObservation(observationId: $observationId, reason: $reason) { ${OBSERVATION_FIELDS} }
   }
 `;
 

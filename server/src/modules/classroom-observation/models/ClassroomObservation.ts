@@ -142,6 +142,13 @@ export interface IClassroomObservation extends Document {
   cancelledAt?: Date | null;
   cancelledBy?: Types.ObjectId | null;
   cancelledReason?: string | null;
+  // --- Principal/Office edit before publish (like the Comments reviewer edit) ------
+  /** The observer's review exactly as submitted, snapshotted on the FIRST manager edit
+   *  (null = never edited). Kept so the record of what the observer actually wrote —
+   *  and any calibration read that should judge the observer — survives the edit. */
+  originalReview?: Record<string, unknown> | null;
+  reviewEditedAt?: Date | null;
+  reviewEditedBy?: Types.ObjectId | null;
   // --- REF-11 payload (set at REVIEW; empty until then) — NO total/average -----
   domains: IDomainScore[];
   gates: IGateScore[];
@@ -245,6 +252,9 @@ const ClassroomObservationSchema = new Schema<IClassroomObservation>(
     cancelledAt: { type: Date, default: null },
     cancelledBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
     cancelledReason: { type: String, trim: true, default: null },
+    originalReview: { type: Schema.Types.Mixed, default: null },
+    reviewEditedAt: { type: Date, default: null },
+    reviewEditedBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
     domains: { type: [DomainScoreSchema], default: [] },
     gates: { type: [GateScoreSchema], default: [] },
     oneStrength: { type: String, trim: true, default: null },

@@ -360,7 +360,9 @@ export type ObservationStackParamList = {
   MyReviewHistory: undefined;
   /** CO-14 (D-#426) — build a review rota from a written instruction. */
   ObservationRota: undefined;
-  ReviewObservation: { observationId: string; form: string; title: string };
+  /** `mode: "edit"` = Principal/Office editing a REVIEWED, unpublished review: the form
+   *  opens prefilled from the server and saves via editClassroomObservationReview. */
+  ReviewObservation: { observationId: string; form: string; title: string; mode?: "edit" };
   ObservationDetail: { observationId: string; title?: string };
   CompareObservations: { recordingId: string; title?: string };
   ObservationTrend: undefined;
