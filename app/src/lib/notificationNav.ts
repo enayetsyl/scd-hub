@@ -30,9 +30,19 @@ export function notificationTarget(
     case "ATTENDANCE_REMINDER":
       return { tab: "AttendanceTab", screen: "AttendanceHome" };
     case "CLASS_NOTE_PROMPT":
-    case "COVER_ASSIGNED":
       // MyRoutine carries the teacher's day + the notes-to-publish prompt.
       return { tab: "RoutineTab", screen: "MyRoutine" };
+    case "COVER_ASSIGNED":
+      // My class notes ON THE COVER'S DATE — its `myDay` read overlays both cover
+      // kinds (HR leave-cover + routine substitution). MyRoutine lists only the
+      // teacher's own recurring slots live today, so a cover never appeared there,
+      // and a teacher with no own slots yet saw "No routine slots" (owner report
+      // 2026-09-30, a cover for the next day).
+      return {
+        tab: "ClassNotesTab",
+        screen: "MyClassNotes",
+        params: refs?.date ? { date: refs.date } : undefined,
+      };
     case "CLASS_NOTE_ESCALATION":
       return { tab: "RoutineTab", screen: "RoutineHome" };
     case "CLASS_NOTE_PUBLISHED":
