@@ -662,3 +662,40 @@ describe("overdueChaseList", () => {
     expect(list.entries).toEqual([]);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Class comparison on the student profile (owner ask 2026-09-30)
+// ---------------------------------------------------------------------------
+import { classComparisonOf } from "../modules/trackers/services/ClassTestSummaryService";
+
+describe("classComparisonOf — class average + class highest over the same tests", () => {
+  const exam = (id: string, subject: "BAN" | "ENG", totalMarks = 20) => ({
+    _id: { toString: () => id } as unknown as mongoose.Types.ObjectId,
+    subject,
+    totalMarks,
+    passMark: 8,
+  });
+  const exams = [exam("t1", "BAN"), exam("t2", "BAN"), exam("t3", "ENG", 10)];
+  const r = (studentId: string, testId: string, marks: number) => ({ studentId, testId, marks });
+
+  test("per subject: mean and best of each student's OWN average", () => {
+    const { bySubject } = classComparisonOf(exams, [
+      r("a", "t1", 20), r("a", "t2", 10), // a: 100, 50 → 75
+      r("b", "t1", 10), r("b", "t2", 10), // b: 50, 50 → 50
+    ]);
+    expect(bySubject.get("BAN")).toEqual({ avg: 62.5, highest: 75 });
+    expect(bySubject.get("ENG")).toBeUndefined();
+  });
+
+  test("overall: each student's average across every subject, then mean + best", () => {
+    const { overall } = classComparisonOf(exams, [
+      r("a", "t1", 20), r("a", "t3", 5), // a: 100, 50 → 75
+      r("b", "t1", 16), r("b", "t3", 10), // b: 80, 100 → 90
+    ]);
+    expect(overall).toEqual({ avg: 82.5, highest: 90 });
+  });
+
+  test("results on tests outside the profile's exams are ignored; nobody sat → nulls", () => {
+    expect(classComparisonOf(exams, [r("a", "other", 20)]).overall).toEqual({ avg: null, highest: null });
+  });
+});

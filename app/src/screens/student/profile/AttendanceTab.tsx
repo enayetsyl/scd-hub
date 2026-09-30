@@ -12,7 +12,7 @@
  */
 import React, { useMemo, useState } from "react";
 import { Pressable, Text, View } from "react-native";
-import type { ProfileAttendanceT } from "../../../graphql/studentProfile";
+import type { ProfileAttendanceT, ProfileClassAttendanceT } from "../../../graphql/studentProfile";
 import { Body, Card, Loader, Muted, Notice } from "../../../components/ui";
 import { PieChart, type PieSlice } from "../../../components/PieChart";
 import { STR, bnNum, monthLabel } from "../../../lib/labels";
@@ -89,11 +89,14 @@ export function AttendanceTab({
   fetching,
   error,
   todayKey,
+  classComparison,
 }: {
   attendance: ProfileAttendanceT | null;
   fetching: boolean;
   error: string | null;
   todayKey: string;
+  /** The student's section over the same year-to-date window (average + best presence %). */
+  classComparison: ProfileClassAttendanceT | null;
 }): React.ReactElement {
   const colors = useColors();
   const [width, setWidth] = useState(0);
@@ -276,6 +279,21 @@ export function AttendanceTab({
           ]}
         />
       </Card>
+      {classComparison && classComparison.classSize > 0 ? (
+        <Card style={{ gap: space(2) }}>
+          <DataTable
+            columns={[
+              { label: STR.spVsClassYear, width: 200 },
+              { label: "", width: 90, align: "right" },
+            ]}
+            rows={[
+              { key: "me", cells: [STR.spThisStudent, pctText(yearCounts.marked ? (yearCounts.present / yearCounts.marked) * 100 : null)] },
+              { key: "avg", cells: [STR.spClassAvg, pctText(classComparison.avgPresentPct)] },
+              { key: "top", cells: [STR.spClassHighest, pctText(classComparison.highestPresentPct)] },
+            ]}
+          />
+        </Card>
+      ) : null}
       <Card style={{ gap: space(4) }}>
         <PieChart
           title={STR.spPieMonth}

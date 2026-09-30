@@ -20,10 +20,11 @@ import type { TrackerItemT, TrackerPanelT } from "../../../graphql/studentProfil
 import { Badge, Body, Button, Card, Chip, ChipRow, Loader, Muted, Notice } from "../../../components/ui";
 import { STR, bnNum, hwResultLabel, hwSubjectLabel, isoDateLabel, lifecycleStateLabel } from "../../../lib/labels";
 import { space, useColors } from "../../../theme";
-import { DataTable, SectionTitle, StatTile, TileRow, ToneText, pctText, toneForCount, toneForPct } from "./parts";
+import { DataTable, SectionTitle, StatTile, TileRow, ToneText, pctText, toneForCount, toneForPct, withN } from "./parts";
 
 type Bucket = "outstanding" | "upcoming" | "withTeacher" | "done";
-type Filter = "all" | Bucket;
+/** "late" = work the student did not bring on time — any item that needed a chase. */
+type Filter = "all" | Bucket | "late";
 
 const OWED = new Set(["GIVEN", "DUE", "CHASE"]);
 const WITH_TEACHER = new Set(["SUBMITTED", "CHECKED", "RESUBMIT"]);
@@ -142,7 +143,12 @@ export function TrackerTab({
   }, [items]);
 
   const listed = useMemo(
-    () => items.filter((i) => (!subject || i.subject === subject) && (filter === "all" || bucketOf(i) === filter)),
+    () =>
+      items.filter(
+        (i) =>
+          (!subject || i.subject === subject) &&
+          (filter === "all" || (filter === "late" ? i.chaseCount > 0 : bucketOf(i) === filter)),
+      ),
     [items, subject, filter],
   );
 
@@ -170,6 +176,15 @@ export function TrackerTab({
             value={bnNum(outstanding.length)}
             tone={toneForCount(outstanding.length)}
             onPress={outstanding.length > 0 ? () => { setSubject(null); setFilter("outstanding"); } : undefined}
+          />
+          {/* Not brought on time = the item needed at least one chase (the teacher's
+              "did not bring it" pass). Tap to list exactly those items. */}
+          <StatTile
+            label={STR.spNotOnTime}
+            value={bnNum(t.chased)}
+            sub={`${withN(STR.spNotOnTimeSub, t.sheets)} · ${STR.spChased} ${bnNum(t.chaseTotal)}`}
+            tone={toneForCount(t.chased, 5)}
+            onPress={t.chased > 0 ? () => { setSubject(null); setFilter("late"); setLimit(PAGE); } : undefined}
           />
           {!isAssignment ? (
             <StatTile
@@ -207,6 +222,7 @@ export function TrackerTab({
                     { label: STR.spColCount, width: 70, align: "right" },
                     { label: STR.spAvgMarks, width: 100, align: "right" },
                     { label: STR.spColLatest, width: 90, align: "right" },
+                    { label: STR.spColLate, width: 80, align: "right" },
                     { label: STR.spColOutstanding, width: 90, align: "right" },
                   ]
                 : [
@@ -214,6 +230,7 @@ export function TrackerTab({
                     { label: STR.spColGiven, width: 70, align: "right" },
                     { label: STR.spSubmissionPct, width: 100, align: "right" },
                     { label: STR.spQualityPct, width: 100, align: "right" },
+                    { label: STR.spColLate, width: 80, align: "right" },
                     { label: STR.spColOutstanding, width: 90, align: "right" },
                   ]
             }
@@ -235,6 +252,7 @@ export function TrackerTab({
                       bnNum(c.sheets),
                       <ToneText key="a" tone={toneForPct(c.avgMarksPct, 70, 50)}>{pctText(c.avgMarksPct)}</ToneText>,
                       latest && latest.totalMarks ? `${bnNum(latest.marks ?? 0)}/${bnNum(latest.totalMarks)}` : "—",
+                      <ToneText key="late" tone={c.chased === 0 ? "muted" : "warn"}>{bnNum(c.chased)}</ToneText>,
                       <ToneText key="o" tone={owed === 0 ? "muted" : "danger"}>{bnNum(owed)}</ToneText>,
                     ]
                   : [
@@ -242,6 +260,7 @@ export function TrackerTab({
                       bnNum(c.sheets),
                       <ToneText key="s" tone={toneForPct(c.submissionPct, 85, 65)}>{pctText(c.submissionPct)}</ToneText>,
                       <ToneText key="q" tone={toneForPct(c.qualityPct)}>{pctText(c.qualityPct)}</ToneText>,
+                      <ToneText key="late" tone={c.chased === 0 ? "muted" : "warn"}>{bnNum(c.chased)}</ToneText>,
                       <ToneText key="o" tone={owed === 0 ? "muted" : "danger"}>{bnNum(owed)}</ToneText>,
                     ],
               };
@@ -260,6 +279,7 @@ export function TrackerTab({
                 ["all", STR.spFilterAll],
                 ["outstanding", STR.spFilterOutstanding],
                 ["upcoming", STR.spAwaiting],
+                ["late", STR.spNotOnTime],
                 ["withTeacher", STR.spFilterWithTeacher],
                 ["done", STR.spFilterDone],
               ] as [Filter, string][]

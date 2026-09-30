@@ -315,3 +315,14 @@ describe("studentProfileComments", () => {
     expect(p.comments[0].authorName).toBeNull();
   });
 });
+
+import { summarisePresence } from "../modules/trackers/services/StudentProfileContextService";
+
+describe("summarisePresence — class attendance comparison", () => {
+  test("mean (rounded) and best of the classmates' presence %", () => {
+    expect(summarisePresence([90, 80, 71])).toEqual({ classSize: 3, avgPresentPct: 80, highestPresentPct: 90 });
+  });
+  test("no classmate with marked days → nulls", () => {
+    expect(summarisePresence([])).toEqual({ classSize: 0, avgPresentPct: null, highestPresentPct: null });
+  });
+});

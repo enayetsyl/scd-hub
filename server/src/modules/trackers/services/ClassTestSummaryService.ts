@@ -577,6 +577,51 @@ export interface StudentProfileSubjectRow {
   latestPercent: number | null;
   previousPercent: number | null;
   trend: Trend;
+  /** Class comparison over the SAME tests: the mean, and the best, of every sitting
+   *  student's own average in this subject (null when nobody sat one). */
+  classAvgPercent: number | null;
+  classHighestPercent: number | null;
+}
+
+export interface ClassComparison {
+  avg: number | null;
+  highest: number | null;
+}
+
+const round1 = (n: number) => Math.round(n * 10) / 10;
+const meanOf = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
+
+/**
+ * The class a student is compared with = everyone who sat the same printed tests. Each
+ * student is reduced to their OWN average (per subject, and overall) — the same
+ * definition as the profile's own `avgPercent` — then the class average is the mean of
+ * those averages and the class highest is the best of them. PRESENT results only. PURE.
+ */
+export function classComparisonOf(
+  exams: ReadonlyArray<Pick<IClassTest, "_id" | "subject" | "totalMarks" | "passMark">>,
+  results: ReadonlyArray<{ studentId: { toString(): string }; testId: { toString(): string }; marks?: number | null }>,
+): { bySubject: Map<string, ClassComparison>; overall: ClassComparison } {
+  const examById = new Map(exams.map((e) => [e._id.toString(), e]));
+  const perStudentSubject = new Map<string, Map<string, number[]>>(); // subject → student → percents
+  const perStudent = new Map<string, number[]>();
+  for (const r of results) {
+    const exam = examById.get(r.testId.toString());
+    if (!exam) continue;
+    const pct = deriveScore({ status: "PRESENT", marks: r.marks ?? null, totalMarks: exam.totalMarks, passMark: exam.passMark }).percent;
+    if (pct === null) continue;
+    const sid = r.studentId.toString();
+    const bySt = perStudentSubject.get(exam.subject) ?? perStudentSubject.set(exam.subject, new Map()).get(exam.subject)!;
+    (bySt.get(sid) ?? bySt.set(sid, []).get(sid)!).push(pct);
+    (perStudent.get(sid) ?? perStudent.set(sid, []).get(sid)!).push(pct);
+  }
+  const summarise = (lists: Iterable<number[]>): ClassComparison => {
+    const avgs = [...lists].map((l) => meanOf(l)).filter((x): x is number => x !== null);
+    const avg = meanOf(avgs);
+    return { avg: avg === null ? null : round1(avg), highest: avgs.length ? round1(Math.max(...avgs)) : null };
+  };
+  const bySubject = new Map<string, ClassComparison>();
+  for (const [subject, bySt] of perStudentSubject) bySubject.set(subject, summarise(bySt.values()));
+  return { bySubject, overall: summarise(perStudent.values()) };
 }
 
 /** CT-10: derived, never-stored per-student analytics (identity plane; NO corpus). */
@@ -605,6 +650,9 @@ export interface StudentProfileAnalytics {
   /** Rank in the most recent PRESENT exam (by marks) among present students. */
   latestRank: number | null;
   latestRankOf: number | null;
+  /** All-subject class comparison over the same tests (see classComparisonOf). */
+  classAvgPercent: number | null;
+  classHighestPercent: number | null;
 }
 
 export interface StudentProfile {
@@ -621,6 +669,7 @@ const EMPTY_ANALYTICS: StudentProfileAnalytics = {
   examsPresent: 0, avgPercent: null, consistency: null, slope: null, trajectory: "na",
   atRisk: false, streakKind: null, streakLength: 0, bestSubject: null, weakestSubject: null,
   recurringWeaknesses: [], latestRank: null, latestRankOf: null,
+  classAvgPercent: null, classHighestPercent: null,
 };
 
 /** Least-squares slope of ys against their index (0..n-1); null when < 2 points.
@@ -710,9 +759,23 @@ export async function studentProfile(
       const previousPercent = percents.length > 1 ? percents[percents.length - 2] : null;
       const avgPercent =
         percents.length === 0 ? null : Math.round((percents.reduce((a, b) => a + b, 0) / percents.length) * 10) / 10;
-      return { subject, examsTaken: percents.length, avgPercent, latestPercent, previousPercent, trend: trendOf(latestPercent, previousPercent) };
+      return {
+        subject, examsTaken: percents.length, avgPercent, latestPercent, previousPercent,
+        trend: trendOf(latestPercent, previousPercent), classAvgPercent: null, classHighestPercent: null,
+      };
     })
     .sort((a, b) => a.subject.localeCompare(b.subject));
+
+  // Class comparison over the same printed tests (one query: every PRESENT result).
+  const peerResults = (await ClassTestResult.find({ testId: { $in: exams.map((e) => e._id) }, status: "PRESENT" })
+    .select("studentId testId marks")
+    .lean()) as unknown as Array<{ studentId: Types.ObjectId; testId: Types.ObjectId; marks?: number | null }>;
+  const comparison = classComparisonOf(exams, peerResults ?? []);
+  for (const row of bySubject) {
+    const c = comparison.bySubject.get(row.subject);
+    row.classAvgPercent = c?.avg ?? null;
+    row.classHighestPercent = c?.highest ?? null;
+  }
 
   // ---- CT-10 analytics (all DERIVED, never stored — D-#85; identity-plane) ----
   const presentOldest = [...results]
@@ -771,6 +834,7 @@ export async function studentProfile(
     examsPresent: percents.length, avgPercent, consistency, slope, trajectory,
     atRisk: !!atRisk, streakKind, streakLength, bestSubject, weakestSubject,
     recurringWeaknesses, latestRank, latestRankOf,
+    classAvgPercent: comparison.overall.avg, classHighestPercent: comparison.overall.highest,
   };
 
   return { studentId, studentName, results, bySubject, analytics };
