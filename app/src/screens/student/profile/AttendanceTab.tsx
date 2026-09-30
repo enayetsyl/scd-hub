@@ -135,7 +135,10 @@ export function AttendanceTab({
   const wide = width >= 820;
 
   const calendar = (
-    <Card style={{ flexGrow: 1, flexBasis: wide ? 0 : undefined, gap: space(2) }}>
+    // No flex sizing here: the wrapper column sets the width, and a flexBasis inside
+    // a vertical parent sizes the card's HEIGHT — at 0 the card collapsed to its
+    // header row and the calendar spilled out below it (owner screenshot 2026-09-30).
+    <Card style={{ gap: space(2) }}>
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
         <Pressable
           accessibilityRole="button"
@@ -258,7 +261,7 @@ export function AttendanceTab({
 
   const pctOf = (n: number, of: number) => (of === 0 ? "" : ` (${pctText((n / of) * 100)})`);
   const stats = (
-    <View style={{ flexGrow: 1, flexBasis: wide ? 0 : undefined, gap: space(3) }}>
+    <View style={{ gap: space(3) }}>
       <Card style={{ gap: space(2) }}>
         <DataTable
           columns={[
