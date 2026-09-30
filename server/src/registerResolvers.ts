@@ -62,6 +62,7 @@ import "./modules/hr/resolvers/staffDirectory";
 import "./modules/hr/resolvers/staffHub";
 import "./modules/guardian/resolvers/guardianPortal";
 import "./modules/notifications/resolvers/notifications";
+import "./modules/notifications/resolvers/announcement";
 import "./modules/notifications/resolvers/webPush";
 import "./modules/library/resolvers/library";
 import "./modules/library/resolvers/circulation";
