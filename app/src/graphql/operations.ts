@@ -341,6 +341,68 @@ export const ROSTER_QUERY = gql<
   }
 `;
 
+/** A Quran/Arabic group as the student table shows it. */
+export interface DirectoryGroupT {
+  id: string;
+  code: string;
+  level: string;
+  gender: string;
+  nameBn: string;
+}
+
+/** One row of the whole-school student table (roster:manage). */
+export interface StudentDirectoryRowT {
+  id: string;
+  schoolId: string;
+  name: string;
+  nameBn: string | null;
+  classId: string;
+  classLevel: number | null;
+  classNameBn: string | null;
+  sectionId: string;
+  sectionCode: string | null;
+  sectionNameBn: string | null;
+  quranGroup: DirectoryGroupT | null;
+  arabicGroup: DirectoryGroupT | null;
+  guardians: { relation: string; name: string; phone: string }[];
+}
+
+export const STUDENT_DIRECTORY_QUERY = gql<{ studentDirectory: StudentDirectoryRowT[] }, Record<string, never>>`
+  query StudentDirectory {
+    studentDirectory {
+      id
+      schoolId
+      name
+      nameBn
+      classId
+      classLevel
+      classNameBn
+      sectionId
+      sectionCode
+      sectionNameBn
+      quranGroup {
+        id
+        code
+        level
+        gender
+        nameBn
+      }
+      arabicGroup {
+        id
+        code
+        level
+        gender
+        nameBn
+      }
+      guardians {
+        relation
+        name
+        phone
+      }
+    }
+  }
+`;
+
 // ===========================================================================
 // Staff (read-only HR roster — Principal/Office only, staff:manage)
 // ===========================================================================

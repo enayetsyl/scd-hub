@@ -2231,6 +2231,16 @@ const STR_BN = {
   guardians: "অভিভাবক",
   noGuardians: "কোনো অভিভাবক যুক্ত নেই।",
   changeSection: "শ্রেণি পরিবর্তন",
+  // Whole-school student table
+  rosterColSl: "ক্রমিক",
+  rosterColName: "নাম",
+  rosterColClass: "শ্রেণি",
+  rosterColQuran: "কুরআন গ্রুপ",
+  rosterColArabic: "আরবি গ্রুপ",
+  rosterColGuardianPhone: "অভিভাবকের ফোন",
+  rosterAllClasses: "সব শ্রেণি",
+  rosterPerPage: "প্রতি পৃষ্ঠায়",
+  rosterShowing: "{total} জনের মধ্যে {from}–{to} দেখানো হচ্ছে",
 
   // Message templates (MT-1..MT-3, D-#128–#131) — Principal-only
   mtMessageTemplates: "বার্তা টেমপ্লেট",
@@ -6654,6 +6664,16 @@ const STR_EN: StrTable = {
   guardians: "Guardians",
   noGuardians: "No guardians linked.",
   changeSection: "Change class",
+  // Whole-school student table
+  rosterColSl: "SL",
+  rosterColName: "Name",
+  rosterColClass: "Class",
+  rosterColQuran: "Quran group",
+  rosterColArabic: "Arabic group",
+  rosterColGuardianPhone: "Guardian phone",
+  rosterAllClasses: "All classes",
+  rosterPerPage: "Rows per page",
+  rosterShowing: "Showing {from} to {to} of {total}",
 
   // Message templates (MT-1..MT-3, D-#128–#131) — Principal-only
   mtMessageTemplates: "Message templates",
