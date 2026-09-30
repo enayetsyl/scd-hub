@@ -253,6 +253,18 @@ export async function supersedeOpenRoundsForAddress(
   return supersedeOpenRounds(key, reason, actorId, actorRole);
 }
 
+/** Version-keyed supersession — the open rounds on ONE artifact version. Session plans use it:
+ *  the sessions of a chapter share an address, so the address-keyed form would also close the
+ *  other sessions' reviews. */
+export async function supersedeOpenRoundsForArtifact(
+  artifactId: string,
+  reason: string,
+  actorId?: string,
+  actorRole?: string,
+): Promise<number> {
+  return supersedeOpenRounds({ artifactId: new Types.ObjectId(artifactId) } as unknown as ReviewThreadKey, reason, actorId, actorRole);
+}
+
 /** Qid-keyed supersession (questions, D-#508) — the re-import hook for a revised question. */
 export async function supersedeOpenRoundsForQid(
   qid: string,

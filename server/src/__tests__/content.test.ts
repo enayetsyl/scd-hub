@@ -306,3 +306,54 @@ describe("J1.9 — versioning: supersede-not-overwrite", () => {
     expect(mockArtifactUpdateOne).not.toHaveBeenCalled();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Session plans: the period is part of the identity (owner report 2026-09-30)
+// ---------------------------------------------------------------------------
+import { ReviewAssignment } from "../modules/content/models/ReviewAssignment";
+
+describe("session plans — each period is its own plan", () => {
+  const session = (period: number) => ({
+    ...VALID_ENVELOPE,
+    payload: { ...VALID_ENVELOPE.payload, session_plan: { period_index: period } },
+  });
+
+  test("the supersede lookup includes the session's period_index", async () => {
+    mockArtifactFindOneResult.mockResolvedValueOnce(null);
+    mockHarnessPass();
+    await importEnvelope(session(2), ACTOR_ID);
+    expect(mockArtifactFindOne).toHaveBeenCalledWith(
+      expect.objectContaining({ docType: "session_plan", "envelopeJson.payload.session_plan.period_index": 2, current: true }),
+    );
+  });
+
+  test("a session plan with no period_index looks up period null (not 'any session')", async () => {
+    mockArtifactFindOneResult.mockResolvedValueOnce(null);
+    mockHarnessPass();
+    await importEnvelope({ ...VALID_ENVELOPE }, ACTOR_ID);
+    expect(mockArtifactFindOne).toHaveBeenCalledWith(
+      expect.objectContaining({ "envelopeJson.payload.session_plan.period_index": null }),
+    );
+  });
+
+  test("re-importing a session closes only the review rounds on the version it replaces", async () => {
+    const priorId = new mongoose.Types.ObjectId();
+    mockArtifactFindOneResult.mockResolvedValueOnce({ _id: priorId, current: true });
+    mockArtifactCreate.mockResolvedValueOnce(makeArtifactDoc({ priorVersionId: priorId }));
+    mockHarnessPass();
+    await importEnvelope(session(1), ACTOR_ID);
+    const q = (ReviewAssignment.find as jest.Mock).mock.calls[0][0] as Record<string, unknown>;
+    expect(String(q.artifactId)).toBe(priorId.toString());
+    expect(q.anchorWord).toBeUndefined(); // NOT the chapter-wide address key
+  });
+
+  test("a chapter plan still supersedes by address alone", async () => {
+    mockArtifactFindOneResult.mockResolvedValueOnce(null);
+    mockHarnessPass();
+    await importEnvelope({ ...VALID_ENVELOPE, doc_type: "chapter_plan", payload: { ...VALID_ENVELOPE.payload, plan_type: "chapter_plan" } }, ACTOR_ID);
+    const key = mockArtifactFindOne.mock.calls[0][0] as Record<string, unknown>;
+    // Object.keys, not toHaveProperty: a dotted string there is read as a nested path.
+    expect(Object.keys(key)).not.toContain("envelopeJson.payload.session_plan.period_index");
+    expect(Object.keys(key)).toContain("address.number");
+  });
+});
