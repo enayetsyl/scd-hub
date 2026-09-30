@@ -20,7 +20,7 @@
  */
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ScrollView, View, RefreshControl } from "react-native";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect, useRoute } from "@react-navigation/native";
 import { useMutation, useQuery } from "urql";
 import {
   MY_DAY_QUERY,
@@ -395,7 +395,13 @@ function PeriodNoteCard({ slot, date }: { slot: RoutineSlotT; date: string }): R
 }
 
 export default function MyClassNotesScreen(): React.ReactElement {
-  const [date, setDate] = useState(todayISO());
+  // Read defensively: the initial route mounts with no params (rn-initial-route trap).
+  const routeDate = (useRoute().params as { date?: string } | undefined)?.date;
+  const [date, setDate] = useState(routeDate ?? todayISO());
+  // A later deep link (another cover notification) re-targets the mounted screen.
+  useEffect(() => {
+    if (routeDate) setDate(routeDate);
+  }, [routeDate]);
   const [dayQ, refetchDay] = useQuery({ query: MY_DAY_QUERY, variables: { date } });
   const day = dayQ.data?.myDay;
   const slots = day?.slots ?? [];
