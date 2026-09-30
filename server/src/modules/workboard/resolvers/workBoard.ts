@@ -42,6 +42,7 @@ import {
   type WorkCardLink,
 } from "../services/WorkBoardService";
 import { loadGrid, type LoadCell, type LoadRow } from "../services/LoadService";
+import { pullWorkCard, releaseWorkCard } from "../services/OfficeCoverService";
 import { loadLevelFor, type HrCategory } from "@scd/shared";
 
 // ---------------------------------------------------------------------------
@@ -151,6 +152,10 @@ const WorkCardRef = builder.objectRef<WorkCard>("WorkCard").implement({
     taskId: t.string({ nullable: true, resolve: (c) => c.taskId }),
     sourceId: t.string({ nullable: true, resolve: (c) => c.sourceId }),
     link: t.field({ type: WorkCardLinkRef, nullable: true, resolve: (c) => c.link }),
+    /** WB-5 (D-#702): the viewer may take this office card onto their own board. */
+    canPull: t.boolean({ resolve: (c) => c.canPull ?? false }),
+    pulledById: t.string({ nullable: true, resolve: (c) => c.pulledById ?? null }),
+    pulledByName: t.string({ nullable: true, resolve: (c) => c.pulledByName ?? null }),
   }),
 });
 
@@ -502,6 +507,26 @@ builder.mutationField("cancelTask", (t) =>
     authScopes: { authenticated: true },
     args: { id: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => decorateOne(await cancelTask(ctx.auth, args.id)),
+  }),
+);
+
+builder.mutationField("pullWorkCard", (t) =>
+  t.boolean({
+    description:
+      "WB-5 (D-#702): take an office-queue card (PRINT_JOB / LEAVE_APPROVAL) onto MY board while the desk is on leave. " +
+      "A desk login, an OFFICE/PRINCIPAL-template backup, or tasks:assign. The card leaves every other board until its source closes. Audited.",
+    authScopes: { authenticated: true },
+    args: { kind: t.arg.string({ required: true }), sourceId: t.arg.string({ required: true }) },
+    resolve: async (_root, args, ctx) => pullWorkCard(ctx.auth, args.kind, args.sourceId),
+  }),
+);
+
+builder.mutationField("releaseWorkCard", (t) =>
+  t.boolean({
+    description: "WB-5: give a pulled office card back to the queue — the puller or tasks:assign. Audited.",
+    authScopes: { authenticated: true },
+    args: { kind: t.arg.string({ required: true }), sourceId: t.arg.string({ required: true }) },
+    resolve: async (_root, args, ctx) => releaseWorkCard(ctx.auth, args.kind, args.sourceId),
   }),
 );
 
