@@ -1,5 +1,7 @@
 # STATUS
 
+- 2026-09-30 (cont. 3): **BUILT — OBSERVATION + QUESTION_REVIEW auto cards, same branch `feat/wb-today-card` (PR #908, gate re-run).** Owner named Mahzabin's videos and Kaynat's chapter reviews; both already worked (VideoReviewAssignment, plan ReviewAssignment) but two neighbours did not: a classroom observation handed to an observer, and the question-review queue — which reuses ReviewAssignment per QUESTION, so the existing adapter would have put thousands of cards on Kaynat's board. Grouped to one card per reviewer.
+
 - 2026-09-30 (cont. 2): **BUILT — আজকের কাজ card on both Today screens + badge/tile count fix, branch `feat/wb-today-card` off `origin/dev`.** Owner, viewing as Taskir on prod: the board worked but Today did not point at it. `TodayWorkCard` is self-contained (own one-day query, renders nothing on error) so it drops into `TodayScreen` and `AdminTodayScreen` without touching their data flow. The remaining WB-4 half (colleague requests without the grant) stays deferred. Gate: server + app tsc clean, workBoard/graphqlDocuments/scheduler suites green, expo export exit 0.
   **Now / next:** PR → `dev` → promote on the owner's word.
 

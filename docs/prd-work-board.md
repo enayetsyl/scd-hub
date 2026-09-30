@@ -57,6 +57,8 @@ second source of truth that drifts. Projecting them is free and always right.
 | Homework awaiting checking | `MonthlyPendingWorkService` (per month, per report) | `homeworkCards`: one card per item with SUBMITTED records (per item, never per student) |
 | Class-test marks owed | `classTestSettled` (CT-8) | `classTestCards`: PRINTED, exam date passed, not settled; due = exam + deadlineDays |
 | Video / plan reviews | `VideoReviewAssignment`, `ReviewAssignment` | one card each while PENDING / assigned |
+| Classroom observation to review | `ClassroomObservation` (observerId, state ASSIGNED) | one card per observation until REVIEWED (owner ask 2026-09-30) |
+| Question-review queue | `ReviewAssignment` with docType `question` (QR) | ONE card per reviewer with the count — a reviewer can hold thousands of rounds |
 | Office queues | `PrintRequest`, `StaffLeaveApplication` | one card per REQUESTED job / applied leave on every OFFICE (and leave:manage) actor's board |
 | A typed task | — | `Task` + `TaskTemplate`, `TaskService` state machine, `tasks:assign` |
 | Load per person | — | `LoadService.loadGrid`, per-category thresholds in `shared/vocab.ts` |
