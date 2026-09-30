@@ -23,7 +23,18 @@ import { BATCH_DOC_TYPE, BATCH_MAX_ITEMS } from "@scd/shared";
 import { ContentArtifact } from "../models/ContentArtifact";
 import { ImportBatch } from "../../platform/models/ImportBatch";
 import { CorpusEvent } from "../../corpus/models/CorpusEvent";
-import { isPlanDocType, supersedeOpenRoundsForAddress, supersedeOpenRoundsForQid } from "./ReviewService";
+import {
+  isPlanDocType,
+  supersedeOpenRoundsForAddress,
+  supersedeOpenRoundsForArtifact,
+  supersedeOpenRoundsForQid,
+} from "./ReviewService";
+
+/** A session plan's period within its chapter (1, 2, …), or null when the envelope has none. */
+export function sessionPeriodIndexOf(payload: Record<string, unknown>): number | null {
+  const sp = payload.session_plan as Record<string, unknown> | undefined;
+  return typeof sp?.period_index === "number" ? sp.period_index : null;
+}
 
 /** Wrap execFile in a Promise that always resolves (never throws) — returns {stdout,stderr,code}. */
 function execFilePromise(
@@ -215,6 +226,13 @@ async function persistEnvelope(
       "address.number": addr.number,
       current: true,
     };
+    // A chapter taught over several periods has one SESSION plan per period, all at the
+    // same address — the period is part of the identity. Without it, importing session 2
+    // superseded session 1 and the chapter showed only its last session (owner report
+    // 2026-09-30). null matches an envelope with no period_index, as before.
+    if (envelope.doc_type === "session_plan") {
+      versionKey["envelopeJson.payload.session_plan.period_index"] = sessionPeriodIndexOf(payload);
+    }
   }
   const prior = await ContentArtifact.findOne(versionKey).lean();
   if (prior) {
@@ -223,7 +241,12 @@ async function persistEnvelope(
     // open review round on the prior version. The next round is then assigned on this new
     // version (born `draft`). The thread anchor is doc-type specific (D-#508) — the address
     // for plans, the `qid` for questions, mirroring the version key chosen just above.
-    if (typeof envelope.doc_type === "string" && isPlanDocType(envelope.doc_type)) {
+    if (envelope.doc_type === "session_plan") {
+      // Session plans share their chapter's address, so an address-wide cancel would also
+      // close the open reviews of the chapter's OTHER sessions. Close only the rounds on
+      // the version this import replaces.
+      await supersedeOpenRoundsForArtifact(prior._id.toString(), "superseded_by_reimport", actorId.toString());
+    } else if (typeof envelope.doc_type === "string" && isPlanDocType(envelope.doc_type)) {
       await supersedeOpenRoundsForAddress(
         {
           docType: envelope.doc_type,
@@ -548,7 +571,9 @@ function versionKeyOf(env: Record<string, unknown>): string {
   if (env.doc_type === "question") return `q:${String(p.qid)}`;
   if (env.doc_type === "stimulus") return `s:${String(p.stimulus_id)}`;
   const a = (env.address ?? {}) as Record<string, unknown>;
-  return `o:${String(env.doc_type)}:${String(env.subject)}:${String(env.class_level)}:${String(a.anchor_word)}:${String(a.number)}`;
+  const base = `o:${String(env.doc_type)}:${String(env.subject)}:${String(env.class_level)}:${String(a.anchor_word)}:${String(a.number)}`;
+  // Mirrors persistEnvelope: a session plan's period is part of its identity.
+  return env.doc_type === "session_plan" ? `${base}:${String(sessionPeriodIndexOf(p))}` : base;
 }
 
 /**
