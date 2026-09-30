@@ -34,6 +34,8 @@ import {
 } from "../services/StudentProfileService";
 import {
   studentProfileAttendance,
+  classAttendanceComparison,
+  type ClassAttendanceComparison,
   studentProfileComments,
   studentProfileHeader,
   type ProfileAcademicYear,
@@ -421,6 +423,36 @@ builder.queryField("studentProfileAttendance", (t) =>
     resolve: async (_root, args, ctx) => {
       await assertStudentProfileRead(ctx, args.studentId);
       return studentProfileAttendance(args.studentId, args.fromKey, args.toKey);
+    },
+  }),
+);
+
+const ClassAttendanceRef = builder
+  .objectRef<ClassAttendanceComparison>("StudentProfileClassAttendance")
+  .implement({
+    description: "The student's section over the window: how many classmates had marked days, their average and best presence %.",
+    fields: (t) => ({
+      classSize: t.exposeInt("classSize"),
+      avgPresentPct: t.int({ nullable: true, resolve: (c) => c.avgPresentPct }),
+      highestPresentPct: t.int({ nullable: true, resolve: (c) => c.highestPresentPct }),
+    }),
+  });
+
+builder.queryField("studentProfileClassAttendance", (t) =>
+  t.field({
+    type: ClassAttendanceRef,
+    description:
+      "Class comparison for the attendance tab — the average and highest presence % among the active students " +
+      "of the student's section over [fromKey, toKey]. Same gate as studentProfileAttendance; no names returned.",
+    authScopes: { authenticated: true },
+    args: {
+      studentId: t.arg.string(panelArgs.studentId),
+      fromKey: t.arg.string(panelArgs.fromKey),
+      toKey: t.arg.string(panelArgs.toKey),
+    },
+    resolve: async (_root, args, ctx) => {
+      await assertStudentProfileRead(ctx, args.studentId);
+      return classAttendanceComparison(args.studentId, args.fromKey, args.toKey);
     },
   }),
 );

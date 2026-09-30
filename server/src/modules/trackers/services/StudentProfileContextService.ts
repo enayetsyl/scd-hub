@@ -311,6 +311,42 @@ export function leaveDaysInWindow(
   return Math.round(diff / 86_400_000) + 1;
 }
 
+export interface ClassAttendanceComparison {
+  /** Active classmates (same section) with at least one marked day in the window. */
+  classSize: number;
+  avgPresentPct: number | null;
+  highestPresentPct: number | null;
+}
+
+/** Mean + best of the classmates' presence percentages. PURE. */
+export function summarisePresence(pcts: readonly number[]): ClassAttendanceComparison {
+  if (pcts.length === 0) return { classSize: 0, avgPresentPct: null, highestPresentPct: null };
+  return {
+    classSize: pcts.length,
+    avgPresentPct: Math.round(pcts.reduce((a, b) => a + b, 0) / pcts.length),
+    highestPresentPct: Math.max(...pcts),
+  };
+}
+
+/**
+ * The student's class for comparison = the active students of their CURRENT section,
+ * each read through the same studentAttendanceHistory the profile uses (so a Class 1–5
+ * child's Quran-group days count exactly as they do on their own profile). A separate
+ * read from studentProfileAttendance on purpose: that one runs per student inside the
+ * monthly report and the PDF sheet, where a classmate sweep per call would multiply.
+ */
+export async function classAttendanceComparison(
+  studentId: string,
+  fromKey: string,
+  toKey: string,
+): Promise<ClassAttendanceComparison> {
+  const me = (await Student.findById(studentId).select("sectionId").lean()) as { sectionId: Types.ObjectId } | null;
+  if (!me) throw new Error("Student not found");
+  const mates = (await Student.find({ sectionId: me.sectionId, active: true }).select("_id").lean()) as Array<{ _id: Types.ObjectId }>;
+  const histories = await Promise.all(mates.map((m) => studentAttendanceHistory(m._id.toString(), fromKey, toKey)));
+  return summarisePresence(histories.filter((h) => h.markedDays > 0).map((h) => h.presentPct));
+}
+
 export async function studentProfileAttendance(
   studentId: string,
   fromKey: string,

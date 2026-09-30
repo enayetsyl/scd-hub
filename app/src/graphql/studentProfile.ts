@@ -271,6 +271,9 @@ export interface ProfileClassTestT {
     latestPercent: number | null;
     previousPercent: number | null;
     trend: string;
+    /** Class comparison over the same tests: mean + best of every student's own average. */
+    classAvgPercent: number | null;
+    classHighestPercent: number | null;
   }>;
   analytics: {
     examsPresent: number;
@@ -285,6 +288,8 @@ export interface ProfileClassTestT {
     recurringWeaknesses: Array<{ tag: string; count: number }>;
     latestRank: number | null;
     latestRankOf: number | null;
+    classAvgPercent: number | null;
+    classHighestPercent: number | null;
   };
 }
 
@@ -299,12 +304,31 @@ export const STUDENT_PROFILE_CLASS_TEST_QUERY = gql<
         testId ctId subject testNumber examDate status marks totalMarks percent pass
         weakness teacherAction guardianAction
       }
-      bySubject { subject examsTaken avgPercent latestPercent previousPercent trend }
+      bySubject { subject examsTaken avgPercent latestPercent previousPercent trend classAvgPercent classHighestPercent }
       analytics {
         examsPresent avgPercent consistency trajectory atRisk streakKind streakLength
-        bestSubject weakestSubject latestRank latestRankOf
+        bestSubject weakestSubject latestRank latestRankOf classAvgPercent classHighestPercent
         recurringWeaknesses { tag count }
       }
+    }
+  }
+`;
+
+/** The student's section over a window — how many classmates had marked days, their average
+ *  and best presence %. No names (a comparison, not a league table). */
+export interface ProfileClassAttendanceT {
+  classSize: number;
+  avgPresentPct: number | null;
+  highestPresentPct: number | null;
+}
+
+export const STUDENT_PROFILE_CLASS_ATTENDANCE_QUERY = gql<
+  { studentProfileClassAttendance: ProfileClassAttendanceT },
+  PanelVars
+>`
+  query StudentProfileClassAttendance($studentId: String!, $fromKey: String!, $toKey: String!) {
+    studentProfileClassAttendance(studentId: $studentId, fromKey: $fromKey, toKey: $toKey) {
+      classSize avgPresentPct highestPresentPct
     }
   }
 `;

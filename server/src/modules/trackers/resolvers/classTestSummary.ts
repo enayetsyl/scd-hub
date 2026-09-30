@@ -377,6 +377,8 @@ StudentProfileSubjectRef.implement({
     latestPercent: t.float({ nullable: true, resolve: (r) => r.latestPercent }),
     previousPercent: t.float({ nullable: true, resolve: (r) => r.previousPercent }),
     trend: t.exposeString("trend"),
+    classAvgPercent: t.float({ nullable: true, resolve: (r) => r.classAvgPercent }),
+    classHighestPercent: t.float({ nullable: true, resolve: (r) => r.classHighestPercent }),
   }),
 });
 
@@ -406,6 +408,8 @@ StudentAnalyticsRef.implement({
     recurringWeaknesses: t.field({ type: [WeaknessTallyRef], resolve: (r) => r.recurringWeaknesses }),
     latestRank: t.int({ nullable: true, resolve: (r) => r.latestRank }),
     latestRankOf: t.int({ nullable: true, resolve: (r) => r.latestRankOf }),
+    classAvgPercent: t.float({ nullable: true, resolve: (r) => r.classAvgPercent }),
+    classHighestPercent: t.float({ nullable: true, resolve: (r) => r.classHighestPercent }),
   }),
 });
 
