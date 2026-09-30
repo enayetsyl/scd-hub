@@ -42,7 +42,10 @@ export type StudentProfileParams = {
 
 /** Teacher-first Class Notes entry (UX-8, D-#266) — own periods, zero selection. */
 export type ClassNotesStackParamList = {
-  MyClassNotes: undefined;
+  /** `date` (YYYY-MM-DD) opens the day a deep link is about — a cover notification
+   *  lands on the cover's date. Optional: this is the stack's initial route, so it
+   *  also mounts with no params and then shows today. */
+  MyClassNotes: { date?: string } | undefined;
   /** The archive: every note the caller may see, filtered + paginated. */
   AllClassNotes: undefined;
 };

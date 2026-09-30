@@ -52,6 +52,17 @@ describe("notification deep-links cover every kind the server emits", () => {
     }
   });
 
+  test("a cover notification opens My class notes on the cover's date, not MyRoutine", () => {
+    // MyRoutine lists only the teacher's own recurring slots live today — covers never
+    // appear there, and a teacher with no own slots yet saw an empty screen (owner
+    // report 2026-09-30). My class notes reads `myDay`, which overlays both cover kinds.
+    const branch = source.slice(source.indexOf('case "COVER_ASSIGNED":'));
+    const body = branch.slice(0, branch.indexOf("case ", 10));
+    expect(body).toContain('screen: "MyClassNotes"');
+    expect(body).toContain("refs?.date");
+    expect(body).not.toContain('screen: "MyRoutine"');
+  });
+
   test("the exception list stays honest — nothing on it is actually mapped", () => {
     const stale = Object.keys(KNOWN_UNMAPPED).filter(isMapped);
     expect(stale).toEqual([]);
