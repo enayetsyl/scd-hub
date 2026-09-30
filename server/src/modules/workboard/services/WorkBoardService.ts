@@ -62,6 +62,7 @@ import { StaffProfile } from "../../foundation/models/StaffProfile";
 import { normalizePhone } from "../../foundation/services/credentials";
 import type { ITask } from "../models/Task";
 import { tasksOnBoards } from "./TaskService";
+import { PULLABLE_KINDS, isBackup, officeRecipients, officeUncoveredToday, pullsFor } from "./OfficeCoverService";
 
 export interface WorkCardLink {
   screen: string;
@@ -90,6 +91,10 @@ export interface WorkCard {
   taskId: string | null;
   sourceId: string | null;
   link: WorkCardLink | null;
+  /** WB-5 (D-#702): an office-queue card a backup may take, or one already taken. */
+  canPull?: boolean;
+  pulledById?: string | null;
+  pulledByName?: string | null;
 }
 
 /** What one staff user looks like to the board (role + templates + grants, for gates). */
@@ -698,8 +703,19 @@ export async function boardFor(users: BoardUser[], fromKey: string, toKey: strin
   );
   const manual = tasks.map((t) => manualCard(t, todayKey, names));
 
-  const officeUsers = users.filter((u) => actsAsAny(u, ["OFFICE"]));
-  const approvers = users.filter((u) => actsAsAny(u, ["OFFICE", "PRINCIPAL"]) && callerHasPermission(profileOf(u), "leave:manage"));
+  // WB-5 (D-#702): office-queue cards belong to the DESK (primary-role OFFICE). While
+  // the desk is on leave the backups (OFFICE-template teacher-admins, the Principal)
+  // see them too and may pull one; a pulled card sits on the puller's board alone.
+  const uncovered = nowInRange ? await officeUncoveredToday(todayKey) : false;
+  const pulls = nowInRange ? await pullsFor(PULLABLE_KINDS) : [];
+  const pullerIds = new Set(pulls.map((p) => p.userId));
+  const officeRecipientsIn = officeRecipients(users, uncovered);
+  const withPullers = (base: BoardUser[]): BoardUser[] => {
+    const ids = new Set(base.map((u) => u._id.toString()));
+    return [...base, ...users.filter((u) => pullerIds.has(u._id.toString()) && !ids.has(u._id.toString()))];
+  };
+  const officeUsers = withPullers(officeRecipientsIn);
+  const approvers = withPullers(officeRecipientsIn.filter((u) => callerHasPermission(profileOf(u), "leave:manage")));
 
   const auto = await Promise.all([
     safe("period", () => periodCards(userIds, fromKey, toKey, keys)),
@@ -711,7 +727,41 @@ export async function boardFor(users: BoardUser[], fromKey: string, toKey: strin
     nowInRange ? safe("print", () => printCards(officeUsers, todayKey)) : Promise.resolve([]),
     nowInRange ? safe("leave", () => leaveCards(approvers, todayKey)) : Promise.resolve([]),
   ]);
-  return sortCards([...manual, ...auto.flat()]);
+  const pullerNames = new Map<string, string>();
+  if (pulls.length) {
+    const rows = await User.find({ _id: { $in: [...pullerIds] } }).select("name").lean();
+    for (const r of rows) pullerNames.set(r._id.toString(), r.name);
+  }
+  return sortCards(applyPulls([...manual, ...auto.flat()], pulls, users, pullerNames));
+}
+
+/** Pure (WB-5): a pulled office card shows on the puller's board ALONE; an unpulled one
+ *  on a backup's board is marked pullable. Desk logins never see a pull button on their
+ *  own queue — it is theirs already. */
+export function applyPulls(
+  cards: WorkCard[],
+  pulls: Array<{ kind: string; sourceId: string; userId: string }>,
+  users: Array<{ _id: { toString(): string }; role: string; additionalTemplates?: string[] }>,
+  names: Map<string, string>,
+): WorkCard[] {
+  const pulledBy = new Map(pulls.map((p) => [`${p.kind}:${p.sourceId}`, p.userId]));
+  const byId = new Map(users.map((u) => [u._id.toString(), u]));
+  const out: WorkCard[] = [];
+  for (const c of cards) {
+    if (!(PULLABLE_KINDS as readonly string[]).includes(c.kind) || !c.sourceId) {
+      out.push(c);
+      continue;
+    }
+    const owner = pulledBy.get(`${c.kind}:${c.sourceId}`);
+    if (owner) {
+      if (owner !== c.userId) continue; // taken by someone else — off this board
+      out.push({ ...c, pulledById: owner, pulledByName: names.get(owner) ?? null, canPull: false });
+      continue;
+    }
+    const u = byId.get(c.userId);
+    out.push({ ...c, canPull: !!u && isBackup(u), pulledById: null, pulledByName: null });
+  }
+  return out;
 }
 
 export interface WorkBoardCounts {
