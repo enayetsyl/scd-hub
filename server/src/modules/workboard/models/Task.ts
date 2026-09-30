@@ -17,7 +17,8 @@ import { DAY_SLOTS, TASK_PRIORITIES, TASK_STATUSES } from "@scd/shared";
  * never deleted (the audit log names the task by id).
  *
  * `templateId` + `dueKey` are unique together: the scheduler materialises a
- * recurring task once per school day and a retried tick is a no-op.
+ * recurring task once per school day and a retried tick is a no-op. Manual tasks
+ * carry no `templateId` and sit outside that index (see below).
  *
  * Identity plane (names people) — no corpus path (ADR-005).
  */
@@ -77,7 +78,13 @@ const TaskSchema = new Schema<ITask>(
 TaskSchema.index({ assigneeUserId: 1, status: 1, dueKey: 1 });
 // "আমার দেওয়া কাজ": what I put on other people's boards.
 TaskSchema.index({ assignedBy: 1, status: 1, dueKey: -1 });
-// One materialised task per template per day (the retried-tick guard).
-TaskSchema.index({ templateId: 1, dueKey: 1 }, { unique: true, sparse: true });
+// One materialised task per template per day (the retried-tick guard). PARTIAL, not
+// sparse: a compound sparse index still indexes a row that has ANY of its keys, and
+// every row has `dueKey` — so manual tasks (no templateId) all shared the
+// (null, dueKey) slot and only ONE manual task per date could exist school-wide.
+TaskSchema.index(
+  { templateId: 1, dueKey: 1 },
+  { unique: true, partialFilterExpression: { templateId: { $type: "objectId" } } },
+);
 
 export const Task = model<ITask>("Task", TaskSchema);
