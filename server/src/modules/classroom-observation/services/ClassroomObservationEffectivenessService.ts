@@ -232,7 +232,8 @@ export async function reviewerEffectiveness(now: Date = new Date()): Promise<Rev
     observerIds.add(obs);
 
     // (2) backlog — still ASSIGNED to this observer.
-    if (o.state === "ASSIGNED") bump(backlog, obs);
+    // A cancelled or observer-rejected assignment is not backlog (CO-15).
+    if (o.state === "ASSIGNED" && !(o as { cancelledAt?: Date | null }).cancelledAt) bump(backlog, obs);
 
     // (3) throughput + (2) timeliness — released reviews this observer completed.
     if (released(o) && o.reviewedAt) {

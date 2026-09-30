@@ -107,6 +107,7 @@ import {
   withholdObservation,
   releaseObservationHold,
   cancelObservation,
+  editObservationReview,
   restoreCancelledObservation,
   myReviewQueue,
   observationCounts,
@@ -190,6 +191,7 @@ const makeDoc = (over: Record<string, unknown> = {}) => {
     ...over,
   };
   doc.save = jest.fn(async () => doc);
+  doc.markModified = jest.fn();
   return doc;
 };
 
@@ -1153,5 +1155,139 @@ describe("cancelled rows leave the queue and the count (CO-15)", () => {
     expect(mockCountDocuments).toHaveBeenCalledWith(
       expect.objectContaining({ state: "REVIEWED", publishedAt: null, withheldAt: null }),
     );
+  });
+});
+
+// ===========================================================================
+// Observer rejects an unreviewable video (owner ask 2026-09-30)
+// ===========================================================================
+
+describe("observer rejects a video (cancel byObserver)", () => {
+  test("the assigned observer rejects an ASSIGNED row → cancel stamp, REJECTED audit, managers notified", async () => {
+    const doc = makeDoc({ state: "ASSIGNED", observerId: OBSERVER });
+    mockFindById.mockResolvedValue(doc);
+    mockUserFind.mockReturnValue({ select: () => ({ lean: async () => [{ _id: OFFICE }] }) });
+    const res = await cancelObservation({
+      observationId: String(doc._id),
+      reason: "The recording is a class test — nothing to observe.",
+      actorId: OBSERVER.toString(),
+      byObserver: true,
+    });
+    expect(res.cancelledAt).toBeTruthy();
+    expect(res.rejectedByObserver).toBe(true);
+    expect(res.state).toBe("ASSIGNED"); // additive flag, restorable like any cancel
+    expect(mockWriteAudit).toHaveBeenCalledWith(expect.objectContaining({ eventKind: "CLASSROOM_OBSERVATION_REJECTED" }));
+    expect(mockWriteAudit).not.toHaveBeenCalledWith(expect.objectContaining({ eventKind: "CLASSROOM_OBSERVATION_CANCELLED" }));
+    expect(mockEmit).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "OBSERVATION_REJECTED", recipientUserId: OFFICE.toString() }),
+    );
+  });
+
+  test("a DIFFERENT teacher cannot reject someone else's assignment", async () => {
+    const doc = makeDoc({ state: "ASSIGNED", observerId: OBSERVER });
+    mockFindById.mockResolvedValue(doc);
+    await expect(
+      cancelObservation({ observationId: String(doc._id), reason: "not mine", actorId: TEACHER.toString(), byObserver: true }),
+    ).rejects.toBeInstanceOf(ClassroomObservationError);
+    expect(doc.save as jest.Mock).not.toHaveBeenCalled();
+  });
+
+  test("an UPLOADED (unassigned) row cannot be rejected by an observer", async () => {
+    const doc = makeDoc({ state: "UPLOADED", observerId: null });
+    mockFindById.mockResolvedValue(doc);
+    await expect(
+      cancelObservation({ observationId: String(doc._id), reason: "class test", actorId: OBSERVER.toString(), byObserver: true }),
+    ).rejects.toBeInstanceOf(ClassroomObservationError);
+  });
+
+  test("a reason is required", async () => {
+    mockFindById.mockResolvedValue(makeDoc({ state: "ASSIGNED", observerId: OBSERVER }));
+    await expect(
+      cancelObservation({ observationId: String(oid()), reason: " ", actorId: OBSERVER.toString(), byObserver: true }),
+    ).rejects.toBeInstanceOf(ClassroomObservationError);
+  });
+
+  test("a manager cancel is NOT flagged as an observer rejection", async () => {
+    const doc = makeDoc({ state: "ASSIGNED", observerId: OBSERVER });
+    mockFindById.mockResolvedValue(doc);
+    const res = await cancelObservation({ observationId: String(doc._id), reason: "teacher on leave", actorId: OFFICE.toString() });
+    expect(res.rejectedByObserver).toBe(false);
+  });
+});
+
+// ===========================================================================
+// Principal/Office edit a review before publishing (owner ask 2026-09-30)
+// ===========================================================================
+
+describe("editObservationReview", () => {
+  const reviewed = () =>
+    makeDoc({
+      state: "REVIEWED",
+      reviewedAt: new Date("2026-06-15T00:00:00Z"),
+      ...validPayload(),
+      originalReview: null,
+      reviewEditedAt: null,
+      reviewEditedBy: null,
+    });
+
+  test("edits an unpublished review, snapshots the observer's original, audits the changed fields", async () => {
+    const doc = reviewed();
+    mockFindById.mockResolvedValue(doc);
+    const res = await editObservationReview({
+      observationId: String(doc._id),
+      ...validPayload(),
+      growthFocus: "Ask two open questions per lesson segment.",
+      actorId: OFFICE.toString(),
+    });
+    expect(res.growthFocus).toBe("Ask two open questions per lesson segment.");
+    expect(res.reviewEditedBy).toBe(OFFICE.toString());
+    expect((doc.originalReview as Record<string, unknown>).growthFocus).toBe(validPayload().growthFocus);
+    expect(mockWriteAudit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventKind: "CLASSROOM_OBSERVATION_REVIEW_EDITED",
+        meta: expect.objectContaining({ changedFields: ["growthFocus"], firstEdit: true }),
+      }),
+    );
+  });
+
+  test("a second edit keeps the FIRST original, not the intermediate version", async () => {
+    const original = { ...validPayload(), growthFocus: "observer's words" };
+    const doc = reviewed();
+    doc.growthFocus = "principal's first edit";
+    doc.originalReview = original;
+    mockFindById.mockResolvedValue(doc);
+    await editObservationReview({ observationId: String(doc._id), ...validPayload(), growthFocus: "second edit", actorId: OFFICE.toString() });
+    expect((doc.originalReview as Record<string, unknown>).growthFocus).toBe("observer's words");
+  });
+
+  test("no change → no stamp, no audit", async () => {
+    const doc = reviewed();
+    mockFindById.mockResolvedValue(doc);
+    const res = await editObservationReview({ observationId: String(doc._id), ...validPayload(), actorId: OFFICE.toString() });
+    expect(res.reviewEditedAt).toBeNull();
+    expect(mockWriteAudit).not.toHaveBeenCalled();
+  });
+
+  test("a PUBLISHED review cannot be edited", async () => {
+    const doc = reviewed();
+    doc.publishedAt = new Date("2026-06-16T00:00:00Z");
+    mockFindById.mockResolvedValue(doc);
+    await expect(
+      editObservationReview({ observationId: String(doc._id), ...validPayload(), actorId: OFFICE.toString() }),
+    ).rejects.toBeInstanceOf(ClassroomObservationError);
+  });
+
+  test("an unreviewed (ASSIGNED) row cannot be edited", async () => {
+    mockFindById.mockResolvedValue(makeDoc({ state: "ASSIGNED" }));
+    await expect(
+      editObservationReview({ observationId: String(oid()), ...validPayload(), actorId: OFFICE.toString() }),
+    ).rejects.toBeInstanceOf(ClassroomObservationError);
+  });
+
+  test("the edit is validated exactly like a review (an incomplete payload is refused)", async () => {
+    mockFindById.mockResolvedValue(reviewed());
+    await expect(
+      editObservationReview({ observationId: String(oid()), ...validPayload(), domains: [], actorId: OFFICE.toString() }),
+    ).rejects.toBeTruthy();
   });
 });

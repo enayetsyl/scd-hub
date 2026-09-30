@@ -24,6 +24,7 @@ import {
   WITHHOLD_CLASSROOM_OBSERVATION,
   RELEASE_CLASSROOM_OBSERVATION_HOLD,
   CANCEL_CLASSROOM_OBSERVATION,
+  REJECT_CLASSROOM_OBSERVATION,
   RESTORE_CANCELLED_CLASSROOM_OBSERVATION,
   REQUEST_CO_REVIEW_OBSERVATION,
   OBSERVATIONS_FOR_RECORDING_QUERY,
@@ -111,6 +112,7 @@ export default function ObservationDetailScreen({ route, navigation }: Props): R
   const [, withhold] = useMutation(WITHHOLD_CLASSROOM_OBSERVATION);
   const [, liftHold] = useMutation(RELEASE_CLASSROOM_OBSERVATION_HOLD);
   const [, cancelObs] = useMutation(CANCEL_CLASSROOM_OBSERVATION);
+  const [, rejectObs] = useMutation(REJECT_CLASSROOM_OBSERVATION);
   const [, restoreObs] = useMutation(RESTORE_CANCELLED_CLASSROOM_OBSERVATION);
   const [, coReview] = useMutation(REQUEST_CO_REVIEW_OBSERVATION);
 
@@ -126,6 +128,7 @@ export default function ObservationDetailScreen({ route, navigation }: Props): R
   const [responseText, setResponseText] = useState("");
   const [withholdReason, setWithholdReason] = useState("");
   const [cancelReason, setCancelReason] = useState("");
+  const [rejectReason, setRejectReason] = useState("");
   const [coObserverId, setCoObserverId] = useState<string | null>(null);
   const [fairness, setFairness] = useState<string | null>(null);
   const [usefulness, setUsefulness] = useState<string | null>(null);
@@ -185,6 +188,18 @@ export default function ObservationDetailScreen({ route, navigation }: Props): R
     }
     const res = await run(() => cancelObs({ observationId, reason }), STR.obsCancelDone);
     if (res) setCancelReason("");
+  }
+
+  // The assigned observer turns down a video they cannot review (a class test was
+  // recorded, the footage is blank). Reason required, caught here before a round-trip.
+  async function onReject(): Promise<void> {
+    const reason = rejectReason.trim();
+    if (!reason) {
+      setError(STR.obsRejectReasonRequired);
+      return;
+    }
+    const res = await run(() => rejectObs({ observationId, reason }), STR.obsRejectDone);
+    if (res) setRejectReason("");
   }
 
   // CO-2: authorize YouTube (separate gesture from the upload, so the file dialog keeps its user gesture).
@@ -280,10 +295,39 @@ export default function ObservationDetailScreen({ route, navigation }: Props): R
                     })
                   }
                 />
+                {/* A recording that cannot be reviewed (a class test, blank footage) is
+                    turned down here with a reason — the Principal is notified and can
+                    restore it or upload a fresh one. */}
+                <Divider />
+                <Muted style={{ marginBottom: space(2) }}>{STR.obsRejectHint}</Muted>
+                <Field
+                  label={STR.obsRejectReason}
+                  value={rejectReason}
+                  onChangeText={setRejectReason}
+                  placeholder={STR.obsRejectReasonPlaceholder}
+                  multiline
+                />
+                <Button
+                  title={STR.obsReject}
+                  variant="danger"
+                  onPress={() => void onReject()}
+                  disabled={busy || rejectReason.trim().length === 0}
+                />
               </>
             ) : (
               <Notice message={STR.obsNoReviewPerm} tone="warn" />
             )}
+          </Card>
+        ) : null}
+
+        {/* The observer's own view of a video they rejected — the review card is gone, so
+            say what happened rather than leave an empty row. */}
+        {isObserver && !canManage && obs.cancelledAt ? (
+          <Card>
+            <View style={{ flexDirection: "row", marginBottom: space(2) }}>
+              <Badge text={obs.rejectedByObserver ? STR.obsRejectedByObserver : STR.obsCancelled} tone="warn" />
+            </View>
+            <Row label={STR.obsCancelReason} value={obs.cancelledReason ?? "—"} />
           </Card>
         ) : null}
 
@@ -299,7 +343,7 @@ export default function ObservationDetailScreen({ route, navigation }: Props): R
             {obs.cancelledAt ? (
               <>
                 <View style={{ flexDirection: "row", marginBottom: space(2) }}>
-                  <Badge text={STR.obsCancelled} tone="warn" />
+                  <Badge text={obs.rejectedByObserver ? STR.obsRejectedByObserver : STR.obsCancelled} tone="warn" />
                 </View>
                 <Row label={STR.obsCancelledOn} value={isoDateTimeLabel(obs.cancelledAt)} />
                 {obs.cancelledBy ? (
@@ -344,6 +388,29 @@ export default function ObservationDetailScreen({ route, navigation }: Props): R
         {canManage && (obs.state === "REVIEWED" || obs.publishedAt) ? (
           <Card>
             <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.obsPublishTitle}</Body>
+            {obs.reviewEditedAt ? (
+              <Row
+                label={STR.obsReviewEdited}
+                value={`${isoDateTimeLabel(obs.reviewEditedAt)}${obs.reviewEditedBy ? ` · ${nameById[obs.reviewEditedBy] ?? ""}` : ""}`}
+              />
+            ) : null}
+            {/* Like the Comments reviewer edit: fix the review before the teacher sees it.
+                The observer's original is kept on the server. */}
+            {!obs.publishedAt ? (
+              <Button
+                title={STR.obsEditReview}
+                variant="secondary"
+                style={{ marginBottom: space(2) }}
+                onPress={() =>
+                  navigation.navigate("ReviewObservation", {
+                    observationId,
+                    form: obs.form,
+                    title: `${obsFormLabel(obs.form)} · ${hwSubjectLabel(obs.subject)}`,
+                    mode: "edit",
+                  })
+                }
+              />
+            ) : null}
             {obs.publishedAt ? (
               <Row label={STR.obsPublishedOn} value={isoDateTimeLabel(obs.publishedAt)} />
             ) : obs.withheldAt ? (

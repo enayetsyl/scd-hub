@@ -114,6 +114,13 @@ export interface ClassroomObservationShape {
   cancelledAt: string | null;
   cancelledBy: string | null;
   cancelledReason: string | null;
+  /** True when the cancel was the ASSIGNED observer rejecting the video (the
+   *  canceller is the observer), not a Principal/Office call-off. */
+  rejectedByObserver: boolean;
+  /** Set when Principal/Office edited the review before publishing; the observer's
+   *  original stays on the row (`originalReview`). */
+  reviewEditedAt: string | null;
+  reviewEditedBy: string | null;
   domains: DomainScoreShape[];
   gates: GateScoreShape[];
   oneStrength: string | null;
@@ -162,6 +169,10 @@ function shape(d: IClassroomObservation): ClassroomObservationShape {
     cancelledAt: d.cancelledAt ? new Date(d.cancelledAt).toISOString() : null,
     cancelledBy: d.cancelledBy ? d.cancelledBy.toString() : null,
     cancelledReason: d.cancelledReason ?? null,
+    rejectedByObserver:
+      !!d.cancelledAt && !!d.cancelledBy && !!d.observerId && d.cancelledBy.toString() === d.observerId.toString(),
+    reviewEditedAt: d.reviewEditedAt ? new Date(d.reviewEditedAt).toISOString() : null,
+    reviewEditedBy: d.reviewEditedBy ? d.reviewEditedBy.toString() : null,
     domains: (d.domains ?? []).map((x) => ({ domain: x.domain, level: x.level, note: x.note })),
     gates: (d.gates ?? []).map((x) => ({ gate: x.gate, result: x.result, breachNote: x.breachNote ?? null })),
     oneStrength: d.oneStrength ?? null,
@@ -448,6 +459,114 @@ export interface ReviewObservationInput extends Ref11PayloadInput {
   quran?: QuranPayloadInput;
 }
 
+/** Validate + store a review payload onto the row, by the row's form (CO-5): a QURAN
+ *  row uses the Quran (ClassEcho) form; every other row uses REF-11. NEVER REF-11 for
+ *  QURAN. Shared by the observer's submit and the manager's pre-publish edit, so both
+ *  are held to exactly the same validation. */
+function applyReviewPayload(doc: IClassroomObservation, input: Ref11PayloadInput & { quran?: QuranPayloadInput }): void {
+  if (doc.form === "QURAN") {
+    if (!input.quran) {
+      throw new ClassroomObservationError("কুরআন ফর্মের পর্যবেক্ষণে কুরআন পেলোড প্রয়োজন");
+    }
+    doc.quran = validateQuranPayload(input.quran);
+    // A QURAN row never carries the REF-11 fields (left at their defaults).
+  } else {
+    const payload = validateRef11Payload(input);
+    doc.domains = payload.domains;
+    doc.gates = payload.gates;
+    doc.oneStrength = payload.oneStrength;
+    doc.growthFocus = payload.growthFocus;
+    doc.priorFocusProgress = payload.priorFocusProgress;
+    doc.priorFocusNote = payload.priorFocusNote;
+    doc.overallSuggestion = payload.overallSuggestion; // CO-16 (D-#503)
+  }
+}
+
+/** The review fields as a plain object — the snapshot kept on first edit, and the
+ *  before/after compared to name what an edit changed. */
+const REVIEW_FIELDS = [
+  "domains",
+  "gates",
+  "oneStrength",
+  "growthFocus",
+  "priorFocusProgress",
+  "priorFocusNote",
+  "overallSuggestion",
+  "quran",
+] as const;
+function reviewSnapshot(doc: IClassroomObservation): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const f of REVIEW_FIELDS) {
+    const v = (doc as unknown as Record<string, unknown>)[f];
+    out[f] = v == null ? null : JSON.parse(JSON.stringify(v));
+  }
+  return out;
+}
+
+export interface EditObservationReviewInput extends Ref11PayloadInput {
+  observationId: string;
+  /** Principal/Office (observation:manage) — enforced by the resolver. */
+  actorId: string;
+  quran?: QuranPayloadInput;
+}
+
+/**
+ * Principal/Office edit a REVIEWED review BEFORE it is published — the observation twin
+ * of the Comments reviewer edit (owner ask 2026-09-30). Same validation as the
+ * observer's submit (applyReviewPayload). Unlike the comment edit, the observer's
+ * submission is NOT lost: it is snapshotted to `originalReview` on the first edit, and
+ * every edit is audited with the fields it changed.
+ *
+ * Refused once published (the teacher has read it — the record must not change under
+ * them) or cancelled. A withheld row may be edited: withhold is "not yet", and fixing
+ * the review is often why it was held.
+ */
+export async function editObservationReview(input: EditObservationReviewInput): Promise<ClassroomObservationShape> {
+  const doc = (await ClassroomObservation.findById(input.observationId)) as IClassroomObservation | null;
+  if (!doc) throw new ClassroomObservationError("Observation not found");
+  if (doc.state !== "REVIEWED") {
+    throw new ClassroomObservationError("শুধু পর্যালোচিত পর্যবেক্ষণ সংশোধন করা যাবে");
+  }
+  if (doc.publishedAt) {
+    throw new ClassroomObservationError("প্রকাশিত পর্যবেক্ষণ আর সংশোধন করা যাবে না");
+  }
+  if (doc.cancelledAt) {
+    throw new ClassroomObservationError("এই পর্যবেক্ষণ বাতিল করা হয়েছে");
+  }
+
+  const before = reviewSnapshot(doc);
+  const firstEdit = !doc.originalReview;
+  if (firstEdit) {
+    doc.originalReview = before;
+    doc.markModified("originalReview");
+  }
+  applyReviewPayload(doc, input);
+  const after = reviewSnapshot(doc);
+  // Compare CONTENT only: stored sub-documents carry an `_id` that fresh input does not,
+  // and the validator normalises blanks to null — neither is an edit.
+  const canon = (v: unknown) => JSON.stringify(v, (k, x) => (k === "_id" || x === null || x === undefined ? undefined : x));
+  const changedFields = REVIEW_FIELDS.filter((f) => canon(before[f]) !== canon(after[f]));
+  if (changedFields.length === 0) return shape(doc); // nothing changed — no stamp, no audit
+
+  doc.reviewEditedAt = new Date();
+  doc.reviewEditedBy = oid(input.actorId, "actorId");
+  await doc.save();
+
+  await writeAudit({
+    eventKind: "CLASSROOM_OBSERVATION_REVIEW_EDITED",
+    actorId: input.actorId,
+    targetId: doc._id,
+    targetKind: "ClassroomObservation",
+    meta: {
+      teacherId: doc.teacherId.toString(),
+      observerId: doc.observerId ? doc.observerId.toString() : null,
+      changedFields: [...changedFields],
+      firstEdit,
+    },
+  });
+  return shape(doc);
+}
+
 export async function reviewObservation(input: ReviewObservationInput): Promise<ClassroomObservationShape> {
   const doc = (await ClassroomObservation.findById(input.observationId)) as IClassroomObservation | null;
   if (!doc) throw new ClassroomObservationError("Observation not found");
@@ -466,25 +585,7 @@ export async function reviewObservation(input: ReviewObservationInput): Promise<
     throw new ClassroomObservationError("Only the assigned observer may review this observation");
   }
 
-  // The form decides the validator + the stored payload (CO-5): a QURAN row uses the
-  // Quran (ClassEcho) form; every other row uses REF-11. NEVER REF-11 for QURAN.
-  if (doc.form === "QURAN") {
-    if (!input.quran) {
-      throw new ClassroomObservationError("কুরআন ফর্মের পর্যবেক্ষণে কুরআন পেলোড প্রয়োজন");
-    }
-    const payload = validateQuranPayload(input.quran);
-    doc.quran = payload;
-    // A QURAN row never carries the REF-11 fields (left at their defaults).
-  } else {
-    const payload = validateRef11Payload(input);
-    doc.domains = payload.domains;
-    doc.gates = payload.gates;
-    doc.oneStrength = payload.oneStrength;
-    doc.growthFocus = payload.growthFocus;
-    doc.priorFocusProgress = payload.priorFocusProgress;
-    doc.priorFocusNote = payload.priorFocusNote;
-    doc.overallSuggestion = payload.overallSuggestion; // CO-16 (D-#503)
-  }
+  applyReviewPayload(doc, input);
   doc.state = "REVIEWED"; // observer/Principal-only until PUBLISHED (CO-8, D-#271)
   doc.reviewedAt = new Date();
   await doc.save();
@@ -581,6 +682,31 @@ async function emitReadyToPublish(doc: IClassroomObservation): Promise<void> {
     );
   } catch (err) {
     console.error("OBSERVATION_READY_TO_PUBLISH emit failed (never blocks the review):", err);
+  }
+}
+
+/** The observer turned a video down — Principal/Office decide what happens next
+ *  (re-assign a fresh recording, or restore if the rejection was a mistake). Best-effort:
+ *  never blocks the rejection. */
+async function emitRejected(doc: IClassroomObservation, reason: string): Promise<void> {
+  try {
+    const managerIds = await managerRecipientIds();
+    const obsId = doc._id.toString();
+    await Promise.all(
+      managerIds.map((userId) =>
+        emit({
+          recipientUserId: userId,
+          kind: "OBSERVATION_REJECTED",
+          titleBn: "পর্যবেক্ষক একটি ভিডিও বাতিল করেছেন",
+          bodyBn: `কারণ: ${reason}`,
+          refs: { observationId: obsId, teacherId: doc.teacherId.toString() },
+          // The rejection instant is in the key: restore → reject again must notify again.
+          dedupeKey: `OBSREJECT:${obsId}:${doc.cancelledAt ? new Date(doc.cancelledAt).getTime() : 0}:${userId}`,
+        }),
+      ),
+    );
+  } catch (err) {
+    console.error("OBSERVATION_REJECTED emit failed (never blocks the rejection):", err);
   }
 }
 
@@ -767,6 +893,11 @@ export interface CancelObservationInput {
   reason: string;
   /** The authenticated actor (Principal/Office — observation:manage). */
   actorId: string;
+  /** The ASSIGNED observer rejecting a video they cannot review (a class test was
+   *  recorded, the footage is blank). Narrower than a manager cancel: only an ASSIGNED
+   *  row, only by its own observer. Stored as the same cancel stamp so every queue,
+   *  count and filter that already honours a cancel honours this too. */
+  byObserver?: boolean;
 }
 
 /**
@@ -816,11 +947,29 @@ export async function cancelObservation(input: CancelObservationInput): Promise<
   if (!(CANCELLABLE_STATES as readonly string[]).includes(doc.state)) {
     throw new ClassroomObservationError("শুধু আপলোডকৃত বা বরাদ্দকৃত পর্যবেক্ষণ বাতিল করা যাবে");
   }
+  if (input.byObserver) {
+    // The observer may only turn down work handed to THEM, and only before reviewing.
+    if (doc.state !== "ASSIGNED" || !doc.observerId || doc.observerId.toString() !== input.actorId) {
+      throw new ClassroomObservationError("শুধু আপনাকে দেওয়া, এখনো মূল্যায়ন না করা ভিডিও বাতিল করা যাবে");
+    }
+  }
 
   doc.cancelledAt = new Date();
   doc.cancelledBy = oid(input.actorId, "actorId");
   doc.cancelledReason = reason;
   await doc.save();
+
+  if (input.byObserver) {
+    await writeAudit({
+      eventKind: "CLASSROOM_OBSERVATION_REJECTED",
+      actorId: input.actorId,
+      targetId: doc._id,
+      targetKind: "ClassroomObservation",
+      meta: { teacherId: doc.teacherId.toString(), observerId: input.actorId, reason },
+    });
+    await emitRejected(doc, reason);
+    return shape(doc);
+  }
 
   await writeAudit({
     eventKind: "CLASSROOM_OBSERVATION_CANCELLED",
