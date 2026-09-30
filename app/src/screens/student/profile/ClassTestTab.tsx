@@ -11,7 +11,7 @@ import { Badge, Body, Card, Chip, ChipRow, Loader, Muted, Notice } from "../../.
 import { MiniBarChart, type BarDatum } from "../../../components/MiniBarChart";
 import { STR, bnNum, ctTrendGlyph, hwSubjectLabel, isoDateLabel } from "../../../lib/labels";
 import { space, useColors } from "../../../theme";
-import { DataTable, SectionTitle, StatTile, TileRow, ToneText, pctText, toneForPct } from "./parts";
+import { DataTable, SectionTitle, StatTile, TileRow, ToneText, pctText, toneForPct, withN } from "./parts";
 
 type Result = ProfileClassTestT["results"][number];
 
@@ -66,6 +66,16 @@ export function ClassTestTab({
   narrowed: boolean;
 }): React.ReactElement {
   const [subject, setSubject] = useState<string | null>(null);
+  const [missedOnly, setMissedOnly] = useState(false);
+
+  // Tests the student did not sit: result rows marked ABSENT (percent null). A test
+  // with no result row yet is the teacher's pending entry, not a missed test.
+  const missedBySubject = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const r of profile?.results ?? []) if (r.status === "ABSENT") m.set(r.subject, (m.get(r.subject) ?? 0) + 1);
+    return m;
+  }, [profile]);
+  const missedTotal = [...missedBySubject.values()].reduce((n, v) => n + v, 0);
 
   const newestFirst = useMemo(
     () => [...(profile?.results ?? [])].sort((a, b) => new Date(b.examDate).getTime() - new Date(a.examDate).getTime()),
@@ -87,7 +97,21 @@ export function ClassTestTab({
   }
 
   const a = profile.analytics;
-  const listed = subject ? newestFirst.filter((r) => r.subject === subject) : newestFirst.slice(0, 8);
+  const listed = newestFirst.filter(
+    (r) => (!subject || r.subject === subject) && (!missedOnly || r.status === "ABSENT"),
+  );
+  const shown = subject || missedOnly ? listed : listed.slice(0, 8);
+  // bySubject is built from scores, so a subject whose every test was missed has no
+  // row there — add it, or its misses would be invisible in the table.
+  const subjectRows = [
+    ...profile.bySubject,
+    ...[...missedBySubject.keys()]
+      .filter((s) => !profile.bySubject.some((b) => b.subject === s))
+      .map((s) => ({ subject: s, examsTaken: 0, avgPercent: null, latestPercent: null, previousPercent: null, trend: "flat" })),
+  ];
+  const listTitle = [subject ? hwSubjectLabel(subject) : null, missedOnly ? STR.spCtNotAttendedList : null]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <View style={{ gap: space(3) }}>
@@ -98,6 +122,13 @@ export function ClassTestTab({
           value={pctText(a.avgPercent)}
           sub={`${STR.ctExamsTaken} ${bnNum(a.examsPresent)}`}
           tone={toneForPct(a.avgPercent, 80, 50)}
+        />
+        <StatTile
+          label={STR.spCtNotAttended}
+          value={bnNum(missedTotal)}
+          sub={withN(STR.spCtNotAttendedSub, a.examsPresent + missedTotal)}
+          tone={missedTotal === 0 ? "ok" : missedTotal >= 3 ? "danger" : "warn"}
+          onPress={missedTotal > 0 ? () => setMissedOnly((v) => !v) : undefined}
         />
         <StatTile
           label={STR.spLatestRank}
@@ -133,18 +164,22 @@ export function ClassTestTab({
         <DataTable
           columns={[
             { label: STR.spColSubject, width: 150 },
-            { label: STR.spColTests, width: 70, align: "right" },
+            { label: STR.spColTaken, width: 70, align: "right" },
+            { label: STR.spColMissed, width: 70, align: "right" },
             { label: STR.ctAvgPercent, width: 100, align: "right" },
             { label: STR.spColLatest, width: 90, align: "right" },
             { label: STR.ctTrajectory, width: 80, align: "center" },
           ]}
-          rows={profile.bySubject.map((b) => ({
+          rows={subjectRows.map((b) => ({
             key: b.subject,
             selected: subject === b.subject,
             onPress: () => setSubject(subject === b.subject ? null : b.subject),
             cells: [
               hwSubjectLabel(b.subject),
               bnNum(b.examsTaken),
+              <ToneText key="m" tone={(missedBySubject.get(b.subject) ?? 0) > 0 ? "danger" : "muted"}>
+                {bnNum(missedBySubject.get(b.subject) ?? 0)}
+              </ToneText>,
               <ToneText key="a" tone={toneForPct(b.avgPercent, 80, 50)}>{pctText(b.avgPercent)}</ToneText>,
               <ToneText key="l" tone={toneForPct(b.latestPercent, 80, 50)}>{pctText(b.latestPercent)}</ToneText>,
               <ToneText key="t" tone={trendTone(b.trend)}>{ctTrendGlyph(b.trend)}</ToneText>,
@@ -155,15 +190,17 @@ export function ClassTestTab({
 
       <Card style={{ gap: space(2) }}>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: space(2) }}>
-          <SectionTitle title={subject ? hwSubjectLabel(subject) : STR.spRecentTests} />
-          {subject ? (
+          <SectionTitle title={listTitle || STR.spRecentTests} />
+          {subject || missedOnly ? (
             <ChipRow>
-              <Chip label={`✕ ${hwSubjectLabel(subject)}`} selected onPress={() => setSubject(null)} />
+              {subject ? <Chip label={`✕ ${hwSubjectLabel(subject)}`} selected onPress={() => setSubject(null)} /> : null}
+              {missedOnly ? <Chip label={`✕ ${STR.spCtNotAttended}`} selected onPress={() => setMissedOnly(false)} /> : null}
             </ChipRow>
           ) : null}
         </View>
-        {subject && chart.length > 0 ? <MiniBarChart data={chart} /> : null}
-        {listed.map((r) => (
+        {subject && !missedOnly && chart.length > 0 ? <MiniBarChart data={chart} /> : null}
+        {shown.length === 0 ? <Muted>{STR.spNoItemsFilter}</Muted> : null}
+        {shown.map((r) => (
           <TestRow key={r.testId} r={r} />
         ))}
       </Card>
