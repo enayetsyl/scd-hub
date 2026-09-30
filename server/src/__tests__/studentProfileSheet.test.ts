@@ -44,6 +44,8 @@ const panel = (over: Partial<StudentTrackerPanel> = {}): StudentTrackerPanel => 
 const input = (over: Partial<SheetInput> = {}): SheetInput => ({
   header: {
     studentId: "s1",
+    schoolId: "0112",
+    address: null,
     name: "Musa Bin Sadik",
     nameBn: "মুসা বিন সাদিক",
     rollNumber: "12",
@@ -85,6 +87,7 @@ const input = (over: Partial<SheetInput> = {}): SheetInput => ({
         daysInWindow: 2,
       },
     ],
+    offDays: [],
   },
   homework: panel(),
   assignment: panel({ totals: counters({ graded: 4, avgMarksPct: 72.5 }) }),
