@@ -3328,16 +3328,17 @@ const ROUTINE_SLOT_FIELDS = `
 
 export const ROUTINE_SLOTS_QUERY = gql<
   { routineSlots: RoutineSlotT[] },
-  { groupType: string; groupId: string }
+  { groupType: string; groupId: string; date?: string | null }
 >`
-  query RoutineSlots($groupType: String!, $groupId: String!) {
-    routineSlots(groupType: $groupType, groupId: $groupId) { ${ROUTINE_SLOT_FIELDS} }
+  query RoutineSlots($groupType: String!, $groupId: String!, $date: String) {
+    routineSlots(groupType: $groupType, groupId: $groupId, date: $date) { ${ROUTINE_SLOT_FIELDS} }
   }
 `;
 
-export const MY_ROUTINE_QUERY = gql<{ myRoutineSlots: RoutineSlotT[] }, NoVars>`
-  query MyRoutine {
-    myRoutineSlots { ${ROUTINE_SLOT_FIELDS} }
+/** `date` (YYYY-MM-DD, optional) = the week as in force on that date; default today. */
+export const MY_ROUTINE_QUERY = gql<{ myRoutineSlots: RoutineSlotT[] }, { date?: string | null }>`
+  query MyRoutine($date: String) {
+    myRoutineSlots(date: $date) { ${ROUTINE_SLOT_FIELDS} }
   }
 `;
 
