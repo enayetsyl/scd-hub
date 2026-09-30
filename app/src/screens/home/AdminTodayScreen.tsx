@@ -18,6 +18,7 @@ import type { TabParamList } from "../../navigation/types";
 import { Screen, H2, Body, Muted, Card, Badge, Loader, ErrorBanner } from "../../components/ui";
 import { GiftHandoverCard } from "../../components/GiftHandoverCard";
 import { LiveClassCard } from "../../components/LiveClassCard";
+import { TodayWorkCard } from "../../components/TodayWorkCard";
 import { useAuth } from "../../auth/AuthContext";
 import { STR, bnNum, dayOfWeekLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
@@ -194,6 +195,10 @@ export default function AdminTodayScreen(): React.ReactElement {
             answer changes every period, and an uncovered class is the one thing here
             that needs a decision within the hour. */}
         {canLiveBoard ? <LiveClassCard /> : null}
+
+        {/* WB-4 (D-#701) — আজকের কাজ: the caller's own board for today (a Principal's
+            leave approvals and tasks; the Office's print jobs), linking to the board. */}
+        <TodayWorkCard />
 
         {cards.map(renderCard)}
 

@@ -12,6 +12,8 @@ const SCREEN_TAB: Record<string, string> = {
   ClassTestResults: "ClassTestTab",
   FreeMixingHome: "FreeMixingTab",
   ReviewSubmit: "ReviewTab",
+  QuestionReviewQueue: "ReviewTab",
+  ObservationDetail: "ObservationTab",
   PrintHome: "PrintTab",
   LeaveAdmin: "HrTab",
 };

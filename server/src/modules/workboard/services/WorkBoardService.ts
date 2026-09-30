@@ -52,6 +52,7 @@ import { ClassTest } from "../../trackers/models/ClassTest";
 import { ClassTestResult } from "../../trackers/models/ClassTestResult";
 import { classTestSettled } from "../../reports/services/MonthlyPendingWorkService";
 import { VideoReviewAssignment } from "../../classroom-observation/models/VideoReviewAssignment";
+import { ClassroomObservation } from "../../classroom-observation/models/ClassroomObservation";
 import { ReviewAssignment } from "../../content/models/ReviewAssignment";
 import { PrintRequest } from "../../printing/models/PrintRequest";
 import { User } from "../../foundation/models/User";
@@ -61,6 +62,7 @@ import { StaffProfile } from "../../foundation/models/StaffProfile";
 import { normalizePhone } from "../../foundation/services/credentials";
 import type { ITask } from "../models/Task";
 import { tasksOnBoards } from "./TaskService";
+import { PULLABLE_KINDS, isBackup, officeRecipients, officeUncoveredToday, pullsFor } from "./OfficeCoverService";
 
 export interface WorkCardLink {
   screen: string;
@@ -89,6 +91,10 @@ export interface WorkCard {
   taskId: string | null;
   sourceId: string | null;
   link: WorkCardLink | null;
+  /** WB-5 (D-#702): an office-queue card a backup may take, or one already taken. */
+  canPull?: boolean;
+  pulledById?: string | null;
+  pulledByName?: string | null;
 }
 
 /** What one staff user looks like to the board (role + templates + grants, for gates). */
@@ -440,6 +446,9 @@ async function videoReviewCards(userIds: string[], todayKey: string): Promise<Wo
   }));
 }
 
+/** Plan/chapter reviews are one card each. QUESTION reviews share the same model
+ *  (QuestionReviewService writes a ReviewAssignment per question) and a reviewer can
+ *  hold thousands at once — those become ONE card per reviewer with the count. */
 async function planReviewCards(userIds: string[], todayKey: string): Promise<WorkCard[]> {
   const rows = (await ReviewAssignment.find({
     reviewerId: { $in: userIds.map((u) => new Types.ObjectId(u)) },
@@ -447,16 +456,87 @@ async function planReviewCards(userIds: string[], todayKey: string): Promise<Wor
   })
     .select("reviewerId docType subject classLevel anchorWord addressNumber artifactId assignedAt")
     .lean()) as unknown as Array<{ _id: Types.ObjectId; reviewerId: Types.ObjectId; docType: string; subject: string; classLevel: number; anchorWord: string; addressNumber: string; artifactId: Types.ObjectId; assignedAt: Date }>;
+  const out: WorkCard[] = [];
+  const questions = new Map<string, { n: number; oldest: Date }>();
+  for (const r of rows) {
+    if (r.docType === "question") {
+      const id = r.reviewerId.toString();
+      const cur = questions.get(id) ?? { n: 0, oldest: new Date(r.assignedAt) };
+      cur.n += 1;
+      if (new Date(r.assignedAt) < cur.oldest) cur.oldest = new Date(r.assignedAt);
+      questions.set(id, cur);
+      continue;
+    }
+    out.push({
+      key: `PLAN_REVIEW:${r._id.toString()}`,
+      kind: "PLAN_REVIEW",
+      userId: r.reviewerId.toString(),
+      titleBn: `পরিকল্পনা রিভিউ · ${bn(r.classLevel)}ম শ্রেণি ${subjectBn(r.subject)} · ${r.anchorWord} ${r.addressNumber}`,
+      detailBn: `বরাদ্দ ${dateKeyOf(new Date(r.assignedAt))}`,
+      dateKey: todayKey,
+      slot: "ANY",
+      startMin: null,
+      effortMin: WORK_EFFORT_MIN.planReview,
+      status: "TODO",
+      overdue: false,
+      priority: null,
+      blockedReason: null,
+      assignedById: null,
+      assignedByName: null,
+      forLabel: null,
+      taskId: null,
+      sourceId: r._id.toString(),
+      link: { screen: "ReviewSubmit", params: { assignmentId: r._id.toString(), artifactId: r.artifactId.toString() } },
+    });
+  }
+  for (const [userId, q] of questions) {
+    out.push({
+      key: `QUESTION_REVIEW:${userId}`,
+      kind: "QUESTION_REVIEW",
+      userId,
+      titleBn: `প্রশ্ন রিভিউ · ${bn(q.n)}টি বাকি`,
+      detailBn: `সবচেয়ে পুরোনো বরাদ্দ ${dateKeyOf(q.oldest)}`,
+      dateKey: todayKey,
+      slot: "ANY",
+      startMin: null,
+      effortMin: q.n * WORK_EFFORT_MIN.questionPerItem,
+      status: "TODO",
+      overdue: false,
+      priority: null,
+      blockedReason: null,
+      assignedById: null,
+      assignedByName: null,
+      forLabel: null,
+      taskId: null,
+      sourceId: null,
+      link: { screen: "QuestionReviewQueue", params: {} },
+    });
+  }
+  return out;
+}
+
+/** A classroom observation handed to an observer (state ASSIGNED) — gone once reviewed. */
+async function observationCards(userIds: string[], todayKey: string): Promise<WorkCard[]> {
+  const rows = (await ClassroomObservation.find({
+    observerId: { $in: userIds.map((u) => new Types.ObjectId(u)) },
+    state: "ASSIGNED",
+  })
+    .select("observerId teacherId classDate subject periodNumber")
+    .lean()) as unknown as Array<{ _id: Types.ObjectId; observerId: Types.ObjectId; teacherId: Types.ObjectId; classDate: string; subject: string; periodNumber?: number | null }>;
+  if (rows.length === 0) return [];
+  const names = new Map(
+    (await User.find({ _id: { $in: rows.map((r) => r.teacherId) } }).select("name").lean()).map((u) => [u._id.toString(), u.name]),
+  );
   return rows.map((r) => ({
-    key: `PLAN_REVIEW:${r._id.toString()}`,
-    kind: "PLAN_REVIEW" as const,
-    userId: r.reviewerId.toString(),
-    titleBn: `পরিকল্পনা রিভিউ · ${bn(r.classLevel)}ম শ্রেণি ${subjectBn(r.subject)} · ${r.anchorWord} ${r.addressNumber}`,
-    detailBn: `বরাদ্দ ${dateKeyOf(new Date(r.assignedAt))}`,
+    key: `OBSERVATION:${r._id.toString()}`,
+    kind: "OBSERVATION" as const,
+    userId: r.observerId.toString(),
+    titleBn: `শ্রেণি পর্যবেক্ষণ · ${names.get(r.teacherId.toString()) ?? "শিক্ষক"} · ${subjectBn(r.subject)}`,
+    detailBn: `ক্লাস ${r.classDate}${r.periodNumber ? ` · ${bn(r.periodNumber)}ম পিরিয়ড` : ""}`,
     dateKey: todayKey,
     slot: "ANY" as const,
     startMin: null,
-    effortMin: WORK_EFFORT_MIN.planReview,
+    effortMin: WORK_EFFORT_MIN.observation,
     status: "TODO" as const,
     overdue: false,
     priority: null,
@@ -466,7 +546,7 @@ async function planReviewCards(userIds: string[], todayKey: string): Promise<Wor
     forLabel: null,
     taskId: null,
     sourceId: r._id.toString(),
-    link: { screen: "ReviewSubmit", params: { assignmentId: r._id.toString(), artifactId: r.artifactId.toString() } },
+    link: { screen: "ObservationDetail", params: { observationId: r._id.toString() } },
   }));
 }
 
@@ -623,8 +703,19 @@ export async function boardFor(users: BoardUser[], fromKey: string, toKey: strin
   );
   const manual = tasks.map((t) => manualCard(t, todayKey, names));
 
-  const officeUsers = users.filter((u) => actsAsAny(u, ["OFFICE"]));
-  const approvers = users.filter((u) => actsAsAny(u, ["OFFICE", "PRINCIPAL"]) && callerHasPermission(profileOf(u), "leave:manage"));
+  // WB-5 (D-#702): office-queue cards belong to the DESK (primary-role OFFICE). While
+  // the desk is on leave the backups (OFFICE-template teacher-admins, the Principal)
+  // see them too and may pull one; a pulled card sits on the puller's board alone.
+  const uncovered = nowInRange ? await officeUncoveredToday(todayKey) : false;
+  const pulls = nowInRange ? await pullsFor(PULLABLE_KINDS) : [];
+  const pullerIds = new Set(pulls.map((p) => p.userId));
+  const officeRecipientsIn = officeRecipients(users, uncovered);
+  const withPullers = (base: BoardUser[]): BoardUser[] => {
+    const ids = new Set(base.map((u) => u._id.toString()));
+    return [...base, ...users.filter((u) => pullerIds.has(u._id.toString()) && !ids.has(u._id.toString()))];
+  };
+  const officeUsers = withPullers(officeRecipientsIn);
+  const approvers = withPullers(officeRecipientsIn.filter((u) => callerHasPermission(profileOf(u), "leave:manage")));
 
   const auto = await Promise.all([
     safe("period", () => periodCards(userIds, fromKey, toKey, keys)),
@@ -632,10 +723,45 @@ export async function boardFor(users: BoardUser[], fromKey: string, toKey: strin
     nowInRange ? safe("classTest", () => classTestCards(userIds, todayKey, labels)) : Promise.resolve([]),
     nowInRange ? safe("videoReview", () => videoReviewCards(userIds, todayKey)) : Promise.resolve([]),
     nowInRange ? safe("planReview", () => planReviewCards(userIds, todayKey)) : Promise.resolve([]),
+    nowInRange ? safe("observation", () => observationCards(userIds, todayKey)) : Promise.resolve([]),
     nowInRange ? safe("print", () => printCards(officeUsers, todayKey)) : Promise.resolve([]),
     nowInRange ? safe("leave", () => leaveCards(approvers, todayKey)) : Promise.resolve([]),
   ]);
-  return sortCards([...manual, ...auto.flat()]);
+  const pullerNames = new Map<string, string>();
+  if (pulls.length) {
+    const rows = await User.find({ _id: { $in: [...pullerIds] } }).select("name").lean();
+    for (const r of rows) pullerNames.set(r._id.toString(), r.name);
+  }
+  return sortCards(applyPulls([...manual, ...auto.flat()], pulls, users, pullerNames));
+}
+
+/** Pure (WB-5): a pulled office card shows on the puller's board ALONE; an unpulled one
+ *  on a backup's board is marked pullable. Desk logins never see a pull button on their
+ *  own queue — it is theirs already. */
+export function applyPulls(
+  cards: WorkCard[],
+  pulls: Array<{ kind: string; sourceId: string; userId: string }>,
+  users: Array<{ _id: { toString(): string }; role: string; additionalTemplates?: string[] }>,
+  names: Map<string, string>,
+): WorkCard[] {
+  const pulledBy = new Map(pulls.map((p) => [`${p.kind}:${p.sourceId}`, p.userId]));
+  const byId = new Map(users.map((u) => [u._id.toString(), u]));
+  const out: WorkCard[] = [];
+  for (const c of cards) {
+    if (!(PULLABLE_KINDS as readonly string[]).includes(c.kind) || !c.sourceId) {
+      out.push(c);
+      continue;
+    }
+    const owner = pulledBy.get(`${c.kind}:${c.sourceId}`);
+    if (owner) {
+      if (owner !== c.userId) continue; // taken by someone else — off this board
+      out.push({ ...c, pulledById: owner, pulledByName: names.get(owner) ?? null, canPull: false });
+      continue;
+    }
+    const u = byId.get(c.userId);
+    out.push({ ...c, canPull: !!u && isBackup(u), pulledById: null, pulledByName: null });
+  }
+  return out;
 }
 
 export interface WorkBoardCounts {
@@ -646,6 +772,12 @@ export interface WorkBoardCounts {
 export async function boardCountsFor(user: BoardUser, now = new Date()): Promise<WorkBoardCounts> {
   const todayKey = dateKeyOf(now);
   const cards = await boardFor([user], todayKey, todayKey, now);
+  // Only cards DATED today count as "open today": a marks card whose deadline is
+  // still ahead sits on a future day and would otherwise inflate the badge above
+  // what the board's আজ view shows (prod, 2026-09-30: badge 14 vs tile 11).
   const open = cards.filter((c) => c.status !== "DONE");
-  return { openToday: open.filter((c) => !c.overdue).length, overdue: open.filter((c) => c.overdue).length };
+  return {
+    openToday: open.filter((c) => !c.overdue && c.dateKey === todayKey).length,
+    overdue: open.filter((c) => c.overdue).length,
+  };
 }

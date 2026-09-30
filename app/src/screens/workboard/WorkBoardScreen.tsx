@@ -13,7 +13,15 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useMutation, useQuery } from "urql";
 import type { DaySlot, TaskStatus } from "@scd/shared";
 import { DAY_SLOTS } from "@scd/shared";
-import { MY_WORK_BOARD_QUERY, SET_TASK_BLOCKED, SET_TASK_STATUS, WORK_BOARD_FOR_QUERY, type WorkCardT } from "../../graphql/workBoard";
+import {
+  MY_WORK_BOARD_QUERY,
+  PULL_WORK_CARD,
+  RELEASE_WORK_CARD,
+  SET_TASK_BLOCKED,
+  SET_TASK_STATUS,
+  WORK_BOARD_FOR_QUERY,
+  type WorkCardT,
+} from "../../graphql/workBoard";
 import type { TabParamList, WorkBoardStackParamList } from "../../navigation/types";
 import { Screen, Button, EmptyState, Notice, Field, Loader, ErrorBanner } from "../../components/ui";
 import { WorkCardView } from "../../components/WorkCardView";
@@ -62,6 +70,28 @@ export default function WorkBoardScreen({ route, navigation }: Props): React.Rea
 
   const [, setStatus] = useMutation(SET_TASK_STATUS);
   const [, setBlocked] = useMutation(SET_TASK_BLOCKED);
+  const [, pullCard] = useMutation(PULL_WORK_CARD);
+  const [, releaseCard] = useMutation(RELEASE_WORK_CARD);
+
+  // WB-5 (D-#702): take an office-queue card while the desk is on leave / give it back.
+  async function onPull(card: WorkCardT): Promise<void> {
+    if (!card.sourceId) return;
+    setError(null);
+    setBusyKey(card.key);
+    const res = await pullCard({ kind: card.kind, sourceId: card.sourceId });
+    setBusyKey(null);
+    if (res.error) setError(friendlyError(res.error));
+    else refetch();
+  }
+  async function onRelease(card: WorkCardT): Promise<void> {
+    if (!card.sourceId) return;
+    setError(null);
+    setBusyKey(card.key);
+    const res = await releaseCard({ kind: card.kind, sourceId: card.sourceId });
+    setBusyKey(null);
+    if (res.error) setError(friendlyError(res.error));
+    else refetch();
+  }
 
   const canWork = mine || can("tasks:assign");
 
@@ -190,6 +220,8 @@ export default function WorkBoardScreen({ route, navigation }: Props): React.Rea
                   card={c}
                   onOpen={() => open(c)}
                   onStatus={canWork && c.kind === "TASK" ? (s) => onStatus(c, s) : undefined}
+                  onPull={mine && c.canPull ? () => onPull(c) : undefined}
+                  onRelease={mine && c.pulledById && c.pulledById === user?.id ? () => onRelease(c) : undefined}
                   busy={busyKey === c.key}
                 />
               ))}
@@ -216,6 +248,8 @@ export default function WorkBoardScreen({ route, navigation }: Props): React.Rea
                           card={c}
                           onOpen={() => open(c)}
                           onStatus={canWork && c.kind === "TASK" ? (s) => onStatus(c, s) : undefined}
+                  onPull={mine && c.canPull ? () => onPull(c) : undefined}
+                  onRelease={mine && c.pulledById && c.pulledById === user?.id ? () => onRelease(c) : undefined}
                           busy={busyKey === c.key}
                         />
                       ))}

@@ -17,6 +17,8 @@ export function WorkCardView({
   onStatus,
   busy = false,
   showAssignee,
+  onPull,
+  onRelease,
 }: {
   card: WorkCardT;
   onOpen?: () => void;
@@ -25,6 +27,9 @@ export function WorkCardView({
   busy?: boolean;
   /** For an assigner's list: name the person the card belongs to. */
   showAssignee?: string | null;
+  /** WB-5: office-queue cover — take this card / give it back. */
+  onPull?: () => void;
+  onRelease?: () => void;
 }): React.ReactElement {
   const styles = useStyles();
   const colors = useColors();
@@ -59,6 +64,7 @@ export function WorkCardView({
           )}
         </View>
         {card.detailBn ? <Text style={styles.meta}>{card.detailBn}</Text> : null}
+        {card.pulledByName ? <Text style={[styles.meta, { color: colors.primary }]}>{`${card.pulledByName} ${STR.wbPulledBy}`}</Text> : null}
         {blocked ? <Text style={[styles.meta, { color: colors.error }]}>{`${STR.wbBlock}: ${card.blockedReason}`}</Text> : null}
         <Text style={styles.meta}>
           {[
@@ -79,6 +85,20 @@ export function WorkCardView({
           </View>
           {!manual && onOpen ? <Text style={[styles.open, { color: colors.info }]}>{STR.wbOpenSource}</Text> : null}
         </View>
+        {!manual && (onPull || onRelease) ? (
+          <View style={styles.acts}>
+            {onPull ? (
+              <Pressable disabled={busy} onPress={onPull} style={[styles.act, styles.actPrimary, { backgroundColor: colors.primary }]}>
+                <Text style={[styles.actText, { color: colors.onPrimary }]}>{STR.wbPull}</Text>
+              </Pressable>
+            ) : null}
+            {onRelease ? (
+              <Pressable disabled={busy} onPress={onRelease} style={styles.act}>
+                <Text style={styles.actText}>{STR.wbRelease}</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        ) : null}
         {manual && onStatus && !done ? (
           <View style={styles.acts}>
             {card.status !== "DOING" ? (
