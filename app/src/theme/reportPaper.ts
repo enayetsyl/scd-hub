@@ -31,4 +31,8 @@ export const REPORT_PAPER = {
   /** A tappable cell (the student table's name → profile); darker than headerBg
    *  so it still reads on the white rows. */
   link: "#1a66c9",
+  /** A toned value in a cell (good / watch / bad), readable on both row colours. */
+  toneOk: "#15803d",
+  toneWarn: "#b45309",
+  toneDanger: "#b91c1c",
 } as const;

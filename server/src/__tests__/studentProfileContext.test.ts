@@ -18,6 +18,7 @@ const mockStudentComments = jest.fn();
 const mockTimeline = jest.fn();
 const mockLeaveFind = jest.fn();
 const mockUserFind = jest.fn();
+const mockHolidayFind = jest.fn().mockReturnValue([]);
 
 jest.mock("../modules/attendance/services/AttendanceReportService", () => ({
   studentAttendanceHistory: (...a: unknown[]) => mockAttendanceHistory(...a),
@@ -33,6 +34,11 @@ jest.mock("../modules/attendance/models/StudentLeaveApplication", () => ({
     find: (f: unknown) => ({ sort: () => ({ lean: async () => mockLeaveFind(f) }) }),
   },
 }));
+jest.mock("../modules/routine/models/HolidayException", () => ({
+  HolidayException: {
+    find: (f: unknown) => ({ select: () => ({ lean: async () => mockHolidayFind(f) }) }),
+  },
+}));
 jest.mock("../modules/foundation/models/User", () => ({
   User: {
     find: (f: unknown) => ({ select: () => ({ lean: async () => mockUserFind(f) }) }),
@@ -44,6 +50,7 @@ import {
   absentStreakMaxOf,
   leaveDaysInWindow,
   monthlyAttendanceOf,
+  offDaysOf,
   studentProfileAttendance,
   studentProfileComments,
 } from "../modules/trackers/services/StudentProfileContextService";
@@ -150,7 +157,44 @@ describe("attendanceSplitOf (pure, shared with the whole picture)", () => {
   });
 });
 
+describe("offDaysOf (pure)", () => {
+  // 2026-07-01 is a Wednesday: Thu 2, Fri 3 (OFF), Sat 4 (QURAN_ONLY), Sun 5.
+  test("Fridays and Saturdays are off days; Sun–Thu are not", () => {
+    expect(offDaysOf("2026-07-01", "2026-07-05", [])).toEqual([
+      { dateKey: "2026-07-03", dayType: "OFF", holidayNameBn: null },
+      { dateKey: "2026-07-04", dayType: "QURAN_ONLY", holidayNameBn: null },
+    ]);
+  });
+
+  test("a holiday on a weekday is an off day carrying its name", () => {
+    const days = offDaysOf("2026-07-01", "2026-07-02", [{ fromKey: "2026-07-02", toKey: "2026-07-09", nameBn: "ঈদ" }]);
+    expect(days).toEqual([{ dateKey: "2026-07-02", dayType: "HOLIDAY", holidayNameBn: "ঈদ" }]);
+  });
+
+  test("a range too long to walk yields no off days instead of throwing", () => {
+    expect(offDaysOf("2020-01-01", "2026-12-31", [])).toEqual([]);
+  });
+});
+
 describe("studentProfileAttendance", () => {
+  test("off days come back with holiday names from the window's HolidayException rows", async () => {
+    mockAttendanceHistory.mockResolvedValue({
+      studentId: STUDENT, sectionId: "sec", markedDays: 0, absentDays: 0, presentPct: 0, days: [],
+    });
+    mockLeaveFind.mockReturnValue([]);
+    mockHolidayFind.mockReturnValueOnce([
+      { fromDate: new Date(2026, 5, 7), toDate: new Date(2026, 5, 8), nameBn: "বাজেট ছুটি" },
+    ]);
+    const p = await studentProfileAttendance(STUDENT, "2026-06-07", "2026-06-13");
+    // Sun 7 + Mon 8 holiday, Fri 12 off, Sat 13 Quran-only.
+    expect(p.offDays.map((d) => [d.dateKey, d.dayType, d.holidayNameBn])).toEqual([
+      ["2026-06-07", "HOLIDAY", "বাজেট ছুটি"],
+      ["2026-06-08", "HOLIDAY", "বাজেট ছুটি"],
+      ["2026-06-12", "OFF", null],
+      ["2026-06-13", "QURAN_ONLY", null],
+    ]);
+  });
+
   test("uncovered absences EXCLUDE leave-covered days; totals come from the existing read", async () => {
     mockAttendanceHistory.mockResolvedValue({
       studentId: STUDENT,

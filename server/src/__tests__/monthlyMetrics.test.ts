@@ -304,7 +304,7 @@ describe("MR-1 §5.3 — attendance", () => {
     absentUncoveredDays: days.filter((d) => d.absent && !d.leaveCovered).length,
     absentStreakMax: 2,
     recentPresentPct: null, earlierPresentPct: null, trajectory: "na",
-    monthly: [], days, leaves: [],
+    monthly: [], days, leaves: [], offDays: [],
   });
 
   test("the leave-covered / uncovered split is carried, not collapsed", () => {
