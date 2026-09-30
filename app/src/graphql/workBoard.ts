@@ -31,6 +31,10 @@ export interface WorkCardT {
   taskId: string | null;
   sourceId: string | null;
   link: WorkCardLinkT | null;
+  /** WB-5 (D-#702): office-queue cover — the viewer may take it, or someone already has. */
+  canPull: boolean;
+  pulledById: string | null;
+  pulledByName: string | null;
 }
 
 export interface TaskT {
@@ -99,7 +103,20 @@ export interface AssignableStaffT {
 const CARD_FIELDS = `
   key kind userId titleBn detailBn dateKey slot startMin effortMin status overdue priority
   blockedReason assignedById assignedByName forLabel taskId sourceId
+  canPull pulledById pulledByName
   link { screen paramsJson }
+`;
+
+export const PULL_WORK_CARD = gql<{ pullWorkCard: boolean }, { kind: string; sourceId: string }>`
+  mutation PullWorkCard($kind: String!, $sourceId: String!) {
+    pullWorkCard(kind: $kind, sourceId: $sourceId)
+  }
+`;
+
+export const RELEASE_WORK_CARD = gql<{ releaseWorkCard: boolean }, { kind: string; sourceId: string }>`
+  mutation ReleaseWorkCard($kind: String!, $sourceId: String!) {
+    releaseWorkCard(kind: $kind, sourceId: $sourceId)
+  }
 `;
 
 const TASK_FIELDS = `

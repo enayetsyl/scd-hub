@@ -100,6 +100,8 @@ assistant_hifz amber ≥ 5h, red ≥ 6.5h; office_accounts / support amber ≥ 6
 manual tasks only, so nothing is told twice. Digest and overdue are ONE row per recipient per day
 (the D-#554 lesson), never one per task.
 
+**D-#702 — Office-queue cards belong to the DESK; backups cover a desk on leave by PULLING.** Print jobs and leave applications sit on primary-role OFFICE logins only. While every desk login is on approved leave, OFFICE/PRINCIPAL-template backups and the Principal see them with a pull button; a pulled card (`WorkCardPull`) shows on the puller's board alone until the source closes, and can be released. Desk logins never see a pull button on their own queue.
+
 **D-#701(h) — Support staff without a login are not assignees.** Their work is a task on the
 office assistant's board with a `forLabel` ("যার জন্য"). Assignee is always a User, like every
 other row-gate in the app.

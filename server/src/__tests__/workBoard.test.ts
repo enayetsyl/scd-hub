@@ -41,7 +41,8 @@ jest.mock("../modules/workboard/services/workBoardNotifications", () => ({
 }));
 
 import { templateDueOn } from "../modules/workboard/services/TaskTemplateService";
-import { slotForMinute, sortCards, type WorkCard } from "../modules/workboard/services/WorkBoardService";
+import { applyPulls, slotForMinute, sortCards, type WorkCard } from "../modules/workboard/services/WorkBoardService";
+import { deskUncovered, officeRecipients } from "../modules/workboard/services/OfficeCoverService";
 import { aggregateLoad } from "../modules/workboard/services/LoadService";
 import { digestLines, overdueLines } from "../modules/workboard/services/TaskSweepService";
 import {
@@ -173,6 +174,54 @@ describe("aggregateLoad", () => {
     expect(loadLevelFor("teacher", 390)).toBe("red");
     expect(loadLevelFor("office_accounts", 449)).toBe("amber");
     expect(loadLevelFor(null, 300)).toBe("amber");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 3b. Office cover + pulls (WB-5, D-#702)
+// ---------------------------------------------------------------------------
+
+describe("office cover: desk, backups, pulls", () => {
+  const akmol = { _id: "akmol", role: "OFFICE", additionalTemplates: [] as string[] };
+  const tazkir = { _id: "tazkir", role: "TEACHER", additionalTemplates: ["OFFICE"] };
+  const principal = { _id: "principal", role: "PRINCIPAL", additionalTemplates: [] as string[] };
+  const plainTeacher = { _id: "kainat", role: "TEACHER", additionalTemplates: [] as string[] };
+  const all = [akmol, tazkir, principal, plainTeacher];
+
+  test("deskUncovered: no desk login, or every desk login absent", () => {
+    expect(deskUncovered([], new Set())).toBe(true);
+    expect(deskUncovered(["akmol"], new Set())).toBe(false);
+    expect(deskUncovered(["akmol"], new Set(["akmol"]))).toBe(true);
+    expect(deskUncovered(["akmol", "b"], new Set(["akmol"]))).toBe(false);
+  });
+
+  test("office cards go to the desk alone normally, and to the backups too while uncovered", () => {
+    expect(officeRecipients(all, false).map((u) => u._id)).toEqual(["akmol"]);
+    expect(officeRecipients(all, true).map((u) => u._id)).toEqual(["akmol", "tazkir", "principal"]);
+  });
+
+  test("applyPulls: a pulled card shows on the puller's board alone; a backup's unpulled card is pullable; the desk's never is", () => {
+    const job = (userId: string) => card({ key: `PRINT_JOB:j1:${userId}`, kind: "PRINT_JOB", userId, sourceId: "j1" });
+    const other = card({ key: "PERIOD:s:d:akmol", kind: "PERIOD", userId: "akmol", sourceId: "s" });
+    const names = new Map([["tazkir", "Tazkir"]]);
+
+    const unpulled = applyPulls([job("akmol"), job("tazkir"), job("principal"), other], [], all, names);
+    expect(unpulled.map((c) => [c.userId, c.canPull ?? false])).toEqual([
+      ["akmol", false],
+      ["tazkir", true],
+      ["principal", true],
+      ["akmol", false],
+    ]);
+
+    const pulled = applyPulls(
+      [job("akmol"), job("tazkir"), job("principal"), other],
+      [{ kind: "PRINT_JOB", sourceId: "j1", userId: "tazkir" }],
+      all,
+      names,
+    );
+    expect(pulled.map((c) => c.key)).toEqual(["PRINT_JOB:j1:tazkir", "PERIOD:s:d:akmol"]);
+    expect(pulled[0].pulledByName).toBe("Tazkir");
+    expect(pulled[0].canPull).toBe(false);
   });
 });
 

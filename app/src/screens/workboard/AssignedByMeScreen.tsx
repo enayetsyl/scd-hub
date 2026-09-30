@@ -39,6 +39,9 @@ function toCard(t: TaskT, today: string) {
     taskId: t.id,
     sourceId: null,
     link: null,
+    canPull: false,
+    pulledById: null,
+    pulledByName: null,
   };
 }
 

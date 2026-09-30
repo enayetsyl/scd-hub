@@ -194,6 +194,8 @@ export const AUDIT_KIND_LABELS: Record<AuditEventKind, AuditKindLabel> = {
   CLASSROOM_OBSERVATION_HOLD_LIFTED: { bn: "পর্যবেক্ষণের স্থগিতাদেশ তুলে নিয়েছেন", en: "Lifted an observation hold", group: "OBSERVATION" },
   CLASSROOM_OBSERVATION_CANCELLED: { bn: "পরিকল্পিত পর্যবেক্ষণ বাতিল করেছেন", en: "Cancelled a planned observation", group: "OBSERVATION" },
   CLASSROOM_OBSERVATION_RESTORED: { bn: "বাতিল পর্যবেক্ষণ ফিরিয়েছেন", en: "Restored a cancelled observation", group: "OBSERVATION" },
+  CLASSROOM_OBSERVATION_REJECTED: { bn: "পর্যবেক্ষক ভিডিও বাতিল করেছেন", en: "Observer rejected a video", group: "OBSERVATION" },
+  CLASSROOM_OBSERVATION_REVIEW_EDITED: { bn: "প্রকাশের আগে পর্যবেক্ষণ সংশোধন করেছেন", en: "Edited a review before publishing", group: "OBSERVATION" },
   CLASSROOM_OBSERVATION_SUPERSEDED: { bn: "পুনঃপর্যবেক্ষণে আগেরটি প্রতিস্থাপিত হয়েছে", en: "Superseded a prior observation", group: "OBSERVATION" },
   CLASSROOM_OBSERVATION_RESPONDED: { bn: "পর্যবেক্ষণে শিক্ষকের জবাব দিয়েছেন", en: "Responded to an observation", group: "OBSERVATION" },
   CLASSROOM_OBSERVATION_ESCALATED: { bn: "জবাব না আসায় পর্যবেক্ষণ প্রধান শিক্ষকের কাছে গেছে", en: "Escalated an unanswered observation", group: "OBSERVATION" },
