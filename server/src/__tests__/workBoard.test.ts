@@ -366,3 +366,25 @@ describe("TaskService", () => {
     await expect(cancelTask(teacher(boss.toString()), ID)).rejects.toThrow();
   });
 });
+
+describe("Task template index", () => {
+  // Source reads (the model is mocked above); CRLF-normalised for Windows checkouts.
+  const read = (rel: string): string =>
+    require("fs").readFileSync(require("path").join(__dirname, rel), "utf8").replace(/\r\n/g, "\n");
+  const MODEL = read("../modules/workboard/models/Task.ts");
+
+  test("the template-per-day unique index is PARTIAL on templateId, never sparse", () => {
+    // Compound + sparse still indexes every row (all have dueKey), so manual tasks
+    // shared the (null, dueKey) slot: one manual task per date, school-wide.
+    const decl = MODEL.slice(MODEL.indexOf("TaskSchema.index(\n  { templateId: 1, dueKey: 1 }"));
+    expect(decl).toMatch(/unique: true, partialFilterExpression: \{ templateId: \{ \$type: "objectId" \} \}/);
+    expect(MODEL).not.toMatch(/templateId: 1, dueKey: 1 \}, \{[^}]*sparse/);
+  });
+
+  test("a migration exists, because Mongoose cannot replace a same-named index", () => {
+    const script = read("../../scripts/migrate-task-template-index.ts");
+    expect(script).toContain("templateId_1_dueKey_1");
+    expect(script).toMatch(/Task\.syncIndexes\(\)/);
+    expect(script).toMatch(/partial template index is NOT present/);
+  });
+});
