@@ -185,6 +185,17 @@ export type RoutineStackParamList = {
 
 /** Print queue (PQ-3/PQ-4, D-#281) — role-aware: teachers see their own requests,
  *  the Office works the queue. */
+/** Work board (WB-1..WB-3, D-#701). `WorkBoard` without params = the caller's own board;
+ *  with `userId` = someone else's (the load grid's drill-down, tasks:assign). */
+export type WorkBoardStackParamList = {
+  WorkBoard: { userId?: string; name?: string; dateKey?: string } | undefined;
+  TaskDetail: { taskId: string };
+  TaskForm: { taskId?: string; assigneeUserId?: string; template?: boolean; dueKey?: string } | undefined;
+  AssignedByMe: undefined;
+  LoadGrid: undefined;
+  TaskTemplates: undefined;
+};
+
 export type PrintStackParamList = {
   PrintHome: undefined;
   NewPrintRequest: { setId?: string; contentArtifactId?: string; title?: string } | undefined;
@@ -577,6 +588,8 @@ export type TabParamList = {
   AttendanceTab: NavigatorScreenParams<AttendanceStackParamList>;
   /** PQ-4 (D-#281) — the one print queue. */
   PrintTab: NavigatorScreenParams<PrintStackParamList>;
+  /** WB-1 (D-#701) — the unified work board. */
+  WorkBoardTab: NavigatorScreenParams<WorkBoardStackParamList>;
   ClassNotesTab: NavigatorScreenParams<ClassNotesStackParamList>;
   LibraryTab: NavigatorScreenParams<LibraryStackParamList>;
   ChatTab: NavigatorScreenParams<ChatStackParamList>;

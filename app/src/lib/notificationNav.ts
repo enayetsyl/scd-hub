@@ -245,6 +245,18 @@ export function notificationTarget(
       // (D-#582). That screen opens on the আবেদিত filter, which is this application.
       return { tab: "HrTab", screen: "LeaveAdmin" };
 
+    // Work board (WB-1, D-#701): a task row lands ON the task; a digest/overdue
+    // notice lands on the board itself.
+    case "TASK_ASSIGNED":
+    case "TASK_DONE":
+    case "TASK_BLOCKED":
+      return refs?.taskId
+        ? { tab: "WorkBoardTab", screen: "TaskDetail", params: { taskId: refs.taskId } }
+        : { tab: "WorkBoardTab", screen: "WorkBoard" };
+    case "TASK_DUE_DIGEST":
+    case "TASK_OVERDUE":
+      return { tab: "WorkBoardTab", screen: "WorkBoard" };
+
     default:
       return null;
   }

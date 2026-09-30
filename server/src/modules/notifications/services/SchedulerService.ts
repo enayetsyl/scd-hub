@@ -78,6 +78,13 @@ import {
   HW_AUTO_ISSUE_END_HOUR,
 } from "../../trackers/services/HomeworkAutoIssueService";
 import { captureNetSnapshot, captureDailyHealth } from "../../platform/services/SystemHealthService";
+import { materializeTaskTemplates } from "../../workboard/services/TaskTemplateService";
+import {
+  dispatchTaskDigest,
+  dispatchTaskOverdue,
+  TASK_DIGEST_MINUTES,
+  TASK_OVERDUE_MINUTES,
+} from "../../workboard/services/TaskSweepService";
 // (No backup import: the school's own nightly cron owns backups — ADR-011. The health
 // panel WATCHES that folder rather than running a second job; see BackupService.)
 import { markTick, resetTickerHeartbeat } from "./tickerHeartbeat";
@@ -239,6 +246,10 @@ export interface TickSummary {
   hwWeeklyDigestEmitted: number;
   /** 08:00 class-test overdue digests emitted to Office/Principal (D-#603). */
   ctOverdueDigestEmitted: number;
+  /** Work board (WB-1/WB-2, D-#701): recurring tasks materialised, 07:30 digests, 16:00 overdue notices. */
+  taskTemplatesCreated: number;
+  taskDigestsEmitted: number;
+  taskOverdueEmitted: number;
 }
 
 const subjectBn = (subject: string): string =>
@@ -276,6 +287,9 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
     hwAutoChased: 0,
     hwWeeklyDigestEmitted: 0,
     ctOverdueDigestEmitted: 0,
+    taskTemplatesCreated: 0,
+    taskDigestsEmitted: 0,
+    taskOverdueEmitted: 0,
   };
 
   // --- Classroom-observation response escalation (CO-3) — the teacher-response ladder
@@ -637,6 +651,33 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
       });
     });
   }
+
+  // --- Work board (WB-1/WB-2, D-#701) — manual tasks only; auto cards keep their
+  // source modules' reminders. Behind the school-day gate like the class-note prompts:
+  //   templates  once per school day, first tick — "daily cash entry" is born early
+  //   07:30      one due digest per person with open work (today + overdue)
+  //   16:00      one overdue notice per recipient (assignee AND assigner)
+  // runOnce guards the QUERIES (the D-#603 lesson); the dedupe keys guard the rows.
+  await family("task templates", async () => {
+    await runOnce(dateKey, "TASKTPL", async () => {
+      summary.taskTemplatesCreated = await materializeTaskTemplates(now);
+      if (summary.taskTemplatesCreated > 0) {
+        console.log(`[scheduler] task templates: ${summary.taskTemplatesCreated} task(s) created for ${dateKey}`);
+      }
+    });
+  });
+  await family("task due digest", async () => {
+    if (!windowOpen(nowMin, TASK_DIGEST_MINUTES)) return;
+    await runOnce(dateKey, "TASKDIG", async () => {
+      summary.taskDigestsEmitted = await dispatchTaskDigest(now);
+    });
+  });
+  await family("task overdue", async () => {
+    if (!windowOpen(nowMin, TASK_OVERDUE_MINUTES)) return;
+    await runOnce(dateKey, "TASKOD", async () => {
+      summary.taskOverdueEmitted = await dispatchTaskOverdue(now);
+    });
+  });
 
   // --- Attendance tiers (D-#96/#99) — CALL the AT-4 engine, one truth.
   // FULL days only (the dispatcher gates again itself — belt and braces).

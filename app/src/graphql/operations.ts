@@ -6255,6 +6255,8 @@ export interface NotificationRefsT {
   /** CT-8 submit notice — deep-links to ClassTestPublish. */
   classTestId: string | null;
   ctId: string | null;
+  /** Work board (WB-1, D-#701) — deep-links to TaskDetail. */
+  taskId: string | null;
   /** D-#644 exam syllabus. Staff open SyllabusDetail, which is addressed by the
    *  (exam × class × subject) triple rather than by the row id. */
   syllabusId: string | null;
@@ -6280,7 +6282,7 @@ const NOTIFICATION_FIELDS = `
     reviewAssignmentId artifactId substitutionId loanId rung
     audienceKey periodNumber tier hour observationId
     workClaimId workClaimTracker
-    classTestId ctId
+    classTestId ctId taskId
     syllabusId examId classId subject
   }
 `;
