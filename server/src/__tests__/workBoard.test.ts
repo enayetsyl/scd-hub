@@ -67,6 +67,22 @@ describe("templateDueOn", () => {
     expect(templateDueOn({ recurrence: "WEEKLY", weekdays: [0, 1] }, wed)).toBe(false);
     expect(templateDueOn({ recurrence: "WEEKLY", weekdays: [] }, wed)).toBe(false);
   });
+  test("MONTHLY_WEEKDAY: the Nth weekday of the month; 5 = the last one", () => {
+    // September 2026: Saturdays fall on 5, 12, 19, 26 → the 26th is both 4th and last.
+    const sat = (d: number) => new Date(2026, 8, d);
+    const first = { recurrence: "MONTHLY_WEEKDAY" as const, weekdays: [6], weekOfMonth: 1 };
+    expect(templateDueOn(first, sat(5))).toBe(true);
+    expect(templateDueOn(first, sat(12))).toBe(false);
+    expect(templateDueOn(first, new Date(2026, 8, 6))).toBe(false); // a Sunday
+    expect(templateDueOn({ ...first, weekOfMonth: 4 }, sat(26))).toBe(true);
+    expect(templateDueOn({ ...first, weekOfMonth: 5 }, sat(26))).toBe(true);
+    expect(templateDueOn({ ...first, weekOfMonth: 5 }, sat(19))).toBe(false);
+    // October 2026 has five Saturdays (3, 10, 17, 24, 31): "last" is the 31st, "4th" is the 24th.
+    expect(templateDueOn({ ...first, weekOfMonth: 5 }, new Date(2026, 9, 31))).toBe(true);
+    expect(templateDueOn({ ...first, weekOfMonth: 5 }, new Date(2026, 9, 24))).toBe(false);
+    expect(templateDueOn({ ...first, weekOfMonth: 4 }, new Date(2026, 9, 24))).toBe(true);
+    expect(templateDueOn({ recurrence: "MONTHLY_WEEKDAY", weekdays: [], weekOfMonth: 1 }, sat(5))).toBe(false);
+  });
   test("MONTHLY fires on its date, and a 31 clamps to the month's last day", () => {
     expect(templateDueOn({ recurrence: "MONTHLY", weekdays: [], monthDay: 30 }, wed)).toBe(true);
     expect(templateDueOn({ recurrence: "MONTHLY", weekdays: [], monthDay: 31 }, wed)).toBe(true);

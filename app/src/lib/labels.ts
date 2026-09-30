@@ -21,6 +21,9 @@ import {
   TASK_RECURRENCE_LABELS_EN,
   WORK_CARD_KIND_LABELS_BN,
   WORK_CARD_KIND_LABELS_EN,
+  WEEK_OF_MONTH_LABELS_BN,
+  WEEK_OF_MONTH_LABELS_EN,
+  type WeekOfMonth,
   type TaskStatus,
   type TaskPriority,
   type DaySlot,
@@ -342,6 +345,8 @@ export const taskPriorityLabel = (p: TaskPriority): string => pick(TASK_PRIORITY
 export const daySlotLabel = (s: DaySlot): string => pick(DAY_SLOT_LABELS_BN, DAY_SLOT_LABELS_EN)[s] ?? s;
 export const taskRecurrenceLabel = (r: TaskRecurrence): string => pick(TASK_RECURRENCE_LABELS_BN, TASK_RECURRENCE_LABELS_EN)[r] ?? r;
 export const workCardKindLabel = (k: WorkCardKind): string => pick(WORK_CARD_KIND_LABELS_BN, WORK_CARD_KIND_LABELS_EN)[k] ?? k;
+export const weekOfMonthLabel = (w: number): string =>
+  pick(WEEK_OF_MONTH_LABELS_BN, WEEK_OF_MONTH_LABELS_EN)[w as WeekOfMonth] ?? String(w);
 export const weekdayShortLabel = (i: number): string => {
   const dow = DAYS_OF_WEEK[i];
   return dow ? pick(DAY_OF_WEEK_LABELS_BN, DAY_OF_WEEK_LABELS_EN)[dow] : String(i);
@@ -1274,6 +1279,8 @@ const STR_BN = {
   wbOnce: "একবার",
   wbWeekdays: "সপ্তাহের দিন",
   wbMonthDay: "মাসের তারিখ",
+  wbWeekOfMonth: "মাসের কততম সপ্তাহ",
+  wbWeekday: "সপ্তাহের দিন (একটি)",
   wbSave: "কাজ দিন",
   wbSaved: "কাজ দেওয়া হয়েছে",
   wbAssignedBy: "দিয়েছেন",
@@ -5861,6 +5868,8 @@ const STR_EN: StrTable = {
   wbOnce: "Once",
   wbWeekdays: "Weekdays",
   wbMonthDay: "Day of month",
+  wbWeekOfMonth: "Which week of the month",
+  wbWeekday: "Weekday (one)",
   wbSave: "Assign",
   wbSaved: "Task saved",
   wbAssignedBy: "Assigned by",

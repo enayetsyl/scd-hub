@@ -13,6 +13,9 @@ import { DAY_SLOTS, TASK_PRIORITIES, TASK_RECURRENCES } from "@scd/shared";
  *   WEEKLY      — school days whose weekday is in `weekdays` (0 = Sunday … 6)
  *   MONTHLY     — the school day whose date-of-month is `monthDay`; a `monthDay`
  *                 past the month's end clamps to the last day (31 = month end)
+ *   MONTHLY_WEEKDAY — the `weekOfMonth`-th (1..4, 5 = last) `weekdays[0]` of the
+ *                 month, e.g. the first Saturday (owner ask 2026-09-30). If that day
+ *                 is a holiday the instance is simply not created that month.
  *
  * A template is deactivated, never deleted — its past tasks keep pointing at it.
  */
@@ -29,6 +32,8 @@ export interface ITaskTemplate extends Document {
   recurrence: TaskRecurrence;
   weekdays: number[];
   monthDay?: number;
+  /** MONTHLY_WEEKDAY only: 1..4, or 5 = the last such weekday of the month. */
+  weekOfMonth?: number;
   active: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -47,6 +52,7 @@ const TaskTemplateSchema = new Schema<ITaskTemplate>(
     recurrence: { type: String, enum: TASK_RECURRENCES, required: true },
     weekdays: { type: [Number], default: [] },
     monthDay: { type: Number, min: 1, max: 31 },
+    weekOfMonth: { type: Number, min: 1, max: 5 },
     active: { type: Boolean, required: true, default: true },
   },
   { timestamps: true },

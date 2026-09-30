@@ -4724,17 +4724,37 @@ export const DAY_SLOT_BOUNDARIES_MIN = { middayFrom: 11 * 60, afternoonFrom: 13 
 
 /** A recurring task is a TaskTemplate; the scheduler materialises one Task per
  *  matching SCHOOL day (never on OFF/HOLIDAY — the class-note prompt posture). */
-export const TASK_RECURRENCES = ["SCHOOL_DAYS", "WEEKLY", "MONTHLY"] as const;
+export const TASK_RECURRENCES = ["SCHOOL_DAYS", "WEEKLY", "MONTHLY", "MONTHLY_WEEKDAY"] as const;
 export type TaskRecurrence = (typeof TASK_RECURRENCES)[number];
 export const TASK_RECURRENCE_LABELS_BN: Record<TaskRecurrence, string> = {
   SCHOOL_DAYS: "প্রতি স্কুল দিন",
   WEEKLY: "প্রতি সপ্তাহে",
   MONTHLY: "মাসের নির্দিষ্ট তারিখে",
+  MONTHLY_WEEKDAY: "মাসের নির্দিষ্ট সপ্তাহের দিনে",
 };
 export const TASK_RECURRENCE_LABELS_EN: Record<TaskRecurrence, string> = {
   SCHOOL_DAYS: "Every school day",
   WEEKLY: "Weekly",
   MONTHLY: "Monthly on a date",
+  MONTHLY_WEEKDAY: "Monthly on a weekday",
+};
+/** MONTHLY_WEEKDAY (owner ask 2026-09-30, "first Saturday of every month"): which
+ *  occurrence of the weekday in the month. 5 = the LAST one, whatever its ordinal. */
+export const WEEKS_OF_MONTH = [1, 2, 3, 4, 5] as const;
+export type WeekOfMonth = (typeof WEEKS_OF_MONTH)[number];
+export const WEEK_OF_MONTH_LABELS_BN: Record<WeekOfMonth, string> = {
+  1: "১ম",
+  2: "২য়",
+  3: "৩য়",
+  4: "৪র্থ",
+  5: "শেষ",
+};
+export const WEEK_OF_MONTH_LABELS_EN: Record<WeekOfMonth, string> = {
+  1: "1st",
+  2: "2nd",
+  3: "3rd",
+  4: "4th",
+  5: "Last",
 };
 
 /** Every card kind the board can show. TASK is the manual row; the rest are auto. */

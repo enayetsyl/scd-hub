@@ -9,13 +9,13 @@ import { View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useMutation, useQuery } from "urql";
 import type { DaySlot, TaskPriority, TaskRecurrence } from "@scd/shared";
-import { DAY_SLOTS, TASK_PRIORITIES, TASK_RECURRENCES } from "@scd/shared";
+import { DAY_SLOTS, TASK_PRIORITIES, TASK_RECURRENCES, WEEKS_OF_MONTH } from "@scd/shared";
 import { ASSIGNABLE_STAFF_QUERY, CREATE_TASK, CREATE_TASK_TEMPLATE, TASK_QUERY, UPDATE_TASK } from "../../graphql/workBoard";
 import type { WorkBoardStackParamList } from "../../navigation/types";
 import { Screen, Card, Muted, Button, Chip, ChipRow, Field, Select, Notice } from "../../components/ui";
 import { DateField } from "../../components/DateField";
 import { useAuth } from "../../auth/AuthContext";
-import { STR, bnNum, daySlotLabel, taskPriorityLabel, taskRecurrenceLabel, weekdayShortLabel } from "../../lib/labels";
+import { STR, bnNum, daySlotLabel, taskPriorityLabel, taskRecurrenceLabel, weekOfMonthLabel, weekdayShortLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { dateKey } from "../../lib/dates";
 import { minutesLabel } from "../../lib/workBoardNav";
@@ -40,6 +40,9 @@ export default function TaskFormScreen({ route, navigation }: Props): React.Reac
   const [recurrence, setRecurrence] = React.useState<Recurrence>(route.params?.template ? "SCHOOL_DAYS" : "ONCE");
   const [weekdays, setWeekdays] = React.useState<number[]>([]);
   const [monthDay, setMonthDay] = React.useState("1");
+  // MONTHLY_WEEKDAY ("first Saturday of every month"): one weekday + which week.
+  const [monthWeekday, setMonthWeekday] = React.useState<number | null>(6);
+  const [weekOfMonth, setWeekOfMonth] = React.useState<number | null>(1);
   const [error, setError] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
 
@@ -79,7 +82,8 @@ export default function TaskFormScreen({ route, navigation }: Props): React.Reac
     effortMin >= 5 &&
     effortMin <= 480 &&
     (recurrence !== "WEEKLY" || weekdays.length > 0) &&
-    (recurrence !== "MONTHLY" || (Number(monthDay) >= 1 && Number(monthDay) <= 31));
+    (recurrence !== "MONTHLY" || (Number(monthDay) >= 1 && Number(monthDay) <= 31)) &&
+    (recurrence !== "MONTHLY_WEEKDAY" || (monthWeekday !== null && weekOfMonth !== null));
 
   async function submit(): Promise<void> {
     if (!valid || !assignee) return;
@@ -106,8 +110,9 @@ export default function TaskFormScreen({ route, navigation }: Props): React.Reac
           slot,
           effortMin,
           recurrence,
-          weekdays: recurrence === "WEEKLY" ? weekdays : null,
+          weekdays: recurrence === "WEEKLY" ? weekdays : recurrence === "MONTHLY_WEEKDAY" && monthWeekday !== null ? [monthWeekday] : null,
           monthDay: recurrence === "MONTHLY" ? Number(monthDay) : null,
+          weekOfMonth: recurrence === "MONTHLY_WEEKDAY" ? weekOfMonth : null,
         },
       });
     }
@@ -172,6 +177,21 @@ export default function TaskFormScreen({ route, navigation }: Props): React.Reac
           </>
         ) : recurrence === "MONTHLY" ? (
           <Field label={STR.wbMonthDay} value={monthDay} onChangeText={setMonthDay} keyboardType="number-pad" />
+        ) : recurrence === "MONTHLY_WEEKDAY" ? (
+          <>
+            <Muted>{STR.wbWeekOfMonth}</Muted>
+            <ChipRow>
+              {WEEKS_OF_MONTH.map((w) => (
+                <Chip key={w} label={weekOfMonthLabel(w)} selected={weekOfMonth === w} onPress={() => setWeekOfMonth(w)} />
+              ))}
+            </ChipRow>
+            <Muted>{STR.wbWeekday}</Muted>
+            <ChipRow>
+              {[6, 0, 1, 2, 3, 4, 5].map((d) => (
+                <Chip key={d} label={weekdayShortLabel(d)} selected={monthWeekday === d} onPress={() => setMonthWeekday(d)} />
+              ))}
+            </ChipRow>
+          </>
         ) : null}
 
         <Muted>{STR.wbSlot}</Muted>
