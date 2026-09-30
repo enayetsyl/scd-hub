@@ -5271,6 +5271,11 @@ const STR_BN = {
   spLatestRank: "সর্বশেষ অবস্থান",
   spCtAbsent: "অনুপস্থিত",
   spAtRiskNo: "ঝুঁকি নেই",
+  spCtNotAttended: "অংশ নেয়নি",
+  spCtNotAttendedSub: "মোট {n}টি টেস্টের মধ্যে",
+  spCtNotAttendedList: "যে টেস্টে অংশ নেয়নি",
+  spColTaken: "দিয়েছে",
+  spColMissed: "দেয়নি",
 
   // --- Monthly progress report (MR-5b, prd-monthly-report) ---
   mrConsoleTitle: "মাসিক অগ্রগতি রিপোর্ট",
@@ -9801,6 +9806,11 @@ const STR_EN: StrTable = {
   spLatestRank: "Latest rank",
   spCtAbsent: "Absent",
   spAtRiskNo: "Not at risk",
+  spCtNotAttended: "Not attended",
+  spCtNotAttendedSub: "of {n} tests",
+  spCtNotAttendedList: "Tests not attended",
+  spColTaken: "Taken",
+  spColMissed: "Missed",
 
   // --- Monthly progress report (MR-5b) ---
   mrConsoleTitle: "Monthly progress report",
