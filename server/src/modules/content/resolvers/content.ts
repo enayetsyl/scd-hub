@@ -7,6 +7,7 @@
  * artifact       — J1.5/J1.7 open one plan (returns rendered_markdown; app never re-renders)
  */
 import { builder } from "../../../schema";
+import { PLAN_DOC_TYPES } from "@scd/shared";
 import {
   importEnvelope as importEnvelopeSvc,
   importContentFiles,
@@ -450,32 +451,132 @@ builder.queryField("contentTree", (t) =>
       const scope = await buildContentScope(ctx);
       const visibleDocs = docs.filter((d) => contentScopeAllows(scope, d.subject, d.classLevel));
 
-      // Group: subject+classLevel → anchorWord+number → artifacts
-      const nodeMap = new Map<string, ContentTreeNodeShape>();
-      for (const doc of visibleDocs) {
-        const nodeKey = `${doc.subject}:${doc.classLevel}`;
-        if (!nodeMap.has(nodeKey)) {
-          nodeMap.set(nodeKey, { subject: doc.subject, classLevel: doc.classLevel, chapters: [] });
-        }
-        const node = nodeMap.get(nodeKey)!;
-        const chapterKey = `${doc.address.anchorWord}:${doc.address.number}`;
-        let chapter = node.chapters.find(
-          (c) => c.anchorWord === doc.address.anchorWord && c.number === String(doc.address.number),
-        );
-        if (!chapter) {
-          chapter = {
-            anchorWord: doc.address.anchorWord,
-            number: String(doc.address.number),
-            title: doc.address.title ?? null,
-            artifacts: [],
-          };
-          node.chapters.push(chapter);
-          void chapterKey;
-        }
-        chapter.artifacts.push(docToShape(doc));
-      }
+      return groupContentTree(visibleDocs);
+    },
+  }),
+);
 
-      return sortTreeNodes(Array.from(nodeMap.values()));
+/** Group sorted, scope-filtered docs: subject+classLevel → anchorWord+number → artifacts. */
+function groupContentTree(visibleDocs: LeanArtifact[]): ContentTreeNodeShape[] {
+  const nodeMap = new Map<string, ContentTreeNodeShape>();
+  for (const doc of visibleDocs) {
+    const nodeKey = `${doc.subject}:${doc.classLevel}`;
+    if (!nodeMap.has(nodeKey)) {
+      nodeMap.set(nodeKey, { subject: doc.subject, classLevel: doc.classLevel, chapters: [] });
+    }
+    const node = nodeMap.get(nodeKey)!;
+    let chapter = node.chapters.find(
+      (c) => c.anchorWord === doc.address.anchorWord && c.number === String(doc.address.number),
+    );
+    if (!chapter) {
+      chapter = {
+        anchorWord: doc.address.anchorWord,
+        number: String(doc.address.number),
+        title: doc.address.title ?? null,
+        artifacts: [],
+      };
+      node.chapters.push(chapter);
+    }
+    chapter.artifacts.push(docToShape(doc));
+  }
+  return sortTreeNodes(Array.from(nodeMap.values()));
+}
+
+// ---------------------------------------------------------------------------
+// Query: contentTreePage — Lesson Plans, one page of CHAPTERS at a time
+// ---------------------------------------------------------------------------
+
+export const CONTENT_TREE_PAGE_SIZE = 15;
+
+/**
+ * Slice a built tree by CHAPTER (never splitting a chapter's chapter plan from its sessions
+ * across two pages), keeping the subject×class grouping of whatever lands on the page. PURE.
+ */
+export function pageContentTree(
+  nodes: ContentTreeNodeShape[],
+  page: number,
+  pageSize: number,
+): { nodes: ContentTreeNodeShape[]; totalChapters: number; totalPlans: number; page: number; pageSize: number } {
+  const size = Math.min(Math.max(1, Math.floor(pageSize) || CONTENT_TREE_PAGE_SIZE), 100);
+  const flat = nodes.flatMap((n) => n.chapters.map((c) => ({ n, c })));
+  const pageCount = Math.max(1, Math.ceil(flat.length / size));
+  const current = Math.min(Math.max(1, Math.floor(page) || 1), pageCount);
+  const out: ContentTreeNodeShape[] = [];
+  for (const { n, c } of flat.slice((current - 1) * size, current * size)) {
+    const last = out[out.length - 1];
+    if (last && last.subject === n.subject && last.classLevel === n.classLevel) last.chapters.push(c);
+    else out.push({ subject: n.subject, classLevel: n.classLevel, chapters: [c] });
+  }
+  return {
+    nodes: out,
+    totalChapters: flat.length,
+    totalPlans: flat.reduce((sum, { c }) => sum + c.artifacts.length, 0),
+    page: current,
+    pageSize: size,
+  };
+}
+
+interface ContentTreePageShape {
+  nodes: ContentTreeNodeShape[];
+  totalChapters: number;
+  totalPlans: number;
+  page: number;
+  pageSize: number;
+}
+
+const ContentTreePageRef = builder.objectRef<ContentTreePageShape>("ContentTreePage");
+ContentTreePageRef.implement({
+  fields: (t) => ({
+    nodes: t.field({ type: [ContentTreeNodeRef], resolve: (p) => p.nodes }),
+    totalChapters: t.exposeInt("totalChapters"),
+    totalPlans: t.exposeInt("totalPlans"),
+    page: t.exposeInt("page"),
+    pageSize: t.exposeInt("pageSize"),
+  }),
+});
+
+builder.queryField("contentTreePage", (t) =>
+  t.field({
+    type: ContentTreePageRef,
+    description:
+      "Lesson Plans, one page of chapters at a time: plans only, filtered server-side by subject, class, " +
+      "plan type and curation tag (current versions unless currentOnly=false), scope-filtered.",
+    authScopes: { hasPermission: "content:read" },
+    args: {
+      subject: t.arg.string({ required: false }),
+      classLevel: t.arg.int({ required: false }),
+      currentOnly: t.arg.boolean({ required: false }),
+      docType: t.arg.string({ required: false }),
+      curationTag: t.arg.string({ required: false }),
+      page: t.arg.int({ required: false }),
+      pageSize: t.arg.int({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+
+      const filter: FilterQuery<IContentArtifact> = {
+        // Plans only — questions/stimuli live in the Questions tab (the tree screen used to
+        // drop them client-side, after downloading them).
+        docType: args.docType && (PLAN_DOC_TYPES as readonly string[]).includes(args.docType)
+          ? args.docType
+          : { $in: [...PLAN_DOC_TYPES] },
+      };
+      if (args.currentOnly !== false) filter.current = true;
+      if (args.subject) filter.subject = args.subject;
+      if (args.classLevel != null) filter.classLevel = args.classLevel;
+      if (args.curationTag) filter.curationTag = args.curationTag;
+      applyMixedDocTypeGate(filter as Record<string, unknown>, ctx.auth);
+
+      // Same projection + JS sort as contentTree (see the 32 MB sort note there).
+      const docs = (await ContentArtifact.find(filter)
+        .select(TREE_PROJECTION)
+        .lean()) as unknown as LeanArtifact[];
+      docs.sort(compareForTree);
+
+      const scope = await buildContentScope(ctx);
+      const visibleDocs = docs.filter((d) => contentScopeAllows(scope, d.subject, d.classLevel));
+
+      return pageContentTree(groupContentTree(visibleDocs), args.page ?? 1, args.pageSize ?? CONTENT_TREE_PAGE_SIZE);
     },
   }),
 );
