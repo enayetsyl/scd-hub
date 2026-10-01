@@ -365,3 +365,44 @@ describe("AJ-2 — myAssignmentPrepPrompts", () => {
     expect(await myAssignmentPrepPrompts(YEAR, TEACHER, new Date(2026, 5, 14))).toHaveLength(0);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Dated entries (the C4/C5 boys/girls split, 2026-10-01): a week uses the entries in
+// force on its DELIVERY date, so a split never rewrites past weeks or back-fills them.
+// ---------------------------------------------------------------------------
+import { entryActiveOn } from "../modules/trackers/assignmentCalendar";
+
+describe("entryActiveOn", () => {
+  test("open-ended entries are always in force", () => {
+    expect(entryActiveOn({}, "2026-10-01")).toBe(true);
+  });
+  test("the window is inclusive at both ends", () => {
+    const e = { effectiveFrom: "2026-10-01", effectiveTo: "2026-10-31" };
+    expect(entryActiveOn(e, "2026-09-30")).toBe(false);
+    expect(entryActiveOn(e, "2026-10-01")).toBe(true);
+    expect(entryActiveOn(e, "2026-10-31")).toBe(true);
+    expect(entryActiveOn(e, "2026-11-01")).toBe(false);
+  });
+});
+
+describe("expectedItemsForWeek — dated entries", () => {
+  // week 15 delivers on Thu 2026-04-16 (see the test above)
+  test("an entry that ENDED before the delivery date is gone; one that STARTS after it is not yet there", async () => {
+    const retired = entry({ cycleWeek: 3, effectiveTo: "2026-04-15" });
+    const future = entry({ cycleWeek: 3, subject: "MATH", effectiveFrom: "2026-04-17" });
+    const live = entry({ cycleWeek: 3, subject: "ENG" });
+    mockScheduleFindOne.mockResolvedValue(schedule([retired, future, live]));
+    mockItemFind.mockResolvedValue([]);
+    const week = await expectedItemsForWeek(YEAR, 15);
+    expect(week.items.map((i) => i.subject)).toEqual(["ENG"]);
+  });
+
+  test("an entry starting ON the delivery date and one ending ON it are both in force that week", async () => {
+    const starts = entry({ cycleWeek: 3, effectiveFrom: "2026-04-16" });
+    const ends = entry({ cycleWeek: 3, subject: "MATH", effectiveTo: "2026-04-16" });
+    mockScheduleFindOne.mockResolvedValue(schedule([starts, ends]));
+    mockItemFind.mockResolvedValue([]);
+    const week = await expectedItemsForWeek(YEAR, 15);
+    expect(week.items).toHaveLength(2);
+  });
+});
