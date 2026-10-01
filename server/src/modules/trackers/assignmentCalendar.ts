@@ -46,6 +46,16 @@ export function dateOnlyISO(d: Date): string {
   return new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())).toISOString();
 }
 
+/** Is a rotation entry in force on `dateKey` (YYYY-MM-DD)? Its optional window is inclusive;
+ *  absent bounds are open. PURE — here, not on the model, so suites that mock the model
+ *  still get the real rule. */
+export function entryActiveOn(
+  e: { effectiveFrom?: string | null; effectiveTo?: string | null },
+  dateKey: string,
+): boolean {
+  return (!e.effectiveFrom || e.effectiveFrom <= dateKey) && (!e.effectiveTo || dateKey <= e.effectiveTo);
+}
+
 function addDays(date: Date, days: number): Date {
   const d = new Date(date.getTime());
   d.setDate(d.getDate() + days);

@@ -31,6 +31,7 @@ import {
   dateOnlyISO,
   type IsOpenDay,
   type ResolvedWeekDates,
+  entryActiveOn,
 } from "../assignmentCalendar";
 
 function assertSubject(s: string): asserts s is HwSubject {
@@ -110,7 +111,11 @@ export interface AddEntryInput {
   sectionId: string;
   subject: string;
   teacherId: string;
+  /** Optional first day (YYYY-MM-DD) — a replacement section starting mid-year. */
+  effectiveFrom?: string | null;
 }
+
+const DATE_KEY = /^\d{4}-\d{2}-\d{2}$/;
 
 export async function addScheduleEntry(input: AddEntryInput): Promise<IAssignmentSchedule> {
   assertSubject(input.subject);
@@ -130,11 +135,15 @@ export async function addScheduleEntry(input: AddEntryInput): Promise<IAssignmen
   if (!schedule) {
     throw new Error("No AssignmentSchedule for this academic year — set the term anchor first");
   }
+  if (input.effectiveFrom && !DATE_KEY.test(input.effectiveFrom)) throw new Error("effectiveFrom must be YYYY-MM-DD");
+  // A duplicate is a cell whose window OVERLAPS the new one — an entry that ended before
+  // the new one starts is history, not a clash.
   const dup = schedule.entries.find(
     (e) =>
       e.cycleWeek === input.cycleWeek &&
       e.sectionId.toString() === input.sectionId &&
-      e.subject === input.subject,
+      e.subject === input.subject &&
+      !(e.effectiveTo && input.effectiveFrom && e.effectiveTo < input.effectiveFrom),
   );
   if (dup) {
     throw new Error(
@@ -148,7 +157,26 @@ export async function addScheduleEntry(input: AddEntryInput): Promise<IAssignmen
     sectionId: input.sectionId,
     subject: input.subject,
     teacherId: input.teacherId,
+    effectiveFrom: input.effectiveFrom ?? null,
   } as never);
+  await schedule.save();
+  return schedule;
+}
+
+/** End an entry on `lastDayKey` (inclusive) instead of deleting it: weeks up to that day keep
+ *  the cell; later weeks do not. Used when a section is split or retired mid-year. */
+export async function retireScheduleEntry(
+  academicYearId: string,
+  entryId: string,
+  lastDayKey: string,
+): Promise<IAssignmentSchedule> {
+  if (!DATE_KEY.test(lastDayKey)) throw new Error("lastDayKey must be YYYY-MM-DD");
+  const schedule = await AssignmentSchedule.findOne({ academicYearId });
+  if (!schedule) throw new Error("No AssignmentSchedule for this academic year — set the term anchor first");
+  const entry = schedule.entries.id(entryId);
+  if (!entry) throw new Error("Schedule entry not found in this year's rotation");
+  if (entry.effectiveFrom && lastDayKey < entry.effectiveFrom) throw new Error("lastDayKey is before the entry starts");
+  entry.effectiveTo = lastDayKey;
   await schedule.save();
   return schedule;
 }
@@ -317,7 +345,11 @@ export async function expectedItemsForWeek(
     throw new Error("No AssignmentSchedule for this academic year — set the term anchor first");
   }
   const resolved = await resolveScheduleWeek(schedule, weekNumber);
-  const entries = schedule.entries.filter((e) => e.cycleWeek === resolved.cycleWeek);
+  // The entries IN FORCE for this week, judged on its delivery date (its week start when
+  // suspended): a dated entry (a section that was split or retired) leaves past weeks
+  // exactly as they were and never back-fills them.
+  const refKey = dateOnlyISO(resolved.deliveryDate ?? resolved.weekStart).slice(0, 10);
+  const entries = schedule.entries.filter((e) => e.cycleWeek === resolved.cycleWeek && entryActiveOn(e, refKey));
 
   // An AssignmentItem is delivered once one exists for (week × section × subject)
   // — the same key the delivery pass enforces uniqueness on. We deliberately do

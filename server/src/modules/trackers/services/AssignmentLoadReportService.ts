@@ -14,6 +14,7 @@
  */
 import { Types } from "mongoose";
 import { AssignmentSchedule } from "../models/AssignmentSchedule";
+import { dateOnlyISO } from "../assignmentCalendar";
 import { AssignmentItem } from "../models/AssignmentItem";
 import { User } from "../../foundation/models/User";
 
@@ -46,8 +47,13 @@ const bump = (m: Map<string, Tally>, k: string): Tally => {
 export async function assignmentLoadReport(academicYearId: string): Promise<AssignmentLoadReport> {
   const schedule = (await AssignmentSchedule.findOne({ academicYearId })
     .select("entries")
-    .lean()) as unknown as { entries?: Array<{ subject: string; teacherId: { toString(): string } }> } | null;
-  const entries = schedule?.entries ?? [];
+    .lean()) as unknown as {
+    entries?: Array<{ subject: string; teacherId: { toString(): string }; effectiveTo?: string | null }>;
+  } | null;
+  // Planned = the rotation as it stands; an entry that has already ended (a split/retired
+  // section) is not planned work any more.
+  const todayKey = dateOnlyISO(new Date()).slice(0, 10);
+  const entries = (schedule?.entries ?? []).filter((e) => !e.effectiveTo || e.effectiveTo >= todayKey);
 
   const items = (await AssignmentItem.find({ academicYearId: new Types.ObjectId(academicYearId) })
     .select("subject teacherId status")
