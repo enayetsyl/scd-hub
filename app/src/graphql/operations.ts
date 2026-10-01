@@ -708,6 +708,71 @@ export const CONTENT_TREE_QUERY = gql<
   }
 `;
 
+/** Lesson Plans, one page of chapters — plans only, every filter applied server-side. */
+export const CONTENT_TREE_PAGE_QUERY = gql<
+  {
+    contentTreePage: {
+      nodes: ContentTreeNode[];
+      totalChapters: number;
+      totalPlans: number;
+      page: number;
+      pageSize: number;
+    };
+  },
+  {
+    subject?: string | null;
+    classLevel?: number | null;
+    currentOnly?: boolean | null;
+    docType?: string | null;
+    curationTag?: string | null;
+    page?: number | null;
+  }
+>`
+  query ContentTreePage(
+    $subject: String
+    $classLevel: Int
+    $currentOnly: Boolean
+    $docType: String
+    $curationTag: String
+    $page: Int
+  ) {
+    contentTreePage(
+      subject: $subject
+      classLevel: $classLevel
+      currentOnly: $currentOnly
+      docType: $docType
+      curationTag: $curationTag
+      page: $page
+    ) {
+      totalChapters
+      totalPlans
+      page
+      pageSize
+      nodes {
+        subject
+        classLevel
+        chapters {
+          anchorWord
+          number
+          title
+          artifacts {
+            id
+            docType
+            subject
+            classLevel
+            address { anchorWord number title }
+            curationTag
+            reviewStatus
+            current
+            importedAt
+            sessionIndex
+          }
+        }
+      }
+    }
+  }
+`;
+
 /** Full artifact incl. renderedMarkdown for the plan view (ADR-006: shown as-is). */
 export interface ContentArtifactT extends ArtifactListItem {
   renderedMarkdown: string | null;
@@ -878,6 +943,44 @@ export const ASSIGNABLE_PLANS = gql<{ assignablePlans: AssignablePlanT[] }, NoVa
       artifactId docType subject classLevel anchorWord addressNumber title
       reviewStatus currentReviewerId currentReviewerName currentAssignmentId roundStatus
       sessionIndex roundNumber verdict assignedAt submittedAt
+    }
+  }
+`;
+
+/** One page of the plan-review board, filtered server-side. */
+export const ASSIGNABLE_PLANS_PAGE = gql<
+  { assignablePlansPage: { rows: AssignablePlanT[]; total: number; page: number; pageSize: number } },
+  {
+    subject?: string | null;
+    classLevel?: number | null;
+    docType?: string | null;
+    state?: string | null;
+    reviewerId?: string | null;
+    page?: number | null;
+  }
+>`
+  query AssignablePlansPage(
+    $subject: String
+    $classLevel: Int
+    $docType: String
+    $state: String
+    $reviewerId: String
+    $page: Int
+  ) {
+    assignablePlansPage(
+      subject: $subject
+      classLevel: $classLevel
+      docType: $docType
+      state: $state
+      reviewerId: $reviewerId
+      page: $page
+    ) {
+      total page pageSize
+      rows {
+        artifactId docType subject classLevel anchorWord addressNumber title
+        reviewStatus currentReviewerId currentReviewerName currentAssignmentId roundStatus
+        sessionIndex roundNumber verdict assignedAt submittedAt
+      }
     }
   }
 `;

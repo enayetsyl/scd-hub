@@ -11,6 +11,10 @@
  *   • opens the plan's review history,
  * one row at a time or for a ticked selection ("give selected to…", "unassign selected").
  *
+ * Paged on the server (`assignablePlansPage`, 50 rows a page): every filter runs there, so
+ * the screen never downloads all ~850 plans. "Select all" ticks this page; ticks survive
+ * moving between pages.
+ *
  * Gated content:assign_review, like Assign reviews.
  */
 import React, { useMemo, useState } from "react";
@@ -19,7 +23,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
 import { SUBJECTS, CLASS_LEVELS, PLAN_DOC_TYPES } from "@scd/shared";
 import {
-  ASSIGNABLE_PLANS,
+  ASSIGNABLE_PLANS_PAGE,
   REVIEWER_ASSIGNMENT_LOAD,
   TEACHERS_QUERY,
   ASSIGN_PLAN_REVIEW,
@@ -47,6 +51,7 @@ import {
   ErrorBanner,
   Divider,
 } from "../../components/ui";
+import { Pager } from "../../components/Pager";
 import { STR, subjectLabel, classLevelLabel, docTypeLabel, reviewVerdictLabel, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
@@ -55,8 +60,6 @@ type Props = NativeStackScreenProps<ReviewStackParamList, "PlanReviewBoard">;
 
 type RowState = "unassigned" | "awaiting" | "reviewed" | "signed";
 const ROW_STATES: RowState[] = ["unassigned", "awaiting", "reviewed", "signed"];
-/** Rows rendered before "show more" — the full list is ~800 plans. */
-const PAGE = 120;
 
 function stateOf(p: AssignablePlanT): RowState {
   if (p.reviewStatus === "gold") return "signed";
@@ -101,7 +104,28 @@ function shortDate(iso: string | null): string {
 type RowAction = { artifactId: string; kind: "assign" | "move" | "newRound" };
 
 export default function PlanReviewBoardScreen({ navigation }: Props): React.ReactElement {
-  const [{ data: plansData, fetching: plansFetching, error: plansErr }, refetchPlans] = useQuery({ query: ASSIGNABLE_PLANS });
+  const [subject, setSubjectRaw] = useState<string | null>(null);
+  const [classLevel, setClassLevelRaw] = useState<number | null>(null);
+  const [docType, setDocTypeRaw] = useState<string | null>(null);
+  const [state, setStateRaw] = useState<RowState | null>(null);
+  const [reviewerFilter, setReviewerFilterRaw] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  // Any filter change starts again at page 1 — page 4 of a narrower set may not exist.
+  const withPageReset = <T,>(set: (v: T) => void) => (v: T) => {
+    set(v);
+    setPage(1);
+  };
+  const setSubject = withPageReset(setSubjectRaw);
+  const setClassLevel = withPageReset(setClassLevelRaw);
+  const setDocType = withPageReset(setDocTypeRaw);
+  const setState = withPageReset(setStateRaw);
+  const setReviewerFilter = withPageReset(setReviewerFilterRaw);
+
+  // The server filters and pages (one page of rows per request, not every plan).
+  const [{ data: plansData, fetching: plansFetching, error: plansErr }, refetchPlans] = useQuery({
+    query: ASSIGNABLE_PLANS_PAGE,
+    variables: { subject, classLevel, docType, state, reviewerId: reviewerFilter, page },
+  });
   const [{ data: loadData }, refetchLoad] = useQuery({ query: REVIEWER_ASSIGNMENT_LOAD });
   const [{ data: teacherData }] = useQuery({ query: TEACHERS_QUERY });
   const [, assignOne] = useMutation(ASSIGN_PLAN_REVIEW);
@@ -110,18 +134,14 @@ export default function PlanReviewBoardScreen({ navigation }: Props): React.Reac
   const [, moveMany] = useMutation(MOVE_PLAN_REVIEWS);
   const [, cancelMany] = useMutation(CANCEL_PLAN_REVIEWS);
 
-  const plans = plansData?.assignablePlans ?? [];
+  const pageData = plansData?.assignablePlansPage;
+  const plans = pageData?.rows ?? [];
+  const total = pageData?.total ?? 0;
   const load = loadData?.reviewerAssignmentLoad ?? [];
   const teacherOptions = (teacherData?.teachers ?? []).map((t) => ({ label: t.name, value: t.id, hint: t.phone ?? undefined }));
 
-  const [subject, setSubject] = useState<string | null>(null);
-  const [classLevel, setClassLevel] = useState<number | null>(null);
-  const [docType, setDocType] = useState<string | null>(null);
-  const [state, setState] = useState<RowState | null>(null);
-  const [reviewerFilter, setReviewerFilter] = useState<string | null>(null);
-  const [limit, setLimit] = useState(PAGE);
-
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  // Ticked rows are kept WITH their data, so a selection survives moving to another page.
+  const [selected, setSelected] = useState<Map<string, AssignablePlanT>>(new Map());
   const [bulkReviewer, setBulkReviewer] = useState<string | null>(null);
   const [confirmUnassign, setConfirmUnassign] = useState(false);
   const [rowAction, setRowAction] = useState<RowAction | null>(null);
@@ -129,19 +149,6 @@ export default function PlanReviewBoardScreen({ navigation }: Props): React.Reac
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ text: string; tone: "ok" | "warn" | "danger" } | null>(null);
 
-  const visible = useMemo(
-    () =>
-      plans.filter(
-        (p) =>
-          (!subject || p.subject === subject) &&
-          (classLevel == null || p.classLevel === classLevel) &&
-          (!docType || p.docType === docType) &&
-          (!state || stateOf(p) === state) &&
-          (!reviewerFilter || p.currentReviewerId === reviewerFilter),
-      ),
-    [plans, subject, classLevel, docType, state, reviewerFilter],
-  );
-  const shown = visible.slice(0, limit);
   const byId = useMemo(() => new Map(plans.map((p) => [p.artifactId, p])), [plans]);
 
   function refresh(): void {
@@ -149,12 +156,12 @@ export default function PlanReviewBoardScreen({ navigation }: Props): React.Reac
     refetchLoad({ requestPolicy: "network-only" });
   }
 
-  function toggle(id: string): void {
+  function toggle(p: AssignablePlanT): void {
     setConfirmUnassign(false);
     setSelected((s) => {
-      const next = new Set(s);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      const next = new Map(s);
+      if (next.has(p.artifactId)) next.delete(p.artifactId);
+      else next.set(p.artifactId, p);
       return next;
     });
   }
@@ -212,7 +219,7 @@ export default function PlanReviewBoardScreen({ navigation }: Props): React.Reac
     setMsg(null);
     setConfirmUnassign(false);
     if (!bulkReviewer) return setMsg({ text: STR.rvPickReviewerAndPlan, tone: "danger" });
-    const rows = [...selected].map((id) => byId.get(id)).filter((p): p is AssignablePlanT => Boolean(p));
+    const rows = [...selected.values()];
     if (rows.length === 0) return setMsg({ text: STR.prbNothingSelected, tone: "danger" });
 
     // Unassigned → a fresh round; awaiting (someone else's) → moved in place; a reviewed or
@@ -248,14 +255,14 @@ export default function PlanReviewBoardScreen({ navigation }: Props): React.Reac
     setBusy(false);
     if (leftAlone > 0) parts.push(`${STR.prbSkipped} ${bnNum(leftAlone)} — ${STR.prbSkippedReviewed}`);
     setMsg({ text: parts.join(" · ") || STR.prbSkippedReviewed, tone: failed ? "danger" : leftAlone > 0 ? "warn" : "ok" });
-    setSelected(new Set());
+    setSelected(new Map());
     refresh();
   }
 
   async function unassignSelected(): Promise<void> {
     setMsg(null);
-    const ids = [...selected]
-      .map((id) => byId.get(id)?.currentAssignmentId)
+    const ids = [...selected.values()]
+      .map((p) => p.currentAssignmentId)
       .filter((x): x is string => Boolean(x));
     if (ids.length === 0) return setMsg({ text: STR.prbNothingSelected, tone: "danger" });
     if (!confirmUnassign) {
@@ -272,13 +279,13 @@ export default function PlanReviewBoardScreen({ navigation }: Props): React.Reac
       text: r.failedCount > 0 ? `${STR.prbUnassignedCount} ${bnNum(r.cancelled)} · ${STR.rvFailed} ${bnNum(r.failedCount)}` : `${STR.prbUnassignedCount} ${bnNum(r.cancelled)}`,
       tone: r.failedCount > 0 ? "danger" : "ok",
     });
-    setSelected(new Set());
+    setSelected(new Map());
     refresh();
   }
 
   // --- render --------------------------------------------------------------
 
-  const selectedWithRound = [...selected].filter((id) => byId.get(id)?.currentAssignmentId).length;
+  const selectedWithRound = [...selected.values()].filter((p) => p.currentAssignmentId).length;
 
   function renderRow(p: AssignablePlanT): React.ReactElement {
     const st = stateOf(p);
@@ -294,7 +301,7 @@ export default function PlanReviewBoardScreen({ navigation }: Props): React.Reac
       <Card key={p.artifactId} style={{ marginBottom: space(2) }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
           {st !== "signed" ? (
-            <Pressable onPress={() => toggle(p.artifactId)} accessibilityRole="checkbox" accessibilityState={{ checked: isSel }} hitSlop={8}>
+            <Pressable onPress={() => toggle(p)} accessibilityRole="checkbox" accessibilityState={{ checked: isSel }} hitSlop={8}>
               <Badge text={isSel ? "✓" : "○"} tone={isSel ? "ok" : "muted"} />
             </Pressable>
           ) : null}
@@ -338,7 +345,7 @@ export default function PlanReviewBoardScreen({ navigation }: Props): React.Reac
 
   // Group the page into chapters, keeping the server's order (chapter plan, then sessions).
   const groups: { key: string; head: AssignablePlanT; rows: AssignablePlanT[] }[] = [];
-  for (const p of shown) {
+  for (const p of plans) {
     const k = chapterKey(p);
     const last = groups[groups.length - 1];
     if (last && last.key === k) last.rows.push(p);
@@ -400,16 +407,23 @@ export default function PlanReviewBoardScreen({ navigation }: Props): React.Reac
       {/* Bulk: give the ticked plans to one reviewer, or unassign them */}
       <View style={{ flexDirection: "row", alignItems: "center", gap: space(3), marginBottom: space(2) }}>
         <Pressable
-          onPress={() => setSelected(new Set(visible.filter((p) => stateOf(p) !== "signed").map((p) => p.artifactId)))}
+          onPress={() =>
+            setSelected((s) => {
+              // This page's rows — the selection keeps anything ticked on other pages.
+              const next = new Map(s);
+              for (const p of plans) if (stateOf(p) !== "signed") next.set(p.artifactId, p);
+              return next;
+            })
+          }
           accessibilityRole="button"
         >
           <Body style={{ fontWeight: "700" }}>{STR.rvSelectAll}</Body>
         </Pressable>
-        <Pressable onPress={() => setSelected(new Set())} accessibilityRole="button">
+        <Pressable onPress={() => setSelected(new Map())} accessibilityRole="button">
           <Muted>{STR.rvClear}</Muted>
         </Pressable>
         <View style={{ flex: 1 }} />
-        <Muted>{`${bnNum(selected.size)} ${STR.qrSelected} · ${bnNum(visible.length)}`}</Muted>
+        <Muted>{`${bnNum(selected.size)} ${STR.qrSelected} · ${bnNum(total)}`}</Muted>
       </View>
       {selected.size > 0 ? (
         <Card style={{ marginBottom: space(3) }}>
@@ -444,23 +458,18 @@ export default function PlanReviewBoardScreen({ navigation }: Props): React.Reac
         <ErrorBanner message={friendlyError(plansErr)} onRetry={() => refetchPlans({ requestPolicy: "network-only" })} />
       ) : plansFetching && plans.length === 0 ? (
         <Loader label={STR.loading} />
-      ) : visible.length === 0 ? (
+      ) : total === 0 ? (
         <EmptyState message={STR.empty} />
       ) : (
         <>
+          <Pager page={pageData?.page ?? page} pageSize={pageData?.pageSize ?? 50} total={total} onPage={setPage} />
           {groups.map((g) => (
             <View key={g.key} style={{ marginBottom: space(3) }}>
               <H2>{chapterTitle(g.head)}</H2>
               {g.rows.map(renderRow)}
             </View>
           ))}
-          {visible.length > shown.length ? (
-            <Button
-              title={`${STR.loadMore} (${bnNum(visible.length - shown.length)})`}
-              variant="secondary"
-              onPress={() => setLimit((n) => n + PAGE)}
-            />
-          ) : null}
+          <Pager page={pageData?.page ?? page} pageSize={pageData?.pageSize ?? 50} total={total} onPage={setPage} />
         </>
       )}
     </Screen>

@@ -1,7 +1,8 @@
 /**
  * ContentTreeScreen (S2 / J1.5–J1.6) — browse Subject×Class → Chapter → Lesson.
- * Filter chips: subject / classLevel (sent to contentTree) + curationTag
- * (applied client-side; contentTree has no curationTag arg). Plans only —
+ * Paged on the server (`contentTreePage`, 15 chapters a page — a chapter is never split
+ * across pages): every filter chip (subject, class, plan type, curation tag, version view)
+ * is applied there, so the screen downloads one page, not every plan. Plans only —
  * questions/stimuli live in the Questions tab. Scope is enforced server-side,
  * so a supervisory teacher naturally sees content beyond their teaching sections.
  */
@@ -12,7 +13,8 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
 import { useQuery } from "urql";
 import { SUBJECTS, CLASS_LEVELS, CURATION_TAGS, PLAN_DOC_TYPES } from "@scd/shared";
-import { CONTENT_TREE_QUERY } from "../../graphql/operations";
+import { CONTENT_TREE_PAGE_QUERY } from "../../graphql/operations";
+import { Pager } from "../../components/Pager";
 import type { ContentStackParamList } from "../../navigation/types";
 import {
   Screen,
@@ -40,8 +42,6 @@ import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<ContentStackParamList, "ContentTree">;
 
-const PLAN_TYPES = new Set<string>(PLAN_DOC_TYPES);
-
 function reviewTone(status: string): "ok" | "brand" | "muted" {
   return status === "gold" ? "ok" : status === "reviewed" ? "brand" : "muted";
 }
@@ -68,13 +68,24 @@ export default function ContentTreeScreen({ navigation }: Props): React.ReactEle
   const columnCount = width >= 1280 ? 3 : width >= 960 ? 2 : 1;
   const groupWidth = columnCount === 1 ? "100%" : columnCount === 2 ? "48%" : "31%";
 
-  const [subject, setSubject] = useState<string | null>(null);
-  const [classLevel, setClassLevel] = useState<number | null>(null);
-  const [curationTag, setCurationTag] = useState<string | null>(null);
-  const [docType, setDocType] = useState<string | null>(null);
+  const [subject, setSubjectRaw] = useState<string | null>(null);
+  const [classLevel, setClassLevelRaw] = useState<number | null>(null);
+  const [curationTag, setCurationTagRaw] = useState<string | null>(null);
+  const [docType, setDocTypeRaw] = useState<string | null>(null);
   // Current only by default: a re-import supersedes the old version (it stays as history),
   // and listing both by default read as a duplicate plan (owner report 2026-09-30).
-  const [currentOnly, setCurrentOnly] = useState(true);
+  const [currentOnly, setCurrentOnlyRaw] = useState(true);
+  const [page, setPage] = useState(1);
+  // Any filter change starts again at page 1 — page 4 of a narrower set may not exist.
+  const withPageReset = <T,>(set: (v: T) => void) => (v: T) => {
+    set(v);
+    setPage(1);
+  };
+  const setSubject = withPageReset(setSubjectRaw);
+  const setClassLevel = withPageReset(setClassLevelRaw);
+  const setCurationTag = withPageReset(setCurationTagRaw);
+  const setDocType = withPageReset(setDocTypeRaw);
+  const setCurrentOnly = withPageReset(setCurrentOnlyRaw);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   // One-line summary of the active filters, shown in the collapsed accordion header
@@ -94,8 +105,8 @@ export default function ContentTreeScreen({ navigation }: Props): React.ReactEle
   );
 
   const [{ data, fetching, error }, refetch] = useQuery({
-    query: CONTENT_TREE_QUERY,
-    variables: { subject, classLevel, currentOnly },
+    query: CONTENT_TREE_PAGE_QUERY,
+    variables: { subject, classLevel, currentOnly, docType, curationTag, page },
   });
 
   // Re-fetch whenever the tab regains focus (e.g. after an Admin → Import) so a
@@ -112,28 +123,12 @@ export default function ContentTreeScreen({ navigation }: Props): React.ReactEle
     }, [refetch]),
   );
 
-  const nodes = data?.contentTree ?? [];
-
-  const filtered = useMemo(
-    () =>
-      nodes
-        .map((n) => ({
-          ...n,
-          chapters: n.chapters
-            .map((c) => ({
-              ...c,
-              artifacts: c.artifacts.filter(
-                (a) =>
-                  PLAN_TYPES.has(a.docType) &&
-                  (!curationTag || a.curationTag === curationTag) &&
-                  (!docType || a.docType === docType),
-              ),
-            }))
-            .filter((c) => c.artifacts.length > 0),
-        }))
-        .filter((n) => n.chapters.length > 0),
-    [nodes, curationTag, docType],
-  );
+  const treePage = data?.contentTreePage;
+  // Already filtered by the server (plans only, every chip) — render as received.
+  const filtered = treePage?.nodes ?? [];
+  const pager = treePage ? (
+    <Pager page={treePage.page} pageSize={treePage.pageSize} total={treePage.totalChapters} onPage={setPage} />
+  ) : null;
 
   return (
     <Screen padded={false}>
@@ -222,6 +217,7 @@ export default function ContentTreeScreen({ navigation }: Props): React.ReactEle
         <EmptyState message={STR.empty} />
       ) : (
         <ScrollView contentContainerStyle={{ padding: space(4) }}>
+          {pager}
           {filtered.map((node) => (
             <View key={`${node.subject}:${node.classLevel}`} style={{ marginBottom: space(4) }}>
               <H2>
@@ -256,6 +252,7 @@ export default function ContentTreeScreen({ navigation }: Props): React.ReactEle
               ))}
             </View>
           ))}
+          {pager}
         </ScrollView>
       )}
     </Screen>

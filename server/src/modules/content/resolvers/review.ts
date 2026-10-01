@@ -28,6 +28,8 @@ import {
   planReviewThread as planReviewThreadSvc,
   reviewerAssignmentLoad as reviewerLoadSvc,
   listAssignablePlans as assignablePlansSvc,
+  assignablePlansPage as assignablePlansPageSvc,
+  PLAN_BOARD_PAGE_SIZE,
   movePlanReviews as movePlanReviewsSvc,
   cancelPlanReviews as cancelPlanReviewsSvc,
   ReviewError,
@@ -38,6 +40,7 @@ import {
   type AssignablePlanDTO,
   type PlanReviewMoveResult,
   type PlanReviewCancelResult,
+  type AssignablePlansPage,
 } from "../services/ReviewService";
 
 // ---------------------------------------------------------------------------
@@ -389,6 +392,49 @@ builder.queryField("assignablePlans", (t) =>
     resolve: async (_root, _args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       return assignablePlansSvc();
+    },
+  }),
+);
+
+const AssignablePlansPageRef = builder.objectRef<AssignablePlansPage>("AssignablePlansPage");
+AssignablePlansPageRef.implement({
+  fields: (t) => ({
+    rows: t.field({ type: [AssignablePlanRef], resolve: (p) => p.rows }),
+    total: t.exposeInt("total"),
+    page: t.exposeInt("page"),
+    pageSize: t.exposeInt("pageSize"),
+  }),
+});
+
+builder.queryField("assignablePlansPage", (t) =>
+  t.field({
+    type: AssignablePlansPageRef,
+    description:
+      "One page of the plan-review board — current plans filtered server-side (subject, class, type, " +
+      "board state unassigned|awaiting|reviewed|signed, reviewer). Requires content:assign_review.",
+    authScopes: { hasPermission: "content:assign_review" },
+    args: {
+      subject: t.arg.string({ required: false }),
+      classLevel: t.arg.int({ required: false }),
+      docType: t.arg.string({ required: false }),
+      state: t.arg.string({ required: false }),
+      reviewerId: t.arg.string({ required: false }),
+      page: t.arg.int({ required: false }),
+      pageSize: t.arg.int({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      return assignablePlansPageSvc(
+        {
+          subject: args.subject,
+          classLevel: args.classLevel,
+          docType: args.docType,
+          state: args.state,
+          reviewerId: args.reviewerId,
+        },
+        args.page ?? 1,
+        args.pageSize ?? PLAN_BOARD_PAGE_SIZE,
+      );
     },
   }),
 );
