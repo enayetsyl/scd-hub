@@ -246,15 +246,19 @@ function scheduleShape(doc: {
     sectionId: { toString(): string };
     subject: string;
     teacherId: { toString(): string };
+    effectiveTo?: string | null;
   }>;
 }): ScheduleShape {
+  // The rotation editor shows the rotation as it stands: an entry that has already ENDED
+  // (a split/retired section) is history — kept on the document for past weeks, not edited.
+  const todayKey = dateOnlyISO(new Date()).slice(0, 10);
   return {
     id: doc._id.toString(),
     academicYearId: doc.academicYearId.toString(),
     termStartDate: doc.termStartDate.toISOString(),
     deliveryDayOfWeek: doc.deliveryDayOfWeek,
     dueDayOfWeek: doc.dueDayOfWeek,
-    entries: doc.entries.map((e) => ({
+    entries: doc.entries.filter((e) => !e.effectiveTo || e.effectiveTo >= todayKey).map((e) => ({
       id: e._id.toString(),
       cycleWeek: e.cycleWeek,
       classId: e.classId.toString(),

@@ -31,6 +31,7 @@ import {
   weekNumberFor,
   weekStartOf,
   dateOnlyISO,
+  entryActiveOn,
 } from "../assignmentCalendar";
 import { isTerminalState } from "../lifecycle";
 
@@ -125,8 +126,10 @@ export async function assignmentSummary(filter: SummaryFilter): Promise<Assignme
       continue;
     }
     const cw = resolved.cycleWeek; // week-of-month rotation slot (D-#275)
+    // Entries in force on this week's delivery date (dated entries: a split/retired section).
+    const refKey = dateOnlyISO(resolved.deliveryDate ?? resolved.weekStart).slice(0, 10);
     for (const e of schedule.entries) {
-      if (e.cycleWeek !== cw) continue;
+      if (e.cycleWeek !== cw || !entryActiveOn(e, refKey)) continue;
       const teacherKey = e.teacherId.toString();
       if (filter.teacherId && teacherKey !== filter.teacherId) continue;
       scheduledTotal++;

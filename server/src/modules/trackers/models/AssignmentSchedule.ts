@@ -30,7 +30,15 @@ export interface IAssignmentScheduleEntry {
   /** HW_SUBJECTS axis (D-#36 — Quran excluded, lives in the Quran Tracker). */
   subject: HwSubject;
   teacherId: Types.ObjectId;
+  /** Optional validity window, inclusive local date keys (YYYY-MM-DD). The expected grid is
+   *  computed on read for EVERY week, so a section change (the C4/C5 boys/girls split) must
+   *  date its entries — retiring the old section's entries outright would erase them from
+   *  past weeks, and adding the new ones undated would back-fill past weeks as undelivered.
+   *  Absent = open-ended. A week uses the entries in force on its delivery date. */
+  effectiveFrom?: string | null;
+  effectiveTo?: string | null;
 }
+
 
 export interface IAssignmentSchedule extends Document {
   _id: Types.ObjectId;
@@ -54,6 +62,8 @@ const AssignmentScheduleEntrySchema = new Schema<IAssignmentScheduleEntry>({
   sectionId: { type: Schema.Types.ObjectId, required: true },
   subject: { type: String, enum: HW_SUBJECTS, required: true },
   teacherId: { type: Schema.Types.ObjectId, required: true },
+  effectiveFrom: { type: String, default: null, match: /^\d{4}-\d{2}-\d{2}$/ },
+  effectiveTo: { type: String, default: null, match: /^\d{4}-\d{2}-\d{2}$/ },
 });
 
 const AssignmentScheduleSchema = new Schema<IAssignmentSchedule>(
