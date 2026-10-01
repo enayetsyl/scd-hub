@@ -150,14 +150,6 @@ async function assertRecordInSection(recordId: string, sectionId: string): Promi
   }
 }
 
-async function assertItemInSection(itemId: string, sectionId: string): Promise<void> {
-  const item = await AssignmentItem.findById(itemId).select("sectionId").lean();
-  if (!item) throw new Error("AssignmentItem not found");
-  if (item.sectionId.toString() !== sectionId) {
-    throw new ForbiddenError("Item is not in the given section");
-  }
-}
-
 /** Item-level read gate: the item's subject must be within the caller's allowed
  *  subject codes for the section (null = unrestricted) — a subject teacher may
  *  not open another subject's per-student records/counts. */
@@ -1813,11 +1805,12 @@ builder.mutationField("assignmentSubmitPass", (t) =>
         await assignmentItemSubjectId(args.itemId),
         "submit_assignment",
       );
-      await assertItemInSection(args.itemId, args.sectionId);
       return asSubmitPassSvc(
         args.itemId,
         args.entries.map((e) => ({ recordId: e.recordId, submitted: e.submitted })),
         ctx.auth.userId as string,
+        new Date(),
+        { sectionId: args.sectionId },
       );
     },
   }),
@@ -1844,11 +1837,12 @@ builder.mutationField("assignmentReturnPass", (t) =>
         await assignmentItemSubjectId(args.itemId),
         "check_assignment",
       );
-      await assertItemInSection(args.itemId, args.sectionId);
       return asReturnPassSvc(
         args.itemId,
         args.entries.map((e) => ({ recordId: e.recordId, returned: e.returned })),
         ctx.auth.userId as string,
+        new Date(),
+        { sectionId: args.sectionId },
       );
     },
   }),

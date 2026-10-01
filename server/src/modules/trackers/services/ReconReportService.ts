@@ -256,13 +256,17 @@ async function asNotDeclaredRows(
 
 /**
  * D-#459: the (section × subject × week) cells the AssignmentSchedule rotation expects
- * but with NO matching ASSIGNMENT print request for that delivery date. Unlike
- * `asNotDeclaredRows`, this does NOT skip `item.delivered` — whether the digital
- * AssignmentItem was declared is a separate obligation from printing a copy, and a
- * printed copy is expected for every rotation-named assignment regardless. Only
- * `nilDeclared` cells are skipped (an explicit "no assignment this week" owes no print
- * either). Matching is by (sectionId, subject) within the week's delivery date, since
- * PrintRequest has no direct FK to a rotation entry.
+ * but with NO matching ASSIGNMENT print request for that delivery date.
+ *
+ * Owner ruling 2026-10-01 (after the C4/C5 boys/girls split):
+ *   - only a DECLARED cell (an AssignmentItem exists) owes a print. An undeclared cell
+ *     is already on the declare-pending report; listing it here too was noise, and a
+ *     `nilDeclared` cell owes nothing at all;
+ *   - one print job serves the whole CLASS for that subject: the Boys teacher sends the
+ *     sheet to print and the Girls section delivers the same copy. Matching is therefore
+ *     by (classId, subject) within the week's delivery date — which also honours a
+ *     request still tagged to the old combined section. PrintRequest has no direct FK to
+ *     a rotation entry.
  */
 async function asNotPrintedRows(
   fromKey: string,
@@ -293,10 +297,10 @@ async function asNotPrintedRows(
       const deliveryKey = (week.deliveryDate as string).slice(0, 10);
       if (deliveryKey > todayKey) continue;
 
-      const items = week.items.filter((item) => !item.nilDeclared);
+      const items = week.items.filter((item) => item.delivered && !item.nilDeclared);
       if (items.length === 0) continue;
 
-      // One query per week: which (section, subject) cells already have a live
+      // One query per week: which (class, subject) cells already have a live
       // ASSIGNMENT print request for this delivery date? Mongoose auto-casts these
       // string ids against the schema's ObjectId field — no explicit cast needed.
       const classIds = [...new Set(items.map((i) => i.classId))];
@@ -306,16 +310,16 @@ async function asNotPrintedRows(
         classId: { $in: classIds },
         status: { $ne: "CANCELLED" },
       })
-        .select("sectionId subject")
-        .lean()) as unknown as Array<{ sectionId?: { toString(): string }; subject?: string }>;
+        .select("classId subject")
+        .lean()) as unknown as Array<{ classId?: { toString(): string }; subject?: string }>;
       const printedKeys = new Set(
         printed
-          .filter((p): p is { sectionId: { toString(): string }; subject: string } => !!p.sectionId && !!p.subject)
-          .map((p) => `${p.sectionId.toString()}|${p.subject}`),
+          .filter((p): p is { classId: { toString(): string }; subject: string } => !!p.classId && !!p.subject)
+          .map((p) => `${p.classId.toString()}|${p.subject}`),
       );
 
       for (const item of items) {
-        const key = `${item.sectionId}|${item.subject}`;
+        const key = `${item.classId}|${item.subject}`;
         if (printedKeys.has(key)) continue;
         out.push({
           weekNumber: week.weekNumber,

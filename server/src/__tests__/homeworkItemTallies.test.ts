@@ -97,15 +97,31 @@ describe("D-#383 — homeworkItemTallies", () => {
 
   it("restricts to the caller's readable subjects via the item lookup", async () => {
     mockItemFind.mockReturnValue([{ _id: "i1" }]);
-    mockRecordFind.mockReturnValue([rec("i1", "SUBMITTED", ["GIVEN", "SUBMITTED"])]);
+    mockRecordFind.mockReturnValue([
+      rec("i1", "SUBMITTED", ["GIVEN", "SUBMITTED"]),
+      rec("i2", "DUE", ["GIVEN", "DUE"]),
+    ]);
 
     const tallies = await homeworkItemTallies("sec1", new Set(["ENG"]));
 
-    // Items are filtered by subject first, then records by those item ids —
-    // a teacher must never get counts for a subject they cannot read.
-    expect(mockItemFind).toHaveBeenCalledWith({ sectionId: "sec1", subject: { $in: ["ENG"] } });
-    expect(mockRecordFind).toHaveBeenCalledWith({ hwItemId: { $in: ["i1"] } });
-    expect(tallies).toHaveLength(1);
+    // A teacher must never get counts for a subject they cannot read: the records'
+    // items are filtered by subject and only the readable ones survive.
+    expect(mockRecordFind).toHaveBeenCalledWith({ sectionId: "sec1" });
+    expect(mockItemFind).toHaveBeenCalledWith({ _id: { $in: ["i1", "i2"] }, subject: { $in: ["ENG"] } });
+    expect(tallies.map((t) => t.hwItemId)).toEqual(["i1"]);
+  });
+
+  it("a subject teacher still sees tallies for a pre-split item (records follow the student)", async () => {
+    // C4 split (2026-10-01): the item still sits on C4-ALL, its records on C4-Boys.
+    // The old item-section lookup found nothing, so a subject teacher's cards lost their counts.
+    mockItemFind.mockReturnValue([{ _id: "preSplit" }]);
+    mockRecordFind.mockReturnValue([rec("preSplit", "DUE", ["GIVEN", "DUE"])]);
+
+    const [t] = await homeworkItemTallies("c4boys", new Set(["ENG"]));
+
+    expect(mockItemFind.mock.calls[0][0]).not.toHaveProperty("sectionId");
+    expect(t.hwItemId).toBe("preSplit");
+    expect(t.pendingSubmission).toBe(1);
   });
 
   it("reads every record for the section when unrestricted", async () => {
