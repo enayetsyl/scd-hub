@@ -44,8 +44,9 @@ const HomeworkNilDeclarationSchema = new Schema<IHomeworkNilDeclaration>(
   { timestamps: true },
 );
 
-// One nil per (class, subject, day) — re-declaring updates the reason (upsert).
-HomeworkNilDeclarationSchema.index({ classId: 1, subject: 1, dateKey: 1 }, { unique: true });
+// One nil per (SECTION, subject, day) — re-declaring updates the reason (upsert). Per
+// section, not class: a split class (C4 Boys / Girls) declares each section on its own.
+HomeworkNilDeclarationSchema.index({ sectionId: 1, subject: 1, dateKey: 1 }, { unique: true });
 // Report range scans.
 HomeworkNilDeclarationSchema.index({ dateKey: 1 });
 
