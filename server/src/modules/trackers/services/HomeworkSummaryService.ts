@@ -406,18 +406,20 @@ export async function homeworkItemTallies(
   /** Subject allow-list from the caller's scope; null/undefined = unrestricted. */
   subjects?: ReadonlySet<string> | null,
 ): Promise<HomeworkItemTally[]> {
-  // Subject scope is an ITEM property, so restrict by item before touching records.
-  let itemFilter: Record<string, unknown> = { sectionId };
-  if (subjects) {
-    const ids = await HomeworkItem.find({ sectionId, subject: { $in: [...subjects] } })
-      .select("_id")
-      .lean();
-    itemFilter = { hwItemId: { $in: ids.map((i) => i._id) } };
-  }
-
-  const records = await HomeworkStudentRecord.find(itemFilter)
+  // Records are keyed by the STUDENT's section, not the item's: an item issued before a
+  // section split serves both halves, each tallying only its own students. Subject scope
+  // is an ITEM property, so it is applied to the items those records point at.
+  let records = await HomeworkStudentRecord.find({ sectionId })
     .select("hwItemId state stateDates")
     .lean();
+  if (subjects) {
+    const itemIds = [...new Set(records.map((r) => r.hwItemId.toString()))];
+    const readable = await HomeworkItem.find({ _id: { $in: itemIds }, subject: { $in: [...subjects] } })
+      .select("_id")
+      .lean();
+    const keep = new Set(readable.map((i) => i._id.toString()));
+    records = records.filter((r) => keep.has(r.hwItemId.toString()));
+  }
 
   const byItem = new Map<string, HomeworkItemTally>();
   for (const r of records) {

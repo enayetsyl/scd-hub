@@ -70,7 +70,8 @@ function stubDocs(docs: ReturnType<typeof rec>[]) {
       then: (resolve: (v: unknown) => void, reject: (e: unknown) => void) =>
         Promise.resolve(doc).then(resolve, reject),
       select: () => ({
-        lean: () => Promise.resolve(doc ? { state: doc.state, asItemId: doc.asItemId } : null),
+        lean: () =>
+          Promise.resolve(doc ? { state: doc.state, asItemId: doc.asItemId, sectionId: doc.sectionId } : null),
       }),
     };
   });
@@ -108,6 +109,35 @@ describe("submitPass — first-cross-only + chase-before-due (G7)", () => {
     expect(r.state).toBe("SUBMITTED");
     expect(r.stateDates.map((s) => s.state)).toEqual(["DUE", "SUBMITTED"]);
     expect(new Set(r.stateDates.map((s) => new Date(s.at).getTime())).size).toBe(1);
+  });
+});
+
+describe("submitPass / returnPass — section scope by RECORD (C4 split, 2026-10-01)", () => {
+  test("a pre-split item's record that followed the student to C4-Boys passes from C4-Boys", async () => {
+    // The item still sits on C4-ALL; the old item-section check refused the whole pass.
+    const boys = new mongoose.Types.ObjectId();
+    const r = rec({ state: "DUE", sectionId: boys });
+    stubDocs([r]);
+    const res = await submitPass(ITEM_ID, [{ recordId: r.recordId, submitted: true }], ACTOR, new Date(), {
+      sectionId: boys.toString(),
+    });
+    expect(res.submittedCount).toBe(1);
+    expect(r.state).toBe("SUBMITTED");
+  });
+
+  test("a record of another section is refused (submit and return)", async () => {
+    const r = rec({ state: "DUE" });
+    const c = rec({ state: "CHECKED" });
+    stubDocs([r, c]);
+    const other = { sectionId: new mongoose.Types.ObjectId().toString() };
+    await expect(
+      submitPass(ITEM_ID, [{ recordId: r.recordId, submitted: true }], ACTOR, new Date(), other),
+    ).rejects.toThrow(/not in the given section/);
+    await expect(
+      returnPass(ITEM_ID, [{ recordId: c.recordId, returned: true }], ACTOR, new Date(), other),
+    ).rejects.toThrow(/not in the given section/);
+    expect(r.state).toBe("DUE");
+    expect(c.state).toBe("CHECKED");
   });
 });
 

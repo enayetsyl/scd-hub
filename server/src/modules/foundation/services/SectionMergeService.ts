@@ -14,6 +14,7 @@ import { Section } from "../models/Section";
 import { Student } from "../models/Student";
 import { SectionMerge } from "../models/SectionMerge";
 import { writeAudit } from "../../platform/services/AuditService";
+import { rehomeStudentRecords } from "../../trackers/services/recordRehome";
 
 export class SectionMergeError extends Error {
   constructor(message: string) {
@@ -101,6 +102,9 @@ export async function mergeSections(
       { _id: { $in: moves.map((m) => m.studentId) } },
       { $set: { sectionId: combined._id } },
     );
+    // Their homework/assignment records follow them, or the combined section's
+    // workspaces cannot see work issued before the merge.
+    await rehomeStudentRecords(moves.map((m) => m.studentId), combined._id);
   }
   await Section.updateMany({ _id: { $in: sourceIds } }, { $set: { active: false } });
 
@@ -167,6 +171,7 @@ export async function splitSections(
   let moved = 0;
   for (const [dest, ids] of byDest) {
     await Student.updateMany({ _id: { $in: ids } }, { $set: { sectionId: new Types.ObjectId(dest) } });
+    await rehomeStudentRecords(ids, dest);
     moved += ids.length;
   }
 
