@@ -159,14 +159,19 @@ export function LiveClassCard(): React.ReactElement | null {
       )}
 
       <Divider />
-      <View style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
+      {/* Wraps: on a phone the badge and the link don't fit side by side, and without
+          wrap they overlapped (owner screenshot 2026-10-01) — the link drops to its own
+          line, still right-aligned, instead. */}
+      <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: space(2) }}>
         {uncoveredToday > 0 ? (
           <Badge text={`${STR.lcbUncoveredToday}: ${bnNum(uncoveredToday)}`} tone="danger" />
         ) : (
-          <Muted style={{ flex: 1 }}>{STR.lcbAllStaffed}</Muted>
+          <Muted style={{ flexShrink: 1 }}>{STR.lcbAllStaffed}</Muted>
         )}
-        <Body style={{ fontWeight: "600", marginLeft: "auto" }}>{STR.lcbBoardOpen}</Body>
-        <Icon name="chevron-right" size={18} color={colors.textSecondary} />
+        <View style={{ flexDirection: "row", alignItems: "center", gap: space(1), marginLeft: "auto" }}>
+          <Body style={{ fontWeight: "600" }}>{STR.lcbBoardOpen}</Body>
+          <Icon name="chevron-right" size={18} color={colors.textSecondary} />
+        </View>
       </View>
     </Card>
   );

@@ -119,8 +119,11 @@ export default function RoutineHomeScreen({ navigation }: Props): React.ReactEle
         {groupsQ.data && (groupsQ.data.subjectGroups ?? []).length === 0 ? <Muted>{STR.empty}</Muted> : null}
         {(groupsQ.data?.subjectGroups ?? []).map((g) => (
           <Card key={g.id}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-              <View style={{ flex: 1 }}>
+            {/* Wraps: a long group code (ARABIC_QURANIC_ARABIC_MIXED) is an unshrinkable
+                badge, and beside it the name was crushed to one word per line on a phone.
+                The name keeps a minimum width; the badge moves under it when they don't fit. */}
+            <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: space(2) }}>
+              <View style={{ flexGrow: 1, flexShrink: 1, flexBasis: 160, minWidth: 0 }}>
                 <Body style={{ fontWeight: "700" }}>{g.nameBn}</Body>
                 <Muted>
                   {periodTrackLabel(g.track)} · {g.level}
@@ -128,7 +131,8 @@ export default function RoutineHomeScreen({ navigation }: Props): React.ReactEle
               </View>
               <Badge text={g.code} tone="brand" />
             </View>
-            <View style={{ flexDirection: "row", gap: space(2), marginTop: space(2) }}>
+            {/* Wraps too — four buttons do not fit one phone-width row. */}
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: space(2) }}>
               <Button
                 title={STR.rtView}
                 variant="secondary"
