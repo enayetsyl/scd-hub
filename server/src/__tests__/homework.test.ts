@@ -510,12 +510,12 @@ describe("T1.1 — declareHomeworkItem validations (handoff §2.1)", () => {
 describe("D-#299 — declareNoHomework / removeNoHomework", () => {
   const NIL = { classId: CLASS_ID, sectionId: SECTION_ID, subject: "MATH", date: "2026-06-02", reason: "EXAM", actorId: ACTOR_ID };
 
-  test("happy path: upserts one (class, subject, day) marker with the reason", async () => {
+  test("happy path: upserts one (SECTION, subject, day) marker with the reason", async () => {
     const res = await declareNoHomework(NIL);
     expect(res).toMatchObject({ subject: "MATH", dateKey: "2026-06-02", reason: "EXAM" });
     expect(mockNilUpsert).toHaveBeenCalledWith(
-      { classId: CLASS_ID, subject: "MATH", dateKey: "2026-06-02" },
-      { $set: { sectionId: SECTION_ID, reason: "EXAM", declaredBy: ACTOR_ID } },
+      { sectionId: SECTION_ID, subject: "MATH", dateKey: "2026-06-02" },
+      { $set: { classId: CLASS_ID, reason: "EXAM", declaredBy: ACTOR_ID } },
       { new: true, upsert: true },
     );
   });
@@ -534,7 +534,7 @@ describe("D-#299 — declareNoHomework / removeNoHomework", () => {
   test("a real declaration auto-clears the nil for the same cell", async () => {
     await declareHomeworkItem(validDeclareInput());
     expect(mockNilDelete).toHaveBeenCalledWith({
-      classId: CLASS_ID,
+      sectionId: SECTION_ID,
       subject: "MATH",
       dateKey: "2026-06-02",
     });
@@ -542,9 +542,20 @@ describe("D-#299 — declareNoHomework / removeNoHomework", () => {
 
   test("removeNoHomework reports whether a marker existed", async () => {
     mockNilDelete.mockResolvedValue({ deletedCount: 1 });
-    await expect(removeNoHomework({ classId: CLASS_ID, subject: "MATH", date: "2026-06-02" })).resolves.toBe(true);
+    await expect(removeNoHomework({ classId: CLASS_ID, sectionId: SECTION_ID, subject: "MATH", date: "2026-06-02" })).resolves.toBe(true);
     mockNilDelete.mockResolvedValue({ deletedCount: 0 });
-    await expect(removeNoHomework({ classId: CLASS_ID, subject: "MATH", date: "2026-06-02" })).resolves.toBe(false);
+    await expect(removeNoHomework({ classId: CLASS_ID, sectionId: SECTION_ID, subject: "MATH", date: "2026-06-02" })).resolves.toBe(false);
+    expect(mockNilDelete).toHaveBeenLastCalledWith({ sectionId: SECTION_ID, subject: "MATH", dateKey: "2026-06-02" });
+  });
+
+  test("a split class declares per section: the real-item check and the upsert are keyed by SECTION, never class", async () => {
+    // C4 Boys / Girls share a classId; Boys' marker or homework must not block or be overwritten by Girls.
+    await declareNoHomework(NIL);
+    const [itemQuery] = mockItemFindOne.mock.calls[mockItemFindOne.mock.calls.length - 1] as [Record<string, unknown>];
+    expect(itemQuery).toMatchObject({ sectionId: SECTION_ID, subject: "MATH" });
+    expect(itemQuery).not.toHaveProperty("classId");
+    const [filter] = mockNilUpsert.mock.calls[0] as [Record<string, unknown>];
+    expect(filter).not.toHaveProperty("classId");
   });
 });
 

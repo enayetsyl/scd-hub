@@ -285,9 +285,10 @@ export async function declareHomeworkItem(
   });
 
   // D-#299: a real declaration supersedes a "no homework today" marker for the
-  // same (class, subject, day) — the teacher changed their mind.
+  // same (SECTION, subject, day) — the teacher changed their mind. Per section, not
+  // per class: a split class (C4 Boys / Girls) declares independently.
   await HomeworkNilDeclaration.deleteOne({
-    classId: input.classId,
+    sectionId: input.sectionId,
     subject,
     dateKey: dateKeyOf(dateGiven),
   });
@@ -537,8 +538,11 @@ function dayBoundsOf(d: Date): { start: Date; end: Date } {
   };
 }
 
-/** Declare "no homework today" for one (class, subject, day). Upsert — tapping
- *  again updates the reason. Rejected while a REAL item exists for the cell. */
+/** Declare "no homework today" for one (SECTION, subject, day). Upsert — tapping
+ *  again updates the reason. Rejected while a REAL item exists for the cell.
+ *  Keyed by section, not class (owner report 2026-10-01): after the C4/C5 boys/girls
+ *  split the class-keyed marker showed C4 Boys' "no homework — Exam" on the Girls page,
+ *  and declaring for Girls would have overwritten the Boys' marker. */
 export async function declareNoHomework(input: {
   classId: string;
   sectionId: string;
@@ -560,7 +564,7 @@ export async function declareNoHomework(input: {
   }
   const { start, end } = dayBoundsOf(d);
   const real = await HomeworkItem.findOne({
-    classId: input.classId,
+    sectionId: input.sectionId,
     subject,
     dateGiven: { $gte: start, $lte: end },
   })
@@ -570,10 +574,10 @@ export async function declareNoHomework(input: {
     throw new Error("Homework IS declared for this subject today — remove is not possible via nil");
   }
   const doc = await HomeworkNilDeclaration.findOneAndUpdate(
-    { classId: input.classId, subject, dateKey: dateKeyOf(d) },
+    { sectionId: input.sectionId, subject, dateKey: dateKeyOf(d) },
     {
       $set: {
-        sectionId: input.sectionId,
+        classId: input.classId,
         reason: input.reason as HwNilReason,
         declaredBy: input.actorId,
       },
@@ -586,6 +590,7 @@ export async function declareNoHomework(input: {
 /** Remove a mistaken nil declaration (same write-scope as declaring it). */
 export async function removeNoHomework(input: {
   classId: string;
+  sectionId: string;
   subject: string;
   date: string;
 }): Promise<boolean> {
@@ -593,21 +598,22 @@ export async function removeNoHomework(input: {
   const d = new Date(input.date.length === 10 ? `${input.date}T00:00:00` : input.date);
   if (Number.isNaN(d.getTime())) throw new Error("Invalid date");
   const res = await HomeworkNilDeclaration.deleteOne({
-    classId: input.classId,
+    sectionId: input.sectionId,
     subject: input.subject,
     dateKey: dateKeyOf(d),
   });
   return (res.deletedCount ?? 0) > 0;
 }
 
-/** The day's nil declarations for a class (the declare screen's state read). */
+/** The day's nil declarations for ONE SECTION (the declare screen's state read). */
 export async function listNilDeclarations(
   classId: string,
   date: string,
+  sectionId: string,
 ): Promise<NilDeclarationDTO[]> {
   const d = new Date(date.length === 10 ? `${date}T00:00:00` : date);
   if (Number.isNaN(d.getTime())) throw new Error("Invalid date");
-  const docs = await HomeworkNilDeclaration.find({ classId, dateKey: dateKeyOf(d) }).lean();
+  const docs = await HomeworkNilDeclaration.find({ classId, sectionId, dateKey: dateKeyOf(d) }).lean();
   return (docs as unknown as Parameters<typeof toNilDTO>[0][]).map(toNilDTO);
 }
 
