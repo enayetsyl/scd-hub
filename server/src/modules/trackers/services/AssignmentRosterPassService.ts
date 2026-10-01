@@ -135,11 +135,23 @@ export interface AsReturnPassResult {
   unchangedCount: number;
 }
 
-async function loadState(recordId: string, itemId: string): Promise<LifecycleState> {
-  const rec = await AssignmentStudentRecord.findById(recordId).select("state asItemId").lean();
+/**
+ * The section the pass runs from. An item confirmed before a section split still
+ * serves BOTH halves (its records follow each student's current section), so the
+ * pass is scoped by RECORD section, not item section. Omitted = item-wide.
+ */
+export interface AsPassScope {
+  sectionId?: string;
+}
+
+async function loadState(recordId: string, itemId: string, scope: AsPassScope = {}): Promise<LifecycleState> {
+  const rec = await AssignmentStudentRecord.findById(recordId).select("state asItemId sectionId").lean();
   if (!rec) throw new Error(`AssignmentStudentRecord not found: ${recordId}`);
   if (rec.asItemId.toString() !== itemId) {
     throw new Error(`Record ${recordId} does not belong to this assignment item`);
+  }
+  if (scope.sectionId && String(rec.sectionId) !== scope.sectionId) {
+    throw new Error(`Record ${recordId} is not in the given section`);
   }
   return rec.state as LifecycleState;
 }
@@ -149,10 +161,11 @@ export async function submitPass(
   entries: AsSubmitPassEntry[],
   actorId: string,
   at: Date = new Date(),
+  scope: AsPassScope = {},
 ): Promise<AsSubmitPassResult> {
   const result: AsSubmitPassResult = { submittedCount: 0, chasedCount: 0, unchangedCount: 0 };
   for (const entry of entries) {
-    const state = await loadState(entry.recordId, itemId);
+    const state = await loadState(entry.recordId, itemId, scope);
     if (!SUBMIT_ACTIONABLE.includes(state)) {
       throw new Error(`Cannot run the submission pass on a ${state} record — use the workspace card's exception actions`);
     }
@@ -177,6 +190,7 @@ export async function returnPass(
   entries: AsReturnPassEntry[],
   actorId: string,
   at: Date = new Date(),
+  scope: AsPassScope = {},
 ): Promise<AsReturnPassResult> {
   const result: AsReturnPassResult = { returnedCount: 0, unchangedCount: 0 };
   for (const entry of entries) {
@@ -184,7 +198,7 @@ export async function returnPass(
       result.unchangedCount += 1;
       continue;
     }
-    const state = await loadState(entry.recordId, itemId);
+    const state = await loadState(entry.recordId, itemId, scope);
     if (!RETURN_ACTIONABLE.includes(state)) {
       throw new Error(`Cannot return a ${state} record — only a checked assignment is handed back`);
     }

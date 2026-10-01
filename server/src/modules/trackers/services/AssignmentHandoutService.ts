@@ -17,8 +17,9 @@
  *                               period that day, cover-overlaid (RoutineSubstitution
  *                               R-4 and the HR StaffCoverSlot, the two mechanisms
  *                               MyDayService already reconciles)
- *   is it printed             — a live ASSIGNMENT `PrintRequest` for (section ×
- *                               subject × delivery date), the D-#459 match
+ *   is it printed             — a live ASSIGNMENT `PrintRequest` for (class ×
+ *                               subject × delivery date), the D-#459 match (class,
+ *                               not section, since the 2026-10-01 owner ruling)
  *
  * WHY THE LAST **SECTION** PERIOD, not simply the last period. A section's final
  * period of the day can be a cross-grade Quran/Arabic group (D-#48), and there the
@@ -329,15 +330,17 @@ export async function handoutBoard(date: Date, opts: HandoutBoardOptions = {}): 
       classId: { $in: classIds },
       status: { $ne: "CANCELLED" },
     })
-      .select("sectionId subject")
+      .select("classId subject")
       .lean(),
   ]);
   const sectionNameById = new Map(sections.map((s) => [s._id.toString(), s.nameBn]));
   const nameById = new Map(users.map((u) => [u._id.toString(), u.name]));
+  // One print job serves every section of the class for that subject (owner ruling
+  // 2026-10-01 — the Boys teacher prints, the Girls section delivers the same sheet).
   const printedKeys = new Set(
-    (printed as unknown as Array<{ sectionId?: { toString(): string }; subject?: string }>)
-      .filter((p) => !!p.sectionId && !!p.subject)
-      .map((p) => `${p.sectionId!.toString()}|${p.subject}`),
+    (printed as unknown as Array<{ classId?: { toString(): string }; subject?: string }>)
+      .filter((p) => !!p.classId && !!p.subject)
+      .map((p) => `${p.classId!.toString()}|${p.subject}`),
   );
 
   base.sections = rows
@@ -345,7 +348,7 @@ export async function handoutBoard(date: Date, opts: HandoutBoardOptions = {}): 
       const fill = (p: HandoutPacket): HandoutPacket => ({
         ...p,
         subjectTeacherName: nameById.get(p.subjectTeacherId) ?? null,
-        printRequested: printedKeys.has(`${r.sectionId}|${p.subject}`),
+        printRequested: printedKeys.has(`${r.classId}|${p.subject}`),
       });
       return {
         sectionId: r.sectionId,

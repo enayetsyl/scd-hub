@@ -124,8 +124,8 @@ const AsNilDeclaredRef = builder.objectRef<AsNilDeclared>("AsNilDeclared").imple
 const AsNotPrintedRef = builder.objectRef<AsNotPrinted>("AsNotPrinted").implement({
   description:
     "One (section, subject, week) the AssignmentSchedule rotation expected but with no matching " +
-    "ASSIGNMENT print request for that delivery date (D-#459) — checked independently of whether " +
-    "the AssignmentItem was declared, since printing is expected regardless.",
+    "ASSIGNMENT print request for that delivery date (D-#459). Only a DECLARED cell owes a print, " +
+    "and one request serves every section of its class for that subject (owner ruling 2026-10-01).",
   fields: (t) => ({
     weekNumber: t.exposeInt("weekNumber"),
     weekStartKey: t.exposeString("weekStartKey"),
