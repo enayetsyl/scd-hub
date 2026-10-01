@@ -4,7 +4,7 @@
  * binding.ts); this layer does the DB queries + the idempotent ScopeGrant sync.
  */
 import { Types } from "mongoose";
-import { SUBJECTS, DAYS_OF_WEEK, type DayOfWeek, type RoutineSubject, type PeriodTrack } from "@scd/shared";
+import { DAYS_OF_WEEK, type DayOfWeek, type RoutineSubject, type PeriodTrack } from "@scd/shared";
 import { RoutineSlot, type IRoutineSlot } from "../models/RoutineSlot";
 import { RoutineSubstitution } from "../models/RoutineSubstitution";
 import { Section } from "../../foundation/models/Section";
@@ -16,7 +16,7 @@ import { writeAudit } from "../../platform/services/AuditService";
 import { weekdayBaseDayType, dayTypeAdmitsTrack } from "../calendar";
 import { detectConflicts, type SlotLite } from "../conflicts";
 import { liveWindow, startOfDay, endOfDayBefore } from "../liveWindow";
-import { routineGrantPlan } from "../binding";
+import { routineGrantPlan, ROUTINE_GRANT_SUBJECTS } from "../binding";
 import { onRoutineSlotChangedSync } from "../../chat/services/ChatGroupService";
 
 export interface CreateSlotInput {
@@ -128,7 +128,7 @@ export async function createRoutineSlot(input: CreateSlotInput): Promise<CreateS
   const warnings: string[] = [];
   const plan = routineGrantPlan(
     { groupType: input.groupType, isBreak: input.isBreak, teacherId: input.teacherId, subject: input.subject },
-    SUBJECTS,
+    ROUTINE_GRANT_SUBJECTS,
   );
   if (plan.bind && input.teacherId && classId) {
     const warn = await bindRoutineGrant(
@@ -290,14 +290,14 @@ export async function updateRoutineSlot(input: UpdateSlotInput): Promise<CreateS
   const warnings: string[] = [];
   const oldPlan = routineGrantPlan(
     { groupType: existing.groupType, isBreak: existing.isBreak, teacherId: oldTeacherId ?? undefined, subject: oldSubject },
-    SUBJECTS,
+    ROUTINE_GRANT_SUBJECTS,
   );
   if (oldPlan.bind && oldTeacherId && (oldTeacherId !== newTeacherId || oldSubject !== input.subject)) {
     await unbindIfOrphaned(oldTeacherId, existing.groupId.toString(), oldSubject, input.actorId, changeFrom);
   }
   const newPlan = routineGrantPlan(
     { groupType: existing.groupType, isBreak: existing.isBreak, teacherId: newTeacherId ?? undefined, subject: input.subject },
-    SUBJECTS,
+    ROUTINE_GRANT_SUBJECTS,
   );
   if (newPlan.bind && newTeacherId && classId) {
     const warn = await bindRoutineGrant(newTeacherId, classId.toString(), existing.groupId.toString(), input.subject, input.actorId);
@@ -408,7 +408,7 @@ export async function deleteRoutineSlot(
 
   const plan = routineGrantPlan(
     { groupType: slot.groupType, isBreak: slot.isBreak, teacherId: slot.teacherId?.toString(), subject: slot.subject },
-    SUBJECTS,
+    ROUTINE_GRANT_SUBJECTS,
   );
   if (plan.bind && slot.teacherId) {
     await unbindIfOrphaned(slot.teacherId.toString(), slot.groupId.toString(), slot.subject, actorId, changeFrom);
