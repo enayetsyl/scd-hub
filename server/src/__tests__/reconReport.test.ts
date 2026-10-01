@@ -534,7 +534,7 @@ describe("asNotPrinted (D-#459)", () => {
     ...over,
   });
   const engItem = (over: Record<string, unknown> = {}) => ({
-    delivered: true, // D-#459: printing is checked regardless of the declared flag
+    delivered: true, // owner ruling 2026-10-01: only a declared cell owes a print
     nilDeclared: false,
     classId: CLS,
     sectionId: SEC,
@@ -568,9 +568,8 @@ describe("asNotPrinted (D-#459)", () => {
     });
   });
 
-  test("delivered=true does NOT suppress the gap — printing is a separate obligation", async () => {
+  test("a declared cell with no print request reports; asNotDeclared stays silent", async () => {
     // The AssignmentItem was declared (delivered: true), yet no print request exists.
-    // asNotDeclared would stay silent here; asNotPrinted must still report it.
     mockExpectedWeek.mockImplementation((_ay: string, w: number) =>
       Promise.resolve(expectedWeek(w, { items: w === 1 ? [engItem({ delivered: true })] : [] })),
     );
@@ -580,20 +579,50 @@ describe("asNotPrinted (D-#459)", () => {
     expect(r.asNotPrinted).toHaveLength(1);
   });
 
+  test("an UNDECLARED cell owes no print — it is already on the declare-pending report (owner 2026-10-01)", async () => {
+    mockExpectedWeek.mockImplementation((_ay: string, w: number) =>
+      Promise.resolve(expectedWeek(w, { items: w === 1 ? [engItem({ delivered: false })] : [] })),
+    );
+    mockPrintReqFind.mockResolvedValue([]);
+    const r = await reconciliationReport("2026-07-07", "2026-07-13", NOW);
+    expect(r.asNotDeclared).toHaveLength(1);
+    expect(r.asNotPrinted).toEqual([]);
+  });
+
   test("a matching non-cancelled ASSIGNMENT print request clears the gap", async () => {
     mockExpectedWeek.mockImplementation((_ay: string, w: number) =>
       Promise.resolve(expectedWeek(w, { items: w === 1 ? [engItem()] : [] })),
     );
-    mockPrintReqFind.mockResolvedValue([{ sectionId: SEC, subject: "ENG" }]);
+    mockPrintReqFind.mockResolvedValue([{ classId: CLS, sectionId: SEC, subject: "ENG" }]);
     const r = await reconciliationReport("2026-07-07", "2026-07-13", NOW);
     expect(r.asNotPrinted).toEqual([]);
   });
 
-  test("a print request tagged to a DIFFERENT section leaves the gap open", async () => {
+  test("one print job serves every section of the class — Boys printed, Girls delivers the same (owner 2026-10-01)", async () => {
+    const boys = engItem({ sectionId: "sec-boys", teacherId: "u-as" });
+    const girls = engItem({ sectionId: "sec-girls", teacherId: "u-as" });
+    mockExpectedWeek.mockImplementation((_ay: string, w: number) =>
+      Promise.resolve(expectedWeek(w, { items: w === 1 ? [boys, girls] : [] })),
+    );
+    mockPrintReqFind.mockResolvedValue([{ classId: CLS, sectionId: "sec-boys", subject: "ENG" }]);
+    const r = await reconciliationReport("2026-07-07", "2026-07-13", NOW);
+    expect(r.asNotPrinted).toEqual([]);
+  });
+
+  test("a request still tagged to the old combined section (or none) counts for the class", async () => {
     mockExpectedWeek.mockImplementation((_ay: string, w: number) =>
       Promise.resolve(expectedWeek(w, { items: w === 1 ? [engItem()] : [] })),
     );
-    mockPrintReqFind.mockResolvedValue([{ sectionId: "sec-other", subject: "ENG" }]);
+    mockPrintReqFind.mockResolvedValue([{ classId: CLS, subject: "ENG" }]);
+    const r = await reconciliationReport("2026-07-07", "2026-07-13", NOW);
+    expect(r.asNotPrinted).toEqual([]);
+  });
+
+  test("a print request for a DIFFERENT class leaves the gap open", async () => {
+    mockExpectedWeek.mockImplementation((_ay: string, w: number) =>
+      Promise.resolve(expectedWeek(w, { items: w === 1 ? [engItem()] : [] })),
+    );
+    mockPrintReqFind.mockResolvedValue([{ classId: "cls-other", sectionId: "sec-other", subject: "ENG" }]);
     const r = await reconciliationReport("2026-07-07", "2026-07-13", NOW);
     expect(r.asNotPrinted).toHaveLength(1);
   });
@@ -602,7 +631,7 @@ describe("asNotPrinted (D-#459)", () => {
     mockExpectedWeek.mockImplementation((_ay: string, w: number) =>
       Promise.resolve(expectedWeek(w, { items: w === 1 ? [engItem()] : [] })),
     );
-    mockPrintReqFind.mockResolvedValue([{ sectionId: SEC, subject: "MATH" }]);
+    mockPrintReqFind.mockResolvedValue([{ classId: CLS, sectionId: SEC, subject: "MATH" }]);
     const r = await reconciliationReport("2026-07-07", "2026-07-13", NOW);
     expect(r.asNotPrinted).toHaveLength(1);
   });

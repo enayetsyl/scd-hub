@@ -209,14 +209,14 @@ describe("D-#643 handoutBoard", () => {
     expect(packetCount([sec])).toBe(1);
   });
 
-  test("printRequested matches (section × subject) on the delivery date only", async () => {
+  test("printRequested matches (class × subject) on the delivery date only", async () => {
     mockExpectedWeek.mockResolvedValue({
       weekNumber: 3,
       suspended: false,
       deliveryDate: `${DELIVERY}T00:00:00.000Z`,
       items: [cell(), cell({ entryId: "e2", subject: "MATH" })],
     });
-    mockPrintFind.mockResolvedValue([{ sectionId: { toString: () => "sA" }, subject: "BAN" }]);
+    mockPrintFind.mockResolvedValue([{ classId: { toString: () => "c3" }, subject: "BAN" }]);
     const [sec] = (await handoutBoard(deliveryDate())).sections;
     expect(sec.packets.find((p) => p.subject === "BAN")!.printRequested).toBe(true);
     expect(sec.packets.find((p) => p.subject === "MATH")!.printRequested).toBe(false);
@@ -224,6 +224,22 @@ describe("D-#643 handoutBoard", () => {
     expect(mockPrintFind).toHaveBeenCalledWith(
       expect.objectContaining({ purpose: "ASSIGNMENT", neededByKey: DELIVERY }),
     );
+  });
+
+  test("one print job serves both halves of a split class (owner ruling 2026-10-01)", async () => {
+    // The Boys teacher sent the sheet to print; the Girls section hands out the same copy.
+    mockExpectedWeek.mockResolvedValue({
+      weekNumber: 3,
+      suspended: false,
+      deliveryDate: `${DELIVERY}T00:00:00.000Z`,
+      items: [cell({ sectionId: "sBoys" }), cell({ entryId: "e2", sectionId: "sGirls" })],
+    });
+    mockSlotFind.mockResolvedValue([]);
+    mockPrintFind.mockResolvedValue([{ classId: { toString: () => "c3" }, sectionId: { toString: () => "sBoys" }, subject: "BAN" }]);
+    const secs = (await handoutBoard(deliveryDate())).sections;
+    expect(secs).toHaveLength(2);
+    expect(secs.every((s) => s.packets.every((p) => p.printRequested))).toBe(true);
+    expect(unprintedCount(secs)).toBe(0);
   });
 
   test("a section with packets but no routine slot is KEPT, with a null teacher", async () => {
