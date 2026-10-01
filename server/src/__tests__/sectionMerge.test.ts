@@ -40,6 +40,10 @@ jest.mock("../modules/foundation/models/SectionMerge", () => ({
 jest.mock("../modules/platform/services/AuditService", () => ({
   writeAudit: (p: unknown) => mockWriteAudit(p),
 }));
+const mockRehome = jest.fn().mockResolvedValue({ homework: 0, assignment: 0 });
+jest.mock("../modules/trackers/services/recordRehome", () => ({
+  rehomeStudentRecords: (ids: unknown, to: unknown) => mockRehome(ids, to),
+}));
 
 import {
   deriveGenderToSource,
@@ -100,6 +104,9 @@ describe("mergeSections", () => {
     expect(mockSectionUpdateMany).toHaveBeenCalledWith(expect.anything(), { $set: { active: false } });
     expect(mockMergeCreate).toHaveBeenCalledWith(expect.objectContaining({ status: "active" }));
     expect(mockWriteAudit).toHaveBeenCalledWith(expect.objectContaining({ eventKind: "SECTIONS_MERGED" }));
+    // homework/assignment records follow the students into the combined section
+    expect(mockRehome).toHaveBeenCalledWith(expect.any(Array), COMBINED);
+    expect((mockRehome.mock.calls[0][0] as unknown[]).length).toBe(3);
   });
 
   test("rejects when the class is already merged", async () => {
@@ -156,6 +163,11 @@ describe("splitSections", () => {
     expect(boysMove).toBeTruthy();
     const idsToBoys = (boysMove![0] as { _id: { $in: mongoose.Types.ObjectId[] } })._id.$in.map((i) => i.toString());
     expect(idsToBoys).toEqual(expect.arrayContaining([boyA.toString(), newBoy.toString()]));
+    // records follow each student to their destination section (C4 split, 2026-10-01)
+    const rehomedToBoys = mockRehome.mock.calls.find((c) => String(c[1]) === BOYS.toString());
+    expect((rehomedToBoys![0] as mongoose.Types.ObjectId[]).map(String)).toEqual(
+      expect.arrayContaining([boyA.toString(), newBoy.toString()]),
+    );
     expect(saved.status).toBe("split");
     expect(mockWriteAudit).toHaveBeenCalledWith(expect.objectContaining({ eventKind: "SECTIONS_SPLIT" }));
   });

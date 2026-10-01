@@ -71,7 +71,8 @@ function stubDocs(docs: ReturnType<typeof rec>[]) {
       then: (resolve: (v: unknown) => void, reject: (e: unknown) => void) =>
         Promise.resolve(doc).then(resolve, reject),
       select: () => ({
-        lean: () => Promise.resolve(doc ? { state: doc.state, hwItemId: doc.hwItemId } : null),
+        lean: () =>
+          Promise.resolve(doc ? { state: doc.state, hwItemId: doc.hwItemId, sectionId: doc.sectionId } : null),
       }),
     };
   });
@@ -80,6 +81,7 @@ function stubDocs(docs: ReturnType<typeof rec>[]) {
       lean: () => {
         const f = filter as {
           hwItemId: unknown;
+          sectionId?: unknown;
           state?: { $in?: string[] };
           chaseCount?: number;
           _id?: { $nin?: unknown[] };
@@ -90,6 +92,7 @@ function stubDocs(docs: ReturnType<typeof rec>[]) {
           .filter(
             (d) =>
               d.hwItemId.toString() === String(f.hwItemId) &&
+              (f.sectionId === undefined || String(d.sectionId) === String(f.sectionId)) &&
               states.includes(d.state) &&
               d.chaseCount === 0 &&
               d.dueDate != null &&
@@ -203,6 +206,23 @@ describe("submitPass — due-day sibling sweep (owner ruling 2026-08-04)", () =>
     expect(mockEmitChase).toHaveBeenCalledTimes(1);
   });
 
+  test("a section-scoped pass on a pre-split item never auto-chases the OTHER half's students", async () => {
+    // C4 split (2026-10-01): one item serves C4-Boys and C4-Girls; the Boys teacher's
+    // commit must not chase a Girls student the Boys roster never showed.
+    const boys = new mongoose.Types.ObjectId();
+    const girls = new mongoose.Types.ObjectId();
+    const inPayload = rec({ state: "DUE", dueDate: yesterday(), sectionId: boys });
+    const boysMissed = rec({ state: "DUE", dueDate: yesterday(), sectionId: boys });
+    const girlsSibling = rec({ state: "DUE", dueDate: yesterday(), sectionId: girls });
+    stubDocs([inPayload, boysMissed, girlsSibling]);
+    const res = await submitPass(ITEM_ID, [{ recordId: inPayload.recordId, submitted: true }], ACTOR, new Date(), {
+      sectionId: boys.toString(),
+    });
+    expect(res.autoChasedCount).toBe(1);
+    expect(boysMissed.state).toBe("CHASE");
+    expect(girlsSibling.state).toBe("DUE");
+  });
+
   test("a GIVEN sibling due today fast-forwards GIVEN → DUE → CHASE with one shared stamp time", async () => {
     const inPayload = rec({ state: "DUE", dueDate: yesterday() });
     const missed = rec({ state: "GIVEN", dueDate: yesterday() });
@@ -252,6 +272,27 @@ describe("submitPass — guards", () => {
     await expect(
       submitPass(ITEM_ID, [{ recordId: r.recordId, submitted: true }], ACTOR),
     ).rejects.toThrow(/does not belong/);
+  });
+
+  test("a section-scoped pass rejects a record of another section", async () => {
+    const r = rec({ state: "GIVEN" });
+    stubDocs([r]);
+    await expect(
+      submitPass(ITEM_ID, [{ recordId: r.recordId, submitted: true }], ACTOR, new Date(), {
+        sectionId: new mongoose.Types.ObjectId().toString(),
+      }),
+    ).rejects.toThrow(/not in the given section/);
+    expect(r.state).toBe("GIVEN");
+  });
+
+  test("a section-scoped pass accepts a pre-split item's record that follows the student", async () => {
+    const boys = new mongoose.Types.ObjectId();
+    const r = rec({ state: "GIVEN", sectionId: boys });
+    stubDocs([r]);
+    const res = await submitPass(ITEM_ID, [{ recordId: r.recordId, submitted: true }], ACTOR, new Date(), {
+      sectionId: boys.toString(),
+    });
+    expect(res.submittedCount).toBe(1);
   });
 });
 
