@@ -681,6 +681,10 @@ export interface IssueRosterEntry {
   present: boolean;
 }
 
+/** Shown to the teacher (friendlyError passes a plain Error through). */
+export const EMPTY_SECTION_ISSUE_ERROR =
+  "এই শাখায় কোনো শিক্ষার্থী নেই, তাই বাড়ির কাজ দেওয়া যাবে না — শিক্ষার্থীরা যে শাখায় আছে (যেমন বালক/বালিকা) সেটি বেছে নিন";
+
 export interface IssueHomeworkItemResult {
   itemId: string;
   hwId: string;
@@ -695,6 +699,10 @@ export async function issueHomeworkItem(
 ): Promise<IssueHomeworkItemResult> {
   const item = await HomeworkItem.findById(itemId);
   if (!item) throw new Error("HomeworkItem not found");
+  // An empty roster means the section has no students — e.g. the combined section
+  // emptied by the C4/C5 boys/girls split. Issuing would mark the item "issued" with
+  // no records, invisible in every workspace (2026-09-30: four items stranded).
+  if (roster.length === 0) throw new Error(EMPTY_SECTION_ISSUE_ERROR);
 
   const now = new Date();
   // Owner ruling 2026-08-04: due = the subject's next TEACHING day in this
@@ -872,8 +880,12 @@ export async function markRecordsDue(sectionId: string, recordIds: string[], act
 // Read helpers (daily declaration view + lifecycle queues — handoff §8)
 // ---------------------------------------------------------------------------
 
-export async function listDailyItems(classId: string, dateGiven?: Date) {
+/** A class's items for a day; `sectionId` narrows to one section. A class split into
+ *  Boys/Girls has two independent homework days (2026-10-01): one section's confirm must
+ *  never issue — or count the minutes of — the other section's items. */
+export async function listDailyItems(classId: string, dateGiven?: Date, sectionId?: string) {
   const filter: Record<string, unknown> = { classId };
+  if (sectionId) filter.sectionId = sectionId;
   if (dateGiven) {
     const start = new Date(dateGiven);
     start.setHours(0, 0, 0, 0);

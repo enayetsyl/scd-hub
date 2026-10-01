@@ -125,6 +125,7 @@ import {
   generateHwId,
   declareHomeworkItem,
   issueHomeworkItem,
+  EMPTY_SECTION_ISSUE_ERROR,
   listHomeworkTopics,
   topicLabelByCode,
   transitionRecord,
@@ -612,6 +613,17 @@ describe("issueHomeworkItem — per-student record spawn", () => {
     await expect(issueHomeworkItem(ITEM_ID.toString(), [], ACTOR_ID)).rejects.toThrow(
       "HomeworkItem not found",
     );
+  });
+
+  test("an empty roster is refused — the item is NOT marked issued with zero records (2026-09-30)", async () => {
+    // The combined C4 section, emptied by the boys/girls split, had no students: four
+    // items went "issued" with no records and vanished from every workspace.
+    const item = makeItemDoc();
+    mockItemFindById.mockResolvedValue(item);
+    await expect(issueHomeworkItem(ITEM_ID.toString(), [], ACTOR_ID)).rejects.toThrow(EMPTY_SECTION_ISSUE_ERROR);
+    expect(item.status).toBe("declared");
+    expect(item.save).not.toHaveBeenCalled();
+    expect(mockRecordInsertMany).not.toHaveBeenCalled();
   });
 });
 

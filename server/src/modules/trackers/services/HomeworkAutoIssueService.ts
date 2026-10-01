@@ -119,7 +119,7 @@ export function autoIssueWindow(now: Date, lookback = HW_AUTO_ISSUE_LOOKBACK_SCH
 
 /**
  * One sweep pass: for each school day in the lookback window (newest first), every
- * class with ≥1 still-`declared` item that day gets ONE confirm attempt off that
+ * section with ≥1 still-`declared` item that day gets ONE confirm attempt off that
  * day's attendance-backed roster. Any confirm-gate failure (coverage, ceiling,
  * raced double-confirm) defers the class to the next tick — the sweep never trims,
  * never guesses, never throws.
@@ -145,15 +145,18 @@ export async function sweepHomeworkAutoIssue(now = new Date()): Promise<AutoIssu
       .lean()) as unknown as Array<{ classId: { toString(): string }; sectionId: { toString(): string } }>;
     if (items.length === 0) continue;
 
-    const sectionOfClass = new Map<string, string>();
-    for (const it of items) sectionOfClass.set(it.classId.toString(), it.sectionId.toString());
+    // One confirm per SECTION with still-declared items: a class split into Boys/Girls
+    // confirms each half on its own roster (keying by class issued one half's items
+    // to the other half's students, 2026-10-01).
+    const classOfSection = new Map<string, string>();
+    for (const it of items) classOfSection.set(it.sectionId.toString(), it.classId.toString());
 
     // D-#319: reconciled classes are NOT filtered out — every class in the map has
     // ≥1 still-`declared` item on this day, so a reconciled one is a LATE TOP-UP
     // candidate and confirm handles it (issuing only the still-declared items).
     // A fully-issued day never enters the map.
 
-    for (const [classId, sectionId] of sectionOfClass) {
+    for (const [sectionId, classId] of classOfSection) {
       // The roster is built for THAT day's attendance — never today's, or a
       // recovered Sunday would spawn records off Thursday's absentees.
       const roster = await buildIssueRoster(sectionId, dateKey);
@@ -165,6 +168,7 @@ export async function sweepHomeworkAutoIssue(now = new Date()): Promise<AutoIssu
       try {
         res = await confirmHomeworkDay({
           classId,
+          sectionId,
           date: day,
           roster,
           actorId: HW_AUTO_ISSUE_ACTOR_ID,

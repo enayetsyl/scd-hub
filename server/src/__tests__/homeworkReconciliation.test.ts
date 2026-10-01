@@ -24,6 +24,7 @@ jest.mock("../modules/trackers/services/HomeworkService", () => ({
   // Topic-label enrichment used by tallyDay — stub to a no-op (label tested elsewhere).
   topicLabelByCode: async () => new Map<string, string>(),
   joinTopicLabels: (tags: string[]) => (tags ?? []).join(" · "),
+  EMPTY_SECTION_ISSUE_ERROR: "EMPTY_SECTION",
 }));
 
 jest.mock("../modules/trackers/models/HomeworkItem", () => ({
@@ -444,7 +445,7 @@ describe("D-#310 — confirmHomeworkDay subject-coverage gate", () => {
     const r = await confirmHomeworkDay({
       classId: CLASS_ID,
       date: A_TUESDAY,
-      roster: [],
+      roster: [{ studentId: "s1", present: true }],
       actorId: ACTOR_ID,
     });
     expect(r.reconState).toBe("reconciled");
@@ -457,7 +458,7 @@ describe("D-#310 — confirmHomeworkDay subject-coverage gate", () => {
     const r = await confirmHomeworkDay({
       classId: CLASS_ID,
       date: A_TUESDAY,
-      roster: [],
+      roster: [{ studentId: "s1", present: true }],
       actorId: ACTOR_ID,
     });
     expect(r.reconState).toBe("reconciled");
@@ -465,9 +466,84 @@ describe("D-#310 — confirmHomeworkDay subject-coverage gate", () => {
 
   test("the slot query only asks for declaration-EXPECTED subjects (ARABIC excluded, D-#308)", async () => {
     mockList.mockResolvedValue([leanItem({ subject: "MATH" })]);
-    await confirmHomeworkDay({ classId: CLASS_ID, date: A_TUESDAY, roster: [], actorId: ACTOR_ID });
+    await confirmHomeworkDay({ classId: CLASS_ID, date: A_TUESDAY, roster: [{ studentId: "s1", present: true }], actorId: ACTOR_ID });
     const [filter] = mockSlotFind.mock.calls[0] as [{ subject: { $in: string[] }; dayOfWeek: string }];
     expect(filter.subject.$in).not.toContain("ARABIC");
     expect(filter.dayOfWeek).toBe("TUE");
+  });
+});
+
+// ===========================================================================
+// A class split into Boys/Girls (2026-10-01): each section is its own homework day
+// ===========================================================================
+
+describe("section-scoped homework day (C4/C5 split, 2026-10-01)", () => {
+  const BOYS = new mongoose.Types.ObjectId().toString();
+  const GIRLS = new mongoose.Types.ObjectId().toString();
+  const ROSTER = [{ studentId: "girl1", present: true }];
+  /** listDailyItems honours its third (sectionId) argument like the real one. */
+  function stubClassDay(items: ReturnType<typeof leanItem>[]) {
+    mockList.mockImplementation((_c: unknown, _d: unknown, sectionId?: string) =>
+      Promise.resolve(sectionId ? items.filter((i) => String(i.sectionId) === sectionId) : items),
+    );
+  }
+
+  test("a Girls confirm issues ONLY the Girls items — never the Boys items to the girls", async () => {
+    const boysSci = leanItem({ sectionId: BOYS, subject: "SCI" });
+    const girlsMath = leanItem({ sectionId: GIRLS, subject: "MATH" });
+    stubClassDay([boysSci, girlsMath]);
+    const r = await confirmHomeworkDay({ classId: CLASS_ID, sectionId: GIRLS, date: A_TUESDAY, roster: ROSTER, actorId: ACTOR_ID });
+    expect(r.issuedItems).toBe(1);
+    expect(mockIssue).toHaveBeenCalledTimes(1);
+    expect(mockIssue).toHaveBeenCalledWith(girlsMath._id.toString(), ROSTER, ACTOR_ID);
+    expect(mockList).toHaveBeenCalledWith(CLASS_ID, A_TUESDAY, GIRLS);
+  });
+
+  test("the other section confirming first is NOT a reconciled day for this one (gate + issue still run)", async () => {
+    // Boys already confirmed → the class row is reconciled; Girls has issued nothing yet.
+    mockReconFindOne.mockReturnValue(leanRecon({ reconState: "reconciled" }));
+    const boysDone = leanItem({ sectionId: BOYS, status: "issued" });
+    const girlsMath = leanItem({ sectionId: GIRLS, subject: "MATH" });
+    stubClassDay([boysDone, girlsMath]);
+    mockSlotFind.mockResolvedValue([{ subject: "BAN", effectiveFrom: new Date(2020, 0, 1), effectiveTo: null }]);
+    // Girls owes BAN → the coverage gate applies (a top-up would skip it).
+    await expect(
+      confirmHomeworkDay({ classId: CLASS_ID, sectionId: GIRLS, date: A_TUESDAY, roster: ROSTER, actorId: ACTOR_ID }),
+    ).rejects.toThrow(/BAN still owe a declaration/);
+    expect(mockSlotFind.mock.calls[0][0]).toMatchObject({ groupId: GIRLS });
+  });
+
+  test("the day total is per section — two halves' minutes are never summed against one ceiling", async () => {
+    stubClassDay([
+      leanItem({ sectionId: BOYS, timeDecl: 80 }),
+      leanItem({ sectionId: GIRLS, timeDecl: 80 }),
+    ]);
+    const t = await tallyDay(CLASS_ID, A_TUESDAY, GIRLS);
+    expect(t.dayTotal).toBe(80);
+    expect(t.withinCeiling).toBe(true);
+  });
+
+  test("the tally does not read 'reconciled' for a section that still has items to issue", async () => {
+    mockReconFindOne.mockReturnValue(leanRecon({ reconState: "reconciled" }));
+    stubClassDay([leanItem({ sectionId: BOYS, status: "issued" }), leanItem({ sectionId: GIRLS })]);
+    expect((await tallyDay(CLASS_ID, A_TUESDAY, GIRLS)).state).not.toBe("reconciled");
+    expect((await tallyDay(CLASS_ID, A_TUESDAY, BOYS)).state).toBe("reconciled");
+  });
+
+  test("an empty roster (a section with no students) is refused BEFORE anything is issued", async () => {
+    stubClassDay([leanItem({ sectionId: GIRLS }), leanItem({ sectionId: GIRLS, subject: "BAN" })]);
+    await expect(
+      confirmHomeworkDay({ classId: CLASS_ID, sectionId: GIRLS, date: A_TUESDAY, roster: [], actorId: ACTOR_ID }),
+    ).rejects.toThrow("EMPTY_SECTION");
+    expect(mockIssue).not.toHaveBeenCalled();
+    expect(mockReconUpdate).not.toHaveBeenCalled();
+  });
+
+  test("a trim refuses an item from another section than the one authorized", async () => {
+    const boysItem = { ...leanItem({ sectionId: BOYS }), sectionId: { toString: () => BOYS }, classId: { toString: () => CLASS_ID } };
+    mockItemFindById.mockResolvedValue(boysItem);
+    await expect(
+      applyTrim({ classId: CLASS_ID, sectionId: GIRLS, date: A_TUESDAY, itemId: "x", newQCount: 5, rank: "b", actorId: ACTOR_ID }),
+    ).rejects.toThrow(/not in this section/);
   });
 });

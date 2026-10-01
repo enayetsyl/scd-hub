@@ -167,6 +167,23 @@ describe("reconciliationReport (D-#290)", () => {
     expect(r.hwMisses[0].dateKey).toBe("2026-07-12");
   });
 
+  test("a split class: the other section confirming first does not hide this section's unissued day (2026-10-01)", async () => {
+    seedSection();
+    const day = new Date(2026, 6, 9);
+    // SEC (e.g. Girls) still has a declared item; "sec-boys" confirmed and issued.
+    mockHwItemFind.mockImplementation((f: { status?: string }) =>
+      Promise.resolve(
+        f?.status === "issued"
+          ? [{ classId: CLS, sectionId: "sec-boys", dateGiven: day, timeDecl: 30 }]
+          : [{ classId: CLS, sectionId: SEC, dateGiven: day, timeDecl: 60 }],
+      ),
+    );
+    mockHwReconFind.mockResolvedValue([{ classId: CLS, reconDate: day }]);
+    const r = await reconciliationReport("2026-07-07", "2026-07-13");
+    expect(r.hwMisses).toHaveLength(1);
+    expect(r.hwMisses[0]).toMatchObject({ dateKey: "2026-07-09", sectionNameBn: "মূল", declaredItems: 1 });
+  });
+
   test("the homework delegate outranks the class teacher as the named confirmer", async () => {
     seedSection({ homeworkConfirmerId: "u-del" });
     mockHwItemFind.mockResolvedValue([
