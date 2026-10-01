@@ -83,6 +83,10 @@ const dedupeKeys = {
     `SRET:${dateKey}:${studentId}:${teacherId}`,
   /** Per assignment: re-running the host mutation can't double-notify. */
   reviewAssigned: (assignmentId: string) => `REV:${assignmentId}`,
+  /** A round handed to a NEW reviewer in place (D-#704): per round, per recipient, per move —
+   *  the round's own `REV:<id>` row already exists and would swallow the new reviewer's notice. */
+  reviewMoved: (assignmentId: string, reviewerId: string, stamp: string) =>
+    `REVM:${assignmentId}:${reviewerId}:${stamp}`,
   /** One key per (reviewer, batch) — a bulk question assign notifies ONCE, not per question. */
   questionReviewAssigned: (reviewerId: string, stamp: string) => `QREV:${reviewerId}:${stamp}`,
   /** Per substitution: one notification per recorded cover. */
@@ -467,7 +471,10 @@ export interface ReviewAssignedEvent {
   roundNumber: number;
 }
 
-export async function emitReviewAssigned(assignment: ReviewAssignedEvent): Promise<void> {
+export async function emitReviewAssigned(
+  assignment: ReviewAssignedEvent,
+  opts: { moveStamp?: string } = {},
+): Promise<void> {
   return bestEffort("review assigned", async () => {
     await emit({
       recipientUserId: assignment.reviewerId.toString(),
@@ -484,7 +491,9 @@ export async function emitReviewAssigned(assignment: ReviewAssignedEvent): Promi
         reviewAssignmentId: assignment._id.toString(),
         artifactId: assignment.artifactId.toString(),
       },
-      dedupeKey: dedupeKeys.reviewAssigned(assignment._id.toString()),
+      dedupeKey: opts.moveStamp
+        ? dedupeKeys.reviewMoved(assignment._id.toString(), assignment.reviewerId.toString(), opts.moveStamp)
+        : dedupeKeys.reviewAssigned(assignment._id.toString()),
     });
   });
 }
