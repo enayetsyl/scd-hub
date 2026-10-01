@@ -849,10 +849,15 @@ export interface AssignablePlanDTO {
 
 /** The current plans + their open-round assignment state (for the multi-select picker). */
 export async function listAssignablePlans(): Promise<AssignablePlanDTO[]> {
+  // Projected: a plan's renderedMarkdown is several KB and envelopeJson is the whole import
+  // payload; reading them for ~850 plans only to list them made this the heaviest call on the
+  // Review tab. Only the session index is needed from the envelope.
   const arts = (await ContentArtifact.find({
     docType: { $in: PLAN_DOC_TYPES },
     current: true,
-  }).lean()) as unknown as Array<{
+  })
+    .select("docType subject classLevel address reviewStatus envelopeJson.payload.session_plan.period_index")
+    .lean()) as unknown as Array<{
     _id: Types.ObjectId;
     docType: string;
     subject: string;
@@ -937,4 +942,70 @@ export async function listAssignablePlans(): Promise<AssignablePlanDTO[]> {
     });
   // (A second sort by addressNumber-as-string used to follow here; it put chapter 10 before
   // chapter 2. The numeric sort above is the order.)
+}
+
+// ---------------------------------------------------------------------------
+// Paged board read (the plan-review board, D-#704 follow-up)
+// ---------------------------------------------------------------------------
+
+/** The board's row state — derived, never stored. */
+export type PlanBoardState = "unassigned" | "awaiting" | "reviewed" | "signed";
+
+export function planBoardStateOf(p: Pick<AssignablePlanDTO, "reviewStatus" | "currentAssignmentId" | "roundStatus">): PlanBoardState {
+  if (p.reviewStatus === "gold") return "signed";
+  if (!p.currentAssignmentId) return "unassigned";
+  return p.roundStatus === "submitted" ? "reviewed" : "awaiting";
+}
+
+export interface AssignablePlansFilter {
+  subject?: string | null;
+  classLevel?: number | null;
+  docType?: string | null;
+  state?: string | null;
+  reviewerId?: string | null;
+}
+
+export interface AssignablePlansPage {
+  rows: AssignablePlanDTO[];
+  /** Rows matching the filter, across every page. */
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export const PLAN_BOARD_PAGE_SIZE = 50;
+
+/** Filter + page the board server-side, so the screen fetches one page, not every plan.
+ *  PURE over an already-listed set (the filter/slice half is unit-tested on its own). */
+export function pagePlans(
+  all: AssignablePlanDTO[],
+  f: AssignablePlansFilter,
+  page: number,
+  pageSize: number,
+): AssignablePlansPage {
+  const size = Math.min(Math.max(1, Math.floor(pageSize) || PLAN_BOARD_PAGE_SIZE), 200);
+  const matching = all.filter(
+    (p) =>
+      (!f.subject || p.subject === f.subject) &&
+      (f.classLevel == null || p.classLevel === f.classLevel) &&
+      (!f.docType || p.docType === f.docType) &&
+      (!f.state || planBoardStateOf(p) === f.state) &&
+      (!f.reviewerId || p.currentReviewerId === f.reviewerId),
+  );
+  const pageCount = Math.max(1, Math.ceil(matching.length / size));
+  const current = Math.min(Math.max(1, Math.floor(page) || 1), pageCount);
+  return {
+    rows: matching.slice((current - 1) * size, current * size),
+    total: matching.length,
+    page: current,
+    pageSize: size,
+  };
+}
+
+export async function assignablePlansPage(
+  f: AssignablePlansFilter,
+  page: number,
+  pageSize: number,
+): Promise<AssignablePlansPage> {
+  return pagePlans(await listAssignablePlans(), f, page, pageSize);
 }
