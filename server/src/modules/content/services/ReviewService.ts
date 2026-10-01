@@ -96,6 +96,34 @@ export function addressKeyOf(a: AddressKeyInput): AddressKey {
   };
 }
 
+// --- Session-plan thread anchor (D-#704) ---------------------------------------------
+// Every session of a chapter shares the chapter's 5-field address, so an address-keyed
+// thread merged them: assigning session 2 superseded session 1's open round, a sign-off of
+// one session closed its siblings, and the thread/round number were shared. A session
+// round also carries `sessionIndex` (the envelope's `session_plan.period_index`), and the
+// plan thread key includes it. Read here rather than imported from ContentService, which
+// already imports this module.
+
+type SessionIndexInput = { envelopeJson?: Record<string, unknown> | null };
+
+/** A session plan's period within its chapter (1, 2, …), or null when the envelope has none. */
+export function planSessionIndexOf(a: SessionIndexInput): number | null {
+  const sp = (a.envelopeJson?.payload as Record<string, unknown> | undefined)?.session_plan as
+    | Record<string, unknown>
+    | undefined;
+  return typeof sp?.period_index === "number" ? sp.period_index : null;
+}
+
+/** A plan's thread key: the address, plus `sessionIndex` for a session plan. A session plan
+ *  with no period index keys on `sessionIndex: null` — Mongo matches that against rows that
+ *  lack the field, so such a plan keeps the old address-wide behaviour rather than failing. */
+export type PlanThreadKey = AddressKey & { sessionIndex?: number | null };
+
+export function planThreadKeyOf(a: AddressKeyInput & SessionIndexInput): PlanThreadKey {
+  const key = addressKeyOf(a);
+  return a.docType === "session_plan" ? { ...key, sessionIndex: planSessionIndexOf(a) } : key;
+}
+
 // --- Question thread anchor (D-#508) -------------------------------------------------
 // A question's identity is its `qid`, NOT its address: persistEnvelope supersedes questions
 // on `envelopeJson.payload.qid` precisely because a whole unit of questions shares ONE
@@ -115,7 +143,7 @@ export interface ReviewQidKey {
   qid: string;
 }
 
-export type ReviewThreadKey = AddressKey | ReviewQidKey;
+export type ReviewThreadKey = AddressKey | PlanThreadKey | ReviewQidKey;
 
 type ThreadKeyInput = AddressKeyInput & { envelopeJson?: Record<string, unknown> | null };
 
@@ -132,7 +160,7 @@ export function threadKeyOf(a: ThreadKeyInput): ReviewThreadKey {
     if (!qid) throw new ReviewError("Question artifact has no payload.qid — it cannot be reviewed");
     return { docType: "question", qid };
   }
-  return addressKeyOf(a);
+  return planThreadKeyOf(a);
 }
 
 // ---------------------------------------------------------------------------
@@ -148,6 +176,8 @@ export interface ReviewAssignmentDTO {
   addressNumber: string;
   /** Question rounds only (D-#508) — the thread anchor. Null on plan rounds. */
   qid: string | null;
+  /** Session-plan rounds only (D-#704) — the session within its chapter. */
+  sessionIndex: number | null;
   artifactId: string;
   reviewerId: string;
   assignedBy: string;
@@ -167,6 +197,7 @@ export interface RawAssignment {
   anchorWord: string;
   addressNumber: string;
   qid?: string | null;
+  sessionIndex?: number | null;
   artifactId: { toString(): string };
   reviewerId: { toString(): string };
   assignedBy: { toString(): string };
@@ -187,6 +218,7 @@ export function toDTO(d: RawAssignment): ReviewAssignmentDTO {
     anchorWord: d.anchorWord,
     addressNumber: d.addressNumber,
     qid: d.qid ?? null,
+    sessionIndex: d.sessionIndex ?? null,
     artifactId: d.artifactId.toString(),
     reviewerId: d.reviewerId.toString(),
     assignedBy: d.assignedBy.toString(),
@@ -293,19 +325,14 @@ export async function assignPlanReview(input: AssignReviewInput): Promise<Review
     throw new ReviewError(`Only plans are reviewable (got docType=${artifact.docType})`);
   }
 
-  const key = addressKeyOf(artifact);
-  const keyFilter = {
-    docType: key.docType,
-    subject: key.subject,
-    classLevel: key.classLevel,
-    anchorWord: key.anchorWord,
-    addressNumber: key.addressNumber,
-  };
+  // The plan's thread: its address, plus the session for a session plan (D-#704) — so a
+  // session's new round never supersedes a sibling session's open round.
+  const keyFilter = planThreadKeyOf(artifact);
 
-  // Supersede any open round for this address key — one open round at a time (D-#40).
-  await supersedeOpenRoundsForAddress(keyFilter, "superseded_by_new_round", input.assignedBy, input.actorRole);
+  // Supersede any open round on this plan's thread — one open round at a time (D-#40).
+  await supersedeOpenRounds(keyFilter, "superseded_by_new_round", input.assignedBy, input.actorRole);
 
-  // Round number = max existing + 1 (monotonic across the address's history).
+  // Round number = max existing + 1 (monotonic across the thread's history).
   const latest = await ReviewAssignment.find(keyFilter).sort({ roundNumber: -1 }).limit(1).lean();
   const prevRound = (latest as unknown as RawAssignment[])[0]?.roundNumber ?? 0;
 
@@ -499,8 +526,9 @@ export async function planReviewInbox(): Promise<ReviewAssignmentDTO[]> {
   return (docs as unknown as RawAssignment[]).map(toDTO);
 }
 
-/** Full round history for a plan's address, oldest→newest (R2.4). Resolved from any
- *  artifactId of the plan (the thread spans every version of that address). */
+/** Full round history for a plan's thread, oldest→newest (R2.4). Resolved from any
+ *  artifactId of the plan (the thread spans every version of that address — and, for a
+ *  session plan, of that session only, D-#704). */
 export async function planReviewThread(artifactId: string): Promise<ReviewAssignmentDTO[]> {
   const artifact = await ContentArtifact.findById(artifactId).lean();
   if (!artifact) throw new ReviewError("Artifact not found");
@@ -509,14 +537,7 @@ export async function planReviewThread(artifactId: string): Promise<ReviewAssign
   if (!isPlanDocType(artifact.docType)) {
     throw new ReviewError("Not a plan — use questionReviewThread for questions");
   }
-  const key = addressKeyOf(artifact);
-  const docs = await ReviewAssignment.find({
-    docType: key.docType,
-    subject: key.subject,
-    classLevel: key.classLevel,
-    anchorWord: key.anchorWord,
-    addressNumber: key.addressNumber,
-  })
+  const docs = await ReviewAssignment.find(planThreadKeyOf(artifact))
     .sort({ roundNumber: 1 })
     .lean();
   return (docs as unknown as RawAssignment[]).map(toDTO);
@@ -576,9 +597,10 @@ export async function approvePlan(input: {
   if (reason.length > 0) artifact.approvalNote = reason;
   await artifact.save();
 
-  // Close the thread: no open round should remain after sign-off (R2.1).
-  const key = addressKeyOf(artifact);
-  await supersedeOpenRoundsForAddress(
+  // Close the thread: no open round should remain after sign-off (R2.1). The plan's own
+  // thread only — signing off one session must not close its siblings' rounds (D-#704).
+  const key = planThreadKeyOf(artifact);
+  await supersedeOpenRounds(
     key,
     isOverride ? "approved_override_signed_off" : "approved_signed_off",
     input.actorId,
@@ -641,6 +663,126 @@ export async function assignPlanReviewBulk(input: {
   return { assignedCount, failedCount: failures.length, failures };
 }
 
+// ---------------------------------------------------------------------------
+// Change reviewer / bulk unassign (the plan-review board, D-#704)
+// ---------------------------------------------------------------------------
+
+export interface PlanReviewMoveResult {
+  moved: number;
+  /** Rounds left alone, each with why (already decided, already theirs, closed…). */
+  skipped: { assignmentId: string; reason: string }[];
+}
+
+/**
+ * Hand open plan rounds to another reviewer — the plan twin of the question chapter move
+ * (D-#650). UNTOUCHED rounds only (`assigned`, no verdict): the round is updated in place,
+ * so its number stays honest ("round 1" is still the first review anyone does) and the
+ * read override follows `reviewerId` to the new person. A round that already has a verdict
+ * is SKIPPED — that review happened; sending the plan to someone else is a new round
+ * (assignPlanReview), which the board offers separately.
+ *
+ * Each moved round tells its new reviewer (the same per-plan notice a fresh assign sends),
+ * under a key of its own: the round's original `REV:<id>` row already exists, and reusing
+ * it would silently swallow the new reviewer's notice.
+ */
+export async function movePlanReviews(input: {
+  assignmentIds: string[];
+  toReviewerId: string;
+  actorId: string;
+  actorRole?: string;
+}): Promise<PlanReviewMoveResult> {
+  if (!Types.ObjectId.isValid(input.toReviewerId)) throw new ReviewError("Pick a reviewer");
+  const to = await User.findById(input.toReviewerId).select({ active: 1, role: 1 }).lean();
+  if (!to || to.active === false || to.role === "GUARDIAN") throw new ReviewError("That person cannot review plans");
+
+  const stamp = String(Date.now());
+  const skipped: { assignmentId: string; reason: string }[] = [];
+  let moved = 0;
+  for (const assignmentId of input.assignmentIds) {
+    if (!Types.ObjectId.isValid(assignmentId)) {
+      skipped.push({ assignmentId, reason: "not found" });
+      continue;
+    }
+    const round = await ReviewAssignment.findById(assignmentId);
+    if (!round || !isPlanDocType(round.docType)) {
+      skipped.push({ assignmentId, reason: "not found" });
+      continue;
+    }
+    if (round.status !== "assigned" || round.verdict) {
+      skipped.push({ assignmentId, reason: round.status === "submitted" ? "already reviewed" : "closed" });
+      continue;
+    }
+    const fromReviewerId = round.reviewerId.toString();
+    if (fromReviewerId === input.toReviewerId) {
+      skipped.push({ assignmentId, reason: "already theirs" });
+      continue;
+    }
+    round.reviewerId = new Types.ObjectId(input.toReviewerId);
+    round.assignedBy = new Types.ObjectId(input.actorId);
+    round.assignedAt = new Date();
+    await round.save();
+    moved += 1;
+
+    await writeAudit({
+      eventKind: "REVIEW_REASSIGNED",
+      actorId: input.actorId,
+      actorRole: input.actorRole,
+      targetId: round._id.toString(),
+      targetKind: "ReviewAssignment",
+      meta: {
+        artifactId: round.artifactId.toString(),
+        fromReviewerId,
+        toReviewerId: input.toReviewerId,
+        roundNumber: round.roundNumber,
+        docType: round.docType,
+      },
+    });
+    await emitReviewAssigned(
+      {
+        _id: round._id,
+        reviewerId: round.reviewerId,
+        artifactId: round.artifactId,
+        subject: round.subject,
+        classLevel: round.classLevel,
+        anchorWord: round.anchorWord,
+        addressNumber: round.addressNumber,
+        roundNumber: round.roundNumber,
+      },
+      { moveStamp: stamp },
+    );
+  }
+  return { moved, skipped };
+}
+
+export interface PlanReviewCancelResult {
+  cancelled: number;
+  failures: { assignmentId: string; error: string }[];
+}
+
+/** Unassign several open plan rounds at once — loops cancelPlanReview (each audited),
+ *  collecting per-round failures rather than aborting the batch. */
+export async function cancelPlanReviews(input: {
+  assignmentIds: string[];
+  actorId: string;
+  actorRole?: string;
+}): Promise<PlanReviewCancelResult> {
+  let cancelled = 0;
+  const failures: { assignmentId: string; error: string }[] = [];
+  for (const assignmentId of input.assignmentIds) {
+    try {
+      const round = Types.ObjectId.isValid(assignmentId)
+        ? await ReviewAssignment.findById(assignmentId).select({ docType: 1 }).lean()
+        : null;
+      if (!round || !isPlanDocType(round.docType)) throw new ReviewError("Review assignment not found");
+      await cancelPlanReview({ assignmentId, actorId: input.actorId, actorRole: input.actorRole });
+      cancelled += 1;
+    } catch (err) {
+      failures.push({ assignmentId, error: err instanceof Error ? err.message : String(err) });
+    }
+  }
+  return { cancelled, failures };
+}
+
 export interface ReviewerLoadDTO {
   reviewerId: string;
   reviewerName: string;
@@ -696,6 +838,13 @@ export interface AssignablePlanDTO {
   currentReviewerName: string | null;
   currentAssignmentId: string | null;
   roundStatus: string | null; // assigned|submitted|null
+  /** Session plans only — the session within its chapter (D-#704). */
+  sessionIndex: number | null;
+  /** The open round's details (null when unassigned). */
+  roundNumber: number | null;
+  verdict: string | null;
+  assignedAt: string | null;
+  submittedAt: string | null;
 }
 
 /** The current plans + their open-round assignment state (for the multi-select picker). */
@@ -714,11 +863,14 @@ export async function listAssignablePlans(): Promise<AssignablePlanDTO[]> {
   }>;
 
   const openRounds = (await ReviewAssignment.find({
+    docType: { $in: PLAN_DOC_TYPES },
     status: { $in: ["assigned", "submitted"] },
   }).lean()) as unknown as RawAssignment[];
 
-  const keyStr = (k: ReviewAddressKey): string =>
-    `${k.docType}|${k.subject}|${k.classLevel}|${k.anchorWord}|${k.addressNumber}`;
+  // Keyed on the plan THREAD (D-#704): a session round matches only its own session, so the
+  // sessions of one chapter no longer all show the same reviewer.
+  const keyStr = (k: PlanThreadKey): string =>
+    `${k.docType}|${k.subject}|${k.classLevel}|${k.anchorWord}|${k.addressNumber}|${k.sessionIndex ?? ""}`;
   const roundByKey = new Map<string, RawAssignment>();
   for (const r of openRounds) {
     roundByKey.set(
@@ -728,6 +880,7 @@ export async function listAssignablePlans(): Promise<AssignablePlanDTO[]> {
         classLevel: r.classLevel,
         anchorWord: r.anchorWord,
         addressNumber: r.addressNumber,
+        sessionIndex: r.docType === "session_plan" ? r.sessionIndex ?? null : undefined,
       }),
       r,
     );
@@ -760,7 +913,7 @@ export async function listAssignablePlans(): Promise<AssignablePlanDTO[]> {
       return aTitle.localeCompare(bTitle);
     })
     .map((a) => {
-      const key = addressKeyOf(a as unknown as AddressKeyInput);
+      const key = planThreadKeyOf(a as unknown as AddressKeyInput & SessionIndexInput);
       const round = roundByKey.get(keyStr(key));
       return {
         artifactId: a._id.toString(),
@@ -775,11 +928,13 @@ export async function listAssignablePlans(): Promise<AssignablePlanDTO[]> {
         currentReviewerName: round ? nameOf.get(round.reviewerId.toString()) ?? null : null,
         currentAssignmentId: round ? round._id.toString() : null,
         roundStatus: round ? round.status : null,
+        sessionIndex: a.docType === "session_plan" ? planSessionIndexOf(a) : null,
+        roundNumber: round ? round.roundNumber : null,
+        verdict: round ? round.verdict ?? null : null,
+        assignedAt: round ? round.assignedAt.toISOString() : null,
+        submittedAt: round?.submittedAt ? round.submittedAt.toISOString() : null,
       };
-    })
-    .sort((a, b) =>
-      a.subject === b.subject
-        ? a.classLevel - b.classLevel || a.addressNumber.localeCompare(b.addressNumber)
-        : a.subject.localeCompare(b.subject),
-    );
+    });
+  // (A second sort by addressNumber-as-string used to follow here; it put chapter 10 before
+  // chapter 2. The numeric sort above is the order.)
 }
