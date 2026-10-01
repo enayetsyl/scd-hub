@@ -144,8 +144,46 @@ export async function createRoutineSlot(input: CreateSlotInput): Promise<CreateS
   // M-2 (D-#78): keep the SECTION + SUBJECT chat groups in sync with the new
   // slot's teacher. Best-effort — never blocks the routine mutation.
   await onRoutineSlotChangedSync(slot);
+  if (input.teacherId) {
+    await announceRoutineTeachersChanged({ teacherIds: [input.teacherId], from: input.effectiveFrom, actorId: input.createdBy });
+  }
 
   return { slot, warnings };
+}
+
+// ---------------------------------------------------------------------------
+// Routine-change listeners
+// ---------------------------------------------------------------------------
+
+/** A teacher's timetable changed from `from` on (a slot was created, re-assigned, or
+ *  retired). Listeners re-derive whatever was planned against the old timetable. */
+export interface RoutineTeachersChange {
+  teacherIds: string[];
+  from: Date;
+  actorId: string;
+}
+type RoutineChangeListener = (change: RoutineTeachersChange) => Promise<void>;
+const routineChangeListeners: RoutineChangeListener[] = [];
+
+/** Subscribe to routine changes. The leave-cover service registers here so covers follow
+ *  the timetable (owner report 2026-10-01: a cover arranged before the C4/C5 split kept
+ *  pointing at the retired combined-section period). A registry instead of a direct import
+ *  because CoverService already imports this module. */
+export function onRoutineTeachersChanged(listener: RoutineChangeListener): void {
+  routineChangeListeners.push(listener);
+}
+
+/** Best-effort fan-out to the listeners — a listener failure never blocks a routine edit. */
+async function announceRoutineTeachersChanged(change: RoutineTeachersChange): Promise<void> {
+  const teacherIds = [...new Set(change.teacherIds.filter(Boolean))];
+  if (teacherIds.length === 0) return;
+  for (const listener of routineChangeListeners) {
+    try {
+      await listener({ ...change, teacherIds });
+    } catch (err) {
+      console.error("[routine] change listener failed (routine edit unaffected):", err);
+    }
+  }
 }
 
 export interface UpdateSlotInput {
@@ -306,6 +344,11 @@ export async function updateRoutineSlot(input: UpdateSlotInput): Promise<CreateS
 
   const slot = await RoutineSlot.findById(liveId).lean();
   await onRoutineSlotChangedSync(slot as unknown as IRoutineSlot);
+  await announceRoutineTeachersChanged({
+    teacherIds: [oldTeacherId, newTeacherId].filter((t): t is string => !!t),
+    from: changeFrom,
+    actorId: input.actorId,
+  });
   return { slot: slot as unknown as IRoutineSlot, warnings };
 }
 
@@ -417,6 +460,9 @@ export async function deleteRoutineSlot(
   // M-2 (D-#78): re-sync the affected SECTION + SUBJECT chat groups (the teacher
   // may now have dropped out of one). Best-effort — never blocks the delete.
   await onRoutineSlotChangedSync(slot);
+  if (slot.teacherId) {
+    await announceRoutineTeachersChanged({ teacherIds: [slot.teacherId.toString()], from: changeFrom, actorId });
+  }
 }
 
 /** Revoke the routine teaching grant for (teacher, section, subject) iff no routine

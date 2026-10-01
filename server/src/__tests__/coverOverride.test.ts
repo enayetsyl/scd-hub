@@ -68,6 +68,7 @@ jest.mock("../modules/routine/models/RoutineSubstitution", () => ({
   },
 }));
 jest.mock("../modules/routine/services/RoutineSlotService", () => ({
+  onRoutineTeachersChanged: jest.fn(),
   slotsForTeacherOnDate: jest.fn(async () => []),
 }));
 jest.mock("../modules/hr/services/staffMatch", () => ({
