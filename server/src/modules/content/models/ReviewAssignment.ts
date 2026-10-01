@@ -47,6 +47,9 @@ export interface IReviewAssignment extends Document {
   /** Question rounds only (D-#508): the stable item identity that anchors the thread.
    *  Unset on plan rounds, which anchor on the address fields above. */
   qid?: string;
+  /** Session-plan rounds only (D-#704): the session within its chapter. Every session of a
+   *  chapter shares the address above, so this is what keeps their threads apart. */
+  sessionIndex?: number | null;
   // --- the specific version under review this round ---
   artifactId: Types.ObjectId;
   // --- the round ---
@@ -71,6 +74,7 @@ const ReviewAssignmentSchema = new Schema<IReviewAssignment>(
     anchorWord: { type: String, required: true },
     addressNumber: { type: String, required: true },
     qid: { type: String },
+    sessionIndex: { type: Number },
     artifactId: { type: Schema.Types.ObjectId, ref: "ContentArtifact", required: true },
     reviewerId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     assignedBy: { type: Schema.Types.ObjectId, ref: "User", required: true },

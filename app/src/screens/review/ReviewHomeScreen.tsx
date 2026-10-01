@@ -152,6 +152,10 @@ export default function ReviewHomeScreen({ navigation }: Props): React.ReactElem
             <Body style={{ fontWeight: "700" }}>{STR.rvAssignTitle}</Body>
             <Muted style={{ marginTop: 2 }}>{STR.rvAssign}</Muted>
           </Card>
+          <Card onPress={() => navigation.navigate("PlanReviewBoard")}>
+            <Body style={{ fontWeight: "700" }}>{STR.prbTitle}</Body>
+            <Muted style={{ marginTop: 2 }}>{STR.prbSubtitle}</Muted>
+          </Card>
           <View style={{ height: space(3) }} />
           <H2>{STR.reviewInbox}</H2>
           {inboxErr ? (

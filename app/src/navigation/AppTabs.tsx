@@ -115,6 +115,7 @@ import ReviewHomeScreen from "../screens/review/ReviewHomeScreen";
 import ReviewSubmitScreen from "../screens/review/ReviewSubmitScreen";
 import ReviewThreadScreen from "../screens/review/ReviewThreadScreen";
 import AssignReviewsScreen from "../screens/review/AssignReviewsScreen";
+import PlanReviewBoardScreen from "../screens/review/PlanReviewBoardScreen";
 import QuestionReviewQueueScreen from "../screens/review/QuestionReviewQueueScreen";
 import AssignQuestionsScreen from "../screens/review/AssignQuestionsScreen";
 import PublishQuestionsScreen from "../screens/review/PublishQuestionsScreen";
@@ -775,6 +776,7 @@ function ReviewNavigator(): React.ReactElement {
       <ReviewStack.Screen name="ReviewSubmit" component={ReviewSubmitScreen} options={{ title: STR.submitReview }} />
       <ReviewStack.Screen name="ReviewThread" component={ReviewThreadScreen} options={{ title: STR.reviewThread }} />
       <ReviewStack.Screen name="AssignReviews" component={AssignReviewsScreen} options={{ title: STR.rvAssignTitle }} />
+      <ReviewStack.Screen name="PlanReviewBoard" component={PlanReviewBoardScreen} options={{ title: STR.prbTitle }} />
       {/* Question review & publish (QR-4, D-#508). All after ReviewHome — the first screen
           registered becomes the stack's initial route, and a param-taking screen there
           crashes the whole tab. */}

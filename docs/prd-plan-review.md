@@ -175,3 +175,11 @@ The **thread** is *derived* (no separate doc): query `ReviewAssignment` by addre
 - **`reviewed` usability — SETTLED:** a `reviewed` plan is **usable to teach from** in the interim; the
   loop still closes only at `gold` (Principal sign-off). No gating change needed (read paths already allow
   any `reviewStatus`).
+
+## 11. Plan-review board + per-session threads (D-#704, 2026-10-01)
+
+- **Thread key.** A plan's review thread is its address **plus `sessionIndex` for a session plan** (`planThreadKeyOf`). Every session of a chapter shares the chapter's address; keying on the address alone made one session's assign/sign-off close its siblings' rounds. D-#40's "one open round" now reads per thread.
+- **Board** (Review hub → "Plan review assignments", `content:assign_review`): every current chapter plan and session, grouped by chapter, with reviewer · round · state; filters by reviewer, state, type, subject, class.
+- **Actions.** Assign (unassigned) · Change reviewer (`movePlanReviews` — an untouched round moves in place; a reviewed one is skipped) · New round (a reviewed plan → `assignPlanReview`) · Unassign (`cancelPlanReview` / bulk `cancelPlanReviews`) · History (the thread). Bulk: give ticked plans to one reviewer, or unassign them.
+- **Notice.** A moved round tells the new reviewer with the existing plan template under `REVM:<round>:<reviewer>:<stamp>`.
+- **Migration.** `server/scripts/migrate-session-review-index.ts` stamps `sessionIndex` on session rounds written before D-#704.
