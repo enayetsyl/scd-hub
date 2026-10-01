@@ -862,6 +862,13 @@ export interface AssignablePlanT {
   currentReviewerName: string | null;
   currentAssignmentId: string | null;
   roundStatus: string | null;
+  /** Session plans only — the session within its chapter (D-#704). */
+  sessionIndex: number | null;
+  /** The open round (null when unassigned). */
+  roundNumber: number | null;
+  verdict: string | null;
+  assignedAt: string | null;
+  submittedAt: string | null;
 }
 
 /** Current plans + their open-round assignment state, for the multi-select picker. */
@@ -870,6 +877,7 @@ export const ASSIGNABLE_PLANS = gql<{ assignablePlans: AssignablePlanT[] }, NoVa
     assignablePlans {
       artifactId docType subject classLevel anchorWord addressNumber title
       reviewStatus currentReviewerId currentReviewerName currentAssignmentId roundStatus
+      sessionIndex roundNumber verdict assignedAt submittedAt
     }
   }
 `;
@@ -904,6 +912,37 @@ export const ASSIGN_PLAN_REVIEW_BULK = gql<
     assignPlanReviewBulk(artifactIds: $artifactIds, reviewerId: $reviewerId) {
       assignedCount failedCount failures
     }
+  }
+`;
+
+// --- Plan-review board: change reviewer + bulk unassign (D-#704) ---
+
+export interface PlanReviewMoveResultT {
+  moved: number;
+  skippedCount: number;
+  skipped: string[];
+}
+
+/** Hand open, not-yet-reviewed plan rounds to another reviewer (in place). */
+export const MOVE_PLAN_REVIEWS = gql<
+  { movePlanReviews: PlanReviewMoveResultT },
+  { assignmentIds: string[]; toReviewerId: string }
+>`
+  mutation MovePlanReviews($assignmentIds: [String!]!, $toReviewerId: String!) {
+    movePlanReviews(assignmentIds: $assignmentIds, toReviewerId: $toReviewerId) { moved skippedCount skipped }
+  }
+`;
+
+export interface PlanReviewCancelResultT {
+  cancelled: number;
+  failedCount: number;
+  failures: string[];
+}
+
+/** Unassign several open plan rounds at once. */
+export const CANCEL_PLAN_REVIEWS = gql<{ cancelPlanReviews: PlanReviewCancelResultT }, { assignmentIds: string[] }>`
+  mutation CancelPlanReviews($assignmentIds: [String!]!) {
+    cancelPlanReviews(assignmentIds: $assignmentIds) { cancelled failedCount failures }
   }
 `;
 

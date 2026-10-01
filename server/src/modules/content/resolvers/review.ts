@@ -28,12 +28,16 @@ import {
   planReviewThread as planReviewThreadSvc,
   reviewerAssignmentLoad as reviewerLoadSvc,
   listAssignablePlans as assignablePlansSvc,
+  movePlanReviews as movePlanReviewsSvc,
+  cancelPlanReviews as cancelPlanReviewsSvc,
   ReviewError,
   type ReviewAssignmentDTO,
   type ApprovePlanResult,
   type BulkAssignResult,
   type ReviewerLoadDTO,
   type AssignablePlanDTO,
+  type PlanReviewMoveResult,
+  type PlanReviewCancelResult,
 } from "../services/ReviewService";
 
 // ---------------------------------------------------------------------------
@@ -50,6 +54,7 @@ ReviewAssignmentRef.implement({
     classLevel: t.exposeInt("classLevel"),
     anchorWord: t.exposeString("anchorWord"),
     addressNumber: t.exposeString("addressNumber"),
+    sessionIndex: t.int({ nullable: true, resolve: (r) => r.sessionIndex }),
     artifactId: t.exposeString("artifactId"),
     reviewerId: t.exposeString("reviewerId"),
     assignedBy: t.exposeString("assignedBy"),
@@ -366,6 +371,11 @@ AssignablePlanRef.implement({
     currentReviewerName: t.string({ nullable: true, resolve: (r) => r.currentReviewerName }),
     currentAssignmentId: t.string({ nullable: true, resolve: (r) => r.currentAssignmentId }),
     roundStatus: t.string({ nullable: true, resolve: (r) => r.roundStatus }),
+    sessionIndex: t.int({ nullable: true, resolve: (r) => r.sessionIndex }),
+    roundNumber: t.int({ nullable: true, resolve: (r) => r.roundNumber }),
+    verdict: t.string({ nullable: true, resolve: (r) => r.verdict }),
+    assignedAt: t.string({ nullable: true, resolve: (r) => r.assignedAt }),
+    submittedAt: t.string({ nullable: true, resolve: (r) => r.submittedAt }),
   }),
 });
 
@@ -379,6 +389,78 @@ builder.queryField("assignablePlans", (t) =>
     resolve: async (_root, _args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       return assignablePlansSvc();
+    },
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Plan-review board: change reviewer + bulk unassign (D-#704)
+// ---------------------------------------------------------------------------
+
+const PlanReviewMoveResultRef = builder.objectRef<PlanReviewMoveResult>("PlanReviewMoveResult");
+PlanReviewMoveResultRef.implement({
+  fields: (t) => ({
+    moved: t.exposeInt("moved"),
+    skippedCount: t.int({ resolve: (r) => r.skipped.length }),
+    skipped: t.field({
+      type: ["String"],
+      resolve: (r) => r.skipped.map((s) => `${s.assignmentId}: ${s.reason}`),
+    }),
+  }),
+});
+
+builder.mutationField("movePlanReviews", (t) =>
+  t.field({
+    type: PlanReviewMoveResultRef,
+    description:
+      "Hand open plan-review rounds to another reviewer, in place. Only rounds with no verdict yet move; " +
+      "a reviewed round is skipped (send it for a new round instead). Requires content:assign_review.",
+    authScopes: { hasPermission: "content:assign_review" },
+    args: {
+      assignmentIds: t.arg.stringList({ required: true }),
+      toReviewerId: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      try {
+        return await movePlanReviewsSvc({
+          assignmentIds: args.assignmentIds,
+          toReviewerId: args.toReviewerId,
+          actorId: ctx.auth.userId,
+          actorRole: ctx.auth.role,
+        });
+      } catch (err) {
+        return mapReviewError(err);
+      }
+    },
+  }),
+);
+
+const PlanReviewCancelResultRef = builder.objectRef<PlanReviewCancelResult>("PlanReviewCancelResult");
+PlanReviewCancelResultRef.implement({
+  fields: (t) => ({
+    cancelled: t.exposeInt("cancelled"),
+    failedCount: t.int({ resolve: (r) => r.failures.length }),
+    failures: t.field({
+      type: ["String"],
+      resolve: (r) => r.failures.map((f) => `${f.assignmentId}: ${f.error}`),
+    }),
+  }),
+});
+
+builder.mutationField("cancelPlanReviews", (t) =>
+  t.field({
+    type: PlanReviewCancelResultRef,
+    description: "Unassign several open plan-review rounds at once. Requires content:assign_review.",
+    authScopes: { hasPermission: "content:assign_review" },
+    args: { assignmentIds: t.arg.stringList({ required: true }) },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      return cancelPlanReviewsSvc({
+        assignmentIds: args.assignmentIds,
+        actorId: ctx.auth.userId,
+        actorRole: ctx.auth.role,
+      });
     },
   }),
 );
