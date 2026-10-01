@@ -388,6 +388,22 @@ export function compareForTree(a: LeanArtifact, b: LeanArtifact): number {
   return new Date(a.importedAt).getTime() - new Date(b.importedAt).getTime();
 }
 
+/**
+ * Order the grouped tree for reading: subject → class → chapter NUMBER. The docs are sorted
+ * docType-first (so a chapter's chapter plan precedes its session plans), and chapters are
+ * created in the order docs are met — which put every chapter that has only SESSION plans
+ * after all the chapters with a chapter plan: a freshly imported chapter 3 appeared below
+ * chapter 52 (owner report 2026-09-30). Artifacts inside a chapter keep their order. PURE.
+ */
+export function sortTreeNodes<
+  N extends { subject: string; classLevel: number; chapters: Array<{ anchorWord: string; number: string }> },
+>(nodes: N[]): N[] {
+  for (const n of nodes) {
+    n.chapters.sort((a, b) => compareMixed(a.number, b.number) || a.anchorWord.localeCompare(b.anchorWord));
+  }
+  return nodes.sort((a, b) => a.subject.localeCompare(b.subject) || a.classLevel - b.classLevel);
+}
+
 /** The session's period index, or null — the one value we still need from the envelope. */
 function sessionIndexOf(doc: LeanArtifact): number | null {
   const payload = doc.envelopeJson?.payload as Record<string, unknown> | undefined;
@@ -459,7 +475,7 @@ builder.queryField("contentTree", (t) =>
         chapter.artifacts.push(docToShape(doc));
       }
 
-      return Array.from(nodeMap.values());
+      return sortTreeNodes(Array.from(nodeMap.values()));
     },
   }),
 );
