@@ -112,6 +112,7 @@ jest.mock("../modules/routine/models/RoutineSlot", () => ({
 
 const mockSlotsForDate = jest.fn();
 jest.mock("../modules/routine/services/RoutineSlotService", () => ({
+  onRoutineTeachersChanged: jest.fn(),
   slotsForDate: (gt: unknown, gid: unknown, d: unknown) => mockSlotsForDate(gt, gid, d),
 }));
 

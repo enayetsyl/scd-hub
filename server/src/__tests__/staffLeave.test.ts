@@ -138,6 +138,7 @@ jest.mock("../modules/foundation/models/Subject", () => ({
   Subject: { findOne: (q: unknown) => ({ select: () => ({ lean: () => mockSubjectFindOne(q) }) }) },
 }));
 jest.mock("../modules/routine/services/RoutineSlotService", () => ({
+  onRoutineTeachersChanged: jest.fn(),
   slotsForTeacherOnDate: (t: unknown, d: unknown) => mockSlotsForTeacherOnDate(t, d),
 }));
 jest.mock("../modules/routine/models/RoutineSubstitution", () => ({
