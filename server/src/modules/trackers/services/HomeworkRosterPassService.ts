@@ -55,6 +55,30 @@ export interface ReturnPassResult {
 }
 
 /**
+ * The section the pass runs from. A homework item issued before a section split
+ * still serves BOTH halves (its records were moved to each student's current
+ * section), so a pass is scoped by RECORD section, not item section: an entry from
+ * another section is rejected and the sibling auto-chase never reaches the other
+ * half. Omitted = item-wide (internal callers).
+ */
+export interface PassScope {
+  sectionId?: string;
+}
+
+/** The pass's per-record peek — rejects a record of another item or another section. */
+async function peekState(recordId: string, itemId: string, scope: PassScope): Promise<LifecycleState> {
+  const record = await HomeworkStudentRecord.findById(recordId).select("state hwItemId sectionId").lean();
+  if (!record) throw new Error(`HomeworkStudentRecord not found: ${recordId}`);
+  if (record.hwItemId.toString() !== itemId) {
+    throw new Error(`Record ${recordId} does not belong to this homework item`);
+  }
+  if (scope.sectionId && String(record.sectionId) !== scope.sectionId) {
+    throw new Error(`Record ${recordId} is not in the given section`);
+  }
+  return record.state as LifecycleState;
+}
+
+/**
  * The submission pass. Each entry's record must currently be GIVEN | DUE | CHASE
  * (the app never sends otherwise; the server does not trust that). One `at` is
  * shared by every hop of a single record's walk so D-#338's popActionGroup can
@@ -65,6 +89,7 @@ export async function submitPass(
   entries: SubmitPassEntry[],
   actorId: string,
   at: Date = new Date(),
+  scope: PassScope = {},
 ): Promise<SubmitPassResult> {
   const result: SubmitPassResult = {
     submittedCount: 0,
@@ -74,12 +99,7 @@ export async function submitPass(
   };
 
   for (const entry of entries) {
-    const record = await HomeworkStudentRecord.findById(entry.recordId).select("state hwItemId").lean();
-    if (!record) throw new Error(`HomeworkStudentRecord not found: ${entry.recordId}`);
-    if (record.hwItemId.toString() !== itemId) {
-      throw new Error(`Record ${entry.recordId} does not belong to this homework item`);
-    }
-    const state = record.state as LifecycleState;
+    const state = await peekState(entry.recordId, itemId, scope);
     if (!SUBMIT_ACTIONABLE.includes(state)) {
       throw new Error(`Cannot run the submission pass on a ${state} record — use the workspace card's exception actions`);
     }
@@ -112,6 +132,7 @@ export async function submitPass(
     excludeRecordIds: entries.map((e) => e.recordId),
     actorId,
     at,
+    sectionId: scope.sectionId,
   });
 
   return result;
@@ -128,7 +149,7 @@ export async function submitPass(
  */
 export async function chaseUnsubmittedSiblings(
   itemId: string,
-  opts: { excludeRecordIds?: string[]; actorId?: string; at?: Date } = {},
+  opts: { excludeRecordIds?: string[]; actorId?: string; at?: Date; sectionId?: string } = {},
 ): Promise<number> {
   const at = opts.at ?? new Date();
   const todayKey = dateKeyOf(at);
@@ -136,6 +157,7 @@ export async function chaseUnsubmittedSiblings(
 
   const siblings = await HomeworkStudentRecord.find({
     hwItemId: itemId,
+    ...(opts.sectionId ? { sectionId: opts.sectionId } : {}),
     state: { $in: ["GIVEN", "DUE"] },
     chaseCount: 0,
     dueDate: { $exists: true, $ne: null },
@@ -162,6 +184,7 @@ export async function returnPass(
   entries: ReturnPassEntry[],
   actorId: string,
   at: Date = new Date(),
+  scope: PassScope = {},
 ): Promise<ReturnPassResult> {
   const result: ReturnPassResult = { returnedCount: 0, unchangedCount: 0 };
 
@@ -170,12 +193,7 @@ export async function returnPass(
       result.unchangedCount += 1;
       continue;
     }
-    const record = await HomeworkStudentRecord.findById(entry.recordId).select("state hwItemId").lean();
-    if (!record) throw new Error(`HomeworkStudentRecord not found: ${entry.recordId}`);
-    if (record.hwItemId.toString() !== itemId) {
-      throw new Error(`Record ${entry.recordId} does not belong to this homework item`);
-    }
-    const state = record.state as LifecycleState;
+    const state = await peekState(entry.recordId, itemId, scope);
     if (!RETURN_ACTIONABLE.includes(state)) {
       throw new Error(`Cannot return a ${state} record — only a checked khata is handed back`);
     }

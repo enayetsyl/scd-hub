@@ -1439,6 +1439,8 @@ builder.mutationField("homeworkSubmitPass", (t) =>
         args.itemId,
         args.entries.map((e) => ({ recordId: e.recordId, submitted: e.submitted })),
         ctx.auth.userId as string,
+        new Date(),
+        { sectionId: args.sectionId },
       );
     },
   }),
@@ -1464,6 +1466,8 @@ builder.mutationField("homeworkReturnPass", (t) =>
         args.itemId,
         args.entries.map((e) => ({ recordId: e.recordId, returned: e.returned })),
         ctx.auth.userId as string,
+        new Date(),
+        { sectionId: args.sectionId },
       );
     },
   }),
