@@ -863,12 +863,14 @@ export async function childHomeworkNilDays(
   fromKey: string,
   toKey: string,
 ): Promise<GuardianHwNilDay[]> {
-  const student = (await Student.findById(studentId).select("classId").lean()) as {
-    classId?: { toString(): string };
+  const student = (await Student.findById(studentId).select("sectionId").lean()) as {
+    sectionId?: { toString(): string };
   } | null;
-  if (!student?.classId) return [];
+  if (!student?.sectionId) return [];
+  // The child's OWN section: a split class (C4 Boys / Girls) declares "no homework" per
+  // section, so a class-wide read would show a girl the boys' marker.
   const rows = await HomeworkNilDeclaration.find({
-    classId: student.classId,
+    sectionId: student.sectionId,
     dateKey: { $gte: fromKey, $lte: toKey },
   }).lean();
   return rows

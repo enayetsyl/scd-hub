@@ -453,7 +453,7 @@ builder.mutationField("removeNoHomework", (t) =>
         await resolveSubjectId(args.subject),
         "declare_homework",
       );
-      return removeNilSvc({ classId: args.classId, subject: args.subject, date: args.date });
+      return removeNilSvc({ classId: args.classId, sectionId: args.sectionId, subject: args.subject, date: args.date });
     },
   }),
 );
@@ -472,7 +472,7 @@ builder.queryField("homeworkNilDeclarations", (t) =>
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       await assertCanRead(ctx, args.sectionId, args.classId);
       const allowed = await allowedSubjectCodesForSection(ctx, args.sectionId, args.classId);
-      const rows = await listNilDeclarations(args.classId, args.date);
+      const rows = await listNilDeclarations(args.classId, args.date, args.sectionId);
       return allowed ? rows.filter((r) => allowed.has(r.subject)) : rows;
     },
   }),
