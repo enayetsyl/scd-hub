@@ -19,6 +19,7 @@ const mockMembershipFind = jest.fn();
 const mockCoverSlotFind = jest.fn();
 
 jest.mock("../modules/routine/services/RoutineSlotService", () => ({
+  onRoutineTeachersChanged: jest.fn(),
   routineForDate: (...a: unknown[]) => mockRoutineForDate(...a),
 }));
 jest.mock("../modules/hr/models/StaffCoverSlot", () => ({

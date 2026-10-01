@@ -15,6 +15,7 @@ jest.mock("../modules/routine/models/RoutineSlot", () => ({
   RoutineSlot: { find: jest.fn(() => ({ sort: () => ({ lean: async () => [] }) })) },
 }));
 jest.mock("../modules/routine/services/RoutineSlotService", () => ({
+  onRoutineTeachersChanged: jest.fn(),
   createRoutineSlot: jest.fn(),
   updateRoutineSlot: jest.fn(),
   deleteRoutineSlot: jest.fn(),

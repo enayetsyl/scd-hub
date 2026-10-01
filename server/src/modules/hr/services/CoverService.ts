@@ -27,9 +27,10 @@ import { SubjectGroup } from "../../routine/models/SubjectGroup";
 import { RoutineSubstitution } from "../../routine/models/RoutineSubstitution";
 import { PeriodGrid } from "../../routine/models/PeriodGrid";
 import { assignProxy, revokeProxy } from "../../foundation/services/ScopeGrantService";
-import { slotsForTeacherOnDate } from "../../routine/services/RoutineSlotService";
+import { slotsForTeacherOnDate, onRoutineTeachersChanged } from "../../routine/services/RoutineSlotService";
+import { RoutineSlot } from "../../routine/models/RoutineSlot";
 import { resolveDayType } from "../../routine/calendar";
-import { resolveUserIdForStaff } from "./staffMatch";
+import { resolveUserIdForStaff, resolveStaffProfileForUser } from "./staffMatch";
 import { parseDateKey, datesInRange, partialPeriodWindow, LeaveError } from "./dates";
 import { writeAudit } from "../../platform/services/AuditService";
 import { emitHrCoverAssigned } from "../../notifications/services/emitters";
@@ -389,6 +390,106 @@ export async function decideCoverSlot(
 }
 
 /** Revoke all live proxy grants backing a leave's cover slots (on cancel/reject). */
+/** Local YYYY-MM-DD of a Date (school-local calendar day). */
+function localKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/**
+ * Make a teacher's leave covers follow the timetable from `fromKey` on (owner report
+ * 2026-10-01). A cover row names a routine slot; when that slot is retired or re-assigned
+ * after the cover was planned (the C4/C5 split), the row kept pointing at the old period —
+ * the cover teacher wrote to an emptied section and the absent teacher's pending list
+ * never cleared. For each of the teacher's live leaves reaching `fromKey`:
+ *   1. fan out again against the CURRENT routine (idempotent — adds rows only for periods
+ *      the teacher now teaches);
+ *   2. an APPROVED row on a retired slot moves to its replacement (same leave, date,
+ *      period) when one exists — reject + re-approve through decideCoverSlot, so the proxy
+ *      grant and RoutineSubstitution follow; with no replacement YET it is kept, because a
+ *      split retires the old rows before creating the new ones and the next change moves it;
+ *   3. any other row on a retired slot is deleted — step 1 recreates what is still needed.
+ * Returns what changed, for the audit and tests.
+ */
+export async function reconcileCoversForTeacher(
+  teacherUserId: string,
+  fromKey: string,
+  actorId: string,
+): Promise<{ created: number; moved: number; removed: number }> {
+  const out = { created: 0, moved: 0, removed: 0 };
+  const staff = await resolveStaffProfileForUser(teacherUserId);
+  if (!staff) return out;
+  const leaves = (await StaffLeaveApplication.find({
+    staffProfileId: staff._id,
+    status: { $in: ["applied", "approved"] },
+    toKey: { $gte: fromKey },
+  })
+    .select("_id")
+    .lean()) as Array<{ _id: Types.ObjectId }>;
+  if (leaves.length === 0) return out;
+
+  for (const leave of leaves) {
+    const leaveId = leave._id.toString();
+    out.created += (await fanOutCoverSlots(leaveId, staff._id.toString())).length;
+
+    const rows = await StaffCoverSlot.find({ leaveApplicationId: leave._id, dateKey: { $gte: fromKey } }).lean();
+    const slotIds = [...new Set(rows.map((r) => r.routineSlotId.toString()))];
+    const slots = new Map(
+      ((await RoutineSlot.find({ _id: { $in: slotIds } }).select("effectiveTo").lean()) as Array<{
+        _id: Types.ObjectId;
+        effectiveTo?: Date | null;
+      }>).map((s) => [s._id.toString(), s]),
+    );
+    const retiredOn = (r: { routineSlotId: Types.ObjectId; dateKey: string }) => {
+      const s = slots.get(r.routineSlotId.toString());
+      return !s || (!!s.effectiveTo && localKey(new Date(s.effectiveTo)) < r.dateKey);
+    };
+
+    for (const r of rows.filter(retiredOn)) {
+      if (r.status !== "approved") {
+        await StaffCoverSlot.deleteOne({ _id: r._id });
+        out.removed++;
+        continue;
+      }
+      const repl = rows.find(
+        (x) =>
+          x.dateKey === r.dateKey &&
+          x.periodNumber === r.periodNumber &&
+          x._id.toString() !== r._id.toString() &&
+          x.status !== "approved" &&
+          !retiredOn(x),
+      ) ?? (await StaffCoverSlot.findOne({
+        leaveApplicationId: leave._id,
+        dateKey: r.dateKey,
+        periodNumber: r.periodNumber,
+        _id: { $ne: r._id },
+        status: { $ne: "approved" },
+      }).lean());
+      if (!repl || retiredOn(repl) || !r.finalCoverTeacherUserId) continue; // keep until a replacement exists
+      const coverTeacher = r.finalCoverTeacherUserId.toString();
+      await decideCoverSlot(r._id.toString(), false, actorId);
+      await decideCoverSlot(repl._id.toString(), true, actorId, coverTeacher);
+      await StaffCoverSlot.deleteOne({ _id: r._id });
+      out.moved++;
+    }
+  }
+  if (out.created || out.moved || out.removed) {
+    await writeAudit({
+      eventKind: "STAFF_COVER_DECIDED",
+      actorId,
+      targetId: staff._id,
+      targetKind: "StaffProfile",
+      meta: { decision: "reconciled_after_routine_change", teacherUserId: teacherUserId, fromKey, ...out },
+    });
+  }
+  return out;
+}
+
+// Covers follow the timetable: every routine create / re-assign / retire re-derives the
+// affected teachers' leave covers from the change date on.
+onRoutineTeachersChanged(async ({ teacherIds, from, actorId }) => {
+  for (const t of teacherIds) await reconcileCoversForTeacher(t, localKey(from), actorId);
+});
+
 export async function revokeCoversForLeave(leaveApplicationId: string, actorId: string): Promise<number> {
   const slots = await StaffCoverSlot.find({
     leaveApplicationId: new Types.ObjectId(leaveApplicationId),
