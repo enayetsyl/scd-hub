@@ -452,3 +452,18 @@ describe("slotsForTeacherOnDate (leave-cover fan-out source)", () => {
     expect(rows.map((r) => r.groupType).sort()).toEqual(["section", "subjectgroup"]);
   });
 });
+
+// ISLAM is taught per Section with class notes / homework — its routine slots must bind
+// a teaching grant like the content subjects (owner report 2026-10-01).
+import { ROUTINE_GRANT_SUBJECTS } from "../modules/routine/binding";
+
+describe("ROUTINE_GRANT_SUBJECTS", () => {
+  test("a Section ISLAM slot binds a teaching grant", () => {
+    expect(routineGrantPlan({ groupType: "section", isBreak: false, teacherId: "t", subject: "ISLAM" }, ROUTINE_GRANT_SUBJECTS).bind).toBe(true);
+  });
+  test("Quran/Arabic still bind nothing", () => {
+    expect(routineGrantPlan({ groupType: "subjectgroup", isBreak: false, teacherId: "t", subject: "QURAN" }, ROUTINE_GRANT_SUBJECTS).bind).toBe(false);
+    expect(ROUTINE_GRANT_SUBJECTS).not.toContain("ARABIC");
+    expect(ROUTINE_GRANT_SUBJECTS).not.toContain("QURAN");
+  });
+});
