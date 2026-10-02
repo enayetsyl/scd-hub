@@ -1,6 +1,6 @@
 import { builder } from "../../../schema";
-import { staffLogin, guardianLogin } from "../services/AuthService";
-import type { AuthResult } from "../services/AuthService";
+import { staffLogin, guardianLogin, refreshSession } from "../services/AuthService";
+import type { AuthResult, AuthTokenPayload } from "../services/AuthService";
 import {
   listImpersonationTargets,
   startImpersonation,
@@ -32,6 +32,18 @@ builder.mutationField("staffLogin", (t) =>
     },
     resolve: (_root, args) =>
       staffLogin({ email: args.email, password: args.password }),
+  }),
+);
+
+builder.mutationField("refreshSession", (t) =>
+  t.field({
+    type: AuthResultRef,
+    nullable: true,
+    description:
+      "Re-mint the caller's session token (D-#708) — the app calls this on every open so a " +
+      "person stays signed in. Null when the account is gone/deactivated (the app signs out) " +
+      "or for a borrowed View-as token (never extended).",
+    resolve: (_root, _args, ctx) => (ctx.auth ? refreshSession(ctx.auth as AuthTokenPayload) : null),
   }),
 );
 

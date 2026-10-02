@@ -53,6 +53,18 @@ export interface AuthResult {
   name: string;
 }
 
+/** Re-mint the session on every app open (D-#708) — null = the server signed us out. */
+export const REFRESH_SESSION = gql<{ refreshSession: AuthResult | null }, NoVars>`
+  mutation RefreshSession {
+    refreshSession {
+      token
+      userId
+      role
+      name
+    }
+  }
+`;
+
 export const STAFF_LOGIN = gql<
   { staffLogin: AuthResult | null },
   { email: string; password: string }
