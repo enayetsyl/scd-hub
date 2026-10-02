@@ -140,6 +140,30 @@ describe("D-#314 sweepHomeworkAutoIssue", () => {
     );
   });
 
+  test("a split class is confirmed once PER SECTION, each on its own roster (2026-10-01)", async () => {
+    // Keyed by class, one half's roster was used for both halves' items.
+    const GIRLS = new mongoose.Types.ObjectId();
+    mockItemFind.mockImplementation((filter: { dateGiven?: { $gte?: Date } }) => {
+      const from = filter?.dateGiven?.$gte;
+      if (!from || midnight(from) !== midnight(NOW)) return Promise.resolve([]);
+      return Promise.resolve([
+        { classId: CLASS_ID, sectionId: SECTION_ID },
+        { classId: CLASS_ID, sectionId: GIRLS },
+      ]);
+    });
+    mockResolveUnits.mockResolvedValue(
+      new Map([
+        [S1.toString(), { unitType: "section", unitId: SECTION_ID.toString() }],
+        [S2.toString(), { unitType: "section", unitId: SECTION_ID.toString() }],
+      ]),
+    );
+    await sweepHomeworkAutoIssue(NOW);
+    expect(mockConfirm).toHaveBeenCalledTimes(2);
+    const sections = mockConfirm.mock.calls.map((c) => String((c[0] as { sectionId: string }).sectionId)).sort();
+    expect(sections).toEqual([SECTION_ID.toString(), GIRLS.toString()].sort());
+    for (const c of mockConfirm.mock.calls) expect((c[0] as { classId: string }).classId).toBe(CLASS_ID.toString());
+  });
+
   test("attendance incomplete → deferred; confirm never runs", async () => {
     mockDayFind.mockResolvedValue([]);
     const res = await sweepHomeworkAutoIssue(NOW);

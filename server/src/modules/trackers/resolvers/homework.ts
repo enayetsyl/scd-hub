@@ -599,6 +599,7 @@ builder.queryField("homeworkItems", (t) =>
       const all = await listDailyItems(
         args.classId,
         args.dateGiven ? new Date(args.dateGiven) : undefined,
+        args.sectionId, // a split class's halves keep separate homework days
       );
       const docs = allowed ? all.filter((d) => allowed.has(d.subject)) : all;
       return docs.map((d) => ({
@@ -959,7 +960,7 @@ builder.queryField("homeworkDayTally", (t) =>
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       await assertCanViewHomeworkDay(ctx, args.sectionId, args.classId);
-      return tallyDaySvc(args.classId, new Date(args.date));
+      return tallyDaySvc(args.classId, new Date(args.date), args.sectionId);
     },
   }),
 );
@@ -1031,7 +1032,7 @@ builder.queryField("homeworkTrimCandidates", (t) =>
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       await assertCanViewHomeworkDay(ctx, args.sectionId, args.classId);
-      return trimCandidatesSvc(args.classId, new Date(args.date));
+      return trimCandidatesSvc(args.classId, new Date(args.date), args.sectionId);
     },
   }),
 );
@@ -1055,6 +1056,7 @@ builder.mutationField("trimHomeworkItem", (t) =>
       await assertCanConfirmHomework(ctx, args.sectionId); // class teacher, delegate, or Principal
       return applyTrimSvc({
         classId: args.classId,
+        sectionId: args.sectionId,
         date: new Date(args.date),
         itemId: args.itemId,
         newQCount: args.newQCount,
@@ -1084,6 +1086,7 @@ builder.mutationField("confirmHomeworkDay", (t) =>
       await assertCanConfirmHomework(ctx, args.sectionId); // class teacher, delegate, or Principal
       return confirmDaySvc({
         classId: args.classId,
+        sectionId: args.sectionId,
         date: new Date(args.date),
         roster: args.roster.map((r) => ({ studentId: r.studentId, present: r.present })),
         actorId: ctx.auth.userId as string,
