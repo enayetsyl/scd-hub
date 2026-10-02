@@ -23,6 +23,7 @@ import { AssignmentItem } from "../models/AssignmentItem";
 import { AssignmentNilDeclaration, AS_NIL_REASONS, type AsNilReason } from "../models/AssignmentNilDeclaration";
 import { HolidayException } from "../../routine/models/HolidayException";
 import { dayTypeFor } from "../../routine/calendar";
+import { deliveryDayCovers, coverCellKey } from "../assignmentCover";
 import {
   atMidnight,
   weekNumberFor,
@@ -229,7 +230,14 @@ export interface ExpectedItem {
   classLevel: number;
   sectionId: string;
   subject: HwSubject;
+  /** The RESPONSIBLE teacher: the rotation entry's teacher, or — when that teacher's
+   *  period of this subject in this section is covered on the delivery day — the
+   *  cover teacher (D-#707). */
   teacherId: string;
+  /** The rotation entry's own teacher, whatever the cover. */
+  scheduledTeacherId: string;
+  /** True when `teacherId` is a delivery-day cover (D-#707). */
+  coveredOnDelivery: boolean;
   /** True once an AssignmentItem exists for (week × section × subject). */
   delivered: boolean;
   /** AS-T6: null (no item) | "DRAFT" (awaiting weekly confirm) | "ISSUED". */
@@ -383,6 +391,15 @@ export async function expectedItemsForWeek(
   }>;
   const nilByEntry = new Map(nilRows.map((n) => [itemKey(n.sectionId.toString(), n.subject), n]));
 
+  // D-#707: a delivery-day cover of the scheduled teacher's period takes the week over.
+  const covers =
+    resolved.deliveryDate && !resolved.suspended
+      ? await deliveryDayCovers(
+          entries.map((e) => ({ sectionId: e.sectionId.toString(), subject: e.subject, teacherId: e.teacherId.toString() })),
+          resolved.deliveryDate,
+        )
+      : new Map<string, string>();
+
   return {
     academicYearId,
     weekNumber: resolved.weekNumber,
@@ -397,6 +414,8 @@ export async function expectedItemsForWeek(
     items: entries.map((e) => {
       const item = byEntry.get(itemKey(e.sectionId.toString(), e.subject));
       const nil = nilByEntry.get(itemKey(e.sectionId.toString(), e.subject));
+      const scheduled = e.teacherId.toString();
+      const cover = covers.get(coverCellKey({ sectionId: e.sectionId.toString(), subject: e.subject, teacherId: scheduled }));
       return {
         entryId: e._id.toString(),
         cycleWeek: e.cycleWeek,
@@ -404,7 +423,9 @@ export async function expectedItemsForWeek(
         classLevel: e.classLevel,
         sectionId: e.sectionId.toString(),
         subject: e.subject,
-        teacherId: e.teacherId.toString(),
+        teacherId: cover ?? scheduled,
+        scheduledTeacherId: scheduled,
+        coveredOnDelivery: !!cover,
         delivered: !!item,
         status: item ? item.status : null,
         asItemId: item ? item._id.toString() : null,

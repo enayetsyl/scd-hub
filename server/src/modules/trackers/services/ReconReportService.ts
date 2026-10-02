@@ -36,6 +36,7 @@ import { dateKeyOf, parseDateKey } from "../../attendance/dates";
 import { expectedItemsForWeek } from "./AssignmentScheduleService";
 import { weekNumberFor } from "../assignmentCalendar";
 import { PrintRequest } from "../../printing/models/PrintRequest";
+import { printMatchKey } from "../assignmentPrintMatch";
 
 export interface HwReconMiss {
   dateKey: string;
@@ -310,16 +311,27 @@ async function asNotPrintedRows(
         classId: { $in: classIds },
         status: { $ne: "CANCELLED" },
       })
-        .select("classId subject")
-        .lean()) as unknown as Array<{ classId?: { toString(): string }; subject?: string }>;
+        .select("classId sectionId subject")
+        .lean()) as unknown as Array<{
+        classId?: { toString(): string };
+        sectionId?: { toString(): string };
+        subject?: string;
+      }>;
+      // Class match up to the D-#707 cutover, section match after (assignmentPrintMatch).
       const printedKeys = new Set(
         printed
-          .filter((p): p is { classId: { toString(): string }; subject: string } => !!p.classId && !!p.subject)
-          .map((p) => `${p.classId.toString()}|${p.subject}`),
+          .filter((p) => !!p.classId && !!p.subject)
+          .map((p) =>
+            printMatchKey(deliveryKey, {
+              classId: p.classId!.toString(),
+              sectionId: p.sectionId?.toString(),
+              subject: p.subject!,
+            }),
+          ),
       );
 
       for (const item of items) {
-        const key = `${item.classId}|${item.subject}`;
+        const key = printMatchKey(deliveryKey, item);
         if (printedKeys.has(key)) continue;
         out.push({
           weekNumber: week.weekNumber,

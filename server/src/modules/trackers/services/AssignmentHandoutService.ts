@@ -42,6 +42,7 @@ import { StaffCoverSlot } from "../../hr/models/StaffCoverSlot";
 import { liveWindow } from "../../routine/liveWindow";
 import { resolveDayType, dayTypeAdmitsTrack } from "../../routine/calendar";
 import { PrintRequest } from "../../printing/models/PrintRequest";
+import { printMatchKey } from "../assignmentPrintMatch";
 import { AssignmentSchedule } from "../models/AssignmentSchedule";
 import { expectedItemsForWeek } from "./AssignmentScheduleService";
 import { weekNumberFor } from "../assignmentCalendar";
@@ -330,17 +331,22 @@ export async function handoutBoard(date: Date, opts: HandoutBoardOptions = {}): 
       classId: { $in: classIds },
       status: { $ne: "CANCELLED" },
     })
-      .select("classId subject")
+      .select("classId sectionId subject")
       .lean(),
   ]);
   const sectionNameById = new Map(sections.map((s) => [s._id.toString(), s.nameBn]));
   const nameById = new Map(users.map((u) => [u._id.toString(), u.name]));
-  // One print job serves every section of the class for that subject (owner ruling
-  // 2026-10-01 — the Boys teacher prints, the Girls section delivers the same sheet).
+  // Class match up to the D-#707 cutover, section match after (assignmentPrintMatch).
   const printedKeys = new Set(
-    (printed as unknown as Array<{ classId?: { toString(): string }; subject?: string }>)
+    (printed as unknown as Array<{ classId?: { toString(): string }; sectionId?: { toString(): string }; subject?: string }>)
       .filter((p) => !!p.classId && !!p.subject)
-      .map((p) => `${p.classId!.toString()}|${p.subject}`),
+      .map((p) =>
+        printMatchKey(deliveryDateKey, {
+          classId: p.classId!.toString(),
+          sectionId: p.sectionId?.toString(),
+          subject: p.subject!,
+        }),
+      ),
   );
 
   base.sections = rows
@@ -348,7 +354,9 @@ export async function handoutBoard(date: Date, opts: HandoutBoardOptions = {}): 
       const fill = (p: HandoutPacket): HandoutPacket => ({
         ...p,
         subjectTeacherName: nameById.get(p.subjectTeacherId) ?? null,
-        printRequested: printedKeys.has(`${r.classId}|${p.subject}`),
+        printRequested: printedKeys.has(
+          printMatchKey(deliveryDateKey, { classId: r.classId, sectionId: r.sectionId, subject: p.subject }),
+        ),
       });
       return {
         sectionId: r.sectionId,

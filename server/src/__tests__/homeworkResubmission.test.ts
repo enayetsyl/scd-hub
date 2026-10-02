@@ -250,14 +250,21 @@ describe("T3.2/T3.3/T3.5 — top-up boundaries", () => {
 // ===========================================================================
 
 describe("T3.4 — student day-load includes top-up minutes", () => {
+  /** The child's records: base lookups ({hwItemId:$in}) vs the top-up read ({topupFlag}). */
+  function stubRecords(receivedItemIds: string[], topups: unknown[]) {
+    mockRecFind.mockImplementation((q: { hwItemId?: unknown; topupFlag?: boolean }) =>
+      Promise.resolve(q.topupFlag ? topups : receivedItemIds.map((id) => ({ hwItemId: id }))),
+    );
+  }
+
   test("sums issued items + open resubmission top-ups; flags over-ceiling", async () => {
     mockList.mockResolvedValue([
-      { status: "issued", qCount: 5, timeDecl: 200 },
-      { status: "issued", qCount: 3, timeDecl: 30 },
-      { status: "declared", qCount: 4, timeDecl: 20 }, // not issued → excluded
-      { status: "issued", qCount: 0, timeDecl: 0 }, // zeroed → excluded
+      { _id: "i1", status: "issued", qCount: 5, timeDecl: 200 },
+      { _id: "i2", status: "issued", qCount: 3, timeDecl: 30 },
+      { _id: "i3", status: "declared", qCount: 4, timeDecl: 20 }, // not issued → excluded
+      { _id: "i4", status: "issued", qCount: 0, timeDecl: 0 }, // zeroed → excluded
     ]);
-    mockRecFind.mockResolvedValue([
+    stubRecords(["i1", "i2"], [
       { state: "GIVEN", topupTime: 15 }, // open → counts
       { state: "DUE", topupTime: 10 }, // open → counts
       { state: "RETURNED", topupTime: 30 }, // terminal → excluded
@@ -271,10 +278,22 @@ describe("T3.4 — student day-load includes top-up minutes", () => {
   });
 
   test("within ceiling when there are no top-ups", async () => {
-    mockList.mockResolvedValue([{ status: "issued", qCount: 5, timeDecl: 100 }]);
-    mockRecFind.mockResolvedValue([]);
+    mockList.mockResolvedValue([{ _id: "i1", status: "issued", qCount: 5, timeDecl: 100 }]);
+    stubRecords(["i1"], []);
     const load = await getStudentDayLoad(CLASS, STUDENT, new Date(2026, 5, 2));
     expect(load.totalMinutes).toBe(100);
+    expect(load.overCeiling).toBe(false);
+  });
+
+  test("only the child's OWN section's homework counts in a split class (owner 2026-10-02)", async () => {
+    // C4 Boys and C4 Girls each issued 60 min; a girl received only the Girls item.
+    mockList.mockResolvedValue([
+      { _id: "boysItem", status: "issued", qCount: 5, timeDecl: 60 },
+      { _id: "girlsItem", status: "issued", qCount: 5, timeDecl: 60 },
+    ]);
+    stubRecords(["girlsItem"], []);
+    const load = await getStudentDayLoad(CLASS, STUDENT, new Date(2026, 5, 2));
+    expect(load.baseMinutes).toBe(60);
     expect(load.overCeiling).toBe(false);
   });
 });
