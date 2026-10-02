@@ -33,7 +33,14 @@ import { RoutineSlot } from "../../routine/models/RoutineSlot";
 import { HolidayException } from "../../routine/models/HolidayException";
 import { dayTypeFor } from "../../routine/calendar";
 import { dateKeyOf } from "../../attendance/dates";
-import { issueHomeworkItem, listDailyItems, topicLabelByCode, joinTopicLabels, type IssueRosterEntry } from "./HomeworkService";
+import {
+  EMPTY_SECTION_ISSUE_ERROR,
+  issueHomeworkItem,
+  listDailyItems,
+  topicLabelByCode,
+  joinTopicLabels,
+  type IssueRosterEntry,
+} from "./HomeworkService";
 import { isWeekend } from "../calendar";
 
 // ---------------------------------------------------------------------------
@@ -98,8 +105,8 @@ function toItemView(d: LeanItem): DayItemView {
   };
 }
 
-export async function tallyDay(classId: string, date: Date): Promise<DayTallyResult> {
-  const docs = await listDailyItems(classId, date);
+export async function tallyDay(classId: string, date: Date, sectionId?: string): Promise<DayTallyResult> {
+  const docs = await listDailyItems(classId, date, sectionId);
   const labelByCode = await topicLabelByCode(docs.flatMap((d) => d.topTags ?? []));
   const items = docs.map((d) => ({ ...toItemView(d), topicLabelBn: joinTopicLabels(d.topTags ?? [], labelByCode) }));
   const dayTotal = items.reduce((sum, it) => sum + it.timeDecl, 0);
@@ -110,7 +117,11 @@ export async function tallyDay(classId: string, date: Date): Promise<DayTallyRes
     classId,
     reconDate: reconDayKey(date),
   }).lean();
-  const reconciled = recon?.reconState === "reconciled";
+  // The reconciliation row is per CLASS; a split class has two sections confirming
+  // separately, so one section's confirm must not read as "reconciled" for the other
+  // while it still has items to issue.
+  const sectionPending = !!sectionId && docs.some((d) => d.status === "declared" && d.qCount > 0);
+  const reconciled = recon?.reconState === "reconciled" && !sectionPending;
 
   const state: ReconState = reconciled
     ? "reconciled"
@@ -143,8 +154,8 @@ export interface TrimCandidates {
   rankC: DayItemView[];
 }
 
-export async function getTrimCandidates(classId: string, date: Date): Promise<TrimCandidates> {
-  const { items } = await tallyDay(classId, date);
+export async function getTrimCandidates(classId: string, date: Date, sectionId?: string): Promise<TrimCandidates> {
+  const { items } = await tallyDay(classId, date, sectionId);
   const live = items.filter((it) => it.status === "declared" && it.qCount > 0);
   return {
     rankA: live.filter((it) => it.revItem),
@@ -165,6 +176,8 @@ function proportionalTime(oldTime: number, oldQ: number, newQ: number): number {
 
 export interface ApplyTrimInput {
   classId: string;
+  /** The section the caller was authorized on — the item must belong to it. */
+  sectionId?: string;
   date: Date;
   itemId: string;
   newQCount: number;
@@ -188,17 +201,27 @@ export async function applyTrim(input: ApplyTrimInput): Promise<ApplyTrimResult>
   const rank = input.rank as TrimRank;
   const dayKey = reconDayKey(input.date);
 
-  // Cannot trim once the day is reconciled (trim log is immutable, §4.5).
   const existing = await HomeworkReconciliation.findOne({ classId: input.classId, reconDate: dayKey }).lean();
-  if (existing && existing.reconState === "reconciled") {
+  const classReconciled = !!existing && existing.reconState === "reconciled";
+  if (classReconciled && !input.sectionId) {
     throw new Error("Day already reconciled — the trim log is immutable (handoff §4.5)");
   }
 
   const item = await HomeworkItem.findById(input.itemId);
   if (!item) throw new Error("HomeworkItem not found");
   if (item.classId.toString() !== input.classId) throw new Error("Item is not in this class");
+  if (input.sectionId && item.sectionId.toString() !== input.sectionId) throw new Error("Item is not in this section");
   if (reconDayKey(item.dateGiven).getTime() !== dayKey.getTime()) {
     throw new Error("Item is not part of this reconciliation day");
+  }
+  // Cannot trim once the day is reconciled (trim log is immutable, §4.5). The row is per
+  // CLASS, so for a split class "reconciled" is judged on the item's own section: has
+  // it already issued that day? The other section's first confirm may still be ahead.
+  if (classReconciled) {
+    const sectionDocs = await listDailyItems(input.classId, input.date, item.sectionId.toString());
+    if (sectionDocs.some((d) => d.status === "issued")) {
+      throw new Error("Day already reconciled — the trim log is immutable (handoff §4.5)");
+    }
   }
   if (item.status !== "declared") throw new Error("Only a declared (not-yet-issued) item can be trimmed");
 
@@ -239,7 +262,8 @@ export async function applyTrim(input: ApplyTrimInput): Promise<ApplyTrimResult>
         academicYearId: item.academicYearId,
         ceiling: HW_DAILY_CEILING_MIN,
       },
-      $set: { reconState: "open" },
+      // Never re-open a row the class's other section already reconciled.
+      ...(classReconciled ? {} : { $set: { reconState: "open" } }),
       $push: {
         trimLog: {
           trimHw: item._id,
@@ -256,7 +280,7 @@ export async function applyTrim(input: ApplyTrimInput): Promise<ApplyTrimResult>
     { upsert: true, new: true },
   );
 
-  const tally = await tallyDay(input.classId, input.date);
+  const tally = await tallyDay(input.classId, input.date, item.sectionId.toString());
   return { hwId: item.hwId, rank, trimFrom, trimTo, trimMin, tally };
 }
 
@@ -272,6 +296,11 @@ export interface ConfirmHomeworkDayInput {
   /** D-#314: set by the auto-issue sweep so the reconciliation row records a
    *  SYSTEM confirm (never sent by the manual resolver path). */
   autoIssued?: boolean;
+  /** The section the roster belongs to. Only THIS section's items are gated and
+   *  issued — a class split into Boys/Girls confirms each half on its own roster
+   *  (2026-10-01: a C4 Girls confirm issued the C4 Boys items to the girls).
+   *  Omitted = every item of the class (single-section callers). */
+  sectionId?: string;
 }
 
 export interface ConfirmHomeworkDayResult {
@@ -294,10 +323,14 @@ export async function confirmHomeworkDay(
 
   const dayKey = reconDayKey(input.date);
   const existing = await HomeworkReconciliation.findOne({ classId: input.classId, reconDate: dayKey }).lean();
-  const alreadyReconciled = !!existing && existing.reconState === "reconciled";
+  const classReconciled = !!existing && existing.reconState === "reconciled";
 
-  const docs = await listDailyItems(input.classId, input.date);
+  const docs = await listDailyItems(input.classId, input.date, input.sectionId);
   if (docs.length === 0) throw new Error("No homework declared for this day");
+  // The reconciliation row is per CLASS. For a section-scoped confirm, this section
+  // counts as reconciled only once it has itself issued that day — the class's other
+  // section confirming first must not turn this one's first confirm into a top-up.
+  const alreadyReconciled = classReconciled && (!input.sectionId || docs.some((d) => d.status === "issued"));
 
   // D-#319: a LATE TOP-UP confirm — items declared AFTER the day was confirmed
   // were stranded (`declared` forever: re-confirm refused, the sweep skipped
@@ -317,7 +350,7 @@ export async function confirmHomeworkDay(
   // already hard-blocked above, holiday-overridden days owe nothing.
   // A D-#319 top-up SKIPS the gate — the day already passed a human confirm
   // once; blocking the stranded items on coverage would re-strand them.
-  const sectionId = docs[0].sectionId;
+  const sectionId = input.sectionId ?? docs[0].sectionId;
   const dayStart = new Date(input.date);
   dayStart.setHours(0, 0, 0, 0);
   const dayEnd = new Date(dayStart);
@@ -369,6 +402,10 @@ export async function confirmHomeworkDay(
         `trim required before issuing (handoff §4.3)`,
     );
   }
+
+  // Refuse BEFORE issuing anything: an empty roster (a section with no students) would
+  // otherwise mark every item issued with zero records, invisible in every workspace.
+  if (pendingItems.length > 0 && input.roster.length === 0) throw new Error(EMPTY_SECTION_ISSUE_ERROR);
 
   // Issue every declared item that still carries homework (zeroed subjects spawn nothing).
   let issuedItems = 0;
@@ -455,9 +492,21 @@ export async function pendingHomeworkSections(date: Date): Promise<PendingHomewo
     .select("classId")
     .lean();
   const reconciledClassIds = new Set(reconciled.map((r) => r.classId.toString()));
+  // The reconciliation row is per CLASS: in a split class, one section's confirm must
+  // not silence the other's reminders. A section counts as confirmed once it has
+  // itself issued that day (a late top-up in a confirmed section stays quiet, as before).
+  const issuedSectionIds = reconciledClassIds.size
+    ? new Set(
+        (
+          await HomeworkItem.find({ dateGiven: { $gte: dayStart, $lt: dayEnd }, status: "issued" })
+            .select("sectionId")
+            .lean()
+        ).map((i) => i.sectionId.toString()),
+      )
+    : new Set<string>();
 
   const pendingSectionIds = [...sectionClass.entries()]
-    .filter(([, classId]) => !reconciledClassIds.has(classId))
+    .filter(([sectionId, classId]) => !reconciledClassIds.has(classId) || !issuedSectionIds.has(sectionId))
     .map(([sectionId]) => sectionId);
   if (pendingSectionIds.length === 0) return [];
 

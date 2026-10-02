@@ -8,7 +8,7 @@
  * students silently get no due dates, no checking, no chases (live prod finding
  * 2026-07-13: Nursery had declared homework and had NEVER been confirmed).
  *
- *   hwReconMisses — per (class, day) in the range: ≥1 still-`declared` item and
+ *   hwReconMisses — per (section, day) in the range: ≥1 still-`declared` item and
  *                   the day's reconciliation is not `reconciled` (the same rule
  *                   as the pendingHomeworkSections reminder ladder — lockstep).
  *   asReconMisses — per (section, week) whose §4-resolved deliveryDate falls in
@@ -469,7 +469,8 @@ export async function reconciliationReport(
   >();
   for (const it of hwItems) {
     const dateKey = dateKeyOf(new Date(it.dateGiven));
-    const key = `${it.classId.toString()}|${dateKey}`;
+    // Per SECTION, not class: a split class's halves confirm separately (2026-10-01).
+    const key = `${it.sectionId.toString()}|${dateKey}`;
     const b =
       hwBuckets.get(key) ??
       hwBuckets
@@ -498,7 +499,18 @@ export async function reconciliationReport(
     const reconciled = new Set(
       recons.map((r) => `${r.classId.toString()}|${dateKeyOf(new Date(r.reconDate))}`),
     );
-    hwPending = hwPending.filter((b) => !reconciled.has(`${b.classId}|${b.dateKey}`));
+    // The reconciliation row is per CLASS: a section counts as confirmed only once it
+    // has itself issued that day — the other half confirming first must not hide it.
+    const issuedSectionDays = new Set<string>();
+    if (recons.length > 0) {
+      const issued = await HomeworkItem.find({ status: "issued", dateGiven: { $gte: start, $lte: end } })
+        .select("sectionId dateGiven")
+        .lean();
+      for (const it of issued) issuedSectionDays.add(`${it.sectionId.toString()}|${dateKeyOf(new Date(it.dateGiven))}`);
+    }
+    hwPending = hwPending.filter(
+      (b) => !(reconciled.has(`${b.classId}|${b.dateKey}`) && issuedSectionDays.has(`${b.sectionId}|${b.dateKey}`)),
+    );
   }
 
   // --- Assignments: (section, week) buckets of still-DRAFT items in the range ---
