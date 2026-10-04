@@ -17,6 +17,7 @@ const mockDeleteOne = jest.fn();
 const mockTopicFind = jest.fn();
 const mockReconFindOne = jest.fn();
 const mockFileFind = jest.fn();
+const mockItemFind = jest.fn();
 
 jest.mock("../modules/trackers/models/HomeworkItem", () => ({
   HOMEWORK_ITEM_STATUSES: ["declared", "issued"],
@@ -33,6 +34,8 @@ jest.mock("../modules/trackers/models/HomeworkItem", () => ({
       };
     },
     deleteOne: (q: unknown) => Promise.resolve(mockDeleteOne(q)),
+    // listDailyItems — the section's own items that day (find().sort().lean()).
+    find: (q: unknown) => ({ sort: () => ({ lean: () => Promise.resolve(mockItemFind(q)) }) }),
   },
 }));
 jest.mock("../modules/trackers/models/HomeworkTopic", () => ({
@@ -83,7 +86,10 @@ beforeEach(() => {
   mockTopicFind.mockReset();
   mockReconFindOne.mockReset();
   mockFileFind.mockReset();
+  mockItemFind.mockReset();
   mockReconFindOne.mockResolvedValue(null);
+  // By default the item's OWN section has issued that day — a reconciled day is frozen.
+  mockItemFind.mockReturnValue([{ status: "issued" }]);
   mockTopicFind.mockResolvedValue([{ code: "TOP-MATH-C3-02" }]);
 });
 
@@ -184,4 +190,28 @@ test("delete: reconciled day rejected", async () => {
   mockReconFindOne.mockResolvedValue({ reconState: "reconciled" });
   await expect(deleteHomeworkItem("item-1")).rejects.toThrow(/reconciled/);
   expect(mockDeleteOne).not.toHaveBeenCalled();
+});
+
+// D-#706 follow-up (owner report 2026-10-04): the reconciliation row is per CLASS, but a
+// split class's sections confirm separately. C5 Girls' auto-issue froze C5 Boys' still-
+// declared English item. The day is reconciled for an item's section only once THAT
+// section has issued.
+test("split class: the OTHER section's confirm does not freeze this section's declared item", async () => {
+  mockItemById.mockReturnValue(itemDoc());
+  mockReconFindOne.mockResolvedValue({ reconState: "reconciled" });
+  mockItemFind.mockReturnValue([{ status: "declared" }]); // this section has issued nothing
+  const res = await deleteHomeworkItem("item-1");
+  expect(mockDeleteOne).toHaveBeenCalled();
+  expect(res.hwId).toBe("HW-C3-MATH-0007");
+  // …and the lookup was scoped to the item's own section.
+  expect(mockItemFind.mock.calls[0][0]).toMatchObject({ classId: "class-1", sectionId: "sec-1" });
+});
+
+test("split class: an edit is likewise allowed until this section has issued", async () => {
+  const doc = itemDoc();
+  mockItemById.mockReturnValue(doc);
+  mockReconFindOne.mockResolvedValue({ reconState: "reconciled" });
+  mockItemFind.mockReturnValue([{ status: "declared" }]);
+  await updateHomeworkItem({ itemId: "item-1", description: "নতুন", actorId: "t-1" });
+  expect(doc.description).toBe("নতুন");
 });
