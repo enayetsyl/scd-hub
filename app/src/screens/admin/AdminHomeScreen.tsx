@@ -13,7 +13,7 @@ import { useAuth } from "../../auth/AuthContext";
 type Props = NativeStackScreenProps<AdminStackParamList, "AdminHome">;
 
 export default function AdminHomeScreen({ navigation }: Props): React.ReactElement {
-  const { role, can } = useAuth();
+  const { isRole, can } = useAuth();
   const canImport = can("content:import");
   const canManageUsers = can("user:manage");
   const canRoster = can("roster:manage");
@@ -28,7 +28,10 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
   // tracker:read they already hold — no new permission (D-#554).
   // BUG-WC-3: gated on ROLE, not tracker:read — OFFICE deliberately holds no
   // tracker permission, so the old gate hid the queue from the role it is for.
-  const canWorkClaims = role === "PRINCIPAL" || role === "OFFICE";
+  // Owner ask 2026-10-04: template-aware, matching the server's `canWatchClaims`
+  // (isAdminStaff) — a teacher holding the Office template from Access control
+  // (Akter, Tazkir) could already read the queue but never saw this card.
+  const canWorkClaims = isRole("PRINCIPAL") || isRole("OFFICE");
   // AR-2: the ranking reads the two attendance registers, so it sits behind the gate
   // that already owns them — `attendance:manage` is Principal + Office exactly.
   const canAttendance = can("attendance:manage");
