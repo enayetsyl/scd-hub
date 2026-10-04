@@ -9,8 +9,7 @@ import React, { useMemo } from "react";
 import { ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
-import { STUDENTS_QUERY } from "../../graphql/operations";
-import { CLASS_TEST_QUERY, CLASS_TEST_RESULTS_QUERY } from "../../graphql/classTest";
+import { CLASS_TEST_QUERY, CLASS_TEST_RESULTS_QUERY, CLASS_TEST_ROSTER_QUERY } from "../../graphql/classTest";
 import { Screen, Card, Body, Muted, Badge, Notice } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
 import { STR, hwSubjectLabel, bnNum } from "../../lib/labels";
@@ -24,8 +23,11 @@ export default function ClassTestResultsViewScreen({ route }: Props): React.Reac
 
   const [testQ, refetchTest] = useQuery({ query: CLASS_TEST_QUERY, variables: { id: testId } });
   const test = testQ.data?.classTest ?? null;
-  const [studentsQ, refetchStudents] = useQuery({ query: STUDENTS_QUERY, variables: { sectionId: test?.sectionId ?? "" }, pause: !test });
-  const students = (studentsQ.data?.studentsInSection ?? []).filter((s) => s.active);
+  // The exam's OWN roster (D-#507), not the section's current one: a group exam has no
+  // section, and an exam sat before a boys/girls split has a section nobody is in any
+  // more (owner report 2026-10-04) — both listed nobody here.
+  const [studentsQ, refetchStudents] = useQuery({ query: CLASS_TEST_ROSTER_QUERY, variables: { testId }, pause: !test });
+  const students = studentsQ.data?.classTestRoster ?? [];
   const [resultsQ, refetchResults] = useQuery({ query: CLASS_TEST_RESULTS_QUERY, variables: { testId } });
   const byStudent = useMemo(() => {
     const m = new Map<string, NonNullable<typeof resultsQ.data>["classTestResults"][number]>();
@@ -70,7 +72,7 @@ export default function ClassTestResultsViewScreen({ route }: Props): React.Reac
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                   <View style={{ flexShrink: 1 }}>
                     <Body style={{ fontWeight: "700" }}>{s.name}</Body>
-                    <Muted>{s.schoolId}</Muted>
+                    <Muted>{s.sectionNameBn ? `${s.schoolId} · ${s.sectionNameBn}` : s.schoolId}</Muted>
                   </View>
                   {!r ? (
                     <Badge text={STR.ctNotEntered} tone="muted" />
