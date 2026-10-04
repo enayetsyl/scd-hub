@@ -7,6 +7,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react";
 import {
   ME_QUERY,
+  REFRESH_SESSION,
   STAFF_LOGIN,
   GUARDIAN_LOGIN,
   START_IMPERSONATION,
@@ -29,6 +30,29 @@ const VIEW_MODE_KEY = "scd_view_mode";
 
 /** Who the Principal is currently viewing as, and until when (VA-1, D-#638). */
 const VIEW_AS_KEY = "scd_view_as";
+
+/**
+ * The last good `me` answer (D-#708). An app opened with no/slow network used to read the
+ * failed `me` as "signed out" and DELETE the saved login; now it opens on this copy and
+ * only a real server rejection signs the person out.
+ */
+const ME_CACHE_KEY = "scd_me_cache";
+
+interface MeCache {
+  me: MeUser;
+  permissions: string[];
+  templates: string[];
+}
+
+function parseMeCache(raw: string | null): MeCache | null {
+  if (!raw) return null;
+  try {
+    const v = JSON.parse(raw) as MeCache;
+    return v && v.me && typeof v.me.id === "string" ? v : null;
+  } catch {
+    return null;
+  }
+}
 
 /** The borrowed session, as the banner needs to render it. */
 export interface ViewAsSession {
@@ -98,6 +122,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
  */
 async function switchToken(token: string | null): Promise<void> {
   await persistToken(token);
+  await removeItem(ME_CACHE_KEY); // a different identity never opens on the last one's copy
   resetUrqlClient();
 }
 
@@ -114,7 +139,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
     // when `me` comes back null so a rejected session never leaves a stale set behind.
     setRawPermissions(res.data?.myPermissions ?? []);
     setTemplates((res.data?.myTemplates ?? []) as Role[]);
-    return res.data?.me ?? null;
+    const me = res.data?.me ?? null;
+    if (me) {
+      const cache: MeCache = { me, permissions: res.data?.myPermissions ?? [], templates: res.data?.myTemplates ?? [] };
+      void setItem(ME_CACHE_KEY, JSON.stringify(cache));
+    }
+    return me;
   }, []);
 
   // The D-#467 hat switcher is gone: a two-hat login now always sees both jobs at once.
@@ -156,15 +186,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
         if (!cancelled) setStatus("anon");
         return;
       }
-      const me = await resolveMe();
+
+      // D-#708: stay signed in. Every open re-mints the session (30 days) — never a
+      // borrowed View-as token, which keeps its own short window. A network failure
+      // keeps the saved login; only an explicit server "no" (expired or deactivated)
+      // signs the person out.
+      if (!(await getRealToken())) {
+        const refreshed = await getUrqlClient().mutation(REFRESH_SESSION, {}).toPromise();
+        if (refreshed.data?.refreshSession?.token) {
+          await persistToken(refreshed.data.refreshSession.token);
+        }
+      }
+
+      const res = await getUrqlClient().query(ME_QUERY, {}, { requestPolicy: "network-only" }).toPromise();
       if (cancelled) return;
+      const me = res.data?.me ?? null;
       if (me) {
+        setRawPermissions(res.data?.myPermissions ?? []);
+        setTemplates((res.data?.myTemplates ?? []) as Role[]);
+        void setItem(ME_CACHE_KEY, JSON.stringify({ me, permissions: res.data?.myPermissions ?? [], templates: res.data?.myTemplates ?? [] }));
         setUser(me);
         setStatus("authed");
-      } else {
-        await persistToken(null);
-        setStatus("anon");
+        return;
       }
+      if (res.error?.networkError || (res.error && !res.data)) {
+        // Offline / server unreachable: open on the last good copy, keep the token.
+        const cached = parseMeCache(await getItem(ME_CACHE_KEY));
+        if (cached) {
+          setRawPermissions(cached.permissions);
+          setTemplates(cached.templates as Role[]);
+          setUser(cached.me);
+          setStatus("authed");
+        } else {
+          setStatus("anon"); // token kept — the next open with a network signs straight in
+        }
+        return;
+      }
+      // The server answered and said "not signed in": the session is really over.
+      await persistToken(null);
+      await removeItem(ME_CACHE_KEY);
+      setRawPermissions([]);
+      setTemplates([]);
+      setStatus("anon");
     })();
     return () => {
       cancelled = true;

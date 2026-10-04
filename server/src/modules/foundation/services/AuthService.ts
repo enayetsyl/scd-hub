@@ -21,11 +21,19 @@ export interface AuthTokenPayload {
   impersonatorRole?: Role;
 }
 
-/** Mint a session token. `expiresIn` is the ordinary 8h day unless a caller shortens it —
+/**
+ * A login session lasts this long, and every app open re-mints it (`refreshSession`), so
+ * a person stays signed in as long as they open the app at least once in the window
+ * (owner 2026-10-02, D-#708 — was 8h, which signed everyone out daily). The refresh
+ * re-reads the account, so deactivation and access changes take effect on the next open.
+ */
+export const SESSION_TTL: jwt.SignOptions["expiresIn"] = "30d";
+
+/** Mint a session token. `expiresIn` is the ordinary session unless a caller shortens it —
  *  a borrowed "View as" token is deliberately short-lived (ImpersonationService). */
 export function signToken(
   payload: AuthTokenPayload,
-  expiresIn: jwt.SignOptions["expiresIn"] = "8h",
+  expiresIn: jwt.SignOptions["expiresIn"] = SESSION_TTL,
 ): string {
   const secret = process.env.JWT_SECRET ?? "dev-secret";
   return jwt.sign(payload, secret, { expiresIn });
@@ -116,6 +124,42 @@ export async function staffLogin(input: StaffLoginInput): Promise<AuthResult | n
 // ---------------------------------------------------------------------------
 // Guardian login (flexible identifier: email | phone | school_id, D-#9)
 // ---------------------------------------------------------------------------
+
+/**
+ * Re-mint the caller's session (D-#708) — called by the app on every open. Takes the
+ * already-verified token payload; returns null (the app then signs out) when the account
+ * is gone, deactivated, or a guardian whose login was disabled. Re-reads the account's
+ * CURRENT role and access overrides, so a change made since login lands now.
+ * A "View as" (borrowed) token is never extended: it returns null and the app keeps the
+ * short borrowed session it already has.
+ */
+export async function refreshSession(auth: AuthTokenPayload): Promise<AuthResult | null> {
+  if (auth.impersonatorId) return null;
+  if (auth.role === "GUARDIAN") {
+    const guardian = await Guardian.findOne({ _id: auth.userId, active: true }).lean();
+    if (!guardian || !guardian.loginEnabled || !guardian.passwordHash) return null;
+    return {
+      token: signToken({ userId: guardian._id.toString(), role: "GUARDIAN" }),
+      userId: guardian._id.toString(),
+      role: "GUARDIAN",
+      name: guardian.name,
+    };
+  }
+  const user = await User.findOne({ _id: auth.userId, active: true }).lean();
+  if (!user) return null;
+  return {
+    token: signToken({
+      userId: user._id.toString(),
+      role: user.role,
+      additionalTemplates: user.additionalTemplates ?? [],
+      grantedPermissions: user.grantedPermissions ?? [],
+      revokedPermissions: user.revokedPermissions ?? [],
+    }),
+    userId: user._id.toString(),
+    role: user.role,
+    name: user.name,
+  };
+}
 
 export interface GuardianLoginInput {
   identifier: string;

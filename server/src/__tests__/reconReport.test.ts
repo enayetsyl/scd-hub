@@ -626,6 +626,24 @@ describe("asNotPrinted (D-#459)", () => {
     expect(r.asNotPrinted).toEqual([]);
   });
 
+  test("from the D-#707 cutover each section prints its own: Boys' print no longer clears Girls", async () => {
+    // Owner 2026-10-02: each Boys/Girls section's own teacher creates (and prints) its assignment.
+    const LATER = new Date(2026, 9, 10); // Sat 2026-10-10
+    mockScheduleFind.mockResolvedValue([{ academicYearId: "ay-1", termStartDate: new Date(2026, 9, 4) }]);
+    const boys = engItem({ sectionId: "sec-boys" });
+    const girls = engItem({ sectionId: "sec-girls" });
+    mockExpectedWeek.mockResolvedValue({
+      weekNumber: 1,
+      weekStart: "2026-10-04",
+      suspended: false,
+      deliveryDate: "2026-10-08T00:00:00.000Z",
+      items: [boys, girls],
+    });
+    mockPrintReqFind.mockResolvedValue([{ classId: CLS, sectionId: "sec-boys", subject: "ENG" }]);
+    const r = await reconciliationReport("2026-10-04", "2026-10-10", LATER);
+    expect(r.asNotPrinted.map((x) => x.sectionId)).toEqual(["sec-girls"]);
+  });
+
   test("a request still tagged to the old combined section (or none) counts for the class", async () => {
     mockExpectedWeek.mockImplementation((_ay: string, w: number) =>
       Promise.resolve(expectedWeek(w, { items: w === 1 ? [engItem()] : [] })),
