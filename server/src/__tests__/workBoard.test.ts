@@ -47,7 +47,16 @@ jest.mock("../modules/workboard/services/workBoardNotifications", () => ({
 }));
 
 import { templateDueOn } from "../modules/workboard/services/TaskTemplateService";
-import { applyPulls, observationCards, slotForMinute, sortCards, type WorkCard } from "../modules/workboard/services/WorkBoardService";
+import {
+  applyPulls,
+  isMonthKey,
+  nextMonthKey,
+  observationCards,
+  slotForMinute,
+  sortCards,
+  summarizeCheckMonths,
+  type WorkCard,
+} from "../modules/workboard/services/WorkBoardService";
 import { deskUncovered, officeRecipients } from "../modules/workboard/services/OfficeCoverService";
 import { aggregateLoad } from "../modules/workboard/services/LoadService";
 import { digestLines, overdueLines } from "../modules/workboard/services/TaskSweepService";
@@ -247,6 +256,32 @@ describe("observationCards", () => {
     expect(filter.state).toBe("ASSIGNED");
     expect(filter).toHaveProperty("cancelledAt", null);
     expect(cards.map((c) => c.key)).toEqual([`OBSERVATION:${open._id.toString()}`]);
+  });
+});
+
+describe("homework-check months (no age cutoff)", () => {
+  test("month keys: valid shape, and December rolls the year", () => {
+    expect(isMonthKey("2026-09")).toBe(true);
+    expect(isMonthKey("2026-13")).toBe(false);
+    expect(isMonthKey("2026-9")).toBe(false);
+    expect(nextMonthKey("2026-09")).toBe("2026-10");
+    expect(nextMonthKey("2026-12")).toBe("2027-01");
+  });
+
+  test("an unfinished check is never dropped for age; months group newest first; fully checked items vanish", () => {
+    const items = [
+      { id: "a", dateKey: "2026-08-23" }, // 2 unchecked — older than 45 days, still listed
+      { id: "b", dateKey: "2026-08-27" }, // all checked
+      { id: "c", dateKey: "2026-09-03" }, // 1 unchecked
+      { id: "d", dateKey: "2026-09-29" }, // 3 unchecked
+      { id: "e", dateKey: "2026-01-10" }, // 1 unchecked — January
+    ];
+    const submitted = new Map([["a", 2], ["c", 1], ["d", 3], ["e", 1]]);
+    expect(summarizeCheckMonths(items, submitted)).toEqual([
+      { monthKey: "2026-09", items: 2, copies: 4 },
+      { monthKey: "2026-08", items: 1, copies: 2 },
+      { monthKey: "2026-01", items: 1, copies: 1 },
+    ]);
   });
 });
 

@@ -313,13 +313,26 @@ async function periodCards(userIds: string[], fromKey: string, toKey: string, ke
   return out;
 }
 
-async function homeworkCards(userIds: string[], todayKey: string, labels: { cls: Map<string, string>; sec: Map<string, string> }): Promise<WorkCard[]> {
-  const since = new Date(Date.now() - 45 * 24 * 3600 * 1000);
+/**
+ * HOMEWORK_CHECK cards: an item with copies still SUBMITTED (handed in, not yet
+ * checked) stays on its declarer's board until every copy is checked — there is NO
+ * age cutoff (owner ask 2026-10-04; the old 45-day window silently dropped
+ * unfinished checks). The live board asks for the CURRENT month only; earlier
+ * months are summarised by `homeworkCheckMonths` and loaded one month at a time by
+ * `homeworkCheckCardsForMonth`, so an old backlog never slows the board.
+ */
+async function homeworkCards(
+  userIds: string[],
+  todayKey: string,
+  labels: { cls: Map<string, string>; sec: Map<string, string> },
+  range: { from: Date; to?: Date },
+): Promise<WorkCard[]> {
   const items = (await HomeworkItem.find({
     declaredBy: { $in: userIds.map((u) => new Types.ObjectId(u)) },
-    dateGiven: { $gte: since },
+    dateGiven: range.to ? { $gte: range.from, $lt: range.to } : { $gte: range.from },
   })
     .select("hwId subject classId sectionId dateGiven declaredBy")
+    .sort({ dateGiven: 1 })
     .lean()) as unknown as Array<{ _id: Types.ObjectId; hwId: string; subject: string; classId: Types.ObjectId; sectionId: Types.ObjectId; dateGiven: Date; declaredBy: Types.ObjectId }>;
   if (items.length === 0) return [];
   const counts = (await HomeworkStudentRecord.aggregate([
@@ -355,6 +368,72 @@ async function homeworkCards(userIds: string[], todayKey: string, labels: { cls:
     });
   }
   return out;
+}
+
+/** "YYYY-MM" — a calendar month, in the server's (Dhaka) local time like every dateKey. */
+export function isMonthKey(s: string): boolean {
+  return /^\d{4}-(0[1-9]|1[0-2])$/.test(s);
+}
+
+/** "2026-09" → "2026-10"; December rolls the year. */
+export function nextMonthKey(monthKey: string): string {
+  const [y, m] = monthKey.split("-").map(Number);
+  return m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, "0")}`;
+}
+
+export interface HomeworkCheckMonth {
+  monthKey: string;
+  /** Homework items in that month with at least one copy still unchecked. */
+  items: number;
+  /** Unchecked copies across those items. */
+  copies: number;
+}
+
+/** Pure: per-month totals of unchecked copies, newest month first; months with none are dropped. */
+export function summarizeCheckMonths(
+  items: Array<{ id: string; dateKey: string }>,
+  submittedByItem: Map<string, number>,
+): HomeworkCheckMonth[] {
+  const by = new Map<string, HomeworkCheckMonth>();
+  for (const it of items) {
+    const n = submittedByItem.get(it.id) ?? 0;
+    if (n === 0) continue;
+    const monthKey = it.dateKey.slice(0, 7);
+    const cur = by.get(monthKey) ?? { monthKey, items: 0, copies: 0 };
+    cur.items += 1;
+    cur.copies += n;
+    by.set(monthKey, cur);
+  }
+  return [...by.values()].sort((a, b) => b.monthKey.localeCompare(a.monthKey));
+}
+
+/** The months BEFORE the current one that still hold unchecked homework for these users —
+ *  the collapsed headers under the board. Counts only; the cards load per month. */
+export async function homeworkCheckMonths(userIds: string[], now = new Date()): Promise<HomeworkCheckMonth[]> {
+  const monthStart = parseDateKey(`${dateKeyOf(now).slice(0, 7)}-01`);
+  const items = (await HomeworkItem.find({
+    declaredBy: { $in: userIds.map((u) => new Types.ObjectId(u)) },
+    dateGiven: { $lt: monthStart },
+  })
+    .select("dateGiven")
+    .lean()) as unknown as Array<{ _id: Types.ObjectId; dateGiven: Date }>;
+  if (items.length === 0) return [];
+  const counts = (await HomeworkStudentRecord.aggregate([
+    { $match: { hwItemId: { $in: items.map((i) => i._id) }, state: "SUBMITTED" } },
+    { $group: { _id: "$hwItemId", n: { $sum: 1 } } },
+  ])) as Array<{ _id: Types.ObjectId; n: number }>;
+  return summarizeCheckMonths(
+    items.map((i) => ({ id: i._id.toString(), dateKey: dateKeyOf(new Date(i.dateGiven)) })),
+    new Map(counts.map((c) => [c._id.toString(), c.n])),
+  );
+}
+
+/** One earlier month's homework-check cards, oldest homework first (loaded when its header opens). */
+export async function homeworkCheckCardsForMonth(userIds: string[], monthKey: string, now = new Date()): Promise<WorkCard[]> {
+  if (!isMonthKey(monthKey)) throw new Error("মাস সঠিক নয়");
+  const from = parseDateKey(`${monthKey}-01`);
+  const to = parseDateKey(`${nextMonthKey(monthKey)}-01`);
+  return homeworkCards(userIds, dateKeyOf(now), await labelMaps(), { from, to });
 }
 
 async function classTestCards(userIds: string[], todayKey: string, labels: { cls: Map<string, string>; sec: Map<string, string> }): Promise<WorkCard[]> {
@@ -723,7 +802,10 @@ export async function boardFor(users: BoardUser[], fromKey: string, toKey: strin
 
   const auto = await Promise.all([
     safe("period", () => periodCards(userIds, fromKey, toKey, keys)),
-    nowInRange ? safe("homework", () => homeworkCards(userIds, todayKey, labels)) : Promise.resolve([]),
+    // The current month only — earlier months live in the collapsible headers below the board.
+    nowInRange
+      ? safe("homework", () => homeworkCards(userIds, todayKey, labels, { from: parseDateKey(`${todayKey.slice(0, 7)}-01`) }))
+      : Promise.resolve([]),
     nowInRange ? safe("classTest", () => classTestCards(userIds, todayKey, labels)) : Promise.resolve([]),
     nowInRange ? safe("videoReview", () => videoReviewCards(userIds, todayKey)) : Promise.resolve([]),
     nowInRange ? safe("planReview", () => planReviewCards(userIds, todayKey)) : Promise.resolve([]),

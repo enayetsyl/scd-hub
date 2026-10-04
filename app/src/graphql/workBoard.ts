@@ -140,6 +140,29 @@ export const WORK_BOARD_FOR_QUERY = gql<{ workBoardFor: WorkCardT[] }, { userId:
   }
 `;
 
+/** Earlier months still holding unchecked homework — the collapsed headers (counts only). */
+export interface HomeworkCheckMonthT {
+  monthKey: string;
+  items: number;
+  copies: number;
+}
+
+export const HOMEWORK_CHECK_MONTHS_QUERY = gql<{ homeworkCheckMonths: HomeworkCheckMonthT[] }, { userId?: string | null }>`
+  query HomeworkCheckMonths($userId: String) {
+    homeworkCheckMonths(userId: $userId) { monthKey items copies }
+  }
+`;
+
+/** One month's homework-check cards — fetched only when its header is opened. */
+export const HOMEWORK_CHECK_CARDS_FOR_MONTH_QUERY = gql<
+  { homeworkCheckCardsForMonth: WorkCardT[] },
+  { monthKey: string; userId?: string | null }
+>`
+  query HomeworkCheckCardsForMonth($monthKey: String!, $userId: String) {
+    homeworkCheckCardsForMonth(monthKey: $monthKey, userId: $userId) { ${CARD_FIELDS} }
+  }
+`;
+
 export const MY_WORK_BOARD_COUNTS = gql<{ myWorkBoardCounts: { openToday: number; overdue: number } }, NoVars>`
   query MyWorkBoardCounts {
     myWorkBoardCounts { openToday overdue }

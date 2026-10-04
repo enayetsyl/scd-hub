@@ -25,6 +25,7 @@ import {
 import type { TabParamList, WorkBoardStackParamList } from "../../navigation/types";
 import { Screen, Button, EmptyState, Notice, Field, Loader, ErrorBanner } from "../../components/ui";
 import { WorkCardView } from "../../components/WorkCardView";
+import { EarlierHomeworkChecks } from "../../components/EarlierHomeworkChecks";
 import { useAuth } from "../../auth/AuthContext";
 import { STR, bnNum, dateHeaderLabel, daySlotLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
@@ -261,6 +262,9 @@ export default function WorkBoardScreen({ route, navigation }: Props): React.Rea
           })}
         </>
       )}
+
+      {/* Earlier months' unchecked homework — collapsed, fetched per month on open. */}
+      {view !== "overdue" ? <EarlierHomeworkChecks userId={otherId} onOpen={open} /> : null}
     </Screen>
   );
 }
