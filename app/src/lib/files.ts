@@ -15,6 +15,7 @@ import { Platform } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
 import { REST_BASE } from "../graphql/client";
 import { getToken } from "./tokenStore";
+import { STR } from "./labels";
 import * as FileSystem from "expo-file-system";
 import * as IntentLauncher from "expo-intent-launcher";
 
@@ -842,9 +843,24 @@ async function openStoredFileAndroid(fileId: string): Promise<void> {
   // moveAsync renamed it away, and the second failed with "File ... could not be moved"
   // (GlitchTip, prod). A per-call suffix makes the download private to this invocation.
   const target = `${FileSystem.cacheDirectory}scdhub-tmp-${fileId}-${++tmpSeq}`;
-  const res = await FileSystem.downloadAsync(`${REST_BASE}/files/${encodeURIComponent(fileId)}`, target, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  // Resumable only so a stalled download can be STOPPED: a bare downloadAsync on a
+  // dropped phone connection never settles, and the button spins forever.
+  const download = FileSystem.createDownloadResumable(
+    `${REST_BASE}/files/${encodeURIComponent(fileId)}`,
+    target,
+    { headers: token ? { Authorization: `Bearer ${token}` } : {} },
+  );
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timedOut = new Promise<"timeout">((resolve) => {
+    timer = setTimeout(() => resolve("timeout"), FILE_OPEN_TIMEOUT_MS);
   });
+  const outcome = await Promise.race([download.downloadAsync(), timedOut]).finally(() => clearTimeout(timer));
+  if (outcome === "timeout" || !outcome) {
+    await download.pauseAsync().catch(() => undefined);
+    await FileSystem.deleteAsync(target, { idempotent: true });
+    throw new FileUploadError(STR.fileOpenTimeout);
+  }
+  const res = outcome;
   if (res.status !== 200) {
     // The route answers a denial as JSON — downloadAsync writes that body to the file,
     // so surface the server's own Bangla message rather than a bare status code.
@@ -917,25 +933,77 @@ async function openStoredFileOnce(fileId: string): Promise<void> {
     throw new FileUploadError("File viewing is web-only in this build");
   }
   const token = getToken();
-  const res = await fetch(`${REST_BASE}/files/${encodeURIComponent(fileId)}`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
-  if (!res.ok) {
-    let message = `file request failed (${res.status})`;
-    try {
-      const body = (await res.json()) as { error?: string };
-      if (body.error) message = body.error;
-    } catch {
-      // keep the generic message
+  const abort = new AbortController();
+  const timer = setTimeout(() => abort.abort(), FILE_OPEN_TIMEOUT_MS);
+  let res: Response;
+  let blob: Blob;
+  try {
+    res = await fetch(`${REST_BASE}/files/${encodeURIComponent(fileId)}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      signal: abort.signal,
+    });
+    if (!res.ok) {
+      let message = `file request failed (${res.status})`;
+      try {
+        const body = (await res.json()) as { error?: string };
+        if (body.error) message = body.error;
+      } catch {
+        // keep the generic message
+      }
+      throw new FileUploadError(message);
     }
-    throw new FileUploadError(message);
+    blob = await res.blob();
+  } catch (e) {
+    if (abort.signal.aborted) throw new FileUploadError(STR.fileOpenTimeout);
+    throw e;
+  } finally {
+    clearTimeout(timer);
   }
-  const blob = await res.blob();
   const blobUrl = URL.createObjectURL(blob);
   if (typeof window !== "undefined") {
-    window.open(blobUrl, "_blank");
+    // A phone browser opened NOTHING here (owner report 2026-10-04: Jasi tapped "View
+    // question" again and again — the button spun, then nothing). `window.open` after
+    // an await is outside the tap's user activation, so mobile Chrome's popup blocker
+    // drops it silently (it returns null); and even an allowed tab cannot show a PDF
+    // blob on Android Chrome. So a phone SAVES the file — the OS then offers to open
+    // it — and a desktop falls back to the same save when its new tab is blocked.
+    const tab = isMobileBrowser() ? null : window.open(blobUrl, "_blank");
+    if (!tab) saveBlobUrl(blobUrl, downloadName(res.headers.get("content-disposition"), fileId, blob.type));
     setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
   }
+}
+
+/** Long enough for a large scan on a slow phone line; short enough that a stalled
+ *  download ends with a message instead of a button that spins forever. */
+const FILE_OPEN_TIMEOUT_MS = 60_000;
+
+function isMobileBrowser(): boolean {
+  return typeof navigator !== "undefined" && /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+}
+
+/** Save a blob URL under a real file name (a programmatic download needs no popup). */
+function saveBlobUrl(blobUrl: string, name: string): void {
+  const a = document.createElement("a");
+  a.href = blobUrl;
+  a.download = name;
+  a.rel = "noopener";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+/** The server's own name (`inline; filename="<encoded>"`), else id + extension. */
+function downloadName(disposition: string | null, fileId: string, mime: string): string {
+  const m = disposition ? /filename="([^"]+)"/i.exec(disposition) : null;
+  if (m) {
+    try {
+      return decodeURIComponent(m[1]);
+    } catch {
+      // a malformed escape — fall through to the generated name
+    }
+  }
+  const ext = MIME_EXT[mime.split(";")[0].trim().toLowerCase()];
+  return ext ? `scdhub-${fileId}.${ext}` : `scdhub-${fileId}`;
 }
 
 // ---------------------------------------------------------------------------

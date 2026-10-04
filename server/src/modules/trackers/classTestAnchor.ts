@@ -28,6 +28,7 @@ import { assertCanRead, assertCanWrite, ForbiddenError } from "../../middleware/
 import { isAdminStaff } from "../foundation/services/RoleScope";
 import { Student } from "../foundation/models/Student";
 import { Section } from "../foundation/models/Section";
+import { SectionMerge } from "../foundation/models/SectionMerge";
 import { Class } from "../foundation/models/Class";
 import { SubjectGroup } from "../routine/models/SubjectGroup";
 import { SubjectGroupMembership } from "../routine/models/SubjectGroupMembership";
@@ -40,10 +41,47 @@ export interface AnchoredTest {
   classId: string | null;
   subjectGroupId: string | null;
   subject: string;
+  /** The exam's accountable teacher — keeps the exam once its section is emptied. */
+  teacherId?: string | null;
 }
 
 export function isGroupAnchored(test: AnchoredTest): boolean {
   return !!test.subjectGroupId;
+}
+
+/** A section that no longer holds any active student — the combined C4/C5 sections
+ *  after the 2026-10-01 boys/girls split, or a merge's source sections. */
+async function isEmptiedSection(sectionId: string): Promise<boolean> {
+  return (await Student.countDocuments({ sectionId, active: true })) === 0;
+}
+
+/**
+ * Run a section-scope check, letting the exam's OWN teacher through when its section
+ * has since been emptied (owner report 2026-10-04). A split/merge moves the students
+ * and ends the old section's routine rows, which expires the teacher's grant on it —
+ * so an exam sat before the split, whose marks were not yet in, became unopenable for
+ * the very teacher who has to enter them ("Something went wrong" on Science Test #4).
+ * Narrow on purpose: only the exam's teacher, only when nobody sits in that section.
+ */
+async function withEmptiedSectionOwner(
+  ctx: AppContext,
+  test: AnchoredTest,
+  check: () => Promise<void>,
+): Promise<void> {
+  try {
+    await check();
+  } catch (err) {
+    if (
+      err instanceof ForbiddenError &&
+      test.sectionId &&
+      test.teacherId &&
+      ctx.auth?.userId === test.teacherId &&
+      (await isEmptiedSection(test.sectionId))
+    ) {
+      return;
+    }
+    throw err;
+  }
 }
 
 /** Staff READ scope on the exam's unit. Principal/Office are unscoped, as before. */
@@ -56,8 +94,9 @@ export async function assertAnchorRead(ctx: AppContext, test: AnchoredTest): Pro
     }
     return;
   }
-  if (!test.sectionId || !test.classId) throw new ForbiddenError();
-  await assertCanRead(ctx, test.sectionId, test.classId);
+  const { sectionId, classId } = test;
+  if (!sectionId || !classId) throw new ForbiddenError();
+  await withEmptiedSectionOwner(ctx, test, () => assertCanRead(ctx, sectionId, classId));
 }
 
 /**
@@ -80,35 +119,69 @@ export async function assertAnchorWrite(
     }
     return;
   }
-  if (!test.sectionId) throw new ForbiddenError();
-  await assertCanWrite(ctx, test.sectionId, await subjectId(), action);
+  const { sectionId } = test;
+  if (!sectionId) throw new ForbiddenError();
+  const subject = await subjectId();
+  await withEmptiedSectionOwner(ctx, test, () => assertCanWrite(ctx, sectionId, subject, action));
 }
 
 /**
  * The students who sat this exam — the denominator for "complete" and the roster
  * the marks screen lists.
  *
- * Section anchor: the section's active students (unchanged). Group anchor: the
+ * Section anchor: the section's active students — or, once that section has been
+ * emptied by a split/merge, who sat it (see `emptiedSectionRoster`). Group anchor: the
  * group's ACTIVE members, which is the whole point — those students come from
  * several sections and classes, and the section rosters they belong to are the
  * wrong answer in both directions (they include children who do not attend this
  * group, and exclude group members from other sections).
  */
 export async function rosterStudentIds(test: AnchoredTest): Promise<string[]> {
+  return (await resolveRoster(test)).ids;
+}
+
+/** The roster plus whether it came from an emptied section's fallback (the marks
+ *  screen then names each child's CURRENT section, as it does for a group exam). */
+async function resolveRoster(test: AnchoredTest): Promise<{ ids: string[]; movedOn: boolean }> {
   if (test.subjectGroupId) {
     const memberships = (await SubjectGroupMembership.find({
       groupId: new Types.ObjectId(test.subjectGroupId),
     })
       .select("studentId")
       .lean()) as unknown as Array<{ studentId: Types.ObjectId }>;
-    if (memberships.length === 0) return [];
+    if (memberships.length === 0) return { ids: [], movedOn: false };
     const ids = memberships.map((m) => m.studentId);
     const students = (await Student.find({ _id: { $in: ids }, active: true })
       .select("_id")
       .lean()) as unknown as Array<{ _id: Types.ObjectId }>;
-    return students.map((s) => s._id.toString());
+    return { ids: students.map((s) => s._id.toString()), movedOn: false };
   }
   const students = (await Student.find({ sectionId: test.sectionId, active: true })
+    .select("_id")
+    .lean()) as unknown as Array<{ _id: Types.ObjectId }>;
+  if (students.length > 0 || !test.sectionId || !test.classId) {
+    return { ids: students.map((s) => s._id.toString()), movedOn: false };
+  }
+  return { ids: await emptiedSectionRoster(test.sectionId, test.classId), movedOn: true };
+}
+
+/**
+ * Who sat an exam whose section has since been emptied (owner report 2026-10-04).
+ * Students carry no section history, so this is reconstructed:
+ *   - a MERGE source section (D-#62) — the merge snapshot names exactly who left it;
+ *   - otherwise (a split, e.g. the combined C4/C5 sections on 2026-10-01, which moved
+ *     everyone into the class's new boys/girls sections) — the class's active students.
+ * Without it the marks screen listed nobody, so a pre-split exam could never be scored.
+ */
+async function emptiedSectionRoster(sectionId: string, classId: string): Promise<string[]> {
+  const merge = (await SectionMerge.findOne({ sourceSectionIds: new Types.ObjectId(sectionId) })
+    .sort({ mergedAt: -1 })
+    .select("moves")
+    .lean()) as unknown as { moves: Array<{ studentId: Types.ObjectId; fromSectionId: Types.ObjectId }> } | null;
+  const filter = merge
+    ? { _id: { $in: merge.moves.filter((m) => m.fromSectionId.toString() === sectionId).map((m) => m.studentId) } }
+    : { classId: new Types.ObjectId(classId) };
+  const students = (await Student.find({ ...filter, active: true })
     .select("_id")
     .lean()) as unknown as Array<{ _id: Types.ObjectId }>;
   return students.map((s) => s._id.toString());
@@ -123,7 +196,7 @@ export async function rosterStudentIds(test: AnchoredTest): Promise<string[]> {
 export async function classTestRosterStudents(test: AnchoredTest): Promise<
   Array<{ id: string; schoolId: string; name: string; nameBn: string | null; sectionNameBn: string | null }>
 > {
-  const ids = await rosterStudentIds(test);
+  const { ids, movedOn } = await resolveRoster(test);
   if (ids.length === 0) return [];
   const students = (await Student.find({ _id: { $in: ids.map((id) => new Types.ObjectId(id)) } })
     .select("schoolId name nameBn sectionId")
@@ -136,7 +209,8 @@ export async function classTestRosterStudents(test: AnchoredTest): Promise<
   }>;
 
   let sectionNames = new Map<string, string>();
-  if (test.subjectGroupId) {
+  // An emptied section's roster spans the class's new sections, so name them too.
+  if (test.subjectGroupId || movedOn) {
     const sectionIds = [...new Set(students.filter((s) => s.sectionId).map((s) => s.sectionId!.toString()))];
     const sections = sectionIds.length
       ? ((await Section.find({ _id: { $in: sectionIds.map((id) => new Types.ObjectId(id)) } })
