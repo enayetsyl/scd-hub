@@ -9,6 +9,7 @@
  * Every gate is re-checked in the service (the resolver's `authScopes` is the
  * declarative half; TaskService holds the row rules). Identity plane only.
  */
+import { Types } from "mongoose";
 import { builder } from "../../../schema";
 import { ForbiddenError } from "../../../middleware/authz";
 import { callerHasPermission, DAY_SLOTS, TASK_PRIORITIES, TASK_RECURRENCES, TASK_STATUSES } from "@scd/shared";
@@ -36,7 +37,10 @@ import {
   boardCountsFor,
   boardFor,
   categoriesFor,
+  homeworkCheckCardsForMonth,
+  homeworkCheckMonths,
   loadBoardUsers,
+  type HomeworkCheckMonth,
   type WorkBoardCounts,
   type WorkCard,
   type WorkCardLink,
@@ -57,6 +61,15 @@ function requireAuth(ctx: AppContext) {
 function assertAssigner(ctx: AppContext): void {
   const auth = requireAuth(ctx);
   if (!callerHasPermission(auth, "tasks:assign")) throw new ForbiddenError("অন্যের বোর্ড দেখার অনুমতি নেই");
+}
+
+/** Whose board: the caller's own, or (tasks:assign) someone else's — the drill-down rule. */
+function boardOwnerId(ctx: AppContext, userId: string | null | undefined): string {
+  const auth = requireAuth(ctx);
+  if (!userId || userId === auth.userId) return auth.userId;
+  assertAssigner(ctx);
+  if (!Types.ObjectId.isValid(userId)) throw new Error("ব্যবহারকারী সঠিক নয়");
+  return userId;
 }
 
 function assertKeys(fromKey: string, toKey: string): void {
@@ -156,6 +169,15 @@ const WorkCardRef = builder.objectRef<WorkCard>("WorkCard").implement({
     canPull: t.boolean({ resolve: (c) => c.canPull ?? false }),
     pulledById: t.string({ nullable: true, resolve: (c) => c.pulledById ?? null }),
     pulledByName: t.string({ nullable: true, resolve: (c) => c.pulledByName ?? null }),
+  }),
+});
+
+const HomeworkCheckMonthRef = builder.objectRef<HomeworkCheckMonth>("HomeworkCheckMonth").implement({
+  description: "An earlier month that still holds unchecked homework copies — a collapsed header under the board.",
+  fields: (t) => ({
+    monthKey: t.exposeString("monthKey"),
+    items: t.exposeInt("items"),
+    copies: t.exposeInt("copies"),
   }),
 });
 
@@ -323,6 +345,28 @@ builder.queryField("workBoardFor", (t) =>
       const users = await loadBoardUsers([args.userId]);
       return boardFor(users, args.fromKey, args.toKey);
     },
+  }),
+);
+
+builder.queryField("homeworkCheckMonths", (t) =>
+  t.field({
+    type: [HomeworkCheckMonthRef],
+    description:
+      "Months before the current one with homework copies still unchecked, newest first (counts only). " +
+      "Own board, or someone else's with tasks:assign.",
+    authScopes: { authenticated: true },
+    args: { userId: t.arg.string({ required: false }) },
+    resolve: async (_root, args, ctx) => homeworkCheckMonths([boardOwnerId(ctx, args.userId)]),
+  }),
+);
+
+builder.queryField("homeworkCheckCardsForMonth", (t) =>
+  t.field({
+    type: [WorkCardRef],
+    description: "One earlier month's homework-check cards (monthKey YYYY-MM), loaded when its header is opened.",
+    authScopes: { authenticated: true },
+    args: { monthKey: t.arg.string({ required: true }), userId: t.arg.string({ required: false }) },
+    resolve: async (_root, args, ctx) => homeworkCheckCardsForMonth([boardOwnerId(ctx, args.userId)], args.monthKey),
   }),
 );
 
