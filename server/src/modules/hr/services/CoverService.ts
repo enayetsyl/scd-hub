@@ -184,23 +184,51 @@ export async function userIdsOnLeave(
  *  until an admin rejects it) for some OTHER slot at this exact (date, period)?
  *  Shared by proposeCover and decideCoverSlot so a pending proposal blocks a
  *  second teacher from proposing/assigning the SAME colleague for the SAME
- *  meeting until the first proposal is rejected (D-#268 live-testing find). */
+ *  meeting until the first proposal is rejected (D-#268 live-testing find).
+ *
+ *  Only a slot whose LEAVE is still live counts (owner report 2026-10-04): a
+ *  cancelled/rejected leave used to leave its proposed slots "proposed" forever, so
+ *  the teacher proposed on it could never be assigned that period again — Jasi was
+ *  blocked from covering Nursery P1 by a cancelled duplicate of the very leave she
+ *  was being assigned to. */
 async function findConflictingCoverSlot(
   excludeSlotId: Types.ObjectId,
   teacherId: string,
   dateKey: string,
   periodNumber: number,
 ): Promise<boolean> {
-  const conflict = await StaffCoverSlot.findOne({
+  const reserved = (await StaffCoverSlot.find({
     _id: { $ne: excludeSlotId },
     $or: [{ proposedCoverTeacherId: new Types.ObjectId(teacherId) }, { finalCoverTeacherUserId: new Types.ObjectId(teacherId) }],
     dateKey,
     periodNumber,
     status: { $in: ["proposed", "approved"] },
   })
+    .select("leaveApplicationId")
+    .lean()) as unknown as Array<{ leaveApplicationId: Types.ObjectId }>;
+  if (reserved.length === 0) return false;
+  const live = (await StaffLeaveApplication.find({
+    _id: { $in: reserved.map((s) => s.leaveApplicationId) },
+    status: { $in: ["applied", "approved"] },
+  })
     .select("_id")
-    .lean();
-  return !!conflict;
+    .lean()) as unknown as Array<{ _id: Types.ObjectId }>;
+  return live.length > 0;
+}
+
+/** A cancelled/rejected leave's slots must not take a new reservation — the class
+ *  is no longer losing its teacher, and a proposal there would hold the cover
+ *  teacher's period for an absence that is not happening (owner report 2026-10-04). */
+async function assertLeaveLive(slot: IStaffCoverSlot): Promise<void> {
+  const live = (await StaffLeaveApplication.find({
+    _id: slot.leaveApplicationId,
+    status: { $in: ["applied", "approved"] },
+  })
+    .select("_id")
+    .lean()) as unknown as Array<{ _id: Types.ObjectId }>;
+  if (live.length === 0) {
+    throw new LeaveError("This leave was cancelled or rejected — its classes no longer need cover");
+  }
 }
 
 /** Propose a covering teacher for a slot (the legwork — D-#22). Does NOT grant
@@ -215,6 +243,7 @@ export async function proposeCover(
   const slot = await StaffCoverSlot.findById(slotId);
   if (!slot) throw new LeaveError("Cover slot not found");
   if (slot.status === "approved") throw new LeaveError("Slot already approved — revoke before re-proposing");
+  await assertLeaveLive(slot);
   if (await findConflictingCoverSlot(slot._id, coverTeacherUserId, slot.dateKey, slot.periodNumber)) {
     throw new LeaveError(
       `This teacher is already proposed/assigned to cover another class at ${slot.dateKey} period ${slot.periodNumber} — ` +
@@ -289,6 +318,7 @@ export async function decideCoverSlot(
   // Re-approving/re-overriding an already-approved slot is out of scope this build
   // (D-#268) — reject-then-reassign is the existing path for swapping an approved cover.
   if (slot.status === "approved") return slot;
+  await assertLeaveLive(slot);
 
   // A teacher can only physically be in one place at a given (date, period) — reject
   // approving this slot for them if they already hold an approved cover OR a pending
@@ -490,10 +520,17 @@ onRoutineTeachersChanged(async ({ teacherIds, from, actorId }) => {
   for (const t of teacherIds) await reconcileCoversForTeacher(t, localKey(from), actorId);
 });
 
+/**
+ * Release every cover a cancelled/rejected leave was holding. Both statuses that
+ * reserve a teacher are released, not just "approved" (owner report 2026-10-04):
+ * a PROPOSED slot left behind kept its teacher reserved for that period forever,
+ * and an approved slot's RoutineSubstitution kept naming the cover teacher on the
+ * routine — so a re-applied leave for the same day could not use either teacher.
+ */
 export async function revokeCoversForLeave(leaveApplicationId: string, actorId: string): Promise<number> {
   const slots = await StaffCoverSlot.find({
     leaveApplicationId: new Types.ObjectId(leaveApplicationId),
-    status: "approved",
+    status: { $in: ["proposed", "approved"] },
   });
   let revoked = 0;
   for (const slot of slots) {
@@ -501,11 +538,45 @@ export async function revokeCoversForLeave(leaveApplicationId: string, actorId: 
       await revokeProxy(slot.proxyGrantId.toString(), actorId);
       revoked++;
     }
+    if (slot.status === "approved" && slot.finalCoverTeacherUserId) {
+      await dropSubstitutionUnlessStillCovered(slot);
+    }
     slot.proxyGrantId = null;
     slot.status = "needs_cover";
     await slot.save();
   }
   return revoked;
+}
+
+/** Delete an approved slot's RoutineSubstitution (as decideCoverSlot's reject does) —
+ *  unless another LIVE leave's approved slot puts the same teacher on the same meeting.
+ *  The substitution is keyed (routine slot, date, cover teacher), so when a leave is
+ *  re-applied for the same day and approved with the same cover, both slots share one
+ *  row; cancelling the old duplicate must not take the live cover off the routine. */
+async function dropSubstitutionUnlessStillCovered(slot: IStaffCoverSlot): Promise<void> {
+  const others = (await StaffCoverSlot.find({
+    _id: { $ne: slot._id },
+    routineSlotId: slot.routineSlotId,
+    dateKey: slot.dateKey,
+    finalCoverTeacherUserId: slot.finalCoverTeacherUserId,
+    status: "approved",
+  })
+    .select("leaveApplicationId")
+    .lean()) as unknown as Array<{ leaveApplicationId: Types.ObjectId }>;
+  if (others.length > 0) {
+    const live = (await StaffLeaveApplication.find({
+      _id: { $in: others.map((s) => s.leaveApplicationId) },
+      status: { $in: ["applied", "approved"] },
+    })
+      .select("_id")
+      .lean()) as unknown as Array<{ _id: Types.ObjectId }>;
+    if (live.length > 0) return;
+  }
+  await RoutineSubstitution.deleteOne({
+    slotId: slot.routineSlotId,
+    date: parseDateKey(slot.dateKey),
+    coverTeacherId: slot.finalCoverTeacherUserId,
+  });
 }
 
 export async function coverSlotsForLeave(leaveApplicationId: string): Promise<IStaffCoverSlot[]> {

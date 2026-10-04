@@ -776,6 +776,11 @@ describe("cover fan-out + proxy seam (D-#20/#22)", () => {
     };
     slot.save = jest.fn().mockResolvedValue(slot);
     mockSlotFindById.mockResolvedValue(slot);
+    // The slot's own leave is live (looked up by _id); nobody is on leave that day.
+    mockLeaveFind.mockImplementation((q: Record<string, unknown>) =>
+      leanChain("_id" in q ? [{ _id: slot.leaveApplicationId }] : []),
+    );
+    mockSlotFind.mockReturnValue(leanChain([])); // no conflicting cover slot
     const grantId = oid().toString();
     mockAssignProxy.mockResolvedValue(grantId);
 
