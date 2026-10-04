@@ -64,6 +64,27 @@ function groupPermissions(): { resource: string; perms: string[] }[] {
 
 const MODULE_GROUPS = groupPermissions();
 
+/**
+ * Owner ask 2026-10-04: features gated on the Principal/Office TEMPLATE (server
+ * `isAdminStaff`/`actsAs`, client `isRole`) rather than a permission, so they never
+ * appear in the permission list below — the Principal could not see them here at
+ * all. Listed so this screen is the one place that says who has them; the switch is
+ * the Office template chip. Keep in step with the gates: the Admin card
+ * (AdminHomeScreen `canWorkClaims`) and the Reports group (AppTabs `canReports`).
+ */
+type LabelKey = keyof typeof STR;
+const OFFICE_TEMPLATE_FEATURES: { labelKey: LabelKey; leaves?: LabelKey[] }[] = [
+  { labelKey: "wcQueueTitle" },
+  {
+    labelKey: "tabReports",
+    leaves: [
+      "clTitle", "alReportTitle", "ctReportTitle", "attReportTitle", "rtNoteReportTitle",
+      "rptHwDeclarePending", "rptHwIssuePending", "rptAsDeclarePending", "rptAsDeliverPending",
+      "rptAsPrintPending", "rrTitle", "hlrTitle", "hwwdTitle",
+    ],
+  },
+];
+
 export default function AccessControlEditScreen({ route }: Props): React.ReactElement {
   const { userId, name } = route.params;
   const [{ data, fetching, error }, refetch] = useQuery({
@@ -102,6 +123,8 @@ export default function AccessControlEditScreen({ route }: Props): React.ReactEl
   const effective = new Set(access.effectivePermissions);
   const granted = new Set(access.grantedPermissions);
   const revoked = new Set(access.revokedPermissions);
+  // The server's isAdminStaff, read off this user's templates (primary + additional).
+  const hasOfficeTemplate = role === "PRINCIPAL" || role === "OFFICE" || additional.has("OFFICE");
 
   // The template baseline = union of permissionsForRole over [role, ...additional].
   const baseline = new Set<string>();
@@ -189,6 +212,23 @@ export default function AccessControlEditScreen({ route }: Props): React.ReactEl
           <Chip key={t} label={t} selected={additional.has(t)} onPress={() => toggleTemplate(t)} />
         ))}
       </ChipRow>
+
+      <Body style={{ fontWeight: "700", marginTop: space(3) }}>{STR.acTplFeaturesTitle}</Body>
+      <Muted style={{ marginBottom: space(1) }}>{STR.acTplFeaturesHint}</Muted>
+      {OFFICE_TEMPLATE_FEATURES.map((f) => (
+        <Card key={f.labelKey}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
+            <View style={{ flex: 1 }}>
+              <Body style={{ fontWeight: "700" }}>{STR[f.labelKey]}</Body>
+              {f.leaves ? <Muted style={{ marginTop: 2 }}>{f.leaves.map((k) => STR[k]).join(" · ")}</Muted> : null}
+            </View>
+            <Badge
+              text={hasOfficeTemplate ? STR.acTplHas : STR.acTplHasNot}
+              tone={hasOfficeTemplate ? "ok" : "muted"}
+            />
+          </View>
+        </Card>
+      ))}
 
       <Divider />
 
