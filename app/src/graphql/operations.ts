@@ -8853,13 +8853,15 @@ export interface WorkClaimRowT {
   checkpoint: string;
   checkpointLabelBn: string;
   nudgedToday: boolean;
+  /** D-#710: school days from the action day through today (0 = not yet due). */
+  pendingSchoolDays: number;
 }
 
 const WORK_CLAIM_ROW_FIELDS = `
   claimId tracker workId subject
   studentId studentNameBn sectionId sectionNameBn
   teacherId teacherName claimedAt actionDateKey dueDateKey note
-  status statusLabelBn checkpoint checkpointLabelBn nudgedToday
+  status statusLabelBn checkpoint checkpointLabelBn nudgedToday pendingSchoolDays
 `;
 
 export const MY_WORK_CLAIMS_QUERY = gql<{ myWorkClaims: WorkClaimRowT[] }, Record<string, never>>`
@@ -8882,6 +8884,31 @@ export const REJECT_WORK_CLAIM = gql<
     rejectWorkClaim(claimId: $claimId, reason: $reason, note: $note) {
       ${WORK_CLAIM_ROW_FIELDS}
     }
+  }
+`;
+
+/** D-#710: the people the Principal added to the 10:30 digest. */
+export interface WorkClaimDigestRecipientT {
+  userId: string;
+  name: string;
+  role: string;
+}
+
+export const WORK_CLAIM_DIGEST_RECIPIENTS_QUERY = gql<
+  { workClaimDigestRecipients: WorkClaimDigestRecipientT[] },
+  Record<string, never>
+>`
+  query WorkClaimDigestRecipients {
+    workClaimDigestRecipients { userId name role }
+  }
+`;
+
+export const SET_WORK_CLAIM_DIGEST_RECIPIENTS = gql<
+  { setWorkClaimDigestRecipients: WorkClaimDigestRecipientT[] },
+  { userIds: string[] }
+>`
+  mutation SetWorkClaimDigestRecipients($userIds: [String!]!) {
+    setWorkClaimDigestRecipients(userIds: $userIds) { userId name role }
   }
 `;
 

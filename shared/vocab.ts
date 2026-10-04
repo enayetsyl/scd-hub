@@ -4575,12 +4575,14 @@ export const WORK_CLAIM_WINDOW_SCHOOL_DAYS = 7;
  *  attempt 2 the single retry. A parent who still disagrees is a conversation. */
 export const WORK_CLAIM_MAX_ATTEMPTS = 2;
 
-/** Same-day escalation fire points, minutes-from-midnight (D-#554, owner ruling
- *  2026-08-25). The Office is told at 11:30 and the Principal at 13:00 on the
- *  claim's ACTION DAY if the teacher still has not marked the work. Both ride
+/** The ONE daily escalation digest, minutes-from-midnight (D-#710, owner ruling
+ *  2026-10-04; replaces D-#554's 11:30 Office + 13:00 Principal rungs). At 10:30
+ *  every Principal and Office user, plus the Principal-chosen extra recipients, is
+ *  told how many claims whose ACTION DAY has arrived the teachers still have not
+ *  marked — broken down per teacher with school days pending. A claim filed before
+ *  10:30 on a school day is acted on that day; later, the next school day. Rides
  *  the existing 60s ticker, which already fires at arbitrary HH:MM. */
-export const WORK_CLAIM_OFFICE_RUNG_MIN = 11 * 60 + 30;
-export const WORK_CLAIM_PRINCIPAL_RUNG_MIN = 13 * 60;
+export const WORK_CLAIM_DIGEST_MIN = 10 * 60 + 30;
 
 /** The same-day floor, minutes-from-midnight (D-#683, owner ruling 2026-09-16).
  *

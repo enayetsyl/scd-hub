@@ -28,6 +28,7 @@ import { RoutineSlot } from "../../routine/models/RoutineSlot";
 import { SubjectGroupMembership } from "../../routine/models/SubjectGroupMembership";
 import { dateKeyOf } from "../../attendance/dates";
 import { actingAsFilter } from "../../foundation/services/RoleScope";
+import { bnNum } from "../../../lib/bnNum";
 
 type IdLike = { toString(): string };
 
@@ -1791,37 +1792,45 @@ export async function emitWorkClaimResolved(claim: {
   });
 }
 
+/** How many teachers the digest names before folding the rest into "+N জন". */
+const WORK_CLAIM_DIGEST_TEACHERS_SHOWN = 6;
+
 /**
- * The 11:30 / 13:00 rung (D-#554). ONE digest row per recipient per rung per day,
- * carrying the COUNT — never one row per claim. Recipients are every active user
- * in the rung's role.
+ * The 10:30 digest (D-#710; was D-#554's 11:30 / 13:00 rungs). ONE row per
+ * recipient per day carrying the COUNT plus a per-teacher breakdown — who holds how
+ * many, and how many school days the oldest has waited — never one row per claim.
+ * The caller resolves the recipients (every Principal + Office user + the
+ * Principal-named extras).
  */
 export async function emitWorkClaimEscalation(
-  role: "OFFICE" | "PRINCIPAL",
+  recipientIds: readonly string[],
   openCount: number,
+  byTeacher: ReadonlyArray<{ teacherName: string; count: number; oldestDays: number }>,
   at: Date,
 ): Promise<number> {
   let sent = 0;
   await bestEffort("work claim escalation", async () => {
     if (openCount <= 0) return;
-    const recipients = (await User.find(actingAsFilter([role])).select("_id").lean()) as unknown as Array<{
-      _id: IdLike;
-    }>;
     const dateKey = dateKeyOf(at);
-    const rung = role === "OFFICE" ? "1130" : "1300";
+    const rung = "1030";
     const titleBn = "অভিভাবকের জানানো নিষ্পন্ন হয়নি";
-    const bodyBn =
-      role === "OFFICE"
-        ? `${openCount} টি জানানো এখনো শিক্ষক নিষ্পন্ন করেননি। তালিকা দেখে মনে করিয়ে দিন।`
-        : `${openCount} টি জানানো দুপুর ১টা পর্যন্ত নিষ্পন্ন হয়নি।`;
-    for (const r of recipients) {
+    const shown = byTeacher.slice(0, WORK_CLAIM_DIGEST_TEACHERS_SHOWN);
+    const rest = byTeacher.length - shown.length;
+    const lines = shown.map(
+      (t) => `${t.teacherName || "—"} ${bnNum(t.count)}টি (${bnNum(t.oldestDays)} দিন)`,
+    );
+    const breakdown = lines.length
+      ? ` শিক্ষকভিত্তিক: ${lines.join(", ")}${rest > 0 ? `, আরও ${bnNum(rest)} জন` : ""}।`
+      : "";
+    const bodyBn = `${bnNum(openCount)}টি জানানো সকাল ১০:৩০ পর্যন্ত নিষ্পন্ন হয়নি।${breakdown}`;
+    for (const id of recipientIds) {
       await emit({
-        recipientUserId: r._id.toString(),
+        recipientUserId: id,
         kind: "WORK_CLAIM_ESCALATED",
         titleBn,
         bodyBn,
         refs: { date: dateKey, stage: rung },
-        dedupeKey: dedupeKeys.workClaimEscalated(dateKey, rung, r._id.toString()),
+        dedupeKey: dedupeKeys.workClaimEscalated(dateKey, rung, id),
       });
       sent += 1;
     }

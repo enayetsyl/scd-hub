@@ -217,10 +217,13 @@ export function notificationTarget(
     // use this kind. আজ carries the claim card, which is where they act.
     case "WORK_CLAIM_FILED":
       return { tab: "HomeTab", screen: "Today" };
-    // The 11:30 / 13:00 digest — Office and Principal both land on the queue the
-    // rung is counting (and which OFFICE reaches without any tracker permission).
+    // The 10:30 digest (D-#710) — Office and Principal land on the queue it counts
+    // (which OFFICE reaches without any tracker permission). A TEACHER the Principal
+    // added to the digest has no Admin tab, so the same screen sits in their Home stack.
     case "WORK_CLAIM_ESCALATED":
-      return { tab: "AdminTab", screen: "WorkClaimQueue" };
+      return role === "PRINCIPAL" || role === "OFFICE"
+        ? { tab: "AdminTab", screen: "WorkClaimQueue" }
+        : { tab: "HomeTab", screen: "WorkClaimQueue" };
     // Guardian-addressed: the answer to what they filed. The tracker decides the
     // list — without it a homework answer would open the assignment tab.
     case "WORK_CLAIM_RESOLVED":

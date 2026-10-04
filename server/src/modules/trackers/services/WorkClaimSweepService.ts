@@ -1,22 +1,22 @@
 /**
- * WorkClaimSweepService (GC-5, D-#554/#557) — the same-day escalation rungs and
- * the expiry sweep, driven by the existing 60-second ticker.
+ * WorkClaimSweepService (GC-5, D-#554/#557, D-#710) — the daily escalation digest
+ * and the expiry sweep, driven by the existing 60-second ticker.
  *
- *   11:30 → every active Office user
- *   13:00 → every active Principal user
+ *   10:30 → every active Principal + Office user, plus the Principal-named extras
  *
- * Each rung sends ONE digest row per recipient per day carrying the COUNT, never
- * one row per claim. That shape is what makes an hours-scale ladder survivable:
- * at 91 students, per-claim rows would make the Principal's inbox unreadable
- * inside a week, and an unreadable inbox is an ignored one.
+ * (D-#710 replaced D-#554's 11:30 Office / 13:00 Principal rungs with this one.)
+ * It sends ONE digest row per recipient per day carrying the COUNT and a per-teacher
+ * breakdown (count + school days the oldest has waited), never one row per claim:
+ * at 91 students, per-claim rows would make an inbox unreadable inside a week, and
+ * an unreadable inbox is an ignored one.
  *
- * A claim is due at a rung when its STORED `actionDateKey` (D-#557) has arrived —
+ * A claim is in the digest when its STORED `actionDateKey` (D-#557) has arrived —
  * today or earlier. "Or earlier" matters: a claim nobody answered yesterday
- * re-appears in today's 11:30 and 13:00 rows, which IS the chasing behaviour.
+ * re-appears in today's digest with one more day on it, which IS the chasing.
  *
- * Idempotent twice over: `officeNotifiedAt` / `principalNotifiedAt` are stamped
- * once per claim, and each emitted row carries a (date, rung, recipient) dedupe
- * key. A restart mid-rung re-runs safely.
+ * Idempotent twice over: `principalNotifiedAt` ("management told") is stamped once
+ * per claim, and each emitted row carries a (date, rung, recipient) dedupe key. A
+ * restart mid-digest re-runs safely.
  */
 import { WORK_CLAIM_WINDOW_SCHOOL_DAYS } from "@scd/shared";
 import { GuardianWorkClaim } from "../models/GuardianWorkClaim";
@@ -24,27 +24,24 @@ import { emitWorkClaimEscalation } from "../../notifications/services/emitters";
 import { writeAudit } from "../../platform/services/AuditService";
 import { SYSTEM_ACTOR_ID } from "./ClaimReassignService";
 import { dateKeyOf } from "../../attendance/dates";
+import { digestRecipientIds, pendingByTeacher } from "./WorkClaimDigestService";
 
 export interface WorkClaimRungResult {
-  /** Claims that were open and due at this rung. */
+  /** Claims that were open and due at the digest. */
   openCount: number;
   /** Inbox rows written (one per recipient). */
   notified: number;
 }
 
 /**
- * Run one escalation rung. `role` picks which stamp guards it, so re-running the
- * 11:30 rung at 11:31 finds nothing new to stamp and emits nothing new.
+ * Run the 10:30 digest. Re-running it at 10:31 emits nothing new: every row is
+ * deduped per (date, recipient), and the stamp is only ever set once.
  */
-export async function runWorkClaimRung(
-  role: "OFFICE" | "PRINCIPAL",
-  at: Date = new Date(),
-): Promise<WorkClaimRungResult> {
+export async function runWorkClaimDigest(at: Date = new Date()): Promise<WorkClaimRungResult> {
   const todayKey = dateKeyOf(at);
-  const stampField = role === "OFFICE" ? "officeNotifiedAt" : "principalNotifiedAt";
 
   // Open claims whose action day has ARRIVED (today or earlier). A claim filed
-  // this afternoon carries tomorrow's action day and is correctly not here yet.
+  // after 10:30 carries the next school day's action day and is not here yet.
   const due = await GuardianWorkClaim.find({
     status: "PENDING",
     actionDateKey: { $lte: todayKey },
@@ -52,13 +49,18 @@ export async function runWorkClaimRung(
 
   if (due.length === 0) return { openCount: 0, notified: 0 };
 
-  const notified = await emitWorkClaimEscalation(role, due.length, at);
+  const byTeacher = await pendingByTeacher(
+    due.map((c) => ({ teacherId: c.teacherId, actionDateKey: c.actionDateKey })),
+    at,
+  );
+  const recipients = await digestRecipientIds();
+  const notified = await emitWorkClaimEscalation(recipients, due.length, byTeacher, at);
 
   // Stamp AFTER the emit: a failed emit leaves the claims unstamped, so the next
-  // tick retries rather than silently swallowing the rung.
+  // tick retries rather than silently swallowing the digest.
   for (const claim of due) {
-    if (!claim.get(stampField)) {
-      claim.set(stampField, at);
+    if (!claim.get("principalNotifiedAt")) {
+      claim.set("principalNotifiedAt", at);
       await claim.save();
     }
   }

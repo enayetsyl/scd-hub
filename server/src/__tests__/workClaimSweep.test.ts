@@ -1,21 +1,25 @@
 /**
- * GC-5 tests — the same-day escalation rungs and the expiry sweep (D-#554/#557).
+ * GC-5 / D-#710 tests — the 10:30 escalation digest and the expiry sweep.
  *
  * What must hold:
- *   - a rung reads the STORED action day, so a claim filed this afternoon is not
- *     escalated this afternoon
- *   - a claim still open the next day appears in that day's rungs again
- *   - the rung is ONE digest per recipient carrying the count, not one per claim
- *   - stamping is idempotent, so a restart mid-rung re-emits nothing new
+ *   - the digest reads the STORED action day, so a claim filed after 10:30 is not
+ *     escalated the same day
+ *   - a claim still open the next day appears in that day's digest again
+ *   - ONE digest per recipient carrying the count + per-teacher breakdown, never
+ *     one per claim; recipients come from the digest service (Principal + Office +
+ *     the Principal-named extras)
+ *   - stamping is idempotent, so a restart mid-digest re-emits nothing new
  *   - a failed emit leaves claims UNSTAMPED, so the next tick retries
  *
- * DB-free: the claim model, the emitter and the audit log are mocked.
+ * DB-free: the claim model, the digest service, the emitter and the audit log are mocked.
  */
 import mongoose from "mongoose";
 
 const mockFind = jest.fn();
 const mockEmitEsc = jest.fn();
 const mockAudit = jest.fn();
+const mockRecipients = jest.fn();
+const mockByTeacher = jest.fn();
 
 jest.mock("../modules/trackers/models/GuardianWorkClaim", () => ({
   GuardianWorkClaim: { find: (q: unknown) => mockFind(q) },
@@ -26,9 +30,13 @@ jest.mock("../modules/notifications/services/emitters", () => ({
 jest.mock("../modules/platform/services/AuditService", () => ({
   writeAudit: (p: unknown) => mockAudit(p),
 }));
+jest.mock("../modules/trackers/services/WorkClaimDigestService", () => ({
+  digestRecipientIds: () => mockRecipients(),
+  pendingByTeacher: (...a: unknown[]) => mockByTeacher(...a),
+}));
 
 import {
-  runWorkClaimRung,
+  runWorkClaimDigest,
   expireStaleWorkClaims,
 } from "../modules/trackers/services/WorkClaimSweepService";
 
@@ -57,86 +65,79 @@ function claim(over: Record<string, unknown> = {}) {
   };
 }
 
+const RECIPIENTS = ["principal", "akmol", "akter", "tazkir"];
+const BREAKDOWN = [{ teacherId: "t1", teacherName: "Tamany", count: 2, oldestDays: 3 }];
+
 beforeEach(() => {
   jest.clearAllMocks();
-  mockEmitEsc.mockResolvedValue(3);
+  mockEmitEsc.mockResolvedValue(4);
   mockAudit.mockResolvedValue(undefined);
+  mockRecipients.mockResolvedValue(RECIPIENTS);
+  mockByTeacher.mockResolvedValue(BREAKDOWN);
 });
 
-describe("runWorkClaimRung — the 11:30 / 13:00 ladder", () => {
-  const AT = new Date("2026-08-25T11:30:00");
+describe("runWorkClaimDigest — the one 10:30 digest (D-#710)", () => {
+  const AT = new Date("2026-08-25T10:30:00");
 
   test("asks only for OPEN claims whose action day has ARRIVED", async () => {
     mockFind.mockResolvedValue([]);
-    await runWorkClaimRung("OFFICE", AT);
+    await runWorkClaimDigest(AT);
     expect(mockFind).toHaveBeenCalledWith({
       status: "PENDING",
       actionDateKey: { $lte: "2026-08-25" },
     });
   });
 
-  test("a claim scheduled for TOMORROW is not part of today's query", async () => {
-    // The filter is $lte today, so tomorrow's action day cannot match — this is
-    // the D-#557 guarantee that an afternoon filing is not escalated the same day.
+  test("nothing open is a cheap no-op — no recipients looked up, nothing emitted", async () => {
     mockFind.mockResolvedValue([]);
-    const res = await runWorkClaimRung("OFFICE", AT);
-    expect(res.openCount).toBe(0);
+    const res = await runWorkClaimDigest(AT);
+    expect(res).toEqual({ openCount: 0, notified: 0 });
     expect(mockEmitEsc).not.toHaveBeenCalled();
+    expect(mockRecipients).not.toHaveBeenCalled();
   });
 
-  test("ONE digest carrying the COUNT — not one emit per claim", async () => {
-    mockFind.mockResolvedValue([claim(), claim(), claim()]);
-    const res = await runWorkClaimRung("OFFICE", AT);
+  test("ONE digest to every recipient, carrying the COUNT and the per-teacher breakdown", async () => {
+    const claims = [claim(), claim(), claim()];
+    mockFind.mockResolvedValue(claims);
+    const res = await runWorkClaimDigest(AT);
     expect(mockEmitEsc).toHaveBeenCalledTimes(1);
-    expect(mockEmitEsc).toHaveBeenCalledWith("OFFICE", 3, AT);
-    expect(res.openCount).toBe(3);
+    expect(mockEmitEsc).toHaveBeenCalledWith(RECIPIENTS, 3, BREAKDOWN, AT);
+    // The breakdown is computed from exactly the due claims' teacher + action day.
+    expect(mockByTeacher.mock.calls[0][0]).toEqual(
+      claims.map((c) => ({ teacherId: c._store.teacherId, actionDateKey: c._store.actionDateKey })),
+    );
+    expect(res).toEqual({ openCount: 3, notified: 4 });
   });
 
-  test("the Office rung stamps officeNotifiedAt, not the Principal's", async () => {
+  test("stamps principalNotifiedAt — the queue then reads '১০:৩০ পার'", async () => {
     const c = claim();
     mockFind.mockResolvedValue([c]);
-    await runWorkClaimRung("OFFICE", AT);
-    expect(c._store.officeNotifiedAt).toEqual(AT);
-    expect(c._store.principalNotifiedAt).toBeUndefined();
-  });
-
-  test("the Principal rung stamps its own field", async () => {
-    const c = claim();
-    mockFind.mockResolvedValue([c]);
-    await runWorkClaimRung("PRINCIPAL", new Date("2026-08-25T13:00:00"));
-    expect(c._store.principalNotifiedAt).toBeTruthy();
+    await runWorkClaimDigest(AT);
+    expect(c._store.principalNotifiedAt).toEqual(AT);
     expect(c._store.officeNotifiedAt).toBeUndefined();
   });
 
   test("an already-stamped claim is not re-saved — a restart re-emits nothing new", async () => {
-    const c = claim({ officeNotifiedAt: new Date("2026-08-25T11:30:00") });
+    const c = claim({ principalNotifiedAt: new Date("2026-08-24T10:30:00") });
     mockFind.mockResolvedValue([c]);
-    await runWorkClaimRung("OFFICE", AT);
+    await runWorkClaimDigest(AT);
     expect(c.save).not.toHaveBeenCalled();
   });
 
   test("a claim open from YESTERDAY appears again today — that is the chasing", async () => {
-    const stale = claim({ actionDateKey: "2026-08-24" });
-    mockFind.mockResolvedValue([stale]);
-    const res = await runWorkClaimRung("OFFICE", AT);
+    mockFind.mockResolvedValue([claim({ actionDateKey: "2026-08-24" })]);
+    const res = await runWorkClaimDigest(AT);
     expect(res.openCount).toBe(1);
-    expect(mockEmitEsc).toHaveBeenCalledWith("OFFICE", 1, AT);
+    expect(mockEmitEsc).toHaveBeenCalledWith(RECIPIENTS, 1, BREAKDOWN, AT);
   });
 
   test("a failed emit leaves claims UNSTAMPED so the next tick retries", async () => {
     const c = claim();
     mockFind.mockResolvedValue([c]);
     mockEmitEsc.mockRejectedValue(new Error("inbox down"));
-    await expect(runWorkClaimRung("OFFICE", AT)).rejects.toThrow();
-    expect(c._store.officeNotifiedAt).toBeUndefined();
+    await expect(runWorkClaimDigest(AT)).rejects.toThrow();
+    expect(c._store.principalNotifiedAt).toBeUndefined();
     expect(c.save).not.toHaveBeenCalled();
-  });
-
-  test("nothing open is a cheap no-op", async () => {
-    mockFind.mockResolvedValue([]);
-    const res = await runWorkClaimRung("PRINCIPAL", AT);
-    expect(res).toEqual({ openCount: 0, notified: 0 });
-    expect(mockEmitEsc).not.toHaveBeenCalled();
   });
 });
 

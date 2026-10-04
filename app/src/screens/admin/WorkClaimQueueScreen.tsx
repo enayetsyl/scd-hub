@@ -2,11 +2,12 @@
  * WorkClaimQueueScreen (GC-5, D-#554) — "অভিভাবকের জানানো — অনিষ্পন্ন".
  *
  * Every unresolved guardian claim, visible to Office and Principal from the
- * instant it is filed — being TOLD is the laddered thing (11:30 / 13:00), being
- * able to SEE is not.
+ * instant it is filed — being TOLD is the 10:30 digest (D-#710), being able to
+ * SEE is not. The people the Principal adds to the digest can open it too.
  *
- * Rows sort by CHECKPOINT rather than by age, because the same-day ladder made
- * "how many days old" the wrong question. And the only action here is the nudge:
+ * D-#710 (owner ruling 2026-10-04) made "how many days at the teacher's hand" the
+ * question again: rows sort longest-waiting first, each shows its school days, and
+ * a per-teacher summary heads the list. And the only action here is the nudge:
  * OFFICE holds no tracker permission, so it can remind the teacher and nothing
  * else. The footer says so out loud, so nobody hunts for a missing button.
  */
@@ -15,6 +16,8 @@ import { ScrollView, View, RefreshControl } from "react-native";
 import { useMutation, useQuery } from "urql";
 import { Screen, H1, Body, Muted, Card, Badge, Button, EmptyState, Notice, Divider } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
+import WorkClaimDigestRecipientsCard from "../../components/WorkClaimDigestRecipientsCard";
+import { useAuth } from "../../auth/AuthContext";
 import { space } from "../../theme/tokens";
 import { STR, bnNum } from "../../lib/labels";
 import { usePullRefresh } from "../../lib/useRefresh";
@@ -33,6 +36,36 @@ function toneFor(checkpoint: string): "danger" | "warn" | "info" | "muted" {
   return "muted";
 }
 
+/** How urgent a wait is: 3+ school days is overdue, 2 is getting there. */
+function toneForDays(days: number): "danger" | "warn" | "muted" {
+  if (days >= 3) return "danger";
+  if (days >= 2) return "warn";
+  return "muted";
+}
+
+const daysText = (n: number): string => `${bnNum(n)} ${STR.wcDaysUnit}`;
+
+interface TeacherSummary {
+  teacherId: string;
+  teacherName: string;
+  count: number;
+  oldestDays: number;
+}
+
+/** Per teacher: how many open claims, and how long the oldest has waited. */
+function summarize(rows: WorkClaimRowT[]): TeacherSummary[] {
+  const by = new Map<string, TeacherSummary>();
+  for (const r of rows) {
+    const cur = by.get(r.teacherId) ?? { teacherId: r.teacherId, teacherName: r.teacherName, count: 0, oldestDays: 0 };
+    cur.count += 1;
+    cur.oldestDays = Math.max(cur.oldestDays, r.pendingSchoolDays);
+    by.set(r.teacherId, cur);
+  }
+  return [...by.values()].sort(
+    (a, b) => b.oldestDays - a.oldestDays || b.count - a.count || a.teacherName.localeCompare(b.teacherName),
+  );
+}
+
 export default function WorkClaimQueueScreen(): React.ReactElement {
   const [q, refetch] = useQuery({ query: WORK_CLAIM_QUEUE_QUERY, variables: {} });
   const [, nudge] = useMutation(NUDGE_WORK_CLAIM);
@@ -44,6 +77,8 @@ export default function WorkClaimQueueScreen(): React.ReactElement {
   );
 
   const rows: WorkClaimRowT[] = q.data?.workClaimQueue ?? [];
+  const byTeacher = summarize(rows);
+  const { role } = useAuth();
 
   const onNudge = async (row: WorkClaimRowT) => {
     setBusyId(row.claimId);
@@ -73,6 +108,32 @@ export default function WorkClaimQueueScreen(): React.ReactElement {
           {rows.length === 0 ? (
             <EmptyState message={STR.wcQueueEmpty} />
           ) : (
+            <>
+            <Card>
+              <Body style={{ fontWeight: "700" }}>{STR.wcByTeacherTitle}</Body>
+              {byTeacher.map((t, i) => (
+                <View key={t.teacherId}>
+                  {i > 0 ? <Divider /> : null}
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                      gap: space(2),
+                      marginTop: space(2),
+                    }}
+                  >
+                    <Body style={{ flexShrink: 1 }}>
+                      {t.teacherName} · {bnNum(t.count)}{STR.wcCountUnit}
+                    </Body>
+                    <Badge text={`${STR.wcOldest} ${daysText(t.oldestDays)}`} tone={toneForDays(t.oldestDays)} />
+                  </View>
+                </View>
+              ))}
+              <Muted style={{ marginTop: space(2) }}>{STR.wcDaysPendingHint}</Muted>
+            </Card>
+
             <Card>
               {rows.map((r, i) => (
                 <View key={r.claimId}>
@@ -89,7 +150,12 @@ export default function WorkClaimQueueScreen(): React.ReactElement {
                       <Body style={{ fontWeight: "700", flexShrink: 1 }}>
                         {r.studentNameBn} · {r.sectionNameBn}
                       </Body>
-                      <Badge text={r.checkpointLabelBn} tone={toneFor(r.checkpoint)} />
+                      <View style={{ flexDirection: "row", gap: space(1), flexWrap: "wrap" }}>
+                        {r.pendingSchoolDays > 0 ? (
+                          <Badge text={daysText(r.pendingSchoolDays)} tone={toneForDays(r.pendingSchoolDays)} />
+                        ) : null}
+                        <Badge text={r.checkpointLabelBn} tone={toneFor(r.checkpoint)} />
+                      </View>
                     </View>
                     {/* D-#635: WHICH DAY's homework this is. Without it the row named
                         the work only by its id, and staff had to open the tracker to
@@ -119,8 +185,13 @@ export default function WorkClaimQueueScreen(): React.ReactElement {
                 <Muted style={{ marginTop: space(2) }}>{STR.wcOfficeFooter}</Muted>
               </View>
             </Card>
+            </>
           )}
         </QueryGate>
+
+        {/* D-#710: who else gets the 10:30 digest — the Principal decides. Outside the
+            QueryGate so it stays reachable when the queue is empty. */}
+        {role === "PRINCIPAL" ? <WorkClaimDigestRecipientsCard /> : null}
       </ScrollView>
     </Screen>
   );

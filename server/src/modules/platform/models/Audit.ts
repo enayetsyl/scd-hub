@@ -252,6 +252,7 @@ export type AuditEventKind =
   | "WORK_CLAIM_NUDGED"       // Office re-fired the teacher’s notification (Office cannot resolve)
   | "WORK_CLAIM_REASSIGNED"   // teaching changed hands; the open claim followed it (WC-7)
   | "WORK_CLAIM_EXPIRED"      // 7 school days with no answer — leaves the queue, stays here
+  | "WORK_CLAIM_DIGEST_RECIPIENTS_SET" // Principal changed who ELSE gets the 10:30 digest (D-#710)
   // "View as" (VA-1, D-#638). Deliberately NOT LOGIN_SUCCESS: the guardian-engagement
   // report counts guardian logins to find families that have gone quiet, and a Principal
   // checking a family's view is not that family showing up (G7).

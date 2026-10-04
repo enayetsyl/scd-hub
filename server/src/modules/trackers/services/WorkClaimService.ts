@@ -24,7 +24,7 @@ import {
   WORK_CLAIM_ELIGIBLE_STATES,
   WORK_CLAIM_MAX_ATTEMPTS,
   WORK_CLAIM_WINDOW_SCHOOL_DAYS,
-  WORK_CLAIM_OFFICE_RUNG_MIN,
+  WORK_CLAIM_DIGEST_MIN,
 } from "@scd/shared";
 import type { LifecycleState, WorkClaimRejectReason, WorkClaimTracker } from "@scd/shared";
 import { GuardianWorkClaim, type IGuardianWorkClaim } from "../models/GuardianWorkClaim";
@@ -72,15 +72,15 @@ async function isOpenDay(d: Date): Promise<boolean> {
 }
 
 /**
- * The first school day on which BOTH escalation rungs still lie ahead (D-#557).
+ * The first school day on which the 10:30 digest still lies ahead (D-#557, D-#710).
  *
- * Filed strictly before 11:30 on an open day → that day. Anything else — an
- * evening, 11:35, a Thursday afternoon, a Friday, a holiday — rolls to the next
- * open day. The rule exists to stop a 12:00 filing skipping the Office rung
- * entirely and reaching the Principal an hour later.
+ * Filed strictly before 10:30 on an open day → that day. Anything else — an
+ * evening, 10:35, a Thursday afternoon, a Friday, a holiday — rolls to the next
+ * open day, so a claim is never counted as "pending" on a day the digest had
+ * already gone out before it existed. Days pending count from this day.
  */
 export async function resolveActionDateKey(at: Date): Promise<string> {
-  if (minutesIntoDay(at) < WORK_CLAIM_OFFICE_RUNG_MIN && (await isOpenDay(at))) {
+  if (minutesIntoDay(at) < WORK_CLAIM_DIGEST_MIN && (await isOpenDay(at))) {
     return dateKeyOf(at);
   }
   for (let i = 1; i <= MAX_DAY_WALK; i++) {
