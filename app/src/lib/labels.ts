@@ -2691,6 +2691,8 @@ const STR_BN = {
   errGeneric: "সমস্যা হয়েছে। আবার চেষ্টা করুন।",
   errNetwork: "সার্ভারে সংযোগ করা যায়নি।",
   errOffline: "ইন্টারনেট সংযোগ নেই — সংযোগ দেখে আবার চেষ্টা করুন।",
+  fileOpenFailed: "ফাইলটি খোলা যায়নি — আবার চেষ্টা করুন।",
+  fileOpenTimeout: "ফাইলটি আসতে বেশি সময় লাগছে — ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করুন।",
   errForbiddenWrite: "এই শাখায় লেখার অনুমতি নেই।",
   errForbiddenRead: "এই কন্টেন্ট দেখার অনুমতি নেই।",
 
@@ -7305,6 +7307,8 @@ const STR_EN: StrTable = {
   errGeneric: "Something went wrong. Please try again.",
   errNetwork: "Could not connect to the server.",
   errOffline: "No internet connection — check your connection and try again.",
+  fileOpenFailed: "Could not open the file — please try again.",
+  fileOpenTimeout: "The file is taking too long to arrive — check your connection and try again.",
   errForbiddenWrite: "You don't have write permission for this section.",
   errForbiddenRead: "You don't have permission to view this content.",
 
