@@ -11,6 +11,8 @@ const mockSlotFindById = jest.fn();
 const mockSlotFind = jest.fn();
 const mockSlotFindOne = jest.fn();
 const mockLeaveFind = jest.fn();
+const mockConflictFind = jest.fn();
+const mockLeaveById = jest.fn();
 const mockUserFind = jest.fn();
 const mockClassFind = jest.fn();
 const mockSectionFind = jest.fn();
@@ -31,19 +33,24 @@ const findChain = (val: unknown) => {
   o.select = () => o;
   o.sort = () => o;
   o.lean = async () => val;
+  // revokeCoversForLeave awaits find() directly (it saves the docs) — no .lean().
+  o.then = (res: (v: unknown) => unknown, rej: (e: unknown) => unknown) => Promise.resolve(val).then(res, rej);
   return o;
 };
 
+// The cover-vs-cover conflict query (the only slot find with an `$or`) and the
+// leave-liveness lookups (a leave find by `_id`) get their own mocks, so the inbox
+// and userIdsOnLeave tests keep driving mockSlotFind / mockLeaveFind unchanged.
 jest.mock("../modules/hr/models/StaffCoverSlot", () => ({
   StaffCoverSlot: {
     findById: (id: unknown) => mockSlotFindById(id),
-    find: (q: unknown) => findChain(mockSlotFind(q)),
+    find: (q: Record<string, unknown>) => findChain(q && "$or" in q ? mockConflictFind(q) : mockSlotFind(q)),
     findOne: (q: unknown) => findChain(mockSlotFindOne(q)),
   },
 }));
 jest.mock("../modules/hr/models/StaffLeaveApplication", () => ({
   StaffLeaveApplication: {
-    find: (q: unknown) => findChain(mockLeaveFind(q)),
+    find: (q: Record<string, unknown>) => findChain(q && "_id" in q ? mockLeaveById(q) : mockLeaveFind(q)),
   },
 }));
 jest.mock("../modules/foundation/models/User", () => ({
@@ -88,14 +95,22 @@ jest.mock("../modules/notifications/services/emitters", () => ({
   emitHrCoverAssigned: (e: unknown) => mockEmitHrCoverAssigned(e),
 }));
 
-import { decideCoverSlot, needsCoverSlots, proposeCover, userIdsOnLeave } from "../modules/hr/services/CoverService";
+import {
+  decideCoverSlot,
+  needsCoverSlots,
+  proposeCover,
+  revokeCoversForLeave,
+  userIdsOnLeave,
+} from "../modules/hr/services/CoverService";
 import { LeaveError } from "../modules/hr/services/dates";
 
 const ACTOR = oid().toString();
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockSlotFindOne.mockResolvedValue(null); // no conflicting cover by default
+  mockSlotFindOne.mockResolvedValue(null);
+  mockConflictFind.mockResolvedValue([]); // no conflicting cover by default
+  mockLeaveById.mockResolvedValue([{ _id: oid() }]); // every leave looked up by id is live by default
   mockGroupFind.mockResolvedValue([]);
   mockLeaveFind.mockResolvedValue([]); // userIdsOnLeave → nobody on leave by default
   mockResolveUserForStaff.mockResolvedValue(null);
@@ -140,10 +155,10 @@ describe("proposeCover — blocks proposing an already-reserved teacher (D-#268)
     const teacher = oid();
     const slot = baseSlot({ status: "needs_cover", dateKey: "2026-06-14", periodNumber: 2 });
     mockSlotFindById.mockResolvedValue(slot);
-    mockSlotFindOne.mockResolvedValue({ _id: oid() }); // a conflicting proposed/approved slot exists
+    mockConflictFind.mockResolvedValue([{ leaveApplicationId: oid() }]); // a conflicting proposed/approved slot exists
 
     await expect(proposeCover(slot._id.toString(), teacher.toString(), ACTOR)).rejects.toThrow(LeaveError);
-    const queryArg = mockSlotFindOne.mock.calls[0][0] as Record<string, unknown>;
+    const queryArg = mockConflictFind.mock.calls[0][0] as Record<string, unknown>;
     expect(queryArg).toMatchObject({
       dateKey: "2026-06-14",
       periodNumber: 2,
@@ -156,7 +171,7 @@ describe("proposeCover — blocks proposing an already-reserved teacher (D-#268)
     const teacher = oid();
     const slot = baseSlot({ status: "needs_cover" });
     mockSlotFindById.mockResolvedValue(slot);
-    mockSlotFindOne.mockResolvedValue(null); // the earlier slot has since been rejected
+    mockConflictFind.mockResolvedValue([]); // the earlier slot has since been rejected
 
     const res = await proposeCover(slot._id.toString(), teacher.toString(), ACTOR);
     expect(res.status).toBe("proposed");
@@ -243,10 +258,10 @@ describe("decideCoverSlot — override + direct-assign (D-#268)", () => {
     const cover = oid();
     const slot = baseSlot({ proposedCoverTeacherId: cover, status: "proposed", dateKey: "2026-06-14", periodNumber: 2 });
     mockSlotFindById.mockResolvedValue(slot);
-    mockSlotFindOne.mockResolvedValue({ _id: oid() }); // a conflicting approved cover exists
+    mockConflictFind.mockResolvedValue([{ leaveApplicationId: oid() }]); // a conflicting approved cover exists
 
     await expect(decideCoverSlot(slot._id.toString(), true, ACTOR)).rejects.toThrow(LeaveError);
-    const queryArg = mockSlotFindOne.mock.calls[0][0] as Record<string, unknown>;
+    const queryArg = mockConflictFind.mock.calls[0][0] as Record<string, unknown>;
     expect(queryArg).toMatchObject({
       dateKey: "2026-06-14",
       periodNumber: 2,
@@ -259,7 +274,7 @@ describe("decideCoverSlot — override + direct-assign (D-#268)", () => {
     const cover = oid();
     const slot = baseSlot({ proposedCoverTeacherId: cover, status: "proposed", dateKey: "2026-06-14", periodNumber: 2 });
     mockSlotFindById.mockResolvedValue(slot);
-    mockSlotFindOne.mockResolvedValue({ _id: oid() }); // another leave's slot still has this teacher pending
+    mockConflictFind.mockResolvedValue([{ leaveApplicationId: oid() }]); // another leave's slot still has this teacher pending
 
     await expect(decideCoverSlot(slot._id.toString(), true, ACTOR)).rejects.toThrow(
       /already covers \(or is proposed for\)/,
@@ -352,6 +367,86 @@ describe("decideCoverSlot — override + direct-assign (D-#268)", () => {
     // Recorded, but no scope granted — a subjectgroup has none to give.
     expect(update.$set.proxyGrantId).toBeNull();
     expect(mockAssignProxy).not.toHaveBeenCalled();
+  });
+});
+
+describe("cancelled/rejected leaves stop reserving cover teachers (owner report 2026-10-04)", () => {
+  // Hamida's leave for 10-04 was applied three times; the first two were cancelled.
+  // Jasi, still "proposed" on a cancelled copy, could not be assigned Nursery P1 on
+  // the live one — "already covers (or is proposed for) another class".
+  test("a proposed/approved slot on a CANCELLED leave does not block assigning the teacher", async () => {
+    const jasi = oid();
+    const slot = baseSlot({ status: "needs_cover", dateKey: "2026-10-04", periodNumber: 1 });
+    mockSlotFindById.mockResolvedValue(slot);
+    mockAssignProxy.mockResolvedValue(oid().toString());
+    mockConflictFind.mockResolvedValue([{ leaveApplicationId: oid() }]); // the stale slot
+    mockLeaveById.mockImplementation(async (q: { _id: unknown }) =>
+      // assertLeaveLive(slot) finds this slot's own leave; the stale slot's leave is dead.
+      q._id === slot.leaveApplicationId ? [{ _id: slot.leaveApplicationId }] : [],
+    );
+
+    const res = await decideCoverSlot(slot._id.toString(), true, ACTOR, jasi.toString());
+    expect(res.status).toBe("approved");
+    expect(res.finalCoverTeacherUserId!.toString()).toBe(jasi.toString());
+    // The liveness lookup asks only for applied/approved leaves.
+    expect(mockLeaveById).toHaveBeenCalledWith(
+      expect.objectContaining({ status: { $in: ["applied", "approved"] } }),
+    );
+  });
+
+  test("a reservation on a LIVE leave still blocks", async () => {
+    const slot = baseSlot({ status: "needs_cover" });
+    mockSlotFindById.mockResolvedValue(slot);
+    mockConflictFind.mockResolvedValue([{ leaveApplicationId: oid() }]);
+    // default mockLeaveById: every leave is live
+
+    await expect(proposeCover(slot._id.toString(), oid().toString(), ACTOR)).rejects.toThrow(/already proposed/);
+  });
+
+  test("proposing or approving on a cancelled leave's own slot is refused", async () => {
+    const slot = baseSlot({ status: "needs_cover" });
+    mockSlotFindById.mockResolvedValue(slot);
+    mockLeaveById.mockResolvedValue([]); // this slot's leave is cancelled
+
+    await expect(proposeCover(slot._id.toString(), oid().toString(), ACTOR)).rejects.toThrow(/cancelled or rejected/);
+    await expect(decideCoverSlot(slot._id.toString(), true, ACTOR, oid().toString())).rejects.toThrow(
+      /cancelled or rejected/,
+    );
+    expect(slot.save).not.toHaveBeenCalled();
+    expect(mockAssignProxy).not.toHaveBeenCalled();
+  });
+});
+
+describe("revokeCoversForLeave — releases proposed AND approved slots", () => {
+  test("resets proposed slots, revokes grants, and drops the approved cover's RoutineSubstitution", async () => {
+    const eshita = oid(), jasi = oid(), grant = oid();
+    const approved = baseSlot({ status: "approved", finalCoverTeacherUserId: eshita, proxyGrantId: grant, dateKey: "2026-10-04" });
+    const proposed = baseSlot({ status: "proposed", proposedCoverTeacherId: jasi, dateKey: "2026-10-04" });
+    // first find = the leave's slots; the second = "is anyone else live on this meeting?" → no
+    mockSlotFind.mockReturnValueOnce([approved, proposed]).mockReturnValueOnce([]);
+
+    const revoked = await revokeCoversForLeave(oid().toString(), ACTOR);
+
+    expect(mockSlotFind.mock.calls[0][0]).toMatchObject({ status: { $in: ["proposed", "approved"] } });
+    expect(revoked).toBe(1);
+    expect(mockRevokeProxy).toHaveBeenCalledWith(grant.toString(), ACTOR);
+    expect(approved.status).toBe("needs_cover");
+    expect(proposed.status).toBe("needs_cover");
+    expect(mockSubDelete).toHaveBeenCalledTimes(1);
+    expect(mockSubDelete).toHaveBeenCalledWith(
+      expect.objectContaining({ slotId: approved.routineSlotId, coverTeacherId: eshita }),
+    );
+  });
+
+  test("keeps the RoutineSubstitution when a LIVE leave's approved slot shares it", async () => {
+    const eshita = oid();
+    const approved = baseSlot({ status: "approved", finalCoverTeacherUserId: eshita });
+    mockSlotFind.mockReturnValueOnce([approved]).mockReturnValueOnce([{ leaveApplicationId: oid() }]);
+    // default mockLeaveById: that other leave is live
+
+    await revokeCoversForLeave(oid().toString(), ACTOR);
+    expect(approved.status).toBe("needs_cover");
+    expect(mockSubDelete).not.toHaveBeenCalled();
   });
 });
 
