@@ -48,10 +48,15 @@ type LabelKey = keyof typeof STR;
  * too coarse: an assembler must not be shown the reviewer's queue. Leaves without
  * `perms` stay purely route-gated, as every leaf was before.
  */
-type NavLeaf = { route: RouteName; labelKey: LabelKey; icon: string; screen?: string; perms?: string[] };
+/**
+ * `hidden` (optional, owner ask 2026-10-04) takes an entry off the sidebar for
+ * everyone WITHOUT unregistering its route — notification deep links and in-app
+ * links into it keep working. Delete the flag to bring the entry back.
+ */
+type NavLeaf = { route: RouteName; labelKey: LabelKey; icon: string; screen?: string; perms?: string[]; hidden?: boolean };
 type NavSection =
   | ({ type: "item" } & NavLeaf)
-  | { type: "group"; titleKey: LabelKey; icon: string; items: NavLeaf[] };
+  | { type: "group"; titleKey: LabelKey; icon: string; items: NavLeaf[]; hidden?: boolean };
 
 /**
  * Module grouping. Names lean on EximusEdu vocabulary for familiarity; the leaf
@@ -142,7 +147,7 @@ const STAFF_NAV: NavSection[] = [
   },
   { type: "item", route: "CommentsTab", labelKey: "tabComments", icon: "🗣️" },
   { type: "item", route: "ObservationTab", labelKey: "tabObservation", icon: "👁️" },
-  { type: "item", route: "FreeMixingTab", labelKey: "tabFreeMixing", icon: "🎥" },
+  { type: "item", route: "FreeMixingTab", labelKey: "tabFreeMixing", icon: "🎥", hidden: true },
   { type: "item", route: "LibraryTab", labelKey: "tabLibrary", icon: "📖" },
   { type: "item", route: "ChatTab", labelKey: "tabChat", icon: "💬" },
   { type: "item", route: "FinanceTab", labelKey: "tabFinance", icon: "💰" },
@@ -181,6 +186,7 @@ const STAFF_NAV: NavSection[] = [
     type: "group",
     titleKey: "drawerGroupBook",
     icon: "📕",
+    hidden: true,
     items: [
       {
         route: "SupportBookTab",
@@ -263,7 +269,7 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
   const present = React.useMemo(() => new Set(props.state.routeNames), [props.state.routeNames]);
   /** Route-gate + the optional per-leaf effective-permission gate (see NavLeaf). */
   const visibleLeaf = React.useCallback(
-    (leaf: NavLeaf): boolean => present.has(leaf.route) && (!leaf.perms || leaf.perms.some(can)),
+    (leaf: NavLeaf): boolean => !leaf.hidden && present.has(leaf.route) && (!leaf.perms || leaf.perms.some(can)),
     [present, can],
   );
   const focusedTab = props.state.routes[props.state.index];
@@ -583,6 +589,7 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
     if (section.type === "item") {
       return <Leaf key={section.route} leaf={section} />;
     }
+    if (section.hidden) return null;
     const visible = section.items.filter(visibleLeaf);
     if (visible.length === 0) return null;
     const key = `${section.titleKey}-${idx}`;
