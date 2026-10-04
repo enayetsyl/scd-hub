@@ -2,8 +2,10 @@
  * PayrollService (HR-3; prd-hr §4.2/§4.6) — the monthly run.
  *
  *   preparePayrollRun  — Office computes payslips for every active salaried staff
- *                        (incl. support, D-#25): gross (pro-rated on the day-rate via
- *                        an optional per-staff payableDays), the unpaid-leave deduction
+ *                        (incl. support, D-#25): gross (pro-rated on the day-rate for a
+ *                        mid-month joiner/leaver from the joining date / exit case — a
+ *                        leaver's last payslip also carries the exit dues, D-#711 — or
+ *                        an explicit per-staff payableDays), the unpaid-leave deduction
  *                        from the STORED leave split (D-#110 — NOT the read-time
  *                        attendance overlay), advance recovery with the net-pay guard,
  *                        and any manual arrears/bonus/clawback lines. Re-preparing a
@@ -25,9 +27,18 @@ import { AdvanceLoan } from "../models/AdvanceLoan";
 import { LeaveBalanceRecovery } from "../models/LeaveBalanceRecovery";
 import { salariesEffectiveIn } from "./PayHistoryService";
 import { writeAudit } from "../../platform/services/AuditService";
-import { assertMonthKey, dayRate, computePayslip, PayrollError, type PayLineInput } from "./payrollMath";
+import {
+  assertMonthKey,
+  dayRate,
+  computePayslip,
+  payableDaysInMonth,
+  PayrollError,
+  type PayLineInput,
+} from "./payrollMath";
 import { activeAdvanceByStaff } from "./AdvanceService";
 import { computeLatenessCharge, freezeLatenessCharges } from "./LatenessService";
+import { exitsUpTo, exitDues, commitExitPayslips, OVERDRAWN_LEAVE_NOTE } from "./ExitPayService";
+import { toDateKey } from "./ProbationDebtService";
 
 export interface StaffAdjustment {
   staffProfileId: string;
@@ -124,12 +135,24 @@ export async function preparePayrollRun(input: PreparePayrollInput): Promise<{ r
       throw new PayrollError(`${input.monthKey} is locked — corrections ride arrears on a later run (D-#110)`);
     }
     await Payslip.deleteMany({ payrollRunId: existing._id });
+    // The old run's leave-balance credits go with it. They are keyed to ITS id, so the
+    // new run's per-staff cleanup below never reaches them — left behind, a re-prepare
+    // would credit the same agreed (or exit) recovery to the balance twice.
+    await LeaveBalanceRecovery.deleteMany({ payrollRunId: existing._id });
     await PayrollRun.deleteOne({ _id: existing._id });
   }
 
+  // Exits up to this month's end (D-#711). Read FIRST: a leaver whose last working day
+  // is in this month is paid even if someone has since switched their profile off.
+  const exits = await exitsUpTo(input.monthKey);
+  const leaverIds = [...exits.keys()].map((id) => new Types.ObjectId(id));
+
   const [staff, leaveDays, advances, effectiveSalaries] = await Promise.all([
-    StaffProfile.find({ active: true, monthlySalary: { $gt: 0 } })
-      .select("name category monthlySalary paymentMethod")
+    StaffProfile.find({
+      monthlySalary: { $gt: 0 },
+      $or: [{ active: true }, { _id: { $in: leaverIds } }],
+    })
+      .select("name category monthlySalary paymentMethod joiningDate")
       .lean(),
     unpaidLeaveDaysByStaff(input.monthKey),
     activeAdvanceByStaff(),
@@ -159,7 +182,33 @@ export async function preparePayrollRun(input: PreparePayrollInput): Promise<{ r
     const salary = effectiveSalaries.get(sid) ?? s.monthlySalary!;
     const rate = dayRate(salary, input.workingDays);
     const adj = adjByStaff.get(sid);
-    const gross = adj?.payableDays != null ? Math.round(rate * adj.payableDays) : salary;
+
+    /**
+     * A MID-MONTH JOINER OR LEAVER IS PAID FOR THE DAYS THEY SERVED (D-#711).
+     *
+     * Before this the run paid every active salaried profile the whole month unless the
+     * Office typed payable days by hand — so a teacher whose exit case said she left on
+     * the 13th drew the full salary, and a support staff member who joined on the 13th
+     * would have too. The joining date and the exit case's last working day are both on
+     * record; the run now reads them. An explicit `payableDays` adjustment still wins.
+     */
+    const exit = exits.get(sid);
+    // Already paid by a settlement released on its own (before this rule existed).
+    if (exit?.settledOutsideRun) continue;
+    const servedDays = payableDaysInMonth({
+      monthKey: input.monthKey,
+      workingDays: input.workingDays,
+      joinedKey: s.joiningDate ? toDateKey(s.joiningDate) : null,
+      lastDayKey: exit?.lastWorkingDayKey ?? null,
+    });
+    // Not in service at all this month — left before it began, or joins after it ends.
+    if (servedDays === 0 && adj?.payableDays == null) continue;
+    const payableDays = adj?.payableDays ?? servedDays;
+    const gross = payableDays != null ? Math.round(rate * payableDays) : salary;
+    // This month is the leaver's LAST payslip only when the last working day falls in it
+    // (`exitsUpTo` also returns earlier exits, which are normally skipped just above).
+    const exitThisMonth = exit && exit.lastWorkingDayKey >= `${input.monthKey}-01` ? exit : undefined;
+    const dues = exitThisMonth ? await exitDues(sid, rate) : null;
     const advance = advances.get(sid);
     // SH-4 / D-#541: the 3-lates-to-a-day charge. Returns null while the rule is off,
     // in which case nothing is passed and the payslip is byte-identical to today. An
@@ -182,16 +231,22 @@ export async function preparePayrollRun(input: PreparePayrollInput): Promise<{ r
      * again at exit.
      *
      * Upserted per (staff, run) so re-preparing the run replaces rather than stacks.
+     *
+     * A LEAVER's last payslip recovers the WHOLE overdrawn balance instead (D-#616 —
+     * collected at exit). It rides the same row, so the balance reads zero afterwards
+     * and nothing downstream can collect those days a second time.
      */
-    const recoveryDays = Math.max(0, adj?.leaveRecoveryDays ?? 0);
+    const recoveryDays = dues ? dues.overdrawnDays : Math.max(0, adj?.leaveRecoveryDays ?? 0);
+    const recoveryNote = dues ? OVERDRAWN_LEAVE_NOTE : adj?.leaveRecoveryNote?.trim();
     const recoveryDeductions: PayLineInput[] = [...(adj?.manualDeductions ?? [])];
+    if (dues?.probation) recoveryDeductions.push(dues.probation);
     if (recoveryDays > 0) {
       const amount = Math.round(rate * recoveryDays);
       recoveryDeductions.push({
         type: "unpaid_leave",
         amount,
         days: recoveryDays,
-        note: adj?.leaveRecoveryNote?.trim() || "ঋণাত্মক ছুটির জমা সমন্বয় (সম্মতিক্রমে)",
+        note: recoveryNote || "ঋণাত্মক ছুটির জমা সমন্বয় (সম্মতিক্রমে)",
       });
       await LeaveBalanceRecovery.findOneAndUpdate(
         { staffProfileId: new Types.ObjectId(sid), payrollRunId: run._id },
@@ -200,7 +255,7 @@ export async function preparePayrollRun(input: PreparePayrollInput): Promise<{ r
             monthKey: input.monthKey,
             days: recoveryDays,
             amount,
-            note: adj?.leaveRecoveryNote?.trim(),
+            note: recoveryNote,
             agreedBy: new Types.ObjectId(input.actorId),
           },
         },
@@ -211,17 +266,23 @@ export async function preparePayrollRun(input: PreparePayrollInput): Promise<{ r
       await LeaveBalanceRecovery.deleteOne({ staffProfileId: new Types.ObjectId(sid), payrollRunId: run._id });
     }
 
+    const additions: PayLineInput[] = [...(adj?.manualAdditions ?? [])];
+    if (dues?.encashment) additions.push(dues.encashment);
+    // At exit the outstanding advance is netted in FULL (H6.4), still under the net-pay
+    // guard; the Office can hold it back with an explicit `recoverAdvance: false`.
+    const takeAdvance = dues ? !!advance && adj?.recoverAdvance !== false : recoverAdvance(advance, adj);
+
     const computed = computePayslip({
       grossSalary: gross,
       dayRate: rate,
       unpaidLeaveDays: leaveDays.get(sid) ?? 0,
       latenessDeduction,
       manualDeductions: recoveryDeductions,
-      manualAdditions: adj?.manualAdditions,
-      advance: recoverAdvance(advance, adj)
+      manualAdditions: additions,
+      advance: takeAdvance
         ? {
             advanceId: advance!._id.toString(),
-            recoveryMode: advance!.recoveryMode,
+            recoveryMode: dues ? "one_shot" : advance!.recoveryMode,
             installmentAmount: advance!.installmentAmount,
             balance: advance!.balance,
           }
@@ -245,6 +306,8 @@ export async function preparePayrollRun(input: PreparePayrollInput): Promise<{ r
       netPay: computed.netPay,
       advanceRepaid: computed.advanceRepaid,
       advanceId: computed.advanceId ? new Types.ObjectId(computed.advanceId) : null,
+      payableDays: payableDays ?? null,
+      exitCaseId: exitThisMonth?.caseId ?? null,
     });
   }
   const payslips = payslipDocs.length ? await Payslip.insertMany(payslipDocs) : [];
@@ -285,6 +348,11 @@ export async function approvePayrollRun(runId: string, actorId: string): Promise
   // so an unfrozen charge would let a later correction restate an already-paid payslip.
   const frozen = await freezeLatenessCharges(run.monthKey, run._id);
 
+  // D-#711: a leaver's last payslip IS their final settlement — commit it onto the exit
+  // case (and settle the probation debt it charged) so it is never paid a second time.
+  const exitSlips = await Payslip.find({ payrollRunId: run._id, exitCaseId: { $ne: null } }).lean();
+  const exitsSettled = await commitExitPayslips(exitSlips, run.workingDays, actorId);
+
   run.status = "approved_locked";
   run.approvedBy = new Types.ObjectId(actorId);
   run.approvedAt = new Date();
@@ -295,7 +363,7 @@ export async function approvePayrollRun(runId: string, actorId: string): Promise
     actorId,
     targetId: run._id,
     targetKind: "PayrollRun",
-    meta: { monthKey: run.monthKey, advancesRecovered: payslips.length, latenessChargesFrozen: frozen },
+    meta: { monthKey: run.monthKey, advancesRecovered: payslips.length, latenessChargesFrozen: frozen, exitsSettled },
   });
   return run;
 }
@@ -305,6 +373,8 @@ export async function cancelPayrollRun(runId: string, actorId: string): Promise<
   if (!run) throw new PayrollError("Payroll run not found");
   if (run.status !== "prepared") throw new PayrollError("Only a prepared run can be cancelled");
   await Payslip.deleteMany({ payrollRunId: run._id });
+  // The run's leave-balance credits were never paid — they must not keep raising a balance.
+  await LeaveBalanceRecovery.deleteMany({ payrollRunId: run._id });
   run.status = "cancelled";
   await run.save();
   await writeAudit({ eventKind: "PAYROLL_CANCELLED", actorId, targetId: run._id, targetKind: "PayrollRun", meta: { monthKey: run.monthKey } });

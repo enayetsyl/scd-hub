@@ -85,6 +85,15 @@ PayslipRef.implement({
     totalAdditions: t.exposeFloat("totalAdditions"),
     netPay: t.exposeFloat("netPay"),
     advanceRepaid: t.exposeFloat("advanceRepaid"),
+    payableDays: t.float({
+      nullable: true,
+      description: "Days paid when the month was pro-rated (mid-month joiner/leaver, D-#711); null = full month.",
+      resolve: (p) => p.payableDays ?? null,
+    }),
+    isExitPayslip: t.boolean({
+      description: "The leaver's last payslip — it carries their exit dues and is their final settlement (D-#711).",
+      resolve: (p) => !!p.exitCaseId,
+    }),
   }),
 });
 

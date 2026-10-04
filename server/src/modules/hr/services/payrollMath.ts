@@ -7,6 +7,7 @@
  * excess caps and rolls forward, §4.5/D-#27). All figures are whole-taka rounded.
  */
 import type { PayDeductionType, PayAdditionType } from "@scd/shared";
+import { isSchoolDay } from "../../trackers/calendar";
 
 export class PayrollError extends Error {
   constructor(msg: string) {
@@ -24,6 +25,49 @@ export function assertMonthKey(monthKey: string): void {
 export function dayRate(monthlySalary: number, workingDays: number): number {
   if (workingDays <= 0) throw new PayrollError("workingDays must be ≥ 1");
   return Math.round(monthlySalary / workingDays);
+}
+
+/** Sun–Thu days in [fromKey, toKey] inclusive — the school week the run's
+ *  `workingDays` is counted on (trackers/calendar.ts is the one source of that rule). */
+function weekdaysBetween(fromKey: string, toKey: string): number {
+  const [fy, fm, fd] = fromKey.split("-").map(Number);
+  const [ty, tm, td] = toKey.split("-").map(Number);
+  const cursor = new Date(fy, fm - 1, fd);
+  const end = new Date(ty, tm - 1, td);
+  let n = 0;
+  for (; cursor <= end; cursor.setDate(cursor.getDate() + 1)) if (isSchoolDay(cursor)) n += 1;
+  return n;
+}
+
+/**
+ * How many of this month's working days a staff member was actually employed for —
+ * a mid-month joiner from their joining date, a leaver up to their last working day.
+ *
+ * Returns `null` for a full month (pay the salary as-is, no day-rate rounding), `0`
+ * when the whole month falls outside their service, else the pro-rated day count.
+ *
+ * The count is the share of the month's Sun–Thu days that fall inside the service
+ * span, scaled onto the run's own `workingDays`. When the Office enters the plain
+ * Sun–Thu count (22 for Sept 2026) the scaling is exact; when they enter fewer (a
+ * holiday taken out) a leaver still gets the same SHARE of the month, not a figure
+ * counted on a different basis from the day-rate it is multiplied by.
+ */
+export function payableDaysInMonth(input: {
+  monthKey: string;
+  workingDays: number;
+  joinedKey?: string | null;
+  lastDayKey?: string | null;
+}): number | null {
+  const [y, m] = input.monthKey.split("-").map(Number);
+  const monthStart = `${input.monthKey}-01`;
+  const monthEnd = `${input.monthKey}-${String(new Date(y, m, 0).getDate()).padStart(2, "0")}`;
+  const from = input.joinedKey && input.joinedKey > monthStart ? input.joinedKey : monthStart;
+  const to = input.lastDayKey && input.lastDayKey < monthEnd ? input.lastDayKey : monthEnd;
+  if (from === monthStart && to === monthEnd) return null;
+  if (from > to) return 0;
+  const monthDays = weekdaysBetween(monthStart, monthEnd);
+  const served = weekdaysBetween(from, to);
+  return Math.min(input.workingDays, Math.round((served / monthDays) * input.workingDays));
 }
 
 export interface PayLineInput {
