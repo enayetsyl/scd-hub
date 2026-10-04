@@ -515,11 +515,15 @@ async function planReviewCards(userIds: string[], todayKey: string): Promise<Wor
   return out;
 }
 
-/** A classroom observation handed to an observer (state ASSIGNED) — gone once reviewed. */
-async function observationCards(userIds: string[], todayKey: string): Promise<WorkCard[]> {
+/** A classroom observation handed to an observer (state ASSIGNED) — gone once reviewed.
+ *  A cancelled plan keeps state ASSIGNED (CO-15, D-#428), so it is excluded here exactly
+ *  as the review queue and the drawer badge exclude it — otherwise every cancelled
+ *  plan lingers on the board as a task the queue no longer offers. */
+export async function observationCards(userIds: string[], todayKey: string): Promise<WorkCard[]> {
   const rows = (await ClassroomObservation.find({
     observerId: { $in: userIds.map((u) => new Types.ObjectId(u)) },
     state: "ASSIGNED",
+    cancelledAt: null,
   })
     .select("observerId teacherId classDate subject periodNumber")
     .lean()) as unknown as Array<{ _id: Types.ObjectId; observerId: Types.ObjectId; teacherId: Types.ObjectId; classDate: string; subject: string; periodNumber?: number | null }>;
