@@ -18,6 +18,7 @@ const mockEmitHandover = jest.fn();
 const mockAudit = jest.fn();
 const mockEmit = jest.fn();
 const mockStudentById = jest.fn();
+const mockStudentFind = jest.fn();
 
 // The notification SINK and the roster, so the real emitters can be driven without
 // a database — everything else about them stays real, including the dedupe keys.
@@ -25,7 +26,10 @@ jest.mock("../modules/notifications/services/NotificationService", () => ({
   emit: (...a: unknown[]) => mockEmit(...a),
 }));
 jest.mock("../modules/foundation/models/Student", () => ({
-  Student: { findById: (id: unknown) => ({ select: () => ({ lean: () => mockStudentById(id) }) }) },
+  Student: {
+    findById: (id: unknown) => ({ select: () => ({ lean: () => mockStudentById(id) }) }),
+    find: (q: unknown) => ({ select: () => ({ lean: () => mockStudentFind(q) }) }),
+  },
 }));
 
 jest.mock("../modules/trackers/models/GuardianWorkClaim", () => ({
@@ -75,6 +79,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockSubjectById.mockResolvedValue({ code: "MATH" });
   mockStudentById.mockResolvedValue({ nameBn: "ইউসুফ খান সাফওয়ান" });
+  mockStudentFind.mockResolvedValue([]); // no section lookups → every claim stays put
 });
 
 describe("reassignClaimsForSubject — the claim follows the teaching", () => {
@@ -175,6 +180,62 @@ describe("reassignAllOpenClaims — the daily safety net", () => {
     expect(mockClaimFind.mock.calls[0][0]).toEqual({ status: "PENDING" });
     expect(res).toEqual({ examined: 2, moved: 2 });
     expect(mockEmitHandover).toHaveBeenCalledTimes(2);
+  });
+
+  // Owner report 2026-10-04: claims filed on the combined C4 section before the
+  // boys/girls split kept re-resolving THERE — no live MATH grant, so the class
+  // teacher (Kawsar, no Math) owned them and the new sections' Math teachers never
+  // heard. The claim must be resolved where the student now sits.
+  test("a claim follows its STUDENT to their current section, and the new owner is told", async () => {
+    const BOYS = oid();
+    const claim = claimDoc(OLD_TEACHER); // stored on SECTION (the emptied combined one)
+    mockClaimFind.mockResolvedValue([claim]);
+    mockStudentFind.mockResolvedValue([{ _id: claim.studentId, sectionId: BOYS }]);
+    mockResolve.mockResolvedValue({ teacherId: NEW_TEACHER, source: "GRANT" });
+
+    const res = await reassignAllOpenClaims();
+
+    expect(mockResolve.mock.calls[0][0]).toBe(BOYS); // resolved in the NEW section
+    expect(claim.sectionId).toBe(BOYS);
+    expect(claim.teacherId).toBe(NEW_TEACHER);
+    expect(claim.save).toHaveBeenCalledTimes(1);
+    expect(res).toEqual({ examined: 1, moved: 1 });
+    expect(mockEmitHandover).toHaveBeenCalledWith(
+      expect.objectContaining({ sectionId: BOYS.toString(), teacherId: NEW_TEACHER.toString() }),
+    );
+    expect(mockAudit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        meta: expect.objectContaining({ fromSection: SECTION.toString(), toSection: BOYS.toString() }),
+      }),
+    );
+  });
+
+  test("same teacher in the new section → the section moves quietly (no handover notice)", async () => {
+    const GIRLS = oid();
+    const claim = claimDoc(OLD_TEACHER);
+    mockClaimFind.mockResolvedValue([claim]);
+    mockStudentFind.mockResolvedValue([{ _id: claim.studentId, sectionId: GIRLS }]);
+    mockResolve.mockResolvedValue({ teacherId: OLD_TEACHER, source: "GRANT" });
+
+    const res = await reassignAllOpenClaims();
+
+    expect(claim.sectionId).toBe(GIRLS);
+    expect(claim.save).toHaveBeenCalledTimes(1);
+    expect(res).toEqual({ examined: 1, moved: 0 });
+    expect(mockEmitHandover).not.toHaveBeenCalled();
+  });
+
+  test("nobody reachable in the new section → the claim is left exactly as it was", async () => {
+    const claim = claimDoc(OLD_TEACHER);
+    mockClaimFind.mockResolvedValue([claim]);
+    mockStudentFind.mockResolvedValue([{ _id: claim.studentId, sectionId: oid() }]);
+    mockResolve.mockResolvedValue(null);
+
+    await reassignAllOpenClaims();
+
+    expect(claim.sectionId).toBe(SECTION);
+    expect(claim.teacherId).toBe(OLD_TEACHER);
+    expect(claim.save).not.toHaveBeenCalled();
   });
 });
 
