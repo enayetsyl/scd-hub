@@ -350,6 +350,7 @@ export const AUDIT_KIND_LABELS: Record<AuditEventKind, AuditKindLabel> = {
   WORK_CLAIM_NUDGED: { bn: "শিক্ষককে আবার মনে করিয়ে দিয়েছেন", en: "Nudged the teacher on a claim", group: "WORK_CLAIM" },
   WORK_CLAIM_REASSIGNED: { bn: "দাবির দায়িত্ব অন্য শিক্ষককে দিয়েছেন", en: "Reassigned a work claim", group: "WORK_CLAIM" },
   WORK_CLAIM_EXPIRED: { bn: "উত্তর না আসায় দাবির মেয়াদ শেষ", en: "A work claim expired", group: "WORK_CLAIM" },
+  WORK_CLAIM_DIGEST_RECIPIENTS_SET: { bn: "সকাল ১০:৩০-এর সারসংক্ষেপ কারা পাবেন ঠিক করেছেন", en: "Changed who gets the 10:30 claim digest", group: "WORK_CLAIM" },
   SCHOLARSHIP_TOPIC_SAVED: { bn: "বৃত্তি অনুশীলনের টপিক লিখেছেন", en: "Saved a scholarship topic", group: "SCHOLARSHIP" },
   SCHOLARSHIP_TOPIC_RETIRED: { bn: "বৃত্তি অনুশীলনের টপিক বাতিল করেছেন", en: "Retired a scholarship topic", group: "SCHOLARSHIP" },
   SCHOLARSHIP_PAPER_DECLARED: { bn: "অনুশীলন প্রশ্ন ঘোষণা করেছেন", en: "Declared a practice paper", group: "SCHOLARSHIP" },

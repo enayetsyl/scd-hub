@@ -2,11 +2,12 @@
  * Guardian work-claim resolvers — the STAFF side (GC-4/GC-5, D-#551..#554).
  *
  * Seeing and being told are separate (D-#554): every one of these reads is open
- * to all three staff roles from the instant a claim is filed. The 11:30 / 13:00
- * notifications are a scheduler concern, not a visibility one.
+ * to all three staff roles from the instant a claim is filed. The 10:30 digest
+ * (D-#710) is a scheduler concern, not a visibility one — but whoever the Principal
+ * adds to the digest may open the queue it links to, and nudge from it.
  *
  *   myWorkClaims     — the teacher's own open claims (Today card + roster badge)
- *   workClaimQueue   — the Office/Principal unresolved queue, checkpoint-sorted
+ *   workClaimQueue   — the unresolved queue, oldest (school days pending) first
  *   rejectWorkClaim  — the ONE manual close; needs tracker:write, so Office cannot
  *   nudgeWorkClaim   — re-fire the teacher's notification; Office's ENTIRE power here
  *
@@ -19,7 +20,6 @@ import { WORK_CLAIM_REJECT_REASONS, WORK_CLAIM_STATUS_LABELS_BN, WORK_CLAIM_REJE
 import type { WorkClaimRejectReason } from "@scd/shared";
 import { builder } from "../../../schema";
 import { ForbiddenError } from "../../../middleware/authz";
-import { isAdminStaff } from "../../foundation/services/RoleScope";
 import { GuardianWorkClaim } from "../models/GuardianWorkClaim";
 import { Student } from "../../foundation/models/Student";
 import { Section } from "../../foundation/models/Section";
@@ -29,6 +29,8 @@ import type { GuardianWorkClaimView } from "../services/WorkClaimView";
 import { emitWorkClaimNudge, emitWorkClaimResolved } from "../../notifications/services/emitters";
 import { writeAudit } from "../../platform/services/AuditService";
 import { dateKeyOf } from "../../attendance/dates";
+import { WorkClaimDigestConfig } from "../models/WorkClaimDigestConfig";
+import { canWatchClaims, makePendingDayCounter } from "../services/WorkClaimDigestService";
 
 /**
  * The guardian-facing claim view, defined HERE and imported by the guardian
@@ -82,6 +84,8 @@ interface WorkClaimRow {
   checkpointLabelBn: string;
   /** True once the Office has nudged this claim TODAY (rate limit, D-#554). */
   nudgedToday: boolean;
+  /** D-#710: SCHOOL days from the action day through today, inclusive (0 = not yet). */
+  pendingSchoolDays: number;
 }
 
 const WorkClaimRowRef = builder.objectRef<WorkClaimRow>("WorkClaimRow").implement({
@@ -108,13 +112,15 @@ const WorkClaimRowRef = builder.objectRef<WorkClaimRow>("WorkClaimRow").implemen
     checkpoint: t.exposeString("checkpoint"),
     checkpointLabelBn: t.exposeString("checkpointLabelBn"),
     nudgedToday: t.exposeBoolean("nudgedToday"),
+    pendingSchoolDays: t.exposeInt("pendingSchoolDays"),
   }),
 });
 
 const CHECKPOINT_LABELS_BN: Record<string, string> = {
-  PRINCIPAL_TOLD: "১৩:০০ পার",
+  PRINCIPAL_TOLD: "১০:৩০ পার",
+  // Legacy: only claims stamped by the retired 11:30 rung (before D-#710) carry this.
   OFFICE_TOLD: "১১:৩০ পার",
-  WAITING: "১১:৩০-এর অপেক্ষায়",
+  WAITING: "১০:৩০-এর অপেক্ষায়",
   SCHEDULED_TOMORROW: "আগামী কর্মদিবস",
 };
 
@@ -155,7 +161,13 @@ async function toRows(claims: Array<Record<string, any>>, now: Date): Promise<Wo
   const secName = new Map(sections.map((s) => [s._id.toString(), s.nameBn || s.code || ""]));
   const tName = new Map(teachers.map((u) => [u._id.toString(), u.name || ""]));
 
-  const rows = claims.map((c) => {
+  // Sequential on purpose: the counter memoizes each calendar day, and claims share
+  // the same handful of days — in parallel every call would miss the memo.
+  const countDays = makePendingDayCounter(now);
+  const days: number[] = [];
+  for (const c of claims) days.push(await countDays(c.actionDateKey));
+
+  const rows = claims.map((c, i) => {
     const checkpoint = checkpointOf(c as never, todayKey);
     return {
       claimId: c._id.toString(),
@@ -177,11 +189,15 @@ async function toRows(claims: Array<Record<string, any>>, now: Date): Promise<Wo
       checkpoint,
       checkpointLabelBn: CHECKPOINT_LABELS_BN[checkpoint] ?? checkpoint,
       nudgedToday: !!c.lastNudgedAt && dateKeyOf(new Date(c.lastNudgedAt)) === todayKey,
+      pendingSchoolDays: days[i],
     };
   });
 
+  // D-#710: longest-waiting first — "how many days at the teacher's hand" is now
+  // the question (owner ruling 2026-10-04), with the ladder rank as the tie-break.
   rows.sort(
     (a, b) =>
+      b.pendingSchoolDays - a.pendingSchoolDays ||
       (CHECKPOINT_RANK[a.checkpoint] ?? 9) - (CHECKPOINT_RANK[b.checkpoint] ?? 9) ||
       a.claimedAt.localeCompare(b.claimedAt),
   );
@@ -223,13 +239,14 @@ builder.queryField("workClaimQueue", (t) =>
     type: [WorkClaimRowRef],
     authScopes: { authenticated: true },
     description:
-      "Every unresolved guardian claim, checkpoint-first (13:00 passed → 11:30 passed → " +
-      "waiting → scheduled for the next school day). The Office/Principal queue.",
+      "Every unresolved guardian claim, longest-waiting first (school days pending, D-#710). " +
+      "The Office/Principal queue, also open to the Principal's chosen digest recipients.",
     resolve: async (_r, _a, ctx) => {
       // The queue is the OFFICE/PRINCIPAL screen and is unscoped by design: the
       // whole point of a claim is that somebody above the teacher can see it
-      // (D-#554). A teacher reads their OWN claims through myWorkClaims instead.
-      if (!isAdminStaff(ctx.auth)) throw new ForbiddenError();
+      // (D-#554). A teacher reads their OWN claims through myWorkClaims instead —
+      // unless the Principal added them to the 10:30 digest (D-#710), which links here.
+      if (!(await canWatchClaims(ctx))) throw new ForbiddenError();
       const claims = (await GuardianWorkClaim.find({ status: "PENDING" })
         .sort({ claimedAt: 1 })
         .lean()) as unknown as Array<Record<string, any>>;
@@ -288,10 +305,9 @@ builder.mutationField("nudgeWorkClaim", (t) =>
       "never mark the work submitted itself (D-#554).",
     args: { claimId: t.arg.string({ required: true }) },
     resolve: async (_r, args, ctx) => {
-      // The queue is the OFFICE/PRINCIPAL screen and is unscoped by design: the
-      // whole point of a claim is that somebody above the teacher can see it
-      // (D-#554). A teacher reads their OWN claims through myWorkClaims instead.
-      if (!isAdminStaff(ctx.auth)) throw new ForbiddenError();
+      // Whoever may watch the queue may nudge from it (D-#554, D-#710) — the nudge is
+      // a reminder to the teacher, never a change to the work.
+      if (!(await canWatchClaims(ctx))) throw new ForbiddenError();
       const claim = await GuardianWorkClaim.findById(args.claimId);
       if (!claim) throw new Error("জানানোটি পাওয়া যায়নি");
       if (claim.status !== "PENDING") throw new Error("এই জানানোটি ইতিমধ্যেই নিষ্পন্ন হয়েছে");
@@ -330,6 +346,96 @@ builder.mutationField("nudgeWorkClaim", (t) =>
 
       const rows = await toRows([claim.toObject() as Record<string, any>], now);
       return rows[0];
+    },
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// The 10:30 digest's extra recipients (D-#710) — Principal-edited
+// ---------------------------------------------------------------------------
+
+interface DigestRecipient {
+  userId: string;
+  name: string;
+  role: string;
+}
+
+const DigestRecipientRef = builder.objectRef<DigestRecipient>("WorkClaimDigestRecipient").implement({
+  description: "A person the Principal added to the 10:30 guardian-claim digest (D-#710).",
+  fields: (t) => ({
+    userId: t.exposeString("userId"),
+    name: t.exposeString("name"),
+    role: t.exposeString("role"),
+  }),
+});
+
+async function extraRecipients(): Promise<DigestRecipient[]> {
+  const cfg = (await WorkClaimDigestConfig.findOne({ key: "SINGLETON" })
+    .select("extraRecipientIds")
+    .lean()) as unknown as { extraRecipientIds?: Types.ObjectId[] } | null;
+  const ids = cfg?.extraRecipientIds ?? [];
+  if (ids.length === 0) return [];
+  const users = (await User.find({ _id: { $in: ids }, active: true })
+    .select("name role")
+    .sort({ name: 1 })
+    .lean()) as unknown as Array<{ _id: Types.ObjectId; name?: string; role?: string }>;
+  return users.map((u) => ({ userId: u._id.toString(), name: u.name ?? "", role: u.role ?? "" }));
+}
+
+builder.queryField("workClaimDigestRecipients", (t) =>
+  t.field({
+    type: [DigestRecipientRef],
+    authScopes: { authenticated: true },
+    description:
+      "Who the Principal added to the 10:30 digest, on top of every Principal and Office user " +
+      "(D-#710). Readable by whoever may watch the queue.",
+    resolve: async (_r, _a, ctx) => {
+      if (!(await canWatchClaims(ctx))) throw new ForbiddenError();
+      return extraRecipients();
+    },
+  }),
+);
+
+builder.mutationField("setWorkClaimDigestRecipients", (t) =>
+  t.field({
+    type: [DigestRecipientRef],
+    authScopes: { authenticated: true },
+    description:
+      "Replace the 10:30 digest's extra recipients (D-#710). PRINCIPAL only. Every Principal " +
+      "and Office user always receives it; these are the people added on top, and they may " +
+      "also open the claim queue and nudge from it.",
+    args: { userIds: t.arg.stringList({ required: true }) },
+    resolve: async (_r, args, ctx) => {
+      if (ctx.auth?.role !== "PRINCIPAL") throw new ForbiddenError();
+      const unique = [...new Set(args.userIds)];
+      if (unique.some((id) => !Types.ObjectId.isValid(id))) throw new Error("অজানা ব্যবহারকারী");
+      const users = (await User.find({
+        _id: { $in: unique.map((id) => new Types.ObjectId(id)) },
+        active: true,
+        role: { $ne: "GUARDIAN" },
+      })
+        .select("_id")
+        .lean()) as unknown as Array<{ _id: Types.ObjectId }>;
+      if (users.length !== unique.length) {
+        throw new Error("শুধু সক্রিয় কর্মীদের যোগ করা যায়");
+      }
+      await WorkClaimDigestConfig.findOneAndUpdate(
+        { key: "SINGLETON" },
+        {
+          $set: {
+            extraRecipientIds: users.map((u) => u._id),
+            updatedBy: new Types.ObjectId(ctx.auth.userId),
+          },
+        },
+        { upsert: true },
+      );
+      await writeAudit({
+        eventKind: "WORK_CLAIM_DIGEST_RECIPIENTS_SET",
+        actorId: ctx.auth.userId,
+        targetKind: "WorkClaimDigestConfig",
+        meta: { userIds: unique },
+      });
+      return extraRecipients();
     },
   }),
 );

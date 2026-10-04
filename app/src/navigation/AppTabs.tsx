@@ -630,6 +630,9 @@ function HomeNavigator(): React.ReactElement {
         component={adminDash ? AdminTodayScreen : TodayScreen}
         options={{ title: STR.drawerItemToday }}
       />
+      {/* D-#710: where the 10:30 digest lands a TEACHER the Principal added to it.
+          Second, never first — Today must stay the initial route. */}
+      <HomeStack.Screen name="WorkClaimQueue" component={WorkClaimQueueScreen} options={{ title: STR.wcQueueTitle }} />
     </HomeStack.Navigator>
   );
 }

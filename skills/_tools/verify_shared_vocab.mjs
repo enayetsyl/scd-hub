@@ -726,9 +726,9 @@ check("a claim is only ever filable against DUE or CHASE — GIVEN is not late y
   eq(V.WORK_CLAIM_ELIGIBLE_STATES, ["DUE", "CHASE"]));
 check("every eligible state is a real LifecycleState (D-#37 mirror)",
   V.WORK_CLAIM_ELIGIBLE_STATES.every((st) => V.LIFECYCLE_STATES.includes(st)));
-check("the same-day rungs are 11:30 (Office) then 13:00 (Principal), in that order — owner ruling 2026-08-25, D-#554",
-  V.WORK_CLAIM_OFFICE_RUNG_MIN === 690 && V.WORK_CLAIM_PRINCIPAL_RUNG_MIN === 780 &&
-  V.WORK_CLAIM_OFFICE_RUNG_MIN < V.WORK_CLAIM_PRINCIPAL_RUNG_MIN);
+check("ONE daily escalation digest at 10:30, before the 14:00 same-day floor — owner ruling 2026-10-04, D-#710 (replaces D-#554's 11:30/13:00 rungs)",
+  V.WORK_CLAIM_DIGEST_MIN === 630 && V.WORK_CLAIM_DIGEST_MIN < V.WORK_CLAIM_SAME_DAY_MIN &&
+  V.WORK_CLAIM_OFFICE_RUNG_MIN === undefined && V.WORK_CLAIM_PRINCIPAL_RUNG_MIN === undefined);
 check("one re-claim only, and a 7-school-day window (D-#553)",
   V.WORK_CLAIM_MAX_ATTEMPTS === 2 && V.WORK_CLAIM_WINDOW_SCHOOL_DAYS === 7);
 check("NO work-claim permission is added — guardians file under guardian:read_child, teachers resolve under tracker:write, Office reads under tracker:read (D-#551/#554)",

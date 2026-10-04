@@ -20,6 +20,9 @@ export type HwEditItemParam = {
 /** Staff landing dashboard (UX-4, D-#265) — registered FIRST so staff land here. */
 export type HomeStackParamList = {
   Today: undefined;
+  /** D-#710: the claim queue for a teacher the Principal added to the 10:30 digest
+   *  (teachers have no Admin tab). Registered AFTER Today, so Today stays initial. */
+  WorkClaimQueue: undefined;
 };
 
 /** Which panel the Student Profile opens on (SP-3, prd-student-profile §8.1). */
