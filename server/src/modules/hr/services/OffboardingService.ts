@@ -22,15 +22,15 @@ import type { OffboardingTrigger, ClearanceItemStatus } from "@scd/shared";
 import { OffboardingCase, type IOffboardingCase, type IFinalSettlement } from "../models/OffboardingCase";
 import { StaffProfile } from "../../foundation/models/StaffProfile";
 import { User } from "../../foundation/models/User";
-import { AcademicYear } from "../../foundation/models/AcademicYear";
+import { Payslip } from "../models/Payslip";
 import { AdvanceLoan } from "../models/AdvanceLoan";
 import { revokeAllGrantsForUser } from "../../foundation/services/ScopeGrantService";
 import { writeAudit } from "../../platform/services/AuditService";
 import { dateKeyOf } from "../../attendance/dates";
 import { parseDateKey } from "./dates";
 import { dayRate, computePayslip, type PayLineInput } from "./payrollMath";
-import { pendingExitDebt, settleOnExit } from "./ProbationDebtService";
-import { balancesForStaff, pooledBalanceForStaff } from "./LeaveEntitlementService";
+import { settleOnExit } from "./ProbationDebtService";
+import { exitDues } from "./ExitPayService";
 import { activeAdvanceByStaff } from "./AdvanceService";
 import { resolveUserIdForStaff } from "./staffMatch";
 import {
@@ -120,6 +120,9 @@ export async function updateClearanceItem(
   if (note !== undefined) item.note = note;
   item.updatedBy = new Types.ObjectId(actorId);
   item.updatedAt = new Date();
+  // D-#711 — the money already went out with the leaver's last payslip; the case was
+  // left open only for clearance. Finishing the checklist is what closes it.
+  if (c.settlement?.paidInMonthKey && clearanceComplete(c.clearanceItems)) c.status = "completed";
   await c.save();
   await writeAudit({
     eventKind: "OFFBOARDING_CLEARANCE_UPDATED",
@@ -215,6 +218,17 @@ export interface ComputeSettlementInput {
   actorId: string;
 }
 
+/** Refuse when a payroll run carries this exit's last payslip (D-#711). A prepared run
+ *  counts too: approving it is what pays, and the settlement must not race it. */
+async function assertNotPaidByRun(caseId: Types.ObjectId): Promise<void> {
+  const slip = await Payslip.findOne({ exitCaseId: caseId }).select("monthKey").lean();
+  if (slip) {
+    throw new OffboardingError(
+      `This exit is paid as the last payslip of the ${slip.monthKey} payroll run — re-prepare that run to change it`,
+    );
+  }
+}
+
 export async function computeFinalSettlement(input: ComputeSettlementInput): Promise<IOffboardingCase> {
   if (input.workingDays < 1) throw new OffboardingError("workingDays must be ≥ 1");
   const c = await OffboardingCase.findById(input.caseId);
@@ -230,64 +244,24 @@ export async function computeFinalSettlement(input: ComputeSettlementInput): Pro
     throw new OffboardingError("Staff member has no monthly salary set — cannot compute a settlement");
   }
 
+  // D-#711 — an exit whose last month went through a payroll run was paid THERE, dues
+  // and all. Computing a settlement on top would pay the same money twice.
+  await assertNotPaidByRun(c._id);
+
   const rate = dayRate(staff.monthlySalary, input.workingDays);
   const gross = input.payableDays != null ? Math.round(rate * input.payableDays) : staff.monthlySalary;
 
-  // H6.4 — full leave encashment: the carried-over encashable days × day-rate (H2.4(b)).
-  const ayId =
-    input.academicYearId ?? (await AcademicYear.findOne({ current: true }).select("_id").lean())?._id?.toString();
-  let encashableDays = 0;
-  if (ayId) {
-    const balances = await balancesForStaff(c.staffProfileId.toString(), ayId);
-    encashableDays = balances.reduce((s, b) => s + b.encashableDays, 0);
-  }
+  // The H6.4 exit dues — encashment, the overdrawn balance (D-#616) and the probation-
+  // held debt (D-#540) — from the one source the monthly run reads too. Read-only: the
+  // probation rows are marked settled only when the settlement is RELEASED, so a
+  // recompute cannot consume the debt and leave it out of the figure actually approved.
+  const dues = await exitDues(c.staffProfileId.toString(), rate, input.academicYearId);
+  const encashableDays = dues.encashableDays;
   const additions: PayLineInput[] = [...(input.manualAdditions ?? [])];
-  if (encashableDays > 0) {
-    additions.push({ type: "leave_encashment", amount: Math.round(rate * encashableDays), days: encashableDays });
-  }
-
-  // SH-3 / D-#540 — a probationer who leaves before being confirmed carries their HELD
-  // leave debt to the final settlement: the pool that would have absorbed it was never
-  // granted. Read-only here; the rows are marked settled only when the settlement is
-  // RELEASED, so a recompute cannot consume the debt and then leave it out of the
-  // figure the Principal actually approves.
-  const heldProbationDays = await pendingExitDebt(c.staffProfileId.toString());
+  if (dues.encashment) additions.push(dues.encashment);
   const deductions: PayLineInput[] = [...(input.manualDeductions ?? [])];
-
-  /**
-   * AN OVERDRAWN LEAVE BALANCE IS RECOVERED HERE, AND ONLY HERE (D-#616).
-   *
-   * Leave and lateness both draw the pool and the pool may go negative; payroll never
-   * turns that into a salary deduction while someone is employed. The debt is real
-   * though, and this is the last payslip — so the final settlement is where it lands,
-   * exactly as the probation-held debt above does.
-   *
-   * The two do not overlap. Held probation days never entered the pool at all (there was
-   * no pool to enter), so they are counted separately; a negative balance is days that
-   * DID draw a pool and took it past zero.
-   *
-   * An earlier agreed recovery (D-#617) has already moved the balance back up, so
-   * whatever remains negative here is genuinely still owed.
-   */
-  const pool = await pooledBalanceForStaff(c.staffProfileId.toString(), ayId ?? null);
-  const overdrawnDays = pool.remainingDays < 0 ? Math.abs(pool.remainingDays) : 0;
-  if (overdrawnDays > 0) {
-    deductions.push({
-      type: "unpaid_leave",
-      amount: Math.round(rate * overdrawnDays),
-      days: overdrawnDays,
-      note: "ঋণাত্মক ছুটির জমা (D-#616)",
-    });
-  }
-
-  if (heldProbationDays > 0) {
-    deductions.push({
-      type: "unpaid_leave",
-      amount: Math.round(rate * heldProbationDays),
-      days: heldProbationDays,
-      note: "প্রবেশনকালীন জমা ছুটি (D-#540)",
-    });
-  }
+  if (dues.overdrawn) deductions.push(dues.overdrawn);
+  if (dues.probation) deductions.push(dues.probation);
 
   // H6.4 — outstanding advance netted in FULL at exit (one_shot), capped by the net-pay guard.
   const advance = (await activeAdvanceByStaff()).get(c.staffProfileId.toString());
@@ -341,6 +315,9 @@ export async function releaseFinalSettlement(caseId: string, actorId: string): P
   if (!c) throw new OffboardingError("Offboarding case not found");
   if (!c.settlement) throw new OffboardingError("No settlement has been computed yet");
   if (c.settlement.held === false) throw new OffboardingError("The settlement is already released");
+  // A held settlement computed BEFORE the leaver's month was run is superseded by that
+  // run's payslip (D-#711); releasing it as well would pay twice.
+  await assertNotPaidByRun(c._id);
   if (!clearanceComplete(c.clearanceItems)) {
     throw new OffboardingError(
       "The final settlement is hard-held until clearance is complete — every item must be done or waived (H6.4/D-#29)",

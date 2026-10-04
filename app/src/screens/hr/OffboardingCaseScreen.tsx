@@ -244,8 +244,10 @@ export default function OffboardingCaseScreen({ route }: Props): React.ReactElem
               tone={released ? "ok" : "warn"}
             />
           </View>
+          {settlement.paidInMonthKey ? <Row label={STR.hrSettlementPaidInRun} value={settlement.paidInMonthKey} /> : null}
           <Row label={STR.hrPayGross} value={money(settlement.grossSalary)} />
           <Row label={STR.hrPayDayRate} value={money(settlement.dayRate)} />
+          {settlement.payableDays != null ? <Row label={STR.hrPayPayableDays} value={bnNum(settlement.payableDays)} /> : null}
           {settlement.leaveEncashmentDays > 0 ? <Row label={STR.hrLeaveEncashDays} value={bnNum(settlement.leaveEncashmentDays)} /> : null}
           {settlement.additions.length > 0 ? (
             <>

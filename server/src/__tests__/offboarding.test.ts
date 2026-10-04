@@ -78,6 +78,12 @@ jest.mock("../modules/hr/models/ProbationLeaveDebt", () => ({
 jest.mock("../modules/hr/models/AdvanceLoan", () => ({
   AdvanceLoan: { findById: (id: unknown) => mockAdvanceFindById(id) },
 }));
+/** D-#711 — the exit's last payslip in a payroll run. Default "none" = a settlement
+ *  path exactly as before; the paid-by-a-run refusal is asserted separately. */
+const mockExitSlipFindOne = jest.fn((_q: unknown) => null as unknown);
+jest.mock("../modules/hr/models/Payslip", () => ({
+  Payslip: { findOne: (q: unknown) => ({ select: () => ({ lean: async () => mockExitSlipFindOne(q) }) }) },
+}));
 jest.mock("../modules/foundation/services/ScopeGrantService", () => ({
   revokeAllGrantsForUser: (u: unknown, by: unknown) => mockRevokeAllGrants(u, by),
 }));
@@ -400,6 +406,36 @@ describe("final settlement (H6.4, D-#29)", () => {
     await releaseFinalSettlement((c._id as mongoose.Types.ObjectId).toString(), oid().toString());
     expect(ProbationLeaveDebt.updateOne).toHaveBeenCalled();
   });
+
+  // --- D-#711: the leaver's last month paid by the monthly run -----------------
+  test("refuses to compute a settlement for an exit a payroll run already pays", async () => {
+    const c: Record<string, unknown> = {
+      _id: oid(), staffProfileId: oid(), status: "access_revoked", settlement: null,
+      clearanceItems: [{ status: "pending" }], save: jest.fn(),
+    };
+    mockCaseFindById.mockResolvedValue(c);
+    mockStaffFindById.mockResolvedValue({ monthlySalary: 5000 });
+    mockExitSlipFindOne.mockReturnValueOnce({ monthKey: "2026-09" });
+    await expect(
+      computeFinalSettlement({ caseId: (c._id as mongoose.Types.ObjectId).toString(), workingDays: 22, actorId: oid().toString() }),
+    ).rejects.toThrow(/2026-09 payroll run/);
+    expect(c.save).not.toHaveBeenCalled();
+  });
+
+  test("refuses to release a held settlement that a payroll run has since superseded", async () => {
+    const c: Record<string, unknown> = {
+      _id: oid(), staffProfileId: oid(), status: "access_revoked",
+      settlement: { held: true, advanceId: null, advanceRecovered: 0, netPay: 100 },
+      clearanceItems: [{ status: "done" }],
+      save: jest.fn(), markModified: jest.fn(),
+    };
+    mockCaseFindById.mockResolvedValue(c);
+    mockExitSlipFindOne.mockReturnValueOnce({ monthKey: "2026-09" });
+    await expect(releaseFinalSettlement((c._id as mongoose.Types.ObjectId).toString(), oid().toString())).rejects.toThrow(
+      /payroll run/,
+    );
+    expect((c.settlement as Record<string, unknown>).held).toBe(true);
+  });
 });
 
 // ===========================================================================
@@ -413,6 +449,28 @@ describe("clearance + cancel", () => {
     await updateClearanceItem((c._id as mongoose.Types.ObjectId).toString(), "no_dues", "done", "ok", oid().toString());
     expect(item.status).toBe("done");
     expect(mockWriteAudit).toHaveBeenCalledWith(expect.objectContaining({ eventKind: "OFFBOARDING_CLEARANCE_UPDATED" }));
+  });
+
+  test("a case whose dues were paid by a payroll run closes when its clearance is finished (D-#711)", async () => {
+    const item = { key: "no_dues", label: "x", status: "pending" as const, note: null, updatedBy: null, updatedAt: null };
+    const done = { key: "assets", label: "y", status: "done" as const, note: null, updatedBy: null, updatedAt: null };
+    const c: Record<string, unknown> = {
+      _id: oid(), status: "access_revoked", clearanceItems: [done, item],
+      settlement: { held: false, paidInMonthKey: "2026-09" }, save: jest.fn(),
+    };
+    mockCaseFindById.mockResolvedValue(c);
+    await updateClearanceItem((c._id as mongoose.Types.ObjectId).toString(), "no_dues", "waived", undefined, oid().toString());
+    expect(c.status).toBe("completed");
+  });
+
+  test("…but a case still waiting on its own settlement stays open", async () => {
+    const item = { key: "no_dues", label: "x", status: "pending" as const, note: null, updatedBy: null, updatedAt: null };
+    const c: Record<string, unknown> = {
+      _id: oid(), status: "access_revoked", clearanceItems: [item], settlement: { held: true }, save: jest.fn(),
+    };
+    mockCaseFindById.mockResolvedValue(c);
+    await updateClearanceItem((c._id as mongoose.Types.ObjectId).toString(), "no_dues", "done", undefined, oid().toString());
+    expect(c.status).toBe("access_revoked");
   });
 
   test("cancelOffboarding only works before access is revoked", async () => {

@@ -7316,6 +7316,10 @@ export interface PayslipT {
   totalAdditions: number;
   netPay: number;
   advanceRepaid: number;
+  /** Days paid when the month was pro-rated (mid-month joiner/leaver, D-#711); null = full month. */
+  payableDays: number | null;
+  /** The leaver's last payslip — it carries the exit dues and is the final settlement. */
+  isExitPayslip: boolean;
 }
 
 export const PAYSLIPS_FOR_RUN_QUERY = gql<{ payslipsForRun: PayslipT[] }, { runId: string }>`
@@ -7325,7 +7329,7 @@ export const PAYSLIPS_FOR_RUN_QUERY = gql<{ payslipsForRun: PayslipT[] }, { runI
       grossSalary dayRate unpaidLeaveDays
       deductions { type amount days note }
       additions { type amount days note }
-      totalDeductions totalAdditions netPay advanceRepaid
+      totalDeductions totalAdditions netPay advanceRepaid payableDays isExitPayslip
     }
   }
 `;
@@ -7599,6 +7603,8 @@ export interface FinalSettlementT {
   held: boolean;
   computedAt: string;
   releasedAt: string | null;
+  /** The payroll month that paid this as the leaver's last payslip (D-#711). */
+  paidInMonthKey: string | null;
 }
 
 export interface OffboardingCaseT {
@@ -7628,7 +7634,7 @@ const OFFBOARDING_CASE_FIELDS = `
     workingDays payableDays dayRate grossSalary leaveEncashmentDays
     deductions { type amount days note }
     additions { type amount days note }
-    totalDeductions totalAdditions netPay advanceRecovered held computedAt releasedAt
+    totalDeductions totalAdditions netPay advanceRecovered held computedAt releasedAt paidInMonthKey
   }
   exitInterviewReason exitInterviewFeedback serviceCertificateIssuedAt createdAt
 `;

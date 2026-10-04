@@ -50,12 +50,25 @@ jest.mock("../modules/hr/models/Payslip", () => ({
 // D-#617 — preparing a run upserts (or clears) an agreed leave-balance recovery.
 const mockRecoveryUpsert = jest.fn().mockResolvedValue({});
 const mockRecoveryDelete = jest.fn().mockResolvedValue({});
+const mockRecoveryDeleteMany = jest.fn().mockResolvedValue({});
 jest.mock("../modules/hr/models/LeaveBalanceRecovery", () => ({
   LeaveBalanceRecovery: {
     find: () => ({ select: () => ({ lean: async () => [] }) }),
     findOneAndUpdate: (q: unknown, u: unknown, o: unknown) => mockRecoveryUpsert(q, u, o),
     deleteOne: (q: unknown) => mockRecoveryDelete(q),
+    deleteMany: (q: unknown) => mockRecoveryDeleteMany(q),
   },
+}));
+// D-#711 — leavers. Default: nobody has an exit case, which is every staff member in
+// every pre-existing test below, so their figures must be unchanged to the taka.
+const mockExitsUpTo = jest.fn(async (_m: string) => new Map<string, unknown>());
+const mockExitDues = jest.fn();
+const mockCommitExit = jest.fn(async (..._a: unknown[]) => 0);
+jest.mock("../modules/hr/services/ExitPayService", () => ({
+  exitsUpTo: (m: string) => mockExitsUpTo(m),
+  exitDues: (s: unknown, r: unknown) => mockExitDues(s, r),
+  commitExitPayslips: (...a: unknown[]) => mockCommitExit(...a),
+  OVERDRAWN_LEAVE_NOTE: "ঋণাত্মক ছুটির জমা (D-#616)",
 }));
 jest.mock("../modules/hr/models/AdvanceLoan", () => ({
   AdvanceLoan: {
@@ -96,7 +109,7 @@ jest.mock("../modules/platform/services/AuditService", () => ({
   writeAudit: (p: unknown) => mockWriteAudit(p),
 }));
 
-import { assertMonthKey, dayRate, computePayslip, PayrollError } from "../modules/hr/services/payrollMath";
+import { assertMonthKey, dayRate, computePayslip, payableDaysInMonth, PayrollError } from "../modules/hr/services/payrollMath";
 import { preparePayrollRun, approvePayrollRun, cancelPayrollRun, paymentExport, recoverAdvance } from "../modules/hr/services/PayrollService";
 import ExcelJS from "exceljs";
 import { buildPaymentWorkbook } from "../modules/hr/routes/paymentExportCsv";
@@ -725,5 +738,187 @@ describe("whether a run recovers an advance (D-#622)", () => {
   test("no advance, nothing to recover", () => {
     expect(recoverAdvance(null, { recoverAdvance: true })).toBe(false);
     expect(recoverAdvance(undefined, undefined)).toBe(false);
+  });
+});
+
+// ===========================================================================
+/**
+ * D-#711 — a mid-month joiner or leaver is paid for the days they served.
+ *
+ * The prod case: Afia Loskor's exit case said her last working day was 2026-09-13, and
+ * the September run still paid her the full ৳5,000 — the run never read the exit. Selina
+ * Begum joined on 2026-09-13 and would have drawn a full month the same way. Sept 2026
+ * has 22 Sun–Thu days (the run's workingDays); 9 of them fall on or before the 13th and
+ * 14 on or after it.
+ */
+describe("mid-month joiners and leavers (D-#711)", () => {
+  test("payableDaysInMonth: a full month is null — the salary is paid as-is", () => {
+    expect(payableDaysInMonth({ monthKey: "2026-09", workingDays: 22 })).toBeNull();
+    expect(payableDaysInMonth({ monthKey: "2026-09", workingDays: 22, joinedKey: "2026-01-13" })).toBeNull();
+    expect(payableDaysInMonth({ monthKey: "2026-09", workingDays: 22, lastDayKey: "2026-12-31" })).toBeNull();
+  });
+
+  test("payableDaysInMonth: a leaver to the 13th serves 9 of 22; a joiner from the 13th serves 14", () => {
+    expect(payableDaysInMonth({ monthKey: "2026-09", workingDays: 22, lastDayKey: "2026-09-13" })).toBe(9);
+    expect(payableDaysInMonth({ monthKey: "2026-09", workingDays: 22, joinedKey: "2026-09-13" })).toBe(14);
+    // Joined and left inside the same month: the 13th..the 24th.
+    expect(
+      payableDaysInMonth({ monthKey: "2026-09", workingDays: 22, joinedKey: "2026-09-13", lastDayKey: "2026-09-24" }),
+    ).toBe(10);
+  });
+
+  test("payableDaysInMonth: outside the month entirely is 0", () => {
+    expect(payableDaysInMonth({ monthKey: "2026-09", workingDays: 22, lastDayKey: "2026-08-28" })).toBe(0);
+    expect(payableDaysInMonth({ monthKey: "2026-09", workingDays: 22, joinedKey: "2026-10-04" })).toBe(0);
+  });
+
+  test("payableDaysInMonth: the SHARE of the month is kept when the Office enters fewer working days", () => {
+    // 9/22 of a 20-day month (two holidays taken out) → 8, not 9 counted on another basis.
+    expect(payableDaysInMonth({ monthKey: "2026-09", workingDays: 20, lastDayKey: "2026-09-13" })).toBe(8);
+  });
+
+  function prepareWith(staff: Array<Record<string, unknown>>) {
+    mockRunFindOne.mockResolvedValue(null);
+    mockStaffFind.mockResolvedValue(staff);
+    mockLeaveFind.mockResolvedValue([]);
+    mockAdvFind.mockResolvedValue([]);
+    mockRunCreate.mockResolvedValue({ _id: oid(), monthKey: "2026-09", status: "prepared" });
+    mockSlipInsert.mockImplementation(async (docs: unknown) => docs);
+  }
+  const noDues = {
+    encashableDays: 0, overdrawnDays: 0, heldProbationDays: 0, encashment: null, overdrawn: null, probation: null,
+  };
+
+  test("a LEAVER is pro-rated to the last working day and her exit dues ride the payslip", async () => {
+    const afia = oid();
+    const caseId = oid();
+    prepareWith([{ _id: afia, name: "Afia", category: "teacher", monthlySalary: 5000, paymentMethod: "bank" }]);
+    mockExitsUpTo.mockResolvedValueOnce(
+      new Map([[afia.toString(), { caseId, lastWorkingDayKey: "2026-09-13", settledOutsideRun: false }]]),
+    );
+    // rate = round(5000/22) = 227; 2 encashable days, 1 day overdrawn.
+    mockExitDues.mockResolvedValueOnce({
+      ...noDues,
+      encashableDays: 2,
+      overdrawnDays: 1,
+      encashment: { type: "leave_encashment", amount: 454, days: 2 },
+    });
+
+    const { payslips } = await preparePayrollRun({ monthKey: "2026-09", workingDays: 22, actorId: ACTOR });
+
+    const p = payslips[0] as any;
+    expect(p.payableDays).toBe(9);
+    expect(p.grossSalary).toBe(2043); // 227 × 9
+    expect(p.additions).toEqual([expect.objectContaining({ type: "leave_encashment", amount: 454 })]);
+    expect(p.deductions).toEqual([expect.objectContaining({ type: "unpaid_leave", amount: 227, days: 1 })]);
+    expect(p.netPay).toBe(2043 + 454 - 227);
+    expect(p.exitCaseId).toBe(caseId);
+    // The overdrawn days go back on the balance, so they can never be collected twice.
+    expect(mockRecoveryUpsert).toHaveBeenCalledWith(
+      expect.anything(),
+      { $set: expect.objectContaining({ days: 1, amount: 227 }) },
+      expect.anything(),
+    );
+  });
+
+  test("a leaver's outstanding advance is netted in FULL, even a one-shot nobody ticked", async () => {
+    const s = oid();
+    prepareWith([{ _id: s, name: "L", category: "teacher", monthlySalary: 22000, paymentMethod: "bank" }]);
+    mockAdvFind.mockResolvedValue([{ _id: oid(), staffProfileId: s, recoveryMode: "one_shot", balance: 3000 }]);
+    mockExitsUpTo.mockResolvedValueOnce(
+      new Map([[s.toString(), { caseId: oid(), lastWorkingDayKey: "2026-09-13", settledOutsideRun: false }]]),
+    );
+    mockExitDues.mockResolvedValueOnce(noDues);
+    const { payslips } = await preparePayrollRun({ monthKey: "2026-09", workingDays: 22, actorId: ACTOR });
+    expect((payslips[0] as any).advanceRepaid).toBe(3000);
+  });
+
+  test("someone who left in an EARLIER month, or was already settled, gets no payslip", async () => {
+    const gone = oid();
+    const settled = oid();
+    prepareWith([
+      { _id: gone, name: "Gone", category: "teacher", monthlySalary: 5000 },
+      { _id: settled, name: "Settled", category: "teacher", monthlySalary: 5000 },
+    ]);
+    mockExitsUpTo.mockResolvedValueOnce(
+      new Map([
+        [gone.toString(), { caseId: oid(), lastWorkingDayKey: "2026-08-20", settledOutsideRun: false }],
+        [settled.toString(), { caseId: oid(), lastWorkingDayKey: "2026-09-13", settledOutsideRun: true }],
+      ]),
+    );
+    const { payslips } = await preparePayrollRun({ monthKey: "2026-09", workingDays: 22, actorId: ACTOR });
+    expect(payslips).toHaveLength(0);
+    expect(mockExitDues).not.toHaveBeenCalled();
+  });
+
+  test("a leaver whose profile was switched off is still paid her last month", async () => {
+    const s = oid();
+    prepareWith([]);
+    mockExitsUpTo.mockResolvedValueOnce(
+      new Map([[s.toString(), { caseId: oid(), lastWorkingDayKey: "2026-09-13", settledOutsideRun: false }]]),
+    );
+    await preparePayrollRun({ monthKey: "2026-09", workingDays: 22, actorId: ACTOR });
+    expect(mockStaffFind).toHaveBeenCalledWith(
+      expect.objectContaining({ $or: [{ active: true }, { _id: { $in: [s] } }] }),
+    );
+  });
+
+  test("a JOINER is paid from the joining date, with no exit dues", async () => {
+    const selina = oid();
+    prepareWith([
+      {
+        _id: selina, name: "Selina", category: "support", monthlySalary: 5000, paymentMethod: "cash",
+        joiningDate: new Date("2026-09-13"),
+      },
+    ]);
+    const { payslips } = await preparePayrollRun({ monthKey: "2026-09", workingDays: 22, actorId: ACTOR });
+    const p = payslips[0] as any;
+    expect(p.payableDays).toBe(14);
+    expect(p.grossSalary).toBe(3178); // 227 × 14
+    expect(p.exitCaseId).toBeNull();
+    expect(mockExitDues).not.toHaveBeenCalled();
+  });
+
+  test("someone who joins after the month is not on it; the Office's own payable days still win", async () => {
+    const later = oid();
+    const typed = oid();
+    prepareWith([
+      { _id: later, name: "Later", category: "support", monthlySalary: 5000, joiningDate: new Date("2026-10-04") },
+      { _id: typed, name: "Typed", category: "support", monthlySalary: 5000, joiningDate: new Date("2026-09-13") },
+    ]);
+    const { payslips } = await preparePayrollRun({
+      monthKey: "2026-09",
+      workingDays: 22,
+      actorId: ACTOR,
+      adjustments: [{ staffProfileId: typed.toString(), payableDays: 10 }],
+    });
+    expect(payslips).toHaveLength(1);
+    expect((payslips[0] as any).grossSalary).toBe(2270); // 227 × 10, not × 14
+  });
+
+  test("re-preparing drops the OLD run's leave-balance credits; cancelling drops the run's own", async () => {
+    const oldRun = oid();
+    mockRunFindOne.mockResolvedValue({ _id: oldRun, status: "prepared" });
+    mockStaffFind.mockResolvedValue([]);
+    mockLeaveFind.mockResolvedValue([]);
+    mockAdvFind.mockResolvedValue([]);
+    mockRunCreate.mockResolvedValue({ _id: oid(), monthKey: "2026-09", status: "prepared" });
+    await preparePayrollRun({ monthKey: "2026-09", workingDays: 22, actorId: ACTOR });
+    expect(mockRecoveryDeleteMany).toHaveBeenCalledWith({ payrollRunId: oldRun });
+
+    const run: any = { _id: oid(), monthKey: "2026-09", status: "prepared", save: jest.fn() };
+    mockRunFindById.mockResolvedValue(run);
+    await cancelPayrollRun(run._id.toString(), ACTOR);
+    expect(mockRecoveryDeleteMany).toHaveBeenCalledWith({ payrollRunId: run._id });
+  });
+
+  test("approving the run commits the leaver's payslip as her final settlement", async () => {
+    const run: any = { _id: oid(), monthKey: "2026-09", status: "prepared", workingDays: 22, save: jest.fn() };
+    mockRunFindById.mockResolvedValue(run);
+    const exitSlip = { exitCaseId: oid(), advanceRepaid: 0 };
+    mockSlipFind.mockReturnValue([exitSlip]);
+    await approvePayrollRun(run._id.toString(), ACTOR);
+    expect(mockSlipFind).toHaveBeenCalledWith({ payrollRunId: run._id, exitCaseId: { $ne: null } });
+    expect(mockCommitExit).toHaveBeenCalledWith([exitSlip], 22, ACTOR);
   });
 });

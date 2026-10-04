@@ -46,6 +46,13 @@ export interface IPayslip extends Document {
   /** Advance amount recovered in THIS run (after the net-pay guard), and which advance. */
   advanceRepaid: number;
   advanceId?: Types.ObjectId | null;
+  /** Days paid when the month was PRO-RATED (a mid-month joiner or leaver); null = the
+   *  full monthly salary. Stored so the payslip can say why its gross is short. */
+  payableDays?: number | null;
+  /** Set when this is a leaver's LAST payslip and it carries their exit dues (leave
+   *  encashment, overdrawn-leave and probation-debt charges). The exit case's final
+   *  settlement then IS this payslip — it is never paid a second time. */
+  exitCaseId?: Types.ObjectId | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -79,11 +86,14 @@ const PayslipSchema = new Schema<IPayslip>(
     netPay: { type: Number, required: true },
     advanceRepaid: { type: Number, required: true, default: 0, min: 0 },
     advanceId: { type: Schema.Types.ObjectId, default: null },
+    payableDays: { type: Number, default: null, min: 0 },
+    exitCaseId: { type: Schema.Types.ObjectId, ref: "OffboardingCase", default: null },
   },
   { timestamps: true },
 );
 
 PayslipSchema.index({ payrollRunId: 1, staffProfileId: 1 }, { unique: true });
 PayslipSchema.index({ staffProfileId: 1, monthKey: 1 });
+PayslipSchema.index({ exitCaseId: 1 });
 
 export const Payslip = model<IPayslip>("Payslip", PayslipSchema);
