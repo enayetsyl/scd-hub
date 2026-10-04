@@ -31,6 +31,12 @@ jest.mock("../modules/foundation/models/User", () => ({
     find: () => ({ select: () => ({ lean: () => Promise.resolve([]) }) }),
   },
 }));
+const mockObservationFind = jest.fn();
+jest.mock("../modules/classroom-observation/models/ClassroomObservation", () => ({
+  ClassroomObservation: {
+    find: (q: unknown) => ({ select: () => ({ lean: () => mockObservationFind(q) }) }),
+  },
+}));
 jest.mock("../modules/platform/services/AuditService", () => ({
   writeAudit: (p: unknown) => mockWriteAudit(p),
 }));
@@ -41,7 +47,7 @@ jest.mock("../modules/workboard/services/workBoardNotifications", () => ({
 }));
 
 import { templateDueOn } from "../modules/workboard/services/TaskTemplateService";
-import { applyPulls, slotForMinute, sortCards, type WorkCard } from "../modules/workboard/services/WorkBoardService";
+import { applyPulls, observationCards, slotForMinute, sortCards, type WorkCard } from "../modules/workboard/services/WorkBoardService";
 import { deskUncovered, officeRecipients } from "../modules/workboard/services/OfficeCoverService";
 import { aggregateLoad } from "../modules/workboard/services/LoadService";
 import { digestLines, overdueLines } from "../modules/workboard/services/TaskSweepService";
@@ -222,6 +228,25 @@ describe("office cover: desk, backups, pulls", () => {
     expect(pulled.map((c) => c.key)).toEqual(["PRINT_JOB:j1:tazkir", "PERIOD:s:d:akmol"]);
     expect(pulled[0].pulledByName).toBe("Tazkir");
     expect(pulled[0].canPull).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 3c. Observation cards
+// ---------------------------------------------------------------------------
+
+describe("observationCards", () => {
+  test("a cancelled plan (still state ASSIGNED) is not a card — the board matches the review queue", async () => {
+    const observer = new Types.ObjectId();
+    const open = { _id: new Types.ObjectId(), observerId: observer, teacherId: new Types.ObjectId(), classDate: "2026-10-04", subject: "MATH" };
+    mockObservationFind.mockResolvedValueOnce([open]);
+
+    const cards = await observationCards([observer.toString()], "2026-10-04");
+
+    const filter = mockObservationFind.mock.calls[0][0] as Record<string, unknown>;
+    expect(filter.state).toBe("ASSIGNED");
+    expect(filter).toHaveProperty("cancelledAt", null);
+    expect(cards.map((c) => c.key)).toEqual([`OBSERVATION:${open._id.toString()}`]);
   });
 });
 
