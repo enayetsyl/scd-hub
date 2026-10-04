@@ -361,7 +361,7 @@ builder.mutationField("fileScriptBundle", (t) =>
         // the test's real section + subject, resolved server-side).
         if (kind !== "CLASS_TEST") throw new ForbiddenError();
         const test = await ClassTest.findById(args.refId)
-          .select("sectionId classId subjectGroupId subject")
+          .select("sectionId classId subjectGroupId subject teacherId")
           .lean();
         if (!test) throw new Error("ক্লাস টেস্ট পাওয়া যায়নি");
         // Anchor-aware since D-#507: a group-anchored exam has no section to hold the
@@ -373,6 +373,8 @@ builder.mutationField("fileScriptBundle", (t) =>
             classId: test.classId ? test.classId.toString() : null,
             subjectGroupId: test.subjectGroupId ? test.subjectGroupId.toString() : null,
             subject: test.subject,
+            // The exam's teacher keeps it once its section is emptied (a split).
+            teacherId: test.teacherId ? test.teacherId.toString() : null,
           },
           async () => {
             const subjectDoc = await Subject.findOne({ code: test.subject }).select("_id").lean();

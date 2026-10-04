@@ -187,9 +187,11 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
     );
   }
   if (!test) {
+    // Say WHY (a scope refusal reads as the permission message) — the bare generic
+    // text hid a lost grant from the teacher and from whoever she asked (2026-10-04).
     return (
       <Screen>
-        <Notice message={STR.errGeneric} tone="danger" />
+        <Notice message={friendlyError(testQ.error)} tone="danger" />
       </Screen>
     );
   }
