@@ -18,6 +18,7 @@
 import { Types } from "mongoose";
 import { GuardianWorkClaim } from "../models/GuardianWorkClaim";
 import { Subject } from "../../foundation/models/Subject";
+import { Student } from "../../foundation/models/Student";
 import { resolveClaimRecipient } from "./ClaimRecipient";
 import { emitWorkClaimReassigned } from "../../notifications/services/emitters";
 import { writeAudit } from "../../platform/services/AuditService";
@@ -112,10 +113,29 @@ export async function reassignClaimsForSubject(
   return out;
 }
 
+/** Each student's CURRENT section, for the students on these claims. */
+async function currentSections(studentIds: Types.ObjectId[]): Promise<Map<string, Types.ObjectId>> {
+  if (studentIds.length === 0) return new Map();
+  const students = (await Student.find({ _id: { $in: studentIds } })
+    .select("_id sectionId")
+    .lean()) as unknown as Array<{ _id: Types.ObjectId; sectionId?: Types.ObjectId | null }>;
+  return new Map(
+    students.filter((s) => s.sectionId).map((s) => [s._id.toString(), s.sectionId as Types.ObjectId]),
+  );
+}
+
 /**
  * The safety net: re-resolve EVERY open claim. Run from the escalation sweep so a
  * change that never went through `grantTeaching` — a routine edit, a deactivated
  * user, a directly-edited grant — still self-heals within a day.
+ *
+ * A claim also follows its STUDENT (owner report 2026-10-04). It is resolved against
+ * the student's CURRENT section, not the one stored when it was filed: after the C4/C5
+ * boys/girls split, claims filed on the emptied combined section kept re-resolving
+ * there — no live MATH grant, so the class-teacher fallback — and Kawsar, who teaches
+ * no Math, owned four C4 Math claims the boys'/girls' Math teachers never saw. The
+ * homework records themselves were already moved (`rehomeStudentRecords`); the
+ * claim's section moves with the handover.
  */
 export async function reassignAllOpenClaims(
   actorId: string = SYSTEM_ACTOR_ID,
@@ -124,15 +144,24 @@ export async function reassignAllOpenClaims(
   try {
     const claims = await GuardianWorkClaim.find({ status: "PENDING" });
     out.examined = claims.length;
+    const homes = await currentSections(claims.map((c) => c.studentId));
     for (const claim of claims) {
-      const next = await resolveClaimRecipient(claim.sectionId, claim.subject, claim.teacherId);
+      const home = homes.get(claim.studentId.toString());
+      const rehomed = !!home && home.toString() !== claim.sectionId.toString();
+      const sectionId = rehomed ? home! : claim.sectionId;
+      const next = await resolveClaimRecipient(sectionId, claim.subject, claim.teacherId);
       if (!next) continue;
-      if (next.teacherId.toString() === claim.teacherId.toString()) continue;
+      const sameTeacher = next.teacherId.toString() === claim.teacherId.toString();
+      if (sameTeacher && !rehomed) continue;
 
       const previous = claim.teacherId.toString();
+      const fromSection = claim.sectionId.toString();
+      claim.sectionId = sectionId;
       claim.teacherId = next.teacherId;
       claim.teacherSource = next.source;
       await claim.save();
+      // Only the section moved — the same teacher answers it, so nobody new to tell.
+      if (sameTeacher) continue;
       out.moved += 1;
 
       await emitWorkClaimReassigned({
@@ -151,7 +180,13 @@ export async function reassignAllOpenClaims(
         actorId,
         targetId: claim._id.toString(),
         targetKind: "GuardianWorkClaim",
-        meta: { workId: claim.workId, from: previous, to: next.teacherId.toString(), source: next.source },
+        meta: {
+          workId: claim.workId,
+          from: previous,
+          to: next.teacherId.toString(),
+          source: next.source,
+          ...(rehomed ? { fromSection, toSection: sectionId.toString() } : {}),
+        },
       });
     }
   } catch (err) {
