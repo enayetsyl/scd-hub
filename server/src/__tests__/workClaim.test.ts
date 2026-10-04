@@ -128,8 +128,8 @@ beforeEach(() => {
 // §6.3.1 — the action day (D-#557)
 // ---------------------------------------------------------------------------
 
-describe("resolveActionDateKey — the owner's two examples must both land on a real 11:30", () => {
-  test("Thursday 09:00 → THAT Thursday (both rungs still ahead)", async () => {
+describe("resolveActionDateKey — every claim lands on a real 10:30 digest (D-#557, D-#710)", () => {
+  test("Thursday 09:00 → THAT Thursday (the digest is still ahead)", async () => {
     // 2026-08-27 is a Thursday.
     expect(await resolveActionDateKey(new Date("2026-08-27T09:00:00"))).toBe("2026-08-27");
   });
@@ -139,14 +139,14 @@ describe("resolveActionDateKey — the owner's two examples must both land on a 
     expect(await resolveActionDateKey(new Date("2026-08-24T21:00:00"))).toBe("2026-08-25");
   });
 
-  test("11:35 rolls to the next day rather than skipping the Office rung", async () => {
-    // Filed 5 minutes after 11:30: escalating at 13:00 would reach the Principal
-    // having given the teacher one hour and skipped Office entirely.
-    expect(await resolveActionDateKey(new Date("2026-08-24T11:35:00"))).toBe("2026-08-25");
+  test("10:35 rolls to the next day — that day's digest has already gone out", async () => {
+    // Filed 5 minutes after the 10:30 digest: counting it as pending today would
+    // charge the teacher a school day the digest never told anyone about.
+    expect(await resolveActionDateKey(new Date("2026-08-24T10:35:00"))).toBe("2026-08-25");
   });
 
-  test("11:29 still catches the same day", async () => {
-    expect(await resolveActionDateKey(new Date("2026-08-24T11:29:00"))).toBe("2026-08-24");
+  test("10:29 still catches the same day", async () => {
+    expect(await resolveActionDateKey(new Date("2026-08-24T10:29:00"))).toBe("2026-08-24");
   });
 
   test("Thursday afternoon waits for Sunday — nobody collects a notebook on Fri/Sat", async () => {

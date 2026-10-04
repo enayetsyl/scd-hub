@@ -41,7 +41,7 @@
  * Identity-plane only (ADR-005); no corpus path (N5.1).
  */
 import type { AttendanceReminderTier } from "@scd/shared";
-import { WORK_CLAIM_OFFICE_RUNG_MIN, WORK_CLAIM_PRINCIPAL_RUNG_MIN } from "@scd/shared";
+import { WORK_CLAIM_DIGEST_MIN } from "@scd/shared";
 import { ROUTINE_SUBJECT_LABELS_BN } from "@scd/shared";
 import { resolveDayType } from "../../routine/calendar";
 import { hhmmToMinutes } from "../../routine/schedule";
@@ -60,7 +60,7 @@ import { pendingHomeworkSections } from "../../trackers/services/HomeworkReconci
 import { sweepHomeworkDue } from "../../trackers/services/HomeworkDueSweepService";
 import { overdueCounts } from "../../trackers/services/ClassTestSummaryService";
 import {
-  runWorkClaimRung,
+  runWorkClaimDigest,
   expireStaleWorkClaims,
 } from "../../trackers/services/WorkClaimSweepService";
 import { reassignAllOpenClaims } from "../../trackers/services/ClaimReassignService";
@@ -124,14 +124,6 @@ export const HW_CONFIRM_REMINDER_MINUTES = [13 * 60, 13 * 60 + 30, 14 * 60] as c
 export const HW_CONFIRM_ESCALATION_RUNGS = [
   { min: 14 * 60, role: "OFFICE" },
   { min: 16 * 60, role: "PRINCIPAL" },
-] as const;
-/** Guardian work-claim rungs (D-#554, owner ruling 2026-08-25): the Office is told
- *  at 11:30 and the Principal at 13:00, on the claim's stored ACTION DAY. Both ride
- *  this same ticker — the attendance tiers already fire at 12:10/12:45, so neither
- *  time needed any new scheduling machinery. */
-export const WORK_CLAIM_RUNGS = [
-  { min: WORK_CLAIM_OFFICE_RUNG_MIN, role: "OFFICE" },
-  { min: WORK_CLAIM_PRINCIPAL_RUNG_MIN, role: "PRINCIPAL" },
 ] as const;
 
 /** Class-test overdue digest (D-#603) — 08:00 to OFFICE + PRINCIPAL, FULL school
@@ -401,15 +393,17 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
     });
   });
 
-  // --- Guardian work claims (GC-5, D-#554): 11:30 → Office, 13:00 → Principal.
-  // ONE digest row per recipient per rung per day, carrying the count. A claim
-  // still open tomorrow appears in tomorrow's rows too — that IS the chasing.
-  // WC-7 safety net, once a day and just BEFORE the first rung: re-resolve every
-  // open claim, so a change that never went through `grantTeaching` — a routine
-  // edit, a deactivated user, a hand-edited grant — still reaches whoever can
-  // actually act, and the rung that follows counts against the new owner.
+  // --- Guardian work claims (D-#710; was D-#554's 11:30/13:00 rungs): ONE 10:30
+  // digest to every Principal + Office user + the Principal-named extras, carrying
+  // the count and a per-teacher breakdown. A claim still open tomorrow appears in
+  // tomorrow's digest with one more day on it — that IS the chasing. The three
+  // families share the 10:30 window and run IN THIS ORDER on the same tick:
+  //
+  // 1. WC-7 safety net: re-resolve every open claim, so a change that never went
+  //    through `grantTeaching` — a routine edit, a deactivated user, a moved
+  //    student — still reaches whoever can act, and the digest counts against them.
   await family("work claim reassign sweep", async () => {
-    if (!windowOpen(nowMin, WORK_CLAIM_OFFICE_RUNG_MIN)) return;
+    if (!windowOpen(nowMin, WORK_CLAIM_DIGEST_MIN)) return;
     await runOnce(dateKey, "WCREASSIGN", async () => {
       const res = await reassignAllOpenClaims();
       if (res.moved > 0) {
@@ -418,26 +412,25 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
     });
   });
 
-  await family("work claim rungs", async () => {
-    const rung = WORK_CLAIM_RUNGS.find((r) => windowOpen(nowMin, r.min));
-    if (!rung) return;
-    await runOnce(dateKey, `WCR-${rung.role}`, async () => {
-      const res = await runWorkClaimRung(rung.role, now);
-      if (res.openCount > 0) {
-        console.log(
-          `[scheduler] work claims → ${rung.role}: ${res.openCount} open, ${res.notified} row(s)`,
-        );
-      }
-    });
-  });
-
-  // Queue hygiene: claims nobody answered inside the window leave the queue and
-  // stay in the audit log. Once a day, alongside the Principal rung.
+  // 2. Queue hygiene: claims nobody answered inside the window leave the queue and
+  //    stay in the audit log — BEFORE the digest, so it never counts a claim that
+  //    is expiring that same minute.
   await family("work claim expiry", async () => {
-    if (!windowOpen(nowMin, WORK_CLAIM_PRINCIPAL_RUNG_MIN)) return;
+    if (!windowOpen(nowMin, WORK_CLAIM_DIGEST_MIN)) return;
     await runOnce(dateKey, "WCEXP", async () => {
       const expired = await expireStaleWorkClaims(now);
       if (expired > 0) console.log(`[scheduler] work claims expired: ${expired}`);
+    });
+  });
+
+  // 3. The digest itself.
+  await family("work claim digest", async () => {
+    if (!windowOpen(nowMin, WORK_CLAIM_DIGEST_MIN)) return;
+    await runOnce(dateKey, "WCDIGEST", async () => {
+      const res = await runWorkClaimDigest(now);
+      if (res.openCount > 0) {
+        console.log(`[scheduler] work claim digest: ${res.openCount} open, ${res.notified} row(s)`);
+      }
     });
   });
 
