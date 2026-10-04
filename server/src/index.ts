@@ -13,6 +13,7 @@ import { createYoga } from "graphql-yoga";
 import { connectDb } from "./db";
 import { connectBookDb, BookDbNotConfiguredError } from "./bookDb";
 import { buildContext, verifyTokenFromRequest } from "./context";
+import { withActiveAccount } from "./sessionActive";
 import { runWithAuditActor } from "./modules/platform/services/auditActor";
 
 // Import all resolvers (side-effects: register on builder). One list, shared with the
@@ -109,7 +110,7 @@ const yoga = createYoga({
   maskedErrors: { maskError: maskErrorExposingDomain },
   // MON-2: capture real resolver faults (role + operation) into GlitchTip.
   plugins: [sentryYogaPlugin],
-  context: ({ request }) => {
+  context: async ({ request }) => {
     // Yoga delivers a WHATWG Request whose headers are a Fetch `Headers` object
     // (read via .get); the raw Node req is not reliably exposed as `.raw`, so
     // `req.headers.authorization` was always undefined and every authenticated
@@ -120,7 +121,9 @@ const yoga = createYoga({
         ? headers.get("authorization") ?? ""
         : headers.authorization ?? "";
     const req = { headers: { authorization } } as unknown as express.Request;
-    return buildContext(req, {} as express.Response);
+    const ctx = buildContext(req, {} as express.Response);
+    // D-#708: 30-day sessions — a deactivated account's token stops working here.
+    return { ...ctx, auth: await withActiveAccount(ctx.auth) };
   },
 });
 

@@ -30,6 +30,14 @@ jest.mock("../modules/trackers/models/AssignmentNilDeclaration", () => ({
 jest.mock("../modules/routine/models/HolidayException", () => ({
   HolidayException: { find: (q: unknown) => ({ lean: () => mockHolidayFind(q) }) },
 }));
+// D-#707: delivery-day covers (the lookup itself is tested in assignmentCover.test.ts).
+const mockCovers = jest.fn();
+jest.mock("../modules/trackers/assignmentCover", () => ({
+  deliveryDayCovers: (cells: unknown, date: unknown) => mockCovers(cells, date),
+  coverCellKey: (c: { sectionId: string; subject: string; teacherId: string }) =>
+    `${c.sectionId}|${c.subject}|${c.teacherId}`,
+}));
+beforeEach(() => mockCovers.mockResolvedValue(new Map()));
 
 import {
   weekNumberFor,
@@ -281,6 +289,31 @@ describe("AJ-1 — expectedItemsForWeek", () => {
     expect(ban.asId).toBe("AS-C2-BAN-0001");
     expect(math.delivered).toBe(false);
     expect(math.asItemId).toBeNull();
+  });
+
+  test("a delivery-day cover of the scheduled teacher's period becomes the responsible teacher (D-#707)", async () => {
+    const e3 = entry({ cycleWeek: 3 });
+    const COVER = oid().toString();
+    mockScheduleFindOne.mockResolvedValue(schedule([e3]));
+    mockItemFind.mockResolvedValue([]);
+    mockCovers.mockResolvedValue(new Map([[`${e3.sectionId.toString()}|${e3.subject}|${e3.teacherId.toString()}`, COVER]]));
+    const week = await expectedItemsForWeek(YEAR, 15);
+    const [item] = week.items;
+    expect(item.teacherId).toBe(COVER);
+    expect(item.scheduledTeacherId).toBe(e3.teacherId.toString());
+    expect(item.coveredOnDelivery).toBe(true);
+    // asked about the week's DELIVERY day (Thu 2026-04-16)
+    const [, onDate] = mockCovers.mock.calls[0] as [unknown, Date];
+    expect([onDate.getFullYear(), onDate.getMonth(), onDate.getDate()]).toEqual([2026, 3, 16]);
+  });
+
+  test("no cover → the scheduled teacher stays responsible", async () => {
+    const e3 = entry({ cycleWeek: 3 });
+    mockScheduleFindOne.mockResolvedValue(schedule([e3]));
+    mockItemFind.mockResolvedValue([]);
+    const [item] = (await expectedItemsForWeek(YEAR, 15)).items;
+    expect(item.teacherId).toBe(e3.teacherId.toString());
+    expect(item.coveredOnDelivery).toBe(false);
   });
 
   test("delivered join keys on (section × subject), not the entry _id — survives a re-added entry", async () => {

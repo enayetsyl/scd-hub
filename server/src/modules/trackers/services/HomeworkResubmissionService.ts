@@ -226,10 +226,23 @@ export async function getStudentDayLoad(
   studentId: string,
   date: Date,
 ): Promise<StudentDayLoadResult> {
-  // Base: the day's issued common sheets for the class (every child gets them).
-  const items = await listDailyItems(classId, date);
-  const baseMinutes = items
-    .filter((it) => it.status === "issued" && it.qCount > 0)
+  // Base: the day's issued sheets THIS child received — a class split into Boys/Girls
+  // has two sets of homework a day, and a child carries only their own section's
+  // (owner 2026-10-02). "Received" = the child has a record for the item; records
+  // follow the student, so this is right for pre-split items on the old section too.
+  const issued = (await listDailyItems(classId, date)).filter((it) => it.status === "issued" && it.qCount > 0);
+  const received = issued.length
+    ? new Set(
+        (
+          (await HomeworkStudentRecord.find({
+            studentId,
+            hwItemId: { $in: issued.map((it) => it._id) },
+          }).lean()) as unknown as Array<{ hwItemId: { toString(): string } }>
+        ).map((r) => r.hwItemId.toString()),
+      )
+    : new Set<string>();
+  const baseMinutes = issued
+    .filter((it) => received.has(it._id.toString()))
     .reduce((sum, it) => sum + it.timeDecl, 0);
 
   // Top-up: the child's OPEN resubmission top-ups (not yet returned).
