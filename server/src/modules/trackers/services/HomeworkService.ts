@@ -341,15 +341,24 @@ async function assertKnownTopTags(
 }
 
 /** Reject writes once the item's day is reconciled — the recon report and the
- *  immutable trim log (§4.5) are frozen views of that day's declarations. */
-async function assertDayUnreconciled(classId: string, dateGiven: Date): Promise<void> {
+ *  immutable trim log (§4.5) are frozen views of that day's declarations.
+ *
+ *  The reconciliation row is per CLASS, but a split class's sections confirm on their
+ *  own (D-#706). So for the item's SECTION the day counts as reconciled only once that
+ *  section has itself issued something that day — the same rule confirm and tally
+ *  already apply. Without it, C5 Girls' auto-issue (2026-10-04) froze C5 Boys' still-
+ *  declared English item: it could be neither edited nor deleted. */
+async function assertDayUnreconciled(classId: string, dateGiven: Date, sectionId?: string): Promise<void> {
   const existing = await HomeworkReconciliation.findOne({
     classId,
     reconDate: reconDayKey(dateGiven),
   }).lean();
-  if (existing && existing.reconState === "reconciled") {
-    throw new Error("Day already reconciled — declared items are frozen (handoff §4.5)");
+  if (!existing || existing.reconState !== "reconciled") return;
+  if (sectionId) {
+    const sectionDocs = await listDailyItems(classId, dateGiven, sectionId);
+    if (!sectionDocs.some((d) => d.status === "issued")) return;
   }
+  throw new Error("Day already reconciled — declared items are frozen (handoff §4.5)");
 }
 
 export interface UpdateHomeworkItemInput {
@@ -422,7 +431,7 @@ export async function updateHomeworkItem(input: UpdateHomeworkItemInput): Promis
       );
     }
   } else {
-    await assertDayUnreconciled(item.classId.toString(), item.dateGiven);
+    await assertDayUnreconciled(item.classId.toString(), item.dateGiven, item.sectionId?.toString());
   }
 
   if (input.topTags !== undefined) {
@@ -491,7 +500,7 @@ export async function deleteHomeworkItem(itemId: string): Promise<{ itemId: stri
   if (item.status !== "declared") {
     throw new Error("Item is already issued — issued homework cannot be deleted");
   }
-  await assertDayUnreconciled(item.classId.toString(), item.dateGiven as unknown as Date);
+  await assertDayUnreconciled(item.classId.toString(), item.dateGiven as unknown as Date, item.sectionId?.toString());
   await HomeworkItem.deleteOne({ _id: item._id });
   return { itemId: item._id.toString(), hwId: item.hwId };
 }
