@@ -75,6 +75,11 @@ FinalSettlementRef.implement({
     held: t.exposeBoolean("held"),
     computedAt: t.string({ resolve: (s) => new Date(s.computedAt).toISOString() }),
     releasedAt: t.string({ nullable: true, resolve: (s) => (s.releasedAt ? new Date(s.releasedAt).toISOString() : null) }),
+    paidInMonthKey: t.string({
+      nullable: true,
+      description: "The payroll month this settlement was paid in as the leaver's last payslip (D-#711).",
+      resolve: (s) => s.paidInMonthKey ?? null,
+    }),
   }),
 });
 

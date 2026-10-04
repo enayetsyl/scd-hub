@@ -182,8 +182,10 @@ export default function PayrollRunDetailScreen({ route, navigation }: Props): Re
         payslips.map((p) => (
           <Card key={p.id}>
             <Body style={{ fontWeight: "700" }}>{p.snapshotName}</Body>
+            {p.isExitPayslip ? <Badge text={STR.hrPayExitPayslip} tone="info" /> : null}
             <Row label={STR.hrPayGross} value={money(p.grossSalary)} />
             <Row label={STR.hrPayDayRate} value={money(p.dayRate)} />
+            {p.payableDays != null ? <Row label={STR.hrPayPayableDays} value={bnNum(p.payableDays)} /> : null}
             {p.unpaidLeaveDays > 0 ? <Row label={STR.hrPayUnpaidLeave} value={bnNum(p.unpaidLeaveDays)} /> : null}
             {p.deductions.length > 0 ? (
               <>

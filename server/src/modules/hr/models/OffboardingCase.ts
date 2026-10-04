@@ -67,6 +67,9 @@ export interface IFinalSettlement {
   computedBy: Types.ObjectId;
   releasedAt?: Date | null;
   releasedBy?: Types.ObjectId | null;
+  /** Set when the settlement was PAID as the leaver's last monthly payslip (D-#711)
+   *  rather than released on its own — the run month it rode. */
+  paidInMonthKey?: string | null;
 }
 
 export interface IOffboardingCase extends Document {
@@ -137,6 +140,7 @@ const FinalSettlementSchema = new Schema<IFinalSettlement>(
     computedBy: { type: Schema.Types.ObjectId, required: true },
     releasedAt: { type: Date, default: null },
     releasedBy: { type: Schema.Types.ObjectId, default: null },
+    paidInMonthKey: { type: String, default: null },
   },
   { _id: false },
 );
