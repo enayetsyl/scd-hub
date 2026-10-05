@@ -16,7 +16,8 @@
  *   StaffCoverSlot             — the HR leave fan-out (PXG-1/D-#268): one row per
  *                                class meeting, `approved` ONLY after Principal/Office
  *                                decide. `needs_cover`/`proposed` is exactly the
- *                                owner's "not proxy approved" case → UNCOVERED
+ *                                owner's "not proxy approved" case → UNCOVERED —
+ *                                but only while the row's leave is still live
  *   StaffLeaveApplication      — an approved leave with no fan-out row still means
  *                                the teacher is out (period-scoped for partial days)
  *   TeacherAttendanceDay       — the biometric sheet (AT-1): a staff member marked
@@ -50,6 +51,7 @@ import { User } from "../../foundation/models/User";
 import { StaffProfile } from "../../foundation/models/StaffProfile";
 import { normalizePhone } from "../../foundation/services/credentials";
 import { StaffCoverSlot } from "../../hr/models/StaffCoverSlot";
+import { StaffLeaveApplication } from "../../hr/models/StaffLeaveApplication";
 import { userIdsOnLeave } from "../../hr/services/CoverService";
 import { TeacherAttendanceDay } from "../../attendance/models/TeacherAttendanceDay";
 import { parseDateKey } from "../../attendance/dates";
@@ -166,6 +168,19 @@ const emptyBoard = (
   uncoveredNowCount: 0,
   uncoveredTodayCount: 0,
 });
+
+/** The subset of these leave ids that are still live (applied/approved). */
+async function liveLeaveIdsAmong(ids: Array<Types.ObjectId | null | undefined>): Promise<Set<string>> {
+  const unique = [...new Set(ids.filter((i): i is Types.ObjectId => !!i).map((i) => i.toString()))];
+  if (unique.length === 0) return new Set();
+  const live = (await StaffLeaveApplication.find({
+    _id: { $in: unique.map((i) => new Types.ObjectId(i)) },
+    status: { $in: ["applied", "approved"] },
+  })
+    .select("_id")
+    .lean()) as unknown as Array<{ _id: Types.ObjectId }>;
+  return new Set(live.map((l) => l._id.toString()));
+}
 
 /**
  * User ids of staff the biometric sheet marks ABSENT on `dateKey` (AT-1, D-#63).
@@ -310,15 +325,22 @@ export async function liveClassBoard(dateStr: string, now: Date = new Date()): P
   const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0);
   const dayEnd = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
   const slotIds = slots.map((s) => s._id);
-  const [subs, hrCovers, absentBiometric] = await Promise.all([
+  const [subs, allHrCovers, absentBiometric] = await Promise.all([
     RoutineSubstitution.find({ slotId: { $in: slotIds }, active: true, date: { $gte: dayStart, $lte: dayEnd } })
       .select("slotId coverTeacherId")
       .lean(),
     StaffCoverSlot.find({ routineSlotId: { $in: slotIds }, dateKey })
-      .select("routineSlotId status finalCoverTeacherUserId proposedCoverTeacherId")
+      .select("routineSlotId status finalCoverTeacherUserId proposedCoverTeacherId leaveApplicationId")
       .lean(),
     biometricAbsentUserIds(dateKey),
   ]);
+  // A cancelled/rejected leave KEEPS its fan-out rows — `revokeCoversForLeave` resets
+  // them to needs_cover rather than deleting them — so only rows whose leave is still
+  // live (applied/approved) mean the teacher is out. Without this, a leave filed by
+  // mistake and cancelled two minutes later flagged the teacher "On leave" for every
+  // day it had spanned (owner report 2026-10-05, Shah Mahfuj Ahmed, 1 Oct–1 Nov).
+  const liveLeaveIds = await liveLeaveIdsAmong(allHrCovers.map((c) => c.leaveApplicationId));
+  const hrCovers = allHrCovers.filter((c) => c.leaveApplicationId && liveLeaveIds.has(c.leaveApplicationId.toString()));
   const subBySlot = new Map(subs.map((s) => [s.slotId.toString(), s.coverTeacherId.toString()]));
   // One HR row per (slot, date) by the fan-out's own guard; a later row wins only if
   // it is the approved one, so approvals are never masked by a stale needs_cover row.
