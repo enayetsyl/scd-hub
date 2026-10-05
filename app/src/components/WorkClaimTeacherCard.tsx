@@ -3,7 +3,10 @@
  *
  * The card makes the notification visible, but the roster pass is where the work
  * actually gets done: marking the student submitted there closes the claim with
- * no second tap. So the only action offered HERE is the one the roster pass
+ * no second tap. So the card names WHICH tracker the claim is about and opens that
+ * roster directly (owner report 2026-10-05: a claim on AS-C2-MATH-0009, an
+ * ASSIGNMENT, sent the teacher hunting in Homework, where HW-C2-MATH-0009 is an
+ * unrelated August item). The only action taken HERE is the one the roster pass
  * cannot express — rejecting with a reason.
  *
  * The amber "অফিসকে জানানো হয়েছে" chip is the teacher's one signal that the
@@ -12,14 +15,17 @@
  */
 import React, { useState } from "react";
 import { View, Modal, Pressable, TextInput } from "react-native";
+import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import { useMutation } from "urql";
 import { WORK_CLAIM_REJECT_REASONS, WORK_CLAIM_REJECT_REASON_LABELS_BN } from "@scd/shared";
 import type { WorkClaimRejectReason } from "@scd/shared";
 import { Body, Muted, Card, Badge, Button, Notice, Divider } from "./ui";
 import { space } from "../theme/tokens";
 import { useColors } from "../theme";
-import { STR, bnNum } from "../lib/labels";
+import { STR, bnNum, workClaimTrackerLabel } from "../lib/labels";
 import { REJECT_WORK_CLAIM, type WorkClaimRowT } from "../graphql/operations";
+import { useSectionContext } from "../state/SectionContext";
+import type { TabParamList } from "../navigation/types";
 
 export function WorkClaimTeacherCard({
   rows,
@@ -35,6 +41,31 @@ export function WorkClaimTeacherCard({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [, reject] = useMutation(REJECT_WORK_CLAIM);
+  const tabNav = useNavigation<NavigationProp<TabParamList>>();
+  const { setSection } = useSectionContext();
+
+  /** Open the roster where marking the student submitted closes this claim. */
+  const openRoster = (r: WorkClaimRowT) => {
+    const navigate = tabNav.navigate as unknown as (name: string, params?: object) => void;
+    if (r.tracker === "ASSIGNMENT") {
+      navigate("AssignmentTab", {
+        screen: "AssignmentWorkspace",
+        params: { sectionId: r.sectionId, classId: r.classId },
+        initial: false,
+      });
+      return;
+    }
+    // The homework workspace takes no params — it reads the shared section pick.
+    setSection({
+      classId: r.classId,
+      sectionId: r.sectionId,
+      classLevel: r.classLevel,
+      classNameBn: r.classNameBn,
+      sectionCode: r.sectionCode,
+      sectionNameBn: r.sectionNameBn,
+    });
+    navigate("HomeworkTab", { screen: "HomeworkWorkspace", initial: false });
+  };
 
   if (rows.length === 0) return null;
 
@@ -91,12 +122,20 @@ export function WorkClaimTeacherCard({
             {/* D-#635: the work's OWN date beside its id — the teacher's first question
                 about a claim is which day's homework the parent means. */}
             <Muted>
-              {r.workId}
+              {workClaimTrackerLabel(r.tracker)} · {r.workId}
               {r.dueDateKey ? ` · ${bnNum(r.dueDateKey)}` : ""}
             </Muted>
             {r.note ? <Body>{r.note}</Body> : null}
             <Muted>{STR.wcTeacherHint}</Muted>
-            <Button title={STR.wcReject} variant="secondary" onPress={() => setTarget(r)} />
+            <View style={{ flexDirection: "row", gap: space(2) }}>
+              <Button
+                title={`${STR.wcOpenRoster} · ${workClaimTrackerLabel(r.tracker)}`}
+                onPress={() => openRoster(r)}
+                disabled={!r.classId}
+                style={{ flex: 1 }}
+              />
+              <Button title={STR.wcReject} variant="secondary" onPress={() => setTarget(r)} />
+            </View>
           </View>
         </View>
       ))}

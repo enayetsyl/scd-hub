@@ -23,6 +23,9 @@ import {
   WORK_CARD_KIND_LABELS_EN,
   WEEK_OF_MONTH_LABELS_BN,
   WEEK_OF_MONTH_LABELS_EN,
+  WORK_CLAIM_TRACKER_LABELS_BN,
+  WORK_CLAIM_TRACKER_LABELS_EN,
+  type WorkClaimTracker,
   type WeekOfMonth,
   type TaskStatus,
   type TaskPriority,
@@ -540,6 +543,10 @@ const MONTHS_EN = ["January", "February", "March", "April", "May", "June", "July
 const MONTHS_BN = ["জানুয়ারি", "ফেব্রুয়ারি", "মার্চ", "এপ্রিল", "মে", "জুন", "জুলাই", "আগস্ট", "সেপ্টেম্বর", "অক্টোবর", "নভেম্বর", "ডিসেম্বর"];
 /** Calendar month name (0-based) in the active language (D-#275). */
 export const monthLabel = (month: number): string => (_lang === "en" ? MONTHS_EN : MONTHS_BN)[month] ?? "";
+
+/** "Homework" / "Assignment" for a guardian claim, in the active language. */
+export const workClaimTrackerLabel = (t: string): string =>
+  (_lang === "en" ? WORK_CLAIM_TRACKER_LABELS_EN : WORK_CLAIM_TRACKER_LABELS_BN)[t as WorkClaimTracker] ?? t;
 
 export const genderLabel = (v?: string | null): string => {
   const en = _lang === "en";
@@ -1925,6 +1932,7 @@ const STR_BN = {
   // GC-4 — the teacher card + reject sheet
   wcTeacherCardTitle: "অভিভাবকের জানানো",
   wcTeacherHint: "খাতা নিয়ে জমা নেওয়ার তালিকায় জমা লিখে দিলেই এটি নিষ্পন্ন হয়ে যাবে।",
+  wcOpenRoster: "জমার তালিকা খুলুন",
   wcReject: "নাকচ",
   wcRejectTitle: "কেন জমা লেখা যাচ্ছে না?",
   wcRejectConfirm: "নাকচ করুন",
@@ -6581,6 +6589,7 @@ const STR_EN: StrTable = {
   wcMaxChars: "200 characters max",
   wcTeacherCardTitle: "Guardian reports",
   wcTeacherHint: "Recording the student as submitted in the roster pass closes this automatically.",
+  wcOpenRoster: "Open the roster",
   wcReject: "Reject",
   wcRejectTitle: "Why can this not be recorded?",
   wcRejectConfirm: "Reject",
