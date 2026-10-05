@@ -23,6 +23,7 @@ import { ForbiddenError } from "../../../middleware/authz";
 import { GuardianWorkClaim } from "../models/GuardianWorkClaim";
 import { Student } from "../../foundation/models/Student";
 import { Section } from "../../foundation/models/Section";
+import { Class } from "../../foundation/models/Class";
 import { User } from "../../foundation/models/User";
 import { rejectWorkClaim as rejectSvc } from "../services/WorkClaimService";
 import type { GuardianWorkClaimView } from "../services/WorkClaimView";
@@ -68,6 +69,14 @@ interface WorkClaimRow {
   studentNameBn: string;
   sectionId: string;
   sectionNameBn: string;
+  /** The section's class — with sectionCode/classLevel/classNameBn this is everything
+   *  the app needs to open the right roster (owner report 2026-10-05: the card named
+   *  "…-MATH-0009" and the teacher went to the HOMEWORK item of that number, not the
+   *  ASSIGNMENT the parent meant). */
+  classId: string;
+  classLevel: number | null;
+  classNameBn: string;
+  sectionCode: string;
   teacherId: string;
   teacherName: string;
   claimedAt: string;
@@ -101,6 +110,10 @@ const WorkClaimRowRef = builder.objectRef<WorkClaimRow>("WorkClaimRow").implemen
     studentNameBn: t.exposeString("studentNameBn"),
     sectionId: t.exposeString("sectionId"),
     sectionNameBn: t.exposeString("sectionNameBn"),
+    classId: t.exposeString("classId"),
+    classLevel: t.int({ nullable: true, resolve: (r) => r.classLevel }),
+    classNameBn: t.exposeString("classNameBn"),
+    sectionCode: t.exposeString("sectionCode"),
     teacherId: t.exposeString("teacherId"),
     teacherName: t.exposeString("teacherName"),
     claimedAt: t.exposeString("claimedAt"),
@@ -151,14 +164,21 @@ async function toRows(claims: Array<Record<string, any>>, now: Date): Promise<Wo
     .select("nameBn name")
     .lean()) as unknown as Array<{ _id: Types.ObjectId; nameBn?: string; name?: string }>;
   const sections = (await Section.find({ _id: { $in: claims.map((c) => c.sectionId) } })
-    .select("nameBn code")
-    .lean()) as unknown as Array<{ _id: Types.ObjectId; nameBn?: string; code?: string }>;
+    .select("nameBn code classId")
+    .lean()) as unknown as Array<{ _id: Types.ObjectId; nameBn?: string; code?: string; classId?: Types.ObjectId }>;
   const teachers = (await User.find({ _id: { $in: claims.map((c) => c.teacherId) } })
     .select("name")
     .lean()) as unknown as Array<{ _id: Types.ObjectId; name?: string }>;
 
   const sName = new Map(students.map((s) => [s._id.toString(), s.nameBn || s.name || ""]));
   const secName = new Map(sections.map((s) => [s._id.toString(), s.nameBn || s.code || ""]));
+  const secById = new Map(sections.map((s) => [s._id.toString(), s]));
+  const classIdOf = (c: Record<string, any>): string =>
+    (c.classId ?? secById.get(c.sectionId.toString())?.classId ?? "").toString();
+  const classes = (await Class.find({ _id: { $in: [...new Set(claims.map(classIdOf).filter(Boolean))] } })
+    .select("nameBn level")
+    .lean()) as unknown as Array<{ _id: Types.ObjectId; nameBn?: string; level?: number }>;
+  const clsById = new Map(classes.map((c) => [c._id.toString(), c]));
   const tName = new Map(teachers.map((u) => [u._id.toString(), u.name || ""]));
 
   // Sequential on purpose: the counter memoizes each calendar day, and claims share
@@ -178,6 +198,10 @@ async function toRows(claims: Array<Record<string, any>>, now: Date): Promise<Wo
       studentNameBn: sName.get(c.studentId.toString()) ?? "",
       sectionId: c.sectionId.toString(),
       sectionNameBn: secName.get(c.sectionId.toString()) ?? "",
+      classId: classIdOf(c),
+      classLevel: clsById.get(classIdOf(c))?.level ?? null,
+      classNameBn: clsById.get(classIdOf(c))?.nameBn ?? "",
+      sectionCode: secById.get(c.sectionId.toString())?.code ?? "",
       teacherId: c.teacherId.toString(),
       teacherName: tName.get(c.teacherId.toString()) ?? "",
       claimedAt: new Date(c.claimedAt).toISOString(),

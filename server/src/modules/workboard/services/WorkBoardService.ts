@@ -60,6 +60,7 @@ import { Class } from "../../foundation/models/Class";
 import { Section } from "../../foundation/models/Section";
 import { StaffProfile } from "../../foundation/models/StaffProfile";
 import { normalizePhone } from "../../foundation/services/credentials";
+import { actingAsFilter } from "../../foundation/services/RoleScope";
 import type { ITask } from "../models/Task";
 import { tasksOnBoards } from "./TaskService";
 import { PULLABLE_KINDS, isBackup, officeRecipients, officeUncoveredToday, pullsFor } from "./OfficeCoverService";
@@ -313,6 +314,97 @@ async function periodCards(userIds: string[], fromKey: string, toKey: string, ke
   return out;
 }
 
+/** A routine slot as the check-owner rule needs it. */
+export interface CheckOwnerSlot {
+  groupId: string;
+  subject: string;
+  teacherId: string;
+  dayOfWeek: string;
+  effectiveFrom: Date;
+  effectiveTo?: Date | null;
+}
+
+/**
+ * Pure: who checks this homework item (owner ask 2026-10-05). The declarer — except when
+ * the declarer is Principal/Office staff, who declare on a teacher's behalf (the Principal
+ * entered HW-C5-BAN-0036 on 1 Oct while Shah Mahfuj Ahmed was on leave, and its check card
+ * then sat on the Principal's board). Then it is the section's subject teacher from the
+ * routine: the slot live on the day it was given (that weekday first), else today's, else
+ * — no routine teacher at all — the declarer after all, so the card is never lost.
+ */
+export function checkOwnerOf(
+  item: { declaredBy: string; sectionId: string; subject: string; dateGiven: Date },
+  adminIds: Set<string>,
+  slots: CheckOwnerSlot[],
+  now: Date,
+): string {
+  if (!adminIds.has(item.declaredBy)) return item.declaredBy;
+  const mine = slots.filter((s) => s.groupId === item.sectionId && s.subject === item.subject);
+  const weekday = DAYS_OF_WEEK[item.dateGiven.getDay()];
+  const onDay =
+    mine.find((s) => s.dayOfWeek === weekday && isLiveOn(s, item.dateGiven)) ??
+    mine.find((s) => isLiveOn(s, item.dateGiven)) ??
+    mine.find((s) => isLiveOn(s, now));
+  return onDay?.teacherId ?? item.declaredBy;
+}
+
+type CheckItem = {
+  _id: Types.ObjectId;
+  hwId: string;
+  subject: string;
+  classId: Types.ObjectId;
+  sectionId: Types.ObjectId;
+  dateGiven: Date;
+  declaredBy: Types.ObjectId;
+  ownerId: string;
+};
+
+/** Homework items (given in `dateGiven`) whose checking belongs to one of `userIds` under
+ *  `checkOwnerOf` — the caller's own declarations plus any a Principal/Office user
+ *  declared for a class the caller teaches. Oldest given-date first. */
+async function homeworkItemsCheckedBy(
+  userIds: string[],
+  dateGiven: Record<string, Date>,
+  now = new Date(),
+): Promise<CheckItem[]> {
+  const adminIds = new Set(
+    ((await User.find(actingAsFilter(["PRINCIPAL", "OFFICE"])).select("_id").lean()) as Array<{ _id: Types.ObjectId }>).map(
+      (u) => u._id.toString(),
+    ),
+  );
+  const declarers = [...new Set([...userIds, ...adminIds])].map((u) => new Types.ObjectId(u));
+  const items = (await HomeworkItem.find({ declaredBy: { $in: declarers }, dateGiven })
+    .select("hwId subject classId sectionId dateGiven declaredBy")
+    .sort({ dateGiven: 1 })
+    .lean()) as unknown as Array<Omit<CheckItem, "ownerId">>;
+  const byAdmin = items.filter((i) => adminIds.has(i.declaredBy.toString()));
+  const slots: CheckOwnerSlot[] = byAdmin.length
+    ? (
+        (await RoutineSlot.find({
+          groupType: "section",
+          groupId: { $in: [...new Set(byAdmin.map((i) => i.sectionId.toString()))].map((id) => new Types.ObjectId(id)) },
+          subject: { $in: [...new Set(byAdmin.map((i) => i.subject))] },
+          teacherId: { $ne: null },
+          active: true,
+        })
+          .select("groupId subject teacherId dayOfWeek effectiveFrom effectiveTo")
+          .lean()) as unknown as Array<{ groupId: Types.ObjectId; subject: string; teacherId: Types.ObjectId; dayOfWeek: string; effectiveFrom: Date; effectiveTo?: Date | null }>
+      ).map((s) => ({ ...s, groupId: s.groupId.toString(), teacherId: s.teacherId.toString() }))
+    : [];
+  const want = new Set(userIds);
+  return items
+    .map((i) => ({
+      ...i,
+      ownerId: checkOwnerOf(
+        { declaredBy: i.declaredBy.toString(), sectionId: i.sectionId.toString(), subject: i.subject, dateGiven: new Date(i.dateGiven) },
+        adminIds,
+        slots,
+        now,
+      ),
+    }))
+    .filter((i) => want.has(i.ownerId));
+}
+
 /**
  * HOMEWORK_CHECK cards: an item with copies still SUBMITTED (handed in, not yet
  * checked) stays on its declarer's board until every copy is checked — there is NO
@@ -327,13 +419,10 @@ async function homeworkCards(
   labels: { cls: Map<string, string>; sec: Map<string, string> },
   range: { from: Date; to?: Date },
 ): Promise<WorkCard[]> {
-  const items = (await HomeworkItem.find({
-    declaredBy: { $in: userIds.map((u) => new Types.ObjectId(u)) },
-    dateGiven: range.to ? { $gte: range.from, $lt: range.to } : { $gte: range.from },
-  })
-    .select("hwId subject classId sectionId dateGiven declaredBy")
-    .sort({ dateGiven: 1 })
-    .lean()) as unknown as Array<{ _id: Types.ObjectId; hwId: string; subject: string; classId: Types.ObjectId; sectionId: Types.ObjectId; dateGiven: Date; declaredBy: Types.ObjectId }>;
+  const items = await homeworkItemsCheckedBy(
+    userIds,
+    range.to ? { $gte: range.from, $lt: range.to } : { $gte: range.from },
+  );
   if (items.length === 0) return [];
   const counts = (await HomeworkStudentRecord.aggregate([
     { $match: { hwItemId: { $in: items.map((i) => i._id) }, state: "SUBMITTED" } },
@@ -344,7 +433,7 @@ async function homeworkCards(
   for (const it of items) {
     const n = byItem.get(it._id.toString()) ?? 0;
     if (n === 0) continue;
-    const userId = it.declaredBy.toString();
+    const userId = it.ownerId;
     out.push({
       key: `HOMEWORK_CHECK:${it._id.toString()}:${userId}`,
       kind: "HOMEWORK_CHECK",
@@ -411,12 +500,7 @@ export function summarizeCheckMonths(
  *  the collapsed headers under the board. Counts only; the cards load per month. */
 export async function homeworkCheckMonths(userIds: string[], now = new Date()): Promise<HomeworkCheckMonth[]> {
   const monthStart = parseDateKey(`${dateKeyOf(now).slice(0, 7)}-01`);
-  const items = (await HomeworkItem.find({
-    declaredBy: { $in: userIds.map((u) => new Types.ObjectId(u)) },
-    dateGiven: { $lt: monthStart },
-  })
-    .select("dateGiven")
-    .lean()) as unknown as Array<{ _id: Types.ObjectId; dateGiven: Date }>;
+  const items = await homeworkItemsCheckedBy(userIds, { $lt: monthStart }, now);
   if (items.length === 0) return [];
   const counts = (await HomeworkStudentRecord.aggregate([
     { $match: { hwItemId: { $in: items.map((i) => i._id) }, state: "SUBMITTED" } },

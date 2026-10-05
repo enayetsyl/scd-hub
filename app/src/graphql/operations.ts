@@ -8847,6 +8847,11 @@ export interface WorkClaimRowT {
   studentNameBn: string;
   sectionId: string;
   sectionNameBn: string;
+  /** The section's class — what the card needs to open the right roster. */
+  classId: string;
+  classLevel: number | null;
+  classNameBn: string;
+  sectionCode: string;
   teacherId: string;
   teacherName: string;
   claimedAt: string;
@@ -8865,7 +8870,7 @@ export interface WorkClaimRowT {
 
 const WORK_CLAIM_ROW_FIELDS = `
   claimId tracker workId subject
-  studentId studentNameBn sectionId sectionNameBn
+  studentId studentNameBn sectionId sectionNameBn classId classLevel classNameBn sectionCode
   teacherId teacherName claimedAt actionDateKey dueDateKey note
   status statusLabelBn checkpoint checkpointLabelBn nudgedToday pendingSchoolDays
 `;

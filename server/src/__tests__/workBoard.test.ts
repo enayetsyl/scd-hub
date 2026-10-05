@@ -55,6 +55,7 @@ import {
   slotForMinute,
   sortCards,
   summarizeCheckMonths,
+  checkOwnerOf,
   type WorkCard,
 } from "../modules/workboard/services/WorkBoardService";
 import { deskUncovered, officeRecipients } from "../modules/workboard/services/OfficeCoverService";
@@ -256,6 +257,41 @@ describe("observationCards", () => {
     expect(filter.state).toBe("ASSIGNED");
     expect(filter).toHaveProperty("cancelledAt", null);
     expect(cards.map((c) => c.key)).toEqual([`OBSERVATION:${open._id.toString()}`]);
+  });
+});
+
+describe("checkOwnerOf — who checks a homework item", () => {
+  const principal = "p1";
+  const admins = new Set([principal]);
+  const day = (d: number) => new Date(2026, 9, d); // October 2026, local
+  const slot = (teacherId: string, dayOfWeek: string, from: Date, to: Date | null = null) => ({
+    groupId: "sec5b", subject: "BAN", teacherId, dayOfWeek, effectiveFrom: from, effectiveTo: to,
+  });
+  const item = (declaredBy: string, given = day(1)) => ({ declaredBy, sectionId: "sec5b", subject: "BAN", dateGiven: given });
+
+  test("a teacher's own declaration stays theirs", () => {
+    expect(checkOwnerOf(item("t1"), admins, [slot("t2", "THU", day(1))], day(5))).toBe("t1");
+  });
+
+  test("a Principal/Office declaration goes to the section's routine subject teacher (HW-C5-BAN-0036)", () => {
+    // 1 Oct 2026 is a Thursday; Shah Mahfuj ("mahfuj") teaches C5 বালক Bangla from 1 Oct.
+    expect(checkOwnerOf(item(principal), admins, [slot("mahfuj", "THU", day(1))], day(5))).toBe("mahfuj");
+  });
+
+  test("the teacher ON the given day wins over today's, and that weekday's slot over another", () => {
+    const slots = [
+      slot("old", "SUN", new Date(2026, 0, 1), new Date(2026, 8, 30, 23, 59, 59, 999)),
+      slot("new", "SUN", day(1)),
+      slot("thursdayTeacher", "THU", day(1)),
+    ];
+    expect(checkOwnerOf(item(principal, new Date(2026, 8, 27)), admins, slots, day(5))).toBe("old"); // Sun 27 Sep
+    expect(checkOwnerOf(item(principal, day(1)), admins, slots, day(5))).toBe("thursdayTeacher"); // Thu 1 Oct
+  });
+
+  test("no routine teacher for that class and subject → the declarer keeps it (never lost)", () => {
+    expect(checkOwnerOf(item(principal), admins, [], day(5))).toBe(principal);
+    const otherSubject = [{ ...slot("t9", "THU", day(1)), subject: "MATH" }];
+    expect(checkOwnerOf(item(principal), admins, otherSubject, day(5))).toBe(principal);
   });
 });
 
