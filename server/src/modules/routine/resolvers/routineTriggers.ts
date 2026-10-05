@@ -29,6 +29,7 @@ import {
   publishClassNote,
   resolveNoteAuthorization,
   classNotesForDate,
+  ownSlotIdsOn,
   classNoteSubmissionReport,
   myClassNotePrompts,
   updateClassNote,
@@ -164,7 +165,8 @@ builder.queryField("classNotesForDate", (t) =>
     },
     resolve: async (_r, args, ctx) => {
       if (args.groupType !== "section" && args.groupType !== "subjectgroup") throw new Error("Invalid groupType");
-      const notes = await classNotesForDate(args.groupType, args.groupId, parseDate(args.date));
+      const date = parseDate(args.date);
+      const notes = await classNotesForDate(args.groupType, args.groupId, date);
 
       // D-#389 (owner, 2026-07-29) — the same move D-#388 made for the trackers:
       // the class teacher SEES the whole section's notes again, because the screen
@@ -176,7 +178,18 @@ builder.queryField("classNotesForDate", (t) =>
       if (args.groupType === "section" && ctx.auth) {
         const section = await Section.findById(args.groupId).select("classId").lean();
         const classId = section?.classId ? section.classId.toString() : "";
-        await assertCanRead(ctx, args.groupId, classId);
+        try {
+          await assertCanRead(ctx, args.groupId, classId);
+        } catch (e) {
+          // Read-scope follows TODAY's routine. A teacher who taught this section on
+          // `date` but no longer does (a routine change since — the 1 Oct C4/C5 split,
+          // owner report 2026-10-05) still reads back their OWN periods' notes for it.
+          if (!(e instanceof ForbiddenError)) throw e;
+          const userId = ctx.auth.userId as string;
+          const own = await ownSlotIdsOn(userId, "section", args.groupId, date);
+          if (own.size === 0) throw e;
+          return notes.filter((n) => own.has(n.slotId.toString()) || n.publishedBy.toString() === userId);
+        }
         const allowed = await allowedSubjectCodesForSection(ctx, args.groupId, classId);
         if (allowed) {
           const userId = ctx.auth.userId as string;

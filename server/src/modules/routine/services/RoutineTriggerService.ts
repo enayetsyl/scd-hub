@@ -182,6 +182,32 @@ export async function classNotesForDate(
 }
 
 /**
+ * The caller's OWN routine slots in this group that were live on `date` (owner report
+ * 2026-10-05). Section read-scope follows today's routine, so after a routine change
+ * (the 1 Oct C4/C5 gender split) a teacher was refused the old সম্মিলিত section — and
+ * with it their own published notes for every date before the change. This is the
+ * date-scoped fallback: a teacher may always read back what they taught that day.
+ */
+export async function ownSlotIdsOn(
+  userId: string,
+  groupType: "section" | "subjectgroup",
+  groupId: string,
+  date: Date,
+): Promise<Set<string>> {
+  if (!Types.ObjectId.isValid(userId) || !Types.ObjectId.isValid(groupId)) return new Set();
+  const slots = (await RoutineSlot.find({
+    groupType,
+    groupId: new Types.ObjectId(groupId),
+    teacherId: new Types.ObjectId(userId),
+    dayOfWeek: DAYS_OF_WEEK[date.getDay()],
+    ...liveWindow(date),
+  })
+    .select("_id")
+    .lean()) as unknown as Array<{ _id: Types.ObjectId }>;
+  return new Set(slots.map((s) => s._id.toString()));
+}
+
+/**
  * The range twin of `classNotesForDate` (D-#476) — every note the group has in
  * [from, to] in ONE query. The guardian class-notes history used to call the
  * single-day function once per day, which is why its window was pinned at a week;
