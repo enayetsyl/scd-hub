@@ -74,6 +74,13 @@ jest.mock("../modules/hr/models/StaffCoverSlot", () => ({
   StaffCoverSlot: { find: (q: unknown) => ({ select: () => ({ lean: () => mockCoverSlotFind(q) }) }) },
 }));
 
+// The live-leave lookup: by default every queried leave is live; a test that cancels
+// the leave makes it return nothing.
+const mockLeaveFind = jest.fn();
+jest.mock("../modules/hr/models/StaffLeaveApplication", () => ({
+  StaffLeaveApplication: { find: (q: unknown) => ({ select: () => ({ lean: () => mockLeaveFind(q) }) }) },
+}));
+
 const mockTeacherAttFind = jest.fn();
 jest.mock("../modules/attendance/models/TeacherAttendanceDay", () => ({
   TeacherAttendanceDay: { find: (q: unknown) => ({ select: () => ({ lean: () => mockTeacherAttFind(q) }) }) },
@@ -104,6 +111,7 @@ const at = (hhmm: string, dateKey = TUESDAY): Date => {
 const teacherA = oid();
 const teacherB = oid();
 const coverC = oid();
+const leaveL = oid();
 const classId = oid();
 const sectionId = oid();
 const slot1 = oid();
@@ -156,6 +164,7 @@ function primeDefaults(): void {
   mockGroupFind.mockResolvedValue([]);
   mockSubFind.mockResolvedValue([]);
   mockCoverSlotFind.mockResolvedValue([]);
+  mockLeaveFind.mockImplementation(async (q: { _id: { $in: unknown[] } }) => q._id.$in.map((_id) => ({ _id })));
   mockTeacherAttFind.mockResolvedValue([]);
   mockStaffFind.mockResolvedValue([]);
   mockUserIdsOnLeave.mockResolvedValue(new Set<string>());
@@ -187,7 +196,7 @@ describe("liveClassBoard — who takes each period", () => {
 
   test("an APPROVED HR cover shows the cover teacher — the absent teacher stays named", async () => {
     mockCoverSlotFind.mockResolvedValue([
-      { routineSlotId: slot1, status: "approved", finalCoverTeacherUserId: coverC, proposedCoverTeacherId: coverC },
+      { routineSlotId: slot1, leaveApplicationId: leaveL, status: "approved", finalCoverTeacherUserId: coverC, proposedCoverTeacherId: coverC },
     ]);
     const board = await liveClassBoard(TUESDAY, at("07:10"));
     expect(board.cells[0]).toMatchObject({
@@ -202,7 +211,7 @@ describe("liveClassBoard — who takes each period", () => {
 
   test("a PROPOSED cover is not a cover — the class is flagged, the proposal shown beside it", async () => {
     mockCoverSlotFind.mockResolvedValue([
-      { routineSlotId: slot1, status: "proposed", finalCoverTeacherUserId: null, proposedCoverTeacherId: coverC },
+      { routineSlotId: slot1, leaveApplicationId: leaveL, status: "proposed", finalCoverTeacherUserId: null, proposedCoverTeacherId: coverC },
     ]);
     const board = await liveClassBoard(TUESDAY, at("07:10"));
     expect(board.cells[0]).toMatchObject({
@@ -218,11 +227,23 @@ describe("liveClassBoard — who takes each period", () => {
 
   test("a needs_cover row is flagged with no proposal to show", async () => {
     mockCoverSlotFind.mockResolvedValue([
-      { routineSlotId: slot2, status: "needs_cover", finalCoverTeacherUserId: null, proposedCoverTeacherId: null },
+      { routineSlotId: slot2, leaveApplicationId: leaveL, status: "needs_cover", finalCoverTeacherUserId: null, proposedCoverTeacherId: null },
     ]);
     const board = await liveClassBoard(TUESDAY, at("07:10"));
     const p2 = board.cells.find((c) => c.periodNumber === 2)!;
     expect(p2).toMatchObject({ status: "UNCOVERED", pendingCoverTeacherName: null, absenceReason: "leave" });
+  });
+
+  test("a needs_cover row left behind by a CANCELLED leave says nothing — the teacher is on duty", async () => {
+    mockCoverSlotFind.mockResolvedValue([
+      { routineSlotId: slot1, leaveApplicationId: leaveL, status: "needs_cover", finalCoverTeacherUserId: null, proposedCoverTeacherId: null },
+    ]);
+    mockLeaveFind.mockResolvedValue([]); // the leave is cancelled/rejected
+    const board = await liveClassBoard(TUESDAY, at("07:10"));
+    expect(board.cells[0]).toMatchObject({ status: "ON_DUTY", absenceReason: null, teacherName: "Hamida Akter" });
+    expect(board.uncoveredTodayCount).toBe(0);
+    const q = mockLeaveFind.mock.calls[0][0] as { status: { $in: string[] } };
+    expect(q.status.$in).toEqual(["applied", "approved"]);
   });
 
   test("an approved leave with no fan-out row still flags the class", async () => {
@@ -284,8 +305,8 @@ describe("liveClassBoard — the clock", () => {
 
   test("uncoveredNow counts only the period running now, uncoveredToday the whole day", async () => {
     mockCoverSlotFind.mockResolvedValue([
-      { routineSlotId: slot1, status: "needs_cover", finalCoverTeacherUserId: null, proposedCoverTeacherId: null },
-      { routineSlotId: slot2, status: "needs_cover", finalCoverTeacherUserId: null, proposedCoverTeacherId: null },
+      { routineSlotId: slot1, leaveApplicationId: leaveL, status: "needs_cover", finalCoverTeacherUserId: null, proposedCoverTeacherId: null },
+      { routineSlotId: slot2, leaveApplicationId: leaveL, status: "needs_cover", finalCoverTeacherUserId: null, proposedCoverTeacherId: null },
     ]);
     const board = await liveClassBoard(TUESDAY, at("08:00"));
     expect(board.uncoveredNowCount).toBe(1);
