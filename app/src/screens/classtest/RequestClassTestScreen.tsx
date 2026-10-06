@@ -147,13 +147,13 @@ export default function RequestClassTestScreen(): React.ReactElement {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [suggestQ.data]);
 
-  // UX-6 default: pass mark tracks ⌈total × 0.33⌉ until the teacher edits it
+  // UX-6 default: pass mark tracks ⌈total × 0.50⌉ (D-#712 — the server's default too) until the teacher edits it
   // themselves (then their value wins — the field stays fully editable).
   const [passMarkTouched, setPassMarkTouched] = useState(false);
   useEffect(() => {
     const total = Number(totalMarks);
     if (!passMarkTouched && totalMarks.trim() !== "" && Number.isFinite(total) && total >= 1) {
-      setPassMark(String(Math.ceil(total * 0.33)));
+      setPassMark(String(Math.ceil(total * 0.5)));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [totalMarks, passMarkTouched]);
@@ -420,7 +420,7 @@ export default function RequestClassTestScreen(): React.ReactElement {
           <DateField label={STR.ctExamDate} value={examDate} onChange={setExamDate} error={fieldErrors.examDate} />
           <Field label={STR.ctTotalMarks} value={totalMarks} onChangeText={setTotalMarks} keyboardType="number-pad" error={fieldErrors.totalMarks} />
 
-          {/* UX-6: rarely-changed inputs fold away — pass mark (auto ⌈total×0.33⌉),
+          {/* UX-6: rarely-changed inputs fold away — pass mark (auto ⌈total×0.50⌉),
               test number (auto-suggested), deadline (server default 2 open days), notes.
               The happy path never opens this. */}
           <MoreOptions>
