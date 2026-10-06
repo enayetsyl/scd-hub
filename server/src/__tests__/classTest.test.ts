@@ -246,11 +246,12 @@ describe("generateCtId / suggestTestNumber / defaultPassMark", () => {
     expect(await suggestTestNumber(AY_OID.toString(), 3, "MATH" as never)).toBe(1);
   });
 
-  test("defaultPassMark rounds 40% of total", () => {
-    expect(defaultPassMark(20)).toBe(8);
-    expect(defaultPassMark(25)).toBe(10);
-    expect(defaultPassMark(15)).toBe(6); // 6.0
-    expect(defaultPassMark(13)).toBe(5); // 5.2 → 5
+  test("defaultPassMark is half the total, rounded UP (D-#712)", () => {
+    expect(defaultPassMark(20)).toBe(10);
+    expect(defaultPassMark(25)).toBe(13); // 12.5 → 13
+    expect(defaultPassMark(15)).toBe(8); // 7.5 → 8
+    expect(defaultPassMark(10)).toBe(5);
+    expect(defaultPassMark(1)).toBe(1);
   });
 });
 
@@ -278,7 +279,7 @@ describe("createRequest", () => {
     expect(res.source).toBe("POOL_SET");
     expect(res.setId).toBe(baseInput.setId);
     expect(res.questionFileId).toBeNull();
-    expect(res.passMark).toBe(8); // round(0.4 × 20)
+    expect(res.passMark).toBe(10); // ⌈0.5 × 20⌉ (D-#712)
     expect(res.testNumber).toBe(1); // auto-suggested (none yet)
     expect(res.deadlineDays).toBe(2);
     expect(mockWriteAudit).toHaveBeenCalledWith(
