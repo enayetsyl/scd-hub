@@ -8,7 +8,7 @@
  *                        an assembled CT-kind set (setId) OR an uploaded paper
  *                        (questionFileId, owned by the requester). year/level/
  *                        class are RESOLVED from the section (D-#143), never
- *                        client-supplied. passMark defaults to round(0.40×total).
+ *                        client-supplied. passMark defaults to ⌈0.50×total⌉ (D-#712).
  *   markPrinted        — Office: REQUESTED → PRINTED, stamps printedBy/At. THE
  *                        RECORD IS NOW THE OFFICIAL EXAM (the exam-date deadline
  *                        anchor; the school-day derivation is CT-2).
@@ -239,9 +239,11 @@ export function classTestShape(d: IClassTest): ClassTestShape {
   };
 }
 
-/** round(0.40 × totalMarks) — the §3.2 / §4 default pass mark. */
+/** ⌈0.50 × totalMarks⌉ — the default pass mark (D-#712, owner 2026-10-06; was round(0.40×),
+ *  while the request form pre-filled ⌈0.33×⌉). Only a NEW test takes it; every existing
+ *  test keeps the pass mark stored on it. Same rule as the app's pre-fill. */
 export function defaultPassMark(totalMarks: number): number {
-  return Math.round(0.4 * totalMarks);
+  return Math.ceil(0.5 * totalMarks);
 }
 
 export async function createRequest(
