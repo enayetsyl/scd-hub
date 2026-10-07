@@ -129,6 +129,39 @@ describe("updateAssignmentItem (D-#353 tiered edit)", () => {
     expect(doc.setId).toBeUndefined();
   });
 
+  // --- D-#713: attachments are required — replaceable, never clearable ----------
+
+  test("D-#713: clearing every attachment is refused and nothing is saved", async () => {
+    const doc = makeItem({ attachmentIds: ["507f1f77bcf86cd799439088"] });
+    mockItemFindById.mockReturnValue(doc);
+
+    await expect(
+      updateAssignmentItem({ itemId: ITEM, attachmentIds: [], actorId: OWNER }),
+    ).rejects.toThrow(/অন্তত একটি ফাইল/);
+    expect(doc.attachmentIds).toEqual(["507f1f77bcf86cd799439088"]); // untouched
+    expect(doc.save).not.toHaveBeenCalled();
+  });
+
+  test("D-#713: replacing the attachments with another uploaded file is allowed", async () => {
+    const doc = makeItem({ attachmentIds: ["507f1f77bcf86cd799439088"] });
+    mockItemFindById.mockReturnValue(doc);
+    const next = "507f1f77bcf86cd799439077";
+    mockFileFind.mockResolvedValue([{ _id: next }]);
+
+    await updateAssignmentItem({ itemId: ITEM, attachmentIds: [next], actorId: OWNER });
+    expect((doc.attachmentIds as unknown[]).map(String)).toEqual([next]);
+    expect(doc.save).toHaveBeenCalled();
+  });
+
+  test("D-#713: an item delivered before the rule (no attachments) stays editable", async () => {
+    const doc = makeItem({ attachmentIds: undefined });
+    mockItemFindById.mockReturnValue(doc);
+
+    await updateAssignmentItem({ itemId: ITEM, totalMarks: 30, actorId: OWNER });
+    expect(doc.totalMarks).toBe(30);
+    expect(doc.save).toHaveBeenCalled();
+  });
+
   test("another teacher cannot edit someone else's cell", async () => {
     mockItemFindById.mockReturnValue(makeItem());
     await expect(
