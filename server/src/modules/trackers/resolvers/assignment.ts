@@ -1203,6 +1203,9 @@ builder.mutationField("deliverAssignment", (t) =>
       // field the guardian reads.
       description: t.arg.string({ required: true }),
       estMinutes: t.arg.int({ required: false }),
+      // D-#713: at least one file is REQUIRED, but enforced by the service with a
+      // Bangla message rather than here — a schema-level `required: true` would
+      // reject an older installed APK with a raw validation error instead.
       attachmentIds: t.arg.stringList({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
