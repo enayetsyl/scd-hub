@@ -22,7 +22,17 @@ import {
   STUDENTS_QUERY,
   type RoutineSlotT,
 } from "../graphql/operations";
-import { Body, Muted, Badge, Button, Field, Divider } from "./ui";
+import { Body, Muted, Badge, Button, Field, Divider, breakAnywhere } from "./ui";
+import { UploadDropZone } from "./UploadDropZone";
+import {
+  pickAndUploadAssignmentFiles,
+  uploadAssignmentWebFiles,
+  openStoredFile,
+  AS_MAX_ATTACHMENTS,
+  FileUploadError,
+  type UploadedFile,
+  type MultiUploadResult,
+} from "../lib/files";
 import { useAuth } from "../auth/AuthContext";
 import { STR, bnNum, hwSubjectLabel } from "../lib/labels";
 import { friendlyError } from "../lib/errors";
@@ -74,8 +84,26 @@ export function AssignmentDeliverBlock({
   const [showRoster, setShowRoster] = useState(false);
   const [busy, setBusy] = useState(false);
   const [, deliver] = useMutation(DELIVER_ASSIGNMENT);
+  /** D-#713: the sheet is required, so the period card needs the same picker as
+   *  DeliverAssignmentScreen — uploaded on pick, bound at deliver. */
+  const [files, setFiles] = useState<UploadedFile[]>([]);
+  const [pickBusy, setPickBusy] = useState(false);
 
   if (!eligible || !cell) return null;
+
+  async function runAttachmentUpload(upload: () => Promise<MultiUploadResult>): Promise<void> {
+    if (pickBusy || files.length >= AS_MAX_ATTACHMENTS) return;
+    setPickBusy(true);
+    try {
+      const res = await upload();
+      if (res.uploaded.length > 0) setFiles((cur) => [...cur, ...res.uploaded]);
+      if (res.failures.length > 0) toast.show(res.failures.join("\n"), "danger");
+    } catch (e) {
+      toast.show(e instanceof FileUploadError ? e.message : STR.errGeneric, "danger");
+    } finally {
+      setPickBusy(false);
+    }
+  }
 
   const absentCount = students.filter((s) => absent[s.id]).length;
 
@@ -84,6 +112,10 @@ export function AssignmentDeliverBlock({
     // D-#478: the family reads this line — refuse an empty one before the round-trip.
     if (description.trim() === "") {
       toast.show(STR.asDescRequired, "danger");
+      return;
+    }
+    if (files.length === 0) {
+      toast.show(STR.asAttachRequired, "danger");
       return;
     }
     if (students.length === 0) {
@@ -100,6 +132,7 @@ export function AssignmentDeliverBlock({
       description: description.trim(),
       estMinutes: estMinutes.trim() === "" ? undefined : parseInt(estMinutes, 10),
       totalMarks: totalMarks.trim() === "" ? undefined : parseInt(totalMarks, 10),
+      attachmentIds: files.map((f) => f.fileId),
     });
     setBusy(false);
     if (res.error || !res.data?.deliverAssignment) {
@@ -130,6 +163,39 @@ export function AssignmentDeliverBlock({
         </View>
       </View>
 
+      <Body style={{ fontWeight: "700", marginTop: space(2) }}>
+        📎 {STR.cnAttachments} * ({files.length}/{AS_MAX_ATTACHMENTS})
+      </Body>
+      {files.length === 0 ? <Muted>{STR.asAttachRequired}</Muted> : null}
+      {files.map((f, i) => (
+        <View key={f.fileId} style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
+          <Pressable
+            style={{ flex: 1, minWidth: 0 }}
+            onPress={() => void openStoredFile(f.fileId).catch(() => toast.show(STR.errGeneric, "danger"))}
+          >
+            <Body style={breakAnywhere}>📎 {f.originalName}</Body>
+          </Pressable>
+          <Button title={STR.remove} variant="ghost" onPress={() => setFiles((cur) => cur.filter((_, j) => j !== i))} />
+        </View>
+      ))}
+      <UploadDropZone
+        onFiles={(dropped) =>
+          void runAttachmentUpload(() => uploadAssignmentWebFiles(dropped, AS_MAX_ATTACHMENTS - files.length))
+        }
+        disabled={pickBusy || files.length >= AS_MAX_ATTACHMENTS}
+      >
+        <Button
+          title={pickBusy ? STR.saving : STR.cnAttachFile}
+          variant="secondary"
+          onPress={() =>
+            void runAttachmentUpload(() => pickAndUploadAssignmentFiles(AS_MAX_ATTACHMENTS - files.length))
+          }
+          loading={pickBusy}
+          disabled={pickBusy || files.length >= AS_MAX_ATTACHMENTS}
+          style={{ marginBottom: space(2) }}
+        />
+      </UploadDropZone>
+
       <Pressable onPress={() => setShowRoster((v) => !v)} accessibilityRole="button">
         <Muted>
           {showRoster ? "▾" : "▸"} {STR.asPresent} {bnNum(students.length - absentCount)} · {STR.asAbsent}{" "}
@@ -159,7 +225,7 @@ export function AssignmentDeliverBlock({
         title={STR.asDeliver}
         onPress={() => void onDeliver()}
         loading={busy}
-        disabled={busy || students.length === 0}
+        disabled={busy || pickBusy || students.length === 0}
         style={{ marginTop: space(2) }}
       />
     </View>

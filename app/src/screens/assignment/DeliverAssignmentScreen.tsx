@@ -119,6 +119,11 @@ export default function DeliverAssignmentScreen({ route, navigation }: Props): R
       setError(STR.asDescRequired);
       return;
     }
+    // D-#713: the sheet is required — same early catch as the description.
+    if (files.length === 0) {
+      setError(STR.asAttachRequired);
+      return;
+    }
     // The set-id link is optional, but a non-blank value must be a real id —
     // else the server rejects it. Catch it here so the teacher gets a clear
     // inline message instead of a failed delivery.
@@ -140,7 +145,7 @@ export default function DeliverAssignmentScreen({ route, navigation }: Props): R
       setId: setId.trim() === "" ? undefined : setId.trim(),
       totalMarks: marks,
       estMinutes: mins,
-      attachmentIds: files.length > 0 ? files.map((f) => f.fileId) : undefined,
+      attachmentIds: files.map((f) => f.fileId),
     });
     setBusy(false);
     if (res.error || !res.data?.deliverAssignment) return setError(friendlyError(res.error));
@@ -174,8 +179,9 @@ export default function DeliverAssignmentScreen({ route, navigation }: Props): R
 
         <Card>
           <Body style={{ fontWeight: "700", marginBottom: 4 }}>
-            📎 {STR.cnAttachments} ({files.length}/{AS_MAX_ATTACHMENTS})
+            📎 {STR.cnAttachments} * ({files.length}/{AS_MAX_ATTACHMENTS})
           </Body>
+          {files.length === 0 ? <Muted style={{ marginBottom: 4 }}>{STR.asAttachRequired}</Muted> : null}
           {files.map((f, i) => (
             <View key={f.fileId} style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
               <Pressable
@@ -245,7 +251,13 @@ export default function DeliverAssignmentScreen({ route, navigation }: Props): R
               );
             })}
             <View style={{ marginTop: 8 }}>
-              <Button title={STR.asDeliver} onPress={onDeliver} loading={busy} disabled={busy || students.length === 0} />
+              {/* A file still uploading is not yet in `files` — wait for it. */}
+              <Button
+                title={STR.asDeliver}
+                onPress={onDeliver}
+                loading={busy}
+                disabled={busy || pickBusy || students.length === 0}
+              />
             </View>
           </Card>
         )}

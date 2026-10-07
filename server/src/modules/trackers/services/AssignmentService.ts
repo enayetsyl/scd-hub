@@ -93,6 +93,12 @@ export interface DeliverAssignmentInput {
 
 export const AS_MAX_ATTACHMENTS = 5;
 
+/** D-#713: an assignment is handed out WITH its sheet — at least one attachment is
+ *  required at delivery, and an edit may replace the files but never clear them.
+ *  Bangla, because a teacher sees it on the delivery form. */
+export const AS_ATTACHMENT_REQUIRED =
+  "অন্তত একটি ফাইল যুক্ত করুন — অ্যাসাইনমেন্টের শিট বা নির্দেশনা ছাড়া দেওয়া যাবে না";
+
 /** Validate delivery-pass attachments: ≤5 valid ObjectIds, every one an existing
  *  StoredFile of kind assignment_attachment — anything else (an hw_answer, a chat
  *  file) must never become class-readable through the item's read gate (D-#298). */
@@ -192,6 +198,9 @@ export async function deliverAssignmentItem(
   }
 
   const attachmentIds = await normalizeAttachmentIds(input.attachmentIds);
+  // D-#713: enforced HERE, like the D-#478 description, so every caller path
+  // (the period-card block, the full screen, scripts) delivers with a file.
+  if (!attachmentIds) throw new Error(AS_ATTACHMENT_REQUIRED);
 
   const at = input.at ?? new Date();
   const asId = await generateAsId(input.academicYearId, entry.classLevel, entry.subject);
@@ -361,7 +370,12 @@ export async function updateAssignmentItem(
   }
 
   if (input.attachmentIds !== undefined) {
-    item.attachmentIds = await normalizeAttachmentIds(input.attachmentIds);
+    // D-#713: replaceable, never CLEARABLE (the description rule above). An edit
+    // that leaves attachmentIds out is untouched, so items delivered before the
+    // rule existed stay editable.
+    const next = await normalizeAttachmentIds(input.attachmentIds);
+    if (!next) throw new Error(AS_ATTACHMENT_REQUIRED);
+    item.attachmentIds = next;
   }
 
   await item.save();
