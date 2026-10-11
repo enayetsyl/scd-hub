@@ -45,6 +45,8 @@ import { ScholarshipPaper, type IScholarshipPaper } from "../models/ScholarshipP
 import { ScholarshipScore, type IScholarshipScore } from "../models/ScholarshipScore";
 import { ScholarshipTopic } from "../models/ScholarshipTopic";
 import { Student } from "../../foundation/models/Student";
+import { Section } from "../../foundation/models/Section";
+import { emptiedSectionRoster } from "../../trackers/classTestAnchor";
 
 export type Band = "weak" | "fair" | "good" | "insufficient";
 
@@ -459,6 +461,29 @@ export function sittingFilter(sectionId: string | Types.ObjectId): Record<string
   };
 }
 
+/**
+ * `sittingFilter`, but for a section that may since have been EMPTIED by a split or
+ * merge (owner report 2026-10-11). Every C5 paper sits on the combined সম্মিলিত
+ * section, which the 2026-10-01 বালক/বালিকা split left with nobody in it — so
+ * SP-C5-BAN-0004 (dated 10-07) opened a mark grid with no names, and the analysis of
+ * the scored papers lost its roster the same way. A populated section is unchanged;
+ * an emptied one reads who was in it (the class tests' `emptiedSectionRoster`: a
+ * merge snapshot, else the class's active students), still minus excluded children.
+ */
+export async function sittingRosterFilter(sectionId: string | Types.ObjectId): Promise<Record<string, unknown>> {
+  const base = sittingFilter(sectionId);
+  if (await Student.exists({ sectionId: base.sectionId, active: true })) return base;
+  const section = (await Section.findById(base.sectionId).select("classId").lean()) as {
+    classId?: Types.ObjectId;
+  } | null;
+  if (!section?.classId) return base;
+  const ids = await emptiedSectionRoster(String(base.sectionId), String(section.classId));
+  return {
+    _id: { $in: ids.map((id) => new Types.ObjectId(id)) },
+    scholarshipExcluded: { $ne: true },
+  };
+}
+
 /** Every SCORED/PUBLISHED paper in scope, with its scores. DRAFT and DECLARED papers
  *  carry no marks yet and would only add empty denominators. */
 export async function loadScope(scope: AnalysisScope): Promise<PaperWithScores[]> {
@@ -530,7 +555,7 @@ export async function studentAnalysis(
   // EXCLUDED children are not in the pool (D-#697). A child the school never entered for
   // the examination is not someone to be ahead of or behind, so she must not sit inside a
   // class mean, nor inside the "of N" that a rank is counted out of.
-  const roster = (await Student.find(sittingFilter(scope.sectionId))
+  const roster = (await Student.find(await sittingRosterFilter(scope.sectionId))
     .select("_id")
     .lean()) as { _id: Types.ObjectId }[];
   const ids = roster.map((s) => String(s._id));
@@ -617,7 +642,7 @@ export async function classAnalysis(
   // fall back to `name` exactly as the paper roster does (ScholarshipService). Without
   // the fallback every heat-map card on a real section renders "—" and the teacher
   // cannot tell which column is which child.
-  const roster = (await Student.find(sittingFilter(scope.sectionId))
+  const roster = (await Student.find(await sittingRosterFilter(scope.sectionId))
     .select("_id name nameBn")
     .sort({ nameBn: 1, name: 1 })
     .lean()) as { _id: Types.ObjectId; name?: string; nameBn?: string }[];

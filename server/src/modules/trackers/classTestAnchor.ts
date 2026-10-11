@@ -173,7 +173,7 @@ async function resolveRoster(test: AnchoredTest): Promise<{ ids: string[]; moved
  *     everyone into the class's new boys/girls sections) — the class's active students.
  * Without it the marks screen listed nobody, so a pre-split exam could never be scored.
  */
-async function emptiedSectionRoster(sectionId: string, classId: string): Promise<string[]> {
+export async function emptiedSectionRoster(sectionId: string, classId: string): Promise<string[]> {
   const merge = (await SectionMerge.findOne({ sourceSectionIds: new Types.ObjectId(sectionId) })
     .sort({ mergedAt: -1 })
     .select("moves")
