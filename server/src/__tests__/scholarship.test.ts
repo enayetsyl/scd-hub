@@ -70,8 +70,18 @@ jest.mock("../modules/foundation/models/Class", () => ({
 }));
 
 const mockStudentFind = jest.fn();
+// Default: the paper's section still has students, so the roster is the section's own.
+const mockStudentExists = jest.fn(async (_q?: unknown): Promise<unknown> => ({ _id: oid() }));
 jest.mock("../modules/foundation/models/Student", () => ({
-  Student: { find: (q: unknown) => mockStudentFind(q) },
+  Student: {
+    find: (q: unknown) => mockStudentFind(q),
+    exists: (q: unknown) => mockStudentExists(q),
+  },
+}));
+
+const mockEmptiedRoster = jest.fn(async (..._a: unknown[]): Promise<string[]> => []);
+jest.mock("../modules/trackers/classTestAnchor", () => ({
+  emptiedSectionRoster: (...a: unknown[]) => mockEmptiedRoster(...a),
 }));
 
 const mockResolveTeacher = jest.fn();
@@ -116,6 +126,8 @@ function topicsResolve(rows: { code: string; subject: string }[]): void {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockStudentExists.mockImplementation(async () => ({ _id: oid() }));
+  mockEmptiedRoster.mockImplementation(async () => []);
   topicsResolve([
     { code: ENG_TOPICS[0], subject: "ENG" },
     { code: ENG_TOPICS[1], subject: "ENG" },
@@ -495,6 +507,30 @@ describe("enterScores", () => {
     expect(mockStudentFind.mock.calls[0][0]).toMatchObject({
       scholarshipExcluded: { $ne: true },
     });
+  });
+
+  it("a paper on a section EMPTIED by a split gates on who was in it (C5 সম্মিলিত, 2026-10-11)", async () => {
+    // SP-C5-BAN-0004 sits on the combined section the 10-01 বালক/বালিকা split emptied;
+    // its children are now in the class's new sections and must still be markable.
+    const classId = oid();
+    mockStudentExists.mockImplementation(async () => null);
+    mockSectionFindById.mockReturnValue(leanChain({ classId }));
+    mockEmptiedRoster.mockImplementation(async () => [studentId]);
+    const n = await enterScores(String(paperOid), [{ studentId, status: "ABSENT" }], principal);
+    expect(n).toBe(1);
+    expect(mockEmptiedRoster).toHaveBeenCalledWith(String(sectionId), String(classId));
+    const q = mockStudentFind.mock.calls[0][0] as { _id: { $in: unknown[] }; sectionId?: unknown };
+    expect(q._id.$in.map(String)).toEqual([studentId]);
+    expect(q.sectionId).toBeUndefined();
+    // Still the SITTING roster — an excluded child stays out (D-#697).
+    expect(q).toMatchObject({ scholarshipExcluded: { $ne: true } });
+  });
+
+  it("a populated section never consults the emptied-section fallback", async () => {
+    await enterScores(String(paperOid), [{ studentId, status: "ABSENT" }], principal);
+    expect(mockEmptiedRoster).not.toHaveBeenCalled();
+    expect(mockSectionFindById).not.toHaveBeenCalled();
+    expect(mockStudentFind.mock.calls[0][0]).toMatchObject({ sectionId });
   });
 
   it("does not demote a paper that is already SCORED", async () => {

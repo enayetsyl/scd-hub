@@ -171,10 +171,15 @@ export default function ReviewHomeScreen({ navigation }: Props): React.ReactElem
                   <Body style={{ flex: 1, fontWeight: "700" }}>{planTitle(r)}</Body>
                   <Badge text={reviewVerdictLabel(r.verdict)} tone={r.verdict === "APPROVE" ? "ok" : "warn"} />
                 </View>
-                <Muted style={{ marginTop: 4 }}>
-                  {STR.reviewRound} {bnNum(r.roundNumber)}
-                  {r.feedback ? ` · ${r.feedback}` : ""}
-                </Muted>
+                {/* The plan type, as on My reviews below — the anchor word alone ("পাঠ 2")
+                    cannot tell a chapter plan from a session plan at the same address. */}
+                <View style={{ flexDirection: "row", alignItems: "center", gap: space(2), marginTop: 4 }}>
+                  <Badge text={docTypeLabel(r.docType)} tone="info" />
+                  <Muted style={{ flex: 1 }}>
+                    {STR.reviewRound} {bnNum(r.roundNumber)}
+                  </Muted>
+                </View>
+                {r.feedback ? <Muted style={{ marginTop: 4 }}>{r.feedback}</Muted> : null}
               </Card>
             ))
           )}

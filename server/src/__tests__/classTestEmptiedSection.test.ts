@@ -53,7 +53,14 @@ jest.mock("../modules/routine/models/SubjectGroup", () => ({ SubjectGroup: { fin
 jest.mock("../modules/routine/models/SubjectGroupMembership", () => ({
   SubjectGroupMembership: { find: () => leanChain([]) },
 }));
-jest.mock("../modules/trackers/subjectTeacher", () => ({ teachesSubjectGroup: jest.fn(async () => false) }));
+jest.mock("../modules/trackers/subjectTeacher", () => ({
+  teachesSubjectGroup: jest.fn(async () => false),
+  teachesSectionSubject: jest.fn(async () => false),
+}));
+// SCIENCE has a `Subject` row, so a refused read never takes the routine-only path.
+jest.mock("../modules/foundation/models/Subject", () => ({
+  Subject: { findOne: () => leanChain({ _id: new (jest.requireActual("mongoose").Types.ObjectId)() }) },
+}));
 jest.mock("../modules/foundation/services/RoleScope", () => ({ isAdminStaff: () => false }));
 
 const mockAssertCanRead = jest.fn();

@@ -46,9 +46,8 @@ import {
   type ArchiveLocationShape,
 } from "../services/ArchiveService";
 import { ClassTest } from "../../trackers/models/ClassTest";
-import { Subject } from "../../foundation/models/Subject";
 import { assertCanWrite, ForbiddenError } from "../../../middleware/authz";
-import { assertAnchorWrite } from "../../trackers/classTestAnchor";
+import { assertAnchorWrite, subjectIdOrNull } from "../../trackers/classTestAnchor";
 import { isAdminStaff } from "../../foundation/services/RoleScope";
 
 // ---------------------------------------------------------------------------
@@ -376,10 +375,7 @@ builder.mutationField("fileScriptBundle", (t) =>
             // The exam's teacher keeps it once its section is emptied (a split).
             teacherId: test.teacherId ? test.teacherId.toString() : null,
           },
-          async () => {
-            const subjectDoc = await Subject.findOne({ code: test.subject }).select("_id").lean();
-            return subjectDoc?._id ? subjectDoc._id.toString() : "";
-          },
+          () => subjectIdOrNull(test.subject),
         );
       }
       return fileBundleSvc({
