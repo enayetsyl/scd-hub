@@ -24,7 +24,7 @@ import { Section } from "../../foundation/models/Section";
 import { Class } from "../../foundation/models/Class";
 import { Student } from "../../foundation/models/Student";
 import { resolveSubjectTeacher } from "../../trackers/subjectTeacher";
-import { sittingFilter } from "./ScholarshipAnalysisService";
+import { sittingRosterFilter } from "./ScholarshipAnalysisService";
 import { writeAudit } from "../../platform/services/AuditService";
 
 // ---------------------------------------------------------------------------
@@ -338,7 +338,7 @@ export async function enterScores(
   // screen, a replayed mutation — must be refused rather than quietly stored where
   // nothing will ever read it.
   const onRoster = (await Student.find({
-    ...sittingFilter(paper.sectionId),
+    ...(await sittingRosterFilter(paper.sectionId)),
     _id: { $in: ids.map((i) => new Types.ObjectId(i)) },
   })
     .select("_id")
@@ -699,7 +699,7 @@ export async function paperDetail(id: string): Promise<PaperDetailView | null> {
     // Only the children the school entered (D-#697). An excluded child on the mark grid
     // is a row the teacher must remember to skip on every paper, and one mistyped 0
     // there would put her into the class mean she was removed from.
-    Student.find(sittingFilter(p.sectionId)).select("name nameBn").sort({ nameBn: 1, name: 1 }).lean() as Promise<
+    Student.find(await sittingRosterFilter(p.sectionId)).select("name nameBn").sort({ nameBn: 1, name: 1 }).lean() as Promise<
       { _id: Types.ObjectId; name: string; nameBn?: string }[]
     >,
     ScholarshipScore.find({ paperId: p._id }).select("studentId status itemMarks").lean() as Promise<
