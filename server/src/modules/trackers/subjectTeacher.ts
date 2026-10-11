@@ -127,9 +127,33 @@ export async function teachesSubjectGroup(
   subjectGroupId: string,
   subject: string,
 ): Promise<boolean> {
+  return teachesOnRoutine(teacherId, "subjectgroup", subjectGroupId, subject);
+}
+
+/**
+ * Does the routine name this teacher on ANY live slot of this section × subject?
+ * Only for a subject with no `Subject` row (ARABIC, QURAN — D-#521/#530): those
+ * routine slots bind no teaching grant (`bindRoutineGrant` has no subjectId to
+ * stamp), so the grant check cannot answer and the routine must. A subject that
+ * HAS grants must keep using them — the timetable is not authority there (WC-7).
+ */
+export async function teachesSectionSubject(
+  teacherId: string,
+  sectionId: string,
+  subject: string,
+): Promise<boolean> {
+  return teachesOnRoutine(teacherId, "section", sectionId, subject);
+}
+
+async function teachesOnRoutine(
+  teacherId: string,
+  groupType: "section" | "subjectgroup",
+  groupId: string,
+  subject: string,
+): Promise<boolean> {
   const slots = (await RoutineSlot.find({
-    groupType: "subjectgroup",
-    groupId: subjectGroupId,
+    groupType,
+    groupId,
     subject,
     teacherId,
     active: true,
