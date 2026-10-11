@@ -41,17 +41,10 @@ import {
   assertCanRead,
   ForbiddenError,
 } from "../../../middleware/authz";
-import { assertAnchorRead, assertAnchorWrite, groupNameBn } from "../classTestAnchor";
-import { Subject } from "../../foundation/models/Subject";
+import { assertAnchorRead, assertAnchorWrite, groupNameBn, subjectIdOrNull } from "../classTestAnchor";
 import { User } from "../../foundation/models/User";
 import type { Types } from "mongoose";
 import { isAdminStaff } from "../../foundation/services/RoleScope";
-
-async function resolveSubjectId(subject: string): Promise<string> {
-  const doc = await Subject.findOne({ code: subject }).select("_id").lean();
-  if (!doc) throw new Error(`Subject not found: ${subject}`);
-  return doc._id.toString();
-}
 
 // ---------------------------------------------------------------------------
 // Gate helpers
@@ -178,7 +171,7 @@ builder.mutationField("createClassTestRequest", (t) =>
           subjectGroupId: args.subjectGroupId ?? null,
           subject: args.subject,
         },
-        () => resolveSubjectId(args.subject),
+        () => subjectIdOrNull(args.subject),
       );
       return createRequestSvc({
         sectionId: args.sectionId ?? undefined,
@@ -248,7 +241,7 @@ builder.mutationField("registerClassTestOfficial", (t) =>
             subjectGroupId: args.subjectGroupId ?? null,
             subject: args.subject,
           },
-          () => resolveSubjectId(args.subject),
+          () => subjectIdOrNull(args.subject),
         );
       }
       return createRequestSvc({
@@ -298,7 +291,7 @@ builder.queryField("suggestClassTestNumber", (t) =>
           subjectGroupId: args.subjectGroupId ?? null,
           subject: args.subject,
         },
-        () => resolveSubjectId(args.subject),
+        () => subjectIdOrNull(args.subject),
       );
       if (args.subjectGroupId) {
         // A group's Test # line is its own (year × group × subject).

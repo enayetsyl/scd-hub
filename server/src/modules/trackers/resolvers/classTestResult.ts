@@ -38,15 +38,13 @@ import {
   type UnpublishOutcome,
   type SubmitOutcome,
 } from "../services/ClassTestPublishService";
-import { Subject } from "../../foundation/models/Subject";
 import { ForbiddenError } from "../../../middleware/authz";
-import { assertAnchorRead, assertAnchorWrite, classTestRosterStudents } from "../classTestAnchor";
-
-async function resolveSubjectId(subject: string): Promise<string> {
-  const doc = await Subject.findOne({ code: subject }).select("_id").lean();
-  if (!doc) throw new Error(`Subject not found: ${subject}`);
-  return doc._id.toString();
-}
+import {
+  assertAnchorRead,
+  assertAnchorWrite,
+  classTestRosterStudents,
+  subjectIdOrNull,
+} from "../classTestAnchor";
 
 /** Resolve the test's unit + enforce staff read-scope on it (teachers only).
  *  Anchor-aware since D-#507: a group exam is read-scoped by "you teach that
@@ -65,7 +63,7 @@ async function assertWriteTest(ctx: AppContext, testId: string): Promise<void> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
   const test = await getClassTest(testId);
   if (!test) throw new ForbiddenError("Class test not found");
-  await assertAnchorWrite(ctx, test, () => resolveSubjectId(test.subject), "enter_classtest_result");
+  await assertAnchorWrite(ctx, test, () => subjectIdOrNull(test.subject), "enter_classtest_result");
 }
 
 // ---------------------------------------------------------------------------
@@ -155,7 +153,7 @@ builder.mutationField("enterClassTestResult", (t) =>
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       const test = await getClassTest(args.testId);
       if (!test) throw new ForbiddenError("Class test not found");
-      await assertAnchorWrite(ctx, test, () => resolveSubjectId(test.subject), "enter_classtest_result");
+      await assertAnchorWrite(ctx, test, () => subjectIdOrNull(test.subject), "enter_classtest_result");
       return enterResult({
         testId: args.testId,
         studentId: args.studentId,

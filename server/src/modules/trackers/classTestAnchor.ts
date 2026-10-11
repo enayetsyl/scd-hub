@@ -32,7 +32,8 @@ import { SectionMerge } from "../foundation/models/SectionMerge";
 import { Class } from "../foundation/models/Class";
 import { SubjectGroup } from "../routine/models/SubjectGroup";
 import { SubjectGroupMembership } from "../routine/models/SubjectGroupMembership";
-import { teachesSubjectGroup } from "./subjectTeacher";
+import { Subject } from "../foundation/models/Subject";
+import { teachesSectionSubject, teachesSubjectGroup } from "./subjectTeacher";
 import type { DelegatedAction } from "@scd/shared";
 
 /** The anchor fields every caller already has on a `ClassTestShape`. */
@@ -96,18 +97,46 @@ export async function assertAnchorRead(ctx: AppContext, test: AnchoredTest): Pro
   }
   const { sectionId, classId } = test;
   if (!sectionId || !classId) throw new ForbiddenError();
-  await withEmptiedSectionOwner(ctx, test, () => assertCanRead(ctx, sectionId, classId));
+  const userId = ctx.auth.userId;
+  await withEmptiedSectionOwner(ctx, test, async () => {
+    try {
+      await assertCanRead(ctx, sectionId, classId);
+    } catch (err) {
+      // A routine-only subject binds no grant, so its teacher may hold none on this
+      // section at all (Sajeda, Nursery Arabic) — the routine answers instead.
+      if (
+        err instanceof ForbiddenError &&
+        (await subjectIdOrNull(test.subject)) === null &&
+        (await teachesSectionSubject(userId, sectionId, test.subject))
+      ) {
+        return;
+      }
+      throw err;
+    }
+  });
+}
+
+/**
+ * The `Subject` row id for a subject code, or null when the code has none — how
+ * ARABIC and QURAN present (D-#521/#530). Null tells `assertAnchorWrite` that grants
+ * cannot answer, so the routine must; it is not an error. Throwing here is what made
+ * every section-anchored Arabic class test fail with "Subject not found: ARABIC".
+ */
+export async function subjectIdOrNull(code: string): Promise<string | null> {
+  const doc = (await Subject.findOne({ code }).select("_id").lean()) as { _id: Types.ObjectId } | null;
+  return doc ? doc._id.toString() : null;
 }
 
 /**
  * WRITE scope on the exam's unit (create-adjacent actions, result entry, publish).
  * `subjectId` is only needed by the section path — a group grant does not exist to
- * be subject-scoped; the routine slot already carries the subject.
+ * be subject-scoped; the routine slot already carries the subject. It resolves to
+ * null for a subject with no `Subject` row (see `subjectIdOrNull`).
  */
 export async function assertAnchorWrite(
   ctx: AppContext,
   test: AnchoredTest,
-  subjectId: () => Promise<string>,
+  subjectId: () => Promise<string | null>,
   action?: DelegatedAction,
 ): Promise<void> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
@@ -122,6 +151,18 @@ export async function assertAnchorWrite(
   const { sectionId } = test;
   if (!sectionId) throw new ForbiddenError();
   const subject = await subjectId();
+  if (subject === null) {
+    // No `Subject` row ⇒ the routine slot bound no teaching grant, so the grant
+    // check has nothing to match. Same roles as `assertCanWrite`; a teacher passes
+    // only if the routine names them on this section × subject.
+    if (ctx.auth.role === "PRINCIPAL") return;
+    if (ctx.auth.role === "OFFICE" || ctx.auth.role === "GUARDIAN") throw new ForbiddenError();
+    const userId = ctx.auth.userId;
+    await withEmptiedSectionOwner(ctx, test, async () => {
+      if (!(await teachesSectionSubject(userId, sectionId, test.subject))) throw new ForbiddenError();
+    });
+    return;
+  }
   await withEmptiedSectionOwner(ctx, test, () => assertCanWrite(ctx, sectionId, subject, action));
 }
 

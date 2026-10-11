@@ -16,8 +16,8 @@
 import { builder } from "../../../schema";
 import type { AppContext } from "../../../context";
 import { callerHasPermission } from "@scd/shared";
-import { ForbiddenError, assertCanWrite } from "../../../middleware/authz";
-import { Subject } from "../../foundation/models/Subject";
+import { ForbiddenError } from "../../../middleware/authz";
+import { assertAnchorWrite, subjectIdOrNull } from "../classTestAnchor";
 import { ClassTestQuestionRequest } from "../models/ClassTestQuestionRequest";
 import {
   createCtQuestionRequest,
@@ -42,10 +42,17 @@ function assertOffice(ctx: AppContext): void {
   }
 }
 
-async function resolveSubjectId(subject: string): Promise<string> {
-  const doc = await Subject.findOne({ code: subject }).select("_id").lean();
-  if (!doc) throw new Error(`Subject not found: ${subject}`);
-  return doc._id.toString();
+/**
+ * Section write-scope for a question request — the same gate a class test uses, so
+ * an ARABIC request (no `Subject` row, no routine grant) is decided by the routine
+ * instead of failing with "Subject not found: ARABIC" (owner report 2026-10-11).
+ */
+async function assertQuestionWrite(ctx: AppContext, sectionId: string, subject: string): Promise<void> {
+  await assertAnchorWrite(
+    ctx,
+    { sectionId, classId: null, subjectGroupId: null, subject },
+    () => subjectIdOrNull(subject),
+  );
 }
 
 const CtQuestionRoundRef = builder.objectRef<CtQuestionRoundShape>("CtQuestionRound");
@@ -115,7 +122,7 @@ builder.mutationField("createCtQuestionRequest", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanWrite(ctx, args.sectionId, await resolveSubjectId(args.subject));
+      await assertQuestionWrite(ctx, args.sectionId, args.subject);
       return createCtQuestionRequest({ ...args, actorId: ctx.auth.userId as string });
     },
   }),
@@ -188,7 +195,7 @@ builder.mutationField("requestCtQuestionPrint", (t) =>
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       const doc = await ClassTestQuestionRequest.findById(args.id).select("sectionId subject").lean();
       if (!doc) throw new Error("অনুরোধটি পাওয়া যায়নি");
-      await assertCanWrite(ctx, doc.sectionId.toString(), await resolveSubjectId(doc.subject as string));
+      await assertQuestionWrite(ctx, doc.sectionId.toString(), doc.subject as string);
       return requestCtQuestionPrint({
         id: args.id,
         colour: args.colour ?? null,
@@ -222,7 +229,7 @@ builder.mutationField("editCtQuestionRequest", (t) =>
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       const doc = await ClassTestQuestionRequest.findById(args.id).select("sectionId subject").lean();
       if (!doc) throw new Error("অনুরোধটি পাওয়া যায়নি");
-      await assertCanWrite(ctx, doc.sectionId.toString(), await resolveSubjectId(doc.subject as string));
+      await assertQuestionWrite(ctx, doc.sectionId.toString(), doc.subject as string);
       return editCtQuestionRequest({
         id: args.id,
         chapter: args.chapter,
