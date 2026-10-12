@@ -13,6 +13,7 @@
  * DB-free: the model + audit are mocked; the machine is real.
  */
 import mongoose from "mongoose";
+import { printTargetFields } from "../modules/printing/printTarget";
 
 const mockCreate = jest.fn();
 const mockFindById = jest.fn();
@@ -290,6 +291,30 @@ describe("ASSIGNMENT-purpose jobs require class + section + subject (D-#459)", (
     mockSectionFindOne.mockResolvedValue(null);
     await expect(createPrintRequest(asInput)).rejects.toThrow(/শাখাটি/);
     expect(mockSectionFindOne).toHaveBeenCalledWith({ _id: SEC, classId: CLS });
+  });
+
+  // D-#721: a section tag narrows a per-present count, so EVERY purpose is held to it.
+  test("any purpose: a section from another class is refused", async () => {
+    mockSectionFindOne.mockResolvedValue(null);
+    await expect(createPrintRequest({ ...asInput, purpose: "CLASSWORK" })).rejects.toThrow(/শাখাটি/);
+  });
+
+  test("a non-assignment job may still name no section at all", async () => {
+    mockSectionFindOne.mockResolvedValue(null);
+    await createPrintRequest({ ...asInput, purpose: "CLASSWORK", sectionId: null });
+    expect(mockSectionFindOne).not.toHaveBeenCalled();
+  });
+
+  test("printTargetFields: the picked target tags the job and is the count's class", () => {
+    expect(
+      printTargetFields({ copiesMode: "CLASS_PRESENT", classId: CLS, sectionId: SEC }),
+    ).toEqual({ copiesMode: "CLASS_PRESENT", copiesClassId: CLS, classId: CLS, sectionId: SEC });
+    // An old client sends only copiesClassId — kept as is, no tag invented.
+    expect(printTargetFields({ copiesMode: "CLASS_PRESENT", copiesClassId: CLS })).toEqual({
+      copiesMode: "CLASS_PRESENT", copiesClassId: CLS, classId: undefined, sectionId: undefined,
+    });
+    // A FIXED job is tagged but has no count class.
+    expect(printTargetFields({ copiesMode: "FIXED", classId: CLS, sectionId: SEC }).copiesClassId).toBeUndefined();
   });
 
   test("accepts a well-tagged ASSIGNMENT job", async () => {
@@ -830,6 +855,14 @@ describe("historyKey — what counts as THE SAME document", () => {
     expect(historyKey(histDoc({ ...base, classId: c4 }))).not.toBe(k3);
     expect(historyKey(histDoc({ ...base, classId: c3, subject: "MATH" }))).not.toBe(k3);
     expect(historyKey(histDoc({ ...base, classId: c3, purpose: "CLASSWORK" }))).not.toBe(k3);
+  });
+
+  // D-#721: a reprint copies `latest`'s section — one row per বালক/বালিকা, or the
+  // Girls' sheet reprints under the Boys' tag.
+  test("the same sheet printed for two SECTIONS of one class stays separate", () => {
+    const file = oid(), c4 = oid();
+    const base = { fileIds: [file], classId: c4, subject: "ENG", purpose: "ASSIGNMENT" };
+    expect(historyKey(histDoc({ ...base, sectionId: oid() }))).not.toBe(historyKey(histDoc({ ...base, sectionId: oid() })));
   });
 
   test("a set / plan / link is keyed by its own reference", () => {

@@ -158,6 +158,7 @@ export default function TeachingNoteDocScreen({
               <Card>
                 <SendToPrintCard
                   successMessage={STR.tnSentToPrint}
+                  classLevel={note.classLevel}
                   onSend={async (opts) => {
                     const res = await sendToPrint({ id: note.id, ...opts });
                     return res.error || !res.data?.sendTeachingNoteToPrint

@@ -31,6 +31,47 @@ export function pickableSections<T extends PickableSection>(sections: readonly T
   return active.filter((s) => s.studentCount == null || s.studentCount > 0);
 }
 
+export interface PickableClass<S extends PickableSection & { id: string; nameBn: string }> {
+  id: string;
+  level: number;
+  active: boolean;
+  sections: readonly S[];
+}
+
+/** One "who is this print for" choice: a class, narrowed to a section when split. */
+export interface PrintTarget {
+  key: string;
+  classId: string;
+  classLevel: number;
+  /** The section to tag — the sole section of an unsplit class, else the chosen half. */
+  sectionId: string | null;
+  /** Set only when the class is split, so the chip can say "৪র্থ শ্রেণি বালক". */
+  sectionNameBn: string | null;
+}
+
+/**
+ * The print-for chips (D-#721), Nursery first: one per class, or one per section where
+ * a class has more than one pickable section (C4/C5 বালক/বালিকা). A per-present count
+ * then counts that section alone, and the job carries a real section tag.
+ */
+export function printTargets<S extends PickableSection & { id: string; nameBn: string }>(
+  classes: readonly PickableClass<S>[],
+): PrintTarget[] {
+  const out: PrintTarget[] = [];
+  for (const c of [...classes].filter((x) => x.active).sort((a, b) => a.level - b.level)) {
+    const sections = pickableSections(c.sections);
+    if (sections.length <= 1) {
+      const sectionId = sections[0]?.id ?? null;
+      out.push({ key: `${c.id}|${sectionId ?? "-"}`, classId: c.id, classLevel: c.level, sectionId, sectionNameBn: null });
+      continue;
+    }
+    for (const s of sections) {
+      out.push({ key: `${c.id}|${s.id}`, classId: c.id, classLevel: c.level, sectionId: s.id, sectionNameBn: s.nameBn });
+    }
+  }
+  return out;
+}
+
 /** Section names that just mean "the whole class" — not worth printing as a label. */
 const WHOLE_CLASS_SECTION_NAMES = new Set(["মূল", "সম্মিলিত"]);
 

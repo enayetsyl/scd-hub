@@ -188,6 +188,14 @@ export async function createPrintRequest(input: CreatePrintRequestInput): Promis
   if (!input.trusted) await assertSourceResolves(input);
   if (input.purpose === "ASSIGNMENT") {
     await assertAssignmentTagging(input.classId, input.sectionId, input.subject);
+  } else if (input.classId && input.sectionId) {
+    // D-#721: a tagged section narrows a per-present count (countingSectionIdOf), so it
+    // must really be a section of the tagged class — the same guard ASSIGNMENT has.
+    if (!Types.ObjectId.isValid(input.classId) || !Types.ObjectId.isValid(input.sectionId)) {
+      throw new PrintRequestError("Invalid classId or sectionId");
+    }
+    const section = await Section.findOne({ _id: input.sectionId, classId: input.classId }).select("_id").lean();
+    if (!section) throw new PrintRequestError("এই শাখাটি নির্বাচিত শ্রেণির অন্তর্ভুক্ত নয়");
   }
 
   const copies = input.copies ?? 1;
@@ -595,7 +603,7 @@ export interface PrintHistoryFilter {
 }
 
 export interface PrintHistoryRow {
-  /** The grouping key — source identity × class × subject × purpose (see `historyKey`). */
+  /** The grouping key — source identity × class × section × subject × purpose (see `historyKey`). */
   key: string;
   /** The most recent job in the group: the row's display representative AND the
    *  record a reprint clones from. */
@@ -644,7 +652,7 @@ export interface PrintHistoryPage {
  * The SOURCE alone is not enough: one worksheet legitimately gets printed for class 3
  * Bangla and for class 4 Bangla, and the history is browsed BY class/subject/purpose —
  * collapsing those into one row would lose the axis the teacher navigates by. So the
- * key is source identity × class × subject × purpose, which still folds the real case
+ * key is source identity × class × section × subject × purpose, which still folds the real case
  * (the same sheet, same class, printed five times over a term) into one row.
  */
 /**
@@ -683,7 +691,16 @@ export function historyKey(doc: IPrintRequest): string {
     default:
       src = `${doc.sourceType}:${doc._id.toString()}`; // unknown source → never grouped
   }
-  return [src, effectiveClassIdOf(doc)?.toString() ?? "-", doc.subject ?? "-", doc.purpose].join("|");
+  // The SECTION too (D-#721): since C4/C5 split, one sheet printed for বালক and for
+  // বালিকা is two documents — a reprint copies `latest`'s section tag, so folding them
+  // into one row reprinted under whichever section printed last.
+  return [
+    src,
+    effectiveClassIdOf(doc)?.toString() ?? "-",
+    doc.sectionId?.toString() ?? "-",
+    doc.subject ?? "-",
+    doc.purpose,
+  ].join("|");
 }
 
 /** When a job was printed, for grouping — `printedAt` is stamped at markPrinted, but a

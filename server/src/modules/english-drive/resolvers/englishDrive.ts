@@ -119,6 +119,9 @@ builder.mutationField("sendEnglishDriveDocToPrint", (t) =>
       // D-#294 print flow (owner 2026-07-25): copies mode + class + use date.
       copiesMode: t.arg.string({ required: false }),
       copiesClassId: t.arg.string({ required: false }),
+      // D-#721: who the print is FOR (class + its section once split); optional for old clients.
+      classId: t.arg.string({ required: false }),
+      sectionId: t.arg.string({ required: false }),
       neededByKey: t.arg.string({ required: false }),
       // Edit-before-print (D-#348): optional edited markdown + layout knobs.
       contentMd: t.arg.string({ required: false }),

@@ -55,6 +55,7 @@ import { writeAudit } from "../../platform/services/AuditService";
 import { StoredFile } from "../../platform/models/StoredFile";
 import { uploadToDrive, DriveUnavailableError } from "../../platform/services/DriveStore";
 import { createPrintRequest } from "../../printing/services/PrintRequestService";
+import { printTargetFields } from "../../printing/printTarget";
 import { markdownToPdf } from "../../../routes/pdfRenderer";
 import { RoutineSlot } from "../../routine/models/RoutineSlot";
 import { emitTeachingNotePublished } from "../../notifications/services/emitters";
@@ -626,6 +627,10 @@ export interface SendTeachingNoteToPrintInput {
   copies: number;
   copiesMode?: string | null;
   copiesClassId?: string | null;
+  /** Who the print is FOR — the class, and its section once the class is split
+   *  (D-#721). Tags the job and narrows a per-present count to that section. */
+  classId?: string | null;
+  sectionId?: string | null;
   /** The day the print will be USED (YYYY-MM-DD) — required at the resolver. */
   neededByKey?: string | null;
 }
@@ -663,8 +668,7 @@ export async function sendTeachingNoteToPrint(
       colour: input.colour,
       sides: input.sides,
       copies: input.copies,
-      copiesMode: input.copiesMode ?? undefined,
-      copiesClassId: input.copiesClassId ?? undefined,
+      ...printTargetFields(input),
       neededByKey: input.neededByKey ?? undefined,
       subject: note.subject,
       requestedBy: ctx.auth!.userId as string,
@@ -709,8 +713,7 @@ export async function sendTeachingNoteToPrint(
     colour: input.colour,
     sides: input.sides,
     copies: input.copies,
-    copiesMode: input.copiesMode ?? undefined,
-    copiesClassId: input.copiesClassId ?? undefined,
+    ...printTargetFields(input),
     neededByKey: input.neededByKey ?? undefined,
     subject: note.subject,
     requestedBy: ctx.auth!.userId as string,

@@ -40,6 +40,8 @@ import {
 import { openPdf, openPdfPost, PDF_SUPPORTED } from "../../lib/pdf";
 import { openStoredFile, FileUploadError } from "../../lib/files";
 import { friendlyError } from "../../lib/errors";
+import { printTargets } from "../../lib/sectionPicks";
+import { printTargetLabel } from "../../components/SendToPrintCard";
 import { STR, bnNum, classLevelLabel, isoDateLabel } from "../../lib/labels";
 import { usePullRefresh } from "../../lib/useRefresh";
 import { space } from "../../theme/tokens";
@@ -70,7 +72,10 @@ export default function EnglishDriveDocScreen({ route, navigation }: Props): Rea
   const [yearsQ] = useQuery({ query: ACADEMIC_YEARS_QUERY });
   const printYearId = yearsQ.data?.academicYears?.find((y) => y.current)?.id ?? yearsQ.data?.academicYears?.[0]?.id ?? null;
   const [classesQ] = useQuery({ query: CLASSES_QUERY, variables: { academicYearId: printYearId ?? "" }, pause: !printYearId });
-  const printClasses = (classesQ.data?.classes ?? []).filter((c) => c.active);
+  // D-#721: print-for chips — a class, or its বালক/বালিকা half once split. The doc's own
+  // class is pre-picked when it has one section; an AS sheet needs a real section tag
+  // (the assignment print-gap report matches on it).
+  const printTargetList = printTargets(classesQ.data?.classes ?? []);
 
   // ED-3b: siblings in the same class, once the doc (and its class) is known. Same
   // scoped read the library uses — server re-gates; metadata only (contentMd null).
@@ -107,7 +112,13 @@ export default function EnglishDriveDocScreen({ route, navigation }: Props): Rea
   const [copies, setCopies] = useState("1");
   // D-#294 print flow (owner 2026-07-25): copies mode + class + use date.
   const [copiesMode, setCopiesMode] = useState<"FIXED" | "CLASS_PRESENT">("FIXED");
-  const [copiesClassId, setCopiesClassId] = useState<string | null>(null);
+  const [targetKey, setTargetKey] = useState<string | null>(null);
+  const printTarget = printTargetList.find((t) => t.key === targetKey) ?? null;
+  const ownTargets = doc ? printTargetList.filter((t) => t.classLevel === doc.classLevel) : [];
+  const soleOwnKey = ownTargets.length === 1 ? ownTargets[0].key : null;
+  React.useEffect(() => {
+    if (soleOwnKey && targetKey === null) setTargetKey(soleOwnKey);
+  }, [soleOwnKey]); // eslint-disable-line react-hooks/exhaustive-deps
   const [neededByKey, setNeededByKey] = useState("");
   const [printBusy, setPrintBusy] = useState(false);
   const [printErr, setPrintErr] = useState<string | null>(null);
@@ -189,8 +200,8 @@ export default function EnglishDriveDocScreen({ route, navigation }: Props): Rea
 
   async function onSendToPrint(): Promise<void> {
     const n = Number(copies);
-    if (printBusy || !colour || !sides || !neededByKey) return;
-    if (copiesMode === "FIXED" ? !Number.isInteger(n) || n < 1 : !copiesClassId) return;
+    if (printBusy || !colour || !sides || !neededByKey || !printTarget) return;
+    if (copiesMode === "FIXED" && (!Number.isInteger(n) || n < 1)) return;
     setPrintBusy(true);
     setPrintErr(null);
     setPrintOk(null);
@@ -200,7 +211,9 @@ export default function EnglishDriveDocScreen({ route, navigation }: Props): Rea
       sides,
       copies: copiesMode === "FIXED" ? n : 1, // resolved from attendance at print time
       copiesMode,
-      copiesClassId: copiesMode === "CLASS_PRESENT" ? copiesClassId : null,
+      copiesClassId: copiesMode === "CLASS_PRESENT" ? printTarget.classId : null,
+      classId: printTarget.classId,
+      sectionId: printTarget.sectionId,
       neededByKey,
       // Edit-before-print: print the edited version + layout when in edit mode.
       ...(editMode ? { contentMd: editedMd, fontScale, lineSpacing, margin } : {}),
@@ -373,8 +386,15 @@ export default function EnglishDriveDocScreen({ route, navigation }: Props): Rea
                         ))}
                       </ChipRow>
 
-                      {/* D-#294 copies: a typed number OR one per student present in a
-                          class on the use day (owner 2026-07-25). */}
+                      <Body style={{ fontWeight: "700", marginVertical: space(1) }}>{STR.prPrintFor} *</Body>
+                      <ChipRow>
+                        {printTargetList.map((t) => (
+                          <Chip key={t.key} label={printTargetLabel(t)} selected={targetKey === t.key} onPress={() => setTargetKey(t.key)} />
+                        ))}
+                      </ChipRow>
+
+                      {/* D-#294 copies: a typed number OR one per student present on the
+                          use day — counted for the print-for pick above (D-#721). */}
                       <Body style={{ fontWeight: "700", marginVertical: space(1) }}>{STR.prCopies} *</Body>
                       <ChipRow>
                         <Chip label={STR.prCopiesFixed} selected={copiesMode === "FIXED"} onPress={() => setCopiesMode("FIXED")} />
@@ -383,14 +403,9 @@ export default function EnglishDriveDocScreen({ route, navigation }: Props): Rea
                       {copiesMode === "FIXED" ? (
                         <Field label={STR.prCopies} value={copies} onChangeText={setCopies} keyboardType="number-pad" />
                       ) : (
-                        <View style={{ marginTop: space(1) }}>
-                          <Muted style={{ marginBottom: space(1) }}>{STR.prCopiesClassHint}</Muted>
-                          <ChipRow>
-                            {printClasses.map((c) => (
-                              <Chip key={c.id} label={classLevelLabel(c.level)} selected={copiesClassId === c.id} onPress={() => setCopiesClassId(c.id)} />
-                            ))}
-                          </ChipRow>
-                        </View>
+                        <Muted style={{ marginTop: space(1) }}>
+                          {printTarget?.sectionNameBn ? STR.prCopiesSectionOnly : STR.prCopiesPresentHint}
+                        </Muted>
                       )}
 
                       {/* The day the print will be USED — mandatory (also picks the
@@ -406,7 +421,8 @@ export default function EnglishDriveDocScreen({ route, navigation }: Props): Rea
                           !colour ||
                           !sides ||
                           !neededByKey ||
-                          (copiesMode === "FIXED" ? !(Number(copies) >= 1) : !copiesClassId)
+                          !printTarget ||
+                          (copiesMode === "FIXED" && !(Number(copies) >= 1))
                         }
                         style={{ marginTop: space(1) }}
                       />

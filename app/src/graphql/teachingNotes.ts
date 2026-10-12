@@ -240,6 +240,9 @@ export const SEND_TEACHING_NOTE_TO_PRINT = gql<
     copies: number;
     copiesMode?: string | null;
     copiesClassId?: string | null;
+    /** D-#721: who the print is FOR — the class, and its section once split. */
+    classId?: string | null;
+    sectionId?: string | null;
     neededByKey?: string | null;
   }
 >`
@@ -250,6 +253,8 @@ export const SEND_TEACHING_NOTE_TO_PRINT = gql<
     $copies: Int!
     $copiesMode: String
     $copiesClassId: String
+    $classId: String
+    $sectionId: String
     $neededByKey: String
   ) {
     sendTeachingNoteToPrint(
@@ -259,6 +264,8 @@ export const SEND_TEACHING_NOTE_TO_PRINT = gql<
       copies: $copies
       copiesMode: $copiesMode
       copiesClassId: $copiesClassId
+      classId: $classId
+      sectionId: $sectionId
       neededByKey: $neededByKey
     ) {
       printRequestId

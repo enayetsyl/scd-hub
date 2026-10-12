@@ -61,3 +61,38 @@ describe("isWholeClassSectionName", () => {
     expect(isWholeClassSectionName("বালক")).toBe(false);
   });
 });
+
+interface Target {
+  key: string;
+  classId: string;
+  classLevel: number;
+  sectionId: string | null;
+  sectionNameBn: string | null;
+}
+const { printTargets } = require("../../../app/src/lib/sectionPicks") as {
+  printTargets: (c: { id: string; level: number; active: boolean; sections: Sec[] }[]) => Target[];
+};
+
+describe("printTargets (D-#721)", () => {
+  const classes = [
+    { id: "c4", level: 4, active: true, sections: [sec("b4", "বালক", 7), sec("g4", "বালিকা", 5), sec("a4", "সম্মিলিত", 0)] },
+    { id: "c3", level: 3, active: true, sections: [sec("a3", "সম্মিলিত", 17)] },
+    { id: "cn", level: -1, active: true, sections: [sec("mn", "মূল", 21)] },
+    { id: "old", level: 6, active: false, sections: [sec("x", "মূল", 0)] },
+  ];
+
+  test("one chip per unsplit class, one per section of a split class, Nursery first", () => {
+    const t = printTargets(classes);
+    expect(t.map((x) => x.key)).toEqual(["cn|mn", "c3|a3", "c4|b4", "c4|g4"]);
+  });
+
+  test("an unsplit class still tags its sole section, but shows no section name", () => {
+    const c3 = printTargets(classes).find((x) => x.classId === "c3")!;
+    expect(c3).toEqual(expect.objectContaining({ sectionId: "a3", sectionNameBn: null }));
+  });
+
+  test("a split half names itself", () => {
+    const girls = printTargets(classes).find((x) => x.sectionId === "g4")!;
+    expect(girls).toEqual(expect.objectContaining({ classId: "c4", classLevel: 4, sectionNameBn: "বালিকা" }));
+  });
+});
