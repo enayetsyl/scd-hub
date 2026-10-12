@@ -68,6 +68,12 @@ jest.mock("../modules/routine/models/HolidayException", () => ({
   HolidayException: { find: (q: unknown) => ({ lean: () => mockHolidayFind(q) }) },
 }));
 
+// D-#725: deliver checks the roster against the section's active students.
+const mockStudentCount = jest.fn();
+jest.mock("../modules/foundation/models/Student", () => ({
+  Student: { countDocuments: (q: unknown) => mockStudentCount(q) },
+}));
+
 // Delivery-pass attachments (D-#298): the kind check queries StoredFile.
 const mockStoredFind = jest.fn();
 jest.mock("../modules/platform/models/StoredFile", () => ({
@@ -142,6 +148,8 @@ function rec(over: Record<string, unknown> = {}) {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  // Default: every roster child is in the entry's section.
+  mockStudentCount.mockImplementation(async (q: { _id: { $in: unknown[] } }) => q._id.$in.length);
   mockHolidayFind.mockResolvedValue([]);
   mockItemFindOne.mockResolvedValue(null);
   mockAsNilDeleteOne.mockResolvedValue({ deletedCount: 0 });
@@ -175,6 +183,41 @@ describe("AS_ID generation", () => {
 // ===========================================================================
 
 describe("AJ-3 — deliverAssignmentItem", () => {
+  // D-#725: confirmAssignmentWeek stamps every roster child with the item's section, so
+  // a child from the other half must never get onto the roster.
+  test("D-#725: a roster child outside the entry's section is refused, nothing created", async () => {
+    mockScheduleFindOne.mockResolvedValue(scheduleWithEntry());
+    mockStudentCount.mockResolvedValue(2); // one of three is not in this section
+    await expect(
+      deliverAssignmentItem({
+        academicYearId: YEAR, weekNumber: 1, entryId: ENTRY_ID.toString(),
+        roster: [
+          { studentId: oid().toString(), present: true },
+          { studentId: oid().toString(), present: true },
+          { studentId: oid().toString(), present: false },
+        ],
+        description: "পাতা ১২", attachmentIds: [oid().toString()], actorId: ACTOR,
+      }),
+    ).rejects.toThrow(/এই শাখার নয়/);
+    expect(mockItemCreate).not.toHaveBeenCalled();
+    const q = mockStudentCount.mock.calls[0][0] as { sectionId: unknown; active: boolean };
+    expect(String(q.sectionId)).toBe(String(SECTION));
+    expect(q.active).toBe(true);
+  });
+
+  test("D-#725: the same child twice is refused", async () => {
+    mockScheduleFindOne.mockResolvedValue(scheduleWithEntry());
+    const dup = oid().toString();
+    await expect(
+      deliverAssignmentItem({
+        academicYearId: YEAR, weekNumber: 1, entryId: ENTRY_ID.toString(),
+        roster: [{ studentId: dup, present: true }, { studentId: dup, present: false }],
+        description: "পাতা ১২", attachmentIds: [oid().toString()], actorId: ACTOR,
+      }),
+    ).rejects.toThrow(/দুবার/);
+    expect(mockItemCreate).not.toHaveBeenCalled();
+  });
+
   // D-#478: the brief "what is the assignment" is REQUIRED at deliver.
   const DESC = "পাতা ১২ — অনুশীলনী ৩";
   // D-#713: ...and at least one attached sheet.

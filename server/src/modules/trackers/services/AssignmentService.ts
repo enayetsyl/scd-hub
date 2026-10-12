@@ -34,6 +34,7 @@ import {
 } from "../models/AssignmentStudentRecord";
 import { AssignmentSequence } from "../models/AssignmentSequence";
 import { AssignmentSchedule } from "../models/AssignmentSchedule";
+import { Student } from "../../foundation/models/Student";
 import { resolveScheduleWeek } from "./AssignmentScheduleService";
 import { assertTransition } from "../lifecycle";
 import { atMidnight, dateOnlyISO } from "../assignmentCalendar";
@@ -171,6 +172,23 @@ export async function deliverAssignmentItem(
 
   if (!Array.isArray(input.roster) || input.roster.length === 0) {
     throw new Error("The delivery pass needs the section roster (per-student GIVEN/ABSENT_REDELIVER)");
+  }
+  // D-#725: the roster must be THIS section's active children, once each. The client
+  // builds it from studentsInSection, but confirmAssignmentWeek stamps every roster
+  // child with the item's section — so a stale app or a script sending the whole C4
+  // would hand বালিকা records to a বালক item, invisible to the বালিকা workspace.
+  const rosterIds = input.roster.map((r) => r.studentId);
+  if (new Set(rosterIds).size !== rosterIds.length) {
+    throw new Error("রোস্টারে একই শিক্ষার্থী দুবার আছে");
+  }
+  if (!rosterIds.every((id) => Types.ObjectId.isValid(id))) throw new Error("Invalid studentId in the roster");
+  const inSection = await Student.countDocuments({
+    _id: { $in: rosterIds.map((id) => new Types.ObjectId(id)) },
+    sectionId: entry.sectionId,
+    active: true,
+  });
+  if (inSection !== rosterIds.length) {
+    throw new Error("রোস্টারে এমন শিক্ষার্থী আছে যে এই শাখার নয় — পাতাটি রিফ্রেশ করে আবার দিন");
   }
   if (input.totalMarks !== undefined && (!Number.isInteger(input.totalMarks) || input.totalMarks < 1)) {
     throw new Error("totalMarks must be a positive integer");
