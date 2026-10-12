@@ -184,6 +184,8 @@ export function notificationTarget(
         ? { tab: "GuardianHomeTab", screen: "ChildFees" }
         : { tab: "FinanceTab", screen: "FinanceHome" };
     case "CLASS_TEST_RESULT":
+    // CS-3 (D-#716): the scanned script opens from the same result card ("খাতা দেখুন").
+    case "CT_SCRIPT_PUBLISHED":
       // Guardian results render on the আজ home cards (N3.3 pattern).
       return guardian
         ? { tab: "GuardianHomeTab", screen: "GuardianHome" }

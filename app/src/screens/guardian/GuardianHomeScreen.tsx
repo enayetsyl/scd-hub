@@ -857,6 +857,26 @@ export default function GuardianHomeScreen(): React.ReactElement {
                 </View>
                 {r.weakness ? <Muted>{STR.ctWeakness}: {r.weakness}</Muted> : null}
                 {r.guardianAction ? <Muted>{STR.ctGuardianAction}: {r.guardianAction}</Muted> : null}
+                {/* CS-3 (D-#716): the scanned script, once the office has published it —
+                    one button per page; a "being scanned" line while it is at the office. */}
+                {r.scriptPages.length > 0 && FILE_VIEW_SUPPORTED ? (
+                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: space(2) }}>
+                    {r.scriptPages.map((p, i) => (
+                      <Button
+                        key={p.fileId}
+                        title={
+                          i === 0
+                            ? `${STR.csViewScript}${r.scriptPages.length > 1 ? ` (${bnNum(r.scriptPages.length)} ${STR.csPage})` : ""}`
+                            : `${STR.csPage} ${bnNum(i + 1)}`
+                        }
+                        variant={i === 0 ? "secondary" : "ghost"}
+                        onPress={() => void openStoredFile(p.fileId).catch(() => undefined)}
+                      />
+                    ))}
+                  </View>
+                ) : r.scriptPending ? (
+                  <Muted style={{ marginTop: space(1) }}>{STR.csScanning}</Muted>
+                ) : null}
               </View>
             ))
           )}

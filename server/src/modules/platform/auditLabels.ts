@@ -252,6 +252,15 @@ export const AUDIT_KIND_LABELS: Record<AuditEventKind, AuditKindLabel> = {
   SCRIPT_BUNDLE_DISPOSED: { bn: "মেয়াদোত্তীর্ণ উত্তরপত্র নিষ্পত্তি করেছেন", en: "Disposed of a script bundle", group: "ARCHIVE" },
   SCRIPT_BUNDLE_VOIDED: { bn: "ভুল বান্ডিল বাতিল করেছেন", en: "Voided a script bundle", group: "ARCHIVE" },
   STORAGE_BOX_CHANGED: { bn: "সংরক্ষণ বাক্স পরিবর্তন করেছেন", en: "Changed a storage box", group: "ARCHIVE" },
+  // Class-test scripts (CS-1..CS-3, D-#715–#719)
+  CT_SCRIPTS_RECEIVED: { bn: "ক্লাস টেস্টের খাতা গ্রহণ করেছেন", en: "Received class-test scripts", group: "EXAM" },
+  CT_SCRIPTS_RECEIVE_UNDONE: { bn: "খাতা গ্রহণ বাতিল করেছেন", en: "Undid a script receipt", group: "EXAM" },
+  CT_SCRIPT_TAGGED: { bn: "খাতার স্ক্যান ট্যাগ করেছেন", en: "Tagged a script scan", group: "EXAM" },
+  CT_SCRIPTS_PUBLISHED: { bn: "খাতার স্ক্যান অভিভাবকদের জন্য প্রকাশ করেছেন", en: "Published script scans", group: "EXAM" },
+  CT_SCRIPTS_UNPUBLISHED: { bn: "খাতার স্ক্যান প্রকাশ বাতিল করেছেন", en: "Unpublished script scans", group: "EXAM" },
+  CT_SCRIPTS_HANDED_BACK: { bn: "খাতা শিক্ষককে ফেরত দিয়েছেন", en: "Handed scripts back to the teacher", group: "EXAM" },
+  CT_SCRIPTS_RETURNED: { bn: "খাতা শিক্ষার্থীদের ফেরত দিয়েছেন", en: "Returned scripts to the students", group: "EXAM" },
+  CT_SCRIPTS_WAIVED: { bn: "খাতার ধাপ বাদ দিয়েছেন", en: "Waived a test's scripts", group: "EXAM" },
 
   // --- Teaching notes & drive -----------------------------------------------
   TEACHING_NOTE_UPLOADED: { bn: "শিক্ষণ নোট আপলোড করেছেন", en: "Uploaded a teaching note", group: "NOTES" },

@@ -48,6 +48,15 @@ export interface IClassTestResult extends Document {
   /** Bumped on each (re)publish so CT-3's dedupeKey re-notifies (default 0 = unpublished). */
   publishedVersion: number;
   enteredBy: Types.ObjectId;
+  /** CS-2 (docs/prd-ct-scripts.md §5, D-#716): the scanned pages of this student's
+   *  script, in order (StoredFile kind `classtest_script`). */
+  scriptFileIds?: Types.ObjectId[];
+  /** A PRESENT student whose paper was not received (lost / not handed in) — lets
+   *  the test reach UPLOAD_DONE without a scan. Never set on an ABSENT row. */
+  scriptMissing?: boolean;
+  scriptMissingReason?: string | null;
+  scriptTaggedBy?: Types.ObjectId | null;
+  scriptTaggedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -69,11 +78,18 @@ const ClassTestResultSchema = new Schema<IClassTestResult>(
     publishedAt: { type: Date },
     publishedVersion: { type: Number, required: true, default: 0, min: 0 },
     enteredBy: { type: Schema.Types.ObjectId, required: true },
+    scriptFileIds: { type: [{ type: Schema.Types.ObjectId, ref: "StoredFile" }], default: undefined },
+    scriptMissing: { type: Boolean },
+    scriptMissingReason: { type: String, trim: true, default: null },
+    scriptTaggedBy: { type: Schema.Types.ObjectId, default: null },
+    scriptTaggedAt: { type: Date, default: null },
   },
   { timestamps: true },
 );
 
 // One result per student per exam (the §3.3 invariant; the upsert key).
 ClassTestResultSchema.index({ testId: 1, studentId: 1 }, { unique: true });
+// CS-2: the file read gate reverse-resolves a scan to its owning row.
+ClassTestResultSchema.index({ scriptFileIds: 1 }, { sparse: true });
 
 export const ClassTestResult = model<IClassTestResult>("ClassTestResult", ClassTestResultSchema);

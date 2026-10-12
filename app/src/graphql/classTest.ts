@@ -386,6 +386,8 @@ export interface ClassTestReportStatusRowT {
   publishOverdue: boolean;
   schoolDaysLate: number;
   state: string;
+  /** CS-1 (D-#715): the script stage (CT_SCRIPT_STAGES) — null when not in the flow. */
+  scriptStage: string | null;
 }
 
 export interface ClassTestSummaryVars {
@@ -423,7 +425,7 @@ export const CLASS_TEST_REPORTS_STATUS_QUERY = gql<
       testId ctId subject testNumber classLevel sectionId subjectGroupId teacherId teacherName submittedAt publishedAt examDate deadline deadlineDays
       rosterCount enteredCount presentCount absentCount pendingCount complete
       submittedCount publishedCount submitComplete publishComplete
-      overdue teacherOverdue publishOverdue schoolDaysLate state
+      overdue teacherOverdue publishOverdue schoolDaysLate state scriptStage
     }
   }
 `;
@@ -613,6 +615,10 @@ export interface GuardianClassTestResultT {
   weakness: string | null;
   guardianAction: string | null;
   publishedAt: string | null;
+  /** CS-3 (D-#716): the child's scanned script — empty until the Office publishes it. */
+  scriptPages: { fileId: string; mime: string }[];
+  /** The paper is at the office being scanned. */
+  scriptPending: boolean;
 }
 
 export const CHILD_TEST_RESULTS_QUERY = gql<
@@ -622,6 +628,7 @@ export const CHILD_TEST_RESULTS_QUERY = gql<
   query ChildTestResults($studentId: String!) {
     childTestResults(studentId: $studentId) {
       testId ctId subject testNumber examDate classLevel groupNameBn status marks totalMarks percent pass weakness guardianAction publishedAt
+      scriptPages { fileId mime } scriptPending
     }
   }
 `;

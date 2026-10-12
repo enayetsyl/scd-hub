@@ -41,7 +41,10 @@ import {
   DriveUnavailableError,
 } from "../modules/platform/services/DriveStore";
 import { assertFileReadAccess } from "../modules/trackers/services/HomeworkFileService";
-import { assertClassTestFileReadAccess } from "../modules/trackers/services/ClassTestFileService";
+import {
+  assertClassTestFileReadAccess,
+  assertClassTestScriptReadAccess,
+} from "../modules/trackers/services/ClassTestFileService";
 import { assertAssignmentFileReadAccess } from "../modules/trackers/services/AssignmentFileService";
 import { assertEnglishDriveFileReadAccess } from "../modules/english-drive/services/EnglishDriveService";
 import { assertTeachingNoteFileReadAccess } from "../modules/teaching-notes/services/TeachingNoteService";
@@ -533,6 +536,61 @@ filesRouter.post("/classnote", parseClassNoteUpload, async (req: Request, res: R
     res.json({
       fileId: stored._id.toString(),
       kind: "classnote_attachment",
+      mime: stored.mime,
+      sizeBytes: stored.sizeBytes,
+      originalName: stored.originalName,
+    });
+  } catch (e) {
+    if (e instanceof DriveUnavailableError) {
+      res.status(503).json({ error: FILE_ERRORS_BN.driveDown });
+      return;
+    }
+    throw e;
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /files/ctscript — the Office uploads ONE scanned page (or a whole-script PDF)
+// of a class-test answer script (CS-2, docs/prd-ct-scripts.md §6, D-#716). jpeg/png/
+// pdf ≤ 10 MB (the class-note envelope), Drive-first. The page is UNTAGGED (Office-
+// only to read) until attachClassTestScriptPages binds it to one student's row.
+// ---------------------------------------------------------------------------
+
+filesRouter.post("/ctscript", parseClassNoteUpload, async (req: Request, res: Response) => {
+  const ctx = buildContext(req, res);
+  if (!ctx.auth || !callerHasPermission(ctx.auth, "roster:manage")) {
+    res.status(403).json({ error: FILE_ERRORS_BN.forbidden });
+    return;
+  }
+  const file = req.file;
+  if (!file) {
+    res.status(400).json({ error: "file field missing" });
+    return;
+  }
+  const rejection = validateClassNoteUpload(file.mimetype, file.size);
+  if (rejection) {
+    res.status(422).json({ error: rejection === FILE_ERRORS_BN.tooLarge ? "ফাইলের আকার সর্বোচ্চ ১০ মেগাবাইট" : rejection });
+    return;
+  }
+  try {
+    const driveFileId = await uploadToDrive({
+      name: `${Date.now()}_${decodeUploadName(file.originalname)}`,
+      mime: file.mimetype,
+      data: file.buffer,
+      year: String(new Date().getFullYear()),
+      subfolder: "ctscript",
+    });
+    const stored = await StoredFile.create({
+      kind: "classtest_script" as StoredFileKind,
+      mime: file.mimetype,
+      sizeBytes: file.size,
+      originalName: decodeUploadName(file.originalname),
+      driveFileId, // server-internal — NOT in the response below
+      uploadedBy: ctx.auth.userId,
+    });
+    res.json({
+      fileId: stored._id.toString(),
+      kind: "classtest_script",
       mime: stored.mime,
       sizeBytes: stored.sizeBytes,
       originalName: stored.originalName,
@@ -1107,6 +1165,10 @@ filesRouter.get("/:id", async (req: Request, res: Response) => {
       // the day it is added. The `book_` prefix is an invariant of the kind set and
       // is pinned by a test (supportBookFiles.test.ts) rather than assumed here.
       assertBookFileReadAccess(ctx, file);
+    } else if (file.kind === "classtest_script") {
+      // A scanned page of ONE student's script (CS-2/CS-3, D-#716): Office always;
+      // the child's guardian once results + scripts are published; staff by scope.
+      await assertClassTestScriptReadAccess(ctx, file);
     } else if (file.kind === "archive_photo") {
       // A bundle photo is operational staff metadata (AR-3): the class-test
       // screens' read audience — tracker:read staff or the Office/Principal.

@@ -338,6 +338,8 @@ export type ClassTestStackParamList = {
   ArchiveFileBundle: { testId?: string; ctId?: string };
   ArchiveBundle: { bundleId: string };
   ArchiveBox: { boxId: string };
+  /** CS-2 (D-#716): the Office's scan & tag screen for one test's scripts. */
+  CtScriptUpload: { testId: string; title?: string };
 };
 
 /** Student Comments + Parents-Meeting (CM-6) — staff stack

@@ -162,6 +162,11 @@ ReportStatusRowRef.implement({
     }),
     schoolDaysLate: t.exposeInt("schoolDaysLate"),
     state: t.exposeString("state"),
+    scriptStage: t.string({
+      nullable: true,
+      description: "CS-1 (D-#715): the script stage (CT_SCRIPT_STAGES) — null when not in the script flow.",
+      resolve: (r) => r.scriptStage,
+    }),
   }),
 });
 
@@ -184,7 +189,7 @@ builder.queryField("classTestReportsStatus", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       await assertReportRead(ctx, args.sectionId, { selfTeacherId: args.teacherId });
-      return reportsStatus(filterFromArgs(args));
+      return reportsStatus(filterFromArgs(args), { withScriptStages: true });
     },
   }),
 );
