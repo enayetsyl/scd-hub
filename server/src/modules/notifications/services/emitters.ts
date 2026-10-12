@@ -52,8 +52,10 @@ const dedupeKeys = {
     `CNPUB:${slotId}:${dateKey}:${guardianId}`,
   /** Per student+item (PRD N1.4): a 4th chase re-emits the same key → no-op. */
   hwParentComms: (hwItemId: string, studentId: string) => `HWPC:${hwItemId}:${studentId}`,
-  /** One auto-issue notice per class per day (D-#314). */
-  hwAutoIssued: (classId: string, dateKey: string) => `HWAI:${classId}:${dateKey}`,
+  /** One auto-issue notice per SECTION per day (D-#314; per section since D-#730 — keyed by
+   *  class, a বালিকা auto-issue on the same day as বালক was swallowed, and the Notification
+   *  dedupeKey index is unique school-wide). */
+  hwAutoIssued: (sectionId: string, dateKey: string) => `HWAI:${sectionId}:${dateKey}`,
   /** Per item+student+day+guardian (D-#260): every chase notifies the guardian, but
    *  re-chasing the same student the same day is a no-op for the inbox (once/day). */
   hwGuardianChase: (hwItemId: string, studentId: string, dateKey: string, guardianId: string) =>
@@ -317,7 +319,7 @@ export async function emitHwAutoIssued(event: HwAutoIssuedEvent): Promise<void> 
         dayTotal: event.dayTotal,
       }),
       refs: { sectionId: event.sectionId.toString(), date: event.dateKey },
-      dedupeKey: dedupeKeys.hwAutoIssued(event.classId.toString(), event.dateKey),
+      dedupeKey: dedupeKeys.hwAutoIssued(event.sectionId.toString(), event.dateKey),
     });
   });
 }

@@ -14,7 +14,6 @@
  */
 import { Types } from "mongoose";
 import { AssignmentSchedule } from "../models/AssignmentSchedule";
-import { dateOnlyISO } from "../assignmentCalendar";
 import { AssignmentItem } from "../models/AssignmentItem";
 import { User } from "../../foundation/models/User";
 
@@ -50,10 +49,11 @@ export async function assignmentLoadReport(academicYearId: string): Promise<Assi
     .lean()) as unknown as {
     entries?: Array<{ subject: string; teacherId: { toString(): string }; effectiveTo?: string | null }>;
   } | null;
-  // Planned = the rotation as it stands; an entry that has already ended (a split/retired
-  // section) is not planned work any more.
-  const todayKey = dateOnlyISO(new Date()).slice(0, 10);
-  const entries = (schedule?.entries ?? []).filter((e) => !e.effectiveTo || e.effectiveTo >= todayKey);
+  // Planned = every rotation cell that was in force at any point this year — the same
+  // year-to-date basis as Delivered, which counts every item of the year (D-#729). Dropping
+  // ENDED cells (the C4/C5 সম্মিলিত, ended 2026-09-30) while still counting their items
+  // showed a teacher who taught the combined section as "planned 0, delivered N".
+  const entries = schedule?.entries ?? [];
 
   const items = (await AssignmentItem.find({ academicYearId: new Types.ObjectId(academicYearId) })
     .select("subject teacherId status")

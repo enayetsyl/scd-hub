@@ -18,6 +18,7 @@ import { Types } from "mongoose";
 import { HW_SUBJECTS, ROSTER_CLASS_LEVEL_MIN, ROSTER_CLASS_LEVEL_MAX } from "@scd/shared";
 import type { HwSubject } from "@scd/shared";
 import { Class } from "../../foundation/models/Class";
+import { Section } from "../../foundation/models/Section";
 import { AssignmentSchedule, type IAssignmentSchedule } from "../models/AssignmentSchedule";
 import { AssignmentItem } from "../models/AssignmentItem";
 import { AssignmentNilDeclaration, AS_NIL_REASONS, type AsNilReason } from "../models/AssignmentNilDeclaration";
@@ -137,6 +138,15 @@ export async function addScheduleEntry(input: AddEntryInput): Promise<IAssignmen
     throw new Error("No AssignmentSchedule for this academic year — set the term anchor first");
   }
   if (input.effectiveFrom && !DATE_KEY.test(input.effectiveFrom)) throw new Error("effectiveFrom must be YYYY-MM-DD");
+  // D-#728: the class (and level) come from the SECTION — a client pairing C5's class with
+  // a C4 section stored a cell that read as C5 and minted C5 asIds for C4 children.
+  const section = (await Section.findById(input.sectionId).select("classId").lean()) as {
+    classId: Types.ObjectId;
+  } | null;
+  if (!section) throw new Error("Section not found");
+  if (section.classId.toString() !== input.classId) {
+    throw new Error("এই শাখাটি নির্বাচিত শ্রেণির অন্তর্ভুক্ত নয়");
+  }
   // A duplicate is a cell whose window OVERLAPS the new one — an entry that ended before
   // the new one starts is history, not a clash.
   const dup = schedule.entries.find(
@@ -190,6 +200,20 @@ export async function removeScheduleEntry(
   if (!schedule) throw new Error("No AssignmentSchedule for this academic year");
   const entry = schedule.entries.id(entryId);
   if (!entry) throw new Error("Schedule entry not found");
+  // D-#728: removing a cell rewrites every PAST week it covered (they stop expecting it,
+  // and an undated re-add expects it before it began). A cell with delivered work or a
+  // "no assignment" declaration is history — end it from a date instead.
+  const used =
+    (await AssignmentItem.exists({ scheduleEntryId: entry._id })) ||
+    (await AssignmentNilDeclaration.exists({
+      academicYearId,
+      sectionId: entry.sectionId,
+      subject: entry.subject,
+      cycleWeek: entry.cycleWeek,
+    }));
+  if (used) {
+    throw new Error("এই ঘরে আগের সপ্তাহের কাজ আছে — মুছে না দিয়ে একটি তারিখ থেকে শেষ করুন");
+  }
   entry.deleteOne();
   await schedule.save();
   return schedule;

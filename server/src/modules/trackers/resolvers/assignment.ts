@@ -32,6 +32,7 @@ import {
   upsertAssignmentSchedule as upsertScheduleSvc,
   addScheduleEntry as addEntrySvc,
   removeScheduleEntry as removeEntrySvc,
+  retireScheduleEntry as retireEntrySvc,
   updateScheduleEntryTeacher as updateEntryTeacherSvc,
   getAssignmentSchedule as getScheduleSvc,
   expectedItemsForWeek as expectedWeekSvc,
@@ -189,6 +190,9 @@ interface ScheduleEntryShape {
   sectionId: string;
   subject: string;
   teacherId: string;
+  /** D-#728: the cell's window (YYYY-MM-DD, inclusive); null = open-ended. */
+  effectiveFrom: string | null;
+  effectiveTo: string | null;
 }
 const ScheduleEntryRef = builder.objectRef<ScheduleEntryShape>("AssignmentScheduleEntry");
 ScheduleEntryRef.implement({
@@ -200,6 +204,8 @@ ScheduleEntryRef.implement({
     sectionId: t.exposeString("sectionId"),
     subject: t.exposeString("subject"),
     teacherId: t.exposeString("teacherId"),
+    effectiveFrom: t.string({ nullable: true, resolve: (e) => e.effectiveFrom }),
+    effectiveTo: t.string({ nullable: true, resolve: (e) => e.effectiveTo }),
   }),
 });
 
@@ -238,6 +244,7 @@ function scheduleShape(doc: {
     sectionId: { toString(): string };
     subject: string;
     teacherId: { toString(): string };
+    effectiveFrom?: string | null;
     effectiveTo?: string | null;
   }>;
 }): ScheduleShape {
@@ -258,6 +265,8 @@ function scheduleShape(doc: {
       sectionId: e.sectionId.toString(),
       subject: e.subject,
       teacherId: e.teacherId.toString(),
+      effectiveFrom: e.effectiveFrom ?? null,
+      effectiveTo: e.effectiveTo ?? null,
     })),
   };
 }
@@ -696,6 +705,7 @@ interface SummaryShape {
   suspendedWeeks: number[];
   byTeacher: RateRowShape[];
   byClass: RateRowShape[];
+  bySection: RateRowShape[];
   byWeek: RateRowShape[];
   submissionRatePct: number | null;
   chaseVolume: number;
@@ -716,6 +726,8 @@ SummaryRef.implement({
     suspendedWeeks: t.field({ type: ["Int"], resolve: (r) => r.suspendedWeeks }),
     byTeacher: t.field({ type: [RateRowRef], resolve: (r) => r.byTeacher }),
     byClass: t.field({ type: [RateRowRef], resolve: (r) => r.byClass }),
+    /** D-#729: per section — key is the sectionId. */
+    bySection: t.field({ type: [RateRowRef], resolve: (r) => r.bySection }),
     byWeek: t.field({ type: [RateRowRef], resolve: (r) => r.byWeek }),
     submissionRatePct: t.int({ nullable: true, resolve: (r) => r.submissionRatePct }),
     chaseVolume: t.exposeInt("chaseVolume"),
@@ -828,10 +840,14 @@ builder.mutationField("addAssignmentScheduleEntry", (t) =>
       sectionId: t.arg.string({ required: true }),
       subject: t.arg.string({ required: true }),
       teacherId: t.arg.string({ required: true }),
+      // D-#728: the cell's first day (YYYY-MM-DD). Omitted = open-ended back to the
+      // term start (the pre-D-#728 behaviour, kept for older clients).
+      effectiveFrom: t.arg.string({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       const doc = await addEntrySvc({
+        effectiveFrom: args.effectiveFrom ?? null,
         academicYearId: args.academicYearId,
         cycleWeek: args.cycleWeek,
         classId: args.classId,
@@ -857,6 +873,26 @@ builder.mutationField("removeAssignmentScheduleEntry", (t) =>
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       const doc = await removeEntrySvc(args.academicYearId, args.entryId);
+      return scheduleShape(doc as never);
+    },
+  }),
+);
+
+builder.mutationField("retireAssignmentScheduleEntry", (t) =>
+  t.field({
+    type: ScheduleRef,
+    description:
+      "End one rotation cell on lastDayKey (inclusive, YYYY-MM-DD) — weeks up to it keep the cell, " +
+      "later weeks do not (D-#728). The non-destructive alternative to remove.",
+    authScopes: { hasPermission: "roster:manage" },
+    args: {
+      academicYearId: t.arg.string({ required: true }),
+      entryId: t.arg.string({ required: true }),
+      lastDayKey: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      const doc = await retireEntrySvc(args.academicYearId, args.entryId, args.lastDayKey);
       return scheduleShape(doc as never);
     },
   }),
@@ -1508,7 +1544,10 @@ builder.queryField("assignmentRecords", (t) =>
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       await assertCanRead(ctx, args.sectionId, args.classId);
       await assertItemSubjectReadable(ctx, args.sectionId, args.classId, args.itemId);
-      const docs = await listAssignmentRecords(args.itemId);
+      // D-#726: the records of the section the caller was authorised for — never the
+      // whole item (another section's item id, or a pre-split combined item, leaked the
+      // other half's marks and feedback).
+      const docs = await listAssignmentRecords(args.itemId, args.sectionId);
       return docs.map((d) => ({
         id: d._id.toString(),
         asId: d.asId,
@@ -1543,7 +1582,7 @@ builder.queryField("assignmentItemCounts", (t) =>
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       await assertCanRead(ctx, args.sectionId, args.classId);
       await assertItemSubjectReadable(ctx, args.sectionId, args.classId, args.itemId);
-      return countsSvc(args.itemId);
+      return countsSvc(args.itemId, args.sectionId); // D-#726: this section's records only
     },
   }),
 );
