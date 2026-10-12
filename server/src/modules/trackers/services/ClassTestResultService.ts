@@ -336,6 +336,7 @@ export async function examReportStatus(testId: string, now: Date = new Date()): 
       classId: test.classId ? test.classId.toString() : null,
       subjectGroupId: test.subjectGroupId ? test.subjectGroupId.toString() : null,
       subject: test.subject,
+      examDate: test.examDate,
     }),
     ClassTestResult.find({ testId: new Types.ObjectId(testId) })
       .select("status submittedAt publishedAt")

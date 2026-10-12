@@ -79,8 +79,10 @@ jest.mock("../modules/archive/models/ScriptBundle", () => ({
 
 const mockCtUpdateOne = jest.fn().mockResolvedValue({});
 const mockSectionFindById = jest.fn();
+// D-#722: suggestTestNumber reads the section's class siblings (none by default).
+const mockSectionFind = jest.fn();
 jest.mock("../modules/foundation/models/Section", () => ({
-  Section: { findById: (id: unknown) => mockSectionFindById(id) },
+  Section: { findById: (id: unknown) => mockSectionFindById(id), find: (q: unknown) => mockSectionFind(q) },
 }));
 
 const mockClassFindById = jest.fn();
@@ -155,6 +157,7 @@ import {
   updateClassTestDetails,
 } from "../modules/trackers/services/ClassTestService";
 import { dateKeyOf } from "../modules/attendance/dates";
+import { Student } from "../modules/foundation/models/Student";
 import { filesRouter, FILE_ERRORS_BN } from "../routes/files";
 
 // ---------------------------------------------------------------------------
@@ -199,6 +202,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockSeqUpdate.mockResolvedValue({ seq: 1 });
   mockSectionFindById.mockReturnValue(leanChain({ classId: CLASS_OID }));
+  mockSectionFind.mockReturnValue(leanChain([]));
   mockClassFindById.mockReturnValue(leanChain({ level: 3, academicYearId: AY_OID }));
   mockSetFindById.mockReturnValue(leanChain({ setType: "CT" }));
   mockSlotFind.mockReturnValue(leanChain([])); // routine names nobody → actor is accountable
@@ -244,6 +248,19 @@ describe("generateCtId / suggestTestNumber / defaultPassMark", () => {
     expect(await suggestTestNumber(AY_OID.toString(), 3, "MATH" as never)).toBe(5);
     mockCtFindOne.mockReturnValueOnce(leanChain(null));
     expect(await suggestTestNumber(AY_OID.toString(), 3, "MATH" as never)).toBe(1);
+  });
+
+  // D-#722: since C4/C5 split, Boys and Girls each carry their own Test # line, seeded by
+  // the emptied combined section's history — not one class counter they interleave on.
+  test("with a section: the line is that section + its class's EMPTIED sections only", async () => {
+    const BOYS = oid(), GIRLS = oid(), ALL = oid();
+    mockSectionFind.mockReturnValueOnce(leanChain([{ _id: GIRLS }, { _id: ALL }]));
+    const distinct = jest.spyOn(Student, "distinct").mockResolvedValueOnce([GIRLS] as never);
+    mockCtFindOne.mockReturnValueOnce(leanChain({ testNumber: 4 }));
+    expect(await suggestTestNumber(AY_OID.toString(), 4, "SCI" as never, BOYS.toString())).toBe(5);
+    const q = mockCtFindOne.mock.calls[mockCtFindOne.mock.calls.length - 1][0] as { sectionId: { $in: unknown[] } };
+    expect(q.sectionId.$in.map(String)).toEqual([BOYS.toString(), ALL.toString()]); // GIRLS is populated → its own line
+    distinct.mockRestore();
   });
 
   test("defaultPassMark is half the total, rounded UP (D-#712)", () => {

@@ -533,8 +533,14 @@ export const docTypeLabel = (v?: string | null): string =>
 /** The exam's UNIT, in one label (D-#507): a class-anchored exam reads as its class,
  *  a group-anchored one as the Arabic group's own name — a group spans classes, so
  *  there is no class level to print. */
-export const ctUnitLabel = (test: { classLevel: number | null; groupNameBn: string | null }): string =>
-  test.classLevel != null ? classLevelLabel(test.classLevel) : test.groupNameBn ?? "—";
+export const ctUnitLabel = (
+  test: { classLevel: number | null; groupNameBn: string | null },
+  /** The section's name when it tells halves apart ("বালক"), from `useSectionNames` (D-#722). */
+  sectionNameBn?: string | null,
+): string =>
+  test.classLevel != null
+    ? `${classLevelLabel(test.classLevel)}${sectionNameBn ? ` ${sectionNameBn}` : ""}`
+    : test.groupNameBn ?? "—";
 
 export const classLevelLabel = (level: number): string => {
   const roster = pick(ROSTER_CLASS_LABELS_BN, ROSTER_CLASS_LABELS_EN);
@@ -1364,6 +1370,9 @@ const STR_BN = {
   prCopiesFixed: "সংখ্যা লিখুন",
   prCopiesClass: "শ্রেণির উপস্থিত অনুযায়ী",
   prCopiesClassHint: "ব্যবহারের দিনের উপস্থিত শিক্ষার্থী অনুযায়ী কপি ছাপা হবে — শ্রেণি বেছে নিন",
+  prCopiesSectionOnly: "শুধু এই শাখার উপস্থিত শিক্ষার্থী গোনা হবে",
+  prPrintFor: "কোন শ্রেণি / শাখার জন্য",
+  prCopiesPresentHint: "ব্যবহারের দিনের উপস্থিত শিক্ষার্থী অনুযায়ী কপি ছাপা হবে",
   ctCopiesClassHint: "পরীক্ষার দিনে এই শ্রেণির উপস্থিত শিক্ষার্থী অনুযায়ী কপি ছাপা হবে",
   prPickClass: "শ্রেণি বেছে নিন",
   prCopiesPending: "সংখ্যা পাওয়া যায়নি — উপস্থিতি বাকি",
@@ -6114,6 +6123,9 @@ const STR_EN: StrTable = {
   prCopiesFixed: "Type a number",
   prCopiesClass: "Per class present",
   prCopiesClassHint: "Copies will match the students present on the use day — pick the class",
+  prCopiesSectionOnly: "Only this section's present students are counted",
+  prPrintFor: "For which class / section",
+  prCopiesPresentHint: "Copies will match the students present on the use day",
   ctCopiesClassHint: "Copies will match this class's students present on the exam day",
   prPickClass: "Pick a class",
   prCopiesPending: "Count not available — attendance pending",

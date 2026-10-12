@@ -68,6 +68,9 @@ export const SEND_ENGLISH_DRIVE_TO_PRINT = gql<
     copies: number;
     copiesMode?: string | null;
     copiesClassId?: string | null;
+    /** D-#721: who the print is FOR — the class, and its section once split. */
+    classId?: string | null;
+    sectionId?: string | null;
     neededByKey?: string | null;
     contentMd?: string | null;
     fontScale?: number | null;
@@ -82,6 +85,8 @@ export const SEND_ENGLISH_DRIVE_TO_PRINT = gql<
     $copies: Int!
     $copiesMode: String
     $copiesClassId: String
+    $classId: String
+    $sectionId: String
     $neededByKey: String
     $contentMd: String
     $fontScale: Float
@@ -95,6 +100,8 @@ export const SEND_ENGLISH_DRIVE_TO_PRINT = gql<
       copies: $copies
       copiesMode: $copiesMode
       copiesClassId: $copiesClassId
+      classId: $classId
+      sectionId: $sectionId
       neededByKey: $neededByKey
       contentMd: $contentMd
       fontScale: $fontScale

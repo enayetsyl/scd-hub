@@ -36,6 +36,7 @@ import { Screen, breakAnywhere, H2, Body, Muted, Card, Chip, ChipRow, Button, Ba
 import { DateField } from "../../components/DateField";
 import { STR, bnNum, classLevelLabel, hwSubjectLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { isWholeClassSectionName } from "../../lib/sectionPicks";
 import { openStoredFile } from "../../lib/files";
 import { subscribeLiveEvents } from "../../lib/liveEvents";
 import { useFileOpen } from "../../lib/useFileOpen";
@@ -78,6 +79,15 @@ const statusTone = (s: string): "ok" | "warn" | "muted" =>
 /** D-#302: a request the teacher still cares about day-to-day — filed but not yet
  *  printed, or printed but not yet handed over. Delivered/cancelled are history. */
 const isActiveRequest = (s: string): boolean => s === "REQUESTED" || s === "PRINTED";
+
+/** " (৪র্থ শ্রেণি বালক)" — whose present students a CLASS_PRESENT count is, naming the
+ *  section when the count is narrower than the class; "" when the job names no class. */
+const countedFor = (r: PrintRequestT): string =>
+  r.copiesClassLevel !== null
+    ? ` (${classLevelLabel(r.copiesClassLevel)}${
+        isWholeClassSectionName(r.copiesSectionNameBn) ? "" : ` ${r.copiesSectionNameBn}`
+      })`
+    : "";
 
 export default function PrintHomeScreen({ navigation }: Props): React.ReactElement {
   const { role, can } = useAuth();
@@ -206,25 +216,27 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
             r.copiesPending ? (
               <Muted style={{ fontWeight: "600" }}>
                 ⚠ {STR.prCopiesPending}
-                {r.copiesClassLevel !== null ? ` (${classLevelLabel(r.copiesClassLevel)})` : ""}
+                {countedFor(r)}
               </Muted>
             ) : (
               <Muted>
                 {bnNum(r.effectiveCopies ?? 0)} {STR.prCopiesShort} · {STR.prCopiesFromPresent}
-                {r.copiesClassLevel !== null ? ` (${classLevelLabel(r.copiesClassLevel)})` : ""}
+                {countedFor(r)}
               </Muted>
             )
           ) : (
             <Muted>
               {bnNum(r.copies)} {STR.prCopiesShort}
               {r.copiesMode === "CLASS_PRESENT" && r.copiesClassLevel !== null
-                ? ` · ${STR.prCopiesFromPresent} (${classLevelLabel(r.copiesClassLevel)})`
+                ? ` · ${STR.prCopiesFromPresent}${countedFor(r)}`
                 : ""}
             </Muted>
           )}
           <Muted>
             {r.purpose}
-            {r.sectionNameBn ? ` · ${r.sectionNameBn}` : ""}
+            {/* "বালক" alone can't tell class 4 from class 5 — lead with the class. */}
+            {r.classLevel !== null ? ` · ${classLevelLabel(r.classLevel)}` : ""}
+            {!isWholeClassSectionName(r.sectionNameBn) ? ` · ${r.sectionNameBn}` : ""}
             {r.neededByKey ? ` · ${STR.prUseDate}: ${bnNum(r.neededByKey)}` : ""}
           </Muted>
           {/* The Office cannot start a job without knowing how to print it. */}

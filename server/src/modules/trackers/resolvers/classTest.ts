@@ -317,6 +317,7 @@ builder.queryField("suggestClassTestNumber", (t) =>
         klass.academicYearId.toString(),
         klass.level,
         args.subject as never,
+        args.sectionId,
       );
     },
   }),
@@ -456,7 +457,13 @@ builder.queryField("classTestsForSection", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanRead(ctx, args.sectionId, args.classId);
+      // The class comes from the SECTION, never the client: a class-scoped reader pairing
+      // their own classId with another class's sectionId would otherwise pass (D-#722).
+      const section = (await Section.findById(args.sectionId).select("classId").lean()) as {
+        classId: Types.ObjectId;
+      } | null;
+      if (!section) throw new ForbiddenError("Section not found");
+      await assertCanRead(ctx, args.sectionId, section.classId.toString());
       return listForSectionSvc(args.sectionId);
     },
   }),

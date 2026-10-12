@@ -72,7 +72,7 @@ export default function CtQuestionRequestScreen(): React.ReactElement {
       <ScrollView contentContainerStyle={{ padding: space(4) }}>
         <Card>
           <Body style={{ fontWeight: "700" }}>{STR.cqFormTitle}</Body>
-          <ClassSectionSelect academicYearId={yearId} value={section} onChange={setSection} />
+          <ClassSectionSelect academicYearId={yearId} value={section} onChange={setSection} liveOnly />
           <Select
             label={STR.subject}
             value={subject}

@@ -25,6 +25,7 @@ import { QueryGate } from "../../components/QueryGate";
 import { useAuth } from "../../auth/AuthContext";
 import { useToast } from "../../state/ToastContext";
 import { friendlyError } from "../../lib/errors";
+import { useSectionNames } from "../../lib/useSectionNames";
 import { STR, hwSubjectLabel, classTestStatusLabel, bnNum, isoDateLabel, dhakaDateKey } from "../../lib/labels";
 import { space } from "../../theme/tokens";
 import type { ClassTestStackParamList, TabParamList } from "../../navigation/types";
@@ -32,6 +33,7 @@ import type { ClassTestStackParamList, TabParamList } from "../../navigation/typ
 type Nav = NativeStackNavigationProp<ClassTestStackParamList>;
 
 export default function ClassTestHomeScreen(): React.ReactElement {
+  const sectionName = useSectionNames();
   const nav = useNavigation<Nav>();
   // PQ-5: the print queue is a sibling TAB now, not a screen in this stack.
   const tabNav = useNavigation<NavigationProp<TabParamList>>();
@@ -166,6 +168,7 @@ export default function ClassTestHomeScreen(): React.ReactElement {
                   <View style={{ flexShrink: 1 }}>
                     <Body style={{ fontWeight: "700" }}>
                       {hwSubjectLabel(t.subject)} · {STR.ctTestNumber} {bnNum(t.testNumber)}
+                      {sectionName(t.sectionId) ? ` · ${sectionName(t.sectionId)}` : ""}
                     </Body>
                     <Muted>
                       {t.ctId} · {isoDateLabel(t.examDate)}

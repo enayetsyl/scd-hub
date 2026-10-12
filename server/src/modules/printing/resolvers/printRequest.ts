@@ -16,9 +16,11 @@ import { User } from "../../foundation/models/User";
 import { StoredFile } from "../../platform/models/StoredFile";
 import { Class } from "../../foundation/models/Class";
 import { Section } from "../../foundation/models/Section";
-import { classPresenceForDate } from "../../attendance/services/AttendanceReportService";
+import { classPresenceForDate, sectionPresenceForDate } from "../../attendance/services/AttendanceReportService";
 import { dateKeyOf } from "../../attendance/dates";
 import {
+  countingSectionIdOf,
+  presentCountFrom,
   createPrintRequest,
   markPrinted,
   markDelivered,
@@ -73,6 +75,8 @@ interface PrintRequestView {
   effectiveCopies: number | null;
   copiesPending: boolean;
   copiesClassLevel: number | null;
+  /** The section the count is for when it is narrower than the class (`countingSectionIdOf`). */
+  copiesSectionNameBn: string | null;
   /** D-#362: the level of the job's OWN class (`classId`) — the history sorts by it. */
   classLevel: number | null;
   /** D-#459: the job's section label, for display next to classLevel. */
@@ -113,6 +117,8 @@ PrintRequestRef.implement({
     copiesMode: t.string({ resolve: (v) => v.doc.copiesMode ?? "FIXED" }),
     copiesClassId: t.string({ nullable: true, resolve: (v) => v.doc.copiesClassId?.toString() ?? null }),
     copiesClassLevel: t.int({ nullable: true, resolve: (v) => v.copiesClassLevel }),
+    /** CLASS_PRESENT jobs counting ONE section of the class: that section's label. */
+    copiesSectionNameBn: t.string({ nullable: true, resolve: (v) => v.copiesSectionNameBn }),
     /** Resolved count for CLASS_PRESENT jobs (use-day attendance); equals `copies` otherwise. */
     effectiveCopies: t.int({ nullable: true, resolve: (v) => v.effectiveCopies }),
     /** True while the use day's attendance is pending — the Office may print with a manual count. */
@@ -194,20 +200,28 @@ async function decorate(docs: IPrintRequest[]): Promise<PrintRequestView[]> {
       useKeys.map(async (key) => [key, await classPresenceForDate(key)] as const),
     ),
   );
+  // Section roll-ups only for the use days that have a job counting one section.
+  const sectionKeys = useKeys.filter((key) =>
+    cpDocs.some((d) => d.neededByKey === key && countingSectionIdOf(d)),
+  );
+  const sectionPresenceByDay = new Map(
+    await Promise.all(
+      sectionKeys.map(async (key) => [key, await sectionPresenceForDate(key)] as const),
+    ),
+  );
 
   return docs.map((doc) => {
     let effectiveCopies: number | null = doc.copies;
     let copiesPending = false;
     if (doc.copiesMode === "CLASS_PRESENT" && doc.status === "REQUESTED") {
-      const presence = doc.neededByKey ? presenceByDay.get(doc.neededByKey) : undefined;
-      const row = presence?.find((p) => p.classId === doc.copiesClassId?.toString());
-      if (row && row.complete) {
-        effectiveCopies = row.presentCount;
-      } else {
-        effectiveCopies = null;
-        copiesPending = true; // future use day, or attendance not (fully) marked yet
-      }
+      const key = doc.neededByKey;
+      const resolved = key && presenceByDay.has(key)
+        ? presentCountFrom(doc, presenceByDay.get(key)!, sectionPresenceByDay.get(key) ?? [])
+        : { copies: null, pending: true }; // future use day, or no use day
+      effectiveCopies = resolved.copies;
+      copiesPending = resolved.pending; // pending also while attendance isn't fully marked
     }
+    const countingSectionId = doc.copiesMode === "CLASS_PRESENT" ? countingSectionIdOf(doc) : null;
     return {
       doc,
       requesterName: nameById.get(doc.requestedBy.toString()) ?? null,
@@ -220,6 +234,7 @@ async function decorate(docs: IPrintRequest[]): Promise<PrintRequestView[]> {
       effectiveCopies,
       copiesPending,
       copiesClassLevel: doc.copiesClassId ? (levelOf.get(doc.copiesClassId.toString()) ?? null) : null,
+      copiesSectionNameBn: countingSectionId ? (sectionNameById.get(countingSectionId) ?? null) : null,
       classLevel: doc.classId ? (levelOf.get(doc.classId.toString()) ?? null) : null,
       sectionNameBn: doc.sectionId ? (sectionNameById.get(doc.sectionId.toString()) ?? null) : null,
     };

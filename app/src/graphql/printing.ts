@@ -28,6 +28,8 @@ export interface PrintRequestT {
   copiesMode: string;
   copiesClassId: string | null;
   copiesClassLevel: number | null;
+  /** Set when the count is ONE section of that class (a বালক/বালিকা job), else null. */
+  copiesSectionNameBn: string | null;
   /** Resolved count for CLASS_PRESENT jobs; null while the use day's attendance is pending. */
   effectiveCopies: number | null;
   copiesPending: boolean;
@@ -54,7 +56,7 @@ export interface PrintRequestT {
 const PRINT_REQUEST_FIELDS = `
   id title purpose sourceType setId contentArtifactId fileIds linkUrl
   files { id name mime }
-  colour sides copies copiesMode copiesClassId copiesClassLevel effectiveCopies copiesPending
+  colour sides copies copiesMode copiesClassId copiesClassLevel copiesSectionNameBn effectiveCopies copiesPending
   neededByKey classId classLevel sectionId sectionNameBn subject classTestId notes status
   requestedBy requesterName requestedAt printedAt deliveredAt cancelReason
 `;
