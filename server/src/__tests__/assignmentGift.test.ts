@@ -32,6 +32,8 @@ const mockClassFindById = jest.fn();
 const mockClassFind = jest.fn();
 const mockUserFind = jest.fn();
 const mockUserFindById = jest.fn();
+const mockRecDistinct = jest.fn();
+const mockSectionFind = jest.fn();
 
 jest.mock("../modules/trackers/models/AssignmentItem", () => ({
   AssignmentItem: {
@@ -44,6 +46,14 @@ jest.mock("../modules/trackers/models/AssignmentItem", () => ({
 jest.mock("../modules/trackers/models/AssignmentStudentRecord", () => ({
   AssignmentStudentRecord: {
     find: (q: unknown) => ({ select: () => ({ lean: () => Promise.resolve(mockRecFind(q)) }) }),
+    // D-#724: a section view finds its students' items through their records.
+    distinct: (f: unknown, q: unknown) => Promise.resolve(mockRecDistinct(f, q)),
+  },
+}));
+// D-#724: section names for the Today card's per-section grouping.
+jest.mock("../modules/foundation/models/Section", () => ({
+  Section: {
+    find: (q: unknown) => ({ select: () => ({ lean: () => Promise.resolve(mockSectionFind(q)) }) }),
   },
 }));
 jest.mock("../modules/trackers/models/AssignmentGiftAward", () => ({
@@ -188,6 +198,7 @@ beforeEach(() => {
   mockUserFind.mockReturnValue([]);
   // The class-name join for the AG-3 class-wise grouping.
   mockClassFind.mockImplementation(() => [{ _id: CLASS, nameBn: "শ্রেণি ৩" }]);
+  mockSectionFind.mockImplementation(() => [{ _id: SECTION, nameBn: "সম্মিলিত" }]);
   mockStudentFind.mockImplementation(() => [
     { _id: ALICE, name: "Alice", schoolId: "0001", rollNumber: "1", classId: CLASS, sectionId: SECTION },
     { _id: BOB, name: "Bob", schoolId: "0002", rollNumber: "2", classId: CLASS, sectionId: SECTION },
@@ -607,5 +618,58 @@ describe("handover (AG-2)", () => {
     await expect(undoGiftHandover(YEAR, ALICE.toString(), "WEEKLY", 1)).resolves.toBe(true);
     mockAwardDelete.mockReturnValue({ deletedCount: 0 });
     await expect(undoGiftHandover(YEAR, ALICE.toString(), "WEEKLY", 1)).resolves.toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// D-#724 — a SECTION view after the বালক/বালিকা split
+// ---------------------------------------------------------------------------
+
+describe("a section view keeps the pre-split history (D-#724)", () => {
+  const BOYS = new Types.ObjectId();
+
+  it("scores the section's CURRENT students over their whole history, items on the old combined section included", async () => {
+    // Weeks 1–4 were issued on the combined section (SECTION) to both children;
+    // since the split Alice is in বালক, Bob in বালিকা.
+    seed(
+      [{ week: 1 }, { week: 2 }, { week: 3 }, { week: 4 }],
+      [1, 2, 3, 4].flatMap((w) => [
+        { student: ALICE, week: w, submittedOffset: -1 },
+        { student: BOB, week: w, submittedOffset: -1 },
+      ]),
+    );
+    const allRecs = mockRecFind({}) as Array<{ asItemId: Types.ObjectId; studentId: Types.ObjectId }>;
+    const inSet = (q: { studentId?: { $in: Types.ObjectId[] } }, id: Types.ObjectId) =>
+      !q.studentId || q.studentId.$in.some((x) => x.equals(id));
+    mockRecFind.mockImplementation((q: { studentId?: { $in: Types.ObjectId[] } }) =>
+      allRecs.filter((r) => inSet(q, r.studentId)),
+    );
+    mockRecDistinct.mockImplementation((_f: unknown, q: { studentId: { $in: Types.ObjectId[] } }) => [
+      ...new Set(allRecs.filter((r) => inSet(q, r.studentId)).map((r) => r.asItemId)),
+    ]);
+    mockStudentFind.mockImplementation((q: { sectionId?: unknown }) =>
+      q.sectionId
+        ? [{ _id: ALICE }] // who is in বালক now
+        : [{ _id: ALICE, name: "Alice", schoolId: "0001", rollNumber: "1", classId: CLASS, sectionId: BOYS }],
+    );
+    mockSectionFind.mockImplementation(() => [{ _id: BOYS, nameBn: "বালক" }]);
+
+    const report = await assignmentGiftReport({
+      academicYearId: YEAR,
+      sectionId: BOYS.toString(),
+      weekFrom: 1,
+      weekTo: 4,
+      asOf: at(dueOf(4), 1),
+    });
+
+    expect(report.students.map((r) => r.studentId)).toEqual([ALICE.toString()]); // not Bob
+    const alice = rowFor(report, ALICE)!;
+    expect(alice.wonWeeks).toEqual([1, 2, 3, 4]); // the history the item filter used to drop
+    expect(alice.streakMilestoneWeeks).toContain(4);
+    expect(alice.sectionNameBn).toBe("বালক");
+    // The item query is narrowed to the section's students' items, never by item.sectionId.
+    const itemQuery = mockItemFind.mock.calls[0][0] as Record<string, unknown>;
+    expect(itemQuery.sectionId).toBeUndefined();
+    expect(itemQuery._id).toBeDefined();
   });
 });

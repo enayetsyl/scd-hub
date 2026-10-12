@@ -23,6 +23,8 @@ interface Row {
   studentName: string;
   classId: string;
   className: string;
+  sectionId?: string | null;
+  sectionNameBn?: string | null;
   rollNumber: string | null;
   wonWeeks: number[];
   streakMilestoneWeeks: number[];
@@ -37,6 +39,7 @@ interface Winner {
   streakGiven: boolean;
 }
 interface ClassGroup {
+  key: string;
   classId: string;
   className: string;
   winners: Winner[];
@@ -175,5 +178,28 @@ describe("groupWinnersByClass", () => {
   test("no winners at all is an empty list, not a crash", () => {
     expect(groupWinnersByClass([], 10)).toEqual([]);
     expect(giftTotals([])).toEqual({ winners: 0, outstanding: 0 });
+  });
+});
+
+// D-#724: since C4/C5 split into বালক/বালিকা, one class heading mixed two sections.
+describe("groupWinnersByClass — one group per SECTION", () => {
+  test("a split class gives two headings; a whole-class section adds nothing", () => {
+    const groups = groupWinnersByClass(
+      [
+        row({ studentId: "a", studentName: "Abdullah", classId: "c4", className: "শ্রেণি ৪", sectionId: "s4b", sectionNameBn: "বালক" }),
+        row({ studentId: "b", studentName: "Bushra", classId: "c4", className: "শ্রেণি ৪", sectionId: "s4g", sectionNameBn: "বালিকা" }),
+        row({ studentId: "c", studentName: "Chand", classId: "c3", className: "শ্রেণি ৩", sectionId: "s3", sectionNameBn: "সম্মিলিত" }),
+      ],
+      10,
+    );
+    expect(groups.map((g) => g.className)).toEqual(["শ্রেণি ৩", "শ্রেণি ৪ বালক", "শ্রেণি ৪ বালিকা"]);
+    expect(new Set(groups.map((g) => g.key)).size).toBe(3); // unique keys — the card toggles by key
+    expect(groups.find((g) => g.key === "s4g")!.winners.map((w) => w.studentName)).toEqual(["Bushra"]);
+  });
+
+  test("a row without a section still groups by class (older payload)", () => {
+    const groups = groupWinnersByClass([row({ studentId: "a", classId: "c3" }), row({ studentId: "b", classId: "c3" })], 10);
+    expect(groups).toHaveLength(1);
+    expect(groups[0].key).toBe("c3");
   });
 });

@@ -64,6 +64,7 @@ import {
   STR,
   bnNum,
   classLevelLabel,
+  classSectionLabel,
   dayTypeLabel,
   fullDateLabel,
   hwSubjectLabel,
@@ -328,7 +329,7 @@ export default function TodayScreen(): React.ReactElement {
     if (cells.length === 0) return `${head} · ${bnNum(p.items)} ${STR.alertItems}`;
     const shown = cells
       .slice(0, 4)
-      .map((c) => `${classLevelLabel(c.classLevel)} · ${hwSubjectLabel(c.subject)}`)
+      .map((c) => `${classSectionLabel(c.classLevel, sectionName(c.sectionId))} · ${hwSubjectLabel(c.subject)}`)
       .join(", ");
     const rest = cells.length - 4;
     return rest > 0 ? `${head} — ${shown} +${bnNum(rest)} ${STR.prepMore}` : `${head} — ${shown}`;

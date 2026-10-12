@@ -27,6 +27,10 @@ export interface GiftRowLike {
   studentName: string;
   classId: string;
   className: string;
+  /** D-#724: the student's section — the group key once a class is split. Older
+   *  rows without it group by class, as before. */
+  sectionId?: string | null;
+  sectionNameBn?: string | null;
   rollNumber: string | null;
   wonWeeks: number[];
   streakMilestoneWeeks: number[];
@@ -46,7 +50,10 @@ export interface GiftWinner {
 }
 
 export interface GiftClassGroup {
+  /** Unique per group: the section id (D-#724), or the class id for an unsectioned row. */
+  key: string;
   classId: string;
+  /** The heading: the class, plus "বালক" / "বালিকা" when the section tells halves apart. */
   className: string;
   winners: GiftWinner[];
   /** Gifts in this class still to hand out: weekly ones, plus higher gifts for
@@ -54,12 +61,24 @@ export interface GiftClassGroup {
   outstanding: number;
 }
 
+/** Section names that only mean "the whole class" — kept local: this module stays
+ *  import-free for the server suite. Same set as `lib/sectionPicks.ts`. */
+const WHOLE_CLASS_SECTION_NAMES = new Set(["মূল", "সম্মিলিত"]);
+
+function headingOf(row: GiftRowLike): string {
+  const cls = row.className || "—";
+  const sec = row.sectionNameBn;
+  return sec && !WHOLE_CLASS_SECTION_NAMES.has(sec) ? `${cls} ${sec}` : cls;
+}
+
 function hasAward(row: GiftRowLike, kind: string, weekNumber: number): boolean {
   return row.awards.some((a) => a.kind === kind && a.weekNumber === weekNumber);
 }
 
 /**
- * Group one week's winners by class, ordered by class name and then by student name.
+ * Group one week's winners by SECTION (D-#724 — C4/C5 split into বালক/বালিকা, so one
+ * class heading mixed two desks' worth of children), ordered by heading and then by
+ * student name. A whole-class section name (মূল / সম্মিলিত) adds nothing to the heading.
  *
  * A class with no winners this week is omitted entirely — the desk should not scroll
  * past empty headings to find the work.
@@ -71,10 +90,12 @@ export function groupWinnersByClass(rows: GiftRowLike[], weekNumber: number): Gi
     // Rule 1: wonWeeks, which includes the live-week QUALIFIED case (D-#497).
     if (!row.wonWeeks.includes(weekNumber)) continue;
 
-    const group = byClass.get(row.classId) ?? {
+    const key = row.sectionId || row.classId;
+    const group = byClass.get(key) ?? {
+      key,
       classId: row.classId,
       // A class row missing its Bangla name must not render as a bare ObjectId.
-      className: row.className || "—",
+      className: headingOf(row),
       winners: [],
       outstanding: 0,
     };
@@ -87,7 +108,7 @@ export function groupWinnersByClass(rows: GiftRowLike[], weekNumber: number): Gi
       streakMilestone: row.streakMilestoneWeeks.includes(weekNumber),
       streakGiven: hasAward(row, "STREAK", weekNumber),
     });
-    byClass.set(row.classId, group);
+    byClass.set(key, group);
   }
 
   const groups = [...byClass.values()];

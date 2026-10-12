@@ -48,6 +48,8 @@ export interface GiftStudentRowT {
   classId: string;
   className: string;
   sectionId: string;
+  /** D-#724: the student's current section's name (the Today card groups by it). */
+  sectionNameBn: string;
   weeks: GiftWeekT[];
   wonWeeks: number[];
   pendingWeeks: number[];
@@ -107,6 +109,7 @@ export const ASSIGNMENT_GIFT_REPORT = gql<
         classId
         className
         sectionId
+        sectionNameBn
         weeks {
           weekNumber
           dueDate

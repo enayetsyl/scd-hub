@@ -152,6 +152,9 @@ const GiftStudentRowRef = builder.objectRef<GiftStudentRow>("GiftStudentRow").im
       description: "The class's Bangla name — the heading the Office's Today card groups winners under.",
     }),
     sectionId: t.exposeString("sectionId"),
+    sectionNameBn: t.exposeString("sectionNameBn", {
+      description: "The student's current section's Bangla name (D-#724) — the Today card groups by section.",
+    }),
     weeks: t.field({ type: [GiftWeekRef], resolve: (r) => r.weeks }),
     wonWeeks: t.intList({ resolve: (r) => r.wonWeeks }),
     pendingWeeks: t.intList({
