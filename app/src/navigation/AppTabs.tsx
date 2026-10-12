@@ -169,6 +169,7 @@ import ArchiveHomeScreen from "../screens/archive/ArchiveHomeScreen";
 import FileBundleScreen from "../screens/archive/FileBundleScreen";
 import BundleDetailScreen from "../screens/archive/BundleDetailScreen";
 import StorageBoxScreen from "../screens/archive/StorageBoxScreen";
+import CtScriptUploadScreen from "../screens/classtest/CtScriptUploadScreen";
 import MyCtQuestionsScreen from "../screens/classtest/MyCtQuestionsScreen";
 import CtQuestionRequestScreen from "../screens/classtest/CtQuestionRequestScreen";
 import CtQuestionQueueScreen from "../screens/classtest/CtQuestionQueueScreen";
@@ -976,6 +977,12 @@ function ClassTestNavigator(): React.ReactElement {
       <ClassTestStack.Screen name="ArchiveFileBundle" component={FileBundleScreen} options={{ title: STR.arFileTitle }} />
       <ClassTestStack.Screen name="ArchiveBundle" component={BundleDetailScreen} options={{ title: STR.arBundleTitle }} />
       <ClassTestStack.Screen name="ArchiveBox" component={StorageBoxScreen} options={{ title: STR.arBoxTitle }} />
+      {/* CS-2 (D-#716): scan & tag — needs a testId, so it must never be first here. */}
+      <ClassTestStack.Screen
+        name="CtScriptUpload"
+        component={CtScriptUploadScreen}
+        options={({ route }) => ({ title: route.params.title || STR.csUploadTitle })}
+      />
     </ClassTestStack.Navigator>
   );
 }

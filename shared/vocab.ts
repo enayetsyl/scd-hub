@@ -1401,6 +1401,10 @@ export const NOTIFICATION_KINDS = [
   // the exam's requesting teacher (approve/publish released the results to guardians).
   "CT_RESULT_SUBMITTED",
   "CT_RESULT_PUBLISHED",
+  // Class-test scripts (CS-3, docs/prd-ct-scripts.md §8, D-#716; app-native, NO wire
+  // twin): the Office published the scanned scripts → the child's login-enabled
+  // guardians. Deduped per test+student+guardian+scripts version.
+  "CT_SCRIPT_PUBLISHED",
   // Staff leave (owner 2026-07-26): a teacher submitted a leave application →
   // every approver (active Principal/Office). App-native, no wire twin.
   "STAFF_LEAVE_SUBMITTED",
@@ -1494,6 +1498,7 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   CT_QUESTION_OFFICE: "প্রশ্ন তৈরির অনুরোধ",
   CT_RESULT_SUBMITTED: "ফলাফল অনুমোদনের অপেক্ষায়",
   CT_RESULT_PUBLISHED: "ক্লাস টেস্টের ফলাফল প্রকাশিত",
+  CT_SCRIPT_PUBLISHED: "ক্লাস টেস্টের খাতা দেখা যাবে",
   STAFF_LEAVE_SUBMITTED: "ছুটির আবেদন অনুমোদনের অপেক্ষায়",
   PRINT_DELIVERED: "প্রিন্ট ডেলিভারি হয়েছে",
   PRINT_REQUESTED: "নতুন প্রিন্ট অনুরোধ",
@@ -1550,6 +1555,7 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   CT_QUESTION_OFFICE: "Question request update",
   CT_RESULT_SUBMITTED: "Class-test results submitted",
   CT_RESULT_PUBLISHED: "Class-test results published",
+  CT_SCRIPT_PUBLISHED: "Class-test script available",
   STAFF_LEAVE_SUBMITTED: "Leave application awaiting approval",
   PRINT_DELIVERED: "Print job delivered",
   PRINT_REQUESTED: "New print request",
@@ -1798,6 +1804,58 @@ export const CLASS_TEST_ATTENDANCE_STATUS_LABELS_EN: Record<ClassTestAttendanceS
   PRESENT: "Present",
   ABSENT: "Absent",
 };
+
+/** The class-test SCRIPT stage (CS-1..CS-3, docs/prd-ct-scripts.md §4, D-#715–#719) —
+ *  a THIRD axis beside entry state and publish state (D-#370): where the paper is.
+ *  DERIVED on read from the `ClassTest.scripts` stamps + the per-result script
+ *  fields, never stored. A test enters at its first results publish (DUE); the Office
+ *  receives it (UPLOAD_*), scans and tags each present student, publishes to
+ *  guardians, hands the paper to the teacher (WITH_TEACHER), and the teacher returns
+ *  it to the students (RETURNED). WAIVED closes a test with no scans (D-#718).
+ *  App-native, NO wire twin. */
+export const CT_SCRIPT_STAGES = [
+  "DUE",
+  "OVERDUE",
+  "UPLOAD_PENDING",
+  "UPLOAD_IN_PROGRESS",
+  "UPLOAD_DONE",
+  "PUBLISHED",
+  "WITH_TEACHER",
+  "RETURN_OVERDUE",
+  "RETURNED",
+  "WAIVED",
+] as const;
+export type CtScriptStage = (typeof CT_SCRIPT_STAGES)[number];
+
+export const CT_SCRIPT_STAGE_LABELS_BN: Record<CtScriptStage, string> = {
+  DUE: "খাতা জমা বাকি",
+  OVERDUE: "খাতা জমায় বিলম্ব",
+  UPLOAD_PENDING: "আপলোড বাকি",
+  UPLOAD_IN_PROGRESS: "আপলোড চলমান",
+  UPLOAD_DONE: "আপলোড সম্পন্ন",
+  PUBLISHED: "খাতা প্রকাশিত",
+  WITH_TEACHER: "শিক্ষকের কাছে ফেরত",
+  RETURN_OVERDUE: "ফেরত দিতে বিলম্ব",
+  RETURNED: "খাতা ফেরত দেওয়া হয়েছে",
+  WAIVED: "খাতা প্রযোজ্য নয়",
+};
+export const CT_SCRIPT_STAGE_LABELS_EN: Record<CtScriptStage, string> = {
+  DUE: "Scripts due",
+  OVERDUE: "Scripts overdue",
+  UPLOAD_PENDING: "Upload pending",
+  UPLOAD_IN_PROGRESS: "Upload in progress",
+  UPLOAD_DONE: "Upload done",
+  PUBLISHED: "Scripts published",
+  WITH_TEACHER: "With teacher to return",
+  RETURN_OVERDUE: "Return overdue",
+  RETURNED: "Returned to students",
+  WAIVED: "Not applicable",
+};
+
+/** School days a teacher has to hand the scripts in after the results are first
+ *  published, and to return them to the students after the Office hands them back
+ *  (owner ruling 2026-10-12, D-#715/#719). Overdue is STRICTLY after the due day. */
+export const CT_SCRIPT_DUE_SCHOOL_DAYS = 1;
 
 
 // --- A.11 LIBRARY ENUMS (app-native; Library module — prd-library, ----------

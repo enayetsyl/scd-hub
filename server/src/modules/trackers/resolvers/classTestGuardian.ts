@@ -11,8 +11,23 @@
 import { builder } from "../../../schema";
 import { assertGuardianOfStudent } from "../../../middleware/authz";
 import { childTestResults, type GuardianClassTestResult } from "../services/ClassTestResultService";
+import { childScriptInfo, type GuardianScriptInfo } from "../services/ClassTestScriptService";
 
-const GuardianClassTestResultRef = builder.objectRef<GuardianClassTestResult>("GuardianClassTestResult");
+/** CS-3 (D-#716): the child's scanned script rides on the result row — pages only
+ *  once the Office published them, `scriptPending` while they are being scanned. */
+type GuardianResultWithScript = GuardianClassTestResult & { script: GuardianScriptInfo };
+
+const GuardianScriptPageRef = builder
+  .objectRef<{ fileId: string; mime: string }>("GuardianScriptPage")
+  .implement({
+    description: "One scanned page of the child's class-test script (opened via GET /files/:id).",
+    fields: (t) => ({
+      fileId: t.exposeString("fileId"),
+      mime: t.exposeString("mime"),
+    }),
+  });
+
+const GuardianClassTestResultRef = builder.objectRef<GuardianResultWithScript>("GuardianClassTestResult");
 GuardianClassTestResultRef.implement({
   description:
     "A child's PUBLISHED class-test result as the guardian portal shows it — read-only (CT-3, J7). " +
@@ -38,6 +53,15 @@ GuardianClassTestResultRef.implement({
     weakness: t.string({ nullable: true, resolve: (r) => r.weakness }),
     guardianAction: t.string({ nullable: true, resolve: (r) => r.guardianAction }),
     publishedAt: t.string({ nullable: true, resolve: (r) => r.publishedAt }),
+    scriptPages: t.field({
+      type: [GuardianScriptPageRef],
+      description: "The child's scanned script pages — empty until the Office publishes the scripts (D-#716).",
+      resolve: (r) => r.script.pages,
+    }),
+    scriptPending: t.boolean({
+      description: "The paper is at the office being scanned — not yet published (CS-3).",
+      resolve: (r) => r.script.pending,
+    }),
   }),
 });
 
@@ -51,7 +75,9 @@ builder.queryField("childTestResults", (t) =>
     args: { studentId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       await assertGuardianOfStudent(ctx, args.studentId);
-      return childTestResults(args.studentId);
+      const rows = await childTestResults(args.studentId);
+      const info = await childScriptInfo(args.studentId, rows.map((r) => r.testId));
+      return rows.map((r) => ({ ...r, script: info.get(r.testId) ?? { pages: [], pending: false } }));
     },
   }),
 );
