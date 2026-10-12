@@ -787,3 +787,38 @@ export const OBSERVATION_ROTAS_QUERY = gql<{ observationRotas: StoredRotaT[] }, 
     }
   }
 `;
+
+/** Owner ask 2026-10-12: the caller's own daily review target progress (null = no quota → no card). */
+export interface ReviewQuotaDayT {
+  dateKey: string;
+  working: boolean;
+  reviewed: number;
+  cumulative: number;
+  expected: number;
+  diff: number;
+  isToday: boolean;
+}
+export interface ReviewQuotaT {
+  perDay: number;
+  startKey: string;
+  todayKey: string;
+  days: ReviewQuotaDayT[];
+  reviewedTotal: number;
+  reviewedThroughYesterday: number;
+  expectedThroughYesterday: number;
+  diffThroughYesterday: number;
+  todayWorking: boolean;
+  todayReviewed: number;
+  todayTarget: number;
+  neededToday: number;
+}
+
+export const MY_REVIEW_QUOTA_QUERY = gql<{ myReviewQuota: ReviewQuotaT | null }, Record<string, never>>`
+  query MyReviewQuota {
+    myReviewQuota {
+      perDay startKey todayKey reviewedTotal reviewedThroughYesterday expectedThroughYesterday
+      diffThroughYesterday todayWorking todayReviewed todayTarget neededToday
+      days { dateKey working reviewed cumulative expected diff isToday }
+    }
+  }
+`;
