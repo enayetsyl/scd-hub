@@ -21,9 +21,10 @@ import {
 import { UploadDropZone } from "../../components/UploadDropZone";
 import type { AssignmentStackParamList } from "../../navigation/types";
 import { Screen, breakAnywhere, Body, Muted, Card, Badge, Button, Field, Loader, EmptyState, Notice } from "../../components/ui";
-import { STR, bnNum, hwSubjectLabel, classLevelLabel, monthLabel } from "../../lib/labels";
+import { STR, bnNum, hwSubjectLabel, classSectionLabel, monthLabel } from "../../lib/labels";
 import { isLikelyObjectId } from "../../lib/validate";
 import { friendlyError } from "../../lib/errors";
+import { useSectionNames } from "../../lib/useSectionNames";
 import { space } from "../../theme/tokens";
 import { Pressable } from "react-native";
 
@@ -34,6 +35,7 @@ const day = (iso: string): string => iso.slice(0, 10);
 export default function DeliverAssignmentScreen({ route, navigation }: Props): React.ReactElement {
   const { academicYearId, entryId, weekNumber, month, weekOfMonth, sectionId, classId, classLevel, subject, deliveryDate, dueDate } =
     route.params;
+  const sectionName = useSectionNames();
 
   // `weekNumber` is the CONTINUOUS term-anchored index (the server key), not the number
   // shown on the Assignments home ("July · Week 4" = week-of-month). Label with the home
@@ -159,7 +161,7 @@ export default function DeliverAssignmentScreen({ route, navigation }: Props): R
       <ScrollView contentContainerStyle={{ flexGrow: 1, padding: space(4) }}>
         <Card>
           <Body style={{ fontWeight: "700" }}>
-            {classLevelLabel(classLevel)} — {hwSubjectLabel(subject)} · {weekLabel}
+            {classSectionLabel(classLevel, sectionName(sectionId))} — {hwSubjectLabel(subject)} · {weekLabel}
           </Body>
           <Muted style={{ marginTop: 2 }}>
             {STR.asDeliverBy} {day(deliveryDate)} · {STR.asDueBy} {day(dueDate)}

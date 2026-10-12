@@ -28,6 +28,7 @@ import { AssignmentItem } from "../models/AssignmentItem";
 import { AssignmentStudentRecord } from "../models/AssignmentStudentRecord";
 import { AssignmentGiftAward, type GiftAwardKind } from "../models/AssignmentGiftAward";
 import { Student } from "../../foundation/models/Student";
+import { Section } from "../../foundation/models/Section";
 import { Class } from "../../foundation/models/Class";
 import { User } from "../../foundation/models/User";
 import { dhakaDayKey } from "../../../lib/dhakaDay";
@@ -115,6 +116,9 @@ export interface GiftStudentRow {
    *  report to hand out gifts, so the heading it groups under belongs to the report.
    *  Falls back to "" when the class row is missing — never to the raw ObjectId. */
   className: string;
+  /** The student's CURRENT section's Bangla name (D-#724) — "" when missing. The desk
+   *  groups by section, since one class may now be বালক + বালিকা. */
+  sectionNameBn: string;
   /** Only the weeks inside [weekFrom, weekTo] — the streak is derived over the
    *  student's WHOLE history up to weekTo, not just this window. */
   weeks: GiftWeek[];
@@ -222,7 +226,23 @@ export async function assignmentGiftReport(filter: GiftFilter): Promise<GiftRepo
 
   const scope: Record<string, unknown> = { academicYearId: yearId, status: "ISSUED" };
   if (filter.classId) scope.classId = new Types.ObjectId(filter.classId);
-  if (filter.sectionId) scope.sectionId = new Types.ObjectId(filter.sectionId);
+
+  // A SECTION view is scoped by its STUDENTS, never by item.sectionId (D-#724). Since
+  // the C4/C5 বালক/বালিকা split, every pre-split item sits on the emptied সম্মিলিত, so an
+  // item filter restarted each streak on 2026-10-01 — while `giftEntitlement`, which
+  // judges a tick, reads the student's whole history. Same history here, so the
+  // teacher's screen and the server agree on every 🏆.
+  let sectionStudentIds: Types.ObjectId[] | null = null;
+  if (filter.sectionId) {
+    const inSection = (await Student.find({ sectionId: new Types.ObjectId(filter.sectionId), active: true })
+      .select("_id")
+      .lean()) as unknown as Array<{ _id: Types.ObjectId }>;
+    sectionStudentIds = inSection.map((s) => s._id);
+    const itemIds = sectionStudentIds.length
+      ? await AssignmentStudentRecord.distinct("asItemId", { studentId: { $in: sectionStudentIds } })
+      : [];
+    scope._id = { $in: itemIds };
+  }
 
   // weekTo defaults to the last week that actually has issued work.
   let weekTo = filter.weekTo;
@@ -256,6 +276,9 @@ export async function assignmentGiftReport(filter: GiftFilter): Promise<GiftRepo
   const records = (await AssignmentStudentRecord.find({
     asItemId: { $in: items.map((i) => i._id) },
     resubOf: null,
+    // A section view: only its own students' rows (an old combined item also holds the
+    // other half's records).
+    ...(sectionStudentIds ? { studentId: { $in: sectionStudentIds } } : {}),
   })
     .select("asItemId studentId state stateDates")
     .lean()) as unknown as RecordLean[];
@@ -335,6 +358,14 @@ export async function assignmentGiftReport(filter: GiftFilter): Promise<GiftRepo
         .lean()) as unknown as Array<{ _id: Types.ObjectId; nameBn?: string }>)
     : [];
   const classNameById = new Map(classRows.map((c) => [c._id.toString(), c.nameBn ?? ""]));
+  // …and SECTION names, so the desk groups বালক and বালিকা apart (D-#724). One query.
+  const reportSectionIds = [...new Set(students.map((s) => s.sectionId.toString()))];
+  const sectionRows = reportSectionIds.length
+    ? ((await Section.find({ _id: { $in: reportSectionIds } })
+        .select("nameBn")
+        .lean()) as unknown as Array<{ _id: Types.ObjectId; nameBn?: string }>)
+    : [];
+  const sectionNameById = new Map(sectionRows.map((s) => [s._id.toString(), s.nameBn ?? ""]));
 
   const handoverUserIds = [...new Set(awards.map((a) => a.handedOverBy.toString()))];
   const handoverNames = handoverUserIds.length
@@ -449,6 +480,7 @@ export async function assignmentGiftReport(filter: GiftFilter): Promise<GiftRepo
       classId: student.classId.toString(),
       className: classNameById.get(student.classId.toString()) ?? "",
       sectionId: student.sectionId.toString(),
+      sectionNameBn: sectionNameById.get(student.sectionId.toString()) ?? "",
       weeks: windowWeeks,
       wonWeeks,
       pendingWeeks,

@@ -14,12 +14,14 @@ import type { AssignmentStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Badge, Button, Field, Chip, Loader, EmptyState, Notice } from "../../components/ui";
 import { STR, bnNum, hwSubjectLabel, monthLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { useSectionLabel } from "../../lib/useSectionNames";
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<AssignmentStackParamList, "AssignmentReconcile">;
 
 export default function AssignmentReconcileScreen({ route, navigation }: Props): React.ReactElement {
   const { academicYearId, sectionId, weekNumber, month, weekOfMonth } = route.params;
+  const sectionLabel = useSectionLabel(); // D-#723: the confirm is per section
 
   // `weekNumber` is the CONTINUOUS term-anchored index (the server key) — it is NOT the
   // number the teacher sees on the Assignments home ("July · Week 4" = week-of-month).
@@ -91,6 +93,7 @@ export default function AssignmentReconcileScreen({ route, navigation }: Props):
             <Card>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                 <Body style={{ fontWeight: "700", flexShrink: 1 }}>
+                  {sectionLabel(sectionId) ? `${sectionLabel(sectionId)} · ` : ""}
                   {weekLabel} — {STR.asWeeklyTotal}
                 </Body>
                 <Badge

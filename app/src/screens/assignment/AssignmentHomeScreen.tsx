@@ -28,8 +28,9 @@ import { Screen, Body, Muted, Card, Badge, Button, Chip, ChipRow, EmptyState, No
 import { QueryGate } from "../../components/QueryGate";
 import { AssignmentEditSheet, type AssignmentEditTarget } from "../../components/AssignmentEditSheet";
 import { ConfirmSheet } from "../../components/ConfirmSheet";
-import { STR, bnNum, hwSubjectLabel, classLevelLabel, monthLabel, HW_NIL_REASONS, hwNilReasonLabel } from "../../lib/labels";
+import { STR, bnNum, hwSubjectLabel, classSectionLabel, monthLabel, HW_NIL_REASONS, hwNilReasonLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { useSectionNames } from "../../lib/useSectionNames";
 import { useAuth } from "../../auth/AuthContext";
 import { useToast } from "../../state/ToastContext";
 import { space } from "../../theme/tokens";
@@ -55,6 +56,8 @@ function currentWeekNumber(termStartDate: string, today = new Date()): number {
 const day = (iso?: string | null): string => (iso ? iso.slice(0, 10) : "—");
 
 export default function AssignmentHomeScreen({ navigation }: Props): React.ReactElement {
+  // D-#723: C4/C5 বালক/বালিকা — two cards per subject must say which half they are.
+  const sectionName = useSectionNames();
   const { role, user, can } = useAuth();
   const canTrackerRead = can("tracker:read");
   const canSchedule = can("roster:manage");
@@ -132,7 +135,7 @@ export default function AssignmentHomeScreen({ navigation }: Props): React.React
     setEditTarget({
       itemId: item.asItemId as string,
       asId: item.asId ?? "",
-      label: `${classLevelLabel(item.classLevel)} — ${hwSubjectLabel(item.subject)}`,
+      label: `${classSectionLabel(item.classLevel, sectionName(item.sectionId))} — ${hwSubjectLabel(item.subject)}`,
       issued: item.status === "ISSUED",
       estMinutes: item.estMinutes,
       totalMarks: item.totalMarks,
@@ -238,7 +241,7 @@ export default function AssignmentHomeScreen({ navigation }: Props): React.React
                 {prompts.map((p) => (
                   <View key={p.entryId} style={{ marginTop: 8, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                     <Body>
-                      {classLevelLabel(p.classLevel)} — {hwSubjectLabel(p.subject)}
+                      {classSectionLabel(p.classLevel, sectionName(p.sectionId))} — {hwSubjectLabel(p.subject)}
                     </Body>
                     <Muted>
                       {STR.asDeliverBy} {day(p.deliveryDate)}
@@ -297,7 +300,7 @@ export default function AssignmentHomeScreen({ navigation }: Props): React.React
                 <Card key={item.entryId}>
                   <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                     <Body style={{ fontWeight: "700" }}>
-                      {classLevelLabel(item.classLevel)} — {hwSubjectLabel(item.subject)}
+                      {classSectionLabel(item.classLevel, sectionName(item.sectionId))} — {hwSubjectLabel(item.subject)}
                     </Body>
                     <Badge
                       text={
@@ -356,7 +359,7 @@ export default function AssignmentHomeScreen({ navigation }: Props): React.React
                                 onPress={() =>
                                   setDelTarget({
                                     itemId: item.asItemId as string,
-                                    label: `${classLevelLabel(item.classLevel)} — ${hwSubjectLabel(item.subject)}`,
+                                    label: `${classSectionLabel(item.classLevel, sectionName(item.sectionId))} — ${hwSubjectLabel(item.subject)}`,
                                   })
                                 }
                               />

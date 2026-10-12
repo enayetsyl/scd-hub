@@ -538,9 +538,12 @@ export const ctUnitLabel = (
   /** The section's name when it tells halves apart ("বালক"), from `useSectionNames` (D-#722). */
   sectionNameBn?: string | null,
 ): string =>
-  test.classLevel != null
-    ? `${classLevelLabel(test.classLevel)}${sectionNameBn ? ` ${sectionNameBn}` : ""}`
-    : test.groupNameBn ?? "—";
+  test.classLevel != null ? classSectionLabel(test.classLevel, sectionNameBn) : test.groupNameBn ?? "—";
+
+/** "৪র্থ শ্রেণি বালক" — the class, plus the section when it tells halves apart (D-#723).
+ *  Pass the name from `useSectionNames`, which is null for মূল / সম্মিলিত. */
+export const classSectionLabel = (level: number, sectionNameBn?: string | null): string =>
+  `${classLevelLabel(level)}${sectionNameBn ? ` ${sectionNameBn}` : ""}`;
 
 export const classLevelLabel = (level: number): string => {
   const roster = pick(ROSTER_CLASS_LABELS_BN, ROSTER_CLASS_LABELS_EN);

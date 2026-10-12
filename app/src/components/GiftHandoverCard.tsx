@@ -170,12 +170,12 @@ export function GiftHandoverCard(): React.ReactElement | null {
             {bnNum(totals.outstanding)}
           </Muted>
           {groups.map((g, i) => {
-            const open = openClassId === g.classId;
+            const open = openClassId === g.key;
             return (
-              <View key={g.classId}>
+              <View key={g.key}>
                 {i > 0 ? <Divider /> : null}
                 <Card
-                  onPress={() => setOpenClassId(open ? null : g.classId)}
+                  onPress={() => setOpenClassId(open ? null : g.key)}
                   style={{ marginTop: space(2) }}
                 >
                   <View

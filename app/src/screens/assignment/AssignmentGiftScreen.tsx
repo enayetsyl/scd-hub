@@ -42,6 +42,7 @@ import {
 } from "../../components/ui";
 import { STR, bnNum, subjectLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { isWholeClassSectionName, pickableSections } from "../../lib/sectionPicks";
 import { useToast } from "../../state/ToastContext";
 import { space } from "../../theme/tokens";
 
@@ -86,6 +87,8 @@ function WinnerRow({
           <Body style={{ fontWeight: "700" }}>
             {row.studentName}
             {row.rollNumber ? ` (${bnNum(row.rollNumber)})` : ""}
+            {/* D-#724: a class-wide list mixes বালক and বালিকা — say which. */}
+            {isWholeClassSectionName(row.sectionNameBn) ? "" : ` · ${row.sectionNameBn}`}
             {provisional ? ` · ${STR.agProvisional}` : ""}
           </Body>
           {subtitle ? <Muted>{subtitle}</Muted> : null}
@@ -127,7 +130,8 @@ export default function AssignmentGiftScreen({ route }: Props): React.ReactEleme
     pause: !academicYearId,
   });
   const classes = classesQ.data?.classes ?? [];
-  const sections = classId ? (classes.find((c) => c.id === classId)?.sections ?? []) : [];
+  // D-#724: not the emptied সম্মিলিত — a section view is its CURRENT students, so it is empty.
+  const sections = classId ? pickableSections(classes.find((c) => c.id === classId)?.sections ?? []) : [];
 
   const [reportQ, refetchReport] = useQuery({
     query: ASSIGNMENT_GIFT_REPORT,
