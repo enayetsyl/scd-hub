@@ -203,6 +203,7 @@ export const AUDIT_KIND_LABELS: Record<AuditEventKind, AuditKindLabel> = {
   OBSERVATION_ROTA_SAVED: { bn: "পর্যবেক্ষণের রোটা সংরক্ষণ করেছেন", en: "Saved an observation rota", group: "OBSERVATION" },
   OBSERVATION_ESCALATION_CONFIG_SET: { bn: "পর্যবেক্ষণের তাগাদার নিয়ম বদলেছেন", en: "Set the observation escalation cadence", group: "OBSERVATION" },
   OBSERVATION_SCHEDULE_CONFIG_SET: { bn: "পর্যবেক্ষণের সময়সূচির নিয়ম বদলেছেন", en: "Set the observation schedule cadence", group: "OBSERVATION" },
+  REVIEW_QUOTA_SET: { bn: "দৈনিক রিভিউ লক্ষ্য ঠিক করেছেন", en: "Set a daily review target", group: "OBSERVATION" },
   SESSION_RECORDING_ADDED: { bn: "ক্লাসের ভিডিও যুক্ত করেছেন", en: "Added a session recording", group: "OBSERVATION" },
   VIDEO_REVIEW_ASSIGNED: { bn: "ভিডিও পর্যালোচনার দায়িত্ব দিয়েছেন", en: "Assigned a video review", group: "OBSERVATION" },
   VIDEO_REVIEW_REVIEWED: { bn: "ভিডিও পর্যালোচনা করেছেন", en: "Reviewed a video", group: "OBSERVATION" },

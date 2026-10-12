@@ -78,6 +78,9 @@ export const EXPECTED_ERROR_NAMES: ReadonlySet<string> = new Set([
   // CO-14 (D-#426): a refused rota is a DELIBERATE outcome — the model broke a rule the
   // user set and the violations are shown to them. Not a fault to page anyone about.
   "ObservationRotaError",
+  // Owner ask 2026-10-12: a refused review-target setting (bad date/count) — a Bangla
+  // message for the Principal, not a fault.
+  "ReviewQuotaError",
   "DriveUnavailableError",
   "FinanceError",
   "LeaveError",

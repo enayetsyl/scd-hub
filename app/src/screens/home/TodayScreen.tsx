@@ -52,6 +52,7 @@ import { useSectionContext } from "../../state/SectionContext";
 import { Screen, H1, H2, Body, Muted, Card, Badge, Button, EmptyState, Notice } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
 import { WorkClaimTeacherCard } from "../../components/WorkClaimTeacherCard";
+import { ReviewQuotaCard } from "../../components/ReviewQuotaCard";
 import { ReturningStudentsCard } from "../../components/ReturningStudentsCard";
 import { TodayWorkCard } from "../../components/TodayWorkCard";
 import { GiftHandoverCard } from "../../components/GiftHandoverCard";
@@ -605,6 +606,10 @@ export default function TodayScreen(): React.ReactElement {
             ))}
           </Card>
         ) : null}
+
+        {/* আমার রিভিউ লক্ষ্য (owner ask 2026-10-12): renders only for an observer with a
+            daily review target — myReviewQuota is null for everyone else. */}
+        <ReviewQuotaCard />
 
         {/* WB-4 (D-#701) — আজকের কাজ: the work board's open cards for today, with a
             link to the board. Self-contained; owner ask on the first prod test. */}
