@@ -44,6 +44,15 @@ export interface AnchoredTest {
   subject: string;
   /** The exam's accountable teacher — keeps the exam once its section is emptied. */
   teacherId?: string | null;
+  /** When it was sat — bounds an emptied section's reconstructed roster to the children
+   *  enrolled by then (`emptiedSectionRoster`). Absent → no bound. */
+  examDate?: string | Date | null;
+}
+
+/** The latest enrolment an exam's reconstructed roster admits: the end of its exam day. */
+export function enrolledByOf(examDate: string | Date | null | undefined): Date | null {
+  if (!examDate) return null;
+  return new Date(new Date(examDate).getTime() + 24 * 60 * 60 * 1000);
 }
 
 export function isGroupAnchored(test: AnchoredTest): boolean {
@@ -203,7 +212,10 @@ async function resolveRoster(test: AnchoredTest): Promise<{ ids: string[]; moved
   if (students.length > 0 || !test.sectionId || !test.classId) {
     return { ids: students.map((s) => s._id.toString()), movedOn: false };
   }
-  return { ids: await emptiedSectionRoster(test.sectionId, test.classId), movedOn: true };
+  return {
+    ids: await emptiedSectionRoster(test.sectionId, test.classId, enrolledByOf(test.examDate)),
+    movedOn: true,
+  };
 }
 
 /**
@@ -213,8 +225,26 @@ async function resolveRoster(test: AnchoredTest): Promise<{ ids: string[]; moved
  *   - otherwise (a split, e.g. the combined C4/C5 sections on 2026-10-01, which moved
  *     everyone into the class's new boys/girls sections) — the class's active students.
  * Without it the marks screen listed nobody, so a pre-split exam could never be scored.
+ *
+ * `enrolledBy` (the end of the exam day) drops children admitted AFTER the exam — they
+ * never sat it, and as the completion denominator they would hold a finished exam open.
  */
-export async function emptiedSectionRoster(sectionId: string, classId: string): Promise<string[]> {
+export async function emptiedSectionRoster(
+  sectionId: string,
+  classId: string,
+  enrolledBy: Date | null = null,
+): Promise<string[]> {
+  return (await emptiedSectionCandidates(sectionId, classId))
+    .filter((s) => sittingBy(s, enrolledBy))
+    .map((s) => s.id);
+}
+
+/** An emptied section's roster candidates with their enrolment time — the one read
+ *  behind `emptiedSectionRoster`, exported so the reports can batch it per section. */
+export async function emptiedSectionCandidates(
+  sectionId: string,
+  classId: string,
+): Promise<Array<{ id: string; createdAt: Date | null }>> {
   const merge = (await SectionMerge.findOne({ sourceSectionIds: new Types.ObjectId(sectionId) })
     .sort({ mergedAt: -1 })
     .select("moves")
@@ -223,9 +253,14 @@ export async function emptiedSectionRoster(sectionId: string, classId: string): 
     ? { _id: { $in: merge.moves.filter((m) => m.fromSectionId.toString() === sectionId).map((m) => m.studentId) } }
     : { classId: new Types.ObjectId(classId) };
   const students = (await Student.find({ ...filter, active: true })
-    .select("_id")
-    .lean()) as unknown as Array<{ _id: Types.ObjectId }>;
-  return students.map((s) => s._id.toString());
+    .select("_id createdAt")
+    .lean()) as unknown as Array<{ _id: Types.ObjectId; createdAt?: Date | null }>;
+  return students.map((s) => ({ id: s._id.toString(), createdAt: s.createdAt ?? null }));
+}
+
+/** True when a candidate was enrolled by `enrolledBy` (no bound, or no stamp → kept). */
+export function sittingBy(s: { createdAt: Date | null }, enrolledBy: Date | null): boolean {
+  return !enrolledBy || !s.createdAt || new Date(s.createdAt).getTime() < enrolledBy.getTime();
 }
 
 /**
@@ -295,7 +330,12 @@ export async function classTestRosterStudents(test: AnchoredTest): Promise<
 /** Just the count — the completion denominator, without shipping the ids. */
 export async function rosterCount(test: AnchoredTest): Promise<number> {
   if (test.subjectGroupId) return (await rosterStudentIds(test)).length;
-  return Student.countDocuments({ sectionId: test.sectionId, active: true });
+  const n = await Student.countDocuments({ sectionId: test.sectionId, active: true });
+  if (n > 0 || !test.sectionId || !test.classId) return n;
+  // An emptied section (the C4/C5 সম্মিলিত after the split): count the roster the marks
+  // screen lists. Returning 0 here made the denominator fall back to the ENTERED count
+  // (`effectiveRosterCount`), so an exam half-marked at the split read complete.
+  return (await emptiedSectionRoster(test.sectionId, test.classId, enrolledByOf(test.examDate))).length;
 }
 
 /** The unit's Bangla name for display (group name, or null for a section — the

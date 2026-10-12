@@ -10,6 +10,8 @@
  *      unmarked, and names every pending marker
  *   4. studentAttendanceHistory — reads through the student's unit, and spans the
  *      cutover (old section rows + new group rows) without a backfill
+ *   5. classPresenceForDate / sectionPresenceForDate — a split class pools in the
+ *      class row and stays apart in the section rows
  *
  * DB-free: models are mocked; the roll-up logic is real.
  */
@@ -64,6 +66,8 @@ jest.mock("../modules/attendance/services/StudentAttendanceService", () => ({
 
 import {
   absenteeReport,
+  classPresenceForDate,
+  sectionPresenceForDate,
   unmarkedSections,
   studentAttendanceHistory,
 } from "../modules/attendance/services/AttendanceReportService";
@@ -253,5 +257,66 @@ describe("studentAttendanceHistory — reads through the unit, spans the cutover
     await studentAttendanceHistory("kid-kg", "2026-06-01", "2026-06-30");
     const filter = mockDayFind.mock.calls[0][0] as { $or: unknown[] };
     expect(filter.$or).toEqual([{ sectionId: SEC_KG }]); // no duplicate section entry
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Presence roll-ups for a SPLIT class (C4/C5 বালক/বালিকা from 2026-10-01): the
+// class row pools both sections, the section rows keep them apart — a per-present
+// print for one section reads its own row, never the class's.
+// ---------------------------------------------------------------------------
+describe("presence roll-ups for a split class", () => {
+  const SEC_4B = "sec-4b";
+  const SEC_4G = "sec-4g";
+  const SPLIT = [
+    student("boy-1", SEC_4B, "cls-4"),
+    student("boy-2", SEC_4B, "cls-4"),
+    student("girl-1", SEC_4G, "cls-4"),
+  ];
+  const SPLIT_UNITS = new Map([
+    ["boy-1", { unitType: "subjectgroup", unitId: QAIDA }],
+    ["boy-2", { unitType: "subjectgroup", unitId: NAJERA }],
+    ["girl-1", { unitType: "subjectgroup", unitId: QAIDA }],
+  ]);
+
+  beforeEach(() => {
+    mockStudentFind.mockResolvedValue(SPLIT);
+    mockResolveUnits.mockResolvedValue(SPLIT_UNITS);
+    // Classes the day holds no student of (cls-3, cls-kg) must not surface as rows.
+    mockClassFind.mockResolvedValue([...CLASSES, { _id: "cls-4", level: 4, nameBn: "চতুর্থ" }]);
+  });
+
+  test("a fully marked day: one pooled class row, two separate section rows", async () => {
+    mockDayFind.mockResolvedValue([
+      { dateKey: DATE, subjectGroupId: QAIDA, absentStudentIds: ["girl-1"] },
+      { dateKey: DATE, subjectGroupId: NAJERA, absentStudentIds: [] },
+    ]);
+    const classes = await classPresenceForDate(DATE);
+    expect(classes).toEqual([
+      expect.objectContaining({ classId: "cls-4", classLevel: 4, presentCount: 2, absentCount: 1, totalCount: 3, complete: true }),
+    ]);
+    const sections = await sectionPresenceForDate(DATE);
+    expect(sections).toHaveLength(2);
+    expect(sections).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ sectionId: SEC_4B, presentCount: 2, absentCount: 0, totalCount: 2, complete: true }),
+        expect.objectContaining({ sectionId: SEC_4G, presentCount: 0, absentCount: 1, totalCount: 1, complete: true }),
+      ]),
+    );
+  });
+
+  test("a section is complete on its own while its sibling still waits", async () => {
+    // Najera (boy-2's group) has not reported: the boys and the class are pending,
+    // but the girls are all captured and can already be counted.
+    mockDayFind.mockResolvedValue([{ dateKey: DATE, subjectGroupId: QAIDA, absentStudentIds: [] }]);
+    const [cls] = await classPresenceForDate(DATE);
+    expect(cls.complete).toBe(false);
+    const sections = await sectionPresenceForDate(DATE);
+    expect(sections.find((s) => s.sectionId === SEC_4B)).toEqual(
+      expect.objectContaining({ complete: false, markedCount: 1 }),
+    );
+    expect(sections.find((s) => s.sectionId === SEC_4G)).toEqual(
+      expect.objectContaining({ complete: true, presentCount: 1 }),
+    );
   });
 });

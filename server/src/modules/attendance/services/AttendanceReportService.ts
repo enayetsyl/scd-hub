@@ -211,46 +211,39 @@ export interface ClassPresence {
   complete: boolean;
 }
 
+type PresenceTally = Pick<
+  ClassPresence,
+  "markedCount" | "presentCount" | "absentCount" | "totalCount" | "complete"
+>;
+
 /**
- * Per-class present/absent counts for a date, rolled up from every attendance unit
- * (D-#278/#279). `presentCount` counts only students whose unit was actually marked —
- * an unmarked Quran group is *pending*, never silently "present".
+ * The roll-up shared by the class and section presence reads: every active student,
+ * resolved to their attendance unit for the date, tallied under `keyOf`.
+ * `presentCount` counts only students whose unit was actually marked — an unmarked
+ * Quran group is *pending*, never silently "present".
  */
-export async function classPresenceForDate(dateKey: string): Promise<ClassPresence[]> {
+async function presenceTallies(
+  dateKey: string,
+  keyOf: (s: { sectionId: { toString(): string }; classId: { toString(): string } }) => string,
+): Promise<Map<string, PresenceTally>> {
   parseDateKey(dateKey);
   const [days, students] = await Promise.all([
     StudentAttendanceDay.find({ dateKey }).select("sectionId subjectGroupId absentStudentIds").lean() as unknown as Promise<DayLike[]>,
     Student.find({ active: true }).select("_id sectionId classId").lean(),
   ]);
-  if (students.length === 0) return [];
+  const rows = new Map<string, PresenceTally>();
+  if (students.length === 0) return rows;
 
   const markedUnits = new Set(days.map(unitKeyOfDay));
   const absentIds = new Set(days.flatMap((d) => d.absentStudentIds.map((id) => id.toString())));
   const units = await resolveUnits(students.map(toLite), dateKey); // D-#292
 
-  const classes = await Class.find({ _id: { $in: [...new Set(students.map((s) => s.classId.toString()))] } })
-    .select("level nameBn")
-    .lean();
-  const classById = new Map(classes.map((c) => [c._id.toString(), c]));
-
-  const rows = new Map<string, ClassPresence>();
   for (const s of students) {
-    const classId = s.classId.toString();
-    const cls = classById.get(classId);
-    if (!cls) continue;
-    let row = rows.get(classId);
+    const key = keyOf(s);
+    let row = rows.get(key);
     if (!row) {
-      row = {
-        classId,
-        classLevel: cls.level,
-        classNameBn: cls.nameBn,
-        markedCount: 0,
-        presentCount: 0,
-        absentCount: 0,
-        totalCount: 0,
-        complete: true,
-      };
-      rows.set(classId, row);
+      row = { markedCount: 0, presentCount: 0, absentCount: 0, totalCount: 0, complete: true };
+      rows.set(key, row);
     }
     row.totalCount += 1;
     const unit = units.get(s._id.toString());
@@ -262,8 +255,46 @@ export async function classPresenceForDate(dateKey: string): Promise<ClassPresen
     if (absentIds.has(s._id.toString())) row.absentCount += 1;
     else row.presentCount += 1;
   }
+  return rows;
+}
 
-  return [...rows.values()].sort((a, b) => a.classLevel - b.classLevel);
+/**
+ * Per-class present/absent counts for a date, rolled up from every attendance unit
+ * (D-#278/#279).
+ */
+export async function classPresenceForDate(dateKey: string): Promise<ClassPresence[]> {
+  const tallies = await presenceTallies(dateKey, (s) => s.classId.toString());
+  if (tallies.size === 0) return [];
+
+  const classes = await Class.find({ _id: { $in: [...tallies.keys()] } })
+    .select("level nameBn")
+    .lean();
+
+  return classes
+    .filter((cls) => tallies.has(cls._id.toString()))
+    .map((cls) => ({
+      classId: cls._id.toString(),
+      classLevel: cls.level,
+      classNameBn: cls.nameBn,
+      ...tallies.get(cls._id.toString())!,
+    }))
+    .sort((a, b) => a.classLevel - b.classLevel);
+}
+
+export interface SectionPresence extends PresenceTally {
+  sectionId: string;
+}
+
+/**
+ * Per-SECTION present/absent counts for a date — the same roll-up as
+ * `classPresenceForDate`, keyed by each student's CURRENT section. A per-present
+ * print for one section of a split class (C4/C5 বালক/বালিকা from 2026-10-01) must
+ * count that section alone; the class count prints for both. Only sections holding
+ * active students appear.
+ */
+export async function sectionPresenceForDate(dateKey: string): Promise<SectionPresence[]> {
+  const tallies = await presenceTallies(dateKey, (s) => s.sectionId.toString());
+  return [...tallies].map(([sectionId, t]) => ({ sectionId, ...t }));
 }
 
 // ---------------------------------------------------------------------------

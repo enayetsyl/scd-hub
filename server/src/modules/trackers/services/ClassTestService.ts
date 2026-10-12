@@ -31,6 +31,7 @@ import { ClassTestGroupSequence } from "../models/ClassTestGroupSequence";
 import { ClassTestResult } from "../models/ClassTestResult";
 import { Section } from "../../foundation/models/Section";
 import { Class } from "../../foundation/models/Class";
+import { Student } from "../../foundation/models/Student";
 import { AcademicYear } from "../../foundation/models/AcademicYear";
 import { SubjectGroup } from "../../routine/models/SubjectGroup";
 import { User } from "../../foundation/models/User";
@@ -83,19 +84,48 @@ export async function generateGroupCtId(
   return `CT-G-${code}-${n}`;
 }
 
-/** The next human "Test #": one past the highest existing testNumber for this
- *  (year × class × subject), counting REQUESTED + PRINTED (a cancelled request
- *  doesn't consume a number). Default 1 when none exist. Editable by the teacher. */
+/**
+ * The sections whose tests share ONE Test # line with `sectionId`: itself, plus any
+ * section of its class that now holds no students (the C4/C5 সম্মিলিত after the
+ * বালক/বালিকা split). Each half then continues from the combined section's last number
+ * — both read Test #5 after a combined #4 — instead of the two halves interleaving one
+ * class-wide counter (#5 boys, #6 girls), which left each with gaps (D-#722).
+ */
+async function testNumberLineSections(sectionId: string): Promise<Types.ObjectId[]> {
+  const section = (await Section.findById(sectionId).select("classId").lean()) as {
+    classId: Types.ObjectId;
+  } | null;
+  if (!section) return [new Types.ObjectId(sectionId)];
+  const siblings = (await Section.find({ classId: section.classId, _id: { $ne: new Types.ObjectId(sectionId) } })
+    .select("_id")
+    .lean()) as unknown as Array<{ _id: Types.ObjectId }>;
+  const populated = siblings.length
+    ? new Set(
+        ((await Student.distinct("sectionId", {
+          sectionId: { $in: siblings.map((s) => s._id) },
+          active: true,
+        })) as Types.ObjectId[]).map((id) => id.toString()),
+      )
+    : new Set<string>();
+  return [new Types.ObjectId(sectionId), ...siblings.filter((s) => !populated.has(s._id.toString())).map((s) => s._id)];
+}
+
+/** The next human "Test #": one past the highest existing testNumber, counting
+ *  REQUESTED + PRINTED (a cancelled request doesn't consume a number). Default 1 when
+ *  none exist. Editable by the teacher. With `sectionId` the line is that section's
+ *  (`testNumberLineSections`); without it, the whole (year × class × subject). */
 export async function suggestTestNumber(
   academicYearId: string,
   classLevel: number,
   subject: HwSubject,
+  sectionId?: string | null,
 ): Promise<number> {
   const top = (await ClassTest.findOne({
     academicYearId,
     classLevel,
     subject,
     status: { $ne: "CANCELLED" },
+    ...(sectionId ? { sectionId: { $in: await testNumberLineSections(sectionId) } } : {}),
   })
     .sort({ testNumber: -1 })
     .select("testNumber")
@@ -354,7 +384,7 @@ export async function createRequest(
   if (testNumber === undefined) {
     testNumber = group
       ? await suggestGroupTestNumber(academicYearId.toString(), group._id.toString(), subject)
-      : await suggestTestNumber(academicYearId.toString(), classLevel!, subject);
+      : await suggestTestNumber(academicYearId.toString(), classLevel!, subject, input.sectionId);
   }
   if (!Number.isInteger(testNumber) || testNumber < 1) {
     throw new Error("testNumber must be a positive integer");

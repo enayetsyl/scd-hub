@@ -36,6 +36,7 @@ import { UploadDropZone } from "../../components/UploadDropZone";
 import { useFileOpen } from "../../lib/useFileOpen";
 import { STR, hwSubjectLabel, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { useSectionNames } from "../../lib/useSectionNames";
 import { usePullRefresh } from "../../lib/useRefresh";
 import { space } from "../../theme/tokens";
 import { ctQuestionStatusBadge, CtQuestionMeta } from "./MyCtQuestionsScreen";
@@ -44,6 +45,7 @@ import { ctQuestionStatusBadge, CtQuestionMeta } from "./MyCtQuestionsScreen";
 const OFFICE_ACTIONABLE = new Set(["REQUESTED", "CHANGES_REQUESTED"]);
 
 export default function CtQuestionQueueScreen(): React.ReactElement {
+  const sectionName = useSectionNames();
   const { confirmAction } = useConfirm();
   const [q, refetch] = useQuery({ query: CT_QUESTION_QUEUE });
   const [, send] = useMutation(SEND_CT_QUESTION_FOR_REVIEW);
@@ -168,6 +170,7 @@ export default function CtQuestionQueueScreen(): React.ReactElement {
                   <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                     <Body style={{ fontWeight: "700", flexShrink: 1 }}>
                       {hwSubjectLabel(r.subject)} · {STR.class} {bnNum(r.classLevel)}
+                      {sectionName(r.sectionId) ? ` ${sectionName(r.sectionId)}` : ""}
                       {r.requesterName ? ` — ${r.requesterName}` : ""}
                     </Body>
                     <Badge text={badge.text} tone={badge.tone} />

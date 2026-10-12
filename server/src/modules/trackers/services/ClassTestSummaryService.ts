@@ -31,6 +31,7 @@ import { SubjectGroup } from "../../routine/models/SubjectGroup";
 import { SubjectGroupMembership } from "../../routine/models/SubjectGroupMembership";
 import { User } from "../../foundation/models/User";
 import { deriveScore } from "../classTestScoring";
+import { emptiedSectionCandidates, enrolledByOf, sittingBy } from "../classTestAnchor";
 import {
   examReportStatus,
   deriveReportOwnership,
@@ -265,6 +266,22 @@ export async function reportsStatus(
       ])) as Array<{ _id: Types.ObjectId; n: number }>)
     : [];
   const rosterBySection = new Map(rosterCounts.map((r) => [r._id.toString(), r.n]));
+  // An EMPTIED section (the C4/C5 সম্মিলিত after the split) counts its reconstructed
+  // roster, bounded per exam to who was enrolled by then (`rosterCount`'s rule). One
+  // read per emptied section, not per exam — the D-#500 property holds.
+  const emptiedCandidates = new Map<string, Array<{ id: string; createdAt: Date | null }>>();
+  for (const sid of sectionIds) {
+    if (rosterBySection.has(sid)) continue;
+    const exam = exams.find((e) => e.sectionId?.toString() === sid && e.classId);
+    if (exam) emptiedCandidates.set(sid, await emptiedSectionCandidates(sid, exam.classId!.toString()));
+  }
+  const sectionRosterFor = (exam: (typeof exams)[number]): number => {
+    const sid = exam.sectionId!.toString();
+    const candidates = emptiedCandidates.get(sid);
+    if (!candidates) return rosterBySection.get(sid) ?? 0;
+    const by = enrolledByOf(exam.examDate);
+    return candidates.filter((s) => sittingBy(s, by)).length;
+  };
 
   // D-#507: a group-anchored exam's denominator is its GROUP's active membership.
   // Batched exactly like the section roster above — the D-#500 property (a fixed
@@ -312,7 +329,7 @@ export async function reportsStatus(
       isOpenDay,
       rosterCount: exam.subjectGroupId
         ? rosterByGroup.get(exam.subjectGroupId.toString()) ?? 0
-        : rosterBySection.get(exam.sectionId!.toString()) ?? 0,
+        : sectionRosterFor(exam),
       enteredCount: enteredByTest.get(exam._id.toString()) ?? 0,
       presentCount: presentByTest.get(exam._id.toString()) ?? 0,
       submittedCount: ho?.submittedCount ?? 0,

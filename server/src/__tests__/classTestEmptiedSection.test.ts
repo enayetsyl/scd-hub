@@ -11,6 +11,8 @@
  *   roster — a populated section is unchanged; an emptied one falls back to the
  *            class's students, or to a merge snapshot's moves for a merge source;
  *            the roster rows then name each child's CURRENT section.
+ *   count  — an emptied section counts that same roster (not 0 → "entered = complete"),
+ *            bounded to children enrolled by the exam day (D-#722).
  *   authz  — the exam's own teacher passes read+write on an emptied section; another
  *            teacher does not; nobody passes on a section that still has students.
  *
@@ -78,6 +80,7 @@ import {
   assertAnchorRead,
   assertAnchorWrite,
   classTestRosterStudents,
+  rosterCount,
   rosterStudentIds,
 } from "../modules/trackers/classTestAnchor";
 import { ForbiddenError } from "../middleware/authz";
@@ -163,6 +166,38 @@ describe("roster of an exam whose section was emptied", () => {
 
     const rows = await classTestRosterStudents(EXAM);
     expect(rows.map((r) => r.sectionNameBn).sort()).toEqual(["৪র্থ · বালক", "৪র্থ · বালিকা"]);
+  });
+});
+
+// D-#722: counting 0 here made the completion denominator fall back to the ENTERED count,
+// so an exam half-marked when the class split read complete and left every chase list.
+describe("completion denominator of an exam whose section was emptied", () => {
+  const EXAM_DAY = "2026-09-17T00:00:00.000Z";
+  test("counts the reconstructed roster, not 0", async () => {
+    mockStudentFind.mockImplementationOnce(() =>
+      leanChain([{ _id: BOYS, createdAt: new Date("2026-01-05") }, { _id: GIRLS, createdAt: new Date("2026-01-05") }]),
+    );
+    expect(await rosterCount({ ...EXAM, examDate: EXAM_DAY })).toBe(2);
+  });
+
+  test("a child admitted AFTER the exam day is not owed a mark", async () => {
+    mockStudentFind.mockImplementationOnce(() =>
+      leanChain([{ _id: BOYS, createdAt: new Date("2026-01-05") }, { _id: GIRLS, createdAt: new Date("2026-09-25") }]),
+    );
+    expect(await rosterCount({ ...EXAM, examDate: EXAM_DAY })).toBe(1);
+    // ...and the marks screen lists the same children the denominator counts.
+    mockStudentFind
+      .mockImplementationOnce(() => leanChain([]))
+      .mockImplementationOnce(() =>
+        leanChain([{ _id: BOYS, createdAt: new Date("2026-01-05") }, { _id: GIRLS, createdAt: new Date("2026-09-25") }]),
+      );
+    expect(await rosterStudentIds({ ...EXAM, examDate: EXAM_DAY })).toEqual([BOYS.toString()]);
+  });
+
+  test("a populated section is still a plain count", async () => {
+    mockStudentCount.mockImplementationOnce(async () => 7);
+    expect(await rosterCount({ ...EXAM, examDate: EXAM_DAY })).toBe(7);
+    expect(mockStudentFind).not.toHaveBeenCalled();
   });
 });
 

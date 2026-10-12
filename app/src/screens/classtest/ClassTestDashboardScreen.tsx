@@ -38,6 +38,7 @@ import { STR, hwSubjectLabel, ctReportStateLabel, ctScriptStageLabel, bnNum, iso
 import { CT_SCRIPT_TILE_ORDER, ctScriptStageTone } from "../../lib/ctScriptStage";
 import type { CtScriptStage } from "@scd/shared";
 import { friendlyError } from "../../lib/errors";
+import { useSectionNames } from "../../lib/useSectionNames";
 import { space } from "../../theme/tokens";
 import type { ClassTestStackParamList } from "../../navigation/types";
 
@@ -95,6 +96,7 @@ function Kpi({
 }
 
 export default function ClassTestDashboardScreen(): React.ReactElement {
+  const sectionName = useSectionNames();
   const nav = useNavigation<Nav>();
   // D-#339: tap a tile → filter the per-test drill-down below (logged = all).
   const [stateFilter, setStateFilter] = useState<StateFilter>(null);
@@ -244,6 +246,7 @@ export default function ClassTestDashboardScreen(): React.ReactElement {
                       <View style={{ flexShrink: 1 }}>
                         <Body style={{ fontWeight: "700" }}>
                           {hwSubjectLabel(r.subject)} · {STR.ctTestNumber} {bnNum(r.testNumber)}
+                          {sectionName(r.sectionId) ? ` · ${sectionName(r.sectionId)}` : ""}
                         </Body>
                         <Muted>
                           {r.ctId} · {isoDateLabel(r.examDate)} · {r.teacherName}

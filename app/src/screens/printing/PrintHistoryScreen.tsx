@@ -56,6 +56,7 @@ import { DateField } from "../../components/DateField";
 // the foundation subject labels don't carry (they'd render as the raw code).
 import { STR, bnNum, classLevelLabel, routineSubjectLabel, printPurposeLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { pickableSections } from "../../lib/sectionPicks";
 import { openStoredFile } from "../../lib/files";
 import { openPrintSource } from "../../lib/printSource";
 import { useFileOpen } from "../../lib/useFileOpen";
@@ -238,7 +239,8 @@ export default function PrintHistoryScreen({ navigation }: Props): React.ReactEl
   // D-#459: sections for the currently-picked tag class, same sole-section auto-select
   // UX as NewPrintRequestScreen.
   const tagSelectedClass = (classData?.classes ?? []).find((c) => c.id === tagClass) ?? null;
-  const tagActiveSections = tagSelectedClass ? tagSelectedClass.sections.filter((s) => s.active) : [];
+  // Not the emptied সম্মিলিত (pre-split jobs still match by class, assignmentPrintMatch).
+  const tagActiveSections = tagSelectedClass ? pickableSections(tagSelectedClass.sections) : [];
   const tagSoleSection = tagActiveSections.length === 1 ? tagActiveSections[0] : null;
   useEffect(() => {
     if (tagSoleSection && tagSection !== tagSoleSection.id) setTagSection(tagSoleSection.id);

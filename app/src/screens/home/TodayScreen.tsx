@@ -72,6 +72,7 @@ import {
   setTypeLabel,
 } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { useSectionNames } from "../../lib/useSectionNames";
 import { useAuth } from "../../auth/AuthContext";
 import { useColors } from "../../theme";
 import { radius, space, typeScale } from "../../theme/tokens";
@@ -164,6 +165,7 @@ export default function TodayScreen(): React.ReactElement {
   const ctPending = (ctPendingQ.data?.classTestReportsStatus ?? []).filter(
     (r) => !r.submitComplete && dateKey(new Date(r.examDate)) <= date,
   );
+  const sectionName = useSectionNames();
 
   // Owner 2026-07-25: the teacher's OWN homework lifecycle at a glance — totals +
   // the four pending pills, each tapping the pending drill (HwPendingSheet). Same
@@ -565,7 +567,9 @@ export default function TodayScreen(): React.ReactElement {
                 key={r.testId}
                 icon="flask-conical"
                 tone={r.teacherOverdue ? "error" : "gold"}
-                title={`${STR.tdCtResultPending}: ${hwSubjectLabel(r.subject)} · ${STR.ctTestNumber} ${bnNum(r.testNumber)}`}
+                title={`${STR.tdCtResultPending}: ${hwSubjectLabel(r.subject)} · ${STR.ctTestNumber} ${bnNum(r.testNumber)}${
+                  sectionName(r.sectionId) ? ` · ${sectionName(r.sectionId)}` : ""
+                }`}
                 sub={`${bnNum(dateKey(new Date(r.examDate)))} · ${STR.ctEntered} ${bnNum(r.enteredCount)}/${bnNum(r.rosterCount)}${
                   r.teacherOverdue ? ` · ${STR.ctSchoolDaysLate} ${bnNum(r.schoolDaysLate)}` : ""
                 }`}

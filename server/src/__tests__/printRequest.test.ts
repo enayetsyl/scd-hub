@@ -13,6 +13,7 @@
  * DB-free: the model + audit are mocked; the machine is real.
  */
 import mongoose from "mongoose";
+import { printTargetFields } from "../modules/printing/printTarget";
 
 const mockCreate = jest.fn();
 const mockFindById = jest.fn();
@@ -25,6 +26,7 @@ const mockEmitRequested = jest.fn().mockResolvedValue(undefined);
 const mockUserFindById = jest.fn().mockResolvedValue({ name: "Teacher T" });
 const mockClassTestUpdateOne = jest.fn().mockResolvedValue({});
 const mockClassPresence = jest.fn();
+const mockSectionPresence = jest.fn();
 const mockCountDocuments = jest.fn();
 const mockPublishRealtime = jest.fn();
 const mockFind = jest.fn();
@@ -68,6 +70,7 @@ jest.mock("../modules/foundation/models/Class", () => ({
 // D-#294: CLASS_PRESENT copies resolve from the use day's attendance roll-up.
 jest.mock("../modules/attendance/services/AttendanceReportService", () => ({
   classPresenceForDate: (k: unknown) => mockClassPresence(k),
+  sectionPresenceForDate: (k: unknown) => mockSectionPresence(k),
 }));
 // D-#295: every queue transition nudges the realtime bus (badges/queue push).
 jest.mock("../modules/realtime/bus", () => ({
@@ -122,6 +125,7 @@ import {
   validateSource,
   isPrintableUrl,
   effectiveCopiesFor,
+  countingSectionIdOf,
   printQueue,
   printQueueCounts,
   printHistory,
@@ -287,6 +291,30 @@ describe("ASSIGNMENT-purpose jobs require class + section + subject (D-#459)", (
     mockSectionFindOne.mockResolvedValue(null);
     await expect(createPrintRequest(asInput)).rejects.toThrow(/শাখাটি/);
     expect(mockSectionFindOne).toHaveBeenCalledWith({ _id: SEC, classId: CLS });
+  });
+
+  // D-#721: a section tag narrows a per-present count, so EVERY purpose is held to it.
+  test("any purpose: a section from another class is refused", async () => {
+    mockSectionFindOne.mockResolvedValue(null);
+    await expect(createPrintRequest({ ...asInput, purpose: "CLASSWORK" })).rejects.toThrow(/শাখাটি/);
+  });
+
+  test("a non-assignment job may still name no section at all", async () => {
+    mockSectionFindOne.mockResolvedValue(null);
+    await createPrintRequest({ ...asInput, purpose: "CLASSWORK", sectionId: null });
+    expect(mockSectionFindOne).not.toHaveBeenCalled();
+  });
+
+  test("printTargetFields: the picked target tags the job and is the count's class", () => {
+    expect(
+      printTargetFields({ copiesMode: "CLASS_PRESENT", classId: CLS, sectionId: SEC }),
+    ).toEqual({ copiesMode: "CLASS_PRESENT", copiesClassId: CLS, classId: CLS, sectionId: SEC });
+    // An old client sends only copiesClassId — kept as is, no tag invented.
+    expect(printTargetFields({ copiesMode: "CLASS_PRESENT", copiesClassId: CLS })).toEqual({
+      copiesMode: "CLASS_PRESENT", copiesClassId: CLS, classId: undefined, sectionId: undefined,
+    });
+    // A FIXED job is tagged but has no count class.
+    expect(printTargetFields({ copiesMode: "FIXED", classId: CLS, sectionId: SEC }).copiesClassId).toBeUndefined();
   });
 
   test("accepts a well-tagged ASSIGNMENT job", async () => {
@@ -620,6 +648,60 @@ describe("CLASS_PRESENT copies (D-#294)", () => {
     mockFindById.mockResolvedValue(doc);
     await expect(markPrinted(doc._id.toString(), OFFICE, 0)).rejects.toThrow(/positive integer/);
   });
+
+  // C4/C5 split into বালক/বালিকা (2026-10-01): a job tagged with a section of the class
+  // it counts is FOR that section — the class count printed both sections' papers.
+  describe("a job tagged with one section of a split class", () => {
+    const BOYS = oid();
+    const tagged = (over: Record<string, unknown> = {}) =>
+      cpDoc({ classId: CLS, sectionId: BOYS, ...over } as Partial<DocStub>);
+    const classRow = { classId: CLS.toString(), presentCount: 12, complete: true };
+
+    test("counts the section's present students, not the class's", async () => {
+      mockClassPresence.mockResolvedValue([classRow]);
+      mockSectionPresence.mockResolvedValue([{ sectionId: BOYS.toString(), presentCount: 7, complete: true }]);
+      const r = await effectiveCopiesFor(tagged() as never, new Date(2026, 6, 13));
+      expect(r).toEqual({ copies: 7, pending: false });
+      expect(mockSectionPresence).toHaveBeenCalledWith("2026-07-13");
+    });
+
+    test("waits for the section's own attendance", async () => {
+      mockClassPresence.mockResolvedValue([classRow]);
+      mockSectionPresence.mockResolvedValue([{ sectionId: BOYS.toString(), presentCount: 3, complete: false }]);
+      const r = await effectiveCopiesFor(tagged() as never, new Date(2026, 6, 13));
+      expect(r).toEqual({ copies: null, pending: true });
+    });
+
+    test("an emptied section (no row) falls back to the class count", async () => {
+      mockClassPresence.mockResolvedValue([classRow]);
+      mockSectionPresence.mockResolvedValue([]);
+      const r = await effectiveCopiesFor(tagged() as never, new Date(2026, 6, 13));
+      expect(r).toEqual({ copies: 12, pending: false });
+    });
+
+    test("a count class OTHER than the job's own class still counts that whole class", async () => {
+      mockClassPresence.mockResolvedValue([classRow]);
+      const r = await effectiveCopiesFor(tagged({ classId: oid() }) as never, new Date(2026, 6, 13));
+      expect(r).toEqual({ copies: 12, pending: false });
+      expect(mockSectionPresence).not.toHaveBeenCalled();
+    });
+
+    test("markPrinted finalizes the section count", async () => {
+      const doc = tagged();
+      mockFindById.mockResolvedValue(doc);
+      mockClassPresence.mockResolvedValue([classRow]);
+      mockSectionPresence.mockResolvedValue([{ sectionId: BOYS.toString(), presentCount: 6, complete: true }]);
+      await markPrinted(doc._id.toString(), OFFICE);
+      expect((doc as unknown as { copies: number }).copies).toBe(6);
+    });
+
+    test("countingSectionIdOf: only a section of the counted class narrows the count", () => {
+      expect(countingSectionIdOf({ copiesClassId: CLS, classId: CLS, sectionId: BOYS } as never)).toBe(BOYS.toString());
+      expect(countingSectionIdOf({ copiesClassId: CLS, classId: oid(), sectionId: BOYS } as never)).toBeNull();
+      expect(countingSectionIdOf({ copiesClassId: CLS, classId: CLS, sectionId: null } as never)).toBeNull();
+      expect(countingSectionIdOf({ copiesClassId: null, classId: CLS, sectionId: BOYS } as never)).toBeNull();
+    });
+  });
 });
 
 describe("printQueueCounts (D-#294 badges)", () => {
@@ -773,6 +855,14 @@ describe("historyKey — what counts as THE SAME document", () => {
     expect(historyKey(histDoc({ ...base, classId: c4 }))).not.toBe(k3);
     expect(historyKey(histDoc({ ...base, classId: c3, subject: "MATH" }))).not.toBe(k3);
     expect(historyKey(histDoc({ ...base, classId: c3, purpose: "CLASSWORK" }))).not.toBe(k3);
+  });
+
+  // D-#721: a reprint copies `latest`'s section — one row per বালক/বালিকা, or the
+  // Girls' sheet reprints under the Boys' tag.
+  test("the same sheet printed for two SECTIONS of one class stays separate", () => {
+    const file = oid(), c4 = oid();
+    const base = { fileIds: [file], classId: c4, subject: "ENG", purpose: "ASSIGNMENT" };
+    expect(historyKey(histDoc({ ...base, sectionId: oid() }))).not.toBe(historyKey(histDoc({ ...base, sectionId: oid() })));
   });
 
   test("a set / plan / link is keyed by its own reference", () => {

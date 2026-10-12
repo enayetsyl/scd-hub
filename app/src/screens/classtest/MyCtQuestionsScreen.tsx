@@ -37,6 +37,7 @@ import { openStoredFile, FILE_VIEW_SUPPORTED } from "../../lib/files";
 import { useFileOpen } from "../../lib/useFileOpen";
 import { STR, hwSubjectLabel, bnNum, isoDateLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { useSectionNames } from "../../lib/useSectionNames";
 import { usePullRefresh } from "../../lib/useRefresh";
 import { space } from "../../theme/tokens";
 import type { ClassTestStackParamList } from "../../navigation/types";
@@ -100,6 +101,7 @@ export function CtQuestionMeta({ r }: { r: CtQuestionRequestT }): React.ReactEle
 }
 
 export default function MyCtQuestionsScreen(): React.ReactElement {
+  const sectionName = useSectionNames();
   const nav = useNavigation<Nav>();
   const { confirmAction } = useConfirm();
   const [q, refetch] = useQuery({ query: MY_CT_QUESTION_REQUESTS });
@@ -277,6 +279,7 @@ export default function MyCtQuestionsScreen(): React.ReactElement {
                   <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                     <Body style={{ fontWeight: "700", flexShrink: 1 }}>
                       {hwSubjectLabel(r.subject)} · {STR.class} {bnNum(r.classLevel)}
+                      {sectionName(r.sectionId) ? ` ${sectionName(r.sectionId)}` : ""}
                     </Body>
                     <Badge text={badge.text} tone={badge.tone} />
                   </View>
