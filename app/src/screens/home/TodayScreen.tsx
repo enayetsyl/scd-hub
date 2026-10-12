@@ -511,6 +511,18 @@ export default function TodayScreen(): React.ReactElement {
           routes by primary role, so Tazkir/Akter Hossen land here, not on AdminToday. */}
       {can("roster:manage") ? <CtScriptOfficeCard /> : null}
 
+      {/* আমার রিভিউ লক্ষ্য (owner ask 2026-10-12): renders only for an observer with a
+          daily review target — myReviewQuota is null for everyone else. OUTSIDE the
+          QueryGate: the target counts working days, not the observer's own periods, so
+          a day with no periods must still show it. */}
+      <ReviewQuotaCard />
+
+      {/* WB-4 (D-#701) — আজকের কাজ: the work board's open cards for today, with a
+          link to the board. Self-contained; owner ask on the first prod test. OUTSIDE the
+          QueryGate: assigned tasks are owed on a day with no periods too, and inside
+          the gate the empty-day state replaced the whole card. */}
+      <TodayWorkCard />
+
       <QueryGate
         result={q}
         onRetry={refetchAll}
@@ -621,14 +633,6 @@ export default function TodayScreen(): React.ReactElement {
             ))}
           </Card>
         ) : null}
-
-        {/* আমার রিভিউ লক্ষ্য (owner ask 2026-10-12): renders only for an observer with a
-            daily review target — myReviewQuota is null for everyone else. */}
-        <ReviewQuotaCard />
-
-        {/* WB-4 (D-#701) — আজকের কাজ: the work board's open cards for today, with a
-            link to the board. Self-contained; owner ask on the first prod test. */}
-        <TodayWorkCard />
 
         {/* আমার পিরিয়ড — horizontal timeline; current slot highlighted */}
         <H2>{STR.myPeriods}</H2>
