@@ -23,6 +23,7 @@ import {
   submitPlanReview as submitSvc,
   cancelPlanReview as cancelSvc,
   approvePlan as approveSvc,
+  approvePlanBulk as approveBulkSvc,
   listMyReviewAssignments,
   planReviewInbox as planReviewInboxSvc,
   planReviewThread as planReviewThreadSvc,
@@ -35,6 +36,7 @@ import {
   ReviewError,
   type ReviewAssignmentDTO,
   type ApprovePlanResult,
+  type ApprovePlanBulkResult,
   type BulkAssignResult,
   type ReviewerLoadDTO,
   type AssignablePlanDTO,
@@ -67,6 +69,10 @@ ReviewAssignmentRef.implement({
     verdict: t.string({ nullable: true, resolve: (r) => r.verdict }),
     feedback: t.string({ nullable: true, resolve: (r) => r.feedback }),
     submittedAt: t.string({ nullable: true, resolve: (r) => r.submittedAt }),
+    // Filled by planReviewInbox only; null elsewhere.
+    title: t.string({ nullable: true, resolve: (r) => r.title ?? null }),
+    reviewerName: t.string({ nullable: true, resolve: (r) => r.reviewerName ?? null }),
+    artifactReviewStatus: t.string({ nullable: true, resolve: (r) => r.artifactReviewStatus ?? null }),
   }),
 });
 
@@ -240,6 +246,40 @@ builder.mutationField("approvePlan", (t) =>
       } catch (err) {
         return mapReviewError(err);
       }
+    },
+  }),
+);
+
+const ApprovePlanBulkResultRef = builder.objectRef<ApprovePlanBulkResult>("ApprovePlanBulkResult");
+ApprovePlanBulkResultRef.implement({
+  fields: (t) => ({
+    okCount: t.exposeInt("okCount"),
+    failedCount: t.exposeInt("failedCount"),
+    failures: t.field({
+      type: ["String"],
+      resolve: (r) => r.failures.map((f) => `${f.artifactId}: ${f.error}`),
+    }),
+  }),
+});
+
+builder.mutationField("approvePlanBulk", (t) =>
+  t.field({
+    type: ApprovePlanBulkResultRef,
+    description:
+      "Principal sign-off of MANY reviewer-approved plans in one call (each → gold, its thread " +
+      "closed, audited — exactly as approvePlan). No override path: a plan that is not 'reviewed' " +
+      "fails with a reason and stays for a one-at-a-time decision. Requires content:promote_gold.",
+    authScopes: { hasPermission: "content:promote_gold" },
+    args: {
+      artifactIds: t.arg.stringList({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      return approveBulkSvc({
+        artifactIds: args.artifactIds,
+        actorId: ctx.auth.userId,
+        actorRole: ctx.auth.role,
+      });
     },
   }),
 );

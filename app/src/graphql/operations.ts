@@ -836,10 +836,16 @@ export interface ReviewAssignmentT {
   verdict: string | null;
   feedback: string | null;
   submittedAt: string | null;
+  /** Session plans only (D-#704) — which session of the chapter. */
+  sessionIndex?: number | null;
+  /** planReviewInbox only (null elsewhere). */
+  title?: string | null;
+  reviewerName?: string | null;
+  artifactReviewStatus?: string | null;
 }
 
 const REVIEW_ASSIGNMENT_FIELDS = `
-  id docType subject classLevel anchorWord addressNumber
+  id docType subject classLevel anchorWord addressNumber sessionIndex
   artifactId reviewerId assignedBy assignedAt roundNumber status
   verdict feedback submittedAt
 `;
@@ -854,7 +860,7 @@ export const MY_REVIEW_ASSIGNMENTS = gql<{ myReviewAssignments: ReviewAssignment
 /** Principal/Office inbox — submitted rounds awaiting action. */
 export const PLAN_REVIEW_INBOX = gql<{ planReviewInbox: ReviewAssignmentT[] }, NoVars>`
   query PlanReviewInbox {
-    planReviewInbox { ${REVIEW_ASSIGNMENT_FIELDS} }
+    planReviewInbox { ${REVIEW_ASSIGNMENT_FIELDS} title reviewerName artifactReviewStatus }
   }
 `;
 
@@ -921,6 +927,16 @@ export const APPROVE_PLAN = gql<
       reviewStatus
       override
     }
+  }
+`;
+
+/** Principal sign-off of several reviewer-approved plans (no override path). */
+export const APPROVE_PLAN_BULK = gql<
+  { approvePlanBulk: { okCount: number; failedCount: number; failures: string[] } },
+  { artifactIds: string[] }
+>`
+  mutation ApprovePlanBulk($artifactIds: [String!]!) {
+    approvePlanBulk(artifactIds: $artifactIds) { okCount failedCount failures }
   }
 `;
 

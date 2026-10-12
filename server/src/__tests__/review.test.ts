@@ -22,10 +22,16 @@ const mockReviewFindOne = jest.fn();
 const mockReviewUpdateOne = jest.fn();
 const mockWriteAudit = jest.fn().mockResolvedValue(undefined);
 
+const mockArtifactFind = jest.fn();
+const mockUserFind = jest.fn();
 jest.mock("../modules/content/models/ContentArtifact", () => ({
   ContentArtifact: {
     findById: (id: unknown) => mockArtifactFindById(id),
+    find: (f: unknown) => mockArtifactFind(f),
   },
+}));
+jest.mock("../modules/foundation/models/User", () => ({
+  User: { find: (f: unknown) => mockUserFind(f) },
 }));
 
 jest.mock("../modules/content/models/ReviewAssignment", () => ({
@@ -60,6 +66,7 @@ import {
   cancelPlanReview,
   reviewerMayReadArtifact,
   approvePlan,
+  approvePlanBulk,
   supersedeOpenRoundsForAddress,
   listMyReviewAssignments,
   planReviewInbox,
@@ -605,12 +612,70 @@ describe("listMyReviewAssignments (R2.5)", () => {
 });
 
 describe("planReviewInbox (R2.3)", () => {
+  beforeEach(() => {
+    mockArtifactFind.mockReturnValue(query([]));
+    mockUserFind.mockReturnValue(query([]));
+  });
+
   test("returns submitted rounds as DTOs with feedback", async () => {
     mockReviewFind.mockReturnValue(query([rawRound(), rawRound({ verdict: "APPROVE", feedback: undefined })]));
     const inbox = await planReviewInbox();
     expect(inbox).toHaveLength(2);
     expect(inbox[0].feedback).toBe("fix objectives");
     expect(inbox[0].status).toBe("submitted");
+  });
+
+  test("each card names its plan title, its reviewer and the plan's status (owner ask 2026-10-12)", async () => {
+    mockReviewFind.mockReturnValue(query([rawRound({ verdict: "APPROVE" })]));
+    mockArtifactFind.mockReturnValue(query([{ _id: ARTIFACT_ID, address: { title: "আমার পরিচয়" }, reviewStatus: "reviewed" }]));
+    mockUserFind.mockReturnValue(query([{ _id: REVIEWER_ID, name: "Tasmiah" }]));
+    const [card] = await planReviewInbox();
+    expect(card.title).toBe("আমার পরিচয়");
+    expect(card.reviewerName).toBe("Tasmiah");
+    expect(card.artifactReviewStatus).toBe("reviewed");
+  });
+
+  test("an empty inbox makes no artifact or user reads", async () => {
+    mockReviewFind.mockReturnValue(query([]));
+    expect(await planReviewInbox()).toEqual([]);
+    expect(mockArtifactFind).not.toHaveBeenCalled();
+    expect(mockUserFind).not.toHaveBeenCalled();
+  });
+});
+
+describe("approvePlanBulk (owner ask 2026-10-12)", () => {
+  const OTHER_ID = new mongoose.Types.ObjectId();
+
+  test("signs off every reviewed plan; a draft fails ALONE with approvePlan's reason (no override in bulk)", async () => {
+    const reviewed = { ...planArtifact({ reviewStatus: "reviewed" }), save: jest.fn().mockResolvedValue(true) };
+    const draft = { ...planArtifact({ _id: OTHER_ID, reviewStatus: "draft" }), save: jest.fn() };
+    mockArtifactFindById.mockImplementation((id: unknown) => (String(id) === OTHER_ID.toString() ? draft : reviewed));
+    mockReviewFind.mockReturnValue(query([]));
+
+    const res = await approvePlanBulk({
+      artifactIds: [ARTIFACT_ID.toString(), OTHER_ID.toString()],
+      actorId: ADMIN_ID.toString(),
+      actorRole: "PRINCIPAL",
+    });
+
+    expect(res.okCount).toBe(1);
+    expect(res.failedCount).toBe(1);
+    expect(res.failures[0].artifactId).toBe(OTHER_ID.toString());
+    expect(res.failures[0].error).toMatch(/must be 'reviewed'/);
+    expect(reviewed.reviewStatus).toBe("gold");
+    expect(draft.save).not.toHaveBeenCalled();
+  });
+
+  test("a repeated id is signed off once", async () => {
+    const reviewed = { ...planArtifact({ reviewStatus: "reviewed" }), save: jest.fn().mockResolvedValue(true) };
+    mockArtifactFindById.mockReturnValue(reviewed);
+    mockReviewFind.mockReturnValue(query([]));
+    const res = await approvePlanBulk({
+      artifactIds: [ARTIFACT_ID.toString(), ARTIFACT_ID.toString()],
+      actorId: ADMIN_ID.toString(),
+    });
+    expect(res).toEqual({ okCount: 1, failedCount: 0, failures: [] });
+    expect(reviewed.save).toHaveBeenCalledTimes(1);
   });
 });
 

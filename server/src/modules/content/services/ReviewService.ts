@@ -187,6 +187,11 @@ export interface ReviewAssignmentDTO {
   verdict: string | null;
   feedback: string | null;
   submittedAt: string | null;
+  /** Inbox only (owner ask 2026-10-12) — so a card can name the plan, its reviewer, and
+   *  whether it can be signed off now. Absent (null) on every other query. */
+  title?: string | null;
+  reviewerName?: string | null;
+  artifactReviewStatus?: string | null;
 }
 
 export interface RawAssignment {
@@ -520,10 +525,36 @@ export async function listMyReviewAssignments(reviewerId: string): Promise<Revie
 export async function planReviewInbox(): Promise<ReviewAssignmentDTO[]> {
   // PLANS ONLY (D-#508) — question rounds have their own inbox (questionReviewInbox),
   // split by verdict into the publish queue and the rejected list.
-  const docs = await ReviewAssignment.find({ docType: { $in: PLAN_DOC_TYPES }, status: "submitted" })
+  const docs = (await ReviewAssignment.find({ docType: { $in: PLAN_DOC_TYPES }, status: "submitted" })
     .sort({ submittedAt: -1 })
-    .lean();
-  return (docs as unknown as RawAssignment[]).map(toDTO);
+    .lean()) as unknown as RawAssignment[];
+  if (docs.length === 0) return [];
+
+  // Two batched reads, not one per card. "Bangla · Class 1 · পাঠ 2" alone could not tell
+  // three sessions of the same chapter apart, nor say whether a card was ready to sign
+  // off (owner report 2026-10-12).
+  const artifactIds = [...new Set(docs.map((d) => d.artifactId.toString()))];
+  const reviewerIds = [...new Set(docs.map((d) => d.reviewerId.toString()))];
+  const [arts, users] = await Promise.all([
+    ContentArtifact.find({ _id: { $in: artifactIds } }).select("address reviewStatus").lean() as unknown as Promise<
+      { _id: Types.ObjectId; address?: { title?: string | null }; reviewStatus?: string }[]
+    >,
+    User.find({ _id: { $in: reviewerIds } }).select("name").lean() as unknown as Promise<
+      { _id: Types.ObjectId; name?: string }[]
+    >,
+  ]);
+  const artById = new Map(arts.map((a) => [a._id.toString(), a]));
+  const nameById = new Map(users.map((u) => [u._id.toString(), u.name ?? null]));
+
+  return docs.map((d) => {
+    const art = artById.get(d.artifactId.toString());
+    return {
+      ...toDTO(d),
+      title: art?.address?.title ?? null,
+      reviewerName: nameById.get(d.reviewerId.toString()) ?? null,
+      artifactReviewStatus: art?.reviewStatus ?? null,
+    };
+  });
 }
 
 /** Full round history for a plan's thread, oldest→newest (R2.4). Resolved from any
@@ -623,6 +654,42 @@ export async function approvePlan(input: {
   });
 
   return { artifactId: artifact._id.toString(), reviewStatus: "gold", override: isOverride };
+}
+
+export interface ApprovePlanBulkResult {
+  okCount: number;
+  failedCount: number;
+  failures: { artifactId: string; error: string }[];
+}
+
+/**
+ * Sign off several plans at once (owner ask 2026-10-12: "approve those already approved by
+ * the reviewer in one go"). Only the NORMAL path — a plan a reviewer passed (`reviewed`).
+ * An override needs a reason per plan, so a draft cannot ride along in a batch; it fails
+ * here with approvePlan's own message and stays in the inbox for a one-at-a-time decision
+ * (the publishQuestionBulk rule, D-#525).
+ *
+ * A loop over approvePlan on purpose, unlike publishQuestionBulk's batched writes: the
+ * inbox holds tens of plans, not hundreds of questions, and reusing approvePlan keeps the
+ * stamp, the per-session thread close (D-#704) and the audit identical to a single sign-off.
+ */
+export async function approvePlanBulk(input: {
+  artifactIds: string[];
+  actorId: string;
+  actorRole?: string;
+}): Promise<ApprovePlanBulkResult> {
+  let okCount = 0;
+  const failures: { artifactId: string; error: string }[] = [];
+  for (const artifactId of [...new Set(input.artifactIds)]) {
+    try {
+      // No overrideReason: approvePlan then refuses anything not `reviewed`.
+      await approvePlan({ artifactId, actorId: input.actorId, actorRole: input.actorRole });
+      okCount += 1;
+    } catch (err) {
+      failures.push({ artifactId, error: err instanceof Error ? err.message : String(err) });
+    }
+  }
+  return { okCount, failedCount: failures.length, failures };
 }
 
 // ---------------------------------------------------------------------------
