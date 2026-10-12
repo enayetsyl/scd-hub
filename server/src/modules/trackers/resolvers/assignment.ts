@@ -1508,7 +1508,10 @@ builder.queryField("assignmentRecords", (t) =>
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       await assertCanRead(ctx, args.sectionId, args.classId);
       await assertItemSubjectReadable(ctx, args.sectionId, args.classId, args.itemId);
-      const docs = await listAssignmentRecords(args.itemId);
+      // D-#726: the records of the section the caller was authorised for — never the
+      // whole item (another section's item id, or a pre-split combined item, leaked the
+      // other half's marks and feedback).
+      const docs = await listAssignmentRecords(args.itemId, args.sectionId);
       return docs.map((d) => ({
         id: d._id.toString(),
         asId: d.asId,
@@ -1543,7 +1546,7 @@ builder.queryField("assignmentItemCounts", (t) =>
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       await assertCanRead(ctx, args.sectionId, args.classId);
       await assertItemSubjectReadable(ctx, args.sectionId, args.classId, args.itemId);
-      return countsSvc(args.itemId);
+      return countsSvc(args.itemId, args.sectionId); // D-#726: this section's records only
     },
   }),
 );

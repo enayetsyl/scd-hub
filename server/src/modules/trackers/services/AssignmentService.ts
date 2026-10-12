@@ -741,11 +741,14 @@ export interface AssignmentItemCounts {
   missingStudentIds: string[];
 }
 
-export async function assignmentItemCounts(itemId: string): Promise<AssignmentItemCounts> {
+/** `sectionId` (D-#726): count only the records OF that section — the one the caller is
+ *  scoped to. A pre-split item on the emptied সম্মিলিত holds both halves' children. */
+export async function assignmentItemCounts(itemId: string, sectionId?: string): Promise<AssignmentItemCounts> {
   const item = await AssignmentItem.findById(itemId).lean();
   if (!item) throw new Error("AssignmentItem not found");
   const records = (await AssignmentStudentRecord.find({
     asItemId: itemId,
+    ...(sectionId ? { sectionId: new Types.ObjectId(sectionId) } : {}),
     resubOf: null, // the original pass defines receipt/submission; resubmissions don't double-count
   }).lean()) as unknown as IAssignmentStudentRecord[];
 
@@ -783,8 +786,15 @@ export async function listAssignmentItems(filter: {
   >;
 }
 
-export async function listAssignmentRecords(asItemId: string): Promise<IAssignmentStudentRecord[]> {
-  return AssignmentStudentRecord.find({ asItemId }).lean() as unknown as Promise<
+/** `sectionId` (D-#726): only that section's records — see `assignmentItemCounts`. */
+export async function listAssignmentRecords(
+  asItemId: string,
+  sectionId?: string,
+): Promise<IAssignmentStudentRecord[]> {
+  return AssignmentStudentRecord.find({
+    asItemId,
+    ...(sectionId ? { sectionId: new Types.ObjectId(sectionId) } : {}),
+  }).lean() as unknown as Promise<
     IAssignmentStudentRecord[]
   >;
 }

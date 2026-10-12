@@ -604,4 +604,17 @@ describe("assignmentItemCounts — derived, never typed", () => {
     expect(c.submittedCount).toBe(1);
     expect(c.missingStudentIds).toEqual([sMissing.toString()]); // per student, by id — names join in the resolver
   });
+
+  // D-#726: a pre-split item on the emptied সম্মিলিত holds BOTH halves' records; the
+  // caller's section narrows the query, so a বালক teacher never reads বালিকা marks.
+  test("D-#726: with a section, only that section's records are read", async () => {
+    const ITEM_ID = oid(), BOYS = oid();
+    mockItemFindById.mockResolvedValue({ _id: ITEM_ID, asId: "AS-C4-BAN-0009" });
+    mockRecFind.mockReturnValue([]);
+    await assignmentItemCounts(ITEM_ID.toString(), BOYS.toString());
+    const q = mockRecFind.mock.calls[mockRecFind.mock.calls.length - 1][0] as { sectionId?: unknown };
+    expect(String(q.sectionId)).toBe(BOYS.toString());
+    await assignmentItemCounts(ITEM_ID.toString());
+    expect((mockRecFind.mock.calls[mockRecFind.mock.calls.length - 1][0] as object)).not.toHaveProperty("sectionId");
+  });
 });
