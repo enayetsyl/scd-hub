@@ -5833,6 +5833,8 @@ export interface AsChaseEntryT {
   asId: string;
   subject: string;
   weekNumber: number;
+  /** The RECORD's section — names বালক / বালিকা on the row (D-#723). */
+  sectionId: string;
   studentId: string;
   studentName: string;
   guardianPhone: string | null;
@@ -5846,7 +5848,7 @@ export interface AsChaseEntryT {
 export const AS_CHASE_LIST = gql<{ assignmentChaseList: AsChaseEntryT[] }, NoVars>`
   query AssignmentChaseList {
     assignmentChaseList {
-      recordId asId subject weekNumber studentId studentName guardianPhone
+      recordId asId subject weekNumber sectionId studentId studentName guardianPhone
       dueDate daysOverdue chaseCount followUpCount nextStepNumber
     }
   }

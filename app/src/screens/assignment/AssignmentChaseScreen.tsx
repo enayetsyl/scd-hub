@@ -19,6 +19,7 @@ import type { AssignmentStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Badge, Button, Field, Chip, ChipRow, Loader, EmptyState, Notice } from "../../components/ui";
 import { STR, bnNum, hwSubjectLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { useSectionLabel } from "../../lib/useSectionNames";
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<AssignmentStackParamList, "AssignmentChase">;
@@ -26,6 +27,8 @@ type Props = NativeStackScreenProps<AssignmentStackParamList, "AssignmentChase">
 export default function AssignmentChaseScreen(_props: Props): React.ReactElement {
   const [listQ, refetchList] = useQuery({ query: AS_CHASE_LIST });
   const entries = listQ.data?.assignmentChaseList ?? [];
+  // D-#723: the asId cannot tell C4 বালক from বালিকা — say the class + section.
+  const sectionLabel = useSectionLabel();
 
   const [expanded, setExpanded] = useState<string | null>(null);
   const [followUpsQ, refetchFollowUps] = useQuery({
@@ -96,7 +99,8 @@ export default function AssignmentChaseScreen(_props: Props): React.ReactElement
                   <Badge text={`${bnNum(e.daysOverdue)} ${STR.asDaysOverdue}`} tone="warn" />
                 </View>
                 <Muted style={{ marginTop: 2 }}>
-                  {e.asId} · {hwSubjectLabel(e.subject)} · {STR.asWeek} {bnNum(e.weekNumber)}
+                  {e.asId} · {sectionLabel(e.sectionId) ? `${sectionLabel(e.sectionId)} · ` : ""}
+                  {hwSubjectLabel(e.subject)} · {STR.asWeek} {bnNum(e.weekNumber)}
                   {e.guardianPhone ? ` · ${e.guardianPhone}` : ""}
                 </Muted>
                 <Muted>
