@@ -72,6 +72,8 @@ export interface AssignmentSummary {
   suspendedWeeks: number[];
   byTeacher: RateRow[];
   byClass: RateRow[];
+  /** D-#729: per SECTION — a split class's halves apart (byClass pools them). */
+  bySection: RateRow[];
   byWeek: RateRow[];
   /** Of delivered records (has GIVEN): % that ever reached SUBMITTED. */
   submissionRatePct: number | null;
@@ -115,6 +117,7 @@ export async function assignmentSummary(filter: SummaryFilter): Promise<Assignme
   const suspendedWeeks: number[] = [];
   const scheduledByTeacher = new Map<string, number>();
   const scheduledByClass = new Map<string, number>();
+  const scheduledBySection = new Map<string, number>();
   const scheduledByWeek = new Map<string, number>();
   let scheduledTotal = 0;
   for (let w = weekFrom; w <= weekTo; w++) {
@@ -136,6 +139,8 @@ export async function assignmentSummary(filter: SummaryFilter): Promise<Assignme
       scheduledByTeacher.set(teacherKey, (scheduledByTeacher.get(teacherKey) ?? 0) + 1);
       const classKey = e.classId.toString();
       scheduledByClass.set(classKey, (scheduledByClass.get(classKey) ?? 0) + 1);
+      const sectionKey = e.sectionId.toString();
+      scheduledBySection.set(sectionKey, (scheduledBySection.get(sectionKey) ?? 0) + 1);
       scheduledByWeek.set(String(w), (scheduledByWeek.get(String(w)) ?? 0) + 1);
     }
   }
@@ -152,12 +157,15 @@ export async function assignmentSummary(filter: SummaryFilter): Promise<Assignme
 
   const deliveredByTeacher = new Map<string, number>();
   const deliveredByClass = new Map<string, number>();
+  const deliveredBySection = new Map<string, number>();
   const deliveredByWeek = new Map<string, number>();
   for (const it of items) {
     const t = it.teacherId.toString();
     deliveredByTeacher.set(t, (deliveredByTeacher.get(t) ?? 0) + 1);
     const c = it.classId.toString();
     deliveredByClass.set(c, (deliveredByClass.get(c) ?? 0) + 1);
+    const sec = it.sectionId.toString();
+    deliveredBySection.set(sec, (deliveredBySection.get(sec) ?? 0) + 1);
     const w = String(it.weekNumber);
     deliveredByWeek.set(w, (deliveredByWeek.get(w) ?? 0) + 1);
   }
@@ -216,6 +224,7 @@ export async function assignmentSummary(filter: SummaryFilter): Promise<Assignme
     suspendedWeeks,
     byTeacher: rateRows(scheduledByTeacher, deliveredByTeacher),
     byClass: rateRows(scheduledByClass, deliveredByClass),
+    bySection: rateRows(scheduledBySection, deliveredBySection),
     byWeek: rateRows(scheduledByWeek, deliveredByWeek),
     submissionRatePct:
       deliveredRecords.length === 0

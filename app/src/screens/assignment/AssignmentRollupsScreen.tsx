@@ -13,6 +13,7 @@ import type { AssignmentStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Loader, EmptyState, Notice } from "../../components/ui";
 import { STR, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { isWholeClassSectionName } from "../../lib/sectionPicks";
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<AssignmentStackParamList, "AssignmentRollups">;
@@ -46,6 +47,14 @@ export default function AssignmentRollupsScreen({ route }: Props): React.ReactEl
   const s = summaryQ.data?.assignmentSummary ?? null;
   const teacherName = (id: string): string => (teachersQ.data?.teachers ?? []).find((u) => u.id === id)?.name ?? id;
   const className = (id: string): string => (classesQ.data?.classes ?? []).find((c) => c.id === id)?.nameBn ?? id;
+  // D-#729: "চতুর্থ শ্রেণি বালক" — a whole-class section (মূল / সম্মিলিত) reads as the class.
+  const sectionLabel = (id: string): string => {
+    for (const c of classesQ.data?.classes ?? []) {
+      const sec = c.sections.find((x) => x.id === id);
+      if (sec) return isWholeClassSectionName(sec.nameBn) ? c.nameBn : `${c.nameBn} ${sec.nameBn}`;
+    }
+    return id;
+  };
   const weekName = (k: string): string => `${STR.asWeek} ${bnNum(k)}`;
 
   return (
@@ -90,6 +99,7 @@ export default function AssignmentRollupsScreen({ route }: Props): React.ReactEl
             </Card>
             <RateTable title={STR.asByTeacher} rows={s.byTeacher} nameOf={teacherName} />
             <RateTable title={STR.asByClass} rows={s.byClass} nameOf={className} />
+            <RateTable title={STR.asBySection} rows={s.bySection} nameOf={sectionLabel} />
             <RateTable title={STR.asByWeek} rows={s.byWeek} nameOf={weekName} />
           </>
         )}

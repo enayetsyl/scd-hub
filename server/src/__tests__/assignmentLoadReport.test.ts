@@ -65,3 +65,20 @@ describe("assignmentLoadReport (D-#329)", () => {
     expect(r.bySubject.find((x) => x.key === "BAN")).toMatchObject({ planned: 0, delivered: 2, issued: 1 });
   });
 });
+
+// D-#729: Planned and Delivered share a year-to-date basis. The C4/C5 সম্মিলিত cells
+// ENDED on 2026-09-30, but their items still count as delivered — dropping the cells
+// showed that teacher as "planned 0, delivered N".
+describe("an ENDED rotation cell still counts as planned (D-#729)", () => {
+  test("a cell ended in the past is part of the year's plan", async () => {
+    mockScheduleFindOne.mockReturnValue({
+      entries: [
+        { subject: "ENG", teacherId: { toString: () => T2 }, effectiveTo: "2026-09-30" },
+        { subject: "ENG", teacherId: { toString: () => T2 }, effectiveFrom: "2026-10-01" },
+      ],
+    });
+    mockItemFind.mockReturnValue([{ subject: "ENG", teacherId: { toString: () => T2 }, status: "ISSUED" }]);
+    const r = await assignmentLoadReport(YEAR);
+    expect(r.byTeacher.find((x) => x.key === T2)).toMatchObject({ planned: 2, delivered: 1 });
+  });
+});

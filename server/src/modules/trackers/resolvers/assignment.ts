@@ -705,6 +705,7 @@ interface SummaryShape {
   suspendedWeeks: number[];
   byTeacher: RateRowShape[];
   byClass: RateRowShape[];
+  bySection: RateRowShape[];
   byWeek: RateRowShape[];
   submissionRatePct: number | null;
   chaseVolume: number;
@@ -725,6 +726,8 @@ SummaryRef.implement({
     suspendedWeeks: t.field({ type: ["Int"], resolve: (r) => r.suspendedWeeks }),
     byTeacher: t.field({ type: [RateRowRef], resolve: (r) => r.byTeacher }),
     byClass: t.field({ type: [RateRowRef], resolve: (r) => r.byClass }),
+    /** D-#729: per section — key is the sectionId. */
+    bySection: t.field({ type: [RateRowRef], resolve: (r) => r.bySection }),
     byWeek: t.field({ type: [RateRowRef], resolve: (r) => r.byWeek }),
     submissionRatePct: t.int({ nullable: true, resolve: (r) => r.submissionRatePct }),
     chaseVolume: t.exposeInt("chaseVolume"),

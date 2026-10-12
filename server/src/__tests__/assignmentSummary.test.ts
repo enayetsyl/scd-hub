@@ -140,12 +140,13 @@ describe("AJ-7 — assignmentSummary", () => {
   });
 
   test("class/week breakdowns + record health match the per-student records exactly", async () => {
+    const SEC_K = oid(); // D-#729: Kawsar's MATH section, for the per-section row
     mockScheduleFindOne.mockResolvedValue(
-      schedule([...fourWeekRotation(AJMOL), ...fourWeekRotation(KAWSAR).map((e) => ({ ...e, classId: oid(), sectionId: oid(), subject: "MATH" }))]),
+      schedule([...fourWeekRotation(AJMOL), ...fourWeekRotation(KAWSAR).map((e) => ({ ...e, classId: oid(), sectionId: SEC_K, subject: "MATH" }))]),
     );
     const ITEM = oid();
     mockItemFind.mockResolvedValue([
-      { _id: ITEM, teacherId: KAWSAR, classId: CLASS_A, weekNumber: 1, subject: "MATH" },
+      { _id: ITEM, teacherId: KAWSAR, classId: CLASS_A, sectionId: SEC_K, weekNumber: 1, subject: "MATH" },
     ]);
     const day = (n: number, h = 9) => new Date(2026, 0, n, h);
     const sA = oid();
@@ -170,6 +171,8 @@ describe("AJ-7 — assignmentSummary", () => {
     expect(s.deliveredTotal).toBe(1);
     const week1 = s.byWeek.find((r) => r.key === "1")!;
     expect(week1.scheduled).toBe(2); // both teachers' cw-1 entries
+    // D-#729: the per-SECTION row — a split class's halves are rated apart.
+    expect(s.bySection.find((r) => r.key === SEC_K.toString())).toMatchObject({ scheduled: 1, delivered: 1, deliveryRatePct: 100 });
     expect(week1.delivered).toBe(1);
     expect(s.submissionRatePct).toBe(50); // 1 of 2 original delivered records submitted
     expect(s.chaseVolume).toBe(3);

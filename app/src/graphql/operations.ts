@@ -6323,6 +6323,8 @@ export interface AsSummaryT {
   suspendedWeeks: number[];
   byTeacher: AsRateRowT[];
   byClass: AsRateRowT[];
+  /** D-#729: per section (key = sectionId). */
+  bySection: AsRateRowT[];
   byWeek: AsRateRowT[];
   submissionRatePct: number | null;
   chaseVolume: number;
@@ -6341,6 +6343,7 @@ export const AS_SUMMARY = gql<
       academicYearId weekFrom weekTo scheduledTotal deliveredTotal suspendedWeeks
       byTeacher { key scheduled delivered deliveryRatePct }
       byClass { key scheduled delivered deliveryRatePct }
+      bySection { key scheduled delivered deliveryRatePct }
       byWeek { key scheduled delivered deliveryRatePct }
       submissionRatePct chaseVolume attentionStudentIds commsPromptStudentIds
       openResubmissions avgCheckingLatencyDays
