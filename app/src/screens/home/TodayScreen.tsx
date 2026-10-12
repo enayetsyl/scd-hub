@@ -55,6 +55,8 @@ import { WorkClaimTeacherCard } from "../../components/WorkClaimTeacherCard";
 import { ReviewQuotaCard } from "../../components/ReviewQuotaCard";
 import { ReturningStudentsCard } from "../../components/ReturningStudentsCard";
 import { TodayWorkCard } from "../../components/TodayWorkCard";
+import { CtScriptTeacherCard } from "../../components/CtScriptTeacherCard";
+import { CtScriptOfficeCard } from "../../components/CtScriptOfficeCard";
 import { GiftHandoverCard } from "../../components/GiftHandoverCard";
 import { LiveClassCard } from "../../components/LiveClassCard";
 import { Icon, type IconName } from "../../components/Icon";
@@ -497,6 +499,15 @@ export default function TodayScreen(): React.ReactElement {
           QueryGate on purpose: it carries its own query, and the school-wide board must
           not disappear because the CALLER's own day happens to be empty. */}
       {canLiveBoard ? <LiveClassCard /> : null}
+
+      {/* CS-1/CS-3 (D-#715/#719) — ক্লাস টেস্টের খাতা: hand the scripts to the office,
+          and later return them to the students. OUTSIDE the QueryGate for the same
+          reason as the live board: the paper is owed even on a day with no periods
+          (found driving the app — the gate's empty state swallowed the card). */}
+      {can("tracker:write") ? <CtScriptTeacherCard /> : null}
+      {/* The Office's queue, for a TEACHER login carrying the OFFICE template — AppTabs
+          routes by primary role, so Tazkir/Akter Hossen land here, not on AdminToday. */}
+      {can("roster:manage") ? <CtScriptOfficeCard /> : null}
 
       <QueryGate
         result={q}

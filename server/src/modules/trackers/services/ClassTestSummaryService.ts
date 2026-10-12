@@ -20,7 +20,8 @@
  * Identity-plane (names studentIds/teacherIds); NO corpus path (ADR-005).
  */
 import { Types } from "mongoose";
-import { HW_SUBJECT_LABELS_BN, ROSTER_CLASS_LABELS_BN, type RosterClassLevel } from "@scd/shared";
+import { HW_SUBJECT_LABELS_BN, ROSTER_CLASS_LABELS_BN, type CtScriptStage, type RosterClassLevel } from "@scd/shared";
+import { stagesForTests } from "./ClassTestScriptService";
 import { Section } from "../../foundation/models/Section";
 import { bnNum } from "../../../lib/bnNum";
 import { ClassTest, type IClassTest } from "../models/ClassTest";
@@ -128,6 +129,9 @@ export interface ReportStatusRow extends ExamReportStatus {
   /** Newest result-row publishedAt (CT-3 publish/approve) — null until ≥1 result is published. */
   publishedAt: string | null;
   state: ReportState;
+  /** CS-1 (D-#715): the third axis — where the paper is. Null when the test is not in
+   *  the script flow, or when the caller did not ask for it (`withScriptStages`). */
+  scriptStage: CtScriptStage | null;
 }
 
 /**
@@ -186,7 +190,7 @@ function examStatusFrom(
  *  counters poll every 60s and only ever tally, never render a name (D-#603). */
 export async function reportsStatus(
   filter: SummaryFilter,
-  opts: { withTeacherNames?: boolean } = {},
+  opts: { withTeacherNames?: boolean; withScriptStages?: boolean } = {},
 ): Promise<ReportStatusRow[]> {
   const now = filter.asOf ?? new Date();
   const exams = await loadPrintedExams(filter);
@@ -297,6 +301,9 @@ export async function reportsStatus(
     if (s._id.status === "PRESENT") presentByTest.set(k, (presentByTest.get(k) ?? 0) + s.n);
   }
 
+  // CS-1: one extra aggregate, only for the callers that render the খাতা column.
+  const scriptStages = opts.withScriptStages ? await stagesForTests(exams, now) : new Map<string, CtScriptStage>();
+
   const rows: ReportStatusRow[] = [];
   for (const exam of exams) {
     const ho = handoffByTest.get(exam._id.toString());
@@ -326,6 +333,7 @@ export async function reportsStatus(
       submittedAt: sub ? new Date(sub).toISOString() : null,
       publishedAt: pub ? new Date(pub).toISOString() : null,
       state: reportStateOf(status),
+      scriptStage: scriptStages.get(exam._id.toString()) ?? null,
     });
   }
   return rows;

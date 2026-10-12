@@ -768,6 +768,72 @@ export const uploadAssignmentWebFiles = (files: File[], maxFiles: number): Promi
 export const uploadHomeworkQuestionWebFiles = (files: File[], maxFiles: number): Promise<MultiUploadResult> =>
   uploadWebFilesCapped("/files/hw", files, maxFiles, { kind: "question" });
 
+// ---------------------------------------------------------------------------
+// Class-test script scans (CS-2, POST /files/ctscript, D-#716). jpeg/png/pdf ≤ 10 MB,
+// Office only. A scan is UNTAGGED until attachClassTestScriptPages binds it.
+// ---------------------------------------------------------------------------
+
+/** A whole class's scripts in one go — generous, the server caps per-file size. */
+export const CT_SCRIPT_MAX_FILES = 200;
+
+async function uploadCtScriptAsset(asset: DocumentPicker.DocumentPickerAsset): Promise<UploadedFile> {
+  const form = new FormData();
+  if (Platform.OS === "web") {
+    const blob = await fetch(asset.uri).then((r) => r.blob());
+    form.append("file", new File([blob], asset.name, { type: asset.mimeType ?? blob.type }));
+  } else {
+    form.append("file", {
+      uri: asset.uri,
+      name: asset.name,
+      type: asset.mimeType ?? "application/octet-stream",
+    } as unknown as Blob);
+  }
+  const token = getToken();
+  const res = await fetch(`${REST_BASE}/files/ctscript`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: form,
+  });
+  if (!res.ok) {
+    let message = `upload failed (${res.status})`;
+    try {
+      const body = (await res.json()) as { error?: string };
+      if (body.error) message = body.error;
+    } catch {
+      // keep the generic message
+    }
+    throw new FileUploadError(message);
+  }
+  const body = (await res.json()) as { fileId: string; originalName: string; mime: string };
+  return { fileId: body.fileId, originalName: body.originalName, mime: body.mime };
+}
+
+/**
+ * Pick several scans and upload each, in the order picked SORTED BY FILE NAME — a
+ * scanner names its output scan_0001, scan_0002 … in roll order, and the roll-order
+ * auto-match depends on that order. Per-file failures never sink the rest.
+ */
+export async function pickAndUploadCtScripts(maxFiles = CT_SCRIPT_MAX_FILES): Promise<MultiUploadResult> {
+  const picked = await DocumentPicker.getDocumentAsync({
+    type: FILE_MIMES,
+    multiple: true,
+    copyToCacheDirectory: true,
+  });
+  if (picked.canceled || !picked.assets?.length) return { uploaded: [], failures: [] };
+  const sorted = [...picked.assets].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+  const take = sorted.slice(0, Math.max(0, maxFiles));
+  const uploaded: UploadedFile[] = [];
+  const failures: string[] = sorted.slice(Math.max(0, maxFiles)).map((a) => `${a.name}: limit`);
+  for (const asset of take) {
+    try {
+      uploaded.push(await uploadCtScriptAsset(asset));
+    } catch (e) {
+      failures.push(`${asset.name}: ${e instanceof FileUploadError ? e.message : String(e)}`);
+    }
+  }
+  return { uploaded, failures };
+}
+
 /** Fetch a stored file (with auth) and open it in a new browser tab. Web only. */
 /** Open a bundle's printable cover sheet (AR-4, GET /pdf/archive-cover/:id) in a
  *  new tab. Web-only, like openStoredFile. */

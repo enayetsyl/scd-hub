@@ -34,7 +34,9 @@ import {
   type CtPublishFilter,
 } from "../../lib/ctPublishStatus";
 import { CT_PAGE_SIZE, ctOrderRows, ctPageOf } from "../../lib/ctDashboardOrder";
-import { STR, hwSubjectLabel, ctReportStateLabel, bnNum, isoDateLabel } from "../../lib/labels";
+import { STR, hwSubjectLabel, ctReportStateLabel, ctScriptStageLabel, bnNum, isoDateLabel } from "../../lib/labels";
+import { CT_SCRIPT_TILE_ORDER, ctScriptStageTone } from "../../lib/ctScriptStage";
+import type { CtScriptStage } from "@scd/shared";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
 import type { ClassTestStackParamList } from "../../navigation/types";
@@ -100,6 +102,12 @@ export default function ClassTestDashboardScreen(): React.ReactElement {
   // tiles only ever answered "are the marks in?", never "can the guardian see them?".
   // The two AND-combine, so "Complete + Unpublished" = the actual release backlog.
   const [publishFilter, setPublishFilter] = useState<CtPublishFilter | null>(null);
+  // CS-1 (D-#715): the THIRD axis — where the paper is. AND-combines with both above.
+  const [scriptFilter, setScriptFilter] = useState<CtScriptStage | null>(null);
+  const pickScript = (s: CtScriptStage | null): void => {
+    setScriptFilter(s);
+    setPageAt(0);
+  };
   // Current page of the drill-down; either filter changing sends you back to page 1,
   // because page 4 of the old list means nothing in the new one.
   const [pageAt, setPageAt] = useState(0);
@@ -118,7 +126,10 @@ export default function ClassTestDashboardScreen(): React.ReactElement {
   const chase = chaseQ.data?.classTestOverdueChase ?? null;
   const allRows = rowsQ.data?.classTestReportsStatus ?? [];
   const stateRows = stateFilter ? allRows.filter((r) => matchesStateFilter(r, stateFilter)) : allRows;
-  const filtered = publishFilter ? stateRows.filter((r) => matchesCtPublishFilter(r, publishFilter)) : stateRows;
+  const publishRows = publishFilter ? stateRows.filter((r) => matchesCtPublishFilter(r, publishFilter)) : stateRows;
+  const filtered = scriptFilter ? publishRows.filter((r) => r.scriptStage === scriptFilter) : publishRows;
+  // The script tiles count school-wide, like the entry-state tiles beside them.
+  const scriptCount = (s: CtScriptStage): number => allRows.filter((r) => r.scriptStage === s).length;
   // Release backlog → overdue → in hand → done (lib/ctDashboardOrder), then 50 a page.
   const rows = ctOrderRows(filtered);
   const { page, pageCount, from, rows: pageRows } = ctPageOf(rows, pageAt);
@@ -168,11 +179,29 @@ export default function ClassTestDashboardScreen(): React.ReactElement {
               <Kpi label={STR.ctCompletionRate} value={d.completionRatePct == null ? "—" : `${bnNum(d.completionRatePct)}%`} />
             </View>
 
+            {/* CS-1 (D-#715) — খাতার ধাপ: the paper's journey after the results are out.
+                Tap a tile to filter the drill-down; tap again to clear. */}
+            <Muted style={{ marginTop: space(3) }}>
+              {STR.csDashTitle} · {STR.csDashHint}
+            </Muted>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2) }}>
+              {CT_SCRIPT_TILE_ORDER.map((s) => (
+                <Kpi
+                  key={s}
+                  label={ctScriptStageLabel(s)}
+                  value={bnNum(scriptCount(s))}
+                  selected={scriptFilter === s}
+                  onPress={() => pickScript(scriptFilter === s ? null : s)}
+                />
+              ))}
+            </View>
+
             {/* D-#339: per-test drill-down — who submitted / logged what, filtered by the tapped tile. */}
             <Card>
               <Body style={{ fontWeight: "700" }}>
                 {STR.ctDrilldownTitle} · {stateFilter ? ctReportStateLabel(stateFilter) : STR.ctLogged}
-                {publishFilter ? ` · ${ctPublishFilterLabel(publishFilter)}` : ""} ({bnNum(rows.length)})
+                {publishFilter ? ` · ${ctPublishFilterLabel(publishFilter)}` : ""}
+                {scriptFilter ? ` · ${ctScriptStageLabel(scriptFilter)}` : ""} ({bnNum(rows.length)})
               </Body>
 
               {/* The publish axis (owner ask 2026-07-28) — AND-combines with the tile above. */}
@@ -224,6 +253,10 @@ export default function ClassTestDashboardScreen(): React.ReactElement {
                       <View style={{ alignItems: "flex-end", gap: space(1) }}>
                         <Badge text={ctReportStateLabel(r.state)} tone={stateTone(r.state)} />
                         <Badge {...ctPublishBadge(r)} />
+                        {/* CS-1: the third axis — only once the test is in the script flow. */}
+                        {r.scriptStage ? (
+                          <Badge text={ctScriptStageLabel(r.scriptStage)} tone={ctScriptStageTone(r.scriptStage)} />
+                        ) : null}
                       </View>
                     </View>
                     <Muted style={{ marginTop: space(1) }}>
@@ -246,6 +279,17 @@ export default function ClassTestDashboardScreen(): React.ReactElement {
                         ? ` · ${STR.ctPublishedBadge} ${isoDateLabel(r.publishedAt)}`
                         : ""}
                     </Muted>
+                    {/* CS-2: straight to the scan & tag screen for a test in the script flow. */}
+                    {r.scriptStage ? (
+                      <Pressable
+                        onPress={() => nav.navigate("CtScriptUpload", { testId: r.testId, title: r.ctId })}
+                        style={{ marginTop: space(1) }}
+                      >
+                        <Muted>
+                          {STR.csColumn}: {ctScriptStageLabel(r.scriptStage)} · {STR.csUpload} ›
+                        </Muted>
+                      </Pressable>
+                    ) : null}
                     {/* AR-1 lookup line: box + location (+ holder while out), or not-filed. */}
                     {(() => {
                       const loc = locOf.get(r.testId);

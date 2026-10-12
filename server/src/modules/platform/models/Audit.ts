@@ -230,6 +230,15 @@ export type AuditEventKind =
   | "SCRIPT_BUNDLE_DISPOSED"       // outside-retention bundle disposed with a reason (D-#446; shred AFTER this row)
   | "SCRIPT_BUNDLE_VOIDED"         // a filed-in-error bundle voided — record kept, unique slot freed
   | "STORAGE_BOX_CHANGED"          // box create/update/retire — prior+new in meta (the LIBRARY_CATALOG_CHANGED pattern)
+  // Class-test scripts (CS-1..CS-3, docs/prd-ct-scripts.md §4, D-#715–#719)
+  | "CT_SCRIPTS_RECEIVED"          // Office counted the paper in at the desk (count in meta)
+  | "CT_SCRIPTS_RECEIVE_UNDONE"    // a receipt taken back before anything was tagged
+  | "CT_SCRIPT_TAGGED"             // a page added/removed or a student marked খাতা নেই — studentId + before/after in meta
+  | "CT_SCRIPTS_PUBLISHED"         // scans released to guardians (version in meta)
+  | "CT_SCRIPTS_UNPUBLISHED"       // scans pulled back from guardians
+  | "CT_SCRIPTS_HANDED_BACK"       // Office gave the paper to the teacher to return in class (D-#719)
+  | "CT_SCRIPTS_RETURNED"          // the teacher (or Office for an absent teacher) returned it to the students
+  | "CT_SCRIPTS_WAIVED"            // closed without scans, with a reason (D-#718) — meta.undone on an unwaive
   // Exam syllabus (SY-1..SY-6, docs/prd-exam-syllabus.md §6/§7, D-#530–#532)
   | "EXAM_CREATED"                    // an exam row created (exam:manage)
   | "EXAM_UPDATED"                    // an exam's name/date window edited; meta lists WHICH fields moved, never their values (the D-#526 posture)

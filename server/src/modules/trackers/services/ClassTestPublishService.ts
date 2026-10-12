@@ -36,6 +36,7 @@ import {
 } from "../../notifications/services/emitters";
 import { writeAudit } from "../../platform/services/AuditService";
 import { ClassTestResultError } from "./ClassTestResultService";
+import { startScriptClock } from "./ClassTestScriptService";
 
 // ---------------------------------------------------------------------------
 // Message build (rendered from the MT registry; §8 Regular / Excellent / Absent)
@@ -218,6 +219,10 @@ export async function publishResult(testId: string, studentId: string, actorId: 
     meta: { mode: "student", ctId: test.ctId, testId, studentId, publishedVersion: doc.publishedVersion },
   });
 
+  // CS-1 (D-#715): the first release starts the script clock — the teacher now owes
+  // the paper to the Office. A no-op once the test is already in the flow.
+  await startScriptClock(testId);
+
   return { testId, recipients: [recipient], unreachableCount: recipient.unreachableByWa ? 1 : 0 };
 }
 
@@ -266,6 +271,9 @@ export async function publishExam(testId: string, actorId: string): Promise<Publ
       unreachableCount,
     },
   });
+
+  // CS-1 (D-#715): the first release starts the script clock (no-op on a re-publish).
+  if (recipients.length > 0) await startScriptClock(testId);
 
   // CT-8 notify: the exam's ACCOUNTABLE subject teacher learns the release went out
   // (not the entrant — an admin registering on a teacher's behalf must not swallow

@@ -110,6 +110,11 @@ const dedupeKeys = {
   /** Per test+guardian (D-#472). NOT versioned: a reprint of the same paper is the same
    *  exam on the same day, so re-sending it to print must never re-notify the family. */
   classTestUpcoming: (testId: string, guardianId: string) => `CTUP:${testId}:${guardianId}`,
+  /** Per test+student+guardian+scripts version (CS-3, D-#716): the recipient is IN the
+   *  key, so a newly linked guardian is never swallowed, and a re-publish (version
+   *  bumped) re-notifies while the same version is a no-op. */
+  classTestScript: (testId: string, studentId: string, guardianId: string, version: number) =>
+    `CTSCR:${testId}:${studentId}:${guardianId}:v${version}`,
   /** Per NOTE VERSION + recipient (TN-3): keyed on the version row, so a genuinely
    *  new version is a new thing to say while re-running the mutation is a no-op. */
   teachingNotePublished: (noteId: string, userId: string) => `TNPUB:${noteId}:${userId}`,
@@ -675,6 +680,68 @@ export async function emitVocabGuardianResult(ev: VocabGuardianResultEvent): Pro
 // dedupeKey carries `publishedVersion`, so a re-publish (version bumped) RE-notifies
 // — the idempotent emit only swallows the SAME version. Returns the notified guardian ids.
 // ---------------------------------------------------------------------------
+
+export interface ClassTestScriptPublishedEvent {
+  testId: IdLike;
+  ctId: string;
+  /** The students who have ≥1 scanned page (a খাতা নেই student gets nothing to open). */
+  studentIds: IdLike[];
+  sectionId?: IdLike | null;
+  version: number;
+  titleBn: string;
+  bodyBn: string;
+}
+
+/** CS-3 (docs/prd-ct-scripts.md §8, D-#716) — the scanned scripts are published → each
+ *  student's login-enabled guardians. No wa.me twin: a family without a login cannot
+ *  open the portal, so a link would point at nothing. Returns notified guardian ids. */
+export async function emitCtScriptPublished(ev: ClassTestScriptPublishedEvent): Promise<string[]> {
+  const notified: string[] = [];
+  await bestEffort("class-test script published", async () => {
+    if (ev.studentIds.length === 0) return;
+    const links = (await GuardianLink.find({
+      studentId: { $in: ev.studentIds },
+      active: { $ne: false }, // missing = active (pre-GP-1 rows)
+    })
+      .select("guardianId studentId")
+      .lean()) as unknown as Array<{ guardianId: IdLike; studentId: IdLike }>;
+    if (links.length === 0) return;
+    const guardians = (await Guardian.find({
+      _id: { $in: [...new Set(links.map((l) => l.guardianId.toString()))] },
+      loginEnabled: true,
+      active: true,
+    })
+      .select("_id")
+      .lean()) as unknown as Array<{ _id: IdLike }>;
+    const loginIds = new Set(guardians.map((g) => g._id.toString()));
+    await Promise.all(
+      links
+        .filter((l) => loginIds.has(l.guardianId.toString()))
+        .map(async (l) => {
+          await emit({
+            recipientGuardianId: l.guardianId.toString(),
+            kind: "CT_SCRIPT_PUBLISHED",
+            titleBn: ev.titleBn,
+            bodyBn: ev.bodyBn,
+            refs: {
+              classTestId: ev.testId.toString(),
+              ctId: ev.ctId,
+              studentId: l.studentId.toString(),
+              ...(ev.sectionId ? { sectionId: ev.sectionId.toString() } : {}),
+            },
+            dedupeKey: dedupeKeys.classTestScript(
+              ev.testId.toString(),
+              l.studentId.toString(),
+              l.guardianId.toString(),
+              ev.version,
+            ),
+          });
+          notified.push(l.guardianId.toString());
+        }),
+    );
+  });
+  return notified;
+}
 
 export interface ClassTestGuardianResultEvent {
   testId: IdLike;

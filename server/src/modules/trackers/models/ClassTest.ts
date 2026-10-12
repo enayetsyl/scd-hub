@@ -94,9 +94,61 @@ export interface IClassTest extends Document {
   cancelledAt?: Date;
   cancelReason?: string;
   notes?: string;
+  /** The paper's journey after the results are out (CS-1..CS-3,
+   *  docs/prd-ct-scripts.md §5, D-#715–#719). Absent = not in the script flow yet.
+   *  Stamps only — the stage is DERIVED on read (`ClassTestScriptService.deriveStage`). */
+  scripts?: IClassTestScripts | null;
   createdAt: Date;
   updatedAt: Date;
 }
+
+export interface IClassTestScripts {
+  /** Dhaka `YYYY-MM-DD`: 1 school day after the FIRST results publish (or launch day
+   *  for a backfilled test). Never moved by a re-publish. */
+  dueDateKey: string;
+  /** Set by the launch backfill (D-#718), so a report can tell the two apart. */
+  backfilled?: boolean;
+  receivedAt?: Date | null;
+  receivedBy?: Types.ObjectId | null;
+  /** What the Office counted at the desk — a shortfall is a hint, not a block. */
+  receivedCount?: number | null;
+  publishedAt?: Date | null;
+  publishedBy?: Types.ObjectId | null;
+  /** Bumped per publish so a re-publish re-notifies (the D-#160 posture). */
+  publishedVersion?: number;
+  /** The Office gave the paper to the teacher to return in class (D-#719). */
+  handedBackAt?: Date | null;
+  handedBackBy?: Types.ObjectId | null;
+  returnDueDateKey?: string | null;
+  /** The teacher returned it to the students — final. */
+  returnedAt?: Date | null;
+  returnedBy?: Types.ObjectId | null;
+  waivedAt?: Date | null;
+  waivedBy?: Types.ObjectId | null;
+  waiveReason?: string | null;
+}
+
+const ClassTestScriptsSchema = new Schema<IClassTestScripts>(
+  {
+    dueDateKey: { type: String, required: true },
+    backfilled: { type: Boolean },
+    receivedAt: { type: Date, default: null },
+    receivedBy: { type: Schema.Types.ObjectId, default: null },
+    receivedCount: { type: Number, default: null, min: 0 },
+    publishedAt: { type: Date, default: null },
+    publishedBy: { type: Schema.Types.ObjectId, default: null },
+    publishedVersion: { type: Number, default: 0, min: 0 },
+    handedBackAt: { type: Date, default: null },
+    handedBackBy: { type: Schema.Types.ObjectId, default: null },
+    returnDueDateKey: { type: String, default: null },
+    returnedAt: { type: Date, default: null },
+    returnedBy: { type: Schema.Types.ObjectId, default: null },
+    waivedAt: { type: Date, default: null },
+    waivedBy: { type: Schema.Types.ObjectId, default: null },
+    waiveReason: { type: String, trim: true, default: null },
+  },
+  { _id: false },
+);
 
 const ClassTestSchema = new Schema<IClassTest>(
   {
@@ -126,6 +178,7 @@ const ClassTestSchema = new Schema<IClassTest>(
     cancelledAt: { type: Date },
     cancelReason: { type: String, trim: true },
     notes: { type: String, trim: true },
+    scripts: { type: ClassTestScriptsSchema, default: undefined },
   },
   { timestamps: true },
 );
@@ -140,5 +193,7 @@ ClassTestSchema.index({ teacherId: 1, requestedAt: -1 });
 ClassTestSchema.index({ sectionId: 1, status: 1 });
 // D-#507: the group's own exams (the group teacher's list + the roster reads).
 ClassTestSchema.index({ subjectGroupId: 1, requestedAt: -1 });
+// CS-1: the tests in the script flow (teacher + Office queues read by this).
+ClassTestSchema.index({ "scripts.dueDateKey": 1 }, { sparse: true });
 
 export const ClassTest = model<IClassTest>("ClassTest", ClassTestSchema);
