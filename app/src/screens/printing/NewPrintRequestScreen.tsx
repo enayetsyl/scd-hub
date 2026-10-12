@@ -42,6 +42,7 @@ import { Screen, breakAnywhere, H2, Body, Muted, Card, Field, Chip, ChipRow, But
 import { DateField } from "../../components/DateField";
 import { STR, classLevelLabel, routineSubjectLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { isWholeClassSectionName, pickableSections } from "../../lib/sectionPicks";
 import {
   pickAndUploadPrintFiles,
   uploadPrintWebFiles,
@@ -130,13 +131,20 @@ export default function NewPrintRequestScreen({ route, navigation }: Props): Rea
   // Nursery (-1) and KG (0) sort ahead of class 1..5 — the order the school reads them in.
   const classes = (classData?.classes ?? []).filter((c) => c.active).slice().sort((a, b) => a.level - b.level);
   const selectedClass = classes.find((c) => c.id === classId) ?? null;
-  const activeSections = selectedClass ? selectedClass.sections.filter((s) => s.active) : [];
+  // Not the emptied সম্মিলিত beside a বালক/বালিকা split — a job tagged to it matches nothing.
+  const activeSections = selectedClass ? pickableSections(selectedClass.sections) : [];
   // A class with exactly one section → auto-select it, same UX as ClassSectionSelect
   // (components/vocabPickers.tsx) uses elsewhere — no point making the user pick from one.
   const soleSection = activeSections.length === 1 ? activeSections[0] : null;
   React.useEffect(() => {
     if (soleSection && sectionId !== soleSection.id) setSectionId(soleSection.id);
   }, [soleSection?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  // The section a per-present count will follow (the submit's count class falls back to
+  // the job's class) — null when it counts the whole class, or the section is মূল.
+  const countedSection =
+    copiesMode === "CLASS_PRESENT" && selectedClass && (copiesClassId ?? classId) === selectedClass.id
+      ? (activeSections.find((s) => s.id === sectionId && !isWholeClassSectionName(s.nameBn)) ?? null)
+      : null;
 
   /** Shared upload tail for both entry points — the pick button and the web drop. */
   async function runUpload(upload: () => Promise<MultiUploadResult>): Promise<void> {
@@ -454,6 +462,14 @@ export default function NewPrintRequestScreen({ route, navigation }: Props): Rea
                 />
               ))}
             </ChipRow>
+            {/* The server counts the tagged section, not the class, when the count's class
+                is the job's own (countingSectionIdOf) — say so, or a বালক job reads as
+                "the whole class 4". */}
+            {countedSection ? (
+              <Muted style={{ marginTop: space(1) }}>
+                {STR.prCopiesSectionOnly} — {countedSection.nameBn}
+              </Muted>
+            ) : null}
           </View>
         )}
       </Card>

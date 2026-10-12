@@ -25,6 +25,7 @@ import { DateField } from "../../components/DateField";
 import { useReportFilterState } from "../../components/ReportFilters";
 import { STR, bnNum, hwSubjectLabel, dayOfWeekLabel, classLevelLabel, getActiveLang } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { pickableSections } from "../../lib/sectionPicks";
 import { useConfirm } from "../../state/ConfirmContext";
 import { useToast } from "../../state/ToastContext";
 import { space } from "../../theme/tokens";
@@ -255,7 +256,8 @@ export default function AssignmentScheduleScreen(_props: Props): React.ReactElem
                     <Select
                       label={STR.section}
                       value={sectionId}
-                      options={selectedClass.sections.filter((s) => s.active).map((s) => ({ label: s.nameBn, value: s.id }))}
+                      // Not the emptied সম্মিলিত — an entry there has no roster to deliver to.
+                      options={pickableSections(selectedClass.sections).map((s) => ({ label: s.nameBn, value: s.id }))}
                       onChange={setSectionId}
                       placeholder={STR.section}
                     />

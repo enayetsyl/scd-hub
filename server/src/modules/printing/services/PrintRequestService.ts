@@ -25,7 +25,12 @@ import { User } from "../../foundation/models/User";
 import { Class } from "../../foundation/models/Class";
 import { Section } from "../../foundation/models/Section";
 import { ClassTest } from "../../trackers/models/ClassTest";
-import { classPresenceForDate } from "../../attendance/services/AttendanceReportService";
+import {
+  classPresenceForDate,
+  sectionPresenceForDate,
+  type ClassPresence,
+  type SectionPresence,
+} from "../../attendance/services/AttendanceReportService";
 import { dateKeyOf, isValidDateKey, parseDateKey } from "../../attendance/dates";
 import { publishRealtime } from "../../realtime/bus";
 
@@ -321,14 +326,47 @@ export interface EffectiveCopies {
   pending: boolean;
 }
 
+type CountingDoc = Pick<IPrintRequest, "copiesClassId" | "classId" | "sectionId">;
+
+/**
+ * The SECTION whose present students a CLASS_PRESENT job counts, or null for the
+ * whole class. A job tagged with a section of the very class it counts is FOR that
+ * section — since C4/C5 split into বালক/বালিকা (2026-10-01) the class count printed
+ * both sections' papers for each. Derived at read time, so jobs already queued are
+ * counted right too; a single-section class reads the same number either way.
+ */
+export function countingSectionIdOf(doc: CountingDoc): string | null {
+  if (!doc.copiesClassId || !doc.classId || !doc.sectionId) return null;
+  return doc.classId.toString() === doc.copiesClassId.toString() ? doc.sectionId.toString() : null;
+}
+
+/**
+ * Pick a CLASS_PRESENT job's count out of the use day's roll-ups. A counting section
+ * that holds no active students (an emptied সম্মিলিত) has no row and falls back to the
+ * class — the count such a job read before the split.
+ */
+export function presentCountFrom(
+  doc: CountingDoc,
+  classRows: ClassPresence[],
+  sectionRows: SectionPresence[],
+): EffectiveCopies {
+  const sectionId = countingSectionIdOf(doc);
+  const row =
+    (sectionId ? sectionRows.find((p) => p.sectionId === sectionId) : undefined) ??
+    classRows.find((p) => p.classId === doc.copiesClassId?.toString());
+  if (!row || !row.complete) return { copies: null, pending: true };
+  return { copies: row.presentCount, pending: false };
+}
+
 /**
  * Resolve a CLASS_PRESENT job's copy count from the USE day's attendance
- * (`neededByKey`): the class's PRESENT students once every attendance unit
- * holding them is marked. A future use day, an incomplete day, or a class with
- * no marked units → pending (the Office may print with a manual count instead).
+ * (`neededByKey`): the PRESENT students of its class — or of its section, see
+ * `countingSectionIdOf` — once every attendance unit holding them is marked. A future
+ * use day, an incomplete day, or a class with no marked units → pending (the Office
+ * may print with a manual count instead).
  */
 export async function effectiveCopiesFor(
-  doc: Pick<IPrintRequest, "copiesMode" | "copiesClassId" | "neededByKey" | "copies" | "status">,
+  doc: Pick<IPrintRequest, "copiesMode" | "neededByKey" | "copies" | "status"> & CountingDoc,
   now: Date = new Date(),
 ): Promise<EffectiveCopies> {
   if (doc.copiesMode !== "CLASS_PRESENT") return { copies: doc.copies, pending: false };
@@ -337,10 +375,11 @@ export async function effectiveCopiesFor(
   const useKey = doc.neededByKey;
   if (!useKey || !doc.copiesClassId) return { copies: null, pending: true };
   if (useKey > dateKeyOf(now)) return { copies: null, pending: true }; // attendance can't exist yet
-  const presence = await classPresenceForDate(useKey);
-  const row = presence.find((p) => p.classId === doc.copiesClassId!.toString());
-  if (!row || !row.complete) return { copies: null, pending: true };
-  return { copies: row.presentCount, pending: false };
+  const [classRows, sectionRows] = await Promise.all([
+    classPresenceForDate(useKey),
+    countingSectionIdOf(doc) ? sectionPresenceForDate(useKey) : Promise.resolve([]),
+  ]);
+  return presentCountFrom(doc, classRows, sectionRows);
 }
 
 /** REQUESTED → PRINTED (Office/Principal). For a CLASS_PRESENT job the count is
