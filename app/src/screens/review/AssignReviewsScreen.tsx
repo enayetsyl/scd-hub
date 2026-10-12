@@ -37,14 +37,27 @@ import {
   ErrorBanner,
   Divider,
 } from "../../components/ui";
-import { STR, subjectLabel, classLevelLabel, reviewStatusLabel, bnNum } from "../../lib/labels";
+import {
+  STR,
+  subjectLabel,
+  classLevelLabel,
+  reviewStatusLabel,
+  reviewVerdictLabel,
+  reviewRoundStatusLabel,
+  docTypeLabel,
+  bnNum,
+} from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<ReviewStackParamList, "AssignReviews">;
 
+/** Same shape as the Review inbox card title, session number included — three session
+ *  plans of one chapter must not read as the same row three times (owner report 2026-10-12). */
 function planTitle(p: AssignablePlanT): string {
-  const head = `${subjectLabel(p.subject)} · ${classLevelLabel(p.classLevel)} · ${p.anchorWord} ${bnNum(p.addressNumber)}`;
+  const session =
+    p.docType === "session_plan" && p.sessionIndex != null ? ` · ${STR.spSession} ${bnNum(p.sessionIndex)}` : "";
+  const head = `${subjectLabel(p.subject)} · ${classLevelLabel(p.classLevel)} · ${p.anchorWord} ${bnNum(p.addressNumber)}${session}`;
   return p.title ? `${head} · ${p.title}` : head;
 }
 
@@ -172,11 +185,26 @@ export default function AssignReviewsScreen(_props: Props): React.ReactElement {
           <Card key={p.currentAssignmentId ?? p.artifactId}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
               <Body style={{ flex: 1, fontWeight: "700" }}>{planTitle(p)}</Body>
-              <Badge text={reviewStatusLabel(p.reviewStatus)} tone={statusTone(p.reviewStatus)} />
+              {/* A decided round shows the REVIEWER's verdict, worded exactly as the Review
+                  inbox does — the plan's own status ("Draft") is what made the two screens
+                  look like they disagreed about the same round (owner report 2026-10-12). */}
+              {p.roundStatus === "submitted" && p.verdict ? (
+                <Badge
+                  text={`${STR.rvReviewer}: ${reviewVerdictLabel(p.verdict)}`}
+                  tone={p.verdict === "APPROVE" ? "ok" : "warn"}
+                />
+              ) : (
+                <Badge text={reviewStatusLabel(p.reviewStatus)} tone={statusTone(p.reviewStatus)} />
+              )}
             </View>
-            <Muted style={{ marginTop: 4 }}>
-              {p.roundStatus ? `${p.roundStatus} · ${STR.rvAssignedTo}: ${p.currentReviewerName ?? STR.rvReviewer}` : STR.rvAssignedTo}
-            </Muted>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: space(2), marginTop: 4 }}>
+              <Badge text={docTypeLabel(p.docType)} tone="info" />
+              <Muted style={{ flex: 1 }}>
+                {p.roundStatus
+                  ? `${reviewRoundStatusLabel(p.roundStatus)} · ${STR.rvAssignedTo}: ${p.currentReviewerName ?? STR.rvReviewer}`
+                  : STR.rvAssignedTo}
+              </Muted>
+            </View>
             <Button
               title={unassignBusy && unassignId === p.currentAssignmentId ? STR.saving : STR.rvUnassign}
               onPress={() => p.currentAssignmentId && onUnassign(p.currentAssignmentId)}
@@ -265,11 +293,12 @@ export default function AssignReviewsScreen(_props: Props): React.ReactElement {
                 <Body style={{ flex: 1, fontWeight: "700" }}>{planTitle(p)}</Body>
                 <Badge text={reviewStatusLabel(p.reviewStatus)} tone={statusTone(p.reviewStatus)} />
               </View>
-              <Muted style={{ marginTop: 4 }}>
-                {p.currentReviewerName
-                  ? `${STR.rvAssignedTo}: ${p.currentReviewerName}`
-                  : STR.rvUnassigned}
-              </Muted>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: space(2), marginTop: 4 }}>
+                <Badge text={docTypeLabel(p.docType)} tone="info" />
+                <Muted style={{ flex: 1 }}>
+                  {p.currentReviewerName ? `${STR.rvAssignedTo}: ${p.currentReviewerName}` : STR.rvUnassigned}
+                </Muted>
+              </View>
             </Card>
           );
         })

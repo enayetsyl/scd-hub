@@ -14,9 +14,14 @@ import React, { useState, useMemo, useRef, useCallback } from "react";
 import { View, Pressable } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
-import { useQuery } from "urql";
+import { useQuery, useMutation } from "urql";
 import { SUBJECTS, CLASS_LEVELS, PLAN_DOC_TYPES } from "@scd/shared";
-import { MY_REVIEW_ASSIGNMENTS, PLAN_REVIEW_INBOX, type ReviewAssignmentT } from "../../graphql/operations";
+import {
+  APPROVE_PLAN_BULK,
+  MY_REVIEW_ASSIGNMENTS,
+  PLAN_REVIEW_INBOX,
+  type ReviewAssignmentT,
+} from "../../graphql/operations";
 import type { ReviewStackParamList } from "../../navigation/types";
 import { useAuth } from "../../auth/AuthContext";
 import {
@@ -32,7 +37,10 @@ import {
   EmptyState,
   ErrorBanner,
   Divider,
+  Button,
 } from "../../components/ui";
+import { SelectableCard } from "../../components/SelectableCard";
+import { useToast } from "../../state/ToastContext";
 import {
   STR,
   subjectLabel,
@@ -47,8 +55,21 @@ import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<ReviewStackParamList, "ReviewHome">;
 
+/** subject · class · পাঠ N [· সেশন K] [· title]. The session number is what tells three
+ *  session plans of one chapter apart — without it they read as one card three times
+ *  (owner report 2026-10-12). */
 function planTitle(r: ReviewAssignmentT): string {
-  return `${subjectLabel(r.subject)} · ${classLevelLabel(r.classLevel)} · ${r.anchorWord} ${bnNum(r.addressNumber)}`;
+  const session =
+    r.docType === "session_plan" && r.sessionIndex != null ? ` · ${STR.spSession} ${bnNum(r.sessionIndex)}` : "";
+  const title = r.title ? ` · ${r.title}` : "";
+  return `${subjectLabel(r.subject)} · ${classLevelLabel(r.classLevel)} · ${r.anchorWord} ${bnNum(r.addressNumber)}${session}${title}`;
+}
+
+/** A card the Principal can sign off in a batch: the reviewer approved it AND the plan is
+ *  `reviewed`. Anything else needs a one-at-a-time decision in its thread (an override
+ *  needs a reason), so it stays out of the selectable group. */
+function readyToSignOff(r: ReviewAssignmentT): boolean {
+  return r.verdict === "APPROVE" && r.artifactReviewStatus === "reviewed";
 }
 
 export default function ReviewHomeScreen({ navigation }: Props): React.ReactElement {
@@ -81,6 +102,85 @@ export default function ReviewHomeScreen({ navigation }: Props): React.ReactElem
 
   const inbox = inboxData?.planReviewInbox ?? [];
   const mine = mineData?.myReviewAssignments ?? [];
+
+  // Inbox, split by what the Principal has to DO (owner ask 2026-10-12): the reviewer-
+  // approved plans are a sign-off pile, cleared in one go; the rest need a decision each.
+  const canSignOff = can("content:promote_gold");
+  const readyRows = useMemo(() => inbox.filter(readyToSignOff), [inbox]);
+  const otherRows = useMemo(() => inbox.filter((r) => !readyToSignOff(r)), [inbox]);
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  // Only ids still on the ready pile count — a refetch can drop a row the user had ticked.
+  const pickedIds = useMemo(
+    () => readyRows.map((r) => r.artifactId).filter((id) => picked.has(id)),
+    [readyRows, picked],
+  );
+  const allPicked = readyRows.length > 0 && pickedIds.length === readyRows.length;
+  const [signingOff, setSigningOff] = useState(false);
+  const [, approveBulk] = useMutation(APPROVE_PLAN_BULK);
+  const toast = useToast();
+
+  function togglePick(artifactId: string): void {
+    setPicked((prev) => {
+      const next = new Set(prev);
+      if (next.has(artifactId)) next.delete(artifactId);
+      else next.add(artifactId);
+      return next;
+    });
+  }
+
+  async function signOffPicked(): Promise<void> {
+    if (pickedIds.length === 0 || signingOff) return;
+    setSigningOff(true);
+    const res = await approveBulk({ artifactIds: pickedIds });
+    setSigningOff(false);
+    if (res.error) {
+      toast.show(friendlyError(res.error), "danger");
+      return;
+    }
+    const r = res.data?.approvePlanBulk;
+    toast.show(
+      r && r.failedCount > 0
+        ? `${STR.rvSignedOff} (${bnNum(r.okCount)} ✓, ${bnNum(r.failedCount)} ✗)`
+        : `${STR.rvSignedOff} (${bnNum(r?.okCount ?? pickedIds.length)})`,
+      r && r.failedCount > 0 ? "danger" : "ok",
+    );
+    setPicked(new Set());
+    // Signed-off rounds are closed server-side, so they drop off this list on refetch.
+    refetchInbox({ requestPolicy: "network-only" });
+  }
+
+  function inboxCard(r: ReviewAssignmentT, selectable: boolean): React.ReactElement {
+    const open = () => navigation.navigate("ReviewThread", { artifactId: r.artifactId });
+    const body = (
+      <>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space(2) }}>
+          <Body style={{ flex: 1, fontWeight: "700" }}>{planTitle(r)}</Body>
+          {/* The REVIEWER's verdict — worded as a status so it does not read as a button. */}
+          <Badge
+            text={`${STR.rvReviewer}: ${reviewVerdictLabel(r.verdict)}`}
+            tone={r.verdict === "APPROVE" ? "ok" : "warn"}
+          />
+        </View>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: space(2), marginTop: 4 }}>
+          <Badge text={docTypeLabel(r.docType)} tone="info" />
+          <Muted style={{ flex: 1 }}>
+            {STR.reviewRound} {bnNum(r.roundNumber)}
+            {r.reviewerName ? ` · ${r.reviewerName}` : ""}
+          </Muted>
+        </View>
+        {r.feedback ? <Muted style={{ marginTop: 4 }}>{r.feedback}</Muted> : null}
+      </>
+    );
+    return selectable ? (
+      <SelectableCard key={r.id} selected={picked.has(r.artifactId)} onToggle={() => togglePick(r.artifactId)} onPress={open}>
+        {body}
+      </SelectableCard>
+    ) : (
+      <Card key={r.id} onPress={open}>
+        {body}
+      </Card>
+    );
+  }
 
   // My-reviews filters (client-side over the caller's own rounds, like the Content tab).
   const [subject, setSubject] = useState<string | null>(null);
@@ -165,23 +265,50 @@ export default function ReviewHomeScreen({ navigation }: Props): React.ReactElem
           ) : inbox.length === 0 ? (
             <EmptyState message={STR.noInbox} />
           ) : (
-            inbox.map((r) => (
-              <Card key={r.id} onPress={() => navigation.navigate("ReviewThread", { artifactId: r.artifactId })}>
-                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                  <Body style={{ flex: 1, fontWeight: "700" }}>{planTitle(r)}</Body>
-                  <Badge text={reviewVerdictLabel(r.verdict)} tone={r.verdict === "APPROVE" ? "ok" : "warn"} />
+            <>
+              {/* 1 — the sign-off pile. Tick (or Select all), then one button; signed-off
+                  plans close their round and leave the inbox. Office sees the pile but
+                  cannot sign off (content:promote_gold is Principal-locked). */}
+              {readyRows.length > 0 ? (
+                <View style={{ marginBottom: space(3) }}>
+                  <Body style={{ fontWeight: "700", marginTop: space(2) }}>
+                    {STR.rvInboxReady} ({bnNum(readyRows.length)})
+                  </Body>
+                  {canSignOff ? (
+                    <>
+                      <Muted style={{ marginBottom: space(2) }}>{STR.rvInboxReadyHint}</Muted>
+                      <View
+                        style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: space(2), marginBottom: space(2) }}
+                      >
+                        <Chip
+                          label={STR.qrSelectAll}
+                          selected={allPicked}
+                          onPress={() => setPicked(allPicked ? new Set() : new Set(readyRows.map((r) => r.artifactId)))}
+                        />
+                        <Button
+                          title={`${STR.rvSignOffSelected} (${bnNum(pickedIds.length)})`}
+                          onPress={() => void signOffPicked()}
+                          loading={signingOff}
+                          disabled={signingOff || pickedIds.length === 0}
+                        />
+                      </View>
+                    </>
+                  ) : null}
+                  {readyRows.map((r) => inboxCard(r, canSignOff))}
                 </View>
-                {/* The plan type, as on My reviews below — the anchor word alone ("পাঠ 2")
-                    cannot tell a chapter plan from a session plan at the same address. */}
-                <View style={{ flexDirection: "row", alignItems: "center", gap: space(2), marginTop: 4 }}>
-                  <Badge text={docTypeLabel(r.docType)} tone="info" />
-                  <Muted style={{ flex: 1 }}>
-                    {STR.reviewRound} {bnNum(r.roundNumber)}
-                  </Muted>
+              ) : null}
+
+              {/* 2 — everything else: changes requested (a new version to import, or an
+                  override with a reason) — one decision each, in the thread. */}
+              {otherRows.length > 0 ? (
+                <View>
+                  <Body style={{ fontWeight: "700", marginTop: space(2), marginBottom: space(2) }}>
+                    {STR.rvInboxNeedsAction} ({bnNum(otherRows.length)})
+                  </Body>
+                  {otherRows.map((r) => inboxCard(r, false))}
                 </View>
-                {r.feedback ? <Muted style={{ marginTop: 4 }}>{r.feedback}</Muted> : null}
-              </Card>
-            ))
+              ) : null}
+            </>
           )}
         </View>
       ) : null}
