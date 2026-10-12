@@ -294,7 +294,7 @@ export default function RequestClassTestScreen(): React.ReactElement {
               <Muted style={{ marginBottom: space(2) }}>{STR.ctGroupExamHelp}</Muted>
             </>
           ) : yearId ? (
-            <ClassSectionSelect academicYearId={yearId} value={section} onChange={setSection} />
+            <ClassSectionSelect academicYearId={yearId} value={section} onChange={setSection} liveOnly />
           ) : (
             // No current year = nothing can be filed. SAY so — a blank form with no
             // explanation is how this codebase has hidden config gaps before.

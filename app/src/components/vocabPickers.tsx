@@ -8,6 +8,7 @@ import { VOCAB_PROGRAMS, ROSTER_CLASS_LEVELS } from "@scd/shared";
 import { Select } from "./ui";
 import { CLASSES_QUERY } from "../graphql/operations";
 import { STR, vocabProgramLabel, classLevelLabel } from "../lib/labels";
+import { pickableSections } from "../lib/sectionPicks";
 
 /** Pick a vocab program (ENGLISH/BANGLA/ARABIC). */
 export function ProgramSelect({
@@ -64,16 +65,24 @@ export function ClassSectionSelect({
   academicYearId,
   value,
   onChange,
+  liveOnly = false,
 }: {
   academicYearId: string;
   value: SectionPick | null;
   onChange: (v: SectionPick | null) => void;
+  /** New work only (D-#722): drop an emptied section beside populated siblings — the C4/C5
+   *  সম্মিলিত after the বালক/বালিকা split. Off where history must stay reachable (reports). */
+  liveOnly?: boolean;
 }): React.ReactElement {
   const [{ data }] = useQuery({ query: CLASSES_QUERY, variables: { academicYearId }, pause: !academicYearId });
   const classes = (data?.classes ?? []).filter((c) => c.active);
   const [classId, setClassId] = React.useState<string | null>(value?.classId ?? null);
   const selectedClass = classes.find((c) => c.id === classId) ?? null;
-  const activeSections = selectedClass ? selectedClass.sections.filter((s) => s.active) : [];
+  const activeSections = selectedClass
+    ? liveOnly
+      ? pickableSections(selectedClass.sections)
+      : selectedClass.sections.filter((s) => s.active)
+    : [];
   // A class with exactly one section → auto-select it; the dropdown is hidden (no
   // point making the user pick from a single option). Multi-section classes still pick.
   const soleSection = activeSections.length === 1 ? activeSections[0] : null;

@@ -12,8 +12,8 @@ import React, { useMemo, useState } from "react";
 import { Linking, ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation, type CombinedError } from "urql";
-import { STUDENTS_QUERY } from "../../graphql/operations";
 import {
+  CLASS_TEST_ROSTER_QUERY,
   CLASS_TEST_RESULTS_QUERY,
   PUBLISH_CLASS_TEST_EXAM,
   UNPUBLISH_CLASS_TEST_RESULT,
@@ -27,6 +27,7 @@ import {
 import { Screen, Card, Body, Muted, Button, Badge, Field, Loader, Notice } from "../../components/ui";
 import { STR, hwSubjectLabel, ctUnitLabel, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { useSectionNames } from "../../lib/useSectionNames";
 import { useAuth } from "../../auth/AuthContext";
 import { space } from "../../theme/tokens";
 import type { ClassTestStackParamList } from "../../navigation/types";
@@ -48,12 +49,15 @@ export default function ClassTestPublishScreen({ route }: Props): React.ReactEle
   // The test's own teacher always gets the teacher leg; the office leg sits beside it.
   const ownsTest = !!test && !!user && (test.teacherId === user.id || test.requestedBy === user.id);
   const showTeacherLeg = !isAdmin || ownsTest;
-  const [studentsQ] = useQuery({ query: STUDENTS_QUERY, variables: { sectionId: test?.sectionId ?? "" }, pause: !test });
+  // The EXAM's roster, not the section's current students: a pre-split test on the
+  // emptied সম্মিলিত (and a group exam) has none, so every row showed a raw id.
+  const [studentsQ] = useQuery({ query: CLASS_TEST_ROSTER_QUERY, variables: { testId }, pause: !test });
   const nameById = useMemo(() => {
     const m = new Map<string, string>();
-    for (const s of studentsQ.data?.studentsInSection ?? []) m.set(s.id, s.name);
+    for (const s of studentsQ.data?.classTestRoster ?? []) m.set(s.id, s.name);
     return m;
   }, [studentsQ.data]);
+  const sectionName = useSectionNames();
   const [resultsQ, refetch] = useQuery({ query: CLASS_TEST_RESULTS_QUERY, variables: { testId }, requestPolicy: "cache-and-network" });
   const results = resultsQ.data?.classTestResults ?? [];
 
@@ -133,7 +137,7 @@ export default function ClassTestPublishScreen({ route }: Props): React.ReactEle
               (owner ask 2026-08-02). */}
           {test ? (
             <Muted>
-              {ctUnitLabel(test)} · {hwSubjectLabel(test.subject)} · {STR.ctTotalMarks}{" "}
+              {ctUnitLabel(test, sectionName(test.sectionId))} · {hwSubjectLabel(test.subject)} · {STR.ctTotalMarks}{" "}
               {bnNum(test.totalMarks)} · {STR.ctPassMark} {bnNum(test.passMark)}
             </Muted>
           ) : null}

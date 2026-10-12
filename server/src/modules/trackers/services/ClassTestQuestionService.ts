@@ -158,6 +158,7 @@ export async function createCtQuestionRequest(input: CreateCtQuestionInput): Pro
     klass.academicYearId.toString(),
     klass.level,
     input.subject as HwSubject,
+    input.sectionId,
   );
 
   const doc = await ClassTestQuestionRequest.create({

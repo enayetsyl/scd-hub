@@ -24,6 +24,7 @@ import { Screen, Card, Body, Muted, Button, Badge, Chip, Field, Loader, Notice }
 import { DateField } from "../../components/DateField";
 import { STR, hwSubjectLabel, ctUnitLabel, bnNum, isoDateLabel, dhakaDateKey } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { useSectionNames } from "../../lib/useSectionNames";
 import { useAuth } from "../../auth/AuthContext";
 import { useToast } from "../../state/ToastContext";
 import { space } from "../../theme/tokens";
@@ -47,6 +48,7 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
   // members. `studentsInSection` cannot answer for a group exam: its students come
   // from several sections, so the server resolves the roster per anchor instead.
   const [studentsQ] = useQuery({ query: CLASS_TEST_ROSTER_QUERY, variables: { testId }, pause: !test });
+  const sectionName = useSectionNames();
   const students = studentsQ.data?.classTestRoster ?? [];
   const [resultsQ, refetch] = useQuery({ query: CLASS_TEST_RESULTS_QUERY, variables: { testId } });
   const results = resultsQ.data?.classTestResults ?? [];
@@ -204,7 +206,7 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
         <Card>
           <Body style={{ fontWeight: "700" }}>{title}</Body>
           <Muted>
-            {ctUnitLabel(test)} · {hwSubjectLabel(test.subject)}
+            {ctUnitLabel(test, sectionName(test.sectionId))} · {hwSubjectLabel(test.subject)}
           </Muted>
           <View style={{ marginTop: space(2) }}>
             <Badge text={STR.ctRetiredBadge} tone="muted" />
@@ -256,7 +258,7 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
               looking at "English · Test # 1" had no way to tell which class it belongs
               to (owner ask 2026-08-02). */}
           <Muted>
-            {ctUnitLabel(test)} · {hwSubjectLabel(test.subject)} · {STR.ctTotalMarks}{" "}
+            {ctUnitLabel(test, sectionName(test.sectionId))} · {hwSubjectLabel(test.subject)} · {STR.ctTotalMarks}{" "}
             {bnNum(test.totalMarks)} · {STR.ctPassMark} {bnNum(test.passMark)}
           </Muted>
           {/* Exam-level submit/publish state — the answer to "did my submit land?".

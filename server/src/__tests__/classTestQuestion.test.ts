@@ -41,7 +41,11 @@ jest.mock("../modules/trackers/models/ClassTestQuestionRequest", () => {
 });
 const mockSectionFindById = jest.fn();
 jest.mock("../modules/foundation/models/Section", () => ({
-  Section: { findById: (id: unknown) => ({ select: () => ({ lean: async () => mockSectionFindById(id) }) }) },
+  Section: {
+    findById: (id: unknown) => ({ select: () => ({ lean: async () => mockSectionFindById(id) }) }),
+    // D-#722: suggestTestNumber reads the section's class siblings — none here.
+    find: () => ({ select: () => ({ lean: async () => [] }) }),
+  },
 }));
 const mockClassFindById = jest.fn();
 jest.mock("../modules/foundation/models/Class", () => ({
@@ -166,7 +170,8 @@ describe("createCtQuestionRequest — mandatory fields + derivation", () => {
 
   test("derives level/year from the section, auto test number, REQUESTED + audit + office notify", async () => {
     const out = await createCtQuestionRequest(validCreate());
-    expect(mockSuggestTestNumber).toHaveBeenCalledWith(YEAR.toString(), 3, "MATH");
+    // D-#722: the Test # line is the SECTION's (বালক / বালিকা each keep their own).
+    expect(mockSuggestTestNumber).toHaveBeenCalledWith(YEAR.toString(), 3, "MATH", SECTION.toString());
     expect(out.status).toBe("REQUESTED");
     expect(out.testNumber).toBe(4);
     expect(mockWriteAudit).toHaveBeenCalledWith(expect.objectContaining({ eventKind: "CT_QUESTION_REQUESTED" }));

@@ -533,8 +533,14 @@ export const docTypeLabel = (v?: string | null): string =>
 /** The exam's UNIT, in one label (D-#507): a class-anchored exam reads as its class,
  *  a group-anchored one as the Arabic group's own name — a group spans classes, so
  *  there is no class level to print. */
-export const ctUnitLabel = (test: { classLevel: number | null; groupNameBn: string | null }): string =>
-  test.classLevel != null ? classLevelLabel(test.classLevel) : test.groupNameBn ?? "—";
+export const ctUnitLabel = (
+  test: { classLevel: number | null; groupNameBn: string | null },
+  /** The section's name when it tells halves apart ("বালক"), from `useSectionNames` (D-#722). */
+  sectionNameBn?: string | null,
+): string =>
+  test.classLevel != null
+    ? `${classLevelLabel(test.classLevel)}${sectionNameBn ? ` ${sectionNameBn}` : ""}`
+    : test.groupNameBn ?? "—";
 
 export const classLevelLabel = (level: number): string => {
   const roster = pick(ROSTER_CLASS_LABELS_BN, ROSTER_CLASS_LABELS_EN);
