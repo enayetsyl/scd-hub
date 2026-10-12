@@ -5392,6 +5392,9 @@ export interface AsScheduleEntryT {
   sectionId: string;
   subject: string;
   teacherId: string;
+  /** D-#728: the cell's window (YYYY-MM-DD, inclusive); null = open-ended. */
+  effectiveFrom: string | null;
+  effectiveTo: string | null;
 }
 
 export interface AsScheduleT {
@@ -5405,7 +5408,7 @@ export interface AsScheduleT {
 
 const AS_SCHEDULE_FIELDS = `
   id academicYearId termStartDate deliveryDayOfWeek dueDayOfWeek
-  entries { id cycleWeek classId classLevel sectionId subject teacherId }
+  entries { id cycleWeek classId classLevel sectionId subject teacherId effectiveFrom effectiveTo }
 `;
 
 export const AS_SCHEDULE_QUERY = gql<
@@ -5428,10 +5431,10 @@ export const UPSERT_AS_SCHEDULE = gql<
 
 export const ADD_AS_SCHEDULE_ENTRY = gql<
   { addAssignmentScheduleEntry: AsScheduleT },
-  { academicYearId: string; cycleWeek: number; classId: string; classLevel: number; sectionId: string; subject: string; teacherId: string }
+  { academicYearId: string; cycleWeek: number; classId: string; classLevel: number; sectionId: string; subject: string; teacherId: string; effectiveFrom?: string | null }
 >`
-  mutation AddAssignmentScheduleEntry($academicYearId: String!, $cycleWeek: Int!, $classId: String!, $classLevel: Int!, $sectionId: String!, $subject: String!, $teacherId: String!) {
-    addAssignmentScheduleEntry(academicYearId: $academicYearId, cycleWeek: $cycleWeek, classId: $classId, classLevel: $classLevel, sectionId: $sectionId, subject: $subject, teacherId: $teacherId) { ${AS_SCHEDULE_FIELDS} }
+  mutation AddAssignmentScheduleEntry($academicYearId: String!, $cycleWeek: Int!, $classId: String!, $classLevel: Int!, $sectionId: String!, $subject: String!, $teacherId: String!, $effectiveFrom: String) {
+    addAssignmentScheduleEntry(academicYearId: $academicYearId, cycleWeek: $cycleWeek, classId: $classId, classLevel: $classLevel, sectionId: $sectionId, subject: $subject, teacherId: $teacherId, effectiveFrom: $effectiveFrom) { ${AS_SCHEDULE_FIELDS} }
   }
 `;
 
@@ -5441,6 +5444,16 @@ export const REMOVE_AS_SCHEDULE_ENTRY = gql<
 >`
   mutation RemoveAssignmentScheduleEntry($academicYearId: String!, $entryId: String!) {
     removeAssignmentScheduleEntry(academicYearId: $academicYearId, entryId: $entryId) { ${AS_SCHEDULE_FIELDS} }
+  }
+`;
+
+/** D-#728: end a rotation cell on lastDayKey (inclusive) — the non-destructive remove. */
+export const RETIRE_AS_SCHEDULE_ENTRY = gql<
+  { retireAssignmentScheduleEntry: AsScheduleT },
+  { academicYearId: string; entryId: string; lastDayKey: string }
+>`
+  mutation RetireAssignmentScheduleEntry($academicYearId: String!, $entryId: String!, $lastDayKey: String!) {
+    retireAssignmentScheduleEntry(academicYearId: $academicYearId, entryId: $entryId, lastDayKey: $lastDayKey) { ${AS_SCHEDULE_FIELDS} }
   }
 `;
 
@@ -6310,6 +6323,8 @@ export interface AsSummaryT {
   suspendedWeeks: number[];
   byTeacher: AsRateRowT[];
   byClass: AsRateRowT[];
+  /** D-#729: per section (key = sectionId). */
+  bySection: AsRateRowT[];
   byWeek: AsRateRowT[];
   submissionRatePct: number | null;
   chaseVolume: number;
@@ -6328,6 +6343,7 @@ export const AS_SUMMARY = gql<
       academicYearId weekFrom weekTo scheduledTotal deliveredTotal suspendedWeeks
       byTeacher { key scheduled delivered deliveryRatePct }
       byClass { key scheduled delivered deliveryRatePct }
+      bySection { key scheduled delivered deliveryRatePct }
       byWeek { key scheduled delivered deliveryRatePct }
       submissionRatePct chaseVolume attentionStudentIds commsPromptStudentIds
       openResubmissions avgCheckingLatencyDays

@@ -41,7 +41,6 @@ import { Section } from "../../foundation/models/Section";
 import { AssignmentSchedule } from "../../trackers/models/AssignmentSchedule";
 import { AssignmentItem } from "../../trackers/models/AssignmentItem";
 import { HomeworkItem } from "../../trackers/models/HomeworkItem";
-import { HomeworkReconciliation, reconDayKey } from "../../trackers/models/HomeworkReconciliation";
 import { expectedItemsForWeek } from "../../trackers/services/AssignmentScheduleService";
 import { weekNumberFor } from "../../trackers/assignmentCalendar";
 
@@ -339,38 +338,26 @@ async function confirmerSections(userId: string): Promise<Array<{ sectionId: str
   return sections.map((s) => ({ sectionId: s._id.toString(), classId: s.classId.toString() }));
 }
 
-/** Window days on which one of the caller's classes has declared-but-unconfirmed
- *  homework (same rule as the pendingHomeworkSections reminder ladder). */
-async function hwReconcileBacklog(classIds: string[], keys: string[]): Promise<string[]> {
-  if (classIds.length === 0) return [];
+/** Window days on which one of the caller's SECTIONS still owes its homework confirm:
+ *  a declared item that still carries questions (D-#731 — the confirm has been per
+ *  section since D-#706, the same `sectionPending` rule HomeworkReconciliationService
+ *  uses). The reconciliation ROW is still one per class per day, so judging by it let
+ *  বালক's confirm clear বালিকা's alert, and nagged বালক about বালিকা's items before. */
+async function hwReconcileBacklog(sectionIds: string[], keys: string[]): Promise<string[]> {
+  if (sectionIds.length === 0) return [];
   const start = parseDateKey(keys[0]);
   const lastDate = parseDateKey(keys[keys.length - 1]);
   const end = new Date(lastDate.getFullYear(), lastDate.getMonth(), lastDate.getDate(), 23, 59, 59, 999);
 
   const declared = await HomeworkItem.find({
-    classId: { $in: classIds },
+    sectionId: { $in: sectionIds },
     status: "declared",
+    qCount: { $gt: 0 },
     dateGiven: { $gte: start, $lte: end },
   })
-    .select("classId dateGiven")
+    .select("dateGiven")
     .lean();
-  if (declared.length === 0) return [];
-
-  const recons = await HomeworkReconciliation.find({
-    classId: { $in: classIds },
-    reconDate: { $gte: reconDayKey(start), $lte: reconDayKey(end) },
-    reconState: "reconciled",
-  })
-    .select("classId reconDate")
-    .lean();
-  const reconciled = new Set(recons.map((r) => `${r.classId.toString()}|${dateKeyOf(new Date(r.reconDate))}`));
-
-  const pendingKeys = new Set<string>();
-  for (const it of declared) {
-    const key = dateKeyOf(new Date(it.dateGiven));
-    if (!reconciled.has(`${it.classId.toString()}|${key}`)) pendingKeys.add(key);
-  }
-  return [...pendingKeys].sort();
+  return [...new Set(declared.map((it) => dateKeyOf(new Date(it.dateGiven))))].sort();
 }
 
 /** Still-DRAFT assignment items in the caller's sections whose §4-resolved
@@ -441,7 +428,7 @@ export async function pendingWorkFor(ctx: AppContext, today: Date): Promise<Pend
     : [];
   if (mySections.length > 0) {
     const hwPending = await hwReconcileBacklog(
-      [...new Set(mySections.map((s) => s.classId))],
+      mySections.map((s) => s.sectionId),
       keys,
     );
     if (hwPending.length > 0) out.push(alert("hw_reconcile", hwPending));

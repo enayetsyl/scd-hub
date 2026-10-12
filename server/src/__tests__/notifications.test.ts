@@ -87,6 +87,7 @@ import {
   emitClassNotePublished,
   emitHwParentComms,
   emitHwGuardianChase,
+  emitHwAutoIssued,
   emitReviewAssigned,
   emitCoverAssigned,
 } from "../modules/notifications/services/emitters";
@@ -349,6 +350,20 @@ describe("N1.4 emitHwParentComms", () => {
   test("best-effort: a lookup failure never throws into the transition", async () => {
     mockSectionFindById.mockRejectedValue(new Error("db down"));
     await expect(emitHwParentComms(record())).resolves.toBeUndefined();
+  });
+});
+
+// D-#730: the auto-issue notice is one per SECTION per day — keyed by class, a বালিকা
+// auto-issue on the same day as বালক was swallowed (dedupeKey is unique school-wide).
+describe("emitHwAutoIssued — one notice per section per day (D-#730)", () => {
+  test("two sections of one class on the same day get two distinct keys", async () => {
+    const CLASS = oid(), BOYS = oid(), GIRLS = oid();
+    mockSectionFindById.mockResolvedValue({ classTeacherId: oid() });
+    for (const sectionId of [BOYS, GIRLS]) {
+      await emitHwAutoIssued({ classId: CLASS, sectionId, dateKey: "2026-10-12", issuedItems: 2, dayTotal: 40 } as never);
+    }
+    const keys = mockNotifUpdateOne.mock.calls.map((c) => (c[0] as { dedupeKey: string }).dedupeKey);
+    expect(keys).toEqual([`HWAI:${BOYS.toString()}:2026-10-12`, `HWAI:${GIRLS.toString()}:2026-10-12`]);
   });
 });
 

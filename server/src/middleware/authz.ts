@@ -68,6 +68,24 @@ export async function resolveTeacherScopes(ctx: AppContext): Promise<ScopeItem[]
   return scopes;
 }
 
+/**
+ * The class a CLASS-SHAPED read extent (supervisory / delegation: grade_class,
+ * explicit_set) is matched against — the SECTION's own class, never the caller-sent
+ * `classId` (D-#727). A reader scoped to C4 pairing classId=C4 with a C5 section id
+ * passed before. Lazy, like `assertCanWrite`: only a caller holding such an extent pays
+ * the Section read; an unknown id (a group anchor) keeps the claimed class.
+ */
+async function readClassIdFor(scopes: ScopeItem[], sectionId: string, claimed: string): Promise<string> {
+  const needs = scopes.some(
+    (s) =>
+      (s.kind === "supervisory" || s.kind === "delegation") &&
+      (s.extent === "grade_class" || s.extent === "explicit_set"),
+  );
+  if (!needs || !/^[0-9a-f]{24}$/i.test(sectionId)) return claimed;
+  const section = await Section.findById(sectionId).select("classId").lean();
+  return section?.classId ? section.classId.toString() : claimed;
+}
+
 /** Assert the caller can read the given section. Used in content/question resolvers. */
 export async function assertCanRead(
   ctx: AppContext,
@@ -78,7 +96,8 @@ export async function assertCanRead(
   if (isAdminStaff(ctx.auth)) return;
   if (ctx.auth?.role === "GUARDIAN") throw new ForbiddenError();
   const scopes = await resolveTeacherScopes(ctx);
-  if (!canRead(scopes, sectionId, classId, subjectId)) throw new ForbiddenError();
+  const realClassId = await readClassIdFor(scopes, sectionId, classId);
+  if (!canRead(scopes, sectionId, realClassId, subjectId)) throw new ForbiddenError();
 }
 
 /**
@@ -127,6 +146,7 @@ export async function allowedSubjectCodesForSection(
   if (me?.homeworkSupervisor) return null;
 
   const scopes = await resolveTeacherScopes(ctx);
+  classId = await readClassIdFor(scopes, sectionId, classId); // D-#727
   const subjectIds = new Set<string>();
   for (const s of scopes) {
     if (s.kind === "teaching" && s.sectionId === sectionId) {

@@ -31,7 +31,7 @@ jest.mock("../modules/foundation/models/Subject", () => ({
   Subject: { find: (q: unknown) => ({ select: () => ({ lean: () => mockSubjectFind(q) }) }) },
 }));
 
-import { allowedSubjectCodesForSection, ForbiddenError } from "../middleware/authz";
+import { allowedSubjectCodesForSection, assertCanRead, ForbiddenError } from "../middleware/authz";
 
 const TEACHER_ID = new mongoose.Types.ObjectId().toString();
 const SECTION = "sec1";
@@ -208,5 +208,38 @@ describe("allowedSubjectCodesForSection", () => {
     const allowed = await allowedSubjectCodesForSection(ctxOf("TEACHER"), SECTION, CLASS);
     expect(allowed).toEqual(new Set(["SCI"]));
     expect(mockSubjectFind).toHaveBeenCalledWith({ _id: { $in: [SUBJ_SCI_ID] } });
+  });
+});
+
+// D-#727: a class-shaped read extent is matched against the SECTION's own class — a
+// C4 supervisor pairing classId=C4 with a C5 section id used to read C5.
+describe("the class comes from the section, not the caller (D-#727)", () => {
+  const C4 = new mongoose.Types.ObjectId().toString();
+  const C5 = new mongoose.Types.ObjectId().toString();
+  const C5_BOYS = new mongoose.Types.ObjectId().toString();
+  const c4Supervisor = [{ _id: "g9", kind: "supervisory", extent: "grade_class", classId: C4 }];
+
+  test("assertCanRead: claiming C4 on a C5 section is refused", async () => {
+    mockGrantFind.mockResolvedValue(c4Supervisor);
+    mockSectionFindById.mockResolvedValue({ classId: C5 });
+    await expect(assertCanRead(ctxOf("TEACHER"), C5_BOYS, C4)).rejects.toThrow(ForbiddenError);
+  });
+
+  test("assertCanRead: the same supervisor on a real C4 section passes", async () => {
+    mockGrantFind.mockResolvedValue(c4Supervisor);
+    mockSectionFindById.mockResolvedValue({ classId: C4 });
+    await expect(assertCanRead(ctxOf("TEACHER"), C5_BOYS, C4)).resolves.toBeUndefined();
+  });
+
+  test("allowedSubjectCodesForSection: no unrestricted read on another class's section", async () => {
+    mockGrantFind.mockResolvedValue(c4Supervisor);
+    mockSectionFindById.mockResolvedValue({ classId: C5 });
+    await expect(allowedSubjectCodesForSection(ctxOf("TEACHER"), C5_BOYS, C4)).resolves.toEqual(new Set());
+  });
+
+  test("a plain teaching grant never pays the section lookup", async () => {
+    mockGrantFind.mockResolvedValue([{ kind: "teaching", sectionId: C5_BOYS, classId: C5, subjectId: SUBJ_SCI_ID, active: true }]);
+    await assertCanRead(ctxOf("TEACHER"), C5_BOYS, C5);
+    expect(mockSectionFindById).not.toHaveBeenCalled();
   });
 });

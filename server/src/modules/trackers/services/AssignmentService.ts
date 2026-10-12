@@ -34,6 +34,7 @@ import {
 } from "../models/AssignmentStudentRecord";
 import { AssignmentSequence } from "../models/AssignmentSequence";
 import { AssignmentSchedule } from "../models/AssignmentSchedule";
+import { Student } from "../../foundation/models/Student";
 import { resolveScheduleWeek } from "./AssignmentScheduleService";
 import { assertTransition } from "../lifecycle";
 import { atMidnight, dateOnlyISO } from "../assignmentCalendar";
@@ -171,6 +172,23 @@ export async function deliverAssignmentItem(
 
   if (!Array.isArray(input.roster) || input.roster.length === 0) {
     throw new Error("The delivery pass needs the section roster (per-student GIVEN/ABSENT_REDELIVER)");
+  }
+  // D-#725: the roster must be THIS section's active children, once each. The client
+  // builds it from studentsInSection, but confirmAssignmentWeek stamps every roster
+  // child with the item's section — so a stale app or a script sending the whole C4
+  // would hand বালিকা records to a বালক item, invisible to the বালিকা workspace.
+  const rosterIds = input.roster.map((r) => r.studentId);
+  if (new Set(rosterIds).size !== rosterIds.length) {
+    throw new Error("রোস্টারে একই শিক্ষার্থী দুবার আছে");
+  }
+  if (!rosterIds.every((id) => Types.ObjectId.isValid(id))) throw new Error("Invalid studentId in the roster");
+  const inSection = await Student.countDocuments({
+    _id: { $in: rosterIds.map((id) => new Types.ObjectId(id)) },
+    sectionId: entry.sectionId,
+    active: true,
+  });
+  if (inSection !== rosterIds.length) {
+    throw new Error("রোস্টারে এমন শিক্ষার্থী আছে যে এই শাখার নয় — পাতাটি রিফ্রেশ করে আবার দিন");
   }
   if (input.totalMarks !== undefined && (!Number.isInteger(input.totalMarks) || input.totalMarks < 1)) {
     throw new Error("totalMarks must be a positive integer");
@@ -723,11 +741,14 @@ export interface AssignmentItemCounts {
   missingStudentIds: string[];
 }
 
-export async function assignmentItemCounts(itemId: string): Promise<AssignmentItemCounts> {
+/** `sectionId` (D-#726): count only the records OF that section — the one the caller is
+ *  scoped to. A pre-split item on the emptied সম্মিলিত holds both halves' children. */
+export async function assignmentItemCounts(itemId: string, sectionId?: string): Promise<AssignmentItemCounts> {
   const item = await AssignmentItem.findById(itemId).lean();
   if (!item) throw new Error("AssignmentItem not found");
   const records = (await AssignmentStudentRecord.find({
     asItemId: itemId,
+    ...(sectionId ? { sectionId: new Types.ObjectId(sectionId) } : {}),
     resubOf: null, // the original pass defines receipt/submission; resubmissions don't double-count
   }).lean()) as unknown as IAssignmentStudentRecord[];
 
@@ -765,8 +786,15 @@ export async function listAssignmentItems(filter: {
   >;
 }
 
-export async function listAssignmentRecords(asItemId: string): Promise<IAssignmentStudentRecord[]> {
-  return AssignmentStudentRecord.find({ asItemId }).lean() as unknown as Promise<
+/** `sectionId` (D-#726): only that section's records — see `assignmentItemCounts`. */
+export async function listAssignmentRecords(
+  asItemId: string,
+  sectionId?: string,
+): Promise<IAssignmentStudentRecord[]> {
+  return AssignmentStudentRecord.find({
+    asItemId,
+    ...(sectionId ? { sectionId: new Types.ObjectId(sectionId) } : {}),
+  }).lean() as unknown as Promise<
     IAssignmentStudentRecord[]
   >;
 }
