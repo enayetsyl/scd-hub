@@ -404,17 +404,31 @@ describe("hw_reconcile / as_reconcile alerts (D-#290)", () => {
     expect(a.oldestDateKey).toBe("2026-06-09");
   });
 
-  test("a RECONCILED day drops out of hw_reconcile", async () => {
+  // D-#731: the confirm is per SECTION (D-#706), so the alert asks per section: does
+  // one of MY sections still hold a declared item with questions? A confirmed day's
+  // items are issued and drop out by themselves; the other half of a split class (its
+  // own class teacher) is never asked about — the class-wide reconciliation ROW used to
+  // let বালক's confirm clear বালিকা's alert.
+  test("D-#731: asks only for still-declared, non-zeroed items of the caller's own sections", async () => {
+    mockSectionFind.mockResolvedValue([SECTION]);
+    mockHwItemFind.mockResolvedValue([{ dateGiven: new Date(2026, 5, 11) }]);
+    const alerts = await pendingAlertsFor(ctxFor("TEACHER"), TODAY);
+    expect(alerts.find((x) => x.kind === "hw_reconcile")!.count).toBe(1);
+    const filter = mockHwItemFind.mock.calls[0][0] as Record<string, unknown>;
+    expect(filter).toMatchObject({ sectionId: { $in: ["sec-1"] }, status: "declared", qCount: { $gt: 0 } });
+    expect(filter).not.toHaveProperty("classId");
+    expect(mockHwReconFind).not.toHaveBeenCalled(); // the class-wide row no longer decides
+  });
+
+  test("D-#731: two declared items on one day are ONE pending day", async () => {
     mockSectionFind.mockResolvedValue([SECTION]);
     mockHwItemFind.mockResolvedValue([
-      { classId: "cls-1", dateGiven: new Date(2026, 5, 9) },
-      { classId: "cls-1", dateGiven: new Date(2026, 5, 11) },
+      { dateGiven: new Date(2026, 5, 10) },
+      { dateGiven: new Date(2026, 5, 10, 12) },
     ]);
-    mockHwReconFind.mockResolvedValue([{ classId: "cls-1", reconDate: new Date(2026, 5, 9) }]);
-    const alerts = await pendingAlertsFor(ctxFor("TEACHER"), TODAY);
-    const a = alerts.find((x) => x.kind === "hw_reconcile")!;
+    const a = (await pendingAlertsFor(ctxFor("TEACHER"), TODAY)).find((x) => x.kind === "hw_reconcile")!;
     expect(a.count).toBe(1);
-    expect(a.oldestDateKey).toBe("2026-06-11");
+    expect(a.oldestDateKey).toBe("2026-06-10");
   });
 
   test("still-DRAFT assignment items whose delivery day arrived raise as_reconcile", async () => {
