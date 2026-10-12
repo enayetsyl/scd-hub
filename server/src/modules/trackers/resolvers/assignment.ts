@@ -32,6 +32,7 @@ import {
   upsertAssignmentSchedule as upsertScheduleSvc,
   addScheduleEntry as addEntrySvc,
   removeScheduleEntry as removeEntrySvc,
+  retireScheduleEntry as retireEntrySvc,
   updateScheduleEntryTeacher as updateEntryTeacherSvc,
   getAssignmentSchedule as getScheduleSvc,
   expectedItemsForWeek as expectedWeekSvc,
@@ -189,6 +190,9 @@ interface ScheduleEntryShape {
   sectionId: string;
   subject: string;
   teacherId: string;
+  /** D-#728: the cell's window (YYYY-MM-DD, inclusive); null = open-ended. */
+  effectiveFrom: string | null;
+  effectiveTo: string | null;
 }
 const ScheduleEntryRef = builder.objectRef<ScheduleEntryShape>("AssignmentScheduleEntry");
 ScheduleEntryRef.implement({
@@ -200,6 +204,8 @@ ScheduleEntryRef.implement({
     sectionId: t.exposeString("sectionId"),
     subject: t.exposeString("subject"),
     teacherId: t.exposeString("teacherId"),
+    effectiveFrom: t.string({ nullable: true, resolve: (e) => e.effectiveFrom }),
+    effectiveTo: t.string({ nullable: true, resolve: (e) => e.effectiveTo }),
   }),
 });
 
@@ -238,6 +244,7 @@ function scheduleShape(doc: {
     sectionId: { toString(): string };
     subject: string;
     teacherId: { toString(): string };
+    effectiveFrom?: string | null;
     effectiveTo?: string | null;
   }>;
 }): ScheduleShape {
@@ -258,6 +265,8 @@ function scheduleShape(doc: {
       sectionId: e.sectionId.toString(),
       subject: e.subject,
       teacherId: e.teacherId.toString(),
+      effectiveFrom: e.effectiveFrom ?? null,
+      effectiveTo: e.effectiveTo ?? null,
     })),
   };
 }
@@ -828,10 +837,14 @@ builder.mutationField("addAssignmentScheduleEntry", (t) =>
       sectionId: t.arg.string({ required: true }),
       subject: t.arg.string({ required: true }),
       teacherId: t.arg.string({ required: true }),
+      // D-#728: the cell's first day (YYYY-MM-DD). Omitted = open-ended back to the
+      // term start (the pre-D-#728 behaviour, kept for older clients).
+      effectiveFrom: t.arg.string({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       const doc = await addEntrySvc({
+        effectiveFrom: args.effectiveFrom ?? null,
         academicYearId: args.academicYearId,
         cycleWeek: args.cycleWeek,
         classId: args.classId,
@@ -857,6 +870,26 @@ builder.mutationField("removeAssignmentScheduleEntry", (t) =>
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       const doc = await removeEntrySvc(args.academicYearId, args.entryId);
+      return scheduleShape(doc as never);
+    },
+  }),
+);
+
+builder.mutationField("retireAssignmentScheduleEntry", (t) =>
+  t.field({
+    type: ScheduleRef,
+    description:
+      "End one rotation cell on lastDayKey (inclusive, YYYY-MM-DD) — weeks up to it keep the cell, " +
+      "later weeks do not (D-#728). The non-destructive alternative to remove.",
+    authScopes: { hasPermission: "roster:manage" },
+    args: {
+      academicYearId: t.arg.string({ required: true }),
+      entryId: t.arg.string({ required: true }),
+      lastDayKey: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      const doc = await retireEntrySvc(args.academicYearId, args.entryId, args.lastDayKey);
       return scheduleShape(doc as never);
     },
   }),

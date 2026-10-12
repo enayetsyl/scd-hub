@@ -21,11 +21,25 @@ jest.mock("../modules/trackers/models/AssignmentSchedule", () => ({
     findOneAndUpdate: jest.fn(),
   },
 }));
+const mockItemExists = jest.fn();
+const mockNilExists = jest.fn();
 jest.mock("../modules/trackers/models/AssignmentItem", () => ({
-  AssignmentItem: { find: (q: unknown) => ({ lean: () => mockItemFind(q) }) },
+  AssignmentItem: {
+    find: (q: unknown) => ({ lean: () => mockItemFind(q) }),
+    exists: (q: unknown) => mockItemExists(q),
+  },
 }));
 jest.mock("../modules/trackers/models/AssignmentNilDeclaration", () => ({
-  AssignmentNilDeclaration: { find: (q: unknown) => ({ lean: () => mockAsNilFind(q) }) },
+  AssignmentNilDeclaration: {
+    find: (q: unknown) => ({ lean: () => mockAsNilFind(q) }),
+    exists: (q: unknown) => mockNilExists(q),
+  },
+}));
+// D-#728: addScheduleEntry checks the section belongs to the class sent.
+const CLS = new mongoose.Types.ObjectId();
+const mockSectionFindById = jest.fn();
+jest.mock("../modules/foundation/models/Section", () => ({
+  Section: { findById: (id: unknown) => ({ select: () => ({ lean: () => mockSectionFindById(id) }) }) },
 }));
 jest.mock("../modules/routine/models/HolidayException", () => ({
   HolidayException: { find: (q: unknown) => ({ lean: () => mockHolidayFind(q) }) },
@@ -37,7 +51,12 @@ jest.mock("../modules/trackers/assignmentCover", () => ({
   coverCellKey: (c: { sectionId: string; subject: string; teacherId: string }) =>
     `${c.sectionId}|${c.subject}|${c.teacherId}`,
 }));
-beforeEach(() => mockCovers.mockResolvedValue(new Map()));
+beforeEach(() => {
+  mockCovers.mockResolvedValue(new Map());
+  mockSectionFindById.mockResolvedValue({ classId: CLS });
+  mockItemExists.mockResolvedValue(null);
+  mockNilExists.mockResolvedValue(null);
+});
 
 import {
   weekNumberFor,
@@ -48,6 +67,7 @@ import {
 } from "../modules/trackers/assignmentCalendar";
 import {
   addScheduleEntry,
+  removeScheduleEntry,
   expectedItemsForWeek,
   myAssignmentPrepPrompts,
   upsertAssignmentSchedule,
@@ -209,7 +229,7 @@ describe("schedule CRUD validation", () => {
       addScheduleEntry({
         academicYearId: YEAR,
         cycleWeek: 1,
-        classId: oid().toString(),
+        classId: CLS.toString(),
         classLevel: 2,
         sectionId: (e.sectionId as mongoose.Types.ObjectId).toString(),
         subject: "BAN",
@@ -231,7 +251,7 @@ describe("schedule CRUD validation", () => {
   test("Nursery (-1) and KG (0) are accepted; classLevel outside the roster range is rejected", async () => {
     mockScheduleFindOne.mockResolvedValue({ ...schedule(), save: jest.fn() });
     const base = {
-      academicYearId: YEAR, cycleWeek: 1, classId: oid().toString(),
+      academicYearId: YEAR, cycleWeek: 1, classId: CLS.toString(),
       subject: "BAN", teacherId: oid().toString(),
     };
     // Distinct sections so the (cycleWeek × section × subject) dup guard doesn't fire.
@@ -240,6 +260,38 @@ describe("schedule CRUD validation", () => {
     // classLevel is validated before the schedule/dup lookup, so section reuse is irrelevant here.
     await expect(addScheduleEntry({ ...base, sectionId: oid().toString(), classLevel: -2 })).rejects.toThrow(/roster classes/);
     await expect(addScheduleEntry({ ...base, sectionId: oid().toString(), classLevel: 6 })).rejects.toThrow(/roster classes/);
+  });
+
+  // D-#728: a C4 section sent with C5's class would read as C5 and mint C5 asIds.
+  test("a section that is not of the class sent is refused", async () => {
+    mockScheduleFindOne.mockResolvedValue({ ...schedule(), save: jest.fn() });
+    mockSectionFindById.mockResolvedValue({ classId: oid() });
+    await expect(
+      addScheduleEntry({
+        academicYearId: YEAR, cycleWeek: 1, classId: CLS.toString(), classLevel: 4,
+        sectionId: oid().toString(), subject: "BAN", teacherId: oid().toString(),
+      }),
+    ).rejects.toThrow(/অন্তর্ভুক্ত নয়/);
+  });
+
+  test("an effectiveFrom is stored on the new cell", async () => {
+    const doc = { ...schedule(), save: jest.fn() };
+    mockScheduleFindOne.mockResolvedValue(doc);
+    await addScheduleEntry({
+      academicYearId: YEAR, cycleWeek: 1, classId: CLS.toString(), classLevel: 4,
+      sectionId: oid().toString(), subject: "BAN", teacherId: oid().toString(), effectiveFrom: "2026-10-01",
+    });
+    expect((doc.entries as unknown as Array<{ effectiveFrom?: string }>).slice(-1)[0].effectiveFrom).toBe("2026-10-01");
+  });
+
+  // D-#728: removing a cell with history rewrites past weeks — end it instead.
+  test("remove is refused once the cell has a delivered item; allowed when unused", async () => {
+    const e = entry();
+    const entries = Object.assign([e], { id: (id: string) => (id === e._id.toString() ? { ...e, deleteOne: jest.fn() } : null) });
+    mockScheduleFindOne.mockResolvedValue({ ...schedule(), entries, save: jest.fn() });
+    mockItemExists.mockResolvedValueOnce({ _id: oid() });
+    await expect(removeScheduleEntry(YEAR, e._id.toString())).rejects.toThrow(/শেষ করুন/);
+    await expect(removeScheduleEntry(YEAR, e._id.toString())).resolves.toBeDefined();
   });
 });
 

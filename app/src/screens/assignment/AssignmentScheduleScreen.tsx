@@ -18,12 +18,13 @@ import {
   ADD_AS_SCHEDULE_ENTRY,
   REMOVE_AS_SCHEDULE_ENTRY,
   UPDATE_AS_SCHEDULE_ENTRY_TEACHER,
+  RETIRE_AS_SCHEDULE_ENTRY,
 } from "../../graphql/operations";
 import type { AssignmentStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Button, Field, Chip, ChipRow, Select, Loader, Notice } from "../../components/ui";
 import { DateField } from "../../components/DateField";
 import { useReportFilterState } from "../../components/ReportFilters";
-import { STR, bnNum, hwSubjectLabel, dayOfWeekLabel, classLevelLabel, getActiveLang } from "../../lib/labels";
+import { STR, bnNum, hwSubjectLabel, dayOfWeekLabel, classLevelLabel, getActiveLang, dhakaDateKey } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { pickableSections } from "../../lib/sectionPicks";
 import { useConfirm } from "../../state/ConfirmContext";
@@ -82,6 +83,12 @@ export default function AssignmentScheduleScreen(_props: Props): React.ReactElem
   const [, addEntry] = useMutation(ADD_AS_SCHEDULE_ENTRY);
   const [, removeEntry] = useMutation(REMOVE_AS_SCHEDULE_ENTRY);
   const [, updateEntryTeacher] = useMutation(UPDATE_AS_SCHEDULE_ENTRY_TEACHER);
+  const [, retireEntry] = useMutation(RETIRE_AS_SCHEDULE_ENTRY);
+  // D-#728: a new cell starts TODAY by default — an undated cell expected itself in
+  // every past week of its cycle (before the section even existed).
+  const [entryFrom, setEntryFrom] = useState(() => dhakaDateKey());
+  const [endingId, setEndingId] = useState<string | null>(null);
+  const [endKey, setEndKey] = useState(() => dhakaDateKey());
   // D-#328: per-entry teacher edit — the entry being edited + its picked teacher.
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTeacherId, setEditTeacherId] = useState<string | null>(null);
@@ -135,6 +142,7 @@ export default function AssignmentScheduleScreen(_props: Props): React.ReactElem
       sectionId,
       subject,
       teacherId,
+      effectiveFrom: entryFrom || null,
     });
     setBusy(false);
     if (res.error) return setError(friendlyError(res.error));
@@ -149,6 +157,17 @@ export default function AssignmentScheduleScreen(_props: Props): React.ReactElem
     const res = await removeEntry({ academicYearId: yearId, entryId });
     if (res.error) return setError(friendlyError(res.error));
     toast.show(STR.asEntryRemoved, "ok");
+    refetchSchedule({ requestPolicy: "network-only" });
+  }
+
+  /** D-#728: end a cell on a chosen day (inclusive) — past weeks keep it. */
+  async function onEnd(entryId: string): Promise<void> {
+    setError(null);
+    setOk(null);
+    const res = await retireEntry({ academicYearId: yearId, entryId, lastDayKey: endKey });
+    if (res.error) return setError(friendlyError(res.error));
+    setEndingId(null);
+    toast.show(STR.asEntryEnded, "ok");
     refetchSchedule({ requestPolicy: "network-only" });
   }
 
@@ -276,6 +295,7 @@ export default function AssignmentScheduleScreen(_props: Props): React.ReactElem
                     placeholder={STR.asTeacher}
                     searchable
                   />
+                  <DateField label={STR.asEntryFrom} value={entryFrom} onChange={setEntryFrom} />
                   <View style={{ marginTop: 8 }}>
                     <Button title={STR.asAddEntry} onPress={onAddEntry} loading={busy} disabled={busy} />
                   </View>
@@ -303,13 +323,25 @@ export default function AssignmentScheduleScreen(_props: Props): React.ReactElem
                                 </Body>
                                 <Muted>
                                   {classLevelLabel(e.classLevel)} · {teacherName(e.teacherId)}
+                                  {e.effectiveFrom ? ` · ${bnNum(e.effectiveFrom)} ${STR.asFromSuffix}` : ""}
+                                  {e.effectiveTo ? ` · ${bnNum(e.effectiveTo)} ${STR.asUntilSuffix}` : ""}
                                 </Muted>
                               </View>
                               <ChipRow>
                                 <Chip label={STR.asEditEntry} onPress={() => startEdit(e.id, e.teacherId)} />
+                                <Chip label={STR.asEndEntry} onPress={() => setEndingId(endingId === e.id ? null : e.id)} />
                                 <Chip label={STR.asRemoveEntry} onPress={() => void onRemove(e.id)} />
                               </ChipRow>
                             </View>
+                            {endingId === e.id ? (
+                              <View style={{ marginTop: 6 }}>
+                                <DateField label={STR.asEndOn} value={endKey} onChange={setEndKey} />
+                                <ChipRow>
+                                  <Chip label={STR.asEndEntry} onPress={() => void onEnd(e.id)} />
+                                  <Chip label={STR.cancel} onPress={() => setEndingId(null)} />
+                                </ChipRow>
+                              </View>
+                            ) : null}
                             {editingId === e.id ? (
                               <View style={{ marginTop: 6 }}>
                                 <Select
