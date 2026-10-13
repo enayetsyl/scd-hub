@@ -11,6 +11,9 @@
  *   slotMinutes      — appointment length; drives the sequential slot times.
  *   dayStartMinutes  — when the first slot starts, in minutes-from-midnight
  *                      (e.g. 600 = 10:00).
+ *   breaks[]         — clock-time breaks (tea, prayer) as [startMinutes, endMinutes)
+ *                      minutes-from-midnight. No timed slot may overlap one — slot
+ *                      timing jumps to the break's end (owner ask 2026-10-13).
  *   status           — `draft → scheduled → closed`. A **model-local literal
  *                      union, NOT a shared/vocab.ts enum** (CM-3 is vocab-free; the
  *                      MEETING_SCHEDULE notification kind + the scheduled transition
@@ -34,6 +37,12 @@ export interface IMeetingScope {
   sectionIds: Types.ObjectId[];
 }
 
+/** A clock-time break in the meeting day: [startMinutes, endMinutes), minutes-from-midnight. */
+export interface IMeetingBreak {
+  startMinutes: number;
+  endMinutes: number;
+}
+
 export interface IParentMeeting extends Document {
   _id: Types.ObjectId;
   academicYearId: Types.ObjectId;
@@ -41,6 +50,7 @@ export interface IParentMeeting extends Document {
   meetingDate: Date;
   slotMinutes: number;
   dayStartMinutes: number;
+  breaks: IMeetingBreak[];
   status: ParentMeetingStatus;
   includeScope: IMeetingScope;
   createdAt: Date;
@@ -54,6 +64,16 @@ const ParentMeetingSchema = new Schema<IParentMeeting>(
     meetingDate: { type: Date, required: true },
     slotMinutes: { type: Number, required: true, min: 1 },
     dayStartMinutes: { type: Number, required: true, min: 0, max: 24 * 60 - 1 },
+    breaks: {
+      type: [
+        {
+          _id: false,
+          startMinutes: { type: Number, required: true, min: 0, max: 24 * 60 },
+          endMinutes: { type: Number, required: true, min: 0, max: 24 * 60 },
+        },
+      ],
+      default: [],
+    },
     status: { type: String, enum: PARENT_MEETING_STATUSES, default: "draft", required: true },
     includeScope: {
       classIds: { type: [Schema.Types.ObjectId], ref: "Class", default: [] },

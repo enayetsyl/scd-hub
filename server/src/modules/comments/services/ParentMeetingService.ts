@@ -14,6 +14,7 @@
  *                         audited PARENT_MEETING_SLOTS_GENERATED.
  *   setSlotOnCall       — flag a family On-Call (J-CM4: null time) + re-time the rest.
  *   reorderSlots        — admin reorder; the new order drives the slot times.
+ *   setMeetingBreaks    — clock-time breaks (draft-only); slot times skip over them.
  *   reads               — the meeting + its slots, for the Office.
  *
  * Role RBAC (`roster:manage`, the D-#94 admin gate) is enforced by the RESOLVER —
@@ -21,7 +22,12 @@
  * phone); NO corpus path (ADR-005).
  */
 import { Types } from "mongoose";
-import { ParentMeeting, type IParentMeeting, type ParentMeetingStatus } from "../models/ParentMeeting";
+import {
+  ParentMeeting,
+  type IParentMeeting,
+  type IMeetingBreak,
+  type ParentMeetingStatus,
+} from "../models/ParentMeeting";
 import { ParentMeetingSlot, type IParentMeetingSlot } from "../models/ParentMeetingSlot";
 import { Student } from "../../foundation/models/Student";
 import { Class } from "../../foundation/models/Class";
@@ -43,6 +49,7 @@ export interface ParentMeetingShape {
   meetingDate: string;
   slotMinutes: number;
   dayStartMinutes: number;
+  breaks: IMeetingBreak[];
   status: ParentMeetingStatus;
   includeClassIds: string[];
   includeSectionIds: string[];
@@ -56,6 +63,8 @@ export interface ParentMeetingSlotShape {
   familyKey: string;
   studentIds: string[];
   classLabels: string[];
+  /** Student names parallel to `studentIds` — joined at read time (never stored); absent where not joined. */
+  studentNames?: string[];
   order: number;
   slotTime: number | null;
   onCall: boolean;
@@ -85,6 +94,7 @@ function meetingShape(d: IParentMeeting): ParentMeetingShape {
     meetingDate: new Date(d.meetingDate).toISOString(),
     slotMinutes: d.slotMinutes,
     dayStartMinutes: d.dayStartMinutes,
+    breaks: (d.breaks ?? []).map((b) => ({ startMinutes: b.startMinutes, endMinutes: b.endMinutes })),
     status: d.status,
     includeClassIds: (d.includeScope?.classIds ?? []).map((x) => x.toString()),
     includeSectionIds: (d.includeScope?.sectionIds ?? []).map((x) => x.toString()),
@@ -129,6 +139,7 @@ export interface FamilyGroup {
   familyKey: string;
   studentIds: string[];
   classLabels: string[];
+  studentNames: string[];
   hasPhone: boolean;
 }
 
@@ -173,6 +184,7 @@ export function groupFamilies(students: StudentForSlot[]): FamilyGroup[] {
         familyKey: key,
         studentIds: members.map((m) => m.id),
         classLabels: members.map((m) => m.classLabel),
+        studentNames: members.map((m) => m.name),
         hasPhone: !key.startsWith("nophone:"),
       },
       lead: studentSortKey(members[0]),
@@ -185,22 +197,64 @@ export function groupFamilies(students: StudentForSlot[]): FamilyGroup[] {
 
 /**
  * Assign sequential slot times to slots **already sorted by `order`**: timed slots
- * get `dayStartMinutes + i*slotMinutes` (i increments over timed slots only), On-Call
- * slots get null. Pure — the order drives the times (D-#123). Returns the times
- * parallel to the input.
+ * step `slotMinutes` from `dayStartMinutes` (On-Call slots get null and consume no
+ * step). A timed slot that would overlap a break starts at that break's end instead,
+ * so no appointment ever runs into a break. Pure — the order drives the times
+ * (D-#123). Returns the times parallel to the input.
  */
 export function assignSlotTimes(
   slots: { onCall: boolean }[],
   dayStartMinutes: number,
   slotMinutes: number,
+  breaks: IMeetingBreak[] = [],
 ): (number | null)[] {
-  let i = 0;
+  const sorted = [...breaks].sort((a, b) => a.startMinutes - b.startMinutes);
+  let cursor = dayStartMinutes;
   return slots.map((s) => {
     if (s.onCall) return null;
-    const t = dayStartMinutes + i * slotMinutes;
-    i += 1;
+    // Breaks are sorted, so one pass pushes the cursor past every break it hits.
+    for (const b of sorted) {
+      if (cursor < b.endMinutes && cursor + slotMinutes > b.startMinutes) cursor = b.endMinutes;
+    }
+    const t = cursor;
+    cursor += slotMinutes;
     return t;
   });
+}
+
+/**
+ * Validate + normalize admin-entered breaks: each must be a whole-minute range inside
+ * the day with start < end; overlapping/touching breaks merge into one. Returns them
+ * sorted by start. Pure.
+ */
+export function normalizeBreaks(breaks: IMeetingBreak[]): IMeetingBreak[] {
+  for (const b of breaks) {
+    if (!Number.isInteger(b.startMinutes) || !Number.isInteger(b.endMinutes)) {
+      throw new ParentMeetingError("Break times must be whole minutes");
+    }
+    if (b.startMinutes < 0 || b.endMinutes > 24 * 60 || b.startMinutes >= b.endMinutes) {
+      throw new ParentMeetingError("A break must end after it starts, within the day");
+    }
+  }
+  const sorted = [...breaks].sort((a, b) => a.startMinutes - b.startMinutes);
+  const merged: IMeetingBreak[] = [];
+  for (const b of sorted) {
+    const last = merged[merged.length - 1];
+    if (last && b.startMinutes <= last.endMinutes) last.endMinutes = Math.max(last.endMinutes, b.endMinutes);
+    else merged.push({ startMinutes: b.startMinutes, endMinutes: b.endMinutes });
+  }
+  return merged;
+}
+
+/** Fill each slot's `studentNames` (parallel to `studentIds`) with ONE batched Student read. */
+async function withStudentNames(slots: ParentMeetingSlotShape[]): Promise<ParentMeetingSlotShape[]> {
+  const ids = [...new Set(slots.flatMap((s) => s.studentIds))];
+  if (ids.length === 0) return slots;
+  const students = ((await Student.find({ _id: { $in: ids.map((id) => new Types.ObjectId(id)) } })
+    .select("name")
+    .lean()) ?? []) as unknown as { _id: Types.ObjectId; name: string }[];
+  const nameById = new Map(students.map((s) => [s._id.toString(), s.name]));
+  return slots.map((s) => ({ ...s, studentNames: s.studentIds.map((id) => nameById.get(id) ?? "") }));
 }
 
 // ===========================================================================
@@ -350,6 +404,7 @@ export async function generateSlots(meetingId: string, actorId: string): Promise
     families.map(() => ({ onCall: false })),
     meeting.dayStartMinutes,
     meeting.slotMinutes,
+    meeting.breaks ?? [],
   );
 
   // Wholesale replace (the setVocabTestPositions posture) — delete then relay.
@@ -383,7 +438,8 @@ export async function generateSlots(meetingId: string, actorId: string): Promise
 
   return {
     meetingId: meeting._id.toString(),
-    slots: docs.map(slotShape),
+    // insertMany keeps input order, so docs[i] is families[i] — names come free.
+    slots: docs.map((d, i) => ({ ...slotShape(d), studentNames: families[i]?.studentNames ?? [] })),
     familyCount: families.length,
     reachableCount,
     unreachableCount,
@@ -403,12 +459,43 @@ async function retimeAndReturn(meeting: IParentMeeting): Promise<ParentMeetingSl
     slots.map((s) => ({ onCall: !!s.onCall })),
     meeting.dayStartMinutes,
     meeting.slotMinutes,
+    meeting.breaks ?? [],
   );
   for (let i = 0; i < slots.length; i++) {
     slots[i].slotTime = times[i];
     await slots[i].save();
   }
-  return slots.map(slotShape);
+  return withStudentNames(slots.map(slotShape));
+}
+
+// ===========================================================================
+// setMeetingBreaks (draft-only; re-times the slots around the breaks)
+// ===========================================================================
+
+export async function setMeetingBreaks(
+  meetingId: string,
+  breaks: IMeetingBreak[],
+  actorId: string,
+): Promise<{ meeting: ParentMeetingShape; slots: ParentMeetingSlotShape[] }> {
+  const meeting = await loadMeetingOrThrow(meetingId);
+  if (meeting.status !== "draft") {
+    throw new ParentMeetingError("Breaks can only be changed while the meeting is a draft");
+  }
+  const normalized = normalizeBreaks(breaks);
+  meeting.breaks = normalized;
+  await meeting.save();
+
+  const slots = await retimeAndReturn(meeting);
+
+  await writeAudit({
+    eventKind: "PARENT_MEETING_SLOTS_REORDERED",
+    actorId,
+    targetId: meeting._id,
+    targetKind: "ParentMeeting",
+    meta: { action: "setBreaks", breaks: normalized },
+  });
+
+  return { meeting: meetingShape(meeting), slots };
 }
 
 // ===========================================================================
@@ -511,5 +598,5 @@ export async function listMeetingSlots(meetingId: string): Promise<ParentMeeting
   const docs = (await ParentMeetingSlot.find({ meetingId: new Types.ObjectId(meetingId) })
     .sort({ order: 1 })
     .lean()) as unknown as IParentMeetingSlot[];
-  return docs.map(slotShape);
+  return withStudentNames(docs.map(slotShape));
 }
