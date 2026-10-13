@@ -32,6 +32,22 @@ export const FILE_VIEW_SUPPORTED = Platform.OS === "web" || Platform.OS === "and
 
 export class FileUploadError extends Error {}
 
+/**
+ * The filename for a React Native FormData file part. RN 0.74 sends it twice —
+ * `filename="<name>"; filename*=utf-8''<encodeURI(name)>` — and encodeURI leaves
+ * `( ) ' , ; @ = * : ? /` raw, which are illegal in an RFC 5987 ext-value. busboy
+ * (multer) then rejects the whole Content-Disposition and SKIPS the part, so a phone
+ * upload of "paper (1).pdf" reached the server as "file field missing". Swap those
+ * characters (and the `"` / `\` that would break the quoted form) for safe ones;
+ * Bangla and spaces are percent-encoded fine and stay as they are.
+ */
+export function rnUploadName(name: string): string {
+  return name
+    .replace(/\(/g, "[")
+    .replace(/\)/g, "]")
+    .replace(/[',;@=*:?/"\\]/g, "_");
+}
+
 export interface UploadedFile {
   fileId: string;
   originalName: string;
@@ -98,7 +114,7 @@ async function uploadHomeworkAsset(
     // React Native FormData file part: { uri, name, type }
     form.append("file", {
       uri: asset.uri,
-      name: asset.name,
+      name: rnUploadName(asset.name),
       type: asset.mimeType ?? "application/octet-stream",
     } as unknown as Blob);
   }
@@ -176,7 +192,7 @@ export async function pickAndUploadChatFile(
   } else {
     form.append("file", {
       uri: asset.uri,
-      name: asset.name,
+      name: rnUploadName(asset.name),
       type: asset.mimeType ?? "application/octet-stream",
     } as unknown as Blob);
   }
@@ -235,7 +251,7 @@ export async function pickAndUploadClassTestPaper(): Promise<UploadedFile | null
   } else {
     form.append("file", {
       uri: asset.uri,
-      name: asset.name,
+      name: rnUploadName(asset.name),
       type: asset.mimeType ?? "application/octet-stream",
     } as unknown as Blob);
   }
@@ -279,7 +295,7 @@ export async function pickAndUploadArchivePhoto(): Promise<UploadedFile | null> 
   } else {
     form.append("file", {
       uri: asset.uri,
-      name: asset.name,
+      name: rnUploadName(asset.name),
       type: asset.mimeType ?? "application/octet-stream",
     } as unknown as Blob);
   }
@@ -330,7 +346,7 @@ export async function pickAndUploadClassNoteAttachment(): Promise<UploadedFile |
   } else {
     form.append("file", {
       uri: asset.uri,
-      name: asset.name,
+      name: rnUploadName(asset.name),
       type: asset.mimeType ?? "application/octet-stream",
     } as unknown as Blob);
   }
@@ -371,7 +387,7 @@ async function uploadAssignmentAsset(asset: DocumentPicker.DocumentPickerAsset):
   } else {
     form.append("file", {
       uri: asset.uri,
-      name: asset.name,
+      name: rnUploadName(asset.name),
       type: asset.mimeType ?? "application/octet-stream",
     } as unknown as Blob);
   }
@@ -440,7 +456,7 @@ async function uploadPrintAsset(asset: DocumentPicker.DocumentPickerAsset): Prom
   } else {
     form.append("file", {
       uri: asset.uri,
-      name: asset.name,
+      name: rnUploadName(asset.name),
       type: asset.mimeType ?? "application/octet-stream",
     } as unknown as Blob);
   }
@@ -538,7 +554,7 @@ export async function pickAndUploadCommentFile(
   } else {
     form.append("file", {
       uri: asset.uri,
-      name: asset.name,
+      name: rnUploadName(asset.name),
       type: asset.mimeType ?? "application/octet-stream",
     } as unknown as Blob);
   }
@@ -606,7 +622,7 @@ export async function uploadEnglishDriveAsset(
   } else {
     form.append("file", {
       uri: asset.uri,
-      name: asset.name,
+      name: rnUploadName(asset.name),
       type: asset.mimeType ?? "application/octet-stream",
     } as unknown as Blob);
   }
@@ -648,7 +664,7 @@ export async function uploadTeachingNoteAsset(
   } else {
     form.append("file", {
       uri: asset.uri,
-      name: asset.name,
+      name: rnUploadName(asset.name),
       type: asset.mimeType ?? "application/octet-stream",
     } as unknown as Blob);
   }
@@ -784,7 +800,7 @@ async function uploadCtScriptAsset(asset: DocumentPicker.DocumentPickerAsset): P
   } else {
     form.append("file", {
       uri: asset.uri,
-      name: asset.name,
+      name: rnUploadName(asset.name),
       type: asset.mimeType ?? "application/octet-stream",
     } as unknown as Blob);
   }
@@ -1122,7 +1138,7 @@ export async function pickAndUploadBookImage(
   } else {
     form.append("file", {
       uri: asset.uri,
-      name: asset.name,
+      name: rnUploadName(asset.name),
       type: asset.mimeType ?? "application/octet-stream",
     } as unknown as Blob);
   }
