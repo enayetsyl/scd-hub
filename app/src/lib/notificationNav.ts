@@ -195,6 +195,17 @@ export function notificationTarget(
       // dashboard that lists which exams they are. Office/Principal only — a
       // guardian can never receive this kind.
       return { tab: "ClassTestTab", screen: "ClassTestDashboard" };
+    // SP-4 (D-#738) improvement actions.
+    case "IMPROVEMENT_ACTION_ASSIGNED":
+      // The task is ticked from Today on both sides; the card lists it on its first day.
+      return guardian ? { tab: "GuardianHomeTab", screen: "GuardianHome" } : { tab: "HomeTab", screen: "Today" };
+    case "IMPROVEMENT_TASKS_PENDING":
+      // Office/Principal: the list where they mark on the teacher's behalf.
+      return { tab: "ClassTestTab", screen: "ImprovementDayTasks" };
+    case "IMPROVEMENT_GUARDIAN_MISSED":
+      // The class teacher: the student's progress page needs roster:manage, so the row
+      // lands on their Today; the notification text names the child and the subject.
+      return { tab: "HomeTab", screen: "Today" };
     case "VOCAB_RESULT":
       return guardian
         ? { tab: "GuardianHomeTab", screen: "GuardianHome" }

@@ -75,6 +75,10 @@ export const EXPECTED_ERROR_NAMES: ReadonlySet<string> = new Set([
   "ChatError",
   "ClassTestResultError",
   "ClassroomObservationError",
+  // Improvement actions (SP-2..SP-4, D-#735..#737): a refused create/tick/assign — no part,
+  // a day not on the schedule, a tick by someone not responsible today. A sentence for
+  // the person, not a fault.
+  "ImprovementError",
   // CO-14 (D-#426): a refused rota is a DELIBERATE outcome — the model broke a rule the
   // user set and the violations are shown to them. Not a fault to page anyone about.
   "ObservationRotaError",

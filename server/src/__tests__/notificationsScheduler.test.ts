@@ -131,6 +131,14 @@ jest.mock("../modules/workboard/services/TaskSweepService", () => ({
   TASK_DIGEST_MINUTES: 7 * 60 + 30,
   TASK_OVERDUE_MINUTES: 16 * 60,
 }));
+// SP-4 (D-#738) — the 11:00 improvement sweep reads real models; stubbed like the work board.
+const mockImprovementPending = jest.fn((_now: Date) => Promise.resolve(0));
+const mockImprovementMissed = jest.fn((_now: Date) => Promise.resolve(0));
+jest.mock("../modules/improvement/services/ImprovementSweepService", () => ({
+  emitPendingDigest: (now: Date) => mockImprovementPending(now),
+  emitGuardianMissed: (now: Date) => mockImprovementMissed(now),
+  IMPROVEMENT_DIGEST_MINUTES: 11 * 60,
+}));
 
 import {
   runSchedulerTick,
@@ -428,6 +436,39 @@ describe("class-test overdue digest (D-#603)", () => {
     mockOverdueCounts.mockResolvedValue({ overdue: 4, awaitingSubmit: 4, awaitingPublish: 0 });
     await runSchedulerTick(at(8, 0));
     expect(mockOverdueCounts).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Improvement actions 11:00 sweep (SP-4, D-#738)
+// ---------------------------------------------------------------------------
+
+describe("improvement 11:00 sweep (D-#738)", () => {
+  it("runs both halves at 11:00 on a FULL day and reports their counts", async () => {
+    mockImprovementPending.mockResolvedValue(2);
+    mockImprovementMissed.mockResolvedValue(1);
+    const s = await runSchedulerTick(at(11, 0));
+    expect(s.improvementPendingEmitted).toBe(2);
+    expect(s.improvementMissedEmitted).toBe(1);
+  });
+
+  it("reads ONCE per day across the stale window", async () => {
+    await runSchedulerTick(at(11, 0));
+    await runSchedulerTick(at(11, 5));
+    await runSchedulerTick(at(11, 25));
+    expect(mockImprovementPending).toHaveBeenCalledTimes(1);
+    expect(mockImprovementMissed).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not fire before 11:00", async () => {
+    await runSchedulerTick(at(10, 55));
+    expect(mockImprovementPending).not.toHaveBeenCalled();
+  });
+
+  it.each(["OFF", "HOLIDAY", "QURAN_ONLY"] as const)("does NOT run on a %s day", async (dayType) => {
+    mockResolveDayType.mockResolvedValue(dayType);
+    await runSchedulerTick(at(11, 0));
+    expect(mockImprovementPending).not.toHaveBeenCalled();
   });
 });
 

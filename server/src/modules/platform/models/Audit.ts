@@ -239,6 +239,13 @@ export type AuditEventKind =
   | "CT_SCRIPTS_HANDED_BACK"       // Office gave the paper to the teacher to return in class (D-#719)
   | "CT_SCRIPTS_RETURNED"          // the teacher (or Office for an absent teacher) returned it to the students
   | "CT_SCRIPTS_WAIVED"            // closed without scans, with a reason (D-#718) — meta.undone on an unwaive
+  // Improvement actions (SP-2..SP-4, docs/prd-student-progress.md, D-#735..#737)
+  | "IMPROVEMENT_ACTION_CREATED"   // Office/Principal set an action (scope, subject, days, start/end in meta)
+  | "IMPROVEMENT_ACTION_STOPPED"   // stopped early, with an optional reason
+  | "IMPROVEMENT_ACTION_EXTENDED"  // more school days added (count + new end in meta)
+  | "IMPROVEMENT_TICKED"           // a day marked DONE/COULDNT — part, day, reason, onBehalf/asCover in meta
+  | "IMPROVEMENT_UNTICKED"         // a day's mark taken back (what it was in meta)
+  | "IMPROVEMENT_ASSIGNEE_SET"     // who does a teacher day changed on the leave cover screen (null = back to the default)
   // Exam syllabus (SY-1..SY-6, docs/prd-exam-syllabus.md §6/§7, D-#530–#532)
   | "EXAM_CREATED"                    // an exam row created (exam:manage)
   | "EXAM_UPDATED"                    // an exam's name/date window edited; meta lists WHICH fields moved, never their values (the D-#526 posture)
