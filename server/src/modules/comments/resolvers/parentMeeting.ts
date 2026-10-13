@@ -18,6 +18,7 @@ import {
   generateSlots,
   setSlotOnCall,
   reorderSlots,
+  setMeetingBreaks,
   listParentMeetings,
   getParentMeeting,
   listMeetingSlots,
@@ -29,6 +30,22 @@ import {
 // ---------------------------------------------------------------------------
 // GraphQL shapes
 // ---------------------------------------------------------------------------
+
+const MeetingBreakRef = builder.objectRef<{ startMinutes: number; endMinutes: number }>("MeetingBreak");
+MeetingBreakRef.implement({
+  description: "A clock-time break in a parents' meeting day: [startMinutes, endMinutes), minutes-from-midnight.",
+  fields: (t) => ({
+    startMinutes: t.exposeInt("startMinutes"),
+    endMinutes: t.exposeInt("endMinutes"),
+  }),
+});
+
+const MeetingBreakInput = builder.inputType("MeetingBreakInput", {
+  fields: (t) => ({
+    startMinutes: t.int({ required: true }),
+    endMinutes: t.int({ required: true }),
+  }),
+});
 
 const ParentMeetingRef = builder.objectRef<ParentMeetingShape>("ParentMeeting");
 ParentMeetingRef.implement({
@@ -42,6 +59,7 @@ ParentMeetingRef.implement({
     meetingDate: t.exposeString("meetingDate"),
     slotMinutes: t.exposeInt("slotMinutes"),
     dayStartMinutes: t.exposeInt("dayStartMinutes"),
+    breaks: t.field({ type: [MeetingBreakRef], resolve: (m) => m.breaks }),
     status: t.exposeString("status"),
     includeClassIds: t.exposeStringList("includeClassIds"),
     includeSectionIds: t.exposeStringList("includeSectionIds"),
@@ -62,6 +80,11 @@ ParentMeetingSlotRef.implement({
     familyKey: t.exposeString("familyKey"),
     studentIds: t.exposeStringList("studentIds"),
     classLabels: t.exposeStringList("classLabels"),
+    studentNames: t.stringList({
+      nullable: true,
+      description: "Names parallel to studentIds, joined at read time; null on payloads that do not join them.",
+      resolve: (s) => s.studentNames ?? null,
+    }),
     order: t.exposeInt("order"),
     slotTime: t.int({ nullable: true, resolve: (s) => s.slotTime }),
     onCall: t.exposeBoolean("onCall"),
@@ -171,6 +194,34 @@ builder.mutationField("reorderMeetingSlots", (t) =>
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       return reorderSlots(args.meetingId, args.slotIds, ctx.auth.userId as string);
+    },
+  }),
+);
+
+const SetMeetingBreaksResultRef = builder.objectRef<{ meeting: ParentMeetingShape; slots: ParentMeetingSlotShape[] }>(
+  "SetMeetingBreaksResult",
+);
+SetMeetingBreaksResultRef.implement({
+  fields: (t) => ({
+    meeting: t.field({ type: ParentMeetingRef, resolve: (r) => r.meeting }),
+    slots: t.field({ type: [ParentMeetingSlotRef], resolve: (r) => r.slots }),
+  }),
+});
+
+builder.mutationField("setMeetingBreaks", (t) =>
+  t.field({
+    type: SetMeetingBreaksResultRef,
+    description:
+      "Replace a draft meeting's clock-time breaks (overlaps merge) and re-time its slots so none runs " +
+      "into a break. Requires roster:manage. Audited.",
+    authScopes: { hasPermission: "roster:manage" },
+    args: {
+      meetingId: t.arg.string({ required: true }),
+      breaks: t.arg({ type: [MeetingBreakInput], required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      return setMeetingBreaks(args.meetingId, args.breaks, ctx.auth.userId as string);
     },
   }),
 );

@@ -8,6 +8,10 @@
  * After dispatch: per-slot present/absent (setMeetingSlotAttendance) + the derived
  * meetingAttendanceSummary aggregates. Each child in a slot has a "Comparison" link →
  * MeetingComparison. All actions ride roster:manage — the Bangla deny surfaces inline.
+ *
+ * Each slot leads with the family's student names (joined server-side); while draft
+ * the admin edits clock-time breaks (setMeetingBreaks) and the slot list shows a
+ * break row where the timing jumps over one.
  */
 import React, { useEffect, useState } from "react";
 import { Linking, ScrollView, View } from "react-native";
@@ -23,10 +27,13 @@ import {
   DISPATCH_MEETING_SCHEDULE,
   SET_MEETING_SLOT_ATTENDANCE,
   MEETING_ATTENDANCE_SUMMARY_QUERY,
+  SET_MEETING_BREAKS,
   type GenerateSlotsResultT,
+  type MeetingBreakT,
   type MeetingDispatchResultT,
+  type ParentMeetingSlotT,
 } from "../../graphql/comments";
-import { Screen, Card, Body, Muted, Button, Badge, Loader, Notice } from "../../components/ui";
+import { Screen, Card, Body, Muted, Button, Badge, Field, Loader, Notice } from "../../components/ui";
 import { STR, meetingStatusLabel, minutesToHHMM, bnNum, isoDateLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
@@ -34,6 +41,21 @@ import type { CommentsStackParamList } from "../../navigation/types";
 
 type Props = NativeStackScreenProps<CommentsStackParamList, "MeetingAdmin">;
 type Nav = NativeStackNavigationProp<CommentsStackParamList>;
+
+/** "10:30" / "১০:৩০" / "1030" → minutes-from-midnight, or null when not a valid clock time. */
+function parseClock(raw: string): number | null {
+  const ascii = raw.trim().replace(/[০-৯]/g, (d) => String(d.charCodeAt(0) - 0x09e6));
+  const m = /^(\d{1,2}):?(\d{2})$/.exec(ascii);
+  if (!m) return null;
+  const h = Number(m[1]);
+  const mm = Number(m[2]);
+  return h < 24 && mm < 60 ? h * 60 + mm : null;
+}
+
+/** A slot's children as display names, falling back to the class label when a name is missing. */
+function childNames(s: ParentMeetingSlotT): string[] {
+  return s.studentIds.map((_, idx) => s.studentNames?.[idx] || s.classLabels[idx] || bnNum(idx + 1));
+}
 
 export default function MeetingAdminScreen({ route }: Props): React.ReactElement {
   const { meetingId } = route.params;
@@ -58,12 +80,20 @@ export default function MeetingAdminScreen({ route }: Props): React.ReactElement
   const [, reorder] = useMutation(REORDER_MEETING_SLOTS);
   const [, dispatch] = useMutation(DISPATCH_MEETING_SCHEDULE);
   const [, setAttendance] = useMutation(SET_MEETING_SLOT_ATTENDANCE);
+  const [, setBreaks] = useMutation(SET_MEETING_BREAKS);
 
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [genResult, setGenResult] = useState<GenerateSlotsResultT | null>(null);
   const [dispatchResult, setDispatchResult] = useState<MeetingDispatchResultT | null>(null);
+  const [breakStart, setBreakStart] = useState("");
+  const [breakEnd, setBreakEnd] = useState("");
+
+  const breaks: MeetingBreakT[] = [...(meeting?.breaks ?? [])].sort((a, b) => a.startMinutes - b.startMinutes);
+  const namesBySlot = new Map(slots.map((s) => [s.id, childNames(s)]));
+  // Render cursor over `breaks` for the slot list (reset every render).
+  let shownBreaks = 0;
 
   function refreshAll(): void {
     refetchMeeting({ requestPolicy: "network-only" });
@@ -117,6 +147,25 @@ export default function MeetingAdminScreen({ route }: Props): React.ReactElement
     await run(() => reorder({ meetingId, slotIds: ids }), STR.cmSlotsGenerated);
   }
 
+  function saveBreaks(next: MeetingBreakT[]): Promise<unknown> {
+    const plain = next.map((b) => ({ startMinutes: b.startMinutes, endMinutes: b.endMinutes }));
+    return run(() => setBreaks({ meetingId, breaks: plain }), STR.cmBreaksSaved);
+  }
+
+  async function onAddBreak(): Promise<void> {
+    const start = parseClock(breakStart);
+    const end = parseClock(breakEnd);
+    if (start == null || end == null || end <= start) {
+      setOk(null);
+      setError(STR.cmBreakInvalid);
+      return;
+    }
+    if (await saveBreaks([...breaks, { startMinutes: start, endMinutes: end }])) {
+      setBreakStart("");
+      setBreakEnd("");
+    }
+  }
+
   if (meetingQ.fetching && !meeting) {
     return (
       <Screen>
@@ -162,6 +211,46 @@ export default function MeetingAdminScreen({ route }: Props): React.ReactElement
           </Card>
         ) : null}
 
+        {/* Breaks — editable while draft; the slot timing jumps over them */}
+        {isDraft || breaks.length > 0 ? (
+          <Card>
+            <Body style={{ fontWeight: "700" }}>{STR.cmBreaks}</Body>
+            {breaks.length === 0 ? <Muted style={{ marginTop: space(1) }}>{STR.cmNoBreaks}</Muted> : null}
+            {breaks.map((b) => (
+              <View
+                key={`${b.startMinutes}-${b.endMinutes}`}
+                style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: space(1) }}
+              >
+                <Body>
+                  {minutesToHHMM(b.startMinutes)} – {minutesToHHMM(b.endMinutes)}
+                </Body>
+                {isDraft ? (
+                  <Button
+                    title={STR.cmRemoveBreak}
+                    variant="ghost"
+                    onPress={() => void saveBreaks(breaks.filter((x) => x !== b))}
+                    disabled={busy}
+                  />
+                ) : null}
+              </View>
+            ))}
+            {isDraft ? (
+              <>
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: space(2) }}>
+                  <View style={{ flexGrow: 1, flexBasis: 140 }}>
+                    <Field label={STR.cmBreakStart} value={breakStart} onChangeText={setBreakStart} placeholder="10:30" />
+                  </View>
+                  <View style={{ flexGrow: 1, flexBasis: 140 }}>
+                    <Field label={STR.cmBreakEnd} value={breakEnd} onChangeText={setBreakEnd} placeholder="11:00" />
+                  </View>
+                </View>
+                <Button title={STR.cmAddBreak} variant="secondary" onPress={() => void onAddBreak()} disabled={busy} />
+                <Muted style={{ marginTop: space(1) }}>{STR.cmBreakHint}</Muted>
+              </>
+            ) : null}
+          </Card>
+        ) : null}
+
         {/* Attendance summary (after dispatch — derived) */}
         {!isDraft && summary ? (
           <Card>
@@ -192,6 +281,7 @@ export default function MeetingAdminScreen({ route }: Props): React.ReactElement
                 style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: space(2) }}
               >
                 <View style={{ flexShrink: 1 }}>
+                  {namesBySlot.has(o.slotId) ? <Body>{namesBySlot.get(o.slotId)?.join(", ")}</Body> : null}
                   <Muted>
                     {o.onCall ? STR.cmOnCall : minutesToHHMM(o.slotTime)}
                     {o.unreachableByWa ? ` · ${STR.cmUnreachable}` : ""}
@@ -213,14 +303,34 @@ export default function MeetingAdminScreen({ route }: Props): React.ReactElement
           ) : slots.length === 0 ? (
             <Muted style={{ marginTop: space(2) }}>{STR.cmNoSlots}</Muted>
           ) : (
-            slots.map((s, i) => (
-              <Card key={s.id}>
+            slots.map((s, i) => {
+              // Breaks that end by this slot's start are drawn just above it (timed slots only).
+              const breaksBefore: MeetingBreakT[] = [];
+              if (!s.onCall && s.slotTime != null) {
+                while (shownBreaks < breaks.length && breaks[shownBreaks].endMinutes <= s.slotTime) {
+                  breaksBefore.push(breaks[shownBreaks]);
+                  shownBreaks += 1;
+                }
+              }
+              const names = childNames(s);
+              return (
+              <React.Fragment key={s.id}>
+              {breaksBefore.map((b) => (
+                <Notice
+                  key={`break-${b.startMinutes}`}
+                  tone="info"
+                  message={`${STR.cmBreaks}: ${minutesToHHMM(b.startMinutes)} – ${minutesToHHMM(b.endMinutes)}`}
+                />
+              ))}
+              <Card>
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                   <View style={{ flexShrink: 1 }}>
                     <Body style={{ fontWeight: "700" }}>
-                      {bnNum(s.order)}. {s.classLabels.join(", ")}
+                      {bnNum(i + 1)}. {names.join(", ")}
                     </Body>
-                    <Muted>{s.onCall ? STR.cmOnCall : minutesToHHMM(s.slotTime)}</Muted>
+                    <Muted>
+                      {s.onCall ? STR.cmOnCall : minutesToHHMM(s.slotTime)} · {s.classLabels.join(", ")}
+                    </Muted>
                   </View>
                   {s.attended != null ? (
                     <Badge text={s.attended ? STR.cmPresent : STR.cmAbsent} tone={s.attended ? "ok" : "danger"} />
@@ -271,20 +381,22 @@ export default function MeetingAdminScreen({ route }: Props): React.ReactElement
                   {s.studentIds.map((sid, idx) => (
                     <Button
                       key={sid}
-                      title={`${STR.cmComparison}: ${s.classLabels[idx] ?? bnNum(idx + 1)}`}
+                      title={`${STR.cmComparison}: ${names[idx]}`}
                       variant="ghost"
                       onPress={() =>
                         nav.navigate("MeetingComparison", {
                           meetingId,
                           studentId: sid,
-                          studentName: s.classLabels[idx] ?? sid,
+                          studentName: names[idx],
                         })
                       }
                     />
                   ))}
                 </View>
               </Card>
-            ))
+              </React.Fragment>
+              );
+            })
           )}
         </Card>
       </ScrollView>
