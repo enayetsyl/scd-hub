@@ -80,6 +80,11 @@ import {
 import { captureNetSnapshot, captureDailyHealth } from "../../platform/services/SystemHealthService";
 import { materializeTaskTemplates } from "../../workboard/services/TaskTemplateService";
 import {
+  emitPendingDigest as emitImprovementPendingDigest,
+  emitGuardianMissed as emitImprovementGuardianMissed,
+  IMPROVEMENT_DIGEST_MINUTES,
+} from "../../improvement/services/ImprovementSweepService";
+import {
   dispatchTaskDigest,
   dispatchTaskOverdue,
   TASK_DIGEST_MINUTES,
@@ -242,6 +247,9 @@ export interface TickSummary {
   taskTemplatesCreated: number;
   taskDigestsEmitted: number;
   taskOverdueEmitted: number;
+  /** 11:00 improvement sweep (SP-4, D-#738): Office/Principal digests + class-teacher guardian alerts. */
+  improvementPendingEmitted: number;
+  improvementMissedEmitted: number;
 }
 
 const subjectBn = (subject: string): string =>
@@ -282,6 +290,8 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
     taskTemplatesCreated: 0,
     taskDigestsEmitted: 0,
     taskOverdueEmitted: 0,
+    improvementPendingEmitted: 0,
+    improvementMissedEmitted: 0,
   };
 
   // --- Classroom-observation response escalation (CO-3) — the teacher-response ladder
@@ -641,6 +651,18 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
           });
           if (res.created) summary.ctOverdueDigestEmitted += 1;
         }
+      });
+    });
+
+    // --- Improvement actions (SP-4, D-#738) — 11:00, FULL days. One rolled-up row per
+    // Office/Principal when a teacher task of today is still unticked (so they can act
+    // the same day), and the class teacher's "guardian missed 3 days" alerts. runOnce
+    // guards the reads (the D-#603 lesson); the dedupe keys guard the rows.
+    await family("improvement 11:00 sweep", async () => {
+      if (!windowOpen(nowMin, IMPROVEMENT_DIGEST_MINUTES)) return;
+      await runOnce(dateKey, "IMPR", async () => {
+        summary.improvementPendingEmitted = await emitImprovementPendingDigest(now);
+        summary.improvementMissedEmitted = await emitImprovementGuardianMissed(now);
       });
     });
   }

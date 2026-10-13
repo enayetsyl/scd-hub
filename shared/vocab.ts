@@ -1458,6 +1458,13 @@ export const NOTIFICATION_KINDS = [
   "TASK_OVERDUE",
   "TASK_DONE",
   "TASK_BLOCKED",
+  // Improvement actions (SP-4, D-#738; app-native, NO wire twin):
+  //   ACTION_ASSIGNED → the assigned teacher + each guardian (guardian part), on create
+  //   TASKS_PENDING   → every Office/Principal at 11:00 when a teacher task of today is unticked
+  //   GUARDIAN_MISSED → the class teacher when a guardian left 3 scheduled days unmarked
+  "IMPROVEMENT_ACTION_ASSIGNED",
+  "IMPROVEMENT_TASKS_PENDING",
+  "IMPROVEMENT_GUARDIAN_MISSED",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
@@ -1517,6 +1524,9 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   TASK_OVERDUE: "কাজ বকেয়া",
   TASK_DONE: "কাজ শেষ",
   TASK_BLOCKED: "কাজ আটকে আছে",
+  IMPROVEMENT_ACTION_ASSIGNED: "নতুন উন্নতির কাজ",
+  IMPROVEMENT_TASKS_PENDING: "উন্নতির কাজ এখনো বাকি",
+  IMPROVEMENT_GUARDIAN_MISSED: "অভিভাবক কাজ চিহ্নিত করেননি",
 };
 export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   BELL_REMINDER: "Bell reminder",
@@ -1574,7 +1584,74 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   TASK_OVERDUE: "Task overdue",
   TASK_DONE: "Task done",
   TASK_BLOCKED: "Task blocked",
+  IMPROVEMENT_ACTION_ASSIGNED: "New improvement task",
+  IMPROVEMENT_TASKS_PENDING: "Improvement tasks not ticked",
+  IMPROVEMENT_GUARDIAN_MISSED: "Guardian missed improvement days",
 };
+
+/**
+ * Improvement actions (SP-2, docs/prd-student-progress.md §4, D-#735) — app-native,
+ * NO wire twin. An action targets ONE student or a whole SECTION in one subject and
+ * carries a teacher part and/or a guardian part, each a daily task over one shared
+ * schedule of school days.
+ */
+export const IMPROVEMENT_SCOPES = ["STUDENT", "CLASS"] as const;
+export type ImprovementScope = (typeof IMPROVEMENT_SCOPES)[number];
+
+/** EVERY_SCHOOL_DAY = each FULL day of the D-#50 calendar; SUBJECT_DAYS = only the
+ *  weekdays the section's live routine has a period of the action's subject. */
+export const IMPROVEMENT_REPEATS = ["EVERY_SCHOOL_DAY", "SUBJECT_DAYS"] as const;
+export type ImprovementRepeat = (typeof IMPROVEMENT_REPEATS)[number];
+
+export const IMPROVEMENT_PARTS = ["TEACHER", "GUARDIAN"] as const;
+export type ImprovementPart = (typeof IMPROVEMENT_PARTS)[number];
+
+export const IMPROVEMENT_TICK_STATUSES = ["DONE", "COULDNT"] as const;
+export type ImprovementTickStatus = (typeof IMPROVEMENT_TICK_STATUSES)[number];
+
+/** Why a day was not done — a fixed list per side, so the strip can count them. */
+export const IMPROVEMENT_TEACHER_REASONS = ["ON_LEAVE", "NO_PERIOD", "STUDENT_ABSENT", "OTHER"] as const;
+export const IMPROVEMENT_GUARDIAN_REASONS = ["CHILD_SICK", "NO_TIME", "NO_QUESTIONS", "OTHER"] as const;
+/** D-#737: how an Office/Principal knows a teacher day was done when ticking on behalf. */
+export const IMPROVEMENT_ON_BEHALF_REASONS = ["TEACHER_TOLD", "CHECKED_COPY", "DID_IT_MYSELF"] as const;
+export const IMPROVEMENT_REASONS = [
+  ...IMPROVEMENT_TEACHER_REASONS,
+  ...IMPROVEMENT_GUARDIAN_REASONS.filter((r) => r !== "OTHER"),
+  ...IMPROVEMENT_ON_BEHALF_REASONS,
+] as const;
+export type ImprovementReason = (typeof IMPROVEMENT_REASONS)[number];
+
+export const IMPROVEMENT_REASON_LABELS_BN: Record<ImprovementReason, string> = {
+  ON_LEAVE: "আমি ছুটিতে ছিলাম",
+  NO_PERIOD: "আজ এই বিষয়ের ক্লাস নেই",
+  STUDENT_ABSENT: "শিক্ষার্থী অনুপস্থিত",
+  OTHER: "অন্য কারণ",
+  CHILD_SICK: "সন্তান অসুস্থ",
+  NO_TIME: "আজ সময় হয়নি",
+  NO_QUESTIONS: "প্রশ্ন/কাজ পাইনি",
+  TEACHER_TOLD: "শিক্ষক জানিয়েছেন",
+  CHECKED_COPY: "খাতা দেখে নিশ্চিত হয়েছি",
+  DID_IT_MYSELF: "আমি নিজে করেছি",
+};
+export const IMPROVEMENT_REASON_LABELS_EN: Record<ImprovementReason, string> = {
+  ON_LEAVE: "I was on leave",
+  NO_PERIOD: "No period of this subject today",
+  STUDENT_ABSENT: "Student absent",
+  OTHER: "Other",
+  CHILD_SICK: "Child was sick",
+  NO_TIME: "No time today",
+  NO_QUESTIONS: "Didn't get the questions",
+  TEACHER_TOLD: "Teacher told me",
+  CHECKED_COPY: "I checked the copy",
+  DID_IT_MYSELF: "I did it myself",
+};
+
+/** Action lifecycle — DERIVED on read from the day keys + `stoppedAt`, never stored. */
+export const IMPROVEMENT_ACTION_STATES = ["UPCOMING", "RUNNING", "ENDED", "STOPPED"] as const;
+export type ImprovementActionState = (typeof IMPROVEMENT_ACTION_STATES)[number];
+
+/** Longest schedule one action may carry (school days). */
+export const IMPROVEMENT_MAX_DAYS = 60;
 
 /**
  * Guardian-portal view surfaces (GE-2, D-#465) — what a family actually opened.

@@ -6452,6 +6452,8 @@ export interface NotificationRefsT {
   examId: string | null;
   classId: string | null;
   subject: string | null;
+  /** SP-4 (D-#738) — deep-links to the improvement action. */
+  improvementActionId: string | null;
 }
 
 export interface NotificationT {
@@ -6473,6 +6475,7 @@ const NOTIFICATION_FIELDS = `
     workClaimId workClaimTracker
     classTestId ctId taskId
     syllabusId examId classId subject
+    improvementActionId
   }
 `;
 

@@ -335,6 +335,15 @@ export type ClassTestStackParamList = {
   ClassTestReports: undefined;
   ClassTestClassSubject: { sectionId: string; classId: string; subject: string; title: string };
   ClassTestStudentProfile: { studentId: string; studentName: string };
+  /** Student progress board + improvement actions (SP-1..SP-4, D-#734..#738). The board
+   *  and the day list are param-free — the drawer deep-links them. */
+  StudentProgress: undefined;
+  StudentProgressStudent: { studentId: string; name: string };
+  NewImprovementAction:
+    | { scope?: "STUDENT" | "CLASS"; sectionId?: string; studentId?: string; studentName?: string; subject?: string }
+    | undefined;
+  ImprovementAction: { id: string };
+  ImprovementDayTasks: undefined;
   /** Answer-script archive (AR-1..AR-4, D-#443–#447) — physical storage of
    *  class-test scripts. Lives in this stack because its audience is exactly
    *  this tab's (teachers tracker:*, Office roster:manage). */
