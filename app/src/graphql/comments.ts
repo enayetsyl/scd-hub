@@ -178,6 +178,11 @@ export const DELIVER_STUDENT_COMMENT = gql<
 // Parent meeting + per-family slots (CM-3)
 // ---------------------------------------------------------------------------
 
+export interface MeetingBreakT {
+  startMinutes: number;
+  endMinutes: number;
+}
+
 export interface ParentMeetingT {
   id: string;
   academicYearId: string;
@@ -185,6 +190,7 @@ export interface ParentMeetingT {
   meetingDate: string;
   slotMinutes: number;
   dayStartMinutes: number;
+  breaks: MeetingBreakT[];
   status: string;
   includeClassIds: string[];
   includeSectionIds: string[];
@@ -192,7 +198,7 @@ export interface ParentMeetingT {
   updatedAt: string;
 }
 
-const PARENT_MEETING_FIELDS = `id academicYearId instanceLabel meetingDate slotMinutes dayStartMinutes status includeClassIds includeSectionIds createdAt updatedAt`;
+const PARENT_MEETING_FIELDS = `id academicYearId instanceLabel meetingDate slotMinutes dayStartMinutes breaks { startMinutes endMinutes } status includeClassIds includeSectionIds createdAt updatedAt`;
 
 export interface ParentMeetingSlotT {
   id: string;
@@ -200,6 +206,8 @@ export interface ParentMeetingSlotT {
   familyKey: string;
   studentIds: string[];
   classLabels: string[];
+  /** Parallel to studentIds; null on payloads that don't join names. */
+  studentNames: string[] | null;
   order: number;
   slotTime: number | null;
   onCall: boolean;
@@ -210,7 +218,7 @@ export interface ParentMeetingSlotT {
   updatedAt: string;
 }
 
-const PARENT_MEETING_SLOT_FIELDS = `id meetingId familyKey studentIds classLabels order slotTime onCall dispatchedAt attended attendanceRemark createdAt updatedAt`;
+const PARENT_MEETING_SLOT_FIELDS = `id meetingId familyKey studentIds classLabels studentNames order slotTime onCall dispatchedAt attended attendanceRemark createdAt updatedAt`;
 
 export const PARENT_MEETINGS_QUERY = gql<
   { parentMeetings: ParentMeetingT[] },
@@ -298,6 +306,18 @@ export const REORDER_MEETING_SLOTS = gql<
 >`
   mutation ReorderMeetingSlots($meetingId: String!, $slotIds: [String!]!) {
     reorderMeetingSlots(meetingId: $meetingId, slotIds: $slotIds) { ${PARENT_MEETING_SLOT_FIELDS} }
+  }
+`;
+
+export const SET_MEETING_BREAKS = gql<
+  { setMeetingBreaks: { meeting: ParentMeetingT; slots: ParentMeetingSlotT[] } },
+  { meetingId: string; breaks: MeetingBreakT[] }
+>`
+  mutation SetMeetingBreaks($meetingId: String!, $breaks: [MeetingBreakInput!]!) {
+    setMeetingBreaks(meetingId: $meetingId, breaks: $breaks) {
+      meeting { ${PARENT_MEETING_FIELDS} }
+      slots { ${PARENT_MEETING_SLOT_FIELDS} }
+    }
   }
 `;
 

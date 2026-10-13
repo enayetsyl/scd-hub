@@ -92,6 +92,9 @@ import {
   generateSlots,
   setSlotOnCall,
   reorderSlots,
+  setMeetingBreaks,
+  listMeetingSlots,
+  normalizeBreaks,
   ParentMeetingError,
   type StudentForSlot,
 } from "../modules/comments/services/ParentMeetingService";
@@ -166,6 +169,50 @@ describe("assignSlotTimes (sequential from dayStart; On-Call → null)", () => {
       15,
     );
     expect(times).toEqual([600, null, 615]); // the On-Call slot is skipped, not timed
+  });
+
+  test("a slot that would run into a break starts at the break's end", () => {
+    const timed = Array.from({ length: 4 }, () => ({ onCall: false }));
+    // 10-min slots from 10:00; break 10:25–10:45 → the 10:20 slot would overlap it
+    expect(assignSlotTimes(timed, 600, 10, [{ startMinutes: 625, endMinutes: 645 }])).toEqual([600, 610, 645, 655]);
+  });
+
+  test("a slot ending exactly at the break start is kept; back-to-back breaks are both skipped", () => {
+    const timed = Array.from({ length: 3 }, () => ({ onCall: false }));
+    expect(
+      assignSlotTimes(timed, 600, 10, [
+        { startMinutes: 640, endMinutes: 650 }, // unsorted on purpose
+        { startMinutes: 610, endMinutes: 630 },
+      ]),
+    ).toEqual([600, 630, 650]);
+  });
+
+  test("On-Call slots stay null with breaks present", () => {
+    expect(
+      assignSlotTimes([{ onCall: true }, { onCall: false }], 600, 15, [{ startMinutes: 600, endMinutes: 620 }]),
+    ).toEqual([null, 620]);
+  });
+});
+
+describe("normalizeBreaks", () => {
+  test("sorts and merges overlapping/touching breaks", () => {
+    expect(
+      normalizeBreaks([
+        { startMinutes: 720, endMinutes: 750 },
+        { startMinutes: 600, endMinutes: 620 },
+        { startMinutes: 615, endMinutes: 630 },
+        { startMinutes: 750, endMinutes: 760 },
+      ]),
+    ).toEqual([
+      { startMinutes: 600, endMinutes: 630 },
+      { startMinutes: 720, endMinutes: 760 },
+    ]);
+  });
+
+  test("rejects an empty or inverted range", () => {
+    expect(() => normalizeBreaks([{ startMinutes: 600, endMinutes: 600 }])).toThrow(ParentMeetingError);
+    expect(() => normalizeBreaks([{ startMinutes: 650, endMinutes: 600 }])).toThrow(ParentMeetingError);
+    expect(() => normalizeBreaks([{ startMinutes: 600.5, endMinutes: 610 }])).toThrow(ParentMeetingError);
   });
 });
 
@@ -286,6 +333,29 @@ describe("generateSlots", () => {
     expect(mockWriteAudit).toHaveBeenCalledWith(
       expect.objectContaining({ eventKind: "PARENT_MEETING_SLOTS_GENERATED" }),
     );
+    // names ride along parallel to studentIds (owner ask 2026-10-13: "no names are showing")
+    const sibSlot = res.slots.find((s) => s.studentIds.length === 2);
+    expect(sibSlot?.studentNames).toEqual(["Arham", "Asila"]);
+  });
+
+  test("generation honours the meeting's breaks", async () => {
+    mockMeetingFindById.mockResolvedValue(
+      draftMeeting({ slotMinutes: 15, breaks: [{ startMinutes: 610, endMinutes: 640 }] }),
+    );
+    const classA = oid();
+    const secA = oid();
+    mockStudentFind.mockReturnValue(
+      chain([
+        { _id: oid(), name: "A", phone: "011", classId: classA, sectionId: secA },
+        { _id: oid(), name: "B", phone: "022", classId: classA, sectionId: secA },
+      ]),
+    );
+    mockClassFind.mockReturnValue(chain([{ _id: classA, level: 0, nameBn: "কেজি" }]));
+    mockSectionFind.mockReturnValue(chain([{ _id: secA, code: "A" }]));
+
+    const res = await generateSlots(MEETING_OID.toString(), ACTOR);
+    // 10:00 slot would end 10:15 (overlaps 10:10 break) → it moves to 10:40, the next to 10:55
+    expect(res.slots.map((s) => s.slotTime)).toEqual([640, 655]);
   });
 
   test("refuses to (re)generate once the meeting is no longer a draft (D-#175)", async () => {
@@ -387,6 +457,58 @@ describe("reorderSlots", () => {
       reorderSlots(MEETING_OID.toString(), [(s1._id as mongoose.Types.ObjectId).toString()], ACTOR),
     ).rejects.toThrow(/exactly the meeting's slots/);
     expect(mockSlotUpdateOne).not.toHaveBeenCalled();
+  });
+});
+
+// ===========================================================================
+// setMeetingBreaks + names on the slot read
+// ===========================================================================
+
+describe("setMeetingBreaks", () => {
+  test("stores normalized breaks, re-times slots around them, audits", async () => {
+    const meeting: Record<string, unknown> = draftMeeting();
+    meeting.save = jest.fn(async () => meeting);
+    mockMeetingFindById.mockResolvedValue(meeting);
+    const s1 = slotDoc({ order: 0, slotTime: 600 });
+    const s2 = slotDoc({ familyKey: "222", order: 1, slotTime: 615 });
+    mockSlotFind.mockReturnValue(chain([s1, s2]));
+
+    const res = await setMeetingBreaks(
+      MEETING_OID.toString(),
+      [{ startMinutes: 615, endMinutes: 630 }],
+      ACTOR,
+    );
+    expect(meeting.save).toHaveBeenCalled();
+    expect(res.meeting.breaks).toEqual([{ startMinutes: 615, endMinutes: 630 }]);
+    expect(res.slots.map((s) => s.slotTime)).toEqual([600, 630]);
+    expect(mockWriteAudit).toHaveBeenCalledWith(
+      expect.objectContaining({ meta: expect.objectContaining({ action: "setBreaks" }) }),
+    );
+  });
+
+  test("refuses once the meeting has left draft", async () => {
+    mockMeetingFindById.mockResolvedValue(draftMeeting({ status: "scheduled" }));
+    await expect(
+      setMeetingBreaks(MEETING_OID.toString(), [{ startMinutes: 615, endMinutes: 630 }], ACTOR),
+    ).rejects.toThrow(/draft/);
+    expect(mockSlotFind).not.toHaveBeenCalled();
+  });
+});
+
+describe("listMeetingSlots joins student names", () => {
+  test("names come back parallel to studentIds with ONE batched Student read", async () => {
+    const a = oid();
+    const b = oid();
+    mockSlotFind.mockReturnValue(chain([slotDoc({ studentIds: [b, a], classLabels: ["Two", "KG"] })]));
+    mockStudentFind.mockReturnValue(
+      chain([
+        { _id: a, name: "Arham" },
+        { _id: b, name: "Asila" },
+      ]),
+    );
+    const [slot] = await listMeetingSlots(MEETING_OID.toString());
+    expect(slot.studentNames).toEqual(["Asila", "Arham"]);
+    expect(mockStudentFind).toHaveBeenCalledTimes(1);
   });
 });
 
