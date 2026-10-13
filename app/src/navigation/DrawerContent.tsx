@@ -23,7 +23,9 @@ import type { Role } from "@scd/shared";
 import { STR } from "../lib/labels";
 import { bnNum } from "../lib/labels";
 import { PRINT_QUEUE_COUNTS } from "../graphql/printing";
-import { CT_QUESTION_COUNTS, CLASS_TEST_OVERDUE_COUNTS } from "../graphql/classTest";
+import { CT_QUESTION_COUNTS, CLASS_TEST_OVERDUE_COUNTS, CHILD_TEST_RESULTS_QUERY } from "../graphql/classTest";
+import { countNewResults } from "../lib/childClassTests";
+import { useGuardianChild } from "../state/GuardianChildContext";
 import { STAFF_LEAVE_PENDING_COUNT, COMMENT_REVIEW_COUNT, OBSERVATION_COUNTS } from "../graphql/operations";
 import { MY_SYLLABUS_APPROVAL_COUNT } from "../graphql/examSyllabus";
 import { MY_WORK_BOARD_COUNTS } from "../graphql/workBoard";
@@ -254,6 +256,7 @@ const GUARDIAN_NAV: NavSection[] = [
       { route: "GuardianRoutineTab", labelKey: "tabRoutine", icon: "📅" },
       { route: "GuardianHomeworkTab", labelKey: "tabHomework", icon: "📒" },
       { route: "GuardianAssignmentsTab", labelKey: "tabAssignment", icon: "📋" },
+      { route: "GuardianClassTestTab", labelKey: "tabClassTest", icon: "🧪" },
       { route: "GuardianSyllabusTab", labelKey: "syTitle", icon: "📋" },
     ],
   },
@@ -449,6 +452,18 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
   }, [canObservationBadge, refetchObsCount]);
   const obsCounts = obsCountQ.data?.observationCounts;
 
+  // D-#732: the guardian's Class Test badge — results published in the last 7 days
+  // for the selected child, the same count as Today's "new class-test result" row.
+  // Same query + variables as the Today screen, so urql serves it from that cache.
+  const isGuardian = role === "GUARDIAN";
+  const { selected: guardianChild } = useGuardianChild();
+  const [childTestsQ] = useQuery({
+    query: CHILD_TEST_RESULTS_QUERY,
+    variables: { studentId: guardianChild?.studentId ?? "" },
+    pause: !isGuardian || !guardianChild,
+  });
+  const newChildResults = countNewResults(childTestsQ.data?.childTestResults ?? [], Date.now());
+
   const badgeFor = (route: RouteName): number | undefined =>
     route === "QuestionsTab" && basket.count > 0 ? basket.count : undefined;
 
@@ -458,6 +473,9 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
     /** The deep-linked screen, when the route hosts several leaves (Syllabus, Reports). */
     screen?: string,
   ): Array<{ count: number; bg: string }> => {
+    if (route === "GuardianClassTestTab" && newChildResults > 0) {
+      return [{ count: newChildResults, bg: colors.info }];
+    }
     if (route === "SyllabusTab" && screen === "SyllabusApprovals" && syllabusPending > 0) {
       return [{ count: syllabusPending, bg: colors.warning }];
     }

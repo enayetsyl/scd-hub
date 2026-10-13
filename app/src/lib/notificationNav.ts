@@ -186,9 +186,9 @@ export function notificationTarget(
     case "CLASS_TEST_RESULT":
     // CS-3 (D-#716): the scanned script opens from the same result card ("খাতা দেখুন").
     case "CT_SCRIPT_PUBLISHED":
-      // Guardian results render on the আজ home cards (N3.3 pattern).
+      // D-#732: a guardian's results (and their scripts) live on the Class Test tab.
       return guardian
-        ? { tab: "GuardianHomeTab", screen: "GuardianHome" }
+        ? { tab: "GuardianClassTestTab", screen: "ChildClassTests" }
         : { tab: "ClassTestTab", screen: "ClassTestHome" };
     case "CLASS_TEST_OVERDUE_DIGEST":
       // D-#603: the digest carries only counts, so the row MUST land on the

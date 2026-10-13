@@ -246,6 +246,10 @@ export type GuardianRoutineStackParamList = {
 export type GuardianAssignmentsStackParamList = {
   ChildAssignments: undefined;
 };
+/** D-#732 — the guardian's Class Test tab (upcoming tests + published results). */
+export type GuardianClassTestStackParamList = {
+  ChildClassTests: undefined;
+};
 
 /** Library (LB-4, D-#81–#84). */
 export type LibraryStackParamList = {
@@ -624,4 +628,5 @@ export type TabParamList = {
   GuardianHomeworkTab: NavigatorScreenParams<GuardianHomeworkStackParamList>;
   GuardianRoutineTab: NavigatorScreenParams<GuardianRoutineStackParamList>;
   GuardianAssignmentsTab: NavigatorScreenParams<GuardianAssignmentsStackParamList>;
+  GuardianClassTestTab: NavigatorScreenParams<GuardianClassTestStackParamList>;
 };
