@@ -49,6 +49,7 @@ import type {
   GuardianHomeworkStackParamList,
   GuardianRoutineStackParamList,
   GuardianAssignmentsStackParamList,
+  GuardianClassTestStackParamList,
   TabParamList,
 } from "./types";
 
@@ -111,6 +112,7 @@ import AssignmentChaseScreen from "../screens/assignment/AssignmentChaseScreen";
 import AssignmentRollupsScreen from "../screens/assignment/AssignmentRollupsScreen";
 import AssignmentGiftScreen from "../screens/assignment/AssignmentGiftScreen";
 import ChildAssignmentsScreen from "../screens/guardian/ChildAssignmentsScreen";
+import ChildClassTestsScreen from "../screens/guardian/ChildClassTestsScreen";
 import ReviewHomeScreen from "../screens/review/ReviewHomeScreen";
 import ReviewSubmitScreen from "../screens/review/ReviewSubmitScreen";
 import ReviewThreadScreen from "../screens/review/ReviewThreadScreen";
@@ -1478,6 +1480,17 @@ function GuardianAssignmentsNavigator(): React.ReactElement {
   );
 }
 
+// D-#732 — the guardian's Class Test tab.
+const GuardianClassTestStack = createNativeStackNavigator<GuardianClassTestStackParamList>();
+function GuardianClassTestNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    <GuardianClassTestStack.Navigator screenOptions={stackOptions}>
+      <GuardianClassTestStack.Screen name="ChildClassTests" component={ChildClassTestsScreen} options={{ title: STR.tabClassTest }} />
+    </GuardianClassTestStack.Navigator>
+  );
+}
+
 // --- Drawer (D-#258) -------------------------------------------------------
 
 const Drawer = createDrawerNavigator<TabParamList>();
@@ -1790,6 +1803,7 @@ export function AppTabs(): React.ReactElement {
         {canGuardian ? (
           <Drawer.Screen name="GuardianAssignmentsTab" component={GuardianAssignmentsNavigator} />
         ) : null}
+        {canGuardian ? <Drawer.Screen name="GuardianClassTestTab" component={GuardianClassTestNavigator} /> : null}
       </Drawer.Navigator>
     </GuardianChildProvider>
   );

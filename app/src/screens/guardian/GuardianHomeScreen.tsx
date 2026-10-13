@@ -24,13 +24,15 @@ import {
 import { CHILD_TEST_RESULTS_QUERY } from "../../graphql/classTest";
 import { CHILD_COMMENTS_QUERY } from "../../graphql/comments";
 import { CHILD_REVISION_QUERY } from "../../graphql/revision";
-import { Screen, Body, Muted, Card, Badge, Button, Notice, Loader, EmptyState, Divider } from "../../components/ui";
+import { Screen, Body, Muted, Card, Badge, Button, Notice, Loader, EmptyState } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
 import { WorkClaimBlock } from "../../components/WorkClaimBlock";
 import { HandBackBadges, handBackOnly } from "../../components/HandBackBadges";
 import { useRecordView } from "../../lib/useRecordView";
+import { countNewResults } from "../../lib/childClassTests";
+import { UpcomingClassTestsCard, ClassTestResultRow } from "../../components/ChildClassTestCards";
 import { useNotifications } from "../../state/NotificationContext";
 import { CHILD_TRAJECTORY_QUERY } from "../../graphql/wholePicture";
 import { openStoredFile, FILE_VIEW_SUPPORTED } from "../../lib/files";
@@ -272,9 +274,14 @@ export default function GuardianHomeScreen(): React.ReactElement {
   const recentComments = (commentsQ.data?.childComments ?? []).filter((c) =>
     isRecent(c.deliveredAt ?? c.createdAt),
   ).length;
-  const recentTests = (testResultsQ.data?.childTestResults ?? []).filter((t) =>
-    isRecent(t.publishedAt),
-  ).length;
+  // D-#732: the shared rule, so this count, the sidebar badge and the tab's NEW
+  // tags always agree.
+  const recentTests = countNewResults(testResultsQ.data?.childTestResults ?? [], Date.now());
+  const goClassTests = (): void =>
+    (nav as unknown as { navigate: (name: string, params?: object) => void }).navigate(
+      "GuardianClassTestTab",
+      { screen: "ChildClassTests" },
+    );
   const alerts: Array<{ key: string; text: string; tone: "danger" | "warn" | "info"; onPress?: () => void }> = [];
   if (hwChaseCount > 0) {
     alerts.push({ key: "hw", text: `${STR.gpAlertHwChase}: ${bnNum(hwChaseCount)}`, tone: "danger" });
@@ -294,7 +301,12 @@ export default function GuardianHomeScreen(): React.ReactElement {
     alerts.push({ key: "comments", text: `${STR.gpAlertNewComment}: ${bnNum(recentComments)}`, tone: "info" });
   }
   if (recentTests > 0) {
-    alerts.push({ key: "tests", text: `${STR.gpAlertNewTest}: ${bnNum(recentTests)}`, tone: "info" });
+    alerts.push({
+      key: "tests",
+      text: `${STR.gpAlertNewTest}: ${bnNum(recentTests)}`,
+      tone: "info",
+      onPress: goClassTests,
+    });
   }
   if (unreadCount > 0) {
     alerts.push({
@@ -342,43 +354,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
         {/* D-#472: upcoming class tests — sits ABOVE the attention strip because it is
             the one thing on this screen the family can still act on (revise). Each row
             drops off by itself once its exam day has passed. */}
-        {upcomingTests.length > 0 ? (
-          <Card>
-            <Body style={{ fontWeight: "700", marginBottom: space(1) }}>{STR.gpUpcomingTests}</Body>
-            {upcomingTests.map((t, i) => (
-              <View key={t.id} style={{ marginTop: i === 0 ? 0 : space(2) }}>
-                {i === 0 ? null : <Divider />}
-                <View style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
-                  <Body style={{ fontWeight: "700", flex: 1 }}>
-                    {t.subjectLabelBn}
-                    {t.testNumber ? ` · টেস্ট ${bnNum(t.testNumber)}` : ""}
-                  </Body>
-                  <Badge
-                    text={
-                      t.daysAway === 0
-                        ? STR.gpTestToday
-                        : t.daysAway === 1
-                          ? STR.gpTestTomorrow
-                          : `${bnNum(t.daysAway)} ${STR.gpTestInDays}`
-                    }
-                    tone={t.daysAway <= 1 ? "warn" : "info"}
-                  />
-                </View>
-                <Muted>{bnNum(t.examDate.slice(0, 10))}</Muted>
-                {t.chapter ? (
-                  <Muted>
-                    {STR.gpChapter}: {t.chapter}
-                  </Muted>
-                ) : null}
-                <Muted>
-                  {t.totalMarks != null ? `${STR.gpMarks} ${bnNum(t.totalMarks)}` : ""}
-                  {t.totalMarks != null && t.durationMinutes != null ? " · " : ""}
-                  {t.durationMinutes != null ? `${bnNum(t.durationMinutes)} ${STR.gpMinutes}` : ""}
-                </Muted>
-              </View>
-            ))}
-          </Card>
-        ) : null}
+        <UpcomingClassTestsCard tests={upcomingTests} />
 
         {/* Attention strip (owner ask 2026-07-19) — chase, fees due, new comment/
             result, unread notifications. Hidden entirely on a quiet day. */}
@@ -832,53 +808,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
           {(testResultsQ.data?.childTestResults ?? []).length === 0 ? (
             <Muted style={{ marginTop: space(2) }}>{STR.gpNoTestResults}</Muted>
           ) : (
-            (testResultsQ.data?.childTestResults ?? []).map((r) => (
-              <View key={r.testId} style={{ marginTop: space(2) }}>
-                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                  <View style={{ flex: 1 }}>
-                    <Body>
-                      {hwSubjectLabel(r.subject)} · {STR.ctTestNumber} {bnNum(r.testNumber)}
-                    </Body>
-                    {/* D-#507: a group exam names the GROUP — a parent should not have
-                        to guess why an Arabic mark arrived with no class attached. */}
-                    <Muted>
-                      {isoDateLabel(r.examDate)}
-                      {r.groupNameBn ? ` · ${r.groupNameBn}` : ""}
-                    </Muted>
-                  </View>
-                  <Badge
-                    text={
-                      r.status === "ABSENT"
-                        ? STR.ctAbsent
-                        : `${bnNum(r.marks ?? 0)}/${bnNum(r.totalMarks)}${r.percent == null ? "" : ` · ${bnNum(r.percent)}%`}`
-                    }
-                    tone={r.status === "ABSENT" ? "muted" : r.pass ? "brand" : "danger"}
-                  />
-                </View>
-                {r.weakness ? <Muted>{STR.ctWeakness}: {r.weakness}</Muted> : null}
-                {r.guardianAction ? <Muted>{STR.ctGuardianAction}: {r.guardianAction}</Muted> : null}
-                {/* CS-3 (D-#716): the scanned script, once the office has published it —
-                    one button per page; a "being scanned" line while it is at the office. */}
-                {r.scriptPages.length > 0 && FILE_VIEW_SUPPORTED ? (
-                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: space(2) }}>
-                    {r.scriptPages.map((p, i) => (
-                      <Button
-                        key={p.fileId}
-                        title={
-                          i === 0
-                            ? `${STR.csViewScript}${r.scriptPages.length > 1 ? ` (${bnNum(r.scriptPages.length)} ${STR.csPage})` : ""}`
-                            : `${STR.csPage} ${bnNum(i + 1)}`
-                        }
-                        variant={i === 0 ? "secondary" : "ghost"}
-                        onPress={() => void openStoredFile(p.fileId).catch(() => undefined)}
-                      />
-                    ))}
-                  </View>
-                ) : r.scriptPending ? (
-                  <Muted style={{ marginTop: space(1) }}>{STR.csScanning}</Muted>
-                ) : null}
-              </View>
-            ))
+            (testResultsQ.data?.childTestResults ?? []).map((r) => <ClassTestResultRow key={r.testId} r={r} />)
           )}
         </Card>
 
