@@ -27,6 +27,10 @@ import { STR, bnNum, hwSubjectLabel } from "../../lib/labels";
 import { useColors } from "../../theme";
 import { radius, space } from "../../theme/tokens";
 
+/** Subject names on this tab — "Bangladesh & Global Studies" is shortened to BGS
+ *  (owner, 2026-10-13): it took two lines in the summary and was cut off on the bars. */
+const subjectName = (code: string): string => (code === "BGS" ? STR.gctBgsShort : hwSubjectLabel(code));
+
 /** One summary figure. */
 function Stat({
   label,
@@ -111,11 +115,11 @@ export default function ChildClassTestsScreen(): React.ReactElement {
                   {summary.avgPercent !== null ? (
                     <Stat label={STR.gctAverage} value={`${bnNum(summary.avgPercent)}%`} />
                   ) : null}
-                  {summary.best ? <Stat label={STR.gctBest} value={hwSubjectLabel(summary.best)} /> : null}
+                  {summary.best ? <Stat label={STR.gctBest} value={subjectName(summary.best)} /> : null}
                   {summary.weakest ? (
                     <Stat
                       label={STR.gctNeedsAttention}
-                      value={hwSubjectLabel(summary.weakest)}
+                      value={subjectName(summary.weakest)}
                       accent={colors.warning}
                     />
                   ) : null}
@@ -135,12 +139,14 @@ export default function ChildClassTestsScreen(): React.ReactElement {
                       key={s.subject}
                       style={{ flexDirection: "row", alignItems: "center", gap: space(3), marginTop: space(2) }}
                     >
-                      <Text numberOfLines={1} style={{ width: 84, color: colors.textPrimary, fontWeight: "600" }}>
-                        {hwSubjectLabel(s.subject)}
+                      {/* Wide enough for "Islamic Studies" / "ইসলাম শিক্ষা" on one line; a
+                          longer name wraps rather than being cut to "Islamic Stu…". */}
+                      <Text style={{ width: 120, color: colors.textPrimary, fontWeight: "600" }}>
+                        {subjectName(s.subject)}
                       </Text>
                       <View
                         style={{ flex: 1, height: 10, borderRadius: radius.pill, backgroundColor: colors.surfaceAlt, overflow: "hidden" }}
-                        accessibilityLabel={`${hwSubjectLabel(s.subject)} ${bnNum(s.avgPercent)}%`}
+                        accessibilityLabel={`${subjectName(s.subject)} ${bnNum(s.avgPercent)}%`}
                       >
                         <View
                           style={{
@@ -167,7 +173,7 @@ export default function ChildClassTestsScreen(): React.ReactElement {
                   <ChipRow>
                     <Chip label={STR.all} selected={subject === "all"} onPress={() => setSubject("all")} />
                     {subjects.map((s) => (
-                      <Chip key={s} label={hwSubjectLabel(s)} selected={subject === s} onPress={() => setSubject(s)} />
+                      <Chip key={s} label={subjectName(s)} selected={subject === s} onPress={() => setSubject(s)} />
                     ))}
                   </ChipRow>
                 </View>
@@ -178,7 +184,7 @@ export default function ChildClassTestsScreen(): React.ReactElement {
                 <Muted style={{ marginTop: space(2) }}>{STR.gctNoSubjectResults}</Muted>
               ) : (
                 shown.map((r) => (
-                  <ClassTestResultRow key={r.testId} r={r} isNew={isNewResult(r.publishedAt, now)} showOutcome />
+                  <ClassTestResultRow key={r.testId} r={r} isNew={isNewResult(r.publishedAt, now)} showOutcome subjectName={subjectName} />
                 ))
               )}
             </Card>

@@ -261,6 +261,13 @@ export const AUDIT_KIND_LABELS: Record<AuditEventKind, AuditKindLabel> = {
   CT_SCRIPTS_HANDED_BACK: { bn: "খাতা শিক্ষককে ফেরত দিয়েছেন", en: "Handed scripts back to the teacher", group: "EXAM" },
   CT_SCRIPTS_RETURNED: { bn: "খাতা শিক্ষার্থীদের ফেরত দিয়েছেন", en: "Returned scripts to the students", group: "EXAM" },
   CT_SCRIPTS_WAIVED: { bn: "খাতার ধাপ বাদ দিয়েছেন", en: "Waived a test's scripts", group: "EXAM" },
+  // Improvement actions (SP-2..SP-4, D-#735..#737)
+  IMPROVEMENT_ACTION_CREATED: { bn: "উন্নতির কাজ দিয়েছেন", en: "Set an improvement action", group: "EXAM" },
+  IMPROVEMENT_ACTION_STOPPED: { bn: "উন্নতির কাজ বন্ধ করেছেন", en: "Stopped an improvement action", group: "EXAM" },
+  IMPROVEMENT_ACTION_EXTENDED: { bn: "উন্নতির কাজের দিন বাড়িয়েছেন", en: "Extended an improvement action", group: "EXAM" },
+  IMPROVEMENT_TICKED: { bn: "উন্নতির কাজের দিন চিহ্নিত করেছেন", en: "Marked an improvement day", group: "EXAM" },
+  IMPROVEMENT_UNTICKED: { bn: "উন্নতির কাজের চিহ্ন বাতিল করেছেন", en: "Took back an improvement mark", group: "EXAM" },
+  IMPROVEMENT_ASSIGNEE_SET: { bn: "উন্নতির কাজের দায়িত্ব বদলেছেন", en: "Changed who does an improvement day", group: "EXAM" },
 
   // --- Teaching notes & drive -----------------------------------------------
   TEACHING_NOTE_UPLOADED: { bn: "শিক্ষণ নোট আপলোড করেছেন", en: "Uploaded a teaching note", group: "NOTES" },

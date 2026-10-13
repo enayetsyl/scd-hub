@@ -182,6 +182,11 @@ import ClassTestDashboardScreen from "../screens/classtest/ClassTestDashboardScr
 import ClassTestReportsScreen from "../screens/classtest/ClassTestReportsScreen";
 import ClassTestClassSubjectScreen from "../screens/classtest/ClassTestClassSubjectScreen";
 import ClassTestStudentProfileScreen from "../screens/classtest/ClassTestStudentProfileScreen";
+import StudentProgressScreen from "../screens/progress/StudentProgressScreen";
+import StudentProgressStudentScreen from "../screens/progress/StudentProgressStudentScreen";
+import NewImprovementActionScreen from "../screens/progress/NewImprovementActionScreen";
+import ImprovementActionScreen from "../screens/progress/ImprovementActionScreen";
+import ImprovementDayTasksScreen from "../screens/progress/ImprovementDayTasksScreen";
 import CommentsHomeScreen from "../screens/comments/CommentsHomeScreen";
 import SectionCommentsScreen from "../screens/comments/SectionCommentsScreen";
 import CommentReviewScreen from "../screens/comments/CommentReviewScreen";
@@ -972,6 +977,16 @@ function ClassTestNavigator(): React.ReactElement {
         component={ClassTestStudentProfileScreen}
         options={({ route }) => ({ title: route.params.studentName || STR.ctStudentProfileTitle })}
       />
+      {/* SP-1..SP-4 (D-#734..#738) — student progress board + improvement actions. */}
+      <ClassTestStack.Screen name="StudentProgress" component={StudentProgressScreen} options={{ title: STR.impNavTitle }} />
+      <ClassTestStack.Screen
+        name="StudentProgressStudent"
+        component={StudentProgressStudentScreen}
+        options={({ route }) => ({ title: route.params.name || STR.impStudentTitle })}
+      />
+      <ClassTestStack.Screen name="NewImprovementAction" component={NewImprovementActionScreen} options={{ title: STR.impNewTitle }} />
+      <ClassTestStack.Screen name="ImprovementAction" component={ImprovementActionScreen} options={{ title: STR.impActionTitle }} />
+      <ClassTestStack.Screen name="ImprovementDayTasks" component={ImprovementDayTasksScreen} options={{ title: STR.impDayListTitle }} />
       <ClassTestStack.Screen name="StudentProfile" component={StudentProfileScreen} options={{ title: STR.spTitle }} />
       {/* Answer-script archive (AR-1..AR-4, D-#443–#447) — this stack because its
           audience is exactly this tab's gate (tracker:* teachers + roster:manage). */}

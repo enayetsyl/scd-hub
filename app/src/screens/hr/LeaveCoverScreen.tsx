@@ -41,6 +41,7 @@ import {
   Notice,
 } from "../../components/ui";
 import { AvailableTeacherSelect } from "../../components/selects";
+import { LeaveImprovementTasks } from "../../components/LeaveImprovementTasks";
 import { STR, coverSlotStatusLabel, dateHeaderLabel, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useConfirm } from "../../state/ConfirmContext";
@@ -263,6 +264,14 @@ export default function LeaveCoverScreen({ route }: Props): React.ReactElement {
           </Card>
         ))
       )}
+
+      {/* SP-3 (D-#736) — the improvement tasks of the leave days and who does each. Follows
+          the period covers above, so it re-reads whenever a cover changes. */}
+      <LeaveImprovementTasks
+        leaveApplicationId={leaveApplicationId}
+        manage={manage}
+        refreshKey={slots.map((s) => `${s.id}:${s.status}:${s.proposedCoverTeacherId ?? ""}:${s.finalCoverTeacherUserId ?? ""}`).join("|")}
+      />
     </Screen>
   );
 }

@@ -89,6 +89,7 @@ auto-deploys (`.github/workflows`, `scripts/deploy.sh`). So:
   prd-routine.md      ← Routine/Timetable module build contract: rooms+period-defs+slots+conflict-engine, slices R-1..3 (D-#46/#47)
   prd-class-teacher.md ← Class-teacher → section daily-coordinator gate (attendance/leave/report-card/comms), slice CT-1 now (D-#45)
   prd-ct-scripts.md   ← Class-test scripts: teacher hand-in → office receive → scan/tag per student → guardian view → return, slices CS-1..3 (D-#715–#719)
+  prd-student-progress.md ← Office/Principal progress board (student × subject) + two-part improvement actions ticked daily by teacher/guardian, leave hand-over, 11:00 check, SP-1..4 (D-#734–#738)
   prd-work-board.md   ← Work board: manual tasks beside auto cards projected from routine/homework/class-test/review/print/leave, load grid, templates; slices WB-1..WB-3 built (D-#701)
   scholarship-eng-paper-structure.md ← OWNER-APPROVED C5 English paper shape: 14 items → 24 topic rows + marks.
                         Read before generating an English scholarship question or touching the ENG seed (D-#670/#672)

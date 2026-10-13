@@ -94,6 +94,8 @@ const STAFF_NAV: NavSection[] = [
       { route: "HomeworkTab", labelKey: "tabHomework", icon: "📒" },
       { route: "AssignmentTab", labelKey: "tabAssignment", icon: "📋" },
       { route: "ClassTestTab", labelKey: "tabClassTest", icon: "🧪" },
+      // SP-1 (D-#734) — Office / Principal only; lives in the Class Test stack.
+      { route: "ClassTestTab", labelKey: "impNavTitle", icon: "📈", screen: "StudentProgress", perms: ["roster:manage"] },
       { route: "RevisionTab", labelKey: "tabRevision", icon: "🕌" },
     ],
   },
@@ -263,6 +265,12 @@ const GUARDIAN_NAV: NavSection[] = [
 ];
 
 const NAV: NavSection[] = [...STAFF_NAV, ...GUARDIAN_NAV];
+
+/** "route:screen" of every deep-linked leaf. A plain leaf of the same route (ক্লাস টেস্ট)
+ *  must not light up too while one of these screens is open (শিক্ষার্থীর অগ্রগতি, SP-1). */
+const DEEP_LINKED = new Set(
+  NAV.flatMap((s) => (s.type === "group" ? s.items : [s])).filter((l) => l.screen).map((l) => `${l.route}:${l.screen}`),
+);
 
 export default function DrawerContent(props: DrawerContentComponentProps): React.ReactElement {
   const colors = useColors();
@@ -529,7 +537,9 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
 
   const Leaf = ({ leaf, indent }: { leaf: NavLeaf; indent?: boolean }): React.ReactElement | null => {
     if (!visibleLeaf(leaf)) return null;
-    const active = leaf.route === activeRoute && (!leaf.screen || leaf.screen === activeNested);
+    const active =
+      leaf.route === activeRoute &&
+      (leaf.screen ? leaf.screen === activeNested : !DEEP_LINKED.has(`${leaf.route}:${activeNested ?? ""}`));
     const badge = badgeFor(leaf.route);
     const tinted = tintedBadgesFor(leaf.route, leaf.screen);
     return (

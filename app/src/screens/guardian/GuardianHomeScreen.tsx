@@ -33,6 +33,7 @@ import { HandBackBadges, handBackOnly } from "../../components/HandBackBadges";
 import { useRecordView } from "../../lib/useRecordView";
 import { countNewResults } from "../../lib/childClassTests";
 import { UpcomingClassTestsCard, ClassTestResultRow } from "../../components/ChildClassTestCards";
+import { ImprovementTasksGuardianCard } from "../../components/ImprovementTasksGuardianCard";
 import { useNotifications } from "../../state/NotificationContext";
 import { CHILD_TRAJECTORY_QUERY } from "../../graphql/wholePicture";
 import { openStoredFile, FILE_VIEW_SUPPORTED } from "../../lib/files";
@@ -354,6 +355,11 @@ export default function GuardianHomeScreen(): React.ReactElement {
         {/* D-#472: upcoming class tests — sits ABOVE the attention strip because it is
             the one thing on this screen the family can still act on (revise). Each row
             drops off by itself once its exam day has passed. */}
+        {/* SP-2 (D-#735) — today's tasks from school for this child; first, because it is
+            the one thing here the family is asked to DO today. Renders nothing on a day
+            without a task. */}
+        {selected ? <ImprovementTasksGuardianCard studentId={selected.studentId} /> : null}
+
         <UpcomingClassTestsCard tests={upcomingTests} />
 
         {/* Attention strip (owner ask 2026-07-19) — chase, fees due, new comment/

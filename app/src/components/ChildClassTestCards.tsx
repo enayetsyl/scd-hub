@@ -71,10 +71,13 @@ export function ClassTestResultRow({
   r,
   isNew = false,
   showOutcome = false,
+  subjectName = hwSubjectLabel,
 }: {
   r: GuardianClassTestResultT;
   isNew?: boolean;
   showOutcome?: boolean;
+  /** How the subject is named — the Class Test tab passes its short names (BGS). */
+  subjectName?: (code: string) => string;
 }): React.ReactElement {
   const absent = r.status === "ABSENT";
   return (
@@ -83,7 +86,7 @@ export function ClassTestResultRow({
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: space(2) }}>
             <Body>
-              {hwSubjectLabel(r.subject)} · {STR.ctTestNumber} {bnNum(r.testNumber)}
+              {subjectName(r.subject)} · {STR.ctTestNumber} {bnNum(r.testNumber)}
             </Body>
             {isNew ? <Badge text={STR.gctNew} tone="info" /> : null}
           </View>

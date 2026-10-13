@@ -96,6 +96,8 @@ export interface NotificationRefs {
   examId?: string;
   classId?: string;
   subject?: string;
+  /** Improvement action (SP-4, D-#738) — deep-link: the action's tracking screen. */
+  improvementActionId?: string;
 }
 
 export interface INotification extends Document {
@@ -163,6 +165,8 @@ const RefsSchema = new Schema<NotificationRefs>(
     examId: { type: String },
     classId: { type: String },
     subject: { type: String },
+    // SP-4 (D-#738) — same lockstep rule: model, resolver, app query.
+    improvementActionId: { type: String },
   },
   { _id: false },
 );
