@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Student Progress Guide</title>
+<style>
+  @page { size: A4; margin: 14mm 14mm 16mm 14mm; }
+  :root {
+    --green: #176c45; --green-soft: #e3f0e8; --ink: #1d2320; --muted: #5b6660;
+    --line: #dde3df; --red: #b42318; --red-soft: #fbe3e1; --amber: #a95a07;
+    --amber-soft: #fdecd6; --blue: #1d5fa8; --blue-soft: #e2edf9; --paper: #ffffff;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink);
+    font-family: "Segoe UI", "Nirmala UI", Arial, sans-serif; font-size: 10.5pt; line-height: 1.45; }
+  .bn { font-family: "Nirmala UI", "Segoe UI", sans-serif; }
+  h1 { font-size: 26pt; margin: 0 0 4px; color: var(--green); letter-spacing: -0.5px; }
+  h2 { font-size: 16pt; color: var(--green); margin: 0 0 6px; padding-bottom: 6px; border-bottom: 2px solid var(--green); }
+  h3 { font-size: 11.5pt; margin: 14px 0 4px; }
+  p { margin: 4px 0 8px; }
+  ul, ol { margin: 4px 0 8px; padding-left: 20px; }
+  li { margin: 2px 0; }
+  .page { page-break-after: always; }
+  .page:last-child { page-break-after: auto; }
+  .lede { color: var(--muted); font-size: 11pt; margin-bottom: 8px; }
+  .role-tag { display: inline-block; font-size: 8.5pt; font-weight: 700; letter-spacing: .6px; text-transform: uppercase;
+    padding: 2px 8px; border-radius: 4px; color: #fff; background: var(--green); margin-bottom: 6px; }
+  .role-tag.t { background: var(--blue); } .role-tag.g { background: var(--amber); }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
+  .two.wide-left { grid-template-columns: 1.35fr 1fr; }
+  .tip { border-left: 4px solid var(--green); background: var(--green-soft); padding: 7px 10px; border-radius: 0 6px 6px 0; margin: 8px 0; font-size: 10pt; }
+  .warn { border-left-color: var(--amber); background: var(--amber-soft); }
+  table.ref { width: 100%; border-collapse: collapse; font-size: 9.8pt; margin: 6px 0 10px; }
+  table.ref th, table.ref td { border: 1px solid var(--line); padding: 5px 7px; text-align: left; vertical-align: top; }
+  table.ref th { background: #f3f6f4; font-weight: 600; }
+  .n { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%;
+    background: #d92d20; color: #fff; font-size: 8.5pt; font-weight: 700; flex: none; vertical-align: middle; }
+  .steps { list-style: none; padding: 0; }
+  .steps li { display: flex; gap: 8px; margin: 6px 0; }
+  .avoid { break-inside: avoid; }
+
+  /* ---- Cover ---- */
+  .cover-band { background: var(--green); color: #fff; border-radius: 10px; padding: 20px 24px 16px; margin-bottom: 12px; }
+  .cover-band h1 { color: #fff; }
+  .cover-band .sub { font-size: 12.5pt; opacity: .92; }
+  .cover-band .bn { font-size: 13pt; opacity: .9; margin-top: 2px; }
+  .who { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 6px 0 10px; }
+  .who div { border: 1px solid var(--line); border-radius: 8px; padding: 10px 11px; }
+  .who b.hd { display: block; margin-bottom: 3px; }
+  .flow { display: flex; align-items: stretch; gap: 6px; margin: 6px 0 10px; }
+  .flow .box { flex: 1; border: 1.5px solid var(--green); border-radius: 8px; padding: 8px 9px; font-size: 9.5pt; background: #fbfdfc; }
+  .flow .box b { display: block; color: var(--green); font-size: 9pt; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 2px; }
+  .flow .arr { align-self: center; color: var(--green); font-size: 16pt; font-weight: 700; }
+
+  /* ---- Mockups ---- */
+  .mock { border: 1px solid #c9d2cd; border-radius: 10px; overflow: hidden; background: #f6f8f7; position: relative;
+    box-shadow: 0 2px 6px rgba(0,0,0,.08); font-size: 9pt; }
+  .bar { background: var(--green); color: #fff; padding: 8px 12px; font-weight: 700; font-size: 10.5pt; display: flex; gap: 10px; align-items: center; }
+  .bar .ic { opacity: .9; font-weight: 400; }
+  .mbody { padding: 9px; }
+  .chips { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 7px; }
+  .chip { border: 1px solid #c9d2cd; border-radius: 99px; padding: 2px 9px; background: #fff; font-size: 8.5pt; white-space: nowrap; }
+  .chip.on { background: var(--green-soft); border-color: var(--green); color: var(--green); font-weight: 600; }
+  .tiles { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-bottom: 7px; }
+  .tile { background: #fff; border: 1px solid var(--line); border-radius: 7px; padding: 5px 6px; position: relative; }
+  .tile .l { font-size: 7.5pt; color: var(--muted); } .tile .v { font-size: 14pt; font-weight: 700; line-height: 1.2; }
+  .tile .s { font-size: 6.5pt; color: var(--muted); line-height: 1.2; }
+  .tile.r { background: var(--red-soft); border-color: #f2c2bd; } .tile.r .l, .tile.r .v, .tile.r .s { color: var(--red); }
+  .tile.a { background: var(--amber-soft); border-color: #f4d3a8; } .tile.a .l, .tile.a .v, .tile.a .s { color: var(--amber); }
+  .tile.g { background: var(--green-soft); border-color: #c5ddcf; }
+  .card { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px; margin-bottom: 6px; position: relative; }
+  .card .t { font-weight: 700; font-size: 9.5pt; } .card .h { color: var(--muted); font-size: 8pt; }
+  .row { border-top: 1px solid var(--line); padding: 5px 0; }
+  .row .nm { font-weight: 700; } .row .meta { color: var(--muted); font-weight: 400; }
+  .bd { display: inline-block; border-radius: 4px; padding: 0 6px; font-size: 7.8pt; margin-right: 4px; line-height: 1.6; }
+  .bd.r { background: var(--red-soft); color: var(--red); } .bd.a { background: var(--amber-soft); color: var(--amber); }
+  .bd.b { background: var(--blue-soft); color: var(--blue); } .bd.g { background: var(--green-soft); color: var(--green); }
+  .trend { color: var(--muted); font-size: 8pt; margin-right: 4px; }
+  .call { position: absolute; width: 17px; height: 17px; border-radius: 50%; background: #d92d20; color: #fff; font-size: 8pt;
+    font-weight: 700; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 2px #fff; z-index: 2; }
+  .btn { display: inline-block; border-radius: 6px; padding: 3px 10px; font-size: 8.5pt; font-weight: 600; border: 1px solid var(--green); color: var(--green); background: #fff; }
+  .btn.f { background: var(--green); color: #fff; }
+  .btn.o { border-color: #c9d2cd; color: var(--ink); }
+  .grid-t { width: 100%; border-collapse: collapse; font-size: 8pt; background: #fff; }
+  .grid-t th, .grid-t td { border: 1px solid var(--line); padding: 3px 4px; text-align: center; }
+  .grid-t td:first-child, .grid-t th:first-child { text-align: left; }
+  .grid-t .pin td { background: #f3f6f4; font-style: italic; }
+  .lo { color: var(--red); font-weight: 700; } .mid { color: var(--amber); font-weight: 700; } .hi { color: var(--green); }
+  .lnk { color: var(--blue); text-decoration: underline; }
+  .field { margin: 4px 0; } .field .lab { font-size: 7.8pt; color: var(--muted); }
+  .input { background: #fff; border: 1px solid #c9d2cd; border-radius: 5px; padding: 3px 6px; font-size: 8.5pt; }
+  .sec-h { font-weight: 700; font-size: 8.8pt; color: var(--green); margin: 6px 0 2px; }
+  .strip { display: flex; gap: 3px; margin: 3px 0 5px; }
+  .d { width: 19px; height: 19px; border-radius: 4px; font-size: 8pt; font-weight: 700; display: flex; align-items: center; justify-content: center; border: 1px solid transparent; }
+  .d.ok { background: var(--green); color: #fff; } .d.c { background: var(--blue); color: #fff; }
+  .d.o { background: #66706b; color: #fff; } .d.x { background: var(--amber-soft); border-color: var(--amber); color: var(--amber); }
+  .d.q { background: var(--red-soft); border-color: var(--red); color: var(--red); } .d.f { border: 1px solid #c9d2cd; background: #fff; }
+  .phone { width: 250px; margin: 0 auto; border: 7px solid #26302b; border-radius: 22px; overflow: hidden; background: #f6f8f7; position: relative; box-shadow: 0 3px 8px rgba(0,0,0,.15); font-size: 8.8pt; }
+  .phone .bar { font-size: 9.5pt; }
+  .gcard { border: 2px solid #e9a94f; border-radius: 9px; background: #fff; padding: 8px; margin: 8px; position: relative; }
+  .notif { background: #fff; border-radius: 9px; padding: 7px 9px; box-shadow: 0 1px 4px rgba(0,0,0,.18); margin: 8px; font-size: 8.4pt; position: relative; }
+  .notif .app { font-size: 7.3pt; color: var(--muted); margin-bottom: 2px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px; font-size: 8.5pt; margin: 4px 0 8px; }
+  .legend span { display: inline-flex; align-items: center; gap: 4px; }
+  .footer-note { color: var(--muted); font-size: 8.5pt; margin-top: 10px; }
+</style>
+</head>
+<body>
+
+<!-- ============ PAGE 1 — COVER / OVERVIEW ============ -->
+<section class="page">
+  <div class="cover-band">
+    <h1>Student Progress</h1>
+    <div class="sub">A short user guide for the Office, Teachers and Guardians</div>
+    <div class="bn">শিক্ষার্থীর অগ্রগতি — ব্যবহার নির্দেশিকা</div>
+  </div>
+
+  <p class="lede">Student progress uses class-test results to show which students are slipping, so the school can act
+  early. When a student needs help, the Office sets an <b>improvement action</b>: a small daily task for the teacher,
+  the guardian, or both. When the action ends, the student's next test shows whether it worked.</p>
+
+  <h3>Who does what</h3>
+  <div class="who">
+    <div><span class="role-tag">Office / Principal</span><b class="hd">Watches and decides</b>Opens the board, sees who is at risk, creates
+      actions and checks that the daily tasks get ticked.</div>
+    <div><span class="role-tag t">Teacher</span><b class="hd">Does the school part</b>Sees the task on the <b>Today</b> screen and ticks
+      “Done today” or “Couldn't today” each day.</div>
+    <div><span class="role-tag g">Guardian</span><b class="hd">Does the home part</b>Sees the task on the <b>Today</b> screen (the first screen of the app) for their child
+      and ticks it every evening.</div>
+  </div>
+
+  <h3>How one action works</h3>
+  <div class="flow">
+    <div class="box"><b>1 · Spot</b>The board shows a student is <i>at risk</i> or <i>falling</i> in a subject.</div>
+    <div class="arr">→</div>
+    <div class="box"><b>2 · Plan</b>The Office creates an action: what the teacher and the guardian do each day, for how many school days.</div>
+    <div class="arr">→</div>
+    <div class="box"><b>3 · Do</b>Every school day, the teacher and the guardian tick their task in the app.</div>
+    <div class="arr">→</div>
+    <div class="box"><b>4 · Check</b>After the last day, the next class test is compared with the one before: <i>Before 32% → After 48%</i>.</div>
+  </div>
+
+  <h3>Words you will see</h3>
+  <table class="ref">
+    <tr><th style="width:24%">Word</th><th>What it means</th></tr>
+    <tr><td><span class="bd r">At risk</span> <span class="bn">ঝুঁকিতে</span></td><td>The student's overall marks are going down <b>and</b> they failed their most recent class test.
+      (At least 2 tests are needed.)</td></tr>
+    <tr><td><span class="bd a">Falling</span> <span class="bn">নামছে</span></td><td>In one subject, each of the last three tests was lower than the one before, for example 44% → 38% → 32%.</td></tr>
+    <tr><td>▲ / ▼</td><td>The last test in that subject was at least 1 mark-percent higher (▲) or lower (▼) than the one before.</td></tr>
+    <tr><td>Improvement action <span class="bn">উন্নতির কাজ</span></td><td>A daily task for a fixed number of school days, for one student or a whole section, in one subject.</td></tr>
+    <tr><td>Not marked <span class="bn">চিহ্নিত হয়নি</span></td><td>A school day has passed and nobody ticked “Done” or “Couldn't” for it.</td></tr>
+  </table>
+
+  <div class="tip">Everything is calculated from <b>published class-test results</b>. If a test has not been published, it does not count yet.
+  An absent student's test counts as an absence, not as a zero.</div>
+</section>
+
+<!-- ============ PAGE 2 — OFFICE: THE BOARD ============ -->
+<section class="page">
+  <span class="role-tag">Office / Principal</span>
+  <h2>1. Read the board</h2>
+  <p>Open the menu (☰) → <b>Trackers</b> → <b>Student progress</b> <span class="bn">(শিক্ষার্থীর অগ্রগতি)</span>.
+  Only the Office and the Principal see this page.</p>
+
+  <div class="mock avoid" style="margin:8px 0 10px">
+    <div class="bar"><span class="ic">←</span><span class="ic">☰</span>Student progress</div>
+    <div class="mbody" style="padding-left:20px">
+      <div class="chips" style="position:relative"><span class="call" style="left:-17px;top:2px">1</span>
+        <span class="chip on">Whole year</span><span class="chip">This term (Jul–Dec)</span><span class="chip">Last 30 days</span></div>
+      <div class="tiles" style="position:relative"><span class="call" style="left:-17px;top:4px">2</span>
+        <div class="tile"><div class="l">School average</div><div class="v">72%</div><div class="s">90 Student</div></div>
+        <div class="tile r"><div class="l">At risk</div><div class="v">15</div><div class="s">falling + failed the last test</div></div>
+        <div class="tile a"><div class="l">No action yet</div><div class="v">15</div><div class="s">at risk, without a plan</div></div>
+        <div class="tile"><div class="l">Actions behind</div><div class="v">0</div><div class="s">a teacher day was not marked</div></div>
+        <div class="tile g"><div class="l">Improved after action</div><div class="v">0/0</div><div class="s">next test higher than before</div></div>
+      </div>
+      <div class="card"><span class="call" style="left:-17px;top:4px">3</span>
+        <div class="t">Needs attention — whole school</div><div class="h">At risk or falling, worst first</div>
+        <div class="row"><span class="nm">Rafi Ahmed</span> <span class="meta">Class 3 · English</span><br>
+          <span class="bd r">At risk</span><span class="trend">Last 3 tests: 46% → 31% → 22%</span><span class="bd r">No action yet</span></div>
+        <div class="row"><span class="nm">Sumaiya Akter</span> <span class="meta">Class 5 বালিকা · Mathematics</span><br>
+          <span class="bd a">Falling</span><span class="trend">Last 3 tests: 58% → 51% → 44%</span><span class="bd b">Action running</span></div>
+        <div class="row" style="position:relative"><span class="call" style="right:-4px;top:4px">4</span><span class="nm">Tanvir Hasan</span> <span class="meta">Class 4 · Science</span><br>
+          <span class="bd r">At risk</span><span class="trend">Last 3 tests: 40% → 33% → 28%</span><span class="bd a">Teacher behind</span></div>
+      </div>
+    </div>
+  </div>
+
+  <ol class="steps">
+    <li><span class="n">1</span><div><b>Choose the period.</b> <i>Whole year</i> (January–December), <i>This term</i> (July–December) or <i>Last 30 days</i>.
+      All numbers below change with it.</div></li>
+    <li><span class="n">2</span><div><b>Read the five tiles.</b>
+      <table class="ref" style="margin-top:4px">
+        <tr><th style="width:27%">Tile</th><th>What it counts</th></tr>
+        <tr><td>School average</td><td>The average of every student's overall % (the number under it is how many students have results).</td></tr>
+        <tr><td>At risk</td><td>How many students are at risk.</td></tr>
+        <tr><td>No action yet</td><td>At-risk students who have <b>no</b> running or upcoming action. <b>Bring this number to zero.</b></td></tr>
+        <tr><td>Actions behind</td><td>Running actions where a past teacher day was never ticked. Follow these up.</td></tr>
+        <tr><td>Improved after action</td><td>Finished actions where the next test was higher than the test before, e.g. <i>3/4</i>.</td></tr>
+      </table></div></li>
+    <li><span class="n">3</span><div><b>Work down the “Needs attention” list.</b> Worst first. A student can appear once for each subject where they are falling. Tap a name to open their page.</div></li>
+    <li><span class="n">4</span><div><b>Check the action badge</b> on each row:
+      <span class="bd r">No action yet</span> nothing planned ·
+      <span class="bd b">Action running</span> on track ·
+      <span class="bd a">Teacher behind</span> a day was not ticked ·
+      <span class="bd g">Action done +6%</span> finished, with the change in marks.</div></li>
+  </ol>
+
+  <div class="tip warn"><b>About the small coloured numbers next to “Student progress” in the menu:</b> they are the same counters as
+  <b>Class Test</b> (papers waiting for review, overdue results). They are not student-progress numbers.</div>
+</section>
+
+<!-- ============ PAGE 3 — OFFICE: SECTION GRID & STUDENT PAGE ============ -->
+<section class="page">
+  <span class="role-tag">Office / Principal</span>
+  <h2>2. Look at one class or one student</h2>
+
+  <h3>The section grid: every student × every subject</h3>
+  <p>Further down the board, pick a section chip (Nursery … Class 5). The grid shows each student's average in each subject.</p>
+
+  <div class="mock avoid" style="margin:6px 0 8px">
+    <div class="mbody">
+      <div class="chips"><span class="chip">Nursery</span><span class="chip">KG</span><span class="chip">Class 1</span><span class="chip">Class 2</span>
+        <span class="chip on">Class 3</span><span class="chip">Class 4 বালক</span><span class="chip">Class 4 বালিকা</span><span class="chip">…</span></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+        <b>Class 3 — Every student × subject</b><span class="btn" style="position:relative">+ Class action<span class="call" style="right:-10px;top:-9px">2</span></span></div>
+      <div class="chips"><span class="chip on">All students</span><span class="chip">At risk only</span><span class="chip">Has a running action</span>
+        <span style="color:var(--muted);font-size:8pt;margin-left:6px">▲▼ = the last two tests in that subject</span></div>
+      <table class="grid-t">
+        <tr><th>Student</th><th>Bangla</th><th>English</th><th>Math</th><th>Science</th><th>Overall</th><th>Actions</th></tr>
+        <tr class="pin"><td>Class highest</td><td>96%</td><td>94%</td><td>98%</td><td>92%</td><td>94%</td><td></td></tr>
+        <tr class="pin"><td>Class average</td><td>78%</td><td>69%</td><td>71%</td><td>74%</td><td>73%</td><td></td></tr>
+        <tr><td><span class="lnk">Rafi Ahmed</span> <span class="bd r">At risk</span></td><td class="mid">55% ▼</td><td class="lo">33% ▼</td><td class="mid">48%</td><td>62%</td><td class="mid">50%</td><td>—</td></tr>
+        <tr><td><span class="lnk">Nadia Islam</span></td><td class="hi">88% ▲</td><td>76%</td><td class="hi">91% ▲</td><td class="hi">84%</td><td class="hi">85%</td><td>—</td></tr>
+        <tr style="position:relative"><td><span class="lnk">Arif Rahman</span></td><td>70%</td><td>64% ▲</td><td class="mid">52% ▼</td><td>67%</td><td>63%</td><td>1 running<span class="call" style="right:-8px;top:-2px;position:absolute">1</span></td></tr>
+      </table>
+    </div>
+  </div>
+  <ul>
+    <li><b>Colours:</b> <span class="hi">80% and above</span> · 60–79% plain · <span class="mid">40–59% amber</span> · <span class="lo">below 40% red</span>.</li>
+    <li><span class="n">1</span> The <b>Actions</b> column shows how many actions this student has, e.g. <i>2 running · 1 behind · 1 done</i>.</li>
+    <li><span class="n">2</span> When most of a class is weak in a subject, use <b>+ Class action</b>: one action for the whole section.</li>
+  </ul>
+
+  <h3>The student page</h3>
+  <div class="two wide-left">
+    <div class="mock avoid">
+      <div class="bar"><span class="ic">←</span>Rafi Ahmed</div>
+      <div class="mbody">
+        <div class="card"><b>Rafi Ahmed</b> <span class="meta" style="color:var(--muted)">Class 3</span> <span class="bd r">At risk</span><br>
+          Average <b>50%</b> <span style="color:var(--muted)">class 73%</span> · Direction <b style="color:var(--red)">Falling ▼</b><br>
+          <span style="font-size:8pt">Recurring weakness: <i>spelling (3)</i>, <i>tenses (2)</i></span></div>
+        <div class="card"><div class="t">By subject</div>
+          <div class="row"><b>English</b> 33% ▼ <span style="color:var(--muted)">class 69%</span><br>
+          <span class="trend">Last 3 tests: 46% → 31% → 22%</span><br>
+          <span style="font-size:8pt">Teacher's note: <i>spelling mistakes</i></span> <span class="lnk" style="float:right">+ New action</span></div></div>
+        <div class="card"><div class="t">Improvement actions <span class="btn" style="float:right;font-size:7.5pt;padding:1px 7px">+ New action</span></div>
+          <div class="h" style="margin-top:4px">No actions yet.</div></div>
+      </div>
+    </div>
+    <div>
+      <p>Tap a student's name on the board or in the grid. You will see:</p>
+      <ul>
+        <li>their average next to the class average, and whether they are <b>rising</b>, <b>falling</b> or <b>steady</b>;</li>
+        <li><b>recurring weaknesses</b>: notes the teachers wrote on 2 or more tests;</li>
+        <li>each subject with its last three tests and the teacher's latest note;</li>
+        <li>every improvement action for this student, including class actions for their section.</li>
+      </ul>
+      <div class="tip">Tap <b>+ New action</b> next to the weak subject: the student and the subject are filled in for you.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PAGE 4 — OFFICE: CREATE AN ACTION ============ -->
+<section class="page">
+  <span class="role-tag">Office / Principal</span>
+  <h2>3. Create an improvement action</h2>
+  <div class="two">
+    <div class="mock avoid">
+      <div class="bar"><span class="ic">←</span>New improvement action</div>
+      <div class="mbody">
+        <div class="sec-h" style="position:relative">1 · Who is it for?<span class="call" style="right:0;top:-2px">1</span></div>
+        <div class="chips"><span class="chip on">Student</span><span class="chip">Whole class</span></div>
+        <div class="field"><span class="input">Class 3</span> <span class="input">Rafi Ahmed</span></div>
+        <div class="chips"><span class="chip">Bangla</span><span class="chip on">English</span><span class="chip">Math</span></div>
+        <div class="field"><div class="lab">Why</div><div class="input bn">শেষ ৩টি টেস্ট: 46% → 31% → 22%; দুর্বলতা: spelling</div></div>
+
+        <div class="sec-h" style="position:relative">2 · Teacher<span class="call" style="right:0;top:-2px">2</span></div>
+        <div style="font-size:8.5pt">☑ Include a teacher part</div>
+        <div class="field"><div class="lab">Done by</div><div class="input">Mst. Farhana Begum</div></div>
+        <div class="field"><div class="lab">What the teacher does each day</div><div class="input">Check 5 spelling words from today's lesson in class</div></div>
+
+        <div class="sec-h" style="position:relative">3 · Guardian<span class="call" style="right:0;top:-2px">3</span></div>
+        <div style="font-size:8.5pt">☑ Include a guardian part <span style="color:var(--muted)">— goes to the student's guardians</span></div>
+        <div class="field"><div class="lab">What the guardian makes sure of each day</div><div class="input">Make sure he writes 5 spelling words 3 times</div></div>
+        <div style="font-size:8pt">☑ Tell the class teacher if the guardian misses 3 days in a row</div>
+
+        <div class="sec-h" style="position:relative">4 · Schedule<span class="call" style="right:0;top:-2px">4</span></div>
+        <div class="chips"><span class="chip on">Every school day</span><span class="chip">Days with this subject's period</span></div>
+        <div class="field"><span class="lab">For how many school days</span> <span class="input">20</span> &nbsp;<span class="lab">Starts</span> <span class="input">15 Oct 2026</span></div>
+
+        <div class="card" style="background:#fbfdfc;margin-top:6px"><div class="h">What they will see each day — Day 1</div>
+          <span class="btn f" style="font-size:7.5pt">Done today</span> <span class="btn o" style="font-size:7.5pt">Couldn't today</span></div>
+        <div style="text-align:right;position:relative"><span class="btn f">Save action</span><span class="call" style="right:-6px;top:-10px">5</span></div>
+      </div>
+    </div>
+    <div>
+      <p>Open it from <b>+ New action</b> (student page) or <b>+ Class action</b> (section grid).</p>
+      <ol class="steps">
+        <li><span class="n">1</span><div><b>Who and which subject.</b> One student or the whole class. The <i>Why</i> box is filled in from the test results; you can edit it.</div></li>
+        <li><span class="n">2</span><div><b>Teacher part.</b> The subject's routine teacher is picked for you; change it if needed. Write <b>one small task</b> they can do every day.</div></li>
+        <li><span class="n">3</span><div><b>Guardian part.</b> Write what the guardian makes sure of at home. It goes to every linked guardian (for a class action, to every family in the section). Keep the 3-day alert on, so the class teacher can call a family that stops ticking.</div></li>
+        <li><span class="n">4</span><div><b>Schedule.</b> <i>Every school day</i>, or only the days when the class has this subject's period. Default 20 school days (1–60). Fridays and holidays are skipped automatically.</div></li>
+        <li><span class="n">5</span><div><b>Save action.</b> The teacher and the guardians get a notification straight away.</div></li>
+      </ol>
+      <div class="tip"><b>Write tasks people can do in 5 minutes.</b> Teachers and guardians see your words exactly as written, so use the language they read best (Bangla for most guardians).</div>
+      <div class="tip warn">You need at least one part (teacher or guardian). After saving, the text <b>cannot be edited</b>. To change it, stop the action and create a new one.</div>
+      <p style="font-size:9.5pt;color:var(--muted)">If the class has no period of that subject in its routine, choose <i>Every school day</i>; the other option will not save.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PAGE 5 — OFFICE: FOLLOW UP ============ -->
+<section class="page">
+  <span class="role-tag">Office / Principal</span>
+  <h2>4. Follow up every day</h2>
+
+  <div class="two">
+    <div>
+      <h3>At 11:00 on school days</h3>
+      <p>If any teacher has not ticked today's task, you get <b>one notification</b> listing who still owes a tick. Your
+      <b>Today</b> screen also shows an <i>Improvement tasks today</i> card. Tap <b>Open the list</b>.</p>
+      <div class="mock avoid" style="max-width:300px">
+        <div class="notif"><div class="app">SCD Hub · now</div><b class="bn">৩টি উন্নতির কাজ এখনো চিহ্নিত হয়নি</b><br>
+          <span class="bn">Farhana Begum 2, Kamal Uddin 1 — দেখে শিক্ষককে মনে করিয়ে দিন বা তাঁর পক্ষে চিহ্নিত করুন।</span></div>
+      </div>
+    </div>
+    <div class="mock avoid" style="margin-top:8px">
+      <div class="bar"><span class="ic">←</span>Improvement tasks today</div>
+      <div class="mbody">
+        <div class="chips"><span class="bd r">Not ticked yet: 2</span><span class="bd g">Done: 5</span></div>
+        <div class="card"><b>Farhana Begum</b><br><span class="lnk">Rafi Ahmed · English</span> <span style="color:var(--muted)">· Day 4/20</span><br>
+          <span style="font-size:8.3pt">Check 5 spelling words from today's lesson</span><br>
+          <span class="btn" style="font-size:7.5pt;margin-top:3px">Mark done on behalf</span> <span class="btn o" style="font-size:7.5pt">Mark couldn't</span></div>
+        <div class="card"><b>Nobody assigned</b> <span class="bd a">Needs a person</span><br><span class="lnk">Class 4 বালক · Math</span> <span style="color:var(--muted)">· Day 2/10</span></div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Marking on a teacher's behalf</h3>
+  <p>First remind the teacher. If you know the task was done, tap <b>Mark done on behalf</b> and say how you know:
+  <i>Teacher told me</i>, <i>I checked the copy</i> or <i>I did it myself</i>. It is shown as <b>O</b> (marked by Office), never as the
+  teacher's own tick. You can also mark earlier missed days from the action's page.</p>
+
+  <h3>The action page: day by day</h3>
+  <div class="two wide-left">
+    <div class="mock avoid">
+      <div class="bar"><span class="ic">←</span>Improvement action</div>
+      <div class="mbody">
+        <div class="card"><span class="bd b">Running · Day 7/20</span> <b>English · Student · Rafi Ahmed</b><br>
+          <span style="font-size:8pt;color:var(--muted)">Why: last 3 tests 46% → 31% → 22%</span>
+          <div style="display:flex;gap:5px;margin-top:5px;font-size:8pt">
+            <div class="tile" style="flex:1"><div class="l">Teacher</div><b>4/6</b></div>
+            <div class="tile" style="flex:1"><div class="l">Guardian</div><b>5/6</b></div>
+            <div class="tile" style="flex:1"><div class="l">Before → After</div><b style="font-size:7.5pt">waiting for the next test</b></div></div></div>
+        <div class="card"><div class="t">Day by day</div>
+          <div style="font-size:8pt;margin-top:3px">Teacher</div>
+          <div class="strip"><div class="d ok">✓</div><div class="d ok">✓</div><div class="d c">C</div><div class="d o">O</div><div class="d x">–</div><div class="d q">?</div><div class="d f"></div><div class="d f"></div><div class="d f"></div></div>
+          <div style="font-size:8pt">Guardian</div>
+          <div class="strip"><div class="d ok">✓</div><div class="d ok">✓</div><div class="d ok">✓</div><div class="d x">–</div><div class="d ok">✓</div><div class="d ok">✓</div><div class="d f"></div><div class="d f"></div><div class="d f"></div></div>
+        </div>
+        <div style="text-align:right"><span class="btn o">Extend by 5 days</span> <span class="btn o" style="color:var(--red);border-color:#f2c2bd">Stop action</span></div>
+      </div>
+    </div>
+    <div>
+      <div class="legend" style="flex-direction:column;gap:3px">
+        <span><span class="d ok">✓</span> Done</span>
+        <span><span class="d c">C</span> Done by the cover teacher</span>
+        <span><span class="d o">O</span> Marked by Office / Principal</span>
+        <span><span class="d x">–</span> Couldn't (with a reason)</span>
+        <span><span class="d q">?</span> Not marked: nobody ticked it</span>
+        <span><span class="d f"></span> Still to come</span>
+      </div>
+      <p>Tap a past <b>?</b> day to mark it. <i>Days not done</i> lists the reasons given. For a class action, <i>Each family's ticks</i>
+      shows which guardians are keeping up.</p>
+      <p><b>Extend by 5 days</b> adds five more school days. <b>Stop action</b> ends it early and asks for a reason.</p>
+    </div>
+  </div>
+
+  <div class="tip"><b>Teacher on leave?</b> That day's task goes to the teacher covering the period. On the leave's <i>cover</i> screen,
+  under <i>Improvement tasks while away</i>, you can pick someone else for any day. Days marked <span class="bd a">Needs a person</span> have nobody yet.</div>
+</section>
+
+<!-- ============ PAGE 6 — TEACHER ============ -->
+<section class="page">
+  <span class="role-tag t">Teacher</span>
+  <h2>For teachers: your daily task</h2>
+  <p>You don't need to open any board. When the Office gives you an improvement action, you get a notification
+  (<span class="bn">নতুন উন্নতির কাজ</span>) and the task appears on your <b>Today</b> screen every scheduled school day.</p>
+
+  <div class="two">
+    <div class="mock avoid">
+      <div class="bar"><span class="ic">☰</span>Today</div>
+      <div class="mbody">
+        <div class="card">
+          <div style="display:flex;justify-content:space-between"><span class="t">Improvement tasks today</span><span class="bd a">2 left</span></div>
+          <div class="h">Set by the Principal / Office. Tick each one when done.</div>
+          <div class="row" style="position:relative"><span class="call" style="right:-4px;top:2px">1</span>
+            <b>Rafi Ahmed</b> <span class="bd b">Student</span> <span style="color:var(--muted)">English</span><br>
+            Check 5 spelling words from today's lesson<br>
+            <span style="color:var(--muted);font-size:8pt">Day 6/20 · 4/5 Done</span><br>
+            <span style="position:relative"><span class="btn f" style="margin-top:3px">Done today</span><span class="call" style="left:-20px;top:2px">2</span></span>
+            <span class="btn o">Couldn't today</span></div>
+          <div class="row"><span class="bd a" style="font-size:7.3pt">Covering, today only: Kamal Uddin</span><br>
+            <b>Class 4 বালক</b> <span class="bd b">Whole class</span> <span style="color:var(--muted)">Math</span><br>
+            Do 3 times-table questions at the start of the period<br>
+            <span style="color:var(--muted);font-size:8pt">Day 2/10 · 1/1 Done</span><br>
+            <span class="btn f" style="margin-top:3px">Done today</span> <span class="btn o">Couldn't today</span></div>
+          <div class="row" style="position:relative"><span class="call" style="right:-4px;top:2px">3</span>
+            <span style="font-size:8pt">Why not today?</span><br>
+            <span class="chip">I was on leave</span> <span class="chip">No period of this subject today</span>
+            <span class="chip">Student absent</span> <span class="chip">Other</span></div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <ol class="steps">
+        <li><span class="n">1</span><div><b>Read the task.</b> It shows the student (or whole class), the subject, the task, and how far along it is: <i>Day 6/20</i>.</div></li>
+        <li><span class="n">2</span><div><b>Do it, then tap “Done today”</b> <span class="bn">(আজ করেছি)</span>. The card shows <i>Done today ✓</i>.</div></li>
+        <li><span class="n">3</span><div><b>Couldn't do it?</b> Tap “Couldn't today” <span class="bn">(আজ পারিনি)</span> and pick a reason. That is still an answer, and the Office can see why.</div></li>
+      </ol>
+      <div class="tip"><b>Tick it the same day.</b> You can only tick <i>today's</i> task. Tapped the wrong button? Use <b>Undo</b> before the day ends.
+      At 11:00 the Office sees whose tasks are still unticked.</div>
+      <h3>Covering for a colleague</h3>
+      <p>If a teacher is on leave and you cover their period, their task for that day appears on <i>your</i> Today screen with
+      <span class="bd a">Covering, today only</span>. Your tick counts as yours (<b>C</b> on the action's strip).</p>
+      <h3>Class teachers: the “guardian missed 3 days” alert</h3>
+      <p>If a family in your section leaves the home task unticked for 3 school days in a row, you get a notification:</p>
+      <div class="mock" style="max-width:290px">
+        <div class="notif"><div class="app">SCD Hub · 11:00</div><b class="bn">অভিভাবক টানা ৩ দিন চিহ্নিত করেননি</b><br>
+          <span class="bn">Rafi Ahmed (Class 3) — English: স্কুলের দেওয়া কাজটি বাড়িতে হচ্ছে কি না অভিভাবকের সাথে কথা বলুন।</span></div>
+      </div>
+      <p style="margin-top:6px">Please call or message the guardian and ask whether the home task is being done.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PAGE 7 — GUARDIAN ============ -->
+<section class="page">
+  <span class="role-tag g">Guardian</span>
+  <h2>For guardians: helping at home <span class="bn" style="font-size:12pt;font-weight:400">· অভিভাবকদের জন্য</span></h2>
+  <p>Sometimes the school asks for your help at home with one subject, for a few weeks. You will be told in the app,
+  and you only need to tick one button each day.</p>
+
+  <div class="two">
+    <div class="phone avoid">
+      <div class="notif" style="margin:10px 8px;position:relative"><span class="call" style="left:-6px;top:-6px">1</span>
+        <div class="app">SCD Hub · now</div><b class="bn">স্কুল থেকে প্রতিদিনের কাজ — English</b><br>
+        <span class="bn">প্রতিদিন ৫টি বানান ৩ বার লেখাবেন (20 স্কুল দিন, শুরু 15 Oct) — প্রতিদিন অ্যাপে "আজ করেছি" চাপুন।</span></div>
+      <div class="bar"><span class="ic">☰</span>Today</div>
+      <div class="gcard"><span class="call" style="right:-6px;top:-6px">2</span>
+        <div class="t" style="font-weight:700">Today's tasks from school</div>
+        <div style="font-size:7.8pt;color:var(--muted)">The school asked for your help at home. Tick each one every day.</div>
+        <div style="margin-top:6px"><b>English</b></div>
+        <div class="bn">প্রতিদিন ৫টি বানান ৩ বার লেখাবেন</div>
+        <div style="font-size:7.8pt;color:var(--muted)">Day 6/20 · days ticked so far:</div>
+        <div class="strip"><div class="d ok" style="width:13px;height:13px"></div><div class="d ok" style="width:13px;height:13px"></div><div class="d ok" style="width:13px;height:13px"></div><div class="d x" style="width:13px;height:13px"></div><div class="d ok" style="width:13px;height:13px"></div><div class="d f" style="width:13px;height:13px"></div></div>
+        <div style="position:relative"><span class="btn f">Done today</span> <span class="btn o">Couldn't today</span><span class="call" style="right:2px;top:-4px">3</span></div>
+      </div>
+      <div style="padding:2px 10px 12px;color:var(--muted);font-size:8pt">… the rest of the Today screen</div>
+    </div>
+    <div>
+      <ol class="steps">
+        <li><span class="n">1</span><div><b>You get a notification</b> <span class="bn">(স্কুল থেকে প্রতিদিনের কাজ)</span> telling you the subject, the daily task and how many school days it runs.</div></li>
+        <li><span class="n">2</span><div><b>Open the app.</b> On the <b>Today</b> screen (the first screen you see), the orange-bordered card <i>Today's tasks from school</i> appears at the top on every task day. If you have more than one child, choose the child first.</div></li>
+        <li><span class="n">3</span><div><b>After helping your child, tap “Done today”</b> <span class="bn">(আজ করেছি)</span>. You will see <i>Done today ✓ — thank you</i>.</div></li>
+      </ol>
+      <h3>If you could not do it today</h3>
+      <p>Tap <b>Couldn't today</b> <span class="bn">(আজ পারিনি)</span> and choose a reason:</p>
+      <ul>
+        <li>Child was sick <span class="bn">(সন্তান অসুস্থ)</span></li>
+        <li>No time today <span class="bn">(আজ সময় হয়নি)</span></li>
+        <li>Didn't get the questions <span class="bn">(প্রশ্ন/কাজ পাইনি)</span></li>
+        <li>Other <span class="bn">(অন্য কারণ)</span></li>
+      </ul>
+      <div class="tip"><b>Please tick every evening, even if you couldn't do it.</b> You can only tick <i>today's</i> task.
+      Pressed the wrong button? Tap <b>Undo</b> the same day. If you miss 3 days in a row, the class teacher will contact you.</div>
+      <p>The little squares show your past days: green = done, orange = couldn't, red = not ticked. No card means
+      there is no task that day (for example on holidays).</p>
+      <p>When the task ends, the school compares your child's next class test with the one before. Thank you for helping!</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PAGE 8 — QUICK ANSWERS ============ -->
+<section class="page">
+  <h2>Quick answers</h2>
+  <table class="ref">
+    <tr><th style="width:36%">Question</th><th>Answer</th></tr>
+    <tr><td>Why isn't a new test showing on the board?</td><td>Only published class-test results count. Once the result is published, it appears the next time the board is opened.</td></tr>
+    <tr><td>Why is a weak student not marked “At risk”?</td><td>They need at least 2 tests where they were present, a downward overall trend, <b>and</b> a failed last test. A weak student who is improving is not at risk.</td></tr>
+    <tr><td>What is the pass mark?</td><td>Each class test has its own pass mark; the board uses that test's mark.</td></tr>
+    <tr><td>Can a teacher see the board?</td><td>No. Teachers see only their own tasks on the Today screen. The board is for the Office and the Principal.</td></tr>
+    <tr><td>Can guardians see marks or other children?</td><td>No. Guardians see only the daily task for their own child.</td></tr>
+    <tr><td>Can I change an action's text after saving?</td><td>No. Stop it and create a new one. You can add days with <i>Extend by 5 days</i>.</td></tr>
+    <tr><td>Does a holiday added later move the days?</td><td>No. The days are fixed when the action is saved. Add days with <i>Extend by 5 days</i> if needed.</td></tr>
+    <tr><td>How is “Before → After” worked out?</td><td><i>Before</i> is the last test in that subject before the start day. <i>After</i> is the first test after the last day. For a class action, both are the section's average.</td></tr>
+    <tr><td>Can a teacher tick yesterday?</td><td>No. Only the Office or the Principal can mark a past day, and it shows as <b>O</b>.</td></tr>
+    <tr><td>The Student progress menu item shows numbers. What are they?</td><td>Those are the Class Test counters (papers to review, overdue results), not progress numbers.</td></tr>
+  </table>
+
+  <h3>A good weekly routine for the Office</h3>
+  <ol>
+    <li>Open <b>Student progress</b>. Bring <b>No action yet</b> to zero by creating actions for at-risk students.</li>
+    <li>Check <b>Actions behind</b> and follow up with those teachers.</li>
+    <li>Look at finished actions (<span class="bd g">Action done</span>). If a student did not improve, try a different task.</li>
+    <li>Answer the 11:00 notification each school day: remind teachers, or mark on their behalf if you know it was done.</li>
+  </ol>
+
+  <p class="footer-note">SCD Hub · Student progress user guide · October 2026. The pictures are examples with sample names.
+  The app may show these screens in Bangla (its default language); the buttons are in the same places.</p>
+</section>
+
+</body>
+</html>
