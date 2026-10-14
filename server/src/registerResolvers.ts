@@ -88,6 +88,7 @@ import "./modules/classroom-observation/resolvers/observationSchedule";
 import "./modules/classroom-observation/resolvers/observationRota";
 import "./modules/classroom-observation/resolvers/videoReview";
 import "./modules/classroom-observation/resolvers/reviewQuota";
+import "./modules/trackers/resolvers/resultEntryTarget";
 import "./modules/platform/resolvers/audit";
 import "./modules/platform/resolvers/activity";
 import "./modules/platform/resolvers/systemHealth";

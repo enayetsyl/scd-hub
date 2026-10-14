@@ -170,6 +170,7 @@ export type AuditEventKind =
   | "CLASSROOM_OBSERVATION_ESCALATED"  // the response ladder flagged a still-unanswered observation to the Principal (CO-3)
   | "OBSERVATION_ESCALATION_CONFIG_SET" // an admin edited the response-escalation cadence thresholds (CO-3, observation:manage)
   | "OBSERVATION_SCHEDULE_CONFIG_SET"   // an admin edited the review-scheduler cadence (base interval + per-tier multipliers, CO-6, observation:manage)
+  | "RESULT_ENTRY_TARGET_SET"           // a teacher's class-test result backlog target set/changed (D-#739, Principal)
   | "REVIEW_QUOTA_SET"                  // an observer's daily review target set/changed (owner ask 2026-10-12, Principal)
   | "SESSION_RECORDING_ADDED"          // CO-2 footage linked to an observation
   | "PARENT_MEETING_CREATED"    // an admin created a parents' meeting in draft (CM-3, §3/§6, D-#123)
