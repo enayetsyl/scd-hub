@@ -14,18 +14,23 @@
  * message:dispatch). Reads are gated Principal/Office server-side; a teacher
  * reaching here sees the Bangla deny inline.
  */
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Linking, Pressable, ScrollView, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
-import {
-  CLASS_TEST_DASHBOARD_QUERY,
-  CLASS_TEST_OVERDUE_CHASE_QUERY,
-  CLASS_TEST_REPORTS_STATUS_QUERY,
-} from "../../graphql/classTest";
+import { CLASS_TEST_OVERDUE_CHASE_QUERY, CLASS_TEST_REPORTS_STATUS_QUERY } from "../../graphql/classTest";
 import { ARCHIVE_LOCATIONS_QUERY } from "../../graphql/archive";
-import { Screen, Card, Body, Muted, Button, Badge, Chip, ChipRow, Loader, Notice } from "../../components/ui";
+import { Screen, Card, Body, Muted, Button, Badge, Chip, ChipRow, Field, Loader, Notice, Select } from "../../components/ui";
+import { DateField } from "../../components/DateField";
+import {
+  EMPTY_CT_SCOPE,
+  GROUP_SECTION,
+  ctDashboardKpis,
+  ctScopeActiveCount,
+  inCtScope,
+  type CtScope,
+} from "../../lib/ctDashboardFilter";
 import {
   CT_PUBLISH_FILTERS,
   ctPublishBadge,
@@ -34,7 +39,17 @@ import {
   type CtPublishFilter,
 } from "../../lib/ctPublishStatus";
 import { CT_PAGE_SIZE, ctOrderRows, ctPageOf } from "../../lib/ctDashboardOrder";
-import { STR, hwSubjectLabel, ctReportStateLabel, ctScriptStageLabel, bnNum, isoDateLabel } from "../../lib/labels";
+import {
+  STR,
+  hwSubjectLabel,
+  ctReportStateLabel,
+  ctScriptStageLabel,
+  bnNum,
+  isoDateLabel,
+  classLevelLabel,
+  classSectionLabel,
+  dhakaDateKey,
+} from "../../lib/labels";
 import { CT_SCRIPT_TILE_ORDER, ctScriptStageTone } from "../../lib/ctScriptStage";
 import type { CtScriptStage } from "@scd/shared";
 import { friendlyError } from "../../lib/errors";
@@ -121,12 +136,58 @@ export default function ClassTestDashboardScreen(): React.ReactElement {
     setPublishFilter(f);
     setPageAt(0);
   };
-  const [dashQ] = useQuery({ query: CLASS_TEST_DASHBOARD_QUERY, variables: {} });
+  // D-#740: the SCOPE (class / section / subject / teacher / exam dates / search). It
+  // narrows everything below it — tiles, list, overdue-by-teacher, chase — because the
+  // tiles are a fold over the same rows (lib/ctDashboardFilter), not a second query.
+  const [scope, setScope] = useState<CtScope>(EMPTY_CT_SCOPE);
+  const patchScope = (patch: Partial<CtScope>): void => {
+    setScope((s) => ({ ...s, ...patch }));
+    setPageAt(0);
+  };
   const [chaseQ] = useQuery({ query: CLASS_TEST_OVERDUE_CHASE_QUERY, variables: {} });
   const [rowsQ] = useQuery({ query: CLASS_TEST_REPORTS_STATUS_QUERY, variables: {} });
-  const d = dashQ.data?.classTestPrincipalDashboard ?? null;
   const chase = chaseQ.data?.classTestOverdueChase ?? null;
-  const allRows = rowsQ.data?.classTestReportsStatus ?? [];
+  const schoolRows = useMemo(() => rowsQ.data?.classTestReportsStatus ?? [], [rowsQ.data]);
+  const sectionLabelOf = (r: { classLevel: number | null; sectionId: string | null }): string =>
+    r.sectionId === null || r.classLevel === null
+      ? STR.ctScopeGroupTests
+      : classSectionLabel(r.classLevel, sectionName(r.sectionId));
+  const haystackOf = (r: (typeof schoolRows)[number]): string =>
+    `${hwSubjectLabel(r.subject)} ${r.subject} ${sectionLabelOf(r)} ${STR.ctTestNumber} ${r.testNumber}`;
+  const inScope = (s: CtScope) => (r: (typeof schoolRows)[number]) => inCtScope(r, s, haystackOf(r), dhakaDateKey);
+  const allRows = schoolRows.filter(inScope(scope));
+  const d = rowsQ.data ? ctDashboardKpis(allRows) : null;
+  // Each picker offers what the OTHER filters leave (faceted), so a choice never leads
+  // to an empty list; the picked value itself always stays listed.
+  const facet = (clear: Partial<CtScope>) => schoolRows.filter(inScope({ ...scope, ...clear }));
+  const classOptions = [...new Set(facet({ classLevel: null }).map((r) => r.classLevel))]
+    .filter((l): l is number => l !== null)
+    .sort((a, b) => a - b)
+    .map((l) => ({ label: classLevelLabel(l), value: String(l) }));
+  const sectionRows = facet({ section: null });
+  const sectionOptions = [
+    ...new Map(
+      sectionRows
+        .filter((r) => r.sectionId !== null && r.classLevel !== null)
+        .sort((a, b) => (a.classLevel ?? 0) - (b.classLevel ?? 0))
+        .map((r) => [r.sectionId as string, { label: sectionLabelOf(r), value: r.sectionId as string }]),
+    ).values(),
+    ...(sectionRows.some((r) => r.sectionId === null && r.subjectGroupId)
+      ? [{ label: STR.ctScopeGroupTests, value: GROUP_SECTION }]
+      : []),
+  ];
+  const subjectOptions = [...new Set(facet({ subject: null }).map((r) => r.subject))]
+    .map((s) => ({ label: hwSubjectLabel(s), value: s }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+  const teacherOptions = [...new Map(facet({ teacherId: null }).map((r) => [r.teacherId, r.teacherName])).entries()]
+    .map(([value, label]) => ({ label, value }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+  const scopeCount = ctScopeActiveCount(scope);
+  // The chase card lists teachers with an in-scope overdue test. Its WhatsApp message
+  // is the server's and names ALL of that teacher's overdue tests, so the exams shown
+  // under the name stay whole too — the screen must not show less than the message says.
+  const scopeTeachers = new Set(allRows.filter((r) => r.teacherOverdue).map((r) => r.teacherId));
+  const chaseEntries = (chase?.entries ?? []).filter((e) => scopeCount === 0 || scopeTeachers.has(e.teacherId));
   const stateRows = stateFilter ? allRows.filter((r) => matchesStateFilter(r, stateFilter)) : allRows;
   const publishRows = publishFilter ? stateRows.filter((r) => matchesCtPublishFilter(r, publishFilter)) : stateRows;
   const filtered = scriptFilter ? publishRows.filter((r) => r.scriptStage === scriptFilter) : publishRows;
@@ -153,12 +214,96 @@ export default function ClassTestDashboardScreen(): React.ReactElement {
   return (
     <Screen padded={false}>
       <ScrollView contentContainerStyle={{ padding: space(4) }}>
-        {dashQ.error ? <Notice message={friendlyError(dashQ.error)} tone="danger" /> : null}
-        {dashQ.fetching ? (
+        {rowsQ.error ? <Notice message={friendlyError(rowsQ.error)} tone="danger" /> : null}
+        {rowsQ.fetching && !rowsQ.data ? (
           <Loader label={STR.loading} />
         ) : d ? (
           <>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2) }}>
+            {/* D-#740 — the scope: narrows every tile, list and card below. */}
+            <Card>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                <Body style={{ fontWeight: "700" }}>
+                  {STR.ctScopeTitle}
+                  {scopeCount > 0 ? ` (${bnNum(scopeCount)})` : ""}
+                </Body>
+                {scopeCount > 0 ? (
+                  <Button title={STR.ctScopeClear} variant="ghost" onPress={() => patchScope(EMPTY_CT_SCOPE)} />
+                ) : null}
+              </View>
+              <Muted>{STR.ctScopeHint}</Muted>
+              <Field
+                label={undefined}
+                value={scope.search}
+                onChangeText={(t) => patchScope({ search: t })}
+                placeholder={STR.ctScopeSearch}
+              />
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2) }}>
+                <View style={{ flexGrow: 1, flexBasis: 160 }}>
+                  <Select
+                    label={STR.ctScopeClass}
+                    value={scope.classLevel === null ? "" : String(scope.classLevel)}
+                    placeholder={STR.all}
+                    options={[{ label: STR.all, value: "" }, ...classOptions]}
+                    // A section belongs to one class — drop it when the class moves away.
+                    onChange={(v) => {
+                      const level = v === "" ? null : Number(v);
+                      const keep =
+                        scope.section === null ||
+                        level === null ||
+                        schoolRows.some((r) => r.classLevel === level && r.sectionId === scope.section);
+                      patchScope({ classLevel: level, section: keep ? scope.section : null });
+                    }}
+                  />
+                </View>
+                <View style={{ flexGrow: 1, flexBasis: 160 }}>
+                  <Select
+                    label={STR.ctScopeSection}
+                    value={scope.section ?? ""}
+                    placeholder={STR.all}
+                    options={[{ label: STR.all, value: "" }, ...sectionOptions]}
+                    onChange={(v) => patchScope({ section: v || null })}
+                  />
+                </View>
+                <View style={{ flexGrow: 1, flexBasis: 160 }}>
+                  <Select
+                    label={STR.ctScopeSubject}
+                    value={scope.subject ?? ""}
+                    placeholder={STR.all}
+                    searchable
+                    options={[{ label: STR.all, value: "" }, ...subjectOptions]}
+                    onChange={(v) => patchScope({ subject: v || null })}
+                  />
+                </View>
+                <View style={{ flexGrow: 1, flexBasis: 160 }}>
+                  <Select
+                    label={STR.ctScopeTeacher}
+                    value={scope.teacherId ?? ""}
+                    placeholder={STR.all}
+                    searchable
+                    options={[{ label: STR.all, value: "" }, ...teacherOptions]}
+                    onChange={(v) => patchScope({ teacherId: v || null })}
+                  />
+                </View>
+                <View style={{ flexGrow: 1, flexBasis: 160 }}>
+                  <DateField
+                    label={STR.ctScopeDateFrom}
+                    value={scope.dateFrom}
+                    onChange={(v) => patchScope({ dateFrom: v })}
+                    max={scope.dateTo || undefined}
+                  />
+                </View>
+                <View style={{ flexGrow: 1, flexBasis: 160 }}>
+                  <DateField
+                    label={STR.ctScopeDateTo}
+                    value={scope.dateTo}
+                    onChange={(v) => patchScope({ dateTo: v })}
+                    min={scope.dateFrom || undefined}
+                  />
+                </View>
+              </View>
+            </Card>
+
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: space(3) }}>
               <Kpi label={STR.ctLogged} value={bnNum(d.logged)} selected={stateFilter === null} onPress={() => pickState(null)} />
               <Kpi label={STR.ctComplete} value={bnNum(d.complete)} selected={stateFilter === "complete"} onPress={() => pickState("complete")} />
               <Kpi label={STR.ctInProgress} value={bnNum(d.inProgress)} selected={stateFilter === "in_progress"} onPress={() => pickState("in_progress")} />
@@ -367,10 +512,10 @@ export default function ClassTestDashboardScreen(): React.ReactElement {
             <Notice message={friendlyError(chaseQ.error)} tone="danger" />
           ) : chaseQ.fetching ? (
             <Loader label={STR.loading} />
-          ) : !chase || chase.entries.length === 0 ? (
+          ) : chaseEntries.length === 0 ? (
             <Muted style={{ marginTop: space(2) }}>{STR.ctNoOverdue}</Muted>
           ) : (
-            chase.entries.map((e) => (
+            chaseEntries.map((e) => (
               <View
                 key={e.teacherId}
                 style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: space(3) }}
