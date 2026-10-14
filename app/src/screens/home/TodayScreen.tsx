@@ -53,6 +53,7 @@ import { Screen, H1, H2, Body, Muted, Card, Badge, Button, EmptyState, Notice } 
 import { QueryGate } from "../../components/QueryGate";
 import { WorkClaimTeacherCard } from "../../components/WorkClaimTeacherCard";
 import { ReviewQuotaCard } from "../../components/ReviewQuotaCard";
+import { ResultEntryTargetCard } from "../../components/ResultEntryTargetCard";
 import { ReturningStudentsCard } from "../../components/ReturningStudentsCard";
 import { TodayWorkCard } from "../../components/TodayWorkCard";
 import { CtScriptTeacherCard } from "../../components/CtScriptTeacherCard";
@@ -525,6 +526,11 @@ export default function TodayScreen(): React.ReactElement {
           QueryGate: the target counts working days, not the observer's own periods, so
           a day with no periods must still show it. */}
       <ReviewQuotaCard />
+
+      {/* D-#739: a teacher's class-test result backlog with a due day — renders only for a
+          teacher with a target (myResultEntryTarget is null otherwise). OUTSIDE the QueryGate
+          for the same reason as the review target: it counts working days, not periods. */}
+      <ResultEntryTargetCard />
 
       {/* WB-4 (D-#701) — আজকের কাজ: the work board's open cards for today, with a
           link to the board. Self-contained; owner ask on the first prod test. OUTSIDE the

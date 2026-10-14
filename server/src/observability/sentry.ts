@@ -85,6 +85,8 @@ export const EXPECTED_ERROR_NAMES: ReadonlySet<string> = new Set([
   // Owner ask 2026-10-12: a refused review-target setting (bad date/count) — a Bangla
   // message for the Principal, not a fault.
   "ReviewQuotaError",
+  // D-#739: a refused result-backlog target setting — a Bangla message for the Principal.
+  "ResultEntryTargetError",
   "DriveUnavailableError",
   "FinanceError",
   "LeaveError",

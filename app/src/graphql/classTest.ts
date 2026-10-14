@@ -818,3 +818,58 @@ export const DELETE_CT_QUESTION_REQUEST = gql<
     deleteCtQuestionRequest(id: $id, reason: $reason)
   }
 `;
+
+/** D-#739: the caller's own class-test result backlog target (null = no target → no card). */
+export interface ResultEntryTargetDayT {
+  dateKey: string;
+  working: boolean;
+  entered: number;
+  cumulative: number;
+  expected: number;
+  diff: number;
+  isToday: boolean;
+  future: boolean;
+}
+export interface ResultEntryTargetLineT {
+  label: string;
+  students: number;
+  tests: number;
+  total: number;
+  entered: number;
+  remaining: number;
+  testsFound: number;
+}
+export interface ResultEntryTargetT {
+  subject: string;
+  startKey: string;
+  dueKey: string;
+  todayKey: string;
+  total: number;
+  enteredTotal: number;
+  remaining: number;
+  lines: ResultEntryTargetLineT[];
+  days: ResultEntryTargetDayT[];
+  enteredThroughYesterday: number;
+  expectedThroughYesterday: number;
+  diffThroughYesterday: number;
+  todayWorking: boolean;
+  todayEntered: number;
+  todayTarget: number;
+  neededToday: number;
+  workingDaysLeft: number;
+  perDayToFinish: number;
+  done: boolean;
+  overdue: boolean;
+}
+
+export const MY_RESULT_ENTRY_TARGET_QUERY = gql<{ myResultEntryTarget: ResultEntryTargetT | null }, Record<string, never>>`
+  query MyResultEntryTarget {
+    myResultEntryTarget {
+      subject startKey dueKey todayKey total enteredTotal remaining
+      enteredThroughYesterday expectedThroughYesterday diffThroughYesterday
+      todayWorking todayEntered todayTarget neededToday workingDaysLeft perDayToFinish done overdue
+      lines { label students tests total entered remaining testsFound }
+      days { dateKey working entered cumulative expected diff isToday future }
+    }
+  }
+`;
