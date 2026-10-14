@@ -493,7 +493,9 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
       if (printCounts.printed > 0) out.push({ count: printCounts.printed, bg: colors.warning });
       return out;
     }
-    if (route === "ClassTestTab" && (canClassTestBadge || canCtOverdueBadge)) {
+    // `!screen`: Student progress (D-#734) deep-links into this stack and must not
+    // wear Class Test's question/overdue counters.
+    if (route === "ClassTestTab" && !screen && (canClassTestBadge || canCtOverdueBadge)) {
       const out: Array<{ count: number; bg: string }> = [];
       if (canClassTestBadge && ctCounts) {
         if (ctCounts.pending > 0) out.push({ count: ctCounts.pending, bg: colors.error });
