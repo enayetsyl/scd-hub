@@ -149,6 +149,7 @@ export const AUDIT_KIND_LABELS: Record<AuditEventKind, AuditKindLabel> = {
   CLASS_TEST_PRINTED: { bn: "ক্লাস টেস্ট প্রিন্ট হয়েছে চিহ্নিত করেছেন", en: "Marked a class test printed", group: "EXAM" },
   CLASS_TEST_CANCELLED: { bn: "ক্লাস টেস্ট বাতিল করেছেন", en: "Cancelled a class test", group: "EXAM" },
   CLASS_TEST_RESTORED: { bn: "বাতিল ক্লাস টেস্ট ফিরিয়েছেন", en: "Restored a class test", group: "EXAM" },
+  RESULT_ENTRY_TARGET_SET: { bn: "ক্লাস টেস্টের ফল তোলার লক্ষ্য ঠিক করেছেন", en: "Set a class-test result entry target", group: "EXAM" },
   CLASS_TEST_DETAILS_EDITED: { bn: "ক্লাস টেস্টের তথ্য সংশোধন করেছেন", en: "Edited class-test details", group: "EXAM" },
   CLASS_TEST_RESULT_ENTERED: { bn: "ক্লাস টেস্টের ফলাফল লিখেছেন", en: "Entered class-test results", group: "EXAM" },
   CLASS_TEST_RESULT_SUBMITTED: { bn: "ক্লাস টেস্টের ফলাফল জমা দিয়েছেন", en: "Submitted class-test results", group: "EXAM" },
