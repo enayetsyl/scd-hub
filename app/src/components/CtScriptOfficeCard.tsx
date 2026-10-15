@@ -21,7 +21,7 @@ import {
   type CtScriptRowT,
 } from "../graphql/ctScripts";
 import type { TabParamList } from "../navigation/types";
-import { Badge, Body, Button, Card, Muted, Notice } from "./ui";
+import { Badge, Body, Button, Card, Muted, Notice, wrapRowText } from "./ui";
 import { STR, bnNum, isoDateLabel, ctScriptStageLabel } from "../lib/labels";
 import { ctScriptRowTitle, ctScriptStageTone } from "../lib/ctScriptStage";
 import { friendlyError } from "../lib/errors";
@@ -99,7 +99,7 @@ export function CtScriptOfficeCard(): React.ReactElement | null {
               const count = counts[r.testId] ?? r.presentCount;
               return (
                 <View key={r.testId} style={styles.row}>
-                  <Pressable onPress={() => openUpload(r)} style={{ flex: 1, minWidth: 0 }}>
+                  <Pressable onPress={() => openUpload(r)} style={wrapRowText}>
                     <Body numberOfLines={2}>{ctScriptRowTitle(r, STR.ctTestNumber, bnNum)}</Body>
                     <Muted>
                       {g.key === "wait"

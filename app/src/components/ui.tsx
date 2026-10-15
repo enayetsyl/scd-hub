@@ -68,7 +68,9 @@ export function Screen({
   const expanded = collapsed && width >= DRAWER_PERMANENT_MIN_WIDTH;
   const inner = scroll ? (
     <ScrollView
-      contentContainerStyle={[padded && styles.padded, style]}
+      // Web: room below the last control so a mobile browser's bottom bar never sits
+      // on a form's submit button (App.tsx sizes the root to 100dvh for the same reason).
+      contentContainerStyle={[padded && styles.padded, Platform.OS === "web" && styles.webScrollTail, style]}
       keyboardShouldPersistTaps="handled"
       refreshControl={refreshControl}
     >
@@ -177,6 +179,12 @@ export function Body({
  *  text's min-content width and shoves a sibling button off the card. Native already
  *  character-wraps an over-long word. Pair with `flex: 1, minWidth: 0` in a row. */
 export const breakAnywhere = (Platform.OS === "web" ? { overflowWrap: "anywhere" } : {}) as TextStyle;
+/** The text column of a WRAPPING row that also holds a badge and/or a button. `flex: 1,
+ *  minWidth: 0` lets the fixed-width siblings squeeze the text to nothing on a phone —
+ *  one Bangla letter per line (owner 2026-10-15, ক্লাস টেস্টের খাতা card). A real
+ *  basis makes the badge/button wrap to the next line instead. The row needs
+ *  `flexWrap: "wrap"`. */
+export const wrapRowText: ViewStyle = { flexGrow: 1, flexShrink: 1, flexBasis: 180, minWidth: 160 };
 
 export function Muted({
   children,
@@ -639,6 +647,7 @@ const useStyles = makeStyles((colors) => ({
   frameBleed: { flex: 1, width: "100%" },
   flex: { flex: 1 },
   padded: { padding: space(4) },
+  webScrollTail: { paddingBottom: space(16) },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: space(6) },
   pressed: { opacity: 0.7 },
 
