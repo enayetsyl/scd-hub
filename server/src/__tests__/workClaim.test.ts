@@ -11,6 +11,13 @@
  * DB-free: models, the calendar and the audit log are mocked.
  */
 import mongoose from "mongoose";
+import { readFileSync } from "fs";
+import path from "path";
+import {
+  WORK_CLAIM_REJECT_REASONS,
+  WORK_CLAIM_REJECT_REASONS_SELECTABLE,
+  WORK_CLAIM_REJECT_REASON_LABELS_BN,
+} from "@scd/shared";
 
 const mockClaimFindOne = jest.fn();
 const mockClaimCount = jest.fn();
@@ -490,6 +497,37 @@ describe("rejectWorkClaim — the only manual close, and it demands a reason", (
         reason: "NOT_BROUGHT",
       }),
     ).rejects.toThrow(/ইতিমধ্যেই নিষ্পন্ন/);
+  });
+
+  test("ALREADY_RECORDED is refused and the claim stays open (D-#742)", async () => {
+    // An open claim is never recorded — recording the work accepts it. Prod 2026-10-15:
+    // 53 records sat at CHASE under this reason because nothing was ever marked.
+    const claim = pending();
+    mockClaimFindById.mockResolvedValue(claim);
+    await expect(
+      rejectWorkClaim({
+        claimId: claim._id.toString(),
+        actorId: TEACHER.toString(),
+        reason: "ALREADY_RECORDED",
+      }),
+    ).rejects.toThrow(/জমা দিয়েছে হিসেবে চিহ্নিত করুন/);
+    expect(claim.status).toBe("PENDING");
+    expect(claim.save).not.toHaveBeenCalled();
+  });
+
+  test("the teacher's picker no longer offers ALREADY_RECORDED, but the label survives for history", () => {
+    expect(WORK_CLAIM_REJECT_REASONS_SELECTABLE).not.toContain("ALREADY_RECORDED");
+    expect(WORK_CLAIM_REJECT_REASONS_SELECTABLE).toEqual(
+      expect.arrayContaining(["NOT_BROUGHT", "NOT_FOUND", "INCOMPLETE", "OTHER"]),
+    );
+    expect(WORK_CLAIM_REJECT_REASONS).toContain("ALREADY_RECORDED");
+    expect(WORK_CLAIM_REJECT_REASON_LABELS_BN.ALREADY_RECORDED).toBeTruthy();
+    const card = readFileSync(
+      path.resolve(__dirname, "../../../app/src/components/WorkClaimTeacherCard.tsx"),
+      "utf8",
+    );
+    expect(card).toContain("WORK_CLAIM_REJECT_REASONS_SELECTABLE.map");
+    expect(card).not.toMatch(/WORK_CLAIM_REJECT_REASONS\.map/);
   });
 });
 

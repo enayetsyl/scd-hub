@@ -25,6 +25,7 @@ import {
   WORK_CLAIM_MAX_ATTEMPTS,
   WORK_CLAIM_WINDOW_SCHOOL_DAYS,
   WORK_CLAIM_DIGEST_MIN,
+  WORK_CLAIM_REJECT_REASONS_SELECTABLE,
 } from "@scd/shared";
 import type { LifecycleState, WorkClaimRejectReason, WorkClaimTracker } from "@scd/shared";
 import { GuardianWorkClaim, type IGuardianWorkClaim } from "../models/GuardianWorkClaim";
@@ -391,6 +392,12 @@ export async function rejectWorkClaim(
   }
   if (input.reason === "OTHER" && !input.note?.trim()) {
     throw new WorkClaimError("অন্যান্য কারণ বাছাই করলে কারণটি লিখতে হবে");
+  }
+  // D-#742: an open claim is never "already recorded" — recording the work accepts it.
+  if (!WORK_CLAIM_REJECT_REASONS_SELECTABLE.includes(input.reason)) {
+    throw new WorkClaimError(
+      "শিক্ষার্থী জমা দিয়ে থাকলে নাকচ করবেন না — জমা নেওয়ার তালিকায় তাকে জমা দিয়েছে হিসেবে চিহ্নিত করুন, জানানোটি নিজে থেকেই গ্রহণ হয়ে যাবে",
+    );
   }
 
   claim.status = "REJECTED";
