@@ -17,7 +17,7 @@ import React, { useState } from "react";
 import { View, Modal, Pressable, TextInput } from "react-native";
 import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import { useMutation } from "urql";
-import { WORK_CLAIM_REJECT_REASONS, WORK_CLAIM_REJECT_REASON_LABELS_BN } from "@scd/shared";
+import { WORK_CLAIM_REJECT_REASONS_SELECTABLE, WORK_CLAIM_REJECT_REASON_LABELS_BN } from "@scd/shared";
 import type { WorkClaimRejectReason } from "@scd/shared";
 import { Body, Muted, Card, Badge, Button, Notice, Divider } from "./ui";
 import { space } from "../theme/tokens";
@@ -154,7 +154,8 @@ export function WorkClaimTeacherCard({
               </Muted>
 
               <View style={{ marginTop: space(2) }}>
-                {WORK_CLAIM_REJECT_REASONS.map((code) => (
+                {/* D-#742: no "আগেই জমা লেখা হয়েছে" — a submitted child is marked, not rejected. */}
+                {WORK_CLAIM_REJECT_REASONS_SELECTABLE.map((code) => (
                   <Pressable
                     key={code}
                     onPress={() => { setReason(code); setError(null); }}
