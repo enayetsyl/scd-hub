@@ -246,6 +246,26 @@ describe("liveClassBoard — who takes each period", () => {
     expect(q.status.$in).toEqual(["applied", "approved"]);
   });
 
+  test("D-#743: a row naming ANOTHER teacher's leave (slot re-assigned in place) says nothing about this one", async () => {
+    // Prod 2026-10-15: Fida's needs_cover row stayed on a period handed to Momin, and the
+    // board showed Momin "On leave".
+    mockCoverSlotFind.mockResolvedValue([
+      { routineSlotId: slot2, leaveApplicationId: leaveL, status: "needs_cover", absentTeacherUserId: coverC, finalCoverTeacherUserId: null, proposedCoverTeacherId: null },
+    ]);
+    const board = await liveClassBoard(TUESDAY, at("07:10"));
+    const p2 = board.cells.find((c) => c.periodNumber === 2)!;
+    expect(p2).toMatchObject({ status: "ON_DUTY", absenceReason: null, teacherName: "Md Abdul Momin" });
+    expect(board.uncoveredTodayCount).toBe(0);
+  });
+
+  test("…while a row naming the slot's OWN teacher still flags it", async () => {
+    mockCoverSlotFind.mockResolvedValue([
+      { routineSlotId: slot2, leaveApplicationId: leaveL, status: "needs_cover", absentTeacherUserId: teacherB, finalCoverTeacherUserId: null, proposedCoverTeacherId: null },
+    ]);
+    const board = await liveClassBoard(TUESDAY, at("07:10"));
+    expect(board.cells.find((c) => c.periodNumber === 2)).toMatchObject({ status: "UNCOVERED", absenceReason: "leave" });
+  });
+
   test("an approved leave with no fan-out row still flags the class", async () => {
     mockUserIdsOnLeave.mockResolvedValue(new Set([teacherA.toString()]));
     const board = await liveClassBoard(TUESDAY, at("07:10"));
