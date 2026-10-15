@@ -1,0 +1,526 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<title>শিক্ষার্থীর অগ্রগতি নির্দেশিকা</title>
+<style>
+  @page { size: A4; margin: 14mm 14mm 16mm 14mm; }
+  :root {
+    --green: #176c45; --green-soft: #e3f0e8; --ink: #1d2320; --muted: #5b6660;
+    --line: #dde3df; --red: #b42318; --red-soft: #fbe3e1; --amber: #a95a07;
+    --amber-soft: #fdecd6; --blue: #1d5fa8; --blue-soft: #e2edf9; --paper: #ffffff;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink);
+    font-family: "Nirmala UI", "Segoe UI", Arial, sans-serif; font-size: 10.2pt; line-height: 1.5; }
+  .bn { font-family: "Nirmala UI", "Segoe UI", sans-serif; }
+  h1 { font-size: 26pt; margin: 0 0 4px; color: var(--green); letter-spacing: -0.5px; }
+  h2 { font-size: 16pt; color: var(--green); margin: 0 0 6px; padding-bottom: 6px; border-bottom: 2px solid var(--green); }
+  h3 { font-size: 11.5pt; margin: 14px 0 4px; }
+  p { margin: 4px 0 8px; }
+  ul, ol { margin: 4px 0 8px; padding-left: 20px; }
+  li { margin: 2px 0; }
+  .page { page-break-after: always; }
+  .page:last-child { page-break-after: auto; }
+  .lede { color: var(--muted); font-size: 11pt; margin-bottom: 8px; }
+  .role-tag { display: inline-block; font-size: 8.5pt; font-weight: 700; letter-spacing: .6px; text-transform: uppercase;
+    padding: 2px 8px; border-radius: 4px; color: #fff; background: var(--green); margin-bottom: 6px; }
+  .role-tag.t { background: var(--blue); } .role-tag.g { background: var(--amber); }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
+  .two.wide-left { grid-template-columns: 1.35fr 1fr; }
+  .tip { border-left: 4px solid var(--green); background: var(--green-soft); padding: 7px 10px; border-radius: 0 6px 6px 0; margin: 8px 0; font-size: 10pt; }
+  .warn { border-left-color: var(--amber); background: var(--amber-soft); }
+  table.ref { width: 100%; border-collapse: collapse; font-size: 9.8pt; margin: 6px 0 10px; }
+  table.ref th, table.ref td { border: 1px solid var(--line); padding: 5px 7px; text-align: left; vertical-align: top; }
+  table.ref th { background: #f3f6f4; font-weight: 600; }
+  .n { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%;
+    background: #d92d20; color: #fff; font-size: 8.5pt; font-weight: 700; flex: none; vertical-align: middle; }
+  .steps { list-style: none; padding: 0; }
+  .steps li { display: flex; gap: 8px; margin: 6px 0; }
+  .avoid { break-inside: avoid; }
+
+  /* ---- Cover ---- */
+  .cover-band { background: var(--green); color: #fff; border-radius: 10px; padding: 20px 24px 16px; margin-bottom: 12px; }
+  .cover-band h1 { color: #fff; }
+  .cover-band .sub { font-size: 12.5pt; opacity: .92; }
+  .cover-band .bn { font-size: 13pt; opacity: .9; margin-top: 2px; }
+  .cover-band .en { font-size: 11pt; opacity: .85; margin-top: 2px; font-family: "Segoe UI", sans-serif; }
+  .who { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 6px 0 10px; }
+  .who div { border: 1px solid var(--line); border-radius: 8px; padding: 10px 11px; }
+  .who b.hd { display: block; margin-bottom: 3px; }
+  .flow { display: flex; align-items: stretch; gap: 6px; margin: 6px 0 10px; }
+  .flow .box { flex: 1; border: 1.5px solid var(--green); border-radius: 8px; padding: 8px 9px; font-size: 9.5pt; background: #fbfdfc; }
+  .flow .box b { display: block; color: var(--green); font-size: 9pt; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 2px; }
+  .flow .arr { align-self: center; color: var(--green); font-size: 16pt; font-weight: 700; }
+
+  /* ---- Mockups ---- */
+  .mock { border: 1px solid #c9d2cd; border-radius: 10px; overflow: hidden; background: #f6f8f7; position: relative;
+    box-shadow: 0 2px 6px rgba(0,0,0,.08); font-size: 9pt; }
+  .bar { background: var(--green); color: #fff; padding: 8px 12px; font-weight: 700; font-size: 10.5pt; display: flex; gap: 10px; align-items: center; }
+  .bar .ic { opacity: .9; font-weight: 400; }
+  .mbody { padding: 9px; }
+  .chips { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 7px; }
+  .chip { border: 1px solid #c9d2cd; border-radius: 99px; padding: 2px 9px; background: #fff; font-size: 8.5pt; white-space: nowrap; }
+  .chip.on { background: var(--green-soft); border-color: var(--green); color: var(--green); font-weight: 600; }
+  .tiles { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-bottom: 7px; }
+  .tile { background: #fff; border: 1px solid var(--line); border-radius: 7px; padding: 5px 6px; position: relative; }
+  .tile .l { font-size: 7.5pt; color: var(--muted); } .tile .v { font-size: 14pt; font-weight: 700; line-height: 1.2; }
+  .tile .s { font-size: 6.5pt; color: var(--muted); line-height: 1.2; }
+  .tile.r { background: var(--red-soft); border-color: #f2c2bd; } .tile.r .l, .tile.r .v, .tile.r .s { color: var(--red); }
+  .tile.a { background: var(--amber-soft); border-color: #f4d3a8; } .tile.a .l, .tile.a .v, .tile.a .s { color: var(--amber); }
+  .tile.g { background: var(--green-soft); border-color: #c5ddcf; }
+  .card { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px; margin-bottom: 6px; position: relative; }
+  .card .t { font-weight: 700; font-size: 9.5pt; } .card .h { color: var(--muted); font-size: 8pt; }
+  .row { border-top: 1px solid var(--line); padding: 5px 0; }
+  .row .nm { font-weight: 700; } .row .meta { color: var(--muted); font-weight: 400; }
+  .bd { display: inline-block; border-radius: 4px; padding: 0 6px; font-size: 7.8pt; margin-right: 4px; line-height: 1.6; }
+  .bd.r { background: var(--red-soft); color: var(--red); } .bd.a { background: var(--amber-soft); color: var(--amber); }
+  .bd.b { background: var(--blue-soft); color: var(--blue); } .bd.g { background: var(--green-soft); color: var(--green); }
+  .trend { color: var(--muted); font-size: 8pt; margin-right: 4px; }
+  .call { position: absolute; width: 17px; height: 17px; border-radius: 50%; background: #d92d20; color: #fff; font-size: 8pt;
+    font-weight: 700; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 2px #fff; z-index: 2; }
+  .btn { display: inline-block; border-radius: 6px; padding: 3px 10px; font-size: 8.5pt; font-weight: 600; border: 1px solid var(--green); color: var(--green); background: #fff; }
+  .btn.f { background: var(--green); color: #fff; }
+  .btn.o { border-color: #c9d2cd; color: var(--ink); }
+  .grid-t { width: 100%; border-collapse: collapse; font-size: 8pt; background: #fff; }
+  .grid-t th, .grid-t td { border: 1px solid var(--line); padding: 3px 4px; text-align: center; }
+  .grid-t td:first-child, .grid-t th:first-child { text-align: left; }
+  .grid-t .pin td { background: #f3f6f4; font-style: italic; }
+  .lo { color: var(--red); font-weight: 700; } .mid { color: var(--amber); font-weight: 700; } .hi { color: var(--green); }
+  .lnk { color: var(--blue); text-decoration: underline; }
+  .field { margin: 4px 0; } .field .lab { font-size: 7.8pt; color: var(--muted); }
+  .input { background: #fff; border: 1px solid #c9d2cd; border-radius: 5px; padding: 3px 6px; font-size: 8.5pt; }
+  .sec-h { font-weight: 700; font-size: 8.8pt; color: var(--green); margin: 6px 0 2px; }
+  .strip { display: flex; gap: 3px; margin: 3px 0 5px; }
+  .d { width: 19px; height: 19px; border-radius: 4px; font-size: 8pt; font-weight: 700; display: flex; align-items: center; justify-content: center; border: 1px solid transparent; }
+  .d.ok { background: var(--green); color: #fff; } .d.c { background: var(--blue); color: #fff; }
+  .d.o { background: #66706b; color: #fff; } .d.x { background: var(--amber-soft); border-color: var(--amber); color: var(--amber); }
+  .d.q { background: var(--red-soft); border-color: var(--red); color: var(--red); } .d.f { border: 1px solid #c9d2cd; background: #fff; }
+  .phone { width: 250px; margin: 0 auto; border: 7px solid #26302b; border-radius: 22px; overflow: hidden; background: #f6f8f7; position: relative; box-shadow: 0 3px 8px rgba(0,0,0,.15); font-size: 8.8pt; }
+  .phone .bar { font-size: 9.5pt; }
+  .gcard { border: 2px solid #e9a94f; border-radius: 9px; background: #fff; padding: 8px; margin: 8px; position: relative; }
+  .notif { background: #fff; border-radius: 9px; padding: 7px 9px; box-shadow: 0 1px 4px rgba(0,0,0,.18); margin: 8px; font-size: 8.4pt; position: relative; }
+  .notif .app { font-size: 7.3pt; color: var(--muted); margin-bottom: 2px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px; font-size: 8.5pt; margin: 4px 0 8px; }
+  .legend span { display: inline-flex; align-items: center; gap: 4px; }
+  .footer-note { color: var(--muted); font-size: 8.5pt; margin-top: 10px; }
+</style>
+</head>
+<body>
+
+<!-- ============ পৃষ্ঠা ১ — পরিচিতি ============ -->
+<section class="page">
+  <div class="cover-band">
+    <h1>শিক্ষার্থীর অগ্রগতি</h1>
+    <div class="sub">অফিস, শিক্ষক ও অভিভাবকদের জন্য ছোট ব্যবহার নির্দেশিকা</div>
+    <div class="en">Student Progress — User Guide</div>
+  </div>
+
+  <p class="lede">ক্লাস টেস্টের ফলাফল দেখে এই অংশ বলে দেয় কোন শিক্ষার্থী পিছিয়ে পড়ছে, যাতে স্কুল আগেভাগেই ব্যবস্থা নিতে পারে।
+  কোনো শিক্ষার্থীর সাহায্য দরকার হলে অফিস একটি <b>উন্নতির কাজ</b> দেয়: শিক্ষক, অভিভাবক বা দুজনের জন্য প্রতিদিনের ছোট একটি কাজ।
+  কাজ শেষ হলে পরের টেস্টের নম্বর দেখে বোঝা যায় কাজটি কাজে লেগেছে কি না।</p>
+
+  <h3>কে কী করবেন</h3>
+  <div class="who">
+    <div><span class="role-tag">অফিস / প্রধান শিক্ষক</span><b class="hd">দেখেন ও সিদ্ধান্ত নেন</b>বোর্ড খুলে দেখেন কে ঝুঁকিতে আছে, উন্নতির কাজ দেন
+      এবং প্রতিদিনের কাজ চিহ্নিত হচ্ছে কি না খেয়াল রাখেন।</div>
+    <div><span class="role-tag t">শিক্ষক</span><b class="hd">স্কুলের অংশটি করেন</b><b>আজ</b> স্ক্রিনে কাজটি দেখেন এবং প্রতিদিন
+      “আজ করেছি” বা “আজ পারিনি” চাপেন।</div>
+    <div><span class="role-tag g">অভিভাবক</span><b class="hd">বাড়ির অংশটি করেন</b>অ্যাপের প্রথম স্ক্রিন <b>আজ</b>-এ সন্তানের কাজটি দেখেন
+      এবং প্রতিদিন সন্ধ্যায় চিহ্নিত করেন।</div>
+  </div>
+
+  <h3>একটি উন্নতির কাজ যেভাবে চলে</h3>
+  <div class="flow">
+    <div class="box"><b>১ · খুঁজে পাওয়া</b>বোর্ডে দেখা যায় কোনো শিক্ষার্থী কোনো বিষয়ে <i>ঝুঁকিতে</i> আছে বা <i>নামছে</i>।</div>
+    <div class="arr">→</div>
+    <div class="box"><b>২ · পরিকল্পনা</b>অফিস কাজ দেয়: শিক্ষক ও অভিভাবক প্রতিদিন কী করবেন, কত স্কুল দিন ধরে।</div>
+    <div class="arr">→</div>
+    <div class="box"><b>৩ · করা</b>প্রতিটি স্কুল দিনে শিক্ষক ও অভিভাবক অ্যাপে নিজের কাজটি চিহ্নিত করেন।</div>
+    <div class="arr">→</div>
+    <div class="box"><b>৪ · যাচাই</b>শেষ দিনের পর পরের ক্লাস টেস্ট আগেরটির সাথে মেলানো হয়: <i>আগে ৩২% → পরে ৪৮%</i>।</div>
+  </div>
+
+  <h3>যে শব্দগুলো দেখবেন</h3>
+  <table class="ref">
+    <tr><th style="width:24%">শব্দ</th><th>অর্থ</th></tr>
+    <tr><td><span class="bd r">ঝুঁকিতে</span></td><td>শিক্ষার্থীর সামগ্রিক নম্বর নামছে <b>এবং</b> সর্বশেষ ক্লাস টেস্টে সে ফেল করেছে। (অন্তত ২টি টেস্ট লাগবে।)</td></tr>
+    <tr><td><span class="bd a">নামছে</span></td><td>কোনো একটি বিষয়ে শেষ তিনটি টেস্টের প্রতিটি আগেরটির চেয়ে কম, যেমন ৪৪% → ৩৮% → ৩২%।</td></tr>
+    <tr><td>▲ / ▼</td><td>ওই বিষয়ের শেষ টেস্ট আগেরটির চেয়ে অন্তত ১% বেশি (▲) বা কম (▼)।</td></tr>
+    <tr><td>উন্নতির কাজ</td><td>নির্দিষ্ট কয়েক স্কুল দিনের জন্য প্রতিদিনের একটি কাজ: একজন শিক্ষার্থী বা পুরো শাখার জন্য, একটি বিষয়ে।</td></tr>
+    <tr><td>চিহ্নিত হয়নি</td><td>একটি স্কুল দিন পার হয়েছে, কিন্তু কেউ “আজ করেছি” বা “আজ পারিনি” চাপেনি।</td></tr>
+  </table>
+
+  <div class="tip">সবকিছু হিসাব হয় <b>প্রকাশিত ক্লাস টেস্টের ফলাফল</b> থেকে। কোনো টেস্টের ফল প্রকাশ না হলে সেটি এখনো গোনা হয় না।
+  অনুপস্থিত শিক্ষার্থীর টেস্ট অনুপস্থিতি হিসেবে গোনা হয়, শূন্য নম্বর হিসেবে নয়।</div>
+</section>
+
+<!-- ============ পৃষ্ঠা ২ — অফিস: বোর্ড ============ -->
+<section class="page">
+  <span class="role-tag">অফিস / প্রধান শিক্ষক</span>
+  <h2>১. বোর্ড পড়ুন</h2>
+  <p>মেনু (☰) → <b>ট্র্যাকার</b> → <b>শিক্ষার্থীর অগ্রগতি</b> চাপুন। এই পাতা শুধু অফিস ও প্রধান শিক্ষক দেখতে পান।</p>
+
+  <div class="mock avoid" style="margin:8px 0 10px">
+    <div class="bar"><span class="ic">←</span><span class="ic">☰</span>শিক্ষার্থীর অগ্রগতি</div>
+    <div class="mbody" style="padding-left:20px">
+      <div class="chips" style="position:relative"><span class="call" style="left:-17px;top:2px">1</span>
+        <span class="chip on">পুরো বছর</span><span class="chip">এই টার্ম (জুলাই–ডিসেম্বর)</span><span class="chip">শেষ ৩০ দিন</span></div>
+      <div class="tiles" style="position:relative"><span class="call" style="left:-17px;top:4px">2</span>
+        <div class="tile"><div class="l">স্কুলের গড়</div><div class="v">৭২%</div><div class="s">৯০ শিক্ষার্থী</div></div>
+        <div class="tile r"><div class="l">ঝুঁকিতে</div><div class="v">১৫</div><div class="s">নামছে + শেষ টেস্টে ফেল</div></div>
+        <div class="tile a"><div class="l">কাজ দেওয়া হয়নি</div><div class="v">১৫</div><div class="s">ঝুঁকিতে আছে, কোনো কাজ নেই</div></div>
+        <div class="tile"><div class="l">পিছিয়ে থাকা কাজ</div><div class="v">০</div><div class="s">শিক্ষকের কোনো দিন চিহ্নিত হয়নি</div></div>
+        <div class="tile g"><div class="l">কাজের পর উন্নতি</div><div class="v">০/০</div><div class="s">পরের টেস্টে নম্বর বেড়েছে</div></div>
+      </div>
+      <div class="card"><span class="call" style="left:-17px;top:4px">3</span>
+        <div class="t">মনোযোগ দরকার — পুরো স্কুল</div><div class="h">ঝুঁকিতে বা টানা নামছে, সবচেয়ে খারাপ আগে</div>
+        <div class="row"><span class="nm">Rafi Ahmed</span> <span class="meta">Class 3 · English</span><br>
+          <span class="bd r">ঝুঁকিতে</span><span class="trend">শেষ ৩টি টেস্ট: ৪৬% → ৩১% → ২২%</span><span class="bd r">কোনো কাজ নেই</span></div>
+        <div class="row"><span class="nm">Sumaiya Akter</span> <span class="meta">Class 5 বালিকা · Mathematics</span><br>
+          <span class="bd a">নামছে</span><span class="trend">শেষ ৩টি টেস্ট: ৫৮% → ৫১% → ৪৪%</span><span class="bd b">কাজ চলছে</span></div>
+        <div class="row" style="position:relative"><span class="call" style="right:-4px;top:4px">4</span><span class="nm">Tanvir Hasan</span> <span class="meta">Class 4 · Science</span><br>
+          <span class="bd r">ঝুঁকিতে</span><span class="trend">শেষ ৩টি টেস্ট: ৪০% → ৩৩% → ২৮%</span><span class="bd a">শিক্ষক পিছিয়ে</span></div>
+      </div>
+    </div>
+  </div>
+
+  <ol class="steps">
+    <li><span class="n">1</span><div><b>সময় বেছে নিন।</b> <i>পুরো বছর</i> (জানুয়ারি–ডিসেম্বর), <i>এই টার্ম</i> (জুলাই–ডিসেম্বর) বা <i>শেষ ৩০ দিন</i>।
+      নিচের সব সংখ্যা সেই অনুযায়ী বদলায়।</div></li>
+    <li><span class="n">2</span><div><b>পাঁচটি ঘর পড়ুন।</b>
+      <table class="ref" style="margin-top:4px">
+        <tr><th style="width:27%">ঘর</th><th>কী গোনে</th></tr>
+        <tr><td>স্কুলের গড়</td><td>প্রত্যেক শিক্ষার্থীর সামগ্রিক নম্বরের গড় (নিচের সংখ্যাটি হলো যতজনের ফলাফল আছে)।</td></tr>
+        <tr><td>ঝুঁকিতে</td><td>কতজন শিক্ষার্থী ঝুঁকিতে আছে।</td></tr>
+        <tr><td>কাজ দেওয়া হয়নি</td><td>ঝুঁকিতে থাকা যে শিক্ষার্থীদের কোনো চলমান বা আসন্ন কাজ <b>নেই</b>। <b>এই সংখ্যা শূন্যে নামিয়ে আনুন।</b></td></tr>
+        <tr><td>পিছিয়ে থাকা কাজ</td><td>চলমান যে কাজে শিক্ষকের কোনো পার হওয়া দিন চিহ্নিত হয়নি। এগুলোর খোঁজ নিন।</td></tr>
+        <tr><td>কাজের পর উন্নতি</td><td>শেষ হওয়া কাজের মধ্যে কতগুলোতে পরের টেস্টের নম্বর আগের টেস্টের চেয়ে বেশি, যেমন <i>৩/৪</i>।</td></tr>
+      </table></div></li>
+    <li><span class="n">3</span><div><b>“মনোযোগ দরকার” তালিকা ধরে কাজ করুন।</b> সবচেয়ে খারাপ অবস্থা আগে। একজন শিক্ষার্থী যত বিষয়ে নামছে, ততবার তালিকায় আসতে পারে।
+      বিস্তারিত দেখতে নামের ওপর চাপুন।</div></li>
+    <li><span class="n">4</span><div><b>প্রতিটি সারির কাজের চিহ্ন দেখুন:</b>
+      <span class="bd r">কোনো কাজ নেই</span> কিছু দেওয়া হয়নি ·
+      <span class="bd b">কাজ চলছে</span> ঠিকমতো চলছে ·
+      <span class="bd a">শিক্ষক পিছিয়ে</span> কোনো দিন চিহ্নিত হয়নি ·
+      <span class="bd g">কাজ শেষ +৬%</span> শেষ হয়েছে, নম্বরের পরিবর্তনসহ।</div></li>
+  </ol>
+
+  <div class="tip warn"><b>মেনুতে “শিক্ষার্থীর অগ্রগতি”-র পাশে যে ছোট রঙিন সংখ্যা দেখেন:</b> সেগুলো আসলে <b>ক্লাস টেস্ট</b>-এর সংখ্যা
+  (পর্যালোচনার অপেক্ষায় থাকা প্রশ্নপত্র, দেরি হওয়া ফলাফল)। এগুলো শিক্ষার্থীর অগ্রগতির সংখ্যা নয়।</div>
+</section>
+
+<!-- ============ পৃষ্ঠা ৩ — অফিস: শাখা ও শিক্ষার্থী ============ -->
+<section class="page">
+  <span class="role-tag">অফিস / প্রধান শিক্ষক</span>
+  <h2>২. একটি শাখা বা একজন শিক্ষার্থী দেখুন</h2>
+
+  <h3>শাখার ছক: প্রত্যেক শিক্ষার্থী × প্রতিটি বিষয়</h3>
+  <p>বোর্ডের নিচের দিকে একটি শাখা বেছে নিন (Nursery … Class 5)। ছকে প্রত্যেক শিক্ষার্থীর প্রতিটি বিষয়ের গড় দেখা যায়।</p>
+
+  <div class="mock avoid" style="margin:6px 0 8px">
+    <div class="mbody">
+      <div class="chips"><span class="chip">Nursery</span><span class="chip">KG</span><span class="chip">Class 1</span><span class="chip">Class 2</span>
+        <span class="chip on">Class 3</span><span class="chip">Class 4 বালক</span><span class="chip">Class 4 বালিকা</span><span class="chip">…</span></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+        <b>Class 3 — প্রত্যেক শিক্ষার্থী × বিষয়</b><span class="btn" style="position:relative">+ শাখার কাজ<span class="call" style="right:-10px;top:-9px">2</span></span></div>
+      <div class="chips"><span class="chip on">সবাই</span><span class="chip">শুধু ঝুঁকিতে</span><span class="chip">চলমান কাজ আছে</span>
+        <span style="color:var(--muted);font-size:8pt;margin-left:6px">▲▼ = ওই বিষয়ের শেষ দুই টেস্ট</span></div>
+      <table class="grid-t">
+        <tr><th>শিক্ষার্থী</th><th>Bangla</th><th>English</th><th>Math</th><th>Science</th><th>মোট</th><th>কাজ</th></tr>
+        <tr class="pin"><td>শ্রেণির সর্বোচ্চ</td><td>৯৬%</td><td>৯৪%</td><td>৯৮%</td><td>৯২%</td><td>৯৪%</td><td></td></tr>
+        <tr class="pin"><td>শ্রেণির গড়</td><td>৭৮%</td><td>৬৯%</td><td>৭১%</td><td>৭৪%</td><td>৭৩%</td><td></td></tr>
+        <tr><td><span class="lnk">Rafi Ahmed</span> <span class="bd r">ঝুঁকিতে</span></td><td class="mid">৫৫% ▼</td><td class="lo">৩৩% ▼</td><td class="mid">৪৮%</td><td>৬২%</td><td class="mid">৫০%</td><td>—</td></tr>
+        <tr><td><span class="lnk">Nadia Islam</span></td><td class="hi">৮৮% ▲</td><td>৭৬%</td><td class="hi">৯১% ▲</td><td class="hi">৮৪%</td><td class="hi">৮৫%</td><td>—</td></tr>
+        <tr style="position:relative"><td><span class="lnk">Arif Rahman</span></td><td>৭০%</td><td>৬৪% ▲</td><td class="mid">৫২% ▼</td><td>৬৭%</td><td>৬৩%</td><td>১ চলমান<span class="call" style="right:-8px;top:-2px;position:absolute">1</span></td></tr>
+      </table>
+    </div>
+  </div>
+  <ul>
+    <li><b>রং:</b> <span class="hi">৮০% ও তার বেশি</span> · ৬০–৭৯% সাধারণ · <span class="mid">৪০–৫৯% কমলা</span> · <span class="lo">৪০%-এর নিচে লাল</span>।</li>
+    <li><span class="n">1</span> <b>কাজ</b> কলামে দেখা যায় শিক্ষার্থীর কয়টি কাজ আছে, যেমন <i>২ চলমান · ১ পিছিয়ে · ১ শেষ</i>।</li>
+    <li><span class="n">2</span> শাখার বেশিরভাগ শিক্ষার্থী কোনো বিষয়ে দুর্বল হলে <b>+ শাখার কাজ</b> চাপুন: পুরো শাখার জন্য একটি কাজ।</li>
+  </ul>
+
+  <h3>শিক্ষার্থীর পাতা</h3>
+  <div class="two wide-left">
+    <div class="mock avoid">
+      <div class="bar"><span class="ic">←</span>Rafi Ahmed</div>
+      <div class="mbody">
+        <div class="card"><b>Rafi Ahmed</b> <span class="meta" style="color:var(--muted)">Class 3</span> <span class="bd r">ঝুঁকিতে</span><br>
+          গড় <b>৫০%</b> <span style="color:var(--muted)">শ্রেণি ৭৩%</span> · দিক <b style="color:var(--red)">নামছে ▼</b><br>
+          <span style="font-size:8pt">বারবার দুর্বলতা: <i>বানান (৩)</i>, <i>tense (২)</i></span></div>
+        <div class="card"><div class="t">বিষয় অনুযায়ী</div>
+          <div class="row"><b>English</b> ৩৩% ▼ <span style="color:var(--muted)">শ্রেণি ৬৯%</span><br>
+          <span class="trend">শেষ ৩টি টেস্ট: ৪৬% → ৩১% → ২২%</span><br>
+          <span style="font-size:8pt">শিক্ষকের নোট: <i>বানানে ভুল</i></span> <span class="lnk" style="float:right">+ নতুন কাজ</span></div></div>
+        <div class="card"><div class="t">উন্নতির কাজ <span class="btn" style="float:right;font-size:7.5pt;padding:1px 7px">+ নতুন কাজ</span></div>
+          <div class="h" style="margin-top:4px">এখনো কোনো কাজ নেই।</div></div>
+      </div>
+    </div>
+    <div>
+      <p>বোর্ডে বা ছকে শিক্ষার্থীর নামের ওপর চাপুন। দেখবেন:</p>
+      <ul>
+        <li>শ্রেণির গড়ের পাশে তার গড়, এবং সে <b>উঠছে</b>, <b>নামছে</b> নাকি <b>স্থির</b>;</li>
+        <li><b>বারবার দুর্বলতা</b>: শিক্ষকেরা ২ বা তার বেশি টেস্টে যে নোট লিখেছেন;</li>
+        <li>প্রতিটি বিষয়ের শেষ তিনটি টেস্ট ও শিক্ষকের সর্বশেষ নোট;</li>
+        <li>এই শিক্ষার্থীর সব উন্নতির কাজ, তার শাখার জন্য দেওয়া কাজসহ।</li>
+      </ul>
+      <div class="tip">দুর্বল বিষয়ের পাশে <b>+ নতুন কাজ</b> চাপুন: শিক্ষার্থী ও বিষয় নিজে থেকেই বসে যাবে।</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ পৃষ্ঠা ৪ — অফিস: কাজ দেওয়া ============ -->
+<section class="page">
+  <span class="role-tag">অফিস / প্রধান শিক্ষক</span>
+  <h2>৩. উন্নতির কাজ দিন</h2>
+  <div class="two">
+    <div class="mock avoid">
+      <div class="bar"><span class="ic">←</span>নতুন উন্নতির কাজ</div>
+      <div class="mbody">
+        <div class="sec-h" style="position:relative">১ · কার জন্য?<span class="call" style="right:0;top:-2px">1</span></div>
+        <div class="chips"><span class="chip on">শিক্ষার্থী</span><span class="chip">পুরো শাখা</span></div>
+        <div class="field"><span class="input">Class 3</span> <span class="input">Rafi Ahmed</span></div>
+        <div class="chips"><span class="chip">Bangla</span><span class="chip on">English</span><span class="chip">Math</span></div>
+        <div class="field"><div class="lab">কারণ</div><div class="input">শেষ ৩টি টেস্ট: 46% → 31% → 22%; দুর্বলতা: বানান</div></div>
+
+        <div class="sec-h" style="position:relative">২ · শিক্ষক<span class="call" style="right:0;top:-2px">2</span></div>
+        <div style="font-size:8.5pt">☑ শিক্ষকের অংশ রাখুন</div>
+        <div class="field"><div class="lab">কে করবেন</div><div class="input">Mst. Farhana Begum</div></div>
+        <div class="field"><div class="lab">শিক্ষক প্রতিদিন কী করবেন</div><div class="input">ক্লাসে আজকের পাঠের ৫টি বানান দেখে নেবেন</div></div>
+
+        <div class="sec-h" style="position:relative">৩ · অভিভাবক<span class="call" style="right:0;top:-2px">3</span></div>
+        <div style="font-size:8.5pt">☑ অভিভাবকের অংশ রাখুন <span style="color:var(--muted)">— শিক্ষার্থীর অভিভাবকদের কাছে যাবে</span></div>
+        <div class="field"><div class="lab">অভিভাবক প্রতিদিন কী নিশ্চিত করবেন</div><div class="input">প্রতিদিন ৫টি বানান ৩ বার লেখাবেন</div></div>
+        <div style="font-size:8pt">☑ অভিভাবক টানা ৩ দিন চিহ্নিত না করলে শ্রেণি শিক্ষককে জানান</div>
+
+        <div class="sec-h" style="position:relative">৪ · সময়সূচি<span class="call" style="right:0;top:-2px">4</span></div>
+        <div class="chips"><span class="chip on">প্রতিটি স্কুল দিন</span><span class="chip">এই বিষয়ের ক্লাসের দিন</span></div>
+        <div class="field"><span class="lab">কত স্কুল দিন</span> <span class="input">২০</span> &nbsp;<span class="lab">শুরুর তারিখ</span> <span class="input">১৫ অক্টোবর ২০২৬</span></div>
+
+        <div class="card" style="background:#fbfdfc;margin-top:6px"><div class="h">প্রতিদিন যা দেখবেন — দিন ১</div>
+          <span class="btn f" style="font-size:7.5pt">আজ করেছি</span> <span class="btn o" style="font-size:7.5pt">আজ পারিনি</span></div>
+        <div style="text-align:right;position:relative"><span class="btn f">কাজটি দিন</span><span class="call" style="right:-6px;top:-10px">5</span></div>
+      </div>
+    </div>
+    <div>
+      <p>শিক্ষার্থীর পাতার <b>+ নতুন কাজ</b> বা শাখার ছকের <b>+ শাখার কাজ</b> থেকে খুলুন।</p>
+      <ol class="steps">
+        <li><span class="n">1</span><div><b>কার জন্য ও কোন বিষয়।</b> একজন শিক্ষার্থী বা পুরো শাখা। <i>কারণ</i> ঘরটি টেস্টের ফল থেকে নিজে ভরে যায়; চাইলে বদলাতে পারেন।</div></li>
+        <li><span class="n">2</span><div><b>শিক্ষকের অংশ।</b> রুটিন অনুযায়ী ওই বিষয়ের শিক্ষক নিজে থেকে বাছাই হয়ে থাকেন; দরকার হলে বদলান। প্রতিদিন করা যায় এমন <b>একটি ছোট কাজ</b> লিখুন।</div></li>
+        <li><span class="n">3</span><div><b>অভিভাবকের অংশ।</b> বাড়িতে অভিভাবক কী নিশ্চিত করবেন, লিখুন। এটি সব যুক্ত অভিভাবকের কাছে যায় (শাখার কাজ হলে শাখার প্রতিটি পরিবারের কাছে)। ৩ দিনের সতর্কতাটি চালু রাখুন, যাতে কোনো পরিবার চিহ্নিত করা বন্ধ করলে শ্রেণি শিক্ষক যোগাযোগ করতে পারেন।</div></li>
+        <li><span class="n">4</span><div><b>সময়সূচি।</b> <i>প্রতিটি স্কুল দিন</i>, অথবা শুধু যেদিন শাখায় ওই বিষয়ের ক্লাস আছে। সাধারণত ২০ স্কুল দিন (১–৬০)। শুক্রবার ও ছুটির দিন নিজে থেকে বাদ যায়।</div></li>
+        <li><span class="n">5</span><div><b>কাজটি দিন</b> চাপুন। শিক্ষক ও অভিভাবকেরা সঙ্গে সঙ্গে নোটিফিকেশন পান।</div></li>
+      </ol>
+      <div class="tip"><b>৫ মিনিটে করা যায় এমন কাজ লিখুন।</b> শিক্ষক ও অভিভাবকেরা আপনার লেখা হুবহু দেখেন, তাই সহজ বাংলায় লিখুন।</div>
+      <div class="tip warn">অন্তত একটি অংশ (শিক্ষক বা অভিভাবক) লাগবে। একবার দেওয়ার পর লেখা <b>আর বদলানো যায় না</b>। বদলাতে হলে কাজটি বন্ধ করে নতুন কাজ দিন।</div>
+      <p style="font-size:9.5pt;color:var(--muted)">শাখার রুটিনে ওই বিষয়ের কোনো ক্লাস না থাকলে <i>প্রতিটি স্কুল দিন</i> বেছে নিন; অন্যটি দিলে কাজ সংরক্ষণ হবে না।</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ পৃষ্ঠা ৫ — অফিস: প্রতিদিনের খোঁজ ============ -->
+<section class="page">
+  <span class="role-tag">অফিস / প্রধান শিক্ষক</span>
+  <h2>৪. প্রতিদিন খোঁজ নিন</h2>
+
+  <div class="two">
+    <div>
+      <h3>স্কুল দিনে সকাল ১১টায়</h3>
+      <p>কোনো শিক্ষক আজকের কাজ চিহ্নিত না করলে আপনি <b>একটি নোটিফিকেশন</b> পান, যাতে লেখা থাকে কার কাজ এখনো বাকি।
+      আপনার <b>আজ</b> স্ক্রিনেও <i>আজকের উন্নতির কাজ</i> কার্ড দেখা যায়। <b>তালিকা দেখুন</b> চাপুন।</p>
+      <div class="mock avoid" style="max-width:300px">
+        <div class="notif"><div class="app">SCD Hub · এখন</div><b>৩টি উন্নতির কাজ এখনো চিহ্নিত হয়নি</b><br>
+          Farhana Begum ২, Kamal Uddin ১ — দেখে শিক্ষককে মনে করিয়ে দিন বা তাঁর পক্ষে চিহ্নিত করুন।</div>
+      </div>
+    </div>
+    <div class="mock avoid" style="margin-top:8px">
+      <div class="bar"><span class="ic">←</span>আজকের উন্নতির কাজ</div>
+      <div class="mbody">
+        <div class="chips"><span class="bd r">এখনো চিহ্নিত হয়নি: ২</span><span class="bd g">হয়েছে: ৫</span></div>
+        <div class="card"><b>Farhana Begum</b><br><span class="lnk">Rafi Ahmed · English</span> <span style="color:var(--muted)">· দিন ৪/২০</span><br>
+          <span style="font-size:8.3pt">ক্লাসে আজকের পাঠের ৫টি বানান দেখে নেবেন</span><br>
+          <span class="btn" style="font-size:7.5pt;margin-top:3px">শিক্ষকের পক্ষে চিহ্নিত করুন</span> <span class="btn o" style="font-size:7.5pt">পারেননি চিহ্নিত করুন</span></div>
+        <div class="card"><b>কারও দায়িত্বে নেই</b> <span class="bd a">কেউ নেই — বেছে নিন</span><br><span class="lnk">Class 4 বালক · Math</span> <span style="color:var(--muted)">· দিন ২/১০</span></div>
+      </div>
+    </div>
+  </div>
+
+  <h3>শিক্ষকের পক্ষে চিহ্নিত করা</h3>
+  <p>আগে শিক্ষককে মনে করিয়ে দিন। কাজটি হয়েছে জানলে <b>শিক্ষকের পক্ষে চিহ্নিত করুন</b> চাপুন এবং কীভাবে জানলেন তা বেছে নিন:
+  <i>শিক্ষক জানিয়েছেন</i>, <i>খাতা দেখে নিশ্চিত হয়েছি</i> বা <i>আমি নিজে করেছি</i>। এটি <b>O</b> (অফিস চিহ্নিত করেছে) হিসেবে দেখায়,
+  কখনো শিক্ষকের নিজের চিহ্ন হিসেবে নয়। কাজের পাতা থেকে আগের বাকি দিনগুলোও চিহ্নিত করতে পারেন।</p>
+
+  <h3>কাজের পাতা: দিন অনুযায়ী</h3>
+  <div class="two wide-left">
+    <div class="mock avoid">
+      <div class="bar"><span class="ic">←</span>উন্নতির কাজ</div>
+      <div class="mbody">
+        <div class="card"><span class="bd b">চলছে · দিন ৭/২০</span> <b>English · শিক্ষার্থী · Rafi Ahmed</b><br>
+          <span style="font-size:8pt;color:var(--muted)">কারণ: শেষ ৩টি টেস্ট ৪৬% → ৩১% → ২২%</span>
+          <div style="display:flex;gap:5px;margin-top:5px;font-size:8pt">
+            <div class="tile" style="flex:1"><div class="l">শিক্ষক</div><b>৪/৬</b></div>
+            <div class="tile" style="flex:1"><div class="l">অভিভাবক</div><b>৫/৬</b></div>
+            <div class="tile" style="flex:1"><div class="l">আগে → পরে</div><b style="font-size:7.5pt">পরের টেস্টের অপেক্ষা</b></div></div></div>
+        <div class="card"><div class="t">দিন অনুযায়ী</div>
+          <div style="font-size:8pt;margin-top:3px">শিক্ষক</div>
+          <div class="strip"><div class="d ok">✓</div><div class="d ok">✓</div><div class="d c">C</div><div class="d o">O</div><div class="d x">–</div><div class="d q">?</div><div class="d f"></div><div class="d f"></div><div class="d f"></div></div>
+          <div style="font-size:8pt">অভিভাবক</div>
+          <div class="strip"><div class="d ok">✓</div><div class="d ok">✓</div><div class="d ok">✓</div><div class="d x">–</div><div class="d ok">✓</div><div class="d ok">✓</div><div class="d f"></div><div class="d f"></div><div class="d f"></div></div>
+        </div>
+        <div style="text-align:right"><span class="btn o">আরও ৫ দিন</span> <span class="btn o" style="color:var(--red);border-color:#f2c2bd">কাজ বন্ধ করুন</span></div>
+      </div>
+    </div>
+    <div>
+      <div class="legend" style="flex-direction:column;gap:3px">
+        <span><span class="d ok">✓</span> করা হয়েছে</span>
+        <span><span class="d c">C</span> বদলি শিক্ষক করেছেন</span>
+        <span><span class="d o">O</span> অফিস/প্রধান শিক্ষক চিহ্নিত করেছেন</span>
+        <span><span class="d x">–</span> পারেননি (কারণসহ)</span>
+        <span><span class="d q">?</span> চিহ্নিত হয়নি: কেউ চাপেননি</span>
+        <span><span class="d f"></span> আসছে</span>
+      </div>
+      <p>পার হওয়া কোনো <b>?</b> দিনে চাপ দিয়ে চিহ্নিত করুন। <i>যেদিন হয়নি</i> অংশে কারণগুলো দেখা যায়। শাখার কাজ হলে
+      <i>প্রতিটি পরিবারের চিহ্ন</i> অংশে দেখা যায় কোন অভিভাবক নিয়মিত চিহ্নিত করছেন।</p>
+      <p><b>আরও ৫ দিন</b> চাপলে আরও পাঁচ স্কুল দিন যোগ হয়। <b>কাজ বন্ধ করুন</b> চাপলে কাজটি আগেই শেষ হয়; কারণ জানতে চাওয়া হয়।</p>
+    </div>
+  </div>
+
+  <div class="tip"><b>শিক্ষক ছুটিতে?</b> সেদিনের কাজটি ওই ক্লাসের বদলি শিক্ষকের কাছে যায়। ছুটির <i>বদলি</i> স্ক্রিনে
+  <i>ছুটির সময়ের উন্নতির কাজ</i> অংশ থেকে যেকোনো দিনের জন্য অন্য কাউকে বেছে নিতে পারেন। <span class="bd a">কেউ নেই — বেছে নিন</span>
+  লেখা দিনগুলোর জন্য এখনো কেউ ঠিক হয়নি।</div>
+</section>
+
+<!-- ============ পৃষ্ঠা ৬ — শিক্ষক ============ -->
+<section class="page">
+  <span class="role-tag t">শিক্ষক</span>
+  <h2>শিক্ষকদের জন্য: আপনার প্রতিদিনের কাজ</h2>
+  <p>আপনাকে কোনো বোর্ড খুলতে হবে না। অফিস আপনাকে উন্নতির কাজ দিলে আপনি একটি নোটিফিকেশন পাবেন (<i>নতুন উন্নতির কাজ</i>),
+  এবং নির্ধারিত প্রতিটি স্কুল দিনে কাজটি আপনার <b>আজ</b> স্ক্রিনে দেখা যাবে।</p>
+
+  <div class="two">
+    <div class="mock avoid">
+      <div class="bar"><span class="ic">☰</span>আজ</div>
+      <div class="mbody" style="padding-left:20px">
+        <div class="card">
+          <div style="display:flex;justify-content:space-between"><span class="t">আজকের উন্নতির কাজ</span><span class="bd a">২ বাকি</span></div>
+          <div class="h">প্রধান শিক্ষক / অফিস দিয়েছেন। প্রতিটি শেষ হলে চিহ্নিত করুন।</div>
+          <div class="row" style="position:relative"><span class="call" style="left:-27px;top:4px">1</span>
+            <b>Rafi Ahmed</b> <span class="bd b">শিক্ষার্থী</span> <span style="color:var(--muted)">English</span><br>
+            ক্লাসে আজকের পাঠের ৫টি বানান দেখে নেবেন<br>
+            <span style="color:var(--muted);font-size:8pt">দিন ৬/২০ · ৪/৫ হয়েছে</span><br>
+            <span style="position:relative"><span class="btn f" style="margin-top:3px">আজ করেছি</span><span class="call" style="left:-27px;top:2px">2</span></span>
+            <span class="btn o">আজ পারিনি</span></div>
+          <div class="row"><span class="bd a" style="font-size:7.3pt">বদলি — শুধু আজ: Kamal Uddin</span><br>
+            <b>Class 4 বালক</b> <span class="bd b">পুরো শাখা</span> <span style="color:var(--muted)">Math</span><br>
+            ক্লাসের শুরুতে নামতার ৩টি প্রশ্ন করাবেন<br>
+            <span style="color:var(--muted);font-size:8pt">দিন ২/১০ · ১/১ হয়েছে</span><br>
+            <span class="btn f" style="margin-top:3px">আজ করেছি</span> <span class="btn o">আজ পারিনি</span></div>
+          <div class="row" style="position:relative"><span class="call" style="left:-27px;top:4px">3</span>
+            <span style="font-size:8pt">কেন হয়নি?</span><br>
+            <span class="chip">আমি ছুটিতে ছিলাম</span> <span class="chip">আজ এই বিষয়ের ক্লাস নেই</span>
+            <span class="chip">শিক্ষার্থী অনুপস্থিত</span> <span class="chip">অন্য কারণ</span></div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <ol class="steps">
+        <li><span class="n">1</span><div><b>কাজটি পড়ুন।</b> এতে শিক্ষার্থী (বা পুরো শাখা), বিষয়, কাজ এবং কত দিন হলো তা দেখা যায়: <i>দিন ৬/২০</i>।</div></li>
+        <li><span class="n">2</span><div><b>কাজটি করে “আজ করেছি” চাপুন।</b> কার্ডে <i>আজ করেছি ✓</i> দেখাবে।</div></li>
+        <li><span class="n">3</span><div><b>করতে পারেননি?</b> “আজ পারিনি” চেপে একটি কারণ বেছে নিন। এটিও একটি উত্তর, আর অফিস কারণটি দেখতে পায়।</div></li>
+      </ol>
+      <div class="tip"><b>সেদিনই চিহ্নিত করুন।</b> আপনি শুধু <i>আজকের</i> কাজ চিহ্নিত করতে পারেন। ভুল বোতাম চাপলে দিন শেষ হওয়ার আগে
+      <b>বাতিল</b> চাপুন। সকাল ১১টায় অফিস দেখে কার কাজ এখনো চিহ্নিত হয়নি।</div>
+      <h3>সহকর্মীর বদলি হলে</h3>
+      <p>কোনো শিক্ষক ছুটিতে থাকলে এবং আপনি তাঁর ক্লাসে বদলি হলে, সেদিনের কাজটি <i>আপনার</i> আজ স্ক্রিনে আসবে, পাশে লেখা থাকবে
+      <span class="bd a">বদলি — শুধু আজ</span>। আপনার চিহ্ন আপনার নামেই থাকে (কাজের পাতায় <b>C</b>)।</p>
+      <h3>শ্রেণি শিক্ষকদের জন্য: “অভিভাবক টানা ৩ দিন” সতর্কতা</h3>
+      <p>আপনার শাখার কোনো পরিবার টানা ৩ স্কুল দিন বাড়ির কাজটি চিহ্নিত না করলে আপনি এই নোটিফিকেশন পাবেন:</p>
+      <div class="mock" style="max-width:290px">
+        <div class="notif"><div class="app">SCD Hub · ১১:০০</div><b>অভিভাবক টানা ৩ দিন চিহ্নিত করেননি</b><br>
+          Rafi Ahmed (Class 3) — English: স্কুলের দেওয়া কাজটি বাড়িতে হচ্ছে কি না অভিভাবকের সাথে কথা বলুন।</div>
+      </div>
+      <p style="margin-top:6px">অভিভাবককে ফোন বা মেসেজ করে জেনে নিন বাড়িতে কাজটি হচ্ছে কি না।</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ পৃষ্ঠা ৭ — অভিভাবক ============ -->
+<section class="page">
+  <span class="role-tag g">অভিভাবক</span>
+  <h2>অভিভাবকদের জন্য: বাড়িতে সাহায্য</h2>
+  <p>কখনো কখনো স্কুল কয়েক সপ্তাহের জন্য কোনো একটি বিষয়ে বাড়িতে আপনার সাহায্য চায়। অ্যাপেই আপনাকে জানানো হবে,
+  আর প্রতিদিন শুধু একটি বোতাম চাপলেই হবে।</p>
+
+  <div class="two">
+    <div class="phone avoid">
+      <div class="notif" style="margin:10px 8px;position:relative"><span class="call" style="left:-6px;top:-6px">1</span>
+        <div class="app">SCD Hub · এখন</div><b>স্কুল থেকে প্রতিদিনের কাজ — English</b><br>
+        প্রতিদিন ৫টি বানান ৩ বার লেখাবেন (২০ স্কুল দিন, শুরু ১৫ অক্টোবর) — প্রতিদিন অ্যাপে "আজ করেছি" চাপুন।</div>
+      <div class="bar"><span class="ic">☰</span>আজ</div>
+      <div class="gcard"><span class="call" style="right:-6px;top:-6px">2</span>
+        <div class="t" style="font-weight:700">স্কুল থেকে আজকের কাজ</div>
+        <div style="font-size:7.8pt;color:var(--muted)">স্কুল বাড়িতে আপনার সাহায্য চেয়েছে। প্রতিদিন চিহ্নিত করুন।</div>
+        <div style="margin-top:6px"><b>English</b></div>
+        <div>প্রতিদিন ৫টি বানান ৩ বার লেখাবেন</div>
+        <div style="font-size:7.8pt;color:var(--muted)">দিন ৬/২০ · এ পর্যন্ত চিহ্নিত দিন:</div>
+        <div class="strip"><div class="d ok" style="width:13px;height:13px"></div><div class="d ok" style="width:13px;height:13px"></div><div class="d ok" style="width:13px;height:13px"></div><div class="d x" style="width:13px;height:13px"></div><div class="d ok" style="width:13px;height:13px"></div><div class="d f" style="width:13px;height:13px"></div></div>
+        <div style="position:relative"><span class="btn f">আজ করেছি</span> <span class="btn o">আজ পারিনি</span><span class="call" style="right:2px;top:-4px">3</span></div>
+      </div>
+      <div style="padding:2px 10px 12px;color:var(--muted);font-size:8pt">… আজ স্ক্রিনের বাকি অংশ</div>
+    </div>
+    <div>
+      <ol class="steps">
+        <li><span class="n">1</span><div><b>একটি নোটিফিকেশন আসবে</b> (<i>স্কুল থেকে প্রতিদিনের কাজ</i>)। এতে বিষয়, প্রতিদিনের কাজ এবং কত স্কুল দিন চলবে তা লেখা থাকে।</div></li>
+        <li><span class="n">2</span><div><b>অ্যাপ খুলুন।</b> প্রথম স্ক্রিন <b>আজ</b>-এর একদম ওপরে কমলা বর্ডারের <i>স্কুল থেকে আজকের কাজ</i> কার্ডটি প্রতিটি কাজের দিনে দেখা যাবে। একাধিক সন্তান থাকলে আগে সন্তান বেছে নিন।</div></li>
+        <li><span class="n">3</span><div><b>সন্তানকে কাজটি করিয়ে “আজ করেছি” চাপুন।</b> দেখবেন <i>আজ করেছি ✓ — ধন্যবাদ</i>।</div></li>
+      </ol>
+      <h3>আজ করতে না পারলে</h3>
+      <p><b>আজ পারিনি</b> চাপুন এবং একটি কারণ বেছে নিন:</p>
+      <ul>
+        <li>সন্তান অসুস্থ</li>
+        <li>আজ সময় হয়নি</li>
+        <li>প্রশ্ন/কাজ পাইনি</li>
+        <li>অন্য কারণ</li>
+      </ul>
+      <div class="tip"><b>প্রতিদিন সন্ধ্যায় চিহ্নিত করুন, করতে না পারলেও।</b> আপনি শুধু <i>আজকের</i> কাজ চিহ্নিত করতে পারেন।
+      ভুল বোতাম চাপলে সেদিনই <b>বাতিল</b> চাপুন। টানা ৩ দিন চিহ্নিত না করলে শ্রেণি শিক্ষক আপনার সাথে যোগাযোগ করবেন।</div>
+      <p>ছোট ঘরগুলো আগের দিনগুলো দেখায়: সবুজ = করা হয়েছে, কমলা = পারেননি, লাল = চিহ্নিত হয়নি। কার্ড না থাকলে সেদিন কোনো কাজ নেই
+      (যেমন ছুটির দিনে)।</p>
+      <p>কাজ শেষ হলে স্কুল আপনার সন্তানের পরের ক্লাস টেস্টের নম্বর আগের টেস্টের সাথে মিলিয়ে দেখে। সাহায্য করার জন্য ধন্যবাদ!</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ পৃষ্ঠা ৮ — দ্রুত উত্তর ============ -->
+<section class="page">
+  <h2>সাধারণ প্রশ্নের উত্তর</h2>
+  <table class="ref">
+    <tr><th style="width:36%">প্রশ্ন</th><th>উত্তর</th></tr>
+    <tr><td>নতুন টেস্ট বোর্ডে দেখা যাচ্ছে না কেন?</td><td>শুধু প্রকাশিত ক্লাস টেস্টের ফল গোনা হয়। ফল প্রকাশের পর বোর্ড আবার খুললেই দেখা যাবে।</td></tr>
+    <tr><td>দুর্বল একজন শিক্ষার্থী “ঝুঁকিতে” দেখাচ্ছে না কেন?</td><td>এর জন্য অন্তত ২টি টেস্টে উপস্থিতি, সামগ্রিক নম্বর নামতে থাকা, <b>এবং</b> শেষ টেস্টে ফেল দরকার। দুর্বল কিন্তু উন্নতি করছে এমন শিক্ষার্থী ঝুঁকিতে গোনা হয় না।</td></tr>
+    <tr><td>পাস নম্বর কত?</td><td>প্রতিটি ক্লাস টেস্টের নিজের পাস নম্বর আছে; বোর্ড সেই টেস্টের নম্বরই ব্যবহার করে।</td></tr>
+    <tr><td>শিক্ষক কি বোর্ড দেখতে পান?</td><td>না। শিক্ষকেরা শুধু আজ স্ক্রিনে নিজের কাজগুলো দেখেন। বোর্ড অফিস ও প্রধান শিক্ষকের জন্য।</td></tr>
+    <tr><td>অভিভাবক কি নম্বর বা অন্য শিক্ষার্থীদের দেখতে পান?</td><td>না। অভিভাবক শুধু নিজের সন্তানের প্রতিদিনের কাজটি দেখেন।</td></tr>
+    <tr><td>কাজ দেওয়ার পর লেখা বদলানো যায়?</td><td>না। কাজটি বন্ধ করে নতুন কাজ দিন। <i>আরও ৫ দিন</i> দিয়ে দিন বাড়ানো যায়।</td></tr>
+    <tr><td>পরে নতুন ছুটি যোগ হলে কাজের দিন সরে যায়?</td><td>না। কাজ দেওয়ার সময়ই দিনগুলো ঠিক হয়ে যায়। দরকার হলে <i>আরও ৫ দিন</i> দিয়ে দিন বাড়ান।</td></tr>
+    <tr><td>“আগে → পরে” কীভাবে হিসাব হয়?</td><td><i>আগে</i> হলো শুরুর দিনের আগে ওই বিষয়ের শেষ টেস্ট। <i>পরে</i> হলো শেষ দিনের পর প্রথম টেস্ট। শাখার কাজ হলে দুটোই শাখার গড়।</td></tr>
+    <tr><td>শিক্ষক কি গতকালের কাজ চিহ্নিত করতে পারেন?</td><td>না। শুধু অফিস বা প্রধান শিক্ষক আগের দিন চিহ্নিত করতে পারেন, এবং সেটি <b>O</b> হিসেবে দেখায়।</td></tr>
+    <tr><td>মেনুতে “শিক্ষার্থীর অগ্রগতি”-র পাশে সংখ্যা দেখায়। এগুলো কী?</td><td>এগুলো ক্লাস টেস্টের সংখ্যা (পর্যালোচনার প্রশ্নপত্র, দেরি হওয়া ফল), অগ্রগতির সংখ্যা নয়।</td></tr>
+  </table>
+
+  <h3>অফিসের জন্য সাপ্তাহিক নিয়ম</h3>
+  <ol>
+    <li><b>শিক্ষার্থীর অগ্রগতি</b> খুলুন। ঝুঁকিতে থাকা শিক্ষার্থীদের কাজ দিয়ে <b>কাজ দেওয়া হয়নি</b> সংখ্যাটি শূন্যে আনুন।</li>
+    <li><b>পিছিয়ে থাকা কাজ</b> দেখুন এবং ওই শিক্ষকদের খোঁজ নিন।</li>
+    <li>শেষ হওয়া কাজগুলো (<span class="bd g">কাজ শেষ</span>) দেখুন। কোনো শিক্ষার্থীর উন্নতি না হলে অন্য ধরনের কাজ দিন।</li>
+    <li>প্রতিটি স্কুল দিনে ১১টার নোটিফিকেশনের উত্তর দিন: শিক্ষককে মনে করিয়ে দিন, অথবা কাজ হয়েছে জানলে তাঁর পক্ষে চিহ্নিত করুন।</li>
+  </ol>
+
+  <p class="footer-note">SCD Hub · শিক্ষার্থীর অগ্রগতি ব্যবহার নির্দেশিকা · অক্টোবর ২০২৬। ছবিগুলো নমুনা নাম দিয়ে তৈরি।
+  অ্যাপের ভাষা ইংরেজি করলে একই জায়গায় ইংরেজি লেখা দেখবেন। শ্রেণি, শাখা ও বিষয়ের নাম অ্যাপে যেভাবে লেখা আছে সেভাবেই দেখানো হয়েছে।</p>
+</section>
+
+</body>
+</html>

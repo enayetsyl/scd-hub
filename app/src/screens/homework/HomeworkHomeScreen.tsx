@@ -19,6 +19,7 @@ import {
   HOMEWORK_SUMMARY,
   HOMEWORK_CLASS_OVERVIEW,
   DELETE_HOMEWORK_ITEM,
+  VOID_HOMEWORK_ITEM,
   type HwClassRefInput,
 } from "../../graphql/operations";
 import type { HomeworkStackParamList } from "../../navigation/types";
@@ -54,7 +55,9 @@ const today = (): string => dateKey();
 
 export default function HomeworkHomeScreen({ navigation }: Props): React.ReactElement {
   const colors = useColors();
-  const { user } = useAuth();
+  const { user, can } = useAuth();
+  // D-#741: Principal/Office may remove a never-issued item even once the day is closed.
+  const canVoid = can("homework:void");
   const { selection } = useSectionContext();
 
   const [date, setDate] = useState(today());
@@ -125,22 +128,27 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
   const { confirmAction } = useConfirm();
   const toast = useToast();
   const [, deleteItem] = useMutation(DELETE_HOMEWORK_ITEM);
+  const [, voidItem] = useMutation(VOID_HOMEWORK_ITEM);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const onDeleteItem = useCallback(
     async (itemId: string): Promise<void> => {
       if (deletingId) return;
       if (!(await confirmAction({ title: STR.hwDeleteAction, message: STR.hwDeleteConfirm, confirmLabel: STR.hwDeleteAction }))) return;
       setDeletingId(itemId);
-      const res = await deleteItem({ itemId });
+      // homework:void holders take the D-#741 path — it also works on a closed day.
+      const res = canVoid ? await voidItem({ itemId }) : await deleteItem({ itemId });
       setDeletingId(null);
-      if (res.error || !res.data?.deleteHomeworkItem) {
+      const ok = canVoid
+        ? !!(res.data as { voidHomeworkItem?: unknown } | undefined)?.voidHomeworkItem
+        : !!(res.data as { deleteHomeworkItem?: unknown } | undefined)?.deleteHomeworkItem;
+      if (res.error || !ok) {
         toast.show(friendlyError(res.error), "danger");
         return;
       }
       toast.show(STR.hwDeleted, "ok");
       refetchTally({ requestPolicy: "network-only" });
     },
-    [deletingId, confirmAction, deleteItem, toast, refetchTally],
+    [deletingId, confirmAction, canVoid, voidItem, deleteItem, toast, refetchTally],
   );
 
   const selectedSection =
@@ -198,6 +206,7 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
                 const mine = isAdmin || (!!user && it.declaredBy === user.id);
                 const dayOpen = it.status === "declared" ? tally?.state !== "reconciled" : true;
                 const editable = mine && dayOpen;
+                const canDelete = it.status === "declared" && (editable || canVoid);
                 return (
                   <Card key={it.itemId}>
                     <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
@@ -215,8 +224,9 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
                       </Muted>
                     ) : null}
                     {it.bandWarning ? <Muted style={{ color: colors.warning, marginTop: 4 }}>{STR.hwBandWarning}</Muted> : null}
-                    {editable ? (
+                    {editable || canDelete ? (
                       <View style={{ flexDirection: "row", gap: space(2), marginTop: space(3) }}>
+                        {editable ? (
                         <View style={{ flex: 1 }}>
                           <Button
                             title={STR.hwEditAction}
@@ -241,7 +251,8 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
                             }
                           />
                         </View>
-                        {it.status === "declared" ? (
+                        ) : null}
+                        {canDelete ? (
                           <View style={{ flex: 1 }}>
                             <Button
                               title={STR.hwDeleteAction}

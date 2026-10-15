@@ -114,6 +114,7 @@ export const AUDIT_KIND_LABELS: Record<AuditEventKind, AuditKindLabel> = {
   TRACKER_WRITE: { bn: "ট্র্যাকারে লিখেছেন", en: "Tracker write", group: "HOMEWORK" },
   HW_FILE_ATTACHED: { bn: "বাড়ির কাজে ফাইল যুক্ত করেছেন", en: "Attached a homework file", group: "HOMEWORK" },
   HW_RECORD_REVERTED: { bn: "বাড়ির কাজের সর্বশেষ ধাপ ফিরিয়ে নিয়েছেন", en: "Reverted a homework record", group: "HOMEWORK" },
+  HW_ITEM_VOIDED: { bn: "না-দেওয়া বাড়ির কাজ মুছেছেন", en: "Deleted an unissued homework item", group: "HOMEWORK" },
 
   // --- Assignments ----------------------------------------------------------
   AS_RECORD_REVERTED: { bn: "অ্যাসাইনমেন্টের সর্বশেষ ধাপ ফিরিয়ে নিয়েছেন", en: "Reverted an assignment record", group: "ASSIGNMENT" },
