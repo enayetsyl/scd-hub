@@ -37,6 +37,18 @@ void SplashScreen.preventAutoHideAsync();
 // EXPO_PUBLIC_SENTRY_DSN is set, so local dev / the web-export gate are unaffected.
 initSentry();
 
+// Mobile browsers: Expo's web reset sizes html/body/#root at `height: 100%` with
+// `body { overflow: hidden }`. On Chrome Android that height can include the strip
+// under the browser toolbar, and since the body cannot scroll, whatever sits at the
+// very bottom of a form is unreachable (owner 2026-10-15: the work-board task form's
+// assign button). `100dvh` is the viewport actually visible; older browsers keep 100%.
+if (Platform.OS === "web" && typeof document !== "undefined" && !document.getElementById("scd-viewport-fix")) {
+  const style = document.createElement("style");
+  style.id = "scd-viewport-fix";
+  style.textContent = "@supports (height: 100dvh) { html, body, #root { height: 100dvh; } }";
+  document.head.appendChild(style);
+}
+
 /**
  * Keying RootNavigator by the active language remounts the navigation subtree on a
  * language switch, so every screen re-reads the new language. The providers above

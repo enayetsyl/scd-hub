@@ -13,7 +13,7 @@ import React from "react";
 import { View } from "react-native";
 import { useMutation, useQuery } from "urql";
 import { MY_CT_SCRIPT_TASKS_QUERY, MARK_CT_SCRIPTS_RETURNED, type CtScriptRowT } from "../graphql/ctScripts";
-import { Badge, Body, Button, Card, Muted, Notice } from "./ui";
+import { Badge, Body, Button, Card, Muted, Notice, wrapRowText } from "./ui";
 import { STR, bnNum, isoDateLabel, ctScriptStageLabel } from "../lib/labels";
 import { ctScriptRowTitle, ctScriptStageTone } from "../lib/ctScriptStage";
 import { friendlyError } from "../lib/errors";
@@ -49,7 +49,7 @@ export function CtScriptTeacherCard(): React.ReactElement | null {
           <Body style={styles.groupTitle}>{STR.csSubmitTitle}</Body>
           {submit.map((r) => (
             <View key={r.testId} style={styles.row}>
-              <View style={{ flex: 1, minWidth: 0 }}>
+              <View style={wrapRowText}>
                 <Body numberOfLines={2}>{ctScriptRowTitle(r, STR.ctTestNumber, bnNum)}</Body>
                 <Muted>
                   {STR.csDueBy}: {isoDateLabel(r.dueDateKey)} · {bnNum(r.presentCount)} {STR.csPresent}
@@ -66,7 +66,7 @@ export function CtScriptTeacherCard(): React.ReactElement | null {
           <Body style={styles.groupTitle}>{STR.csReturnTitle}</Body>
           {back.map((r) => (
             <View key={r.testId} style={styles.row}>
-              <View style={{ flex: 1, minWidth: 0 }}>
+              <View style={wrapRowText}>
                 <Body numberOfLines={2}>{ctScriptRowTitle(r, STR.ctTestNumber, bnNum)}</Body>
                 <Muted>
                   {STR.csDueBy}: {isoDateLabel(r.returnDueDateKey)}

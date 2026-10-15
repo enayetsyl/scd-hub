@@ -13,7 +13,7 @@ import React from "react";
 import { View } from "react-native";
 import { useMutation, useQuery } from "urql";
 import { UNISSUED_HOMEWORK, VOID_HOMEWORK_ITEM } from "../graphql/operations";
-import { Badge, Body, Button, Card, Muted, Notice } from "./ui";
+import { Badge, Body, Button, Card, Muted, Notice, wrapRowText } from "./ui";
 import { STR, bnNum, hwSubjectLabel, isoDateLabel } from "../lib/labels";
 import { friendlyError } from "../lib/errors";
 import { useConfirm } from "../state/ConfirmContext";
@@ -57,9 +57,9 @@ export function UnissuedHomeworkCard(): React.ReactElement | null {
       {rows.map((r) => (
         <View
           key={r.itemId}
-          style={{ flexDirection: "row", alignItems: "center", gap: space(2), marginTop: space(3) }}
+          style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: space(2), marginTop: space(3) }}
         >
-          <View style={{ flex: 1, minWidth: 0 }}>
+          <View style={wrapRowText}>
             <Body numberOfLines={1}>
               {r.className}
               {r.sectionName ? ` (${r.sectionName})` : ""} · {hwSubjectLabel(r.subject)}
