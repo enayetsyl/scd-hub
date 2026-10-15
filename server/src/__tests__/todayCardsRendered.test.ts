@@ -32,7 +32,7 @@ const tabsSrc = readFileSync(APPTABS, "utf8");
 const RETURN_AT = src.search(/\n {2}return \(/);
 
 /** Cards Today is expected to render. Add a row when a new card is added. */
-const CARDS = ["WorkClaimTeacherCard", "ReturningStudentsCard", "GiftHandoverCard", "LiveClassCard"];
+const CARDS = ["WorkClaimTeacherCard", "ReturningStudentsCard", "GiftHandoverCard", "LiveClassCard", "UnissuedHomeworkCard"];
 
 describe("TodayScreen — every card is inside the render", () => {
   test("the component has a top-level return", () => {
@@ -111,5 +111,28 @@ describe("AdminTodayScreen — the admin-only cards reach the roles that hold th
     // such a teacher would still be routed to TodayScreen. The card follows the
     // permission so that case is not silently unreachable.
     expect(src).toContain("<GiftHandoverCard");
+  });
+
+  /**
+   * D-#741: the 0-question homework clean-up. The Office has NO Homework tab (no
+   * tracker permission, D-#554), so this card on the admin screen is the only place the
+   * desk can see those items at all. Gated on homework:void — the permission the
+   * resolver checks — never on a tracker permission the Office does not hold.
+   */
+  test("the unissued-homework card is on the ADMIN screen, gated on homework:void", () => {
+    const usage = adminSrc.indexOf("<UnissuedHomeworkCard");
+    expect(usage).toBeGreaterThan(0);
+    expect(usage).toBeGreaterThan(ADMIN_RETURN_AT);
+    const line = adminSrc.split(/\r?\n/).find((l) => l.includes("<UnissuedHomeworkCard")) ?? "";
+    expect(line).toContain("canVoidHomework");
+    expect(adminSrc).toMatch(/const canVoidHomework = can\("homework:void"\)/);
+  });
+
+  test("on the teacher screen it follows the same permission, outside the QueryGate", () => {
+    const line = src.split(/\r?\n/).find((l) => l.includes("<UnissuedHomeworkCard")) ?? "";
+    expect(line).toContain("canVoidHomework");
+    expect(src).toMatch(/const canVoidHomework = can\("homework:void"\)/);
+    // Own-query cards inside the QueryGate vanish on an empty day — keep it before it.
+    expect(src.indexOf("<UnissuedHomeworkCard")).toBeLessThan(src.indexOf("<QueryGate"));
   });
 });

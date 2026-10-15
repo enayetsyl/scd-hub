@@ -51,6 +51,11 @@ import {
 } from "../services/HomeworkRosterPassService";
 import { revertHomeworkRecord as revertHomeworkRecordSvc } from "../services/HomeworkRevertService";
 import {
+  voidHomeworkItem as voidHomeworkItemSvc,
+  listUnissuedHomework as listUnissuedHomeworkSvc,
+  type UnissuedHomeworkDTO,
+} from "../services/HomeworkVoidService";
+import {
   homeworkSummary as homeworkSummarySvc,
   homeworkClassOverview as classOverviewSvc,
   resubmissionWatchList as watchListSvc,
@@ -382,6 +387,58 @@ builder.mutationField("deleteHomeworkItem", (t) =>
       );
       return deleteSvc(args.itemId);
     },
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// HW-VOID (D-#741): Principal/Office remove a never-issued declaration
+// ---------------------------------------------------------------------------
+// Its OWN permission, not tracker:write — the Office holds no tracker permission
+// (D-#554) and gets exactly this clean-up. Both holders are admin staff, so the
+// item is reachable school-wide; the service refuses anything with student records.
+
+builder.mutationField("voidHomeworkItem", (t) =>
+  t.field({
+    type: DeleteHomeworkItemResultRef,
+    description:
+      "Remove a homework declaration that was never issued (D-#741) — e.g. a 0-question " +
+      "item confirm skips — even once the day is reconciled. Refused when any student record exists.",
+    authScopes: { hasPermission: "homework:void" },
+    args: {
+      itemId: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      return voidHomeworkItemSvc(args.itemId, ctx.auth.userId as string);
+    },
+  }),
+);
+
+const UnissuedHomeworkRef = builder.objectRef<UnissuedHomeworkDTO>("UnissuedHomework");
+UnissuedHomeworkRef.implement({
+  fields: (t) => ({
+    itemId: t.exposeString("itemId"),
+    hwId: t.exposeString("hwId"),
+    classId: t.exposeString("classId"),
+    className: t.exposeString("className"),
+    sectionId: t.exposeString("sectionId"),
+    sectionName: t.exposeString("sectionName"),
+    subject: t.exposeString("subject"),
+    dateKey: t.exposeString("dateKey"),
+    timeDecl: t.exposeInt("timeDecl"),
+    qCount: t.exposeInt("qCount"),
+    description: t.exposeString("description", { nullable: true }),
+    declaredByName: t.exposeString("declaredByName"),
+  }),
+});
+
+builder.queryField("unissuedHomework", (t) =>
+  t.field({
+    type: [UnissuedHomeworkRef],
+    description:
+      "0-question homework declarations from the last 30 days — confirm never issues them (D-#741). School-wide.",
+    authScopes: { hasPermission: "homework:void" },
+    resolve: () => listUnissuedHomeworkSvc(),
   }),
 );
 

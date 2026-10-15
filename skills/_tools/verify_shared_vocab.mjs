@@ -34,7 +34,7 @@ check("default-deny: unknown role", V.roleHasPermission("GHOST", "content:read")
 check("PRINCIPAL has user:manage + audit:read", V.roleHasPermission("PRINCIPAL", "user:manage") && V.roleHasPermission("PRINCIPAL", "audit:read"));
 check("TEACHER lacks user:manage / audit:read / content:import", !["user:manage","audit:read","content:import"].some((p) => V.roleHasPermission("TEACHER", p)));
 check("TEACHER can read content + assemble + write trackers", ["content:read","set:assemble","tracker:write"].every((p) => V.roleHasPermission("TEACHER", p)));
-check("OFFICE = roster/staff/leave/payroll/performance/guardian/message/import/assign_review/question(read+manage)/routine/attendance/library/chat/observation/finance/report/gift/exam/scholarship/tasks", eq(V.permissionsForRole("OFFICE"), ["roster:manage","staff:manage","leave:manage","payroll:manage","performance:manage","guardian:link","message:dispatch","content:import","content:assign_review","question:read","question:manage","routine:read","routine:manage","attendance:manage","library:read","library:manage","chat:read","chat:write","chat:manage","observation:upload","observation:read","observation:manage","finance:manage","report:release","gift:manage","exam:manage","exam:read","scholarship:manage","scholarship:read","tasks:assign"]));
+check("OFFICE = roster/staff/leave/payroll/performance/guardian/message/import/assign_review/question(read+manage)/routine/attendance/library/chat/observation/finance/report/gift/homework-void/exam/scholarship/tasks", eq(V.permissionsForRole("OFFICE"), ["roster:manage","staff:manage","leave:manage","payroll:manage","performance:manage","guardian:link","message:dispatch","content:import","content:assign_review","question:read","question:manage","routine:read","routine:manage","attendance:manage","library:read","library:manage","chat:read","chat:write","chat:manage","observation:upload","observation:read","observation:manage","finance:manage","report:release","gift:manage","homework:void","exam:manage","exam:read","scholarship:manage","scholarship:read","tasks:assign"]));
 // question:manage is the desk's correction power, NOT a teaching one (D-#548): Office and the
 // Principal hold it; a TEACHER — reviewer included — must still go through a review verdict.
 check("question:manage is Principal + Office only; TEACHER and GUARDIAN never", V.roleHasPermission("PRINCIPAL","question:manage") && V.roleHasPermission("OFFICE","question:manage") && !V.roleHasPermission("TEACHER","question:manage") && !V.roleHasPermission("GUARDIAN","question:manage"));
@@ -787,6 +787,13 @@ check("gift:manage exists as its OWN permission — the Office must not need tra
   V.PERMISSIONS.includes("gift:manage") && !V.ROLE_PERMISSIONS.OFFICE.some((p) => p.startsWith("tracker:")));
 check("TEACHER keeps tracker:read — the gift report stays reachable for a class teacher (D-#479)",
   V.roleHasPermission("TEACHER","tracker:read"));
+
+// --- HW-VOID: the desk removes a never-issued homework item WITHOUT a tracker grant (D-#741) ---
+check("homework:void is PRINCIPAL + OFFICE only — TEACHER and GUARDIAN never (a teacher deletes her own via tracker:write, day open)",
+  V.roleHasPermission("PRINCIPAL","homework:void") && V.roleHasPermission("OFFICE","homework:void") &&
+  !V.roleHasPermission("TEACHER","homework:void") && !V.roleHasPermission("GUARDIAN","homework:void"));
+check("homework:void exists as its OWN permission and OFFICE still holds no tracker:* (D-#554 stands)",
+  V.PERMISSIONS.includes("homework:void") && !V.ROLE_PERMISSIONS.OFFICE.some((p) => p.startsWith("tracker:")));
 
 console.log(`\nRESULT: ${fails === 0 ? "PASS — all checks green" : fails + " FAILED"}`);
 process.exit(fails === 0 ? 0 : 1);

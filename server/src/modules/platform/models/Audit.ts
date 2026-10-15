@@ -134,6 +134,7 @@ export type AuditEventKind =
   // two rows are the only evidence — they carry the popped states + the restored
   // state so "I marked it and it went back to pending" is answerable (D-#354).
   | "HW_RECORD_REVERTED"  // a homework student record's last action was undone (D-#338)
+  | "HW_ITEM_VOIDED"      // Principal/Office removed a never-issued homework declaration (D-#741)
   | "AS_RECORD_REVERTED"  // an assignment student record's last action was undone (D-#338)
   | "BOOK_ISSUED"         // library desk issued a copy to a borrower (LB-2, D-#81/#82)
   | "BOOK_RETURNED"       // copy returned at the desk (LB-2)

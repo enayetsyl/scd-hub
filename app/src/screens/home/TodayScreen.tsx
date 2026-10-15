@@ -62,6 +62,7 @@ import { ImprovementTasksTeacherCard } from "../../components/ImprovementTasksTe
 import { ImprovementTasksOfficeCard } from "../../components/ImprovementTasksOfficeCard";
 import { GiftHandoverCard } from "../../components/GiftHandoverCard";
 import { LiveClassCard } from "../../components/LiveClassCard";
+import { UnissuedHomeworkCard } from "../../components/UnissuedHomeworkCard";
 import { Icon, type IconName } from "../../components/Icon";
 import {
   STR,
@@ -132,6 +133,8 @@ export default function TodayScreen(): React.ReactElement {
   // D-#674 — the live class board follows the PERMISSION, not the role: a per-user
   // routine:manage grant (D-#193) lands on THIS screen, not the admin dashboard.
   const canLiveBoard = can("routine:manage");
+  // HW-VOID (D-#741) — removing never-issued homework follows its own permission.
+  const canVoidHomework = can("homework:void");
 
   // D-#318: the teacher's OWN sections' attendance at a glance (admins land on
   // the card dashboard instead, so no pause needed beyond the guardian gate).
@@ -505,6 +508,10 @@ export default function TodayScreen(): React.ReactElement {
           QueryGate on purpose: it carries its own query, and the school-wide board must
           not disappear because the CALLER's own day happens to be empty. */}
       {canLiveBoard ? <LiveClassCard /> : null}
+
+      {/* HW-VOID (D-#741) — 0-question homework confirm never issues, for a per-user
+          homework:void grant. Outside the QueryGate for the same reason as above. */}
+      {canVoidHomework ? <UnissuedHomeworkCard /> : null}
 
       {/* CS-1/CS-3 (D-#715/#719) — ক্লাস টেস্টের খাতা: hand the scripts to the office,
           and later return them to the students. OUTSIDE the QueryGate for the same
