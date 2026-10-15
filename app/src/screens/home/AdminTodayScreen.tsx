@@ -19,6 +19,7 @@ import { Screen, H2, Body, Muted, Card, Badge, Loader, ErrorBanner } from "../..
 import { GiftHandoverCard } from "../../components/GiftHandoverCard";
 import { LiveClassCard } from "../../components/LiveClassCard";
 import { TodayWorkCard } from "../../components/TodayWorkCard";
+import { UnissuedHomeworkCard } from "../../components/UnissuedHomeworkCard";
 import { CtScriptOfficeCard } from "../../components/CtScriptOfficeCard";
 import { ImprovementTasksOfficeCard } from "../../components/ImprovementTasksOfficeCard";
 import { ImprovementTasksTeacherCard } from "../../components/ImprovementTasksTeacherCard";
@@ -110,6 +111,9 @@ export default function AdminTodayScreen(): React.ReactElement {
   const canGift = can("gift:manage");
   // D-#674 — the live class board follows the PERMISSION the server gates on.
   const canLiveBoard = can("routine:manage");
+  // HW-VOID (D-#741) — Principal + Office remove 0-question homework from here; the
+  // Office has no Homework tab (no tracker permission, D-#554).
+  const canVoidHomework = can("homework:void");
 
   const [q, refetch] = useQuery({ query: ADMIN_TODAY_QUERY, variables: { date }, requestPolicy: "cache-and-network" });
   const cards = q.data?.adminToday ?? [];
@@ -211,6 +215,10 @@ export default function AdminTodayScreen(): React.ReactElement {
             on the teacher's behalf; and any task this person was given to do themselves. */}
         {can("roster:manage") ? <ImprovementTasksOfficeCard /> : null}
         <ImprovementTasksTeacherCard />
+
+        {/* HW-VOID (D-#741) — homework declared with 0 questions (usually a class note
+            filed as homework): confirm never issues it; delete it here. Hidden when none. */}
+        {canVoidHomework ? <UnissuedHomeworkCard /> : null}
 
         {cards.map(renderCard)}
 

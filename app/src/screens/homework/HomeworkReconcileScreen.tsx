@@ -18,6 +18,7 @@ import {
   ROSTER_QUERY,
   TRIM_HOMEWORK_ITEM,
   CONFIRM_HOMEWORK_DAY,
+  VOID_HOMEWORK_ITEM,
 } from "../../graphql/operations";
 import type { HomeworkStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Badge, Button, Field, Chip, ChipRow, Notice, Loader, EmptyState, ErrorBanner } from "../../components/ui";
@@ -28,6 +29,7 @@ import { friendlyError } from "../../lib/errors";
 import { useAuth } from "../../auth/AuthContext";
 import { useSectionContext } from "../../state/SectionContext";
 import { useToast } from "../../state/ToastContext";
+import { useConfirm } from "../../state/ConfirmContext";
 import { space, useColors } from "../../theme";
 import { dateKey } from "../../lib/dates";
 
@@ -73,6 +75,11 @@ export default function HomeworkReconcileScreen({ navigation, route }: Props): R
   }, [attRoster]);
   const [, trim] = useMutation(TRIM_HOMEWORK_ITEM);
   const [, confirm] = useMutation(CONFIRM_HOMEWORK_DAY);
+  // D-#741: Principal/Office remove a never-issued item (e.g. a class note filed as
+  // 0-question homework) — still possible after the day is confirmed.
+  const canVoid = can("homework:void");
+  const [, voidItem] = useMutation(VOID_HOMEWORK_ITEM);
+  const { confirmAction } = useConfirm();
 
   // Refetch the live tally when the screen regains focus (e.g. after declaring an
   // item on the sibling screen) so it never shows a stale day-total. Mirrors
@@ -117,6 +124,19 @@ export default function HomeworkReconcileScreen({ navigation, route }: Props): R
     }
     toast.show(STR.saved, "ok");
     setTrimTo((m) => ({ ...m, [itemId]: "" }));
+    refetchTally({ requestPolicy: "network-only" });
+  }
+
+  async function onVoid(itemId: string): Promise<void> {
+    if (!(await confirmAction({ title: STR.hwDeleteAction, message: STR.hwVoidConfirm, confirmLabel: STR.hwDeleteAction }))) return;
+    setBusy(true);
+    const res = await voidItem({ itemId });
+    setBusy(false);
+    if (res.error || !res.data?.voidHomeworkItem) {
+      toast.show(friendlyError(res.error), "danger");
+      return;
+    }
+    toast.show(STR.hwDeleted, "ok");
     refetchTally({ requestPolicy: "network-only" });
   }
 
@@ -191,6 +211,11 @@ export default function HomeworkReconcileScreen({ navigation, route }: Props): R
                   <View style={{ marginBottom: 12 }}>
                     <Button title={STR.hwTrim} variant="secondary" onPress={() => onTrim(it.itemId, it.qCount, it.revItem)} disabled={busy} />
                   </View>
+                  {canVoid ? (
+                    <View style={{ marginBottom: 12 }}>
+                      <Button title={STR.hwDeleteAction} variant="danger" onPress={() => void onVoid(it.itemId)} disabled={busy} />
+                    </View>
+                  ) : null}
                 </View>
               </Card>
             ))}

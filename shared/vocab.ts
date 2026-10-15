@@ -3897,6 +3897,11 @@ export const PERMISSIONS = [
   // tracker permission (D-#554 — the Office nudges and never resolves tracker work).
   // Teachers reach the same report through `tracker:read`, section-scoped, unchanged.
   "gift:manage",           // read the gift report school-wide + tick/untick a handover (Principal/Office)
+  // Remove a homework declaration that was never issued (D-#741) — a 0-question item
+  // confirm skips, or anything still `declared` on a day already closed. Same shape as
+  // gift:manage: its OWN permission, so the Office gets this one clean-up and NO tracker
+  // permission (D-#554 stands). An item with student records is never removable.
+  "homework:void",         // list never-issued homework school-wide + delete one (Principal/Office)
   // routine / timetable (app-native; D-#46)
   "routine:read",          // read the routine (Principal/Teacher/Office; guardian read rides guardian:read_child — narrow slot, D-#69)
   "routine:manage",        // build/edit calendar, rooms, groups, grids, slots (Principal/Office)
@@ -4000,6 +4005,7 @@ export const PERMISSION_BUILD_STATUS: Record<Permission, "build" | "pipeline"> =
   "tracker:write": "build",
   "tracker:export": "build",
   "gift:manage": "build",
+  "homework:void": "build",
   "routine:read": "build",
   "routine:manage": "build",
   "attendance:mark": "build",
@@ -4056,6 +4062,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "set:read", "set:assemble", "set:export",
     "tracker:read", "tracker:write", "tracker:export",
     "gift:manage",           // hand out the assignment weekly gift (AG-1, D-#479–#483) — Principal + Office
+    "homework:void",         // delete a never-issued homework declaration, even on a closed day (D-#741)
     "routine:read", "routine:manage",
     "attendance:manage", // NOT attendance:mark — Principal assigns markers, doesn't mark (D-#64)
     "library:read", "library:manage",
@@ -4127,6 +4134,8 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
                              // handover (AG-1, D-#479–#483). Its OWN permission, NOT tracker:read — D-#554's
                              // "the Office holds no tracker permission" stands; handing out a gift is a desk
                              // job, resolving tracker work is not.
+    "homework:void",         // delete a never-issued homework declaration (D-#741) — the desk's clean-up for
+                             // a teacher's mis-filed item; still NO tracker permission (D-#554).
     "exam:manage", "exam:read", // exam syllabus: create the exam, write and submit a syllabus (SY-1/SY-4). PUBLISH
                              // is refused to Office BY STATE, not by permission — the row must reach
                              // PRINCIPAL_REVIEW and only the Principal moves it on (D-#533, §7.4).
@@ -4318,6 +4327,7 @@ export const PERMISSION_LABELS_BN: Record<Permission, PermissionLabel> = {
   "tracker:write": { name: "ট্র্যাকার এন্ট্রি", desc: "ট্র্যাকারে এন্ট্রি ও আপডেট" },
   "tracker:export": { name: "ট্র্যাকার এক্সপোর্ট", desc: "ট্র্যাকার রিপোর্ট রপ্তানি" },
   "gift:manage": { name: "উপহার পরিচালনা", desc: "সাপ্তাহিক উপহারের বিজয়ী তালিকা দেখা ও উপহার দেওয়া হয়েছে চিহ্নিত করা" },
+  "homework:void": { name: "বাড়ির কাজ মুছে ফেলা", desc: "যে বাড়ির কাজ শিক্ষার্থীদের দেওয়া হয়নি (যেমন ০ প্রশ্ন) তা মুছে ফেলা" },
   "routine:read": { name: "রুটিন দেখা", desc: "ক্লাস রুটিন ও টাইমটেবিল পড়া" },
   "routine:manage": { name: "রুটিন পরিচালনা", desc: "ক্যালেন্ডার, রুম, গ্রিড ও স্লট সম্পাদনা" },
   "attendance:mark": { name: "হাজিরা মার্ক", desc: "সেকশনের অনুপস্থিতি মার্ক করা" },
@@ -4382,6 +4392,7 @@ export const PERMISSION_LABELS_EN: Record<Permission, PermissionLabel> = {
   "tracker:write": { name: "Write trackers", desc: "Enter and update tracker rows" },
   "tracker:export": { name: "Export trackers", desc: "Export tracker reports" },
   "gift:manage": { name: "Manage gifts", desc: "See the weekly gift winners and mark a gift as given" },
+  "homework:void": { name: "Delete unissued homework", desc: "Remove a homework declaration that was never issued to students (e.g. 0 questions)" },
   "routine:read": { name: "Read routine", desc: "View the class routine/timetable" },
   "routine:manage": { name: "Manage routine", desc: "Edit calendar, rooms, grids, slots" },
   "attendance:mark": { name: "Mark attendance", desc: "Mark a section's absentees" },

@@ -3059,6 +3059,55 @@ export const DELETE_HOMEWORK_ITEM = gql<
   }
 `;
 
+/** HW-VOID (D-#741): Principal/Office remove a never-issued declaration — even on a
+ *  reconciled day. Gated on `homework:void`, not on a tracker permission. */
+export const VOID_HOMEWORK_ITEM = gql<
+  { voidHomeworkItem: { itemId: string; hwId: string } },
+  { itemId: string }
+>`
+  mutation VoidHomeworkItem($itemId: String!) {
+    voidHomeworkItem(itemId: $itemId) {
+      itemId
+      hwId
+    }
+  }
+`;
+
+export interface UnissuedHomeworkT {
+  itemId: string;
+  hwId: string;
+  classId: string;
+  className: string;
+  sectionId: string;
+  sectionName: string;
+  subject: string;
+  dateKey: string;
+  timeDecl: number;
+  qCount: number;
+  description: string | null;
+  declaredByName: string;
+}
+
+/** HW-VOID (D-#741): 0-question declarations confirm will never issue (last 30 days). */
+export const UNISSUED_HOMEWORK = gql<{ unissuedHomework: UnissuedHomeworkT[] }, Record<string, never>>`
+  query UnissuedHomework {
+    unissuedHomework {
+      itemId
+      hwId
+      classId
+      className
+      sectionId
+      sectionName
+      subject
+      dateKey
+      timeDecl
+      qCount
+      description
+      declaredByName
+    }
+  }
+`;
+
 export const HW_NIL_DECLARATIONS = gql<
   { homeworkNilDeclarations: HwNilDeclT[] },
   { sectionId: string; classId: string; date: string }
