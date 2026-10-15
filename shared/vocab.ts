@@ -4693,6 +4693,15 @@ export const WORK_CLAIM_REJECT_REASONS = [
 ] as const;
 export type WorkClaimRejectReason = (typeof WORK_CLAIM_REJECT_REASONS)[number];
 
+/** The reasons a teacher may PICK today (D-#742). ALREADY_RECORDED stays in the enum
+ *  only so the 89 historical rejections keep their label — it can never be true when
+ *  chosen: a claim is filed only on DUE/CHASE, and marking the work submitted closes
+ *  the claim as ACCEPTED, so any claim still open is by definition NOT recorded.
+ *  Prod 2026-10-15: teachers used it to mean "yes, the child brought it" and recorded
+ *  nothing — 53 records sat at বাড়ির কাজ আনেনি under a "আগেই জমা লেখা হয়েছে" note. */
+export const WORK_CLAIM_REJECT_REASONS_SELECTABLE: readonly WorkClaimRejectReason[] =
+  WORK_CLAIM_REJECT_REASONS.filter((r) => r !== "ALREADY_RECORDED");
+
 export const WORK_CLAIM_REJECT_REASON_LABELS_BN: Record<WorkClaimRejectReason, string> = {
   NOT_BROUGHT: "খাতা আনেনি",
   NOT_FOUND: "খাতা পাইনি",
