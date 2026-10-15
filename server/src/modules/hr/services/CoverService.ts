@@ -464,15 +464,33 @@ export async function reconcileCoversForTeacher(
     const rows = await StaffCoverSlot.find({ leaveApplicationId: leave._id, dateKey: { $gte: fromKey } }).lean();
     const slotIds = [...new Set(rows.map((r) => r.routineSlotId.toString()))];
     const slots = new Map(
-      ((await RoutineSlot.find({ _id: { $in: slotIds } }).select("effectiveTo").lean()) as Array<{
+      ((await RoutineSlot.find({ _id: { $in: slotIds } }).select("effectiveTo teacherId").lean()) as Array<{
         _id: Types.ObjectId;
         effectiveTo?: Date | null;
+        teacherId?: Types.ObjectId | null;
       }>).map((s) => [s._id.toString(), s]),
     );
     const retiredOn = (r: { routineSlotId: Types.ObjectId; dateKey: string }) => {
       const s = slots.get(r.routineSlotId.toString());
       return !s || (!!s.effectiveTo && localKey(new Date(s.effectiveTo)) < r.dateKey);
     };
+    // D-#743: a slot re-assigned IN PLACE stays live but is no longer this teacher's
+    // period. Prod 2026-10-04: a slot was given to a teacher on leave, then 71 s later
+    // to a colleague; the first teacher's needs_cover row stayed on it and the class
+    // board showed the colleague "On leave" on 10-15.
+    // Rows without an absent teacher (older shape) cannot be judged — left alone.
+    const reassigned = (r: { routineSlotId: Types.ObjectId; absentTeacherUserId?: Types.ObjectId | null }) => {
+      const s = slots.get(r.routineSlotId.toString());
+      return !!s && !!r.absentTeacherUserId && String(s.teacherId ?? "") !== String(r.absentTeacherUserId);
+    };
+
+    // An unapproved row on a period this teacher no longer teaches is simply void. An
+    // APPROVED one is kept: it carries a proxy grant + substitution someone arranged,
+    // and undoing that is an admin decision (the class board ignores it either way).
+    for (const r of rows.filter((x) => !retiredOn(x) && reassigned(x) && x.status !== "approved")) {
+      await StaffCoverSlot.deleteOne({ _id: r._id });
+      out.removed++;
+    }
 
     for (const r of rows.filter(retiredOn)) {
       if (r.status !== "approved") {

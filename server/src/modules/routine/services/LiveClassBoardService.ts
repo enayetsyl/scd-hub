@@ -330,17 +330,27 @@ export async function liveClassBoard(dateStr: string, now: Date = new Date()): P
       .select("slotId coverTeacherId")
       .lean(),
     StaffCoverSlot.find({ routineSlotId: { $in: slotIds }, dateKey })
-      .select("routineSlotId status finalCoverTeacherUserId proposedCoverTeacherId leaveApplicationId")
+      .select("routineSlotId status finalCoverTeacherUserId proposedCoverTeacherId leaveApplicationId absentTeacherUserId")
       .lean(),
     biometricAbsentUserIds(dateKey),
   ]);
+  const slotTeacher = new Map(slots.map((s) => [s._id.toString(), s.teacherId ? s.teacherId.toString() : ""]));
   // A cancelled/rejected leave KEEPS its fan-out rows — `revokeCoversForLeave` resets
   // them to needs_cover rather than deleting them — so only rows whose leave is still
   // live (applied/approved) mean the teacher is out. Without this, a leave filed by
   // mistake and cancelled two minutes later flagged the teacher "On leave" for every
   // day it had spanned (owner report 2026-10-05, Shah Mahfuj Ahmed, 1 Oct–1 Nov).
   const liveLeaveIds = await liveLeaveIdsAmong(allHrCovers.map((c) => c.leaveApplicationId));
-  const hrCovers = allHrCovers.filter((c) => c.leaveApplicationId && liveLeaveIds.has(c.leaveApplicationId.toString()));
+  // …and only a row whose absent teacher still TEACHES the slot (D-#743). A slot
+  // re-assigned in place keeps the previous teacher's row; read naively, the board
+  // pinned that leave on the new teacher (owner report 2026-10-15: a teacher shown
+  // "On leave" for a colleague's leave on a period handed over on 10-04).
+  const hrCovers = allHrCovers.filter(
+    (c) =>
+      c.leaveApplicationId &&
+      liveLeaveIds.has(c.leaveApplicationId.toString()) &&
+      (!c.absentTeacherUserId || c.absentTeacherUserId.toString() === slotTeacher.get(c.routineSlotId.toString())),
+  );
   const subBySlot = new Map(subs.map((s) => [s.slotId.toString(), s.coverTeacherId.toString()]));
   // One HR row per (slot, date) by the fan-out's own guard; a later row wins only if
   // it is the approved one, so approvals are never masked by a stale needs_cover row.

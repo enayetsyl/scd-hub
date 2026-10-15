@@ -103,6 +103,29 @@ describe("reconcileCoversForTeacher", () => {
     expect(mockWriteAudit).not.toHaveBeenCalled();
   });
 
+  test("D-#743: a live slot re-assigned IN PLACE to a colleague drops the absent teacher's unapproved row", async () => {
+    const absent = oid();
+    const colleague = oid();
+    const HANDED = oid();
+    const STILL_MINE = oid();
+    mockRoutineSlotFind.mockResolvedValue([
+      { _id: HANDED, effectiveTo: null, teacherId: colleague },
+      { _id: STILL_MINE, effectiveTo: null, teacherId: absent },
+    ]);
+    const stale = { _id: oid(), routineSlotId: HANDED, dateKey: "2026-10-15", periodNumber: 2, status: "needs_cover", absentTeacherUserId: absent };
+    const keptApproved = {
+      _id: oid(), routineSlotId: HANDED, dateKey: "2026-10-16", periodNumber: 2, status: "approved", absentTeacherUserId: absent, finalCoverTeacherUserId: oid(),
+    };
+    const mine = { _id: oid(), routineSlotId: STILL_MINE, dateKey: "2026-10-15", periodNumber: 3, status: "needs_cover", absentTeacherUserId: absent };
+    const legacy = { _id: oid(), routineSlotId: HANDED, dateKey: "2026-10-17", periodNumber: 2, status: "needs_cover" };
+    mockCoverFind.mockResolvedValue([stale, keptApproved, mine, legacy]);
+
+    const res = await reconcileCoversForTeacher("teacher-user", "2026-10-15", "actor");
+    expect(res.removed).toBe(1);
+    expect(mockCoverDeleteOne).toHaveBeenCalledWith({ _id: stale._id });
+    for (const r of [keptApproved, mine, legacy]) expect(mockCoverDeleteOne).not.toHaveBeenCalledWith({ _id: r._id });
+  });
+
   test("a teacher with no staff profile / no live leave is a no-op", async () => {
     mockResolveStaffForUser.mockResolvedValueOnce(null);
     expect(await reconcileCoversForTeacher("nobody", "2026-10-01", "actor")).toEqual({ created: 0, moved: 0, removed: 0 });
