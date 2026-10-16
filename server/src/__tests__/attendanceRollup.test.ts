@@ -201,6 +201,18 @@ describe("unmarkedSections — pending while ANY covering unit is unmarked", () 
     ]);
   });
 
+  test("withMarkers: false (D-#751) — same pending sections, no marker resolution", async () => {
+    mockDayFind.mockResolvedValue([
+      { dateKey: DATE, subjectGroupId: QAIDA, absentStudentIds: [] },
+      { dateKey: DATE, sectionId: SEC_KG, absentStudentIds: [] },
+    ]);
+    const rows = await unmarkedSections(DATE, { withMarkers: false });
+    expect(rows.map((r) => r.sectionId)).toEqual([SEC_3]);
+    expect(rows[0].pendingUnits).toEqual([expect.objectContaining({ unitId: NAJERA, markerName: null })]);
+    expect(mockMarkerForUnit).not.toHaveBeenCalled();
+    expect(mockUserFindById).not.toHaveBeenCalled();
+  });
+
   test("all units marked → nothing pending", async () => {
     mockDayFind.mockResolvedValue([
       { dateKey: DATE, subjectGroupId: QAIDA, absentStudentIds: [] },

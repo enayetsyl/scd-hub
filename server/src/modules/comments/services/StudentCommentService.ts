@@ -377,8 +377,12 @@ export async function reviewInboxCount(): Promise<number> {
   return StudentComment.countDocuments({ deliveredAt: null, discardedAt: null });
 }
 
-export async function reviewInbox(): Promise<CommentReviewRow[]> {
-  const docs = (await StudentComment.find({ deliveredAt: null, discardedAt: null }).sort({ createdAt: -1 }).lean()) as unknown as IStudentComment[];
+/** `limit` (D-#751): the newest N only — the admin dashboard shows 5 rows beside
+ *  `reviewInboxCount()`, so it need not load and join the whole queue. */
+export async function reviewInbox(limit?: number): Promise<CommentReviewRow[]> {
+  const q = StudentComment.find({ deliveredAt: null, discardedAt: null }).sort({ createdAt: -1 });
+  if (limit != null) q.limit(limit);
+  const docs = (await q.lean()) as unknown as IStudentComment[];
   if (docs.length === 0) return [];
 
   const studentIds = [...new Set(docs.map((d) => d.studentId.toString()))];

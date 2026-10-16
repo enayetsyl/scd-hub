@@ -91,5 +91,7 @@ const ClassTestResultSchema = new Schema<IClassTestResult>(
 ClassTestResultSchema.index({ testId: 1, studentId: 1 }, { unique: true });
 // CS-2: the file read gate reverse-resolves a scan to its owning row.
 ClassTestResultSchema.index({ scriptFileIds: 1 }, { sparse: true });
+// D-#751: the admin dashboard's "submitted, awaiting approval" read (unpublished + submitted).
+ClassTestResultSchema.index({ publishedAt: 1, submittedAt: 1 });
 
 export const ClassTestResult = model<IClassTestResult>("ClassTestResult", ClassTestResultSchema);

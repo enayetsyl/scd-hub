@@ -68,6 +68,10 @@ export interface HwLifecycleFilters {
   classLevel?: number | null;
   subject?: string | null;
   now?: Date;
+  /** D-#751: compute ONLY `backlog` (`teachers` comes back empty). Reads just the
+   *  SUBMITTED records instead of every per-student record in the range — the admin
+   *  dashboard shows the backlog and nothing else. */
+  backlogOnly?: boolean;
 }
 
 export interface HwTeacherLifecycleRow {
@@ -201,18 +205,24 @@ export async function homeworkLifecycleReport(
     .select("sectionId classId classLevel subject status declaredBy dateGiven")
     .lean();
 
+  const backlogOnly = opts.backlogOnly === true;
   const records =
     items.length === 0
       ? []
-      : await HomeworkStudentRecord.find({ hwItemId: { $in: items.map((i) => i._id) } })
+      : await HomeworkStudentRecord.find({
+          hwItemId: { $in: items.map((i) => i._id) },
+          ...(backlogOnly ? { state: "SUBMITTED" } : {}),
+        })
           .select("hwItemId state stateDates chaseCount")
           .lean();
 
   const itemById = new Map(items.map((i) => [i._id.toString(), i]));
   // Attribute every item to its accountable subject teacher (routine), not the
   // declarer (D-#350 owner finding: a Principal's on-behalf entry belongs to the
-  // subject teacher's row).
-  const accById = await accountableTeacherByItem(items as unknown as ItemLite[]);
+  // subject teacher's row). Backlog-only: just the items a SUBMITTED record names.
+  const recordItemIds = new Set(records.map((r) => r.hwItemId.toString()));
+  const attributed = backlogOnly ? items.filter((i) => recordItemIds.has(i._id.toString())) : items;
+  const accById = await accountableTeacherByItem(attributed as unknown as ItemLite[]);
   const teacherOfItem = (it: { _id: { toString(): string }; declaredBy: { toString(): string } }): string =>
     accById.get(it._id.toString()) ?? it.declaredBy.toString();
 
@@ -242,7 +252,7 @@ export async function homeworkLifecycleReport(
     return a;
   };
 
-  for (const it of items) {
+  for (const it of backlogOnly ? [] : items) {
     const a = teacherFor(teacherOfItem(it));
     a.declaredItems += 1;
     if (it.status === "issued") a.issuedItems += 1;
@@ -352,7 +362,13 @@ export async function homeworkLifecycleReport(
     }))
     .sort((a, b) => b.oldestDays - a.oldestDays || b.count - a.count);
 
-  return { fromKey, toKey, backlogThresholdDays: HW_CHECKING_BACKLOG_DAYS, teachers: teacherRows, backlog };
+  return {
+    fromKey,
+    toKey,
+    backlogThresholdDays: HW_CHECKING_BACKLOG_DAYS,
+    teachers: backlogOnly ? [] : teacherRows,
+    backlog,
+  };
 }
 
 /**

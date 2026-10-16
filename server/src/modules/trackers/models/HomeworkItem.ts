@@ -117,5 +117,8 @@ HomeworkItemSchema.index({ classId: 1, dateGiven: 1 });
 // Reverse lookup for the GET /files/:id read gate (which item owns this file?).
 HomeworkItemSchema.index({ attachmentIds: 1 }, { sparse: true });
 HomeworkItemSchema.index({ academicYearId: 1, classLevel: 1, subject: 1 });
+// D-#751: school-wide date-range reads (recon report, lifecycle report, admin dashboard)
+// filter on dateGiven alone — no index above leads with it.
+HomeworkItemSchema.index({ dateGiven: 1, status: 1 });
 
 export const HomeworkItem = model<IHomeworkItem>("HomeworkItem", HomeworkItemSchema);

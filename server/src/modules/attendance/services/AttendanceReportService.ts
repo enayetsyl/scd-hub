@@ -618,8 +618,16 @@ export interface PendingUnit {
  * Active sections still unmarked for the date — a section counts as unmarked while ANY
  * unit holding its students lacks a day record (D-#278). Empty on non-FULL days:
  * attendance isn't expected (AT4.1, D-#50).
+ *
+ * `withMarkers: false` (D-#751) skips the per-unit marker resolution — a sequential
+ * 2–6 queries per pending unit — for callers that only count the sections (the
+ * admin dashboard); `markerTeacherId`/`markerName` then come back null.
  */
-export async function unmarkedSections(dateKey: string): Promise<UnmarkedSection[]> {
+export async function unmarkedSections(
+  dateKey: string,
+  opts: { withMarkers?: boolean } = {},
+): Promise<UnmarkedSection[]> {
+  const withMarkers = opts.withMarkers ?? true;
   const dayType = await resolveDayType(parseDateKey(dateKey));
   if (dayType !== "FULL") return [];
 
@@ -677,7 +685,7 @@ export async function unmarkedSections(dateKey: string): Promise<UnmarkedSection
 
     const pendingUnits: PendingUnit[] = [];
     for (const unit of stillPending) {
-      const marker = await markerForUnit(unit, dateKey);
+      const marker = withMarkers ? await markerForUnit(unit, dateKey) : { teacherId: null };
       const teacher = marker.teacherId ? await User.findById(marker.teacherId).select("name").lean() : null;
       pendingUnits.push({
         unitType: unit.unitType,
