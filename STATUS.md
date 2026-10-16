@@ -1,5 +1,7 @@
 # STATUS
 
+- 2026-10-16 (night): **LIVE + OTA — worksheet feedback round (D-#748): teacher ranges, স্বরবর্ণ/ব্যঞ্জনবর্ণ and Capital/small sub-questions, Bangla two-line + English four-line khata guides, full-width jumbled lines. #1012/#1013/#1015 → #1014 (`734b0f87`), OTA `f2ab287a`.**
+  **Now / next:** PROD picture import (owner must leave auto mode — the VM copy is refused as Remote Shell Writes); then teachers try a real send-to-print.
 - 2026-10-16 (late, cont.): **#1012 (ranges + guide lines, D-#748) merged to dev. BUILT — English capital + small letters as two sub-questions, branch `feat/worksheet-eng-small`.**
   **Now / next:** PR → dev → promote + OTA for both. PROD picture import still pending (auto mode refuses the VM copy).
 - 2026-10-16 (late): **BUILT — worksheet ranges + Bangla guide lines (D-#748), branch `feat/worksheet-ranges`.** From the owner's feedback on the live papers: teacher picks where fill-the-gaps / each jumbled line / each before-after column / the স্বরবর্ণ and ব্যঞ্জনবর্ণ parts start and end; Bangla boxes are ruled with two guide lines; jumbled lines span the page.
