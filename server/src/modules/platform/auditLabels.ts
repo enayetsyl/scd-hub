@@ -380,6 +380,9 @@ export const AUDIT_KIND_LABELS: Record<AuditEventKind, AuditKindLabel> = {
   SCHOLARSHIP_ANALYSIS_EXPORTED: { bn: "শিক্ষার্থীর বিশ্লেষণ নামিয়েছেন", en: "Downloaded a student's analysis", group: "SCHOLARSHIP" },
   // Work board (WB-1, D-#701)
   TASK_WRITE: { bn: "কাজের বোর্ডে কাজ বদলেছেন", en: "Changed a work-board task", group: "HR" },
+  WORKSHEET_SENT_TO_PRINT: { bn: "তৈরি করা প্রশ্নপত্র প্রিন্টে পাঠিয়েছেন", en: "Sent a generated worksheet to print", group: "CONTENT" },
+  WORKSHEET_PLAN_SAVED: { bn: "প্রশ্ন-পরিকল্পনা সংরক্ষণ করেছেন", en: "Saved a worksheet plan", group: "CONTENT" },
+  WORKSHEET_PICTURE_EDITED: { bn: "ছবির ভাণ্ডারে ছবি বদলেছেন", en: "Edited a picture-bank picture", group: "CONTENT" },
 };
 
 const FALLBACK_GROUP: ActivityGroup = "OTHER";

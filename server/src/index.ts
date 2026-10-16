@@ -28,6 +28,7 @@ import { paymentExportCsvRouter } from "./modules/hr/routes/paymentExportCsv";
 import { payrollRegisterXlsxRouter } from "./modules/hr/routes/payrollRegisterXlsx";
 import { paymentAdvicePdfRouter } from "./modules/hr/routes/paymentAdvicePdf";
 import { setPdfRouter } from "./modules/assessment/routes/setPdf";
+import { worksheetPdfRouter } from "./modules/worksheets/routes/worksheetPdf";
 import { englishDrivePdfRouter } from "./modules/english-drive/routes/englishDrivePdf";
 import { archiveCoverPdfRouter } from "./modules/archive/routes/archiveCoverPdf";
 import { studentProfilePdfRouter } from "./modules/trackers/routes/studentProfilePdf";
@@ -162,6 +163,8 @@ app.use("/export", corsForRest);
 // Thin HTTP surface — PDF export (ADR-003, ADR-009)
 app.use("/pdf", pdfRouter);
 app.use("/pdf/set", setPdfRouter);
+// Generated Nursery/KG worksheets + answer keys (D-#747) — under the allowlisted /pdf prefix.
+app.use("/pdf/worksheet", worksheetPdfRouter);
 app.use("/pdf/english-drive", englishDrivePdfRouter);
 app.use("/pdf/student-profile", studentProfilePdfRouter);
 app.use("/pdf/monthly-report", monthlyReportPdfRouter);

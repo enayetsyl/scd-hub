@@ -120,6 +120,9 @@ export const EXPECTED_ERROR_NAMES: ReadonlySet<string> = new Set([
   "SectionMergeError",
   "StudentCommentError",
   "VocabError",
+  // Worksheet generator (D-#744): no published syllabus, a class/subject it does not
+  // cover yet, a bad preset count — input the teacher can fix, never a fault.
+  "WorksheetError",
 ]);
 
 /** The Pothos scope-auth plugin denials surface as "Not authorized ..." text — also expected. */
