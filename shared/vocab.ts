@@ -5000,3 +5000,123 @@ export function loadLevelFor(category: HrCategory | null | undefined, minutes: n
   if (minutes >= t.amber) return "amber";
   return "ok";
 }
+
+// --- WORKSHEET GENERATOR (app-native; Nursery/KG papers in final-exam style, ------
+// D-#744–#747, docs/prd-worksheets.md). NO wire-contract twin: a worksheet is
+// generated in the app from the published exam-syllabus rows, never imported, so
+// there is no envelope mirror and no two-place sync — only /shared + the verifier.
+
+/** What a generated paper is for. FINAL follows the published মানবন্টন row for row;
+ *  ASSIGNMENT and CLASS_TEST take a preset subset of the same rows. */
+export const WORKSHEET_KINDS = ["ASSIGNMENT", "CLASS_TEST", "FINAL"] as const;
+export type WorksheetKind = (typeof WORKSHEET_KINDS)[number];
+export const WORKSHEET_KIND_LABELS_BN: Record<WorksheetKind, string> = {
+  ASSIGNMENT: "অ্যাসাইনমেন্ট",
+  CLASS_TEST: "ক্লাস টেস্ট",
+  FINAL: "বার্ষিক পরীক্ষা",
+};
+export const WORKSHEET_KIND_LABELS_EN: Record<WorksheetKind, string> = {
+  ASSIGNMENT: "Assignment",
+  CLASS_TEST: "Class test",
+  FINAL: "Final exam",
+};
+
+/** The question kinds a syllabus row can be generated as. Each is one rule with a
+ *  few settings (range, how many), never an authored question. MANUAL prints the
+ *  row's label with blank space; ORAL prints nothing but keeps its marks. */
+export const WORKSHEET_ITEM_KINDS = [
+  "WRITE_SEQUENCE",
+  "FILL_MISSING",
+  "REARRANGE",
+  "BEFORE",
+  "AFTER",
+  "BEFORE_AFTER",
+  "PICTURE_FIRST_LETTER",
+  "MATCH_PICTURE_LETTER",
+  "MATCH_PICTURE_WORD",
+  "MATCH_CASE",
+  "MATCH_NUMERAL",
+  "COUNT_PICTURES",
+  "MATCH_COUNT",
+  "ORAL",
+  "MANUAL",
+] as const;
+export type WorksheetItemKind = (typeof WORKSHEET_ITEM_KINDS)[number];
+export const WORKSHEET_ITEM_KIND_LABELS_BN: Record<WorksheetItemKind, string> = {
+  WRITE_SEQUENCE: "ক্রমে লেখা",
+  FILL_MISSING: "খালি ঘর পূরণ",
+  REARRANGE: "এলোমেলো সাজানো",
+  BEFORE: "আগেরটি লেখা",
+  AFTER: "পরেরটি লেখা",
+  BEFORE_AFTER: "আগের ও পরেরটি লেখা",
+  PICTURE_FIRST_LETTER: "ছবি দেখে প্রথম বর্ণ",
+  MATCH_PICTURE_LETTER: "ছবির সাথে বর্ণের মিল",
+  MATCH_PICTURE_WORD: "ছবির সাথে শব্দের মিল",
+  MATCH_CASE: "বড় হাতের ↔ ছোট হাতের",
+  MATCH_NUMERAL: "Number ↔ সংখ্যা",
+  COUNT_PICTURES: "ছবি গুনে সংখ্যা লেখা",
+  MATCH_COUNT: "ছবির সাথে সংখ্যার মিল",
+  ORAL: "মৌখিক (ছাপা হয় না)",
+  MANUAL: "নিজে লিখুন (ফাঁকা জায়গা)",
+};
+export const WORKSHEET_ITEM_KIND_LABELS_EN: Record<WorksheetItemKind, string> = {
+  WRITE_SEQUENCE: "Write in order",
+  FILL_MISSING: "Fill the missing",
+  REARRANGE: "Rearrange",
+  BEFORE: "Write the one before",
+  AFTER: "Write the one after",
+  BEFORE_AFTER: "Before and after",
+  PICTURE_FIRST_LETTER: "Picture → first letter",
+  MATCH_PICTURE_LETTER: "Match picture ↔ letter",
+  MATCH_PICTURE_WORD: "Match picture ↔ word",
+  MATCH_CASE: "Capital ↔ small",
+  MATCH_NUMERAL: "Numeral ↔ Bangla number",
+  COUNT_PICTURES: "Count and write",
+  MATCH_COUNT: "Match picture ↔ number",
+  ORAL: "Oral (not printed)",
+  MANUAL: "Write it yourself (blank space)",
+};
+
+/** The sequence a letter/number kind walks. BAN_ALL = স্বরবর্ণ then ব্যঞ্জনবর্ণ. */
+export const WORKSHEET_AXES = [
+  "BAN_VOWEL",
+  "BAN_CONSONANT",
+  "BAN_ALL",
+  "ENG_UPPER",
+  "ENG_LOWER",
+  "NUM_BN",
+  "NUM_EN",
+] as const;
+export type WorksheetAxis = (typeof WORKSHEET_AXES)[number];
+export const WORKSHEET_AXIS_LABELS_BN: Record<WorksheetAxis, string> = {
+  BAN_VOWEL: "স্বরবর্ণ",
+  BAN_CONSONANT: "ব্যঞ্জনবর্ণ",
+  BAN_ALL: "স্বর + ব্যঞ্জন",
+  ENG_UPPER: "A–Z",
+  ENG_LOWER: "a–z",
+  NUM_BN: "সংখ্যা (বাংলা)",
+  NUM_EN: "Number (English)",
+};
+
+/** Which school book a bank picture was taken from (owner 2026-10-16: the book's
+ *  pictures exactly). ARABIC is reserved for the scanned রওযাতুল আতফাল ১. */
+export const WORKSHEET_PICTURE_BOOKS = ["BAN", "ENG", "MATH_B", "MATH_E", "ARABIC"] as const;
+export type WorksheetPictureBook = (typeof WORKSHEET_PICTURE_BOOKS)[number];
+export const WORKSHEET_PICTURE_BOOK_LABELS_BN: Record<WorksheetPictureBook, string> = {
+  BAN: "বাংলা বই",
+  ENG: "English বই",
+  MATH_B: "গণিত (বাংলা)",
+  MATH_E: "Math (English)",
+  ARABIC: "আরবি বই",
+};
+
+/** What a picture may be used for. FIRST_LETTER/MATCH need a tagged first letter,
+ *  WORD needs a tagged word, COUNT needs nothing but a clean single object. */
+export const WORKSHEET_PICTURE_USES = ["FIRST_LETTER", "MATCH", "WORD", "COUNT"] as const;
+export type WorksheetPictureUse = (typeof WORKSHEET_PICTURE_USES)[number];
+export const WORKSHEET_PICTURE_USE_LABELS_BN: Record<WorksheetPictureUse, string> = {
+  FIRST_LETTER: "ছবি দেখে বর্ণ লেখ",
+  MATCH: "ছবির সাথে বর্ণের মিল",
+  WORD: "ছবির সাথে শব্দের মিল",
+  COUNT: "গণনা",
+};

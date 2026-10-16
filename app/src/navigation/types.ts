@@ -208,6 +208,12 @@ export type PrintStackParamList = {
   NewPrintRequest: { setId?: string; contentArtifactId?: string; title?: string } | undefined;
   /** D-#362 — already-printed documents, one row each, with a reprint action. */
   PrintHistory: undefined;
+  /** D-#744 — generate a Nursery/KG worksheet (assignment / class test / final). */
+  WorksheetGenerate: undefined;
+  /** D-#746 — the book picture bank (tag / hide / reserve: roster:manage). */
+  PictureBank: undefined;
+  /** D-#745 — how each মানবন্টন row is generated + presets (roster:manage). */
+  WorksheetPlan: undefined;
 };
 
 export type AttendanceStackParamList = {
