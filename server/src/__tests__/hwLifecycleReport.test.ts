@@ -204,6 +204,18 @@ describe("homeworkLifecycleReport (D-#350, teacher-first)", () => {
     expect(r.teachers[0].teacherName).toBe("Teacher One");
     expect(r.teachers.some((t) => t.teacherId === PRIN)).toBe(false);
   });
+
+  test("backlogOnly (D-#751): reads only SUBMITTED records, same backlog, no teacher rows", async () => {
+    mockItemFind.mockResolvedValue([item1]);
+    mockRecFind.mockResolvedValue([records[1]]); // what the SUBMITTED-only read returns
+
+    const r = await homeworkLifecycleReport("2026-07-07", "2026-07-13", { now: NOW, backlogOnly: true });
+
+    expect(mockRecFind).toHaveBeenCalledWith(expect.objectContaining({ state: "SUBMITTED" }));
+    expect(r.teachers).toEqual([]);
+    expect(r.backlog).toHaveLength(1);
+    expect(r.backlog[0]).toMatchObject({ subject: "SCI", teacherName: "Teacher One", count: 1, oldestDays: 3 });
+  });
 });
 
 describe("homeworkLifecyclePending (D-#350 drill-down)", () => {

@@ -38,6 +38,29 @@ import { weekNumberFor } from "../assignmentCalendar";
 import { PrintRequest } from "../../printing/models/PrintRequest";
 import { printMatchKey } from "../assignmentPrintMatch";
 
+/** D-#751: the not-declared and not-printed passes walk the SAME rotation weeks — one
+ *  report shares each `expectedItemsForWeek` read (≈5 queries) instead of doing it twice. */
+type WeekLoader = typeof expectedItemsForWeek;
+
+function memoWeekLoader(): WeekLoader {
+  const cache = new Map<string, ReturnType<WeekLoader>>();
+  return (academicYearId, weekNumber) => {
+    const key = `${academicYearId}|${weekNumber}`;
+    let p = cache.get(key);
+    if (!p) {
+      p = expectedItemsForWeek(academicYearId, weekNumber);
+      cache.set(key, p);
+    }
+    return p;
+  };
+}
+
+export interface ReconReportOptions {
+  /** D-#751: skip the D-#459 not-printed pass (`asNotPrinted` comes back empty) —
+   *  for callers that never show it (the admin dashboard). */
+  skipNotPrinted?: boolean;
+}
+
 export interface HwReconMiss {
   dateKey: string;
   sectionId: string;
@@ -209,6 +232,7 @@ async function asNotDeclaredRows(
   fromKey: string,
   toKey: string,
   now: Date,
+  loadWeek: WeekLoader = expectedItemsForWeek,
 ): Promise<Array<Omit<AsNotDeclared, "sectionNameBn"> & { teacherId: string | null }>> {
   const { start, end } = rangeBounds(fromKey, toKey);
   const todayKey = dateKeyOf(now);
@@ -226,7 +250,7 @@ async function asNotDeclaredRows(
     for (let w = wFrom; w <= wTo; w++) {
       let week;
       try {
-        week = await expectedItemsForWeek(sched.academicYearId.toString(), w);
+        week = await loadWeek(sched.academicYearId.toString(), w);
       } catch {
         continue; // schedule vanished between reads — nothing owed
       }
@@ -273,6 +297,7 @@ async function asNotPrintedRows(
   fromKey: string,
   toKey: string,
   now: Date,
+  loadWeek: WeekLoader = expectedItemsForWeek,
 ): Promise<Array<Omit<AsNotPrinted, "sectionNameBn"> & { teacherId: string | null }>> {
   const { start, end } = rangeBounds(fromKey, toKey);
   const todayKey = dateKeyOf(now);
@@ -290,7 +315,7 @@ async function asNotPrintedRows(
     for (let w = wFrom; w <= wTo; w++) {
       let week;
       try {
-        week = await expectedItemsForWeek(sched.academicYearId.toString(), w);
+        week = await loadWeek(sched.academicYearId.toString(), w);
       } catch {
         continue;
       }
@@ -368,11 +393,19 @@ async function hwNotDeclaredRows(
   const { start, end } = rangeBounds(fromKey, toKey);
   const todayKey = dateKeyOf(now);
 
+  // D-#751: only the weekdays the range covers — the loop below skips every other
+  // day's slots anyway, and a one-day read no longer loads the whole week's routine.
+  const rangeDays = new Set<string>();
+  for (let d = new Date(start); d.getTime() <= end.getTime() && rangeDays.size < 7; d.setDate(d.getDate() + 1)) {
+    rangeDays.add(DAYS_OF_WEEK[d.getDay()]);
+  }
+
   const [slots, declared, holidays] = await Promise.all([
     RoutineSlot.find({
       groupType: "section",
       active: true,
       isBreak: false,
+      dayOfWeek: { $in: [...rangeDays] },
       // D-#308: ARABIC is declarable but never EXPECTED — no red row when absent.
       subject: { $in: HW_DECLARATION_EXPECTED_SUBJECTS as readonly string[] },
     })
@@ -450,30 +483,51 @@ export async function reconciliationReport(
   fromKey: string,
   toKey: string,
   now: Date = new Date(),
+  opts: ReconReportOptions = {},
 ): Promise<ReconReport> {
   const { start, end } = rangeBounds(fromKey, toKey);
 
+  // D-#751: the passes below are independent reads — they used to run one after
+  // another (≈10 round-trip stages), which the admin dashboard waited on before
+  // it could start any other card. Only the not-declared pass needs the nil keys.
+  const loadWeek = memoWeekLoader();
+  const asNotDeclP = asNotDeclaredRows(fromKey, toKey, now, loadWeek);
+  const asNotPrintedP = opts.skipNotPrinted
+    ? Promise.resolve([] as Awaited<ReturnType<typeof asNotPrintedRows>>)
+    : asNotPrintedRows(fromKey, toKey, now, loadWeek);
+  // Promise.resolve adopts the Query ONCE — a bare Mongoose Query re-executes on every then/catch.
+  const asItemsP = Promise.resolve(
+    AssignmentItem.find({
+      status: "DRAFT",
+      deliveryDate: { $gte: start, $lte: end },
+    })
+      .select("sectionId weekNumber deliveryDate estMinutes")
+      .lean(),
+  );
+  // Rejections surface at the await below; keep Node from flagging them as unhandled
+  // while the earlier stages are still running.
+  for (const p of [asNotDeclP, asNotPrintedP, asItemsP]) p.catch(() => undefined);
+
   // --- Explicit "no homework today" markers in the range (D-#299) ----------------
-  const nilRows = await HomeworkNilDeclaration.find({
-    dateKey: { $gte: fromKey, $lte: toKey },
-  }).lean();
+  const [nilRows, asNilRows] = await Promise.all([
+    HomeworkNilDeclaration.find({ dateKey: { $gte: fromKey, $lte: toKey } }).lean(),
+    AssignmentNilDeclaration.find({ deliveryDateKey: { $gte: fromKey, $lte: toKey } }).lean(),
+  ]);
   const nilKeys = new Set(
     nilRows.map((r) => `${r.sectionId.toString()}|${r.subject}|${r.dateKey}`),
   );
-  const asNilRows = await AssignmentNilDeclaration.find({
-    deliveryDateKey: { $gte: fromKey, $lte: toKey },
-  }).lean();
 
   // --- Homework never declared at all (routine-expected, per class × subject × day) --
-  const notDeclRaw = await hwNotDeclaredRows(fromKey, toKey, now, nilKeys);
-
   // --- Homework: (class, day) buckets of still-declared items in the range ------
-  const hwItems = await HomeworkItem.find({
-    status: "declared",
-    dateGiven: { $gte: start, $lte: end },
-  })
-    .select("classId sectionId dateGiven timeDecl")
-    .lean();
+  const [notDeclRaw, hwItems] = await Promise.all([
+    hwNotDeclaredRows(fromKey, toKey, now, nilKeys),
+    HomeworkItem.find({
+      status: "declared",
+      dateGiven: { $gte: start, $lte: end },
+    })
+      .select("classId sectionId dateGiven timeDecl")
+      .lean(),
+  ]);
 
   const hwBuckets = new Map<
     string,
@@ -526,12 +580,7 @@ export async function reconciliationReport(
   }
 
   // --- Assignments: (section, week) buckets of still-DRAFT items in the range ---
-  const asItems = await AssignmentItem.find({
-    status: "DRAFT",
-    deliveryDate: { $gte: start, $lte: end },
-  })
-    .select("sectionId weekNumber deliveryDate estMinutes")
-    .lean();
+  const asItems = await asItemsP;
 
   const asBuckets = new Map<
     string,
@@ -556,10 +605,10 @@ export async function reconciliationReport(
   const asPending = [...asBuckets.values()];
 
   // --- D-#309: rotation-expected assignments never declared ----------------------
-  const asNotDeclRaw = await asNotDeclaredRows(fromKey, toKey, now);
+  const asNotDeclRaw = await asNotDeclP;
 
   // --- D-#459: rotation-expected assignments with no matching print request -----
-  const asNotPrintedRaw = await asNotPrintedRows(fromKey, toKey, now);
+  const asNotPrintedRaw = await asNotPrintedP;
 
   // --- Enrich with section/class/confirmer names (one batched pass) -------------
   const info = await sectionInfoMap([

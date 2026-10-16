@@ -23,7 +23,7 @@ import { needsCoverSlots } from "../../hr/services/CoverService";
 import { StaffProfile } from "../../foundation/models/StaffProfile";
 import { ClassroomObservation } from "../../classroom-observation/models/ClassroomObservation";
 import { User } from "../../foundation/models/User";
-import { reviewInbox } from "../../comments/services/StudentCommentService";
+import { reviewInbox, reviewInboxCount } from "../../comments/services/StudentCommentService";
 import { StudentComment } from "../../comments/models/StudentComment";
 import { listPrintQueue } from "../../trackers/services/ClassTestService";
 import { ClassTestResult } from "../../trackers/models/ClassTestResult";
@@ -83,7 +83,11 @@ async function safe(key: string, build: () => Promise<Omit<AdminTodayCard, "key"
 
 async function attendanceCard(dateKey: string): Promise<AdminTodayCard> {
   return safe("attendance", async () => {
-    const [presence, unmarked] = await Promise.all([classPresenceForDate(dateKey), unmarkedSections(dateKey)]);
+    // Count only — the marker names are the chase screen's job (D-#751).
+    const [presence, unmarked] = await Promise.all([
+      classPresenceForDate(dateKey),
+      unmarkedSections(dateKey, { withMarkers: false }),
+    ]);
     const present = presence.reduce((s, c) => s + c.presentCount, 0);
     const absent = presence.reduce((s, c) => s + c.absentCount, 0);
     const rows = presence.map((c) => ({
@@ -103,14 +107,18 @@ async function attendanceCard(dateKey: string): Promise<AdminTodayCard> {
   });
 }
 
-async function hwCycleCard(dateKey: string, recon: ReconReport): Promise<AdminTodayCard> {
+async function hwCycleCard(dateKey: string, reconP: Promise<ReconReport>): Promise<AdminTodayCard> {
   return safe("hwCycle", async () => {
-    const confirmed = (await HomeworkReconciliation.find({
-      reconDate: reconDayKey(parseDateKey(dateKey)),
-      reconState: "reconciled",
-    })
-      .select("classId autoIssued")
-      .lean()) as unknown as Array<{ classId: { toString(): string }; autoIssued?: boolean }>;
+    const [recon, confirmedRaw] = await Promise.all([
+      reconP,
+      HomeworkReconciliation.find({
+        reconDate: reconDayKey(parseDateKey(dateKey)),
+        reconState: "reconciled",
+      })
+        .select("classId autoIssued")
+        .lean(),
+    ]);
+    const confirmed = confirmedRaw as unknown as Array<{ classId: { toString(): string }; autoIssued?: boolean }>;
     const classes = (await Class.find({ _id: { $in: confirmed.map((r) => r.classId) } })
       .select("level")
       .lean()) as unknown as Array<{ _id: { toString(): string }; level: number }>;
@@ -153,7 +161,7 @@ async function hwCycleCard(dateKey: string, recon: ReconReport): Promise<AdminTo
 
 async function hwLifecycleCard(fromKey: string, toKey: string): Promise<AdminTodayCard> {
   return safe("hwLifecycle", async () => {
-    const report = await homeworkLifecycleReport(fromKey, toKey);
+    const report = await homeworkLifecycleReport(fromKey, toKey, { backlogOnly: true });
     const rows = report.backlog.map((b) => ({
       title: `${lvl(b.classLevel)} — ${b.sectionNameBn} · ${b.subject}`,
       subtitle: b.teacherName,
@@ -168,8 +176,9 @@ async function hwLifecycleCard(fromKey: string, toKey: string): Promise<AdminTod
   });
 }
 
-async function assignmentsCard(recon: ReconReport): Promise<AdminTodayCard> {
+async function assignmentsCard(reconP: Promise<ReconReport>): Promise<AdminTodayCard> {
   return safe("assignments", async () => {
+    const recon = await reconP;
     const declareRows = recon.asNotDeclared.map((m) => ({
       title: `${lvl(m.classLevel)} — ${m.sectionNameBn} · ${m.subject}`,
       subtitle: m.teacherName,
@@ -308,8 +317,10 @@ async function commentsCard(dateKey: string): Promise<AdminTodayCard> {
     const dayStart = parseDateKey(dateKey);
     const dayEnd = new Date(dayStart);
     dayEnd.setDate(dayEnd.getDate() + 1);
-    const [inbox, today] = await Promise.all([
-      reviewInbox(),
+    // The newest ROW_CAP rows + a count, not the whole joined queue (D-#751).
+    const [inbox, pending, today] = await Promise.all([
+      reviewInbox(ROW_CAP),
+      reviewInboxCount(),
       StudentComment.countDocuments({ createdAt: { $gte: dayStart, $lt: dayEnd } }),
     ]);
     const rows = inbox.map((c) => ({
@@ -321,9 +332,10 @@ async function commentsCard(dateKey: string): Promise<AdminTodayCard> {
     return {
       badges: [
         { key: "commentsToday", value: today, tone: "info" },
-        { key: "commentsPendingReview", value: inbox.length, tone: inbox.length > 0 ? "warn" : "ok" },
+        { key: "commentsPendingReview", value: pending, tone: pending > 0 ? "warn" : "ok" },
       ],
-      ...cap(rows),
+      rows,
+      moreCount: Math.max(0, pending - rows.length),
     };
   });
 }
@@ -384,14 +396,15 @@ export async function adminToday(dateKey: string, now = new Date()): Promise<Adm
     weekAgo.getDate(),
   ).padStart(2, "0")}`;
 
-  // The recon read serves TWO cards — fetch once, best-effort.
-  let recon: ReconReport;
-  try {
-    recon = await reconciliationReport(dateKey, dateKey, now);
-  } catch (err) {
-    console.error("[adminToday] reconciliationReport failed:", err);
-    recon = { fromKey: dateKey, toKey: dateKey, hwMisses: [], asMisses: [], hwNotDeclared: [], hwNilDeclared: [], asNilDeclared: [], asNotDeclared: [], asNotPrinted: [] };
-  }
+  // The recon read serves TWO cards — fetch once, best-effort. Started, not awaited
+  // (D-#751): the other eight cards no longer wait behind it. The dashboard never
+  // shows the not-printed list, so that pass is skipped.
+  const recon: Promise<ReconReport> = reconciliationReport(dateKey, dateKey, now, { skipNotPrinted: true }).catch(
+    (err) => {
+      console.error("[adminToday] reconciliationReport failed:", err);
+      return { fromKey: dateKey, toKey: dateKey, hwMisses: [], asMisses: [], hwNotDeclared: [], hwNilDeclared: [], asNilDeclared: [], asNotDeclared: [], asNotPrinted: [] };
+    },
+  );
 
   return Promise.all([
     attendanceCard(dateKey),

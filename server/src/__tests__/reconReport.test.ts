@@ -585,6 +585,27 @@ describe("asNotPrinted (D-#459)", () => {
     });
   });
 
+  test("D-#751: each rotation week is read ONCE, shared by the not-declared and not-printed passes", async () => {
+    mockExpectedWeek.mockImplementation((_ay: string, w: number) =>
+      Promise.resolve(expectedWeek(w, { items: w === 1 ? [engItem({ delivered: true })] : [] })),
+    );
+    mockPrintReqFind.mockResolvedValue([]);
+    await reconciliationReport("2026-07-07", "2026-07-13", NOW);
+    const weeks = mockExpectedWeek.mock.calls.map(([ay, w]) => `${ay}|${w}`);
+    expect(weeks.length).toBeGreaterThan(0);
+    expect(new Set(weeks).size).toBe(weeks.length);
+  });
+
+  test("D-#751: skipNotPrinted leaves asNotPrinted empty and never queries print requests", async () => {
+    mockExpectedWeek.mockImplementation((_ay: string, w: number) =>
+      Promise.resolve(expectedWeek(w, { items: w === 1 ? [engItem({ delivered: true })] : [] })),
+    );
+    mockPrintReqFind.mockResolvedValue([]);
+    const r = await reconciliationReport("2026-07-07", "2026-07-13", NOW, { skipNotPrinted: true });
+    expect(r.asNotPrinted).toEqual([]);
+    expect(mockPrintReqFind).not.toHaveBeenCalled();
+  });
+
   test("a declared cell with no print request reports; asNotDeclared stays silent", async () => {
     // The AssignmentItem was declared (delivered: true), yet no print request exists.
     mockExpectedWeek.mockImplementation((_ay: string, w: number) =>

@@ -80,8 +80,13 @@ jest.mock("../modules/foundation/models/User", () => ({
 }));
 
 const mockReviewInbox = jest.fn();
+// The queue mock holds the WHOLE inbox; the service reads only `limit` rows + a count (D-#751).
 jest.mock("../modules/comments/services/StudentCommentService", () => ({
-  reviewInbox: () => mockReviewInbox(),
+  reviewInbox: async (limit?: number) => {
+    const all = (await mockReviewInbox()) ?? [];
+    return limit == null ? all : all.slice(0, limit);
+  },
+  reviewInboxCount: async () => ((await mockReviewInbox()) ?? []).length,
 }));
 const mockCommentCount = jest.fn();
 jest.mock("../modules/comments/models/StudentComment", () => ({

@@ -232,10 +232,9 @@ export type AttendanceStackParamList = {
   SectionPicker: undefined;
 };
 
-/** Guardian portal (GP-2) — the Home tab carries a class-notes history sub-screen. */
+/** Guardian portal (GP-2). The class-notes history moved to its own sidebar tab (D-#750). */
 export type GuardianHomeStackParamList = {
   GuardianHome: undefined;
-  ChildClassNotes: undefined;
   ChildAttendance: undefined;
   ChildFees: undefined;
   ChildLeave: undefined;
@@ -255,6 +254,10 @@ export type GuardianAssignmentsStackParamList = {
 /** D-#732 — the guardian's Class Test tab (upcoming tests + published results). */
 export type GuardianClassTestStackParamList = {
   ChildClassTests: undefined;
+};
+/** D-#750 — the guardian's Class Notes tab (the lesson history, once a Home sub-screen). */
+export type GuardianClassNotesStackParamList = {
+  ChildClassNotes: undefined;
 };
 
 /** Library (LB-4, D-#81–#84). */
@@ -644,4 +647,5 @@ export type TabParamList = {
   GuardianRoutineTab: NavigatorScreenParams<GuardianRoutineStackParamList>;
   GuardianAssignmentsTab: NavigatorScreenParams<GuardianAssignmentsStackParamList>;
   GuardianClassTestTab: NavigatorScreenParams<GuardianClassTestStackParamList>;
+  GuardianClassNotesTab: NavigatorScreenParams<GuardianClassNotesStackParamList>;
 };

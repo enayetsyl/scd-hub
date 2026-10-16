@@ -1,5 +1,7 @@
 # STATUS
 
+- 2026-10-16 (night, cont. 5): **BUILT — guardian Class Notes sidebar item, no Class Test badge, Notices shortcut removed (D-#750); admin dashboard server speedups (D-#751). Branch `feat/dash-perf-guardian-notes` (worktree `C:/w/dpg`).**
+  **Now / next:** PR → `dev` → promote + OTA (the guardian sidebar change needs the phone update). Deferred by the owner: dashboard step 2 (summary-only tiles; confirm the tile list with the admins first), the drawer badge-poll merge, the class-test overdue badge cost, and the APK size levers (drop x86/x86_64, compress native libs, R8; needs an APK release from the keystore laptop).
 - 2026-10-16 (night, cont. 4): **LIVE + OTA — taught-letter checkboxes, maths guide lines, guide lines at real copybook spacing (Bangla 0.8 cm; English 0.4/0.4/0.4 = 1.2 cm). Promotions #1017 + #1019 (`0ae19184`), OTA `77c6ec7d`.**
   **Now / next:** teachers try it; first real send-to-print tests the Drive upload.
 - 2026-10-16 (night, cont. 3): **#1016 (checkboxes + maths lines) LIVE on web via #1017 (`86f80c32`). BUILT — guide lines at real cm spacing, branch `feat/worksheet-guide-cm`.**

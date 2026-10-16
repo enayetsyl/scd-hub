@@ -79,5 +79,7 @@ const StudentCommentSchema = new Schema<IStudentComment>(
 // The child's timeline + the section worklist are the hot reads (newest first).
 StudentCommentSchema.index({ studentId: 1, createdAt: -1 });
 StudentCommentSchema.index({ sectionId: 1, createdAt: -1 });
+// D-#751: the review queue (badge count + dashboard rows) — undelivered, undiscarded, newest first.
+StudentCommentSchema.index({ deliveredAt: 1, discardedAt: 1, createdAt: -1 });
 
 export const StudentComment = model<IStudentComment>("StudentComment", StudentCommentSchema);
