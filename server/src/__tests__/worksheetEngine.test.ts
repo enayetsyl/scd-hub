@@ -276,8 +276,13 @@ describe("teacher ranges (owner 2026-10-16)", () => {
     expect(ranged.sections[0].groups!.map((g) => g.cells.map((c) => c.a).join(""))).toEqual(["ABCDE", "fghij"]);
   });
 
-  it("an English paper is not ruled", () => {
-    expect(gen([{ seq: 1, label: "after", kind: "AFTER", axis: "ENG_UPPER", count: 4, marksEach: 1 }], "ENG").ruled).toBe(false);
+  it("English boxes use the four-line English khata; Bangla the two-line copy; maths stays plain", () => {
+    const eng = gen([{ seq: 1, label: "after", kind: "AFTER", axis: "ENG_UPPER", count: 4, marksEach: 1 }], "ENG");
+    expect([eng.ruled, eng.ruling]).toEqual([true, "ENG"]);
+    const ban = gen([{ seq: 1, label: "পরের", kind: "AFTER", axis: "BAN_ALL", count: 4, marksEach: 1 }], "BAN");
+    expect([ban.ruled, ban.ruling]).toEqual([true, "BAN"]);
+    const math = gen([{ seq: 1, label: "পরের", kind: "AFTER", axis: "NUM_BN", count: 4, marksEach: 1 }], "MATH");
+    expect([math.ruled, math.ruling]).toEqual([false, undefined]);
   });
 });
 
