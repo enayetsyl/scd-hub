@@ -77,6 +77,8 @@ const allText = (doc: WorksheetDoc): string[] => {
   for (const s of doc.sections) {
     s.cells?.forEach((c) => out.push(c.t, c.a ?? ""));
     s.rows?.forEach((r) => r.forEach((c) => out.push(c.t, c.a ?? "")));
+    s.columns?.forEach((col) => col.forEach((r) => r.forEach((c) => out.push(c.t, c.a ?? ""))));
+    s.groups?.forEach((g) => g.cells.forEach((c) => out.push(c.t, c.a ?? "")));
     s.sets?.forEach((x) => out.push(...x.shown, ...x.answer));
     s.pictures?.forEach((p) => out.push(p.a));
     s.right?.forEach((r) => out.push(r));
@@ -134,7 +136,10 @@ describe("generateWorksheet", () => {
     expect(doc.warnings).toEqual([]);
     expect(doc.total).toBe(100);
     expect(doc.sections.map((s) => s.n)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
-    expect(doc.sections[0].cells).toHaveLength(50); // স্বরবর্ণ ১১ + ব্যঞ্জনবর্ণ ৩৯
+    // Owner 2026-10-16: two sub-questions — স্বরবর্ণ ১১ and ব্যঞ্জনবর্ণ ৩৯.
+    expect(doc.sections[0].layout).toBe("groups");
+    expect(doc.sections[0].groups!.map((g) => g.cells.length)).toEqual([11, 39]);
+    expect(doc.ruled).toBe(true);
     expect(doc.sections[9].layout).toBe("oral");
   });
 
@@ -170,7 +175,7 @@ describe("generateWorksheet", () => {
   it("answers 'আগের বর্ণ' along ONE alphabet line (ক comes after ঔ)", () => {
     const seq = axisSequence("BAN_ALL", {});
     const doc = generateWorksheet({ kind: "FINAL", subject: "BAN", rows: [{ seq: 1, label: "আগের বর্ণ লেখ", kind: "BEFORE", axis: "BAN_ALL", count: 49, marksEach: 1 }], scope: {}, seed: 1, pictures: [] });
-    for (const r of doc.sections[0].rows!) {
+    for (const r of doc.sections[0].columns!.flat()) {
       expect(seq.indexOf(r[0].a!)).toBe(seq.indexOf(r[1].t) - 1);
     }
   });
@@ -222,7 +227,62 @@ describe("generateWorksheet", () => {
     const a = generateWorksheet({ kind: "FINAL", subject: "BAN", rows: base, scope: {}, seed: 9, pictures: bank() });
     const b = generateWorksheet({ kind: "FINAL", subject: "BAN", rows: base.map((r) => (r.seq === 5 ? { ...r, count: 6 } : r)), scope: {}, seed: 9, pictures: bank() });
     expect(JSON.stringify(b.sections[1])).toBe(JSON.stringify(a.sections[1]));
-    expect(b.sections[4].rows).toHaveLength(6);
+    expect(b.sections[4].columns!.flat()).toHaveLength(6);
+  });
+});
+
+describe("teacher ranges (owner 2026-10-16)", () => {
+  const gen = (rows: RowSpec[], subject = "BAN") =>
+    generateWorksheet({ kind: "ASSIGNMENT", subject, rows, scope: {}, seed: 3, pictures: [] });
+
+  it("fill-the-gaps shows exactly the chosen first..last letters", () => {
+    const d = gen([{ seq: 1, label: "খালি ঘর", kind: "FILL_MISSING", axis: "BAN_CONSONANT", count: 4, marksEach: 1, ranges: [{ from: "ঙ", to: "ট" }] }]);
+    const cells = d.sections[0].cells!;
+    expect(cells.map((c) => c.t || c.a)).toEqual(["ঙ", "চ", "ছ", "জ", "ঝ", "ঞ", "ট"]);
+    expect(cells[0].t).toBe("ঙ"); // the first cell is always given
+    expect(cells.filter((c) => !c.t)).toHaveLength(4);
+  });
+
+  it("the alphabet row takes a separate range for স্বরবর্ণ and ব্যঞ্জনবর্ণ", () => {
+    const d = gen([{ seq: 1, label: "বর্ণমালা", kind: "WRITE_SEQUENCE", axis: "BAN_ALL", count: 1, marksEach: 15, ranges: [{ from: "অ", to: "ঈ" }, { from: "ক", to: "ঙ" }] }]);
+    expect(d.sections[0].groups!.map((g) => g.cells.map((c) => c.a))).toEqual([["অ", "আ", "ই", "ঈ"], ["ক", "খ", "গ", "ঘ", "ঙ"]]);
+  });
+
+  it("each jumbled line comes from its own range, 5 letters per line", () => {
+    const d = gen([{ seq: 1, label: "সাজাও", kind: "REARRANGE", axis: "BAN_CONSONANT", setSize: 5, count: 10, marksEach: 1, ranges: [{ from: "ক", to: "ঙ" }, { from: "ত", to: "ন" }] }]);
+    const sets = d.sections[0].sets!;
+    expect(sets.map((x) => x.answer)).toEqual([["ক", "খ", "গ", "ঘ", "ঙ"], ["ত", "থ", "দ", "ধ", "ন"]]);
+    expect(sets.every((x) => x.shown.join("") !== x.answer.join(""))).toBe(true);
+  });
+
+  it("before/after columns run top to bottom inside each column range", () => {
+    const d = gen([{ seq: 1, label: "পরের বর্ণ", kind: "AFTER", axis: "BAN_ALL", count: 10, marksEach: 1, ranges: [{ from: "অ", to: "উ" }, { from: "ক", to: "ঙ" }] }]);
+    const [c1, c2] = d.sections[0].columns!;
+    expect(c1.map((r) => r[0].t)).toEqual(["অ", "আ", "ই", "ঈ", "উ"]);
+    expect(c1.map((r) => r[1].a)).toEqual(["আ", "ই", "ঈ", "উ", "ঊ"]);
+    expect(c2.map((r) => r[0].t)).toEqual(["ক", "খ", "গ", "ঘ", "ঙ"]);
+  });
+
+  it("a range the sequence does not know falls back to the automatic choice", () => {
+    const d = gen([{ seq: 1, label: "খালি ঘর", kind: "FILL_MISSING", axis: "BAN_ALL", count: 3, marksEach: 1, ranges: [{ from: "X", to: "" }] }]);
+    expect(d.sections[0].cells!.length).toBeGreaterThan(3);
+    expect(d.warnings).toEqual([]);
+  });
+
+  it("English letter-writing is two sub-questions too: capital letters, then small letters", () => {
+    const whole = gen([{ seq: 1, label: "Write the capital letters A–Z", kind: "WRITE_SEQUENCE", axis: "ENG_UPPER", count: 1, marksEach: 15 }], "ENG");
+    expect(whole.sections[0].groups!.map((g) => [g.label, g.cells.length])).toEqual([["a) Capital letters", 26], ["b) Small letters", 26]]);
+    const ranged = gen([{ seq: 1, label: "Write the letters", kind: "WRITE_SEQUENCE", axis: "ENG_UPPER", count: 1, marksEach: 15, ranges: [{ from: "A", to: "E" }, { from: "f", to: "j" }] }], "ENG");
+    expect(ranged.sections[0].groups!.map((g) => g.cells.map((c) => c.a).join(""))).toEqual(["ABCDE", "fghij"]);
+  });
+
+  it("English boxes use the four-line English khata; Bangla the two-line copy; maths stays plain", () => {
+    const eng = gen([{ seq: 1, label: "after", kind: "AFTER", axis: "ENG_UPPER", count: 4, marksEach: 1 }], "ENG");
+    expect([eng.ruled, eng.ruling]).toEqual([true, "ENG"]);
+    const ban = gen([{ seq: 1, label: "পরের", kind: "AFTER", axis: "BAN_ALL", count: 4, marksEach: 1 }], "BAN");
+    expect([ban.ruled, ban.ruling]).toEqual([true, "BAN"]);
+    const math = gen([{ seq: 1, label: "পরের", kind: "AFTER", axis: "NUM_BN", count: 4, marksEach: 1 }], "MATH");
+    expect([math.ruled, math.ruling]).toEqual([false, undefined]);
   });
 });
 

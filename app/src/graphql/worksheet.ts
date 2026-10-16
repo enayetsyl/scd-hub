@@ -9,6 +9,8 @@ import { gql } from "urql";
 export interface WorksheetPresetRowT {
   seq: number;
   count: number;
+  /** This paper only: per part, where it starts and ends ("" = automatic). */
+  ranges?: Array<{ from: string; to: string }> | null;
 }
 
 export interface WorksheetPlanRowT {

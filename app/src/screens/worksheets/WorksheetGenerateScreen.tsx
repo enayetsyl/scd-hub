@@ -43,6 +43,77 @@ const BAN_CONSONANTS = [
 const ENG_LETTERS = Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i));
 const NUMBER_STOPS = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
 
+interface RangeT {
+  from: string;
+  to: string;
+}
+
+const BN_DIGITS = "০১২৩৪৫৬৭৮৯";
+const BAN_VOWELS = ["অ", "আ", "ই", "ঈ", "উ", "ঊ", "ঋ", "এ", "ঐ", "ও", "ঔ"];
+
+/** The full sequence an axis walks — mirrors server engine/sequences.ts (display form). */
+function axisOptions(axis: string | null): string[] {
+  switch (axis) {
+    case "BAN_VOWEL":
+      return BAN_VOWELS;
+    case "BAN_CONSONANT":
+      return BAN_CONSONANTS;
+    case "BAN_ALL":
+      return [...BAN_VOWELS, ...BAN_CONSONANTS];
+    case "ENG_UPPER":
+      return ENG_LETTERS;
+    case "ENG_LOWER":
+      return ENG_LETTERS.map((l) => l.toLowerCase());
+    case "NUM_BN":
+      return Array.from({ length: 100 }, (_, i) => String(i + 1).replace(/\d/g, (d) => BN_DIGITS[Number(d)]));
+    case "NUM_EN":
+      return Array.from({ length: 100 }, (_, i) => String(i + 1));
+    default:
+      return [];
+  }
+}
+
+/** The parts of a row a teacher can bound — must match the engine's part order. */
+function rangeParts(
+  r: { kind: string; axis: string | null; setSize: number | null },
+  count: number,
+): Array<{ label: string; options: string[] }> {
+  const opts = axisOptions(r.axis);
+  if (!opts.length) return [];
+  const shownLabel = r.axis === "NUM_BN" || r.axis === "NUM_EN" ? STR.wsRangeNumbersShown : STR.wsRangeShown;
+  switch (r.kind) {
+    case "WRITE_SEQUENCE":
+      if (r.axis === "BAN_ALL") {
+        return [
+          { label: STR.wsRangeVowels, options: BAN_VOWELS },
+          { label: STR.wsRangeConsonants, options: BAN_CONSONANTS },
+        ];
+      }
+      if (r.axis === "ENG_UPPER" || r.axis === "ENG_LOWER") {
+        // Two sub-questions, like Bangla: capital letters, then small letters.
+        return [
+          { label: STR.wsRangeCapital, options: ENG_LETTERS },
+          { label: STR.wsRangeSmall, options: ENG_LETTERS.map((l) => l.toLowerCase()) },
+        ];
+      }
+      return [{ label: shownLabel, options: opts }];
+    case "FILL_MISSING":
+      return [{ label: shownLabel, options: opts }];
+    case "REARRANGE": {
+      const numeric = r.axis === "NUM_BN" || r.axis === "NUM_EN";
+      const size = r.setSize ?? (numeric ? 10 : 5);
+      const lines = count < size ? count : Math.max(1, Math.ceil(count / size));
+      return Array.from({ length: Math.min(lines, 20) }, (_, i) => ({ label: `${STR.wsRangeLine} ${bnNum(i + 1)}`, options: opts }));
+    }
+    case "BEFORE":
+    case "AFTER":
+    case "BEFORE_AFTER":
+      return [1, 2].map((n) => ({ label: `${STR.wsRangeColumn} ${bnNum(n)}`, options: opts }));
+    default:
+      return [];
+  }
+}
+
 const newSeed = (): number => Math.floor(Math.random() * 1_000_000_000);
 const kindLabel = (k: string): string =>
   (getActiveLang() === "en" ? WORKSHEET_KIND_LABELS_EN : WORKSHEET_KIND_LABELS_BN)[k as keyof typeof WORKSHEET_KIND_LABELS_BN] ?? k;
@@ -107,13 +178,33 @@ export default function WorksheetGenerateScreen(): React.ReactElement {
   const [showAnswers, setShowAnswers] = useState(false);
   const [forTeacherId, setForTeacherId] = useState<string>("");
 
+  // Owner 2026-10-16: per part (alphabet half / line / column), where it starts and ends.
+  // "" = automatic for that part. Never saved into a preset — this paper only.
+  const [ranges, setRanges] = useState<Record<number, RangeT[]>>({});
+  const [rangeOpen, setRangeOpen] = useState<Record<number, boolean>>({});
+  useEffect(() => setRanges({}), [classId, subject, kind]);
+  const setRange = (seq: number, k: number, patch: Partial<RangeT>): void =>
+    setRanges((cur) => {
+      const list = [...(cur[seq] ?? [])];
+      list[k] = { ...(list[k] ?? { from: "", to: "" }), ...patch };
+      return { ...cur, [seq]: list };
+    });
+
   const rowsVar = useMemo(
     () =>
       Object.entries(picks)
         .filter(([, c]) => c > 0)
-        .map(([seq, count]) => ({ seq: Number(seq), count }))
+        .map(([seq, count]) => {
+          const list = ranges[Number(seq)] ?? [];
+          const used = list.some((r) => r && r.from && r.to);
+          return {
+            seq: Number(seq),
+            count,
+            ...(used ? { ranges: list.map((r) => r ?? { from: "", to: "" }) } : {}),
+          };
+        })
         .sort((a, b) => a.seq - b.seq),
-    [picks],
+    [picks, ranges],
   );
 
   const vars = useMemo(
@@ -282,6 +373,50 @@ export default function WorksheetGenerateScreen(): React.ReactElement {
                   <Muted>
                     × {bnNum(r.marksEach)} = {bnNum(c * r.marksEach)}
                   </Muted>
+                </View>
+              ) : null}
+              {on && rangeParts(r, c).length ? (
+                <View style={{ width: "100%", gap: space(1) }}>
+                  <Button
+                    title={rangeOpen[r.seq] ? STR.wsRangeHide : STR.wsRangeEdit}
+                    variant="ghost"
+                    onPress={() => setRangeOpen((o) => ({ ...o, [r.seq]: !o[r.seq] }))}
+                  />
+                  {rangeOpen[r.seq] ? (
+                    <>
+                      <Muted>{STR.wsRangeHint}</Muted>
+                      {rangeParts(r, c).map((part, k) => {
+                        const cur = ranges[r.seq]?.[k] ?? { from: "", to: "" };
+                        const opts = [
+                          { value: "", label: STR.wsRangeAuto },
+                          ...part.options.map((o) => ({ value: o, label: o })),
+                        ];
+                        return (
+                          <View key={k} style={{ flexDirection: "row", gap: space(2), alignItems: "flex-end", flexWrap: "wrap" }}>
+                            <Body style={{ minWidth: 110, paddingBottom: space(3) }}>{part.label}</Body>
+                            <View style={{ flexGrow: 1, flexBasis: 140 }}>
+                              <Select
+                                label={STR.wsRangeFrom}
+                                value={cur.from}
+                                onChange={(v) => setRange(r.seq, k, { from: v })}
+                                options={opts}
+                                searchable
+                              />
+                            </View>
+                            <View style={{ flexGrow: 1, flexBasis: 140 }}>
+                              <Select
+                                label={STR.wsRangeTo}
+                                value={cur.to}
+                                onChange={(v) => setRange(r.seq, k, { to: v })}
+                                options={opts}
+                                searchable
+                              />
+                            </View>
+                          </View>
+                        );
+                      })}
+                    </>
+                  ) : null}
                 </View>
               ) : null}
             </View>

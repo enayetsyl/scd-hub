@@ -318,7 +318,7 @@ function buildHeader(args: GenerateArgs, plan: PlanView, kind: WorksheetKind, to
     subtitle: args.subtitle?.trim() || null,
     classLine: english
       ? `Class: ${englishClassLabel(plan.classLevel)} · Subject: English`
-      : `শ্রেণি: ${classBn} · বিষয়: ${subjectBn}`,
+      : `শ্রেণি: ${classBn}      বিষয়: ${subjectBn}`,
     meta: args.meta?.trim() || d.meta,
     fullMarks: english ? `Full marks: ${total}` : `পূর্ণমান: ${bnNumber(total)}`,
     nameLabel: english ? "Name" : "নাম",
