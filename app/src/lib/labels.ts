@@ -6122,6 +6122,18 @@ const STR_BN = {
   wsBankHiddenBadge: "লুকানো",
   wsBankReservedBadge: "বার্ষিক",
   wsBankFromBooks: "সব ছবি বিদ্যালয়ের নিজস্ব নার্সারি বই ২০২৬ থেকে নেওয়া।",
+  // Worksheet ranges (owner 2026-10-16)
+  wsRangeEdit: "কোথা থেকে কোথা পর্যন্ত — ঠিক করুন",
+  wsRangeHide: "সীমা লুকান",
+  wsRangeHint: "খালি রাখলে নিজে থেকে বাছাই হবে।",
+  wsRangeFrom: "থেকে",
+  wsRangeTo: "পর্যন্ত",
+  wsRangeAuto: "স্বয়ংক্রিয়",
+  wsRangeLine: "লাইন",
+  wsRangeColumn: "কলাম",
+  wsRangeVowels: "স্বরবর্ণ",
+  wsRangeConsonants: "ব্যঞ্জনবর্ণ",
+  wsRangeShown: "যে বর্ণগুলো দেখাবে",
 } as const;
 
 type StrTable = Record<keyof typeof STR_BN, string>;
@@ -11065,6 +11077,18 @@ const STR_EN: StrTable = {
   wsBankHiddenBadge: "Hidden",
   wsBankReservedBadge: "Final",
   wsBankFromBooks: "Every picture is from the school's own Nursery books 2026.",
+  // Worksheet ranges (owner 2026-10-16)
+  wsRangeEdit: "Set where it starts and ends",
+  wsRangeHide: "Hide ranges",
+  wsRangeHint: "Leave empty to let it choose.",
+  wsRangeFrom: "From",
+  wsRangeTo: "To",
+  wsRangeAuto: "Automatic",
+  wsRangeLine: "Line",
+  wsRangeColumn: "Column",
+  wsRangeVowels: "Vowels",
+  wsRangeConsonants: "Consonants",
+  wsRangeShown: "Letters shown",
 };
 
 /** UI chrome strings — resolves to the active language at read time (Proxy). Use

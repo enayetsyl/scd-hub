@@ -186,8 +186,18 @@ PicturePageRef.implement({
 // Inputs
 // ---------------------------------------------------------------------------
 
+/** One part's first/last letter (or number); empty strings = automatic for that part. */
+const RangeInput = builder.inputType("WorksheetRangeInput", {
+  fields: (t) => ({ from: t.string({ required: true }), to: t.string({ required: true }) }),
+});
+
 const PresetRowInput = builder.inputType("WorksheetPresetRowInput", {
-  fields: (t) => ({ seq: t.int({ required: true }), count: t.int({ required: true }) }),
+  fields: (t) => ({
+    seq: t.int({ required: true }),
+    count: t.int({ required: true }),
+    // Owner 2026-10-16: where each part (alphabet half / line / column) starts and ends.
+    ranges: t.field({ type: [RangeInput], required: false }),
+  }),
 });
 
 const PlanRowInput = builder.inputType("WorksheetPlanRowInput", {

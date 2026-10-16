@@ -16,8 +16,11 @@ import {
   letterInScope,
   numberUpTo,
   ENG_UPPER,
+  BAN_VOWELS,
+  BAN_CONSONANTS,
+  MAX_NUMBER_UP_TO,
 } from "./sequences";
-import type { Cell, GenerateInput, PictureRef, RowSpec, Section, WorksheetDoc } from "./types";
+import type { Cell, GenerateInput, LetterRange, PictureRef, RowSpec, Section, WorksheetDoc } from "./types";
 
 // ---------------------------------------------------------------------------
 // Seeded randomness
@@ -109,30 +112,63 @@ interface Built {
   printed: number | null;
 }
 
+/** The whole axis, ignoring "taught up to" — a teacher's explicit range overrides scope. */
+const fullSequence = (axis: WorksheetAxis): string[] => axisSequence(axis, { numberUpTo: MAX_NUMBER_UP_TO });
+
+/** Indices [lo, hi] of a teacher range inside `seq`, or null when it does not resolve. */
+export function resolveRange(seq: readonly string[], r: LetterRange | null | undefined): [number, number] | null {
+  if (!r || !r.from || !r.to) return null;
+  const a = seq.indexOf(r.from.trim());
+  const b = seq.indexOf(r.to.trim());
+  if (a < 0 || b < 0) return null;
+  return a <= b ? [a, b] : [b, a];
+}
+
+const partRange = (row: RowSpec, k: number): LetterRange | null => row.ranges?.[k] ?? null;
+const blankCells = (run: string[]): Cell[] => run.map((a) => ({ t: "", a }));
+
 function buildWriteSequence(row: RowSpec, c: RowCtx): Built {
   const axis = row.axis ?? "BAN_ALL";
+  if (axis === "BAN_ALL") {
+    // Owner 2026-10-16: স্বরবর্ণ and ব্যঞ্জনবর্ণ are two separate questions under one number,
+    // each with its own first and last letter.
+    const parts: Array<{ label: string; full: string[]; auto: string[] }> = [
+      { label: "ক) স্বরবর্ণ লেখ", full: [...BAN_VOWELS], auto: [...BAN_VOWELS] },
+      { label: "খ) ব্যঞ্জনবর্ণ লেখ", full: [...BAN_CONSONANTS], auto: axisSequence("BAN_CONSONANT", c.input.scope) },
+    ];
+    const groups = parts.map((p, k) => {
+      const rr = resolveRange(p.full, partRange(row, k));
+      const run = rr ? p.full.slice(rr[0], rr[1] + 1) : p.auto;
+      return {
+        label: p.label,
+        note: rangeNote(c.input.subject, axis, run[0], run[run.length - 1]),
+        cols: run.length <= 12 ? run.length : 10,
+        cells: blankCells(run),
+      };
+    });
+    return { section: { layout: "groups", groups }, printed: null };
+  }
+
   const seq = axisSequence(axis, c.input.scope);
-  if (row.count > 1 && row.count < seq.length) {
+  const full = fullSequence(axis);
+  const rr = resolveRange(full, partRange(row, 0));
+  let run: string[];
+  if (rr) {
+    run = full.slice(rr[0], rr[1] + 1);
+  } else if (row.count > 1 && row.count < seq.length) {
     // "১১ থেকে ২৫ পর্যন্ত সংখ্যাগুলো লেখ" — a random window, each cell one mark.
     const start = randInt(c.rng, 0, seq.length - row.count);
-    const run = seq.slice(start, start + row.count);
-    return {
-      section: {
-        layout: "grid",
-        cols: isNumberAxis(axis) ? 5 : 10,
-        note: rangeNote(c.input.subject, axis, run[0], run[run.length - 1]),
-        cells: run.map((a) => ({ t: "", a })),
-      },
-      printed: null,
-    };
+    run = seq.slice(start, start + row.count);
+  } else {
+    // The whole in-scope sequence: one lump of marks.
+    run = seq;
   }
-  // The whole in-scope sequence ("সম্পূর্ণ বর্ণমালা ক্রমে লেখ"): one row, one mark lump.
   return {
     section: {
       layout: "grid",
-      cols: 10,
-      note: rangeNote(c.input.subject, axis, seq[0], seq[seq.length - 1]),
-      cells: seq.map((a) => ({ t: "", a })),
+      cols: isNumberAxis(axis) && run.length <= 30 ? 5 : 10,
+      note: rangeNote(c.input.subject, axis, run[0], run[run.length - 1]),
+      cells: blankCells(run),
     },
     printed: null,
   };
@@ -140,14 +176,24 @@ function buildWriteSequence(row: RowSpec, c: RowCtx): Built {
 
 function buildFillMissing(row: RowSpec, c: RowCtx): Built {
   const axis = row.axis ?? "BAN_ALL";
-  const seq = axisSequence(axis, c.input.scope);
   const numeric = isNumberAxis(axis);
-  const blanksWanted = Math.min(row.count, Math.max(0, seq.length - 2));
-  // A window wide enough that the blanks are surrounded by givens.
-  let win = numeric ? Math.ceil((blanksWanted * 2.5) / 10) * 10 : Math.max(blanksWanted * 2 + 2, 10);
-  win = Math.min(seq.length, Math.max(win, blanksWanted + 2));
-  const start = randInt(c.rng, 0, seq.length - win);
-  const run = seq.slice(start, start + win);
+  const full = fullSequence(axis);
+  const rr = resolveRange(full, partRange(row, 0));
+  let run: string[];
+  if (rr) {
+    // The teacher's range IS the cells shown (owner 2026-10-16).
+    run = full.slice(rr[0], rr[1] + 1);
+  } else {
+    const seq = axisSequence(axis, c.input.scope);
+    const want = Math.min(row.count, Math.max(0, seq.length - 2));
+    // A window wide enough that the blanks are surrounded by givens.
+    let win = numeric ? Math.ceil((want * 2.5) / 10) * 10 : Math.max(want * 2 + 2, 10);
+    win = Math.min(seq.length, Math.max(win, want + 2));
+    const start = randInt(c.rng, 0, seq.length - win);
+    run = seq.slice(start, start + win);
+  }
+  // The first cell is always given — it tells the child where the line starts.
+  const blanksWanted = Math.min(row.count, Math.max(0, run.length - 1));
   const blanks = new Set(pickIndices(c.rng, 1, run.length - 1, blanksWanted));
   const cells: Cell[] = run.map((t, i) => (blanks.has(i) ? { t: "", a: t } : { t }));
   return {
@@ -159,35 +205,71 @@ function buildFillMissing(row: RowSpec, c: RowCtx): Built {
 function buildRearrange(row: RowSpec, c: RowCtx): Built {
   const axis = row.axis ?? "BAN_ALL";
   const seq = axisSequence(axis, c.input.scope);
+  const full = fullSequence(axis);
   const size = Math.max(3, Math.min(row.setSize ?? (isNumberAxis(axis) ? 10 : 5), seq.length));
-  // `count` is either the number of sets ("2 sets × 5") or the letters in total ("5 × 2").
+  // `count` is either the number of lines ("2 sets × 5") or the letters in total ("5 × 2").
   const sets = row.count < size ? row.count : Math.max(1, Math.ceil(row.count / size));
   const out: Array<{ shown: string[]; answer: string[] }> = [];
   for (let k = 0; k < sets; k++) {
-    const start = randInt(c.rng, 0, seq.length - size);
-    const run = seq.slice(start, start + size);
+    // Owner 2026-10-16: the teacher says where each line starts and ends.
+    const rr = resolveRange(full, partRange(row, k));
+    let run: string[];
+    if (rr) {
+      const span = full.slice(rr[0], rr[1] + 1);
+      const st = span.length > size ? randInt(c.rng, 0, span.length - size) : 0;
+      run = span.slice(st, st + size);
+    } else {
+      const start = randInt(c.rng, 0, seq.length - size);
+      run = seq.slice(start, start + size);
+    }
+    if (run.length < 2) continue;
     let shown = shuffle(run, c.rng);
     if (shown.join("|") === run.join("|")) shown = run.slice().reverse();
     out.push({ shown, answer: run });
   }
-  return { section: { layout: "jumble", sets: out }, printed: null };
+  return { section: { layout: "jumble", sets: out }, printed: out.length === sets ? null : out.length };
 }
 
 function buildBeforeAfter(row: RowSpec, c: RowCtx, mode: "BEFORE" | "AFTER" | "BOTH"): Built {
   const axis = row.axis ?? "BAN_ALL";
   const seq = axisSequence(axis, c.input.scope);
+  const full = fullSequence(axis);
   const items = mode === "BOTH" ? Math.ceil(row.count / 2) : row.count;
+  const perColumn = [Math.ceil(items / 2), Math.floor(items / 2)];
   const lo = mode === "AFTER" ? 0 : 1;
-  const hi = mode === "BEFORE" ? seq.length - 1 : seq.length - 2;
-  const picks = pickIndices(c.rng, lo, hi, items);
-  const rows: Cell[][] = picks.map((i) => {
-    if (mode === "BEFORE") return [{ t: "", a: seq[i - 1] }, { t: seq[i] }];
-    if (mode === "AFTER") return [{ t: seq[i] }, { t: "", a: seq[i + 1] }];
-    return [{ t: "", a: seq[i - 1] }, { t: seq[i] }, { t: "", a: seq[i + 1] }];
+  const hiOf = (s: readonly string[]): number => (mode === "BEFORE" ? s.length - 1 : s.length - 2);
+  const used = new Set<string>();
+
+  const columns: Cell[][][] = perColumn.map((n, k) => {
+    // Owner 2026-10-16: the teacher sets where each column starts and ends; the letters
+    // then run top to bottom in book order. Without a range, a random spread as before.
+    const rr = resolveRange(full, partRange(row, k));
+    let base: readonly string[];
+    let picks: number[];
+    if (rr) {
+      base = full;
+      const a = Math.max(rr[0], lo);
+      const b = Math.min(rr[1], hiOf(full));
+      const cand: number[] = [];
+      for (let i = a; i <= b; i++) cand.push(i);
+      picks = cand.length <= n ? cand : shuffle(cand, c.rng).slice(0, n).sort((x, y) => x - y);
+    } else {
+      base = seq;
+      const cand: number[] = [];
+      for (let i = lo; i <= hiOf(seq); i++) if (!used.has(seq[i])) cand.push(i);
+      picks = shuffle(cand, c.rng).slice(0, n);
+    }
+    picks.forEach((i) => used.add(base[i]));
+    return picks.map((i) => {
+      if (mode === "BEFORE") return [{ t: "", a: base[i - 1] }, { t: base[i] }];
+      if (mode === "AFTER") return [{ t: base[i] }, { t: "", a: base[i + 1] }];
+      return [{ t: "", a: base[i - 1] }, { t: base[i] }, { t: "", a: base[i + 1] }];
+    });
   });
-  const printedBlanks = mode === "BOTH" ? picks.length * 2 : picks.length;
+  const itemsPrinted = columns.reduce((s, col) => s + col.length, 0);
+  const printedBlanks = mode === "BOTH" ? itemsPrinted * 2 : itemsPrinted;
   return {
-    section: { layout: "rows", cols: mode === "BOTH" ? 3 : 2, rows },
+    section: { layout: "columns", cols: mode === "BOTH" ? 3 : 2, columns },
     printed: printedBlanks >= row.count ? null : printedBlanks,
   };
 }
@@ -415,5 +497,5 @@ export function generateWorksheet(input: GenerateInput): WorksheetDoc {
     total += marks;
   }
 
-  return { sections, total, pictureIds: [...usedPictures], warnings };
+  return { sections, total, pictureIds: [...usedPictures], warnings, ruled: input.subject === "BAN" };
 }

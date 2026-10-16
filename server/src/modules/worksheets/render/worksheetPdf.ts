@@ -42,6 +42,7 @@ export interface PictureBytes {
 const INK = "#111111";
 const ANSWER = "#9B1C1C";
 const LINE = "#222222";
+const GUIDE = "#8FA3BF";
 
 const MARGIN = 40;
 
@@ -80,6 +81,16 @@ function textWidth(doc: Doc, text: string, size: number): number {
 
 function box(doc: Doc, x: number, y: number, w: number, h: number): void {
   doc.lineWidth(0.8).strokeColor(LINE).rect(x, y, w, h).stroke();
+}
+
+/** A box a child writes in. Bangla papers get two faint handwriting guide lines inside
+ *  (the মাত্রা line and the base line, as on a ruled Bangla copy — owner 2026-10-16). */
+function writeBox(doc: Doc, x: number, y: number, w: number, h: number, ruled: boolean): void {
+  box(doc, x, y, w, h);
+  if (!ruled) return;
+  doc.save().lineWidth(0.4).strokeColor(GUIDE);
+  for (const f of [0.34, 0.74]) doc.moveTo(x + 2, y + h * f).lineTo(x + w - 2, y + h * f).stroke();
+  doc.restore();
 }
 
 function cellText(c: Cell, answers: boolean): { text: string; color: string } {
@@ -153,7 +164,7 @@ export async function renderWorksheetPdf(
         y += 14;
       }
       y += 3;
-      y = drawBody(doc, s, y, W, answers, pictures) + 12;
+      y = drawBody(doc, s, y, W, answers, pictures, !!wsDoc.ruled) + 12;
     }
 
     doc.end();
@@ -164,8 +175,12 @@ function estimateHeight(s: Section): number {
   switch (s.layout) {
     case "grid":
       return Math.ceil((s.cells?.length ?? 0) / (s.cols ?? 10)) * 28;
+    case "groups":
+      return (s.groups ?? []).reduce((h, g) => h + 26 + Math.ceil(g.cells.length / g.cols) * 36, 0);
+    case "columns":
+      return Math.max(0, ...(s.columns ?? []).map((c) => c.length)) * 40;
     case "jumble":
-      return (s.sets?.length ?? 0) * 64;
+      return (s.sets?.length ?? 0) * 76;
     case "rows":
       return Math.ceil((s.rows?.length ?? 0) / 2) * 30;
     case "pictures": {
@@ -190,6 +205,7 @@ function drawBody(
   W: number,
   answers: boolean,
   pictures: PictureBytes,
+  ruled: boolean,
 ): number {
   let y = y0;
   const pageBottom = doc.page.height - MARGIN;
@@ -204,52 +220,102 @@ function drawBody(
     case "grid": {
       const cols = s.cols ?? 10;
       const cw = W / cols;
-      const ch = 28;
+      const ch = ruled ? 36 : 28;
       (s.cells ?? []).forEach((c, i) => {
         const col = i % cols;
         if (col === 0 && i > 0) y += ch;
         if (col === 0) breakIfNeeded(ch);
         const x = MARGIN + col * cw;
-        box(doc, x, y, cw, ch);
+        writeBox(doc, x, y, cw, ch, ruled && !c.t);
         const { text, color } = cellText(c, answers);
         centered(doc, text, x, y, cw, ch, 14, color);
       });
       return y + ((s.cells ?? []).length ? ch : 0);
     }
 
+    case "groups": {
+      // Sub-questions under one number — ক) স্বরবর্ণ, খ) ব্যঞ্জনবর্ণ (owner 2026-10-16).
+      const ch = ruled ? 36 : 28;
+      for (const g of s.groups ?? []) {
+        breakIfNeeded(18 + ch);
+        const lw = line(doc, g.label, MARGIN + 6, y, 11);
+        if (g.note) line(doc, `  (${g.note})`, MARGIN + 6 + lw, y + 1, 9.5, "#444444");
+        y += 16;
+        const cw = W / g.cols;
+        g.cells.forEach((c, i) => {
+          const col = i % g.cols;
+          if (col === 0 && i > 0) y += ch;
+          if (col === 0) breakIfNeeded(ch);
+          const x = MARGIN + col * cw;
+          writeBox(doc, x, y, cw, ch, ruled && !c.t);
+          const { text, color } = cellText(c, answers);
+          centered(doc, text, x, y, cw, ch, 14, color);
+        });
+        y += (g.cells.length ? ch : 0) + 10;
+      }
+      return y - 10;
+    }
+
     case "jumble": {
+      // Owner 2026-10-16: one line per set, the boxes spread across the full page width.
+      const topH = 28;
+      const ansH = ruled ? 38 : 30;
       for (const set of s.sets ?? []) {
-        breakIfNeeded(60);
-        const cw = Math.min(56, W / set.shown.length);
+        breakIfNeeded(topH + ansH + 4);
+        const cw = W / set.shown.length;
         set.shown.forEach((t, i) => {
           const x = MARGIN + i * cw;
-          box(doc, x, y, cw, 26);
-          centered(doc, t, x, y, cw, 26, 14);
-          box(doc, x, y + 26, cw, 30);
-          if (answers) centered(doc, set.answer[i], x, y + 26, cw, 30, 14, ANSWER);
+          box(doc, x, y, cw, topH);
+          centered(doc, t, x, y, cw, topH, 15);
+          writeBox(doc, x, y + topH, cw, ansH, ruled);
+          if (answers) centered(doc, set.answer[i], x, y + topH, cw, ansH, 14, ANSWER);
         });
-        y += 64;
+        y += topH + ansH + 10;
       }
-      return y - 8;
+      return y - 10;
     }
 
     case "rows": {
       const items = s.rows ?? [];
       const colW = W / 2;
-      const cell = 30;
+      const cell = ruled ? 36 : 30;
       items.forEach((row, i) => {
         const col = i % 2;
         if (col === 0 && i > 0) y += cell + 4;
         if (col === 0) breakIfNeeded(cell);
         let x = MARGIN + col * colW + 10;
         for (const c of row) {
-          box(doc, x, y, 44, cell);
+          writeBox(doc, x, y, 48, cell, ruled && !c.t);
           const { text, color } = cellText(c, answers);
-          centered(doc, text, x, y, 44, cell, 14, color);
-          x += 52;
+          centered(doc, text, x, y, 48, cell, 14, color);
+          x += 56;
         }
       });
       return y + (items.length ? cell : 0);
+    }
+
+    case "columns": {
+      // Before/after: column by column, top to bottom, in the order the teacher set.
+      const cols = s.columns ?? [];
+      const colW = W / Math.max(1, cols.length);
+      const cell = ruled ? 36 : 30;
+      const depth = Math.max(0, ...cols.map((c) => c.length));
+      for (let r = 0; r < depth; r++) {
+        breakIfNeeded(cell);
+        cols.forEach((col, k) => {
+          const row = col[r];
+          if (!row) return;
+          let x = MARGIN + k * colW + 10;
+          for (const c of row) {
+            writeBox(doc, x, y, 48, cell, ruled && !c.t);
+            const { text, color } = cellText(c, answers);
+            centered(doc, text, x, y, 48, cell, 14, color);
+            x += 56;
+          }
+        });
+        y += cell + 4;
+      }
+      return y - (depth ? 4 : 0);
     }
 
     case "pictures": {
@@ -290,7 +356,7 @@ function drawBody(
         const img = pictures.get(p.pictureId);
         if (img) doc.image(img, x + 4, y + 4, { fit: [cw - 8, h - 42], align: "center", valign: "center" });
         const bx = x + (cw - 32) / 2;
-        box(doc, bx, y + h - 36, 32, 30);
+        writeBox(doc, bx, y + h - 36, 32, 30, ruled);
         if (answers) centered(doc, p.a, bx, y + h - 36, 32, 30, 14, ANSWER);
       });
       return y + (items.length ? h : 0);

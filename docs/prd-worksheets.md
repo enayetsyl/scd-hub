@@ -41,6 +41,8 @@ those rows into papers:
   published Nursery 2026 BAN/ENG/MATH row correctly (tests pin them). A saved choice applies only
   while the row's wording is unchanged; a changed row is flagged on the plan screen.
 
+**Ranges (D-#748).** For a paper, the teacher may bound each PART of a letter question by its first and last letter: fill-the-gaps (the cells shown), the alphabet row (স্বরবর্ণ and ব্যঞ্জনবর্ণ are two sub-questions, one range each), each jumbled line, and each of the two before/after columns (listed top to bottom). An explicit range overrides "taught up to"; empty = automatic. Bangla writing boxes carry two handwriting guide lines.
+
 ## 3. Roles (no new permission)
 
 - **Generate / preview / send / read the bank:** `tracker:write` (teachers) OR `roster:manage`
