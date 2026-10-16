@@ -50,6 +50,7 @@ import type {
   GuardianRoutineStackParamList,
   GuardianAssignmentsStackParamList,
   GuardianClassTestStackParamList,
+  GuardianClassNotesStackParamList,
   TabParamList,
 } from "./types";
 
@@ -1463,7 +1464,6 @@ function GuardianHomeNavigator(): React.ReactElement {
   return (
       <GuardianHomeStack.Navigator screenOptions={stackOptions}>
         <GuardianHomeStack.Screen name="GuardianHome" component={GuardianHomeScreen} options={{ title: STR.gpToday }} />
-        <GuardianHomeStack.Screen name="ChildClassNotes" component={ChildClassNotesScreen} options={{ title: STR.gpClassNotesHistory }} />
         <GuardianHomeStack.Screen name="ChildAttendance" component={ChildAttendanceScreen} options={{ title: STR.gpAttendance }} />
         <GuardianHomeStack.Screen name="ChildFees" component={ChildFeesScreen} options={{ title: STR.gpFees }} />
         <GuardianHomeStack.Screen name="ChildLeave" component={ChildLeaveScreen} options={{ title: STR.gpLeave }} />
@@ -1509,6 +1509,17 @@ function GuardianClassTestNavigator(): React.ReactElement {
     <GuardianClassTestStack.Navigator screenOptions={stackOptions}>
       <GuardianClassTestStack.Screen name="ChildClassTests" component={ChildClassTestsScreen} options={{ title: STR.tabClassTest }} />
     </GuardianClassTestStack.Navigator>
+  );
+}
+
+// D-#750 — the guardian's Class Notes tab (the lesson history, formerly pushed from Today).
+const GuardianClassNotesStack = createNativeStackNavigator<GuardianClassNotesStackParamList>();
+function GuardianClassNotesNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    <GuardianClassNotesStack.Navigator screenOptions={stackOptions}>
+      <GuardianClassNotesStack.Screen name="ChildClassNotes" component={ChildClassNotesScreen} options={{ title: STR.drawerItemClassNotes }} />
+    </GuardianClassNotesStack.Navigator>
   );
 }
 
@@ -1825,6 +1836,7 @@ export function AppTabs(): React.ReactElement {
           <Drawer.Screen name="GuardianAssignmentsTab" component={GuardianAssignmentsNavigator} />
         ) : null}
         {canGuardian ? <Drawer.Screen name="GuardianClassTestTab" component={GuardianClassTestNavigator} /> : null}
+        {canGuardian ? <Drawer.Screen name="GuardianClassNotesTab" component={GuardianClassNotesNavigator} /> : null}
       </Drawer.Navigator>
     </GuardianChildProvider>
   );

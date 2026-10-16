@@ -283,6 +283,12 @@ export default function GuardianHomeScreen(): React.ReactElement {
       "GuardianClassTestTab",
       { screen: "ChildClassTests" },
     );
+  // D-#750: the lesson history is its own sidebar tab now.
+  const goClassNotes = (): void =>
+    (nav as unknown as { navigate: (name: string, params?: object) => void }).navigate(
+      "GuardianClassNotesTab",
+      { screen: "ChildClassNotes" },
+    );
   const alerts: Array<{ key: string; text: string; tone: "danger" | "warn" | "info"; onPress?: () => void }> = [];
   if (hwChaseCount > 0) {
     alerts.push({ key: "hw", text: `${STR.gpAlertHwChase}: ${bnNum(hwChaseCount)}`, tone: "danger" });
@@ -320,7 +326,6 @@ export default function GuardianHomeScreen(): React.ReactElement {
   const shortcuts = [
     { key: "attendance", title: STR.gpAttendance, onPress: () => nav.navigate("ChildAttendance") },
     { key: "fees", title: STR.gpFees, onPress: () => nav.navigate("ChildFees") },
-    { key: "notices", title: STR.gpNotices, onPress: () => nav.navigate("ChildClassNotes") },
     { key: "leave", title: STR.gpLeave, onPress: () => nav.navigate("ChildLeave") },
     { key: "notifications", title: STR.gpPush, onPress: () => openNotificationCenter() },
   ];
@@ -586,7 +591,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
             <Button
               title={STR.gpPastLessons}
               variant="ghost"
-              onPress={() => nav.navigate("ChildClassNotes")}
+              onPress={goClassNotes}
             />
           </View>
         </Card>
