@@ -1,5 +1,7 @@
 # STATUS
 
+- 2026-10-16 (late, cont.): **#1012 (ranges + guide lines, D-#748) merged to dev. BUILT — English capital + small letters as two sub-questions, branch `feat/worksheet-eng-small`.**
+  **Now / next:** PR → dev → promote + OTA for both. PROD picture import still pending (auto mode refuses the VM copy).
 - 2026-10-16 (late): **BUILT — worksheet ranges + Bangla guide lines (D-#748), branch `feat/worksheet-ranges`.** From the owner's feedback on the live papers: teacher picks where fill-the-gaps / each jumbled line / each before-after column / the স্বরবর্ণ and ব্যঞ্জনবর্ণ parts start and end; Bangla boxes are ruled with two guide lines; jumbled lines span the page.
   **Now / next:** PR → dev → promote + OTA. PROD picture import still pending — auto mode refused copying the bundle to the VM (`[Remote Shell Writes]`); needs the owner out of auto mode.
 - 2026-10-16 (cont.): **LIVE + OTA — worksheet generator (D-#744–#747): #1010 → dev (`b44ce267`), promoted in #1011 (`e90c9574`), prod deploy green; OTA group `1c4b6edd` (runtime 1.1.0, commit e90c9574).** Prod probe: `worksheetPlan` answers "Not authorized" (field live), `/pdf/worksheet/:id` returns API 401 (not the SPA). Bundle grep prod-URL 1 / localhost 0, new screen strings present; sourcemaps "1 of 2" as usual; prior OTA a389b302 ancestor-checked.

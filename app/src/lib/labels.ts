@@ -6134,6 +6134,10 @@ const STR_BN = {
   wsRangeVowels: "স্বরবর্ণ",
   wsRangeConsonants: "ব্যঞ্জনবর্ণ",
   wsRangeShown: "যে বর্ণগুলো দেখাবে",
+  // Worksheet English small letters (owner 2026-10-16)
+  wsRangeCapital: "বড় হাতের অক্ষর (A–Z)",
+  wsRangeSmall: "ছোট হাতের অক্ষর (a–z)",
+  wsRangeNumbersShown: "যে সংখ্যাগুলো দেখাবে",
 } as const;
 
 type StrTable = Record<keyof typeof STR_BN, string>;
@@ -11089,6 +11093,10 @@ const STR_EN: StrTable = {
   wsRangeVowels: "Vowels",
   wsRangeConsonants: "Consonants",
   wsRangeShown: "Letters shown",
+  // Worksheet English small letters (owner 2026-10-16)
+  wsRangeCapital: "Capital letters (A–Z)",
+  wsRangeSmall: "Small letters (a–z)",
+  wsRangeNumbersShown: "Numbers shown",
 };
 
 /** UI chrome strings — resolves to the active language at read time (Proxy). Use

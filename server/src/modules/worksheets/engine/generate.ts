@@ -129,13 +129,20 @@ const blankCells = (run: string[]): Cell[] => run.map((a) => ({ t: "", a }));
 
 function buildWriteSequence(row: RowSpec, c: RowCtx): Built {
   const axis = row.axis ?? "BAN_ALL";
-  if (axis === "BAN_ALL") {
+  const english = axis === "ENG_UPPER" || axis === "ENG_LOWER";
+  if (axis === "BAN_ALL" || english) {
     // Owner 2026-10-16: স্বরবর্ণ and ব্যঞ্জনবর্ণ are two separate questions under one number,
-    // each with its own first and last letter.
-    const parts: Array<{ label: string; full: string[]; auto: string[] }> = [
-      { label: "ক) স্বরবর্ণ লেখ", full: [...BAN_VOWELS], auto: [...BAN_VOWELS] },
-      { label: "খ) ব্যঞ্জনবর্ণ লেখ", full: [...BAN_CONSONANTS], auto: axisSequence("BAN_CONSONANT", c.input.scope) },
-    ];
+    // each with its own first and last letter — and English the same way, capital letters
+    // then small letters ("another option for writing small letters, like Bangla").
+    const parts: Array<{ label: string; full: string[]; auto: string[] }> = english
+      ? [
+          { label: "a) Capital letters", full: [...ENG_UPPER], auto: axisSequence("ENG_UPPER", c.input.scope) },
+          { label: "b) Small letters", full: ENG_UPPER.map((l) => l.toLowerCase()), auto: axisSequence("ENG_LOWER", c.input.scope) },
+        ]
+      : [
+          { label: "ক) স্বরবর্ণ লেখ", full: [...BAN_VOWELS], auto: [...BAN_VOWELS] },
+          { label: "খ) ব্যঞ্জনবর্ণ লেখ", full: [...BAN_CONSONANTS], auto: axisSequence("BAN_CONSONANT", c.input.scope) },
+        ];
     const groups = parts.map((p, k) => {
       const rr = resolveRange(p.full, partRange(row, k));
       const run = rr ? p.full.slice(rr[0], rr[1] + 1) : p.auto;
