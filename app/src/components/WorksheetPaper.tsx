@@ -63,22 +63,31 @@ const box = (w: number | `${number}%`, h: number): ViewStyle => ({
 });
 
 /** Two faint handwriting guide lines (মাত্রা + base line) inside a Bangla writing box. */
-const GUIDES: Record<"BAN" | "ENG", Array<[`${number}%`, string]>> = {
-  BAN: [["34%", "#8FA3BF"], ["74%", "#8FA3BF"]],
-  ENG: [["20%", "#E07A7A"], ["40%", "#7F9BD6"], ["60%", "#7F9BD6"], ["80%", "#E07A7A"]],
+/** One centimetre on screen (CSS reference pixel, 96 dpi) — the preview keeps the real
+ *  copybook spacing (owner 2026-10-16): Bangla two lines 0.8 cm apart; English khata four
+ *  lines, red / blue / blue / red, 0.4 cm apart (1.2 cm first to fourth). */
+const CM_PX = 96 / 2.54;
+const GUIDES: Record<"BAN" | "ENG", Array<[number, string]>> = {
+  BAN: [[0, "#8FA3BF"], [0.8 * CM_PX, "#8FA3BF"]],
+  ENG: [[0, "#E07A7A"], [0.4 * CM_PX, "#7F9BD6"], [0.8 * CM_PX, "#7F9BD6"], [1.2 * CM_PX, "#E07A7A"]],
 };
+/** A ruled writing box tall enough for its guides, as on the printed sheet. */
+const ruledPx = (r: "BAN" | "ENG"): number => Math.round((r === "ENG" ? 1.8 : 1.4) * CM_PX);
 const RulingContext = React.createContext<"BAN" | "ENG">("BAN");
 
+/** The guide lines, centred vertically in the box at their real spacing. */
 function Guides({ on }: { on: boolean }): React.ReactElement | null {
   const ruling = React.useContext(RulingContext);
   if (!on) return null;
+  const lines = GUIDES[ruling];
+  const span = lines[lines.length - 1][0];
   return (
     <>
-      {GUIDES[ruling].map(([top, colour]) => (
+      {lines.map(([off, colour]) => (
         <View
-          key={top}
+          key={off}
           pointerEvents="none"
-          style={{ position: "absolute", left: 2, right: 2, top, height: 1, backgroundColor: colour }}
+          style={{ position: "absolute", left: 2, right: 2, top: "50%", marginTop: off - span / 2, height: 1, backgroundColor: colour }}
         />
       ))}
     </>
@@ -120,7 +129,8 @@ function Body({
   showAnswers: boolean;
   ruled: boolean;
 }): React.ReactElement | null {
-  const ch = ruled ? 46 : 36;
+  const ruling = React.useContext(RulingContext);
+  const ch = ruled ? ruledPx(ruling) : 36;
   const gridOf = (cells: Cell[], cols: number): React.ReactElement => (
     <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
       {cells.map((c, i) => (
@@ -216,7 +226,7 @@ function Body({
                 style={{ flexBasis: 240, flexGrow: 1, borderWidth: 1, borderColor: LINE, padding: 6, flexDirection: "row", alignItems: "center", gap: 8 }}
               >
                 <Repeated uri={pics[p.pictureId]} n={p.repeat} icon={22} />
-                <View style={box(40, 38)}>
+                <View style={box(40, ruled ? ch : 38)}>
                   <Guides on={ruled} />
                   {showAnswers ? <Text style={txt(16, ANSWER)}>{p.a}</Text> : null}
                 </View>
@@ -230,7 +240,7 @@ function Body({
           {items.map((p, i) => (
             <View key={i} style={{ width: 96, borderWidth: 1, borderColor: LINE, alignItems: "center", padding: 4, gap: 4 }}>
               <Pic uri={pics[p.pictureId]} size={70} />
-              <View style={box(36, 38)}>
+              <View style={box(44, ruled ? ch : 38)}>
                 <Guides on={ruled} />
                 {showAnswers ? <Text style={txt(17, ANSWER)}>{p.a}</Text> : null}
               </View>

@@ -43,12 +43,17 @@ const INK = "#111111";
 const ANSWER = "#9B1C1C";
 const LINE = "#222222";
 type Ruling = "BAN" | "ENG";
-/** Guide lines per copybook, as [fraction of box height, colour]. Bangla: মাত্রা + base
- *  line. English khata (owner 2026-10-16 photo): red, blue, blue, red, evenly spaced. */
+/** One centimetre in PDF points — the guide lines are measured like a real copybook. */
+const CM = 72 / 2.54;
+/** Guide lines per copybook, as [offset from the first line, colour] — owner 2026-10-16:
+ *  Bangla two lines 0.8 cm apart (মাত্রা + base line); English khata four lines, red /
+ *  blue / blue / red, 0.4 cm apart, 1.2 cm from the first to the fourth. */
 const GUIDES: Record<Ruling, Array<[number, string]>> = {
-  BAN: [[0.34, "#8FA3BF"], [0.74, "#8FA3BF"]],
-  ENG: [[0.2, "#E07A7A"], [0.4, "#7F9BD6"], [0.6, "#7F9BD6"], [0.8, "#E07A7A"]],
+  BAN: [[0, "#8FA3BF"], [0.8 * CM, "#8FA3BF"]],
+  ENG: [[0, "#E07A7A"], [0.4 * CM, "#7F9BD6"], [0.8 * CM, "#7F9BD6"], [1.2 * CM, "#E07A7A"]],
 };
+/** A ruled writing box tall enough to hold its guides with room above and below. */
+const ruledHeight = (ruling: Ruling): number => (ruling === "ENG" ? 1.8 * CM : 1.4 * CM);
 
 const MARGIN = 40;
 
@@ -94,9 +99,11 @@ function box(doc: Doc, x: number, y: number, w: number, h: number): void {
 function writeBox(doc: Doc, x: number, y: number, w: number, h: number, ruled: boolean, ruling: Ruling = "BAN"): void {
   box(doc, x, y, w, h);
   if (!ruled) return;
+  const guides = GUIDES[ruling];
+  const top = y + (h - guides[guides.length - 1][0]) / 2; // centred in the box
   doc.save().lineWidth(0.6);
-  for (const [f, colour] of GUIDES[ruling]) {
-    doc.strokeColor(colour).moveTo(x + 2, y + h * f).lineTo(x + w - 2, y + h * f).stroke();
+  for (const [off, colour] of guides) {
+    doc.strokeColor(colour).moveTo(x + 2, top + off).lineTo(x + w - 2, top + off).stroke();
   }
   doc.restore();
 }
@@ -229,7 +236,7 @@ function drawBody(
     case "grid": {
       const cols = s.cols ?? 10;
       const cw = W / cols;
-      const ch = ruled ? (ruling === "ENG" ? 42 : 36) : 28;
+      const ch = ruled ? ruledHeight(ruling) : 28;
       (s.cells ?? []).forEach((c, i) => {
         const col = i % cols;
         if (col === 0 && i > 0) y += ch;
@@ -244,7 +251,7 @@ function drawBody(
 
     case "groups": {
       // Sub-questions under one number — ক) স্বরবর্ণ, খ) ব্যঞ্জনবর্ণ (owner 2026-10-16).
-      const ch = ruled ? (ruling === "ENG" ? 42 : 36) : 28;
+      const ch = ruled ? ruledHeight(ruling) : 28;
       for (const g of s.groups ?? []) {
         breakIfNeeded(18 + ch);
         const lw = line(doc, g.label, MARGIN + 6, y, 11);
@@ -268,7 +275,7 @@ function drawBody(
     case "jumble": {
       // Owner 2026-10-16: one line per set, the boxes spread across the full page width.
       const topH = 28;
-      const ansH = ruled ? (ruling === "ENG" ? 44 : 38) : 30;
+      const ansH = ruled ? ruledHeight(ruling) : 30;
       for (const set of s.sets ?? []) {
         breakIfNeeded(topH + ansH + 4);
         const cw = W / set.shown.length;
@@ -287,7 +294,7 @@ function drawBody(
     case "rows": {
       const items = s.rows ?? [];
       const colW = W / 2;
-      const cell = ruled ? (ruling === "ENG" ? 42 : 36) : 30;
+      const cell = ruled ? ruledHeight(ruling) : 30;
       items.forEach((row, i) => {
         const col = i % 2;
         if (col === 0 && i > 0) y += cell + 4;
@@ -307,7 +314,7 @@ function drawBody(
       // Before/after: column by column, top to bottom, in the order the teacher set.
       const cols = s.columns ?? [];
       const colW = W / Math.max(1, cols.length);
-      const cell = ruled ? (ruling === "ENG" ? 42 : 36) : 30;
+      const cell = ruled ? ruledHeight(ruling) : 30;
       const depth = Math.max(0, ...cols.map((c) => c.length));
       for (let r = 0; r < depth; r++) {
         breakIfNeeded(cell);
@@ -347,15 +354,17 @@ function drawBody(
             const iy = y + 6 + Math.floor(k / perRow) * (icon + 3);
             if (img && iy + icon <= y + h) doc.image(img, ix, iy, { fit: [icon, icon], align: "center", valign: "center" });
           }
-          writeBox(doc, x + colW - 46, y + (h - 34) / 2, 38, 34, ruled, ruling);
-          if (answers) centered(doc, p.a, x + colW - 46, y + (h - 34) / 2, 38, 34, 14, ANSWER);
+          const bh = ruled ? ruledHeight(ruling) : 34;
+          writeBox(doc, x + colW - 46, y + (h - bh) / 2, 38, bh, ruled, ruling);
+          if (answers) centered(doc, p.a, x + colW - 46, y + (h - bh) / 2, 38, bh, 14, ANSWER);
         });
         return y + (items.length ? h : 0);
       }
       const cols = 5;
       const gap = 8;
       const cw = (W - gap * (cols - 1)) / cols;
-      const h = 88;
+      const bh = ruled ? ruledHeight(ruling) : 30;
+      const h = 58 + bh;
       items.forEach((p, i) => {
         const col = i % cols;
         if (col === 0 && i > 0) y += h + gap;
@@ -363,10 +372,10 @@ function drawBody(
         const x = MARGIN + col * (cw + gap);
         box(doc, x, y, cw, h);
         const img = pictures.get(p.pictureId);
-        if (img) doc.image(img, x + 4, y + 4, { fit: [cw - 8, h - 42], align: "center", valign: "center" });
-        const bx = x + (cw - 32) / 2;
-        writeBox(doc, bx, y + h - 36, 32, 30, ruled, ruling);
-        if (answers) centered(doc, p.a, bx, y + h - 36, 32, 30, 14, ANSWER);
+        if (img) doc.image(img, x + 4, y + 4, { fit: [cw - 8, h - bh - 12], align: "center", valign: "center" });
+        const bx = x + (cw - 40) / 2;
+        writeBox(doc, bx, y + h - bh - 6, 40, bh, ruled, ruling);
+        if (answers) centered(doc, p.a, bx, y + h - bh - 6, 40, bh, 14, ANSWER);
       });
       return y + (items.length ? h : 0);
     }
