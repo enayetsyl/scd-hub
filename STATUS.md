@@ -1,5 +1,7 @@
 # STATUS
 
+- 2026-10-16 (night, cont. 3): **#1016 (checkboxes + maths lines) LIVE on web via #1017 (`86f80c32`). BUILT — guide lines at real cm spacing, branch `feat/worksheet-guide-cm`.**
+  **Now / next:** PR → dev → promote, then ONE OTA carrying #1016 + this.
 - 2026-10-16 (night, cont. 2): **BUILT — taught-letter checkboxes + maths guide lines (D-#749), branch `feat/worksheet-math-ruling`.**
   **Now / next:** PR → dev → promote + OTA.
 - 2026-10-16 (night, cont.): **PROD DATA — worksheet picture bank loaded (470 pictures, 313 active).** Nursery finals now generate at 100 marks with book pictures in all three subjects.
