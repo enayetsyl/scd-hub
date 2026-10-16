@@ -10,7 +10,7 @@
 import type { WorksheetAxis, WorksheetItemKind, WorksheetKind } from "@scd/shared";
 import { WORKSHEET_ITEM_KINDS, WORKSHEET_AXES } from "@scd/shared";
 import { autoMapRow } from "./autoMap";
-import type { RowSpec } from "./types";
+import type { LetterRange, RowSpec } from "./types";
 
 export interface SyllabusRowIn {
   seq: number;
@@ -33,6 +33,8 @@ export interface SavedRowChoice {
 export interface PresetRow {
   seq: number;
   count: number;
+  /** Teacher ranges for this paper only (never saved into a preset). */
+  ranges?: Array<LetterRange | null> | null;
 }
 
 export interface PlanRow extends RowSpec {
@@ -115,7 +117,16 @@ export function rowsForKind(
     const r = bySeq.get(p.seq);
     if (!r) continue;
     const count = Math.max(1, Math.min(Math.floor(p.count), 50));
-    out.push({ seq: r.seq, label: r.label, kind: r.kind, axis: r.axis, setSize: r.setSize, count, marksEach: r.marksEach });
+    out.push({
+      seq: r.seq,
+      label: r.label,
+      kind: r.kind,
+      axis: r.axis,
+      setSize: r.setSize,
+      count,
+      marksEach: r.marksEach,
+      ...(p.ranges && p.ranges.length ? { ranges: p.ranges.slice(0, 20) } : {}),
+    });
   }
   return out;
 }

@@ -20,11 +20,13 @@ export interface WorksheetSection {
   note?: string | null;
   marks: number;
   kind: string;
-  layout: "grid" | "jumble" | "rows" | "pictures" | "match" | "oral" | "manual";
+  layout: "grid" | "groups" | "jumble" | "rows" | "columns" | "pictures" | "match" | "oral" | "manual";
   cols?: number;
   cells?: Cell[];
   sets?: Array<{ shown: string[]; answer: string[] }>;
   rows?: Cell[][];
+  groups?: Array<{ label: string; note?: string | null; cols: number; cells: Cell[] }>;
+  columns?: Cell[][][];
   pictures?: Array<{ pictureId: string; repeat: number; a: string }>;
   left?: Array<{ pictureId: string | null; repeat: number; t: string | null }>;
   right?: string[];
@@ -37,11 +39,14 @@ export interface WorksheetDocT {
   total: number;
   pictureIds: string[];
   warnings: string[];
+  /** Bangla handwriting guide lines inside writing boxes. */
+  ruled?: boolean;
 }
 
 const INK = "#111111";
 const ANSWER = "#9B1C1C";
 const LINE = "#222222";
+const GUIDE = "#8FA3BF";
 const BN = "০১২৩৪৫৬৭৮৯";
 const num = (n: number, english: boolean): string => (english ? String(n) : String(n).replace(/\d/g, (d) => BN[Number(d)]));
 
@@ -55,6 +60,20 @@ const box = (w: number | `${number}%`, h: number): ViewStyle => ({
   justifyContent: "center",
   backgroundColor: "#FFFFFF",
 });
+
+/** Two faint handwriting guide lines (মাত্রা + base line) inside a Bangla writing box. */
+function Guides({ on }: { on: boolean }): React.ReactElement | null {
+  if (!on) return null;
+  const l = (top: `${number}%`): React.ReactElement => (
+    <View pointerEvents="none" style={{ position: "absolute", left: 2, right: 2, top, height: 1, backgroundColor: GUIDE }} />
+  );
+  return (
+    <>
+      {l("34%")}
+      {l("74%")}
+    </>
+  );
+}
 
 function CellText({ c, showAnswers, size = 17 }: { c: Cell; showAnswers: boolean; size?: number }): React.ReactElement | null {
   if (c.t) return <Text style={txt(size)}>{c.t}</Text>;
@@ -84,39 +103,68 @@ function Body({
   s,
   pics,
   showAnswers,
+  ruled,
 }: {
   s: WorksheetSection;
   pics: Record<string, string>;
   showAnswers: boolean;
+  ruled: boolean;
 }): React.ReactElement | null {
+  const ch = ruled ? 42 : 36;
+  const gridOf = (cells: Cell[], cols: number): React.ReactElement => (
+    <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+      {cells.map((c, i) => (
+        <View key={i} style={[box(`${100 / cols}%`, ch), { marginLeft: i % cols ? -1 : 0, marginTop: i >= cols ? -1 : 0 }]}>
+          <Guides on={ruled && !c.t} />
+          <CellText c={c} showAnswers={showAnswers} />
+        </View>
+      ))}
+    </View>
+  );
+  const itemRow = (row: Cell[], key: number): React.ReactElement => (
+    <View key={key} style={{ flexDirection: "row", gap: 6 }}>
+      {row.map((c, j) => (
+        <View key={j} style={box(44, ch)}>
+          <Guides on={ruled && !c.t} />
+          <CellText c={c} showAnswers={showAnswers} />
+        </View>
+      ))}
+    </View>
+  );
   switch (s.layout) {
-    case "grid": {
-      const cols = s.cols ?? 10;
+    case "grid":
+      return gridOf(s.cells ?? [], s.cols ?? 10);
+    case "groups":
       return (
-        <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
-          {(s.cells ?? []).map((c, i) => (
-            <View key={i} style={[box(`${100 / cols}%`, 36), { marginLeft: i % cols ? -1 : 0, marginTop: i >= cols ? -1 : 0 }]}>
-              <CellText c={c} showAnswers={showAnswers} />
+        <View style={{ gap: 10 }}>
+          {(s.groups ?? []).map((g, k) => (
+            <View key={k} style={{ gap: 4 }}>
+              <Text style={txt(14)}>
+                {g.label}
+                {g.note ? <Text style={txt(12, "#444444")}>{`  (${g.note})`}</Text> : null}
+              </Text>
+              {gridOf(g.cells, g.cols)}
             </View>
           ))}
         </View>
       );
-    }
     case "jumble":
+      // One line per set, boxes spread across the full width (owner 2026-10-16).
       return (
         <View style={{ gap: 10 }}>
           {(s.sets ?? []).map((set, k) => (
             <View key={k}>
               <View style={{ flexDirection: "row" }}>
                 {set.shown.map((t, i) => (
-                  <View key={i} style={[box(44, 34), { marginLeft: i ? -1 : 0 }]}>
+                  <View key={i} style={[box(`${100 / set.shown.length}%`, 34), { marginLeft: i ? -1 : 0 }]}>
                     <Text style={txt(17)}>{t}</Text>
                   </View>
                 ))}
               </View>
               <View style={{ flexDirection: "row", marginTop: -1 }}>
                 {set.answer.map((a, i) => (
-                  <View key={i} style={[box(44, 38), { marginLeft: i ? -1 : 0 }]}>
+                  <View key={i} style={[box(`${100 / set.answer.length}%`, ch), { marginLeft: i ? -1 : 0 }]}>
+                    <Guides on={ruled} />
                     {showAnswers ? <Text style={txt(17, ANSWER)}>{a}</Text> : null}
                   </View>
                 ))}
@@ -129,12 +177,19 @@ function Body({
       return (
         <View style={{ flexDirection: "row", flexWrap: "wrap", rowGap: 6 }}>
           {(s.rows ?? []).map((row, i) => (
-            <View key={i} style={{ width: "50%", minWidth: 150, flexDirection: "row", gap: 6 }}>
-              {row.map((c, j) => (
-                <View key={j} style={box(42, 36)}>
-                  <CellText c={c} showAnswers={showAnswers} />
-                </View>
-              ))}
+            <View key={i} style={{ width: "50%", minWidth: 150 }}>
+              {itemRow(row, i)}
+            </View>
+          ))}
+        </View>
+      );
+    case "columns":
+      // Before/after: each column top to bottom, in the order the teacher set.
+      return (
+        <View style={{ flexDirection: "row", flexWrap: "wrap", rowGap: 12 }}>
+          {(s.columns ?? []).map((col, k) => (
+            <View key={k} style={{ width: "50%", minWidth: 150, gap: 6 }}>
+              {col.map((row, i) => itemRow(row, i))}
             </View>
           ))}
         </View>
@@ -162,7 +217,10 @@ function Body({
           {items.map((p, i) => (
             <View key={i} style={{ width: 96, borderWidth: 1, borderColor: LINE, alignItems: "center", padding: 4, gap: 4 }}>
               <Pic uri={pics[p.pictureId]} size={70} />
-              <View style={box(36, 34)}>{showAnswers ? <Text style={txt(17, ANSWER)}>{p.a}</Text> : null}</View>
+              <View style={box(36, 38)}>
+                <Guides on={ruled} />
+                {showAnswers ? <Text style={txt(17, ANSWER)}>{p.a}</Text> : null}
+              </View>
             </View>
           ))}
         </View>
@@ -253,7 +311,7 @@ export default function WorksheetPaper({
             <Text style={txt(15)}>[{num(s.marks, en)}]</Text>
           </View>
           {s.note ? <Text style={[txt(12, "#444444"), { marginBottom: 4, marginLeft: 12 }]}>({s.note})</Text> : null}
-          <Body s={s} pics={pictures} showAnswers={showAnswers} />
+          <Body s={s} pics={pictures} showAnswers={showAnswers} ruled={!!doc.ruled} />
         </View>
       ))}
     </View>
