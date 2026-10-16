@@ -269,6 +269,13 @@ describe("teacher ranges (owner 2026-10-16)", () => {
     expect(d.warnings).toEqual([]);
   });
 
+  it("English letter-writing is two sub-questions too: capital letters, then small letters", () => {
+    const whole = gen([{ seq: 1, label: "Write the capital letters A–Z", kind: "WRITE_SEQUENCE", axis: "ENG_UPPER", count: 1, marksEach: 15 }], "ENG");
+    expect(whole.sections[0].groups!.map((g) => [g.label, g.cells.length])).toEqual([["a) Capital letters", 26], ["b) Small letters", 26]]);
+    const ranged = gen([{ seq: 1, label: "Write the letters", kind: "WRITE_SEQUENCE", axis: "ENG_UPPER", count: 1, marksEach: 15, ranges: [{ from: "A", to: "E" }, { from: "f", to: "j" }] }], "ENG");
+    expect(ranged.sections[0].groups!.map((g) => g.cells.map((c) => c.a).join(""))).toEqual(["ABCDE", "fghij"]);
+  });
+
   it("an English paper is not ruled", () => {
     expect(gen([{ seq: 1, label: "after", kind: "AFTER", axis: "ENG_UPPER", count: 4, marksEach: 1 }], "ENG").ruled).toBe(false);
   });

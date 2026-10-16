@@ -80,16 +80,25 @@ function rangeParts(
 ): Array<{ label: string; options: string[] }> {
   const opts = axisOptions(r.axis);
   if (!opts.length) return [];
+  const shownLabel = r.axis === "NUM_BN" || r.axis === "NUM_EN" ? STR.wsRangeNumbersShown : STR.wsRangeShown;
   switch (r.kind) {
     case "WRITE_SEQUENCE":
-      return r.axis === "BAN_ALL"
-        ? [
-            { label: STR.wsRangeVowels, options: BAN_VOWELS },
-            { label: STR.wsRangeConsonants, options: BAN_CONSONANTS },
-          ]
-        : [{ label: STR.wsRangeShown, options: opts }];
+      if (r.axis === "BAN_ALL") {
+        return [
+          { label: STR.wsRangeVowels, options: BAN_VOWELS },
+          { label: STR.wsRangeConsonants, options: BAN_CONSONANTS },
+        ];
+      }
+      if (r.axis === "ENG_UPPER" || r.axis === "ENG_LOWER") {
+        // Two sub-questions, like Bangla: capital letters, then small letters.
+        return [
+          { label: STR.wsRangeCapital, options: ENG_LETTERS },
+          { label: STR.wsRangeSmall, options: ENG_LETTERS.map((l) => l.toLowerCase()) },
+        ];
+      }
+      return [{ label: shownLabel, options: opts }];
     case "FILL_MISSING":
-      return [{ label: STR.wsRangeShown, options: opts }];
+      return [{ label: shownLabel, options: opts }];
     case "REARRANGE": {
       const numeric = r.axis === "NUM_BN" || r.axis === "NUM_EN";
       const size = r.setSize ?? (numeric ? 10 : 5);
