@@ -139,6 +139,12 @@ jest.mock("../modules/improvement/services/ImprovementSweepService", () => ({
   emitGuardianMissed: (now: Date) => mockImprovementMissed(now),
   IMPROVEMENT_DIGEST_MINUTES: 11 * 60,
 }));
+// MC-2 (D-#756) — the 08:00 meeting-comment reminders read real models; stubbed the same way.
+const mockMeetingReminders = jest.fn((_now: Date) => Promise.resolve({ notes: 0, summaries: 0 }));
+jest.mock("../modules/comments/services/MeetingChainService", () => ({
+  emitMorningReminders: (now: Date) => mockMeetingReminders(now),
+  MEETING_REMINDER_MINUTES: 8 * 60,
+}));
 
 import {
   runSchedulerTick,
@@ -469,6 +475,36 @@ describe("improvement 11:00 sweep (D-#738)", () => {
     mockResolveDayType.mockResolvedValue(dayType);
     await runSchedulerTick(at(11, 0));
     expect(mockImprovementPending).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Parents'-meeting comment reminders (MC-2, D-#756)
+// ---------------------------------------------------------------------------
+
+describe("meeting comment 08:00 reminders (D-#756)", () => {
+  it("runs at 08:00 on a FULL day and reports both counts", async () => {
+    mockMeetingReminders.mockResolvedValue({ notes: 3, summaries: 1 });
+    const s = await runSchedulerTick(at(8, 0));
+    expect(s.meetingNoteRemindersEmitted).toBe(3);
+    expect(s.meetingSummaryRemindersEmitted).toBe(1);
+  });
+
+  it("reads ONCE per day across the stale window", async () => {
+    await runSchedulerTick(at(8, 0));
+    await runSchedulerTick(at(8, 10));
+    expect(mockMeetingReminders).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not fire before 08:00", async () => {
+    await runSchedulerTick(at(7, 55));
+    expect(mockMeetingReminders).not.toHaveBeenCalled();
+  });
+
+  it.each(["OFF", "HOLIDAY"] as const)("does NOT run on a %s day", async (dayType) => {
+    mockResolveDayType.mockResolvedValue(dayType);
+    await runSchedulerTick(at(8, 0));
+    expect(mockMeetingReminders).not.toHaveBeenCalled();
   });
 });
 

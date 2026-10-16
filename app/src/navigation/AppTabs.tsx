@@ -198,6 +198,12 @@ import CommentEntryScreen from "../screens/comments/CommentEntryScreen";
 import MeetingsListScreen from "../screens/comments/MeetingsListScreen";
 import MeetingAdminScreen from "../screens/comments/MeetingAdminScreen";
 import MeetingComparisonScreen from "../screens/comments/MeetingComparisonScreen";
+import MeetingCommentsScreen from "../screens/comments/MeetingCommentsScreen";
+import MeetingFinalQueueScreen from "../screens/comments/MeetingFinalQueueScreen";
+import MeetingFinalScreen from "../screens/comments/MeetingFinalScreen";
+import MeetingBriefScreen from "../screens/comments/MeetingBriefScreen";
+import MeetingSubjectNoteScreen from "../screens/meetings/MeetingSubjectNoteScreen";
+import MeetingSummaryWriteScreen from "../screens/meetings/MeetingSummaryWriteScreen";
 import ObservationHomeScreen from "../screens/observation/ObservationHomeScreen";
 import MyObservationsScreen from "../screens/observation/MyObservationsScreen";
 import AllObservationsScreen from "../screens/observation/AllObservationsScreen";
@@ -645,6 +651,14 @@ function HomeNavigator(): React.ReactElement {
       {/* D-#710: where the 10:30 digest lands a TEACHER the Principal added to it.
           Second, never first — Today must stay the initial route. */}
       <HomeStack.Screen name="WorkClaimQueue" component={WorkClaimQueueScreen} options={{ title: STR.wcQueueTitle }} />
+      {/* MC-3 (D-#752): opened from the two Today meeting cards. Param-requiring, so
+          never first (the RN initial-route trap) — Today stays the initial route. */}
+      <HomeStack.Screen name="MeetingSubjectNote" component={MeetingSubjectNoteScreen} options={{ title: STR.mcTodayNotesTitle }} />
+      <HomeStack.Screen
+        name="MeetingSummaryWrite"
+        component={MeetingSummaryWriteScreen}
+        options={({ route }) => ({ title: route.params.studentName || STR.mcSummaryCardTitle })}
+      />
     </HomeStack.Navigator>
   );
 }
@@ -1035,6 +1049,19 @@ function CommentsNavigator(): React.ReactElement {
         component={MeetingComparisonScreen}
         options={({ route }) => ({ title: route.params.studentName || STR.cmComparisonTitle })}
       />
+      {/* MC-4 (D-#752..#756): the meeting's comment chain + the meeting-day brief. */}
+      <CommentsStack.Screen
+        name="MeetingComments"
+        component={MeetingCommentsScreen}
+        options={({ route }) => ({ title: `${STR.mcCommentsButton} · ${route.params.instanceLabel}` })}
+      />
+      <CommentsStack.Screen name="MeetingFinalQueue" component={MeetingFinalQueueScreen} options={{ title: STR.mcFinalQueueTitle }} />
+      <CommentsStack.Screen
+        name="MeetingFinal"
+        component={MeetingFinalScreen}
+        options={({ route }) => ({ title: route.params.studentName || STR.mcFinalQueueTitle })}
+      />
+      <CommentsStack.Screen name="MeetingBrief" component={MeetingBriefScreen} options={{ title: STR.mcBriefTitle }} />
     </CommentsStack.Navigator>
   );
 }

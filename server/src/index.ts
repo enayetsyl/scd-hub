@@ -32,6 +32,7 @@ import { worksheetPdfRouter } from "./modules/worksheets/routes/worksheetPdf";
 import { englishDrivePdfRouter } from "./modules/english-drive/routes/englishDrivePdf";
 import { archiveCoverPdfRouter } from "./modules/archive/routes/archiveCoverPdf";
 import { studentProfilePdfRouter } from "./modules/trackers/routes/studentProfilePdf";
+import { meetingBriefPdfRouter } from "./modules/comments/routes/meetingBriefPdf";
 import { monthlyReportPdfRouter } from "./modules/reports/routes/monthlyReportPdf";
 import { monthlyCommentExportRouter } from "./modules/reports/routes/monthlyCommentExport";
 import { scholarshipAnalysisExportRouter } from "./modules/scholarship/routes/scholarshipAnalysisExport";
@@ -167,6 +168,8 @@ app.use("/pdf/set", setPdfRouter);
 app.use("/pdf/worksheet", worksheetPdfRouter);
 app.use("/pdf/english-drive", englishDrivePdfRouter);
 app.use("/pdf/student-profile", studentProfilePdfRouter);
+// Parents'-meeting brief (MC-2, D-#755) — under the allowlisted /pdf prefix.
+app.use("/pdf/meeting-brief", meetingBriefPdfRouter);
 app.use("/pdf/monthly-report", monthlyReportPdfRouter);
 app.use("/export/monthly-comments", monthlyCommentExportRouter);
 // Under the ALREADY-ALLOWLISTED /export prefix on the VM's Caddyfile — a new top-level

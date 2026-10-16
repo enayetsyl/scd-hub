@@ -195,6 +195,14 @@ export default function MeetingAdminScreen({ route }: Props): React.ReactElement
             {slots.length > 0 ? (
               <Button title={STR.cmDispatch} variant="secondary" onPress={onDispatch} disabled={busy} />
             ) : null}
+            {/* MC-4 (D-#752..#756): the comment chain — collection, progress, finals. */}
+            {meeting ? (
+              <Button
+                title={STR.mcCommentsButton}
+                variant="secondary"
+                onPress={() => nav.navigate("MeetingComments", { meetingId, instanceLabel: meeting.instanceLabel })}
+              />
+            ) : null}
           </View>
         </Card>
 
@@ -376,22 +384,15 @@ export default function MeetingAdminScreen({ route }: Props): React.ReactElement
                   </View>
                 ) : null}
 
-                {/* Per-child comparison link */}
+                {/* MC-4 (D-#754): the meeting-day brief for this family — every child of the
+                    slot as a tab; it carries the whole comment chain and the numbers, so it
+                    replaces the per-child comparison link here. */}
                 <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: space(2) }}>
-                  {s.studentIds.map((sid, idx) => (
-                    <Button
-                      key={sid}
-                      title={`${STR.cmComparison}: ${names[idx]}`}
-                      variant="ghost"
-                      onPress={() =>
-                        nav.navigate("MeetingComparison", {
-                          meetingId,
-                          studentId: sid,
-                          studentName: names[idx],
-                        })
-                      }
-                    />
-                  ))}
+                  <Button
+                    title={`${STR.mcBriefButton}: ${names.join(", ")}`}
+                    variant="ghost"
+                    onPress={() => nav.navigate("MeetingBrief", { meetingId, studentIds: s.studentIds })}
+                  />
                 </View>
               </Card>
               </React.Fragment>

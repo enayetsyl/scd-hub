@@ -227,6 +227,12 @@ export const AUDIT_KIND_LABELS: Record<AuditEventKind, AuditKindLabel> = {
   PARENT_MEETING_SCHEDULED: { bn: "অভিভাবক সভা ঘোষণা করেছেন", en: "Scheduled a parents' meeting", group: "MESSAGING" },
   MEETING_SLOT_ATTENDANCE_SET: { bn: "সভায় উপস্থিতি লিখেছেন", en: "Set meeting slot attendance", group: "MESSAGING" },
   MEETING_COMMENT_SAVED: { bn: "সভার জন্য মন্তব্য লিখেছেন", en: "Saved a meeting comment", group: "MESSAGING" },
+  MEETING_COMMENTS_OPENED: { bn: "সভার মন্তব্য সংগ্রহ শুরু করেছেন", en: "Opened meeting comment collection", group: "MESSAGING" },
+  MEETING_COMMENT_ROSTER_REFRESHED: { bn: "সভার মন্তব্যের শিক্ষক তালিকা হালনাগাদ করেছেন", en: "Refreshed the meeting comment teacher list", group: "MESSAGING" },
+  MEETING_SUBJECT_SKIPPED: { bn: "সভার মন্তব্যে একটি বিষয় বাদ দিয়েছেন", en: "Skipped a subject for meeting comments", group: "MESSAGING" },
+  MEETING_SUBJECT_NOTE_SAVED: { bn: "সভার জন্য বিষয় শিক্ষকের মন্তব্য লিখেছেন", en: "Saved a subject teacher's meeting comment", group: "MESSAGING" },
+  MEETING_FINAL_COMMENT_SAVED: { bn: "সভার চূড়ান্ত মন্তব্য লিখেছেন", en: "Saved a final meeting comment", group: "MESSAGING" },
+  MEETING_NOTE_REMINDER_SENT: { bn: "সভার মন্তব্যের রিমাইন্ডার পাঠিয়েছেন", en: "Sent a meeting comment reminder", group: "MESSAGING" },
 
   // --- Monthly reports ------------------------------------------------------
   MONTHLY_REPORT_CONFIG_SET: { bn: "মাসিক রিপোর্টের নিয়ম বদলেছেন", en: "Set the monthly-report config", group: "REPORTS" },

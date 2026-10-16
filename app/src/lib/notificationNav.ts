@@ -206,6 +206,10 @@ export function notificationTarget(
       // The class teacher: the student's progress page needs roster:manage, so the row
       // lands on their Today; the notification text names the child and the subject.
       return { tab: "HomeTab", screen: "Today" };
+    // MC-2 (D-#756) parents'-meeting comment reminders — both cards live on Today.
+    case "MEETING_NOTE_REMINDER":
+    case "MEETING_SUMMARY_REMINDER":
+      return { tab: "HomeTab", screen: "Today" };
     case "VOCAB_RESULT":
       return guardian
         ? { tab: "GuardianHomeTab", screen: "GuardianHome" }

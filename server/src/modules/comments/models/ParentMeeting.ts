@@ -43,6 +43,22 @@ export interface IMeetingBreak {
   endMinutes: number;
 }
 
+/**
+ * The comment chain's collection window (MC-1, docs/prd-meeting-comments.md, D-#753).
+ * Absent until the Office/Principal opens collection; the roster of who comments on
+ * whom lives in `MeetingSubjectNote` rows built at that moment.
+ */
+export interface IMeetingCommentCollection {
+  openedAt: Date;
+  openedBy: Types.ObjectId;
+  /** `YYYY-MM-DD` — subject teachers' notes due. */
+  subjectDueKey: string;
+  /** `YYYY-MM-DD` — class teachers' summaries due. */
+  summaryDueKey: string;
+  /** When the roster was last (re)built from the routine. */
+  rosterBuiltAt: Date;
+}
+
 export interface IParentMeeting extends Document {
   _id: Types.ObjectId;
   academicYearId: Types.ObjectId;
@@ -53,6 +69,7 @@ export interface IParentMeeting extends Document {
   breaks: IMeetingBreak[];
   status: ParentMeetingStatus;
   includeScope: IMeetingScope;
+  commentCollection?: IMeetingCommentCollection | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -78,6 +95,19 @@ const ParentMeetingSchema = new Schema<IParentMeeting>(
     includeScope: {
       classIds: { type: [Schema.Types.ObjectId], ref: "Class", default: [] },
       sectionIds: { type: [Schema.Types.ObjectId], ref: "Section", default: [] },
+    },
+    commentCollection: {
+      type: new Schema(
+        {
+          openedAt: { type: Date, required: true },
+          openedBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
+          subjectDueKey: { type: String, required: true },
+          summaryDueKey: { type: String, required: true },
+          rosterBuiltAt: { type: Date, required: true },
+        },
+        { _id: false },
+      ),
+      default: null,
     },
   },
   { timestamps: true },

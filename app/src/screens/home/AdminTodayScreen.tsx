@@ -23,6 +23,8 @@ import { UnissuedHomeworkCard } from "../../components/UnissuedHomeworkCard";
 import { CtScriptOfficeCard } from "../../components/CtScriptOfficeCard";
 import { ImprovementTasksOfficeCard } from "../../components/ImprovementTasksOfficeCard";
 import { ImprovementTasksTeacherCard } from "../../components/ImprovementTasksTeacherCard";
+import { MeetingNotesTeacherCard } from "../../components/MeetingNotesTeacherCard";
+import { MeetingSummaryTeacherCard } from "../../components/MeetingSummaryTeacherCard";
 import { useAuth } from "../../auth/AuthContext";
 import { STR, bnNum, dayOfWeekLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
@@ -215,6 +217,11 @@ export default function AdminTodayScreen(): React.ReactElement {
             on the teacher's behalf; and any task this person was given to do themselves. */}
         {can("roster:manage") ? <ImprovementTasksOfficeCard /> : null}
         <ImprovementTasksTeacherCard />
+
+        {/* MC-3 (D-#752) — a Principal who also teaches (or class-teaches) gets the same
+            meeting-comment cards; each renders nothing when the caller owes nothing. */}
+        {can("tracker:write") ? <MeetingNotesTeacherCard /> : null}
+        {can("tracker:write") ? <MeetingSummaryTeacherCard /> : null}
 
         {/* HW-VOID (D-#741) — homework declared with 0 questions (usually a class note
             filed as homework): confirm never issues it; delete it here. Hidden when none. */}
