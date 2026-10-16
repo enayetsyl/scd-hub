@@ -504,5 +504,8 @@ export function generateWorksheet(input: GenerateInput): WorksheetDoc {
     total += marks;
   }
 
-  return { sections, total, pictureIds: [...usedPictures], warnings, ruled: input.subject === "BAN" };
+  // Owner 2026-10-16: Bangla boxes as a Bangla copy (two lines); English letter, word and
+  // writing boxes as an English khata (four lines). Maths boxes stay plain.
+  const ruling = input.subject === "BAN" ? "BAN" : input.subject === "ENG" ? "ENG" : undefined;
+  return { sections, total, pictureIds: [...usedPictures], warnings, ruled: !!ruling, ...(ruling ? { ruling } : {}) };
 }

@@ -39,14 +39,15 @@ export interface WorksheetDocT {
   total: number;
   pictureIds: string[];
   warnings: string[];
-  /** Bangla handwriting guide lines inside writing boxes. */
+  /** Handwriting guide lines inside writing boxes. */
   ruled?: boolean;
+  /** BAN = two blue lines; ENG = the four-line English khata (red, blue, blue, red). */
+  ruling?: "BAN" | "ENG";
 }
 
 const INK = "#111111";
 const ANSWER = "#9B1C1C";
 const LINE = "#222222";
-const GUIDE = "#8FA3BF";
 const BN = "০১২৩৪৫৬৭৮৯";
 const num = (n: number, english: boolean): string => (english ? String(n) : String(n).replace(/\d/g, (d) => BN[Number(d)]));
 
@@ -62,15 +63,24 @@ const box = (w: number | `${number}%`, h: number): ViewStyle => ({
 });
 
 /** Two faint handwriting guide lines (মাত্রা + base line) inside a Bangla writing box. */
+const GUIDES: Record<"BAN" | "ENG", Array<[`${number}%`, string]>> = {
+  BAN: [["34%", "#8FA3BF"], ["74%", "#8FA3BF"]],
+  ENG: [["20%", "#E07A7A"], ["40%", "#7F9BD6"], ["60%", "#7F9BD6"], ["80%", "#E07A7A"]],
+};
+const RulingContext = React.createContext<"BAN" | "ENG">("BAN");
+
 function Guides({ on }: { on: boolean }): React.ReactElement | null {
+  const ruling = React.useContext(RulingContext);
   if (!on) return null;
-  const l = (top: `${number}%`): React.ReactElement => (
-    <View pointerEvents="none" style={{ position: "absolute", left: 2, right: 2, top, height: 1, backgroundColor: GUIDE }} />
-  );
   return (
     <>
-      {l("34%")}
-      {l("74%")}
+      {GUIDES[ruling].map(([top, colour]) => (
+        <View
+          key={top}
+          pointerEvents="none"
+          style={{ position: "absolute", left: 2, right: 2, top, height: 1, backgroundColor: colour }}
+        />
+      ))}
     </>
   );
 }
@@ -110,7 +120,7 @@ function Body({
   showAnswers: boolean;
   ruled: boolean;
 }): React.ReactElement | null {
-  const ch = ruled ? 42 : 36;
+  const ch = ruled ? 46 : 36;
   const gridOf = (cells: Cell[], cols: number): React.ReactElement => (
     <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
       {cells.map((c, i) => (
@@ -311,7 +321,9 @@ export default function WorksheetPaper({
             <Text style={txt(15)}>[{num(s.marks, en)}]</Text>
           </View>
           {s.note ? <Text style={[txt(12, "#444444"), { marginBottom: 4, marginLeft: 12 }]}>({s.note})</Text> : null}
-          <Body s={s} pics={pictures} showAnswers={showAnswers} ruled={!!doc.ruled} />
+          <RulingContext.Provider value={doc.ruling ?? "BAN"}>
+            <Body s={s} pics={pictures} showAnswers={showAnswers} ruled={!!doc.ruled} />
+          </RulingContext.Provider>
         </View>
       ))}
     </View>

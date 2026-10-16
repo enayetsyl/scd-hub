@@ -100,6 +100,9 @@ export interface WorksheetDoc {
   pictureIds: string[];
   /** Bangla, shown above the preview — e.g. a row printed fewer items than asked. */
   warnings: string[];
-  /** Bangla handwriting guide lines inside every writing box (owner 2026-10-16). */
+  /** Handwriting guide lines inside every writing box (owner 2026-10-16). */
   ruled?: boolean;
+  /** Which copybook: BAN = two blue lines (মাত্রা + base); ENG = the four-line English
+   *  khata, red / blue / blue / red. Absent on papers stored before it = BAN. */
+  ruling?: "BAN" | "ENG";
 }

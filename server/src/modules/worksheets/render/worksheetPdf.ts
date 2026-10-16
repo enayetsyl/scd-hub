@@ -42,7 +42,13 @@ export interface PictureBytes {
 const INK = "#111111";
 const ANSWER = "#9B1C1C";
 const LINE = "#222222";
-const GUIDE = "#8FA3BF";
+type Ruling = "BAN" | "ENG";
+/** Guide lines per copybook, as [fraction of box height, colour]. Bangla: মাত্রা + base
+ *  line. English khata (owner 2026-10-16 photo): red, blue, blue, red, evenly spaced. */
+const GUIDES: Record<Ruling, Array<[number, string]>> = {
+  BAN: [[0.34, "#8FA3BF"], [0.74, "#8FA3BF"]],
+  ENG: [[0.2, "#E07A7A"], [0.4, "#7F9BD6"], [0.6, "#7F9BD6"], [0.8, "#E07A7A"]],
+};
 
 const MARGIN = 40;
 
@@ -85,11 +91,13 @@ function box(doc: Doc, x: number, y: number, w: number, h: number): void {
 
 /** A box a child writes in. Bangla papers get two faint handwriting guide lines inside
  *  (the মাত্রা line and the base line, as on a ruled Bangla copy — owner 2026-10-16). */
-function writeBox(doc: Doc, x: number, y: number, w: number, h: number, ruled: boolean): void {
+function writeBox(doc: Doc, x: number, y: number, w: number, h: number, ruled: boolean, ruling: Ruling = "BAN"): void {
   box(doc, x, y, w, h);
   if (!ruled) return;
-  doc.save().lineWidth(0.4).strokeColor(GUIDE);
-  for (const f of [0.34, 0.74]) doc.moveTo(x + 2, y + h * f).lineTo(x + w - 2, y + h * f).stroke();
+  doc.save().lineWidth(0.6);
+  for (const [f, colour] of GUIDES[ruling]) {
+    doc.strokeColor(colour).moveTo(x + 2, y + h * f).lineTo(x + w - 2, y + h * f).stroke();
+  }
   doc.restore();
 }
 
@@ -164,7 +172,7 @@ export async function renderWorksheetPdf(
         y += 14;
       }
       y += 3;
-      y = drawBody(doc, s, y, W, answers, pictures, !!wsDoc.ruled) + 12;
+      y = drawBody(doc, s, y, W, answers, pictures, !!wsDoc.ruled, wsDoc.ruling ?? "BAN") + 12;
     }
 
     doc.end();
@@ -206,6 +214,7 @@ function drawBody(
   answers: boolean,
   pictures: PictureBytes,
   ruled: boolean,
+  ruling: Ruling,
 ): number {
   let y = y0;
   const pageBottom = doc.page.height - MARGIN;
@@ -220,13 +229,13 @@ function drawBody(
     case "grid": {
       const cols = s.cols ?? 10;
       const cw = W / cols;
-      const ch = ruled ? 36 : 28;
+      const ch = ruled ? (ruling === "ENG" ? 42 : 36) : 28;
       (s.cells ?? []).forEach((c, i) => {
         const col = i % cols;
         if (col === 0 && i > 0) y += ch;
         if (col === 0) breakIfNeeded(ch);
         const x = MARGIN + col * cw;
-        writeBox(doc, x, y, cw, ch, ruled && !c.t);
+        writeBox(doc, x, y, cw, ch, ruled && !c.t, ruling);
         const { text, color } = cellText(c, answers);
         centered(doc, text, x, y, cw, ch, 14, color);
       });
@@ -235,7 +244,7 @@ function drawBody(
 
     case "groups": {
       // Sub-questions under one number — ক) স্বরবর্ণ, খ) ব্যঞ্জনবর্ণ (owner 2026-10-16).
-      const ch = ruled ? 36 : 28;
+      const ch = ruled ? (ruling === "ENG" ? 42 : 36) : 28;
       for (const g of s.groups ?? []) {
         breakIfNeeded(18 + ch);
         const lw = line(doc, g.label, MARGIN + 6, y, 11);
@@ -247,7 +256,7 @@ function drawBody(
           if (col === 0 && i > 0) y += ch;
           if (col === 0) breakIfNeeded(ch);
           const x = MARGIN + col * cw;
-          writeBox(doc, x, y, cw, ch, ruled && !c.t);
+          writeBox(doc, x, y, cw, ch, ruled && !c.t, ruling);
           const { text, color } = cellText(c, answers);
           centered(doc, text, x, y, cw, ch, 14, color);
         });
@@ -259,7 +268,7 @@ function drawBody(
     case "jumble": {
       // Owner 2026-10-16: one line per set, the boxes spread across the full page width.
       const topH = 28;
-      const ansH = ruled ? 38 : 30;
+      const ansH = ruled ? (ruling === "ENG" ? 44 : 38) : 30;
       for (const set of s.sets ?? []) {
         breakIfNeeded(topH + ansH + 4);
         const cw = W / set.shown.length;
@@ -267,7 +276,7 @@ function drawBody(
           const x = MARGIN + i * cw;
           box(doc, x, y, cw, topH);
           centered(doc, t, x, y, cw, topH, 15);
-          writeBox(doc, x, y + topH, cw, ansH, ruled);
+          writeBox(doc, x, y + topH, cw, ansH, ruled, ruling);
           if (answers) centered(doc, set.answer[i], x, y + topH, cw, ansH, 14, ANSWER);
         });
         y += topH + ansH + 10;
@@ -278,14 +287,14 @@ function drawBody(
     case "rows": {
       const items = s.rows ?? [];
       const colW = W / 2;
-      const cell = ruled ? 36 : 30;
+      const cell = ruled ? (ruling === "ENG" ? 42 : 36) : 30;
       items.forEach((row, i) => {
         const col = i % 2;
         if (col === 0 && i > 0) y += cell + 4;
         if (col === 0) breakIfNeeded(cell);
         let x = MARGIN + col * colW + 10;
         for (const c of row) {
-          writeBox(doc, x, y, 48, cell, ruled && !c.t);
+          writeBox(doc, x, y, 48, cell, ruled && !c.t, ruling);
           const { text, color } = cellText(c, answers);
           centered(doc, text, x, y, 48, cell, 14, color);
           x += 56;
@@ -298,7 +307,7 @@ function drawBody(
       // Before/after: column by column, top to bottom, in the order the teacher set.
       const cols = s.columns ?? [];
       const colW = W / Math.max(1, cols.length);
-      const cell = ruled ? 36 : 30;
+      const cell = ruled ? (ruling === "ENG" ? 42 : 36) : 30;
       const depth = Math.max(0, ...cols.map((c) => c.length));
       for (let r = 0; r < depth; r++) {
         breakIfNeeded(cell);
@@ -307,7 +316,7 @@ function drawBody(
           if (!row) return;
           let x = MARGIN + k * colW + 10;
           for (const c of row) {
-            writeBox(doc, x, y, 48, cell, ruled && !c.t);
+            writeBox(doc, x, y, 48, cell, ruled && !c.t, ruling);
             const { text, color } = cellText(c, answers);
             centered(doc, text, x, y, 48, cell, 14, color);
             x += 56;
@@ -356,7 +365,7 @@ function drawBody(
         const img = pictures.get(p.pictureId);
         if (img) doc.image(img, x + 4, y + 4, { fit: [cw - 8, h - 42], align: "center", valign: "center" });
         const bx = x + (cw - 32) / 2;
-        writeBox(doc, bx, y + h - 36, 32, 30, ruled);
+        writeBox(doc, bx, y + h - 36, 32, 30, ruled, ruling);
         if (answers) centered(doc, p.a, bx, y + h - 36, 32, 30, 14, ANSWER);
       });
       return y + (items.length ? h : 0);
