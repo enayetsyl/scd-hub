@@ -278,6 +278,8 @@ const ClassroomObservationSchema = new Schema<IClassroomObservation>(
 ClassroomObservationSchema.index({ teacherId: 1, classDate: -1 });
 ClassroomObservationSchema.index({ observerId: 1, state: 1 });
 ClassroomObservationSchema.index({ recordingId: 1 });
+// D-#751: the dashboard/drawer per-state counts (no observer filter).
+ClassroomObservationSchema.index({ state: 1 });
 
 export const ClassroomObservation = model<IClassroomObservation>(
   "ClassroomObservation",
