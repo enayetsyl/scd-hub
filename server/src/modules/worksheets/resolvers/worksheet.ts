@@ -233,6 +233,8 @@ const generateArgs = builder.args((t) => ({
   rows: t.field({ type: [PresetRowInput], required: false }),
   letterUpTo: t.int({ required: false }),
   numberUpTo: t.int({ required: false }),
+  // Owner 2026-10-16: one checkbox per taught letter — replaces letterUpTo when given.
+  letters: t.stringList({ required: false }),
   title: t.string({ required: false }),
   subtitle: t.string({ required: false }),
   meta: t.string({ required: false }),

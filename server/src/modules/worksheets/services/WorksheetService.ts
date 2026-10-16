@@ -257,6 +257,8 @@ export interface GenerateArgs {
   rows?: PresetRow[] | null;
   letterUpTo?: number | null;
   numberUpTo?: number | null;
+  /** The letters actually taught, one checkbox each (owner 2026-10-16); replaces letterUpTo. */
+  letters?: string[] | null;
   /** Header overrides typed by the teacher ("ক্লাস টেস্ট — ৩", "অক্টোবর, ৩য় সপ্তাহ"). */
   title?: string | null;
   subtitle?: string | null;
@@ -326,6 +328,13 @@ function buildHeader(args: GenerateArgs, plan: PlanView, kind: WorksheetKind, to
   };
 }
 
+/** At most the whole alphabet, each a short string — the set is just a filter. */
+function cleanLetters(letters: string[] | null | undefined): string[] | null {
+  if (!letters || letters.length === 0) return null;
+  const out = [...new Set(letters.map((l) => l.trim()).filter((l) => l.length > 0 && l.length <= 4))].slice(0, 60);
+  return out.length ? out : null;
+}
+
 export async function generate(ctx: AppContext, args: GenerateArgs, pictures?: PictureRef[]): Promise<Generated> {
   assertKind(args.kind);
   const kind = args.kind;
@@ -353,6 +362,7 @@ export async function generate(ctx: AppContext, args: GenerateArgs, pictures?: P
       // A final covers the whole book (the syllabus says সম্পূর্ণ পাঠ্যবই).
       letterUpTo: kind === "FINAL" ? letterMax : args.letterUpTo ?? letterMax,
       numberUpTo: kind === "FINAL" ? null : args.numberUpTo ?? null,
+      letters: kind === "FINAL" ? null : cleanLetters(args.letters),
     },
     seed: args.seed,
     pictures: pictures ?? (await loadPictureRefs()),
@@ -536,6 +546,7 @@ export async function sendWorksheetToPrint(ctx: AppContext, input: SendWorksheet
     seed: input.seed,
     letterUpTo: input.letterUpTo ?? null,
     numberUpTo: input.numberUpTo ?? null,
+    letters: cleanLetters(input.letters),
     rows: g.rows,
     doc: g.doc,
     header: g.header,

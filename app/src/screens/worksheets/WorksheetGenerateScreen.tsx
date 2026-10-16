@@ -114,6 +114,13 @@ function rangeParts(
   }
 }
 
+/** Every letter a subject's checkbox grid offers (Bangla: স্বর + ব্যঞ্জন; English: A–Z). */
+function allLettersFor(subject: string): string[] {
+  if (subject === "BAN") return [...BAN_VOWELS, ...BAN_CONSONANTS];
+  if (subject === "ENG") return [...ENG_LETTERS];
+  return [];
+}
+
 const newSeed = (): number => Math.floor(Math.random() * 1_000_000_000);
 const kindLabel = (k: string): string =>
   (getActiveLang() === "en" ? WORKSHEET_KIND_LABELS_EN : WORKSHEET_KIND_LABELS_BN)[k as keyof typeof WORKSHEET_KIND_LABELS_BN] ?? k;
@@ -166,9 +173,29 @@ export default function WorksheetGenerateScreen(): React.ReactElement {
     setPicks(Object.fromEntries(base.map((p) => [p.seq, p.count])));
   }, [plan, kind]);
 
-  const [letterUpTo, setLetterUpTo] = useState<number | null>(null);
+  // Owner 2026-10-16: one checkbox per letter instead of "taught up to" — any combination.
+  // Starts with every letter ticked; a full set is sent as null (= the whole alphabet).
+  const [taught, setTaught] = useState<Set<string>>(() => new Set(allLettersFor("BAN")));
   const [numberUpTo, setNumberUpTo] = useState<number>(50);
-  useEffect(() => setLetterUpTo(null), [subject]);
+  useEffect(() => setTaught(new Set(allLettersFor(subject))), [subject]);
+  const toggleLetter = (l: string): void =>
+    setTaught((cur) => {
+      const next = new Set(cur);
+      if (next.has(l)) next.delete(l);
+      else next.add(l);
+      return next;
+    });
+  const setMany = (letters: string[], on: boolean): void =>
+    setTaught((cur) => {
+      const next = new Set(cur);
+      letters.forEach((l) => (on ? next.add(l) : next.delete(l)));
+      return next;
+    });
+  const lettersVar = useMemo(() => {
+    const all = allLettersFor(subject);
+    if (subject === "MATH" || taught.size === 0 || all.every((l) => taught.has(l))) return null;
+    return all.filter((l) => taught.has(l));
+  }, [subject, taught]);
   const isFinal = kind === "FINAL";
 
   const [title, setTitle] = useState("");
@@ -214,13 +241,14 @@ export default function WorksheetGenerateScreen(): React.ReactElement {
       kind,
       seed,
       rows: rowsVar,
-      letterUpTo: isFinal || subject === "MATH" ? null : letterUpTo,
+      letterUpTo: null,
+      letters: isFinal ? null : lettersVar,
       numberUpTo: isFinal || subject !== "MATH" ? null : numberUpTo,
       title: title.trim() || null,
       subtitle: subtitle.trim() || null,
       meta: meta.trim() || null,
     }),
-    [classId, subject, kind, seed, rowsVar, letterUpTo, numberUpTo, isFinal, title, subtitle, meta],
+    [classId, subject, kind, seed, rowsVar, lettersVar, numberUpTo, isFinal, title, subtitle, meta],
   );
 
   const [previewQ] = useQuery({
@@ -250,10 +278,6 @@ export default function WorksheetGenerateScreen(): React.ReactElement {
 
   const setCount = (seq: number, c: number): void => setPicks((p) => ({ ...p, [seq]: Math.max(0, Math.min(50, c)) }));
 
-  const scopeOptions =
-    subject === "BAN"
-      ? BAN_CONSONANTS.map((l, i) => ({ value: String(i), label: `অ–ঔ ও ক–${l}` }))
-      : ENG_LETTERS.map((l, i) => ({ value: String(i), label: `A–${l}` }));
 
   const openWs = async (id: string, answers: boolean): Promise<void> => {
     setPdfErr(null);
@@ -313,14 +337,51 @@ export default function WorksheetGenerateScreen(): React.ReactElement {
             helper={STR.wsScopeHint}
           />
         ) : (
-          <Select
-            label={STR.wsTaughtUpTo}
-            value={letterUpTo == null ? String(scopeOptions.length - 1) : String(letterUpTo)}
-            onChange={(v) => setLetterUpTo(Number(v))}
-            options={scopeOptions}
-            helper={STR.wsScopeHint}
-            searchable
-          />
+          <View style={{ gap: space(2), marginTop: space(2) }}>
+            <Body>{STR.wsTaughtLetters}</Body>
+            {(subject === "BAN"
+              ? [
+                  { label: STR.wsRangeVowels, letters: BAN_VOWELS },
+                  { label: STR.wsRangeConsonants, letters: BAN_CONSONANTS },
+                ]
+              : [{ label: STR.wsRangeCapital, letters: ENG_LETTERS }]
+            ).map((g) => (
+              <View key={g.label} style={{ gap: space(1) }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: space(2), flexWrap: "wrap" }}>
+                  <Muted>{g.label}</Muted>
+                  <Button title={STR.wsTickAll} variant="ghost" onPress={() => setMany(g.letters, true)} />
+                  <Button title={STR.wsTickNone} variant="ghost" onPress={() => setMany(g.letters, false)} />
+                </View>
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+                  {g.letters.map((l) => {
+                    const on = taught.has(l);
+                    return (
+                      <Pressable
+                        key={l}
+                        accessibilityRole="checkbox"
+                        accessibilityState={{ checked: on }}
+                        accessibilityLabel={l}
+                        onPress={() => toggleLetter(l)}
+                        style={{
+                          width: 44,
+                          height: 44,
+                          borderRadius: 8,
+                          borderWidth: 2,
+                          borderColor: colors.primary,
+                          backgroundColor: on ? colors.primary : colors.surface,
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <Body style={{ color: on ? colors.onPrimary : colors.textPrimary, fontSize: 18 }}>{l}</Body>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+            ))}
+            <Muted>{taught.size === 0 ? STR.wsTickSomething : STR.wsScopeHint}</Muted>
+          </View>
         )}
       </Card>
 

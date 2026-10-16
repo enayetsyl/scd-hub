@@ -6138,6 +6138,11 @@ const STR_BN = {
   wsRangeCapital: "বড় হাতের অক্ষর (A–Z)",
   wsRangeSmall: "ছোট হাতের অক্ষর (a–z)",
   wsRangeNumbersShown: "যে সংখ্যাগুলো দেখাবে",
+  // Worksheet taught-letter checkboxes (owner 2026-10-16)
+  wsTaughtLetters: "যে বর্ণগুলো পড়ানো হয়েছে — টিক দিন",
+  wsTickAll: "সব",
+  wsTickNone: "কোনোটিই না",
+  wsTickSomething: "অন্তত একটি বর্ণ টিক দিন — না দিলে পুরো বর্ণমালা থেকে আসবে।",
 } as const;
 
 type StrTable = Record<keyof typeof STR_BN, string>;
@@ -11097,6 +11102,11 @@ const STR_EN: StrTable = {
   wsRangeCapital: "Capital letters (A–Z)",
   wsRangeSmall: "Small letters (a–z)",
   wsRangeNumbersShown: "Numbers shown",
+  // Worksheet taught-letter checkboxes (owner 2026-10-16)
+  wsTaughtLetters: "Tick the letters that have been taught",
+  wsTickAll: "All",
+  wsTickNone: "None",
+  wsTickSomething: "Tick at least one letter — with none ticked the whole alphabet is used.",
 };
 
 /** UI chrome strings — resolves to the active language at read time (Proxy). Use
