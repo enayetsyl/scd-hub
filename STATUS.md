@@ -1,5 +1,7 @@
 # STATUS
 
+- 2026-10-16 (night, cont. 4): **LIVE + OTA — taught-letter checkboxes, maths guide lines, guide lines at real copybook spacing (Bangla 0.8 cm; English 0.4/0.4/0.4 = 1.2 cm). Promotions #1017 + #1019 (`0ae19184`), OTA `77c6ec7d`.**
+  **Now / next:** teachers try it; first real send-to-print tests the Drive upload.
 - 2026-10-16 (night, cont. 3): **#1016 (checkboxes + maths lines) LIVE on web via #1017 (`86f80c32`). BUILT — guide lines at real cm spacing, branch `feat/worksheet-guide-cm`.**
   **Now / next:** PR → dev → promote, then ONE OTA carrying #1016 + this.
 - 2026-10-16 (night, cont. 2): **BUILT — taught-letter checkboxes + maths guide lines (D-#749), branch `feat/worksheet-math-ruling`.**
