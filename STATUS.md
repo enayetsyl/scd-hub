@@ -1,5 +1,7 @@
 # STATUS
 
+- 2026-10-16 (night, cont. 2): **BUILT — taught-letter checkboxes + maths guide lines (D-#749), branch `feat/worksheet-math-ruling`.**
+  **Now / next:** PR → dev → promote + OTA.
 - 2026-10-16 (night, cont.): **PROD DATA — worksheet picture bank loaded (470 pictures, 313 active).** Nursery finals now generate at 100 marks with book pictures in all three subjects.
   **Now / next:** teachers try Print → "অ্যাসাইনমেন্ট / প্রশ্ন তৈরি করুন"; first real send-to-print exercises the Drive upload. Open owner questions: guide lines for maths boxes? keep-for-final flag, assignment marks.
 - 2026-10-16 (night): **LIVE + OTA — worksheet feedback round (D-#748): teacher ranges, স্বরবর্ণ/ব্যঞ্জনবর্ণ and Capital/small sub-questions, Bangla two-line + English four-line khata guides, full-width jumbled lines. #1012/#1013/#1015 → #1014 (`734b0f87`), OTA `f2ab287a`.**

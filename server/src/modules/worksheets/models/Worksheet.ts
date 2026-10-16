@@ -29,6 +29,8 @@ export interface IWorksheet extends Document {
   seed: number;
   letterUpTo?: number | null;
   numberUpTo?: number | null;
+  /** The taught-letter checkboxes the paper was made from (null = whole range). */
+  letters?: string[] | null;
   rows: RowSpec[];
   doc: WorksheetDoc;
   /** The header exactly as printed — the answer key reprints it unchanged. */
@@ -56,6 +58,7 @@ const WorksheetSchema = new Schema<IWorksheet>(
     seed: { type: Number, required: true },
     letterUpTo: { type: Number, default: null },
     numberUpTo: { type: Number, default: null },
+    letters: { type: [String], default: null },
     rows: { type: Schema.Types.Mixed, required: true },
     doc: { type: Schema.Types.Mixed, required: true },
     header: { type: Schema.Types.Mixed, required: true },

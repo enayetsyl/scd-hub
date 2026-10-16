@@ -33,6 +33,9 @@ export interface Scope {
   /** Bangla: index into BAN_CONSONANTS (vowels are always in scope). English: index into A–Z. */
   letterUpTo?: number | null;
   numberUpTo?: number | null;
+  /** The letters actually taught — one checkbox each (owner 2026-10-16). When given it
+   *  replaces letterUpTo; a letter not ticked never appears and its pictures are not used. */
+  letters?: string[] | null;
 }
 
 function clampIndex(v: number | null | undefined, max: number): number {
@@ -40,12 +43,29 @@ function clampIndex(v: number | null | undefined, max: number): number {
   return Math.max(0, Math.min(max, Math.floor(v)));
 }
 
+/** The taught-letter set (owner 2026-10-16: a checkbox per letter), or null = no set given.
+ *  English letters compare case-insensitively (stored upper-case). */
+function taughtSet(scope: Scope): Set<string> | null {
+  if (!scope.letters || scope.letters.length === 0) return null;
+  return new Set(scope.letters.map((l) => (/^[a-z]$/i.test(l) ? l.toUpperCase() : l.trim())));
+}
+
+export function vowelsInScope(scope: Scope): readonly string[] {
+  const set = taughtSet(scope);
+  return set ? BAN_VOWELS.filter((v) => set.has(v)) : BAN_VOWELS;
+}
+
 export function consonantsInScope(scope: Scope): readonly string[] {
+  const set = taughtSet(scope);
+  if (set) return BAN_CONSONANTS.filter((c) => set.has(c));
   return BAN_CONSONANTS.slice(0, clampIndex(scope.letterUpTo, BAN_CONSONANTS.length - 1) + 1);
 }
 
-export function engInScope(scope: Scope): number {
-  return clampIndex(scope.letterUpTo, 25) + 1;
+/** In-scope English capitals, in A–Z order. */
+export function engUpperInScope(scope: Scope): string[] {
+  const set = taughtSet(scope);
+  if (set) return ENG_UPPER.filter((c) => set.has(c));
+  return ENG_UPPER.slice(0, clampIndex(scope.letterUpTo, 25) + 1);
 }
 
 export function numberUpTo(scope: Scope): number {
@@ -53,19 +73,20 @@ export function numberUpTo(scope: Scope): number {
   return Math.max(10, Math.min(MAX_NUMBER_UP_TO, Math.floor(n)));
 }
 
-/** The in-scope sequence an axis walks, in display form. */
+/** The in-scope sequence an axis walks, in display form. With a taught-letter set the
+ *  sequence is those letters in book order (gaps where a letter was not ticked). */
 export function axisSequence(axis: WorksheetAxis, scope: Scope): string[] {
   switch (axis) {
     case "BAN_VOWEL":
-      return [...BAN_VOWELS];
+      return [...vowelsInScope(scope)];
     case "BAN_CONSONANT":
       return [...consonantsInScope(scope)];
     case "BAN_ALL":
-      return [...BAN_VOWELS, ...consonantsInScope(scope)];
+      return [...vowelsInScope(scope), ...consonantsInScope(scope)];
     case "ENG_UPPER":
-      return ENG_UPPER.slice(0, engInScope(scope));
+      return engUpperInScope(scope);
     case "ENG_LOWER":
-      return ENG_LOWER.slice(0, engInScope(scope));
+      return engUpperInScope(scope).map((c) => c.toLowerCase());
     case "NUM_BN":
       return Array.from({ length: numberUpTo(scope) }, (_, i) => bnNumber(i + 1));
     case "NUM_EN":
@@ -77,10 +98,6 @@ export const isNumberAxis = (axis: WorksheetAxis): boolean => axis === "NUM_BN" 
 
 /** Is a picture's tagged first letter inside the taught scope? Unknown letters are out. */
 export function letterInScope(letter: string, subject: string, scope: Scope): boolean {
-  if (subject === "ENG") {
-    const i = ENG_UPPER.indexOf(letter.toUpperCase());
-    return i >= 0 && i < engInScope(scope);
-  }
-  if ((BAN_VOWELS as readonly string[]).includes(letter)) return true;
-  return consonantsInScope(scope).includes(letter);
+  if (subject === "ENG") return engUpperInScope(scope).includes(letter.toUpperCase());
+  return vowelsInScope(scope).includes(letter) || consonantsInScope(scope).includes(letter);
 }

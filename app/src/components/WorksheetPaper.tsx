@@ -216,7 +216,10 @@ function Body({
                 style={{ flexBasis: 240, flexGrow: 1, borderWidth: 1, borderColor: LINE, padding: 6, flexDirection: "row", alignItems: "center", gap: 8 }}
               >
                 <Repeated uri={pics[p.pictureId]} n={p.repeat} icon={22} />
-                <View style={box(40, 36)}>{showAnswers ? <Text style={txt(16, ANSWER)}>{p.a}</Text> : null}</View>
+                <View style={box(40, 38)}>
+                  <Guides on={ruled} />
+                  {showAnswers ? <Text style={txt(16, ANSWER)}>{p.a}</Text> : null}
+                </View>
               </View>
             ))}
           </View>

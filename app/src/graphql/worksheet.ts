@@ -85,6 +85,8 @@ export interface WorksheetGenerateVars {
   rows?: WorksheetPresetRowT[] | null;
   letterUpTo?: number | null;
   numberUpTo?: number | null;
+  /** The letters actually taught (checkboxes); null = the whole alphabet. */
+  letters?: string[] | null;
   title?: string | null;
   subtitle?: string | null;
   meta?: string | null;
@@ -99,6 +101,7 @@ export const WORKSHEET_PREVIEW = gql<{ worksheetPreview: WorksheetPreviewT }, Wo
     $rows: [WorksheetPresetRowInput!]
     $letterUpTo: Int
     $numberUpTo: Int
+    $letters: [String!]
     $title: String
     $subtitle: String
     $meta: String
@@ -111,6 +114,7 @@ export const WORKSHEET_PREVIEW = gql<{ worksheetPreview: WorksheetPreviewT }, Wo
       rows: $rows
       letterUpTo: $letterUpTo
       numberUpTo: $numberUpTo
+      letters: $letters
       title: $title
       subtitle: $subtitle
       meta: $meta
@@ -146,6 +150,7 @@ export const SEND_WORKSHEET_TO_PRINT = gql<
     $rows: [WorksheetPresetRowInput!]
     $letterUpTo: Int
     $numberUpTo: Int
+    $letters: [String!]
     $title: String
     $subtitle: String
     $meta: String
@@ -166,6 +171,7 @@ export const SEND_WORKSHEET_TO_PRINT = gql<
       rows: $rows
       letterUpTo: $letterUpTo
       numberUpTo: $numberUpTo
+      letters: $letters
       title: $title
       subtitle: $subtitle
       meta: $meta
