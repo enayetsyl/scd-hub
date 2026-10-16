@@ -140,20 +140,23 @@ function buildWriteSequence(row: RowSpec, c: RowCtx): Built {
           { label: "b) Small letters", full: ENG_UPPER.map((l) => l.toLowerCase()), auto: axisSequence("ENG_LOWER", c.input.scope) },
         ]
       : [
-          { label: "ক) স্বরবর্ণ লেখ", full: [...BAN_VOWELS], auto: [...BAN_VOWELS] },
+          { label: "ক) স্বরবর্ণ লেখ", full: [...BAN_VOWELS], auto: axisSequence("BAN_VOWEL", c.input.scope) },
           { label: "খ) ব্যঞ্জনবর্ণ লেখ", full: [...BAN_CONSONANTS], auto: axisSequence("BAN_CONSONANT", c.input.scope) },
         ];
-    const groups = parts.map((p, k) => {
-      const rr = resolveRange(p.full, partRange(row, k));
-      const run = rr ? p.full.slice(rr[0], rr[1] + 1) : p.auto;
-      return {
+    const groups = parts
+      .map((p, k) => {
+        const rr = resolveRange(p.full, partRange(row, k));
+        return { p, run: rr ? p.full.slice(rr[0], rr[1] + 1) : p.auto };
+      })
+      // A part with nothing ticked (e.g. no vowel taught yet) is left out, not printed empty.
+      .filter((x) => x.run.length > 0)
+      .map(({ p, run }) => ({
         label: p.label,
         note: rangeNote(c.input.subject, axis, run[0], run[run.length - 1]),
         cols: run.length <= 12 ? run.length : 10,
         cells: blankCells(run),
-      };
-    });
-    return { section: { layout: "groups", groups }, printed: null };
+      }));
+    return { section: { layout: "groups", groups }, printed: groups.length ? null : 0 };
   }
 
   const seq = axisSequence(axis, c.input.scope);
@@ -261,10 +264,20 @@ function buildBeforeAfter(row: RowSpec, c: RowCtx, mode: "BEFORE" | "AFTER" | "B
       for (let i = a; i <= b; i++) cand.push(i);
       picks = cand.length <= n ? cand : shuffle(cand, c.rng).slice(0, n).sort((x, y) => x - y);
     } else {
-      base = seq;
-      const cand: number[] = [];
-      for (let i = lo; i <= hiOf(seq); i++) if (!used.has(seq[i])) cand.push(i);
-      picks = shuffle(cand, c.rng).slice(0, n);
+      // Answers come from the REAL alphabet: with ক and গ ticked but not খ, the letter
+      // before গ is still খ. So prefer letters whose neighbour was taught too, and fall
+      // back to any taught letter only when that runs short.
+      base = full;
+      const taught = new Set(seq);
+      const good: number[] = [];
+      const fallback: number[] = [];
+      for (let i = lo; i <= hiOf(full); i++) {
+        if (!taught.has(full[i]) || used.has(full[i])) continue;
+        const nbOk =
+          (mode === "AFTER" || taught.has(full[i - 1])) && (mode === "BEFORE" || taught.has(full[i + 1]));
+        (nbOk ? good : fallback).push(i);
+      }
+      picks = [...shuffle(good, c.rng), ...shuffle(fallback, c.rng)].slice(0, n);
     }
     picks.forEach((i) => used.add(base[i]));
     return picks.map((i) => {
@@ -505,7 +518,7 @@ export function generateWorksheet(input: GenerateInput): WorksheetDoc {
   }
 
   // Owner 2026-10-16: Bangla boxes as a Bangla copy (two lines); English letter, word and
-  // writing boxes as an English khata (four lines). Maths boxes stay plain.
-  const ruling = input.subject === "BAN" ? "BAN" : input.subject === "ENG" ? "ENG" : undefined;
+  // writing boxes as an English khata (four lines); maths boxes like Bangla ("yes like bangla").
+  const ruling = input.subject === "ENG" ? "ENG" : input.subject === "BAN" || input.subject === "MATH" ? "BAN" : undefined;
   return { sections, total, pictureIds: [...usedPictures], warnings, ruled: !!ruling, ...(ruling ? { ruling } : {}) };
 }

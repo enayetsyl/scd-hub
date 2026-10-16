@@ -276,13 +276,50 @@ describe("teacher ranges (owner 2026-10-16)", () => {
     expect(ranged.sections[0].groups!.map((g) => g.cells.map((c) => c.a).join(""))).toEqual(["ABCDE", "fghij"]);
   });
 
-  it("English boxes use the four-line English khata; Bangla the two-line copy; maths stays plain", () => {
+  it("English boxes use the four-line English khata; Bangla and maths the two-line copy", () => {
     const eng = gen([{ seq: 1, label: "after", kind: "AFTER", axis: "ENG_UPPER", count: 4, marksEach: 1 }], "ENG");
     expect([eng.ruled, eng.ruling]).toEqual([true, "ENG"]);
     const ban = gen([{ seq: 1, label: "পরের", kind: "AFTER", axis: "BAN_ALL", count: 4, marksEach: 1 }], "BAN");
     expect([ban.ruled, ban.ruling]).toEqual([true, "BAN"]);
     const math = gen([{ seq: 1, label: "পরের", kind: "AFTER", axis: "NUM_BN", count: 4, marksEach: 1 }], "MATH");
-    expect([math.ruled, math.ruling]).toEqual([false, undefined]);
+    expect([math.ruled, math.ruling]).toEqual([true, "BAN"]);
+  });
+});
+
+describe("taught letters as checkboxes (owner 2026-10-16)", () => {
+  const ticked = ["অ", "আ", "ক", "খ", "গ", "চ", "ছ"];
+  const gen = (rows: RowSpec[], pictures: PictureRef[] = []) =>
+    generateWorksheet({ kind: "ASSIGNMENT", subject: "BAN", rows, scope: { letters: ticked }, seed: 6, pictures });
+
+  it("only ticked letters appear, in book order", () => {
+    const d = gen([{ seq: 1, label: "বর্ণমালা", kind: "WRITE_SEQUENCE", axis: "BAN_ALL", count: 1, marksEach: 15 }]);
+    expect(d.sections[0].groups!.map((g) => g.cells.map((c) => c.a))).toEqual([["অ", "আ"], ["ক", "খ", "গ", "চ", "ছ"]]);
+  });
+
+  it("pictures follow the ticks", () => {
+    const d = gen([{ seq: 1, label: "ছবি", kind: "PICTURE_FIRST_LETTER", count: 30, marksEach: 1 }], bank());
+    const letterOf = new Map(bank().map((p) => [p.id, p.letter]));
+    expect(d.pictureIds.every((id) => ticked.includes(letterOf.get(id)!))).toBe(true);
+  });
+
+  it("before/after answers come from the real alphabet, preferring taught neighbours", () => {
+    const d = gen([{ seq: 1, label: "আগের বর্ণ", kind: "BEFORE", axis: "BAN_ALL", count: 4, marksEach: 1 }]);
+    const all = axisSequence("BAN_ALL", {});
+    for (const [blank, shown] of d.sections[0].columns!.flat()) {
+      expect(ticked).toContain(shown.t);
+      expect(all.indexOf(blank.a!)).toBe(all.indexOf(shown.t) - 1);
+      expect(ticked).toContain(blank.a); // with enough taught pairs, the answer was taught too
+    }
+  });
+
+  it("a part with nothing ticked is left out rather than printed empty", () => {
+    const d = generateWorksheet({ kind: "ASSIGNMENT", subject: "BAN", scope: { letters: ["ক", "খ"] }, seed: 1, pictures: [], rows: [{ seq: 1, label: "বর্ণমালা", kind: "WRITE_SEQUENCE", axis: "BAN_ALL", count: 1, marksEach: 15 }] });
+    expect(d.sections[0].groups!.map((g) => g.label)).toEqual(["খ) ব্যঞ্জনবর্ণ লেখ"]);
+  });
+
+  it("English ticks are case-insensitive", () => {
+    const d = generateWorksheet({ kind: "ASSIGNMENT", subject: "ENG", scope: { letters: ["a", "C", "e"] }, seed: 1, pictures: [], rows: [{ seq: 1, label: "Write", kind: "WRITE_SEQUENCE", axis: "ENG_UPPER", count: 1, marksEach: 15 }] });
+    expect(d.sections[0].groups!.map((g) => g.cells.map((c) => c.a).join(""))).toEqual(["ACE", "ace"]);
   });
 });
 

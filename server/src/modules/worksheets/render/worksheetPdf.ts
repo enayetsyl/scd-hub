@@ -347,7 +347,7 @@ function drawBody(
             const iy = y + 6 + Math.floor(k / perRow) * (icon + 3);
             if (img && iy + icon <= y + h) doc.image(img, ix, iy, { fit: [icon, icon], align: "center", valign: "center" });
           }
-          box(doc, x + colW - 46, y + (h - 34) / 2, 38, 34);
+          writeBox(doc, x + colW - 46, y + (h - 34) / 2, 38, 34, ruled, ruling);
           if (answers) centered(doc, p.a, x + colW - 46, y + (h - 34) / 2, 38, 34, 14, ANSWER);
         });
         return y + (items.length ? h : 0);
