@@ -1,0 +1,387 @@
+/**
+ * Generate a Nursery/KG paper in final-exam style (D-#744–#747).
+ *
+ * Teacher or Office (owner 2026-10-16: both press Generate): pick class, subject and
+ * kind; say how far the class has been taught; tick the মানবন্টন rows and counts;
+ * preview natively; re-roll a "new version"; send THAT version to the Office queue.
+ * The server regenerates from the same seed, so the print matches the preview.
+ */
+import React, { useEffect, useMemo, useState } from "react";
+import { Platform, Pressable, ScrollView, View } from "react-native";
+import { useMutation, useQuery } from "urql";
+import {
+  WORKSHEET_KIND_LABELS_BN,
+  WORKSHEET_KIND_LABELS_EN,
+  WORKSHEET_KINDS,
+  WORKSHEET_ITEM_KIND_LABELS_BN,
+  WORKSHEET_ITEM_KIND_LABELS_EN,
+} from "@scd/shared";
+import { ACADEMIC_YEARS_QUERY, CLASSES_QUERY } from "../../graphql/operations";
+import {
+  MY_WORKSHEETS,
+  SEND_WORKSHEET_TO_PRINT,
+  WORKSHEET_PLAN,
+  WORKSHEET_PREVIEW,
+  WORKSHEET_TEACHERS,
+  type WorksheetPresetRowT,
+} from "../../graphql/worksheet";
+import { Screen, H2, Body, Muted, Card, Button, Chip, ChipRow, Field, Select, Notice, Badge, Loader } from "../../components/ui";
+import SendToPrintCard from "../../components/SendToPrintCard";
+import WorksheetPaper, { type WorksheetDocT } from "../../components/WorksheetPaper";
+import { useAuth } from "../../auth/AuthContext";
+import { STR, bnNum, classLevelLabel, routineSubjectLabel, isoDateLabel, getActiveLang } from "../../lib/labels";
+import { friendlyError } from "../../lib/errors";
+import { openPdf, PDF_SUPPORTED } from "../../lib/pdf";
+import { useColors } from "../../theme";
+import { space } from "../../theme/tokens";
+
+const SUBJECTS = ["BAN", "ENG", "MATH"] as const;
+const BAN_CONSONANTS = [
+  "ক", "খ", "গ", "ঘ", "ঙ", "চ", "ছ", "জ", "ঝ", "ঞ", "ট", "ঠ", "ড", "ঢ", "ণ", "ত", "থ", "দ", "ধ", "ন",
+  "প", "ফ", "ব", "ভ", "ম", "য", "র", "ল", "শ", "ষ", "স", "হ", "ড়", "ঢ়", "য়", "ৎ", "ং", "ঃ", "ঁ",
+];
+const ENG_LETTERS = Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i));
+const NUMBER_STOPS = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+
+const newSeed = (): number => Math.floor(Math.random() * 1_000_000_000);
+const kindLabel = (k: string): string =>
+  (getActiveLang() === "en" ? WORKSHEET_KIND_LABELS_EN : WORKSHEET_KIND_LABELS_BN)[k as keyof typeof WORKSHEET_KIND_LABELS_BN] ?? k;
+
+const itemKindLabel = (k: string): string =>
+  (getActiveLang() === "en" ? WORKSHEET_ITEM_KIND_LABELS_EN : WORKSHEET_ITEM_KIND_LABELS_BN)[
+    k as keyof typeof WORKSHEET_ITEM_KIND_LABELS_BN
+  ] ?? k;
+
+export default function WorksheetGenerateScreen(): React.ReactElement {
+  const { can } = useAuth();
+  const colors = useColors();
+  const isOffice = can("roster:manage");
+
+  // --- class + subject ------------------------------------------------------
+  const [yearsQ] = useQuery({ query: ACADEMIC_YEARS_QUERY });
+  const yearId = yearsQ.data?.academicYears?.find((y) => y.current)?.id ?? yearsQ.data?.academicYears?.[0]?.id ?? null;
+  const [classesQ] = useQuery({ query: CLASSES_QUERY, variables: { academicYearId: yearId ?? "" }, pause: !yearId });
+  const classes = useMemo(
+    () => (classesQ.data?.classes ?? []).filter((c) => c.active !== false && c.level <= 0).sort((a, b) => a.level - b.level),
+    [classesQ.data],
+  );
+  const [classId, setClassId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!classId && classes.length) setClassId(classes[0].id);
+  }, [classes, classId]);
+  const cls = classes.find((c) => c.id === classId) ?? null;
+  const [subject, setSubject] = useState<(typeof SUBJECTS)[number]>("BAN");
+  const [kind, setKind] = useState<string>("ASSIGNMENT");
+
+  // --- plan ---------------------------------------------------------------
+  const [planQ] = useQuery({
+    query: WORKSHEET_PLAN,
+    variables: { classId: classId ?? "", subject },
+    pause: !classId,
+    requestPolicy: "cache-and-network",
+  });
+  const plan = planQ.data?.worksheetPlan ?? null;
+
+  // Picks: seq → count (0 = off). Re-seeded from the preset whenever plan/kind changes.
+  const [picks, setPicks] = useState<Record<number, number>>({});
+  useEffect(() => {
+    if (!plan) return;
+    const base: WorksheetPresetRowT[] =
+      kind === "ASSIGNMENT"
+        ? plan.assignmentPreset
+        : kind === "CLASS_TEST"
+          ? plan.classTestPreset
+          : plan.rows.map((r) => ({ seq: r.seq, count: r.count }));
+    setPicks(Object.fromEntries(base.map((p) => [p.seq, p.count])));
+  }, [plan, kind]);
+
+  const [letterUpTo, setLetterUpTo] = useState<number | null>(null);
+  const [numberUpTo, setNumberUpTo] = useState<number>(50);
+  useEffect(() => setLetterUpTo(null), [subject]);
+  const isFinal = kind === "FINAL";
+
+  const [title, setTitle] = useState("");
+  const [subtitle, setSubtitle] = useState("");
+  const [meta, setMeta] = useState("");
+  const [seed, setSeed] = useState<number>(newSeed);
+  const [showAnswers, setShowAnswers] = useState(false);
+  const [forTeacherId, setForTeacherId] = useState<string>("");
+
+  const rowsVar = useMemo(
+    () =>
+      Object.entries(picks)
+        .filter(([, c]) => c > 0)
+        .map(([seq, count]) => ({ seq: Number(seq), count }))
+        .sort((a, b) => a.seq - b.seq),
+    [picks],
+  );
+
+  const vars = useMemo(
+    () => ({
+      classId: classId ?? "",
+      subject,
+      kind,
+      seed,
+      rows: rowsVar,
+      letterUpTo: isFinal || subject === "MATH" ? null : letterUpTo,
+      numberUpTo: isFinal || subject !== "MATH" ? null : numberUpTo,
+      title: title.trim() || null,
+      subtitle: subtitle.trim() || null,
+      meta: meta.trim() || null,
+    }),
+    [classId, subject, kind, seed, rowsVar, letterUpTo, numberUpTo, isFinal, title, subtitle, meta],
+  );
+
+  const [previewQ] = useQuery({
+    query: WORKSHEET_PREVIEW,
+    variables: vars,
+    pause: !plan || plan.rows.length === 0 || rowsVar.length === 0,
+  });
+  const preview = previewQ.data?.worksheetPreview ?? null;
+  const doc = useMemo<WorksheetDocT | null>(() => (preview ? (JSON.parse(preview.docJson) as WorksheetDocT) : null), [preview]);
+  const pictureMap = useMemo(
+    () => Object.fromEntries((preview?.pictures ?? []).map((p) => [p.id, p.dataUri])),
+    [preview],
+  );
+
+  const [teachersQ] = useQuery({
+    query: WORKSHEET_TEACHERS,
+    variables: { classId: classId ?? "", subject },
+    pause: !isOffice || !classId,
+  });
+  const [mineQ, refetchMine] = useQuery({ query: MY_WORKSHEETS, variables: { limit: 10 } });
+  const [, sendToPrint] = useMutation(SEND_WORKSHEET_TO_PRINT);
+  const [pdfErr, setPdfErr] = useState<string | null>(null);
+
+  const total = plan
+    ? plan.rows.reduce((s, r) => s + (picks[r.seq] ?? 0) * r.marksEach, 0)
+    : 0;
+
+  const setCount = (seq: number, c: number): void => setPicks((p) => ({ ...p, [seq]: Math.max(0, Math.min(50, c)) }));
+
+  const scopeOptions =
+    subject === "BAN"
+      ? BAN_CONSONANTS.map((l, i) => ({ value: String(i), label: `অ–ঔ ও ক–${l}` }))
+      : ENG_LETTERS.map((l, i) => ({ value: String(i), label: `A–${l}` }));
+
+  const openWs = async (id: string, answers: boolean): Promise<void> => {
+    setPdfErr(null);
+    try {
+      await openPdf(`/pdf/worksheet/${id}${answers ? "?answers=1" : ""}`);
+    } catch {
+      setPdfErr(STR.errGeneric);
+    }
+  };
+
+  return (
+    <Screen scroll>
+      <H2>{STR.wsTitle}</H2>
+      <Muted style={{ marginBottom: space(3) }}>
+        {STR.wsOnlyPrePrimary} {STR.wsArabicLater}
+      </Muted>
+
+      <Card>
+        {isOffice ? (
+          <Select
+            label={STR.wsForTeacher}
+            value={forTeacherId}
+            onChange={setForTeacherId}
+            options={[
+              { value: "", label: STR.wsForMyself },
+              ...(teachersQ.data?.worksheetTeachers ?? []).map((t) => ({ value: t.userId, label: t.name || t.userId })),
+            ]}
+          />
+        ) : null}
+        <Select
+          label={STR.wsClass}
+          value={classId}
+          onChange={setClassId}
+          options={classes.map((c) => ({ value: c.id, label: c.nameBn || classLevelLabel(c.level) }))}
+        />
+        <Body style={{ marginTop: space(2) }}>{STR.wsSubject}</Body>
+        <ChipRow>
+          {SUBJECTS.map((s) => (
+            <Chip key={s} label={routineSubjectLabel(s)} selected={subject === s} onPress={() => setSubject(s)} />
+          ))}
+        </ChipRow>
+        <Body style={{ marginTop: space(2) }}>{STR.wsKind}</Body>
+        <ChipRow>
+          {WORKSHEET_KINDS.map((k) => (
+            <Chip key={k} label={kindLabel(k)} selected={kind === k} onPress={() => setKind(k)} />
+          ))}
+        </ChipRow>
+
+        {isFinal ? (
+          <Notice tone="info" message={STR.wsFinalScope} />
+        ) : subject === "MATH" ? (
+          <Select
+            label={STR.wsNumberUpTo}
+            value={String(numberUpTo)}
+            onChange={(v) => setNumberUpTo(Number(v))}
+            options={NUMBER_STOPS.map((n) => ({ value: String(n), label: `১–${bnNum(n)}` }))}
+            helper={STR.wsScopeHint}
+          />
+        ) : (
+          <Select
+            label={STR.wsTaughtUpTo}
+            value={letterUpTo == null ? String(scopeOptions.length - 1) : String(letterUpTo)}
+            onChange={(v) => setLetterUpTo(Number(v))}
+            options={scopeOptions}
+            helper={STR.wsScopeHint}
+            searchable
+          />
+        )}
+      </Card>
+
+      <Card>
+        <H2>{STR.wsRows}</H2>
+        <Muted style={{ marginBottom: space(2) }}>
+          {STR.wsRowsHint}
+          {plan?.examName ? ` · ${plan.examName}` : ""}
+        </Muted>
+        {planQ.fetching && !plan ? <Loader /> : null}
+        {planQ.error ? <Notice tone="danger" message={friendlyError(planQ.error)} /> : null}
+        {plan && plan.rows.length === 0 ? <Notice tone="warn" message={STR.wsNoRows} /> : null}
+        {plan?.rows.map((r) => {
+          const c = picks[r.seq] ?? 0;
+          const on = c > 0;
+          return (
+            <View
+              key={r.seq}
+              style={{ flexDirection: "row", alignItems: "center", gap: space(2), paddingVertical: space(2), borderTopWidth: 1, borderColor: "#ECF2EE", flexWrap: "wrap" }}
+            >
+              <Pressable
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: on }}
+                onPress={() => setCount(r.seq, on ? 0 : r.count)}
+                style={{ flexDirection: "row", alignItems: "center", gap: space(2), flexGrow: 1, flexShrink: 1, flexBasis: 200, minHeight: 44 }}
+              >
+                {/* Drawn, not a ☑ glyph — the Bangla font renders ☑ and ☐ alike. */}
+                <View
+                  style={{
+                    width: 22,
+                    height: 22,
+                    borderRadius: 4,
+                    borderWidth: 2,
+                    borderColor: colors.primary,
+                    backgroundColor: on ? colors.primary : "transparent",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  {on ? <Body style={{ color: colors.onPrimary, fontSize: 14, lineHeight: 18 }}>✓</Body> : null}
+                </View>
+                <Body style={{ flexShrink: 1 }}>{r.label}</Body>
+                <Badge text={itemKindLabel(r.kind)} tone="muted" />
+              </Pressable>
+              {on ? (
+                <View style={{ flexDirection: "row", alignItems: "center", gap: space(1) }}>
+                  <Button title="−" variant="secondary" onPress={() => setCount(r.seq, c - 1)} />
+                  <Body style={{ minWidth: 28, textAlign: "center" }}>{bnNum(c)}</Body>
+                  <Button title="+" variant="secondary" onPress={() => setCount(r.seq, c + 1)} />
+                  <Muted>
+                    × {bnNum(r.marksEach)} = {bnNum(c * r.marksEach)}
+                  </Muted>
+                </View>
+              ) : null}
+            </View>
+          );
+        })}
+        {plan && plan.rows.length ? (
+          <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: space(2) }}>
+            <Body>{STR.wsTotal}</Body>
+            <Body>{bnNum(total)}</Body>
+          </View>
+        ) : null}
+        {isFinal && plan ? (
+          <Muted>
+            {total === plan.finalTotal ? STR.wsFinalMatches : STR.wsFinalDiffers} ({bnNum(plan.finalTotal)})
+          </Muted>
+        ) : null}
+      </Card>
+
+      <Card>
+        <Body>{STR.wsHeader}</Body>
+        <Field label={STR.wsHeaderTitle} value={title} onChangeText={setTitle} />
+        <Field label={STR.wsHeaderSub} value={subtitle} onChangeText={setSubtitle} />
+        <Field label={STR.wsHeaderMeta} value={meta} onChangeText={setMeta} />
+      </Card>
+
+      <Card>
+        <View style={{ flexDirection: "row", gap: space(2), flexWrap: "wrap", marginBottom: space(2) }}>
+          <Button title={`↻ ${STR.wsNewVersion}`} variant="secondary" onPress={() => setSeed(newSeed())} />
+          <Button
+            title={showAnswers ? STR.wsHideAnswers : STR.wsShowAnswers}
+            variant="ghost"
+            onPress={() => setShowAnswers((v) => !v)}
+          />
+        </View>
+        <Muted style={{ marginBottom: space(2) }}>{STR.wsPreviewHint}</Muted>
+        {previewQ.error ? <Notice tone="danger" message={friendlyError(previewQ.error)} /> : null}
+        {(preview?.warnings ?? []).map((w, i) => (
+          <Notice key={i} tone="warn" message={w} />
+        ))}
+        {cls && plan && rowsVar.length > 0 ? (
+          <SendToPrintCard
+            classLevel={cls.level}
+            successMessage={STR.wsSentToPrint}
+            disabled={!preview || previewQ.fetching}
+            onSend={async (opts) => {
+              const res = await sendToPrint({
+                ...vars,
+                colour: opts.colour,
+                sides: opts.sides,
+                copies: opts.copies,
+                copiesMode: opts.copiesMode,
+                copiesClassId: opts.copiesMode === "CLASS_PRESENT" ? classId : null,
+                // The worksheet's own class decides the paper; the card only adds the section.
+                sectionId: opts.classId === classId ? opts.sectionId : null,
+                neededByKey: opts.neededByKey,
+                forTeacherId: forTeacherId || null,
+              });
+              if (res.error || !res.data?.sendWorksheetToPrint) return friendlyError(res.error);
+              refetchMine({ requestPolicy: "network-only" });
+              return null;
+            }}
+          />
+        ) : null}
+      </Card>
+
+      <View style={{ marginBottom: space(3) }}>
+        <Body style={{ marginBottom: space(2) }}>
+          {STR.wsPreview} · {STR.wsVersion} {bnNum(seed % 1000)}
+        </Body>
+        {previewQ.fetching && !doc ? <Loader /> : null}
+        {doc && preview ? (
+          <ScrollView horizontal={Platform.OS !== "web"} contentContainerStyle={{ flexGrow: 1 }}>
+            <View style={{ flex: 1, minWidth: 320 }}>
+              <WorksheetPaper doc={doc} header={preview.header} pictures={pictureMap} showAnswers={showAnswers} />
+            </View>
+          </ScrollView>
+        ) : null}
+        {!classId ? <Muted>{STR.wsPickClassSubject}</Muted> : null}
+      </View>
+
+      <Card>
+        <H2>{STR.wsMade}</H2>
+        {pdfErr ? <Notice tone="danger" message={pdfErr} /> : null}
+        {!PDF_SUPPORTED ? <Muted>{STR.wsPdfWebOnly}</Muted> : null}
+        {(mineQ.data?.myWorksheets ?? []).length === 0 ? <Muted>{STR.wsMadeEmpty}</Muted> : null}
+        {(mineQ.data?.myWorksheets ?? []).map((w) => (
+          <View key={w.id} style={{ paddingVertical: space(2), borderTopWidth: 1, borderColor: "#ECF2EE", gap: space(1) }}>
+            <Body>{w.title}</Body>
+            <Muted>
+              {isoDateLabel(w.createdAt)} · {STR.wsTotal} {bnNum(w.totalMarks)}
+            </Muted>
+            {PDF_SUPPORTED ? (
+              <View style={{ flexDirection: "row", gap: space(2), flexWrap: "wrap" }}>
+                <Button title={STR.wsOpenPaper} variant="secondary" onPress={() => void openWs(w.id, false)} />
+                <Button title={STR.wsOpenKey} variant="ghost" onPress={() => void openWs(w.id, true)} />
+              </View>
+            ) : null}
+          </View>
+        ))}
+      </Card>
+    </Screen>
+  );
+}

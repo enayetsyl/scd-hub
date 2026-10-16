@@ -79,6 +79,9 @@ import AssignedByMeScreen from "../screens/workboard/AssignedByMeScreen";
 import LoadGridScreen from "../screens/workboard/LoadGridScreen";
 import TaskTemplatesScreen from "../screens/workboard/TaskTemplatesScreen";
 import NewPrintRequestScreen from "../screens/printing/NewPrintRequestScreen";
+import WorksheetGenerateScreen from "../screens/worksheets/WorksheetGenerateScreen";
+import PictureBankScreen from "../screens/worksheets/PictureBankScreen";
+import WorksheetPlanScreen from "../screens/worksheets/WorksheetPlanScreen";
 import PrintHistoryScreen from "../screens/printing/PrintHistoryScreen";
 import ContentTreeScreen from "../screens/content/ContentTreeScreen";
 import PlanViewScreen from "../screens/content/PlanViewScreen";
@@ -668,6 +671,9 @@ function PrintNavigator(): React.ReactElement {
       <PrintStack.Screen name="PrintHome" component={PrintHomeScreen} options={{ title: STR.prQueueTitle }} />
       <PrintStack.Screen name="NewPrintRequest" component={NewPrintRequestScreen} options={{ title: STR.prNew }} />
       <PrintStack.Screen name="PrintHistory" component={PrintHistoryScreen} options={{ title: STR.prHistory }} />
+      <PrintStack.Screen name="WorksheetGenerate" component={WorksheetGenerateScreen} options={{ title: STR.wsTitle }} />
+      <PrintStack.Screen name="PictureBank" component={PictureBankScreen} options={{ title: STR.wsBank }} />
+      <PrintStack.Screen name="WorksheetPlan" component={WorksheetPlanScreen} options={{ title: STR.wsPlan }} />
     </PrintStack.Navigator>
   );
 }

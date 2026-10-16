@@ -385,6 +385,20 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
       ) : null}
       {/* D-#362: before filing a new request, check whether it was printed before —
           a reprint reuses the earlier job's file instead of sending it again. */}
+      {/* D-#744: Nursery/KG papers generated in final-exam style — teacher or Office. */}
+      {canRequest || isOffice ? (
+        <Button
+          title={`📝 ${STR.wsOpen}`}
+          variant="secondary"
+          onPress={() => navigation.navigate("WorksheetGenerate")}
+        />
+      ) : null}
+      {isOffice ? (
+        <View style={{ flexDirection: "row", gap: space(2), flexWrap: "wrap" }}>
+          <Button title={`🖼 ${STR.wsBank}`} variant="ghost" onPress={() => navigation.navigate("PictureBank")} />
+          <Button title={`📋 ${STR.wsPlan}`} variant="ghost" onPress={() => navigation.navigate("WorksheetPlan")} />
+        </View>
+      ) : null}
       <Button
         title={`🗂 ${STR.prHistory}`}
         variant="secondary"

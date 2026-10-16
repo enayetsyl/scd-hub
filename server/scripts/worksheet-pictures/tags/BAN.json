@@ -1,0 +1,1228 @@
+{
+ "5:0": {
+  "word": "অশ্ব",
+  "letter": "অ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "horse"
+ },
+ "5:1": {
+  "word": "অহি",
+  "letter": "অ",
+  "uses": []
+ },
+ "6:2": {
+  "word": "আনারস",
+  "letter": "আ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "pineapple"
+ },
+ "6:3": {
+  "word": "আম",
+  "letter": "আ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH",
+   "WORD"
+  ],
+  "wordEn": "mango"
+ },
+ "7:4": {
+  "word": "ইঁদুর",
+  "letter": "ই",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "mouse"
+ },
+ "7:5": {
+  "word": "ইলিশ",
+  "letter": "ই",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "hilsa"
+ },
+ "7:6": {
+  "active": false
+ },
+ "8:7": {
+  "word": "ঈদ",
+  "letter": "ঈ",
+  "uses": []
+ },
+ "8:9": {
+  "word": "ঈগল",
+  "letter": "ঈ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "eagle"
+ },
+ "9:10": {
+  "word": "আম",
+  "letter": "আ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH",
+   "WORD"
+  ],
+  "wordEn": "mango"
+ },
+ "9:11": {
+  "active": false
+ },
+ "9:14": {
+  "active": false
+ },
+ "10:16": {
+  "word": "উট",
+  "letter": "উ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH",
+   "WORD"
+  ],
+  "wordEn": "camel"
+ },
+ "10:17": {
+  "word": "উল",
+  "letter": "উ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "wool"
+ },
+ "11:18": {
+  "word": "ঊষা",
+  "letter": "ঊ",
+  "uses": []
+ },
+ "11:19": {
+  "word": "ঊর্মি",
+  "letter": "ঊ",
+  "uses": []
+ },
+ "12:20": {
+  "word": "ঋতু",
+  "letter": "ঋ",
+  "uses": []
+ },
+ "12:21": {
+  "word": "ঋণ",
+  "letter": "ঋ",
+  "uses": []
+ },
+ "13:23": {
+  "word": "উল",
+  "letter": "উ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "wool"
+ },
+ "13:24": {
+  "word": "ঊষা",
+  "letter": "ঊ",
+  "uses": []
+ },
+ "13:26": {
+  "active": false
+ },
+ "14:27": {
+  "word": "এলাচ",
+  "letter": "এ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "cardamom"
+ },
+ "15:28": {
+  "word": "ঐক্য",
+  "letter": "ঐ",
+  "uses": []
+ },
+ "15:29": {
+  "word": "ঐরাবত",
+  "letter": "ঐ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "elephant"
+ },
+ "16:30": {
+  "word": "ওল",
+  "letter": "ও",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "16:31": {
+  "word": "ওজন",
+  "letter": "ও",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "scale"
+ },
+ "17:32": {
+  "word": "ঔষধ",
+  "letter": "ঔ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "medicine"
+ },
+ "17:33": {
+  "word": "ঔষধালয়",
+  "letter": "ঔ",
+  "uses": []
+ },
+ "18:34": {
+  "word": "এলাচ",
+  "letter": "এ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "cardamom"
+ },
+ "18:35": {
+  "active": false
+ },
+ "18:37": {
+  "active": false
+ },
+ "18:38": {
+  "active": false
+ },
+ "18:39": {
+  "active": false
+ },
+ "18:40": {
+  "active": false
+ },
+ "18:41": {
+  "active": false
+ },
+ "18:42": {
+  "active": false
+ },
+ "18:43": {
+  "active": false
+ },
+ "18:44": {
+  "active": false
+ },
+ "18:46": {
+  "word": "ঔষধ",
+  "letter": "ঔ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "medicine"
+ },
+ "22:50": {
+  "word": "কাক",
+  "letter": "ক",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "crow"
+ },
+ "22:51": {
+  "word": "কলা",
+  "letter": "ক",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH",
+   "WORD"
+  ],
+  "wordEn": "banana"
+ },
+ "23:52": {
+  "word": "খরগোশ",
+  "letter": "খ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "rabbit"
+ },
+ "23:53": {
+  "word": "খেজুর",
+  "letter": "খ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "dates"
+ },
+ "24:54": {
+  "word": "গাভী",
+  "letter": "গ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "cow"
+ },
+ "24:55": {
+  "word": "গোলাপ",
+  "letter": "গ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "rose"
+ },
+ "25:56": {
+  "word": "ঘুড়ি",
+  "letter": "ঘ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "kite"
+ },
+ "25:57": {
+  "word": "ঘড়ি",
+  "letter": "ঘ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "clock"
+ },
+ "26:58": {
+  "word": "ব্যাঙ",
+  "letter": "ব",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "frog"
+ },
+ "26:59": {
+  "word": "রং",
+  "letter": "র",
+  "uses": []
+ },
+ "27:60": {
+  "word": "কলা",
+  "letter": "ক",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH",
+   "WORD"
+  ],
+  "wordEn": "banana"
+ },
+ "27:61": {
+  "word": "খেজুর",
+  "letter": "খ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "dates"
+ },
+ "27:62": {
+  "word": "গোলাপ",
+  "letter": "গ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "rose"
+ },
+ "27:63": {
+  "word": "ঘড়ি",
+  "letter": "ঘ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "watch"
+ },
+ "27:64": {
+  "word": "রং পেনসিল",
+  "letter": "র",
+  "uses": []
+ },
+ "28:66": {
+  "word": "চড়ুই",
+  "letter": "চ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "sparrow"
+ },
+ "28:67": {
+  "word": "চিতাবাঘ",
+  "letter": "চ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "cheetah"
+ },
+ "29:68": {
+  "word": "ছাগল",
+  "letter": "ছ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "goat"
+ },
+ "29:69": {
+  "word": "ছাতা",
+  "letter": "ছ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "umbrella"
+ },
+ "30:70": {
+  "word": "জাহাজ",
+  "letter": "জ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "ship"
+ },
+ "30:71": {
+  "word": "জবা",
+  "letter": "জ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "hibiscus"
+ },
+ "31:72": {
+  "word": "ঝড়",
+  "letter": "ঝ",
+  "uses": []
+ },
+ "31:73": {
+  "word": "ঝুড়ি",
+  "letter": "ঝ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "basket"
+ },
+ "32:74": {
+  "word": "বিড়াল",
+  "letter": "ব",
+  "uses": []
+ },
+ "33:75": {
+  "word": "ছাতা",
+  "letter": "ছ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "umbrella"
+ },
+ "33:76": {
+  "word": "জবা",
+  "letter": "জ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "hibiscus"
+ },
+ "33:78": {
+  "word": "ঝুড়ি",
+  "letter": "ঝ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "basket"
+ },
+ "33:80": {
+  "active": false
+ },
+ "33:82": {
+  "active": false
+ },
+ "34:84": {
+  "word": "টিয়া",
+  "letter": "ট",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "parrot"
+ },
+ "34:85": {
+  "word": "টমেটো",
+  "letter": "ট",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "tomato"
+ },
+ "39:98": {
+  "word": "ঠেলাগাড়ি",
+  "letter": "ঠ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "cart"
+ },
+ "35:87": {
+  "active": false
+ },
+ "35:88": {
+  "word": "ঠোঁট",
+  "letter": "ঠ",
+  "uses": []
+ },
+ "36:89": {
+  "word": "ডাব",
+  "letter": "ড",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "coconut"
+ },
+ "36:90": {
+  "word": "ডালিম",
+  "letter": "ড",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "pomegranate"
+ },
+ "37:91": {
+  "word": "ঢেঁড়স",
+  "letter": "ঢ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "okra"
+ },
+ "37:92": {
+  "word": "ঢাকনা",
+  "letter": "ঢ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "lid"
+ },
+ "37:93": {
+  "active": false
+ },
+ "38:94": {
+  "word": "লবণ",
+  "letter": "ল",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "salt"
+ },
+ "38:95": {
+  "word": "হরিণ",
+  "letter": "হ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "deer"
+ },
+ "39:96": {
+  "word": "টমেটো",
+  "letter": "ট",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "tomato"
+ },
+ "39:99": {
+  "word": "ডালিম",
+  "letter": "ড",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "pomegranate"
+ },
+ "39:100": {
+  "word": "ঢেঁড়স",
+  "letter": "ঢ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "okra"
+ },
+ "39:111": {
+  "active": false
+ },
+ "40:113": {
+  "word": "তাল",
+  "letter": "ত",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "40:114": {
+  "word": "তরমুজ",
+  "letter": "ত",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "watermelon"
+ },
+ "41:115": {
+  "word": "থলে",
+  "letter": "থ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "bag"
+ },
+ "41:116": {
+  "word": "থালা",
+  "letter": "থ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "plate"
+ },
+ "42:117": {
+  "word": "দই",
+  "letter": "দ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH",
+   "WORD"
+  ],
+  "wordEn": "curd"
+ },
+ "42:119": {
+  "word": "দুআ",
+  "letter": "দ",
+  "uses": []
+ },
+ "43:120": {
+  "word": "ধান",
+  "letter": "ধ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "paddy"
+ },
+ "43:121": {
+  "word": "ধনুক",
+  "letter": "ধ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "bow"
+ },
+ "44:123": {
+  "word": "নৌকা",
+  "letter": "ন",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "boat"
+ },
+ "44:124": {
+  "word": "নদী",
+  "letter": "ন",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "river"
+ },
+ "45:125": {
+  "word": "থলে",
+  "letter": "থ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "bag"
+ },
+ "45:126": {
+  "active": false
+ },
+ "45:127": {
+  "active": false
+ },
+ "45:128": {
+  "active": false
+ },
+ "45:130": {
+  "word": "ধান",
+  "letter": "ধ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "paddy"
+ },
+ "45:131": {
+  "word": "নৌকা",
+  "letter": "ন",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "boat"
+ },
+ "45:132": {
+  "active": false
+ },
+ "45:133": {
+  "active": false
+ },
+ "46:134": {
+  "word": "পালক",
+  "letter": "প",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "feather"
+ },
+ "46:136": {
+  "word": "পাখি",
+  "letter": "প",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "bird"
+ },
+ "47:137": {
+  "word": "ফল",
+  "letter": "ফ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH",
+   "WORD"
+  ],
+  "wordEn": "fruit"
+ },
+ "47:138": {
+  "word": "ফুলকপি",
+  "letter": "ফ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "cauliflower"
+ },
+ "48:139": {
+  "word": "বাঘ",
+  "letter": "ব",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "tiger"
+ },
+ "48:140": {
+  "word": "বল",
+  "letter": "ব",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH",
+   "WORD"
+  ],
+  "wordEn": "ball"
+ },
+ "49:141": {
+  "word": "ভালুক",
+  "letter": "ভ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "bear"
+ },
+ "49:142": {
+  "word": "ভেড়া",
+  "letter": "ভ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "sheep"
+ },
+ "50:143": {
+  "word": "মই",
+  "letter": "ম",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH",
+   "WORD"
+  ],
+  "wordEn": "ladder"
+ },
+ "50:144": {
+  "active": false
+ },
+ "50:147": {
+  "word": "ময়ূর",
+  "letter": "ম",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "peacock"
+ },
+ "50:148": {
+  "active": false
+ },
+ "51:151": {
+  "active": false
+ },
+ "51:152": {
+  "word": "ফুলকপি",
+  "letter": "ফ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "cauliflower"
+ },
+ "51:153": {
+  "active": false
+ },
+ "52:155": {
+  "word": "যব",
+  "letter": "য",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "barley"
+ },
+ "52:157": {
+  "active": false
+ },
+ "52:159": {
+  "word": "যাকাত",
+  "letter": "য",
+  "uses": []
+ },
+ "53:165": {
+  "word": "রসুন",
+  "letter": "র",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "garlic"
+ },
+ "53:166": {
+  "word": "রেলগাড়ি",
+  "letter": "র",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "train"
+ },
+ "54:167": {
+  "word": "লেবু",
+  "letter": "ল",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "lemon"
+ },
+ "54:168": {
+  "word": "লাউ",
+  "letter": "ল",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "gourd"
+ },
+ "55:169": {
+  "word": "শাপলা",
+  "letter": "শ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "water lily"
+ },
+ "55:170": {
+  "word": "শসা",
+  "letter": "শ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "cucumber"
+ },
+ "56:171": {
+  "word": "ষাঁড়",
+  "letter": "ষ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "bull"
+ },
+ "57:174": {
+  "active": false
+ },
+ "57:175": {
+  "word": "রসুন",
+  "letter": "র",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "garlic"
+ },
+ "57:178": {
+  "word": "লেবু",
+  "letter": "ল",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "lime"
+ },
+ "57:180": {
+  "active": false
+ },
+ "58:188": {
+  "word": "সিংহ",
+  "letter": "স",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "lion"
+ },
+ "58:189": {
+  "word": "সন্দেশ",
+  "letter": "স",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "59:190": {
+  "word": "হাঁস",
+  "letter": "হ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "duck"
+ },
+ "59:191": {
+  "word": "হলুদ",
+  "letter": "হ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "turmeric"
+ },
+ "59:192": {
+  "active": false
+ },
+ "60:193": {
+  "word": "ঘোড়া",
+  "letter": "ঘ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "horse"
+ },
+ "60:194": {
+  "word": "গাড়ি",
+  "letter": "গ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "car"
+ },
+ "61:195": {
+  "active": false
+ },
+ "61:196": {
+  "word": "আষাঢ়",
+  "letter": "আ",
+  "uses": []
+ },
+ "62:197": {
+  "word": "সময়",
+  "letter": "স",
+  "uses": []
+ },
+ "62:198": {
+  "word": "পায়রা",
+  "letter": "প",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "pigeon"
+ },
+ "63:199": {
+  "word": "গাড়ি",
+  "letter": "গ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "car"
+ },
+ "64:204": {
+  "word": "শরৎ",
+  "letter": "শ",
+  "uses": []
+ },
+ "64:205": {
+  "word": "মৎস্য",
+  "letter": "ম",
+  "uses": []
+ },
+ "64:206": {
+  "active": false
+ },
+ "64:207": {
+  "active": false
+ },
+ "65:209": {
+  "word": "চিংড়ি",
+  "letter": "চ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "prawn"
+ },
+ "65:210": {
+  "word": "শিং",
+  "letter": "শ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "horns"
+ },
+ "66:211": {
+  "word": "দুঃখ",
+  "letter": "দ",
+  "uses": []
+ },
+ "66:212": {
+  "word": "হাসি",
+  "letter": "হ",
+  "uses": []
+ },
+ "67:213": {
+  "word": "বাঁশ",
+  "letter": "ব",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "bamboo"
+ },
+ "67:214": {
+  "active": false
+ },
+ "67:215": {
+  "active": false
+ },
+ "67:216": {
+  "active": false
+ },
+ "68:218": {
+  "word": "চিংড়ি",
+  "letter": "চ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ],
+  "wordEn": "prawn"
+ },
+ "68:219": {
+  "active": false
+ },
+ "68:220": {
+  "active": false
+ },
+ "73:222": {
+  "word": "মই",
+  "letter": "ম",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH",
+   "WORD"
+  ],
+  "wordEn": "ladder"
+ },
+ "76:247": {
+  "word": "ঘর",
+  "letter": "ঘ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH",
+   "WORD"
+  ],
+  "wordEn": "house"
+ },
+ "73:229": {
+  "word": "ফল",
+  "letter": "ফ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH",
+   "WORD"
+  ],
+  "wordEn": "fruit"
+ },
+ "73:230": {
+  "word": "কলম",
+  "letter": "ক",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH",
+   "WORD"
+  ],
+  "wordEn": "pen"
+ },
+ "73:231": {
+  "word": "বই",
+  "letter": "ব",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH",
+   "WORD"
+  ],
+  "wordEn": "book"
+ },
+ "73:232": {
+  "word": "কলস",
+  "letter": "ক",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH",
+   "WORD"
+  ],
+  "wordEn": "pitcher"
+ },
+ "75:242": {
+  "word": "জগ",
+  "letter": "জ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH",
+   "WORD"
+  ],
+  "wordEn": "jug"
+ },
+ "75:243": {
+  "word": "বক",
+  "letter": "ব",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH",
+   "WORD"
+  ],
+  "wordEn": "heron"
+ },
+ "75:244": {
+  "word": "ইট",
+  "letter": "ই",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH",
+   "WORD"
+  ],
+  "wordEn": "brick"
+ },
+ "75:245": {
+  "word": "উট",
+  "letter": "উ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH",
+   "WORD"
+  ],
+  "wordEn": "camel"
+ },
+ "75:246": {
+  "word": "উল",
+  "letter": "উ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH",
+   "WORD"
+  ],
+  "wordEn": "wool"
+ },
+ "76:250": {
+  "word": "আম",
+  "letter": "আ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH",
+   "WORD"
+  ],
+  "wordEn": "mango"
+ }
+}

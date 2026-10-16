@@ -284,6 +284,9 @@ export type AuditEventKind =
   | "IMPERSONATION_START"     // Principal opened someone else's account view; target = the account
   | "IMPERSONATION_END"       // returned to their own account (or the borrowed token expired)
   | "TASK_WRITE"              // work board (WB-1, D-#701): a manual task/template created, moved, re-statused, reassigned, blocked, cancelled — meta.action
+  | "WORKSHEET_SENT_TO_PRINT" // a generated Nursery/KG paper filed to the print queue (D-#747) — meta.kind/subject/seed
+  | "WORKSHEET_PLAN_SAVED"    // how a class level × subject's মানবন্টন rows are generated, + presets (D-#745)
+  | "WORKSHEET_PICTURE_EDITED" // a picture-bank row re-tagged / hidden / reserved for the final (D-#746)
   | "PERMISSION_DENIED";
 
 export interface IAudit extends Document {

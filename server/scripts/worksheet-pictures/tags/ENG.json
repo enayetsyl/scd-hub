@@ -1,0 +1,752 @@
+{
+ "3:0": {
+  "word": "apple",
+  "wordEn": "apple",
+  "letter": "A",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "3:1": {
+  "word": "ant",
+  "wordEn": "ant",
+  "letter": "A",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "4:2": {
+  "active": false
+ },
+ "4:3": {
+  "word": "banana",
+  "wordEn": "banana",
+  "letter": "B",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "5:4": {
+  "word": "cat",
+  "wordEn": "cat",
+  "letter": "C",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "5:5": {
+  "word": "cow",
+  "wordEn": "cow",
+  "letter": "C",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "6:6": {
+  "word": "duck",
+  "wordEn": "duck",
+  "letter": "D",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "6:7": {
+  "word": "deer",
+  "wordEn": "deer",
+  "letter": "D",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "7:8": {
+  "word": "ear",
+  "wordEn": "ear",
+  "letter": "E",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "7:9": {
+  "word": "egg",
+  "wordEn": "egg",
+  "letter": "E",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "8:10": {
+  "word": "deer",
+  "wordEn": "deer",
+  "letter": "D",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "8:11": {
+  "active": false
+ },
+ "8:12": {
+  "word": "ant",
+  "wordEn": "ant",
+  "letter": "A",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "8:14": {
+  "word": "ball",
+  "wordEn": "ball",
+  "letter": "B",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "8:15": {
+  "word": "cat",
+  "wordEn": "cat",
+  "letter": "C",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "8:16": {
+  "active": false
+ },
+ "9:36": {
+  "word": "banana",
+  "wordEn": "banana",
+  "letter": "B",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "9:37": {
+  "word": "eraser",
+  "wordEn": "eraser",
+  "letter": "E",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "9:38": {
+  "word": "cock",
+  "wordEn": "cock",
+  "letter": "C",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "9:39": {
+  "active": false
+ },
+ "9:40": {
+  "word": "dog",
+  "wordEn": "dog",
+  "letter": "D",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "10:41": {
+  "word": "fan",
+  "wordEn": "fan",
+  "letter": "F",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "10:42": {
+  "word": "flower",
+  "wordEn": "flower",
+  "letter": "F",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "11:43": {
+  "word": "goat",
+  "wordEn": "goat",
+  "letter": "G",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "11:44": {
+  "word": "glass",
+  "wordEn": "glass",
+  "letter": "G",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "12:45": {
+  "word": "hot",
+  "wordEn": "hot",
+  "letter": "H",
+  "uses": []
+ },
+ "12:46": {
+  "word": "hen",
+  "wordEn": "hen",
+  "letter": "H",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "13:47": {
+  "word": "ice-cream",
+  "wordEn": "ice-cream",
+  "letter": "I",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "13:48": {
+  "word": "iron",
+  "wordEn": "iron",
+  "letter": "I",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "14:49": {
+  "word": "jug",
+  "wordEn": "jug",
+  "letter": "J",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "14:50": {
+  "word": "jelly",
+  "wordEn": "jelly",
+  "letter": "J",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "15:65": {
+  "word": "flowers",
+  "wordEn": "flowers",
+  "letter": "F",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "15:66": {
+  "word": "horse",
+  "wordEn": "horse",
+  "letter": "H",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "15:67": {
+  "word": "jam",
+  "wordEn": "jam",
+  "letter": "J",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "15:68": {
+  "word": "ice-cream",
+  "wordEn": "ice-cream",
+  "letter": "I",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "16:70": {
+  "word": "jeep",
+  "wordEn": "jeep",
+  "letter": "J",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "16:72": {
+  "word": "fish",
+  "wordEn": "fish",
+  "letter": "F",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "16:73": {
+  "word": "ice",
+  "wordEn": "ice",
+  "letter": "I",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "16:74": {
+  "word": "hand",
+  "wordEn": "hand",
+  "letter": "H",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "16:75": {
+  "word": "goat",
+  "wordEn": "goat",
+  "letter": "G",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "17:76": {
+  "word": "key",
+  "wordEn": "key",
+  "letter": "K",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "17:77": {
+  "word": "kite",
+  "wordEn": "kite",
+  "letter": "K",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "18:78": {
+  "word": "lotus",
+  "wordEn": "lotus",
+  "letter": "L",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "18:79": {
+  "word": "lock",
+  "wordEn": "lock",
+  "letter": "L",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "19:80": {
+  "word": "mug",
+  "wordEn": "mug",
+  "letter": "M",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "19:81": {
+  "word": "mango",
+  "wordEn": "mango",
+  "letter": "M",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "20:82": {
+  "word": "net",
+  "wordEn": "net",
+  "letter": "N",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "20:84": {
+  "word": "nest",
+  "wordEn": "nest",
+  "letter": "N",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "21:85": {
+  "word": "olive",
+  "wordEn": "olive",
+  "letter": "O",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "21:86": {
+  "word": "orange",
+  "wordEn": "orange",
+  "letter": "O",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "22:87": {
+  "word": "nest",
+  "wordEn": "nest",
+  "letter": "N",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "22:89": {
+  "word": "mug",
+  "wordEn": "mug",
+  "letter": "M",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "22:90": {
+  "word": "lotus",
+  "wordEn": "lotus",
+  "letter": "L",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "22:100": {
+  "word": "key",
+  "wordEn": "key",
+  "letter": "K",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "23:101": {
+  "word": "nuts",
+  "wordEn": "nuts",
+  "letter": "N",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "23:104": {
+  "word": "olive",
+  "wordEn": "olive",
+  "letter": "O",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "23:109": {
+  "word": "lock",
+  "wordEn": "lock",
+  "letter": "L",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "24:111": {
+  "word": "pencil",
+  "wordEn": "pencil",
+  "letter": "P",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "24:112": {
+  "word": "potato",
+  "wordEn": "potato",
+  "letter": "P",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "25:113": {
+  "word": "Quran",
+  "wordEn": "Quran",
+  "letter": "Q",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "25:120": {
+  "word": "quail",
+  "wordEn": "quail",
+  "letter": "Q",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "26:121": {
+  "word": "rat",
+  "wordEn": "rat",
+  "letter": "R",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "26:122": {
+  "word": "rabbit",
+  "wordEn": "rabbit",
+  "letter": "R",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "27:123": {
+  "word": "ship",
+  "wordEn": "ship",
+  "letter": "S",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "27:124": {
+  "word": "sun",
+  "wordEn": "sun",
+  "letter": "S",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "28:125": {
+  "word": "tiger",
+  "wordEn": "tiger",
+  "letter": "T",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "28:126": {
+  "word": "toy",
+  "wordEn": "toy",
+  "letter": "T",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "29:150": {
+  "word": "rat",
+  "wordEn": "rat",
+  "letter": "R",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "29:151": {
+  "word": "sun",
+  "wordEn": "sun",
+  "letter": "S",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "30:153": {
+  "word": "tree",
+  "wordEn": "tree",
+  "letter": "T",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "30:157": {
+  "word": "ship",
+  "wordEn": "ship",
+  "letter": "S",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "30:160": {
+  "word": "toy",
+  "wordEn": "toy",
+  "letter": "T",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "31:162": {
+  "word": "uniform",
+  "wordEn": "uniform",
+  "letter": "U",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "31:163": {
+  "word": "umbrella",
+  "wordEn": "umbrella",
+  "letter": "U",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "32:164": {
+  "word": "van",
+  "wordEn": "van",
+  "letter": "V",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "32:165": {
+  "word": "veil",
+  "wordEn": "veil",
+  "letter": "V",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "33:166": {
+  "word": "water",
+  "wordEn": "water",
+  "letter": "W",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "33:167": {
+  "word": "wheel",
+  "wordEn": "wheel",
+  "letter": "W",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "34:168": {
+  "word": "ox",
+  "wordEn": "ox",
+  "letter": "O",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "35:169": {
+  "word": "year",
+  "wordEn": "year",
+  "letter": "Y",
+  "uses": []
+ },
+ "35:170": {
+  "word": "yarn",
+  "wordEn": "yarn",
+  "letter": "Y",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "36:292": {
+  "word": "zebra",
+  "wordEn": "zebra",
+  "letter": "Z",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "36:293": {
+  "word": "zoo",
+  "wordEn": "zoo",
+  "letter": "Z",
+  "uses": []
+ },
+ "37:295": {
+  "word": "van",
+  "wordEn": "van",
+  "letter": "V",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "37:297": {
+  "word": "umbrella",
+  "wordEn": "umbrella",
+  "letter": "U",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "38:300": {
+  "word": "vegetables",
+  "wordEn": "vegetables",
+  "letter": "V",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ },
+ "38:301": {
+  "word": "water",
+  "wordEn": "water",
+  "letter": "W",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH"
+  ]
+ }
+}
