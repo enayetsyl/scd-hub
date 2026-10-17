@@ -75,6 +75,26 @@ def is_blank(im):
     return a.std() < 6 or (a > 245).mean() > 0.985
 
 
+def render_region(pdf, page, rect_pt, tmp, dpi=300):
+    """Render [x, y, w, h] (PDF points, top-left origin) of one page and trim the white
+    margin — for a picture the book stores as several tiles side by side."""
+    k = dpi / 72.0
+    x, y, w, h = rect_pt
+    stem = os.path.join(tmp, "region_%d" % page)
+    subprocess.run(
+        ["pdftoppm", "-r", str(dpi), "-png", "-f", str(page), "-l", str(page),
+         "-x", str(int(x * k)), "-y", str(int(y * k)), "-W", str(int(w * k)), "-H", str(int(h * k)),
+         "-singlefile", pdf, stem],
+        check=True,
+    )
+    im = Image.open(stem + ".png").convert("RGB")
+    ink = Image.eval(im.convert("L"), lambda v: 255 if v < 243 else 0).getbbox()
+    if ink:
+        pad = 6
+        im = im.crop((max(0, ink[0] - pad), max(0, ink[1] - pad), min(im.width, ink[2] + pad), min(im.height, ink[3] + pad)))
+    return im
+
+
 def encode(im, max_side, fmt):
     c = im.copy()
     c.thumbnail((max_side, max_side), Image.LANCZOS)
@@ -139,9 +159,13 @@ def main():
         items = []
         for key, im, _ in kept:
             page, num = (int(x) for x in key.split(":"))
+            t = tags.get(key, {})
+            if t.get("render"):
+                # The book split this picture into tiles (the hilsa, owner 2026-10-17):
+                # take the whole picture from the rendered page instead of one tile.
+                im = render_region(local, page, t["render"], tmp)
             img_b64, size = encode(im, IMAGE_MAX, "PNG")
             thumb_b64, _ = encode(im, THUMB_MAX, "JPEG")
-            t = tags.get(key, {})
             items.append({
                 "book": args.book,
                 "page": page,
