@@ -85,6 +85,10 @@ import {
   IMPROVEMENT_DIGEST_MINUTES,
 } from "../../improvement/services/ImprovementSweepService";
 import {
+  emitMorningReminders as emitMeetingCommentReminders,
+  MEETING_REMINDER_MINUTES,
+} from "../../comments/services/MeetingChainService";
+import {
   dispatchTaskDigest,
   dispatchTaskOverdue,
   TASK_DIGEST_MINUTES,
@@ -250,6 +254,9 @@ export interface TickSummary {
   /** 11:00 improvement sweep (SP-4, D-#738): Office/Principal digests + class-teacher guardian alerts. */
   improvementPendingEmitted: number;
   improvementMissedEmitted: number;
+  /** 08:00 parents'-meeting comment reminders (MC-2, D-#756). */
+  meetingNoteRemindersEmitted: number;
+  meetingSummaryRemindersEmitted: number;
 }
 
 const subjectBn = (subject: string): string =>
@@ -292,6 +299,8 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
     taskOverdueEmitted: 0,
     improvementPendingEmitted: 0,
     improvementMissedEmitted: 0,
+    meetingNoteRemindersEmitted: 0,
+    meetingSummaryRemindersEmitted: 0,
   };
 
   // --- Classroom-observation response escalation (CO-3) — the teacher-response ladder
@@ -663,6 +672,18 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
       await runOnce(dateKey, "IMPR", async () => {
         summary.improvementPendingEmitted = await emitImprovementPendingDigest(now);
         summary.improvementMissedEmitted = await emitImprovementGuardianMissed(now);
+      });
+    });
+
+    // --- Parents'-meeting comments (MC-2, D-#756) — 08:00, FULL days, from 3 days before
+    // each due date until the meeting: one row per subject teacher with notes left and per
+    // class teacher with summaries ready. runOnce guards the reads; dedupe keys the rows.
+    await family("meeting comment reminders", async () => {
+      if (!windowOpen(nowMin, MEETING_REMINDER_MINUTES)) return;
+      await runOnce(dateKey, "MCR", async () => {
+        const r = await emitMeetingCommentReminders(now);
+        summary.meetingNoteRemindersEmitted = r.notes;
+        summary.meetingSummaryRemindersEmitted = r.summaries;
       });
     });
   }

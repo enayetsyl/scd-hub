@@ -1465,6 +1465,14 @@ export const NOTIFICATION_KINDS = [
   "IMPROVEMENT_ACTION_ASSIGNED",
   "IMPROVEMENT_TASKS_PENDING",
   "IMPROVEMENT_GUARDIAN_MISSED",
+  // Parents'-meeting comment chain (MC-2, docs/prd-meeting-comments.md §5, D-#756;
+  // app-native, NO wire twin):
+  //   NOTE_REMINDER    → a subject teacher with comments left (the Office's button, and
+  //                      08:00 from 3 days before the subject due date)
+  //   SUMMARY_REMINDER → a class teacher with summaries ready to write (08:00 from 3
+  //                      days before the summary due date)
+  "MEETING_NOTE_REMINDER",
+  "MEETING_SUMMARY_REMINDER",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
@@ -1527,6 +1535,8 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   IMPROVEMENT_ACTION_ASSIGNED: "নতুন উন্নতির কাজ",
   IMPROVEMENT_TASKS_PENDING: "উন্নতির কাজ এখনো বাকি",
   IMPROVEMENT_GUARDIAN_MISSED: "অভিভাবক কাজ চিহ্নিত করেননি",
+  MEETING_NOTE_REMINDER: "অভিভাবক সভার মন্তব্য বাকি",
+  MEETING_SUMMARY_REMINDER: "সভার সারাংশ লেখার সময়",
 };
 export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   BELL_REMINDER: "Bell reminder",
@@ -1587,6 +1597,8 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   IMPROVEMENT_ACTION_ASSIGNED: "New improvement task",
   IMPROVEMENT_TASKS_PENDING: "Improvement tasks not ticked",
   IMPROVEMENT_GUARDIAN_MISSED: "Guardian missed improvement days",
+  MEETING_NOTE_REMINDER: "Meeting comments left",
+  MEETING_SUMMARY_REMINDER: "Meeting summaries to write",
 };
 
 /**
