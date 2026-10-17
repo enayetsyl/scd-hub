@@ -180,6 +180,13 @@ export type AuditEventKind =
   | "PARENT_MEETING_SCHEDULED"  // a meeting dispatched (draft → scheduled) — timing notices fanned out (CM-4, §6/J-CM5, D-#176)
   | "MEETING_SLOT_ATTENDANCE_SET" // a family slot's present/absent captured at the meeting (CM-4, §6, D-#176)
   | "MEETING_COMMENT_SAVED"     // a class teacher saved a (student × meeting) positive+concern note (CM-5, §3/§6/J-CM6, D-#124)
+  // Parents'-meeting comment chain (MC-1..MC-4, docs/prd-meeting-comments.md, D-#752..#756)
+  | "MEETING_COMMENTS_OPENED"          // collection opened (roster counts in meta) or its due dates changed (meta.datesOnly)
+  | "MEETING_COMMENT_ROSTER_REFRESHED" // who-comments-on-whom rebuilt from the routine; written notes kept
+  | "MEETING_SUBJECT_SKIPPED"          // a subject skipped for a section (reason in meta) — meta.undone on a restore
+  | "MEETING_SUBJECT_NOTE_SAVED"       // a subject teacher saved a child's Strengths + Concerns (meta.edit on a rewrite)
+  | "MEETING_FINAL_COMMENT_SAVED"      // Principal/Office saved the final word (source AS_IS/EDITED/OWN in meta)
+  | "MEETING_NOTE_REMINDER_SENT"       // the Office sent a teacher a reminder about comments left
   | "USER_ACCESS_CHANGED"   // Principal edited a staff User's per-user access — prior + new {templates, granted, revoked} retained here (Access Control AC-1, §6/J-AC6, D-#193/#214; ADR-008/D-#101 prior-state pattern)
   | "FINANCE_OPENING_BALANCE_SET" // an opening balance declared/re-declared for a ledger (effective-dated, append-only — Finance FIN-1, §3/J-FIN1-1, D-#222)
   | "FINANCE_POSTING_RECORDED"    // a finance money event (fee/income/expense/transfer) appended (Finance FIN-2A, §3.A/J-FIN2-1, D-#224)

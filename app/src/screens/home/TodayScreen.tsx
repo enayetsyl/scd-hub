@@ -59,6 +59,8 @@ import { TodayWorkCard } from "../../components/TodayWorkCard";
 import { CtScriptTeacherCard } from "../../components/CtScriptTeacherCard";
 import { CtScriptOfficeCard } from "../../components/CtScriptOfficeCard";
 import { ImprovementTasksTeacherCard } from "../../components/ImprovementTasksTeacherCard";
+import { MeetingNotesTeacherCard } from "../../components/MeetingNotesTeacherCard";
+import { MeetingSummaryTeacherCard } from "../../components/MeetingSummaryTeacherCard";
 import { ImprovementTasksOfficeCard } from "../../components/ImprovementTasksOfficeCard";
 import { GiftHandoverCard } from "../../components/GiftHandoverCard";
 import { LiveClassCard } from "../../components/LiveClassCard";
@@ -527,6 +529,11 @@ export default function TodayScreen(): React.ReactElement {
           QueryGate: owed on a day with no periods too. */}
       {can("tracker:write") ? <ImprovementTasksTeacherCard /> : null}
       {can("roster:manage") ? <ImprovementTasksOfficeCard /> : null}
+
+      {/* MC-3 (D-#752) — parents'-meeting comments owed (subject teacher) and summaries to
+          write (class teacher). OUTSIDE the QueryGate: owed on a day with no periods too. */}
+      {can("tracker:write") ? <MeetingNotesTeacherCard /> : null}
+      {can("tracker:write") ? <MeetingSummaryTeacherCard /> : null}
 
       {/* আমার রিভিউ লক্ষ্য (owner ask 2026-10-12): renders only for an observer with a
           daily review target — myReviewQuota is null for everyone else. OUTSIDE the
