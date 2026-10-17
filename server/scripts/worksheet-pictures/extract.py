@@ -95,6 +95,22 @@ def render_region(pdf, page, rect_pt, tmp, dpi=300):
     return im
 
 
+def compose_tiles(tmp, layout):
+    """Darken-composite the listed pdfimages tiles at their [num, x, y] offsets, then trim."""
+    parts = [(Image.open(os.path.join(tmp, "i-%03d.png" % n)).convert("L"), x, y) for n, x, y in layout]
+    w = max(x + p.width for p, x, _ in parts)
+    h = max(y + p.height for p, _, y in parts)
+    canvas = np.full((h, w), 255, dtype=np.uint8)
+    for p, x, y in parts:
+        a = np.asarray(p, dtype=np.uint8)
+        canvas[y:y + a.shape[0], x:x + a.shape[1]] = np.minimum(canvas[y:y + a.shape[0], x:x + a.shape[1]], a)
+    im = Image.fromarray(canvas).convert("RGB")
+    ink = Image.eval(im.convert("L"), lambda v: 255 if v < 243 else 0).getbbox()
+    if ink:
+        im = im.crop((max(0, ink[0] - 6), max(0, ink[1] - 6), min(im.width, ink[2] + 6), min(im.height, ink[3] + 6)))
+    return im
+
+
 def encode(im, max_side, fmt):
     c = im.copy()
     c.thumbnail((max_side, max_side), Image.LANCZOS)
@@ -160,7 +176,12 @@ def main():
         for key, im, _ in kept:
             page, num = (int(x) for x in key.split(":"))
             t = tags.get(key, {})
-            if t.get("render"):
+            if t.get("tiles"):
+                # The book's PDF places this picture's tiles slightly APART, so even its own
+                # page shows white seams (the মৎস্য fish, owner 2026-10-17): butt the tiles
+                # together as cut — [[image number, x, y], ...] in tile pixels.
+                im = compose_tiles(tmp, t["tiles"])
+            elif t.get("render"):
                 # The book split this picture into tiles (the hilsa, owner 2026-10-17):
                 # take the whole picture from the rendered page instead of one tile.
                 im = render_region(local, page, t["render"], tmp)
