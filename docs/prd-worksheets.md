@@ -50,6 +50,9 @@ those rows into papers:
 - **Save the plan, tag/hide/reserve a picture:** `roster:manage`.
 - **Answer key** (`GET /pdf/worksheet/:id?answers=1`): the creator, the teacher it was made for,
   or `roster:manage`.
+- **PDF of the paper on screen** (`POST /pdf/worksheet/preview[?answers=1]`, body = the preview's
+  own arguments): the generate gate. Rendered by the print renderer, nothing stored, no picture
+  use stamped — only sending to print counts as a use. Web only, like every PDF in the app.
 
 ## 4. Print path
 
