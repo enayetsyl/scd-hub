@@ -14,6 +14,7 @@ import * as path from "path";
 import { BENGALI_FONT, splitScriptRuns } from "../../../routes/pdfRenderer";
 import type { Cell, Section, WorksheetDoc } from "../engine/types";
 import { bnNumber } from "../engine/sequences";
+import { withMarkBases } from "./markBase";
 
 const FONT_PATH = path.resolve(__dirname, "../../../../assets/fonts/NotoSansBengali-Regular.ttf");
 
@@ -59,11 +60,21 @@ const MARGIN = 40;
 
 type Doc = PDFKit.PDFDocument;
 
+/** Script runs, keeping markBase's leading no-break space WITH the Bengali mark after it —
+ *  shaped apart, the mark gets its dotted circle back. */
+function runsOf(text: string): ReturnType<typeof splitScriptRuns> {
+  const runs = splitScriptRuns(text);
+  if (runs.length > 1 && runs[0].text === "\u00A0" && runs[1].font === BENGALI_FONT) {
+    return [{ font: BENGALI_FONT, text: runs[0].text + runs[1].text }, ...runs.slice(2)];
+  }
+  return runs;
+}
+
 /** Draw a one-line string centred in a box, switching fonts per script run. */
 function centered(doc: Doc, text: string, x: number, y: number, w: number, h: number, size: number, color = INK): void {
   if (!text) return;
   doc.fontSize(size).fillColor(color);
-  const runs = splitScriptRuns(text);
+  const runs = runsOf(text);
   let width = 0;
   for (const r of runs) width += doc.font(r.font).widthOfString(r.text);
   let cx = x + Math.max(0, (w - width) / 2);
@@ -78,7 +89,7 @@ function centered(doc: Doc, text: string, x: number, y: number, w: number, h: nu
 function line(doc: Doc, text: string, x: number, y: number, size: number, color = INK): number {
   doc.fontSize(size).fillColor(color);
   let cx = x;
-  for (const r of splitScriptRuns(text)) {
+  for (const r of runsOf(text)) {
     doc.font(r.font).text(r.text, cx, y, { lineBreak: false });
     cx += doc.font(r.font).widthOfString(r.text);
   }
@@ -87,7 +98,7 @@ function line(doc: Doc, text: string, x: number, y: number, size: number, color 
 
 function textWidth(doc: Doc, text: string, size: number): number {
   doc.fontSize(size);
-  return splitScriptRuns(text).reduce((w, r) => w + doc.font(r.font).widthOfString(r.text), 0);
+  return runsOf(text).reduce((w, r) => w + doc.font(r.font).widthOfString(r.text), 0);
 }
 
 function box(doc: Doc, x: number, y: number, w: number, h: number): void {
@@ -122,6 +133,7 @@ export async function renderWorksheetPdf(
   opts: { answers?: boolean } = {},
 ): Promise<Buffer> {
   const answers = !!opts.answers;
+  wsDoc = withMarkBases(wsDoc);
   return new Promise<Buffer>((resolve, reject) => {
     const doc = new PDFDocument({ size: "A4", margins: { top: MARGIN, bottom: MARGIN, left: MARGIN, right: MARGIN } });
     const chunks: Buffer[] = [];
