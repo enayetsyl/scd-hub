@@ -6,12 +6,14 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "horse"
+  "wordEn": "horse",
+  "pageLetter": "অ"
  },
  "5:1": {
   "word": "অহি",
   "letter": "অ",
-  "uses": []
+  "uses": [],
+  "pageLetter": "অ"
  },
  "6:2": {
   "word": "আনারস",
@@ -20,7 +22,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "pineapple"
+  "wordEn": "pineapple",
+  "pageLetter": "আ"
  },
  "6:3": {
   "word": "আম",
@@ -30,7 +33,8 @@
    "MATCH",
    "WORD"
   ],
-  "wordEn": "mango"
+  "wordEn": "mango",
+  "pageLetter": "আ"
  },
  "7:4": {
   "word": "ইঁদুর",
@@ -39,7 +43,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "mouse"
+  "wordEn": "mouse",
+  "pageLetter": "ই"
  },
  "7:5": {
   "word": "ইলিশ",
@@ -48,7 +53,14 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "hilsa"
+  "wordEn": "hilsa",
+  "render": [
+   200,
+   95,
+   106,
+   57
+  ],
+  "pageLetter": "ই"
  },
  "7:6": {
   "active": false
@@ -56,7 +68,8 @@
  "8:7": {
   "word": "ঈদ",
   "letter": "ঈ",
-  "uses": []
+  "uses": [],
+  "pageLetter": "ঈ"
  },
  "8:9": {
   "word": "ঈগল",
@@ -65,7 +78,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "eagle"
+  "wordEn": "eagle",
+  "pageLetter": "ঈ"
  },
  "9:10": {
   "word": "আম",
@@ -75,7 +89,9 @@
    "MATCH",
    "WORD"
   ],
-  "wordEn": "mango"
+  "wordEn": "mango",
+  "active": false,
+  "exerciseOnly": true
  },
  "9:11": {
   "active": false
@@ -91,7 +107,8 @@
    "MATCH",
    "WORD"
   ],
-  "wordEn": "camel"
+  "wordEn": "camel",
+  "pageLetter": "উ"
  },
  "10:17": {
   "word": "উল",
@@ -100,27 +117,32 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "wool"
+  "wordEn": "wool",
+  "pageLetter": "উ"
  },
  "11:18": {
   "word": "ঊষা",
   "letter": "ঊ",
-  "uses": []
+  "uses": [],
+  "pageLetter": "ঊ"
  },
  "11:19": {
   "word": "ঊর্মি",
   "letter": "ঊ",
-  "uses": []
+  "uses": [],
+  "pageLetter": "ঊ"
  },
  "12:20": {
   "word": "ঋতু",
   "letter": "ঋ",
-  "uses": []
+  "uses": [],
+  "pageLetter": "ঋ"
  },
  "12:21": {
   "word": "ঋণ",
   "letter": "ঋ",
-  "uses": []
+  "uses": [],
+  "pageLetter": "ঋ"
  },
  "13:23": {
   "word": "উল",
@@ -129,12 +151,16 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "wool"
+  "wordEn": "wool",
+  "active": false,
+  "exerciseOnly": true
  },
  "13:24": {
   "word": "ঊষা",
   "letter": "ঊ",
-  "uses": []
+  "uses": [],
+  "active": false,
+  "exerciseOnly": true
  },
  "13:26": {
   "active": false
@@ -146,12 +172,14 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "cardamom"
+  "wordEn": "cardamom",
+  "pageLetter": "এ"
  },
  "15:28": {
   "word": "ঐক্য",
   "letter": "ঐ",
-  "uses": []
+  "uses": [],
+  "pageLetter": "ঐ"
  },
  "15:29": {
   "word": "ঐরাবত",
@@ -160,7 +188,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "elephant"
+  "wordEn": "elephant",
+  "pageLetter": "ঐ"
  },
  "16:30": {
   "word": "ওল",
@@ -168,7 +197,8 @@
   "uses": [
    "FIRST_LETTER",
    "MATCH"
-  ]
+  ],
+  "pageLetter": "ও"
  },
  "16:31": {
   "word": "ওজন",
@@ -177,7 +207,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "scale"
+  "wordEn": "scale",
+  "pageLetter": "ও"
  },
  "17:32": {
   "word": "ঔষধ",
@@ -186,12 +217,14 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "medicine"
+  "wordEn": "medicine",
+  "pageLetter": "ঔ"
  },
  "17:33": {
   "word": "ঔষধালয়",
   "letter": "ঔ",
-  "uses": []
+  "uses": [],
+  "pageLetter": "ঔ"
  },
  "18:34": {
   "word": "এলাচ",
@@ -200,7 +233,9 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "cardamom"
+  "wordEn": "cardamom",
+  "active": false,
+  "exerciseOnly": true
  },
  "18:35": {
   "active": false
@@ -236,7 +271,9 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "medicine"
+  "wordEn": "medicine",
+  "active": false,
+  "exerciseOnly": true
  },
  "22:50": {
   "word": "কাক",
@@ -245,7 +282,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "crow"
+  "wordEn": "crow",
+  "pageLetter": "ক"
  },
  "22:51": {
   "word": "কলা",
@@ -255,7 +293,8 @@
    "MATCH",
    "WORD"
   ],
-  "wordEn": "banana"
+  "wordEn": "banana",
+  "pageLetter": "ক"
  },
  "23:52": {
   "word": "খরগোশ",
@@ -264,7 +303,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "rabbit"
+  "wordEn": "rabbit",
+  "pageLetter": "খ"
  },
  "23:53": {
   "word": "খেজুর",
@@ -273,7 +313,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "dates"
+  "wordEn": "dates",
+  "pageLetter": "খ"
  },
  "24:54": {
   "word": "গাভী",
@@ -282,7 +323,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "cow"
+  "wordEn": "cow",
+  "pageLetter": "গ"
  },
  "24:55": {
   "word": "গোলাপ",
@@ -291,7 +333,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "rose"
+  "wordEn": "rose",
+  "pageLetter": "গ"
  },
  "25:56": {
   "word": "ঘুড়ি",
@@ -300,7 +343,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "kite"
+  "wordEn": "kite",
+  "pageLetter": "ঘ"
  },
  "25:57": {
   "word": "ঘড়ি",
@@ -309,7 +353,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "clock"
+  "wordEn": "clock",
+  "pageLetter": "ঘ"
  },
  "26:58": {
   "word": "ব্যাঙ",
@@ -318,12 +363,18 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "frog"
+  "wordEn": "frog",
+  "pageLetter": "ঙ"
  },
  "26:59": {
-  "word": "রং",
+  "word": "রঙ",
   "letter": "র",
-  "uses": []
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH",
+   "WORD"
+  ],
+  "pageLetter": "ঙ"
  },
  "27:60": {
   "word": "কলা",
@@ -333,7 +384,9 @@
    "MATCH",
    "WORD"
   ],
-  "wordEn": "banana"
+  "wordEn": "banana",
+  "active": false,
+  "exerciseOnly": true
  },
  "27:61": {
   "word": "খেজুর",
@@ -342,7 +395,9 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "dates"
+  "wordEn": "dates",
+  "active": false,
+  "exerciseOnly": true
  },
  "27:62": {
   "word": "গোলাপ",
@@ -351,7 +406,9 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "rose"
+  "wordEn": "rose",
+  "active": false,
+  "exerciseOnly": true
  },
  "27:63": {
   "word": "ঘড়ি",
@@ -360,12 +417,16 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "watch"
+  "wordEn": "watch",
+  "active": false,
+  "exerciseOnly": true
  },
  "27:64": {
   "word": "রং পেনসিল",
   "letter": "র",
-  "uses": []
+  "uses": [],
+  "active": false,
+  "exerciseOnly": true
  },
  "28:66": {
   "word": "চড়ুই",
@@ -374,7 +435,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "sparrow"
+  "wordEn": "sparrow",
+  "pageLetter": "চ"
  },
  "28:67": {
   "word": "চিতাবাঘ",
@@ -383,7 +445,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "cheetah"
+  "wordEn": "cheetah",
+  "pageLetter": "চ"
  },
  "29:68": {
   "word": "ছাগল",
@@ -392,7 +455,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "goat"
+  "wordEn": "goat",
+  "pageLetter": "ছ"
  },
  "29:69": {
   "word": "ছাতা",
@@ -401,7 +465,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "umbrella"
+  "wordEn": "umbrella",
+  "pageLetter": "ছ"
  },
  "30:70": {
   "word": "জাহাজ",
@@ -410,7 +475,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "ship"
+  "wordEn": "ship",
+  "pageLetter": "জ"
  },
  "30:71": {
   "word": "জবা",
@@ -419,12 +485,14 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "hibiscus"
+  "wordEn": "hibiscus",
+  "pageLetter": "জ"
  },
  "31:72": {
   "word": "ঝড়",
   "letter": "ঝ",
-  "uses": []
+  "uses": [],
+  "pageLetter": "ঝ"
  },
  "31:73": {
   "word": "ঝুড়ি",
@@ -433,12 +501,19 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "basket"
+  "wordEn": "basket",
+  "pageLetter": "ঝ"
  },
  "32:74": {
-  "word": "বিড়াল",
-  "letter": "ব",
-  "uses": []
+  "word": "মিঞা",
+  "letter": "ম",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH",
+   "WORD"
+  ],
+  "wordEn": "cat",
+  "pageLetter": "ঞ"
  },
  "33:75": {
   "word": "ছাতা",
@@ -447,7 +522,9 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "umbrella"
+  "wordEn": "umbrella",
+  "active": false,
+  "exerciseOnly": true
  },
  "33:76": {
   "word": "জবা",
@@ -456,7 +533,9 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "hibiscus"
+  "wordEn": "hibiscus",
+  "active": false,
+  "exerciseOnly": true
  },
  "33:78": {
   "word": "ঝুড়ি",
@@ -465,7 +544,9 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "basket"
+  "wordEn": "basket",
+  "active": false,
+  "exerciseOnly": true
  },
  "33:80": {
   "active": false
@@ -480,7 +561,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "parrot"
+  "wordEn": "parrot",
+  "pageLetter": "ট"
  },
  "34:85": {
   "word": "টমেটো",
@@ -489,7 +571,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "tomato"
+  "wordEn": "tomato",
+  "pageLetter": "ট"
  },
  "39:98": {
   "word": "ঠেলাগাড়ি",
@@ -498,7 +581,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "cart"
+  "wordEn": "cart",
+  "pageLetter": "ঠ"
  },
  "35:87": {
   "active": false
@@ -506,7 +590,8 @@
  "35:88": {
   "word": "ঠোঁট",
   "letter": "ঠ",
-  "uses": []
+  "uses": [],
+  "pageLetter": "ঠ"
  },
  "36:89": {
   "word": "ডাব",
@@ -515,7 +600,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "coconut"
+  "wordEn": "coconut",
+  "pageLetter": "ড"
  },
  "36:90": {
   "word": "ডালিম",
@@ -524,7 +610,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "pomegranate"
+  "wordEn": "pomegranate",
+  "pageLetter": "ড"
  },
  "37:91": {
   "word": "ঢেঁড়স",
@@ -533,7 +620,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "okra"
+  "wordEn": "okra",
+  "pageLetter": "ঢ"
  },
  "37:92": {
   "word": "ঢাকনা",
@@ -542,7 +630,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "lid"
+  "wordEn": "lid",
+  "pageLetter": "ঢ"
  },
  "37:93": {
   "active": false
@@ -554,7 +643,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "salt"
+  "wordEn": "salt",
+  "pageLetter": "ণ"
  },
  "38:95": {
   "word": "হরিণ",
@@ -563,7 +653,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "deer"
+  "wordEn": "deer",
+  "pageLetter": "ণ"
  },
  "39:96": {
   "word": "টমেটো",
@@ -572,7 +663,9 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "tomato"
+  "wordEn": "tomato",
+  "active": false,
+  "exerciseOnly": true
  },
  "39:99": {
   "word": "ডালিম",
@@ -581,7 +674,9 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "pomegranate"
+  "wordEn": "pomegranate",
+  "active": false,
+  "exerciseOnly": true
  },
  "39:100": {
   "word": "ঢেঁড়স",
@@ -590,7 +685,9 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "okra"
+  "wordEn": "okra",
+  "active": false,
+  "exerciseOnly": true
  },
  "39:111": {
   "active": false
@@ -601,7 +698,8 @@
   "uses": [
    "FIRST_LETTER",
    "MATCH"
-  ]
+  ],
+  "pageLetter": "ত"
  },
  "40:114": {
   "word": "তরমুজ",
@@ -610,7 +708,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "watermelon"
+  "wordEn": "watermelon",
+  "pageLetter": "ত"
  },
  "41:115": {
   "word": "থলে",
@@ -619,7 +718,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "bag"
+  "wordEn": "bag",
+  "pageLetter": "থ"
  },
  "41:116": {
   "word": "থালা",
@@ -628,7 +728,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "plate"
+  "wordEn": "plate",
+  "pageLetter": "থ"
  },
  "42:117": {
   "word": "দই",
@@ -638,12 +739,19 @@
    "MATCH",
    "WORD"
   ],
-  "wordEn": "curd"
+  "wordEn": "curd",
+  "pageLetter": "দ"
  },
  "42:119": {
   "word": "দুআ",
   "letter": "দ",
-  "uses": []
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH",
+   "WORD"
+  ],
+  "wordEn": "dua",
+  "pageLetter": "দ"
  },
  "43:120": {
   "word": "ধান",
@@ -652,7 +760,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "paddy"
+  "wordEn": "paddy",
+  "pageLetter": "ধ"
  },
  "43:121": {
   "word": "ধনুক",
@@ -661,7 +770,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "bow"
+  "wordEn": "bow",
+  "pageLetter": "ধ"
  },
  "44:123": {
   "word": "নৌকা",
@@ -670,7 +780,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "boat"
+  "wordEn": "boat",
+  "pageLetter": "ন"
  },
  "44:124": {
   "word": "নদী",
@@ -679,7 +790,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "river"
+  "wordEn": "river",
+  "pageLetter": "ন"
  },
  "45:125": {
   "word": "থলে",
@@ -688,7 +800,9 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "bag"
+  "wordEn": "bag",
+  "active": false,
+  "exerciseOnly": true
  },
  "45:126": {
   "active": false
@@ -706,7 +820,9 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "paddy"
+  "wordEn": "paddy",
+  "active": false,
+  "exerciseOnly": true
  },
  "45:131": {
   "word": "নৌকা",
@@ -715,7 +831,9 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "boat"
+  "wordEn": "boat",
+  "active": false,
+  "exerciseOnly": true
  },
  "45:132": {
   "active": false
@@ -730,7 +848,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "feather"
+  "wordEn": "feather",
+  "pageLetter": "প"
  },
  "46:136": {
   "word": "পাখি",
@@ -739,7 +858,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "bird"
+  "wordEn": "bird",
+  "pageLetter": "প"
  },
  "47:137": {
   "word": "ফল",
@@ -749,7 +869,8 @@
    "MATCH",
    "WORD"
   ],
-  "wordEn": "fruit"
+  "wordEn": "fruit",
+  "pageLetter": "ফ"
  },
  "47:138": {
   "word": "ফুলকপি",
@@ -758,7 +879,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "cauliflower"
+  "wordEn": "cauliflower",
+  "pageLetter": "ফ"
  },
  "48:139": {
   "word": "বাঘ",
@@ -767,7 +889,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "tiger"
+  "wordEn": "tiger",
+  "pageLetter": "ব"
  },
  "48:140": {
   "word": "বল",
@@ -777,7 +900,8 @@
    "MATCH",
    "WORD"
   ],
-  "wordEn": "ball"
+  "wordEn": "ball",
+  "pageLetter": "ব"
  },
  "49:141": {
   "word": "ভালুক",
@@ -786,7 +910,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "bear"
+  "wordEn": "bear",
+  "pageLetter": "ভ"
  },
  "49:142": {
   "word": "ভেড়া",
@@ -795,7 +920,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "sheep"
+  "wordEn": "sheep",
+  "pageLetter": "ভ"
  },
  "50:143": {
   "word": "মই",
@@ -805,7 +931,8 @@
    "MATCH",
    "WORD"
   ],
-  "wordEn": "ladder"
+  "wordEn": "ladder",
+  "pageLetter": "ম"
  },
  "50:144": {
   "active": false
@@ -817,7 +944,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "peacock"
+  "wordEn": "peacock",
+  "pageLetter": "ম"
  },
  "50:148": {
   "active": false
@@ -832,7 +960,9 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "cauliflower"
+  "wordEn": "cauliflower",
+  "active": false,
+  "exerciseOnly": true
  },
  "51:153": {
   "active": false
@@ -844,7 +974,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "barley"
+  "wordEn": "barley",
+  "pageLetter": "য"
  },
  "52:157": {
   "active": false
@@ -852,7 +983,8 @@
  "52:159": {
   "word": "যাকাত",
   "letter": "য",
-  "uses": []
+  "uses": [],
+  "pageLetter": "য"
  },
  "53:165": {
   "word": "রসুন",
@@ -861,7 +993,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "garlic"
+  "wordEn": "garlic",
+  "pageLetter": "র"
  },
  "53:166": {
   "word": "রেলগাড়ি",
@@ -870,7 +1003,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "train"
+  "wordEn": "train",
+  "pageLetter": "র"
  },
  "54:167": {
   "word": "লেবু",
@@ -879,7 +1013,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "lemon"
+  "wordEn": "lemon",
+  "pageLetter": "ল"
  },
  "54:168": {
   "word": "লাউ",
@@ -888,7 +1023,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "gourd"
+  "wordEn": "gourd",
+  "pageLetter": "ল"
  },
  "55:169": {
   "word": "শাপলা",
@@ -897,7 +1033,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "water lily"
+  "wordEn": "water lily",
+  "pageLetter": "শ"
  },
  "55:170": {
   "word": "শসা",
@@ -906,7 +1043,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "cucumber"
+  "wordEn": "cucumber",
+  "pageLetter": "শ"
  },
  "56:171": {
   "word": "ষাঁড়",
@@ -915,7 +1053,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "bull"
+  "wordEn": "bull",
+  "pageLetter": "ষ"
  },
  "57:174": {
   "active": false
@@ -927,7 +1066,9 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "garlic"
+  "wordEn": "garlic",
+  "active": false,
+  "exerciseOnly": true
  },
  "57:178": {
   "word": "লেবু",
@@ -936,7 +1077,9 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "lime"
+  "wordEn": "lime",
+  "active": false,
+  "exerciseOnly": true
  },
  "57:180": {
   "active": false
@@ -948,7 +1091,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "lion"
+  "wordEn": "lion",
+  "pageLetter": "স"
  },
  "58:189": {
   "word": "সন্দেশ",
@@ -956,7 +1100,8 @@
   "uses": [
    "FIRST_LETTER",
    "MATCH"
-  ]
+  ],
+  "pageLetter": "স"
  },
  "59:190": {
   "word": "হাঁস",
@@ -965,7 +1110,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "duck"
+  "wordEn": "duck",
+  "pageLetter": "হ"
  },
  "59:191": {
   "word": "হলুদ",
@@ -974,7 +1120,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "turmeric"
+  "wordEn": "turmeric",
+  "pageLetter": "হ"
  },
  "59:192": {
   "active": false
@@ -986,7 +1133,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "horse"
+  "wordEn": "horse",
+  "pageLetter": "ড়"
  },
  "60:194": {
   "word": "গাড়ি",
@@ -995,20 +1143,31 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "car"
+  "wordEn": "car",
+  "pageLetter": "ড়"
  },
  "61:195": {
-  "active": false
+  "active": true,
+  "word": "গাঢ়",
+  "letter": "গ",
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH",
+   "WORD"
+  ],
+  "pageLetter": "ঢ়"
  },
  "61:196": {
   "word": "আষাঢ়",
   "letter": "আ",
-  "uses": []
+  "uses": [],
+  "pageLetter": "ঢ়"
  },
  "62:197": {
   "word": "সময়",
   "letter": "স",
-  "uses": []
+  "uses": [],
+  "pageLetter": "য়"
  },
  "62:198": {
   "word": "পায়রা",
@@ -1017,7 +1176,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "pigeon"
+  "wordEn": "pigeon",
+  "pageLetter": "য়"
  },
  "63:199": {
   "word": "গাড়ি",
@@ -1026,17 +1186,38 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "car"
+  "wordEn": "car",
+  "active": false,
+  "exerciseOnly": true
  },
  "64:204": {
   "word": "শরৎ",
   "letter": "শ",
-  "uses": []
+  "uses": [],
+  "pageLetter": "ৎ"
  },
  "64:205": {
   "word": "মৎস্য",
   "letter": "ম",
-  "uses": []
+  "uses": [],
+  "tiles": [
+   [
+    205,
+    0,
+    0
+   ],
+   [
+    206,
+    358,
+    0
+   ],
+   [
+    207,
+    0,
+    177
+   ]
+  ],
+  "pageLetter": "ৎ"
  },
  "64:206": {
   "active": false
@@ -1051,7 +1232,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "prawn"
+  "wordEn": "prawn",
+  "pageLetter": "ং"
  },
  "65:210": {
   "word": "শিং",
@@ -1060,17 +1242,30 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "horns"
+  "wordEn": "horns",
+  "pageLetter": "ং"
  },
  "66:211": {
-  "word": "দুঃখ",
+  "word": "দুঃখী",
   "letter": "দ",
-  "uses": []
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH",
+   "WORD"
+  ],
+  "wordEn": "sad",
+  "pageLetter": "ঃ"
  },
  "66:212": {
-  "word": "হাসি",
+  "word": "হাঃ হাঃ",
   "letter": "হ",
-  "uses": []
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH",
+   "WORD"
+  ],
+  "wordEn": "laughing",
+  "pageLetter": "ঃ"
  },
  "67:213": {
   "word": "বাঁশ",
@@ -1079,7 +1274,8 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "bamboo"
+  "wordEn": "bamboo",
+  "pageLetter": "ঁ"
  },
  "67:214": {
   "active": false
@@ -1097,7 +1293,9 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "prawn"
+  "wordEn": "prawn",
+  "active": false,
+  "exerciseOnly": true
  },
  "68:219": {
   "active": false
@@ -1113,7 +1311,9 @@
    "MATCH",
    "WORD"
   ],
-  "wordEn": "ladder"
+  "wordEn": "ladder",
+  "active": false,
+  "exerciseOnly": true
  },
  "76:247": {
   "word": "ঘর",
@@ -1123,7 +1323,9 @@
    "MATCH",
    "WORD"
   ],
-  "wordEn": "house"
+  "wordEn": "house",
+  "active": false,
+  "exerciseOnly": true
  },
  "73:229": {
   "word": "ফল",
@@ -1133,7 +1335,9 @@
    "MATCH",
    "WORD"
   ],
-  "wordEn": "fruit"
+  "wordEn": "fruit",
+  "active": false,
+  "exerciseOnly": true
  },
  "73:230": {
   "word": "কলম",
@@ -1143,7 +1347,9 @@
    "MATCH",
    "WORD"
   ],
-  "wordEn": "pen"
+  "wordEn": "pen",
+  "active": false,
+  "exerciseOnly": true
  },
  "73:231": {
   "word": "বই",
@@ -1153,7 +1359,9 @@
    "MATCH",
    "WORD"
   ],
-  "wordEn": "book"
+  "wordEn": "book",
+  "active": false,
+  "exerciseOnly": true
  },
  "73:232": {
   "word": "কলস",
@@ -1163,7 +1371,9 @@
    "MATCH",
    "WORD"
   ],
-  "wordEn": "pitcher"
+  "wordEn": "pitcher",
+  "active": false,
+  "exerciseOnly": true
  },
  "75:242": {
   "word": "জগ",
@@ -1173,7 +1383,9 @@
    "MATCH",
    "WORD"
   ],
-  "wordEn": "jug"
+  "wordEn": "jug",
+  "active": false,
+  "exerciseOnly": true
  },
  "75:243": {
   "word": "বক",
@@ -1183,7 +1395,9 @@
    "MATCH",
    "WORD"
   ],
-  "wordEn": "heron"
+  "wordEn": "heron",
+  "active": false,
+  "exerciseOnly": true
  },
  "75:244": {
   "word": "ইট",
@@ -1193,7 +1407,9 @@
    "MATCH",
    "WORD"
   ],
-  "wordEn": "brick"
+  "wordEn": "brick",
+  "active": false,
+  "exerciseOnly": true
  },
  "75:245": {
   "word": "উট",
@@ -1203,7 +1419,9 @@
    "MATCH",
    "WORD"
   ],
-  "wordEn": "camel"
+  "wordEn": "camel",
+  "active": false,
+  "exerciseOnly": true
  },
  "75:246": {
   "word": "উল",
@@ -1213,7 +1431,9 @@
    "MATCH",
    "WORD"
   ],
-  "wordEn": "wool"
+  "wordEn": "wool",
+  "active": false,
+  "exerciseOnly": true
  },
  "76:250": {
   "word": "আম",
@@ -1223,6 +1443,76 @@
    "MATCH",
    "WORD"
   ],
-  "wordEn": "mango"
+  "wordEn": "mango",
+  "active": false,
+  "exerciseOnly": true
+ },
+ "14:9001": {
+  "word": "এক",
+  "letter": "এ",
+  "wordEn": "one",
+  "render": [
+   191,
+   59,
+   110,
+   110
+  ],
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH",
+   "WORD"
+  ],
+  "pageLetter": "এ"
+ },
+ "32:9001": {
+  "word": "পঞ্চম",
+  "letter": "প",
+  "wordEn": "fifth",
+  "render": [
+   321,
+   48,
+   111,
+   114
+  ],
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH",
+   "WORD"
+  ],
+  "pageLetter": "ঞ"
+ },
+ "56:9001": {
+  "word": "ষাট",
+  "letter": "ষ",
+  "wordEn": "sixty",
+  "render": [
+   318,
+   49,
+   110,
+   113
+  ],
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH",
+   "WORD"
+  ],
+  "pageLetter": "ষ"
+ },
+ "67:9001": {
+  "word": "চাঁদ",
+  "letter": "চ",
+  "wordEn": "moon",
+  "render": [
+   205,
+   49,
+   111,
+   113
+  ],
+  "uses": [
+   "FIRST_LETTER",
+   "MATCH",
+   "WORD"
+  ],
+  "pageLetter": "ঁ"
  }
 }

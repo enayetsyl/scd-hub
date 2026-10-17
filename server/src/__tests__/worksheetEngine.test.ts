@@ -222,6 +222,24 @@ describe("generateWorksheet", () => {
     expect(s.answer!.every((a, i) => a === i)).toBe(false);
   });
 
+  it("each matching column holds its own letters — no line crosses into the other column", () => {
+    for (const seed of [1, 4, 9, 23, 77]) {
+      for (const count of [5, 6, 10]) {
+        const d = generateWorksheet({ kind: "FINAL", subject: "BAN", rows: [{ seq: 1, label: "m", kind: "MATCH_PICTURE_LETTER", count, marksEach: 1 }], scope: {}, seed, pictures: bank() });
+        const s = d.sections[0];
+        const byId = new Map(bank().map((p) => [p.id, p.letter]));
+        s.left!.forEach((l, i) => {
+          expect(s.answer![i] % 2).toBe(i % 2);
+          expect(s.right![s.answer![i]]).toBe(byId.get(l.pictureId!));
+        });
+        for (const col of [0, 1]) {
+          const idx = s.left!.map((_, i) => i).filter((i) => i % 2 === col);
+          if (idx.length > 1) expect(idx.every((i) => s.answer![i] === i)).toBe(false);
+        }
+      }
+    }
+  });
+
   it("re-rolls only the row whose count changed", () => {
     const base = rowsForKind("FINAL", plan(BAN_ROWS, "BAN"), null);
     const a = generateWorksheet({ kind: "FINAL", subject: "BAN", rows: base, scope: {}, seed: 9, pictures: bank() });
@@ -375,5 +393,35 @@ describe("renderWorksheetPdf", () => {
       expect(pdf.subarray(0, 4).toString()).toBe("%PDF");
       expect(pdf.byteLength).toBeGreaterThan(2000);
     }
+  });
+});
+
+describe("book letter (pageLetter, owner 2026-10-17)", () => {
+  // The book's ঙ / ঁ pages: ব্যাঙ starts with ব but is the ঙ picture, বাঁশ is the ঁ picture.
+  const pics = (): PictureRef[] => [
+    { id: "frog", book: "BAN", letter: "ব", pageLetter: "ঙ", word: "ব্যাঙ", uses: ["FIRST_LETTER", "MATCH"], recent: false, reserved: false },
+    { id: "bamboo", book: "BAN", letter: "ব", pageLetter: "ঁ", word: "বাঁশ", uses: ["FIRST_LETTER", "MATCH"], recent: false, reserved: false },
+    { id: "kola", book: "BAN", letter: "ক", pageLetter: "ক", word: "কলা", uses: ["FIRST_LETTER", "MATCH"], recent: false, reserved: false },
+  ];
+  const row = (kind: "MATCH_PICTURE_LETTER" | "PICTURE_FIRST_LETTER"): RowSpec => ({ seq: 1, label: "m", kind, count: 3, marksEach: 1 });
+
+  it("picture–letter matching pairs each picture with its page's letter", () => {
+    const d = generateWorksheet({ kind: "FINAL", subject: "BAN", rows: [row("MATCH_PICTURE_LETTER")], scope: {}, seed: 3, pictures: pics() });
+    const s = d.sections[0];
+    const want = new Map([["frog", "ঙ"], ["bamboo", "ঁ"], ["kola", "ক"]]);
+    expect(s.left!.length).toBe(3);
+    s.left!.forEach((l, i) => expect(s.right![s.answer![i]]).toBe(want.get(l.pictureId!)));
+  });
+
+  it("the first-letter question still asks for the word's first letter", () => {
+    const d = generateWorksheet({ kind: "FINAL", subject: "BAN", rows: [row("PICTURE_FIRST_LETTER")], scope: {}, seed: 3, pictures: pics() });
+    const items = d.sections[0].pictures!;
+    const first = new Map([["frog", "ব"], ["bamboo", "ব"], ["kola", "ক"]]);
+    items.forEach((p) => expect(p.a).toBe(first.get(p.pictureId)));
+  });
+
+  it("a ticked page letter brings its pictures into matching", () => {
+    const d = generateWorksheet({ kind: "ASSIGNMENT", subject: "BAN", rows: [row("MATCH_PICTURE_LETTER")], scope: { letters: ["ক", "ঙ"] }, seed: 3, pictures: pics() });
+    expect(d.sections[0].left!.map((l) => l.pictureId).sort()).toEqual(["frog", "kola"]);
   });
 });

@@ -319,7 +319,8 @@ function picturePool(c: RowCtx, need: "FIRST_LETTER" | "MATCH" | "WORD"): Pictur
   const pool = c.input.pictures.filter((p) => {
     if (p.book !== book || !p.uses.includes(need)) return false;
     if (need === "WORD") return !!p.word;
-    return !!p.letter && letterInScope(p.letter, c.input.subject, c.input.scope);
+    const l = need === "MATCH" ? matchLetter(p) : p.letter;
+    return !!l && letterInScope(l, c.input.subject, c.input.scope);
   });
   // A picture already on this paper is not reused in another question.
   return orderPool(pool, c.rng, c.isFinal).filter((p) => !c.usedPictures.has(p.id));
@@ -327,6 +328,16 @@ function picturePool(c: RowCtx, need: "FIRST_LETTER" | "MATCH" | "WORD"): Pictur
 
 function letterAnswer(p: PictureRef, subject: string): string {
   const l = p.letter ?? "";
+  return subject === "ENG" ? l.toUpperCase() : l;
+}
+
+/** MATCH pairs a picture with its book page's letter (ব্যাঙ → ঙ, owner 2026-10-17). */
+function matchLetter(p: PictureRef): string | null {
+  return p.pageLetter || p.letter || null;
+}
+
+function matchAnswer(p: PictureRef, subject: string): string {
+  const l = matchLetter(p) ?? "";
   return subject === "ENG" ? l.toUpperCase() : l;
 }
 
@@ -353,27 +364,39 @@ function buildMatch(
   chosen: Array<{ pictureId: string | null; repeat: number; t: string | null; answer: string }>,
   c: RowCtx,
 ): Pick<Section, "left" | "right" | "answer"> {
-  const right = shuffle(
-    chosen.map((x) => x.answer),
-    c.rng,
-  );
-  // Never print the answers already lined up with their pictures.
-  if (chosen.length > 1 && right.every((r, i) => r === chosen[i].answer)) right.reverse();
+  // Both renderers lay item i out in column i % 2, and each column is its own puzzle
+  // (owner 2026-10-17): shuffle the answers WITHIN a column, never across the two.
+  const right: string[] = new Array(chosen.length);
+  const answer: number[] = new Array(chosen.length);
+  for (const col of [0, 1]) {
+    const idx = chosen.map((_, i) => i).filter((i) => i % 2 === col);
+    const order = shuffle(
+      idx.map((_, k) => k),
+      c.rng,
+    );
+    // Never print the answers already lined up with their pictures.
+    if (idx.length > 1 && order.every((o, k) => o === k)) order.reverse();
+    // slot k of this column shows the answer of item idx[order[k]]
+    order.forEach((o, k) => {
+      right[idx[k]] = chosen[idx[o]].answer;
+      answer[idx[o]] = idx[k];
+    });
+  }
   return {
     left: chosen.map((x) => ({ pictureId: x.pictureId, repeat: x.repeat, t: x.t })),
     right,
-    answer: chosen.map((x) => right.indexOf(x.answer)),
+    answer,
   };
 }
 
 function buildMatchPictureLetter(row: RowSpec, c: RowCtx): Built {
-  const chosen = takeDistinct(picturePool(c, "MATCH"), row.count, (p) => letterAnswer(p, c.input.subject));
+  const chosen = takeDistinct(picturePool(c, "MATCH"), row.count, (p) => matchAnswer(p, c.input.subject));
   chosen.forEach((p) => c.usedPictures.add(p.id));
   return {
     section: {
       layout: "match",
       ...buildMatch(
-        chosen.map((p) => ({ pictureId: p.id, repeat: 1, t: null, answer: letterAnswer(p, c.input.subject) })),
+        chosen.map((p) => ({ pictureId: p.id, repeat: 1, t: null, answer: matchAnswer(p, c.input.subject) })),
         c,
       ),
     },

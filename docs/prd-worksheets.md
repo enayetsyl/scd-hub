@@ -77,7 +77,17 @@ extractor:
 - applies each image's soft mask onto white;
 - drops fragments;
 - de-duplicates by average hash;
-- applies `tags/<book>.json` (curated `page:index` → word, letter, uses, active).
+- applies `tags/<book>.json` (curated `page:index` → word, letter, pageLetter, uses, active);
+- takes a picture the book splits into tiles from the rendered page (`render`) or butts its tiles
+  together (`tiles`), and a tag whose key names no embedded image (`14:9001`) plus `render` is a
+  page-region crop of its own — the numerals the book draws as vector art (এক ১, পঞ্চম ৫, ষাট ৬০).
+
+**Book letter (D-#757).** A Bangla picture carries two letters: `letter`, the word's first letter
+(what "ছবি দেখে সঠিক বর্ণ লেখ" asks for), and `pageLetter`, the letter page it sits on (ব্যাঙ → ঙ,
+বাঁশ → ঁ, চিংড়ি → ং). Picture–letter matching pairs a picture with its `pageLetter` (falling back to
+`letter`), as the book and the 2025 finals do, and the scope filter for matching uses the same
+letter. The bank's card badge shows the book letter, with the first letter beside it when they
+differ. The Bangla book's 50 letter pages carry 100 pictures, two per letter, all in the bank.
 
 **Defaults:** an untagged Bangla/English picture starts hidden; a maths picture starts as a
 counting picture. **Re-runs** refresh the image bytes only and never touch tags.

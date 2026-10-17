@@ -39,6 +39,9 @@ export function CtScriptOfficeCard(): React.ReactElement | null {
   const [, receive] = useMutation(RECEIVE_CT_SCRIPTS);
   const [, handBack] = useMutation(HAND_BACK_CT_SCRIPTS);
   const [open, setOpen] = React.useState<string | null>(null);
+  // Groups the Office expanded past MAX_ROWS. The "+N" used to be plain text, so a test
+  // beyond the fifth (e.g. after the D-#718 backfill: 100 waiting) could not be reached here.
+  const [expanded, setExpanded] = React.useState<Record<string, boolean>>({});
   const [counts, setCounts] = React.useState<Record<string, number>>({});
   const [busy, setBusy] = React.useState(false);
   const [err, setErr] = React.useState<string | null>(null);
@@ -95,7 +98,7 @@ export function CtScriptOfficeCard(): React.ReactElement | null {
         .map((g) => (
           <View key={g.key} style={styles.group}>
             <Text style={[styles.groupTitle, { color: colors.textSecondary }]}>{g.title}</Text>
-            {g.rows.slice(0, MAX_ROWS).map((r) => {
+            {(expanded[g.key] ? g.rows : g.rows.slice(0, MAX_ROWS)).map((r) => {
               const count = counts[r.testId] ?? r.presentCount;
               return (
                 <View key={r.testId} style={styles.row}>
@@ -155,7 +158,16 @@ export function CtScriptOfficeCard(): React.ReactElement | null {
               );
             })}
             {g.rows.length > MAX_ROWS ? (
-              <Muted>{`+${bnNum(g.rows.length - MAX_ROWS)}`}</Muted>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => setExpanded((e) => ({ ...e, [g.key]: !e[g.key] }))}
+              >
+                <Text style={[styles.more, { color: colors.primary }]}>
+                  {expanded[g.key]
+                    ? `${STR.csShowLess} ‹`
+                    : `${STR.csShowAll} (+${bnNum(g.rows.length - MAX_ROWS)}) ›`}
+                </Text>
+              </Pressable>
             ) : null}
           </View>
         ))}
@@ -168,6 +180,7 @@ const useStyles = makeStyles((c) => ({
   badges: { flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: space(2) },
   group: { marginTop: space(3), gap: space(1) },
   groupTitle: { ...typeScale.chip },
+  more: { ...typeScale.chip, fontWeight: "700", paddingVertical: space(2) },
   row: {
     flexDirection: "row",
     flexWrap: "wrap",

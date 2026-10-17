@@ -75,6 +75,42 @@ def is_blank(im):
     return a.std() < 6 or (a > 245).mean() > 0.985
 
 
+def render_region(pdf, page, rect_pt, tmp, dpi=300):
+    """Render [x, y, w, h] (PDF points, top-left origin) of one page and trim the white
+    margin — for a picture the book stores as several tiles side by side."""
+    k = dpi / 72.0
+    x, y, w, h = rect_pt
+    stem = os.path.join(tmp, "region_%d" % page)
+    subprocess.run(
+        ["pdftoppm", "-r", str(dpi), "-png", "-f", str(page), "-l", str(page),
+         "-x", str(int(x * k)), "-y", str(int(y * k)), "-W", str(int(w * k)), "-H", str(int(h * k)),
+         "-singlefile", pdf, stem],
+        check=True,
+    )
+    im = Image.open(stem + ".png").convert("RGB")
+    ink = Image.eval(im.convert("L"), lambda v: 255 if v < 243 else 0).getbbox()
+    if ink:
+        pad = 6
+        im = im.crop((max(0, ink[0] - pad), max(0, ink[1] - pad), min(im.width, ink[2] + pad), min(im.height, ink[3] + pad)))
+    return im
+
+
+def compose_tiles(tmp, layout):
+    """Darken-composite the listed pdfimages tiles at their [num, x, y] offsets, then trim."""
+    parts = [(Image.open(os.path.join(tmp, "i-%03d.png" % n)).convert("L"), x, y) for n, x, y in layout]
+    w = max(x + p.width for p, x, _ in parts)
+    h = max(y + p.height for p, _, y in parts)
+    canvas = np.full((h, w), 255, dtype=np.uint8)
+    for p, x, y in parts:
+        a = np.asarray(p, dtype=np.uint8)
+        canvas[y:y + a.shape[0], x:x + a.shape[1]] = np.minimum(canvas[y:y + a.shape[0], x:x + a.shape[1]], a)
+    im = Image.fromarray(canvas).convert("RGB")
+    ink = Image.eval(im.convert("L"), lambda v: 255 if v < 243 else 0).getbbox()
+    if ink:
+        im = im.crop((max(0, ink[0] - 6), max(0, ink[1] - 6), min(im.width, ink[2] + 6), min(im.height, ink[3] + 6)))
+    return im
+
+
 def encode(im, max_side, fmt):
     c = im.copy()
     c.thumbnail((max_side, max_side), Image.LANCZOS)
@@ -136,12 +172,29 @@ def main():
                 # keep the bigger copy but the FIRST page it appeared on
                 kept[dup] = (kept[dup][0] if kept[dup][0] in tags else key, im, hsh)
 
+        # Pictures the book DRAWS (vector art — the numerals ১, ৫, ৬০ on the এ/ঞ/ষ pages) or
+        # only shows as tiles have no single embedded image: a tag whose key names no embedded
+        # image ("14:9001") and carries `render` becomes a page-region crop of its own.
+        image_keys = {"%d:%d" % (r["page"], r["num"]) for r in rows}
+        for key, t in tags.items():
+            if key not in image_keys and t.get("render"):
+                kept.append((key, None, None))
+
         items = []
         for key, im, _ in kept:
             page, num = (int(x) for x in key.split(":"))
+            t = tags.get(key, {})
+            if t.get("tiles"):
+                # The book's PDF places this picture's tiles slightly APART, so even its own
+                # page shows white seams (the মৎস্য fish, owner 2026-10-17): butt the tiles
+                # together as cut — [[image number, x, y], ...] in tile pixels.
+                im = compose_tiles(tmp, t["tiles"])
+            elif t.get("render"):
+                # The book split this picture into tiles (the hilsa, owner 2026-10-17):
+                # take the whole picture from the rendered page instead of one tile.
+                im = render_region(local, page, t["render"], tmp)
             img_b64, size = encode(im, IMAGE_MAX, "PNG")
             thumb_b64, _ = encode(im, THUMB_MAX, "JPEG")
-            t = tags.get(key, {})
             items.append({
                 "book": args.book,
                 "page": page,
@@ -150,6 +203,8 @@ def main():
                 "word": t.get("word"),
                 "wordEn": t.get("wordEn"),
                 "letter": t.get("letter"),
+                # the letter page it sits on (ব্যাঙ → ঙ): what picture–letter MATCH pairs with
+                "pageLetter": t.get("pageLetter"),
                 "uses": t.get("uses", ["COUNT"] if args.book.startswith("MATH") else []),
                 # Bangla/English: only a reviewed (tagged) picture starts active — the books
                 # split many photos into tiles, and an untagged fragment must never reach a
