@@ -21,7 +21,8 @@ import {
   type CtScriptRowT,
 } from "../graphql/ctScripts";
 import type { TabParamList } from "../navigation/types";
-import { Badge, Body, Button, Card, Muted, Notice, wrapRowText } from "./ui";
+import { Badge, Body, Button, Muted, Notice, wrapRowText } from "./ui";
+import { FoldCard } from "./FoldCard";
 import { STR, bnNum, isoDateLabel, ctScriptStageLabel } from "../lib/labels";
 import { ctScriptRowTitle, ctScriptStageTone } from "../lib/ctScriptStage";
 import { friendlyError } from "../lib/errors";
@@ -84,14 +85,19 @@ export function CtScriptOfficeCard(): React.ReactElement | null {
     }
   }
 
+  // D-#758: the stage badges are the summary; the groups open on tap.
   return (
-    <Card>
-      <Body style={styles.title}>{STR.csCardTitle}</Body>
-      <View style={styles.badges}>
-        {stageCounts.map(({ s, n }) => (
-          <Badge key={s} text={`${ctScriptStageLabel(s)} · ${bnNum(n)}`} tone={ctScriptStageTone(s)} />
-        ))}
-      </View>
+    <FoldCard
+      id="today:ctScriptsOffice"
+      title={<Body style={styles.title}>{STR.csCardTitle}</Body>}
+      summary={
+        <View style={styles.badges}>
+          {stageCounts.map(({ s, n }) => (
+            <Badge key={s} text={`${ctScriptStageLabel(s)} · ${bnNum(n)}`} tone={ctScriptStageTone(s)} />
+          ))}
+        </View>
+      }
+    >
       {err ? <Notice message={err} tone="danger" /> : null}
       {groups
         .filter((g) => g.rows.length > 0)
@@ -171,14 +177,14 @@ export function CtScriptOfficeCard(): React.ReactElement | null {
             ) : null}
           </View>
         ))}
-    </Card>
+    </FoldCard>
   );
 }
 
 const useStyles = makeStyles((c) => ({
   title: { ...typeScale.sectionTitle, color: c.textPrimary },
-  badges: { flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: space(2) },
-  group: { marginTop: space(3), gap: space(1) },
+  badges: { flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: space(1) },
+  group: { marginTop: space(2), gap: space(1) },
   groupTitle: { ...typeScale.chip },
   more: { ...typeScale.chip, fontWeight: "700", paddingVertical: space(2) },
   row: {

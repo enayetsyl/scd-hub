@@ -20,6 +20,7 @@ import { useMutation } from "urql";
 import { WORK_CLAIM_REJECT_REASONS_SELECTABLE, WORK_CLAIM_REJECT_REASON_LABELS_BN } from "@scd/shared";
 import type { WorkClaimRejectReason } from "@scd/shared";
 import { Body, Muted, Card, Badge, Button, Notice, Divider } from "./ui";
+import { FoldCard } from "./FoldCard";
 import { space } from "../theme/tokens";
 import { useColors } from "../theme";
 import { STR, bnNum, workClaimTrackerLabel } from "../lib/labels";
@@ -92,13 +93,25 @@ export function WorkClaimTeacherCard({
     onChanged();
   };
 
+  // D-#758: the count (and an escalation badge, so it is never hidden) is the summary;
+  // the claims and their buttons open on tap.
+  const escalated = rows.find((r) => r.checkpoint === "PRINCIPAL_TOLD") ?? rows.find((r) => r.checkpoint === "OFFICE_TOLD");
   return (
-    <Card>
-      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-        <Body style={{ fontWeight: "700" }}>{STR.wcTeacherCardTitle}</Body>
-        <Badge text={String(rows.length)} tone="warn" />
-      </View>
-
+    <FoldCard
+      id="today:workClaims"
+      title={STR.wcTeacherCardTitle}
+      aside={<Badge text={String(rows.length)} tone="warn" />}
+      summary={
+        escalated ? (
+          <View style={{ flexDirection: "row" }}>
+            <Badge
+              text={escalated.checkpoint === "PRINCIPAL_TOLD" ? STR.wcPrincipalTold : STR.wcOfficeTold}
+              tone={escalated.checkpoint === "PRINCIPAL_TOLD" ? "danger" : "warn"}
+            />
+          </View>
+        ) : undefined
+      }
+    >
       {rows.map((r, i) => (
         <View key={r.claimId}>
           {i > 0 ? <Divider /> : null}
@@ -222,6 +235,6 @@ export function WorkClaimTeacherCard({
           </Pressable>
         </Pressable>
       </Modal>
-    </Card>
+    </FoldCard>
   );
 }

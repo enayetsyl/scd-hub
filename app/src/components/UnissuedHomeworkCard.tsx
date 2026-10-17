@@ -13,7 +13,8 @@ import React from "react";
 import { View } from "react-native";
 import { useMutation, useQuery } from "urql";
 import { UNISSUED_HOMEWORK, VOID_HOMEWORK_ITEM } from "../graphql/operations";
-import { Badge, Body, Button, Card, Muted, Notice, wrapRowText } from "./ui";
+import { Badge, Body, Button, Muted, Notice, wrapRowText } from "./ui";
+import { FoldCard } from "./FoldCard";
 import { STR, bnNum, hwSubjectLabel, isoDateLabel } from "../lib/labels";
 import { friendlyError } from "../lib/errors";
 import { useConfirm } from "../state/ConfirmContext";
@@ -46,13 +47,14 @@ export function UnissuedHomeworkCard(): React.ReactElement | null {
     refetch({ requestPolicy: "network-only" });
   }
 
+  // D-#758: the count is the summary; the hint and the rows open on tap.
   return (
-    <Card>
-      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-        <Body style={{ fontWeight: "700", flex: 1 }}>📒 {STR.hwVoidCardTitle}</Body>
-        <Badge text={bnNum(rows.length)} tone="warn" />
-      </View>
-      <Muted style={{ marginTop: 2 }}>{STR.hwVoidCardHint}</Muted>
+    <FoldCard
+      id="today:unissuedHomework"
+      title={`📒 ${STR.hwVoidCardTitle}`}
+      aside={<Badge text={bnNum(rows.length)} tone="warn" />}
+    >
+      <Muted>{STR.hwVoidCardHint}</Muted>
       {err ? <Notice message={err} tone="danger" /> : null}
       {rows.map((r) => (
         <View
@@ -79,6 +81,6 @@ export function UnissuedHomeworkCard(): React.ReactElement | null {
           />
         </View>
       ))}
-    </Card>
+    </FoldCard>
   );
 }

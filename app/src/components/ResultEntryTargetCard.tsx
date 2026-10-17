@@ -13,7 +13,8 @@ import React from "react";
 import { Text, View } from "react-native";
 import { useQuery } from "urql";
 import { MY_RESULT_ENTRY_TARGET_QUERY } from "../graphql/classTest";
-import { Body, Muted, Card, Badge, Notice } from "./ui";
+import { Body, Muted, Badge, Notice } from "./ui";
+import { FoldCard } from "./FoldCard";
 import { STR, bnNum, monthLabel, hwSubjectLabel } from "../lib/labels";
 import { makeStyles, space, typeScale } from "../theme";
 
@@ -46,28 +47,32 @@ export function ResultEntryTargetCard(): React.ReactElement | null {
   const tone = p.done ? "ok" : p.overdue || diff < 0 ? "danger" : diff > 0 ? "ok" : "brand";
   const missing = p.lines.filter((l) => l.testsFound < l.tests);
 
+  // D-#758: the headline and today's numbers are the summary; the level and day tables open on tap.
   return (
-    <Card>
-      <View style={styles.head}>
-        <View style={{ flexShrink: 1 }}>
+    <FoldCard
+      id="today:resultEntryTarget"
+      title={
+        <View>
           <Body style={{ fontWeight: "700" }}>{fill(STR.retTitle, { subject: hwSubjectLabel(p.subject) })}</Body>
           <Muted>{fill(STR.retSubtitle, { total: p.total, due: shortDate(p.dueKey) })}</Muted>
         </View>
-        <Badge text={headline} tone={tone} />
-      </View>
-
-      <View style={styles.today}>
-        {!p.done && p.todayWorking ? (
-          <>
-            <Body style={{ fontWeight: "600" }}>{fill(STR.rqToday, { done: p.todayEntered, target: p.todayTarget })}</Body>
-            <Muted>{p.neededToday > 0 ? fill(STR.rqNeedToday, { n: p.neededToday }) : STR.rqOnTrackToday}</Muted>
-          </>
-        ) : !p.done ? (
-          <Muted>{STR.rqNotWorking}</Muted>
-        ) : null}
-        <Muted>{fill(STR.retProgress, { done: p.enteredTotal, total: p.total, left: p.remaining })}</Muted>
-        {p.perDayToFinish > 0 ? <Muted>{fill(STR.retPerDay, { n: p.perDayToFinish, days: p.workingDaysLeft })}</Muted> : null}
-      </View>
+      }
+      aside={<Badge text={headline} tone={tone} />}
+      summary={
+        <View style={styles.today}>
+          {!p.done && p.todayWorking ? (
+            <>
+              <Body style={{ fontWeight: "600" }}>{fill(STR.rqToday, { done: p.todayEntered, target: p.todayTarget })}</Body>
+              <Muted>{p.neededToday > 0 ? fill(STR.rqNeedToday, { n: p.neededToday }) : STR.rqOnTrackToday}</Muted>
+            </>
+          ) : !p.done ? (
+            <Muted>{STR.rqNotWorking}</Muted>
+          ) : null}
+          <Muted>{fill(STR.retProgress, { done: p.enteredTotal, total: p.total, left: p.remaining })}</Muted>
+          {p.perDayToFinish > 0 ? <Muted>{fill(STR.retPerDay, { n: p.perDayToFinish, days: p.workingDaysLeft })}</Muted> : null}
+        </View>
+      }
+    >
 
       {missing.map((l) => (
         <Notice key={l.label} tone="warn" message={fill(STR.retTestsMissing, { label: l.label, found: l.testsFound, tests: l.tests })} />
@@ -115,14 +120,13 @@ export function ResultEntryTargetCard(): React.ReactElement | null {
           </Text>
         </View>
       ))}
-    </Card>
+    </FoldCard>
   );
 }
 
 const useStyles = makeStyles((c) => ({
-  head: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: space(2) },
-  today: { marginTop: space(2), marginBottom: space(2), gap: 2 },
-  section: { ...typeScale.caption, color: c.textSecondary, fontWeight: "700", marginTop: space(3), marginBottom: space(1) },
+  today: { gap: 2 },
+  section: { ...typeScale.caption, color: c.textSecondary, fontWeight: "700", marginTop: space(2), marginBottom: space(1) },
   row: { flexDirection: "row", alignItems: "center", paddingVertical: space(1), borderBottomWidth: 1, borderBottomColor: c.border },
   headRow: { borderBottomColor: c.border },
   offRow: { opacity: 0.6 },

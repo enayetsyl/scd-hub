@@ -8,7 +8,7 @@
  * icon/title/target in the registry below — new cards are mostly server work.
  * Teachers keep the existing TodayScreen; AppTabs picks per role.
  */
-import React, { useState } from "react";
+import React from "react";
 import { Pressable, ScrollView, Text, View, RefreshControl } from "react-native";
 import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import { useQuery } from "urql";
@@ -16,6 +16,7 @@ import { DAYS_OF_WEEK } from "@scd/shared";
 import { ADMIN_TODAY_QUERY, type AdminTodayCardT } from "../../graphql/operations";
 import type { TabParamList } from "../../navigation/types";
 import { Screen, H2, Body, Muted, Card, Badge, Loader, ErrorBanner } from "../../components/ui";
+import { FoldCard } from "../../components/FoldCard";
 import { GiftHandoverCard } from "../../components/GiftHandoverCard";
 import { LiveClassCard } from "../../components/LiveClassCard";
 import { TodayWorkCard } from "../../components/TodayWorkCard";
@@ -107,7 +108,6 @@ const BADGE_TARGETS: Record<string, CardMeta["target"] & { params?: object }> = 
 export default function AdminTodayScreen(): React.ReactElement {
   const nav = useNavigation<NavigationProp<TabParamList>>();
   const date = dateKey();
-  const [open, setOpen] = useState<Record<string, boolean>>({});
   // AG-3 — the desk that physically hands out the weekly gift (Principal + Office).
   const { can } = useAuth();
   const canGift = can("gift:manage");
@@ -136,51 +136,51 @@ export default function AdminTodayScreen(): React.ReactElement {
   const renderCard = (card: AdminTodayCardT): React.ReactElement | null => {
     const meta = REGISTRY[card.key];
     if (!meta) return null; // a future server card this app version doesn't know — skip
-    const isOpen = !!open[card.key];
+    // D-#758: the same FoldCard as every other Today card, so they all read alike.
     return (
-      <Card key={card.key} onPress={() => setOpen((m) => ({ ...m, [card.key]: !isOpen }))}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
-          <Text style={{ fontSize: 18 }}>{meta.icon}</Text>
-          <Body style={{ fontWeight: "700", flex: 1 }}>{STR[meta.titleKey]}</Body>
-          <Text style={{ fontSize: 12 }}>{isOpen ? "▾" : "▸"}</Text>
-        </View>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(1), marginTop: space(1) }}>
-          {card.badges.map((b) => (
-            <Pressable
-              key={b.key}
-              accessibilityRole="button"
-              onPress={() => goTarget(BADGE_TARGETS[b.key] ?? meta.target)}
-            >
-              <Badge text={`${badgeLabel(b.key)}: ${bnNum(b.value)}`} tone={toneOf(b.tone)} />
-            </Pressable>
-          ))}
-        </View>
-        {isOpen ? (
-          <View style={{ marginTop: space(2) }}>
-            {card.rows.map((r, i) => (
+      <FoldCard
+        key={card.key}
+        id={`admin:${card.key}`}
+        icon={<Text style={{ fontSize: 18 }}>{meta.icon}</Text>}
+        title={STR[meta.titleKey]}
+        summary={
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(1) }}>
+            {card.badges.map((b) => (
               <Pressable
-                key={`${card.key}-${i}`}
-                onPress={() => goTo(meta)}
-                style={{ flexDirection: "row", alignItems: "center", paddingVertical: space(1), gap: space(2) }}
+                key={b.key}
+                accessibilityRole="button"
+                onPress={() => goTarget(BADGE_TARGETS[b.key] ?? meta.target)}
               >
-                <View style={{ flex: 1 }}>
-                  <Body style={{ fontWeight: "600" }}>{r.title}</Body>
-                  {r.subtitle ? <Muted>{r.subtitle}</Muted> : null}
-                </View>
-                {r.value ? <Badge text={r.value} tone={toneOf(r.tone)} /> : null}
+                <Badge text={`${badgeLabel(b.key)}: ${bnNum(b.value)}`} tone={toneOf(b.tone)} />
               </Pressable>
             ))}
-            {card.moreCount > 0 ? (
-              <Muted style={{ marginTop: 2 }}>
-                +{bnNum(card.moreCount)} {STR.dcMore}
-              </Muted>
-            ) : null}
-            <Pressable onPress={() => goTo(meta)} style={{ marginTop: space(2) }} accessibilityRole="link">
-              <Body style={{ fontWeight: "600" }}>{STR.dcOpen}</Body>
-            </Pressable>
           </View>
-        ) : null}
-      </Card>
+        }
+      >
+        <View>
+          {card.rows.map((r, i) => (
+            <Pressable
+              key={`${card.key}-${i}`}
+              onPress={() => goTo(meta)}
+              style={{ flexDirection: "row", alignItems: "center", paddingVertical: space(1), gap: space(2) }}
+            >
+              <View style={{ flex: 1 }}>
+                <Body style={{ fontWeight: "600" }}>{r.title}</Body>
+                {r.subtitle ? <Muted>{r.subtitle}</Muted> : null}
+              </View>
+              {r.value ? <Badge text={r.value} tone={toneOf(r.tone)} /> : null}
+            </Pressable>
+          ))}
+          {card.moreCount > 0 ? (
+            <Muted style={{ marginTop: 2 }}>
+              +{bnNum(card.moreCount)} {STR.dcMore}
+            </Muted>
+          ) : null}
+          <Pressable onPress={() => goTo(meta)} style={{ marginTop: space(2) }} accessibilityRole="link">
+            <Body style={{ fontWeight: "600" }}>{STR.dcOpen}</Body>
+          </Pressable>
+        </View>
+      </FoldCard>
     );
   };
 

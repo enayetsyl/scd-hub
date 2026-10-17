@@ -11,7 +11,8 @@
  */
 import React from "react";
 import { View } from "react-native";
-import { Body, Muted, Card, Badge, Divider } from "./ui";
+import { Body, Muted, Badge, Divider } from "./ui";
+import { FoldCard } from "./FoldCard";
 import { space } from "../theme/tokens";
 import { STR, bnNum, subjectLabel } from "../lib/labels";
 import type { ReturningStudentT } from "../graphql/operations";
@@ -23,13 +24,9 @@ export function ReturningStudentsCard({
 }): React.ReactElement | null {
   if (rows.length === 0) return null;
 
+  // D-#758: the count is the summary; the students and what to ask them for open on tap.
   return (
-    <Card>
-      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-        <Body style={{ fontWeight: "700" }}>{STR.rlCardTitle}</Body>
-        <Badge text={bnNum(rows.length)} tone="info" />
-      </View>
-
+    <FoldCard id="today:returningStudents" title={STR.rlCardTitle} aside={<Badge text={bnNum(rows.length)} tone="info" />}>
       {rows.map((s, i) => {
         const redeliver = s.items.filter((x) => x.group === "REDELIVER");
         const collect = s.items.filter((x) => x.group === "COLLECT");
@@ -86,6 +83,6 @@ export function ReturningStudentsCard({
           </View>
         );
       })}
-    </Card>
+    </FoldCard>
   );
 }

@@ -20,6 +20,7 @@ import React from "react";
 import { View } from "react-native";
 import { useMutation, useQuery } from "urql";
 import { Body, Muted, Card, Badge, Button, Divider, Loader } from "./ui";
+import { FoldCard } from "./FoldCard";
 import { space } from "../theme/tokens";
 import { STR, bnNum } from "../lib/labels";
 import { useToast } from "../state/ToastContext";
@@ -116,23 +117,33 @@ export function GiftHandoverCard(): React.ReactElement | null {
   // Nothing to hand out and nothing won — say so rather than rendering a bare header.
   if (!report) return null;
 
+  // D-#758: the outstanding count and one line of week totals are the summary; the
+  // week stepper and the class lists open on tap.
   return (
-    <Card>
-      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-        <Body style={{ fontWeight: "700" }}>{STR.agTodayTitle}</Body>
+    <FoldCard
+      id="today:giftHandover"
+      title={STR.agTodayTitle}
+      aside={
         <Badge
           text={totals.outstanding > 0 ? bnNum(totals.outstanding) : "✅"}
           tone={totals.outstanding > 0 ? "warn" : "ok"}
         />
-      </View>
-
+      }
+      summary={
+        <Muted>
+          {STR.agWeek} {bnNum(week)}
+          {groups.length === 0
+            ? ` · ${STR.agNoWinnersThisWeek}`
+            : ` · ${STR.agWinners}: ${bnNum(totals.winners)} · ${STR.agOutstanding}: ${bnNum(totals.outstanding)}`}
+        </Muted>
+      }
+    >
       {/* Week stepper — the desk often works a week late, so ◀ must be reachable. */}
       <View
         style={{
           flexDirection: "row",
           alignItems: "center",
           justifyContent: "space-between",
-          marginTop: space(2),
         }}
       >
         <Button
@@ -161,14 +172,9 @@ export function GiftHandoverCard(): React.ReactElement | null {
         />
       </View>
 
-      {groups.length === 0 ? (
-        <Muted style={{ marginTop: space(2) }}>{STR.agNoWinnersThisWeek}</Muted>
-      ) : (
+      {/* An empty week already says so in the summary line above. */}
+      {groups.length === 0 ? null : (
         <>
-          <Muted style={{ marginTop: space(2) }}>
-            {STR.agWinners}: {bnNum(totals.winners)} · {STR.agOutstanding}:{" "}
-            {bnNum(totals.outstanding)}
-          </Muted>
           {groups.map((g, i) => {
             const open = openClassId === g.key;
             return (
@@ -284,6 +290,6 @@ export function GiftHandoverCard(): React.ReactElement | null {
           })}
         </>
       )}
-    </Card>
+    </FoldCard>
   );
 }

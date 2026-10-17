@@ -12,7 +12,8 @@ import { useQuery } from "urql";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { MY_MEETING_SUMMARY_WORK } from "../graphql/meetingChain";
-import { Badge, Body, Card, Muted } from "./ui";
+import { Badge, Muted } from "./ui";
+import { FoldCard } from "./FoldCard";
 import { STR, bnNum, routineSubjectLabel } from "../lib/labels";
 import { dayLabel, placeLabel } from "./MeetingChainParts";
 import { useColors } from "../theme";
@@ -48,22 +49,24 @@ export function MeetingSummaryTeacherCard(): React.ReactElement | null {
               <Text style={{ color: c.textPrimary, fontSize: 12 }}>{label}</Text>
             </View>
           );
+          // D-#758: the three count tiles are the summary; the hint and the per-child rows open on tap.
           return (
-            <Card key={key}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space(2) }}>
-                <Body style={{ fontWeight: "700", flex: 1 }}>
-                  {STR.mcSummaryCardTitle} · {placeLabel(s)}
-                </Body>
-                {ready.length ? <Badge text={`${bnNum(ready.length)} ${STR.mcReady}`} tone="info" /> : null}
-              </View>
+            <FoldCard
+              key={key}
+              id={`today:meetingSummary:${key}`}
+              title={`${STR.mcSummaryCardTitle} · ${placeLabel(s)}`}
+              aside={ready.length ? <Badge text={`${bnNum(ready.length)} ${STR.mcReady}`} tone="info" /> : null}
+              summary={
+                <View style={{ flexDirection: "row", gap: space(2), marginTop: space(1) }}>
+                  {tile(s.ready, STR.mcReady, c.infoContainer, c.info)}
+                  {tile(s.waiting, STR.mcWaiting, c.warningContainer, c.warning)}
+                  {tile(s.done, STR.mcDoneLower, c.primaryContainer, c.primary)}
+                </View>
+              }
+            >
               <Muted>
                 {STR.mcSummaryHint} {STR.mcSummaryDueBy} {dayLabel(m.summaryDueKey)}।
               </Muted>
-              <View style={{ flexDirection: "row", gap: space(2), marginTop: space(2) }}>
-                {tile(s.ready, STR.mcReady, c.infoContainer, c.info)}
-                {tile(s.waiting, STR.mcWaiting, c.warningContainer, c.warning)}
-                {tile(s.done, STR.mcDoneLower, c.primaryContainer, c.primary)}
-              </View>
 
               {ready.map((x) => (
                 <Pressable
@@ -119,7 +122,7 @@ export function MeetingSummaryTeacherCard(): React.ReactElement | null {
                     </Pressable>
                   ))
                 : null}
-            </Card>
+            </FoldCard>
           );
         }),
       )}

@@ -21,11 +21,12 @@
  * reaches it on the teacher Today screen too (the D-#668 lesson).
  */
 import React from "react";
-import { View } from "react-native";
+import { Pressable, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { useQuery } from "urql";
 import { LIVE_CLASS_BOARD_QUERY, type LiveClassCellT } from "../graphql/operations";
-import { Body, Muted, Card, Badge, Divider, Loader } from "./ui";
+import { Body, Muted, Badge, Divider, Loader } from "./ui";
+import { FoldCard } from "./FoldCard";
 import { Icon } from "./Icon";
 import { STR, bnNum, routineSubjectLabel, absenceReasonLabel } from "../lib/labels";
 import { useColors } from "../theme";
@@ -99,22 +100,34 @@ export function LiveClassCard(): React.ReactElement | null {
   const period = live[0]?.periodNumber ?? null;
   const window = live[0]?.startTime && live[0]?.endTime ? `${bnNum(live[0].startTime)}–${bnNum(live[0].endTime)}` : null;
 
-  return (
-    <Card onPress={openBoard}>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
-        <Icon name="clock" size={18} color={colors.textPrimary} />
-        <Body style={{ fontWeight: "700", flex: 1 }}>{STR.lcbNowTitle}</Body>
-        {period != null ? (
-          <Badge text={`${STR.rtPeriodN} ${bnNum(period)}${window ? ` · ${window}` : ""}`} tone="brand" />
-        ) : null}
-      </View>
+  const liveNoTeacher = live.filter(noTeacher).length;
 
-      {live.length === 0 ? (
-        <Muted style={{ marginTop: space(2) }}>
-          {board.cells.length === 0 ? STR.lcbNoBoard : STR.lcbNoneLive}
-        </Muted>
-      ) : (
-        <View style={{ marginTop: space(2) }}>
+  // D-#758: the period, the no-teacher alarm and the day's uncovered count are the
+  // summary — an uncovered class still shows red without opening anything; the
+  // per-class rows and the board link open on tap.
+  return (
+    <FoldCard
+      id="today:liveClasses"
+      icon={<Icon name="clock" size={18} color={colors.textPrimary} />}
+      title={STR.lcbNowTitle}
+      summary={
+        <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: space(2) }}>
+          {period != null ? (
+            <Badge text={`${STR.rtPeriodN} ${bnNum(period)}${window ? ` · ${window}` : ""}`} tone="brand" />
+          ) : (
+            <Muted>{board.cells.length === 0 ? STR.lcbNoBoard : STR.lcbNoneLive}</Muted>
+          )}
+          {liveNoTeacher > 0 ? <Badge text={`${STR.lcbNoTeacher}: ${bnNum(liveNoTeacher)}`} tone="danger" /> : null}
+          {uncoveredToday > 0 ? (
+            <Badge text={`${STR.lcbUncoveredToday}: ${bnNum(uncoveredToday)}`} tone="danger" />
+          ) : (
+            <Muted style={{ flexShrink: 1 }}>{STR.lcbAllStaffed}</Muted>
+          )}
+        </View>
+      }
+    >
+      {live.length > 0 ? (
+        <View>
           {live.map((c) => {
             const alert = noTeacher(c);
             const fg = alert ? colors.onErrorContainer : colors.textPrimary;
@@ -156,23 +169,20 @@ export function LiveClassCard(): React.ReactElement | null {
             );
           })}
         </View>
-      )}
+      ) : null}
 
       <Divider />
-      {/* Wraps: on a phone the badge and the link don't fit side by side, and without
-          wrap they overlapped (owner screenshot 2026-10-01) — the link drops to its own
-          line, still right-aligned, instead. */}
-      <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: space(2) }}>
-        {uncoveredToday > 0 ? (
-          <Badge text={`${STR.lcbUncoveredToday}: ${bnNum(uncoveredToday)}`} tone="danger" />
-        ) : (
-          <Muted style={{ flexShrink: 1 }}>{STR.lcbAllStaffed}</Muted>
-        )}
-        <View style={{ flexDirection: "row", alignItems: "center", gap: space(1), marginLeft: "auto" }}>
-          <Body style={{ fontWeight: "600" }}>{STR.lcbBoardOpen}</Body>
-          <Icon name="chevron-right" size={18} color={colors.textSecondary} />
-        </View>
-      </View>
-    </Card>
+      <Pressable
+        onPress={openBoard}
+        accessibilityRole="link"
+        style={({ pressed }) => [
+          { flexDirection: "row", alignItems: "center", gap: space(1), alignSelf: "flex-end", minHeight: 40 },
+          pressed && { opacity: 0.7 },
+        ]}
+      >
+        <Body style={{ fontWeight: "600" }}>{STR.lcbBoardOpen}</Body>
+        <Icon name="chevron-right" size={18} color={colors.textSecondary} />
+      </Pressable>
+    </FoldCard>
   );
 }

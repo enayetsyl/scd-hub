@@ -11,7 +11,8 @@ import React from "react";
 import { Pressable, Text, View } from "react-native";
 import { useQuery } from "urql";
 import { MY_REVIEW_QUOTA_QUERY, type ReviewQuotaDayT } from "../graphql/observation";
-import { Body, Muted, Card, Badge } from "./ui";
+import { Body, Muted, Badge } from "./ui";
+import { FoldCard } from "./FoldCard";
 import { STR, bnNum, monthLabel } from "../lib/labels";
 import { makeStyles, space, typeScale } from "../theme";
 
@@ -41,28 +42,31 @@ export function ReviewQuotaCard(): React.ReactElement | null {
   const rows: ReviewQuotaDayT[] = [...p.days].reverse();
   const shown = showAll ? rows : rows.slice(0, VISIBLE_ROWS);
 
+  // D-#758: the headline and today's numbers are the summary; the day-by-day table opens on tap.
   return (
-    <Card>
-      <View style={styles.head}>
-        <View style={{ flexShrink: 1 }}>
+    <FoldCard
+      id="today:reviewQuota"
+      title={
+        <View>
           <Body style={{ fontWeight: "700" }}>{STR.rqTitle}</Body>
           <Muted>{fill(STR.rqSubtitle, { n: p.perDay, date: shortDate(p.startKey) })}</Muted>
         </View>
-        <Badge text={headline} tone={tone} />
-      </View>
-
-      <View style={styles.today}>
-        {p.todayWorking ? (
-          <>
-            <Body style={{ fontWeight: "600" }}>{fill(STR.rqToday, { done: p.todayReviewed, target: p.todayTarget })}</Body>
-            <Muted>{p.neededToday > 0 ? fill(STR.rqNeedToday, { n: p.neededToday }) : STR.rqOnTrackToday}</Muted>
-          </>
-        ) : (
-          <Muted>{STR.rqNotWorking}</Muted>
-        )}
-        <Muted>{fill(STR.rqTotals, { done: p.reviewedThroughYesterday, target: p.expectedThroughYesterday })}</Muted>
-      </View>
-
+      }
+      aside={<Badge text={headline} tone={tone} />}
+      summary={
+        <View style={styles.today}>
+          {p.todayWorking ? (
+            <>
+              <Body style={{ fontWeight: "600" }}>{fill(STR.rqToday, { done: p.todayReviewed, target: p.todayTarget })}</Body>
+              <Muted>{p.neededToday > 0 ? fill(STR.rqNeedToday, { n: p.neededToday }) : STR.rqOnTrackToday}</Muted>
+            </>
+          ) : (
+            <Muted>{STR.rqNotWorking}</Muted>
+          )}
+          <Muted>{fill(STR.rqTotals, { done: p.reviewedThroughYesterday, target: p.expectedThroughYesterday })}</Muted>
+        </View>
+      }
+    >
       <View style={[styles.row, styles.headRow]}>
         <Text style={[styles.cell, styles.dateCell, styles.th]}>{STR.rqColDate}</Text>
         <Text style={[styles.cell, styles.th]}>{STR.rqColReviewed}</Text>
@@ -87,13 +91,12 @@ export function ReviewQuotaCard(): React.ReactElement | null {
           <Text style={styles.link}>{showAll ? STR.rqShowLess : STR.rqShowAll}</Text>
         </Pressable>
       ) : null}
-    </Card>
+    </FoldCard>
   );
 }
 
 const useStyles = makeStyles((c) => ({
-  head: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: space(2) },
-  today: { marginTop: space(2), marginBottom: space(2), gap: 2 },
+  today: { gap: 2 },
   row: { flexDirection: "row", alignItems: "center", paddingVertical: space(1), borderBottomWidth: 1, borderBottomColor: c.border },
   headRow: { borderBottomColor: c.border },
   offRow: { opacity: 0.6 },
