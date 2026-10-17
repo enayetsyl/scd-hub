@@ -29,7 +29,7 @@ import { Screen, H2, Body, Muted, Card, Button, Chip, ChipRow, Field, Select, No
 import SendToPrintCard from "../../components/SendToPrintCard";
 import WorksheetPaper, { type WorksheetDocT } from "../../components/WorksheetPaper";
 import { useAuth } from "../../auth/AuthContext";
-import { STR, bnNum, classLevelLabel, routineSubjectLabel, isoDateLabel, getActiveLang } from "../../lib/labels";
+import { STR, bnNum, wsRangeTooLongLabel, classLevelLabel, routineSubjectLabel, isoDateLabel, getActiveLang } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { openPdf, PDF_SUPPORTED } from "../../lib/pdf";
 import { useColors } from "../../theme";
@@ -77,7 +77,7 @@ function axisOptions(axis: string | null): string[] {
 function rangeParts(
   r: { kind: string; axis: string | null; setSize: number | null },
   count: number,
-): Array<{ label: string; options: string[] }> {
+): Array<{ label: string; options: string[]; max?: number }> {
   const opts = axisOptions(r.axis);
   if (!opts.length) return [];
   const shownLabel = r.axis === "NUM_BN" || r.axis === "NUM_EN" ? STR.wsRangeNumbersShown : STR.wsRangeShown;
@@ -103,7 +103,7 @@ function rangeParts(
       const numeric = r.axis === "NUM_BN" || r.axis === "NUM_EN";
       const size = r.setSize ?? (numeric ? 10 : 5);
       const lines = count < size ? count : Math.max(1, Math.ceil(count / size));
-      return Array.from({ length: Math.min(lines, 20) }, (_, i) => ({ label: `${STR.wsRangeLine} ${bnNum(i + 1)}`, options: opts }));
+      return Array.from({ length: Math.min(lines, 20) }, (_, i) => ({ label: `${STR.wsRangeLine} ${bnNum(i + 1)}`, options: opts, max: size }));
     }
     case "BEFORE":
     case "AFTER":
@@ -448,6 +448,12 @@ export default function WorksheetGenerateScreen(): React.ReactElement {
                       <Muted>{STR.wsRangeHint}</Muted>
                       {rangeParts(r, c).map((part, k) => {
                         const cur = ranges[r.seq]?.[k] ?? { from: "", to: "" };
+                        // The engine takes `max` letters in a row from a longer range (owner chose a
+                        // warning over changing that, 2026-10-17).
+                        const a = part.options.indexOf(cur.from);
+                        const b = part.options.indexOf(cur.to);
+                        const span = a >= 0 && b >= 0 ? Math.abs(b - a) + 1 : 0;
+                        const tooLong = part.max != null && span > part.max;
                         const opts = [
                           { value: "", label: STR.wsRangeAuto },
                           ...part.options.map((o) => ({ value: o, label: o })),
@@ -473,6 +479,11 @@ export default function WorksheetGenerateScreen(): React.ReactElement {
                                 searchable
                               />
                             </View>
+                            {tooLong ? (
+                              <View style={{ width: "100%" }}>
+                                <Notice tone="warn" message={wsRangeTooLongLabel(part.max as number, span)} />
+                              </View>
+                            ) : null}
                           </View>
                         );
                       })}

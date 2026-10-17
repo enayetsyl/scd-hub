@@ -352,6 +352,12 @@ export const taskPriorityLabel = (p: TaskPriority): string => pick(TASK_PRIORITY
 export const daySlotLabel = (s: DaySlot): string => pick(DAY_SLOT_LABELS_BN, DAY_SLOT_LABELS_EN)[s] ?? s;
 export const taskRecurrenceLabel = (r: TaskRecurrence): string => pick(TASK_RECURRENCE_LABELS_BN, TASK_RECURRENCE_LABELS_EN)[r] ?? r;
 export const workCardKindLabel = (k: WorkCardKind): string => pick(WORK_CARD_KIND_LABELS_BN, WORK_CARD_KIND_LABELS_EN)[k] ?? k;
+/** Owner 2026-10-17: a line range longer than the line — say so instead of cutting it silently. */
+export const wsRangeTooLongLabel = (size: number, span: number): string =>
+  pick(
+    `এই লাইনে শুধু ${bnNum(size)}টি আসবে — বাছাই করা ${bnNum(span)}টির মধ্যে পরপর ${bnNum(size)}টি।`,
+    `Only ${size} of these ${span} will be used — ${size} in a row.`,
+  );
 export const weekOfMonthLabel = (w: number): string =>
   pick(WEEK_OF_MONTH_LABELS_BN, WEEK_OF_MONTH_LABELS_EN)[w as WeekOfMonth] ?? String(w);
 export const weekdayShortLabel = (i: number): string => {
