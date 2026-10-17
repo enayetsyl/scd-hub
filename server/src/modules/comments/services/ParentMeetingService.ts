@@ -341,8 +341,10 @@ async function loadMeetingOrThrow(meetingId: string): Promise<IParentMeeting> {
   return meeting;
 }
 
-/** The active students in a meeting's includeScope, flattened for grouping. */
-async function studentsInScope(meeting: IParentMeeting): Promise<StudentForSlot[]> {
+/** The Student filter for a meeting's includeScope (both lists empty ⇒ every active
+ *  student, §3). Shared with the comment-chain roster (MC-1) so the slots and the
+ *  comments always cover the same children. */
+export function meetingScopeFilter(meeting: Pick<IParentMeeting, "includeScope">): Record<string, unknown> {
   const classIds = meeting.includeScope?.classIds ?? [];
   const sectionIds = meeting.includeScope?.sectionIds ?? [];
 
@@ -353,6 +355,12 @@ async function studentsInScope(meeting: IParentMeeting): Promise<StudentForSlot[
     if (classIds.length) or.push({ classId: { $in: classIds } });
     filter.$or = or;
   }
+  return filter;
+}
+
+/** The active students in a meeting's includeScope, flattened for grouping. */
+async function studentsInScope(meeting: IParentMeeting): Promise<StudentForSlot[]> {
+  const filter = meetingScopeFilter(meeting);
 
   const students = (await Student.find(filter)
     .select("name phone classId sectionId")

@@ -96,6 +96,10 @@ export const EXPECTED_ERROR_NAMES: ReadonlySet<string> = new Set([
   // refusal is the feature, since the alternative is a wrong letter someone signs.
   "LetterError",
   "LibraryError",
+  // Parents'-meeting comment chain (MC-1..MC-4, D-#752..#756): a note by the wrong teacher,
+  // a summary before every subject note is in, a frozen layer — sentences for the person.
+  "MeetingBriefError",
+  "MeetingChainError",
   "MeetingCommentError",
   "MessageTemplateError",
   // Monthly report (MR-1..MR-4): all three are deliberate denials, not faults — a

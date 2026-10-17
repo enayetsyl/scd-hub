@@ -23,6 +23,11 @@ export type HomeStackParamList = {
   /** D-#710: the claim queue for a teacher the Principal added to the 10:30 digest
    *  (teachers have no Admin tab). Registered AFTER Today, so Today stays initial. */
   WorkClaimQueue: undefined;
+  /** MC-3 (D-#752): a subject teacher writes one child's meeting comment. `queue` = the
+   *  same group's due children in order, for "Save & next". Never first in the stack. */
+  MeetingSubjectNote: { meetingId: string; studentId: string; subject: string; queue?: string[] };
+  /** MC-3: the class teacher writes a child's summary from every subject comment. */
+  MeetingSummaryWrite: { meetingId: string; studentId: string; studentName: string };
 };
 
 /** Which panel the Student Profile opens on (SP-3, prd-student-profile §8.1). */
@@ -374,6 +379,12 @@ export type CommentsStackParamList = {
   MeetingsList: undefined;
   MeetingAdmin: { meetingId: string; instanceLabel: string };
   MeetingComparison: { meetingId: string; studentId: string; studentName: string };
+  /** MC-4 (D-#752..#756): the meeting's comment collection — progress, skip, remind. */
+  MeetingComments: { meetingId: string; instanceLabel: string };
+  MeetingFinalQueue: { meetingId: string; instanceLabel: string };
+  MeetingFinal: { meetingId: string; studentId: string; studentName: string };
+  /** The meeting-day brief. `studentIds` = every child of the family slot (sibling tabs). */
+  MeetingBrief: { meetingId: string; studentIds: string[]; studentId?: string };
 };
 
 /** Classroom Observation (CO app surfaces over CO-1..CO-7) — staff stack

@@ -98,6 +98,7 @@ import "./modules/trackers/resolvers/classTestQuestion";
 import "./modules/comments/resolvers/parentMeeting";
 import "./modules/comments/resolvers/meetingDispatch";
 import "./modules/comments/resolvers/meetingComment";
+import "./modules/comments/resolvers/meetingChain";
 import "./modules/access-control/resolvers/accessControl";
 import "./modules/support-book/resolvers/supportBook";
 import "./modules/support-book/resolvers/supportBookSlots";

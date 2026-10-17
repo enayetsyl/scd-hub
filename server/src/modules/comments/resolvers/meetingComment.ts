@@ -19,6 +19,7 @@ import type { Role } from "@scd/shared";
 import { roleHasPermission } from "@scd/shared";
 import { ForbiddenError, assertIsClassTeacher, assertGuardianOfStudent } from "../../../middleware/authz";
 import { resolveCommentSection } from "../services/StudentCommentService";
+import { assertSummaryWritable } from "../services/MeetingChainService";
 import {
   saveMeetingComment,
   studentCommentTimeline,
@@ -159,6 +160,9 @@ builder.mutationField("saveMeetingComment", (t) =>
       // Section resolved server-side from the student (the CM-1 D-#115 posture).
       const sectionId = await resolveCommentSection(args.studentId);
       await assertIsClassTeacher(ctx, sectionId); // class-teacher-only (J-CM6 / D-#42/#45)
+      // MC-1 (D-#752): once comment collection is open, the summary waits for every
+      // subject note (written or skipped) and freezes when the final is written.
+      await assertSummaryWritable(args.meetingId, args.studentId, { strengths: args.positiveText, concerns: args.concernText });
       return saveMeetingComment({
         meetingId: args.meetingId,
         studentId: args.studentId,
