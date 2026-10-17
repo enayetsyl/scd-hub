@@ -319,7 +319,8 @@ function picturePool(c: RowCtx, need: "FIRST_LETTER" | "MATCH" | "WORD"): Pictur
   const pool = c.input.pictures.filter((p) => {
     if (p.book !== book || !p.uses.includes(need)) return false;
     if (need === "WORD") return !!p.word;
-    return !!p.letter && letterInScope(p.letter, c.input.subject, c.input.scope);
+    const l = need === "MATCH" ? matchLetter(p) : p.letter;
+    return !!l && letterInScope(l, c.input.subject, c.input.scope);
   });
   // A picture already on this paper is not reused in another question.
   return orderPool(pool, c.rng, c.isFinal).filter((p) => !c.usedPictures.has(p.id));
@@ -327,6 +328,16 @@ function picturePool(c: RowCtx, need: "FIRST_LETTER" | "MATCH" | "WORD"): Pictur
 
 function letterAnswer(p: PictureRef, subject: string): string {
   const l = p.letter ?? "";
+  return subject === "ENG" ? l.toUpperCase() : l;
+}
+
+/** MATCH pairs a picture with its book page's letter (ব্যাঙ → ঙ, owner 2026-10-17). */
+function matchLetter(p: PictureRef): string | null {
+  return p.pageLetter || p.letter || null;
+}
+
+function matchAnswer(p: PictureRef, subject: string): string {
+  const l = matchLetter(p) ?? "";
   return subject === "ENG" ? l.toUpperCase() : l;
 }
 
@@ -379,13 +390,13 @@ function buildMatch(
 }
 
 function buildMatchPictureLetter(row: RowSpec, c: RowCtx): Built {
-  const chosen = takeDistinct(picturePool(c, "MATCH"), row.count, (p) => letterAnswer(p, c.input.subject));
+  const chosen = takeDistinct(picturePool(c, "MATCH"), row.count, (p) => matchAnswer(p, c.input.subject));
   chosen.forEach((p) => c.usedPictures.add(p.id));
   return {
     section: {
       layout: "match",
       ...buildMatch(
-        chosen.map((p) => ({ pictureId: p.id, repeat: 1, t: null, answer: letterAnswer(p, c.input.subject) })),
+        chosen.map((p) => ({ pictureId: p.id, repeat: 1, t: null, answer: matchAnswer(p, c.input.subject) })),
         c,
       ),
     },

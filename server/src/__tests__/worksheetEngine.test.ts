@@ -395,3 +395,33 @@ describe("renderWorksheetPdf", () => {
     }
   });
 });
+
+describe("book letter (pageLetter, owner 2026-10-17)", () => {
+  // The book's ঙ / ঁ pages: ব্যাঙ starts with ব but is the ঙ picture, বাঁশ is the ঁ picture.
+  const pics = (): PictureRef[] => [
+    { id: "frog", book: "BAN", letter: "ব", pageLetter: "ঙ", word: "ব্যাঙ", uses: ["FIRST_LETTER", "MATCH"], recent: false, reserved: false },
+    { id: "bamboo", book: "BAN", letter: "ব", pageLetter: "ঁ", word: "বাঁশ", uses: ["FIRST_LETTER", "MATCH"], recent: false, reserved: false },
+    { id: "kola", book: "BAN", letter: "ক", pageLetter: "ক", word: "কলা", uses: ["FIRST_LETTER", "MATCH"], recent: false, reserved: false },
+  ];
+  const row = (kind: "MATCH_PICTURE_LETTER" | "PICTURE_FIRST_LETTER"): RowSpec => ({ seq: 1, label: "m", kind, count: 3, marksEach: 1 });
+
+  it("picture–letter matching pairs each picture with its page's letter", () => {
+    const d = generateWorksheet({ kind: "FINAL", subject: "BAN", rows: [row("MATCH_PICTURE_LETTER")], scope: {}, seed: 3, pictures: pics() });
+    const s = d.sections[0];
+    const want = new Map([["frog", "ঙ"], ["bamboo", "ঁ"], ["kola", "ক"]]);
+    expect(s.left!.length).toBe(3);
+    s.left!.forEach((l, i) => expect(s.right![s.answer![i]]).toBe(want.get(l.pictureId!)));
+  });
+
+  it("the first-letter question still asks for the word's first letter", () => {
+    const d = generateWorksheet({ kind: "FINAL", subject: "BAN", rows: [row("PICTURE_FIRST_LETTER")], scope: {}, seed: 3, pictures: pics() });
+    const items = d.sections[0].pictures!;
+    const first = new Map([["frog", "ব"], ["bamboo", "ব"], ["kola", "ক"]]);
+    items.forEach((p) => expect(p.a).toBe(first.get(p.pictureId)));
+  });
+
+  it("a ticked page letter brings its pictures into matching", () => {
+    const d = generateWorksheet({ kind: "ASSIGNMENT", subject: "BAN", rows: [row("MATCH_PICTURE_LETTER")], scope: { letters: ["ক", "ঙ"] }, seed: 3, pictures: pics() });
+    expect(d.sections[0].left!.map((l) => l.pictureId).sort()).toEqual(["frog", "kola"]);
+  });
+});

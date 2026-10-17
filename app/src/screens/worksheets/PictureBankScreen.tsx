@@ -47,6 +47,7 @@ export default function PictureBankScreen(): React.ReactElement {
   const [word, setWord] = useState("");
   const [wordEn, setWordEn] = useState("");
   const [letter, setLetter] = useState("");
+  const [pageLetter, setPageLetter] = useState("");
   const [uses, setUses] = useState<string[]>([]);
   const [reserve, setReserve] = useState(false);
   const [active, setActive] = useState(true);
@@ -58,6 +59,7 @@ export default function PictureBankScreen(): React.ReactElement {
     setWord(p.word ?? "");
     setWordEn(p.wordEn ?? "");
     setLetter(p.letter ?? "");
+    setPageLetter(p.pageLetter ?? "");
     setUses(p.uses);
     setReserve(p.reserveForFinal);
     setActive(p.active);
@@ -66,7 +68,7 @@ export default function PictureBankScreen(): React.ReactElement {
 
   const save = async (): Promise<void> => {
     if (!selected) return;
-    const res = await update({ id: selected.id, word, wordEn, letter, uses, reserveForFinal: reserve, active });
+    const res = await update({ id: selected.id, word, wordEn, letter, pageLetter, uses, reserveForFinal: reserve, active });
     if (res.error || !res.data?.updateWorksheetPicture) {
       setMsg({ tone: "danger", text: friendlyError(res.error) });
       return;
@@ -118,6 +120,7 @@ export default function PictureBankScreen(): React.ReactElement {
               </Muted>
               <Field label={STR.wsBankWord} value={word} onChangeText={setWord} editable={canEdit} />
               <Field label={STR.wsBankLetter} value={letter} onChangeText={setLetter} editable={canEdit} />
+              <Field label={STR.wsBankPageLetter} value={pageLetter} onChangeText={setPageLetter} editable={canEdit} />
               <Field label={STR.wsBankWordEn} value={wordEn} onChangeText={setWordEn} editable={canEdit} />
             </View>
           </View>
@@ -170,12 +173,16 @@ export default function PictureBankScreen(): React.ReactElement {
                 <Body numberOfLines={1} style={{ flexShrink: 1 }}>
                   {p.word ?? "—"}
                 </Body>
-                {p.letter ? <Badge text={p.letter} tone="brand" /> : null}
+                {/* the book page's letter first — বাঁশ sits under ঁ, not ব */}
+                {p.pageLetter || p.letter ? <Badge text={(p.pageLetter || p.letter) as string} tone="brand" /> : null}
               </View>
               <Muted>
                 {STR.wsBankPage} {bnNum(p.page)}
               </Muted>
               <View style={{ flexDirection: "row", gap: 4, flexWrap: "wrap" }}>
+                {p.pageLetter && p.letter && p.pageLetter !== p.letter ? (
+                  <Badge text={`${STR.wsBankFirstShort} ${p.letter}`} tone="muted" />
+                ) : null}
                 {!p.active ? <Badge text={STR.wsBankHiddenBadge} tone="muted" /> : null}
                 {p.reserveForFinal ? <Badge text={STR.wsBankReservedBadge} tone="gold" /> : null}
               </View>

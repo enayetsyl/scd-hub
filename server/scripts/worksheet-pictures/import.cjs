@@ -58,6 +58,7 @@ async function main() {
             word: x.word ?? null,
             wordEn: x.wordEn ?? null,
             letter: x.letter ?? null,
+            pageLetter: x.pageLetter ?? null,
             uses: x.uses ?? [],
             active: x.active !== false,
             reserveForFinal: false,
