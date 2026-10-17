@@ -13,7 +13,8 @@ import { Text, View } from "react-native";
 import { useMutation, useQuery } from "urql";
 import { IMPROVEMENT_TEACHER_REASONS } from "@scd/shared";
 import { MY_IMPROVEMENT_TASKS, TICK_IMPROVEMENT_TASK, UNTICK_IMPROVEMENT_TASK, type ImprovementTaskT } from "../graphql/improvement";
-import { Badge, Body, Button, Card, Chip, ChipRow, Muted, Notice } from "./ui";
+import { Badge, Body, Button, Chip, ChipRow, Muted, Notice } from "./ui";
+import { FoldCard } from "./FoldCard";
 import { STR, bnNum, classSectionLabel, subjectShortLabel, improvementReasonLabel } from "../lib/labels";
 import { isWholeClassSectionName } from "../lib/sectionPicks";
 import { friendlyError } from "../lib/errors";
@@ -44,12 +45,13 @@ export function ImprovementTasksTeacherCard(): React.ReactElement | null {
     refetch({ requestPolicy: "network-only" });
   }
 
+  // D-#758: the count left is the summary; the tasks and their buttons open on tap.
   return (
-    <Card>
-      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space(2) }}>
-        <Body style={{ fontWeight: "700" }}>{STR.impDayListTitle}</Body>
-        <Badge text={left ? `${bnNum(left)} ${STR.impLeft}` : STR.impAllDone} tone={left ? "warn" : "ok"} />
-      </View>
+    <FoldCard
+      id="today:improvementTeacher"
+      title={STR.impDayListTitle}
+      aside={<Badge text={left ? `${bnNum(left)} ${STR.impLeft}` : STR.impAllDone} tone={left ? "warn" : "ok"} />}
+    >
       <Muted>{STR.impTodayCardHint}</Muted>
       {err ? <Notice message={err} tone="danger" /> : null}
       {rows.map((r) => {
@@ -91,6 +93,6 @@ export function ImprovementTasksTeacherCard(): React.ReactElement | null {
           </View>
         );
       })}
-    </Card>
+    </FoldCard>
   );
 }

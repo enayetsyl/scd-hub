@@ -13,7 +13,8 @@ import { useQuery } from "urql";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { MY_MEETING_NOTE_WORK, type NoteWorkGroupT } from "../graphql/meetingChain";
-import { Badge, Body, Card, Muted } from "./ui";
+import { Badge, Body, Muted } from "./ui";
+import { FoldCard } from "./FoldCard";
 import { STR, bnNum, routineSubjectLabel } from "../lib/labels";
 import { dayLabel, placeLabel } from "./MeetingChainParts";
 import { useColors } from "../theme";
@@ -119,19 +120,23 @@ export function MeetingNotesTeacherCard(): React.ReactElement | null {
     <>
       {meetings.map((m) => {
         const firstDue = m.groups.findIndex((g) => g.due > 0);
+        // D-#758: the due count and the dates are the summary; the class × subject groups open on tap.
         return (
-          <Card key={m.meetingId}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space(2) }}>
-              <Body style={{ fontWeight: "700", flex: 1 }}>{STR.mcTodayNotesTitle}</Body>
-              <Badge text={m.due ? `${bnNum(m.due)} ${STR.mcDue}` : STR.mcAllDone} tone={m.due ? "warn" : "ok"} />
-            </View>
-            <Muted>
-              {STR.mcMeetingOn} {dayLabel(m.meetingDateKey)} · {STR.mcNotesDueBy} {dayLabel(m.subjectDueKey)}
-            </Muted>
+          <FoldCard
+            key={m.meetingId}
+            id={`today:meetingNotes:${m.meetingId}`}
+            title={STR.mcTodayNotesTitle}
+            aside={<Badge text={m.due ? `${bnNum(m.due)} ${STR.mcDue}` : STR.mcAllDone} tone={m.due ? "warn" : "ok"} />}
+            summary={
+              <Muted>
+                {STR.mcMeetingOn} {dayLabel(m.meetingDateKey)} · {STR.mcNotesDueBy} {dayLabel(m.subjectDueKey)}
+              </Muted>
+            }
+          >
             {m.groups.map((g, i) => (
               <Group key={`${g.sectionId}-${g.subject}`} meetingId={m.meetingId} g={g} initiallyOpen={i === firstDue} />
             ))}
-          </Card>
+          </FoldCard>
         );
       })}
     </>
