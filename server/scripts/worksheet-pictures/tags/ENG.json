@@ -90,7 +90,9 @@
   "uses": [
    "FIRST_LETTER",
    "MATCH"
-  ]
+  ],
+  "active": false,
+  "exerciseOnly": true
  },
  "8:11": {
   "active": false
@@ -102,7 +104,9 @@
   "uses": [
    "FIRST_LETTER",
    "MATCH"
-  ]
+  ],
+  "active": false,
+  "exerciseOnly": true
  },
  "8:14": {
   "word": "ball",
@@ -111,7 +115,9 @@
   "uses": [
    "FIRST_LETTER",
    "MATCH"
-  ]
+  ],
+  "active": false,
+  "exerciseOnly": true
  },
  "8:15": {
   "word": "cat",
@@ -120,7 +126,9 @@
   "uses": [
    "FIRST_LETTER",
    "MATCH"
-  ]
+  ],
+  "active": false,
+  "exerciseOnly": true
  },
  "8:16": {
   "active": false
@@ -132,7 +140,9 @@
   "uses": [
    "FIRST_LETTER",
    "MATCH"
-  ]
+  ],
+  "active": false,
+  "exerciseOnly": true
  },
  "9:37": {
   "word": "eraser",
@@ -141,7 +151,9 @@
   "uses": [
    "FIRST_LETTER",
    "MATCH"
-  ]
+  ],
+  "active": false,
+  "exerciseOnly": true
  },
  "9:38": {
   "word": "cock",
@@ -150,7 +162,9 @@
   "uses": [
    "FIRST_LETTER",
    "MATCH"
-  ]
+  ],
+  "active": false,
+  "exerciseOnly": true
  },
  "9:39": {
   "active": false
@@ -162,7 +176,9 @@
   "uses": [
    "FIRST_LETTER",
    "MATCH"
-  ]
+  ],
+  "active": false,
+  "exerciseOnly": true
  },
  "10:41": {
   "word": "fan",
@@ -258,7 +274,9 @@
   "uses": [
    "FIRST_LETTER",
    "MATCH"
-  ]
+  ],
+  "active": false,
+  "exerciseOnly": true
  },
  "15:66": {
   "word": "horse",
@@ -267,7 +285,9 @@
   "uses": [
    "FIRST_LETTER",
    "MATCH"
-  ]
+  ],
+  "active": false,
+  "exerciseOnly": true
  },
  "15:67": {
   "word": "jam",
@@ -276,7 +296,9 @@
   "uses": [
    "FIRST_LETTER",
    "MATCH"
-  ]
+  ],
+  "active": false,
+  "exerciseOnly": true
  },
  "15:68": {
   "word": "ice-cream",
@@ -285,7 +307,9 @@
   "uses": [
    "FIRST_LETTER",
    "MATCH"
-  ]
+  ],
+  "active": false,
+  "exerciseOnly": true
  },
  "16:70": {
   "word": "jeep",
@@ -294,7 +318,9 @@
   "uses": [
    "FIRST_LETTER",
    "MATCH"
-  ]
+  ],
+  "active": false,
+  "exerciseOnly": true
  },
  "16:72": {
   "word": "fish",
@@ -303,7 +329,9 @@
   "uses": [
    "FIRST_LETTER",
    "MATCH"
-  ]
+  ],
+  "active": false,
+  "exerciseOnly": true
  },
  "16:73": {
   "word": "ice",
@@ -312,7 +340,9 @@
   "uses": [
    "FIRST_LETTER",
    "MATCH"
-  ]
+  ],
+  "active": false,
+  "exerciseOnly": true
  },
  "16:74": {
   "word": "hand",
@@ -321,7 +351,9 @@
   "uses": [
    "FIRST_LETTER",
    "MATCH"
-  ]
+  ],
+  "active": false,
+  "exerciseOnly": true
  },
  "16:75": {
   "word": "goat",
@@ -330,7 +362,9 @@
   "uses": [
    "FIRST_LETTER",
    "MATCH"
-  ]
+  ],
+  "active": false,
+  "exerciseOnly": true
  },
  "17:76": {
   "word": "key",
@@ -429,7 +463,9 @@
   "uses": [
    "FIRST_LETTER",
    "MATCH"
-  ]
+  ],
+  "active": false,
+  "exerciseOnly": true
  },
  "22:89": {
   "word": "mug",
@@ -438,7 +474,9 @@
   "uses": [
    "FIRST_LETTER",
    "MATCH"
-  ]
+  ],
+  "active": false,
+  "exerciseOnly": true
  },
  "22:90": {
   "word": "lotus",
@@ -447,7 +485,9 @@
   "uses": [
    "FIRST_LETTER",
    "MATCH"
-  ]
+  ],
+  "active": false,
+  "exerciseOnly": true
  },
  "22:100": {
   "word": "key",
@@ -456,7 +496,9 @@
   "uses": [
    "FIRST_LETTER",
    "MATCH"
-  ]
+  ],
+  "active": false,
+  "exerciseOnly": true
  },
  "23:101": {
   "word": "nuts",
@@ -465,7 +507,9 @@
   "uses": [
    "FIRST_LETTER",
    "MATCH"
-  ]
+  ],
+  "active": false,
+  "exerciseOnly": true
  },
  "23:104": {
   "word": "olive",
@@ -474,7 +518,9 @@
   "uses": [
    "FIRST_LETTER",
    "MATCH"
-  ]
+  ],
+  "active": false,
+  "exerciseOnly": true
  },
  "23:109": {
   "word": "lock",
@@ -483,7 +529,9 @@
   "uses": [
    "FIRST_LETTER",
    "MATCH"
-  ]
+  ],
+  "active": false,
+  "exerciseOnly": true
  },
  "24:111": {
   "word": "pencil",
@@ -582,7 +630,9 @@
   "uses": [
    "FIRST_LETTER",
    "MATCH"
-  ]
+  ],
+  "active": false,
+  "exerciseOnly": true
  },
  "29:151": {
   "word": "sun",
@@ -591,7 +641,9 @@
   "uses": [
    "FIRST_LETTER",
    "MATCH"
-  ]
+  ],
+  "active": false,
+  "exerciseOnly": true
  },
  "30:153": {
   "word": "tree",
@@ -600,7 +652,9 @@
   "uses": [
    "FIRST_LETTER",
    "MATCH"
-  ]
+  ],
+  "active": false,
+  "exerciseOnly": true
  },
  "30:157": {
   "word": "ship",
@@ -609,7 +663,9 @@
   "uses": [
    "FIRST_LETTER",
    "MATCH"
-  ]
+  ],
+  "active": false,
+  "exerciseOnly": true
  },
  "30:160": {
   "word": "toy",
@@ -618,7 +674,9 @@
   "uses": [
    "FIRST_LETTER",
    "MATCH"
-  ]
+  ],
+  "active": false,
+  "exerciseOnly": true
  },
  "31:162": {
   "word": "uniform",
@@ -720,7 +778,9 @@
   "uses": [
    "FIRST_LETTER",
    "MATCH"
-  ]
+  ],
+  "active": false,
+  "exerciseOnly": true
  },
  "37:297": {
   "word": "umbrella",
@@ -729,7 +789,9 @@
   "uses": [
    "FIRST_LETTER",
    "MATCH"
-  ]
+  ],
+  "active": false,
+  "exerciseOnly": true
  },
  "38:300": {
   "word": "vegetables",
@@ -738,7 +800,9 @@
   "uses": [
    "FIRST_LETTER",
    "MATCH"
-  ]
+  ],
+  "active": false,
+  "exerciseOnly": true
  },
  "38:301": {
   "word": "water",
@@ -747,6 +811,8 @@
   "uses": [
    "FIRST_LETTER",
    "MATCH"
-  ]
+  ],
+  "active": false,
+  "exerciseOnly": true
  }
 }

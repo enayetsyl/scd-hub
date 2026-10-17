@@ -48,7 +48,13 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "hilsa"
+  "wordEn": "hilsa",
+  "render": [
+   200,
+   95,
+   106,
+   57
+  ]
  },
  "7:6": {
   "active": false
@@ -75,7 +81,9 @@
    "MATCH",
    "WORD"
   ],
-  "wordEn": "mango"
+  "wordEn": "mango",
+  "active": false,
+  "exerciseOnly": true
  },
  "9:11": {
   "active": false
@@ -129,12 +137,16 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "wool"
+  "wordEn": "wool",
+  "active": false,
+  "exerciseOnly": true
  },
  "13:24": {
   "word": "ঊষা",
   "letter": "ঊ",
-  "uses": []
+  "uses": [],
+  "active": false,
+  "exerciseOnly": true
  },
  "13:26": {
   "active": false
@@ -200,7 +212,9 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "cardamom"
+  "wordEn": "cardamom",
+  "active": false,
+  "exerciseOnly": true
  },
  "18:35": {
   "active": false
@@ -236,7 +250,9 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "medicine"
+  "wordEn": "medicine",
+  "active": false,
+  "exerciseOnly": true
  },
  "22:50": {
   "word": "কাক",
@@ -333,7 +349,9 @@
    "MATCH",
    "WORD"
   ],
-  "wordEn": "banana"
+  "wordEn": "banana",
+  "active": false,
+  "exerciseOnly": true
  },
  "27:61": {
   "word": "খেজুর",
@@ -342,7 +360,9 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "dates"
+  "wordEn": "dates",
+  "active": false,
+  "exerciseOnly": true
  },
  "27:62": {
   "word": "গোলাপ",
@@ -351,7 +371,9 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "rose"
+  "wordEn": "rose",
+  "active": false,
+  "exerciseOnly": true
  },
  "27:63": {
   "word": "ঘড়ি",
@@ -360,12 +382,16 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "watch"
+  "wordEn": "watch",
+  "active": false,
+  "exerciseOnly": true
  },
  "27:64": {
   "word": "রং পেনসিল",
   "letter": "র",
-  "uses": []
+  "uses": [],
+  "active": false,
+  "exerciseOnly": true
  },
  "28:66": {
   "word": "চড়ুই",
@@ -447,7 +473,9 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "umbrella"
+  "wordEn": "umbrella",
+  "active": false,
+  "exerciseOnly": true
  },
  "33:76": {
   "word": "জবা",
@@ -456,7 +484,9 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "hibiscus"
+  "wordEn": "hibiscus",
+  "active": false,
+  "exerciseOnly": true
  },
  "33:78": {
   "word": "ঝুড়ি",
@@ -465,7 +495,9 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "basket"
+  "wordEn": "basket",
+  "active": false,
+  "exerciseOnly": true
  },
  "33:80": {
   "active": false
@@ -572,7 +604,9 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "tomato"
+  "wordEn": "tomato",
+  "active": false,
+  "exerciseOnly": true
  },
  "39:99": {
   "word": "ডালিম",
@@ -581,7 +615,9 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "pomegranate"
+  "wordEn": "pomegranate",
+  "active": false,
+  "exerciseOnly": true
  },
  "39:100": {
   "word": "ঢেঁড়স",
@@ -590,7 +626,9 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "okra"
+  "wordEn": "okra",
+  "active": false,
+  "exerciseOnly": true
  },
  "39:111": {
   "active": false
@@ -688,7 +726,9 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "bag"
+  "wordEn": "bag",
+  "active": false,
+  "exerciseOnly": true
  },
  "45:126": {
   "active": false
@@ -706,7 +746,9 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "paddy"
+  "wordEn": "paddy",
+  "active": false,
+  "exerciseOnly": true
  },
  "45:131": {
   "word": "নৌকা",
@@ -715,7 +757,9 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "boat"
+  "wordEn": "boat",
+  "active": false,
+  "exerciseOnly": true
  },
  "45:132": {
   "active": false
@@ -832,7 +876,9 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "cauliflower"
+  "wordEn": "cauliflower",
+  "active": false,
+  "exerciseOnly": true
  },
  "51:153": {
   "active": false
@@ -927,7 +973,9 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "garlic"
+  "wordEn": "garlic",
+  "active": false,
+  "exerciseOnly": true
  },
  "57:178": {
   "word": "লেবু",
@@ -936,7 +984,9 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "lime"
+  "wordEn": "lime",
+  "active": false,
+  "exerciseOnly": true
  },
  "57:180": {
   "active": false
@@ -1026,7 +1076,9 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "car"
+  "wordEn": "car",
+  "active": false,
+  "exerciseOnly": true
  },
  "64:204": {
   "word": "শরৎ",
@@ -1097,7 +1149,9 @@
    "FIRST_LETTER",
    "MATCH"
   ],
-  "wordEn": "prawn"
+  "wordEn": "prawn",
+  "active": false,
+  "exerciseOnly": true
  },
  "68:219": {
   "active": false
@@ -1113,7 +1167,9 @@
    "MATCH",
    "WORD"
   ],
-  "wordEn": "ladder"
+  "wordEn": "ladder",
+  "active": false,
+  "exerciseOnly": true
  },
  "76:247": {
   "word": "ঘর",
@@ -1123,7 +1179,9 @@
    "MATCH",
    "WORD"
   ],
-  "wordEn": "house"
+  "wordEn": "house",
+  "active": false,
+  "exerciseOnly": true
  },
  "73:229": {
   "word": "ফল",
@@ -1133,7 +1191,9 @@
    "MATCH",
    "WORD"
   ],
-  "wordEn": "fruit"
+  "wordEn": "fruit",
+  "active": false,
+  "exerciseOnly": true
  },
  "73:230": {
   "word": "কলম",
@@ -1143,7 +1203,9 @@
    "MATCH",
    "WORD"
   ],
-  "wordEn": "pen"
+  "wordEn": "pen",
+  "active": false,
+  "exerciseOnly": true
  },
  "73:231": {
   "word": "বই",
@@ -1153,7 +1215,9 @@
    "MATCH",
    "WORD"
   ],
-  "wordEn": "book"
+  "wordEn": "book",
+  "active": false,
+  "exerciseOnly": true
  },
  "73:232": {
   "word": "কলস",
@@ -1163,7 +1227,9 @@
    "MATCH",
    "WORD"
   ],
-  "wordEn": "pitcher"
+  "wordEn": "pitcher",
+  "active": false,
+  "exerciseOnly": true
  },
  "75:242": {
   "word": "জগ",
@@ -1173,7 +1239,9 @@
    "MATCH",
    "WORD"
   ],
-  "wordEn": "jug"
+  "wordEn": "jug",
+  "active": false,
+  "exerciseOnly": true
  },
  "75:243": {
   "word": "বক",
@@ -1183,7 +1251,9 @@
    "MATCH",
    "WORD"
   ],
-  "wordEn": "heron"
+  "wordEn": "heron",
+  "active": false,
+  "exerciseOnly": true
  },
  "75:244": {
   "word": "ইট",
@@ -1193,7 +1263,9 @@
    "MATCH",
    "WORD"
   ],
-  "wordEn": "brick"
+  "wordEn": "brick",
+  "active": false,
+  "exerciseOnly": true
  },
  "75:245": {
   "word": "উট",
@@ -1203,7 +1275,9 @@
    "MATCH",
    "WORD"
   ],
-  "wordEn": "camel"
+  "wordEn": "camel",
+  "active": false,
+  "exerciseOnly": true
  },
  "75:246": {
   "word": "উল",
@@ -1213,7 +1287,9 @@
    "MATCH",
    "WORD"
   ],
-  "wordEn": "wool"
+  "wordEn": "wool",
+  "active": false,
+  "exerciseOnly": true
  },
  "76:250": {
   "word": "আম",
@@ -1223,6 +1299,8 @@
    "MATCH",
    "WORD"
   ],
-  "wordEn": "mango"
+  "wordEn": "mango",
+  "active": false,
+  "exerciseOnly": true
  }
 }
