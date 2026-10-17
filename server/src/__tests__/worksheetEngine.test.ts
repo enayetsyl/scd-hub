@@ -222,6 +222,24 @@ describe("generateWorksheet", () => {
     expect(s.answer!.every((a, i) => a === i)).toBe(false);
   });
 
+  it("each matching column holds its own letters — no line crosses into the other column", () => {
+    for (const seed of [1, 4, 9, 23, 77]) {
+      for (const count of [5, 6, 10]) {
+        const d = generateWorksheet({ kind: "FINAL", subject: "BAN", rows: [{ seq: 1, label: "m", kind: "MATCH_PICTURE_LETTER", count, marksEach: 1 }], scope: {}, seed, pictures: bank() });
+        const s = d.sections[0];
+        const byId = new Map(bank().map((p) => [p.id, p.letter]));
+        s.left!.forEach((l, i) => {
+          expect(s.answer![i] % 2).toBe(i % 2);
+          expect(s.right![s.answer![i]]).toBe(byId.get(l.pictureId!));
+        });
+        for (const col of [0, 1]) {
+          const idx = s.left!.map((_, i) => i).filter((i) => i % 2 === col);
+          if (idx.length > 1) expect(idx.every((i) => s.answer![i] === i)).toBe(false);
+        }
+      }
+    }
+  });
+
   it("re-rolls only the row whose count changed", () => {
     const base = rowsForKind("FINAL", plan(BAN_ROWS, "BAN"), null);
     const a = generateWorksheet({ kind: "FINAL", subject: "BAN", rows: base, scope: {}, seed: 9, pictures: bank() });
