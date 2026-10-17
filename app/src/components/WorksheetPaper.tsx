@@ -45,6 +45,35 @@ export interface WorksheetDocT {
   ruling?: "BAN" | "ENG";
 }
 
+/**
+ * ঁ ং ঃ (any Bengali vowel sign) on their own get a dotted circle (◌) from the text shaper.
+ * A no-break space in front is the Unicode placeholder base: the mark shows alone, no circle
+ * (owner 2026-10-17). Display only. Same rule as the server's render/markBase.ts — keep in step.
+ */
+const LEADING_MARK = /^[\u0981-\u0983\u09BC\u09BE-\u09CD\u09D7\u09E2\u09E3]/;
+function markBase(s: string): string;
+function markBase(s: string | null | undefined): string | null | undefined;
+function markBase(s: string | null | undefined): string | null | undefined {
+  return s && LEADING_MARK.test(s) ? "\u00A0" + s : s;
+}
+const markCell = (c: Cell): Cell => ({ ...c, t: markBase(c.t), a: markBase(c.a) });
+function withMarkBases(doc: WorksheetDocT): WorksheetDocT {
+  return {
+    ...doc,
+    sections: doc.sections.map((s) => ({
+      ...s,
+      cells: s.cells?.map(markCell),
+      rows: s.rows?.map((r) => r.map(markCell)),
+      columns: s.columns?.map((col) => col.map((r) => r.map(markCell))),
+      groups: s.groups?.map((g) => ({ ...g, cells: g.cells.map(markCell) })),
+      sets: s.sets?.map((x) => ({ shown: x.shown.map((t) => markBase(t)), answer: x.answer.map((t) => markBase(t)) })),
+      pictures: s.pictures?.map((p) => ({ ...p, a: markBase(p.a) })),
+      left: s.left?.map((l) => ({ ...l, t: markBase(l.t) ?? null })),
+      right: s.right?.map((t) => markBase(t)),
+    })),
+  };
+}
+
 const INK = "#111111";
 const ANSWER = "#9B1C1C";
 const LINE = "#222222";
@@ -253,9 +282,14 @@ function Body({
       const left = s.left ?? [];
       const right = s.right ?? [];
       return (
-        <View style={{ flexDirection: "row", flexWrap: "wrap", rowGap: 6, columnGap: 16 }}>
-          {left.map((l, i) => (
-            <View key={i} style={{ flexBasis: 260, flexGrow: 1, flexDirection: "row", alignItems: "center" }}>
+        // Two real columns, each its own puzzle (the engine puts item i in column i % 2). A
+        // wrapped grid let an odd last item stretch across the page, so its answer box sat
+        // under the OTHER column (owner 2026-10-17). On a phone column 2 drops below column 1.
+        <View style={{ flexDirection: "row", flexWrap: "wrap", rowGap: 6, columnGap: 16, alignItems: "flex-start" }}>
+          {[0, 1].map((col) => (
+            <View key={col} style={{ flexBasis: 260, flexGrow: 1, flexShrink: 1, gap: 6 }}>
+              {left.map((l, i) => (i % 2 !== col ? null : (
+            <View key={i} style={{ flexDirection: "row", alignItems: "center" }}>
               <View style={[box(110, 54), { padding: 3 }]}>
                 {l.pictureId && l.repeat > 1 ? (
                   <Repeated uri={pics[l.pictureId]} n={l.repeat} icon={12} />
@@ -271,6 +305,8 @@ function Body({
               <View style={box(60, 54)}>
                 <Text style={txt((right[i] ?? "").length > 3 ? 14 : 19)}>{right[i]}</Text>
               </View>
+            </View>
+              )))}
             </View>
           ))}
         </View>
@@ -301,6 +337,7 @@ export default function WorksheetPaper({
   showAnswers: boolean;
 }): React.ReactElement {
   const en = header.english;
+  const paper = withMarkBases(doc);
   return (
     <View
       accessibilityLabel={header.title}
@@ -325,7 +362,7 @@ export default function WorksheetPaper({
       </View>
       <View style={{ height: 1, backgroundColor: "#888888", marginBottom: 8 }} />
 
-      {doc.sections.map((s) => (
+      {paper.sections.map((s) => (
         <View key={s.n} style={{ marginBottom: 16 }}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8, marginBottom: 6 }}>
             <Text style={[txt(15), { flex: 1 }]}>

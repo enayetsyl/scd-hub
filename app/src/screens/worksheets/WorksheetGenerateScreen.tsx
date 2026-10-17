@@ -31,7 +31,7 @@ import WorksheetPaper, { type WorksheetDocT } from "../../components/WorksheetPa
 import { useAuth } from "../../auth/AuthContext";
 import { STR, bnNum, wsRangeTooLongLabel, classLevelLabel, routineSubjectLabel, isoDateLabel, getActiveLang } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
-import { openPdf, PDF_SUPPORTED } from "../../lib/pdf";
+import { openPdf, openPdfPost, PDF_SUPPORTED } from "../../lib/pdf";
 import { useColors } from "../../theme";
 import { space } from "../../theme/tokens";
 
@@ -288,6 +288,21 @@ export default function WorksheetGenerateScreen(): React.ReactElement {
     }
   };
 
+  // Owner 2026-10-17: the paper on screen as a PDF, without sending it to print.
+  const [previewPdfErr, setPreviewPdfErr] = useState<string | null>(null);
+  const [previewPdfBusy, setPreviewPdfBusy] = useState(false);
+  const openPreviewPdf = async (answers: boolean): Promise<void> => {
+    setPreviewPdfErr(null);
+    setPreviewPdfBusy(true);
+    try {
+      await openPdfPost(`/pdf/worksheet/preview${answers ? "?answers=1" : ""}`, vars);
+    } catch {
+      setPreviewPdfErr(STR.errGeneric);
+    } finally {
+      setPreviewPdfBusy(false);
+    }
+  };
+
   return (
     <Screen scroll>
       <H2>{STR.wsTitle}</H2>
@@ -522,7 +537,24 @@ export default function WorksheetGenerateScreen(): React.ReactElement {
             variant="ghost"
             onPress={() => setShowAnswers((v) => !v)}
           />
+          {PDF_SUPPORTED ? (
+            <>
+              <Button
+                title={STR.wsPdfPreview}
+                variant="secondary"
+                disabled={!preview || previewQ.fetching || previewPdfBusy}
+                onPress={() => void openPreviewPdf(false)}
+              />
+              <Button
+                title={STR.wsPdfPreviewKey}
+                variant="ghost"
+                disabled={!preview || previewQ.fetching || previewPdfBusy}
+                onPress={() => void openPreviewPdf(true)}
+              />
+            </>
+          ) : null}
         </View>
+        {previewPdfErr ? <Notice tone="danger" message={previewPdfErr} /> : null}
         <Muted style={{ marginBottom: space(2) }}>{STR.wsPreviewHint}</Muted>
         {previewQ.error ? <Notice tone="danger" message={friendlyError(previewQ.error)} /> : null}
         {(preview?.warnings ?? []).map((w, i) => (
