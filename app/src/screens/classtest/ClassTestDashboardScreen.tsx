@@ -54,6 +54,7 @@ import { CT_SCRIPT_TILE_ORDER, ctScriptStageTone } from "../../lib/ctScriptStage
 import type { CtScriptStage } from "@scd/shared";
 import { friendlyError } from "../../lib/errors";
 import { useSectionNames } from "../../lib/useSectionNames";
+import { useAuth } from "../../auth/AuthContext";
 import { space } from "../../theme/tokens";
 import type { ClassTestStackParamList } from "../../navigation/types";
 
@@ -113,6 +114,8 @@ function Kpi({
 export default function ClassTestDashboardScreen(): React.ReactElement {
   const sectionName = useSectionNames();
   const nav = useNavigation<Nav>();
+  // The archive desk permission — the same one fileScriptBundle lets file any test.
+  const canFile = useAuth().can("roster:manage");
   // D-#339: tap a tile → filter the per-test drill-down below (logged = all).
   const [stateFilter, setStateFilter] = useState<StateFilter>(null);
   // Owner ask 2026-07-28: the PUBLISH axis, independent of the entry state above — the
@@ -438,9 +441,24 @@ export default function ClassTestDashboardScreen(): React.ReactElement {
                         </Muted>
                       </Pressable>
                     ) : null}
-                    {/* AR-1 lookup line: box + location (+ holder while out), or not-filed. */}
+                    {/* AR-1 lookup line: box + location (+ holder while out), or not-filed.
+                        Not filed → the Office can file ANY teacher's scripts from here
+                        (fileScriptBundle accepts roster:manage for every test); before, the
+                        only file action was on the teacher's own "My tests" list. */}
                     {(() => {
                       const loc = locOf.get(r.testId);
+                      if (!loc && canFile) {
+                        return (
+                          <Pressable
+                            onPress={() => nav.navigate("ArchiveFileBundle", { testId: r.testId, ctId: r.ctId })}
+                            style={{ marginTop: space(1) }}
+                          >
+                            <Muted>
+                              {STR.arWhereScripts} {STR.arNotFiled} · {STR.arFileNow} ›
+                            </Muted>
+                          </Pressable>
+                        );
+                      }
                       return (
                         <Muted style={{ marginTop: space(1) }}>
                           {STR.arWhereScripts}{" "}
