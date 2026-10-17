@@ -289,7 +289,10 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
   const nestedState = focusedTab?.state;
   const activeNested = nestedState?.routes?.[nestedState.index ?? nestedState.routes.length - 1]?.name;
 
-  // Groups default to expanded (only two of them); a tap collapses/expands.
+  // D-#760 (owner 2026-10-17): groups start CLOSED — the list had grown long enough that
+  // every group open buried the items below it. The group holding the current screen's
+  // tab starts open, so its highlighted item stays visible. A tap collapses/expands, and
+  // a tapped group keeps the choice for the session.
   const [collapsed, setCollapsed] = React.useState<Record<string, boolean>>({});
 
   // D-#294: the print operator's queue counters — red = awaiting printing, yellow =
@@ -607,7 +610,7 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
     const visible = section.items.filter(visibleLeaf);
     if (visible.length === 0) return null;
     const key = `${section.titleKey}-${idx}`;
-    const isCollapsed = collapsed[key] ?? false;
+    const isCollapsed = collapsed[key] ?? !visible.some((it) => it.route === activeRoute);
     return (
       <View key={key} style={{ marginTop: space(1) }}>
         <Pressable
