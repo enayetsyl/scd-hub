@@ -19,9 +19,9 @@ type SidebarState = { collapsed: boolean; toggle: () => void };
 const SidebarContext = React.createContext<SidebarState>({ collapsed: false, toggle: () => {} });
 
 export function SidebarProvider({ children }: { children: React.ReactNode }): React.ReactElement {
-  // D-#759 (owner 2026-10-17): the sidebar starts CLOSED on laptop/desktop; ☰ opens it.
-  // Phones are unaffected — there the drawer is a slide-over that always starts shut.
-  const [collapsed, setCollapsed] = React.useState(true);
+  // Starts OPEN on laptop/desktop. D-#759 had it start closed; reverted by D-#760 — the
+  // owner meant the sidebar's menu GROUPS, not the sidebar itself (see DrawerContent).
+  const [collapsed, setCollapsed] = React.useState(false);
   const value = React.useMemo(() => ({ collapsed, toggle: () => setCollapsed((c) => !c) }), [collapsed]);
   return <SidebarContext.Provider value={value}>{children}</SidebarContext.Provider>;
 }
