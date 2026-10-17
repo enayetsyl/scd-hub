@@ -6300,6 +6300,9 @@ const STR_BN = {
   mcMakePdf: "PDF তৈরি করুন",
   mcAlwaysIncluded: "প্রধান শিক্ষক ও শ্রেণি শিক্ষকের মন্তব্য এবং সংখ্যাগুলো সবসময় থাকবে।",
   mcSlotAt: "সময়",
+  // D-#758 — Today cards open as a summary; tap for the details.
+  foldShowDetails: "বিস্তারিত দেখতে চাপুন",
+  foldHideDetails: "বিস্তারিত লুকাতে চাপুন",
 } as const;
 
 type StrTable = Record<keyof typeof STR_BN, string>;
@@ -11415,6 +11418,9 @@ const STR_EN: StrTable = {
   mcMakePdf: "Make PDF to print",
   mcAlwaysIncluded: "The Principal's and class teacher's comments and the numbers are always included.",
   mcSlotAt: "Slot",
+  // D-#758 — Today cards open as a summary; tap for the details.
+  foldShowDetails: "Tap to show details",
+  foldHideDetails: "Tap to hide details",
 };
 
 /** UI chrome strings — resolves to the active language at read time (Proxy). Use

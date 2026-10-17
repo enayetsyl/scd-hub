@@ -13,7 +13,8 @@ import React from "react";
 import { View } from "react-native";
 import { useMutation, useQuery } from "urql";
 import { MY_CT_SCRIPT_TASKS_QUERY, MARK_CT_SCRIPTS_RETURNED, type CtScriptRowT } from "../graphql/ctScripts";
-import { Badge, Body, Button, Card, Muted, Notice, wrapRowText } from "./ui";
+import { Badge, Body, Button, Muted, Notice, wrapRowText } from "./ui";
+import { FoldCard } from "./FoldCard";
 import { STR, bnNum, isoDateLabel, ctScriptStageLabel } from "../lib/labels";
 import { ctScriptRowTitle, ctScriptStageTone } from "../lib/ctScriptStage";
 import { friendlyError } from "../lib/errors";
@@ -40,9 +41,23 @@ export function CtScriptTeacherCard(): React.ReactElement | null {
     refetch({ requestPolicy: "network-only" });
   }
 
+  // D-#758: a badge per stage is the summary (the Office card's idiom); the rows open on tap.
+  const stageCounts = ["OVERDUE", "DUE", "RETURN_OVERDUE", "WITH_TEACHER"]
+    .map((s) => ({ s, n: rows.filter((r) => r.stage === s).length }))
+    .filter((x) => x.n > 0);
+
   return (
-    <Card>
-      <Body style={styles.title}>{STR.csCardTitle}</Body>
+    <FoldCard
+      id="today:ctScriptsTeacher"
+      title={<Body style={styles.title}>{STR.csCardTitle}</Body>}
+      summary={
+        <View style={styles.badges}>
+          {stageCounts.map(({ s, n }) => (
+            <Badge key={s} text={`${ctScriptStageLabel(s)} · ${bnNum(n)}`} tone={ctScriptStageTone(s)} />
+          ))}
+        </View>
+      }
+    >
       {err ? <Notice message={err} tone="danger" /> : null}
       {submit.length > 0 ? (
         <View style={styles.group}>
@@ -83,12 +98,13 @@ export function CtScriptTeacherCard(): React.ReactElement | null {
           ))}
         </View>
       ) : null}
-    </Card>
+    </FoldCard>
   );
 }
 
 const useStyles = makeStyles((c) => ({
   title: { ...typeScale.sectionTitle, color: c.textPrimary },
+  badges: { flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: space(1) },
   group: { marginTop: space(2), gap: space(1) },
   groupTitle: { ...typeScale.bodyStrong, color: c.textPrimary },
   row: {

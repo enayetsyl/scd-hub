@@ -3,7 +3,8 @@
  * Owner, on the first prod test: *"the tasks are not showing in the today but in the
  * tasks. shouldn't it show in the today section."* One card: today's open count,
  * overdue count, and the first few open cards as compact rows; every row and the
- * header open the board. Self-contained (own query) so it drops into BOTH Today
+ * "see all" link open the board (D-#758: the counts are the summary, the rows open
+ * on tap). Self-contained (own query) so it drops into BOTH Today
  * screens without touching their data flow. Renders nothing while loading with no
  * data, and nothing on error — a broken card must never break Today.
  */
@@ -13,7 +14,7 @@ import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import { useQuery } from "urql";
 import { MY_WORK_BOARD_QUERY, type WorkCardT } from "../graphql/workBoard";
 import type { TabParamList } from "../navigation/types";
-import { Card } from "./ui";
+import { FoldCard } from "./FoldCard";
 import { STR, bnNum, daySlotLabel, taskPriorityLabel, workCardKindLabel } from "../lib/labels";
 import { dateKey } from "../lib/dates";
 import { cardTarget, minutesLabel } from "../lib/workBoardNav";
@@ -52,24 +53,26 @@ export function TodayWorkCard(): React.ReactElement | null {
     (nav.navigate as unknown as (name: string, p?: object) => void)(t.tab, { screen: t.screen, params: t.params, initial: false });
   };
 
+  // D-#758: the counts are the summary; the rows and the board link open on tap.
   return (
-    <Card>
-      <Pressable onPress={() => go("WorkBoard")} style={styles.head}>
-        <Text style={styles.title}>{STR.wbTodayCount}</Text>
-        <Text style={[styles.link, { color: colors.primary }]}>{STR.wbSeeAll}</Text>
-      </Pressable>
-      <View style={styles.stats}>
-        <Text style={styles.stat}>
-          <Text style={styles.statN}>{bnNum(open.length)}</Text> {STR.wbOpen}
-        </Text>
-        <Text style={styles.stat}>
-          <Text style={styles.statN}>{bnNum(done.length)}</Text> {STR.wbDone}
-        </Text>
-        <Text style={[styles.stat, overdue.length > 0 && { color: colors.error }]}>
-          <Text style={[styles.statN, overdue.length > 0 && { color: colors.error }]}>{bnNum(overdue.length)}</Text> {STR.wbOverdue}
-        </Text>
-        {open.length > 0 ? <Text style={styles.stat}>{minutesLabel(minutes, bnNum)}</Text> : null}
-      </View>
+    <FoldCard
+      id="today:workBoard"
+      title={<Text style={styles.title}>{STR.wbTodayCount}</Text>}
+      summary={
+        <View style={styles.stats}>
+          <Text style={styles.stat}>
+            <Text style={styles.statN}>{bnNum(open.length)}</Text> {STR.wbOpen}
+          </Text>
+          <Text style={styles.stat}>
+            <Text style={styles.statN}>{bnNum(done.length)}</Text> {STR.wbDone}
+          </Text>
+          <Text style={[styles.stat, overdue.length > 0 && { color: colors.error }]}>
+            <Text style={[styles.statN, overdue.length > 0 && { color: colors.error }]}>{bnNum(overdue.length)}</Text> {STR.wbOverdue}
+          </Text>
+          {open.length > 0 ? <Text style={styles.stat}>{minutesLabel(minutes, bnNum)}</Text> : null}
+        </View>
+      }
+    >
       {shown.length === 0 ? (
         <Text style={styles.empty}>{STR.wbNothingToday}</Text>
       ) : (
@@ -98,20 +101,18 @@ export function TodayWorkCard(): React.ReactElement | null {
           );
         })
       )}
-      {open.length > MAX_ROWS ? (
-        <Pressable onPress={() => go("WorkBoard")}>
-          <Text style={[styles.more, { color: colors.primary }]}>{`+${bnNum(open.length - MAX_ROWS)} · ${STR.wbSeeAll}`}</Text>
-        </Pressable>
-      ) : null}
-    </Card>
+      <Pressable onPress={() => go("WorkBoard")} accessibilityRole="link">
+        <Text style={[styles.more, { color: colors.primary }]}>
+          {open.length > MAX_ROWS ? `+${bnNum(open.length - MAX_ROWS)} · ${STR.wbSeeAll}` : STR.wbSeeAll}
+        </Text>
+      </Pressable>
+    </FoldCard>
   );
 }
 
 const useStyles = makeStyles((c) => ({
-  head: { flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", marginBottom: space(1) },
   title: { ...typeScale.sectionTitle, color: c.textPrimary },
-  link: { ...typeScale.chip },
-  stats: { flexDirection: "row", flexWrap: "wrap", gap: space(3), marginBottom: space(2) },
+  stats: { flexDirection: "row", flexWrap: "wrap", gap: space(3) },
   stat: { ...typeScale.caption, color: c.textSecondary },
   statN: { ...typeScale.bodyStrong, color: c.textPrimary },
   empty: { ...typeScale.secondary, color: c.textSecondary },

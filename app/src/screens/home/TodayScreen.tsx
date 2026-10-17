@@ -51,6 +51,7 @@ import { HwPendingSheet, type HwPendingTarget } from "../../components/HwPending
 import { useSectionContext } from "../../state/SectionContext";
 import { Screen, H1, H2, Body, Muted, Card, Badge, Button, EmptyState, Notice } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
+import { FoldCard } from "../../components/FoldCard";
 import { WorkClaimTeacherCard } from "../../components/WorkClaimTeacherCard";
 import { ReviewQuotaCard } from "../../components/ReviewQuotaCard";
 import { ResultEntryTargetCard } from "../../components/ResultEntryTargetCard";
@@ -426,6 +427,18 @@ export default function TodayScreen(): React.ReactElement {
     </Pressable>
   );
 
+  /** D-#758 — the footer link inside a folded card: the header now toggles the card,
+   *  so the jump to the full screen moved down here. */
+  const OpenLink = ({ onPress }: { onPress: () => void }): React.ReactElement => (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="link"
+      style={({ pressed }) => [{ alignSelf: "flex-end", justifyContent: "center", minHeight: 40 }, pressed && { opacity: 0.7 }]}
+    >
+      <Body style={{ fontWeight: "600" }}>{STR.dcOpen}</Body>
+    </Pressable>
+  );
+
   type Tile = { key: string; icon: IconName; label: string; go: () => void };
   const tiles: (Tile | false)[] = [
     canDeclare && {
@@ -621,13 +634,20 @@ export default function TodayScreen(): React.ReactElement {
             the office and hands out, because a section's LAST period today is theirs.
             Server returns [] on every day that is not the delivery day, so the card's
             mere presence is the signal that today is the day. */}
+        {/* D-#758: the sections are the summary; the packets open on tap. */}
         {handout.length > 0 ? (
-          <Card onPress={() => nav.navigate("AssignmentTab", { screen: "AssignmentHandout", initial: false })}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: space(2), marginBottom: space(1) }}>
-              <Icon name="package" size={18} color={colors.textPrimary} />
-              <Body style={{ fontWeight: "700", flex: 1 }}>{STR.hoTodayTitle}</Body>
-              <Icon name="chevron-right" size={20} color={colors.textSecondary} />
-            </View>
+          <FoldCard
+            id="today:handout"
+            icon={<Icon name="package" size={18} color={colors.textPrimary} />}
+            title={STR.hoTodayTitle}
+            summary={
+              <Muted>
+                {handout
+                  .map((sec) => `${classLevelLabel(sec.classLevel)}${sec.sectionNameBn ? ` — ${sec.sectionNameBn}` : ""}`)
+                  .join(", ")}
+              </Muted>
+            }
+          >
             <Muted style={{ marginBottom: space(2) }}>{STR.hoCollect}</Muted>
             {handout.map((sec) => (
               <View key={sec.sectionId} style={{ marginBottom: space(2) }}>
@@ -660,7 +680,8 @@ export default function TodayScreen(): React.ReactElement {
                 ) : null}
               </View>
             ))}
-          </Card>
+            <OpenLink onPress={() => nav.navigate("AssignmentTab", { screen: "AssignmentHandout", initial: false })} />
+          </FoldCard>
         ) : null}
 
         {/* আমার পিরিয়ড — horizontal timeline; current slot highlighted */}
@@ -756,13 +777,21 @@ export default function TodayScreen(): React.ReactElement {
         {canGift ? <GiftHandoverCard /> : null}
 
         {/* D-#318: the teacher's OWN sections' attendance at a glance — tap for names. */}
+        {/* D-#758: the totals (and an incomplete flag) are the summary; per section on tap. */}
         {!canManage && mySections.length > 0 ? (
-          <Card onPress={() => nav.navigate("AttendanceTab", { screen: "SectionAttendance", initial: false })}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: space(2), marginBottom: space(1) }}>
-              <Icon name="hand" size={18} color={colors.textPrimary} />
-              <Body style={{ fontWeight: "700", flex: 1 }}>{STR.attMySectionsToday}</Body>
-              <Icon name="chevron-right" size={20} color={colors.textSecondary} />
-            </View>
+          <FoldCard
+            id="today:mySectionsAttendance"
+            icon={<Icon name="hand" size={18} color={colors.textPrimary} />}
+            title={STR.attMySectionsToday}
+            aside={mySections.some((sec) => !sec.complete) ? <Badge text={STR.presenceIncomplete} tone="warn" /> : null}
+            summary={
+              <Muted>
+                {STR.presentWord}: {bnNum(mySections.reduce((n, sec) => n + sec.presentCount, 0))} · {STR.absentWord}:{" "}
+                {bnNum(mySections.reduce((n, sec) => n + sec.absentCount, 0))} /{" "}
+                {bnNum(mySections.reduce((n, sec) => n + sec.totalCount, 0))}
+              </Muted>
+            }
+          >
             {mySections.map((sec) => (
               <View
                 key={sec.sectionId}
@@ -781,7 +810,8 @@ export default function TodayScreen(): React.ReactElement {
                 </Muted>
               </View>
             ))}
-          </Card>
+            <OpenLink onPress={() => nav.navigate("AttendanceTab", { screen: "SectionAttendance", initial: false })} />
+          </FoldCard>
         ) : null}
 
         {/* Owner 2026-07-25: my homework lifecycle — totals + tappable pending pills. */}
