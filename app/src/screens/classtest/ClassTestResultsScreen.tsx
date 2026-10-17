@@ -365,6 +365,24 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
 
         {studentsQ.fetching ? (
           <Loader label={STR.loading} />
+        ) : studentsQ.error ? (
+          // The roster needs tracker:read, which the Office deliberately lacks (PoLP).
+          // The refusal used to fall through to "No students in this section", which
+          // reads as missing data. Say what is true, and send the Office to the work
+          // it does on a test — receiving and scanning the scripts (CS-1/CS-2).
+          <Card>
+            <Notice
+              message={can("tracker:read") ? friendlyError(studentsQ.error) : STR.ctResultsTeacherOnly}
+              tone="info"
+            />
+            {isAdmin ? (
+              <Button
+                title={`${STR.csUploadTitle} ›`}
+                variant="secondary"
+                onPress={() => nav.navigate("CtScriptUpload", { testId, title: test?.ctId ?? title })}
+              />
+            ) : null}
+          </Card>
         ) : students.length === 0 ? (
           <Card>
             <Muted>{STR.ctNoStudents}</Muted>
