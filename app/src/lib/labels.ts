@@ -6052,6 +6052,9 @@ const STR_BN = {
   csColumn: "খাতা",
   csReceivedOn: "খাতা গৃহীত",
   csNotInFlow: "এই টেস্টের খাতার ধাপ এখনও শুরু হয়নি।",
+  csShowAll: "সব দেখুন",
+  csShowLess: "কম দেখুন",
+  ctResultsTeacherOnly: "ফলাফল শিক্ষক দেন — এই পরীক্ষার শিক্ষার্থী তালিকা শুধু শিক্ষক ও তত্ত্বাবধায়কেরা দেখেন।",
   csUploadFailed: "কিছু ফাইল আপলোড হয়নি",
   // Worksheet generator (D-#744–#747)
   wsTitle: "প্রশ্ন ও অ্যাসাইনমেন্ট তৈরি",
@@ -11162,6 +11165,9 @@ const STR_EN: StrTable = {
   csColumn: "Script",
   csReceivedOn: "Received",
   csNotInFlow: "This test's script stage has not started yet.",
+  csShowAll: "Show all",
+  csShowLess: "Show less",
+  ctResultsTeacherOnly: "Results are entered by the teacher — this exam's student list is for teachers and supervisors.",
   csUploadFailed: "Some files did not upload",
   // Worksheet generator (D-#744–#747)
   wsTitle: "Make a worksheet",
