@@ -115,6 +115,7 @@ import {
   getPlan,
   savePlan,
   previewWorksheet,
+  renderPreviewWorksheet,
   sendWorksheetToPrint,
   worksheetForRead,
   worksheetTeachers,
@@ -192,6 +193,20 @@ describe("preview", () => {
     expect(p.pictures.every((x) => x.dataUri.startsWith("data:image/jpeg;base64,"))).toBe(true);
     expect(mockWorksheetCreate).not.toHaveBeenCalled();
     expect(mockCreatePrint).not.toHaveBeenCalled();
+  });
+});
+
+describe("preview PDF (owner 2026-10-17)", () => {
+  it("renders the paper on screen without storing, printing or auditing it", async () => {
+    const pdf = await renderPreviewWorksheet(teacher, { ...sendArgs, letterUpTo: 5 }, false);
+    expect(pdf.subarray(0, 4).toString()).toBe("%PDF");
+    expect(mockWorksheetCreate).not.toHaveBeenCalled();
+    expect(mockCreatePrint).not.toHaveBeenCalled();
+    expect(mockAudit).not.toHaveBeenCalled();
+  });
+
+  it("refuses a guardian", async () => {
+    await expect(renderPreviewWorksheet(guardian, { ...sendArgs }, true)).rejects.toThrow();
   });
 });
 

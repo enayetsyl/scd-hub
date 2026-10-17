@@ -606,6 +606,18 @@ export async function renderStoredWorksheet(ctx: AppContext, id: string, answers
   return renderWorksheetPdf(ws.doc, ws.header, { get: (pid) => pics.get(pid) }, { answers });
 }
 
+/**
+ * The paper on screen as a PDF, without saving or printing it (owner 2026-10-17: "a pdf
+ * export option"). Same seed + args → the same paper as the preview; nothing is stored and
+ * no picture's use is stamped (only sending to print counts as a use).
+ */
+export async function renderPreviewWorksheet(ctx: AppContext, args: GenerateArgs, answers: boolean): Promise<Buffer> {
+  assertCanGenerate(ctx);
+  const g = await generate(ctx, args);
+  const pics = await pictureBytes(g.doc.pictureIds, "image");
+  return renderWorksheetPdf(g.doc, g.header, { get: (pid) => pics.get(pid) }, { answers });
+}
+
 export interface WorksheetListRow {
   id: string;
   title: string;
