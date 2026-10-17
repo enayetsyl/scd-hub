@@ -43,6 +43,8 @@ export interface PictureRef {
   book: WorksheetPictureBook;
   word?: string | null;
   letter?: string | null;
+  /** The book page's letter (ব্যাঙ → ঙ); MATCH uses it, null = `letter`. */
+  pageLetter?: string | null;
   uses: WorksheetPictureUse[];
   /** Printed within the recent window — used only when the pool runs short. */
   recent: boolean;

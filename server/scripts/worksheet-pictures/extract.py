@@ -172,6 +172,14 @@ def main():
                 # keep the bigger copy but the FIRST page it appeared on
                 kept[dup] = (kept[dup][0] if kept[dup][0] in tags else key, im, hsh)
 
+        # Pictures the book DRAWS (vector art — the numerals ১, ৫, ৬০ on the এ/ঞ/ষ pages) or
+        # only shows as tiles have no single embedded image: a tag whose key names no embedded
+        # image ("14:9001") and carries `render` becomes a page-region crop of its own.
+        image_keys = {"%d:%d" % (r["page"], r["num"]) for r in rows}
+        for key, t in tags.items():
+            if key not in image_keys and t.get("render"):
+                kept.append((key, None, None))
+
         items = []
         for key, im, _ in kept:
             page, num = (int(x) for x in key.split(":"))
@@ -195,6 +203,8 @@ def main():
                 "word": t.get("word"),
                 "wordEn": t.get("wordEn"),
                 "letter": t.get("letter"),
+                # the letter page it sits on (ব্যাঙ → ঙ): what picture–letter MATCH pairs with
+                "pageLetter": t.get("pageLetter"),
                 "uses": t.get("uses", ["COUNT"] if args.book.startswith("MATH") else []),
                 # Bangla/English: only a reviewed (tagged) picture starts active — the books
                 # split many photos into tiles, and an untagged fragment must never reach a

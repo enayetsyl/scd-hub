@@ -268,13 +268,16 @@ export interface GenerateArgs {
 export async function loadPictureRefs(now = new Date()): Promise<PictureRef[]> {
   const cutoff = new Date(now.getTime() - RECENT_USE_DAYS * 86_400_000);
   const rows = (await WorksheetPicture.find({ active: true })
-    .select("book word letter uses reserveForFinal lastUsedAt")
-    .lean()) as unknown as Array<Pick<IWorksheetPicture, "_id" | "book" | "word" | "letter" | "uses" | "reserveForFinal" | "lastUsedAt">>;
+    .select("book word letter pageLetter uses reserveForFinal lastUsedAt")
+    .lean()) as unknown as Array<
+    Pick<IWorksheetPicture, "_id" | "book" | "word" | "letter" | "pageLetter" | "uses" | "reserveForFinal" | "lastUsedAt">
+  >;
   return rows.map((p) => ({
     id: p._id.toString(),
     book: p.book,
     word: p.word ?? null,
     letter: p.letter ?? null,
+    pageLetter: p.pageLetter ?? null,
     uses: (p.uses ?? []) as WorksheetPictureUse[],
     recent: !!p.lastUsedAt && p.lastUsedAt > cutoff,
     reserved: !!p.reserveForFinal,
@@ -673,6 +676,7 @@ export interface PictureRow {
   word: string | null;
   wordEn: string | null;
   letter: string | null;
+  pageLetter: string | null;
   uses: string[];
   reserveForFinal: boolean;
   active: boolean;
@@ -699,7 +703,7 @@ export async function listPictures(ctx: AppContext, f: PictureFilter): Promise<P
   if (f.untagged) q.$or = [{ letter: null }, { word: null }, { uses: { $size: 0 } }];
   if (f.search?.trim()) {
     const s = escapeRegex(f.search.trim());
-    q.$and = [{ $or: [{ word: { $regex: s, $options: "i" } }, { wordEn: { $regex: s, $options: "i" } }, { letter: s }] }];
+    q.$and = [{ $or: [{ word: { $regex: s, $options: "i" } }, { wordEn: { $regex: s, $options: "i" } }, { letter: s }, { pageLetter: s }] }];
   }
   const limit = Math.min(Math.max(f.limit ?? 60, 1), 120);
   const offset = Math.max(f.offset ?? 0, 0);
@@ -733,6 +737,7 @@ export async function listPictures(ctx: AppContext, f: PictureFilter): Promise<P
       word: p.word ?? null,
       wordEn: p.wordEn ?? null,
       letter: p.letter ?? null,
+      pageLetter: p.pageLetter ?? null,
       uses: p.uses ?? [],
       reserveForFinal: !!p.reserveForFinal,
       active: p.active !== false,
@@ -747,6 +752,7 @@ export interface PicturePatch {
   word?: string | null;
   wordEn?: string | null;
   letter?: string | null;
+  pageLetter?: string | null;
   uses?: string[] | null;
   reserveForFinal?: boolean | null;
   active?: boolean | null;
@@ -763,6 +769,11 @@ export async function updatePicture(ctx: AppContext, id: string, patch: PictureP
     const l = norm(patch.letter);
     if (l && [...l].length > 3) throw new WorksheetError("প্রথম বর্ণে একটি অক্ষরই দিন");
     set.letter = l;
+  }
+  if (patch.pageLetter !== undefined) {
+    const l = norm(patch.pageLetter);
+    if (l && [...l].length > 3) throw new WorksheetError("বইয়ের বর্ণে একটি অক্ষরই দিন");
+    set.pageLetter = l;
   }
   if (patch.uses != null) {
     if (patch.uses.some((u) => !(WORKSHEET_PICTURE_USES as readonly string[]).includes(u))) {
@@ -790,6 +801,7 @@ export async function updatePicture(ctx: AppContext, id: string, patch: PictureP
     word: p.word ?? null,
     wordEn: p.wordEn ?? null,
     letter: p.letter ?? null,
+    pageLetter: p.pageLetter ?? null,
     uses: p.uses ?? [],
     reserveForFinal: !!p.reserveForFinal,
     active: p.active !== false,

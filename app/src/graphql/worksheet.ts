@@ -252,6 +252,7 @@ export interface WorksheetPictureT {
   word: string | null;
   wordEn: string | null;
   letter: string | null;
+  pageLetter: string | null;
   uses: string[];
   reserveForFinal: boolean;
   active: boolean;
@@ -260,7 +261,7 @@ export interface WorksheetPictureT {
   thumbUri: string;
 }
 
-const PICTURE_FIELDS = "id book page word wordEn letter uses reserveForFinal active useCount lastUsedAt thumbUri";
+const PICTURE_FIELDS = "id book page word wordEn letter pageLetter uses reserveForFinal active useCount lastUsedAt thumbUri";
 
 export const WORKSHEET_PICTURES = gql<
   {
@@ -309,6 +310,7 @@ export const UPDATE_WORKSHEET_PICTURE = gql<
     word?: string | null;
     wordEn?: string | null;
     letter?: string | null;
+    pageLetter?: string | null;
     uses?: string[] | null;
     reserveForFinal?: boolean | null;
     active?: boolean | null;
@@ -319,6 +321,7 @@ export const UPDATE_WORKSHEET_PICTURE = gql<
     $word: String
     $wordEn: String
     $letter: String
+    $pageLetter: String
     $uses: [String!]
     $reserveForFinal: Boolean
     $active: Boolean
@@ -328,6 +331,7 @@ export const UPDATE_WORKSHEET_PICTURE = gql<
       word: $word
       wordEn: $wordEn
       letter: $letter
+      pageLetter: $pageLetter
       uses: $uses
       reserveForFinal: $reserveForFinal
       active: $active

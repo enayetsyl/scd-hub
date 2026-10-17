@@ -31,6 +31,11 @@ export interface IWorksheetPicture extends Document {
   wordEn?: string | null;
   /** First letter the child should write (আ, A). Null = not yet tagged. */
   letter?: string | null;
+  /**
+   * The letter whose page the picture sits on (ব্যাঙ → ঙ, বাঁশ → ঁ). Picture–letter MATCH
+   * pairs a picture with this letter, as the book and the 2025 finals do; null = `letter`.
+   */
+  pageLetter?: string | null;
   uses: WorksheetPictureUse[];
   /** Kept for the final exam: assignments and class tests never draw it. */
   reserveForFinal: boolean;
@@ -58,6 +63,7 @@ const WorksheetPictureSchema = new Schema<IWorksheetPicture>(
     word: { type: String, trim: true, default: null },
     wordEn: { type: String, trim: true, default: null },
     letter: { type: String, trim: true, default: null },
+    pageLetter: { type: String, trim: true, default: null },
     uses: { type: [String], enum: WORKSHEET_PICTURE_USES, default: [] },
     reserveForFinal: { type: Boolean, default: false },
     active: { type: Boolean, default: true },
