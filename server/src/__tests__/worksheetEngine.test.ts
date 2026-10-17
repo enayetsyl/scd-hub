@@ -14,6 +14,7 @@ import { mergePlanRows, rowsForKind, defaultPreset } from "../modules/worksheets
 import { BAN_CONSONANTS, BAN_VOWELS, axisSequence } from "../modules/worksheets/engine/sequences";
 import type { PictureRef, RowSpec, WorksheetDoc } from "../modules/worksheets/engine/types";
 import { renderWorksheetPdf } from "../modules/worksheets/render/worksheetPdf";
+import { markBase, withMarkBases } from "../modules/worksheets/render/markBase";
 
 type Row = { seq: number; label: string; itemType: string | null; count: number; marksEach: number; total: number };
 const row = (seq: number, label: string, itemType: string | null, count: number, marksEach: number): Row => ({
@@ -423,5 +424,22 @@ describe("book letter (pageLetter, owner 2026-10-17)", () => {
   it("a ticked page letter brings its pictures into matching", () => {
     const d = generateWorksheet({ kind: "ASSIGNMENT", subject: "BAN", rows: [row("MATCH_PICTURE_LETTER")], scope: { letters: ["ক", "ঙ"] }, seed: 3, pictures: pics() });
     expect(d.sections[0].left!.map((l) => l.pictureId).sort()).toEqual(["frog", "kola"]);
+  });
+});
+
+describe("lone marks print without a dotted circle (owner 2026-10-17)", () => {
+  it("puts a no-break space before ঁ ং ঃ and vowel signs, leaves letters alone", () => {
+    for (const m of ["ঁ", "ং", "ঃ", "া"]) expect(markBase(m)).toBe("\u00A0" + m);
+    for (const l of ["ক", "অ", "ৎ", "A", ""]) expect(markBase(l)).toBe(l);
+  });
+
+  it("applies to every text slot of a paper and leaves the stored doc untouched", () => {
+    const d = generateWorksheet({ kind: "FINAL", subject: "BAN", scope: {}, seed: 5, pictures: bank(), rows: [{ seq: 1, label: "আগের বর্ণ", kind: "BEFORE", axis: "BAN_CONSONANT", count: 8, marksEach: 1, ranges: [{ from: "ড়", to: "ঁ" }, null] }] });
+    const before = JSON.stringify(d);
+    const shown = withMarkBases(d);
+    expect(JSON.stringify(d)).toBe(before);
+    const texts = allText(shown).filter(Boolean);
+    expect(texts.some((t) => t.startsWith("\u00A0"))).toBe(true);
+    expect(texts.every((t) => !/^[ঁংঃ]/.test(t))).toBe(true);
   });
 });
