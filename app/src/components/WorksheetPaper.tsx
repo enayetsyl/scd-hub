@@ -253,9 +253,14 @@ function Body({
       const left = s.left ?? [];
       const right = s.right ?? [];
       return (
-        <View style={{ flexDirection: "row", flexWrap: "wrap", rowGap: 6, columnGap: 16 }}>
-          {left.map((l, i) => (
-            <View key={i} style={{ flexBasis: 260, flexGrow: 1, flexDirection: "row", alignItems: "center" }}>
+        // Two real columns, each its own puzzle (the engine puts item i in column i % 2). A
+        // wrapped grid let an odd last item stretch across the page, so its answer box sat
+        // under the OTHER column (owner 2026-10-17). On a phone column 2 drops below column 1.
+        <View style={{ flexDirection: "row", flexWrap: "wrap", rowGap: 6, columnGap: 16, alignItems: "flex-start" }}>
+          {[0, 1].map((col) => (
+            <View key={col} style={{ flexBasis: 260, flexGrow: 1, flexShrink: 1, gap: 6 }}>
+              {left.map((l, i) => (i % 2 !== col ? null : (
+            <View key={i} style={{ flexDirection: "row", alignItems: "center" }}>
               <View style={[box(110, 54), { padding: 3 }]}>
                 {l.pictureId && l.repeat > 1 ? (
                   <Repeated uri={pics[l.pictureId]} n={l.repeat} icon={12} />
@@ -271,6 +276,8 @@ function Body({
               <View style={box(60, 54)}>
                 <Text style={txt((right[i] ?? "").length > 3 ? 14 : 19)}>{right[i]}</Text>
               </View>
+            </View>
+              )))}
             </View>
           ))}
         </View>
