@@ -111,6 +111,18 @@ def compose_tiles(tmp, layout):
     return im
 
 
+def whiten(im, level):
+    """Turn every pixel at least `level` light in all channels white, then trim — for a picture
+    the book embedded on a baked-in grey checkerboard (the BALL, owner 2026-10-17)."""
+    a = np.asarray(im.convert("RGB")).copy()
+    a[a.min(axis=2) >= level] = 255
+    im = Image.fromarray(a)
+    ink = Image.eval(im.convert("L"), lambda v: 255 if v < 243 else 0).getbbox()
+    if ink:
+        im = im.crop((max(0, ink[0] - 6), max(0, ink[1] - 6), min(im.width, ink[2] + 6), min(im.height, ink[3] + 6)))
+    return im
+
+
 def encode(im, max_side, fmt):
     c = im.copy()
     c.thumbnail((max_side, max_side), Image.LANCZOS)
@@ -193,6 +205,8 @@ def main():
                 # The book split this picture into tiles (the hilsa, owner 2026-10-17):
                 # take the whole picture from the rendered page instead of one tile.
                 im = render_region(local, page, t["render"], tmp)
+            if t.get("whiten"):
+                im = whiten(im, t["whiten"])
             img_b64, size = encode(im, IMAGE_MAX, "PNG")
             thumb_b64, _ = encode(im, THUMB_MAX, "JPEG")
             items.append({
