@@ -1,5 +1,14 @@
 # STATUS
 
+- 2026-10-18 (cont.): **BUILT — paging sweep (D-#761). Branch `feat/pagination-sweep` (worktree `C:/w/tsum`).**
+  - **Owner ask:** page every list that grows, fix the silent caps and the two bugs, and make paging-from-the-start a rule.
+  - **Audit:** 4 read-only agents found about 50 lists.
+  - **Build:** the foundation (lib/paging, pageRef, app hooks, docs/pagination.md, AGENTS.md rule, feature-lifecycle step) went in first; 6 parallel agents then fixed disjoint modules in C:/w/pg1..pg6; merged with no conflicts.
+  - **Changes:** about 45 new `<name>Page` queries and optional args, all additive (released bundles keep working), and 5 indexes.
+  - **Gate GREEN (executed):** shared build 0; server + app `tsc` 0; server jest **301/301 suites, 5,323/5,323 tests**, one full run after fixing 3 new suites whose fixtures left uniquely-indexed ids unset; `expo export --platform web` 0.
+  - **Runtime (in-memory Mongo):** an API probe of all 45 new queries as the Principal (40 ok; 5 refused for expected reasons: guardian-only, no local book DB, placeholder vocab id; 0 crashes). Notification inbox driven with 130 seeded rows, 8/8 checks.
+  - **Owner-visible changes:** guardian home cards show the newest 5 + see-all/older; the proxy-grant list hides ended windows; the CT report range now refetches; print history shows 50 documents a page with the real total.
+  - **Now / next:** PR → `dev` → owner checks → promote + OTA (app + server; phones need the OTA). Leftover worktrees C:/w/pg1..pg6 to remove after merge.
 - 2026-10-18: **LIVE + OTA — sidebar menu groups start closed (the current screen's group opens); the sidebar itself is open again (D-#760, reverts D-#759). #1050 → dev (`6a934684`), promoted in #1051 (`8caf27e0`, prod deploy green, prod web 200); OTA group `3b6764a2` (runtime 1.1.0, commit 8caf27e0).** The first OTA attempt was killed mid-bundle by a session restart, then republished cleanly. Bundle check: prod URL 1, localhost 0. Sourcemaps uploaded. Prior OTA (`71f5a21c`) ancestor-checked.
   **Now / next:** nothing pending for D-#758–#760.
 - 2026-10-17 (cont. 8): **BUILT — sidebar menu groups start closed (the current screen's group opens); D-#759 reverted, so the sidebar is open again (D-#760). Branch `feat/drawer-groups-closed` (worktree `C:/w/tsum`).** The owner meant the group chevrons, not the ☰ sidebar. **Gate GREEN (executed):** app `tsc` 0; expo web at 1440 px, 6/6 checks.
