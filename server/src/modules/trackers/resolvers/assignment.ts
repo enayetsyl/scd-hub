@@ -22,6 +22,7 @@
  *     (the GP-1 link gate) — AJ-8.
  */
 import { builder } from "../../../schema";
+import { pageRef } from "../../../pageRef";
 import type { GuardianWorkClaimView } from "../services/WorkClaimView";
 import { GuardianWorkClaimGqlRef } from "./workClaim";
 import type { AppContext } from "../../../context";
@@ -71,6 +72,7 @@ import {
 } from "../services/AssignmentRosterPassService";
 import {
   assignmentChaseList as chaseListSvc,
+  assignmentChaseListPage as chaseListPageSvc,
   escalateAssignmentChase as escalateSvc,
   recordFollowUpOutcome as outcomeSvc,
   listAssignmentFollowUps as listFollowUpsSvc,
@@ -622,6 +624,9 @@ ChaseEntryRef.implement({
     nextStepNumber: t.exposeInt("nextStepNumber"),
   }),
 });
+
+// D-#761: the chase list, one page at a time.
+const ChaseEntryPageRef = pageRef("AssignmentChaseEntryPage", ChaseEntryRef);
 
 interface EscalateResultShape {
   followUpId: string;
@@ -1967,6 +1972,22 @@ builder.queryField("assignmentChaseList", (t) =>
   }),
 );
 
+builder.queryField("assignmentChaseListPage", (t) =>
+  t.field({
+    type: ChaseEntryPageRef,
+    description: "assignmentChaseList, one page at a time, most overdue first (D-#761).",
+    authScopes: { hasPermission: "message:dispatch" },
+    args: {
+      page: t.arg.int({ required: false }),
+      pageSize: t.arg.int({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      assertFollowUpAdmin(ctx);
+      return chaseListPageSvc(args);
+    },
+  }),
+);
+
 builder.mutationField("escalateAssignmentChase", (t) =>
   t.field({
     type: EscalateResultRef,
@@ -2101,18 +2122,21 @@ builder.queryField("childAssignments", (t) =>
       "Guardian read (AJ-8): the linked child's assignments — pending, overdue with days late, " +
       "marks + result + feedback. Link-gated (assertGuardianOfStudent). " +
       "limit/offset are OPTIONAL (D-#476): omitted = the whole history, exactly as before, so a " +
-      "phone still running an older bundle is unaffected.",
+      "phone still running an older bundle is unaffected. outstandingOnly (D-#761, optional) = only " +
+      "the rows still to act on (being chased, or pending and late), read from open records only.",
     authScopes: { hasPermission: "guardian:read_child" },
     args: {
       studentId: t.arg.string({ required: true }),
       limit: t.arg.int({ required: false }),
       offset: t.arg.int({ required: false }),
+      outstandingOnly: t.arg.boolean({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
       await assertGuardianOfStudent(ctx, args.studentId);
       return childAssignmentsSvc(args.studentId, new Date(), {
         limit: args.limit,
         offset: args.offset,
+        outstandingOnly: args.outstandingOnly,
       });
     },
   }),

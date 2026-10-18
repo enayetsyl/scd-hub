@@ -18,7 +18,7 @@ import {
 } from "@scd/shared";
 import { ACADEMIC_YEARS_QUERY, CLASSES_QUERY } from "../../graphql/operations";
 import {
-  MY_WORKSHEETS,
+  MY_WORKSHEETS_PAGE,
   SEND_WORKSHEET_TO_PRINT,
   WORKSHEET_PLAN,
   WORKSHEET_PREVIEW,
@@ -27,6 +27,8 @@ import {
 } from "../../graphql/worksheet";
 import { Screen, H2, Body, Muted, Card, Button, Chip, ChipRow, Field, Select, Notice, Badge, Loader } from "../../components/ui";
 import SendToPrintCard from "../../components/SendToPrintCard";
+import { Pager } from "../../components/Pager";
+import { usePageState } from "../../lib/paging";
 import WorksheetPaper, { type WorksheetDocT } from "../../components/WorksheetPaper";
 import { useAuth } from "../../auth/AuthContext";
 import { STR, bnNum, wsRangeTooLongLabel, classLevelLabel, routineSubjectLabel, isoDateLabel, getActiveLang } from "../../lib/labels";
@@ -40,6 +42,9 @@ const BAN_CONSONANTS = [
   "ক", "খ", "গ", "ঘ", "ঙ", "চ", "ছ", "জ", "ঝ", "ঞ", "ট", "ঠ", "ড", "ঢ", "ণ", "ত", "থ", "দ", "ধ", "ন",
   "প", "ফ", "ব", "ভ", "ম", "য", "র", "ল", "শ", "ষ", "স", "হ", "ড়", "ঢ়", "য়", "ৎ", "ং", "ঃ", "ঁ",
 ];
+/** D-#761: the "made" card keeps its short look — ten papers a page. */
+const MADE_PAGE_SIZE = 10;
+
 const ENG_LETTERS = Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i));
 const NUMBER_STOPS = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
 
@@ -268,7 +273,13 @@ export default function WorksheetGenerateScreen(): React.ReactElement {
     variables: { classId: classId ?? "", subject },
     pause: !isOffice || !classId,
   });
-  const [mineQ, refetchMine] = useQuery({ query: MY_WORKSHEETS, variables: { limit: 10 } });
+  // D-#761: paged — the list used to stop at the newest 10 with no way to an older paper.
+  const [madePage, setMadePage] = usePageState();
+  const [mineQ, refetchMine] = useQuery({
+    query: MY_WORKSHEETS_PAGE,
+    variables: { page: madePage, pageSize: MADE_PAGE_SIZE },
+  });
+  const made = mineQ.data?.myWorksheetsPage.rows ?? [];
   const [, sendToPrint] = useMutation(SEND_WORKSHEET_TO_PRINT);
   const [pdfErr, setPdfErr] = useState<string | null>(null);
 
@@ -579,6 +590,8 @@ export default function WorksheetGenerateScreen(): React.ReactElement {
                 forTeacherId: forTeacherId || null,
               });
               if (res.error || !res.data?.sendWorksheetToPrint) return friendlyError(res.error);
+              // The new paper is the newest — back to page 1 so it is the one on screen.
+              setMadePage(1);
               refetchMine({ requestPolicy: "network-only" });
               return null;
             }}
@@ -605,8 +618,8 @@ export default function WorksheetGenerateScreen(): React.ReactElement {
         <H2>{STR.wsMade}</H2>
         {pdfErr ? <Notice tone="danger" message={pdfErr} /> : null}
         {!PDF_SUPPORTED ? <Muted>{STR.wsPdfWebOnly}</Muted> : null}
-        {(mineQ.data?.myWorksheets ?? []).length === 0 ? <Muted>{STR.wsMadeEmpty}</Muted> : null}
-        {(mineQ.data?.myWorksheets ?? []).map((w) => (
+        {made.length === 0 ? <Muted>{STR.wsMadeEmpty}</Muted> : null}
+        {made.map((w) => (
           <View key={w.id} style={{ paddingVertical: space(2), borderTopWidth: 1, borderColor: "#ECF2EE", gap: space(1) }}>
             <Body>{w.title}</Body>
             <Muted>
@@ -620,6 +633,12 @@ export default function WorksheetGenerateScreen(): React.ReactElement {
             ) : null}
           </View>
         ))}
+        <Pager
+          page={madePage}
+          pageSize={MADE_PAGE_SIZE}
+          total={mineQ.data?.myWorksheetsPage.total ?? 0}
+          onPage={setMadePage}
+        />
       </Card>
     </Screen>
   );

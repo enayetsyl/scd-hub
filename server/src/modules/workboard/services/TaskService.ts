@@ -17,6 +17,7 @@ import { isValidDateKey } from "../../attendance/dates";
 import { User } from "../../foundation/models/User";
 import { writeAudit } from "../../platform/services/AuditService";
 import { Task, type ITask } from "../models/Task";
+import { queryPage, type Page, type PageArgs } from "../../../lib/paging";
 import { emitTaskAssigned, emitTaskBlocked, emitTaskDone } from "./workBoardNotifications";
 
 export interface TaskInput {
@@ -315,4 +316,27 @@ export async function tasksAssignedBy(userId: string, open: boolean): Promise<IT
     .sort(open ? { dueKey: 1, createdAt: 1 } : { doneAt: -1 })
     .limit(open ? 500 : 100)
     .lean() as unknown as Promise<ITask[]>;
+}
+
+/** D-#761: one page of `tasksAssignedBy` — the list above stops at 500 open / 100 done
+ *  without saying so. Same filter and order, `_id` as tie-breaker; `map` decorates
+ *  only the rows on this page. */
+export function tasksAssignedByPage<T>(
+  userId: string,
+  open: boolean,
+  args: PageArgs,
+  map: (docs: ITask[]) => T[] | Promise<T[]>,
+): Promise<Page<T>> {
+  return queryPage(
+    Task,
+    {
+      assignedBy: new Types.ObjectId(userId),
+      assigneeUserId: { $ne: new Types.ObjectId(userId) },
+      cancelledAt: null,
+      status: open ? { $ne: "DONE" } : "DONE",
+    },
+    open ? { dueKey: 1, createdAt: 1, _id: 1 } : { doneAt: -1, _id: -1 },
+    args,
+    (docs) => map(docs as unknown as ITask[]),
+  );
 }

@@ -47,6 +47,9 @@ const ClassNoteSchema = new Schema<IClassNote>(
 // One note per slot per date; group+date listing.
 ClassNoteSchema.index({ slotId: 1, date: 1 }, { unique: true });
 ClassNoteSchema.index({ groupType: 1, groupId: 1, date: 1 });
+// The admin list + archive read a date window newest first (D-#761); no other index
+// leads with `date`.
+ClassNoteSchema.index({ date: -1, publishedAt: -1 });
 // A guardian opening an attachment resolves the OWNING note by file id — the pointer
 // runs note→file, so this sparse multikey index backs that reverse lookup.
 ClassNoteSchema.index({ attachmentIds: 1 }, { sparse: true });

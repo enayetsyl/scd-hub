@@ -20,15 +20,20 @@
  * PQ-10 (owner ask): the Office view OPENS on the reader's own prints rather than on the
  * whole school — one press on "সব" widens it again. It changes nothing for a teacher,
  * whose scope is already themselves.
+ *
+ * D-#761: PAGED (`printHistoryPage`). Every chip narrows server-side, the chip options come
+ * from `printHistoryFacets` (the whole window, not one page), and the count is the real
+ * total — so the old "older prints may be missing" notices are gone with the cap.
  */
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
 import { ROUTINE_SUBJECTS, PRINT_COLOUR_LABELS_EN, PRINT_SIDES_LABELS_EN } from "@scd/shared";
 import type { Role } from "@scd/shared";
 import {
-  PRINT_HISTORY_QUERY,
+  PRINT_HISTORY_PAGE_QUERY,
+  PRINT_HISTORY_FACETS_QUERY,
   REPRINT_PRINT_REQUEST,
   TAG_PRINT_REQUESTS,
   type PrintHistoryRowT,
@@ -52,6 +57,8 @@ import {
   Notice,
 } from "../../components/ui";
 import { DateField } from "../../components/DateField";
+import { Pager } from "../../components/Pager";
+import { usePageState, PAGE_SIZE } from "../../lib/paging";
 // routineSubjectLabel, not subjectLabel: a print job's subject can be ARABIC/QURAN, which
 // the foundation subject labels don't carry (they'd render as the raw code).
 import { STR, bnNum, classLevelLabel, routineSubjectLabel, printPurposeLabel } from "../../lib/labels";
@@ -119,16 +126,50 @@ export default function PrintHistoryScreen({ navigation }: Props): React.ReactEl
   const datesInverted = ISO_DATE.test(fromKey) && ISO_DATE.test(toKey) && fromKey > toKey;
   const sendDates = datesValid && !datesInverted;
 
-  // cache-and-network: a reprint moves the job into the REQUESTED bucket and bumps this
-  // document's print count, so the cached page is stale the moment we act.
-  const [historyQ, refetchHistory] = useQuery({
-    query: PRINT_HISTORY_QUERY,
-    variables: {
-      fromKey: sendDates && ISO_DATE.test(fromKey) ? fromKey : null,
-      toKey: sendDates && ISO_DATE.test(toKey) ? toKey : null,
-    },
+  const fromVar = sendDates && ISO_DATE.test(fromKey) ? fromKey : null;
+  const toVar = sendDates && ISO_DATE.test(toKey) ? toKey : null;
+
+  // D-#761: the chip options come from the whole history in the window (one page of rows
+  // would hide every subject/teacher that only appears on page 2).
+  const [facetsQ, refetchFacets] = useQuery({
+    query: PRINT_HISTORY_FACETS_QUERY,
+    variables: { fromKey: fromVar, toKey: toVar },
     requestPolicy: "cache-and-network",
   });
+  const facets = facetsQ.data?.printHistoryFacets;
+
+  // D-#761: the history is PAGED server-side, so every chip narrows there too. Any
+  // filter change goes back to page 1.
+  const [page, setPage] = usePageState(
+    `${classFilter}|${subjectFilter}|${purposeFilter}|${teacherFilter}|${fromVar}|${toVar}`,
+  );
+  // cache-and-network: a reprint moves the job into the REQUESTED bucket and bumps this
+  // document's print count, so the cached page is stale the moment we act.
+  const [historyQ, refetchPage] = useQuery({
+    query: PRINT_HISTORY_PAGE_QUERY,
+    variables: {
+      classId: classFilter !== ANY && classFilter !== NONE ? classFilter : null,
+      noClass: classFilter === NONE ? true : null,
+      subject: subjectFilter !== ANY ? subjectFilter : null,
+      purpose: purposeFilter !== ANY ? purposeFilter : null,
+      printedBy: isOffice && teacherFilter !== ANY ? teacherFilter : null,
+      fromKey: fromVar,
+      toKey: toVar,
+      page,
+      pageSize: PAGE_SIZE,
+    },
+    // PQ-10: the Office's first read waits for the own-prints default below, so it does
+    // not fetch the whole school only to throw it away a moment later.
+    pause: isOffice && !teacherDefaulted,
+    requestPolicy: "cache-and-network",
+  });
+  const refetchHistory = useCallback(
+    (opts: { requestPolicy: "network-only" }): void => {
+      refetchPage(opts);
+      refetchFacets(opts);
+    },
+    [refetchPage, refetchFacets],
+  );
   const [, reprint] = useMutation(REPRINT_PRINT_REQUEST);
   const [, tagRequests] = useMutation(TAG_PRINT_REQUESTS);
   const { openingId, runOpen } = useFileOpen();
@@ -145,36 +186,29 @@ export default function PrintHistoryScreen({ navigation }: Props): React.ReactEl
     pause: !academicYearId,
   });
 
-  const rows = historyQ.data?.printHistory.rows ?? [];
-  const scannedCapped = historyQ.data?.printHistory.scannedCapped ?? false;
-  const truncated = historyQ.data?.printHistory.truncated ?? false;
-  const totalRows = historyQ.data?.printHistory.totalRows ?? 0;
+  const rows = historyQ.data?.printHistoryPage.rows ?? [];
+  const total = historyQ.data?.printHistoryPage.total ?? 0;
 
-  // Every roster class, PLUS any class a row names that the roster no longer lists (a job
-  // filed against an earlier year's class), PLUS "no class" for the remainder that names
-  // one nowhere. Rows are keyed on the row's EFFECTIVE class (PQ-8) — `latest.classId` is
-  // set only by the class-test path, so filtering on it showed Nursery empty and Class 1
+  // Every roster class, PLUS any class the history names that the roster no longer lists
+  // (a job filed against an earlier year's class), PLUS "no class" for the remainder that
+  // names one nowhere. Rows are keyed on the row's EFFECTIVE class (PQ-8) — `latest.classId`
+  // is set only by the class-test path, so filtering on it showed Nursery empty and Class 1
   // with a single row while the school had printed for both all term.
   const classOptions = useMemo(() => {
     const seen = new Map<string, number | null>();
     for (const c of classData?.classes ?? []) if (c.active) seen.set(c.id, c.level);
-    for (const r of rows) if (r.classId) seen.set(r.classId, r.classLevel);
+    for (const c of facets?.classes ?? []) seen.set(c.classId, c.classLevel);
     const out = [...seen.entries()].sort(
       (a, b) => (a[1] ?? Number.MAX_SAFE_INTEGER) - (b[1] ?? Number.MAX_SAFE_INTEGER),
     );
     // "No class" sorts last, matching the row order.
-    if (rows.some((r) => !r.classId)) out.push([NONE, null]);
+    if (facets?.hasNoClass) out.push([NONE, null]);
     return out;
-  }, [rows, classData]);
-  const subjectOptions = useMemo(
-    () => [...new Set(rows.map((r) => r.latest.subject).filter((s): s is string => !!s))].sort(),
-    [rows],
-  );
-  const purposeOptions = useMemo(() => [...new Set(rows.map((r) => r.latest.purpose))], [rows]);
-  // Requester ids are index-aligned with the names; a group can list several.
+  }, [facets, classData]);
+  const subjectOptions = facets?.subjects ?? [];
+  const purposeOptions = facets?.purposes ?? [];
   const teacherOptions = useMemo(() => {
-    const seen = new Map<string, string>();
-    for (const r of rows) r.requesterIds.forEach((id, i) => seen.set(id, r.requesterNames[i] ?? "—"));
+    const seen = new Map<string, string>((facets?.requesters ?? []).map((r) => [r.id, r.name]));
     // PQ-10: the reader's own chip sorts first — it is the default selection, so it must
     // not be somewhere down a twenty-name row.
     return [...seen.entries()].sort((a, b) => {
@@ -182,7 +216,7 @@ export default function PrintHistoryScreen({ navigation }: Props): React.ReactEl
       if (user && b[0] === user.id) return 1;
       return a[1].localeCompare(b[1]);
     });
-  }, [rows, user]);
+  }, [facets, user]);
 
   // PQ-10 (owner ask) — the Office view opens on the READER'S OWN prints. Everyone with
   // `roster:manage` sees every requester here, and the usual reason to come to this screen
@@ -196,36 +230,37 @@ export default function PrintHistoryScreen({ navigation }: Props): React.ReactEl
   // one option, and a filter with no way to clear it is a trap.
   useEffect(() => {
     if (teacherDefaulted || !isOffice || !user) return;
-    if (historyQ.fetching || !historyQ.data) return;
+    // D-#761: decided off the facets (the whole window), not off one page of rows. A
+    // failed facets read must not leave the paused history waiting forever.
+    if (facetsQ.error) {
+      setTeacherDefaulted(true);
+      return;
+    }
+    if (facetsQ.fetching || !facetsQ.data) return;
     setTeacherDefaulted(true);
     if (teacherOptions.length > 1 && teacherOptions.some(([id]) => id === user.id)) {
       setTeacherFilter(user.id);
     }
-  }, [teacherDefaulted, isOffice, user, historyQ.fetching, historyQ.data, teacherOptions]);
+  }, [teacherDefaulted, isOffice, user, facetsQ.fetching, facetsQ.data, facetsQ.error, teacherOptions]);
 
   // A narrowed date window can remove the very option a chip is pinned to; drop such a
   // selection rather than leave an invisible filter hiding every row. Only once the new
-  // page has actually landed — mid-fetch the option lists are empty, and resetting off
-  // that would wipe the teacher's chips every time they touch a date.
+  // options have actually landed — mid-fetch the option lists are empty, and resetting
+  // off that would wipe the teacher's chips every time they touch a date.
   useEffect(() => {
-    if (historyQ.fetching || !historyQ.data) return;
+    if (facetsQ.fetching || !facetsQ.data) return;
     if (classFilter !== ANY && !classOptions.some(([id]) => id === classFilter)) setClassFilter(ANY);
     if (subjectFilter !== ANY && !subjectOptions.includes(subjectFilter)) setSubjectFilter(ANY);
     if (purposeFilter !== ANY && !purposeOptions.includes(purposeFilter)) setPurposeFilter(ANY);
     if (teacherFilter !== ANY && !teacherOptions.some(([id]) => id === teacherFilter)) setTeacherFilter(ANY);
   }, [
-    historyQ.fetching, historyQ.data,
+    facetsQ.fetching, facetsQ.data,
     classOptions, subjectOptions, purposeOptions, teacherOptions,
     classFilter, subjectFilter, purposeFilter, teacherFilter,
   ]);
 
-  const visible = rows.filter(
-    (r) =>
-      (classFilter === ANY || (r.classId ?? NONE) === classFilter) &&
-      (subjectFilter === ANY || r.latest.subject === subjectFilter) &&
-      (purposeFilter === ANY || r.latest.purpose === purposeFilter) &&
-      (teacherFilter === ANY || r.requesterIds.includes(teacherFilter)),
-  );
+  // D-#761: the server already applied every chip; this page IS the visible list.
+  const visible = rows;
 
   // PQ-9 — who may name the class of an untagged row: the Office, or the teacher who
   // filed it. Mirrors the server gate; the server is still the one enforcing it.
@@ -322,10 +357,8 @@ export default function PrintHistoryScreen({ navigation }: Props): React.ReactEl
     <Screen scroll>
       <H2>{STR.prHistory}</H2>
       <Muted>{STR.prHistoryHint}</Muted>
-      {scannedCapped ? <Notice message={STR.prHistoryCapped} tone="warn" /> : null}
-      {/* PQ-7: a page cut short by the limit says so — a short list must never read as
-          "this is everything that was ever printed". */}
-      {truncated ? <Notice message={STR.prHistoryTruncated} tone="warn" /> : null}
+      {/* D-#761: the history is paged, so nothing is cut off any more — the PQ-7
+          "older prints may be missing" / "list cut short" notices have nothing to say. */}
       {datesInverted ? <Notice message={STR.prDatesInverted} tone="danger" /> : null}
 
       {/* PQ-7 — the printed-on window. Narrows server-side, so it reaches past the page. */}
@@ -421,14 +454,16 @@ export default function PrintHistoryScreen({ navigation }: Props): React.ReactEl
         </>
       ) : null}
 
-      {rows.length > 0 ? (
+      {/* D-#761: the real number of matching documents, not this page's length. */}
+      {total > 0 ? (
         <Muted style={{ marginTop: space(2) }}>
-          {bnNum(visible.length)}
-          {visible.length !== totalRows ? ` / ${bnNum(totalRows)}` : ""} {STR.prHistoryCount}
+          {bnNum(total)} {STR.prHistoryCount}
         </Muted>
       ) : null}
 
-      {historyQ.fetching && rows.length === 0 ? (
+      {/* `!historyQ.data` too: the Office's first read is paused until the PQ-10
+          default lands, and an empty-state flash there would read as "nothing printed". */}
+      {(historyQ.fetching || (!historyQ.data && !historyQ.error)) && rows.length === 0 ? (
         <Loader label={STR.loading} />
       ) : historyQ.error ? (
         <ErrorBanner
@@ -620,6 +655,7 @@ export default function PrintHistoryScreen({ navigation }: Props): React.ReactEl
           </Card>
         ))
       )}
+      <Pager page={page} pageSize={PAGE_SIZE} total={total} onPage={setPage} />
     </Screen>
   );
 }

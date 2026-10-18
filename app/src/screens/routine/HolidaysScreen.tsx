@@ -23,6 +23,8 @@ import {
 } from "../../graphql/operations";
 import { Screen, Body, Muted, Card, Button, Badge, Field, Select, Notice, ErrorBanner } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
+import { Pager } from "../../components/Pager";
+import { usePagedRows } from "../../lib/paging";
 import { useConfirm } from "../../state/ConfirmContext";
 import { STR, isoDateLabel, dhakaDateKey, holidayTypeLabel, holidayTypeOptions } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
@@ -99,6 +101,8 @@ export default function HolidaysScreen(): React.ReactElement {
   const live = (q.data?.holidays ?? []).filter((h) => h.active);
   const upcoming = live.filter((h) => h.toDate.slice(0, 10) >= today);
   const past = live.filter((h) => h.toDate.slice(0, 10) < today).reverse();
+  // D-#761: past holidays are kept forever, so that list pages (client-side; the rows are tiny).
+  const { shown: pastShown, pager: pastPager } = usePagedRows(past);
 
   const renderRow = (h: HolidayT): React.ReactElement => (
     <Card key={h.id}>
@@ -159,7 +163,8 @@ export default function HolidaysScreen(): React.ReactElement {
           {past.length > 0 ? (
             <>
               <Body style={{ fontWeight: "700", marginTop: space(2) }}>{STR.hxPast}</Body>
-              {past.map(renderRow)}
+              {pastShown.map(renderRow)}
+              <Pager {...pastPager} />
             </>
           ) : null}
         </QueryGate>

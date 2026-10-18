@@ -23,12 +23,14 @@ import * as Clipboard from "expo-clipboard";
 import { useQuery, useMutation, useClient } from "urql";
 import { BUILD_SCOPES } from "@scd/shared";
 import {
-  SUPPORT_BOOKS, SUPPORT_BOOK_ASSEMBLY_GATE, SUPPORT_BOOK_BUILD_JOBS,
+  SUPPORT_BOOKS, SUPPORT_BOOK_ASSEMBLY_GATE, SUPPORT_BOOK_BUILD_JOBS_PAGE,
   QUEUE_SUPPORT_BOOK_BUILD, SUPPORT_BOOK_EXPORT_JSON,
   type SupportBookT, type SupportBookGateT, type SupportBookBuildJobT,
 } from "../../graphql/supportBook";
 import { Screen, Body, Muted, Card, Select, Badge, Button, Chip, ChipRow, Field, EmptyState, Divider } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
+import { Pager } from "../../components/Pager";
+import { usePageState, PAGE_SIZE } from "../../lib/paging";
 import { STR, bnNum, isoDateTimeLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { openStoredFile, FileUploadError } from "../../lib/files";
@@ -152,16 +154,20 @@ export default function BookAssembleScreen(): React.ReactElement {
     variables: { bookId, lessonNos: scopedLessons },
     pause: !bookId,
   });
-  const [jobsQ, refetchJobs] = useQuery<{ supportBookBuildJobs: SupportBookBuildJobT[] }>({
-    query: SUPPORT_BOOK_BUILD_JOBS,
-    variables: { bookId, limit: 25 },
+  // D-#761: paged — the history used to stop at the newest 25 with no way past.
+  const [jobsPage, setJobsPage] = usePageState(bookId);
+  const [jobsQ, refetchJobs] = useQuery<{
+    supportBookBuildJobsPage: { rows: SupportBookBuildJobT[]; total: number; page: number; pageSize: number };
+  }>({
+    query: SUPPORT_BOOK_BUILD_JOBS_PAGE,
+    variables: { bookId, page: jobsPage, pageSize: PAGE_SIZE },
     pause: !bookId,
   });
 
   const [queueRes, queueBuild] = useMutation(QUEUE_SUPPORT_BOOK_BUILD);
 
   const gate = gateQ.data?.supportBookAssemblyGate ?? null;
-  const jobs = jobsQ.data?.supportBookBuildJobs ?? [];
+  const jobs = jobsQ.data?.supportBookBuildJobsPage.rows ?? [];
 
   async function onQueue(): Promise<void> {
     setNote(null);
@@ -172,6 +178,7 @@ export default function BookAssembleScreen(): React.ReactElement {
     }
     setNote({ text: STR.sbQueued, bad: false });
     setForce(false);
+    setJobsPage(1); // the new job is the newest — show the page it is on
     refetchJobs({ requestPolicy: "network-only" });
     refetchGate({ requestPolicy: "network-only" });
   }
@@ -294,6 +301,12 @@ export default function BookAssembleScreen(): React.ReactElement {
           ) : (
             jobs.map((j) => <JobCard key={j.jobId} job={j} />)
           )}
+          <Pager
+            page={jobsPage}
+            pageSize={PAGE_SIZE}
+            total={jobsQ.data?.supportBookBuildJobsPage.total ?? 0}
+            onPage={setJobsPage}
+          />
         </QueryGate>
       </ScrollView>
     </Screen>

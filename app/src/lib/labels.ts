@@ -2060,6 +2060,7 @@ const STR_BN = {
   gpLoadOlder: "আরও পুরোনো দেখুন",
   gpLoadingOlder: "লোড হচ্ছে…",
   gpNoOlder: "আর পুরোনো তথ্য নেই",
+  gpSeeAll: "সব দেখুন ›", // D-#761
   gpShowingSince: "দেখানো হচ্ছে",
   gpRangeTooWide: "একবারে সর্বোচ্চ ৩ মাসের তথ্য দেখা যায়",
   gpHwGivenTitle: "এই দিনের বাড়ির কাজ",
@@ -2763,6 +2764,7 @@ const STR_BN = {
   rvUnassigned: "বরাদ্দ হয়নি",
   rvAssignedTo: "বরাদ্দকৃত",
   rvSelectAll: "সব নির্বাচন",
+  rvSelectPage: "এই পৃষ্ঠার সব নির্বাচন", // D-#761
   rvClear: "মুছুন",
   rvAssignSelected: "নির্বাচিতগুলো বরাদ্দ করুন",
   rvAssigned: "বরাদ্দ হয়েছে",
@@ -5443,6 +5445,8 @@ const STR_BN = {
   finEximusDiff: "এক্সিমাস পার্থক্য",
   finAppBank: "অ্যাপ ব্যাংক ব্যালেন্স",
   finReconHistory: "হিসাব মিলানোর ইতিহাস",
+  finReconHistoryFrom: "শুরুর তারিখ", // D-#761
+  finReconHistoryTo: "শেষ তারিখ", // D-#761
   finReconRecorded: "হিসাব মিলানো রেকর্ড হয়েছে।",
 
   // Budget
@@ -7224,6 +7228,7 @@ const STR_EN: StrTable = {
   gpLoadOlder: "Show older",
   gpLoadingOlder: "Loading…",
   gpNoOlder: "No older records",
+  gpSeeAll: "See all ›", // D-#761
   gpShowingSince: "Showing from",
   gpRangeTooWide: "At most 3 months can be shown at once",
   gpHwGivenTitle: "Homework given this day",
@@ -7910,6 +7915,7 @@ const STR_EN: StrTable = {
   rvUnassigned: "Unassigned",
   rvAssignedTo: "Assigned to",
   rvSelectAll: "Select all",
+  rvSelectPage: "Select all on this page", // D-#761
   rvClear: "Clear",
   rvAssignSelected: "Assign selected",
   rvAssigned: "Assigned",
@@ -10565,6 +10571,8 @@ const STR_EN: StrTable = {
   finEximusDiff: "Eximus diff",
   finAppBank: "App bank balance",
   finReconHistory: "Reconciliation history",
+  finReconHistoryFrom: "From", // D-#761
+  finReconHistoryTo: "To", // D-#761
   finReconRecorded: "Reconciliation recorded.",
 
   // Budget

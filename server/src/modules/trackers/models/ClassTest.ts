@@ -195,5 +195,8 @@ ClassTestSchema.index({ sectionId: 1, status: 1 });
 ClassTestSchema.index({ subjectGroupId: 1, requestedAt: -1 });
 // CS-1: the tests in the script flow (teacher + Office queues read by this).
 ClassTestSchema.index({ "scripts.dueDateKey": 1 }, { sparse: true });
+// D-#761: the reports-status list bounded by an exam-date window (status + examDate
+// is its filter, examDate its sort).
+ClassTestSchema.index({ status: 1, examDate: 1 });
 
 export const ClassTest = model<IClassTest>("ClassTest", ClassTestSchema);

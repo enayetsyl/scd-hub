@@ -42,6 +42,8 @@ import {
 } from "../../components/ui";
 import { AvailableTeacherSelect } from "../../components/selects";
 import { LeaveImprovementTasks } from "../../components/LeaveImprovementTasks";
+import { Pager } from "../../components/Pager";
+import { usePagedRows } from "../../lib/paging";
 import { STR, coverSlotStatusLabel, dateHeaderLabel, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useConfirm } from "../../state/ConfirmContext";
@@ -57,6 +59,10 @@ function statusTone(s: string): "info" | "ok" | "muted" {
 /** Post-merge sections that ARE the whole class — their name is redundant next to
  *  the class, so we show just the class (mirrors SectionBar). */
 const WHOLE_CLASS_SECTIONS = new Set(["মূল", "সম্মিলিত"]);
+
+/** D-#761: a long leave has 300–600 slots and every open card mounts an
+ *  AvailableTeacherSelect with its own availability query, so the page is kept small. */
+const COVER_PAGE_SIZE = 20;
 
 export default function LeaveCoverScreen({ route }: Props): React.ReactElement {
   const { leaveApplicationId, manage } = route.params;
@@ -84,6 +90,7 @@ export default function LeaveCoverScreen({ route }: Props): React.ReactElement {
   const [, decide] = useMutation(DECIDE_STAFF_COVER_SLOT);
 
   const slots = slotsQ.data?.staffCoverSlots ?? [];
+  const { shown: shownSlots, pager } = usePagedRows(slots, { pageSize: COVER_PAGE_SIZE, resetKey: leaveApplicationId });
   const subjectName = new Map((subjectsQ.data?.subjects ?? []).map((s) => [s.id, s.nameBn]));
   const groupName = new Map((groupsQ.data?.subjectGroups ?? []).map((g) => [g.id, g.nameBn]));
   const teacherName = new Map((teachersQ.data?.teachers ?? []).map((t) => [t.id, t.name]));
@@ -167,7 +174,7 @@ export default function LeaveCoverScreen({ route }: Props): React.ReactElement {
       ) : slots.length === 0 ? (
         <EmptyState message={STR.hrCoverEmpty} />
       ) : (
-        slots.map((slot) => (
+        shownSlots.map((slot) => (
           <Card key={slot.id}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
               <Body style={{ fontWeight: "700", flex: 1 }}>{slotLabel(slot)}</Body>
@@ -264,6 +271,7 @@ export default function LeaveCoverScreen({ route }: Props): React.ReactElement {
           </Card>
         ))
       )}
+      <Pager {...pager} />
 
       {/* SP-3 (D-#736) — the improvement tasks of the leave days and who does each. Follows
           the period covers above, so it re-reads whenever a cover changes. */}

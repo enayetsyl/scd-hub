@@ -183,6 +183,17 @@ export const SUPPORT_BOOK_ESCALATIONS = gql`
   }
 `;
 
+/** D-#761: the inbox, PAGED — still oldest first. With "open only" off the list above is
+ *  every thread the programme ever raised. */
+export const SUPPORT_BOOK_ESCALATIONS_PAGE = gql`
+  query SupportBookEscalationsPage($bookId: String, $openOnly: Boolean, $page: Int, $pageSize: Int) {
+    supportBookEscalationsPage(bookId: $bookId, openOnly: $openOnly, page: $page, pageSize: $pageSize) {
+      total page pageSize
+      rows { ${ESCALATION_FIELDS} }
+    }
+  }
+`;
+
 export const RAISE_SUPPORT_BOOK_ESCALATION = gql`
   mutation RaiseSupportBookEscalation(
     $bookId: String!, $lessonNo: Int!, $target: String!, $subject: String!, $body: String!, $targetId: String
@@ -244,6 +255,19 @@ export const SUPPORT_BOOK_BUILD_JOBS = gql`
     supportBookBuildJobs(bookId: $bookId, limit: $limit) {
       jobId bookId scope lessonNos profiles state
       queuedAt startedAt finishedAt failureReason outputFileIds log
+    }
+  }
+`;
+
+/** D-#761: the render history, PAGED — the list above stops at its newest 25. */
+export const SUPPORT_BOOK_BUILD_JOBS_PAGE = gql`
+  query SupportBookBuildJobsPage($bookId: String!, $page: Int, $pageSize: Int) {
+    supportBookBuildJobsPage(bookId: $bookId, page: $page, pageSize: $pageSize) {
+      total page pageSize
+      rows {
+        jobId bookId scope lessonNos profiles state
+        queuedAt startedAt finishedAt failureReason outputFileIds log
+      }
     }
   }
 `;

@@ -100,9 +100,14 @@ function filterFromArgs(args: {
   teacherId?: string | null;
   asOf?: string | null;
   retired?: boolean | null;
+  examFrom?: string | null;
+  examTo?: string | null;
 }): SummaryFilter {
   const asOf = args.asOf ? new Date(args.asOf) : undefined;
   if (asOf && Number.isNaN(asOf.getTime())) throw new ForbiddenError("asOf is not a valid date");
+  for (const k of [args.examFrom, args.examTo]) {
+    if (k && !/^\d{4}-\d{2}-\d{2}$/.test(k)) throw new ForbiddenError("examFrom/examTo must be YYYY-MM-DD");
+  }
   return {
     academicYearId: args.academicYearId ?? undefined,
     classLevel: args.classLevel ?? undefined,
@@ -111,6 +116,8 @@ function filterFromArgs(args: {
     retired: args.retired ?? undefined,
     teacherId: args.teacherId ?? undefined,
     asOf,
+    examFrom: args.examFrom ?? undefined,
+    examTo: args.examTo ?? undefined,
   };
 }
 
@@ -186,6 +193,10 @@ builder.queryField("classTestReportsStatus", (t) =>
       asOf: t.arg.string({ required: false }),
       /** true → list RETIRED exams instead of live ones, so a retirement can be undone. */
       retired: t.arg.boolean({ required: false }),
+      // D-#761: optional exam-date window (Dhaka days, inclusive). Omitted = every
+      // date, exactly as before, so released bundles are unaffected.
+      examFrom: t.arg.string({ required: false, description: "Earliest exam date, YYYY-MM-DD (Dhaka), inclusive." }),
+      examTo: t.arg.string({ required: false, description: "Latest exam date, YYYY-MM-DD (Dhaka), inclusive." }),
     },
     resolve: async (_root, args, ctx) => {
       await assertReportRead(ctx, args.sectionId, { selfTeacherId: args.teacherId });

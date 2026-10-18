@@ -24,6 +24,7 @@ import { buildBellSchedule, type BellTrigger } from "../trigger";
 import { ForbiddenError } from "../../../middleware/authz";
 import { emitClassNotePublished } from "../../notifications/services/emitters";
 import { liveWindow } from "../liveWindow";
+import { queryPage, type Page, type PageArgs } from "../../../lib/paging";
 
 function dayBounds(date: Date): { start: Date; end: Date } {
   const s = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0);
@@ -388,6 +389,82 @@ export async function classNotesAdmin(date: Date, dateTo?: Date): Promise<ClassN
     .sort({ publishedAt: -1 })
     .lean()) as unknown as IClassNote[];
   return enrichClassNotes(notes);
+}
+
+// D-#761: the admin list, paged. `classNotesAdmin` above returns the whole window (30 days
+// ≈ 1,500 enriched rows); this returns one page, with the screen's class / teacher /
+// subject filters applied in the database. Same window, same newest-first order.
+
+export interface ClassNotesAdminFilter {
+  date: Date;
+  dateTo?: Date | null;
+  /** Section notes of this class level (a subject-group note has none, so never matches). */
+  classLevel?: number | null;
+  /** The author's display name — the screen filters by name, as its select shows names. */
+  teacherName?: string | null;
+  subject?: string | null;
+}
+
+function adminWindow(f: { date: Date; dateTo?: Date | null }): Record<string, unknown> {
+  const { start } = dayBounds(f.dateTo && f.dateTo < f.date ? f.dateTo : f.date);
+  const { end } = dayBounds(f.dateTo && f.dateTo > f.date ? f.dateTo : f.date);
+  return { date: { $gte: start, $lte: end } };
+}
+
+export async function classNotesAdminPage(f: ClassNotesAdminFilter & PageArgs): Promise<Page<ClassNoteAdminRow>> {
+  const q = adminWindow(f);
+  if (f.subject) q.subject = f.subject;
+  if (f.teacherName) {
+    const users = (await User.find({ name: f.teacherName }).select("_id").lean()) as unknown as { _id: Types.ObjectId }[];
+    q.publishedBy = { $in: users.map((u) => u._id) };
+  }
+  if (f.classLevel != null) {
+    const classes = (await Class.find({ level: f.classLevel }).select("_id").lean()) as unknown as { _id: Types.ObjectId }[];
+    const secs = (await Section.find({ classId: { $in: classes.map((c) => c._id) } })
+      .select("_id")
+      .lean()) as unknown as { _id: Types.ObjectId }[];
+    q.groupType = "section";
+    q.groupId = { $in: secs.map((s) => s._id) };
+  }
+  return queryPage(ClassNote, q, { publishedAt: -1, _id: -1 }, f, (notes) =>
+    enrichClassNotes(notes as unknown as IClassNote[]),
+  );
+}
+
+export interface ClassNotesAdminOptions {
+  classLevels: number[];
+  teachers: string[];
+  subjects: string[];
+}
+
+/** The class / teacher / subject values present in the window — the selects never offer a
+ *  value with zero matches (D-#309), now that the screen no longer holds every row. */
+export async function classNotesAdminOptions(f: { date: Date; dateTo?: Date | null }): Promise<ClassNotesAdminOptions> {
+  const q = adminWindow(f);
+  const [subjects, authorIds, sectionIds] = await Promise.all([
+    ClassNote.distinct("subject", q) as unknown as Promise<string[]>,
+    ClassNote.distinct("publishedBy", q) as unknown as Promise<Types.ObjectId[]>,
+    ClassNote.distinct("groupId", { ...q, groupType: "section" }) as unknown as Promise<Types.ObjectId[]>,
+  ]);
+  const [users, sections] = await Promise.all([
+    authorIds.length
+      ? (User.find({ _id: { $in: authorIds } }).select("name").lean() as unknown as Promise<{ name?: string }[]>)
+      : Promise.resolve([]),
+    sectionIds.length
+      ? (Section.find({ _id: { $in: sectionIds } }).select("classId").lean() as unknown as Promise<
+          { classId?: Types.ObjectId }[]
+        >)
+      : Promise.resolve([]),
+  ]);
+  const classIds = [...new Set(sections.map((s) => s.classId?.toString()).filter((x): x is string => !!x))];
+  const classes = classIds.length
+    ? ((await Class.find({ _id: { $in: classIds } }).select("level").lean()) as unknown as { level?: number }[])
+    : [];
+  return {
+    classLevels: [...new Set(classes.map((c) => c.level).filter((l): l is number => l != null))].sort((a, b) => a - b),
+    teachers: [...new Set(users.map((u) => u.name).filter((n): n is string => !!n))].sort(),
+    subjects: [...new Set(subjects)].sort(),
+  };
 }
 
 // ---------------------------------------------------------------------------

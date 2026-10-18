@@ -13,12 +13,15 @@
  * Identity-plane; NO corpus path (ADR-005).
  */
 import { builder } from "../../../schema";
+import { pageRef } from "../../../pageRef";
 import { ForbiddenError } from "../../../middleware/authz";
 import {
   vocabTestReport,
   vocabStudentDashboard,
   vocabClassDashboard,
   vocabStudentCumulative,
+  vocabStudentTestsPage,
+  vocabClassTestsPage,
   type VocabTestReport,
   type VocabStudentDashboard,
   type VocabClassDashboard,
@@ -131,6 +134,9 @@ StudentTestEntryRef.implement({
   }),
 });
 
+// D-#761: the per-test history, one page at a time (the dashboard keeps the roll-up).
+const VocabStudentTestEntryPageRef = pageRef("VocabStudentTestEntryPage", StudentTestEntryRef);
+
 const VocabStudentDashboardRef = builder.objectRef<VocabStudentDashboard>("VocabStudentDashboard");
 VocabStudentDashboardRef.implement({
   description: "Per-student dashboard: per-test history + roll-up + persistent weak words (VC-4, J5).",
@@ -157,6 +163,9 @@ ClassTestEntryRef.implement({
     rollup: t.field({ type: ScoreRollupRef, resolve: (e) => e.rollup }),
   }),
 });
+
+// D-#761: the section's per-test summary rows, one page at a time.
+const VocabClassTestEntryPageRef = pageRef("VocabClassTestEntryPage", ClassTestEntryRef);
 
 const VocabClassDashboardRef = builder.objectRef<VocabClassDashboard>("VocabClassDashboard");
 VocabClassDashboardRef.implement({
@@ -263,6 +272,24 @@ builder.queryField("vocabStudentDashboard", (t) =>
   }),
 );
 
+builder.queryField("vocabStudentTestsPage", (t) =>
+  t.field({
+    type: VocabStudentTestEntryPageRef,
+    description:
+      "One page of a student's per-test history, newest first (D-#761). The roll-up and " +
+      "persistent words stay on vocabStudentDashboard. Requires tracker:read.",
+    authScopes: { hasPermission: "tracker:read" },
+    args: {
+      studentId: t.arg.string({ required: true }),
+      program: t.arg.string({ required: false }),
+      page: t.arg.int({ required: false }),
+      pageSize: t.arg.int({ required: false }),
+    },
+    resolve: async (_root, args) =>
+      vocabStudentTestsPage(args.studentId, { program: args.program ?? null }, args),
+  }),
+);
+
 builder.queryField("vocabClassDashboard", (t) =>
   t.field({
     type: VocabClassDashboardRef,
@@ -278,6 +305,24 @@ builder.queryField("vocabClassDashboard", (t) =>
         program: args.program ?? null,
         thresholds: args.classPersistentPct != null ? { persistentClassPct: args.classPersistentPct } : null,
       }),
+  }),
+);
+
+builder.queryField("vocabClassTestsPage", (t) =>
+  t.field({
+    type: VocabClassTestEntryPageRef,
+    description:
+      "One page of a section's per-test summary rows, newest first (D-#761). The class roll-up " +
+      "and most-missed stay on vocabClassDashboard. Requires tracker:read.",
+    authScopes: { hasPermission: "tracker:read" },
+    args: {
+      sectionId: t.arg.string({ required: true }),
+      program: t.arg.string({ required: false }),
+      page: t.arg.int({ required: false }),
+      pageSize: t.arg.int({ required: false }),
+    },
+    resolve: async (_root, args) =>
+      vocabClassTestsPage(args.sectionId, { program: args.program ?? null }, args),
   }),
 );
 

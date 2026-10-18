@@ -36,6 +36,7 @@ import { suggestTestNumber, createRequest, type ClassTestShape } from "./ClassTe
 import { emitClassTestUpcoming } from "../../notifications/services/emitters";
 import { bnNum } from "../../../lib/bnNum";
 import { dhakaDayKey } from "../../../lib/dhakaDay";
+import { normalizePage, type Page, type PageArgs } from "../../../lib/paging";
 
 export interface CtQuestionRoundShape {
   fileId: string;
@@ -657,4 +658,75 @@ export async function ctQuestionQueue(): Promise<CtQuestionRequestShape[]> {
         new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime(),
     )
     .map((r) => shape(r, nameById.get(r.requestedBy.toString()) ?? null));
+}
+
+// ---------------------------------------------------------------------------
+// Paged lists (D-#761)
+// ---------------------------------------------------------------------------
+
+/** A status-rank map as the ordered status list it encodes. */
+function statusSequence(order: Record<string, number>): string[] {
+  return Object.keys(order).sort((a, b) => order[a] - order[b]);
+}
+
+/**
+ * D-#761: one page of requests in a fixed status order, newest first inside a
+ * status — the same order the in-memory lists sort into. The order is a short
+ * list of statuses, so the page is walked bucket by bucket: count each status,
+ * then skip/limit inside only the buckets this page spans. Finished requests a
+ * page does not show never leave the database, and the `{status, requestedAt}`
+ * indexes serve every read. A status outside the order sinks last (the `?? 9`).
+ */
+async function pageInStatusOrder(
+  base: Record<string, unknown>,
+  order: readonly string[],
+  args: PageArgs,
+): Promise<Page<IClassTestQuestionRequest>> {
+  const { page, pageSize, skip } = normalizePage(args);
+  const buckets: Array<Record<string, unknown>> = [
+    ...order.map((status) => ({ ...base, status })),
+    { ...base, status: { $nin: [...order] } },
+  ];
+  const counts = await Promise.all(buckets.map((f) => ClassTestQuestionRequest.countDocuments(f)));
+  const rows: IClassTestQuestionRequest[] = [];
+  let toSkip = skip;
+  for (let i = 0; i < buckets.length && rows.length < pageSize; i++) {
+    if (toSkip >= counts[i]) {
+      toSkip -= counts[i];
+      continue;
+    }
+    const take = Math.min(pageSize - rows.length, counts[i] - toSkip);
+    const docs = (await ClassTestQuestionRequest.find(buckets[i])
+      .sort({ requestedAt: -1, _id: -1 })
+      .skip(toSkip)
+      .limit(take)
+      .lean()) as unknown as IClassTestQuestionRequest[];
+    rows.push(...docs);
+    toSkip = 0;
+  }
+  return { rows, total: counts.reduce((a, b) => a + b, 0), page, pageSize };
+}
+
+/** D-#761: `myCtQuestionRequests`, one page at a time — same order, same rows. */
+export async function myCtQuestionRequestsPage(
+  actorId: string,
+  args: PageArgs,
+): Promise<Page<CtQuestionRequestShape>> {
+  const p = await pageInStatusOrder(
+    { requestedBy: actorId, active: { $ne: false } },
+    statusSequence(STATUS_ORDER),
+    args,
+  );
+  return { ...p, rows: p.rows.map((r) => shape(r)) };
+}
+
+/** D-#761: `ctQuestionQueue`, one page at a time — teacher names joined for this page only. */
+export async function ctQuestionQueuePage(args: PageArgs): Promise<Page<CtQuestionRequestShape>> {
+  const p = await pageInStatusOrder({ active: { $ne: false } }, statusSequence(QUEUE_ORDER), args);
+  const teacherIds = [...new Set(p.rows.map((r) => r.requestedBy.toString()))];
+  const teachers = (await User.find({ _id: { $in: teacherIds } })
+    .select("name")
+    .lean()) as unknown as Array<{ _id: Types.ObjectId; name?: string }>;
+  const nameById = new Map(teachers.map((t) => [t._id.toString(), t.name ?? null]));
+  return { ...p, rows: p.rows.map((r) => shape(r, nameById.get(r.requestedBy.toString()) ?? null)) };
 }

@@ -18,7 +18,7 @@
 import React from "react";
 import { ScrollView, View } from "react-native";
 import { useQuery } from "urql";
-import { MY_NOTIFICATIONS_QUERY, type NotificationT } from "../../graphql/operations";
+import { MY_NOTIFICATION_QUERY, type NotificationT } from "../../graphql/operations";
 import { useAuth } from "../../auth/AuthContext";
 import { notificationTarget, type NotificationTarget } from "../../lib/notificationNav";
 import { Screen, Card, Body, Muted, Badge, Button, Loader, EmptyState } from "../../components/ui";
@@ -49,14 +49,15 @@ export default function NotificationDetailScreen({
   const { role } = useAuth();
   const id = route.params?.id;
 
-  // The inbox query is already warm in the cache, so this resolves without a
-  // round-trip in the normal flow (and refetches by itself if opened cold).
+  // D-#761: read the ONE row by id. It used to be looked up inside the inbox's newest
+  // 100, so a deep link to anything older opened an empty screen.
   const [{ data, fetching }] = useQuery({
-    query: MY_NOTIFICATIONS_QUERY,
-    variables: { limit: 100 },
+    query: MY_NOTIFICATION_QUERY,
+    variables: { id: id ?? "" },
+    pause: !id,
     requestPolicy: "cache-first",
   });
-  const row: NotificationT | undefined = (data?.myNotifications ?? []).find((n) => n.id === id);
+  const row: NotificationT | undefined = data?.myNotification ?? undefined;
 
   /** `initial: false` keeps the tab's home screen beneath the deep-linked screen —
    *  without it the target becomes the stack's FIRST screen and loses its back button

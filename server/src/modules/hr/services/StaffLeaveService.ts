@@ -49,6 +49,7 @@ import { fanOutCoverSlots, revokeCoversForLeave, resolvePartialPeriods } from ".
 import { emitStaffLeaveSubmitted } from "../../notifications/services/emitters";
 import { POOLED_LEAVE_TYPES } from "@scd/shared";
 import { bnNum } from "../../../lib/bnNum";
+import { queryPage, type Page, type PageArgs } from "../../../lib/paging";
 
 // --- pure split math -------------------------------------------------------
 
@@ -346,6 +347,16 @@ export async function listLeave(filter: ListLeaveFilter): Promise<IStaffLeaveApp
   return StaffLeaveApplication.find(q)
     .sort({ fromKey: -1 })
     .lean() as unknown as Promise<IStaffLeaveApplication[]>;
+}
+
+/** D-#761: one page of `listLeave` (same filter, newest first, `_id` tie-breaker). The
+ *  Approved/Rejected/All chips used to return every leave ever recorded. */
+export function listLeavePage(filter: ListLeaveFilter, args: PageArgs): Promise<Page<IStaffLeaveApplication>> {
+  const q: Record<string, unknown> = {};
+  if (filter.status) q.status = filter.status;
+  if (filter.fromKey) q.toKey = { $gte: filter.fromKey };
+  if (filter.toKey) q.fromKey = { $lte: filter.toKey };
+  return queryPage(StaffLeaveApplication, q, { fromKey: -1, _id: -1 }, args, (docs) => docs as IStaffLeaveApplication[]);
 }
 
 // --- attendance overlay (the AT-1 ✘ → LEAVE seam) --------------------------

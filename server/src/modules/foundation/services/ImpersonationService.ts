@@ -31,6 +31,7 @@ import { Student } from "../models/Student";
 import { Section } from "../models/Section";
 import { signToken, type AuthResult } from "./AuthService";
 import { writeAudit } from "../../platform/services/AuditService";
+import { normalizePage, MAX_PAGE_SIZE, type Page, type PageArgs } from "../../../lib/paging";
 
 /** A borrowed session is short. Long enough to reproduce a bug, short enough that a
  *  forgotten tab is not a standing second identity. */
@@ -170,40 +171,13 @@ export async function listImpersonationTargets(input: {
       .sort({ name: 1 })
       .limit(limit)
       .lean();
-
-    const sections = await Section.find({ classTeacherId: { $in: users.map((u) => u._id) }, active: true })
-      .select("classTeacherId nameBn code")
-      .lean();
-    const sectionsByTeacher = new Map<string, string[]>();
-    for (const s of sections as Array<{ classTeacherId?: Types.ObjectId; nameBn?: string; code?: string }>) {
-      if (!s.classTeacherId) continue;
-      const key = s.classTeacherId.toString();
-      const list = sectionsByTeacher.get(key) ?? [];
-      list.push(s.nameBn || s.code || "");
-      sectionsByTeacher.set(key, list);
-    }
-
-    return users.map((u) => {
-      const templates = (u.additionalTemplates ?? []) as Role[];
-      const isPrincipal = u.role === "PRINCIPAL" || templates.includes("PRINCIPAL");
-      const isSelf = u._id.toString() === caller.id.toString();
-      const inactive = u.active === false;
-      return {
-        id: u._id.toString(),
-        kind: "STAFF" as const,
-        name: u.name,
-        role: u.role as string,
-        lines: (sectionsByTeacher.get(u._id.toString()) ?? []).filter(Boolean),
-        eligible: !isPrincipal && !isSelf && !inactive,
-        reason: isSelf ? TARGET_SELF : isPrincipal ? TARGET_PRINCIPAL : inactive ? TARGET_INACTIVE : null,
-      };
-    });
+    return staffTargetRows(users, caller.id.toString());
   }
 
   const q: Record<string, unknown> = {};
   if (rx) q.$or = [{ name: rx }, { phone: rx }, { identifier: rx }];
   let guardians = await Guardian.find(q)
-    .select("name active loginEnabled passwordHash")
+    .select(GUARDIAN_TARGET_FIELDS)
     .sort({ name: 1 })
     .limit(limit)
     .lean();
@@ -212,22 +186,110 @@ export async function listImpersonationTargets(input: {
   // CHILD — which is how the owner will actually look a family up. Resolve it through the
   // roster and re-fetch, so typing a শিক্ষার্থী's name finds their guardians.
   if (rx && guardians.length === 0) {
-    const students = await Student.find({ $or: [{ name: rx }, { nameBn: rx }] })
-      .select("_id")
-      .limit(limit)
-      .lean();
-    if (students.length > 0) {
-      const links = await GuardianLink.find({ studentId: { $in: students.map((s) => s._id) } })
-        .select("guardianId")
-        .lean();
-      guardians = await Guardian.find({ _id: { $in: links.map((l) => l.guardianId) } })
-        .select("name active loginEnabled passwordHash")
+    const ids = await guardianIdsForChildSearch(rx, limit);
+    if (ids) {
+      guardians = await Guardian.find({ _id: { $in: ids } })
+        .select(GUARDIAN_TARGET_FIELDS)
         .sort({ name: 1 })
         .limit(limit)
         .lean();
     }
   }
 
+  return guardianTargetRows(guardians);
+}
+
+/**
+ * D-#761: one page of the picker, so the Guardian tab with an empty search no longer
+ * stops at the first 50 names with no hint. Same eligibility, same order (`_id` breaks
+ * name ties), and the child-name fallback when no guardian matches by their own details.
+ */
+export async function listImpersonationTargetsPage(
+  input: { callerUserId: string; kind: ImpersonationKind; search?: string | null },
+  args: PageArgs,
+): Promise<Page<ImpersonationTarget>> {
+  const caller = await assertMayViewAs(input.callerUserId);
+  const { page, pageSize, skip } = normalizePage(args);
+  const rx = searchClause(input.search);
+
+  if (input.kind === "STAFF") {
+    const q: Record<string, unknown> = {};
+    if (rx) q.$or = [{ name: rx }, { email: rx }, { phone: rx }];
+    const [users, total] = await Promise.all([
+      User.find(q).select("name role active additionalTemplates").sort({ name: 1, _id: 1 }).skip(skip).limit(pageSize).lean(),
+      User.countDocuments(q),
+    ]);
+    return { rows: await staffTargetRows(users, caller.id.toString()), total, page, pageSize };
+  }
+
+  let q: Record<string, unknown> = {};
+  if (rx) q.$or = [{ name: rx }, { phone: rx }, { identifier: rx }];
+  let total = await Guardian.countDocuments(q);
+  if (rx && total === 0) {
+    const ids = await guardianIdsForChildSearch(rx, MAX_PAGE_SIZE);
+    if (ids) {
+      q = { _id: { $in: ids } };
+      total = await Guardian.countDocuments(q);
+    }
+  }
+  const guardians =
+    total === 0
+      ? []
+      : await Guardian.find(q).select(GUARDIAN_TARGET_FIELDS).sort({ name: 1, _id: 1 }).skip(skip).limit(pageSize).lean();
+  return { rows: await guardianTargetRows(guardians), total, page, pageSize };
+}
+
+const GUARDIAN_TARGET_FIELDS = "name active loginEnabled passwordHash";
+
+/** The guardians of the students whose name matches, or null when no student does. */
+async function guardianIdsForChildSearch(rx: RegExp, limit: number): Promise<Types.ObjectId[] | null> {
+  const students = await Student.find({ $or: [{ name: rx }, { nameBn: rx }] })
+    .select("_id")
+    .limit(limit)
+    .lean();
+  if (students.length === 0) return null;
+  const links = await GuardianLink.find({ studentId: { $in: students.map((s) => s._id) } })
+    .select("guardianId")
+    .lean();
+  return links.map((l) => l.guardianId);
+}
+
+async function staffTargetRows(
+  users: Array<{ _id: Types.ObjectId; name: string; role: unknown; active?: boolean; additionalTemplates?: unknown }>,
+  callerId: string,
+): Promise<ImpersonationTarget[]> {
+  const sections = await Section.find({ classTeacherId: { $in: users.map((u) => u._id) }, active: true })
+    .select("classTeacherId nameBn code")
+    .lean();
+  const sectionsByTeacher = new Map<string, string[]>();
+  for (const s of sections as Array<{ classTeacherId?: Types.ObjectId; nameBn?: string; code?: string }>) {
+    if (!s.classTeacherId) continue;
+    const key = s.classTeacherId.toString();
+    const list = sectionsByTeacher.get(key) ?? [];
+    list.push(s.nameBn || s.code || "");
+    sectionsByTeacher.set(key, list);
+  }
+
+  return users.map((u) => {
+    const templates = (u.additionalTemplates ?? []) as Role[];
+    const isPrincipal = u.role === "PRINCIPAL" || templates.includes("PRINCIPAL");
+    const isSelf = u._id.toString() === callerId;
+    const inactive = u.active === false;
+    return {
+      id: u._id.toString(),
+      kind: "STAFF" as const,
+      name: u.name,
+      role: u.role as string,
+      lines: (sectionsByTeacher.get(u._id.toString()) ?? []).filter(Boolean),
+      eligible: !isPrincipal && !isSelf && !inactive,
+      reason: isSelf ? TARGET_SELF : isPrincipal ? TARGET_PRINCIPAL : inactive ? TARGET_INACTIVE : null,
+    };
+  });
+}
+
+async function guardianTargetRows(
+  guardians: Array<{ _id: Types.ObjectId; name: string; active?: boolean; loginEnabled?: boolean; passwordHash?: string | null }>,
+): Promise<ImpersonationTarget[]> {
   const childLines = await childLinesByGuardian(guardians.map((g) => g._id));
 
   return guardians.map((g) => {

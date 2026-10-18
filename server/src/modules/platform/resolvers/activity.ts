@@ -10,6 +10,7 @@ import {
   activityPeople,
   activityPerson,
   personActivity,
+  personActivityPage,
   personActivityDays,
   ACTIVITY_SOURCES,
   type ActivityPersonShape,
@@ -18,6 +19,7 @@ import {
   type PersonActivityResult,
 } from "../services/ActivityService";
 import { ACTIVITY_GROUPS, ACTIVITY_GROUP_LABELS, type ActivityGroup } from "../auditLabels";
+import { pageRef } from "../../../pageRef";
 
 const ActivityPersonRef = builder.objectRef<ActivityPersonShape>("ActivityPerson");
 ActivityPersonRef.implement({
@@ -144,6 +146,43 @@ builder.queryField("personActivity", (t) =>
         source: args.source,
         limit: args.limit,
       }),
+  }),
+);
+
+// D-#761: the paged feed PersonActivityScreen reads — every row in the window is
+// reachable, instead of a 500-row cap and "narrow the range". `personActivity` stays
+// for released bundles.
+const ActivityRowPageRef = pageRef("ActivityRowPage", ActivityRowRef);
+
+builder.queryField("personActivityPage", (t) =>
+  t.field({
+    type: ActivityRowPageRef,
+    description:
+      "One page of personActivity (same window + filters), newest first; total counts every row " +
+      "in the window (D-#761). Requires audit:read.",
+    authScopes: { hasPermission: "audit:read" },
+    args: {
+      personId: t.arg.string({ required: true }),
+      from: t.arg.string({ required: true }),
+      to: t.arg.string({ required: true }),
+      group: t.arg.string({ required: false }),
+      kind: t.arg.string({ required: false }),
+      source: t.arg.string({ required: false }),
+      page: t.arg.int({ required: false }),
+      pageSize: t.arg.int({ required: false }),
+    },
+    resolve: async (_root, args) =>
+      personActivityPage(
+        {
+          personId: args.personId,
+          from: args.from,
+          to: args.to,
+          group: args.group,
+          kind: args.kind,
+          source: args.source,
+        },
+        args,
+      ),
   }),
 );
 

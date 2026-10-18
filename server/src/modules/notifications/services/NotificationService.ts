@@ -24,6 +24,8 @@ import {
   type NotificationRefs,
 } from "../models/Notification";
 import { ForbiddenError } from "../../../middleware/authz";
+import { normalizePage, type Page, type PageArgs } from "../../../lib/paging";
+import { Types } from "mongoose";
 
 // ---------------------------------------------------------------------------
 // Channel registry (the fan-out behind the seam)
@@ -148,6 +150,51 @@ export async function myNotifications(
     .sort({ createdAt: -1 })
     .limit(limit)
     .lean() as unknown as INotification[];
+}
+
+/**
+ * D-#761: the inbox, PAGED and UNREAD FIRST. `myNotifications` returned the newest N only,
+ * so an older unread row was unreachable while the bell badge still counted it, and the
+ * screen's unread-first sort ran inside those N. Here the server orders it: every unread
+ * row (newest first), then every read row (newest first). Two runs on the
+ * (recipient, readAt, createdAt) index, with the page cut across the seam.
+ */
+export async function myNotificationsPage(recipient: RecipientRef, args: PageArgs): Promise<Page<INotification>> {
+  const own = ownRowFilter(recipient);
+  const { page, pageSize, skip } = normalizePage(args);
+  const unreadFilter = { ...own, readAt: null }; // matches missing readAt too
+  const readFilter = { ...own, readAt: { $ne: null } };
+  const newestFirst = { createdAt: -1 as const, _id: -1 as const };
+  const [unreadTotal, readTotal] = await Promise.all([
+    Notification.countDocuments(unreadFilter),
+    Notification.countDocuments(readFilter),
+  ]);
+  const rows: INotification[] = [];
+  if (skip < unreadTotal) {
+    rows.push(
+      ...((await Notification.find(unreadFilter).sort(newestFirst).skip(skip).limit(pageSize).lean()) as unknown as INotification[]),
+    );
+  }
+  const left = pageSize - rows.length;
+  if (left > 0 && readTotal > 0) {
+    rows.push(
+      ...((await Notification.find(readFilter)
+        .sort(newestFirst)
+        .skip(Math.max(0, skip - unreadTotal))
+        .limit(left)
+        .lean()) as unknown as INotification[]),
+    );
+  }
+  return { rows, total: unreadTotal + readTotal, page, pageSize };
+}
+
+/** D-#761: ONE of the recipient's own rows by id, or null (unknown id, malformed id, or
+ *  someone else's row — indistinguishable on purpose). The detail screen used to look the
+ *  id up inside the inbox's newest 100, so a deep link to an older row opened nothing. */
+export async function myNotificationById(id: string, recipient: RecipientRef): Promise<INotification | null> {
+  const own = ownRowFilter(recipient);
+  if (!Types.ObjectId.isValid(id)) return null;
+  return (await Notification.findOne({ _id: id, ...own }).lean()) as unknown as INotification | null;
 }
 
 export async function myUnreadCount(recipient: RecipientRef): Promise<number> {

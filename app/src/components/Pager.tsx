@@ -20,6 +20,13 @@ export function Pager({
   onPage: (page: number) => void;
 }): React.ReactElement | null {
   const pageCount = Math.max(1, Math.ceil(total / Math.max(1, pageSize)));
+  // D-#761: rows can shrink under the current page (the last item on it was removed,
+  // delivered or resolved), so step back to the last real page instead of stranding the
+  // reader on an empty one. Only when `total > 0`: while a new page loads, callers pass
+  // `total ?? 0`, and clamping on that 0 would bounce every page change back to page 1.
+  React.useEffect(() => {
+    if (total > 0 && page > pageCount) onPage(pageCount);
+  }, [total, page, pageCount, onPage]);
   if (pageCount <= 1) return null;
   return (
     <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: space(3), marginVertical: space(2) }}>

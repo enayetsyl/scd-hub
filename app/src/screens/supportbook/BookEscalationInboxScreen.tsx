@@ -18,12 +18,14 @@ import React, { useState } from "react";
 import { ScrollView, View } from "react-native";
 import { useQuery, useMutation } from "urql";
 import {
-  SUPPORT_BOOKS, SUPPORT_BOOK_ESCALATIONS,
+  SUPPORT_BOOKS, SUPPORT_BOOK_ESCALATIONS_PAGE,
   REPLY_SUPPORT_BOOK_ESCALATION, RESOLVE_SUPPORT_BOOK_ESCALATION,
   type SupportBookT, type SupportBookEscalationT,
 } from "../../graphql/supportBook";
 import { Screen, Body, Muted, Card, Select, Badge, Button, Chip, ChipRow, Field, EmptyState, Divider } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
+import { Pager } from "../../components/Pager";
+import { usePageState, PAGE_SIZE } from "../../lib/paging";
 import { STR, bnNum, escalationStateLabel, isoDateTimeLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useAuth } from "../../auth/AuthContext";
@@ -161,11 +163,15 @@ export default function BookEscalationInboxScreen(): React.ReactElement {
   const [bookId, setBookId] = useState<string | null>(null);
   const [openOnly, setOpenOnly] = useState(true);
 
-  const [escQ, refetchEsc] = useQuery<{ supportBookEscalations: SupportBookEscalationT[] }>({
-    query: SUPPORT_BOOK_ESCALATIONS,
-    variables: { bookId: bookId ?? undefined, openOnly },
+  // D-#761: paged, still oldest first — with "open only" off this is every thread ever.
+  const [page, setPage] = usePageState(`${bookId ?? ""}|${openOnly}`);
+  const [escQ, refetchEsc] = useQuery<{
+    supportBookEscalationsPage: { rows: SupportBookEscalationT[]; total: number; page: number; pageSize: number };
+  }>({
+    query: SUPPORT_BOOK_ESCALATIONS_PAGE,
+    variables: { bookId: bookId ?? undefined, openOnly, page, pageSize: PAGE_SIZE },
   });
-  const threads = escQ.data?.supportBookEscalations ?? [];
+  const threads = escQ.data?.supportBookEscalationsPage.rows ?? [];
 
   return (
     <Screen padded={false}>
@@ -208,6 +214,12 @@ export default function BookEscalationInboxScreen(): React.ReactElement {
               />
             ))
           )}
+          <Pager
+            page={page}
+            pageSize={PAGE_SIZE}
+            total={escQ.data?.supportBookEscalationsPage.total ?? 0}
+            onPage={setPage}
+          />
         </QueryGate>
       </ScrollView>
     </Screen>

@@ -22,7 +22,7 @@ import {
   MY_CONDUCT_RECORDS_QUERY,
   MY_GRIEVANCES_QUERY,
   MY_DEVELOPMENT_LOG_QUERY,
-  MY_OBSERVATIONS_QUERY,
+  MY_OBSERVATIONS_PAGE_QUERY,
   MY_LEAVE_POOL_QUERY,
   MY_PROBATION_DEBT_QUERY,
   MY_STAFF_ATTENDANCE_QUERY,
@@ -57,6 +57,8 @@ import {
   payLineNote,
 } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { Pager } from "../../components/Pager";
+import { usePageState, usePagedRows, PAGE_SIZE } from "../../lib/paging";
 import { space } from "../../theme/tokens";
 
 /** SH-8 — the last 30 days, as the two date keys myStaffAttendance takes. */
@@ -102,7 +104,9 @@ export default function MyRecordScreen(): React.ReactElement {
   const [conductQ] = useQuery({ query: MY_CONDUCT_RECORDS_QUERY });
   const [grievQ, refetchGriev] = useQuery({ query: MY_GRIEVANCES_QUERY });
   const [cpdQ] = useQuery({ query: MY_DEVELOPMENT_LOG_QUERY });
-  const [obsQ] = useQuery({ query: MY_OBSERVATIONS_QUERY });
+  // D-#761: observations are server-paged (all-time list); payslips are client-paged below.
+  const [obsPage, setObsPage] = usePageState();
+  const [obsQ] = useQuery({ query: MY_OBSERVATIONS_PAGE_QUERY, variables: { page: obsPage, pageSize: PAGE_SIZE } });
   const [subjectsQ] = useQuery({ query: SUBJECTS_QUERY });
   // SH-7 — the two own-row reads MyRecordScreen has lacked since PR-1.
   const [poolQ] = useQuery({ query: MY_LEAVE_POOL_QUERY });
@@ -117,12 +121,15 @@ export default function MyRecordScreen(): React.ReactElement {
   const conduct = conductQ.data?.myConductRecords ?? [];
   const grievances = grievQ.data?.myGrievances ?? [];
   const cpd = cpdQ.data?.myDevelopmentLog ?? [];
-  const observations = obsQ.data?.myObservations ?? [];
+  const observations = obsQ.data?.myObservationsPage.rows ?? [];
+  const observationsTotal = obsQ.data?.myObservationsPage.total ?? 0;
   const subjectName = new Map((subjectsQ.data?.subjects ?? []).map((s) => [s.id, s.nameBn]));
   const pool = poolQ.data?.myLeavePool;
   const heldDebt = debtQ.data?.myProbationDebt;
   const attendance = attQ.data?.myStaffAttendance ?? [];
   const payslips = slipQ.data?.myPayslips ?? [];
+  // ~12 a year per person, so paging the rows already fetched is enough (D-#761).
+  const { shown: shownPayslips, pager: payslipPager } = usePagedRows(payslips, { pageSize: 12 });
 
   const anyLoading = apprQ.fetching || conductQ.fetching || grievQ.fetching || cpdQ.fetching;
   const firstError = apprQ.error ?? conductQ.error ?? grievQ.error ?? cpdQ.error ?? obsQ.error;
@@ -233,7 +240,7 @@ export default function MyRecordScreen(): React.ReactElement {
       {payslips.length === 0 ? (
         <Card><Muted>{STR.stfMyNoPayslips}</Muted></Card>
       ) : (
-        payslips.map((s) => (
+        shownPayslips.map((s) => (
           <Card key={s.id}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
               <Body style={{ fontWeight: "700" }}>{s.monthKey}</Body>
@@ -253,6 +260,7 @@ export default function MyRecordScreen(): React.ReactElement {
           </Card>
         ))
       )}
+      <Pager {...payslipPager} />
 
       {/* Appraisals */}
       <Body style={{ fontWeight: "700", marginTop: space(4), marginBottom: space(2) }}>{STR.hrMyAppraisals}</Body>
@@ -339,7 +347,7 @@ export default function MyRecordScreen(): React.ReactElement {
       )}
 
       {/* Observations the caller authored (supervisor); hidden when none. */}
-      {observations.length > 0 ? (
+      {observationsTotal > 0 ? (
         <>
           <Body style={{ fontWeight: "700", marginTop: space(4), marginBottom: space(2) }}>{STR.hrMyObservations}</Body>
           {observations.map((o) => (
@@ -352,6 +360,7 @@ export default function MyRecordScreen(): React.ReactElement {
               {o.followUp ? <Muted>{STR.hrFollowUp}: {o.followUp}</Muted> : null}
             </Card>
           ))}
+          <Pager page={obsPage} pageSize={PAGE_SIZE} total={observationsTotal} onPage={setObsPage} />
         </>
       ) : null}
 

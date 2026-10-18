@@ -11,7 +11,9 @@ import { View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
-import { SCHOLARSHIP_PAPERS_QUERY } from "../../graphql/scholarship";
+import { SCHOLARSHIP_PAPERS_PAGE_QUERY } from "../../graphql/scholarship";
+import { Pager } from "../../components/Pager";
+import { usePageState, PAGE_SIZE } from "../../lib/paging";
 import {
   Screen,
   Card,
@@ -80,13 +82,15 @@ export default function ScholarshipHomeScreen(): React.ReactElement {
   const active = sectionId ?? sections[0]?.id ?? null;
   const activeSection = sections.find((s) => s.id === active) ?? null;
 
+  // D-#761: a section gains practice papers every week — page them on the server.
+  const [page, setPage] = usePageState(`${active ?? ""}|${subject ?? ""}`);
   const [{ data, fetching, error }] = useQuery({
-    query: SCHOLARSHIP_PAPERS_QUERY,
-    variables: { sectionId: active ?? "", subject },
+    query: SCHOLARSHIP_PAPERS_PAGE_QUERY,
+    variables: { sectionId: active ?? "", subject, page, pageSize: PAGE_SIZE },
     pause: !active,
   });
 
-  const papers = data?.scholarshipPapers ?? [];
+  const papers = data?.scholarshipPapersPage?.rows ?? [];
 
   if (classesFetching) return <Screen><Loader /></Screen>;
 
@@ -158,6 +162,7 @@ export default function ScholarshipHomeScreen(): React.ReactElement {
           </Card>
         );
       })}
+      <Pager page={page} pageSize={PAGE_SIZE} total={data?.scholarshipPapersPage?.total ?? 0} onPage={setPage} />
 
       {activeSection ? (
         <View style={{ gap: space(3), marginTop: space(2) }}>

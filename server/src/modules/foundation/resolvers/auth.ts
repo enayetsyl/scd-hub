@@ -3,12 +3,14 @@ import { staffLogin, guardianLogin, refreshSession } from "../services/AuthServi
 import type { AuthResult, AuthTokenPayload } from "../services/AuthService";
 import {
   listImpersonationTargets,
+  listImpersonationTargetsPage,
   startImpersonation,
   endImpersonation,
   type ImpersonationKind,
   type ImpersonationResult,
   type ImpersonationTarget,
 } from "../services/ImpersonationService";
+import { pageRef } from "../../../pageRef";
 
 const AuthResultRef = builder.objectRef<AuthResult>("AuthResult");
 AuthResultRef.implement({
@@ -113,6 +115,31 @@ builder.queryField("impersonationTargets", (t) =>
         search: args.search,
         limit: args.limit,
       });
+    },
+  }),
+);
+
+// D-#761: the paged picker ViewAsScreen reads (the list above stops at 50 names, A→Z,
+// with no hint). Stays beside it for released bundles.
+const ImpersonationTargetPageRef = pageRef("ImpersonationTargetPage", ImpersonationTargetRef);
+
+builder.queryField("impersonationTargetsPage", (t) =>
+  t.field({
+    type: ImpersonationTargetPageRef,
+    authScopes: { authenticated: true },
+    description: "One page of impersonationTargets (same eligibility + search), A→Z (D-#761).",
+    args: {
+      kind: t.arg.string({ required: true }),
+      search: t.arg.string({ required: false }),
+      page: t.arg.int({ required: false }),
+      pageSize: t.arg.int({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new Error("Unauthenticated");
+      return listImpersonationTargetsPage(
+        { callerUserId: ctx.auth.userId, kind: args.kind as ImpersonationKind, search: args.search },
+        args,
+      );
     },
   }),
 );

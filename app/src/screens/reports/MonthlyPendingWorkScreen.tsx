@@ -23,6 +23,8 @@ import {
 } from "../../graphql/monthlyReport";
 import { Screen, Body, Muted, Card, Select, Button, EmptyState } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
+import { Pager } from "../../components/Pager";
+import { usePagedRows } from "../../lib/paging";
 import { STR, bnNum, hwSubjectLabel } from "../../lib/labels";
 import { space, useColors } from "../../theme";
 
@@ -111,6 +113,9 @@ export default function MonthlyPendingWorkScreen(): React.ReactElement {
   const [chaseQ] = useQuery({ query: MONTHLY_TEACHER_CHASE_QUERY, variables: { periodKey } });
   const chases = chaseQ.data?.monthlyTeacherChase ?? [];
   const p: PendingWorkT | null = q.data?.monthlyPendingWork ?? null;
+  // D-#761: one month's details can run to hundreds of lines; page them here (the
+  // server already bounds the list to the month). The tallies above stay whole.
+  const { shown: detailRows, pager: detailPager } = usePagedRows(p?.rows ?? [], { resetKey: periodKey });
 
   const nothingLeft =
     p != null &&
@@ -201,7 +206,7 @@ export default function MonthlyPendingWorkScreen(): React.ReactElement {
 
               <Card>
                 <Body style={{ fontWeight: "700", marginBottom: space(1) }}>{STR.mpDetails}</Body>
-                {p.rows.map((r) => (
+                {detailRows.map((r) => (
                   <View
                     key={`${r.kind}-${r.ref}`}
                     style={{ paddingVertical: 4, borderBottomWidth: 1, borderBottomColor: colors.border }}
@@ -215,6 +220,7 @@ export default function MonthlyPendingWorkScreen(): React.ReactElement {
                     </Muted>
                   </View>
                 ))}
+                <Pager {...detailPager} />
               </Card>
             </>
           ) : null}

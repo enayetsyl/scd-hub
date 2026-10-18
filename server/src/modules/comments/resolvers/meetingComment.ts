@@ -214,12 +214,13 @@ builder.queryField("childComments", (t) =>
     type: [GuardianStudentCommentRef],
     description:
       "The linked child's DELIVERED daily comments — read-only (CM-5, J-CM8). Undelivered comments and the " +
-      "meeting comment are structurally absent. Gated by the guardian-link row scope (D-#68).",
+      "meeting comment are structurally absent. Gated by the guardian-link row scope (D-#68). " +
+      "limit (D-#761) = the newest N only; omitted = the whole history, as before.",
     authScopes: { hasPermission: "guardian:read_child" },
-    args: { studentId: t.arg.string({ required: true }) },
+    args: { studentId: t.arg.string({ required: true }), limit: t.arg.int({ required: false }) },
     resolve: async (_root, args, ctx) => {
       await assertGuardianOfStudent(ctx, args.studentId);
-      return childComments(args.studentId);
+      return childComments(args.studentId, args.limit);
     },
   }),
 );

@@ -111,6 +111,8 @@ export interface FilterOptionSets {
 export function useReportFilterState(sets: FilterOptionSets): {
   node: React.ReactElement;
   match: (classLevel: number | null, teacherName: string | null, subject?: string) => boolean;
+  /** The picked values (null = All), for a screen that filters on the server (D-#761). */
+  values: { classLevel: number | null; teacher: string | null; subject: string | null };
 } {
   const [cls, setCls] = useState<string>(ALL);
   const [teacher, setTeacher] = useState<string>(ALL);
@@ -162,7 +164,12 @@ export function useReportFilterState(sets: FilterOptionSets): {
     </View>
   );
 
-  return { node, match };
+  const values = {
+    classLevel: cls === ALL ? null : Number(cls),
+    teacher: teacher === ALL ? null : teacher,
+    subject: subject === ALL ? null : subject,
+  };
+  return { node, match, values };
 }
 
 export interface RowFilterConfig<T> {

@@ -31,6 +31,7 @@ import { liveWindow } from "../../routine/liveWindow";
 import { Student } from "../../foundation/models/Student";
 import { resolveDayType } from "../../routine/calendar";
 import { writeAudit } from "../../platform/services/AuditService";
+import { queryPage, type Page, type PageArgs } from "../../../lib/paging";
 
 /** A surfaced service error (Bangla-friendly message), mirroring the tracker pattern. */
 export class RevisionError extends Error {}
@@ -372,11 +373,16 @@ export interface GuardianRevisionEntry {
 /** A linked child's DELIVERED revision entries, newest first (SR-4 guardian card, J-SR4-4).
  *  Delivered-only — the marking/delivery is the guardian-release boundary (D-#155); the
  *  RESOLVER gates `guardian:read_child` + `assertGuardianOfStudent` (D-#68). */
-export async function childRevision(studentId: string): Promise<GuardianRevisionEntry[]> {
+/** D-#761: `limit` = the newest N Saturdays only (the guardian home's bounded card);
+ *  omitted = the whole delivered history, as before. */
+export async function childRevision(studentId: string, limit?: number | null): Promise<GuardianRevisionEntry[]> {
   if (!Types.ObjectId.isValid(studentId)) throw new RevisionError("Invalid student id");
-  const docs = (await RevisionEntry.find({ studentId: new Types.ObjectId(studentId), deliveredAt: { $ne: null } })
-    .sort({ date: -1 })
-    .lean()) as unknown as IRevisionEntry[];
+  let q = RevisionEntry.find({ studentId: new Types.ObjectId(studentId), deliveredAt: { $ne: null } }).sort({
+    date: -1,
+    _id: -1,
+  });
+  if (limit != null && limit > 0) q = q.limit(limit);
+  const docs = (await q.lean()) as unknown as IRevisionEntry[];
   return docs
     .filter((d) => d.deliveredAt) // belt-and-braces (a lean $ne can't fully exclude missing)
     .map((d) => ({
@@ -396,6 +402,14 @@ export async function studentRevisionHistory(studentId: string): Promise<Revisio
     .sort({ date: -1 })
     .lean()) as unknown as IRevisionEntry[];
   return docs.map(shape);
+}
+
+/** D-#761: studentRevisionHistory, one page at a time (newest first, _id tie-break). */
+export async function studentRevisionHistoryPage(studentId: string, args: PageArgs): Promise<Page<RevisionEntryShape>> {
+  if (!Types.ObjectId.isValid(studentId)) throw new RevisionError("Invalid student id");
+  return queryPage(RevisionEntry, { studentId: new Types.ObjectId(studentId) }, { date: -1, _id: -1 }, args, (docs) =>
+    (docs as unknown as IRevisionEntry[]).map(shape),
+  );
 }
 
 function shapeGroup(g: { _id: Types.ObjectId; code: string; nameBn: string; level: string; gender: string }): RevisionGroupShape {

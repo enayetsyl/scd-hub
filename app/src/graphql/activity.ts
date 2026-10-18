@@ -116,6 +116,49 @@ export const PERSON_ACTIVITY_QUERY = gql<
   }
 `;
 
+// D-#761: the paged feed the screen reads — every row in the window is reachable. The
+// list query above stays for released bundles.
+export const PERSON_ACTIVITY_PAGE_QUERY = gql<
+  { personActivityPage: { rows: ActivityRowT[]; total: number; page: number; pageSize: number } },
+  {
+    personId: string;
+    from: string;
+    to: string;
+    group?: string | null;
+    source?: string | null;
+    page: number;
+    pageSize: number;
+  }
+>`
+  query PersonActivityPage(
+    $personId: String!
+    $from: String!
+    $to: String!
+    $group: String
+    $source: String
+    $page: Int
+    $pageSize: Int
+  ) {
+    personActivityPage(
+      personId: $personId
+      from: $from
+      to: $to
+      group: $group
+      source: $source
+      page: $page
+      pageSize: $pageSize
+    ) {
+      total
+      page
+      pageSize
+      rows {
+        id source at firstAt day kind labelBn labelEn group count
+        targetKind targetId targetLabel metaJson viaViewAs
+      }
+    }
+  }
+`;
+
 export const PERSON_ACTIVITY_DAYS_QUERY = gql<
   { personActivityDays: ActivityDayT[] },
   { personId: string; from: string; to: string }

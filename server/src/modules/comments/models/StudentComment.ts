@@ -79,6 +79,8 @@ const StudentCommentSchema = new Schema<IStudentComment>(
 // The child's timeline + the section worklist are the hot reads (newest first).
 StudentCommentSchema.index({ studentId: 1, createdAt: -1 });
 StudentCommentSchema.index({ sectionId: 1, createdAt: -1 });
+// D-#761: the author's own "my comments" page — no other index leads with the author.
+StudentCommentSchema.index({ authorUserId: 1, createdAt: -1 });
 // D-#751: the review queue (badge count + dashboard rows) — undelivered, undiscarded, newest first.
 StudentCommentSchema.index({ deliveredAt: 1, discardedAt: 1, createdAt: -1 });
 

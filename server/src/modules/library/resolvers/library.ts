@@ -29,8 +29,10 @@ import {
   addBookCopy,
   setCopyStatus,
   bookTitles,
+  bookTitlesPage,
   bookTitleDetail,
 } from "../services/LibraryCatalogService";
+import { pageRef } from "../../../pageRef";
 import {
   getEffectivePolicy,
   effectivePolicies,
@@ -46,6 +48,7 @@ import {
   currentLibrarianIds,
 } from "../services/LibrarianService";
 import { callerHasPermission } from "@scd/shared";
+import type { Page } from "../../../lib/paging";
 
 // ---------------------------------------------------------------------------
 // Shapes
@@ -199,6 +202,37 @@ builder.queryField("bookTitles", (t) =>
         category: args.category,
         includeInactive: args.includeInactive,
       }) as unknown as Promise<TitleListItem[]>,
+  }),
+);
+
+// D-#761: the catalog grows with every purchase — the browse and manage screens page it.
+const BookTitlePageRef = pageRef("BookTitlePage", BookTitleRef);
+
+builder.queryField("bookTitlesPage", (t) =>
+  t.field({
+    type: BookTitlePageRef,
+    description:
+      "One page of the catalog (D-#761), titleBn order — the same filters as bookTitles, with " +
+      "availability computed for the page's titles only.",
+    authScopes: { hasPermission: "library:read" },
+    args: {
+      search: t.arg.string({ required: false }),
+      language: t.arg.string({ required: false }),
+      category: t.arg.string({ required: false }),
+      includeInactive: t.arg.boolean({ required: false }),
+      page: t.arg.int({ required: false }),
+      pageSize: t.arg.int({ required: false }),
+    },
+    resolve: async (_root, args) =>
+      bookTitlesPage(
+        {
+          search: args.search,
+          language: args.language ? parseEnum(args.language, BOOK_LANGUAGES, "ভাষা") : null,
+          category: args.category,
+          includeInactive: args.includeInactive,
+        },
+        args,
+      ) as unknown as Promise<Page<TitleListItem>>,
   }),
 );
 

@@ -22,6 +22,7 @@ import {
   decideLeave,
   leaveForStaff,
   listLeave,
+  listLeavePage,
   type LeaveDecision,
 } from "../services/StaffLeaveService";
 import { balancesForStaff, upsertEntitlement, type LeaveBalanceView } from "../services/LeaveEntitlementService";
@@ -37,6 +38,7 @@ import { StaffLeaveApplication, type IStaffLeaveApplication } from "../models/St
 import type { IStaffCoverSlot } from "../models/StaffCoverSlot";
 import type { LeaveType, LeaveDayPart } from "@scd/shared";
 import { roundLeaveDays } from "../services/dates";
+import { pageRef } from "../../../pageRef";
 
 // ---------------------------------------------------------------------------
 // Gates / helpers
@@ -344,6 +346,29 @@ builder.queryField("staffLeaveApplications", (t) =>
         fromKey: args.fromKey ?? undefined,
         toKey: args.toKey ?? undefined,
       }) as unknown as Promise<LeaveShape[]>,
+  }),
+);
+
+// D-#761: the paged list LeaveAdminScreen reads; the list above stays for released bundles.
+const StaffLeavePageRef = pageRef("StaffLeavePage", StaffLeaveRef);
+
+builder.queryField("staffLeaveApplicationsPage", (t) =>
+  t.field({
+    type: StaffLeavePageRef,
+    description: "One page of staffLeaveApplications (same filters), newest first (D-#761). Requires leave:manage.",
+    authScopes: { hasPermission: "leave:manage" },
+    args: {
+      status: t.arg.string({ required: false }),
+      fromKey: t.arg.string({ required: false }),
+      toKey: t.arg.string({ required: false }),
+      page: t.arg.int({ required: false }),
+      pageSize: t.arg.int({ required: false }),
+    },
+    resolve: async (_root, args) =>
+      listLeavePage(
+        { status: args.status ?? undefined, fromKey: args.fromKey ?? undefined, toKey: args.toKey ?? undefined },
+        args,
+      ),
   }),
 );
 

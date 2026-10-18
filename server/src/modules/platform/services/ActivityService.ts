@@ -46,6 +46,7 @@ import { HomeworkStudentRecord } from "../../trackers/models/HomeworkStudentReco
 import { AssignmentStudentRecord } from "../../trackers/models/AssignmentStudentRecord";
 import { auditKindLabel, kindsInGroup, type ActivityGroup, ACTIVITY_GROUPS } from "../auditLabels";
 import { dhakaDayKey } from "../../../lib/dhakaDay";
+import { normalizePage, type Page, type PageArgs } from "../../../lib/paging";
 
 export const ACTIVITY_LIMIT_DEFAULT = 200;
 export const ACTIVITY_LIMIT_MAX = 500;
@@ -262,6 +263,22 @@ function trackerPipeline(
   codeField: string,
   limit: number,
 ): PipelineStage[] {
+  return [
+    ...trackerFoldStages(actorId, start, end, itemField, codeField),
+    // `_id` (the fold key) breaks ties so a page boundary never reshuffles (D-#761).
+    { $sort: { lastAt: -1, _id: -1 } },
+    { $limit: limit },
+  ];
+}
+
+/** The match → unwind → fold stages, shared by the row read and the D-#761 count. */
+function trackerFoldStages(
+  actorId: Types.ObjectId,
+  start: Date,
+  end: Date,
+  itemField: string,
+  codeField: string,
+): PipelineStage[] {
   const range = { $gte: start, $lte: end };
   return [
     // Pre-`$unwind` narrowing: hits the {stateDates.by, stateDates.at} index.
@@ -284,9 +301,23 @@ function trackerPipeline(
         code: { $first: `$${codeField}` },
       },
     },
-    { $sort: { lastAt: -1 } },
-    { $limit: limit },
   ];
+}
+
+/** D-#761: how many folded (item × state × day) rows a tracker has in the window. */
+async function trackerFoldCount(
+  model: typeof HomeworkStudentRecord | typeof AssignmentStudentRecord,
+  actorId: Types.ObjectId,
+  start: Date,
+  end: Date,
+  itemField: string,
+  codeField: string,
+): Promise<number> {
+  const out = (await (model as typeof HomeworkStudentRecord).aggregate([
+    ...trackerFoldStages(actorId, start, end, itemField, codeField),
+    { $count: "n" },
+  ])) as unknown as Array<{ n: number }>;
+  return out[0]?.n ?? 0;
 }
 
 async function homeworkRows(
@@ -341,14 +372,13 @@ function trackerRow(f: TrackerFoldRow, source: "HOMEWORK" | "ASSIGNMENT"): Activ
   };
 }
 
-async function auditRows(
+function auditFilter(
   actorId: Types.ObjectId,
   start: Date,
   end: Date,
-  limit: number,
   kind?: string | null,
   group?: string | null,
-): Promise<ActivityRowShape[]> {
+): Record<string, unknown> {
   const q: Record<string, unknown> = {
     // A "View as" row names the Principal as actor and the borrowed account in
     // `onBehalfOf`. Both belong on this person's timeline — one as their own
@@ -361,8 +391,20 @@ async function auditRows(
   } else if (group && isActivityGroup(group)) {
     q.eventKind = { $in: kindsInGroup(group) };
   }
+  return q;
+}
 
-  const rows = (await Audit.find(q).sort({ eventAt: -1 }).limit(limit).lean()) as unknown as IAudit[];
+async function auditRows(
+  actorId: Types.ObjectId,
+  start: Date,
+  end: Date,
+  limit: number,
+  kind?: string | null,
+  group?: string | null,
+): Promise<ActivityRowShape[]> {
+  const q = auditFilter(actorId, start, end, kind, group);
+  // `_id` breaks ties so a page boundary never reshuffles (D-#761).
+  const rows = (await Audit.find(q).sort({ eventAt: -1, _id: -1 }).limit(limit).lean()) as unknown as IAudit[];
   return rows.map((r) => {
     const label = auditKindLabel(r.eventKind);
     const at = new Date(r.eventAt);
@@ -392,9 +434,78 @@ async function auditRows(
  */
 export async function personActivity(input: PersonActivityInput): Promise<PersonActivityResult> {
   if (!Types.ObjectId.isValid(input.personId)) return { rows: [], truncated: false };
+  const { actorId, start, end, kind, group, wantAudit, wantHomework, wantAssignment } = activityPlan(input);
+  const limit = Math.min(Math.max(input.limit ?? ACTIVITY_LIMIT_DEFAULT, 1), ACTIVITY_LIMIT_MAX);
+
+  const [audit, homework, assignment] = await Promise.all([
+    wantAudit ? auditRows(actorId, start, end, limit, kind, group) : Promise.resolve([]),
+    wantHomework ? homeworkRows(actorId, start, end, limit) : Promise.resolve([]),
+    wantAssignment ? assignmentRows(actorId, start, end, limit) : Promise.resolve([]),
+  ]);
+
+  // Any source returning a full page means the window is hiding rows; say so
+  // rather than presenting a silently partial day as a complete one.
+  const truncated =
+    audit.length >= limit || homework.length >= limit || assignment.length >= limit;
+
+  const rows = [...audit, ...homework, ...assignment].sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
+  return { rows: rows.slice(0, limit), truncated };
+}
+
+/**
+ * D-#761: one PAGE of the same merged feed, so every row in the window is reachable
+ * (the list read above stops at 500 and can only say "narrow the range"). Each source
+ * reads its newest `skip + pageSize` rows; the merge orders by time, then a fixed
+ * source order, then each source's own order — so a source's slice of the global order
+ * is exactly its own top-N and no row is skipped or repeated across a page boundary.
+ * `total` is the audit count plus the folded tracker-row counts. A folded row can still
+ * land on two pages if a stamp arrives between reads; same as any live feed.
+ */
+export async function personActivityPage(
+  input: Omit<PersonActivityInput, "limit">,
+  args: PageArgs,
+): Promise<Page<ActivityRowShape>> {
+  const { page, pageSize, skip } = normalizePage(args);
+  if (!Types.ObjectId.isValid(input.personId)) return { rows: [], total: 0, page, pageSize };
+  const { actorId, start, end, kind, group, wantAudit, wantHomework, wantAssignment } = activityPlan(input);
+  const need = skip + pageSize;
+
+  const [audit, homework, assignment, auditN, homeworkN, assignmentN] = await Promise.all([
+    wantAudit ? auditRows(actorId, start, end, need, kind, group) : Promise.resolve([]),
+    wantHomework ? homeworkRows(actorId, start, end, need) : Promise.resolve([]),
+    wantAssignment ? assignmentRows(actorId, start, end, need) : Promise.resolve([]),
+    wantAudit ? Audit.countDocuments(auditFilter(actorId, start, end, kind, group)) : Promise.resolve(0),
+    wantHomework
+      ? trackerFoldCount(HomeworkStudentRecord, actorId, start, end, "hwItemId", "hwId")
+      : Promise.resolve(0),
+    wantAssignment
+      ? trackerFoldCount(AssignmentStudentRecord, actorId, start, end, "asItemId", "asId")
+      : Promise.resolve(0),
+  ]);
+
+  const ranked = [audit, homework, assignment].flatMap((rows, src) => rows.map((row, i) => ({ row, src, i })));
+  ranked.sort((a, b) => (a.row.at < b.row.at ? 1 : a.row.at > b.row.at ? -1 : a.src - b.src || a.i - b.i));
+  return {
+    rows: ranked.slice(skip, skip + pageSize).map((r) => r.row),
+    total: auditN + homeworkN + assignmentN,
+    page,
+    pageSize,
+  };
+}
+
+/** The validated read plan shared by `personActivity` and `personActivityPage`. */
+function activityPlan(input: Omit<PersonActivityInput, "limit">): {
+  actorId: Types.ObjectId;
+  start: Date;
+  end: Date;
+  kind: string | null;
+  group: string | null;
+  wantAudit: boolean;
+  wantHomework: boolean;
+  wantAssignment: boolean;
+} {
   const actorId = new Types.ObjectId(input.personId);
   const { start, end } = resolveWindow(input.from, input.to);
-  const limit = Math.min(Math.max(input.limit ?? ACTIVITY_LIMIT_DEFAULT, 1), ACTIVITY_LIMIT_MAX);
 
   const source = input.source ?? null;
   const group = input.group ?? null;
@@ -427,19 +538,7 @@ export async function personActivity(input: PersonActivityInput): Promise<Person
     (group === null || group === "ASSIGNMENT") &&
     kind === null;
 
-  const [audit, homework, assignment] = await Promise.all([
-    wantAudit ? auditRows(actorId, start, end, limit, kind, group) : Promise.resolve([]),
-    wantHomework ? homeworkRows(actorId, start, end, limit) : Promise.resolve([]),
-    wantAssignment ? assignmentRows(actorId, start, end, limit) : Promise.resolve([]),
-  ]);
-
-  // Any source returning a full page means the window is hiding rows; say so
-  // rather than presenting a silently partial day as a complete one.
-  const truncated =
-    audit.length >= limit || homework.length >= limit || assignment.length >= limit;
-
-  const rows = [...audit, ...homework, ...assignment].sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
-  return { rows: rows.slice(0, limit), truncated };
+  return { actorId, start, end, kind, group, wantAudit, wantHomework, wantAssignment };
 }
 
 /**

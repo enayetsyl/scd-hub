@@ -17,13 +17,15 @@ import { ScrollView, View, RefreshControl } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { useQuery, useMutation } from "urql";
 import {
-  CT_QUESTION_QUEUE,
+  CT_QUESTION_QUEUE_PAGE,
   SEND_CT_QUESTION_FOR_REVIEW,
   DELETE_CT_QUESTION_REQUEST,
 } from "../../graphql/classTest";
 import { useConfirm } from "../../state/ConfirmContext";
 import { Screen, Body, Muted, Card, Badge, Button, Field, Notice, Loader, EmptyState } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
+import { Pager } from "../../components/Pager";
+import { usePageState, PAGE_SIZE } from "../../lib/paging";
 import {
   pickAndUploadClassTestPaper,
   uploadClassTestPaperWebFile,
@@ -47,7 +49,9 @@ const OFFICE_ACTIONABLE = new Set(["REQUESTED", "CHANGES_REQUESTED"]);
 export default function CtQuestionQueueScreen(): React.ReactElement {
   const sectionName = useSectionNames();
   const { confirmAction } = useConfirm();
-  const [q, refetch] = useQuery({ query: CT_QUESTION_QUEUE });
+  // D-#761: server-paged — finished requests pile up forever; work-needed stays first.
+  const [page, setPage] = usePageState();
+  const [q, refetch] = useQuery({ query: CT_QUESTION_QUEUE_PAGE, variables: { page, pageSize: PAGE_SIZE } });
   const [, send] = useMutation(SEND_CT_QUESTION_FOR_REVIEW);
   const [, deleteRequest] = useMutation(DELETE_CT_QUESTION_REQUEST);
 
@@ -61,7 +65,14 @@ export default function CtQuestionQueueScreen(): React.ReactElement {
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
 
-  const rows = q.data?.ctQuestionQueue ?? [];
+  const pageData = q.data?.ctQuestionQueuePage;
+  const rows = pageData?.rows ?? [];
+  // A delete can empty the last page; step back rather than strand the reader on it.
+  React.useEffect(() => {
+    if (pageData && pageData.rows.length === 0 && page > 1) {
+      setPage(Math.max(1, Math.ceil(pageData.total / PAGE_SIZE)));
+    }
+  }, [pageData, page, setPage]);
   const { refreshing, onRefresh } = usePullRefresh(q.fetching, () =>
     refetch({ requestPolicy: "network-only" }),
   );
@@ -280,6 +291,7 @@ export default function CtQuestionQueueScreen(): React.ReactElement {
               );
             })
           )}
+          <Pager page={page} pageSize={PAGE_SIZE} total={pageData?.total ?? 0} onPage={setPage} />
         </QueryGate>
       </ScrollView>
     </Screen>
