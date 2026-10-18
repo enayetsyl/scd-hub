@@ -243,6 +243,8 @@ export type GuardianHomeStackParamList = {
   ChildAttendance: undefined;
   ChildFees: undefined;
   ChildLeave: undefined;
+  ChildComments: undefined;
+  ChildRevision: undefined;
 };
 export type GuardianHomeworkStackParamList = {
   // Optional deep-link params (D-#452 weekly digest): preselect the child and
