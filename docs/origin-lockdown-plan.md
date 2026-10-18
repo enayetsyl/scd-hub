@@ -30,10 +30,10 @@ header. The plan below removes the bypass itself.
 ### 0. Quick cleanup (any time, about 5 minutes)
 
 1. **Fix `scripts/deploy.sh` first.** The web source-map upload still names
-   `https://errors.scdhub.<domain>`. That host's TLS already fails, so the upload is
-   failing on every deploy and saying only "non-fatal". Point it at
-   `https://scdhub-errors.<domain>`, deploy, and confirm the deploy log has no
-   "sentry sourcemap upload failed" line.
+   `https://errors.scdhub.<domain>`, whose TLS already fails. **Done 2026-10-18:** it now
+   names `https://scdhub-errors.<domain>`. Note: the upload only runs when the VM's deploy
+   shell has `SENTRY_AUTH_TOKEN`, and none is set, so web deploys upload no source maps
+   today (it never failed; it never ran). Setting that token is a separate choice.
 2. In Cloudflare → DNS, **delete the `errors.scdhub` record**.
 
 ### 1. Give dev a single-label name
