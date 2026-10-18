@@ -15,6 +15,7 @@ import {
   TEACHER_AVAILABILITY_QUERY,
 } from "../graphql/operations";
 import { STR, hrCategoryLabel, subjectLabel, bnNum } from "../lib/labels";
+import { personName } from "../lib/personName";
 import { useAuth } from "../auth/AuthContext";
 
 /** Pick a staff member by name → yields the StaffProfile id (HR admin surfaces).
@@ -30,7 +31,7 @@ export function StaffSelect({
 }): React.ReactElement {
   const [{ data }] = useQuery({ query: STAFF_QUERY, variables: {} });
   const options = (data?.staff ?? []).map((s) => ({
-    label: s.nameBn || s.name,
+    label: personName(s),
     value: s.id,
     hint: hrCategoryLabel(s.category),
   }));

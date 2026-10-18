@@ -32,8 +32,8 @@ builder.mutationField("staffLogin", (t) =>
       email: t.arg.string({ required: true }),
       password: t.arg.string({ required: true }),
     },
-    resolve: (_root, args) =>
-      staffLogin({ email: args.email, password: args.password }),
+    resolve: (_root, args, ctx) =>
+      staffLogin({ email: args.email, password: args.password, ip: ctx.clientIp }),
   }),
 );
 
@@ -59,9 +59,9 @@ builder.mutationField("guardianLogin", (t) =>
       identifierKind: t.arg.string({ required: true }),
       password: t.arg.string({ required: true }),
     },
-    resolve: (_root, args) => {
+    resolve: (_root, args, ctx) => {
       const kind = args.identifierKind as "email" | "phone" | "school_id";
-      return guardianLogin({ identifier: args.identifier, identifierKind: kind, password: args.password });
+      return guardianLogin({ identifier: args.identifier, identifierKind: kind, password: args.password, ip: ctx.clientIp });
     },
   }),
 );

@@ -37,6 +37,7 @@ import { STR, bnNum, employmentStatusLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { openPdf, PDF_SUPPORTED } from "../../lib/pdf";
 import { space } from "../../theme/tokens";
+import { personName } from "../../lib/personName";
 
 type Props = NativeStackScreenProps<AdminStackParamList, "ConfirmEmployment">;
 
@@ -141,7 +142,7 @@ export default function ConfirmEmploymentScreen({ route, navigation }: Props): R
   if (letterFailure) {
     return (
       <Screen scroll>
-        <H2>{`${STR.stfConfirmTitle} — ${staff.nameBn || staff.name}`}</H2>
+        <H2>{`${STR.stfConfirmTitle} — ${personName(staff)}`}</H2>
         <Notice tone="ok" message={STR.stfConfirmedNoLetterOk} />
         <Notice tone="warn" message={`${STR.stfConfirmedNoLetter} ${letterFailure}`} />
         <Button title={STR.close} variant="secondary" onPress={() => navigation.goBack()} />
@@ -151,7 +152,7 @@ export default function ConfirmEmploymentScreen({ route, navigation }: Props): R
 
   return (
     <Screen scroll>
-      <H2>{`${STR.stfConfirmTitle} — ${staff.nameBn || staff.name}`}</H2>
+      <H2>{`${STR.stfConfirmTitle} — ${personName(staff)}`}</H2>
       {failure ? <Notice tone="danger" message={failure} /> : null}
 
       <Card>

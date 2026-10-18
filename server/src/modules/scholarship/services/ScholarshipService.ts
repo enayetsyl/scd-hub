@@ -27,6 +27,7 @@ import { resolveSubjectTeacher } from "../../trackers/subjectTeacher";
 import { sittingRosterFilter } from "./ScholarshipAnalysisService";
 import { writeAudit } from "../../platform/services/AuditService";
 import { queryPage, type Page, type PageArgs } from "../../../lib/paging";
+import { personName } from "../../../lib/personName";
 
 // ---------------------------------------------------------------------------
 // paperId generation
@@ -498,7 +499,7 @@ export interface CandidateView {
 export async function listCandidates(sectionId: string): Promise<CandidateView[]> {
   const students = (await Student.find({ sectionId: new Types.ObjectId(sectionId) })
     .select("name nameBn rollNumber scholarshipExcluded")
-    .sort({ nameBn: 1, name: 1 })
+    .sort({ name: 1 })
     .lean()) as {
     _id: Types.ObjectId;
     name: string;
@@ -513,7 +514,7 @@ export async function listCandidates(sectionId: string): Promise<CandidateView[]
   const byStudent = new Map(counts.map((c) => [String(c._id), c.n]));
   return students.map((s) => ({
     studentId: String(s._id),
-    nameBn: s.nameBn?.trim() || s.name,
+    nameBn: personName(s), // legacy field name; English-first since D-#764
     rollNumber: s.rollNumber ?? null,
     sitting: s.scholarshipExcluded !== true,
     scoredPapers: byStudent.get(String(s._id)) ?? 0,
@@ -713,7 +714,7 @@ export async function paperDetail(id: string): Promise<PaperDetailView | null> {
     // Only the children the school entered (D-#697). An excluded child on the mark grid
     // is a row the teacher must remember to skip on every paper, and one mistyped 0
     // there would put her into the class mean she was removed from.
-    Student.find(await sittingRosterFilter(p.sectionId)).select("name nameBn").sort({ nameBn: 1, name: 1 }).lean() as Promise<
+    Student.find(await sittingRosterFilter(p.sectionId)).select("name nameBn").sort({ name: 1 }).lean() as Promise<
       { _id: Types.ObjectId; name: string; nameBn?: string }[]
     >,
     ScholarshipScore.find({ paperId: p._id }).select("studentId status itemMarks").lean() as Promise<
@@ -757,7 +758,7 @@ export async function paperDetail(id: string): Promise<PaperDetailView | null> {
       const marks = row?.status === "PRESENT" ? row.itemMarks : [];
       return {
         studentId: String(s._id),
-        nameBn: s.nameBn?.trim() || s.name,
+        nameBn: personName(s), // legacy field name; English-first since D-#764
         status: row?.status ?? null,
         itemMarks: marks,
         total: row?.status === "PRESENT" ? sumMarks(marks.map((m) => m.marks)) : null,

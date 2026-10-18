@@ -24,6 +24,7 @@ import { STR, bnNum, classLevelLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useToast } from "../../state/ToastContext";
 import { space } from "../../theme/tokens";
+import { personName } from "../../lib/personName";
 
 type Props = NativeStackScreenProps<AttendanceStackParamList, "MarkAttendance">;
 
@@ -120,7 +121,7 @@ export default function MarkAttendanceScreen({ route }: Props): React.ReactEleme
                 {section.students.map((s) => (
                   <Chip
                     key={s.studentId}
-                    label={`${s.nameBn || s.name}${absent.has(s.studentId) ? " ✗" : ""}`}
+                    label={`${personName(s)}${absent.has(s.studentId) ? " ✗" : ""}`}
                     selected={!absent.has(s.studentId)}
                     onPress={() => toggle(s.studentId)}
                   />

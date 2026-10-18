@@ -79,6 +79,7 @@ import {
   offboardingTriggerLabel,
 } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { personName, personNameAlt } from "../../lib/personName";
 import { Pager } from "../../components/Pager";
 import { usePagedRows } from "../../lib/paging";
 import { useAuth } from "../../auth/AuthContext";
@@ -803,7 +804,8 @@ export default function StaffHubScreen({ route, navigation }: Props): React.Reac
 
   return (
     <Screen scroll>
-      <H2>{staff.nameBn || staff.name}</H2>
+      <H2>{personName(staff)}</H2>
+      {personNameAlt(staff) ? <Muted>{personNameAlt(staff)}</Muted> : null}
       <Muted>{`${staff.designation ?? hrCategoryLabel(staff.category)} · ${STR.staffId} ${staff.schoolId}`}</Muted>
 
       {error ? <Notice tone="warn" message={friendlyError(error)} /> : null}

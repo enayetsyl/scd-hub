@@ -42,6 +42,7 @@ import {
   isNurseryKg,
   unitKey,
 } from "../attendanceUnit";
+import { personName } from "../../../lib/personName";
 
 export type RankWindow = "week" | "month" | "cumulative" | "annual";
 
@@ -425,7 +426,7 @@ async function rankStudentsByUnit(
     const sec = sectionNameOf.get(sectionId) ?? "";
     return [{
       id,
-      name: (s as { nameBn?: string }).nameBn || s.name,
+      name: personName(s as { name: string; nameBn?: string }),
       unitLabel: cls ? `${cls} · ${sec}` : sec,
       classLabel: cls,
       classLevel: level,
@@ -549,7 +550,7 @@ async function rankStudentsRanked(input: {
     const cls = classOf.get(id);
     return [{
       id,
-      name: s.nameBn || s.name,
+      name: personName(s),
       unitLabel: labelOf.get(unitId) ?? "—",
       classLabel: cls?.label,
       classLevel: cls?.level,
@@ -614,7 +615,7 @@ export async function rankStaff(input: {
     if (!t || t.held === 0) return []; // every day in the window was approved leave
     return [{
       id: s._id.toString(),
-      name: (s as { nameBn?: string; name: string }).nameBn || s.name,
+      name: personName(s as { nameBn?: string; name: string }),
       unitLabel: (s as { category?: string }).category ?? "—",
       heldDays: t.held,
       absentDays: t.absent,
@@ -779,7 +780,7 @@ export async function rankStudentsByGroupBreakdown(input: {
             const cls = classOf.get(id);
             return {
               id,
-              name: s.nameBn || s.name,
+              name: personName(s),
               unitLabel: nameBn,
               classLabel: cls?.label,
               classLevel: cls?.level,

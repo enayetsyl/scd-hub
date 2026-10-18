@@ -7,6 +7,7 @@ import { User } from "../../foundation/models/User";
 import { Guardian } from "../../foundation/models/Guardian";
 import { normalizePhone } from "../../foundation/services/credentials";
 import { renderTemplate } from "../../templates/services/MessageTemplateService";
+import { personName } from "../../../lib/personName";
 
 /**
  * The overdue CHASE LIST (LB-5, D-#84) — works with ZERO notification
@@ -127,7 +128,7 @@ export async function libraryChaseList(now = new Date()): Promise<ChaseRow[]> {
       if (loan.borrowerType === "STUDENT") {
         borrowerId = loan.studentId!.toString();
         const s = studentMap.get(borrowerId);
-        borrowerName = s ? s.nameBn || s.name : null;
+        borrowerName = s ? personName(s) : null;
         phone = s?.phone ?? null; // the family phone (D-#31/#59 reality)
       } else if (loan.borrowerType === "STAFF") {
         borrowerId = loan.userId!.toString();

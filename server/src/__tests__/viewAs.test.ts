@@ -422,7 +422,7 @@ describe("the picker lists who can be entered, and says why not", () => {
       callerUserId: PRINCIPAL.toString(),
       kind: "GUARDIAN",
     });
-    expect(rows[0].lines).toEqual(["আয়েশা · শাখা ৪ক"]);
+    expect(rows[0].lines).toEqual(["Ayesha · শাখা ৪ক"]); // English first (D-#764)
     expect(rows[0].eligible).toBe(true);
   });
 

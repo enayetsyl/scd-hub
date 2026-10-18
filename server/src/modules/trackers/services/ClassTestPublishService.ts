@@ -37,6 +37,7 @@ import {
 import { writeAudit } from "../../platform/services/AuditService";
 import { ClassTestResultError } from "./ClassTestResultService";
 import { startScriptClock } from "./ClassTestScriptService";
+import { personName } from "../../../lib/personName";
 
 // ---------------------------------------------------------------------------
 // Message build (rendered from the MT registry; §8 Regular / Excellent / Absent)
@@ -149,7 +150,7 @@ async function deliverResult(
   student: StudentLite | undefined,
   titleBn: string,
 ): Promise<ClassTestMessageRecipient> {
-  const studentName = student?.nameBn || student?.name || "শিক্ষার্থী";
+  const studentName = personName(student, "শিক্ষার্থী");
   const { kind, messageBn } = await buildClassTestResultMessage(
     { status: doc.status, marks: doc.marks ?? null, weakness: doc.weakness, guardianAction: doc.guardianAction },
     { subject: test.subject, testNumber: test.testNumber, examDate: test.examDate, totalMarks: test.totalMarks },

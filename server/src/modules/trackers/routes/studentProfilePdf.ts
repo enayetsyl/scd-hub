@@ -28,6 +28,7 @@ import {
 } from "../services/StudentProfileContextService";
 import { studentProfile as classTestProfile } from "../services/ClassTestSummaryService";
 import { buildProfileSheetMarkdown } from "../services/StudentProfileSheetService";
+import { personName } from "../../../lib/personName";
 
 export const studentProfilePdfRouter: Router = createRouter();
 
@@ -86,7 +87,7 @@ studentProfilePdfRouter.get("/:studentId", async (req: Request, res: Response) =
     });
 
     const pdfBuffer = await markdownToPdf(markdown, {
-      title: `${header.nameBn || header.name} — শিক্ষার্থী প্রোফাইল`,
+      title: `${personName(header)} — শিক্ষার্থী প্রোফাইল`,
     });
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `inline; filename="student_profile_${studentId}_${fromKey}_${toKey}.pdf"`);

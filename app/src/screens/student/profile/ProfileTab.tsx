@@ -8,6 +8,7 @@ import { Linking, Pressable, Text, View } from "react-native";
 import type { ProfileHeaderT } from "../../../graphql/studentProfile";
 import { Badge, Body, Card, Muted, Row } from "../../../components/ui";
 import { STR, bnNum, classLevelLabel, genderLabel, relationLabel } from "../../../lib/labels";
+import { personName, personNameAlt } from "../../../lib/personName";
 import { radius, space, useColors } from "../../../theme";
 import { SectionTitle } from "./parts";
 
@@ -39,7 +40,8 @@ export function IdentityCard({
   footer?: React.ReactNode;
 }): React.ReactElement {
   const colors = useColors();
-  const name = header?.nameBn || header?.name || fallbackName || "";
+  const name = personName(header, fallbackName ?? "");
+  const nameAlt = personNameAlt(header);
   const rows: [string, string][] = header
     ? [
         [STR.studentId, header.schoolId],
@@ -68,8 +70,8 @@ export function IdentityCard({
             </Text>
           </View>
           <Text style={{ color: colors.onPrimary, fontSize: 18, fontWeight: "800", textAlign: "center" }}>{name}</Text>
-          {header?.nameBn ? (
-            <Text style={{ color: colors.onPrimary, opacity: 0.85, textAlign: "center" }}>{header.name}</Text>
+          {nameAlt ? (
+            <Text style={{ color: colors.onPrimary, opacity: 0.85, textAlign: "center" }}>{nameAlt}</Text>
           ) : null}
           {narrowed ? <Badge text={STR.spMySubjectsOnly} tone="muted" /> : null}
         </View>

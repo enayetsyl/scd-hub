@@ -26,6 +26,7 @@ import { friendlyError } from "../../lib/errors";
 import { usePullRefresh } from "../../lib/useRefresh";
 import { space, useColors } from "../../theme";
 import { REPORT_PAPER as REPORT } from "../../theme/reportPaper";
+import { personName } from "../../lib/personName";
 
 type Nav = NativeStackNavigationProp<AdminStackParamList>;
 
@@ -203,10 +204,9 @@ export default function RosterScreen(): React.ReactElement {
                       {/* SP-3 entry point: the roster is where an admin looks a child up. */}
                       <Pressable
                         accessibilityRole="link"
-                        onPress={() => nav.navigate("StudentProfile", { studentId: r.id, studentName: r.nameBn || r.name })}
+                        onPress={() => nav.navigate("StudentProfile", { studentId: r.id, studentName: personName(r) })}
                       >
-                        <Body style={{ color: REPORT.link, fontWeight: "600" }}>{r.nameBn || r.name}</Body>
-                        {r.nameBn ? <Muted style={{ color: REPORT.textMuted }}>{r.name}</Muted> : null}
+                        <Body style={{ color: REPORT.link, fontWeight: "600" }}>{personName(r)}</Body>
                       </Pressable>
                     </Cell>
                     <Cell width={COLUMNS[3].width}>

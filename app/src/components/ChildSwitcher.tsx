@@ -7,13 +7,14 @@ import React from "react";
 import { View } from "react-native";
 import { Body, Muted, Card, Chip, ChipRow } from "./ui";
 import { useGuardianChild } from "../state/GuardianChildContext";
-import { STR, getActiveLang, classLevelLabel } from "../lib/labels";
+import { STR, classLevelLabel } from "../lib/labels";
+import { personName } from "../lib/personName";
 import { space } from "../theme/tokens";
 
 export function ChildSwitcher(): React.ReactElement | null {
   const { children, selected, selectChild } = useGuardianChild();
-  const lang = getActiveLang();
-  const displayName = (c: { name: string; nameBn: string }): string => (lang === "en" ? c.name : c.nameBn);
+  // English first in both languages (D-#764).
+  const displayName = (c: { name: string; nameBn: string }): string => personName(c);
   if (children.length === 0) return null;
   return (
     <Card>

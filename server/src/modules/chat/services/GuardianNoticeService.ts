@@ -23,6 +23,7 @@ import { writeAudit } from "../../platform/services/AuditService";
 import { normalizePhone } from "../../foundation/services/credentials";
 import { GuardianNotice } from "../models/GuardianNotice";
 import { ChatError } from "./ChatService";
+import { personName } from "../../../lib/personName";
 
 /**
  * The D-#45 parent-comms authorization (no new permission, the D-#42 pattern):
@@ -109,7 +110,7 @@ export async function composeGuardianNotice(
   const recipients: NoticeRecipient[] = [];
   let unreachableCount = 0;
   for (const s of students) {
-    const studentName = s.nameBn || s.name;
+    const studentName = personName(s);
     if (!s.phone) {
       unreachableCount += 1;
       continue;

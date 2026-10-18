@@ -165,7 +165,7 @@ describe("buildProfileSheetMarkdown — identity + window", () => {
   const md = buildProfileSheetMarkdown(input());
 
   test("leads with the child, class, section, roll and class teacher", () => {
-    expect(md).toContain("# মুসা বিন সাদিক");
+    expect(md).toContain("# Musa Bin Sadik"); // English first (D-#764)
     expect(md).toContain("পঞ্চম শ্রেণি");
     expect(md).toContain("শাখা সম্মিলিত");
     expect(md).toContain("রোল ১২");
@@ -269,7 +269,7 @@ describe("buildProfileSheetMarkdown — empty windows degrade honestly", () => {
       ...base,
       header: { ...base.header, guardians: [], classTeacherName: null },
     });
-    expect(md).toContain("# মুসা বিন সাদিক");
+    expect(md).toContain("# Musa Bin Sadik"); // English first (D-#764)
     expect(md).not.toContain("অভিভাবক:");
   });
 });

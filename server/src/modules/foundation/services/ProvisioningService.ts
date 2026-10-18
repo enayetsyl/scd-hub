@@ -6,6 +6,7 @@ import { GuardianLink } from "../models/GuardianLink";
 import { User } from "../models/User";
 import { StaffProfile } from "../models/StaffProfile";
 import { hashPassword } from "./AuthService";
+import { clearAccountThrottle } from "./LoginThrottleService";
 import { generatePassword, normalizePhone, buildCredentialShareLink } from "./credentials";
 import { writeAudit } from "../../platform/services/AuditService";
 
@@ -153,6 +154,7 @@ export async function provisionGuardianLogin(phoneRaw: string, actor: Actor): Pr
     guardian.loginEnabled = true;
     if (!guardian.phone) guardian.phone = phone;
     await guardian.save();
+    await clearAccountThrottle("Guardian", guardian._id.toString());
   } else {
     guardian = await Guardian.create({
       name: `${students[0].name} এর অভিভাবক`,
@@ -202,6 +204,8 @@ export async function resetGuardianPassword(guardianId: string, actor: Actor): P
   guardian.passwordHash = await hashPassword(password);
   guardian.loginEnabled = true;
   await guardian.save();
+  // A reset is how the Office lets a locked-out person back in (D-#765).
+  await clearAccountThrottle("Guardian", guardian._id.toString());
 
   const studentCount = await GuardianLink.countDocuments({ guardianId: guardian._id });
 
@@ -278,6 +282,7 @@ export async function provisionStaffLogin(staffProfileId: string, actor: Actor):
     user.active = true;
     if (!user.name) user.name = staff.name;
     await user.save();
+    await clearAccountThrottle("User", user._id.toString());
   } else {
     user = await User.create({ phone, name: staff.name, role, passwordHash, active: true });
   }
@@ -327,6 +332,8 @@ export async function resetUserPassword(userId: string, actor: Actor): Promise<P
   user.passwordHash = await hashPassword(password);
   user.active = true;
   await user.save();
+  // A reset is how the Office lets a locked-out person back in (D-#765).
+  await clearAccountThrottle("User", user._id.toString());
 
   await writeAudit({
     eventKind: "CREDENTIAL_PROVISIONED",
@@ -358,6 +365,8 @@ export async function resetStaffPassword(userId: string, actor: Actor): Promise<
   user.passwordHash = await hashPassword(password);
   user.active = true;
   await user.save();
+  // A reset is how the Office lets a locked-out person back in (D-#765).
+  await clearAccountThrottle("User", user._id.toString());
 
   await writeAudit({
     eventKind: "CREDENTIAL_PROVISIONED",

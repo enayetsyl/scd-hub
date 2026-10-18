@@ -13,9 +13,10 @@ import { LoadOlder } from "../../components/LoadOlder";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
 import { useRecordView } from "../../lib/useRecordView";
-import { STR, bnNum, dateHeaderLabel, getActiveLang } from "../../lib/labels";
+import { STR, bnNum, dateHeaderLabel } from "../../lib/labels";
 import { space } from "../../theme/tokens";
 import { dateKey, addDaysKey, daysBetweenKeys, GUARDIAN_MAX_LOOKBACK_DAYS } from "../../lib/dates";
+import { personName } from "../../lib/personName";
 
 const isoDay = (d: Date): string => dateKey(d);
 const daysAgo = (n: number): string => {
@@ -54,7 +55,6 @@ function DayRow({
 export default function ChildAttendanceScreen(): React.ReactElement {
   const { selected, fetching } = useGuardianChild();
   useRecordView("ATTENDANCE", selected?.studentId);
-  const lang = getActiveLang();
   const [fromKey, setFromKey] = useState(daysAgo(30));
   const [toKey, setToKey] = useState(isoDay(new Date()));
 
@@ -106,7 +106,7 @@ export default function ChildAttendanceScreen(): React.ReactElement {
         {history ? (
           <>
             <Card>
-              <Body style={{ fontWeight: "700" }}>{lang === "en" ? selected.name : selected.nameBn}</Body>
+              <Body style={{ fontWeight: "700" }}>{personName(selected)}</Body>
               <Muted style={{ marginTop: space(1) }}>
                 {bnNum(history.markedDays)} {STR.attDaysWord} · {STR.attPresentWord}: {bnNum(history.markedDays - history.absentDays)} ·{" "}
                 {STR.attAbsentWord}: {bnNum(history.absentDays)}

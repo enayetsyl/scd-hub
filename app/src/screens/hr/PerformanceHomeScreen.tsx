@@ -22,6 +22,7 @@ import { STAFF_QUERY } from "../../graphql/operations";
 import { useQuery } from "urql";
 import { STR } from "../../lib/labels";
 import { space } from "../../theme/tokens";
+import { personName } from "../../lib/personName";
 
 type Props = NativeStackScreenProps<HrStackParamList, "PerformanceHome">;
 
@@ -41,9 +42,9 @@ export default function PerformanceHomeScreen({ navigation }: Props): React.Reac
         </Card>
         {staffId !== "" ? (
           <Card
-            onPress={() => navigation.navigate("StaffPerformance", { staffProfileId: staffId, name: name ? name.nameBn || name.name : STR.hrStaffMember })}
+            onPress={() => navigation.navigate("StaffPerformance", { staffProfileId: staffId, name: name ? personName(name) : STR.hrStaffMember })}
           >
-            <Body style={{ fontWeight: "700" }}>{name ? name.nameBn || name.name : STR.hrStaffMember}</Body>
+            <Body style={{ fontWeight: "700" }}>{name ? personName(name) : STR.hrStaffMember}</Body>
             <Muted>{STR.hrPerformanceSub}</Muted>
           </Card>
         ) : null}

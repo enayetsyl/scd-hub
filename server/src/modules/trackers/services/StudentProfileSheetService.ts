@@ -25,6 +25,7 @@ import type { StudentProfile as ClassTestProfile } from "./ClassTestSummaryServi
  *  exported under this name so existing callers are untouched. */
 export { bnNum as bn } from "../../../lib/bnNum";
 import { bnNum as bn } from "../../../lib/bnNum";
+import { personName } from "../../../lib/personName";
 
 const ROSTER_CLASS_BN: Record<number, string> = {
   [-1]: "নার্সারি",
@@ -101,7 +102,7 @@ export function buildProfileSheetMarkdown(input: SheetInput): string {
   const lines: string[] = [];
 
   const className = ROSTER_CLASS_BN[h.classLevel] ?? `শ্রেণি ${bn(h.classLevel)}`;
-  lines.push(`# ${h.nameBn || h.name}`);
+  lines.push(`# ${personName(h)}`);
   lines.push(
     [
       className,
