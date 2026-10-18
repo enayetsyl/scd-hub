@@ -18,7 +18,8 @@
  *                          APPROVE = the publish queue, CHANGES_REQUESTED = the rejected list;
  *                          plus subject / class / chapter / type / search, paginated (QR-6).
  *   questionReviewThread — round history for one question.
- *   assignableQuestions  — content:assign_review. The picker.
+ *   assignableQuestions / assignableQuestionsPage — content:assign_review. The picker
+ *                          (the Page form pages every match, D-#761).
  *   questionReviewerProgress / questionReviewerRounds / questionReviewerRoundCount
  *                        — content:assign_review. Who was given what, and how they ruled
  *                          (QR-5, D-#537). Verdict-bucketed, so publishing a question does
@@ -27,6 +28,7 @@
  * Permissions are the SAME ones the plan loop uses — D-#508 adds none.
  */
 import { builder } from "../../../schema";
+import { pageRef } from "../../../pageRef";
 import { ForbiddenError } from "../../../middleware/authz";
 import { expectedGraphQLError } from "../../../observability/sentry";
 import { isAdminStaff } from "../../foundation/services/RoleScope";
@@ -53,6 +55,7 @@ import {
   publishQuestionsMatching as publishMatchingSvc,
   questionReviewThread as threadSvc,
   listAssignableQuestions,
+  listAssignableQuestionsPage,
   questionReviewerProgress as progressSvc,
   listQuestionReviewerRounds as reviewerRoundsSvc,
   countQuestionReviewerRounds as reviewerRoundCountSvc,
@@ -725,6 +728,32 @@ builder.queryField("assignableQuestions", (t) =>
         search: args.search,
         limit: args.limit,
       });
+    },
+  }),
+);
+
+// D-#761: the paged picker. `assignableQuestions` stops at its limit and the rest vanish.
+const AssignableQuestionPageRef = pageRef("AssignableQuestionPage", AssignableQuestionRef);
+
+builder.queryField("assignableQuestionsPage", (t) =>
+  t.field({
+    type: AssignableQuestionPageRef,
+    description:
+      "One page of the assign picker (same filters as assignableQuestions); total counts every " +
+      "match. Requires content:assign_review (Principal/Office).",
+    authScopes: { hasPermission: "content:assign_review" },
+    args: {
+      subject: t.arg.string({ required: false }),
+      classLevel: t.arg.int({ required: false }),
+      topicTag: t.arg.string({ required: false }),
+      reviewStatus: t.arg.string({ required: false }),
+      search: t.arg.string({ required: false }),
+      page: t.arg.int({ required: false }),
+      pageSize: t.arg.int({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      return listAssignableQuestionsPage(args);
     },
   }),
 );

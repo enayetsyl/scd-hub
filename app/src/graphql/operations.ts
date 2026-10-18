@@ -984,7 +984,11 @@ export const ASSIGNABLE_PLANS_PAGE = gql<
     docType?: string | null;
     state?: string | null;
     reviewerId?: string | null;
+    // D-#761: the assign screen's filters + page size.
+    reviewStatus?: string | null;
+    unassignedOnly?: boolean | null;
     page?: number | null;
+    pageSize?: number | null;
   }
 >`
   query AssignablePlansPage(
@@ -993,7 +997,10 @@ export const ASSIGNABLE_PLANS_PAGE = gql<
     $docType: String
     $state: String
     $reviewerId: String
+    $reviewStatus: String
+    $unassignedOnly: Boolean
     $page: Int
+    $pageSize: Int
   ) {
     assignablePlansPage(
       subject: $subject
@@ -1001,7 +1008,10 @@ export const ASSIGNABLE_PLANS_PAGE = gql<
       docType: $docType
       state: $state
       reviewerId: $reviewerId
+      reviewStatus: $reviewStatus
+      unassignedOnly: $unassignedOnly
       page: $page
+      pageSize: $pageSize
     ) {
       total page pageSize
       rows {
@@ -1511,6 +1521,23 @@ export const ASSIGNABLE_QUESTIONS = gql<
       artifactId qid subject classLevel anchorWord addressNumber
       questionText questionType marks topicTag reviewStatus
       currentReviewerId currentReviewerName currentAssignmentId roundStatus
+    }
+  }
+`;
+
+/** D-#761: the paged picker — every match reachable, `total` is the real count. */
+export const ASSIGNABLE_QUESTIONS_PAGE = gql<
+  { assignableQuestionsPage: { rows: AssignableQuestionT[]; total: number; page: number; pageSize: number } },
+  { subject?: string | null; classLevel?: number | null; search?: string | null; page?: number | null; pageSize?: number | null }
+>`
+  query AssignableQuestionsPage($subject: String, $classLevel: Int, $search: String, $page: Int, $pageSize: Int) {
+    assignableQuestionsPage(subject: $subject, classLevel: $classLevel, search: $search, page: $page, pageSize: $pageSize) {
+      total page pageSize
+      rows {
+        artifactId qid subject classLevel anchorWord addressNumber
+        questionText questionType marks topicTag reviewStatus
+        currentReviewerId currentReviewerName currentAssignmentId roundStatus
+      }
     }
   }
 `;
@@ -4677,6 +4704,55 @@ export const CLASS_NOTES_ADMIN_QUERY = gql<
       subjectGroupNameBn authorName publishedAt
       attachments { id name mime }
     }
+  }
+`;
+/** D-#761: the admin list one page at a time, its filters run on the server. */
+export const CLASS_NOTES_ADMIN_PAGE_QUERY = gql<
+  { classNotesAdminPage: { rows: ClassNoteAdminRowT[]; total: number; page: number; pageSize: number } },
+  {
+    date: string;
+    dateTo?: string | null;
+    classLevel?: number | null;
+    teacherName?: string | null;
+    subject?: string | null;
+    page?: number | null;
+    pageSize?: number | null;
+  }
+>`
+  query ClassNotesAdminPage(
+    $date: String!
+    $dateTo: String
+    $classLevel: Int
+    $teacherName: String
+    $subject: String
+    $page: Int
+    $pageSize: Int
+  ) {
+    classNotesAdminPage(
+      date: $date
+      dateTo: $dateTo
+      classLevel: $classLevel
+      teacherName: $teacherName
+      subject: $subject
+      page: $page
+      pageSize: $pageSize
+    ) {
+      total page pageSize
+      rows {
+        id date subject taughtSummaryBn classLevel classNameBn sectionCode sectionNameBn
+        subjectGroupNameBn authorName publishedAt
+        attachments { id name mime }
+      }
+    }
+  }
+`;
+/** D-#761: the select options for that window (values that exist in it). */
+export const CLASS_NOTES_ADMIN_OPTIONS_QUERY = gql<
+  { classNotesAdminOptions: { classLevels: number[]; teachers: string[]; subjects: string[] } },
+  { date: string; dateTo?: string | null }
+>`
+  query ClassNotesAdminOptions($date: String!, $dateTo: String) {
+    classNotesAdminOptions(date: $date, dateTo: $dateTo) { classLevels teachers subjects }
   }
 `;
 export const UPDATE_CLASS_NOTE = gql<

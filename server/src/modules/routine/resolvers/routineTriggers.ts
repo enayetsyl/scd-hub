@@ -35,6 +35,8 @@ import {
   updateClassNote,
   deleteClassNote,
   classNotesAdmin,
+  classNotesAdminPage,
+  classNotesAdminOptions,
   classNotePage,
   classNoteFilterOptions,
   type ClassNoteSubmissionRow,
@@ -43,7 +45,9 @@ import {
   type ClassNotePage,
   type ClassNoteFilterOption,
   type ClassNoteFilterOptions,
+  type ClassNotesAdminOptions,
 } from "../services/RoutineTriggerService";
+import { pageRef } from "../../../pageRef";
 
 const BellTriggerRef = builder.objectRef<BellTrigger>("BellTrigger").implement({
   fields: (t) => ({
@@ -349,6 +353,58 @@ builder.queryField("classNotesAdmin", (t) =>
     },
     resolve: async (_r, args) =>
       classNotesAdmin(parseDate(args.date), args.dateTo ? parseDate(args.dateTo) : undefined),
+  }),
+);
+
+// D-#761: the admin list one page at a time (the window can be 30 days or a custom range),
+// with its class / teacher / subject filters run on the server.
+const ClassNoteAdminPageRef = pageRef("ClassNoteAdminPage", ClassNoteAdminRowRef);
+
+builder.queryField("classNotesAdminPage", (t) =>
+  t.field({
+    type: ClassNoteAdminPageRef,
+    authScopes: { hasPermission: "routine:manage" },
+    args: {
+      date: t.arg.string({ required: true }),
+      dateTo: t.arg.string({ required: false }),
+      classLevel: t.arg.int({ required: false }),
+      teacherName: t.arg.string({ required: false }),
+      subject: t.arg.string({ required: false }),
+      page: t.arg.int({ required: false }),
+      pageSize: t.arg.int({ required: false }),
+    },
+    resolve: async (_r, args) =>
+      classNotesAdminPage({
+        date: parseDate(args.date),
+        dateTo: args.dateTo ? parseDate(args.dateTo) : null,
+        classLevel: args.classLevel,
+        teacherName: args.teacherName,
+        subject: args.subject,
+        page: args.page,
+        pageSize: args.pageSize,
+      }),
+  }),
+);
+
+const ClassNotesAdminOptionsRef = builder.objectRef<ClassNotesAdminOptions>("ClassNotesAdminOptions").implement({
+  fields: (t) => ({
+    classLevels: t.intList({ resolve: (o) => o.classLevels }),
+    teachers: t.stringList({ resolve: (o) => o.teachers }),
+    subjects: t.stringList({ resolve: (o) => o.subjects }),
+  }),
+});
+
+builder.queryField("classNotesAdminOptions", (t) =>
+  t.field({
+    type: ClassNotesAdminOptionsRef,
+    description: "The class levels / teacher names / subjects present in the admin list's date window.",
+    authScopes: { hasPermission: "routine:manage" },
+    args: {
+      date: t.arg.string({ required: true }),
+      dateTo: t.arg.string({ required: false }),
+    },
+    resolve: async (_r, args) =>
+      classNotesAdminOptions({ date: parseDate(args.date), dateTo: args.dateTo ? parseDate(args.dateTo) : null }),
   }),
 );
 

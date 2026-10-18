@@ -4,6 +4,9 @@
  * to REVIEWED / TEACHER_RESPONDED states (the only states visible to the
  * observed teacher server-side). Tapping a row opens ObservationDetailScreen
  * where they can watch the video, read the review, and add their response.
+ *
+ * D-#761: paged on the client, 50 a page — one teacher's observations grow slowly (a few
+ * a month), so the payload stays modest; the server read is row-scoped in memory.
  */
 import React, { useMemo } from "react";
 import { ScrollView, View } from "react-native";
@@ -13,6 +16,8 @@ import { useQuery } from "urql";
 import { TEACHER_CLASSROOM_OBSERVATIONS_QUERY } from "../../graphql/observation";
 import { Screen, Card, Body, Muted, Button, Badge } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
+import { Pager } from "../../components/Pager";
+import { usePagedRows } from "../../lib/paging";
 import { useAuth } from "../../auth/AuthContext";
 import { STR, obsFormLabel, hwSubjectLabel, obsStateLabel, isoDateLabel } from "../../lib/labels";
 import { space } from "../../theme/tokens";
@@ -38,6 +43,7 @@ export default function MyObservationsScreen(): React.ReactElement {
       ),
     [obsQ.data],
   );
+  const { shown, pager } = usePagedRows(rows);
 
   return (
     <Screen padded={false}>
@@ -52,7 +58,7 @@ export default function MyObservationsScreen(): React.ReactElement {
             <Muted>{STR.obsNoMyObservations}</Muted>
           </Card>
         ) : (
-          rows.map((o) => {
+          shown.map((o) => {
             const title = `${obsFormLabel(o.form)} · ${hwSubjectLabel(o.subject)}`;
             return (
               <Card key={o.id}>
@@ -77,6 +83,7 @@ export default function MyObservationsScreen(): React.ReactElement {
             );
           })
         )}
+        <Pager {...pager} />
         </QueryGate>
       </ScrollView>
     </Screen>

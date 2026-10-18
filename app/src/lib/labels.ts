@@ -2763,6 +2763,7 @@ const STR_BN = {
   rvUnassigned: "বরাদ্দ হয়নি",
   rvAssignedTo: "বরাদ্দকৃত",
   rvSelectAll: "সব নির্বাচন",
+  rvSelectPage: "এই পৃষ্ঠার সব নির্বাচন", // D-#761
   rvClear: "মুছুন",
   rvAssignSelected: "নির্বাচিতগুলো বরাদ্দ করুন",
   rvAssigned: "বরাদ্দ হয়েছে",
@@ -7910,6 +7911,7 @@ const STR_EN: StrTable = {
   rvUnassigned: "Unassigned",
   rvAssignedTo: "Assigned to",
   rvSelectAll: "Select all",
+  rvSelectPage: "Select all on this page", // D-#761
   rvClear: "Clear",
   rvAssignSelected: "Assign selected",
   rvAssigned: "Assigned",

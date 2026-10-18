@@ -5,6 +5,9 @@
  * Principal. Below them, a teacher's OWN recent comments (D-#263) — "see the
  * comments they made" — across any student, tap to re-open/edit/deliver. Every
  * action is re-gated server-side (the server stays the gate).
+ *
+ * D-#761: "my comments" pages on the server (`myStudentCommentsPage`) — without a student
+ * it is every comment the teacher ever wrote.
  */
 import React from "react";
 import { ScrollView, View } from "react-native";
@@ -12,9 +15,11 @@ import { useNavigation } from "@react-navigation/native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
-import { MY_STUDENT_COMMENTS_QUERY } from "../../graphql/comments";
+import { MY_STUDENT_COMMENTS_PAGE_QUERY } from "../../graphql/comments";
 import { Screen, Card, Body, Muted, Button, Badge } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
+import { Pager } from "../../components/Pager";
+import { usePageState, PAGE_SIZE } from "../../lib/paging";
 import { useAuth } from "../../auth/AuthContext";
 import { STR, commentTypeLabel, commentSentimentLabel, isoDateLabel } from "../../lib/labels";
 import { space } from "../../theme/tokens";
@@ -30,8 +35,14 @@ export default function CommentsHomeScreen(): React.ReactElement {
   // Principal/Office review + release comments to guardians (D-#264).
   const canReview = can("roster:manage");
 
-  const [mineQ, refetchMine] = useQuery({ query: MY_STUDENT_COMMENTS_QUERY, variables: {}, pause: !canComments });
-  const mine = mineQ.data?.myStudentComments ?? [];
+  const [page, setPage] = usePageState();
+  const [mineQ, refetchMine] = useQuery({
+    query: MY_STUDENT_COMMENTS_PAGE_QUERY,
+    variables: { page, pageSize: PAGE_SIZE },
+    pause: !canComments,
+  });
+  const mine = mineQ.data?.myStudentCommentsPage.rows ?? [];
+  const mineTotal = mineQ.data?.myStudentCommentsPage.total ?? 0;
 
   // Refresh the "my comments" list whenever the hub regains focus (e.g. after
   // recording/editing one on the entry screen).
@@ -134,6 +145,7 @@ export default function CommentsHomeScreen(): React.ReactElement {
                 );
               })
             )}
+            <Pager page={page} pageSize={PAGE_SIZE} total={mineTotal} onPage={setPage} />
             </QueryGate>
           </Card>
         ) : null}
