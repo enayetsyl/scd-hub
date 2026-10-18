@@ -51,9 +51,33 @@ export function initSentry(): void {
 }
 
 /** Capture an app error/exception; a no-op when Sentry is disabled. */
-export function captureAppError(error: unknown, context?: Record<string, unknown>): void {
+export function captureAppError(
+  error: unknown,
+  context?: Record<string, unknown>,
+  grouping?: { fingerprint?: string[]; tags?: Record<string, string> },
+): void {
   if (!sentryEnabled) return;
-  Sentry.captureException(error, context ? { extra: context } : undefined);
+  Sentry.captureException(error, {
+    ...(context ? { extra: context } : {}),
+    ...(grouping?.fingerprint ? { fingerprint: grouping.fingerprint } : {}),
+    ...(grouping?.tags ? { tags: grouping.tags } : {}),
+  });
+}
+
+/**
+ * Who is signed in, stamped on every later event. Without it each event carries only the
+ * SDK's random install id, so an issue could say "a phone" but never "which account"
+ * (GlitchTip, 2026-10-18: every open issue, no way to follow one up). The account id and
+ * role only — D-#252 allows PII for debugging, but the id is enough to look a person up,
+ * and a name or phone on every event is more than that needs. `viewAs` marks an admin
+ * borrowing someone's session, whose errors are not that person's. `null` on logout.
+ */
+export function setSentryUser(
+  user: { id: string; role: string } | null,
+  viewAs = false,
+): void {
+  if (!sentryEnabled) return;
+  Sentry.setUser(user ? { id: user.id, role: user.role, ...(viewAs ? { viewAs: true } : {}) } : null);
 }
 
 /**
