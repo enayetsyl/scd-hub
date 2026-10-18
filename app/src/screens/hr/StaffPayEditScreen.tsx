@@ -33,6 +33,7 @@ import BankDetailsFields, {
 } from "../../components/BankDetailsFields";
 import { useAuth } from "../../auth/AuthContext";
 import { space } from "../../theme/tokens";
+import { personName } from "../../lib/personName";
 
 type Props = NativeStackScreenProps<AdminStackParamList, "StaffPayEdit">;
 
@@ -159,7 +160,7 @@ export default function StaffPayEditScreen({ route, navigation }: Props): React.
 
   return (
     <Screen scroll>
-      <H2>{`${STR.stfSetPay} — ${staff.nameBn || staff.name}`}</H2>
+      <H2>{`${STR.stfSetPay} — ${personName(staff)}`}</H2>
       {failure ? <Notice tone="danger" message={failure} /> : null}
 
       {canPay ? (

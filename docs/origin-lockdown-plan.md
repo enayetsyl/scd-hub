@@ -1,4 +1,4 @@
-# Origin lockdown plan (D-#765 follow-up)
+# Origin lockdown plan (D-#766 follow-up)
 
 **Status:** planned, not started. Run it as its own session; it needs the Cloudflare
 dashboard and the Oracle Cloud console, so the operator must take part.
@@ -20,7 +20,7 @@ Anyone who looks up either name gets `<vm-ip>`. Requests sent straight there ski
 Cloudflare's firewall (the managed rules that blocked the WordPress and React-RCE probes
 in the 2026-10-18 review).
 
-**Already mitigated (D-#764/#765, 2026-10-18):** Caddy now accepts `Cf-Connecting-Ip`
+**Already mitigated (D-#765/#766, 2026-10-18):** Caddy now accepts `Cf-Connecting-Ip`
 only from Cloudflare's address ranges and passes the result as `X-Real-IP`. So the
 login lockout's network rule cannot be dodged by skipping Cloudflare and forging the
 header. The plan below removes the bypass itself.

@@ -29,6 +29,7 @@ import { renderTemplate } from "../../templates/services/MessageTemplateService"
 import { emitStudentComment } from "../../notifications/services/emitters";
 import { writeAudit } from "../../platform/services/AuditService";
 import { StudentCommentError } from "./StudentCommentService";
+import { personName } from "../../../lib/personName";
 
 /** wa.me click-to-send link (ADR-003 — always a MANUAL send; null when no phone). */
 export function commentWaLink(phone: string | undefined | null, message: string): string | null {
@@ -77,7 +78,7 @@ export async function deliverComment(commentId: string, actorId: string): Promis
   const student = (await Student.findById(comment.studentId)
     .select("name nameBn phone")
     .lean()) as unknown as StudentLite | null;
-  const studentName = student?.nameBn || student?.name || "শিক্ষার্থী";
+  const studentName = personName(student, "শিক্ষার্থী");
   const typeBn = (COMMENT_TYPE_LABELS_BN as Record<string, string>)[comment.type] ?? comment.type;
 
   // N+1 guard: render the title + body ONCE here; the emitter takes pre-rendered text.

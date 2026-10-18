@@ -49,6 +49,7 @@ import { resolveDayType } from "../../routine/calendar";
 import { resolveHomeworkDueDate } from "../homeworkDueDate";
 import { renderTemplate } from "../../templates/services/MessageTemplateService";
 import { emitHomeworkWeeklyDigest } from "../../notifications/services/emitters";
+import { personName } from "../../../lib/personName";
 
 /** Hard cap on the rendered body (chars). Expo's total-payload limit is 4096
  *  BYTES and Bangla is ~3 bytes/char UTF-8; ~1000 chars + title + refs stays
@@ -358,7 +359,7 @@ export async function renderDigestBody(
   window: DigestWindow,
 ): Promise<string> {
   const body = await renderTemplate(templateKey, {
-    StudentName: digest.nameBn || digest.name || "শিক্ষার্থী",
+    StudentName: personName(digest, "শিক্ষার্থী"),
     WeekRange: `${window.unsubFromKey} — ${window.headsUpKey}`,
     Unsubmitted: buildUnsubmittedSummary(digest.unsubmitted),
     HeadsUp: buildHeadsUpSummary(digest.headsUp),

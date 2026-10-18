@@ -29,6 +29,7 @@ import { User } from "../../foundation/models/User";
 import { renderTemplate } from "../../templates/services/MessageTemplateService";
 import { dateKeyOf } from "../../attendance/dates";
 import { isHifzLevel, RevisionError } from "./RevisionService";
+import { personName } from "../../../lib/personName";
 
 /** The read-time default coverage window — a juz not revised within this many days is
  *  "overdue for revision" (D-#246/#97 — no seed; an admin override is a later slice). */
@@ -411,7 +412,7 @@ async function studentNameMap(studentIds: string[]): Promise<Map<string, string>
   const students = (await Student.find({ _id: { $in: studentIds.map((id) => new Types.ObjectId(id)) } })
     .select("name nameBn")
     .lean()) as unknown as Array<{ _id: Types.ObjectId; name?: string; nameBn?: string }>;
-  return new Map(students.map((s) => [s._id.toString(), s.nameBn || s.name || "শিক্ষার্থী"]));
+  return new Map(students.map((s) => [s._id.toString(), personName(s, "শিক্ষার্থী")]));
 }
 
 // Re-export for a future label-driven UI (the mistake labels live in the app today).

@@ -16,6 +16,7 @@ import { STR, bnNum, classLevelLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
 import { dateKey } from "../../lib/dates";
+import { personName } from "../../lib/personName";
 
 type Props = NativeStackScreenProps<AttendanceStackParamList, "SectionAttendance">;
 
@@ -63,13 +64,13 @@ export default function SectionAttendanceScreen({ navigation: nav }: Props): Rea
               onPress={() =>
                 nav.navigate("StudentProfile", {
                   studentId: a.studentId,
-                  studentName: a.nameBn || a.name,
+                  studentName: personName(a),
                   initialPanel: "attendance",
                 })
               }
               style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 2, marginTop: 2 }}
             >
-              <Body style={{ flex: 1 }}>{a.nameBn || a.name}</Body>
+              <Body style={{ flex: 1 }}>{personName(a)}</Body>
               <Muted>
                 {STR.attRoll}: {a.rollNumber ? bnNum(a.rollNumber) : "—"} · {STR.attIdNo}: {bnNum(a.schoolId)}
                 {a.leaveCovered ? " · ✓" : ""}

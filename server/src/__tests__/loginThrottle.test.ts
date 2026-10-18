@@ -1,6 +1,6 @@
 /**
- * D-#764 — login lockout: 5 wrong passwords on an account, or 30 from one network, within
- * 2 h ⇒ refused for 2 h. D-#765 — GraphiQL + introspection off outside development.
+ * D-#765 — login lockout: 5 wrong passwords on an account, or 30 from one network, within
+ * 2 h ⇒ refused for 2 h. D-#766 — GraphiQL + introspection off outside development.
  *
  * In-memory MongoDB, real services.
  */
@@ -70,7 +70,7 @@ const wrongStaff = (ip: string | null = "203.0.113.5") => staffLogin({ email: PH
 const wrongGuardian = (ip: string | null = "203.0.113.5") =>
   guardianLogin({ identifier: GUARDIAN_PHONE, identifierKind: "phone", password: "nope", ip });
 
-describe("account lockout (D-#764)", () => {
+describe("account lockout (D-#765)", () => {
   it("blocks the 5th wrong password and then refuses even the right one", async () => {
     for (let i = 0; i < 4; i++) await expect(wrongStaff()).resolves.toBeNull();
     // Four wrong is still a working account.
@@ -129,7 +129,7 @@ describe("account lockout (D-#764)", () => {
   });
 });
 
-describe("network lockout (D-#764)", () => {
+describe("network lockout (D-#765)", () => {
   it("30 wrong passwords from one address block that address only", async () => {
     const ip = "203.0.113.200";
     for (let i = 0; i < IP_FAIL_LIMIT - 1; i++) await recordLoginFailure(ipKey(ip), IP_FAIL_LIMIT);
@@ -156,7 +156,7 @@ describe("network lockout (D-#764)", () => {
   });
 });
 
-describe("GraphQL developer tools (D-#765)", () => {
+describe("GraphQL developer tools (D-#766)", () => {
   const schema = createSchema({ typeDefs: "type Query { ok: Boolean }", resolvers: { Query: { ok: () => true } } });
   const run = async (nodeEnv: string | undefined, query: string) => {
     const opts = graphqlDevToolsOptions(nodeEnv);

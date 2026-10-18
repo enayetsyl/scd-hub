@@ -32,6 +32,7 @@ import { useToast } from "../../state/ToastContext";
 import { useConfirm } from "../../state/ConfirmContext";
 import { space, useColors } from "../../theme";
 import { dateKey } from "../../lib/dates";
+import { personName } from "../../lib/personName";
 
 type Props = NativeStackScreenProps<HomeworkStackParamList, "HomeworkReconcile">;
 
@@ -235,7 +236,7 @@ export default function HomeworkReconcileScreen({ navigation, route }: Props): R
                   {students.map((s) => (
                     <Chip
                       key={s.id}
-                      label={`${s.nameBn || s.name}${absent.has(s.id) ? " ✗" : ""}`}
+                      label={`${personName(s)}${absent.has(s.id) ? " ✗" : ""}`}
                       selected={!absent.has(s.id)}
                       onPress={() => toggleAbsent(s.id)}
                     />

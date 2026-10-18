@@ -109,7 +109,7 @@ if (process.env.SENTRY_DEBUG_ROUTE === "1" && process.env.NODE_ENV !== "producti
 
 const schema = builder.toSchema();
 
-// D-#765: GraphiQL + introspection only on a developer's machine (graphqlDevTools.ts).
+// D-#766: GraphiQL + introspection only on a developer's machine (graphqlDevTools.ts).
 const devTools = graphqlDevToolsOptions(process.env.NODE_ENV);
 
 const yoga = createYoga({

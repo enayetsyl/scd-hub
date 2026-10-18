@@ -32,6 +32,7 @@ import { writeAudit } from "../../platform/services/AuditService";
 import { dateKeyOf } from "../../attendance/dates";
 import { WorkClaimDigestConfig } from "../models/WorkClaimDigestConfig";
 import { canWatchClaims, makePendingDayCounter } from "../services/WorkClaimDigestService";
+import { personName } from "../../../lib/personName";
 
 /**
  * The guardian-facing claim view, defined HERE and imported by the guardian
@@ -170,7 +171,7 @@ async function toRows(claims: Array<Record<string, any>>, now: Date): Promise<Wo
     .select("name")
     .lean()) as unknown as Array<{ _id: Types.ObjectId; name?: string }>;
 
-  const sName = new Map(students.map((s) => [s._id.toString(), s.nameBn || s.name || ""]));
+  const sName = new Map(students.map((s) => [s._id.toString(), personName(s)]));
   const secName = new Map(sections.map((s) => [s._id.toString(), s.nameBn || s.code || ""]));
   const secById = new Map(sections.map((s) => [s._id.toString(), s]));
   const classIdOf = (c: Record<string, any>): string =>

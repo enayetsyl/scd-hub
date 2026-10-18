@@ -48,6 +48,7 @@ import { STR, bnNum, leaveTypeLabel, leaveStatusLabel, leavePartialSummary } fro
 import { friendlyError } from "../../lib/errors";
 import { useConfirm } from "../../state/ConfirmContext";
 import { space } from "../../theme/tokens";
+import { personName } from "../../lib/personName";
 
 type Props = NativeStackScreenProps<HrStackParamList, "LeaveAdmin">;
 
@@ -114,7 +115,7 @@ export default function LeaveAdminScreen({ navigation }: Props): React.ReactElem
   const [, applyLeave] = useMutation(APPLY_FOR_STAFF_LEAVE);
 
   const apps = appsQ.data?.staffLeaveApplicationsPage.rows ?? [];
-  const staffName = new Map((staffQ.data?.staff ?? []).map((s) => [s.id, s.nameBn || s.name]));
+  const staffName = new Map((staffQ.data?.staff ?? []).map((s) => [s.id, personName(s)]));
 
   async function runDecide(applicationId: string, decision: "approve" | "reject"): Promise<void> {
     if (decision === "reject" && !(await confirmAction({ confirmLabel: STR.hrLeaveReject }))) return;

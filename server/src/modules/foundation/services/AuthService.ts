@@ -20,7 +20,7 @@ const SALT_ROUNDS = 12;
 
 type LoginFailAudit = Omit<Parameters<typeof writeAudit>[0], "eventKind" | "meta"> & { meta?: Record<string, unknown> };
 
-/** The lockout gate (D-#764): a blocked key is refused AND recorded as a LOGIN_FAIL. */
+/** The lockout gate (D-#765): a blocked key is refused AND recorded as a LOGIN_FAIL. */
 async function assertNotBlocked(key: string, ip: string | null, audit: LoginFailAudit): Promise<void> {
   try {
     await assertLoginAllowed(key);
@@ -36,7 +36,7 @@ async function assertNotBlocked(key: string, ip: string | null, audit: LoginFail
   }
 }
 
-/** Count a wrong password against the account and the network (D-#764). */
+/** Count a wrong password against the account and the network (D-#765). */
 async function countWrongPassword(kind: LoginAccountKind, id: string, ip: string | null): Promise<boolean> {
   const locked = await recordLoginFailure(accountKey(kind, id), ACCOUNT_FAIL_LIMIT);
   if (ip) await recordLoginFailure(ipKey(ip), IP_FAIL_LIMIT);
@@ -112,7 +112,7 @@ export interface StaffLoginInput {
   /** Email or phone — the arg is still named `email` for backward compat (D-#60). */
   email: string;
   password: string;
-  /** The caller's address, for the network lockout (D-#764). Absent ⇒ that rule is skipped. */
+  /** The caller's address, for the network lockout (D-#765). Absent ⇒ that rule is skipped. */
   ip?: string | null;
 }
 
@@ -209,7 +209,7 @@ export interface GuardianLoginInput {
   identifier: string;
   identifierKind: "email" | "phone" | "school_id";
   password: string;
-  /** The caller's address, for the network lockout (D-#764). Absent ⇒ that rule is skipped. */
+  /** The caller's address, for the network lockout (D-#765). Absent ⇒ that rule is skipped. */
   ip?: string | null;
 }
 

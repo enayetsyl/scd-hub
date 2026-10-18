@@ -204,7 +204,7 @@ export async function resetGuardianPassword(guardianId: string, actor: Actor): P
   guardian.passwordHash = await hashPassword(password);
   guardian.loginEnabled = true;
   await guardian.save();
-  // A reset is how the Office lets a locked-out person back in (D-#764).
+  // A reset is how the Office lets a locked-out person back in (D-#765).
   await clearAccountThrottle("Guardian", guardian._id.toString());
 
   const studentCount = await GuardianLink.countDocuments({ guardianId: guardian._id });
@@ -332,7 +332,7 @@ export async function resetUserPassword(userId: string, actor: Actor): Promise<P
   user.passwordHash = await hashPassword(password);
   user.active = true;
   await user.save();
-  // A reset is how the Office lets a locked-out person back in (D-#764).
+  // A reset is how the Office lets a locked-out person back in (D-#765).
   await clearAccountThrottle("User", user._id.toString());
 
   await writeAudit({
@@ -365,7 +365,7 @@ export async function resetStaffPassword(userId: string, actor: Actor): Promise<
   user.passwordHash = await hashPassword(password);
   user.active = true;
   await user.save();
-  // A reset is how the Office lets a locked-out person back in (D-#764).
+  // A reset is how the Office lets a locked-out person back in (D-#765).
   await clearAccountThrottle("User", user._id.toString());
 
   await writeAudit({

@@ -141,7 +141,7 @@ describe("libraryChaseList (J-L8)", () => {
     const rows = await libraryChaseList(NOW);
     expect(rows.map((r) => r.borrowerType)).toEqual(["STUDENT", "GUARDIAN", "STAFF"]); // grouped order
     const student = rows[0];
-    expect(student.borrowerName).toBe("শিক্ষার্থী");
+    expect(student.borrowerName).toBe("Student S"); // English first (D-#764)
     expect(student.phone).toBe("01711-111111"); // the family phone
     expect(student.waLink).toMatch(/^https:\/\/wa\.me\/01711111111\?text=/); // normalized
     expect(student.daysOverdue).toBe(3);

@@ -112,7 +112,7 @@ jest.mock("../modules/foundation/models/StaffProfile", () => ({
 jest.mock("../modules/platform/services/AuditService", () => ({
   writeAudit: jest.fn(() => Promise.resolve()),
 }));
-// The login lockout (D-#764) — never blocked here; its behaviour is in loginThrottle.test.ts.
+// The login lockout (D-#765) — never blocked here; its behaviour is in loginThrottle.test.ts.
 jest.mock("../modules/foundation/models/LoginThrottle", () => ({
   LoginThrottle: {
     findOne: () => ({ lean: () => Promise.resolve(null) }),

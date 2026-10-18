@@ -30,7 +30,7 @@ import type { AppContext } from "../context";
  * are NOT sent to GlitchTip. Add new domain error classes here as modules grow.
  */
 export const EXPECTED_ERROR_NAMES: ReadonlySet<string> = new Set([
-  // A login refused by the lockout (D-#764): too many wrong passwords on the account or
+  // A login refused by the lockout (D-#765): too many wrong passwords on the account or
   // from the network. A Bangla sentence telling the person how long to wait — the lockout
   // working, not a fault.
   "LoginBlockedError",

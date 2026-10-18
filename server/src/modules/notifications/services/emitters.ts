@@ -29,6 +29,7 @@ import { SubjectGroupMembership } from "../../routine/models/SubjectGroupMembers
 import { dateKeyOf } from "../../attendance/dates";
 import { actingAsFilter } from "../../foundation/services/RoleScope";
 import { bnNum } from "../../../lib/bnNum";
+import { personName } from "../../../lib/personName";
 
 type IdLike = { toString(): string };
 
@@ -1739,7 +1740,7 @@ export async function emitWorkClaimFiled(ev: WorkClaimNotifyEvent): Promise<void
     const student = (await Student.findById(ev.studentId).select("nameBn name").lean()) as
       | { nameBn?: string; name?: string }
       | null;
-    const who = student?.nameBn || student?.name || "একজন শিক্ষার্থী";
+    const who = personName(student, "একজন শিক্ষার্থী");
     await emit({
       recipientUserId: ev.teacherId,
       kind: "WORK_CLAIM_FILED",
@@ -1772,7 +1773,7 @@ export async function emitWorkClaimReassigned(ev: WorkClaimNotifyEvent): Promise
     const student = (await Student.findById(ev.studentId).select("nameBn name").lean()) as
       | { nameBn?: string; name?: string }
       | null;
-    const who = student?.nameBn || student?.name || "একজন শিক্ষার্থী";
+    const who = personName(student, "একজন শিক্ষার্থী");
     await emit({
       recipientUserId: ev.teacherId,
       kind: "WORK_CLAIM_FILED",
@@ -1798,7 +1799,7 @@ export async function emitWorkClaimNudge(ev: WorkClaimNotifyEvent, at: Date): Pr
     const student = (await Student.findById(ev.studentId).select("nameBn name").lean()) as
       | { nameBn?: string; name?: string }
       | null;
-    const who = student?.nameBn || student?.name || "একজন শিক্ষার্থী";
+    const who = personName(student, "একজন শিক্ষার্থী");
     await emit({
       recipientUserId: ev.teacherId,
       kind: "WORK_CLAIM_FILED",

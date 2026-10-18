@@ -1,5 +1,5 @@
 /**
- * Login lockout (D-#764). Before it, a wrong password cost nothing: a script could walk
+ * Login lockout (D-#765). Before it, a wrong password cost nothing: a script could walk
  * every guardian school id with a list of common passwords and nothing would slow it.
  *
  *   • ACCOUNT — 5 wrong passwords on one account within 2 h ⇒ that account refuses every

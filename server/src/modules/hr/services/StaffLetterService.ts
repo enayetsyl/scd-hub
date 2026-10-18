@@ -24,6 +24,7 @@ import {
 } from "./supportContract";
 import { getHrPolicy } from "./HrPolicyService";
 import { writeAudit } from "../../platform/services/AuditService";
+import { personName } from "../../../lib/personName";
 
 export class LetterError extends Error {
   constructor(msg: string) {
@@ -168,7 +169,7 @@ export async function issueLetter(input: IssueLetterInput): Promise<IStaffLetter
       dutiesBn: duties,
       workingHoursBn: c.workingHoursBn?.trim() || SUPPORT_WORKING_HOURS_BN[c.role],
       foodAllowance: c.foodAllowance ?? null,
-      employeeSignatureNameBn: staff.nameBn || staff.name,
+      employeeSignatureNameBn: personName(staff),
       // The contract is signed by the Principal in Bangla, not the English letters'
       // Convener — so these override the signature block for this kind only.
       signatoryName: policy.signatoryNameBn,

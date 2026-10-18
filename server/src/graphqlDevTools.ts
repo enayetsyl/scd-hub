@@ -1,5 +1,5 @@
 /**
- * D-#765: the GraphiQL page and schema introspection are a developer's tools. On a live
+ * D-#766: the GraphiQL page and schema introspection are a developer's tools. On a live
  * server they handed anyone the full list of operations — every staff, salary and student
  * query — to aim at. They are on ONLY where NODE_ENV is explicitly "development" (a
  * developer's own machine); an unset NODE_ENV counts as live, so a misconfigured server

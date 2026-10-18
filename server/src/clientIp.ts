@@ -1,5 +1,5 @@
 /**
- * The caller's network address, for the login lockout (D-#764).
+ * The caller's network address, for the login lockout (D-#765).
  *
  * Node only ever sees Caddy, so the address comes from a header. `X-Real-IP` is the one
  * to trust: the VM's Caddyfile OVERWRITES it on every API request with Caddy's own

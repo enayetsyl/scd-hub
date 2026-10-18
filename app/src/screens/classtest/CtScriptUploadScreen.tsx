@@ -47,6 +47,7 @@ import {
 import { ctScriptStageTone, ctScriptRowTitle } from "../../lib/ctScriptStage";
 import { makeStyles, radius, space, typeScale, useColors } from "../../theme";
 import type { ClassTestStackParamList } from "../../navigation/types";
+import { personName } from "../../lib/personName";
 
 type Route = RouteProp<ClassTestStackParamList, "CtScriptUpload">;
 
@@ -264,7 +265,7 @@ export default function CtScriptUploadScreen(): React.ReactElement {
                     <View key={s.studentId} style={[styles.row, absent && { opacity: 0.6 }]}>
                       <Text style={styles.roll}>{s.rollNumber ? bnNum(s.rollNumber) : "—"}</Text>
                       <View style={{ flex: 1, minWidth: 0, gap: space(1) }}>
-                        <Body numberOfLines={1}>{s.nameBn || s.name}</Body>
+                        <Body numberOfLines={1}>{personName(s)}</Body>
                         <View style={styles.pages}>
                           {s.pages.map((p, i) => (
                             <View key={p.fileId} style={[styles.page, { borderColor: colors.border }]}>

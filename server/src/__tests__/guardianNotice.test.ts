@@ -80,7 +80,7 @@ describe("M-6 composeGuardianNotice", () => {
     });
     expect(res.recipientCount).toBe(1);
     expect(res.unreachableCount).toBe(1);
-    expect(res.recipients[0].studentName).toBe("ইউসুফ");
+    expect(res.recipients[0].studentName).toBe("Yousuf"); // English first (D-#764)
     // normalizePhone preserves the leading + (the established library/credentials convention).
     expect(res.recipients[0].waLink).toMatch(/^https:\/\/wa\.me\/\+8801700000001\?text=/);
     expect(mockNoticeCreate).toHaveBeenCalledWith(

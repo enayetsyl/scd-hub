@@ -42,6 +42,7 @@ import { STR, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { openPdf, PDF_SUPPORTED } from "../../lib/pdf";
 import { space } from "../../theme/tokens";
+import { personName } from "../../lib/personName";
 
 type Props = NativeStackScreenProps<AdminStackParamList, "IssueLetter">;
 
@@ -165,7 +166,7 @@ export default function IssueLetterScreen({ route, navigation }: Props): React.R
 
   return (
     <Screen scroll>
-      <H2>{`${kindLabel(kind)} — ${staff.nameBn || staff.name}`}</H2>
+      <H2>{`${kindLabel(kind)} — ${personName(staff)}`}</H2>
       {failure ? <Notice tone="danger" message={failure} /> : null}
 
       {kind === "appointment" ? (

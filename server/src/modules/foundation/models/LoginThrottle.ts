@@ -1,7 +1,7 @@
 import { Schema, model } from "mongoose";
 
 /**
- * Failed-login counter (D-#764). One row per throttled key:
+ * Failed-login counter (D-#765). One row per throttled key:
  *   `acct:User:<id>` / `acct:Guardian:<id>` — one account's wrong passwords
  *   `ip:<address>`                          — every wrong password from one network
  *

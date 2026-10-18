@@ -62,6 +62,7 @@ import {
   setMonthlyReportConfig,
   type MonthlyReportConfigShape,
 } from "../services/MonthlyReportConfigService";
+import { personName } from "../../../lib/personName";
 
 // ---------------------------------------------------------------------------
 // Gates
@@ -187,7 +188,7 @@ async function viewOf(
   const fullView = subjects === null;
   return {
     report,
-    studentName: child?.nameBn || child?.name || "",
+    studentName: personName(child),
     rollNumber: child?.rollNumber ?? null,
     fullView,
     subjectFilter: subjects ?? [],
