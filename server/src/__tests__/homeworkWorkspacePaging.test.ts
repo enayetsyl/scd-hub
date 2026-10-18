@@ -74,9 +74,17 @@ async function rec(hwItemId: Types.ObjectId, studentId: Types.ObjectId, state: s
 beforeAll(async () => {
   mongo = await MongoMemoryServer.create();
   await mongoose.connect(mongo.getUri());
+
+  // Build every unique index BEFORE inserting fixtures, so a fixture missing a uniquely-
+
+  // indexed field fails here every time, not only when CI happens to be slower (D-#761).
+
+  await Promise.all(Object.values(mongoose.models).map((model) => model.init()));
+  // schoolId is uniquely indexed: unset, the 2nd student collides on null whenever the
+  // index happens to be built before this insert (it failed on CI, passed locally).
   await Student.collection.insertMany([
-    { _id: stuA, name: "Aisha" },
-    { _id: stuB, name: "Bilal" },
+    { _id: stuA, name: "Aisha", schoolId: "T-1" },
+    { _id: stuB, name: "Bilal", schoolId: "T-2" },
   ]);
 });
 
