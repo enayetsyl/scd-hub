@@ -10,6 +10,8 @@ import { sentryYogaPlugin, sentryEnabled, Sentry } from "./observability/sentry"
 import { maskErrorExposingDomain } from "./observability/errorMask";
 import express from "express";
 import { createYoga } from "graphql-yoga";
+import { clientIpFrom } from "./clientIp";
+import { graphqlDevToolsOptions } from "./graphqlDevTools";
 import { connectDb } from "./db";
 import { connectBookDb, BookDbNotConfiguredError } from "./bookDb";
 import { buildContext, verifyTokenFromRequest } from "./context";
@@ -107,11 +109,15 @@ if (process.env.SENTRY_DEBUG_ROUTE === "1" && process.env.NODE_ENV !== "producti
 
 const schema = builder.toSchema();
 
+// D-#765: GraphiQL + introspection only on a developer's machine (graphqlDevTools.ts).
+const devTools = graphqlDevToolsOptions(process.env.NODE_ENV);
+
 const yoga = createYoga({
   schema,
   maskedErrors: { maskError: maskErrorExposingDomain },
+  graphiql: devTools.graphiql,
   // MON-2: capture real resolver faults (role + operation) into GlitchTip.
-  plugins: [sentryYogaPlugin],
+  plugins: [sentryYogaPlugin, ...devTools.plugins],
   context: async ({ request }) => {
     // Yoga delivers a WHATWG Request whose headers are a Fetch `Headers` object
     // (read via .get); the raw Node req is not reliably exposed as `.raw`, so
@@ -124,8 +130,9 @@ const yoga = createYoga({
         : headers.authorization ?? "";
     const req = { headers: { authorization } } as unknown as express.Request;
     const ctx = buildContext(req, {} as express.Response);
+    const clientIp = clientIpFrom((k) => (typeof headers.get === "function" ? headers.get(k) : null));
     // D-#708: 30-day sessions — a deactivated account's token stops working here.
-    return { ...ctx, auth: await withActiveAccount(ctx.auth) };
+    return { ...ctx, auth: await withActiveAccount(ctx.auth), clientIp };
   },
 });
 

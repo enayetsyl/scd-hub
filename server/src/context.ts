@@ -28,6 +28,8 @@ export interface AppContext {
   res: Response;
   /** Populated after JWT verification. Null = unauthenticated. */
   auth: AuthPayload | null;
+  /** The caller's network address (clientIp.ts) — GraphQL requests only; feeds the login lockout (D-#764). */
+  clientIp?: string | null;
 }
 
 export function buildContext(req: Request, res: Response): AppContext {

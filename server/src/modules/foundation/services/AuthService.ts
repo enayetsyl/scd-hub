@@ -4,8 +4,44 @@ import { User } from "../models/User";
 import { Guardian } from "../models/Guardian";
 import { writeAudit } from "../../platform/services/AuditService";
 import type { Role, Permission } from "@scd/shared";
+import {
+  ACCOUNT_FAIL_LIMIT,
+  IP_FAIL_LIMIT,
+  LoginBlockedError,
+  accountKey,
+  assertLoginAllowed,
+  clearAccountThrottle,
+  ipKey,
+  recordLoginFailure,
+  type LoginAccountKind,
+} from "./LoginThrottleService";
 
 const SALT_ROUNDS = 12;
+
+type LoginFailAudit = Omit<Parameters<typeof writeAudit>[0], "eventKind" | "meta"> & { meta?: Record<string, unknown> };
+
+/** The lockout gate (D-#764): a blocked key is refused AND recorded as a LOGIN_FAIL. */
+async function assertNotBlocked(key: string, ip: string | null, audit: LoginFailAudit): Promise<void> {
+  try {
+    await assertLoginAllowed(key);
+  } catch (err) {
+    if (err instanceof LoginBlockedError) {
+      await writeAudit({
+        ...audit,
+        eventKind: "LOGIN_FAIL",
+        meta: { ...audit.meta, reason: key.startsWith("ip:") ? "ip_blocked" : "account_blocked", ip },
+      });
+    }
+    throw err;
+  }
+}
+
+/** Count a wrong password against the account and the network (D-#764). */
+async function countWrongPassword(kind: LoginAccountKind, id: string, ip: string | null): Promise<boolean> {
+  const locked = await recordLoginFailure(accountKey(kind, id), ACCOUNT_FAIL_LIMIT);
+  if (ip) await recordLoginFailure(ipKey(ip), IP_FAIL_LIMIT);
+  return locked;
+}
 
 export interface AuthTokenPayload {
   userId: string;
@@ -76,6 +112,8 @@ export interface StaffLoginInput {
   /** Email or phone — the arg is still named `email` for backward compat (D-#60). */
   email: string;
   password: string;
+  /** The caller's address, for the network lockout (D-#764). Absent ⇒ that rule is skipped. */
+  ip?: string | null;
 }
 
 export interface AuthResult {
@@ -89,6 +127,8 @@ export async function staffLogin(input: StaffLoginInput): Promise<AuthResult | n
   // Accept either an email (case-insensitive) or a phone number as the identifier
   // (D-#60); any equivalent phone spelling matches (01…/+8801…/8801…, D-#315).
   const id = input.email.trim();
+  const ip = input.ip ?? null;
+  if (ip) await assertNotBlocked(ipKey(ip), ip, { meta: { identifier: id } });
   const user = await User.findOne({
     $or: [{ email: id.toLowerCase() }, { phone: { $in: phoneCandidates(id) } }],
     active: true,
@@ -98,12 +138,16 @@ export async function staffLogin(input: StaffLoginInput): Promise<AuthResult | n
     return null;
   }
 
+  // Before the password check: a blocked account is refused even with the right password.
+  await assertNotBlocked(accountKey("User", user._id.toString()), ip, { actorId: user._id, actorRole: user.role });
   const ok = await verifyPassword(input.password, user.passwordHash);
   if (!ok) {
-    await writeAudit({ eventKind: "LOGIN_FAIL", actorId: user._id, actorRole: user.role, meta: { reason: "bad_password" } });
+    const lockedOut = await countWrongPassword("User", user._id.toString(), ip);
+    await writeAudit({ eventKind: "LOGIN_FAIL", actorId: user._id, actorRole: user.role, meta: { reason: "bad_password", ip, lockedOut } });
     return null;
   }
 
+  await clearAccountThrottle("User", user._id.toString());
   await writeAudit({ eventKind: "LOGIN_SUCCESS", actorId: user._id, actorRole: user.role });
 
   return {
@@ -165,10 +209,14 @@ export interface GuardianLoginInput {
   identifier: string;
   identifierKind: "email" | "phone" | "school_id";
   password: string;
+  /** The caller's address, for the network lockout (D-#764). Absent ⇒ that rule is skipped. */
+  ip?: string | null;
 }
 
 export async function guardianLogin(input: GuardianLoginInput): Promise<AuthResult | null> {
   const id = input.identifier.trim();
+  const ip = input.ip ?? null;
+  if (ip) await assertNotBlocked(ipKey(ip), ip, { meta: { kind: input.identifierKind } });
   const guardian = await Guardian.findOne({
     identifierKind: input.identifierKind,
     // Phone identifiers match any equivalent spelling (01…/+8801…/8801…, D-#315).
@@ -187,12 +235,15 @@ export async function guardianLogin(input: GuardianLoginInput): Promise<AuthResu
     return null;
   }
 
+  await assertNotBlocked(accountKey("Guardian", guardian._id.toString()), ip, { actorId: guardian._id, actorRole: "GUARDIAN" });
   const ok = await verifyPassword(input.password, guardian.passwordHash);
   if (!ok) {
-    await writeAudit({ eventKind: "LOGIN_FAIL", actorId: guardian._id, actorRole: "GUARDIAN", meta: { reason: "bad_password" } });
+    const lockedOut = await countWrongPassword("Guardian", guardian._id.toString(), ip);
+    await writeAudit({ eventKind: "LOGIN_FAIL", actorId: guardian._id, actorRole: "GUARDIAN", meta: { reason: "bad_password", ip, lockedOut } });
     return null;
   }
 
+  await clearAccountThrottle("Guardian", guardian._id.toString());
   await writeAudit({ eventKind: "LOGIN_SUCCESS", actorId: guardian._id, actorRole: "GUARDIAN" });
 
   return {
