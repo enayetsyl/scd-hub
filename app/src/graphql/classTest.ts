@@ -8,6 +8,15 @@ import { gql } from "urql";
 
 type NoVars = Record<string, never>;
 
+/** D-#761: one page of a server-paged list — `{ rows, total, page, pageSize }`, page 1-based. */
+export interface PageOfT<T> {
+  rows: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+type PageVars = { page: number; pageSize: number };
+
 // ---------------------------------------------------------------------------
 // ClassTest header / print request (CT-1)
 // ---------------------------------------------------------------------------
@@ -75,6 +84,13 @@ export const CLASS_TEST_ROSTER_QUERY = gql<
 
 export const MY_CLASS_TESTS_QUERY = gql<{ myClassTests: ClassTestT[] }, NoVars>`
   query MyClassTests { myClassTests { ${CLASS_TEST_FIELDS} } }
+`;
+
+// D-#761: the hub's own-tests list, server-paged (newest first, any status).
+export const MY_CLASS_TESTS_PAGE_QUERY = gql<{ myClassTestsPage: PageOfT<ClassTestT> }, PageVars>`
+  query MyClassTestsPage($page: Int, $pageSize: Int) {
+    myClassTestsPage(page: $page, pageSize: $pageSize) { rows { ${CLASS_TEST_FIELDS} } total page pageSize }
+  }
 `;
 
 export const CLASS_TESTS_FOR_SECTION_QUERY = gql<
@@ -404,6 +420,9 @@ export interface ClassTestSummaryVars {
 export interface ClassTestReportsVars extends ClassTestSummaryVars {
   /** true → list RETIRED exams instead of live ones (so a retirement can be undone). */
   retired?: boolean | null;
+  /** D-#761: exam-date window, "YYYY-MM-DD" (Dhaka), inclusive; null = open. */
+  examFrom?: string | null;
+  examTo?: string | null;
 }
 
 const SUMMARY_ARG_DEFS = `$academicYearId: String, $classLevel: Int, $sectionId: String, $subject: String, $teacherId: String, $asOf: String`;
@@ -413,8 +432,9 @@ const SUMMARY_ARG_USE = `academicYearId: $academicYearId, classLevel: $classLeve
 // declare it, and sending it there fails the whole document with
 // "Unknown argument retired" — which is exactly what broke the Class-test dashboard
 // in prod on 2026-08-03.
-const REPORTS_ARG_DEFS = `${SUMMARY_ARG_DEFS}, $retired: Boolean`;
-const REPORTS_ARG_USE = `${SUMMARY_ARG_USE}, retired: $retired`;
+// D-#761: the exam-date window is reports-status-only too, for the same reason.
+const REPORTS_ARG_DEFS = `${SUMMARY_ARG_DEFS}, $retired: Boolean, $examFrom: String, $examTo: String`;
+const REPORTS_ARG_USE = `${SUMMARY_ARG_USE}, retired: $retired, examFrom: $examFrom, examTo: $examTo`;
 
 export const CLASS_TEST_REPORTS_STATUS_QUERY = gql<
   { classTestReportsStatus: ClassTestReportStatusRowT[] },
@@ -686,6 +706,19 @@ export const MY_CT_QUESTION_REQUESTS = gql<{ myCtQuestionRequests: CtQuestionReq
 export const CT_QUESTION_QUEUE = gql<{ ctQuestionQueue: CtQuestionRequestT[] }, Record<string, never>>`
   query CtQuestionQueue {
     ctQuestionQueue { ${CT_QUESTION_FIELDS} }
+  }
+`;
+
+// D-#761: the two request lists, server-paged (same order as the unpaged queries).
+export const MY_CT_QUESTION_REQUESTS_PAGE = gql<{ myCtQuestionRequestsPage: PageOfT<CtQuestionRequestT> }, PageVars>`
+  query MyCtQuestionRequestsPage($page: Int, $pageSize: Int) {
+    myCtQuestionRequestsPage(page: $page, pageSize: $pageSize) { rows { ${CT_QUESTION_FIELDS} } total page pageSize }
+  }
+`;
+
+export const CT_QUESTION_QUEUE_PAGE = gql<{ ctQuestionQueuePage: PageOfT<CtQuestionRequestT> }, PageVars>`
+  query CtQuestionQueuePage($page: Int, $pageSize: Int) {
+    ctQuestionQueuePage(page: $page, pageSize: $pageSize) { rows { ${CT_QUESTION_FIELDS} } total page pageSize }
   }
 `;
 

@@ -14,7 +14,7 @@ import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
 import {
-  MY_CLASS_TESTS_QUERY,
+  MY_CLASS_TESTS_PAGE_QUERY,
   CLASS_TEST_OVERDUE_COUNTS,
   UPDATE_CLASS_TEST_DETAILS,
 } from "../../graphql/classTest";
@@ -22,6 +22,8 @@ import { ARCHIVE_LOCATIONS_QUERY } from "../../graphql/archive";
 import { Screen, Card, Body, Muted, Button, Badge, Notice } from "../../components/ui";
 import { DateField } from "../../components/DateField";
 import { QueryGate } from "../../components/QueryGate";
+import { Pager } from "../../components/Pager";
+import { usePageState, PAGE_SIZE } from "../../lib/paging";
 import { useAuth } from "../../auth/AuthContext";
 import { useToast } from "../../state/ToastContext";
 import { friendlyError } from "../../lib/errors";
@@ -44,8 +46,10 @@ export default function ClassTestHomeScreen(): React.ReactElement {
   // the OFFICE template must see the dashboard, not just a primary-role PRINCIPAL/OFFICE.
   const isAdmin = isRole("PRINCIPAL") || isRole("OFFICE");
 
-  const [myQ, refetchMy] = useQuery({ query: MY_CLASS_TESTS_QUERY, variables: {} });
-  const mine = myQ.data?.myClassTests ?? [];
+  // D-#761: server-paged — the list is every test the caller ever owned, any status.
+  const [page, setPage] = usePageState();
+  const [myQ, refetchMy] = useQuery({ query: MY_CLASS_TESTS_PAGE_QUERY, variables: { page, pageSize: PAGE_SIZE } });
+  const mine = React.useMemo(() => myQ.data?.myClassTestsPage?.rows ?? [], [myQ.data]);
 
   // D-#620: the Dashboard button carries its own counts. Paused for non-admins —
   // they do not see the button at all — and read with `?.` so a slow or failed
@@ -60,6 +64,7 @@ export default function ClassTestHomeScreen(): React.ReactElement {
 
   // AR-1: one batched "where are the scripts?" lookup for the visible PRINTED
   // tests — never a per-row query. A missing entry means nothing is filed yet.
+  // D-#761: `mine` is one page now, so the lookup covers just that page.
   const printedIds = React.useMemo(
     () => mine.filter((t) => t.status === "PRINTED").map((t) => t.id),
     [mine],
@@ -290,6 +295,7 @@ export default function ClassTestHomeScreen(): React.ReactElement {
               </View>
             ))
           )}
+          <Pager page={page} pageSize={PAGE_SIZE} total={myQ.data?.myClassTestsPage?.total ?? 0} onPage={setPage} />
           </QueryGate>
         </Card>
       </ScrollView>

@@ -15,6 +15,8 @@ import { useQuery } from "urql";
 import { CLASS_TEST_REPORTS_STATUS_QUERY } from "../../graphql/classTest";
 import { Screen, Body, Muted, Card, Badge, Chip, ChipRow, Loader, Notice, EmptyState } from "../../components/ui";
 import { useReportRange, useRowFilters } from "../../components/ReportFilters";
+import { Pager } from "../../components/Pager";
+import { usePagedRows } from "../../lib/paging";
 import { STR, hwSubjectLabel, ctReportStateLabel, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { usePullRefresh } from "../../lib/useRefresh";
@@ -26,17 +28,24 @@ type CrossNav = { navigate: (name: string, params?: object) => void };
 
 const STATES = ["complete", "in_progress", "not_started", "overdue"] as const;
 
+/** useReportRange's "All time" sentinels — no server bound on that side. */
+const ALL_FROM = "0000-01-01";
+const ALL_TO = "9999-12-31";
+
 const stateTone = (s: string): "ok" | "danger" | "brand" | "muted" =>
   s === "complete" ? "ok" : s === "overdue" ? "danger" : s === "in_progress" ? "brand" : "muted";
 
 export default function ClassTestReportScreen(): React.ReactElement {
   const nav = useNavigation() as unknown as CrossNav;
-  const [rowsQ, refetch] = useQuery({ query: CLASS_TEST_REPORTS_STATUS_QUERY, variables: {} });
-  const all = rowsQ.data?.classTestReportsStatus ?? [];
-
   // Exam-date range (D-#309 chips) — applied before the row filters so the
   // class/teacher/subject options only offer values present in the range.
   const { fromKey, toKey, node: rangeNode } = useReportRange(30, { withAll: true });
+  // D-#761: the server bounds the exam set by the same range, so "last 30 days" no
+  // longer ships every printed test ever. "All time" (the open sentinels) stays open.
+  const examFrom = fromKey === ALL_FROM ? null : fromKey;
+  const examTo = toKey === ALL_TO ? null : toKey;
+  const [rowsQ, refetch] = useQuery({ query: CLASS_TEST_REPORTS_STATUS_QUERY, variables: { examFrom, examTo } });
+  const all = rowsQ.data?.classTestReportsStatus ?? [];
   const inRange = all.filter((r) => {
     const k = dateKey(new Date(r.examDate));
     return k >= fromKey && k <= toKey;
@@ -52,6 +61,11 @@ export default function ClassTestReportScreen(): React.ReactElement {
   const [stateFilter, setStateFilter] = useState<string>("");
   const rows = stateFilter ? filtered.filter((r) => r.state === stateFilter) : filtered;
   const countOf = (s: string): number => filtered.filter((r) => r.state === s).length;
+  // D-#761: page the cards (the chip counts above stay whole). The class/teacher/
+  // subject state lives inside useRowFilters, so its effect enters via the count.
+  const { shown, pager } = usePagedRows(rows, {
+    resetKey: `${fromKey}|${toKey}|${stateFilter}|${filtered.length}`,
+  });
 
   const { refreshing, onRefresh } = usePullRefresh(rowsQ.fetching, () =>
     refetch({ requestPolicy: "network-only" }),
@@ -86,7 +100,7 @@ export default function ClassTestReportScreen(): React.ReactElement {
         ) : rows.length === 0 ? (
           <EmptyState message={STR.ctNoReports} />
         ) : (
-          rows.map((r) => (
+          shown.map((r) => (
             <Card key={r.testId}>
               <Pressable
                 accessibilityRole="button"
@@ -127,6 +141,7 @@ export default function ClassTestReportScreen(): React.ReactElement {
             </Card>
           ))
         )}
+        <Pager {...pager} />
       </ScrollView>
     </Screen>
   );
