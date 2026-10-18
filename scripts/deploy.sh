@@ -32,7 +32,7 @@ build() {
     ( cd app \
         && npx expo export --platform web --source-maps \
         && { npx sentry-cli sourcemaps upload \
-               --url https://errors.scdhub.shafayet.me --org scd --project scdhub-app \
+               --url https://scdhub-errors.shafayet.me --org scd --project scdhub-app \
                --release "$(git rev-parse HEAD)" dist \
              || say "sentry sourcemap upload failed (non-fatal)"; } \
         ; find dist -name '*.map' -delete )

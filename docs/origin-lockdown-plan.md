@@ -1,7 +1,22 @@
 # Origin lockdown plan (D-#766 follow-up)
 
-**Status:** planned, not started. Run it as its own session; it needs the Cloudflare
-dashboard and the Oracle Cloud console, so the operator must take part.
+**Status (2026-10-18, D-#767): DONE, all steps.**
+
+- Step 0: done. deploy.sh names `scdhub-errors`, and the `errors.scdhub` DNS record is deleted.
+- Step 1: done. Dev is `scdhub-dev.<domain>` (proxied). Caddy no longer serves
+  `dev.scdhub`; delete its DNS record.
+- Step 2(a): done. The Origin CA cert (`*.<domain>` + `<domain>`, to 2041) is in
+  `/etc/caddy/certs/`. **Global** Authenticated Origin Pulls is on in Cloudflare, and every
+  site imports the `(cloudflare_only)` snippet (`client_auth require_and_verify` against
+  `cf-origin-pull-ca.pem`, which **expires 2029-11-01**). Caddy backups:
+  `Caddyfile.bak-20261018-lockdown0` (before) and `-lockdown1` (after the dev stage).
+- Step 2(b): done. `ufw` allows 80/443 only from Cloudflare's 22 ranges (15 IPv4 +
+  7 IPv6, comment `cloudflare`); 22 stays open for the SSH deploy. Backups:
+  `/etc/ufw/user{,6}.rules.bak-20261018-lockdown`. If Cloudflare publishes a new range, add
+  it here AND in the Caddyfile's `trusted_proxies`.
+- Step 3: verified. Direct to `<vm-ip>`, ports 80/443 no longer even connect. Through
+  Cloudflare: prod web/API/`version.json`, dev and GlitchTip all 200. SSH and all three
+  services are still up.
 
 **Repo is public:** this file uses `<domain>` for the zone and `<vm-ip>` for the server.
 The real values live in the operator's notes, never here.
@@ -30,10 +45,10 @@ header. The plan below removes the bypass itself.
 ### 0. Quick cleanup (any time, about 5 minutes)
 
 1. **Fix `scripts/deploy.sh` first.** The web source-map upload still names
-   `https://errors.scdhub.<domain>`. That host's TLS already fails, so the upload is
-   failing on every deploy and saying only "non-fatal". Point it at
-   `https://scdhub-errors.<domain>`, deploy, and confirm the deploy log has no
-   "sentry sourcemap upload failed" line.
+   `https://errors.scdhub.<domain>`, whose TLS already fails. **Done 2026-10-18:** it now
+   names `https://scdhub-errors.<domain>`. Note: the upload only runs when the VM's deploy
+   shell has `SENTRY_AUTH_TOKEN`, and none is set, so web deploys upload no source maps
+   today (it never failed; it never ran). Setting that token is a separate choice.
 2. In Cloudflare → DNS, **delete the `errors.scdhub` record**.
 
 ### 1. Give dev a single-label name
