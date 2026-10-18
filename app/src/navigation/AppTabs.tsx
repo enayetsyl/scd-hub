@@ -330,6 +330,8 @@ import ChildClassNotesScreen from "../screens/guardian/ChildClassNotesScreen";
 import ChildAttendanceScreen from "../screens/guardian/ChildAttendanceScreen";
 import ChildFeesScreen from "../screens/guardian/ChildFeesScreen";
 import ChildLeaveScreen from "../screens/guardian/ChildLeaveScreen";
+import ChildCommentsScreen from "../screens/guardian/ChildCommentsScreen";
+import ChildRevisionScreen from "../screens/guardian/ChildRevisionScreen";
 import ChildHomeworkScreen from "../screens/guardian/ChildHomeworkScreen";
 import ChildRoutineScreen from "../screens/guardian/ChildRoutineScreen";
 import { GuardianChildProvider } from "../state/GuardianChildContext";
@@ -1494,6 +1496,8 @@ function GuardianHomeNavigator(): React.ReactElement {
         <GuardianHomeStack.Screen name="ChildAttendance" component={ChildAttendanceScreen} options={{ title: STR.gpAttendance }} />
         <GuardianHomeStack.Screen name="ChildFees" component={ChildFeesScreen} options={{ title: STR.gpFees }} />
         <GuardianHomeStack.Screen name="ChildLeave" component={ChildLeaveScreen} options={{ title: STR.gpLeave }} />
+        <GuardianHomeStack.Screen name="ChildComments" component={ChildCommentsScreen} options={{ title: STR.gpComments }} />
+        <GuardianHomeStack.Screen name="ChildRevision" component={ChildRevisionScreen} options={{ title: STR.gpRevision }} />
       </GuardianHomeStack.Navigator>
     );
   }

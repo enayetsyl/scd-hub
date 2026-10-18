@@ -261,6 +261,13 @@ const GUARDIAN_NAV: NavSection[] = [
       { route: "GuardianSyllabusTab", labelKey: "syTitle", icon: "📋" },
     ],
   },
+  // D-#769 (owner ask): sections that used to be reachable only by scrolling Today —
+  // two shortcut cards at its bottom and two history cards above them — get a sidebar
+  // entry each. All four live in the Today stack, so they deep-link by screen.
+  { type: "item", route: "GuardianHomeTab", screen: "ChildAttendance", labelKey: "gpAttendance", icon: "🙋" },
+  { type: "item", route: "GuardianHomeTab", screen: "ChildLeave", labelKey: "gpLeave", icon: "📝" },
+  { type: "item", route: "GuardianHomeTab", screen: "ChildComments", labelKey: "gpComments", icon: "💬" },
+  { type: "item", route: "GuardianHomeTab", screen: "ChildRevision", labelKey: "gpRevision", icon: "📖" },
 ];
 
 const NAV: NavSection[] = [...STAFF_NAV, ...GUARDIAN_NAV];
@@ -604,7 +611,9 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
 
   const renderSection = (section: NavSection, idx: number): React.ReactElement | null => {
     if (section.type === "item") {
-      return <Leaf key={section.route} leaf={section} />;
+      // Route ALONE is not unique: the guardian's Today and its four deep-linked
+      // sections (D-#769) share GuardianHomeTab, and duplicate keys made React clone rows.
+      return <Leaf key={`${section.route}:${section.screen ?? ""}`} leaf={section} />;
     }
     if (section.hidden) return null;
     const visible = section.items.filter(visibleLeaf);

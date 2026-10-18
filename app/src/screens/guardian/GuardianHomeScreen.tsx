@@ -60,6 +60,8 @@ import {
 } from "../../lib/labels";
 import { space } from "../../theme/tokens";
 import { dateKey } from "../../lib/dates";
+import { useRecentLimit, RECENT_ROWS } from "../../lib/useRecentLimit";
+import { ChildCommentRows, ChildRevisionRows } from "../../components/ChildCommentRevisionRows";
 
 type Nav = NativeStackNavigationProp<GuardianHomeStackParamList>;
 
@@ -76,24 +78,7 @@ const OPEN_STATES = new Set(["GIVEN", "ABSENT_REDELIVER", "DUE", "SUBMITTED", "C
 
 /** D-#761: Today is a summary. Each history card shows the newest few rows; a card
  *  with a tab of its own links there ("see all"), the others page back with LoadOlder. */
-const HOME_RECENT = 5;
-
-/** A history card's row bound: starts at HOME_RECENT, LoadOlder widens it, a new child
- *  starts over. `more` = the last fetch filled the bound, so older rows may exist (or a
- *  widening is in flight — keep the button up, spinning). */
-function useRecentLimit(childId: string): {
-  limit: number;
-  older: () => void;
-  more: (rows: number, fetching?: boolean) => boolean;
-} {
-  const [limit, setLimit] = React.useState(HOME_RECENT);
-  React.useEffect(() => setLimit(HOME_RECENT), [childId]);
-  return {
-    limit,
-    older: () => setLimit((n) => n + HOME_RECENT * 2),
-    more: (rows, fetching = false) => rows >= limit || (fetching && limit > HOME_RECENT),
-  };
-}
+const HOME_RECENT = RECENT_ROWS;
 
 export default function GuardianHomeScreen(): React.ReactElement {
   const nav = useNavigation<Nav>();
@@ -903,35 +888,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
             sectionId / deliveryChannels. Attachments open on web via openStoredFile. */}
         <Card>
           <Body style={{ fontWeight: "700" }}>{STR.gpComments}</Body>
-          {(commentsQ.data?.childComments ?? []).length === 0 ? (
-            <Muted style={{ marginTop: space(2) }}>{STR.gpNoComments}</Muted>
-          ) : (
-            (commentsQ.data?.childComments ?? []).map((c) => (
-              <View key={c.id} style={{ marginTop: space(2) }}>
-                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                  <Muted>
-                    {commentTypeLabel(c.type)} · {commentSentimentLabel(c.sentiment)}
-                  </Muted>
-                  <Muted>{isoDateLabel(c.createdAt)}</Muted>
-                </View>
-                <Body style={{ marginTop: space(1) }}>{c.text}</Body>
-                {c.attachmentIds.length > 0 && FILE_VIEW_SUPPORTED ? (
-                  <View style={{ marginTop: space(1) }}>
-                    {c.attachmentIds.map((fid) => (
-                      <Button
-                        key={fid}
-                        title={STR.cmOpenAttachment}
-                        variant="ghost"
-                        loading={openingId === fid}
-                        disabled={!!openingId}
-                        onPress={() => runOpen(fid, () => openStoredFile(fid).catch(() => {}))}
-                      />
-                    ))}
-                  </View>
-                ) : null}
-              </View>
-            ))
-          )}
+          <ChildCommentRows rows={commentRows} openingId={openingId} runOpen={runOpen} />
           {commentsLimit.more(commentRows.length, commentsQ.fetching) ? (
             <LoadOlder onPress={commentsLimit.older} loading={commentsQ.fetching} />
           ) : null}
@@ -942,32 +899,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
             portions / ØªÙ†Ø¨ÛŒÙ‡ / ÙØªØ­ / structured mistakes / the teacher's comment. */}
         <Card>
           <Body style={{ fontWeight: "700" }}>{STR.gpRevision}</Body>
-          {(revisionQ.data?.childRevision ?? []).length === 0 ? (
-            <Muted style={{ marginTop: space(2) }}>{STR.gpNoRevision}</Muted>
-          ) : (
-            (revisionQ.data?.childRevision ?? []).map((e) => (
-              <View key={e.id} style={{ marginTop: space(2) }}>
-                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                  <Body style={{ fontWeight: "700" }}>{bnNum(e.date)}</Body>
-                  <Badge text={e.present ? STR.revPresent : STR.revAbsent} tone={e.present ? "brand" : "muted"} />
-                </View>
-                {e.present
-                  ? e.juzRecords.map((r, i) => (
-                      <Muted key={i} style={{ marginTop: space(1) }}>
-                        {revCategoryLabel(r.category)} · {STR.revJuz} {bnNum(r.juz)} · {bnNum(r.amountJuz)} · {STR.revTanbih}{" "}
-                        {bnNum(r.tanbih)} · {STR.revFath} {bnNum(r.fath)} · {STR.revMistakes}{" "}
-                        {bnNum(r.mistakes.harf + r.mistakes.ghunnah + r.mistakes.madd + r.mistakes.other)}
-                      </Muted>
-                    ))
-                  : null}
-                {e.teacherComment ? (
-                  <Body style={{ marginTop: space(1) }}>
-                    {STR.revComment}: {e.teacherComment}
-                  </Body>
-                ) : null}
-              </View>
-            ))
-          )}
+          <ChildRevisionRows rows={revisionQ.data?.childRevision ?? []} />
           {revisionLimit.more((revisionQ.data?.childRevision ?? []).length, revisionQ.fetching) ? (
             <LoadOlder onPress={revisionLimit.older} loading={revisionQ.fetching} />
           ) : null}
