@@ -19,6 +19,7 @@ import { VocabWord } from "../models/VocabWord";
 import { writeAudit } from "../../platform/services/AuditService";
 import { assertProgram, assertClassLevel, cleanField, VocabError } from "./VocabWordService";
 import { weekStartFor, atMidnight } from "./vocabCalendar";
+import { queryPage, type Page, type PageArgs } from "../../../lib/paging";
 
 // ---------------------------------------------------------------------------
 // Pure layout engine (§3.4) — directions validated against the program's set
@@ -237,4 +238,13 @@ export async function listVocabTests(input: ListTestsInput): Promise<IVocabTest[
   if (input.program) query.program = assertProgram(input.program);
   if (input.weekOf) query.weekOf = weekStartFor(input.weekOf);
   return VocabTest.find(query).sort({ testDate: -1 }).lean() as unknown as Promise<IVocabTest[]>;
+}
+
+/** D-#761: `listVocabTests`, one page at a time (newest first, `_id` tie-break). */
+export function listVocabTestsPage(input: ListTestsInput, args: PageArgs): Promise<Page<IVocabTest>> {
+  const query: Record<string, unknown> = {};
+  if (input.sectionId) query.sectionId = new Types.ObjectId(input.sectionId);
+  if (input.program) query.program = assertProgram(input.program);
+  if (input.weekOf) query.weekOf = weekStartFor(input.weekOf);
+  return queryPage(VocabTest, query, { testDate: -1, _id: -1 }, args, (docs) => docs as unknown as IVocabTest[]);
 }

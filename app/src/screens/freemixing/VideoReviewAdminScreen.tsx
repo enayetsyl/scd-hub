@@ -10,8 +10,11 @@ import { Linking, ScrollView, View, RefreshControl } from "react-native";
 import { useQuery, useMutation } from "urql";
 import {
   CREATE_VIDEO_REVIEW,
-  VIDEO_REVIEW_OVERVIEW,
+  VIDEO_REVIEW_SUMMARY,
+  VIDEO_REVIEW_ROWS_PAGE,
 } from "../../graphql/videoReview";
+import { Pager } from "../../components/Pager";
+import { usePageState, PAGE_SIZE } from "../../lib/paging";
 import { TEACHERS_QUERY } from "../../graphql/operations";
 import { Screen, H2, Body, Muted, Card, Badge, Button, Field, Select, Notice, Loader, EmptyState, Divider } from "../../components/ui";
 import { STR, bnNum, dhakaDateKey } from "../../lib/labels";
@@ -28,7 +31,7 @@ function statusBadge(status: string): { text: string; tone: "warn" | "ok" | "dan
 }
 
 export default function VideoReviewAdminScreen(): React.ReactElement {
-  const [{ data, fetching }, refetch] = useQuery({ query: VIDEO_REVIEW_OVERVIEW });
+  const [{ data, fetching: summaryFetching }, refetchSummary] = useQuery({ query: VIDEO_REVIEW_SUMMARY });
   const [{ data: teachersData }] = useQuery({ query: TEACHERS_QUERY });
   const [, create] = useMutation(CREATE_VIDEO_REVIEW);
 
@@ -44,7 +47,19 @@ export default function VideoReviewAdminScreen(): React.ReactElement {
   const [ok, setOk] = useState<string | null>(null);
 
   const overview = data?.videoReviewOverview;
-  const rows = (overview?.rows ?? []).filter((r) => statusFilter === "" || r.status === statusFilter);
+  // D-#761: every video ever assigned — the rows page on the server, and the status
+  // filter runs there too (a filter over one page would hide matches on the others).
+  const [page, setPage] = usePageState(statusFilter);
+  const [{ data: rowsData, fetching: rowsFetching }, refetchRows] = useQuery({
+    query: VIDEO_REVIEW_ROWS_PAGE,
+    variables: { status: statusFilter === "" ? null : statusFilter, page, pageSize: PAGE_SIZE },
+  });
+  const rows = rowsData?.videoReviewRowsPage.rows ?? [];
+  const fetching = summaryFetching || rowsFetching;
+  const refetch = (opts: { requestPolicy: "network-only" }): void => {
+    refetchSummary(opts);
+    refetchRows(opts);
+  };
   const teacherOptions = (teachersData?.teachers ?? []).map((t) => ({
     label: t.name,
     value: t.id,
@@ -178,6 +193,7 @@ export default function VideoReviewAdminScreen(): React.ReactElement {
             );
           })
         )}
+        <Pager page={page} pageSize={PAGE_SIZE} total={rowsData?.videoReviewRowsPage.total ?? 0} onPage={setPage} />
       </ScrollView>
     </Screen>
   );

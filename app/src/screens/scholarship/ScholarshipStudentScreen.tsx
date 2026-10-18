@@ -33,6 +33,8 @@ import {
   Notice,
 } from "../../components/ui";
 import { MiniLineChart } from "../../components/MiniCharts";
+import { Pager } from "../../components/Pager";
+import { usePagedRows } from "../../lib/paging";
 import { downloadFile, PDF_SUPPORTED } from "../../lib/pdf";
 import { useToast } from "../../state/ToastContext";
 import { STR, bnNum, hwSubjectLabel } from "../../lib/labels";
@@ -126,6 +128,11 @@ export default function ScholarshipStudentScreen({ route }: Props): React.ReactE
   }
 
   const rows = (axis === "topic" ? a?.topics : a?.chapters) ?? [];
+  // D-#761: the analysis needs every paper, but the paper-by-paper list grows each week —
+  // page it on the client.
+  const { shown: papersShown, pager: papersPager } = usePagedRows(a?.papers ?? [], {
+    resetKey: `${studentId}|${subject ?? ""}`,
+  });
 
   /**
    * Download this student × this subject as Markdown, to hand to a model for tailored
@@ -171,7 +178,7 @@ export default function ScholarshipStudentScreen({ route }: Props): React.ReactE
       {a && a.papers.length > 0 ? (
         <Card>
           <Body style={{ fontWeight: "700" }}>{STR.scPaperWise}</Body>
-          {a.papers.map((p) => (
+          {papersShown.map((p) => (
             <View
               key={p.paperId}
               style={{
@@ -197,6 +204,7 @@ export default function ScholarshipStudentScreen({ route }: Props): React.ReactE
               </View>
             </View>
           ))}
+          <Pager {...papersPager} />
         </Card>
       ) : null}
 

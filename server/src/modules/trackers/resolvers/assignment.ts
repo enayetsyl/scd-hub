@@ -22,6 +22,7 @@
  *     (the GP-1 link gate) — AJ-8.
  */
 import { builder } from "../../../schema";
+import { pageRef } from "../../../pageRef";
 import type { GuardianWorkClaimView } from "../services/WorkClaimView";
 import { GuardianWorkClaimGqlRef } from "./workClaim";
 import type { AppContext } from "../../../context";
@@ -71,6 +72,7 @@ import {
 } from "../services/AssignmentRosterPassService";
 import {
   assignmentChaseList as chaseListSvc,
+  assignmentChaseListPage as chaseListPageSvc,
   escalateAssignmentChase as escalateSvc,
   recordFollowUpOutcome as outcomeSvc,
   listAssignmentFollowUps as listFollowUpsSvc,
@@ -622,6 +624,9 @@ ChaseEntryRef.implement({
     nextStepNumber: t.exposeInt("nextStepNumber"),
   }),
 });
+
+// D-#761: the chase list, one page at a time.
+const ChaseEntryPageRef = pageRef("AssignmentChaseEntryPage", ChaseEntryRef);
 
 interface EscalateResultShape {
   followUpId: string;
@@ -1963,6 +1968,22 @@ builder.queryField("assignmentChaseList", (t) =>
     resolve: async (_root, _args, ctx) => {
       assertFollowUpAdmin(ctx);
       return chaseListSvc();
+    },
+  }),
+);
+
+builder.queryField("assignmentChaseListPage", (t) =>
+  t.field({
+    type: ChaseEntryPageRef,
+    description: "assignmentChaseList, one page at a time, most overdue first (D-#761).",
+    authScopes: { hasPermission: "message:dispatch" },
+    args: {
+      page: t.arg.int({ required: false }),
+      pageSize: t.arg.int({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      assertFollowUpAdmin(ctx);
+      return chaseListPageSvc(args);
     },
   }),
 );

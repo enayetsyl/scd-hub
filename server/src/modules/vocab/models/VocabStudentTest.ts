@@ -33,5 +33,7 @@ const VocabStudentTestSchema = new Schema<IVocabStudentTest>(
 
 // One attendance anchor per (student, test) — upsert key + the test's marked roster.
 VocabStudentTestSchema.index({ testId: 1, studentId: 1 }, { unique: true });
+// D-#761: a student's own tests (the paged per-test history + dashboard anchor read).
+VocabStudentTestSchema.index({ studentId: 1, testId: 1 });
 
 export const VocabStudentTest = model<IVocabStudentTest>("VocabStudentTest", VocabStudentTestSchema);

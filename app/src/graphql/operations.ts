@@ -2107,6 +2107,43 @@ export const ASSESSMENT_SETS_QUERY = gql<
   }
 `;
 
+// D-#761: the section's sets, one page at a time (newest first; setType filters server-side).
+export const ASSESSMENT_SETS_PAGE_QUERY = gql<
+  { assessmentSetsPage: { rows: AssessmentSetT[]; total: number; page: number; pageSize: number } },
+  {
+    sectionId: string;
+    classId: string;
+    status?: string | null;
+    setType?: string | null;
+    page?: number | null;
+    pageSize?: number | null;
+  }
+>`
+  query AssessmentSetsPage($sectionId: String!, $classId: String!, $status: String, $setType: String, $page: Int, $pageSize: Int) {
+    assessmentSetsPage(sectionId: $sectionId, classId: $classId, status: $status, setType: $setType, page: $page, pageSize: $pageSize) {
+      rows {
+        id
+        setType
+        name
+        sectionId
+        classId
+        subjectId
+        status
+        basketItems { artifactId qid marks }
+        totalMarks
+        durationMinutes
+        examMinutes
+        dueDate
+        createdBy
+        assembledBy
+        assembledAt
+        createdAt
+      }
+      total page pageSize
+    }
+  }
+`;
+
 /** ux-audit F7 — Today's "সাম্প্রতিক সেট": the caller's newest sets across ALL
  *  their sections, each with the id of a still-open tracker (if any) so the
  *  shortcut can route straight to TrackerEntry instead of re-firing the
@@ -2202,6 +2239,38 @@ export const TRACKERS_QUERY = gql<
       createdBy
       closedAt
       createdAt
+    }
+  }
+`;
+
+// D-#761: the section's trackers, one page at a time (newest first).
+export const TRACKERS_PAGE_QUERY = gql<
+  { trackersPage: { rows: TrackerRecordT[]; total: number; page: number; pageSize: number } },
+  {
+    sectionId: string;
+    classId: string;
+    trackerKind?: string | null;
+    setId?: string | null;
+    status?: string | null;
+    page?: number | null;
+    pageSize?: number | null;
+  }
+>`
+  query TrackersPage($sectionId: String!, $classId: String!, $trackerKind: String, $setId: String, $status: String, $page: Int, $pageSize: Int) {
+    trackersPage(sectionId: $sectionId, classId: $classId, trackerKind: $trackerKind, setId: $setId, status: $status, page: $page, pageSize: $pageSize) {
+      rows {
+        id
+        trackerKind
+        setId
+        sectionId
+        classId
+        entries { pseudoStudentId score submitted complete }
+        status
+        createdBy
+        closedAt
+        createdAt
+      }
+      total page pageSize
     }
   }
 `;
@@ -5992,6 +6061,22 @@ export const AS_CHASE_LIST = gql<{ assignmentChaseList: AsChaseEntryT[] }, NoVar
   }
 `;
 
+// D-#761: the school-wide chase list, one page at a time (most overdue first).
+export const AS_CHASE_LIST_PAGE = gql<
+  { assignmentChaseListPage: { rows: AsChaseEntryT[]; total: number; page: number; pageSize: number } },
+  { page?: number | null; pageSize?: number | null }
+>`
+  query AssignmentChaseListPage($page: Int, $pageSize: Int) {
+    assignmentChaseListPage(page: $page, pageSize: $pageSize) {
+      rows {
+        recordId asId subject weekNumber sectionId studentId studentName guardianPhone
+        dueDate daysOverdue chaseCount followUpCount nextStepNumber
+      }
+      total page pageSize
+    }
+  }
+`;
+
 export interface AsEscalateResultT {
   followUpId: string;
   recordId: string;
@@ -6891,6 +6976,19 @@ export const OVERSIGHT_CONVERSATIONS_QUERY = gql<
 >`
   query OversightConversations {
     oversightConversations { ${CONVERSATION_FIELDS} }
+  }
+`;
+
+// D-#761: the oversight browser, one page at a time (newest activity first).
+export const OVERSIGHT_CONVERSATIONS_PAGE_QUERY = gql<
+  { oversightConversationsPage: { rows: ConversationT[]; total: number; page: number; pageSize: number } },
+  { page?: number | null; pageSize?: number | null }
+>`
+  query OversightConversationsPage($page: Int, $pageSize: Int) {
+    oversightConversationsPage(page: $page, pageSize: $pageSize) {
+      rows { ${CONVERSATION_FIELDS} }
+      total page pageSize
+    }
   }
 `;
 
@@ -8046,6 +8144,19 @@ export const VOCAB_TESTS_QUERY = gql<
   }
 `;
 
+// D-#761: the section's tests, one page at a time (newest first).
+export const VOCAB_TESTS_PAGE_QUERY = gql<
+  { vocabTestsPage: { rows: VocabTestT[]; total: number; page: number; pageSize: number } },
+  { sectionId?: string | null; program?: string | null; weekOf?: string | null; page?: number | null; pageSize?: number | null }
+>`
+  query VocabTestsPage($sectionId: String, $program: String, $weekOf: String, $page: Int, $pageSize: Int) {
+    vocabTestsPage(sectionId: $sectionId, program: $program, weekOf: $weekOf, page: $page, pageSize: $pageSize) {
+      rows { ${VOCAB_TEST_FIELDS} }
+      total page pageSize
+    }
+  }
+`;
+
 export const VOCAB_TEST_QUERY = gql<{ vocabTest: VocabTestT | null }, { testId: string }>`
   query VocabTest($testId: String!) {
     vocabTest(testId: $testId) { ${VOCAB_TEST_FIELDS} }
@@ -8144,12 +8255,38 @@ export const VOCAB_ASSIGNMENT_HISTORY_QUERY = gql<
   }
 `;
 
+// D-#761: the append-only assignment history, one page at a time.
+export const VOCAB_ASSIGNMENT_HISTORY_PAGE_QUERY = gql<
+  { vocabAssignmentHistoryPage: { rows: VocabAssignmentT[]; total: number; page: number; pageSize: number } },
+  { sectionId: string; program: string; page?: number | null; pageSize?: number | null }
+>`
+  query VocabAssignmentHistoryPage($sectionId: String!, $program: String!, $page: Int, $pageSize: Int) {
+    vocabAssignmentHistoryPage(sectionId: $sectionId, program: $program, page: $page, pageSize: $pageSize) {
+      rows { ${VOCAB_ASSIGNMENT_FIELDS} }
+      total page pageSize
+    }
+  }
+`;
+
 export const MY_VOCAB_ASSIGNMENTS_QUERY = gql<
   { myVocabAssignments: VocabAssignmentT[] },
   { fromWeek?: string | null }
 >`
   query MyVocabAssignments($fromWeek: String) {
     myVocabAssignments(fromWeek: $fromWeek) { ${VOCAB_ASSIGNMENT_FIELDS} }
+  }
+`;
+
+// D-#761: the caller's weekly tester duty, one page at a time (newest week first).
+export const MY_VOCAB_ASSIGNMENTS_PAGE_QUERY = gql<
+  { myVocabAssignmentsPage: { rows: VocabAssignmentT[]; total: number; page: number; pageSize: number } },
+  { fromWeek?: string | null; page?: number | null; pageSize?: number | null }
+>`
+  query MyVocabAssignmentsPage($fromWeek: String, $page: Int, $pageSize: Int) {
+    myVocabAssignmentsPage(fromWeek: $fromWeek, page: $page, pageSize: $pageSize) {
+      rows { ${VOCAB_ASSIGNMENT_FIELDS} }
+      total page pageSize
+    }
   }
 `;
 
@@ -8295,6 +8432,33 @@ export const VOCAB_STUDENT_DASHBOARD_QUERY = gql<
   }
 `;
 
+// D-#761: the dashboard WITHOUT perTest (roll-up + persistent words only) — the per-test
+// history comes a page at a time from VOCAB_STUDENT_TESTS_PAGE_QUERY.
+export const VOCAB_STUDENT_DASHBOARD_SUMMARY_QUERY = gql<
+  { vocabStudentDashboard: Omit<VocabStudentDashboardT, "perTest"> },
+  { studentId: string; program?: string | null; persistentMinTests?: number | null }
+>`
+  query VocabStudentDashboardSummary($studentId: String!, $program: String, $persistentMinTests: Int) {
+    vocabStudentDashboard(studentId: $studentId, program: $program, persistentMinTests: $persistentMinTests) {
+      studentId
+      rollup { ${VOCAB_ROLLUP_FIELDS} }
+      persistentWords { ${VOCAB_PERSISTENT_FIELDS} }
+    }
+  }
+`;
+
+export const VOCAB_STUDENT_TESTS_PAGE_QUERY = gql<
+  { vocabStudentTestsPage: { rows: VocabStudentTestEntryT[]; total: number; page: number; pageSize: number } },
+  { studentId: string; program?: string | null; page?: number | null; pageSize?: number | null }
+>`
+  query VocabStudentTestsPage($studentId: String!, $program: String, $page: Int, $pageSize: Int) {
+    vocabStudentTestsPage(studentId: $studentId, program: $program, page: $page, pageSize: $pageSize) {
+      rows { test { ${VOCAB_TEST_META_FIELDS} } result { ${VOCAB_RESULT_FIELDS} } }
+      total page pageSize
+    }
+  }
+`;
+
 export interface VocabClassTestEntryT {
   test: VocabTestMetaT;
   rollup: VocabScoreRollupT;
@@ -8318,6 +8482,33 @@ export const VOCAB_CLASS_DASHBOARD_QUERY = gql<
       tests { test { ${VOCAB_TEST_META_FIELDS} } rollup { ${VOCAB_ROLLUP_FIELDS} } }
       rollup { ${VOCAB_ROLLUP_FIELDS} }
       mostMissed { ${VOCAB_MISSED_FIELDS} }
+    }
+  }
+`;
+
+// D-#761: the class dashboard WITHOUT the per-test rows (roll-up + most-missed only) —
+// the rows come a page at a time from VOCAB_CLASS_TESTS_PAGE_QUERY.
+export const VOCAB_CLASS_DASHBOARD_SUMMARY_QUERY = gql<
+  { vocabClassDashboard: Omit<VocabClassDashboardT, "tests"> },
+  { sectionId: string; program?: string | null; classPersistentPct?: number | null }
+>`
+  query VocabClassDashboardSummary($sectionId: String!, $program: String, $classPersistentPct: Float) {
+    vocabClassDashboard(sectionId: $sectionId, program: $program, classPersistentPct: $classPersistentPct) {
+      sectionId program
+      rollup { ${VOCAB_ROLLUP_FIELDS} }
+      mostMissed { ${VOCAB_MISSED_FIELDS} }
+    }
+  }
+`;
+
+export const VOCAB_CLASS_TESTS_PAGE_QUERY = gql<
+  { vocabClassTestsPage: { rows: VocabClassTestEntryT[]; total: number; page: number; pageSize: number } },
+  { sectionId: string; program?: string | null; page?: number | null; pageSize?: number | null }
+>`
+  query VocabClassTestsPage($sectionId: String!, $program: String, $page: Int, $pageSize: Int) {
+    vocabClassTestsPage(sectionId: $sectionId, program: $program, page: $page, pageSize: $pageSize) {
+      rows { test { ${VOCAB_TEST_META_FIELDS} } rollup { ${VOCAB_ROLLUP_FIELDS} } }
+      total page pageSize
     }
   }
 `;

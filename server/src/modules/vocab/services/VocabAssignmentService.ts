@@ -14,6 +14,7 @@ import { VocabTestAssignment, type IVocabTestAssignment } from "../models/VocabT
 import { writeAudit } from "../../platform/services/AuditService";
 import { assertProgram, VocabError } from "./VocabWordService";
 import { weekStartFor } from "./vocabCalendar";
+import { queryPage, type Page, type PageArgs } from "../../../lib/paging";
 
 export interface AssignTesterInput {
   sectionId: string;
@@ -86,6 +87,35 @@ export async function assignmentHistory(
   return VocabTestAssignment.find({ sectionId: new Types.ObjectId(sectionId), program: prog })
     .sort({ createdAt: -1 })
     .lean() as unknown as Promise<IVocabTestAssignment[]>;
+}
+
+/** D-#761: `assignmentsForTeacher`, one page at a time (newest week first). */
+export function assignmentsForTeacherPage(
+  teacherId: string,
+  fromWeek: Date | undefined,
+  args: PageArgs,
+): Promise<Page<IVocabTestAssignment>> {
+  const query: Record<string, unknown> = { assignedTeacherId: new Types.ObjectId(teacherId) };
+  if (fromWeek) query.weekOf = { $gte: weekStartFor(fromWeek) };
+  return queryPage(VocabTestAssignment, query, { weekOf: -1, createdAt: -1, _id: -1 }, args, (docs) =>
+    docs as unknown as IVocabTestAssignment[],
+  );
+}
+
+/** D-#761: `assignmentHistory`, one page at a time (append-only log, newest first). */
+export function assignmentHistoryPage(
+  sectionId: string,
+  program: string,
+  args: PageArgs,
+): Promise<Page<IVocabTestAssignment>> {
+  const prog = assertProgram(program);
+  return queryPage(
+    VocabTestAssignment,
+    { sectionId: new Types.ObjectId(sectionId), program: prog },
+    { createdAt: -1, _id: -1 },
+    args,
+    (docs) => docs as unknown as IVocabTestAssignment[],
+  );
 }
 
 export interface ScopeLike {

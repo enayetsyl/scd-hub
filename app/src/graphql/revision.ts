@@ -90,6 +90,19 @@ export const STUDENT_REVISION_HISTORY_QUERY = gql<
   }
 `;
 
+// D-#761: one entry per Saturday, forever — the history one page at a time (newest first).
+export const STUDENT_REVISION_HISTORY_PAGE_QUERY = gql<
+  { studentRevisionHistoryPage: { rows: RevisionEntryT[]; total: number; page: number; pageSize: number } },
+  { studentId: string; page?: number | null; pageSize?: number | null }
+>`
+  query StudentRevisionHistoryPage($studentId: String!, $page: Int, $pageSize: Int) {
+    studentRevisionHistoryPage(studentId: $studentId, page: $page, pageSize: $pageSize) {
+      rows { ${REVISION_ENTRY_FIELDS} }
+      total page pageSize
+    }
+  }
+`;
+
 // --- Inputs (SR-1) ---------------------------------------------------------
 
 export interface RevisionJuzMistakesInput {

@@ -7,9 +7,15 @@ import React, { useState } from "react";
 import { ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
-import { VOCAB_STUDENT_DASHBOARD_QUERY, VOCAB_STUDENT_CUMULATIVE_QUERY } from "../../graphql/operations";
+import {
+  VOCAB_STUDENT_DASHBOARD_SUMMARY_QUERY,
+  VOCAB_STUDENT_TESTS_PAGE_QUERY,
+  VOCAB_STUDENT_CUMULATIVE_QUERY,
+} from "../../graphql/operations";
 import { Screen, Card, Body, Muted, Badge, Chip } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
+import { Pager } from "../../components/Pager";
+import { usePageState, usePagedRows, PAGE_SIZE } from "../../lib/paging";
 import { STR, bnNum, vocabProgramLabel, vocabCumulativeModeLabel, isoDateLabel } from "../../lib/labels";
 import { space } from "../../theme/tokens";
 import type { VocabStackParamList } from "../../navigation/types";
@@ -22,10 +28,21 @@ export default function VocabStudentReportScreen({ route }: Props): React.ReactE
   const [mode, setMode] = useState<(typeof MODES)[number]>("WEEKLY");
 
   const [dashQ, refetchDash] = useQuery({
-    query: VOCAB_STUDENT_DASHBOARD_QUERY,
+    query: VOCAB_STUDENT_DASHBOARD_SUMMARY_QUERY,
     variables: { studentId, program: program ?? null },
   });
   const dash = dashQ.data?.vocabStudentDashboard ?? null;
+  // D-#761: the per-test history grows every week — page it on the server; the
+  // persistent-words list grows too, so it pages on the client.
+  const [testsPage, setTestsPage] = usePageState(`${studentId}|${program ?? ""}`);
+  const [testsQ, refetchTests] = useQuery({
+    query: VOCAB_STUDENT_TESTS_PAGE_QUERY,
+    variables: { studentId, program: program ?? null, page: testsPage, pageSize: PAGE_SIZE },
+  });
+  const perTest = testsQ.data?.vocabStudentTestsPage;
+  const { shown: persistentShown, pager: persistentPager } = usePagedRows(dash?.persistentWords ?? [], {
+    resetKey: `${studentId}|${program ?? ""}`,
+  });
   const [cumQ, refetchCum] = useQuery({
     query: VOCAB_STUDENT_CUMULATIVE_QUERY,
     variables: { studentId, program: program ?? null, mode },
@@ -40,6 +57,7 @@ export default function VocabStudentReportScreen({ route }: Props): React.ReactE
           onRetry={() => {
             refetchDash({ requestPolicy: "network-only" });
             refetchCum({ requestPolicy: "network-only" });
+            refetchTests({ requestPolicy: "network-only" });
           }}
           loaderLabel={STR.loading}
         >
@@ -63,7 +81,7 @@ export default function VocabStudentReportScreen({ route }: Props): React.ReactE
             {(dash?.persistentWords ?? []).length === 0 ? (
               <Muted style={{ marginTop: space(2) }}>{STR.empty}</Muted>
             ) : (
-              dash!.persistentWords.map((w) => (
+              persistentShown.map((w) => (
                 <View key={w.wordId} style={{ flexDirection: "row", justifyContent: "space-between", marginTop: space(2) }}>
                   <Body style={{ flexShrink: 1 }}>
                     {w.headword} — {w.banglaMeaning}
@@ -72,6 +90,7 @@ export default function VocabStudentReportScreen({ route }: Props): React.ReactE
                 </View>
               ))
             )}
+            <Pager {...persistentPager} />
           </Card>
 
           {/* Cumulative period */}
@@ -104,28 +123,35 @@ export default function VocabStudentReportScreen({ route }: Props): React.ReactE
           {/* Per-test history */}
           <Card>
             <Body style={{ fontWeight: "700" }}>{STR.vbPerTest}</Body>
-            {(dash?.perTest ?? []).length === 0 ? (
-              <Muted style={{ marginTop: space(2) }}>{STR.vbNoReportData}</Muted>
-            ) : (
-              dash!.perTest.map((e) => (
-                <View key={e.test.testId} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: space(2) }}>
-                  <View style={{ flexShrink: 1 }}>
-                    <Body>
-                      {vocabProgramLabel(e.test.program)} · {e.test.label}
-                    </Body>
-                    <Muted>{isoDateLabel(e.test.testDate)}</Muted>
+            <QueryGate
+              result={testsQ}
+              onRetry={() => refetchTests({ requestPolicy: "network-only" })}
+              loaderLabel={STR.loading}
+            >
+              {(perTest?.rows ?? []).length === 0 ? (
+                <Muted style={{ marginTop: space(2) }}>{STR.vbNoReportData}</Muted>
+              ) : (
+                perTest!.rows.map((e) => (
+                  <View key={e.test.testId} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: space(2) }}>
+                    <View style={{ flexShrink: 1 }}>
+                      <Body>
+                        {vocabProgramLabel(e.test.program)} · {e.test.label}
+                      </Body>
+                      <Muted>{isoDateLabel(e.test.testDate)}</Muted>
+                    </View>
+                    <Badge
+                      text={
+                        e.result.status === "ABSENT"
+                          ? STR.vbAbsent
+                          : `${bnNum(e.result.score ?? 0)}/${bnNum(e.result.totalMarks)}`
+                      }
+                      tone={e.result.status === "ABSENT" ? "muted" : "ok"}
+                    />
                   </View>
-                  <Badge
-                    text={
-                      e.result.status === "ABSENT"
-                        ? STR.vbAbsent
-                        : `${bnNum(e.result.score ?? 0)}/${bnNum(e.result.totalMarks)}`
-                    }
-                    tone={e.result.status === "ABSENT" ? "muted" : "ok"}
-                  />
-                </View>
-              ))
-            )}
+                ))
+              )}
+              <Pager page={testsPage} pageSize={PAGE_SIZE} total={perTest?.total ?? 0} onPage={setTestsPage} />
+            </QueryGate>
           </Card>
         </QueryGate>
       </ScrollView>

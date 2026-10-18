@@ -31,6 +31,7 @@ import { liveWindow } from "../../routine/liveWindow";
 import { Student } from "../../foundation/models/Student";
 import { resolveDayType } from "../../routine/calendar";
 import { writeAudit } from "../../platform/services/AuditService";
+import { queryPage, type Page, type PageArgs } from "../../../lib/paging";
 
 /** A surfaced service error (Bangla-friendly message), mirroring the tracker pattern. */
 export class RevisionError extends Error {}
@@ -396,6 +397,14 @@ export async function studentRevisionHistory(studentId: string): Promise<Revisio
     .sort({ date: -1 })
     .lean()) as unknown as IRevisionEntry[];
   return docs.map(shape);
+}
+
+/** D-#761: studentRevisionHistory, one page at a time (newest first, _id tie-break). */
+export async function studentRevisionHistoryPage(studentId: string, args: PageArgs): Promise<Page<RevisionEntryShape>> {
+  if (!Types.ObjectId.isValid(studentId)) throw new RevisionError("Invalid student id");
+  return queryPage(RevisionEntry, { studentId: new Types.ObjectId(studentId) }, { date: -1, _id: -1 }, args, (docs) =>
+    (docs as unknown as IRevisionEntry[]).map(shape),
+  );
 }
 
 function shapeGroup(g: { _id: Types.ObjectId; code: string; nameBn: string; level: string; gender: string }): RevisionGroupShape {

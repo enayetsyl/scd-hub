@@ -121,6 +121,19 @@ export const SCRIPT_BUNDLES_QUERY = gql<
   }
 `;
 
+// D-#761: the archive search without the old silent 500-row cap, one page at a time.
+export const SCRIPT_BUNDLES_PAGE_QUERY = gql<
+  { scriptBundlesPage: { rows: ScriptBundleT[]; total: number; page: number; pageSize: number } },
+  { labelQuery?: string | null; status?: string | null; classLevel?: number | null; page?: number | null; pageSize?: number | null }
+>`
+  query ScriptBundlesPage($labelQuery: String, $status: String, $classLevel: Int, $page: Int, $pageSize: Int) {
+    scriptBundlesPage(labelQuery: $labelQuery, status: $status, classLevel: $classLevel, page: $page, pageSize: $pageSize) {
+      rows { ${BUNDLE_FIELDS} }
+      total page pageSize
+    }
+  }
+`;
+
 export const OPEN_CHECKOUTS_QUERY = gql<{ openScriptCheckouts: ScriptBundleT[] }, NoVars>`
   query OpenScriptCheckouts {
     openScriptCheckouts { ${BUNDLE_FIELDS} }
@@ -136,6 +149,19 @@ export const PENDING_ACKS_QUERY = gql<{ pendingScriptAcks: ScriptBundleT[] }, No
 export const DISPOSABLE_BUNDLES_QUERY = gql<{ disposableScriptBundles: ScriptBundleT[] }, NoVars>`
   query DisposableScriptBundles {
     disposableScriptBundles { ${BUNDLE_FIELDS} }
+  }
+`;
+
+// D-#761: the retention list, one page at a time (oldest exam first).
+export const DISPOSABLE_BUNDLES_PAGE_QUERY = gql<
+  { disposableScriptBundlesPage: { rows: ScriptBundleT[]; total: number; page: number; pageSize: number } },
+  { page?: number | null; pageSize?: number | null }
+>`
+  query DisposableScriptBundlesPage($page: Int, $pageSize: Int) {
+    disposableScriptBundlesPage(page: $page, pageSize: $pageSize) {
+      rows { ${BUNDLE_FIELDS} }
+      total page pageSize
+    }
   }
 `;
 
