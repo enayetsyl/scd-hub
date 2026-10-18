@@ -19,6 +19,7 @@ import { BookBuildJob, type IBookBuildJob } from "../models/BookBuildJob";
 import { BookEscalation } from "../models/BookEscalation";
 import { bookStaleness } from "./BookImageService";
 import { writeBookEvent } from "../models/BookEvent";
+import { queryPage, type Page, type PageArgs } from "../../../lib/paging";
 
 export class BuildGateError extends Error {
   readonly reasons: string[];
@@ -200,6 +201,12 @@ export async function claimNextJob(workerId: string): Promise<IBookBuildJob | nu
     { $set: { state: "RUNNING", startedAt: new Date(), workerId } },
     { sort: { queuedAt: 1 }, new: true },
   );
+}
+
+/** D-#761: a book's render history, newest first, one page at a time. The
+ *  `supportBookBuildJobs` query stops at its newest 25 (max 100) with no way past. */
+export function buildJobsPage(bookId: string, args: PageArgs): Promise<Page<IBookBuildJob>> {
+  return queryPage(BookBuildJob, { bookId }, { queuedAt: -1, _id: -1 }, args, (docs) => docs as IBookBuildJob[]);
 }
 
 /** Hand a job back to the queue — used when a worker is killed mid-render, so a

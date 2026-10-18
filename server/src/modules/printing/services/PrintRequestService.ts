@@ -33,6 +33,7 @@ import {
 } from "../../attendance/services/AttendanceReportService";
 import { dateKeyOf, isValidDateKey, parseDateKey } from "../../attendance/dates";
 import { publishRealtime } from "../../realtime/bus";
+import { pageOf, queryPage, type Page, type PageArgs } from "../../../lib/paging";
 
 export class PrintRequestError extends Error {
   constructor(msg: string) {
@@ -569,6 +570,27 @@ export async function myPrintRequests(userId: string, limit = 50): Promise<IPrin
     .lean() as unknown as Promise<IPrintRequest[]>;
 }
 
+/** The statuses "in flight" for the requester's own list — the rest (DELIVERED,
+ *  CANCELLED) is past history behind the fold (D-#302). */
+const ACTIVE_STATUSES = ["REQUESTED", "PRINTED"] as const;
+
+/**
+ * D-#761: a teacher's own requests, PAGED. `myPrintRequests` stops at its newest 50 with
+ * no way past them, so a busy term's older requests (and the past-requests count) went
+ * silently missing. `active`: true = in flight, false = past, omitted = everything.
+ */
+export function myPrintRequestsPage(
+  userId: string,
+  active: boolean | null | undefined,
+  args: PageArgs,
+): Promise<Page<IPrintRequest>> {
+  if (!Types.ObjectId.isValid(userId)) throw new PrintRequestError("Invalid user");
+  const q: Record<string, unknown> = { requestedBy: new Types.ObjectId(userId) };
+  if (active === true) q.status = { $in: ACTIVE_STATUSES };
+  if (active === false) q.status = { $nin: ACTIVE_STATUSES };
+  return queryPage(PrintRequest, q, { requestedAt: -1, _id: -1 }, args, (docs) => docs as unknown as IPrintRequest[]);
+}
+
 export async function printRequestById(id: string): Promise<IPrintRequest | null> {
   return PrintRequest.findById(id).lean() as unknown as Promise<IPrintRequest | null>;
 }
@@ -719,6 +741,25 @@ function printedAtOf(doc: IPrintRequest): Date {
  * the row and calls `reprintPrintRequest` on `latest`.
  */
 export async function printHistory(filter: PrintHistoryFilter = {}): Promise<PrintHistoryPage> {
+  const docs = (await PrintRequest.find(printHistoryQuery(filter))
+    .sort({ printedAt: -1, requestedAt: -1 })
+    .limit(PRINT_HISTORY_SCAN_CAP)
+    .lean()) as unknown as IPrintRequest[];
+
+  const rows = await groupPrintHistory(docs);
+  const limit = Math.min(Math.max(filter.limit ?? PRINT_HISTORY_DEFAULT_LIMIT, 1), PRINT_HISTORY_MAX_LIMIT);
+  return {
+    rows: rows.slice(0, limit),
+    scannedCapped: docs.length === PRINT_HISTORY_SCAN_CAP,
+    truncated: rows.length > limit,
+    totalRows: rows.length,
+  };
+}
+
+/** The job filter behind every history read — `printHistory`, and since D-#761
+ *  `printHistoryPage` / `printHistoryFacets`. Throws on a malformed argument before any
+ *  database call. */
+function printHistoryQuery(filter: PrintHistoryFilter): Record<string, unknown> {
   const q: Record<string, unknown> = { status: { $in: PRINTED_STATUSES } };
   // Two clauses below each need their own `$or`, so they are AND-ed explicitly rather
   // than assigned to `q.$or` — the second assignment would silently drop the first.
@@ -773,12 +814,12 @@ export async function printHistory(filter: PrintHistoryFilter = {}): Promise<Pri
   }
 
   if (and.length) q.$and = and;
+  return q;
+}
 
-  const docs = (await PrintRequest.find(q)
-    .sort({ printedAt: -1, requestedAt: -1 })
-    .limit(PRINT_HISTORY_SCAN_CAP)
-    .lean()) as unknown as IPrintRequest[];
-
+/** Printed jobs → ONE ROW PER DOCUMENT, class levels resolved, most recently printed
+ *  first (D-#461). Reads only the `HISTORY_GROUP_FIELDS` of each job. */
+async function groupPrintHistory(docs: IPrintRequest[]): Promise<PrintHistoryRow[]> {
   const groups = new Map<string, PrintHistoryRow>();
   for (const doc of docs) {
     const key = historyKey(doc);
@@ -831,15 +872,102 @@ export async function printHistory(filter: PrintHistoryFilter = {}): Promise<Pri
       // A job with no class sorts last, not as level 0 (which would put it before class 1).
       (a.classLevel ?? Number.MAX_SAFE_INTEGER) - (b.classLevel ?? Number.MAX_SAFE_INTEGER) ||
       (a.latest.subject ?? "").localeCompare(b.latest.subject ?? "") ||
-      (purposeOrder.get(a.latest.purpose) ?? 99) - (purposeOrder.get(b.latest.purpose) ?? 99),
+      (purposeOrder.get(a.latest.purpose) ?? 99) - (purposeOrder.get(b.latest.purpose) ?? 99) ||
+      // D-#761: a total order, so a row never shows on two pages (or on none).
+      a.key.localeCompare(b.key),
   );
+  return rows;
+}
 
-  const limit = Math.min(Math.max(filter.limit ?? PRINT_HISTORY_DEFAULT_LIMIT, 1), PRINT_HISTORY_MAX_LIMIT);
+// ---------------------------------------------------------------------------
+// D-#761 — the history, PAGED. `printHistory` reads at most PRINT_HISTORY_SCAN_CAP jobs
+// and hands every grouped row to the screen at once (the owner saw "959 documents" in
+// one scroll, under a "prints older than this window may be missing" notice).
+// ---------------------------------------------------------------------------
+
+/** What the grouping reads off a job. The paged scan projects to these, so reading the
+ *  whole printed history stays light; only a page's `latest` jobs are loaded in full. */
+const HISTORY_GROUP_FIELDS =
+  "sourceType setId contentArtifactId fileIds linkUrl classId copiesClassId sectionId subject purpose printedAt requestedAt requestedBy";
+
+export interface PrintHistoryPageFilter extends Omit<PrintHistoryFilter, "limit"> {
+  /** The Office's teacher chip: documents this person printed AT LEAST ONCE. Row-level,
+   *  as the screen always filtered it — unlike `requestedBy` (the teacher's own-row
+   *  scope), which keeps only that person's jobs inside each row. */
+  printedBy?: string | null;
+}
+
+/** Every printed job matching the filter, grouped — no scan cap. */
+async function allHistoryRows(filter: PrintHistoryFilter): Promise<PrintHistoryRow[]> {
+  const docs = (await PrintRequest.find(printHistoryQuery(filter))
+    .select(HISTORY_GROUP_FIELDS)
+    .sort({ printedAt: -1, requestedAt: -1, _id: -1 })
+    .lean()) as unknown as IPrintRequest[];
+  return groupPrintHistory(docs);
+}
+
+/**
+ * One page of the reprint history, every document reachable. Same rows, same order and
+ * same filters as `printHistory`; `total` counts every matching document.
+ */
+export async function printHistoryPage(
+  filter: PrintHistoryPageFilter,
+  args: PageArgs,
+): Promise<Page<PrintHistoryRow>> {
+  if (filter.printedBy && !Types.ObjectId.isValid(filter.printedBy)) {
+    throw new PrintRequestError("Invalid printedBy");
+  }
+  let rows = await allHistoryRows(filter);
+  if (filter.printedBy) rows = rows.filter((r) => r.requesterIds.includes(filter.printedBy as string));
+  const page = pageOf(rows, args);
+  if (page.rows.length === 0) return page;
+  // The page's representatives in full (title, files, print settings): the scan only
+  // carried the grouping fields.
+  const full = (await PrintRequest.find({ _id: { $in: page.rows.map((r) => r.latest._id) } })
+    .lean()) as unknown as IPrintRequest[];
+  const byId = new Map(full.map((d) => [d._id.toString(), d]));
+  return { ...page, rows: page.rows.map((r) => ({ ...r, latest: byId.get(r.latest._id.toString()) ?? r.latest })) };
+}
+
+export interface PrintHistoryFacets {
+  /** Classes the history names, as (effective class id, level). */
+  classes: Array<{ classId: string; classLevel: number | null }>;
+  /** Some document names no class either way. */
+  hasNoClass: boolean;
+  /** Distinct subject codes, sorted. */
+  subjects: string[];
+  /** Distinct purposes, most recently printed first. */
+  purposes: string[];
+  /** Distinct requesters, most recently printed first. */
+  requesterIds: string[];
+}
+
+/**
+ * The chip options for the paged history (D-#761). The screen used to read them off the
+ * rows it had; with one page on hand that would hide every subject/teacher on page 2,
+ * so they come from the whole history inside the scope + printed-on window instead.
+ * The chips' own selections do NOT narrow this — they are the options to pick from.
+ */
+export async function printHistoryFacets(
+  filter: Pick<PrintHistoryFilter, "requestedBy" | "fromKey" | "toKey">,
+): Promise<PrintHistoryFacets> {
+  const rows = await allHistoryRows({ requestedBy: filter.requestedBy, fromKey: filter.fromKey, toKey: filter.toKey });
+  const classes = new Map<string, number | null>();
+  const subjects = new Set<string>();
+  const purposes = new Set<string>();
+  const requesters = new Set<string>();
+  for (const r of rows) {
+    if (r.classId) classes.set(r.classId, r.classLevel);
+    if (r.latest.subject) subjects.add(r.latest.subject);
+    purposes.add(r.latest.purpose);
+    for (const id of r.requesterIds) requesters.add(id);
+  }
   return {
-    rows: rows.slice(0, limit),
-    scannedCapped: docs.length === PRINT_HISTORY_SCAN_CAP,
-    truncated: rows.length > limit,
-    totalRows: rows.length,
+    classes: [...classes.entries()].map(([classId, classLevel]) => ({ classId, classLevel })),
+    hasNoClass: rows.some((r) => !r.classId),
+    subjects: [...subjects].sort(),
+    purposes: [...purposes],
+    requesterIds: [...requesters],
   };
 }
 

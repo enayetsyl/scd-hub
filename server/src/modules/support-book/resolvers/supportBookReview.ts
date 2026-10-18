@@ -21,7 +21,9 @@ import { BookReviewRound } from "../models/BookReviewRound";
 import { BookEscalation } from "../models/BookEscalation";
 import {
   assignReview, submitReview, signOffLesson, raiseEscalation, replyToEscalation, resolveEscalation,
+  escalationsPage,
 } from "../services/BookReviewService";
+import { pageRef } from "../../../pageRef";
 import { writeAudit } from "../../platform/services/AuditService";
 import { isBookDbReady } from "../../../bookDb";
 
@@ -162,6 +164,31 @@ builder.queryField("supportBookEscalations", (t) =>
       if (args.openOnly !== false) q.state = { $in: ["OPEN", "ANSWERED"] };
       const rows = await BookEscalation.find(q).sort({ createdAt: 1 }).lean();
       return rows.map((e) => toEscalation(e as unknown as Record<string, unknown>));
+    },
+  }),
+);
+
+// D-#761: the inbox, paged — with "open only" off `supportBookEscalations` is every thread.
+const EscalationPageRef = pageRef("SupportBookEscalationPage", EscalationRef);
+
+builder.queryField("supportBookEscalationsPage", (t) =>
+  t.field({
+    type: EscalationPageRef,
+    description:
+      "The senior reviewer's inbox, OLDEST FIRST, one page at a time (D-#761). Same filters as " +
+      "`supportBookEscalations`. Requires book:read.",
+    authScopes: { hasPermission: "book:read" },
+    args: {
+      bookId: t.arg.string({ required: false }),
+      lessonNo: t.arg.int({ required: false }),
+      openOnly: t.arg.boolean({ required: false }),
+      page: t.arg.int({ required: false }),
+      pageSize: t.arg.int({ required: false }),
+    },
+    resolve: async (_root, args) => {
+      assertBookPlane();
+      const page = await escalationsPage(args, args);
+      return { ...page, rows: page.rows.map((e) => toEscalation(e as unknown as Record<string, unknown>)) };
     },
   }),
 );
