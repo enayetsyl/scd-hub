@@ -1,5 +1,12 @@
 # STATUS
 
+- 2026-10-18 (cont. 6): **VM — origin lockdown done (D-#767) except the optional ufw allowlist.**
+  - **Dev URL is now `https://scdhub-dev.<domain>`** (same password).
+  - Origin CA cert + Global Authenticated Origin Pulls; every host direct to the VM IP fails the TLS handshake.
+  - Verified through Cloudflare: prod web/API/bundle/APK/version.json, dev and GlitchTip all 200.
+  - **Owner to do:** delete the `dev.scdhub` DNS record in Cloudflare.
+  - **Pending:** the ufw step (80/443 only from Cloudflare ranges) was blocked by the agent's auto-mode guard. It is optional, because the TLS lock already refuses direct traffic.
+  - **Watch:** the Cloudflare origin-pull CA expires 2029-11-01; replace `/etc/caddy/certs/cf-origin-pull-ca.pem` before then.
 - 2026-10-18 (cont. 5): **VM — dev server switched to `NODE_ENV=production` (owner OK), closing the D-#766 gap on the public dev API.** systemd unit + dev `.env` edited (backups `*.bak-20261018-d766`), service restarted. Verified: dev GraphiQL 406, introspection refused, queries + login path work, no dev-mode error detail. GlitchTip unaffected (`SENTRY_ENVIRONMENT=development` pinned). GraphiQL now exists only on a local machine.
 - 2026-10-18 (cont. 4): **LIVE — login lockout (D-#765) + GraphiQL/introspection off (D-#766). #1072 → dev (`aa8cd56b`, dev deploy green); reached prod in the #1073 promotion (`6a4411f6`, prod deploy green). Server-only, no OTA.**
   - **Prod verified:** web 200, `/healthz` ok, GraphiQL gone, introspection refused, `__typename` + login work. The lockout itself was not exercised on prod, because that would lock a real account; it is covered by `loginThrottle.test.ts`.

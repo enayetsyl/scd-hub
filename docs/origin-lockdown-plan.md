@@ -1,7 +1,19 @@
 # Origin lockdown plan (D-#766 follow-up)
 
-**Status:** planned, not started. Run it as its own session; it needs the Cloudflare
-dashboard and the Oracle Cloud console, so the operator must take part.
+**Status (2026-10-18, D-#767): DONE except step 2(b), the firewall.**
+
+- Step 0: done. deploy.sh names `scdhub-errors`, and the `errors.scdhub` DNS record is deleted.
+- Step 1: done. Dev is `scdhub-dev.<domain>` (proxied). Caddy no longer serves
+  `dev.scdhub`; delete its DNS record.
+- Step 2(a): done. The Origin CA cert (`*.<domain>` + `<domain>`, to 2041) is in
+  `/etc/caddy/certs/`. **Global** Authenticated Origin Pulls is on in Cloudflare, and every
+  site imports the `(cloudflare_only)` snippet (`client_auth require_and_verify` against
+  `cf-origin-pull-ca.pem`, which **expires 2029-11-01**). Caddy backups:
+  `Caddyfile.bak-20261018-lockdown0` (before) and `-lockdown1` (after the dev stage).
+- Step 2(b): **pending.** `ufw` still allows 80/443 from anywhere. It is optional:
+  without the Cloudflare client certificate, the TLS handshake already fails.
+- Step 3: verified. Every host sent direct to `<vm-ip>` fails the TLS handshake. Through
+  Cloudflare: prod web/API/bundle/APK/`version.json`, dev and GlitchTip all 200.
 
 **Repo is public:** this file uses `<domain>` for the zone and `<vm-ip>` for the server.
 The real values live in the operator's notes, never here.
