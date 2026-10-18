@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<title>অভিভাবক সভা — বিষয় শিক্ষকের নির্দেশিকা</title>
+<style>
+@page { size: A4; margin: 13mm 13mm 15mm 13mm; }
+:root {
+  --green: #176c45; --green-soft: #e3f0e8; --ink: #1d2320; --muted: #5b6660;
+  --line: #dde3df; --red: #b42318; --red-soft: #fbe3e1; --amber: #a95a07;
+  --amber-soft: #fdecd6; --blue: #1d5fa8; --blue-soft: #e2edf9; --gold: #8f6400; --gold-soft: #f3e7c9; --paper: #ffffff;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--paper); color: var(--ink);
+  font-family: "Nirmala UI", "Noto Sans Bengali", "Segoe UI", Arial, sans-serif; font-size: 10.2pt; line-height: 1.55; }
+h1 { font-size: 25pt; margin: 0 0 4px; color: var(--green); letter-spacing: -0.3px; }
+h2 { font-size: 15pt; color: var(--green); margin: 0 0 6px; padding-bottom: 5px; border-bottom: 2px solid var(--green); }
+h3 { font-size: 11.5pt; margin: 12px 0 4px; }
+p { margin: 4px 0 8px; }
+ul, ol { margin: 4px 0 8px; padding-left: 20px; }
+li { margin: 2px 0; }
+.page { page-break-after: always; }
+.page:last-child { page-break-after: auto; }
+.lede { color: var(--muted); font-size: 11pt; margin-bottom: 8px; }
+.role-tag { display: inline-block; font-size: 8.5pt; font-weight: 700; padding: 2px 8px; border-radius: 4px; color: #fff; background: var(--green); margin-bottom: 6px; }
+.role-tag.t { background: var(--blue); } .role-tag.g { background: var(--amber); } .role-tag.p { background: var(--gold); }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
+.two.wl { grid-template-columns: 1.25fr 1fr; }
+.two.wr { grid-template-columns: 1fr 1.25fr; }
+.tip { border-left: 4px solid var(--green); background: var(--green-soft); padding: 7px 10px; border-radius: 0 6px 6px 0; margin: 8px 0; font-size: 9.8pt; }
+.warn { border-left-color: var(--amber); background: var(--amber-soft); }
+.info { border-left-color: var(--blue); background: var(--blue-soft); }
+table.ref { width: 100%; border-collapse: collapse; font-size: 9.6pt; margin: 6px 0 10px; }
+table.ref th, table.ref td { border: 1px solid var(--line); padding: 5px 7px; text-align: left; vertical-align: top; }
+table.ref th { background: #f3f6f4; font-weight: 600; }
+.n { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; border-radius: 50%;
+  background: #d92d20; color: #fff; font-size: 8.5pt; font-weight: 700; flex: none; vertical-align: middle; padding: 0 4px; }
+.steps { list-style: none; padding: 0; }
+.steps > li { display: flex; gap: 8px; margin: 6px 0; }
+.steps > li > span:last-child { flex: 1; min-width: 0; }
+.steps ul { margin: 3px 0 3px; padding-left: 18px; }
+.steps ul li { display: list-item; margin: 1px 0; }
+.avoid { break-inside: avoid; }
+.k { display: inline-block; border: 1px solid #c9d2cd; border-radius: 5px; padding: 0 6px; background: #f6f8f7; font-weight: 600; font-size: 9.4pt; white-space: nowrap; }
+
+/* cover */
+.cover-band { background: var(--green); color: #fff; border-radius: 10px; padding: 18px 22px 14px; margin-bottom: 12px; }
+.cover-band h1 { color: #fff; }
+.cover-band .sub { font-size: 12.5pt; opacity: .93; }
+.cover-band .en { font-size: 10.5pt; opacity: .85; margin-top: 2px; font-family: "Segoe UI", sans-serif; }
+.flow { display: flex; align-items: stretch; gap: 5px; margin: 6px 0 10px; }
+.flow .box { flex: 1; border: 1.5px solid #c9d2cd; border-radius: 8px; padding: 7px 8px; font-size: 9pt; background: #fbfdfc; color: var(--muted); }
+.flow .box b { display: block; font-size: 9pt; margin-bottom: 2px; color: var(--ink); }
+.flow .box.me { border-color: var(--green); background: var(--green-soft); color: var(--ink); }
+.flow .box.me b { color: var(--green); }
+.flow .arr { align-self: center; color: var(--green); font-size: 14pt; font-weight: 700; }
+.timeline { border-left: 3px solid var(--green); margin: 6px 0 10px 6px; padding-left: 12px; }
+.timeline div { position: relative; margin: 6px 0; }
+.timeline div::before { content: ""; position: absolute; left: -18px; top: 6px; width: 9px; height: 9px; border-radius: 50%; background: var(--green); }
+.timeline b { color: var(--green); }
+
+/* mockups */
+.mock { border: 1px solid #c9d2cd; border-radius: 10px; overflow: hidden; background: #f6f8f7; position: relative; box-shadow: 0 2px 6px rgba(0,0,0,.08); font-size: 8.8pt; }
+.bar { background: var(--green); color: #fff; padding: 7px 11px; font-weight: 700; font-size: 10pt; display: flex; gap: 10px; align-items: center; }
+.bar .ic { opacity: .9; font-weight: 400; }
+.mbody { padding: 8px; }
+.phone { width: 245px; margin: 0 auto; border: 7px solid #26302b; border-radius: 22px; overflow: hidden; background: #f6f8f7; position: relative; box-shadow: 0 3px 8px rgba(0,0,0,.15); font-size: 8.6pt; }
+.phone .bar { font-size: 9.5pt; }
+.card { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px; margin-bottom: 6px; position: relative; }
+.card.goldb { border: 2px solid var(--gold); }
+.card .t { font-weight: 700; font-size: 9.4pt; } .card .h { color: var(--muted); font-size: 7.9pt; }
+.row { border-top: 1px solid var(--line); padding: 4px 0; display: flex; justify-content: space-between; gap: 6px; align-items: center; }
+.pill { border-radius: 6px; padding: 4px 8px; margin: 3px 0; display: flex; justify-content: space-between; font-size: 8.4pt; }
+.pill.due { background: var(--amber-soft); } .pill.due b:last-child { color: var(--amber); }
+.pill.ready { background: var(--blue-soft); } .pill.ready b:last-child { color: var(--blue); }
+.pill.done { background: #ecf2ee; }
+.pill.wait { background: #ecf2ee; display: block; } .pill.wait span { display: block; color: var(--amber); font-size: 7.6pt; }
+.bd { display: inline-block; border-radius: 99px; padding: 0 7px; font-size: 7.6pt; line-height: 1.7; font-weight: 600; white-space: nowrap; }
+.bd.r { background: var(--red-soft); color: var(--red); } .bd.a { background: var(--amber-soft); color: var(--amber); }
+.bd.b { background: var(--blue-soft); color: var(--blue); } .bd.g { background: var(--green-soft); color: var(--green); } .bd.y { background: var(--gold-soft); color: #4a3400; }
+.btn { display: inline-block; border-radius: 6px; padding: 2px 9px; font-size: 8.3pt; font-weight: 600; border: 1px solid var(--green); color: var(--green); background: #fff; margin: 2px 2px 2px 0; }
+.btn.f { background: var(--green); color: #fff; }
+.btn.o { border-color: #c9d2cd; color: var(--ink); }
+.btn.gh { border-color: transparent; color: var(--green); }
+.input { background: #fff; border: 1px solid #c9d2cd; border-radius: 5px; padding: 3px 6px; font-size: 8.3pt; min-height: 20px; margin-bottom: 4px; }
+.input.tall { min-height: 34px; }
+.lab { font-size: 7.6pt; color: var(--muted); }
+.lab.s { color: var(--green); font-weight: 700; } .lab.c { color: var(--amber); font-weight: 700; }
+.hint { background: var(--blue-soft); color: var(--blue); border-radius: 6px; padding: 4px 7px; font-size: 7.6pt; margin-bottom: 5px; }
+.tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-bottom: 6px; }
+.tile { background: #fff; border: 1px solid var(--line); border-radius: 7px; padding: 5px 6px; }
+.tile .l { font-size: 7.3pt; color: var(--muted); } .tile .v { font-size: 13pt; font-weight: 700; line-height: 1.2; }
+.tile .s { font-size: 6.8pt; color: var(--muted); line-height: 1.25; }
+.bar2 { height: 5px; border-radius: 99px; background: #ecf2ee; overflow: hidden; margin: 2px 0; }
+.bar2 i { display: block; height: 5px; background: var(--green); }
+.ntile { background: #fff; border: 1px solid var(--line); border-radius: 7px; padding: 4px 7px; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
+.ntile .l { font-size: 7.2pt; color: var(--muted); } .ntile .v { font-weight: 700; font-size: 8.8pt; } .ntile .s { font-size: 7pt; color: var(--amber); }
+.ntile .lk { color: var(--blue); font-size: 7.6pt; font-weight: 600; }
+.call { position: absolute; width: 17px; height: 17px; border-radius: 50%; background: #d92d20; color: #fff; font-size: 8pt;
+  font-weight: 700; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 2px #fff; z-index: 2; }
+.notif { background: #fff; border-radius: 9px; padding: 7px 9px; box-shadow: 0 1px 4px rgba(0,0,0,.18); margin: 8px; font-size: 8.3pt; position: relative; }
+.notif .app { font-size: 7.2pt; color: var(--muted); margin-bottom: 2px; }
+.wa { background: #e6f4ea; border-radius: 9px; padding: 8px 10px; font-size: 9pt; margin: 6px 0; border: 1px solid #c5e1cd; }
+.footer-note { color: var(--muted); font-size: 8.5pt; margin-top: 10px; }
+.faq dt { font-weight: 700; margin-top: 7px; }
+.faq dd { margin: 2px 0 0 0; }
+
+</style>
+</head>
+<body>
+<!-- ============ পৃষ্ঠা ১ — পরিচিতি + আজ কার্ড ============ -->
+<section class="page">
+  <div class="cover-band" style="background:var(--blue)">
+    <h1>অভিভাবক সভা — বিষয় শিক্ষকের নির্দেশিকা</h1>
+    <div class="sub">আপনার পড়ানো প্রতিটি শিক্ষার্থী সম্পর্কে মন্তব্য লেখা</div>
+    <div class="en">Parents' Meeting — Subject Teacher's Guide</div>
+  </div>
+
+  <p class="lede">অভিভাবক সভার আগে আপনি যে যে শ্রেণিতে যে বিষয় পড়ান, সেই শ্রেণির প্রতিটি শিক্ষার্থী সম্পর্কে দুটি কথা লিখবেন:
+  <b>ভালো দিক</b> ও <b>চিন্তার বিষয়</b>। আপনার মন্তব্য পড়ে শ্রেণি শিক্ষক সারাংশ লেখেন, আর প্রধান শিক্ষক সভায় অভিভাবকের সাথে কথা বলেন।</p>
+
+  <h3>পুরো যাত্রা — আপনার কাজ সবুজ রঙে</h3>
+  <div class="flow">
+    <div class="box"><b>১ · সভা ও সময়সূচি</b>অফিস সভা তৈরি করে, অভিভাবকদের সময় পাঠায়।</div>
+    <div class="arr">→</div>
+    <div class="box me"><b>২ · আপনার মন্তব্য</b>প্রতিটি শিক্ষার্থীর জন্য ভালো দিক ও চিন্তার বিষয়।</div>
+    <div class="arr">→</div>
+    <div class="box"><b>৩ · শ্রেণি শিক্ষকের সারাংশ</b>সব বিষয় শিক্ষকের মন্তব্য পড়ে।</div>
+    <div class="arr">→</div>
+    <div class="box"><b>৪ · চূড়ান্ত মন্তব্য</b>প্রধান শিক্ষক / অফিস।</div>
+    <div class="arr">→</div>
+    <div class="box"><b>৫ · সভার দিন</b>সব মন্তব্য একসাথে অভিভাবকের সামনে।</div>
+  </div>
+
+  <div class="two wl">
+    <div>
+      <h3>কোথায় পাবেন</h3>
+      <p>অফিস মন্তব্য সংগ্রহ শুরু করলেই আপনার <b>আজ</b> পাতায় <b>অভিভাবক সভার মন্তব্য</b> কার্ড আসে। আলাদা কোনো মেনু খুঁজতে হবে না।</p>
+      <ol class="steps">
+        <li><span class="n">১</span><span>উপরে লেখা থাকে কতজন <b>বাকি</b>, সভার তারিখ আর আপনার মন্তব্যের শেষ তারিখ।</span></li>
+        <li><span class="n">২</span><span>প্রতিটি শ্রেণি ও বিষয় আলাদা সারি — যেমন “নার্সারি · গণিত”, “শ্রেণি ৩ · গণিত”। সারি চাপলে খোলে বা বন্ধ হয়; কতজনের লেখা হয়েছে তা দাগে দেখায়।</span></li>
+        <li><span class="n">৩</span><span>যাঁদের মন্তব্য বাকি তাঁদের নাম কমলা রঙে, পাশে <span class="k">লিখুন ›</span>। চাপলেই লেখার পাতা খোলে।</span></li>
+        <li><span class="n">৪</span><span>লেখা হয়ে যাওয়াদের দেখতে <span class="k">লেখা হয়ে গেছে দেখুন</span> চাপুন; সেখান থেকে বদলানোও যায়।</span></li>
+      </ol>
+      <div class="tip info">কোন শ্রেণিতে কোন বিষয় আপনার, তা রুটিন থেকে নেওয়া হয়েছে। কুরআন / আরবি দলের শিক্ষক হলে আপনার দলের শিক্ষার্থীরা আসবে।
+      তালিকায় ভুল দেখলে অফিসকে বলুন — তাঁরা রুটিন ঠিক করে তালিকা হালনাগাদ করবেন।</div>
+      <div class="tip">শিক্ষার্থী বেশি হলে প্রতিদিন কয়েকজন করে লিখুন — শেষ দিনে সব জমে গেলে মন্তব্য ভালো হয় না।</div>
+    </div>
+    <div>
+      <div class="phone">
+        <div class="bar">☰ &nbsp;আজ</div>
+        <div class="mbody">
+          <div class="card"><div class="t">অভিভাবক সভার মন্তব্য <span class="bd a" style="float:right">৪ বাকি</span></div>
+            <div class="h">সভা রবিবার, ১ নভেম্বর · আপনার মন্তব্যের শেষ তারিখ মঙ্গলবার, ২৭ অক্টোবর</div>
+            <span class="call" style="right:-6px;top:4px">১</span>
+            <div class="row" style="display:block"><b>নার্সারি · গণিত</b> <span style="float:right">▴</span>
+              <div class="bar2"><i style="width:0%"></i></div><div class="h">০/২ জনের লেখা হয়েছে</div></div>
+            <span class="call" style="left:-6px;top:58px">২</span>
+            <div class="pill due"><b>নাফিস</b><b>লিখুন ›</b></div>
+            <div class="pill due"><b>নাবিলা</b><b>লিখুন ›</b></div>
+            <span class="call" style="right:-6px;top:96px">৩</span>
+            <div class="row" style="display:block"><b>শ্রেণি ৩ · গণিত</b> <span style="float:right">▾</span>
+              <div class="bar2"><i style="width:33%"></i></div><div class="h">১/৩ জনের লেখা হয়েছে</div></div>
+            <div class="h" style="color:var(--blue);font-weight:600">লেখা হয়ে গেছে দেখুন (১)</div>
+            <span class="call" style="right:-6px;bottom:4px">৪</span>
+          </div>
+          <div class="card"><div class="t">আজকের ক্লাস</div><div class="h">(আজ পাতার অন্য কার্ডগুলো নিচে থাকে)</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ পৃষ্ঠা ২ — লেখার পাতা ============ -->
+<section class="page">
+  <h2>মন্তব্য লেখা</h2>
+  <div class="two wr">
+    <div>
+      <div class="phone">
+        <div class="bar">← &nbsp;বুশরা</div>
+        <div class="mbody">
+          <div class="h">শ্রেণি ৩ · গণিত · ২/২</div>
+          <div class="card"><div class="h">আগের সভার পর থেকে · এই বিষয়ে</div>
+            <div class="ntile"><span><span class="l">ক্লাস টেস্ট</span><br><span class="v">৫/৬ দিয়েছে · গড় ৬৪%</span></span><span class="lk">বিস্তারিত ›</span></div>
+            <div class="ntile"><span><span class="l">বাড়ির কাজ</span><br><span class="v">১৪/১৮ জমা</span><br><span class="s">৪ জমা দেয়নি</span></span><span class="lk">বিস্তারিত ›</span></div>
+            <div class="ntile"><span><span class="l">অ্যাসাইনমেন্ট</span><br><span class="v">৩/৪ জমা</span></span><span class="lk">বিস্তারিত ›</span></div>
+            <span class="btn gh">আগের সভায় আপনার মন্তব্য (২০২৬ — ১ম)</span>
+            <span class="call" style="right:-6px;top:4px">১</span><span class="call" style="right:-6px;bottom:4px">২</span></div>
+          <div class="card">
+            <div class="hint">পুরো শিক্ষার্থী সম্পর্কে লিখুন — পড়াশোনা, আচরণ, অভ্যাস, স্বাস্থ্য। শুধু এই বিষয় নিয়ে হতে হবে না।</div>
+            <div class="lab">ভালো দিক</div><div class="input tall">নামতা ভালো পারে; ক্লাসে মনোযোগী।</div>
+            <div class="lab">চিন্তার বিষয়</div><div class="input tall">হাতের লেখা অস্পষ্ট।</div>
+            <div class="h">শ্রেণি শিক্ষক, প্রধান শিক্ষক ও অফিস দেখবেন। অ্যাপে অভিভাবক দেখবেন না।</div>
+            <span class="btn f">সংরক্ষণ করে পরের জন</span><span class="btn">সংরক্ষণ</span>
+            <span class="call" style="right:-6px;top:4px">৩</span><span class="call" style="right:-6px;bottom:4px">৪</span></div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <ol class="steps">
+        <li><span class="n">১</span><span>উপরের ঘরগুলো আগের সভার পর থেকে <b>আপনার বিষয়ে</b> শিক্ষার্থীর ক্লাস টেস্ট, বাড়ির কাজ ও অ্যাসাইনমেন্ট দেখায়। <span class="k">বিস্তারিত ›</span> চাপলে কোন কাজ জমা পড়েনি তাও দেখা যায়।</span></li>
+        <li><span class="n">২</span><span>আগের সভায় আপনি কী লিখেছিলেন দেখতে <span class="k">আগের সভায় আপনার মন্তব্য</span> চাপুন — উন্নতি হয়েছে কি না বলতে কাজে লাগে।</span></li>
+        <li><span class="n">৩</span><span>দুটি ঘর লিখুন। একটি ফাঁকা রাখা যায়, তবে দুটিই ফাঁকা হলে সংরক্ষণ হবে না।
+          <b>শুধু আপনার বিষয় নিয়ে নয়</b> — আচরণ, অভ্যাস, মনোযোগ, স্বাস্থ্য, বন্ধুদের সাথে মেলামেশা যা চোখে পড়ে লিখুন।</span></li>
+        <li><span class="n">৪</span><span><span class="k">সংরক্ষণ করে পরের জন</span> চাপলে একই শ্রেণির পরের বাকি শিক্ষার্থীর পাতা খোলে — আজ পাতায় ফিরতে হয় না। তালিকার শেষজনে শুধু <span class="k">সংরক্ষণ</span> থাকে।</span></li>
+      </ol>
+
+      <h3>ভালো মন্তব্যের উদাহরণ</h3>
+      <table class="ref">
+        <tr><th style="width:50%">এড়িয়ে চলুন</th><th>এভাবে লিখুন</th></tr>
+        <tr><td>ভালো।</td><td>নামতা ১০ পর্যন্ত মুখস্থ; ক্লাসে প্রশ্নের উত্তর দিতে আগ্রহী।</td></tr>
+        <tr><td>পড়ে না।</td><td>রবিবারের বাড়ির কাজ প্রায়ই আনে না (৬ বার); শব্দের বানানে ভুল করে।</td></tr>
+        <tr><td>দুষ্টু।</td><td>পাশের জনের সাথে কথা বলে ক্লাসে মনোযোগ হারায়; সামনের বেঞ্চে বসালে ভালো করে।</td></tr>
+      </table>
+      <div class="tip">মন্তব্য পড়ে অভিভাবক বাড়িতে কী করবেন তা যেন বোঝা যায়। এক-দুই বাক্যই যথেষ্ট।</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ পৃষ্ঠা ৩ — পরে কী হয় ============ -->
+<section class="page">
+  <h2>সংরক্ষণের পর কী হয়</h2>
+  <div class="two">
+    <div>
+      <ul>
+        <li>শ্রেণি শিক্ষক <b>সারাংশ লেখার আগ পর্যন্ত</b> আপনি মন্তব্য বদলাতে পারবেন: আজ পাতায় <span class="k">লেখা হয়ে গেছে দেখুন</span> → নাম চাপুন।</li>
+        <li>শ্রেণি শিক্ষক সারাংশ লিখে ফেললে নামের পাশে <b>“সারাংশ হয়ে গেছে”</b> দেখায় — তখন আর বদলানো যায় না।</li>
+        <li>অফিস কোনো বিষয় বাদ দিলে (যেমন আপনি ছুটিতে) সেই শিক্ষার্থীদের জন্য মন্তব্য লাগবে না।</li>
+        <li>আপনার মন্তব্য শ্রেণি শিক্ষক, প্রধান শিক্ষক ও অফিস দেখেন; সভার দিন প্রয়োজনে অভিভাবকের সামনে খোলা হয়। অভিভাবক অ্যাপে দেখেন না।</li>
+      </ul>
+      <h3>রিমাইন্ডার</h3>
+      <p>শেষ তারিখের <b>৩ দিন আগে থেকে</b> সভার দিন পর্যন্ত, মন্তব্য বাকি থাকলে প্রতি স্কুল দিনে সকাল ৮টায় নোটিফিকেশন আসে। অফিসও দিনে একবার রিমাইন্ডার পাঠাতে পারে। চাপলে আজ পাতা খোলে।</p>
+      <div class="tip">আপনি শ্রেণি শিক্ষকও হলে আপনার আজ পাতায় আরেকটি কার্ড আসবে — <b>সভার সারাংশ</b>। সেটি <b>শ্রেণি শিক্ষকের নির্দেশিকা</b>-য় আছে।</div>
+    </div>
+    <div>
+      <div class="phone" style="width:230px">
+        <div class="bar">নোটিফিকেশন</div>
+        <div class="notif"><div class="app">SCD Hub · এখন</div><b>অভিভাবক সভার মন্তব্য বাকি: ৪ জন</b><br>২০২৬ — ২য় সভার (১ নভেম্বর) জন্য শিক্ষার্থীদের মন্তব্য লিখুন — শেষ তারিখ ২৭ অক্টোবর। "আজ" পাতায় তালিকা আছে।</div>
+      </div>
+    </div>
+  </div>
+
+  <h3>প্রশ্ন ও সমাধান</h3>
+  <dl class="faq">
+    <dt>আজ পাতায় কার্ডটি নেই।</dt>
+    <dd>অফিস এখনো মন্তব্য সংগ্রহ শুরু করেনি, বা রুটিনে আপনার নামে কোনো শ্রেণি নেই। অফিসকে জানান।</dd>
+    <dt>যে শ্রেণি আমি পড়াই না সেটি দেখাচ্ছে / যেটি পড়াই সেটি নেই।</dt>
+    <dd>রুটিনে ভুল আছে। অফিস রুটিন ঠিক করে “শিক্ষক তালিকা হালনাগাদ” চাপলে ঠিক হয়ে যাবে; আপনার আগে লেখা মন্তব্য হারাবে না।</dd>
+    <dt>“এই মন্তব্যটি অন্য শিক্ষকের লেখার কথা” দেখাচ্ছে।</dt>
+    <dd>এই শিক্ষার্থীর এই বিষয়টি রুটিন অনুযায়ী অন্য শিক্ষকের। অফিসকে জানান।</dd>
+    <dt>“শ্রেণি শিক্ষক সারাংশ লিখে ফেলেছেন” দেখাচ্ছে।</dt>
+    <dd>এই শিক্ষার্থীর মন্তব্য আর বদলানো যাবে না। জরুরি কিছু থাকলে শ্রেণি শিক্ষক বা প্রধান শিক্ষককে সরাসরি বলুন।</dd>
+  </dl>
+<p class="footer-note">SCD Hub · অভিভাবক সভা নির্দেশিকা · অক্টোবর ২০২৬</p>
+</section>
+
+</body>
+</html>
