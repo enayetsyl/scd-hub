@@ -29,6 +29,7 @@ import { Student } from "../../foundation/models/Student";
 import { User } from "../../foundation/models/User";
 import { StoredFile } from "../../platform/models/StoredFile";
 import { writeAudit } from "../../platform/services/AuditService";
+import { queryPage, type Page, type PageArgs } from "../../../lib/paging";
 
 /** A surfaced service error (Bangla-friendly message), mirroring the tracker pattern. */
 export class StudentCommentError extends Error {}
@@ -323,6 +324,18 @@ export async function listSectionComments(sectionId: string): Promise<StudentCom
   return docs.map(shape);
 }
 
+/** D-#761: one page of the section worklist (every comment ever made on the section
+ *  grows without bound), newest first. */
+export function listSectionCommentsPage(sectionId: string, args: PageArgs): Promise<Page<StudentCommentShape>> {
+  return queryPage(
+    StudentComment,
+    { sectionId: new Types.ObjectId(sectionId) },
+    { createdAt: -1, _id: -1 },
+    args,
+    (docs) => (docs as unknown as IStudentComment[]).map(shape),
+  );
+}
+
 /** A child's full comment history, newest first (the staff timeline). The
  *  guardian-facing delivered-only read (`childComments`) is CM-5. */
 export async function studentComments(studentId: string): Promise<StudentCommentShape[]> {
@@ -345,12 +358,34 @@ export interface AuthoredCommentShape extends StudentCommentShape {
  * child's name is joined in (the list spans students). Identity plane; no corpus path.
  */
 export async function myComments(actorId: string, studentId?: string): Promise<AuthoredCommentShape[]> {
+  const docs = (await StudentComment.find(myCommentsFilter(actorId, studentId))
+    .sort({ createdAt: -1 })
+    .lean()) as unknown as IStudentComment[];
+  return withStudentNames(docs);
+}
+
+/** D-#761: one page of the caller's own comments — without a student, that is every
+ *  comment they ever wrote. Names are joined for the page's rows only. */
+export function myCommentsPage(
+  actorId: string,
+  studentId: string | undefined,
+  args: PageArgs,
+): Promise<Page<AuthoredCommentShape>> {
+  return queryPage(StudentComment, myCommentsFilter(actorId, studentId), { createdAt: -1, _id: -1 }, args, (docs) =>
+    withStudentNames(docs as unknown as IStudentComment[]),
+  );
+}
+
+function myCommentsFilter(actorId: string, studentId?: string): Record<string, unknown> {
   const filter: Record<string, unknown> = { authorUserId: new Types.ObjectId(actorId) };
   if (studentId) {
     if (!Types.ObjectId.isValid(studentId)) throw new StudentCommentError("Invalid student id");
     filter.studentId = new Types.ObjectId(studentId);
   }
-  const docs = (await StudentComment.find(filter).sort({ createdAt: -1 }).lean()) as unknown as IStudentComment[];
+  return filter;
+}
+
+async function withStudentNames(docs: IStudentComment[]): Promise<AuthoredCommentShape[]> {
   if (docs.length === 0) return [];
 
   const studentIds = [...new Set(docs.map((d) => d.studentId.toString()))];
@@ -383,6 +418,21 @@ export async function reviewInbox(limit?: number): Promise<CommentReviewRow[]> {
   const q = StudentComment.find({ deliveredAt: null, discardedAt: null }).sort({ createdAt: -1 });
   if (limit != null) q.limit(limit);
   const docs = (await q.lean()) as unknown as IStudentComment[];
+  return withReviewNames(docs);
+}
+
+/** D-#761: one page of the review queue, newest first; `total` is the whole queue. */
+export function reviewInboxPage(args: PageArgs): Promise<Page<CommentReviewRow>> {
+  return queryPage(
+    StudentComment,
+    { deliveredAt: null, discardedAt: null },
+    { createdAt: -1, _id: -1 },
+    args,
+    (docs) => withReviewNames(docs as unknown as IStudentComment[]),
+  );
+}
+
+async function withReviewNames(docs: IStudentComment[]): Promise<CommentReviewRow[]> {
   if (docs.length === 0) return [];
 
   const studentIds = [...new Set(docs.map((d) => d.studentId.toString()))];

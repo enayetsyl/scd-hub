@@ -43,6 +43,19 @@ export const SECTION_STUDENT_COMMENTS_QUERY = gql<
   }
 `;
 
+/** D-#761: the section worklist one page at a time, newest first. */
+export const SECTION_STUDENT_COMMENTS_PAGE_QUERY = gql<
+  { sectionStudentCommentsPage: { rows: StudentCommentT[]; total: number; page: number; pageSize: number } },
+  { sectionId: string; page?: number | null; pageSize?: number | null }
+>`
+  query SectionStudentCommentsPage($sectionId: String!, $page: Int, $pageSize: Int) {
+    sectionStudentCommentsPage(sectionId: $sectionId, page: $page, pageSize: $pageSize) {
+      total page pageSize
+      rows { ${STUDENT_COMMENT_FIELDS} }
+    }
+  }
+`;
+
 export const STUDENT_COMMENTS_QUERY = gql<
   { studentComments: StudentCommentT[] },
   { studentId: string }
@@ -66,6 +79,19 @@ export const MY_STUDENT_COMMENTS_QUERY = gql<
   }
 `;
 
+/** D-#761: the caller's own comments one page at a time. */
+export const MY_STUDENT_COMMENTS_PAGE_QUERY = gql<
+  { myStudentCommentsPage: { rows: AuthoredCommentT[]; total: number; page: number; pageSize: number } },
+  { studentId?: string | null; page?: number | null; pageSize?: number | null }
+>`
+  query MyStudentCommentsPage($studentId: String, $page: Int, $pageSize: Int) {
+    myStudentCommentsPage(studentId: $studentId, page: $page, pageSize: $pageSize) {
+      total page pageSize
+      rows { ${STUDENT_COMMENT_FIELDS} studentName }
+    }
+  }
+`;
+
 // The Principal/Office review dashboard (D-#264): every undelivered comment to triage.
 export interface CommentReviewItemT {
   id: string;
@@ -85,6 +111,21 @@ export const COMMENT_REVIEW_INBOX_QUERY = gql<{ commentReviewInbox: CommentRevie
   query CommentReviewInbox {
     commentReviewInbox {
       id studentId studentName sectionId authorUserId authorName type sentiment text attachmentIds createdAt
+    }
+  }
+`;
+
+/** D-#761: the review queue one page at a time; `total` is the whole queue. */
+export const COMMENT_REVIEW_INBOX_PAGE_QUERY = gql<
+  { commentReviewInboxPage: { rows: CommentReviewItemT[]; total: number; page: number; pageSize: number } },
+  { page?: number | null; pageSize?: number | null }
+>`
+  query CommentReviewInboxPage($page: Int, $pageSize: Int) {
+    commentReviewInboxPage(page: $page, pageSize: $pageSize) {
+      total page pageSize
+      rows {
+        id studentId studentName sectionId authorUserId authorName type sentiment text attachmentIds createdAt
+      }
     }
   }
 `;

@@ -5,14 +5,18 @@
  * single teacher. Here the Principal/Office: sees per-reviewer open counts, picks ONE
  * teacher, multi-selects plans (filterable; "select all"), and assigns them in a single
  * call. Gated content:assign_review (same as assignPlanReview).
+ *
+ * D-#761: both plan lists page on the server (`assignablePlansPage`, 50 a page) instead of
+ * reading all ~850 plans; the filters run there. A selection survives moving between pages;
+ * "select all" adds the current page.
  */
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import { View, Pressable } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
 import { SUBJECTS, CLASS_LEVELS, REVIEW_STATUSES } from "@scd/shared";
 import {
-  ASSIGNABLE_PLANS,
+  ASSIGNABLE_PLANS_PAGE,
   CANCEL_PLAN_REVIEW,
   REVIEWER_ASSIGNMENT_LOAD,
   ASSIGN_PLAN_REVIEW_BULK,
@@ -48,6 +52,8 @@ import {
   bnNum,
 } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { usePageState, PAGE_SIZE } from "../../lib/paging";
+import { Pager } from "../../components/Pager";
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<ReviewStackParamList, "AssignReviews">;
@@ -62,42 +68,42 @@ function planTitle(p: AssignablePlanT): string {
 }
 
 export default function AssignReviewsScreen(_props: Props): React.ReactElement {
-  const [{ data: plansData, fetching: plansFetching, error: plansErr }, refetchPlans] = useQuery({ query: ASSIGNABLE_PLANS });
-  const [{ data: loadData, fetching: loadFetching }, refetchLoad] = useQuery({ query: REVIEWER_ASSIGNMENT_LOAD });
-  const [{ data: teacherData }] = useQuery({ query: TEACHERS_QUERY });
-  const [, assignBulk] = useMutation(ASSIGN_PLAN_REVIEW_BULK);
-  const [, cancelReview] = useMutation(CANCEL_PLAN_REVIEW);
-
-  const plans = plansData?.assignablePlans ?? [];
-  const load = loadData?.reviewerAssignmentLoad ?? [];
-  const teacherOptions = (teacherData?.teachers ?? []).map((t) => ({ label: t.name, value: t.id, hint: t.phone ?? undefined }));
-
   const [reviewerId, setReviewerId] = useState<string | null>(null);
   const [subject, setSubject] = useState<string | null>(null);
   const [classLevel, setClassLevel] = useState<number | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [unassignedOnly, setUnassignedOnly] = useState(false);
+
+  // D-#761: one server page per list; any filter change goes back to page 1.
+  const [page, setPage] = usePageState(`${subject}|${classLevel}|${status}|${unassignedOnly}`);
+  const [reviewerPage, setReviewerPage] = usePageState(reviewerId);
+  const [{ data: plansData, fetching: plansFetching, error: plansErr }, refetchPlans] = useQuery({
+    query: ASSIGNABLE_PLANS_PAGE,
+    variables: { subject, classLevel, reviewStatus: status, unassignedOnly: unassignedOnly || null, page, pageSize: PAGE_SIZE },
+  });
+  const [{ data: reviewerData }, refetchReviewerPlans] = useQuery({
+    query: ASSIGNABLE_PLANS_PAGE,
+    variables: { reviewerId, page: reviewerPage, pageSize: PAGE_SIZE },
+    pause: !reviewerId,
+  });
+  const [{ data: loadData, fetching: loadFetching }, refetchLoad] = useQuery({ query: REVIEWER_ASSIGNMENT_LOAD });
+  const [{ data: teacherData }] = useQuery({ query: TEACHERS_QUERY });
+  const [, assignBulk] = useMutation(ASSIGN_PLAN_REVIEW_BULK);
+  const [, cancelReview] = useMutation(CANCEL_PLAN_REVIEW);
+
+  const plansPage = plansData?.assignablePlansPage;
+  const visible = plansPage?.rows ?? [];
+  const visibleTotal = plansPage?.total ?? 0;
+  const reviewerPlans = reviewerId ? reviewerData?.assignablePlansPage.rows ?? [] : [];
+  const reviewerTotal = reviewerData?.assignablePlansPage.total ?? 0;
+  const load = loadData?.reviewerAssignmentLoad ?? [];
+  const teacherOptions = (teacherData?.teachers ?? []).map((t) => ({ label: t.name, value: t.id, hint: t.phone ?? undefined }));
+
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [unassignBusy, setUnassignBusy] = useState(false);
   const [unassignId, setUnassignId] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ text: string; tone: "ok" | "danger" } | null>(null);
-
-  const visible = useMemo(
-    () =>
-      plans.filter(
-        (p) =>
-          (!subject || p.subject === subject) &&
-          (classLevel == null || p.classLevel === classLevel) &&
-          (!status || p.reviewStatus === status) &&
-          (!unassignedOnly || !p.currentReviewerId),
-      ),
-    [plans, subject, classLevel, status, unassignedOnly],
-  );
-  const reviewerPlans = useMemo(
-    () => plans.filter((p) => Boolean(reviewerId && p.currentReviewerId === reviewerId && p.currentAssignmentId)),
-    [plans, reviewerId],
-  );
 
   const statusTone = (s: string): "ok" | "brand" | "muted" =>
     s === "gold" ? "ok" : s === "reviewed" ? "brand" : "muted";
@@ -110,8 +116,14 @@ export default function AssignReviewsScreen(_props: Props): React.ReactElement {
       return next;
     });
   }
+  // This page's rows (D-#761) — anything ticked on other pages stays ticked.
   function selectAllVisible(): void {
-    setSelected(new Set(visible.map((p) => p.artifactId)));
+    setSelected((s) => new Set([...s, ...visible.map((p) => p.artifactId)]));
+  }
+  function refetchAll(): void {
+    refetchPlans({ requestPolicy: "network-only" });
+    if (reviewerId) refetchReviewerPlans({ requestPolicy: "network-only" });
+    refetchLoad({ requestPolicy: "network-only" });
   }
 
   async function onAssign(): Promise<void> {
@@ -132,8 +144,7 @@ export default function AssignReviewsScreen(_props: Props): React.ReactElement {
       tone: r.failedCount > 0 ? "danger" : "ok",
     });
     setSelected(new Set());
-    refetchPlans({ requestPolicy: "network-only" });
-    refetchLoad({ requestPolicy: "network-only" });
+    refetchAll();
   }
 
   async function onUnassign(assignmentId: string): Promise<void> {
@@ -149,8 +160,7 @@ export default function AssignReviewsScreen(_props: Props): React.ReactElement {
     }
     setMsg({ text: STR.rvUnassignedDone, tone: "ok" });
     setUnassignId(null);
-    refetchPlans({ requestPolicy: "network-only" });
-    refetchLoad({ requestPolicy: "network-only" });
+    refetchAll();
   }
 
   return (
@@ -216,6 +226,9 @@ export default function AssignReviewsScreen(_props: Props): React.ReactElement {
           </Card>
         ))
       )}
+      {reviewerId ? (
+        <Pager page={reviewerData?.assignablePlansPage.page ?? reviewerPage} pageSize={PAGE_SIZE} total={reviewerTotal} onPage={setReviewerPage} />
+      ) : null}
 
       <Divider />
 
@@ -259,13 +272,13 @@ export default function AssignReviewsScreen(_props: Props): React.ReactElement {
 
       <View style={{ flexDirection: "row", alignItems: "center", gap: space(3), marginVertical: space(2) }}>
         <Pressable onPress={selectAllVisible} accessibilityRole="button">
-          <Body style={{ fontWeight: "700", color: undefined }}>{STR.rvSelectAll}</Body>
+          <Body style={{ fontWeight: "700", color: undefined }}>{visibleTotal > visible.length ? STR.rvSelectPage : STR.rvSelectAll}</Body>
         </Pressable>
         <Pressable onPress={() => setSelected(new Set())} accessibilityRole="button">
           <Muted>{STR.rvClear}</Muted>
         </Pressable>
         <View style={{ flex: 1 }} />
-        <Muted>{`${bnNum(selected.size)} / ${bnNum(visible.length)}`}</Muted>
+        <Muted>{`${bnNum(selected.size)} / ${bnNum(visibleTotal)}`}</Muted>
       </View>
 
       <Button
@@ -279,7 +292,7 @@ export default function AssignReviewsScreen(_props: Props): React.ReactElement {
 
       {plansErr ? (
         <ErrorBanner message={friendlyError(plansErr)} onRetry={() => refetchPlans({ requestPolicy: "network-only" })} />
-      ) : plansFetching && plans.length === 0 ? (
+      ) : plansFetching && !plansData ? (
         <Loader label={STR.loading} />
       ) : visible.length === 0 ? (
         <EmptyState message={STR.empty} />
@@ -303,6 +316,8 @@ export default function AssignReviewsScreen(_props: Props): React.ReactElement {
           );
         })
       )}
+      {/* The server clamps a page past the end (an assign can shrink the list), so show its page. */}
+      <Pager page={plansPage?.page ?? page} pageSize={PAGE_SIZE} total={visibleTotal} onPage={setPage} />
     </Screen>
   );
 }

@@ -1030,6 +1030,10 @@ export interface AssignablePlansFilter {
   docType?: string | null;
   state?: string | null;
   reviewerId?: string | null;
+  /** The plan's own reviewStatus (draft|reviewed|gold) — the assign screen's chip (D-#761). */
+  reviewStatus?: string | null;
+  /** No open round only (D-#761). */
+  unassignedOnly?: boolean | null;
 }
 
 export interface AssignablePlansPage {
@@ -1057,7 +1061,9 @@ export function pagePlans(
       (f.classLevel == null || p.classLevel === f.classLevel) &&
       (!f.docType || p.docType === f.docType) &&
       (!f.state || planBoardStateOf(p) === f.state) &&
-      (!f.reviewerId || p.currentReviewerId === f.reviewerId),
+      (!f.reviewerId || p.currentReviewerId === f.reviewerId) &&
+      (!f.reviewStatus || p.reviewStatus === f.reviewStatus) &&
+      (!f.unassignedOnly || !p.currentReviewerId),
   );
   const pageCount = Math.max(1, Math.ceil(matching.length / size));
   const current = Math.min(Math.max(1, Math.floor(page) || 1), pageCount);

@@ -14,6 +14,9 @@
  * a second reviewer reports "0 assigned" and nothing changes. Moving is therefore its own
  * action, with its own from-reviewer picker and its own confirmation, and it shows exactly
  * what the losing reviewer holds before anything is taken away.
+ *
+ * D-#761: the picker pages on the server (`assignableQuestionsPage`). It used to ask for
+ * 300 rows and the rest silently vanished; "select all" now adds the current page.
  */
 import React, { useState, useMemo, useCallback } from "react";
 import { View, Pressable, ScrollView, RefreshControl } from "react-native";
@@ -22,7 +25,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useQuery, useMutation } from "urql";
 import { SUBJECTS, CLASS_LEVELS } from "@scd/shared";
 import {
-  ASSIGNABLE_QUESTIONS,
+  ASSIGNABLE_QUESTIONS_PAGE,
   ASSIGN_QUESTION_REVIEW_BULK,
   ASSIGN_QUESTION_REVIEW_BY_CHAPTER,
   MOVE_QUESTION_REVIEW_CHAPTER,
@@ -50,6 +53,8 @@ import {
 } from "../../components/ui";
 import { STR, subjectLabel, classLevelLabel, reviewStatusLabel, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { usePageState, PAGE_SIZE } from "../../lib/paging";
+import { Pager } from "../../components/Pager";
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<ReviewStackParamList, "AssignQuestions">;
@@ -64,9 +69,12 @@ export default function AssignQuestionsScreen({ navigation }: Props): React.Reac
   const [notice, setNotice] = useState<string | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
 
+  const searchTerm = search.trim() === "" ? null : search.trim();
+  // D-#761: one server page at a time; a filter change goes back to page 1.
+  const [page, setPage] = usePageState(`${subject}|${classLevel}|${searchTerm}`);
   const [{ data, fetching, error }, refetch] = useQuery({
-    query: ASSIGNABLE_QUESTIONS,
-    variables: { subject, classLevel, search: search.trim() === "" ? null : search.trim(), limit: 300 },
+    query: ASSIGNABLE_QUESTIONS_PAGE,
+    variables: { subject, classLevel, search: searchTerm, page, pageSize: PAGE_SIZE },
   });
   const [{ data: teacherData }] = useQuery({ query: TEACHERS_QUERY });
   const [, assignBulk] = useMutation(ASSIGN_QUESTION_REVIEW_BULK);
@@ -169,7 +177,8 @@ export default function AssignQuestionsScreen({ navigation }: Props): React.Reac
     }, [refetch]),
   );
 
-  const rows = data?.assignableQuestions ?? [];
+  const rows = data?.assignableQuestionsPage.rows ?? [];
+  const total = data?.assignableQuestionsPage.total ?? 0;
   const teachers = teacherData?.teachers ?? [];
 
   const toggle = (id: string): void => {
@@ -247,12 +256,20 @@ export default function AssignQuestionsScreen({ navigation }: Props): React.Reac
         <Divider />
 
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), alignItems: "center" }}>
-          <Muted>{`${bnNum(selected.size)} ${STR.qrSelected}`}</Muted>
+          <Muted>{`${bnNum(selected.size)} ${STR.qrSelected} · ${bnNum(total)}`}</Muted>
           <Button
-            title={allSelected ? STR.rvClear : STR.rvSelectAll}
+            title={allSelected ? STR.rvClear : total > rows.length ? STR.rvSelectPage : STR.rvSelectAll}
             variant="ghost"
             onPress={() =>
-              setSelected(allSelected ? new Set() : new Set(rows.map((r) => r.artifactId)))
+              // This page's rows (D-#761); ticks on other pages are kept.
+              setSelected((prev) => {
+                const next = new Set(prev);
+                for (const r of rows) {
+                  if (allSelected) next.delete(r.artifactId);
+                  else next.add(r.artifactId);
+                }
+                return next;
+              })
             }
           />
         </View>
@@ -407,6 +424,7 @@ export default function AssignQuestionsScreen({ navigation }: Props): React.Reac
             </Pressable>
           ))
         )}
+        <Pager page={page} pageSize={PAGE_SIZE} total={total} onPage={setPage} />
       </ScrollView>
     </Screen>
   );

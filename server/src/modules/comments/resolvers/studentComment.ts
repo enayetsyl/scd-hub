@@ -14,6 +14,7 @@
  * delivered-only read is CM-5. Identity plane (names studentIds); no corpus path.
  */
 import { builder } from "../../../schema";
+import { pageRef } from "../../../pageRef";
 import type { AppContext } from "../../../context";
 import {
   resolveCommentSection,
@@ -25,6 +26,9 @@ import {
   myComments,
   reviewInbox,
   reviewInboxCount,
+  listSectionCommentsPage,
+  myCommentsPage,
+  reviewInboxPage,
   discardComment,
   type StudentCommentShape,
   type AuthoredCommentShape,
@@ -205,6 +209,26 @@ builder.queryField("sectionStudentComments", (t) =>
   }),
 );
 
+// D-#761: the section worklist one page at a time (it keeps every comment ever made).
+const StudentCommentPageRef = pageRef("StudentCommentPage", StudentCommentRef);
+
+builder.queryField("sectionStudentCommentsPage", (t) =>
+  t.field({
+    type: StudentCommentPageRef,
+    description: "One page of a section's daily comments, newest first. Same read-scope as sectionStudentComments.",
+    authScopes: { authenticated: true },
+    args: {
+      sectionId: t.arg.string({ required: true }),
+      page: t.arg.int({ required: false }),
+      pageSize: t.arg.int({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      await assertReadSection(ctx, args.sectionId);
+      return listSectionCommentsPage(args.sectionId, args);
+    },
+  }),
+);
+
 builder.queryField("studentComments", (t) =>
   t.field({
     type: [StudentCommentRef],
@@ -263,6 +287,26 @@ builder.queryField("myStudentComments", (t) =>
   }),
 );
 
+// D-#761: the caller's own comments one page at a time.
+const AuthoredCommentPageRef = pageRef("AuthoredCommentPage", AuthoredCommentRef);
+
+builder.queryField("myStudentCommentsPage", (t) =>
+  t.field({
+    type: AuthoredCommentPageRef,
+    description: "One page of the CALLER'S OWN daily comments, newest first (optionally one student).",
+    authScopes: { authenticated: true },
+    args: {
+      studentId: t.arg.string({ required: false }),
+      page: t.arg.int({ required: false }),
+      pageSize: t.arg.int({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      return myCommentsPage(ctx.auth.userId as string, args.studentId ?? undefined, args);
+    },
+  }),
+);
+
 // The Principal/Office review dashboard (D-#264): every undelivered comment, with the
 // child's + author's names, so they decide what reaches the guardian.
 const CommentReviewItemRef = builder.objectRef<CommentReviewRow>("CommentReviewItem");
@@ -293,6 +337,25 @@ builder.queryField("commentReviewInbox", (t) =>
     resolve: async (_root, _args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       return reviewInbox();
+    },
+  }),
+);
+
+// D-#761: the review queue one page at a time; `total` is the whole queue.
+const CommentReviewPageRef = pageRef("CommentReviewPage", CommentReviewItemRef);
+
+builder.queryField("commentReviewInboxPage", (t) =>
+  t.field({
+    type: CommentReviewPageRef,
+    description: "One page of the undelivered-comment review queue, newest first. Requires roster:manage.",
+    authScopes: { hasPermission: "roster:manage" },
+    args: {
+      page: t.arg.int({ required: false }),
+      pageSize: t.arg.int({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      return reviewInboxPage(args);
     },
   }),
 );

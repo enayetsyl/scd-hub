@@ -27,6 +27,7 @@ import { ContentArtifact } from "../../content/models/ContentArtifact";
 import { User } from "../../foundation/models/User";
 import { writeAudit, writeAuditMany } from "../../platform/services/AuditService";
 import { emitQuestionReviewAssigned } from "../../notifications/services/emitters";
+import { queryPage, type Page, type PageArgs } from "../../../lib/paging";
 import {
   ReviewError,
   addressKeyOf,
@@ -1362,14 +1363,41 @@ function toObjectId(raw: string, what: string): Types.ObjectId {
   return new Types.ObjectId(raw);
 }
 
-export async function listAssignableQuestions(args: {
+export interface AssignableQuestionsFilter {
   subject?: string | null;
   classLevel?: number | null;
   topicTag?: string | null;
   reviewStatus?: string | null;
   search?: string | null;
-  limit?: number | null;
-}): Promise<AssignableQuestionDTO[]> {
+}
+
+export async function listAssignableQuestions(
+  args: AssignableQuestionsFilter & { limit?: number | null },
+): Promise<AssignableQuestionDTO[]> {
+  const limit = Math.min(Math.max(args.limit ?? 200, 1), 500);
+  const arts = (await ContentArtifact.find(assignableQuestionsFilter(args))
+    .sort({ subject: 1, classLevel: 1, importedAt: -1 })
+    .limit(limit)
+    .lean()) as unknown as LeanQuestion[];
+  return toAssignableQuestions(arts);
+}
+
+/**
+ * One page of the assign picker (D-#761). `assignableQuestions` stops at its limit (max
+ * 500) and the rows past it silently vanished — and "select all" covered only the rows
+ * that came back. This pages through every match and reports the real total.
+ */
+export function listAssignableQuestionsPage(args: AssignableQuestionsFilter & PageArgs): Promise<Page<AssignableQuestionDTO>> {
+  return queryPage(
+    ContentArtifact,
+    assignableQuestionsFilter(args),
+    { subject: 1, classLevel: 1, importedAt: -1, _id: -1 },
+    args,
+    (docs) => toAssignableQuestions(docs as unknown as LeanQuestion[]),
+  );
+}
+
+function assignableQuestionsFilter(args: AssignableQuestionsFilter): Record<string, unknown> {
   const filter: Record<string, unknown> = { docType: QUESTION_DOC_TYPE, current: true, retiredAt: null };
   // Published questions are done — they are not assignable.
   filter.reviewStatus = args.reviewStatus ? args.reviewStatus : { $ne: "gold" };
@@ -1380,12 +1408,11 @@ export async function listAssignableQuestions(args: {
     const re = new RegExp(args.search.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
     filter.$or = [{ "envelopeJson.payload.question_text": re }, { "envelopeJson.payload.qid": re }];
   }
+  return filter;
+}
 
-  const limit = Math.min(Math.max(args.limit ?? 200, 1), 500);
-  const arts = (await ContentArtifact.find(filter)
-    .sort({ subject: 1, classLevel: 1, importedAt: -1 })
-    .limit(limit)
-    .lean()) as unknown as LeanQuestion[];
+/** The picker rows for these questions, each with its open round (if any). */
+async function toAssignableQuestions(arts: LeanQuestion[]): Promise<AssignableQuestionDTO[]> {
   if (arts.length === 0) return [];
 
   const qids = arts.map((a) => qidOf(a)).filter((q): q is string => q != null);
