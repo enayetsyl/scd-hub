@@ -9,9 +9,11 @@ import { ScrollView, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
-import { VOCAB_TESTS_QUERY } from "../../graphql/operations";
+import { VOCAB_TESTS_PAGE_QUERY } from "../../graphql/operations";
 import { Screen, Card, Body, Muted, Button, Badge, Chip } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
+import { Pager } from "../../components/Pager";
+import { usePageState, PAGE_SIZE } from "../../lib/paging";
 import { ProgramSelect, ClassSectionSelect, type SectionPick } from "../../components/vocabPickers";
 import { AcademicYearSelect } from "../../components/selects";
 import { STR, vocabProgramLabel, vocabTestStatusLabel, isoDateLabel } from "../../lib/labels";
@@ -26,12 +28,14 @@ export default function VocabTestsScreen(): React.ReactElement {
   const [program, setProgram] = useState<string | null>(null);
   const [section, setSection] = useState<SectionPick | null>(null);
 
+  // D-#761: a section gains tests every week — page them on the server (newest first).
+  const [page, setPage] = usePageState(`${section?.sectionId ?? ""}|${program ?? ""}`);
   const [testsQ, refetchTests] = useQuery({
-    query: VOCAB_TESTS_QUERY,
-    variables: { sectionId: section?.sectionId ?? null, program: program ?? null },
+    query: VOCAB_TESTS_PAGE_QUERY,
+    variables: { sectionId: section?.sectionId ?? null, program: program ?? null, page, pageSize: PAGE_SIZE },
     pause: !section,
   });
-  const tests = testsQ.data?.vocabTests ?? [];
+  const tests = testsQ.data?.vocabTestsPage.rows ?? [];
 
   return (
     <Screen padded={false}>
@@ -76,6 +80,7 @@ export default function VocabTestsScreen(): React.ReactElement {
                   );
                 })
               )}
+              <Pager page={page} pageSize={PAGE_SIZE} total={testsQ.data?.vocabTestsPage.total ?? 0} onPage={setPage} />
             </QueryGate>
           </Card>
         ) : null}

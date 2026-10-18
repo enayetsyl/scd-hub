@@ -14,12 +14,14 @@
  * no corpus path (ADR-005).
  */
 import { builder } from "../../../schema";
+import { pageRef } from "../../../pageRef";
 import { ForbiddenError } from "../../../middleware/authz";
 import {
   createVideoReview,
   myVideoReviews,
   reviewVideo,
   videoReviewOverview,
+  videoReviewRowsPage,
   type VideoReviewShape,
   type VideoReviewTeacherSummary,
   type VideoReviewOverview,
@@ -139,5 +141,24 @@ builder.queryField("videoReviewOverview", (t) =>
       "(Principal/Office).",
     authScopes: { hasPermission: "observation:manage" },
     resolve: async () => videoReviewOverview(),
+  }),
+);
+
+// D-#761: every active review ever — page the board's rows (status filter server-side).
+const VideoReviewPageRef = pageRef("VideoReviewPage", VideoReviewRef);
+
+builder.queryField("videoReviewRowsPage", (t) =>
+  t.field({
+    type: VideoReviewPageRef,
+    description:
+      "The office board's rows, one page at a time (PENDING first, then newest class date), " +
+      "optionally one status (D-#761). Requires observation:manage (Principal/Office).",
+    authScopes: { hasPermission: "observation:manage" },
+    args: {
+      status: t.arg.string({ required: false }),
+      page: t.arg.int({ required: false }),
+      pageSize: t.arg.int({ required: false }),
+    },
+    resolve: async (_root, args) => videoReviewRowsPage(args.status ?? null, args),
   }),
 );

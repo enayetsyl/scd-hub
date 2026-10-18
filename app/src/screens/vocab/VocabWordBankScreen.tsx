@@ -15,6 +15,8 @@ import {
 } from "../../graphql/operations";
 import { Screen, Card, Body, Muted, Button, Field, Badge, Chip, Loader, Notice } from "../../components/ui";
 import { ProgramSelect, ClassLevelSelect } from "../../components/vocabPickers";
+import { Pager } from "../../components/Pager";
+import { usePagedRows } from "../../lib/paging";
 import { STR } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { usePullRefresh } from "../../lib/useRefresh";
@@ -33,6 +35,8 @@ export default function VocabWordBankScreen(): React.ReactElement {
     pause: !ready,
   });
   const words = wordsQ.data?.vocabWords ?? [];
+  // D-#761: the server bounds this to ONE (program × class) bank; page it on the client.
+  const { shown, pager } = usePagedRows(words, { resetKey: `${program ?? ""}|${classLevelStr ?? ""}|${showInactive}` });
 
   const [, addWord] = useMutation(ADD_VOCAB_WORD);
   const [, editWord] = useMutation(EDIT_VOCAB_WORD);
@@ -124,7 +128,7 @@ export default function VocabWordBankScreen(): React.ReactElement {
   return (
     <Screen padded={false}>
       <FlatList
-        data={ready ? words : []}
+        data={ready ? shown : []}
         keyExtractor={(w) => w.id}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ padding: space(4) }}
@@ -132,6 +136,7 @@ export default function VocabWordBankScreen(): React.ReactElement {
           ready ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} /> : undefined
         }
         ListHeaderComponent={header}
+        ListFooterComponent={ready ? <Pager {...pager} /> : null}
         ListEmptyComponent={
           !ready ? null : wordsQ.fetching ? (
             <Loader label={STR.loading} />

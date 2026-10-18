@@ -18,11 +18,13 @@
  * that check here would leave the service writable from any future caller.
  */
 import { builder } from "../../../schema";
+import { pageRef } from "../../../pageRef";
 import type { HwSubject, ScholarshipTopicAxis } from "@scd/shared";
 import {
   declarePaper,
   enterScores,
   listPapers,
+  listPapersPage,
   listTopics,
   paperDetail,
   retireTopic,
@@ -99,6 +101,9 @@ PaperRowRef.implement({
     classPercent: t.float({ nullable: true, resolve: (r) => r.classPercent }),
   }),
 });
+
+// D-#761: the papers list, one page at a time.
+const PaperRowPageRef = pageRef("ScholarshipPaperRowPage", PaperRowRef);
 
 const PaperItemRef = builder.objectRef<PaperDetailView["items"][number]>("ScholarshipPaperItem");
 PaperItemRef.implement({
@@ -377,6 +382,20 @@ builder.queryFields((t) => ({
     },
     resolve: async (_r, args) =>
       listPapers(args.sectionId, (args.subject ?? undefined) as HwSubject | undefined),
+  }),
+
+  scholarshipPapersPage: t.field({
+    type: PaperRowPageRef,
+    description: "scholarshipPapers, one page at a time, newest first (D-#761).",
+    authScopes: { hasPermission: "scholarship:read" },
+    args: {
+      sectionId: t.arg.string({ required: true }),
+      subject: t.arg.string({ required: false }),
+      page: t.arg.int({ required: false }),
+      pageSize: t.arg.int({ required: false }),
+    },
+    resolve: async (_r, args) =>
+      listPapersPage(args.sectionId, (args.subject ?? undefined) as HwSubject | undefined, args),
   }),
 
   scholarshipPaper: t.field({

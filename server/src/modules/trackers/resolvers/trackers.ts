@@ -17,12 +17,14 @@
  * Supervisory-only → ForbiddenError.
  */
 import { builder } from "../../../schema";
+import { pageRef } from "../../../pageRef";
 import {
   openTracker as openTrackerSvc,
   recordEntry as recordEntrySvc,
   recordEntries as recordEntriesSvc,
   closeTracker as closeTrackerSvc,
   listTrackers,
+  listTrackersPage,
   getTrackerSummary,
   buildNonSubmitterLink,
 } from "../services/TrackerService";
@@ -398,6 +400,40 @@ builder.queryField("trackers", (t) =>
       });
 
       return (docs as LeanTracker[]).map(trackerToShape);
+    },
+  }),
+);
+
+// D-#761: the tracker list grows per set — page it.
+const TrackerRecordPageRef = pageRef("TrackerRecordPage", TrackerRecordRef);
+
+builder.queryField("trackersPage", (t) =>
+  t.field({
+    type: TrackerRecordPageRef,
+    description: "trackers, one page at a time, newest first (D-#761). Same filters + read scope.",
+    authScopes: { hasPermission: "tracker:read" },
+    args: {
+      sectionId: t.arg.string({ required: true }),
+      classId: t.arg.string({ required: true }),
+      trackerKind: t.arg.string({ required: false }),
+      setId: t.arg.string({ required: false }),
+      status: t.arg.string({ required: false }),
+      page: t.arg.int({ required: false }),
+      pageSize: t.arg.int({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      await assertCanRead(ctx, args.sectionId, args.classId);
+      return listTrackersPage(
+        {
+          sectionId: args.sectionId,
+          trackerKind: args.trackerKind as import("@scd/shared").TrackerKind | undefined,
+          setId: args.setId ?? undefined,
+          status: args.status ?? undefined,
+        },
+        args,
+        (docs) => (docs as LeanTracker[]).map(trackerToShape),
+      );
     },
   }),
 );

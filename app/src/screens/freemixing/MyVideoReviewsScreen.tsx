@@ -11,6 +11,8 @@ import { useQuery, useMutation } from "urql";
 import { MY_VIDEO_REVIEWS, REVIEW_VIDEO } from "../../graphql/videoReview";
 import { Screen, Body, Muted, Card, Badge, Button, Field, Notice, Loader, EmptyState } from "../../components/ui";
 import { useConfirm } from "../../state/ConfirmContext";
+import { Pager } from "../../components/Pager";
+import { usePagedRows } from "../../lib/paging";
 import { STR, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { usePullRefresh } from "../../lib/useRefresh";
@@ -34,6 +36,8 @@ export default function MyVideoReviewsScreen(): React.ReactElement {
   const [ok, setOk] = useState<string | null>(null);
 
   const rows = data?.myVideoReviews ?? [];
+  // D-#761: one teacher's own list (pending first) — page it on the client.
+  const { shown, pager } = usePagedRows(rows);
   const { refreshing, onRefresh } = usePullRefresh(fetching, () =>
     refetch({ requestPolicy: "network-only" }),
   );
@@ -75,7 +79,7 @@ export default function MyVideoReviewsScreen(): React.ReactElement {
         ) : rows.length === 0 ? (
           <EmptyState message={STR.vrNoVideos} />
         ) : (
-          rows.map((r) => {
+          shown.map((r) => {
             const badge = statusBadge(r.status);
             const commenting = commentFor === r.id;
             return (
@@ -136,6 +140,7 @@ export default function MyVideoReviewsScreen(): React.ReactElement {
             );
           })
         )}
+        <Pager {...pager} />
       </ScrollView>
     </Screen>
   );

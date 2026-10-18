@@ -26,6 +26,7 @@ import { hasOpenClaim } from "./WorkClaimService";
 import { emitAssignmentGuardianChase } from "../../notifications/services/emitters";
 import { renderTemplate } from "../../templates/services/MessageTemplateService";
 import { atMidnight, dateOnlyISO } from "../assignmentCalendar";
+import { pageOf, type Page, type PageArgs } from "../../../lib/paging";
 
 // ---------------------------------------------------------------------------
 // The §7 guardian message (Bangla, generated; template reviewed by the
@@ -97,17 +98,45 @@ export interface ChaseListEntry {
   nextStepNumber: number;
 }
 
+type ChaseRecordLean = {
+  _id: { toString(): string };
+  asItemId: { toString(): string };
+  asId: string;
+  studentId: { toString(): string };
+  sectionId: { toString(): string };
+  classId: { toString(): string };
+  dueDate?: Date;
+  chaseCount: number;
+};
+
 export async function assignmentChaseList(asOf: Date = new Date()): Promise<ChaseListEntry[]> {
-  const records = (await AssignmentStudentRecord.find({ state: "CHASE" }).lean()) as unknown as Array<{
-    _id: { toString(): string };
-    asItemId: { toString(): string };
-    asId: string;
-    studentId: { toString(): string };
-    sectionId: { toString(): string };
-    classId: { toString(): string };
-    dueDate?: Date;
-    chaseCount: number;
-  }>;
+  const records = (await AssignmentStudentRecord.find({ state: "CHASE" }).lean()) as unknown as ChaseRecordLean[];
+  return (await chaseEntries(records, asOf)).sort((a, b) => b.daysOverdue - a.daysOverdue);
+}
+
+/**
+ * D-#761: one page of the chase list, in the list's own order (most overdue first —
+ * i.e. oldest due date first, undated last; `_id` tie-break). Only `_id` + `dueDate` of
+ * every CHASE record are read to order them; items, students and follow-up counts are
+ * joined for THIS page's records only.
+ */
+export async function assignmentChaseListPage(args: PageArgs, asOf: Date = new Date()): Promise<Page<ChaseListEntry>> {
+  const keys = (await AssignmentStudentRecord.find({ state: "CHASE" })
+    .select("_id dueDate")
+    .lean()) as unknown as Array<{ _id: { toString(): string }; dueDate?: Date }>;
+  const dueMs = (k: { dueDate?: Date }) => (k.dueDate ? atMidnight(new Date(k.dueDate)).getTime() : Infinity);
+  keys.sort((a, b) => dueMs(a) - dueMs(b) || (a._id.toString() < b._id.toString() ? -1 : a._id.toString() > b._id.toString() ? 1 : 0));
+  const page = pageOf(keys, args);
+  if (page.rows.length === 0) return { ...page, rows: [] };
+  const ids = page.rows.map((k) => k._id.toString());
+  const records = (await AssignmentStudentRecord.find({ _id: { $in: ids } }).lean()) as unknown as ChaseRecordLean[];
+  const byId = new Map(records.map((r) => [r._id.toString(), r]));
+  const ordered = ids.map((id) => byId.get(id)).filter((r): r is ChaseRecordLean => !!r);
+  return { ...page, rows: await chaseEntries(ordered, asOf) };
+}
+
+/** Join items / students / follow-up counts onto CHASE records (order preserved). */
+async function chaseEntries(records: ChaseRecordLean[], asOf: Date): Promise<ChaseListEntry[]> {
   if (records.length === 0) return [];
 
   const itemIds = [...new Set(records.map((r) => r.asItemId.toString()))];
@@ -155,8 +184,7 @@ export async function assignmentChaseList(asOf: Date = new Date()): Promise<Chas
         followUpCount,
         nextStepNumber: followUpCount + 1,
       };
-    })
-    .sort((a, b) => b.daysOverdue - a.daysOverdue);
+    });
 }
 
 // ---------------------------------------------------------------------------

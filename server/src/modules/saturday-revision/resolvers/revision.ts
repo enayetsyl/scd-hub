@@ -14,6 +14,7 @@
  * (SR-2) / analytics (SR-3) here. Identity plane (names studentIds); no corpus path.
  */
 import { builder } from "../../../schema";
+import { pageRef } from "../../../pageRef";
 import type { AppContext } from "../../../context";
 import { callerHasPermission } from "@scd/shared";
 import { ForbiddenError } from "../../../middleware/authz";
@@ -23,6 +24,7 @@ import {
   editEntry,
   groupSaturday,
   studentRevisionHistory,
+  studentRevisionHistoryPage,
   myRevisionGroups,
   teacherTeachesGroup,
   teacherCanReadStudent,
@@ -299,6 +301,28 @@ builder.queryField("studentRevisionHistory", (t) =>
     resolve: async (_root, args, ctx) => {
       await assertCanReadStudent(ctx, args.studentId);
       return studentRevisionHistory(args.studentId);
+    },
+  }),
+);
+
+// D-#761: one entry per Saturday, forever — page the staff timeline.
+const RevisionEntryPageRef = pageRef("RevisionEntryPage", RevisionEntryRef);
+
+builder.queryField("studentRevisionHistoryPage", (t) =>
+  t.field({
+    type: RevisionEntryPageRef,
+    description:
+      "studentRevisionHistory, one page at a time, newest first (D-#761). Same gate: tracker:read + " +
+      "the child being in a Qur'an group you lead (Principal/Office unscoped).",
+    authScopes: { authenticated: true },
+    args: {
+      studentId: t.arg.string({ required: true }),
+      page: t.arg.int({ required: false }),
+      pageSize: t.arg.int({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      await assertCanReadStudent(ctx, args.studentId);
+      return studentRevisionHistoryPage(args.studentId, args);
     },
   }),
 );

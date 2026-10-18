@@ -1,14 +1,16 @@
 /**
  * SetListScreen (S7 / J3.2) — assessment sets for the selected section, filtered
- * by status (draft/assembled, server-side) and set type (client-side; the query
- * has no type arg). Tap a set → SetDetail. A writable section must be selected.
+ * by status (draft/assembled) and set type — both server-side on the paged query
+ * (D-#761). Tap a set → SetDetail. A writable section must be selected.
  */
 import React, { useState } from "react";
 import { View, ScrollView } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
 import { SET_TYPES } from "@scd/shared";
-import { ASSESSMENT_SETS_QUERY } from "../../graphql/operations";
+import { ASSESSMENT_SETS_PAGE_QUERY } from "../../graphql/operations";
+import { Pager } from "../../components/Pager";
+import { usePageState, PAGE_SIZE } from "../../lib/paging";
 import type { SetsStackParamList } from "../../navigation/types";
 import {
   Screen,
@@ -37,14 +39,24 @@ export default function SetListScreen({ navigation }: Props): React.ReactElement
 
   // cache-and-network so a set assembled elsewhere (assembleSet doesn't invalidate
   // this list's cache — different __typename) shows its fresh status on return.
+  // D-#761: every set the section ever made — page it on the server. The type chip is a
+  // server filter now (a client filter over one page would hide matches on other pages).
+  const [page, setPage] = usePageState(`${selection.sectionId ?? ""}|${status ?? ""}|${type ?? ""}`);
   const [{ data, fetching, error }, refetch] = useQuery({
-    query: ASSESSMENT_SETS_QUERY,
-    variables: { sectionId: selection.sectionId ?? "", classId: selection.classId ?? "", status },
+    query: ASSESSMENT_SETS_PAGE_QUERY,
+    variables: {
+      sectionId: selection.sectionId ?? "",
+      classId: selection.classId ?? "",
+      status,
+      setType: type,
+      page,
+      pageSize: PAGE_SIZE,
+    },
     pause: !hasSection,
     requestPolicy: "cache-and-network",
   });
 
-  const sets = (data?.assessmentSets ?? []).filter((s) => !type || s.setType === type);
+  const sets = data?.assessmentSetsPage.rows ?? [];
 
   return (
     <Screen padded={false}>
@@ -95,6 +107,9 @@ export default function SetListScreen({ navigation }: Props): React.ReactElement
             </Card>
           ))
         )}
+        {hasSection && !error && !fetching ? (
+          <Pager page={page} pageSize={PAGE_SIZE} total={data?.assessmentSetsPage.total ?? 0} onPage={setPage} />
+        ) : null}
       </ScrollView>
     </Screen>
   );

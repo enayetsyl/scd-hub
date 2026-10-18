@@ -12,15 +12,17 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation, useQuery } from "urql";
 import {
   STORAGE_BOXES_QUERY,
-  SCRIPT_BUNDLES_QUERY,
+  SCRIPT_BUNDLES_PAGE_QUERY,
   PENDING_ACKS_QUERY,
   OPEN_CHECKOUTS_QUERY,
-  DISPOSABLE_BUNDLES_QUERY,
+  DISPOSABLE_BUNDLES_PAGE_QUERY,
   CREATE_STORAGE_BOX,
   type ScriptBundleT,
 } from "../../graphql/archive";
 import { Screen, Card, Body, Muted, Button, Badge, Field, Notice } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
+import { Pager } from "../../components/Pager";
+import { usePageState, PAGE_SIZE } from "../../lib/paging";
 import { useAuth } from "../../auth/AuthContext";
 import {
   STR,
@@ -73,14 +75,22 @@ export default function ArchiveHomeScreen(): React.ReactElement {
   const doSearch = search.trim().length >= 3;
 
   const [boxesQ, refetchBoxes] = useQuery({ query: STORAGE_BOXES_QUERY, variables: {} });
+  // D-#761: the search and the retention list page on the server (the search used to
+  // stop silently at 500 rows).
+  const [searchPage, setSearchPage] = usePageState(search.trim());
+  const [dispPage, setDispPage] = usePageState();
   const [searchQ, refetchSearch] = useQuery({
-    query: SCRIPT_BUNDLES_QUERY,
-    variables: { labelQuery: search.trim() },
+    query: SCRIPT_BUNDLES_PAGE_QUERY,
+    variables: { labelQuery: search.trim(), page: searchPage, pageSize: PAGE_SIZE },
     pause: !doSearch,
   });
   const [acksQ, refetchAcks] = useQuery({ query: PENDING_ACKS_QUERY });
   const [outQ, refetchOut] = useQuery({ query: OPEN_CHECKOUTS_QUERY });
-  const [dispQ, refetchDisp] = useQuery({ query: DISPOSABLE_BUNDLES_QUERY, pause: !canManage });
+  const [dispQ, refetchDisp] = useQuery({
+    query: DISPOSABLE_BUNDLES_PAGE_QUERY,
+    variables: { page: dispPage, pageSize: PAGE_SIZE },
+    pause: !canManage,
+  });
 
   const [newLabel, setNewLabel] = React.useState("");
   const [newLocation, setNewLocation] = React.useState("");
@@ -103,10 +113,10 @@ export default function ArchiveHomeScreen(): React.ReactElement {
   }
 
   const boxes = boxesQ.data?.storageBoxes ?? [];
-  const found = searchQ.data?.scriptBundles ?? [];
+  const found = searchQ.data?.scriptBundlesPage.rows ?? [];
   const acks = acksQ.data?.pendingScriptAcks ?? [];
   const out = outQ.data?.openScriptCheckouts ?? [];
-  const disposable = dispQ.data?.disposableScriptBundles ?? [];
+  const disposable = dispQ.data?.disposableScriptBundlesPage.rows ?? [];
 
   return (
     <Screen padded={false}>
@@ -131,6 +141,12 @@ export default function ArchiveHomeScreen(): React.ReactElement {
                   />
                 ))
               )}
+              <Pager
+                page={searchPage}
+                pageSize={PAGE_SIZE}
+                total={searchQ.data?.scriptBundlesPage.total ?? 0}
+                onPage={setSearchPage}
+              />
             </QueryGate>
           ) : null}
         </Card>
@@ -248,6 +264,12 @@ export default function ArchiveHomeScreen(): React.ReactElement {
                   />
                 ))
               )}
+              <Pager
+                page={dispPage}
+                pageSize={PAGE_SIZE}
+                total={dispQ.data?.disposableScriptBundlesPage.total ?? 0}
+                onPage={setDispPage}
+              />
             </QueryGate>
           </Card>
         ) : null}

@@ -53,6 +53,31 @@ export const VIDEO_REVIEW_OVERVIEW = gql<
   }
 `;
 
+// D-#761: the board's per-teacher counts alone (no rows) + the rows one page at a time,
+// with the status filter applied on the server.
+export const VIDEO_REVIEW_SUMMARY = gql<
+  { videoReviewOverview: { summary: VideoReviewTeacherSummaryT[] } },
+  NoVars
+>`
+  query VideoReviewSummary {
+    videoReviewOverview {
+      summary { teacherId teacherName pending ok notOk }
+    }
+  }
+`;
+
+export const VIDEO_REVIEW_ROWS_PAGE = gql<
+  { videoReviewRowsPage: { rows: VideoReviewT[]; total: number; page: number; pageSize: number } },
+  { status?: string | null; page?: number | null; pageSize?: number | null }
+>`
+  query VideoReviewRowsPage($status: String, $page: Int, $pageSize: Int) {
+    videoReviewRowsPage(status: $status, page: $page, pageSize: $pageSize) {
+      rows { ${VIDEO_REVIEW_FIELDS} }
+      total page pageSize
+    }
+  }
+`;
+
 export const CREATE_VIDEO_REVIEW = gql<
   { createVideoReview: VideoReviewT },
   {

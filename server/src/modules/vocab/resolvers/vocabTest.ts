@@ -13,6 +13,7 @@
  * Identity/operational plane; NO corpus path (ADR-005).
  */
 import { builder } from "../../../schema";
+import { pageRef } from "../../../pageRef";
 import { ForbiddenError } from "../../../middleware/authz";
 import {
   createVocabTest,
@@ -21,6 +22,7 @@ import {
   getVocabTest,
   positionsForTest,
   listVocabTests,
+  listVocabTestsPage,
   type DirectionSelection,
 } from "../services/VocabTestService";
 import {
@@ -28,6 +30,8 @@ import {
   currentAssignment,
   assignmentsForTeacher,
   assignmentHistory,
+  assignmentsForTeacherPage,
+  assignmentHistoryPage,
 } from "../services/VocabAssignmentService";
 import { assertCanOperateVocab } from "../services/vocabGate";
 import { resolveDefaultTestDate, weekStartFor } from "../services/vocabCalendar";
@@ -230,6 +234,10 @@ builder.mutationField("assignVocabTester", (t) =>
   }),
 );
 
+// D-#761: page types for the growing lists (tests per section, the append-only assignments).
+const VocabTestPageRef = pageRef("VocabTestPage", VocabTestRef);
+const VocabTestAssignmentPageRef = pageRef("VocabTestAssignmentPage", VocabTestAssignmentRef);
+
 // ---------------------------------------------------------------------------
 // Queries
 // ---------------------------------------------------------------------------
@@ -274,6 +282,30 @@ builder.queryField("vocabTests", (t) =>
   }),
 );
 
+builder.queryField("vocabTestsPage", (t) =>
+  t.field({
+    type: VocabTestPageRef,
+    description: "vocabTests, one page at a time, newest first (D-#761). Requires tracker:read.",
+    authScopes: { hasPermission: "tracker:read" },
+    args: {
+      sectionId: t.arg.string({ required: false }),
+      program: t.arg.string({ required: false }),
+      weekOf: t.arg.string({ required: false }),
+      page: t.arg.int({ required: false }),
+      pageSize: t.arg.int({ required: false }),
+    },
+    resolve: async (_root, args) =>
+      listVocabTestsPage(
+        {
+          sectionId: args.sectionId ?? undefined,
+          program: args.program ?? undefined,
+          weekOf: args.weekOf ? parseDate(args.weekOf, "weekOf") : undefined,
+        },
+        args,
+      ),
+  }),
+);
+
 builder.queryField("vocabTesterAssignment", (t) =>
   t.field({
     type: VocabTestAssignmentRef,
@@ -304,6 +336,21 @@ builder.queryField("vocabAssignmentHistory", (t) =>
   }),
 );
 
+builder.queryField("vocabAssignmentHistoryPage", (t) =>
+  t.field({
+    type: VocabTestAssignmentPageRef,
+    description: "vocabAssignmentHistory, one page at a time, newest first (D-#761). Requires roster:manage.",
+    authScopes: { hasPermission: "roster:manage" },
+    args: {
+      sectionId: t.arg.string({ required: true }),
+      program: t.arg.string({ required: true }),
+      page: t.arg.int({ required: false }),
+      pageSize: t.arg.int({ required: false }),
+    },
+    resolve: async (_root, args) => assignmentHistoryPage(args.sectionId, args.program, args),
+  }),
+);
+
 builder.queryField("myVocabAssignments", (t) =>
   t.field({
     type: [VocabTestAssignmentRef],
@@ -316,6 +363,27 @@ builder.queryField("myVocabAssignments", (t) =>
         ctx.auth.userId,
         args.fromWeek ? parseDate(args.fromWeek, "fromWeek") : undefined,
       ) as unknown as Promise<IVocabTestAssignment[]>;
+    },
+  }),
+);
+
+builder.queryField("myVocabAssignmentsPage", (t) =>
+  t.field({
+    type: VocabTestAssignmentPageRef,
+    description: "myVocabAssignments, one page at a time, newest week first (own-row, D-#761). Requires tracker:read.",
+    authScopes: { hasPermission: "tracker:read" },
+    args: {
+      fromWeek: t.arg.string({ required: false }),
+      page: t.arg.int({ required: false }),
+      pageSize: t.arg.int({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      return assignmentsForTeacherPage(
+        ctx.auth.userId,
+        args.fromWeek ? parseDate(args.fromWeek, "fromWeek") : undefined,
+        args,
+      );
     },
   }),
 );

@@ -17,6 +17,7 @@ import { CorpusEvent } from "../../corpus/models/CorpusEvent";
 import { SET_TYPE_TO_TRACKER } from "@scd/shared";
 import type { TrackerKind } from "@scd/shared";
 import { renderTemplate } from "../../templates/services/MessageTemplateService";
+import { queryPage, type Page, type PageArgs } from "../../../lib/paging";
 
 /** Deterministic pseudonym for a student — sha256(studentId), ADR-005. */
 function pseudonymize(studentId: string): string {
@@ -267,6 +268,15 @@ export async function listTrackers(input: ListTrackersInput) {
   if (input.setId) filter.setId = input.setId;
   if (input.status) filter.status = input.status;
   return TrackerRecord.find(filter).sort({ createdAt: -1 }).lean();
+}
+
+/** D-#761: listTrackers, one page at a time (newest first, _id tie-break). */
+export function listTrackersPage<T>(input: ListTrackersInput, args: PageArgs, map: (docs: unknown[]) => T[]): Promise<Page<T>> {
+  const filter: Record<string, unknown> = { sectionId: input.sectionId };
+  if (input.trackerKind) filter.trackerKind = input.trackerKind;
+  if (input.setId) filter.setId = input.setId;
+  if (input.status) filter.status = input.status;
+  return queryPage(TrackerRecord, filter, { createdAt: -1, _id: -1 }, args, (docs) => map(docs as unknown[]));
 }
 
 // ---------------------------------------------------------------------------

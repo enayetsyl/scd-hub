@@ -41,6 +41,30 @@ export const SCHOLARSHIP_PAPERS_QUERY = gql`
   }
 `;
 
+// D-#761: one section's papers, one page at a time (newest first).
+export const SCHOLARSHIP_PAPERS_PAGE_QUERY = gql`
+  query ScholarshipPapersPage($sectionId: String!, $subject: String, $page: Int, $pageSize: Int) {
+    scholarshipPapersPage(sectionId: $sectionId, subject: $subject, page: $page, pageSize: $pageSize) {
+      rows {
+        id
+        paperId
+        name
+        subjects
+        paperDate
+        totalMarks
+        itemCount
+        status
+        scoredCount
+        presentCount
+        classPercent
+      }
+      total
+      page
+      pageSize
+    }
+  }
+`;
+
 export const SCHOLARSHIP_PAPER_QUERY = gql`
   query ScholarshipPaper($id: String!) {
     scholarshipPaper(id: $id) {

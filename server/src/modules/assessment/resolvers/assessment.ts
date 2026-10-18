@@ -14,6 +14,8 @@
  * section. Supervisory-only teachers cannot write → ForbiddenError. PRINCIPAL can.
  */
 import { builder } from "../../../schema";
+import { pageRef } from "../../../pageRef";
+import { queryPage } from "../../../lib/paging";
 import {
   createSet as createSetSvc,
   createSetWithQuestions as createSetWithQuestionsSvc,
@@ -433,6 +435,37 @@ builder.queryField("assessmentSets", (t) =>
 
       const docs = await AssessmentSet.find(filter).sort({ createdAt: -1 }).lean() as LeanSet[];
       return docs.map((d) => setToShape(d));
+    },
+  }),
+);
+
+// D-#761: the section's sets across every year — page them. setType is a server filter
+// here (the list screen used to filter it client-side, which a paged list cannot do).
+const AssessmentSetPageRef = pageRef("AssessmentSetPage", AssessmentSetRef);
+
+builder.queryField("assessmentSetsPage", (t) =>
+  t.field({
+    type: AssessmentSetPageRef,
+    description: "assessmentSets, one page at a time, newest first (D-#761). Read-scope enforced.",
+    authScopes: { hasPermission: "set:read" },
+    args: {
+      sectionId: t.arg.string({ required: true }),
+      classId: t.arg.string({ required: true }),
+      status: t.arg.string({ required: false }),
+      setType: t.arg.string({ required: false }),
+      page: t.arg.int({ required: false }),
+      pageSize: t.arg.int({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      await assertCanRead(ctx, args.sectionId, args.classId);
+
+      const filter: Record<string, unknown> = { sectionId: args.sectionId };
+      if (args.status) filter.status = args.status;
+      if (args.setType) filter.setType = args.setType;
+      return queryPage(AssessmentSet, filter, { createdAt: -1, _id: -1 }, args, (docs) =>
+        (docs as unknown as LeanSet[]).map((d) => setToShape(d)),
+      );
     },
   }),
 );

@@ -20,6 +20,7 @@ import { writeAudit } from "../../platform/services/AuditService";
 import { Conversation, type IConversation } from "../models/Conversation";
 import { ChatMessage, type IChatMessage } from "../models/ChatMessage";
 import { ChatError } from "./ChatService";
+import { queryPage, type Page, type PageArgs } from "../../../lib/paging";
 
 /** Every conversation in the school, newest-activity first — the oversight
  *  browser (incl. DIRECT + archived). No membership filter (chat:oversee only). */
@@ -27,6 +28,14 @@ export async function oversightConversations(): Promise<IConversation[]> {
   return Conversation.find({})
     .sort({ lastMessageAt: -1, createdAt: -1 })
     .lean() as unknown as IConversation[];
+}
+
+/** D-#761: the oversight browser, one page at a time (same order, _id tie-break). The
+ *  resolver batches members for the page's conversations only. */
+export function oversightConversationsPage(args: PageArgs): Promise<Page<IConversation>> {
+  return queryPage(Conversation, {}, { lastMessageAt: -1, createdAt: -1, _id: -1 }, args, (docs) =>
+    docs as unknown as IConversation[],
+  );
 }
 
 /** Open a conversation for oversight: writes the CHAT_OVERSIGHT_OPENED audit row

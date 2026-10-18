@@ -17,6 +17,7 @@ import { type VocabProgram } from "@scd/shared";
 import { VocabTest, type IVocabTest } from "../models/VocabTest";
 import { VocabStudentTest } from "../models/VocabStudentTest";
 import { Student } from "../../foundation/models/Student";
+import { pageOf, queryPage, type Page, type PageArgs } from "../../../lib/paging";
 import { studentResult, testResults, type DerivedStudentResult } from "./VocabResultService";
 import {
   resolveThresholds,
@@ -135,7 +136,8 @@ async function studentTests(
   const q: Record<string, unknown> = { _id: { $in: testIds.map((id) => new Types.ObjectId(id)) } };
   if (filter.program) q.program = filter.program;
   if (filter.sectionId) q.sectionId = new Types.ObjectId(filter.sectionId);
-  return VocabTest.find(q).sort({ testDate: -1 }).lean() as unknown as Promise<IVocabTest[]>;
+  // _id tie-break (D-#761): two tests on one date keep one order across pages.
+  return VocabTest.find(q).sort({ testDate: -1, _id: -1 }).lean() as unknown as Promise<IVocabTest[]>;
 }
 
 export async function vocabStudentDashboard(
@@ -163,6 +165,26 @@ export async function vocabStudentDashboard(
     rollup: scoreRollup(outcomes),
     persistentWords: persistentWeakWords(misses, thresholds.persistentStudentMinTests),
   };
+}
+
+/**
+ * D-#761: one page of the student's per-test history (newest first). The test headers are
+ * cheap; the derived result (positions + mistakes) is built for THIS page's tests only.
+ * The dashboard's roll-up + persistent words stay on `vocabStudentDashboard`.
+ */
+export async function vocabStudentTestsPage(
+  studentId: string,
+  opts: { program?: string | null },
+  args: PageArgs,
+): Promise<Page<VocabStudentDashboard["perTest"][number]>> {
+  const tests = await studentTests(studentId, { program: opts.program ?? undefined });
+  const page = pageOf(tests, args);
+  const rows: VocabStudentDashboard["perTest"] = [];
+  for (const t of page.rows) {
+    const result = await studentResult(t._id.toString(), studentId);
+    if (result) rows.push({ test: testMeta(t), result });
+  }
+  return { ...page, rows };
 }
 
 // ---------------------------------------------------------------------------
@@ -218,6 +240,28 @@ export async function vocabClassDashboard(
     rollup: scoreRollup(allOutcomes),
     mostMissed: mostMissedWords(allMisses, distinctPresent, thresholds.persistentClassPct),
   };
+}
+
+/**
+ * D-#761: one page of a section's per-test summary rows (newest first). Skip/limit run in
+ * the database; each page test's roll-up is derived for the page only. The class roll-up
+ * + most-missed stay on `vocabClassDashboard`.
+ */
+export function vocabClassTestsPage(
+  sectionId: string,
+  opts: { program?: string | null },
+  args: PageArgs,
+): Promise<Page<VocabClassDashboard["tests"][number]>> {
+  const q: Record<string, unknown> = { sectionId: new Types.ObjectId(sectionId) };
+  if (opts.program) q.program = opts.program;
+  return queryPage(VocabTest, q, { testDate: -1, _id: -1 }, args, async (docs) => {
+    const rows: VocabClassDashboard["tests"] = [];
+    for (const t of docs as unknown as IVocabTest[]) {
+      const results = await testResults(t._id.toString());
+      rows.push({ test: testMeta(t), rollup: scoreRollup(results.map(toOutcome)) });
+    }
+    return rows;
+  });
 }
 
 // ---------------------------------------------------------------------------
