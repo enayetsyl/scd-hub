@@ -317,3 +317,33 @@ The রচনা title is a carrier like any other item. A রচনা on **ব
 মূলভাব passage about trees, or a শ্রমের মর্যাদা রচনা beside a সংক্ষিপ্ত-উত্তর item on the same
 lesson's theme, hands the student one answer from the other. Run the checker over the finished
 paper: `node skills/_tools/check_answer_leak.mjs <paper.md>`.
+
+---
+
+## Extension from the পাঞ্জেরী guide — owner decision 2026-10-18
+
+**The bank ran dry at the পাঠ ৪–৬ papers** (2026-09-23): পাঠ ৪ took রচনা row 7 (বর্ষাকাল), পাঠ ৫ row 8 (বৃক্ষরোপণ) and ফরম row 4 (পাঠাগার কার্ড), পাঠ ৬ row 9 (আধুনিক জীবনে বিজ্ঞান) and আবেদনপত্র row 4. Those three papers printed only one alternative of items ১৪ and ১৫ for lack of rows; this ledger was not ticked for them at the time — it is now.
+
+On 2026-10-18 the owner chose to **extend the bank from the whole transcribed guide** (`scholarship/C5 Bangla Guide md/`, same সহায়িকা the original photos came from) for the remaining papers পাঠ ৭–২৩. Rules kept: each entry used once, bank row 10 first, then guide order, skipping any title on the paper's own lesson (D-#689); সংকেত printed verbatim. Each paper prints **one** alternative of item ১৪ and **both** রচনা. After review the owner replaced two titles with repeats of the guide's সুপার সাজেশন (which is exactly rows 1–10 above).
+
+| পাঠ | ১৪ (গাইড প্রশ্ন #) | ২১ সূত্রসহ (গাইড #) | ২২ উন্মুক্ত (গাইড #) |
+|--:|---|---|---|
+| ৭ | ফরম ২ — স্কাউট দলের সদস্য ফরম | ৫৮. শ্রমের মর্যাদা | ২. বীরপুরুষ শহিদ তিতুমীর |
+| ৮ | আবেদনপত্র ১২ — ষষ্ঠ শ্রেণিতে ভর্তির জন্য আবেদন (ব্যাংক সারি ৫) | ৪. বাংলাদেশের কুটির শিল্প | ৫. আমার জীবনের লক্ষ্য |
+| ৯ | আবেদনপত্র ১ — বইমেলায় যাওয়ার জন্য সাময়িক ছুটি | ৩. বাংলাদেশের জাতীয় পশু বাঘ | ৬. শহিদ বুদ্ধিজীবী |
+| ১০ | ফরম ৩ — সামিহা বিনতে আদনান — ফরম | ৭. মাটির নিচে পুরানো নগর | ৮. শিক্ষকের প্রতি দায়িত্ব ও কর্তব্য |
+| ১১ | আবেদনপত্র ২ — দিনা/দিহান — আবেদন | ১০. আমরা তোমাদের ভুলব না | ১১. একুশে ফেব্রুয়ারি |
+| ১২ | আবেদনপত্র ৩ — আন্তঃস্কুল ফুটবল ফাইনাল দেখার ছুটি | ১২. মুক্তিযুদ্ধ | ১৪. বিজয় দিবস |
+| ১৩ | ফরম ৪ — অদিতি রায় — ফরম | ২৫. বাংলাদেশের সুন্দরবন (সুপার সাজেশন — পুনরাবৃত্তি) | ১৭. বাংলাদেশের জাতীয় মাছ: ইলিশ |
+| ১৪ | আবেদনপত্র ৫ — ডালিম/জবা — আবেদন | ১৮. আমাদের জাতীয় পতাকা | ১৯. জাতীয় ফল: কাঁঠাল |
+| ১৫ | আবেদনপত্র ৬ — সুমন/সুমি — আবেদন | ২০. জাতীয় ফুল: শাপলা | ২১. বাংলাদেশের কৃষক |
+| ১৬ | ফরম ৬ — নজরুল একাডেমির সদস্যপদ ফরম | ২২. কয়েকটি পরিচিত পাখি | ২৩. বাংলাদেশের ফল |
+| ১৭ | আবেদনপত্র ৯ — হাত ধোয়ার কর্মসূচি আয়োজনের অনুরোধ | ২৪. বাংলাদেশের প্রাকৃতিক সৌন্দর্য ও বৈচিত্র্য | ২৬. বাংলাদেশের প্রাণিজগৎ |
+| ১৮ | আবেদনপত্র ১১ — নিপা/নজরুল — আবেদন | ২৮. আমার প্রিয় ঋতু: বসন্তকাল | ৩০. গ্রীষ্মকাল |
+| ১৯ | ফরম ৮ — মুক্তা/পরাগ — ফরম | ৩১. শীতকাল | ৩২. শীতের সকাল |
+| ২০ | আবেদনপত্র ১৩ — বিলম্বে বেতন পরিশোধের জরিমানা মওকুফ | ৩৩. হজরত মুহাম্মদ (স) | ৩৪. বাংলাদেশের জাতীয় কবি |
+| ২১ | আবেদনপত্র ১৪ — বিনা বেতনে পড়ার আবেদন | ৩৫. বীরশ্রেষ্ঠ নূর মোহাম্মদ শেখ | ৩৬. বীরশ্রেষ্ঠ মোহাম্মদ রুহুল আমিন |
+| ২২ | ফরম ১০ — ক্যারাটে ক্লাবের সদস্য ফরম | ৩৯. ডেঙ্গুজ্বর ও এর প্রতিকার | ৪০. জলবায়ু পরিবর্তন |
+| ২৩ | আবেদনপত্র ১৫ — বিদ্যালয় হতে ছাড়পত্র | ৩৭. শহিদ মীর মুগ্ধ | ২৭. বাংলাদেশের ষড়ঋতু (সুপার সাজেশন — পুনরাবৃত্তি) |
+
+**Left unused in the guide:** আবেদনপত্র ১৬–১৯; ফরম — none; রচনা — the titles not listed above (৪২–৪৭, ৪৯–৫৭, ৫৯–৬১). Next papers should take those before repeating anything.
