@@ -35,6 +35,7 @@ import {
   employmentStatusLabel,
 } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { personName, personNameAlt } from "../../lib/personName";
 import { space } from "../../theme/tokens";
 
 /** ISO timestamp → DD/MM/YYYY in Bangla numerals. */
@@ -63,10 +64,10 @@ function StaffCard({
   return (
     <Card onPress={() => onOpen(s)}>
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-        <Body style={{ fontWeight: "700", flex: 1 }}>{s.nameBn || s.name}</Body>
+        <Body style={{ fontWeight: "700", flex: 1 }}>{personName(s)}</Body>
         <Button title={STR.staffEditAction} variant="ghost" onPress={() => onEdit(s)} />
       </View>
-      {s.nameBn ? <Muted>{s.name}</Muted> : null}
+      {personNameAlt(s) ? <Muted>{personNameAlt(s)}</Muted> : null}
       <Muted>{`${hrCategoryLabel(s.category)}${s.designation ? ` · ${s.designation}` : ""}`}</Muted>
       <Divider />
       <Row label={STR.staffId} value={s.schoolId} />

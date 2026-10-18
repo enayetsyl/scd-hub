@@ -38,6 +38,7 @@ import { meetingScopeFilter } from "./ParentMeetingService";
 import { meetingDayKey, meetingWindow, childNumbers, previousMeetingOf, addDaysKey, subjectBn, type BriefNumbers } from "./MeetingBriefService";
 import { dhakaDayKey } from "../../../lib/dhakaDay";
 import { bnNum } from "../../../lib/bnNum";
+import { personName } from "../../../lib/personName";
 
 /** A refused chain action — a sentence for the person, never a fault (EXPECTED_ERROR_NAMES). */
 export class MeetingChainError extends Error {}
@@ -231,7 +232,7 @@ async function scopeStudents(meeting: IParentMeeting, extra: Record<string, unkn
   return (await Student.find({ ...meetingScopeFilter(meeting), ...extra }).select("name nameBn sectionId classId").lean()) as unknown as ScopeStudent[];
 }
 
-const displayName = (s: { name: string; nameBn?: string }): string => s.nameBn || s.name;
+const displayName = (s: { name: string; nameBn?: string }): string => personName(s);
 
 /** Open (collection started, not closed) meetings whose day is today or later. */
 async function openMeetings(now: Date): Promise<IParentMeeting[]> {

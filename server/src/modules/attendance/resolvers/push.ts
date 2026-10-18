@@ -16,6 +16,7 @@ import {
   unregisterPushDevice,
   buildGuardianChaseLink,
 } from "../services/PushDeviceService";
+import { personName } from "../../../lib/personName";
 
 builder.mutationField("registerPushDevice", (t) =>
   t.boolean({
@@ -67,7 +68,7 @@ builder.queryField("guardianChaseLink", (t) =>
       if (!student.phone) return null;
       return buildGuardianChaseLink({
         toPhone: student.phone,
-        studentName: student.nameBn ?? student.name,
+        studentName: personName(student),
       });
     },
   }),

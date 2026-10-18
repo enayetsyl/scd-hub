@@ -284,7 +284,7 @@ describe("Summary", () => {
   test("children and sections are joined onto the row", async () => {
     const rep = await guardianEngagement({ days: 90 });
     const row = rep.guardians.find((r) => r.guardianId === G_REGULAR.toString())!;
-    expect(row.childNames).toEqual(["শিশু"]);
+    expect(row.childNames).toEqual(["Child"]); // English first (D-#764)
     expect(row.sectionNames).toEqual(["ক শাখা"]);
   });
 });

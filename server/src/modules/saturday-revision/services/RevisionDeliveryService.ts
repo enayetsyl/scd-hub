@@ -39,6 +39,7 @@ import { dateKeyOf } from "../../attendance/dates";
 import { writeAudit } from "../../platform/services/AuditService";
 import { RevisionError } from "./RevisionService";
 import { actingAsFilter } from "../../foundation/services/RoleScope";
+import { personName } from "../../../lib/personName";
 
 /** The read-time default consecutive-absence threshold (D-#245/#97 — no seed write). */
 export const DEFAULT_ABSENCE_THRESHOLD = 2;
@@ -117,7 +118,7 @@ export async function deliverEntry(entryId: string, actorId: string): Promise<Re
   const student = (await Student.findById(entry.studentId)
     .select("name nameBn phone")
     .lean()) as unknown as StudentLite | null;
-  const studentName = student?.nameBn || student?.name || "শিক্ষার্থী";
+  const studentName = personName(student, "শিক্ষার্থী");
   const dateKey = dateKeyOf(new Date(entry.date));
   const kind: "SR_ABSENT" | "SR_DIGEST" = entry.present ? "SR_DIGEST" : "SR_ABSENT";
 

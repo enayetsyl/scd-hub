@@ -40,6 +40,7 @@ import {
 } from "./ClassTestResultService";
 import { atMidnight, buildIsOpenDayForRange, deriveOverdue, type IsOpenDay } from "../classTestCalendar";
 import { getEffectiveTemplate, interpolate, type EffectiveTemplate } from "../../templates/services/MessageTemplateService";
+import { personName } from "../../../lib/personName";
 
 // ---------------------------------------------------------------------------
 // Scope filter → the PRINTED-exam query (an official exam is the unit of reporting)
@@ -592,7 +593,7 @@ async function loadStudentNames(ids: string[]): Promise<Map<string, string>> {
   const students = (await Student.find({ _id: { $in: ids.map((id) => new Types.ObjectId(id)) } })
     .select("name nameBn")
     .lean()) as unknown as Array<{ _id: Types.ObjectId; name: string; nameBn?: string }>;
-  return new Map(students.map((s) => [s._id.toString(), s.nameBn || s.name]));
+  return new Map(students.map((s) => [s._id.toString(), personName(s)]));
 }
 
 // ---------------------------------------------------------------------------

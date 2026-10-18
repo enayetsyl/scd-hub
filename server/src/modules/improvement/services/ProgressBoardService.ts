@@ -30,6 +30,7 @@ import {
   type Cell,
 } from "../rules";
 import { summarize, todayKey, ImprovementError, type ActionSummary } from "./ImprovementActionService";
+import { personName } from "../../../lib/personName";
 
 const str = (id: unknown): string => (id == null ? "" : String(id));
 const oid = (id: string | Types.ObjectId): Types.ObjectId => new Types.ObjectId(id.toString());
@@ -223,7 +224,7 @@ export async function sectionBoard(sectionId: string, fromKey: string, toKey: st
       const acts = idx.forStudent(str(k._id), sectionId);
       return {
         studentId: str(k._id),
-        name: k.nameBn || k.name,
+        name: personName(k),
         rollNumber: k.rollNumber ?? null,
         cells: [...r.cells].sort((a, b) => bySubjectOrder(a.subject, b.subject)),
         overall: r.overall,
@@ -329,7 +330,7 @@ export async function schoolOverview(fromKey: string, toKey: string): Promise<Sc
       const st = rowState(idx.forStudent(str(k._id), str(k.sectionId), subject), outcome);
       attention.push({
         studentId: sid,
-        name: k.nameBn || k.name,
+        name: personName(k),
         sectionId: str(k.sectionId),
         classLevel: sec?.classLevel ?? null,
         sectionNameBn: sec?.nameBn ?? "",
@@ -414,7 +415,7 @@ export async function studentProgress(studentId: string, fromKey: string, toKey:
 
   return {
     studentId,
-    name: st.nameBn || st.name,
+    name: personName(st),
     sectionId: str(st.sectionId),
     classLevel: board.classLevel,
     sectionNameBn: board.sectionNameBn,

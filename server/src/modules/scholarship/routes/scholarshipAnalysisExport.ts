@@ -26,6 +26,7 @@ import { studentAnalysis } from "../services/ScholarshipAnalysisService";
 import { listTopics } from "../services/ScholarshipService";
 import { buildAnalysisMarkdown } from "../services/ScholarshipExportService";
 import { writeAudit } from "../../platform/services/AuditService";
+import { personName } from "../../../lib/personName";
 
 export const scholarshipAnalysisExportRouter: Router = createRouter();
 
@@ -91,7 +92,7 @@ scholarshipAnalysisExportRouter.get("/", async (req: Request, res: Response) => 
   const catalogue = await listTopics(classLevel, subject);
   // `nameBn` is sparse in the source roster, so `name` is the fallback exactly as the
   // paper roster and the heat-map do.
-  const studentName = student.nameBn?.trim() || student.name || "—";
+  const studentName = personName(student, "—");
 
   const body = buildAnalysisMarkdown({
     studentName,

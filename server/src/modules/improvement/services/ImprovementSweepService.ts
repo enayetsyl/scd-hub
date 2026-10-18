@@ -21,6 +21,7 @@ import { actingAsFilter } from "../../foundation/services/RoleScope";
 import { emit } from "../../notifications/services/NotificationService";
 import { officeDayTasks, todayKey } from "./ImprovementActionService";
 import { pastDays, trailingUnmarked, addDaysKey } from "../rules";
+import { personName } from "../../../lib/personName";
 
 const str = (id: unknown): string => (id == null ? "" : String(id));
 
@@ -98,7 +99,7 @@ export async function emitGuardianMissed(now = new Date()): Promise<number> {
         recipientUserId: str(section.classTeacherId),
         kind: "IMPROVEMENT_GUARDIAN_MISSED",
         titleBn: `অভিভাবক টানা ${bnDigits(run)} দিন চিহ্নিত করেননি`,
-        bodyBn: `${k.nameBn || k.name} (${section.nameBn}) — ${(HW_SUBJECT_LABELS_BN as Record<string, string>)[a.subject] ?? a.subject}: স্কুলের দেওয়া কাজটি বাড়িতে হচ্ছে কি না অভিভাবকের সাথে কথা বলুন।`,
+        bodyBn: `${personName(k)} (${section.nameBn}) — ${(HW_SUBJECT_LABELS_BN as Record<string, string>)[a.subject] ?? a.subject}: স্কুলের দেওয়া কাজটি বাড়িতে হচ্ছে কি না অভিভাবকের সাথে কথা বলুন।`,
         refs: { improvementActionId: str(a._id), studentId: str(k._id), date: today },
         dedupeKey: `IAGM:${str(a._id)}:${str(k._id)}:${runStart}`,
       });

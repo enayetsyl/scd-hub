@@ -50,6 +50,7 @@ import { emitStaffLeaveSubmitted } from "../../notifications/services/emitters";
 import { POOLED_LEAVE_TYPES } from "@scd/shared";
 import { bnNum } from "../../../lib/bnNum";
 import { queryPage, type Page, type PageArgs } from "../../../lib/paging";
+import { personName } from "../../../lib/personName";
 
 // --- pure split math -------------------------------------------------------
 
@@ -215,7 +216,7 @@ export async function applyForLeave(input: ApplyLeaveInput): Promise<IStaffLeave
 
   // Notify every approver (active Principal/Office) — owner 2026-07-26. Best-effort;
   // a notification problem never blocks the application.
-  const staffName = staff.nameBn || staff.name || "";
+  const staffName = personName(staff);
   const span = input.fromKey === input.toKey ? input.fromKey : `${input.fromKey} – ${input.toKey}`;
   await emitStaffLeaveSubmitted({
     leaveApplicationId: application._id.toString(),

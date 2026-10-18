@@ -292,7 +292,7 @@ describe("rankStudents — present % of held days", () => {
     expect(mockSectionFind).not.toHaveBeenCalled(); // registers are never mixed
   });
 
-  test("the Bangla name is preferred when the roster carries one", async () => {
+  test("the English name is preferred even when the roster carries a Bangla one (D-#764)", async () => {
     mockSectionFind.mockResolvedValue([{ _id: oid(SEC), code: "Main", nameBn: "মূল" }]);
     mockStudentDayFind.mockResolvedValue(
       Array.from({ length: 10 }, () => ({ sectionId: oid(SEC), absentStudentIds: [] })),
@@ -301,7 +301,7 @@ describe("rankStudents — present % of held days", () => {
       { _id: oid("a"), name: "Ayesha", nameBn: "আয়েশা", sectionId: oid(SEC), classId: oid("cKg") },
     ]);
     const res = await rankStudents({ window: "month", anchorKey: "2026-08-15", axis: "section", axisValue: SEC });
-    expect(res.rows[0].name).toBe("আয়েশা");
+    expect(res.rows[0].name).toBe("Ayesha");
   });
 });
 
