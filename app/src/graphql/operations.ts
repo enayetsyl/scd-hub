@@ -127,6 +127,29 @@ export const IMPERSONATION_TARGETS = gql<
   }
 `;
 
+// D-#761: the paged picker ViewAsScreen reads; the query above stays for released bundles.
+export const IMPERSONATION_TARGETS_PAGE = gql<
+  { impersonationTargetsPage: { rows: ImpersonationTargetT[]; total: number; page: number; pageSize: number } },
+  { kind: string; search?: string | null; page: number; pageSize: number }
+>`
+  query ImpersonationTargetsPage($kind: String!, $search: String, $page: Int, $pageSize: Int) {
+    impersonationTargetsPage(kind: $kind, search: $search, page: $page, pageSize: $pageSize) {
+      rows {
+        id
+        kind
+        name
+        role
+        lines
+        eligible
+        reason
+      }
+      total
+      page
+      pageSize
+    }
+  }
+`;
+
 export interface ImpersonationResultT {
   token: string;
   userId: string;
@@ -590,6 +613,21 @@ export const PROXY_GRANTS_QUERY = gql<{ proxyGrants: ScopeGrantT[] }, { activeOn
   }
 `;
 
+// D-#761: the paged list ScopeGrantScreen reads (also drops grants whose window has ended).
+export const PROXY_GRANTS_PAGE_QUERY = gql<
+  { proxyGrantsPage: { rows: ScopeGrantT[]; total: number; page: number; pageSize: number } },
+  { activeOnly?: boolean | null; page: number; pageSize: number }
+>`
+  query ProxyGrantsPage($activeOnly: Boolean, $page: Int, $pageSize: Int) {
+    proxyGrantsPage(activeOnly: $activeOnly, page: $page, pageSize: $pageSize) {
+      rows { ${SCOPE_GRANT_FIELDS} }
+      total
+      page
+      pageSize
+    }
+  }
+`;
+
 /** Subject-teacher (teaching) grants for a section (user:manage). */
 export const TEACHING_GRANTS_QUERY = gql<{ teachingGrants: ScopeGrantT[] }, { sectionId: string }>`
   query TeachingGrants($sectionId: String!) {
@@ -984,7 +1022,11 @@ export const ASSIGNABLE_PLANS_PAGE = gql<
     docType?: string | null;
     state?: string | null;
     reviewerId?: string | null;
+    // D-#761: the assign screen's filters + page size.
+    reviewStatus?: string | null;
+    unassignedOnly?: boolean | null;
     page?: number | null;
+    pageSize?: number | null;
   }
 >`
   query AssignablePlansPage(
@@ -993,7 +1035,10 @@ export const ASSIGNABLE_PLANS_PAGE = gql<
     $docType: String
     $state: String
     $reviewerId: String
+    $reviewStatus: String
+    $unassignedOnly: Boolean
     $page: Int
+    $pageSize: Int
   ) {
     assignablePlansPage(
       subject: $subject
@@ -1001,7 +1046,10 @@ export const ASSIGNABLE_PLANS_PAGE = gql<
       docType: $docType
       state: $state
       reviewerId: $reviewerId
+      reviewStatus: $reviewStatus
+      unassignedOnly: $unassignedOnly
       page: $page
+      pageSize: $pageSize
     ) {
       total page pageSize
       rows {
@@ -1511,6 +1559,23 @@ export const ASSIGNABLE_QUESTIONS = gql<
       artifactId qid subject classLevel anchorWord addressNumber
       questionText questionType marks topicTag reviewStatus
       currentReviewerId currentReviewerName currentAssignmentId roundStatus
+    }
+  }
+`;
+
+/** D-#761: the paged picker — every match reachable, `total` is the real count. */
+export const ASSIGNABLE_QUESTIONS_PAGE = gql<
+  { assignableQuestionsPage: { rows: AssignableQuestionT[]; total: number; page: number; pageSize: number } },
+  { subject?: string | null; classLevel?: number | null; search?: string | null; page?: number | null; pageSize?: number | null }
+>`
+  query AssignableQuestionsPage($subject: String, $classLevel: Int, $search: String, $page: Int, $pageSize: Int) {
+    assignableQuestionsPage(subject: $subject, classLevel: $classLevel, search: $search, page: $page, pageSize: $pageSize) {
+      total page pageSize
+      rows {
+        artifactId qid subject classLevel anchorWord addressNumber
+        questionText questionType marks topicTag reviewStatus
+        currentReviewerId currentReviewerName currentAssignmentId roundStatus
+      }
     }
   }
 `;
@@ -2080,6 +2145,43 @@ export const ASSESSMENT_SETS_QUERY = gql<
   }
 `;
 
+// D-#761: the section's sets, one page at a time (newest first; setType filters server-side).
+export const ASSESSMENT_SETS_PAGE_QUERY = gql<
+  { assessmentSetsPage: { rows: AssessmentSetT[]; total: number; page: number; pageSize: number } },
+  {
+    sectionId: string;
+    classId: string;
+    status?: string | null;
+    setType?: string | null;
+    page?: number | null;
+    pageSize?: number | null;
+  }
+>`
+  query AssessmentSetsPage($sectionId: String!, $classId: String!, $status: String, $setType: String, $page: Int, $pageSize: Int) {
+    assessmentSetsPage(sectionId: $sectionId, classId: $classId, status: $status, setType: $setType, page: $page, pageSize: $pageSize) {
+      rows {
+        id
+        setType
+        name
+        sectionId
+        classId
+        subjectId
+        status
+        basketItems { artifactId qid marks }
+        totalMarks
+        durationMinutes
+        examMinutes
+        dueDate
+        createdBy
+        assembledBy
+        assembledAt
+        createdAt
+      }
+      total page pageSize
+    }
+  }
+`;
+
 /** ux-audit F7 — Today's "সাম্প্রতিক সেট": the caller's newest sets across ALL
  *  their sections, each with the id of a still-open tracker (if any) so the
  *  shortcut can route straight to TrackerEntry instead of re-firing the
@@ -2175,6 +2277,38 @@ export const TRACKERS_QUERY = gql<
       createdBy
       closedAt
       createdAt
+    }
+  }
+`;
+
+// D-#761: the section's trackers, one page at a time (newest first).
+export const TRACKERS_PAGE_QUERY = gql<
+  { trackersPage: { rows: TrackerRecordT[]; total: number; page: number; pageSize: number } },
+  {
+    sectionId: string;
+    classId: string;
+    trackerKind?: string | null;
+    setId?: string | null;
+    status?: string | null;
+    page?: number | null;
+    pageSize?: number | null;
+  }
+>`
+  query TrackersPage($sectionId: String!, $classId: String!, $trackerKind: String, $setId: String, $status: String, $page: Int, $pageSize: Int) {
+    trackersPage(sectionId: $sectionId, classId: $classId, trackerKind: $trackerKind, setId: $setId, status: $status, page: $page, pageSize: $pageSize) {
+      rows {
+        id
+        trackerKind
+        setId
+        sectionId
+        classId
+        entries { pseudoStudentId score submitted complete }
+        status
+        createdBy
+        closedAt
+        createdAt
+      }
+      total page pageSize
     }
   }
 `;
@@ -2875,14 +3009,49 @@ export interface HwOpenRecordT {
   resubOf: string | null;
 }
 
+const HW_OPEN_RECORD_FIELDS = `
+  id hwId hwItemId subject topicLabelBn description dateGiven studentId studentName state chaseCount hasAnswerFile hasGuardianClaim answerFileId dueDate result stampCount lastStateAt resubOf
+`;
+
+/** D-#761: `skipFinishedItems` leaves out finished items (all returned, none today) —
+ *  the workspace pages those through HOMEWORK_DONE_ITEMS_PAGE instead. */
 export const HOMEWORK_OPEN_RECORDS = gql<
   { homeworkOpenRecords: HwOpenRecordT[] },
-  { sectionId: string; classId: string; states: string[] }
+  { sectionId: string; classId: string; states: string[]; skipFinishedItems?: boolean }
 >`
-  query HomeworkOpenRecords($sectionId: String!, $classId: String!, $states: [String!]!) {
-    homeworkOpenRecords(sectionId: $sectionId, classId: $classId, states: $states) {
-      id hwId hwItemId subject topicLabelBn description dateGiven studentId studentName state chaseCount hasAnswerFile hasGuardianClaim answerFileId dueDate result stampCount lastStateAt resubOf
+  query HomeworkOpenRecords($sectionId: String!, $classId: String!, $states: [String!]!, $skipFinishedItems: Boolean) {
+    homeworkOpenRecords(sectionId: $sectionId, classId: $classId, states: $states, skipFinishedItems: $skipFinishedItems) {
+      ${HW_OPEN_RECORD_FIELDS}
     }
+  }
+`;
+
+/** D-#761: the workspace's completed fold, one page of finished ITEMS (cards) at a
+ *  time, newest given-date first, each with its records. */
+export interface HwDoneItemT {
+  hwItemId: string;
+  records: HwOpenRecordT[];
+}
+
+export const HOMEWORK_DONE_ITEMS_PAGE = gql<
+  { homeworkDoneItemsPage: { rows: HwDoneItemT[]; total: number; page: number; pageSize: number } },
+  { sectionId: string; classId: string; subject?: string | null; page: number; pageSize: number }
+>`
+  query HomeworkDoneItemsPage($sectionId: String!, $classId: String!, $subject: String, $page: Int, $pageSize: Int) {
+    homeworkDoneItemsPage(sectionId: $sectionId, classId: $classId, subject: $subject, page: $page, pageSize: $pageSize) {
+      rows { hwItemId records { ${HW_OPEN_RECORD_FIELDS} } }
+      total page pageSize
+    }
+  }
+`;
+
+/** D-#761: finished-card counts per subject — the subject chips and the fold's count. */
+export const HOMEWORK_DONE_ITEM_SUBJECTS = gql<
+  { homeworkDoneItemSubjects: Array<{ subject: string; count: number }> },
+  { sectionId: string; classId: string }
+>`
+  query HomeworkDoneItemSubjects($sectionId: String!, $classId: String!) {
+    homeworkDoneItemSubjects(sectionId: $sectionId, classId: $classId) { subject count }
   }
 `;
 
@@ -4679,6 +4848,55 @@ export const CLASS_NOTES_ADMIN_QUERY = gql<
     }
   }
 `;
+/** D-#761: the admin list one page at a time, its filters run on the server. */
+export const CLASS_NOTES_ADMIN_PAGE_QUERY = gql<
+  { classNotesAdminPage: { rows: ClassNoteAdminRowT[]; total: number; page: number; pageSize: number } },
+  {
+    date: string;
+    dateTo?: string | null;
+    classLevel?: number | null;
+    teacherName?: string | null;
+    subject?: string | null;
+    page?: number | null;
+    pageSize?: number | null;
+  }
+>`
+  query ClassNotesAdminPage(
+    $date: String!
+    $dateTo: String
+    $classLevel: Int
+    $teacherName: String
+    $subject: String
+    $page: Int
+    $pageSize: Int
+  ) {
+    classNotesAdminPage(
+      date: $date
+      dateTo: $dateTo
+      classLevel: $classLevel
+      teacherName: $teacherName
+      subject: $subject
+      page: $page
+      pageSize: $pageSize
+    ) {
+      total page pageSize
+      rows {
+        id date subject taughtSummaryBn classLevel classNameBn sectionCode sectionNameBn
+        subjectGroupNameBn authorName publishedAt
+        attachments { id name mime }
+      }
+    }
+  }
+`;
+/** D-#761: the select options for that window (values that exist in it). */
+export const CLASS_NOTES_ADMIN_OPTIONS_QUERY = gql<
+  { classNotesAdminOptions: { classLevels: number[]; teachers: string[]; subjects: string[] } },
+  { date: string; dateTo?: string | null }
+>`
+  query ClassNotesAdminOptions($date: String!, $dateTo: String) {
+    classNotesAdminOptions(date: $date, dateTo: $dateTo) { classLevels teachers subjects }
+  }
+`;
 export const UPDATE_CLASS_NOTE = gql<
   { updateClassNote: ClassNoteT },
   { id: string; taughtSummaryBn?: string | null; attachmentIds?: string[] | null }
@@ -5080,6 +5298,21 @@ export const TEACHER_ATTENDANCE_IMPORTS = gql<
 >`
   query TeacherAttendanceImports {
     teacherAttendanceImports { dateKey records }
+  }
+`;
+
+// D-#761: the paged past-uploads list (the query above stops at 60 silently).
+export const TEACHER_ATTENDANCE_IMPORTS_PAGE = gql<
+  { teacherAttendanceImportsPage: { rows: { dateKey: string; records: number }[]; total: number; page: number; pageSize: number } },
+  { page: number; pageSize: number }
+>`
+  query TeacherAttendanceImportsPage($page: Int, $pageSize: Int) {
+    teacherAttendanceImportsPage(page: $page, pageSize: $pageSize) {
+      rows { dateKey records }
+      total
+      page
+      pageSize
+    }
   }
 `;
 
@@ -5916,6 +6149,22 @@ export const AS_CHASE_LIST = gql<{ assignmentChaseList: AsChaseEntryT[] }, NoVar
   }
 `;
 
+// D-#761: the school-wide chase list, one page at a time (most overdue first).
+export const AS_CHASE_LIST_PAGE = gql<
+  { assignmentChaseListPage: { rows: AsChaseEntryT[]; total: number; page: number; pageSize: number } },
+  { page?: number | null; pageSize?: number | null }
+>`
+  query AssignmentChaseListPage($page: Int, $pageSize: Int) {
+    assignmentChaseListPage(page: $page, pageSize: $pageSize) {
+      rows {
+        recordId asId subject weekNumber sectionId studentId studentName guardianPhone
+        dueDate daysOverdue chaseCount followUpCount nextStepNumber
+      }
+      total page pageSize
+    }
+  }
+`;
+
 export interface AsEscalateResultT {
   followUpId: string;
   recordId: string;
@@ -6041,6 +6290,25 @@ export const BOOK_TITLES_QUERY = gql<
   query BookTitles($search: String, $language: String, $includeInactive: Boolean) {
     bookTitles(search: $search, language: $language, includeInactive: $includeInactive) {
       id titleBn titleEn author language category shelf active totalCopies availableCopies
+    }
+  }
+`;
+
+/** D-#761: the catalog, one page at a time (the browse + manage screens). */
+export const BOOK_TITLES_PAGE_QUERY = gql<
+  { bookTitlesPage: { rows: BookTitleRowT[]; total: number; page: number; pageSize: number } },
+  {
+    search?: string | null;
+    language?: string | null;
+    includeInactive?: boolean | null;
+    page: number;
+    pageSize: number;
+  }
+>`
+  query BookTitlesPage($search: String, $language: String, $includeInactive: Boolean, $page: Int, $pageSize: Int) {
+    bookTitlesPage(search: $search, language: $language, includeInactive: $includeInactive, page: $page, pageSize: $pageSize) {
+      rows { id titleBn titleEn author language category shelf active totalCopies availableCopies }
+      total page pageSize
     }
   }
 `;
@@ -6242,18 +6510,20 @@ export const LOANS_QUERY = gql<
   }
 `;
 
+/** D-#761: `activeOnly` — the desk renders only the books still out, so it no longer
+ *  pulls the borrower's whole loan history. */
 export const BORROWER_LOANS_QUERY = gql<
   { borrowerLoans: BookLoanT[] },
-  { borrowerType: string; borrowerId: string }
+  { borrowerType: string; borrowerId: string; activeOnly?: boolean | null }
 >`
-  query BorrowerLoans($borrowerType: String!, $borrowerId: String!) {
-    borrowerLoans(borrowerType: $borrowerType, borrowerId: $borrowerId) { ${LOAN_FIELDS} }
+  query BorrowerLoans($borrowerType: String!, $borrowerId: String!, $activeOnly: Boolean) {
+    borrowerLoans(borrowerType: $borrowerType, borrowerId: $borrowerId, activeOnly: $activeOnly) { ${LOAN_FIELDS} }
   }
 `;
 
-export const MY_LOANS_QUERY = gql<{ myLoans: BookLoanT[] }, NoVars>`
-  query MyLoans {
-    myLoans { ${LOAN_FIELDS} }
+export const MY_LOANS_QUERY = gql<{ myLoans: BookLoanT[] }, { activeOnly?: boolean | null }>`
+  query MyLoans($activeOnly: Boolean) {
+    myLoans(activeOnly: $activeOnly) { ${LOAN_FIELDS} }
   }
 `;
 
@@ -6425,13 +6695,15 @@ export interface ChildAssignmentT {
 }
 
 /** D-#476: limit/offset are optional server-side, so omitting them still returns
- *  the whole history — the guardian list passes them to page instead. */
+ *  the whole history — the guardian list passes them to page instead.
+ *  D-#761: `outstandingOnly` = just the rows still to act on (chased, or pending and
+ *  late), for the lists that render nothing else. */
 export const CHILD_ASSIGNMENTS = gql<
   { childAssignments: ChildAssignmentT[] },
-  { studentId: string; limit?: number; offset?: number }
+  { studentId: string; limit?: number; offset?: number; outstandingOnly?: boolean }
 >`
-  query ChildAssignments($studentId: String!, $limit: Int, $offset: Int) {
-    childAssignments(studentId: $studentId, limit: $limit, offset: $offset) {
+  query ChildAssignments($studentId: String!, $limit: Int, $offset: Int, $outstandingOnly: Boolean) {
+    childAssignments(studentId: $studentId, limit: $limit, offset: $offset, outstandingOnly: $outstandingOnly) {
       recordId asId subject weekNumber state pending daysLate deliveryDate dueDate
       canClaim claimHoldBn
       claim { ${WORK_CLAIM_FIELDS} }
@@ -6451,12 +6723,13 @@ export interface ChildLibraryLoanT {
   overdue: boolean;
 }
 
+/** D-#761: `limit` = the newest N loans plus every book still out; omitted = all. */
 export const CHILD_LIBRARY_LOANS_QUERY = gql<
   { childLibraryLoans: ChildLibraryLoanT[] },
-  { studentId: string }
+  { studentId: string; limit?: number }
 >`
-  query ChildLibraryLoans($studentId: String!) {
-    childLibraryLoans(studentId: $studentId) {
+  query ChildLibraryLoans($studentId: String!, $limit: Int) {
+    childLibraryLoans(studentId: $studentId, limit: $limit) {
       id titleBn accessionNo issuedAt dueDate status returnedAt overdue
     }
   }
@@ -6534,6 +6807,30 @@ export const MY_NOTIFICATIONS_QUERY = gql<
 >`
   query MyNotifications($unreadOnly: Boolean, $limit: Int) {
     myNotifications(unreadOnly: $unreadOnly, limit: $limit) {
+      ${NOTIFICATION_FIELDS}
+    }
+  }
+`;
+
+/** D-#761: the inbox, PAGED — every unread row first (newest first), then the read ones.
+ *  The server orders it, so an old unread row is reachable, not just counted by the 🔔. */
+export const MY_NOTIFICATIONS_PAGE_QUERY = gql<
+  { myNotificationsPage: { rows: NotificationT[]; total: number; page: number; pageSize: number } },
+  { page?: number | null; pageSize?: number | null }
+>`
+  query MyNotificationsPage($page: Int, $pageSize: Int) {
+    myNotificationsPage(page: $page, pageSize: $pageSize) {
+      total page pageSize
+      rows { ${NOTIFICATION_FIELDS} }
+    }
+  }
+`;
+
+/** D-#761: ONE own notification by id — the detail screen, so a deep link to an old row
+ *  opens it rather than nothing. Null when it is not the caller's. */
+export const MY_NOTIFICATION_QUERY = gql<{ myNotification: NotificationT | null }, { id: string }>`
+  query MyNotification($id: String!) {
+    myNotification(id: $id) {
       ${NOTIFICATION_FIELDS}
     }
   }
@@ -6818,6 +7115,19 @@ export const OVERSIGHT_CONVERSATIONS_QUERY = gql<
   }
 `;
 
+// D-#761: the oversight browser, one page at a time (newest activity first).
+export const OVERSIGHT_CONVERSATIONS_PAGE_QUERY = gql<
+  { oversightConversationsPage: { rows: ConversationT[]; total: number; page: number; pageSize: number } },
+  { page?: number | null; pageSize?: number | null }
+>`
+  query OversightConversationsPage($page: Int, $pageSize: Int) {
+    oversightConversationsPage(page: $page, pageSize: $pageSize) {
+      rows { ${CONVERSATION_FIELDS} }
+      total page pageSize
+    }
+  }
+`;
+
 export const OPEN_CONVERSATION_OVERSIGHT = gql<
   { openConversationOversight: ConversationT },
   { conversationId: string }
@@ -7095,6 +7405,21 @@ export const STAFF_LEAVE_APPLICATIONS_QUERY = gql<
   }
 `;
 
+// D-#761: the paged list LeaveAdminScreen reads; the query above stays for released bundles.
+export const STAFF_LEAVE_APPLICATIONS_PAGE_QUERY = gql<
+  { staffLeaveApplicationsPage: { rows: StaffLeaveT[]; total: number; page: number; pageSize: number } },
+  { status?: string | null; fromKey?: string | null; toKey?: string | null; page: number; pageSize: number }
+>`
+  query StaffLeaveApplicationsPage($status: String, $fromKey: String, $toKey: String, $page: Int, $pageSize: Int) {
+    staffLeaveApplicationsPage(status: $status, fromKey: $fromKey, toKey: $toKey, page: $page, pageSize: $pageSize) {
+      rows { ${STAFF_LEAVE_FIELDS} }
+      total
+      page
+      pageSize
+    }
+  }
+`;
+
 export const UPSERT_STAFF_LEAVE_ENTITLEMENT = gql<
   { upsertStaffLeaveEntitlement: StaffLeaveBalanceT },
   { staffProfileId: string; academicYearId: string; leaveType: string; allowanceDays: number; carriedOverDays?: number | null; note?: string | null }
@@ -7238,6 +7563,21 @@ const OBSERVATION_FIELDS = `
 export const MY_OBSERVATIONS_QUERY = gql<{ myObservations: ObservationT[] }, NoVars>`
   query MyObservations {
     myObservations { ${OBSERVATION_FIELDS} }
+  }
+`;
+
+// D-#761: paged; the query above stays for released bundles.
+export const MY_OBSERVATIONS_PAGE_QUERY = gql<
+  { myObservationsPage: { rows: ObservationT[]; total: number; page: number; pageSize: number } },
+  { page: number; pageSize: number }
+>`
+  query MyObservationsPage($page: Int, $pageSize: Int) {
+    myObservationsPage(page: $page, pageSize: $pageSize) {
+      rows { ${OBSERVATION_FIELDS} }
+      total
+      page
+      pageSize
+    }
   }
 `;
 
@@ -7543,6 +7883,21 @@ export const SETTLE_STAFF_ADVANCE = gql<
 export const STAFF_OBSERVATIONS_QUERY = gql<{ staffObservations: ObservationT[] }, { staffProfileId: string }>`
   query StaffObservations($staffProfileId: String!) {
     staffObservations(staffProfileId: $staffProfileId) { ${OBSERVATION_FIELDS} }
+  }
+`;
+
+// D-#761: paged; the query above stays for released bundles.
+export const STAFF_OBSERVATIONS_PAGE_QUERY = gql<
+  { staffObservationsPage: { rows: ObservationT[]; total: number; page: number; pageSize: number } },
+  { staffProfileId: string; page: number; pageSize: number }
+>`
+  query StaffObservationsPage($staffProfileId: String!, $page: Int, $pageSize: Int) {
+    staffObservationsPage(staffProfileId: $staffProfileId, page: $page, pageSize: $pageSize) {
+      rows { ${OBSERVATION_FIELDS} }
+      total
+      page
+      pageSize
+    }
   }
 `;
 
@@ -7970,6 +8325,19 @@ export const VOCAB_TESTS_QUERY = gql<
   }
 `;
 
+// D-#761: the section's tests, one page at a time (newest first).
+export const VOCAB_TESTS_PAGE_QUERY = gql<
+  { vocabTestsPage: { rows: VocabTestT[]; total: number; page: number; pageSize: number } },
+  { sectionId?: string | null; program?: string | null; weekOf?: string | null; page?: number | null; pageSize?: number | null }
+>`
+  query VocabTestsPage($sectionId: String, $program: String, $weekOf: String, $page: Int, $pageSize: Int) {
+    vocabTestsPage(sectionId: $sectionId, program: $program, weekOf: $weekOf, page: $page, pageSize: $pageSize) {
+      rows { ${VOCAB_TEST_FIELDS} }
+      total page pageSize
+    }
+  }
+`;
+
 export const VOCAB_TEST_QUERY = gql<{ vocabTest: VocabTestT | null }, { testId: string }>`
   query VocabTest($testId: String!) {
     vocabTest(testId: $testId) { ${VOCAB_TEST_FIELDS} }
@@ -8068,12 +8436,38 @@ export const VOCAB_ASSIGNMENT_HISTORY_QUERY = gql<
   }
 `;
 
+// D-#761: the append-only assignment history, one page at a time.
+export const VOCAB_ASSIGNMENT_HISTORY_PAGE_QUERY = gql<
+  { vocabAssignmentHistoryPage: { rows: VocabAssignmentT[]; total: number; page: number; pageSize: number } },
+  { sectionId: string; program: string; page?: number | null; pageSize?: number | null }
+>`
+  query VocabAssignmentHistoryPage($sectionId: String!, $program: String!, $page: Int, $pageSize: Int) {
+    vocabAssignmentHistoryPage(sectionId: $sectionId, program: $program, page: $page, pageSize: $pageSize) {
+      rows { ${VOCAB_ASSIGNMENT_FIELDS} }
+      total page pageSize
+    }
+  }
+`;
+
 export const MY_VOCAB_ASSIGNMENTS_QUERY = gql<
   { myVocabAssignments: VocabAssignmentT[] },
   { fromWeek?: string | null }
 >`
   query MyVocabAssignments($fromWeek: String) {
     myVocabAssignments(fromWeek: $fromWeek) { ${VOCAB_ASSIGNMENT_FIELDS} }
+  }
+`;
+
+// D-#761: the caller's weekly tester duty, one page at a time (newest week first).
+export const MY_VOCAB_ASSIGNMENTS_PAGE_QUERY = gql<
+  { myVocabAssignmentsPage: { rows: VocabAssignmentT[]; total: number; page: number; pageSize: number } },
+  { fromWeek?: string | null; page?: number | null; pageSize?: number | null }
+>`
+  query MyVocabAssignmentsPage($fromWeek: String, $page: Int, $pageSize: Int) {
+    myVocabAssignmentsPage(fromWeek: $fromWeek, page: $page, pageSize: $pageSize) {
+      rows { ${VOCAB_ASSIGNMENT_FIELDS} }
+      total page pageSize
+    }
   }
 `;
 
@@ -8219,6 +8613,33 @@ export const VOCAB_STUDENT_DASHBOARD_QUERY = gql<
   }
 `;
 
+// D-#761: the dashboard WITHOUT perTest (roll-up + persistent words only) — the per-test
+// history comes a page at a time from VOCAB_STUDENT_TESTS_PAGE_QUERY.
+export const VOCAB_STUDENT_DASHBOARD_SUMMARY_QUERY = gql<
+  { vocabStudentDashboard: Omit<VocabStudentDashboardT, "perTest"> },
+  { studentId: string; program?: string | null; persistentMinTests?: number | null }
+>`
+  query VocabStudentDashboardSummary($studentId: String!, $program: String, $persistentMinTests: Int) {
+    vocabStudentDashboard(studentId: $studentId, program: $program, persistentMinTests: $persistentMinTests) {
+      studentId
+      rollup { ${VOCAB_ROLLUP_FIELDS} }
+      persistentWords { ${VOCAB_PERSISTENT_FIELDS} }
+    }
+  }
+`;
+
+export const VOCAB_STUDENT_TESTS_PAGE_QUERY = gql<
+  { vocabStudentTestsPage: { rows: VocabStudentTestEntryT[]; total: number; page: number; pageSize: number } },
+  { studentId: string; program?: string | null; page?: number | null; pageSize?: number | null }
+>`
+  query VocabStudentTestsPage($studentId: String!, $program: String, $page: Int, $pageSize: Int) {
+    vocabStudentTestsPage(studentId: $studentId, program: $program, page: $page, pageSize: $pageSize) {
+      rows { test { ${VOCAB_TEST_META_FIELDS} } result { ${VOCAB_RESULT_FIELDS} } }
+      total page pageSize
+    }
+  }
+`;
+
 export interface VocabClassTestEntryT {
   test: VocabTestMetaT;
   rollup: VocabScoreRollupT;
@@ -8242,6 +8663,33 @@ export const VOCAB_CLASS_DASHBOARD_QUERY = gql<
       tests { test { ${VOCAB_TEST_META_FIELDS} } rollup { ${VOCAB_ROLLUP_FIELDS} } }
       rollup { ${VOCAB_ROLLUP_FIELDS} }
       mostMissed { ${VOCAB_MISSED_FIELDS} }
+    }
+  }
+`;
+
+// D-#761: the class dashboard WITHOUT the per-test rows (roll-up + most-missed only) —
+// the rows come a page at a time from VOCAB_CLASS_TESTS_PAGE_QUERY.
+export const VOCAB_CLASS_DASHBOARD_SUMMARY_QUERY = gql<
+  { vocabClassDashboard: Omit<VocabClassDashboardT, "tests"> },
+  { sectionId: string; program?: string | null; classPersistentPct?: number | null }
+>`
+  query VocabClassDashboardSummary($sectionId: String!, $program: String, $classPersistentPct: Float) {
+    vocabClassDashboard(sectionId: $sectionId, program: $program, classPersistentPct: $classPersistentPct) {
+      sectionId program
+      rollup { ${VOCAB_ROLLUP_FIELDS} }
+      mostMissed { ${VOCAB_MISSED_FIELDS} }
+    }
+  }
+`;
+
+export const VOCAB_CLASS_TESTS_PAGE_QUERY = gql<
+  { vocabClassTestsPage: { rows: VocabClassTestEntryT[]; total: number; page: number; pageSize: number } },
+  { sectionId: string; program?: string | null; page?: number | null; pageSize?: number | null }
+>`
+  query VocabClassTestsPage($sectionId: String!, $program: String, $page: Int, $pageSize: Int) {
+    vocabClassTestsPage(sectionId: $sectionId, program: $program, page: $page, pageSize: $pageSize) {
+      rows { test { ${VOCAB_TEST_META_FIELDS} } rollup { ${VOCAB_ROLLUP_FIELDS} } }
+      total page pageSize
     }
   }
 `;
@@ -8333,12 +8781,13 @@ export interface ChildVocabResultT {
   result: VocabStudentResultT;
 }
 
+/** D-#761: `limit` = the newest N results only; omitted = all. */
 export const CHILD_VOCAB_QUERY = gql<
   { childVocab: ChildVocabResultT[] },
-  { studentId: string; program?: string | null }
+  { studentId: string; program?: string | null; limit?: number }
 >`
-  query ChildVocab($studentId: String!, $program: String) {
-    childVocab(studentId: $studentId, program: $program) {
+  query ChildVocab($studentId: String!, $program: String, $limit: Int) {
+    childVocab(studentId: $studentId, program: $program, limit: $limit) {
       testId program label testDate classLevel
       result { ${VOCAB_RESULT_FIELDS} }
     }

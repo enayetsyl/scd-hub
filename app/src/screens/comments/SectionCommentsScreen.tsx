@@ -5,6 +5,9 @@
  * comment → edit/deliver it. Delivered comments are sealed (read-only). The
  * reads ride tracker:read, the entry actions ride tracker:write — the Bangla
  * deny surfaces inline on the entry screen. Refetches on focus.
+ *
+ * D-#761: the comment list pages on the server (`sectionStudentCommentsPage`) — a
+ * section keeps every daily comment ever made on it.
  */
 import React, { useEffect, useMemo, useState } from "react";
 import { ScrollView, View } from "react-native";
@@ -12,9 +15,11 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
 import { STUDENTS_QUERY } from "../../graphql/operations";
-import { SECTION_STUDENT_COMMENTS_QUERY } from "../../graphql/comments";
+import { SECTION_STUDENT_COMMENTS_PAGE_QUERY } from "../../graphql/comments";
 import { Screen, Card, Body, Muted, Button, Badge } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
+import { Pager } from "../../components/Pager";
+import { usePageState, PAGE_SIZE } from "../../lib/paging";
 import { ClassSectionSelect, type SectionPick } from "../../components/vocabPickers";
 import { AcademicYearSelect } from "../../components/selects";
 import { STR, commentTypeLabel, commentSentimentLabel, isoDateLabel } from "../../lib/labels";
@@ -37,19 +42,15 @@ export default function SectionCommentsScreen(): React.ReactElement {
     return m;
   }, [studentsQ.data]);
 
+  const [page, setPage] = usePageState(sectionId);
   const [commentsQ, refetchComments] = useQuery({
-    query: SECTION_STUDENT_COMMENTS_QUERY,
-    variables: { sectionId },
+    query: SECTION_STUDENT_COMMENTS_PAGE_QUERY,
+    variables: { sectionId, page, pageSize: PAGE_SIZE },
     pause: !sectionId,
   });
-  // Newest first.
-  const comments = useMemo(
-    () =>
-      [...(commentsQ.data?.sectionStudentComments ?? [])].sort(
-        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-      ),
-    [commentsQ.data],
-  );
+  // Newest first (the server pages in that order).
+  const comments = commentsQ.data?.sectionStudentCommentsPage.rows ?? [];
+  const commentsTotal = commentsQ.data?.sectionStudentCommentsPage.total ?? 0;
 
   useEffect(() => {
     const unsub = nav.addListener("focus", () => {
@@ -161,6 +162,7 @@ export default function SectionCommentsScreen(): React.ReactElement {
                   );
                 })
               )}
+              <Pager page={page} pageSize={PAGE_SIZE} total={commentsTotal} onPage={setPage} />
             </Card>
           </QueryGate>
         )}

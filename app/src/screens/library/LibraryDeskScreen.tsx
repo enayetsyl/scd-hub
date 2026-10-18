@@ -55,7 +55,8 @@ export default function LibraryDeskScreen(): React.ReactElement {
   });
   const [loansQ, refetchLoans] = useQuery({
     query: BORROWER_LOANS_QUERY,
-    variables: { borrowerType, borrowerId: borrower?.id ?? "" },
+    // D-#761: the desk renders only the books still out — don't pull the whole history.
+    variables: { borrowerType, borrowerId: borrower?.id ?? "", activeOnly: true },
     pause: !borrower,
   });
   const [resvQ, refetchResv] = useQuery({

@@ -181,6 +181,21 @@ export const TASKS_ASSIGNED_BY_ME_QUERY = gql<{ tasksAssignedByMe: TaskT[] }, { 
   }
 `;
 
+// D-#761: the paged list the screen reads; the query above stays for released bundles.
+export const TASKS_ASSIGNED_BY_ME_PAGE_QUERY = gql<
+  { tasksAssignedByMePage: { rows: TaskT[]; total: number; page: number; pageSize: number } },
+  { open?: boolean | null; page: number; pageSize: number }
+>`
+  query TasksAssignedByMePage($open: Boolean, $page: Int, $pageSize: Int) {
+    tasksAssignedByMePage(open: $open, page: $page, pageSize: $pageSize) {
+      rows { ${TASK_FIELDS} }
+      total
+      page
+      pageSize
+    }
+  }
+`;
+
 export const WORK_LOAD_GRID_QUERY = gql<{ workLoadGrid: LoadRowT[] }, { fromKey: string; toKey: string }>`
   query WorkLoadGrid($fromKey: String!, $toKey: String!) {
     workLoadGrid(fromKey: $fromKey, toKey: $toKey) {

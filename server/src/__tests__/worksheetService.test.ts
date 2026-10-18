@@ -87,10 +87,22 @@ jest.mock("../modules/worksheets/models/WorksheetPicture", () => ({
 }));
 const mockWorksheetCreate = jest.fn(async (d: Record<string, unknown>) => ({ _id: oid(), ...d }));
 const mockWorksheetFindById = jest.fn();
+// D-#761: the paged list — what find() was asked for, and what it hands back.
+const mockListPlan: Record<string, unknown> = {};
+const mockListRows = jest.fn((): unknown[] => []);
+const mockListCount = jest.fn(async (_q?: unknown) => 0);
 jest.mock("../modules/worksheets/models/Worksheet", () => ({
   Worksheet: {
     create: (d: Record<string, unknown>) => mockWorksheetCreate(d),
     findById: () => chain(mockWorksheetFindById()),
+    find: (q: unknown) => {
+      mockListPlan.filter = q;
+      const c: Record<string, unknown> = {};
+      for (const m of ["select", "sort", "skip", "limit"]) c[m] = (v: unknown) => { mockListPlan[m] = v; return c; };
+      c.lean = async () => mockListRows();
+      return c;
+    },
+    countDocuments: (q: unknown) => mockListCount(q),
   },
 }));
 const mockStoredCreate = jest.fn(async (d: Record<string, unknown>) => ({ _id: oid(), ...d }));
@@ -119,6 +131,7 @@ import {
   sendWorksheetToPrint,
   worksheetForRead,
   worksheetTeachers,
+  myWorksheetsPage,
 } from "../modules/worksheets/services/WorksheetService";
 
 const ctxOf = (role: string, userId: string) => ({ auth: { userId, role } }) as unknown as AppContext;
@@ -269,5 +282,31 @@ describe("answer key read gate", () => {
   it("opens for the teacher the Office made it for", async () => {
     mockWorksheetFindById.mockReturnValue({ ...stored, createdBy: new mongoose.Types.ObjectId(OFFICE), forTeacherId: new mongoose.Types.ObjectId(OTHER_TEACHER) });
     await expect(worksheetForRead(ctxOf("TEACHER", OTHER_TEACHER), stored._id.toString())).resolves.toBeTruthy();
+  });
+});
+
+// D-#761 — the "made" list stopped at the newest N with no way to an older paper.
+describe("myWorksheetsPage", () => {
+  it("pages my papers (made by me OR for me), newest first, projected to the row fields", async () => {
+    const w = {
+      _id: oid(), title: "Bangla CT", kind: "CLASS_TEST", subject: "BAN", classLevel: 0,
+      totalMarks: 25, createdAt: new Date("2026-10-01T00:00:00Z"), printRequestId: null,
+    };
+    mockListRows.mockReturnValue([w]);
+    mockListCount.mockResolvedValue(23);
+    const page = await myWorksheetsPage(teacher, { page: 3, pageSize: 10 });
+    expect(page).toMatchObject({ total: 23, page: 3, pageSize: 10 });
+    expect(page.rows).toEqual([expect.objectContaining({ id: w._id.toString(), title: "Bangla CT", printRequestId: null })]);
+    expect(mockListPlan.sort).toEqual({ createdAt: -1, _id: -1 });
+    expect([mockListPlan.skip, mockListPlan.limit]).toEqual([20, 10]);
+    // Never the generated `doc` — a list row is the summary only.
+    expect(String(mockListPlan.select)).not.toContain("doc");
+    const or = (mockListPlan.filter as { $or: Array<Record<string, { toString(): string }>> }).$or;
+    expect(or.map((c) => Object.keys(c)[0])).toEqual(["createdBy", "forTeacherId"]);
+    expect(or[0].createdBy.toString()).toBe(TEACHER);
+  });
+
+  it("is gated like generating: a guardian may not list", async () => {
+    await expect(myWorksheetsPage(guardian, {})).rejects.toThrow();
   });
 });

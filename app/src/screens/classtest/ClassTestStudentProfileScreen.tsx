@@ -13,6 +13,8 @@ import { STUDENT_WHOLE_PICTURE_QUERY } from "../../graphql/wholePicture";
 import { WholePictureCard } from "../../components/WholePictureCard";
 import { Screen, Card, Body, Muted, Badge, Loader, Notice } from "../../components/ui";
 import { MiniBarChart, type BarDatum } from "../../components/MiniBarChart";
+import { Pager } from "../../components/Pager";
+import { usePagedRows } from "../../lib/paging";
 import { STR, hwSubjectLabel, ctTrendGlyph, bnNum, isoDateLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
@@ -42,6 +44,11 @@ export default function ClassTestStudentProfileScreen({ route }: Props): React.R
     }
     return m;
   }, [p]);
+
+  // D-#761: the per-exam cards grow every term, so they are paged here. The server
+  // still sends the whole list — the bar charts above draw every test — and every
+  // number (analytics, per-subject roll-up) is computed server-side over all of it.
+  const { shown: resultRows, pager: resultsPager } = usePagedRows(p?.results ?? [], { resetKey: studentId });
 
   return (
     <Screen padded={false}>
@@ -116,7 +123,7 @@ export default function ClassTestStudentProfileScreen({ route }: Props): React.R
               ))}
             </Card>
 
-            {p.results.map((r) => (
+            {resultRows.map((r) => (
               <Card key={r.testId}>
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                   <View style={{ flexShrink: 1 }}>
@@ -146,6 +153,7 @@ export default function ClassTestStudentProfileScreen({ route }: Props): React.R
                 ) : null}
               </Card>
             ))}
+            <Pager {...resultsPager} />
           </>
         )}
       </ScrollView>

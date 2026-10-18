@@ -29,6 +29,7 @@ import {
   setTaskStatus,
   taskById,
   tasksAssignedBy,
+  tasksAssignedByPage,
   updateTask,
 } from "../services/TaskService";
 import { createTaskTemplate, listTaskTemplates, setTaskTemplateActive } from "../services/TaskTemplateService";
@@ -47,6 +48,7 @@ import {
 } from "../services/WorkBoardService";
 import { loadGrid, type LoadCell, type LoadRow } from "../services/LoadService";
 import { pullWorkCard, releaseWorkCard } from "../services/OfficeCoverService";
+import { pageRef } from "../../../pageRef";
 import { loadLevelFor, type HrCategory } from "@scd/shared";
 
 // ---------------------------------------------------------------------------
@@ -408,6 +410,27 @@ builder.queryField("tasksAssignedByMe", (t) =>
     resolve: async (_root, args, ctx) => {
       const auth = requireAuth(ctx);
       return decorate(await tasksAssignedBy(auth.userId, args.open ?? true));
+    },
+  }),
+);
+
+// D-#761: the paged list AssignedByMeScreen reads (the list above stops at 500 open /
+// 100 done silently); stays beside it for released bundles.
+const TaskPageRef = pageRef("TaskPage", TaskRef);
+
+builder.queryField("tasksAssignedByMePage", (t) =>
+  t.field({
+    type: TaskPageRef,
+    description: "One page of tasksAssignedByMe (same open/done split and order); total counts every match (D-#761).",
+    authScopes: { authenticated: true },
+    args: {
+      open: t.arg.boolean({ required: false }),
+      page: t.arg.int({ required: false }),
+      pageSize: t.arg.int({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      const auth = requireAuth(ctx);
+      return tasksAssignedByPage(auth.userId, args.open ?? true, args, decorate);
     },
   }),
 );

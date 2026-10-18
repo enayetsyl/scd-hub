@@ -5,6 +5,7 @@ import { ScopeGrant, notExpired, type SupervisoryExtent } from "../models/ScopeG
 import { Section } from "../models/Section";
 import { writeAudit } from "../../platform/services/AuditService";
 import { dhakaDayStart } from "../../../lib/dhakaDay";
+import { queryPage, pageOf, type Page, type PageArgs } from "../../../lib/paging";
 
 // ---------------------------------------------------------------------------
 // Proxy window helpers (D-#20)
@@ -668,6 +669,31 @@ export async function supervisoryGrants(teacherId?: string): Promise<ScopeGrantV
   if (teacherId) filter.teacherId = teacherId;
   const grants = await ScopeGrant.find(filter).sort({ createdAt: -1 }).lean();
   return grants.map(grantView);
+}
+
+/**
+ * D-#761: one page of the admin proxy-grant list (newest first). Every approved cover
+ * slot mints a 1-day proxy grant, and an elapsed one is only flipped `active:false`
+ * LAZILY (when the covering teacher next makes a request — middleware/authz), so the
+ * "active" list kept every expired-but-unused grant. With `activeOnly` (the default) a
+ * grant whose window has ended is left out too. activeOnly=false = the full history.
+ */
+export async function proxyGrantsPage(
+  activeOnly: boolean,
+  args: PageArgs,
+  now: Date = new Date(),
+): Promise<Page<ScopeGrantView>> {
+  const filter: Record<string, unknown> = { kind: "proxy" };
+  if (!activeOnly) {
+    return queryPage(ScopeGrant, filter, { createdAt: -1, _id: -1 }, args, (docs) => docs.map((g) => grantView(g as LeanGrant)));
+  }
+  filter.active = true;
+  // The window test runs in Dhaka days (proxyWindowEnd), so it is applied here rather
+  // than in Mongo; the active set is small once the elapsed rows are out.
+  const grants = (await ScopeGrant.find(filter).sort({ createdAt: -1, _id: -1 }).lean()) as unknown as LeanGrant[];
+  const live = grants.filter((g) => !g.startDate || g.durationDays == null || !isProxyExpired(g.startDate, g.durationDays, now));
+  const page = pageOf(live, args);
+  return { ...page, rows: page.rows.map(grantView) };
 }
 
 // ---------------------------------------------------------------------------

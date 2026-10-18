@@ -24,6 +24,8 @@ import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { useQuery, useMutation } from "urql";
 import {
   HOMEWORK_OPEN_RECORDS,
+  HOMEWORK_DONE_ITEMS_PAGE,
+  HOMEWORK_DONE_ITEM_SUBJECTS,
   HOMEWORK_SUBMIT_PASS,
   HOMEWORK_RETURN_PASS,
   RECORD_HOMEWORK_OUTCOME,
@@ -48,6 +50,8 @@ import { useTaughtSubjects } from "../../lib/useTaughtSubjects";
 import { SubjectFold, type SubjectFoldRenderOpts } from "../../components/SubjectFold";
 import { RosterChipPass } from "../../components/RosterChipPass";
 import { CardGrid } from "../../components/CardGrid";
+import { Pager } from "../../components/Pager";
+import { usePageState, PAGE_SIZE } from "../../lib/paging";
 import { UploadDropZone } from "../../components/UploadDropZone";
 import type { HomeworkStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Badge, Button, Field, Chip, ChipRow, Notice, Loader, EmptyState } from "../../components/ui";
@@ -140,9 +144,19 @@ export default function HomeworkWorkspaceScreen({ navigation }: Props): React.Re
   const { selection, hasSection } = useSectionContext();
   const base = { sectionId: selection.sectionId ?? "", classId: selection.classId ?? "" };
 
+  // D-#761: `skipFinishedItems` — the deck no longer carries every RETURNED record the
+  // section ever had. Items still open, or returned today, come with ALL their rows
+  // (earlier returns included, D-#648); finished items page through the fold below.
   const [recsQ, refetchRecs] = useQuery({
     query: HOMEWORK_OPEN_RECORDS,
-    variables: { ...base, states: OPEN_STATES },
+    variables: { ...base, states: OPEN_STATES, skipFinishedItems: true },
+    pause: !hasSection,
+  });
+  // Finished-card counts per subject: the fold's count and the subject chips (a subject
+  // whose only cards are finished still gets one) without loading the history itself.
+  const [doneSubjectsQ, refetchDoneSubjects] = useQuery({
+    query: HOMEWORK_DONE_ITEM_SUBJECTS,
+    variables: base,
     pause: !hasSection,
   });
   // D-#383: the card header's pipeline counts. Must come from the server — the
@@ -162,11 +176,10 @@ export default function HomeworkWorkspaceScreen({ navigation }: Props): React.Re
   const today = dhakaDayOf(new Date().toISOString());
   const all = recsQ.data?.homeworkOpenRecords ?? [];
   const records = all.filter((r) => r.state !== "RETURNED" || dhakaDayOf(r.lastStateAt) === today);
-  // Everything left over belongs to an item with NO open rows — finished work. It used
-  // to vanish from the screen entirely (owner: "I need to see the returned card",
-  // 2026-08-02); it now lives in a collapsed fold at the foot.
+  // Items with NO open rows are finished work. They used to vanish from the screen
+  // entirely (owner: "I need to see the returned card", 2026-08-02); they live in a
+  // collapsed fold at the foot, paged from the server (D-#761 — see doneQ below).
   const openItemIds = new Set(records.map((r) => r.hwItemId));
-  const doneRecords = all.filter((r) => !openItemIds.has(r.hwItemId));
   // D-#648: an item that still has open work keeps its EARLIER returns off the deck
   // (the filter above), and it is not "done" either — so those students were fetched
   // and then rendered nowhere, while the header still counted them. The card's own
@@ -189,8 +202,9 @@ export default function HomeworkWorkspaceScreen({ navigation }: Props): React.Re
   const [subjectFilter, setSubjectFilter] = useState<string>(ANY_SUBJECT);
   const [subjectOpen, setSubjectOpen] = useState(false);
   // Count CARDS (hwItems), not records — "English (৯)" means nine homework cards,
-  // which is what the chip is narrowing to. Counted over `all`, so a subject whose
-  // only cards are finished still gets a chip.
+  // which is what the chip is narrowing to. Open cards are counted over `all`, finished
+  // ones come from the server's per-subject counts (D-#761), so a subject whose only
+  // cards are finished still gets a chip.
   const itemIdsBySubject = new Map<string, Set<string>>();
   for (const r of all) {
     let ids = itemIdsBySubject.get(r.subject);
@@ -200,26 +214,59 @@ export default function HomeworkWorkspaceScreen({ navigation }: Props): React.Re
     }
     ids.add(r.hwItemId);
   }
-  const subjectOptions = [...itemIdsBySubject]
-    .map(([subject, ids]) => ({ subject, count: ids.size }))
+  const doneBySubject = new Map(
+    (doneSubjectsQ.data?.homeworkDoneItemSubjects ?? []).map((d) => [d.subject, d.count]),
+  );
+  const subjectOptions = [...new Set([...itemIdsBySubject.keys(), ...doneBySubject.keys()])]
+    .map((subject) => ({
+      subject,
+      count: (itemIdsBySubject.get(subject)?.size ?? 0) + (doneBySubject.get(subject) ?? 0),
+    }))
     .sort((a, b) => hwSubjectLabel(a.subject).localeCompare(hwSubjectLabel(b.subject)));
   // A pick left over from another section reads as "সব" instead of an empty screen.
   const activeSubject = subjectOptions.some((o) => o.subject === subjectFilter) ? subjectFilter : ANY_SUBJECT;
   const bySubject = <T extends { subject: string }>(rows: T[]): T[] =>
     activeSubject === ANY_SUBJECT ? rows : rows.filter((r) => r.subject === activeSubject);
   const shown = bySubject(records);
-  const shownDone = bySubject(doneRecords);
-  const doneCount = new Set(shownDone.map((r) => r.hwItemId)).size;
+  // The fold's count is the server's (every finished card for this subject pick), not
+  // the length of the page on screen.
+  const doneCount =
+    activeSubject === ANY_SUBJECT
+      ? [...doneBySubject.values()].reduce((n, c) => n + c, 0)
+      : (doneBySubject.get(activeSubject) ?? 0);
+
+  // The finished-work fold — collapsed by default, so the daily deck stays the deck.
+  const [showDone, setShowDone] = useState(false);
+  // D-#761: the fold pages finished CARDS on the server, newest first, and is only
+  // fetched once opened. A new section or subject pick goes back to page 1.
+  const [donePage, setDonePage] = usePageState(`${selection.sectionId ?? ""}|${activeSubject}`);
+  const [doneQ, refetchDone] = useQuery({
+    query: HOMEWORK_DONE_ITEMS_PAGE,
+    variables: {
+      ...base,
+      subject: activeSubject === ANY_SUBJECT ? null : activeSubject,
+      page: donePage,
+      pageSize: PAGE_SIZE,
+    },
+    pause: !hasSection || !showDone,
+  });
+  const shownDone = useMemo(
+    () => (doneQ.data?.homeworkDoneItemsPage.rows ?? []).flatMap((d) => d.records),
+    [doneQ.data],
+  );
 
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
 
-  // Both queries refetch together: a submit/return pass changes the rows AND the
-  // header counts, so refreshing one without the other leaves a stale card.
+  // The queries refetch together: a submit/return pass changes the rows AND the
+  // header counts (and can move a card in or out of the finished fold), so refreshing
+  // one without the others leaves a stale card.
   const refresh = useCallback(() => {
     refetchRecs({ requestPolicy: "network-only" });
     refetchTallies({ requestPolicy: "network-only" });
-  }, [refetchRecs, refetchTallies]);
+    refetchDoneSubjects({ requestPolicy: "network-only" });
+    if (showDone) refetchDone({ requestPolicy: "network-only" });
+  }, [refetchRecs, refetchTallies, refetchDoneSubjects, refetchDone, showDone]);
 
   const firstFocus = useRef(true);
   useFocusEffect(
@@ -245,8 +292,6 @@ export default function HomeworkWorkspaceScreen({ navigation }: Props): React.Re
   // It is keyed by hwItemId (not index) so the selection survives the list re-ordering on
   // refresh, and `null` = everything collapsed, which is the initial state.
   const [openItemId, setOpenItemId] = useState<string | null>(null);
-  // The finished-work fold — collapsed by default, so the daily deck stays the deck.
-  const [showDone, setShowDone] = useState(false);
 
   const renderCards = (recs: HwOpenRecordT[], opts?: CardRenderOpts): React.ReactNode => (
     <CardGrid>
@@ -344,7 +389,7 @@ export default function HomeworkWorkspaceScreen({ navigation }: Props): React.Re
                 different decision. Undo is the exception (`allowUndo`) — a card lands
                 here the instant the last student is returned, so without it a return
                 made by mistake seconds ago would have nowhere to go. */}
-            {shownDone.length > 0 ? (
+            {doneCount > 0 ? (
               <View style={{ marginTop: space(3) }}>
                 <Button
                   title={`${showDone ? "▾" : "▸"} ${STR.wsCompletedFold} (${bnNum(doneCount)})`}
@@ -353,11 +398,21 @@ export default function HomeworkWorkspaceScreen({ navigation }: Props): React.Re
                 />
                 {showDone ? (
                   <View style={{ marginTop: space(2) }}>
-                    {renderCards(shownDone, {
-                      readOnly: true,
-                      allowUndo: true,
-                      viewOnlyNote: STR.wsCompletedNote,
-                    })}
+                    {doneQ.fetching && !doneQ.data ? (
+                      <Loader label={STR.loading} />
+                    ) : (
+                      renderCards(shownDone, {
+                        readOnly: true,
+                        allowUndo: true,
+                        viewOnlyNote: STR.wsCompletedNote,
+                      })
+                    )}
+                    <Pager
+                      page={donePage}
+                      pageSize={PAGE_SIZE}
+                      total={doneQ.data?.homeworkDoneItemsPage.total ?? 0}
+                      onPage={setDonePage}
+                    />
                   </View>
                 ) : null}
               </View>

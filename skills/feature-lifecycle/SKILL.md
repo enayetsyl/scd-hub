@@ -10,6 +10,11 @@ description: Use when adding a new feature or changing an existing one in the sc
 3. If the change is a real decision, append a row to `DECISIONS.md` (and an ADR to
    `docs/architecture.md` if architectural).
 4. Implement with surgical edits (patch, don't regenerate).
+   **Any list that grows over time is paged from the first commit (D-#761).** History, logs,
+   records, results, comments, requests, anything that accumulates per day, per student or
+   per year. Use a `<name>Page` query (`server/src/lib/paging.ts` + `server/src/pageRef.ts`)
+   and `<Pager>` on the screen. Never a bare `.find()` with no limit, and never a silent
+   `.limit(N)` with no way to reach older rows. See `docs/pagination.md`.
 5. If it touches the import contract or shared vocab/RBAC, run `/skills/contract-sync`.
 6. Run `/skills/verify-before-commit`. Green output is the gate.
 7. Update `STATUS.md`; append a `CHANGELOG.md` line. Commit (one change per commit); tag if a milestone.

@@ -297,14 +297,16 @@ export async function meetingComparison(meetingId: string, studentId: string): P
 
 /** The child's DELIVERED daily comments, newest first — guardian-facing shape (no
  *  staff fields; undelivered comments and the MeetingComment are structurally absent). */
-export async function childComments(studentId: string): Promise<GuardianStudentComment[]> {
+/** D-#761: `limit` = the newest N only (the guardian home's bounded card); omitted = the
+ *  whole delivered history, as before. */
+export async function childComments(studentId: string, limit?: number | null): Promise<GuardianStudentComment[]> {
   if (!Types.ObjectId.isValid(studentId)) throw new MeetingCommentError("Invalid student id");
-  const docs = (await StudentComment.find({
+  let q = StudentComment.find({
     studentId: new Types.ObjectId(studentId),
     deliveredAt: { $ne: null },
-  })
-    .sort({ createdAt: -1 })
-    .lean()) as unknown as IStudentComment[];
+  }).sort({ createdAt: -1, _id: -1 });
+  if (limit != null && limit > 0) q = q.limit(limit);
+  const docs = (await q.lean()) as unknown as IStudentComment[];
   return docs
     .filter((d) => d.deliveredAt) // belt-and-braces (a lean read can't rely on $ne alone for missing)
     .map((d) => ({

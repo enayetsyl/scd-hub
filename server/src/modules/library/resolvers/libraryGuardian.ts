@@ -8,7 +8,7 @@
  */
 import { builder } from "../../../schema";
 import { assertGuardianOfStudent } from "../../../middleware/authz";
-import { borrowerLoans, isOverdue } from "../services/LibraryCirculationService";
+import { borrowerLoans, recentLoansPlusActive, isOverdue } from "../services/LibraryCirculationService";
 import { BookTitle } from "../models/BookTitle";
 import { BookCopy } from "../models/BookCopy";
 import type { IBookLoan } from "../models/BookLoan";
@@ -51,12 +51,22 @@ builder.queryField("childLibraryLoans", (t) =>
     type: [ChildLibraryLoanRef],
     description:
       "The linked child's library loans — current + history, read-only (LB-5 / GP-2 rider, " +
-      "J-L9). Gated by the guardian-link row scope (D-#68); no mutations exist for guardians.",
+      "J-L9). Gated by the guardian-link row scope (D-#68); no mutations exist for guardians. " +
+      "limit (D-#761) = the newest N loans PLUS every book still out, so an outstanding loan is " +
+      "never cut off; omitted = the whole history, as before.",
     authScopes: { authenticated: true },
-    args: { studentId: t.arg.string({ required: true }) },
+    args: {
+      studentId: t.arg.string({ required: true }),
+      limit: t.arg.int({ required: false }),
+    },
     resolve: async (_root, args, ctx) => {
       await assertGuardianOfStudent(ctx, args.studentId);
-      const rows = (await borrowerLoans({ type: "STUDENT", id: args.studentId })) as unknown as LoanLean[];
+      const borrower = { type: "STUDENT" as const, id: args.studentId };
+      const rows = (
+        args.limit != null && args.limit > 0
+          ? await recentLoansPlusActive(borrower, args.limit)
+          : await borrowerLoans(borrower)
+      ) as unknown as LoanLean[];
       if (rows.length === 0) return [];
       const [titles, copies] = await Promise.all([
         BookTitle.find({ _id: { $in: rows.map((l) => l.titleId.toString()) } })

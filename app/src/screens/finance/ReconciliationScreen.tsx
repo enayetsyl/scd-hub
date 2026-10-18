@@ -7,9 +7,12 @@
 import React, { useState } from "react";
 import { ScrollView, View } from "react-native";
 import { useQuery, useMutation } from "urql";
-import { RECORD_RECONCILIATION, RECONCILIATION_HISTORY_QUERY } from "../../graphql/finance";
-import { Screen, Card, Body, Muted, Button, Field, Row, Notice, Divider, Loader } from "../../components/ui";
+import { RECORD_RECONCILIATION, RECONCILIATION_HISTORY_PAGE_QUERY } from "../../graphql/finance";
+import { Screen, Card, Body, Muted, Button, Field, Row, Notice, Divider, Loader, ErrorBanner } from "../../components/ui";
 import { DateField } from "../../components/DateField";
+import { Pager } from "../../components/Pager";
+import { usePageState, PAGE_SIZE } from "../../lib/paging";
+import { dateKey, addDaysKey } from "../../lib/dates";
 import { STR, money } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
@@ -29,13 +32,19 @@ export default function ReconciliationScreen(): React.ReactElement {
   const [busy, setBusy] = useState(false);
   const [last, setLast] = useState<{ bankDiff: number; cash: number; bank: number; online: number } | null>(null);
 
+  // D-#761: the history query REQUIRES from/to — it used to be sent `{}`, failed validation,
+  // and the screen (no error shown) read "none". Default to the last 90 days and page it.
+  const [histFrom, setHistFrom] = useState(() => addDaysKey(dateKey(), -89));
+  const [histTo, setHistTo] = useState(() => dateKey());
   const [historyActive, setHistoryActive] = useState(false);
-  const [historyQ] = useQuery({
-    query: RECONCILIATION_HISTORY_QUERY,
-    variables: {},
-    pause: !historyActive,
+  const [histPage, setHistPage] = usePageState(`${histFrom}|${histTo}`);
+  const [historyQ, refetchHistory] = useQuery({
+    query: RECONCILIATION_HISTORY_PAGE_QUERY,
+    variables: { from: histFrom, to: histTo, page: histPage, pageSize: PAGE_SIZE },
+    pause: !historyActive || !histFrom || !histTo,
   });
-  const history = historyQ.data?.reconciliationHistory ?? [];
+  const historyPage = historyQ.data?.reconciliationHistoryPage;
+  const history = historyPage?.rows ?? [];
 
   async function onRecord(): Promise<void> {
     setError(null);
@@ -89,14 +98,21 @@ export default function ReconciliationScreen(): React.ReactElement {
 
         <Card>
           <Body style={{ fontWeight: "700" }}>{STR.finReconHistory}</Body>
+          <DateField label={STR.finReconHistoryFrom} value={histFrom} onChange={setHistFrom} max={histTo || undefined} />
+          <DateField label={STR.finReconHistoryTo} value={histTo} onChange={setHistTo} min={histFrom || undefined} />
           <Button title={STR.finLoad} variant="secondary" onPress={() => setHistoryActive(true)} />
           {historyActive && historyQ.fetching ? (
             <Loader label={STR.loading} />
+          ) : historyActive && historyQ.error ? (
+            <ErrorBanner message={friendlyError(historyQ.error)} onRetry={() => refetchHistory({ requestPolicy: "network-only" })} />
           ) : historyActive && history.length === 0 ? (
             <Muted style={{ marginTop: space(2) }}>{STR.finNone}</Muted>
           ) : (
             history.map((r) => <Row key={r.id} label={r.date} value={`${STR.finBankDiff}: ${money(r.bankDiff)}`} />)
           )}
+          {historyActive ? (
+            <Pager page={histPage} pageSize={PAGE_SIZE} total={historyPage?.total ?? 0} onPage={setHistPage} />
+          ) : null}
         </Card>
       </ScrollView>
     </Screen>

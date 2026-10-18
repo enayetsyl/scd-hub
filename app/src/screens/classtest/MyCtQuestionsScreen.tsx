@@ -22,7 +22,7 @@ import {
   PRINT_SIDES_LABELS_EN,
 } from "@scd/shared";
 import {
-  MY_CT_QUESTION_REQUESTS,
+  MY_CT_QUESTION_REQUESTS_PAGE,
   REVIEW_CT_QUESTION,
   REQUEST_CT_QUESTION_PRINT,
   EDIT_CT_QUESTION_REQUEST,
@@ -32,6 +32,8 @@ import {
 import { Screen, Body, Muted, Card, Badge, Button, Field, Chip, Select, Notice, Loader, EmptyState } from "../../components/ui";
 import { DateField } from "../../components/DateField";
 import { QueryGate } from "../../components/QueryGate";
+import { Pager } from "../../components/Pager";
+import { usePageState, PAGE_SIZE } from "../../lib/paging";
 import { useConfirm } from "../../state/ConfirmContext";
 import { openStoredFile, FILE_VIEW_SUPPORTED } from "../../lib/files";
 import { useFileOpen } from "../../lib/useFileOpen";
@@ -104,7 +106,9 @@ export default function MyCtQuestionsScreen(): React.ReactElement {
   const sectionName = useSectionNames();
   const nav = useNavigation<Nav>();
   const { confirmAction } = useConfirm();
-  const [q, refetch] = useQuery({ query: MY_CT_QUESTION_REQUESTS });
+  // D-#761: server-paged — every request a teacher ever filed stays on this list.
+  const [page, setPage] = usePageState();
+  const [q, refetch] = useQuery({ query: MY_CT_QUESTION_REQUESTS_PAGE, variables: { page, pageSize: PAGE_SIZE } });
   const [, review] = useMutation(REVIEW_CT_QUESTION);
   const [, sendPrint] = useMutation(REQUEST_CT_QUESTION_PRINT);
   const [, editRequest] = useMutation(EDIT_CT_QUESTION_REQUEST);
@@ -129,7 +133,8 @@ export default function MyCtQuestionsScreen(): React.ReactElement {
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
 
-  const rows = q.data?.myCtQuestionRequests ?? [];
+  const pageData = q.data?.myCtQuestionRequestsPage;
+  const rows = pageData?.rows ?? [];
   const { refreshing, onRefresh } = usePullRefresh(q.fetching, () =>
     refetch({ requestPolicy: "network-only" }),
   );
@@ -498,6 +503,7 @@ export default function MyCtQuestionsScreen(): React.ReactElement {
               );
             })
           )}
+          <Pager page={page} pageSize={PAGE_SIZE} total={pageData?.total ?? 0} onPage={setPage} />
         </QueryGate>
       </ScrollView>
     </Screen>

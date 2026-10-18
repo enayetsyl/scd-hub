@@ -459,6 +459,9 @@ builder.queryField("assignablePlansPage", (t) =>
       docType: t.arg.string({ required: false }),
       state: t.arg.string({ required: false }),
       reviewerId: t.arg.string({ required: false }),
+      // D-#761: the assign screen's filters. Omitted = no filter (today's behaviour).
+      reviewStatus: t.arg.string({ required: false }),
+      unassignedOnly: t.arg.boolean({ required: false }),
       page: t.arg.int({ required: false }),
       pageSize: t.arg.int({ required: false }),
     },
@@ -471,6 +474,8 @@ builder.queryField("assignablePlansPage", (t) =>
           docType: args.docType,
           state: args.state,
           reviewerId: args.reviewerId,
+          reviewStatus: args.reviewStatus,
+          unassignedOnly: args.unassignedOnly,
         },
         args.page ?? 1,
         args.pageSize ?? PLAN_BOARD_PAGE_SIZE,

@@ -83,6 +83,20 @@ export const MY_PRINT_REQUESTS_QUERY = gql<{ myPrintRequests: PrintRequestT[] },
   }
 `;
 
+/** D-#761: the caller's own requests, PAGED. `active`: true = in flight
+ *  (REQUESTED/PRINTED), false = past (delivered/cancelled). */
+export const MY_PRINT_REQUESTS_PAGE_QUERY = gql<
+  { myPrintRequestsPage: { rows: PrintRequestT[]; total: number; page: number; pageSize: number } },
+  { active?: boolean | null; page?: number | null; pageSize?: number | null }
+>`
+  query MyPrintRequestsPage($active: Boolean, $page: Int, $pageSize: Int) {
+    myPrintRequestsPage(active: $active, page: $page, pageSize: $pageSize) {
+      total page pageSize
+      rows { ${PRINT_REQUEST_FIELDS} }
+    }
+  }
+`;
+
 export interface CreatePrintRequestVars {
   title: string;
   purpose: string;
@@ -207,6 +221,63 @@ export const PRINT_HISTORY_QUERY = gql<
         jobIds suggestedClassId suggestedClassLevel suggestedSubject suggestionEvidence
         latest { ${PRINT_REQUEST_FIELDS} }
       }
+    }
+  }
+`;
+
+/** D-#761: the history, PAGED — every document reachable, `total` the real count. The
+ *  class/subject/purpose chips and the Office teacher chip (`printedBy`) narrow
+ *  server-side now, since one page is not enough to filter on. */
+export const PRINT_HISTORY_PAGE_QUERY = gql<
+  { printHistoryPage: { rows: PrintHistoryRowT[]; total: number; page: number; pageSize: number } },
+  {
+    classId?: string | null;
+    noClass?: boolean | null;
+    subject?: string | null;
+    purpose?: string | null;
+    printedBy?: string | null;
+    fromKey?: string | null;
+    toKey?: string | null;
+    page?: number | null;
+    pageSize?: number | null;
+  }
+>`
+  query PrintHistoryPage(
+    $classId: String, $noClass: Boolean, $subject: String, $purpose: String,
+    $printedBy: String, $fromKey: String, $toKey: String, $page: Int, $pageSize: Int
+  ) {
+    printHistoryPage(
+      classId: $classId, noClass: $noClass, subject: $subject, purpose: $purpose,
+      printedBy: $printedBy, fromKey: $fromKey, toKey: $toKey, page: $page, pageSize: $pageSize
+    ) {
+      total page pageSize
+      rows {
+        key printCount lastPrintedAt firstPrintedAt requesterNames requesterIds classId classLevel
+        jobIds suggestedClassId suggestedClassLevel suggestedSubject suggestionEvidence
+        latest { ${PRINT_REQUEST_FIELDS} }
+      }
+    }
+  }
+`;
+
+export interface PrintHistoryFacetsT {
+  classes: Array<{ classId: string; classLevel: number | null }>;
+  hasNoClass: boolean;
+  subjects: string[];
+  purposes: string[];
+  requesters: Array<{ id: string; name: string }>;
+}
+
+/** D-#761: the chip options for the paged history, over the whole printed-on window. */
+export const PRINT_HISTORY_FACETS_QUERY = gql<
+  { printHistoryFacets: PrintHistoryFacetsT },
+  { fromKey?: string | null; toKey?: string | null }
+>`
+  query PrintHistoryFacets($fromKey: String, $toKey: String) {
+    printHistoryFacets(fromKey: $fromKey, toKey: $toKey) {
+      classes { classId classLevel }
+      hasNoClass subjects purposes
+      requesters { id name }
     }
   }
 `;

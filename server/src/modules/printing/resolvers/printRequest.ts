@@ -27,15 +27,20 @@ import {
   cancelPrintRequest,
   printQueue,
   myPrintRequests,
+  myPrintRequestsPage,
   printRequestById,
   printQueueCounts,
   printHistory,
+  printHistoryPage,
+  printHistoryFacets,
   reprintPrintRequest,
   tagPrintRequests,
   suggestTagFor,
   type PrintHistoryRow,
+  type PrintHistoryFacets,
   type PrintTagSuggestion,
 } from "../services/PrintRequestService";
+import { pageRef } from "../../../pageRef";
 import type { IPrintRequest } from "../models/PrintRequest";
 
 // ---------------------------------------------------------------------------
@@ -417,6 +422,28 @@ builder.queryField("myPrintRequests", (t) =>
   }),
 );
 
+// D-#761: the caller's own requests, PAGED — `myPrintRequests` stops at the newest 50.
+const MyPrintRequestPageRef = pageRef("PrintRequestPage", PrintRequestRef);
+
+builder.queryField("myPrintRequestsPage", (t) =>
+  t.field({
+    type: MyPrintRequestPageRef,
+    description:
+      "The caller's own print requests, newest first, one page at a time (D-#761). `active`: true = " +
+      "REQUESTED/PRINTED, false = everything else (delivered, cancelled), omitted = all. Requires tracker:write.",
+    authScopes: { hasPermission: "tracker:write" },
+    args: {
+      active: t.arg.boolean({ required: false }),
+      page: t.arg.int({ required: false }),
+      pageSize: t.arg.int({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      const page = await myPrintRequestsPage(ctx.auth!.userId, args.active, args);
+      return { ...page, rows: await decorate(page.rows) };
+    },
+  }),
+);
+
 // ---------------------------------------------------------------------------
 // D-#362 — reprint history
 // ---------------------------------------------------------------------------
@@ -530,28 +557,140 @@ builder.queryField("printHistory", (t) =>
         toKey: args.toKey,
         limit: args.limit,
       });
-      const decorated = await decorate(page.rows.map((r) => r.latest));
-      const names = await requesterNamesFor(page.rows);
-      // PQ-9: a level→class map for the suggestions, fetched once and only when some row
-      // actually needs one (a fully tagged page pays nothing).
-      const needsSuggestion = page.rows.some((r) => r.classId === null);
-      const classByLevel = needsSuggestion ? await activeClassByLevel() : new Map<number, string>();
       return {
-        rows: page.rows.map((row, i) => ({
-          row,
-          latest: decorated[i],
-          requesterNames: row.requesterIds.map((id) => names.get(id) ?? "—"),
-          // Only an untagged row gets a suggestion — on a tagged one it would invite
-          // re-tagging a class somebody already established.
-          suggestion:
-            row.classId === null
-              ? suggestionFor(decorated[i], classByLevel)
-              : null,
-        })),
+        rows: await historyRowViews(page.rows),
         scannedCapped: page.scannedCapped,
         truncated: page.truncated,
         totalRows: page.totalRows,
       };
+    },
+  }),
+);
+
+/** Decorate grouped history rows for the wire: the representative job, requester
+ *  names, and (PQ-9) the tag suggestion of an untagged row. */
+async function historyRowViews(rows: PrintHistoryRow[]): Promise<PrintHistoryRowView[]> {
+  const decorated = await decorate(rows.map((r) => r.latest));
+  const names = await requesterNamesFor(rows);
+  // PQ-9: a level→class map for the suggestions, fetched once and only when some row
+  // actually needs one (a fully tagged page pays nothing).
+  const needsSuggestion = rows.some((r) => r.classId === null);
+  const classByLevel = needsSuggestion ? await activeClassByLevel() : new Map<number, string>();
+  return rows.map((row, i) => ({
+    row,
+    latest: decorated[i],
+    requesterNames: row.requesterIds.map((id) => names.get(id) ?? "—"),
+    // Only an untagged row gets a suggestion — on a tagged one it would invite
+    // re-tagging a class somebody already established.
+    suggestion: row.classId === null ? suggestionFor(decorated[i], classByLevel) : null,
+  }));
+}
+
+/** Who may read the history and as whom: the Office sees everyone, a teacher only
+ *  their own jobs (enforced here, never by an argument). */
+function historyScope(ctx: AppContext): { office: boolean; userId: string } {
+  if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+  const office = isOffice(ctx);
+  if (!office && !callerHasPermission(ctx.auth, "tracker:write")) {
+    throw new ForbiddenError("Not allowed to read the print history");
+  }
+  return { office, userId: ctx.auth.userId };
+}
+
+// D-#761: the history, PAGED — every document reachable, `total` the real count.
+const PrintHistoryDocPageRef = pageRef("PrintHistoryDocPage", PrintHistoryRowRef);
+
+builder.queryField("printHistoryPage", (t) =>
+  t.field({
+    type: PrintHistoryDocPageRef,
+    description:
+      "One page of the reprint history (D-#761): the rows, order and filters of `printHistory`, with " +
+      "no scan cap, so every matching document is reachable and `total` counts all of them. " +
+      "`printedBy` (Office only) keeps the documents that person printed at least once. A teacher " +
+      "sees only their own prints — enforced server-side.",
+    authScopes: { authenticated: true },
+    args: {
+      classId: t.arg.string({ required: false }),
+      noClass: t.arg.boolean({ required: false }),
+      subject: t.arg.string({ required: false }),
+      purpose: t.arg.string({ required: false }),
+      printedBy: t.arg.string({ required: false }),
+      fromKey: t.arg.string({ required: false }),
+      toKey: t.arg.string({ required: false }),
+      page: t.arg.int({ required: false }),
+      pageSize: t.arg.int({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      const { office, userId } = historyScope(ctx);
+      const page = await printHistoryPage(
+        {
+          classId: args.classId,
+          noClass: args.noClass,
+          subject: args.subject,
+          purpose: args.purpose,
+          // Own-row scope for a teacher; the Office narrows by the teacher chip instead.
+          requestedBy: office ? null : userId,
+          printedBy: office ? args.printedBy ?? null : null,
+          fromKey: args.fromKey,
+          toKey: args.toKey,
+        },
+        args,
+      );
+      return { ...page, rows: await historyRowViews(page.rows) };
+    },
+  }),
+);
+
+interface PrintHistoryFacetsView extends Omit<PrintHistoryFacets, "requesterIds"> {
+  requesters: Array<{ id: string; name: string }>;
+}
+
+const PrintHistoryClassFacetRef = builder
+  .objectRef<{ classId: string; classLevel: number | null }>("PrintHistoryClassFacet")
+  .implement({
+    fields: (t) => ({
+      classId: t.exposeString("classId"),
+      classLevel: t.int({ nullable: true, resolve: (c) => c.classLevel }),
+    }),
+  });
+
+const PrintHistoryRequesterRef = builder
+  .objectRef<{ id: string; name: string }>("PrintHistoryRequester")
+  .implement({
+    fields: (t) => ({ id: t.exposeString("id"), name: t.exposeString("name") }),
+  });
+
+const PrintHistoryFacetsRef = builder.objectRef<PrintHistoryFacetsView>("PrintHistoryFacets").implement({
+  description:
+    "The filter-chip options of the paged history (D-#761), over the whole history in the caller's " +
+    "scope and printed-on window — not just one page's rows.",
+  fields: (t) => ({
+    classes: t.field({ type: [PrintHistoryClassFacetRef], resolve: (f) => f.classes }),
+    hasNoClass: t.exposeBoolean("hasNoClass"),
+    subjects: t.exposeStringList("subjects"),
+    purposes: t.exposeStringList("purposes"),
+    requesters: t.field({ type: [PrintHistoryRequesterRef], resolve: (f) => f.requesters }),
+  }),
+});
+
+builder.queryField("printHistoryFacets", (t) =>
+  t.field({
+    type: PrintHistoryFacetsRef,
+    description: "Chip options for `printHistoryPage` (D-#761). Same scope rule as the history.",
+    authScopes: { authenticated: true },
+    args: {
+      fromKey: t.arg.string({ required: false }),
+      toKey: t.arg.string({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      const { office, userId } = historyScope(ctx);
+      const f = await printHistoryFacets({ requestedBy: office ? null : userId, fromKey: args.fromKey, toKey: args.toKey });
+      const users = f.requesterIds.length
+        ? await User.find({ _id: { $in: f.requesterIds } }).select("name").lean()
+        : [];
+      const names = new Map(users.map((u) => [u._id.toString(), u.name]));
+      const { requesterIds, ...rest } = f;
+      return { ...rest, requesters: requesterIds.map((id) => ({ id, name: names.get(id) ?? "—" })) };
     },
   }),
 );

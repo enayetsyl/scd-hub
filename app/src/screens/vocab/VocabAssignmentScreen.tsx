@@ -10,9 +10,11 @@ import { useQuery, useMutation } from "urql";
 import {
   ASSIGN_VOCAB_TESTER,
   VOCAB_TESTER_ASSIGNMENT_QUERY,
-  VOCAB_ASSIGNMENT_HISTORY_QUERY,
+  VOCAB_ASSIGNMENT_HISTORY_PAGE_QUERY,
   TEACHERS_QUERY,
 } from "../../graphql/operations";
+import { Pager } from "../../components/Pager";
+import { usePageState, PAGE_SIZE } from "../../lib/paging";
 import { Screen, Card, Body, Muted, Button, Badge, Loader, Notice } from "../../components/ui";
 import { DateField } from "../../components/DateField";
 import { ProgramSelect, ClassSectionSelect, type SectionPick } from "../../components/vocabPickers";
@@ -39,9 +41,11 @@ export default function VocabAssignmentScreen(): React.ReactElement {
     variables: { sectionId: section?.sectionId ?? "", program: program ?? "", weekOf: week },
     pause: !ready,
   });
+  // D-#761: the append-only history grows every week — page it on the server.
+  const [historyPage, setHistoryPage] = usePageState(`${section?.sectionId ?? ""}|${program ?? ""}`);
   const [historyQ, refetchHistory] = useQuery({
-    query: VOCAB_ASSIGNMENT_HISTORY_QUERY,
-    variables: { sectionId: section?.sectionId ?? "", program: program ?? "" },
+    query: VOCAB_ASSIGNMENT_HISTORY_PAGE_QUERY,
+    variables: { sectionId: section?.sectionId ?? "", program: program ?? "", page: historyPage, pageSize: PAGE_SIZE },
     pause: !section || !program,
   });
   const [teachersQ] = useQuery({ query: TEACHERS_QUERY });
@@ -63,7 +67,7 @@ export default function VocabAssignmentScreen(): React.ReactElement {
   }
 
   const current = currentQ.data?.vocabTesterAssignment ?? null;
-  const history = historyQ.data?.vocabAssignmentHistory ?? [];
+  const history = historyQ.data?.vocabAssignmentHistoryPage.rows ?? [];
 
   return (
     <Screen padded={false}>
@@ -119,6 +123,12 @@ export default function VocabAssignmentScreen(): React.ReactElement {
                 </View>
               ))
             )}
+            <Pager
+              page={historyPage}
+              pageSize={PAGE_SIZE}
+              total={historyQ.data?.vocabAssignmentHistoryPage.total ?? 0}
+              onPage={setHistoryPage}
+            />
           </Card>
         ) : null}
       </ScrollView>

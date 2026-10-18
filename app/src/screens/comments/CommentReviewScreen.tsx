@@ -7,15 +7,19 @@
  * on the child's staff timeline. Gated `roster:manage` (Principal/Office) — the tab/card
  * only shows for them and the server re-gates `commentReviewInbox` +
  * `deliverStudentComment` + `discardStudentComment`.
+ *
+ * D-#761: the queue pages on the server (`commentReviewInboxPage`, 50 a page).
  */
 import React from "react";
 import { ScrollView, View } from "react-native";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation, useQuery } from "urql";
-import { COMMENT_REVIEW_INBOX_QUERY, DISCARD_STUDENT_COMMENT } from "../../graphql/comments";
+import { COMMENT_REVIEW_INBOX_PAGE_QUERY, DISCARD_STUDENT_COMMENT } from "../../graphql/comments";
 import { Screen, Card, Body, Muted, Badge, Button, Field, EmptyState, ErrorBanner } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
+import { Pager } from "../../components/Pager";
+import { usePageState, PAGE_SIZE } from "../../lib/paging";
 import { STR, commentTypeLabel, commentSentimentLabel, isoDateTimeLabel } from "../../lib/labels";
 import { space } from "../../theme/tokens";
 import type { CommentsStackParamList } from "../../navigation/types";
@@ -24,8 +28,14 @@ type Nav = NativeStackNavigationProp<CommentsStackParamList>;
 
 export default function CommentReviewScreen(): React.ReactElement {
   const nav = useNavigation<Nav>();
-  const [q, refetch] = useQuery({ query: COMMENT_REVIEW_INBOX_QUERY });
-  const items = q.data?.commentReviewInbox ?? [];
+  const [page, setPage] = usePageState();
+  const [q, refetch] = useQuery({ query: COMMENT_REVIEW_INBOX_PAGE_QUERY, variables: { page, pageSize: PAGE_SIZE } });
+  const pageData = q.data?.commentReviewInboxPage;
+  const items = pageData?.rows ?? [];
+  // Delivering / discarding the last cards of the last page empties it — step back.
+  React.useEffect(() => {
+    if (pageData && pageData.rows.length === 0 && pageData.page > 1) setPage(Math.max(1, Math.ceil(pageData.total / PAGE_SIZE)));
+  }, [pageData, setPage]);
 
   // Inline discard: the card whose reason field is open, its draft reason, and any error.
   const [discardingId, setDiscardingId] = React.useState<string | null>(null);
@@ -151,6 +161,7 @@ export default function CommentReviewScreen(): React.ReactElement {
             );
           })
         )}
+        <Pager page={page} pageSize={PAGE_SIZE} total={pageData?.total ?? 0} onPage={setPage} />
         </QueryGate>
       </ScrollView>
     </Screen>

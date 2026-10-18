@@ -26,6 +26,7 @@ import { Student } from "../../foundation/models/Student";
 import { resolveSubjectTeacher } from "../../trackers/subjectTeacher";
 import { sittingRosterFilter } from "./ScholarshipAnalysisService";
 import { writeAudit } from "../../platform/services/AuditService";
+import { queryPage, type Page, type PageArgs } from "../../../lib/paging";
 
 // ---------------------------------------------------------------------------
 // paperId generation
@@ -623,6 +624,19 @@ export async function listPapers(sectionId: string, subject?: HwSubject): Promis
   const papers = (await ScholarshipPaper.find(q)
     .sort({ paperDate: -1, createdAt: -1 })
     .lean()) as unknown as IScholarshipPaper[];
+  return paperRows(papers);
+}
+
+/** D-#761: listPapers, one page at a time; scores are read for THIS page's papers only. */
+export function listPapersPage(sectionId: string, subject: HwSubject | undefined, args: PageArgs): Promise<Page<PaperListRow>> {
+  const q: Record<string, unknown> = { sectionId: new Types.ObjectId(sectionId) };
+  if (subject) q.subjects = subject;
+  return queryPage(ScholarshipPaper, q, { paperDate: -1, createdAt: -1, _id: -1 }, args, (docs) =>
+    paperRows(docs as unknown as IScholarshipPaper[]),
+  );
+}
+
+async function paperRows(papers: IScholarshipPaper[]): Promise<PaperListRow[]> {
   if (papers.length === 0) return [];
 
   const scores = (await ScholarshipScore.find({ paperId: { $in: papers.map((p) => p._id) } })

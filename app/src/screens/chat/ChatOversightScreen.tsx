@@ -11,7 +11,9 @@ import { View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
 import { useFocusEffect } from "@react-navigation/native";
-import { OVERSIGHT_CONVERSATIONS_QUERY, type ConversationT } from "../../graphql/operations";
+import { OVERSIGHT_CONVERSATIONS_PAGE_QUERY, type ConversationT } from "../../graphql/operations";
+import { Pager } from "../../components/Pager";
+import { usePageState, PAGE_SIZE } from "../../lib/paging";
 import type { ChatStackParamList } from "../../navigation/types";
 import { Screen, Card, Body, Muted, Badge, Notice, EmptyState } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
@@ -26,14 +28,19 @@ export default function ChatOversightScreen({ navigation }: Props): React.ReactE
   const { user } = useAuth();
   const myUserId = user?.id ?? "";
 
-  const [q, refetch] = useQuery({ query: OVERSIGHT_CONVERSATIONS_QUERY });
+  // D-#761: every conversation in the school (incl. archived) — page it on the server.
+  const [page, setPage] = usePageState();
+  const [q, refetch] = useQuery({
+    query: OVERSIGHT_CONVERSATIONS_PAGE_QUERY,
+    variables: { page, pageSize: PAGE_SIZE },
+  });
   useFocusEffect(
     React.useCallback(() => {
       refetch({ requestPolicy: "cache-and-network" });
     }, [refetch]),
   );
 
-  const conversations: ConversationT[] = q.data?.oversightConversations ?? [];
+  const conversations: ConversationT[] = q.data?.oversightConversationsPage.rows ?? [];
 
   return (
     <Screen>
@@ -73,6 +80,7 @@ export default function ChatOversightScreen({ navigation }: Props): React.ReactE
           );
         })
       )}
+      <Pager page={page} pageSize={PAGE_SIZE} total={q.data?.oversightConversationsPage.total ?? 0} onPage={setPage} />
       </QueryGate>
     </Screen>
   );

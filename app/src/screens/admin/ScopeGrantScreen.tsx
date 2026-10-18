@@ -10,10 +10,12 @@ import { View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useMutation, useQuery } from "urql";
 import type { Role } from "@scd/shared";
-import { ASSIGN_PROXY, REVOKE_PROXY, EXTEND_PROXY, ACADEMIC_YEARS_QUERY, CLASSES_QUERY, PROXY_GRANTS_QUERY, TEACHERS_QUERY, SUBJECTS_QUERY } from "../../graphql/operations";
+import { ASSIGN_PROXY, REVOKE_PROXY, EXTEND_PROXY, ACADEMIC_YEARS_QUERY, CLASSES_QUERY, PROXY_GRANTS_PAGE_QUERY, TEACHERS_QUERY, SUBJECTS_QUERY } from "../../graphql/operations";
 import type { AdminStackParamList } from "../../navigation/types";
 import { Screen, H2, Body, Muted, Card, Button, Field, Select, Divider, EmptyState, Loader } from "../../components/ui";
 import { DateField } from "../../components/DateField";
+import { Pager } from "../../components/Pager";
+import { usePageState, PAGE_SIZE } from "../../lib/paging";
 import { TeacherSelect, SubjectSelect } from "../../components/selects";
 import { STR, subjectLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
@@ -54,12 +56,14 @@ export default function ScopeGrantScreen(_props: Props): React.ReactElement {
   const canManage = !!user && can("user:manage");
 
   // Active grants list (Slice-4 follow-up): pick a grant to extend/revoke.
+  // D-#761: server-paged; grants whose window has ended no longer linger in it.
+  const [grantPage, setGrantPage] = usePageState();
   const [{ data: grantData, fetching: grantsFetching }, refetchGrants] = useQuery({
-    query: PROXY_GRANTS_QUERY,
-    variables: {},
+    query: PROXY_GRANTS_PAGE_QUERY,
+    variables: { page: grantPage, pageSize: PAGE_SIZE },
     pause: !canManage,
   });
-  const grants = grantData?.proxyGrants ?? [];
+  const grants = grantData?.proxyGrantsPage.rows ?? [];
   const [{ data: teacherData }] = useQuery({ query: TEACHERS_QUERY, pause: !canManage });
   const teacherById = new Map((teacherData?.teachers ?? []).map((t) => [t.id, t.name]));
   const [{ data: yearsData }] = useQuery({ query: ACADEMIC_YEARS_QUERY, pause: !canManage });
@@ -258,6 +262,7 @@ export default function ScopeGrantScreen(_props: Props): React.ReactElement {
           </Card>
         ))
       )}
+      <Pager page={grantPage} pageSize={PAGE_SIZE} total={grantData?.proxyGrantsPage.total ?? 0} onPage={setGrantPage} />
     </Screen>
   );
 }

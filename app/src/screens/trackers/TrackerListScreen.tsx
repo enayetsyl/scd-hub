@@ -8,7 +8,9 @@ import { View, ScrollView } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
 import { TRACKER_KINDS } from "@scd/shared";
-import { TRACKERS_QUERY } from "../../graphql/operations";
+import { TRACKERS_PAGE_QUERY } from "../../graphql/operations";
+import { Pager } from "../../components/Pager";
+import { usePageState, PAGE_SIZE } from "../../lib/paging";
 import type { TrackersStackParamList } from "../../navigation/types";
 import {
   Screen,
@@ -36,18 +38,22 @@ export default function TrackerListScreen({ navigation }: Props): React.ReactEle
   const [kind, setKind] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
 
+  // D-#761: one tracker per set, forever — page them on the server (filters reset to page 1).
+  const [page, setPage] = usePageState(`${selection.sectionId ?? ""}|${kind ?? ""}|${status ?? ""}`);
   const [{ data, fetching, error }, refetch] = useQuery({
-    query: TRACKERS_QUERY,
+    query: TRACKERS_PAGE_QUERY,
     variables: {
       sectionId: selection.sectionId ?? "",
       classId: selection.classId ?? "",
       trackerKind: kind,
       status,
+      page,
+      pageSize: PAGE_SIZE,
     },
     pause: !hasSection,
   });
 
-  const trackers = data?.trackers ?? [];
+  const trackers = data?.trackersPage.rows ?? [];
 
   return (
     <Screen padded={false}>
@@ -106,6 +112,9 @@ export default function TrackerListScreen({ navigation }: Props): React.ReactEle
             );
           })
         )}
+        {hasSection && !error && !fetching ? (
+          <Pager page={page} pageSize={PAGE_SIZE} total={data?.trackersPage.total ?? 0} onPage={setPage} />
+        ) : null}
       </ScrollView>
     </Screen>
   );

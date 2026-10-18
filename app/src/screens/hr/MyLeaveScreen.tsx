@@ -41,6 +41,8 @@ import { STR, bnNum, leaveTypeLabel, leaveStatusLabel, leaveDayPartLabel, leaveP
 import { friendlyError } from "../../lib/errors";
 import { useConfirm } from "../../state/ConfirmContext";
 import { DateField } from "../../components/DateField";
+import { Pager } from "../../components/Pager";
+import { usePagedRows } from "../../lib/paging";
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<HrStackParamList, "MyLeave">;
@@ -79,6 +81,8 @@ export default function MyLeaveScreen({ navigation }: Props): React.ReactElement
   const [, decideLeave] = useMutation(DECIDE_STAFF_LEAVE);
 
   const applications = leaveQ.data?.myStaffLeave ?? [];
+  // D-#761: one person files a handful a year, so the fetched rows are paged on the client.
+  const { shown: shownApplications, pager } = usePagedRows(applications);
   const pool = balQ.data?.myLeavePool;
   const heldDebt = debtQ.data?.myProbationDebt;
 
@@ -246,7 +250,7 @@ export default function MyLeaveScreen({ navigation }: Props): React.ReactElement
       ) : applications.length === 0 ? (
         <EmptyState message={STR.empty} />
       ) : (
-        applications.map((a) => (
+        shownApplications.map((a) => (
           <Card key={a.id}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
               <Body style={{ fontWeight: "700", flex: 1 }}>{leaveTypeLabel(a.leaveType)}</Body>
@@ -282,6 +286,7 @@ export default function MyLeaveScreen({ navigation }: Props): React.ReactElement
           </Card>
         ))
       )}
+      <Pager {...pager} />
     </Screen>
   );
 }

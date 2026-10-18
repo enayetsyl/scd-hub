@@ -15,6 +15,7 @@
  *     `roster:manage` — the library-desk single-custodian posture (D-#444).
  */
 import { builder } from "../../../schema";
+import { pageRef } from "../../../pageRef";
 import type { AppContext } from "../../../context";
 import { callerHasPermission } from "@scd/shared";
 import type { Role, ArchiveSourceKind } from "@scd/shared";
@@ -34,6 +35,8 @@ import {
   getBundle as getBundleSvc,
   getBundleForSource as getBundleForSourceSvc,
   listBundles as listBundlesSvc,
+  listBundlesPage as listBundlesPageSvc,
+  listDisposablePage as listDisposablePageSvc,
   listBoxBundles as listBoxBundlesSvc,
   listOpenCheckouts as listOpenCheckoutsSvc,
   listPendingAcks as listPendingAcksSvc,
@@ -313,6 +316,61 @@ builder.queryField("archiveLocationsForTests", (t) =>
     resolve: async (_root, args, ctx) => {
       assertStaffRead(ctx);
       return locationsForTestsSvc(args.testIds);
+    },
+  }),
+);
+
+// D-#761: the archive grows every term — page the search + the retention list (no silent cap).
+const ScriptBundlePageRef = pageRef("ScriptBundlePage", ScriptBundleRef);
+
+builder.queryField("scriptBundlesPage", (t) =>
+  t.field({
+    type: ScriptBundlePageRef,
+    description:
+      "scriptBundles, one page at a time, newest exam first — no 500-row cap; total is the real " +
+      "match count (D-#761). Staff read.",
+    authScopes: { authenticated: true },
+    args: {
+      academicYearId: t.arg.string({ required: false }),
+      classLevel: t.arg.int({ required: false }),
+      subject: t.arg.string({ required: false }),
+      status: t.arg.string({ required: false }),
+      boxId: t.arg.string({ required: false }),
+      labelQuery: t.arg.string({ required: false }),
+      page: t.arg.int({ required: false }),
+      pageSize: t.arg.int({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      assertStaffRead(ctx);
+      const page = await listBundlesPageSvc(
+        {
+          academicYearId: args.academicYearId ?? undefined,
+          classLevel: args.classLevel ?? undefined,
+          subject: args.subject ?? undefined,
+          status: args.status ?? undefined,
+          boxId: args.boxId ?? undefined,
+          labelQuery: args.labelQuery ?? undefined,
+        },
+        args,
+      );
+      return { ...page, rows: await decorateNames(page.rows) };
+    },
+  }),
+);
+
+builder.queryField("disposableScriptBundlesPage", (t) =>
+  t.field({
+    type: ScriptBundlePageRef,
+    description: "disposableScriptBundles, one page at a time, oldest exam first (D-#761). roster:manage.",
+    authScopes: { hasPermission: "roster:manage" },
+    args: {
+      page: t.arg.int({ required: false }),
+      pageSize: t.arg.int({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      const page = await listDisposablePageSvc(args);
+      return { ...page, rows: await decorateNames(page.rows) };
     },
   }),
 );

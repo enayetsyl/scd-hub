@@ -7,6 +7,7 @@
  * (oversight, audited) + the guardian-notice composer below.
  */
 import { builder } from "../../../schema";
+import { pageRef } from "../../../pageRef";
 import { POSTING_POLICIES, NOTICE_SCOPES, callerHasPermission, type PostingPolicy } from "@scd/shared";
 import { User } from "../../foundation/models/User";
 import type { IConversation } from "../models/Conversation";
@@ -50,6 +51,7 @@ import {
 } from "../services/ChatGroupService";
 import {
   oversightConversations,
+  oversightConversationsPage,
   openConversationOversight,
   oversightMessages,
 } from "../services/ChatOversightService";
@@ -545,6 +547,25 @@ builder.queryField("oversightConversations", (t) =>
       const conversations = await oversightConversations();
       await attachMembers(conversations); // batch the members field (no N+1)
       return conversations;
+    },
+  }),
+);
+
+// D-#761: the oversight browser grows with every DM/group — page it.
+const ConversationPageRef = pageRef("ConversationPage", ConversationRef);
+
+builder.queryField("oversightConversationsPage", (t) =>
+  t.field({
+    type: ConversationPageRef,
+    authScopes: { hasPermission: "chat:oversee" },
+    args: {
+      page: t.arg.int({ required: false }),
+      pageSize: t.arg.int({ required: false }),
+    },
+    resolve: async (_root, args) => {
+      const page = await oversightConversationsPage(args);
+      await attachMembers(page.rows); // members for this page only
+      return page;
     },
   }),
 );

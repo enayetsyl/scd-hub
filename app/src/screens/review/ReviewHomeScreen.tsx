@@ -9,6 +9,9 @@
  *
  * Each query is paused when the role lacks the permission, so a single-permission
  * role never fires a query the server would reject.
+ *
+ * D-#761: both are open-round queues (a round leaves on sign-off / supersede), so the
+ * server already bounds them; each list pages on the client, 50 cards a page.
  */
 import React, { useState, useMemo, useRef, useCallback } from "react";
 import { View, Pressable } from "react-native";
@@ -51,6 +54,8 @@ import {
   bnNum,
 } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { usePagedRows } from "../../lib/paging";
+import { Pager } from "../../components/Pager";
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<ReviewStackParamList, "ReviewHome">;
@@ -114,7 +119,10 @@ export default function ReviewHomeScreen({ navigation }: Props): React.ReactElem
     () => readyRows.map((r) => r.artifactId).filter((id) => picked.has(id)),
     [readyRows, picked],
   );
-  const allPicked = readyRows.length > 0 && pickedIds.length === readyRows.length;
+  const { shown: readyShown, pager: readyPager } = usePagedRows(readyRows);
+  const { shown: otherShown, pager: otherPager } = usePagedRows(otherRows);
+  // Select all = this page's ready cards (D-#761); ticks on other pages are kept.
+  const allPicked = readyShown.length > 0 && readyShown.every((r) => picked.has(r.artifactId));
   const [signingOff, setSigningOff] = useState(false);
   const [, approveBulk] = useMutation(APPROVE_PLAN_BULK);
   const toast = useToast();
@@ -198,6 +206,9 @@ export default function ReviewHomeScreen({ navigation }: Props): React.ReactElem
       ),
     [mine, subject, classLevel, docType],
   );
+  const { shown: mineShown, pager: minePager } = usePagedRows(filteredMine, {
+    resetKey: `${subject}|${classLevel}|${docType}`,
+  });
 
   const activeFilters = useMemo(
     () =>
@@ -281,9 +292,18 @@ export default function ReviewHomeScreen({ navigation }: Props): React.ReactElem
                         style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: space(2), marginBottom: space(2) }}
                       >
                         <Chip
-                          label={STR.qrSelectAll}
+                          label={readyRows.length > readyShown.length ? STR.rvSelectPage : STR.qrSelectAll}
                           selected={allPicked}
-                          onPress={() => setPicked(allPicked ? new Set() : new Set(readyRows.map((r) => r.artifactId)))}
+                          onPress={() =>
+                            setPicked((prev) => {
+                              const next = new Set(prev);
+                              for (const r of readyShown) {
+                                if (allPicked) next.delete(r.artifactId);
+                                else next.add(r.artifactId);
+                              }
+                              return next;
+                            })
+                          }
                         />
                         <Button
                           title={`${STR.rvSignOffSelected} (${bnNum(pickedIds.length)})`}
@@ -294,7 +314,8 @@ export default function ReviewHomeScreen({ navigation }: Props): React.ReactElem
                       </View>
                     </>
                   ) : null}
-                  {readyRows.map((r) => inboxCard(r, canSignOff))}
+                  {readyShown.map((r) => inboxCard(r, canSignOff))}
+                  <Pager {...readyPager} />
                 </View>
               ) : null}
 
@@ -305,7 +326,8 @@ export default function ReviewHomeScreen({ navigation }: Props): React.ReactElem
                   <Body style={{ fontWeight: "700", marginTop: space(2), marginBottom: space(2) }}>
                     {STR.rvInboxNeedsAction} ({bnNum(otherRows.length)})
                   </Body>
-                  {otherRows.map((r) => inboxCard(r, false))}
+                  {otherShown.map((r) => inboxCard(r, false))}
+                  <Pager {...otherPager} />
                 </View>
               ) : null}
             </>
@@ -372,7 +394,7 @@ export default function ReviewHomeScreen({ navigation }: Props): React.ReactElem
           ) : filteredMine.length === 0 ? (
             <EmptyState message={STR.empty} />
           ) : (
-            filteredMine.map((r) => {
+            mineShown.map((r) => {
               const decided = r.status === "submitted";
               return (
                 <Card
@@ -405,6 +427,7 @@ export default function ReviewHomeScreen({ navigation }: Props): React.ReactElem
               );
             })
           )}
+          <Pager {...minePager} />
         </View>
       ) : null}
     </Screen>

@@ -10,13 +10,15 @@ import { Linking, ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
 import {
-  AS_CHASE_LIST,
+  AS_CHASE_LIST_PAGE,
   AS_FOLLOWUPS,
   ESCALATE_AS_CHASE,
   RECORD_AS_FOLLOWUP_OUTCOME,
 } from "../../graphql/operations";
 import type { AssignmentStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Badge, Button, Field, Chip, ChipRow, Loader, EmptyState, Notice } from "../../components/ui";
+import { Pager } from "../../components/Pager";
+import { usePageState, PAGE_SIZE } from "../../lib/paging";
 import { STR, bnNum, hwSubjectLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useSectionLabel } from "../../lib/useSectionNames";
@@ -25,8 +27,10 @@ import { space } from "../../theme/tokens";
 type Props = NativeStackScreenProps<AssignmentStackParamList, "AssignmentChase">;
 
 export default function AssignmentChaseScreen(_props: Props): React.ReactElement {
-  const [listQ, refetchList] = useQuery({ query: AS_CHASE_LIST });
-  const entries = listQ.data?.assignmentChaseList ?? [];
+  // D-#761: every CHASE record school-wide — page it on the server (most overdue first).
+  const [page, setPage] = usePageState();
+  const [listQ, refetchList] = useQuery({ query: AS_CHASE_LIST_PAGE, variables: { page, pageSize: PAGE_SIZE } });
+  const entries = listQ.data?.assignmentChaseListPage.rows ?? [];
   // D-#723: the asId cannot tell C4 বালক from বালিকা — say the class + section.
   const sectionLabel = useSectionLabel();
 
@@ -161,6 +165,7 @@ export default function AssignmentChaseScreen(_props: Props): React.ReactElement
             );
           })
         )}
+        <Pager page={page} pageSize={PAGE_SIZE} total={listQ.data?.assignmentChaseListPage.total ?? 0} onPage={setPage} />
       </ScrollView>
     </Screen>
   );

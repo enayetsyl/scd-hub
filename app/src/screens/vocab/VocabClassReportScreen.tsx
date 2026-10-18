@@ -6,9 +6,11 @@
 import React, { useState } from "react";
 import { ScrollView, View } from "react-native";
 import { useQuery } from "urql";
-import { VOCAB_CLASS_DASHBOARD_QUERY } from "../../graphql/operations";
+import { VOCAB_CLASS_DASHBOARD_SUMMARY_QUERY, VOCAB_CLASS_TESTS_PAGE_QUERY } from "../../graphql/operations";
 import { Screen, Card, Body, Muted, Badge } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
+import { Pager } from "../../components/Pager";
+import { usePageState, usePagedRows, PAGE_SIZE } from "../../lib/paging";
 import { ProgramSelect, ClassSectionSelect, type SectionPick } from "../../components/vocabPickers";
 import { AcademicYearSelect } from "../../components/selects";
 import { STR, bnNum, vocabProgramLabel, isoDateLabel } from "../../lib/labels";
@@ -20,11 +22,22 @@ export default function VocabClassReportScreen(): React.ReactElement {
   const [section, setSection] = useState<SectionPick | null>(null);
 
   const [dashQ, refetchDash] = useQuery({
-    query: VOCAB_CLASS_DASHBOARD_QUERY,
+    query: VOCAB_CLASS_DASHBOARD_SUMMARY_QUERY,
     variables: { sectionId: section?.sectionId ?? "", program: program ?? null },
     pause: !section,
   });
   const dash = dashQ.data?.vocabClassDashboard ?? null;
+  // D-#761: the section's per-test rows grow every week — page them on the server; the
+  // most-missed list grows with the bank, so it pages on the client.
+  const filterKey = `${section?.sectionId ?? ""}|${program ?? ""}`;
+  const [testsPage, setTestsPage] = usePageState(filterKey);
+  const [testsQ, refetchTests] = useQuery({
+    query: VOCAB_CLASS_TESTS_PAGE_QUERY,
+    variables: { sectionId: section?.sectionId ?? "", program: program ?? null, page: testsPage, pageSize: PAGE_SIZE },
+    pause: !section,
+  });
+  const tests = testsQ.data?.vocabClassTestsPage;
+  const { shown: missedShown, pager: missedPager } = usePagedRows(dash?.mostMissed ?? [], { resetKey: filterKey });
 
   return (
     <Screen padded={false}>
@@ -39,7 +52,10 @@ export default function VocabClassReportScreen(): React.ReactElement {
         {!section ? null : (
           <QueryGate
             result={dashQ}
-            onRetry={() => refetchDash({ requestPolicy: "network-only" })}
+            onRetry={() => {
+              refetchDash({ requestPolicy: "network-only" });
+              refetchTests({ requestPolicy: "network-only" });
+            }}
             loaderLabel={STR.loading}
           >
             {dash ? (
@@ -61,23 +77,30 @@ export default function VocabClassReportScreen(): React.ReactElement {
 
                 <Card>
                   <Body style={{ fontWeight: "700" }}>{STR.vbPerTest}</Body>
-                  {dash.tests.length === 0 ? (
-                    <Muted style={{ marginTop: space(2) }}>{STR.vbNoTests}</Muted>
-                  ) : (
-                    dash.tests.map((e) => (
-                      <View key={e.test.testId} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: space(2) }}>
-                        <View style={{ flexShrink: 1 }}>
-                          <Body>
-                            {vocabProgramLabel(e.test.program)} · {e.test.label}
-                          </Body>
-                          <Muted>{isoDateLabel(e.test.testDate)}</Muted>
+                  <QueryGate
+                    result={testsQ}
+                    onRetry={() => refetchTests({ requestPolicy: "network-only" })}
+                    loaderLabel={STR.loading}
+                  >
+                    {(tests?.rows ?? []).length === 0 ? (
+                      <Muted style={{ marginTop: space(2) }}>{STR.vbNoTests}</Muted>
+                    ) : (
+                      tests!.rows.map((e) => (
+                        <View key={e.test.testId} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: space(2) }}>
+                          <View style={{ flexShrink: 1 }}>
+                            <Body>
+                              {vocabProgramLabel(e.test.program)} · {e.test.label}
+                            </Body>
+                            <Muted>{isoDateLabel(e.test.testDate)}</Muted>
+                          </View>
+                          <Muted>
+                            {STR.vbAvgScore}: {bnNum(e.rollup.averageScore)}/{bnNum(e.rollup.averageTotal)}
+                          </Muted>
                         </View>
-                        <Muted>
-                          {STR.vbAvgScore}: {bnNum(e.rollup.averageScore)}/{bnNum(e.rollup.averageTotal)}
-                        </Muted>
-                      </View>
-                    ))
-                  )}
+                      ))
+                    )}
+                    <Pager page={testsPage} pageSize={PAGE_SIZE} total={tests?.total ?? 0} onPage={setTestsPage} />
+                  </QueryGate>
                 </Card>
 
                 <Card>
@@ -85,7 +108,7 @@ export default function VocabClassReportScreen(): React.ReactElement {
                   {dash.mostMissed.length === 0 ? (
                     <Muted style={{ marginTop: space(2) }}>{STR.empty}</Muted>
                   ) : (
-                    dash.mostMissed.map((w) => (
+                    missedShown.map((w) => (
                       <View key={w.wordId} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: space(2) }}>
                         <Body style={{ flexShrink: 1 }}>
                           {w.headword} — {w.banglaMeaning}
@@ -97,6 +120,7 @@ export default function VocabClassReportScreen(): React.ReactElement {
                       </View>
                     ))
                   )}
+                  <Pager {...missedPager} />
                 </Card>
               </>
             ) : null}

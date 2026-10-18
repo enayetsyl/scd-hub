@@ -6,10 +6,13 @@
  * rows. Emission is server-internal — there is deliberately no emit mutation.
  */
 import { builder } from "../../../schema";
+import { pageRef } from "../../../pageRef";
 import type { AppContext } from "../../../context";
 import type { INotification, NotificationRefs } from "../models/Notification";
 import {
   myNotifications,
+  myNotificationsPage,
+  myNotificationById,
   myUnreadCount,
   markRead,
   markManyRead,
@@ -90,6 +93,35 @@ builder.queryField("myNotifications", (t) =>
         unreadOnly: args.unreadOnly ?? false,
         limit: args.limit ?? undefined,
       }),
+  }),
+);
+
+// D-#761: the inbox, paged and unread-first (server-ordered), so no row is out of reach.
+const NotificationPageRef = pageRef("NotificationPage", NotificationRef);
+
+builder.queryField("myNotificationsPage", (t) =>
+  t.field({
+    type: NotificationPageRef,
+    description:
+      "The caller's own notifications, one page at a time (D-#761): every unread row newest first, " +
+      "then every read row newest first. `total` counts them all.",
+    authScopes: { authenticated: true },
+    args: {
+      page: t.arg.int({ required: false }),
+      pageSize: t.arg.int({ required: false }),
+    },
+    resolve: async (_r, args, ctx) => myNotificationsPage(recipientOf(ctx), args),
+  }),
+);
+
+builder.queryField("myNotification", (t) =>
+  t.field({
+    type: NotificationRef,
+    nullable: true,
+    description: "One of the caller's own notifications by id (D-#761 — the detail screen). Null if not theirs.",
+    authScopes: { authenticated: true },
+    args: { id: t.arg.string({ required: true }) },
+    resolve: async (_r, args, ctx) => myNotificationById(args.id, recipientOf(ctx)),
   }),
 );
 

@@ -1468,4 +1468,38 @@ Versioning is by git tag; this file is the human-readable "what shipped" ledger.
 - 2026-10-18 | Release | **Sidebar groups start closed, sidebar open again (D-#760) live: #1050 → dev (`6a934684`), promoted in #1051 (`8caf27e0`), prod deploy green; OTA group `3b6764a2` (runtime 1.1.0, commit 8caf27e0). Bundle: prod URL 1, localhost 0; sourcemaps uploaded; prior OTA 71f5a21c ancestor-checked.** |
 - 2026-10-18 | Docs | **Parents'-meeting user guides in Bangla, one per role (`user manual/`).** Office (6 pp, the whole journey: meeting, slots, breaks, WhatsApp times, comment collection, progress/skip/remind, finals, meeting-day brief + print + attendance), Principal (3 pp), subject teacher (3 pp), class teacher (3 pp), guardian (1 p). PDF + HTML source each, screen mockups with numbered call-outs, built with the app's own Bangla button labels. |
 - 2026-10-18 | Fix | **GlitchTip app noise: background network failures dropped, all network failures grouped into one issue, events stamped with the signed-in account id + role (D-#762).** `graphql/client.ts` AppState gate + fingerprint; `observability/sentry.ts` `captureAppError` grouping arg + `setSentryUser`; AuthContext effect. Gate: app `tsc` 0, web export 0. |
+- 2026-10-18 | Feature | **Paging standard (D-#761).** `server/src/lib/paging.ts` (normalizePage / pageOf / queryPage), `server/src/pageRef.ts` (`{ rows, total, page, pageSize }`), `app/src/lib/paging.ts` (usePageState / usePagedRows). `docs/pagination.md`, plus an AGENTS.md hard rule and a feature-lifecycle step: lists that grow are paged from the first version, with no unbounded reads, no silent caps, and old queries kept for released bundles. `Pager` steps back to the last real page when rows shrink. | (this branch)
+- 2026-10-18 | Feature | **About 45 growing lists now page (D-#761), each through a new `<name>Page` query beside the old one.**
+  - **Homework:** the workspace's finished fold (it read every RETURNED record ever).
+  - **Guardian:** home cards bounded to the newest 5, with see-all/older; child class tests.
+  - **Library:** catalog.
+  - **Review:** assign plans / assign questions pickers, review home.
+  - **Class notes:** admin list.
+  - **Comments:** home, section, review inbox.
+  - **Class tests:** question queue, my requests, my tests, section reports, student profile, reports-hub report.
+  - **Reports:** monthly pending details, pending / reconciliation reports.
+  - **Vocab:** student report, class report, tests, assignments, history, word bank.
+  - **Other module lists:** scholarship papers, assignment chase, chat oversight, trackers, sets, Hifz revision history, video reviews, archive search + disposable list.
+  - **Leave and cover:** leave admin, cover slots, needs-cover inbox (20 per page to bound the per-row availability queries).
+  - **Staff, access and finance:** proxy grants (now also hiding windows that ended), person activity, observations, payslips, own leave, fee history.
+  - **Small extras:** past holidays, my observations.
+
+  New indexes: HomeworkStudentRecord {sectionId, state, updatedAt, hwItemId}; ClassTest {status, examDate}; ClassNote {date, publishedAt}; StudentComment {authorUserId, createdAt}; VocabStudentTest {studentId, testId}. | (this branch)
+- 2026-10-18 | Fix | **Silent caps removed (D-#761).** Older rows were unreachable:
+  - Already printed / print history: a 1000-job scan window; now the real document total, server-paged, with chip options from the whole window.
+  - Notifications: newest 100. Now paged with unread first across the whole inbox.
+  - My print requests: 50.
+  - Teacher attendance imports: 60.
+  - Tasks I assigned: 100 / 500.
+  - Archive search: 500.
+  - View-as guardians: 50.
+  - Worksheets made: 10.
+  - Support-book build jobs: 25.
+  - Assign-questions picker: 300.
+  - Person activity: 500.
+  | (this branch)
+- 2026-10-18 | Fix | **Notification detail opens any notification by id (D-#761).** It searched the newest-100 list, so a link to an older notification opened nothing. New caller-scoped `myNotification(id)`. | (this branch)
+- 2026-10-18 | Fix | **Finance → Reconciliation history loads (D-#761).** The query was sent without its required `from`/`to`, failed validation, and the screen showed "none". The screen now has its own date fields (default last 90 days), an error banner, and paging. | (this branch)
+- 2026-10-18 | Fix | **Class test reports: the year picker reaches the query (D-#761).** `academicYearId` was never sent. | (this branch)
 - 2026-10-18 | Release | **GlitchTip app noise + account on events (D-#762) live: #1057 → dev (`289c6e7f`), promoted in #1058 (`462d4e28`), prod deploy green; OTA group `f06d1571` (runtime 1.1.0, commit 462d4e28). Bundle: prod URL 1, localhost 0; sourcemaps uploaded; prior OTA 8caf27e0 ancestor-checked.** |
+- 2026-10-18 | Test | **Paging test fixtures are deterministic (D-#761).** The promotion gate failed on homeworkWorkspacePaging: a Student fixture left the uniquely-indexed `schoolId` unset, so whether the 2nd row collided on null depended on index-build timing. That timing passed locally and on #1059, then failed on #1060. Fixed the fixture; the 4 memory-server paging suites now build every index (`model.init()`) before inserting, so a missing unique field fails every time. 4 suites, 34/34. |

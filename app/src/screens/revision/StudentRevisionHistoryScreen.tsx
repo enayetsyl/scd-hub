@@ -6,8 +6,10 @@ import React from "react";
 import { ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
-import { STUDENT_REVISION_HISTORY_QUERY, type RevisionEntryT } from "../../graphql/revision";
+import { STUDENT_REVISION_HISTORY_PAGE_QUERY, type RevisionEntryT } from "../../graphql/revision";
 import { Screen, Card, Body, Muted, Badge, Notice, Loader, EmptyState } from "../../components/ui";
+import { Pager } from "../../components/Pager";
+import { usePageState, PAGE_SIZE } from "../../lib/paging";
 import { STR, bnNum, revCategoryLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
@@ -22,8 +24,14 @@ function juzMistakeTotal(r: RevisionEntryT["juzRecords"][number]): number {
 
 export default function StudentRevisionHistoryScreen({ route }: Props): React.ReactElement {
   const { studentId, studentName } = route.params;
-  const [histQ] = useQuery({ query: STUDENT_REVISION_HISTORY_QUERY, variables: { studentId } });
-  const entries = [...(histQ.data?.studentRevisionHistory ?? [])].sort((a, b) => b.date.localeCompare(a.date));
+  // D-#761: paged on the server, newest first (the page is already date-sorted; the
+  // in-page sort is kept as a belt-and-braces).
+  const [page, setPage] = usePageState(studentId);
+  const [histQ] = useQuery({
+    query: STUDENT_REVISION_HISTORY_PAGE_QUERY,
+    variables: { studentId, page, pageSize: PAGE_SIZE },
+  });
+  const entries = [...(histQ.data?.studentRevisionHistoryPage.rows ?? [])].sort((a, b) => b.date.localeCompare(a.date));
 
   return (
     <Screen padded={false}>
@@ -67,6 +75,9 @@ export default function StudentRevisionHistoryScreen({ route }: Props): React.Re
             </Card>
           ))
         )}
+        {!histQ.fetching && !histQ.error ? (
+          <Pager page={page} pageSize={PAGE_SIZE} total={histQ.data?.studentRevisionHistoryPage.total ?? 0} onPage={setPage} />
+        ) : null}
       </ScrollView>
     </Screen>
   );

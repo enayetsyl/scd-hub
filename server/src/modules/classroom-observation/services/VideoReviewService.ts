@@ -13,6 +13,7 @@ import {
 } from "../models/VideoReviewAssignment";
 import { User } from "../../foundation/models/User";
 import { writeAudit } from "../../platform/services/AuditService";
+import { normalizePage, type Page, type PageArgs } from "../../../lib/paging";
 
 export interface VideoReviewShape {
   id: string;
@@ -213,5 +214,41 @@ export async function videoReviewOverview(): Promise<VideoReviewOverview> {
       .map((r) => shape(r, nameById.get(r.teacherId.toString()) ?? null)),
     // Most pending first — the teachers the office should nudge.
     summary: [...byTeacher.values()].sort((a, b) => b.pending - a.pending),
+  };
+}
+
+/**
+ * D-#761: the office board's rows, one page at a time, in the board's order (PENDING
+ * first, then newest class date; `_id` tie-break). The status filter runs here, not on
+ * the phone, so a filtered page is a real page. Teacher names are joined for the page only.
+ * The per-teacher counts stay on `videoReviewOverview.summary`.
+ */
+export async function videoReviewRowsPage(
+  status: string | null | undefined,
+  args: PageArgs,
+): Promise<Page<VideoReviewShape>> {
+  const { page, pageSize, skip } = normalizePage(args);
+  const match: Record<string, unknown> = { active: { $ne: false } };
+  if (status) match.status = status;
+  const [docs, total] = await Promise.all([
+    VideoReviewAssignment.aggregate<IVideoReviewAssignment>([
+      { $match: match },
+      { $addFields: { _pendingRank: { $cond: [{ $eq: ["$status", "PENDING"] }, 0, 1] } } },
+      { $sort: { _pendingRank: 1, classDate: -1, _id: -1 } },
+      { $skip: skip },
+      { $limit: pageSize },
+    ]),
+    VideoReviewAssignment.countDocuments(match),
+  ]);
+  const teacherIds = [...new Set(docs.map((r) => r.teacherId.toString()))];
+  const teachers = (await User.find({ _id: { $in: teacherIds } })
+    .select("name")
+    .lean()) as unknown as Array<{ _id: Types.ObjectId; name?: string }>;
+  const nameById = new Map(teachers.map((t) => [t._id.toString(), t.name ?? null]));
+  return {
+    rows: docs.map((r) => shape(r, nameById.get(r.teacherId.toString()) ?? null)),
+    total,
+    page,
+    pageSize,
   };
 }

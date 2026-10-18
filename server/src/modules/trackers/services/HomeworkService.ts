@@ -20,6 +20,7 @@ import {
 } from "@scd/shared";
 import type { HwSubject, LifecycleState, HwResult } from "@scd/shared";
 import { Types } from "mongoose";
+import { queryPage, type Page, type PageArgs } from "../../../lib/paging";
 import { StoredFile } from "../../platform/models/StoredFile";
 import { HomeworkItem } from "../models/HomeworkItem";
 import { HomeworkStudentRecord } from "../models/HomeworkStudentRecord";
@@ -957,6 +958,145 @@ export interface OpenRecordDTO {
 export async function listOpenRecords(sectionId: string, states: LifecycleState[]): Promise<OpenRecordDTO[]> {
   if (states.length === 0) return [];
   const recs = await HomeworkStudentRecord.find({ sectionId, state: { $in: states } }).lean();
+  return enrichOpenRecords(recs);
+}
+
+// The lean record shape exactly as `find().lean()` yields it (the helper exists only
+// so the enrichment below can name that type).
+type HwRecordLean = Awaited<ReturnType<typeof leanRecordsOf>>[number];
+function leanRecordsOf(filter: Record<string, unknown>) {
+  return HomeworkStudentRecord.find(filter).lean();
+}
+
+/** Last stamp of a record — the moment it reached its current state. */
+function lastStampAt(r: { stateDates?: Array<{ at: unknown }> | null }): Date | null {
+  const s = r.stateDates ?? [];
+  return s.length ? new Date(s[s.length - 1]!.at as Date) : null;
+}
+
+/**
+ * D-#761 — which of a section's homework items are still ON THE DECK: any record not
+ * yet RETURNED, or a return stamped on/after `dayStart` (today's same-day confirmation
+ * list, with Undo — D-#338). Every other item is finished work, which pages through
+ * `homeworkDoneItemsPage` instead of riding on every visit.
+ *
+ * `updatedAt` pre-filters today's returns (a return is a write, so it bumps it); the
+ * last stamp then decides exactly, so a record touched today for another reason stays out.
+ */
+export async function hwDeckItemIds(sectionId: string, dayStart: Date): Promise<Set<string>> {
+  const [openIds, touchedToday] = await Promise.all([
+    HomeworkStudentRecord.distinct("hwItemId", { sectionId, state: { $ne: "RETURNED" } }),
+    HomeworkStudentRecord.find({ sectionId, state: "RETURNED", updatedAt: { $gte: dayStart } })
+      .select({ hwItemId: 1, stateDates: 1 })
+      .lean(),
+  ]);
+  const ids = new Set(openIds.map((id) => String(id)));
+  for (const r of touchedToday) {
+    const at = lastStampAt(r);
+    if (at && at.getTime() >= dayStart.getTime()) ids.add(r.hwItemId.toString());
+  }
+  return ids;
+}
+
+/**
+ * D-#761 — the workspace's open deck: every record in `states` of the items still on
+ * the deck (see `hwDeckItemIds`), INCLUDING their earlier returns (the D-#648 fold on an
+ * open card). The same rows `listOpenRecords` gives today minus the finished items'
+ * history, which used to arrive in full on every visit.
+ */
+export async function listWorkspaceRecords(
+  sectionId: string,
+  states: LifecycleState[],
+  dayStart: Date,
+): Promise<OpenRecordDTO[]> {
+  if (states.length === 0) return [];
+  const deck = await hwDeckItemIds(sectionId, dayStart);
+  if (deck.size === 0) return [];
+  const recs = await HomeworkStudentRecord.find({
+    sectionId,
+    state: { $in: states },
+    hwItemId: { $in: [...deck].map((id) => new Types.ObjectId(id)) },
+  }).lean();
+  return enrichOpenRecords(recs);
+}
+
+/** The section's FINISHED homework items: every record returned, none of it today. */
+async function hwDoneItemIds(sectionId: string, dayStart: Date): Promise<Types.ObjectId[]> {
+  const [all, deck] = await Promise.all([
+    HomeworkStudentRecord.distinct("hwItemId", { sectionId }),
+    hwDeckItemIds(sectionId, dayStart),
+  ]);
+  return all.filter((id) => !deck.has(String(id))).map((id) => new Types.ObjectId(String(id)));
+}
+
+export interface HwDoneItem {
+  hwItemId: string;
+  /** The item's records in this section (all RETURNED), in `listOpenRecords` order. */
+  records: OpenRecordDTO[];
+}
+
+/**
+ * D-#761 — one page of the workspace's completed fold: finished items, newest given-date
+ * first (subject, then _id break ties — the client's card order). `subjects` is the
+ * caller's read scope (null = unrestricted); `subject` the screen's chip filter.
+ */
+export function homeworkDoneItemsPage(
+  sectionId: string,
+  dayStart: Date,
+  filter: { subjects?: ReadonlySet<string> | null; subject?: string | null },
+  args: PageArgs,
+): Promise<Page<HwDoneItem>> {
+  return hwDoneItemIds(sectionId, dayStart).then((ids) =>
+    queryPage(
+      HomeworkItem,
+      { _id: { $in: ids }, ...doneSubjectFilter(filter) },
+      { dateGiven: -1, subject: 1, _id: -1 },
+      args,
+      async (items) => {
+        if (items.length === 0) return [];
+        const recs = await HomeworkStudentRecord.find({
+          sectionId,
+          hwItemId: { $in: items.map((i) => i._id) },
+        }).lean();
+        const dtos = await enrichOpenRecords(recs);
+        return items.map((i) => ({
+          hwItemId: i._id.toString(),
+          records: dtos.filter((d) => d.hwItemId === i._id.toString()),
+        }));
+      },
+    ),
+  );
+}
+
+/** D-#761 — finished-item counts per subject, so the workspace's subject chips still
+ *  count (and offer) a subject whose only cards are finished. */
+export async function homeworkDoneItemSubjects(
+  sectionId: string,
+  dayStart: Date,
+  subjects?: ReadonlySet<string> | null,
+): Promise<Array<{ subject: string; count: number }>> {
+  const ids = await hwDoneItemIds(sectionId, dayStart);
+  if (ids.length === 0) return [];
+  const items = await HomeworkItem.find({ _id: { $in: ids }, ...doneSubjectFilter({ subjects }) })
+    .select({ subject: 1 })
+    .lean();
+  const counts = new Map<string, number>();
+  for (const i of items) counts.set(i.subject, (counts.get(i.subject) ?? 0) + 1);
+  return [...counts].map(([subject, count]) => ({ subject, count })).sort((a, b) => a.subject.localeCompare(b.subject));
+}
+
+function doneSubjectFilter(filter: {
+  subjects?: ReadonlySet<string> | null;
+  subject?: string | null;
+}): Record<string, unknown> {
+  if (filter.subject) {
+    // A chip outside the caller's scope matches nothing rather than widening the read.
+    return { subject: filter.subjects && !filter.subjects.has(filter.subject) ? { $in: [] } : filter.subject };
+  }
+  return filter.subjects ? { subject: { $in: [...filter.subjects] } } : {};
+}
+
+async function enrichOpenRecords(recs: HwRecordLean[]): Promise<OpenRecordDTO[]> {
   if (recs.length === 0) return [];
 
   const itemIds = [...new Set(recs.map((r) => r.hwItemId.toString()))];

@@ -27,6 +27,8 @@ import {
 } from "../../graphql/supportBook";
 import { Screen, Body, Muted, Card, Select, Badge, Button, Chip, ChipRow, EmptyState } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
+import { Pager } from "../../components/Pager";
+import { usePagedRows } from "../../lib/paging";
 import { STR, bnNum } from "../../lib/labels";
 import { pickAndUploadBookImage, FileUploadError } from "../../lib/files";
 import { space, useColors } from "../../theme";
@@ -221,7 +223,11 @@ export default function BookImageQueueScreen(): React.ReactElement {
   const all = useMemo(() => slotsQ.data?.supportBookSlots ?? [], [slotsQ.data]);
   const outstanding = useMemo(() => all.filter(isOutstanding), [all]);
   const staleCount = useMemo(() => all.filter((s) => s.hasStale).length, [all]);
-  const shown = outstandingOnly ? outstanding : all;
+  // D-#761: the server sends one book's slots (bounded by the book), so CLIENT paging —
+  // with "all" on that is every slot of every পাঠ, hundreds of cards in one scroll.
+  const { shown, pager } = usePagedRows(outstandingOnly ? outstanding : all, {
+    resetKey: `${bookId}|${outstandingOnly}`,
+  });
 
   return (
     <Screen padded={false}>
@@ -288,6 +294,7 @@ export default function BookImageQueueScreen(): React.ReactElement {
               />
             ))
           )}
+          <Pager {...pager} />
         </QueryGate>
       </ScrollView>
     </Screen>

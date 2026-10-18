@@ -3,19 +3,26 @@
  * info (class · section · subject · content · author · attachments) plus per-row
  * inline EDIT (updateClassNote — summary + attachments) and DELETE (deleteClassNote).
  * routine:manage; reachable from the Routine tab. Full-width card list.
+ *
+ * D-#761: paged on the server (`classNotesAdminPage`, 50 a page) — a 30-day window is
+ * ~1,500 notes. The class / teacher / subject selects run there too; their options come
+ * from `classNotesAdminOptions` (values present in the window).
  */
 import React, { useState } from "react";
 import { ScrollView, View } from "react-native";
 import { useQuery, useMutation } from "urql";
 import {
-  CLASS_NOTES_ADMIN_QUERY,
+  CLASS_NOTES_ADMIN_PAGE_QUERY,
+  CLASS_NOTES_ADMIN_OPTIONS_QUERY,
   UPDATE_CLASS_NOTE,
   DELETE_CLASS_NOTE,
   type ClassNoteAdminRowT,
 } from "../../graphql/operations";
 import { Screen, Body, Muted, Card, Field, Button, Badge, Loader, Notice } from "../../components/ui";
 import { ClassNoteAttachments, type AttachmentRef } from "../../components/ClassNoteAttachments";
-import { useReportRange, useRowFilters } from "../../components/ReportFilters";
+import { useReportRange, useReportFilterState } from "../../components/ReportFilters";
+import { Pager } from "../../components/Pager";
+import { usePageState, PAGE_SIZE } from "../../lib/paging";
 import { openStoredFile } from "../../lib/files";
 import { STR, routineSubjectLabel, classLevelLabel, getActiveLang, isoDateTimeLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
@@ -34,13 +41,34 @@ function rowSection(r: ClassNoteAdminRowT): string | null {
 }
 
 export default function ClassNotesAdminScreen(): React.ReactElement {
-  // Owner request: class / subject / teacher / date-range filters. Range fetches
-  // server-side (dateTo); the row filters are the D-#309 client-side pattern —
-  // options derive from the fetched rows, so a select never offers 0 matches.
+  // Owner request: class / subject / teacher / date-range filters. All of them run
+  // server-side now (D-#761); the select options are the values present in the window,
+  // so a select still never offers 0 matches (D-#309).
   const { fromKey, toKey, node: rangeNode } = useReportRange(1);
-  const [q, refetch] = useQuery({
-    query: CLASS_NOTES_ADMIN_QUERY,
+  const [optionsQ] = useQuery({
+    query: CLASS_NOTES_ADMIN_OPTIONS_QUERY,
     variables: { date: fromKey, dateTo: toKey },
+    requestPolicy: "cache-and-network",
+  });
+  const opts = optionsQ.data?.classNotesAdminOptions;
+  const { node: filterNode, values } = useReportFilterState({
+    classLevels: opts?.classLevels ?? [],
+    teachers: opts?.teachers ?? [],
+    subjects: opts?.subjects ?? [],
+    subjectLabel: routineSubjectLabel,
+  });
+  const [page, setPage] = usePageState(`${fromKey}|${toKey}|${values.classLevel}|${values.teacher}|${values.subject}`);
+  const [q, refetch] = useQuery({
+    query: CLASS_NOTES_ADMIN_PAGE_QUERY,
+    variables: {
+      date: fromKey,
+      dateTo: toKey,
+      classLevel: values.classLevel,
+      teacherName: values.teacher,
+      subject: values.subject,
+      page,
+      pageSize: PAGE_SIZE,
+    },
     requestPolicy: "cache-and-network",
   });
   const [, updateNote] = useMutation(UPDATE_CLASS_NOTE);
@@ -48,13 +76,13 @@ export default function ClassNotesAdminScreen(): React.ReactElement {
   const { confirmAction } = useConfirm();
   const toast = useToast();
 
-  const allRows = q.data?.classNotesAdmin ?? [];
-  const { filtered: rows, node: filterNode } = useRowFilters(allRows, {
-    classOf: (r) => r.classLevel,
-    teacherOf: (r) => r.authorName,
-    subjectOf: (r) => r.subject,
-    subjectLabel: routineSubjectLabel,
-  });
+  const pageData = q.data?.classNotesAdminPage;
+  const rows = pageData?.rows ?? [];
+  const total = pageData?.total ?? 0;
+  // A delete can empty the last page — step back to the new last one.
+  React.useEffect(() => {
+    if (pageData && pageData.rows.length === 0 && pageData.page > 1) setPage(Math.max(1, Math.ceil(pageData.total / PAGE_SIZE)));
+  }, [pageData, setPage]);
   const [editId, setEditId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
   const [editFiles, setEditFiles] = useState<AttachmentRef[]>([]);
@@ -100,7 +128,7 @@ export default function ClassNotesAdminScreen(): React.ReactElement {
             {filterNode}
           </View>
           <View style={{ marginTop: space(2), alignSelf: "flex-start" }}>
-            <Badge text={`${STR.rtTableShowing} ${rows.length}`} tone="muted" />
+            <Badge text={`${STR.rtTableShowing} ${total}`} tone="muted" />
           </View>
         </Card>
 
@@ -158,6 +186,7 @@ export default function ClassNotesAdminScreen(): React.ReactElement {
             )}
           </Card>
         ))}
+        <Pager page={page} pageSize={PAGE_SIZE} total={total} onPage={setPage} />
       </ScrollView>
     </Screen>
   );

@@ -8,7 +8,7 @@ import React from "react";
 import { View } from "react-native";
 import { useQuery, useMutation } from "urql";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { STAFF_OBSERVATIONS_QUERY, SUBMIT_OBSERVATION, SUBJECTS_QUERY } from "../../graphql/operations";
+import { STAFF_OBSERVATIONS_PAGE_QUERY, SUBMIT_OBSERVATION, SUBJECTS_QUERY } from "../../graphql/operations";
 import type { HrStackParamList } from "../../navigation/types";
 import {
   Screen,
@@ -25,6 +25,8 @@ import {
   Notice,
 } from "../../components/ui";
 import { DateField } from "../../components/DateField";
+import { Pager } from "../../components/Pager";
+import { usePageState, PAGE_SIZE } from "../../lib/paging";
 import { STR, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
@@ -43,11 +45,16 @@ export default function StaffObservationsScreen({ route }: Props): React.ReactEl
   const [error, setError] = React.useState<string | null>(null);
   const [ok, setOk] = React.useState<string | null>(null);
 
-  const [obsQ, refetch] = useQuery({ query: STAFF_OBSERVATIONS_QUERY, variables: { staffProfileId } });
+  // D-#761: server-paged (it was every observation of the person, all time).
+  const [page, setPage] = usePageState(staffProfileId);
+  const [obsQ, refetch] = useQuery({
+    query: STAFF_OBSERVATIONS_PAGE_QUERY,
+    variables: { staffProfileId, page, pageSize: PAGE_SIZE },
+  });
   const [subjectsQ] = useQuery({ query: SUBJECTS_QUERY });
   const [, submit] = useMutation(SUBMIT_OBSERVATION);
 
-  const observations = obsQ.data?.staffObservations ?? [];
+  const observations = obsQ.data?.staffObservationsPage.rows ?? [];
   const subjectName = new Map((subjectsQ.data?.subjects ?? []).map((s) => [s.id, s.nameBn]));
 
   const valid = ISO_DATE.test(dateKey) && notes.trim() !== "";
@@ -117,6 +124,7 @@ export default function StaffObservationsScreen({ route }: Props): React.ReactEl
           </Card>
         ))
       )}
+      <Pager page={page} pageSize={PAGE_SIZE} total={obsQ.data?.staffObservationsPage.total ?? 0} onPage={setPage} />
     </Screen>
   );
 }

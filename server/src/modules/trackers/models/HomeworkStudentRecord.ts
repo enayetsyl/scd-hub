@@ -101,6 +101,11 @@ HomeworkStudentRecordSchema.index({ hwItemId: 1, studentId: 1 });
 HomeworkStudentRecordSchema.index({ studentId: 1, state: 1 });
 HomeworkStudentRecordSchema.index({ hwItemId: 1, state: 1 });
 HomeworkStudentRecordSchema.index({ resubOf: 1 });
+// D-#761: the homework workspace's per-section reads — which items are still open
+// (distinct hwItemId over non-RETURNED), today's returns (updatedAt), and the finished
+// items (distinct over RETURNED) — all run off this one index, the distincts covered.
+// Before it, every section read collection-scanned (there was no sectionId index).
+HomeworkStudentRecordSchema.index({ sectionId: 1, state: 1, updatedAt: -1, hwItemId: 1 });
 // "What did this person do, and when" (AL-1, D-#645). Compound over two fields of
 // the SAME array of subdocuments, which is a legal multikey index (the parallel-
 // array restriction applies to two DIFFERENT arrays). Without it the person

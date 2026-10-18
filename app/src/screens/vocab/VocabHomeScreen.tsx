@@ -10,9 +10,11 @@ import { ScrollView, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
-import { MY_VOCAB_ASSIGNMENTS_QUERY } from "../../graphql/operations";
+import { MY_VOCAB_ASSIGNMENTS_PAGE_QUERY } from "../../graphql/operations";
 import { Screen, Card, Body, Muted, Button } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
+import { Pager } from "../../components/Pager";
+import { usePageState, PAGE_SIZE } from "../../lib/paging";
 import { useAuth } from "../../auth/AuthContext";
 import { STR, vocabProgramLabel, isoDateLabel } from "../../lib/labels";
 import { space } from "../../theme/tokens";
@@ -24,8 +26,13 @@ export default function VocabHomeScreen(): React.ReactElement {
   const nav = useNavigation<Nav>();
   const { role, can } = useAuth();
   const canAssign = can("roster:manage");
-  const [myQ, refetchMy] = useQuery({ query: MY_VOCAB_ASSIGNMENTS_QUERY, variables: {} });
-  const mine = myQ.data?.myVocabAssignments ?? [];
+  // D-#761: one duty row per week, forever — page it on the server (newest week first).
+  const [page, setPage] = usePageState();
+  const [myQ, refetchMy] = useQuery({
+    query: MY_VOCAB_ASSIGNMENTS_PAGE_QUERY,
+    variables: { page, pageSize: PAGE_SIZE },
+  });
+  const mine = myQ.data?.myVocabAssignmentsPage.rows ?? [];
 
   return (
     <Screen padded={false}>
@@ -61,6 +68,7 @@ export default function VocabHomeScreen(): React.ReactElement {
                 </View>
               ))
             )}
+            <Pager page={page} pageSize={PAGE_SIZE} total={myQ.data?.myVocabAssignmentsPage.total ?? 0} onPage={setPage} />
           </QueryGate>
         </Card>
       </ScrollView>

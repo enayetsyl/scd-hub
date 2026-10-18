@@ -30,15 +30,17 @@ builder.queryField("childVocab", (t) =>
     type: [ChildVocabResultRef],
     description:
       "The linked child's vocab results — read-only, marked tests only (VC-4, J7). Gated by the " +
-      "guardian-link row scope (D-#68/#155). No mutations exist for guardians.",
+      "guardian-link row scope (D-#68/#155). No mutations exist for guardians. limit (D-#761) = the " +
+      "newest N results only; omitted = every result, as before.",
     authScopes: { hasPermission: "guardian:read_child" },
     args: {
       studentId: t.arg.string({ required: true }),
       program: t.arg.string({ required: false }),
+      limit: t.arg.int({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
       await assertGuardianOfStudent(ctx, args.studentId);
-      return childVocab(args.studentId, { program: args.program ?? null });
+      return childVocab(args.studentId, { program: args.program ?? null, limit: args.limit });
     },
   }),
 );

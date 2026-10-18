@@ -8,12 +8,14 @@
  */
 import type { Permission } from "@scd/shared";
 import { builder } from "../../../schema";
+import { pageRef } from "../../../pageRef";
 import {
   getPlan,
   savePlan,
   previewWorksheet,
   sendWorksheetToPrint,
   myWorksheets,
+  myWorksheetsPage,
   worksheetTeachers,
   listPictures,
   updatePicture,
@@ -259,6 +261,19 @@ builder.queryField("myWorksheets", (t) =>
     authScopes: GENERATE(),
     args: { limit: t.arg.int({ required: false }) },
     resolve: (_r, args, ctx) => myWorksheets(ctx, args.limit ?? 30),
+  }),
+);
+
+// D-#761: `myWorksheets` stops at its newest N; this pages through all of them.
+const WorksheetListRowPageRef = pageRef("WorksheetListRowPage", ListRowRef);
+
+builder.queryField("myWorksheetsPage", (t) =>
+  t.field({
+    type: WorksheetListRowPageRef,
+    description: "Worksheets I sent to print (or the Office made for me), newest first, one page at a time (D-#761).",
+    authScopes: GENERATE(),
+    args: { page: t.arg.int({ required: false }), pageSize: t.arg.int({ required: false }) },
+    resolve: (_r, args, ctx) => myWorksheetsPage(ctx, args),
   }),
 );
 

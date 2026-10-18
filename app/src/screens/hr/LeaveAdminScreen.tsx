@@ -13,7 +13,7 @@ import { useQuery, useMutation } from "urql";
 import { LEAVE_TYPES, LEAVE_STATUSES } from "@scd/shared";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import {
-  STAFF_LEAVE_APPLICATIONS_QUERY,
+  STAFF_LEAVE_APPLICATIONS_PAGE_QUERY,
   DECIDE_STAFF_LEAVE,
   APPLY_FOR_STAFF_LEAVE,
   UPSERT_STAFF_LEAVE_ENTITLEMENT,
@@ -41,6 +41,8 @@ import {
 } from "../../components/ui";
 import { StaffSelect, AcademicYearSelect } from "../../components/selects";
 import { DateField } from "../../components/DateField";
+import { Pager } from "../../components/Pager";
+import { usePageState, PAGE_SIZE } from "../../lib/paging";
 import { STR, bnNum, leaveTypeLabel, leaveStatusLabel, leavePartialSummary } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useConfirm } from "../../state/ConfirmContext";
@@ -83,9 +85,11 @@ export default function LeaveAdminScreen({ navigation }: Props): React.ReactElem
   const [entCarried, setEntCarried] = React.useState("");
   const [entNote, setEntNote] = React.useState("");
 
+  // D-#761: server-paged — the Approved/Rejected/All chips used to return every leave ever.
+  const [page, setPage] = usePageState(status);
   const [appsQ, refetchApps] = useQuery({
-    query: STAFF_LEAVE_APPLICATIONS_QUERY,
-    variables: { status: status ?? undefined },
+    query: STAFF_LEAVE_APPLICATIONS_PAGE_QUERY,
+    variables: { status: status ?? undefined, page, pageSize: PAGE_SIZE },
   });
   const [staffQ] = useQuery({ query: STAFF_QUERY, variables: {} });
 
@@ -93,7 +97,7 @@ export default function LeaveAdminScreen({ navigation }: Props): React.ReactElem
   const [, upsertEnt] = useMutation(UPSERT_STAFF_LEAVE_ENTITLEMENT);
   const [, applyLeave] = useMutation(APPLY_FOR_STAFF_LEAVE);
 
-  const apps = appsQ.data?.staffLeaveApplications ?? [];
+  const apps = appsQ.data?.staffLeaveApplicationsPage.rows ?? [];
   const staffName = new Map((staffQ.data?.staff ?? []).map((s) => [s.id, s.nameBn || s.name]));
 
   async function runDecide(applicationId: string, decision: "approve" | "reject"): Promise<void> {
@@ -269,6 +273,7 @@ export default function LeaveAdminScreen({ navigation }: Props): React.ReactElem
           </Card>
         ))
       )}
+      <Pager page={page} pageSize={PAGE_SIZE} total={appsQ.data?.staffLeaveApplicationsPage.total ?? 0} onPage={setPage} />
 
       {/* Entitlement editor */}
       <Body style={{ fontWeight: "700", marginTop: space(4), marginBottom: space(2) }}>{STR.hrEntitlements}</Body>

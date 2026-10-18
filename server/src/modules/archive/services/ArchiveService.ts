@@ -27,6 +27,7 @@ import { ClassTest } from "../../trackers/models/ClassTest";
 import { AcademicYear } from "../../foundation/models/AcademicYear";
 import { User } from "../../foundation/models/User";
 import { writeAudit } from "../../platform/services/AuditService";
+import { queryPage, type Page, type PageArgs } from "../../../lib/paging";
 import type { ArchiveSourceKind } from "@scd/shared";
 
 // ---------------------------------------------------------------------------
@@ -494,6 +495,18 @@ export async function listDisposable(): Promise<ScriptBundleShape[]> {
   return rows.map(bundleShape);
 }
 
+/** D-#761: listDisposable, one page at a time (oldest exam first, `_id` tie-break). */
+export async function listDisposablePage(args: PageArgs): Promise<Page<ScriptBundleShape>> {
+  const protectedIds = await protectedYearIds();
+  return queryPage(
+    ScriptBundle,
+    { status: "FILED", academicYearId: { $nin: protectedIds } },
+    { examDate: 1, _id: 1 },
+    args,
+    (docs) => (docs as unknown as IScriptBundle[]).map(bundleShape),
+  );
+}
+
 export async function disposeBundle(input: {
   bundleId: string;
   reason: string;
@@ -581,6 +594,22 @@ export async function listBundles(filter: {
   /** Case-insensitive substring over the human id (CT-C5-BAN-0001). */
   labelQuery?: string;
 }): Promise<ScriptBundleShape[]> {
+  const rows = await ScriptBundle.find(bundleFilter(filter)).sort({ examDate: -1 }).limit(500);
+  return rows.map(bundleShape);
+}
+
+/** D-#761: listBundles WITHOUT the silent 500 cap — one page at a time, newest exam
+ *  first (`_id` tie-break); `total` is the real match count. */
+export function listBundlesPage(
+  filter: Parameters<typeof listBundles>[0],
+  args: PageArgs,
+): Promise<Page<ScriptBundleShape>> {
+  return queryPage(ScriptBundle, bundleFilter(filter), { examDate: -1, _id: -1 }, args, (docs) =>
+    (docs as unknown as IScriptBundle[]).map(bundleShape),
+  );
+}
+
+function bundleFilter(filter: Parameters<typeof listBundles>[0]): Record<string, unknown> {
   const q: Record<string, unknown> = {};
   if (filter.academicYearId) q.academicYearId = filter.academicYearId;
   if (filter.classLevel !== undefined) q.classLevel = filter.classLevel;
@@ -591,8 +620,7 @@ export async function listBundles(filter: {
     const escaped = filter.labelQuery.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     q.sourceLabel = { $regex: escaped, $options: "i" };
   }
-  const rows = await ScriptBundle.find(q).sort({ examDate: -1 }).limit(500);
-  return rows.map(bundleShape);
+  return q;
 }
 
 /** The batched lookup-line read (one query per screen, not per row): where are
