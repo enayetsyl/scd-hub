@@ -1,5 +1,6 @@
 # STATUS
 
+- 2026-10-18 (cont. 5): **VM — dev server switched to `NODE_ENV=production` (owner OK), closing the D-#766 gap on the public dev API.** systemd unit + dev `.env` edited (backups `*.bak-20261018-d766`), service restarted. Verified: dev GraphiQL 406, introspection refused, queries + login path work, no dev-mode error detail. GlitchTip unaffected (`SENTRY_ENVIRONMENT=development` pinned). GraphiQL now exists only on a local machine.
 - 2026-10-18 (cont. 4): **LIVE — login lockout (D-#765) + GraphiQL/introspection off (D-#766). #1072 → dev (`aa8cd56b`, dev deploy green); reached prod in the #1073 promotion (`6a4411f6`, prod deploy green). Server-only, no OTA.**
   - **Prod verified:** web 200, `/healthz` ok, GraphiQL gone, introspection refused, `__typename` + login work. The lockout itself was not exercised on prod, because that would lock a real account; it is covered by `loginThrottle.test.ts`.
   - **Open:** the dev server runs `NODE_ENV=development` (systemd unit + `.env`), so the PUBLIC dev API still serves GraphiQL/introspection and Yoga dev-mode error detail. Fix = set dev to `production` (dev already pins `SENTRY_ENVIRONMENT=development`, so GlitchTip tagging is unaffected); awaiting owner OK.
