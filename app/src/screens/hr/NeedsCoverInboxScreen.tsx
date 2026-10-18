@@ -16,7 +16,7 @@ import { DateField } from "../../components/DateField";
 import { AvailableTeacherSelect } from "../../components/selects";
 import { Pager } from "../../components/Pager";
 import { usePagedRows } from "../../lib/paging";
-import { STR, dateHeaderLabel, bnNum } from "../../lib/labels";
+import { STR, dateHeaderLabel, bnNum, routineSubjectLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { groupByDate } from "../../lib/groupByDate";
 import { space } from "../../theme/tokens";
@@ -105,7 +105,7 @@ export default function NeedsCoverInboxScreen(_props: Props): React.ReactElement
                   {STR.rtPeriodN} {bnNum(r.periodNumber)} ·{" "}
                   {r.subjectGroupName
                     ? r.subjectGroupName
-                    : `${r.subjectName ?? STR.hrCoverSubject} · ${r.className ?? ""} ${r.sectionName ?? ""}`.trim()}
+                    : `${r.subjectName ?? (r.routineSubject ? routineSubjectLabel(r.routineSubject) : STR.hrCoverSubject)} · ${r.className ?? ""} ${r.sectionName ?? ""}`.trim()}
                 </Body>
                 <Muted>{r.absentTeacherName ?? "—"}</Muted>
                 <AvailableTeacherSelect
