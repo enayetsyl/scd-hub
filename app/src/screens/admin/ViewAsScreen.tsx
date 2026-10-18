@@ -13,8 +13,10 @@ import React, { useState } from "react";
 import { ScrollView, View, Pressable } from "react-native";
 import { useQuery } from "urql";
 import { useNavigation } from "@react-navigation/native";
-import { IMPERSONATION_TARGETS, type ImpersonationTargetT } from "../../graphql/operations";
+import { IMPERSONATION_TARGETS_PAGE, type ImpersonationTargetT } from "../../graphql/operations";
 import { Screen, Body, Muted, Card, Field, Badge, Loader, EmptyState, ErrorBanner } from "../../components/ui";
+import { Pager } from "../../components/Pager";
+import { usePageState, PAGE_SIZE } from "../../lib/paging";
 import { useAuth } from "../../auth/AuthContext";
 import { STR } from "../../lib/labels";
 import { useColors } from "../../theme";
@@ -31,11 +33,14 @@ export default function ViewAsScreen(): React.ReactElement {
   const navigation = useNavigation();
   const colors = useColors();
 
+  // D-#761: server-paged — an empty search on the Guardian tab used to stop at the first
+  // 50 names A→Z with no hint. A new tab or search → page 1.
+  const [page, setPage] = usePageState(`${tab}|${search.trim()}`);
   const [q] = useQuery({
-    query: IMPERSONATION_TARGETS,
-    variables: { kind: tab, search: search.trim() === "" ? null : search.trim() },
+    query: IMPERSONATION_TARGETS_PAGE,
+    variables: { kind: tab, search: search.trim() === "" ? null : search.trim(), page, pageSize: PAGE_SIZE },
   });
-  const rows = q.data?.impersonationTargets ?? [];
+  const rows = q.data?.impersonationTargetsPage.rows ?? [];
 
   const open = async (row: ImpersonationTargetT) => {
     if (!row.eligible || busyId) return;
@@ -109,6 +114,7 @@ export default function ViewAsScreen(): React.ReactElement {
             </Card>
           </Pressable>
         ))}
+        <Pager page={page} pageSize={PAGE_SIZE} total={q.data?.impersonationTargetsPage.total ?? 0} onPage={setPage} />
       </ScrollView>
     </Screen>
   );

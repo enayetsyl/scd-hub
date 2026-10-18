@@ -529,6 +529,21 @@ export const RECONCILIATION_HISTORY_QUERY = gql<
   }
 `;
 
+// D-#761: the paged history the screen reads; the list query above stays for released bundles.
+export const RECONCILIATION_HISTORY_PAGE_QUERY = gql<
+  { reconciliationHistoryPage: { rows: ReconciliationEntryT[]; total: number; page: number; pageSize: number } },
+  { from: string; to: string; page: number; pageSize: number }
+>`
+  query ReconciliationHistoryPage($from: String!, $to: String!, $page: Int, $pageSize: Int) {
+    reconciliationHistoryPage(from: $from, to: $to, page: $page, pageSize: $pageSize) {
+      rows { ${RECON_FIELDS} }
+      total
+      page
+      pageSize
+    }
+  }
+`;
+
 export const UNRECONCILED_DAYS_QUERY = gql<
   { unreconciledDays: string[] },
   { from: string; to: string }

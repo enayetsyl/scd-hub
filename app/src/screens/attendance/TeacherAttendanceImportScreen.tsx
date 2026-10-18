@@ -13,7 +13,7 @@ import { useQuery, useMutation } from "urql";
 import {
   PREVIEW_TEACHER_ATTENDANCE,
   COMMIT_TEACHER_ATTENDANCE,
-  TEACHER_ATTENDANCE_IMPORTS,
+  TEACHER_ATTENDANCE_IMPORTS_PAGE,
   TEACHER_ATTENDANCE_FOR_DATE,
   STAFF_QUERY,
   type AttImportPreviewT,
@@ -21,6 +21,8 @@ import {
 import type { AttendanceStackParamList } from "../../navigation/types";
 import { Screen, H2, Body, Muted, Card, Badge, Button, Notice, Divider, Select, Loader } from "../../components/ui";
 import { UploadDropZone } from "../../components/UploadDropZone";
+import { Pager } from "../../components/Pager";
+import { usePageState, PAGE_SIZE } from "../../lib/paging";
 import { STR, bnNum, teacherAttendanceStatusLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
@@ -60,7 +62,12 @@ export default function TeacherAttendanceImportScreen(_props: Props): React.Reac
 
   const [, runPreview] = useMutation(PREVIEW_TEACHER_ATTENDANCE);
   const [, runCommit] = useMutation(COMMIT_TEACHER_ATTENDANCE);
-  const [importsQ, refetchImports] = useQuery({ query: TEACHER_ATTENDANCE_IMPORTS });
+  // D-#761: server-paged — the old list stopped at the newest 60 days without saying so.
+  const [importsPage, setImportsPage] = usePageState();
+  const [importsQ, refetchImports] = useQuery({
+    query: TEACHER_ATTENDANCE_IMPORTS_PAGE,
+    variables: { page: importsPage, pageSize: PAGE_SIZE },
+  });
   const [staffQ] = useQuery({ query: STAFF_QUERY, variables: {} });
   const [rosterQ] = useQuery({
     query: TEACHER_ATTENDANCE_FOR_DATE,
@@ -246,7 +253,7 @@ export default function TeacherAttendanceImportScreen(_props: Props): React.Reac
 
       <Divider />
       <H2>{STR.attPastImports}</H2>
-      {(importsQ.data?.teacherAttendanceImports ?? []).map((d) => (
+      {(importsQ.data?.teacherAttendanceImportsPage.rows ?? []).map((d) => (
         <Card key={d.dateKey} onPress={() => setRosterDate(rosterDate === d.dateKey ? null : d.dateKey)}>
           <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
             <Body style={{ fontWeight: "700" }}>{d.dateKey}</Body>
@@ -271,6 +278,12 @@ export default function TeacherAttendanceImportScreen(_props: Props): React.Reac
           ) : null}
         </Card>
       ))}
+      <Pager
+        page={importsPage}
+        pageSize={PAGE_SIZE}
+        total={importsQ.data?.teacherAttendanceImportsPage.total ?? 0}
+        onPage={setImportsPage}
+      />
       <View style={{ height: space(4) }} />
     </Screen>
   );

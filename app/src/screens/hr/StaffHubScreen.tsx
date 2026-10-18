@@ -79,6 +79,8 @@ import {
   offboardingTriggerLabel,
 } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { Pager } from "../../components/Pager";
+import { usePagedRows } from "../../lib/paging";
 import { useAuth } from "../../auth/AuthContext";
 import { openPdf, PDF_SUPPORTED } from "../../lib/pdf";
 import { space } from "../../theme/tokens";
@@ -464,6 +466,8 @@ function PayrollTab({ staff, onSetPay }: { staff: StaffT; onSetPay: () => void }
     query: STAFF_LATENESS_PREVIEW_QUERY, variables: { staffProfileId: staff.id, monthKey }, requestPolicy: "cache-and-network",
   });
   const slips = data?.staffPayslips ?? [];
+  // D-#761: ~12 a year per person, so paging the rows already fetched is enough.
+  const { shown: shownSlips, pager: slipPager } = usePagedRows(slips, { pageSize: 12, resetKey: staff.id });
   const p = pol?.hrPolicy;
   const l = late?.staffLatenessPreview;
   const salary = staff.monthlySalary;
@@ -538,7 +542,7 @@ function PayrollTab({ staff, onSetPay }: { staff: StaffT; onSetPay: () => void }
         {error ? <Notice tone="danger" message={friendlyError(error)} />
           : fetching && slips.length === 0 ? <Loader label={STR.loading} />
           : slips.length === 0 ? <EmptyState message={STR.stfNoPayslips} />
-          : slips.map((s) => (
+          : shownSlips.map((s) => (
               <View key={s.id}>
                 <Divider />
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
@@ -550,6 +554,7 @@ function PayrollTab({ staff, onSetPay }: { staff: StaffT; onSetPay: () => void }
                 ) : null}
               </View>
             ))}
+        <Pager {...slipPager} />
       </Card>
     </View>
   );

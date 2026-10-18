@@ -14,6 +14,8 @@ import type { HrStackParamList } from "../../navigation/types";
 import { Screen, H2, Body, Muted, Card, Button, Loader, EmptyState, ErrorBanner, Notice } from "../../components/ui";
 import { DateField } from "../../components/DateField";
 import { AvailableTeacherSelect } from "../../components/selects";
+import { Pager } from "../../components/Pager";
+import { usePagedRows } from "../../lib/paging";
 import { STR, dateHeaderLabel, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { groupByDate } from "../../lib/groupByDate";
@@ -21,6 +23,10 @@ import { space } from "../../theme/tokens";
 import { dateKey } from "../../lib/dates";
 
 type Props = NativeStackScreenProps<HrStackParamList, "NeedsCoverInbox">;
+
+/** D-#761: every row mounts an AvailableTeacherSelect with its own availability query,
+ *  so the worklist is paged in small pages (grouping by date stays within the page). */
+const COVER_PAGE_SIZE = 20;
 
 function todayKey(): string {
   return dateKey();
@@ -43,7 +49,8 @@ export default function NeedsCoverInboxScreen(_props: Props): React.ReactElement
   const [, decide] = useMutation(DECIDE_STAFF_COVER_SLOT);
 
   const rows = rowsQ.data?.needsCoverSlots ?? [];
-  const groups = groupByDate(rows, (r) => r.dateKey);
+  const { shown, pager } = usePagedRows(rows, { pageSize: COVER_PAGE_SIZE, resetKey: `${from}|${to}` });
+  const groups = groupByDate(shown, (r) => r.dateKey);
 
   async function assign(slotId: string): Promise<void> {
     const teacherId = assignFor[slotId];
@@ -119,6 +126,7 @@ export default function NeedsCoverInboxScreen(_props: Props): React.ReactElement
           </View>
         ))
       )}
+      <Pager {...pager} />
     </Screen>
   );
 }
