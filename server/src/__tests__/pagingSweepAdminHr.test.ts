@@ -267,6 +267,9 @@ describe("listImpersonationTargetsPage", () => {
     await Guardian.collection.insertMany(
       Array.from({ length: 57 }, (_, i) => ({
         name: `Guardian ${String(i).padStart(2, "0")}`,
+        // {identifierKind, identifier} is uniquely indexed; set both or every row collides on null.
+        identifierKind: "phone",
+        identifier: `0171000${String(i).padStart(4, "0")}`,
         active: true,
         loginEnabled: true,
         passwordHash: "x",

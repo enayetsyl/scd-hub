@@ -58,6 +58,8 @@ beforeAll(async () => {
   const states = ["RETURNED", "RETURNED", "RETURNED", "CHASE", "GIVEN"];
   for (let i = 0; i < states.length; i++) {
     const it = await AssignmentItem.collection.insertOne({
+      // asId is uniquely indexed; raw inserts must set it or the 2nd row collides on null.
+      asId: `AS-${i}`,
       subject: "ENG",
       weekNumber: i + 1,
       deliveryDate: day(`2026-09-${String(1 + i * 5).padStart(2, "0")}`),

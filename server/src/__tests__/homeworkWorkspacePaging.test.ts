@@ -35,8 +35,11 @@ const NOW = new Date("2026-10-18T06:00:00Z"); // 12:00 Dhaka
 const DAY_START = new Date("2026-10-18T00:00:00+06:00");
 const daysAgo = (n: number) => new Date(NOW.getTime() - n * 86_400_000);
 
+let itemSeq = 0;
 async function item(subject: string, dateGiven: Date): Promise<Types.ObjectId> {
   const doc = await HomeworkItem.collection.insertOne({
+    // hwId is uniquely indexed; raw inserts must set it or the 2nd row collides on null.
+    hwId: `HW-T${++itemSeq}`,
     subject,
     dateGiven,
     classId,
