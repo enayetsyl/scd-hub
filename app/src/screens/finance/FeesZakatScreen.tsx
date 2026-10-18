@@ -19,6 +19,8 @@ import {
 } from "../../graphql/finance";
 import { Screen, Card, Body, Muted, Button, Field, Select, Row, Notice, Divider, Loader } from "../../components/ui";
 import { DateField } from "../../components/DateField";
+import { Pager } from "../../components/Pager";
+import { usePagedRows } from "../../lib/paging";
 import {
   STR,
   financeFeeHeadLabel,
@@ -75,6 +77,8 @@ export default function FeesZakatScreen(): React.ReactElement {
     pause: !historyStudentId,
   });
   const history = historyQ.data?.studentFeeHistory ?? [];
+  // D-#761: the postings of one child are modest, so the fetched rows are paged on the client.
+  const { shown: shownHistory, pager: historyPager } = usePagedRows(history, { resetKey: historyStudentId });
 
   function setCoverageRow(i: number, patch: Partial<CoverageRow>): void {
     setCoverage((rows) => rows.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
@@ -225,10 +229,11 @@ export default function FeesZakatScreen(): React.ReactElement {
           ) : historyStudentId && history.length === 0 ? (
             <Muted style={{ marginTop: space(2) }}>{STR.finNone}</Muted>
           ) : (
-            history.map((p) => (
+            shownHistory.map((p) => (
               <Row key={p.id} label={`${p.date} · ${financePostingKindLabel(p.kind)}`} value={money(p.amount)} />
             ))
           )}
+          <Pager {...historyPager} />
         </Card>
       </ScrollView>
     </Screen>

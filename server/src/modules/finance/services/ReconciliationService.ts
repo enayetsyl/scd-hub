@@ -16,6 +16,7 @@ import { FinancePosting } from "../models/FinancePosting";
 import { QardIouEntry } from "../models/QardIouEntry";
 import { FinanceError, type FinanceActor, ledgerBalanceAsOf } from "./FinanceLedgerService";
 import { writeAudit } from "../../platform/services/AuditService";
+import { queryPage, type Page, type PageArgs } from "../../../lib/paging";
 
 export interface RecordReconciliationInput {
   /** YYYY-MM-DD — reconcile as of the END of this day. */
@@ -115,6 +116,27 @@ export async function reconciliationHistory(fromKey: string, toKey: string): Pro
   const to = new Date(`${toKey}T23:59:59.999Z`);
   if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) throw new FinanceError("তারিখ পরিসীমা বৈধ নয়");
   return ReconciliationEntry.find({ date: { $gte: from, $lte: to } }).sort({ date: -1, createdAt: -1 });
+}
+
+/**
+ * D-#761: one page of the same history — a wide [from, to] is ~250 rows a year, so the
+ * screen pages it instead of reading the whole window. Same order, `_id` as tie-breaker.
+ */
+export async function reconciliationHistoryPage(
+  fromKey: string,
+  toKey: string,
+  args: PageArgs,
+): Promise<Page<IReconciliationEntry>> {
+  const from = new Date(`${fromKey}T00:00:00.000Z`);
+  const to = new Date(`${toKey}T23:59:59.999Z`);
+  if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) throw new FinanceError("তারিখ পরিসীমা বৈধ নয়");
+  return queryPage(
+    ReconciliationEntry,
+    { date: { $gte: from, $lte: to } },
+    { date: -1, createdAt: -1, _id: -1 },
+    args,
+    (docs) => docs as IReconciliationEntry[],
+  );
 }
 
 /**

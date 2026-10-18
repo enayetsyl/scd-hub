@@ -13,10 +13,12 @@ import {
   revokeDelegation,
   delegationGrants,
   grantView,
+  proxyGrantsPage,
   type ScopeGrantView,
 } from "../services/ScopeGrantService";
 import type { SupervisoryExtent } from "../models/ScopeGrant";
 import { ScopeGrant } from "../models/ScopeGrant";
+import { pageRef } from "../../../pageRef";
 
 const SupervisoryPairRef = builder.objectRef<{ classId: string; subjectId: string }>("SupervisoryPair");
 SupervisoryPairRef.implement({
@@ -101,6 +103,25 @@ builder.queryField("proxyGrants", (t) =>
       const grants = await ScopeGrant.find(filter).sort({ createdAt: -1 }).lean();
       return grants.map(grantView);
     },
+  }),
+);
+
+// D-#761: the paged list ScopeGrantScreen reads; `proxyGrants` stays for released bundles.
+const ScopeGrantPageRef = pageRef("ScopeGrantPage", ScopeGrantRef);
+
+builder.queryField("proxyGrantsPage", (t) =>
+  t.field({
+    type: ScopeGrantPageRef,
+    authScopes: { hasPermission: "user:manage" },
+    description:
+      "One page of proxy/cover grants, newest first (D-#761). activeOnly (default true) also leaves " +
+      "out grants whose window has ended but are not yet stamped inactive; false = full history.",
+    args: {
+      activeOnly: t.arg.boolean({ required: false }),
+      page: t.arg.int({ required: false }),
+      pageSize: t.arg.int({ required: false }),
+    },
+    resolve: (_root, args) => proxyGrantsPage(args.activeOnly !== false, args),
   }),
 );
 

@@ -31,6 +31,7 @@ import { StaffNameAlias } from "../models/StaffNameAlias";
 import { StaffProfile } from "../../foundation/models/StaffProfile";
 import { writeAudit } from "../../platform/services/AuditService";
 import { loadApprovedLeaves, staffLeaveCovers } from "../../hr/services/StaffLeaveService";
+import { normalizePage, type Page, type PageArgs } from "../../../lib/paging";
 
 export class AttendanceImportError extends Error {
   constructor(msg: string) {
@@ -527,6 +528,26 @@ export async function importedDates(limit = 60): Promise<ImportedDate[]> {
     { $limit: limit },
   ]);
   return grouped.map((g) => ({ dateKey: g._id, records: g.records }));
+}
+
+/** D-#761: one page of the imported dates (newest first). The list above stops at 60
+ *  silently; this reaches every imported day and reports the real total. */
+export async function importedDatesPage(args: PageArgs): Promise<Page<ImportedDate>> {
+  const { page, pageSize, skip } = normalizePage(args);
+  const [out] = await TeacherAttendanceDay.aggregate<{
+    rows: Array<{ _id: string; records: number }>;
+    total: Array<{ n: number }>;
+  }>([
+    { $group: { _id: "$dateKey", records: { $sum: 1 } } },
+    { $sort: { _id: -1 } },
+    { $facet: { rows: [{ $skip: skip }, { $limit: pageSize }], total: [{ $count: "n" }] } },
+  ]);
+  return {
+    rows: (out?.rows ?? []).map((g) => ({ dateKey: g._id, records: g.records })),
+    total: out?.total[0]?.n ?? 0,
+    page,
+    pageSize,
+  };
 }
 
 export interface StaffAttendanceSummary {

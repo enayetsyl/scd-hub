@@ -8,9 +8,9 @@
  *
  * Three shapes worth keeping straight:
  * (1) It is RANGE-driven, not scroll-driven. The day strip shows where the work
- *     is before the reader commits to a window, and `truncated` says out loud
- *     when the window is hiding rows — a partial list presented as a complete
- *     one is the failure mode that matters on a screen people are judged by.
+ *     is before the reader commits to a window. The window is server-paged
+ *     (D-#761), so every row in it is reachable — a partial list presented as a
+ *     complete one is the failure mode that matters on a screen people are judged by.
  * (2) A tracker pass is ONE row with a count, not thirty rows. "২৮ জন
  *     শিক্ষার্থী" is the fact; the thirty records are its implementation.
  * (3) A View-as row (D-#638) is shown with a warning chip, never silently
@@ -26,7 +26,7 @@ import {
   ACTIVITY_PEOPLE_QUERY,
   ACTIVITY_PERSON_QUERY,
   PERSON_ACTIVITY_DAYS_QUERY,
-  PERSON_ACTIVITY_QUERY,
+  PERSON_ACTIVITY_PAGE_QUERY,
   type ActivityRowT,
 } from "../../graphql/activity";
 import {
@@ -47,6 +47,8 @@ import {
 } from "../../components/ui";
 import { DateField } from "../../components/DateField";
 import { QueryGate } from "../../components/QueryGate";
+import { Pager } from "../../components/Pager";
+import { usePageState, PAGE_SIZE } from "../../lib/paging";
 import {
   STR,
   bnNum,
@@ -59,8 +61,6 @@ import {
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<AdminStackParamList, "PersonActivity">;
-
-const ROW_LIMIT = 500;
 
 /** N days back from today, as a Dhaka "YYYY-MM-DD" key. */
 function daysAgoKey(n: number): string {
@@ -116,15 +116,19 @@ export default function PersonActivityScreen({ route }: Props): React.ReactEleme
     pause: personId == null,
   });
   const [groupsQ] = useQuery({ query: ACTIVITY_GROUPS_QUERY, pause: personId == null });
+  // D-#761: server-paged — every row in the window is reachable (it used to stop at
+  // 500 rows and say "narrow the date range"). Any filter change → page 1.
+  const [page, setPage] = usePageState(`${personId}|${from}|${to}|${group}|${source}`);
   const [feedQ, refetchFeed] = useQuery({
-    query: PERSON_ACTIVITY_QUERY,
+    query: PERSON_ACTIVITY_PAGE_QUERY,
     variables: {
       personId: personId ?? "",
       from,
       to,
       group: group === "" ? null : group,
       source: source === "" ? null : source,
-      limit: ROW_LIMIT,
+      page,
+      pageSize: PAGE_SIZE,
     },
     pause: personId == null,
   });
@@ -135,8 +139,7 @@ export default function PersonActivityScreen({ route }: Props): React.ReactEleme
   });
 
   const person = personQ.data?.activityPerson ?? null;
-  const rows = useMemo(() => feedQ.data?.personActivity.rows ?? [], [feedQ.data]);
-  const truncated = feedQ.data?.personActivity.truncated ?? false;
+  const rows = useMemo(() => feedQ.data?.personActivityPage.rows ?? [], [feedQ.data]);
   const days = daysQ.data?.personActivityDays ?? [];
   const totalActions = days.reduce((n, d) => n + d.total, 0);
 
@@ -271,8 +274,6 @@ export default function PersonActivityScreen({ route }: Props): React.ReactEleme
         placeholder={STR.all}
       />
 
-      {truncated ? <Notice message={STR.actTruncated} tone="warn" /> : null}
-
       <QueryGate
         result={feedQ}
         onRetry={() => refetchFeed({ requestPolicy: "network-only" })}
@@ -335,6 +336,7 @@ export default function PersonActivityScreen({ route }: Props): React.ReactEleme
               })}
             </View>
           ))}
+          <Pager page={page} pageSize={PAGE_SIZE} total={feedQ.data?.personActivityPage.total ?? 0} onPage={setPage} />
         </>
       </QueryGate>
     </Screen>

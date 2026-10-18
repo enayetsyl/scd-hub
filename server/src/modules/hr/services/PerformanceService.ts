@@ -24,6 +24,7 @@ import { StaffProfile } from "../../foundation/models/StaffProfile";
 import { writeAudit } from "../../platform/services/AuditService";
 import { PerformanceError } from "./conductLadder";
 import { parseDateKey } from "./dates";
+import { queryPage, type Page, type PageArgs } from "../../../lib/paging";
 
 const todayKey = (): string => new Date().toISOString().slice(0, 10);
 
@@ -79,6 +80,29 @@ export async function observationsByObserver(observerId: string): Promise<IObser
   return Observation.find({ observerId: new Types.ObjectId(observerId) })
     .sort({ dateKey: -1 })
     .lean() as unknown as Promise<IObservation[]>;
+}
+
+/** D-#761: one page of `observationsForStaff` (newest first, `_id` tie-breaker) — the
+ *  list above is every observation of the person, all time. */
+export function observationsForStaffPage(staffProfileId: string, args: PageArgs): Promise<Page<IObservation>> {
+  return queryPage(
+    Observation,
+    { staffProfileId: new Types.ObjectId(staffProfileId) },
+    { dateKey: -1, _id: -1 },
+    args,
+    (docs) => docs as unknown as IObservation[],
+  );
+}
+
+/** D-#761: one page of `observationsByObserver` (newest first, `_id` tie-breaker). */
+export function observationsByObserverPage(observerId: string, args: PageArgs): Promise<Page<IObservation>> {
+  return queryPage(
+    Observation,
+    { observerId: new Types.ObjectId(observerId) },
+    { dateKey: -1, _id: -1 },
+    args,
+    (docs) => docs as unknown as IObservation[],
+  );
 }
 
 // --- appraisal --------------------------------------------------------------

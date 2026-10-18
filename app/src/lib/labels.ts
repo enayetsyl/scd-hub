@@ -5444,6 +5444,8 @@ const STR_BN = {
   finEximusDiff: "এক্সিমাস পার্থক্য",
   finAppBank: "অ্যাপ ব্যাংক ব্যালেন্স",
   finReconHistory: "হিসাব মিলানোর ইতিহাস",
+  finReconHistoryFrom: "শুরুর তারিখ", // D-#761
+  finReconHistoryTo: "শেষ তারিখ", // D-#761
   finReconRecorded: "হিসাব মিলানো রেকর্ড হয়েছে।",
 
   // Budget
@@ -10567,6 +10569,8 @@ const STR_EN: StrTable = {
   finEximusDiff: "Eximus diff",
   finAppBank: "App bank balance",
   finReconHistory: "Reconciliation history",
+  finReconHistoryFrom: "From", // D-#761
+  finReconHistoryTo: "To", // D-#761
   finReconRecorded: "Reconciliation recorded.",
 
   // Budget

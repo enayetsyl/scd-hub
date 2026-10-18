@@ -7,11 +7,13 @@ import React from "react";
 import { Pressable, Text, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
-import { TASKS_ASSIGNED_BY_ME_QUERY, type TaskT } from "../../graphql/workBoard";
+import { TASKS_ASSIGNED_BY_ME_PAGE_QUERY, type TaskT } from "../../graphql/workBoard";
 import type { WorkBoardStackParamList } from "../../navigation/types";
 import { Screen, Button, EmptyState } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
 import { WorkCardView } from "../../components/WorkCardView";
+import { Pager } from "../../components/Pager";
+import { usePageState, PAGE_SIZE } from "../../lib/paging";
 import { STR, bnNum } from "../../lib/labels";
 import { dateKey } from "../../lib/dates";
 import { makeStyles, radius, space, typeScale } from "../../theme";
@@ -48,9 +50,17 @@ function toCard(t: TaskT, today: string) {
 export default function AssignedByMeScreen({ navigation }: Props): React.ReactElement {
   const styles = useStyles();
   const [open, setOpen] = React.useState(true);
-  const [q, refetchQ] = useQuery({ query: TASKS_ASSIGNED_BY_ME_QUERY, variables: { open }, requestPolicy: "cache-and-network" });
+  // D-#761: server-paged (the old list stopped at 500 open / 100 done without saying so);
+  // grouping by person stays within the page. The open count is the server total.
+  const [page, setPage] = usePageState(open);
+  const [q, refetchQ] = useQuery({
+    query: TASKS_ASSIGNED_BY_ME_PAGE_QUERY,
+    variables: { open, page, pageSize: PAGE_SIZE },
+    requestPolicy: "cache-and-network",
+  });
   const refetch = (): void => refetchQ({ requestPolicy: "network-only" });
-  const tasks = q.data?.tasksAssignedByMe ?? [];
+  const tasks = q.data?.tasksAssignedByMePage.rows ?? [];
+  const total = q.data?.tasksAssignedByMePage.total ?? 0;
   const today = dateKey();
 
   const byPerson = new Map<string, { name: string; tasks: TaskT[] }>();
@@ -70,7 +80,7 @@ export default function AssignedByMeScreen({ navigation }: Props): React.ReactEl
     <Screen scroll>
       <View style={styles.seg}>
         {[
-          [true, `${STR.wbOpen}${open && tasks.length ? ` ${bnNum(tasks.length)}` : ""}`],
+          [true, `${STR.wbOpen}${open && total ? ` ${bnNum(total)}` : ""}`],
           [false, STR.wbShowDone],
         ].map(([v, label]) => (
           <Pressable key={String(v)} onPress={() => setOpen(v as boolean)} style={[styles.segBtn, open === v && styles.segOn]}>
@@ -93,6 +103,7 @@ export default function AssignedByMeScreen({ navigation }: Props): React.ReactEl
             ))}
           </View>
         ))}
+        <Pager page={page} pageSize={PAGE_SIZE} total={total} onPage={setPage} />
       </QueryGate>
     </Screen>
   );

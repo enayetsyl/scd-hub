@@ -127,6 +127,29 @@ export const IMPERSONATION_TARGETS = gql<
   }
 `;
 
+// D-#761: the paged picker ViewAsScreen reads; the query above stays for released bundles.
+export const IMPERSONATION_TARGETS_PAGE = gql<
+  { impersonationTargetsPage: { rows: ImpersonationTargetT[]; total: number; page: number; pageSize: number } },
+  { kind: string; search?: string | null; page: number; pageSize: number }
+>`
+  query ImpersonationTargetsPage($kind: String!, $search: String, $page: Int, $pageSize: Int) {
+    impersonationTargetsPage(kind: $kind, search: $search, page: $page, pageSize: $pageSize) {
+      rows {
+        id
+        kind
+        name
+        role
+        lines
+        eligible
+        reason
+      }
+      total
+      page
+      pageSize
+    }
+  }
+`;
+
 export interface ImpersonationResultT {
   token: string;
   userId: string;
@@ -587,6 +610,21 @@ export const MY_SCOPES_QUERY = gql<{ myScopes: ScopeGrantT[] }, NoVars>`
 export const PROXY_GRANTS_QUERY = gql<{ proxyGrants: ScopeGrantT[] }, { activeOnly?: boolean | null }>`
   query ProxyGrants($activeOnly: Boolean) {
     proxyGrants(activeOnly: $activeOnly) { ${SCOPE_GRANT_FIELDS} }
+  }
+`;
+
+// D-#761: the paged list ScopeGrantScreen reads (also drops grants whose window has ended).
+export const PROXY_GRANTS_PAGE_QUERY = gql<
+  { proxyGrantsPage: { rows: ScopeGrantT[]; total: number; page: number; pageSize: number } },
+  { activeOnly?: boolean | null; page: number; pageSize: number }
+>`
+  query ProxyGrantsPage($activeOnly: Boolean, $page: Int, $pageSize: Int) {
+    proxyGrantsPage(activeOnly: $activeOnly, page: $page, pageSize: $pageSize) {
+      rows { ${SCOPE_GRANT_FIELDS} }
+      total
+      page
+      pageSize
+    }
   }
 `;
 
@@ -5228,6 +5266,21 @@ export const TEACHER_ATTENDANCE_IMPORTS = gql<
   }
 `;
 
+// D-#761: the paged past-uploads list (the query above stops at 60 silently).
+export const TEACHER_ATTENDANCE_IMPORTS_PAGE = gql<
+  { teacherAttendanceImportsPage: { rows: { dateKey: string; records: number }[]; total: number; page: number; pageSize: number } },
+  { page: number; pageSize: number }
+>`
+  query TeacherAttendanceImportsPage($page: Int, $pageSize: Int) {
+    teacherAttendanceImportsPage(page: $page, pageSize: $pageSize) {
+      rows { dateKey records }
+      total
+      page
+      pageSize
+    }
+  }
+`;
+
 export interface StaffAttendanceSummaryT {
   staffProfileId: string;
   staffName: string;
@@ -7269,6 +7322,21 @@ export const STAFF_LEAVE_APPLICATIONS_QUERY = gql<
   }
 `;
 
+// D-#761: the paged list LeaveAdminScreen reads; the query above stays for released bundles.
+export const STAFF_LEAVE_APPLICATIONS_PAGE_QUERY = gql<
+  { staffLeaveApplicationsPage: { rows: StaffLeaveT[]; total: number; page: number; pageSize: number } },
+  { status?: string | null; fromKey?: string | null; toKey?: string | null; page: number; pageSize: number }
+>`
+  query StaffLeaveApplicationsPage($status: String, $fromKey: String, $toKey: String, $page: Int, $pageSize: Int) {
+    staffLeaveApplicationsPage(status: $status, fromKey: $fromKey, toKey: $toKey, page: $page, pageSize: $pageSize) {
+      rows { ${STAFF_LEAVE_FIELDS} }
+      total
+      page
+      pageSize
+    }
+  }
+`;
+
 export const UPSERT_STAFF_LEAVE_ENTITLEMENT = gql<
   { upsertStaffLeaveEntitlement: StaffLeaveBalanceT },
   { staffProfileId: string; academicYearId: string; leaveType: string; allowanceDays: number; carriedOverDays?: number | null; note?: string | null }
@@ -7412,6 +7480,21 @@ const OBSERVATION_FIELDS = `
 export const MY_OBSERVATIONS_QUERY = gql<{ myObservations: ObservationT[] }, NoVars>`
   query MyObservations {
     myObservations { ${OBSERVATION_FIELDS} }
+  }
+`;
+
+// D-#761: paged; the query above stays for released bundles.
+export const MY_OBSERVATIONS_PAGE_QUERY = gql<
+  { myObservationsPage: { rows: ObservationT[]; total: number; page: number; pageSize: number } },
+  { page: number; pageSize: number }
+>`
+  query MyObservationsPage($page: Int, $pageSize: Int) {
+    myObservationsPage(page: $page, pageSize: $pageSize) {
+      rows { ${OBSERVATION_FIELDS} }
+      total
+      page
+      pageSize
+    }
   }
 `;
 
@@ -7717,6 +7800,21 @@ export const SETTLE_STAFF_ADVANCE = gql<
 export const STAFF_OBSERVATIONS_QUERY = gql<{ staffObservations: ObservationT[] }, { staffProfileId: string }>`
   query StaffObservations($staffProfileId: String!) {
     staffObservations(staffProfileId: $staffProfileId) { ${OBSERVATION_FIELDS} }
+  }
+`;
+
+// D-#761: paged; the query above stays for released bundles.
+export const STAFF_OBSERVATIONS_PAGE_QUERY = gql<
+  { staffObservationsPage: { rows: ObservationT[]; total: number; page: number; pageSize: number } },
+  { staffProfileId: string; page: number; pageSize: number }
+>`
+  query StaffObservationsPage($staffProfileId: String!, $page: Int, $pageSize: Int) {
+    staffObservationsPage(staffProfileId: $staffProfileId, page: $page, pageSize: $pageSize) {
+      rows { ${OBSERVATION_FIELDS} }
+      total
+      page
+      pageSize
+    }
   }
 `;
 

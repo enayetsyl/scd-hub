@@ -19,6 +19,7 @@ import {
   teacherAttendanceForDate,
   staffAttendanceForRange,
   importedDates,
+  importedDatesPage,
   teacherAttendanceSummary,
   type ImportPreview,
   type PreviewRow,
@@ -28,6 +29,7 @@ import {
   type StaffAttendanceSummary,
 } from "../services/TeacherAttendanceService";
 import { resolveStaffProfileForUser } from "../../hr/services/staffMatch";
+import { pageRef } from "../../../pageRef";
 
 // ---------------------------------------------------------------------------
 // Shapes
@@ -207,6 +209,19 @@ builder.queryField("teacherAttendanceImports", (t) =>
     description: "Imported dates, newest first (AT1.6 past-uploads list). Requires attendance:manage.",
     authScopes: { hasPermission: "attendance:manage" },
     resolve: async () => importedDates(),
+  }),
+);
+
+// D-#761: the paged past-uploads list (the list above stops at 60 silently).
+const ImportedDatePageRef = pageRef("TeacherAttendanceImportedDatePage", ImportedDateRef);
+
+builder.queryField("teacherAttendanceImportsPage", (t) =>
+  t.field({
+    type: ImportedDatePageRef,
+    description: "One page of imported dates, newest first (D-#761). Requires attendance:manage.",
+    authScopes: { hasPermission: "attendance:manage" },
+    args: { page: t.arg.int({ required: false }), pageSize: t.arg.int({ required: false }) },
+    resolve: async (_root, args) => importedDatesPage(args),
   }),
 );
 
