@@ -1,4 +1,4 @@
-import { Platform } from "react-native";
+import { AppState, Platform } from "react-native";
 import { createClient, type Client, cacheExchange, fetchExchange, mapExchange, getOperationName } from "urql";
 import { getToken } from "../lib/tokenStore";
 import { isKnownOffline } from "../lib/netStatus";
@@ -59,12 +59,28 @@ const errorReportExchange = mapExchange({
     // signal (DNS, the proxy, a down server), and it is the one that diagnosed the
     // offline-resume ErrorBoundary crash. Unknown connectivity still reports (tri-state).
     if (isKnownOffline()) return;
-    captureAppError(error.networkError, {
-      kind: "network",
-      operation: getOperationName(operation.query) ?? "unknown",
-      operationKind: operation.kind,
-      url: API_URL,
-    });
+    // Nor is a request a BACKGROUNDED native app made (GlitchTip, 2026-10-18: 23 of 77
+    // retained network events carried `in_foreground: false`, most of them the
+    // notification-badge poll). Android suspends a background app's network, so the
+    // request dies with a link up — `isKnownOffline` cannot see it — and no one is
+    // looking at the screen it would have filled. An outage still reports from every
+    // phone that is in use. Web is left alone: a hidden tab keeps its network.
+    if (Platform.OS !== "web" && AppState.currentState !== "active") return;
+    const operationName = getOperationName(operation.query) ?? "unknown";
+    captureAppError(
+      error.networkError,
+      {
+        kind: "network",
+        operation: operationName,
+        operationKind: operation.kind,
+        url: API_URL,
+      },
+      // ONE issue for every transport failure. The stack is the fetch polyfill's, so it
+      // split the same event into a new issue per frame it happened to die in (ten open
+      // issues on 2026-10-18, all "Network request failed"). The operation rides as a tag,
+      // so the issue still filters by caller, and an outage shows as a spike on one row.
+      { fingerprint: ["app-network-failure"], tags: { operation: operationName } },
+    );
   },
 });
 

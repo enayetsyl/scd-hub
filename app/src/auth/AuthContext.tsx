@@ -20,6 +20,7 @@ import { clearNavState } from "../lib/navState";
 import { getUrqlClient, resetUrqlClient } from "../graphql/client";
 import { friendlyError } from "../lib/errors";
 import { registerPushToken, unregisterPushToken } from "../lib/push";
+import { setSentryUser } from "../observability/sentry";
 import { STR } from "../lib/labels";
 import { type Role } from "@scd/shared";
 
@@ -372,6 +373,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
     setTemplates([]);
     setStatus("anon");
   }, []);
+
+  // Every error captured from here on names the account it happened in (and, under
+  // View-as, says so — the borrowed account's id is on the event, not the Principal's).
+  useEffect(() => {
+    setSentryUser(user ? { id: user.id, role: user.role } : null, !!viewAs);
+  }, [user, viewAs]);
 
   // What the app offers = exactly what the server reported this caller may do. There is
   // no longer a hat to narrow it (the D-#467 switcher is gone), so this is the effective
