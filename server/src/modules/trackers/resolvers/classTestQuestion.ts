@@ -14,6 +14,7 @@
  *   land on different people by construction; the PRINCIPAL holds both.
  */
 import { builder } from "../../../schema";
+import { pageRef } from "../../../pageRef";
 import type { AppContext } from "../../../context";
 import { callerHasPermission } from "@scd/shared";
 import { ForbiddenError } from "../../../middleware/authz";
@@ -29,6 +30,8 @@ import {
   deleteCtQuestionRequest,
   myCtQuestionRequests,
   ctQuestionQueue,
+  myCtQuestionRequestsPage,
+  ctQuestionQueuePage,
   ctQuestionCounts,
   type CtQuestionRequestShape,
   type CtQuestionRoundShape,
@@ -309,6 +312,36 @@ builder.queryField("ctQuestionQueue", (t) =>
     resolve: async (_root, _args, ctx) => {
       assertOffice(ctx);
       return ctQuestionQueue();
+    },
+  }),
+);
+
+// D-#761: the two request lists, one page at a time (finished requests pile up
+// forever). The unpaged queries above stay for bundles released before paging.
+const CtQuestionRequestPageRef = pageRef("CtQuestionRequestPage", CtQuestionRequestRef);
+
+builder.queryField("myCtQuestionRequestsPage", (t) =>
+  t.field({
+    type: CtQuestionRequestPageRef,
+    description: "One page of myCtQuestionRequests (same order). Requires tracker:write.",
+    authScopes: { hasPermission: "tracker:write" },
+    args: { page: t.arg.int({ required: false }), pageSize: t.arg.int({ required: false }) },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      return myCtQuestionRequestsPage(ctx.auth.userId as string, args);
+    },
+  }),
+);
+
+builder.queryField("ctQuestionQueuePage", (t) =>
+  t.field({
+    type: CtQuestionRequestPageRef,
+    description: "One page of ctQuestionQueue (work-needed first). Requires roster:manage.",
+    authScopes: { authenticated: true },
+    args: { page: t.arg.int({ required: false }), pageSize: t.arg.int({ required: false }) },
+    resolve: async (_root, args, ctx) => {
+      assertOffice(ctx);
+      return ctQuestionQueuePage(args);
     },
   }),
 );
