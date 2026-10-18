@@ -1,5 +1,7 @@
 # STATUS
 
+- 2026-10-18: **LIVE + OTA — sidebar menu groups start closed (the current screen's group opens); the sidebar itself is open again (D-#760, reverts D-#759). #1050 → dev (`6a934684`), promoted in #1051 (`8caf27e0`, prod deploy green, prod web 200); OTA group `3b6764a2` (runtime 1.1.0, commit 8caf27e0).** The first OTA attempt was killed mid-bundle by a session restart, then republished cleanly. Bundle check: prod URL 1, localhost 0. Sourcemaps uploaded. Prior OTA (`71f5a21c`) ancestor-checked.
+  **Now / next:** nothing pending for D-#758–#760.
 - 2026-10-17 (cont. 8): **BUILT — sidebar menu groups start closed (the current screen's group opens); D-#759 reverted, so the sidebar is open again (D-#760). Branch `feat/drawer-groups-closed` (worktree `C:/w/tsum`).** The owner meant the group chevrons, not the ☰ sidebar. **Gate GREEN (executed):** app `tsc` 0; expo web at 1440 px, 6/6 checks.
   **Now / next:** PR → `dev` → promote + OTA (prod currently has D-#759 live: the sidebar starts closed).
 - 2026-10-17 (cont. 7): **LIVE + OTA — the desktop sidebar starts closed; ☰ opens it (D-#759). #1046 → dev (`823dfac2`), promoted in #1047 (`71f5a21c`, prod deploy green, prod web + `/healthz` 200); OTA group `1ff07397` (runtime 1.1.0, commit 71f5a21c).** Bundle check: prod URL 1, localhost 0. Sourcemaps uploaded. Prior OTA (`3c153a06`) ancestor-checked.
