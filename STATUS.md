@@ -1,5 +1,9 @@
 # STATUS
 
+- 2026-10-18 (cont. 2): **LIVE + OTA — paging for every growing list, silent caps removed, paging-from-the-start rule (D-#761).**
+  - **Path to prod:** #1059 → dev (`5a183854`). The first promotion attempt (#1060) failed its gate on a timing-dependent test fixture (Student `schoolId` unset), fixed in #1063 (`66aee75f`). #1060 then merged to main (`b6645fb0`); prod deploy green, prod web + `/healthz` 200, prod schema serves `NotificationPage`.
+  - **OTA:** group `d0871af5` (runtime 1.1.0, commit b6645fb0). Bundle: prod URL 1, localhost 0. Sourcemaps uploaded. The prior OTA f06d1571 (#1057, D-#762, published by another session) was ancestor-checked.
+  - **Now / next:** owners check the paged screens on their phones after a cold start. Note: guardian home cards now show the newest 5. Agent worktrees C:/w/pg1..pg6 removed.
 - 2026-10-18 (cont.): **BUILT — paging sweep (D-#761). Branch `feat/pagination-sweep` (worktree `C:/w/tsum`).**
   - **Owner ask:** page every list that grows, fix the silent caps and the two bugs, and make paging-from-the-start a rule.
   - **Audit:** 4 read-only agents found about 50 lists.
