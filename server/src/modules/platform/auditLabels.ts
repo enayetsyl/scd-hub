@@ -326,6 +326,7 @@ export const AUDIT_KIND_LABELS: Record<AuditEventKind, AuditKindLabel> = {
   STAFF_LEAVE_ENTITLEMENT_SET: { bn: "কর্মীর ছুটির কোটা নির্ধারণ করেছেন", en: "Set a leave entitlement", group: "HR" },
   STAFF_LEAVE_SUBMITTED: { bn: "ছুটির আবেদন করেছেন", en: "Applied for leave", group: "HR" },
   STAFF_LEAVE_DECIDED: { bn: "ছুটির আবেদন নিষ্পত্তি করেছেন", en: "Decided a leave application", group: "HR" },
+  STAFF_LEAVE_ENDED_EARLY: { bn: "ছুটি আগেভাগে শেষ করেছেন", en: "Ended a leave early", group: "HR" },
   STAFF_COVER_PROPOSED: { bn: "কভার শিক্ষক প্রস্তাব করেছেন", en: "Proposed a covering teacher", group: "HR" },
   STAFF_COVER_DECIDED: { bn: "কভার নিয়োগ নিষ্পত্তি করেছেন", en: "Decided a cover slot", group: "HR" },
   STAFF_PAY_SET: { bn: "কর্মীর বেতন নির্ধারণ করেছেন", en: "Set staff pay", group: "HR" },

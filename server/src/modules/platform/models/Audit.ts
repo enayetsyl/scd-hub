@@ -65,6 +65,7 @@ export type AuditEventKind =
   | "STAFF_LEAVE_ENTITLEMENT_SET" // staff leave allowance granted/edited per year (HR-2, prd-hr §3.1)
   | "STAFF_LEAVE_SUBMITTED"       // staff leave application recorded (HR-2, prd-hr H2.1)
   | "STAFF_LEAVE_DECIDED"         // staff leave approved/rejected/cancelled (HR-2, H2.3/H2.6)
+  | "STAFF_LEAVE_ENDED_EARLY"     // staff came back early: leave shortened, later covers released (owner 2026-10-18)
   // --- Staff hub (SH-1..SH-4; docs/prd-staff-hub.md, D-#539–#545) -----------
   | "HR_POLICY_SET"               // the annual leave pool / lateness rule edited (SH-3, D-#539/#541)
   | "STAFF_LETTER_ISSUED"         // an appointment/confirmation/service letter issued (SH-1, D-#542)
