@@ -26,6 +26,12 @@ beforeAll(async () => {
   mongo = await MongoMemoryServer.create();
   await mongoose.connect(mongo.getUri());
 
+  // Build every unique index BEFORE inserting fixtures, so a fixture missing a uniquely-
+
+  // indexed field fails here every time, not only when CI happens to be slower (D-#761).
+
+  await Promise.all(Object.values(mongoose.models).map((model) => model.init()));
+
   // 7 titles A..G; F is ENGLISH, G inactive. Each has 2 copies, one of them on loan.
   const names = ["A", "B", "C", "D", "E", "F", "G"];
   for (const n of names) {
