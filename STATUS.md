@@ -1,5 +1,7 @@
 # STATUS
 
+- 2026-10-18 (cont. 2): **BUILT — leave list refreshes on mobile; cover cards name Arabic/Quran-on-section periods (D-#763).** Owner reports: an applied leave showed on web but not on the phone; a Nursery P6 cover card said "Class/Section". (1) `LeaveAdminScreen` is `cache-and-network` and re-asks on focus and on app resume (it was cache-first with no refresh, so a long-lived phone kept the pre-application list). (2) `staffCoverSlots` / `needsCoverSlots` gain `routineSubject` (the routine slot's code, batch-read at display time, so existing slots fix too); the cover card and the needs-cover inbox fall back to its label when the code has no foundation Subject. Gate: server + app `tsc` 0; 9 HR/cover suites 166/166 (new needsCoverSlots case); /verify on in-memory Mongo + expo web: 6/6 (return-visit and resume both show a leave added meanwhile; card reads আরবি, no শ্রেণি/শাখা).
+  **Now / next:** PR → `dev`. Promotion carries D-#761 too (paging sweep, awaiting owner check) — confirm before promoting; then OTA (app + server).
 - 2026-10-18 (cont.): **BUILT — paging sweep (D-#761). Branch `feat/pagination-sweep` (worktree `C:/w/tsum`).**
   - **Owner ask:** page every list that grows, fix the silent caps and the two bugs, and make paging-from-the-start a rule.
   - **Audit:** 4 read-only agents found about 50 lists.

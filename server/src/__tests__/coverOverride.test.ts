@@ -18,6 +18,7 @@ const mockClassFind = jest.fn();
 const mockSectionFind = jest.fn();
 const mockSubjectFind = jest.fn();
 const mockGroupFind = jest.fn();
+const mockRoutineSlotFind = jest.fn();
 const mockAssignProxy = jest.fn();
 const mockRevokeProxy = jest.fn().mockResolvedValue(undefined);
 const mockSubUpdate = jest.fn().mockResolvedValue({});
@@ -64,6 +65,9 @@ jest.mock("../modules/foundation/models/Section", () => ({
 }));
 jest.mock("../modules/foundation/models/Subject", () => ({
   Subject: { find: (q: unknown) => findChain(mockSubjectFind(q)) },
+}));
+jest.mock("../modules/routine/models/RoutineSlot", () => ({
+  RoutineSlot: { find: (q: unknown) => findChain(mockRoutineSlotFind(q)) },
 }));
 jest.mock("../modules/routine/models/SubjectGroup", () => ({
   SubjectGroup: { find: (q: unknown) => findChain(mockGroupFind(q)) },
@@ -112,6 +116,7 @@ beforeEach(() => {
   mockConflictFind.mockResolvedValue([]); // no conflicting cover by default
   mockLeaveById.mockResolvedValue([{ _id: oid() }]); // every leave looked up by id is live by default
   mockGroupFind.mockResolvedValue([]);
+  mockRoutineSlotFind.mockResolvedValue([]);
   mockLeaveFind.mockResolvedValue([]); // userIdsOnLeave → nobody on leave by default
   mockResolveUserForStaff.mockResolvedValue(null);
 });
@@ -490,6 +495,38 @@ describe("needsCoverSlots — cross-leave inbox range/status filtering", () => {
     });
     // needs_cover alone covers both "never proposed" and "rejected-back" — confirm the filter used.
     expect(mockSlotFind.mock.calls[0][0]).toMatchObject({ status: "needs_cover" });
+  });
+
+  test("a section row whose code has no foundation Subject carries the routine's subject code (D-#763)", async () => {
+    // Prod 2026-10-18: Arabic on a Nursery section was stored with neither a subject
+    // nor a group, and the cover card could only say "Class/Section".
+    const leaveId = oid();
+    mockLeaveFind.mockResolvedValue([{ _id: leaveId }]);
+    const cls = oid(), sec = oid(), rsArabic = oid(), rsMath = oid(), subj = oid();
+    mockSlotFind.mockResolvedValue([
+      {
+        _id: oid(), leaveApplicationId: leaveId, groupType: "section", absentTeacherUserId: null, classId: cls,
+        sectionId: sec, subjectId: null, subjectGroupId: null, routineSlotId: rsArabic, dateKey: "2026-10-20", periodNumber: 6,
+      },
+      {
+        _id: oid(), leaveApplicationId: leaveId, groupType: "section", absentTeacherUserId: null, classId: cls,
+        sectionId: sec, subjectId: subj, subjectGroupId: null, routineSlotId: rsMath, dateKey: "2026-10-20", periodNumber: 2,
+      },
+    ]);
+    mockUserFind.mockResolvedValue([]);
+    mockClassFind.mockResolvedValue([{ _id: cls, nameBn: "নার্সারি" }]);
+    mockSectionFind.mockResolvedValue([{ _id: sec, nameBn: "সম্মিলিত" }]);
+    mockSubjectFind.mockResolvedValue([{ _id: subj, nameBn: "গণিত" }]);
+    mockRoutineSlotFind.mockResolvedValue([
+      { _id: rsArabic, subject: "ARABIC" },
+      { _id: rsMath, subject: "MATH" },
+    ]);
+
+    const rows = await needsCoverSlots("2026-10-20", "2026-10-20");
+    expect(rows[0]).toMatchObject({ subjectName: null, routineSubject: "ARABIC", periodNumber: 6 });
+    expect(rows[1]).toMatchObject({ subjectName: "গণিত", routineSubject: "MATH" });
+    // One batched routine read for the whole inbox, not one per row.
+    expect(mockRoutineSlotFind).toHaveBeenCalledTimes(1);
   });
 });
 

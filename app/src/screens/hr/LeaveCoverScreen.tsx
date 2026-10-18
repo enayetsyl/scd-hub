@@ -44,7 +44,7 @@ import { AvailableTeacherSelect } from "../../components/selects";
 import { LeaveImprovementTasks } from "../../components/LeaveImprovementTasks";
 import { Pager } from "../../components/Pager";
 import { usePagedRows } from "../../lib/paging";
-import { STR, coverSlotStatusLabel, dateHeaderLabel, bnNum } from "../../lib/labels";
+import { STR, coverSlotStatusLabel, dateHeaderLabel, bnNum, routineSubjectLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useConfirm } from "../../state/ConfirmContext";
 import { useSectionContext } from "../../state/SectionContext";
@@ -103,8 +103,14 @@ export default function LeaveCoverScreen({ route }: Props): React.ReactElement {
    *  general subject, else a generic class fallback. */
   function slotLabel(slot: (typeof slots)[number]): string {
     if (slot.subjectGroupId) return groupName.get(slot.subjectGroupId) ?? STR.hrCoverClass;
-    if (slot.subjectId) return subjectName.get(slot.subjectId) ?? STR.hrCoverSubject;
-    return STR.hrCoverClass;
+    if (slot.subjectId) return subjectName.get(slot.subjectId) ?? routineName(slot) ?? STR.hrCoverSubject;
+    // No foundation Subject for the routine's code (Arabic/Quran taught on a section):
+    // the routine still says what the period is.
+    return routineName(slot) ?? STR.hrCoverClass;
+  }
+
+  function routineName(slot: (typeof slots)[number]): string | null {
+    return slot.routineSubject ? routineSubjectLabel(slot.routineSubject) : null;
   }
 
   /** The class (+ section) a general-subject slot covers, e.g. "পঞ্চম শ্রেণি · A".

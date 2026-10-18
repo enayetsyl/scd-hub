@@ -8,8 +8,9 @@
  * denies in-band; this screen is reached only when the caller holds it.
  */
 import React from "react";
-import { View } from "react-native";
+import { AppState, View } from "react-native";
 import { useQuery, useMutation } from "urql";
+import { useFocusEffect } from "@react-navigation/native";
 import { LEAVE_TYPES, LEAVE_STATUSES } from "@scd/shared";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import {
@@ -87,10 +88,25 @@ export default function LeaveAdminScreen({ navigation }: Props): React.ReactElem
 
   // D-#761: server-paged — the Approved/Rejected/All chips used to return every leave ever.
   const [page, setPage] = usePageState(status);
+  // Other people's applications arrive from their own phones, and nothing on this device
+  // invalidates the cached list — a phone that opened this screen before a teacher
+  // applied kept showing the old list for days, while a fresh web load showed the leave
+  // (prod, 2026-10-18). So: show the cache but always re-ask, and re-ask again whenever
+  // the screen is returned to or the app comes back to the foreground.
   const [appsQ, refetchApps] = useQuery({
     query: STAFF_LEAVE_APPLICATIONS_PAGE_QUERY,
     variables: { status: status ?? undefined, page, pageSize: PAGE_SIZE },
+    requestPolicy: "cache-and-network",
   });
+  useFocusEffect(
+    React.useCallback(() => {
+      refetchApps({ requestPolicy: "network-only" });
+      const sub = AppState.addEventListener("change", (next) => {
+        if (next === "active") refetchApps({ requestPolicy: "network-only" });
+      });
+      return () => sub.remove();
+    }, [refetchApps]),
+  );
   const [staffQ] = useQuery({ query: STAFF_QUERY, variables: {} });
 
   const [, decide] = useMutation(DECIDE_STAFF_LEAVE);
