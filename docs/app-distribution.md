@@ -53,6 +53,14 @@ Phones apply it on their next cold start (UpdateGate: check → fetch → reload
 
 ## APK release (native change)
 
+0. **Firebase config present?** Android push (expo-notifications → FCM) needs
+   `app/android/app/google-services.json` — Firebase project `scd-hub-66724`, Android
+   app `com.scd.hub`. It is **gitignored** (public repo), so a fresh worktree lacks it:
+   copy it from the build machine's main checkout, or re-download it (Firebase console →
+   Project settings → Your apps → SCD Hub Android). `release-apk.mjs` refuses to build
+   without it or with a config for another package (D-#768). The server-side half — the
+   FCM V1 service-account key Expo sends with — lives in EAS (expo.dev → scd-hub →
+   Credentials → Android → com.scd.hub → FCM V1), not in the repo.
 1. Native deps changed? Bump `runtimeVersion` in **both** `app/app.json` and
    `android/.../values/strings.xml`.
 2. Bump `expo.android.versionCode` (always) and `expo.version` (if user-facing).

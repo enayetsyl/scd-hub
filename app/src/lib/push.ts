@@ -18,6 +18,7 @@ import Constants from "expo-constants";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import { REGISTER_PUSH_DEVICE, UNREGISTER_PUSH_DEVICE } from "../graphql/operations";
+import { captureAppError } from "../observability/sentry";
 
 /** The token this device registered this session — what logout unregisters. */
 let registeredToken: string | null = null;
@@ -53,15 +54,31 @@ export async function registerPushToken(client: Client): Promise<void> {
     const token = tokenResp.data;
     if (!token) return;
 
-    await client
+    const res = await client
       .mutation(REGISTER_PUSH_DEVICE, { token, platform: Platform.OS })
       .toPromise();
+    if (res.error) throw res.error;
     registeredToken = token;
   } catch (err) {
-    // Push registration is never allowed to break the session.
+    // Push registration is never allowed to break the session — but it is no longer
+    // allowed to fail SILENTLY either. Every Android phone failed here from the first
+    // APK until D-#768 (no Firebase config, so no token), and a console.warn on a phone
+    // is read by no one: the push-device table sat at 0 rows for four months. Once per
+    // app session, one grouped GlitchTip issue.
     console.warn("[push] registration skipped:", err);
+    if (!reportedFailure) {
+      reportedFailure = true;
+      captureAppError(
+        err,
+        { kind: "push-registration", platform: Platform.OS },
+        { fingerprint: ["push-registration-failed"] },
+      );
+    }
   }
 }
+
+/** One report per app session — registration re-runs on every sign-in. */
+let reportedFailure = false;
 
 /** Deactivate this device's token server-side (called from logout, while the
  *  auth token still works). Best-effort — logout always proceeds. */

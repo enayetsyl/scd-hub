@@ -18,3 +18,6 @@ local.properties
 # Release signing (never commit — root .gitignore also covers *.jks)
 keystore.properties
 *.jks
+
+# Firebase config (D-#768) — kept off the public repo; lives only on the APK build machine
+google-services.json
