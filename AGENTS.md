@@ -53,6 +53,12 @@ auto-deploys (`.github/workflows`, `scripts/deploy.sh`). So:
   with English codes on trackers/forms (see `/docs/glossary.md`).
 - **One change at a time.** Don't blend unrelated edits into one batch/commit; each meaningful change
   gets its own `CHANGELOG.md` line.
+- **Lists that grow are paged from the start (D-#761).** Any list that accumulates over time
+  (history, records, results, comments, requests, logs) ships with paging in its first version.
+  Use a `<name>Page` query returning `{ rows, total, page, pageSize }` (`server/src/lib/paging.ts`,
+  `server/src/pageRef.ts`) and `<Pager>` / `usePagedRows` on the screen. Never return an unbounded
+  `.find()`, and never cap silently with `.limit(N)`. Keep old queries working (phones run an older
+  bundle until their next cold start). See `docs/pagination.md`.
 
 ## Commands
 > Fill the app/server rows when those packages are scaffolded; the two verifiers below are live now.
@@ -102,6 +108,7 @@ auto-deploys (`.github/workflows`, `scripts/deploy.sh`). So:
                         the same commit as the paper; never repeat one (D-#676)
   architecture.md     ← how (modules, data planes, the ADRs)
   glossary.md         ← canonical terminology (read before naming anything)
+  pagination.md       ← the paging standard for any list that grows (D-#761) — read before building a list screen
   import-contract.md  ← the envelope contract narrative
   import-workflow.md  ← how content is authored (Claude Desktop) and imported into the app
   roadmap.md          ← deferred pipeline / backlog (build-later work; not the live cursor)
