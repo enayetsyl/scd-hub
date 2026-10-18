@@ -24,6 +24,7 @@ import { writeAudit } from "../../platform/services/AuditService";
 import { testResults, type DerivedStudentResult, type WrongWord } from "./VocabResultService";
 import { vocabStudentCumulative } from "./VocabSummaryService";
 import { type PersistentWord, type CumulativeMode } from "./vocabAggregate";
+import { personName } from "../../../lib/personName";
 
 /** Single-school convention — the {School} signature line. */
 const SCHOOL = "SCD";
@@ -178,7 +179,7 @@ export async function generateVocabTestMessages(input: {
 
   for (const result of results) {
     const student = studentById.get(result.studentId);
-    const studentName = student?.nameBn || student?.name || "শিক্ষার্থী";
+    const studentName = personName(student, "শিক্ষার্থী");
     const { kind, messageBn } = await buildVocabResultMessage(result, studentName, testDate);
 
     const waLink = waLinkFor(student?.phone, messageBn);
@@ -294,7 +295,7 @@ export async function generateVocabCumulativeMessages(input: {
     if (cumulative.numTests === 0) continue; // outside the window → skip
 
     const student = studentById.get(studentId);
-    const studentName = student?.nameBn || student?.name || "শিক্ষার্থী";
+    const studentName = personName(student, "শিক্ষার্থী");
     const messageBn = await buildVocabCumulativeMessage(cumulative, studentName);
 
     const waLink = waLinkFor(student?.phone, messageBn);

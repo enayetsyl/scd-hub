@@ -26,6 +26,7 @@ import { DateField } from "../../components/DateField";
 import { STR, bnNum, classLevelLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
+import { personName } from "../../lib/personName";
 
 type Props = NativeStackScreenProps<AttendanceStackParamList, "AttendanceReport">;
 
@@ -156,7 +157,7 @@ export default function AttendanceReportScreen(_props: Props): React.ReactElemen
                         key={a.studentId}
                         style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 2 }}
                       >
-                        <Body style={{ flex: 1 }}>{a.nameBn || a.name}</Body>
+                        <Body style={{ flex: 1 }}>{personName(a)}</Body>
                         <Muted>
                           {STR.attRoll}: {a.rollNumber ? bnNum(a.rollNumber) : "—"} · {STR.attIdNo}: {bnNum(a.schoolId)}
                           {a.leaveCovered ? " · ✓" : ""}
@@ -206,7 +207,7 @@ export default function AttendanceReportScreen(_props: Props): React.ReactElemen
       {noApp.map((s) => (
         <Card key={s.studentId}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-            <Body style={{ fontWeight: "700", flex: 1 }}>{s.nameBn || s.name}</Body>
+            <Body style={{ fontWeight: "700", flex: 1 }}>{personName(s)}</Body>
             <Muted>
               {STR.attRoll}: {s.rollNumber ? bnNum(s.rollNumber) : "—"} · {STR.attIdNo}: {bnNum(s.schoolId)}
             </Muted>

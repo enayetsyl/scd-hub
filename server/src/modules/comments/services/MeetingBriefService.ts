@@ -34,6 +34,7 @@ import { studentProfile as classTestProfile } from "../../trackers/services/Clas
 import { OWED_BY_STUDENT_STATES, inStates } from "../../trackers/lifecycleBuckets";
 import { dhakaDayKey } from "../../../lib/dhakaDay";
 import { bnNum as bn } from "../../../lib/bnNum";
+import { personName } from "../../../lib/personName";
 
 export class MeetingBriefError extends Error {}
 
@@ -367,7 +368,7 @@ export async function meetingBrief(meetingId: string, studentId: string, now = n
     instanceLabel: meeting.instanceLabel,
     meetingDateKey: meetingDayKey(meeting),
     studentId,
-    studentName: student.nameBn || student.name,
+    studentName: personName(student),
     classLevel: cls?.level ?? null,
     classNameBn: cls?.nameBn ?? "",
     sectionNameBn: section?.nameBn ?? "",

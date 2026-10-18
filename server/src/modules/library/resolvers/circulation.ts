@@ -41,6 +41,7 @@ import { BookCopy } from "../models/BookCopy";
 import { Student } from "../../foundation/models/Student";
 import { User } from "../../foundation/models/User";
 import { Guardian } from "../../foundation/models/Guardian";
+import { personName } from "../../../lib/personName";
 
 // ---------------------------------------------------------------------------
 // Decoration (names + title/accession labels for desk lists)
@@ -100,7 +101,7 @@ async function buildNameMaps(rows: BorrowerRow[], titleIds: string[], copyIds: s
       : Promise.resolve([]),
   ]);
   return {
-    students: new Map(students.map((s) => [s._id.toString(), s.nameBn || s.name])),
+    students: new Map(students.map((s) => [s._id.toString(), personName(s)])),
     users: new Map(users.map((u) => [u._id.toString(), u.name])),
     guardians: new Map(guardians.map((g) => [g._id.toString(), g.name])),
     titles: new Map(titles.map((t) => [t._id.toString(), t.titleBn])),
@@ -571,7 +572,7 @@ builder.queryField("libraryBorrowerSearch", (t) =>
           .select("name nameBn schoolId")
           .limit(LIMIT)
           .lean()) as unknown as Array<{ _id: IdLike; name: string; nameBn?: string; schoolId: string }>;
-        return rows.map((s) => ({ id: s._id.toString(), name: s.nameBn || s.name, detail: s.schoolId }));
+        return rows.map((s) => ({ id: s._id.toString(), name: personName(s), detail: s.schoolId }));
       }
       if (type === "STAFF") {
         const rows = (await User.find({ active: true, name: rx })

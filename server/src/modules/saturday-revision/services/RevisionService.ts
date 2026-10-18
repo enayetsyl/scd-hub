@@ -32,6 +32,7 @@ import { Student } from "../../foundation/models/Student";
 import { resolveDayType } from "../../routine/calendar";
 import { writeAudit } from "../../platform/services/AuditService";
 import { queryPage, type Page, type PageArgs } from "../../../lib/paging";
+import { personName } from "../../../lib/personName";
 
 /** A surfaced service error (Bangla-friendly message), mirroring the tracker pattern. */
 export class RevisionError extends Error {}
@@ -340,7 +341,7 @@ export async function groupSaturday(groupId: string, date: Date): Promise<Revisi
   const students = (await Student.find({ _id: { $in: studentIds }, active: { $ne: false } })
     .select("name nameBn")
     .lean()) as unknown as StudentLite[];
-  const nameById = new Map(students.map((s) => [s._id.toString(), s.nameBn || s.name || "শিক্ষার্থী"]));
+  const nameById = new Map(students.map((s) => [s._id.toString(), personName(s, "শিক্ষার্থী")]));
 
   const entries = (await RevisionEntry.find({
     groupId: new Types.ObjectId(groupId),

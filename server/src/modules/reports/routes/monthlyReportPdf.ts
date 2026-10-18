@@ -27,6 +27,7 @@ import { MonthlyReport } from "../models/MonthlyReport";
 import { narrowSnapshot } from "../resolvers/monthlyReport";
 import { buildMonthlyReportMarkdown } from "../services/MonthlyReportSheetService";
 import type { MonthlySnapshot } from "../services/MonthlyReportService";
+import { personName } from "../../../lib/personName";
 
 export const monthlyReportPdfRouter: Router = createRouter();
 
@@ -97,7 +98,7 @@ monthlyReportPdfRouter.get("/:reportId", async (req: Request, res: Response) => 
       provisional: report.provisional,
       // §4: the paragraph is cross-subject, so a narrowed sheet carries none.
       comment: subjects === null ? report.commentFinal ?? null : null,
-      studentName: student?.nameBn || student?.name || "",
+      studentName: personName(student),
       classLabel: klass?.nameBn ?? "",
       sectionLabel: section?.nameBn ?? section?.code ?? "",
       rollNumber: student?.rollNumber ?? null,
@@ -110,7 +111,7 @@ monthlyReportPdfRouter.get("/:reportId", async (req: Request, res: Response) => 
     });
 
     const pdf = await markdownToPdf(markdown, {
-      title: `${student?.nameBn || student?.name || ""} — মাসিক অগ্রগতি রিপোর্ট (${report.periodKey})`,
+      title: `${personName(student)} — মাসিক অগ্রগতি রিপোর্ট (${report.periodKey})`,
       fontScale: 0.92,
       margin: 38,
     });

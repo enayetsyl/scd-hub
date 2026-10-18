@@ -34,6 +34,7 @@ import { FinanceError, type FinanceActor } from "./FinanceLedgerService";
 import { renderTemplate } from "../../templates/services/MessageTemplateService";
 import { emitFinanceFeeDue } from "../../notifications/services/emitters";
 import { writeAudit } from "../../platform/services/AuditService";
+import { personName } from "../../../lib/personName";
 
 const FEE_HEAD_SET = new Set<string>(FINANCE_STUDENT_FEE_HEADS);
 const COVERAGE_TYPE_SET = new Set<string>(FEE_COVERAGE_TYPES);
@@ -324,7 +325,7 @@ export async function chaseFeeDue(
   const guardianDue = await guardianDueFor(studentId);
   if (guardianDue <= 0) return null;
 
-  const studentName = student.nameBn || student.name;
+  const studentName = personName(student);
   const params = { StudentName: studentName, AmountDue: guardianDue };
   const titleBn = await renderTemplate("finance.fee_due.chase.title");
   const bodyBn = await renderTemplate("finance.fee_due.chase.body", params);

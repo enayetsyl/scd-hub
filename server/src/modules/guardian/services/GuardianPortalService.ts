@@ -79,6 +79,7 @@ import { ForbiddenError } from "../../../middleware/authz";
 import { ClassTest } from "../../trackers/models/ClassTest";
 import { ClassTestQuestionRequest } from "../../trackers/models/ClassTestQuestionRequest";
 import { dhakaDayKey } from "../../../lib/dhakaDay";
+import { personName } from "../../../lib/personName";
 
 // ---------------------------------------------------------------------------
 // Shapes (narrow by design — built fresh, never spreads of staff documents)
@@ -912,7 +913,7 @@ export async function childFeeDue(studentId: string): Promise<GuardianFeeDue> {
   const student = await requireStudent(studentId);
   return {
     studentId,
-    studentName: student.nameBn ?? student.name,
+    studentName: personName(student),
     guardianDue: await guardianDueFor(studentId),
   };
 }

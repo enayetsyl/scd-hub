@@ -37,6 +37,7 @@ import { DateField } from "../../components/DateField";
 import { STR, bnNum, offboardingTriggerLabel, offboardingStatusLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
+import { personName } from "../../lib/personName";
 
 type Props = NativeStackScreenProps<HrStackParamList, "OffboardingHome">;
 
@@ -61,7 +62,7 @@ export default function OffboardingHomeScreen({ navigation }: Props): React.Reac
   const [, initiate] = useMutation(INITIATE_OFFBOARDING);
 
   const cases = casesQ.data?.offboardingCases ?? [];
-  const staffName = new Map((staffQ.data?.staff ?? []).map((s) => [s.id, s.nameBn || s.name]));
+  const staffName = new Map((staffQ.data?.staff ?? []).map((s) => [s.id, personName(s)]));
 
   const valid = staffId !== "" && trigger && ISO_DATE.test(lastDay) && (noticeDate === "" || ISO_DATE.test(noticeDate));
 

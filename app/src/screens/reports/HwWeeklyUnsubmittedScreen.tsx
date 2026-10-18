@@ -25,6 +25,7 @@ import { STR, bnNum, subjectLabel, classLevelLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
 import { dateKey } from "../../lib/dates";
+import { personName } from "../../lib/personName";
 
 type Props = NativeStackScreenProps<ReportsStackParamList, "HwWeeklyUnsubmitted">;
 
@@ -168,7 +169,7 @@ export default function HwWeeklyUnsubmittedScreen({ route }: Props): React.React
     const data = filteredRows.map((r, i) => [
       bnNum(i + 1),
       sectionName(r),
-      `${r.nameBn ?? r.name}${r.rollNumber ? ` (${r.rollNumber})` : ""}`,
+      `${personName(r)}${r.rollNumber ? ` (${r.rollNumber})` : ""}`,
       r.unsubmitted
         .map((l) => `${l.subjectLabelBn} ${l.dateKey}${l.description ? `: ${l.description}` : ""} [${l.stateLabelBn}${l.chaseCount ? ` ×${l.chaseCount}` : ""}]`)
         .join(" | ") || STR.hwwdNoUnsub,
@@ -283,7 +284,7 @@ export default function HwWeeklyUnsubmittedScreen({ route }: Props): React.React
                       <Muted style={{ color: REPORT.textMuted }}>{sectionName(r)}</Muted>
                     </View>
                     <View style={{ width: 190, padding: space(2), justifyContent: "center" }}>
-                      <Body style={{ fontWeight: "700", color: REPORT.text }}>{r.nameBn ?? r.name}</Body>
+                      <Body style={{ fontWeight: "700", color: REPORT.text }}>{personName(r)}</Body>
                       {r.rollNumber ? (
                         <Muted style={{ color: REPORT.textMuted }}>{`${STR.hwwdRoll} ${bnNum(r.rollNumber)}`}</Muted>
                       ) : null}

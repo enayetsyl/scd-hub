@@ -70,10 +70,10 @@ describe("MR-6 §9 — a revised report does not read like a new one", () => {
     ]);
   });
 
-  test("the Bangla name is preferred, and the month travels as the raw key", async () => {
+  test("the English name is preferred (D-#764), and the month travels as the raw key", async () => {
     const out = await deliverMonthlyReport(report());
-    expect(out.studentName).toBe("মারুফ হাসান");
-    expect(out.messageBn).toContain("মারুফ হাসান");
+    expect(out.studentName).toBe("Maruf Hasan");
+    expect(out.messageBn).toContain("Maruf Hasan");
     expect(out.messageBn).toContain("2026-07");
   });
 });
@@ -89,7 +89,7 @@ describe("MR-6 — both rails, and neither is silent about failing", () => {
     await deliverMonthlyReport(report());
     // Three renders for the whole report, not three per family.
     expect(rendered).toHaveLength(3);
-    expect(emitted[0].titleBn).toBe("monthly_report.released.title|মারুফ হাসান|2026-07");
+    expect(emitted[0].titleBn).toBe("monthly_report.released.title|Maruf Hasan|2026-07");
   });
 
   test("a family with a phone gets a wa.me link", async () => {

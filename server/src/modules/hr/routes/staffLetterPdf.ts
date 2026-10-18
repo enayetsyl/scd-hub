@@ -425,7 +425,7 @@ function renderContract(doc: PDFKit.PDFDocument, letter: IStaffLetter, width: nu
   // §১ — identity
   mixedText(doc, "১. কর্মীর পরিচয়:", { width });
   const idRows: Array<[string, string | null | undefined]> = [
-    ["নাম", s.staffNameBn || s.staffName],
+    ["নাম", s.staffName || s.staffNameBn],
     ["ঠিকানা (স্থায়ী)", s.permanentAddressBn],
     ["ঠিকানা (বর্তমান)", s.presentAddressBn],
     ["পদবি", s.designation],
@@ -478,7 +478,7 @@ function renderContract(doc: PDFKit.PDFDocument, letter: IStaffLetter, width: nu
   keepTogether(doc, 170);
   mixedText(doc, `তারিখ: ${longDateBn(s.letterDate)}`, { width });
   doc.moveDown(1.4);
-  mixedText(doc, `কর্মীর নাম: ${s.employeeSignatureNameBn ?? s.staffName}`, { width });
+  mixedText(doc, `কর্মীর নাম: ${s.staffName || s.employeeSignatureNameBn}`, { width });
   mixedText(doc, "কর্মীর স্বাক্ষর: ...........................................", { width });
   doc.moveDown(1.2);
   mixedText(doc, "কর্তৃপক্ষের পক্ষে:", { width });

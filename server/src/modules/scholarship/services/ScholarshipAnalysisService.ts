@@ -47,6 +47,7 @@ import { ScholarshipTopic } from "../models/ScholarshipTopic";
 import { Student } from "../../foundation/models/Student";
 import { Section } from "../../foundation/models/Section";
 import { emptiedSectionRoster } from "../../trackers/classTestAnchor";
+import { personName } from "../../../lib/personName";
 
 export type Band = "weak" | "fair" | "good" | "insufficient";
 
@@ -644,11 +645,11 @@ export async function classAnalysis(
   // cannot tell which column is which child.
   const roster = (await Student.find(await sittingRosterFilter(scope.sectionId))
     .select("_id name nameBn")
-    .sort({ nameBn: 1, name: 1 })
+    .sort({ name: 1 })
     .lean()) as { _id: Types.ObjectId; name?: string; nameBn?: string }[];
   const students = roster.map((s) => ({
     id: String(s._id),
-    nameBn: s.nameBn?.trim() || s.name || "—",
+    nameBn: personName(s, "—"), // legacy field name; English-first since D-#764
   }));
   const labelOf = await labelLookup(scope.classLevel);
 

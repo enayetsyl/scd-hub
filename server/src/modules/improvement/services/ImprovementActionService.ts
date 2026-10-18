@@ -53,6 +53,7 @@ import {
   addDaysKey,
   type ResponsibleSource,
 } from "../rules";
+import { personName } from "../../../lib/personName";
 
 export class ImprovementError extends Error {
   constructor(msg: string) {
@@ -609,7 +610,7 @@ function baseRow(a: LeanAction, part: ImprovementPart, dayKey: string, names: Na
     classLevel: sec?.classLevel ?? null,
     sectionNameBn: sec?.nameBn ?? "",
     studentId: a.studentId ? str(a.studentId) : null,
-    studentName: st ? st.nameBn || st.name : null,
+    studentName: st ? personName(st) : null,
     task: (part === "TEACHER" ? a.teacherTask : a.guardianTask) ?? "",
   };
 }
@@ -678,7 +679,7 @@ export async function guardianTasks(studentId: string, guardianId: string, dayKe
     return {
       ...baseRow(a, "GUARDIAN", dayKey, names),
       studentId,
-      studentName: names.students.get(studentId)?.nameBn || names.students.get(studentId)?.name || null,
+      studentName: personName(names.students.get(studentId)) || null,
       responsibleUserId: null,
       responsibleName: null,
       responsibleSource: null,
@@ -807,7 +808,7 @@ export async function summarize(actions: LeanAction[], today = todayKey()): Prom
       classLevel: sec?.classLevel ?? null,
       sectionNameBn: sec?.nameBn ?? "",
       studentId: a.studentId ? str(a.studentId) : null,
-      studentName: st ? st.nameBn || st.name : null,
+      studentName: st ? personName(st) : null,
       reason: a.reason ?? null,
       teacherTask: a.teacherTask ?? null,
       teacherUserId: a.teacherUserId ? str(a.teacherUserId) : null,
@@ -917,7 +918,7 @@ export async function actionDetail(actionId: string, today = todayKey()): Promis
         const by = new Map(mine.map((t) => [t.dayKey, t.status]));
         return {
           studentId: str(k._id),
-          name: k.nameBn || k.name,
+          name: personName(k),
           done: mine.filter((t) => t.status === "DONE" && owedKeys.includes(t.dayKey)).length,
           owed: owedKeys.length,
           last3: owedKeys.slice(-3).map((d) => by.get(d) ?? null),
@@ -1020,7 +1021,7 @@ const subjectBn = (s: string): string => (HW_SUBJECT_LABELS_BN as Record<string,
 async function notifyAssigned(action: IImprovementAction): Promise<void> {
   const names = await loadNames([], action.studentId ? [str(action.studentId)] : [], [str(action.sectionId)]);
   const who = action.studentId ? names.students.get(str(action.studentId)) : null;
-  const target = who ? who.nameBn || who.name : names.sections.get(str(action.sectionId))?.nameBn ?? "";
+  const target = who ? personName(who) : names.sections.get(str(action.sectionId))?.nameBn ?? "";
   const days = action.dayKeys.length;
   const refs = { improvementActionId: str(action._id), date: action.dayKeys[0] };
   if (action.teacherUserId && action.teacherTask) {

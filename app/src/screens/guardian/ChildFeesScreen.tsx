@@ -11,13 +11,13 @@ import { QueryGate } from "../../components/QueryGate";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
 import { useRecordView } from "../../lib/useRecordView";
-import { STR, bnNum, getActiveLang } from "../../lib/labels";
+import { STR, bnNum } from "../../lib/labels";
 import { space } from "../../theme/tokens";
+import { personName } from "../../lib/personName";
 
 export default function ChildFeesScreen(): React.ReactElement {
   const { selected, fetching } = useGuardianChild();
   useRecordView("FEES", selected?.studentId);
-  const lang = getActiveLang();
 
   const [q, refetchQ] = useQuery({
     query: CHILD_FEE_DUE_QUERY,
@@ -60,7 +60,7 @@ export default function ChildFeesScreen(): React.ReactElement {
         {due ? (
           <>
             <Card>
-              <Body style={{ fontWeight: "700" }}>{lang === "en" ? selected.name : selected.nameBn}</Body>
+              <Body style={{ fontWeight: "700" }}>{personName(selected)}</Body>
               <Muted style={{ marginTop: space(1) }}>{STR.finGuardianDue}</Muted>
               <Body style={{ fontWeight: "700", marginTop: space(1) }}>
                 {bnNum(due.guardianDue)}

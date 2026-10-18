@@ -31,6 +31,7 @@ import { Audit } from "../../platform/models/Audit";
 import { Notification } from "../../notifications/models/Notification";
 import { GuardianView } from "../models/GuardianView";
 import { dhakaDayKey } from "../../../lib/dhakaDay";
+import { personName } from "../../../lib/personName";
 
 const DAY_MS = 86_400_000;
 /** Distinct active days inside the window at or above which a family reads as REGULAR. */
@@ -203,7 +204,7 @@ export async function guardianEngagement(
     if (!st) continue;
     const gk = l.guardianId.toString();
     const kids = childrenByGuardian.get(gk) ?? [];
-    kids.push(st.nameBn ?? st.name);
+    kids.push(personName(st));
     childrenByGuardian.set(gk, kids);
     const sid = st.sectionId?.toString();
     if (sid) {

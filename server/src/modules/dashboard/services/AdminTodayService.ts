@@ -33,6 +33,7 @@ import {
   packetCount,
   unprintedCount,
 } from "../../trackers/services/AssignmentHandoutService";
+import { personName } from "../../../lib/personName";
 
 export interface AdminCardBadge {
   key: string;
@@ -253,7 +254,7 @@ async function leaveCard(dateKey: string): Promise<AdminTodayCard> {
     const profiles = (await StaffProfile.find({ _id: { $in: sorted.map((l) => l.staffProfileId) } })
       .select("name nameBn")
       .lean()) as unknown as Array<{ _id: { toString(): string }; name: string; nameBn?: string }>;
-    const nameOf = new Map(profiles.map((p) => [p._id.toString(), p.nameBn || p.name]));
+    const nameOf = new Map(profiles.map((p) => [p._id.toString(), personName(p)]));
     const rows = sorted.map((l) => ({
       title: nameOf.get(l.staffProfileId.toString()) ?? "—",
       subtitle: `${l.leaveType} · ${l.fromKey} → ${l.toKey}`,

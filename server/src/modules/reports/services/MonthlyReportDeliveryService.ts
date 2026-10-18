@@ -28,6 +28,7 @@ import { emitMonthlyReport } from "../../notifications/services/emitters";
 import { Student } from "../../foundation/models/Student";
 import { commentWaLink } from "../../comments/services/CommentDeliveryService";
 import type { IMonthlyReport } from "../models/MonthlyReport";
+import { personName } from "../../../lib/personName";
 
 export interface MonthlyReportDeliveryOutcome {
   reportId: string;
@@ -54,7 +55,7 @@ export async function deliverMonthlyReport(
     .select("name nameBn phone")
     .lean()) as unknown as { name: string; nameBn?: string; phone?: string } | null;
 
-  const studentName = student?.nameBn || student?.name || "";
+  const studentName = personName(student);
   const kind = report.isRerelease ? "revised" : "released";
   const params = { studentName, month: report.periodKey };
 

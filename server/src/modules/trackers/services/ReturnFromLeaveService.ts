@@ -27,6 +27,7 @@ import { AssignmentStudentRecord } from "../models/AssignmentStudentRecord";
 import { HomeworkItem } from "../models/HomeworkItem";
 import { AssignmentItem } from "../models/AssignmentItem";
 import { dateKeyOf } from "../../attendance/dates";
+import { personName } from "../../../lib/personName";
 
 /** Hand these out — the child never received them. */
 const REDELIVER_STATES: readonly LifecycleState[] = ["ABSENT_REDELIVER"];
@@ -290,7 +291,7 @@ export async function returningStudentsFor(
     if (mine.length === 0) continue;
     out.push({
       studentId,
-      studentNameBn: rosterRow.nameBn || rosterRow.name || "",
+      studentNameBn: personName(rosterRow),
       sectionId: (conf?.sectionId ?? rosterRow.sectionId.toString()) as string,
       source: conf ? "RETURNED" : "EXPECTED",
       daysAbsent: conf?.daysAbsent ?? 0,

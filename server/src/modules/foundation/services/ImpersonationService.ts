@@ -32,6 +32,7 @@ import { Section } from "../models/Section";
 import { signToken, type AuthResult } from "./AuthService";
 import { writeAudit } from "../../platform/services/AuditService";
 import { normalizePage, MAX_PAGE_SIZE, type Page, type PageArgs } from "../../../lib/paging";
+import { personName } from "../../../lib/personName";
 
 /** A borrowed session is short. Long enough to reproduce a bug, short enough that a
  *  forgotten tab is not a standing second identity. */
@@ -138,7 +139,7 @@ async function childLinesByGuardian(guardianIds: Types.ObjectId[]): Promise<Map<
     const student = studentById.get(link.studentId.toString());
     if (!student) continue;
     const label = sectionLabelById.get(student.sectionId?.toString() ?? "") ?? "";
-    const name = student.nameBn || student.name;
+    const name = personName(student);
     const key = link.guardianId.toString();
     const lines = out.get(key) ?? [];
     lines.push(label ? `${name} · ${label}` : name);
