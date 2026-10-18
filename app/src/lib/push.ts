@@ -16,8 +16,10 @@ import { Platform } from "react-native";
 import type { Client } from "urql";
 import Constants from "expo-constants";
 import * as Device from "expo-device";
+import * as Application from "expo-application";
 import * as Notifications from "expo-notifications";
 import { REGISTER_PUSH_DEVICE, UNREGISTER_PUSH_DEVICE } from "../graphql/operations";
+import { captureAppError } from "../observability/sentry";
 
 /** The token this device registered this session — what logout unregisters. */
 let registeredToken: string | null = null;
@@ -53,15 +55,38 @@ export async function registerPushToken(client: Client): Promise<void> {
     const token = tokenResp.data;
     if (!token) return;
 
-    await client
+    const res = await client
       .mutation(REGISTER_PUSH_DEVICE, { token, platform: Platform.OS })
       .toPromise();
+    if (res.error) throw res.error;
     registeredToken = token;
   } catch (err) {
-    // Push registration is never allowed to break the session.
+    // Push registration is never allowed to break the session — but it is no longer
+    // allowed to fail SILENTLY either. Every Android phone failed here from the first
+    // APK until D-#768 (no Firebase config, so no token), and a console.warn on a phone
+    // is read by no one: the push-device table sat at 0 rows for four months. Once per
+    // app session, one grouped GlitchTip issue.
     console.warn("[push] registration skipped:", err);
+    // Builds before versionCode 9 have no Firebase config and are KNOWN to fail here;
+    // the OTA carries this code to them too, and reporting them would page the
+    // maintainer once per phone per session for a failure that is already explained.
+    // Only a build that should work is worth hearing about.
+    const expectedToWork = Platform.OS !== "android" || Number(Application.nativeBuildVersion ?? 0) >= FIRST_FCM_BUILD;
+    if (!reportedFailure && expectedToWork) {
+      reportedFailure = true;
+      captureAppError(
+        err,
+        { kind: "push-registration", platform: Platform.OS },
+        { fingerprint: ["push-registration-failed"] },
+      );
+    }
   }
 }
+
+/** One report per app session — registration re-runs on every sign-in. */
+let reportedFailure = false;
+/** The first Android versionCode built with google-services.json (D-#768). */
+const FIRST_FCM_BUILD = 9;
 
 /** Deactivate this device's token server-side (called from logout, while the
  *  auth token still works). Best-effort — logout always proceeds. */

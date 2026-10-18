@@ -67,6 +67,25 @@ if (!fs.existsSync(path.join(ANDROID, "keystore.properties"))) {
   console.error("app/android/keystore.properties missing — the build would fall back to the DEBUG key. Aborting.");
   process.exit(1);
 }
+// D-#768: Firebase config for Android push. Gitignored (public repo), so a fresh
+// worktree lacks it; the gms gradle plugin would fail later with a less obvious error,
+// and a config for the wrong package would build fine and still never get a token.
+const gsPath = path.join(ANDROID, "app", "google-services.json");
+if (!fs.existsSync(gsPath)) {
+  console.error(
+    "app/android/app/google-services.json missing — Android push would not work.\n" +
+      "  Firebase console → project scd-hub-66724 → Project settings → Your apps → SCD Hub Android →\n" +
+      "  download google-services.json into app/android/app/.",
+  );
+  process.exit(1);
+}
+const gsPackages = (JSON.parse(fs.readFileSync(gsPath, "utf8")).client ?? []).map(
+  (c) => c.client_info?.android_client_info?.package_name,
+);
+if (!gsPackages.includes(expo.android?.package)) {
+  console.error(`google-services.json is for ${gsPackages.join(", ") || "no package"}, not ${expo.android?.package}. Aborting.`);
+  process.exit(1);
+}
 
 // --- build ---
 // The Sentry gradle plugin uploads release source maps when SENTRY_AUTH_TOKEN is
