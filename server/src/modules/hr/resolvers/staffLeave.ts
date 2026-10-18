@@ -31,6 +31,7 @@ import {
   decideCoverSlot,
   coverSlotsForLeave,
   needsCoverSlots,
+  routineSubjectForSlot,
   type NeedsCoverRow,
 } from "../services/CoverService";
 import { resolveStaffProfileForUser } from "../services/staffMatch";
@@ -103,6 +104,17 @@ StaffCoverSlotRef.implement({
     sectionId: t.string({ nullable: true, resolve: (s) => s.sectionId?.toString() ?? null }),
     subjectId: t.string({ nullable: true, resolve: (s) => s.subjectId?.toString() ?? null }),
     subjectGroupId: t.string({ nullable: true, resolve: (s) => s.subjectGroupId?.toString() ?? null }),
+    routineSubject: t.string({
+      nullable: true,
+      description:
+        "The routine's subject code for this meeting (BAN, ARABIC, QURAN, …). Names the period when " +
+        "`subjectId` is null because the code has no foundation Subject.",
+      // The list query batch-loads it; a mutation returns a bare slot, so look it up.
+      resolve: (s) => {
+        const pre = (s as IStaffCoverSlot & { routineSubject?: string | null }).routineSubject;
+        return pre !== undefined ? pre : routineSubjectForSlot(s);
+      },
+    }),
     absentTeacherUserId: t.string({ nullable: true, resolve: (s) => s.absentTeacherUserId?.toString() ?? null }),
     dateKey: t.exposeString("dateKey"),
     periodNumber: t.exposeInt("periodNumber"),
@@ -130,6 +142,7 @@ NeedsCoverRowRef.implement({
     subjectName: t.string({ nullable: true, resolve: (r) => r.subjectName }),
     subjectGroupId: t.string({ nullable: true, resolve: (r) => r.subjectGroupId }),
     subjectGroupName: t.string({ nullable: true, resolve: (r) => r.subjectGroupName }),
+    routineSubject: t.string({ nullable: true, resolve: (r) => r.routineSubject }),
     dateKey: t.exposeString("dateKey"),
     periodNumber: t.exposeInt("periodNumber"),
   }),

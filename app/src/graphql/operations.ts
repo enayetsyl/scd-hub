@@ -7316,6 +7316,8 @@ export interface StaffCoverSlotT {
   sectionId: string | null;
   subjectId: string | null;
   subjectGroupId: string | null;
+  /** The routine's subject code — names the period when `subjectId` is null (Arabic/Quran on a section). */
+  routineSubject: string | null;
   absentTeacherUserId: string | null;
   dateKey: string;
   periodNumber: number;
@@ -7326,7 +7328,7 @@ export interface StaffCoverSlotT {
 }
 
 const STAFF_COVER_SLOT_FIELDS = `
-  id leaveApplicationId groupType classId sectionId subjectId subjectGroupId
+  id leaveApplicationId groupType classId sectionId subjectId subjectGroupId routineSubject
   absentTeacherUserId dateKey periodNumber
   proposedCoverTeacherId finalCoverTeacherUserId status proxyGrantId
 `;
@@ -7375,6 +7377,7 @@ export interface NeedsCoverRowT {
   subjectName: string | null;
   subjectGroupId: string | null;
   subjectGroupName: string | null;
+  routineSubject: string | null;
   dateKey: string;
   periodNumber: number;
 }
@@ -7389,7 +7392,7 @@ export const NEEDS_COVER_SLOTS_QUERY = gql<
     needsCoverSlots(from: $from, to: $to) {
       slotId leaveApplicationId groupType absentTeacherUserId absentTeacherName
       classId className sectionId sectionName subjectId subjectName
-      subjectGroupId subjectGroupName dateKey periodNumber
+      subjectGroupId subjectGroupName routineSubject dateKey periodNumber
     }
   }
 `;

@@ -597,10 +597,39 @@ async function dropSubstitutionUnlessStillCovered(slot: IStaffCoverSlot): Promis
   });
 }
 
-export async function coverSlotsForLeave(leaveApplicationId: string): Promise<IStaffCoverSlot[]> {
-  return StaffCoverSlot.find({ leaveApplicationId: new Types.ObjectId(leaveApplicationId) })
+export async function coverSlotsForLeave(
+  leaveApplicationId: string,
+): Promise<Array<IStaffCoverSlot & { routineSubject: string | null }>> {
+  const slots = (await StaffCoverSlot.find({ leaveApplicationId: new Types.ObjectId(leaveApplicationId) })
     .sort({ createdAt: 1 })
-    .lean() as unknown as Promise<IStaffCoverSlot[]>;
+    .lean()) as unknown as IStaffCoverSlot[];
+  const subjectOf = await routineSubjectsFor(slots);
+  return slots.map((s) => ({
+    ...s,
+    routineSubject: s.routineSlotId ? subjectOf.get(s.routineSlotId.toString()) ?? null : null,
+  })) as unknown as Array<IStaffCoverSlot & { routineSubject: string | null }>;
+}
+
+/**
+ * The routine's own subject code for each slot's meeting, keyed by routine slot id.
+ *
+ * A slot's `subjectId` is set only when the code matches a foundation `Subject`
+ * (D-#257), and a section meeting whose code has none — Arabic or Quran taught on a
+ * Nursery/KG section — was stored with neither a subject nor a group, so the screens
+ * could only say "Class/Section" (prod, 2026-10-18). The routine still knows what the
+ * period is; this reads it at display time, so slots created before the fix name
+ * their subject too. A routine slot deleted since leaves the code null.
+ */
+async function routineSubjectsFor(slots: Array<Pick<IStaffCoverSlot, "routineSlotId">>): Promise<Map<string, string>> {
+  const ids = [...new Set(slots.map((s) => s.routineSlotId?.toString()).filter((id): id is string => !!id))];
+  if (ids.length === 0) return new Map();
+  const rows = await RoutineSlot.find({ _id: { $in: ids } }).select("subject").lean();
+  return new Map(rows.filter((r) => r.subject).map((r) => [r._id.toString(), r.subject as string]));
+}
+
+/** The routine subject code for ONE slot — the mutation results, which return a bare slot. */
+export async function routineSubjectForSlot(slot: Pick<IStaffCoverSlot, "routineSlotId">): Promise<string | null> {
+  return (await routineSubjectsFor([slot])).get(slot.routineSlotId?.toString() ?? "") ?? null;
 }
 
 /** A cross-leave needs-cover row (PXG-1) — one per uncovered class meeting, with
@@ -622,6 +651,9 @@ export interface NeedsCoverRow {
   subjectName: string | null;
   subjectGroupId: string | null;
   subjectGroupName: string | null;
+  /** The routine's subject code (BAN, ARABIC, QURAN, …) — names the period when
+   *  `subjectName` is null because the code has no foundation Subject. */
+  routineSubject: string | null;
   dateKey: string;
   periodNumber: number;
 }
@@ -664,6 +696,7 @@ export async function needsCoverSlots(fromKey: string, toKey: string): Promise<N
   const sectionName = new Map(sections.map((s) => [s._id.toString(), s.nameBn]));
   const subjectName = new Map(subjects.map((s) => [s._id.toString(), s.nameBn]));
   const groupName = new Map(groups.map((g) => [g._id.toString(), g.nameBn]));
+  const routineSubject = await routineSubjectsFor(slots);
 
   return slots.map((s) => ({
     slotId: s._id.toString(),
@@ -679,6 +712,7 @@ export async function needsCoverSlots(fromKey: string, toKey: string): Promise<N
     subjectName: s.subjectId ? subjectName.get(s.subjectId.toString()) ?? null : null,
     subjectGroupId: s.subjectGroupId ? s.subjectGroupId.toString() : null,
     subjectGroupName: s.subjectGroupId ? groupName.get(s.subjectGroupId.toString()) ?? null : null,
+    routineSubject: s.routineSlotId ? routineSubject.get(s.routineSlotId.toString()) ?? null : null,
     dateKey: s.dateKey,
     periodNumber: s.periodNumber,
   }));
