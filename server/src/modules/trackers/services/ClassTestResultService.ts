@@ -30,6 +30,7 @@ import { writeAudit } from "../../platform/services/AuditService";
 import { rosterCount } from "../classTestAnchor";
 import { deriveScore, type DerivedScore } from "../classTestScoring";
 import { resolveClassTestDeadline, resolveClassTestOverdue, atMidnight } from "../classTestCalendar";
+import { pageOf, type Page, type PageArgs } from "../../../lib/paging";
 
 /** A surfaced service error (Bangla-friendly message), mirroring the tracker pattern. */
 export class ClassTestResultError extends Error {}
@@ -482,4 +483,24 @@ export async function childTestResults(studentId: string): Promise<GuardianClass
   // Newest exam first.
   out.sort((a, b) => new Date(b.examDate).getTime() - new Date(a.examDate).getTime());
   return out;
+}
+
+/**
+ * D-#761: one page of the child's published results, newest exam first (testId breaks
+ * ties so a page never shuffles), optionally one subject. Rows are derived (a join to
+ * the PRINTED exam), so the page is cut in memory — the wire carries one page, and the
+ * resolver reads script info for that page only.
+ */
+export async function childTestResultsPage(
+  studentId: string,
+  subject: string | null | undefined,
+  args: PageArgs,
+): Promise<Page<GuardianClassTestResult>> {
+  const all = await childTestResults(studentId);
+  const rows = (subject ? all.filter((r) => r.subject === subject) : all).sort(
+    (a, b) =>
+      new Date(b.examDate).getTime() - new Date(a.examDate).getTime() ||
+      (a.testId < b.testId ? 1 : a.testId > b.testId ? -1 : 0),
+  );
+  return pageOf(rows, args);
 }

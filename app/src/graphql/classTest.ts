@@ -653,6 +653,42 @@ export const CHILD_TEST_RESULTS_QUERY = gql<
   }
 `;
 
+/** D-#761: one page of the child's results, newest exam first, optionally one subject. */
+export const CHILD_TEST_RESULTS_PAGE_QUERY = gql<
+  { childTestResultsPage: { rows: GuardianClassTestResultT[]; total: number; page: number; pageSize: number } },
+  { studentId: string; subject?: string | null; page: number; pageSize: number }
+>`
+  query ChildTestResultsPage($studentId: String!, $subject: String, $page: Int, $pageSize: Int) {
+    childTestResultsPage(studentId: $studentId, subject: $subject, page: $page, pageSize: $pageSize) {
+      rows {
+        testId ctId subject testNumber examDate classLevel groupNameBn status marks totalMarks percent pass weakness guardianAction publishedAt
+        scriptPages { fileId mime } scriptPending
+      }
+      total page pageSize
+    }
+  }
+`;
+
+/** D-#761: every published result as a light summary row — what the tab's figures,
+ *  its subject chips and Today's "new result" count are computed from (one rule,
+ *  lib/childClassTests), now that the full result list pages. */
+export interface GuardianClassTestStatT {
+  testId: string;
+  subject: string;
+  status: string;
+  percent: number | null;
+  publishedAt: string | null;
+}
+
+export const CHILD_TEST_RESULT_STATS_QUERY = gql<
+  { childTestResultStats: GuardianClassTestStatT[] },
+  { studentId: string }
+>`
+  query ChildTestResultStats($studentId: String!) {
+    childTestResultStats(studentId: $studentId) { testId subject status percent publishedAt }
+  }
+`;
+
 // ---------------------------------------------------------------------------
 // CT question-request loop (owner ask 2026-07-20): teacher asks the office for
 // a question paper; office uploads rounds; teacher approves (locks) or asks for

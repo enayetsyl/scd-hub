@@ -422,12 +422,13 @@ export interface GuardianRevisionEntryT {
   deliveredAt: string | null;
 }
 
+/** D-#761: `limit` = the newest N Saturdays only; omitted = the whole history. */
 export const CHILD_REVISION_QUERY = gql<
   { childRevision: GuardianRevisionEntryT[] },
-  { studentId: string }
+  { studentId: string; limit?: number }
 >`
-  query ChildRevision($studentId: String!) {
-    childRevision(studentId: $studentId) {
+  query ChildRevision($studentId: String!, $limit: Int) {
+    childRevision(studentId: $studentId, limit: $limit) {
       id date present
       juzRecords { ${JUZ_RECORD_FIELDS} }
       teacherComment deliveredAt

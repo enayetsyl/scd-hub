@@ -3,6 +3,7 @@ import { BookTitle, type IBookTitle } from "../models/BookTitle";
 import { BookCopy, type IBookCopy } from "../models/BookCopy";
 import { writeAudit } from "../../platform/services/AuditService";
 import { LibraryError } from "../errors";
+import { queryPage, type Page, type PageArgs } from "../../../lib/paging";
 
 /**
  * Catalog operations (LB-1, D-#82): titles + per-copy accession numbers.
@@ -158,8 +159,7 @@ export interface TitleWithAvailability {
   availableCopies: number;
 }
 
-/** Browse/search the catalog with computed availability per title. */
-export async function bookTitles(filter: TitleFilter): Promise<TitleWithAvailability[]> {
+function titleQuery(filter: TitleFilter): Record<string, unknown> {
   const query: Record<string, unknown> = {};
   if (!filter.includeInactive) query.active = true;
   if (filter.language) query.language = filter.language;
@@ -168,7 +168,31 @@ export async function bookTitles(filter: TitleFilter): Promise<TitleWithAvailabi
     const rx = new RegExp(escapeRegex(filter.search.trim()), "i");
     query.$or = [{ titleBn: rx }, { titleEn: rx }, { author: rx }, { isbn: rx }];
   }
-  const titles = (await BookTitle.find(query).sort({ titleBn: 1 }).lean()) as unknown as IBookTitle[];
+  return query;
+}
+
+/** Browse/search the catalog with computed availability per title. */
+export async function bookTitles(filter: TitleFilter): Promise<TitleWithAvailability[]> {
+  const titles = (await BookTitle.find(titleQuery(filter)).sort({ titleBn: 1 }).lean()) as unknown as IBookTitle[];
+  return withAvailability(titles);
+}
+
+/**
+ * D-#761: one page of the catalog, same filters as `bookTitles`. Availability is
+ * computed for THIS page's titles only, so an empty search no longer reads every
+ * copy in the library.
+ */
+export function bookTitlesPage(filter: TitleFilter, args: PageArgs): Promise<Page<TitleWithAvailability>> {
+  return queryPage(
+    BookTitle,
+    titleQuery(filter),
+    { titleBn: 1, _id: 1 },
+    args,
+    (titles) => withAvailability(titles),
+  );
+}
+
+async function withAvailability(titles: IBookTitle[]): Promise<TitleWithAvailability[]> {
   if (titles.length === 0) return [];
   const copies = (await BookCopy.find({ titleId: { $in: titles.map((t) => t._id) } })
     .select("titleId status")

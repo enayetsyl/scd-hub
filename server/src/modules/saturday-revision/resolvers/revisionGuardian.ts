@@ -58,12 +58,13 @@ builder.queryField("childRevision", (t) =>
     type: [GuardianRevisionEntryRef],
     description:
       "The linked child's DELIVERED Saturday revision entries, newest first — read-only (SR-4, J-SR4-4). " +
-      "Gated by the guardian-link row scope (D-#68); delivered-only (D-#155).",
+      "Gated by the guardian-link row scope (D-#68); delivered-only (D-#155). limit (D-#761) = the " +
+      "newest N only; omitted = the whole history, as before.",
     authScopes: { hasPermission: "guardian:read_child" },
-    args: { studentId: t.arg.string({ required: true }) },
+    args: { studentId: t.arg.string({ required: true }), limit: t.arg.int({ required: false }) },
     resolve: async (_root, args, ctx) => {
       await assertGuardianOfStudent(ctx, args.studentId);
-      return childRevision(args.studentId);
+      return childRevision(args.studentId, args.limit);
     },
   }),
 );

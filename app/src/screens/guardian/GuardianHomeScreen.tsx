@@ -21,11 +21,12 @@ import {
   CHILD_ASSIGNMENTS,
   CHILD_FEE_DUE_QUERY,
 } from "../../graphql/operations";
-import { CHILD_TEST_RESULTS_QUERY } from "../../graphql/classTest";
+import { CHILD_TEST_RESULTS_PAGE_QUERY, CHILD_TEST_RESULT_STATS_QUERY } from "../../graphql/classTest";
 import { CHILD_COMMENTS_QUERY } from "../../graphql/comments";
 import { CHILD_REVISION_QUERY } from "../../graphql/revision";
 import { Screen, Body, Muted, Card, Badge, Button, Notice, Loader, EmptyState } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
+import { LoadOlder } from "../../components/LoadOlder";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
 import { WorkClaimBlock } from "../../components/WorkClaimBlock";
@@ -73,6 +74,27 @@ const daysAgo = (n: number): string => {
 /** Lifecycle states that still need the family's attention (not RETURNED). */
 const OPEN_STATES = new Set(["GIVEN", "ABSENT_REDELIVER", "DUE", "SUBMITTED", "CHASE", "CHECKED", "RESUBMIT"]);
 
+/** D-#761: Today is a summary. Each history card shows the newest few rows; a card
+ *  with a tab of its own links there ("see all"), the others page back with LoadOlder. */
+const HOME_RECENT = 5;
+
+/** A history card's row bound: starts at HOME_RECENT, LoadOlder widens it, a new child
+ *  starts over. `more` = the last fetch filled the bound, so older rows may exist (or a
+ *  widening is in flight — keep the button up, spinning). */
+function useRecentLimit(childId: string): {
+  limit: number;
+  older: () => void;
+  more: (rows: number, fetching?: boolean) => boolean;
+} {
+  const [limit, setLimit] = React.useState(HOME_RECENT);
+  React.useEffect(() => setLimit(HOME_RECENT), [childId]);
+  return {
+    limit,
+    older: () => setLimit((n) => n + HOME_RECENT * 2),
+    more: (rows, fetching = false) => rows >= limit || (fetching && limit > HOME_RECENT),
+  };
+}
+
 export default function GuardianHomeScreen(): React.ReactElement {
   const nav = useNavigation<Nav>();
   const { selected, fetching } = useGuardianChild();
@@ -108,9 +130,14 @@ export default function GuardianHomeScreen(): React.ReactElement {
     variables: { studentId: sid, date },
     pause: !selected,
   });
+  // D-#761: the history cards below are bounded (newest few + LoadOlder / see-all).
+  const libraryLimit = useRecentLimit(sid);
+  const vocabLimit = useRecentLimit(sid);
+  const commentsLimit = useRecentLimit(sid);
+  const revisionLimit = useRecentLimit(sid);
   const [libraryQ, refetchLibrary] = useQuery({
     query: CHILD_LIBRARY_LOANS_QUERY,
-    variables: { studentId: sid },
+    variables: { studentId: sid, limit: libraryLimit.limit },
     pause: !selected,
   });
   // D-#472: confirmed class tests the child will sit — shown until the exam day
@@ -124,38 +151,52 @@ export default function GuardianHomeScreen(): React.ReactElement {
 
   const [vocabQ, refetchVocab] = useQuery({
     query: CHILD_VOCAB_QUERY,
-    variables: { studentId: sid },
+    variables: { studentId: sid, limit: vocabLimit.limit },
     pause: !selected,
   });
+  // D-#761: the card shows the newest few (the Class Test tab has the rest); the
+  // "new result" count reads the light stats rows, so it still counts every result.
   const [testResultsQ, refetchTests] = useQuery({
-    query: CHILD_TEST_RESULTS_QUERY,
+    query: CHILD_TEST_RESULTS_PAGE_QUERY,
+    variables: { studentId: sid, page: 1, pageSize: HOME_RECENT },
+    pause: !selected,
+  });
+  const [testStatsQ, refetchTestStats] = useQuery({
+    query: CHILD_TEST_RESULT_STATS_QUERY,
     variables: { studentId: sid },
     pause: !selected,
   });
   const [commentsQ, refetchComments] = useQuery({
     query: CHILD_COMMENTS_QUERY,
-    variables: { studentId: sid },
+    variables: { studentId: sid, limit: commentsLimit.limit },
     pause: !selected,
   });
   const [revisionQ, refetchRevision] = useQuery({
     query: CHILD_REVISION_QUERY,
-    variables: { studentId: sid },
+    variables: { studentId: sid, limit: revisionLimit.limit },
     pause: !selected,
   });
+  // D-#761: the assignment card shows the newest few (the Assignments tab has the
+  // rest). The করতে হবে rows and the late alert need every OUTSTANDING one however
+  // old, so they come from their own outstanding-only read.
   const [asgnQ, refetchAsgn] = useQuery({
     query: CHILD_ASSIGNMENTS,
-    variables: { studentId: sid },
+    variables: { studentId: sid, limit: HOME_RECENT },
     pause: !selected,
   });
-
-
+  const [asgnTodoQ, refetchAsgnTodo] = useQuery({
+    query: CHILD_ASSIGNMENTS,
+    variables: { studentId: sid, outstandingOnly: true },
+    pause: !selected,
+  });
 
   // GC-3: filing a claim changes canClaim/claim on the row AND mutes its chase,
   // so both reads behind করতে হবে are re-run.
   const refetchTodo = React.useCallback(() => {
     refetchHw({ requestPolicy: "network-only" });
     refetchAsgn({ requestPolicy: "network-only" });
-  }, [refetchHw, refetchAsgn]);
+    refetchAsgnTodo({ requestPolicy: "network-only" });
+  }, [refetchHw, refetchAsgn, refetchAsgnTodo]);
   const [feeQ, refetchFee] = useQuery({
     query: CHILD_FEE_DUE_QUERY,
     variables: { studentId: sid },
@@ -166,8 +207,8 @@ export default function GuardianHomeScreen(): React.ReactElement {
   // UX-7: pull-to-refresh — one gesture refreshes every card on the guardian home.
   const anyFetching =
     routineQ.fetching || notesQ.fetching || hwQ.fetching || loadQ.fetching || libraryQ.fetching ||
-    vocabQ.fetching || testResultsQ.fetching || commentsQ.fetching || revisionQ.fetching || asgnQ.fetching ||
-    feeQ.fetching;
+    vocabQ.fetching || testResultsQ.fetching || testStatsQ.fetching || commentsQ.fetching || revisionQ.fetching ||
+    asgnQ.fetching || asgnTodoQ.fetching || feeQ.fetching;
   const { refreshing, onRefresh } = usePullRefresh(anyFetching, () => {
     const opts = { requestPolicy: "network-only" as const };
     refetchRoutine(opts);
@@ -177,10 +218,12 @@ export default function GuardianHomeScreen(): React.ReactElement {
     refetchLibrary(opts);
     refetchVocab(opts);
     refetchTests(opts);
+    refetchTestStats(opts);
     refetchUpcoming(opts);
     refetchComments(opts);
     refetchRevision(opts);
     refetchAsgn(opts);
+    refetchAsgnTodo(opts);
     refetchFee(opts);
   });
   // CM-6 follow-up: no guardian meeting-slot card is rendered. The server's
@@ -245,8 +288,12 @@ export default function GuardianHomeScreen(): React.ReactElement {
   // assignment screen. Assignments carry no declared minutes, so the count is
   // the load figure here.
   const assignments = asgnQ.data?.childAssignments ?? [];
-  // DE-6: the assignment half of the action list — late, or being chased.
-  const todoAssignments = assignments.filter((a) => a.state === "CHASE" || (a.pending && a.daysLate > 0));
+  // DE-6: the assignment half of the action list — late, or being chased. D-#761: read
+  // from the outstanding-only query (the card above is only the newest few); the
+  // filter stays so the rule reads the same here as in ChildHomeworkScreen.
+  const todoAssignments = (asgnTodoQ.data?.childAssignments ?? []).filter(
+    (a) => a.state === "CHASE" || (a.pending && a.daysLate > 0),
+  );
   const asgnByDate = new Map<string, typeof assignments>();
   for (const a of assignments) {
     const k = (a.deliveryDate ?? a.dueDate ?? "").slice(0, 10);
@@ -268,16 +315,18 @@ export default function GuardianHomeScreen(): React.ReactElement {
   const isRecent = (iso: string | null | undefined): boolean =>
     !!iso && Date.now() - new Date(iso).getTime() <= RECENT_MS;
   const hwChaseCount = openHomework.filter((r) => r.state === "CHASE").length;
-  const asgnChaseCount = (asgnQ.data?.childAssignments ?? []).filter(
-    (a) => a.state === "CHASE" || (a.pending && a.daysLate > 0),
-  ).length;
+  const asgnChaseCount = todoAssignments.length;
   const feeDue = feeQ.data?.childFeeDue?.guardianDue ?? 0;
-  const recentComments = (commentsQ.data?.childComments ?? []).filter((c) =>
-    isRecent(c.deliveredAt ?? c.createdAt),
-  ).length;
+  const commentRows = commentsQ.data?.childComments ?? [];
+  const recentComments = commentRows.filter((c) => isRecent(c.deliveredAt ?? c.createdAt)).length;
+  // D-#761: the comment card holds only the newest few, so when every one of them is
+  // recent there may be more — say "N+" rather than a count that reads as exact.
+  const recentCommentsCapped = commentsLimit.more(commentRows.length) && recentComments === commentRows.length;
   // D-#732: the shared rule, so this count, the sidebar badge and the tab's NEW
   // tags always agree.
-  const recentTests = countNewResults(testResultsQ.data?.childTestResults ?? [], Date.now());
+  const recentTests = countNewResults(testStatsQ.data?.childTestResultStats ?? [], Date.now());
+  const testResults = testResultsQ.data?.childTestResultsPage.rows ?? [];
+  const testResultsTotal = testResultsQ.data?.childTestResultsPage.total ?? 0;
   const goClassTests = (): void =>
     (nav as unknown as { navigate: (name: string, params?: object) => void }).navigate(
       "GuardianClassTestTab",
@@ -305,7 +354,11 @@ export default function GuardianHomeScreen(): React.ReactElement {
     });
   }
   if (recentComments > 0) {
-    alerts.push({ key: "comments", text: `${STR.gpAlertNewComment}: ${bnNum(recentComments)}`, tone: "info" });
+    alerts.push({
+      key: "comments",
+      text: `${STR.gpAlertNewComment}: ${bnNum(recentComments)}${recentCommentsCapped ? "+" : ""}`,
+      tone: "info",
+    });
   }
   if (recentTests > 0) {
     alerts.push({
@@ -339,7 +392,10 @@ export default function GuardianHomeScreen(): React.ReactElement {
         <ChildSwitcher />
 
         <QueryGate
-          results={[trajQ, routineQ, notesQ, hwQ, loadQ, libraryQ, vocabQ, testResultsQ, commentsQ, revisionQ, asgnQ, feeQ]}
+          results={[
+            trajQ, routineQ, notesQ, hwQ, loadQ, libraryQ, vocabQ, testResultsQ, testStatsQ, commentsQ, revisionQ,
+            asgnQ, asgnTodoQ, feeQ,
+          ]}
           onRetry={() => {
             const opts = { requestPolicy: "network-only" as const };
             refetchTraj(opts);
@@ -350,9 +406,11 @@ export default function GuardianHomeScreen(): React.ReactElement {
             refetchLibrary(opts);
             refetchVocab(opts);
             refetchTests(opts);
+            refetchTestStats(opts);
             refetchComments(opts);
             refetchRevision(opts);
             refetchAsgn(opts);
+            refetchAsgnTodo(opts);
             refetchFee(opts);
           }}
           loaderLabel={STR.loading}
@@ -740,6 +798,11 @@ export default function GuardianHomeScreen(): React.ReactElement {
                 </View>
               ))
             )}
+            {/* D-#761: only the newest few are here; the whole card already opens the
+                Assignments tab, so this is a marker, not a second button. */}
+            {assignments.length >= HOME_RECENT ? (
+              <Muted style={{ marginTop: space(2), textDecorationLine: "underline" }}>{STR.gpSeeAll}</Muted>
+            ) : null}
           </Pressable>
         </Card>
 
@@ -780,6 +843,9 @@ export default function GuardianHomeScreen(): React.ReactElement {
               </View>
             ))
           )}
+          {libraryLimit.more((libraryQ.data?.childLibraryLoans ?? []).length, libraryQ.fetching) ? (
+            <LoadOlder onPress={libraryLimit.older} loading={libraryQ.fetching} />
+          ) : null}
         </Card>
 
         {/* Vocabulary results — read-only, marked tests only (VC-5 / J7, D-#155) */}
@@ -810,17 +876,26 @@ export default function GuardianHomeScreen(): React.ReactElement {
               </View>
             ))
           )}
+          {vocabLimit.more((vocabQ.data?.childVocab ?? []).length, vocabQ.fetching) ? (
+            <LoadOlder onPress={vocabLimit.older} loading={vocabQ.fetching} />
+          ) : null}
         </Card>
 
         {/* Class-test results — read-only, PUBLISHED only (CT-5 / J7, D-#68). Never
             shows teacherAction (the childTestResults query doesn't fetch it). */}
         <Card>
           <Body style={{ fontWeight: "700" }}>{STR.gpTestResults}</Body>
-          {(testResultsQ.data?.childTestResults ?? []).length === 0 ? (
+          {testResults.length === 0 ? (
             <Muted style={{ marginTop: space(2) }}>{STR.gpNoTestResults}</Muted>
           ) : (
-            (testResultsQ.data?.childTestResults ?? []).map((r) => <ClassTestResultRow key={r.testId} r={r} />)
+            testResults.map((r) => <ClassTestResultRow key={r.testId} r={r} />)
           )}
+          {/* D-#761: the newest few; every result lives on the Class Test tab. */}
+          {testResultsTotal > testResults.length ? (
+            <View style={{ marginTop: space(2) }}>
+              <Button title={STR.gpSeeAll} variant="ghost" onPress={goClassTests} />
+            </View>
+          ) : null}
         </Card>
 
         {/* Teacher comments — read-only, DELIVERED daily comments only (CM-6 / CM-5,
@@ -857,6 +932,9 @@ export default function GuardianHomeScreen(): React.ReactElement {
               </View>
             ))
           )}
+          {commentsLimit.more(commentRows.length, commentsQ.fetching) ? (
+            <LoadOlder onPress={commentsLimit.older} loading={commentsQ.fetching} />
+          ) : null}
         </Card>
 
         {/* Saturday Hifz revision — read-only, DELIVERED Saturdays only (SR-4). The
@@ -890,6 +968,9 @@ export default function GuardianHomeScreen(): React.ReactElement {
               </View>
             ))
           )}
+          {revisionLimit.more((revisionQ.data?.childRevision ?? []).length, revisionQ.fetching) ? (
+            <LoadOlder onPress={revisionLimit.older} loading={revisionQ.fetching} />
+          ) : null}
         </Card>
         </QueryGate>
 

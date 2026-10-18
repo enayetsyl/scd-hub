@@ -33,7 +33,7 @@ import {
   dateOnlyISO,
   entryActiveOn,
 } from "../assignmentCalendar";
-import { isTerminalState } from "../lifecycle";
+import { isTerminalState, TERMINAL_STATES } from "../lifecycle";
 
 // D-#34 figures (reused; AS-T5): chase 2 → attention list, 3 → parent-comms prompt.
 const CHASE_ATTENTION_THRESHOLD = 2;
@@ -284,13 +284,28 @@ export interface ChildAssignmentEntry {
 export async function childAssignments(
   studentId: string,
   asOf: Date = new Date(),
-  page?: { limit?: number | null; offset?: number | null },
+  page?: { limit?: number | null; offset?: number | null; outstandingOnly?: boolean | null },
 ): Promise<ChildAssignmentEntry[]> {
-  let q = AssignmentStudentRecord.find({ studentId }).sort({ createdAt: -1 });
+  // D-#761: `outstandingOnly` reads OPEN records only (a few, however long the history)
+  // and keeps the rows the family still has to act on — the করতে হবে rule below.
+  const filter: Record<string, unknown> = { studentId };
+  if (page?.outstandingOnly) filter.state = { $nin: [...TERMINAL_STATES] };
+  let q = AssignmentStudentRecord.find(filter).sort({ createdAt: -1 });
   if (page?.offset != null && page.offset > 0) q = q.skip(page.offset);
   if (page?.limit != null && page.limit > 0) q = q.limit(page.limit);
   const records = (await q.lean()) as unknown as RecordLean[];
   if (records.length === 0) return [];
+  const entries = await buildChildAssignmentEntries(records, asOf);
+  return page?.outstandingOnly ? entries.filter(isOutstandingAssignment) : entries;
+}
+
+/** The guardian "still to do" rule for an assignment row — being chased, or pending and
+ *  late. The same predicate the app's করতে হবে card and GP-10 pending list apply. */
+export function isOutstandingAssignment(a: Pick<ChildAssignmentEntry, "state" | "pending" | "daysLate">): boolean {
+  return a.state === "CHASE" || (a.pending && a.daysLate > 0);
+}
+
+async function buildChildAssignmentEntries(records: RecordLean[], asOf: Date): Promise<ChildAssignmentEntry[]> {
 
   const itemIds = [...new Set(records.map((r) => r.asItemId.toString()))];
   const items = (await AssignmentItem.find({ _id: { $in: itemIds } }).lean()) as unknown as IAssignmentItem[];

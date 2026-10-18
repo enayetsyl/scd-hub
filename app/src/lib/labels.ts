@@ -2060,6 +2060,7 @@ const STR_BN = {
   gpLoadOlder: "আরও পুরোনো দেখুন",
   gpLoadingOlder: "লোড হচ্ছে…",
   gpNoOlder: "আর পুরোনো তথ্য নেই",
+  gpSeeAll: "সব দেখুন ›", // D-#761
   gpShowingSince: "দেখানো হচ্ছে",
   gpRangeTooWide: "একবারে সর্বোচ্চ ৩ মাসের তথ্য দেখা যায়",
   gpHwGivenTitle: "এই দিনের বাড়ির কাজ",
@@ -7227,6 +7228,7 @@ const STR_EN: StrTable = {
   gpLoadOlder: "Show older",
   gpLoadingOlder: "Loading…",
   gpNoOlder: "No older records",
+  gpSeeAll: "See all ›", // D-#761
   gpShowingSince: "Showing from",
   gpRangeTooWide: "At most 3 months can be shown at once",
   gpHwGivenTitle: "Homework given this day",

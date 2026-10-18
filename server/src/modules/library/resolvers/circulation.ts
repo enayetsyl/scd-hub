@@ -447,15 +447,20 @@ builder.queryField("loans", (t) =>
 builder.queryField("borrowerLoans", (t) =>
   t.field({
     type: [BookLoanRef],
-    description: "One borrower's loans, newest first (desk view). Librarian gate.",
+    description:
+      "One borrower's loans, newest first (desk view). Librarian gate. activeOnly (D-#761) keeps " +
+      "only the books still out; omitted = the whole loan history, as before.",
     authScopes: { hasPermission: "library:read" },
     args: {
       borrowerType: t.arg.string({ required: true }),
       borrowerId: t.arg.string({ required: true }),
+      activeOnly: t.arg.boolean({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
       await assertIsLibrarian(ctx);
-      const rows = await borrowerLoans(parseBorrowerArgs(args.borrowerType, args.borrowerId));
+      const rows = await borrowerLoans(parseBorrowerArgs(args.borrowerType, args.borrowerId), {
+        activeOnly: args.activeOnly,
+      });
       return decorateLoans(rows as unknown as LoanShape[]);
     },
   }),
@@ -464,10 +469,13 @@ builder.queryField("borrowerLoans", (t) =>
 builder.queryField("myLoans", (t) =>
   t.field({
     type: [BookLoanRef],
-    description: "The calling staff member's own loans (own-row; J5-style self view).",
+    description:
+      "The calling staff member's own loans (own-row; J5-style self view). activeOnly (D-#761) keeps " +
+      "only the books still out; omitted = the whole loan history, as before.",
     authScopes: { hasPermission: "library:read" },
-    resolve: async (_root, _args, ctx) => {
-      const rows = await borrowerLoans({ type: "STAFF", id: ctx.auth!.userId });
+    args: { activeOnly: t.arg.boolean({ required: false }) },
+    resolve: async (_root, args, ctx) => {
+      const rows = await borrowerLoans({ type: "STAFF", id: ctx.auth!.userId }, { activeOnly: args.activeOnly });
       return decorateLoans(rows as unknown as LoanShape[]);
     },
   }),
