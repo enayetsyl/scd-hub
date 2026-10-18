@@ -2,6 +2,10 @@
 
 - 2026-10-18 (cont. 2): **BUILT — leave list refreshes on mobile; cover cards name Arabic/Quran-on-section periods (D-#763).** Owner reports: an applied leave showed on web but not on the phone; a Nursery P6 cover card said "Class/Section". (1) `LeaveAdminScreen` is `cache-and-network` and re-asks on focus and on app resume (it was cache-first with no refresh, so a long-lived phone kept the pre-application list). (2) `staffCoverSlots` / `needsCoverSlots` gain `routineSubject` (the routine slot's code, batch-read at display time, so existing slots fix too); the cover card and the needs-cover inbox fall back to its label when the code has no foundation Subject. Gate: server + app `tsc` 0; 9 HR/cover suites 166/166 (new needsCoverSlots case); /verify on in-memory Mongo + expo web: 6/6 (return-visit and resume both show a leave added meanwhile; card reads আরবি, no শ্রেণি/শাখা).
   **Now / next:** PR → `dev`. Promotion carries D-#761 too (paging sweep, awaiting owner check) — confirm before promoting; then OTA (app + server).
+- 2026-10-18 (cont. 2): **LIVE + OTA — paging for every growing list, silent caps removed, paging-from-the-start rule (D-#761).**
+  - **Path to prod:** #1059 → dev (`5a183854`). The first promotion attempt (#1060) failed its gate on a timing-dependent test fixture (Student `schoolId` unset), fixed in #1063 (`66aee75f`). #1060 then merged to main (`b6645fb0`); prod deploy green, prod web + `/healthz` 200, prod schema serves `NotificationPage`.
+  - **OTA:** group `d0871af5` (runtime 1.1.0, commit b6645fb0). Bundle: prod URL 1, localhost 0. Sourcemaps uploaded. The prior OTA f06d1571 (#1057, D-#762, published by another session) was ancestor-checked.
+  - **Now / next:** owners check the paged screens on their phones after a cold start. Note: guardian home cards now show the newest 5. Agent worktrees C:/w/pg1..pg6 removed.
 - 2026-10-18 (cont.): **BUILT — paging sweep (D-#761). Branch `feat/pagination-sweep` (worktree `C:/w/tsum`).**
   - **Owner ask:** page every list that grows, fix the silent caps and the two bugs, and make paging-from-the-start a rule.
   - **Audit:** 4 read-only agents found about 50 lists.
