@@ -3,7 +3,15 @@
  * fallback. Covers the server helper and the app's mirror (pure module, no RN).
  */
 import { personName } from "../lib/personName";
-import { personName as appPersonName, personNameAlt } from "../../../app/src/lib/personName";
+
+// The app module sits outside the server's rootDir, so it is required, not imported
+// (the attachRows / childClassTests convention).
+type Named = { name?: string | null; nameBn?: string | null };
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { personName: appPersonName, personNameAlt } = require("../../../app/src/lib/personName") as {
+  personName: (p: Named | null | undefined, fallback?: string) => string;
+  personNameAlt: (p: Named | null | undefined) => string | null;
+};
 
 describe("personName (D-#764)", () => {
   test.each([
