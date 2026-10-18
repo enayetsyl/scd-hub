@@ -1,5 +1,6 @@
 # STATUS
 
+- 2026-10-18 (cont. 7): **VM — origin lockdown COMPLETE (D-#767): ufw allows 80/443 only from Cloudflare (22 ranges).** Verified: direct 80/443 blocked; prod/dev/GlitchTip 200 through Cloudflare; SSH + caddy/prod/dev services up. A new Cloudflare range must be added to BOTH ufw and the Caddyfile `trusted_proxies`. Owner: delete the `dev.scdhub` DNS record.
 - 2026-10-18 (cont. 6): **VM — origin lockdown done (D-#767) except the optional ufw allowlist.**
   - **Dev URL is now `https://scdhub-dev.<domain>`** (same password).
   - Origin CA cert + Global Authenticated Origin Pulls; every host direct to the VM IP fails the TLS handshake.
