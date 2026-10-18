@@ -1,5 +1,9 @@
 # STATUS
 
+- 2026-10-18 (cont. 4): **LIVE — login lockout (D-#765) + GraphiQL/introspection off (D-#766). #1072 → dev (`aa8cd56b`, dev deploy green); reached prod in the #1073 promotion (`6a4411f6`, prod deploy green). Server-only, no OTA.**
+  - **Prod verified:** web 200, `/healthz` ok, GraphiQL gone, introspection refused, `__typename` + login work. The lockout itself was not exercised on prod, because that would lock a real account; it is covered by `loginThrottle.test.ts`.
+  - **Open:** the dev server runs `NODE_ENV=development` (systemd unit + `.env`), so the PUBLIC dev API still serves GraphiQL/introspection and Yoga dev-mode error detail. Fix = set dev to `production` (dev already pins `SENTRY_ENVIRONMENT=development`, so GlitchTip tagging is unaffected); awaiting owner OK.
+  - **Next:** docs/origin-lockdown-plan.md (own session; its step 0 fixes deploy.sh source-map upload to the dead `errors.scdhub` host).
 - 2026-10-18 (cont. 3): **BUILT — login lockout (D-#765) + API developer tools off on live servers (D-#766). Branch `fix/auth-hardening` (worktree `C:/w/auth-hardening`). VM Caddy headers + `X-Real-IP` are ALREADY LIVE (applied directly, backup `Caddyfile.bak-20261018-d765`).**
   - **Owner ask:** after a Cloudflare "728 threats" upsell email: is it danger? The review found only WordPress/React-RCE probes, all blocked. The owner then asked to close the real gaps.
   - **Lockout:** 5 wrong passwords per account → 2 h; 30 per network address → 2 h (school Wi-Fi / carrier shared IPs); a reset from the credentials screens lifts an account block.
