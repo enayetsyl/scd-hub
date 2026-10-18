@@ -120,3 +120,29 @@ in substance. It is ticked so the next paper does not print the same task again.
 Its other writing prompts — a letter describing the neighbourhood library, an email about a
 biography, and the compositions *Our School Library* and *A Visit to a Library* — are outside the
 bank and leave every composition row free.
+
+---
+
+## Extension from the পাঞ্জেরী guide — owner decision 2026-10-18
+
+**State after Units 5–7 (2026-09-23), not ticked above at the time:** Unit 5 took letter 4, application 5, email 4 and compositions 7 + 8; Unit 6 took letter 5, email 5 and composition 9 (13.b a repeat); Unit 7 took letter 6 (13.b/13.c repeats, no composition). Applications, emails and compositions were then empty.
+
+On 2026-10-18 the owner chose to **extend the bank from the whole transcribed guide** (`scholarship/C5 English Guide md/`) for Units 8–20: unused bank letters 7–13 first, then guide letters; five new guide applications and emails, then the repeats authorised 2026-09-23; nine new guide compositions (one form printed per paper). When compositions ran out, the owner had four papers repeat the guide's সুপার সাজেশন compositions.
+
+| Unit | 13.a letter | 13.b application | 13.c email | 14 composition |
+|--:|---|---|---|---|
+| 8 | bank 7 | guide A4 | guide E4 | guide C1 — Your Aim in Life |
+| 9 | bank 8 | guide A5 | guide E5 | guide C2 — The Liberation War of Bangladesh |
+| 10 | bank 9 | guide A7 | guide E7 | guide C5 — Your Favourite Sport (with the guide's cue questions) |
+| 11 | bank 10 | guide A8 | guide E9 | guide C8 — A Journey by Train |
+| 12 | bank 11 | guide A9 | guide E10 | guide C13 — Your Visit to a Historical Place |
+| 13 | bank 12 | bank 1 (repeat) | bank 1 (repeat) | guide C9 — Physical Exercise |
+| 14 | bank 13 | bank 2 (repeat) | bank 2 (repeat) | guide C14 — Newspaper |
+| 15 | guide L4 | bank 3 (repeat) | bank 3 (repeat) | guide C16 — Your Experience of a Great Day |
+| 16 | guide L15 | bank 4 (repeat) | bank 4 (repeat) | guide C4 — A field trip you enjoyed (সুপার সাজেশন repeat; 14.b with cues) |
+| 17 | guide L16 | bank 5 (repeat) | bank 5 (repeat) | guide C12 — Your First Day at School (সুপার সাজেশন repeat) |
+| 18 | guide L18 | guide A4 (repeat) | guide E5 (repeat) | guide C17 — Your Birthday Party |
+| 19 | guide L21 | guide A5 (repeat) | guide E7 (repeat) | guide C18 — The Tourist Spots in Bangladesh (সুপার সাজেশন repeat) |
+| 20 | guide L22 | guide A7 (repeat) | guide E9 (repeat) | guide C6 — Your Favourite Hobby (সুপার সাজেশন repeat) |
+
+Guide rows: L = letter, A = application, E = email, C = composition, numbered as in `C5_ENG_GUIDE_10/11`. Unused in the guide: letter 23 (return a book); every new application and email row is now spent once.
