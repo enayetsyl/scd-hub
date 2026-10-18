@@ -41,6 +41,7 @@ import {
 } from "../../components/ui";
 import { StaffSelect, AcademicYearSelect } from "../../components/selects";
 import { DateField } from "../../components/DateField";
+import { EndLeaveEarly } from "../../components/EndLeaveEarly";
 import { STR, bnNum, leaveTypeLabel, leaveStatusLabel, leavePartialSummary } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useConfirm } from "../../state/ConfirmContext";
@@ -264,6 +265,19 @@ export default function LeaveAdminScreen({ navigation }: Props): React.ReactElem
                 title={STR.hrLeaveManageCover}
                 variant="secondary"
                 onPress={() => navigation.navigate("LeaveCover", { leaveApplicationId: a.id, title: leaveTypeLabel(a.leaveType), manage: true })}
+              />
+              <EndLeaveEarly
+                leave={a}
+                disabled={busy}
+                onDone={(m) => {
+                  setError(null);
+                  setOk(m);
+                  refetchApps({ requestPolicy: "network-only" });
+                }}
+                onError={(m) => {
+                  setOk(null);
+                  setError(m);
+                }}
               />
             </View>
           </Card>

@@ -566,6 +566,29 @@ export async function revokeCoversForLeave(leaveApplicationId: string, actorId: 
   return revoked;
 }
 
+/**
+ * The early-return half of revokeCoversForLeave (endLeaveEarly, owner 2026-10-18):
+ * release every cover this leave holds from `fromKey` on, then DELETE those slots —
+ * the teacher is back, so the meetings no longer need anyone. Kept as needs_cover they
+ * would show in the needs-cover inbox, whose query reads slot status, not the leave's
+ * new last day. Earlier dates are untouched: those absences happened. Returns how many
+ * slots were removed.
+ */
+export async function releaseCoversFrom(leaveApplicationId: string, fromKey: string, actorId: string): Promise<number> {
+  const slots = await StaffCoverSlot.find({
+    leaveApplicationId: new Types.ObjectId(leaveApplicationId),
+    dateKey: { $gte: fromKey },
+  });
+  for (const slot of slots) {
+    if (slot.proxyGrantId) await revokeProxy(slot.proxyGrantId.toString(), actorId);
+    if (slot.status === "approved" && slot.finalCoverTeacherUserId) {
+      await dropSubstitutionUnlessStillCovered(slot);
+    }
+    await StaffCoverSlot.deleteOne({ _id: slot._id });
+  }
+  return slots.length;
+}
+
 /** Delete an approved slot's RoutineSubstitution (as decideCoverSlot's reject does) —
  *  unless another LIVE leave's approved slot puts the same teacher on the same meeting.
  *  The substitution is keyed (routine slot, date, cover teacher), so when a leave is

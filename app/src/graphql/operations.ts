@@ -6970,6 +6970,19 @@ export const DECIDE_STAFF_LEAVE = gql<
   }
 `;
 
+/** The staff member came back early: end the leave the day before `returnKey` and release
+*  the cover from then on (owner 2026-10-18). */
+export const END_STAFF_LEAVE_EARLY = gql<
+  { endStaffLeaveEarly: StaffLeaveT },
+  { applicationId: string; returnKey: string }
+>`
+  mutation EndStaffLeaveEarly($applicationId: String!, $returnKey: String!) {
+    endStaffLeaveEarly(applicationId: $applicationId, returnKey: $returnKey) {
+      ${STAFF_LEAVE_FIELDS}
+    }
+  }
+`;
+
 /** Pending leave applications awaiting approval — the Staff drawer badge (owner 2026-07-26). */
 export const STAFF_LEAVE_PENDING_COUNT = gql<{ staffLeavePendingCount: number }, Record<string, never>>`
   query StaffLeavePendingCount {

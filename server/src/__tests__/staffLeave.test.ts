@@ -23,6 +23,7 @@ const mockSlotCreate = jest.fn();
 const mockSlotFindById = jest.fn();
 const mockSlotFind = jest.fn();
 const mockSlotFindOne = jest.fn();
+const mockSlotDeleteOne = jest.fn().mockResolvedValue({});
 const mockGrantFind = jest.fn();
 const mockAssignProxy = jest.fn();
 const mockRevokeProxy = jest.fn().mockResolvedValue(undefined);
@@ -105,6 +106,7 @@ jest.mock("../modules/hr/models/StaffCoverSlot", () => ({
     findById: (id: unknown) => mockSlotFindById(id),
     find: (q: unknown) => mockSlotFind(q),
     findOne: (q: unknown) => ({ select: () => ({ lean: () => mockSlotFindOne(q) }) }),
+    deleteOne: (q: unknown) => mockSlotDeleteOne(q),
   },
 }));
 // SH-3 (D-#539/#540): decideLeave now reads the HR policy and, for probation leave,
@@ -182,6 +184,7 @@ import {
   staffLeaveCovers,
   applyForLeave,
   decideLeave,
+  endLeaveEarly,
 } from "../modules/hr/services/StaffLeaveService";
 import {
   fanOutCoverSlots,
@@ -583,6 +586,60 @@ describe("decideLeave", () => {
     expect(res.status).toBe("cancelled");
     expect(mockRevokeProxy).toHaveBeenCalledWith(grantId.toString(), ACTOR); // captured before the service nulls it
     expect(slot.proxyGrantId).toBeNull();
+  });
+
+  // --- early return (owner 2026-10-18: back on the 18th from a leave to the 19th) ---
+  describe("endLeaveEarly", () => {
+    test("shortens to the day before return, re-stamps the split, releases later covers", async () => {
+      const app = leaveDoc({ leaveType: "maternity", fromKey: "2026-10-15", toKey: "2026-10-19", days: 5, status: "approved", paidDays: 0, unpaidDays: 5 });
+      confirmedStaff();
+      mockLeaveFindById.mockResolvedValue(app);
+      const grantId = oid();
+      const covered = { _id: oid(), dateKey: "2026-10-18", proxyGrantId: grantId, status: "approved", finalCoverTeacherUserId: oid(), routineSlotId: oid() };
+      const open = { _id: oid(), dateKey: "2026-10-19", proxyGrantId: null, status: "needs_cover" };
+      // The release query asks for dateKey ≥ return; the substitution check (exact
+      // dateKey) finds no other cover on the meeting.
+      mockSlotFind.mockImplementation((q: { dateKey?: unknown }) =>
+        typeof q.dateKey === "object" ? Promise.resolve([covered, open]) : leanChain([]),
+      );
+      const res = await endLeaveEarly(app._id.toString(), "2026-10-18", ACTOR);
+      expect(res.toKey).toBe("2026-10-17");
+      expect(res.days).toBe(3);
+      expect(res.unpaidDays).toBe(3); // maternity is wholly unpaid — on 3 days now, not 5
+      expect(res.status).toBe("approved");
+      // Only slots from the return date on were asked for.
+      expect(mockSlotFind).toHaveBeenCalledWith(expect.objectContaining({ dateKey: { $gte: "2026-10-18" } }));
+      expect(mockRevokeProxy).toHaveBeenCalledWith(grantId.toString(), ACTOR);
+      expect(mockSlotDeleteOne).toHaveBeenCalledTimes(2);
+      expect(app.save).toHaveBeenCalled();
+      expect(mockWriteAudit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventKind: "STAFF_LEAVE_ENDED_EARLY",
+          meta: expect.objectContaining({ returnKey: "2026-10-18", releasedSlots: 2, previous: expect.objectContaining({ toKey: "2026-10-19", days: 5 }) }),
+        }),
+      );
+    });
+
+    test("an applied (undecided) leave shortens without stamping a split", async () => {
+      const app = leaveDoc({ fromKey: "2026-10-15", toKey: "2026-10-19", days: 5, status: "applied" });
+      mockLeaveFindById.mockResolvedValue(app);
+      mockSlotFind.mockResolvedValue([]);
+      const res = await endLeaveEarly(app._id.toString(), "2026-10-16", ACTOR);
+      expect(res.toKey).toBe("2026-10-15");
+      expect(res.days).toBe(1);
+      expect(res.paidDays).toBeUndefined();
+    });
+
+    test.each([
+      ["on the first day (that is a cancel)", { fromKey: "2026-10-15", toKey: "2026-10-19" }, "2026-10-15", /cancel/],
+      ["after the last day", { fromKey: "2026-10-15", toKey: "2026-10-19" }, "2026-10-20", /nothing to shorten/],
+      ["a partial day", { fromKey: "2026-10-15", toKey: "2026-10-15", dayPart: "late_entry" }, "2026-10-16", /partial-day/],
+      ["a cancelled leave", { fromKey: "2026-10-15", toKey: "2026-10-19", status: "cancelled" }, "2026-10-17", /applied or approved/],
+    ])("refuses %s", async (_label, over, returnKey, msg) => {
+      mockLeaveFindById.mockResolvedValue(leaveDoc({ status: "approved", ...over }));
+      await expect(endLeaveEarly(oid().toString(), returnKey, ACTOR)).rejects.toThrow(msg);
+      expect(mockSlotDeleteOne).not.toHaveBeenCalled();
+    });
   });
 
   // --- SH-3 / D-#540: probation leave is HELD, not paid and not deducted -------

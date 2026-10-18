@@ -41,6 +41,7 @@ import { STR, bnNum, leaveTypeLabel, leaveStatusLabel, leaveDayPartLabel, leaveP
 import { friendlyError } from "../../lib/errors";
 import { useConfirm } from "../../state/ConfirmContext";
 import { DateField } from "../../components/DateField";
+import { EndLeaveEarly } from "../../components/EndLeaveEarly";
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<HrStackParamList, "MyLeave">;
@@ -278,6 +279,19 @@ export default function MyLeaveScreen({ navigation }: Props): React.ReactElement
               {a.status === "applied" || a.status === "approved" ? (
                 <Button title={STR.hrLeaveCancel} variant="danger" onPress={() => cancel(a)} disabled={busy} />
               ) : null}
+              <EndLeaveEarly
+                leave={a}
+                disabled={busy}
+                onDone={(m) => {
+                  setError(null);
+                  setOk(m);
+                  refetchLeave({ requestPolicy: "network-only" });
+                }}
+                onError={(m) => {
+                  setOk(null);
+                  setError(m);
+                }}
+              />
             </View>
           </Card>
         ))

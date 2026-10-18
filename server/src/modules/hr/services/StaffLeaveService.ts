@@ -45,7 +45,7 @@ import {
   recordProbationDebt,
   clearProbationDebt,
 } from "./ProbationDebtService";
-import { fanOutCoverSlots, revokeCoversForLeave, resolvePartialPeriods } from "./CoverService";
+import { fanOutCoverSlots, revokeCoversForLeave, releaseCoversFrom, resolvePartialPeriods } from "./CoverService";
 import { emitStaffLeaveSubmitted } from "../../notifications/services/emitters";
 import { POOLED_LEAVE_TYPES } from "@scd/shared";
 import { bnNum } from "../../../lib/bnNum";
@@ -239,62 +239,8 @@ export async function decideLeave(
   if (!app) throw new LeaveError("Leave application not found");
 
   if (decision === "approve") {
-    const rules = LEAVE_TYPE_RULES[app.leaveType];
-
-    // --- SH-3 / D-#540: probation leave is HELD, not paid and not deducted --------
-    // The pivot is the leave's own start date against confirmationDate, never the
-    // live employmentStatus — see ProbationDebtService for why.
-    const policy = await getHrPolicy();
-    const onProbation =
-      policy.probationDebtEnabled &&
-      rules.balanceTracked &&
-      (await isProbationLeaveForStaff(app.staffProfileId, app.fromKey));
-
-    if (onProbation) {
-      app.status = "approved";
-      app.paidDays = 0;
-      app.unpaidDays = app.days;
-      app.exceedWarning = null;
-      // HELD, not payable now (D-#540). Without this, payroll's unpaid-leave line
-      // would dock these very days this month AND the ledger would collect them
-      // again at confirmation — the same absence charged twice.
-      app.probationHeld = true;
-      await recordProbationDebt({
-        staffProfileId: app.staffProfileId,
-        leaveApplicationId: app._id,
-        fromKey: app.fromKey,
-        leaveType: app.leaveType,
-        days: app.days,
-      });
-    } else {
-      let remaining = 0;
-      if (rules.balanceTracked && app.academicYearId) {
-        // D-#539: the pooled types share ONE allowance, so the balance this leave
-        // draws is the pool's — not this type's own row. Non-pooled balance-tracked
-        // types (none today, but the enum may grow) keep the per-type path.
-        remaining = (POOLED_LEAVE_TYPES as readonly LeaveType[]).includes(app.leaveType)
-          ? await pooledRemainingExcluding(
-              app.staffProfileId.toString(),
-              app.academicYearId.toString(),
-              app._id.toString(),
-            )
-          : await perTypeRemainingExcluding(
-              app.staffProfileId.toString(),
-              app.academicYearId.toString(),
-              app.leaveType,
-              app._id.toString(),
-            );
-      }
-      const split = splitLeaveDays(app.leaveType, app.days, remaining);
-      app.status = "approved";
-      app.paidDays = split.paidDays;
-      app.unpaidDays = split.unpaidDays;
-      app.exceedWarning = split.exceedWarning;
-      // Cleared explicitly: re-approving a leave that was previously held (the staff
-      // member has since been confirmed) must make its unpaid days payable again.
-      app.probationHeld = false;
-      await clearProbationDebt(app._id);
-    }
+    app.status = "approved";
+    await stampApprovalSplit(app);
   } else {
     app.status = decision === "reject" ? "rejected" : "cancelled";
     // Pull back any live cover write-access for a leave that is no longer happening.
@@ -318,6 +264,135 @@ export async function decideLeave(
       status: app.status,
       paidDays: app.paidDays ?? null,
       unpaidDays: app.unpaidDays ?? null,
+    },
+  });
+  return app;
+}
+
+/**
+ * Stamp an approved leave's paid/unpaid split from its CURRENT `days` (caller saves).
+ * Shared by approval and by endLeaveEarly, which re-runs it after shortening the span —
+ * the split must follow the days actually taken, or payroll docks days the staff member worked.
+ */
+async function stampApprovalSplit(app: IStaffLeaveApplication): Promise<void> {
+  const rules = LEAVE_TYPE_RULES[app.leaveType];
+
+  // --- SH-3 / D-#540: probation leave is HELD, not paid and not deducted --------
+  // The pivot is the leave's own start date against confirmationDate, never the
+  // live employmentStatus — see ProbationDebtService for why.
+  const policy = await getHrPolicy();
+  const onProbation =
+    policy.probationDebtEnabled &&
+    rules.balanceTracked &&
+    (await isProbationLeaveForStaff(app.staffProfileId, app.fromKey));
+
+  if (onProbation) {
+    app.paidDays = 0;
+    app.unpaidDays = app.days;
+    app.exceedWarning = null;
+    // HELD, not payable now (D-#540). Without this, payroll's unpaid-leave line
+    // would dock these very days this month AND the ledger would collect them
+    // again at confirmation — the same absence charged twice.
+    app.probationHeld = true;
+    await recordProbationDebt({
+      staffProfileId: app.staffProfileId,
+      leaveApplicationId: app._id,
+      fromKey: app.fromKey,
+      leaveType: app.leaveType,
+      days: app.days,
+    });
+    return;
+  }
+
+  let remaining = 0;
+  if (rules.balanceTracked && app.academicYearId) {
+    // D-#539: the pooled types share ONE allowance, so the balance this leave
+    // draws is the pool's — not this type's own row. Non-pooled balance-tracked
+    // types (none today, but the enum may grow) keep the per-type path.
+    remaining = (POOLED_LEAVE_TYPES as readonly LeaveType[]).includes(app.leaveType)
+      ? await pooledRemainingExcluding(
+          app.staffProfileId.toString(),
+          app.academicYearId.toString(),
+          app._id.toString(),
+        )
+      : await perTypeRemainingExcluding(
+          app.staffProfileId.toString(),
+          app.academicYearId.toString(),
+          app.leaveType,
+          app._id.toString(),
+        );
+  }
+  const split = splitLeaveDays(app.leaveType, app.days, remaining);
+  app.paidDays = split.paidDays;
+  app.unpaidDays = split.unpaidDays;
+  app.exceedWarning = split.exceedWarning;
+  // Cleared explicitly: re-approving a leave that was previously held (the staff
+  // member has since been confirmed) must make its unpaid days payable again.
+  app.probationHeld = false;
+  await clearProbationDebt(app._id);
+}
+
+// --- early return ----------------------------------------------------------
+
+/**
+ * The staff member came back before the leave's last day (owner 2026-10-18: Fida was
+ * on leave to the 19th, rejoined on the 18th, and could not be given a proxy class —
+ * every cover picker still read her as out). Ends the leave on the day BEFORE
+ * `returnKey`:
+ *   - `toKey` / `days` shrink, so the cover pickers, the class board and the
+ *     biometric ✘→LEAVE overlay all see her as present from `returnKey` on;
+ *   - an approved leave's paid/unpaid split is re-stamped from the shorter span, so
+ *     payroll does not dock (and the balance does not draw) days she worked;
+ *   - every cover slot dated `returnKey` or later is released — proxy grant revoked,
+ *     routine substitution dropped — and deleted, since that class meeting is no
+ *     longer losing its teacher (left as needs_cover it would sit in the inbox).
+ * Only a live (applied/approved) FULL-DAY leave can be ended early, and only to a date
+ * strictly inside it: returning on or before the first day is a cancellation, and a
+ * partial day (D-#361) is one date, so cancel is the path for both.
+ */
+export async function endLeaveEarly(
+  applicationId: string,
+  returnKey: string,
+  actorId: string,
+): Promise<IStaffLeaveApplication> {
+  const app = await StaffLeaveApplication.findById(applicationId);
+  if (!app) throw new LeaveError("Leave application not found");
+  if (app.status !== "applied" && app.status !== "approved") {
+    throw new LeaveError("Only an applied or approved leave can be ended early");
+  }
+  if ((app.dayPart ?? "full") !== "full") {
+    throw new LeaveError("A partial-day leave covers one date — cancel it instead");
+  }
+  parseDateKey(returnKey);
+  if (returnKey <= app.fromKey) {
+    throw new LeaveError("The return date is on or before the leave's first day — cancel the leave instead");
+  }
+  if (returnKey > app.toKey) {
+    throw new LeaveError("The return date is after the leave's last day — nothing to shorten");
+  }
+
+  const previous = { toKey: app.toKey, days: app.days, paidDays: app.paidDays ?? null, unpaidDays: app.unpaidDays ?? null };
+  const releasedSlots = await releaseCoversFrom(app._id.toString(), returnKey, actorId);
+
+  app.toKey = new Date(parseDateKey(returnKey).getTime() - 86_400_000).toISOString().slice(0, 10);
+  app.days = countLeaveDays(app.fromKey, app.toKey);
+  if (app.status === "approved") await stampApprovalSplit(app);
+  await app.save();
+
+  await writeAudit({
+    eventKind: "STAFF_LEAVE_ENDED_EARLY",
+    actorId,
+    targetId: app._id,
+    targetKind: "StaffLeaveApplication",
+    meta: {
+      staffProfileId: app.staffProfileId.toString(),
+      returnKey,
+      previous,
+      toKey: app.toKey,
+      days: app.days,
+      paidDays: app.paidDays ?? null,
+      unpaidDays: app.unpaidDays ?? null,
+      releasedSlots,
     },
   });
   return app;

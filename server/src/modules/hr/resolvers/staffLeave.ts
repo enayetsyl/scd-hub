@@ -20,6 +20,7 @@ import type { AppContext } from "../../../context";
 import {
   applyForLeave,
   decideLeave,
+  endLeaveEarly,
   leaveForStaff,
   listLeave,
   type LeaveDecision,
@@ -263,6 +264,31 @@ builder.mutationField("decideStaffLeave", (t) =>
         }
       }
       return decideLeave(args.applicationId, decision, ctx.auth!.userId, args.note ?? undefined) as unknown as Promise<LeaveShape>;
+    },
+  }),
+);
+
+builder.mutationField("endStaffLeaveEarly", (t) =>
+  t.field({
+    type: StaffLeaveRef,
+    description:
+      "The staff member came back before the leave's last day: end the leave on the day before " +
+      "`returnKey`, re-stamp an approved leave's paid/unpaid split from the shorter span, and " +
+      "release + remove every cover slot from `returnKey` on (owner 2026-10-18). The applicant " +
+      "(own-row) or Principal/Office (leave:manage) may do it — same gate as cancel. Audited.",
+    authScopes: { authenticated: true },
+    args: {
+      applicationId: t.arg.string({ required: true }),
+      returnKey: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!hasManage(ctx)) {
+        const app = await StaffLeaveApplication.findById(args.applicationId).select("staffProfileId").lean();
+        if (!app || app.staffProfileId.toString() !== (await callerStaffProfileId(ctx))) {
+          throw new ForbiddenError("You may only end your own leave early");
+        }
+      }
+      return endLeaveEarly(args.applicationId, args.returnKey, ctx.auth!.userId) as unknown as Promise<LeaveShape>;
     },
   }),
 );
