@@ -11,7 +11,8 @@ import type { AppContext } from "../../../context";
 import { ForbiddenError } from "../../../middleware/authz";
 import { BUILD_SCOPES, type BuildScope } from "@scd/shared";
 import { BookBuildJob } from "../models/BookBuildJob";
-import { assemblyGate, queueBuild, materializeBookJson } from "../services/BookBuildService";
+import { assemblyGate, queueBuild, materializeBookJson, buildJobsPage } from "../services/BookBuildService";
+import { pageRef } from "../../../pageRef";
 import { writeAudit } from "../../platform/services/AuditService";
 import { isBookDbReady } from "../../../bookDb";
 
@@ -105,6 +106,27 @@ builder.queryField("supportBookBuildJobs", (t) =>
         .limit(Math.min(args.limit ?? 25, 100))
         .lean();
       return rows.map((j) => toJob(j as unknown as Record<string, unknown>));
+    },
+  }),
+);
+
+// D-#761: the render history, paged — `supportBookBuildJobs` stops at its newest 25.
+const JobPageRef = pageRef("SupportBookBuildJobPage", JobRef);
+
+builder.queryField("supportBookBuildJobsPage", (t) =>
+  t.field({
+    type: JobPageRef,
+    description: "A book's render history, newest first, one page at a time (D-#761). Requires book:read.",
+    authScopes: { hasPermission: "book:read" },
+    args: {
+      bookId: t.arg.string({ required: true }),
+      page: t.arg.int({ required: false }),
+      pageSize: t.arg.int({ required: false }),
+    },
+    resolve: async (_root, args) => {
+      assertBookPlane();
+      const page = await buildJobsPage(args.bookId, args);
+      return { ...page, rows: page.rows.map((j) => toJob(j as unknown as Record<string, unknown>)) };
     },
   }),
 );

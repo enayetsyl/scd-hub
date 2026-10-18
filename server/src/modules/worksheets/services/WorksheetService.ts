@@ -28,6 +28,7 @@ import {
 } from "@scd/shared";
 import type { PrintPurpose, RosterClassLevel, RoutineSubject, WorksheetKind, WorksheetPictureUse } from "@scd/shared";
 import type { AppContext } from "../../../context";
+import { normalizePage, type Page, type PageArgs } from "../../../lib/paging";
 import { ForbiddenError } from "../../../middleware/authz";
 import { Class } from "../../foundation/models/Class";
 import { Section } from "../../foundation/models/Section";
@@ -629,15 +630,21 @@ export interface WorksheetListRow {
   printRequestId: string | null;
 }
 
+const LIST_ROW_FIELDS = "title kind subject classLevel totalMarks createdAt printRequestId";
+
 export async function myWorksheets(ctx: AppContext, limit = 30): Promise<WorksheetListRow[]> {
   assertCanGenerate(ctx);
   const me = new Types.ObjectId(ctx.auth!.userId as string);
   const rows = (await Worksheet.find({ $or: [{ createdBy: me }, { forTeacherId: me }] })
-    .select("title kind subject classLevel totalMarks createdAt printRequestId")
+    .select(LIST_ROW_FIELDS)
     .sort({ createdAt: -1 })
     .limit(Math.min(Math.max(limit, 1), 100))
     .lean()) as unknown as IWorksheet[];
-  return rows.map((w) => ({
+  return rows.map(toListRow);
+}
+
+function toListRow(w: IWorksheet): WorksheetListRow {
+  return {
     id: w._id.toString(),
     title: w.title,
     kind: w.kind,
@@ -646,7 +653,27 @@ export async function myWorksheets(ctx: AppContext, limit = 30): Promise<Workshe
     totalMarks: w.totalMarks,
     createdAt: w.createdAt,
     printRequestId: w.printRequestId?.toString() ?? null,
-  }));
+  };
+}
+
+/** D-#761: the same list, PAGED — `myWorksheets` stops at its newest N with no way past. */
+export async function myWorksheetsPage(ctx: AppContext, args: PageArgs): Promise<Page<WorksheetListRow>> {
+  assertCanGenerate(ctx);
+  const me = new Types.ObjectId(ctx.auth!.userId as string);
+  const filter = { $or: [{ createdBy: me }, { forTeacherId: me }] };
+  // Not `queryPage`: a worksheet carries its whole generated `doc`, so the list projects
+  // to the row fields the way `myWorksheets` always has.
+  const { page, pageSize, skip } = normalizePage(args);
+  const [rows, total] = await Promise.all([
+    Worksheet.find(filter)
+      .select(LIST_ROW_FIELDS)
+      .sort({ createdAt: -1, _id: -1 })
+      .skip(skip)
+      .limit(pageSize)
+      .lean() as unknown as Promise<IWorksheet[]>,
+    Worksheet.countDocuments(filter),
+  ]);
+  return { rows: rows.map(toListRow), total, page, pageSize };
 }
 
 // ---------------------------------------------------------------------------

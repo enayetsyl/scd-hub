@@ -236,6 +236,19 @@ export const MY_WORKSHEETS = gql<{ myWorksheets: WorksheetListRowT[] }, { limit?
   }
 `;
 
+/** D-#761: the same list, PAGED — `myWorksheets` stops at its newest N. */
+export const MY_WORKSHEETS_PAGE = gql<
+  { myWorksheetsPage: { rows: WorksheetListRowT[]; total: number; page: number; pageSize: number } },
+  { page?: number | null; pageSize?: number | null }
+>`
+  query MyWorksheetsPage($page: Int, $pageSize: Int) {
+    myWorksheetsPage(page: $page, pageSize: $pageSize) {
+      total page pageSize
+      rows { id title kind subject classLevel totalMarks createdAt printRequestId }
+    }
+  }
+`;
+
 export const WORKSHEET_TEACHERS = gql<
   { worksheetTeachers: Array<{ userId: string; name: string }> },
   { classId: string; subject: string }

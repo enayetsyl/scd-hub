@@ -15,6 +15,7 @@ import { SupportBookLesson } from "../models/SupportBookLesson";
 import { LessonPatch } from "../models/LessonPatch";
 import { writeBookEvent } from "../models/BookEvent";
 import { openComments } from "./BookCommentService";
+import { queryPage, type Page, type PageArgs } from "../../../lib/paging";
 
 export class ReviewRuleError extends Error {
   constructor(message: string) {
@@ -153,6 +154,22 @@ export async function submitReview(input: SubmitReviewInput): Promise<IBookRevie
  *  either; someone still has to apply the ruling. */
 export async function openEscalations(bookId: string, lessonNo: number): Promise<IBookEscalation[]> {
   return BookEscalation.find({ bookId, lessonNo, state: { $in: ["OPEN", "ANSWERED"] } }).lean<IBookEscalation[]>();
+}
+
+/**
+ * D-#761: the senior reviewer's inbox, one page at a time — still OLDEST FIRST (the
+ * thread waiting longest is the one blocking a lesson). `supportBookEscalations` returns
+ * every thread, which with "open only" off is the whole programme's history.
+ */
+export function escalationsPage(
+  filter: { bookId?: string | null; lessonNo?: number | null; openOnly?: boolean | null },
+  args: PageArgs,
+): Promise<Page<IBookEscalation>> {
+  const q: Record<string, unknown> = {};
+  if (filter.bookId) q.bookId = filter.bookId;
+  if (filter.lessonNo != null) q.lessonNo = filter.lessonNo;
+  if (filter.openOnly !== false) q.state = { $in: ["OPEN", "ANSWERED"] };
+  return queryPage(BookEscalation, q, { createdAt: 1, _id: 1 }, args, (docs) => docs as IBookEscalation[]);
 }
 
 export interface SignoffInput {
