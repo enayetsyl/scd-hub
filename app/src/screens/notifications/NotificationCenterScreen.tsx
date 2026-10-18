@@ -3,7 +3,8 @@
  * the 🔔 in every stack header (a root-level modal, so one screen serves every
  * tab and both staff + guardian sessions).
  *
- *   • newest-first (server order), unread-first (client partition)
+ *   • unread-first, newest-first within each — server-ordered and PAGED (D-#761), so an
+ *     older unread row is reachable instead of hiding past the newest 100
  *   • Bangla title/body + the kind label chip; unread rows highlighted
  *   • tap = markRead + deep-link to the row's surface (lib/notificationNav);
  *     mark-all-read button on top
@@ -16,7 +17,7 @@ import React, { useState } from "react";
 import { View, Text, FlatList, RefreshControl, Pressable } from "react-native";
 import { useMutation, useQuery } from "urql";
 import {
-  MY_NOTIFICATIONS_QUERY,
+  MY_NOTIFICATIONS_PAGE_QUERY,
   MARK_NOTIFICATION_READ,
   MARK_NOTIFICATIONS_READ,
   MARK_ALL_NOTIFICATIONS_READ,
@@ -25,6 +26,8 @@ import {
 import { useAuth } from "../../auth/AuthContext";
 import { useNotifications } from "../../state/NotificationContext";
 import { Screen, Card, Body, Muted, Badge, Button, Loader, EmptyState, ErrorBanner } from "../../components/ui";
+import { Pager } from "../../components/Pager";
+import { usePageState, PAGE_SIZE } from "../../lib/paging";
 import { STR, notificationKindLabel, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { usePullRefresh } from "../../lib/useRefresh";
@@ -51,14 +54,15 @@ function shortTime(iso: string): string {
 export default function NotificationCenterScreen({ navigation }: { navigation: RootNav }): React.ReactElement {
   useAuth();
   const colors = useColors();
-  const { refresh } = useNotifications();
+  const { refresh, unreadCount } = useNotifications();
   // GE-2: this screen serves staff and guardians alike; the hook itself no-ops for
   // any non-GUARDIAN session, so staff inbox opens never enter the family figures.
   useRecordView("NOTIFICATIONS");
 
+  const [page, setPage] = usePageState();
   const [{ data, fetching, error }, refetch] = useQuery({
-    query: MY_NOTIFICATIONS_QUERY,
-    variables: { limit: 100 },
+    query: MY_NOTIFICATIONS_PAGE_QUERY,
+    variables: { page, pageSize: PAGE_SIZE },
     requestPolicy: "cache-and-network",
   });
   const [, markRead] = useMutation(MARK_NOTIFICATION_READ);
@@ -68,10 +72,13 @@ export default function NotificationCenterScreen({ navigation }: { navigation: R
   // D-#307: the picked unread rows (checkbox multi-select).
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
-  const rows = data?.myNotifications ?? [];
-  // Server is newest-first; partition unread-first without losing that order.
-  const sorted = [...rows.filter((r) => !r.readAt), ...rows.filter((r) => !!r.readAt)];
-  const unread = rows.filter((r) => !r.readAt).length;
+  const rows = data?.myNotificationsPage.rows ?? [];
+  const total = data?.myNotificationsPage.total ?? 0;
+  // D-#761: the server already puts every unread row first (newest first), then the read
+  // ones — partitioning here would only sort within one page.
+  const sorted = rows;
+  // Mark-all stays on offer on a page of read rows while older pages still hold unread.
+  const unread = Math.max(rows.filter((r) => !r.readAt).length, unreadCount);
 
   const toggleSelect = (id: string) => {
     setSelected((prev) => {
@@ -155,6 +162,7 @@ export default function NotificationCenterScreen({ navigation }: { navigation: R
             <EmptyState message={STR.notifEmpty} />
           )
         }
+        ListFooterComponent={<Pager page={page} pageSize={PAGE_SIZE} total={total} onPage={setPage} />}
         renderItem={({ item: row }) => {
           const isUnread = !row.readAt;
           const isSelected = selected.has(row.id);

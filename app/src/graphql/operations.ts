@@ -6539,6 +6539,30 @@ export const MY_NOTIFICATIONS_QUERY = gql<
   }
 `;
 
+/** D-#761: the inbox, PAGED — every unread row first (newest first), then the read ones.
+ *  The server orders it, so an old unread row is reachable, not just counted by the 🔔. */
+export const MY_NOTIFICATIONS_PAGE_QUERY = gql<
+  { myNotificationsPage: { rows: NotificationT[]; total: number; page: number; pageSize: number } },
+  { page?: number | null; pageSize?: number | null }
+>`
+  query MyNotificationsPage($page: Int, $pageSize: Int) {
+    myNotificationsPage(page: $page, pageSize: $pageSize) {
+      total page pageSize
+      rows { ${NOTIFICATION_FIELDS} }
+    }
+  }
+`;
+
+/** D-#761: ONE own notification by id — the detail screen, so a deep link to an old row
+ *  opens it rather than nothing. Null when it is not the caller's. */
+export const MY_NOTIFICATION_QUERY = gql<{ myNotification: NotificationT | null }, { id: string }>`
+  query MyNotification($id: String!) {
+    myNotification(id: $id) {
+      ${NOTIFICATION_FIELDS}
+    }
+  }
+`;
+
 export const MY_UNREAD_NOTIFICATION_COUNT = gql<
   { myUnreadNotificationCount: number },
   NoVars
