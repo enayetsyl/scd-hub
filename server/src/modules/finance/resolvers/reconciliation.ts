@@ -12,10 +12,12 @@ import { type FinanceActor } from "../services/FinanceLedgerService";
 import {
   recordReconciliation,
   reconciliationHistory,
+  reconciliationHistoryPage,
   latestReconciliation,
   unreconciledDays,
 } from "../services/ReconciliationService";
 import type { IReconciliationEntry, ILedgerTriple } from "../models/ReconciliationEntry";
+import { pageRef } from "../../../pageRef";
 
 function actorOf(ctx: AppContext): FinanceActor {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
@@ -106,6 +108,24 @@ builder.queryField("reconciliationHistory", (t) =>
     authScopes: { hasPermission: "finance:manage" },
     args: { from: t.arg.string({ required: true }), to: t.arg.string({ required: true }) },
     resolve: (_root, args) => reconciliationHistory(args.from, args.to),
+  }),
+);
+
+// D-#761: the paged history the screen reads (the list above stays for released bundles).
+const ReconPageRef = pageRef("ReconciliationEntryPage", ReconRef);
+
+builder.queryField("reconciliationHistoryPage", (t) =>
+  t.field({
+    type: ReconPageRef,
+    description: "One page of the reconciliation history over [from, to], newest first (D-#761). Requires finance:manage.",
+    authScopes: { hasPermission: "finance:manage" },
+    args: {
+      from: t.arg.string({ required: true }),
+      to: t.arg.string({ required: true }),
+      page: t.arg.int({ required: false }),
+      pageSize: t.arg.int({ required: false }),
+    },
+    resolve: (_root, args) => reconciliationHistoryPage(args.from, args.to, args),
   }),
 );
 

@@ -30,6 +30,8 @@ import {
   submitObservation,
   observationsForStaff,
   observationsByObserver,
+  observationsForStaffPage,
+  observationsByObserverPage,
   upsertAppraisal,
   signOffAppraisal,
   appraisalsForStaff,
@@ -53,6 +55,7 @@ import type { IAppraisal } from "../models/Appraisal";
 import type { IConductRecord } from "../models/ConductRecord";
 import type { IGrievance } from "../models/Grievance";
 import type { IDevelopmentLog } from "../models/DevelopmentLog";
+import { pageRef } from "../../../pageRef";
 
 // ---------------------------------------------------------------------------
 // Gates / helpers
@@ -234,6 +237,37 @@ builder.queryField("staffObservations", (t) =>
     authScopes: { hasPermission: "performance:manage" },
     args: { staffProfileId: t.arg.string({ required: true }) },
     resolve: async (_root, args) => observationsForStaff(args.staffProfileId) as unknown as Promise<IObservation[]>,
+  }),
+);
+
+// D-#761: paged reads of the two lists above (each is all-time); the lists stay for
+// released bundles.
+const ObservationPageRef = pageRef("ObservationPage", ObservationRef);
+
+builder.queryField("myObservationsPage", (t) =>
+  t.field({
+    type: ObservationPageRef,
+    description: "One page of myObservations, newest first (D-#761). No permission.",
+    authScopes: { authenticated: true },
+    args: { page: t.arg.int({ required: false }), pageSize: t.arg.int({ required: false }) },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      return observationsByObserverPage(ctx.auth.userId, args);
+    },
+  }),
+);
+
+builder.queryField("staffObservationsPage", (t) =>
+  t.field({
+    type: ObservationPageRef,
+    description: "One page of staffObservations, newest first (D-#761). Requires performance:manage.",
+    authScopes: { hasPermission: "performance:manage" },
+    args: {
+      staffProfileId: t.arg.string({ required: true }),
+      page: t.arg.int({ required: false }),
+      pageSize: t.arg.int({ required: false }),
+    },
+    resolve: async (_root, args) => observationsForStaffPage(args.staffProfileId, args),
   }),
 );
 
