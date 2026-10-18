@@ -15,6 +15,7 @@
  * (routes/files.ts) — not GraphQL; the Drive id never reaches a client.
  */
 import { builder } from "../../../schema";
+import { pageRef } from "../../../pageRef";
 import type { AppContext } from "../../../context";
 import { callerHasPermission } from "@scd/shared";
 import type { Role } from "@scd/shared";
@@ -27,6 +28,7 @@ import {
   getClassTest as getClassTestSvc,
   listPrintQueue as listPrintQueueSvc,
   listMyClassTests as listMyClassTestsSvc,
+  listMyClassTestsPage as listMyClassTestsPageSvc,
   listClassTestsForSection as listForSectionSvc,
   retireClassTest as retireClassTestSvc,
   restoreClassTest as restoreClassTestSvc,
@@ -442,6 +444,23 @@ builder.queryField("myClassTests", (t) =>
     resolve: async (_root, _args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       return listMyClassTestsSvc(ctx.auth.userId as string);
+    },
+  }),
+);
+
+// D-#761: the hub's "my class tests" list, one page at a time (it is all-time, any
+// status). `myClassTests` stays for older bundles and the archive file-bundle picker.
+const ClassTestPageRef = pageRef("ClassTestPage", ClassTestRef);
+
+builder.queryField("myClassTestsPage", (t) =>
+  t.field({
+    type: ClassTestPageRef,
+    description: "One page of myClassTests (any status, newest first).",
+    authScopes: { hasPermission: "tracker:write" },
+    args: { page: t.arg.int({ required: false }), pageSize: t.arg.int({ required: false }) },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      return listMyClassTestsPageSvc(ctx.auth.userId as string, args);
     },
   }),
 );

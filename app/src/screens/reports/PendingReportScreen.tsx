@@ -19,6 +19,8 @@ import { RECON_REPORT_QUERY } from "../../graphql/operations";
 import type { ReportsStackParamList } from "../../navigation/types";
 import { Screen, H2, Body, Muted, Card, Badge, Loader, ErrorBanner } from "../../components/ui";
 import { useReportRange, useRowFilters } from "../../components/ReportFilters";
+import { Pager } from "../../components/Pager";
+import { usePagedRows } from "../../lib/paging";
 import { STR, bnNum, classLevelLabel, hwSubjectLabel, monthLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useColors } from "../../theme";
@@ -133,11 +135,16 @@ export default function PendingReportScreen({ route }: Props): React.ReactElemen
     ...(hasSubject ? { subjectOf: (r: Row) => r.subject ?? "" } : {}),
   });
 
+  // D-#761: a custom range has no upper limit — page the rows, then group within the
+  // page. The reset key carries the range and the filtered count (the filter state
+  // lives inside useRowFilters), so a new range or filter starts again at page 1.
+  const { shown, pager } = usePagedRows(filtered, { resetKey: `${kind}|${from}|${to}|${filtered.length}` });
+
   // Group by day/week, preserving server order (newest first).
   const groups: Array<[string, Row[]]> = [];
   {
     const map = new Map<string, Row[]>();
-    for (const r of filtered) {
+    for (const r of shown) {
       const list = map.get(r.groupKey);
       if (list) list.push(r);
       else {
@@ -208,6 +215,7 @@ export default function PendingReportScreen({ route }: Props): React.ReactElemen
           ))}
         </Card>
       ))}
+      <Pager {...pager} />
     </Screen>
   );
 }

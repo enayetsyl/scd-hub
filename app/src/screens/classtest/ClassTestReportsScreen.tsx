@@ -15,6 +15,8 @@ import { CLASS_TEST_REPORTS_STATUS_QUERY } from "../../graphql/classTest";
 import { Screen, Card, Body, Muted, Button, Badge, Chip, ChipRow, Select, Loader, Notice } from "../../components/ui";
 import { ClassSectionSelect, type SectionPick } from "../../components/vocabPickers";
 import { AcademicYearSelect } from "../../components/selects";
+import { Pager } from "../../components/Pager";
+import { usePagedRows } from "../../lib/paging";
 import {
   CT_PUBLISH_FILTERS,
   ctPublishBadge,
@@ -56,7 +58,13 @@ export default function ClassTestReportsScreen(): React.ReactElement {
 
   const [rowsQ] = useQuery({
     query: CLASS_TEST_REPORTS_STATUS_QUERY,
-    variables: { sectionId: section?.sectionId ?? null, subject: subject ?? null, retired: showRetired || null },
+    // D-#761: the picked academic year now reaches the server (it was shown but never sent).
+    variables: {
+      academicYearId: yearId || null,
+      sectionId: section?.sectionId ?? null,
+      subject: subject ?? null,
+      retired: showRetired || null,
+    },
     pause: !section,
   });
   const allRows = rowsQ.data?.classTestReportsStatus ?? [];
@@ -65,6 +73,11 @@ export default function ClassTestReportsScreen(): React.ReactElement {
   const [filter, setFilter] = useState<string>("");
   const rows = allRows.filter((r) => matchesFilter(r, filter));
   const countOf = (f: string): number => allRows.filter((r) => matchesFilter(r, f)).length;
+  // D-#761: one section × one year is bounded, so the cards page client-side; the chip
+  // counts above stay whole.
+  const { shown, pager } = usePagedRows(rows, {
+    resetKey: `${yearId}|${section?.sectionId ?? ""}|${subject ?? ""}|${showRetired}|${filter}`,
+  });
   const filterLabel = (f: string): string =>
     (CT_PUBLISH_FILTERS as readonly string[]).includes(f)
       ? ctPublishFilterLabel(f as CtPublishFilter)
@@ -147,7 +160,7 @@ export default function ClassTestReportsScreen(): React.ReactElement {
             <Muted>{STR.ctNoReports}</Muted>
           </Card>
         ) : (
-          rows.map((r) => (
+          shown.map((r) => (
             <Card key={r.testId}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                 <View style={{ flexShrink: 1 }}>
@@ -187,6 +200,7 @@ export default function ClassTestReportsScreen(): React.ReactElement {
             </Card>
           ))
         )}
+        {section ? <Pager {...pager} /> : null}
       </ScrollView>
     </Screen>
   );

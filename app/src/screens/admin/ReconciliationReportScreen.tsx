@@ -11,6 +11,8 @@ import { useQuery } from "urql";
 import { RECON_REPORT_QUERY, type HwReconMissT, type HwNotDeclaredT } from "../../graphql/operations";
 import { Screen, H2, Body, Muted, Card, Badge, Loader, ErrorBanner } from "../../components/ui";
 import { useReportRange, useReportFilterState } from "../../components/ReportFilters";
+import { Pager } from "../../components/Pager";
+import { usePagedRows } from "../../lib/paging";
 import { STR, bnNum, classLevelLabel, hwSubjectLabel, hwNilReasonLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useColors } from "../../theme";
@@ -53,25 +55,36 @@ export default function ReconciliationReportScreen(): React.ReactElement {
   const hwNilDeclared = (report?.hwNilDeclared ?? []).filter((m) => match(m.classLevel, m.teacherName, m.subject));
   const asNilDeclared = (report?.asNilDeclared ?? []).filter((m) => match(m.classLevel, m.teacherName, m.subject));
 
+  // D-#761: a custom range has no upper limit, so each long list is paged on its own.
+  // The rows are paged first and the day groups are built within the page. The reset
+  // key carries the range and the filtered count (the filter state lives inside
+  // useReportFilterState), so a new range or filter starts again at page 1.
+  const resetOf = (n: number): string => `${from}|${to}|${n}`;
+  const hwMissesPg = usePagedRows(hwMisses, { resetKey: resetOf(hwMisses.length) });
+  const asMissesPg = usePagedRows(asMisses, { resetKey: resetOf(asMisses.length) });
+  const hwNotDeclaredPg = usePagedRows(hwNotDeclared, { resetKey: resetOf(hwNotDeclared.length) });
+  const hwNilDeclaredPg = usePagedRows(hwNilDeclared, { resetKey: resetOf(hwNilDeclared.length) });
+  const asNilDeclaredPg = usePagedRows(asNilDeclared, { resetKey: resetOf(asNilDeclared.length) });
+
   const hwByDay = useMemo(() => {
     const map = new Map<string, HwReconMissT[]>();
-    for (const m of hwMisses) {
+    for (const m of hwMissesPg.shown) {
       const list = map.get(m.dateKey);
       if (list) list.push(m);
       else map.set(m.dateKey, [m]);
     }
     return [...map.entries()];
-  }, [hwMisses]);
+  }, [hwMissesPg.shown]);
   // D-#293: homework never declared at all, grouped per day.
   const hwNdByDay = useMemo(() => {
     const map = new Map<string, HwNotDeclaredT[]>();
-    for (const m of hwNotDeclared) {
+    for (const m of hwNotDeclaredPg.shown) {
       const list = map.get(m.dateKey);
       if (list) list.push(m);
       else map.set(m.dateKey, [m]);
     }
     return [...map.entries()];
-  }, [hwNotDeclared]);
+  }, [hwNotDeclaredPg.shown]);
 
   return (
     <Screen scroll>
@@ -122,6 +135,7 @@ export default function ReconciliationReportScreen(): React.ReactElement {
               ))}
             </View>
           ))}
+          <Pager {...hwMissesPg.pager} />
         </Card>
       ) : null}
 
@@ -129,7 +143,7 @@ export default function ReconciliationReportScreen(): React.ReactElement {
       {asMisses.length > 0 ? (
         <Card>
           <Body style={{ fontWeight: "700", marginBottom: space(1) }}>📋 {STR.rrAsTitle}</Body>
-          {asMisses.map((m) => (
+          {asMissesPg.shown.map((m) => (
             <View
               key={`${m.sectionId}-${m.weekNumber}`}
               style={{ flexDirection: "row", alignItems: "center", paddingVertical: space(1), gap: space(2) }}
@@ -150,6 +164,7 @@ export default function ReconciliationReportScreen(): React.ReactElement {
               <Badge text={bnNum(m.draftItems)} tone="danger" />
             </View>
           ))}
+          <Pager {...asMissesPg.pager} />
         </Card>
       ) : null}
 
@@ -184,6 +199,7 @@ export default function ReconciliationReportScreen(): React.ReactElement {
               ))}
             </View>
           ))}
+          <Pager {...hwNotDeclaredPg.pager} />
         </Card>
       ) : null}
 
@@ -192,7 +208,7 @@ export default function ReconciliationReportScreen(): React.ReactElement {
       {hwNilDeclared.length > 0 ? (
         <Card>
           <Body style={{ fontWeight: "700", marginBottom: space(1) }}>📗 {STR.hwNilReportTitle}</Body>
-          {hwNilDeclared.map((m) => (
+          {hwNilDeclaredPg.shown.map((m) => (
             <View
               key={`${m.sectionId}-${m.subject}-${m.dateKey}`}
               style={{ flexDirection: "row", alignItems: "center", paddingVertical: space(1), gap: space(2) }}
@@ -209,13 +225,14 @@ export default function ReconciliationReportScreen(): React.ReactElement {
               <Badge text={hwNilReasonLabel(m.reason)} tone="brand" />
             </View>
           ))}
+          <Pager {...hwNilDeclaredPg.pager} />
         </Card>
       ) : null}
 
       {asNilDeclared.length > 0 ? (
         <Card>
           <Body style={{ fontWeight: "700", marginBottom: space(1) }}>📘 {STR.asNilReportTitle}</Body>
-          {asNilDeclared.map((m) => (
+          {asNilDeclaredPg.shown.map((m) => (
             <View
               key={`${m.sectionId}-${m.subject}-${m.weekNumber}`}
               style={{ flexDirection: "row", alignItems: "center", paddingVertical: space(1), gap: space(2) }}
@@ -232,6 +249,7 @@ export default function ReconciliationReportScreen(): React.ReactElement {
               <Badge text={hwNilReasonLabel(m.reason)} tone="brand" />
             </View>
           ))}
+          <Pager {...asNilDeclaredPg.pager} />
         </Card>
       ) : null}
     </Screen>

@@ -58,6 +58,18 @@ export interface SummaryFilter {
    *  so a retired exam stays reachable — otherwise retiring it would be a one-way
    *  door with no restore path (owner ask 2026-08-03). */
   retired?: boolean;
+  /** D-#761: exam-date window, Dhaka calendar days "YYYY-MM-DD", both inclusive.
+   *  Omitted = open on that side (every existing caller's behaviour). */
+  examFrom?: string;
+  examTo?: string;
+}
+
+const DAY_KEY = /^\d{4}-\d{2}-\d{2}$/;
+/** The instant a Dhaka calendar day starts (UTC+6, no DST). */
+function dhakaDayStartOfKey(key: string, name: string): Date {
+  const d = new Date(`${key}T00:00:00+06:00`);
+  if (!DAY_KEY.test(key) || Number.isNaN(d.getTime())) throw new Error(`${name} must be YYYY-MM-DD`);
+  return d;
 }
 
 function examQuery(filter: SummaryFilter): Record<string, unknown> {
@@ -71,6 +83,16 @@ function examQuery(filter: SummaryFilter): Record<string, unknown> {
     // still answer on requestedBy, so no exam falls out of the filter mid-rollout.
     const tid = new Types.ObjectId(filter.teacherId);
     q.$or = [{ teacherId: tid }, { teacherId: { $exists: false }, requestedBy: tid }];
+  }
+  // D-#761: bound the exam set by date in the DATABASE, so a "last 30 days" report
+  // no longer reads (and sends) every printed test since the school began.
+  if (filter.examFrom || filter.examTo) {
+    const range: Record<string, Date> = {};
+    if (filter.examFrom) range.$gte = dhakaDayStartOfKey(filter.examFrom, "examFrom");
+    if (filter.examTo) {
+      range.$lt = new Date(dhakaDayStartOfKey(filter.examTo, "examTo").getTime() + 24 * 60 * 60 * 1000);
+    }
+    q.examDate = range;
   }
   return q;
 }

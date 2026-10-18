@@ -43,6 +43,7 @@ import { createPrintRequest } from "../../printing/services/PrintRequestService"
 import { PrintRequest } from "../../printing/models/PrintRequest";
 import { ScriptBundle } from "../../archive/models/ScriptBundle";
 import { resolveSubjectTeacher } from "../subjectTeacher";
+import { queryPage, type Page, type PageArgs } from "../../../lib/paging";
 
 // ---------------------------------------------------------------------------
 // CT_ID generation (D-#34 numbering pattern) + Test# auto-suggest
@@ -872,6 +873,17 @@ export async function listMyClassTests(actorId: string): Promise<ClassTestShape[
     .sort({ requestedAt: -1 })
     .lean()) as unknown as IClassTest[];
   return docs.map(classTestShape);
+}
+
+/** D-#761: `listMyClassTests`, one page at a time — same rows, same newest-first order. */
+export function listMyClassTestsPage(actorId: string, args: PageArgs): Promise<Page<ClassTestShape>> {
+  return queryPage(
+    ClassTest,
+    { $or: [{ teacherId: actorId }, { requestedBy: actorId }] },
+    { requestedAt: -1, _id: -1 },
+    args,
+    (docs) => (docs as unknown as IClassTest[]).map(classTestShape),
+  );
 }
 
 /** Class tests for a section (read-scope enforced by the resolver). */
