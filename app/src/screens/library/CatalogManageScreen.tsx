@@ -8,7 +8,7 @@ import { View } from "react-native";
 import { useQuery, useMutation } from "urql";
 import { BOOK_LANGUAGES } from "@scd/shared";
 import {
-  BOOK_TITLES_QUERY,
+  BOOK_TITLES_PAGE_QUERY,
   BOOK_TITLE_QUERY,
   CREATE_BOOK_TITLE,
   UPDATE_BOOK_TITLE,
@@ -16,6 +16,8 @@ import {
   SET_COPY_STATUS,
 } from "../../graphql/operations";
 import { Screen, Body, Muted, Card, Button, Badge, Chip, ChipRow, Field, Notice, Loader } from "../../components/ui";
+import { Pager } from "../../components/Pager";
+import { usePageState, PAGE_SIZE } from "../../lib/paging";
 import { STR, bnNum, bookLanguageLabel, copyStatusLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useConfirm } from "../../state/ConfirmContext";
@@ -39,9 +41,12 @@ export default function CatalogManageScreen(): React.ReactElement {
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
 
+  // D-#761: the catalog pages — an empty search used to load every title (and every copy
+  // behind the availability counts). A new search goes back to page 1.
+  const [titlePage, setTitlePage] = usePageState(search.trim());
   const [titlesQ, refetchTitles] = useQuery({
-    query: BOOK_TITLES_QUERY,
-    variables: { search: search.trim() || null, language: null, includeInactive: true },
+    query: BOOK_TITLES_PAGE_QUERY,
+    variables: { search: search.trim() || null, language: null, includeInactive: true, page: titlePage, pageSize: PAGE_SIZE },
   });
   const [detailQ, refetchDetail] = useQuery({
     query: BOOK_TITLE_QUERY,
@@ -54,7 +59,7 @@ export default function CatalogManageScreen(): React.ReactElement {
   const [, addCopy] = useMutation(ADD_BOOK_COPY);
   const [, setCopyStatus] = useMutation(SET_COPY_STATUS);
 
-  const titles = titlesQ.data?.bookTitles ?? [];
+  const titles = titlesQ.data?.bookTitlesPage.rows ?? [];
   const detail = selectedId ? detailQ.data?.bookTitle ?? null : null;
 
   function refresh(): void {
@@ -188,6 +193,7 @@ export default function CatalogManageScreen(): React.ReactElement {
           ) : null}
         </Card>
       ))}
+      <Pager page={titlePage} pageSize={PAGE_SIZE} total={titlesQ.data?.bookTitlesPage.total ?? 0} onPage={setTitlePage} />
     </Screen>
   );
 }

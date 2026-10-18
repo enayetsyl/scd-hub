@@ -576,10 +576,11 @@ export default function ChildHomeworkScreen({
     pause: !selected,
   });
   // Assignments carry their own history (limit/offset optional, D-#476), so one
-  // read serves the whole outstanding list.
+  // read serves the whole outstanding list. D-#761: and only that list is rendered,
+  // so the server sends just the outstanding rows, not every assignment ever given.
   const [asgnQ, refetchAsgn] = useQuery({
     query: CHILD_ASSIGNMENTS,
-    variables: { studentId: selected?.studentId ?? "" },
+    variables: { studentId: selected?.studentId ?? "", outstandingOnly: true },
     pause: !selected,
   });
 

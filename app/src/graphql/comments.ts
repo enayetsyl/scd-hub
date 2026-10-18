@@ -504,12 +504,13 @@ export interface GuardianStudentCommentT {
   createdAt: string;
 }
 
+/** D-#761: `limit` = the newest N only; omitted = the whole history. */
 export const CHILD_COMMENTS_QUERY = gql<
   { childComments: GuardianStudentCommentT[] },
-  { studentId: string }
+  { studentId: string; limit?: number }
 >`
-  query ChildComments($studentId: String!) {
-    childComments(studentId: $studentId) {
+  query ChildComments($studentId: String!, $limit: Int) {
+    childComments(studentId: $studentId, limit: $limit) {
       id type sentiment text attachmentIds deliveredAt createdAt
     }
   }

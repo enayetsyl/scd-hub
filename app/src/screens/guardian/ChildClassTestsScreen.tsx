@@ -4,9 +4,9 @@
  * strongest / weakest subject), an average per subject, and every published result
  * filterable by subject, newest first.
  *
- * No new server read: it is the two guardian queries the Today screen already runs
- * (`childUpcomingClassTests`, `childTestResults` — link-gated by
- * guardian:read_child + assertGuardianOfStudent), with the figures derived in
+ * Reads `childUpcomingClassTests`, `childTestResultStats` (light rows for every result)
+ * and `childTestResultsPage` (the list, paged — D-#761), all link-gated by
+ * guardian:read_child + assertGuardianOfStudent, with the figures derived in
  * `lib/childClassTests` so this tab, the sidebar badge and Today's "new result" row
  * use one rule. Read-only; teacherAction is never fetched (J7, D-#68).
  */
@@ -14,14 +14,16 @@ import React, { useEffect, useMemo, useState } from "react";
 import { RefreshControl, ScrollView, Text, View } from "react-native";
 import { useQuery } from "urql";
 import { CHILD_UPCOMING_CLASS_TESTS_QUERY } from "../../graphql/operations";
-import { CHILD_TEST_RESULTS_QUERY } from "../../graphql/classTest";
+import { CHILD_TEST_RESULTS_PAGE_QUERY, CHILD_TEST_RESULT_STATS_QUERY } from "../../graphql/classTest";
 import { Screen, Body, Muted, Card, Chip, ChipRow, Loader } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
+import { Pager } from "../../components/Pager";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { UpcomingClassTestsCard, ClassTestResultRow } from "../../components/ChildClassTestCards";
 import { useGuardianChild } from "../../state/GuardianChildContext";
 import { useRecordView } from "../../lib/useRecordView";
 import { usePullRefresh } from "../../lib/useRefresh";
+import { usePageState, PAGE_SIZE } from "../../lib/paging";
 import { isNewResult, summarizeChildResults } from "../../lib/childClassTests";
 import { STR, bnNum, hwSubjectLabel } from "../../lib/labels";
 import { useColors } from "../../theme";
@@ -65,14 +67,16 @@ export default function ChildClassTestsScreen(): React.ReactElement {
     variables: { studentId: sid },
     pause: !selected,
   });
-  const [resultsQ, refetchResults] = useQuery({
-    query: CHILD_TEST_RESULTS_QUERY,
+  // D-#761: the summary, the subject chips (and their order) still cover EVERY result,
+  // so they come from the light stats rows; the result list itself pages on the server.
+  const [statsQ, refetchStats] = useQuery({
+    query: CHILD_TEST_RESULT_STATS_QUERY,
     variables: { studentId: sid },
     pause: !selected,
   });
   const upcoming = upcomingQ.data?.childUpcomingClassTests ?? [];
-  const results = useMemo(() => resultsQ.data?.childTestResults ?? [], [resultsQ.data]);
-  const summary = useMemo(() => summarizeChildResults(results), [results]);
+  const stats = useMemo(() => statsQ.data?.childTestResultStats ?? [], [statsQ.data]);
+  const summary = useMemo(() => summarizeChildResults(stats), [stats]);
 
   // Subject filter: "all" or a subject code. A different child starts from "all" —
   // the previous child's subject may not exist for this one.
@@ -80,16 +84,26 @@ export default function ChildClassTestsScreen(): React.ReactElement {
   useEffect(() => setSubject("all"), [sid]);
   // Chips in the order subjects first appear (newest result first), so the subject
   // with the latest result sits next to "All".
-  const subjects = useMemo(() => [...new Set(results.map((r) => r.subject))], [results]);
-  const shown = subject === "all" ? results : results.filter((r) => r.subject === subject);
+  const subjects = useMemo(() => [...new Set(stats.map((r) => r.subject))], [stats]);
+  const [page, setPage] = usePageState(`${sid}|${subject}`);
+  const [resultsQ, refetchResults] = useQuery({
+    query: CHILD_TEST_RESULTS_PAGE_QUERY,
+    variables: { studentId: sid, subject: subject === "all" ? null : subject, page, pageSize: PAGE_SIZE },
+    pause: !selected,
+  });
+  const shown = resultsQ.data?.childTestResultsPage.rows ?? [];
   const now = Date.now();
 
   const refetchAll = (): void => {
     const opts = { requestPolicy: "network-only" as const };
     refetchUpcoming(opts);
+    refetchStats(opts);
     refetchResults(opts);
   };
-  const { refreshing, onRefresh } = usePullRefresh(upcomingQ.fetching || resultsQ.fetching, refetchAll);
+  const { refreshing, onRefresh } = usePullRefresh(
+    upcomingQ.fetching || statsQ.fetching || resultsQ.fetching,
+    refetchAll,
+  );
 
   return (
     <Screen padded={false}>
@@ -103,7 +117,7 @@ export default function ChildClassTestsScreen(): React.ReactElement {
         {!selected ? (
           <Loader label={STR.loading} />
         ) : (
-          <QueryGate results={[upcomingQ, resultsQ]} onRetry={refetchAll} loaderLabel={STR.loading}>
+          <QueryGate results={[upcomingQ, statsQ, resultsQ]} onRetry={refetchAll} loaderLabel={STR.loading}>
             {summary.taken + summary.absent > 0 ? (
               <Card>
                 <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(4) }}>
@@ -178,7 +192,7 @@ export default function ChildClassTestsScreen(): React.ReactElement {
                   </ChipRow>
                 </View>
               ) : null}
-              {results.length === 0 ? (
+              {stats.length === 0 ? (
                 <Muted style={{ marginTop: space(2) }}>{STR.gpNoTestResults}</Muted>
               ) : shown.length === 0 ? (
                 <Muted style={{ marginTop: space(2) }}>{STR.gctNoSubjectResults}</Muted>
@@ -187,6 +201,12 @@ export default function ChildClassTestsScreen(): React.ReactElement {
                   <ClassTestResultRow key={r.testId} r={r} isNew={isNewResult(r.publishedAt, now)} showOutcome subjectName={subjectName} />
                 ))
               )}
+              <Pager
+                page={page}
+                pageSize={PAGE_SIZE}
+                total={resultsQ.data?.childTestResultsPage.total ?? 0}
+                onPage={setPage}
+              />
             </Card>
           </QueryGate>
         )}

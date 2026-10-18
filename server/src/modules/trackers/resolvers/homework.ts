@@ -26,6 +26,10 @@ import {
   listDailyItems,
   listStudentRecords,
   listOpenRecords,
+  listWorkspaceRecords,
+  homeworkDoneItemsPage,
+  homeworkDoneItemSubjects,
+  type HwDoneItem,
   listHomeworkTopics,
   declareNoHomework as declareNilSvc,
   removeNoHomework as removeNilSvc,
@@ -77,6 +81,8 @@ import { Subject } from "../../foundation/models/Subject";
 import { HomeworkItem } from "../models/HomeworkItem";
 import { HomeworkStudentRecord } from "../models/HomeworkStudentRecord";
 import { isAdminStaff } from "../../foundation/services/RoleScope";
+import { pageRef } from "../../../pageRef";
+import { dhakaDayStart } from "../../../lib/dhakaDay";
 
 async function resolveSubjectId(subject: string): Promise<string> {
   const doc = await Subject.findOne({ code: subject }).select("_id").lean();
@@ -781,12 +787,15 @@ builder.queryField("homeworkOpenRecords", (t) =>
     type: [OpenRecordRef],
     description:
       "All of a section's lifecycle records in the given states, across all dates (newest given-date first), " +
-      "for the auto-listed date-grouped Checking queue (states [SUBMITTED]) / Records screens. Read-scope enforced.",
+      "for the auto-listed date-grouped Checking queue (states [SUBMITTED]) / Records screens. Read-scope enforced. " +
+      "skipFinishedItems (D-#761, optional): leave out FINISHED items — every record returned, none of it " +
+      "today — which page through homeworkDoneItemsPage instead. Omitted = every matching record, as before.",
     authScopes: { hasPermission: "tracker:read" },
     args: {
       sectionId: t.arg.string({ required: true }),
       classId: t.arg.string({ required: true }),
       states: t.arg.stringList({ required: true }),
+      skipFinishedItems: t.arg.boolean({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
@@ -803,8 +812,79 @@ builder.queryField("homeworkOpenRecords", (t) =>
       const states = args.states.filter((s): s is LifecycleState =>
         (LIFECYCLE_STATES as readonly string[]).includes(s),
       );
-      const rows = await listOpenRecords(args.sectionId, states);
+      const rows = args.skipFinishedItems
+        ? await listWorkspaceRecords(args.sectionId, states, dhakaDayStart(new Date()))
+        : await listOpenRecords(args.sectionId, states);
       return allowed ? rows.filter((r) => allowed.has(r.subject)) : rows;
+    },
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Query: homeworkDoneItemsPage / homeworkDoneItemSubjects (D-#761) — the workspace's
+// completed fold, paged. It used to ride on homeworkOpenRecords: every RETURNED record
+// the section ever had, on every visit.
+// ---------------------------------------------------------------------------
+
+const HwDoneItemRef = builder.objectRef<HwDoneItem>("HomeworkDoneItem");
+HwDoneItemRef.implement({
+  description: "A finished homework item (every record returned, none today) with its section's records.",
+  fields: (t) => ({
+    hwItemId: t.exposeString("hwItemId"),
+    records: t.field({ type: [OpenRecordRef], resolve: (d) => d.records }),
+  }),
+});
+const HwDoneItemPageRef = pageRef("HomeworkDoneItemPage", HwDoneItemRef);
+
+builder.queryField("homeworkDoneItemsPage", (t) =>
+  t.field({
+    type: HwDoneItemPageRef,
+    description:
+      "One page of a section's FINISHED homework items, newest given-date first (D-#761) — the workspace's " +
+      "completed fold. Read-scope + subject scope exactly like homeworkOpenRecords; `subject` = the chip filter.",
+    authScopes: { hasPermission: "tracker:read" },
+    args: {
+      sectionId: t.arg.string({ required: true }),
+      classId: t.arg.string({ required: true }),
+      subject: t.arg.string({ required: false }),
+      page: t.arg.int({ required: false }),
+      pageSize: t.arg.int({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      await assertCanRead(ctx, args.sectionId, args.classId);
+      const allowed = await allowedSubjectCodesForSection(ctx, args.sectionId, args.classId);
+      return homeworkDoneItemsPage(
+        args.sectionId,
+        dhakaDayStart(new Date()),
+        { subjects: allowed, subject: args.subject },
+        args,
+      );
+    },
+  }),
+);
+
+const HwSubjectCountRef = builder.objectRef<{ subject: string; count: number }>("HomeworkSubjectCount");
+HwSubjectCountRef.implement({
+  fields: (t) => ({ subject: t.exposeString("subject"), count: t.exposeInt("count") }),
+});
+
+builder.queryField("homeworkDoneItemSubjects", (t) =>
+  t.field({
+    type: [HwSubjectCountRef],
+    description:
+      "Finished-item counts per subject for a section (D-#761) — the workspace's subject chips and the " +
+      "completed fold's count. Same scope as homeworkDoneItemsPage.",
+    authScopes: { hasPermission: "tracker:read" },
+    args: {
+      sectionId: t.arg.string({ required: true }),
+      classId: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      await assertCanRead(ctx, args.sectionId, args.classId);
+      const allowed = await allowedSubjectCodesForSection(ctx, args.sectionId, args.classId);
+      return homeworkDoneItemSubjects(args.sectionId, dhakaDayStart(new Date()), allowed);
     },
   }),
 );

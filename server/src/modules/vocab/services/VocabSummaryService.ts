@@ -301,12 +301,16 @@ export interface ChildVocabResult {
  */
 export async function childVocab(
   studentId: string,
-  opts?: { program?: string | null },
+  /** D-#761: `limit` = stop after the newest N results (one result read per test, so the
+   *  bound matters). Omitted = every marked test, as before. */
+  opts?: { program?: string | null; limit?: number | null },
 ): Promise<ChildVocabResult[]> {
   const tests = await studentTests(studentId, { program: opts?.program ?? undefined });
   const marked = tests.filter((t) => t.status === "marked");
+  const limit = opts?.limit != null && opts.limit > 0 ? opts.limit : Infinity;
   const out: ChildVocabResult[] = [];
   for (const t of marked) {
+    if (out.length >= limit) break;
     const result = await studentResult(t._id.toString(), studentId);
     if (!result) continue;
     out.push({ test: testMeta(t), result });

@@ -12,7 +12,7 @@ import { useQuery, useMutation } from "urql";
 import { BOOK_LANGUAGES } from "@scd/shared";
 import {
   AM_I_LIBRARIAN_QUERY,
-  BOOK_TITLES_QUERY,
+  BOOK_TITLES_PAGE_QUERY,
   MY_LOANS_QUERY,
   MY_RESERVATIONS_QUERY,
   CANCEL_RESERVATION,
@@ -20,9 +20,11 @@ import {
 } from "../../graphql/operations";
 import type { LibraryStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Button, Badge, Chip, ChipRow, Field, Notice, EmptyState, Loader } from "../../components/ui";
+import { Pager } from "../../components/Pager";
 import { useAuth } from "../../auth/AuthContext";
 import { STR, bnNum, bookLanguageLabel, reservationStatusLabel, borrowerTypeLabel, isoDateLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { usePageState, PAGE_SIZE } from "../../lib/paging";
 import { useConfirm } from "../../state/ConfirmContext";
 import { space } from "../../theme/tokens";
 
@@ -40,18 +42,22 @@ export default function LibraryHomeScreen({ navigation }: Props): React.ReactEle
   const [librarianQ] = useQuery({ query: AM_I_LIBRARIAN_QUERY });
   const isLibrarian = canManage || (librarianQ.data?.amILibrarian ?? false);
 
+  // D-#761: the catalog pages (an empty search used to render every title); a new
+  // search or language goes back to page 1.
+  const [titlePage, setTitlePage] = usePageState(`${search.trim()}|${language ?? ""}`);
   const [titlesQ] = useQuery({
-    query: BOOK_TITLES_QUERY,
-    variables: { search: search.trim() || null, language },
+    query: BOOK_TITLES_PAGE_QUERY,
+    variables: { search: search.trim() || null, language, page: titlePage, pageSize: PAGE_SIZE },
   });
-  const [loansQ, refetchLoans] = useQuery({ query: MY_LOANS_QUERY });
+  // D-#761: only the books still out are rendered, so only those are fetched.
+  const [loansQ, refetchLoans] = useQuery({ query: MY_LOANS_QUERY, variables: { activeOnly: true } });
   const [resvQ, refetchResv] = useQuery({ query: MY_RESERVATIONS_QUERY });
   const [chaseQ] = useQuery({ query: LIBRARY_CHASE_LIST_QUERY, pause: !isLibrarian });
   const [, cancelResv] = useMutation(CANCEL_RESERVATION);
 
   const myLoans = (loansQ.data?.myLoans ?? []).filter((l) => l.status === "ACTIVE");
   const myResv = (resvQ.data?.myReservations ?? []).filter((r) => r.status === "QUEUED" || r.status === "READY");
-  const titles = titlesQ.data?.bookTitles ?? [];
+  const titles = titlesQ.data?.bookTitlesPage.rows ?? [];
 
   async function runCancel(reservationId: string): Promise<void> {
     if (!(await confirmAction({ confirmLabel: STR.libCancelReservation }))) return;
@@ -176,6 +182,7 @@ export default function LibraryHomeScreen({ navigation }: Props): React.ReactEle
           </Muted>
         </Card>
       ))}
+      <Pager page={titlePage} pageSize={PAGE_SIZE} total={titlesQ.data?.bookTitlesPage.total ?? 0} onPage={setTitlePage} />
     </Screen>
   );
 }

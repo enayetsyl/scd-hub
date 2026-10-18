@@ -2875,14 +2875,49 @@ export interface HwOpenRecordT {
   resubOf: string | null;
 }
 
+const HW_OPEN_RECORD_FIELDS = `
+  id hwId hwItemId subject topicLabelBn description dateGiven studentId studentName state chaseCount hasAnswerFile hasGuardianClaim answerFileId dueDate result stampCount lastStateAt resubOf
+`;
+
+/** D-#761: `skipFinishedItems` leaves out finished items (all returned, none today) —
+ *  the workspace pages those through HOMEWORK_DONE_ITEMS_PAGE instead. */
 export const HOMEWORK_OPEN_RECORDS = gql<
   { homeworkOpenRecords: HwOpenRecordT[] },
-  { sectionId: string; classId: string; states: string[] }
+  { sectionId: string; classId: string; states: string[]; skipFinishedItems?: boolean }
 >`
-  query HomeworkOpenRecords($sectionId: String!, $classId: String!, $states: [String!]!) {
-    homeworkOpenRecords(sectionId: $sectionId, classId: $classId, states: $states) {
-      id hwId hwItemId subject topicLabelBn description dateGiven studentId studentName state chaseCount hasAnswerFile hasGuardianClaim answerFileId dueDate result stampCount lastStateAt resubOf
+  query HomeworkOpenRecords($sectionId: String!, $classId: String!, $states: [String!]!, $skipFinishedItems: Boolean) {
+    homeworkOpenRecords(sectionId: $sectionId, classId: $classId, states: $states, skipFinishedItems: $skipFinishedItems) {
+      ${HW_OPEN_RECORD_FIELDS}
     }
+  }
+`;
+
+/** D-#761: the workspace's completed fold, one page of finished ITEMS (cards) at a
+ *  time, newest given-date first, each with its records. */
+export interface HwDoneItemT {
+  hwItemId: string;
+  records: HwOpenRecordT[];
+}
+
+export const HOMEWORK_DONE_ITEMS_PAGE = gql<
+  { homeworkDoneItemsPage: { rows: HwDoneItemT[]; total: number; page: number; pageSize: number } },
+  { sectionId: string; classId: string; subject?: string | null; page: number; pageSize: number }
+>`
+  query HomeworkDoneItemsPage($sectionId: String!, $classId: String!, $subject: String, $page: Int, $pageSize: Int) {
+    homeworkDoneItemsPage(sectionId: $sectionId, classId: $classId, subject: $subject, page: $page, pageSize: $pageSize) {
+      rows { hwItemId records { ${HW_OPEN_RECORD_FIELDS} } }
+      total page pageSize
+    }
+  }
+`;
+
+/** D-#761: finished-card counts per subject — the subject chips and the fold's count. */
+export const HOMEWORK_DONE_ITEM_SUBJECTS = gql<
+  { homeworkDoneItemSubjects: Array<{ subject: string; count: number }> },
+  { sectionId: string; classId: string }
+>`
+  query HomeworkDoneItemSubjects($sectionId: String!, $classId: String!) {
+    homeworkDoneItemSubjects(sectionId: $sectionId, classId: $classId) { subject count }
   }
 `;
 
@@ -6045,6 +6080,25 @@ export const BOOK_TITLES_QUERY = gql<
   }
 `;
 
+/** D-#761: the catalog, one page at a time (the browse + manage screens). */
+export const BOOK_TITLES_PAGE_QUERY = gql<
+  { bookTitlesPage: { rows: BookTitleRowT[]; total: number; page: number; pageSize: number } },
+  {
+    search?: string | null;
+    language?: string | null;
+    includeInactive?: boolean | null;
+    page: number;
+    pageSize: number;
+  }
+>`
+  query BookTitlesPage($search: String, $language: String, $includeInactive: Boolean, $page: Int, $pageSize: Int) {
+    bookTitlesPage(search: $search, language: $language, includeInactive: $includeInactive, page: $page, pageSize: $pageSize) {
+      rows { id titleBn titleEn author language category shelf active totalCopies availableCopies }
+      total page pageSize
+    }
+  }
+`;
+
 export const BOOK_TITLE_QUERY = gql<
   { bookTitle: BookTitleDetailT | null },
   { titleId: string }
@@ -6242,18 +6296,20 @@ export const LOANS_QUERY = gql<
   }
 `;
 
+/** D-#761: `activeOnly` — the desk renders only the books still out, so it no longer
+ *  pulls the borrower's whole loan history. */
 export const BORROWER_LOANS_QUERY = gql<
   { borrowerLoans: BookLoanT[] },
-  { borrowerType: string; borrowerId: string }
+  { borrowerType: string; borrowerId: string; activeOnly?: boolean | null }
 >`
-  query BorrowerLoans($borrowerType: String!, $borrowerId: String!) {
-    borrowerLoans(borrowerType: $borrowerType, borrowerId: $borrowerId) { ${LOAN_FIELDS} }
+  query BorrowerLoans($borrowerType: String!, $borrowerId: String!, $activeOnly: Boolean) {
+    borrowerLoans(borrowerType: $borrowerType, borrowerId: $borrowerId, activeOnly: $activeOnly) { ${LOAN_FIELDS} }
   }
 `;
 
-export const MY_LOANS_QUERY = gql<{ myLoans: BookLoanT[] }, NoVars>`
-  query MyLoans {
-    myLoans { ${LOAN_FIELDS} }
+export const MY_LOANS_QUERY = gql<{ myLoans: BookLoanT[] }, { activeOnly?: boolean | null }>`
+  query MyLoans($activeOnly: Boolean) {
+    myLoans(activeOnly: $activeOnly) { ${LOAN_FIELDS} }
   }
 `;
 
@@ -6425,13 +6481,15 @@ export interface ChildAssignmentT {
 }
 
 /** D-#476: limit/offset are optional server-side, so omitting them still returns
- *  the whole history — the guardian list passes them to page instead. */
+ *  the whole history — the guardian list passes them to page instead.
+ *  D-#761: `outstandingOnly` = just the rows still to act on (chased, or pending and
+ *  late), for the lists that render nothing else. */
 export const CHILD_ASSIGNMENTS = gql<
   { childAssignments: ChildAssignmentT[] },
-  { studentId: string; limit?: number; offset?: number }
+  { studentId: string; limit?: number; offset?: number; outstandingOnly?: boolean }
 >`
-  query ChildAssignments($studentId: String!, $limit: Int, $offset: Int) {
-    childAssignments(studentId: $studentId, limit: $limit, offset: $offset) {
+  query ChildAssignments($studentId: String!, $limit: Int, $offset: Int, $outstandingOnly: Boolean) {
+    childAssignments(studentId: $studentId, limit: $limit, offset: $offset, outstandingOnly: $outstandingOnly) {
       recordId asId subject weekNumber state pending daysLate deliveryDate dueDate
       canClaim claimHoldBn
       claim { ${WORK_CLAIM_FIELDS} }
@@ -6451,12 +6509,13 @@ export interface ChildLibraryLoanT {
   overdue: boolean;
 }
 
+/** D-#761: `limit` = the newest N loans plus every book still out; omitted = all. */
 export const CHILD_LIBRARY_LOANS_QUERY = gql<
   { childLibraryLoans: ChildLibraryLoanT[] },
-  { studentId: string }
+  { studentId: string; limit?: number }
 >`
-  query ChildLibraryLoans($studentId: String!) {
-    childLibraryLoans(studentId: $studentId) {
+  query ChildLibraryLoans($studentId: String!, $limit: Int) {
+    childLibraryLoans(studentId: $studentId, limit: $limit) {
       id titleBn accessionNo issuedAt dueDate status returnedAt overdue
     }
   }
@@ -8333,12 +8392,13 @@ export interface ChildVocabResultT {
   result: VocabStudentResultT;
 }
 
+/** D-#761: `limit` = the newest N results only; omitted = all. */
 export const CHILD_VOCAB_QUERY = gql<
   { childVocab: ChildVocabResultT[] },
-  { studentId: string; program?: string | null }
+  { studentId: string; program?: string | null; limit?: number }
 >`
-  query ChildVocab($studentId: String!, $program: String) {
-    childVocab(studentId: $studentId, program: $program) {
+  query ChildVocab($studentId: String!, $program: String, $limit: Int) {
+    childVocab(studentId: $studentId, program: $program, limit: $limit) {
       testId program label testDate classLevel
       result { ${VOCAB_RESULT_FIELDS} }
     }

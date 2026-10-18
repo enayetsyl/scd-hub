@@ -213,9 +213,32 @@ export async function loans(filter: LoanFilter, now = new Date()): Promise<IBook
   return BookLoan.find(query).sort({ issuedAt: -1 }).lean() as unknown as IBookLoan[];
 }
 
-/** One borrower's loans, newest first (desk view / staff own-row). */
-export async function borrowerLoans(borrower: Borrower): Promise<IBookLoan[]> {
-  return BookLoan.find({ ...borrowerFilter(borrower) })
-    .sort({ issuedAt: -1 })
-    .lean() as unknown as IBookLoan[];
+/** One borrower's loans, newest first (desk view / staff own-row).
+ *  D-#761: `activeOnly` keeps just the books still out — what the desk and the staff
+ *  home render — instead of the whole loan history; `limit` keeps the newest N.
+ *  Both omitted = every loan, as before. */
+export async function borrowerLoans(
+  borrower: Borrower,
+  opts: { activeOnly?: boolean | null; limit?: number | null } = {},
+): Promise<IBookLoan[]> {
+  const query: Record<string, unknown> = { ...borrowerFilter(borrower) };
+  if (opts.activeOnly) query.status = "ACTIVE";
+  let q = BookLoan.find(query).sort({ issuedAt: -1, _id: -1 });
+  if (opts.limit != null && opts.limit > 0) q = q.limit(opts.limit);
+  return q.lean() as unknown as IBookLoan[];
+}
+
+/** D-#761: the guardian home's bounded loan list — the newest `limit` loans plus any
+ *  older loan still ACTIVE (a book the child still has must never drop off), newest first. */
+export async function recentLoansPlusActive(borrower: Borrower, limit: number): Promise<IBookLoan[]> {
+  const [recent, active] = await Promise.all([
+    borrowerLoans(borrower, { limit }),
+    borrowerLoans(borrower, { activeOnly: true }),
+  ]);
+  const seen = new Set(recent.map((l) => String(l._id)));
+  const extra = active.filter((l) => !seen.has(String(l._id)));
+  return [...recent, ...extra].sort(
+    (a, b) =>
+      new Date(b.issuedAt).getTime() - new Date(a.issuedAt).getTime() || String(b._id).localeCompare(String(a._id)),
+  );
 }

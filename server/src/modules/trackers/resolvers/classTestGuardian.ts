@@ -10,7 +10,12 @@
  */
 import { builder } from "../../../schema";
 import { assertGuardianOfStudent } from "../../../middleware/authz";
-import { childTestResults, type GuardianClassTestResult } from "../services/ClassTestResultService";
+import {
+  childTestResults,
+  childTestResultsPage,
+  type GuardianClassTestResult,
+} from "../services/ClassTestResultService";
+import { pageRef } from "../../../pageRef";
 import { childScriptInfo, type GuardianScriptInfo } from "../services/ClassTestScriptService";
 
 /** CS-3 (D-#716): the child's scanned script rides on the result row — pages only
@@ -78,6 +83,70 @@ builder.queryField("childTestResults", (t) =>
       const rows = await childTestResults(args.studentId);
       const info = await childScriptInfo(args.studentId, rows.map((r) => r.testId));
       return rows.map((r) => ({ ...r, script: info.get(r.testId) ?? { pages: [], pending: false } }));
+    },
+  }),
+);
+
+// D-#761: the Class Test tab pages its result list. The tab's summary (average, best /
+// weakest subject, NEW count) still covers EVERY result, so it reads the light
+// childTestResultStats rows below instead of the full list.
+const GuardianClassTestResultPageRef = pageRef("GuardianClassTestResultPage", GuardianClassTestResultRef);
+
+builder.queryField("childTestResultsPage", (t) =>
+  t.field({
+    type: GuardianClassTestResultPageRef,
+    description:
+      "One page of the linked child's PUBLISHED class-test results, newest exam first (D-#761), " +
+      "optionally one subject. Same gate and shape as childTestResults; script info is read for the page only.",
+    authScopes: { hasPermission: "guardian:read_child" },
+    args: {
+      studentId: t.arg.string({ required: true }),
+      subject: t.arg.string({ required: false }),
+      page: t.arg.int({ required: false }),
+      pageSize: t.arg.int({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      await assertGuardianOfStudent(ctx, args.studentId);
+      const p = await childTestResultsPage(args.studentId, args.subject, args);
+      const info = await childScriptInfo(args.studentId, p.rows.map((r) => r.testId));
+      return { ...p, rows: p.rows.map((r) => ({ ...r, script: info.get(r.testId) ?? { pages: [], pending: false } })) };
+    },
+  }),
+);
+
+type GuardianClassTestStat = Pick<GuardianClassTestResult, "testId" | "subject" | "status" | "percent" | "publishedAt">;
+
+const GuardianClassTestStatRef = builder.objectRef<GuardianClassTestStat>("GuardianClassTestStat").implement({
+  description:
+    "The few fields of a published result the guardian summary needs (D-#761) — subject, status, " +
+    "percent, publishedAt. No marks text, weakness, action or script.",
+  fields: (t) => ({
+    testId: t.exposeString("testId"),
+    subject: t.exposeString("subject"),
+    status: t.exposeString("status"),
+    percent: t.float({ nullable: true, resolve: (r) => r.percent }),
+    publishedAt: t.string({ nullable: true, resolve: (r) => r.publishedAt }),
+  }),
+});
+
+builder.queryField("childTestResultStats", (t) =>
+  t.field({
+    type: [GuardianClassTestStatRef],
+    description:
+      "Every PUBLISHED result of the linked child, newest exam first, as light summary rows (D-#761): " +
+      "the Class Test tab's figures and subject chips, and the Today 'new result' count. Same gate as childTestResults.",
+    authScopes: { hasPermission: "guardian:read_child" },
+    args: { studentId: t.arg.string({ required: true }) },
+    resolve: async (_root, args, ctx) => {
+      await assertGuardianOfStudent(ctx, args.studentId);
+      const rows = await childTestResults(args.studentId);
+      return rows.map((r) => ({
+        testId: r.testId,
+        subject: r.subject,
+        status: r.status,
+        percent: r.percent,
+        publishedAt: r.publishedAt,
+      }));
     },
   }),
 );
