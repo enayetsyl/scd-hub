@@ -24,7 +24,7 @@ import { PRINT_COLOUR_LABELS_EN, PRINT_SIDES_LABELS_EN } from "@scd/shared";
 import type { Role } from "@scd/shared";
 import {
   PRINT_QUEUE_QUERY,
-  MY_PRINT_REQUESTS_QUERY,
+  MY_PRINT_REQUESTS_PAGE_QUERY,
   MARK_PRINT_REQUEST_PRINTED,
   MARK_PRINT_REQUEST_DELIVERED,
   CANCEL_PRINT_REQUEST,
@@ -34,6 +34,8 @@ import { RECON_REPORT_QUERY } from "../../graphql/operations";
 import type { PrintStackParamList } from "../../navigation/types";
 import { Screen, breakAnywhere, H2, Body, Muted, Card, Chip, ChipRow, Button, Badge, Loader, EmptyState, ErrorBanner, Field } from "../../components/ui";
 import { DateField } from "../../components/DateField";
+import { Pager } from "../../components/Pager";
+import { usePageState } from "../../lib/paging";
 import { STR, bnNum, classLevelLabel, hwSubjectLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { isWholeClassSectionName } from "../../lib/sectionPicks";
@@ -75,10 +77,6 @@ const bucketLabel = (s: string): string =>
 
 const statusTone = (s: string): "ok" | "warn" | "muted" =>
   s === "DELIVERED" ? "ok" : s === "PRINTED" ? "warn" : "muted";
-
-/** D-#302: a request the teacher still cares about day-to-day — filed but not yet
- *  printed, or printed but not yet handed over. Delivered/cancelled are history. */
-const isActiveRequest = (s: string): boolean => s === "REQUESTED" || s === "PRINTED";
 
 /** " (৪র্থ শ্রেণি বালক)" — whose present students a CLASS_PRESENT count is, naming the
  *  section when the count is narrower than the class; "" when the job names no class. */
@@ -122,12 +120,29 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
     pause: !isOffice || view !== "QUEUE",
     requestPolicy: "cache-and-network",
   });
-  const [mineQ, refetchMine] = useQuery({
-    query: MY_PRINT_REQUESTS_QUERY,
-    variables: {},
+  // D-#761: the own list is PAGED — in-flight and past each page on their own, so an old
+  // request is never out of reach and the past count is the real total.
+  const [minePage, setMinePage] = usePageState();
+  const [pastPage, setPastPage] = usePageState();
+  const [mineQ, refetchMineActive] = useQuery({
+    query: MY_PRINT_REQUESTS_PAGE_QUERY,
+    variables: { active: true, page: minePage, pageSize: PAGE_SIZE },
     pause: !canRequest,
     requestPolicy: "cache-and-network",
   });
+  const [pastQ, refetchPast] = useQuery({
+    query: MY_PRINT_REQUESTS_PAGE_QUERY,
+    variables: { active: false, page: pastPage, pageSize: PAGE_SIZE },
+    pause: !canRequest,
+    requestPolicy: "cache-and-network",
+  });
+  const refetchMine = useCallback(
+    (opts: { requestPolicy: "network-only" }): void => {
+      refetchMineActive(opts);
+      refetchPast(opts);
+    },
+    [refetchMineActive, refetchPast],
+  );
   // D-#459: the same reconciliationReport query the Reports-hub AsPrintPending screen
   // uses, narrowed to a single day — avoids a second server code path/gate.
   const [gapsQ, refetchGaps] = useQuery({
@@ -373,10 +388,13 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
   // D-#461: the 1-based range this page covers, for the "১–২৫ / ৩৪১" pager label.
   const pageFrom = queueTotal === 0 ? 0 : page * PAGE_SIZE + 1;
   const pageTo = page * PAGE_SIZE + queue.length;
-  const mine = mineQ.data?.myPrintRequests ?? [];
-  // D-#302: in-flight jobs on top; delivered/cancelled behind the fold.
-  const mineActive = mine.filter((r) => isActiveRequest(r.status));
-  const minePast = mine.filter((r) => !isActiveRequest(r.status));
+  // D-#302: in-flight jobs on top; delivered/cancelled behind the fold. D-#761: each is
+  // one server page; the totals are the real counts.
+  const mineActive = mineQ.data?.myPrintRequestsPage.rows ?? [];
+  const mineActiveTotal = mineQ.data?.myPrintRequestsPage.total ?? 0;
+  const minePast = pastQ.data?.myPrintRequestsPage.rows ?? [];
+  const minePastTotal = pastQ.data?.myPrintRequestsPage.total ?? 0;
+  const mineTotal = mineActiveTotal + minePastTotal;
 
   return (
     <Screen scroll>
@@ -496,28 +514,35 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
           <View style={{ marginTop: space(4) }}>
             <H2>{STR.prMyRequests}</H2>
           </View>
-          {mineQ.error ? (
-            <ErrorBanner message={friendlyError(mineQ.error)} onRetry={() => refetchMine({ requestPolicy: "network-only" })} />
-          ) : mineQ.fetching && mine.length === 0 ? (
+          {mineQ.error || pastQ.error ? (
+            <ErrorBanner
+              message={friendlyError((mineQ.error ?? pastQ.error)!)}
+              onRetry={() => refetchMine({ requestPolicy: "network-only" })}
+            />
+          ) : (mineQ.fetching || pastQ.fetching) && mineTotal === 0 ? (
             <Loader label={STR.loading} />
-          ) : mine.length === 0 ? (
+          ) : mineTotal === 0 ? (
             <EmptyState message={STR.prNoJobs} />
           ) : (
             <>
-              {mineActive.length === 0 ? (
+              {mineActiveTotal === 0 ? (
                 <EmptyState message={STR.prNoJobs} />
               ) : (
                 mineActive.map((r) => <Row key={r.id} r={r} office={false} />)
               )}
+              <Pager page={minePage} pageSize={PAGE_SIZE} total={mineActiveTotal} onPage={setMinePage} />
               {/* D-#302: delivered/cancelled history folds behind one toggle. */}
-              {minePast.length > 0 ? (
+              {minePastTotal > 0 ? (
                 <>
                   <Button
-                    title={`${showPast ? "▾" : "▸"} ${STR.prPastRequests} (${bnNum(minePast.length)})`}
+                    title={`${showPast ? "▾" : "▸"} ${STR.prPastRequests} (${bnNum(minePastTotal)})`}
                     variant="secondary"
                     onPress={() => setShowPast((v) => !v)}
                   />
                   {showPast ? minePast.map((r) => <Row key={r.id} r={r} office={false} />) : null}
+                  {showPast ? (
+                    <Pager page={pastPage} pageSize={PAGE_SIZE} total={minePastTotal} onPage={setPastPage} />
+                  ) : null}
                 </>
               ) : null}
             </>
