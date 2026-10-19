@@ -21,7 +21,8 @@ import {
 } from "../../graphql/hwWeeklyDigest";
 import type { ReportsStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Badge, Notice, Loader, Button, Select } from "../../components/ui";
-import { STR, bnNum, subjectLabel, classLevelLabel } from "../../lib/labels";
+import { STR, bnNum, subjectLabel, classSectionLabel } from "../../lib/labels";
+import { isWholeClassSectionName } from "../../lib/sectionPicks";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
 import { dateKey } from "../../lib/dates";
@@ -105,16 +106,24 @@ export default function HwWeeklyUnsubmittedScreen({ route }: Props): React.React
   const rows = report?.students ?? [];
 
   const allLabel = STR.all;
+  // D-#770: the class label + the section only when it tells halves apart ("৪র্থ শ্রেণি
+  // বালক"). The bare section name merged C3/C4/C5 বালক into one chip and every
+  // single-section class into one "মূল"; the filter keys on sectionId for the same reason.
   const sectionName = (r: HwWeeklyStudentRowT): string =>
-    r.sectionNameBn ?? classLevelLabel(r.classLevel);
+    classSectionLabel(r.classLevel, isWholeClassSectionName(r.sectionNameBn) ? null : r.sectionNameBn);
 
-  const sectionOptions = useMemo(
-    () => [
+  const sectionOptions = useMemo(() => {
+    const bySection = new Map<string, { label: string; level: number }>();
+    for (const r of rows) {
+      if (!bySection.has(r.sectionId)) bySection.set(r.sectionId, { label: sectionName(r), level: r.classLevel });
+    }
+    return [
       { label: allLabel, value: "" },
-      ...[...new Set(rows.map(sectionName))].sort((a, b) => a.localeCompare(b)).map((s) => ({ label: s, value: s })),
-    ],
-    [rows, allLabel],
-  );
+      ...[...bySection.entries()]
+        .sort(([, a], [, b]) => a.level - b.level || a.label.localeCompare(b.label))
+        .map(([value, { label }]) => ({ label, value })),
+    ];
+  }, [rows, allLabel]);
   const subjectOptions = useMemo(
     () => [
       { label: allLabel, value: "" },
@@ -137,7 +146,7 @@ export default function HwWeeklyUnsubmittedScreen({ route }: Props): React.React
     () =>
       rows.filter(
         (r) =>
-          (filterSection === "" || sectionName(r) === filterSection) &&
+          (filterSection === "" || r.sectionId === filterSection) &&
           (filterSubject === "" || r.unsubmitted.some((l) => l.subject === filterSubject)) &&
           (filterStatus === "" ||
             (filterStatus === "unsub" ? r.unsubmitted.length > 0 : r.unsubmitted.length === 0)),
