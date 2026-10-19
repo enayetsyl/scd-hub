@@ -70,9 +70,11 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
   const accessible = useAccessibleClasses();
   const { myClasses, isAdmin } = accessible;
 
-  // Per-class cumulative badges (one ref per class, any accessible section authorizes).
+  // D-#770: one ref per accessible SECTION, one row back per section. A class-keyed
+  // fold pooled a split class's বালক and বালিকা (one badge, and over-ceiling days that
+  // added both halves' minutes); the class button now sums its own sections' rows.
   const refs = useMemo<HwClassRefInput[]>(
-    () => myClasses.map((m) => ({ classId: m.cls.id, sectionId: m.sections[0].id })),
+    () => myClasses.flatMap((m) => m.sections.map((s) => ({ classId: m.cls.id, sectionId: s.id }))),
     [myClasses],
   );
   const [overviewQ, refetchOverview] = useQuery({
@@ -80,23 +82,31 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
     variables: { refs },
     pause: refs.length === 0,
   });
-  const overviewByClass = useMemo(() => {
+  const overviewBySection = useMemo(() => {
     const m = new Map<string, NonNullable<typeof overviewQ.data>["homeworkClassOverview"][number]>();
-    for (const o of overviewQ.data?.homeworkClassOverview ?? []) m.set(o.classId, o);
+    for (const o of overviewQ.data?.homeworkClassOverview ?? []) if (o.sectionId) m.set(o.sectionId, o);
     return m;
   }, [overviewQ.data]);
-  // Per-class badge for the dashboard buttons: pending-checking count; red when
-  // chases are open, amber when resubmissions are.
+  // Per-class badge for the dashboard buttons: pending-checking count summed over the
+  // class's sections; red when chases are open, amber when resubmissions are.
   const badges = useMemo(() => {
+    const totals = new Map<string, { pending: number; chases: number; resubs: number }>();
+    for (const ov of overviewBySection.values()) {
+      const t = totals.get(ov.classId) ?? { pending: 0, chases: 0, resubs: 0 };
+      t.pending += ov.pendingChecking;
+      t.chases += ov.activeChases;
+      t.resubs += ov.openResubmissions;
+      totals.set(ov.classId, t);
+    }
     const m = new Map<string, ClassBadge>();
-    for (const [classId, ov] of overviewByClass) {
+    for (const [classId, t] of totals) {
       m.set(classId, {
-        count: ov.pendingChecking,
-        tone: ov.activeChases > 0 ? "danger" : ov.openResubmissions > 0 ? "warn" : "muted",
+        count: t.pending,
+        tone: t.chases > 0 ? "danger" : t.resubs > 0 ? "warn" : "muted",
       });
     }
     return m;
-  }, [overviewByClass]);
+  }, [overviewBySection]);
 
   // The selected class+section detail (existing day-tally + summary).
   const hasSection = !!(selection.classId && selection.sectionId);
@@ -159,7 +169,7 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
   const tally = tallyQ.data?.homeworkDayTally;
   const summary = sumQ.data?.homeworkSummary;
   const over = tally ? !tally.withinCeiling : false;
-  const selectedOverview = selection.classId ? overviewByClass.get(selection.classId) : undefined;
+  const selectedOverview = selection.sectionId ? overviewBySection.get(selection.sectionId) : undefined;
 
   return (
     <Screen padded={false}>

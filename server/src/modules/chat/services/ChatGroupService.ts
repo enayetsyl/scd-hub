@@ -22,10 +22,12 @@
  * Identity-plane behind the ADR-005 firewall — no corpus import in this module.
  */
 import { Types } from "mongoose";
-import { ROUTINE_SUBJECTS, ROUTINE_SUBJECT_LABELS_BN, POSTING_POLICIES } from "@scd/shared";
+import { ROUTINE_SUBJECTS, ROUTINE_SUBJECT_LABELS_BN, POSTING_POLICIES, ROSTER_CLASS_LABELS_BN } from "@scd/shared";
 import type { PostingPolicy, RoutineSubject } from "@scd/shared";
 import { User } from "../../foundation/models/User";
 import { Section, type ISection } from "../../foundation/models/Section";
+import { Class } from "../../foundation/models/Class";
+import { bnNum } from "../../../lib/bnNum";
 import { ScopeGrant, notExpired } from "../../foundation/models/ScopeGrant";
 import { RoutineSlot } from "../../routine/models/RoutineSlot";
 import { liveWindow } from "../../routine/liveWindow";
@@ -182,13 +184,43 @@ async function subjectMemberIds(subject: RoutineSubject): Promise<string[]> {
 // Public sync entry points (group-scoped — called by hooks + the full resync)
 // ---------------------------------------------------------------------------
 
+/** Sections that ARE the whole class — their name adds nothing beside it (the app's
+ *  `isWholeClassSectionName`, sectionPicks.ts). */
+const WHOLE_CLASS_SECTIONS = ["মূল", "সম্মিলিত"];
+
+/**
+ * A SECTION group's title — the server mirror of the app's Bangla `classSectionLabel`
+ * (labels.ts): "নার্সারি" / "কেজি" / "শ্রেণি ৪", plus the section name when it tells
+ * halves apart ("শ্রেণি ৪ বালক"); মূল / সম্মিলিত keep the class label alone. An
+ * unknown class level keeps the bare section name (the pre-D-#770 title).
+ */
+export function sectionGroupTitle(level: number | null | undefined, sectionNameBn: string): string {
+  const name = (sectionNameBn ?? "").trim();
+  if (level == null) return name;
+  const classLabel =
+    level <= 0
+      ? ((ROSTER_CLASS_LABELS_BN as Record<number, string>)[level] ?? `শ্রেণি ${bnNum(level)}`)
+      : `শ্রেণি ${bnNum(level)}`;
+  return !name || WHOLE_CLASS_SECTIONS.includes(name) ? classLabel : `${classLabel} ${name}`;
+}
+
 /** Auto-provision + sync the SECTION group for one section (no-op for an inactive
  *  or missing section). Called on class-teacher/support change + section routine
  *  slot create/delete, and by the full resync. */
 export async function syncSectionGroup(sectionId: string): Promise<SyncCounts | null> {
   const section = (await Section.findById(sectionId).lean()) as ISection | null;
   if (!section || section.active === false) return null;
-  const conv = await upsertAutoConversation("SECTION", section._id.toString(), section.nameBn);
+  // D-#770: titled with the CLASS + the section (a bare "বালক" named the C3, C4 and C5
+  // Boys groups alike). upsertAutoConversation $sets the title on every sync, so an
+  // existing group is renamed on its next sync, not only at creation.
+  const cls = section.classId
+    ? ((await Class.findById(section.classId).select("level").lean()) as { level?: number } | null)
+    : null;
+  const conv = await upsertAutoConversation(
+    "SECTION",
+    section._id.toString(),
+    sectionGroupTitle(cls?.level, section.nameBn),
+  );
   const desired = await filterActiveStaff(await sectionMemberIds(section));
   const counts = await reconcileAutoMembers(conv._id, desired);
   return { conversationId: conv._id.toString(), ...counts };

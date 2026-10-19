@@ -124,8 +124,14 @@ function stubData(opts: {
       ),
     ),
   );
-  mockStudentFind.mockImplementation((q: { classId?: unknown; _id?: unknown }) =>
-    leanChain(q.classId ? (opts.classStudents ?? []) : (opts.students ?? [])),
+  // The heads-up fan-out reads students by SECTION ({ sectionId: { $in } }); the
+  // label read by _id. classStudents is filtered by the query's own section list.
+  mockStudentFind.mockImplementation((q: { sectionId?: { $in: unknown[] }; _id?: unknown }) =>
+    leanChain(
+      q.sectionId
+        ? (opts.classStudents ?? []).filter((s) => q.sectionId!.$in.some((id) => String(id) === String(s.sectionId)))
+        : (opts.students ?? []),
+    ),
   );
   mockSectionFind.mockImplementation(() => leanChain(opts.sections ?? []));
 }
@@ -235,6 +241,36 @@ describe("homeworkWeeklyDigestData — the window split + state filter", () => {
     });
     const out = await homeworkWeeklyDigestData(digestWindowOf(THURSDAY));
     expect(out).toHaveLength(0);
+  });
+
+  test("split class: the heads-up fans by SECTION — a বালক child never gets the বালিকা sheet", async () => {
+    const BOYS = oid();
+    const GIRLS = oid();
+    const BOY = oid();
+    const GIRL = oid();
+    const boysItem = item({ _id: oid(), hwId: "HW-C4-MATH-0010", dateGiven: new Date(2026, 7, 6), sectionId: BOYS, classLevel: 4, description: "বালক অনুশীলনী" });
+    const girlsItem = item({ _id: oid(), hwId: "HW-C4-MATH-0011", dateGiven: new Date(2026, 7, 6), sectionId: GIRLS, classLevel: 4, description: "বালিকা অনুশীলনী" });
+    stubData({
+      items: [boysItem, girlsItem],
+      // Same class, two sections — the pre-fix classId fan-out gave each child both.
+      classStudents: [
+        { _id: BOY, classId: CLASS_A, sectionId: BOYS },
+        { _id: GIRL, classId: CLASS_A, sectionId: GIRLS },
+      ],
+      students: [{ _id: BOY, name: "Boy" }, { _id: GIRL, name: "Girl" }],
+      sections: [{ _id: BOYS, nameBn: "বালক" }, { _id: GIRLS, nameBn: "বালিকা" }],
+    });
+    const out = await homeworkWeeklyDigestData(digestWindowOf(THURSDAY));
+    const boy = out.find((d) => d.studentId === BOY.toString())!;
+    const girl = out.find((d) => d.studentId === GIRL.toString())!;
+    expect(boy.headsUp.map((l) => l.hwId)).toEqual(["HW-C4-MATH-0010"]);
+    expect(girl.headsUp.map((l) => l.hwId)).toEqual(["HW-C4-MATH-0011"]);
+    expect(boy.sectionId).toBe(BOYS.toString());
+    expect(boy.sectionNameBn).toBe("বালক");
+    // The student read itself is section-keyed, never class-keyed.
+    const fanOutQuery = mockStudentFind.mock.calls.map((c) => c[0]).find((q) => q.sectionId);
+    expect(fanOutQuery).toBeTruthy();
+    expect(fanOutQuery.classId).toBeUndefined();
   });
 
   test("unsubmitted lines sort subject-first, then dateKey", async () => {

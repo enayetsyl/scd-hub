@@ -33,6 +33,7 @@ import { Screen, Card, Body, Muted, Button, Chip, Field, Notice, Badge, Loader, 
 import { AcademicYearSelect } from "../../components/selects";
 import { useAuth } from "../../auth/AuthContext";
 import { STR, bnNum } from "../../lib/labels";
+import { pickableSections } from "../../lib/sectionPicks";
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<ChatStackParamList, "GuardianNotice">;
@@ -62,8 +63,10 @@ export default function GuardianNoticeScreen(_props: Props): React.ReactElement 
     variables: { academicYearId: ayId || "" },
     pause: !canManage || !ayId,
   });
+  // D-#770: live sections only — a notice to the emptied সম্মিলিত beside a split
+  // class's বালক/বালিকা (or to an inactive section) reaches no guardian.
   const sectionOptions = (classesQ.data?.classes ?? []).flatMap((c) =>
-    c.sections.map((s) => ({ label: `${c.nameBn} · ${s.nameBn} (${s.code})`, value: s.id })),
+    pickableSections(c.sections).map((s) => ({ label: `${c.nameBn} · ${s.nameBn} (${s.code})`, value: s.id })),
   );
 
   const [, compose] = useMutation(COMPOSE_GUARDIAN_NOTICE);

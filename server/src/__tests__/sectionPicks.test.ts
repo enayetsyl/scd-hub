@@ -18,8 +18,9 @@ interface Sec {
   studentCount?: number | null;
 }
 
-const { pickableSections, isWholeClassSectionName } = require("../../../app/src/lib/sectionPicks") as {
+const { pickableSections, withoutEmptiedSections, isWholeClassSectionName } = require("../../../app/src/lib/sectionPicks") as {
   pickableSections: (s: Sec[]) => Sec[];
+  withoutEmptiedSections: (offered: Sec[], classSections: Sec[]) => Sec[];
   isWholeClassSectionName: (n: string | null | undefined) => boolean;
 };
 
@@ -50,6 +51,24 @@ describe("pickableSections", () => {
   test("a section without a count (older query shape) is kept", () => {
     const mixed = [sec("boys", "বালক", 7), sec("legacy", "মূল", undefined)];
     expect(ids(pickableSections(mixed))).toEqual(["boys", "legacy"]);
+  });
+});
+
+describe("withoutEmptiedSections (D-#770 — grant-reached dashboard lists)", () => {
+  test("a lingering grant on the emptied সম্মিলিত does not bring it back", () => {
+    const c4 = [sec("boys", "বালক", 7), sec("girls", "বালিকা", 5), sec("all", "সম্মিলিত", 0)];
+    // The teacher's grants reach ALL (expired-at-split routine grant) and Boys.
+    expect(ids(withoutEmptiedSections([c4[2], c4[0]], c4))).toEqual(["boys"]);
+  });
+
+  test("before the move, a still-inactive empty half reached by its routine grant is hidden", () => {
+    const c3 = [sec("all", "সম্মিলিত", 17), sec("boys", "বালক", 0, false), sec("girls", "বালিকা", 0, false)];
+    expect(ids(withoutEmptiedSections([c3[0], c3[1]], c3))).toEqual(["all"]);
+  });
+
+  test("a class with no students anywhere keeps what the caller reaches", () => {
+    const empty = [sec("a", "ক", 0), sec("b", "খ", 0)];
+    expect(ids(withoutEmptiedSections(empty, empty))).toEqual(["a", "b"]);
   });
 });
 

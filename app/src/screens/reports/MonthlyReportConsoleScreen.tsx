@@ -30,6 +30,7 @@ import { Screen, Body, Muted, Card, Select, Button, Field, EmptyState } from "..
 import { QueryGate } from "../../components/QueryGate";
 import { STR, bnNum } from "../../lib/labels";
 import { downloadFile, PDF_SUPPORTED } from "../../lib/pdf";
+import { pickableSections } from "../../lib/sectionPicks";
 import { space, useColors } from "../../theme";
 import type { ReportsStackParamList } from "../../navigation/types";
 
@@ -152,9 +153,10 @@ export default function MonthlyReportConsoleScreen(): React.ReactElement {
   const [classesQ] = useQuery({ query: CLASSES_QUERY, variables: { academicYearId: yearId }, pause: !yearId });
   const sections = useMemo(
     () =>
+      // D-#770: pickableSections — unreleased reports now follow the child on a split
+      // (rehomeStudentRecords), so the emptied সম্মিলিত holds nothing to build or release.
       (classesQ.data?.classes ?? []).flatMap((c) =>
-        c.sections
-          .filter((s) => s.active)
+        pickableSections(c.sections)
           .map((s) => ({ id: s.id, label: `${c.nameBn} — ${s.nameBn ?? s.code}` })),
       ),
     [classesQ.data],

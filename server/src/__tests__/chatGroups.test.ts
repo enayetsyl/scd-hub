@@ -81,6 +81,13 @@ jest.mock("../modules/foundation/models/Section", () => ({
   },
 }));
 
+const mockClassFindById = jest.fn();
+jest.mock("../modules/foundation/models/Class", () => ({
+  Class: {
+    findById: (id: unknown) => ({ select: () => ({ lean: () => mockClassFindById(id) }) }),
+  },
+}));
+
 const mockGrantFind = jest.fn();
 jest.mock("../modules/foundation/models/ScopeGrant", () => ({
   ScopeGrant: {
@@ -105,6 +112,7 @@ jest.mock("../modules/platform/services/AuditService", () => ({
 // Import AFTER mocks
 import {
   syncSectionGroup,
+  sectionGroupTitle,
   syncSubjectGroup,
   syncSchoolGroup,
   resyncAllChatGroups,
@@ -233,6 +241,31 @@ describe("M2 syncSectionGroup", () => {
     );
     expect(addedIds).toEqual([CT.toString()]);
     expect(addedIds).not.toContain(Z.toString());
+  });
+});
+
+// D-#770 — a bare "বালক" titled the C3, C4 and C5 Boys groups alike.
+describe("SECTION group title (D-#770)", () => {
+  test("mirrors the app's classSectionLabel: class + the half; মূল/সম্মিলিত keep the class alone", () => {
+    expect(sectionGroupTitle(4, "বালক")).toBe("শ্রেণি ৪ বালক");
+    expect(sectionGroupTitle(3, "বালিকা")).toBe("শ্রেণি ৩ বালিকা");
+    expect(sectionGroupTitle(4, "সম্মিলিত")).toBe("শ্রেণি ৪");
+    expect(sectionGroupTitle(1, "মূল")).toBe("শ্রেণি ১");
+    expect(sectionGroupTitle(-1, "মূল")).toBe("নার্সারি");
+    expect(sectionGroupTitle(0, "বালক")).toBe("কেজি বালক");
+    // Class not found → the old bare-name title, never a crash.
+    expect(sectionGroupTitle(null, "বালক")).toBe("বালক");
+  });
+
+  test("every sync $sets the class-labelled title, so an EXISTING group is renamed too", async () => {
+    const classId = oid();
+    mockSectionFindById.mockResolvedValue({ _id: oid(), classId, active: true, nameBn: "বালক", supportTeacherIds: [] });
+    mockClassFindById.mockResolvedValue({ level: 4 });
+    await syncSectionGroup(oid().toString());
+    expect(mockClassFindById).toHaveBeenCalledWith(classId);
+    const [, update] = mockConvUpsert.mock.calls[0];
+    expect(update.$set).toEqual({ title: "শ্রেণি ৪ বালক" });
+    expect(update.$setOnInsert.title).toBeUndefined(); // not an insert-only field
   });
 });
 

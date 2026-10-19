@@ -31,6 +31,21 @@ export function pickableSections<T extends PickableSection>(sections: readonly T
   return active.filter((s) => s.studentCount == null || s.studentCount > 0);
 }
 
+/**
+ * `offered` minus any EMPTY section while some section of the same class (`classSections`,
+ * active or not) holds students — the pickableSections rule for a list that was NOT built
+ * from `active` alone (a teacher's grant / class-teacher / routine reach, which can name the
+ * emptied সম্মিলিত, or a still-inactive empty half before the move). D-#770.
+ */
+export function withoutEmptiedSections<T extends PickableSection>(
+  offered: readonly T[],
+  classSections: readonly PickableSection[],
+): T[] {
+  const someoneEnrolled = classSections.some((s) => (s.studentCount ?? 0) > 0);
+  if (!someoneEnrolled) return [...offered];
+  return offered.filter((s) => s.studentCount == null || s.studentCount > 0);
+}
+
 export interface PickableClass<S extends PickableSection & { id: string; nameBn: string }> {
   id: string;
   level: number;
