@@ -77,8 +77,9 @@ Rotation teachers are derived per subject from each grid (one teacher per subjec
   student's CURRENT section — STUDENTS copies them to both halves with each half's absentees
   (C4/C5 precedent 2026-09-30). Check one moved student's history shows January. For Nursery/KG
   the section is the live unit — check `SectionAttendanceAssignment` marker overrides too.
-- Things the script deliberately does NOT touch (decide per split): monthly-report DRAFTs still
-  on the combined section (invisible on the halves' consoles), CLASS-scope improvement actions on
+- Unreleased monthly reports (DRAFT/READY) move with the student inside `rehomeStudentRecords`
+  (D-#770); released revisions stay where they were issued.
+- Things the script deliberately does NOT touch (decide per split): CLASS-scope improvement actions on
   the combined section (re-create on the halves), a draft parent meeting scoped by the combined
   `sectionId` (re-scope by class), manual (`source: "manual"`) teaching grants on the combined
   section (re-grant on the halves if still wanted).
