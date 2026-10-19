@@ -22,8 +22,8 @@
  *                               GIVEN/DUE ride along as the safety net for a
  *                               missed sweep. Heads-up basis = LAYER A (items,
  *                               declared OR issued — records may not exist before
- *                               the 17:00 auto-issue), fanned to the class's
- *                               active students.
+ *                               the 17:00 auto-issue), fanned to the item's
+ *                               SECTION's active students (split-safe).
  *   dispatchHomeworkWeeklyDigest — render once (MT N+1 guard), emit per
  *                               guardian × child; skip students with no lines.
  *
@@ -196,8 +196,11 @@ export async function homeworkWeeklyDigestData(
         .lean()
     : [];
 
-  // Heads-up basis: Layer A fanned to the class's active students (records may
+  // Heads-up basis: Layer A fanned to the SECTION's active students (records may
   // not exist yet — the day reconciles at 17:00). Routine-aware due day per item.
+  // Keyed by sectionId, never classId: after a gender split (C4/C5 2026-10-01,
+  // C3 2026-10-25) বালক and বালিকা each declare their own sheet, and a class-wide
+  // fan-out handed every child both halves' homework.
   const headsUpDueKey = new Map<string, string | null>();
   await Promise.all(
     headsUpItems.map(async (i) => {
@@ -209,9 +212,9 @@ export async function homeworkWeeklyDigestData(
       }
     }),
   );
-  const headsUpClassIds = [...new Set(headsUpItems.map((i) => i.classId.toString()))];
-  const headsUpStudents = headsUpClassIds.length
-    ? ((await Student.find({ classId: { $in: headsUpClassIds }, active: true })
+  const headsUpSectionIds = [...new Set(headsUpItems.map((i) => i.sectionId.toString()))];
+  const headsUpStudents = headsUpSectionIds.length
+    ? ((await Student.find({ sectionId: { $in: headsUpSectionIds }, active: true })
         .select("_id classId sectionId")
         .lean()) as unknown as Array<{ _id: Types.ObjectId; classId: Types.ObjectId; sectionId?: Types.ObjectId }>)
     : [];
@@ -245,20 +248,17 @@ export async function homeworkWeeklyDigestData(
     });
   }
 
-  const headsByClass = new Map<string, ItemLite[]>();
+  const headsBySection = new Map<string, ItemLite[]>();
   for (const i of headsUpItems) {
-    const k = i.classId.toString();
-    (headsByClass.get(k) ?? headsByClass.set(k, []).get(k)!).push(i);
+    const k = i.sectionId.toString();
+    (headsBySection.get(k) ?? headsBySection.set(k, []).get(k)!).push(i);
   }
   for (const stu of headsUpStudents) {
-    const classItems = headsByClass.get(stu.classId.toString()) ?? [];
-    if (classItems.length === 0) continue;
-    const e = entryOf(
-      stu._id.toString(),
-      stu.sectionId?.toString() ?? classItems[0].sectionId.toString(),
-      stu.classId.toString(),
-    );
-    for (const it of classItems) {
+    if (!stu.sectionId) continue;
+    const sectionItems = headsBySection.get(stu.sectionId.toString()) ?? [];
+    if (sectionItems.length === 0) continue;
+    const e = entryOf(stu._id.toString(), stu.sectionId.toString(), stu.classId.toString());
+    for (const it of sectionItems) {
       e.heads.push({
         hwItemId: it._id.toString(),
         hwId: it.hwId,

@@ -22,6 +22,7 @@ import {
   type ClassT,
 } from "../graphql/operations";
 import { delegatedClassReach } from "../lib/delegatedExtent";
+import { pickableSections, withoutEmptiedSections } from "../lib/sectionPicks";
 import { Body, Muted, Badge, Loader, EmptyState, ErrorBanner } from "./ui";
 import { STR, bnNum, getActiveLang } from "../lib/labels";
 import { friendlyError } from "../lib/errors";
@@ -68,9 +69,12 @@ export function useAccessibleClasses(): {
 
   const classes = classesData?.classes ?? [];
   const myClasses = useMemo<MyClass[]>(() => {
+    // D-#770: `active` alone offered the emptied সম্মিলিত beside a split class's
+    // বালক/বালিকা (it stays active for past-attendance amendment) — new homework,
+    // checking or an assignment there reaches nobody. Same rule as pickableSections.
     if (isAdmin) {
       return classes
-        .map((cls) => ({ cls, sections: cls.sections.filter((s) => s.active) }))
+        .map((cls) => ({ cls, sections: pickableSections(cls.sections) }))
         .filter((x) => x.sections.length > 0)
         .sort((a, b) => a.cls.level - b.cls.level);
     }
@@ -89,10 +93,14 @@ export function useAccessibleClasses(): {
     return classes
       .map((cls) => ({
         cls,
-        sections:
+        // A lingering grant / class-teacher row on the emptied section must not
+        // resurrect it either (withoutEmptiedSections, D-#770).
+        sections: withoutEmptiedSections(
           reach.wholeSchool || reach.classIds.has(cls.id)
             ? cls.sections.filter((s) => s.active || ids.has(s.id))
             : cls.sections.filter((s) => ids.has(s.id)),
+          cls.sections,
+        ),
       }))
       .filter((x) => x.sections.length > 0)
       .sort((a, b) => a.cls.level - b.cls.level);

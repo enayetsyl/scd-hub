@@ -139,7 +139,7 @@ export default function BuildVocabTestScreen(): React.ReactElement {
               </Body>
               <AcademicYearSelect value={yearId} onChange={setYearId} />
               <ProgramSelect value={program} onChange={setProgram} />
-              {yearId ? <ClassSectionSelect academicYearId={yearId} value={section} onChange={setSection} /> : null}
+              {yearId ? <ClassSectionSelect academicYearId={yearId} value={section} onChange={setSection} liveOnly /> : null}
               <Field label={STR.vbLabel} value={label} onChangeText={setLabel} error={fieldErrors.label} />
               <Field label={STR.vbTotalMarks} value={totalMarks} onChangeText={setTotalMarks} keyboardType="number-pad" error={fieldErrors.totalMarks} />
               {/* Rarely changed — folded (UX-6): the happy path never opens this. */}

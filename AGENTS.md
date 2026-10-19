@@ -141,6 +141,7 @@ auto-deploys (`.github/workflows`, `scripts/deploy.sh`). So:
   contract-sync/      ← the two-place enum/schema sync procedure
   verify-before-commit/ ← the executed-verification gate
   log-issue/          ← capture a pasted testing bug into docs/issues/BACKLOG.md
+  section-split/      ← split a combined section into বালক/বালিকা: phases, plan file, checklist (+ _tools/section_split_by_gender.cjs)
 ```
 
 ## Session-end ritual

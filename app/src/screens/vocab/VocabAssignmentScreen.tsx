@@ -76,7 +76,7 @@ export default function VocabAssignmentScreen(): React.ReactElement {
           <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.vbAssignTitle}</Body>
           <AcademicYearSelect value={yearId} onChange={setYearId} />
           <ProgramSelect value={program} onChange={setProgram} />
-          {yearId ? <ClassSectionSelect academicYearId={yearId} value={section} onChange={setSection} /> : null}
+          {yearId ? <ClassSectionSelect academicYearId={yearId} value={section} onChange={setSection} liveOnly /> : null}
           <DateField label={STR.vbWeek} value={week} onChange={setWeek} />
           <TeacherSelect label={STR.vbAssignTester} value={teacherId} onChange={setTeacherId} />
           <View style={{ marginTop: space(2) }}>
