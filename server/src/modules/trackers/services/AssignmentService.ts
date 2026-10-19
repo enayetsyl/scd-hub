@@ -39,6 +39,7 @@ import { resolveScheduleWeek } from "./AssignmentScheduleService";
 import { assertTransition } from "../lifecycle";
 import { atMidnight, dateOnlyISO } from "../assignmentCalendar";
 import { writeAudit } from "../../platform/services/AuditService";
+import { isRehomed, resolveRecordOwners } from "../recordOwner";
 
 // ---------------------------------------------------------------------------
 // AS_ID generation (D-#34 numbering pattern)
@@ -300,6 +301,9 @@ export interface UpdateAssignmentItemResult {
   dueDate: string;
 }
 
+const NOT_YOUR_CELL =
+  "এই অ্যাসাইনমেন্টটি আপনার বিষয়/সপ্তাহের নয় — শুধু দায়িত্বপ্রাপ্ত শিক্ষক বা অফিস সম্পাদনা করতে পারে";
+
 /** The cell's own subject teacher, or Principal/Office. */
 function assertOwnsAssignmentCell(
   item: { teacherId: { toString(): string } },
@@ -308,8 +312,42 @@ function assertOwnsAssignmentCell(
 ): void {
   if (isAdmin) return;
   if (item.teacherId.toString() !== actorId) {
-    throw new Error("এই অ্যাসাইনমেন্টটি আপনার বিষয়/সপ্তাহের নয় — শুধু দায়িত্বপ্রাপ্ত শিক্ষক বা অফিস সম্পাদনা করতে পারে");
+    throw new Error(NOT_YOUR_CELL);
   }
+}
+
+/**
+ * D-#772 — how much of the item this actor may edit. "FULL": the cell's own teacher or
+ * Principal/Office (D-#353, unchanged). "RECORD_HALF": the record owner (routine
+ * subject teacher) of a section the item's records were REHOMED to by a split — a
+ * pre-split সম্মিলিত item whose বালিকা copies this teacher now checks. That half may
+ * only supply what checking needs (a missing totalMarks); the item's text, set and
+ * attachments stay the item teacher's. Anyone else is refused.
+ */
+async function assignmentEditScope(
+  item: { _id: unknown; teacherId: { toString(): string }; sectionId?: { toString(): string } | null; subject: string; deliveryDate: Date },
+  actorId: string,
+  isAdmin: boolean | undefined,
+): Promise<"FULL" | "RECORD_HALF"> {
+  if (isAdmin || item.teacherId.toString() === actorId) return "FULL";
+  const sections = item.sectionId
+    ? ((await AssignmentStudentRecord.distinct("sectionId", { asItemId: item._id })) as Array<{ toString(): string }>)
+        .filter((s) => isRehomed(item.sectionId, s))
+    : [];
+  if (sections.length > 0) {
+    const owners = await resolveRecordOwners(
+      sections.map((s) => ({
+        itemId: String(item._id),
+        itemSectionId: item.sectionId!.toString(),
+        recordSectionId: s.toString(),
+        subject: item.subject,
+        itemDate: new Date(item.deliveryDate),
+        itemOwnerId: item.teacherId.toString(),
+      })),
+    );
+    if ([...owners.values()].includes(actorId)) return "RECORD_HALF";
+  }
+  throw new Error(NOT_YOUR_CELL);
 }
 
 /**
@@ -330,7 +368,25 @@ export async function updateAssignmentItem(
   if (!Types.ObjectId.isValid(input.itemId)) throw new Error("Invalid assignment id");
   const item = await AssignmentItem.findById(input.itemId);
   if (!item) throw new Error("AssignmentItem not found");
-  assertOwnsAssignmentCell(item, input.actorId, input.isAdmin);
+  const scope = await assignmentEditScope(item, input.actorId, input.isAdmin);
+  if (scope === "RECORD_HALF") {
+    // A split half supplies what its checking needs — the missing পূর্ণমান — and
+    // nothing else: the item text belongs to the item's teacher, and re-scaling an
+    // already-set totalMarks would change the other half's marks too.
+    const touchesOther =
+      input.estMinutes !== undefined ||
+      input.setId !== undefined ||
+      input.description !== undefined ||
+      input.attachmentIds !== undefined;
+    if (touchesOther || input.totalMarks === undefined) {
+      throw new Error(
+        "বিভক্ত শাখার শিক্ষক এই অ্যাসাইনমেন্টের শুধু পূর্ণমান দিতে পারেন — বাকিটা দায়িত্বপ্রাপ্ত শিক্ষক বা অফিস সম্পাদনা করবেন",
+      );
+    }
+    if (item.totalMarks !== undefined && item.totalMarks !== null) {
+      throw new Error("পূর্ণমান আগেই দেওয়া আছে — পরিবর্তনের জন্য দায়িত্বপ্রাপ্ত শিক্ষক বা অফিসকে বলুন");
+    }
+  }
 
   const issued = item.status === "ISSUED";
 
@@ -412,6 +468,7 @@ export async function updateAssignmentItem(
       setId: input.setId,
       descriptionEdited: input.description !== undefined,
       attachments: input.attachmentIds?.length,
+      ...(scope === "RECORD_HALF" ? { viaRecordSection: true } : {}),
     },
   });
 
