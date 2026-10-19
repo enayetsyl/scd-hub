@@ -13,6 +13,7 @@ import {
   revokeDelegation,
   delegationGrants,
   grantView,
+  isGrantLapsed,
   proxyGrantsPage,
   type ScopeGrantView,
 } from "../services/ScopeGrantService";
@@ -82,7 +83,14 @@ builder.queryField("myScopes", (t) =>
     resolve: async (_root, _args, ctx) => {
       if (!ctx.auth) return [];
       const grants = await ScopeGrant.find({ teacherId: ctx.auth.userId, active: true }).lean();
-      return grants.map(grantView);
+      // D-#770: leave out what authz no longer honours — a teaching grant lapsed by a
+      // dated routine retirement (the combined section's grants at a gender split) or
+      // an expired delegation stays `active` as history, and listing it put the
+      // emptied section back in the teacher's pickers. Same predicate as authz.
+      const now = new Date();
+      return grants
+        .filter((g) => !isGrantLapsed(g as { kind: string; expiresAt?: Date | null }, now))
+        .map(grantView);
     },
   }),
 );

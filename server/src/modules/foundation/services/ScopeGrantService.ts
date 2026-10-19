@@ -104,6 +104,22 @@ function extentCovers(
   }
 }
 
+/**
+ * The request-time `expiresAt` lapse composeTeacherScope applies — a TEACHING grant
+ * (a future-dated routine retirement stamps the lapse instead of deactivating, e.g. the
+ * combined section's grants at a gender split) or a DELEGATION (D-#488) whose expiresAt
+ * has passed is no longer in scope though the row stays `active` as history. Supervisory
+ * grants carry no expiry; proxies use their own window (isProxyActive). One predicate so
+ * `myScopes` (D-#770) lists exactly what authz honours.
+ */
+export function isGrantLapsed(
+  g: { kind?: string | null; expiresAt?: Date | string | null },
+  now: Date = new Date(),
+): boolean {
+  if (g.kind !== "teaching" && g.kind !== "delegation") return false;
+  return !!g.expiresAt && new Date(g.expiresAt) <= now;
+}
+
 /** Compose the effective scope union for a teacher (ADR-017).
  *  Proxy grants are validated for the window at request time (D-#20).
  *  Returns { scopes, expiredProxyGrantIds } — callers audit expired grants. */
@@ -122,8 +138,7 @@ export async function composeTeacherScope(
   for (const g of grants) {
     if (g.kind === "teaching") {
       // A future-dated routine retirement stamps the lapse instead of deactivating.
-      const tg = g as { expiresAt?: Date };
-      if (tg.expiresAt && new Date(tg.expiresAt) <= now) continue;
+      if (isGrantLapsed(g as { kind: string; expiresAt?: Date }, now)) continue;
       scopes.push({
         kind: "teaching",
         classId: g.classId!.toString(),
@@ -152,7 +167,7 @@ export async function composeTeacherScope(
         expiresAt?: Date;
       };
       // Request-time expiry (D-#488) — no cron; the row survives as history.
-      if (dg.expiresAt && new Date(dg.expiresAt) <= now) continue;
+      if (isGrantLapsed({ kind: "delegation", expiresAt: dg.expiresAt }, now)) continue;
       if (!dg.extent || !dg.actions || dg.actions.length === 0) continue;
       scopes.push({
         kind: "delegation",
