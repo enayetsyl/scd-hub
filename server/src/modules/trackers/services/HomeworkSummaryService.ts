@@ -25,7 +25,7 @@ import { HomeworkStudentRecord } from "../models/HomeworkStudentRecord";
 import { HomeworkItem } from "../models/HomeworkItem";
 import { HomeworkReconciliation } from "../models/HomeworkReconciliation";
 import { isTerminalState } from "../lifecycle";
-import { resolveSubjectTeachers } from "../subjectTeacher";
+import { homeworkRecordOwners, ownerOf, type HwItemOwnerLite } from "../recordOwner";
 
 // §7.2–7.4 thresholds (confirmed A-01 / D-#34)
 export const CHASE_ATTENTION = 2;
@@ -119,9 +119,9 @@ export async function homeworkSummary(
         ...items.map((i) => i._id.toString()),
       ]),
     ];
-    const mine = await itemsAttributedTo(ids, opts.teacherId);
-    records = records.filter((r) => mine.has(r.hwItemId.toString()));
-    items = items.filter((i) => mine.has(i._id.toString()));
+    const mine = await recordsAttributedTo(records, opts.teacherId, ids);
+    records = mine.records;
+    items = items.filter((i) => mine.itemIds.has(i._id.toString()));
   }
 
   const chaseList: ChaseEntry[] = records
@@ -199,37 +199,53 @@ export interface ClassOverviewResult {
 }
 
 /**
- * The subset of `itemIds` whose ACCOUNTABLE teacher is `teacherId` — the routine's
- * subject teacher for the item's section × subject on its own date (D-#351, the
- * same rule the lifecycle report and the class-test tracker attribute by), falling
- * back to the declarer when the routine names nobody for that cell. One routine
- * query for the whole batch (resolveSubjectTeachers).
+ * The records whose OWNER is `teacherId` (D-#772 — per RECORD, not per item). A
+ * record on its item's section belongs to the item's ACCOUNTABLE teacher: the
+ * routine's subject teacher for the item's section × subject on its own date (D-#351,
+ * the rule the lifecycle report and the class-test tracker attribute by), falling
+ * back to the declarer. A record rehomed to another section by a split belongs to the
+ * routine subject teacher of the RECORD's section (`recordOwner`).
+ *
+ * `itemIds` comes back as the items the teacher owns any of these records on — plus,
+ * for an item with no record here (`extraItemIds`, e.g. one not yet issued), the
+ * items whose item-level owner they are — so topic touches describe the same work.
  */
-async function itemsAttributedTo(itemIds: string[], teacherId: string): Promise<Set<string>> {
-  if (itemIds.length === 0) return new Set();
-  const items = (await HomeworkItem.find({ _id: { $in: itemIds } })
+async function recordsAttributedTo<R extends { hwItemId: { toString(): string }; sectionId?: { toString(): string } | null }>(
+  records: R[],
+  teacherId: string,
+  extraItemIds: readonly string[] = [],
+  now: Date = new Date(),
+): Promise<{ records: R[]; itemIds: Set<string> }> {
+  const ids = [...new Set([...records.map((r) => r.hwItemId.toString()), ...extraItemIds])];
+  if (ids.length === 0) return { records: [], itemIds: new Set() };
+  const items = (await HomeworkItem.find({ _id: { $in: ids } })
     .select("sectionId subject dateGiven declaredBy")
-    .lean()) as unknown as Array<{
-    _id: { toString(): string };
-    sectionId: { toString(): string };
-    subject: string;
-    dateGiven: Date;
-    declaredBy: { toString(): string };
-  }>;
-  const resolved = await resolveSubjectTeachers(
-    items.map((i) => ({
-      key: i._id.toString(),
-      sectionId: i.sectionId.toString(),
-      subject: i.subject,
-      on: new Date(i.dateGiven),
-    })),
+    .lean()) as unknown as HwItemOwnerLite[];
+  const sectionOf = new Map(items.map((i) => [i._id.toString(), i.sectionId]));
+  const owners = await homeworkRecordOwners(
+    items,
+    [
+      ...records.map((r) => ({ itemId: r.hwItemId.toString(), recordSectionId: r.sectionId?.toString() ?? null })),
+      ...items.map((i) => ({ itemId: i._id.toString(), recordSectionId: i.sectionId.toString() })),
+    ],
+    now,
   );
-  const out = new Set<string>();
+  const withRecords = new Set<string>();
+  const itemIds = new Set<string>();
+  const mine = records.filter((r) => {
+    const k = r.hwItemId.toString();
+    withRecords.add(k);
+    const sec = sectionOf.get(k);
+    if (!sec) return false;
+    const owned = ownerOf(owners, k, r.sectionId, sec) === teacherId;
+    if (owned) itemIds.add(k);
+    return owned;
+  });
   for (const i of items) {
     const k = i._id.toString();
-    if ((resolved.get(k) ?? i.declaredBy.toString()) === teacherId) out.add(k);
+    if (!withRecords.has(k) && ownerOf(owners, k, i.sectionId, i.sectionId) === teacherId) itemIds.add(k);
   }
-  return out;
+  return { records: mine, itemIds };
 }
 
 /** Sun-00:00 → Sat-23:59:59 (UTC) window containing `asOfMillis`. */
@@ -241,7 +257,8 @@ function weekRange(asOfMillis: number): { start: Date; end: Date } {
 
 export interface ClassOverviewOpts {
   /** D-#634: count only the homework ATTRIBUTED to this teacher (the routine's
-   *  subject teacher, D-#351, falling back to the declarer). Omit for the
+   *  subject teacher, D-#351, falling back to the declarer; per RECORD after a
+   *  split, D-#772 — `recordsAttributedTo`). Omit for the
    *  school-wide numbers Principal/Office read. */
   teacherId?: string | null;
 }
@@ -260,9 +277,7 @@ export async function homeworkClassOverview(
   // than every item the class was ever given, and no extra work at all for the
   // unscoped (admin) read.
   if (opts.teacherId) {
-    const itemIds = [...new Set(records.map((r) => r.hwItemId.toString()))];
-    const mine = await itemsAttributedTo(itemIds, opts.teacherId);
-    records = records.filter((r) => mine.has(r.hwItemId.toString()));
+    records = (await recordsAttributedTo(records, opts.teacherId, [], new Date(asOfMillis))).records;
   }
   const { start, end } = weekRange(asOfMillis);
   const items = await HomeworkItem.find({
@@ -342,9 +357,7 @@ export async function homeworkSectionOverview(
 
   let records = await HomeworkStudentRecord.find({ sectionId: { $in: sectionIds } }).lean();
   if (opts.teacherId) {
-    const itemIds = [...new Set(records.map((r) => r.hwItemId.toString()))];
-    const mine = await itemsAttributedTo(itemIds, opts.teacherId);
-    records = records.filter((r) => mine.has(r.hwItemId.toString()));
+    records = (await recordsAttributedTo(records, opts.teacherId, [], new Date(asOfMillis))).records;
   }
   const { start, end } = weekRange(asOfMillis);
   const items = await HomeworkItem.find({

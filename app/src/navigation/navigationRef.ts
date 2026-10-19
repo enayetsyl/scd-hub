@@ -17,7 +17,7 @@ export function openNotificationCenter(): void {
  *  booting, or signed out (the root stack has no NotificationDetail until login). */
 let pendingNotificationId: string | null = null;
 
-/** D-#773: a push tap (app or browser) opens THAT notification's detail screen —
+/** D-#774: a push tap (app or browser) opens THAT notification's detail screen —
  *  where an inbox row tap lands — instead of the inbox. Held until it can be shown. */
 export function openNotification(id: string): void {
   pendingNotificationId = id;

@@ -1,5 +1,5 @@
 /**
- * Browser notification taps (D-#773) — the app half of public/sw.js's click handler.
+ * Browser notification taps (D-#774) — the app half of public/sw.js's click handler.
  *
  * A tap reaches the app one of two ways: an already-open tab gets a message from the
  * service worker; with no tab open, a new one starts at `/#notification=<id>`. Both

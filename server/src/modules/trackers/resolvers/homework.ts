@@ -595,7 +595,7 @@ builder.mutationField("transitionHomeworkRecord", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      const record = await HomeworkStudentRecord.findById(args.recordId).select("hwItemId").lean();
+      const record = await HomeworkStudentRecord.findById(args.recordId).select("hwItemId sectionId").lean();
       const item = record ? await HomeworkItem.findById(record.hwItemId).select("subject").lean() : null;
       // Only the →SUBMITTED transition is the delegated "take submission" duty (D-#486);
       // every other state change on this generic mutation stays teaching/proxy-scoped.
@@ -605,6 +605,7 @@ builder.mutationField("transitionHomeworkRecord", (t) =>
         item?.subject ? await resolveSubjectId(item.subject) : undefined,
         args.toState === "SUBMITTED" ? "submit_homework" : undefined,
       );
+      assertHwRecordInSection(record, args.sectionId);
       return transitionSvc({
         recordId: args.recordId,
         toState: args.toState,
@@ -704,6 +705,19 @@ builder.queryField("homeworkTopics", (t) =>
   }),
 );
 
+/** D-#772: the record's REAL section must be the one write-scope was asserted on
+ *  (the assignment twins' assertRecordInSection) — a client-supplied sectionId must
+ *  not lend one section's grant to another section's record. */
+function assertHwRecordInSection(
+  record: { sectionId?: { toString(): string } | null } | null,
+  sectionId: string,
+): void {
+  if (!record) throw new Error("HomeworkStudentRecord not found");
+  if (!record.sectionId || record.sectionId.toString() !== sectionId) {
+    throw new ForbiddenError("Record is not in the given section");
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Query: homeworkStudentRecords (Layer-B for an item — handoff §8.2)
 // ---------------------------------------------------------------------------
@@ -711,7 +725,9 @@ builder.queryField("homeworkTopics", (t) =>
 builder.queryField("homeworkStudentRecords", (t) =>
   t.field({
     type: [HomeworkStudentRecordRef],
-    description: "Per-student lifecycle records for an item. Read-scope enforced.",
+    description:
+      "Per-student lifecycle records for an item, ON the given section only (D-#772 — a pre-split " +
+      "item holds both halves' records). Read-scope enforced.",
     authScopes: { hasPermission: "tracker:read" },
     args: {
       sectionId: t.arg.string({ required: true }),
@@ -726,7 +742,10 @@ builder.queryField("homeworkStudentRecords", (t) =>
         const item = await HomeworkItem.findById(args.itemId).select("subject").lean();
         if (!item || !allowed.has(item.subject)) throw new ForbiddenError();
       }
-      const docs = await listStudentRecords(args.itemId);
+      // D-#772: the records of the section the caller was authorised for — never the
+      // whole item (a pre-split সম্মিলিত item holds BOTH halves' records; the D-#726
+      // listAssignmentRecords rule).
+      const docs = await listStudentRecords(args.itemId, args.sectionId);
       return docs.map((d) => ({
         id: d._id.toString(),
         hwId: d.hwId,
@@ -1323,7 +1342,7 @@ builder.mutationField("checkHomeworkRecord", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      const record = await HomeworkStudentRecord.findById(args.recordId).select("hwItemId").lean();
+      const record = await HomeworkStudentRecord.findById(args.recordId).select("hwItemId sectionId").lean();
       const item = record ? await HomeworkItem.findById(record.hwItemId).select("subject").lean() : null;
       await assertCanWrite(
         ctx,
@@ -1331,6 +1350,7 @@ builder.mutationField("checkHomeworkRecord", (t) =>
         item?.subject ? await resolveSubjectId(item.subject) : undefined,
         "check_homework",
       );
+      assertHwRecordInSection(record, args.sectionId);
       const topup =
         args.topupQids && args.topupQids.length > 0
           ? { qids: [...args.topupQids], time: args.topupTime ?? 0 }
@@ -1462,7 +1482,7 @@ builder.mutationField("recordHomeworkOutcome", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      const record = await HomeworkStudentRecord.findById(args.recordId).select("hwItemId").lean();
+      const record = await HomeworkStudentRecord.findById(args.recordId).select("hwItemId sectionId").lean();
       const item = record ? await HomeworkItem.findById(record.hwItemId).select("subject").lean() : null;
       await assertCanWrite(
         ctx,
@@ -1470,6 +1490,7 @@ builder.mutationField("recordHomeworkOutcome", (t) =>
         item?.subject ? await resolveSubjectId(item.subject) : undefined,
         "check_homework",
       );
+      assertHwRecordInSection(record, args.sectionId);
       const topup =
         args.topupQids && args.topupQids.length > 0
           ? { qids: [...args.topupQids], time: args.topupTime ?? 0 }
