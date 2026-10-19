@@ -29,7 +29,7 @@ import { User } from "../../foundation/models/User";
 import { Student } from "../../foundation/models/Student";
 import { Guardian } from "../../foundation/models/Guardian";
 import { GuardianLink } from "../../foundation/models/GuardianLink";
-import { resolveSubjectTeachers } from "../subjectTeacher";
+import { homeworkItemOwners, homeworkRecordOwners, ownerOf, routineSectionsOf } from "../recordOwner";
 import {
   AWAITING_CHECK_STATES as AWAITING_CHECK,
   AWAITING_RETURN_STATES as AWAITING_RETURN,
@@ -175,22 +175,7 @@ interface ItemLite {
  * resolves attribution by the identical rule.
  */
 async function accountableTeacherByItem(items: ItemLite[]): Promise<Map<string, string>> {
-  const out = new Map<string, string>();
-  if (items.length === 0) return out;
-
-  const resolved = await resolveSubjectTeachers(
-    items.map((i) => ({
-      key: i._id.toString(),
-      sectionId: i.sectionId.toString(),
-      subject: i.subject,
-      on: new Date(i.dateGiven),
-    })),
-  );
-  for (const it of items) {
-    const k = it._id.toString();
-    out.set(k, resolved.get(k) ?? it.declaredBy.toString());
-  }
-  return out;
+  return homeworkItemOwners(items);
 }
 
 export async function homeworkLifecycleReport(
@@ -213,7 +198,7 @@ export async function homeworkLifecycleReport(
           hwItemId: { $in: items.map((i) => i._id) },
           ...(backlogOnly ? { state: "SUBMITTED" } : {}),
         })
-          .select("hwItemId state stateDates chaseCount")
+          .select("hwItemId sectionId state stateDates chaseCount")
           .lean();
 
   const itemById = new Map(items.map((i) => [i._id.toString(), i]));
@@ -225,6 +210,19 @@ export async function homeworkLifecycleReport(
   const accById = await accountableTeacherByItem(attributed as unknown as ItemLite[]);
   const teacherOfItem = (it: { _id: { toString(): string }; declaredBy: { toString(): string } }): string =>
     accById.get(it._id.toString()) ?? it.declaredBy.toString();
+  // D-#772: a RECORD belongs to its owner — the item's teacher above while it sits on
+  // the item's section, the record section's routine subject teacher once a split
+  // rehomed it (a pre-split সম্মিলিত item's বালিকা copies are the বালিকা teacher's).
+  const recOwners = await homeworkRecordOwners(
+    attributed as unknown as ItemLite[],
+    records.map((r) => ({ itemId: r.hwItemId.toString(), recordSectionId: r.sectionId?.toString() ?? null })),
+    now,
+    accById,
+  );
+  const teacherOfRecord = (
+    it: { _id: { toString(): string }; sectionId: { toString(): string }; declaredBy: { toString(): string } },
+    recSectionId: { toString(): string } | null | undefined,
+  ): string => ownerOf(recOwners, it._id.toString(), recSectionId, it.sectionId) ?? teacherOfItem(it);
 
   // --- per-teacher accumulation -------------------------------------------------
   interface TeacherAcc {
@@ -258,14 +256,16 @@ export async function homeworkLifecycleReport(
     if (it.status === "issued") a.issuedItems += 1;
   }
 
-  // --- checking backlog, keyed per (cell × declaring teacher) --------------------
+  // --- checking backlog, keyed per (RECORD section × subject × owner) ------------
   interface BacklogAcc { sectionId: string; subject: string; teacherId: string | null; count: number; oldestDays: number }
   const backlogAcc = new Map<string, BacklogAcc>();
 
   for (const r of records) {
     const it = itemById.get(r.hwItemId.toString());
     if (!it) continue;
-    const a = teacherFor(teacherOfItem(it));
+    const recSection = (r.sectionId ?? it.sectionId).toString();
+    const owner = teacherOfRecord(it, recSection);
+    const a = teacherFor(owner);
     const stamps = (r.stateDates ?? []) as Array<{ state: string; at: Date }>;
     const state = r.state as LifecycleState;
 
@@ -290,12 +290,12 @@ export async function homeworkLifecycleReport(
       if (since) {
         const waitDays = (now.getTime() - since.getTime()) / DAY_MS;
         if (waitDays > HW_CHECKING_BACKLOG_DAYS) {
-          const tid = teacherOfItem(it);
-          const bk = `${it.sectionId.toString()}|${it.subject}|${tid}`;
+          const tid = owner;
+          const bk = `${recSection}|${it.subject}|${tid}`;
           const b =
             backlogAcc.get(bk) ??
             backlogAcc
-              .set(bk, { sectionId: it.sectionId.toString(), subject: it.subject, teacherId: tid, count: 0, oldestDays: 0 })
+              .set(bk, { sectionId: recSection, subject: it.subject, teacherId: tid, count: 0, oldestDays: 0 })
               .get(bk)!;
           b.count += 1;
           b.oldestDays = Math.max(b.oldestDays, Math.floor(waitDays));
@@ -389,12 +389,24 @@ export async function homeworkLifecyclePending(
     .select("sectionId subject classLevel dateGiven declaredBy")
     .lean();
   if (allItems.length === 0) return [];
-  // Keep only items this teacher is ACCOUNTABLE for (routine subject teacher), so
-  // the drill matches the card's attribution — not the declarer (D-#350 finding).
+  // Keep only the RECORDS this teacher owns, so the drill matches the card's
+  // attribution (D-#350: the routine subject teacher, not the declarer; D-#772: per
+  // record — a split's rehomed copies belong to their own section's teacher). The
+  // candidates are the items attributed to them, plus other items' records on a
+  // section whose routine names them (the only place a rehomed record can be theirs).
   const accById = await accountableTeacherByItem(allItems as unknown as ItemLite[]);
-  const items = allItems.filter(
+  const ownItems = allItems.filter(
     (it) => (accById.get(it._id.toString()) ?? it.declaredBy.toString()) === teacherId,
   );
+  const mySections = [...((await routineSectionsOf([teacherId])).get(teacherId) ?? [])];
+  const otherItems = mySections.length
+    ? allItems.filter(
+        (it) =>
+          (accById.get(it._id.toString()) ?? it.declaredBy.toString()) !== teacherId &&
+          !mySections.includes(it.sectionId.toString()),
+      )
+    : [];
+  const items = [...ownItems, ...otherItems];
   if (items.length === 0) return [];
   const subjectOf = new Map(
     items.map((i) => [
@@ -404,14 +416,32 @@ export async function homeworkLifecyclePending(
   );
 
   const recFilter: Record<string, unknown> = {
-    hwItemId: { $in: items.map((i) => i._id) },
+    ...(otherItems.length
+      ? {
+          $or: [
+            { hwItemId: { $in: ownItems.map((i) => i._id) } },
+            { hwItemId: { $in: otherItems.map((i) => i._id) }, sectionId: { $in: mySections } },
+          ],
+        }
+      : { hwItemId: { $in: ownItems.map((i) => i._id) } }),
     state: { $in: statesForStage(stage) },
   };
   if (stage === "CHASE") recFilter.chaseCount = { $gt: 0 };
 
-  const records = await HomeworkStudentRecord.find(recFilter)
+  const fetched = await HomeworkStudentRecord.find(recFilter)
     .select("hwItemId studentId sectionId state stateDates chaseCount")
     .lean();
+  const recOwners = await homeworkRecordOwners(
+    items as unknown as ItemLite[],
+    fetched.map((r) => ({ itemId: r.hwItemId.toString(), recordSectionId: r.sectionId?.toString() ?? null })),
+    now,
+    accById,
+  );
+  const sectionOfItem = new Map(items.map((i) => [i._id.toString(), i.sectionId]));
+  const records = fetched.filter((r) => {
+    const sec = sectionOfItem.get(r.hwItemId.toString());
+    return !!sec && ownerOf(recOwners, r.hwItemId.toString(), r.sectionId, sec) === teacherId;
+  });
   if (records.length === 0) return [];
 
   const studentIds = [...new Set(records.map((r) => r.studentId.toString()))];

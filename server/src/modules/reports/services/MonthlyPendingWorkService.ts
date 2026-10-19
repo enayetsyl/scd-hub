@@ -37,6 +37,7 @@ import { renderTemplate } from "../../templates/services/MessageTemplateService"
 import { commentWaLink } from "../../comments/services/CommentDeliveryService";
 import { bnNum } from "../../../lib/bnNum";
 import { HW_SUBJECT_LABELS_BN } from "@scd/shared";
+import { ownerOf, recordOwnerKey, resolveRecordOwners } from "../../trackers/recordOwner";
 
 /** The slice of a homework/assignment item this read needs — one shape for both. */
 interface ItemRow {
@@ -201,7 +202,7 @@ export async function monthlyPendingWork(periodKey: string): Promise<MonthlyPend
   const clsName = new Map(classes.map((c) => [c._id.toString(), c.nameBn ?? `L${c.level ?? "?"}`]));
   const secName = new Map(sections.map((s) => [s._id.toString(), s.nameBn ?? s.code ?? "?"]));
   const userName = new Map(users.map((u) => [u._id.toString(), u.name]));
-  const label = (classId: Types.ObjectId, sectionId: Types.ObjectId): string =>
+  const label = (classId: Types.ObjectId, sectionId: { toString(): string }): string =>
     `${clsName.get(classId.toString()) ?? "?"} / ${secName.get(sectionId.toString()) ?? "?"}`;
 
   const rows: PendingRow[] = [];
@@ -226,33 +227,65 @@ export async function monthlyPendingWork(periodKey: string): Promise<MonthlyPend
     const now = new Date();
     const records = (await (RecordModel as typeof HomeworkStudentRecord)
       .find({ [fk]: { $in: list.map((i) => i._id) } })
-      .select(`${fk} state dueDate`)
-      .lean()) as unknown as Array<{ state: string; dueDate?: Date; [k: string]: unknown }>;
+      .select(`${fk} sectionId state dueDate`)
+      .lean()) as unknown as Array<{
+      state: string;
+      dueDate?: Date;
+      sectionId?: Types.ObjectId | null;
+      [k: string]: unknown;
+    }>;
 
-    const byItem = new Map<string, Array<{ state: string; dueDate?: Date | null }>>();
+    // D-#772: one row per (item, RECORD section). A pre-split item on the emptied
+    // সম্মিলিত holds both halves' copies; each half is its own teacher's pile, labelled
+    // with the section the copies are on, credited to that section's subject teacher.
+    const itemById = new Map(list.map((i) => [i._id.toString(), i]));
+    const byPile = new Map<string, Array<{ state: string; dueDate?: Date | null }>>();
+    const pileSections = new Map<string, Set<string>>();
     for (const r of records) {
       const k = String(r[fk]);
-      const g = byItem.get(k);
+      const it = itemById.get(k);
+      if (!it) continue;
+      const sec = (r.sectionId ?? it.sectionId).toString();
+      const pk = recordOwnerKey(k, sec);
+      const g = byPile.get(pk);
       if (g) g.push({ state: r.state, dueDate: r.dueDate ?? null });
-      else byItem.set(k, [{ state: r.state, dueDate: r.dueDate ?? null }]);
+      else byPile.set(pk, [{ state: r.state, dueDate: r.dueDate ?? null }]);
+      (pileSections.get(k) ?? pileSections.set(k, new Set()).get(k)!).add(sec);
     }
+    const owners = await resolveRecordOwners(
+      list.flatMap((it) =>
+        [...(pileSections.get(it._id.toString()) ?? [])].map((sec) => ({
+          itemId: it._id.toString(),
+          itemSectionId: it.sectionId.toString(),
+          recordSectionId: sec,
+          subject: it.subject,
+          itemDate: new Date(it[dateField] as Date),
+          itemOwnerId: String(it[teacherField] ?? ""),
+        })),
+      ),
+      now,
+    );
 
     for (const it of list) {
-      const { toCheck, awaiting, notSubmitted } = countOutstanding(byItem.get(it._id.toString()) ?? [], now);
-      if (toCheck + awaiting + notSubmitted === 0) continue;
-      rows.push({
-        kind,
-        teacherId: String(it[teacherField] ?? ""),
-        teacherName: userName.get(String(it[teacherField])) ?? "—",
-        sectionLabel: label(it.classId, it.sectionId),
-        sectionId: it.sectionId.toString(),
-        subject: it.subject,
-        dateKey: dayKey(it[dateField] as Date),
-        ref: String(it[refField] ?? ""),
-        toCheck,
-        awaiting,
-        notSubmitted,
-      });
+      const id = it._id.toString();
+      for (const sec of [...(pileSections.get(id) ?? [])].sort()) {
+        const { toCheck, awaiting, notSubmitted } = countOutstanding(byPile.get(recordOwnerKey(id, sec)) ?? [], now);
+        if (toCheck + awaiting + notSubmitted === 0) continue;
+        const teacherId = ownerOf(owners, id, sec, it.sectionId) ?? String(it[teacherField] ?? "");
+        rows.push({
+          kind,
+          teacherId,
+          teacherName: userName.get(teacherId) ?? "—",
+          sectionLabel: label(it.classId, sec),
+          sectionId: sec,
+          subject: it.subject,
+          dateKey: dayKey(it[dateField] as Date),
+          ref: String(it[refField] ?? ""),
+          toCheck,
+          awaiting,
+          notSubmitted,
+        });
+      }
     }
   }
 

@@ -94,7 +94,11 @@ import { AssignmentItem } from "../models/AssignmentItem";
 import { Subject } from "../../foundation/models/Subject";
 import { Section } from "../../foundation/models/Section";
 import { isAdminStaff } from "../../foundation/services/RoleScope";
-import { myAssignmentLifecycle as myAssignmentLifecycleSvc, type AsTeacherLifecycleRow } from "../services/AssignmentLifecycleService";
+import {
+  myAssignmentLifecycle as myAssignmentLifecycleSvc,
+  type AsLifecycleSection,
+  type AsTeacherLifecycleRow,
+} from "../services/AssignmentLifecycleService";
 import {
   assertCanWrite,
   assertCanWriteAny,
@@ -2148,6 +2152,22 @@ builder.queryField("childAssignments", (t) =>
 // oversight gate beyond tracker:read (the D-#340 SELF pattern).
 // ---------------------------------------------------------------------------
 
+const AsLifecycleSectionRef = builder
+  .objectRef<AsLifecycleSection>("AsLifecycleSection")
+  .implement({
+    description:
+      "One RECORD section's share of the caller's pending assignment buckets (D-#772) — the " +
+      "section a pill opens (after a split, the half the records were moved to).",
+    fields: (t) => ({
+      sectionId: t.exposeString("sectionId"),
+      classId: t.exposeString("classId"),
+      pendingSubmission: t.exposeInt("pendingSubmission"),
+      pendingChecking: t.exposeInt("pendingChecking"),
+      pendingReturn: t.exposeInt("pendingReturn"),
+      chasedPending: t.exposeInt("chasedPending"),
+    }),
+  });
+
 const AsTeacherLifecycleRowRef = builder
   .objectRef<AsTeacherLifecycleRow>("AsTeacherLifecycleRow")
   .implement({
@@ -2163,6 +2183,7 @@ const AsTeacherLifecycleRowRef = builder
       pendingChecking: t.exposeInt("pendingChecking"),
       pendingReturn: t.exposeInt("pendingReturn"),
       chasedPending: t.exposeInt("chasedPending"),
+      sections: t.field({ type: [AsLifecycleSectionRef], resolve: (r) => r.sections ?? [] }),
     }),
   });
 
@@ -2171,8 +2192,9 @@ builder.queryField("myAssignmentLifecycle", (t) =>
     type: AsTeacherLifecycleRowRef,
     description:
       "The CALLER's own assignment lifecycle row (totals + pending buckets), self-scoped — the " +
-      "teacher-dashboard card (D-#471, the twin of myHomeworkLifecycle). Attribution is the " +
-      "item's own teacherId (the rotation owner), so no routine resolution is involved.",
+      "teacher-dashboard card (D-#471, the twin of myHomeworkLifecycle). Attribution is per " +
+      "RECORD (D-#772): the item's teacherId on its own section; a record rehomed by a split " +
+      "goes to the routine subject teacher of the record's section.",
     authScopes: { hasPermission: "tracker:read" },
     args: {
       from: t.arg.string({ required: true }),

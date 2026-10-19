@@ -11,7 +11,8 @@
  *   PERIOD / COVER      routine slots (own, cover-overlaid) + substitutions + approved
  *                       HR cover slots; DONE when a ClassNote exists for (slot, date)
  *   HOMEWORK_CHECK      one card per homework item with SUBMITTED records (owner ruling:
- *                       per item, never per student); gone when all are checked
+ *                       per item, never per student) — per (item, record section) once a
+ *                       split rehomed its copies (D-#772); gone when all are checked
  *   CLASS_TEST_MARKS    a PRINTED test past its exam date whose results are not all
  *                       submitted (classTestSettled — the CT-8 rule)
  *   VIDEO_REVIEW        a PENDING VideoReviewAssignment
@@ -63,6 +64,7 @@ import { normalizePhone } from "../../foundation/services/credentials";
 import { actingAsFilter } from "../../foundation/services/RoleScope";
 import type { ITask } from "../models/Task";
 import { tasksOnBoards } from "./TaskService";
+import { ownerOf, resolveRecordOwners, routineSectionsOf } from "../../trackers/recordOwner";
 import { PULLABLE_KINDS, isBackup, officeRecipients, officeUncoveredToday, pullsFor } from "./OfficeCoverService";
 
 export interface WorkCardLink {
@@ -356,28 +358,71 @@ type CheckItem = {
   sectionId: Types.ObjectId;
   dateGiven: Date;
   declaredBy: Types.ObjectId;
+};
+
+/** One "homework to check" pile: an item's SUBMITTED copies on ONE record section. */
+type CheckPile = CheckItem & {
+  /** The section the copies are on (the student's — after a split, a half). */
+  recordSectionId: string;
+  /** SUBMITTED copies in this pile. */
+  n: number;
   ownerId: string;
 };
 
-/** Homework items (given in `dateGiven`) whose checking belongs to one of `userIds` under
- *  `checkOwnerOf` — the caller's own declarations plus any a Principal/Office user
- *  declared for a class the caller teaches. Oldest given-date first. */
-async function homeworkItemsCheckedBy(
+type SubmittedCount = { _id: { item: Types.ObjectId; sec: Types.ObjectId }; n: number };
+
+/** Homework still to check (given in `dateGiven`) that belongs to one of `userIds`, as
+ *  piles of (item, RECORD section) — D-#772. A pile on its item's own section goes to
+ *  `checkOwnerOf` (the declarer, or the routine teacher for a Principal/Office
+ *  declaration); a pile rehomed to another section by a split goes to THAT section's
+ *  routine subject teacher (`recordOwner`), so a pre-split সম্মিলিত item's বালিকা copies
+ *  reach the বালিকা teacher's board, not the combined-section declarer's. Oldest
+ *  given-date first. */
+async function homeworkChecksBy(
   userIds: string[],
   dateGiven: Record<string, Date>,
   now = new Date(),
-): Promise<CheckItem[]> {
+): Promise<CheckPile[]> {
   const adminIds = new Set(
     ((await User.find(actingAsFilter(["PRINCIPAL", "OFFICE"])).select("_id").lean()) as Array<{ _id: Types.ObjectId }>).map(
       (u) => u._id.toString(),
     ),
   );
   const declarers = [...new Set([...userIds, ...adminIds])].map((u) => new Types.ObjectId(u));
-  const items = (await HomeworkItem.find({ declaredBy: { $in: declarers }, dateGiven })
-    .select("hwId subject classId sectionId dateGiven declaredBy")
-    .sort({ dateGiven: 1 })
-    .lean()) as unknown as Array<Omit<CheckItem, "ownerId">>;
-  const byAdmin = items.filter((i) => adminIds.has(i.declaredBy.toString()));
+  const ITEM_FIELDS = "hwId subject classId sectionId dateGiven declaredBy";
+  const own = (await HomeworkItem.find({ declaredBy: { $in: declarers }, dateGiven })
+    .select(ITEM_FIELDS)
+    .lean()) as unknown as CheckItem[];
+  const ownIds = new Set(own.map((i) => i._id.toString()));
+
+  // Rehomed copies of OTHER declarers' items can only be ours on a section whose routine
+  // names one of us — read just those sections' SUBMITTED copies.
+  const mySections = [...new Set([...(await routineSectionsOf(userIds)).values()].flatMap((s) => [...s]))];
+  const foreignCounts = mySections.length
+    ? ((await HomeworkStudentRecord.aggregate([
+        { $match: { sectionId: { $in: mySections.map((id) => new Types.ObjectId(id)) }, state: "SUBMITTED" } },
+        { $group: { _id: { item: "$hwItemId", sec: "$sectionId" }, n: { $sum: 1 } } },
+      ])) as SubmittedCount[]).filter((c) => !ownIds.has(c._id.item.toString()))
+    : [];
+  const foreign = foreignCounts.length
+    ? ((await HomeworkItem.find({
+        _id: { $in: [...new Set(foreignCounts.map((c) => c._id.item.toString()))].map((id) => new Types.ObjectId(id)) },
+        dateGiven,
+      })
+        .select(ITEM_FIELDS)
+        .lean()) as unknown as CheckItem[])
+    : [];
+  const items = [...own, ...foreign];
+  if (items.length === 0) return [];
+
+  const ownCounts = own.length
+    ? ((await HomeworkStudentRecord.aggregate([
+        { $match: { hwItemId: { $in: own.map((i) => i._id) }, state: "SUBMITTED" } },
+        { $group: { _id: { item: "$hwItemId", sec: "$sectionId" }, n: { $sum: 1 } } },
+      ])) as SubmittedCount[])
+    : [];
+
+  const byAdmin = own.filter((i) => adminIds.has(i.declaredBy.toString()));
   const slots: CheckOwnerSlot[] = byAdmin.length
     ? (
         (await RoutineSlot.find({
@@ -391,26 +436,60 @@ async function homeworkItemsCheckedBy(
           .lean()) as unknown as Array<{ groupId: Types.ObjectId; subject: string; teacherId: Types.ObjectId; dayOfWeek: string; effectiveFrom: Date; effectiveTo?: Date | null }>
       ).map((s) => ({ ...s, groupId: s.groupId.toString(), teacherId: s.teacherId.toString() }))
     : [];
-  const want = new Set(userIds);
-  return items
-    .map((i) => ({
-      ...i,
-      ownerId: checkOwnerOf(
+  const itemById = new Map(items.map((i) => [i._id.toString(), i]));
+  const itemOwner = new Map(
+    items.map((i) => [
+      i._id.toString(),
+      checkOwnerOf(
         { declaredBy: i.declaredBy.toString(), sectionId: i.sectionId.toString(), subject: i.subject, dateGiven: new Date(i.dateGiven) },
         adminIds,
         slots,
         now,
       ),
+    ]),
+  );
+
+  const piles = [...ownCounts, ...foreignCounts].flatMap((c) => {
+    const it = itemById.get(c._id.item.toString());
+    if (!it || c.n === 0) return [];
+    return [{ it, recordSectionId: (c._id.sec ?? it.sectionId).toString(), n: c.n }];
+  });
+  const owners = await resolveRecordOwners(
+    piles.map((p) => ({
+      itemId: p.it._id.toString(),
+      itemSectionId: p.it.sectionId.toString(),
+      recordSectionId: p.recordSectionId,
+      subject: p.it.subject,
+      itemDate: new Date(p.it.dateGiven),
+      itemOwnerId: itemOwner.get(p.it._id.toString()) ?? p.it.declaredBy.toString(),
+    })),
+    now,
+  );
+  const want = new Set(userIds);
+  return piles
+    .map((p) => ({
+      ...p.it,
+      recordSectionId: p.recordSectionId,
+      n: p.n,
+      ownerId: ownerOf(owners, p.it._id.toString(), p.recordSectionId, p.it.sectionId) ?? p.it.declaredBy.toString(),
     }))
-    .filter((i) => want.has(i.ownerId));
+    .filter((p) => want.has(p.ownerId))
+    .sort(
+      (a, b) =>
+        new Date(a.dateGiven).getTime() - new Date(b.dateGiven).getTime() ||
+        a.hwId.localeCompare(b.hwId) ||
+        a.recordSectionId.localeCompare(b.recordSectionId),
+    );
 }
 
 /**
  * HOMEWORK_CHECK cards: an item with copies still SUBMITTED (handed in, not yet
- * checked) stays on its declarer's board until every copy is checked — there is NO
+ * checked) stays on its owner's board until every copy is checked — there is NO
  * age cutoff (owner ask 2026-10-04; the old 45-day window silently dropped
- * unfinished checks). The live board asks for the CURRENT month only; earlier
- * months are summarised by `homeworkCheckMonths` and loaded one month at a time by
+ * unfinished checks). One card per (item, RECORD section) — D-#772: a pre-split item's
+ * halves are two teachers' piles, each labelled with the section its copies are on.
+ * The live board asks for the CURRENT month only; earlier months are summarised by
+ * `homeworkCheckMonths` and loaded one month at a time by
  * `homeworkCheckCardsForMonth`, so an old backlog never slows the board.
  */
 async function homeworkCards(
@@ -419,26 +498,21 @@ async function homeworkCards(
   labels: { cls: Map<string, string>; sec: Map<string, string> },
   range: { from: Date; to?: Date },
 ): Promise<WorkCard[]> {
-  const items = await homeworkItemsCheckedBy(
+  const piles = await homeworkChecksBy(
     userIds,
     range.to ? { $gte: range.from, $lt: range.to } : { $gte: range.from },
   );
-  if (items.length === 0) return [];
-  const counts = (await HomeworkStudentRecord.aggregate([
-    { $match: { hwItemId: { $in: items.map((i) => i._id) }, state: "SUBMITTED" } },
-    { $group: { _id: "$hwItemId", n: { $sum: 1 } } },
-  ])) as Array<{ _id: Types.ObjectId; n: number }>;
-  const byItem = new Map(counts.map((c) => [c._id.toString(), c.n]));
   const out: WorkCard[] = [];
-  for (const it of items) {
-    const n = byItem.get(it._id.toString()) ?? 0;
-    if (n === 0) continue;
+  for (const it of piles) {
+    const n = it.n;
     const userId = it.ownerId;
+    const sameSection = it.recordSectionId === it.sectionId.toString();
     out.push({
-      key: `HOMEWORK_CHECK:${it._id.toString()}:${userId}`,
+      // The item's own section keeps the pre-D-#772 key; a rehomed pile adds its section.
+      key: `HOMEWORK_CHECK:${it._id.toString()}:${userId}${sameSection ? "" : `:${it.recordSectionId}`}`,
       kind: "HOMEWORK_CHECK",
       userId,
-      titleBn: `বাড়ির কাজ দেখা · ${labels.cls.get(it.classId.toString()) ?? "?"} / ${labels.sec.get(it.sectionId.toString()) ?? "?"} · ${subjectBn(it.subject)}`,
+      titleBn: `বাড়ির কাজ দেখা · ${labels.cls.get(it.classId.toString()) ?? "?"} / ${labels.sec.get(it.recordSectionId) ?? "?"} · ${subjectBn(it.subject)}`,
       detailBn: `${bn(n)}টি জমা হয়েছে, দেখা বাকি · ${it.hwId}`,
       dateKey: todayKey,
       slot: "ANY",
@@ -500,15 +574,13 @@ export function summarizeCheckMonths(
  *  the collapsed headers under the board. Counts only; the cards load per month. */
 export async function homeworkCheckMonths(userIds: string[], now = new Date()): Promise<HomeworkCheckMonth[]> {
   const monthStart = parseDateKey(`${dateKeyOf(now).slice(0, 7)}-01`);
-  const items = await homeworkItemsCheckedBy(userIds, { $lt: monthStart }, now);
-  if (items.length === 0) return [];
-  const counts = (await HomeworkStudentRecord.aggregate([
-    { $match: { hwItemId: { $in: items.map((i) => i._id) }, state: "SUBMITTED" } },
-    { $group: { _id: "$hwItemId", n: { $sum: 1 } } },
-  ])) as Array<{ _id: Types.ObjectId; n: number }>;
+  const piles = await homeworkChecksBy(userIds, { $lt: monthStart }, now);
+  if (piles.length === 0) return [];
+  // One entry per (item, record section) pile — the same unit the month's cards use.
+  const pileId = (p: (typeof piles)[number]): string => `${p._id.toString()}|${p.recordSectionId}`;
   return summarizeCheckMonths(
-    items.map((i) => ({ id: i._id.toString(), dateKey: dateKeyOf(new Date(i.dateGiven)) })),
-    new Map(counts.map((c) => [c._id.toString(), c.n])),
+    piles.map((p) => ({ id: pileId(p), dateKey: dateKeyOf(new Date(p.dateGiven)) })),
+    new Map(piles.map((p) => [pileId(p), p.n])),
   );
 }
 
