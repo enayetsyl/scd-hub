@@ -79,6 +79,11 @@ Rotation teachers are derived per subject from each grid (one teacher per subjec
   the section is the live unit — check `SectionAttendanceAssignment` marker overrides too.
 - Unreleased monthly reports (DRAFT/READY) move with the student inside `rehomeStudentRecords`
   (D-#770); released revisions stay where they were issued.
+- Homework issued on the combined section in the days before the cut-over falls due on the
+  halves' first teaching day (D-#771 successor slots), and the move re-resolves each GIVEN
+  record's due date on its new half (`homeworkDueReset` in the rehome output).
+- Work issued on the combined section before the split is COLLECTED and CHECKED on the halves by
+  the halves' teachers: every workspace and pass/check mutation keys on `record.sectionId`.
 - Things the script deliberately does NOT touch (decide per split): CLASS-scope improvement actions on
   the combined section (re-create on the halves), a draft parent meeting scoped by the combined
   `sectionId` (re-scope by class), manual (`source: "manual"`) teaching grants on the combined

@@ -123,7 +123,7 @@ function ThemedNavigation(): React.ReactElement | null {
     })();
   }, []);
 
-  // N4.2 → D-#772: tapping a push opens THAT notification's detail screen (where an
+  // N4.2 → D-#773: tapping a push opens THAT notification's detail screen (where an
   // inbox row tap lands; its "open related" button carries the deep-link). A payload
   // without an id still opens the inbox.
   useEffect(() => {

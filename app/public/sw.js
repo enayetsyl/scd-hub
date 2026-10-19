@@ -2,7 +2,7 @@
  * SCD Hub service worker (D-#296) — receives Web Push messages and shows the
  * browser notification even when no app tab is open. The payload is built by
  * the server's web-push channel: { title, body, kind, refs, notificationId }.
- * Clicking opens THAT notification (D-#772): an open app tab is focused and told
+ * Clicking opens THAT notification (D-#773): an open app tab is focused and told
  * the id by message; with no tab, a new one opens at `/#notification=<id>`. The
  * app (lib/webPushTap.ts) lands on the notification's detail screen either way.
  * A hash, not a query: it never reaches the server or the Cloudflare cache key.

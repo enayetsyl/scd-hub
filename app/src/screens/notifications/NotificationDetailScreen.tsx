@@ -60,7 +60,7 @@ export default function NotificationDetailScreen({
   });
   const row: NotificationT | undefined = data?.myNotification ?? undefined;
 
-  // D-#772: a push tap lands here without passing the inbox, which is where a row used
+  // D-#773: a push tap lands here without passing the inbox, which is where a row used
   // to be marked read — so opening it marks it (an inbox tap already has: no-op).
   const { refresh } = useNotifications();
   const [, markRead] = useMutation(MARK_NOTIFICATION_READ);
