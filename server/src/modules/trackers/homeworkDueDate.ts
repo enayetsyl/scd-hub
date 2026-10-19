@@ -20,8 +20,10 @@
  * Applies to issue, absent-redelivery, and resubmission dues. Existing records
  * keep their old dueDates (no backfill — D row).
  */
+import { Types } from "mongoose";
 import { DAYS_OF_WEEK } from "@scd/shared";
 import { RoutineSlot } from "../routine/models/RoutineSlot";
+import { Section } from "../foundation/models/Section";
 import { HolidayException } from "../routine/models/HolidayException";
 import { HomeworkItem } from "./models/HomeworkItem";
 import { isLiveOn } from "../routine/liveWindow";
@@ -67,6 +69,27 @@ export function pickNextTeachingDay(
   return nextOpenSchoolDay(after, isHoliday);
 }
 
+/** Slack for "starts where the old cell ended": a dated retirement closes the old
+ *  row at 23:59:59.999 the day before and opens the successor at local midnight. */
+const SUCCESSOR_SLACK_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * D-#771 (split/merge cut-over): when EVERY slot of the section×subject cell is
+ * retired, the subject has not stopped being taught — the class was split (or
+ * merged) and the same subject continues on SIBLING sections of the class. Work
+ * issued on the old section just before the cut-over (Wed/Thu before a Sunday
+ * split) must fall due on the first day a successor teaches it, not on the
+ * no-slot fallback (next school day — which chased Wednesday's homework on
+ * Thursday). Successors are sibling slots starting at or after the old cell's
+ * last end; nothing changes while any own slot is open-ended.
+ */
+export function withSuccessorSlots<T extends DueSlotLite>(own: readonly T[], siblings: readonly T[]): T[] {
+  if (own.length === 0 || own.some((s) => !s.effectiveTo)) return [...own];
+  const lastEnd = Math.max(...own.map((s) => new Date(s.effectiveTo as Date | string).getTime()));
+  const successors = siblings.filter((s) => new Date(s.effectiveFrom).getTime() > lastEnd - SUCCESSOR_SLACK_MS);
+  return [...own, ...successors];
+}
+
 /**
  * Async resolver: loads the cell's slots (same shape as subjectTeacher.ts — the
  * attribution twin) and the holiday ranges overlapping the walk window, one
@@ -80,7 +103,7 @@ export async function resolveHomeworkDueDate(
   const capEnd = new Date(after.getTime());
   capEnd.setDate(capEnd.getDate() + DUE_SEARCH_CAP_DAYS + 7); // fallback may walk past the cap
 
-  const [slots, holidays] = await Promise.all([
+  const [ownSlots, holidays] = await Promise.all([
     RoutineSlot.find({
       groupType: "section",
       groupId: sectionId,
@@ -99,6 +122,34 @@ export async function resolveHomeworkDueDate(
       .lean(),
   ]);
 
+  // D-#771: a fully retired cell borrows its successors on the class's other sections.
+  let slots = ownSlots as unknown as DueSlotLite[];
+  if (slots.length > 0 && slots.every((s) => !!s.effectiveTo)) {
+    const section = (await Section.findById(sectionId).select("classId").lean()) as {
+      _id: Types.ObjectId;
+      classId?: Types.ObjectId;
+    } | null;
+    if (section?.classId) {
+      const siblingIds = (
+        (await Section.find({ classId: section.classId, _id: { $ne: section._id } })
+          .select("_id")
+          .lean()) as Array<{ _id: Types.ObjectId }>
+      ).map((s) => s._id);
+      if (siblingIds.length) {
+        const siblings = (await RoutineSlot.find({
+          groupType: "section",
+          groupId: { $in: siblingIds },
+          subject,
+          active: true,
+          isBreak: false,
+        })
+          .select("dayOfWeek effectiveFrom effectiveTo")
+          .lean()) as unknown as DueSlotLite[];
+        slots = withSuccessorSlots(slots, siblings);
+      }
+    }
+  }
+
   const ranges = holidays.map((h) => ({
     from: new Date(h.fromDate).getTime(),
     to: new Date(h.toDate).getTime(),
@@ -108,7 +159,7 @@ export async function resolveHomeworkDueDate(
     return ranges.some((r) => t >= startOfLocalDay(r.from) && t <= endOfLocalDay(r.to));
   };
 
-  return pickNextTeachingDay(after, slots as unknown as DueSlotLite[], isHoliday);
+  return pickNextTeachingDay(after, slots, isHoliday);
 }
 
 /** Record-side convenience: the record knows its item, not its subject —
