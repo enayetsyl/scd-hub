@@ -40,6 +40,7 @@ import {
 } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { groupTrackForSubject, isGroupTaughtSubject } from "../../lib/observationAnchor";
+import { pickableSections } from "../../lib/sectionPicks";
 import { space } from "../../theme/tokens";
 import type { ObservationStackParamList } from "../../navigation/types";
 
@@ -107,12 +108,13 @@ export default function UploadObservationScreen(): React.ReactElement {
     variables: { track: groupTrack },
   });
 
-  // Flatten all active sections into Select options "ClassName — SectionCode"
+  // Flatten the pickable sections into Select options "ClassName — SectionCode".
+  // D-#770: pickableSections, not every active one — the emptied সম্মিলিত beside a
+  // split class's বালক/বালিকা stays active (past attendance) but holds no children.
   const sectionOptions = useMemo(() => {
     const classes = classesQ.data?.classes ?? [];
     return classes.flatMap((c) =>
-      c.sections
-        .filter((s) => s.active)
+      pickableSections(c.sections)
         .map((s) => ({
           label: `${c.nameBn} — ${s.nameBn || s.code}`,
           value: s.id,
