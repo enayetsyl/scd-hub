@@ -348,6 +348,8 @@ export async function homeworkSectionOverview(
   }
   const { start, end } = weekRange(asOfMillis);
   const items = await HomeworkItem.find({
+    // classId leads the (classId, sectionId, subject, dateGiven) index.
+    classId: { $in: [...new Set(unique.map((r) => r.classId))] },
     sectionId: { $in: sectionIds },
     status: "issued",
     dateGiven: { $gte: start, $lte: end },
