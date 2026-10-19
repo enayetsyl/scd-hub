@@ -91,6 +91,7 @@ import {
 import { AssignmentSchedule } from "../models/AssignmentSchedule";
 import { AssignmentStudentRecord } from "../models/AssignmentStudentRecord";
 import { AssignmentItem } from "../models/AssignmentItem";
+import { passOnItemOrRecordSection } from "../recordOwner";
 import { Subject } from "../../foundation/models/Subject";
 import { Section } from "../../foundation/models/Section";
 import { isAdminStaff } from "../../foundation/services/RoleScope";
@@ -1160,16 +1161,30 @@ const UpdateAssignmentResultRef = builder
 
 /** Load the item's real section so write-scope is asserted on IT, never on a
  *  client-supplied one (the module header's rule). */
-async function assertCanWriteOnItem(ctx: AppContext, itemId: string) {
+async function assertCanWriteOnItem(
+  ctx: AppContext,
+  itemId: string,
+  opts: { allowRecordSections?: boolean } = {},
+) {
   const item = await AssignmentItem.findById(itemId).select("sectionId subject").lean();
   if (!item) throw new Error("AssignmentItem not found");
+  const subjectId = await resolveSubjectId(item.subject);
   // Editing or deleting what was delivered is the delivery duty, not a new one
   // (ACS-4, D-#592): whoever may deliver must be able to fix a wrong delivery.
-  await assertCanWrite(
-    ctx,
+  if (!opts.allowRecordSections) {
+    await assertCanWrite(ctx, item.sectionId.toString(), subjectId, "declare_assignment");
+    return;
+  }
+  // D-#772: after a split the item stays on the emptied সম্মিলিত (whose grants lapsed)
+  // while its records sit on the halves — a half's subject teacher may write here too.
+  // WHAT a half may change is the service's call (assignmentEditScope: totalMarks only).
+  await passOnItemOrRecordSection(
     item.sectionId.toString(),
-    await resolveSubjectId(item.subject),
-    "declare_assignment",
+    () => AssignmentStudentRecord.distinct("sectionId", { asItemId: item._id }),
+    (sectionId) =>
+      sectionId === item.sectionId.toString()
+        ? assertCanWrite(ctx, sectionId, subjectId, "declare_assignment")
+        : assertCanWrite(ctx, sectionId, subjectId, "check_assignment"),
   );
 }
 
@@ -1191,7 +1206,7 @@ builder.mutationField("updateAssignmentItem", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanWriteOnItem(ctx, args.itemId);
+      await assertCanWriteOnItem(ctx, args.itemId, { allowRecordSections: true });
       return updateAssignmentItemSvc({
         itemId: args.itemId,
         estMinutes: args.estMinutes ?? undefined,

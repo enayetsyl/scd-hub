@@ -32,6 +32,7 @@ import { StoredFile, type IStoredFile } from "../../platform/models/StoredFile";
 import { GuardianLink } from "../../foundation/models/GuardianLink";
 import { Student } from "../../foundation/models/Student";
 import { writeAudit } from "../../platform/services/AuditService";
+import { passOnItemOrRecordSection } from "../recordOwner";
 
 /** Load + kind-check a StoredFile for attaching. */
 async function requireFile(fileId: string, kind: IStoredFile["kind"]): Promise<IStoredFile> {
@@ -151,5 +152,11 @@ export async function assertFileReadAccess(ctx: AppContext, file: IStoredFile): 
     }
     throw new ForbiddenError("এই শিক্ষার্থীর তথ্য দেখার অনুমতি নেই");
   }
-  await assertCanRead(ctx, item.sectionId.toString(), item.classId.toString());
+  // D-#772: a pre-split item stays on the emptied সম্মিলিত while its records sit on
+  // the halves — a reader of any section holding its records may open its files.
+  await passOnItemOrRecordSection(
+    item.sectionId.toString(),
+    () => HomeworkStudentRecord.distinct("sectionId", { hwItemId: item._id }),
+    (sectionId) => assertCanRead(ctx, sectionId, item.classId.toString()),
+  );
 }
