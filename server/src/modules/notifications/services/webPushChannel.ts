@@ -11,11 +11,27 @@
  * VAPID keys come from the environment (WEB_PUSH_VAPID_PUBLIC_KEY /
  * WEB_PUSH_VAPID_PRIVATE_KEY, generated once per install); without them the
  * channel simply never registers — jest and an unconfigured host send nothing.
+ *
+ * D-#771: a recipient whose phone runs the app gets the app's push, so their PHONE
+ * browsers are skipped — otherwise the same phone shows two notifications and the
+ * browser one opens the website, not the app. Desktop browsers always receive. The
+ * skip follows the live app registration: once the app logs out or is uninstalled
+ * (Expo prunes the dead token), the phone browser receives again.
  */
 import webpush from "web-push";
 import type { INotification } from "../models/Notification";
 import { registerChannel, type NotificationChannel } from "./NotificationService";
 import { WebPushSubscription } from "../models/WebPushSubscription";
+import { PushDevice } from "../../attendance/models/PushDevice";
+
+/** The phone platform a browser subscription runs on, from its recorded user agent;
+ *  null for a desktop browser or an unknown agent (those always receive). */
+export function phoneBrowserPlatform(userAgent?: string | null): "android" | "ios" | null {
+  if (!userAgent) return null;
+  if (/Android/i.test(userAgent)) return "android";
+  if (/iPhone|iPad|iPod/i.test(userAgent)) return "ios";
+  return null;
+}
 
 export function webPushConfigured(): boolean {
   return !!process.env.WEB_PUSH_VAPID_PUBLIC_KEY && !!process.env.WEB_PUSH_VAPID_PRIVATE_KEY;
@@ -34,6 +50,14 @@ export const webPushChannel: NotificationChannel = {
     const subs = await WebPushSubscription.find(owner).lean();
     if (subs.length === 0) return; // never accepted the prompt in any browser (opt-in)
 
+    const appDevices = await PushDevice.find({ ...owner, active: true }).select("platform").lean();
+    const appPlatforms = new Set(appDevices.map((d) => d.platform));
+    const targets = subs.filter((s) => {
+      const phone = phoneBrowserPlatform(s.userAgent);
+      return !phone || !appPlatforms.has(phone);
+    });
+    if (targets.length === 0) return;
+
     const payload = JSON.stringify({
       title: row.titleBn,
       body: row.bodyBn,
@@ -43,7 +67,7 @@ export const webPushChannel: NotificationChannel = {
     });
 
     await Promise.all(
-      subs.map(async (s) => {
+      targets.map(async (s) => {
         try {
           await webpush.sendNotification(
             { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
