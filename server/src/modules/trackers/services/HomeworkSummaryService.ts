@@ -20,6 +20,7 @@
  * and the math stays deterministic/testable.
  */
 import { HW_DAILY_CEILING_MIN } from "@scd/shared";
+import type { LifecycleState } from "@scd/shared";
 import { HomeworkStudentRecord } from "../models/HomeworkStudentRecord";
 import { HomeworkItem } from "../models/HomeworkItem";
 import { HomeworkReconciliation } from "../models/HomeworkReconciliation";
@@ -75,12 +76,34 @@ export interface HomeworkSummaryResult {
   topicTouches: { topTag: string; count: number }[];
 }
 
+export interface HomeworkSummaryOpts extends ClassOverviewOpts {
+  /** D-#770: narrow to ONE section — after a gender split the বালক and বালিকা
+   *  roll-ups are separate piles. Records are keyed by the STUDENT's section
+   *  (they follow a moved student, recordRehome); items by the section they were
+   *  declared on, plus any item the section's records point at (an item issued
+   *  before the split serves both halves). Omit for the class-wide fold. */
+  sectionId?: string | null;
+}
+
 export async function homeworkSummary(
   classId: string,
-  opts: ClassOverviewOpts = {},
+  opts: HomeworkSummaryOpts = {},
 ): Promise<HomeworkSummaryResult> {
-  let records = await HomeworkStudentRecord.find({ classId }).lean();
-  let items = await HomeworkItem.find({ classId, status: "issued" }).lean();
+  let records = await HomeworkStudentRecord.find(
+    opts.sectionId ? { classId, sectionId: opts.sectionId } : { classId },
+  ).lean();
+  let items = await HomeworkItem.find(
+    opts.sectionId
+      ? {
+          classId,
+          status: "issued",
+          $or: [
+            { sectionId: opts.sectionId },
+            { _id: { $in: [...new Set(records.map((r) => r.hwItemId.toString()))] } },
+          ],
+        }
+      : { classId, status: "issued" },
+  ).lean();
 
   // D-#641 (BUG-019): the same narrowing D-#634 gave the class chips and Today's
   // rows. Left class-wide then "for the section's confirmer", this fold ended up
@@ -163,6 +186,9 @@ export async function homeworkSummary(
 
 export interface ClassOverviewResult {
   classId: string;
+  /** D-#770: set by homeworkSectionOverview (the per-section bucket); null on the
+   *  legacy class-keyed fold. */
+  sectionId: string | null;
   pendingChecking: number;
   openResubmissions: number;
   activeChases: number;
@@ -260,20 +286,91 @@ export async function homeworkClassOverview(
     days.set(dayKey, (days.get(dayKey) ?? 0) + (it.timeDecl ?? 0));
   }
 
-  return classIds.map((classId) => {
-    const recs = recByClass.get(classId) ?? [];
-    const pendingChecking = recs.filter((r) => r.state === "SUBMITTED").length;
-    const activeChases = recs.filter((r) => r.state === "CHASE").length;
-    const openResubmissions = recs.filter((r) => r.resubOf && !isTerminalState(r.state)).length;
-    const reachedSubmitted = recs.filter((r) => (r.stateDates ?? []).some((s) => s.state === "SUBMITTED"));
-    const onTime = reachedSubmitted.filter((r) => r.chaseCount === 0).length;
-    const onTimePct = reachedSubmitted.length ? Math.round((onTime / reachedSubmitted.length) * 100) : null;
-    const days = minsByClassDay.get(classId);
-    const overCeilingDaysThisWeek = days
-      ? [...days.values()].filter((m) => m > HW_DAILY_CEILING_MIN).length
-      : 0;
-    return { classId, pendingChecking, activeChases, openResubmissions, onTimePct, overCeilingDaysThisWeek };
-  });
+  return classIds.map((classId) => ({
+    classId,
+    sectionId: null,
+    ...overviewCounts(recByClass.get(classId) ?? [], minsByClassDay.get(classId)),
+  }));
+}
+
+type OverviewRecord = {
+  state: LifecycleState;
+  resubOf?: unknown;
+  chaseCount: number;
+  stateDates?: Array<{ state: string }>;
+};
+
+/** The badge numbers for one bucket (a class, or one section of it). */
+function overviewCounts(
+  recs: readonly OverviewRecord[],
+  days: Map<string, number> | undefined,
+): Omit<ClassOverviewResult, "classId" | "sectionId"> {
+  const pendingChecking = recs.filter((r) => r.state === "SUBMITTED").length;
+  const activeChases = recs.filter((r) => r.state === "CHASE").length;
+  const openResubmissions = recs.filter((r) => r.resubOf && !isTerminalState(r.state)).length;
+  const reachedSubmitted = recs.filter((r) => (r.stateDates ?? []).some((s) => s.state === "SUBMITTED"));
+  const onTime = reachedSubmitted.filter((r) => r.chaseCount === 0).length;
+  const onTimePct = reachedSubmitted.length ? Math.round((onTime / reachedSubmitted.length) * 100) : null;
+  const overCeilingDaysThisWeek = days ? [...days.values()].filter((m) => m > HW_DAILY_CEILING_MIN).length : 0;
+  return { pendingChecking, activeChases, openResubmissions, onTimePct, overCeilingDaysThisWeek };
+}
+
+export interface SectionOverviewRef {
+  classId: string;
+  sectionId: string;
+}
+
+/**
+ * homeworkSectionOverview (D-#770) — the same badges as homeworkClassOverview,
+ * bucketed per SECTION. After a gender split (C4/C5 2026-10-01, C3 2026-10-25) a
+ * class-keyed fold pooled বালক and বালিকা: one badge for both halves, and an
+ * over-ceiling day that added both halves' minutes (each half gets its own sheet,
+ * so neither child carried that load). Records bucket by their own sectionId (the
+ * student's section — records follow a moved student); this week's issued items
+ * by the section they were declared on. For a single-section class the bucket is
+ * the whole class, so the numbers equal the class-keyed ones.
+ */
+export async function homeworkSectionOverview(
+  refs: readonly SectionOverviewRef[],
+  asOfMillis: number,
+  opts: ClassOverviewOpts = {},
+): Promise<ClassOverviewResult[]> {
+  const seen = new Set<string>();
+  const unique = refs.filter((r) => (seen.has(r.sectionId) ? false : (seen.add(r.sectionId), true)));
+  if (unique.length === 0) return [];
+  const sectionIds = unique.map((r) => r.sectionId);
+
+  let records = await HomeworkStudentRecord.find({ sectionId: { $in: sectionIds } }).lean();
+  if (opts.teacherId) {
+    const itemIds = [...new Set(records.map((r) => r.hwItemId.toString()))];
+    const mine = await itemsAttributedTo(itemIds, opts.teacherId);
+    records = records.filter((r) => mine.has(r.hwItemId.toString()));
+  }
+  const { start, end } = weekRange(asOfMillis);
+  const items = await HomeworkItem.find({
+    sectionId: { $in: sectionIds },
+    status: "issued",
+    dateGiven: { $gte: start, $lte: end },
+  }).lean();
+
+  const recBySection = new Map<string, typeof records>();
+  for (const r of records) {
+    const k = r.sectionId.toString();
+    (recBySection.get(k) ?? recBySection.set(k, []).get(k)!).push(r);
+  }
+  const minsBySectionDay = new Map<string, Map<string, number>>();
+  for (const it of items) {
+    const k = it.sectionId.toString();
+    const dayKey = new Date(it.dateGiven as unknown as Date).toISOString().slice(0, 10);
+    const days = minsBySectionDay.get(k) ?? minsBySectionDay.set(k, new Map()).get(k)!;
+    days.set(dayKey, (days.get(dayKey) ?? 0) + (it.timeDecl ?? 0));
+  }
+
+  return unique.map((ref) => ({
+    classId: ref.classId,
+    sectionId: ref.sectionId,
+    ...overviewCounts(recBySection.get(ref.sectionId) ?? [], minsBySectionDay.get(ref.sectionId)),
+  }));
 }
 
 // ---------------------------------------------------------------------------
@@ -290,8 +387,12 @@ export interface WatchListResult {
 export async function resubmissionWatchList(
   classId: string,
   asOfMillis: number,
+  /** D-#770: narrow to one section (records carry the STUDENT's section). */
+  sectionId?: string | null,
 ): Promise<WatchListResult> {
-  const resubs = await HomeworkStudentRecord.find({ classId, resubOf: { $ne: null } }).lean();
+  const resubs = await HomeworkStudentRecord.find(
+    sectionId ? { classId, sectionId, resubOf: { $ne: null } } : { classId, resubOf: { $ne: null } },
+  ).lean();
   const cutoff = asOfMillis - RESUB_WINDOW_DAYS * DAY_MS;
 
   // "open OR recent" — still in flight, or created within the rolling window.
@@ -324,6 +425,9 @@ export interface TrimPatternResult {
   flags: { subject: string; trimmedDays: number; schoolDays: number; ratio: number; flagged: boolean }[];
 }
 
+/** Stays CLASS-keyed (D-#770 note): it reads the HomeworkReconciliation row, which is
+ *  still one per class per day (unique classId + reconDate, see D-#731), so there is
+ *  no per-section trim log to narrow to. */
 export async function trimPatternFlags(
   classId: string,
   fromMillis: number,
@@ -440,9 +544,26 @@ export async function homeworkItemTallies(
   return [...byItem.values()];
 }
 
-export async function questionUsageFeed(classId: string): Promise<QuestionUsageResult> {
-  const items = await HomeworkItem.find({ classId }).lean();
-  const topups = await HomeworkStudentRecord.find({ classId, topupFlag: true }).lean();
+export async function questionUsageFeed(
+  classId: string,
+  /** D-#770: narrow to one section — the items declared on it plus any item its
+   *  records point at (an item issued before a split serves both halves), and the
+   *  section's own top-ups. Omit for the class-wide feed. */
+  sectionId?: string | null,
+): Promise<QuestionUsageResult> {
+  let items;
+  let topups;
+  if (sectionId) {
+    const recs = await HomeworkStudentRecord.find({ classId, sectionId }).lean();
+    topups = recs.filter((r) => r.topupFlag);
+    items = await HomeworkItem.find({
+      classId,
+      $or: [{ sectionId }, { _id: { $in: [...new Set(recs.map((r) => r.hwItemId.toString()))] } }],
+    }).lean();
+  } else {
+    items = await HomeworkItem.find({ classId }).lean();
+    topups = await HomeworkStudentRecord.find({ classId, topupFlag: true }).lean();
+  }
 
   const usage = new Map<string, number>();
   for (const it of items) for (const qid of it.selectedQids ?? []) usage.set(qid, (usage.get(qid) ?? 0) + 1);

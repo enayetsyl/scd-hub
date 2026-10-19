@@ -37,6 +37,7 @@ jest.mock("../modules/trackers/models/HomeworkReconciliation", () => ({
 import {
   homeworkSummary,
   homeworkClassOverview,
+  homeworkSectionOverview,
   resubmissionWatchList,
   trimPatternFlags,
   questionUsageFeed,
@@ -293,6 +294,142 @@ describe("homeworkClassOverview (per-class cumulative counts)", () => {
       expect(scoped.openResubmissions).toBe(0);
       expect(scoped.onTimePct).toBeNull();
     });
+  });
+});
+
+// ===========================================================================
+// D-#770 — section-scoped badges + roll-ups after a gender split
+// ===========================================================================
+
+describe("D-#770 — per-section overview + summary (split class)", () => {
+  const C4 = "class-4";
+  const BOYS = "sec-boys";
+  const GIRLS = "sec-girls";
+  const day0 = new Date(2026, 5, 1, 9);
+  const asOf = new Date(2026, 5, 3).getTime();
+
+  /** Apply the {sectionId: {$in}} / {classId: {$in}} filter the services hand the mock. */
+  const byFilter = <T extends { classId?: string; sectionId?: string }>(rows: T[]) => (q: Record<string, unknown>) =>
+    rows.filter((r) => {
+      for (const key of ["classId", "sectionId"] as const) {
+        const f = q[key] as { $in?: string[] } | string | undefined;
+        if (f === undefined) continue;
+        const allowed = typeof f === "string" ? [f] : f.$in ?? [];
+        if (!allowed.includes(r[key] as string)) return false;
+      }
+      return true;
+    });
+
+  function seedSplitClass(): void {
+    mockRecordFind.mockImplementation(
+      byFilter([
+        { _id: oid(), hwId: "HW-C4-MATH-0001", studentId: oid(), classId: C4, sectionId: BOYS, hwItemId: "b1", state: "SUBMITTED", chaseCount: 0, stateDates: [{ state: "SUBMITTED", at: day0 }] },
+        { _id: oid(), hwId: "HW-C4-MATH-0001", studentId: oid(), classId: C4, sectionId: BOYS, hwItemId: "b1", state: "CHASE", chaseCount: 2, stateDates: [{ state: "GIVEN", at: day0 }] },
+        { _id: oid(), hwId: "HW-C4-MATH-0001", studentId: oid(), classId: C4, sectionId: GIRLS, hwItemId: "g1", state: "SUBMITTED", chaseCount: 0, stateDates: [{ state: "SUBMITTED", at: day0 }] },
+        { _id: oid(), hwId: "HW-C4-MATH-0001", studentId: oid(), classId: C4, sectionId: GIRLS, hwItemId: "g1", state: "SUBMITTED", chaseCount: 0, stateDates: [{ state: "SUBMITTED", at: day0 }] },
+        { _id: oid(), hwId: "HW-C4-MATH-0001", studentId: oid(), classId: C4, sectionId: GIRLS, hwItemId: "g1", state: "SUBMITTED", chaseCount: 0, stateDates: [{ state: "SUBMITTED", at: day0 }] },
+      ]),
+    );
+    // Each half got its own 80-min day: neither child carried 160 minutes.
+    mockItemFind.mockImplementation(
+      byFilter([
+        { classId: C4, sectionId: BOYS, dateGiven: new Date(2026, 5, 1), timeDecl: 80 },
+        { classId: C4, sectionId: GIRLS, dateGiven: new Date(2026, 5, 1), timeDecl: 80 },
+      ]),
+    );
+  }
+
+  test("each section ref gets its own badge; the halves are no longer pooled", async () => {
+    seedSplitClass();
+    const res = await homeworkSectionOverview(
+      [
+        { classId: C4, sectionId: BOYS },
+        { classId: C4, sectionId: GIRLS },
+      ],
+      asOf,
+    );
+    const boys = res.find((r) => r.sectionId === BOYS)!;
+    const girls = res.find((r) => r.sectionId === GIRLS)!;
+    expect(boys.classId).toBe(C4);
+    expect(boys.pendingChecking).toBe(1);
+    expect(boys.activeChases).toBe(1);
+    expect(girls.pendingChecking).toBe(3);
+    expect(girls.activeChases).toBe(0);
+  });
+
+  test("over-ceiling days count each half's own minutes (the class fold added both)", async () => {
+    seedSplitClass();
+    const [pooled] = await homeworkClassOverview([C4], asOf);
+    expect(pooled.overCeilingDaysThisWeek).toBe(1); // 80 + 80 = 160 > 120 — the bug
+    const res = await homeworkSectionOverview([{ classId: C4, sectionId: BOYS }, { classId: C4, sectionId: GIRLS }], asOf);
+    expect(res.map((r) => r.overCeilingDaysThisWeek)).toEqual([0, 0]);
+  });
+
+  test("a single-section class reads exactly the class-keyed numbers", async () => {
+    const C1 = "class-1";
+    const MAIN = "sec-main";
+    mockRecordFind.mockImplementation(
+      byFilter([
+        { classId: C1, sectionId: MAIN, hwItemId: "i1", state: "SUBMITTED", chaseCount: 1, stateDates: [{ state: "SUBMITTED", at: day0 }] },
+        { classId: C1, sectionId: MAIN, hwItemId: "i1", state: "SUBMITTED", chaseCount: 0, stateDates: [{ state: "SUBMITTED", at: day0 }] },
+        { classId: C1, sectionId: MAIN, hwItemId: "i1", state: "CHASE", chaseCount: 3, stateDates: [{ state: "GIVEN", at: day0 }] },
+        { classId: C1, sectionId: MAIN, hwItemId: "i1", state: "DUE", chaseCount: 0, resubOf: oid(), stateDates: [] },
+      ]),
+    );
+    mockItemFind.mockImplementation(
+      byFilter([
+        { classId: C1, sectionId: MAIN, dateGiven: new Date(2026, 5, 1), timeDecl: 100 },
+        { classId: C1, sectionId: MAIN, dateGiven: new Date(2026, 5, 1), timeDecl: 30 },
+      ]),
+    );
+    const [byClass] = await homeworkClassOverview([C1], asOf);
+    const [bySection] = await homeworkSectionOverview([{ classId: C1, sectionId: MAIN }], asOf);
+    const { classId: _a, sectionId: _b, ...classNums } = byClass;
+    const { classId: _c, sectionId: sid, ...sectionNums } = bySection;
+    expect(sid).toBe(MAIN);
+    expect(sectionNums).toEqual(classNums);
+    expect(sectionNums.overCeilingDaysThisWeek).toBe(1);
+  });
+
+  test("duplicate section refs collapse to one row; no refs → [] with no DB hit", async () => {
+    seedSplitClass();
+    const res = await homeworkSectionOverview([{ classId: C4, sectionId: BOYS }, { classId: C4, sectionId: BOYS }], asOf);
+    expect(res).toHaveLength(1);
+    jest.clearAllMocks();
+    expect(await homeworkSectionOverview([], asOf)).toEqual([]);
+    expect(mockRecordFind).not.toHaveBeenCalled();
+  });
+
+  test("homeworkSummary with a sectionId narrows records to that section", async () => {
+    seedSplitClass();
+    const boys = await homeworkSummary(C4, { sectionId: BOYS });
+    expect(boys.pendingChecking).toBe(1);
+    expect(boys.chaseList).toHaveLength(1);
+    const girls = await homeworkSummary(C4, { sectionId: GIRLS });
+    expect(girls.pendingChecking).toBe(3);
+    expect(girls.chaseList).toHaveLength(0);
+    // The item read keeps pre-split items the section's records point at.
+    const itemQ = mockItemFind.mock.calls.map((c) => c[0]).filter((q) => q.$or).pop();
+    expect(itemQ.$or).toEqual([{ sectionId: GIRLS }, { _id: { $in: ["g1"] } }]);
+  });
+
+  test("resubmissionWatchList + questionUsageFeed pass the section through", async () => {
+    mockRecordFind.mockResolvedValue([]);
+    mockItemFind.mockResolvedValue([]);
+    await resubmissionWatchList(C4, asOf, BOYS);
+    expect(mockRecordFind).toHaveBeenLastCalledWith({ classId: C4, sectionId: BOYS, resubOf: { $ne: null } });
+    mockRecordFind.mockResolvedValue([{ hwItemId: "b1", topupFlag: true, topupQids: ["q9"] }, { hwItemId: "b2" }]);
+    mockItemFind.mockResolvedValue([{ selectedQids: ["q1"] }]);
+    const feed = await questionUsageFeed(C4, BOYS);
+    expect(mockRecordFind).toHaveBeenLastCalledWith({ classId: C4, sectionId: BOYS });
+    expect(mockItemFind).toHaveBeenLastCalledWith({
+      classId: C4,
+      $or: [{ sectionId: BOYS }, { _id: { $in: ["b1", "b2"] } }],
+    });
+    expect(feed.feed).toEqual([
+      { qid: "q1", count: 1 },
+      { qid: "q9", count: 1 },
+    ]);
   });
 });
 

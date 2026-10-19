@@ -62,6 +62,7 @@ import {
 import {
   homeworkSummary as homeworkSummarySvc,
   homeworkClassOverview as classOverviewSvc,
+  homeworkSectionOverview as sectionOverviewSvc,
   resubmissionWatchList as watchListSvc,
   trimPatternFlags as trimPatternSvc,
   questionUsageFeed as usageFeedSvc,
@@ -1808,8 +1809,12 @@ builder.queryField("homeworkSummary", (t) =>
       // and lands here as well — their class-wide reconcile duty is served by the
       // reconcile screen and its own alerts, not by a roll-up that silently
       // re-attributes colleagues' backlog to the person reading it.
+      // D-#770: the roll-up is the SELECTED section's — after a gender split the
+      // বালক and বালিকা piles are separate. The sectionId was always sent and
+      // authorized above; only the classId used to reach the fold.
       return homeworkSummarySvc(args.classId, {
         teacherId: isAdminStaff(ctx.auth) ? null : (ctx.auth.userId as string),
+        sectionId: args.sectionId,
       });
     },
   }),
@@ -1828,6 +1833,11 @@ ClassOverviewRef.implement({
   description: "Per-class cumulative homework counts for the dashboard badges (pending checking / chases / resubmissions / on-time% / over-ceiling days this week).",
   fields: (t) => ({
     classId: t.exposeString("classId"),
+    sectionId: t.string({
+      nullable: true,
+      description: "D-#770: the section this row counts (bySection: true); null on the class-keyed fold.",
+      resolve: (r) => r.sectionId,
+    }),
     pendingChecking: t.exposeInt("pendingChecking"),
     openResubmissions: t.exposeInt("openResubmissions"),
     activeChases: t.exposeInt("activeChases"),
@@ -1843,21 +1853,31 @@ builder.queryField("homeworkClassOverview", (t) =>
       "Per-class cumulative homework counts for the dashboard. Each (classId, sectionId) ref is " +
       "authorized via read-scope; refs the caller cannot read are silently skipped. Requires tracker:read. " +
       "D-#634: a TEACHER's badges count only the homework attributed to them (D-#351); Principal/Office " +
-      "read the class-wide numbers.",
+      "read the class-wide numbers. D-#770: bySection: true returns one row PER SECTION ref, counted " +
+      "over that section alone (sectionId set) — send one ref per section. The default (false) keeps " +
+      "the class-keyed fold for older app builds.",
     authScopes: { hasPermission: "tracker:read" },
     args: {
       refs: t.arg({ type: [HomeworkClassRefInput], required: true }),
+      bySection: t.arg.boolean({ required: false, defaultValue: false }),
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       const authorized: string[] = [];
+      const authorizedRefs: { classId: string; sectionId: string }[] = [];
       for (const ref of args.refs) {
         try {
           await assertCanViewHomeworkDay(ctx, ref.sectionId, ref.classId);
           authorized.push(ref.classId);
+          authorizedRefs.push({ classId: ref.classId, sectionId: ref.sectionId });
         } catch {
           // A stale/over-broad ref must not break the whole dashboard — skip it.
         }
+      }
+      if (args.bySection) {
+        return sectionOverviewSvc(authorizedRefs, Date.now(), {
+          teacherId: isAdminStaff(ctx.auth) ? null : (ctx.auth.userId as string),
+        });
       }
       // D-#634: read-scope is broad on purpose (a subject teacher can READ every
       // section they teach in), so the unscoped count answered "how much homework
@@ -1883,7 +1903,7 @@ builder.queryField("homeworkWatchList", (t) =>
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       await assertCanRead(ctx, args.sectionId, args.classId);
-      return watchListSvc(args.classId, Date.now());
+      return watchListSvc(args.classId, Date.now(), args.sectionId); // D-#770: the section's own
     },
   }),
 );
@@ -1903,6 +1923,7 @@ builder.queryField("homeworkTrimPattern", (t) =>
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       await assertCanRead(ctx, args.sectionId, args.classId);
+      // Class-keyed on purpose: the reconciliation row is one per class per day (D-#731).
       return trimPatternSvc(args.classId, new Date(args.from).getTime(), new Date(args.to).getTime());
     },
   }),
@@ -1921,7 +1942,7 @@ builder.queryField("questionUsageFeed", (t) =>
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       await assertCanRead(ctx, args.sectionId, args.classId);
-      return usageFeedSvc(args.classId);
+      return usageFeedSvc(args.classId, args.sectionId); // D-#770: the section's own
     },
   }),
 );

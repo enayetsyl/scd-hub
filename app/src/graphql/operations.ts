@@ -2920,9 +2920,11 @@ export const HOMEWORK_SUMMARY = gql<
   }
 `;
 
-// Per-class cumulative dashboard counts (badges on the class buttons).
+// Per-SECTION cumulative dashboard counts (D-#770): one ref per section, one row
+// back per section (bySection: true) — the class buttons sum their sections' rows.
 export interface HwClassOverviewT {
   classId: string;
+  sectionId: string | null;
   pendingChecking: number;
   openResubmissions: number;
   activeChases: number;
@@ -2939,8 +2941,9 @@ export const HOMEWORK_CLASS_OVERVIEW = gql<
   { refs: HwClassRefInput[] }
 >`
   query HomeworkClassOverview($refs: [HomeworkClassRefInput!]!) {
-    homeworkClassOverview(refs: $refs) {
+    homeworkClassOverview(refs: $refs, bySection: true) {
       classId
+      sectionId
       pendingChecking
       openResubmissions
       activeChases
