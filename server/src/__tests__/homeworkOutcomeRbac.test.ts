@@ -104,7 +104,7 @@ const MUTATION = `mutation {
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockRecFindById.mockReturnValue({ hwItemId: oid() });
+  mockRecFindById.mockReturnValue({ hwItemId: oid(), sectionId: SECTION });
   mockItemFindById.mockReturnValue({ subject: "MATH" });
   mockSubjectFindOne.mockReturnValue({ _id: oid() });
   mockAssertCanWrite.mockResolvedValue(undefined); // in-scope by default
@@ -142,5 +142,48 @@ describe("recordHomeworkOutcome — RBAC + proxy subject-narrowing", () => {
     const badMutation = `mutation { recordHomeworkOutcome(recordId: "${RECORD}", outcome: "CORRECT") { recordId } }`;
     const r = await run(badMutation, "TEACHER");
     expect(denied(r)).toBe(true);
+  });
+});
+
+// D-#772 — the record's REAL section must be the one write-scope was asserted on (the
+// assignment twins' assertRecordInSection). A grant on বালক must not let a caller act on
+// a বালিকা record by naming বালক in the args.
+describe("homework record mutations — record must be in the asserted section (D-#772)", () => {
+  const svc = jest.requireMock("../modules/trackers/services/HomeworkService") as { transitionRecord: jest.Mock };
+  const resub = jest.requireMock("../modules/trackers/services/HomeworkResubmissionService") as Record<string, jest.Mock>;
+  const OTHER = oid().toString();
+
+  test("recordHomeworkOutcome on a record of ANOTHER section is denied; the service never runs", async () => {
+    mockRecFindById.mockReturnValue({ hwItemId: oid(), sectionId: OTHER });
+    const r = await run(MUTATION, "TEACHER");
+    expect(denied(r)).toBe(true);
+    expect(mockRecordOutcome).not.toHaveBeenCalled();
+  });
+
+  test("checkHomeworkRecord on a record of ANOTHER section is denied", async () => {
+    mockRecFindById.mockReturnValue({ hwItemId: oid(), sectionId: OTHER });
+    const r = await run(
+      `mutation { checkHomeworkRecord(sectionId: "${SECTION}", recordId: "${RECORD}", result: "CORRECT") { recordId } }`,
+      "TEACHER",
+    );
+    expect(denied(r)).toBe(true);
+    for (const fn of Object.values(resub)) expect(fn).not.toHaveBeenCalled();
+  });
+
+  test("transitionHomeworkRecord on a record of ANOTHER section is denied", async () => {
+    mockRecFindById.mockReturnValue({ hwItemId: oid(), sectionId: OTHER });
+    const r = await run(
+      `mutation { transitionHomeworkRecord(sectionId: "${SECTION}", recordId: "${RECORD}", toState: "SUBMITTED") { recordId } }`,
+      "TEACHER",
+    );
+    expect(denied(r)).toBe(true);
+    expect(svc.transitionRecord).not.toHaveBeenCalled();
+  });
+
+  test("a missing record is refused before any service runs", async () => {
+    mockRecFindById.mockReturnValue(null);
+    const r = await run(MUTATION, "TEACHER");
+    expect(denied(r)).toBe(true);
+    expect(mockRecordOutcome).not.toHaveBeenCalled();
   });
 });

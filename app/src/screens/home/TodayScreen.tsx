@@ -45,6 +45,7 @@ import {
   type RoutineSlotT,
   type AssignmentPrepT,
   type HwPendingStage,
+  type AsLifecycleSectionT,
 } from "../../graphql/operations";
 import { CLASS_TEST_REPORTS_STATUS_QUERY } from "../../graphql/classTest";
 import { HwPendingSheet, type HwPendingTarget } from "../../components/HwPendingSheet";
@@ -88,6 +89,14 @@ import { usePullRefresh } from "../../lib/useRefresh";
 import { dateKey } from "../../lib/dates";
 
 const todayISO = (): string => dateKey();
+
+/** D-#772: the per-section count behind each assignment-lifecycle pill. */
+const AS_PILL_FIELD: Record<string, Exclude<keyof AsLifecycleSectionT, "sectionId" | "classId">> = {
+  SUBMISSION: "pendingSubmission",
+  CHECK: "pendingChecking",
+  RETURN: "pendingReturn",
+  CHASE: "chasedPending",
+};
 
 /** Cross-tab navigation (the Basket→Sets convention): navigate bubbles up to the drawer. */
 type CrossNav = { navigate: (name: string, params?: object) => void };
@@ -884,11 +893,27 @@ export default function TodayScreen(): React.ReactElement {
                 return (
                   <Pressable
                     key={p.key}
-                    onPress={() =>
-                      active
-                        ? nav.navigate("AssignmentTab", { screen: "AssignmentWorkspace", initial: false })
-                        : undefined
-                    }
+                    onPress={() => {
+                      if (!active) return;
+                      // D-#772: open the section the records are ON — after a split that
+                      // is the half they were moved to, not the item's emptied সম্মিলিত.
+                      // The section holding most of this pill's records wins.
+                      const field = AS_PILL_FIELD[p.key];
+                      const target = [...(myAsLc.sections ?? [])]
+                        .filter((s) => s[field] > 0)
+                        .sort((a, b) => b[field] - a[field])[0];
+                      if (target) {
+                        setSection({
+                          classId: target.classId,
+                          sectionId: target.sectionId,
+                          classLevel: null,
+                          classNameBn: null,
+                          sectionCode: null,
+                          sectionNameBn: null,
+                        });
+                      }
+                      nav.navigate("AssignmentTab", { screen: "AssignmentWorkspace", initial: false });
+                    }}
                     disabled={!active}
                     style={{
                       flexDirection: "row",

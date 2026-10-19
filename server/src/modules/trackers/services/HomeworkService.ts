@@ -919,8 +919,10 @@ export async function listDailyItems(classId: string, dateGiven?: Date, sectionI
   return HomeworkItem.find(filter).sort({ subject: 1 }).lean();
 }
 
-export async function listStudentRecords(hwItemId: string) {
-  return HomeworkStudentRecord.find({ hwItemId }).lean();
+/** `sectionId` (D-#772): only that section's records — a pre-split item holds both
+ *  halves' (the D-#726 listAssignmentRecords rule). */
+export async function listStudentRecords(hwItemId: string, sectionId?: string) {
+  return HomeworkStudentRecord.find({ hwItemId, ...(sectionId ? { sectionId } : {}) }).lean();
 }
 
 /** One open lifecycle record, enriched with its item's subject + given-date and the

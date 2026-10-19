@@ -91,10 +91,15 @@ import {
 import { AssignmentSchedule } from "../models/AssignmentSchedule";
 import { AssignmentStudentRecord } from "../models/AssignmentStudentRecord";
 import { AssignmentItem } from "../models/AssignmentItem";
+import { passOnItemOrRecordSection } from "../recordOwner";
 import { Subject } from "../../foundation/models/Subject";
 import { Section } from "../../foundation/models/Section";
 import { isAdminStaff } from "../../foundation/services/RoleScope";
-import { myAssignmentLifecycle as myAssignmentLifecycleSvc, type AsTeacherLifecycleRow } from "../services/AssignmentLifecycleService";
+import {
+  myAssignmentLifecycle as myAssignmentLifecycleSvc,
+  type AsLifecycleSection,
+  type AsTeacherLifecycleRow,
+} from "../services/AssignmentLifecycleService";
 import {
   assertCanWrite,
   assertCanWriteAny,
@@ -1156,16 +1161,30 @@ const UpdateAssignmentResultRef = builder
 
 /** Load the item's real section so write-scope is asserted on IT, never on a
  *  client-supplied one (the module header's rule). */
-async function assertCanWriteOnItem(ctx: AppContext, itemId: string) {
+async function assertCanWriteOnItem(
+  ctx: AppContext,
+  itemId: string,
+  opts: { allowRecordSections?: boolean } = {},
+) {
   const item = await AssignmentItem.findById(itemId).select("sectionId subject").lean();
   if (!item) throw new Error("AssignmentItem not found");
+  const subjectId = await resolveSubjectId(item.subject);
   // Editing or deleting what was delivered is the delivery duty, not a new one
   // (ACS-4, D-#592): whoever may deliver must be able to fix a wrong delivery.
-  await assertCanWrite(
-    ctx,
+  if (!opts.allowRecordSections) {
+    await assertCanWrite(ctx, item.sectionId.toString(), subjectId, "declare_assignment");
+    return;
+  }
+  // D-#772: after a split the item stays on the emptied সম্মিলিত (whose grants lapsed)
+  // while its records sit on the halves — a half's subject teacher may write here too.
+  // WHAT a half may change is the service's call (assignmentEditScope: totalMarks only).
+  await passOnItemOrRecordSection(
     item.sectionId.toString(),
-    await resolveSubjectId(item.subject),
-    "declare_assignment",
+    () => AssignmentStudentRecord.distinct("sectionId", { asItemId: item._id }),
+    (sectionId) =>
+      sectionId === item.sectionId.toString()
+        ? assertCanWrite(ctx, sectionId, subjectId, "declare_assignment")
+        : assertCanWrite(ctx, sectionId, subjectId, "check_assignment"),
   );
 }
 
@@ -1187,7 +1206,7 @@ builder.mutationField("updateAssignmentItem", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanWriteOnItem(ctx, args.itemId);
+      await assertCanWriteOnItem(ctx, args.itemId, { allowRecordSections: true });
       return updateAssignmentItemSvc({
         itemId: args.itemId,
         estMinutes: args.estMinutes ?? undefined,
@@ -2148,6 +2167,22 @@ builder.queryField("childAssignments", (t) =>
 // oversight gate beyond tracker:read (the D-#340 SELF pattern).
 // ---------------------------------------------------------------------------
 
+const AsLifecycleSectionRef = builder
+  .objectRef<AsLifecycleSection>("AsLifecycleSection")
+  .implement({
+    description:
+      "One RECORD section's share of the caller's pending assignment buckets (D-#772) — the " +
+      "section a pill opens (after a split, the half the records were moved to).",
+    fields: (t) => ({
+      sectionId: t.exposeString("sectionId"),
+      classId: t.exposeString("classId"),
+      pendingSubmission: t.exposeInt("pendingSubmission"),
+      pendingChecking: t.exposeInt("pendingChecking"),
+      pendingReturn: t.exposeInt("pendingReturn"),
+      chasedPending: t.exposeInt("chasedPending"),
+    }),
+  });
+
 const AsTeacherLifecycleRowRef = builder
   .objectRef<AsTeacherLifecycleRow>("AsTeacherLifecycleRow")
   .implement({
@@ -2163,6 +2198,7 @@ const AsTeacherLifecycleRowRef = builder
       pendingChecking: t.exposeInt("pendingChecking"),
       pendingReturn: t.exposeInt("pendingReturn"),
       chasedPending: t.exposeInt("chasedPending"),
+      sections: t.field({ type: [AsLifecycleSectionRef], resolve: (r) => r.sections ?? [] }),
     }),
   });
 
@@ -2171,8 +2207,9 @@ builder.queryField("myAssignmentLifecycle", (t) =>
     type: AsTeacherLifecycleRowRef,
     description:
       "The CALLER's own assignment lifecycle row (totals + pending buckets), self-scoped — the " +
-      "teacher-dashboard card (D-#471, the twin of myHomeworkLifecycle). Attribution is the " +
-      "item's own teacherId (the rotation owner), so no routine resolution is involved.",
+      "teacher-dashboard card (D-#471, the twin of myHomeworkLifecycle). Attribution is per " +
+      "RECORD (D-#772): the item's teacherId on its own section; a record rehomed by a split " +
+      "goes to the routine subject teacher of the record's section.",
     authScopes: { hasPermission: "tracker:read" },
     args: {
       from: t.arg.string({ required: true }),
