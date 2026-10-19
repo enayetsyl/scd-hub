@@ -90,6 +90,12 @@ jest.mock("../modules/trackers/models/HomeworkTopic", () => ({
   },
 }));
 
+// D-#770: declare refuses an empty section — it counts the section's active students.
+const mockStudentCount = jest.fn();
+jest.mock("../modules/foundation/models/Student", () => ({
+  Student: { countDocuments: (q: unknown) => mockStudentCount(q) },
+}));
+
 // Declare-form attachments (D-#297): the kind check queries StoredFile.
 const mockStoredFind = jest.fn();
 jest.mock("../modules/platform/models/StoredFile", () => ({
@@ -126,6 +132,7 @@ import {
   declareHomeworkItem,
   issueHomeworkItem,
   EMPTY_SECTION_ISSUE_ERROR,
+  EMPTY_SECTION_DECLARE_ERROR,
   listHomeworkTopics,
   topicLabelByCode,
   transitionRecord,
@@ -175,6 +182,7 @@ function validDeclareInput(over: Record<string, unknown> = {}) {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockStudentCount.mockResolvedValue(21); // a populated section by default
   mockSeqUpdate.mockResolvedValue({ seq: 1 });
   mockItemFindOne.mockResolvedValue(null);
   mockNilDelete.mockResolvedValue({ deletedCount: 0 });
@@ -300,6 +308,17 @@ describe("T1.1 — declareHomeworkItem validations (handoff §2.1)", () => {
   test("Thursday (light roster) is a valid school night", async () => {
     const res = await declareHomeworkItem(validDeclareInput({ dateGiven: A_THURSDAY }));
     expect(res.status).toBe("declared");
+  });
+
+  // D-#770: the emptied সম্মিলিত beside a split class's বালক/বালিকা stays active, so it
+  // can still be picked — a sheet declared there would reach nobody.
+  test("declaring on a section with no active students is refused, nothing is created", async () => {
+    mockStudentCount.mockResolvedValue(0);
+    await expect(declareHomeworkItem(validDeclareInput())).rejects.toThrow(EMPTY_SECTION_DECLARE_ERROR);
+    expect(mockStudentCount).toHaveBeenCalledWith({ sectionId: SECTION_ID, active: true });
+    expect(mockItemCreate).not.toHaveBeenCalled();
+    expect(mockSeqUpdate).not.toHaveBeenCalled(); // no HW_ID burned either
+    expect(mockNilDelete).not.toHaveBeenCalled(); // a "no homework today" marker survives
   });
 
   // D-#338: same class+section+subject+day may not be declared twice.

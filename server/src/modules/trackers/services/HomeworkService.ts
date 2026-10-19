@@ -182,6 +182,11 @@ export async function findHomeworkItemIdForDay(
   return existing ? existing._id.toString() : null;
 }
 
+/** Shown to the teacher (friendlyError passes a plain Error through) — the declare-time
+ *  twin of EMPTY_SECTION_ISSUE_ERROR (D-#770). */
+export const EMPTY_SECTION_DECLARE_ERROR =
+  "এই শাখায় কোনো শিক্ষার্থী নেই, তাই বাড়ির কাজ ঘোষণা করা যাবে না — শিক্ষার্থীরা যে শাখায় আছে (যেমন বালক/বালিকা) সেটি বেছে নিন";
+
 export async function declareHomeworkItem(
   input: DeclareHomeworkItemInput,
 ): Promise<HomeworkItemResult> {
@@ -229,6 +234,14 @@ export async function declareHomeworkItem(
   }
 
   const attachmentIds = await normalizeAttachmentIds(input.attachmentIds);
+
+  // D-#770: refuse at DECLARE, not only at issue. The emptied সম্মিলিত beside a split
+  // class's বালক/বালিকা stays active (past attendance), so it can still be picked; a
+  // sheet declared there reaches no child, and the day's confirm then refuses to issue
+  // it (EMPTY_SECTION_ISSUE_ERROR) with the teacher's work already sunk into it.
+  if ((await Student.countDocuments({ sectionId: input.sectionId, active: true })) === 0) {
+    throw new Error(EMPTY_SECTION_DECLARE_ERROR);
+  }
 
   // D-#338: ONE common sheet per class+section+subject+day (the model header's
   // stated intent, previously unenforced) — a second declaration is a mistake;
