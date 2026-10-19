@@ -12,7 +12,7 @@
  * WEB_PUSH_VAPID_PRIVATE_KEY, generated once per install); without them the
  * channel simply never registers — jest and an unconfigured host send nothing.
  *
- * D-#772: a recipient whose phone runs the app gets the app's push, so their PHONE
+ * D-#773: a recipient whose phone runs the app gets the app's push, so their PHONE
  * browsers are skipped — otherwise the same phone shows two notifications and the
  * browser one opens the website, not the app. Desktop browsers always receive. The
  * skip follows the live app registration: once the app logs out or is uninstalled

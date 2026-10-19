@@ -64,12 +64,19 @@ jest.mock("../modules/trackers/models/HomeworkItem", () => ({
 const mockRecFindById = jest.fn();
 const mockRecFindOne = jest.fn();
 const mockRecUpdateOne = jest.fn();
+const mockRecDistinct = jest.fn();
 jest.mock("../modules/trackers/models/HomeworkStudentRecord", () => ({
   HomeworkStudentRecord: {
     findById: (id: unknown) => ({ lean: () => mockRecFindById(id) }),
     findOne: (q: unknown) => ({ lean: () => mockRecFindOne(q) }),
     updateOne: (f: unknown, u: unknown) => mockRecUpdateOne(f, u),
+    distinct: (k: string, q: unknown) => mockRecDistinct(k, q),
   },
+}));
+// D-#772: the item-file gates fall back to the sections holding the item's records.
+const mockAsRecDistinct = jest.fn();
+jest.mock("../modules/trackers/models/AssignmentStudentRecord", () => ({
+  AssignmentStudentRecord: { distinct: (k: string, q: unknown) => mockAsRecDistinct(k, q) },
 }));
 
 // D-#298 — the assignment-attachment gate reverse-resolves AssignmentItem.
@@ -191,6 +198,8 @@ beforeEach(() => {
   mockRecFindOne.mockResolvedValue(recordDoc);
   mockItemUpdateOne.mockResolvedValue({ acknowledged: true });
   mockRecUpdateOne.mockResolvedValue({ acknowledged: true });
+  mockRecDistinct.mockResolvedValue([]);
+  mockAsRecDistinct.mockResolvedValue([]);
 });
 
 // ===========================================================================
@@ -398,6 +407,45 @@ describe("GET /files/:id", () => {
     mockAsItemFindOne.mockResolvedValue(itemDoc);
     const res = await get(principalTok);
     expect(res.status).toBe(200);
+  });
+
+  // --- D-#772: a pre-split item stays on the emptied সম্মিলিত; its records are on the halves
+  describe("D-#772 — item files readable from a section holding the item's records", () => {
+    const GIRLS = oid();
+    const girlsTeacher = () =>
+      mockComposeScope.mockResolvedValue({
+        scopes: [{ kind: "teaching", sectionId: GIRLS.toString(), classId: CLASS_ID.toString(), subjectId: "sMATH" }],
+        expiredProxyGrantIds: [],
+      });
+
+    test("homework question file: a বালিকা teacher reads it when বালিকা holds the item's records → 200", async () => {
+      girlsTeacher();
+      mockStoredFindById.mockResolvedValue(questionFile);
+      mockRecDistinct.mockResolvedValue([SECTION_ID, GIRLS]);
+      const res = await get(teacherTok);
+      expect(res.status).toBe(200);
+      expect(mockRecDistinct).toHaveBeenCalledWith("sectionId", { hwItemId: ITEM_ID });
+    });
+
+    test("homework question file: the same teacher, no record of the item on বালিকা → 403", async () => {
+      girlsTeacher();
+      mockStoredFindById.mockResolvedValue(questionFile);
+      mockRecDistinct.mockResolvedValue([SECTION_ID]);
+      const res = await get(teacherTok);
+      expect(res.status).toBe(403);
+      expect(mockDownload).not.toHaveBeenCalled();
+    });
+
+    test("assignment attachment: readable from a half holding the item's records → 200; else 403", async () => {
+      girlsTeacher();
+      mockStoredFindById.mockResolvedValue({ ...questionFile, kind: "assignment_attachment", originalName: "sheet.pdf" });
+      mockAsItemFindOne.mockResolvedValue(itemDoc);
+      mockAsRecDistinct.mockResolvedValue([GIRLS]);
+      expect((await get(teacherTok)).status).toBe(200);
+      expect(mockAsRecDistinct).toHaveBeenCalledWith("sectionId", { asItemId: ITEM_ID });
+      mockAsRecDistinct.mockResolvedValue([]);
+      expect((await get(teacherTok)).status).toBe(403);
+    });
   });
 
   test("teacher WITHOUT read scope on the section → 403", async () => {

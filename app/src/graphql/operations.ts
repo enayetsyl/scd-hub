@@ -8813,6 +8813,17 @@ export interface AsTeacherLifecycleRowT {
   pendingChecking: number;
   pendingReturn: number;
   chasedPending: number;
+  /** D-#772: the pending buckets per RECORD section — the section a pill opens. */
+  sections?: AsLifecycleSectionT[];
+}
+
+export interface AsLifecycleSectionT {
+  sectionId: string;
+  classId: string;
+  pendingSubmission: number;
+  pendingChecking: number;
+  pendingReturn: number;
+  chasedPending: number;
 }
 
 export const MY_AS_LIFECYCLE_QUERY = gql<
@@ -8822,6 +8833,7 @@ export const MY_AS_LIFECYCLE_QUERY = gql<
   query MyAssignmentLifecycle($from: String!, $to: String!) {
     myAssignmentLifecycle(from: $from, to: $to) {
       teacherId deliveredItems given submitted checked returned pendingSubmission pendingChecking pendingReturn chasedPending
+      sections { sectionId classId pendingSubmission pendingChecking pendingReturn chasedPending }
     }
   }
 `;

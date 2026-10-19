@@ -6,7 +6,7 @@
  *   3. a 410 Gone response deletes that subscription (revoked permission);
  *      other errors are logged, never thrown (best-effort channel)
  *   4. registerWebPushChannel is a no-op without VAPID keys
- *   5. D-#772: a phone browser is skipped while the recipient's app is registered
+ *   5. D-#773: a phone browser is skipped while the recipient's app is registered
  *      on that platform; desktop browsers always receive
  *
  * DB-free: the models + the web-push transport are mocked.
@@ -120,7 +120,7 @@ describe("web-push channel (D-#296)", () => {
     expect(mockSubDeleteOne).toHaveBeenCalledTimes(1);
   });
 
-  test("D-#772: an Android app registration skips the recipient's Android browsers only", async () => {
+  test("D-#773: an Android app registration skips the recipient's Android browsers only", async () => {
     mockSubFind.mockResolvedValue([
       sub("phone", ANDROID_CHROME),
       sub("laptop", WINDOWS_CHROME),
@@ -135,7 +135,7 @@ describe("web-push channel (D-#296)", () => {
     );
   });
 
-  test("D-#772: no live app registration → the phone browser still receives", async () => {
+  test("D-#773: no live app registration → the phone browser still receives", async () => {
     mockSubFind.mockResolvedValue([sub("phone", ANDROID_CHROME)]);
     mockDeviceFind.mockResolvedValue([]); // app logged out / uninstalled (inactive rows are not returned)
     await webPushChannel.deliver(row({ recipientUserId: null, recipientGuardianId: "g1" }));
@@ -143,7 +143,7 @@ describe("web-push channel (D-#296)", () => {
     expect(sentEndpoints()).toEqual(["https://push.example/phone"]);
   });
 
-  test("D-#772: every subscription skipped → nothing sent", async () => {
+  test("D-#773: every subscription skipped → nothing sent", async () => {
     mockSubFind.mockResolvedValue([sub("phone", ANDROID_CHROME), sub("phone2", ANDROID_CHROME)]);
     mockDeviceFind.mockResolvedValue([{ platform: "android" }]);
     await webPushChannel.deliver(row());
