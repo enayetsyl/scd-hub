@@ -6,7 +6,7 @@
  * Pure — pickNextTeachingDay takes slots + an isHoliday closure; no DB, no
  * mocks. Weekday map: 0=Sun … 6=Sat; school days Sun–Thu.
  */
-import { pickNextTeachingDay, DUE_SEARCH_CAP_DAYS } from "../modules/trackers/homeworkDueDate";
+import { pickNextTeachingDay, DUE_SEARCH_CAP_DAYS, withSuccessorSlots } from "../modules/trackers/homeworkDueDate";
 
 /** A date in a known week: 2026-08-02 is a SUNDAY (local). Clock 20:15 to
  *  prove clock-time preservation. */
@@ -97,5 +97,43 @@ describe("pickNextTeachingDay — the routine walk", () => {
     const due = pickNextTeachingDay(SUN, [slot("SUN")], noHoliday);
     expect(due.getTime()).toBeGreaterThan(SUN.getTime());
     expect(due.getDate()).toBe(9); // next Sunday
+  });
+});
+
+describe("withSuccessorSlots — D-#771 split/merge cut-over", () => {
+  // Week of the C3 split: Sun 2026-10-18 … the combined rows end Sat 24 Oct 23:59:59.999,
+  // the halves start Sun 25 Oct 00:00 (local).
+  const END = new Date(2026, 9, 24, 23, 59, 59, 999);
+  const START = new Date(2026, 9, 25);
+  const own = (dayOfWeek: string) => ({ dayOfWeek, effectiveFrom: new Date(2026, 0, 1), effectiveTo: END as Date | null });
+  const half = (dayOfWeek: string) => ({ dayOfWeek, effectiveFrom: START, effectiveTo: null as Date | null });
+  const old = (dayOfWeek: string) => ({ dayOfWeek, effectiveFrom: new Date(2026, 0, 1), effectiveTo: null as Date | null });
+
+  test("an open-ended cell ignores siblings entirely", () => {
+    const mine = [{ ...own("SUN"), effectiveTo: null }];
+    expect(withSuccessorSlots(mine, [half("MON")])).toEqual(mine);
+  });
+
+  test("a fully retired cell borrows only siblings that start after it ended", () => {
+    const out = withSuccessorSlots([own("THU")], [half("MON"), old("TUE")]);
+    expect(out.map((s) => s.dayOfWeek).sort()).toEqual(["MON", "THU"]);
+  });
+
+  test("Wed 21 Oct, subject not on the combined Thursday → due the halves' first day, not Thursday", () => {
+    const wed = new Date(2026, 9, 21, 14, 0);
+    const slots = withSuccessorSlots([own("SUN"), own("TUE")], [half("MON"), half("WED")]);
+    const due = pickNextTeachingDay(wed, slots, noHoliday);
+    expect(due.getDate()).toBe(26); // Mon 26 Oct (the old rule fell back to Thu 22)
+    expect(due.getDay()).toBe(1);
+  });
+
+  test("still taught on the combined Thursday → due Thursday as before", () => {
+    const wed = new Date(2026, 9, 21, 14, 0);
+    const slots = withSuccessorSlots([own("THU")], [half("SUN")]);
+    expect(pickNextTeachingDay(wed, slots, noHoliday).getDate()).toBe(22);
+  });
+
+  test("a cell with no slots at all keeps the plain fallback", () => {
+    expect(withSuccessorSlots([], [half("MON")])).toEqual([]);
   });
 });
