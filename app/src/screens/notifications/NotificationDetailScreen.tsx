@@ -17,9 +17,10 @@
  */
 import React from "react";
 import { ScrollView, View } from "react-native";
-import { useQuery } from "urql";
-import { MY_NOTIFICATION_QUERY, type NotificationT } from "../../graphql/operations";
+import { useMutation, useQuery } from "urql";
+import { MY_NOTIFICATION_QUERY, MARK_NOTIFICATION_READ, type NotificationT } from "../../graphql/operations";
 import { useAuth } from "../../auth/AuthContext";
+import { useNotifications } from "../../state/NotificationContext";
 import { notificationTarget, type NotificationTarget } from "../../lib/notificationNav";
 import { Screen, Card, Body, Muted, Badge, Button, Loader, EmptyState } from "../../components/ui";
 import { STR, notificationKindLabel, bnNum } from "../../lib/labels";
@@ -58,6 +59,17 @@ export default function NotificationDetailScreen({
     requestPolicy: "cache-first",
   });
   const row: NotificationT | undefined = data?.myNotification ?? undefined;
+
+  // D-#774: a push tap lands here without passing the inbox, which is where a row used
+  // to be marked read — so opening it marks it (an inbox tap already has: no-op).
+  const { refresh } = useNotifications();
+  const [, markRead] = useMutation(MARK_NOTIFICATION_READ);
+  const markedId = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (!row || row.readAt || markedId.current === row.id) return;
+    markedId.current = row.id;
+    void markRead({ id: row.id }).then(() => refresh());
+  }, [row, markRead, refresh]);
 
   /** `initial: false` keeps the tab's home screen beneath the deep-linked screen —
    *  without it the target becomes the stack's FIRST screen and loses its back button

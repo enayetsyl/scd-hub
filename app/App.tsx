@@ -26,7 +26,13 @@ import { RootNavigator } from "./src/navigation/RootNavigator";
 import { WebPushGate } from "./src/components/WebPushGate";
 import { UpdateGate } from "./src/components/UpdateGate";
 import { AnnouncementPopup } from "./src/components/AnnouncementPopup";
-import { navigationRef, openNotificationCenter } from "./src/navigation/navigationRef";
+import {
+  navigationRef,
+  openNotificationCenter,
+  openNotification,
+  flushPendingNotification,
+} from "./src/navigation/navigationRef";
+import { takeNotificationFromUrl, subscribeNotificationTaps } from "./src/lib/webPushTap";
 import { useNavigationTheme } from "./src/theme";
 
 // Splash holds until Noto Sans Bengali is loaded (ui-guidelines §13.2) — text
@@ -117,12 +123,20 @@ function ThemedNavigation(): React.ReactElement | null {
     })();
   }, []);
 
-  // N4.2: tapping a push opens the NotificationCenter — the role-agnostic
-  // inbox; the row inside carries the same deep-link the badge path uses.
+  // N4.2 → D-#774: tapping a push opens THAT notification's detail screen (where an
+  // inbox row tap lands; its "open related" button carries the deep-link). A payload
+  // without an id still opens the inbox.
   useEffect(() => {
-    if (Platform.OS === "web") return;
-    const sub = Notifications.addNotificationResponseReceivedListener(() => {
-      openNotificationCenter();
+    if (Platform.OS === "web") {
+      // Browser push: sw.js either opened this tab at #notification=<id> or messages it.
+      const fromUrl = takeNotificationFromUrl();
+      if (fromUrl) openNotification(fromUrl);
+      return subscribeNotificationTaps(openNotification);
+    }
+    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+      const id = response.notification.request.content.data?.notificationId;
+      if (typeof id === "string" && id) openNotification(id);
+      else openNotificationCenter();
     });
     return () => sub.remove();
   }, []);
@@ -134,7 +148,9 @@ function ThemedNavigation(): React.ReactElement | null {
       ref={navigationRef}
       theme={navTheme}
       initialState={initialState}
+      onReady={flushPendingNotification}
       onStateChange={(state) => {
+        flushPendingNotification(); // a push tap made while signed out opens after login
         if (Platform.OS !== "web") return;
         void setItem(NAV_STATE_KEY, JSON.stringify(state));
       }}
