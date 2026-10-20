@@ -208,6 +208,7 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
           <Muted>
             {ctUnitLabel(test, sectionName(test.sectionId))} · {hwSubjectLabel(test.subject)}
           </Muted>
+          {test.teacherName ? <Muted>{STR.ctSubjectTeacher}: {test.teacherName}</Muted> : null}
           <View style={{ marginTop: space(2) }}>
             <Badge text={STR.ctRetiredBadge} tone="muted" />
           </View>
@@ -261,6 +262,8 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
             {ctUnitLabel(test, sectionName(test.sectionId))} · {hwSubjectLabel(test.subject)} · {STR.ctTotalMarks}{" "}
             {bnNum(test.totalMarks)} · {STR.ctPassMark} {bnNum(test.passMark)}
           </Muted>
+          {/* Whose exam it is — the approver reads whose marks they release (owner ask 2026-10-20). */}
+          {test.teacherName ? <Muted>{STR.ctSubjectTeacher}: {test.teacherName}</Muted> : null}
           {/* Exam-level submit/publish state — the answer to "did my submit land?".
               Published wins over submitted: a published exam was submitted first. */}
           {anyPublished || allSubmitted ? (
