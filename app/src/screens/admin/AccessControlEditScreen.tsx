@@ -1,30 +1,31 @@
 /**
- * AccessControlEditScreen (AC-2, prd-access-control §6 + J-AC1..J-AC3) — the
- * Principal's per-user permission editor. For one staff member:
+ * AccessControlEditScreen (AC-2, prd-access-control §6 + J-AC1..J-AC3; PM grid, D-#800) —
+ * the Principal's per-person editor. For one staff member:
  *   • Additional-template chips (Teacher/Office) on top of the primary role.
- *   • Every live PERMISSIONS entry, grouped by module, each row showing a
- *     provenance state — from template / added / removed / locked — and an
- *     on/off toggle that adds/removes relative to the template baseline.
+ *   • The feature × action grid (PermissionMatrix, the same one the Roles view uses), each
+ *     row showing where it comes from — from role / added / removed / locked — and a
+ *     switch that adds or removes relative to the role baseline.
+ *   • The delegated duties block (the EXTENT axis, ACS-2).
  *
- * The server is the gate: every tap fires one `access:manage` mutation and the
- * screen re-seeds from the returned (server-derived) effective set, so "a revoke
- * always wins" and the reserved backstop are reflected without client guessing.
- * Reserved-locked rows (non-Principal) are non-toggleable. Bangla 422s surface
- * inline. Gated `access:manage` (the AdminHome entry + the server re-check).
+ * The role baseline is the CURRENT role template (the Principal's role edits applied),
+ * read from `roleTemplates`; the Principal template holds every action. The server is
+ * the gate: every tap fires one `access:manage` mutation and the screen re-seeds from
+ * the returned (server-derived) effective set, so "a revoke always wins" and the
+ * reserved backstop are reflected without client guessing.
  */
 import React from "react";
-import { View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
 import {
-  PERMISSIONS,
-  RESERVED_PERMISSIONS,
   ASSIGNABLE_TEMPLATES,
-  permissionsForRole,
+  CATALOGUE_ROLE_DEFAULTS,
+  RESERVED_PERMISSIONS,
+  type CataloguePermission,
   type Role,
 } from "@scd/shared";
 import {
   USER_EFFECTIVE_ACCESS_QUERY,
+  ROLE_TEMPLATES_QUERY,
   SET_USER_ADDITIONAL_TEMPLATES,
   ADD_USER_GRANTED_PERMISSION,
   REMOVE_USER_GRANTED_PERMISSION,
@@ -32,12 +33,11 @@ import {
   REMOVE_USER_REVOKED_PERMISSION,
   type UserAccessT,
 } from "../../graphql/accessControl";
+import PermissionMatrix, { type MatrixBadge } from "../../components/PermissionMatrix";
 import DelegatedDutiesBlock from "./DelegatedDutiesBlock";
 import type { AdminStackParamList } from "../../navigation/types";
-import {
-  Screen, Body, Muted, Card, Chip, ChipRow, Badge, Notice, Divider, Loader, ErrorBanner,
-} from "../../components/ui";
-import { STR, permissionName, permissionDesc, permissionModuleLabel } from "../../lib/labels";
+import { Screen, Body, Muted, Chip, ChipRow, Notice, Divider, Loader, ErrorBanner } from "../../components/ui";
+import { STR } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
 
@@ -45,52 +45,13 @@ type Props = NativeStackScreenProps<AdminStackParamList, "AccessControlEdit">;
 
 const RESERVED_SET = new Set<string>(RESERVED_PERMISSIONS);
 
-type Prov = "fromTemplate" | "added" | "removed" | "locked" | "none";
-
-/** Ordered modules (by `resource:action` prefix, first-seen order of PERMISSIONS). */
-function groupPermissions(): { resource: string; perms: string[] }[] {
-  const groups: { resource: string; perms: string[] }[] = [];
-  for (const p of PERMISSIONS) {
-    const resource = p.split(":")[0];
-    let g = groups.find((x) => x.resource === resource);
-    if (!g) {
-      g = { resource, perms: [] };
-      groups.push(g);
-    }
-    g.perms.push(p);
-  }
-  return groups;
-}
-
-const MODULE_GROUPS = groupPermissions();
-
-/**
- * Owner ask 2026-10-04: features gated on the Principal/Office TEMPLATE (server
- * `isAdminStaff`/`actsAs`, client `isRole`) rather than a permission, so they never
- * appear in the permission list below — the Principal could not see them here at
- * all. Listed so this screen is the one place that says who has them; the switch is
- * the Office template chip. Keep in step with the gates: the Admin card
- * (AdminHomeScreen `canWorkClaims`) and the Reports group (AppTabs `canReports`).
- */
-type LabelKey = keyof typeof STR;
-const OFFICE_TEMPLATE_FEATURES: { labelKey: LabelKey; leaves?: LabelKey[] }[] = [
-  { labelKey: "wcQueueTitle" },
-  {
-    labelKey: "tabReports",
-    leaves: [
-      "clTitle", "alReportTitle", "ctReportTitle", "attReportTitle", "rtNoteReportTitle",
-      "rptHwDeclarePending", "rptHwIssuePending", "rptAsDeclarePending", "rptAsDeliverPending",
-      "rptAsPrintPending", "rrTitle", "hlrTitle", "hwwdTitle",
-    ],
-  },
-];
-
 export default function AccessControlEditScreen({ route }: Props): React.ReactElement {
   const { userId, name } = route.params;
   const [{ data, fetching, error }, refetch] = useQuery({
     query: USER_EFFECTIVE_ACCESS_QUERY,
     variables: { userId },
   });
+  const [{ data: tplData }] = useQuery({ query: ROLE_TEMPLATES_QUERY, requestPolicy: "cache-and-network" });
 
   const [, setTemplates] = useMutation(SET_USER_ADDITIONAL_TEMPLATES);
   const [, addGrant] = useMutation(ADD_USER_GRANTED_PERMISSION);
@@ -123,21 +84,22 @@ export default function AccessControlEditScreen({ route }: Props): React.ReactEl
   const effective = new Set(access.effectivePermissions);
   const granted = new Set(access.grantedPermissions);
   const revoked = new Set(access.revokedPermissions);
-  // The server's isAdminStaff, read off this user's templates (primary + additional).
-  const hasOfficeTemplate = role === "PRINCIPAL" || role === "OFFICE" || additional.has("OFFICE");
 
-  // The template baseline = union of permissionsForRole over [role, ...additional].
+  // The role baseline: each template's CURRENT catalogue set (role edits applied).
+  const roleSets = new Map<string, string[]>((tplData?.roleTemplates ?? []).map((t) => [t.role, t.permissions]));
   const baseline = new Set<string>();
   for (const t of [role, ...access.additionalTemplates] as Role[]) {
-    for (const p of permissionsForRole(t)) baseline.add(p);
+    const list = t === "PRINCIPAL" ? CATALOGUE_ROLE_DEFAULTS.PRINCIPAL : roleSets.get(t) ?? CATALOGUE_ROLE_DEFAULTS[t];
+    for (const p of list) baseline.add(p);
   }
 
-  function provenanceOf(perm: string): Prov {
-    if (RESERVED_SET.has(perm) && !isPrincipal) return "locked";
-    if (revoked.has(perm)) return "removed";
-    if (effective.has(perm) && !baseline.has(perm)) return "added";
-    if (effective.has(perm)) return "fromTemplate";
-    return "none";
+  function badgeOf(perm: CataloguePermission): MatrixBadge | null {
+    if (RESERVED_SET.has(perm) && !isPrincipal) return { text: STR.acProvLocked, tone: "muted" };
+    if (revoked.has(perm) && baseline.has(perm)) return { text: STR.acProvRemoved, tone: "warn" };
+    if (effective.has(perm) && !baseline.has(perm)) return { text: STR.acProvAdded, tone: "ok" };
+    if (!effective.has(perm) && baseline.has(perm)) return { text: STR.acProvRemoved, tone: "warn" };
+    if (effective.has(perm)) return { text: STR.acFromRole, tone: "info" };
+    return null;
   }
 
   /** Apply one mutation, then re-seed from the server-derived result. */
@@ -145,7 +107,6 @@ export default function AccessControlEditScreen({ route }: Props): React.ReactEl
     key: string,
     op: () => Promise<{ data?: Record<string, UserAccessT | undefined>; error?: unknown }>,
   ): Promise<void> {
-    if (busy) return;
     setBusy(key);
     setOk(null);
     setErr(null);
@@ -161,40 +122,33 @@ export default function AccessControlEditScreen({ route }: Props): React.ReactEl
   }
 
   function toggleTemplate(t: Role): void {
-    if (!access) return;
+    if (!access || busy) return;
     const nextList = additional.has(t)
       ? access.additionalTemplates.filter((x) => x !== t)
       : [...access.additionalTemplates, t];
     void run(`tpl:${t}`, () => setTemplates({ userId, templates: nextList }));
   }
 
-  function togglePermission(perm: string): void {
-    const isOn = effective.has(perm);
-    if (isOn) {
-      // Turn OFF: revoke a template perm, or remove the per-user grant.
-      if (baseline.has(perm)) void run(perm, () => addRevoke({ userId, permission: perm }));
-      else void run(perm, () => removeGrant({ userId, permission: perm }));
+  async function togglePermission(perm: CataloguePermission, next: boolean): Promise<void> {
+    if (next) {
+      // Turn ON: lift this person's revoke if there is one, else add a personal grant.
+      if (revoked.has(perm)) await run(perm, () => removeRevoke({ userId, permission: perm }));
+      else await run(perm, () => addGrant({ userId, permission: perm }));
     } else {
-      // Turn ON: un-revoke if it's off due to a revoke, else add a fresh grant.
-      if (revoked.has(perm)) void run(perm, () => removeRevoke({ userId, permission: perm }));
-      else void run(perm, () => addGrant({ userId, permission: perm }));
+      // Turn OFF: drop a personal grant if that is where it comes from, else revoke it
+      // (it comes from the role, or from an older broad grant that expands to it).
+      if (granted.has(perm)) await run(perm, () => removeGrant({ userId, permission: perm }));
+      else await run(perm, () => addRevoke({ userId, permission: perm }));
     }
   }
 
   // Assignable additional templates, minus the primary role (can't be "additional" to itself).
   const templateChoices = (ASSIGNABLE_TEMPLATES as readonly Role[]).filter((t) => t !== role);
 
-  const provBadge: Record<Exclude<Prov, "none">, { text: string; tone: "muted" | "ok" | "warn" | "info" }> = {
-    fromTemplate: { text: STR.acProvFromTemplate, tone: "info" },
-    added: { text: STR.acProvAdded, tone: "ok" },
-    removed: { text: STR.acProvRemoved, tone: "warn" },
-    locked: { text: STR.acProvLocked, tone: "muted" },
-  };
-
   return (
     <Screen scroll>
       <Body style={{ fontWeight: "700", fontSize: 18 }}>{name}</Body>
-      <Muted style={{ marginBottom: space(2) }}>{STR.acSubtitle}</Muted>
+      <Muted style={{ marginBottom: space(2) }}>{STR.acPeopleIntro}</Muted>
 
       {ok ? <Notice message={ok} tone="ok" /> : null}
       {err ? <Notice message={err} tone="danger" /> : null}
@@ -213,59 +167,16 @@ export default function AccessControlEditScreen({ route }: Props): React.ReactEl
         ))}
       </ChipRow>
 
-      <Body style={{ fontWeight: "700", marginTop: space(3) }}>{STR.acTplFeaturesTitle}</Body>
-      <Muted style={{ marginBottom: space(1) }}>{STR.acTplFeaturesHint}</Muted>
-      {OFFICE_TEMPLATE_FEATURES.map((f) => (
-        <Card key={f.labelKey}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
-            <View style={{ flex: 1 }}>
-              <Body style={{ fontWeight: "700" }}>{STR[f.labelKey]}</Body>
-              {f.leaves ? <Muted style={{ marginTop: 2 }}>{f.leaves.map((k) => STR[k]).join(" · ")}</Muted> : null}
-            </View>
-            <Badge
-              text={hasOfficeTemplate ? STR.acTplHas : STR.acTplHasNot}
-              tone={hasOfficeTemplate ? "ok" : "muted"}
-            />
-          </View>
-        </Card>
-      ))}
-
       <Divider />
 
-      {/* Permissions grouped by module */}
       <Body style={{ fontWeight: "700", marginBottom: space(1) }}>{STR.acPermissions}</Body>
-      <Muted style={{ marginBottom: space(2) }}>{STR.acReservedNote}</Muted>
-
-      {MODULE_GROUPS.map((g) => (
-        <View key={g.resource} style={{ marginBottom: space(3) }}>
-          <Body style={{ fontWeight: "700", marginBottom: space(1) }}>{permissionModuleLabel(g.resource)}</Body>
-          {g.perms.map((perm) => {
-            const prov = provenanceOf(perm);
-            const isOn = effective.has(perm);
-            const locked = prov === "locked";
-            return (
-              <Card key={perm}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
-                  <View style={{ flex: 1 }}>
-                    <Body style={{ fontWeight: "700" }}>{permissionName(perm)}</Body>
-                    <Muted style={{ marginTop: 2 }}>{permissionDesc(perm)}</Muted>
-                  </View>
-                  {prov !== "none" ? (
-                    <Badge text={provBadge[prov].text} tone={provBadge[prov].tone} />
-                  ) : null}
-                  {locked ? null : (
-                    <Chip
-                      label={isOn ? STR.acOn : STR.acOff}
-                      selected={isOn}
-                      onPress={() => togglePermission(perm)}
-                    />
-                  )}
-                </View>
-              </Card>
-            );
-          })}
-        </View>
-      ))}
+      <Muted style={{ marginBottom: space(1) }}>{STR.acReservedNote}</Muted>
+      <PermissionMatrix
+        isOn={(p) => effective.has(p)}
+        badge={badgeOf}
+        busy={busy}
+        onToggle={togglePermission}
+      />
 
       {/* The EXTENT axis (ACS-2): what this person may do BEYOND what they teach. */}
       <DelegatedDutiesBlock userId={userId} />

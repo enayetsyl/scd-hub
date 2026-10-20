@@ -29,11 +29,8 @@ import {
 import { RoleTemplateOverride } from "../models/RoleTemplateOverride";
 import { User } from "../../foundation/models/User";
 import { writeAudit } from "../../platform/services/AuditService";
-import { AccessControlError, type AccessActor } from "./AccessControlService";
-
-/** Escalation actions (mint logins / roles / scope) stay off for Teacher and Office until
- *  their server-side target guards ship (D-#798, findings F-3/F-4). */
-export const ESCALATION_GUARDS_READY = false;
+import { AccessControlError, ESCALATION_GUARDS_READY, type AccessActor } from "./AccessControlService";
+export { ESCALATION_GUARDS_READY };
 
 export interface RoleTemplateShape {
   role: EditableRole;
