@@ -23,4 +23,6 @@ Steps:
    It must end "RESULT: PASS". For question/stimulus changes, also wrap an instance from
    `docs/examples/LOCKED_QuestionBank_Examples_v1.json` in an envelope and run it.
 7. App-native vocab (SetType, TrackerKind, Role, Permission) has no schema twin — edit `vocab.ts` only,
-   then still run the verifier (it checks RBAC invariants and label totality too).
+   then still run the verifier (it checks RBAC invariants and label totality too). A permission change
+   also updates `docs/permission-catalogue/` (README row + the area file's gate tables) in the same
+   commit (D-#799).

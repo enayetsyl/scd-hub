@@ -133,6 +133,11 @@ The two logs answer different questions — `events` = "what pedagogy happened,"
 ## 7. Access control architecture (ADR-004)
 
 - **Action-level RBAC**, default-deny, role→permission map in `/shared`, hardcoded now / data-drivable later.
+  **Planned (PM, D-#790–#801, `docs/prd-permission-matrix.md`):** every feature × every action as
+  `feature:action` from one catalogue; role templates (Teacher/Office) editable as a stored delta on
+  the code default; reach beyond own scope = `view_all` / `edit_all` instead of role checks;
+  notification recipients = holders of the action. Permission decides *what*; row-scope below still
+  decides *where*. The registry is `docs/permission-catalogue/`.
 - **Resolver-level enforcement (ADR-004):** every GraphQL resolver checks permission **and** row-scope **and** the plane boundary before resolving. Returning an entity must not let a client walk a relation it isn't entitled to (e.g., a guardian resolving from their child to another family). Authz is centralized in resolver middleware/directives, not scattered ad hoc.
 - **Row-scope (scope-overlay model, ADR-017):** a teacher's effective scope is the **union of their scope grants**, not just "own classes." Grant kinds:
   - **teaching** — own classes/sections: read + assemble + tracker-write (the base grant).

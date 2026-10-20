@@ -16,3 +16,8 @@ envelope schema + `vocab.ts` + the payload schema (+ the harness).
 App-native vocab (SetType, TrackerKind, Role, Permission, default section) lives ONLY here.
 RBAC here is GRANTS ONLY (default-deny). Row-scope and the PII-firewall plane boundary are enforced
 in resolvers (architecture ADR-004/005), not in this file.
+
+Permissions are moving to a per-feature catalogue (`docs/prd-permission-matrix.md`, D-#790–#801):
+`FEATURE_CATALOGUE` → derived `PERMISSIONS` / `ROLE_PERMISSIONS`, named `feature:action`. Until it
+ships, `docs/permission-catalogue/` is the registry. A new feature adds ALL its actions there
+(D-#799) instead of reusing another feature's permission.
