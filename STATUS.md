@@ -1,5 +1,11 @@
 # STATUS
 
+- 2026-10-20 (cont. 2): **BUILT — mastery tracker M-1: the question bank speaks learning-outcome codes (D-#785).** Branch `feat/mastery-m1` (worktree `C:/w/m1`). M-0 is merged to dev (#1114, `500146d5`), not yet promoted.
+  - Contract (three-place sync): payload `topic_tag` accepts `TOP-` **or** `LO-` codes, optional `lo_codes` (payload + envelope tags); harness L3 mirror + L4 `LO` (class/subject/primary); `build_question_envelopes.py` copies `lo_codes`; vocab verifier pins the pattern in both schemas = `MASTERY_LO_CODE_RE`. Contract doc v1.2 (`envelope_version` stays "1.0").
+  - App side: `[MASTERY-LO]` import WARNING when an LO is unknown / DRAFT / RETIRED in the catalogue (never a refusal); `questions(loCodes:)` filter + `loCodes` field on `QuestionArtifact`.
+  - CI: two new steps — LO-code conformance cases (`server/import/cases/lo-codes`, 3 pass / 6 fail) and the catalogue `--check`.
+  - **Gate (executed):** shared build 0; server `tsc` 0; vocab verifier PASS (+4 checks); LO cases 9/9 + descriptive 11/11; example envelope PASS; `masteryBank.test.ts` 6/6 (real harness + in-memory Mongo); content/questions/questionBatch suites green.
+  - **Now / next:** PR → dev. Then M-2 (per-question work sheets on homework + class tests, exceptions-only entry, rubric, evidence log).
 - 2026-10-20 (cont.): **BUILT — mastery tracker M-0 (catalogue, question-type marks, tags, policy, switch; D-#775–#787).** Branch `feat/mastery-m0` (worktree `C:/w/m0`).
   - Server: `modules/mastery` (6 models, pure `catalogue.ts` rules, `MasteryCatalogueService`, 13 resolvers), 4 permissions (`mastery:read/enter/manage/approve`; approve = Principal + per-user grant, D-#786), 8 audit kinds (group MASTERY), `MasteryCatalogueError` registered.
   - App: drawer group শিখন-দক্ষতা — catalogue home, outcomes (lock/edit/retire), marks with history, import (preview → apply), tags (incl. routing tags), policy + per-year switch.

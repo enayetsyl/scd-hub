@@ -73,6 +73,7 @@ auto-deploys (`.github/workflows`, `scripts/deploy.sh`). So:
 | Purpose | Command |
 |---|---|
 | Shared vocab/RBAC verifier | `npx tsx skills/_tools/verify_shared_vocab.mjs docs/import-contract.schema.json` |
+| Mastery LO-code import conformance | `node skills/_tools/verify_descriptive_carriers.mjs server/import/cases/lo-codes` — same pass_/fail_ convention; run after any edit to `topic_tag`/`lo_codes` in the payload or envelope schema |
 | Mastery catalogue check (md → import JSON) | `npx tsx skills/_tools/mastery_catalogue_to_json.mjs --check docs/mastery/lo-catalogue` (one file: `… <file.md> --out <file.json>`) — validates with the server's own import rules |
 | Descriptive answer-carrier conformance | `node skills/_tools/verify_descriptive_carriers.mjs` — runs the harness over `server/import/cases/descriptive/` (`pass_*` must import, `fail_*` must be rejected). Run after any edit to the question payload schema. |
 | Import-envelope conformance | `python server/import/validate_import.py <envelope.json> --envelope-schema docs/import-contract.schema.json [--plan-schema <plan-schema.json>]` |

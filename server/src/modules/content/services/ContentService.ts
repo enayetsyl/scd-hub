@@ -22,6 +22,7 @@ import type { Types } from "mongoose";
 import { BATCH_DOC_TYPE, BATCH_MAX_ITEMS } from "@scd/shared";
 import { ContentArtifact } from "../models/ContentArtifact";
 import { ImportBatch } from "../../platform/models/ImportBatch";
+import { masteryImportWarnings } from "../../mastery/bank";
 import { CorpusEvent } from "../../corpus/models/CorpusEvent";
 import {
   isPlanDocType,
@@ -174,6 +175,13 @@ async function persistEnvelope(
 ): Promise<ImportResult & { superseded?: boolean }> {
   const prov = (envelope.provenance ?? {}) as Record<string, unknown>;
   const addr = (envelope.address ?? {}) as Record<string, unknown>;
+
+  // Mastery M-1 (D-#785): a question tagged with a learning-outcome code the catalogue does
+  // not hold LOCKED imports with a WARNING, never a refusal — the harness has no catalogue.
+  if (gate.verdict === "PASS") {
+    const loWarnings = await masteryImportWarnings(envelope);
+    if (loWarnings.length > 0) gate = { ...gate, warnings: [...gate.warnings, ...loWarnings] };
+  }
 
   const batchDoc = await ImportBatch.create({
     parentBatchId,

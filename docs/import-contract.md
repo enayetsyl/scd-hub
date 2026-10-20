@@ -112,6 +112,18 @@ mandatory `islamic_alignment` criterion row is unchanged; the amendment relaxed 
 is required, never *what* a rubric must contain.
 - **ADV — REF-21 advisory scan:** plan surface only; NEVER blocks (D-#4 / Project-04 decision 5-B).
 
+### Learning-outcome codes (v1.2, D-#785 — mastery tracker)
+- `topic_tag` accepts the legacy `TOP-<SUBJ>-C<n>-NN` **or** a mastery learning-outcome code
+  `LO-<NUR|KG|C1..C6>-<SUBJ>-<CC>-<NN>` / `LO-<…>-SK-<STRAND>-<NN>` (docs/prd-mastery.md §6.2). Legacy
+  codes stay valid; nothing already imported changes.
+- Optional `lo_codes: [..]` (payload **and** `tags`, equal — L3 `XF`) lists every outcome a question
+  assesses, primary first; `topic_tag` must equal `lo_codes[0]` (L4 `LO`).
+- **L4 `LO`:** every LO code must carry the envelope's own `class_level` and `subject`.
+- **App-side, after a PASS:** an LO the mastery catalogue does not hold LOCKED adds a
+  `[MASTERY-LO]` **warning** — never a refusal. Such a question is not picked for tailored work until
+  its LO is locked.
+- Conformance cases: `server/import/cases/lo-codes/` (`node skills/_tools/verify_descriptive_carriers.mjs server/import/cases/lo-codes`).
+
 ## Mirrored enums (two-/three-place rule)
 The schema and `shared/vocab.ts` MIRROR each other for: Subject, DocType, CurationTag, BloomLevel,
 Difficulty, QuestionType, **PaperRole**, ReviewStatus, SourceProject, AnchorWord. Fields surfaced in a
@@ -133,3 +145,4 @@ Changing one place without the others is a bug — follow `/skills/contract-sync
 | v1.0 | 2026-06-09 | LOCKED (D-PROJ04-005). Plan doc-types + ratified question/stimulus payloads. |
 | v1.1 | 2026-08-15 | Additive: `doc_type: "question_batch"` — one upload wrapping N standard question envelopes. Principal ruling, 2026-08-15. v1.0 shapes unchanged and still accepted. |
 | v1.1 | 2026-08-16 | Clarification (no wire change): a batch may carry `stimulus` elements alongside questions (D-#498), and `build_question_envelopes.py --batch` emits the wrapper. |
+| v1.2 | 2026-10-20 | Additive (D-#785, mastery M-1): `topic_tag` also accepts learning-outcome codes; optional `lo_codes` (payload + tags mirror); harness L3 mirror + L4 `LO` class/subject/primary checks; app-side `[MASTERY-LO]` warning for an LO not LOCKED in the catalogue. `envelope_version` stays `"1.0"`; every v1.1 envelope validates unchanged. |

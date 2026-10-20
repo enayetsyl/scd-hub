@@ -165,6 +165,11 @@ def consistency(env):
         for f in ("bloom_level", "difficulty", "topic_tag", "paper_role"):
             if f in tags and f in p and tags[f] != p[f]:
                 fail("XF", f"envelope.tags.{f}={tags[f]!r} != payload.{f}={p[f]!r}")
+        # lo_codes (D-#785) is optional, but when either side carries it both must, and equal.
+        if ("lo_codes" in tags) != ("lo_codes" in p):
+            fail("XF", "lo_codes must appear in BOTH envelope.tags and payload, or in neither")
+        elif "lo_codes" in tags and tags["lo_codes"] != p["lo_codes"]:
+            fail("XF", f"envelope.tags.lo_codes={tags['lo_codes']!r} != payload.lo_codes={p['lo_codes']!r}")
         return
     # stimulus / question_set carry no indexed-copy mirror — nothing to reconcile.
 
@@ -172,10 +177,41 @@ def consistency(env):
 # ---- L4: question semantics (not expressible in JSON Schema) ------------
 def _sum_eq(a, b): return abs(a - b) < 1e-9
 
+_LO_SUBJECTS = {"BAN", "ENG", "MATH", "SCI", "BGS", "ARABIC", "ISLAM"}
+
+
+def lo_code_semantics(env, p):
+    """Mastery learning-outcome codes (D-#785, docs/prd-mastery.md §6.2).
+
+    A question's LO codes must belong to the envelope's own class and subject, and when
+    `lo_codes` is present its first entry is the primary outcome and must equal
+    `topic_tag`. Whether the LO exists in the locked catalogue is the APP's check at
+    import (a warning) — the harness has no catalogue."""
+    topic = p.get("topic_tag")
+    codes = p.get("lo_codes")
+    lo_list = list(codes) if isinstance(codes, list) else ([topic] if isinstance(topic, str) and topic.startswith("LO-") else [])
+    if isinstance(codes, list) and codes and topic != codes[0]:
+        fail("LO", f"topic_tag={topic!r} must equal lo_codes[0]={codes[0]!r} (the primary outcome)")
+    cls = env.get("class_level")
+    subj = env.get("subject")
+    for code in lo_list:
+        parts = code.split("-")
+        if len(parts) < 4:
+            continue
+        token, csubj = parts[1], parts[2]
+        if isinstance(cls, int) and token != f"C{cls}":
+            fail("LO", f"{code}: class {token} does not match envelope class_level {cls}")
+        if isinstance(subj, str) and csubj != subj:
+            fail("LO", f"{code}: subject {csubj} does not match envelope subject {subj}")
+        if csubj not in _LO_SUBJECTS:
+            fail("LO", f"{code}: unknown subject {csubj}")
+
+
 def question_semantics(env, ref19_slugs):
     if env.get("doc_type") != "question":
         return
     p = env.get("payload", {})
+    lo_code_semantics(env, p)
     qt = p.get("question_type")
     marks = p.get("marks")
 
