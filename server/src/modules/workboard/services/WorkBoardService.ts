@@ -106,6 +106,8 @@ export interface BoardUser {
   name: string;
   role: string;
   phone?: string;
+  /** The fallback staff-match key (D-#788) — set by allStaffUsers. */
+  email?: string;
   additionalTemplates?: string[];
   grantedPermissions?: string[];
   revokedPermissions?: string[];
@@ -902,25 +904,35 @@ export async function loadBoardUsers(userIds: string[]): Promise<BoardUser[]> {
 /** All active staff logins (never guardians) — the load grid's rows. */
 export async function allStaffUsers(): Promise<BoardUser[]> {
   return (await User.find({ active: true, role: { $in: ["PRINCIPAL", "TEACHER", "OFFICE"] } })
-    .select("name role phone additionalTemplates grantedPermissions revokedPermissions")
+    .select("name role phone email additionalTemplates grantedPermissions revokedPermissions")
     .sort({ name: 1 })
     .lean()) as unknown as BoardUser[];
 }
 
-/** StaffProfile category per user id, joined by normalised phone (the staffMatch rule). */
+/** StaffProfile category per user id, joined by the staffMatch rule (D-#788): normalised
+ *  phone first; when the phone finds no one, the email. One match per key only. */
 export async function categoriesFor(users: BoardUser[]): Promise<Map<string, string>> {
   const out = new Map<string, string>();
-  const withPhone = users.filter((u) => u.phone);
-  if (withPhone.length === 0) return out;
-  const profiles = (await StaffProfile.find({ active: true, phone: { $ne: null } }).select("phone category").lean()) as unknown as Array<{ phone?: string; category: string }>;
+  const keyed = users.filter((u) => u.phone || u.email);
+  if (keyed.length === 0) return out;
+  const profiles = (await StaffProfile.find({ active: true, $or: [{ phone: { $ne: null } }, { email: { $nin: [null, ""] } }] })
+    .select("phone email category")
+    .lean()) as unknown as Array<{ phone?: string; email?: string; category: string }>;
+  const normEmail = (e?: string | null): string => (e ?? "").trim().toLowerCase();
   const byPhone = new Map<string, string[]>();
+  const byEmail = new Map<string, string[]>();
   for (const p of profiles) {
-    if (!p.phone) continue;
-    const k = normalizePhone(p.phone);
-    byPhone.set(k, [...(byPhone.get(k) ?? []), p.category]);
+    if (p.phone) {
+      const k = normalizePhone(p.phone);
+      byPhone.set(k, [...(byPhone.get(k) ?? []), p.category]);
+    }
+    const e = normEmail(p.email);
+    if (e) byEmail.set(e, [...(byEmail.get(e) ?? []), p.category]);
   }
-  for (const u of withPhone) {
-    const cats = byPhone.get(normalizePhone(u.phone!)) ?? [];
+  for (const u of keyed) {
+    const phoneCats = u.phone ? byPhone.get(normalizePhone(u.phone)) ?? [] : [];
+    // An ambiguous phone stays unresolved — it is not a cue to try the email.
+    const cats = phoneCats.length > 0 ? phoneCats : byEmail.get(normEmail(u.email)) ?? [];
     if (cats.length === 1) out.set(u._id.toString(), cats[0]);
   }
   return out;
