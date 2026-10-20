@@ -1,7 +1,7 @@
 # PRD — Worksheet generator (Nursery/KG papers in final-exam style)
 
 Decisions: D-#744 (engine), D-#745 (plan), D-#746 (picture bank), D-#747 (print + answer key).
-Status: WS-1 built (BAN/ENG/MATH, Nursery + KG). WS-2 (Arabic) waits for a clean scan of রওযাতুল আতফাল ১.
+Status: WS-1 built (BAN/ENG/MATH, Nursery + KG). WS-2 (Arabic): the clean scan of রওযাতুল আতফাল ১ arrived 2026-10-20 and its 28 letter-page pictures are cut (§5); the Arabic generator itself is not built.
 
 ## 1. Why
 
@@ -71,6 +71,7 @@ python -I server/scripts/worksheet-pictures/extract.py --book BAN    "<Nursery (
 python -I server/scripts/worksheet-pictures/extract.py --book ENG    "<Nursery (English) … .pdf>" --out <dir>
 python -I server/scripts/worksheet-pictures/extract.py --book MATH_B "<Nursery - Math [B] … .pdf>" --out <dir>
 python -I server/scripts/worksheet-pictures/extract.py --book MATH_E "<Math (E) Nursery … .pdf>"  --out <dir>
+python -I server/scripts/worksheet-pictures/extract.py --book ARABIC "<রওদাতুল আতফাল ১ম ভাগ.pdf>"   --out <dir>
 node server/scripts/worksheet-pictures/import.cjs <dir>/bundle.json          # dry run, prints the DB name
 APPLY=1 node server/scripts/worksheet-pictures/import.cjs <dir>/bundle.json  # writes
 ```
@@ -84,6 +85,17 @@ extractor:
 - takes a picture the book splits into tiles from the rendered page (`render`) or butts its tiles
   together (`tiles`), and a tag whose key names no embedded image (`14:9001`) plus `render` is a
   page-region crop of its own — the numerals the book draws as vector art (এক ১, পঞ্চম ৫, ষাট ৬০).
+
+**Arabic (a page scan).** রওযাতুল আতফাল ১ is 85 scanned pages, one JPEG each, so its pictures come
+only from hand-drawn boxes: each `tags/ARABIC.json` entry `"<page>:<n>"` (the n-th picture on that
+page) carries `scan: [x0, y0, x1, y1]` in scan pixels. The extractor lifts the picture off the
+sky-blue page (the page's blue − red is about 45; the book's white turbans and grey robes 5–15),
+whitens enclosed sky pockets (between legs, inside a padlock's shackle; `pockets: false` keeps a
+light-blue iris), and drops the printed word beside the picture. Only the 28 letter pages are cut,
+one picture each (ا has only the word الله), per the letter-page-only rule. `pageLetter` is the
+page; `letter` is the word's first letter (أَرْنَب sits on the ء page, so `letter` أ). The غ picture
+(غُرْفَة, a room) prints the word inside the picture, so it is imported hidden. The ص page prints
+صُورَة under a fence; it is tagged as printed.
 
 **Book letter (D-#757).** A Bangla picture carries two letters: `letter`, the word's first letter
 (what "ছবি দেখে সঠিক বর্ণ লেখ" asks for), and `pageLetter`, the letter page it sits on (ব্যাঙ → ঙ,
@@ -104,9 +116,8 @@ The bundle holds the books' pictures and is never committed.
 
 ## 6. Out of scope / next
 
-- **WS-2 Arabic:** needs a clean, unwatermarked scan of the full book. The excerpt on file carries
-  the publisher's watermark across about a third of its pictures. Pictures are cropped by hand
-  (one image per scanned page), and pdfkit needs an Arabic font.
+- **WS-2 Arabic:** the pictures are cut (§5). Still to build: the Arabic letter sequence and item
+  kinds, `ARABIC` in `WORKSHEET_SUBJECTS`, and an Arabic font for pdfkit.
 - **Classes 1–5:** their rows are mostly authored questions, so the generator would print MANUAL
   rows. That work belongs to the question bank, not here.
 - **A worksheet ↔ AssignmentItem link:** today the print request is tagged with class, section and
