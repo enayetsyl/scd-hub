@@ -52,10 +52,11 @@ export default function SyllabusHomeScreen({ navigation }: Props): React.ReactEl
   });
   const levels = levelsQ.data?.examSyllabusLevels ?? [];
 
+  // urql's manual refetch ignores `pause` — refetch only a query that would run.
   const refresh = usePullRefresh(syllabusQ.fetching, () => {
     pick.refetch();
-    refetchSyllabus({ requestPolicy: "network-only" });
-    refetchLevels({ requestPolicy: "network-only" });
+    if (pick.examId && pick.classId) refetchSyllabus({ requestPolicy: "network-only" });
+    if (pick.examId) refetchLevels({ requestPolicy: "network-only" });
   });
 
   if (!pick.loading && pick.exams.length === 0) {
@@ -87,7 +88,7 @@ export default function SyllabusHomeScreen({ navigation }: Props): React.ReactEl
 
       <QueryGate
         result={syllabusQ}
-        onRetry={() => refetchSyllabus({ requestPolicy: "network-only" })}
+        onRetry={() => pick.examId && pick.classId && refetchSyllabus({ requestPolicy: "network-only" })}
       >
         {view ? (
           <View style={{ gap: space(3), marginTop: space(3) }}>

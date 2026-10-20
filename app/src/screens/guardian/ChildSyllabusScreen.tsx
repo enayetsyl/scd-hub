@@ -37,9 +37,12 @@ export default function ChildSyllabusScreen(): React.ReactElement {
     pause: !pick.examId || !selected,
   });
   const view = q.data?.guardianChildSyllabus ?? null;
+  // urql's manual refetch ignores `pause`: refreshing before an exam is picked sent
+  // examId "" (prod CastError 2026-10-20). Refetch only a query that would run.
+  const ready = !!pick.examId && !!selected;
   const refresh = usePullRefresh(q.fetching, () => {
     pick.refetch();
-    refetch({ requestPolicy: "network-only" });
+    if (ready) refetch({ requestPolicy: "network-only" });
   });
 
   const opened: SyllabusT | null =
@@ -67,7 +70,7 @@ export default function ChildSyllabusScreen(): React.ReactElement {
             }}
           />
 
-          <QueryGate result={q} onRetry={() => refetch({ requestPolicy: "network-only" })}>
+          <QueryGate result={q} onRetry={() => ready && refetch({ requestPolicy: "network-only" })}>
             {view ? (
               <View style={{ gap: space(3), marginTop: space(3) }}>
                 <Card>

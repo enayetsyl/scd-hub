@@ -77,10 +77,11 @@ export default function SyllabusEntryScreen({ navigation }: Props): React.ReactE
   });
   const levels = levelsQ.data?.examSyllabusLevels ?? [];
 
+  // urql's manual refetch ignores `pause` — refetch only a query that would run.
   const refresh = usePullRefresh(syllabusQ.fetching, () => {
     pick.refetch();
-    refetch({ requestPolicy: "network-only" });
-    refetchLevels({ requestPolicy: "network-only" });
+    if (pick.examId && pick.classId) refetch({ requestPolicy: "network-only" });
+    if (pick.examId) refetchLevels({ requestPolicy: "network-only" });
   });
 
   // Coverage counts the subjects that actually have a distribution, not the rows
@@ -114,7 +115,7 @@ export default function SyllabusEntryScreen({ navigation }: Props): React.ReactE
         onChange={pick.setClassId}
       />
 
-      <QueryGate result={syllabusQ} onRetry={() => refetch({ requestPolicy: "network-only" })}>
+      <QueryGate result={syllabusQ} onRetry={() => pick.examId && pick.classId && refetch({ requestPolicy: "network-only" })}>
         {view ? (
           <View style={{ gap: space(3), marginTop: space(3) }}>
             {/* The per-class footer is a CLASS fact covering all eight subjects

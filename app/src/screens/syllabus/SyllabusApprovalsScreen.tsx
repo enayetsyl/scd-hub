@@ -352,20 +352,23 @@ export default function SyllabusApprovalsScreen(): React.ReactElement {
   /** The cell the Principal opened, if any. */
   const [openCell, setOpenCell] = useLocalState<SyllabusT | null>(null);
 
+  // urql's manual refetch ignores `pause`: with no exam picked the board/levels
+  // refetch sent examId "" (prod CastError 2026-10-20). Refetch only what would run.
+  const boardReady = canManage && !!pick.examId;
   const refresh = usePullRefresh(mineQ.fetching || boardQ.fetching, () => {
     refetchMine({ requestPolicy: "network-only" });
-    refetchBoard({ requestPolicy: "network-only" });
-    refetchLevels({ requestPolicy: "network-only" });
+    if (boardReady) refetchBoard({ requestPolicy: "network-only" });
+    if (boardReady) refetchLevels({ requestPolicy: "network-only" });
   });
   /** Refetch both lists but leave the open card alone. */
   const refetchAll = (): void => {
     refetchMine({ requestPolicy: "network-only" });
-    refetchBoard({ requestPolicy: "network-only" });
+    if (boardReady) refetchBoard({ requestPolicy: "network-only" });
   };
   const reload = (): void => {
     refetchMine({ requestPolicy: "network-only" });
-    refetchBoard({ requestPolicy: "network-only" });
-    refetchLevels({ requestPolicy: "network-only" });
+    if (boardReady) refetchBoard({ requestPolicy: "network-only" });
+    if (boardReady) refetchLevels({ requestPolicy: "network-only" });
     setOpenCell(null);
   };
 
