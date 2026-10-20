@@ -177,4 +177,43 @@ describe("classNoteSubmissionReport", () => {
       pendingSubjects: ["MATH"],
     });
   });
+
+  // D-#788: an email-login teacher (her phone carries her guardian login) gets her id too.
+  test("an email-only teacher's school id comes from the email (case-insensitive); a shared email names no one", async () => {
+    const classId = oid();
+    const sectionId = oid();
+    const emailTeacher = oid();
+    const sharedTeacher = oid();
+    const slot = (teacherId: unknown, periodNumber: number) => ({
+      _id: oid(),
+      groupType: "section",
+      groupId: sectionId,
+      classId,
+      dayOfWeek: "WED",
+      periodNumber,
+      subject: "BAN",
+      track: "general",
+      isBreak: false,
+      teacherId,
+      active: true,
+      effectiveFrom: new Date("2026-01-01"),
+    });
+    mockSlotFind.mockResolvedValue([slot(emailTeacher, 1), slot(sharedTeacher, 2)]);
+    mockSectionFind.mockResolvedValue([{ _id: sectionId, classId, code: "A", nameBn: "A" }]);
+    mockClassFind.mockResolvedValue([{ _id: classId, level: 4, nameBn: "Class 4" }]);
+    mockUserFind.mockResolvedValue([
+      { _id: emailTeacher, name: "A Email Teacher", phone: null, email: "k.tanha1994@gmail.com" },
+      { _id: sharedTeacher, name: "B Shared Teacher", phone: null, email: "dup@x.com" },
+    ]);
+    mockStaffFind.mockResolvedValue([
+      { phone: null, email: " K.Tanha1994@gmail.com", schoolId: "20166" },
+      { phone: null, email: "dup@x.com", schoolId: "1" },
+      { phone: null, email: "DUP@x.com", schoolId: "2" },
+    ]);
+
+    const rows = await classNoteSubmissionReport(DATE);
+    const byName = new Map(rows.map((r) => [r.teacherName, r.teacherSchoolId]));
+    expect(byName.get("A Email Teacher")).toBe("20166");
+    expect(byName.get("B Shared Teacher")).toBeNull();
+  });
 });
