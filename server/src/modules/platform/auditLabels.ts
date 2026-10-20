@@ -89,6 +89,7 @@ export const AUDIT_KIND_LABELS: Record<AuditEventKind, AuditKindLabel> = {
   LOGIN_FAIL: { bn: "লগইন ব্যর্থ হয়েছে", en: "Sign-in failed", group: "ACCESS" },
   PERMISSION_DENIED: { bn: "অনুমতি না থাকায় বাধা পেয়েছেন", en: "Permission denied", group: "ACCESS" },
   CREDENTIAL_PROVISIONED: { bn: "লগইন তৈরি/রিসেট করেছেন", en: "Login provisioned or reset", group: "ACCESS" },
+  ROLE_TEMPLATE_CHANGED: { bn: "ভূমিকার অনুমতি বদলেছেন", en: "Changed a role's permissions", group: "ACCESS" },
   USER_ACCESS_CHANGED: { bn: "ব্যবহারকারীর অনুমতি বদলেছেন", en: "Changed a user's access", group: "ACCESS" },
   SCOPE_GRANT_ASSIGN: { bn: "দায়িত্ব (স্কোপ) দিয়েছেন", en: "Assigned a scope grant", group: "ACCESS" },
   SCOPE_GRANT_REVOKE: { bn: "দায়িত্ব (স্কোপ) প্রত্যাহার করেছেন", en: "Revoked a scope grant", group: "ACCESS" },

@@ -23,6 +23,12 @@ import {
   type AccessActor,
   type UserAccessShape,
 } from "../services/AccessControlService";
+import {
+  roleTemplates,
+  setRoleTemplatePermission,
+  resetRoleTemplate,
+  type RoleTemplateShape,
+} from "../services/RoleTemplateService";
 
 /** The acting Principal (gated `access:manage`) — used as the audit actor. */
 function actorOf(ctx: AppContext): AccessActor {
@@ -131,5 +137,59 @@ builder.queryField("userEffectiveAccess", (t) =>
     authScopes: { hasPermission: "access:manage" },
     args: { userId: t.arg.string({ required: true }) },
     resolve: (_root, args) => effectiveUserAccess(args.userId),
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Role templates (PM, docs/prd-permission-matrix.md §7, D-#791/#800) — the Roles tab.
+// Gated `access_control:edit` (LOCKED, Principal-only; today's access:manage).
+// ---------------------------------------------------------------------------
+
+const RoleTemplateRef = builder.objectRef<RoleTemplateShape>("RoleTemplate");
+RoleTemplateRef.implement({
+  description:
+    "One editable role (TEACHER / OFFICE): the Principal's switches as a delta on the code " +
+    "default, the role's catalogue actions now, and how many active logins it reaches.",
+  fields: (t) => ({
+    role: t.exposeString("role"),
+    granted: t.exposeStringList("granted"),
+    revoked: t.exposeStringList("revoked"),
+    permissions: t.exposeStringList("permissions"),
+    userCount: t.exposeInt("userCount"),
+  }),
+});
+
+builder.queryField("roleTemplates", (t) =>
+  t.field({
+    type: [RoleTemplateRef],
+    description: "The editable role templates (TEACHER, OFFICE) with the Principal's edits. Requires access_control:edit.",
+    authScopes: { hasPermission: "access_control:edit" },
+    resolve: () => roleTemplates(),
+  }),
+);
+
+builder.mutationField("setRoleTemplatePermission", (t) =>
+  t.field({
+    type: RoleTemplateRef,
+    description:
+      "Switch one catalogue action on or off for every login of a role (TEACHER / OFFICE). " +
+      "LOCKED and SELF actions are refused (Bangla error). Requires access_control:edit. Audited.",
+    authScopes: { hasPermission: "access_control:edit" },
+    args: {
+      role: t.arg.string({ required: true }),
+      permission: t.arg.string({ required: true }),
+      enabled: t.arg.boolean({ required: true }),
+    },
+    resolve: (_root, args, ctx) => setRoleTemplatePermission(actorOf(ctx), args.role, args.permission, args.enabled),
+  }),
+);
+
+builder.mutationField("resetRoleTemplate", (t) =>
+  t.field({
+    type: RoleTemplateRef,
+    description: "Put a role (TEACHER / OFFICE) back to the code default. Requires access_control:edit. Audited.",
+    authScopes: { hasPermission: "access_control:edit" },
+    args: { role: t.arg.string({ required: true }) },
+    resolve: (_root, args, ctx) => resetRoleTemplate(actorOf(ctx), args.role),
   }),
 );
