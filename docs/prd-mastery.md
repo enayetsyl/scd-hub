@@ -1,6 +1,7 @@
 # PRD — Learning-outcome mastery tracker (`mastery` module · শিখন-দক্ষতা ট্র্যাকার)
 
-**Status:** CONTRACTED 2026-10-20 — nothing built. Mock canvas (32 screens, C3 Math sample):
+**Status:** M-0 BUILT 2026-10-20 (branch `feat/mastery-m0`: catalogue, mark table, tags, policy, switch,
+import + `skills/_tools/mastery_catalogue_to_json.mjs`); M-1..M-6 contracted. Mock canvas (32 screens, C3 Math sample):
 https://claude.ai/artifact/41PHE293FUroM64pWFH6u1 (owner-private; open it before building a screen).
 **Decision block:** D-#775–#785, reserved against `origin/main@b96af3ae` = `origin/dev@569d60ec`
 (2026-10-20, max D-#774; open PRs hold only D-#650/#651/#761).
