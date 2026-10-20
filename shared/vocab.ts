@@ -5217,6 +5217,15 @@ export const WORKSHEET_ITEM_KINDS = [
   "MATCH_NUMERAL",
   "COUNT_PICTURES",
   "MATCH_COUNT",
+  // Arabic (D-#802, the 2026 Nursery/KG আরবি মানবন্টন), though nothing in them is Arabic-only
+  "PICTURE_CIRCLE_LETTER",
+  "PICTURE_CHOOSE_WORD",
+  "PICTURE_WRITE_WORD",
+  "MATCH_LETTER_FORM",
+  "LETTER_FROM_FORM",
+  "MATCH_LETTER_WORD",
+  "SPLIT_WORD",
+  "JOIN_LETTERS",
   "ORAL",
   "MANUAL",
 ] as const;
@@ -5235,6 +5244,14 @@ export const WORKSHEET_ITEM_KIND_LABELS_BN: Record<WorksheetItemKind, string> = 
   MATCH_NUMERAL: "Number ↔ সংখ্যা",
   COUNT_PICTURES: "ছবি গুনে সংখ্যা লেখা",
   MATCH_COUNT: "ছবির সাথে সংখ্যার মিল",
+  PICTURE_CIRCLE_LETTER: "ছবি দেখে সঠিক হরফে বৃত্ত",
+  PICTURE_CHOOSE_WORD: "ছবি দেখে সঠিক শব্দ বাছাই",
+  PICTURE_WRITE_WORD: "ছবি দেখে শব্দ লেখা",
+  MATCH_LETTER_FORM: "হরফ ↔ মাঝের রূপ মিল",
+  LETTER_FROM_FORM: "রূপ দেখে পূর্ণ হরফ লেখা",
+  MATCH_LETTER_WORD: "হরফ ↔ শব্দ মিল",
+  SPLIT_WORD: "শব্দ ভেঙে হরফ লেখা",
+  JOIN_LETTERS: "হরফ জুড়ে শব্দ লেখা",
   ORAL: "মৌখিক (ছাপা হয় না)",
   MANUAL: "নিজে লিখুন (ফাঁকা জায়গা)",
 };
@@ -5252,6 +5269,14 @@ export const WORKSHEET_ITEM_KIND_LABELS_EN: Record<WorksheetItemKind, string> = 
   MATCH_NUMERAL: "Numeral ↔ Bangla number",
   COUNT_PICTURES: "Count and write",
   MATCH_COUNT: "Match picture ↔ number",
+  PICTURE_CIRCLE_LETTER: "Picture → circle the letter",
+  PICTURE_CHOOSE_WORD: "Picture → choose the word",
+  PICTURE_WRITE_WORD: "Picture → write the word",
+  MATCH_LETTER_FORM: "Match letter ↔ middle form",
+  LETTER_FROM_FORM: "Form → write the full letter",
+  MATCH_LETTER_WORD: "Match letter ↔ word",
+  SPLIT_WORD: "Break the word into letters",
+  JOIN_LETTERS: "Join the letters into a word",
   ORAL: "Oral (not printed)",
   MANUAL: "Write it yourself (blank space)",
 };
@@ -5265,6 +5290,7 @@ export const WORKSHEET_AXES = [
   "ENG_LOWER",
   "NUM_BN",
   "NUM_EN",
+  "ARABIC",
 ] as const;
 export type WorksheetAxis = (typeof WORKSHEET_AXES)[number];
 export const WORKSHEET_AXIS_LABELS_BN: Record<WorksheetAxis, string> = {
@@ -5275,6 +5301,7 @@ export const WORKSHEET_AXIS_LABELS_BN: Record<WorksheetAxis, string> = {
   ENG_LOWER: "a–z",
   NUM_BN: "সংখ্যা (বাংলা)",
   NUM_EN: "Number (English)",
+  ARABIC: "আরবি হরফ (ا থেকে ي)",
 };
 
 /** Which school book a bank picture was taken from (owner 2026-10-16: the book's

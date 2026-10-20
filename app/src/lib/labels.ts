@@ -6153,7 +6153,6 @@ const STR_BN = {
   wsPdfPreviewKey: "PDF — উত্তরপত্র",
   wsPdfWebOnly: "PDF শুধু ওয়েবে খোলে — কম্পিউটার থেকে দেখুন।",
   wsOnlyPrePrimary: "এখন শুধু নার্সারি ও কেজির জন্য।",
-  wsArabicLater: "আরবি: বইয়ের স্ক্যান এলে যোগ হবে।",
   wsPickClassSubject: "শ্রেণি ও বিষয় বাছাই করুন।",
   wsPlanKind: "প্রশ্নের ধরন",
   wsPlanAxis: "কোন ক্রম",
@@ -6203,6 +6202,9 @@ const STR_BN = {
   // Worksheet English small letters (owner 2026-10-16)
   wsRangeCapital: "বড় হাতের অক্ষর (A–Z)",
   wsRangeSmall: "ছোট হাতের অক্ষর (a–z)",
+  // Worksheet Arabic (D-#802)
+  // "ا–ي" inside Bangla text is reordered by bidi into "(ي–ا)"; words between keep the order.
+  wsArabicLetters: "আরবি হরফ (ا থেকে ي)",
   wsRangeNumbersShown: "যে সংখ্যাগুলো দেখাবে",
   // Worksheet taught-letter checkboxes (owner 2026-10-16)
   wsTaughtLetters: "যে বর্ণগুলো পড়ানো হয়েছে — টিক দিন",
@@ -11356,7 +11358,6 @@ const STR_EN: StrTable = {
   wsPdfPreviewKey: "PDF — answer key",
   wsPdfWebOnly: "PDFs open on the web only — use a computer.",
   wsOnlyPrePrimary: "Nursery and KG only for now.",
-  wsArabicLater: "Arabic: added once the book scan arrives.",
   wsPickClassSubject: "Pick a class and a subject.",
   wsPlanKind: "Question kind",
   wsPlanAxis: "Which sequence",
@@ -11406,6 +11407,8 @@ const STR_EN: StrTable = {
   // Worksheet English small letters (owner 2026-10-16)
   wsRangeCapital: "Capital letters (A–Z)",
   wsRangeSmall: "Small letters (a–z)",
+  // Worksheet Arabic (D-#802)
+  wsArabicLetters: "Arabic letters (ا to ي)",
   wsRangeNumbersShown: "Numbers shown",
   // Worksheet taught-letter checkboxes (owner 2026-10-16)
   wsTaughtLetters: "Tick the letters that have been taught",

@@ -18,6 +18,14 @@ export const BAN_CONSONANTS = [
 ] as const;
 export const ENG_UPPER = Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i));
 export const ENG_LOWER = ENG_UPPER.map((c) => c.toLowerCase());
+/** রওযাতুল আতফাল ১, letter pages in book order (D-#802): ء has its own page, before ي. */
+export const ARABIC_LETTERS = [
+  "ا", "ب", "ت", "ث", "ج", "ح", "خ", "د", "ذ", "ر",
+  "ز", "س", "ش", "ص", "ض", "ط", "ظ", "ع", "غ", "ف",
+  "ق", "ك", "ل", "م", "ن", "و", "ه", "ء", "ي",
+] as const;
+/** أ إ آ count as alif for scope — أَرْنَب sits on the ء page but starts with an alif. */
+export const arabicBase = (l: string): string => (/^[آأإ]$/.test(l) ? "ا" : l);
 
 const BN_DIGITS = "০১২৩৪৫৬৭৮৯";
 export const bnNumber = (n: number | string): string =>
@@ -68,6 +76,22 @@ export function engUpperInScope(scope: Scope): string[] {
   return ENG_UPPER.slice(0, clampIndex(scope.letterUpTo, 25) + 1);
 }
 
+/** In-scope Arabic letters, in book order. */
+export function arabicInScope(scope: Scope): string[] {
+  const set = taughtSet(scope);
+  if (set) return ARABIC_LETTERS.filter((c) => set.has(c));
+  return ARABIC_LETTERS.slice(0, clampIndex(scope.letterUpTo, ARABIC_LETTERS.length - 1) + 1);
+}
+
+/** The subject's alphabet as one line: in scope, or the whole of it (`full`). Empty for maths. */
+export function alphabetOf(subject: string, scope: Scope, full = false): string[] {
+  const s: Scope = full ? {} : scope;
+  if (subject === "ARABIC") return arabicInScope(s);
+  if (subject === "ENG") return engUpperInScope(s);
+  if (subject === "BAN") return [...vowelsInScope(s), ...consonantsInScope(s)];
+  return [];
+}
+
 export function numberUpTo(scope: Scope): number {
   const n = scope.numberUpTo ?? DEFAULT_NUMBER_UP_TO;
   return Math.max(10, Math.min(MAX_NUMBER_UP_TO, Math.floor(n)));
@@ -91,6 +115,8 @@ export function axisSequence(axis: WorksheetAxis, scope: Scope): string[] {
       return Array.from({ length: numberUpTo(scope) }, (_, i) => bnNumber(i + 1));
     case "NUM_EN":
       return Array.from({ length: numberUpTo(scope) }, (_, i) => String(i + 1));
+    case "ARABIC":
+      return arabicInScope(scope);
   }
 }
 
@@ -99,5 +125,6 @@ export const isNumberAxis = (axis: WorksheetAxis): boolean => axis === "NUM_BN" 
 /** Is a picture's tagged first letter inside the taught scope? Unknown letters are out. */
 export function letterInScope(letter: string, subject: string, scope: Scope): boolean {
   if (subject === "ENG") return engUpperInScope(scope).includes(letter.toUpperCase());
+  if (subject === "ARABIC") return arabicInScope(scope).includes(arabicBase(letter));
   return vowelsInScope(scope).includes(letter) || consonantsInScope(scope).includes(letter);
 }
