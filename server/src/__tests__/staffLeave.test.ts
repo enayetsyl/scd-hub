@@ -859,4 +859,62 @@ describe("staffMatch (the phone-only User↔StaffProfile join)", () => {
     ]);
     expect(await resolveStaffProfileForUser(oid().toString())).toBeNull();
   });
+
+  // D-#786 — email is the fallback key (a teacher whose phone carries her guardian login).
+  test("resolveStaffProfileForUser falls back to EMAIL for an email-only login (case-insensitive)", async () => {
+    mockUserFindById.mockResolvedValue({ email: "k.tanha1994@gmail.com", role: "TEACHER" });
+    const match = { _id: oid(), email: " K.Tanha1994@gmail.com " };
+    mockStaffFind.mockResolvedValue([{ _id: oid(), email: "other@x.com" }, match]);
+    expect(await resolveStaffProfileForUser(oid().toString())).toBe(match);
+  });
+
+  test("resolveStaffProfileForUser tries the email when the phone finds no one", async () => {
+    mockUserFindById.mockResolvedValue({ phone: "1700000000", email: "t@x.com", role: "TEACHER" });
+    const match = { _id: oid(), phone: null, email: "t@x.com" };
+    mockStaffFind.mockResolvedValue([{ _id: oid(), phone: "01999999999" }, match]);
+    expect(await resolveStaffProfileForUser(oid().toString())).toBe(match);
+  });
+
+  test("an AMBIGUOUS phone stays a refusal — it does not fall through to the email", async () => {
+    mockUserFindById.mockResolvedValue({ phone: "1700000000", email: "t@x.com", role: "TEACHER" });
+    mockStaffFind.mockResolvedValue([
+      { _id: oid(), phone: "01700000000" },
+      { _id: oid(), phone: "01700000000", email: "t@x.com" },
+    ]);
+    expect(await resolveStaffProfileForUser(oid().toString())).toBeNull();
+  });
+
+  test("resolveStaffProfileForUser fails CLOSED when two staff share the caller's email", async () => {
+    mockUserFindById.mockResolvedValue({ email: "t@x.com", role: "TEACHER" });
+    mockStaffFind.mockResolvedValue([
+      { _id: oid(), email: "t@x.com" },
+      { _id: oid(), email: "T@X.com" },
+    ]);
+    expect(await resolveStaffProfileForUser(oid().toString())).toBeNull();
+  });
+
+  test("a GUARDIAN login never resolves to a staff record", async () => {
+    mockUserFindById.mockResolvedValue({ phone: "1700000000", role: "GUARDIAN" });
+    mockStaffFind.mockResolvedValue([{ _id: oid(), phone: "01700000000" }]);
+    expect(await resolveStaffProfileForUser(oid().toString())).toBeNull();
+    expect(mockStaffFind).not.toHaveBeenCalled();
+  });
+
+  test("resolveUserIdForStaff falls back to the EMAIL when the profile has no phone", async () => {
+    mockStaffFindById.mockResolvedValue({ phone: null, email: " K.Tanha1994@gmail.com" });
+    const uid = oid();
+    mockUserFindOne.mockResolvedValue({ _id: uid });
+    expect(await resolveUserIdForStaff(oid().toString())).toBe(uid.toString());
+    expect(mockUserFindOne.mock.calls[0][0]).toMatchObject({
+      email: "k.tanha1994@gmail.com",
+      role: { $ne: "GUARDIAN" },
+    });
+  });
+
+  test("resolveUserIdForStaff never returns a GUARDIAN login on the profile's phone", async () => {
+    mockStaffFindById.mockResolvedValue({ phone: "01700000000" });
+    mockUserFindOne.mockResolvedValue(null);
+    expect(await resolveUserIdForStaff(oid().toString())).toBeNull();
+    expect(mockUserFindOne.mock.calls[0][0]).toMatchObject({ role: { $ne: "GUARDIAN" } });
+  });
 });
