@@ -333,6 +333,25 @@ describe("guardianChildSyllabus", () => {
   });
 });
 
+// prod 2026-10-20: a pull-to-refresh before an exam was picked sent examId "" and
+// Mongoose threw a CastError that paged GlitchTip. A malformed id is now a refusal.
+describe("a malformed id is refused before any query (not a CastError)", () => {
+  test.each([
+    ["guardianChildSyllabus", () => guardianChildSyllabus(ctxFor("GUARDIAN"), "", "student1")],
+    ["classSyllabus (empty exam)", () => classSyllabus(ctxFor("OFFICE"), "", CLASS.toString())],
+    ["classSyllabus (empty class)", () => classSyllabus(ctxFor("OFFICE"), EXAM.toString(), "")],
+    ["syllabusDetail", () => syllabusDetail(ctxFor("OFFICE"), "", CLASS.toString(), "BAN" as never)],
+    [
+      "examSyllabusBoard",
+      async () =>
+        (await import("../modules/exams/services/ExamSyllabusReadService")).examSyllabusBoard(ctxFor("PRINCIPAL"), ""),
+    ],
+  ])("%s", async (_name, call) => {
+    await expect(call()).rejects.toThrow("পরীক্ষা ও শ্রেণি নির্বাচন করুন");
+    expect(mockSyllabusFind).not.toHaveBeenCalled();
+  });
+});
+
 describe("mySyllabusApprovals", () => {
   test("returns the caller's TEACHER_REVIEW rows", async () => {
     mockSyllabusFind.mockReturnValue([row({ status: "TEACHER_REVIEW" })]);

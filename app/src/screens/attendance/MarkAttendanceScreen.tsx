@@ -8,7 +8,7 @@
  * the roster is always rendered under CLASS/SECTION headings, because a Quran group
  * mixes sections and the school reads attendance class-wise (D-#278).
  */
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
@@ -19,8 +19,9 @@ import {
   AMEND_ATTENDANCE_UNIT,
 } from "../../graphql/operations";
 import type { AttendanceStackParamList } from "../../navigation/types";
-import { Screen, H2, Body, Muted, Card, Chip, ChipRow, Button, Loader, EmptyState, ErrorBanner } from "../../components/ui";
+import { Screen, H2, Body, Muted, Card, Chip, ChipRow, Button, Loader, EmptyState, ErrorBanner, Notice } from "../../components/ui";
 import { STR, bnNum, classLevelLabel } from "../../lib/labels";
+import { useTodayKey } from "../../lib/useTodayKey";
 import { friendlyError } from "../../lib/errors";
 import { useToast } from "../../state/ToastContext";
 import { space } from "../../theme/tokens";
@@ -28,11 +29,29 @@ import { personName } from "../../lib/personName";
 
 type Props = NativeStackScreenProps<AttendanceStackParamList, "MarkAttendance">;
 
-export default function MarkAttendanceScreen({ route }: Props): React.ReactElement {
+export default function MarkAttendanceScreen({ route, navigation }: Props): React.ReactElement {
   const { unitType, unitId, title, dateKey, amend } = route.params;
   const [absent, setAbsent] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const toast = useToast();
+
+  // A screen opened for TODAY and left open overnight (a restored browser tab, a
+  // resumed app) must move to the new day by itself — its first submit of the morning
+  // otherwise goes out with yesterday's date and the server refuses it as locked
+  // (owner report 2026-10-20). A day the marker deliberately opened in the past stays.
+  const today = useTodayKey();
+  const openedForToday = useRef(dateKey === today);
+  useEffect(() => {
+    if (!amend && openedForToday.current && dateKey < today) navigation.setParams({ dateKey: today });
+  }, [today]); // eslint-disable-line react-hooks/exhaustive-deps
+  // The marker's own path cannot write a past day (O2) — say so instead of offering
+  // a submit that can only fail. The Principal/Office amend path is unaffected.
+  const pastDayLocked = !amend && dateKey < today;
+
+  // A new date is a new record: never carry the previous day's taps across.
+  useEffect(() => {
+    setAbsent(new Set());
+  }, [dateKey]);
 
   const [rosterQ, refetchRoster] = useQuery({ query: ATTENDANCE_UNIT_ROSTER, variables: { unitType, unitId, dateKey } });
   const [dayQ, refetchDay] = useQuery({
@@ -130,7 +149,14 @@ export default function MarkAttendanceScreen({ route }: Props): React.ReactEleme
             </Card>
           ))}
 
-          <Button title={STR.attSubmit} onPress={onSubmit} loading={busy} />
+          {pastDayLocked ? (
+            <>
+              <Notice message={STR.attPastDayNotice} tone="warn" />
+              <Button title={STR.attMarkToday} onPress={() => navigation.setParams({ dateKey: today })} />
+            </>
+          ) : (
+            <Button title={STR.attSubmit} onPress={onSubmit} loading={busy} />
+          )}
           <View style={{ height: space(4) }} />
         </>
       )}

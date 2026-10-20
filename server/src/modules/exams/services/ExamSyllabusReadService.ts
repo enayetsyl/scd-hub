@@ -35,6 +35,18 @@ import { SubjectGroupMembership } from "../../routine/models/SubjectGroupMembers
 import { ExamSyllabus, type ISyllabusMarkRow } from "../models/ExamSyllabus";
 import { ExamClassNote } from "../models/ExamClassNote";
 
+/**
+ * A malformed exam/class/student id is a refusal with a sentence, not a fault. The
+ * app's syllabus screens send `examId: ""` when a pull-to-refresh or retry runs before
+ * an exam is picked (urql's manual refetch ignores `pause`), and Mongoose then threw a
+ * CastError that paged GlitchTip (prod 2026-10-20, guardianChildSyllabus).
+ */
+function assertIds(...ids: string[]): void {
+  if (!ids.every((id) => Types.ObjectId.isValid(id))) {
+    throw new ForbiddenError("পরীক্ষা ও শ্রেণি নির্বাচন করুন");
+  }
+}
+
 export interface SyllabusShape {
   id: string | null;
   examId: string;
@@ -271,6 +283,7 @@ export async function classSyllabus(
   classId: string,
 ): Promise<ClassSyllabusView> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+  assertIds(examId, classId);
 
   const admin = isAdminStaff(ctx.auth);
   const publishedOnly = !admin;
@@ -371,6 +384,7 @@ export async function syllabusDetail(
   subject: RoutineSubject,
 ): Promise<SyllabusShape | null> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+  assertIds(examId, classId);
   const admin = isAdminStaff(ctx.auth);
 
   const row = (await ExamSyllabus.findOne({ examId, classId, subject }).lean()) as unknown as
@@ -408,6 +422,7 @@ export async function syllabusLevelDetail(
 ): Promise<SyllabusShape | null> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
   if (ctx.auth.role === "GUARDIAN") throw new ForbiddenError("এই সিলেবাস দেখার অনুমতি নেই");
+  assertIds(examId);
   const admin = isAdminStaff(ctx.auth);
 
   const row = (await ExamSyllabus.findOne({
@@ -496,6 +511,7 @@ export async function guardianChildSyllabus(
   examId: string,
   studentId: string,
 ): Promise<ClassSyllabusView> {
+  assertIds(examId);
   await assertGuardianOfStudent(ctx, studentId);
 
   const student = (await Student.findById(studentId).select("classId").lean()) as unknown as {
@@ -609,6 +625,7 @@ export async function examSyllabusLevels(
 }>> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
   if (!isAdminStaff(ctx.auth)) throw new ForbiddenError("সিলেবাস বোর্ড দেখার অনুমতি নেই");
+  assertIds(examId);
 
   const groups = (await SubjectGroup.find({ active: { $ne: false } })
     .select("track level nameBn")
@@ -749,6 +766,7 @@ export async function examSyllabusBoard(
   if (!isAdminStaff(ctx.auth)) {
     throw new ForbiddenError("সিলেবাস বোর্ড দেখার অনুমতি নেই");
   }
+  assertIds(examId);
 
   const classes = (await Class.find({}).select("nameBn level").lean()) as unknown as Array<{
     _id: Types.ObjectId;
