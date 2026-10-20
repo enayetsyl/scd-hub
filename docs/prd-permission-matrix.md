@@ -1,6 +1,6 @@
 # PRD — Permission Matrix (every feature × every action, editable per role)
 
-**Status:** Planned — awaiting owner review (§12). No feature code yet. Gaps in today's gates found along the way are listed separately (§12a).
+**Status:** Planned — owner questions answered 2026-10-20 (§12); ready to build. No feature code yet. Gaps in today's gates found along the way are listed separately (§12a).
 **Owner:** Principal (SCD)
 **Module prefix:** PM  ·  **Plane:** identity/operational (ADR-005)
 **Traceability:** D-#790–#801 · refines D-#193 (AC-1, role-as-template) and its §10 deferral ("editing the templates themselves") · composes with D-#484 (delegated scope — the *where* axis, unchanged) · D-#17 (role set unchanged) · ADR-004 (row-scope) · ADR-008 (append-only audit)
@@ -257,20 +257,15 @@ All modules are swept in one release, but the work is still ordered so each step
 4. **Docs + rule:** AGENTS.md, skills, architecture, the catalogue file in sync.
 5. **Release:** one PR → `dev` → owner checks on the dev site → promote + OTA. The legacy aliases keep older bundles working.
 
-## 12. Open questions (owner)
-1. **Principal-only powers** (the 13 `PRINCIPAL-DEFAULT` rows in the catalogue):
-   - exam/syllabus publish;
-   - the monthly-report override, revoke and thresholds;
-   - result-entry targets and the work-claim digest list;
-   - observation quota and the book-build force override;
-   - working in any section (`edit_all`) for homework, assignments, set tracker, question sets and vocab.
-
-   Plan: switchable, default Principal only. Should any of them be **locked** instead? These were Principal-only by decision (D-#397, D-#424, D-#533), so switchable reverses those decisions for whoever the Principal turns them on for.
-2. **D-#554** (Office never resolves tracker work) becomes a default, not a guarantee. Plan: switchable, default off. Or lock tracker actions off for Office?
-3. **Homework "issue".** In the app, the day's homework is issued by *confirm day* (and the overnight auto-issue). The separate `issue` action covers only giving an item to a student who was absent. Plan: keep it, labelled "অনুপস্থিতকে পরে দেওয়া", so it doesn't read like issuing the day.
-4. **Return split from check.** Today returning checked work is part of checking (D-#592). Plan: separate switches, with existing check delegations mapped to both, so nobody loses anything. OK?
-5. **SELF actions** (apply own leave, own tasks, own notifications, own password): plan keeps them always-on, shown read-only. Should any be switchable per role?
-6. **Sensitive staff fields** (§5.8): add `payroll:view` / `staff_records:view_sensitive` as field gates, or leave them riding the staff record?
+## 12. Owner answers (2026-10-20) — all six settled
+| # | Question | Answer | Effect |
+|---|---|---|---|
+| 1 | Principal-only powers (the 13 `PRINCIPAL-DEFAULT` rows: exam/syllabus publish; monthly-report override, revoke, thresholds; result-entry targets; work-claim digest list; observation quota; book-build force; `edit_all` for homework, assignments, set tracker, question sets, vocab): switchable or locked? | **Switchable** | As planned: default Principal only, switchable for Teacher/Office. Only the 11 `LOCKED` rows stay locked. D-#397/#424/#533 now hold by default, not as a guarantee. |
+| 2 | D-#554 (Office never resolves tracker work): a default, or locked? | **Can be changed** | Office tracker actions default off and are switchable. |
+| 3 | Homework `issue` = give to an absent student later (the day is issued by confirm day) | **OK** | As planned. |
+| 4 | Return split from check; existing check delegations map to both | **OK** | As planned (`DELEGATED_ACTION_PERMISSIONS`). |
+| 5 | SELF actions always-on, shown read-only | **Yes** | As planned: the 12 `SELF` rows are not switchable. |
+| 6 | Sensitive staff fields get their own switches | **Yes** | Field gates on `staff` / `staffProfile`: `monthlySalary` → `payroll:view`; NID and bank fields → new `staff_records:view_sensitive` (Office on by default). A holder of `staff_records:view` alone gets those fields as null. |
 
 ## 12a. Gaps found in today's gates
 The inventory found gaps in **today's** gates that this plan does not cause, listed in [findings.md](permission-catalogue/findings.md). The most serious is that `studentsInSection` needs only a login: a guardian's login can read any section's student date of birth, phone, address and blood group, and their guardians' phones. These are separate fixes, each in its own PR, and are **not** folded into the matrix release. The matrix's source-scanning test (§9) would have caught `studentsInSection`, because it gates nothing catalogued and is not on the SELF/GUARDIAN list.

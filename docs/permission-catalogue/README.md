@@ -181,7 +181,7 @@ Several of today's bypasses are template-aware (`isAdminStaff`, `actsAsRole`), w
 | Admin & access | `guardian_engagement` | Guardian app usage | অভিভাবকদের অ্যাপ ব্যবহার | 1 | foundation-platform |
 | Admin & access | `my_account` | My account | আমার অ্যাকাউন্ট | 1 | foundation-platform |
 
-**Totals: 68 features, 323 actions.** By flag: LOCKED 11 · PRINCIPAL-DEFAULT 13 · DESIGNATION 24 · ESCALATION 5 · SELF 12 · unflagged 258. Defaults: TEACHER on 98 · OFFICE on 236. A row may carry a `†`/`F-n`/`2H` note in addition to its flag. Those notes are not counted as flags. Not counted: `guardian:read_child` (GUARDIAN plane), and the future `scholarship_practice:release` (SC-5, not built) and `announcements:publish` (no staff surface yet).
+**Totals: 68 features, 324 actions.** By flag: LOCKED 11 · PRINCIPAL-DEFAULT 13 · DESIGNATION 24 · ESCALATION 5 · SELF 12 · unflagged 259. Defaults: TEACHER on 98 · OFFICE on 237. A row may carry a `†`/`F-n`/`2H` note in addition to its flag. Those notes are not counted as flags. Not counted: `guardian:read_child` (GUARDIAN plane), and the future `scholarship_practice:release` (SC-5, not built) and `announcements:publish` (no staff surface yet).
 
 ---
 
@@ -457,7 +457,8 @@ Several of today's bypasses are template-aware (`isAdminStaff`, `actsAsRole`), w
 #### `staff_records` — কর্মীর তথ্য
 | permission | EN | BN | what it allows | T | O | flags | replaces |
 |---|---|---|---|---|---|---|---|
-| `staff_records:view` | See staff records | কর্মীদের তথ্য দেখা | Staff list and hub profile (incl. NID, bank, salary) | — | on | F-24 | staff:manage |
+| `staff_records:view` | See staff records | কর্মীদের তথ্য দেখা | Staff list and hub profile (without NID, bank and salary) | — | on | | staff:manage |
+| `staff_records:view_sensitive` | See NID and bank details | কর্মীর এনআইডি ও ব্যাংকের তথ্য দেখা | NID and bank-account fields on the staff record (field gate) | — | on | | staff:manage (owner 2026-10-20, Q6) |
 | `staff_records:create` | Add staff | নতুন কর্মী যোগ করা | Create a record (pay excluded) | — | on | | staff:manage |
 | `staff_records:edit` | Edit a record | কর্মীর তথ্য সংশোধন | Bio, contact, bank account | — | on | F-23 | staff:manage |
 | `staff_records:confirm` | Confirm employment | চাকরি স্থায়ী করা | Confirm a probationer; settle held leave debt; preview | — | on | | staff:manage |

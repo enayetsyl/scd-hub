@@ -180,8 +180,8 @@ All are `authenticated` today. The real gate sits in the services under `server/
 ### `server/src/modules/foundation/resolvers/staff.ts` (deduped here)
 | file:line | resolver | today's gate (authScopes + extra) | → new gate (permission, plus extra gates that stay) |
 |---|---|---|---|
-| staff.ts:79 | staff | staff:manage; returns monthlySalary and bank fields | `staff_records:view` · F-24 |
-| staff.ts:103 | staffProfile | staff:manage | `staff_records:view` · F-24 |
+| staff.ts:79 | staff | staff:manage; returns monthlySalary and bank fields | `staff_records:view`; field gates: `monthlySalary` → `payroll:view`, NID + bank → `staff_records:view_sensitive` (null otherwise) · F-24 |
+| staff.ts:103 | staffProfile | staff:manage | `staff_records:view`; same field gates as `staff` · F-24 |
 
 ### `server/src/modules/finance/resolvers/*` (all `finance:manage`, no extra gate)
 | file:line | resolver | today's gate (authScopes + extra) | → new gate (permission, plus extra gates that stay) |
