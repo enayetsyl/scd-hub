@@ -18,20 +18,21 @@ import { DateField } from "../../components/DateField";
 import { STR, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useAuth } from "../../auth/AuthContext";
+import { useTodayKey } from "../../lib/useTodayKey";
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<AttendanceStackParamList, "AttendanceHome">;
-
-const todayKey = (): string => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-};
 
 export default function AttendanceHomeScreen({ navigation }: Props): React.ReactElement {
   const { role, can } = useAuth();
   const canMark = can("attendance:mark");
   const canManage = can("attendance:manage");
-  const [dateKey, setDateKey] = useState(todayKey());
+  // Follows the real date (a tab left open overnight used to keep yesterday's), unless
+  // the teacher deliberately picked another day.
+  const today = useTodayKey();
+  const [picked, setPicked] = useState<string | null>(null);
+  const dateKey = picked ?? today;
+  const setDateKey = (v: string): void => setPicked(v === today ? null : v);
 
   const [unitsQ, refetch] = useQuery({
     query: MY_MARKING_UNITS,
