@@ -361,11 +361,11 @@ summary. Class teacher: behaviour note (VOID tag), three NOT_SUBMITTED in a row.
    view appears; existing homework/assignment flows are byte-for-byte unchanged (tracker tests green).
 10. **Guardian.** A guardian sees only their child, plain labels, home tips, the week's assignment and
     PDF, and the actions record; no section ranks, no other children.
-12. **Deduction-tag routing.** On a confirmed C3 Math HW with four QT-WORD items, a student whose item 3
+11. **Deduction-tag routing.** On a confirmed C3 Math HW with four QT-WORD items, a student whose item 3
     carries "উত্তর-বাক্য নেই" (4½/5) gets: item 3's own LO scored 5/5 (GOOD); SK-ANS rows = 3 GOOD + 1
     WEAK. A C2 Math paper cannot carry that tag (scope off). A work tagged "হাতের লেখা অস্পষ্ট" writes
     one WEAK SK-HW row; an untagged confirmed work writes one GOOD row.
-11. **Marks snapshot.** Changing QT-WORD from 5 to 4 leaves existing items at 5; new items get 4.
+12. **Marks snapshot.** Changing QT-WORD from 5 to 4 leaves existing items at 5; new items get 4.
 
 ## §11 — Out of scope / later
 - Half-yearly / annual exam marks (exams module) — not connected.
