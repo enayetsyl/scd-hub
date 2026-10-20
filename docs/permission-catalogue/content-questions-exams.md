@@ -1,6 +1,6 @@
 # Content, questions, sets, exams, scholarship & books — build checklist
 
-Features: `lesson_plans`, `plan_review`, `question_bank`, `question_review`, `question_sets`, `exam_syllabus`, `scholarship_practice`, `book_production` (owner rows: see README). Source: inventory F, origin/dev 2026-10-20.
+Features: `lesson_plans`, `plan_review`, `question_bank`, `question_review`, `question_sets`, `exam_syllabus`, `scholarship_practice`, `mastery`, `book_production` (owner rows: see README). Source: inventory F, origin/dev 2026-10-20.
 Counts: 56 mutations, 73 queries, 7 REST/SSE.
 
 ## (a) Mutations
@@ -246,3 +246,36 @@ The inventory names no role-routed notification recipients for this area.
 - **/pdf/artifact row scope.** Verify whether content row scope applies on the REST route (it does on the GraphQL reads).
 
 Listed elsewhere: none. The `assessment/resolvers/assessment.ts` and `assessment/routes/setPdf.ts` rows (question_sets) are owned here; trackers-classtest.md cross-references them. The /pdf/artifact and /pdf/set print-queue branches use `printing:view_all`, owned by hr-finance.md.
+
+## (g) `mastery` — learning-outcome mastery tracker (added with M-0, 2026-10-20, D-#775–#787)
+Already one-to-one with today's permissions; no hidden role gate, no REST route yet.
+
+### Mutations
+| file:line | resolver | today's gate | → new gate |
+|---|---|---|---|
+| server/src/modules/mastery/resolvers/masteryCatalogue.ts:356 | importMasteryCatalogue | `mastery:manage` | `mastery:settings` |
+| server/src/modules/mastery/resolvers/masteryCatalogue.ts:369 | lockMasteryCatalogue | `mastery:manage` | `mastery:settings` |
+| server/src/modules/mastery/resolvers/masteryCatalogue.ts:381 | saveMasteryOutcome | `mastery:manage` | `mastery:settings` |
+| server/src/modules/mastery/resolvers/masteryCatalogue.ts:407 | retireMasteryOutcome | `mastery:manage` | `mastery:delete` |
+| server/src/modules/mastery/resolvers/masteryCatalogue.ts:415 | saveMasteryQuestionType | `mastery:manage` | `mastery:settings` |
+| server/src/modules/mastery/resolvers/masteryCatalogue.ts:445 | saveMasteryTag | `mastery:manage`; routing tag needs its strand in every scope (svc) | `mastery:settings`; strand rule (stays) |
+| server/src/modules/mastery/resolvers/masteryCatalogue.ts:474 | saveMasteryPolicy | `mastery:manage`; validated on resolved values (svc) | `mastery:settings`; validation (stays) |
+| server/src/modules/mastery/resolvers/masteryCatalogue.ts:494 | setMasteryEnablement | `mastery:manage`; ON needs a locked catalogue (svc) | `mastery:settings`; lock rule (stays) |
+
+### Queries
+| file:line | resolver | today's gate | → new gate |
+|---|---|---|---|
+| server/src/modules/mastery/resolvers/masteryCatalogue.ts:303 | masteryCoverage | `mastery:read`; curriculum reference, not row-scoped | `mastery:view` |
+| server/src/modules/mastery/resolvers/masteryCatalogue.ts:310 | masteryCatalogue | `mastery:read`; not row-scoped | `mastery:view` |
+| server/src/modules/mastery/resolvers/masteryCatalogue.ts:323 | masteryTags | `mastery:read` | `mastery:view` |
+| server/src/modules/mastery/resolvers/masteryCatalogue.ts:330 | masteryPolicy | `mastery:read` | `mastery:view` |
+| server/src/modules/mastery/resolvers/masteryCatalogue.ts:342 | masteryEnablements | `mastery:read` | `mastery:view` |
+
+### App gates
+| file:line | today | → new |
+|---|---|---|
+| app/src/navigation/AppTabs.tsx:1787 | `mastery:read \|\| mastery:manage` | `mastery:view` \|\| `mastery:settings` |
+| app/src/navigation/DrawerContent.tsx:129–132 | msCatalogueHome/msTags/msPolicy `["mastery:read"]`, msImport `["mastery:manage"]` | `mastery:view` / `mastery:settings` |
+| app/src/screens/mastery/*.tsx (Home :24, Catalogue :40, Marks :33, Policy :38, Tags :81) | `can("mastery:manage")` shows write controls | `can("mastery:settings")` (retire on Catalogue → `mastery:delete`) |
+
+Later slices add their rows here: M-2/M-4 entry and builder (`mastery:enter_results`, `mastery:create`, routine class × subject check in the service), M-5 approval (`mastery:approve`), M-6 guardian reads (`guardian:read_child` + assertGuardianOfStudent).
