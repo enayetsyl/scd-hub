@@ -4,7 +4,7 @@
 import + `skills/_tools/mastery_catalogue_to_json.mjs`); M-1..M-6 contracted. Mock canvas (32 screens, C3 Math sample):
 https://claude.ai/artifact/41PHE293FUroM64pWFH6u1 (owner-private; open it before building a screen).
 **Decision block:** D-#775–#785, reserved against `origin/main@b96af3ae` = `origin/dev@569d60ec`
-(2026-10-20, max D-#774; open PRs hold only D-#650/#651/#761).
+(2026-10-20, max D-#774; open PRs hold only D-#650/#651/#761). D-#786 (approvers) amends D-#781.
 **Content:** draft learning-outcome catalogues for Classes 1–3 in `docs/mastery/lo-catalogue/`
 (owner reviews and locks; see that folder's README).
 
@@ -106,8 +106,8 @@ Permissions (append to `PERMISSIONS` + `ROLE_PERMISSIONS`, follow the how-to not
 vocab.ts): `mastery:read` (TEACHER, PRINCIPAL, OFFICE — scoped by the caller's grants),
 `mastery:enter` (TEACHER, PRINCIPAL — enter results / build assignments for sections they teach),
 `mastery:manage` (PRINCIPAL — catalogue, mark table, tags, policy, switch),
-`mastery:approve` (PRINCIPAL by role; a coordinator receives it as a **per-user grant** via
-`AccessControlService` — there is no COORDINATOR role; supervisory scope grants are read-only).
+`mastery:approve` (PRINCIPAL by role; the owner gives it to **selected OFFICE role holders** as a
+**per-user grant** via `AccessControlService` — no new role is created, D-#786).
 Guardians read through `guardian:read_child` + `assertGuardianOfStudent` (like `childTestResults`).
 
 ## §5 — The model (new collections, `server/src/modules/mastery/models/`)
@@ -130,7 +130,8 @@ appends history; every work-sheet item **copies** its marks at creation, so a ch
 past result.
 
 **`MasteryTag`** (D-#778) `{code, labelBn, appliesTo: ITEM|WORK|BOTH, effect: MASTERY_TAG_EFFECTS,
-routeStrand?: string, deductionHint?: string, active, order}`. Seed: ধারণায় ঘাটতি (WEAK), অসাবধানী
+routeStrand?: string, level?: ITEM|WORK, questionTypeCodes?: string[], deductionMarks?: number,
+scopes: [{classToken, subject}] | "ALL", active, order}` (routing rules: §5.2, D-#787). Seed: ধারণায় ঘাটতি (WEAK), অসাবধানী
 ভুল (LIGHT), চেষ্টা করেনি (WEAK), উত্তর-বাক্য নেই (ROUTE_STRAND → SK-ANS), হাতের লেখা অস্পষ্ট
 (ROUTE_STRAND → SK-HW), অনুপস্থিত (NO_EVIDENCE), জমা দেয়নি (NO_EVIDENCE), নকল করেছে
 (VOID_BEHAVIOUR). Re-work is a first-class flag, not a tag (§5.2). Admin adds tags.
@@ -182,7 +183,22 @@ earned, available, rubricStep?, rework, tags[], signal: GOOD|WEAK|LIGHT|NEUTRAL,
 supersededAt?, excludedAt?, excludedBy?, excludeReason?}`.
 - `NO_EVIDENCE`/`VOID_BEHAVIOUR` statuses or tags produce **no** row (VOID writes a behaviour note to
   the class teacher instead).
-- `ROUTE_STRAND` tags add a row against the strand LO (e.g. SK-ANS) carrying the item's chapter.
+- `ROUTE_STRAND` tags (D-#787) — how a mark-deduction tag feeds a cross-chapter skill:
+  - A routing tag carries `routeStrand` (e.g. `SK-ANS`), `level: ITEM|WORK`, `questionTypeCodes[]`
+    (ITEM level: which item types can carry it, e.g. QT-WORD/QT-CREATIVE for "উত্তর-বাক্য নেই"),
+    an optional `deductionMarks` (from the book rule, e.g. ½) and `scopes[]` (class × subject where it
+    is on — e.g. off for C1–C2 Math, whose books forbid answer sentences).
+  - **Weak evidence:** an item (or work) carrying the tag writes a WEAK row against the strand LO, with
+    the item's chapter.
+  - **Good evidence:** every confirmed item of a listed type (ITEM level) — or every confirmed work
+    (WORK level, e.g. "হাতের লেখা অস্পষ্ট") — that does NOT carry the tag writes a GOOD row for the
+    strand. So the strand gets a real state (weak → improving → mastered) without the teacher doing
+    anything beyond the exceptions they already enter.
+  - **No double blame:** the item's own LO is scored as if the routed deduction had not happened
+    (earned + `deductionMarks`, capped at the item's marks). A word problem solved correctly but
+    missing its answer sentence (4½/5) is GOOD for division and WEAK for SK-ANS.
+  - The strand LO must exist in that class × subject's catalogue; a tag routed to a missing strand is
+    refused at tag save.
 - Rework on the same question the student already answered is recorded with `signal: NEUTRAL` for
   mastery (D-#779).
 
@@ -302,8 +318,8 @@ the teacher's **exclude from diagnosis** for their section (reversible, reason r
 | I1/I2 | শিক্ষার্থীর অবস্থা; one LO's evidence trail | Teacher, Principal | M-3 |
 | I3 | শাখার হিট-ম্যাপ + trigger banner | Teacher, Principal | M-3 |
 | I4 | কাজের মান রিপোর্ট + exclude | Teacher, reviewers | M-3 |
-| L1 | পুরো স্কুল dashboard: pending approvals, running actions, class×subject grid, entry backlog | Principal, coordinator | M-5 |
-| L2 | অতিরিক্ত ক্লাসের প্রস্তাব — attendees, teacher, slot finder, re-test date, notify list | Principal / coordinator (`mastery:approve`) | M-5 |
+| L1 | পুরো স্কুল dashboard: pending approvals, running actions, class×subject grid, entry backlog | Principal, office holders with `mastery:approve` | M-5 |
+| L2 | অতিরিক্ত ক্লাসের প্রস্তাব — attendees, teacher, slot finder, re-test date, notify list | Principal / office holder with `mastery:approve` | M-5 |
 | L3 | রি-টেস্টের ফল — before/after, per student, close with outcome | Teacher, approver | M-5 |
 | L4 | পুরো রেকর্ড (timeline: issue · action · result) | Staff | M-5 |
 | G1–G4 | Guardian: সন্তানের অগ্রগতি, বিষয়ের বিস্তারিত (+ home tips), এই সপ্তাহের অ্যাসাইনমেন্ট (+ PDF), স্কুল যা করেছে | Guardian | M-4/M-6 |
@@ -335,8 +351,8 @@ summary. Class teacher: behaviour note (VOID tag), three NOT_SUBMITTED in a row.
 5. **Layout.** A teacher's layout (Part A off, 20 marks, mix 80/20/0, types SOLVE only) is honoured
    for every sheet and remembered when ticked.
 6. **Trigger.** 16/28 WEAK with 3 confirmed papers ⇒ one PROPOSED section action; a second evaluation
-   does not duplicate it; approval by a coordinator holding `mastery:approve` succeeds, by a plain
-   teacher is refused.
+   does not duplicate it; approval by an OFFICE user holding the `mastery:approve` grant succeeds;
+   by an OFFICE user without the grant, or a plain teacher, is refused.
 7. **Extra class → re-test → close.** HELD with attendance ⇒ re-test sheet built on the due date with
    unseen qids per attendee; confirming it updates states; closing records before/after and outcome;
    the timeline shows issue → action → result.
@@ -346,7 +362,11 @@ summary. Class teacher: behaviour note (VOID tag), three NOT_SUBMITTED in a row.
    view appears; existing homework/assignment flows are byte-for-byte unchanged (tracker tests green).
 10. **Guardian.** A guardian sees only their child, plain labels, home tips, the week's assignment and
     PDF, and the actions record; no section ranks, no other children.
-11. **Marks snapshot.** Changing QT-WORD from 5 to 4 leaves existing items at 5; new items get 4.
+11. **Deduction-tag routing.** On a confirmed C3 Math HW with four QT-WORD items, a student whose item 3
+    carries "উত্তর-বাক্য নেই" (4½/5) gets: item 3's own LO scored 5/5 (GOOD); SK-ANS rows = 3 GOOD + 1
+    WEAK. A C2 Math paper cannot carry that tag (scope off). A work tagged "হাতের লেখা অস্পষ্ট" writes
+    one WEAK SK-HW row; an untagged confirmed work writes one GOOD row.
+12. **Marks snapshot.** Changing QT-WORD from 5 to 4 leaves existing items at 5; new items get 4.
 
 ## §11 — Out of scope / later
 - Half-yearly / annual exam marks (exams module) — not connected.
@@ -356,8 +376,10 @@ summary. Class teacher: behaviour note (VOID tag), three NOT_SUBMITTED in a row.
 - Auto-removing bank questions (reviewers decide; report only).
 
 ## §12 — Open (owner)
-1. One LO per question or several (D-#776) — after the first production batch.
-2. Minimum approved questions per LO before an LO goes live — decide from the M-4 gap counts.
+1. One LO per question or several (D-#776) — owner undecided. Meanwhile cross-cutting skills are
+   captured by deduction-tag routing (D-#787) and a question that tests two things can be split into
+   parts (ক/খ), each with its own LO and marks.
+2. ~~Minimum approved questions per LO~~ — settled: **no minimum** (D-#787).
 3. Books still to arrive: Islam (all classes), Arabic, Class 4 Science; Nursery/KG/Class 6 books.
 4. The weekly assignment build day per class (default: the tracker's existing delivery day).
 
@@ -370,7 +392,9 @@ summary. Class teacher: behaviour note (VOID tag), three NOT_SUBMITTED in a row.
 | D-#778 | Exceptions-only entry; rework flag; tags with effects; no-evidence cases; rubric 4-step | §5.2 |
 | D-#779 | State rules (all policy-configurable) | §6.3 |
 | D-#780 | Tailored weekly assignment; teacher-configurable layout; gold-only pick; never a seen qid; teacher/AI questions | §5.4, §6.1 |
-| D-#781 | Section trigger → extra class (principal or coordinator) → re-test → close; action record | §5.5, §6.3 |
+| D-#781 | Section trigger → extra class (principal or approver) → re-test → close; action record | §5.5, §6.3 |
+| D-#786 | Approvers = Principal + selected OFFICE holders by per-user grant; no coordinator role | §4 |
+| D-#787 | No minimum questions per LO; deduction tags route evidence to skill strands (confirmed, built M-0/M-2) | §5.1, §5.2, §12 |
 | D-#782 | Quality report is report-only; teacher can exclude a question for their section | §6.4 |
 | D-#783 | Guardian visibility and wording; never exam marks | §7, §9 |
 | D-#784 | Scope Nursery–C6, all subjects but Quran; rollout order; 2026 opportunistic, 2027 full | §0 |

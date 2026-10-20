@@ -59,6 +59,13 @@ auto-deploys (`.github/workflows`, `scripts/deploy.sh`). So:
   `server/src/pageRef.ts`) and `<Pager>` / `usePagedRows` on the screen. Never return an unbounded
   `.find()`, and never cap silently with `.limit(N)`. Keep old queries working (phones run an older
   bundle until their next cold start). See `docs/pagination.md`.
+- **Every feature registers all its actions in the permission catalogue (D-#799).** A new feature, or a
+  new action in an existing one, adds a `feature:action` entry for **every** thing a person can do in
+  it (view, declare, check, return, approve, publish…), with default roles (TEACHER/OFFICE; the
+  Principal holds all) and BN/EN labels, to `docs/permission-catalogue/` (and to `FEATURE_CATALOGUE` in
+  `/shared/vocab.ts` once PM ships). Every resolver, REST route and app button names its action; never
+  decide capability with a role check (`isAdminStaff`, `role === …`). It then appears in the Access
+  control role editor with no editor change. See `docs/prd-permission-matrix.md` §9.
 
 ## Commands
 > Fill the app/server rows when those packages are scaffolded; the two verifiers below are live now.
@@ -99,6 +106,8 @@ auto-deploys (`.github/workflows`, `scripts/deploy.sh`). So:
   prd-ct-scripts.md   ← Class-test scripts: teacher hand-in → office receive → scan/tag per student → guardian view → return, slices CS-1..3 (D-#715–#719)
   prd-student-progress.md ← Office/Principal progress board (student × subject) + two-part improvement actions ticked daily by teacher/guardian, leave hand-over, 11:00 check, SP-1..4 (D-#734–#738)
   prd-mastery.md      ← learning-outcome mastery tracker (add-on): LO catalogue → exceptions-only per-question entry → diagnosis → teacher-laid-out tailored assignment → 50% trigger extra class + re-test → guardian, M-0..M-6 (D-#775–#785); draft catalogues in docs/mastery/lo-catalogue/
+  prd-permission-matrix.md ← every feature × every action as `feature:action`, editable per role (Teacher/Office) + per person; reach (view_all/edit_all), legacy expansion, the new-feature rule (D-#790–#801)
+  permission-catalogue/    ← THE registry: every feature + action + defaults (README), per-area resolver/route/app-gate checklists, legacy-expansion, findings
   prd-meeting-comments.md ← parents'-meeting comment chain (subject → class teacher → Principal/Office, Strengths + Concerns) + meeting-day brief & print, MC-1..4 (D-#752–#756)
   prd-work-board.md   ← Work board: manual tasks beside auto cards projected from routine/homework/class-test/review/print/leave, load grid, templates; slices WB-1..WB-3 built (D-#701)
   scholarship-eng-paper-structure.md ← OWNER-APPROVED C5 English paper shape: 14 items → 24 topic rows + marks.
