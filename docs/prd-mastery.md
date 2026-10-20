@@ -3,7 +3,7 @@
 **Status:** CONTRACTED 2026-10-20 — nothing built. Mock canvas (32 screens, C3 Math sample):
 https://claude.ai/artifact/41PHE293FUroM64pWFH6u1 (owner-private; open it before building a screen).
 **Decision block:** D-#775–#785, reserved against `origin/main@b96af3ae` = `origin/dev@569d60ec`
-(2026-10-20, max D-#774; open PRs hold only D-#650/#651/#761).
+(2026-10-20, max D-#774; open PRs hold only D-#650/#651/#761). D-#786 (approvers) amends D-#781.
 **Content:** draft learning-outcome catalogues for Classes 1–3 in `docs/mastery/lo-catalogue/`
 (owner reviews and locks; see that folder's README).
 
@@ -105,8 +105,8 @@ Permissions (append to `PERMISSIONS` + `ROLE_PERMISSIONS`, follow the how-to not
 vocab.ts): `mastery:read` (TEACHER, PRINCIPAL, OFFICE — scoped by the caller's grants),
 `mastery:enter` (TEACHER, PRINCIPAL — enter results / build assignments for sections they teach),
 `mastery:manage` (PRINCIPAL — catalogue, mark table, tags, policy, switch),
-`mastery:approve` (PRINCIPAL by role; a coordinator receives it as a **per-user grant** via
-`AccessControlService` — there is no COORDINATOR role; supervisory scope grants are read-only).
+`mastery:approve` (PRINCIPAL by role; the owner gives it to **selected OFFICE role holders** as a
+**per-user grant** via `AccessControlService` — no new role is created, D-#786).
 Guardians read through `guardian:read_child` + `assertGuardianOfStudent` (like `childTestResults`).
 
 ## §5 — The model (new collections, `server/src/modules/mastery/models/`)
@@ -301,8 +301,8 @@ the teacher's **exclude from diagnosis** for their section (reversible, reason r
 | I1/I2 | শিক্ষার্থীর অবস্থা; one LO's evidence trail | Teacher, Principal | M-3 |
 | I3 | শাখার হিট-ম্যাপ + trigger banner | Teacher, Principal | M-3 |
 | I4 | কাজের মান রিপোর্ট + exclude | Teacher, reviewers | M-3 |
-| L1 | পুরো স্কুল dashboard: pending approvals, running actions, class×subject grid, entry backlog | Principal, coordinator | M-5 |
-| L2 | অতিরিক্ত ক্লাসের প্রস্তাব — attendees, teacher, slot finder, re-test date, notify list | Principal / coordinator (`mastery:approve`) | M-5 |
+| L1 | পুরো স্কুল dashboard: pending approvals, running actions, class×subject grid, entry backlog | Principal, office holders with `mastery:approve` | M-5 |
+| L2 | অতিরিক্ত ক্লাসের প্রস্তাব — attendees, teacher, slot finder, re-test date, notify list | Principal / office holder with `mastery:approve` | M-5 |
 | L3 | রি-টেস্টের ফল — before/after, per student, close with outcome | Teacher, approver | M-5 |
 | L4 | পুরো রেকর্ড (timeline: issue · action · result) | Staff | M-5 |
 | G1–G4 | Guardian: সন্তানের অগ্রগতি, বিষয়ের বিস্তারিত (+ home tips), এই সপ্তাহের অ্যাসাইনমেন্ট (+ PDF), স্কুল যা করেছে | Guardian | M-4/M-6 |
@@ -334,8 +334,8 @@ summary. Class teacher: behaviour note (VOID tag), three NOT_SUBMITTED in a row.
 5. **Layout.** A teacher's layout (Part A off, 20 marks, mix 80/20/0, types SOLVE only) is honoured
    for every sheet and remembered when ticked.
 6. **Trigger.** 16/28 WEAK with 3 confirmed papers ⇒ one PROPOSED section action; a second evaluation
-   does not duplicate it; approval by a coordinator holding `mastery:approve` succeeds, by a plain
-   teacher is refused.
+   does not duplicate it; approval by an OFFICE user holding the `mastery:approve` grant succeeds;
+   by an OFFICE user without the grant, or a plain teacher, is refused.
 7. **Extra class → re-test → close.** HELD with attendance ⇒ re-test sheet built on the due date with
    unseen qids per attendee; confirming it updates states; closing records before/after and outcome;
    the timeline shows issue → action → result.
@@ -369,7 +369,8 @@ summary. Class teacher: behaviour note (VOID tag), three NOT_SUBMITTED in a row.
 | D-#778 | Exceptions-only entry; rework flag; tags with effects; no-evidence cases; rubric 4-step | §5.2 |
 | D-#779 | State rules (all policy-configurable) | §6.3 |
 | D-#780 | Tailored weekly assignment; teacher-configurable layout; gold-only pick; never a seen qid; teacher/AI questions | §5.4, §6.1 |
-| D-#781 | Section trigger → extra class (principal or coordinator) → re-test → close; action record | §5.5, §6.3 |
+| D-#781 | Section trigger → extra class (principal or approver) → re-test → close; action record | §5.5, §6.3 |
+| D-#786 | Approvers = Principal + selected OFFICE holders by per-user grant; no coordinator role | §4 |
 | D-#782 | Quality report is report-only; teacher can exclude a question for their section | §6.4 |
 | D-#783 | Guardian visibility and wording; never exam marks | §7, §9 |
 | D-#784 | Scope Nursery–C6, all subjects but Quran; rollout order; 2026 opportunistic, 2027 full | §0 |
