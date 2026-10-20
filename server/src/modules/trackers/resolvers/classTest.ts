@@ -105,6 +105,19 @@ ClassTestRef.implement({
     status: t.exposeString("status"),
     deadlineDays: t.exposeInt("deadlineDays"),
     teacherId: t.string({ nullable: true, resolve: (r) => r.teacherId }),
+    /** The exam's teacher by name — the accountable subject teacher, else whoever
+     *  filed it (rows predating teacherId). Owner ask 2026-10-20: the approver reads
+     *  whose marks they are releasing. A User lookup per row, so only the one-exam
+     *  query selects it; the list queries leave it out. */
+    teacherName: t.string({
+      nullable: true,
+      resolve: async (r) => {
+        const id = r.teacherId ?? r.requestedBy;
+        if (!id) return null;
+        const u = (await User.findById(id).select("name").lean()) as { name?: string } | null;
+        return u?.name ?? null;
+      },
+    }),
     requestedBy: t.exposeString("requestedBy"),
     requestedAt: t.exposeString("requestedAt"),
     printedBy: t.string({ nullable: true, resolve: (r) => r.printedBy }),

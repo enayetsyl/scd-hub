@@ -54,6 +54,8 @@ export interface ClassTestT {
   cancelReason: string | null;
   cancelledByName: string | null;
   notes: string | null;
+  /** The exam's teacher by name — selected by CLASS_TEST_QUERY only (a lookup per row). */
+  teacherName?: string | null;
 }
 
 const CLASS_TEST_FIELDS = `id ctId academicYearId classLevel classId sectionId subjectGroupId groupNameBn subject testNumber examDate totalMarks passMark source setId questionFileId status deadlineDays teacherId requestedBy requestedAt printedBy printedAt cancelledAt cancelReason cancelledByName notes`;
@@ -103,7 +105,7 @@ export const CLASS_TESTS_FOR_SECTION_QUERY = gql<
 `;
 
 export const CLASS_TEST_QUERY = gql<{ classTest: ClassTestT | null }, { id: string }>`
-  query ClassTest($id: String!) { classTest(id: $id) { ${CLASS_TEST_FIELDS} } }
+  query ClassTest($id: String!) { classTest(id: $id) { ${CLASS_TEST_FIELDS} teacherName } }
 `;
 
 
