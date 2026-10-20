@@ -860,7 +860,7 @@ describe("staffMatch (the phone-only User↔StaffProfile join)", () => {
     expect(await resolveStaffProfileForUser(oid().toString())).toBeNull();
   });
 
-  // D-#786 — email is the fallback key (a teacher whose phone carries her guardian login).
+  // D-#788 — email is the fallback key (a teacher whose phone carries her guardian login).
   test("resolveStaffProfileForUser falls back to EMAIL for an email-only login (case-insensitive)", async () => {
     mockUserFindById.mockResolvedValue({ email: "k.tanha1994@gmail.com", role: "TEACHER" });
     const match = { _id: oid(), email: " K.Tanha1994@gmail.com " };

@@ -10,7 +10,7 @@
  * permission) and behind cover fan-out (the absent StaffProfile → its User id → the
  * teaching ScopeGrants that name the classes to cover).
  *
- * D-#786: EMAIL is the fallback key when the phone finds no one. A teacher whose
+ * D-#788: EMAIL is the fallback key when the phone finds no one. A teacher whose
  * mobile already carries her guardian login (one phone, one User — sparse-unique)
  * logs in by email, and phone-only matching left her with no leave, payslip or
  * cover routing (prod 2026-10-20, 20166). Same fail-closed rule as the phone: one
@@ -51,7 +51,7 @@ export async function resolveUserIdForStaff(staffProfileId: string): Promise<str
 }
 
 /** The StaffProfile behind a logged-in User (own-row self-service). Phone first, then
- *  email (D-#786); the live roster is small so the normalized compare is done in app. */
+ *  email (D-#788); the live roster is small so the normalized compare is done in app. */
 export async function resolveStaffProfileForUser(userId: string): Promise<IStaffProfile | null> {
   const user = (await User.findById(userId).select("phone email role").lean()) as {
     phone?: string | null;
