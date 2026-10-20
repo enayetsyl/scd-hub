@@ -15,6 +15,22 @@ description: Use when adding a new feature or changing an existing one in the sc
    per year. Use a `<name>Page` query (`server/src/lib/paging.ts` + `server/src/pageRef.ts`)
    and `<Pager>` on the screen. Never a bare `.find()` with no limit, and never a silent
    `.limit(N)` with no way to reach older rows. See `docs/pagination.md`.
-5. If it touches the import contract or shared vocab/RBAC, run `/skills/contract-sync`.
-6. Run `/skills/verify-before-commit`. Green output is the gate.
-7. Update `STATUS.md`; append a `CHANGELOG.md` line. Commit (one change per commit); tag if a milestone.
+5. **Register every action in the permission catalogue (D-#799).** List each thing a person can do
+   in the feature as `feature:action` (view, create, declare, check, return, approve, publish,
+   export, settings…), with default roles (TEACHER / OFFICE; the Principal holds all), flags
+   (LOCKED / PRINCIPAL-DEFAULT / DESIGNATION / ESCALATION / SELF) and BN/EN labels. Add it to
+   `docs/permission-catalogue/README.md` and the area file's resolver/route/app-gate tables, and to
+   `FEATURE_CATALOGUE` in `/shared/vocab.ts` once PM has shipped. Then:
+   - every new resolver gets `authScopes: { hasPermission: "feature:action" }` (or is a listed SELF /
+     GUARDIAN path with a reason);
+   - every REST route checks its action with `callerHasPermission`;
+   - every app button that triggers a mutation checks `can("feature:action")`;
+   - "who should be told" = `holdersOf("feature:action")`, never a role list;
+   - reach beyond own scope = `feature:view_all` / `feature:edit_all`, never `isAdminStaff` /
+     `role === …`.
+   Reusing another feature's permission ("composes existing perms", D-#94) is no longer allowed: the
+   Principal must be able to switch the new feature's actions on and off by themselves.
+   See `docs/prd-permission-matrix.md` §9.
+6. If it touches the import contract or shared vocab/RBAC, run `/skills/contract-sync`.
+7. Run `/skills/verify-before-commit`. Green output is the gate.
+8. Update `STATUS.md`; append a `CHANGELOG.md` line. Commit (one change per commit); tag if a milestone.
