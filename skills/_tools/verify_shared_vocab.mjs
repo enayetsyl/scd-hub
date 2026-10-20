@@ -827,5 +827,21 @@ check("mastery policy defaults: thresholds ordered and inside 0..100 (D-#779/#78
   V.MASTERY_POLICY_DEFAULTS.assignmentMixWeak + V.MASTERY_POLICY_DEFAULTS.assignmentMixImproving +
     V.MASTERY_POLICY_DEFAULTS.assignmentMixRevision === 100);
 
+// --- Mastery M-1: the bank speaks LO codes (D-#785) — THREE places agree on the pattern ---
+{
+  const PAYLOAD = JSON.parse(fs.readFileSync(new URL("../../server/import/LOCKED_QuestionPayload_Schema_v1.json", import.meta.url), "utf8"));
+  const loSrc = V.MASTERY_LO_CODE_RE.source;
+  const topicPat = new RegExp(PAYLOAD.properties.topic_tag.pattern);
+  check("payload lo_codes item pattern === vocab MASTERY_LO_CODE_RE",
+    PAYLOAD.properties.lo_codes?.items?.pattern === loSrc);
+  check("envelope tags.lo_codes item pattern === vocab MASTERY_LO_CODE_RE",
+    SCHEMA.properties.tags.properties.lo_codes?.items?.pattern === loSrc);
+  check("payload topic_tag accepts BOTH a legacy TOP- code and an LO code (chapter + strand), refuses malformed",
+    topicPat.test("TOP-MATH-C3-05") && topicPat.test("LO-C3-MATH-07-03") && topicPat.test("LO-C1-BAN-SK-HW-01") &&
+    !topicPat.test("LO-C3-MATH-7-3") && !topicPat.test("LO-C3-QURAN-01-01"));
+  check("lo_codes stays OPTIONAL in the payload (a legacy question needs none)",
+    !PAYLOAD.required.includes("lo_codes"));
+}
+
 console.log(`\nRESULT: ${fails === 0 ? "PASS — all checks green" : fails + " FAILED"}`);
 process.exit(fails === 0 ? 0 : 1);

@@ -28,8 +28,18 @@
     },
     "topic_tag": {
       "type": "string",
-      "pattern": "^TOP-(BAN|ENG|MATH|SCI|BGS)-C[1-5]-\\d{2}$",
-      "description": "Numbered topic tag (REF-07 §3.5 scheme). The register join key and the app filter key; MIRROR of envelope tags.topic_tag. Pattern-only — valid numbers come from the per-subject revision chart + REF-19, not a registry in this schema (QDN-02)."
+      "pattern": "^(TOP-(BAN|ENG|MATH|SCI|BGS)-C[1-5]-\\d{2}|LO-(NUR|KG|C[1-6])-(BAN|ENG|MATH|SCI|BGS|ARABIC|ISLAM)-(\\d{2}|SK-[A-Z]{2,8})-\\d{2})$",
+      "description": "Numbered topic tag (REF-07 §3.5 scheme) OR a mastery learning-outcome code (D-#785, docs/prd-mastery.md §6.2): LO-<class>-<subject>-<CC>-<NN> or LO-<class>-<subject>-SK-<STRAND>-<NN>. The register join key and the app filter key; MIRROR of envelope tags.topic_tag. Pattern-only — TOP- numbers come from the per-subject revision chart + REF-19; LO codes from the locked mastery catalogue, checked by the app at import (a warning, never a refusal)."
+    },
+    "lo_codes": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^LO-(NUR|KG|C[1-6])-(BAN|ENG|MATH|SCI|BGS|ARABIC|ISLAM)-(\\d{2}|SK-[A-Z]{2,8})-\\d{2}$"
+      },
+      "description": "OPTIONAL (D-#785): every learning outcome this question assesses, primary first. When present, topic_tag MUST equal lo_codes[0] and every code must carry the envelope's class and subject (harness L4). Absent ⇒ the question assesses [topic_tag] when that is an LO code. MIRROR of envelope tags.lo_codes. Whether more than one may be scored is an open owner decision; the field holds a list so that decision needs no migration."
     },
     "ref19_topic_id": {
       "type": "string",

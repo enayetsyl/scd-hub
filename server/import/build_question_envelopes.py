@@ -263,7 +263,7 @@ def main():
         address = {"anchor_word": "Unit", "number": unit, "title": args.unit_title or f"Unit {unit}"}
         # Tags MIRROR the payload (validate_import.py L3 reconciles these for questions).
         tags = {}
-        for k in ("topic_tag", "bloom_level", "difficulty", "paper_role"):
+        for k in ("topic_tag", "bloom_level", "difficulty", "paper_role", "lo_codes"):
             if q.get(k) is not None:
                 tags[k] = q[k]
         env = {
