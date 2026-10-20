@@ -129,7 +129,8 @@ appends history; every work-sheet item **copies** its marks at creation, so a ch
 past result.
 
 **`MasteryTag`** (D-#778) `{code, labelBn, appliesTo: ITEM|WORK|BOTH, effect: MASTERY_TAG_EFFECTS,
-routeStrand?: string, deductionHint?: string, active, order}`. Seed: ধারণায় ঘাটতি (WEAK), অসাবধানী
+routeStrand?: string, level?: ITEM|WORK, questionTypeCodes?: string[], deductionMarks?: number,
+scopes: [{classToken, subject}] | "ALL", active, order}` (routing rules: §5.2, D-#787). Seed: ধারণায় ঘাটতি (WEAK), অসাবধানী
 ভুল (LIGHT), চেষ্টা করেনি (WEAK), উত্তর-বাক্য নেই (ROUTE_STRAND → SK-ANS), হাতের লেখা অস্পষ্ট
 (ROUTE_STRAND → SK-HW), অনুপস্থিত (NO_EVIDENCE), জমা দেয়নি (NO_EVIDENCE), নকল করেছে
 (VOID_BEHAVIOUR). Re-work is a first-class flag, not a tag (§5.2). Admin adds tags.
@@ -181,7 +182,22 @@ earned, available, rubricStep?, rework, tags[], signal: GOOD|WEAK|LIGHT|NEUTRAL,
 supersededAt?, excludedAt?, excludedBy?, excludeReason?}`.
 - `NO_EVIDENCE`/`VOID_BEHAVIOUR` statuses or tags produce **no** row (VOID writes a behaviour note to
   the class teacher instead).
-- `ROUTE_STRAND` tags add a row against the strand LO (e.g. SK-ANS) carrying the item's chapter.
+- `ROUTE_STRAND` tags (D-#787) — how a mark-deduction tag feeds a cross-chapter skill:
+  - A routing tag carries `routeStrand` (e.g. `SK-ANS`), `level: ITEM|WORK`, `questionTypeCodes[]`
+    (ITEM level: which item types can carry it, e.g. QT-WORD/QT-CREATIVE for "উত্তর-বাক্য নেই"),
+    an optional `deductionMarks` (from the book rule, e.g. ½) and `scopes[]` (class × subject where it
+    is on — e.g. off for C1–C2 Math, whose books forbid answer sentences).
+  - **Weak evidence:** an item (or work) carrying the tag writes a WEAK row against the strand LO, with
+    the item's chapter.
+  - **Good evidence:** every confirmed item of a listed type (ITEM level) — or every confirmed work
+    (WORK level, e.g. "হাতের লেখা অস্পষ্ট") — that does NOT carry the tag writes a GOOD row for the
+    strand. So the strand gets a real state (weak → improving → mastered) without the teacher doing
+    anything beyond the exceptions they already enter.
+  - **No double blame:** the item's own LO is scored as if the routed deduction had not happened
+    (earned + `deductionMarks`, capped at the item's marks). A word problem solved correctly but
+    missing its answer sentence (4½/5) is GOOD for division and WEAK for SK-ANS.
+  - The strand LO must exist in that class × subject's catalogue; a tag routed to a missing strand is
+    refused at tag save.
 - Rework on the same question the student already answered is recorded with `signal: NEUTRAL` for
   mastery (D-#779).
 
@@ -345,6 +361,10 @@ summary. Class teacher: behaviour note (VOID tag), three NOT_SUBMITTED in a row.
    view appears; existing homework/assignment flows are byte-for-byte unchanged (tracker tests green).
 10. **Guardian.** A guardian sees only their child, plain labels, home tips, the week's assignment and
     PDF, and the actions record; no section ranks, no other children.
+12. **Deduction-tag routing.** On a confirmed C3 Math HW with four QT-WORD items, a student whose item 3
+    carries "উত্তর-বাক্য নেই" (4½/5) gets: item 3's own LO scored 5/5 (GOOD); SK-ANS rows = 3 GOOD + 1
+    WEAK. A C2 Math paper cannot carry that tag (scope off). A work tagged "হাতের লেখা অস্পষ্ট" writes
+    one WEAK SK-HW row; an untagged confirmed work writes one GOOD row.
 11. **Marks snapshot.** Changing QT-WORD from 5 to 4 leaves existing items at 5; new items get 4.
 
 ## §11 — Out of scope / later
@@ -355,8 +375,10 @@ summary. Class teacher: behaviour note (VOID tag), three NOT_SUBMITTED in a row.
 - Auto-removing bank questions (reviewers decide; report only).
 
 ## §12 — Open (owner)
-1. One LO per question or several (D-#776) — after the first production batch.
-2. Minimum approved questions per LO before an LO goes live — decide from the M-4 gap counts.
+1. One LO per question or several (D-#776) — owner undecided. Meanwhile cross-cutting skills are
+   captured by deduction-tag routing (D-#787) and a question that tests two things can be split into
+   parts (ক/খ), each with its own LO and marks.
+2. ~~Minimum approved questions per LO~~ — settled: **no minimum** (D-#787).
 3. Books still to arrive: Islam (all classes), Arabic, Class 4 Science; Nursery/KG/Class 6 books.
 4. The weekly assignment build day per class (default: the tracker's existing delivery day).
 
@@ -371,6 +393,7 @@ summary. Class teacher: behaviour note (VOID tag), three NOT_SUBMITTED in a row.
 | D-#780 | Tailored weekly assignment; teacher-configurable layout; gold-only pick; never a seen qid; teacher/AI questions | §5.4, §6.1 |
 | D-#781 | Section trigger → extra class (principal or approver) → re-test → close; action record | §5.5, §6.3 |
 | D-#786 | Approvers = Principal + selected OFFICE holders by per-user grant; no coordinator role | §4 |
+| D-#787 | No minimum questions per LO; deduction tags route evidence to skill strands (confirmed, built M-0/M-2) | §5.1, §5.2, §12 |
 | D-#782 | Quality report is report-only; teacher can exclude a question for their section | §6.4 |
 | D-#783 | Guardian visibility and wording; never exam marks | §7, §9 |
 | D-#784 | Scope Nursery–C6, all subjects but Quran; rollout order; 2026 opportunistic, 2027 full | §0 |
