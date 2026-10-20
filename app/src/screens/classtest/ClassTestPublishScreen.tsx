@@ -141,6 +141,8 @@ export default function ClassTestPublishScreen({ route }: Props): React.ReactEle
               {bnNum(test.totalMarks)} · {STR.ctPassMark} {bnNum(test.passMark)}
             </Muted>
           ) : null}
+          {/* Whose marks the approver is releasing (owner ask 2026-10-20). */}
+          {test?.teacherName ? <Muted>{STR.ctSubjectTeacher}: {test.teacherName}</Muted> : null}
 
           {showTeacherLeg ? (
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: space(2) }}>

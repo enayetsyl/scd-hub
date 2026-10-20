@@ -97,6 +97,7 @@ auto-deploys (`.github/workflows`, `scripts/deploy.sh`). So:
   prd-worksheets.md   ← Nursery/KG worksheet generator: engine, plan, book picture bank, print + answer key (D-#744–#747)
   prd-ct-scripts.md   ← Class-test scripts: teacher hand-in → office receive → scan/tag per student → guardian view → return, slices CS-1..3 (D-#715–#719)
   prd-student-progress.md ← Office/Principal progress board (student × subject) + two-part improvement actions ticked daily by teacher/guardian, leave hand-over, 11:00 check, SP-1..4 (D-#734–#738)
+  prd-mastery.md      ← learning-outcome mastery tracker (add-on): LO catalogue → exceptions-only per-question entry → diagnosis → teacher-laid-out tailored assignment → 50% trigger extra class + re-test → guardian, M-0..M-6 (D-#775–#785); draft catalogues in docs/mastery/lo-catalogue/
   prd-meeting-comments.md ← parents'-meeting comment chain (subject → class teacher → Principal/Office, Strengths + Concerns) + meeting-day brief & print, MC-1..4 (D-#752–#756)
   prd-work-board.md   ← Work board: manual tasks beside auto cards projected from routine/homework/class-test/review/print/leave, load grid, templates; slices WB-1..WB-3 built (D-#701)
   scholarship-eng-paper-structure.md ← OWNER-APPROVED C5 English paper shape: 14 items → 24 topic rows + marks.
