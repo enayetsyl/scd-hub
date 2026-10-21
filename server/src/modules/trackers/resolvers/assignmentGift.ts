@@ -1,32 +1,27 @@
 /**
  * Assignment gift & streak resolvers (AG-3, D-#479–#483).
  *
- * RBAC (D-#483, widened by D-#667). Every field takes `tracker:read` OR
- * `gift:manage`, because the two callers arrive by different routes:
- *   - a TEACHER holds `tracker:read` and is section-scoped in the resolver body;
- *   - the OFFICE desk — the people who physically hand the gifts out — holds
- *     `gift:manage` and NO tracker permission at all. That is deliberate: D-#554
- *     ("the Office nudges and can never resolve a claim") is asserted by the vocab
- *     verifier, so widening `tracker:read` to the Office was never an option and a
- *     narrow permission was minted instead. Do NOT collapse these gates back to a
- *     single `hasPermission` — either one alone locks out one of the two callers
- *     (`giftRbac.test.ts` fails if you do).
- *   - READ (`assignmentGiftReport`): Principal/Office are unscoped staff and see
- *     every class; any other caller must name a section and pass `assertCanRead`
- *     on it — the established staff-read pattern.
- *   - TICK (`recordGiftHandover` / `undoGiftHandover`): Principal/Office
- *     (`isAdminStaff`) OR the section's assigned class teacher — the D-#42/#45
- *     daily-coordinator gate. `assertCanWrite` is deliberately NOT used: it
- *     throws for OFFICE (authz.ts), and the office is exactly who hands out the
- *     gifts.
+ * RBAC (PM, D-#790..#801; was D-#483/#667's `tracker:read` OR `gift:manage`). The
+ * report takes `assignment_gift:view`, the two ticks `assignment_gift:issue` — Teacher
+ * and Office both hold each by default, so the two callers below keep arriving:
+ *   - a TEACHER is section-scoped in the resolver body;
+ *   - the OFFICE desk — the people who physically hand the gifts out — holds the
+ *     gift actions and NO homework/assignment action (D-#554 stands).
+ *   - READ (`assignmentGiftReport`): a holder of `assignment_gift:view_all`
+ *     (Principal/Office by default — was `isAdminStaff`) sees every class; any other
+ *     caller must name a section and pass `assertCanRead` on it.
+ *   - TICK (`recordGiftHandover` / `undoGiftHandover`): the section's assigned class
+ *     teacher (the D-#42/#45 daily-coordinator designation), waived by
+ *     `assignment_gift:view_all` (was `isAdminStaff`). `assertCanWrite` is
+ *     deliberately NOT used: the office is exactly who hands out the gifts.
  *
  * Entitlement is re-derived inside the service on every tick, so the mutation
  * cannot mint a gift for a student the rule does not currently name a winner.
  */
 import { builder } from "../../../schema";
 import type { AppContext } from "../../../context";
-import { ForbiddenError, assertCanRead } from "../../../middleware/authz";
-import { isAdminStaff } from "../../foundation/services/RoleScope";
+import { ForbiddenError, assertCanRead, type Reach } from "../../../middleware/authz";
+import { callerHasPermission } from "@scd/shared";
 import { Section } from "../../foundation/models/Section";
 import { Student } from "../../foundation/models/Student";
 import { GIFT_AWARD_KINDS, type GiftAwardKind } from "../models/AssignmentGiftAward";
@@ -46,7 +41,11 @@ function isGiftAwardKind(s: string): s is GiftAwardKind {
   return (GIFT_AWARD_KINDS as readonly string[]).includes(s);
 }
 
-/** Read gate: admin staff unscoped; everyone else must name a section they can read. */
+/** PM reach: `assignment_gift:view_all` replaces the isAdminStaff bypass (reads + the
+ *  class-teacher designation on a tick). */
+const GIFT_READ: Reach = { viewAll: "assignment_gift:view_all" };
+
+/** Read gate: a view_all holder is unscoped; everyone else must name a section they can read. */
 async function assertCanReadGiftReport(
   ctx: AppContext,
   sectionId: string | null,
@@ -54,24 +53,25 @@ async function assertCanReadGiftReport(
 ): Promise<void> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
   if (ctx.auth.role === "GUARDIAN") throw new ForbiddenError();
-  if (isAdminStaff(ctx.auth)) return;
+  if (callerHasPermission(ctx.auth, "assignment_gift:view_all")) return;
   if (!sectionId) {
     throw new ForbiddenError("শাখা নির্বাচন করুন — পুরো স্কুলের উপহার রিপোর্ট শুধু অধ্যক্ষ/অফিসের জন্য");
   }
   const section = await Section.findById(sectionId).select("classId").lean();
   if (!section) throw new ForbiddenError("শাখা পাওয়া যায়নি");
-  await assertCanRead(ctx, sectionId, classId ?? section.classId.toString());
+  await assertCanRead(ctx, sectionId, classId ?? section.classId.toString(), undefined, GIFT_READ);
 }
 
 /**
- * Tick gate: admin staff, or the section's assigned class teacher. The section is
+ * Tick gate: the section's assigned class teacher, or a holder of
+ * `assignment_gift:view_all` (the designation waiver; Principal/Office by default). The section is
  * read off the STUDENT server-side — never taken from the caller — so scope cannot
  * be asserted on one section while ticking a student in another.
  */
 async function assertCanHandOverGift(ctx: AppContext, studentId: string): Promise<void> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
   if (ctx.auth.role === "GUARDIAN") throw new ForbiddenError();
-  if (isAdminStaff(ctx.auth)) return;
+  if (callerHasPermission(ctx.auth, "assignment_gift:view_all")) return;
   const student = await Student.findById(studentId).select("sectionId").lean();
   if (!student) throw new ForbiddenError("শিক্ষার্থী পাওয়া যায়নি");
   const section = await Section.findById(student.sectionId).select("classTeacherId").lean();
@@ -207,7 +207,7 @@ builder.queryField("assignmentGiftReport", (t) =>
       "Who submitted every Thursday-given assignment by its Sunday (weekly gift) and who has a " +
       "4-week run (higher gift). Principal/Office see every class; a teacher must name a section " +
       "they can read.",
-    authScopes: { hasAnyPermission: ["tracker:read", "gift:manage"] },
+    authScopes: { hasPermission: "assignment_gift:view" },
     args: {
       academicYearId: t.arg.string({ required: true }),
       weekFrom: t.arg.int({ required: false }),
@@ -238,7 +238,7 @@ builder.mutationField("recordGiftHandover", (t) =>
     description:
       "Record that the gift was physically given. Entitlement is RE-DERIVED here and the call is " +
       "refused if the student is not currently a winner for that week (D-#479). Idempotent.",
-    authScopes: { hasAnyPermission: ["tracker:read", "gift:manage"] },
+    authScopes: { hasPermission: "assignment_gift:issue" },
     args: {
       academicYearId: t.arg.string({ required: true }),
       studentId: t.arg.string({ required: true }),
@@ -265,7 +265,7 @@ builder.mutationField("recordGiftHandover", (t) =>
 builder.mutationField("undoGiftHandover", (t) =>
   t.boolean({
     description: "Undo a mis-tick. True when a handover row was actually removed.",
-    authScopes: { hasAnyPermission: ["tracker:read", "gift:manage"] },
+    authScopes: { hasPermission: "assignment_gift:issue" },
     args: {
       academicYearId: t.arg.string({ required: true }),
       studentId: t.arg.string({ required: true }),

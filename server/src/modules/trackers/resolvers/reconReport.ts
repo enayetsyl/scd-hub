@@ -4,14 +4,15 @@
  * misses per (section, week) — each tracker's natural confirm cadence. Rows name
  * the accountable confirmer (homework delegate ?? class teacher).
  *
- * Gate: Principal/Office by ROLE (the assertFollowUpAdmin precedent, D-#88) —
+ * Gate: any-of `homework:view_reports` / `assignment:view_reports` (PM; Principal/Office by
+ * default, the assertFollowUpAdmin precedent, D-#88) —
  * this is school-wide oversight, not a section-scoped teaching read, and OFFICE
  * holds no tracker:read.
  */
 import { builder } from "../../../schema";
 import type { AppContext } from "../../../context";
 import { ForbiddenError } from "../../../middleware/authz";
-import { actsAsRole } from "@scd/shared";
+import { callerHasPermission } from "@scd/shared";
 import {
   reconciliationReport,
   type ReconReport,
@@ -26,10 +27,12 @@ import {
 
 function assertReconReportAdmin(ctx: AppContext): void {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  // D-#467: TEMPLATE-aware, not primary-role. An OFFICE template the Principal added to
-  // a teacher already carries every OFFICE permission via effectivePermissions; this gate
-  // was the one place that ignored it, so the office desk 403d on its own oversight reads.
-  if (!actsAsRole(ctx.auth, "PRINCIPAL") && !actsAsRole(ctx.auth, "OFFICE")) {
+  // PM (D-#790..#801): either tracker's oversight-report action (Office + Principal by
+  // default — the old template-aware P/O check, D-#467). One payload covers both trackers.
+  if (
+    !callerHasPermission(ctx.auth, "homework:view_reports") &&
+    !callerHasPermission(ctx.auth, "assignment:view_reports")
+  ) {
     throw new ForbiddenError("রিকনসিলিয়েশন রিপোর্ট শুধুমাত্র অধ্যক্ষ/অফিসের জন্য");
   }
 }
@@ -160,7 +163,7 @@ builder.queryField("reconciliationReport", (t) =>
   t.field({
     type: ReconReportRef,
     description: "Per-day homework + per-week assignment reconciliation misses (Principal/Office).",
-    authScopes: { authenticated: true },
+    authScopes: { hasAnyPermission: ["homework:view_reports", "assignment:view_reports"] },
     args: {
       from: t.arg.string({ required: true }),
       to: t.arg.string({ required: true }),

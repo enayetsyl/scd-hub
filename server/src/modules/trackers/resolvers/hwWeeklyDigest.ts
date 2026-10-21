@@ -5,14 +5,14 @@
  * message the guardians got (one text truth) as a manual wa.me line for the
  * ~129 contact-only families (ADR-003 — never auto-dispatched).
  *
- * Gate: Principal/Office by ROLE (the D-#290/#350 oversight precedent) — the
+ * Gate: `homework:remind` (PM; Principal/Office by default, the D-#290/#350 precedent) — the
  * payload names every student school-wide with a guardian phone; `tracker:read`
  * would hand that to any teacher.
  */
 import { builder } from "../../../schema";
 import type { AppContext } from "../../../context";
 import { ForbiddenError } from "../../../middleware/authz";
-import { actsAsRole } from "@scd/shared";
+import { callerHasPermission } from "@scd/shared";
 import { isValidDateKey } from "../../attendance/dates";
 import {
   homeworkWeeklyDigestData,
@@ -27,10 +27,9 @@ import {
 
 function assertWeeklyReportAdmin(ctx: AppContext): void {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  // D-#467: TEMPLATE-aware, not primary-role. An OFFICE template the Principal added to
-  // a teacher already carries every OFFICE permission via effectivePermissions; this gate
-  // was the one place that ignored it, so the office desk 403d on its own oversight reads.
-  if (!actsAsRole(ctx.auth, "PRINCIPAL") && !actsAsRole(ctx.auth, "OFFICE")) {
+  // PM (D-#790..#801): the `homework:remind` action (Office + Principal by default — the
+  // old template-aware P/O check, D-#467).
+  if (!callerHasPermission(ctx.auth, "homework:remind")) {
     throw new ForbiddenError("সাপ্তাহিক রিপোর্ট শুধুমাত্র অধ্যক্ষ/অফিসের জন্য");
   }
 }
@@ -122,9 +121,9 @@ builder.queryField("homeworkWeeklyUnsubmitted", (t) =>
       "Per-student weekly unsubmitted homework + digest-day heads-up, with the guardian-identical " +
       "rendered message and a manual wa.me line per student (D-#453). weekStart omitted = current week; " +
       "any dateKey is snapped to its week's Sunday. Principal/Office by role.",
-    // Role gate in the resolver (the D-#350 oversight pattern) — OFFICE holds no
-    // tracker:read, so a permission gate here would lock the report's operator out.
-    authScopes: { authenticated: true },
+    // PM: its own action (`homework:remind`, Office + Principal by default) — not
+    // `homework:view`, which would hand every guardian phone to any teacher.
+    authScopes: { hasPermission: "homework:remind" },
     args: {
       weekStart: t.arg.string({ required: false }),
       sectionId: t.arg.string({ required: false }),
