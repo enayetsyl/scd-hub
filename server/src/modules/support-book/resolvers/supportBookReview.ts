@@ -3,9 +3,9 @@
  *
  * Gate boundary, same rules as the other two resolver files. The permission split
  * follows who actually does the work:
- *   book:manage         — assign a round (Principal/Office coordinate)
- *   book:review         — submit a verdict, raise an escalation, reply
- *   book:review_senior  — resolve an escalation, record the content sign-off
+ *   book_production:assign   — assign a round
+ *   book_production:review         — submit a verdict, raise an escalation, reply
+ *   book_production:approve  — resolve an escalation, record the content sign-off
  *
  * `isSenior` on a reply is DERIVED from the caller's grants rather than passed in:
  * whether a message answers as the senior reviewer is a fact about who is speaking,
@@ -125,8 +125,8 @@ const toEscalation = (e: Record<string, unknown>): EscalationShape => ({
 builder.queryField("supportBookReviewRounds", (t) =>
   t.field({
     type: [RoundRef],
-    description: "Review rounds for a book, or one পাঠ. Requires book:read.",
-    authScopes: { hasPermission: "book:read" },
+    description: "Review rounds for a book, or one পাঠ. Requires book_production:view.",
+    authScopes: { hasPermission: "book_production:view" },
     args: { bookId: t.arg.string({ required: true }), lessonNo: t.arg.int({ required: false }) },
     resolve: async (_root, args) => {
       assertBookPlane();
@@ -149,8 +149,8 @@ builder.queryField("supportBookEscalations", (t) =>
     type: [EscalationRef],
     description:
       "The senior reviewer's inbox — unresolved threads OLDEST FIRST, because the one " +
-      "waiting longest is the one blocking a lesson. Requires book:read.",
-    authScopes: { hasPermission: "book:read" },
+      "waiting longest is the one blocking a lesson. Requires book_production:view.",
+    authScopes: { hasPermission: "book_production:view" },
     args: {
       bookId: t.arg.string({ required: false }),
       lessonNo: t.arg.int({ required: false }),
@@ -176,8 +176,8 @@ builder.queryField("supportBookEscalationsPage", (t) =>
     type: EscalationPageRef,
     description:
       "The senior reviewer's inbox, OLDEST FIRST, one page at a time (D-#761). Same filters as " +
-      "`supportBookEscalations`. Requires book:read.",
-    authScopes: { hasPermission: "book:read" },
+      "`supportBookEscalations`. Requires book_production:view.",
+    authScopes: { hasPermission: "book_production:view" },
     args: {
       bookId: t.arg.string({ required: false }),
       lessonNo: t.arg.int({ required: false }),
@@ -202,8 +202,8 @@ builder.mutationField("assignSupportBookReview", (t) =>
     type: RoundRef,
     description:
       "Open a review round on a পাঠ. One at a time. Self-review is refused except for " +
-      "a PRINCIPAL, whose round is stamped (D-#424). Requires book:manage.",
-    authScopes: { hasPermission: "book:manage" },
+      "a PRINCIPAL, whose round is stamped (D-#424). Requires book_production:assign.",
+    authScopes: { hasPermission: "book_production:assign" },
     args: {
       bookId: t.arg.string({ required: true }),
       lessonNo: t.arg.int({ required: true }),
@@ -240,8 +240,8 @@ builder.mutationField("submitSupportBookReview", (t) =>
     type: RoundRef,
     description:
       "Submit a verdict + the README §7 checklist. `checklistPassed` goes true only on " +
-      "APPROVE with EVERY item ticked. Requires book:review.",
-    authScopes: { hasPermission: "book:review" },
+      "APPROVE with EVERY item ticked. Requires book_production:review.",
+    authScopes: { hasPermission: "book_production:review" },
     args: {
       bookId: t.arg.string({ required: true }),
       lessonNo: t.arg.int({ required: true }),
@@ -284,8 +284,8 @@ builder.mutationField("submitSupportBookReview", (t) =>
 builder.mutationField("raiseSupportBookEscalation", (t) =>
   t.field({
     type: EscalationRef,
-    description: "Escalate ONE ITEM to the senior reviewer. Requires book:review.",
-    authScopes: { hasPermission: "book:review" },
+    description: "Escalate ONE ITEM to the senior reviewer. Requires book_production:review.",
+    authScopes: { hasPermission: "book_production:review" },
     args: {
       bookId: t.arg.string({ required: true }),
       lessonNo: t.arg.int({ required: true }),
@@ -319,8 +319,8 @@ builder.mutationField("replySupportBookEscalation", (t) =>
     type: EscalationRef,
     description:
       "Append a message. A SENIOR's reply marks the thread ANSWERED; anyone else's " +
-      "re-OPENS it. Requires book:review.",
-    authScopes: { hasPermission: "book:review" },
+      "re-OPENS it. Requires book_production:review.",
+    authScopes: { hasPermission: "book_production:review" },
     args: {
       escalationId: t.arg.string({ required: true }),
       body: t.arg.string({ required: true }),
@@ -336,7 +336,7 @@ builder.mutationField("replySupportBookEscalation", (t) =>
         attachments: (args.attachments ?? []).map((a) => new Types.ObjectId(a)),
         // DERIVED, never client-supplied: a reviewer must not be able to mark their
         // own escalation as answered by setting a flag.
-        isSenior: !!ctx.auth && callerHasPermission(ctx.auth, "book:review_senior"),
+        isSenior: !!ctx.auth && callerHasPermission(ctx.auth, "book_production:approve"),
       });
       return toEscalation(e as unknown as Record<string, unknown>);
     },
@@ -348,8 +348,8 @@ builder.mutationField("resolveSupportBookEscalation", (t) =>
     type: EscalationRef,
     description:
       "Close a thread with the senior's ruling. Changes NO lesson field — the author " +
-      "then submits a patch citing it (D-#410). Requires book:review_senior.",
-    authScopes: { hasPermission: "book:review_senior" },
+      "then submits a patch citing it (D-#410). Requires book_production:approve.",
+    authScopes: { hasPermission: "book_production:approve" },
     args: {
       escalationId: t.arg.string({ required: true }),
       resolution: t.arg.string({ required: true }),
@@ -377,8 +377,8 @@ builder.mutationField("signOffSupportBookLesson", (t) =>
     type: "Boolean",
     description:
       "Record the content sign-off (README §7). Refuses while any escalation is " +
-      "unresolved or the checklist is incomplete. Requires book:review_senior.",
-    authScopes: { hasPermission: "book:review_senior" },
+      "unresolved or the checklist is incomplete. Requires book_production:approve.",
+    authScopes: { hasPermission: "book_production:approve" },
     args: { bookId: t.arg.string({ required: true }), lessonNo: t.arg.int({ required: true }) },
     resolve: async (_root, args, ctx) => {
       assertBookPlane();

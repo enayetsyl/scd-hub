@@ -113,8 +113,8 @@ builder.queryField("supportBookItemRationale", (t) =>
     type: [EntryRef],
     description:
       "Why ONE ITEM reads the way it does — a block or an image slot, oldest first so " +
-      "the story reads forwards. Requires book:read.",
-    authScopes: { hasPermission: "book:read" },
+      "the story reads forwards. Requires book_production:view.",
+    authScopes: { hasPermission: "book_production:view" },
     args: {
       bookId: t.arg.string({ required: true }),
       target: t.arg.string({ required: true }),
@@ -143,8 +143,8 @@ builder.queryField("supportBookRationale", (t) =>
     type: [EntryRef],
     description:
       "The editorial record for a book or one পাঠ, with actors resolved — the same " +
-      "rows as supportBookTimeline but readable. Requires book:read.",
-    authScopes: { hasPermission: "book:read" },
+      "rows as supportBookTimeline but readable. Requires book_production:view.",
+    authScopes: { hasPermission: "book_production:view" },
     args: {
       bookId: t.arg.string({ required: true }),
       lessonNo: t.arg.int({ required: false }),
@@ -167,8 +167,8 @@ builder.queryField("supportBookPolicyAt", (t) =>
     description:
       "The policy set behind a `policySetHash` — the document versions AND their text, " +
       "as they were (D-#403). Null when the hash predates the snapshot memo. " +
-      "Requires book:read.",
-    authScopes: { hasPermission: "book:read" },
+      "Requires book_production:view.",
+    authScopes: { hasPermission: "book_production:view" },
     args: { bookId: t.arg.string({ required: true }), hash: t.arg.string({ required: true }) },
     resolve: async (_root, args) => {
       assertBookPlane();
