@@ -56,7 +56,7 @@ export default function PlanViewScreen({ route, navigation }: Props): React.Reac
   const { role, can } = useAuth();
   const canAssign = can("plan_review:assign");
   const canApprove = can("plan_review:approve");
-  const canRequestPrint = can("tracker:write");
+  const canRequestPrint = can("printing:create");
   const [, assignReview] = useMutation(ASSIGN_PLAN_REVIEW);
   const [, approvePlan] = useMutation(APPROVE_PLAN);
   const [{ data: teacherData }] = useQuery({ query: TEACHERS_QUERY, pause: !canAssign });

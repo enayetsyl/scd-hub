@@ -325,7 +325,7 @@ export async function myDayFor(ctx: AppContext, dateStr: string): Promise<MyDayR
   //    (a guardian login contributes nothing) and, like every other card here,
   //    degrades to an empty list rather than sinking the dashboard.
   let assignmentHandout: HandoutSection[] = [];
-  if (callerHasPermission(auth, "tracker:read")) {
+  if (callerHasPermission(auth, "assignment:view")) {
     try {
       assignmentHandout = await myHandoutSections(auth.userId, d);
     } catch (err) {

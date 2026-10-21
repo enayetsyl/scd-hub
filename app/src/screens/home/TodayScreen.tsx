@@ -154,7 +154,7 @@ export default function TodayScreen(): React.ReactElement {
   const canClassNotes = can("class_note:create");
   const canQuestions = can("question_bank:view");
   const canSets = can("question_sets:view");
-  const canTrackers = can("tracker:read");
+  const canTrackers = can("set_tracker:view");
   const canHr = !!role && role !== "GUARDIAN";
   // AG-3 — whoever ticks a gift handover (`assignment_gift:issue`; the card lists the
   // whole school only for `assignment_gift:view_all`, Principal + Office, D-#667).

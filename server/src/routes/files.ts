@@ -742,7 +742,7 @@ filesRouter.post("/print", parseClassNoteUpload, async (req: Request, res: Respo
 
 filesRouter.post("/english-drive", parseClassNoteUpload, async (req: Request, res: Response) => {
   const ctx = buildContext(req, res);
-  if (!ctx.auth || !callerHasPermission(ctx.auth, "roster:manage")) {
+  if (!ctx.auth || !callerHasPermission(ctx.auth, "english_drive:upload")) {
     res.status(403).json({ error: FILE_ERRORS_BN.forbidden });
     return;
   }
@@ -831,7 +831,7 @@ filesRouter.post("/english-drive", parseClassNoteUpload, async (req: Request, re
 
 filesRouter.post("/teaching-note", parseClassNoteUpload, async (req: Request, res: Response) => {
   const ctx = buildContext(req, res);
-  if (!ctx.auth || !callerHasPermission(ctx.auth, "roster:manage")) {
+  if (!ctx.auth || !callerHasPermission(ctx.auth, "teaching_notes:upload")) {
     res.status(403).json({ error: FILE_ERRORS_BN.forbidden });
     return;
   }

@@ -94,7 +94,7 @@ export async function assertReportRead(
   const role = ctx.auth.role as Role;
   const gate = opts?.gate;
   if (gate ? holdsViewAll(ctx, gate) : isAdminStaff(ctx.auth)) return;
-  if (role === "GUARDIAN" || !callerHasPermission(ctx.auth, gate ? gate.view : "tracker:read")) {
+  if (role === "GUARDIAN" || !callerHasPermission(ctx.auth, gate ? gate.view : "class_test:view")) {
     throw new ForbiddenError();
   }
   // Self-scope: a teacher's own reports need no section — requestedBy IS the scope.

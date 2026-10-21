@@ -60,7 +60,7 @@ export function useAccessibleClasses(opts?: {
   const { role, user, can } = useAuth();
   const { selection } = useSectionContext();
   const ayId = selection.academicYearId;
-  const isAdmin = (opts?.viewAll ? can(opts.viewAll) : can("roster:manage")) || !!user?.homeworkSupervisor;
+  const isAdmin = (opts?.viewAll ? can(opts.viewAll) : can("students:view_all")) || !!user?.homeworkSupervisor;
 
   const [{ data: classesData, fetching, error }] = useQuery({
     query: CLASSES_QUERY,

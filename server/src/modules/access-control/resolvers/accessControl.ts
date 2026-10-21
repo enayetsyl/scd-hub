@@ -2,7 +2,7 @@
  * Access-control resolvers (AC-1, prd-access-control §6, D-#193/#210–#215).
  *
  * The Principal-only per-user permission editor. EVERY field here is gated
- * `authScopes: { hasPermission: "access:manage" }` — a RESERVED-locked, Principal-only
+ * `authScopes: { hasPermission: "access_control:edit" }` — a RESERVED-locked, Principal-only
  * permission (the server re-enforces what the AC-2 screen presents). The mutations tune
  * the three additive `User` fields; a reserved-locked perm is refused at write-time with a
  * Bangla message (surfaced as the GraphQL error); a revoke always wins. The read returns
@@ -61,7 +61,7 @@ builder.mutationField("setUserAdditionalTemplates", (t) =>
     description:
       "Set (or clear, with []) the additional role templates a staff user holds. Only " +
       "TEACHER/OFFICE are assignable (PRINCIPAL/GUARDIAN refused). Requires access:manage. Audited.",
-    authScopes: { hasPermission: "access:manage" },
+    authScopes: { hasPermission: "access_control:edit" },
     args: {
       userId: t.arg.string({ required: true }),
       templates: t.arg.stringList({ required: true }),
@@ -76,7 +76,7 @@ builder.mutationField("addUserGrantedPermission", (t) =>
     description:
       "Add a per-user granted permission. A RESERVED-locked perm or guardian:read_child is " +
       "refused (Bangla error). Requires access:manage. Audited.",
-    authScopes: { hasPermission: "access:manage" },
+    authScopes: { hasPermission: "access_control:edit" },
     args: {
       userId: t.arg.string({ required: true }),
       permission: t.arg.string({ required: true }),
@@ -89,7 +89,7 @@ builder.mutationField("removeUserGrantedPermission", (t) =>
   t.field({
     type: UserAccessRef,
     description: "Remove a per-user granted permission (back to the template baseline). Requires access:manage. Audited.",
-    authScopes: { hasPermission: "access:manage" },
+    authScopes: { hasPermission: "access_control:edit" },
     args: {
       userId: t.arg.string({ required: true }),
       permission: t.arg.string({ required: true }),
@@ -102,7 +102,7 @@ builder.mutationField("addUserRevokedPermission", (t) =>
   t.field({
     type: UserAccessRef,
     description: "Add a per-user revoked permission (a revoke always wins). Requires access:manage. Audited.",
-    authScopes: { hasPermission: "access:manage" },
+    authScopes: { hasPermission: "access_control:edit" },
     args: {
       userId: t.arg.string({ required: true }),
       permission: t.arg.string({ required: true }),
@@ -115,7 +115,7 @@ builder.mutationField("removeUserRevokedPermission", (t) =>
   t.field({
     type: UserAccessRef,
     description: "Remove a per-user revoked permission (the perm may flow from a template/grant again). Requires access:manage. Audited.",
-    authScopes: { hasPermission: "access:manage" },
+    authScopes: { hasPermission: "access_control:edit" },
     args: {
       userId: t.arg.string({ required: true }),
       permission: t.arg.string({ required: true }),
@@ -134,7 +134,7 @@ builder.queryField("userEffectiveAccess", (t) =>
     description:
       "A staff user's per-user access overrides + the DERIVED effective permission set " +
       "(for the AC-2 editor). Requires access:manage.",
-    authScopes: { hasPermission: "access:manage" },
+    authScopes: { hasPermission: "access_control:edit" },
     args: { userId: t.arg.string({ required: true }) },
     resolve: (_root, args) => effectiveUserAccess(args.userId),
   }),
