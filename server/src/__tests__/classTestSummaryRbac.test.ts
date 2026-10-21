@@ -60,6 +60,7 @@ jest.mock("../modules/foundation/models/Student", () => ({
 // Import the builder + register the CT-4 read fields on it (side-effect import).
 import { builder } from "../schema";
 import "../modules/trackers/resolvers/classTestSummary";
+import { setRoleTemplateOverrides } from "@scd/shared";
 
 // graphql-js refuses an empty Mutation type; the resolver adds only queries, so
 // give the singleton builder one throwaway mutation field before toSchema().
@@ -195,5 +196,47 @@ describe("GUARDIAN and unauthenticated callers are denied", () => {
     expect(denied(await run(Q.reports(SECTION), null))).toBe(true);
     expect(denied(await run(Q.classSubject, null))).toBe(true);
     expect(denied(await run(Q.profile, null))).toBe(true);
+  });
+});
+
+// ===========================================================================
+// PM (trackers-classtest.md) — the role bypasses are now actions: class_test:view_all
+// lifts the scope, class_test:remind is the chase. Default switches = the cases above.
+// ===========================================================================
+
+describe("PM: class-test reads follow the catalogue actions", () => {
+  const runWith = (source: string, role: string, grantedPermissions: string[] = []) =>
+    graphql({
+      schema,
+      source,
+      contextValue: { auth: { role, userId: oid().toString(), grantedPermissions } },
+    }) as Promise<ExecutionResult>;
+  const CHASE = `query { classTestOverdueChase { unreachableCount } }`;
+
+  afterEach(() => setRoleTemplateOverrides({}));
+
+  test("OFFICE with class_test:view_all switched off loses the dashboard and the unscoped reports", async () => {
+    setRoleTemplateOverrides({ OFFICE: { granted: [], revoked: ["class_test:view_all"] } });
+    expect(denied(await run(Q.dashboard, "OFFICE"))).toBe(true);
+    expect(denied(await run(Q.reports(), "OFFICE"))).toBe(true);
+    expect(denied(await run(Q.profile, "OFFICE"))).toBe(true);
+  });
+
+  test("a TEACHER granted class_test:view_all per person reads the dashboard and unscoped reports", async () => {
+    expect(ok(await runWith(Q.dashboard, "TEACHER", ["class_test:view_all"]))).toBe(true);
+    expect(ok(await runWith(Q.reports(), "TEACHER", ["class_test:view_all"]))).toBe(true);
+    expect(mockAssertCanRead).not.toHaveBeenCalled(); // view_all = no section check
+  });
+
+  test("the overdue chase is class_test:remind: Office yes, Teacher no, Office switched off no", async () => {
+    expect(ok(await run(CHASE, "OFFICE"))).toBe(true);
+    expect(ok(await run(CHASE, "PRINCIPAL"))).toBe(true);
+    expect(denied(await run(CHASE, "TEACHER"))).toBe(true);
+    setRoleTemplateOverrides({ OFFICE: { granted: [], revoked: ["class_test:remind"] } });
+    expect(denied(await run(CHASE, "OFFICE"))).toBe(true);
+  });
+
+  test("a TEACHER granted class_test:remind per person may chase", async () => {
+    expect(ok(await runWith(CHASE, "TEACHER", ["class_test:remind"]))).toBe(true);
   });
 });

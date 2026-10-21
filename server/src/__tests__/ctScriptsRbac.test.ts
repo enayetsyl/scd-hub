@@ -51,6 +51,7 @@ jest.mock("../middleware/authz", () => ({ ForbiddenError: FakeForbidden }));
 
 import { builder } from "../schema";
 import "../modules/trackers/resolvers/classTestScripts";
+import { setRoleTemplateOverrides } from "@scd/shared";
 
 const schema = builder.toSchema();
 
@@ -71,7 +72,7 @@ const OFFICE_OPS = [
   `query { classTestScriptSheet(testId: "t") { totalMarks } }`,
 ];
 
-describe("the Office side is roster:manage only", () => {
+describe("the Office side is the desk actions (PM: class_test_script:scan/publish/hand_back)", () => {
   test.each(OFFICE_OPS)("OFFICE and PRINCIPAL may: %s", async (op) => {
     expect(denied(await run(op, ctxOf("OFFICE")))).toBe(false);
     expect(denied(await run(op, ctxOf("PRINCIPAL")))).toBe(false);
@@ -104,5 +105,31 @@ describe("returned to the students (D-#719)", () => {
   });
   test("a guardian may not", async () => {
     expect(denied(await run(m, ctxOf("GUARDIAN")))).toBe(true);
+  });
+});
+
+// PM (trackers-classtest.md): the desk is an action now, not roster:manage.
+describe("PM: script actions follow the catalogue", () => {
+  const ctxWith = (role: string, grantedPermissions: string[], userId = oid().toString()) =>
+    ({ auth: { role, userId, grantedPermissions } }) as unknown as Ctx;
+  const receive = `mutation { receiveClassTestScripts(testId: "t", count: 2) { stage } }`;
+  const returned = `mutation { markClassTestScriptsReturned(testId: "t") { stage } }`;
+
+  afterEach(() => setRoleTemplateOverrides({}));
+
+  test("OFFICE with class_test_script:scan switched off loses the desk and the absent-teacher return", async () => {
+    setRoleTemplateOverrides({ OFFICE: { granted: [], revoked: ["class_test_script:scan"] } });
+    expect(denied(await run(receive, ctxOf("OFFICE")))).toBe(true);
+    expect(denied(await run(returned, ctxOf("OFFICE")))).toBe(true);
+  });
+
+  test("a TEACHER granted class_test_script:scan works the desk and returns any test", async () => {
+    expect(denied(await run(receive, ctxWith("TEACHER", ["class_test_script:scan"])))).toBe(false);
+    expect(denied(await run(returned, ctxWith("TEACHER", ["class_test_script:scan"])))).toBe(false);
+  });
+
+  test("TEACHER with class_test_script:return switched off cannot mark even their own test", async () => {
+    setRoleTemplateOverrides({ TEACHER: { granted: [], revoked: ["class_test_script:return"] } });
+    expect(denied(await run(returned, ctxOf("TEACHER", OWNER)))).toBe(true);
   });
 });
