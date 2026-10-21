@@ -3,7 +3,8 @@
  * (ADR-003). THE SERVER IS ALWAYS IN THE MIDDLE: bytes stream through here;
  * no Drive id, URL, or redirect ever reaches any client.
  *
- *   POST /files/hw   — staff upload (JWT + tracker:write). Multipart field
+ *   POST /files/hw   — staff upload (JWT + homework:declare for a question,
+ *                      homework:check for an answer; PM). Multipart field
  *                      `file` + field/query `kind` = question|answer. Validates
  *                      mime ∈ {jpeg,png,pdf} + size ≤ 5 MB, streams to Drive,
  *                      persists StoredFile, returns { fileId, ... }. On Drive
@@ -204,7 +205,13 @@ const parseUpload: express.RequestHandler = (req, res, next) => {
 
 filesRouter.post("/hw", parseUpload, async (req: Request, res: Response) => {
   const ctx = buildContext(req, res);
-  if (!ctx.auth || !callerHasPermission(ctx.auth, "tracker:write")) {
+  // PM (D-#790..#801): a question file is part of declaring (`homework:declare`), a
+  // checked-answer file part of checking (`homework:check`). Row scope is enforced when
+  // the id is bound (attachHomeworkQuestionFile / attachHomeworkAnswerFile).
+  if (
+    !ctx.auth ||
+    (!callerHasPermission(ctx.auth, "homework:declare") && !callerHasPermission(ctx.auth, "homework:check"))
+  ) {
     res.status(403).json({ error: FILE_ERRORS_BN.forbidden });
     return;
   }
@@ -212,6 +219,10 @@ filesRouter.post("/hw", parseUpload, async (req: Request, res: Response) => {
   const kindArg = (req.body?.kind ?? req.query.kind) as string | undefined;
   if (kindArg !== "question" && kindArg !== "answer") {
     res.status(400).json({ error: "kind must be question or answer" });
+    return;
+  }
+  if (!callerHasPermission(ctx.auth, kindArg === "question" ? "homework:declare" : "homework:check")) {
+    res.status(403).json({ error: FILE_ERRORS_BN.forbidden });
     return;
   }
   const kind: StoredFileKind = kindArg === "question" ? "hw_question" : "hw_answer";
@@ -608,12 +619,13 @@ filesRouter.post("/ctscript", parseClassNoteUpload, async (req: Request, res: Re
 // POST /files/assignment — a teacher uploads an assignment sheet/instruction file
 // for the delivery pass (D-#298). Same envelope as /files/classnote: ≤ 10 MB,
 // jpeg/png/pdf, Drive-first. The ≤5-per-item cap is enforced when the ids are
-// bound at deliverAssignment. Upload gate = tracker:write (who may deliver).
+// bound at deliverAssignment. Upload gate = assignment:declare (who may deliver; PM,
+// was tracker:write).
 // ---------------------------------------------------------------------------
 
 filesRouter.post("/assignment", parseClassNoteUpload, async (req: Request, res: Response) => {
   const ctx = buildContext(req, res);
-  if (!ctx.auth || !callerHasPermission(ctx.auth, "tracker:write")) {
+  if (!ctx.auth || !callerHasPermission(ctx.auth, "assignment:declare")) {
     res.status(403).json({ error: FILE_ERRORS_BN.forbidden });
     return;
   }
