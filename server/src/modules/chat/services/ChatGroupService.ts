@@ -14,9 +14,9 @@
  * row added by Office is NEVER touched (J-M3). The reconcile is idempotent — a
  * re-run with unchanged data is a no-op.
  *
- * MANUAL groups (CUSTOM) are Principal/Office-only (`chat:manage` at the resolver);
+ * MANUAL groups (CUSTOM) are Principal/Office-only (`chat:create` / `chat:edit` at the resolver);
  * teachers cannot create groups (DIRECT stays open to all — M-1). Posting policy:
- * ANNOUNCEMENT blocks posting for members without `chat:manage` (enforced in
+ * ANNOUNCEMENT blocks posting for members without `chat:publish` (enforced in
  * ChatService.sendMessage; this service only persists the field).
  *
  * Identity-plane behind the ADR-005 firewall — no corpus import in this module.
@@ -252,7 +252,7 @@ export interface ResyncSummary {
   school: number;
 }
 
-/** Full idempotent resync of every auto group (chat:manage). Iterates active
+/** Full idempotent resync of every auto group (chat:edit). Iterates active
  *  sections, every ROUTINE_SUBJECTS value, and the school singleton; manual rows
  *  are never touched. */
 export async function resyncAllChatGroups(actorId: string): Promise<ResyncSummary> {
@@ -304,7 +304,7 @@ export async function onSectionTeachersChangedSync(sectionId: string): Promise<v
 }
 
 // ---------------------------------------------------------------------------
-// Manual (CUSTOM) groups + membership — chat:manage at the resolver
+// Manual (CUSTOM) groups + membership — chat:create / chat:edit at the resolver
 // ---------------------------------------------------------------------------
 
 export interface CreateGroupInput {
@@ -359,7 +359,7 @@ export async function createGroupConversation(input: CreateGroupInput): Promise<
   return conv as unknown as IConversation;
 }
 
-/** Add a MANUAL member to a group (chat:manage). Works on any non-DIRECT
+/** Add a MANUAL member to a group (chat:edit). Works on any non-DIRECT
  *  conversation — incl. an auto SECTION/SUBJECT group (the manual row coexists
  *  with the auto roster and the sync never removes it, D-#49). */
 export async function addMember(
@@ -387,7 +387,7 @@ export async function addMember(
   });
 }
 
-/** Remove a MANUAL member (chat:manage). Only manual rows are removable — an
+/** Remove a MANUAL member (chat:edit). Only manual rows are removable — an
  *  auto member is owned by the sync (removing it would just be re-added), so a
  *  removal request against an auto row is a no-op. */
 export async function removeMember(
@@ -432,7 +432,7 @@ export async function archiveConversation(
   return { ...conv, active: false } as unknown as IConversation;
 }
 
-/** Set a group's posting policy (chat:manage). ANNOUNCEMENT enforcement happens
+/** Set a group's posting policy (chat:edit). ANNOUNCEMENT enforcement happens
  *  in ChatService.sendMessage; this only persists the field. Not on DIRECT. */
 export async function setPostingPolicy(
   conversationId: string,

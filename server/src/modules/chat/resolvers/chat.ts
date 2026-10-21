@@ -1,9 +1,9 @@
 /**
- * Chat resolvers (M-1, D-#76) — 1:1 staff chat + receipts. RBAC = chat:read /
- * chat:write (Principal/Teacher/Office; GUARDIAN holds neither). Row scope =
+ * Chat resolvers (M-1, D-#76) — 1:1 staff chat + receipts. RBAC = chat:view /
+ * chat:send (Principal/Teacher/Office; GUARDIAN holds neither). Row scope =
  * membership: every conversation/message read and every write passes the
  * service's assertChatMember gate — holding the permission alone reaches
- * nothing you are not a member of. M-6 adds the chat:oversee read paths
+ * nothing you are not a member of. M-6 adds the chat:view_all (LOCKED) read paths
  * (oversight, audited) + the guardian-notice composer below.
  */
 import { builder } from "../../../schema";
@@ -246,12 +246,12 @@ const ChatMessageRef = builder.objectRef<IChatMessage>("ChatMessage").implement(
   }),
 });
 
-// --- Queries (chat:read + membership) ----------------------------------------
+// --- Queries (chat:view + membership) ----------------------------------------
 
 builder.queryField("myConversations", (t) =>
   t.field({
     type: [ConversationRef],
-    authScopes: { hasPermission: "chat:read" },
+    authScopes: { hasPermission: "chat:view" },
     resolve: async (_r, _a, ctx) => {
       const conversations = await myConversations(ctx.auth!.userId);
       await attachMembers(conversations); // pre-batch the members field (no N+1)
@@ -263,7 +263,7 @@ builder.queryField("myConversations", (t) =>
 builder.queryField("conversation", (t) =>
   t.field({
     type: ConversationRef,
-    authScopes: { hasPermission: "chat:read" },
+    authScopes: { hasPermission: "chat:view" },
     args: { id: t.arg.string({ required: true }) },
     resolve: async (_r, args, ctx) => assertChatMember(args.id, ctx.auth!.userId),
   }),
@@ -272,7 +272,7 @@ builder.queryField("conversation", (t) =>
 builder.queryField("messages", (t) =>
   t.field({
     type: [ChatMessageRef],
-    authScopes: { hasPermission: "chat:read" },
+    authScopes: { hasPermission: "chat:view" },
     args: {
       conversationId: t.arg.string({ required: true }),
       beforeId: t.arg.string({ required: false }),
@@ -307,12 +307,12 @@ builder.queryField("messages", (t) =>
   }),
 );
 
-// --- Mutations (chat:write + membership) --------------------------------------
+// --- Mutations (chat:send + membership) --------------------------------------
 
 builder.mutationField("openDirectConversation", (t) =>
   t.field({
     type: ConversationRef,
-    authScopes: { hasPermission: "chat:write" },
+    authScopes: { hasPermission: "chat:send" },
     args: { otherUserId: t.arg.string({ required: true }) },
     resolve: async (_r, args, ctx) => openDirectConversation(ctx.auth!.userId, args.otherUserId),
   }),
@@ -321,7 +321,7 @@ builder.mutationField("openDirectConversation", (t) =>
 builder.mutationField("sendMessage", (t) =>
   t.field({
     type: ChatMessageRef,
-    authScopes: { hasPermission: "chat:write" },
+    authScopes: { hasPermission: "chat:send" },
     args: {
       conversationId: t.arg.string({ required: true }),
       // Optional now (M-4): an attachment-only message carries no body.
@@ -337,7 +337,7 @@ builder.mutationField("sendMessage", (t) =>
         replyToId: args.replyToId ?? undefined,
         attachmentIds: args.attachmentIds ?? undefined,
         // ANNOUNCEMENT gate (M-2, D-#78): managers may post, others are blocked.
-        canManage: callerHasPermission(ctx.auth!, "chat:manage"),
+        canManage: callerHasPermission(ctx.auth!, "chat:publish"),
       });
       // M-7: push to the other members (best-effort, fire-and-forget — never
       // delays or blocks the send; the message is already persisted).
@@ -350,7 +350,7 @@ builder.mutationField("sendMessage", (t) =>
 builder.mutationField("markSeen", (t) =>
   t.field({
     type: "Int",
-    authScopes: { hasPermission: "chat:write" },
+    authScopes: { hasPermission: "chat:view" },
     args: { conversationId: t.arg.string({ required: true }) },
     resolve: async (_r, args, ctx) => markConversationSeen(args.conversationId, ctx.auth!.userId),
   }),
@@ -363,7 +363,7 @@ builder.mutationField("markSeen", (t) =>
 builder.mutationField("setConversationMuted", (t) =>
   t.field({
     type: "Boolean",
-    authScopes: { hasPermission: "chat:read" },
+    authScopes: { hasPermission: "chat:view" },
     args: {
       conversationId: t.arg.string({ required: true }),
       muted: t.arg.boolean({ required: true }),
@@ -378,7 +378,7 @@ builder.mutationField("setConversationMuted", (t) =>
 builder.mutationField("forwardMessage", (t) =>
   t.field({
     type: ChatMessageRef,
-    authScopes: { hasPermission: "chat:write" },
+    authScopes: { hasPermission: "chat:send" },
     args: {
       messageId: t.arg.string({ required: true }),
       toConversationId: t.arg.string({ required: true }),
@@ -389,7 +389,7 @@ builder.mutationField("forwardMessage", (t) =>
         toConversationId: args.toConversationId,
         senderId: ctx.auth!.userId,
         // ANNOUNCEMENT gate on the target (M-2, D-#78) — same rule as sendMessage.
-        canManage: callerHasPermission(ctx.auth!, "chat:manage"),
+        canManage: callerHasPermission(ctx.auth!, "chat:publish"),
       });
       // M-7: push to the target conversation's other members (best-effort).
       void pushNewChatMessage(msg);
@@ -401,7 +401,7 @@ builder.mutationField("forwardMessage", (t) =>
 builder.mutationField("editMessage", (t) =>
   t.field({
     type: ChatMessageRef,
-    authScopes: { hasPermission: "chat:write" },
+    authScopes: { hasPermission: "chat:send" },
     args: {
       messageId: t.arg.string({ required: true }),
       body: t.arg.string({ required: true }),
@@ -413,7 +413,7 @@ builder.mutationField("editMessage", (t) =>
 builder.mutationField("deleteMessage", (t) =>
   t.field({
     type: ChatMessageRef,
-    authScopes: { hasPermission: "chat:write" },
+    authScopes: { hasPermission: "chat:send" },
     args: { messageId: t.arg.string({ required: true }) },
     resolve: async (_r, args, ctx) => deleteMessage(args.messageId, ctx.auth!.userId),
   }),
@@ -422,7 +422,7 @@ builder.mutationField("deleteMessage", (t) =>
 builder.mutationField("toggleReaction", (t) =>
   t.field({
     type: ChatMessageRef,
-    authScopes: { hasPermission: "chat:write" },
+    authScopes: { hasPermission: "chat:send" },
     args: {
       messageId: t.arg.string({ required: true }),
       emoji: t.arg.string({ required: true }),
@@ -436,7 +436,7 @@ builder.mutationField("toggleReaction", (t) =>
   }),
 );
 
-// --- Group management (chat:manage — Principal/Office only, M-2, D-#78) -------
+// --- Group management (chat:create / chat:edit — Principal/Office by default, M-2, D-#78) -------
 
 const ResyncSummaryRef = builder.objectRef<ResyncSummary>("ChatResyncSummary").implement({
   fields: (t) => ({
@@ -449,7 +449,7 @@ const ResyncSummaryRef = builder.objectRef<ResyncSummary>("ChatResyncSummary").i
 builder.mutationField("createGroupConversation", (t) =>
   t.field({
     type: ConversationRef,
-    authScopes: { hasPermission: "chat:manage" },
+    authScopes: { hasPermission: "chat:create" },
     args: {
       title: t.arg.string({ required: true }),
       memberIds: t.arg.stringList({ required: false }),
@@ -475,7 +475,7 @@ builder.mutationField("createGroupConversation", (t) =>
 builder.mutationField("addConversationMember", (t) =>
   t.field({
     type: "Boolean",
-    authScopes: { hasPermission: "chat:manage" },
+    authScopes: { hasPermission: "chat:edit" },
     args: {
       conversationId: t.arg.string({ required: true }),
       userId: t.arg.string({ required: true }),
@@ -490,7 +490,7 @@ builder.mutationField("addConversationMember", (t) =>
 builder.mutationField("removeConversationMember", (t) =>
   t.field({
     type: "Boolean",
-    authScopes: { hasPermission: "chat:manage" },
+    authScopes: { hasPermission: "chat:edit" },
     args: {
       conversationId: t.arg.string({ required: true }),
       userId: t.arg.string({ required: true }),
@@ -505,7 +505,7 @@ builder.mutationField("removeConversationMember", (t) =>
 builder.mutationField("archiveConversation", (t) =>
   t.field({
     type: ConversationRef,
-    authScopes: { hasPermission: "chat:manage" },
+    authScopes: { hasPermission: "chat:edit" },
     args: { conversationId: t.arg.string({ required: true }) },
     resolve: async (_r, args, ctx) => archiveConversation(args.conversationId, ctx.auth!.userId),
   }),
@@ -514,7 +514,7 @@ builder.mutationField("archiveConversation", (t) =>
 builder.mutationField("setPostingPolicy", (t) =>
   t.field({
     type: ConversationRef,
-    authScopes: { hasPermission: "chat:manage" },
+    authScopes: { hasPermission: "chat:edit" },
     args: {
       conversationId: t.arg.string({ required: true }),
       policy: t.arg.string({ required: true }),
@@ -530,19 +530,19 @@ builder.mutationField("setPostingPolicy", (t) =>
 builder.mutationField("resyncChatGroups", (t) =>
   t.field({
     type: ResyncSummaryRef,
-    authScopes: { hasPermission: "chat:manage" },
+    authScopes: { hasPermission: "chat:edit" },
     resolve: async (_r, _args, ctx) => resyncAllChatGroups(ctx.auth!.userId),
   }),
 );
 
-// --- Principal oversight (chat:oversee — PRINCIPAL only, M-6, D-#77/#111) -----
+// --- Principal oversight (chat:view_all — LOCKED, PRINCIPAL only, M-6, D-#77/#111) -----
 // Read-only on ANY conversation incl. DIRECT; NOT membership-gated; deleted
 // originals are visible (un-masked). Opening a thread is itself audited.
 
 builder.queryField("oversightConversations", (t) =>
   t.field({
     type: [ConversationRef],
-    authScopes: { hasPermission: "chat:oversee" },
+    authScopes: { hasPermission: "chat:view_all" },
     resolve: async () => {
       const conversations = await oversightConversations();
       await attachMembers(conversations); // batch the members field (no N+1)
@@ -557,7 +557,7 @@ const ConversationPageRef = pageRef("ConversationPage", ConversationRef);
 builder.queryField("oversightConversationsPage", (t) =>
   t.field({
     type: ConversationPageRef,
-    authScopes: { hasPermission: "chat:oversee" },
+    authScopes: { hasPermission: "chat:view_all" },
     args: {
       page: t.arg.int({ required: false }),
       pageSize: t.arg.int({ required: false }),
@@ -573,7 +573,7 @@ builder.queryField("oversightConversationsPage", (t) =>
 builder.queryField("oversightMessages", (t) =>
   t.field({
     type: [ChatMessageRef],
-    authScopes: { hasPermission: "chat:oversee" },
+    authScopes: { hasPermission: "chat:view_all" },
     args: {
       conversationId: t.arg.string({ required: true }),
       beforeId: t.arg.string({ required: false }),
@@ -610,7 +610,7 @@ builder.queryField("oversightMessages", (t) =>
 builder.mutationField("openConversationOversight", (t) =>
   t.field({
     type: ConversationRef,
-    authScopes: { hasPermission: "chat:oversee" },
+    authScopes: { hasPermission: "chat:view_all" },
     args: { conversationId: t.arg.string({ required: true }) },
     // The audited "open" (CHAT_OVERSIGHT_OPENED) — accountability both ways.
     resolve: async (_r, args, ctx) => openConversationOversight(args.conversationId, ctx.auth!.userId),
@@ -619,8 +619,8 @@ builder.mutationField("openConversationOversight", (t) =>
 
 // --- Guardian notice composer (M-6, D-#79/#111) -------------------------------
 // Guardians are recipients, not participants (D-#76). Authorization lands the
-// D-#45 parent-comms duty: SECTION → the class teacher OR chat:manage; SCHOOL →
-// chat:manage. No new permission (the D-#42 pattern). Gated chat:write so a
+// D-#45 parent-comms duty: SECTION → chat:send_notice + the class teacher, OR
+// chat:send_notice_all; SCHOOL → chat:send_notice_all. Gated on either action so a
 // non-staff token can't reach it; the per-scope check is enforced below.
 
 const NoticeRecipientRef = builder.objectRef<NoticeRecipient>("GuardianNoticeRecipient").implement({
@@ -647,7 +647,7 @@ const ComposeNoticeResultRef = builder.objectRef<ComposeNoticeResult>("GuardianN
 builder.mutationField("composeGuardianNotice", (t) =>
   t.field({
     type: ComposeNoticeResultRef,
-    authScopes: { hasPermission: "chat:write" },
+    authScopes: { hasAnyPermission: ["chat:send_notice", "chat:send_notice_all"] },
     args: {
       scope: t.arg.string({ required: true }),
       title: t.arg.string({ required: true }),
@@ -659,7 +659,7 @@ builder.mutationField("composeGuardianNotice", (t) =>
         throw new Error("Invalid notice scope");
       }
       const scope = args.scope as "SCHOOL" | "SECTION";
-      const canManage = callerHasPermission(ctx.auth!, "chat:manage");
+      const canManage = callerHasPermission(ctx.auth!, "chat:send_notice_all");
 
       // Authorization lands the D-#45 parent-comms duty (deny → ForbiddenError).
       await assertCanComposeNotice(ctx, { scope, sectionId: args.sectionId ?? null, canManage });
