@@ -489,6 +489,10 @@ export type MasteryStackParamList = {
   MasteryImport: undefined;
   MasteryTags: undefined;
   MasteryPolicy: undefined;
+  /** M-2: param-free — the drawer leaf; the screen picks its own section and subject. */
+  MasteryWork: undefined;
+  MasteryNewPaper: { sectionId: string; subject: string; classLevel: number };
+  MasteryEntry: { paperId: string };
 };
 export type TeachingNotesStackParamList = {
   TeachingNotesHome: undefined;

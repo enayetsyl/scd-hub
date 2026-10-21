@@ -1,5 +1,9 @@
 # STATUS
 
+- 2026-10-21: **BUILT — Mastery M-2 (D-#807)** (branch `feat/mastery-m2`, worktree `C:/w/m2`). Work sheets (homework / class test / rubric) per শাখা × subject, exceptions-only entry, evidence written on confirm (no row = full marks; re-work / tags ⇒ weak or light; routing tags ⇒ cross-chapter strand rows).
+  - Reach: the routine holder, or `mastery:edit_all` (new, PRINCIPAL_DEFAULT). Office sees no sheets until M-3 `view_all`.
+  - App: drawer শিখন-দক্ষতা → প্রশ্নভিত্তিক নম্বর (list → new sheet from bank/own question → entry → সব ঠিক আছে).
+  - Next: M-3 diagnosis engine + student/section views + teacher exclusion. Promotion dev→main + OTA pending for M-0..M-2.
 - 2026-10-21 (cont.): **BUILT — KG আরবি papers draw on রওযাতুল আতফাল ২ (D-#806), branch `feat/worksheet-arabic-kg-book` (worktree `C:/w/ws-ar`).** The owner sent the KG book (121 scanned pages). Its pictures come from the التمرينات word pages (pp. 88–107): 53 cut, 51 active (school and mosque hidden because their own pictures print the word; verbs serve word questions only). New picture book `ARABIC_KG`; a KG Arabic paper now takes pictures and words from book 2 only (no repeats: 51 for the final's 40), Nursery keeps book 1. Gate: shared + server `tsc` 0; worksheet suites 74/74; a KG answer key rendered from the real book-2 bundle reads correctly (100 marks, no warnings, 40 distinct pictures).
   **Now / next:** PR → dev → promote; prod import of the `ARABIC_KG` bundle (dry run, then APPLY); OTA (the picture bank's book chips come from shared vocab).
 - 2026-10-21: **BUILT — permission matrix (D-#790–#801, #805)** (branch `feat/permission-matrix`, worktree `C:/w/pm`). Owner ask 2026-10-20: pick a role → every feature with every action; new features join the list.

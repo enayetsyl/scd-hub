@@ -242,6 +242,7 @@ export const FEATURE_CATALOGUE = {
       enter_results: { en: "Enter per-question results", bn: "প্রশ্নভিত্তিক নম্বর তোলা", desc: "Exceptions-only entry, re-work, tags, rubric (M-2), routine-held class × subject", teacher: true, office: false, flags: [] },
       create: { en: "Build homework sheets & assignments", bn: "বাড়ির কাজ ও অ্যাসাইনমেন্ট তৈরি", desc: "Work sheets, the weekly tailored assignment and its layout (M-2/M-4), routine-held class × subject", teacher: true, office: false, flags: [] },
       approve: { en: "Approve extra classes", bn: "অতিরিক্ত ক্লাস অনুমোদন", desc: "Approve a section-trigger proposal, pick slot/teacher, close the action (M-5). Selected Office staff by per-person grant (D-#786)", teacher: false, office: false, flags: [] },
+      edit_all: { en: "Work in any শাখা", bn: "যেকোনো শাখার শিখন-দক্ষতার কাজ", desc: "Build sheets, enter and read results for a class × subject the routine does not give you (M-2)", teacher: false, office: false, flags: ["PRINCIPAL_DEFAULT"] },
     },
   },
   exam_syllabus: {

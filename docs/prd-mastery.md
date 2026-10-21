@@ -3,7 +3,9 @@
 **Status:** M-0 BUILT 2026-10-20 (branch `feat/mastery-m0`: catalogue, mark table, tags, policy, switch,
 import + `skills/_tools/mastery_catalogue_to_json.mjs`; merged to dev #1114); M-1 BUILT 2026-10-20 (branch
 `feat/mastery-m1`: bank accepts LO codes + `lo_codes`, harness L3/L4, `[MASTERY-LO]` import warning,
-`questions(loCodes)` filter + `loCodes` field); M-2..M-6 contracted. Mock canvas (32 screens, C3 Math sample):
+`questions(loCodes)` filter + `loCodes` field); M-2 BUILT 2026-10-21 (branch `feat/mastery-m2`: work sheets
+HW / class test / rubric, exceptions-only entry, append-only evidence + strand routing, `mastery:edit_all`, D-#807);
+M-3..M-6 contracted. Mock canvas (32 screens, C3 Math sample):
 https://claude.ai/artifact/41PHE293FUroM64pWFH6u1 (owner-private; open it before building a screen).
 **Decision block:** D-#775–#785, reserved against `origin/main@b96af3ae` = `origin/dev@569d60ec`
 (2026-10-20, max D-#774; open PRs hold only D-#650/#651/#761). D-#786 (approvers) amends D-#781.

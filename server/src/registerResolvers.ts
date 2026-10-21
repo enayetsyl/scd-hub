@@ -125,4 +125,5 @@ import "./modules/exams/resolvers/exams";
 import "./modules/exams/resolvers/examSyllabus";
 import "./modules/scholarship/resolvers/scholarship";
 import "./modules/mastery/resolvers/masteryCatalogue";
+import "./modules/mastery/resolvers/masteryWork";
 import "./modules/worksheets/resolvers/worksheet";

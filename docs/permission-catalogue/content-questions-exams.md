@@ -278,4 +278,18 @@ Already one-to-one with today's permissions; no hidden role gate, no REST route 
 | app/src/navigation/DrawerContent.tsx:129–132 | msCatalogueHome/msTags/msPolicy `["mastery:read"]`, msImport `["mastery:manage"]` | `mastery:view` / `mastery:settings` |
 | app/src/screens/mastery/*.tsx (Home :24, Catalogue :40, Marks :33, Policy :38, Tags :81) | `can("mastery:manage")` shows write controls | `can("mastery:settings")` (retire on Catalogue → `mastery:delete`) |
 
+
+### M-2 (2026-10-21, D-#807) — work sheets & exceptions-only entry
+| file | resolver | gate (already catalogue-native) |
+|---|---|---|
+| server/src/modules/mastery/resolvers/masteryWork.ts | masteryPapersPage | `mastery:view`; svc: routine holder or `mastery:edit_all` |
+| server/src/modules/mastery/resolvers/masteryWork.ts | masteryPaper | `mastery:view`; svc: routine holder or `mastery:edit_all` |
+| server/src/modules/mastery/resolvers/masteryWork.ts | masteryHomeworkOptions | `mastery:create`; svc: routine holder or `mastery:edit_all` |
+| server/src/modules/mastery/resolvers/masteryWork.ts | createMasteryPaper | `mastery:create`; svc: routine holder or `mastery:edit_all`; switch on; LOCKED outcomes; gold bank items |
+| server/src/modules/mastery/resolvers/masteryWork.ts | deleteMasteryPaper | `mastery:create`; svc: OPEN + no results |
+| server/src/modules/mastery/resolvers/masteryWork.ts | saveMasteryResults | `mastery:enter_results`; svc: routine holder or `mastery:edit_all` |
+| server/src/modules/mastery/resolvers/masteryWork.ts | confirmMasteryPaper | `mastery:enter_results`; svc: routine holder or `mastery:edit_all` |
+
+App: `MasteryTab` opens on `mastery:view` || `mastery:settings` || `mastery:enter_results`; the drawer leaf প্রশ্নভিত্তিক নম্বর on `mastery:enter_results`; the new-sheet button on `mastery:create`. Reach: `MasteryWorkHomeScreen` lists sections via `useAccessibleClasses({ viewAll: "mastery:edit_all" })`.
+
 Later slices add their rows here: M-2/M-4 entry and builder (`mastery:enter_results`, `mastery:create`, routine class × subject check in the service), M-5 approval (`mastery:approve`), M-6 guardian reads (`guardian:read_child` + assertGuardianOfStudent).
