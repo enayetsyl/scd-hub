@@ -1788,7 +1788,7 @@ export function AppTabs(): React.ReactElement {
   const canReports = any(...REPORT_ACTIONS);
   // Mastery tracker (M-0): the catalogue/policy admin. Every staff role holds mastery:read;
   // writes are shown per screen to mastery:manage and re-gated server-side.
-  const canMastery = can("mastery:read") || can("mastery:manage");
+  const canMastery = any("mastery:view", "mastery:settings");
   // GP-2 (D-#68): the GUARDIAN role holds ONLY guardian:read_child, so every
   // staff gate above is false for guardians — the guardian tab set is all they see.
   const canGuardian = can("guardian:read_child");

@@ -231,6 +231,19 @@ export const FEATURE_CATALOGUE = {
       edit_all: { en: "Build in any শাখা", bn: "যেকোনো শাখার সেট তৈরি", desc: "Act outside own grants", teacher: false, office: false, flags: ["PRINCIPAL_DEFAULT"] },
     },
   },
+  mastery: {
+    group: "assessment_and_exams",
+    en: "Learning mastery",
+    bn: "শিখন-দক্ষতা",
+    actions: {
+      view: { en: "View catalogue, marks, tags, policy", bn: "শিখনফল তালিকা, নম্বর, ট্যাগ ও পলিসি দেখা", desc: "Read the outcome catalogue, question-type marks, tags, policy and the switch (later: diagnosis views, row-scoped for teachers)", teacher: true, office: true, flags: [] },
+      settings: { en: "Manage the catalogue & policy", bn: "শিখনফল তালিকা ও পলিসি ঠিক করা", desc: "Import (preview/apply) and lock a catalogue, edit outcomes, question-type marks, tags, policy, the year × class × subject switch", teacher: false, office: false, flags: [] },
+      delete: { en: "Retire an outcome", bn: "শিখনফল অবসরে দেওয়া", desc: "LOCKED → RETIRED; a draft is removed", teacher: false, office: false, flags: [] },
+      enter_results: { en: "Enter per-question results", bn: "প্রশ্নভিত্তিক নম্বর তোলা", desc: "Exceptions-only entry, re-work, tags, rubric (M-2), routine-held class × subject", teacher: true, office: false, flags: [] },
+      create: { en: "Build homework sheets & assignments", bn: "বাড়ির কাজ ও অ্যাসাইনমেন্ট তৈরি", desc: "Work sheets, the weekly tailored assignment and its layout (M-2/M-4), routine-held class × subject", teacher: true, office: false, flags: [] },
+      approve: { en: "Approve extra classes", bn: "অতিরিক্ত ক্লাস অনুমোদন", desc: "Approve a section-trigger proposal, pick slot/teacher, close the action (M-5). Selected Office staff by per-person grant (D-#786)", teacher: false, office: false, flags: [] },
+    },
+  },
   exam_syllabus: {
     group: "assessment_and_exams",
     en: "Exam syllabus",
@@ -886,6 +899,10 @@ export function catalogueAction(perm: CataloguePermission): CatalogueAction {
  *  part only together with an isAdminStaff check). Used to expand per-user grants/revokes
  *  still stored under old names (read-time, D-#795) and by the ship-day equality check. */
 export const LEGACY_PERMISSION_EXPANSION: Record<string, { any: readonly CataloguePermission[]; adminTemplate?: readonly CataloguePermission[] }> = {
+  "mastery:read": { any: ["mastery:view"] },
+  "mastery:enter": { any: ["mastery:enter_results", "mastery:create"] },
+  "mastery:manage": { any: ["mastery:settings", "mastery:delete"] },
+  "mastery:approve": { any: ["mastery:approve"] },
   "content:read": { any: ["lesson_plans:view"] },
   "content:import": { any: ["lesson_plans:import","question_bank:import"] },
   "content:assign_review": { any: ["plan_review:assign","question_review:assign","question_review:view_all"] },

@@ -4040,7 +4040,8 @@ export const LEGACY_PERMISSIONS = [
 export type LegacyPermission = (typeof LEGACY_PERMISSIONS)[number];
 
 /** Every permission a gate may name: the legacy names (during the PM transition) plus every
- *  catalogued `feature:action`. Two strings are both (`attendance:mark`, `payroll:approve`)
+ *  catalogued `feature:action`. Three strings are both (`attendance:mark`, `payroll:approve`,
+ *  `mastery:approve`)
  *  and mean the same thing in both. */
 export type Permission = LegacyPermission | CataloguePermission;
 const LEGACY_PERMISSION_SET: ReadonlySet<string> = new Set<string>(LEGACY_PERMISSIONS);

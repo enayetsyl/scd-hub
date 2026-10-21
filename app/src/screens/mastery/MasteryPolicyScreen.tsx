@@ -35,7 +35,7 @@ type PolicyValues = Record<string, number | boolean>;
 export default function MasteryPolicyScreen(_props: Props): React.ReactElement {
   const toast = useToast();
   const { can } = useAuth();
-  const canManage = can("mastery:manage");
+  const canManage = can("mastery:settings");
   const [scope, setScope] = useState<string>("SCHOOL");
   const [own, setOwn] = useState<Record<string, string | boolean>>({});
   const [error, setError] = useState<string | null>(null);

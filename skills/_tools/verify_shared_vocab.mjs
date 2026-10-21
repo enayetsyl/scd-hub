@@ -857,8 +857,8 @@ check("every feature sits in a known editor group and has BN + EN names",
   Object.values(V.FEATURE_CATALOGUE).every((f) => V.FEATURE_GROUPS.includes(f.group) && f.bn && f.en && Object.keys(f.actions).length > 0));
 check("every action has a BN name, an EN name and a one-line description",
   CAT.every((p) => act(p).bn && act(p).en && act(p).desc));
-check("legacy ∩ catalogue is exactly {attendance:mark, payroll:approve} (same meaning in both)",
-  eq(V.LEGACY_PERMISSIONS.filter((p) => CAT.includes(p)), ["attendance:mark", "payroll:approve"]));
+check("legacy ∩ catalogue is exactly {attendance:mark, payroll:approve, mastery:approve} (same meaning in both)",
+  eq(V.LEGACY_PERMISSIONS.filter((p) => CAT.includes(p)), ["attendance:mark", "payroll:approve", "mastery:approve"]));
 check("PERMISSIONS = legacy ∪ catalogue, no duplicates",
   new Set(V.PERMISSIONS).size === V.PERMISSIONS.length && V.PERMISSIONS.length === new Set([...V.LEGACY_PERMISSIONS, ...CAT]).size);
 check("PERMISSION_LABELS_BN / _EN and PERMISSION_BUILD_STATUS are total over PERMISSIONS",
