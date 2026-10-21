@@ -323,7 +323,7 @@ builder.queryField("progressSchoolOverview", (t) =>
   t.field({
     type: OverviewRef,
     description: "Whole-school tiles + the needs-attention list over [fromKey, toKey] (SP-1). roster:manage.",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "improvement_plan:view_all" },
     args: { fromKey: t.arg.string({ required: true }), toKey: t.arg.string({ required: true }) },
     resolve: async (_r, a) => schoolOverview(a.fromKey, a.toKey),
   }),
@@ -332,7 +332,7 @@ builder.queryField("progressSchoolOverview", (t) =>
 builder.queryField("progressSectionBoard", (t) =>
   t.field({
     type: SectionBoardRef,
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "improvement_plan:view_all" },
     args: { sectionId: t.arg.string({ required: true }), fromKey: t.arg.string({ required: true }), toKey: t.arg.string({ required: true }) },
     resolve: async (_r, a) => sectionBoard(a.sectionId, a.fromKey, a.toKey),
   }),
@@ -341,7 +341,7 @@ builder.queryField("progressSectionBoard", (t) =>
 builder.queryField("progressStudent", (t) =>
   t.field({
     type: StudentProgressRef,
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "improvement_plan:view_all" },
     args: { studentId: t.arg.string({ required: true }), fromKey: t.arg.string({ required: true }), toKey: t.arg.string({ required: true }) },
     resolve: async (_r, a) => studentProgress(a.studentId, a.fromKey, a.toKey),
   }),
@@ -358,7 +358,7 @@ builder.queryField("improvementSuggest", (t) =>
   t.field({
     type: SuggestionRef,
     description: "Prefill for the New action form: a 'why' line from the results, and the routine subject teacher.",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "improvement_plan:create" },
     args: { sectionId: t.arg.string({ required: true }), subject: t.arg.string({ required: true }), studentId: t.arg.string() },
     resolve: async (_r, a) => ({
       reason: await suggestReason(a.studentId ?? null, a.sectionId, a.subject),
@@ -370,7 +370,7 @@ builder.queryField("improvementSuggest", (t) =>
 builder.queryField("improvementActions", (t) =>
   t.field({
     type: [SummaryRef],
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "improvement_plan:view_all" },
     args: { studentId: t.arg.string(), sectionId: t.arg.string() },
     resolve: async (_r, a) => listActions({ studentId: a.studentId, sectionId: a.sectionId }),
   }),
@@ -380,7 +380,7 @@ builder.queryField("improvementAction", (t) =>
   t.field({
     type: DetailRef,
     description: "One action with its day strips (who ticked each day), families for a CLASS action, and before/after (SP-2).",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "improvement_plan:view_all" },
     args: { id: t.arg.string({ required: true }) },
     resolve: async (_r, a) => {
       const d = await actionDetail(a.id);
@@ -395,7 +395,7 @@ builder.queryField("myImprovementTasks", (t) =>
   t.field({
     type: [TaskRef],
     description: "The caller's teacher tasks today — their own, and any they cover for a teacher on leave (SP-2/SP-3).",
-    authScopes: { hasAnyPermission: ["tracker:write", "roster:manage"] },
+    authScopes: { hasPermission: "improvement_plan:tick" },
     resolve: async (_r, _a, ctx) => teacherTasks(actor(ctx)),
   }),
 );
@@ -404,7 +404,7 @@ builder.queryField("improvementDayTasks", (t) =>
   t.field({
     type: [TaskRef],
     description: "Every teacher task of today with who does it and whether it is ticked — the Office 11:00 list (SP-4).",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "improvement_plan:view_all" },
     resolve: async (_r, _a, ctx) => officeDayTasks(undefined, actor(ctx)),
   }),
 );
@@ -438,11 +438,11 @@ builder.queryField("leaveImprovementTasks", (t) =>
   t.field({
     type: [LeaveTaskRef],
     description: "The improvement tasks of a teacher's leave days and who does each (SP-3). Office/Principal, or the applicant.",
-    authScopes: { hasAnyPermission: ["roster:manage", "leave:manage", "tracker:write"] },
+    authScopes: { hasAnyPermission: ["improvement_plan:view_all", "leave:view_all", "leave:apply"] },
     args: { leaveApplicationId: t.arg.string({ required: true }) },
     resolve: async (_r, a, ctx) => {
       const userId = actor(ctx);
-      if (!callerHasPermission(ctx.auth!, "roster:manage") && !callerHasPermission(ctx.auth!, "leave:manage")) {
+      if (!callerHasPermission(ctx.auth!, "improvement_plan:view_all") && !callerHasPermission(ctx.auth!, "leave:view_all")) {
         const leave = (await StaffLeaveApplication.findById(a.leaveApplicationId).select("staffProfileId").lean()) as { staffProfileId: unknown } | null;
         const mine = await resolveStaffProfileForUser(userId);
         if (!leave || !mine || String(mine._id) !== String(leave.staffProfileId)) throw new ForbiddenError("এই ছুটির আবেদন আপনার নয়");
@@ -459,7 +459,7 @@ builder.queryField("leaveImprovementTasks", (t) =>
 builder.mutationField("createImprovementAction", (t) =>
   t.field({
     type: SummaryRef,
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "improvement_plan:create" },
     args: { input: t.arg({ type: CreateInput, required: true }) },
     resolve: async (_r, { input }, ctx) => {
       const a = await createAction(
@@ -488,7 +488,7 @@ builder.mutationField("createImprovementAction", (t) =>
 builder.mutationField("stopImprovementAction", (t) =>
   t.field({
     type: SummaryRef,
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "improvement_plan:edit" },
     args: { id: t.arg.string({ required: true }), reason: t.arg.string() },
     resolve: async (_r, a, ctx) => (await summarize([(await stopAction(a.id, a.reason, actor(ctx), ctx.auth?.role)).toObject()]))[0],
   }),
@@ -497,7 +497,7 @@ builder.mutationField("stopImprovementAction", (t) =>
 builder.mutationField("extendImprovementAction", (t) =>
   t.field({
     type: SummaryRef,
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "improvement_plan:edit" },
     args: { id: t.arg.string({ required: true }), days: t.arg.int({ required: true }) },
     resolve: async (_r, a, ctx) => (await summarize([(await extendAction(a.id, a.days, actor(ctx), ctx.auth?.role)).toObject()]))[0],
   }),
@@ -506,7 +506,7 @@ builder.mutationField("extendImprovementAction", (t) =>
 builder.mutationField("setImprovementDayAssignee", (t) =>
   t.boolean({
     description: "Who does an action's teacher task on one day — the leave cover screen (SP-3). null = back to the default.",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "improvement_plan:assign" },
     args: { actionId: t.arg.string({ required: true }), dayKey: t.arg.string({ required: true }), userId: t.arg.string() },
     resolve: async (_r, a, ctx) => setDayAssignee(a.actionId, a.dayKey, a.userId ?? null, actor(ctx), ctx.auth?.role),
   }),
@@ -517,7 +517,7 @@ builder.mutationField("tickImprovementTask", (t) =>
     description:
       "Mark a TEACHER day DONE/COULDNT — by the person responsible today, or by Office/Principal on behalf (any past " +
       "scheduled day, with a reason). The responsibility check is in the service.",
-    authScopes: { hasAnyPermission: ["tracker:write", "roster:manage"] },
+    authScopes: { hasAnyPermission: ["improvement_plan:tick", "improvement_plan:edit_all"] },
     args: {
       actionId: t.arg.string({ required: true }),
       dayKey: t.arg.string({ required: true }),
@@ -527,7 +527,7 @@ builder.mutationField("tickImprovementTask", (t) =>
     resolve: async (_r, a, ctx) => {
       await tick(
         { actionId: a.actionId, part: "TEACHER", dayKey: a.dayKey, status: a.status as ImprovementTickStatus, reason: (a.reason ?? null) as ImprovementReason | null },
-        { userId: actor(ctx), role: ctx.auth?.role, isAdmin: callerHasPermission(ctx.auth!, "roster:manage") },
+        { userId: actor(ctx), role: ctx.auth?.role, isAdmin: callerHasPermission(ctx.auth!, "improvement_plan:edit_all") },
       );
       return true;
     },
@@ -536,12 +536,12 @@ builder.mutationField("tickImprovementTask", (t) =>
 
 builder.mutationField("untickImprovementTask", (t) =>
   t.boolean({
-    authScopes: { hasAnyPermission: ["tracker:write", "roster:manage"] },
+    authScopes: { hasAnyPermission: ["improvement_plan:tick", "improvement_plan:edit_all"] },
     args: { actionId: t.arg.string({ required: true }), dayKey: t.arg.string({ required: true }) },
     resolve: async (_r, a, ctx) =>
       untick(
         { actionId: a.actionId, part: "TEACHER" as ImprovementPart, dayKey: a.dayKey },
-        { userId: actor(ctx), role: ctx.auth?.role, isAdmin: callerHasPermission(ctx.auth!, "roster:manage") },
+        { userId: actor(ctx), role: ctx.auth?.role, isAdmin: callerHasPermission(ctx.auth!, "improvement_plan:edit_all") },
       ),
   }),
 );
