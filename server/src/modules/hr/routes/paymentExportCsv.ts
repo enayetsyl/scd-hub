@@ -24,7 +24,7 @@
  * sheet at all is a person who does not get paid.
  *
  * THE SAME GATE AS THE QUERY, RE-ASSERTED HERE. A route is a second front door: this
- * file names people and their bank accounts, so it is `payroll:manage` exactly as
+ * file names people and their bank accounts, so it is `payroll:export` exactly as
  * `payrollPaymentExport` is, and it issues only from a LOCKED run (the service
  * enforces that). Audited — an export of everyone's account numbers is an event.
  *
@@ -48,7 +48,7 @@ paymentExportCsvRouter.get("/:runId", async (req: Request, res: Response) => {
     res.status(401).json({ error: "Unauthenticated" });
     return;
   }
-  if (!callerHasPermission(ctx.auth, "payroll:manage")) {
+  if (!callerHasPermission(ctx.auth, "payroll:export")) {
     res.status(403).json({ error: "বেতন-তালিকা রপ্তানি অফিস/অধ্যক্ষের কাজ" });
     return;
   }

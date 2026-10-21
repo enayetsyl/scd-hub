@@ -14,7 +14,7 @@
  * translation (two parties, a duties schedule, both signatures), so it has its own
  * renderer below instead of a flag threaded through this one (D-#586).
  *
- * GATE — `staff:manage`, the same permission that reads the staff record itself. No new
+ * GATE — `staff_letters:view` (PM; was staff:manage), the same permission that reads the staff record itself. No new
  * permission: a letter contains strictly less than the profile it was built from.
  */
 import PDFDocument from "pdfkit";
@@ -51,7 +51,7 @@ export function taka(n: number): string {
 
 staffLetterPdfRouter.get("/:id", async (req: Request, res: Response) => {
   const ctx = buildContext(req, res);
-  if (!ctx.auth || !callerHasPermission(ctx.auth, "staff:manage")) {
+  if (!ctx.auth || !callerHasPermission(ctx.auth, "staff_letters:view")) {
     res.status(403).json({ error: "Forbidden" });
     return;
   }
