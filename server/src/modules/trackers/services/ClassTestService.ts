@@ -198,11 +198,11 @@ export interface CreateClassTestRequestInput {
    *  only a routine with no teacher for the cell falls back to the actor. */
   teacherId?: string;
   actorId: string;
-  /** True when the actor holds `roster:manage` (Principal/Office). When they create
+  /** True when the actor holds `class_test:edit_all` (Principal/Office by default; PM). When they create
    *  WITHOUT an explicit teacher pick AND the routine names nobody, we refuse rather
    *  than silently self-assign the test to the admin (owner 2026-07-27, D-#366) — the
    *  exam would otherwise land in the principal's account instead of the subject
-   *  teacher's. A plain teacher (no roster:manage) still falls back to themselves. */
+   *  teacher's. A plain teacher (no edit_all) still falls back to themselves. */
   actorCanManage?: boolean;
 }
 
@@ -671,7 +671,7 @@ export interface UpdateClassTestDetailsInput {
   passMark?: number;
   examDate?: string;
   actorId: string;
-  /** True when the actor holds `roster:manage` (Principal/Office). */
+  /** True when the actor holds `class_test:edit_all` (any test; PM). Otherwise own test only. */
   canManage: boolean;
 }
 
