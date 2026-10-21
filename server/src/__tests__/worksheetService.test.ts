@@ -124,6 +124,7 @@ jest.mock("../modules/worksheets/render/worksheetPdf", () => ({
 }));
 
 import {
+  arabicBookFor,
   getPlan,
   savePlan,
   previewWorksheet,
@@ -166,6 +167,12 @@ describe("gates", () => {
     await expect(getPlan(teacher, CLASS_ID.toString(), "BAN")).resolves.toMatchObject({ classLevel: -1, finalTotal: 25 });
     await expect(getPlan(office, CLASS_ID.toString(), "BAN")).resolves.toBeTruthy();
     await expect(getPlan(guardian, CLASS_ID.toString(), "BAN")).rejects.toThrow();
+  });
+
+  it("gives a KG আরবি paper book 2 and leaves every other paper on its subject's book (D-#806)", () => {
+    expect(arabicBookFor("ARABIC", 0)).toBe("ARABIC_KG");
+    expect(arabicBookFor("ARABIC", -1)).toBeNull();
+    expect(arabicBookFor("BAN", 0)).toBeNull();
   });
 
   it("generates only for Nursery/KG and BAN/ENG/MATH/ARABIC", async () => {

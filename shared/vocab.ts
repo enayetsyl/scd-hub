@@ -5500,15 +5500,17 @@ export const WORKSHEET_AXIS_LABELS_BN: Record<WorksheetAxis, string> = {
 };
 
 /** Which school book a bank picture was taken from (owner 2026-10-16: the book's
- *  pictures exactly). ARABIC is reserved for the scanned রওযাতুল আতফাল ১. */
-export const WORKSHEET_PICTURE_BOOKS = ["BAN", "ENG", "MATH_B", "MATH_E", "ARABIC"] as const;
+ *  pictures exactly). ARABIC = রওযাতুল আতফাল ১ (Nursery), ARABIC_KG = রওযাতুল আতফাল ২ (KG,
+ *  D-#806): a KG আরবি paper draws on ARABIC_KG, a Nursery one on ARABIC. */
+export const WORKSHEET_PICTURE_BOOKS = ["BAN", "ENG", "MATH_B", "MATH_E", "ARABIC", "ARABIC_KG"] as const;
 export type WorksheetPictureBook = (typeof WORKSHEET_PICTURE_BOOKS)[number];
 export const WORKSHEET_PICTURE_BOOK_LABELS_BN: Record<WorksheetPictureBook, string> = {
   BAN: "বাংলা বই",
   ENG: "English বই",
   MATH_B: "গণিত (বাংলা)",
   MATH_E: "Math (English)",
-  ARABIC: "আরবি বই",
+  ARABIC: "আরবি বই ১ (নার্সারি)",
+  ARABIC_KG: "আরবি বই ২ (কেজি)",
 };
 
 /** What a picture may be used for. FIRST_LETTER/MATCH need a tagged first letter,
