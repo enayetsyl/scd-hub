@@ -16,8 +16,7 @@ import { ImprovementAction } from "../models/ImprovementAction";
 import { ImprovementTick } from "../models/ImprovementTick";
 import { Student } from "../../foundation/models/Student";
 import { Section } from "../../foundation/models/Section";
-import { User } from "../../foundation/models/User";
-import { actingAsFilter } from "../../foundation/services/RoleScope";
+import { holderIdsOf } from "../../access-control/services/holders";
 import { emit } from "../../notifications/services/NotificationService";
 import { officeDayTasks, todayKey } from "./ImprovementActionService";
 import { pastDays, trailingUnmarked, addDaysKey } from "../rules";
@@ -25,7 +24,8 @@ import { personName } from "../../../lib/personName";
 
 const str = (id: unknown): string => (id == null ? "" : String(id));
 
-/** Roles told at 11:00 (template-aware via actingAsFilter, D-#467). */
+/** Roles told at 11:00 by default — kept for reference; recipients are now the holders of
+ *  improvement_plan:view_all (PM §5.5), which by default are exactly these roles. */
 export const IMPROVEMENT_DIGEST_ROLES = ["OFFICE", "PRINCIPAL"] as const;
 /** 11:00 local. */
 export const IMPROVEMENT_DIGEST_MINUTES = 11 * 60;
@@ -45,7 +45,9 @@ export async function emitPendingDigest(now = new Date()): Promise<number> {
     byWho.set(who, (byWho.get(who) ?? 0) + 1);
   }
   const listed = [...byWho.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4).map(([n, c]) => `${n} ${bnDigits(c)}`).join(", ");
-  const recipients = (await User.find(actingAsFilter([...IMPROVEMENT_DIGEST_ROLES])).select("_id").lean()) as unknown as Array<{ _id: Types.ObjectId }>;
+  // PM §5.5: whoever holds the progress board (improvement_plan:view_all; default Office +
+  // Principal — the same people IMPROVEMENT_DIGEST_ROLES named).
+  const recipients = (await holderIdsOf("improvement_plan:view_all")).map((id) => ({ _id: id }));
   let created = 0;
   for (const r of recipients) {
     const res = await emit({

@@ -36,21 +36,22 @@ import {
 } from "../services/StudentCommentService";
 import { Section } from "../../foundation/models/Section";
 import { assertCanRead, ForbiddenError } from "../../../middleware/authz";
-import { isAdminStaff } from "../../foundation/services/RoleScope";
+import { callerHasPermission } from "@scd/shared";
 
-/** True when the caller is a Principal/Office reviewer (the comment-delivery authority,
- *  D-#264) — they may edit any undelivered comment + see the review dashboard. */
+/** True when the caller holds `student_comments:review` (the comment-delivery desk,
+ *  D-#264; PM — was the isAdminStaff role check) — they may edit any undelivered comment. */
 function isReviewer(ctx: AppContext): boolean {
-  return isAdminStaff(ctx.auth);
+  return !!ctx.auth && callerHasPermission(ctx.auth, "student_comments:review");
 }
 
-/** Enforce staff read-scope on a section (teachers only; Principal/Office unscoped). */
+/** Enforce staff read-scope on a section; `student_comments:view_all` lifts the scope
+ *  (PM — was the isAdminStaff bypass). */
 async function assertReadSection(ctx: AppContext, sectionId: string): Promise<void> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  if (isAdminStaff(ctx.auth)) return;
+  if (callerHasPermission(ctx.auth, "student_comments:view_all") && ctx.auth.role !== "GUARDIAN") return;
   const section = await Section.findById(sectionId).lean();
   if (!section) throw new ForbiddenError("Section not found");
-  await assertCanRead(ctx, sectionId, section.classId.toString());
+  await assertCanRead(ctx, sectionId, section.classId.toString(), undefined, { viewAll: "student_comments:view_all" });
 }
 
 // ---------------------------------------------------------------------------
@@ -91,7 +92,7 @@ builder.mutationField("recordStudentComment", (t) =>
       "Record one daily student comment (J-CM1): type + sentiment + text [+ optional attachments]. " +
       "The author is the authenticated teacher; the section is resolved server-side from the student. " +
       "Requires tracker:write on that section. NO delivery yet (CM-2). Audited.",
-    authScopes: { hasPermission: "tracker:write" },
+    authScopes: { hasPermission: "student_comments:create" },
     args: {
       studentId: t.arg.string({ required: true }),
       type: t.arg.string({ required: true }),
@@ -125,7 +126,7 @@ builder.mutationField("editStudentComment", (t) =>
     description:
       "Edit an undelivered student comment (refused once delivered — §3). The AUTHOR (teacher) may edit " +
       "their own; a Principal/Office reviewer may edit ANY undelivered comment before releasing it (D-#264). Audited.",
-    authScopes: { authenticated: true },
+    authScopes: { hasAnyPermission: ["student_comments:create", "student_comments:review"] },
     args: {
       commentId: t.arg.string({ required: true }),
       type: t.arg.string({ required: false }),
@@ -155,7 +156,7 @@ builder.mutationField("removeCommentAttachment", (t) =>
     description:
       "Remove a file from an UNDELIVERED comment. Author (own) or Principal/Office reviewer (any); " +
       "refused once delivered (sealed, §3). Unbinds + drops the StoredFile. Audited (D-#264).",
-    authScopes: { authenticated: true },
+    authScopes: { hasAnyPermission: ["student_comments:create", "student_comments:review"] },
     args: {
       commentId: t.arg.string({ required: true }),
       fileId: t.arg.string({ required: true }),
@@ -180,7 +181,7 @@ builder.mutationField("discardStudentComment", (t) =>
       "guardian (owner 2026-07-27, D-#365). The comment is NOT deleted: it stays greyed on the child's staff " +
       "timeline with the reason (a discarded comment can never reach a guardian). Refused once delivered. " +
       "Requires roster:manage (Principal/Office). Audited.",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "student_comments:review" },
     args: {
       commentId: t.arg.string({ required: true }),
       reason: t.arg.string({ required: true }),
@@ -200,7 +201,7 @@ builder.queryField("sectionStudentComments", (t) =>
   t.field({
     type: [StudentCommentRef],
     description: "Every daily comment on a section, newest first (the staff worklist). Requires tracker:read.",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "student_comments:view" },
     args: { sectionId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       await assertReadSection(ctx, args.sectionId);
@@ -216,7 +217,7 @@ builder.queryField("sectionStudentCommentsPage", (t) =>
   t.field({
     type: StudentCommentPageRef,
     description: "One page of a section's daily comments, newest first. Same read-scope as sectionStudentComments.",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "student_comments:view" },
     args: {
       sectionId: t.arg.string({ required: true }),
       page: t.arg.int({ required: false }),
@@ -235,7 +236,7 @@ builder.queryField("studentComments", (t) =>
     description:
       "A child's full daily-comment history, newest first (the staff timeline; the guardian-facing " +
       "delivered-only read is CM-5). Requires tracker:read + read-scope on the child's section.",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "student_comments:view" },
     args: { studentId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       const sectionId = await resolveCommentSection(args.studentId);
@@ -278,7 +279,7 @@ builder.queryField("myStudentComments", (t) =>
       "The CALLER'S OWN daily comments, newest first (optionally one student) — 'see the comments they " +
       "made' (D-#263). No section read-scope (you authored them); never returns another teacher's comments. " +
       "Requires tracker:read.",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "student_comments:create" },
     args: { studentId: t.arg.string({ required: false }) },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
@@ -294,7 +295,7 @@ builder.queryField("myStudentCommentsPage", (t) =>
   t.field({
     type: AuthoredCommentPageRef,
     description: "One page of the CALLER'S OWN daily comments, newest first (optionally one student).",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "student_comments:create" },
     args: {
       studentId: t.arg.string({ required: false }),
       page: t.arg.int({ required: false }),
@@ -333,7 +334,7 @@ builder.queryField("commentReviewInbox", (t) =>
     description:
       "Every UNDELIVERED student comment, newest first — the Principal/Office review dashboard (D-#264): " +
       "decide what reaches the guardian, edit if needed, then deliver. Requires roster:manage (Principal/Office).",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "student_comments:review" },
     resolve: async (_root, _args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       return reviewInbox();
@@ -348,7 +349,7 @@ builder.queryField("commentReviewInboxPage", (t) =>
   t.field({
     type: CommentReviewPageRef,
     description: "One page of the undelivered-comment review queue, newest first. Requires roster:manage.",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "student_comments:review" },
     args: {
       page: t.arg.int({ required: false }),
       pageSize: t.arg.int({ required: false }),
@@ -366,7 +367,7 @@ builder.queryField("commentReviewCount", (t) =>
     description:
       "How many undelivered comments await Principal/Office review — the Comments drawer badge " +
       "(owner 2026-07-26). Requires roster:manage.",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "student_comments:review" },
     resolve: async (_root, _args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       return reviewInboxCount();

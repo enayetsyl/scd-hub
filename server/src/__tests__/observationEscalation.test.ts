@@ -60,6 +60,10 @@ const mockUserFind = jest.fn();
 jest.mock("../modules/foundation/models/User", () => ({
   User: { find: (f: unknown) => ({ select: () => ({ lean: () => mockUserFind(f) }) }) },
 }));
+// PM §5.5: manager recipients are the action's holders — served from the same fixture.
+jest.mock("../modules/access-control/services/holders", () => ({
+  holderIdsOf: async () => ((await mockUserFind({})) as Array<{ _id: unknown }>).map((u) => String(u._id)),
+}));
 
 const mockEmit = jest.fn();
 jest.mock("../modules/notifications/services/NotificationService", () => ({

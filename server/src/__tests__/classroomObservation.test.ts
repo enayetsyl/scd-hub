@@ -85,6 +85,12 @@ const mockUserFind = jest.fn();
 jest.mock("../modules/foundation/models/User", () => ({
   User: { find: (q: unknown) => mockUserFind(q) },
 }));
+// PM §5.5: manager recipients are the action's holders — served from the same user
+// fixture, so a test that sets mockUserFind still decides who is notified.
+jest.mock("../modules/access-control/services/holders", () => ({
+  holderIdsOf: async () =>
+    ((await mockUserFind({}).select().lean()) as Array<{ _id: unknown }>).map((u) => String(u._id)),
+}));
 
 // The anchor group is loaded to check it EXISTS and is on the subject's own track.
 // Default: every group id resolves to a quran-track group; the track tests override it.

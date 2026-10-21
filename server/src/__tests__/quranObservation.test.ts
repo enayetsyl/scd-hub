@@ -63,6 +63,12 @@ const mockUserFind = jest.fn();
 jest.mock("../modules/foundation/models/User", () => ({
   User: { find: (q: unknown) => mockUserFind(q) },
 }));
+// PM §5.5: manager recipients are the action's holders — served from the same user
+// fixture, so a test that sets mockUserFind still decides who is notified.
+jest.mock("../modules/access-control/services/holders", () => ({
+  holderIdsOf: async () =>
+    ((await mockUserFind({}).select().lean()) as Array<{ _id: unknown }>).map((u) => String(u._id)),
+}));
 
 // A group-anchored upload loads the group to check it exists and is on the subject's
 // own track (D-#655). Mocked like every other model here — these tests are DB-free.

@@ -23,7 +23,7 @@ import type { AppContext } from "../../../context";
 import { ForbiddenError, assertGuardianOfStudent } from "../../../middleware/authz";
 import type { IStoredFile, StoredFileKind } from "../../platform/models/StoredFile";
 import { StudentComment, type IStudentComment } from "../models/StudentComment";
-import { isAdminStaff } from "../../foundation/services/RoleScope";
+import { callerHasPermission } from "@scd/shared";
 
 /** Per-file hard limit — 10 MB exactly (chat parity, D-#108 / prd §5). */
 export const MAX_COMMENT_ATTACHMENT_BYTES = 10 * 1024 * 1024; // 10,485,760
@@ -100,7 +100,8 @@ export async function assertCommentFileReadAccess(
   // practice: the reviewer working Review-and-deliver IS the office desk, and an
   // office-by-TEMPLATE reviewer was denied the very attachments they must check before
   // releasing a comment to a family (owner report, 2026-08-11).
-  if (isAdminStaff(ctx.auth)) return;
+  // PM: the reviewer is whoever holds student_comments:review (was isAdminStaff).
+  if (ctx.auth.role !== "GUARDIAN" && callerHasPermission(ctx.auth, "student_comments:review")) return;
 
   // Otherwise: a guardian of the child, and only once the comment is DELIVERED.
   if (!comment.deliveredAt) throw new ForbiddenError(COMMENT_FILE_ERRORS_BN.notReadable);
