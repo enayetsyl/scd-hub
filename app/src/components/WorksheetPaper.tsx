@@ -20,7 +20,7 @@ export interface WorksheetSection {
   note?: string | null;
   marks: number;
   kind: string;
-  layout: "grid" | "groups" | "jumble" | "rows" | "columns" | "pictures" | "match" | "oral" | "manual";
+  layout: "grid" | "groups" | "jumble" | "rows" | "columns" | "pictures" | "choice" | "match" | "oral" | "manual";
   cols?: number;
   cells?: Cell[];
   sets?: Array<{ shown: string[]; answer: string[] }>;
@@ -28,6 +28,10 @@ export interface WorksheetSection {
   groups?: Array<{ label: string; note?: string | null; cols: number; cells: Cell[] }>;
   columns?: Cell[][][];
   pictures?: Array<{ pictureId: string; repeat: number; a: string }>;
+  /** A picture and its printed options; the child circles one (`answer` indexes `options`). */
+  choices?: Array<{ pictureId: string | null; options: string[]; answer: number }>;
+  /** rows / pictures: the answer is a word — one wide box per item. */
+  wide?: boolean;
   left?: Array<{ pictureId: string | null; repeat: number; t: string | null }>;
   right?: string[];
   answer?: number[];
@@ -43,6 +47,8 @@ export interface WorksheetDocT {
   ruled?: boolean;
   /** BAN = two blue lines; ENG = the four-line English khata (red, blue, blue, red). */
   ruling?: "BAN" | "ENG";
+  /** Arabic (D-#802): grids, item cells and options run from the right. */
+  dir?: "rtl";
 }
 
 /**
@@ -68,6 +74,7 @@ function withMarkBases(doc: WorksheetDocT): WorksheetDocT {
       groups: s.groups?.map((g) => ({ ...g, cells: g.cells.map(markCell) })),
       sets: s.sets?.map((x) => ({ shown: x.shown.map((t) => markBase(t)), answer: x.answer.map((t) => markBase(t)) })),
       pictures: s.pictures?.map((p) => ({ ...p, a: markBase(p.a) })),
+      choices: s.choices?.map((x) => ({ ...x, options: x.options.map((t) => markBase(t)) })),
       left: s.left?.map((l) => ({ ...l, t: markBase(l.t) ?? null })),
       right: s.right?.map((t) => markBase(t)),
     })),
@@ -147,32 +154,51 @@ function Repeated({ uri, n, icon }: { uri: string | undefined; n: number; icon: 
   );
 }
 
+/** One option box beside a choice picture — the options share the rest of the line. */
+const OPTION_CELL: ViewStyle = {
+  flex: 1,
+  height: 62,
+  borderWidth: 1,
+  borderColor: LINE,
+  alignItems: "center",
+  justifyContent: "center",
+  backgroundColor: "#FFFFFF",
+};
+
+/** A choice option is a word (four of them, a line to itself) once it is longer than a letter. */
+const isWordOption = (o: string): boolean => [...o].length > 2;
+
 function Body({
   s,
   pics,
   showAnswers,
   ruled,
+  rtl,
 }: {
   s: WorksheetSection;
   pics: Record<string, string>;
   showAnswers: boolean;
   ruled: boolean;
+  rtl: boolean;
 }): React.ReactElement | null {
   const ruling = React.useContext(RulingContext);
   const ch = ruled ? ruledPx(ruling) : 36;
+  // Right to left (Arabic): rows run from the right, so the shared border overlaps on the right.
+  const row: ViewStyle["flexDirection"] = rtl ? "row-reverse" : "row";
+  const overlap = (on: boolean): ViewStyle => (on ? (rtl ? { marginRight: -1 } : { marginLeft: -1 }) : {});
   const gridOf = (cells: Cell[], cols: number): React.ReactElement => (
-    <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+    <View style={{ flexDirection: row, flexWrap: "wrap" }}>
       {cells.map((c, i) => (
-        <View key={i} style={[box(`${100 / cols}%`, ch), { marginLeft: i % cols ? -1 : 0, marginTop: i >= cols ? -1 : 0 }]}>
+        <View key={i} style={[box(`${100 / cols}%`, ch), overlap(i % cols > 0), { marginTop: i >= cols ? -1 : 0 }]}>
           <Guides on={ruled && !c.t} />
           <CellText c={c} showAnswers={showAnswers} />
         </View>
       ))}
     </View>
   );
-  const itemRow = (row: Cell[], key: number): React.ReactElement => (
-    <View key={key} style={{ flexDirection: "row", gap: 6 }}>
-      {row.map((c, j) => (
+  const itemRow = (cells: Cell[], key: number): React.ReactElement => (
+    <View key={key} style={{ flexDirection: row, gap: 6 }}>
+      {cells.map((c, j) => (
         <View key={j} style={box(44, ch)}>
           <Guides on={ruled && !c.t} />
           <CellText c={c} showAnswers={showAnswers} />
@@ -203,16 +229,16 @@ function Body({
         <View style={{ gap: 10 }}>
           {(s.sets ?? []).map((set, k) => (
             <View key={k}>
-              <View style={{ flexDirection: "row" }}>
+              <View style={{ flexDirection: row }}>
                 {set.shown.map((t, i) => (
-                  <View key={i} style={[box(`${100 / set.shown.length}%`, 34), { marginLeft: i ? -1 : 0 }]}>
+                  <View key={i} style={[box(`${100 / set.shown.length}%`, 34), overlap(i > 0)]}>
                     <Text style={txt(17)}>{t}</Text>
                   </View>
                 ))}
               </View>
-              <View style={{ flexDirection: "row", marginTop: -1 }}>
+              <View style={{ flexDirection: row, marginTop: -1 }}>
                 {set.answer.map((a, i) => (
-                  <View key={i} style={[box(`${100 / set.answer.length}%`, ch), { marginLeft: i ? -1 : 0 }]}>
+                  <View key={i} style={[box(`${100 / set.answer.length}%`, ch), overlap(i > 0)]}>
                     <Guides on={ruled} />
                     {showAnswers ? <Text style={txt(17, ANSWER)}>{a}</Text> : null}
                   </View>
@@ -223,11 +249,28 @@ function Body({
         </View>
       );
     case "rows":
+      if (s.wide) {
+        // A word and the child's answer: one item per line, a wide box for the writing.
+        return (
+          <View style={{ gap: 6 }}>
+            {(s.rows ?? []).map((cells, i) => (
+              <View key={i} style={{ flexDirection: row, gap: 8 }}>
+                {cells.map((c, j) => (
+                  <View key={j} style={[box(j === 0 ? "36%" : "60%", Math.max(ch, 40)), { flexGrow: j === 0 ? 0 : 1 }]}>
+                    <Guides on={ruled && !c.t} />
+                    <CellText c={c} showAnswers={showAnswers} />
+                  </View>
+                ))}
+              </View>
+            ))}
+          </View>
+        );
+      }
       return (
-        <View style={{ flexDirection: "row", flexWrap: "wrap", rowGap: 6 }}>
-          {(s.rows ?? []).map((row, i) => (
+        <View style={{ flexDirection: row, flexWrap: "wrap", rowGap: 6 }}>
+          {(s.rows ?? []).map((cells, i) => (
             <View key={i} style={{ width: "50%", minWidth: 150 }}>
-              {itemRow(row, i)}
+              {itemRow(cells, i)}
             </View>
           ))}
         </View>
@@ -235,16 +278,61 @@ function Body({
     case "columns":
       // Before/after: each column top to bottom, in the order the teacher set.
       return (
-        <View style={{ flexDirection: "row", flexWrap: "wrap", rowGap: 12 }}>
+        <View style={{ flexDirection: row, flexWrap: "wrap", rowGap: 12 }}>
           {(s.columns ?? []).map((col, k) => (
             <View key={k} style={{ width: "50%", minWidth: 150, gap: 6 }}>
-              {col.map((row, i) => itemRow(row, i))}
+              {col.map((cells, i) => itemRow(cells, i))}
             </View>
           ))}
         </View>
       );
+    case "choice": {
+      // A picture, then its options; the child circles one. The key outlines the right one.
+      const items = s.choices ?? [];
+      const words = items.some((c) => c.options.some(isWordOption));
+      return (
+        <View style={{ flexDirection: row, flexWrap: "wrap", gap: 8 }}>
+          {items.map((c, i) => (
+            <View key={i} style={{ flexDirection: row, flexBasis: words ? "100%" : 300, flexGrow: 1 }}>
+              <View style={[box(72, 62), { padding: 3 }]}>
+                {c.pictureId ? <Pic uri={pics[c.pictureId]} size={54} /> : null}
+              </View>
+              {c.options.map((o, k) => (
+                <View key={k} style={[OPTION_CELL, overlap(true)]}>
+                  <View
+                    style={
+                      showAnswers && k === c.answer
+                        ? { borderWidth: 2, borderColor: ANSWER, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 2 }
+                        : { paddingHorizontal: 10, paddingVertical: 2 }
+                    }
+                  >
+                    <Text style={txt(isWordOption(o) ? 17 : 20)}>{o}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          ))}
+        </View>
+      );
+    }
     case "pictures": {
       const items = s.pictures ?? [];
+      if (s.wide) {
+        // Picture → write its word: the answer box is the card's width.
+        return (
+          <View style={{ flexDirection: row, flexWrap: "wrap", gap: 8 }}>
+            {items.map((p, i) => (
+              <View key={i} style={{ width: 150, borderWidth: 1, borderColor: LINE, alignItems: "center", padding: 4, gap: 4 }}>
+                <Pic uri={pics[p.pictureId]} size={80} />
+                <View style={box("100%", ruled ? ch : 38)}>
+                  <Guides on={ruled} />
+                  {showAnswers ? <Text style={txt(17, ANSWER)}>{p.a}</Text> : null}
+                </View>
+              </View>
+            ))}
+          </View>
+        );
+      }
       const counting = items.some((p) => p.repeat > 1);
       if (counting) {
         return (
@@ -265,7 +353,7 @@ function Body({
         );
       }
       return (
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+        <View style={{ flexDirection: row, flexWrap: "wrap", gap: 8 }}>
           {items.map((p, i) => (
             <View key={i} style={{ width: 96, borderWidth: 1, borderColor: LINE, alignItems: "center", padding: 4, gap: 4 }}>
               <Pic uri={pics[p.pictureId]} size={70} />
@@ -302,7 +390,7 @@ function Body({
               <View style={{ flex: 1, alignItems: "center" }}>
                 {showAnswers && s.answer ? <Text style={txt(15, ANSWER)}>{right[s.answer[i]]}</Text> : <Text style={txt(14)}>•    •</Text>}
               </View>
-              <View style={box(60, 54)}>
+              <View style={box(rtl && (right[i] ?? "").length > 3 ? 100 : 60, 54)}>
                 <Text style={txt((right[i] ?? "").length > 3 ? 14 : 19)}>{right[i]}</Text>
               </View>
             </View>
@@ -372,7 +460,7 @@ export default function WorksheetPaper({
           </View>
           {s.note ? <Text style={[txt(12, "#444444"), { marginBottom: 4, marginLeft: 12 }]}>({s.note})</Text> : null}
           <RulingContext.Provider value={doc.ruling ?? "BAN"}>
-            <Body s={s} pics={pictures} showAnswers={showAnswers} ruled={!!doc.ruled} />
+            <Body s={s} pics={pictures} showAnswers={showAnswers} ruled={!!doc.ruled} rtl={doc.dir === "rtl"} />
           </RulingContext.Provider>
         </View>
       ))}

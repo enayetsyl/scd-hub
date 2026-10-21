@@ -22,7 +22,7 @@ import { STR, bnNum, classLevelLabel, routineSubjectLabel, getActiveLang } from 
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
 
-const SUBJECTS = ["BAN", "ENG", "MATH"] as const;
+const SUBJECTS = ["BAN", "ENG", "MATH", "ARABIC"] as const;
 const LETTER_KINDS = new Set(["WRITE_SEQUENCE", "FILL_MISSING", "REARRANGE", "BEFORE", "AFTER", "BEFORE_AFTER"]);
 
 interface RowEdit {

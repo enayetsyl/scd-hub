@@ -18,14 +18,15 @@ import { spawnSync } from "node:child_process";
 import path from "node:path";
 
 const ROOT = path.resolve(import.meta.dirname, "../..");
-const CASES = path.join(ROOT, "server/import/cases/descriptive");
+const CASES = path.resolve(ROOT, process.argv[2] ?? "server/import/cases/descriptive");
+const SET = path.basename(CASES);
 const HARNESS = path.join(ROOT, "server/import/validate_import.py");
 const ENVELOPE = path.join(ROOT, "docs/import-contract.schema.json");
 const PYTHON = process.env.PYTHON_BIN || (process.platform === "win32" ? "python" : "python3");
 
 const files = readdirSync(CASES).filter((f) => f.endsWith(".json")).sort();
 if (files.length === 0) {
-  console.error("RESULT: FAIL — no case files found in server/import/cases/descriptive");
+  console.error(`RESULT: FAIL — no case files found in ${CASES}`);
   process.exit(1);
 }
 
@@ -54,7 +55,7 @@ for (const file of files) {
 
 console.log("");
 if (failures) {
-  console.error(`RESULT: FAIL — ${failures} of ${files.length} descriptive-carrier cases did not gate as intended`);
+  console.error(`RESULT: FAIL — ${failures} of ${files.length} ${SET} cases did not gate as intended`);
   process.exit(1);
 }
-console.log(`RESULT: PASS — all ${files.length} descriptive-carrier cases gate as intended`);
+console.log(`RESULT: PASS — all ${files.length} ${SET} cases gate as intended`);

@@ -9,7 +9,10 @@
  * in `warnings` — never a silent short paper.
  */
 import type { WorksheetAxis } from "@scd/shared";
+import { ARABIC_JOINERS, bareWord, letterForm, wordLetters, type LetterForm } from "./arabic";
 import {
+  alphabetOf,
+  arabicBase,
   axisSequence,
   bnNumber,
   isNumberAxis,
@@ -20,7 +23,7 @@ import {
   BAN_CONSONANTS,
   MAX_NUMBER_UP_TO,
 } from "./sequences";
-import type { Cell, GenerateInput, LetterRange, PictureRef, RowSpec, Section, WorksheetDoc } from "./types";
+import type { Cell, Choice, GenerateInput, LetterRange, PictureRef, RowSpec, Section, WorksheetDoc } from "./types";
 
 // ---------------------------------------------------------------------------
 // Seeded randomness
@@ -102,6 +105,8 @@ interface RowCtx {
   rng: Rng;
   isFinal: boolean;
   usedPictures: Set<string>;
+  /** Bare words already asked on this paper (word rows print no picture, so they need their own). */
+  usedWords: Set<string>;
   warnings: string[];
 }
 
@@ -322,8 +327,12 @@ function picturePool(c: RowCtx, need: "FIRST_LETTER" | "MATCH" | "WORD"): Pictur
     const l = need === "MATCH" ? matchLetter(p) : p.letter;
     return !!l && letterInScope(l, c.input.subject, c.input.scope);
   });
-  // A picture already on this paper is not reused in another question.
-  return orderPool(pool, c.rng, c.isFinal).filter((p) => !c.usedPictures.has(p.id));
+  // A picture already on this paper is not reused in another question — except in Arabic, whose
+  // book has 27 pictures while a Nursery final prints 30 (D-#802): there a used picture comes back
+  // in a later question, but only once the fresh ones have run out.
+  const ordered = orderPool(pool, c.rng, c.isFinal);
+  const fresh = ordered.filter((p) => !c.usedPictures.has(p.id));
+  return c.input.subject === "ARABIC" ? [...fresh, ...ordered.filter((p) => c.usedPictures.has(p.id))] : fresh;
 }
 
 function letterAnswer(p: PictureRef, subject: string): string {
@@ -419,6 +428,135 @@ function buildMatchPictureWord(row: RowSpec, c: RowCtx): Built {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Choices, forms and words — the 2026 আরবি rows (D-#802)
+// ---------------------------------------------------------------------------
+
+/** A letter question offers three letters (the 2025 Nursery paper); a word question four
+ *  (the book's own "ما هذا؟" pages). */
+const LETTER_OPTIONS = 3;
+const WORD_OPTIONS = 4;
+
+/** One letter to a reader: أ and ا are the same answer in a choice. */
+const letterKey = (l: string): string => arabicBase(l).toUpperCase();
+
+/** The answer among `n - 1` distractors from `others`, shuffled; never a second right answer. */
+function withOptions(answer: string, others: readonly string[], n: number, key: (s: string) => string, rng: Rng): Omit<Choice, "pictureId"> {
+  const seen = new Set([key(answer)]);
+  const distract: string[] = [];
+  for (const o of shuffle(others, rng)) {
+    if (!o || seen.has(key(o))) continue;
+    seen.add(key(o));
+    distract.push(o);
+    if (distract.length === n - 1) break;
+  }
+  const options = shuffle([answer, ...distract], rng);
+  return { options, answer: options.indexOf(answer) };
+}
+
+/** Every word the subject's book pictures carry — the pool word distractors come from. */
+function bookWords(c: RowCtx): string[] {
+  const book = pictureBookFor(c.input.subject);
+  return [...new Set(c.input.pictures.filter((p) => p.book === book && p.word).map((p) => p.word as string))];
+}
+
+function buildPictureChoice(row: RowSpec, c: RowCtx, mode: "LETTER" | "WORD"): Built {
+  const subject = c.input.subject;
+  const pool = picturePool(c, mode === "LETTER" ? "FIRST_LETTER" : "WORD");
+  const answerOf = (p: PictureRef): string => (mode === "LETTER" ? letterAnswer(p, subject) : (p.word ?? ""));
+  let chosen = takeDistinct(pool, row.count, (p) => (mode === "LETTER" ? letterKey(answerOf(p)) : bareWord(answerOf(p))));
+  if (chosen.length < row.count) {
+    chosen = [...chosen, ...pool.filter((p) => !chosen.includes(p)).slice(0, row.count - chosen.length)];
+  }
+  // Distractor letters come from what was taught; too few taught → the whole alphabet.
+  const taught = alphabetOf(subject, c.input.scope);
+  const letters = taught.length >= LETTER_OPTIONS ? taught : alphabetOf(subject, c.input.scope, true);
+  const others = mode === "LETTER" ? letters : bookWords(c);
+  const choices: Choice[] = chosen.map((p) => {
+    c.usedPictures.add(p.id);
+    return mode === "LETTER"
+      ? { pictureId: p.id, ...withOptions(answerOf(p), others, LETTER_OPTIONS, letterKey, c.rng) }
+      : { pictureId: p.id, ...withOptions(answerOf(p), others, WORD_OPTIONS, bareWord, c.rng) };
+  });
+  return { section: { layout: "choice", choices }, printed: choices.length === row.count ? null : choices.length };
+}
+
+function buildPictureWriteWord(row: RowSpec, c: RowCtx): Built {
+  const chosen = takeDistinct(picturePool(c, "WORD"), row.count, (p) => bareWord(p.word ?? ""));
+  chosen.forEach((p) => c.usedPictures.add(p.id));
+  return {
+    section: { layout: "pictures", wide: true, pictures: chosen.map((p) => ({ pictureId: p.id, repeat: 1, a: p.word ?? "" })) },
+    printed: chosen.length === row.count ? null : chosen.length,
+  };
+}
+
+/** Joining forms exist only in Arabic: another subject prints nothing (and says so). */
+const arabicLetters = (c: RowCtx): string[] => (c.input.subject === "ARABIC" ? alphabetOf("ARABIC", c.input.scope) : []);
+
+function buildMatchLetterForm(row: RowSpec, c: RowCtx): Built {
+  // ا د ذ ر ز و ء never join forward, so they have no middle form to match.
+  const picks = shuffle(arabicLetters(c).filter((l) => ARABIC_JOINERS.includes(l)), c.rng).slice(0, row.count);
+  const chosen = picks.map((l) => ({ pictureId: null, repeat: 1, t: l, answer: letterForm(l, "medial") }));
+  return {
+    section: { layout: "match", ...buildMatch(chosen, c) },
+    printed: picks.length === row.count ? null : picks.length,
+  };
+}
+
+const FORMS: readonly LetterForm[] = ["initial", "medial", "final"];
+
+function buildLetterFromForm(row: RowSpec, c: RowCtx): Built {
+  const picks = shuffle(arabicLetters(c), c.rng).slice(0, row.count);
+  const rows: Cell[][] = picks.map((l) => [{ t: letterForm(l, FORMS[randInt(c.rng, 0, FORMS.length - 1)]) }, { t: "", a: l }]);
+  return { section: { layout: "rows", cols: 2, rows }, printed: picks.length === row.count ? null : picks.length };
+}
+
+/** Pictures used for their WORD only (nothing printed): in scope, words not yet asked first. */
+function wordPool(c: RowCtx): PictureRef[] {
+  const book = pictureBookFor(c.input.subject);
+  const pool = c.input.pictures.filter(
+    (p) =>
+      p.book === book &&
+      p.uses.includes("WORD") &&
+      !!p.word &&
+      (!p.letter || letterInScope(p.letter, c.input.subject, c.input.scope)),
+  );
+  const ordered = orderPool(pool, c.rng, c.isFinal);
+  const fresh = (p: PictureRef): boolean => !c.usedWords.has(bareWord(p.word ?? ""));
+  return [...ordered.filter(fresh), ...ordered.filter((p) => !fresh(p))];
+}
+
+function buildMatchLetterWord(row: RowSpec, c: RowCtx): Built {
+  const subject = c.input.subject;
+  const chosen = takeDistinct(wordPool(c), row.count, (p) => letterKey(letterAnswer(p, subject)));
+  chosen.forEach((p) => c.usedWords.add(bareWord(p.word ?? "")));
+  return {
+    section: {
+      layout: "match",
+      ...buildMatch(
+        chosen.map((p) => ({ pictureId: null, repeat: 1, t: letterAnswer(p, subject), answer: p.word ?? "" })),
+        c,
+      ),
+    },
+    printed: chosen.length === row.count ? null : chosen.length,
+  };
+}
+
+/** শব্দ ভেঙে হরফ লেখা (بيت → ب ي ت) and its reverse, হরফ জুড়ে শব্দ লেখা. */
+function buildWordLetters(row: RowSpec, c: RowCtx, mode: "SPLIT" | "JOIN"): Built {
+  const chosen = takeDistinct(wordPool(c), row.count, (p) => bareWord(p.word ?? ""));
+  chosen.forEach((p) => c.usedWords.add(bareWord(p.word ?? "")));
+  const rows: Cell[][] = chosen.map((p) => {
+    const bare = bareWord(p.word ?? "");
+    const spaced = wordLetters(p.word ?? "").join(" ");
+    return mode === "SPLIT" ? [{ t: bare }, { t: "", a: spaced }] : [{ t: spaced }, { t: "", a: bare }];
+  });
+  return {
+    section: { layout: "rows", wide: true, rows },
+    printed: chosen.length === row.count ? null : chosen.length,
+  };
+}
+
 function countPool(c: RowCtx, axis: WorksheetAxis | null | undefined): PictureRef[] {
   const preferred = axis === "NUM_EN" ? "MATH_E" : "MATH_B";
   const all = c.input.pictures.filter((p) => p.uses.includes("COUNT"));
@@ -486,6 +624,22 @@ function buildRow(row: RowSpec, c: RowCtx): Built {
       return buildCountPictures(row, c);
     case "MATCH_COUNT":
       return buildMatchCount(row, c);
+    case "PICTURE_CIRCLE_LETTER":
+      return buildPictureChoice(row, c, "LETTER");
+    case "PICTURE_CHOOSE_WORD":
+      return buildPictureChoice(row, c, "WORD");
+    case "PICTURE_WRITE_WORD":
+      return buildPictureWriteWord(row, c);
+    case "MATCH_LETTER_FORM":
+      return buildMatchLetterForm(row, c);
+    case "LETTER_FROM_FORM":
+      return buildLetterFromForm(row, c);
+    case "MATCH_LETTER_WORD":
+      return buildMatchLetterWord(row, c);
+    case "SPLIT_WORD":
+      return buildWordLetters(row, c, "SPLIT");
+    case "JOIN_LETTERS":
+      return buildWordLetters(row, c, "JOIN");
     case "ORAL":
       return { section: { layout: "oral" }, printed: null };
     case "MANUAL":
@@ -504,6 +658,7 @@ function rowSeed(seed: number, seq: number): number {
 export function generateWorksheet(input: GenerateInput): WorksheetDoc {
   const warnings: string[] = [];
   const usedPictures = new Set<string>();
+  const usedWords = new Set<string>();
   const sections: Section[] = [];
   let total = 0;
   let n = 0;
@@ -516,6 +671,7 @@ export function generateWorksheet(input: GenerateInput): WorksheetDoc {
       rng: makeRng(rowSeed(input.seed, row.seq)),
       isFinal: input.kind === "FINAL",
       usedPictures,
+      usedWords,
       warnings,
     };
     const built = buildRow(row, ctx);
@@ -542,6 +698,15 @@ export function generateWorksheet(input: GenerateInput): WorksheetDoc {
 
   // Owner 2026-10-16: Bangla boxes as a Bangla copy (two lines); English letter, word and
   // writing boxes as an English khata (four lines); maths boxes like Bangla ("yes like bangla").
+  // Arabic boxes stay plain — there is no Arabic copybook spec — and the paper runs right to left.
   const ruling = input.subject === "ENG" ? "ENG" : input.subject === "BAN" || input.subject === "MATH" ? "BAN" : undefined;
-  return { sections, total, pictureIds: [...usedPictures], warnings, ruled: !!ruling, ...(ruling ? { ruling } : {}) };
+  return {
+    sections,
+    total,
+    pictureIds: [...usedPictures],
+    warnings,
+    ruled: !!ruling,
+    ...(ruling ? { ruling } : {}),
+    ...(input.subject === "ARABIC" ? { dir: "rtl" as const } : {}),
+  };
 }

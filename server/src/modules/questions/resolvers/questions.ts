@@ -30,6 +30,7 @@ import { applyQuestionOnlyGate, seesPublishedOnly } from "../publishGate";
 import { QUESTION_CATEGORIES, callerHasPermission } from "@scd/shared";
 import type { Types, FlattenMaps, FilterQuery } from "mongoose";
 import type { IContentArtifact } from "../../content/models/ContentArtifact";
+import { loCodeMongoFilter, loCodesOf } from "../../mastery/bank";
 
 type LeanArtifact = FlattenMaps<IContentArtifact> & { _id: Types.ObjectId };
 
@@ -50,6 +51,8 @@ interface QuestionArtifactShape {
   /** Question-specific tag fields lifted from envelope tags + payload. */
   qid?: string | null;
   topicTag?: string | null;
+  /** Mastery learning outcomes this question assesses (D-#785): lo_codes, else [topic_tag] when an LO code. */
+  loCodes: string[];
   questionType?: string | null;
   /** Exercise family (D-#511) — payload lesson_ref. */
   category?: string | null;
@@ -79,6 +82,7 @@ QuestionArtifactRef.implement({
     payloadJson: t.exposeString("payloadJson"),
     qid: t.string({ nullable: true, resolve: (q) => q.qid ?? null }),
     topicTag: t.string({ nullable: true, resolve: (q) => q.topicTag ?? null }),
+    loCodes: t.stringList({ resolve: (q) => q.loCodes }),
     questionType: t.string({ nullable: true, resolve: (q) => q.questionType ?? null }),
     category: t.string({ nullable: true, resolve: (q) => q.category ?? null }),
     paperRole: t.string({ nullable: true, resolve: (q) => q.paperRole ?? null }),
@@ -114,6 +118,7 @@ function docToShape(doc: LeanArtifact): QuestionArtifactShape {
     payloadJson: JSON.stringify(env.payload ?? {}),
     qid: (payload.qid as string | undefined) ?? null,
     topicTag: (tags.topic_tag as string | undefined) ?? null,
+    loCodes: loCodesOf(tags, payload),
     questionType: (payload.question_type as string | undefined) ?? null,
     category: (payload.lesson_ref as string | undefined) ?? null,
     paperRole: (payload.paper_role as string | undefined) ??
@@ -166,6 +171,8 @@ builder.queryField("questions", (t) =>
        *  single-value arg of the same axis; an EMPTY list means "no constraint",
        *  never "match nothing" — clearing the last chip must widen, not blank. */
       topicTags: t.arg.stringList({ required: false }),
+      /** Mastery learning outcomes (D-#785): matches the primary topic_tag OR any lo_codes entry. Empty = no constraint. */
+      loCodes: t.arg.stringList({ required: false }),
       questionTypes: t.arg.stringList({ required: false }),
       /** Chapter numbers, from the artifact's own address (D-#524). */
       chapters: t.arg.intList({ required: false }),
@@ -256,6 +263,10 @@ builder.queryField("questions", (t) =>
       // Multiple $or clauses (content scope / search / cursor) must be ANDed —
       // a bare filter.$or would let a later clause clobber an earlier one.
       const ands: FilterQuery<IContentArtifact>[] = [];
+
+      // Mastery LO filter (D-#785) — ANDed like every other $or clause.
+      const loCodes = (args.loCodes ?? []).filter((c) => c.trim());
+      if (loCodes.length > 0) ands.push(loCodeMongoFilter(loCodes) as FilterQuery<IContentArtifact>);
 
       // Free-text search: question body as typed + digit-normalised qid.
       const rawSearch = args.search?.trim();

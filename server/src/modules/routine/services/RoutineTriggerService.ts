@@ -678,7 +678,7 @@ export async function classNoteSubmissionReport(date: Date): Promise<ClassNoteSu
     sectionIds.size > 0 ? Section.find({ _id: { $in: [...sectionIds] } }).select("classId code nameBn").lean() : Promise.resolve([]),
     classIds.size > 0 ? Class.find({ _id: { $in: [...classIds] } }).select("level nameBn").lean() : Promise.resolve([]),
     subjectGroupIds.size > 0 ? SubjectGroup.find({ _id: { $in: [...subjectGroupIds] } }).select("track level nameBn code").lean() : Promise.resolve([]),
-    teacherIds.size > 0 ? User.find({ _id: { $in: [...teacherIds] } }).select("name phone").lean() : Promise.resolve([]),
+    teacherIds.size > 0 ? User.find({ _id: { $in: [...teacherIds] } }).select("name phone email").lean() : Promise.resolve([]),
   ]);
 
   const sectionById = new Map(sections.map((s) => [s._id.toString(), s]));
@@ -686,11 +686,34 @@ export async function classNoteSubmissionReport(date: Date): Promise<ClassNoteSu
   const subjectGroupById = new Map(subjectGroups.map((g) => [g._id.toString(), g]));
   const userById = new Map(users.map((u) => [u._id.toString(), u]));
   const phones = [...new Set(users.map((u) => u.phone).filter((phone): phone is string => !!phone))];
+  // D-#788: email is the fallback key (a teacher whose phone carries her guardian login
+  // logs in by email). Profile emails are not lowercased, so every emailed profile is
+  // read and compared normalised — the active roster is small.
+  const anyEmail = users.some((u) => !!(u as { email?: string }).email);
   const staffProfiles =
-    phones.length > 0
-      ? await StaffProfile.find({ active: true, phone: { $in: phones } }).select("phone schoolId").lean()
+    phones.length > 0 || anyEmail
+      ? await StaffProfile.find({
+          active: true,
+          $or: [{ phone: { $in: phones } }, ...(anyEmail ? [{ email: { $nin: [null, ""] } }] : [])],
+        })
+          .select("phone email schoolId")
+          .lean()
       : [];
-  const schoolIdByPhone = new Map(staffProfiles.map((s) => [s.phone ?? "", s.schoolId]));
+  const schoolIdByPhone = new Map(
+    staffProfiles.filter((s) => s.phone && phones.includes(s.phone)).map((s) => [s.phone ?? "", s.schoolId]),
+  );
+  const normEmail = (e?: string | null): string => (e ?? "").trim().toLowerCase();
+  // One profile per email only — an email two profiles share names no one (fail closed).
+  const emailCounts = new Map<string, number>();
+  for (const s of staffProfiles) {
+    const e = normEmail(s.email);
+    if (e) emailCounts.set(e, (emailCounts.get(e) ?? 0) + 1);
+  }
+  const schoolIdByEmail = new Map(
+    staffProfiles
+      .filter((s) => normEmail(s.email) && emailCounts.get(normEmail(s.email)) === 1)
+      .map((s) => [normEmail(s.email), s.schoolId]),
+  );
 
   type RowState = ClassNoteSubmissionRow & { sortRank: string };
   const rows = new Map<string, RowState>();
@@ -701,7 +724,10 @@ export async function classNoteSubmissionReport(date: Date): Promise<ClassNoteSu
     const rowKey = `${s.groupType}|${s.groupId.toString()}|${teacherId ?? "none"}`;
     const published = noteBySlot.has(slotId);
     const teacher = teacherId ? userById.get(teacherId) : null;
-    const teacherSchoolId = teacher?.phone ? schoolIdByPhone.get(teacher.phone) ?? null : null;
+    const teacherSchoolId =
+      (teacher?.phone ? schoolIdByPhone.get(teacher.phone) : undefined) ??
+      schoolIdByEmail.get(normEmail((teacher as { email?: string } | null | undefined)?.email)) ??
+      null;
 
     const existing = rows.get(rowKey);
     if (existing) {

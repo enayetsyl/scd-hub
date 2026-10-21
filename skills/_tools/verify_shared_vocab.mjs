@@ -34,7 +34,7 @@ check("default-deny: unknown role", V.roleHasPermission("GHOST", "content:read")
 check("PRINCIPAL has user:manage + audit:read", V.roleHasPermission("PRINCIPAL", "user:manage") && V.roleHasPermission("PRINCIPAL", "audit:read"));
 check("TEACHER lacks user:manage / audit:read / content:import", !["user:manage","audit:read","content:import"].some((p) => V.roleHasPermission("TEACHER", p)));
 check("TEACHER can read content + assemble + write trackers", ["content:read","set:assemble","tracker:write"].every((p) => V.roleHasPermission("TEACHER", p)));
-check("OFFICE = roster/staff/leave/payroll/performance/guardian/message/import/assign_review/question(read+manage)/routine/attendance/library/chat/observation/finance/report/gift/homework-void/exam/scholarship/tasks", eq(V.permissionsForRole("OFFICE"), ["roster:manage","staff:manage","leave:manage","payroll:manage","performance:manage","guardian:link","message:dispatch","content:import","content:assign_review","question:read","question:manage","routine:read","routine:manage","attendance:manage","library:read","library:manage","chat:read","chat:write","chat:manage","observation:upload","observation:read","observation:manage","finance:manage","report:release","gift:manage","homework:void","exam:manage","exam:read","scholarship:manage","scholarship:read","tasks:assign"]));
+check("OFFICE = roster/staff/leave/payroll/performance/guardian/message/import/assign_review/question(read+manage)/routine/attendance/library/chat/observation/finance/report/gift/homework-void/exam/scholarship/mastery-read/tasks", eq(V.permissionsForRole("OFFICE"), ["roster:manage","staff:manage","leave:manage","payroll:manage","performance:manage","guardian:link","message:dispatch","content:import","content:assign_review","question:read","question:manage","routine:read","routine:manage","attendance:manage","library:read","library:manage","chat:read","chat:write","chat:manage","observation:upload","observation:read","observation:manage","finance:manage","report:release","gift:manage","homework:void","exam:manage","exam:read","scholarship:manage","scholarship:read","mastery:read","tasks:assign"]));
 // question:manage is the desk's correction power, NOT a teaching one (D-#548): Office and the
 // Principal hold it; a TEACHER — reviewer included — must still go through a review verdict.
 check("question:manage is Principal + Office only; TEACHER and GUARDIAN never", V.roleHasPermission("PRINCIPAL","question:manage") && V.roleHasPermission("OFFICE","question:manage") && !V.roleHasPermission("TEACHER","question:manage") && !V.roleHasPermission("GUARDIAN","question:manage"));
@@ -799,6 +799,49 @@ check("homework:void is PRINCIPAL + OFFICE only — TEACHER and GUARDIAN never (
   !V.roleHasPermission("TEACHER","homework:void") && !V.roleHasPermission("GUARDIAN","homework:void"));
 check("homework:void exists as its OWN permission and OFFICE still holds no tracker:* (D-#554 stands)",
   V.PERMISSIONS.includes("homework:void") && !V.ROLE_PERMISSIONS.OFFICE.some((p) => p.startsWith("tracker:")));
+
+// --- Mastery tracker (docs/prd-mastery.md, D-#775–#787) ---
+check("mastery perms are declared and BUILD",
+  ["mastery:read", "mastery:enter", "mastery:manage", "mastery:approve"].every(
+    (p) => V.PERMISSIONS.includes(p) && V.PERMISSION_BUILD_STATUS[p] === "build"));
+check("mastery:manage is PRINCIPAL only (catalogue, marks, tags, policy, switch)",
+  V.roleHasPermission("PRINCIPAL", "mastery:manage") &&
+  !["TEACHER", "OFFICE", "GUARDIAN"].some((r) => V.roleHasPermission(r, "mastery:manage")));
+check("mastery:approve is on the PRINCIPAL template only — Office holders get it by PER-USER grant, no coordinator role (D-#786)",
+  V.roleHasPermission("PRINCIPAL", "mastery:approve") &&
+  !["TEACHER", "OFFICE", "GUARDIAN"].some((r) => V.roleHasPermission(r, "mastery:approve")) &&
+  !V.RESERVED_PERMISSIONS.includes("mastery:approve") && !V.ROLES.includes("COORDINATOR"));
+check("TEACHER holds mastery:read + mastery:enter (routine-scoped in the service); GUARDIAN holds no mastery:*",
+  V.roleHasPermission("TEACHER", "mastery:read") && V.roleHasPermission("TEACHER", "mastery:enter") &&
+  !V.PERMISSIONS.filter((p) => p.startsWith("mastery:")).some((p) => V.roleHasPermission("GUARDIAN", p)));
+check("mastery covers every homework subject and no Quran (D-#784)",
+  eq([...V.MASTERY_SUBJECTS], [...V.HW_SUBJECTS]) && !V.MASTERY_SUBJECTS.includes("QURAN"));
+check("LO code pattern: chapter outcome + skill strand accepted, malformed refused (D-#776)",
+  V.MASTERY_LO_CODE_RE.test("LO-C3-MATH-07-03") && V.MASTERY_LO_CODE_RE.test("LO-C1-BAN-SK-HW-01") &&
+  V.MASTERY_LO_CODE_RE.test("LO-NUR-ENG-01-01") && !V.MASTERY_LO_CODE_RE.test("LO-C7-MATH-01-01") &&
+  !V.MASTERY_LO_CODE_RE.test("LO-C3-QURAN-01-01") && !V.MASTERY_LO_CODE_RE.test("TOP-MATH-C3-01"));
+check("mastery policy defaults: thresholds ordered and inside 0..100 (D-#779/#781)",
+  V.MASTERY_POLICY_DEFAULTS.weakBelowPct < V.MASTERY_POLICY_DEFAULTS.improvingAtPct &&
+  V.MASTERY_POLICY_DEFAULTS.improvingAtPct <= 100 && V.MASTERY_POLICY_DEFAULTS.sectionTriggerPct === 50 &&
+  V.MASTERY_POLICY_DEFAULTS.minQuestionsForVerdict === 2 &&
+  V.MASTERY_POLICY_DEFAULTS.assignmentMixWeak + V.MASTERY_POLICY_DEFAULTS.assignmentMixImproving +
+    V.MASTERY_POLICY_DEFAULTS.assignmentMixRevision === 100);
+
+// --- Mastery M-1: the bank speaks LO codes (D-#785) — THREE places agree on the pattern ---
+{
+  const PAYLOAD = JSON.parse(fs.readFileSync(new URL("../../server/import/LOCKED_QuestionPayload_Schema_v1.json", import.meta.url), "utf8"));
+  const loSrc = V.MASTERY_LO_CODE_RE.source;
+  const topicPat = new RegExp(PAYLOAD.properties.topic_tag.pattern);
+  check("payload lo_codes item pattern === vocab MASTERY_LO_CODE_RE",
+    PAYLOAD.properties.lo_codes?.items?.pattern === loSrc);
+  check("envelope tags.lo_codes item pattern === vocab MASTERY_LO_CODE_RE",
+    SCHEMA.properties.tags.properties.lo_codes?.items?.pattern === loSrc);
+  check("payload topic_tag accepts BOTH a legacy TOP- code and an LO code (chapter + strand), refuses malformed",
+    topicPat.test("TOP-MATH-C3-05") && topicPat.test("LO-C3-MATH-07-03") && topicPat.test("LO-C1-BAN-SK-HW-01") &&
+    !topicPat.test("LO-C3-MATH-7-3") && !topicPat.test("LO-C3-QURAN-01-01"));
+  check("lo_codes stays OPTIONAL in the payload (a legacy question needs none)",
+    !PAYLOAD.required.includes("lo_codes"));
+}
 
 console.log(`\nRESULT: ${fails === 0 ? "PASS — all checks green" : fails + " FAILED"}`);
 process.exit(fails === 0 ? 0 : 1);
