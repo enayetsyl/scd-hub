@@ -207,7 +207,7 @@ CompletenessChaseRowRef.implement({
 builder.queryField("studentJuzWeakness", (t) =>
   t.field({
     type: [JuzWeaknessRef],
-    description: "Per-juz weakness heatmap for a child (SR-3, J-SR3-1). tracker:read + the child's group scope.",
+    description: "Per-juz weakness heatmap for a child (SR-3, J-SR3-1). saturday_revision:view + the child's group scope.",
     authScopes: { hasAnyPermission: ["saturday_revision:view", "saturday_revision:view_all"] },
     args: { studentId: t.arg.string({ required: true }), asOf: t.arg.string({ required: false }) },
     resolve: async (_root, args, ctx) => {
@@ -220,7 +220,7 @@ builder.queryField("studentJuzWeakness", (t) =>
 builder.queryField("revisionGroupCoverage", (t) =>
   t.field({
     type: [CoverageRowRef],
-    description: "Per (student × juz) last-revised + overdue flag for a group (SR-3, J-SR3-2). tracker:read + group scope.",
+    description: "Per (student × juz) last-revised + overdue flag for a group (SR-3, J-SR3-2). saturday_revision:view + group scope.",
     authScopes: { hasAnyPermission: ["saturday_revision:view", "saturday_revision:view_all"] },
     args: {
       groupId: t.arg.string({ required: true }),
@@ -254,7 +254,7 @@ builder.queryField("revisionWeeklyTrend", (t) =>
 builder.queryField("revisionLevelDashboard", (t) =>
   t.field({
     type: RevisionDashboardRef,
-    description: "The level (group) rollup (SR-3, J-SR3-4). tracker:read + group scope (Principal/Office unscoped).",
+    description: "The level (group) rollup (SR-3, J-SR3-4). saturday_revision:view + group scope (Principal/Office unscoped).",
     authScopes: { hasAnyPermission: ["saturday_revision:view", "saturday_revision:view_all"] },
     args: { groupId: t.arg.string({ required: true }), asOf: t.arg.string({ required: false }) },
     resolve: async (_root, args, ctx) => {
@@ -267,7 +267,7 @@ builder.queryField("revisionLevelDashboard", (t) =>
 builder.queryField("revisionStudentDashboard", (t) =>
   t.field({
     type: RevisionDashboardRef,
-    description: "The student rollup (SR-3, J-SR3-4). tracker:read + the child's group scope.",
+    description: "The student rollup (SR-3, J-SR3-4). saturday_revision:view + the child's group scope.",
     authScopes: { hasAnyPermission: ["saturday_revision:view", "saturday_revision:view_all"] },
     args: { studentId: t.arg.string({ required: true }), asOf: t.arg.string({ required: false }) },
     resolve: async (_root, args, ctx) => {

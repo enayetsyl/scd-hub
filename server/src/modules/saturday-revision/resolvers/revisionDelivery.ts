@@ -110,7 +110,7 @@ builder.mutationField("deliverGroupRevisionSaturday", (t) =>
     type: [RevisionDeliveryOutcomeRef],
     description:
       "Batch-deliver every entry for a (group × Saturday). Requires being the group's teacher " +
-      "(tracker:write) or Principal/Office. Audited per entry.",
+      "(saturday_revision:send) or saturday_revision:edit_all. Audited per entry.",
     authScopes: { hasAnyPermission: ["saturday_revision:send", "saturday_revision:edit_all"] },
     args: {
       groupId: t.arg.string({ required: true }),
