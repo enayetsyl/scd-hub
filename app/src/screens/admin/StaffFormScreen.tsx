@@ -42,6 +42,7 @@ import {
   genderLabel,
 } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { useAuth } from "../../auth/AuthContext";
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<AdminStackParamList, "StaffForm">;
@@ -56,6 +57,8 @@ function dateInput(iso?: string | null): string {
 export default function StaffFormScreen({ navigation, route }: Props): React.ReactElement {
   const existing = route.params?.staff as StaffT | undefined;
   const isEdit = !!existing;
+  const { can } = useAuth();
+  const canSensitive = can("staff_records:view_sensitive");
 
   const [form, setForm] = useState<Record<string, string>>({
     schoolId: existing?.schoolId ?? "",
@@ -205,12 +208,17 @@ export default function StaffFormScreen({ navigation, route }: Props): React.Rea
         <Field label={`${STR.address} (২)`} value={form.permanentAddress} onChangeText={set("permanentAddress")} multiline />
 
         <Divider />
-        {/* Principal/Office-only rows (H1.4) — already behind the staff:manage gate. */}
-        <Field label={STR.nid} value={form.nid} onChangeText={set("nid")} />
-        <Field label={STR.bankAccount} value={form.bankAccount} onChangeText={set("bankAccount")} />
-        {/* BEFTN to another bank cannot be instructed without it (D-#591). */}
-        <Field label={STR.stfRoutingNo} value={form.routingNo} onChangeText={set("routingNo")} />
-        <Muted style={{ marginTop: -space(2), marginBottom: space(3) }}>{STR.stfRoutingNoHint}</Muted>
+        {/* Sensitive rows (H1.4): NID + bank need staff_records:view_sensitive (PM §5.8) —
+            without it the server returns them null, so the form does not show them. */}
+        {canSensitive ? (
+          <>
+            <Field label={STR.nid} value={form.nid} onChangeText={set("nid")} />
+            <Field label={STR.bankAccount} value={form.bankAccount} onChangeText={set("bankAccount")} />
+            {/* BEFTN to another bank cannot be instructed without it (D-#591). */}
+            <Field label={STR.stfRoutingNo} value={form.routingNo} onChangeText={set("routingNo")} />
+            <Muted style={{ marginTop: -space(2), marginBottom: space(3) }}>{STR.stfRoutingNoHint}</Muted>
+          </>
+        ) : null}
         <Field label={STR.biometricId} value={form.biometricId} onChangeText={set("biometricId")} />
         <Muted>{STR.staffPayElsewhere}</Muted>
 

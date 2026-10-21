@@ -67,8 +67,8 @@ export default function OffboardingCaseScreen({ route }: Props): React.ReactElem
   const { caseId } = route.params;
   const { confirmAction } = useConfirm();
   const { role, can } = useAuth();
-  const canCompute = can("payroll:manage");
-  const canRelease = can("payroll:approve");
+  const canCompute = can("offboarding:prepare");
+  const canRelease = can("offboarding:settle");
 
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);

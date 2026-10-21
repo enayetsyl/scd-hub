@@ -41,7 +41,7 @@ const linesToList = (s: string): string[] => s.split("\n").map((l) => l.trim()).
 export default function StaffAppraisalsScreen({ route }: Props): React.ReactElement {
   const { staffProfileId } = route.params;
   const { role, can } = useAuth();
-  const canSignoff = can("performance:signoff");
+  const canSignoff = can("appraisal:sign_off");
 
   const [yearId, setYearId] = React.useState("");
   const [goals, setGoals] = React.useState("");

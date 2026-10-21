@@ -53,7 +53,7 @@ export default function StaffConductScreen({ route }: Props): React.ReactElement
   const { staffProfileId } = route.params;
   const { confirmAction } = useConfirm();
   const { role, can } = useAuth();
-  const canFinalize = can("performance:signoff");
+  const canFinalize = can("conduct:sign_off");
 
   // New-step form
   const [stage, setStage] = React.useState<string | null>(null);
