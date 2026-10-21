@@ -5,6 +5,7 @@ Extract the picture bank from the school's Nursery book PDFs (D-#746).
     python -I extract.py --book ENG  "<Nursery (English) ... .pdf>"         --out <dir>
     python -I extract.py --book MATH_B "<Nursery - Math [B] ... .pdf>"      --out <dir>
     python -I extract.py --book MATH_E "<Math (E) Nursery ... .pdf>"         --out <dir>
+    python -I extract.py --book ARABIC "<রওদাতুল আতফাল ১ম ভাগ.pdf>"          --out <dir>
 
 Then `node import.cjs <dir>/bundle.json` loads the bundle into Mongo.
 
@@ -17,6 +18,10 @@ What it does, per embedded image (poppler's `pdfimages`, page-numbered):
   * writes `image` (≤600 px PNG) and `thumb` (≤240 px JPEG) as base64 into
     bundle.json, with any curated tags from tags/<book>.json ("page:index" keys).
 
+The Arabic book is a page scan, so its pictures are cut by hand instead: every
+tags/ARABIC.json entry carries a `scan` box and is lifted off the sky-blue page
+(`lift_from_scan`).
+
 The output is a work file, never committed (it is the books' pictures).
 """
 import argparse
@@ -28,9 +33,14 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from collections import deque
 
 from PIL import Image
 import numpy as np
+
+# Books printed as page scans (one image per page): their pictures come only from the
+# hand-drawn `scan` boxes in tags/<book>.json, never from the embedded images.
+SCANNED_BOOKS = {"ARABIC"}
 
 MIN_SIDE = 90
 MAX_ASPECT = 4.0
@@ -123,6 +133,86 @@ def whiten(im, level):
     return im
 
 
+def _grow(m):
+    o = m.copy()
+    o[1:] |= m[:-1]
+    o[:-1] |= m[1:]
+    o[:, 1:] |= m[:, :-1]
+    o[:, :-1] |= m[:, 1:]
+    return o
+
+
+def _reach(seed, allowed):
+    """Grow `seed` through 4-connected `allowed` pixels."""
+    cur = seed & allowed
+    while True:
+        nxt = _grow(cur) & allowed
+        if (nxt == cur).all():
+            return cur
+        cur = nxt
+
+
+def _components(m):
+    """4-connected labels of a boolean mask -> (label array, sizes; label n has sizes[n-1])."""
+    lab = np.zeros(m.shape, dtype=np.int32)
+    sizes = []
+    h, w = m.shape
+    for y0, x0 in zip(*np.nonzero(m)):
+        if lab[y0, x0]:
+            continue
+        n = len(sizes) + 1
+        lab[y0, x0] = n
+        q = deque([(y0, x0)])
+        c = 0
+        while q:
+            y, x = q.popleft()
+            c += 1
+            for yy, xx in ((y - 1, x), (y + 1, x), (y, x - 1), (y, x + 1)):
+                if 0 <= yy < h and 0 <= xx < w and m[yy, xx] and not lab[yy, xx]:
+                    lab[yy, xx] = n
+                    q.append((yy, xx))
+        sizes.append(c)
+    return lab, sizes
+
+
+def lift_from_scan(page_im, box, keep=0.05, pockets=True):
+    """Cut [x0, y0, x1, y1] (scan pixels) out of a scanned page and lift the picture off the
+    book's sky-blue page (রওযাতুল আতফাল ১, scanned one image per page):
+      * the page is pale sky blue — blue clearly above red, and light; only the sky reachable
+        from the box edge is page, so blue INSIDE a picture (an iris) survives;
+      * enclosed sky pockets of any real size (between a horse's legs, inside a padlock's
+        shackle) are page too, unless `pockets` is off (a light-blue iris); then the
+        pale-blue anti-alias fringe is eaten twice. The page measures blue - red ~45 and
+        the book's white turbans and grey robes ~5-15, hence the 28 / 20 cut-offs;
+      * of what is left, only parts at least `keep` × the largest survive — the printed word
+        beside the picture and stray grid dots go."""
+    x0, y0, x1, y1 = box
+    a = np.asarray(page_im.crop((x0, y0, x1, y1)).convert("RGB")).astype(np.int16)
+    r, g, b = a[..., 0], a[..., 1], a[..., 2]
+    sky = (b - r >= 28) & (b >= 170) & (g >= 160)
+    border = np.zeros(sky.shape, dtype=bool)
+    border[0] = border[-1] = True
+    border[:, 0] = border[:, -1] = True
+    page = _reach(border, sky)
+    if pockets:
+        holes, sizes = _components(sky & ~page)
+        page |= np.isin(holes, [i + 1 for i, s in enumerate(sizes) if s >= 80])
+    fringe = (b - r >= 20) & (b >= 150)
+    for _ in range(2):
+        page |= _grow(page) & fringe
+    fg = ~page
+    parts, sizes = _components(fg)
+    if sizes:
+        big = max(sizes)
+        fg = np.isin(parts, [i + 1 for i, s in enumerate(sizes) if s >= keep * big])
+    a[~fg] = 255
+    im = Image.fromarray(a.astype(np.uint8))
+    ys, xs = np.nonzero(fg)
+    if len(xs):
+        im = im.crop((max(0, xs.min() - 6), max(0, ys.min() - 6), min(im.width, xs.max() + 7), min(im.height, ys.max() + 7)))
+    return im
+
+
 def encode(im, max_side, fmt):
     c = im.copy()
     c.thumbnail((max_side, max_side), Image.LANCZOS)
@@ -154,11 +244,14 @@ def main():
         local = os.path.join(tmp, "book.pdf")
         shutil.copyfile(args.pdf, local)
         rows = list_images(local)
-        subprocess.run(["pdfimages", "-png", local, os.path.join(tmp, "i")], check=True)
+        # A scanned book's pages are JPEGs: dump them as stored (-j), since re-encoding
+        # 85 full-page scans as PNG takes over a quarter of an hour.
+        fmt = "-j" if args.book in SCANNED_BOOKS else "-png"
+        subprocess.run(["pdfimages", fmt, local, os.path.join(tmp, "i")], check=True)
 
         kept = []  # (key, image, hash)
         for i, r in enumerate(rows):
-            if r["type"] != "image":
+            if r["type"] != "image" or args.book in SCANNED_BOOKS:
                 continue
             nxt = rows[i + 1] if i + 1 < len(rows) else None
             mask = os.path.join(tmp, "i-%03d.png" % nxt["num"]) if nxt and nxt["type"] in ("smask", "mask") else None
@@ -189,14 +282,21 @@ def main():
         # image ("14:9001") and carries `render` becomes a page-region crop of its own.
         image_keys = {"%d:%d" % (r["page"], r["num"]) for r in rows}
         for key, t in tags.items():
-            if key not in image_keys and t.get("render"):
+            if (key not in image_keys and t.get("render")) or (args.book in SCANNED_BOOKS and t.get("scan")):
                 kept.append((key, None, None))
+        # a scanned book is one image per page: page number -> that image's number
+        page_image = {r["page"]: r["num"] for r in rows if r["type"] == "image"}
 
         items = []
         for key, im, _ in kept:
             page, num = (int(x) for x in key.split(":"))
             t = tags.get(key, {})
-            if t.get("tiles"):
+            if t.get("scan"):
+                # A scanned book (Arabic): "<page>:<n>" is the n-th picture on that page,
+                # cut by hand from the page scan — [x0, y0, x1, y1] in scan pixels.
+                scan = Image.open(os.path.join(tmp, "i-%03d.jpg" % page_image[page]))
+                im = lift_from_scan(scan, t["scan"], t.get("keep", 0.05), t.get("pockets", True))
+            elif t.get("tiles"):
                 # The book's PDF places this picture's tiles slightly APART, so even its own
                 # page shows white seams (the মৎস্য fish, owner 2026-10-17): butt the tiles
                 # together as cut — [[image number, x, y], ...] in tile pixels.

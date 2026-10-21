@@ -1,7 +1,7 @@
 # PRD — Worksheet generator (Nursery/KG papers in final-exam style)
 
-Decisions: D-#744 (engine), D-#745 (plan), D-#746 (picture bank), D-#747 (print + answer key).
-Status: WS-1 built (BAN/ENG/MATH, Nursery + KG). WS-2 (Arabic) waits for a clean scan of রওযাতুল আতফাল ১.
+Decisions: D-#744 (engine), D-#745 (plan), D-#746 (picture bank), D-#747 (print + answer key), D-#802–#804 (Arabic).
+Status: WS-1 built (BAN/ENG/MATH, Nursery + KG). WS-2 built (আরবি, Nursery + KG, §2a): pictures cut from the clean scan of রওযাতুল আতফাল ১ (§5); prod picture import pending.
 
 ## 1. Why
 
@@ -21,8 +21,8 @@ those rows into papers:
 
 | Layer | Where | Changed by |
 |---|---|---|
-| Sequences | `engine/sequences.ts`: স্বরবর্ণ 11 + ব্যঞ্জনবর্ণ 39 (one line, book order), A–Z, 1–100 in Bangla and English digits | code |
-| Item kinds (15) | `engine/generate.ts`: one seeded rule each (WRITE_SEQUENCE, FILL_MISSING, REARRANGE, BEFORE/AFTER/BEFORE_AFTER, PICTURE_FIRST_LETTER, MATCH_PICTURE_LETTER, MATCH_PICTURE_WORD, MATCH_CASE, MATCH_NUMERAL, COUNT_PICTURES, MATCH_COUNT, ORAL, MANUAL) | code |
+| Sequences | `engine/sequences.ts`: স্বরবর্ণ 11 + ব্যঞ্জনবর্ণ 39 (one line, book order), A–Z, 1–100 in Bangla and English digits, the 29 Arabic letters (book order) | code |
+| Item kinds (23) | `engine/generate.ts`: one seeded rule each (WRITE_SEQUENCE, FILL_MISSING, REARRANGE, BEFORE/AFTER/BEFORE_AFTER, PICTURE_FIRST_LETTER, MATCH_PICTURE_LETTER, MATCH_PICTURE_WORD, MATCH_CASE, MATCH_NUMERAL, COUNT_PICTURES, MATCH_COUNT, the eight Arabic kinds of §2a, ORAL, MANUAL) | code |
 | Plan | `WorksheetPlan` keyed by (class level × subject): how each syllabus row is generated, plus the Assignment and Class-test presets. Counts and marks always come from the LIVE syllabus. | Office (plan screen) |
 | Picture bank | `WorksheetPicture`: pictures taken from the school's own Nursery books 2026, bytes stored in Mongo (`image` ≤600 px, `thumb` ≤240 px) | Office (bank screen); importer |
 | Paper | `WorksheetDoc` JSON → drawn natively in the app (`WorksheetPaper`) and by pdfkit (`render/worksheetPdf.ts`) | — |
@@ -38,10 +38,48 @@ those rows into papers:
   - Matching rows use distinct answers.
   - A row that cannot be filled prints what it can, and its marks and a Bangla warning say so.
 - **Auto-mapping.** `engine/autoMap.ts` guesses a row's kind from its wording. It maps every
-  published Nursery 2026 BAN/ENG/MATH row correctly (tests pin them). A saved choice applies only
+  published Nursery 2026 BAN/ENG/MATH row and every Nursery/KG আরবি row correctly (tests pin them). A saved choice applies only
   while the row's wording is unchanged; a changed row is flagged on the plan screen.
 
 **Ranges (D-#748).** For a paper, the teacher may bound each PART of a letter question by its first and last letter: fill-the-gaps (the cells shown), the alphabet row (স্বরবর্ণ and ব্যঞ্জনবর্ণ are two sub-questions, one range each), each jumbled line, and each of the two before/after columns (listed top to bottom). An explicit range overrides "taught up to"; empty = automatic. Bangla writing boxes carry two handwriting guide lines.
+
+**Rows written "1 × N" (D-#803).** An item row written as one item worth N marks (every 2026 আরবি
+row) is generated as N one-mark items. WRITE_SEQUENCE, ORAL and MANUAL keep their single item.
+
+## 2a. Arabic (WS-2, D-#802)
+
+Below class one Arabic is taught class-wise, so its মানবন্টন is found by class like the other
+subjects. The published 2026 rows (Nursery 6 rows = 50, KG 10 rows = 100) all auto-map:
+
+| Row wording (2026) | Kind | Printed as |
+|---|---|---|
+| ছবি দেখে শব্দের প্রথম অক্ষরে বৃত্ত আঁকা · ছবির হরফে বৃত্ত আঁকি | PICTURE_CIRCLE_LETTER | picture + three letters, circle one |
+| ছবি দেখে শব্দের প্রথম অক্ষর লেখা | PICTURE_FIRST_LETTER | picture + a box |
+| ছবি দেখে সঠিক উত্তরে টিক চিহ্ন দেওয়া · ছবির শব্দে বৃত্ত আঁকি | PICTURE_CHOOSE_WORD | picture + four words, tick/circle one |
+| সঠিক তারতিবে হরফ লেখা | REARRANGE (5) | jumbled letters, write them in order |
+| আগে ও পরের হরফ লেখা | BEFORE_AFTER | — |
+| মূল হরফ ও শব্দের মাঝের হরফ মিল করি | MATCH_LETTER_FORM | letter ↔ its middle form (ـبـ); ا د ذ ر ز و ء have none |
+| পূর্ণ হরফ লিখি | LETTER_FROM_FORM | an initial/middle/final form, write the letter |
+| ছবির সাথে শব্দ মিলাই | MATCH_PICTURE_WORD | — |
+| হরফ দিয়ে শব্দ মিলাই | MATCH_LETTER_WORD | letter ↔ a word starting with it |
+| শব্দ ভেঙ্গে হরফ লিখি | SPLIT_WORD | بيت → ب ي ت |
+| হরফ জোড়া লাগিয়ে শব্দ বানাই | JOIN_LETTERS | ب ي ت → بيت |
+| ছবি দেখে আরবি লিখি | PICTURE_WRITE_WORD | picture + a wide box for the word |
+| খালি জায়গা পূরণ করা (ا-ي) | FILL_MISSING | — |
+| ছবি দেখে শব্দ বলা (মৌখিক) | ORAL | — |
+
+- **Letters.** The `ARABIC` axis is ا ب ت ث ج ح خ د ذ ر ز س ش ص ض ط ظ ع غ ف ق ك ل م ن و ه ء ي, the
+  book's letter-page order. The teacher ticks the taught letters as in Bangla. أ/إ/آ count as ا
+  for scope and are never offered beside ا in a choice.
+- **Words.** A word question shows the book's word with harakat; split/join use it bare (بيت).
+- **Direction.** `WorksheetDoc.dir = "rtl"`: grids, item cells, picture cards and options run
+  from the right, in the app and in the PDF. Matching keeps its two columns as they are.
+- **Font.** Noto Naskh Arabic (`server/assets/fonts`, OFL). pdfkit shapes one Arabic word
+  correctly but lays several out left to right, so the renderer draws Arabic word by word from
+  the right. Arabic boxes are unruled (no Arabic copybook spec yet).
+- **Pictures (D-#804).** The book has 27 usable pictures and a Nursery final prints 30 (KG 40), so
+  on an Arabic paper a picture may come back in a later question once the fresh ones run out —
+  never twice in one question. Other subjects still never reuse a picture on a paper.
 
 ## 3. Roles (no new permission)
 
@@ -71,6 +109,7 @@ python -I server/scripts/worksheet-pictures/extract.py --book BAN    "<Nursery (
 python -I server/scripts/worksheet-pictures/extract.py --book ENG    "<Nursery (English) … .pdf>" --out <dir>
 python -I server/scripts/worksheet-pictures/extract.py --book MATH_B "<Nursery - Math [B] … .pdf>" --out <dir>
 python -I server/scripts/worksheet-pictures/extract.py --book MATH_E "<Math (E) Nursery … .pdf>"  --out <dir>
+python -I server/scripts/worksheet-pictures/extract.py --book ARABIC "<রওদাতুল আতফাল ১ম ভাগ.pdf>"   --out <dir>
 node server/scripts/worksheet-pictures/import.cjs <dir>/bundle.json          # dry run, prints the DB name
 APPLY=1 node server/scripts/worksheet-pictures/import.cjs <dir>/bundle.json  # writes
 ```
@@ -84,6 +123,17 @@ extractor:
 - takes a picture the book splits into tiles from the rendered page (`render`) or butts its tiles
   together (`tiles`), and a tag whose key names no embedded image (`14:9001`) plus `render` is a
   page-region crop of its own — the numerals the book draws as vector art (এক ১, পঞ্চম ৫, ষাট ৬০).
+
+**Arabic (a page scan).** রওযাতুল আতফাল ১ is 85 scanned pages, one JPEG each, so its pictures come
+only from hand-drawn boxes: each `tags/ARABIC.json` entry `"<page>:<n>"` (the n-th picture on that
+page) carries `scan: [x0, y0, x1, y1]` in scan pixels. The extractor lifts the picture off the
+sky-blue page (the page's blue − red is about 45; the book's white turbans and grey robes 5–15),
+whitens enclosed sky pockets (between legs, inside a padlock's shackle; `pockets: false` keeps a
+light-blue iris), and drops the printed word beside the picture. Only the 28 letter pages are cut,
+one picture each (ا has only the word الله), per the letter-page-only rule. `pageLetter` is the
+page; `letter` is the word's first letter (أَرْنَب sits on the ء page, so `letter` أ). The غ picture
+(غُرْفَة, a room) prints the word inside the picture, so it is imported hidden. The ص page prints
+صُورَة under a fence; it is tagged as printed.
 
 **Book letter (D-#757).** A Bangla picture carries two letters: `letter`, the word's first letter
 (what "ছবি দেখে সঠিক বর্ণ লেখ" asks for), and `pageLetter`, the letter page it sits on (ব্যাঙ → ঙ,
@@ -104,9 +154,8 @@ The bundle holds the books' pictures and is never committed.
 
 ## 6. Out of scope / next
 
-- **WS-2 Arabic:** needs a clean, unwatermarked scan of the full book. The excerpt on file carries
-  the publisher's watermark across about a third of its pictures. Pictures are cropped by hand
-  (one image per scanned page), and pdfkit needs an Arabic font.
+- **KG Arabic book (রওযাতুল আতফাল ২):** not in the bank. The KG paper draws on book 1's 27
+  pictures and their words until it is scanned.
 - **Classes 1–5:** their rows are mostly authored questions, so the generator would print MANUAL
   rows. That work belongs to the question bank, not here.
 - **A worksheet ↔ AssignmentItem link:** today the print request is tagged with class, section and

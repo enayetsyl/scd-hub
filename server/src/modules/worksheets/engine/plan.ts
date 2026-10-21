@@ -50,6 +50,20 @@ const isKind = (k: string): k is WorksheetItemKind => (WORKSHEET_ITEM_KINDS as r
 const isAxis = (a: string | null | undefined): a is WorksheetAxis =>
   !!a && (WORKSHEET_AXES as readonly string[]).includes(a);
 
+/** Kinds whose single "item" is the whole lump (the alphabet, the oral, a blank space). */
+const LUMP_KINDS: ReadonlySet<string> = new Set(["WRITE_SEQUENCE", "ORAL", "MANUAL"]);
+
+/**
+ * A row written "1 × 10" for an item question (every row of the 2026 আরবি মানবন্টন) means
+ * ten one-mark items, not one item worth ten (D-#802). Lump kinds keep their one item.
+ */
+function itemsOf(kind: string, count: number, marksEach: number): { count: number; marksEach: number } {
+  if (count === 1 && marksEach > 1 && Number.isInteger(marksEach) && !LUMP_KINDS.has(kind)) {
+    return { count: marksEach, marksEach: 1 };
+  }
+  return { count, marksEach };
+}
+
 /** Report-card component rows (CT/আখলাক) carry no count — they are not paper questions. */
 export function mergePlanRows(
   syllabusRows: SyllabusRowIn[],
@@ -64,14 +78,14 @@ export function mergePlanRows(
       const auto = autoMapRow(r.label, r.itemType, subject);
       const s = bySeq.get(r.seq);
       const usable = !!s && s.label.trim() === r.label.trim() && isKind(s.kind);
+      const kind = usable ? (s!.kind as WorksheetItemKind) : auto.kind;
       return {
         seq: r.seq,
         label: r.label,
         itemType: r.itemType ?? null,
-        count: r.count as number,
-        marksEach: r.marksEach as number,
+        ...itemsOf(kind, r.count as number, r.marksEach as number),
         total: r.total,
-        kind: usable ? (s!.kind as WorksheetItemKind) : auto.kind,
+        kind,
         axis: usable ? (isAxis(s!.axis) ? s!.axis : auto.axis) : auto.axis,
         setSize: usable ? (s!.setSize ?? auto.setSize) : auto.setSize,
         source: usable ? "saved" : "auto",

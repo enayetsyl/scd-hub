@@ -7,16 +7,23 @@
  * dark red, "উত্তরপত্র" in the header — so a teacher marks against the very sheet.
  *
  * Fonts: the bundled Noto Bengali subset has no Latin, so every string goes through
- * the shared script splitter (Bangla → Noto, Latin/digits → Helvetica).
+ * the shared script splitter (Bangla → Noto, Latin/digits → Helvetica), and Arabic runs
+ * go to Noto Naskh Arabic (D-#802). fontkit shapes and orders ONE Arabic word correctly,
+ * but pdfkit lays several words out left to right, so an Arabic run is drawn word by
+ * word from the right. An Arabic paper (`dir: "rtl"`) also mirrors its cell layouts.
  */
 import PDFDocument from "pdfkit";
 import * as path from "path";
 import { BENGALI_FONT, splitScriptRuns } from "../../../routes/pdfRenderer";
-import type { Cell, Section, WorksheetDoc } from "../engine/types";
+import type { Cell, Choice, Section, WorksheetDoc } from "../engine/types";
 import { bnNumber } from "../engine/sequences";
 import { withMarkBases } from "./markBase";
 
 const FONT_PATH = path.resolve(__dirname, "../../../../assets/fonts/NotoSansBengali-Regular.ttf");
+const ARABIC_FONT = "NotoNaskhArabic";
+const ARABIC_FONT_PATH = path.resolve(__dirname, "../../../../assets/fonts/NotoNaskhArabic-Regular.ttf");
+/** Naskh reads small next to Noto Bengali at the same point size. */
+const ARABIC_SCALE = 1.2;
 
 export interface WorksheetHeader {
   /** "স্কুল ফর কমিউনিটি ডেভেলপমেন্ট" / "School for Community Development". */
@@ -62,43 +69,95 @@ type Doc = PDFKit.PDFDocument;
 
 /** Script runs, keeping markBase's leading no-break space WITH the Bengali mark after it —
  *  shaped apart, the mark gets its dotted circle back. */
-function runsOf(text: string): ReturnType<typeof splitScriptRuns> {
-  const runs = splitScriptRuns(text);
+interface Run {
+  font: string;
+  text: string;
+}
+
+const isArabicCp = (cp: number): boolean =>
+  (cp >= 0x0600 && cp <= 0x06ff) ||
+  (cp >= 0x0750 && cp <= 0x077f) ||
+  (cp >= 0x08a0 && cp <= 0x08ff) ||
+  (cp >= 0xfb50 && cp <= 0xfdff) ||
+  (cp >= 0xfe70 && cp <= 0xfeff);
+
+function runsOf(text: string): Run[] {
+  let runs: Run[] = splitScriptRuns(text);
   if (runs.length > 1 && runs[0].text === "\u00A0" && runs[1].font === BENGALI_FONT) {
-    return [{ font: BENGALI_FONT, text: runs[0].text + runs[1].text }, ...runs.slice(2)];
+    runs = [{ font: BENGALI_FONT, text: runs[0].text + runs[1].text }, ...runs.slice(2)];
   }
-  return runs;
+  // Arabic has no strong font in the shared splitter: cut it out into runs of its own, keeping
+  // the spaces between Arabic words inside the run (they are the gaps drawWords lays out).
+  const out: Run[] = [];
+  for (const r of runs) {
+    for (const ch of r.text) {
+      const last = out[out.length - 1];
+      const font = isArabicCp(ch.codePointAt(0) ?? 0) || (ch === " " && last?.font === ARABIC_FONT) ? ARABIC_FONT : r.font;
+      if (last && last.font === font) last.text += ch;
+      else out.push({ font, text: ch });
+    }
+  }
+  return out;
+}
+
+/** An Arabic run as words and the spaces between them, in reading order. */
+const arabicTokens = (text: string): string[] => text.split(/( +)/).filter((t) => t.length > 0);
+
+function runWidth(doc: Doc, r: Run, size: number): number {
+  if (r.font !== ARABIC_FONT) return doc.font(r.font).fontSize(size).widthOfString(r.text);
+  doc.font(ARABIC_FONT).fontSize(size * ARABIC_SCALE);
+  return arabicTokens(r.text).reduce((w, t) => w + doc.widthOfString(t), 0);
+}
+
+/** Draws one run with its left edge at `x`; an Arabic run word by word from the right. */
+function drawRun(doc: Doc, r: Run, x: number, y: number, size: number): void {
+  if (r.font !== ARABIC_FONT) {
+    doc.font(r.font).fontSize(size).text(r.text, x, y, { lineBreak: false });
+    return;
+  }
+  const s = size * ARABIC_SCALE;
+  doc.font(ARABIC_FONT).fontSize(s);
+  // Naskh sits lower in its line box than Noto Bengali: lift it to share the baseline area.
+  const ay = y - (s - size) * 0.75;
+  let cx = x + runWidth(doc, r, size);
+  for (const t of arabicTokens(r.text)) {
+    const w = doc.widthOfString(t);
+    cx -= w;
+    if (t.trim()) doc.text(t, cx, ay, { lineBreak: false });
+  }
 }
 
 /** Draw a one-line string centred in a box, switching fonts per script run. */
 function centered(doc: Doc, text: string, x: number, y: number, w: number, h: number, size: number, color = INK): void {
   if (!text) return;
-  doc.fontSize(size).fillColor(color);
+  doc.fillColor(color);
   const runs = runsOf(text);
-  let width = 0;
-  for (const r of runs) width += doc.font(r.font).widthOfString(r.text);
+  const width = runs.reduce((s, r) => s + runWidth(doc, r, size), 0);
   let cx = x + Math.max(0, (w - width) / 2);
   const cy = y + (h - size * 1.25) / 2;
   for (const r of runs) {
-    doc.font(r.font).text(r.text, cx, cy, { lineBreak: false });
-    cx += doc.font(r.font).widthOfString(r.text);
+    drawRun(doc, r, cx, cy, size);
+    cx += runWidth(doc, r, size);
   }
+  doc.fontSize(size);
 }
 
 /** Left-aligned one-liner (labels, header lines). Returns the drawn width. */
 function line(doc: Doc, text: string, x: number, y: number, size: number, color = INK): number {
-  doc.fontSize(size).fillColor(color);
+  doc.fillColor(color);
   let cx = x;
   for (const r of runsOf(text)) {
-    doc.font(r.font).text(r.text, cx, y, { lineBreak: false });
-    cx += doc.font(r.font).widthOfString(r.text);
+    drawRun(doc, r, cx, y, size);
+    cx += runWidth(doc, r, size);
   }
+  doc.fontSize(size);
   return cx - x;
 }
 
 function textWidth(doc: Doc, text: string, size: number): number {
+  const w = runsOf(text).reduce((s, r) => s + runWidth(doc, r, size), 0);
   doc.fontSize(size);
-  return runsOf(text).reduce((w, r) => w + doc.font(r.font).widthOfString(r.text), 0);
+  return w;
 }
 
 function box(doc: Doc, x: number, y: number, w: number, h: number): void {
@@ -141,6 +200,7 @@ export async function renderWorksheetPdf(
     doc.on("end", () => resolve(Buffer.concat(chunks)));
     doc.on("error", reject);
     doc.registerFont(BENGALI_FONT, FONT_PATH);
+    doc.registerFont(ARABIC_FONT, ARABIC_FONT_PATH);
 
     const W = doc.page.width - 2 * MARGIN;
     const bottom = () => doc.page.height - MARGIN;
@@ -191,12 +251,16 @@ export async function renderWorksheetPdf(
         y += 14;
       }
       y += 3;
-      y = drawBody(doc, s, y, W, answers, pictures, !!wsDoc.ruled, wsDoc.ruling ?? "BAN") + 12;
+      y = drawBody(doc, s, y, W, answers, pictures, !!wsDoc.ruled, wsDoc.ruling ?? "BAN", wsDoc.dir === "rtl") + 12;
     }
 
     doc.end();
   });
 }
+
+const CHOICE_H = 58;
+/** Letter choices sit two to a line; word choices (four words) need the whole width. */
+const choicesPerLine = (cs: Choice[]): number => (cs.some((c) => c.options.some((o) => [...o].length > 2)) ? 1 : 2);
 
 function estimateHeight(s: Section): number {
   switch (s.layout) {
@@ -209,8 +273,11 @@ function estimateHeight(s: Section): number {
     case "jumble":
       return (s.sets?.length ?? 0) * 76;
     case "rows":
-      return Math.ceil((s.rows?.length ?? 0) / 2) * 30;
+      return s.wide ? (s.rows?.length ?? 0) * 38 : Math.ceil((s.rows?.length ?? 0) / 2) * 30;
+    case "choice":
+      return Math.ceil((s.choices?.length ?? 0) / choicesPerLine(s.choices ?? [])) * CHOICE_H;
     case "pictures": {
+      if (s.wide) return Math.ceil((s.pictures?.length ?? 0) / 3) * 112;
       const counting = (s.pictures ?? []).some((p) => p.repeat > 1);
       const per = counting ? 2 : 5;
       return Math.ceil((s.pictures?.length ?? 0) / per) * (counting ? 74 : 96);
@@ -234,9 +301,12 @@ function drawBody(
   pictures: PictureBytes,
   ruled: boolean,
   ruling: Ruling,
+  rtl = false,
 ): number {
   let y = y0;
   const pageBottom = doc.page.height - MARGIN;
+  /** x of a box `w` wide laid out left to right at `x` — mirrored on a right-to-left paper. */
+  const mx = (x: number, w: number): number => (rtl ? 2 * MARGIN + W - x - w : x);
   const breakIfNeeded = (h: number): void => {
     if (y + h > pageBottom) {
       doc.addPage();
@@ -253,7 +323,7 @@ function drawBody(
         const col = i % cols;
         if (col === 0 && i > 0) y += ch;
         if (col === 0) breakIfNeeded(ch);
-        const x = MARGIN + col * cw;
+        const x = mx(MARGIN + col * cw, cw);
         writeBox(doc, x, y, cw, ch, ruled && !c.t, ruling);
         const { text, color } = cellText(c, answers);
         centered(doc, text, x, y, cw, ch, 14, color);
@@ -274,7 +344,7 @@ function drawBody(
           const col = i % g.cols;
           if (col === 0 && i > 0) y += ch;
           if (col === 0) breakIfNeeded(ch);
-          const x = MARGIN + col * cw;
+          const x = mx(MARGIN + col * cw, cw);
           writeBox(doc, x, y, cw, ch, ruled && !c.t, ruling);
           const { text, color } = cellText(c, answers);
           centered(doc, text, x, y, cw, ch, 14, color);
@@ -292,7 +362,7 @@ function drawBody(
         breakIfNeeded(topH + ansH + 4);
         const cw = W / set.shown.length;
         set.shown.forEach((t, i) => {
-          const x = MARGIN + i * cw;
+          const x = mx(MARGIN + i * cw, cw);
           box(doc, x, y, cw, topH);
           centered(doc, t, x, y, cw, topH, 15);
           writeBox(doc, x, y + topH, cw, ansH, ruled, ruling);
@@ -305,17 +375,35 @@ function drawBody(
 
     case "rows": {
       const items = s.rows ?? [];
-      const colW = W / 2;
       const cell = ruled ? ruledHeight(ruling) : 30;
+      if (s.wide) {
+        // A word and its answer: one item per line, a wide box for the written word/letters.
+        const h = Math.max(cell, 34);
+        const promptW = W * 0.36;
+        items.forEach((row, i) => {
+          if (i > 0) y += h + 4;
+          breakIfNeeded(h);
+          let x = MARGIN;
+          row.forEach((c, k) => {
+            const w = k === 0 ? promptW : W - promptW - 10;
+            writeBox(doc, mx(x, w), y, w, h, ruled && !c.t, ruling);
+            const { text, color } = cellText(c, answers);
+            centered(doc, text, mx(x, w), y, w, h, 15, color);
+            x += w + 10;
+          });
+        });
+        return y + (items.length ? h : 0);
+      }
+      const colW = W / 2;
       items.forEach((row, i) => {
         const col = i % 2;
         if (col === 0 && i > 0) y += cell + 4;
         if (col === 0) breakIfNeeded(cell);
         let x = MARGIN + col * colW + 10;
         for (const c of row) {
-          writeBox(doc, x, y, 48, cell, ruled && !c.t, ruling);
+          writeBox(doc, mx(x, 48), y, 48, cell, ruled && !c.t, ruling);
           const { text, color } = cellText(c, answers);
-          centered(doc, text, x, y, 48, cell, 14, color);
+          centered(doc, text, mx(x, 48), y, 48, cell, 14, color);
           x += 56;
         }
       });
@@ -335,9 +423,9 @@ function drawBody(
           if (!row) return;
           let x = MARGIN + k * colW + 10;
           for (const c of row) {
-            writeBox(doc, x, y, 48, cell, ruled && !c.t, ruling);
+            writeBox(doc, mx(x, 48), y, 48, cell, ruled && !c.t, ruling);
             const { text, color } = cellText(c, answers);
-            centered(doc, text, x, y, 48, cell, 14, color);
+            centered(doc, text, mx(x, 48), y, 48, cell, 14, color);
             x += 56;
           }
         });
@@ -348,6 +436,26 @@ function drawBody(
 
     case "pictures": {
       const items = s.pictures ?? [];
+      if (s.wide) {
+        // Picture → write its word: three cards a line, the answer box the card's width.
+        const cols = 3;
+        const gap = 10;
+        const cw = (W - gap * (cols - 1)) / cols;
+        const bh = ruled ? ruledHeight(ruling) : 32;
+        const h = 70 + bh;
+        items.forEach((p, i) => {
+          const col = i % cols;
+          if (col === 0 && i > 0) y += h + gap;
+          if (col === 0) breakIfNeeded(h);
+          const x = mx(MARGIN + col * (cw + gap), cw);
+          box(doc, x, y, cw, h);
+          const img = pictures.get(p.pictureId);
+          if (img) doc.image(img, x + 4, y + 4, { fit: [cw - 8, h - bh - 14], align: "center", valign: "center" });
+          writeBox(doc, x + 6, y + h - bh - 6, cw - 12, bh, ruled, ruling);
+          if (answers) centered(doc, p.a, x + 6, y + h - bh - 6, cw - 12, bh, 14, ANSWER);
+        });
+        return y + (items.length ? h : 0);
+      }
       const counting = items.some((p) => p.repeat > 1);
       if (counting) {
         const colW = (W - 12) / 2;
@@ -381,7 +489,7 @@ function drawBody(
         const col = i % cols;
         if (col === 0 && i > 0) y += h + gap;
         if (col === 0) breakIfNeeded(h);
-        const x = MARGIN + col * (cw + gap);
+        const x = mx(MARGIN + col * (cw + gap), cw);
         box(doc, x, y, cw, h);
         const img = pictures.get(p.pictureId);
         if (img) doc.image(img, x + 4, y + 4, { fit: [cw - 8, h - bh - 12], align: "center", valign: "center" });
@@ -392,18 +500,51 @@ function drawBody(
       return y + (items.length ? h : 0);
     }
 
+    case "choice": {
+      // A picture and its options in a row of boxes (the 2025 Nursery "ছবির হরফে বৃত্ত আঁকি"
+      // table); the child circles one. The key rings the right option in red.
+      const items = s.choices ?? [];
+      const per = choicesPerLine(items);
+      const gap = 14;
+      const itemW = (W - gap * (per - 1)) / per;
+      const h = CHOICE_H;
+      items.forEach((ch, i) => {
+        const col = i % per;
+        if (col === 0 && i > 0) y += h + 6;
+        if (col === 0) breakIfNeeded(h);
+        const x0 = MARGIN + col * (itemW + gap);
+        const picW = 70;
+        const pa = mx(x0, picW);
+        box(doc, pa, y, picW, h);
+        const img = ch.pictureId ? pictures.get(ch.pictureId) : undefined;
+        if (img) doc.image(img, pa + 3, y + 3, { fit: [picW - 6, h - 6], align: "center", valign: "center" });
+        const ow = (itemW - picW) / Math.max(1, ch.options.length);
+        ch.options.forEach((o, k) => {
+          const ox = mx(x0 + picW + k * ow, ow);
+          box(doc, ox, y, ow, h);
+          const word = [...o].length > 2;
+          centered(doc, o, ox, y, ow, h, word ? 13 : 16);
+          if (answers && k === ch.answer) {
+            doc.save().lineWidth(1.2).strokeColor(ANSWER).ellipse(ox + ow / 2, y + h / 2, Math.min(ow / 2 - 4, word ? 44 : 16), 16).stroke().restore();
+          }
+        });
+      });
+      return y + (items.length ? h : 0);
+    }
+
     case "match": {
       const left = s.left ?? [];
       const right = s.right ?? [];
       const colW = (W - 20) / 2;
       const h = 44;
+      // Arabic words need more room than a Bangla word's 54 pt box.
+      const ansW = rtl && right.some((t) => [...t].length > 3) ? 96 : 54;
       left.forEach((l, i) => {
         const col = i % 2;
         if (col === 0 && i > 0) y += h + 4;
         if (col === 0) breakIfNeeded(h);
         const x = MARGIN + col * (colW + 20);
         const picW = colW * 0.42;
-        const ansW = 54;
         box(doc, x, y, picW, h);
         const img = l.pictureId ? pictures.get(l.pictureId) : undefined;
         if (img && l.repeat > 1) {

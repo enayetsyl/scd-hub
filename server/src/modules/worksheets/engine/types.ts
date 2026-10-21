@@ -58,7 +58,24 @@ export interface Cell {
   a?: string | null;
 }
 
-export type SectionLayout = "grid" | "groups" | "jumble" | "rows" | "columns" | "pictures" | "match" | "oral" | "manual";
+export type SectionLayout =
+  | "grid"
+  | "groups"
+  | "jumble"
+  | "rows"
+  | "columns"
+  | "pictures"
+  | "choice"
+  | "match"
+  | "oral"
+  | "manual";
+
+/** A picture with printed options; the child circles (or ticks) one. `answer` indexes `options`. */
+export interface Choice {
+  pictureId: string | null;
+  options: string[];
+  answer: number;
+}
 
 export interface Section {
   /** 1-based question number. */
@@ -79,6 +96,9 @@ export interface Section {
   /** columns: before/after items laid out column by column, top to bottom. */
   columns?: Cell[][][];
   pictures?: Array<{ pictureId: string; repeat: number; a: string }>;
+  choices?: Choice[];
+  /** rows / pictures: the answer is a word, so one wide box per item, not a letter box. */
+  wide?: boolean;
   left?: Array<{ pictureId: string | null; repeat: number; t: string | null }>;
   right?: string[];
   /** match: `answer[i]` is the index in `right` that belongs to `left[i]`. */
@@ -107,4 +127,7 @@ export interface WorksheetDoc {
   /** Which copybook: BAN = two blue lines (মাত্রা + base); ENG = the four-line English
    *  khata, red / blue / blue / red. Absent on papers stored before it = BAN. */
   ruling?: "BAN" | "ENG";
+  /** Arabic is written right to left: grids, item cells and options run from the right
+   *  (as the 2025 Nursery paper prints ا in the right-hand box). Absent = left to right. */
+  dir?: "rtl";
 }

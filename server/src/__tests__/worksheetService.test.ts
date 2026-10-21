@@ -168,9 +168,10 @@ describe("gates", () => {
     await expect(getPlan(guardian, CLASS_ID.toString(), "BAN")).rejects.toThrow();
   });
 
-  it("generates only for Nursery/KG and BAN/ENG/MATH", async () => {
+  it("generates only for Nursery/KG and BAN/ENG/MATH/ARABIC", async () => {
     await expect(getPlan(teacher, KG1_ID.toString(), "BAN")).rejects.toThrow(/নার্সারি ও কেজি/);
-    await expect(getPlan(teacher, CLASS_ID.toString(), "ARABIC")).rejects.toThrow(/এখনো/);
+    await expect(getPlan(teacher, CLASS_ID.toString(), "ARABIC")).resolves.toMatchObject({ subject: "ARABIC" });
+    await expect(getPlan(teacher, CLASS_ID.toString(), "QURAN")).rejects.toThrow(/এখনো/);
   });
 
   it("only roster:manage saves the plan", async () => {
