@@ -12,13 +12,16 @@
  *   deleteCtQuestionRequest — roster:manage (Principal/Office). OFFICE deliberately
  *   holds no tracker permission (D-#554), so the teacher's verbs and the office's verb
  *   land on different people by construction; the PRINCIPAL holds both.
+ * PM: the teacher verbs are `class_test_question:create`, the office's
+ * `class_test_question:prepare` (send, queue) / `:delete`; the write scope's role
+ * bypass is `class_test:edit_all` (CLASS_TEST_REACH).
  */
 import { builder } from "../../../schema";
 import { pageRef } from "../../../pageRef";
 import type { AppContext } from "../../../context";
 import { callerHasPermission } from "@scd/shared";
 import { ForbiddenError } from "../../../middleware/authz";
-import { assertAnchorWrite, subjectIdOrNull } from "../classTestAnchor";
+import { assertAnchorWrite, CLASS_TEST_REACH, subjectIdOrNull } from "../classTestAnchor";
 import { ClassTestQuestionRequest } from "../models/ClassTestQuestionRequest";
 import {
   createCtQuestionRequest,
@@ -38,9 +41,14 @@ import {
   type PrintCtQuestionResult,
 } from "../services/ClassTestQuestionService";
 
-function assertOffice(ctx: AppContext): void {
+/** The question-paper office (PM): `class_test_question:prepare` sends drafts and reads
+ *  the queue, `class_test_question:delete` soft-deletes a request. */
+function assertOffice(
+  ctx: AppContext,
+  perm: "class_test_question:prepare" | "class_test_question:delete" = "class_test_question:prepare",
+): void {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  if (!callerHasPermission(ctx.auth, "roster:manage")) {
+  if (!callerHasPermission(ctx.auth, perm)) {
     throw new ForbiddenError("প্রশ্ন তৈরি ও পাঠানো অফিস/অধ্যক্ষের কাজ");
   }
 }
@@ -55,6 +63,8 @@ async function assertQuestionWrite(ctx: AppContext, sectionId: string, subject: 
     ctx,
     { sectionId, classId: null, subjectGroupId: null, subject },
     () => subjectIdOrNull(subject),
+    undefined,
+    CLASS_TEST_REACH,
   );
 }
 
@@ -113,8 +123,8 @@ builder.mutationField("createCtQuestionRequest", (t) =>
     description:
       "A subject teacher asks the office to produce a class-test question paper — class/section, " +
       "subject, chapter, marks, duration and exam date all mandatory; the test number auto-increments. " +
-      "Requires tracker:write + section write-scope.",
-    authScopes: { hasPermission: "tracker:write" },
+      "Requires class_test_question:create + section write-scope.",
+    authScopes: { hasPermission: "class_test_question:create" },
     args: {
       sectionId: t.arg.string({ required: true }),
       subject: t.arg.string({ required: true }),
@@ -136,8 +146,8 @@ builder.mutationField("sendCtQuestionForReview", (t) =>
     type: CtQuestionRequestRef,
     description:
       "Office uploads the produced paper (classtest_question file) and sends it to the requesting " +
-      "teacher for review — one round; repeatable until confirmed. Requires roster:manage.",
-    authScopes: { authenticated: true },
+      "teacher for review — one round; repeatable until confirmed. Requires class_test_question:prepare.",
+    authScopes: { hasPermission: "class_test_question:prepare" },
     args: {
       id: t.arg.string({ required: true }),
       fileId: t.arg.string({ required: true }),
@@ -161,7 +171,7 @@ builder.mutationField("reviewCtQuestion", (t) =>
     description:
       "The requesting teacher's verdict on the current round: approve=true locks the paper " +
       "(CONFIRMED); approve=false requires a change comment. Row-gated to the requester.",
-    authScopes: { hasPermission: "tracker:write" },
+    authScopes: { hasPermission: "class_test_question:create" },
     args: {
       id: t.arg.string({ required: true }),
       approve: t.arg.boolean({ required: true }),
@@ -186,7 +196,7 @@ builder.mutationField("requestCtQuestionPrint", (t) =>
       "Send the CONFIRMED paper to print — files the standard ClassTest + print-queue row " +
       "(existing printing/delivery logging unchanged). Row-gated to the requester; re-verifies " +
       "the section write-scope.",
-    authScopes: { hasPermission: "tracker:write" },
+    authScopes: { hasPermission: "class_test_question:create" },
     args: {
       id: t.arg.string({ required: true }),
       colour: t.arg.string({ required: false }),
@@ -220,7 +230,7 @@ builder.mutationField("editCtQuestionRequest", (t) =>
       "cannot be moved. Allowed only while the office still owes a paper (REQUESTED / " +
       "CHANGES_REQUESTED); the office is notified that the spec changed. Row-gated to the " +
       "requester; re-verifies the section write-scope.",
-    authScopes: { hasPermission: "tracker:write" },
+    authScopes: { hasPermission: "class_test_question:create" },
     args: {
       id: t.arg.string({ required: true }),
       chapter: t.arg.string({ required: true }),
@@ -252,7 +262,7 @@ builder.mutationField("cancelCtQuestionRequest", (t) =>
       "The requesting teacher withdraws a request filed by mistake (status CANCELLED). The row " +
       "stays visible on both lists so the office sees the withdrawal rather than a card vanishing. " +
       "Allowed before CONFIRMED only. Row-gated to the requester.",
-    authScopes: { hasPermission: "tracker:write" },
+    authScopes: { hasPermission: "class_test_question:create" },
     args: {
       id: t.arg.string({ required: true }),
       reason: t.arg.string({ required: false }),
@@ -274,14 +284,14 @@ builder.mutationField("deleteCtQuestionRequest", (t) =>
     description:
       "Office/Principal soft-deletes a question request (active:false) — it leaves both lists and " +
       "the requesting teacher is notified. Refused while the request has a live ClassTest hanging " +
-      "off it (cancel the print job first). Requires roster:manage.",
-    authScopes: { authenticated: true },
+      "off it (cancel the print job first). Requires class_test_question:delete.",
+    authScopes: { hasPermission: "class_test_question:delete" },
     args: {
       id: t.arg.string({ required: true }),
       reason: t.arg.string({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
-      assertOffice(ctx);
+      assertOffice(ctx, "class_test_question:delete");
       return deleteCtQuestionRequest({
         id: args.id,
         reason: args.reason ?? null,
@@ -294,8 +304,8 @@ builder.mutationField("deleteCtQuestionRequest", (t) =>
 builder.queryField("myCtQuestionRequests", (t) =>
   t.field({
     type: [CtQuestionRequestRef],
-    description: "The caller's own question requests — action-needed first. Requires tracker:write.",
-    authScopes: { hasPermission: "tracker:write" },
+    description: "The caller's own question requests — action-needed first. Requires class_test_question:create.",
+    authScopes: { hasPermission: "class_test_question:create" },
     resolve: async (_root, _args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       return myCtQuestionRequests(ctx.auth.userId as string);
@@ -307,8 +317,8 @@ builder.queryField("ctQuestionQueue", (t) =>
   t.field({
     type: [CtQuestionRequestRef],
     description:
-      "Every question request, work-needed first, teacher names joined. Requires roster:manage.",
-    authScopes: { authenticated: true },
+      "Every question request, work-needed first, teacher names joined. Requires class_test_question:prepare.",
+    authScopes: { hasPermission: "class_test_question:prepare" },
     resolve: async (_root, _args, ctx) => {
       assertOffice(ctx);
       return ctQuestionQueue();
@@ -323,8 +333,8 @@ const CtQuestionRequestPageRef = pageRef("CtQuestionRequestPage", CtQuestionRequ
 builder.queryField("myCtQuestionRequestsPage", (t) =>
   t.field({
     type: CtQuestionRequestPageRef,
-    description: "One page of myCtQuestionRequests (same order). Requires tracker:write.",
-    authScopes: { hasPermission: "tracker:write" },
+    description: "One page of myCtQuestionRequests (same order). Requires class_test_question:create.",
+    authScopes: { hasPermission: "class_test_question:create" },
     args: { page: t.arg.int({ required: false }), pageSize: t.arg.int({ required: false }) },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
@@ -336,8 +346,8 @@ builder.queryField("myCtQuestionRequestsPage", (t) =>
 builder.queryField("ctQuestionQueuePage", (t) =>
   t.field({
     type: CtQuestionRequestPageRef,
-    description: "One page of ctQuestionQueue (work-needed first). Requires roster:manage.",
-    authScopes: { authenticated: true },
+    description: "One page of ctQuestionQueue (work-needed first). Requires class_test_question:prepare.",
+    authScopes: { hasPermission: "class_test_question:prepare" },
     args: { page: t.arg.int({ required: false }), pageSize: t.arg.int({ required: false }) },
     resolve: async (_root, args, ctx) => {
       assertOffice(ctx);
@@ -363,13 +373,14 @@ builder.queryField("ctQuestionCounts", (t) =>
     type: CtQuestionCountsRef,
     description:
       "How many class-test question requests are pending (REQUESTED/CHANGES_REQUESTED) and in review " +
-      "(IN_REVIEW). Office/Principal (roster:manage) see the whole pipeline; a teacher (tracker:write) " +
+      "(IN_REVIEW). class_test_question:prepare holders see the whole pipeline; a requester " +
+      "(class_test_question:create) " +
       "sees only their own. Anyone else gets zeros.",
     authScopes: { authenticated: true },
     resolve: async (_root, _args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      const officeWide = callerHasPermission(ctx.auth, "roster:manage");
-      const canRequest = callerHasPermission(ctx.auth, "tracker:write");
+      const officeWide = callerHasPermission(ctx.auth, "class_test_question:prepare");
+      const canRequest = callerHasPermission(ctx.auth, "class_test_question:create");
       if (!officeWide && !canRequest) return { pending: 0, inReview: 0 };
       return ctQuestionCounts(officeWide ? null : (ctx.auth.userId as string));
     },
