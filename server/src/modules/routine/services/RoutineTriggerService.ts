@@ -479,7 +479,7 @@ export interface ClassNoteListFilter {
   sectionId?: string | null;
   subject?: string | null;
   /** The AUTHOR (publishedBy). The resolver pins this to the caller when they
-   *  lack routine:manage — scoping is never left to the client. */
+   *  lack class_note:view_all — scoping is never left to the client. */
   teacherId?: string | null;
   page?: number | null;
   pageSize?: number | null;

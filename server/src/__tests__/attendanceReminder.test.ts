@@ -25,8 +25,9 @@ jest.mock("../modules/attendance/services/AttendanceReportService", () => ({
 jest.mock("../modules/foundation/models/Section", () => ({
   Section: { find: (f: unknown) => ({ select: () => ({ lean: () => mockSectionFind(f) }) }) },
 }));
-jest.mock("../modules/foundation/models/User", () => ({
-  User: { find: (f: unknown) => ({ select: () => ({ lean: () => mockUserFind(f) }) }) },
+// PM (D-#796): the escalation tiers resolve from the holders of attendance:view_all.
+jest.mock("../modules/access-control/services/holders", () => ({
+  holdersOf: (perm: unknown) => mockUserFind(perm),
 }));
 jest.mock("../modules/attendance/models/AttendanceReminderDispatch", () => ({
   AttendanceReminderDispatch: {
@@ -153,18 +154,39 @@ describe("dispatchAttendanceReminders", () => {
       { sectionId: "s1", sectionNameBn: "মূল", markerTeacherId: "t1" },
     ]);
     mockSectionFind.mockResolvedValue([{ _id: oid("s1"), classTeacherId: oid("ct1") }]);
-    mockUserFind.mockResolvedValue([{ _id: oid("o1") }, { _id: oid("o2") }]);
+    // Holders of attendance:view_all: two desk logins (one a teacher by role holding it
+    // via the Office template or a grant) and the Principal.
+    mockUserFind.mockResolvedValue([
+      { _id: oid("o1"), role: "OFFICE" },
+      { _id: oid("o2"), role: "TEACHER" },
+      { _id: oid("p1"), role: "PRINCIPAL" },
+    ]);
 
     await dispatchAttendanceReminders("T1245", DATE);
-    // D-#468: recipients resolve by primary role OR added template, so an office-by-
-    // template user is reached too. Asserting the filter INTENT, not a literal shape.
-    expect(mockUserFind).toHaveBeenCalledWith(expect.objectContaining({ active: true, $or: [{ role: { $in: ["OFFICE"] } }, { additionalTemplates: { $in: ["OFFICE"] } }] }));
+    expect(mockUserFind).toHaveBeenCalledWith("attendance:view_all");
     expect(mockEmit).toHaveBeenCalledTimes(2);
     expect(mockEmit).toHaveBeenCalledWith(
       expect.objectContaining({ recipientUserId: "o1", dedupeKey: `ATT:${DATE}:T1245:s1:o1` }),
     );
     expect(mockEmit).toHaveBeenCalledWith(
       expect.objectContaining({ recipientUserId: "o2", dedupeKey: `ATT:${DATE}:T1245:s1:o2` }),
+    );
+  });
+
+  it("AT4.5 — T1400 routes to the Principal holders of attendance:view_all only", async () => {
+    mockUnmarkedSections.mockResolvedValue([
+      { sectionId: "s1", sectionNameBn: "মূল", markerTeacherId: "t1" },
+    ]);
+    mockSectionFind.mockResolvedValue([{ _id: oid("s1"), classTeacherId: oid("ct1") }]);
+    mockUserFind.mockResolvedValue([
+      { _id: oid("o1"), role: "OFFICE" },
+      { _id: oid("p1"), role: "PRINCIPAL" },
+    ]);
+
+    await dispatchAttendanceReminders("T1400", DATE);
+    expect(mockEmit).toHaveBeenCalledTimes(1);
+    expect(mockEmit).toHaveBeenCalledWith(
+      expect.objectContaining({ recipientUserId: "p1", dedupeKey: `ATT:${DATE}:T1400:s1:p1` }),
     );
   });
 

@@ -9,9 +9,9 @@
  *
  * Section picker = `mySectionsAsClassTeacher` (the caller's coordinated sections,
  * the D-#45 primary author of a SECTION notice). SCHOOL scope (no section) is
- * offered only to chat:manage holders.
+ * offered only to chat:send_notice_all holders.
  *
- * APP-FU1: chat:manage holders (Principal/Office) get the FULL section picker —
+ * APP-FU1: chat:send_notice_all holders (Principal/Office) get the FULL section picker —
  * academic-year → every class's sections via `classes` — so they can target an
  * arbitrary section, not just one they class-teach. The server already permits
  * this: `assertCanComposeNotice` bypasses `assertIsClassTeacher` for canManage,
@@ -42,7 +42,7 @@ type Scope = "SECTION" | "SCHOOL";
 
 export default function GuardianNoticeScreen(_props: Props): React.ReactElement {
   const { role, can } = useAuth();
-  const canManage = can("chat:manage");
+  const canManage = can("chat:send_notice_all"); // PM: SCHOOL / any-section notice
 
   const [scope, setScope] = useState<Scope>("SECTION");
   const [sectionId, setSectionId] = useState<string | null>(null);

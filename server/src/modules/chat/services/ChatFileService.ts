@@ -14,7 +14,7 @@
  *                         (no driveFileId ever leaves the server).
  *
  * Identity-plane (ADR-005) — chat files name staff + conversations, no corpus
- * path. The upload route gates on chat:write + conversation membership; the
+ * path. The upload route gates on chat:send + conversation membership; the
  * sendMessage binding (in ChatService) ensures only the uploader's own files,
  * uploaded FOR that conversation, can be attached.
  */

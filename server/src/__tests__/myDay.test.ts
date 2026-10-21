@@ -140,9 +140,16 @@ describe("myDay — classTeacherOf (D-#290)", () => {
     );
   });
 
-  test("non-teacher roles never query for class-teacher sections", async () => {
+  test("PM: the designation alone decides — no role test for staff; a guardian never queries", async () => {
+    // An Office login is (normally) nobody's class teacher: the lookup runs and finds none.
     const r = await myDayFor(ctxFor("OFFICE"), "2026-07-01");
     expect(r.classTeacherOf).toEqual([]);
+    expect(mockCtSectionFind).toHaveBeenCalledWith(
+      expect.objectContaining({ classTeacherId: "user-1", active: true }),
+    );
+    mockCtSectionFind.mockClear();
+    const g = await myDayFor(ctxFor("GUARDIAN"), "2026-07-01");
+    expect(g.classTeacherOf).toEqual([]);
     expect(mockCtSectionFind).not.toHaveBeenCalled();
   });
 });

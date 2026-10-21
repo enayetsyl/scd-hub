@@ -4,9 +4,9 @@
  *
  * RBAC (composes existing perms — NO new permission, D-#94):
  *   - Reports (`vocabTestReport`/`vocabStudentDashboard`/`vocabClassDashboard`/
- *     `vocabStudentCumulative`): `tracker:read`.
+ *     `vocabStudentCumulative`): `vocab_test:view`.
  *   - Message generation (`generateVocabTestMessages`/`generateVocabCumulativeMessages`):
- *     `message:dispatch` (Principal/Teacher/Office — the AS-T4 R-T2 posture; Guardian
+ *     `vocab_test:send` (Principal/Teacher/Office — the AS-T4 R-T2 posture; Guardian
  *     denied by default-deny).
  *
  * Time inputs (`asOf`) are passed in (D-#153 — no clock in the aggregate math).
@@ -236,15 +236,15 @@ GenerateVocabCumulativeResultRef.implement({
 });
 
 // ---------------------------------------------------------------------------
-// Queries (tracker:read)
+// Queries (vocab_test:view)
 // ---------------------------------------------------------------------------
 
 builder.queryField("vocabTestReport", (t) =>
   t.field({
     type: VocabTestReportRef,
     nullable: true,
-    description: "Per-test report: derived results + roll-up + most-missed (VC-4, J5). Requires tracker:read.",
-    authScopes: { hasPermission: "tracker:read" },
+    description: "Per-test report: derived results + roll-up + most-missed (VC-4, J5). Requires vocab_test:view.",
+    authScopes: { hasPermission: "vocab_test:view" },
     args: {
       testId: t.arg.string({ required: true }),
       classPersistentPct: t.arg.float({ required: false }),
@@ -257,8 +257,8 @@ builder.queryField("vocabTestReport", (t) =>
 builder.queryField("vocabStudentDashboard", (t) =>
   t.field({
     type: VocabStudentDashboardRef,
-    description: "Per-student dashboard + persistent weak words (VC-4, J5). Requires tracker:read.",
-    authScopes: { hasPermission: "tracker:read" },
+    description: "Per-student dashboard + persistent weak words (VC-4, J5). Requires vocab_test:view.",
+    authScopes: { hasPermission: "vocab_test:view" },
     args: {
       studentId: t.arg.string({ required: true }),
       program: t.arg.string({ required: false }),
@@ -277,8 +277,8 @@ builder.queryField("vocabStudentTestsPage", (t) =>
     type: VocabStudentTestEntryPageRef,
     description:
       "One page of a student's per-test history, newest first (D-#761). The roll-up and " +
-      "persistent words stay on vocabStudentDashboard. Requires tracker:read.",
-    authScopes: { hasPermission: "tracker:read" },
+      "persistent words stay on vocabStudentDashboard. Requires vocab_test:view.",
+    authScopes: { hasPermission: "vocab_test:view" },
     args: {
       studentId: t.arg.string({ required: true }),
       program: t.arg.string({ required: false }),
@@ -293,8 +293,8 @@ builder.queryField("vocabStudentTestsPage", (t) =>
 builder.queryField("vocabClassDashboard", (t) =>
   t.field({
     type: VocabClassDashboardRef,
-    description: "Class dashboard: per-test summaries + most-missed (VC-4, J5). Requires tracker:read.",
-    authScopes: { hasPermission: "tracker:read" },
+    description: "Class dashboard: per-test summaries + most-missed (VC-4, J5). Requires vocab_test:view.",
+    authScopes: { hasPermission: "vocab_test:view" },
     args: {
       sectionId: t.arg.string({ required: true }),
       program: t.arg.string({ required: false }),
@@ -313,8 +313,8 @@ builder.queryField("vocabClassTestsPage", (t) =>
     type: VocabClassTestEntryPageRef,
     description:
       "One page of a section's per-test summary rows, newest first (D-#761). The class roll-up " +
-      "and most-missed stay on vocabClassDashboard. Requires tracker:read.",
-    authScopes: { hasPermission: "tracker:read" },
+      "and most-missed stay on vocabClassDashboard. Requires vocab_test:view.",
+    authScopes: { hasPermission: "vocab_test:view" },
     args: {
       sectionId: t.arg.string({ required: true }),
       program: t.arg.string({ required: false }),
@@ -331,8 +331,8 @@ builder.queryField("vocabStudentCumulative", (t) =>
     type: VocabCumulativeRef,
     description:
       "A student's cumulative roll-up over the active period (Weekly/Monthly/Last-N; §9, VC-4). " +
-      "asOf selects the window deterministically. Requires tracker:read.",
-    authScopes: { hasPermission: "tracker:read" },
+      "asOf selects the window deterministically. Requires vocab_test:view.",
+    authScopes: { hasPermission: "vocab_test:view" },
     args: {
       studentId: t.arg.string({ required: true }),
       program: t.arg.string({ required: false }),
@@ -353,7 +353,7 @@ builder.queryField("vocabStudentCumulative", (t) =>
 );
 
 // ---------------------------------------------------------------------------
-// Mutations (message:dispatch — Principal/Teacher/Office; Guardian denied)
+// Mutations (vocab_test:send — Principal/Teacher/Office; Guardian denied)
 // ---------------------------------------------------------------------------
 
 builder.mutationField("generateVocabTestMessages", (t) =>
@@ -362,8 +362,8 @@ builder.mutationField("generateVocabTestMessages", (t) =>
     description:
       "Generate + deliver the per-student guardian messages for a marked test: wa.me for every " +
       "family (ADR-003) + in-app Notification for login-enabled guardians (D-#72). Requires " +
-      "message:dispatch. Audited.",
-    authScopes: { hasPermission: "message:dispatch" },
+      "vocab_test:send. Audited.",
+    authScopes: { hasPermission: "vocab_test:send" },
     args: { testId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) =>
       generateVocabTestMessages({ testId: args.testId, actorId: ctx.auth!.userId }),
@@ -375,8 +375,8 @@ builder.mutationField("generateVocabCumulativeMessages", (t) =>
     type: GenerateVocabCumulativeResultRef,
     description:
       "Generate + deliver per-student CUMULATIVE guardian messages for a section over the active " +
-      "period (§8/§9). wa.me + emit() as the per-test path. Requires message:dispatch. Audited.",
-    authScopes: { hasPermission: "message:dispatch" },
+      "period (§8/§9). wa.me + emit() as the per-test path. Requires vocab_test:send. Audited.",
+    authScopes: { hasPermission: "vocab_test:send" },
     args: {
       sectionId: t.arg.string({ required: true }),
       program: t.arg.string({ required: false }),

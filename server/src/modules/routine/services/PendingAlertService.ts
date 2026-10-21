@@ -409,7 +409,7 @@ export async function pendingWorkFor(ctx: AppContext, today: Date): Promise<Pend
     if (pending.length > 0) out.push(alert("attendance", pending));
   }
 
-  if (callerHasPermission(auth, "routine:read")) {
+  if (callerHasPermission(auth, "class_note:create")) {
     const pending = await classNoteBacklog(auth.userId, keys, dayTypes);
     if (pending.length > 0) out.push(alert("class_note", pending));
   }

@@ -71,7 +71,7 @@ export default function AssignSubjectTeacherScreen({ navigation }: Props): React
   const routineBySubject = new Map(
     (routineQ.data?.sectionSubjectRoutineTeachers ?? []).map((r) => [r.subject, r]),
   );
-  const canEditRoutine = can("routine:manage");
+  const canEditRoutine = can("routine:edit"); // PM: reassignRoutineSubjectTeacher = routine:edit
 
   const grants = grantsQ.data?.teachingGrants ?? [];
 

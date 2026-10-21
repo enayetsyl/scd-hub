@@ -25,7 +25,9 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
     can("teaching_assignments:assign_class_teacher") || can("teaching_assignments:assign_homework_checker");
   const canSections = can("classes_sections:merge_split");
   const canYears = can("classes_sections:settings");
-  const canRoutine = can("routine:manage");
+  // PM: the routine card opens subject-group membership (addGroupMember etc. =
+  // routine:settings).
+  const canRoutine = can("routine:settings");
   const canStaff = can("staff_records:view");
   const canGuardianCreds = can("guardians:reset_password") || can("guardians:link");
   // message_templates:* and access_control:* are LOCKED (Principal-only).
@@ -45,9 +47,10 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
   // (isAdminStaff) — a teacher holding the Office template from Access control
   // (Akter, Tazkir) could already read the queue but never saw this card.
   const canWorkClaims = isRole("PRINCIPAL") || isRole("OFFICE");
-  // AR-2: the ranking reads the two attendance registers, so it sits behind the gate
-  // that already owns them — `attendance:manage` is Principal + Office exactly.
-  const canAttendance = can("attendance:manage");
+  // AR-2: the ranking reads the two attendance registers, so it sits behind the
+  // actions that own them (PM): student ranking attendance:view_all, staff ranking
+  // staff_attendance:view_all — Principal + Office by default.
+  const canAttendance = can("attendance:view_all") || can("staff_attendance:view_all");
 
   return (
     <Screen scroll>

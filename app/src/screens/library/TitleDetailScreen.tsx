@@ -48,9 +48,10 @@ export default function TitleDetailScreen({ route }: Props): React.ReactElement 
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
 
-  const canManage = can("library:manage");
+  // PM: the desk queue = library:lend + (library:edit_all OR the librarian duty).
   const [librarianQ] = useQuery({ query: AM_I_LIBRARIAN_QUERY });
-  const isLibrarian = canManage || (librarianQ.data?.amILibrarian ?? false);
+  const isLibrarian =
+    can("library:lend") && (can("library:edit_all") || (librarianQ.data?.amILibrarian ?? false));
 
   const [titleQ, refetchTitle] = useQuery({ query: BOOK_TITLE_QUERY, variables: { titleId } });
   const [queueQ, refetchQueue] = useQuery({

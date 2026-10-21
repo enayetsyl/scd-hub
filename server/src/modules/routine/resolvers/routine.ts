@@ -2,8 +2,8 @@
  * Routine module — R-1 resolvers (calendar/day-types + holidays + rooms +
  * SubjectGroups + membership + period grids + schedule windows).
  *
- * RBAC: reads gated `routine:read` (Principal/Teacher/Office), writes gated
- * `routine:manage` (Principal/Office) — D-#46. Operational/identity plane; no
+ * RBAC: reads gated `routine:view` (Principal/Teacher/Office), writes gated
+ * `routine:settings` / `routine:edit_calendar` (Principal/Office; PM catalogue) — D-#46. Operational/identity plane; no
  * corpus path. Slots + the conflict engine + scope binding are R-2 (not here).
  */
 import { Types } from "mongoose";
@@ -145,13 +145,13 @@ const GridPeriodInput = builder.inputType("GridPeriodInput", {
 });
 
 // ---------------------------------------------------------------------------
-// Queries (routine:read)
+// Queries (routine:view)
 // ---------------------------------------------------------------------------
 
 builder.queryField("rooms", (t) =>
   t.field({
     type: [RoomRef],
-    authScopes: { hasPermission: "routine:read" },
+    authScopes: { hasPermission: "routine:view" },
     resolve: async () => Room.find().sort({ code: 1 }).lean() as unknown as IRoom[],
   }),
 );
@@ -159,7 +159,7 @@ builder.queryField("rooms", (t) =>
 builder.queryField("subjectGroups", (t) =>
   t.field({
     type: [SubjectGroupRef],
-    authScopes: { hasPermission: "routine:read" },
+    authScopes: { hasPermission: "routine:view" },
     args: {
       track: t.arg.string({ required: false }),
       /** Admin screens pass true to manage retired groups; every other caller gets
@@ -180,7 +180,7 @@ builder.queryField("subjectGroups", (t) =>
 builder.queryField("subjectGroupMembers", (t) =>
   t.field({
     type: ["String"],
-    authScopes: { hasPermission: "routine:read" },
+    authScopes: { hasPermission: "routine:view" },
     args: { groupId: t.arg.string({ required: true }) },
     resolve: async (_r, args) => {
       const rows = await SubjectGroupMembership.find({ groupId: args.groupId }).lean();
@@ -206,7 +206,7 @@ const GroupMemberRef = builder
 builder.queryField("subjectGroupMemberProfiles", (t) =>
   t.field({
     type: [GroupMemberRef],
-    authScopes: { hasPermission: "routine:read" },
+    authScopes: { hasPermission: "routine:view" },
     args: { groupId: t.arg.string({ required: true }) },
     resolve: async (_r, args) => {
       const rows = await SubjectGroupMembership.find({ groupId: args.groupId }).lean();
@@ -223,7 +223,7 @@ builder.queryField("subjectGroupMemberProfiles", (t) =>
 builder.queryField("periodGrids", (t) =>
   t.field({
     type: [PeriodGridRef],
-    authScopes: { hasPermission: "routine:read" },
+    authScopes: { hasPermission: "routine:view" },
     args: { season: t.arg.string({ required: false }) },
     resolve: async (_r, args) => {
       const q = args.season ? { season: args.season } : {};
@@ -235,7 +235,7 @@ builder.queryField("periodGrids", (t) =>
 builder.queryField("scheduleWindows", (t) =>
   t.field({
     type: [ScheduleWindowRef],
-    authScopes: { hasPermission: "routine:read" },
+    authScopes: { hasPermission: "routine:view" },
     args: { academicYearId: t.arg.string({ required: true }) },
     resolve: async (_r, args) =>
       ScheduleWindow.find({ academicYearId: args.academicYearId })
@@ -247,7 +247,7 @@ builder.queryField("scheduleWindows", (t) =>
 builder.queryField("holidays", (t) =>
   t.field({
     type: [HolidayExceptionRef],
-    authScopes: { hasPermission: "routine:read" },
+    authScopes: { hasPermission: "routine:view" },
     resolve: async () =>
       HolidayException.find().sort({ fromDate: 1 }).lean() as unknown as IHolidayException[],
   }),
@@ -256,7 +256,7 @@ builder.queryField("holidays", (t) =>
 builder.queryField("dayType", (t) =>
   t.field({
     type: "String",
-    authScopes: { hasPermission: "routine:read" },
+    authScopes: { hasPermission: "routine:view" },
     args: { date: t.arg.string({ required: true }) },
     resolve: async (_r, args) => {
       const d = new Date(args.date);
@@ -275,7 +275,7 @@ builder.queryField("dayType", (t) =>
 builder.queryField("resolvedDay", (t) =>
   t.field({
     type: ResolvedDayRef,
-    authScopes: { hasPermission: "routine:read" },
+    authScopes: { hasPermission: "routine:view" },
     args: {
       date: t.arg.string({ required: true }),
       audienceKey: t.arg.string({ required: true }),
@@ -300,13 +300,13 @@ builder.queryField("resolvedDay", (t) =>
 );
 
 // ---------------------------------------------------------------------------
-// Mutations (routine:manage)
+// Mutations (routine:settings / routine:edit_calendar)
 // ---------------------------------------------------------------------------
 
 builder.mutationField("createRoom", (t) =>
   t.field({
     type: RoomRef,
-    authScopes: { hasPermission: "routine:manage" },
+    authScopes: { hasPermission: "routine:settings" },
     args: {
       code: t.arg.string({ required: true }),
       nameBn: t.arg.string({ required: true }),
@@ -324,7 +324,7 @@ builder.mutationField("createRoom", (t) =>
 builder.mutationField("setRoomActive", (t) =>
   t.field({
     type: RoomRef,
-    authScopes: { hasPermission: "routine:manage" },
+    authScopes: { hasPermission: "routine:settings" },
     args: {
       id: t.arg.string({ required: true }),
       active: t.arg.boolean({ required: true }),
@@ -340,7 +340,7 @@ builder.mutationField("setRoomActive", (t) =>
 builder.mutationField("createSubjectGroup", (t) =>
   t.field({
     type: SubjectGroupRef,
-    authScopes: { hasPermission: "routine:manage" },
+    authScopes: { hasPermission: "routine:settings" },
     args: {
       track: t.arg.string({ required: true }),
       level: t.arg.string({ required: true }),
@@ -384,7 +384,7 @@ builder.mutationField("setSubjectGroupActive", (t) =>
     description:
       "Retire or restore a Quran/Arabic group. Retiring is refused while members remain — " +
       "move them to the replacement group first.",
-    authScopes: { hasPermission: "routine:manage" },
+    authScopes: { hasPermission: "routine:settings" },
     args: {
       groupId: t.arg.string({ required: true }),
       active: t.arg.boolean({ required: true }),
@@ -415,7 +415,7 @@ builder.mutationField("setSubjectGroupActive", (t) =>
 builder.mutationField("addGroupMember", (t) =>
   t.field({
     type: "Boolean",
-    authScopes: { hasPermission: "routine:manage" },
+    authScopes: { hasPermission: "routine:settings" },
     args: {
       groupId: t.arg.string({ required: true }),
       studentId: t.arg.string({ required: true }),
@@ -452,7 +452,7 @@ builder.mutationField("addGroupMember", (t) =>
 builder.mutationField("removeGroupMember", (t) =>
   t.field({
     type: "Boolean",
-    authScopes: { hasPermission: "routine:manage" },
+    authScopes: { hasPermission: "routine:settings" },
     args: {
       groupId: t.arg.string({ required: true }),
       studentId: t.arg.string({ required: true }),
@@ -472,7 +472,7 @@ builder.mutationField("removeGroupMember", (t) =>
 builder.mutationField("upsertPeriodGrid", (t) =>
   t.field({
     type: PeriodGridRef,
-    authScopes: { hasPermission: "routine:manage" },
+    authScopes: { hasPermission: "routine:settings" },
     args: {
       audienceKey: t.arg.string({ required: true }),
       classLevels: t.arg.intList({ required: true }),
@@ -513,7 +513,7 @@ builder.mutationField("upsertPeriodGrid", (t) =>
 builder.mutationField("createScheduleWindow", (t) =>
   t.field({
     type: ScheduleWindowRef,
-    authScopes: { hasPermission: "routine:manage" },
+    authScopes: { hasPermission: "routine:edit_calendar" },
     args: {
       academicYearId: t.arg.string({ required: true }),
       fromDate: t.arg.string({ required: true }),
@@ -552,7 +552,7 @@ builder.mutationField("createScheduleWindow", (t) =>
 builder.mutationField("createHolidayException", (t) =>
   t.field({
     type: HolidayExceptionRef,
-    authScopes: { hasPermission: "routine:manage" },
+    authScopes: { hasPermission: "routine:edit_calendar" },
     args: {
       fromDate: t.arg.string({ required: true }),
       toDate: t.arg.string({ required: true }),
@@ -588,7 +588,7 @@ builder.mutationField("createHolidayException", (t) =>
 builder.mutationField("retireHolidayException", (t) =>
   t.field({
     type: HolidayExceptionRef,
-    authScopes: { hasPermission: "routine:manage" },
+    authScopes: { hasPermission: "routine:edit_calendar" },
     args: { id: t.arg.string({ required: true }) },
     resolve: async (_r, args) => {
       const h = await HolidayException.findByIdAndUpdate(

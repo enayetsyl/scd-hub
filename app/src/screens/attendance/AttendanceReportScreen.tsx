@@ -27,6 +27,7 @@ import { STR, bnNum, classLevelLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
 import { personName } from "../../lib/personName";
+import { useAuth } from "../../auth/AuthContext";
 
 type Props = NativeStackScreenProps<AttendanceStackParamList, "AttendanceReport">;
 
@@ -52,15 +53,28 @@ export default function AttendanceReportScreen(_props: Props): React.ReactElemen
   const [ok, setOk] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const [reportQ, refetchReport] = useQuery({ query: ABSENTEE_REPORT, variables: { dateKey } });
-  const [unmarkedQ, refetchUnmarked] = useQuery({ query: UNMARKED_SECTIONS, variables: { dateKey } });
+  // PM catalogue actions (D-#790–#801): the student reports ride attendance:view_all,
+  // the staff summary staff_attendance:view_all; the row buttons their own actions.
+  const { can } = useAuth();
+  const canStudents = can("attendance:view_all");
+  const canStaff = can("staff_attendance:view_all");
+  const canRecordLeave = can("attendance:record_leave");
+  const canRemind = can("attendance:remind");
+  const [reportQ, refetchReport] = useQuery({ query: ABSENTEE_REPORT, variables: { dateKey }, pause: !canStudents });
+  const [unmarkedQ, refetchUnmarked] = useQuery({
+    query: UNMARKED_SECTIONS,
+    variables: { dateKey },
+    pause: !canStudents,
+  });
   const [noAppQ, refetchNoApp] = useQuery({
     query: ABSENT_NO_APPLICATION,
     variables: { sectionId: null, fromKey, toKey: dateKey },
+    pause: !canStudents,
   });
   const [summaryQ] = useQuery({
     query: TEACHER_ATTENDANCE_SUMMARY,
     variables: { fromKey, toKey: dateKey },
+    pause: !canStaff,
   });
   const [, submitLeave] = useMutation(SUBMIT_LEAVE_APPLICATION);
   const client = useClient();
@@ -222,8 +236,12 @@ export default function AttendanceReportScreen(_props: Props): React.ReactElemen
             </View>
           ) : (
             <View style={{ flexDirection: "row", gap: space(2), flexWrap: "wrap" }}>
-              <Button title={STR.attRecordLeave} variant="ghost" onPress={() => setLeaveFor(s.studentId)} />
-              <Button title={STR.attChaseWhatsApp} variant="ghost" onPress={() => onChase(s.studentId)} />
+              {canRecordLeave ? (
+                <Button title={STR.attRecordLeave} variant="ghost" onPress={() => setLeaveFor(s.studentId)} />
+              ) : null}
+              {canRemind ? (
+                <Button title={STR.attChaseWhatsApp} variant="ghost" onPress={() => onChase(s.studentId)} />
+              ) : null}
             </View>
           )}
         </Card>

@@ -2,9 +2,10 @@
  * Routine module — R-5 resolvers (bell-schedule trigger + class-note/daily-diary).
  *
  * The trigger SCHEDULE is computed here; delivery (push) rides the deferred
- * messaging pipeline (D-#52). Reads gated `routine:read`; bell-duty assignment is
- * `routine:manage`; class-note publish is `routine:read` (authorized in-service to
- * the slot's teacher / cover / admin).
+ * messaging pipeline (D-#52). Reads gated `routine:view`; bell-duty assignment is
+ * `routine:settings`; class notes ride the `class_note:*` actions (PM catalogue):
+ * publish is `class_note:create` (authorized in-service to the slot's teacher /
+ * cover) or `class_note:edit_all` (any slot).
  */
 import { builder } from "../../../schema";
 import type { AppContext } from "../../../context";
@@ -21,7 +22,6 @@ import { type IBellDutyAssignment } from "../models/BellDutyAssignment";
 import { type IClassNote } from "../models/ClassNote";
 import { RoutineSlotRef } from "./routineSlots";
 import type { BellTrigger } from "../trigger";
-import { isAdminStaff } from "../../foundation/services/RoleScope";
 import {
   bellSchedule,
   assignBellDuty,
@@ -143,7 +143,7 @@ function parseDate(s: string): Date {
 builder.queryField("bellSchedule", (t) =>
   t.field({
     type: [BellTriggerRef],
-    authScopes: { hasPermission: "routine:read" },
+    authScopes: { hasPermission: "routine:view" },
     args: { date: t.arg.string({ required: true }), audienceKey: t.arg.string({ required: true }) },
     resolve: async (_r, args) => bellSchedule(parseDate(args.date), args.audienceKey),
   }),
@@ -152,7 +152,7 @@ builder.queryField("bellSchedule", (t) =>
 builder.queryField("bellDutyForDate", (t) =>
   t.field({
     type: [BellDutyRef],
-    authScopes: { hasPermission: "routine:read" },
+    authScopes: { hasPermission: "routine:view" },
     args: { date: t.arg.string({ required: true }) },
     resolve: async (_r, args) => bellDutyForDate(parseDate(args.date)),
   }),
@@ -161,7 +161,7 @@ builder.queryField("bellDutyForDate", (t) =>
 builder.queryField("classNotesForDate", (t) =>
   t.field({
     type: [ClassNoteRef],
-    authScopes: { hasPermission: "routine:read" },
+    authScopes: { hasPermission: "class_note:view" },
     args: {
       groupType: t.arg.string({ required: true }),
       groupId: t.arg.string({ required: true }),
@@ -183,7 +183,7 @@ builder.queryField("classNotesForDate", (t) =>
         const section = await Section.findById(args.groupId).select("classId").lean();
         const classId = section?.classId ? section.classId.toString() : "";
         try {
-          await assertCanRead(ctx, args.groupId, classId);
+          await assertCanRead(ctx, args.groupId, classId, undefined, { viewAll: "class_note:view_all" });
         } catch (e) {
           // Read-scope follows TODAY's routine. A teacher who taught this section on
           // `date` but no longer does (a routine change since — the 1 Oct C4/C5 split,
@@ -194,7 +194,9 @@ builder.queryField("classNotesForDate", (t) =>
           if (own.size === 0) throw e;
           return notes.filter((n) => own.has(n.slotId.toString()) || n.publishedBy.toString() === userId);
         }
-        const allowed = await allowedSubjectCodesForSection(ctx, args.groupId, classId);
+        const allowed = await allowedSubjectCodesForSection(ctx, args.groupId, classId, {
+          viewAll: "class_note:view_all",
+        });
         if (allowed) {
           const userId = ctx.auth.userId as string;
           // Own notes always stay visible (covers subjects missing from the
@@ -210,7 +212,7 @@ builder.queryField("classNotesForDate", (t) =>
 builder.queryField("myClassNotePrompts", (t) =>
   t.field({
     type: [RoutineSlotRef],
-    authScopes: { hasPermission: "routine:read" },
+    authScopes: { hasPermission: "class_note:create" },
     args: { date: t.arg.string({ required: true }) },
     resolve: async (_r, args, ctx) => myClassNotePrompts(parseDate(args.date), ctx.auth!.userId),
   }),
@@ -219,7 +221,7 @@ builder.queryField("myClassNotePrompts", (t) =>
 builder.queryField("classNoteSubmissionReport", (t) =>
   t.field({
     type: [ClassNoteSubmissionRowRef],
-    authScopes: { hasPermission: "routine:manage" },
+    authScopes: { hasPermission: "class_note:view_all" },
     args: { date: t.arg.string({ required: true }) },
     resolve: async (_r, args) => classNoteSubmissionReport(parseDate(args.date)),
   }),
@@ -230,7 +232,7 @@ builder.queryField("classNoteSubmissionReport", (t) =>
 builder.mutationField("assignBellDuty", (t) =>
   t.field({
     type: BellDutyRef,
-    authScopes: { hasPermission: "routine:manage" },
+    authScopes: { hasPermission: "routine:settings" },
     args: {
       date: t.arg.string({ required: true }),
       periodNumber: t.arg.int({ required: false }),
@@ -275,15 +277,22 @@ const ClassNoteHomeworkInput = builder.inputType("ClassNoteHomeworkInput", {
 
 /**
  * The homework half is gated SEPARATELY from the note (D-#477): publishing a note is
- * `routine:read`, but declaring homework is `tracker:write` + section/subject
+ * `class_note:create`, but declaring homework is `homework:declare` + section/subject
  * write-scope. A cover teacher legitimately holds the first without the second, so
  * inheriting one gate for both would quietly widen who can write to the tracker.
  */
 async function gateNoteHomework(ctx: AppContext, target: NoteHomeworkTarget): Promise<void> {
-  if (!ctx.auth || !callerHasPermission(ctx.auth, "tracker:write")) {
-    throw new ForbiddenError("Declaring homework needs tracker:write");
+  if (!ctx.auth || !callerHasPermission(ctx.auth, "homework:declare")) {
+    throw new ForbiddenError("Declaring homework needs homework:declare");
   }
   await assertCanWrite(ctx, target.sectionId, await resolveSubjectIdByCode(target.subject));
+}
+
+/** PM: `class_note:edit_all` (Principal/Office by default) writes or corrects any note —
+ *  it lifts the slot-teacher/cover designation on publish and the own-row rule on edit
+ *  (both bypasses used to be role/`routine:manage` tests). */
+function canEditAnyNote(ctx: AppContext): boolean {
+  return !!ctx.auth && callerHasPermission(ctx.auth, "class_note:edit_all");
 }
 
 builder.mutationField("publishClassNote", (t) =>
@@ -292,8 +301,8 @@ builder.mutationField("publishClassNote", (t) =>
     description:
       "Publish a class note. DE-3 (D-#477): the optional `homework` payload declares the day's " +
       "homework (or a nil declaration) through the EXISTING tracker services and links it, so a " +
-      "teacher enters the period once. The homework half is gated separately (tracker:write).",
-    authScopes: { hasPermission: "routine:read" },
+      "teacher enters the period once. The homework half is gated separately (homework:declare).",
+    authScopes: { hasAnyPermission: ["class_note:create", "class_note:edit_all"] },
     args: {
       slotId: t.arg.string({ required: true }),
       date: t.arg.string({ required: true }),
@@ -312,7 +321,7 @@ builder.mutationField("publishClassNote", (t) =>
         slotId: args.slotId,
         date,
         actorId: ctx.auth!.userId,
-        canManage: isAdminStaff(ctx.auth),
+        canManage: canEditAnyNote(ctx),
       });
       let linkedItemId = args.homeworkItemId ?? null;
       if (args.homework) {
@@ -334,7 +343,7 @@ builder.mutationField("publishClassNote", (t) =>
         homeworkItemId: linkedItemId,
         attachmentIds: args.attachmentIds ?? null,
         actorId: ctx.auth!.userId,
-        canManage: isAdminStaff(ctx.auth),
+        canManage: canEditAnyNote(ctx),
       });
     },
   }),
@@ -345,7 +354,7 @@ builder.mutationField("publishClassNote", (t) =>
 builder.queryField("classNotesAdmin", (t) =>
   t.field({
     type: [ClassNoteAdminRowRef],
-    authScopes: { hasPermission: "routine:manage" },
+    authScopes: { hasPermission: "class_note:view_all" },
     args: {
       date: t.arg.string({ required: true }),
       /** Inclusive range end (admin filters); omitted = the single `date`. */
@@ -363,7 +372,7 @@ const ClassNoteAdminPageRef = pageRef("ClassNoteAdminPage", ClassNoteAdminRowRef
 builder.queryField("classNotesAdminPage", (t) =>
   t.field({
     type: ClassNoteAdminPageRef,
-    authScopes: { hasPermission: "routine:manage" },
+    authScopes: { hasPermission: "class_note:view_all" },
     args: {
       date: t.arg.string({ required: true }),
       dateTo: t.arg.string({ required: false }),
@@ -398,7 +407,7 @@ builder.queryField("classNotesAdminOptions", (t) =>
   t.field({
     type: ClassNotesAdminOptionsRef,
     description: "The class levels / teacher names / subjects present in the admin list's date window.",
-    authScopes: { hasPermission: "routine:manage" },
+    authScopes: { hasPermission: "class_note:view_all" },
     args: {
       date: t.arg.string({ required: true }),
       dateTo: t.arg.string({ required: false }),
@@ -411,13 +420,13 @@ builder.queryField("classNotesAdminOptions", (t) =>
 // --- The class-note archive: filtered + paginated list (owner ask 2026-08-17) ---
 
 /**
- * Who the caller may see. Principal/Office (`routine:manage`) read the whole
+ * Who the caller may see. `class_note:view_all` (Principal/Office) reads the whole
  * school and may pick a teacher; anyone else is PINNED to their own notes — the
  * client's `teacherId` is ignored rather than trusted, so a forged argument can
  * never widen the slice.
  */
 function classNoteScopeTeacherId(ctx: AppContext, requested?: string | null): string | null {
-  if (ctx.auth && callerHasPermission(ctx.auth, "routine:manage")) return requested ?? null;
+  if (ctx.auth && callerHasPermission(ctx.auth, "class_note:view_all")) return requested ?? null;
   return ctx.auth!.userId;
 }
 
@@ -435,8 +444,8 @@ builder.queryField("classNotesPage", (t) =>
     type: ClassNotePageRef,
     description:
       "The class-note archive: class/section/subject/teacher/date filters, newest first, " +
-      "50 rows a page. routine:manage sees the school; every other caller sees their own notes.",
-    authScopes: { hasPermission: "routine:read" },
+      "50 rows a page. class_note:view_all sees the school; every other caller sees their own notes.",
+    authScopes: { hasAnyPermission: ["class_note:view", "class_note:view_all"] },
     args: {
       from: t.arg.string({ required: false }),
       to: t.arg.string({ required: false }),
@@ -471,7 +480,9 @@ const ClassNoteFilterOptionRef = builder.objectRef<ClassNoteFilterOption & { par
   }),
 });
 
-const ClassNoteFilterOptionsRef = builder.objectRef<ClassNoteFilterOptions & { canManage: boolean }>(
+const ClassNoteFilterOptionsRef = builder.objectRef<
+  ClassNoteFilterOptions & { canManage: boolean; canEditAll: boolean; canDelete: boolean }
+>(
   "ClassNoteFilterOptions",
 ).implement({
   fields: (t) => ({
@@ -479,8 +490,12 @@ const ClassNoteFilterOptionsRef = builder.objectRef<ClassNoteFilterOptions & { c
     sections: t.field({ type: [ClassNoteFilterOptionRef], resolve: (o) => o.sections }),
     subjects: t.stringList({ resolve: (o) => o.subjects }),
     teachers: t.field({ type: [ClassNoteFilterOptionRef], resolve: (o) => o.teachers }),
-    /** The caller reads the whole school (and so may edit/delete any row). */
+    /** The caller reads the whole school (`class_note:view_all`). */
     canManage: t.exposeBoolean("canManage"),
+    /** PM: the caller may correct any row (`class_note:edit_all`). */
+    canEditAll: t.exposeBoolean("canEditAll"),
+    /** PM: the caller may delete a row (`class_note:delete`). */
+    canDelete: t.exposeBoolean("canDelete"),
   }),
 });
 
@@ -488,11 +503,16 @@ builder.queryField("classNoteFilterOptions", (t) =>
   t.field({
     type: ClassNoteFilterOptionsRef,
     description: "Filter values that exist in the caller's slice of the class-note archive.",
-    authScopes: { hasPermission: "routine:read" },
+    authScopes: { hasAnyPermission: ["class_note:view", "class_note:view_all"] },
     resolve: async (_r, _args, ctx) => {
-      const canManage = !!ctx.auth && callerHasPermission(ctx.auth, "routine:manage");
+      const canManage = !!ctx.auth && callerHasPermission(ctx.auth, "class_note:view_all");
       const options = await classNoteFilterOptions({ teacherId: canManage ? null : ctx.auth!.userId });
-      return { ...options, canManage };
+      return {
+        ...options,
+        canManage,
+        canEditAll: canEditAnyNote(ctx),
+        canDelete: !!ctx.auth && callerHasPermission(ctx.auth, "class_note:delete"),
+      };
     },
   }),
 );
@@ -501,9 +521,9 @@ builder.mutationField("updateClassNote", (t) =>
   t.field({
     type: ClassNoteRef,
     description:
-      "Edit a note's summary/attachments. routine:manage edits any note; every other caller " +
+      "Edit a note's summary/attachments. class_note:edit_all edits any note; class_note:edit " +
       "edits only the note they authored (checked in-service against publishedBy).",
-    authScopes: { hasPermission: "routine:read" },
+    authScopes: { hasAnyPermission: ["class_note:edit", "class_note:edit_all"] },
     args: {
       id: t.arg.string({ required: true }),
       taughtSummaryBn: t.arg.string({ required: false }),
@@ -515,7 +535,7 @@ builder.mutationField("updateClassNote", (t) =>
         taughtSummaryBn: args.taughtSummaryBn ?? undefined,
         attachmentIds: args.attachmentIds ?? undefined,
         actorId: ctx.auth!.userId,
-        canManage: !!ctx.auth && callerHasPermission(ctx.auth, "routine:manage"),
+        canManage: canEditAnyNote(ctx),
       }),
   }),
 );
@@ -527,7 +547,7 @@ const DeleteResultRef = builder.objectRef<{ id: string }>("ClassNoteDeleteResult
 builder.mutationField("deleteClassNote", (t) =>
   t.field({
     type: DeleteResultRef,
-    authScopes: { hasPermission: "routine:manage" },
+    authScopes: { hasPermission: "class_note:delete" },
     args: { id: t.arg.string({ required: true }) },
     resolve: async (_r, args) => deleteClassNote(args.id),
   }),

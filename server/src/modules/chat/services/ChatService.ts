@@ -1,7 +1,7 @@
 /**
  * ChatService (M-1, D-#76/#77) — core staff chat: 1:1 threads, messages,
  * per-message seen receipts. Staff-only: guardians never appear in any chat
- * row (D-#76); the resolver layer additionally gates on chat:read/chat:write,
+ * row (D-#76); the resolver layer additionally gates on chat:view/chat:send,
  * which GUARDIAN does not hold.
  *
  * Row scope = MEMBERSHIP: every read/write goes through assertChatMember —
@@ -128,7 +128,7 @@ export interface SendMessageInput {
   /** Chat attachment file ids (M-4) — each must be a CHAT StoredFile the sender
    *  uploaded for THIS conversation (validated via resolveSendAttachments). */
   attachmentIds?: string[] | null;
-  /** Does the sender hold chat:manage? Set by the resolver from the caller's role.
+  /** Does the sender hold chat:publish? Set by the resolver from the caller's permissions.
    *  Gates ANNOUNCEMENT posting (M-2, D-#78) — managers post, others are blocked. */
   canManage?: boolean;
 }
@@ -136,7 +136,7 @@ export interface SendMessageInput {
 export async function sendMessage(input: SendMessageInput): Promise<IChatMessage> {
   const conversation = await assertChatMember(input.conversationId, input.senderId);
 
-  // M-2 (D-#78): in an ANNOUNCEMENT group only chat:manage holders may post
+  // M-2 (D-#78): in an ANNOUNCEMENT group only chat:publish holders may post
   // (reactions — M-3 — stay allowed). OPEN groups + DIRECT are unrestricted.
   if (conversation.postingPolicy === "ANNOUNCEMENT" && !input.canManage) {
     throw new ChatError("এই গ্রুপে শুধুমাত্র ব্যবস্থাপক বার্তা পাঠাতে পারেন");
@@ -338,7 +338,7 @@ export interface ForwardMessageInput {
   messageId: string;
   toConversationId: string;
   senderId: string;
-  /** Does the sender hold chat:manage? Gates ANNOUNCEMENT posting on the TARGET
+  /** Does the sender hold chat:publish? Gates ANNOUNCEMENT posting on the TARGET
    *  (a forward is a post; same rule as sendMessage, M-2/D-#78). */
   canManage?: boolean;
 }
