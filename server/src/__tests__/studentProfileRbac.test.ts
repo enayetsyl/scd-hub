@@ -74,6 +74,8 @@ jest.mock("../modules/trackers/resolvers/classTestSummary", () => {
   });
   return {
     assertReportRead: (...a: unknown[]) => mockAssertReportRead(...a),
+    // PM: the profile gate names its own feature's actions (student_profile:view/_all).
+    STUDENT_PROFILE_REPORT_GATE: { view: "student_profile:view", viewAll: "student_profile:view_all" },
     StudentAnalyticsRef: undefined,
     StudentProfileRef: ref,
   };
@@ -110,6 +112,9 @@ const ctxOf = (role: string | null): Ctx => ({ auth: role ? { role, userId: USER
 
 const run = (source: string, role: string | null): Promise<ExecutionResult> =>
   graphql({ schema, source, contextValue: ctxOf(role) }) as Promise<ExecutionResult>;
+
+// PM: tier 1 is asked under the student_profile actions, not the legacy tracker:read.
+const PROFILE_GATE = { gate: { view: "student_profile:view", viewAll: "student_profile:view_all" } };
 
 const ok = (r: ExecutionResult) => !r.errors || r.errors.length === 0;
 const denied = (r: ExecutionResult) => (r.errors?.length ?? 0) > 0;
@@ -181,7 +186,7 @@ describe("tier 1 — who reaches the panels at all", () => {
 
   test("tier 1 is asserted against the STUDENT's own section, not a client argument", async () => {
     await run(HW, "TEACHER");
-    expect(mockAssertReportRead).toHaveBeenCalledWith(expect.anything(), SECTION.toString());
+    expect(mockAssertReportRead).toHaveBeenCalledWith(expect.anything(), SECTION.toString(), PROFILE_GATE);
   });
 });
 
@@ -192,7 +197,7 @@ describe("tier 2 — subject narrowing (D-#357)", () => {
       expect.anything(),
       SECTION.toString(),
       CLASS.toString(),
-      { classTeacherOversight: true },
+      { classTeacherOversight: true, viewAll: "student_profile:view_all" },
     );
   });
 
@@ -248,12 +253,12 @@ describe("tier 2 — subject narrowing (D-#357)", () => {
   test("the assignment panel runs the identical gate", async () => {
     mockAllowedSubjects.mockResolvedValue(new Set(["MATH"]));
     await run(AS, "TEACHER");
-    expect(mockAssertReportRead).toHaveBeenCalledWith(expect.anything(), SECTION.toString());
+    expect(mockAssertReportRead).toHaveBeenCalledWith(expect.anything(), SECTION.toString(), PROFILE_GATE);
     expect(mockAllowedSubjects).toHaveBeenCalledWith(
       expect.anything(),
       SECTION.toString(),
       CLASS.toString(),
-      { classTeacherOversight: true },
+      { classTeacherOversight: true, viewAll: "student_profile:view_all" },
     );
     expect(mockAssignmentPanel).toHaveBeenCalledWith(
       STUDENT,
@@ -273,7 +278,7 @@ describe("subject-free panels (SP-2)", () => {
     ["comments", CMT],
   ])("%s passes tier 1 for an in-scope teacher", async (_name, q) => {
     expect(ok(await run(q, "TEACHER"))).toBe(true);
-    expect(mockAssertReportRead).toHaveBeenCalledWith(expect.anything(), SECTION.toString());
+    expect(mockAssertReportRead).toHaveBeenCalledWith(expect.anything(), SECTION.toString(), PROFILE_GATE);
   });
 
   test.each([
