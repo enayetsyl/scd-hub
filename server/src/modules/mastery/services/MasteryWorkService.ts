@@ -33,6 +33,7 @@ import { personName } from "../../../lib/personName";
 import { getPolicy, isMasteryEnabled, ensureDefaultTags } from "./MasteryCatalogueService";
 import { loCodesOf } from "../bank";
 import { computeEvidence, isoWeekKey, type ResultLike, type TagLike } from "../evidence";
+import { reapplyExclusions } from "../exclusions";
 
 export type Auth = AccessProfile & { userId: string; role: string };
 
@@ -63,14 +64,14 @@ export function dayOf(ymd: string): Date {
   return d;
 }
 
-interface SectionCtx {
+export interface SectionCtx {
   sectionId: Types.ObjectId;
   classId: Types.ObjectId;
   academicYearId: Types.ObjectId;
   classToken: MasteryClassToken;
 }
 
-async function sectionContext(sectionId: string): Promise<SectionCtx> {
+export async function sectionContext(sectionId: string): Promise<SectionCtx> {
   if (!Types.ObjectId.isValid(sectionId)) throw new MasteryWorkError("শাখা পাওয়া যায়নি।");
   const section = await Section.findById(sectionId).select("classId").lean();
   if (!section) throw new MasteryWorkError("শাখা পাওয়া যায়নি।");
@@ -82,7 +83,7 @@ async function sectionContext(sectionId: string): Promise<SectionCtx> {
 }
 
 /** The row rule: edit_all, or the routine names the caller on this section × subject that day. */
-async function assertMayWork(auth: Auth, sectionId: Types.ObjectId, subject: MasterySubject, on: Date): Promise<void> {
+export async function assertMayWork(auth: Auth, sectionId: Types.ObjectId, subject: MasterySubject, on: Date): Promise<void> {
   if (callerHasPermission(auth, "mastery:edit_all")) return;
   const teacherId = await resolveSubjectTeacher(String(sectionId), subject, on);
   if (teacherId && String(teacherId) === String(auth.userId)) return;
@@ -95,7 +96,7 @@ async function assertEnabled(ctx: SectionCtx, subject: MasterySubject): Promise<
   }
 }
 
-async function loadPaperFor(paperId: string, auth: Auth): Promise<IMasteryPaper> {
+export async function loadPaperFor(paperId: string, auth: Auth): Promise<IMasteryPaper> {
   const paper = await MasteryPaper.findOne({ paperId });
   if (!paper) throw new MasteryWorkError("এই কাজটি পাওয়া যায়নি।");
   await assertMayWork(auth, paper.sectionId, paper.subject, paper.date);
@@ -274,7 +275,7 @@ export interface PaperView {
   rubricLoCodes: string[];
 }
 
-function paperView(p: IMasteryPaper): PaperView {
+export function paperView(p: IMasteryPaper): PaperView {
   return {
     paperId: p.paperId,
     source: p.source,
@@ -328,7 +329,7 @@ export interface PaperDetail {
   roster: RosterRow[];
 }
 
-async function rosterOf(sectionId: Types.ObjectId) {
+export async function rosterOf(sectionId: Types.ObjectId) {
   return Student.find({ sectionId, active: true }).select("name nameBn rollNumber").sort({ rollNumber: 1, name: 1 }).lean() as Promise<
     { _id: Types.ObjectId; name?: string; nameBn?: string; rollNumber?: string }[]
   >;
@@ -517,6 +518,7 @@ async function writeEvidenceFor(paper: IMasteryPaper, studentIds: string[]): Pro
         week,
       })),
     );
+    await reapplyExclusions(paper.sectionId, { paperId: paper._id });
   }
   return { rows: out.rows.length, skipped: out.skipped.length, behaviour: out.behaviourNotes.length };
 }

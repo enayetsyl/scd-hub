@@ -393,6 +393,8 @@ export const AUDIT_KIND_LABELS: Record<AuditEventKind, AuditKindLabel> = {
   MASTERY_PAPER_DELETED: { bn: "প্রশ্নভিত্তিক কাজ মুছেছেন", en: "Deleted a mastery work sheet", group: "MASTERY" },
   MASTERY_RESULTS_SAVED: { bn: "প্রশ্নভিত্তিক নম্বর তুলেছেন", en: "Saved mastery results", group: "MASTERY" },
   MASTERY_PAPER_CONFIRMED: { bn: "প্রশ্নভিত্তিক নম্বর নিশ্চিত করেছেন", en: "Confirmed a mastery work sheet", group: "MASTERY" },
+  MASTERY_ITEM_EXCLUDED: { bn: "প্রশ্ন নির্ণয় থেকে বাদ দিয়েছেন", en: "Excluded a question from diagnosis", group: "MASTERY" },
+  MASTERY_EXCLUSION_REVOKED: { bn: "বাদ দেওয়া প্রশ্ন ফিরিয়েছেন", en: "Brought an excluded question back", group: "MASTERY" },
   SCHOLARSHIP_PAPER_DECLARED: { bn: "অনুশীলন প্রশ্ন ঘোষণা করেছেন", en: "Declared a practice paper", group: "SCHOLARSHIP" },
   SCHOLARSHIP_PAPER_UPDATED: { bn: "অনুশীলন প্রশ্ন সম্পাদনা করেছেন", en: "Edited a practice paper", group: "SCHOLARSHIP" },
   SCHOLARSHIP_SCORES_ENTERED: { bn: "অনুশীলনের নম্বর লিখেছেন", en: "Entered practice marks", group: "SCHOLARSHIP" },
