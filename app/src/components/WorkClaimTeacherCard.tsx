@@ -26,6 +26,7 @@ import { useColors } from "../theme";
 import { STR, bnNum, workClaimTrackerLabel } from "../lib/labels";
 import { REJECT_WORK_CLAIM, type WorkClaimRowT } from "../graphql/operations";
 import { useSectionContext } from "../state/SectionContext";
+import { useAuth } from "../auth/AuthContext";
 import type { TabParamList } from "../navigation/types";
 
 export function WorkClaimTeacherCard({
@@ -42,6 +43,9 @@ export function WorkClaimTeacherCard({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [, reject] = useMutation(REJECT_WORK_CLAIM);
+  // PM: the reject button checks the server's action (`work_claim:reject`).
+  const { can } = useAuth();
+  const canReject = can("work_claim:reject");
   const tabNav = useNavigation<NavigationProp<TabParamList>>();
   const { setSection } = useSectionContext();
 
@@ -147,7 +151,9 @@ export function WorkClaimTeacherCard({
                 disabled={!r.classId}
                 style={{ flex: 1 }}
               />
-              <Button title={STR.wcReject} variant="secondary" onPress={() => setTarget(r)} />
+              {canReject ? (
+                <Button title={STR.wcReject} variant="secondary" onPress={() => setTarget(r)} />
+              ) : null}
             </View>
           </View>
         </View>

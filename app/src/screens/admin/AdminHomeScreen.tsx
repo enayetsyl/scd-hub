@@ -13,7 +13,7 @@ import { useAuth } from "../../auth/AuthContext";
 type Props = NativeStackScreenProps<AdminStackParamList, "AdminHome">;
 
 export default function AdminHomeScreen({ navigation }: Props): React.ReactElement {
-  const { isRole, can } = useAuth();
+  const { can } = useAuth();
   const canImport = can("content:import");
   const canManageUsers = can("user:manage");
   const canRoster = can("roster:manage");
@@ -31,7 +31,9 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
   // Owner ask 2026-10-04: template-aware, matching the server's `canWatchClaims`
   // (isAdminStaff) — a teacher holding the Office template from Access control
   // (Akter, Tazkir) could already read the queue but never saw this card.
-  const canWorkClaims = isRole("PRINCIPAL") || isRole("OFFICE");
+  // PM: `work_claim:view_all` without the digest designation — i.e. with its waiver
+  // `admin_dashboard:view` (Principal + Office by default, template-aware like isRole was).
+  const canWorkClaims = can("work_claim:view_all") && can("admin_dashboard:view");
   // AR-2: the ranking reads the two attendance registers, so it sits behind the gate
   // that already owns them — `attendance:manage` is Principal + Office exactly.
   const canAttendance = can("attendance:manage");

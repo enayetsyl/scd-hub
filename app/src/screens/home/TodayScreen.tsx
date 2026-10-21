@@ -128,7 +128,7 @@ export default function TodayScreen(): React.ReactElement {
   const [claimsQ, refetchClaims] = useQuery({ query: MY_WORK_CLAIMS_QUERY, variables: {} });
 
   // The SAME gates AppTabs uses for the target tabs (no new gating logic).
-  const canDeclare = can("tracker:read");
+  const canDeclare = can("homework:declare");
   const canManage = can("attendance:manage");
   const canAttendance =
     !!role &&
@@ -140,13 +140,17 @@ export default function TodayScreen(): React.ReactElement {
   const canSets = can("set:read");
   const canTrackers = can("tracker:read");
   const canHr = !!role && role !== "GUARDIAN";
-  // AG-3 — the desk that physically hands out the gifts (Principal + Office, D-#667).
-  const canGift = can("gift:manage");
+  // AG-3 — whoever ticks a gift handover (`assignment_gift:issue`; the card lists the
+  // whole school only for `assignment_gift:view_all`, Principal + Office, D-#667).
+  const canGift = can("assignment_gift:issue") && can("assignment_gift:view_all");
   // D-#674 — the live class board follows the PERMISSION, not the role: a per-user
   // routine:manage grant (D-#193) lands on THIS screen, not the admin dashboard.
   const canLiveBoard = can("routine:manage");
   // HW-VOID (D-#741) — removing never-issued homework follows its own permission.
-  const canVoidHomework = can("homework:void");
+  const canVoidHomework = can("homework:delete");
+  // PM: the two self-scoped lifecycle cards follow their own tracker's view action.
+  const canHwView = can("homework:view");
+  const canAsView = can("assignment:view");
 
   // D-#318: the teacher's OWN sections' attendance at a glance (admins land on
   // the card dashboard instead, so no pause needed beyond the guardian gate).
@@ -194,7 +198,7 @@ export default function TodayScreen(): React.ReactElement {
   const [hwLcQ, refetchHwLc] = useQuery({
     query: MY_HW_LIFECYCLE_QUERY,
     variables: { from: hwLcFrom, to: hwLcTo },
-    pause: !canTrackers,
+    pause: !canHwView,
   });
   const myHwLc = hwLcQ.data?.myHomeworkLifecycle ?? null;
   // D-#471: the same card for assignments, over the same 14-day window so the two read
@@ -204,7 +208,7 @@ export default function TodayScreen(): React.ReactElement {
   const [asLcQ, refetchAsLc] = useQuery({
     query: MY_AS_LIFECYCLE_QUERY,
     variables: { from: hwLcFrom, to: hwLcTo },
-    pause: !canTrackers,
+    pause: !canAsView,
   });
   const myAsLc = asLcQ.data?.myAssignmentLifecycle ?? null;
   // The workspace reads its class/section from here, so a drill row can point it.
@@ -222,9 +226,9 @@ export default function TodayScreen(): React.ReactElement {
     if (!canManage) refetchMySections({ requestPolicy: "network-only" });
     if (canSets) refetchRecent({ requestPolicy: "network-only" });
     if (canFileTests && user?.id) refetchCtPending({ requestPolicy: "network-only" });
-    if (canTrackers) refetchHwLc({ requestPolicy: "network-only" });
-    if (canTrackers) refetchAsLc({ requestPolicy: "network-only" });
-  }, [refetch, refetchMySections, refetchRecent, refetchCtPending, refetchHwLc, refetchAsLc, canManage, canSets, canFileTests, canTrackers, user?.id]);
+    if (canHwView) refetchHwLc({ requestPolicy: "network-only" });
+    if (canAsView) refetchAsLc({ requestPolicy: "network-only" });
+  }, [refetch, refetchMySections, refetchRecent, refetchCtPending, refetchHwLc, refetchAsLc, canManage, canSets, canFileTests, canHwView, canAsView, user?.id]);
 
   // Focus-refetch (HomeworkHome pattern): skip the first focus — the queries
   // already run on mount — then refresh whenever the user returns. Also picks
@@ -824,7 +828,7 @@ export default function TodayScreen(): React.ReactElement {
         ) : null}
 
         {/* Owner 2026-07-25: my homework lifecycle — totals + tappable pending pills. */}
-        {canTrackers && myHwLc && myHwLc.given > 0 ? (
+        {canHwView && myHwLc && myHwLc.given > 0 ? (
           <Card>
             <View style={{ flexDirection: "row", alignItems: "center", gap: space(2), marginBottom: space(1) }}>
               <Icon name="book-open" size={18} color={colors.textPrimary} />
@@ -872,7 +876,7 @@ export default function TodayScreen(): React.ReactElement {
 
         {/* D-#471: my assignment lifecycle — the twin of the homework card above.
             Pills deep-link into the assignment workspace instead of a drill sheet. */}
-        {canTrackers && myAsLc && myAsLc.given > 0 ? (
+        {canAsView && myAsLc && myAsLc.given > 0 ? (
           <Card>
             <View style={{ flexDirection: "row", alignItems: "center", gap: space(2), marginBottom: space(1) }}>
               <Icon name="clipboard-list" size={18} color={colors.textPrimary} />
