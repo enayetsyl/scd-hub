@@ -51,7 +51,11 @@ import {
   type StudentProfileHeader,
 } from "../services/StudentProfileContextService";
 import { studentProfile as classTestStudentProfileFor } from "../services/ClassTestSummaryService";
-import { assertReportRead, StudentProfileRef as ClassTestProfileRef } from "./classTestSummary";
+import {
+  assertReportRead,
+  STUDENT_PROFILE_REPORT_GATE,
+  StudentProfileRef as ClassTestProfileRef,
+} from "./classTestSummary";
 
 /** The §4 gate. Returns the subject narrowing to pass to the service:
  *  `null` = unrestricted, otherwise the caller's own subject codes. */
@@ -66,9 +70,12 @@ export async function assertStudentProfileRead(
   if (!student) throw new ForbiddenError("শিক্ষার্থী পাওয়া যায়নি");
   const sectionId = student.sectionId.toString();
   const classId = student.classId.toString();
-  await assertReportRead(ctx, sectionId);
+  // PM: `student_profile:view` scoped, `student_profile:view_all` unscoped (tier 1) and
+  // un-narrowed (tier 2); the class-teacher / confirmer / supervisor designations stay.
+  await assertReportRead(ctx, sectionId, { gate: STUDENT_PROFILE_REPORT_GATE });
   const allowed = await allowedSubjectCodesForSection(ctx, sectionId, classId, {
     classTeacherOversight: true,
+    viewAll: STUDENT_PROFILE_REPORT_GATE.viewAll,
   });
   return { subjects: allowed === null ? null : [...allowed], sectionId, classId };
 }
@@ -161,7 +168,7 @@ builder.queryField("studentProfileHomework", (t) =>
     description:
       "The student's homework panel over [fromKey, toKey] (windowed on the item's DATE_GIVEN, the " +
       "axis the lifecycle report filters on). Staff only; a subject teacher is narrowed to their own subjects.",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "student_profile:view" },
     args: {
       studentId: t.arg.string(panelArgs.studentId),
       fromKey: t.arg.string(panelArgs.fromKey),
@@ -184,7 +191,7 @@ builder.queryField("studentProfileAssignment", (t) =>
     description:
       "The student's assignment panel over [fromKey, toKey] (windowed on the item's deliveryDate). " +
       "Same gate as studentProfileHomework.",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "student_profile:view" },
     args: {
       studentId: t.arg.string(panelArgs.studentId),
       fromKey: t.arg.string(panelArgs.fromKey),
@@ -208,7 +215,7 @@ builder.queryField("studentProfileClassTest", (t) =>
       "The student's class-test profile served through the PROFILE gate: a subject teacher gets " +
       "their own subjects only, and every derived number (average, streak, best/weakest subject, " +
       "rank) is recomputed over that slice. `classTestStudentProfile` is unchanged for the CT screen.",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "student_profile:view" },
     args: { studentId: t.arg.string(panelArgs.studentId) },
     resolve: async (_root, args, ctx) => {
       const { subjects } = await assertStudentProfileRead(ctx, args.studentId);
@@ -398,7 +405,7 @@ builder.queryField("studentProfileHeader", (t) =>
     description:
       "The profile header + the default window (current academic year to date, D-#358). Same tier-1 " +
       "gate as the panels; `fullView` reports whether this caller sees every subject.",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "student_profile:view" },
     args: { studentId: t.arg.string(panelArgs.studentId) },
     resolve: async (_root, args, ctx) => {
       const { subjects } = await assertStudentProfileRead(ctx, args.studentId);
@@ -414,7 +421,7 @@ builder.queryField("studentProfileAttendance", (t) =>
     description:
       "Presence over [fromKey, toKey]. Subject-FREE: visible to any caller past tier 1 — absence is " +
       "not a subject's property, and a subject teacher already sees it on their attendance screen.",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "student_profile:view" },
     args: {
       studentId: t.arg.string(panelArgs.studentId),
       fromKey: t.arg.string(panelArgs.fromKey),
@@ -444,7 +451,7 @@ builder.queryField("studentProfileClassAttendance", (t) =>
     description:
       "Class comparison for the attendance tab — the average and highest presence % among the active students " +
       "of the student's section over [fromKey, toKey]. Same gate as studentProfileAttendance; no names returned.",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "student_profile:view" },
     args: {
       studentId: t.arg.string(panelArgs.studentId),
       fromKey: t.arg.string(panelArgs.fromKey),
@@ -463,7 +470,7 @@ builder.queryField("studentProfileComments", (t) =>
     description:
       "Daily comments over the window + the parent-meeting note history. Subject-FREE (§4): " +
       "behaviour is not a subject's property. Staff only — guardians read their own delivered feed.",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "student_profile:view" },
     args: {
       studentId: t.arg.string(panelArgs.studentId),
       fromKey: t.arg.string(panelArgs.fromKey),
