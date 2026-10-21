@@ -28,7 +28,7 @@ type Props = NativeStackScreenProps<EnglishDriveStackParamList, "EnglishDriveHom
 
 export default function EnglishDriveHomeScreen({ navigation }: Props): React.ReactElement {
   const { role, can } = useAuth();
-  const canUpload = can("roster:manage");
+  const canUpload = can("english_drive:upload"); // PM: was roster:manage
 
   const [levelsQ, refetchLevels] = useQuery({ query: ENGLISH_DRIVE_MY_CLASS_LEVELS });
   const levels = useMemo(

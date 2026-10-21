@@ -4,7 +4,7 @@
  *     manages their OWN device tokens (own-row; no new permission). The owner
  *     is derived from the auth context (a GUARDIAN token registers a
  *     guardian-owned device, N-4/D-#75 — same split as the notification inbox).
- *   guardianChaseLink — Office (attendance:manage) gets the AT4.7 manual wa.me
+ *   guardianChaseLink — Office (attendance:remind) gets the AT4.7 manual wa.me
  *     link for an absent-no-application student. Teachers never chase (O3).
  * Identity-plane (ADR-005).
  */
@@ -60,7 +60,7 @@ builder.queryField("guardianChaseLink", (t) =>
     nullable: true,
     description:
       "AT4.7 — Office-only wa.me link nudging an absent student's guardian to file a leave reason. null when no phone on file.",
-    authScopes: { hasPermission: "attendance:manage" },
+    authScopes: { hasPermission: "attendance:remind" },
     args: { studentId: t.arg.string({ required: true }) },
     resolve: async (_root, args) => {
       const student = await Student.findById(args.studentId).select("name nameBn phone").lean();

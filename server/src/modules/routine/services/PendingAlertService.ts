@@ -409,21 +409,21 @@ export async function pendingWorkFor(ctx: AppContext, today: Date): Promise<Pend
     if (pending.length > 0) out.push(alert("attendance", pending));
   }
 
-  if (callerHasPermission(auth, "routine:read")) {
+  if (callerHasPermission(auth, "class_note:create")) {
     const pending = await classNoteBacklog(auth.userId, keys, dayTypes);
     if (pending.length > 0) out.push(alert("class_note", pending));
   }
 
-  if (callerHasPermission(auth, "tracker:write")) {
+  if (callerHasPermission(auth, "assignment:declare")) {
     const work = await assignmentWork(auth.userId, today);
     if (work.overdue.count > 0) out.push(work.overdue);
     assignmentPrep = work.prep;
   }
 
   // Reconcile alerts — for whoever a section holds accountable (class teacher /
-  // homework delegate). tracker:write guards the seam like the other kinds, so
+  // homework delegate). homework:confirm_day guards the seam like the other kinds, so
   // guardian/office logins never even query for sections.
-  const mySections = callerHasPermission(auth, "tracker:write")
+  const mySections = callerHasPermission(auth, "homework:confirm_day")
     ? await confirmerSections(auth.userId)
     : [];
   if (mySections.length > 0) {

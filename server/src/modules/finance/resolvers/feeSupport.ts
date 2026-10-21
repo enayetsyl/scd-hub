@@ -127,8 +127,8 @@ ChaseOutcomeRef.implement({
 builder.mutationField("createFeeProvider", (t) =>
   t.field({
     type: ProviderRef,
-    description: "Create a fee-support provider (zakat fund / sponsor). Requires finance:manage.",
-    authScopes: { hasPermission: "finance:manage" },
+    description: "Create a fee-support provider (zakat fund / sponsor). Requires fee_support:edit.",
+    authScopes: { hasPermission: "fee_support:edit" },
     args: {
       name: t.arg.string({ required: true }),
       nameBn: t.arg.string({ required: false }),
@@ -144,8 +144,8 @@ builder.mutationField("setFeeSupportAllocation", (t) =>
     type: AllocationRef,
     description:
       "Declare a student's fee-support allocation (effective-dated, append-only — a change is a NEW row). " +
-      "Coverage is per-head FULL|AMOUNT. Requires finance:manage. Audited FEE_SUPPORT_ALLOCATION_SET.",
-    authScopes: { hasPermission: "finance:manage" },
+      "Coverage is per-head FULL|AMOUNT. Requires fee_support:edit. Audited FEE_SUPPORT_ALLOCATION_SET.",
+    authScopes: { hasPermission: "fee_support:edit" },
     args: {
       studentId: t.arg.string({ required: true }),
       providerId: t.arg.string({ required: true }),
@@ -174,8 +174,8 @@ builder.mutationField("setFeeSupportAllocation", (t) =>
 builder.mutationField("recordProviderReceipt", (t) =>
   t.field({
     type: ReceiptRef,
-    description: "Record a provider's payment against its receivable. Requires finance:manage. Audited PROVIDER_RECEIPT_RECORDED.",
-    authScopes: { hasPermission: "finance:manage" },
+    description: "Record a provider's payment against its receivable. Requires fee_support:create. Audited PROVIDER_RECEIPT_RECORDED.",
+    authScopes: { hasPermission: "fee_support:create" },
     args: {
       providerId: t.arg.string({ required: true }),
       amount: t.arg.float({ required: true }),
@@ -194,9 +194,9 @@ builder.mutationField("chaseFeeDue", (t) =>
     nullable: true,
     description:
       "Run the guardian fee-due chase for a student — wa.me for the family + inbox/push for login-enabled " +
-      "guardians (FINANCE_FEE_DUE). Returns null when the student has no outstanding due. Requires finance:manage. " +
+      "guardians (FINANCE_FEE_DUE). Returns null when the student has no outstanding due. Requires finance_ledger:remind. " +
       "Audited FINANCE_FEE_DUE_CHASED.",
-    authScopes: { hasPermission: "finance:manage" },
+    authScopes: { hasPermission: "finance_ledger:remind" },
     args: {
       studentId: t.arg.string({ required: true }),
       asOf: t.arg.string({ required: false }),
@@ -210,8 +210,8 @@ builder.mutationField("chaseFeeDue", (t) =>
 builder.queryField("feeProviders", (t) =>
   t.field({
     type: [ProviderRef],
-    description: "All fee-support providers (A→Z). Requires finance:manage.",
-    authScopes: { hasPermission: "finance:manage" },
+    description: "All fee-support providers (A→Z). Requires fee_support:view.",
+    authScopes: { hasPermission: "fee_support:view" },
     resolve: () => listFeeProviders(),
   }),
 );
@@ -219,8 +219,8 @@ builder.queryField("feeProviders", (t) =>
 builder.queryField("financeProviderStatement", (t) =>
   t.field({
     type: StatementRef,
-    description: "A provider's owed-vs-paid statement (derived). Requires finance:manage.",
-    authScopes: { hasPermission: "finance:manage" },
+    description: "A provider's owed-vs-paid statement (derived). Requires fee_support:view.",
+    authScopes: { hasPermission: "fee_support:view" },
     args: { providerId: t.arg.string({ required: true }) },
     resolve: (_root, args) => providerStatement(args.providerId),
   }),

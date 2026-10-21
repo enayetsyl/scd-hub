@@ -101,6 +101,7 @@ export { getTickerHealth } from "./tickerHeartbeat";
 import { emit } from "./NotificationService";
 import { renderTemplate } from "../../templates/services/MessageTemplateService";
 import { actingAsFilter } from "../../foundation/services/RoleScope";
+import { holderIdsOf } from "../../access-control/services/holders";
 
 type IdLike = { toString(): string };
 
@@ -140,9 +141,10 @@ export const HW_CONFIRM_ESCALATION_RUNGS = [
  *  report late counts FULL days only, so firing on a QURAN_ONLY Saturday would
  *  report a number that did not move since Thursday. */
 export const CT_OVERDUE_DIGEST_MINUTES = 8 * 60;
-/** Who gets it. Teachers are deliberately absent — the owner scoped this to the
- *  two roles who can act on BOTH halves of the split (chase, and approve). */
-export const CT_OVERDUE_DIGEST_ROLES = ["OFFICE", "PRINCIPAL"] as const;
+/** Who gets it: every holder of the chase action (PM §5.5). Teachers are deliberately
+ *  absent by default — the owner scoped this to the two roles who can act on BOTH halves
+ *  of the split (chase, and approve), which is who holds `class_test:remind` by default. */
+export const CT_OVERDUE_DIGEST_PERMISSION = "class_test:remind" as const;
 
 /** Weekly guardian homework digest (D-#452) — 17:00 on the LAST OPEN day of the
  *  Sun–Thu school week (normally Thursday). */
@@ -646,17 +648,15 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
           AwaitingSubmit: counts.awaitingSubmit,
           AwaitingPublish: counts.awaitingPublish,
         });
-        const recipients = (await User.find(actingAsFilter([...CT_OVERDUE_DIGEST_ROLES]))
-          .select("_id")
-          .lean()) as unknown as Array<{ _id: IdLike }>;
-        for (const recipient of recipients) {
+        const recipientIds = await holderIdsOf(CT_OVERDUE_DIGEST_PERMISSION);
+        for (const recipientId of recipientIds) {
           const res = await emit({
-            recipientUserId: recipient._id.toString(),
+            recipientUserId: recipientId,
             kind: "CLASS_TEST_OVERDUE_DIGEST",
             titleBn,
             bodyBn,
             refs: { date: dateKey },
-            dedupeKey: schedulerDedupeKeys.classTestOverdueDigest(dateKey, recipient._id.toString()),
+            dedupeKey: schedulerDedupeKeys.classTestOverdueDigest(dateKey, recipientId),
           });
           if (res.created) summary.ctOverdueDigestEmitted += 1;
         }

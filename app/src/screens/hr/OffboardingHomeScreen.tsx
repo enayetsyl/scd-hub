@@ -38,6 +38,7 @@ import { STR, bnNum, offboardingTriggerLabel, offboardingStatusLabel } from "../
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
 import { personName } from "../../lib/personName";
+import { useAuth } from "../../auth/AuthContext";
 
 type Props = NativeStackScreenProps<HrStackParamList, "OffboardingHome">;
 
@@ -48,6 +49,7 @@ function statusTone(s: string): "info" | "ok" | "muted" | "danger" {
 }
 
 export default function OffboardingHomeScreen({ navigation }: Props): React.ReactElement {
+  const { can } = useAuth();
   const [status, setStatus] = React.useState<string | null>(null);
   const [staffId, setStaffId] = React.useState("");
   const [trigger, setTrigger] = React.useState<string | null>(null);
@@ -111,7 +113,9 @@ export default function OffboardingHomeScreen({ navigation }: Props): React.Reac
         />
         <DateField label={STR.hrLastWorkingDay} value={lastDay} onChange={setLastDay} helper={STR.hrDateHint} />
         <DateField label={STR.hrNoticeDate} value={noticeDate} onChange={setNoticeDate} helper={STR.hrDateHint} />
-        <Button title={STR.hrInitiate} onPress={runInitiate} loading={busy} disabled={busy || !valid} />
+        {can("offboarding:create") ? (
+          <Button title={STR.hrInitiate} onPress={runInitiate} loading={busy} disabled={busy || !valid} />
+        ) : null}
       </Card>
 
       {/* Cases */}

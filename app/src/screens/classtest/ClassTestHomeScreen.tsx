@@ -39,12 +39,18 @@ export default function ClassTestHomeScreen(): React.ReactElement {
   const nav = useNavigation<Nav>();
   // PQ-5: the print queue is a sibling TAB now, not a screen in this stack.
   const tabNav = useNavigation<NavigationProp<TabParamList>>();
-  const { isRole, can } = useAuth();
-  const canWrite = can("tracker:write");
-  const canPrint = can("roster:manage");
-  // Template-aware (D-#467), mirroring the server's isAdminStaff: a teacher who also holds
-  // the OFFICE template must see the dashboard, not just a primary-role PRINCIPAL/OFFICE.
-  const isAdmin = isRole("PRINCIPAL") || isRole("OFFICE");
+  const { can } = useAuth();
+  // PM (trackers-classtest.md §f): each button checks the action its screen's server
+  // gate checks. Same people by default as the old tracker:write / roster:manage / role.
+  const canRequest = can("class_test:create") || can("class_test:register");
+  const canAskPaper = can("class_test_question:create");
+  const canPreparePaper = can("class_test_question:prepare");
+  const canPrintQueue = can("printing:view_all");
+  const canEnterResults = can("class_test:enter_results");
+  const canEditDetails = can("class_test:edit") || can("class_test:edit_all");
+  const canFileScripts = can("archive:create");
+  // The school-wide dashboard + its counts (server: class_test:view_all).
+  const isAdmin = can("class_test:view_all");
 
   // D-#761: server-paged — the list is every test the caller ever owned, any status.
   const [page, setPage] = usePageState();
@@ -119,17 +125,17 @@ export default function ClassTestHomeScreen(): React.ReactElement {
           <Body style={{ fontWeight: "700" }}>{STR.ctHomeTitle}</Body>
           <View style={{ marginTop: space(2), gap: space(2) }}>
             {/* D-#339: Principal/Office also reach the form — the no-print register
-                (server-gated: admin bypasses tracker:write there). */}
-            {canWrite || isAdmin ? <Button title={STR.ctRequestNav} onPress={() => nav.navigate("RequestClassTest")} /> : null}
+                (server-gated: class_test:register; edit_all registers unscoped). */}
+            {canRequest ? <Button title={STR.ctRequestNav} onPress={() => nav.navigate("RequestClassTest")} /> : null}
             {/* Owner ask 2026-07-20: office-produced question papers — teacher side + office queue. */}
-            {canWrite ? (
+            {canAskPaper ? (
               <Button title={STR.cqMyNav} variant="secondary" onPress={() => nav.navigate("MyCtQuestions")} />
             ) : null}
-            {canPrint ? (
+            {canPreparePaper ? (
               <Button title={STR.cqQueueNav} variant="secondary" onPress={() => nav.navigate("CtQuestionQueue")} />
             ) : null}
             {/* PQ-5 (D-#281): class-test printing lives on the ONE print queue now. */}
-            {canPrint ? (
+            {canPrintQueue ? (
               <Button
                 title={STR.ctPrintQueueNav}
                 variant="secondary"
@@ -199,7 +205,7 @@ export default function ClassTestHomeScreen(): React.ReactElement {
                         <Muted>
                           {STR.arWhereScripts} {STR.arNotFiled}
                         </Muted>
-                        {canWrite || canPrint ? (
+                        {canFileScripts ? (
                           <Button
                             title={STR.arFileNow}
                             variant="ghost"
@@ -222,7 +228,7 @@ export default function ClassTestHomeScreen(): React.ReactElement {
                         })
                       }
                     />
-                    {canWrite ? (
+                    {canEnterResults ? (
                       <Button
                         title={STR.ctResultsTitle}
                         variant="secondary"
@@ -234,7 +240,7 @@ export default function ClassTestHomeScreen(): React.ReactElement {
                         }
                       />
                     ) : null}
-                    {canWrite ? (
+                    {canEnterResults ? (
                       <Button
                         title={STR.ctPublishTitle}
                         variant="ghost"
@@ -252,7 +258,7 @@ export default function ClassTestHomeScreen(): React.ReactElement {
                     PRINTED (that edit lives in the results screen's details form,
                     beside the marks it has to agree with) and once CANCELLED (the
                     server refuses a retired exam outright). */}
-                {t.status === "REQUESTED" && (canWrite || canPrint) ? (
+                {t.status === "REQUESTED" && canEditDetails ? (
                   <View style={{ marginTop: space(2) }}>
                     {dateEditId === t.id ? (
                       <>

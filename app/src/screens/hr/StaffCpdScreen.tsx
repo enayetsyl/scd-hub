@@ -25,12 +25,14 @@ import { DateField } from "../../components/DateField";
 import { STR, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
+import { useAuth } from "../../auth/AuthContext";
 
 type Props = NativeStackScreenProps<HrStackParamList, "StaffCpd">;
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 export default function StaffCpdScreen({ route }: Props): React.ReactElement {
+  const { can } = useAuth();
   const { staffProfileId } = route.params;
   const [activity, setActivity] = React.useState("");
   const [dateKey, setDateKey] = React.useState("");
@@ -79,7 +81,9 @@ export default function StaffCpdScreen({ route }: Props): React.ReactElement {
         <Field label={STR.hrCpdActivity} value={activity} onChangeText={setActivity} multiline autoCapitalize="sentences" />
         <DateField label={STR.hrCpdDate} value={dateKey} onChange={setDateKey} helper={STR.hrDateHint} />
         <Field label={STR.hrCpdOutcome} value={outcome} onChangeText={setOutcome} autoCapitalize="sentences" />
-        <Button title={STR.hrObsSubmit} onPress={runAdd} loading={busy} disabled={busy || !valid} />
+        {can("appraisal:log_cpd") ? (
+          <Button title={STR.hrObsSubmit} onPress={runAdd} loading={busy} disabled={busy || !valid} />
+        ) : null}
       </Card>
 
       <Body style={{ fontWeight: "700", marginTop: space(4), marginBottom: space(2) }}>{STR.hrCpd}</Body>

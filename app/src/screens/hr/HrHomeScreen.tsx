@@ -17,11 +17,13 @@ type Props = NativeStackScreenProps<HrStackParamList, "HrHome">;
 
 export default function HrHomeScreen({ navigation }: Props): React.ReactElement {
   const { role, can } = useAuth();
-  const canLeaveManage = can("leave:manage");
-  const canPayroll = can("payroll:manage");
-  const canPerformance = can("performance:manage");
-  const canOffboarding = can("staff:manage");
-  const showAdmin = canLeaveManage || canPayroll || canPerformance || canOffboarding;
+  // PM (D-#790..#801): each card follows its own catalogue action.
+  const canLeaveManage = can("leave:view_all");
+  const canPayroll = can("payroll:view");
+  const canHrPolicy = can("hr_policy:view");
+  const canPerformance = can("appraisal:view_all") || can("conduct:view_all") || can("grievance:view_all");
+  const canOffboarding = can("offboarding:view");
+  const showAdmin = canLeaveManage || canPayroll || canHrPolicy || canPerformance || canOffboarding;
 
   return (
     <Screen scroll>
@@ -50,7 +52,7 @@ export default function HrHomeScreen({ navigation }: Props): React.ReactElement 
           <Muted>{STR.hrPayrollSub}</Muted>
         </Card>
       ) : null}
-      {canPayroll ? (
+      {canHrPolicy ? (
         <Card onPress={() => navigation.navigate("HrPolicy")}>
           <Body style={{ fontWeight: "700" }}>{STR.stfPolicyTitle}</Body>
           <Muted>{STR.stfPolicySub}</Muted>

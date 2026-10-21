@@ -17,11 +17,15 @@
  * the intended OFFICE branch dead code. The gate helpers below (the `assertChaseAdmin`
  * pattern) are the real authority: P/O pass unscoped, a teacher passes scoped, and
  * GUARDIAN / any role without `tracker:read` is denied.
+ *
+ * PM (trackers-classtest.md): the reads name `class_test:view` / `class_test:view_all`
+ * (CLASS_TEST_REPORT_GATE), the dashboard `class_test:view_all`, the chase
+ * `class_test:remind`. Same people by default; the legacy names above are history.
  */
 import { builder } from "../../../schema";
 import type { AppContext } from "../../../context";
 import { callerHasPermission } from "@scd/shared";
-import type { Role } from "@scd/shared";
+import type { Permission, Role } from "@scd/shared";
 import {
   reportsStatus,
   principalDashboard,
@@ -58,37 +62,62 @@ import { isAdminStaff } from "../../foundation/services/RoleScope";
 /** Reports read: Principal/Office unscoped; a TEACHER must scope to a section they
  *  can read (classId resolved server-side) OR to their OWN reports
  *  (`selfTeacherId` === caller — the Today pending-results card); Guardians denied. */
-/** Exported so the cross-tracker whole-picture reuses the SAME report-read scope rule. */
+/** Exported so the cross-tracker whole-picture reuses the SAME report-read scope rule.
+ *
+ *  PM (D-#793): pass `gate` and the feature's actions decide — `viewAll` unscoped (the
+ *  isAdminStaff bypass), `view` scoped (the `tracker:read` half). Omitted → the
+ *  pre-matrix rule exactly (the monthly-report callers keep it until their own sweep). */
+export interface ReportReadGate {
+  view: Permission;
+  viewAll: Permission;
+}
+export const CLASS_TEST_REPORT_GATE: ReportReadGate = {
+  view: "class_test:view",
+  viewAll: "class_test:view_all",
+};
+export const STUDENT_PROFILE_REPORT_GATE: ReportReadGate = {
+  view: "student_profile:view",
+  viewAll: "student_profile:view_all",
+};
+
+/** True when a staff caller holds the gate's unscoped action (never a guardian). */
+export function holdsViewAll(ctx: AppContext, gate: ReportReadGate): boolean {
+  return !!ctx.auth && ctx.auth.role !== "GUARDIAN" && callerHasPermission(ctx.auth, gate.viewAll);
+}
+
 export async function assertReportRead(
   ctx: AppContext,
   sectionId?: string | null,
-  opts?: { selfTeacherId?: string | null },
+  opts?: { selfTeacherId?: string | null; gate?: ReportReadGate },
 ): Promise<void> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
   const role = ctx.auth.role as Role;
-  if (isAdminStaff(ctx.auth)) return;
-  if (role === "GUARDIAN" || !callerHasPermission(ctx.auth, "tracker:read")) throw new ForbiddenError();
+  const gate = opts?.gate;
+  if (gate ? holdsViewAll(ctx, gate) : isAdminStaff(ctx.auth)) return;
+  if (role === "GUARDIAN" || !callerHasPermission(ctx.auth, gate ? gate.view : "class_test:view")) {
+    throw new ForbiddenError();
+  }
   // Self-scope: a teacher's own reports need no section — requestedBy IS the scope.
   if (!sectionId && opts?.selfTeacherId && opts.selfTeacherId === (ctx.auth.userId as string)) return;
   if (!sectionId) throw new ForbiddenError("শিক্ষকের রিপোর্ট পড়তে সেকশন উল্লেখ করতে হবে");
   const section = (await Section.findById(sectionId).select("classId").lean()) as { classId: Types.ObjectId } | null;
   if (!section) throw new ForbiddenError("Section not found");
-  await assertCanRead(ctx, sectionId, section.classId.toString());
+  await assertCanRead(ctx, sectionId, section.classId.toString(), undefined, gate ? { viewAll: gate.viewAll } : undefined);
 }
 
-/** Principal/Office only — the school-wide dashboard (J5). */
+/** The school-wide dashboard (J5) — `class_test:view_all` (Principal/Office by default). */
 function assertDashboardAdmin(ctx: AppContext): void {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  if (!isAdminStaff(ctx.auth)) {
+  if (!holdsViewAll(ctx, CLASS_TEST_REPORT_GATE)) {
     throw new ForbiddenError("ড্যাশবোর্ড অফিস/অধ্যক্ষের জন্য");
   }
 }
 
-/** Overdue-chase: message:dispatch + Principal/Office (D-#88 — the Office chases). */
+/** Overdue-chase: `class_test:remind` (D-#88 — the Office chases; a teacher never chases
+ *  themselves — the action is Office/Principal by default). */
 function assertChaseAdmin(ctx: AppContext): void {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  const role = ctx.auth.role as Role;
-  if (isAdminStaff(ctx.auth) && callerHasPermission(ctx.auth, "message:dispatch")) return;
+  if (callerHasPermission(ctx.auth, "class_test:remind")) return;
   throw new ForbiddenError("ক্লাস টেস্ট ফলো-আপ অফিস/অধ্যক্ষের কাজ");
 }
 
@@ -182,8 +211,8 @@ builder.queryField("classTestReportsStatus", (t) =>
     type: [ReportStatusRowRef],
     description:
       "Per-exam Reports Status (CT-4, J5): submitted/pending/overdue + school-days late + report state. " +
-      "Principal/Office unscoped; a teacher must pass a section they can read (assertReportRead, D-#196).",
-    authScopes: { authenticated: true },
+      "class_test:view_all unscoped; class_test:view must pass a section they can read (assertReportRead, D-#196).",
+    authScopes: { hasAnyPermission: ["class_test:view", "class_test:view_all"] },
     args: {
       academicYearId: t.arg.string({ required: false }),
       classLevel: t.arg.int({ required: false }),
@@ -199,7 +228,7 @@ builder.queryField("classTestReportsStatus", (t) =>
       examTo: t.arg.string({ required: false, description: "Latest exam date, YYYY-MM-DD (Dhaka), inclusive." }),
     },
     resolve: async (_root, args, ctx) => {
-      await assertReportRead(ctx, args.sectionId, { selfTeacherId: args.teacherId });
+      await assertReportRead(ctx, args.sectionId, { selfTeacherId: args.teacherId, gate: CLASS_TEST_REPORT_GATE });
       return reportsStatus(filterFromArgs(args), { withScriptStages: true });
     },
   }),
@@ -242,8 +271,8 @@ DashboardRef.implement({
 builder.queryField("classTestPrincipalDashboard", (t) =>
   t.field({
     type: DashboardRef,
-    description: "Class-test KPIs + overdue-by-teacher (CT-4, J5). Principal/Office only (assertDashboardAdmin, D-#196).",
-    authScopes: { authenticated: true },
+    description: "Class-test KPIs + overdue-by-teacher (CT-4, J5). class_test:view_all (assertDashboardAdmin, D-#196).",
+    authScopes: { hasPermission: "class_test:view_all" },
     args: {
       academicYearId: t.arg.string({ required: false }),
       classLevel: t.arg.int({ required: false }),
@@ -296,13 +325,13 @@ builder.queryField("classTestOverdueCounts", (t) =>
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       const role = ctx.auth.role as Role;
-      const admin = isAdminStaff(ctx.auth);
+      const admin = holdsViewAll(ctx, CLASS_TEST_REPORT_GATE);
       // Returns ZEROES rather than throwing for a role with nothing to see. This
       // field feeds a drawer badge that every signed-in client polls, and a badge
       // probe that CAN be refused is what white-screened the app in 791e5fe — the
       // same reason mySyllabusApprovalCount is unrefusable. It leaks nothing: a
       // count of zero is what such a caller would legitimately be told anyway.
-      const blind = !admin && (role === "GUARDIAN" || !callerHasPermission(ctx.auth, "tracker:read"));
+      const blind = !admin && (role === "GUARDIAN" || !callerHasPermission(ctx.auth, "class_test:view"));
       if (blind) return { open: 0, overdue: 0, awaitingSubmit: 0, awaitingPublish: 0 };
       // A teacher's badge counts only what they are accountable for (the same
       // `teacherId ?? requestedBy` attribution the dashboard uses).
@@ -346,14 +375,14 @@ ClassSubjectAnalysisRef.implement({
 builder.queryField("classTestClassSubjectAnalysis", (t) =>
   t.field({
     type: ClassSubjectAnalysisRef,
-    description: "Class×subject progression + trend (CT-4, §9). Principal/Office unscoped; teacher scoped to the section (assertReportRead, D-#196).",
-    authScopes: { authenticated: true },
+    description: "Class×subject progression + trend (CT-4, §9). class_test:view_all unscoped; class_test:view scoped to the section (assertReportRead, D-#196).",
+    authScopes: { hasAnyPermission: ["class_test:view", "class_test:view_all"] },
     args: {
       sectionId: t.arg.string({ required: true }),
       subject: t.arg.string({ required: true }),
     },
     resolve: async (_root, args, ctx) => {
-      await assertReportRead(ctx, args.sectionId);
+      await assertReportRead(ctx, args.sectionId, { gate: CLASS_TEST_REPORT_GATE });
       return classSubjectAnalysis(args.sectionId, args.subject);
     },
   }),
@@ -446,19 +475,18 @@ StudentProfileRef.implement({
 builder.queryField("classTestStudentProfile", (t) =>
   t.field({
     type: StudentProfileRef,
-    description: "A student's class-test profile across subjects (CT-4, J6). Principal/Office unscoped; teacher scoped to the student's section (D-#196).",
-    authScopes: { authenticated: true },
+    description: "A student's class-test profile across subjects (CT-4, J6). class_test:view_all unscoped; class_test:view scoped to the student's section (D-#196).",
+    authScopes: { hasAnyPermission: ["class_test:view", "class_test:view_all"] },
     args: { studentId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      const role = ctx.auth.role as Role;
-      if (!isAdminStaff(ctx.auth)) {
+      if (!holdsViewAll(ctx, CLASS_TEST_REPORT_GATE)) {
         // Teacher: scope to the student's own section.
         const student = (await Student.findById(args.studentId).select("sectionId").lean()) as {
           sectionId: Types.ObjectId;
         } | null;
         if (!student) throw new ForbiddenError("Student not found");
-        await assertReportRead(ctx, student.sectionId.toString());
+        await assertReportRead(ctx, student.sectionId.toString(), { gate: CLASS_TEST_REPORT_GATE });
       }
       return studentProfile(args.studentId);
     },
@@ -512,8 +540,8 @@ builder.queryField("classTestOverdueChase", (t) =>
     type: OverdueChaseListRef,
     description:
       "The Office chase list (CT-4, J6): teachers with overdue class-test reports + a wa.me nudge each. " +
-      "message:dispatch + Principal/Office (the Office chases — teachers never chase themselves, D-#88).",
-    authScopes: { hasPermission: "message:dispatch" },
+      "class_test:remind (the Office chases — teachers never chase themselves, D-#88).",
+    authScopes: { hasPermission: "class_test:remind" },
     args: {
       academicYearId: t.arg.string({ required: false }),
       classLevel: t.arg.int({ required: false }),

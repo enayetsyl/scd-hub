@@ -16,7 +16,7 @@ import { EventEmitter } from "events";
 /** Topics + the permission that may LISTEN to each (checked at subscribe). */
 export const REALTIME_TOPICS = {
   /** The Office print queue changed (created / printed / delivered / cancelled). */
-  print_queue: "roster:manage",
+  print_queue: "printing:view_all", // PM (was roster:manage)
 } as const;
 
 export type RealtimeTopic = keyof typeof REALTIME_TOPICS;

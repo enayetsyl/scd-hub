@@ -129,8 +129,8 @@ builder.mutationField("setBudgetLine", (t) =>
     description:
       "Set (upsert) a per-(year × head) budget/target. kind=EXPENSE → a FINANCE_EXPENSE_HEADS head; " +
       "kind=INCOME → a FINANCE_INCOME_HEADS head. monthlyOverrides phase a seasonal head. Requires " +
-      "finance:manage. Audited BUDGET_LINE_SET (prior + new).",
-    authScopes: { hasPermission: "finance:manage" },
+      "budget:edit. Audited BUDGET_LINE_SET (prior + new).",
+    authScopes: { hasPermission: "budget:edit" },
     args: {
       academicYearId: t.arg.string({ required: true }),
       head: t.arg.string({ required: true }),
@@ -161,8 +161,8 @@ builder.mutationField("setBudgetLine", (t) =>
 builder.queryField("budgetLines", (t) =>
   t.field({
     type: [BudgetLineRef],
-    description: "A year's budget lines. Requires finance:manage.",
-    authScopes: { hasPermission: "finance:manage" },
+    description: "A year's budget lines. Requires budget:view.",
+    authScopes: { hasPermission: "budget:view" },
     args: { academicYearId: t.arg.string({ required: true }) },
     resolve: (_root, args) => budgetLines(args.academicYearId),
   }),
@@ -171,8 +171,8 @@ builder.queryField("budgetLines", (t) =>
 builder.queryField("budgetVsActual", (t) =>
   t.field({
     type: BudgetVsActualRef,
-    description: "Per-head monthly + cumulative variance for a year (actuals auto-derived). Requires finance:manage.",
-    authScopes: { hasPermission: "finance:manage" },
+    description: "Per-head monthly + cumulative variance for a year (actuals auto-derived). Requires budget:view.",
+    authScopes: { hasPermission: "budget:view" },
     args: { academicYearId: t.arg.string({ required: true }), asOf: t.arg.string({ required: false }) },
     resolve: (_root, args) => budgetVsActual(args.academicYearId, args.asOf ? parseDate(args.asOf) : undefined),
   }),
@@ -181,8 +181,8 @@ builder.queryField("budgetVsActual", (t) =>
 builder.queryField("budgetSurplusDeficit", (t) =>
   t.field({
     type: SurplusDeficitRef,
-    description: "Monthly + YTD income − expense surplus/deficit for a year. Requires finance:manage.",
-    authScopes: { hasPermission: "finance:manage" },
+    description: "Monthly + YTD income − expense surplus/deficit for a year. Requires budget:view.",
+    authScopes: { hasPermission: "budget:view" },
     args: { academicYearId: t.arg.string({ required: true }), asOf: t.arg.string({ required: false }) },
     resolve: (_root, args) => surplusDeficit(args.academicYearId, args.asOf ? parseDate(args.asOf) : undefined),
   }),

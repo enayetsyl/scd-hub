@@ -1,16 +1,17 @@
 /**
  * Saturday-Revision (Qur'an Hifz) resolvers (SR-1, prd-sr1 §3/§5/§6, D-#241/#242).
  *
- * RBAC — composes EXISTING permissions only (D-#17/#94, no new role/permission):
- *   - Record / edit (`recordRevisionEntry` / `editRevisionEntry`): `tracker:write`
- *     + the Quran-group scope (the teacher leads a quran-track slot for the group);
- *     Principal/Office admin via their existing reach. GUARDIAN never writes.
- *   - Reads: `tracker:read` + the Quran-group scope (teacher); Principal/Office
- *     unscoped. GUARDIAN never sees the staff revision reads.
+ * RBAC — the `saturday_revision:*` catalogue actions (PM, D-#790–#801):
+ *   - Record / edit (`recordRevisionEntry` / `editRevisionEntry`):
+ *     `saturday_revision:enter_results` + the Quran-group scope (the teacher leads a
+ *     quran-track slot for the group), or `saturday_revision:edit_all` (Principal/
+ *     Office by default) for any group. GUARDIAN never writes.
+ *   - Reads: `saturday_revision:view` + the Quran-group scope (teacher), or
+ *     `saturday_revision:view_all` (Principal/Office by default) unscoped. GUARDIAN
+ *     never sees the staff revision reads.
  *
- * authScopes gate `{ authenticated: true }` (NOT a hasPermission scope) because OFFICE
- * holds neither tracker:read nor tracker:write (the CT-4-FIX/D-#196 posture) yet is an
- * admin reader/recorder here — the gate helpers below are the authority. NO delivery
+ * authScopes name the action OR its reach (`hasAnyPermission`); the gate helpers below
+ * then apply the group-lead designation unless the reach action is held. NO delivery
  * (SR-2) / analytics (SR-3) here. Identity plane (names studentIds); no corpus path.
  */
 import { builder } from "../../../schema";
@@ -18,7 +19,6 @@ import { pageRef } from "../../../pageRef";
 import type { AppContext } from "../../../context";
 import { callerHasPermission } from "@scd/shared";
 import { ForbiddenError } from "../../../middleware/authz";
-import { isAdminStaff } from "../../foundation/services/RoleScope";
 import {
   recordEntry,
   editEntry,
@@ -36,18 +36,24 @@ import {
 } from "../services/RevisionService";
 
 // ---------------------------------------------------------------------------
-// Scope gates (the authority — authScopes is only `authenticated: true`)
+// Scope gates (the designation; authScopes name the action or its reach)
 // ---------------------------------------------------------------------------
 
-function isAdmin(ctx: AppContext): boolean {
-  return isAdminStaff(ctx.auth);
+/** Reads beyond the caller's own groups (was the isAdminStaff read bypass). */
+function canViewAll(ctx: AppContext): boolean {
+  return !!ctx.auth && callerHasPermission(ctx.auth, "saturday_revision:view_all");
 }
 
-/** Write scope: P/O admin; else tracker:write + the teacher leads the group. */
+/** Writes on any group (was the isAdminStaff write bypass). */
+function canEditAll(ctx: AppContext): boolean {
+  return !!ctx.auth && callerHasPermission(ctx.auth, "saturday_revision:edit_all");
+}
+
+/** Write scope: edit_all; else enter_results + the teacher leads the group. */
 async function assertCanWriteGroup(ctx: AppContext, groupId: string): Promise<void> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  if (isAdmin(ctx)) return;
-  if (ctx.auth.role === "GUARDIAN" || !callerHasPermission(ctx.auth, "tracker:write")) {
+  if (canEditAll(ctx)) return;
+  if (ctx.auth.role === "GUARDIAN" || !callerHasPermission(ctx.auth, "saturday_revision:enter_results")) {
     throw new ForbiddenError("You cannot record revision for this group");
   }
   if (!(await teacherTeachesGroup(ctx.auth.userId as string, groupId))) {
@@ -55,11 +61,11 @@ async function assertCanWriteGroup(ctx: AppContext, groupId: string): Promise<vo
   }
 }
 
-/** Read scope for a group grid: P/O unscoped; else tracker:read + leads the group. */
+/** Read scope for a group grid: view_all unscoped; else view + leads the group. */
 async function assertCanReadGroup(ctx: AppContext, groupId: string): Promise<void> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  if (isAdmin(ctx)) return;
-  if (ctx.auth.role === "GUARDIAN" || !callerHasPermission(ctx.auth, "tracker:read")) {
+  if (canViewAll(ctx)) return;
+  if (ctx.auth.role === "GUARDIAN" || !callerHasPermission(ctx.auth, "saturday_revision:view")) {
     throw new ForbiddenError("You cannot read this group's revision");
   }
   if (!(await teacherTeachesGroup(ctx.auth.userId as string, groupId))) {
@@ -67,12 +73,12 @@ async function assertCanReadGroup(ctx: AppContext, groupId: string): Promise<voi
   }
 }
 
-/** Read scope for a child's history: P/O unscoped; else tracker:read + the child is
+/** Read scope for a child's history: view_all unscoped; else view + the child is
  *  in a group the teacher leads. */
 async function assertCanReadStudent(ctx: AppContext, studentId: string): Promise<void> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  if (isAdmin(ctx)) return;
-  if (ctx.auth.role === "GUARDIAN" || !callerHasPermission(ctx.auth, "tracker:read")) {
+  if (canViewAll(ctx)) return;
+  if (ctx.auth.role === "GUARDIAN" || !callerHasPermission(ctx.auth, "saturday_revision:view")) {
     throw new ForbiddenError("You cannot read this child's revision");
   }
   if (!(await teacherCanReadStudent(ctx.auth.userId as string, studentId))) {
@@ -207,7 +213,7 @@ function toJuzInputs(rows: ReadonlyArray<{
 }
 
 // ---------------------------------------------------------------------------
-// Mutations (tracker:write + group scope; P/O admin)
+// Mutations (saturday_revision:enter_results + group scope; or :edit_all)
 // ---------------------------------------------------------------------------
 
 builder.mutationField("recordRevisionEntry", (t) =>
@@ -215,9 +221,9 @@ builder.mutationField("recordRevisionEntry", (t) =>
     type: RevisionEntryRef,
     description:
       "Record one (student × Saturday) Hifz revision entry (J-SR1; upsert, prefilled-then-edit). " +
-      "present=false ⇒ no juz records. Requires tracker:write + leading the Qur'an group. " +
+      "present=false ⇒ no juz records. Requires saturday_revision:enter_results + leading the Qur'an group. " +
       "Immutable once delivered (SR-2). Audited.",
-    authScopes: { authenticated: true },
+    authScopes: { hasAnyPermission: ["saturday_revision:enter_results", "saturday_revision:edit_all"] },
     args: {
       groupId: t.arg.string({ required: true }),
       studentId: t.arg.string({ required: true }),
@@ -246,8 +252,8 @@ builder.mutationField("editRevisionEntry", (t) =>
     type: RevisionEntryRef,
     description:
       "Edit an existing revision entry by id (J-SR1-4; refused once delivered). " +
-      "Requires tracker:write + leading the entry's Qur'an group. Audited.",
-    authScopes: { authenticated: true },
+      "Requires saturday_revision:enter_results + leading the entry's Qur'an group. Audited.",
+    authScopes: { hasAnyPermission: ["saturday_revision:enter_results", "saturday_revision:edit_all"] },
     args: {
       entryId: t.arg.string({ required: true }),
       groupId: t.arg.string({ required: true }),
@@ -269,7 +275,7 @@ builder.mutationField("editRevisionEntry", (t) =>
 );
 
 // ---------------------------------------------------------------------------
-// Queries (tracker:read + group scope; P/O unscoped)
+// Queries (saturday_revision:view + group scope; :view_all unscoped)
 // ---------------------------------------------------------------------------
 
 builder.queryField("groupRevisionSaturday", (t) =>
@@ -277,8 +283,8 @@ builder.queryField("groupRevisionSaturday", (t) =>
     type: [RevisionGridRowRef],
     description:
       "The group's active roster × a Saturday's entries — the entry grid (J-SR1). " +
-      "Requires tracker:read + leading the Qur'an group (Principal/Office unscoped).",
-    authScopes: { authenticated: true },
+      "Requires saturday_revision:view + leading the Qur'an group (Principal/Office unscoped).",
+    authScopes: { hasAnyPermission: ["saturday_revision:view", "saturday_revision:view_all"] },
     args: {
       groupId: t.arg.string({ required: true }),
       date: t.arg.string({ required: true }),
@@ -295,8 +301,8 @@ builder.queryField("studentRevisionHistory", (t) =>
     type: [RevisionEntryRef],
     description:
       "A child's Hifz revision history, newest first (SR-1; staff timeline). " +
-      "Requires tracker:read + the child being in a Qur'an group you lead (Principal/Office unscoped).",
-    authScopes: { authenticated: true },
+      "Requires saturday_revision:view + the child being in a Qur'an group you lead (Principal/Office unscoped).",
+    authScopes: { hasAnyPermission: ["saturday_revision:view", "saturday_revision:view_all"] },
     args: { studentId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       await assertCanReadStudent(ctx, args.studentId);
@@ -312,9 +318,9 @@ builder.queryField("studentRevisionHistoryPage", (t) =>
   t.field({
     type: RevisionEntryPageRef,
     description:
-      "studentRevisionHistory, one page at a time, newest first (D-#761). Same gate: tracker:read + " +
+      "studentRevisionHistory, one page at a time, newest first (D-#761). Same gate: saturday_revision:view + " +
       "the child being in a Qur'an group you lead (Principal/Office unscoped).",
-    authScopes: { authenticated: true },
+    authScopes: { hasAnyPermission: ["saturday_revision:view", "saturday_revision:view_all"] },
     args: {
       studentId: t.arg.string({ required: true }),
       page: t.arg.int({ required: false }),
@@ -333,14 +339,14 @@ builder.queryField("myRevisionGroups", (t) =>
     description:
       "The Hifz Qur'an groups the caller may record revision for (SR-1, RevisionHome). " +
       "Teacher → groups they lead; Principal/Office → all active Hifz groups. GUARDIAN denied.",
-    authScopes: { authenticated: true },
+    authScopes: { hasAnyPermission: ["saturday_revision:view", "saturday_revision:view_all"] },
     resolve: async (_root, _args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       if (ctx.auth.role === "GUARDIAN") throw new ForbiddenError("Guardians cannot read staff revision groups");
-      if (!isAdmin(ctx) && !callerHasPermission(ctx.auth, "tracker:read")) {
+      if (!canViewAll(ctx) && !callerHasPermission(ctx.auth, "saturday_revision:view")) {
         throw new ForbiddenError("You cannot read revision groups");
       }
-      return myRevisionGroups(ctx.auth.userId as string, isAdmin(ctx));
+      return myRevisionGroups(ctx.auth.userId as string, canViewAll(ctx));
     },
   }),
 );

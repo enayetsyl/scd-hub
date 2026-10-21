@@ -52,7 +52,10 @@ export default function ChatThreadScreen({ route, navigation }: Props): React.Re
   const { confirmAction } = useConfirm();
   const toast = useToast();
   const myUserId = user?.id ?? "";
-  const canManage = can("chat:manage");
+  // PM catalogue actions: posting in an ANNOUNCEMENT group = chat:publish; the group
+  // settings entry = chat:edit (the old chat:manage covered both).
+  const canPublish = can("chat:publish");
+  const canEditGroup = can("chat:edit");
 
   const [messages, setMessages] = useState<ChatMessageT[]>([]); // newest-first
   const [conv, setConv] = useState<ConversationT | null>(null);
@@ -243,7 +246,7 @@ export default function ChatThreadScreen({ route, navigation }: Props): React.Re
     }
   }
 
-  const announcementLocked = conv?.postingPolicy === "ANNOUNCEMENT" && !canManage;
+  const announcementLocked = conv?.postingPolicy === "ANNOUNCEMENT" && !canPublish;
 
   if (loading && messages.length === 0) {
     return (
@@ -274,7 +277,7 @@ export default function ChatThreadScreen({ route, navigation }: Props): React.Re
               <Button title={STR.chatLoadOlder} variant="ghost" loading={loadingOlder} onPress={() => void loadOlder()} />
             ) : null}
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(1) }}>
-              {canManage && conv && conv.kind !== "DIRECT" ? (
+              {canEditGroup && conv && conv.kind !== "DIRECT" ? (
                 <Button
                   title={`⚙ ${STR.chatManageGroup}`}
                   variant="ghost"

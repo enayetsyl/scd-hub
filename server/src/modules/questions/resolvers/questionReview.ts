@@ -2,36 +2,36 @@
  * Question review & publish resolvers (QR-2; D-#508).
  *
  * Mutations:
- *   assignQuestionReview / assignQuestionReviewBulk — content:assign_review (Principal/Office)
- *   moveQuestionReviewChapter — content:assign_review. Move whole chapters from one reviewer
+ *   assignQuestionReview / assignQuestionReviewBulk — question_review:assign (Principal/Office by default)
+ *   moveQuestionReviewChapter — question_review:assign. Move whole chapters from one reviewer
  *                          to another (QR-15, D-#650). UNTOUCHED rounds only; a decided round
  *                          stays with whoever decided it.
- *   submitQuestionReview — content:review (the ASSIGNED reviewer only). Reason optional.
- *   publishQuestion / publishQuestionBulk — content:promote_gold (Principal-locked)
- *   publishQuestionsMatching — content:promote_gold. Publish everything matching the inbox
+ *   submitQuestionReview — question_review:review (the ASSIGNED reviewer only). Reason optional.
+ *   publishQuestion / publishQuestionBulk — question_review:publish (Principal by default)
+ *   publishQuestionsMatching — question_review:publish. Publish everything matching the inbox
  *                          filter (QR-6, D-#538). APPROVE only, capped per call.
  *
  * Queries:
- *   myQuestionReviews    — content:review. The caller's question queue.
+ *   myQuestionReviews    — question_review:review. The caller's question queue.
  *   questionReviewInbox / questionReviewInboxCount
- *                        — content:assign_review. Submitted rounds, filterable by verdict:
+ *                        — question_review:view_all. Submitted rounds, filterable by verdict:
  *                          APPROVE = the publish queue, CHANGES_REQUESTED = the rejected list;
  *                          plus subject / class / chapter / type / search, paginated (QR-6).
  *   questionReviewThread — round history for one question.
- *   assignableQuestions / assignableQuestionsPage — content:assign_review. The picker
+ *   assignableQuestions / assignableQuestionsPage — question_review:assign. The picker
  *                          (the Page form pages every match, D-#761).
  *   questionReviewerProgress / questionReviewerRounds / questionReviewerRoundCount
- *                        — content:assign_review. Who was given what, and how they ruled
+ *                        — question_review:view_all. Who was given what, and how they ruled
  *                          (QR-5, D-#537). Verdict-bucketed, so publishing a question does
  *                          not erase the reviewer's decision from their tally.
  *
- * Permissions are the SAME ones the plan loop uses — D-#508 adds none.
+ * PM (D-#790): the old shared content:* permissions split per feature — question_review:*.
  */
 import { builder } from "../../../schema";
 import { pageRef } from "../../../pageRef";
 import { ForbiddenError } from "../../../middleware/authz";
 import { expectedGraphQLError } from "../../../observability/sentry";
-import { isAdminStaff } from "../../foundation/services/RoleScope";
+import { callerHasPermission } from "@scd/shared";
 import { ReviewError } from "../../content/services/ReviewService";
 import {
   assignQuestionReviewOne as assignSvc,
@@ -171,8 +171,8 @@ builder.mutationField("assignQuestionReview", (t) =>
     type: QuestionReviewRoundRef,
     description:
       "Assign ONE question to a teacher reviewer. The round is anchored on the question's qid, " +
-      "so questions sharing a unit address stay independent. Requires content:assign_review.",
-    authScopes: { hasPermission: "content:assign_review" },
+      "so questions sharing a unit address stay independent. Requires question_review:assign.",
+    authScopes: { hasPermission: "question_review:assign" },
     args: {
       artifactId: t.arg.string({ required: true }),
       reviewerId: t.arg.string({ required: true }),
@@ -198,8 +198,8 @@ builder.mutationField("assignQuestionReviewBulk", (t) =>
     type: QuestionBulkResultRef,
     description:
       "Assign MANY questions to ONE reviewer in a single call — the normal path (Q2.1). " +
-      "Per-question failures are collected, not fatal. Requires content:assign_review.",
-    authScopes: { hasPermission: "content:assign_review" },
+      "Per-question failures are collected, not fatal. Requires question_review:assign.",
+    authScopes: { hasPermission: "question_review:assign" },
     args: {
       artifactIds: t.arg.stringList({ required: true }),
       reviewerId: t.arg.string({ required: true }),
@@ -243,8 +243,8 @@ builder.mutationField("assignQuestionReviewByChapter", (t) =>
     description:
       "Assign every eligible question of one or more CHAPTERS to a single reviewer in one " +
       "action (D-#525). Already-published, already-reviewed and in-flight questions are " +
-      "SKIPPED, never reassigned, and each skip is reported. Requires content:assign_review.",
-    authScopes: { hasPermission: "content:assign_review" },
+      "SKIPPED, never reassigned, and each skip is reported. Requires question_review:assign.",
+    authScopes: { hasPermission: "question_review:assign" },
     args: {
       subject: t.arg.string({ required: true }),
       classLevel: t.arg.int({ required: true }),
@@ -297,8 +297,8 @@ builder.mutationField("moveQuestionReviewChapter", (t) =>
       "Only UNTOUCHED rounds move; anything the losing reviewer has already ruled on stays " +
       "hers and is reported as `skippedDecided`. Separate from assignQuestionReviewByChapter " +
       "so that mutation's D-#525 skip-the-busy rule stays the default. " +
-      "Requires content:assign_review.",
-    authScopes: { hasPermission: "content:assign_review" },
+      "Requires question_review:assign.",
+    authScopes: { hasPermission: "question_review:assign" },
     args: {
       subject: t.arg.string({ required: true }),
       classLevel: t.arg.int({ required: true }),
@@ -331,8 +331,8 @@ builder.mutationField("clearQuestionCondition", (t) =>
     description:
       "Clear an APPROVE_WITH_CONDITION hold and send the question BACK to the same reviewer " +
       "for a fresh round (D-#525) — clearing does NOT publish. Refuses unless the latest " +
-      "round really is a submitted APPROVE_WITH_CONDITION. Requires content:assign_review.",
-    authScopes: { hasPermission: "content:assign_review" },
+      "round really is a submitted APPROVE_WITH_CONDITION. Requires question_review:assign.",
+    authScopes: { hasPermission: "question_review:assign" },
     args: {
       artifactId: t.arg.string({ required: true }),
       note: t.arg.string({ required: false }),
@@ -359,8 +359,8 @@ builder.mutationField("submitQuestionReview", (t) =>
     description:
       "Accept (APPROVE) or reject (CHANGES_REQUESTED) an assigned question. The rejection " +
       "`reason` is OPTIONAL. Only the assigned reviewer may submit; they may edit their own " +
-      "decision until the round closes. APPROVE drives draft→reviewed. Requires content:review.",
-    authScopes: { hasPermission: "content:review" },
+      "decision until the round closes. APPROVE drives draft→reviewed. Requires question_review:review.",
+    authScopes: { hasPermission: "question_review:review" },
     args: {
       assignmentId: t.arg.string({ required: true }),
       verdict: t.arg.string({ required: true }),
@@ -391,8 +391,8 @@ builder.mutationField("submitQuestionReviewBulk", (t) =>
       "Apply ONE verdict to a multi-selection of the caller's own rounds (D-#527) — the " +
       "reviewer works a whole chapter, so deciding one card at a time is the bottleneck. " +
       "APPROVE_WITH_CONDITION is refused: a condition belongs to ONE question. Per-item " +
-      "failures are collected, not fatal. Requires content:review.",
-    authScopes: { hasPermission: "content:review" },
+      "failures are collected, not fatal. Requires question_review:review.",
+    authScopes: { hasPermission: "question_review:review" },
     args: {
       assignmentIds: t.arg.stringList({ required: true }),
       verdict: t.arg.string({ required: true }),
@@ -421,8 +421,8 @@ builder.mutationField("publishQuestion", (t) =>
       "Principal publish: put a question on the teachers' shelf (→ gold) and close its review " +
       "thread. An accepted ('reviewed') question publishes directly; a rejected/draft one may be " +
       "published by override — `overrideReason` is then REQUIRED and recorded. " +
-      "Requires content:promote_gold (Principal-locked).",
-    authScopes: { hasPermission: "content:promote_gold" },
+      "Requires question_review:publish (Principal by default).",
+    authScopes: { hasPermission: "question_review:publish" },
     args: {
       artifactId: t.arg.string({ required: true }),
       overrideReason: t.arg.string({ required: false }),
@@ -449,8 +449,8 @@ builder.mutationField("publishQuestionBulk", (t) =>
     description:
       "Publish a multi-selection of ACCEPTED questions (Q2.10). Carries no override reason — " +
       "an override is per question, so a rejected question must be published one at a time. " +
-      "Requires content:promote_gold (Principal-locked).",
-    authScopes: { hasPermission: "content:promote_gold" },
+      "Requires question_review:publish (Principal by default).",
+    authScopes: { hasPermission: "question_review:publish" },
     args: {
       artifactIds: t.arg.stringList({ required: true }),
     },
@@ -492,8 +492,8 @@ builder.mutationField("publishQuestionsMatching", (t) =>
       "inbox list and its count take, so the number in the confirmation is the number that " +
       "publishes. verdict MUST be APPROVE: a rejected question needs a per-question override " +
       "reason (D-#525), so a bulk call over rejected rounds is refused rather than failing " +
-      "every item. Capped per call; read `remaining`. Requires content:promote_gold.",
-    authScopes: { hasPermission: "content:promote_gold" },
+      "every item. Capped per call; read `remaining`. Requires question_review:publish.",
+    authScopes: { hasPermission: "question_review:publish" },
     args: {
       verdict: t.arg.string({ required: true }),
       subject: t.arg.string({ required: false }),
@@ -528,8 +528,8 @@ builder.queryField("myQuestionReviews", (t) =>
     description:
       "The caller's question-review queue: assigned (awaiting a verdict) first, then submitted " +
       "(decided, still editable). PAGINATED — `limit` defaults to 50 and is capped at 200. " +
-      "Requires content:review.",
-    authScopes: { hasPermission: "content:review" },
+      "Requires question_review:review.",
+    authScopes: { hasPermission: "question_review:review" },
     args: {
       limit: t.arg.int({ required: false }),
       offset: t.arg.int({ required: false }),
@@ -567,8 +567,8 @@ builder.queryField("myQuestionReviewCount", (t) =>
     description:
       "How many rounds the caller's question-review queue holds in total — the pager's " +
       "denominator, so the screen can say '50 of 2,742' rather than implying the page is all " +
-      "there is. Requires content:review.",
-    authScopes: { hasPermission: "content:review" },
+      "there is. Requires question_review:review.",
+    authScopes: { hasPermission: "question_review:review" },
     args: {
       /** The QR-11 filter (D-#559) — same axes as the publish inbox, plus `undecided`. */
       subject: t.arg.string({ required: false }),
@@ -627,8 +627,8 @@ builder.queryField("questionReviewInbox", (t) =>
       "Submitted question rounds, newest first. verdict=APPROVE is the Principal's publish queue " +
       "(Q2.6); verdict=CHANGES_REQUESTED is the rejected list with each reviewer's reason (Q2.7). " +
       "Narrowable by subject / classLevel / chapter / questionType / search (QR-6). PAGINATED: " +
-      "`limit` defaults to 50 and is capped at 200. Requires content:assign_review.",
-    authScopes: { hasPermission: "content:assign_review" },
+      "`limit` defaults to 50 and is capped at 200. Requires question_review:view_all.",
+    authScopes: { hasPermission: "question_review:view_all" },
     args: {
       verdict: t.arg.string({ required: false }),
       subject: t.arg.string({ required: false }),
@@ -655,8 +655,8 @@ builder.queryField("questionReviewInboxCount", (t) =>
     type: "Int",
     description:
       "How many submitted rounds match the same filter — the pager's denominator, and the " +
-      "number the publish-all confirmation quotes. Requires content:assign_review.",
-    authScopes: { hasPermission: "content:assign_review" },
+      "number the publish-all confirmation quotes. Requires question_review:view_all.",
+    authScopes: { hasPermission: "question_review:view_all" },
     args: {
       verdict: t.arg.string({ required: false }),
       subject: t.arg.string({ required: false }),
@@ -681,7 +681,7 @@ builder.queryField("questionReviewThread", (t) =>
     type: [QuestionReviewRoundRef],
     description:
       "The full round history for one question (by any of its versions), oldest→newest. " +
-      "Principal/Office see any thread; a teacher sees only threads they reviewed.",
+      "question_review:view_all holders see any thread; anyone else only threads they reviewed.",
     authScopes: { authenticated: true },
     args: {
       artifactId: t.arg.string({ required: true }),
@@ -694,7 +694,9 @@ builder.queryField("questionReviewThread", (t) =>
       } catch (err) {
         return mapReviewError(err);
       }
-      if (!isAdminStaff(ctx.auth)) {
+      // Any thread: question_review:view_all (PM, D-#790; was isAdminStaff). Otherwise SELF:
+      // a participant reads the threads they reviewed.
+      if (!callerHasPermission(ctx.auth, "question_review:view_all")) {
         const isParticipant = thread.some((r) => r.reviewerId === ctx.auth!.userId);
         if (!isParticipant) throw new ForbiddenError();
       }
@@ -708,8 +710,8 @@ builder.queryField("assignableQuestions", (t) =>
     type: [AssignableQuestionRef],
     description:
       "Current, NOT-yet-published questions with their open-round state, for the assign picker " +
-      "(Q2.2). Requires content:assign_review (Principal/Office).",
-    authScopes: { hasPermission: "content:assign_review" },
+      "(Q2.2). Requires question_review:assign (Principal/Office by default).",
+    authScopes: { hasPermission: "question_review:assign" },
     args: {
       subject: t.arg.string({ required: false }),
       classLevel: t.arg.int({ required: false }),
@@ -740,8 +742,8 @@ builder.queryField("assignableQuestionsPage", (t) =>
     type: AssignableQuestionPageRef,
     description:
       "One page of the assign picker (same filters as assignableQuestions); total counts every " +
-      "match. Requires content:assign_review (Principal/Office).",
-    authScopes: { hasPermission: "content:assign_review" },
+      "match. Requires question_review:assign (Principal/Office by default).",
+    authScopes: { hasPermission: "question_review:assign" },
     args: {
       subject: t.arg.string({ required: false }),
       classLevel: t.arg.int({ required: false }),
@@ -803,8 +805,8 @@ builder.queryField("questionReviewerProgress", (t) =>
     type: [QuestionReviewerProgressRef],
     description:
       "Per-reviewer question-review progress, optionally narrowed to one class and/or subject " +
-      "(Q5.1). Reviewers who still owe work come first. Requires content:assign_review.",
-    authScopes: { hasPermission: "content:assign_review" },
+      "(Q5.1). Reviewers who still owe work come first. Requires question_review:view_all.",
+    authScopes: { hasPermission: "question_review:view_all" },
     args: {
       classLevel: t.arg.int({ required: false }),
       subject: t.arg.string({ required: false }),
@@ -825,8 +827,8 @@ builder.queryField("questionReviewerRounds", (t) =>
       "CHANGES_REQUESTED | CANCELLED) — the drill-down behind a progress counter (Q5.2). " +
       "Unlike questionReviewInbox this is NOT limited to still-open rounds, so a decision " +
       "stays visible after its question is published. PAGINATED: `limit` defaults to 50 and " +
-      "is capped at 200. Requires content:assign_review.",
-    authScopes: { hasPermission: "content:assign_review" },
+      "is capped at 200. Requires question_review:view_all.",
+    authScopes: { hasPermission: "question_review:view_all" },
     args: {
       reviewerId: t.arg.string({ required: true }),
       bucket: t.arg.string({ required: true }),
@@ -858,8 +860,8 @@ builder.queryField("questionReviewerRoundCount", (t) =>
     type: "Int",
     description:
       "How many rounds one reviewer × bucket holds in total — the drill-down pager's " +
-      "denominator, so the screen can say '50 of 2,742'. Requires content:assign_review.",
-    authScopes: { hasPermission: "content:assign_review" },
+      "denominator, so the screen can say '50 of 2,742'. Requires question_review:view_all.",
+    authScopes: { hasPermission: "question_review:view_all" },
     args: {
       reviewerId: t.arg.string({ required: true }),
       bucket: t.arg.string({ required: true }),
@@ -890,8 +892,8 @@ builder.queryField("questionCoverage", (t) =>
       "how far it got (QR-13, D-#567). The progress screen could say how the ASSIGNED work was " +
       "going and nothing about how much of the subject had been assigned, so a reviewer at 13% " +
       "looked the same whether she held the whole subject or a tenth of it. Requires " +
-      "content:assign_review.",
-    authScopes: { hasPermission: "content:assign_review" },
+      "question_review:view_all.",
+    authScopes: { hasPermission: "question_review:view_all" },
     args: {
       subject: t.arg.string({ required: false }),
       classLevel: t.arg.int({ required: false }),
@@ -929,8 +931,8 @@ builder.queryField("questionReviewerSlices", (t) =>
       "Which subject/class/chapter slices each reviewer holds, and how far through each " +
       "(QR-14, D-#568). The progress card gave only a total, so ‘which chapters did I give " +
       "her’ meant tapping through every subject × class combination. Requires " +
-      "content:assign_review.",
-    authScopes: { hasPermission: "content:assign_review" },
+      "question_review:view_all.",
+    authScopes: { hasPermission: "question_review:view_all" },
     args: {
       classLevel: t.arg.int({ required: false }),
       subject: t.arg.string({ required: false }),
@@ -950,8 +952,8 @@ builder.queryField("myReviewChapters", (t) =>
       "The chapters the CALLER actually holds rounds for (QR-14, D-#568). Her queue filter " +
       "used to read `questionChapters`, which walks the bank and is publish-gated for a " +
       "teacher — so she was offered only chapters whose work was already done. Requires " +
-      "content:review.",
-    authScopes: { hasPermission: "content:review" },
+      "question_review:review.",
+    authScopes: { hasPermission: "question_review:review" },
     args: {
       subject: t.arg.string({ required: false }),
       classLevel: t.arg.int({ required: false }),

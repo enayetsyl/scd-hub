@@ -2,8 +2,12 @@
  * Worksheet generator GraphQL surface (D-#744–#747).
  *
  * Gates are declarative (the static resolver-gate guard reads `authScopes`):
- *   generate / preview / send / read the bank → tracker:write OR roster:manage
- *   save the plan / edit a picture            → roster:manage
+ *   plan / preview / own list / read the bank → worksheets:create
+ *   send to print                             → worksheets:send (forTeacherId → worksheets:edit_all)
+ *   the routine-teacher picker                → worksheets:edit_all
+ *   save the plan                             → worksheets:settings
+ *   edit a picture                            → worksheets:edit
+ *   (PM; were tracker:write OR roster:manage, and roster:manage)
  * The service re-checks the same rules, so a future caller cannot skip them.
  */
 import type { Permission } from "@scd/shared";
@@ -31,7 +35,7 @@ import type { PlanRow, PresetRow } from "../engine/plan";
 import type { WorksheetHeader } from "../render/worksheetPdf";
 
 /** A fresh object per field: Pothos wants a mutable Permission[] for the scope. */
-const GENERATE = (): { hasAnyPermission: Permission[] } => ({ hasAnyPermission: ["tracker:write", "roster:manage"] });
+const GENERATE = (): { hasPermission: Permission } => ({ hasPermission: "worksheets:create" });
 
 // ---------------------------------------------------------------------------
 // Types
@@ -281,7 +285,7 @@ builder.queryField("worksheetTeachers", (t) =>
   t.field({
     type: [TeacherRef],
     description: "Office only: the routine teachers of the pair, to generate on their behalf. [] for a teacher.",
-    authScopes: GENERATE(),
+    authScopes: { hasPermission: "worksheets:edit_all" },
     args: { classId: t.arg.string({ required: true }), subject: t.arg.string({ required: true }) },
     resolve: (_r, args, ctx) => worksheetTeachers(ctx, args.classId, args.subject),
   }),
@@ -312,7 +316,7 @@ builder.mutationField("saveWorksheetPlan", (t) =>
   t.field({
     type: PlanRef,
     description: "D-#745: save how each row is generated + the presets. Principal/Office (roster:manage). Audited.",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "worksheets:settings" },
     args: {
       classId: t.arg.string({ required: true }),
       subject: t.arg.string({ required: true }),
@@ -330,7 +334,7 @@ builder.mutationField("sendWorksheetToPrint", (t) =>
     description:
       "D-#747: regenerate the previewed version from its seed, render the PDF and file it through the " +
       "existing print queue (UPLOAD of a print_upload owned by the caller). Stores the worksheet for its answer key.",
-    authScopes: GENERATE(),
+    authScopes: { hasPermission: "worksheets:send" },
     args: {
       ...generateArgs,
       colour: t.arg.string({ required: true }),
@@ -350,7 +354,7 @@ builder.mutationField("updateWorksheetPicture", (t) =>
   t.field({
     type: PictureRowRef,
     description: "D-#746: tag a bank picture (word, first letter, uses), reserve it for the final, or hide it. roster:manage.",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "worksheets:edit" },
     args: {
       id: t.arg.string({ required: true }),
       word: t.arg.string({ required: false }),

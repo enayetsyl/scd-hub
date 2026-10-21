@@ -146,7 +146,7 @@ const itemKindLabel = (k: string): string =>
 export default function WorksheetGenerateScreen(): React.ReactElement {
   const { can } = useAuth();
   const colors = useColors();
-  const isOffice = can("roster:manage");
+  const isOffice = can("worksheets:edit_all"); // PM: make one for a teacher (was roster:manage)
 
   // --- class + subject ------------------------------------------------------
   const [yearsQ] = useQuery({ query: ACADEMIC_YEARS_QUERY });

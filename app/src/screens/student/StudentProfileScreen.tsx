@@ -36,6 +36,7 @@ import { STR } from "../../lib/labels";
 import { dateKey } from "../../lib/dates";
 import { friendlyError } from "../../lib/errors";
 import { openPdf, PDF_SUPPORTED } from "../../lib/pdf";
+import { useAuth } from "../../auth/AuthContext";
 import { useFileOpen } from "../../lib/useFileOpen";
 import { space } from "../../theme/tokens";
 import { useColors } from "../../theme";
@@ -68,6 +69,8 @@ export default function StudentProfileScreen(): React.ReactElement {
   // registered as a stack's FIRST screen (= its initial route, so it mounted with
   // no params) — see the fix alongside this guard.
   const params = (useRoute().params ?? {}) as Partial<StudentProfileParams>;
+  // PM: the sheet is its own action (server: student_profile:export).
+  const canExport = useAuth().can("student_profile:export");
   const studentId = params.studentId ?? "";
   const studentName = params.studentName;
   const colors = useColors();
@@ -191,7 +194,7 @@ export default function StudentProfileScreen(): React.ReactElement {
   // SP-4: the parent-meeting sheet. Web-only like every other PDF path
   // (PDF_SUPPORTED); the server re-asserts the gate and prints the caller's
   // narrowing + a printed-by stamp on the page.
-  const printButton = PDF_SUPPORTED ? (
+  const printButton = PDF_SUPPORTED && canExport ? (
     <View style={{ gap: space(2) }}>
       <Button
         title={STR.spPrintSheet}

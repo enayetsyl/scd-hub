@@ -11,7 +11,7 @@
  *     deliberately never gated (§5a), because a published question's stimulus_ref must
  *     always resolve.
  */
-import { PERMISSIONS, ROLE_PERMISSIONS } from "@scd/shared";
+import { PERMISSIONS, ROLE_PERMISSIONS, setRoleTemplateOverrides } from "@scd/shared";
 import type { AuthPayload } from "../context";
 import {
   seesPublishedOnly,
@@ -38,6 +38,22 @@ describe("seesPublishedOnly", () => {
     expect(seesPublishedOnly(auth("GUARDIAN"))).toBe(true);
     expect(seesPublishedOnly(null)).toBe(true);
     expect(seesPublishedOnly(undefined)).toBe(true);
+  });
+
+  // PM (D-#790): the lift is question_bank:view_all, not isAdminStaff.
+  describe("PM — the lift is question_bank:view_all", () => {
+    afterEach(() => setRoleTemplateOverrides({}));
+
+    test("Office with view_all switched off sees the published shelf only", () => {
+      setRoleTemplateOverrides({ OFFICE: { granted: [], revoked: ["question_bank:view_all"] } });
+      expect(seesPublishedOnly(auth("OFFICE"))).toBe(true);
+      expect(seesPublishedOnly(auth("PRINCIPAL"))).toBe(false);
+    });
+
+    test("a teacher granted view_all per person sees drafts", () => {
+      const t = { userId: "u2", role: "TEACHER", grantedPermissions: ["question_bank:view_all"] } as unknown as AuthPayload;
+      expect(seesPublishedOnly(t)).toBe(false);
+    });
   });
 });
 

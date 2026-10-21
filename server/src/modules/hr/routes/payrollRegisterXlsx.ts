@@ -14,7 +14,7 @@
  * about who was payable, and D-#624 kept when the bank letter became editable.
  *
  * THE SAME GATE, RE-ASSERTED. A route is a second front door and this one names every
- * salary in the school, so it is `payroll:manage` exactly as the payslip query is, and it
+ * salary in the school, so it is `payroll:export` exactly as the payslip query is, and it
  * is audited — an export of everyone's pay is an event.
  *
  * Unlike the payment export it does NOT require a locked run: reviewing the arithmetic
@@ -38,7 +38,7 @@ payrollRegisterXlsxRouter.get("/:runId", async (req: Request, res: Response) => 
     res.status(401).json({ error: "Unauthenticated" });
     return;
   }
-  if (!callerHasPermission(ctx.auth, "payroll:manage")) {
+  if (!callerHasPermission(ctx.auth, "payroll:export")) {
     res.status(403).json({ error: "বেতন-রেজিস্টার রপ্তানি অফিস/অধ্যক্ষের কাজ" });
     return;
   }

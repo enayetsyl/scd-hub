@@ -11,6 +11,11 @@
  *   - Staff reads (queue / section list / one test): `tracker:read` with
  *     `assertCanRead` for the section list; Principal/Office are unscoped staff.
  *
+ * PM (docs/permission-catalogue/trackers-classtest.md): each field now names its
+ * catalogue action — `class_test:create|register|edit|delete|view`, the print rows
+ * `printing:process|view_all`; the role bypasses became `class_test:view_all` /
+ * `class_test:edit_all` (CLASS_TEST_REACH). The legacy names above are history.
+ *
  * The uploaded-paper file moves over `POST /files/classtest` + `GET /files/:id`
  * (routes/files.ts) — not GraphQL; the Drive id never reaches a client.
  */
@@ -18,7 +23,6 @@ import { builder } from "../../../schema";
 import { pageRef } from "../../../pageRef";
 import type { AppContext } from "../../../context";
 import { callerHasPermission } from "@scd/shared";
-import type { Role } from "@scd/shared";
 import {
   createRequest as createRequestSvc,
   markPrinted as markPrintedSvc,
@@ -43,30 +47,27 @@ import {
   assertCanRead,
   ForbiddenError,
 } from "../../../middleware/authz";
-import { assertAnchorRead, assertAnchorWrite, groupNameBn, subjectIdOrNull } from "../classTestAnchor";
+import {
+  assertAnchorRead,
+  assertAnchorWrite,
+  CLASS_TEST_REACH,
+  groupNameBn,
+  subjectIdOrNull,
+} from "../classTestAnchor";
 import { User } from "../../foundation/models/User";
 import type { Types } from "mongoose";
-import { isAdminStaff } from "../../foundation/services/RoleScope";
 
 // ---------------------------------------------------------------------------
 // Gate helpers
 // ---------------------------------------------------------------------------
 
-/** Office / Principal — the print operator (mark-printed / cancel). */
-function assertPrintAdmin(ctx: AppContext): void {
+/** The print operator — the class-test rows of the printing feature (PM):
+ *  `printing:process` marks printed / cancels, `printing:view_all` reads the queue. */
+function assertPrintAdmin(ctx: AppContext, perm: "printing:process" | "printing:view_all"): void {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  if (!callerHasPermission(ctx.auth, "roster:manage")) {
+  if (!callerHasPermission(ctx.auth, perm)) {
     throw new ForbiddenError("ক্লাস টেস্ট ছাপানো/বাতিল অফিস/অধ্যক্ষের কাজ");
   }
-}
-
-/** Staff read of the print queue: Principal/Office (unscoped) or tracker:read. */
-function assertStaffRead(ctx: AppContext): void {
-  if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  const role = ctx.auth.role as Role;
-  if (isAdminStaff(ctx.auth)) return;
-  if (callerHasPermission(ctx.auth, "tracker:read")) return;
-  throw new ForbiddenError();
 }
 
 // ---------------------------------------------------------------------------
@@ -150,7 +151,7 @@ builder.mutationField("createClassTestRequest", (t) =>
       "(questionFileId). Year/class resolved server-side from the section. Born REQUESTED. " +
       "Pass EXACTLY ONE of sectionId or subjectGroupId — the latter for a cross-class Arabic " +
       "group exam (D-#507), whose roster is the group's members and whose class level is null.",
-    authScopes: { hasPermission: "tracker:write" },
+    authScopes: { hasPermission: "class_test:create" },
     args: {
       sectionId: t.arg.string({ required: false }),
       subjectGroupId: t.arg.string({ required: false }),
@@ -187,6 +188,8 @@ builder.mutationField("createClassTestRequest", (t) =>
           subject: args.subject,
         },
         () => subjectIdOrNull(args.subject),
+        undefined,
+        CLASS_TEST_REACH,
       );
       return createRequestSvc({
         sectionId: args.sectionId ?? undefined,
@@ -207,7 +210,8 @@ builder.mutationField("createClassTestRequest", (t) =>
         notes: args.notes ?? undefined,
         teacherId: args.teacherId ?? undefined,
         actorId: ctx.auth.userId as string,
-        actorCanManage: callerHasPermission(ctx.auth, "roster:manage"),
+        // D-#366: one who acts on any test (edit_all) must name the teacher.
+        actorCanManage: callerHasPermission(ctx.auth, "class_test:edit_all"),
       });
     },
   }),
@@ -224,7 +228,7 @@ builder.mutationField("registerClassTestOfficial", (t) =>
       "(printedBy/At = actor/now), no print-queue row — results + overdue tracking start " +
       "immediately. Subject teacher (write-scope) or Principal/Office. Pass EXACTLY ONE of " +
       "sectionId or subjectGroupId (D-#507).",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "class_test:register" },
     args: {
       sectionId: t.arg.string({ required: false }),
       subjectGroupId: t.arg.string({ required: false }),
@@ -244,10 +248,10 @@ builder.mutationField("registerClassTestOfficial", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      const role = ctx.auth.role as Role;
-      const admin = isAdminStaff(ctx.auth);
+      // PM: `class_test:edit_all` (Office/Principal by default — today's isAdminStaff)
+      // registers unscoped and on a teacher's behalf (D-#366); anyone else needs scope.
+      const admin = callerHasPermission(ctx.auth, "class_test:edit_all");
       if (!admin) {
-        if (!callerHasPermission(ctx.auth, "tracker:write")) throw new ForbiddenError();
         await assertAnchorWrite(
           ctx,
           {
@@ -257,6 +261,8 @@ builder.mutationField("registerClassTestOfficial", (t) =>
             subject: args.subject,
           },
           () => subjectIdOrNull(args.subject),
+          undefined,
+          CLASS_TEST_REACH,
         );
       }
       return createRequestSvc({
@@ -275,7 +281,7 @@ builder.mutationField("registerClassTestOfficial", (t) =>
         teacherId: args.teacherId ?? undefined,
         skipPrint: true,
         actorId: ctx.auth.userId as string,
-        actorCanManage: admin || callerHasPermission(ctx.auth, "roster:manage"),
+        actorCanManage: admin,
       });
     },
   }),
@@ -287,7 +293,7 @@ builder.queryField("suggestClassTestNumber", (t) =>
     description:
       "The next human Test# for a section's class+subject, or for a subject GROUP's own " +
       "line (D-#507) — max+1. UI pre-fill for the request form (J1). Pass exactly one anchor.",
-    authScopes: { hasPermission: "tracker:write" },
+    authScopes: { hasPermission: "class_test:create" },
     args: {
       sectionId: t.arg.string({ required: false }),
       subjectGroupId: t.arg.string({ required: false }),
@@ -307,6 +313,8 @@ builder.queryField("suggestClassTestNumber", (t) =>
           subject: args.subject,
         },
         () => subjectIdOrNull(args.subject),
+        undefined,
+        CLASS_TEST_REACH,
       );
       if (args.subjectGroupId) {
         // A group's Test # line is its own (year × group × subject).
@@ -346,10 +354,10 @@ builder.mutationField("markClassTestPrinted", (t) =>
   t.field({
     type: ClassTestRef,
     description: "Office: REQUESTED → PRINTED (J2). The record becomes the official exam; stamps printedAt/By.",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "printing:process" },
     args: { id: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
-      assertPrintAdmin(ctx);
+      assertPrintAdmin(ctx, "printing:process");
       return markPrintedSvc(args.id, ctx.auth!.userId as string);
     },
   }),
@@ -359,10 +367,10 @@ builder.mutationField("cancelClassTest", (t) =>
   t.field({
     type: ClassTestRef,
     description: "Office: REQUESTED → CANCELLED for a withdrawn print request (a PRINTED exam can't be cancelled here).",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "printing:process" },
     args: { id: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
-      assertPrintAdmin(ctx);
+      assertPrintAdmin(ctx, "printing:process");
       return cancelRequestSvc(args.id, ctx.auth!.userId as string);
     },
   }),
@@ -375,7 +383,7 @@ builder.mutationField("retireClassTest", (t) =>
       "Principal/Office: retire a PRINTED exam (→ CANCELLED) with a required reason — it leaves every " +
       "dashboard, report and Overdue count while the record survives, so it can be restored. Refused " +
       "once any result is entered.",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "class_test:delete" },
     args: {
       id: t.arg.string({ required: true }),
       reason: t.arg.string({ required: true }),
@@ -396,7 +404,7 @@ builder.mutationField("updateClassTestDetails", (t) =>
       "totalMarks and examDate are refused (the total is the denominator of every percentage), but " +
       "passMark may still be corrected while every result is DRAFT — refused once any result has " +
       "been submitted or published, since it can flip a student between pass and fail (D-#277).",
-    authScopes: { authenticated: true },
+    authScopes: { hasAnyPermission: ["class_test:edit", "class_test:edit_all"] },
     args: {
       id: t.arg.string({ required: true }),
       totalMarks: t.arg.int({ required: false }),
@@ -405,9 +413,9 @@ builder.mutationField("updateClassTestDetails", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      const canManage = callerHasPermission(ctx.auth, "roster:manage");
-      // A plain teacher still needs write scope; ownership is checked in the service.
-      if (!canManage && !callerHasPermission(ctx.auth, "tracker:write")) throw new ForbiddenError();
+      // `edit_all` corrects any test; `edit` only the caller's own (checked in the service).
+      const canManage = callerHasPermission(ctx.auth, "class_test:edit_all");
+      if (!canManage && !callerHasPermission(ctx.auth, "class_test:edit")) throw new ForbiddenError();
       return updateClassTestDetailsSvc({
         id: args.id,
         totalMarks: args.totalMarks ?? undefined,
@@ -424,7 +432,7 @@ builder.mutationField("restoreClassTest", (t) =>
   t.field({
     type: ClassTestRef,
     description: "Principal/Office: put a retired exam back on the boards (CANCELLED → PRINTED).",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "class_test:delete" },
     args: { id: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
@@ -441,9 +449,9 @@ builder.queryField("classTestPrintQueue", (t) =>
   t.field({
     type: [ClassTestRef],
     description: "The Office print queue: pending REQUESTED class tests, oldest first (Principal/Office).",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "printing:view_all" },
     resolve: async (_root, _args, ctx) => {
-      assertPrintAdmin(ctx);
+      assertPrintAdmin(ctx, "printing:view_all");
       return listPrintQueueSvc();
     },
   }),
@@ -453,7 +461,7 @@ builder.queryField("myClassTests", (t) =>
   t.field({
     type: [ClassTestRef],
     description: "The calling teacher's own class tests (any status), newest first.",
-    authScopes: { hasPermission: "tracker:write" },
+    authScopes: { hasPermission: "class_test:view" },
     resolve: async (_root, _args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       return listMyClassTestsSvc(ctx.auth.userId as string);
@@ -469,7 +477,7 @@ builder.queryField("myClassTestsPage", (t) =>
   t.field({
     type: ClassTestPageRef,
     description: "One page of myClassTests (any status, newest first).",
-    authScopes: { hasPermission: "tracker:write" },
+    authScopes: { hasPermission: "class_test:view" },
     args: { page: t.arg.int({ required: false }), pageSize: t.arg.int({ required: false }) },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
@@ -481,8 +489,8 @@ builder.queryField("myClassTestsPage", (t) =>
 builder.queryField("classTestsForSection", (t) =>
   t.field({
     type: [ClassTestRef],
-    description: "Class tests for a section (staff read). Read-scope enforced.",
-    authScopes: { hasPermission: "tracker:read" },
+    description: "Class tests for a section (staff read). Read-scope enforced; class_test:view_all lifts it.",
+    authScopes: { hasPermission: "class_test:view" },
     args: {
       sectionId: t.arg.string({ required: true }),
       classId: t.arg.string({ required: true }),
@@ -495,7 +503,7 @@ builder.queryField("classTestsForSection", (t) =>
         classId: Types.ObjectId;
       } | null;
       if (!section) throw new ForbiddenError("Section not found");
-      await assertCanRead(ctx, args.sectionId, section.classId.toString());
+      await assertCanRead(ctx, args.sectionId, section.classId.toString(), undefined, CLASS_TEST_REACH);
       return listForSectionSvc(args.sectionId);
     },
   }),
@@ -506,15 +514,15 @@ builder.queryField("classTest", (t) =>
     type: ClassTestRef,
     nullable: true,
     description: "One class test by id (staff read; Principal/Office unscoped, teacher needs read-scope on its section).",
-    authScopes: { authenticated: true },
+    authScopes: { hasAnyPermission: ["class_test:view", "class_test:view_all"] },
     args: { id: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
-      assertStaffRead(ctx);
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       const shape = await getClassTestSvc(args.id);
       if (!shape) return null;
-      // Teachers (not Principal/Office) need read-scope on the test's unit — its
-      // section, or "you teach that group" for a group anchor (D-#507).
-      await assertAnchorRead(ctx, shape);
+      // Without class_test:view_all the caller needs read-scope on the test's unit —
+      // its section, or "you teach that group" for a group anchor (D-#507).
+      await assertAnchorRead(ctx, shape, CLASS_TEST_REACH);
       return shape;
     },
   }),

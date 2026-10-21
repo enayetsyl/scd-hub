@@ -78,7 +78,7 @@ const blank: Draft = {
 export default function MasteryTagsScreen(_props: Props): React.ReactElement {
   const toast = useToast();
   const { can } = useAuth();
-  const canManage = can("mastery:manage");
+  const canManage = can("mastery:settings");
   const [draft, setDraft] = useState<Draft | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [{ data, fetching, error: qErr }, refetch] = useQuery({ query: MASTERY_TAGS_QUERY });

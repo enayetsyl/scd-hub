@@ -67,8 +67,8 @@ export default function OffboardingCaseScreen({ route }: Props): React.ReactElem
   const { caseId } = route.params;
   const { confirmAction } = useConfirm();
   const { role, can } = useAuth();
-  const canCompute = can("payroll:manage");
-  const canRelease = can("payroll:approve");
+  const canCompute = can("offboarding:prepare");
+  const canRelease = can("offboarding:settle");
 
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -170,18 +170,20 @@ export default function OffboardingCaseScreen({ route }: Props): React.ReactElem
                 onChangeText={(v) => setItemNote((p) => ({ ...p, [it.key]: v }))}
                 autoCapitalize="sentences"
               />
-              <Button
-                title={STR.hrClearanceItemSave}
-                variant="secondary"
-                onPress={() =>
-                  run(
-                    () => updateItem({ caseId, key: it.key, status: itemStatus[it.key] ?? it.status, note: itemNote[it.key]?.trim() || undefined }),
-                    (d) => (d as { updateOffboardingClearanceItem?: unknown }).updateOffboardingClearanceItem,
-                    STR.hrClearanceUpdated,
-                  )
-                }
-                disabled={busy}
-              />
+              {can("offboarding:edit") ? (
+                <Button
+                  title={STR.hrClearanceItemSave}
+                  variant="secondary"
+                  onPress={() =>
+                    run(
+                      () => updateItem({ caseId, key: it.key, status: itemStatus[it.key] ?? it.status, note: itemNote[it.key]?.trim() || undefined }),
+                      (d) => (d as { updateOffboardingClearanceItem?: unknown }).updateOffboardingClearanceItem,
+                      STR.hrClearanceUpdated,
+                    )
+                  }
+                  disabled={busy}
+                />
+              ) : null}
             </>
           ) : null}
         </Card>
@@ -191,18 +193,20 @@ export default function OffboardingCaseScreen({ route }: Props): React.ReactElem
           <Muted style={{ marginBottom: space(2) }}>{STR.hrClearanceAdd}</Muted>
           <Field label={STR.hrClearanceKey} value={newKey} onChangeText={setNewKey} placeholder="keys_devices" />
           <Field label={STR.hrClearanceLabel} value={newLabel} onChangeText={setNewLabel} autoCapitalize="sentences" />
-          <Button
-            title={STR.hrClearanceAdd}
-            variant="secondary"
-            onPress={() =>
-              run(
-                () => addItem({ caseId, key: newKey.trim(), label: newLabel.trim() }),
-                (d) => (d as { addOffboardingClearanceItem?: unknown }).addOffboardingClearanceItem,
-                STR.hrClearanceItemAdded,
-              ).then(() => { setNewKey(""); setNewLabel(""); })
-            }
-            disabled={busy || newKey.trim() === "" || newLabel.trim() === ""}
-          />
+          {can("offboarding:edit") ? (
+            <Button
+              title={STR.hrClearanceAdd}
+              variant="secondary"
+              onPress={() =>
+                run(
+                  () => addItem({ caseId, key: newKey.trim(), label: newLabel.trim() }),
+                  (d) => (d as { addOffboardingClearanceItem?: unknown }).addOffboardingClearanceItem,
+                  STR.hrClearanceItemAdded,
+                ).then(() => { setNewKey(""); setNewLabel(""); })
+              }
+              disabled={busy || newKey.trim() === "" || newLabel.trim() === ""}
+            />
+          ) : null}
         </Card>
       ) : null}
 
@@ -220,15 +224,17 @@ export default function OffboardingCaseScreen({ route }: Props): React.ReactElem
           </>
         ) : !terminal ? (
           <View style={{ marginTop: space(2) }}>
-            <Button
-              title={STR.hrRevokeAccess}
-              variant="danger"
-              onPress={async () => {
-                if (!(await confirmAction({ confirmLabel: STR.hrRevokeAccess }))) return;
-                void run(() => revoke({ caseId }), (d) => (d as { revokeOffboardingAccess?: unknown }).revokeOffboardingAccess, STR.hrAccessRevokedMsg);
-              }}
-              disabled={busy}
-            />
+            {can("offboarding:revoke") ? (
+              <Button
+                title={STR.hrRevokeAccess}
+                variant="danger"
+                onPress={async () => {
+                  if (!(await confirmAction({ confirmLabel: STR.hrRevokeAccess }))) return;
+                  void run(() => revoke({ caseId }), (d) => (d as { revokeOffboardingAccess?: unknown }).revokeOffboardingAccess, STR.hrAccessRevokedMsg);
+                }}
+                disabled={busy}
+              />
+            ) : null}
           </View>
         ) : null}
       </Card>
@@ -328,18 +334,20 @@ export default function OffboardingCaseScreen({ route }: Props): React.ReactElem
         ) : null}
         <Field label={STR.hrExitReason} value={exitReason} onChangeText={setExitReason} autoCapitalize="sentences" />
         <Field label={STR.hrExitFeedback} value={exitFeedback} onChangeText={setExitFeedback} multiline autoCapitalize="sentences" />
-        <Button
-          title={STR.hrExitSave}
-          variant="secondary"
-          onPress={() =>
-            run(
-              () => recordExit({ caseId, reason: exitReason.trim() || undefined, feedback: exitFeedback.trim() || undefined }),
-              (d) => (d as { recordExitInterview?: unknown }).recordExitInterview,
-              STR.hrExitSaved,
-            )
-          }
-          disabled={busy || (exitReason.trim() === "" && exitFeedback.trim() === "")}
-        />
+        {can("offboarding:edit") ? (
+          <Button
+            title={STR.hrExitSave}
+            variant="secondary"
+            onPress={() =>
+              run(
+                () => recordExit({ caseId, reason: exitReason.trim() || undefined, feedback: exitFeedback.trim() || undefined }),
+                (d) => (d as { recordExitInterview?: unknown }).recordExitInterview,
+                STR.hrExitSaved,
+              )
+            }
+            disabled={busy || (exitReason.trim() === "" && exitFeedback.trim() === "")}
+          />
+        ) : null}
       </Card>
 
       {/* Service certificate */}
@@ -347,30 +355,32 @@ export default function OffboardingCaseScreen({ route }: Props): React.ReactElem
       <Card>
         {c.serviceCertificateIssuedAt ? (
           <Row label={STR.hrCertIssuedOn} value={bnNum(c.serviceCertificateIssuedAt.slice(0, 10))} />
-        ) : (
-          <Button
-            title={STR.hrIssueCert}
-            variant="secondary"
-            onPress={() =>
-              run(() => issueCert({ caseId }), (d) => (d as { issueServiceCertificate?: unknown }).issueServiceCertificate, STR.hrCertIssued)
-            }
-            disabled={busy}
-          />
-        )}
+        ) : can("offboarding:issue") ? (
+            <Button
+              title={STR.hrIssueCert}
+              variant="secondary"
+              onPress={() =>
+                run(() => issueCert({ caseId }), (d) => (d as { issueServiceCertificate?: unknown }).issueServiceCertificate, STR.hrCertIssued)
+              }
+              disabled={busy}
+            />
+        ) : null}
       </Card>
 
       {/* Cancel (before access revoked / terminal) */}
       {!terminal && !c.accessRevoked ? (
         <View style={{ marginTop: space(4) }}>
-          <Button
-            title={STR.hrCancelOffboarding}
-            variant="danger"
-            onPress={async () => {
-              if (!(await confirmAction({ confirmLabel: STR.hrCancelOffboarding }))) return;
-              void run(() => cancel({ caseId }), (d) => (d as { cancelOffboarding?: unknown }).cancelOffboarding, STR.hrOffboardingCancelled);
-            }}
-            disabled={busy}
-          />
+          {can("offboarding:cancel") ? (
+            <Button
+              title={STR.hrCancelOffboarding}
+              variant="danger"
+              onPress={async () => {
+                if (!(await confirmAction({ confirmLabel: STR.hrCancelOffboarding }))) return;
+                void run(() => cancel({ caseId }), (d) => (d as { cancelOffboarding?: unknown }).cancelOffboarding, STR.hrOffboardingCancelled);
+              }}
+              disabled={busy}
+            />
+          ) : null}
         </View>
       ) : null}
     </Screen>

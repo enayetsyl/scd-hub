@@ -40,7 +40,7 @@ export default function TaskDetailScreen({ route, navigation }: Props): React.Re
   const task = q.data?.task ?? null;
 
   const isAssignee = !!task && task.assigneeUserId === user?.id;
-  const canManage = !!task && (task.assignedBy === user?.id || can("tasks:assign"));
+  const canManage = !!task && (task.assignedBy === user?.id || can("work_board:assign"));
   const canWork = isAssignee || canManage;
 
   const [, setStatus] = useMutation(SET_TASK_STATUS);
@@ -61,7 +61,7 @@ export default function TaskDetailScreen({ route, navigation }: Props): React.Re
   const [showReassign, setShowReassign] = React.useState(false);
   const [confirmCancel, setConfirmCancel] = React.useState(false);
 
-  const [staffQ] = useQuery({ query: ASSIGNABLE_STAFF_QUERY, pause: !can("tasks:assign") || !showReassign });
+  const [staffQ] = useQuery({ query: ASSIGNABLE_STAFF_QUERY, pause: !can("work_board:assign") || !showReassign });
   const staff = staffQ.data?.assignableStaff ?? [];
 
   async function run(label: string, fn: () => Promise<{ error?: unknown }>): Promise<void> {
@@ -180,7 +180,7 @@ export default function TaskDetailScreen({ route, navigation }: Props): React.Re
 
             {canManage && task.status !== "DONE" ? (
               <Card>
-                {can("tasks:assign") ? (
+                {can("work_board:assign") ? (
                   showReassign ? (
                     <View>
                       <Select

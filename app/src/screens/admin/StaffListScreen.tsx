@@ -12,6 +12,7 @@ import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import type { AdminStackParamList } from "../../navigation/types";
 import { HR_CATEGORIES } from "@scd/shared";
 import { STAFF_QUERY, type StaffT } from "../../graphql/operations";
+import { useAuth } from "../../auth/AuthContext";
 import {
   Screen,
   H2,
@@ -59,13 +60,13 @@ function StaffCard({
 }: {
   s: StaffT;
   onOpen: (s: StaffT) => void;
-  onEdit: (s: StaffT) => void;
+  onEdit: ((s: StaffT) => void) | null;
 }): React.ReactElement {
   return (
     <Card onPress={() => onOpen(s)}>
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
         <Body style={{ fontWeight: "700", flex: 1 }}>{personName(s)}</Body>
-        <Button title={STR.staffEditAction} variant="ghost" onPress={() => onEdit(s)} />
+        {onEdit ? <Button title={STR.staffEditAction} variant="ghost" onPress={() => onEdit(s)} /> : null}
       </View>
       {personNameAlt(s) ? <Muted>{personNameAlt(s)}</Muted> : null}
       <Muted>{`${hrCategoryLabel(s.category)}${s.designation ? ` · ${s.designation}` : ""}`}</Muted>
@@ -81,6 +82,10 @@ function StaffCard({
 
 export default function StaffListScreen(): React.ReactElement {
   const nav = useNavigation<NavigationProp<AdminStackParamList>>();
+  // PM: the list is staff_records:view; adding and editing are their own actions.
+  const { can } = useAuth();
+  const canCreate = can("staff_records:create");
+  const canEdit = can("staff_records:edit");
   const [category, setCategory] = React.useState<string | null>(null);
   const [search, setSearch] = React.useState("");
 
@@ -119,7 +124,7 @@ export default function StaffListScreen(): React.ReactElement {
       <Field label={undefined} value={search} onChangeText={setSearch} placeholder={STR.searchStaff} />
 
       {/* SH-6: joining walks the 4-step wizard; the flat form stays for EDITS only. */}
-      <Button title={STR.staffNew} onPress={() => nav.navigate("StaffJoin")} />
+      {canCreate ? <Button title={STR.staffNew} onPress={() => nav.navigate("StaffJoin")} /> : null}
 
       {/* The filter row sat flush against নতুন কর্মী above it, so the primary action and
           the filters read as one control block (D-#590). */}
@@ -165,7 +170,7 @@ export default function StaffListScreen(): React.ReactElement {
             key={s.id}
             s={s}
             onOpen={(row) => nav.navigate("StaffHub", { staff: row })}
-            onEdit={(row) => nav.navigate("StaffForm", { staff: row })}
+            onEdit={canEdit ? (row) => nav.navigate("StaffForm", { staff: row }) : null}
           />
         ))
       )}

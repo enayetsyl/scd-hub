@@ -1,8 +1,12 @@
 /**
  * Assignment Tracker resolvers (AS-T1..AS-T5, D-#85–#89).
  *
- * RBAC — vocab is FROZEN this session (another in-flight branch owns
- * /shared/vocab.ts), so the gates compose EXISTING permissions (D-#94):
+ * RBAC (PM, D-#790..#801): every field names its `assignment:*` catalogue action; the
+ * notes below record the pre-PM composition (D-#94) each action replaced —
+ * `roster:manage` → `assignment:settings` / `view_reports`, `tracker:write` → the
+ * per-step actions, `tracker:read` → `assignment:view`, the follow-up P/O check →
+ * `assignment:remind`, isAdminStaff / PRINCIPAL bypasses → `assignment:view_all` /
+ * `edit_all` / `undo_any` (via the authz reach option). Pre-PM:
  *   - Schedule CRUD (admin): `roster:manage` — the established Principal/Office
  *     admin grant (assignClassTeacher / sectionMerge precedent). The PRD's
  *     "tracker:write admin scope" can't cover OFFICE (it holds no tracker:*),
@@ -27,7 +31,7 @@ import type { GuardianWorkClaimView } from "../services/WorkClaimView";
 import { GuardianWorkClaimGqlRef } from "./workClaim";
 import type { AppContext } from "../../../context";
 import { callerHasPermission } from "@scd/shared";
-import type { Role, LifecycleState } from "@scd/shared";
+import type { LifecycleState, Permission } from "@scd/shared";
 import { dateOnlyISO } from "../assignmentCalendar";
 import {
   upsertAssignmentSchedule as upsertScheduleSvc,
@@ -94,7 +98,6 @@ import { AssignmentItem } from "../models/AssignmentItem";
 import { passOnItemOrRecordSection } from "../recordOwner";
 import { Subject } from "../../foundation/models/Subject";
 import { Section } from "../../foundation/models/Section";
-import { isAdminStaff } from "../../foundation/services/RoleScope";
 import {
   myAssignmentLifecycle as myAssignmentLifecycleSvc,
   type AsLifecycleSection,
@@ -108,7 +111,35 @@ import {
   allowedSubjectCodesForSection,
   isClassTeacher,
   ForbiddenError,
+  type Reach,
 } from "../../../middleware/authz";
+
+/** PM reach (D-#793): `assignment:view_all` replaces isAdminStaff on reads,
+ *  `assignment:edit_all` the PRINCIPAL-pass / OFFICE-refuse on writes. */
+const AS_READ: Reach = { viewAll: "assignment:view_all" };
+const AS_WRITE: Reach = { editAll: "assignment:edit_all" };
+const AS_SUBJECTS = { viewAll: "assignment:view_all" } as const;
+
+/** transitionAssignmentRecord does several actions depending on the target state (PM §5.1). */
+function asTransitionAction(toState: string): Permission | null {
+  switch (toState) {
+    case "GIVEN":
+    case "ABSENT_REDELIVER":
+      return "assignment:issue";
+    case "SUBMITTED":
+    case "CHASE":
+    case "DUE":
+      return "assignment:mark_submitted";
+    case "CHECKED":
+      return "assignment:check";
+    case "RESUBMIT":
+      return "assignment:resubmit";
+    case "RETURNED":
+      return "assignment:return";
+    default:
+      return null; // not a lifecycle state — the service rejects it
+  }
+}
 
 async function resolveSubjectId(subject: string): Promise<string> {
   const doc = await Subject.findOne({ code: subject }).select("_id").lean();
@@ -130,22 +161,22 @@ async function assignmentRecordSubjectId(recordId: string): Promise<string | und
 // Gate helpers (see the header note)
 // ---------------------------------------------------------------------------
 
-/** Principal/Office — the AS-T4 follow-up owner (D-#88; teachers never chase). */
+/** `assignment:remind` — the AS-T4 follow-up owner (D-#88; Principal/Office by default,
+ *  was isAdminStaff on top of message:dispatch; teachers never chase). */
 function assertFollowUpAdmin(ctx: AppContext): void {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  if (!isAdminStaff(ctx.auth)) {
+  if (!callerHasPermission(ctx.auth, "assignment:remind")) {
     throw new ForbiddenError("অ্যাসাইনমেন্ট ফলো-আপ অফিস/অধ্যক্ষের কাজ (D-#88)");
   }
 }
 
-/** Staff read of the schedule/expected grid: Principal/Office (unscoped staff)
- *  or any role holding tracker:read (TEACHER). Guardians are denied here —
- *  their surface is childAssignments. */
+/** Staff read of the schedule/expected grid: `assignment:view` (Teacher) or
+ *  `assignment:settings` (Office) — PM, was isAdminStaff OR tracker:read. Guardians
+ *  hold neither — their surface is childAssignments. */
 function assertStaffScheduleRead(ctx: AppContext): void {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  const role = ctx.auth.role as Role;
-  if (isAdminStaff(ctx.auth)) return;
-  if (callerHasPermission(ctx.auth, "tracker:read")) return;
+  if (callerHasPermission(ctx.auth, "assignment:view")) return;
+  if (callerHasPermission(ctx.auth, "assignment:settings")) return;
   throw new ForbiddenError();
 }
 
@@ -167,17 +198,19 @@ async function assertItemSubjectReadable(
   classId: string,
   itemId: string,
 ): Promise<void> {
-  const allowed = await allowedSubjectCodesForSection(ctx, sectionId, classId);
+  const allowed = await allowedSubjectCodesForSection(ctx, sectionId, classId, AS_SUBJECTS);
   if (!allowed) return;
   const item = await AssignmentItem.findById(itemId).select("subject").lean();
   if (!item || !allowed.has(item.subject)) throw new ForbiddenError();
 }
 
-/** AS-T6 weekly reconcile/confirm owner (D-#274): the section's class teacher
- *  (daily coordinator, D-#42/#45) OR a `roster:manage` holder (Principal/Office). */
+/** AS-T6 weekly reconcile/confirm owner (D-#274): `assignment:confirm_week` AND the
+ *  section's class teacher (daily coordinator, D-#42/#45) — the designation waived by
+ *  `assignment:settings` (PM; the old `roster:manage` leg, Principal/Office). F-8. */
 async function assertCanConfirmAssignmentWeek(ctx: AppContext, sectionId: string): Promise<void> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  if (callerHasPermission(ctx.auth, "roster:manage")) return;
+  if (!callerHasPermission(ctx.auth, "assignment:confirm_week")) throw new ForbiddenError();
+  if (callerHasPermission(ctx.auth, "assignment:settings")) return;
   const section = await Section.findById(sectionId).select("classTeacherId").lean();
   const ctId = section?.classTeacherId ? section.classTeacherId.toString() : null;
   if (!isClassTeacher(ctId, ctx.auth.userId as string)) {
@@ -817,7 +850,7 @@ builder.mutationField("upsertAssignmentSchedule", (t) =>
   t.field({
     type: ScheduleRef,
     description: "Set the year's term anchor + cadence weekdays (Principal/Office, D-#86).",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "assignment:settings" },
     args: {
       academicYearId: t.arg.string({ required: true }),
       termStartDate: t.arg.string({ required: true }),
@@ -841,7 +874,7 @@ builder.mutationField("addAssignmentScheduleEntry", (t) =>
   t.field({
     type: ScheduleRef,
     description: "Add one rotation cell (cycleWeek × section × subject → teacher).",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "assignment:settings" },
     args: {
       academicYearId: t.arg.string({ required: true }),
       cycleWeek: t.arg.int({ required: true }),
@@ -875,7 +908,7 @@ builder.mutationField("removeAssignmentScheduleEntry", (t) =>
   t.field({
     type: ScheduleRef,
     description: "Remove one rotation cell.",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "assignment:settings" },
     args: {
       academicYearId: t.arg.string({ required: true }),
       entryId: t.arg.string({ required: true }),
@@ -894,7 +927,7 @@ builder.mutationField("retireAssignmentScheduleEntry", (t) =>
     description:
       "End one rotation cell on lastDayKey (inclusive, YYYY-MM-DD) — weeks up to it keep the cell, " +
       "later weeks do not (D-#728). The non-destructive alternative to remove.",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "assignment:settings" },
     args: {
       academicYearId: t.arg.string({ required: true }),
       entryId: t.arg.string({ required: true }),
@@ -912,7 +945,7 @@ builder.mutationField("updateAssignmentScheduleEntryTeacher", (t) =>
   t.field({
     type: ScheduleRef,
     description: "Reassign the teacher on one rotation cell (D-#328) — only the teacher changes.",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "assignment:settings" },
     args: {
       academicYearId: t.arg.string({ required: true }),
       entryId: t.arg.string({ required: true }),
@@ -950,8 +983,8 @@ builder.queryField("assignmentLoadReport", (t) =>
     type: AssignmentLoadReportRef,
     description:
       "D-#329: assignments PLANNED (rotation cells) vs GIVEN (delivered items, all weeks; issued of those), " +
-      "by subject and by teacher. Principal/Office (roster:manage).",
-    authScopes: { hasPermission: "roster:manage" },
+      "by subject and by teacher. assignment:view_reports (Principal/Office by default).",
+    authScopes: { hasPermission: "assignment:view_reports" },
     args: { academicYearId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
@@ -965,7 +998,7 @@ builder.queryField("assignmentSchedule", (t) =>
     type: ScheduleRef,
     nullable: true,
     description: "The year's assignment schedule (staff read).",
-    authScopes: { authenticated: true },
+    authScopes: { hasAnyPermission: ["assignment:view", "assignment:settings"] },
     args: { academicYearId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       assertStaffScheduleRead(ctx);
@@ -979,7 +1012,7 @@ builder.queryField("expectedAssignmentsForWeek", (t) =>
   t.field({
     type: ExpectedWeekRef,
     description: "Week N of the computed grid: §4-rolled dates + delivered join (staff read).",
-    authScopes: { authenticated: true },
+    authScopes: { hasAnyPermission: ["assignment:view", "assignment:settings"] },
     args: {
       academicYearId: t.arg.string({ required: true }),
       weekNumber: t.arg.int({ required: true }),
@@ -1027,7 +1060,7 @@ builder.queryField("assignmentCellForSlot", (t) =>
     description:
       "DE-5: resolves slot+date → the deliverable assignment cell, so the class-note period card " +
       "can hand out the week's assignment without the teacher touching the Assignments grid.",
-    authScopes: { hasPermission: "tracker:read" },
+    authScopes: { hasPermission: "assignment:view" },
     args: {
       sectionId: t.arg.string({ required: true }),
       classId: t.arg.string({ required: true }),
@@ -1036,7 +1069,7 @@ builder.queryField("assignmentCellForSlot", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanRead(ctx, args.sectionId, args.classId);
+      await assertCanRead(ctx, args.sectionId, args.classId, undefined, AS_READ);
       const d = new Date(args.date);
       if (Number.isNaN(d.getTime())) throw new Error("Invalid date");
       return assignmentCellForSlotSvc({
@@ -1053,7 +1086,7 @@ builder.queryField("myAssignmentPrepPrompts", (t) =>
   t.field({
     type: [PrepPromptRef],
     description: "D-#89 Sunday/Monday prep prompts for the calling teacher (empty other days).",
-    authScopes: { hasPermission: "tracker:read" },
+    authScopes: { hasPermission: "assignment:view" },
     args: {
       academicYearId: t.arg.string({ required: true }),
       date: t.arg.string({ required: false }),
@@ -1074,7 +1107,7 @@ builder.mutationField("declareNoAssignment", (t) =>
     type: AssignmentNilDeclarationRef,
     description:
       "Declare an expected assignment cell as deliberately none for the week. Clears prep/report pending rows.",
-    authScopes: { hasPermission: "tracker:write" },
+    authScopes: { hasPermission: "assignment:declare" },
     args: {
       academicYearId: t.arg.string({ required: true }),
       weekNumber: t.arg.int({ required: true }),
@@ -1091,6 +1124,7 @@ builder.mutationField("declareNoAssignment", (t) =>
         args.sectionId,
         entry?.subject ? await resolveSubjectId(entry.subject) : undefined,
         "declare_assignment",
+        AS_WRITE,
       );
       return declareNoAssignmentSvc({
         academicYearId: args.academicYearId,
@@ -1108,7 +1142,7 @@ builder.mutationField("removeNoAssignment", (t) =>
   t.field({
     type: "Boolean",
     description: "Remove an explicit 'no assignment' declaration for one expected assignment cell.",
-    authScopes: { hasPermission: "tracker:write" },
+    authScopes: { hasPermission: "assignment:declare" },
     args: {
       academicYearId: t.arg.string({ required: true }),
       weekNumber: t.arg.int({ required: true }),
@@ -1126,6 +1160,7 @@ builder.mutationField("removeNoAssignment", (t) =>
         args.sectionId,
         entry?.subject ? await resolveSubjectId(entry.subject) : undefined,
         "declare_assignment",
+        AS_WRITE,
       );
       return removeNoAssignmentSvc({
         academicYearId: args.academicYearId,
@@ -1172,7 +1207,7 @@ async function assertCanWriteOnItem(
   // Editing or deleting what was delivered is the delivery duty, not a new one
   // (ACS-4, D-#592): whoever may deliver must be able to fix a wrong delivery.
   if (!opts.allowRecordSections) {
-    await assertCanWrite(ctx, item.sectionId.toString(), subjectId, "declare_assignment");
+    await assertCanWrite(ctx, item.sectionId.toString(), subjectId, "declare_assignment", AS_WRITE);
     return;
   }
   // D-#772: after a split the item stays on the emptied সম্মিলিত (whose grants lapsed)
@@ -1183,8 +1218,8 @@ async function assertCanWriteOnItem(
     () => AssignmentStudentRecord.distinct("sectionId", { asItemId: item._id }),
     (sectionId) =>
       sectionId === item.sectionId.toString()
-        ? assertCanWrite(ctx, sectionId, subjectId, "declare_assignment")
-        : assertCanWrite(ctx, sectionId, subjectId, "check_assignment"),
+        ? assertCanWrite(ctx, sectionId, subjectId, "declare_assignment", AS_WRITE)
+        : assertCanWrite(ctx, sectionId, subjectId, "check_assignment", AS_WRITE),
   );
 }
 
@@ -1195,7 +1230,7 @@ builder.mutationField("updateAssignmentItem", (t) =>
       "Edit a delivered assignment (D-#353). DRAFT: estMinutes/totalMarks/setId/attachments. " +
       "ISSUED: descriptive only — estMinutes is FROZEN (weekly load already confirmed) and the " +
       "§4-resolved delivery/due dates are never editable. Own cell, or Principal/Office.",
-    authScopes: { hasPermission: "tracker:write" },
+    authScopes: { hasPermission: "assignment:declare" },
     args: {
       itemId: t.arg.string({ required: true }),
       estMinutes: t.arg.int({ required: false }),
@@ -1215,7 +1250,7 @@ builder.mutationField("updateAssignmentItem", (t) =>
         description: args.description ?? undefined,
         attachmentIds: args.attachmentIds ? [...args.attachmentIds] : undefined,
         actorId: ctx.auth.userId as string,
-        isAdmin: isAdminStaff(ctx.auth),
+        isAdmin: callerHasPermission(ctx.auth, "assignment:edit_all"), // PM 2H: was isAdminStaff
       });
     },
   }),
@@ -1227,7 +1262,7 @@ builder.mutationField("deleteAssignmentItem", (t) =>
     description:
       "Delete a still-DRAFT delivered assignment (D-#353) — the fix path for a mistaken delivery. " +
       "ISSUED is refused (student records exist). Own cell, or Principal/Office.",
-    authScopes: { hasPermission: "tracker:write" },
+    authScopes: { hasPermission: "assignment:declare" },
     args: { itemId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
@@ -1235,7 +1270,7 @@ builder.mutationField("deleteAssignmentItem", (t) =>
       await deleteAssignmentItemSvc({
         itemId: args.itemId,
         actorId: ctx.auth.userId as string,
-        isAdmin: isAdminStaff(ctx.auth),
+        isAdmin: callerHasPermission(ctx.auth, "assignment:edit_all"), // PM 2H: was isAdminStaff
       });
       return true;
     },
@@ -1249,7 +1284,7 @@ builder.mutationField("deliverAssignment", (t) =>
       "The delivery pass (AJ-3, AS-T6): DRAFT the item (dates §4-resolved server-side) + store the " +
       "present/absent roster + estMinutes. Per-student records are issued later by confirmAssignmentWeek. " +
       "Write-scope enforced.",
-    authScopes: { hasPermission: "tracker:write" },
+    authScopes: { hasPermission: "assignment:declare" },
     args: {
       academicYearId: t.arg.string({ required: true }),
       weekNumber: t.arg.int({ required: true }),
@@ -1277,6 +1312,7 @@ builder.mutationField("deliverAssignment", (t) =>
         args.sectionId,
         entry?.subject ? await resolveSubjectId(entry.subject) : undefined,
         "declare_assignment",
+        AS_WRITE,
       );
       return deliverSvc({
         academicYearId: args.academicYearId,
@@ -1350,7 +1386,7 @@ builder.queryField("assignmentWeekLoad", (t) =>
   t.field({
     type: WeekLoadRef,
     description: "AS-T6: the section's weekly assignment load vs the 360-min ceiling (reconcile view).",
-    authScopes: { hasPermission: "tracker:read" },
+    authScopes: { hasPermission: "assignment:view" },
     args: {
       academicYearId: t.arg.string({ required: true }),
       sectionId: t.arg.string({ required: true }),
@@ -1359,13 +1395,13 @@ builder.queryField("assignmentWeekLoad", (t) =>
     resolve: async (_root, args, ctx) => {
       const section = await Section.findById(args.sectionId).select("classId").lean();
       if (!section) throw new Error("Section not found");
-      // The reconcile owner (section class teacher / roster:manage) may read the
+      // The reconcile owner (section class teacher / assignment:settings) may read the
       // week load even without a teaching scope on its subjects; otherwise fall
       // back to the section teaching-scope read (the delivering subject teachers).
       try {
         await assertCanConfirmAssignmentWeek(ctx, args.sectionId);
       } catch {
-        await assertCanRead(ctx, args.sectionId, section.classId.toString());
+        await assertCanRead(ctx, args.sectionId, section.classId.toString(), undefined, AS_READ);
       }
       return weekLoadSvc(args.academicYearId, args.sectionId, args.weekNumber);
     },
@@ -1387,8 +1423,8 @@ SetMinutesRef.implement({
 builder.mutationField("setAssignmentItemMinutes", (t) =>
   t.field({
     type: SetMinutesRef,
-    description: "AS-T6: trim a DRAFT assignment's declared minutes (class teacher / roster:manage).",
-    authScopes: { authenticated: true },
+    description: "AS-T6: trim a DRAFT assignment's declared minutes (assignment:confirm_week: class teacher, or assignment:settings).",
+    authScopes: { hasPermission: "assignment:confirm_week" },
     args: {
       itemId: t.arg.string({ required: true }),
       estMinutes: t.arg.int({ required: true }),
@@ -1429,8 +1465,8 @@ builder.mutationField("confirmAssignmentWeek", (t) =>
     type: ConfirmWeekRef,
     description:
       "AS-T6 gate: confirm a section's week — HARD-BLOCKS if Σ estMinutes > 360, else issues every " +
-      "DRAFT item's per-student records and flips them ISSUED. Class teacher / roster:manage.",
-    authScopes: { authenticated: true },
+      "DRAFT item's per-student records and flips them ISSUED. assignment:confirm_week: class teacher, or assignment:settings.",
+    authScopes: { hasPermission: "assignment:confirm_week" },
     args: {
       academicYearId: t.arg.string({ required: true }),
       sectionId: t.arg.string({ required: true }),
@@ -1453,7 +1489,7 @@ builder.mutationField("redeliverAssignmentRecord", (t) =>
   t.field({
     type: AsTransitionRef,
     description: "Absent student receives later: ABSENT_REDELIVER → GIVEN, item-wide due date kept.",
-    authScopes: { hasPermission: "tracker:write" },
+    authScopes: { hasPermission: "assignment:issue" },
     args: {
       sectionId: t.arg.string({ required: true }),
       recordId: t.arg.string({ required: true }),
@@ -1467,6 +1503,7 @@ builder.mutationField("redeliverAssignmentRecord", (t) =>
         args.sectionId,
         await assignmentRecordSubjectId(args.recordId),
         "declare_assignment",
+        AS_WRITE,
       );
       await assertRecordInSection(args.recordId, args.sectionId);
       return redeliverSvc(args.recordId, ctx.auth.userId as string);
@@ -1478,7 +1515,15 @@ builder.mutationField("transitionAssignmentRecord", (t) =>
   t.field({
     type: AsTransitionRef,
     description: "One legal shared-engine transition (e.g. CHECKED→RETURNED). Write-scope enforced.",
-    authScopes: { hasPermission: "tracker:write" },
+    authScopes: {
+      hasAnyPermission: [
+        "assignment:mark_submitted",
+        "assignment:check",
+        "assignment:return",
+        "assignment:resubmit",
+        "assignment:issue",
+      ],
+    },
     args: {
       sectionId: t.arg.string({ required: true }),
       recordId: t.arg.string({ required: true }),
@@ -1486,6 +1531,11 @@ builder.mutationField("transitionAssignmentRecord", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      // PM §5.1: the target state names the action this call performs (SUBMITTED/CHASE →
+      // mark_submitted, CHECKED → check, RESUBMIT → resubmit, RETURNED → return,
+      // GIVEN → issue).
+      const action = asTransitionAction(args.toState);
+      if (action && !callerHasPermission(ctx.auth, action)) throw new ForbiddenError();
       // Only →SUBMITTED is the delegated "take submission" duty (D-#486); every other
       // state change on this generic mutation stays teaching/proxy-scoped.
       await assertCanWrite(
@@ -1493,6 +1543,7 @@ builder.mutationField("transitionAssignmentRecord", (t) =>
         args.sectionId,
         await assignmentRecordSubjectId(args.recordId),
         args.toState === "SUBMITTED" ? "submit_assignment" : undefined,
+        AS_WRITE,
       );
       await assertRecordInSection(args.recordId, args.sectionId);
       return transitionSvc(args.recordId, args.toState, ctx.auth.userId as string);
@@ -1504,7 +1555,7 @@ builder.mutationField("sweepAssignmentChases", (t) =>
   t.field({
     type: "Int",
     description: "Move every past-due DUE record to CHASE (Office/Principal). Returns how many flipped.",
-    authScopes: { hasPermission: "message:dispatch" },
+    authScopes: { hasPermission: "assignment:remind" },
     args: { itemId: t.arg.string({ required: false }) },
     resolve: async (_root, args, ctx) => {
       assertFollowUpAdmin(ctx); // D-#88 — Office owns the chase pipeline
@@ -1517,7 +1568,7 @@ builder.queryField("assignmentItems", (t) =>
   t.field({
     type: [ItemRef],
     description: "Delivered assignment items for a section. Read-scope enforced.",
-    authScopes: { hasPermission: "tracker:read" },
+    authScopes: { hasPermission: "assignment:view" },
     args: {
       sectionId: t.arg.string({ required: true }),
       classId: t.arg.string({ required: true }),
@@ -1526,8 +1577,8 @@ builder.queryField("assignmentItems", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanRead(ctx, args.sectionId, args.classId);
-      const allowed = await allowedSubjectCodesForSection(ctx, args.sectionId, args.classId);
+      await assertCanRead(ctx, args.sectionId, args.classId, undefined, AS_READ);
+      const allowed = await allowedSubjectCodesForSection(ctx, args.sectionId, args.classId, AS_SUBJECTS);
       const all = await listAssignmentItems({
         academicYearId: args.academicYearId ?? undefined,
         sectionId: args.sectionId,
@@ -1558,7 +1609,7 @@ builder.queryField("assignmentRecords", (t) =>
   t.field({
     type: [AsRecordRef],
     description: "Per-student lifecycle records for an item. Read-scope enforced.",
-    authScopes: { hasPermission: "tracker:read" },
+    authScopes: { hasPermission: "assignment:view" },
     args: {
       sectionId: t.arg.string({ required: true }),
       classId: t.arg.string({ required: true }),
@@ -1566,7 +1617,7 @@ builder.queryField("assignmentRecords", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanRead(ctx, args.sectionId, args.classId);
+      await assertCanRead(ctx, args.sectionId, args.classId, undefined, AS_READ);
       await assertItemSubjectReadable(ctx, args.sectionId, args.classId, args.itemId);
       // D-#726: the records of the section the caller was authorised for — never the
       // whole item (another section's item id, or a pre-split combined item, leaked the
@@ -1596,7 +1647,7 @@ builder.queryField("assignmentItemCounts", (t) =>
   t.field({
     type: CountsRef,
     description: "Derived item counts + missing list (never typed, PRD §1). Read-scope enforced.",
-    authScopes: { hasPermission: "tracker:read" },
+    authScopes: { hasPermission: "assignment:view" },
     args: {
       sectionId: t.arg.string({ required: true }),
       classId: t.arg.string({ required: true }),
@@ -1604,7 +1655,7 @@ builder.queryField("assignmentItemCounts", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanRead(ctx, args.sectionId, args.classId);
+      await assertCanRead(ctx, args.sectionId, args.classId, undefined, AS_READ);
       await assertItemSubjectReadable(ctx, args.sectionId, args.classId, args.itemId);
       return countsSvc(args.itemId, args.sectionId); // D-#726: this section's records only
     },
@@ -1651,8 +1702,8 @@ builder.mutationField("revertAssignmentRecord", (t) =>
       "Undo the last lifecycle ACTION on an assignment record (D-#338): pops the trailing " +
       "same-timestamp stamp group and restores the previous state (untouched spawned resubmission " +
       "deleted; result/marks/feedback cleared on a CHECKED pop; chaseCount decremented). Acting " +
-      "teacher: own action, same Dhaka day; Principal/Office: anytime.",
-    authScopes: { authenticated: true },
+      "teacher: own action, same Dhaka day; assignment:undo_any (Principal/Office by default): anytime.",
+    authScopes: { hasAnyPermission: ["assignment:undo", "assignment:undo_any"] },
     args: {
       sectionId: t.arg.string({ required: true }),
       recordId: t.arg.string({ required: true }),
@@ -1660,7 +1711,10 @@ builder.mutationField("revertAssignmentRecord", (t) =>
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       if (ctx.auth.role === "GUARDIAN") throw new ForbiddenError();
-      const admin = isAdminStaff(ctx.auth);
+      // PM: `assignment:undo_any` replaces the isAdminStaff flag (Office + Principal by
+      // default, F-7 reproduced) — any actor, any day, no scope. `assignment:undo` alone
+      // keeps the scope gate + the service's own-stamp / same-Dhaka-day rule.
+      const admin = callerHasPermission(ctx.auth, "assignment:undo_any");
       await assertRecordInSection(args.recordId, args.sectionId);
       if (!admin) {
         // Any assignment duty on the section — the service already limits a
@@ -1670,6 +1724,7 @@ builder.mutationField("revertAssignmentRecord", (t) =>
           args.sectionId,
           await assignmentRecordSubjectId(args.recordId),
           ["declare_assignment", "submit_assignment", "check_assignment"],
+          AS_WRITE,
         );
       }
       return revertAssignmentRecordSvc({
@@ -1687,7 +1742,7 @@ builder.mutationField("checkAssignmentRecord", (t) =>
     description:
       "Check a submitted record (AJ-5): result + optional marks (≤ totalMarks) + feedback. " +
       "NOTHING auto-spawns (D-#87). Write-scope enforced.",
-    authScopes: { hasPermission: "tracker:write" },
+    authScopes: { hasPermission: "assignment:check" },
     args: {
       sectionId: t.arg.string({ required: true }),
       recordId: t.arg.string({ required: true }),
@@ -1702,6 +1757,7 @@ builder.mutationField("checkAssignmentRecord", (t) =>
         args.sectionId,
         await assignmentRecordSubjectId(args.recordId),
         "check_assignment",
+        AS_WRITE,
       );
       await assertRecordInSection(args.recordId, args.sectionId);
       return checkSvc({
@@ -1753,7 +1809,7 @@ builder.queryField("assignmentOpenRecords", (t) =>
     description:
       "All of a section's assignment records in the given states, across all weeks (newest delivery-date " +
       "first), for the roster-pass workspace (RP-3). Read-scope + per-item subject-readability enforced.",
-    authScopes: { hasPermission: "tracker:read" },
+    authScopes: { hasPermission: "assignment:view" },
     args: {
       sectionId: t.arg.string({ required: true }),
       classId: t.arg.string({ required: true }),
@@ -1761,7 +1817,7 @@ builder.queryField("assignmentOpenRecords", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanRead(ctx, args.sectionId, args.classId);
+      await assertCanRead(ctx, args.sectionId, args.classId, undefined, AS_READ);
       const rows = await listOpenAsRecordsSvc(args.sectionId, args.states as LifecycleState[]);
       // Per-item subject-readability: drop items the caller may not open (a
       // subject teacher never sees another subject's records — mirrors
@@ -1770,7 +1826,7 @@ builder.queryField("assignmentOpenRecords", (t) =>
       // the workspace FOLDS other subjects away read-only rather than hiding them.
       // D-#386 had narrowed this to match homework; D-#388 moves both back together.
       // Writes stay grant-scoped in assertCanWrite, which no fold can bypass.
-      const allowed = await allowedSubjectCodesForSection(ctx, args.sectionId, args.classId);
+      const allowed = await allowedSubjectCodesForSection(ctx, args.sectionId, args.classId, AS_SUBJECTS);
       return allowed ? rows.filter((r) => allowed.has(r.subject)) : rows;
     },
   }),
@@ -1804,17 +1860,17 @@ builder.queryField("assignmentItemTallies", (t) =>
     description:
       "Pipeline counts per assignment item for a section, for the workspace card headers. " +
       "Read-scope + the same subject-readability filter as assignmentOpenRecords.",
-    authScopes: { hasPermission: "tracker:read" },
+    authScopes: { hasPermission: "assignment:view" },
     args: {
       sectionId: t.arg.string({ required: true }),
       classId: t.arg.string({ required: true }),
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanRead(ctx, args.sectionId, args.classId);
+      await assertCanRead(ctx, args.sectionId, args.classId, undefined, AS_READ);
       // Same scope as assignmentOpenRecords above (D-#388) — the counts must cover
       // exactly the cards the caller can see, folded ones included.
-      const allowed = await allowedSubjectCodesForSection(ctx, args.sectionId, args.classId);
+      const allowed = await allowedSubjectCodesForSection(ctx, args.sectionId, args.classId, AS_SUBJECTS);
       return assignmentItemTallies(args.sectionId, allowed);
     },
   }),
@@ -1857,7 +1913,7 @@ builder.mutationField("assignmentSubmitPass", (t) =>
     description:
       "The submission roster pass (RP-3, D-#356): uncrossed → SUBMITTED; crossed → CHASE " +
       "FIRST-CROSS-ONLY, regardless of due date. Subject-teacher write-scope.",
-    authScopes: { hasPermission: "tracker:write" },
+    authScopes: { hasPermission: "assignment:mark_submitted" },
     args: {
       sectionId: t.arg.string({ required: true }),
       itemId: t.arg.string({ required: true }),
@@ -1870,6 +1926,7 @@ builder.mutationField("assignmentSubmitPass", (t) =>
         args.sectionId,
         await assignmentItemSubjectId(args.itemId),
         "submit_assignment",
+        AS_WRITE,
       );
       return asSubmitPassSvc(
         args.itemId,
@@ -1888,7 +1945,7 @@ builder.mutationField("assignmentReturnPass", (t) =>
     description:
       "The return roster pass (RP-3, D-#356): each uncrossed CHECKED/RESUBMIT record → RETURNED. " +
       "Subject-teacher write-scope.",
-    authScopes: { hasPermission: "tracker:write" },
+    authScopes: { hasPermission: "assignment:return" },
     args: {
       sectionId: t.arg.string({ required: true }),
       itemId: t.arg.string({ required: true }),
@@ -1902,6 +1959,7 @@ builder.mutationField("assignmentReturnPass", (t) =>
         args.sectionId,
         await assignmentItemSubjectId(args.itemId),
         "check_assignment",
+        AS_WRITE,
       );
       return asReturnPassSvc(
         args.itemId,
@@ -1920,7 +1978,7 @@ builder.mutationField("recordAssignmentOutcome", (t) =>
     description:
       "One-tap assignment check (RP-3, D-#356): fast-forwards the record to SUBMITTED then checks it " +
       "(result + optional marks ≤ totalMarks + feedback). NOTHING auto-spawns (D-#87). Write-scope enforced.",
-    authScopes: { hasPermission: "tracker:write" },
+    authScopes: { hasPermission: "assignment:check" },
     args: {
       sectionId: t.arg.string({ required: true }),
       recordId: t.arg.string({ required: true }),
@@ -1935,6 +1993,7 @@ builder.mutationField("recordAssignmentOutcome", (t) =>
         args.sectionId,
         await assignmentRecordSubjectId(args.recordId),
         "check_assignment",
+        AS_WRITE,
       );
       await assertRecordInSection(args.recordId, args.sectionId);
       return recordAsOutcomeSvc({
@@ -1954,7 +2013,7 @@ builder.mutationField("issueAssignmentResubmission", (t) =>
     description:
       "Teacher-explicit resubmission on any CHECKED record (D-#87 — never automatic): " +
       "original → RESUBMIT; new record, same AS_ID, fresh pass. Write-scope enforced.",
-    authScopes: { hasPermission: "tracker:write" },
+    authScopes: { hasPermission: "assignment:resubmit" },
     args: {
       sectionId: t.arg.string({ required: true }),
       recordId: t.arg.string({ required: true }),
@@ -1968,6 +2027,7 @@ builder.mutationField("issueAssignmentResubmission", (t) =>
         args.sectionId,
         await assignmentRecordSubjectId(args.recordId),
         "check_assignment",
+        AS_WRITE,
       );
       await assertRecordInSection(args.recordId, args.sectionId);
       return resubSvc(args.recordId, ctx.auth.userId as string);
@@ -1976,14 +2036,14 @@ builder.mutationField("issueAssignmentResubmission", (t) =>
 );
 
 // ===========================================================================
-// AS-T4 — Office follow-up (message:dispatch + Principal/Office, D-#88)
+// AS-T4 — Office follow-up (assignment:remind, Principal/Office by default, D-#88)
 // ===========================================================================
 
 builder.queryField("assignmentChaseList", (t) =>
   t.field({
     type: [ChaseEntryRef],
     description: "Office chase list: every CHASE record + contact + days overdue (D-#88).",
-    authScopes: { hasPermission: "message:dispatch" },
+    authScopes: { hasPermission: "assignment:remind" },
     resolve: async (_root, _args, ctx) => {
       assertFollowUpAdmin(ctx);
       return chaseListSvc();
@@ -1995,7 +2055,7 @@ builder.queryField("assignmentChaseListPage", (t) =>
   t.field({
     type: ChaseEntryPageRef,
     description: "assignmentChaseList, one page at a time, most overdue first (D-#761).",
-    authScopes: { hasPermission: "message:dispatch" },
+    authScopes: { hasPermission: "assignment:remind" },
     args: {
       page: t.arg.int({ required: false }),
       pageSize: t.arg.int({ required: false }),
@@ -2013,7 +2073,7 @@ builder.mutationField("escalateAssignmentChase", (t) =>
     description:
       "Take the next ladder step (AJ-6): 1–2 in-app via the D-#72 emit() seam (skippable), " +
       "3+ WhatsApp message + wa.me link (manual send, ADR-003). Office/Principal only.",
-    authScopes: { hasPermission: "message:dispatch" },
+    authScopes: { hasPermission: "assignment:remind" },
     args: {
       recordId: t.arg.string({ required: true }),
       skipInApp: t.arg.boolean({ required: false }),
@@ -2038,7 +2098,7 @@ builder.mutationField("recordAssignmentFollowUpOutcome", (t) =>
   t.field({
     type: FollowUpRef,
     description: "Stamp a PENDING manual step SENT/SKIPPED + outcome (the sheet's Sent Status).",
-    authScopes: { hasPermission: "message:dispatch" },
+    authScopes: { hasPermission: "assignment:remind" },
     args: {
       followUpId: t.arg.string({ required: true }),
       sentStatus: t.arg.string({ required: true }),
@@ -2064,7 +2124,7 @@ builder.queryField("assignmentFollowUps", (t) =>
   t.field({
     type: [FollowUpRef],
     description: "The ladder history for one chased record (Office/Principal).",
-    authScopes: { hasPermission: "message:dispatch" },
+    authScopes: { hasPermission: "assignment:remind" },
     args: { recordId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       assertFollowUpAdmin(ctx);
@@ -2114,7 +2174,7 @@ builder.queryField("assignmentSummary", (t) =>
     description:
       "Delivery/submission rates by teacher/class/week (suspended weeks excluded), chase volume, " +
       "latency, thresholds (AJ-7). A TEACHER sees their own rows only.",
-    authScopes: { hasPermission: "tracker:read" },
+    authScopes: { hasPermission: "assignment:view" },
     args: {
       academicYearId: t.arg.string({ required: true }),
       weekFrom: t.arg.int({ required: false }),
@@ -2122,8 +2182,11 @@ builder.queryField("assignmentSummary", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      // PRINCIPAL is unscoped; a TEACHER's summary is self-scoped (own delivery health).
-      const teacherId = ctx.auth.role === "TEACHER" ? (ctx.auth.userId as string) : undefined;
+      // `assignment:view_all` (Principal by default; was the non-TEACHER primary role) is
+      // school-wide; everyone else's summary is self-scoped (own delivery health). PM 2H.
+      const teacherId = callerHasPermission(ctx.auth, "assignment:view_all")
+        ? undefined
+        : (ctx.auth.userId as string);
       return summarySvc({
         academicYearId: args.academicYearId,
         weekFrom: args.weekFrom ?? undefined,
@@ -2164,7 +2227,7 @@ builder.queryField("childAssignments", (t) =>
 // ---------------------------------------------------------------------------
 // Query: myAssignmentLifecycle (D-#471) — the teacher-dashboard card, the twin of
 // myHomeworkLifecycle. SELF-SCOPED: it answers only for the caller, so it needs no
-// oversight gate beyond tracker:read (the D-#340 SELF pattern).
+// oversight gate beyond assignment:view (the D-#340 SELF pattern).
 // ---------------------------------------------------------------------------
 
 const AsLifecycleSectionRef = builder
@@ -2210,7 +2273,7 @@ builder.queryField("myAssignmentLifecycle", (t) =>
       "teacher-dashboard card (D-#471, the twin of myHomeworkLifecycle). Attribution is per " +
       "RECORD (D-#772): the item's teacherId on its own section; a record rehomed by a split " +
       "goes to the routine subject teacher of the record's section.",
-    authScopes: { hasPermission: "tracker:read" },
+    authScopes: { hasPermission: "assignment:view" },
     args: {
       from: t.arg.string({ required: true }),
       to: t.arg.string({ required: true }),

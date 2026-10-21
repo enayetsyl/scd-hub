@@ -24,6 +24,8 @@
 import {
   PERMISSIONS,
   RESERVED_PERMISSIONS,
+  catalogueAction,
+  isCataloguePermission,
   ASSIGNABLE_TEMPLATES,
   effectivePermissions,
   type Role,
@@ -34,6 +36,11 @@ import { writeAudit } from "../../platform/services/AuditService";
 
 /** A write-time rejection surfaced to the caller as a Bangla message (the "422" shape). */
 export class AccessControlError extends Error {}
+
+/** PM (D-#798): escalation actions (mint logins / roles / scope) cannot be handed to a
+ *  Teacher or Office login — by role edit or per person — until their server-side target
+ *  guards ship (findings F-3/F-4). The Principal holds them regardless. */
+export const ESCALATION_GUARDS_READY = false;
 
 export interface AccessActor {
   userId: string;
@@ -88,6 +95,9 @@ function assertGrantable(perm: string): asserts perm is Permission {
   }
   if (perm === "guardian:read_child") {
     throw new AccessControlError("অভিভাবক-প্লেনের অনুমতি স্টাফ ব্যবহারকারীকে দেওয়া যায় না");
+  }
+  if (isCataloguePermission(perm) && catalogueAction(perm).flags.includes("ESCALATION") && !ESCALATION_GUARDS_READY) {
+    throw new AccessControlError("এই অনুমতি এখনো চালু করা যায় না (নিরাপত্তা যাচাই বাকি)");
   }
 }
 

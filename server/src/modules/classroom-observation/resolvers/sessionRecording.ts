@@ -16,7 +16,7 @@
 import { builder } from "../../../schema";
 import type { AppContext } from "../../../context";
 import { ForbiddenError } from "../../../middleware/authz";
-import { isAdminStaff } from "../../foundation/services/RoleScope";
+import { callerHasPermission } from "@scd/shared";
 import {
   getObservation,
   canReadObservation,
@@ -28,11 +28,14 @@ import {
   type SessionRecordingShape,
 } from "../services/SessionRecordingService";
 
-/** Build the row-scope actor from the request context (manage = Principal/Office). */
+/** Build the row-scope actor from the request context. `canManage` (any row / any
+ *  teacher) = `classroom_observation:view_all` (PM; was the isAdminStaff role bypass). */
 function actorOf(ctx: AppContext): ObservationActor {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  const role = ctx.auth.role;
-  return { userId: ctx.auth.userId as string, canManage: isAdminStaff(ctx.auth) };
+  return {
+    userId: ctx.auth.userId as string,
+    canManage: callerHasPermission(ctx.auth, "classroom_observation:view_all"),
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -72,7 +75,7 @@ builder.mutationField("recordSessionFootage", (t) =>
       "Link a recorded session (the client-returned YouTube videoId) to an observation, copying its session " +
       "anchor; privacyStatus is forced 'unlisted'. A re-upload relinks. Requires observation:upload " +
       "(Principal/Office). Audited.",
-    authScopes: { hasPermission: "observation:upload" },
+    authScopes: { hasPermission: "classroom_observation:upload" },
     args: {
       observationId: t.arg.string({ required: true }),
       youtubeVideoId: t.arg.string({ required: true }),
@@ -100,7 +103,7 @@ builder.queryField("observationRecording", (t) =>
     description:
       "The footage linked to an observation, ROW-SCOPED to the backing observation's visibility (observer own; " +
       "observed teacher own only at/after REVIEWED; Principal/Office all). Requires observation:read.",
-    authScopes: { hasPermission: "observation:read" },
+    authScopes: { hasPermission: "classroom_observation:view" },
     args: { observationId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       const actor = actorOf(ctx);

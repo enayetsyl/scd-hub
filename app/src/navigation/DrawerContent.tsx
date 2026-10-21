@@ -32,6 +32,7 @@ import { useAuth } from "../auth/AuthContext";
 import { useBasket } from "../state/BasketContext";
 import { fonts, radius, space, typeScale, useColors } from "../theme";
 import type { TabParamList } from "./types";
+import { REPORT_LEAF_ACTIONS } from "../lib/navGates";
 
 type RouteName = keyof TabParamList;
 type LabelKey = keyof typeof STR;
@@ -93,7 +94,7 @@ const STAFF_NAV: NavSection[] = [
       { route: "AssignmentTab", labelKey: "tabAssignment", icon: "📋" },
       { route: "ClassTestTab", labelKey: "tabClassTest", icon: "🧪" },
       // SP-1 (D-#734) — Office / Principal only; lives in the Class Test stack.
-      { route: "ClassTestTab", labelKey: "impNavTitle", icon: "📈", screen: "StudentProgress", perms: ["roster:manage"] },
+      { route: "ClassTestTab", labelKey: "impNavTitle", icon: "📈", screen: "StudentProgress", perms: ["improvement_plan:view_all"] },
       { route: "RevisionTab", labelKey: "tabRevision", icon: "🕌" },
     ],
   },
@@ -106,8 +107,8 @@ const STAFF_NAV: NavSection[] = [
     icon: "📋",
     items: [
       { route: "SyllabusTab", labelKey: "syRead", icon: "📋", screen: "SyllabusHome" },
-      { route: "SyllabusTab", labelKey: "syExamManage", icon: "🗓️", screen: "SyllabusExams", perms: ["exam:manage"] },
-      { route: "SyllabusTab", labelKey: "syEntry", icon: "✍️", screen: "SyllabusEntry", perms: ["exam:manage"] },
+      { route: "SyllabusTab", labelKey: "syExamManage", icon: "🗓️", screen: "SyllabusExams", perms: ["exam_syllabus:settings"] },
+      { route: "SyllabusTab", labelKey: "syEntry", icon: "✍️", screen: "SyllabusEntry", perms: ["exam_syllabus:edit"] },
       { route: "SyllabusTab", labelKey: "syApprovals", icon: "✅", screen: "SyllabusApprovals" },
     ],
   },
@@ -117,7 +118,7 @@ const STAFF_NAV: NavSection[] = [
     icon: "🎓",
     items: [
       { route: "ScholarshipTab", labelKey: "scPapers", icon: "🎓", screen: "ScholarshipHome" },
-      { route: "ScholarshipTab", labelKey: "scTopics", icon: "🏷️", screen: "ScholarshipTopics", perms: ["scholarship:manage"] },
+      { route: "ScholarshipTab", labelKey: "scTopics", icon: "🏷️", screen: "ScholarshipTopics", perms: ["scholarship_practice:settings"] },
     ],
   },
   // Mastery tracker (M-0, docs/prd-mastery.md): catalogue + marks, import, tags, policy & switch.
@@ -126,10 +127,10 @@ const STAFF_NAV: NavSection[] = [
     titleKey: "msDrawerGroup",
     icon: "🎯",
     items: [
-      { route: "MasteryTab", labelKey: "msCatalogueHome", icon: "📚", screen: "MasteryHome", perms: ["mastery:read"] },
-      { route: "MasteryTab", labelKey: "msImport", icon: "📥", screen: "MasteryImport", perms: ["mastery:manage"] },
-      { route: "MasteryTab", labelKey: "msTags", icon: "🏷️", screen: "MasteryTags", perms: ["mastery:read"] },
-      { route: "MasteryTab", labelKey: "msPolicy", icon: "⚙️", screen: "MasteryPolicy", perms: ["mastery:read"] },
+      { route: "MasteryTab", labelKey: "msCatalogueHome", icon: "📚", screen: "MasteryHome", perms: ["mastery:view"] },
+      { route: "MasteryTab", labelKey: "msImport", icon: "📥", screen: "MasteryImport", perms: ["mastery:settings"] },
+      { route: "MasteryTab", labelKey: "msTags", icon: "🏷️", screen: "MasteryTags", perms: ["mastery:view"] },
+      { route: "MasteryTab", labelKey: "msPolicy", icon: "⚙️", screen: "MasteryPolicy", perms: ["mastery:view"] },
     ],
   },
   { type: "item", route: "AttendanceTab", labelKey: "tabAttendance", icon: "🙋" },
@@ -142,8 +143,8 @@ const STAFF_NAV: NavSection[] = [
     icon: "🗂️",
     items: [
       { route: "WorkBoardTab", labelKey: "wbMyBoard", icon: "✅", screen: "WorkBoard" },
-      { route: "WorkBoardTab", labelKey: "wbAssignedByMe", icon: "📤", screen: "AssignedByMe", perms: ["tasks:assign"] },
-      { route: "WorkBoardTab", labelKey: "wbLoad", icon: "📊", screen: "LoadGrid", perms: ["tasks:assign"] },
+      { route: "WorkBoardTab", labelKey: "wbAssignedByMe", icon: "📤", screen: "AssignedByMe", perms: ["work_board:assign"] },
+      { route: "WorkBoardTab", labelKey: "wbLoad", icon: "📊", screen: "LoadGrid", perms: ["work_board:view_all"] },
       { route: "WorkBoardTab", labelKey: "wbTemplates", icon: "🔁", screen: "TaskTemplates" },
     ],
   },
@@ -171,22 +172,22 @@ const STAFF_NAV: NavSection[] = [
     titleKey: "tabReports",
     icon: "📊",
     items: [
-      { route: "ReportsTab", labelKey: "clTitle", icon: "🧑‍🏫", screen: "TeacherClassLoad" },
-      { route: "ReportsTab", labelKey: "alReportTitle", icon: "📋", screen: "AssignmentLoadReport" },
+      { route: "ReportsTab", labelKey: "clTitle", icon: "🧑‍🏫", screen: "TeacherClassLoad", perms: REPORT_LEAF_ACTIONS.TeacherClassLoad },
+      { route: "ReportsTab", labelKey: "alReportTitle", icon: "📋", screen: "AssignmentLoadReport", perms: REPORT_LEAF_ACTIONS.AssignmentLoadReport },
       // D-#340: the class-test oversight report.
-      { route: "ReportsTab", labelKey: "ctReportTitle", icon: "🧪", screen: "ClassTestReport" },
-      { route: "ReportsTab", labelKey: "attReportTitle", icon: "🙋", screen: "AttendanceReport" },
-      { route: "ReportsTab", labelKey: "rtNoteReportTitle", icon: "📓", screen: "ClassNoteReport" },
-      { route: "ReportsTab", labelKey: "rptHwDeclarePending", icon: "📕", screen: "HwDeclarePending" },
-      { route: "ReportsTab", labelKey: "rptHwIssuePending", icon: "📒", screen: "HwIssuePending" },
-      { route: "ReportsTab", labelKey: "rptAsDeclarePending", icon: "📋", screen: "AsDeclarePending" },
-      { route: "ReportsTab", labelKey: "rptAsDeliverPending", icon: "📦", screen: "AsDeliverPending" },
-      { route: "ReportsTab", labelKey: "rptAsPrintPending", icon: "🖨️", screen: "AsPrintPending" },
+      { route: "ReportsTab", labelKey: "ctReportTitle", icon: "🧪", screen: "ClassTestReport", perms: REPORT_LEAF_ACTIONS.ClassTestReport },
+      { route: "ReportsTab", labelKey: "attReportTitle", icon: "🙋", screen: "AttendanceReport", perms: REPORT_LEAF_ACTIONS.AttendanceReport },
+      { route: "ReportsTab", labelKey: "rtNoteReportTitle", icon: "📓", screen: "ClassNoteReport", perms: REPORT_LEAF_ACTIONS.ClassNoteReport },
+      { route: "ReportsTab", labelKey: "rptHwDeclarePending", icon: "📕", screen: "HwDeclarePending", perms: REPORT_LEAF_ACTIONS.HwDeclarePending },
+      { route: "ReportsTab", labelKey: "rptHwIssuePending", icon: "📒", screen: "HwIssuePending", perms: REPORT_LEAF_ACTIONS.HwIssuePending },
+      { route: "ReportsTab", labelKey: "rptAsDeclarePending", icon: "📋", screen: "AsDeclarePending", perms: REPORT_LEAF_ACTIONS.AsDeclarePending },
+      { route: "ReportsTab", labelKey: "rptAsDeliverPending", icon: "📦", screen: "AsDeliverPending", perms: REPORT_LEAF_ACTIONS.AsDeliverPending },
+      { route: "ReportsTab", labelKey: "rptAsPrintPending", icon: "🖨️", screen: "AsPrintPending", perms: REPORT_LEAF_ACTIONS.AsPrintPending },
       // Owner ask 2026-07-20: moved here from the Admin hub.
-      { route: "ReportsTab", labelKey: "rrTitle", icon: "🔄", screen: "ReconciliationReport" },
-      { route: "ReportsTab", labelKey: "hlrTitle", icon: "📘", screen: "HwLifecycleReport" },
+      { route: "ReportsTab", labelKey: "rrTitle", icon: "🔄", screen: "ReconciliationReport", perms: REPORT_LEAF_ACTIONS.ReconciliationReport },
+      { route: "ReportsTab", labelKey: "hlrTitle", icon: "📘", screen: "HwLifecycleReport", perms: REPORT_LEAF_ACTIONS.HwLifecycleReport },
       // D-#453: the weekly unsubmitted-homework report (guardian-digest staff twin).
-      { route: "ReportsTab", labelKey: "hwwdTitle", icon: "📅", screen: "HwWeeklyUnsubmitted" },
+      { route: "ReportsTab", labelKey: "hwwdTitle", icon: "📅", screen: "HwWeeklyUnsubmitted", perms: REPORT_LEAF_ACTIONS.HwWeeklyUnsubmitted },
     ],
   },
   /**
@@ -209,7 +210,7 @@ const STAFF_NAV: NavSection[] = [
         screen: "BookImport",
         // Step one of the module: the author brings book.json/patch.json in, and
         // book:manage creates the title. Everything below is downstream of this.
-        perms: ["book:author", "book:manage"],
+        perms: ["book_production:author", "book_production:create"],
       },
       {
         route: "SupportBookTab",
@@ -218,7 +219,7 @@ const STAFF_NAV: NavSection[] = [
         screen: "BookPolicy",
         // The validator runs against these; a missing one silently weakens every
         // check that depends on it, so whoever loads books needs to see the gaps.
-        perms: ["book:manage"],
+        perms: ["book_production:settings"],
       },
       {
         route: "SupportBookTab",
@@ -227,14 +228,14 @@ const STAFF_NAV: NavSection[] = [
         screen: "BookImageQueue",
         // The reviewers see the queue too — they look at what came back. `book:read`
         // alone is not enough; that is a spectator.
-        perms: ["book:illustrate", "book:review", "book:review_senior"],
+        perms: ["book_production:illustrate", "book_production:review", "book_production:approve"],
       },
       {
         route: "SupportBookTab",
         labelKey: "sbReviewTitle",
         icon: "🔎",
         screen: "BookReview",
-        perms: ["book:review", "book:review_senior"],
+        perms: ["book_production:review", "book_production:approve"],
       },
       {
         route: "SupportBookTab",
@@ -244,14 +245,14 @@ const STAFF_NAV: NavSection[] = [
         // Offered to ordinary reviewers too, not only seniors: a reviewer needs to
         // follow the thread they raised. Only a senior gets the resolve form, and
         // that is decided inside the screen.
-        perms: ["book:review", "book:review_senior"],
+        perms: ["book_production:review", "book_production:approve"],
       },
       {
         route: "SupportBookTab",
         labelKey: "sbAssembleTitle",
         icon: "🏗️",
         screen: "BookAssemble",
-        perms: ["book:assemble"],
+        perms: ["book_production:assemble"],
       },
     ],
   },
@@ -320,7 +321,7 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
   // device completes — create / mark printed / mark delivered / cancel — even though
   // the counts payload itself carries no PrintRequest object. The 60s poll remains
   // only for jobs arriving from OTHER devices; teachers (no roster:manage) never ask.
-  const isPrintOperator = can("roster:manage");
+  const isPrintOperator = can("printing:view_all");
   const countsContext = React.useMemo(() => ({ additionalTypenames: ["PrintRequest"] }), []);
   const [countsQ, refetchCounts] = useQuery({
     query: PRINT_QUEUE_COUNTS,
@@ -348,7 +349,7 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
   // yellow = papers in the teacher's review (IN_REVIEW). Office/Principal see the
   // whole pipeline; a teacher sees their own (server-scoped). Same cache-nudge on
   // any CT-question mutation via the shared typename.
-  const canClassTestBadge = !!role && (can("roster:manage") || can("tracker:write"));
+  const canClassTestBadge = can("class_test_question:create") || can("class_test_question:prepare");
   const ctCountsContext = React.useMemo(() => ({ additionalTypenames: ["CtQuestionRequest"] }), []);
   const [ctCountsQ, refetchCtCounts] = useQuery({
     query: CT_QUESTION_COUNTS,
@@ -369,7 +370,7 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
   // owed" and "paper in review" on this same row, and the delay is a different
   // pipeline entirely. The field is unrefusable (returns 0), so it is safe to poll
   // from every role — but it is still paused for guardians and read with `?.`.
-  const canCtOverdueBadge = !!role && role !== "GUARDIAN";
+  const canCtOverdueBadge = can("class_test:view") || can("class_test:view_all");
   const ctOverdueContext = React.useMemo(() => ({ additionalTypenames: ["ClassTestResult"] }), []);
   const [ctOverdueQ, refetchCtOverdue] = useQuery({
     query: CLASS_TEST_OVERDUE_COUNTS,
@@ -387,11 +388,11 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
   // submitted for as long as the office has not published it. Office/Principal own
   // the whole pile, so their badge stays on `overdue`.
   const ctOverdueCounts = ctOverdueQ.data?.classTestOverdueCounts;
-  const ctOverdue = (can("roster:manage") ? ctOverdueCounts?.overdue : ctOverdueCounts?.awaitingSubmit) ?? 0;
+  const ctOverdue = (can("class_test:view_all") ? ctOverdueCounts?.overdue : ctOverdueCounts?.awaitingSubmit) ?? 0;
 
   // Owner 2026-07-26: Staff drawer badge — leave applications awaiting approval
   // (Principal/Office, leave:manage). Refreshes on any StaffLeaveApplication mutation.
-  const canLeaveBadge = can("leave:manage");
+  const canLeaveBadge = can("leave:approve");
   const leaveCountContext = React.useMemo(() => ({ additionalTypenames: ["StaffLeaveApplication"] }), []);
   const [leaveCountQ, refetchLeaveCount] = useQuery({
     query: STAFF_LEAVE_PENDING_COUNT,
@@ -446,7 +447,7 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
   // Owner 2026-07-26: Comments drawer badge — undelivered comments awaiting
   // Principal/Office review (roster:manage), mirroring Print. Refreshes on any
   // StudentComment mutation (record / edit / deliver).
-  const canCommentBadge = can("roster:manage");
+  const canCommentBadge = can("student_comments:review");
   const commentCountContext = React.useMemo(() => ({ additionalTypenames: ["StudentComment"] }), []);
   const [commentCountQ, refetchCommentCount] = useQuery({
     query: COMMENT_REVIEW_COUNT,
@@ -466,7 +467,7 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
   // (observation:upload). Any observation participant (observation:read) asks; each
   // count is server-scoped and 0 without the matching permission. Refreshes on any
   // ClassroomObservation mutation.
-  const canObservationBadge = can("observation:read");
+  const canObservationBadge = can("classroom_observation:view");
   const obsCountContext = React.useMemo(() => ({ additionalTypenames: ["ClassroomObservation"] }), []);
   const [obsCountQ, refetchObsCount] = useQuery({
     query: OBSERVATION_COUNTS,

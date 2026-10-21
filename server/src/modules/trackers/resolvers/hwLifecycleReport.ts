@@ -7,13 +7,13 @@
  *   - homeworkLifecyclePending: the drill-down behind a pending number — the
  *     named students stuck at that stage, with guardian phone to chase.
  *
- * Gate: Principal/Office by ROLE (the D-#290 reconciliationReport precedent) —
+ * Gate: `homework:view_reports` (PM; Principal/Office by default, the D-#290 precedent) —
  * school-wide oversight, not a section-scoped teaching read.
  */
 import { builder } from "../../../schema";
 import type { AppContext } from "../../../context";
 import { ForbiddenError } from "../../../middleware/authz";
-import { actsAsRole } from "@scd/shared";
+import { callerHasPermission } from "@scd/shared";
 import {
   homeworkLifecycleReport,
   homeworkLifecyclePending,
@@ -26,10 +26,10 @@ import {
 
 function assertLifecycleReportAdmin(ctx: AppContext): void {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  // D-#467: TEMPLATE-aware, not primary-role. An OFFICE template the Principal added to
-  // a teacher already carries every OFFICE permission via effectivePermissions; this gate
-  // was the one place that ignored it, so the office desk 403d on its own oversight reads.
-  if (!actsAsRole(ctx.auth, "PRINCIPAL") && !actsAsRole(ctx.auth, "OFFICE")) {
+  // PM (D-#790..#801): the oversight read is the `homework:view_reports` action (Office +
+  // Principal by default — the old template-aware P/O check, D-#467), so the Principal can
+  // hand it to a teacher or switch it off for the desk.
+  if (!callerHasPermission(ctx.auth, "homework:view_reports")) {
     throw new ForbiddenError("লাইফসাইকেল রিপোর্ট শুধুমাত্র অধ্যক্ষ/অফিসের জন্য");
   }
 }
@@ -114,7 +114,7 @@ builder.queryField("homeworkLifecycleReport", (t) =>
   t.field({
     type: HwLifecycleReportRef,
     description: "Per-teacher homework lifecycle monitoring, filterable (Principal/Office).",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "homework:view_reports" },
     args: {
       from: t.arg.string({ required: true }),
       to: t.arg.string({ required: true }),
@@ -148,7 +148,8 @@ builder.queryField("homeworkLifecyclePending", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      // SELF-scope: a teacher may drill their own pending; anyone else needs admin.
+      // SELF-scope: a teacher may drill their own pending; anyone else needs
+      // `homework:view_reports`.
       if (args.teacherId !== ctx.auth.userId) assertLifecycleReportAdmin(ctx);
       if (!isHwPendingStage(args.stage)) {
         throw new ForbiddenError(`অজানা ধাপ: ${args.stage}`);
@@ -168,7 +169,7 @@ builder.queryField("myHomeworkLifecycle", (t) =>
       "The CALLER's own homework lifecycle row (totals + pending buckets), self-scoped — the teacher-" +
       "dashboard card (owner 2026-07-25). Attribution is the routine subject teacher (D-#351), so a " +
       "Principal's on-behalf entries land in the accountable teacher's own card.",
-    authScopes: { hasPermission: "tracker:read" },
+    authScopes: { hasPermission: "homework:view" },
     args: {
       from: t.arg.string({ required: true }),
       to: t.arg.string({ required: true }),

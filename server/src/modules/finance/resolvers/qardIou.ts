@@ -97,8 +97,8 @@ OverdueRef.implement({
 builder.mutationField("setFinanceParty", (t) =>
   t.field({
     type: PartyRef,
-    description: "Create a Qard/IOU counterparty (non-staff). Requires finance:manage. Audited FINANCE_PARTY_SET.",
-    authScopes: { hasPermission: "finance:manage" },
+    description: "Create a Qard/IOU counterparty (non-staff). Requires qard:edit. Audited FINANCE_PARTY_SET.",
+    authScopes: { hasPermission: "qard:edit" },
     args: {
       name: t.arg.string({ required: true }),
       nameBn: t.arg.string({ required: false }),
@@ -116,9 +116,9 @@ builder.mutationField("recordQardIouEntry", (t) =>
     type: EntryRef,
     description:
       "Append a Qard/IOU register movement (NEW_DISBURSEMENT/REPAYMENT_RECEIVED/ADJUSTMENT). One record " +
-      "carries both the cash and control effects. ADJUSTMENT amount is signed. Requires finance:manage. " +
+      "carries both the cash and control effects. ADJUSTMENT amount is signed. Requires qard:create. " +
       "Audited QARD_IOU_ENTRY_RECORDED.",
-    authScopes: { hasPermission: "finance:manage" },
+    authScopes: { hasPermission: "qard:create" },
     args: {
       partyId: t.arg.string({ required: true }),
       type: t.arg.string({ required: true }),
@@ -155,8 +155,8 @@ builder.mutationField("recordQardIouEntry", (t) =>
 builder.queryField("financeParties", (t) =>
   t.field({
     type: [PartyRef],
-    description: "All Qard/IOU counterparties (A→Z). Requires finance:manage.",
-    authScopes: { hasPermission: "finance:manage" },
+    description: "All Qard/IOU counterparties (A→Z). Requires qard:view.",
+    authScopes: { hasPermission: "qard:view" },
     resolve: () => listParties(),
   }),
 );
@@ -164,8 +164,8 @@ builder.queryField("financeParties", (t) =>
 builder.queryField("qardIouPartyOutstanding", (t) =>
   t.field({
     type: [OutstandingRef],
-    description: "A party's outstanding by type as of `asOf` (default today). Requires finance:manage.",
-    authScopes: { hasPermission: "finance:manage" },
+    description: "A party's outstanding by type as of `asOf` (default today). Requires qard:view.",
+    authScopes: { hasPermission: "qard:view" },
     args: { partyId: t.arg.string({ required: true }), asOf: t.arg.string({ required: false }) },
     resolve: (_root, args) => partyOutstanding(args.partyId, args.asOf ? parseDate(args.asOf) : undefined),
   }),
@@ -174,8 +174,8 @@ builder.queryField("qardIouPartyOutstanding", (t) =>
 builder.queryField("qardIouOverdue", (t) =>
   t.field({
     type: [OverdueRef],
-    description: "Parties past-due unpaid as of `asOf`, ranked by lateness. Requires finance:manage.",
-    authScopes: { hasPermission: "finance:manage" },
+    description: "Parties past-due unpaid as of `asOf`, ranked by lateness. Requires qard:view.",
+    authScopes: { hasPermission: "qard:view" },
     args: { asOf: t.arg.string({ required: false }) },
     resolve: (_root, args) => overdueList(args.asOf ? parseDate(args.asOf) : undefined),
   }),
@@ -184,8 +184,8 @@ builder.queryField("qardIouOverdue", (t) =>
 builder.queryField("qardIouPartyEntries", (t) =>
   t.field({
     type: [EntryRef],
-    description: "A party's register log, newest first. Requires finance:manage.",
-    authScopes: { hasPermission: "finance:manage" },
+    description: "A party's register log, newest first. Requires qard:view.",
+    authScopes: { hasPermission: "qard:view" },
     args: { partyId: t.arg.string({ required: true }) },
     resolve: (_root, args) => partyEntries(args.partyId),
   }),

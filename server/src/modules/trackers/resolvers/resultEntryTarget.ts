@@ -6,6 +6,7 @@
  * corpus path (ADR-005).
  */
 import { builder } from "../../../schema";
+import { callerHasPermission } from "@scd/shared";
 import { ForbiddenError } from "../../../middleware/authz";
 import {
   resultEntryTargetProgress,
@@ -93,8 +94,10 @@ builder.queryField("myResultEntryTarget", (t) =>
 builder.mutationField("setResultEntryTarget", (t) =>
   t.field({
     type: "Boolean",
-    description: "Set, change or switch off a teacher's class-test result backlog target. PRINCIPAL only.",
-    authScopes: { authenticated: true },
+    description:
+      "Set, change or switch off a teacher's class-test result backlog target. class_test:settings " +
+      "(Principal by default).",
+    authScopes: { hasPermission: "class_test:settings" },
     args: {
       userId: t.arg.string({ required: true }),
       subject: t.arg.string({ required: true }),
@@ -105,7 +108,7 @@ builder.mutationField("setResultEntryTarget", (t) =>
       active: t.arg.boolean({ required: false }),
     },
     resolve: async (_r, args, ctx) => {
-      if (ctx.auth?.role !== "PRINCIPAL") throw new ForbiddenError();
+      if (!ctx.auth || !callerHasPermission(ctx.auth, "class_test:settings")) throw new ForbiddenError();
       await setResultEntryTarget({ ...args, actorId: ctx.auth.userId });
       return true;
     },

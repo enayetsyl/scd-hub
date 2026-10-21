@@ -27,7 +27,6 @@ import { callerHasPermission, SYLLABUS_FULL_MARKS } from "@scd/shared";
 import type { RoutineSubject, SyllabusItemType } from "@scd/shared";
 import type { AppContext } from "../../../context";
 import { ForbiddenError } from "../../../middleware/authz";
-import { isAdminStaff, isPrincipalStaff } from "../../foundation/services/RoleScope";
 import { writeAudit } from "../../platform/services/AuditService";
 import { RoutineSlot } from "../../routine/models/RoutineSlot";
 import { SubjectGroup } from "../../routine/models/SubjectGroup";
@@ -58,24 +57,28 @@ function requireAuth(ctx: AppContext): AppContext["auth"] & object {
   return ctx.auth;
 }
 
-/** `exam:manage` — write, submit, send back. NOT publish (see `assertCanPublish`). */
+/** `exam_syllabus:edit` — write, submit, send back. NOT publish (see `assertCanPublish`). */
 function assertCanManage(ctx: AppContext): void {
   const auth = requireAuth(ctx);
-  if (!callerHasPermission(auth, "exam:manage")) {
+  if (!callerHasPermission(auth, "exam_syllabus:edit")) {
     throw new ForbiddenError("সিলেবাস ব্যবস্থাপনার অনুমতি নেই");
   }
 }
 
+/** Holds `exam_syllabus:publish` — PRINCIPAL-DEFAULT (PM, D-#790; was the PRINCIPAL role). */
+function canPublish(auth: NonNullable<AppContext["auth"]>): boolean {
+  return auth.role !== "GUARDIAN" && callerHasPermission(auth, "exam_syllabus:publish");
+}
+
 /**
- * Publish is the Principal's alone. Deliberately a ROLE check rather than an
- * `exam:publish` permission (D-#397's posture): Office holds `exam:manage` so it
- * can write and submit, and is refused here — the syllabus reaches guardians on
- * one desk's signature, and AC-1 cannot accidentally widen that by granting a
- * permission string.
+ * Publish is the Principal's by default: `exam_syllabus:publish` is PRINCIPAL-DEFAULT
+ * (D-#397's posture, PM D-#790): Office holds `exam_syllabus:edit` so it can write and
+ * submit, and is refused here — the syllabus reaches guardians on one desk's
+ * signature unless the Principal deliberately hands the switch on.
  */
 function assertCanPublish(ctx: AppContext): void {
   const auth = requireAuth(ctx);
-  if (!isPrincipalStaff(auth)) {
+  if (!canPublish(auth)) {
     throw new ForbiddenError("সিলেবাস প্রকাশ কেবল প্রধান শিক্ষক করতে পারেন");
   }
 }
@@ -559,7 +562,7 @@ export async function approveSyllabusAsTeacher(
   if (!(isNamed && holder)) {
     // The bypass is available ONLY when the routine genuinely names nobody. A
     // Principal cannot short-circuit a teacher who does exist and is waiting.
-    if (isPrincipalStaff(auth) && rowHolders.length === 0) {
+    if (canPublish(auth) && rowHolders.length === 0) {
       bypass = true;
     } else {
       throw new ForbiddenError("এই সিলেবাস অনুমোদনের অনুমতি নেই — আপনি এই বিষয়ের শিক্ষক নন");
@@ -629,7 +632,8 @@ export async function sendBackSyllabus(
 
   if (doc.status === "TEACHER_REVIEW") {
     const isNamed = doc.approverUserId?.toString() === auth.userId;
-    if (!isNamed && !isAdminStaff(auth)) {
+    // Named approver (designation, D-#533) or the desk (`exam_syllabus:edit`; was isAdminStaff).
+    if (!isNamed && !callerHasPermission(auth, "exam_syllabus:edit")) {
       throw new ForbiddenError("এই সিলেবাস ফেরত দেওয়ার অনুমতি নেই");
     }
   } else if (doc.status === "PRINCIPAL_REVIEW") {

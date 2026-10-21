@@ -1,7 +1,7 @@
 /**
  * Person-activity resolvers (AL-1, D-#645) — "what did this person do, and when".
  * READ-ONLY by construction, like the audit viewer it extends: no mutation is
- * exposed here, ever. Gated on `audit:read` (Principal only, verifier-proven) —
+ * exposed here, ever. Gated on `audit_log:view_activity` (was audit:read; Principal by default) —
  * a timeline of one named person is a stronger read than any single screen it
  * draws from, so it takes the strongest gate the app has rather than a new one.
  */
@@ -99,8 +99,8 @@ ActivityGroupRef.implement({
 builder.queryField("activityPeople", (t) =>
   t.field({
     type: [ActivityPersonRef],
-    description: "Staff and guardians matching `search`, for the person picker. Requires audit:read.",
-    authScopes: { hasPermission: "audit:read" },
+    description: "Staff and guardians matching `search`, for the person picker. Requires audit_log:view_activity.",
+    authScopes: { hasPermission: "audit_log:view_activity" },
     args: {
       search: t.arg.string({ required: false }),
       limit: t.arg.int({ required: false }),
@@ -113,8 +113,8 @@ builder.queryField("activityPerson", (t) =>
   t.field({
     type: ActivityPersonRef,
     nullable: true,
-    description: "One person's display identity (name/role), or null. Requires audit:read.",
-    authScopes: { hasPermission: "audit:read" },
+    description: "One person's display identity (name/role), or null. Requires audit_log:view_activity.",
+    authScopes: { hasPermission: "audit_log:view_activity" },
     args: { personId: t.arg.string({ required: true }) },
     resolve: async (_root, args) => activityPerson(args.personId),
   }),
@@ -125,8 +125,8 @@ builder.queryField("personActivity", (t) =>
     type: ActivityFeedRef,
     description:
       "Everything one person did between two Dhaka calendar days (inclusive), newest " +
-      "first: audit events plus folded homework/assignment tracker passes. Requires audit:read.",
-    authScopes: { hasPermission: "audit:read" },
+      "first: audit events plus folded homework/assignment tracker passes. Requires audit_log:view_activity.",
+    authScopes: { hasPermission: "audit_log:view_activity" },
     args: {
       personId: t.arg.string({ required: true }),
       from: t.arg.string({ required: true }),
@@ -159,8 +159,8 @@ builder.queryField("personActivityPage", (t) =>
     type: ActivityRowPageRef,
     description:
       "One page of personActivity (same window + filters), newest first; total counts every row " +
-      "in the window (D-#761). Requires audit:read.",
-    authScopes: { hasPermission: "audit:read" },
+      "in the window (D-#761). Requires audit_log:view_activity.",
+    authScopes: { hasPermission: "audit_log:view_activity" },
     args: {
       personId: t.arg.string({ required: true }),
       from: t.arg.string({ required: true }),
@@ -191,8 +191,8 @@ builder.queryField("personActivityDays", (t) =>
     type: [ActivityDayRef],
     description:
       "Per-day activity counts for a person over the window — the map used to pick a " +
-      "day before narrowing the range. Requires audit:read.",
-    authScopes: { hasPermission: "audit:read" },
+      "day before narrowing the range. Requires audit_log:view_activity.",
+    authScopes: { hasPermission: "audit_log:view_activity" },
     args: {
       personId: t.arg.string({ required: true }),
       from: t.arg.string({ required: true }),
@@ -206,8 +206,8 @@ builder.queryField("personActivityDays", (t) =>
 builder.queryField("activityGroups", (t) =>
   t.field({
     type: [ActivityGroupRef],
-    description: "The event families, for the filter picker. Requires audit:read.",
-    authScopes: { hasPermission: "audit:read" },
+    description: "The event families, for the filter picker. Requires audit_log:view_activity.",
+    authScopes: { hasPermission: "audit_log:view_activity" },
     resolve: () =>
       ACTIVITY_GROUPS.map((g) => ({
         value: g,
@@ -220,8 +220,8 @@ builder.queryField("activityGroups", (t) =>
 builder.queryField("activitySources", (t) =>
   t.field({
     type: ["String"],
-    description: "The activity sources a row can come from. Requires audit:read.",
-    authScopes: { hasPermission: "audit:read" },
+    description: "The activity sources a row can come from. Requires audit_log:view_activity.",
+    authScopes: { hasPermission: "audit_log:view_activity" },
     resolve: () => [...ACTIVITY_SOURCES],
   }),
 );

@@ -9,6 +9,8 @@
  *   - "Returned to the students" (D-#719): the ACCOUNTABLE teacher under
  *     `tracker:write`, or `roster:manage` for an absent teacher — a declared
  *     `hasAnyPermission` scope (D-#441), with the ownership check in the body.
+ * PM: the desk is `class_test_script:scan` (+ `:publish`, `:hand_back`), the teacher
+ *   `class_test_script:return` (own tests), a stage read `class_test_script:view`.
  */
 import { builder } from "../../../schema";
 import { callerHasPermission } from "@scd/shared";
@@ -123,8 +125,8 @@ builder.queryField("myClassTestScriptTasks", (t) =>
     type: [ScriptTestRowRef],
     description:
       "The caller's own script reminders (Today): scripts to hand in to the Office (DUE/OVERDUE) and " +
-      "scripts handed back to return in class (WITH_TEACHER/RETURN_OVERDUE). Requires tracker:write.",
-    authScopes: { hasPermission: "tracker:write" },
+      "scripts handed back to return in class (WITH_TEACHER/RETURN_OVERDUE). Requires class_test_script:return.",
+    authScopes: { hasPermission: "class_test_script:return" },
     resolve: async (_root, _args, ctx) => teacherScriptTasks(actor(ctx)),
   }),
 );
@@ -132,8 +134,8 @@ builder.queryField("myClassTestScriptTasks", (t) =>
 builder.queryField("classTestScriptQueue", (t) =>
   t.field({
     type: [ScriptTestRowRef],
-    description: "Every unfinished test in the script flow, oldest due first (the Office card). roster:manage.",
-    authScopes: { hasPermission: "roster:manage" },
+    description: "Every unfinished test in the script flow, oldest due first (the Office card). class_test_script:scan.",
+    authScopes: { hasPermission: "class_test_script:scan" },
     resolve: async () => officeScriptQueue(),
   }),
 );
@@ -141,8 +143,8 @@ builder.queryField("classTestScriptQueue", (t) =>
 builder.queryField("classTestScriptSheet", (t) =>
   t.field({
     type: ScriptSheetRef,
-    description: "One test's scan & tag sheet (CS-2). roster:manage.",
-    authScopes: { hasPermission: "roster:manage" },
+    description: "One test's scan & tag sheet (CS-2). class_test_script:scan.",
+    authScopes: { hasPermission: "class_test_script:scan" },
     args: { testId: t.arg.string({ required: true }) },
     resolve: async (_root, args) => scriptSheet(args.testId),
   }),
@@ -152,22 +154,22 @@ builder.queryField("classTestScriptRow", (t) =>
   t.field({
     type: ScriptTestRowRef,
     nullable: true,
-    description: "One test's script stage, or null when it is not in the flow. tracker:read or roster:manage.",
-    authScopes: { hasAnyPermission: ["tracker:read", "roster:manage"] },
+    description: "One test's script stage, or null when it is not in the flow. class_test_script:view (no row scope yet, F-16).",
+    authScopes: { hasPermission: "class_test_script:view" },
     args: { testId: t.arg.string({ required: true }) },
     resolve: async (_root, args) => scriptTestRow(args.testId),
   }),
 );
 
 // ---------------------------------------------------------------------------
-// Office transitions (roster:manage)
+// Office transitions (class_test_script:scan / publish / hand_back)
 // ---------------------------------------------------------------------------
 
 builder.mutationField("receiveClassTestScripts", (t) =>
   t.field({
     type: ScriptTestRowRef,
     description: "Office: the scripts arrived at the desk (count = what was counted). Clears the teacher's reminder.",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "class_test_script:scan" },
     args: { testId: t.arg.string({ required: true }), count: t.arg.int({ required: true }) },
     resolve: async (_root, args, ctx) => receiveScripts(args.testId, args.count, actor(ctx)),
   }),
@@ -177,7 +179,7 @@ builder.mutationField("undoReceiveClassTestScripts", (t) =>
   t.field({
     type: ScriptTestRowRef,
     description: "Office: take a receipt back — only before anything was tagged.",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "class_test_script:scan" },
     args: { testId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => undoReceiveScripts(args.testId, actor(ctx)),
   }),
@@ -187,7 +189,7 @@ builder.mutationField("waiveClassTestScripts", (t) =>
   t.field({
     type: ScriptTestRowRef,
     description: "Office: close a test with no scans (e.g. the paper already went home), with a reason (D-#718).",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "class_test_script:scan" },
     args: { testId: t.arg.string({ required: true }), reason: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => waiveScripts(args.testId, args.reason, actor(ctx)),
   }),
@@ -197,7 +199,7 @@ builder.mutationField("unwaiveClassTestScripts", (t) =>
   t.field({
     type: ScriptTestRowRef,
     description: "Office: undo a waive — the test returns to the stage its stamps imply.",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "class_test_script:scan" },
     args: { testId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => unwaiveScripts(args.testId, actor(ctx)),
   }),
@@ -207,7 +209,7 @@ builder.mutationField("attachClassTestScriptPages", (t) =>
   t.field({
     type: ScriptSheetRef,
     description: "Office: tag uploaded scan pages (StoredFile classtest_script) to one PRESENT student, in order.",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "class_test_script:scan" },
     args: {
       testId: t.arg.string({ required: true }),
       studentId: t.arg.string({ required: true }),
@@ -221,7 +223,7 @@ builder.mutationField("removeClassTestScriptPage", (t) =>
   t.field({
     type: ScriptSheetRef,
     description: "Office: untag one page from a student's script (before publish).",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "class_test_script:scan" },
     args: {
       testId: t.arg.string({ required: true }),
       studentId: t.arg.string({ required: true }),
@@ -235,7 +237,7 @@ builder.mutationField("setClassTestScriptMissing", (t) =>
   t.field({
     type: ScriptSheetRef,
     description: "Office: mark a PRESENT student's script as not received (খাতা নেই), or undo it.",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "class_test_script:scan" },
     args: {
       testId: t.arg.string({ required: true }),
       studentId: t.arg.string({ required: true }),
@@ -251,7 +253,7 @@ builder.mutationField("publishClassTestScripts", (t) =>
   t.field({
     type: ScriptPublishOutcomeRef,
     description: "Office: release the scans to guardians (needs UPLOAD_DONE); notifies each child's guardians.",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "class_test_script:publish" },
     args: { testId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => publishScripts(args.testId, actor(ctx)),
   }),
@@ -261,7 +263,7 @@ builder.mutationField("unpublishClassTestScripts", (t) =>
   t.field({
     type: ScriptTestRowRef,
     description: "Office: pull the scans back from guardians (before the paper is handed to the teacher).",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "class_test_script:publish" },
     args: { testId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => unpublishScripts(args.testId, actor(ctx)),
   }),
@@ -271,7 +273,7 @@ builder.mutationField("handBackClassTestScripts", (t) =>
   t.field({
     type: ScriptTestRowRef,
     description: "Office: gave the paper to the teacher to return in class (D-#719). Needs PUBLISHED.",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "class_test_script:hand_back" },
     args: { testId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => handBackScripts(args.testId, actor(ctx)),
   }),
@@ -285,13 +287,13 @@ builder.mutationField("markClassTestScriptsReturned", (t) =>
   t.field({
     type: ScriptTestRowRef,
     description:
-      "The students have their scripts back (D-#719). The test's accountable teacher (tracker:write) or " +
-      "roster:manage. Needs WITH_TEACHER / RETURN_OVERDUE.",
-    authScopes: { hasAnyPermission: ["tracker:write", "roster:manage"] },
+      "The students have their scripts back (D-#719). The test's accountable teacher (class_test_script:return) or " +
+      "class_test_script:scan. Needs WITH_TEACHER / RETURN_OVERDUE.",
+    authScopes: { hasAnyPermission: ["class_test_script:return", "class_test_script:scan"] },
     args: { testId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       const userId = actor(ctx);
-      if (!callerHasPermission(ctx.auth!, "roster:manage")) {
+      if (!callerHasPermission(ctx.auth!, "class_test_script:scan")) {
         const owner = await accountableTeacherId(args.testId);
         if (owner !== userId) throw new ForbiddenError("শুধু এই টেস্টের শিক্ষক ফেরত চিহ্নিত করতে পারেন");
       }

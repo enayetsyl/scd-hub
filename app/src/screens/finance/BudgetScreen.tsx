@@ -23,8 +23,10 @@ import {
 } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
+import { useAuth } from "../../auth/AuthContext";
 
 export default function BudgetScreen(): React.ReactElement {
+  const { can } = useAuth();
   const [, setLine] = useMutation(SET_BUDGET_LINE);
 
   const [academicYearId, setAcademicYearId] = useState("");
@@ -102,7 +104,9 @@ export default function BudgetScreen(): React.ReactElement {
           <Select label={STR.finHead} value={head} options={headOptions} onChange={setHead} />
           <Field label={STR.finAnnualAmount} value={annualAmount} onChangeText={setAnnualAmount} keyboardType="number-pad" />
           <Field label={STR.finNote} value={note} onChangeText={setNote} multiline />
-          <Button title={STR.finSave} onPress={onSave} loading={busy} disabled={busy} />
+          {can("budget:edit") ? (
+            <Button title={STR.finSave} onPress={onSave} loading={busy} disabled={busy} />
+          ) : null}
         </Card>
 
         <Card>

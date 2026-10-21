@@ -1,7 +1,8 @@
 /**
  * AdminHomeScreen — admin menu, entries gated by the caller's permissions.
- * Import → content:import (Principal/Office); Users + ScopeGrants → user:manage
- * (Principal). PRD §8 RBAC rules.
+ * PM (docs/permission-catalogue/foundation-platform.md §f): each card checks the
+ * catalogue action its screen performs, so a Principal role edit or a per-person
+ * grant shows/hides exactly that card. The server re-gates every call.
  */
 import React from "react";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -13,17 +14,31 @@ import { useAuth } from "../../auth/AuthContext";
 type Props = NativeStackScreenProps<AdminStackParamList, "AdminHome">;
 
 export default function AdminHomeScreen({ navigation }: Props): React.ReactElement {
-  const { isRole, can } = useAuth();
-  const canImport = can("content:import");
-  const canManageUsers = can("user:manage");
-  const canRoster = can("roster:manage");
-  const canRoutine = can("routine:manage");
-  const canStaff = can("staff:manage");
-  const canGuardianCreds = can("guardian:link");
-  const canTemplates = can("template:manage");
-  // access:manage is RESERVED-locked + Principal-only — roleHasPermission is exact here.
-  const canAccess = can("access:manage");
-  const canAudit = can("audit:read");
+  const { can } = useAuth();
+  const canImport = can("lesson_plans:import") || can("question_bank:import");
+  const canStaffLogins = can("staff_logins:view");
+  const canProxy = can("cover:assign_proxy");
+  const canAssignSubject = can("teaching_assignments:assign_subject_teacher");
+  const canAssignSupervisor = can("teaching_assignments:assign_supervisor");
+  const canStudents = can("students:view_all");
+  const canAssignClassTeacher =
+    can("teaching_assignments:assign_class_teacher") || can("teaching_assignments:assign_homework_checker");
+  const canSections = can("classes_sections:merge_split");
+  const canYears = can("classes_sections:settings");
+  // PM: the routine card opens subject-group membership (addGroupMember etc. =
+  // routine:settings).
+  const canRoutine = can("routine:settings");
+  const canStaff = can("staff_records:view");
+  const canGuardianCreds = can("guardians:reset_password") || can("guardians:link");
+  // message_templates:* and access_control:* are LOCKED (Principal-only).
+  const canTemplates = can("message_templates:view");
+  const canAccess = can("access_control:edit");
+  // audit:read split four ways (PM): the log, one person's activity, system health,
+  // guardian app usage.
+  const canAuditLog = can("audit_log:view");
+  const canActivity = can("audit_log:view_activity");
+  const canHealth = can("system_health:view");
+  const canEngagement = can("guardian_engagement:view");
   // GC-5: the guardian-claim queue is an Office/Principal screen and rides the
   // tracker:read they already hold — no new permission (D-#554).
   // BUG-WC-3: gated on ROLE, not tracker:read — OFFICE deliberately holds no
@@ -31,10 +46,13 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
   // Owner ask 2026-10-04: template-aware, matching the server's `canWatchClaims`
   // (isAdminStaff) — a teacher holding the Office template from Access control
   // (Akter, Tazkir) could already read the queue but never saw this card.
-  const canWorkClaims = isRole("PRINCIPAL") || isRole("OFFICE");
-  // AR-2: the ranking reads the two attendance registers, so it sits behind the gate
-  // that already owns them — `attendance:manage` is Principal + Office exactly.
-  const canAttendance = can("attendance:manage");
+  // PM: `work_claim:view_all` without the digest designation — i.e. with its waiver
+  // `admin_dashboard:view` (Principal + Office by default, template-aware like isRole was).
+  const canWorkClaims = can("work_claim:view_all") && can("admin_dashboard:view");
+  // AR-2: the ranking reads the two attendance registers, so it sits behind the
+  // actions that own them (PM): student ranking attendance:view_all, staff ranking
+  // staff_attendance:view_all — Principal + Office by default.
+  const canAttendance = can("attendance:view_all") || can("staff_attendance:view_all");
 
   return (
     <Screen scroll>
@@ -47,35 +65,35 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
         </Card>
       ) : null}
 
-      {canManageUsers ? (
+      {canStaffLogins ? (
         <Card onPress={() => navigation.navigate("UserList")}>
           <Body style={{ fontWeight: "700" }}>{STR.users}</Body>
           <Muted>{STR.admSubUsers}</Muted>
         </Card>
       ) : null}
 
-      {canManageUsers ? (
+      {canProxy ? (
         <Card onPress={() => navigation.navigate("ScopeGrant")}>
           <Body style={{ fontWeight: "700" }}>{STR.scopeGrants}</Body>
           <Muted>{STR.admSubScope}</Muted>
         </Card>
       ) : null}
 
-      {canManageUsers ? (
+      {canAssignSubject ? (
         <Card onPress={() => navigation.navigate("AssignSubjectTeacher")}>
           <Body style={{ fontWeight: "700" }}>{STR.assignSubjectTeacher}</Body>
           <Muted>{STR.admSubAssignSubject}</Muted>
         </Card>
       ) : null}
 
-      {canManageUsers ? (
+      {canAssignSupervisor ? (
         <Card onPress={() => navigation.navigate("SupervisoryGrant")}>
           <Body style={{ fontWeight: "700" }}>{STR.sgManage}</Body>
           <Muted>{STR.admSubSupervisory}</Muted>
         </Card>
       ) : null}
 
-      {canRoster ? (
+      {canStudents ? (
         <Card onPress={() => navigation.navigate("Roster")}>
           <Body style={{ fontWeight: "700" }}>{STR.roster}</Body>
           <Muted>{STR.rosterCount}</Muted>
@@ -98,36 +116,36 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
         </Card>
       ) : null}
 
-      {canAudit ? (
+      {canAuditLog ? (
         <Card onPress={() => navigation.navigate("AuditLog")}>
           <Body style={{ fontWeight: "700" }}>{STR.audTitle}</Body>
           <Muted>{STR.audSubtitle}</Muted>
         </Card>
       ) : null}
 
-      {/* AL-1 (D-#645): the same audit:read gate, read the other way round — the
+      {/* AL-1 (D-#645): audit_log:view_activity — the audit log read the other way round — the
           audit log is the whole school newest-first, this is ONE person over a
           window, with the tracker passes the audit log never carried. */}
-      {canAudit ? (
+      {canActivity ? (
         <Card onPress={() => navigation.navigate("PersonActivity")}>
           <Body style={{ fontWeight: "700" }}>{STR.actTitle}</Body>
           <Muted>{STR.actSubtitle}</Muted>
         </Card>
       ) : null}
 
-      {/* SH-1 (D-#414): same gate as the audit log — `audit:read` is Principal-only, and
+      {/* SH-1 (D-#414): `system_health:view` (was audit:read) — Principal by default, and
           infrastructure headroom is a Principal decision (prune, archive, or pay). */}
-      {canAudit ? (
+      {canHealth ? (
         <Card onPress={() => navigation.navigate("SystemHealth")}>
           <Body style={{ fontWeight: "700" }}>{STR.shTitle}</Body>
           <Muted>{STR.shSubtitle}</Muted>
         </Card>
       ) : null}
 
-      {/* GE-1/GE-3 (D-#464/#465): reuses `audit:read` rather than minting a permission —
+      {/* GE-1/GE-3 (D-#464/#465): `guardian_engagement:view` (was audit:read) —
           the report names families and their children, so it sits at the same
           Principal-only bar as the audit log itself. */}
-      {canAudit ? (
+      {canEngagement ? (
         <Card onPress={() => navigation.navigate("GuardianEngagement")}>
           <Body style={{ fontWeight: "700" }}>{STR.geTitle}</Body>
           <Muted>{STR.geSubtitle}</Muted>
@@ -136,7 +154,7 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
 
       {/* SB-2..SB-4: the four support-book screens are NOT cards here — they live in
           their own 📕 drawer group, because the Admin tab's own gate (content:import /
-          user:manage) is a role template no granted illustrator or reviewer passes. */}
+          staff logins) is a role template no granted illustrator or reviewer passes. */}
 
       {canStaff ? (
         <Card onPress={() => navigation.navigate("Staff")}>
@@ -145,7 +163,7 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
         </Card>
       ) : null}
 
-      {canRoster ? (
+      {canAssignClassTeacher ? (
         <Card onPress={() => navigation.navigate("AssignClassTeacher")}>
           <Body style={{ fontWeight: "700" }}>{STR.assignClassTeacher}</Body>
           <Muted>{STR.admSubAssignClass}</Muted>
@@ -159,14 +177,14 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
         </Card>
       ) : null}
 
-      {canRoster ? (
+      {canSections ? (
         <Card onPress={() => navigation.navigate("SectionConfig")}>
           <Body style={{ fontWeight: "700" }}>{STR.sectionConfig}</Body>
           <Muted>{STR.admSubSection}</Muted>
         </Card>
       ) : null}
 
-      {canRoster ? (
+      {canYears ? (
         <Card onPress={() => navigation.navigate("AcademicYear")}>
           <Body style={{ fontWeight: "700" }}>{STR.ayManage}</Body>
           <Muted>{STR.ayHint}</Muted>
@@ -195,7 +213,11 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
         </Card>
       ) : null}
 
-      {!canImport && !canManageUsers && !canRoster && !canStaff && !canGuardianCreds && !canTemplates && !canAccess && !canRoutine ? (
+      {![
+        canImport, canStaffLogins, canProxy, canAssignSubject, canAssignSupervisor, canStudents,
+        canAttendance, canWorkClaims, canAuditLog, canActivity, canHealth, canEngagement, canStaff,
+        canAssignClassTeacher, canRoutine, canSections, canYears, canGuardianCreds, canTemplates, canAccess,
+      ].some(Boolean) ? (
         <Notice message={STR.noPermission} tone="warn" />
       ) : null}
     </Screen>

@@ -94,7 +94,9 @@ function takeDistinct(pool: PictureRef[], n: number, key: (p: PictureRef) => str
   return out;
 }
 
-const pictureBookFor = (subject: string): string => (subject === "ENG" ? "ENG" : subject === "ARABIC" ? "ARABIC" : "BAN");
+/** The book a picture question draws on: the paper's own (KG আরবি, D-#806) or the subject's. */
+const pictureBookFor = (input: GenerateInput): string =>
+  input.pictureBook ?? (input.subject === "ENG" ? "ENG" : input.subject === "ARABIC" ? "ARABIC" : "BAN");
 
 // ---------------------------------------------------------------------------
 // One section per row
@@ -320,7 +322,7 @@ function buildMatchNumeral(row: RowSpec, c: RowCtx): Built {
 }
 
 function picturePool(c: RowCtx, need: "FIRST_LETTER" | "MATCH" | "WORD"): PictureRef[] {
-  const book = pictureBookFor(c.input.subject);
+  const book = pictureBookFor(c.input);
   const pool = c.input.pictures.filter((p) => {
     if (p.book !== book || !p.uses.includes(need)) return false;
     if (need === "WORD") return !!p.word;
@@ -456,7 +458,7 @@ function withOptions(answer: string, others: readonly string[], n: number, key: 
 
 /** Every word the subject's book pictures carry — the pool word distractors come from. */
 function bookWords(c: RowCtx): string[] {
-  const book = pictureBookFor(c.input.subject);
+  const book = pictureBookFor(c.input);
   return [...new Set(c.input.pictures.filter((p) => p.book === book && p.word).map((p) => p.word as string))];
 }
 
@@ -513,7 +515,7 @@ function buildLetterFromForm(row: RowSpec, c: RowCtx): Built {
 
 /** Pictures used for their WORD only (nothing printed): in scope, words not yet asked first. */
 function wordPool(c: RowCtx): PictureRef[] {
-  const book = pictureBookFor(c.input.subject);
+  const book = pictureBookFor(c.input);
   const pool = c.input.pictures.filter(
     (p) =>
       p.book === book &&

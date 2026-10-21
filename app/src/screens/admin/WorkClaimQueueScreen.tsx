@@ -78,7 +78,7 @@ export default function WorkClaimQueueScreen(): React.ReactElement {
 
   const rows: WorkClaimRowT[] = q.data?.workClaimQueue ?? [];
   const byTeacher = summarize(rows);
-  const { role } = useAuth();
+  const { can } = useAuth();
 
   const onNudge = async (row: WorkClaimRowT) => {
     setBusyId(row.claimId);
@@ -191,7 +191,7 @@ export default function WorkClaimQueueScreen(): React.ReactElement {
 
         {/* D-#710: who else gets the 10:30 digest — the Principal decides. Outside the
             QueryGate so it stays reachable when the queue is empty. */}
-        {role === "PRINCIPAL" ? <WorkClaimDigestRecipientsCard /> : null}
+        {can("work_claim:settings") ? <WorkClaimDigestRecipientsCard /> : null}
       </ScrollView>
     </Screen>
   );

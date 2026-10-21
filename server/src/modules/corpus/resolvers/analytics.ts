@@ -39,7 +39,7 @@ CorpusEventRef.implement({
 builder.queryField("recentEvents", (t) =>
   t.field({
     type: [CorpusEventRef],
-    authScopes: { hasPermission: "content:read" },
+    authScopes: { hasPermission: "lesson_plans:view" },
     description: "De-identified recent corpus events — corpus plane only (ADR-005)",
     resolve: async () => {
       // Corpus plane: returns de-identified events.

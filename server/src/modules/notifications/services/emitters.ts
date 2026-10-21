@@ -28,6 +28,7 @@ import { RoutineSlot } from "../../routine/models/RoutineSlot";
 import { SubjectGroupMembership } from "../../routine/models/SubjectGroupMembership";
 import { dateKeyOf } from "../../attendance/dates";
 import { actingAsFilter } from "../../foundation/services/RoleScope";
+import { holderIdsOf } from "../../access-control/services/holders";
 import { bnNum } from "../../../lib/bnNum";
 import { personName } from "../../../lib/personName";
 
@@ -1311,15 +1312,14 @@ export interface PrintRequestedEvent {
 }
 
 /**
- * Tell every queue OPERATOR (active Principal/Office user) a new print request
- * was filed (D-#296) — the row rides every channel: the bell, native push, and
- * browser web-push. Best-effort; deduped per (job, operator).
+ * Tell every queue OPERATOR (an active printing:process holder — Principal/Office by
+ * default; PM §5.5, was "acting as Principal/Office") a new print request was filed
+ * (D-#296) — the row rides every channel: the bell, native push, and browser web-push.
+ * Best-effort; deduped per (job, operator).
  */
 export async function emitPrintRequested(event: PrintRequestedEvent): Promise<void> {
   return bestEffort("print requested", async () => {
-    const operators = (await User.find(actingAsFilter(["PRINCIPAL", "OFFICE"]))
-      .select("_id")
-      .lean()) as unknown as Array<{ _id: IdLike }>;
+    const operators = (await holderIdsOf("printing:process")).map((id) => ({ _id: id }));
     const titleBn = await renderTemplate("print.requested.title");
     const bodyBn = await renderTemplate("print.requested.body", {
       title: event.title,
@@ -1367,21 +1367,20 @@ export async function emitCtQuestionTeacher(
   });
 }
 
-/** Tell every queue operator (active Principal/Office) about a loop event
- *  (new request / changes requested / confirmed). Best-effort. */
+/** Tell every queue operator — each holder of `class_test_question:prepare` (PM §5.5;
+ *  Office/Principal by default) — about a loop event (new request / changes requested /
+ *  confirmed). Best-effort. */
 export async function emitCtQuestionOffice(event: CtQuestionNotifyEvent): Promise<void> {
   return bestEffort("ct question → office", async () => {
-    const operators = (await User.find(actingAsFilter(["PRINCIPAL", "OFFICE"]))
-      .select("_id")
-      .lean()) as unknown as Array<{ _id: IdLike }>;
-    for (const op of operators) {
+    const operatorIds = await holderIdsOf("class_test_question:prepare");
+    for (const opId of operatorIds) {
       await emit({
-        recipientUserId: op._id.toString(),
+        recipientUserId: opId,
         kind: "CT_QUESTION_OFFICE",
         titleBn: event.titleBn,
         bodyBn: event.bodyBn,
         refs: { ctQuestionRequestId: event.requestId },
-        dedupeKey: `ctq:${event.requestId}:${event.dedupeSuffix}:${op._id.toString()}`,
+        dedupeKey: `ctq:${event.requestId}:${event.dedupeSuffix}:${opId}`,
       });
     }
   });
@@ -1403,21 +1402,19 @@ export interface CtResultSubmittedEvent {
   bodyBn: string;
 }
 
-/** Tell every approver (active Principal/Office) a teacher submitted an exam's
- *  results for review/approval. Best-effort. */
+/** Tell every approver — each holder of `class_test:publish` (PM §5.5; Office/Principal
+ *  by default) — a teacher submitted an exam's results for review/approval. Best-effort. */
 export async function emitCtResultSubmitted(event: CtResultSubmittedEvent): Promise<void> {
   return bestEffort("ct result submitted → office", async () => {
-    const operators = (await User.find(actingAsFilter(["PRINCIPAL", "OFFICE"]))
-      .select("_id")
-      .lean()) as unknown as Array<{ _id: IdLike }>;
-    for (const op of operators) {
+    const operatorIds = await holderIdsOf("class_test:publish");
+    for (const opId of operatorIds) {
       await emit({
-        recipientUserId: op._id.toString(),
+        recipientUserId: opId,
         kind: "CT_RESULT_SUBMITTED",
         titleBn: event.titleBn,
         bodyBn: event.bodyBn,
         refs: { classTestId: event.testId, ctId: event.ctId },
-        dedupeKey: dedupeKeys.ctResultSubmitted(event.testId, event.submittedAtMs, op._id.toString()),
+        dedupeKey: dedupeKeys.ctResultSubmitted(event.testId, event.submittedAtMs, opId),
       });
     }
   });
@@ -1434,13 +1431,12 @@ export interface StaffLeaveSubmittedEvent {
   bodyBn: string;
 }
 
-/** Tell every approver (active Principal/Office) that a teacher submitted a leave
- *  application awaiting their approval. Best-effort. */
+/** Tell every approver (an active leave:approve holder — Principal/Office by default;
+ *  PM §5.5) that a teacher submitted a leave application awaiting their approval.
+ *  Best-effort. */
 export async function emitStaffLeaveSubmitted(event: StaffLeaveSubmittedEvent): Promise<void> {
   return bestEffort("staff leave submitted → office", async () => {
-    const operators = (await User.find(actingAsFilter(["PRINCIPAL", "OFFICE"]))
-      .select("_id")
-      .lean()) as unknown as Array<{ _id: IdLike }>;
+    const operators = (await holderIdsOf("leave:approve")).map((id) => ({ _id: id }));
     for (const op of operators) {
       await emit({
         recipientUserId: op._id.toString(),

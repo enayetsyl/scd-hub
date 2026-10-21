@@ -30,7 +30,7 @@ export default function MasteryMarksScreen({ route }: Props): React.ReactElement
   const { classToken, subject } = route.params;
   const toast = useToast();
   const { can } = useAuth();
-  const canManage = can("mastery:manage");
+  const canManage = can("mastery:settings");
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [newCode, setNewCode] = useState("QT-");
   const [newLabel, setNewLabel] = useState("");

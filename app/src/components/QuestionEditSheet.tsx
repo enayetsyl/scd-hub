@@ -22,6 +22,7 @@ import {
 import { Body, Muted, Card, Button, Field, Chip, ChipRow, Notice, Divider } from "./ui";
 import { STR } from "../lib/labels";
 import { friendlyError } from "../lib/errors";
+import { useAuth } from "../auth/AuthContext";
 import type { QuestionPayload } from "../lib/question";
 import { space } from "../theme/tokens";
 
@@ -56,6 +57,8 @@ export function QuestionEditSheet({
   onCancel,
 }: QuestionEditSheetProps): React.ReactElement {
   const type = payload.question_type ?? "";
+  // Retire is its own action (question_bank:delete) — correcting is question_bank:edit (PM, D-#790).
+  const mayRetire = useAuth().can("question_bank:delete");
 
   const [questionText, setQuestionText] = useState(payload.question_text ?? "");
   const [marks, setMarks] = useState(payload.marks != null ? String(payload.marks) : "");
@@ -217,7 +220,9 @@ export function QuestionEditSheet({
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2) }}>
         <Button title={STR.qeSave} loading={busy} onPress={() => void save()} />
         <Button title={STR.qeCancel} variant="ghost" onPress={onCancel} />
-        <Button title={STR.qeDelete} variant="danger" onPress={() => setConfirmDelete(true)} />
+        {mayRetire ? (
+          <Button title={STR.qeDelete} variant="danger" onPress={() => setConfirmDelete(true)} />
+        ) : null}
       </View>
     </Card>
   );

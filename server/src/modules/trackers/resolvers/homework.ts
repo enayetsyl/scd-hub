@@ -10,8 +10,9 @@
  *   homeworkItems          — the day's declarations for a class (handoff §8.1)
  *   homeworkStudentRecords — Layer-B records for an item (chase/checking queues, §8.2)
  *
- * RBAC: rides the existing tracker:read / tracker:write permissions (D-#33 — no
- * new permission). The class-teacher-only reconcile/confirm action-scope is HW-T2.
+ * RBAC (PM, D-#790..#801): each field names its `homework:*` catalogue action (was
+ * tracker:read / tracker:write, D-#33); row scope still rides assertCanRead /
+ * assertCanWrite with the homework reach actions. Confirm/trim stay designation-gated.
  */
 import { LIFECYCLE_STATES } from "@scd/shared";
 import type { LifecycleState } from "@scd/shared";
@@ -77,13 +78,52 @@ import {
   assertCanConfirmHomework,
   allowedSubjectCodesForSection,
   ForbiddenError,
+  type Reach,
 } from "../../../middleware/authz";
+import { callerHasPermission, type Permission } from "@scd/shared";
 import { Subject } from "../../foundation/models/Subject";
 import { HomeworkItem } from "../models/HomeworkItem";
 import { HomeworkStudentRecord } from "../models/HomeworkStudentRecord";
-import { isAdminStaff } from "../../foundation/services/RoleScope";
 import { pageRef } from "../../../pageRef";
 import { dhakaDayStart } from "../../../lib/dhakaDay";
+
+/** PM reach (D-#793): the homework actions that replace the role bypasses in the scope
+ *  helpers — `homework:view_all` for isAdminStaff on reads, `homework:edit_all` for the
+ *  PRINCIPAL-pass / OFFICE-refuse on writes. */
+const HW_READ: Reach = { viewAll: "homework:view_all" };
+const HW_WRITE: Reach = { editAll: "homework:edit_all" };
+const HW_SUBJECTS = { viewAll: "homework:view_all" } as const;
+
+/** transitionHomeworkRecord does four actions depending on the target state (PM §5.1). */
+function hwTransitionAction(toState: string): Permission | null {
+  switch (toState) {
+    case "GIVEN":
+    case "ABSENT_REDELIVER":
+      return "homework:issue";
+    case "SUBMITTED":
+    case "CHASE":
+    case "DUE":
+      return "homework:mark_submitted";
+    case "CHECKED":
+    case "RESUBMIT":
+      return "homework:check";
+    case "RETURNED":
+      return "homework:return";
+    default:
+      return null; // not a lifecycle state — the service rejects it
+  }
+}
+
+/** The confirm-the-day designation gate (class teacher / confirmer / supervisor /
+ *  delegation, in authz). PM: `homework:edit_all` is the waiver that lets a holder past
+ *  the designation — it replaces authz's PRINCIPAL leg (the Principal always holds it). */
+async function assertConfirmHomeworkDay(
+  ctx: Parameters<typeof assertCanConfirmHomework>[0],
+  sectionId: string,
+): Promise<void> {
+  if (ctx.auth && ctx.auth.role !== "GUARDIAN" && callerHasPermission(ctx.auth, "homework:edit_all")) return;
+  await assertCanConfirmHomework(ctx, sectionId);
+}
 
 async function resolveSubjectId(subject: string): Promise<string> {
   const doc = await Subject.findOne({ code: subject }).select("_id").lean();
@@ -264,7 +304,7 @@ builder.mutationField("declareHomeworkItem", (t) =>
   t.field({
     type: HomeworkItemRef,
     description: "Declare one common homework sheet for a class+subject+day. Write-scope enforced.",
-    authScopes: { hasPermission: "tracker:write" },
+    authScopes: { hasPermission: "homework:declare" },
     args: {
       academicYearId: t.arg.string({ required: true }),
       classId: t.arg.string({ required: true }),
@@ -285,7 +325,7 @@ builder.mutationField("declareHomeworkItem", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanWrite(ctx, args.sectionId, await resolveSubjectId(args.subject), "declare_homework");
+      await assertCanWrite(ctx, args.sectionId, await resolveSubjectId(args.subject), "declare_homework", HW_WRITE);
       const res = await declareSvc({
         academicYearId: args.academicYearId,
         classId: args.classId,
@@ -320,7 +360,7 @@ builder.mutationField("updateHomeworkItem", (t) =>
       "Edit a homework item (D-#336). Declared (+ day unreconciled): every declare field " +
       "except the identity trio subject/classLevel/dateGiven. Issued: description, topics " +
       "and attachments only. Write-scope enforced.",
-    authScopes: { hasPermission: "tracker:write" },
+    authScopes: { hasPermission: "homework:declare" },
     args: {
       itemId: t.arg.string({ required: true }),
       description: t.arg.string({ required: false }),
@@ -343,6 +383,7 @@ builder.mutationField("updateHomeworkItem", (t) =>
         target.sectionId.toString(),
         await resolveSubjectId(target.subject),
         "declare_homework",
+        HW_WRITE,
       );
       const res = await updateSvc({
         itemId: args.itemId,
@@ -377,7 +418,7 @@ builder.mutationField("deleteHomeworkItem", (t) =>
     description:
       "Delete a mis-declared item (D-#336) — the fix for a wrong subject/class/date " +
       "(baked into hwId). Declared-only + day unreconciled. Write-scope enforced.",
-    authScopes: { hasPermission: "tracker:write" },
+    authScopes: { hasPermission: "homework:declare" },
     args: {
       itemId: t.arg.string({ required: true }),
     },
@@ -391,6 +432,7 @@ builder.mutationField("deleteHomeworkItem", (t) =>
         target.sectionId.toString(),
         await resolveSubjectId(target.subject),
         "declare_homework",
+        HW_WRITE,
       );
       return deleteSvc(args.itemId);
     },
@@ -400,7 +442,7 @@ builder.mutationField("deleteHomeworkItem", (t) =>
 // ---------------------------------------------------------------------------
 // HW-VOID (D-#741): Principal/Office remove a never-issued declaration
 // ---------------------------------------------------------------------------
-// Its OWN permission, not tracker:write — the Office holds no tracker permission
+// Its OWN action (homework:delete, was homework:void), not a teaching one — the Office holds no teaching homework action
 // (D-#554) and gets exactly this clean-up. Both holders are admin staff, so the
 // item is reachable school-wide; the service refuses anything with student records.
 
@@ -410,7 +452,7 @@ builder.mutationField("voidHomeworkItem", (t) =>
     description:
       "Remove a homework declaration that was never issued (D-#741) — e.g. a 0-question " +
       "item confirm skips — even once the day is reconciled. Refused when any student record exists.",
-    authScopes: { hasPermission: "homework:void" },
+    authScopes: { hasPermission: "homework:delete" },
     args: {
       itemId: t.arg.string({ required: true }),
     },
@@ -444,7 +486,7 @@ builder.queryField("unissuedHomework", (t) =>
     type: [UnissuedHomeworkRef],
     description:
       "0-question homework declarations from the last 30 days — confirm never issues them (D-#741). School-wide.",
-    authScopes: { hasPermission: "homework:void" },
+    authScopes: { hasPermission: "homework:delete" },
     resolve: () => listUnissuedHomeworkSvc(),
   }),
 );
@@ -474,7 +516,7 @@ builder.mutationField("declareNoHomework", (t) =>
     description:
       "Declare 'no homework today' for a class+subject+day with a reason chip. Upsert (re-tap " +
       "updates the reason); rejected while a real item exists. Write-scope enforced.",
-    authScopes: { hasPermission: "tracker:write" },
+    authScopes: { hasPermission: "homework:declare" },
     args: {
       classId: t.arg.string({ required: true }),
       sectionId: t.arg.string({ required: true }),
@@ -484,7 +526,7 @@ builder.mutationField("declareNoHomework", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanWrite(ctx, args.sectionId, await resolveSubjectId(args.subject), "declare_homework");
+      await assertCanWrite(ctx, args.sectionId, await resolveSubjectId(args.subject), "declare_homework", HW_WRITE);
       return declareNilSvc({
         classId: args.classId,
         sectionId: args.sectionId,
@@ -501,7 +543,7 @@ builder.mutationField("removeNoHomework", (t) =>
   t.field({
     type: "Boolean",
     description: "Remove a mistaken 'no homework today' marker. Write-scope enforced.",
-    authScopes: { hasPermission: "tracker:write" },
+    authScopes: { hasPermission: "homework:declare" },
     args: {
       classId: t.arg.string({ required: true }),
       sectionId: t.arg.string({ required: true }),
@@ -516,6 +558,7 @@ builder.mutationField("removeNoHomework", (t) =>
         args.sectionId,
         await resolveSubjectId(args.subject),
         "declare_homework",
+        HW_WRITE,
       );
       return removeNilSvc({ classId: args.classId, sectionId: args.sectionId, subject: args.subject, date: args.date });
     },
@@ -526,7 +569,7 @@ builder.queryField("homeworkNilDeclarations", (t) =>
   t.field({
     type: [NilDeclarationRef],
     description: "The day's 'no homework' markers for a class. Read-scope enforced.",
-    authScopes: { hasPermission: "tracker:read" },
+    authScopes: { hasPermission: "homework:view" },
     args: {
       sectionId: t.arg.string({ required: true }),
       classId: t.arg.string({ required: true }),
@@ -534,8 +577,8 @@ builder.queryField("homeworkNilDeclarations", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanRead(ctx, args.sectionId, args.classId);
-      const allowed = await allowedSubjectCodesForSection(ctx, args.sectionId, args.classId);
+      await assertCanRead(ctx, args.sectionId, args.classId, undefined, HW_READ);
+      const allowed = await allowedSubjectCodesForSection(ctx, args.sectionId, args.classId, HW_SUBJECTS);
       const rows = await listNilDeclarations(args.classId, args.date, args.sectionId);
       return allowed ? rows.filter((r) => allowed.has(r.subject)) : rows;
     },
@@ -552,7 +595,7 @@ builder.mutationField("issueHomeworkItem", (t) =>
     description:
       "Issue an item: spawn per-student records (present→GIVEN, absent→ABSENT_REDELIVER). " +
       "Write-scope enforced. HW-T2 will gate this behind the daily 120-min reconciliation.",
-    authScopes: { hasPermission: "tracker:write" },
+    authScopes: { hasPermission: "homework:issue" },
     args: {
       sectionId: t.arg.string({ required: true }),
       itemId: t.arg.string({ required: true }),
@@ -568,6 +611,7 @@ builder.mutationField("issueHomeworkItem", (t) =>
         args.sectionId,
         item?.subject ? await resolveSubjectId(item.subject) : undefined,
         "declare_homework",
+        HW_WRITE,
       );
       return issueSvc(
         args.itemId,
@@ -586,7 +630,9 @@ builder.mutationField("transitionHomeworkRecord", (t) =>
   t.field({
     type: TransitionResultRef,
     description: "Apply one legal lifecycle transition to a per-student record (timestamped, §3). Write-scope enforced.",
-    authScopes: { hasPermission: "tracker:write" },
+    authScopes: {
+      hasAnyPermission: ["homework:mark_submitted", "homework:issue", "homework:check", "homework:return"],
+    },
     args: {
       sectionId: t.arg.string({ required: true }),
       recordId: t.arg.string({ required: true }),
@@ -595,6 +641,11 @@ builder.mutationField("transitionHomeworkRecord", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      // PM §5.1: the field admits any of the four actions; the target state names the one
+      // this call performs (GIVEN → issue, SUBMITTED/CHASE/DUE → mark_submitted,
+      // CHECKED/RESUBMIT → check, RETURNED → return).
+      const action = hwTransitionAction(args.toState);
+      if (action && !callerHasPermission(ctx.auth, action)) throw new ForbiddenError();
       const record = await HomeworkStudentRecord.findById(args.recordId).select("hwItemId sectionId").lean();
       const item = record ? await HomeworkItem.findById(record.hwItemId).select("subject").lean() : null;
       // Only the →SUBMITTED transition is the delegated "take submission" duty (D-#486);
@@ -604,6 +655,7 @@ builder.mutationField("transitionHomeworkRecord", (t) =>
         args.sectionId,
         item?.subject ? await resolveSubjectId(item.subject) : undefined,
         args.toState === "SUBMITTED" ? "submit_homework" : undefined,
+        HW_WRITE,
       );
       assertHwRecordInSection(record, args.sectionId);
       return transitionSvc({
@@ -627,7 +679,7 @@ builder.mutationField("markHomeworkRecordsDue", (t) =>
       "Flip a picked set of the section's GIVEN records to DUE in one call (D-#313) — the manual " +
       "early counterpart of the overnight auto-due sweep. Ids outside the section or not GIVEN " +
       "don't match. Returns how many flipped. Write-scope enforced.",
-    authScopes: { hasPermission: "tracker:write" },
+    authScopes: { hasPermission: "homework:mark_submitted" },
     args: {
       sectionId: t.arg.string({ required: true }),
       recordIds: t.arg.stringList({ required: true }),
@@ -637,7 +689,7 @@ builder.mutationField("markHomeworkRecordsDue", (t) =>
       // The manual counterpart of the overnight auto-due sweep: it opens the
       // collection window, so it rides the collection duty (ACS-4, D-#592). No
       // subject is resolvable here, so a subject_dept delegation still fails closed.
-      await assertCanWrite(ctx, args.sectionId, undefined, "submit_homework");
+      await assertCanWrite(ctx, args.sectionId, undefined, "submit_homework", HW_WRITE);
       return markRecordsDueSvc(args.sectionId, [...args.recordIds], ctx.auth.userId as string);
     },
   }),
@@ -651,7 +703,7 @@ builder.queryField("homeworkItems", (t) =>
   t.field({
     type: [HomeworkItemRef],
     description: "The day's homework declarations for a class. Read-scope enforced.",
-    authScopes: { hasPermission: "tracker:read" },
+    authScopes: { hasPermission: "homework:view" },
     args: {
       classId: t.arg.string({ required: true }),
       sectionId: t.arg.string({ required: true }),
@@ -659,8 +711,8 @@ builder.queryField("homeworkItems", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanRead(ctx, args.sectionId, args.classId);
-      const allowed = await allowedSubjectCodesForSection(ctx, args.sectionId, args.classId);
+      await assertCanRead(ctx, args.sectionId, args.classId, undefined, HW_READ);
+      const allowed = await allowedSubjectCodesForSection(ctx, args.sectionId, args.classId, HW_SUBJECTS);
       const all = await listDailyItems(
         args.classId,
         args.dateGiven ? new Date(args.dateGiven) : undefined,
@@ -693,7 +745,7 @@ builder.queryField("homeworkTopics", (t) =>
   t.field({
     type: [HomeworkTopicRef],
     description: "Pickable topics for a (subject, class) — the catalog a teacher chooses topTags from.",
-    authScopes: { hasPermission: "tracker:read" },
+    authScopes: { hasPermission: "homework:view" },
     args: {
       subject: t.arg.string({ required: true }),
       classLevel: t.arg.int({ required: true }),
@@ -728,7 +780,7 @@ builder.queryField("homeworkStudentRecords", (t) =>
     description:
       "Per-student lifecycle records for an item, ON the given section only (D-#772 — a pre-split " +
       "item holds both halves' records). Read-scope enforced.",
-    authScopes: { hasPermission: "tracker:read" },
+    authScopes: { hasPermission: "homework:view" },
     args: {
       sectionId: t.arg.string({ required: true }),
       classId: t.arg.string({ required: true }),
@@ -736,8 +788,8 @@ builder.queryField("homeworkStudentRecords", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanRead(ctx, args.sectionId, args.classId);
-      const allowed = await allowedSubjectCodesForSection(ctx, args.sectionId, args.classId);
+      await assertCanRead(ctx, args.sectionId, args.classId, undefined, HW_READ);
+      const allowed = await allowedSubjectCodesForSection(ctx, args.sectionId, args.classId, HW_SUBJECTS);
       if (allowed) {
         const item = await HomeworkItem.findById(args.itemId).select("subject").lean();
         if (!item || !allowed.has(item.subject)) throw new ForbiddenError();
@@ -810,7 +862,7 @@ builder.queryField("homeworkOpenRecords", (t) =>
       "for the auto-listed date-grouped Checking queue (states [SUBMITTED]) / Records screens. Read-scope enforced. " +
       "skipFinishedItems (D-#761, optional): leave out FINISHED items — every record returned, none of it " +
       "today — which page through homeworkDoneItemsPage instead. Omitted = every matching record, as before.",
-    authScopes: { hasPermission: "tracker:read" },
+    authScopes: { hasPermission: "homework:view" },
     args: {
       sectionId: t.arg.string({ required: true }),
       classId: t.arg.string({ required: true }),
@@ -819,7 +871,7 @@ builder.queryField("homeworkOpenRecords", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanRead(ctx, args.sectionId, args.classId);
+      await assertCanRead(ctx, args.sectionId, args.classId, undefined, HW_READ);
       // D-#388 (owner, 2026-07-29) supersedes the 2026-07-19 narrowing for READS: the
       // class teacher sees the whole section again, because the workspace now FOLDS
       // other subjects away (SubjectFold) instead of hiding them — own subjects open,
@@ -828,7 +880,7 @@ builder.queryField("homeworkOpenRecords", (t) =>
       // WRITES are untouched and remain the real gate: assertCanWrite → canWrite
       // honours only teaching/proxy grants matching section AND subject, with no
       // class-teacher or supervisory escape, so oversight can never become authorship.
-      const allowed = await allowedSubjectCodesForSection(ctx, args.sectionId, args.classId);
+      const allowed = await allowedSubjectCodesForSection(ctx, args.sectionId, args.classId, HW_SUBJECTS);
       const states = args.states.filter((s): s is LifecycleState =>
         (LIFECYCLE_STATES as readonly string[]).includes(s),
       );
@@ -862,7 +914,7 @@ builder.queryField("homeworkDoneItemsPage", (t) =>
     description:
       "One page of a section's FINISHED homework items, newest given-date first (D-#761) — the workspace's " +
       "completed fold. Read-scope + subject scope exactly like homeworkOpenRecords; `subject` = the chip filter.",
-    authScopes: { hasPermission: "tracker:read" },
+    authScopes: { hasPermission: "homework:view" },
     args: {
       sectionId: t.arg.string({ required: true }),
       classId: t.arg.string({ required: true }),
@@ -872,8 +924,8 @@ builder.queryField("homeworkDoneItemsPage", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanRead(ctx, args.sectionId, args.classId);
-      const allowed = await allowedSubjectCodesForSection(ctx, args.sectionId, args.classId);
+      await assertCanRead(ctx, args.sectionId, args.classId, undefined, HW_READ);
+      const allowed = await allowedSubjectCodesForSection(ctx, args.sectionId, args.classId, HW_SUBJECTS);
       return homeworkDoneItemsPage(
         args.sectionId,
         dhakaDayStart(new Date()),
@@ -895,15 +947,15 @@ builder.queryField("homeworkDoneItemSubjects", (t) =>
     description:
       "Finished-item counts per subject for a section (D-#761) — the workspace's subject chips and the " +
       "completed fold's count. Same scope as homeworkDoneItemsPage.",
-    authScopes: { hasPermission: "tracker:read" },
+    authScopes: { hasPermission: "homework:view" },
     args: {
       sectionId: t.arg.string({ required: true }),
       classId: t.arg.string({ required: true }),
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanRead(ctx, args.sectionId, args.classId);
-      const allowed = await allowedSubjectCodesForSection(ctx, args.sectionId, args.classId);
+      await assertCanRead(ctx, args.sectionId, args.classId, undefined, HW_READ);
+      const allowed = await allowedSubjectCodesForSection(ctx, args.sectionId, args.classId, HW_SUBJECTS);
       return homeworkDoneItemSubjects(args.sectionId, dhakaDayStart(new Date()), allowed);
     },
   }),
@@ -939,17 +991,17 @@ builder.queryField("homeworkItemTallies", (t) =>
       "Pipeline counts per homework item for a section, for the workspace card headers. Read-scope " +
       "enforced; subject-scoped exactly like homeworkOpenRecords so a teacher never sees counts for " +
       "a subject they cannot read.",
-    authScopes: { hasPermission: "tracker:read" },
+    authScopes: { hasPermission: "homework:view" },
     args: {
       sectionId: t.arg.string({ required: true }),
       classId: t.arg.string({ required: true }),
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanRead(ctx, args.sectionId, args.classId);
+      await assertCanRead(ctx, args.sectionId, args.classId, undefined, HW_READ);
       // Same posture as the record list above (D-#388) — the counts must cover exactly
       // the cards the caller can see, including the folded ones.
-      const allowed = await allowedSubjectCodesForSection(ctx, args.sectionId, args.classId);
+      const allowed = await allowedSubjectCodesForSection(ctx, args.sectionId, args.classId, HW_SUBJECTS);
       return homeworkItemTallies(args.sectionId, allowed);
     },
   }),
@@ -1095,20 +1147,24 @@ async function assertCanViewHomeworkDay(
   sectionId: string,
   classId: string,
 ): Promise<void> {
-  try {
-    await assertCanConfirmHomework(ctx, sectionId);
-    return;
-  } catch {
-    /* not a confirmer — fall back to ordinary read scope below */
+  // The confirmer leg counts only while the caller holds `homework:confirm_day` (PM §5.2:
+  // the action means "may do this when designated").
+  if (ctx.auth && callerHasPermission(ctx.auth, "homework:confirm_day")) {
+    try {
+      await assertConfirmHomeworkDay(ctx, sectionId);
+      return;
+    } catch {
+      /* not a confirmer — fall back to ordinary read scope below */
+    }
   }
-  await assertCanRead(ctx, sectionId, classId);
+  await assertCanRead(ctx, sectionId, classId, undefined, HW_READ);
 }
 
 builder.queryField("homeworkDayTally", (t) =>
   t.field({
     type: DayTallyRef,
     description: "Live daily budget for a class+day (DAY_TOTAL vs 120). Read- or confirm-scope enforced.",
-    authScopes: { hasPermission: "tracker:read" },
+    authScopes: { hasAnyPermission: ["homework:view", "homework:confirm_day"] },
     args: {
       sectionId: t.arg.string({ required: true }),
       classId: t.arg.string({ required: true }),
@@ -1161,7 +1217,9 @@ builder.queryField("homeworkIssueRoster", (t) =>
   t.field({
     type: IssueRosterRef,
     description: "Attendance-backed present/absent prefill for the reconcile screen (D-#320). Read-scope enforced.",
-    authScopes: { hasPermission: "tracker:read" },
+    authScopes: {
+      hasAnyPermission: ["homework:view", "homework:confirm_day", "assignment:declare"],
+    },
     args: {
       sectionId: t.arg.string({ required: true }),
       classId: t.arg.string({ required: true }),
@@ -1180,7 +1238,7 @@ builder.queryField("homeworkTrimCandidates", (t) =>
   t.field({
     type: TrimCandidatesRef,
     description: "Trim candidates for an over-ceiling day, pre-ranked ক→খ→গ. Read- or confirm-scope enforced.",
-    authScopes: { hasPermission: "tracker:read" },
+    authScopes: { hasAnyPermission: ["homework:view", "homework:confirm_day"] },
     args: {
       sectionId: t.arg.string({ required: true }),
       classId: t.arg.string({ required: true }),
@@ -1199,7 +1257,7 @@ builder.mutationField("trimHomeworkItem", (t) =>
   t.field({
     type: TrimResultRef,
     description: "Trim a homework item's Q_COUNT (time follows proportionally). Logs a trim row. Write-scope enforced.",
-    authScopes: { hasPermission: "tracker:write" },
+    authScopes: { hasPermission: "homework:confirm_day" },
     args: {
       sectionId: t.arg.string({ required: true }),
       classId: t.arg.string({ required: true }),
@@ -1210,7 +1268,7 @@ builder.mutationField("trimHomeworkItem", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanConfirmHomework(ctx, args.sectionId); // class teacher, delegate, or Principal
+      await assertConfirmHomeworkDay(ctx, args.sectionId); // class teacher, delegate, supervisor, or edit_all
       return applyTrimSvc({
         classId: args.classId,
         sectionId: args.sectionId,
@@ -1231,7 +1289,7 @@ builder.mutationField("confirmHomeworkDay", (t) =>
     description:
       "Reconcile + issue the day: blocked if DAY_TOTAL > 120 (trim first), else spawns per-student " +
       "records for every declared item. CLASS-TEACHER only (handoff §9 / D-#42).",
-    authScopes: { hasPermission: "tracker:write" },
+    authScopes: { hasPermission: "homework:confirm_day" },
     args: {
       sectionId: t.arg.string({ required: true }),
       classId: t.arg.string({ required: true }),
@@ -1240,7 +1298,7 @@ builder.mutationField("confirmHomeworkDay", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanConfirmHomework(ctx, args.sectionId); // class teacher, delegate, or Principal
+      await assertConfirmHomeworkDay(ctx, args.sectionId); // class teacher, delegate, supervisor, or edit_all
       return confirmDaySvc({
         classId: args.classId,
         sectionId: args.sectionId,
@@ -1331,7 +1389,7 @@ builder.mutationField("checkHomeworkRecord", (t) =>
       "Check a submitted record: record RESULT (CORRECT/PARTIAL/WRONG). WRONG auto-spawns a same-HW_ID " +
       "resubmission; PARTIAL spawns only if resubmit=true. Optional Pool top-up (reactive only). " +
       "Subject-teacher write-scope (handoff §9).",
-    authScopes: { hasPermission: "tracker:write" },
+    authScopes: { hasPermission: "homework:check" },
     args: {
       sectionId: t.arg.string({ required: true }),
       recordId: t.arg.string({ required: true }),
@@ -1349,6 +1407,7 @@ builder.mutationField("checkHomeworkRecord", (t) =>
         args.sectionId,
         item?.subject ? await resolveSubjectId(item.subject) : undefined,
         "check_homework",
+        HW_WRITE,
       );
       assertHwRecordInSection(record, args.sectionId);
       const topup =
@@ -1398,8 +1457,8 @@ builder.mutationField("revertHomeworkRecord", (t) =>
       "Undo the last lifecycle ACTION on a record (D-#338): pops the trailing same-timestamp stamp " +
       "group, restores the previous state, cleans side effects (untouched spawned resubmission " +
       "deleted; result cleared; chaseCount decremented). Acting teacher: own action, same Dhaka day; " +
-      "Principal/Office: anytime. authenticated+role-gated (OFFICE holds no tracker:*, D-#196).",
-    authScopes: { authenticated: true },
+      "homework:undo_any holders (Principal/Office by default): anytime.",
+    authScopes: { hasAnyPermission: ["homework:undo", "homework:undo_any"] },
     args: {
       sectionId: t.arg.string({ required: true }),
       recordId: t.arg.string({ required: true }),
@@ -1407,7 +1466,10 @@ builder.mutationField("revertHomeworkRecord", (t) =>
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       if (ctx.auth.role === "GUARDIAN") throw new ForbiddenError();
-      const admin = isAdminStaff(ctx.auth);
+      // PM: `homework:undo_any` replaces the isAdminStaff flag (Office + Principal by
+      // default, F-7 reproduced) — any actor, any day, no scope. `homework:undo` alone
+      // keeps the scope gate + the service's own-stamp / same-Dhaka-day rule.
+      const admin = callerHasPermission(ctx.auth, "homework:undo_any");
       const record = await HomeworkStudentRecord.findById(args.recordId)
         .select("hwItemId sectionId")
         .lean();
@@ -1424,6 +1486,7 @@ builder.mutationField("revertHomeworkRecord", (t) =>
           args.sectionId,
           item?.subject ? await resolveSubjectId(item.subject) : undefined,
           ["declare_homework", "submit_homework", "check_homework"],
+          HW_WRITE,
         );
       }
       return revertHomeworkRecordSvc({
@@ -1471,7 +1534,7 @@ builder.mutationField("recordHomeworkOutcome", (t) =>
       "then applies the existing check logic (CORRECT/PARTIAL/WRONG) or chase logic (NOT_SUBMITTED) — " +
       "reuses transitionHomeworkRecord/checkHomeworkRecord's underlying services verbatim, no new edge " +
       "logic. Subject-teacher write-scope (ENH-002); illegal starting states / bad outcome rejected.",
-    authScopes: { hasPermission: "tracker:write" },
+    authScopes: { hasPermission: "homework:check" },
     args: {
       sectionId: t.arg.string({ required: true }),
       recordId: t.arg.string({ required: true }),
@@ -1489,6 +1552,7 @@ builder.mutationField("recordHomeworkOutcome", (t) =>
         args.sectionId,
         item?.subject ? await resolveSubjectId(item.subject) : undefined,
         "check_homework",
+        HW_WRITE,
       );
       assertHwRecordInSection(record, args.sectionId);
       const topup =
@@ -1578,7 +1642,13 @@ async function assertItemWriteScope(
   action?: Parameters<typeof assertCanWrite>[3],
 ): Promise<void> {
   const item = await HomeworkItem.findById(itemId).select("subject").lean();
-  await assertCanWrite(ctx, sectionId, item?.subject ? await resolveSubjectId(item.subject) : undefined, action);
+  await assertCanWrite(
+    ctx,
+    sectionId,
+    item?.subject ? await resolveSubjectId(item.subject) : undefined,
+    action,
+    HW_WRITE,
+  );
 }
 
 builder.mutationField("homeworkSubmitPass", (t) =>
@@ -1588,7 +1658,7 @@ builder.mutationField("homeworkSubmitPass", (t) =>
       "The submission roster pass (RP-1, D-#355): each entry's open record (GIVEN/DUE/CHASE) is either " +
       "fast-forwarded to SUBMITTED (submitted:true) or chased FIRST-CROSS-ONLY (submitted:false — an " +
       "already-CHASE record is a no-op). Subject-teacher write-scope; illegal states rejected.",
-    authScopes: { hasPermission: "tracker:write" },
+    authScopes: { hasPermission: "homework:mark_submitted" },
     args: {
       sectionId: t.arg.string({ required: true }),
       itemId: t.arg.string({ required: true }),
@@ -1614,7 +1684,7 @@ builder.mutationField("homeworkReturnPass", (t) =>
     description:
       "The return roster pass (RP-1, D-#355): each uncrossed CHECKED/RESUBMIT record is handed back " +
       "(→ RETURNED). Subject-teacher write-scope; a non-checked record is rejected.",
-    authScopes: { hasPermission: "tracker:write" },
+    authScopes: { hasPermission: "homework:return" },
     args: {
       sectionId: t.arg.string({ required: true }),
       itemId: t.arg.string({ required: true }),
@@ -1640,7 +1710,7 @@ builder.queryField("studentDayLoad", (t) =>
   t.field({
     type: StudentDayLoadRef,
     description: "A student's personal homework day-load including top-up minutes. Read-scope enforced.",
-    authScopes: { hasPermission: "tracker:read" },
+    authScopes: { hasPermission: "homework:view" },
     args: {
       sectionId: t.arg.string({ required: true }),
       classId: t.arg.string({ required: true }),
@@ -1649,7 +1719,7 @@ builder.queryField("studentDayLoad", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanRead(ctx, args.sectionId, args.classId);
+      await assertCanRead(ctx, args.sectionId, args.classId, undefined, HW_READ);
       return studentDayLoadSvc(args.classId, args.studentId, new Date(args.date));
     },
   }),
@@ -1817,7 +1887,7 @@ builder.queryField("homeworkSummary", (t) =>
       "Homework roll-up for a class: chase list + thresholds, open resubmissions, completion health, " +
       "topic touches. Read-scope enforced. D-#641: a TEACHER's roll-up covers only the homework " +
       "attributed to them (D-#351); Principal/Office read the class-wide numbers.",
-    authScopes: { hasPermission: "tracker:read" },
+    authScopes: { hasPermission: "homework:view" },
     args: {
       sectionId: t.arg.string({ required: true }),
       classId: t.arg.string({ required: true }),
@@ -1834,7 +1904,7 @@ builder.queryField("homeworkSummary", (t) =>
       // বালক and বালিকা piles are separate. The sectionId was always sent and
       // authorized above; only the classId used to reach the fold.
       return homeworkSummarySvc(args.classId, {
-        teacherId: isAdminStaff(ctx.auth) ? null : (ctx.auth.userId as string),
+        teacherId: callerHasPermission(ctx.auth, "homework:view_all") ? null : (ctx.auth.userId as string),
         sectionId: args.sectionId,
       });
     },
@@ -1872,12 +1942,12 @@ builder.queryField("homeworkClassOverview", (t) =>
     type: [ClassOverviewRef],
     description:
       "Per-class cumulative homework counts for the dashboard. Each (classId, sectionId) ref is " +
-      "authorized via read-scope; refs the caller cannot read are silently skipped. Requires tracker:read. " +
+      "authorized via read-scope; refs the caller cannot read are silently skipped. Requires homework:view. " +
       "D-#634: a TEACHER's badges count only the homework attributed to them (D-#351); Principal/Office " +
       "read the class-wide numbers. D-#770: bySection: true returns one row PER SECTION ref, counted " +
       "over that section alone (sectionId set) — send one ref per section. The default (false) keeps " +
       "the class-keyed fold for older app builds.",
-    authScopes: { hasPermission: "tracker:read" },
+    authScopes: { hasPermission: "homework:view" },
     args: {
       refs: t.arg({ type: [HomeworkClassRefInput], required: true }),
       bySection: t.arg.boolean({ required: false, defaultValue: false }),
@@ -1897,7 +1967,7 @@ builder.queryField("homeworkClassOverview", (t) =>
       }
       if (args.bySection) {
         return sectionOverviewSvc(authorizedRefs, Date.now(), {
-          teacherId: isAdminStaff(ctx.auth) ? null : (ctx.auth.userId as string),
+          teacherId: callerHasPermission(ctx.auth, "homework:view_all") ? null : (ctx.auth.userId as string),
         });
       }
       // D-#634: read-scope is broad on purpose (a subject teacher can READ every
@@ -1905,7 +1975,7 @@ builder.queryField("homeworkClassOverview", (t) =>
       // does this class owe, from all its teachers?" — a number no teacher can act
       // on, and a wildly discouraging one. Their own share is the actionable number.
       return classOverviewSvc(authorized, Date.now(), {
-        teacherId: isAdminStaff(ctx.auth) ? null : (ctx.auth.userId as string),
+        teacherId: callerHasPermission(ctx.auth, "homework:view_all") ? null : (ctx.auth.userId as string),
       });
     },
   }),
@@ -1916,14 +1986,14 @@ builder.queryField("homeworkWatchList", (t) =>
   t.field({
     type: WatchListRef,
     description: "Students with ≥3 open/recent resubmissions in a rolling 2-week window (§7.3). Read-scope enforced.",
-    authScopes: { hasPermission: "tracker:read" },
+    authScopes: { hasPermission: "homework:view" },
     args: {
       sectionId: t.arg.string({ required: true }),
       classId: t.arg.string({ required: true }),
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanRead(ctx, args.sectionId, args.classId);
+      await assertCanRead(ctx, args.sectionId, args.classId, undefined, HW_READ);
       return watchListSvc(args.classId, Date.now(), args.sectionId); // D-#770: the section's own
     },
   }),
@@ -1934,7 +2004,7 @@ builder.queryField("homeworkTrimPattern", (t) =>
   t.field({
     type: TrimPatternRef,
     description: "Per-subject trim-pattern flags over a date range (month). Read-scope enforced.",
-    authScopes: { hasPermission: "tracker:read" },
+    authScopes: { hasPermission: "homework:view" },
     args: {
       sectionId: t.arg.string({ required: true }),
       classId: t.arg.string({ required: true }),
@@ -1943,7 +2013,7 @@ builder.queryField("homeworkTrimPattern", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanRead(ctx, args.sectionId, args.classId);
+      await assertCanRead(ctx, args.sectionId, args.classId, undefined, HW_READ);
       // Class-keyed on purpose: the reconciliation row is one per class per day (D-#731).
       return trimPatternSvc(args.classId, new Date(args.from).getTime(), new Date(args.to).getTime());
     },
@@ -1955,14 +2025,14 @@ builder.queryField("questionUsageFeed", (t) =>
   t.field({
     type: QuestionUsageRef,
     description: "De-identified per-question Pool usage counts for a class (§8.4). Read-scope enforced.",
-    authScopes: { hasPermission: "tracker:read" },
+    authScopes: { hasPermission: "homework:view" },
     args: {
       sectionId: t.arg.string({ required: true }),
       classId: t.arg.string({ required: true }),
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanRead(ctx, args.sectionId, args.classId);
+      await assertCanRead(ctx, args.sectionId, args.classId, undefined, HW_READ);
       return usageFeedSvc(args.classId, args.sectionId); // D-#770: the section's own
     },
   }),

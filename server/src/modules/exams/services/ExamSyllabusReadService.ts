@@ -7,7 +7,8 @@
  *
  * Scoping, by role:
  *
- *   PRINCIPAL / OFFICE  every row, every status (they are the ones writing them).
+ *   PRINCIPAL / OFFICE  every row, every status (they are the ones writing them) —
+ *                       by `exam_syllabus:view_all` (PM, D-#790), not by role.
  *   TEACHER             every PUBLISHED row of any class they teach (§7.5), with
  *                       their own (class × subject) pairs flagged `isMine`. Their
  *                       own subjects that are NOT yet published are returned as
@@ -21,11 +22,10 @@
  * list is indistinguishable from a broken query.
  */
 import { Types } from "mongoose";
-import { ROUTINE_SUBJECTS, SYLLABUS_FULL_MARKS } from "@scd/shared";
+import { ROUTINE_SUBJECTS, SYLLABUS_FULL_MARKS, callerHasPermission } from "@scd/shared";
 import type { RoutineSubject, SyllabusItemType, SyllabusStatus } from "@scd/shared";
 import type { AppContext } from "../../../context";
 import { ForbiddenError, assertGuardianOfStudent } from "../../../middleware/authz";
-import { isAdminStaff } from "../../foundation/services/RoleScope";
 import { Student } from "../../foundation/models/Student";
 import { Class } from "../../foundation/models/Class";
 import { myTeachingNoteScope } from "../../teaching-notes/services/TeachingNoteService";
@@ -44,6 +44,24 @@ import { ExamClassNote } from "../models/ExamClassNote";
 function assertIds(...ids: string[]): void {
   if (!ids.every((id) => Types.ObjectId.isValid(id))) {
     throw new ForbiddenError("পরীক্ষা ও শ্রেণি নির্বাচন করুন");
+  }
+}
+
+/** Sees every status, drafts included (PM, D-#790; was isAdminStaff): `exam_syllabus:view_all`. */
+export function seesSyllabusDrafts(auth: AppContext["auth"]): boolean {
+  return !!auth && auth.role !== "GUARDIAN" && callerHasPermission(auth, "exam_syllabus:view_all");
+}
+
+/**
+ * The staff read gate on the authenticated syllabus reads: `exam_syllabus:view` (or
+ * `:view_all`). A GUARDIAN passes untouched — today's behaviour on these reads (F-10,
+ * a pre-existing gap reproduced, not fixed: their own plane is guardianChildSyllabus).
+ */
+export function assertSyllabusReader(ctx: AppContext): void {
+  if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+  if (ctx.auth.role === "GUARDIAN") return;
+  if (!callerHasPermission(ctx.auth, "exam_syllabus:view") && !seesSyllabusDrafts(ctx.auth)) {
+    throw new ForbiddenError("সিলেবাস দেখার অনুমতি নেই");
   }
 }
 
@@ -265,7 +283,7 @@ async function subjectsTaughtIn(classId: string): Promise<Set<string>> {
 /** The caller's own (classLevel, subject) pairs, as a `level:subject` key set. */
 async function myPairKeys(ctx: AppContext): Promise<Set<string> | null> {
   if (!ctx.auth) return new Set();
-  if (isAdminStaff(ctx.auth)) return null; // unrestricted
+  if (seesSyllabusDrafts(ctx.auth)) return null; // unrestricted
   const pairs = await myTeachingNoteScope(ctx);
   return new Set(pairs.map((p) => `${p.classLevel}:${p.subject}`));
 }
@@ -283,9 +301,10 @@ export async function classSyllabus(
   classId: string,
 ): Promise<ClassSyllabusView> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+  assertSyllabusReader(ctx);
   assertIds(examId, classId);
 
-  const admin = isAdminStaff(ctx.auth);
+  const admin = seesSyllabusDrafts(ctx.auth);
   const publishedOnly = !admin;
 
   const cls = (await Class.findById(classId).select("nameBn level").lean()) as unknown as {
@@ -384,8 +403,9 @@ export async function syllabusDetail(
   subject: RoutineSubject,
 ): Promise<SyllabusShape | null> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+  assertSyllabusReader(ctx);
   assertIds(examId, classId);
-  const admin = isAdminStaff(ctx.auth);
+  const admin = seesSyllabusDrafts(ctx.auth);
 
   const row = (await ExamSyllabus.findOne({ examId, classId, subject }).lean()) as unknown as
     | (Parameters<typeof toShape>[0] & { publishedAt?: Date | null })
@@ -422,8 +442,9 @@ export async function syllabusLevelDetail(
 ): Promise<SyllabusShape | null> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
   if (ctx.auth.role === "GUARDIAN") throw new ForbiddenError("এই সিলেবাস দেখার অনুমতি নেই");
+  assertSyllabusReader(ctx);
   assertIds(examId);
-  const admin = isAdminStaff(ctx.auth);
+  const admin = seesSyllabusDrafts(ctx.auth);
 
   const row = (await ExamSyllabus.findOne({
     examId,
@@ -624,7 +645,7 @@ export async function examSyllabusLevels(
   row: SyllabusShape | null;
 }>> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  if (!isAdminStaff(ctx.auth)) throw new ForbiddenError("সিলেবাস বোর্ড দেখার অনুমতি নেই");
+  if (!seesSyllabusDrafts(ctx.auth)) throw new ForbiddenError("সিলেবাস বোর্ড দেখার অনুমতি নেই");
   assertIds(examId);
 
   const groups = (await SubjectGroup.find({ active: { $ne: false } })
@@ -751,7 +772,7 @@ export async function mySyllabusApprovalCount(ctx: AppContext): Promise<number> 
 
 /**
  * The Principal's coverage board: EVERY class of one exam, each with its
- * subjects. `exam:manage` only — it is the one read that deliberately shows
+ * subjects. `exam_syllabus:view_all` only — it is the one read that deliberately shows
  * unpublished rows across the whole school.
  *
  * ONE pass over the exam's syllabus rows plus ONE class read, rather than a
@@ -763,7 +784,7 @@ export async function examSyllabusBoard(
   examId: string,
 ): Promise<ClassSyllabusView[]> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  if (!isAdminStaff(ctx.auth)) {
+  if (!seesSyllabusDrafts(ctx.auth)) {
     throw new ForbiddenError("সিলেবাস বোর্ড দেখার অনুমতি নেই");
   }
   assertIds(examId);

@@ -145,7 +145,7 @@ async function applyScope(
   docs: LeanArtifact[],
   ctx: import("../../../context").AppContext,
 ): Promise<QuestionArtifactShape[]> {
-  const scope = await buildContentScope(ctx);
+  const scope = await buildContentScope(ctx, "question_bank:view_all");
   return docs
     .filter((doc) => contentScopeAllows(scope, doc.subject, doc.classLevel))
     .map(docToShape);
@@ -159,7 +159,7 @@ builder.queryField("questions", (t) =>
   t.field({
     type: [QuestionArtifactRef],
     description: "Filter questions by any combination of tags (J2.2). TEACHER scope enforced (J2.4).",
-    authScopes: { hasPermission: "question:read" },
+    authScopes: { hasPermission: "question_bank:view" },
     args: {
       subject: t.arg.string({ required: false }),
       classLevel: t.arg.int({ required: false }),
@@ -195,7 +195,7 @@ builder.queryField("questions", (t) =>
        *  the client dedupes appended pages by id). */
       after: t.arg.string({ required: false }),
       /** Show the RETIRED questions instead of the live ones (D-#548) — the only way to
-       *  find one in order to restore it. Honoured for question:manage holders. */
+       *  find one in order to restore it. Honoured for question_bank:delete holders. */
       retired: t.arg.boolean({ required: false }),
       /**
        * Narrow to the questions somebody marked IMPORTANT (QR-9, D-#550), or to the normal
@@ -218,10 +218,10 @@ builder.queryField("questions", (t) =>
 
       // Retired questions (D-#548) are hidden from everyone by default — a soft delete that
       // still showed up in the bank would not be a delete. `retired: true` is the way back
-      // in, so somebody with question:manage can find one and restore it; for anyone else
+      // in, so somebody with question_bank:delete can find one and restore it; for anyone else
       // the argument is ignored rather than refused, since it is not a permission boundary
       // so much as a view nobody else has a use for.
-      const mayManage = callerHasPermission(ctx.auth, "question:manage");
+      const mayManage = callerHasPermission(ctx.auth, "question_bank:delete");
       filter.retiredAt = mayManage && args.retired === true ? { $ne: null } : null;
 
       // The important lens (D-#550). Not a permission boundary and not gated: a teacher
@@ -297,8 +297,8 @@ builder.queryField("questions", (t) =>
       }
 
       // Push TEACHER content-scope INTO the DB query so pagination is correct and we
-      // don't load-then-filter every artifact (J2.4). PRINCIPAL/OFFICE → unrestricted.
-      const scope = await buildContentScope(ctx);
+      // don't load-then-filter every artifact (J2.4). question_bank:view_all → unrestricted.
+      const scope = await buildContentScope(ctx, "question_bank:view_all");
       const scopeFilter = contentScopeMongo(scope);
       if (scopeFilter === null) return []; // caller has no readable content
       if (scopeFilter) ands.push({ $or: scopeFilter.$or });
@@ -326,7 +326,7 @@ builder.queryField("question", (t) =>
     type: QuestionArtifactRef,
     nullable: true,
     description: "Fetch a single question artifact by id with full payload (J2.3).",
-    authScopes: { hasPermission: "question:read" },
+    authScopes: { hasPermission: "question_bank:view" },
     args: {
       id: t.arg.string({ required: true }),
     },
@@ -334,13 +334,15 @@ builder.queryField("question", (t) =>
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       const doc = await ContentArtifact.findById(args.id).lean() as LeanArtifact | null;
       if (!doc || doc.docType !== "question") return null;
-      const scope = await buildContentScope(ctx);
+      const scope = await buildContentScope(ctx, "question_bank:view_all");
       if (!contentScopeAllows(scope, doc.subject, doc.classLevel)) throw new ForbiddenError();
       // Publish gate (Q3.2) — with ONE exception: the assigned reviewer must be able to read
       // exactly the unpublished question they were asked to review. That override is
       // read-only and artifact-scoped; it grants no right to select it into a set (Q5.3).
       if (seesPublishedOnly(ctx.auth) && doc.reviewStatus !== "gold") {
-        const isReviewer = await reviewerMayReadArtifact(ctx.auth.userId, doc._id);
+        const isReviewer =
+          callerHasPermission(ctx.auth, "question_review:review") &&
+          (await reviewerMayReadArtifact(ctx.auth.userId, doc._id));
         if (!isReviewer) return null;
       }
       return docToShape(doc);
@@ -358,7 +360,7 @@ builder.queryField("questionTopicTags", (t) =>
     description:
       "Distinct topic_tag values across readable questions — feeds the bank's topic filter. " +
       "Optionally narrowed by subject/classLevel. TEACHER content scope enforced.",
-    authScopes: { hasPermission: "question:read" },
+    authScopes: { hasPermission: "question_bank:view" },
     args: {
       subject: t.arg.string({ required: false }),
       classLevel: t.arg.int({ required: false }),
@@ -372,7 +374,7 @@ builder.queryField("questionTopicTags", (t) =>
       // An unpublished question must not leak its topic into the filter chips (Q3.1).
       applyQuestionOnlyGate(filter as Record<string, unknown>, ctx.auth);
 
-      const scope = await buildContentScope(ctx);
+      const scope = await buildContentScope(ctx, "question_bank:view_all");
       const scopeFilter = contentScopeMongo(scope);
       if (scopeFilter === null) return [];
       if (scopeFilter) filter.$or = scopeFilter.$or;
@@ -400,7 +402,7 @@ builder.queryField("questionCategories", (t) =>
       "feeds the bank's category filter. Optionally narrowed by subject/classLevel. " +
       "Returns [] where the chosen slice carries no categories, which is how the client " +
       "knows not to render the group at all. TEACHER content scope enforced.",
-    authScopes: { hasPermission: "question:read" },
+    authScopes: { hasPermission: "question_bank:view" },
     args: {
       subject: t.arg.string({ required: false }),
       classLevel: t.arg.int({ required: false }),
@@ -414,7 +416,7 @@ builder.queryField("questionCategories", (t) =>
       // An unpublished question must not leak its category into the filter chips (Q3.1).
       applyQuestionOnlyGate(filter as Record<string, unknown>, ctx.auth);
 
-      const scope = await buildContentScope(ctx);
+      const scope = await buildContentScope(ctx, "question_bank:view_all");
       const scopeFilter = contentScopeMongo(scope);
       if (scopeFilter === null) return [];
       if (scopeFilter) filter.$or = scopeFilter.$or;
@@ -439,7 +441,7 @@ builder.queryField("questionChapters", (t) =>
       "Distinct chapter numbers (the artifact's address.number) across readable questions, " +
       "ascending. Optionally narrowed by subject/classLevel. Feeds the bank's chapter filter; " +
       "an empty result is how the client knows not to render the group. TEACHER scope enforced.",
-    authScopes: { hasPermission: "question:read" },
+    authScopes: { hasPermission: "question_bank:view" },
     args: {
       subject: t.arg.string({ required: false }),
       classLevel: t.arg.int({ required: false }),
@@ -453,7 +455,7 @@ builder.queryField("questionChapters", (t) =>
       // An unpublished question must not leak its chapter into the filter chips (Q3.1).
       applyQuestionOnlyGate(filter as Record<string, unknown>, ctx.auth);
 
-      const scope = await buildContentScope(ctx);
+      const scope = await buildContentScope(ctx, "question_bank:view_all");
       const scopeFilter = contentScopeMongo(scope);
       if (scopeFilter === null) return [];
       if (scopeFilter) filter.$or = scopeFilter.$or;
@@ -478,7 +480,7 @@ builder.queryField("stimuli", (t) =>
     // still `draft` — a silent failure landing on a paper in a child's hand. Stimuli are
     // supporting material, not assessable content. A test asserts this exemption; do not
     // "tidy" it into line with questions().
-    authScopes: { hasPermission: "question:read" },
+    authScopes: { hasPermission: "question_bank:view" },
     args: {
       subject: t.arg.string({ required: false }),
       classLevel: t.arg.int({ required: false }),

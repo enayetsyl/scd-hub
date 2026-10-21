@@ -150,3 +150,40 @@ export const REVOKE_DELEGATION = gql<{ revokeDelegation: boolean }, { grantId: s
     revokeDelegation(grantId: $grantId)
   }
 `;
+
+// ---------------------------------------------------------------------------
+// Role templates (PM, docs/prd-permission-matrix.md §7) — the Roles view.
+// Gated access_control:edit server-side (LOCKED, Principal-only).
+// ---------------------------------------------------------------------------
+
+/** One editable role: the Principal's switches as a delta on the code default. */
+export interface RoleTemplateT {
+  role: string;
+  granted: string[];
+  revoked: string[];
+  permissions: string[];
+  userCount: number;
+}
+
+const ROLE_TEMPLATE_FIELDS = `role granted revoked permissions userCount`;
+
+export const ROLE_TEMPLATES_QUERY = gql<{ roleTemplates: RoleTemplateT[] }, Record<string, never>>`
+  query RoleTemplates {
+    roleTemplates { ${ROLE_TEMPLATE_FIELDS} }
+  }
+`;
+
+export const SET_ROLE_TEMPLATE_PERMISSION = gql<
+  { setRoleTemplatePermission: RoleTemplateT },
+  { role: string; permission: string; enabled: boolean }
+>`
+  mutation SetRoleTemplatePermission($role: String!, $permission: String!, $enabled: Boolean!) {
+    setRoleTemplatePermission(role: $role, permission: $permission, enabled: $enabled) { ${ROLE_TEMPLATE_FIELDS} }
+  }
+`;
+
+export const RESET_ROLE_TEMPLATE = gql<{ resetRoleTemplate: RoleTemplateT }, { role: string }>`
+  mutation ResetRoleTemplate($role: String!) {
+    resetRoleTemplate(role: $role) { ${ROLE_TEMPLATE_FIELDS} }
+  }
+`;

@@ -38,9 +38,15 @@ export default function LibraryHomeScreen({ navigation }: Props): React.ReactEle
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
 
-  const canManage = can("library:manage");
+  // PM catalogue actions (D-#790–#801). The desk = library:lend + (library:edit_all OR
+  // the librarian duty — amILibrarian answers the duty half on the server).
+  const canCatalog = can("library:edit");
+  const canAdmin = can("library:settings") || can("library:assign");
+  const canEditAll = can("library:edit_all");
   const [librarianQ] = useQuery({ query: AM_I_LIBRARIAN_QUERY });
-  const isLibrarian = canManage || (librarianQ.data?.amILibrarian ?? false);
+  const onDuty = canEditAll || (librarianQ.data?.amILibrarian ?? false);
+  const isLibrarian = can("library:lend") && onDuty;
+  const canChase = can("library:remind") && onDuty;
 
   // D-#761: the catalog pages (an empty search used to render every title); a new
   // search or language goes back to page 1.
@@ -52,7 +58,7 @@ export default function LibraryHomeScreen({ navigation }: Props): React.ReactEle
   // D-#761: only the books still out are rendered, so only those are fetched.
   const [loansQ, refetchLoans] = useQuery({ query: MY_LOANS_QUERY, variables: { activeOnly: true } });
   const [resvQ, refetchResv] = useQuery({ query: MY_RESERVATIONS_QUERY });
-  const [chaseQ] = useQuery({ query: LIBRARY_CHASE_LIST_QUERY, pause: !isLibrarian });
+  const [chaseQ] = useQuery({ query: LIBRARY_CHASE_LIST_QUERY, pause: !canChase });
   const [, cancelResv] = useMutation(CANCEL_RESERVATION);
 
   const myLoans = (loansQ.data?.myLoans ?? []).filter((l) => l.status === "ACTIVE");
@@ -78,14 +84,14 @@ export default function LibraryHomeScreen({ navigation }: Props): React.ReactEle
       {ok ? <Notice message={ok} tone="ok" /> : null}
       {error ? <Notice message={error} tone="danger" /> : null}
 
-      {/* Desk + manage entries (librarian / library:manage only) */}
-      {isLibrarian || canManage ? (
+      {/* Desk + manage entries (librarian desk / library:edit / settings+assign) */}
+      {isLibrarian || canCatalog || canAdmin ? (
         <View style={{ gap: space(2), marginBottom: space(3) }}>
           {isLibrarian ? <Button title={STR.libDesk} onPress={() => navigation.navigate("LibraryDesk")} /> : null}
-          {canManage ? (
+          {canCatalog ? (
             <Button title={STR.libCatalogManage} variant="secondary" onPress={() => navigation.navigate("CatalogManage")} />
           ) : null}
-          {canManage ? (
+          {canAdmin ? (
             <Button title={STR.libAdmin} variant="secondary" onPress={() => navigation.navigate("LibraryAdmin")} />
           ) : null}
         </View>
@@ -126,7 +132,7 @@ export default function LibraryHomeScreen({ navigation }: Props): React.ReactEle
       ))}
 
       {/* Overdue chase list (LB-5, J-L8 — librarians only; ADR-003 manual wa.me) */}
-      {isLibrarian ? (
+      {canChase ? (
         <>
           <Body style={{ fontWeight: "700", marginTop: space(3), marginBottom: space(1) }}>{STR.libChaseList}</Body>
           {(chaseQ.data?.libraryChaseList ?? []).length === 0 ? (

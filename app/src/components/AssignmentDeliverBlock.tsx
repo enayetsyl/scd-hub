@@ -48,7 +48,7 @@ export function AssignmentDeliverBlock({
 }): React.ReactElement | null {
   const toast = useToast();
   const { can } = useAuth();
-  const eligible = slot.groupType === "section" && !!slot.classId && can("tracker:write");
+  const eligible = slot.groupType === "section" && !!slot.classId && can("assignment:declare");
 
   const [cellQ, refetchCell] = useQuery({
     query: ASSIGNMENT_CELL_FOR_SLOT,

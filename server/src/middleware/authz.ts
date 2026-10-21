@@ -11,7 +11,7 @@
  */
 
 import type { AppContext } from "../context";
-import type { DelegatedAction } from "@scd/shared";
+import { callerHasPermission, type DelegatedAction, type Permission } from "@scd/shared";
 import {
   composeTeacherScope,
   canRead,
@@ -34,6 +34,33 @@ export class ForbiddenError extends Error {
     super(msg);
     this.name = "ForbiddenError";
   }
+}
+
+/** PM reach (docs/prd-permission-matrix.md §5.4, D-#793): the catalogue action that lifts
+ *  the row limit for THIS feature — `<feature>:view_all` on reads, `<feature>:edit_all` on
+ *  writes. Passing it replaces the role bypass (isAdminStaff on reads; PRINCIPAL-pass /
+ *  OFFICE-refuse on writes) with "does the caller hold this action". Omitting it keeps the
+ *  pre-matrix role behaviour exactly, so call sites move over one at a time. */
+export interface Reach {
+  viewAll?: Permission;
+  editAll?: Permission;
+}
+
+/** True when the caller holds the reach action named for this gate. */
+function holdsReach(ctx: AppContext, perm: Permission | undefined): boolean {
+  return !!perm && !!ctx.auth && ctx.auth.role !== "GUARDIAN" && callerHasPermission(ctx.auth, perm);
+}
+
+/** The pre-matrix role bypass on a WRITE gate: PRINCIPAL passes, OFFICE/GUARDIAN refused.
+ *  With `reach.editAll`, the action decides instead (and nobody is refused by role alone). */
+function writeBypass(ctx: AppContext, reach: Reach | undefined): "pass" | "refuse" | "scopes" {
+  if (reach?.editAll) {
+    if (holdsReach(ctx, reach.editAll)) return "pass";
+    return !ctx.auth || ctx.auth.role === "GUARDIAN" ? "refuse" : "scopes";
+  }
+  if (ctx.auth?.role === "PRINCIPAL") return "pass";
+  if (ctx.auth?.role === "OFFICE" || ctx.auth?.role === "GUARDIAN") return "refuse";
+  return "scopes";
 }
 
 /** Pure predicate: is `userId` the section's assigned class teacher? */
@@ -92,8 +119,9 @@ export async function assertCanRead(
   sectionId: string,
   classId: string,
   subjectId?: string,
+  reach?: Reach,
 ): Promise<void> {
-  if (isAdminStaff(ctx.auth)) return;
+  if (reach?.viewAll ? holdsReach(ctx, reach.viewAll) : isAdminStaff(ctx.auth)) return;
   if (ctx.auth?.role === "GUARDIAN") throw new ForbiddenError();
   const scopes = await resolveTeacherScopes(ctx);
   const realClassId = await readClassIdFor(scopes, sectionId, classId);
@@ -125,10 +153,12 @@ export async function allowedSubjectCodesForSection(
      *  decision 2026-07-19: checking queue + class notes are subject-scoped for
      *  EVERY teacher; Principal/Office/supervisors stay unrestricted). */
     classTeacherOversight?: boolean;
+    /** PM reach: the feature's view_all action replaces the isAdminStaff shortcut. */
+    viewAll?: Permission;
   },
 ): Promise<Set<string> | null> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  if (isAdminStaff(ctx.auth)) return null;
+  if (opts?.viewAll ? holdsReach(ctx, opts.viewAll) : isAdminStaff(ctx.auth)) return null;
   if (ctx.auth.role === "GUARDIAN") throw new ForbiddenError();
 
   const userId = ctx.auth.userId as string;
@@ -198,9 +228,11 @@ export async function assertCanWrite(
   sectionId: string,
   subjectId?: string,
   action?: DelegatedAction,
+  reach?: Reach,
 ): Promise<void> {
-  if (ctx.auth?.role === "PRINCIPAL") return;
-  if (ctx.auth?.role === "OFFICE" || ctx.auth?.role === "GUARDIAN") throw new ForbiddenError();
+  const bypass = writeBypass(ctx, reach);
+  if (bypass === "pass") return;
+  if (bypass === "refuse") throw new ForbiddenError();
   const scopes = await resolveTeacherScopes(ctx);
   // The class-shaped extents (grade_class / explicit_set) are the only ones that need
   // the section's class, so the lookup is lazy — a caller holding no such delegation
@@ -234,9 +266,11 @@ export async function assertCanWriteAny(
   sectionId: string,
   subjectId: string | undefined,
   actions: readonly DelegatedAction[],
+  reach?: Reach,
 ): Promise<void> {
-  if (ctx.auth?.role === "PRINCIPAL") return;
-  if (ctx.auth?.role === "OFFICE" || ctx.auth?.role === "GUARDIAN") throw new ForbiddenError();
+  const bypass = writeBypass(ctx, reach);
+  if (bypass === "pass") return;
+  if (bypass === "refuse") throw new ForbiddenError();
   const scopes = await resolveTeacherScopes(ctx);
   // One Section lookup at most, shared across every action tried — the class is a
   // property of the section, not of the duty being asked about.

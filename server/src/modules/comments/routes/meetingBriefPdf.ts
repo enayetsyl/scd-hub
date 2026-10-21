@@ -5,7 +5,7 @@
  *
  * One child, or every child of a family slot, on A4: the numbers, the Principal's/Office's
  * final word and the class teacher's summary always; the subject teachers' table and the
- * detail lists when asked. The brief gate (roster:manage, or the child's class teacher)
+ * detail lists when asked. The brief gate (parents_meeting:view_brief + parents_meeting:view, or the child's class teacher)
  * is re-asserted here for EVERY child — a route is a second front door. The footer stamps
  * who printed it (a sheet handed to a guardian must be traceable, the D-#360 rule).
  * Streamed, never stored.
@@ -40,7 +40,13 @@ meetingBriefPdfRouter.get("/:meetingId", async (req: Request, res: Response) => 
     res.status(400).json({ error: "meetingId and 1–8 student ids are required" });
     return;
   }
-  const actor = { userId: ctx.auth.userId as string, isAdmin: callerHasPermission(ctx.auth, "roster:manage") };
+  // PM: the brief needs parents_meeting:view_brief; parents_meeting:view lifts the
+  // class-teacher designation (was roster:manage).
+  if (!callerHasPermission(ctx.auth, "parents_meeting:view_brief")) {
+    res.status(403).json({ error: "Requires parents_meeting:view_brief" });
+    return;
+  }
+  const actor = { userId: ctx.auth.userId as string, isAdmin: callerHasPermission(ctx.auth, "parents_meeting:view") };
   try {
     for (const id of ids) await assertBriefRead(actor, id);
   } catch (err) {

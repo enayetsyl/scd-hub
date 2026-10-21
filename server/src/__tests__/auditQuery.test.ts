@@ -46,6 +46,9 @@ describe("RBAC — audit:read is Principal-only", () => {
   test("exact holder set is [PRINCIPAL]", () => {
     expect(ROLES.filter((r) => roleHasPermission(r, "audit:read"))).toEqual(["PRINCIPAL"]);
   });
+  test("the resolver rides audit_log:view — Principal-only by default (PM)", () => {
+    expect(ROLES.filter((r) => roleHasPermission(r, "audit_log:view"))).toEqual(["PRINCIPAL"]);
+  });
 });
 
 describe("auditLog read", () => {

@@ -30,11 +30,18 @@ import {
 } from "../services/TrackerService";
 import { AssessmentSet } from "../../assessment/models/AssessmentSet";
 import { TrackerRecord } from "../models/TrackerRecord";
-import { assertCanWrite, assertCanRead, ForbiddenError } from "../../../middleware/authz";
+import { assertCanWrite, assertCanRead, ForbiddenError, type Reach } from "../../../middleware/authz";
 import type { Types, FlattenMaps } from "mongoose";
 import type { ITrackerRecord, TrackerEntry } from "../models/TrackerRecord";
 
 type LeanTracker = FlattenMaps<ITrackerRecord> & { _id: Types.ObjectId };
+
+/** PM reach (trackers-classtest.md): `set_tracker:view_all` replaces the isAdminStaff read
+ *  bypass, `set_tracker:edit_all` (Principal by default) the PRINCIPAL write bypass. */
+const SET_TRACKER_REACH: Reach = {
+  viewAll: "set_tracker:view_all",
+  editAll: "set_tracker:edit_all",
+};
 
 // ---------------------------------------------------------------------------
 // Shape types for Pothos
@@ -194,7 +201,7 @@ builder.mutationField("openTracker", (t) =>
   t.field({
     type: OpenTrackerResultRef,
     description: "Open a new tracker session for an assembled set. Requires write-scope (J4.5).",
-    authScopes: { hasPermission: "tracker:write" },
+    authScopes: { hasPermission: "set_tracker:enter_results" },
     args: {
       setId: t.arg.string({ required: true }),
       sectionId: t.arg.string({ required: true }),
@@ -206,6 +213,8 @@ builder.mutationField("openTracker", (t) =>
         ctx,
         args.sectionId,
         setDoc?.subjectId ? setDoc.subjectId.toString() : undefined,
+        undefined,
+        SET_TRACKER_REACH,
       );
       return openTrackerSvc(args.setId, args.sectionId, ctx.auth.userId as string);
     },
@@ -220,7 +229,7 @@ builder.mutationField("recordEntry", (t) =>
   t.field({
     type: RecordEntryResultRef,
     description: "Record or update one student entry in an open tracker. Write-scope enforced (J4.5).",
-    authScopes: { hasPermission: "tracker:write" },
+    authScopes: { hasPermission: "set_tracker:enter_results" },
     args: {
       trackerId: t.arg.string({ required: true }),
       studentId: t.arg.string({ required: true }),
@@ -240,6 +249,8 @@ builder.mutationField("recordEntry", (t) =>
         ctx,
         trackerDoc.sectionId.toString(),
         trackerDoc.subjectId ? trackerDoc.subjectId.toString() : undefined,
+        undefined,
+        SET_TRACKER_REACH,
       );
 
       return recordEntrySvc({
@@ -290,7 +301,7 @@ builder.mutationField("recordEntries", (t) =>
     type: RecordEntriesResultRef,
     description:
       "Batch record/update/clear student entries in an open tracker with one save. Write-scope enforced (J4.5).",
-    authScopes: { hasPermission: "tracker:write" },
+    authScopes: { hasPermission: "set_tracker:enter_results" },
     args: {
       trackerId: t.arg.string({ required: true }),
       entries: t.arg({ type: [TrackerEntryInput], required: true }),
@@ -304,6 +315,8 @@ builder.mutationField("recordEntries", (t) =>
         ctx,
         trackerDoc.sectionId.toString(),
         trackerDoc.subjectId ? trackerDoc.subjectId.toString() : undefined,
+        undefined,
+        SET_TRACKER_REACH,
       );
 
       return recordEntriesSvc({
@@ -329,7 +342,7 @@ builder.mutationField("closeTracker", (t) =>
   t.field({
     type: CloseTrackerResultRef,
     description: "Seal an open tracker. Write-scope enforced (J4.5).",
-    authScopes: { hasPermission: "tracker:write" },
+    authScopes: { hasPermission: "set_tracker:enter_results" },
     args: {
       trackerId: t.arg.string({ required: true }),
     },
@@ -342,6 +355,8 @@ builder.mutationField("closeTracker", (t) =>
         ctx,
         trackerDoc.sectionId.toString(),
         trackerDoc.subjectId ? trackerDoc.subjectId.toString() : undefined,
+        undefined,
+        SET_TRACKER_REACH,
       );
 
       return closeTrackerSvc(args.trackerId);
@@ -358,7 +373,7 @@ builder.queryField("tracker", (t) =>
     type: TrackerRecordRef,
     nullable: true,
     description: "Fetch a tracker record by id. Read-scope enforced.",
-    authScopes: { hasPermission: "tracker:read" },
+    authScopes: { hasPermission: "set_tracker:view" },
     args: {
       id: t.arg.string({ required: true }),
     },
@@ -366,7 +381,7 @@ builder.queryField("tracker", (t) =>
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       const doc = await TrackerRecord.findById(args.id).lean() as LeanTracker | null;
       if (!doc) return null;
-      await assertCanRead(ctx, doc.sectionId.toString(), doc.classId.toString());
+      await assertCanRead(ctx, doc.sectionId.toString(), doc.classId.toString(), undefined, SET_TRACKER_REACH);
       return trackerToShape(doc);
     },
   }),
@@ -380,7 +395,7 @@ builder.queryField("trackers", (t) =>
   t.field({
     type: [TrackerRecordRef],
     description: "List tracker records for a section. Optional filters: kind / setId / status (J4.4).",
-    authScopes: { hasPermission: "tracker:read" },
+    authScopes: { hasPermission: "set_tracker:view" },
     args: {
       sectionId: t.arg.string({ required: true }),
       classId: t.arg.string({ required: true }),
@@ -390,7 +405,7 @@ builder.queryField("trackers", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanRead(ctx, args.sectionId, args.classId);
+      await assertCanRead(ctx, args.sectionId, args.classId, undefined, SET_TRACKER_REACH);
 
       const docs = await listTrackers({
         sectionId: args.sectionId,
@@ -411,7 +426,7 @@ builder.queryField("trackersPage", (t) =>
   t.field({
     type: TrackerRecordPageRef,
     description: "trackers, one page at a time, newest first (D-#761). Same filters + read scope.",
-    authScopes: { hasPermission: "tracker:read" },
+    authScopes: { hasPermission: "set_tracker:view" },
     args: {
       sectionId: t.arg.string({ required: true }),
       classId: t.arg.string({ required: true }),
@@ -423,7 +438,7 @@ builder.queryField("trackersPage", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanRead(ctx, args.sectionId, args.classId);
+      await assertCanRead(ctx, args.sectionId, args.classId, undefined, SET_TRACKER_REACH);
       return listTrackersPage(
         {
           sectionId: args.sectionId,
@@ -447,7 +462,7 @@ builder.queryField("trackerSummary", (t) =>
     type: TrackerSummaryRef,
     nullable: true,
     description: "Aggregate stats for a tracker record (total entries, submitted, complete, avg score).",
-    authScopes: { hasPermission: "tracker:read" },
+    authScopes: { hasPermission: "set_tracker:view" },
     args: {
       trackerId: t.arg.string({ required: true }),
     },
@@ -456,7 +471,7 @@ builder.queryField("trackerSummary", (t) =>
 
       const doc = await TrackerRecord.findById(args.trackerId).lean() as LeanTracker | null;
       if (!doc) return null;
-      await assertCanRead(ctx, doc.sectionId.toString(), doc.classId.toString());
+      await assertCanRead(ctx, doc.sectionId.toString(), doc.classId.toString(), undefined, SET_TRACKER_REACH);
 
       return getTrackerSummary(args.trackerId);
     },
@@ -472,7 +487,7 @@ builder.queryField("waLink", (t) =>
     type: "String",
     description:
       "Build a wa.me deep link for a non-submitter. Pure function — no dispatch (J4.2, ADR-003).",
-    authScopes: { hasPermission: "message:dispatch" },
+    authScopes: { hasPermission: "set_tracker:remind" },
     args: {
       guardianPhone: t.arg.string({ required: true }),
       studentName: t.arg.string({ required: true }),

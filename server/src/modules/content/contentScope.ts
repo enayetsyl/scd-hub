@@ -13,13 +13,14 @@
  * Built ONCE per request (the teacher's grants + Subject/Class id→code/level maps), then
  * checked per artifact — no per-doc DB hit.
  */
+import { callerHasPermission, type Permission } from "@scd/shared";
 import type { AppContext } from "../../context";
 import { resolveTeacherScopes } from "../../middleware/authz";
 import { Subject } from "../foundation/models/Subject";
 import { Class } from "../foundation/models/Class";
 
 export interface ContentScope {
-  /** Sees everything (PRINCIPAL/OFFICE, or a whole_school supervisory grant). */
+  /** Sees everything (holds the read's `view_all` action, or a whole_school supervisory grant). */
   all: boolean;
   /** subject_dept supervisory — these subject codes, across any class. */
   subjects: Set<string>;
@@ -31,14 +32,20 @@ export interface ContentScope {
 
 const key = (subjectCode: string, classLevel: number): string => `${subjectCode}|${classLevel}`;
 
-export async function buildContentScope(ctx: AppContext): Promise<ContentScope> {
+/**
+ * `viewAll` is the action that lifts the row limit for THIS read (PM, D-#790; was the
+ * PRINCIPAL/OFFICE primary role): `lesson_plans:view_all` on the plan reads,
+ * `question_bank:view_all` on the question reads. Template- and grant-aware, so a
+ * teacher who also wears the OFFICE template now gets the lift (2H, F-27).
+ */
+export async function buildContentScope(ctx: AppContext, viewAll: Permission): Promise<ContentScope> {
   const scope: ContentScope = { all: false, subjects: new Set(), classLevels: new Set(), pairs: new Set() };
   const role = ctx.auth?.role;
-  if (role === "PRINCIPAL" || role === "OFFICE") {
+  if (!ctx.auth || role === "GUARDIAN") return scope; // default-deny
+  if (callerHasPermission(ctx.auth, viewAll)) {
     scope.all = true;
     return scope;
   }
-  if (!ctx.auth || role === "GUARDIAN") return scope; // default-deny
 
   const scopes = await resolveTeacherScopes(ctx);
   const [subjects, classes] = await Promise.all([
@@ -100,7 +107,7 @@ export function contentScopeAllows(scope: ContentScope, subjectCode: string, cla
  * Push the content scope INTO a Mongo query as an `$or` on ContentArtifact's
  * `(subject, classLevel)` — so a paginated/large read can be scoped in the DB
  * (skip/limit works, no per-doc post-filter loop). Returns:
- *   • `undefined` — unrestricted (PRINCIPAL/OFFICE/whole_school): add nothing.
+ *   • `undefined` — unrestricted (`view_all` holder / whole_school): add nothing.
  *   • `null`      — the caller sees NOTHING: the query should return [].
  *   • `{ $or }`   — merge into the filter (`filter.$or = result.$or`).
  */

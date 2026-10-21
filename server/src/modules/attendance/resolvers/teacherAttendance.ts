@@ -1,6 +1,6 @@
 /**
  * Teacher-attendance resolvers (AT-1, D-#63/#67) — the daily biometric Excel
- * snapshot ingest + its read side. All gated `attendance:manage` (Principal/
+ * snapshot ingest + its read side. Gated `staff_attendance:upload` / `:view_all` (Principal/
  * Office): teachers don't see each other's attendance (§11).
  *
  *   previewTeacherAttendanceImport — parse + name-match, nothing persisted (AT1.6)
@@ -132,8 +132,8 @@ builder.mutationField("previewTeacherAttendanceImport", (t) =>
     type: ImportPreviewRef,
     description:
       "Parse an uploaded Employee Attendance Report (.xlsx, base64) and name-match its rows. " +
-      "Persists nothing — the commit step writes (AT1.6). Requires attendance:manage.",
-    authScopes: { hasPermission: "attendance:manage" },
+      "Persists nothing — the commit step writes (AT1.6). Requires staff_attendance:upload.",
+    authScopes: { hasPermission: "staff_attendance:upload" },
     args: {
       fileBase64: t.arg.string({ required: true }),
     },
@@ -147,8 +147,8 @@ builder.mutationField("commitTeacherAttendanceImport", (t) =>
     description:
       "Commit the snapshot: alias mappings are remembered (AT1.2), every row must be matched or " +
       "explicitly ignored (no silent drop), and the date's rows are replaced wholesale (AT1.5). " +
-      "Audited as ATTENDANCE_IMPORTED. Requires attendance:manage.",
-    authScopes: { hasPermission: "attendance:manage" },
+      "Audited as ATTENDANCE_IMPORTED. Requires staff_attendance:upload.",
+    authScopes: { hasPermission: "staff_attendance:upload" },
     args: {
       fileBase64: t.arg.string({ required: true }),
       mappings: t.arg({ type: [AliasMappingInput], required: false }),
@@ -173,8 +173,8 @@ builder.mutationField("commitTeacherAttendanceImport", (t) =>
 builder.queryField("teacherAttendanceForDate", (t) =>
   t.field({
     type: [TeacherDayRecordRef],
-    description: "The imported staff roster for a date (§8). Requires attendance:manage.",
-    authScopes: { hasPermission: "attendance:manage" },
+    description: "The imported staff roster for a date (§8). Requires staff_attendance:view_all.",
+    authScopes: { hasPermission: "staff_attendance:view_all" },
     args: { dateKey: t.arg.string({ required: true }) },
     resolve: async (_root, args) => teacherAttendanceForDate(args.dateKey),
   }),
@@ -188,8 +188,8 @@ builder.queryField("myStaffAttendance", (t) =>
       "✘=ABSENT → LEAVE overlay applied (HR-2). Own-row self-service: the caller's " +
       "StaffProfile is the phone-link (staffMatch, fail-closed on a shared phone); a caller " +
       "with no linked StaffProfile gets an empty list, never another person's days. No " +
-      "permission (the staff-self path; admins use teacherAttendance* with attendance:manage).",
-    authScopes: { authenticated: true },
+      "permission beyond the SELF staff_attendance:view_own (admins use teacherAttendance* with staff_attendance:view_all).",
+    authScopes: { hasPermission: "staff_attendance:view_own" },
     args: {
       fromKey: t.arg.string({ required: true }),
       toKey: t.arg.string({ required: true }),
@@ -206,8 +206,8 @@ builder.queryField("myStaffAttendance", (t) =>
 builder.queryField("teacherAttendanceImports", (t) =>
   t.field({
     type: [ImportedDateRef],
-    description: "Imported dates, newest first (AT1.6 past-uploads list). Requires attendance:manage.",
-    authScopes: { hasPermission: "attendance:manage" },
+    description: "Imported dates, newest first (AT1.6 past-uploads list). Requires staff_attendance:upload.",
+    authScopes: { hasPermission: "staff_attendance:upload" },
     resolve: async () => importedDates(),
   }),
 );
@@ -218,8 +218,8 @@ const ImportedDatePageRef = pageRef("TeacherAttendanceImportedDatePage", Importe
 builder.queryField("teacherAttendanceImportsPage", (t) =>
   t.field({
     type: ImportedDatePageRef,
-    description: "One page of imported dates, newest first (D-#761). Requires attendance:manage.",
-    authScopes: { hasPermission: "attendance:manage" },
+    description: "One page of imported dates, newest first (D-#761). Requires staff_attendance:upload.",
+    authScopes: { hasPermission: "staff_attendance:upload" },
     args: { page: t.arg.int({ required: false }), pageSize: t.arg.int({ required: false }) },
     resolve: async (_root, args) => importedDatesPage(args),
   }),
@@ -228,8 +228,8 @@ builder.queryField("teacherAttendanceImportsPage", (t) =>
 builder.queryField("teacherAttendanceSummary", (t) =>
   t.field({
     type: [StaffSummaryRef],
-    description: "Per-staff attendance counts + % over [fromKey, toKey] (§8/O4). Requires attendance:manage.",
-    authScopes: { hasPermission: "attendance:manage" },
+    description: "Per-staff attendance counts + % over [fromKey, toKey] (§8/O4). Requires staff_attendance:view_all.",
+    authScopes: { hasPermission: "staff_attendance:view_all" },
     args: {
       fromKey: t.arg.string({ required: true }),
       toKey: t.arg.string({ required: true }),

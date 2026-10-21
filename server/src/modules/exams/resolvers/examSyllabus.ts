@@ -5,12 +5,12 @@
  *   examSyllabusDetail      — authenticated; one subject; refuses unpublished to staff readers.
  *   guardianChildSyllabus   — guardian:read_child; the linked child's class, PUBLISHED only.
  *   mySyllabusApprovals     — authenticated; the teacher's "waiting on you" list + drawer badge.
- *   examSyllabusApprover    — exam:manage; who the routine says teaches this pair.
- *   saveExamSyllabus        — exam:manage
- *   submitExamSyllabus      — exam:manage
+ *   examSyllabusApprover    — exam_syllabus:edit; who the routine says teaches this pair.
+ *   saveExamSyllabus        — exam_syllabus:edit
+ *   submitExamSyllabus      — exam_syllabus:edit
  *   approveExamSyllabus     — authenticated; gated to the NAMED routine holder in the service (D-#533)
  *   sendBackExamSyllabus    — authenticated; gated per stage in the service
- *   publishExamSyllabus     — exam:manage + PRINCIPAL role, enforced in the service (§7.4)
+ *   publishExamSyllabus     — exam_syllabus:publish (PRINCIPAL-DEFAULT), re-checked in the service (§7.4)
  *
  * `approveExamSyllabus` deliberately carries only `authenticated: true`: the
  * authority is "do you teach this class × subject in the routine", which is a row
@@ -199,9 +199,9 @@ builder.queryFields((t) => ({
   examSyllabusBoard: t.field({
     type: [ClassSyllabusRef],
     description:
-      "Every class of one exam with its subjects — the Principal's coverage board. exam:manage " +
+      "Every class of one exam with its subjects — the Principal's coverage board. exam_syllabus:view_all " +
       "only: it is the one read that deliberately shows unpublished rows school-wide.",
-    authScopes: { hasPermission: "exam:manage" },
+    authScopes: { hasPermission: "exam_syllabus:view_all" },
     args: { examId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => examSyllabusBoard(ctx, args.examId),
   }),
@@ -226,7 +226,7 @@ builder.queryFields((t) => ({
       "Every Quran/Arabic level that has students, with its syllabus row — the level counterpart " +
       "of the class board. These subjects are taught in cross-grade level groups from class one " +
       "up, so they do not appear on any single class's board (D-#688).",
-    authScopes: { hasPermission: "exam:manage" },
+    authScopes: { hasPermission: "exam_syllabus:view_all" },
     args: { examId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => examSyllabusLevels(ctx, args.examId),
   }),
@@ -284,7 +284,7 @@ builder.queryFields((t) => ({
       "Quran/Arabic LEVEL. Most periods first (§7.1). Asking the class question about a level " +
       "would offer every Quran and Arabic teacher in the school, because a `subjectgroup` slot " +
       "carries no class.",
-    authScopes: { hasPermission: "exam:manage" },
+    authScopes: { hasPermission: "exam_syllabus:edit" },
     args: {
       classId: t.arg.string({ required: false }),
       subject: t.arg.string({ required: true }),
@@ -315,7 +315,7 @@ builder.mutationFields((t) => ({
       "under each class's table. Upserted, and deliberately NOT gated on the syllabus status " +
       "machine: it is a statement of exam FORMAT, not of what a teacher must cover, so it stays " +
       "editable after the class's first subject reaches PRINCIPAL_REVIEW.",
-    authScopes: { hasPermission: "exam:manage" },
+    authScopes: { hasPermission: "exam_syllabus:edit" },
     args: {
       examId: t.arg.string({ required: true }),
       classId: t.arg.string({ required: true }),
@@ -338,7 +338,7 @@ builder.mutationFields((t) => ({
     description:
       "Create or update one syllabus row. Refuses Σ marks ≠ 100 and mojibake. A CONTENT edit to an " +
       "already-approved row returns it to DRAFT and clears the teacher's sign-off (§7.3).",
-    authScopes: { hasPermission: "exam:manage" },
+    authScopes: { hasPermission: "exam_syllabus:edit" },
     args: {
       examId: t.arg.string({ required: true }),
       classId: t.arg.string({ required: false }),
@@ -381,7 +381,7 @@ builder.mutationFields((t) => ({
     description:
       "DRAFT → TEACHER_REVIEW. `approverUserId` must be a ROUTINE holder of the pair; omit it to " +
       "take the default (most periods, §7.1).",
-    authScopes: { hasPermission: "exam:manage" },
+    authScopes: { hasPermission: "exam_syllabus:edit" },
     args: {
       id: t.arg.string({ required: true }),
       approverUserId: t.arg.string({ required: false }),
@@ -399,7 +399,7 @@ builder.mutationFields((t) => ({
       "The alternative was send-back → re-submit, which recorded an ordinary staffing change as " +
       "a rejection of the first teacher's work. Refused once the teacher has signed off: that " +
       "would hand their approval to somebody who never read it.",
-    authScopes: { hasPermission: "exam:manage" },
+    authScopes: { hasPermission: "exam_syllabus:edit" },
     args: {
       id: t.arg.string({ required: true }),
       approverUserId: t.arg.string({ required: true }),
@@ -441,8 +441,8 @@ builder.mutationFields((t) => ({
     type: SyllabusRef,
     description:
       "PRINCIPAL_REVIEW → PUBLISHED. Sets publishedAt, the ONE guardian-visible predicate. Office " +
-      "holds exam:manage and is still refused — publish rides the PRINCIPAL role (§7.4).",
-    authScopes: { hasPermission: "exam:manage" },
+      "holds exam_syllabus:edit and is still refused — publish is exam_syllabus:publish, PRINCIPAL-DEFAULT (§7.4).",
+    authScopes: { hasPermission: "exam_syllabus:publish" },
     args: { id: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       const doc = await publishSyllabus(ctx, args.id);

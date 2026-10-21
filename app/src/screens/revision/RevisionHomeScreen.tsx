@@ -33,7 +33,7 @@ export function mostRecentSaturday(from: Date = new Date()): string {
 export default function RevisionHomeScreen(): React.ReactElement {
   const nav = useNavigation<Nav>();
   const { role, can } = useAuth();
-  const canManage = can("roster:manage");
+  const canManage = can("saturday_revision:view_all"); // PM: the dashboard is view_all-gated on the server
   const [date, setDate] = useState(mostRecentSaturday());
 
   const [groupsQ, refetchGroups] = useQuery({ query: MY_REVISION_GROUPS_QUERY });

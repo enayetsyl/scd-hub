@@ -26,7 +26,12 @@ type Props = NativeStackScreenProps<AttendanceStackParamList, "AttendanceHome">;
 export default function AttendanceHomeScreen({ navigation }: Props): React.ReactElement {
   const { role, can } = useAuth();
   const canMark = can("attendance:mark");
-  const canManage = can("attendance:manage");
+  // PM catalogue actions (D-#790–#801) — each admin card follows the action its
+  // screen's server gate checks (the old attendance:manage covered all four).
+  const canAmend = can("attendance:edit");
+  const canUpload = can("staff_attendance:upload");
+  const canReport = can("attendance:view_all") || can("staff_attendance:view_all");
+  const canAssign = can("attendance:assign");
   // Follows the real date (a tab left open overnight used to keep yesterday's), unless
   // the teacher deliberately picked another day.
   const today = useTodayKey();
@@ -43,26 +48,30 @@ export default function AttendanceHomeScreen({ navigation }: Props): React.React
 
   return (
     <Screen scroll>
-      {canManage ? (
-        <>
-          {/* D-#292: mark/amend ANY class for ANY (past) day — the admin escape hatch. */}
-          <Card onPress={() => navigation.navigate("AttendanceAdmin")}>
-            <Body style={{ fontWeight: "700" }}>🗓️ {STR.attAdminTitle}</Body>
-            <Muted>{STR.attAdminHint}</Muted>
-          </Card>
-          <Card onPress={() => navigation.navigate("TeacherAttendanceImport")}>
-            <Body style={{ fontWeight: "700" }}>📥 {STR.attUploadTitle}</Body>
-            <Muted>{STR.attUploadHint}</Muted>
-          </Card>
-          <Card onPress={() => navigation.navigate("AttendanceReport")}>
-            <Body style={{ fontWeight: "700" }}>📋 {STR.attReportTitle}</Body>
-            <Muted>{STR.attAbsentNoApp} · {STR.attUnmarkedSections} · {STR.attStaffSummary}</Muted>
-          </Card>
-          <Card onPress={() => navigation.navigate("AssignMarker")}>
-            <Body style={{ fontWeight: "700" }}>👤 {STR.attAssignMarkerTitle}</Body>
-            <Muted>{STR.attActiveAssignments}</Muted>
-          </Card>
-        </>
+      {/* D-#292: mark/amend ANY class for ANY (past) day — the admin escape hatch. */}
+      {canAmend ? (
+        <Card onPress={() => navigation.navigate("AttendanceAdmin")}>
+          <Body style={{ fontWeight: "700" }}>🗓️ {STR.attAdminTitle}</Body>
+          <Muted>{STR.attAdminHint}</Muted>
+        </Card>
+      ) : null}
+      {canUpload ? (
+        <Card onPress={() => navigation.navigate("TeacherAttendanceImport")}>
+          <Body style={{ fontWeight: "700" }}>📥 {STR.attUploadTitle}</Body>
+          <Muted>{STR.attUploadHint}</Muted>
+        </Card>
+      ) : null}
+      {canReport ? (
+        <Card onPress={() => navigation.navigate("AttendanceReport")}>
+          <Body style={{ fontWeight: "700" }}>📋 {STR.attReportTitle}</Body>
+          <Muted>{STR.attAbsentNoApp} · {STR.attUnmarkedSections} · {STR.attStaffSummary}</Muted>
+        </Card>
+      ) : null}
+      {canAssign ? (
+        <Card onPress={() => navigation.navigate("AssignMarker")}>
+          <Body style={{ fontWeight: "700" }}>👤 {STR.attAssignMarkerTitle}</Body>
+          <Muted>{STR.attActiveAssignments}</Muted>
+        </Card>
       ) : null}
 
       {canMark ? (
@@ -104,7 +113,7 @@ export default function AttendanceHomeScreen({ navigation }: Props): React.React
         </>
       ) : null}
 
-      {!canMark && !canManage ? <EmptyState message={STR.empty} /> : null}
+      {!canMark && !canAmend && !canUpload && !canReport && !canAssign ? <EmptyState message={STR.empty} /> : null}
       <View style={{ height: space(4) }} />
     </Screen>
   );

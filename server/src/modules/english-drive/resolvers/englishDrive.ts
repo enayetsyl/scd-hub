@@ -67,7 +67,7 @@ builder.queryField("englishDriveDocs", (t) =>
     description:
       "The English Drive library — the latest doc of every (class, block, kind) the caller may see. " +
       "Teachers get their English classes; Principal/Office all; guardians denied.",
-    authScopes: { authenticated: true },
+    authScopes: { hasAnyPermission: ["english_drive:view", "english_drive:view_all"] },
     args: { classLevel: t.arg.int({ required: false }) },
     resolve: async (_root, args, ctx) => englishDriveDocs(ctx, args.classLevel ?? null),
   }),
@@ -77,7 +77,7 @@ builder.queryField("englishDriveDoc", (t) =>
   t.field({
     type: EnglishDriveDocRef,
     description: "One English Drive document with its markdown. Scope-checked like the library.",
-    authScopes: { authenticated: true },
+    authScopes: { hasAnyPermission: ["english_drive:view", "english_drive:view_all"] },
     args: { id: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => englishDriveDocById(ctx, args.id),
   }),
@@ -89,7 +89,7 @@ builder.queryField("englishDriveMyClassLevels", (t) =>
     description:
       "The class levels (1..5) whose English Drive the caller may read — [] means no access " +
       "(hides the drawer tab). Principal/Office get all five; guardians [].",
-    authScopes: { authenticated: true },
+    authScopes: { hasAnyPermission: ["english_drive:view", "english_drive:view_all"] },
     resolve: async (_root, _args, ctx) => myEnglishDriveClassLevels(ctx),
   }),
 );
@@ -110,7 +110,7 @@ builder.mutationField("sendEnglishDriveDocToPrint", (t) =>
       "ED-2: render the doc's PDF server-side and file it through the EXISTING print queue " +
       "(UPLOAD source, print_upload file owned by the caller). Same read gate as the doc " +
       "screen — the class's English teachers + Principal/Office; guardians never.",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "english_drive:send" },
     args: {
       id: t.arg.string({ required: true }),
       colour: t.arg.string({ required: true }),
@@ -145,7 +145,7 @@ builder.mutationField("uploadEnglishDriveDoc", (t) =>
     description:
       "Upload one English Drive markdown document; an existing (class, block, kind, seq) is replaced " +
       "(old row stamped replacedAt). Requires roster:manage (Principal/Office). Audited.",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "english_drive:upload" },
     args: {
       classLevel: t.arg.int({ required: true }),
       // Optional for AS (week-scoped, D-#346) and PT (uses blockNumbers); required otherwise.

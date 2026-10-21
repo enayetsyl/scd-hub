@@ -64,7 +64,7 @@ jest.mock("../modules/content/models/ReviewAssignment", () => ({
 jest.mock("child_process");
 
 // Import AFTER mocks are installed
-import { importEnvelope } from "../modules/content/services/ContentService";
+import { importEnvelope, envelopeImportKind, importFilesKind } from "../modules/content/services/ContentService";
 
 const execFileMock = cp.execFile as jest.MockedFunction<typeof cp.execFile>;
 
@@ -355,5 +355,46 @@ describe("session plans — each period is its own plan", () => {
     // Object.keys, not toHaveProperty: a dotted string there is read as a nested path.
     expect(Object.keys(key)).not.toContain("envelopeJson.payload.session_plan.period_index");
     expect(Object.keys(key)).toContain("address.number");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PM (D-#790; PRD §5.7): one import mutation, two features — the kind received picks
+// lesson_plans:import or question_bank:import.
+// ---------------------------------------------------------------------------
+
+describe("import kind (which import action the gate checks)", () => {
+  test("an envelope's doc_type decides", () => {
+    expect(envelopeImportKind({ doc_type: "chapter_plan" })).toBe("plan");
+    expect(envelopeImportKind({ doc_type: "session_plan" })).toBe("plan");
+    expect(envelopeImportKind({ doc_type: "question" })).toBe("question");
+    expect(envelopeImportKind({ doc_type: "stimulus" })).toBe("question");
+    expect(envelopeImportKind({ doc_type: "question_batch" })).toBe("question");
+    expect(envelopeImportKind({ doc_type: "nonsense" })).toBeNull();
+    expect(envelopeImportKind(null)).toBeNull();
+  });
+
+  test("files: built envelope, then bank, then plan pair — the order importContentFiles uses", () => {
+    const env = (dt: string) => JSON.stringify({ envelope_version: "1.0", doc_type: dt });
+    expect(importFilesKind([{ filename: "e.json", content: env("session_plan") }])).toBe("plan");
+    expect(importFilesKind([{ filename: "e.json", content: env("question") }])).toBe("question");
+    expect(importFilesKind([{ filename: "bank.json", content: JSON.stringify({ questions: [] }) }])).toBe("question");
+    expect(
+      importFilesKind([
+        { filename: "p.json", content: JSON.stringify({ plan_type: "session" }) },
+        { filename: "p.md", content: "# plan" },
+      ]),
+    ).toBe("plan");
+    expect(importFilesKind([{ filename: "x.md", content: "# orphan" }])).toBeNull();
+    expect(importFilesKind([{ filename: "bad.json", content: "{" }])).toBeNull();
+  });
+
+  test("default PRINCIPAL/OFFICE hold both import actions; TEACHER neither", () => {
+    for (const role of ["PRINCIPAL", "OFFICE"] as const) {
+      expect(roleHasPermission(role, "lesson_plans:import")).toBe(true);
+      expect(roleHasPermission(role, "question_bank:import")).toBe(true);
+    }
+    expect(roleHasPermission("TEACHER", "lesson_plans:import")).toBe(false);
+    expect(roleHasPermission("TEACHER", "question_bank:import")).toBe(false);
   });
 });

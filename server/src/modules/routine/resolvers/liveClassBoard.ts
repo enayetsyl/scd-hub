@@ -3,10 +3,10 @@
  * read (D-#674). One gated query serves both surfaces the owner asked for: the Today
  * card (the periods running this minute) and the full class × period day board.
  *
- * Gate: `routine:manage` — held by PRINCIPAL and OFFICE only, and permission-shaped
+ * Gate: `routine:view_all` — PRINCIPAL and OFFICE by default, and permission-shaped
  * rather than role-shaped so a per-user grant (AC-1/D-#193) reaches it too. The board
  * names every teacher in the school against every class, which is oversight data, not
- * the row-scoped `routine:read` a teacher holds for their own timetable.
+ * the row-scoped `routine:view` a teacher holds for their own timetable.
  */
 import { builder } from "../../../schema";
 import {
@@ -87,7 +87,7 @@ builder.queryField("liveClassBoard", (t) =>
     description:
       "Class-wise, period-wise teacher/cover board for a date, with the currently " +
       "running period marked — the Principal/Office live-class view (D-#674).",
-    authScopes: { hasPermission: "routine:manage" },
+    authScopes: { hasPermission: "routine:view_all" },
     args: { date: t.arg.string({ required: true }) },
     resolve: (_root, args) => liveClassBoard(args.date),
   }),

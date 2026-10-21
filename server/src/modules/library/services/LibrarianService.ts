@@ -1,4 +1,4 @@
-import { callerHasPermission } from "@scd/shared";
+import { callerHasPermission, type Permission } from "@scd/shared";
 import type { AppContext } from "../../../context";
 import { ForbiddenError } from "../../../middleware/authz";
 import { LibrarianAssignment, type ILibrarianAssignment } from "../models/LibrarianAssignment";
@@ -8,11 +8,16 @@ import { LibraryError } from "../errors";
 
 /**
  * The librarian desk gate (prd-library §5, D-#81 — the D-#42/#64 duty
- * pattern, NO new role): Principal/Office pass via `library:manage`; a
- * TEACHER passes only while their LATEST `LibrarianAssignment` row is
- * `assign`. Everyone else (incl. an unassigned teacher and any guardian) is
- * denied with a Bangla message.
+ * pattern, NO new role; PM catalogue D-#790–#801): the caller must hold the
+ * desk ACTION (`library:lend` / `library:return` / `library:remind`) AND either
+ * hold `library:edit_all` ("run the desk without a duty" — Principal/Office by
+ * default, the old `library:manage` branch) or be an actively-assigned librarian
+ * (their LATEST `LibrarianAssignment` row is `assign`). Everyone else (incl. an
+ * unassigned teacher and any guardian) is denied with a Bangla message.
  */
+
+/** The desk actions the librarian designation qualifies. */
+export type LibraryDeskAction = Extract<Permission, "library:lend" | "library:return" | "library:remind">;
 
 /** Pure: does the latest assignment row grant the duty? */
 export function latestRowGrantsDuty(latest: Pick<ILibrarianAssignment, "action"> | null): boolean {
@@ -27,13 +32,29 @@ export async function isAssignedLibrarian(userId: string): Promise<boolean> {
   return latestRowGrantsDuty(latest);
 }
 
+/** May the caller run the desk for `action`? The action (role default or per-person
+ *  grant) AND (`library:edit_all` OR the librarian duty). The old `role === "TEACHER"`
+ *  conjunct is dropped — the duty can only be assigned to a teacher anyway. */
+export async function canRunLibraryDesk(
+  ctx: AppContext,
+  action: LibraryDeskAction = "library:lend",
+): Promise<boolean> {
+  if (!ctx.auth) return false;
+  if (!callerHasPermission(ctx.auth, action)) return false;
+  if (callerHasPermission(ctx.auth, "library:edit_all")) return true;
+  return isAssignedLibrarian(ctx.auth.userId);
+}
+
 /** Assert the caller may run DESK OPERATIONS (issue/return/renew/lost/holds,
- *  desk reservations). Catalog/policy/assignment mutations stay
- *  `library:manage`-only — this gate is for the circulation desk. */
-export async function assertIsLibrarian(ctx: AppContext): Promise<void> {
+ *  desk reservations, the overdue chase). Catalog/policy/assignment mutations
+ *  are their own actions (`library:edit` / `:settings` / `:assign`) — this gate
+ *  is for the circulation desk. */
+export async function assertIsLibrarian(
+  ctx: AppContext,
+  action: LibraryDeskAction = "library:lend",
+): Promise<void> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  if (callerHasPermission(ctx.auth, "library:manage")) return;
-  if (ctx.auth.role === "TEACHER" && (await isAssignedLibrarian(ctx.auth.userId))) return;
+  if (await canRunLibraryDesk(ctx, action)) return;
   throw new ForbiddenError("শুধুমাত্র লাইব্রেরিয়ান এই কাজটি করতে পারেন");
 }
 
@@ -44,8 +65,22 @@ export async function assignLibrarian(
 ): Promise<ILibrarianAssignment> {
   const teacher = await User.findById(teacherUserId).lean();
   if (!teacher || !teacher.active) throw new LibraryError("শিক্ষক অ্যাকাউন্টটি পাওয়া যায়নি বা সক্রিয় নয়");
-  if (teacher.role !== "TEACHER") {
-    // Principal/Office already hold library:manage — the duty log is for teachers only (D-#81).
+  // PM: the target must hold `library:lend` (the action the duty qualifies). The
+  // TEACHER-role conjunct stays so ship day changes nobody's access: Principal/Office
+  // hold `library:lend` + `library:edit_all` by default and already run the desk
+  // without a duty — the duty log is for teachers only (D-#81).
+  if (
+    teacher.role !== "TEACHER" ||
+    !callerHasPermission(
+      {
+        role: teacher.role,
+        additionalTemplates: teacher.additionalTemplates ?? [],
+        grantedPermissions: teacher.grantedPermissions ?? [],
+        revokedPermissions: teacher.revokedPermissions ?? [],
+      },
+      "library:lend",
+    )
+  ) {
     throw new LibraryError("লাইব্রেরিয়ান দায়িত্ব শুধুমাত্র একজন শিক্ষককে দেওয়া যায়");
   }
   if (await isAssignedLibrarian(teacherUserId)) {

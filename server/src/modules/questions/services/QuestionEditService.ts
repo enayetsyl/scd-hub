@@ -389,8 +389,8 @@ export async function restoreQuestion(input: {
  * question worth acting on when a set is assembled, not a private desk annotation.
  *
  * WHO may mark, and the one asymmetry that matters:
- *   • `question:manage` (Principal + Office) — any question, at any time, from the bank;
- *   • `content:review` (a reviewer) — ONLY a question she currently holds an open round
+ *   • `question_bank:edit` (Principal + Office by default) — any question, at any time, from the bank;
+ *   • `question_review:review` (a reviewer) — ONLY a question she currently holds an open round
  *     for. A reviewer marks while REVIEWING, which is exactly the set of questions she was
  *     handed; letting her flag arbitrary bank rows would hand every teacher with the review
  *     permission a write on 6,900 documents she was never assigned.
@@ -406,7 +406,7 @@ export async function setQuestionImportant(input: {
   important: boolean;
   actorId: string;
   actorRole?: string;
-  /** True when the caller holds `question:manage`; false for a reviewer. */
+  /** True when the caller holds `question_bank:edit`; false for a reviewer. */
   mayManage: boolean;
 }): Promise<QuestionEditResult> {
   const doc = await loadQuestionDoc(input.artifactId);
@@ -415,7 +415,7 @@ export async function setQuestionImportant(input: {
   const qid = typeof payload.qid === "string" ? payload.qid : null;
 
   // A reviewer is confined to her own open rounds. Checked against the ROUND rather than a
-  // permission because `content:review` is a TEACHER base permission — the check IS the
+  // permission because `question_review:review` is a TEACHER base permission — the check IS the
   // scope. Refused before any write, so a rejected call leaves nothing half-done.
   if (!input.mayManage) {
     if (!qid) throw new ReviewError("Question artifact has no payload.qid — it cannot be marked");

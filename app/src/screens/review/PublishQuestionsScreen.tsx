@@ -78,7 +78,7 @@ export default function PublishQuestionsScreen({ navigation }: Props): React.Rea
   const colors = useColors();
   const { can } = useAuth();
   /** Principal + Office may correct or retire a question in place (QR-8, D-#548). */
-  const mayManage = can("question:manage");
+  const mayManage = can("question_bank:edit");
   const [editing, setEditing] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("APPROVE");
 

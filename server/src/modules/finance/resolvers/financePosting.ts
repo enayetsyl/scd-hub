@@ -147,8 +147,8 @@ builder.mutationField("recordFinancePosting", (t) =>
     description:
       "Append a money event (FEE_COLLECTION/OTHER_INCOME/EXPENSE/TRANSFER). The kind dictates the " +
       "required block; for SALARY pass salaryBaseAmount (HR total) + salaryAdjustments. Requires " +
-      "finance:manage. Audited FINANCE_POSTING_RECORDED.",
-    authScopes: { hasPermission: "finance:manage" },
+      "finance_ledger:create. Audited FINANCE_POSTING_RECORDED.",
+    authScopes: { hasPermission: "finance_ledger:create" },
     args: {
       date: t.arg.string({ required: true }),
       kind: t.arg.string({ required: true }),
@@ -189,8 +189,8 @@ builder.mutationField("reverseFinancePosting", (t) =>
     type: PostingRef,
     description:
       "Reverse a posting — appends a linked negating posting (the original is never edited/deleted). " +
-      "Requires finance:manage. Audited FINANCE_POSTING_REVERSED.",
-    authScopes: { hasPermission: "finance:manage" },
+      "Requires finance_ledger:reverse. Audited FINANCE_POSTING_REVERSED.",
+    authScopes: { hasPermission: "finance_ledger:reverse" },
     args: { postingId: t.arg.string({ required: true }) },
     resolve: (_root, args, ctx) => reversePosting(args.postingId, actorOf(ctx)),
   }),
@@ -201,8 +201,8 @@ builder.mutationField("reverseFinancePosting", (t) =>
 builder.queryField("financeDailySnapshot", (t) =>
   t.field({
     type: DailySnapshotRef,
-    description: "The day's per-ledger opening/in/out/closing (Cash/Bank/Online), derived. Requires finance:manage.",
-    authScopes: { hasPermission: "finance:manage" },
+    description: "The day's per-ledger opening/in/out/closing (Cash/Bank/Online), derived. Requires finance_ledger:view.",
+    authScopes: { hasPermission: "finance_ledger:view" },
     args: { date: t.arg.string({ required: true }) },
     resolve: (_root, args) => dailySnapshot(args.date),
   }),
@@ -211,8 +211,8 @@ builder.queryField("financeDailySnapshot", (t) =>
 builder.queryField("financeMonthToDate", (t) =>
   t.field({
     type: MonthToDateRef,
-    description: "Month-to-date totals by head + totals in/out (YYYY-MM), derived. Requires finance:manage.",
-    authScopes: { hasPermission: "finance:manage" },
+    description: "Month-to-date totals by head + totals in/out (YYYY-MM), derived. Requires finance_ledger:view.",
+    authScopes: { hasPermission: "finance_ledger:view" },
     args: { month: t.arg.string({ required: true }) },
     resolve: (_root, args) => monthToDate(args.month),
   }),
@@ -221,8 +221,8 @@ builder.queryField("financeMonthToDate", (t) =>
 builder.queryField("studentFeeHistory", (t) =>
   t.field({
     type: [PostingRef],
-    description: "A student's FEE_COLLECTION postings, newest first. Requires finance:manage.",
-    authScopes: { hasPermission: "finance:manage" },
+    description: "A student's FEE_COLLECTION postings, newest first. Requires finance_ledger:view.",
+    authScopes: { hasPermission: "finance_ledger:view" },
     args: { studentId: t.arg.string({ required: true }) },
     resolve: (_root, args) => studentFeeHistory(args.studentId),
   }),
@@ -233,8 +233,8 @@ builder.queryField("hrPayrollNetPayableTotal", (t) =>
     type: HrNetPayableRef,
     description:
       "The PII-free HR net-payable aggregate for a month — the SALARY posting pre-fill (D-#228). " +
-      "No individual payslip crosses. Requires finance:manage.",
-    authScopes: { hasPermission: "finance:manage" },
+      "No individual payslip crosses. Requires finance_ledger:view.",
+    authScopes: { hasPermission: "finance_ledger:view" },
     args: { monthKey: t.arg.string({ required: true }) },
     resolve: (_root, args) => hrPayrollNetPayableTotal(args.monthKey),
   }),

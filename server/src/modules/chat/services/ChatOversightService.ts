@@ -1,6 +1,6 @@
 /**
  * ChatOversightService (M-6, D-#77/#111) — Principal read-OVERSIGHT on ANY
- * conversation, incl. 1:1 (resolver-gated `chat:oversee`, PRINCIPAL only).
+ * conversation, incl. 1:1 (resolver-gated `chat:view_all`, PRINCIPAL only).
  *
  * Oversight is READ-ONLY and NOT membership-gated (that is the whole point — a
  * Principal is not a member of two teachers' DM). It deliberately does NOT mask
@@ -23,7 +23,7 @@ import { ChatError } from "./ChatService";
 import { queryPage, type Page, type PageArgs } from "../../../lib/paging";
 
 /** Every conversation in the school, newest-activity first — the oversight
- *  browser (incl. DIRECT + archived). No membership filter (chat:oversee only). */
+ *  browser (incl. DIRECT + archived). No membership filter (chat:view_all only). */
 export async function oversightConversations(): Promise<IConversation[]> {
   return Conversation.find({})
     .sort({ lastMessageAt: -1, createdAt: -1 })
@@ -62,7 +62,7 @@ export interface OversightMessagesOptions {
 }
 
 /** Messages of ANY conversation, newest-first, _id-cursor paginated — UNMASKED
- *  (deleted originals visible). chat:oversee only; no membership gate. */
+ *  (deleted originals visible). chat:view_all only; no membership gate. */
 export async function oversightMessages(
   conversationId: string,
   opts: OversightMessagesOptions = {},

@@ -10,7 +10,7 @@
  * NOTE: everything referenced inside a jest.mock() factory is `mock`-prefixed so
  * babel-plugin-jest-hoist allows the out-of-scope reference.
  */
-import { roleHasPermission } from "@scd/shared";
+import { roleHasPermission, callerHasPermission } from "@scd/shared";
 
 // ---------------------------------------------------------------------------
 // In-memory stores + helpers (all mock-prefixed for jest.mock hoisting)
@@ -130,6 +130,11 @@ import {
   resetGuardianPassword,
   staffCredentialCandidates,
   provisionStaffLogin,
+  resetStaffPassword,
+  resetUserPassword,
+  assertMayMintRole,
+  PRINCIPAL_LOGIN_GUARD_BN,
+  MINT_ROLE_GUARD_BN,
 } from "../modules/foundation/services/ProvisioningService";
 import { generatePassword, normalizePhone, buildCredentialShareLink } from "../modules/foundation/services/credentials";
 import { verifyPassword, staffLogin, phoneCandidates } from "../modules/foundation/services/AuthService";
@@ -380,5 +385,83 @@ describe("RBAC gates", () => {
     expect(roleHasPermission("PRINCIPAL", "user:manage")).toBe(true);
     expect(roleHasPermission("OFFICE", "user:manage")).toBe(false);
     expect(roleHasPermission("TEACHER", "user:manage")).toBe(false);
+  });
+  // PM: the resolvers now name catalogue actions; the defaults reproduce the old gates.
+  test("catalogue gates: guardians:reset_password P+O; staff_logins:* P only (ship day)", () => {
+    for (const perm of ["guardians:reset_password", "guardians:link", "guardians:view_all", "guardians:create"] as const) {
+      expect(callerHasPermission({ role: "PRINCIPAL" }, perm)).toBe(true);
+      expect(callerHasPermission({ role: "OFFICE" }, perm)).toBe(true);
+      expect(callerHasPermission({ role: "TEACHER" }, perm)).toBe(false);
+      expect(callerHasPermission({ role: "GUARDIAN" }, perm)).toBe(false);
+    }
+    for (const perm of ["staff_logins:view", "staff_logins:create", "staff_logins:reset_password"] as const) {
+      expect(callerHasPermission({ role: "PRINCIPAL" }, perm)).toBe(true);
+      expect(callerHasPermission({ role: "OFFICE" }, perm)).toBe(false);
+      expect(callerHasPermission({ role: "TEACHER" }, perm)).toBe(false);
+      // A legacy per-person grant of user:manage still reaches them (read-time expansion).
+      expect(callerHasPermission({ role: "OFFICE", grantedPermissions: ["user:manage"] }, perm)).toBe(true);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Escalation target guards (PM F-3 / F-4, PRD §5.6)
+// ---------------------------------------------------------------------------
+
+describe("escalation target guards (F-3, F-4)", () => {
+  const OFFICE_ACTOR = { userId: "off1", role: "OFFICE" };
+
+  function seedPrincipalPhone(extra: Record<string, unknown> = {}): void {
+    mockStore.users = [
+      mockSaveable({ _id: "p1", phone: "01899999999", name: "Principal", role: "PRINCIPAL", active: true, passwordHash: "x", ...extra }),
+    ];
+  }
+
+  test("F-4: a non-Principal cannot reset a PRINCIPAL phone login; the Principal can", async () => {
+    seedPrincipalPhone();
+    await expect(resetStaffPassword("p1", OFFICE_ACTOR)).rejects.toThrow(PRINCIPAL_LOGIN_GUARD_BN);
+    expect(mockStore.users[0].passwordHash).toBe("x");
+    const cred = await resetStaffPassword("p1", ACTOR);
+    expect(cred.identifier).toBe("01899999999");
+  });
+
+  test("F-4: a non-Principal cannot reset a PRINCIPAL email login; the Principal can", async () => {
+    mockStore.users = [
+      mockSaveable({ _id: "p2", email: "head@school.org", name: "Principal", role: "PRINCIPAL", active: true, passwordHash: "x" }),
+    ];
+    await expect(resetUserPassword("p2", OFFICE_ACTOR)).rejects.toThrow(PRINCIPAL_LOGIN_GUARD_BN);
+    expect(mockStore.users[0].passwordHash).toBe("x");
+    await expect(resetUserPassword("p2", ACTOR)).resolves.toMatchObject({ identifier: "head@school.org" });
+  });
+
+  test("F-4: a login holding the PRINCIPAL template is guarded the same way", async () => {
+    mockStore.users = [
+      mockSaveable({ _id: "t9", phone: "01877777777", name: "Deputy", role: "TEACHER", additionalTemplates: ["PRINCIPAL"], active: true, passwordHash: "x" }),
+    ];
+    await expect(resetStaffPassword("t9", OFFICE_ACTOR)).rejects.toThrow(PRINCIPAL_LOGIN_GUARD_BN);
+  });
+
+  test("F-4: provisionStaffLogin cannot re-provision (reset) a PRINCIPAL login on the same phone", async () => {
+    seedPrincipalPhone();
+    mockStore.staff = [{ _id: "s1", name: "Principal", category: "teacher", phone: "01899999999", active: true }];
+    await expect(provisionStaffLogin("s1", OFFICE_ACTOR)).rejects.toThrow(PRINCIPAL_LOGIN_GUARD_BN);
+    expect(mockStore.users[0].passwordHash).toBe("x");
+    await expect(provisionStaffLogin("s1", ACTOR)).resolves.toMatchObject({ alreadyExisted: true });
+  });
+
+  test("F-4: a non-Principal holder still resets and provisions ordinary staff logins", async () => {
+    mockStore.users = [mockSaveable({ _id: "t1", phone: "01811111111", name: "T", role: "TEACHER", active: true, passwordHash: "x" })];
+    await expect(resetStaffPassword("t1", OFFICE_ACTOR)).resolves.toMatchObject({ identifier: "01811111111" });
+    mockStore.staff = [{ _id: "o1", name: "Office One", category: "office_accounts", phone: "01822222222", active: true }];
+    await expect(provisionStaffLogin("o1", OFFICE_ACTOR)).resolves.toMatchObject({ alreadyExisted: false });
+  });
+
+  test("F-3: only the Principal mints a PRINCIPAL or GUARDIAN role via createUser", () => {
+    expect(() => assertMayMintRole("PRINCIPAL", OFFICE_ACTOR)).toThrow(MINT_ROLE_GUARD_BN);
+    expect(() => assertMayMintRole("GUARDIAN", { role: "TEACHER" })).toThrow(MINT_ROLE_GUARD_BN);
+    expect(() => assertMayMintRole("PRINCIPAL", ACTOR)).not.toThrow();
+    expect(() => assertMayMintRole("GUARDIAN", ACTOR)).not.toThrow();
+    expect(() => assertMayMintRole("TEACHER", OFFICE_ACTOR)).not.toThrow();
+    expect(() => assertMayMintRole("OFFICE", OFFICE_ACTOR)).not.toThrow();
   });
 });

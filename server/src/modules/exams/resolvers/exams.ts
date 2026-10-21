@@ -1,9 +1,9 @@
 /**
  * Exam resolvers (SY-1, docs/prd-exam-syllabus.md §6).
  *
- *   exams       — authenticated; the exam list, newest first. Every role needs it:
- *                 a guardian picks the exam whose syllabus they are reading.
- *   createExam  — exam:manage (Principal/Office).
+ *   exams       — authenticated; the exam list, newest first. Staff need
+ *                 exam_syllabus:view; a guardian picks the exam whose syllabus they are reading.
+ *   createExam  — exam_syllabus:settings (Principal/Office by default).
  *
  * Deliberately thin. `docs/prd-exams.md` EX-1 extends this with the grade scale,
  * status and CT aggregation; none of that is invented here.
@@ -12,6 +12,7 @@ import { builder } from "../../../schema";
 import { Types } from "mongoose";
 import { Exam } from "../models/Exam";
 import { createExam, updateExam } from "../services/ExamService";
+import { assertSyllabusReader } from "../services/ExamSyllabusReadService";
 
 interface ExamShape {
   id: string;
@@ -61,7 +62,9 @@ builder.queryFields((t) => ({
       "carries no marks and no student, and a guardian needs it to choose which syllabus to read.",
     authScopes: { authenticated: true },
     args: { academicYearId: t.arg.string({ required: false }) },
-    resolve: async (_root, args) => {
+    resolve: async (_root, args, ctx) => {
+      // Staff need exam_syllabus:view (PM, D-#790); a guardian keeps the picker (F-10).
+      assertSyllabusReader(ctx);
       const q: Record<string, unknown> = {};
       if (args.academicYearId) q.academicYearId = args.academicYearId;
       const rows = (await Exam.find(q).sort({ createdAt: -1 }).lean()) as unknown as Array<
@@ -79,7 +82,7 @@ builder.mutationFields((t) => ({
       "PATCH an exam's name / date window — an omitted field is left alone (the D-#526 shape). " +
       "`academicYearId` and `term` are NOT editable: together they are the row's identity and its " +
       "unique index, and moving an exam would silently re-home every syllabus hanging off it.",
-    authScopes: { hasPermission: "exam:manage" },
+    authScopes: { hasPermission: "exam_syllabus:settings" },
     args: {
       id: t.arg.string({ required: true }),
       name: t.arg.string({ required: false }),
@@ -100,7 +103,7 @@ builder.mutationFields((t) => ({
   createExam: t.field({
     type: ExamRef,
     description: "Create an exam. One row per (academic year × term) — a duplicate is refused.",
-    authScopes: { hasPermission: "exam:manage" },
+    authScopes: { hasPermission: "exam_syllabus:settings" },
     args: {
       academicYearId: t.arg.string({ required: true }),
       term: t.arg.string({ required: true }),

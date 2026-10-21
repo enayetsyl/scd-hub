@@ -1,7 +1,7 @@
 /**
  * UserListScreen (S15 / J5.1) — staff users. Lists every staff account via the
- * `users` query (user:manage / Principal — Slice-4 follow-up; no more
- * "current user only") plus the create-staff form (createUser → user:manage).
+ * `users` query (staff_logins:view / Principal by default — Slice-4 follow-up; no more
+ * "current user only") plus the create-staff form (createUser → staff_logins:create; reset → staff_logins:reset_password).
  */
 import React, { useCallback, useState } from "react";
 import { useFocusEffect } from "@react-navigation/native";
@@ -21,8 +21,15 @@ type Props = NativeStackScreenProps<AdminStackParamList, "UserList">;
 const STAFF_ROLES = ROLES.filter((r) => r !== "GUARDIAN");
 
 export default function UserListScreen(_props: Props): React.ReactElement {
-  const { user, can } = useAuth();
-  const canManage = !!user && can("user:manage");
+  const { user, can, isRole } = useAuth();
+  // PM: the list, the create form and the reset button are three actions.
+  const canManage = !!user && can("staff_logins:view");
+  const canCreate = !!user && can("staff_logins:create");
+  const canReset = !!user && can("staff_logins:reset_password");
+  // F-3/F-4 mirror (the server refuses anyway): only the Principal mints a PRINCIPAL
+  // login or resets one.
+  const callerIsPrincipal = isRole("PRINCIPAL");
+  const mintableRoles = STAFF_ROLES.filter((r) => r !== "PRINCIPAL" || callerIsPrincipal);
   const [{ data, fetching, error: usersError }, refetchUsers] = useQuery({
     query: USERS_QUERY,
     pause: !canManage,
@@ -125,7 +132,7 @@ export default function UserListScreen(_props: Props): React.ReactElement {
                     {/* Email logins only: a phone login is reset from the staff
                         credentials screen, which also re-derives the role from the HR
                         category (D-#60). */}
-                    {u.email ? (
+                    {u.email && canReset && (u.role !== "PRINCIPAL" || callerIsPrincipal) ? (
                       <Button
                         title={STR.regeneratePassword}
                         variant="secondary"
@@ -154,12 +161,17 @@ ${STR.generatedPassword}: ${freshPassword.password}`}
         </Card>
       ) : null}
 
+      {/* A reset error still shows when the create form is hidden. */}
+      {!canCreate && error ? <Notice message={error} tone="danger" /> : null}
+
+      {canCreate ? (
+        <>
       <Divider />
       <H2>{STR.createUser}</H2>
 
       <Muted>{STR.role}</Muted>
       <ChipRow>
-        {STAFF_ROLES.map((r) => (
+        {mintableRoles.map((r) => (
           <Chip key={r} label={r} selected={role === r} onPress={() => setRole(role === r ? null : r)} />
         ))}
       </ChipRow>
@@ -177,6 +189,8 @@ ${STR.generatedPassword}: ${freshPassword.password}`}
         loading={busy}
         disabled={!name.trim() || !email.trim() || !password || !role}
       />
+        </>
+      ) : null}
     </Screen>
   );
 }

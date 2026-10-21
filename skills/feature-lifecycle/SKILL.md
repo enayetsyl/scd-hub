@@ -19,8 +19,8 @@ description: Use when adding a new feature or changing an existing one in the sc
    in the feature as `feature:action` (view, create, declare, check, return, approve, publish,
    export, settings…), with default roles (TEACHER / OFFICE; the Principal holds all), flags
    (LOCKED / PRINCIPAL-DEFAULT / DESIGNATION / ESCALATION / SELF) and BN/EN labels. Add it to
-   `docs/permission-catalogue/README.md` and the area file's resolver/route/app-gate tables, and to
-   `FEATURE_CATALOGUE` in `/shared/vocab.ts` once PM has shipped. Then:
+   `FEATURE_CATALOGUE` in `/shared/permissionCatalogue.ts` (the source of truth) and to
+   `docs/permission-catalogue/README.md` + the area file's resolver/route/app-gate tables. Then:
    - every new resolver gets `authScopes: { hasPermission: "feature:action" }` (or is a listed SELF /
      GUARDIAN path with a reason);
    - every REST route checks its action with `callerHasPermission`;

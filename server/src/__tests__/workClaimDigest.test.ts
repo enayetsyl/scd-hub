@@ -11,6 +11,7 @@
  * DB-free: User, the config row, the calendar and the notification sink are mocked.
  */
 import mongoose from "mongoose";
+import { setRoleTemplateOverrides } from "@scd/shared";
 
 const mockDayType = jest.fn();
 const mockUserFind = jest.fn();
@@ -101,9 +102,15 @@ describe("digestRecipientIds — Principal + Office + the Principal's extras", (
   test("unions staff with ACTIVE extras and dedupes", async () => {
     const principal = oid(), akmol = oid(), akter = oid(), tazkir = oid(), gone = oid();
     mockCfgFindOne.mockReturnValue({ extraRecipientIds: [akter, tazkir, gone, akmol] });
+    const teacher = oid();
     mockUserFind.mockImplementation((q: Record<string, unknown>) =>
-      "$or" in q
-        ? [{ _id: principal }, { _id: akmol }] // actingAsFilter(PRINCIPAL, OFFICE)
+      "role" in q
+        ? // holdersOf(...) — every active staff login; the action decides (PM §5.5)
+          [
+            { _id: principal, role: "PRINCIPAL" },
+            { _id: akmol, role: "OFFICE" },
+            { _id: teacher, role: "TEACHER" }, // holds work_claim:view_all, not the admin_dashboard:view waiver
+          ]
         : [{ _id: akter }, { _id: tazkir }, { _id: akmol }], // active extras — `gone` dropped
     );
     const ids = await digestRecipientIds();
@@ -113,7 +120,7 @@ describe("digestRecipientIds — Principal + Office + the Principal's extras", (
   test("no config row → just Principal + Office (read-time default, never seeded)", async () => {
     const principal = oid();
     mockCfgFindOne.mockReturnValue(null);
-    mockUserFind.mockReturnValue([{ _id: principal }]);
+    mockUserFind.mockReturnValue([{ _id: principal, role: "PRINCIPAL" }, { _id: oid(), role: "TEACHER" }]);
     expect(await digestRecipientIds()).toEqual([principal.toString()]);
   });
 
@@ -127,6 +134,32 @@ describe("digestRecipientIds — Principal + Office + the Principal's extras", (
     expect(await canWatchClaims(ctx(akter.toString(), "TEACHER"))).toBe(true);
     expect(await canWatchClaims(ctx(other.toString(), "TEACHER"))).toBe(false);
     expect(await canWatchClaims({ auth: null })).toBe(false);
+  });
+
+  test("canWatchClaims (PM): the action is required; admin_dashboard:view waives the digest", async () => {
+    const akter = oid();
+    mockCfgFindOne.mockReturnValue({ extraRecipientIds: [akter] });
+    mockUserFind.mockReturnValue([{ _id: akter }]);
+    const ctx = (userId: string, role: string, extra: Record<string, unknown> = {}) => ({
+      auth: { userId, role, ...extra } as never,
+    });
+    try {
+      // Office with the queue switched off is refused, though it keeps the waiver.
+      setRoleTemplateOverrides({ OFFICE: { granted: [], revoked: ["work_claim:view_all"] } });
+      expect(await canWatchClaims(ctx(oid().toString(), "OFFICE"))).toBe(false);
+      expect(await canWatchClaims(ctx(oid().toString(), "OFFICE"), "work_claim:remind")).toBe(true);
+      // A digest teacher with Teacher remind switched off may read but not nudge.
+      setRoleTemplateOverrides({ TEACHER: { granted: [], revoked: ["work_claim:remind"] } });
+      expect(await canWatchClaims(ctx(akter.toString(), "TEACHER"))).toBe(true);
+      expect(await canWatchClaims(ctx(akter.toString(), "TEACHER"), "work_claim:remind")).toBe(false);
+      setRoleTemplateOverrides({});
+      // A teacher NOT on the digest but granted the waiver per person passes.
+      expect(
+        await canWatchClaims(ctx(oid().toString(), "TEACHER", { grantedPermissions: ["admin_dashboard:view"] })),
+      ).toBe(true);
+    } finally {
+      setRoleTemplateOverrides({});
+    }
   });
 
   test("isDigestRecipient is true only for a listed, active user", async () => {

@@ -26,7 +26,15 @@ import {
   WORKSHEET_PICTURE_USES,
   callerHasPermission,
 } from "@scd/shared";
-import type { PrintPurpose, RosterClassLevel, RoutineSubject, WorksheetKind, WorksheetPictureUse } from "@scd/shared";
+import type {
+  Permission,
+  PrintPurpose,
+  RosterClassLevel,
+  RoutineSubject,
+  WorksheetKind,
+  WorksheetPictureBook,
+  WorksheetPictureUse,
+} from "@scd/shared";
 import type { AppContext } from "../../../context";
 import { normalizePage, type Page, type PageArgs } from "../../../lib/paging";
 import { ForbiddenError } from "../../../middleware/authz";
@@ -65,16 +73,22 @@ export const WORKSHEET_SUBJECTS = ["BAN", "ENG", "MATH", "ARABIC"] as const;
 /** A picture printed within this window is drawn only when the pool runs short. */
 export const RECENT_USE_DAYS = 28;
 
-const GENERATE_PERMS = ["tracker:write", "roster:manage"] as const;
-
-export function assertCanGenerate(ctx: AppContext): void {
-  if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  if (!GENERATE_PERMS.some((p) => callerHasPermission(ctx.auth!, p))) {
-    throw new ForbiddenError("এই কাজের অনুমতি নেই");
-  }
+// PM: the worksheets actions replace tracker:write ∨ roster:manage (make) and the
+// roster:manage "manager" check (plan → settings, on-behalf / others' papers → edit_all,
+// picture bank → edit).
+function holds(ctx: AppContext, perm: Permission): boolean {
+  return !!ctx.auth && ctx.auth.role !== "GUARDIAN" && callerHasPermission(ctx.auth, perm);
 }
 
-const isManager = (ctx: AppContext): boolean => !!ctx.auth && callerHasPermission(ctx.auth, "roster:manage");
+function assertAction(ctx: AppContext, perm: Permission): void {
+  if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+  if (!holds(ctx, perm)) throw new ForbiddenError("এই কাজের অনুমতি নেই");
+}
+
+/** Make a worksheet (plan read, preview, PDF, picture bank, own list): `worksheets:create`. */
+export function assertCanGenerate(ctx: AppContext): void {
+  assertAction(ctx, "worksheets:create");
+}
 
 // ---------------------------------------------------------------------------
 // Plan
@@ -206,7 +220,7 @@ function cleanPreset(p: PresetRow[] | null | undefined, known: Set<number>): Pre
 }
 
 export async function savePlan(ctx: AppContext, input: SavePlanInput): Promise<PlanView> {
-  if (!isManager(ctx)) throw new ForbiddenError("শুধু অফিস/অধ্যক্ষ পরিকল্পনা বদলাতে পারেন");
+  if (!holds(ctx, "worksheets:settings")) throw new ForbiddenError("শুধু অফিস/অধ্যক্ষ পরিকল্পনা বদলাতে পারেন");
   assertSubject(input.subject);
   const cls = await loadClass(input.classId);
   const syl = await latestPublishedSyllabus(input.classId, input.subject);
@@ -333,6 +347,12 @@ function buildHeader(args: GenerateArgs, plan: PlanView, kind: WorksheetKind, to
   };
 }
 
+/** KG আরবি is taught from রওযাতুল আতফাল ২, so its papers draw on that book (D-#806); Nursery
+ *  keeps book 1. Null = the subject's own book. */
+export function arabicBookFor(subject: string, classLevel: number): WorksheetPictureBook | null {
+  return subject === "ARABIC" && classLevel === 0 ? "ARABIC_KG" : null;
+}
+
 /** At most the whole alphabet, each a short string — the set is just a filter. */
 function cleanLetters(letters: string[] | null | undefined): string[] | null {
   if (!letters || letters.length === 0) return null;
@@ -372,6 +392,7 @@ export async function generate(ctx: AppContext, args: GenerateArgs, pictures?: P
     },
     seed: args.seed,
     pictures: pictures ?? (await loadPictureRefs()),
+    pictureBook: arabicBookFor(plan.subject, plan.classLevel),
   });
   const examYear = (await examYearFor(plan)) ?? String(new Date().getFullYear());
   return { plan, kind, doc, rows, header: buildHeader(args, plan, kind, doc.total, examYear) };
@@ -472,11 +493,11 @@ async function resolveSection(classId: string, sectionId?: string | null): Promi
 }
 
 export async function sendWorksheetToPrint(ctx: AppContext, input: SendWorksheetInput): Promise<SendWorksheetResult> {
-  assertCanGenerate(ctx);
+  assertAction(ctx, "worksheets:send");
   if (!input.neededByKey) throw new WorksheetError("প্রিন্ট কবে ব্যবহার হবে সেই তারিখ দিন");
   let forTeacherId: string | null = null;
   if (input.forTeacherId) {
-    if (!isManager(ctx)) throw new ForbiddenError("শুধু অফিস অন্য শিক্ষকের জন্য তৈরি করতে পারে");
+    if (!holds(ctx, "worksheets:edit_all")) throw new ForbiddenError("শুধু অফিস অন্য শিক্ষকের জন্য তৈরি করতে পারে");
     if (!Types.ObjectId.isValid(input.forTeacherId)) throw new WorksheetError("শিক্ষক পাওয়া যায়নি");
     forTeacherId = input.forTeacherId;
   }
@@ -599,7 +620,8 @@ export async function worksheetForRead(ctx: AppContext, id: string): Promise<IWo
   if (!ws) throw new WorksheetError("Not found");
   const me = ctx.auth.userId as string;
   const mine = ws.createdBy?.toString() === me || ws.forTeacherId?.toString() === me;
-  if (!mine && !isManager(ctx)) throw new ForbiddenError("এই প্রশ্নপত্র দেখার অনুমতি নেই");
+  // Own paper → worksheets:create; anyone's → worksheets:edit_all.
+  if (!(mine && holds(ctx, "worksheets:create")) && !holds(ctx, "worksheets:edit_all")) throw new ForbiddenError("এই প্রশ্নপত্র দেখার অনুমতি নেই");
   return ws;
 }
 
@@ -687,7 +709,7 @@ export async function worksheetTeachers(
   classId: string,
   subject: string,
 ): Promise<Array<{ userId: string; name: string }>> {
-  if (!isManager(ctx)) return [];
+  if (!holds(ctx, "worksheets:edit_all")) return [];
   const holders = await routineHoldersFor(classId, subject as RoutineSubject);
   if (!holders.length) return [];
   const users = (await User.find({ _id: { $in: holders.map((h) => new Types.ObjectId(h.userId)) } })
@@ -800,7 +822,7 @@ export interface PicturePatch {
 }
 
 export async function updatePicture(ctx: AppContext, id: string, patch: PicturePatch): Promise<PictureRow> {
-  if (!isManager(ctx)) throw new ForbiddenError("শুধু অফিস/অধ্যক্ষ ছবি বদলাতে পারেন");
+  if (!holds(ctx, "worksheets:edit")) throw new ForbiddenError("শুধু অফিস/অধ্যক্ষ ছবি বদলাতে পারেন");
   if (!Types.ObjectId.isValid(id)) throw new WorksheetError("ছবি পাওয়া যায়নি");
   const set: Record<string, unknown> = { updatedBy: new Types.ObjectId(ctx.auth!.userId as string) };
   const norm = (s: string | null | undefined): string | null => (s == null ? null : s.trim() || null);

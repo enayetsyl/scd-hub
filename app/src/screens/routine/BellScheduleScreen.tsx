@@ -25,7 +25,7 @@ type Props = NativeStackScreenProps<RoutineStackParamList, "BellSchedule">;
 
 export default function BellScheduleScreen(_props: Props): React.ReactElement {
   const { role, can } = useAuth();
-  const canManage = can("routine:manage");
+  const canManage = can("routine:settings"); // PM: assignBellDuty is gated routine:settings
   const [date, setDate] = useState(todayISO());
   const [audienceKey, setAudienceKey] = useState("class_1_5");
   const [adminId, setAdminId] = useState("");

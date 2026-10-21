@@ -3,9 +3,9 @@
  *
  * Gates (prd-library §4, ADR-004 layering):
  *   Desk mutations (issue/return/renew/lost, desk reserve/cancel, queue view)
- *     → `assertIsLibrarian` (library:manage OR an active LibrarianAssignment).
+ *     → `assertIsLibrarian` (the desk action + library:edit_all OR an active LibrarianAssignment).
  *   Staff self-service (myLoans/myReservations, reserve for SELF, cancel own)
- *     → `library:read`, own-row only.
+ *     → `library:view`, own-row only.
  *
  * NO fines, no money fields (D-#27). All identity-plane (ADR-005).
  */
@@ -242,7 +242,7 @@ async function decorateReservations(rows: ReservationShape[]): Promise<Reservati
 // ---------------------------------------------------------------------------
 
 function requireLibraryRead(ctx: AppContext): void {
-  if (!ctx.auth || !callerHasPermission(ctx.auth, "library:read")) {
+  if (!ctx.auth || !callerHasPermission(ctx.auth, "library:view")) {
     throw new ForbiddenError();
   }
 }
@@ -269,14 +269,14 @@ builder.mutationField("issueBook", (t) =>
     description:
       "Desk: issue a copy by accession number to a student/staff/guardian (J-L2). An ON_HOLD copy " +
       "issues only to its READY reservation's borrower. Librarian gate (J-L3). Audited BOOK_ISSUED.",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "library:lend" },
     args: {
       accessionNo: t.arg.string({ required: true }),
       borrowerType: t.arg.string({ required: true }),
       borrowerId: t.arg.string({ required: true }),
     },
     resolve: async (_root, args, ctx) => {
-      await assertIsLibrarian(ctx);
+      await assertIsLibrarian(ctx, "library:lend");
       const loan = await issueBook(
         args.accessionNo,
         parseBorrowerArgs(args.borrowerType, args.borrowerId),
@@ -294,10 +294,10 @@ builder.mutationField("returnBook", (t) =>
     description:
       "Desk: return an ACTIVE loan (J-L4). With a queue the copy goes ON_HOLD for the head " +
       "reservation (J-L6). Librarian gate. Audited BOOK_RETURNED.",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "library:return" },
     args: { loanId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
-      await assertIsLibrarian(ctx);
+      await assertIsLibrarian(ctx, "library:return");
       const loan = await returnBook(args.loanId, ctx.auth!.userId);
       const [view] = await decorateLoans([loan as unknown as LoanShape]);
       return view;
@@ -311,10 +311,10 @@ builder.mutationField("renewLoan", (t) =>
     description:
       "Desk: renew an ACTIVE loan (J-L5) — blocked at maxRenewals or while the title has a " +
       "QUEUED/READY reservation. Librarian gate. Audited BOOK_RENEWED.",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "library:lend" },
     args: { loanId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
-      await assertIsLibrarian(ctx);
+      await assertIsLibrarian(ctx, "library:lend");
       const loan = await renewLoan(args.loanId, ctx.auth!.userId);
       const [view] = await decorateLoans([loan as unknown as LoanShape]);
       return view;
@@ -328,13 +328,13 @@ builder.mutationField("markBookLost", (t) =>
     description:
       "Desk: settle a loan as LOST with a replacement note — NO money is computed or recorded " +
       "(J-L7, D-#27). Librarian gate. Audited BOOK_MARKED_LOST.",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "library:return" },
     args: {
       loanId: t.arg.string({ required: true }),
       note: t.arg.string({ required: true }),
     },
     resolve: async (_root, args, ctx) => {
-      await assertIsLibrarian(ctx);
+      await assertIsLibrarian(ctx, "library:return");
       const loan = await markLost(args.loanId, args.note, ctx.auth!.userId);
       const [view] = await decorateLoans([loan as unknown as LoanShape]);
       return view;
@@ -350,9 +350,9 @@ builder.mutationField("reserveTitle", (t) =>
   t.field({
     type: BookReservationRef,
     description:
-      "Reserve a title (FIFO queue, D-#83). Staff reserve for THEMSELVES with library:read " +
+      "Reserve a title (FIFO queue, D-#83). Staff reserve for THEMSELVES with library:view " +
       "(omit borrower args); the desk reserves on anyone's behalf (librarian gate). Audited.",
-    authScopes: { authenticated: true },
+    authScopes: { hasAnyPermission: ["library:view", "library:lend"] },
     args: {
       titleId: t.arg.string({ required: true }),
       borrowerType: t.arg.string({ required: false }),
@@ -368,7 +368,7 @@ builder.mutationField("reserveTitle", (t) =>
         if (isSelfStaff(ctx, borrower)) {
           requireLibraryRead(ctx);
         } else {
-          await assertIsLibrarian(ctx);
+          await assertIsLibrarian(ctx, "library:lend");
         }
       } else {
         // No borrower args = self-service (a staff token reserving for itself).
@@ -387,9 +387,9 @@ builder.mutationField("cancelReservation", (t) =>
   t.field({
     type: BookReservationRef,
     description:
-      "Cancel a QUEUED/READY reservation — staff cancel their OWN (library:read); the desk " +
+      "Cancel a QUEUED/READY reservation — staff cancel their OWN (library:view); the desk " +
       "cancels any (librarian gate). A cancelled hold promotes the next in queue.",
-    authScopes: { authenticated: true },
+    authScopes: { hasAnyPermission: ["library:view", "library:lend"] },
     args: { reservationId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       const existing = (await BookReservation.findById(args.reservationId).lean()) as unknown as
@@ -401,7 +401,7 @@ builder.mutationField("cancelReservation", (t) =>
       if (ownStaffRow) {
         requireLibraryRead(ctx);
       } else {
-        await assertIsLibrarian(ctx);
+        await assertIsLibrarian(ctx, "library:lend");
       }
       const resv = await cancelReservation(args.reservationId);
       const [view] = await decorateReservations([resv as unknown as ReservationShape]);
@@ -420,14 +420,14 @@ builder.queryField("loans", (t) =>
     description:
       "Desk loan list (status/borrowerType/overdueOnly filters). Librarian gate — borrower " +
       "identities are not for general browsing.",
-    authScopes: { hasPermission: "library:read" },
+    authScopes: { hasPermission: "library:lend" },
     args: {
       status: t.arg.string({ required: false }),
       borrowerType: t.arg.string({ required: false }),
       overdueOnly: t.arg.boolean({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
-      await assertIsLibrarian(ctx);
+      await assertIsLibrarian(ctx, "library:lend");
       const filter: LoanFilter = {
         status: args.status
           ? ((): never => {
@@ -451,14 +451,14 @@ builder.queryField("borrowerLoans", (t) =>
     description:
       "One borrower's loans, newest first (desk view). Librarian gate. activeOnly (D-#761) keeps " +
       "only the books still out; omitted = the whole loan history, as before.",
-    authScopes: { hasPermission: "library:read" },
+    authScopes: { hasPermission: "library:lend" },
     args: {
       borrowerType: t.arg.string({ required: true }),
       borrowerId: t.arg.string({ required: true }),
       activeOnly: t.arg.boolean({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
-      await assertIsLibrarian(ctx);
+      await assertIsLibrarian(ctx, "library:lend");
       const rows = await borrowerLoans(parseBorrowerArgs(args.borrowerType, args.borrowerId), {
         activeOnly: args.activeOnly,
       });
@@ -473,7 +473,7 @@ builder.queryField("myLoans", (t) =>
     description:
       "The calling staff member's own loans (own-row; J5-style self view). activeOnly (D-#761) keeps " +
       "only the books still out; omitted = the whole loan history, as before.",
-    authScopes: { hasPermission: "library:read" },
+    authScopes: { hasPermission: "library:view" },
     args: { activeOnly: t.arg.boolean({ required: false }) },
     resolve: async (_root, args, ctx) => {
       const rows = await borrowerLoans({ type: "STAFF", id: ctx.auth!.userId }, { activeOnly: args.activeOnly });
@@ -487,10 +487,10 @@ builder.queryField("reservationsForTitle", (t) =>
     type: [BookReservationRef],
     description:
       "A title's active queue, FIFO, after the lazy-expiry pass (D-#83). Librarian gate.",
-    authScopes: { hasPermission: "library:read" },
+    authScopes: { hasPermission: "library:lend" },
     args: { titleId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
-      await assertIsLibrarian(ctx);
+      await assertIsLibrarian(ctx, "library:lend");
       const rows = await reservationsForTitle(args.titleId);
       return decorateReservations(rows as unknown as ReservationShape[]);
     },
@@ -501,7 +501,7 @@ builder.queryField("myReservations", (t) =>
   t.field({
     type: [BookReservationRef],
     description: "The calling staff member's own reservations (own-row).",
-    authScopes: { hasPermission: "library:read" },
+    authScopes: { hasPermission: "library:view" },
     resolve: async (_root, _args, ctx) => {
       const rows = await reservationsForBorrower({ type: "STAFF", id: ctx.auth!.userId });
       return decorateReservations(rows as unknown as ReservationShape[]);
@@ -513,13 +513,13 @@ builder.queryField("borrowerReservations", (t) =>
   t.field({
     type: [BookReservationRef],
     description: "One borrower's reservations, newest first (desk view). Librarian gate.",
-    authScopes: { hasPermission: "library:read" },
+    authScopes: { hasPermission: "library:lend" },
     args: {
       borrowerType: t.arg.string({ required: true }),
       borrowerId: t.arg.string({ required: true }),
     },
     resolve: async (_root, args, ctx) => {
-      await assertIsLibrarian(ctx);
+      await assertIsLibrarian(ctx, "library:lend");
       const rows = await reservationsForBorrower(parseBorrowerArgs(args.borrowerType, args.borrowerId));
       return decorateReservations(rows as unknown as ReservationShape[]);
     },
@@ -552,13 +552,13 @@ builder.queryField("libraryBorrowerSearch", (t) =>
     description:
       "Desk borrower search by name/ID/phone within one borrower type (LB-4 picker). " +
       "Librarian gate — exposes roster identities.",
-    authScopes: { hasPermission: "library:read" },
+    authScopes: { hasPermission: "library:lend" },
     args: {
       borrowerType: t.arg.string({ required: true }),
       search: t.arg.string({ required: true }),
     },
     resolve: async (_root, args, ctx) => {
-      await assertIsLibrarian(ctx);
+      await assertIsLibrarian(ctx, "library:lend");
       const type = parseBorrowerType(args.borrowerType);
       const term = args.search.trim();
       if (!term) return [];

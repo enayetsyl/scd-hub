@@ -2,9 +2,9 @@
  * Work-board resolvers (WB-1..WB-3, D-#701).
  *
  * RBAC:
- *   authenticated (any staff)  — my board, my counts, tasks for myself, my templates,
+ *   work_board:use (SELF)      — my board, my counts, tasks for myself, my templates,
  *                                status/block on my own cards
- *   tasks:assign               — anyone's board, the load grid, the staff picker,
+ *   work_board:view_all / :assign — anyone's board, the load grid, the staff picker,
  *                                tasks/templates for OTHER people, move/reassign/cancel
  * Every gate is re-checked in the service (the resolver's `authScopes` is the
  * declarative half; TaskService holds the row rules). Identity plane only.
@@ -60,16 +60,17 @@ function requireAuth(ctx: AppContext) {
   return ctx.auth;
 }
 
-function assertAssigner(ctx: AppContext): void {
+/** PM: reading someone else's board needs work_board:view_all (was tasks:assign). */
+function assertViewAllBoards(ctx: AppContext): void {
   const auth = requireAuth(ctx);
-  if (!callerHasPermission(auth, "tasks:assign")) throw new ForbiddenError("অন্যের বোর্ড দেখার অনুমতি নেই");
+  if (!callerHasPermission(auth, "work_board:view_all")) throw new ForbiddenError("অন্যের বোর্ড দেখার অনুমতি নেই");
 }
 
-/** Whose board: the caller's own, or (tasks:assign) someone else's — the drill-down rule. */
+/** Whose board: the caller's own, or (work_board:view_all) someone else's — the drill-down rule. */
 function boardOwnerId(ctx: AppContext, userId: string | null | undefined): string {
   const auth = requireAuth(ctx);
   if (!userId || userId === auth.userId) return auth.userId;
-  assertAssigner(ctx);
+  assertViewAllBoards(ctx);
   if (!Types.ObjectId.isValid(userId)) throw new Error("ব্যবহারকারী সঠিক নয়");
   return userId;
 }
@@ -271,7 +272,7 @@ async function decorateTemplates(docs: ITaskTemplate[]): Promise<TemplateView[]>
 // ---------------------------------------------------------------------------
 
 const TaskInputType = builder.inputType("TaskInput", {
-  description: "Create a manual task. assigneeUserId = the caller's own id needs no permission; anyone else needs tasks:assign.",
+  description: "Create a manual task. assigneeUserId = the caller's own id needs no permission; anyone else needs work_board:assign.",
   fields: (t) => ({
     titleBn: t.string({ required: true }),
     notes: t.string({ required: false }),
@@ -320,7 +321,7 @@ builder.queryField("myWorkBoard", (t) =>
   t.field({
     type: [WorkCardRef],
     description: "The caller's unified board for [fromKey, toKey]: manual tasks + auto cards, sorted overdue → day → slot → priority.",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "work_board:use" },
     args: { fromKey: t.arg.string({ required: true }), toKey: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       const auth = requireAuth(ctx);
@@ -334,15 +335,14 @@ builder.queryField("myWorkBoard", (t) =>
 builder.queryField("workBoardFor", (t) =>
   t.field({
     type: [WorkCardRef],
-    description: "Someone else's board (tasks:assign) — the load grid's drill-down.",
-    authScopes: { hasPermission: "tasks:assign" },
+    description: "Someone else's board (work_board:view_all) — the load grid's drill-down.",
+    authScopes: { hasPermission: "work_board:view_all" },
     args: {
       userId: t.arg.string({ required: true }),
       fromKey: t.arg.string({ required: true }),
       toKey: t.arg.string({ required: true }),
     },
-    resolve: async (_root, args, ctx) => {
-      assertAssigner(ctx);
+    resolve: async (_root, args) => {
       assertKeys(args.fromKey, args.toKey);
       const users = await loadBoardUsers([args.userId]);
       return boardFor(users, args.fromKey, args.toKey);
@@ -355,8 +355,8 @@ builder.queryField("homeworkCheckMonths", (t) =>
     type: [HomeworkCheckMonthRef],
     description:
       "Months before the current one with homework copies still unchecked, newest first (counts only). " +
-      "Own board, or someone else's with tasks:assign.",
-    authScopes: { authenticated: true },
+      "Own board, or someone else's with work_board:view_all.",
+    authScopes: { hasPermission: "work_board:use" },
     args: { userId: t.arg.string({ required: false }) },
     resolve: async (_root, args, ctx) => homeworkCheckMonths([boardOwnerId(ctx, args.userId)]),
   }),
@@ -366,7 +366,7 @@ builder.queryField("homeworkCheckCardsForMonth", (t) =>
   t.field({
     type: [WorkCardRef],
     description: "One earlier month's homework-check cards (monthKey YYYY-MM), loaded when its header is opened.",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "work_board:use" },
     args: { monthKey: t.arg.string({ required: true }), userId: t.arg.string({ required: false }) },
     resolve: async (_root, args, ctx) => homeworkCheckCardsForMonth([boardOwnerId(ctx, args.userId)], args.monthKey),
   }),
@@ -376,7 +376,7 @@ builder.queryField("myWorkBoardCounts", (t) =>
   t.field({
     type: WorkBoardCountsRef,
     description: "Open-today + overdue card counts for the drawer badge.",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "work_board:use" },
     resolve: async (_root, _args, ctx) => {
       const auth = requireAuth(ctx);
       const [user] = await loadBoardUsers([auth.userId]);
@@ -389,8 +389,8 @@ builder.queryField("myWorkBoardCounts", (t) =>
 builder.queryField("task", (t) =>
   t.field({
     type: TaskRef,
-    description: "One manual task — the assignee, the assigner, or a tasks:assign holder.",
-    authScopes: { authenticated: true },
+    description: "One manual task — the assignee, the assigner, or a work_board:view_all holder.",
+    authScopes: { hasAnyPermission: ["work_board:use", "work_board:view_all"] },
     args: { id: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       const auth = requireAuth(ctx);
@@ -405,7 +405,7 @@ builder.queryField("tasksAssignedByMe", (t) =>
   t.field({
     type: [TaskRef],
     description: "আমার দেওয়া কাজ — tasks the caller put on OTHER people's boards. open=true (default) → not DONE; false → DONE.",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "work_board:use" },
     args: { open: t.arg.boolean({ required: false }) },
     resolve: async (_root, args, ctx) => {
       const auth = requireAuth(ctx);
@@ -422,7 +422,7 @@ builder.queryField("tasksAssignedByMePage", (t) =>
   t.field({
     type: TaskPageRef,
     description: "One page of tasksAssignedByMe (same open/done split and order); total counts every match (D-#761).",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "work_board:use" },
     args: {
       open: t.arg.boolean({ required: false }),
       page: t.arg.int({ required: false }),
@@ -438,11 +438,10 @@ builder.queryField("tasksAssignedByMePage", (t) =>
 builder.queryField("workLoadGrid", (t) =>
   t.field({
     type: [LoadRowRef],
-    description: "Open minutes per staff member per day over [fromKey, toKey] (≤ 14 days), per-category colouring (WB-3). tasks:assign.",
-    authScopes: { hasPermission: "tasks:assign" },
+    description: "Open minutes per staff member per day over [fromKey, toKey] (≤ 14 days), per-category colouring (WB-3). work_board:view_all.",
+    authScopes: { hasPermission: "work_board:view_all" },
     args: { fromKey: t.arg.string({ required: true }), toKey: t.arg.string({ required: true }) },
-    resolve: async (_root, args, ctx) => {
-      assertAssigner(ctx);
+    resolve: async (_root, args) => {
       assertKeys(args.fromKey, args.toKey);
       return loadGrid(args.fromKey, args.toKey);
     },
@@ -452,10 +451,9 @@ builder.queryField("workLoadGrid", (t) =>
 builder.queryField("assignableStaff", (t) =>
   t.field({
     type: [AssignableStaffRef],
-    description: "Every active staff login with today's open load — the new-task picker. tasks:assign.",
-    authScopes: { hasPermission: "tasks:assign" },
-    resolve: async (_root, _args, ctx) => {
-      assertAssigner(ctx);
+    description: "Every active staff login with today's open load — the new-task picker. work_board:assign.",
+    authScopes: { hasPermission: "work_board:assign" },
+    resolve: async () => {
       const todayKey = dateKeyOf(new Date());
       const users = await allStaffUsers();
       const cats = await categoriesFor(users);
@@ -478,8 +476,8 @@ builder.queryField("assignableStaff", (t) =>
 builder.queryField("taskTemplates", (t) =>
   t.field({
     type: [TaskTemplateRef],
-    description: "Recurring tasks: every template for tasks:assign holders, otherwise the ones on the caller's own board.",
-    authScopes: { authenticated: true },
+    description: "Recurring tasks: every template for work_board:view_all holders, otherwise the ones on the caller's own board.",
+    authScopes: { hasPermission: "work_board:use" },
     resolve: async (_root, _args, ctx) => decorateTemplates(await listTaskTemplates(requireAuth(ctx))),
   }),
 );
@@ -491,8 +489,8 @@ builder.queryField("taskTemplates", (t) =>
 builder.mutationField("createTask", (t) =>
   t.field({
     type: TaskRef,
-    description: "Create a manual task. For someone else: tasks:assign; the assignee is notified (TASK_ASSIGNED). Audited.",
-    authScopes: { authenticated: true },
+    description: "Create a manual task. For someone else: work_board:assign; the assignee is notified (TASK_ASSIGNED). Audited.",
+    authScopes: { hasPermission: "work_board:use" },
     args: { input: t.arg({ type: TaskInputType, required: true }) },
     resolve: async (_root, args, ctx) =>
       decorateOne(
@@ -508,8 +506,8 @@ builder.mutationField("createTask", (t) =>
 builder.mutationField("updateTask", (t) =>
   t.field({
     type: TaskRef,
-    description: "Edit title/notes/priority/day/slot/effort — the assigner or tasks:assign. Audited.",
-    authScopes: { authenticated: true },
+    description: "Edit title/notes/priority/day/slot/effort — the assigner or work_board:assign. Audited.",
+    authScopes: { hasAnyPermission: ["work_board:use", "work_board:assign"] },
     args: { id: t.arg.string({ required: true }), patch: t.arg({ type: TaskPatchType, required: true }) },
     resolve: async (_root, args, ctx) =>
       decorateOne(
@@ -525,8 +523,8 @@ builder.mutationField("updateTask", (t) =>
 builder.mutationField("setTaskStatus", (t) =>
   t.field({
     type: TaskRef,
-    description: "TODO / DOING / DONE — the assignee, the assigner or tasks:assign. DONE notifies the assigner. Audited.",
-    authScopes: { authenticated: true },
+    description: "TODO / DOING / DONE — the assignee, the assigner or work_board:assign. DONE notifies the assigner. Audited.",
+    authScopes: { hasAnyPermission: ["work_board:use", "work_board:assign"] },
     args: { id: t.arg.string({ required: true }), status: t.arg({ type: TaskStatusEnum, required: true }) },
     resolve: async (_root, args, ctx) => decorateOne(await setTaskStatus(ctx.auth, args.id, args.status as TaskStatus)),
   }),
@@ -536,7 +534,7 @@ builder.mutationField("setTaskBlocked", (t) =>
   t.field({
     type: TaskRef,
     description: "Block with a one-line reason (notifies the assigner), or unblock with reason = null. Audited.",
-    authScopes: { authenticated: true },
+    authScopes: { hasAnyPermission: ["work_board:use", "work_board:assign"] },
     args: { id: t.arg.string({ required: true }), reason: t.arg.string({ required: false }) },
     resolve: async (_root, args, ctx) => decorateOne(await setTaskBlocked(ctx.auth, args.id, args.reason ?? null)),
   }),
@@ -545,8 +543,8 @@ builder.mutationField("setTaskBlocked", (t) =>
 builder.mutationField("reassignTask", (t) =>
   t.field({
     type: TaskRef,
-    description: "Hand the task to someone else — the assigner or tasks:assign. The new assignee is notified. Audited.",
-    authScopes: { authenticated: true },
+    description: "Hand the task to someone else — the assigner or work_board:assign. The new assignee is notified. Audited.",
+    authScopes: { hasAnyPermission: ["work_board:use", "work_board:assign"] },
     args: { id: t.arg.string({ required: true }), assigneeUserId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => decorateOne(await reassignTask(ctx.auth, args.id, args.assigneeUserId)),
   }),
@@ -555,8 +553,8 @@ builder.mutationField("reassignTask", (t) =>
 builder.mutationField("moveTask", (t) =>
   t.field({
     type: TaskRef,
-    description: "Move to another slot (the assignee may) and/or day (the assigner or tasks:assign). Audited.",
-    authScopes: { authenticated: true },
+    description: "Move to another slot (the assignee may) and/or day (the assigner or work_board:assign). Audited.",
+    authScopes: { hasAnyPermission: ["work_board:use", "work_board:assign"] },
     args: {
       id: t.arg.string({ required: true }),
       dueKey: t.arg.string({ required: false }),
@@ -570,8 +568,8 @@ builder.mutationField("moveTask", (t) =>
 builder.mutationField("cancelTask", (t) =>
   t.field({
     type: TaskRef,
-    description: "Withdraw an open task — the assigner or tasks:assign. The row is hidden, never deleted. Audited.",
-    authScopes: { authenticated: true },
+    description: "Withdraw an open task — the assigner or work_board:assign. The row is hidden, never deleted. Audited.",
+    authScopes: { hasAnyPermission: ["work_board:use", "work_board:assign"] },
     args: { id: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => decorateOne(await cancelTask(ctx.auth, args.id)),
   }),
@@ -581,8 +579,8 @@ builder.mutationField("pullWorkCard", (t) =>
   t.boolean({
     description:
       "WB-5 (D-#702): take an office-queue card (PRINT_JOB / LEAVE_APPROVAL) onto MY board while the desk is on leave. " +
-      "A desk login, an OFFICE/PRINCIPAL-template backup, or tasks:assign. The card leaves every other board until its source closes. Audited.",
-    authScopes: { authenticated: true },
+      "A desk login, an OFFICE/PRINCIPAL-template backup, or work_board:cover_desk. The card leaves every other board until its source closes. Audited.",
+    authScopes: { hasPermission: "work_board:cover_desk" },
     args: { kind: t.arg.string({ required: true }), sourceId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => pullWorkCard(ctx.auth, args.kind, args.sourceId),
   }),
@@ -590,8 +588,8 @@ builder.mutationField("pullWorkCard", (t) =>
 
 builder.mutationField("releaseWorkCard", (t) =>
   t.boolean({
-    description: "WB-5: give a pulled office card back to the queue — the puller or tasks:assign. Audited.",
-    authScopes: { authenticated: true },
+    description: "WB-5: give a pulled office card back to the queue — the puller or work_board:assign. Audited.",
+    authScopes: { hasAnyPermission: ["work_board:use", "work_board:assign"] },
     args: { kind: t.arg.string({ required: true }), sourceId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => releaseWorkCard(ctx.auth, args.kind, args.sourceId),
   }),
@@ -600,8 +598,8 @@ builder.mutationField("releaseWorkCard", (t) =>
 builder.mutationField("createTaskTemplate", (t) =>
   t.field({
     type: TaskTemplateRef,
-    description: "A recurring task (WB-2). For someone else: tasks:assign. The scheduler creates today's instance each school morning.",
-    authScopes: { authenticated: true },
+    description: "A recurring task (WB-2). For someone else: work_board:assign. The scheduler creates today's instance each school morning.",
+    authScopes: { hasPermission: "work_board:use" },
     args: { input: t.arg({ type: TaskTemplateInputType, required: true }) },
     resolve: async (_root, args, ctx) =>
       (
@@ -620,8 +618,8 @@ builder.mutationField("createTaskTemplate", (t) =>
 builder.mutationField("setTaskTemplateActive", (t) =>
   t.field({
     type: TaskTemplateRef,
-    description: "Pause or resume a recurring task. Its creator, its assignee, or tasks:assign.",
-    authScopes: { authenticated: true },
+    description: "Pause or resume a recurring task. Its creator, its assignee, or work_board:assign.",
+    authScopes: { hasAnyPermission: ["work_board:use", "work_board:assign"] },
     args: { id: t.arg.string({ required: true }), active: t.arg.boolean({ required: true }) },
     resolve: async (_root, args, ctx) => (await decorateTemplates([await setTaskTemplateActive(ctx.auth, args.id, args.active)]))[0],
   }),

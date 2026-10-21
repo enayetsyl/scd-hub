@@ -4,7 +4,8 @@
  *
  *   uploader → always (the file exists BEFORE the item does, while the delivery
  *              form previews the picked list — the print_upload rule);
- *   staff    → read scope on the owning item's section+class;
+ *   staff    → `assignment:view` + read scope on the owning item's section+class, or
+ *              `assignment:view_all` (unscoped; PM — was the isAdminStaff bypass);
  *   GUARDIAN → a linked ACTIVE child enrolled in the item's class.
  *
  * Ownership is reverse-resolved through AssignmentItem.attachmentIds (the file
@@ -19,6 +20,9 @@ import { GuardianLink } from "../../foundation/models/GuardianLink";
 import { Student } from "../../foundation/models/Student";
 import { AssignmentStudentRecord } from "../models/AssignmentStudentRecord";
 import { passOnItemOrRecordSection } from "../recordOwner";
+import { callerHasPermission } from "@scd/shared";
+
+const AS_READ = { viewAll: "assignment:view_all" } as const;
 
 export async function assertAssignmentFileReadAccess(
   ctx: AppContext,
@@ -45,11 +49,17 @@ export async function assertAssignmentFileReadAccess(
     }
     throw new ForbiddenError("এই শিক্ষার্থীর তথ্য দেখার অনুমতি নেই");
   }
+  if (
+    !callerHasPermission(ctx.auth, "assignment:view") &&
+    !callerHasPermission(ctx.auth, "assignment:view_all")
+  ) {
+    throw new ForbiddenError();
+  }
   // D-#772: a pre-split item stays on the emptied সম্মিলিত while its records sit on
   // the halves — a reader of any section holding its records may open its files.
   await passOnItemOrRecordSection(
     item.sectionId.toString(),
     () => AssignmentStudentRecord.distinct("sectionId", { asItemId: item._id }),
-    (sectionId) => assertCanRead(ctx, sectionId, item.classId.toString()),
+    (sectionId) => assertCanRead(ctx, sectionId, item.classId.toString(), undefined, AS_READ),
   );
 }

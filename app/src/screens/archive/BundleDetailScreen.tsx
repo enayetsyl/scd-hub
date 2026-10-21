@@ -1,9 +1,9 @@
 /**
  * BundleDetailScreen (AR-2/AR-3, prd-script-archive §8) — one bundle: the
  * cover-sheet facts, box + location, the append-only checkout log, and the desk
- * actions. Every action is `can("roster:manage")`-offered and server-re-gated:
- * acknowledge (once), check out (borrower + purpose), check in (note +
- * optional re-box), dispose (reason; outside retention only), void (reason).
+ * actions. Each action is offered on its own archive action and server-re-gated:
+ * acknowledge (once, `archive:approve`), check out / check in (`archive:lend`),
+ * dispose (reason; outside retention only, `archive:delete`), void (`archive:void`).
  * The cover-sheet PDF (AR-4) opens web-only.
  */
 import React from "react";
@@ -42,7 +42,11 @@ export default function BundleDetailScreen(): React.ReactElement {
   const route = useRoute<Route>();
   const { bundleId } = route.params;
   const { can } = useAuth();
-  const canManage = can("roster:manage");
+  const canApprove = can("archive:approve");
+  const canLend = can("archive:lend");
+  const canVoid = can("archive:void");
+  const canDelete = can("archive:delete");
+  const canDesk = canApprove || canLend || canVoid || canDelete;
 
   const [bundleQ, refetchBundle] = useQuery({
     query: SCRIPT_BUNDLE_QUERY,
@@ -51,9 +55,9 @@ export default function BundleDetailScreen(): React.ReactElement {
   const [boxesQ] = useQuery({
     query: STORAGE_BOXES_QUERY,
     variables: { status: "ACTIVE" },
-    pause: !canManage,
+    pause: !canLend,
   });
-  const [teachersQ] = useQuery({ query: TEACHERS_QUERY, pause: !canManage });
+  const [teachersQ] = useQuery({ query: TEACHERS_QUERY, pause: !canLend });
 
   const b = bundleQ.data?.scriptBundle ?? null;
   const boxes = boxesQ.data?.storageBoxes ?? [];
@@ -197,10 +201,10 @@ export default function BundleDetailScreen(): React.ReactElement {
                 )}
               </Card>
 
-              {canManage && (b.status === "FILED" || b.status === "CHECKED_OUT") ? (
+              {canDesk && (b.status === "FILED" || b.status === "CHECKED_OUT") ? (
                 <Card>
                   {note ? <Notice message={note.text} tone={note.bad ? "danger" : "ok"} /> : null}
-                  {!b.acknowledgedAt ? (
+                  {canApprove && !b.acknowledgedAt ? (
                     <Button
                       title={STR.arAcknowledge}
                       disabled={busy}
@@ -209,6 +213,8 @@ export default function BundleDetailScreen(): React.ReactElement {
                   ) : null}
                   {b.status === "FILED" ? (
                     <View style={{ marginTop: space(2) }}>
+                      {canLend ? (
+                        <>
                       <Body style={{ fontWeight: "700" }}>{STR.arCheckOut}</Body>
                       <Select
                         label={STR.arCheckOutTo}
@@ -240,24 +246,34 @@ export default function BundleDetailScreen(): React.ReactElement {
                         }
                       />
                       <Divider />
+                        </>
+                      ) : null}
+                      {canDelete || canVoid ? (
+                        <>
                       <Body style={{ fontWeight: "700" }}>{STR.arDispose} / {STR.arVoid}</Body>
                       <Field label={STR.arReason} value={reason} onChangeText={setReason} />
                       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: space(2) }}>
+                        {canDelete ? (
                         <Button
                           title={STR.arDispose}
                           variant="secondary"
                           disabled={busy || reason.trim() === ""}
                           onPress={() => void run(dispose({ id: b.id, reason: reason.trim() }))}
                         />
+                        ) : null}
+                        {canVoid ? (
                         <Button
                           title={STR.arVoid}
                           variant="ghost"
                           disabled={busy || reason.trim() === ""}
                           onPress={() => void run(voidBundle({ id: b.id, reason: reason.trim() }))}
                         />
+                        ) : null}
                       </View>
+                        </>
+                      ) : null}
                     </View>
-                  ) : (
+                  ) : canLend ? (
                     <View style={{ marginTop: space(2) }}>
                       <Body style={{ fontWeight: "700" }}>{STR.arCheckIn}</Body>
                       <Field label={STR.arReturnNote} value={returnNote} onChangeText={setReturnNote} />
@@ -287,7 +303,7 @@ export default function BundleDetailScreen(): React.ReactElement {
                         }
                       />
                     </View>
-                  )}
+                  ) : null}
                 </Card>
               ) : null}
             </>

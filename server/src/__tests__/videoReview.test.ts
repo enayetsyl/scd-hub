@@ -101,16 +101,16 @@ beforeEach(() => {
 // RBAC — no new permission: the loop rides the observation perms exactly
 // ---------------------------------------------------------------------------
 
-describe("RBAC — rides the existing observation permissions", () => {
-  test("observation:upload + observation:manage = Principal/Office only", () => {
-    for (const perm of ["observation:upload", "observation:manage"] as const) {
+describe("RBAC — the free_mixing_review actions (PM)", () => {
+  test("free_mixing_review:assign + :view_all = Principal/Office only", () => {
+    for (const perm of ["free_mixing_review:assign", "free_mixing_review:view_all"] as const) {
       const holders = ROLES.filter((r) => roleHasPermission(r, perm));
       expect(holders.sort()).toEqual(["OFFICE", "PRINCIPAL"]);
     }
   });
-  test("observation:review = TEACHER only (guardian never)", () => {
-    const holders = ROLES.filter((r) => roleHasPermission(r, "observation:review"));
-    expect(holders).toEqual(["TEACHER"]);
+  test("free_mixing_review:review = TEACHER (+ the Principal, who holds every action; the assigned-reviewer designation still gates the row); guardian never", () => {
+    const holders = ROLES.filter((r) => roleHasPermission(r, "free_mixing_review:review"));
+    expect(holders.sort()).toEqual(["PRINCIPAL", "TEACHER"]);
   });
 });
 

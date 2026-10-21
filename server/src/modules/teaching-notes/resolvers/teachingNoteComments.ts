@@ -57,7 +57,7 @@ builder.queryField("teachingNoteComments", (t) =>
     description:
       "The comment thread for a note's identity, oldest first. Passing ANY version's id " +
       "returns the same thread — that is the point of the anchor.",
-    authScopes: { authenticated: true },
+    authScopes: { hasAnyPermission: ["teaching_notes:view", "teaching_notes:view_all"] },
     args: { noteId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => teachingNoteComments(ctx, args.noteId),
   }),
@@ -69,7 +69,7 @@ builder.queryField("openTeachingNoteComments", (t) =>
     description:
       "Every OPEN comment across the whole library, newest first — the Principal's outstanding " +
       "list. Requires roster:manage.",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "teaching_notes:review" },
     resolve: async (_root, _args, ctx) => openTeachingNoteComments(ctx),
   }),
 );
@@ -80,7 +80,7 @@ builder.mutationField("addTeachingNoteComment", (t) =>
     description:
       "Leave an improvement comment on a teaching note. Allowed to anyone who may read it; " +
       "many comments per teacher and many teachers per note. Audited.",
-    authScopes: { authenticated: true },
+    authScopes: { hasAnyPermission: ["teaching_notes:view", "teaching_notes:view_all"] },
     args: {
       noteId: t.arg.string({ required: true }),
       bodyBn: t.arg.string({ required: true }),
@@ -101,7 +101,7 @@ builder.mutationField("setTeachingNoteCommentStatus", (t) =>
     description:
       "Mark a comment ADDRESSED (or reopen it as OPEN). The note's uploader or roster:manage — " +
       "a teacher cannot close their own feedback loop. Audited.",
-    authScopes: { authenticated: true },
+    authScopes: { hasAnyPermission: ["teaching_notes:view", "teaching_notes:view_all"] },
     args: {
       commentId: t.arg.string({ required: true }),
       status: t.arg.string({ required: true }),
@@ -122,7 +122,7 @@ builder.mutationField("addressTeachingNoteComments", (t) =>
     description:
       "Mark several open comments ADDRESSED at once — offered right after a new version is " +
       "uploaded. Returns how many were closed.",
-    authScopes: { authenticated: true },
+    authScopes: { hasAnyPermission: ["teaching_notes:view", "teaching_notes:view_all"] },
     args: {
       commentIds: t.arg.stringList({ required: true }),
       addressedNote: t.arg.string({ required: false }),
@@ -141,7 +141,7 @@ builder.mutationField("deleteTeachingNoteComment", (t) =>
     description:
       "Soft-delete a comment — the author, or roster:manage. The row is retained (deletedAt) so " +
       "a supervised thread cannot lose entries without trace. Audited.",
-    authScopes: { authenticated: true },
+    authScopes: { hasAnyPermission: ["teaching_notes:view", "teaching_notes:view_all"] },
     args: { commentId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => deleteTeachingNoteComment(ctx, args.commentId),
   }),

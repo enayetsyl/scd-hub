@@ -25,7 +25,7 @@ export interface CreateExamInput {
 
 export async function createExam(ctx: AppContext, input: CreateExamInput): Promise<IExam> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  if (!callerHasPermission(ctx.auth, "exam:manage")) {
+  if (!callerHasPermission(ctx.auth, "exam_syllabus:settings")) {
     throw new ForbiddenError("পরীক্ষা তৈরির অনুমতি নেই");
   }
   if (!(EXAM_TERMS as readonly string[]).includes(input.term)) {
@@ -84,7 +84,7 @@ export interface UpdateExamInput {
  */
 export async function updateExam(ctx: AppContext, input: UpdateExamInput): Promise<IExam> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  if (!callerHasPermission(ctx.auth, "exam:manage")) {
+  if (!callerHasPermission(ctx.auth, "exam_syllabus:settings")) {
     throw new ForbiddenError("পরীক্ষা সম্পাদনার অনুমতি নেই");
   }
 

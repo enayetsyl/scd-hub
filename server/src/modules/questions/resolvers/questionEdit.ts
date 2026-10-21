@@ -6,7 +6,8 @@
  *   restoreQuestion       — undo a retirement.
  *   setQuestionImportant  — raise or lower the IMPORTANT mark (QR-9, D-#550).
  *
- * The first three require `question:manage` (Principal + Office). A TEACHER — reviewer included —
+ * updateQuestionContent requires `question_bank:edit`; retire/restore require `question_bank:delete`
+ * (Principal + Office by default; PM, D-#790). A TEACHER — reviewer included —
  * never edits directly: they raise a verdict, and the desk acts on it. That is the whole
  * shape of the review loop, and letting a reviewer edit would quietly bypass it.
  *
@@ -78,8 +79,8 @@ builder.mutationField("updateQuestionContent", (t) =>
       "untouched. Subject, class, chapter and question_type are deliberately NOT editable — " +
       "they are the question's address and carrier shape, and moving them would strand open " +
       "review rounds and change what an assembled set contains. A PUBLISHED question may be " +
-      "corrected; the audit row records that it was. Requires question:manage.",
-    authScopes: { hasPermission: "question:manage" },
+      "corrected; the audit row records that it was. Requires question_bank:edit.",
+    authScopes: { hasPermission: "question_bank:edit" },
     args: {
       artifactId: t.arg.string({ required: true }),
       questionText: t.arg.string({ required: false }),
@@ -126,8 +127,8 @@ builder.mutationField("retireQuestion", (t) =>
       "set assembly, and any open review round on it is closed — but the document stays, so " +
       "an AssessmentSet that already references it keeps resolving. A hard delete would " +
       "orphan every set the question was assembled into. Reversible via restoreQuestion. " +
-      "Requires question:manage.",
-    authScopes: { hasPermission: "question:manage" },
+      "Requires question_bank:delete.",
+    authScopes: { hasPermission: "question_bank:delete" },
     args: {
       artifactId: t.arg.string({ required: true }),
       reason: t.arg.string({ required: false }),
@@ -153,8 +154,8 @@ builder.mutationField("restoreQuestion", (t) =>
     type: QuestionEditResultRef,
     description:
       "Undo a retirement — the question returns to the bank. Find retired questions with " +
-      "questions(retired: true). Requires question:manage.",
-    authScopes: { hasPermission: "question:manage" },
+      "questions(retired: true). Requires question_bank:delete.",
+    authScopes: { hasPermission: "question_bank:delete" },
     args: {
       artifactId: t.arg.string({ required: true }),
     },
@@ -180,25 +181,31 @@ builder.mutationField("setQuestionImportant", (t) =>
       "Raise or lower the IMPORTANT mark on a question (QR-9, D-#550). Normal is the usual " +
       "state; the mark is visible to EVERYONE who can see the question, teachers included, " +
       "and is separately filterable via questions(important: true). Principal and Office may " +
-      "mark any question at any time (question:manage); a reviewer (content:review) may mark " +
+      "mark any question at any time (question_bank:edit); a reviewer (question_review:review) may mark " +
       "only a question in her own open review queue. Setting the state it already holds " +
       "writes nothing.",
     // Either gate opens this door, so the scope check lives in the service where it can be
     // executed against a real round rather than asserted about a permission string.
-    authScopes: { hasAnyPermission: ["question:manage", "content:review"] },
+    authScopes: { hasAnyPermission: ["question_bank:edit", "question_review:review"] },
     args: {
       artifactId: t.arg.string({ required: true }),
       important: t.arg.boolean({ required: true }),
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      // question_bank:edit → any question; otherwise the reviewer branch (own open round,
+      // checked in the service) needs question_review:review.
+      const mayManage = callerHasPermission(ctx.auth, "question_bank:edit");
+      if (!mayManage && !callerHasPermission(ctx.auth, "question_review:review")) {
+        throw new ForbiddenError();
+      }
       try {
         return await setImportantSvc({
           artifactId: args.artifactId,
           important: args.important,
           actorId: ctx.auth.userId,
           actorRole: ctx.auth.role,
-          mayManage: callerHasPermission(ctx.auth, "question:manage"),
+          mayManage,
         });
       } catch (err) {
         return mapEditError(err);

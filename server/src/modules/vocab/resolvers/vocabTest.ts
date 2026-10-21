@@ -3,12 +3,12 @@
  * §3.3–§3.5/§5, D-#106/#127).
  *
  * RBAC (composes existing perms, NO new permission — D-#94/#106):
- *   - Weekly tester assignment (`assignVocabTester`, reads): `roster:manage`
+ *   - Weekly tester assignment (`assignVocabTester`, reads): `vocab_test:assign`
  *     (Principal/Office — the admin gate).
- *   - Test build (create / update / lay positions): `tracker:write` + the OPERATOR
+ *   - Test build (create / update / lay positions): `vocab_test:create` + the OPERATOR
  *     gate — the caller must be the current assigned tester OR hold an active proxy
- *     grant on the section (§5); Principal is unscoped, Office/Guardian denied.
- *   - Reads (`vocabTest`/`vocabTests`/positions): `tracker:read`.
+ *     grant on the section (§5); vocab_test:edit_all (Principal by default) is unscoped.
+ *   - Reads (`vocabTest`/`vocabTests`/positions): `vocab_test:view`.
  *
  * Identity/operational plane; NO corpus path (ADR-005).
  */
@@ -97,7 +97,7 @@ VocabTestAssignmentRef.implement({
 });
 
 // ---------------------------------------------------------------------------
-// Mutations — build a test (tracker:write + operator gate)
+// Mutations — build a test (vocab_test:create + operator gate)
 // ---------------------------------------------------------------------------
 
 builder.mutationField("createVocabTest", (t) =>
@@ -106,8 +106,8 @@ builder.mutationField("createVocabTest", (t) =>
     description:
       "Create a vocab test (draft) for a (section × program). testDate defaults to the " +
       "Thursday of its week, holiday-rolled (D-#50); pass testDate to override. Requires " +
-      "tracker:write + being the assigned/covering tester. Audited.",
-    authScopes: { hasPermission: "tracker:write" },
+      "vocab_test:create + being the assigned/covering tester. Audited.",
+    authScopes: { hasAnyPermission: ["vocab_test:create", "vocab_test:edit_all"] },
     args: {
       program: t.arg.string({ required: true }),
       sectionId: t.arg.string({ required: true }),
@@ -139,8 +139,8 @@ builder.mutationField("createVocabTest", (t) =>
 builder.mutationField("updateVocabTest", (t) =>
   t.field({
     type: VocabTestRef,
-    description: "Edit a test's label/marks/half-miss/date (not once marked). tracker:write + operator gate. Audited.",
-    authScopes: { hasPermission: "tracker:write" },
+    description: "Edit a test's label/marks/half-miss/date (not once marked). vocab_test:create + operator gate. Audited.",
+    authScopes: { hasAnyPermission: ["vocab_test:create", "vocab_test:edit_all"] },
     args: {
       testId: t.arg.string({ required: true }),
       label: t.arg.string({ required: false }),
@@ -187,8 +187,8 @@ builder.mutationField("setVocabTestPositions", (t) =>
     type: [VocabTestPositionRef],
     description:
       "Auto-lay a test's positions from selected words per direction (§3.4) — rebuilds " +
-      "positions wholesale + flips the test to ready. tracker:write + operator gate. Audited.",
-    authScopes: { hasPermission: "tracker:write" },
+      "positions wholesale + flips the test to ready. vocab_test:create + operator gate. Audited.",
+    authScopes: { hasAnyPermission: ["vocab_test:create", "vocab_test:edit_all"] },
     args: {
       testId: t.arg.string({ required: true }),
       selections: t.arg({ type: [PositionSelectionInput], required: true }),
@@ -207,7 +207,7 @@ builder.mutationField("setVocabTestPositions", (t) =>
 );
 
 // ---------------------------------------------------------------------------
-// Mutation — weekly tester assignment (roster:manage)
+// Mutation — weekly tester assignment (vocab_test:assign)
 // ---------------------------------------------------------------------------
 
 builder.mutationField("assignVocabTester", (t) =>
@@ -215,8 +215,8 @@ builder.mutationField("assignVocabTester", (t) =>
     type: VocabTestAssignmentRef,
     description:
       "Assign the weekly tester for a (section × program) — append-only (§3.5, D-#106). " +
-      "weekOf is any date inside the target week. Requires roster:manage (Principal/Office). Audited.",
-    authScopes: { hasPermission: "roster:manage" },
+      "weekOf is any date inside the target week. Requires vocab_test:assign (Principal/Office). Audited.",
+    authScopes: { hasPermission: "vocab_test:assign" },
     args: {
       sectionId: t.arg.string({ required: true }),
       program: t.arg.string({ required: true }),
@@ -246,8 +246,8 @@ builder.queryField("vocabTest", (t) =>
   t.field({
     type: VocabTestRef,
     nullable: true,
-    description: "One vocab test by id (VC-2). Requires tracker:read.",
-    authScopes: { hasPermission: "tracker:read" },
+    description: "One vocab test by id (VC-2). Requires vocab_test:view.",
+    authScopes: { hasPermission: "vocab_test:view" },
     args: { testId: t.arg.string({ required: true }) },
     resolve: async (_root, args) => getVocabTest(args.testId) as unknown as Promise<IVocabTest | null>,
   }),
@@ -256,8 +256,8 @@ builder.queryField("vocabTest", (t) =>
 builder.queryField("vocabTestPositions", (t) =>
   t.field({
     type: [VocabTestPositionRef],
-    description: "A test's laid-out positions, ordered by direction + qNumber (VC-2). Requires tracker:read.",
-    authScopes: { hasPermission: "tracker:read" },
+    description: "A test's laid-out positions, ordered by direction + qNumber (VC-2). Requires vocab_test:view.",
+    authScopes: { hasPermission: "vocab_test:view" },
     args: { testId: t.arg.string({ required: true }) },
     resolve: async (_root, args) => positionsForTest(args.testId) as unknown as Promise<IVocabTestPosition[]>,
   }),
@@ -266,8 +266,8 @@ builder.queryField("vocabTestPositions", (t) =>
 builder.queryField("vocabTests", (t) =>
   t.field({
     type: [VocabTestRef],
-    description: "Vocab tests filtered by section / program / week (VC-2). Requires tracker:read.",
-    authScopes: { hasPermission: "tracker:read" },
+    description: "Vocab tests filtered by section / program / week (VC-2). Requires vocab_test:view.",
+    authScopes: { hasPermission: "vocab_test:view" },
     args: {
       sectionId: t.arg.string({ required: false }),
       program: t.arg.string({ required: false }),
@@ -285,8 +285,8 @@ builder.queryField("vocabTests", (t) =>
 builder.queryField("vocabTestsPage", (t) =>
   t.field({
     type: VocabTestPageRef,
-    description: "vocabTests, one page at a time, newest first (D-#761). Requires tracker:read.",
-    authScopes: { hasPermission: "tracker:read" },
+    description: "vocabTests, one page at a time, newest first (D-#761). Requires vocab_test:view.",
+    authScopes: { hasPermission: "vocab_test:view" },
     args: {
       sectionId: t.arg.string({ required: false }),
       program: t.arg.string({ required: false }),
@@ -310,8 +310,8 @@ builder.queryField("vocabTesterAssignment", (t) =>
   t.field({
     type: VocabTestAssignmentRef,
     nullable: true,
-    description: "The CURRENT weekly tester assignment for a (section × program × week) (VC-2). Requires tracker:read.",
-    authScopes: { hasPermission: "tracker:read" },
+    description: "The CURRENT weekly tester assignment for a (section × program × week) (VC-2). Requires vocab_test:view.",
+    authScopes: { hasPermission: "vocab_test:view" },
     args: {
       sectionId: t.arg.string({ required: true }),
       program: t.arg.string({ required: true }),
@@ -325,8 +325,8 @@ builder.queryField("vocabTesterAssignment", (t) =>
 builder.queryField("vocabAssignmentHistory", (t) =>
   t.field({
     type: [VocabTestAssignmentRef],
-    description: "The append-only assignment history for a (section × program), newest first (VC-2). Requires roster:manage.",
-    authScopes: { hasPermission: "roster:manage" },
+    description: "The append-only assignment history for a (section × program), newest first (VC-2). Requires vocab_test:assign.",
+    authScopes: { hasPermission: "vocab_test:assign" },
     args: {
       sectionId: t.arg.string({ required: true }),
       program: t.arg.string({ required: true }),
@@ -339,8 +339,8 @@ builder.queryField("vocabAssignmentHistory", (t) =>
 builder.queryField("vocabAssignmentHistoryPage", (t) =>
   t.field({
     type: VocabTestAssignmentPageRef,
-    description: "vocabAssignmentHistory, one page at a time, newest first (D-#761). Requires roster:manage.",
-    authScopes: { hasPermission: "roster:manage" },
+    description: "vocabAssignmentHistory, one page at a time, newest first (D-#761). Requires vocab_test:assign.",
+    authScopes: { hasPermission: "vocab_test:assign" },
     args: {
       sectionId: t.arg.string({ required: true }),
       program: t.arg.string({ required: true }),
@@ -354,8 +354,8 @@ builder.queryField("vocabAssignmentHistoryPage", (t) =>
 builder.queryField("myVocabAssignments", (t) =>
   t.field({
     type: [VocabTestAssignmentRef],
-    description: "The caller's own weekly tester assignments from a week onward (own-row, VC-2). Requires tracker:read.",
-    authScopes: { hasPermission: "tracker:read" },
+    description: "The caller's own weekly tester assignments from a week onward (own-row, VC-2). Requires vocab_test:view.",
+    authScopes: { hasPermission: "vocab_test:view" },
     args: { fromWeek: t.arg.string({ required: false }) },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
@@ -370,8 +370,8 @@ builder.queryField("myVocabAssignments", (t) =>
 builder.queryField("myVocabAssignmentsPage", (t) =>
   t.field({
     type: VocabTestAssignmentPageRef,
-    description: "myVocabAssignments, one page at a time, newest week first (own-row, D-#761). Requires tracker:read.",
-    authScopes: { hasPermission: "tracker:read" },
+    description: "myVocabAssignments, one page at a time, newest week first (own-row, D-#761). Requires vocab_test:view.",
+    authScopes: { hasPermission: "vocab_test:view" },
     args: {
       fromWeek: t.arg.string({ required: false }),
       page: t.arg.int({ required: false }),
