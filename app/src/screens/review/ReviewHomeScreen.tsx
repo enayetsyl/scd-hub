@@ -79,8 +79,13 @@ function readyToSignOff(r: ReviewAssignmentT): boolean {
 
 export default function ReviewHomeScreen({ navigation }: Props): React.ReactElement {
   const { role, can } = useAuth();
-  const canAssign = can("content:assign_review");
-  const canReview = can("content:review");
+  // Plan loop (PR-1..3) and question loop (QR-4) gate on their own features (PM, D-#790).
+  const canAssign = can("plan_review:assign");
+  const canReview = can("plan_review:review");
+  const canReviewQuestions = can("question_review:review");
+  const canAssignQuestions = can("question_review:assign");
+  // The publish + progress screens read the inbox / reviewer tallies (question_review:view_all).
+  const canSeeQuestionReviews = can("question_review:view_all");
 
   const [{ data: inboxData, fetching: inboxFetching, error: inboxErr }, refetchInbox] = useQuery({
     query: PLAN_REVIEW_INBOX,
@@ -110,7 +115,7 @@ export default function ReviewHomeScreen({ navigation }: Props): React.ReactElem
 
   // Inbox, split by what the Principal has to DO (owner ask 2026-10-12): the reviewer-
   // approved plans are a sign-off pile, cleared in one go; the rest need a decision each.
-  const canSignOff = can("content:promote_gold");
+  const canSignOff = can("plan_review:approve");
   const readyRows = useMemo(() => inbox.filter(readyToSignOff), [inbox]);
   const otherRows = useMemo(() => inbox.filter((r) => !readyToSignOff(r)), [inbox]);
   const [picked, setPicked] = useState<Set<string>>(new Set());
@@ -227,35 +232,43 @@ export default function ReviewHomeScreen({ navigation }: Props): React.ReactElem
       {/* Question review & publish (QR-4, D-#508) — a separate workspace from the plan
           loop above: different unit of work (one question, bulk-assigned), different
           rules (optional rejection reason), and a publish step plans do not have. */}
-      {canReview ? (
+      {canReviewQuestions ? (
         <Card onPress={() => navigation.navigate("QuestionReviewQueue")}>
           <Body style={{ fontWeight: "700" }}>{STR.qrMyQueue}</Body>
           <Muted style={{ marginTop: 2 }}>{STR.qrQueueTitle}</Muted>
         </Card>
       ) : null}
-      {canAssign ? (
+      {canAssignQuestions || canSeeQuestionReviews ? (
         <View style={{ marginBottom: space(4) }}>
-          <View style={{ height: space(3) }} />
-          <Card onPress={() => navigation.navigate("AssignQuestions")}>
-            <Body style={{ fontWeight: "700" }}>{STR.qrAssignTitle}</Body>
-            <Muted style={{ marginTop: 2 }}>{STR.rvAssign}</Muted>
-          </Card>
-          <View style={{ height: space(3) }} />
-          <Card onPress={() => navigation.navigate("PublishQuestions")}>
-            <Body style={{ fontWeight: "700" }}>{STR.qrPublishTitle}</Body>
-            <Muted style={{ marginTop: 2 }}>{`${STR.qrAccepted} · ${STR.qrRejected}`}</Muted>
-          </Card>
-          <View style={{ height: space(3) }} />
-          {/* QR-5 (D-#537): the assign and publish cards are both about QUESTIONS; this
-              one is about the PEOPLE reviewing them. */}
-          <Card onPress={() => navigation.navigate("QuestionReviewProgress")}>
-            <Body style={{ fontWeight: "700" }}>{STR.qpTitle}</Body>
-            <Muted style={{ marginTop: 2 }}>{STR.qpSubtitle}</Muted>
-          </Card>
+          {canAssignQuestions ? (
+            <>
+              <View style={{ height: space(3) }} />
+              <Card onPress={() => navigation.navigate("AssignQuestions")}>
+                <Body style={{ fontWeight: "700" }}>{STR.qrAssignTitle}</Body>
+                <Muted style={{ marginTop: 2 }}>{STR.rvAssign}</Muted>
+              </Card>
+            </>
+          ) : null}
+          {canSeeQuestionReviews ? (
+            <>
+              <View style={{ height: space(3) }} />
+              <Card onPress={() => navigation.navigate("PublishQuestions")}>
+                <Body style={{ fontWeight: "700" }}>{STR.qrPublishTitle}</Body>
+                <Muted style={{ marginTop: 2 }}>{`${STR.qrAccepted} · ${STR.qrRejected}`}</Muted>
+              </Card>
+              <View style={{ height: space(3) }} />
+              {/* QR-5 (D-#537): the assign and publish cards are both about QUESTIONS; this
+                  one is about the PEOPLE reviewing them. */}
+              <Card onPress={() => navigation.navigate("QuestionReviewProgress")}>
+                <Body style={{ fontWeight: "700" }}>{STR.qpTitle}</Body>
+                <Muted style={{ marginTop: 2 }}>{STR.qpSubtitle}</Muted>
+              </Card>
+            </>
+          ) : null}
         </View>
       ) : null}
 
-      {canAssign || canReview ? <Divider /> : null}
+      {canAssign || canReview || canReviewQuestions || canAssignQuestions || canSeeQuestionReviews ? <Divider /> : null}
 
       {canAssign ? (
         <View style={{ marginBottom: space(4) }}>
@@ -279,7 +292,7 @@ export default function ReviewHomeScreen({ navigation }: Props): React.ReactElem
             <>
               {/* 1 — the sign-off pile. Tick (or Select all), then one button; signed-off
                   plans close their round and leave the inbox. Office sees the pile but
-                  cannot sign off (content:promote_gold is Principal-locked). */}
+                  cannot sign off (plan_review:approve is Principal-only by default). */}
               {readyRows.length > 0 ? (
                 <View style={{ marginBottom: space(3) }}>
                   <Body style={{ fontWeight: "700", marginTop: space(2) }}>

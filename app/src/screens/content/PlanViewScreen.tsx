@@ -54,8 +54,8 @@ export default function PlanViewScreen({ route, navigation }: Props): React.Reac
   const [pdfError, setPdfError] = useState<string | null>(null);
 
   const { role, can } = useAuth();
-  const canAssign = can("content:assign_review");
-  const canApprove = can("content:promote_gold");
+  const canAssign = can("plan_review:assign");
+  const canApprove = can("plan_review:approve");
   const canRequestPrint = can("tracker:write");
   const [, assignReview] = useMutation(ASSIGN_PLAN_REVIEW);
   const [, approvePlan] = useMutation(APPROVE_PLAN);

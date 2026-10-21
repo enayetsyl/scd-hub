@@ -136,8 +136,8 @@ export default function TodayScreen(): React.ReactElement {
   const canClassTest =
     !!role && (can("tracker:read") || can("roster:manage"));
   const canClassNotes = can("routine:read");
-  const canQuestions = can("question:read");
-  const canSets = can("set:read");
+  const canQuestions = can("question_bank:view");
+  const canSets = can("question_sets:view");
   const canTrackers = can("tracker:read");
   const canHr = !!role && role !== "GUARDIAN";
   // AG-3 — the desk that physically hands out the gifts (Principal + Office, D-#667).

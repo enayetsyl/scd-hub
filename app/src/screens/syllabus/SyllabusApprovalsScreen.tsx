@@ -9,10 +9,10 @@
  *   Office +         additionally see the whole exam's coverage board, WHO each
  *   Principal        row is with, and can move a row still in TEACHER_REVIEW to a
  *                    different routine holder. Publishing is the Principal's
- *                    alone (§7.4) — Office holds `exam:manage` and is still
- *                    refused server-side, so the button is offered to neither.
+ *                    alone by default (§7.4; `exam_syllabus:publish`, PRINCIPAL-DEFAULT) —
+ *                    Office holds `exam_syllabus:edit` and is refused server-side.
  *
- * The board gate is `can("exam:manage")`, not `isRole("PRINCIPAL")`: the server
+ * The board gate is `can("exam_syllabus:view_all")`, not `isRole("PRINCIPAL")`: the server
  * has always allowed admin staff, and gating the screen tighter meant the desk
  * that WRITES every syllabus could not see the coverage of what it had written.
  *
@@ -67,9 +67,9 @@ function ApprovalCard({
   onStale,
 }: {
   row: SyllabusT;
-  /** "manage" is Office AND Principal — both hold `exam:manage`. */
+  /** "manage" is Office AND Principal — both hold `exam_syllabus:edit` by default. */
   mode: "teacher" | "manage";
-  /** Publish rides the PRINCIPAL role alone (§7.4); Office manages but cannot release. */
+  /** `exam_syllabus:publish` (PRINCIPAL-DEFAULT, §7.4); Office manages but cannot release. */
   canPublish?: boolean;
   onDone: () => void;
   /** Re-read the lists WITHOUT closing the card — used when a call fails. */
@@ -86,7 +86,7 @@ function ApprovalCard({
   const [, reassign] = useMutation(REASSIGN_EXAM_SYLLABUS);
 
   // Who the ROUTINE allows, and their names. Both are manage-only reads, and the
-  // approver query needs `exam:manage` — so a teacher's card must not fire them.
+  // approver query needs `exam_syllabus:edit` — so a teacher's card must not fire them.
   const isManage = mode === "manage";
   const [approverQ] = useQuery({
     query: EXAM_SYLLABUS_APPROVER,
@@ -278,7 +278,7 @@ function ApprovalCard({
                   <Button
                     // Publish belongs to PRINCIPAL_REVIEW alone; a row still with
                     // the teacher can only be recalled, not released. And it rides
-                    // the PRINCIPAL role — Office holds exam:manage and is still
+                    // exam_syllabus:publish — Office holds exam_syllabus:edit and is still
                     // refused server-side (§7.4), so offering it here would be a
                     // button whose only outcome is a refusal.
                     title={row.status === "TEACHER_REVIEW" ? STR.syRecall : STR.syPublish}
@@ -296,13 +296,15 @@ function ApprovalCard({
 }
 
 export default function SyllabusApprovalsScreen(): React.ReactElement {
-  const { isRole, can } = useAuth();
+  const { can } = useAuth();
   // The BOARD is Office's too — `examSyllabusBoard` has always allowed admin staff,
   // and the screen gated it tighter than the server, so the desk that writes every
   // syllabus could not see the coverage of what it had written.
-  const canManage = can("exam:manage");
-  // Publishing stays the Principal's alone (§7.4).
-  const isPrincipal = isRole("PRINCIPAL");
+  // PM (D-#790): the board is exam_syllabus:view_all; the row controls (reassign, send
+  // back) are exam_syllabus:edit; publishing is exam_syllabus:publish (PRINCIPAL-DEFAULT, §7.4).
+  const canManage = can("exam_syllabus:view_all");
+  const canEdit = can("exam_syllabus:edit");
+  const canPublish = can("exam_syllabus:publish");
 
   const [mineQ, refetchMine] = useQuery({ query: MY_SYLLABUS_APPROVALS });
   // `?.` even though this field cannot be refused — the drawer badge reads the
@@ -424,12 +426,12 @@ export default function SyllabusApprovalsScreen(): React.ReactElement {
 
           {/* A cell opens its row in place. Publish and send-back are the SAME
               controls the teacher stage uses — one card, two audiences. */}
-          {openCell ? (
+          {openCell && (canEdit || canPublish) ? (
             <ApprovalCard
               key={openCell.id ?? openCell.subject}
               row={openCell}
               mode="manage"
-              canPublish={isPrincipal}
+              canPublish={canPublish}
               onDone={reload}
               onStale={refetchAll}
             />

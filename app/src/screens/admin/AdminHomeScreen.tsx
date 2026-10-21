@@ -14,7 +14,7 @@ type Props = NativeStackScreenProps<AdminStackParamList, "AdminHome">;
 
 export default function AdminHomeScreen({ navigation }: Props): React.ReactElement {
   const { isRole, can } = useAuth();
-  const canImport = can("content:import");
+  const canImport = can("lesson_plans:import") || can("question_bank:import");
   const canManageUsers = can("user:manage");
   const canRoster = can("roster:manage");
   const canRoutine = can("routine:manage");
