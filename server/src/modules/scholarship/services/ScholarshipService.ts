@@ -11,6 +11,10 @@ import { Types } from "mongoose";
 import {
   HW_SUBJECTS,
   SYLLABUS_ITEM_TYPES,
+  callerHasPermission,
+  type AccessProfile,
+  type CataloguePermission,
+  type Role,
   type HwSubject,
   type SyllabusItemType,
   type ScholarshipAttendanceStatus,
@@ -61,10 +65,18 @@ export async function generatePaperId(
 export interface Actor {
   userId: string;
   role: string;
+  /** The caller's full access profile (templates, grants, revokes). Absent ⇒ the role's
+   *  template alone — what a service-level caller (a test, a script) means. */
+  profile?: AccessProfile;
+}
+
+/** Does this actor hold the catalogue action (role edits + per-person grants applied)? */
+export function actorCan(actor: Actor, perm: CataloguePermission): boolean {
+  return callerHasPermission(actor.profile ?? { role: actor.role as Role }, perm);
 }
 
 /**
- * A TEACHER holds `scholarship:manage` as a BASE permission, so the permission is not
+ * A TEACHER holds `scholarship_practice:create` / `:enter_results` as a BASE permission, so the permission is not
  * the scope (D-#656). She may only touch a paper whose class × subject the ROUTINE
  * names her on — the CT-1 / D-#521 posture, and the same source the class-test
  * accountable-teacher default reads, so the two can never disagree.
@@ -73,7 +85,9 @@ export interface Actor {
  * exactly the QR-9 near-miss, where `content:review` on TEACHER would have handed every
  * teacher a write over the whole question bank.
  *
- * PRINCIPAL and OFFICE are the desk: they declare and score on anyone's behalf.
+ * The desk (`scholarship_practice:edit_all` — PRINCIPAL and OFFICE by default) declares
+ * and scores on anyone's behalf. Anyone else must hold `action` AND be the routine's
+ * teacher for the cell (PM, D-#790; was a primary-role check).
  * A paper that spans subjects passes if she holds ANY of them — she marked the half she
  * teaches, and refusing her the sitting she invigilated helps nobody.
  */
@@ -82,9 +96,10 @@ export async function assertMayManage(
   sectionId: string | Types.ObjectId,
   subjects: readonly HwSubject[],
   on: Date,
+  action: "scholarship_practice:create" | "scholarship_practice:enter_results" = "scholarship_practice:create",
 ): Promise<void> {
-  if (actor.role === "PRINCIPAL" || actor.role === "OFFICE") return;
-  if (actor.role !== "TEACHER") {
+  if (actorCan(actor, "scholarship_practice:edit_all")) return;
+  if (!actorCan(actor, action)) {
     throw new Error("এই কাজটি করার অনুমতি নেই।");
   }
   for (const subject of subjects) {
@@ -326,7 +341,7 @@ export async function enterScores(
 ): Promise<number> {
   const paper = (await ScholarshipPaper.findById(paperId).lean()) as IScholarshipPaper | null;
   if (!paper) throw new Error("প্রশ্নপত্র পাওয়া যায়নি।");
-  await assertMayManage(actor, paper.sectionId, paper.subjects, paper.paperDate ?? new Date());
+  await assertMayManage(actor, paper.sectionId, paper.subjects, paper.paperDate ?? new Date(), "scholarship_practice:enter_results");
   if (rows.length === 0) return 0;
 
   const maxByItem = new Map(paper.items.map((i) => [i.itemNo, i.marks]));
@@ -431,7 +446,7 @@ export function topicCodeFor(subject: HwSubject, classLevel: number, labelBn: st
 }
 
 export async function saveTopic(input: SaveTopicInput, actor: Actor): Promise<string> {
-  if (actor.role !== "PRINCIPAL" && actor.role !== "OFFICE" && actor.role !== "TEACHER") {
+  if (!actorCan(actor, "scholarship_practice:settings")) {
     throw new Error("এই কাজটি করার অনুমতি নেই।");
   }
   if (!input.labelBn?.trim()) throw new Error("টপিকের নাম লেখা হয়নি।");
@@ -469,7 +484,7 @@ export async function retireTopic(
   code: string,
   actor: Actor,
 ): Promise<void> {
-  if (actor.role !== "PRINCIPAL" && actor.role !== "OFFICE") {
+  if (!actorCan(actor, "scholarship_practice:delete")) {
     throw new Error("টপিক বাতিল করার অনুমতি নেই।");
   }
   await ScholarshipTopic.updateOne({ subject, classLevel, code }, { $set: { active: false } });
@@ -541,7 +556,7 @@ export async function setCandidateSitting(
   // Who the school enters for a public examination is not scoped by who teaches English,
   // and `assertMayManage` with no subject would refuse every teacher by accident rather
   // than by intent, which is a rule nobody could read off the code.
-  if (actor.role !== "PRINCIPAL" && actor.role !== "OFFICE") {
+  if (!actorCan(actor, "scholarship_practice:select_candidates")) {
     throw new Error("বৃত্তি পরীক্ষার তালিকা বদলানোর অনুমতি নেই।");
   }
   await Student.updateOne(

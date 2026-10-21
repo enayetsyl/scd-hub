@@ -1,25 +1,27 @@
 /**
  * Scholarship practice-paper resolvers (SC-0..SC-4, docs/prd-scholarship-practice.md).
  *
- *   scholarshipTopics       — scholarship:read; the per-(subject, class) catalogue
- *   scholarshipPapers       — scholarship:read; one section's papers
- *   scholarshipPaper        — scholarship:read; one paper + items + roster (+ scores)
- *   scholarshipStudent      — scholarship:read; one student's topic/chapter weakness
- *   scholarshipClass        — scholarship:read; the class heat-map
- *   saveScholarshipTopic    — scholarship:manage
- *   retireScholarshipTopic  — scholarship:manage (Principal/Office only, in the service)
- *   declareScholarshipPaper — scholarship:manage, ROUTINE-scoped in the service
- *   enterScholarshipScores  — scholarship:manage, ROUTINE-scoped in the service
+ *   scholarshipTopics       — scholarship_practice:view; the per-(subject, class) catalogue
+ *   scholarshipPapers       — scholarship_practice:view; one section's papers
+ *   scholarshipPaper        — scholarship_practice:view; one paper + items + roster (+ scores)
+ *   scholarshipStudent      — scholarship_practice:view; one student's topic/chapter weakness
+ *   scholarshipClass        — scholarship_practice:view; the class heat-map
+ *   saveScholarshipTopic    — scholarship_practice:settings
+ *   retireScholarshipTopic  — scholarship_practice:delete
+ *   setScholarshipCandidate — scholarship_practice:select_candidates
+ *   declareScholarshipPaper — scholarship_practice:create, ROUTINE-scoped in the service
+ *   enterScholarshipScores  — scholarship_practice:enter_results, ROUTINE-scoped in the service
  *
- * The write gates carry `scholarship:manage` and nothing else, because the real
- * authority is a ROW fact — "does the routine give you this class × subject" — and not a
- * permission (D-#656, the CO-1/D-#147 posture). A TEACHER holds the permission as a
- * base grant, so `assertMayManage` in the service is what actually narrows it; putting
+ * The write gates carry the catalogue action (PM, D-#790), but the real authority on a
+ * paper is a ROW fact — "does the routine give you this class × subject" — and not a
+ * permission (D-#656, the CO-1/D-#147 posture). A TEACHER holds the action as a
+ * base grant, so `assertMayManage` in the service is what actually narrows it
+ * (`scholarship_practice:edit_all` skips the routine check); putting
  * that check here would leave the service writable from any future caller.
  */
 import { builder } from "../../../schema";
 import { pageRef } from "../../../pageRef";
-import type { HwSubject, ScholarshipTopicAxis } from "@scd/shared";
+import type { AccessProfile, HwSubject, ScholarshipTopicAxis } from "@scd/shared";
 import {
   declarePaper,
   enterScores,
@@ -33,6 +35,7 @@ import {
   marksNote,
   listCandidates,
   setCandidateSitting,
+  type Actor,
   type CandidateView,
   type PaperDetailView,
   type PaperListRow,
@@ -51,12 +54,9 @@ import {
   type StudentAnalysis,
 } from "../services/ScholarshipAnalysisService";
 
-function actorOf(ctx: { auth: { userId: string; role: string } | null }): {
-  userId: string;
-  role: string;
-} {
+function actorOf(ctx: { auth: (AccessProfile & { userId: string }) | null }): Actor {
   if (!ctx.auth) throw new Error("লগইন প্রয়োজন।");
-  return { userId: ctx.auth.userId, role: ctx.auth.role };
+  return { userId: ctx.auth.userId, role: ctx.auth.role, profile: ctx.auth };
 }
 
 // ---------------------------------------------------------------------------
@@ -352,7 +352,7 @@ builder.queryFields((t) => ({
   scholarshipTopics: t.field({
     type: [TopicRef],
     description: "The topic catalogue for a class, optionally one subject.",
-    authScopes: { hasPermission: "scholarship:read" },
+    authScopes: { hasPermission: "scholarship_practice:view" },
     args: {
       classLevel: t.arg.int({ required: true }),
       subject: t.arg.string({ required: false }),
@@ -367,7 +367,7 @@ builder.queryFields((t) => ({
     description:
       "The WHOLE section roster with each child's sitting flag — the one read that does not " +
       "apply the exclusion, because this is the screen where it is decided.",
-    authScopes: { hasPermission: "scholarship:read" },
+    authScopes: { hasPermission: "scholarship_practice:view" },
     args: { sectionId: t.arg.string({ required: true }) },
     resolve: async (_r, args) => listCandidates(args.sectionId),
   }),
@@ -375,7 +375,7 @@ builder.queryFields((t) => ({
   scholarshipPapers: t.field({
     type: [PaperRowRef],
     description: "One section's practice papers, newest first.",
-    authScopes: { hasPermission: "scholarship:read" },
+    authScopes: { hasPermission: "scholarship_practice:view" },
     args: {
       sectionId: t.arg.string({ required: true }),
       subject: t.arg.string({ required: false }),
@@ -387,7 +387,7 @@ builder.queryFields((t) => ({
   scholarshipPapersPage: t.field({
     type: PaperRowPageRef,
     description: "scholarshipPapers, one page at a time, newest first (D-#761).",
-    authScopes: { hasPermission: "scholarship:read" },
+    authScopes: { hasPermission: "scholarship_practice:view" },
     args: {
       sectionId: t.arg.string({ required: true }),
       subject: t.arg.string({ required: false }),
@@ -402,7 +402,7 @@ builder.queryFields((t) => ({
     type: PaperDetailRef,
     nullable: true,
     description: "One paper: its declared items and the full section roster with any scores.",
-    authScopes: { hasPermission: "scholarship:read" },
+    authScopes: { hasPermission: "scholarship_practice:view" },
     args: { id: t.arg.string({ required: true }) },
     resolve: async (_r, args) => paperDetail(args.id),
   }),
@@ -410,7 +410,7 @@ builder.queryFields((t) => ({
   scholarshipStudent: t.field({
     type: StudentAnalysisRef,
     description: "One student's topic and chapter weakness across every scored paper in scope.",
-    authScopes: { hasPermission: "scholarship:read" },
+    authScopes: { hasPermission: "scholarship_practice:view" },
     args: {
       sectionId: t.arg.string({ required: true }),
       classLevel: t.arg.int({ required: true }),
@@ -431,7 +431,7 @@ builder.queryFields((t) => ({
   scholarshipClass: t.field({
     type: ClassAnalysisRef,
     description: "The class heat-map: one row per topic (or chapter), one cell per student.",
-    authScopes: { hasPermission: "scholarship:read" },
+    authScopes: { hasPermission: "scholarship_practice:view" },
     args: {
       sectionId: t.arg.string({ required: true }),
       classLevel: t.arg.int({ required: true }),
@@ -457,7 +457,7 @@ builder.queryFields((t) => ({
       "sound — so the app can show the same message live while the item list is still being typed. " +
       "A Σ mismatch is reported here but does NOT refuse the write (D-#675); it is a typo signal " +
       "on a one-part-per-question paper and expected on one listing every alternative.",
-    authScopes: { hasPermission: "scholarship:manage" },
+    authScopes: { hasPermission: "scholarship_practice:create" },
     args: {
       classLevel: t.arg.int({ required: true }),
       subjects: t.arg.stringList({ required: true }),
@@ -496,7 +496,7 @@ builder.mutationFields((t) => ({
   saveScholarshipTopic: t.field({
     type: "String",
     description: "Add or edit a topic. Returns its code, which is never rewritten afterwards.",
-    authScopes: { hasPermission: "scholarship:manage" },
+    authScopes: { hasPermission: "scholarship_practice:settings" },
     args: {
       subject: t.arg.string({ required: true }),
       classLevel: t.arg.int({ required: true }),
@@ -526,7 +526,7 @@ builder.mutationFields((t) => ({
   retireScholarshipTopic: t.field({
     type: "Boolean",
     description: "Soft retire — historical items tagged with this code keep resolving.",
-    authScopes: { hasPermission: "scholarship:manage" },
+    authScopes: { hasPermission: "scholarship_practice:delete" },
     args: {
       subject: t.arg.string({ required: true }),
       classLevel: t.arg.int({ required: true }),
@@ -543,7 +543,7 @@ builder.mutationFields((t) => ({
     description:
       "Enter a child for the scholarship examination, or take her out of it (D-#697). Taking her " +
       "out never deletes a mark — the flag scopes the module, it does not purge.",
-    authScopes: { hasPermission: "scholarship:manage" },
+    authScopes: { hasPermission: "scholarship_practice:select_candidates" },
     args: {
       studentId: t.arg.string({ required: true }),
       sitting: t.arg.boolean({ required: true }),
@@ -557,7 +557,7 @@ builder.mutationFields((t) => ({
       "Declare a paper and its item structure. The items need NOT total the full marks (D-#675) — " +
       "a paper listing every alternative out-totals the sitting by design. Returns the new " +
       "paper's id.",
-    authScopes: { hasPermission: "scholarship:manage" },
+    authScopes: { hasPermission: "scholarship_practice:create" },
     args: {
       sectionId: t.arg.string({ required: true }),
       subjects: t.arg.stringList({ required: true }),
@@ -599,7 +599,7 @@ builder.mutationFields((t) => ({
   enterScholarshipScores: t.field({
     type: "Int",
     description: "Write per-item marks for one or more students. Returns how many rows were written.",
-    authScopes: { hasPermission: "scholarship:manage" },
+    authScopes: { hasPermission: "scholarship_practice:enter_results" },
     args: {
       paperId: t.arg.string({ required: true }),
       rows: t.arg({ type: [ScoreRowInput], required: true }),

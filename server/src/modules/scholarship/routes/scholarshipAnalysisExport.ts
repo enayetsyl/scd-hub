@@ -42,7 +42,7 @@ scholarshipAnalysisExportRouter.get("/", async (req: Request, res: Response) => 
     res.status(401).json({ error: "Unauthenticated" });
     return;
   }
-  if (!callerHasPermission(ctx.auth, "scholarship:read")) {
+  if (!callerHasPermission(ctx.auth, "scholarship_practice:view")) {
     res.status(403).json({ error: "বৃত্তি অনুশীলনের বিশ্লেষণ দেখার অনুমতি নেই।" });
     return;
   }
