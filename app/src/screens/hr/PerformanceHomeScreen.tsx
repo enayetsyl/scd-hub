@@ -23,10 +23,12 @@ import { useQuery } from "urql";
 import { STR } from "../../lib/labels";
 import { space } from "../../theme/tokens";
 import { personName } from "../../lib/personName";
+import { useAuth } from "../../auth/AuthContext";
 
 type Props = NativeStackScreenProps<HrStackParamList, "PerformanceHome">;
 
 export default function PerformanceHomeScreen({ navigation }: Props): React.ReactElement {
+  const { can } = useAuth();
   const [staffId, setStaffId] = React.useState("");
   const [staffQ, refetchStaff] = useQuery({ query: STAFF_QUERY, variables: {} });
   const name = (staffQ.data?.staff ?? []).find((s) => s.id === staffId);
@@ -50,10 +52,12 @@ export default function PerformanceHomeScreen({ navigation }: Props): React.Reac
         ) : null}
       </QueryGate>
 
-      <Card onPress={() => navigation.navigate("GrievanceInbox")} style={{ marginTop: space(4) }}>
-        <Body style={{ fontWeight: "700" }}>{STR.hrGrievances}</Body>
-        <Muted>{STR.hrGrievanceConfidential}</Muted>
-      </Card>
+      {can("grievance:view_all") ? (
+        <Card onPress={() => navigation.navigate("GrievanceInbox")} style={{ marginTop: space(4) }}>
+          <Body style={{ fontWeight: "700" }}>{STR.hrGrievances}</Body>
+          <Muted>{STR.hrGrievanceConfidential}</Muted>
+        </Card>
+      ) : null}
     </Screen>
   );
 }

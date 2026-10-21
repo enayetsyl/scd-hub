@@ -685,7 +685,8 @@ filesRouter.post("/assignment", parseClassNoteUpload, async (req: Request, res: 
 
 filesRouter.post("/print", parseClassNoteUpload, async (req: Request, res: Response) => {
   const ctx = buildContext(req, res);
-  if (!ctx.auth || !callerHasPermission(ctx.auth, "tracker:write")) {
+  // PM: printing:create (was tracker:write) — who may file a print request at all.
+  if (!ctx.auth || !callerHasPermission(ctx.auth, "printing:create")) {
     res.status(403).json({ error: FILE_ERRORS_BN.forbidden });
     return;
   }
@@ -1203,7 +1204,7 @@ filesRouter.get("/:id", async (req: Request, res: Response) => {
       // A print upload is readable by the teacher who sent it and by the Office/Principal
       // who has to print it (PQ-2, D-#281) — nobody else.
       const isUploader = file.uploadedBy?.toString() === ctx.auth.userId;
-      if (!isUploader && !callerHasPermission(ctx.auth, "roster:manage")) {
+      if (!isUploader && !callerHasPermission(ctx.auth, "printing:view_all")) {
         throw new ForbiddenError(FILE_ERRORS_BN.forbidden);
       }
     } else {

@@ -1,9 +1,9 @@
 /**
  * TaskService (WB-1, D-#701) — the manual-task state machine + who may touch what.
  *
- *   who may CREATE for X:  X themselves (no permission), or a `tasks:assign` holder
- *   who may EDIT/MOVE/REASSIGN/CANCEL: the assigner, or a `tasks:assign` holder
- *   who may change STATUS / BLOCK: the assignee, the assigner, or a `tasks:assign` holder
+ *   who may CREATE for X:  X themselves (no permission), or a `work_board:assign` holder
+ *   who may EDIT/MOVE/REASSIGN/CANCEL: the assigner, or a `work_board:assign` holder
+ *   who may change STATUS / BLOCK: the assignee, the assigner, or a `work_board:assign` holder
  *
  * Every write is audited (TASK_WRITE, meta.action) and the notification emitters
  * are best-effort — a failed push never rolls a task back.
@@ -41,7 +41,10 @@ export interface TaskPatch {
   effortMin?: number | null;
 }
 
-export const canAssign = (auth: AuthPayload): boolean => callerHasPermission(auth, "tasks:assign");
+/** PM (D-#790..#801): put work on / act on other people's tasks (was tasks:assign). */
+export const canAssign = (auth: AuthPayload): boolean => callerHasPermission(auth, "work_board:assign");
+/** PM: read anyone's board, task or template (was tasks:assign). */
+export const canViewAllBoards = (auth: AuthPayload): boolean => callerHasPermission(auth, "work_board:view_all");
 
 function requireAuth(auth: AuthPayload | null): AuthPayload {
   if (!auth) throw new ForbiddenError("Unauthenticated");
@@ -80,10 +83,11 @@ export async function taskById(id: string): Promise<ITask> {
   return doc;
 }
 
-/** Read gate: the assignee, the assigner, or a tasks:assign holder. */
+/** Read gate: the assignee, the assigner, or a work_board:view_all holder (a
+ *  work_board:assign holder may act on any task, so may also read it). */
 export function assertCanReadTask(auth: AuthPayload, task: ITask): void {
   const me = auth.userId;
-  if (task.assigneeUserId.toString() === me || task.assignedBy.toString() === me || canAssign(auth)) return;
+  if (task.assigneeUserId.toString() === me || task.assignedBy.toString() === me || canViewAllBoards(auth) || canAssign(auth)) return;
   throw new ForbiddenError("এই কাজটি আপনার নয়");
 }
 

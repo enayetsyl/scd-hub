@@ -49,6 +49,7 @@ import { friendlyError } from "../../lib/errors";
 import { useConfirm } from "../../state/ConfirmContext";
 import { useSectionContext } from "../../state/SectionContext";
 import { space } from "../../theme/tokens";
+import { useAuth } from "../../auth/AuthContext";
 
 type Props = NativeStackScreenProps<HrStackParamList, "LeaveCover">;
 
@@ -66,6 +67,9 @@ const COVER_PAGE_SIZE = 20;
 
 export default function LeaveCoverScreen({ route }: Props): React.ReactElement {
   const { leaveApplicationId, manage } = route.params;
+  // PM: approving/rejecting/direct-assigning a slot is cover:approve (was leave:manage).
+  const { can } = useAuth();
+  const canDecide = manage && can("cover:approve");
   const { confirmAction } = useConfirm();
   const [proposals, setProposals] = React.useState<Record<string, string>>({});
   const [overrides, setOverrides] = React.useState<Record<string, string>>({});
@@ -221,7 +225,7 @@ export default function LeaveCoverScreen({ route }: Props): React.ReactElement {
             ) : null}
 
             {/* Admin: approve / reject a proposed slot, or override with someone else. */}
-            {manage && slot.status === "proposed" ? (
+            {canDecide && slot.status === "proposed" ? (
               <>
                 <Divider />
                 <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2) }}>
@@ -255,7 +259,7 @@ export default function LeaveCoverScreen({ route }: Props): React.ReactElement {
             ) : null}
 
             {/* Admin: direct-assign a needs_cover slot — no proposal to wait for. */}
-            {manage && slot.status === "needs_cover" ? (
+            {canDecide && slot.status === "needs_cover" ? (
               <>
                 <Divider />
                 <AvailableTeacherSelect

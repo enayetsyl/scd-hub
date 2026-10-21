@@ -41,8 +41,10 @@ import {
 import { STR, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
+import { useAuth } from "../../auth/AuthContext";
 
 export default function HrPolicyScreen(): React.ReactElement {
+  const { can } = useAuth();
   const [{ data, fetching, error }, refetch] = useQuery({ query: HR_POLICY_QUERY });
   const [, save] = useMutation(SET_HR_POLICY);
 
@@ -328,7 +330,9 @@ export default function HrPolicyScreen(): React.ReactElement {
       </Card>
 
       <View style={{ marginTop: space(2) }}>
-        <Button title={STR.save} loading={busy} disabled={!canSave} onPress={() => void onSave()} />
+        {can("hr_policy:settings") ? (
+          <Button title={STR.save} loading={busy} disabled={!canSave} onPress={() => void onSave()} />
+        ) : null}
       </View>
     </Screen>
   );

@@ -36,11 +36,12 @@ StaffDirectoryEntryRef.implement({
   }),
 });
 
-/** Principal/Office reach (everyone, both modes) — the H8.3 `performance:manage`/`staff:manage` gate. */
+/** Principal/Office reach (everyone, both modes) — PM: `appraisal:observe` (observe anyone)
+ *  or `staff_records:view` (the staff list), replacing performance:manage / staff:manage. */
 function isManager(ctx: AppContext): boolean {
   return (
     ctx.auth !== null &&
-    (callerHasPermission(ctx.auth, "performance:manage") || callerHasPermission(ctx.auth, "staff:manage"))
+    (callerHasPermission(ctx.auth, "appraisal:observe") || callerHasPermission(ctx.auth, "staff_records:view"))
   );
 }
 

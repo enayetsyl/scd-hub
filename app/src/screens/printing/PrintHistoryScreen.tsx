@@ -90,7 +90,10 @@ const NONE = "__none__";
 export default function PrintHistoryScreen({ navigation }: Props): React.ReactElement {
   const { role, user, can } = useAuth();
   const toast = useToast();
-  const isOffice = can("roster:manage");
+  // PM: everyone's history is printing:view_all; tagging/reprinting ANY job is
+  // printing:process (own rows: printing:create). Were roster:manage.
+  const isOffice = can("printing:view_all");
+  const canProcess = can("printing:process");
 
   const [classFilter, setClassFilter] = useState<string>(ANY);
   const [subjectFilter, setSubjectFilter] = useState<string>(ANY);
@@ -265,7 +268,7 @@ export default function PrintHistoryScreen({ navigation }: Props): React.ReactEl
   // PQ-9 — who may name the class of an untagged row: the Office, or the teacher who
   // filed it. Mirrors the server gate; the server is still the one enforcing it.
   const canTag = (r: PrintHistoryRowT): boolean =>
-    isOffice || (!!user && r.requesterIds.includes(user.id));
+    canProcess || (!!user && can("printing:create") && r.requesterIds.includes(user.id));
   // D-#459: also offer the tag form when the class is already set but the SECTION isn't —
   // e.g. an ASSIGNMENT job filed before the section picker existed, or tagged for class
   // only. Without a section it can never match the assignment print-gap report.
@@ -539,7 +542,8 @@ export default function PrintHistoryScreen({ navigation }: Props): React.ReactEl
                   }
                 />
               ) : null}
-              <Button title={STR.prReprint} onPress={() => openReprint(r)} disabled={busy} />
+              {/* PM: same rule as the server — any job with printing:process, else your own. */}
+              {canTag(r) ? <Button title={STR.prReprint} onPress={() => openReprint(r)} disabled={busy} /> : null}
               {/* PQ-9 / D-#459 — offered while class or section is still missing, and only
                   to someone allowed to say (the Office, or whoever filed it). */}
               {needsTag(r) && canTag(r) ? (

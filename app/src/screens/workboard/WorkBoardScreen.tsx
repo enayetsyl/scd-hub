@@ -94,7 +94,7 @@ export default function WorkBoardScreen({ route, navigation }: Props): React.Rea
     else refetch();
   }
 
-  const canWork = mine || can("tasks:assign");
+  const canWork = mine || can("work_board:assign");
 
   async function onStatus(card: WorkCardT, status: TaskStatus | "BLOCK"): Promise<void> {
     if (!card.taskId) return;
@@ -187,7 +187,7 @@ export default function WorkBoardScreen({ route, navigation }: Props): React.Rea
         <View style={{ marginBottom: space(3) }}>
           <Button title={`+ ${STR.wbNewTask}`} variant="secondary" onPress={() => navigation.navigate("TaskForm", { assigneeUserId: user?.id })} />
         </View>
-      ) : can("tasks:assign") ? (
+      ) : can("work_board:assign") ? (
         <View style={{ marginBottom: space(3) }}>
           <Button title={`+ ${STR.wbNewTask}`} variant="secondary" onPress={() => navigation.navigate("TaskForm", { assigneeUserId: otherId ?? undefined })} />
         </View>

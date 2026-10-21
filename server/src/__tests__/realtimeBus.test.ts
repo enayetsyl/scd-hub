@@ -53,6 +53,6 @@ describe("realtime bus (D-#295)", () => {
   test("topic gate: known topics map to a listen permission; unknown strings are rejected", () => {
     expect(isRealtimeTopic("print_queue")).toBe(true);
     expect(isRealtimeTopic("nonsense")).toBe(false);
-    expect(REALTIME_TOPICS.print_queue).toBe("roster:manage");
+    expect(REALTIME_TOPICS.print_queue).toBe("printing:view_all");
   });
 });

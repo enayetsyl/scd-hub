@@ -14,6 +14,7 @@ import { Screen, H2, Body, Muted, Card, Badge, Loader, EmptyState, ErrorBanner }
 import { STR, bnNum, payrollRunStatusLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
+import { useAuth } from "../../auth/AuthContext";
 
 type Props = NativeStackScreenProps<HrStackParamList, "PayrollHome">;
 
@@ -22,6 +23,7 @@ function statusTone(s: string): "info" | "ok" | "muted" {
 }
 
 export default function PayrollHomeScreen({ navigation }: Props): React.ReactElement {
+  const { can } = useAuth();
   // The list must re-read on focus. `payrollRuns` EXCLUDES cancelled runs, so a
   // cache-first replay after cancelling one still shows it, still badged প্রস্তুত —
   // which reads as "cancel did nothing" and was reported as exactly that (D-#578).
@@ -39,17 +41,24 @@ export default function PayrollHomeScreen({ navigation }: Props): React.ReactEle
     <Screen scroll>
       <H2>{STR.hrPayroll}</H2>
 
-      <Card onPress={() => navigation.navigate("PreparePayroll")}>
-        <Body style={{ fontWeight: "700" }}>{STR.hrPrepareRun}</Body>
-      </Card>
-      <Card onPress={() => navigation.navigate("StaffPay")}>
-        <Body style={{ fontWeight: "700" }}>{STR.hrStaffPay}</Body>
-        <Muted>{STR.hrStaffPaySub}</Muted>
-      </Card>
-      <Card onPress={() => navigation.navigate("Advances")}>
-        <Body style={{ fontWeight: "700" }}>{STR.hrAdvances}</Body>
-        <Muted>{STR.hrAdvancesSub}</Muted>
-      </Card>
+      {/* PM: each card follows its own action (payroll:manage was one gate for all). */}
+      {can("payroll:prepare") ? (
+        <Card onPress={() => navigation.navigate("PreparePayroll")}>
+          <Body style={{ fontWeight: "700" }}>{STR.hrPrepareRun}</Body>
+        </Card>
+      ) : null}
+      {can("payroll:edit") ? (
+        <Card onPress={() => navigation.navigate("StaffPay")}>
+          <Body style={{ fontWeight: "700" }}>{STR.hrStaffPay}</Body>
+          <Muted>{STR.hrStaffPaySub}</Muted>
+        </Card>
+      ) : null}
+      {can("salary_advance:view") ? (
+        <Card onPress={() => navigation.navigate("Advances")}>
+          <Body style={{ fontWeight: "700" }}>{STR.hrAdvances}</Body>
+          <Muted>{STR.hrAdvancesSub}</Muted>
+        </Card>
+      ) : null}
 
       <Body style={{ fontWeight: "700", marginTop: space(4), marginBottom: space(2) }}>{STR.hrPayrollRuns}</Body>
       {fetching && runs.length === 0 ? (

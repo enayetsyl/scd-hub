@@ -91,8 +91,11 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
   const { role, can } = useAuth();
   const toast = useToast();
   const { confirmAction } = useConfirm();
-  const isOffice = can("roster:manage");
-  const canRequest = can("tracker:write");
+  // PM (D-#790..#801): the queue is printing:view_all, its buttons printing:process,
+  // filing a request printing:create (were roster:manage / tracker:write).
+  const isOffice = can("printing:view_all");
+  const canProcess = can("printing:process");
+  const canRequest = can("printing:create");
 
   const [bucket, setBucket] = useState<string>("REQUESTED");
   // D-#461: 0-based page within the current bucket; reset whenever the bucket changes
@@ -303,7 +306,7 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
           />
         ) : null}
 
-        {office && r.status === "REQUESTED" ? (
+        {office && canProcess && r.status === "REQUESTED" ? (
           <Button
             title={STR.prMarkPrinted}
             onPress={() => {
@@ -318,7 +321,7 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
             disabled={busy}
           />
         ) : null}
-        {office && r.status === "PRINTED" ? (
+        {office && canProcess && r.status === "PRINTED" ? (
           <Button
             title={STR.prMarkDelivered}
             onPress={() => run(() => markDelivered({ id: r.id }), STR.prDeliveredOk)}
@@ -326,7 +329,7 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
           />
         ) : null}
         {/* A PRINTED job cannot be cancelled — the paper already exists. */}
-        {r.status === "REQUESTED" ? (
+        {r.status === "REQUESTED" && (!office || canProcess) ? (
           <Button
             title={STR.prCancel}
             variant="danger"
@@ -358,7 +361,7 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
 
       {/* D-#294: manual count for a pending CLASS_PRESENT job — attendance for the
           use day isn't in yet, so the Office types the number it printed. */}
-      {office && manualFor === r.id && r.status === "REQUESTED" ? (
+      {office && canProcess && manualFor === r.id && r.status === "REQUESTED" ? (
         <View style={{ marginTop: space(2) }}>
           <Field
             label={STR.prManualCount}

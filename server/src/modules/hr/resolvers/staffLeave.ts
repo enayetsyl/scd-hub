@@ -2,9 +2,10 @@
  * Staff-leave resolvers (HR-2; prd-hr §3, H2, D-#22/#23).
  *
  * RBAC:
- *   leave:manage (Principal/Office) — entitlements, approve/reject leave, approve
- *     cover slots, list all leave + balances, record leave on a staff member's behalf
- *     (support staff have no login, so Office records theirs).
+ *   PM (D-#790..#801) catalogue actions, Principal/Office by default: leave:settings
+ *     (entitlements), leave:approve (approve/reject/cancel another's), cover:approve
+ *     (cover slots), leave:view_all / cover:view_all (lists + balances), leave:create
+ *     (record on a staff member's behalf — support staff have no login).
  *   Own-row self-service (NO new permission) — a logged-in staff member applies for
  *     THEIR OWN leave, proposes a covering teacher on their own leave's slots, cancels
  *     their own leave, and views their own leave + balances. The caller's StaffProfile
@@ -15,7 +16,7 @@
  */
 import { builder } from "../../../schema";
 import { ForbiddenError } from "../../../middleware/authz";
-import { callerHasPermission } from "@scd/shared";
+import { callerHasPermission, type Permission } from "@scd/shared";
 import type { AppContext } from "../../../context";
 import {
   applyForLeave,
@@ -45,8 +46,9 @@ import { pageRef } from "../../../pageRef";
 // Gates / helpers
 // ---------------------------------------------------------------------------
 
-function hasManage(ctx: AppContext): boolean {
-  return ctx.auth !== null && callerHasPermission(ctx.auth, "leave:manage");
+/** PM (D-#790..#801): the caller holds this catalogue action now. */
+function can(ctx: AppContext, perm: Permission): boolean {
+  return ctx.auth !== null && callerHasPermission(ctx.auth, perm);
 }
 
 /** The caller's own StaffProfile id (own-row self-service), or throw. */
@@ -173,8 +175,8 @@ builder.mutationField("upsertStaffLeaveEntitlement", (t) =>
     type: StaffLeaveBalanceRef,
     description:
       "Grant/edit a staff member's leave allowance for a year + balance-tracked type (§3.1). " +
-      "Allowances are admin DATA (numbers parked, §10). Requires leave:manage. Audited.",
-    authScopes: { hasPermission: "leave:manage" },
+      "Allowances are admin DATA (numbers parked, §10). Requires leave:settings. Audited.",
+    authScopes: { hasPermission: "leave:settings" },
     args: {
       staffProfileId: t.arg.string({ required: true }),
       academicYearId: t.arg.string({ required: true }),
@@ -211,12 +213,12 @@ builder.mutationField("applyForStaffLeave", (t) =>
     type: StaffLeaveRef,
     description:
       "Record a staff leave application (prd-hr H2.1). A teacher applies for THEIR OWN leave " +
-      "(own-row; omit staffProfileId). Principal/Office (leave:manage) may record on any staff " +
+      "(own-row; omit staffProfileId). A leave:create holder (Principal/Office) may record on any staff " +
       "member's behalf by passing staffProfileId. Fans out cover slots. Audited. " +
       "`dayPart` (D-#361) is optional/additive: omitted or \"full\" is the original whole-day " +
       "leave; \"late_entry\"/\"early_leave\" need `partialPeriodCount` and a single date " +
       "(fromKey === toKey), fan out cover for ONLY the missed periods, and cost 1/3 of a day.",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "leave:apply" },
     args: {
       staffProfileId: t.arg.string({ required: false }),
       leaveType: t.arg.string({ required: true }),
@@ -229,7 +231,7 @@ builder.mutationField("applyForStaffLeave", (t) =>
     resolve: async (_root, args, ctx) => {
       let target: string;
       if (args.staffProfileId) {
-        if (!hasManage(ctx) && args.staffProfileId !== (await callerStaffProfileId(ctx))) {
+        if (!can(ctx, "leave:create") && args.staffProfileId !== (await callerStaffProfileId(ctx))) {
           throw new ForbiddenError("You may only apply for your own leave");
         }
         target = args.staffProfileId;
@@ -254,10 +256,10 @@ builder.mutationField("decideStaffLeave", (t) =>
   t.field({
     type: StaffLeaveRef,
     description:
-      "Approve / reject (Principal/Office, leave:manage) or cancel (the applicant, own-row, OR " +
-      "leave:manage) a leave. Approve stamps the paid/unpaid split — the exceed rule WARNS, never " +
+      "Approve / reject (leave:approve) or cancel (the applicant, own-row, leave:apply; OR " +
+      "leave:approve) a leave. Approve stamps the paid/unpaid split — the exceed rule WARNS, never " +
       "blocks (§3.3); cancel/reject revoke any live cover proxy grants. Audited.",
-    authScopes: { authenticated: true },
+    authScopes: { hasAnyPermission: ["leave:approve", "leave:apply"] },
     args: {
       applicationId: t.arg.string({ required: true }),
       decision: t.arg.string({ required: true }), // approve | reject | cancel
@@ -268,10 +270,10 @@ builder.mutationField("decideStaffLeave", (t) =>
       if (!["approve", "reject", "cancel"].includes(decision)) {
         throw new ForbiddenError("decision must be approve, reject or cancel");
       }
-      if (decision !== "cancel" && !hasManage(ctx)) {
-        throw new ForbiddenError("Only Principal/Office may approve or reject leave (leave:manage)");
+      if (decision !== "cancel" && !can(ctx, "leave:approve")) {
+        throw new ForbiddenError("Only Principal/Office may approve or reject leave (leave:approve)");
       }
-      if (decision === "cancel" && !hasManage(ctx)) {
+      if (decision === "cancel" && !can(ctx, "leave:approve")) {
         const app = await StaffLeaveApplication.findById(args.applicationId).select("staffProfileId").lean();
         if (!app || app.staffProfileId.toString() !== (await callerStaffProfileId(ctx))) {
           throw new ForbiddenError("You may only cancel your own leave");
@@ -287,14 +289,14 @@ builder.mutationField("proposeStaffCover", (t) =>
     type: StaffCoverSlotRef,
     description:
       "Propose a covering teacher for a leave's cover slot (the legwork, D-#22) — does NOT grant " +
-      "write access. The leave's applicant (own-row) or Principal/Office may propose. Audited.",
-    authScopes: { authenticated: true },
+      "write access. The leave's applicant (own-row, cover:propose) or a cover:approve holder may propose. Audited.",
+    authScopes: { hasAnyPermission: ["cover:propose", "cover:approve"] },
     args: {
       slotId: t.arg.string({ required: true }),
       coverTeacherUserId: t.arg.string({ required: true }),
     },
     resolve: async (_root, args, ctx) => {
-      if (!hasManage(ctx)) {
+      if (!can(ctx, "cover:approve")) {
         const slot = await coverSlotOwnerLeave(args.slotId);
         if (!slot || slot.staffProfileId !== (await callerStaffProfileId(ctx))) {
           throw new ForbiddenError("You may only propose cover on your own leave");
@@ -313,8 +315,8 @@ builder.mutationField("decideStaffCoverSlot", (t) =>
       "grant (write access begins), or reject it → back to needs-cover (D-#22). `overrideCoverTeacherUserId` " +
       "(PXG-1, D-#268) is optional/additive: omitted, behavior is unchanged; supplied, it mints for the " +
       "override teacher instead of the proposer's pick, and lets a proposal-less slot be direct-assigned. " +
-      "Requires leave:manage. Audited.",
-    authScopes: { hasPermission: "leave:manage" },
+      "Requires cover:approve. Audited.",
+    authScopes: { hasPermission: "cover:approve" },
     args: {
       slotId: t.arg.string({ required: true }),
       approve: t.arg.boolean({ required: true }),
@@ -346,8 +348,8 @@ async function coverSlotOwnerLeave(slotId: string): Promise<{ staffProfileId: st
 builder.queryField("staffLeaveApplications", (t) =>
   t.field({
     type: [StaffLeaveRef],
-    description: "All staff leave applications overlapping a range, optionally by status (Office/Principal). Requires leave:manage.",
-    authScopes: { hasPermission: "leave:manage" },
+    description: "All staff leave applications overlapping a range, optionally by status (Office/Principal). Requires leave:view_all.",
+    authScopes: { hasPermission: "leave:view_all" },
     args: {
       status: t.arg.string({ required: false }),
       fromKey: t.arg.string({ required: false }),
@@ -368,8 +370,8 @@ const StaffLeavePageRef = pageRef("StaffLeavePage", StaffLeaveRef);
 builder.queryField("staffLeaveApplicationsPage", (t) =>
   t.field({
     type: StaffLeavePageRef,
-    description: "One page of staffLeaveApplications (same filters), newest first (D-#761). Requires leave:manage.",
-    authScopes: { hasPermission: "leave:manage" },
+    description: "One page of staffLeaveApplications (same filters), newest first (D-#761). Requires leave:view_all.",
+    authScopes: { hasPermission: "leave:view_all" },
     args: {
       status: t.arg.string({ required: false }),
       fromKey: t.arg.string({ required: false }),
@@ -390,8 +392,8 @@ builder.queryField("staffLeavePendingCount", (t) =>
     type: "Int",
     description:
       "How many leave applications are awaiting approval (status 'applied') — the Staff drawer badge " +
-      "(owner 2026-07-26). Requires leave:manage.",
-    authScopes: { hasPermission: "leave:manage" },
+      "(owner 2026-07-26). Requires leave:approve.",
+    authScopes: { hasPermission: "leave:approve" },
     resolve: async () => StaffLeaveApplication.countDocuments({ status: "applied" }),
   }),
 );
@@ -399,8 +401,8 @@ builder.queryField("staffLeavePendingCount", (t) =>
 builder.queryField("staffLeaveBalances", (t) =>
   t.field({
     type: [StaffLeaveBalanceRef],
-    description: "Per-type leave balances for a staff member in a year (§3.1/§3.4). Requires leave:manage.",
-    authScopes: { hasPermission: "leave:manage" },
+    description: "Per-type leave balances for a staff member in a year (§3.1/§3.4). Requires leave:view_all.",
+    authScopes: { hasPermission: "leave:view_all" },
     args: {
       staffProfileId: t.arg.string({ required: true }),
       academicYearId: t.arg.string({ required: true }),
@@ -412,11 +414,11 @@ builder.queryField("staffLeaveBalances", (t) =>
 builder.queryField("staffCoverSlots", (t) =>
   t.field({
     type: [StaffCoverSlotRef],
-    description: "The cover slots of a leave (prd-hr §3.5). leave:manage, or the leave's applicant (own-row).",
-    authScopes: { authenticated: true },
+    description: "The cover slots of a leave (prd-hr §3.5). cover:view_all, or the leave's applicant (own-row, cover:propose).",
+    authScopes: { hasAnyPermission: ["cover:propose", "cover:view_all"] },
     args: { leaveApplicationId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
-      if (!hasManage(ctx)) {
+      if (!can(ctx, "cover:view_all")) {
         const leave = await StaffLeaveApplication.findById(args.leaveApplicationId).select("staffProfileId").lean();
         if (!leave || leave.staffProfileId.toString() !== (await callerStaffProfileId(ctx))) {
           throw new ForbiddenError("You may only view cover slots for your own leave");
@@ -432,8 +434,8 @@ builder.queryField("needsCoverSlots", (t) =>
     type: [NeedsCoverRowRef],
     description:
       "Every uncovered class meeting (across all approved leaves overlapping the range) — the " +
-      "cross-leave inbox (PXG-1, D-#268). Same gate as decideStaffCoverSlot.",
-    authScopes: { hasPermission: "leave:manage" },
+      "cross-leave inbox (PXG-1, D-#268). Requires cover:view_all.",
+    authScopes: { hasPermission: "cover:view_all" },
     args: {
       from: t.arg.string({ required: true }),
       to: t.arg.string({ required: true }),
@@ -445,8 +447,8 @@ builder.queryField("needsCoverSlots", (t) =>
 builder.queryField("myStaffLeave", (t) =>
   t.field({
     type: [StaffLeaveRef],
-    description: "The caller's own staff leave applications (own-row, prd-hr H2.7). No permission needed.",
-    authScopes: { authenticated: true },
+    description: "The caller's own staff leave applications (own-row, prd-hr H2.7). leave:apply (SELF).",
+    authScopes: { hasPermission: "leave:apply" },
     resolve: async (_root, _args, ctx) =>
       leaveForStaff(await callerStaffProfileId(ctx)) as unknown as Promise<LeaveShape[]>,
   }),
@@ -455,8 +457,8 @@ builder.queryField("myStaffLeave", (t) =>
 builder.queryField("myStaffLeaveBalances", (t) =>
   t.field({
     type: [StaffLeaveBalanceRef],
-    description: "The caller's own leave balances for a year (own-row, prd-hr H2.7). No permission needed.",
-    authScopes: { authenticated: true },
+    description: "The caller's own leave balances for a year (own-row, prd-hr H2.7). leave:apply (SELF).",
+    authScopes: { hasPermission: "leave:apply" },
     args: { academicYearId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => balancesForStaff(await callerStaffProfileId(ctx), args.academicYearId),
   }),

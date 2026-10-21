@@ -67,8 +67,8 @@ builder.mutationField("recordReconciliation", (t) =>
     description:
       "Record a reconciliation for a date — diffs the app's DERIVED balances against an entered bank " +
       "balance and/or per-ledger Eximus closing. Append-only (a re-reconcile is a new entry). Requires " +
-      "finance:manage. Audited RECONCILIATION_RECORDED.",
-    authScopes: { hasPermission: "finance:manage" },
+      "reconciliation:create. Audited RECONCILIATION_RECORDED.",
+    authScopes: { hasPermission: "reconciliation:create" },
     args: {
       date: t.arg.string({ required: true }),
       bankStatementBalance: t.arg.float({ required: false }),
@@ -94,8 +94,8 @@ builder.queryField("latestReconciliation", (t) =>
   t.field({
     type: ReconRef,
     nullable: true,
-    description: "A date's current reconciliation (latest entry) or null. Requires finance:manage.",
-    authScopes: { hasPermission: "finance:manage" },
+    description: "A date's current reconciliation (latest entry) or null. Requires reconciliation:view.",
+    authScopes: { hasPermission: "reconciliation:view" },
     args: { date: t.arg.string({ required: true }) },
     resolve: (_root, args) => latestReconciliation(args.date),
   }),
@@ -104,8 +104,8 @@ builder.queryField("latestReconciliation", (t) =>
 builder.queryField("reconciliationHistory", (t) =>
   t.field({
     type: [ReconRef],
-    description: "Reconciliation history over [from, to], newest first. Requires finance:manage.",
-    authScopes: { hasPermission: "finance:manage" },
+    description: "Reconciliation history over [from, to], newest first. Requires reconciliation:view.",
+    authScopes: { hasPermission: "reconciliation:view" },
     args: { from: t.arg.string({ required: true }), to: t.arg.string({ required: true }) },
     resolve: (_root, args) => reconciliationHistory(args.from, args.to),
   }),
@@ -117,8 +117,8 @@ const ReconPageRef = pageRef("ReconciliationEntryPage", ReconRef);
 builder.queryField("reconciliationHistoryPage", (t) =>
   t.field({
     type: ReconPageRef,
-    description: "One page of the reconciliation history over [from, to], newest first (D-#761). Requires finance:manage.",
-    authScopes: { hasPermission: "finance:manage" },
+    description: "One page of the reconciliation history over [from, to], newest first (D-#761). Requires reconciliation:view.",
+    authScopes: { hasPermission: "reconciliation:view" },
     args: {
       from: t.arg.string({ required: true }),
       to: t.arg.string({ required: true }),
@@ -132,8 +132,8 @@ builder.queryField("reconciliationHistoryPage", (t) =>
 builder.queryField("unreconciledDays", (t) =>
   t.field({
     type: ["String"],
-    description: "Days in [from, to] with finance activity but no reconciliation. Requires finance:manage.",
-    authScopes: { hasPermission: "finance:manage" },
+    description: "Days in [from, to] with finance activity but no reconciliation. Requires reconciliation:view.",
+    authScopes: { hasPermission: "reconciliation:view" },
     args: { from: t.arg.string({ required: true }), to: t.arg.string({ required: true }) },
     resolve: (_root, args) => unreconciledDays(args.from, args.to),
   }),

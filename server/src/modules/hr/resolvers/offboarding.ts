@@ -116,8 +116,8 @@ builder.mutationField("initiateOffboarding", (t) =>
     description:
       "Open an offboarding case (prd-hr H6.1). The trigger sets StaffProfile.employmentStatus " +
       "(resignation→resigned, termination→terminated, fixed_term_end→contract_ended, retirement→retired). " +
-      "Seeds the default clearance checklist. Requires staff:manage. Audited.",
-    authScopes: { hasPermission: "staff:manage" },
+      "Seeds the default clearance checklist. Requires offboarding:create. Audited.",
+    authScopes: { hasPermission: "offboarding:create" },
     args: {
       staffProfileId: t.arg.string({ required: true }),
       trigger: t.arg.string({ required: true }),
@@ -138,8 +138,8 @@ builder.mutationField("initiateOffboarding", (t) =>
 builder.mutationField("addOffboardingClearanceItem", (t) =>
   t.field({
     type: OffboardingCaseRef,
-    description: "Add a clearance checklist item (prd-hr H6.2). Requires staff:manage. Audited.",
-    authScopes: { hasPermission: "staff:manage" },
+    description: "Add a clearance checklist item (prd-hr H6.2). Requires offboarding:edit. Audited.",
+    authScopes: { hasPermission: "offboarding:edit" },
     args: {
       caseId: t.arg.string({ required: true }),
       key: t.arg.string({ required: true }),
@@ -153,8 +153,8 @@ builder.mutationField("addOffboardingClearanceItem", (t) =>
 builder.mutationField("updateOffboardingClearanceItem", (t) =>
   t.field({
     type: OffboardingCaseRef,
-    description: "Set a clearance item done/waived/pending with a note (prd-hr H6.2). Requires staff:manage. Audited.",
-    authScopes: { hasPermission: "staff:manage" },
+    description: "Set a clearance item done/waived/pending with a note (prd-hr H6.2). Requires offboarding:edit. Audited.",
+    authScopes: { hasPermission: "offboarding:edit" },
     args: {
       caseId: t.arg.string({ required: true }),
       key: t.arg.string({ required: true }),
@@ -178,8 +178,8 @@ builder.mutationField("revokeOffboardingAccess", (t) =>
     description:
       "Disable the login + revoke ALL scope grants for the leaver (prd-hr H6.3) — normally done " +
       "automatically by the system on the last working day; this is the manual admin path (same " +
-      "last-working-day gate). Idempotent. Requires staff:manage. Audited.",
-    authScopes: { hasPermission: "staff:manage" },
+      "last-working-day gate). Idempotent. Requires offboarding:revoke. Audited.",
+    authScopes: { hasPermission: "offboarding:revoke" },
     args: { caseId: t.arg.string({ required: true }) },
     resolve: (_root, args, ctx) =>
       revokeOffboardingAccess({ caseId: args.caseId, actorId: ctx.auth!.userId }) as unknown as Promise<IOffboardingCase>,
@@ -192,8 +192,8 @@ builder.mutationField("computeFinalSettlement", (t) =>
     description:
       "Compute the final settlement (prd-hr H6.4): salary pro-rated to the last day (payableDays) + " +
       "arrears + full leave encashment − outstanding advance. HARD-HELD until clearance (D-#29). " +
-      "Recompute-safe while held. Requires payroll:manage. Audited.",
-    authScopes: { hasPermission: "payroll:manage" },
+      "Recompute-safe while held. Requires offboarding:prepare. Audited.",
+    authScopes: { hasPermission: "offboarding:prepare" },
     args: {
       caseId: t.arg.string({ required: true }),
       workingDays: t.arg.int({ required: true }),
@@ -221,9 +221,9 @@ builder.mutationField("releaseFinalSettlement", (t) =>
   t.field({
     type: OffboardingCaseRef,
     description:
-      "PRINCIPAL-only (payroll:approve): release the hard-held settlement — GATED on clearance being " +
+      "PRINCIPAL-only (offboarding:settle): release the hard-held settlement — GATED on clearance being " +
       "complete (every item done/waived, H6.4/D-#29). Commits the advance recovery + closes the case. Audited.",
-    authScopes: { hasPermission: "payroll:approve" },
+    authScopes: { hasPermission: "offboarding:settle" },
     args: { caseId: t.arg.string({ required: true }) },
     resolve: (_root, args, ctx) =>
       releaseFinalSettlement(args.caseId, ctx.auth!.userId) as unknown as Promise<IOffboardingCase>,
@@ -233,8 +233,8 @@ builder.mutationField("releaseFinalSettlement", (t) =>
 builder.mutationField("recordExitInterview", (t) =>
   t.field({
     type: OffboardingCaseRef,
-    description: "Record the optional exit interview — reason + feedback (prd-hr H6.5). Requires staff:manage. Audited.",
-    authScopes: { hasPermission: "staff:manage" },
+    description: "Record the optional exit interview — reason + feedback (prd-hr H6.5). Requires offboarding:edit. Audited.",
+    authScopes: { hasPermission: "offboarding:edit" },
     args: {
       caseId: t.arg.string({ required: true }),
       reason: t.arg.string({ required: false }),
@@ -248,8 +248,8 @@ builder.mutationField("recordExitInterview", (t) =>
 builder.mutationField("issueServiceCertificate", (t) =>
   t.field({
     type: OffboardingCaseRef,
-    description: "Issue a service/experience certificate (prd-hr H6.5). Requires staff:manage. Audited.",
-    authScopes: { hasPermission: "staff:manage" },
+    description: "Issue a service/experience certificate (prd-hr H6.5). Requires offboarding:issue. Audited.",
+    authScopes: { hasPermission: "offboarding:issue" },
     args: { caseId: t.arg.string({ required: true }) },
     resolve: (_root, args, ctx) =>
       issueServiceCertificate(args.caseId, ctx.auth!.userId) as unknown as Promise<IOffboardingCase>,
@@ -259,8 +259,8 @@ builder.mutationField("issueServiceCertificate", (t) =>
 builder.mutationField("cancelOffboarding", (t) =>
   t.field({
     type: OffboardingCaseRef,
-    description: "Withdraw an exit before access has been revoked (prd-hr §6). Requires staff:manage. Audited.",
-    authScopes: { hasPermission: "staff:manage" },
+    description: "Withdraw an exit before access has been revoked (prd-hr §6). Requires offboarding:cancel. Audited.",
+    authScopes: { hasPermission: "offboarding:cancel" },
     args: { caseId: t.arg.string({ required: true }) },
     resolve: (_root, args, ctx) =>
       cancelOffboarding(args.caseId, ctx.auth!.userId) as unknown as Promise<IOffboardingCase>,
@@ -275,8 +275,8 @@ builder.queryField("offboardingCase", (t) =>
   t.field({
     type: OffboardingCaseRef,
     nullable: true,
-    description: "One offboarding case by id (Principal/Office). Requires staff:manage.",
-    authScopes: { hasPermission: "staff:manage" },
+    description: "One offboarding case by id (Principal/Office). Requires offboarding:view.",
+    authScopes: { hasPermission: "offboarding:view" },
     args: { caseId: t.arg.string({ required: true }) },
     resolve: (_root, args) => offboardingCaseById(args.caseId) as unknown as Promise<IOffboardingCase | null>,
   }),
@@ -285,8 +285,8 @@ builder.queryField("offboardingCase", (t) =>
 builder.queryField("offboardingCases", (t) =>
   t.field({
     type: [OffboardingCaseRef],
-    description: "All offboarding cases, optionally by status (Principal/Office). Requires staff:manage.",
-    authScopes: { hasPermission: "staff:manage" },
+    description: "All offboarding cases, optionally by status (Principal/Office). Requires offboarding:view.",
+    authScopes: { hasPermission: "offboarding:view" },
     args: { status: t.arg.string({ required: false }) },
     resolve: (_root, args) => offboardingCases(args.status ?? undefined) as unknown as Promise<IOffboardingCase[]>,
   }),
@@ -295,8 +295,8 @@ builder.queryField("offboardingCases", (t) =>
 builder.queryField("offboardingCasesForStaff", (t) =>
   t.field({
     type: [OffboardingCaseRef],
-    description: "A staff member's offboarding case history (Principal/Office). Requires staff:manage.",
-    authScopes: { hasPermission: "staff:manage" },
+    description: "A staff member's offboarding case history (Principal/Office). Requires offboarding:view.",
+    authScopes: { hasPermission: "offboarding:view" },
     args: { staffProfileId: t.arg.string({ required: true }) },
     resolve: (_root, args) => offboardingCasesForStaff(args.staffProfileId) as unknown as Promise<IOffboardingCase[]>,
   }),

@@ -122,8 +122,8 @@ TrendPointRef.implement({
 builder.queryField("financeMonthlyReport", (t) =>
   t.field({
     type: MonthlyReportRef,
-    description: "The month's income/expense by head + the month-end ledger snapshot + net (derived). Requires finance:manage.",
-    authScopes: { hasPermission: "finance:manage" },
+    description: "The month's income/expense by head + the month-end ledger snapshot + net (derived). Requires finance_reports:view.",
+    authScopes: { hasPermission: "finance_reports:view" },
     args: { month: t.arg.string({ required: true }) },
     resolve: (_root, args) => monthlyReport(args.month),
   }),
@@ -132,8 +132,8 @@ builder.queryField("financeMonthlyReport", (t) =>
 builder.queryField("financeYearOverview", (t) =>
   t.field({
     type: YearOverviewRef,
-    description: "The Principal-dashboard KPI bundle for a year (derived, no cross-file stitching). Requires finance:manage.",
-    authScopes: { hasPermission: "finance:manage" },
+    description: "The Principal-dashboard KPI bundle for a year (derived, no cross-file stitching). Requires finance_reports:view.",
+    authScopes: { hasPermission: "finance_reports:view" },
     args: { academicYearId: t.arg.string({ required: true }), asOf: t.arg.string({ required: false }) },
     resolve: (_root, args) => yearOverview(args.academicYearId, args.asOf ? parseDate(args.asOf) : undefined),
   }),
@@ -142,8 +142,8 @@ builder.queryField("financeYearOverview", (t) =>
 builder.queryField("financeYtdIncomeStatement", (t) =>
   t.field({
     type: IncomeStatementRef,
-    description: "The YTD income-statement view (income − expense = net; not a GL). Requires finance:manage.",
-    authScopes: { hasPermission: "finance:manage" },
+    description: "The YTD income-statement view (income − expense = net; not a GL). Requires finance_reports:view.",
+    authScopes: { hasPermission: "finance_reports:view" },
     args: { academicYearId: t.arg.string({ required: true }), asOf: t.arg.string({ required: false }) },
     resolve: (_root, args) => ytdIncomeStatement(args.academicYearId, args.asOf ? parseDate(args.asOf) : undefined),
   }),
@@ -152,8 +152,8 @@ builder.queryField("financeYtdIncomeStatement", (t) =>
 builder.queryField("financeTrends", (t) =>
   t.field({
     type: [TrendPointRef],
-    description: "Monthly income/expense/net series for the year (charts). Requires finance:manage.",
-    authScopes: { hasPermission: "finance:manage" },
+    description: "Monthly income/expense/net series for the year (charts). Requires finance_reports:view.",
+    authScopes: { hasPermission: "finance_reports:view" },
     args: { academicYearId: t.arg.string({ required: true }), asOf: t.arg.string({ required: false }) },
     resolve: (_root, args) => financeTrends(args.academicYearId, args.asOf ? parseDate(args.asOf) : undefined),
   }),

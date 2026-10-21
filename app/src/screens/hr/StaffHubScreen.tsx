@@ -457,14 +457,17 @@ function LeaveTab({ staff }: { staff: StaffT }): React.ReactElement {
   );
 }
 
-function PayrollTab({ staff, onSetPay }: { staff: StaffT; onSetPay: () => void }): React.ReactElement {
+function PayrollTab({
+  staff, onSetPay, canPolicy, canLateness,
+}: { staff: StaffT; onSetPay: (() => void) | null; canPolicy: boolean; canLateness: boolean }): React.ReactElement {
   const monthKey = monthKeyOf(new Date());
   const [{ data, fetching, error }] = useQuery({
     query: STAFF_PAYSLIPS_QUERY, variables: { staffProfileId: staff.id }, requestPolicy: "cache-and-network",
   });
-  const [{ data: pol }] = useQuery({ query: HR_POLICY_QUERY });
+  const [{ data: pol }] = useQuery({ query: HR_POLICY_QUERY, pause: !canPolicy });
   const [{ data: late }] = useQuery({
-    query: STAFF_LATENESS_PREVIEW_QUERY, variables: { staffProfileId: staff.id, monthKey }, requestPolicy: "cache-and-network",
+    query: STAFF_LATENESS_PREVIEW_QUERY, variables: { staffProfileId: staff.id, monthKey }, pause: !canLateness,
+    requestPolicy: "cache-and-network",
   });
   const slips = data?.staffPayslips ?? [];
   // D-#761: ~12 a year per person, so paging the rows already fetched is enough.
@@ -517,7 +520,9 @@ function PayrollTab({ staff, onSetPay }: { staff: StaffT; onSetPay: () => void }
         {salary == null ? <Notice tone="warn" message={STR.stfNoSalaryYet} /> : null}
         {/* Setting pay used to mean leaving the hub entirely for the payroll screens —
             the exact scatter this hub exists to end. */}
-        <Button title={STR.stfSetPay} variant="secondary" onPress={onSetPay} style={{ marginTop: space(2) }} />
+        {onSetPay ? (
+          <Button title={STR.stfSetPay} variant="secondary" onPress={onSetPay} style={{ marginTop: space(2) }} />
+        ) : null}
       </Card>
 
       <Card>
@@ -562,8 +567,14 @@ function PayrollTab({ staff, onSetPay }: { staff: StaffT; onSetPay: () => void }
 }
 
 function DocumentsTab({
-  staff, onIssue, onConfirm,
-}: { staff: StaffT; onIssue: (kind: string) => void; onConfirm: () => void }): React.ReactElement {
+  staff, canIssue, canVoid, onIssue, onConfirm,
+}: {
+  staff: StaffT;
+  canIssue: boolean;
+  canVoid: boolean;
+  onIssue: (kind: string) => void;
+  onConfirm: (() => void) | null;
+}): React.ReactElement {
   const [{ data, fetching, error }, refetch] = useQuery({
     query: STAFF_LETTERS_QUERY, variables: { staffProfileId: staff.id }, requestPolicy: "cache-and-network",
   });
@@ -592,6 +603,7 @@ function DocumentsTab({
       {notice ? <Notice tone="ok" message={notice} /> : null}
       {failure ? <Notice tone="danger" message={failure} /> : null}
 
+      {canIssue ? (
       <Card>
         <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.stfNewLetter}</Body>
         <Button title={STR.stfLetterAppointment} onPress={() => onIssue("appointment")} />
@@ -604,8 +616,12 @@ function DocumentsTab({
                 starts the confirmation that makes it available. Previously the caption
                 read as though the button itself were disabled. */}
             <Muted>{STR.stfConfirmFirstNote}</Muted>
-            <View style={{ height: space(1) }} />
-            <Button title={STR.stfConfirmTitle} variant="secondary" onPress={onConfirm} />
+            {onConfirm ? (
+              <>
+                <View style={{ height: space(1) }} />
+                <Button title={STR.stfConfirmTitle} variant="secondary" onPress={onConfirm} />
+              </>
+            ) : null}
           </>
         )}
         <View style={{ height: space(2) }} />
@@ -619,6 +635,7 @@ function DocumentsTab({
           </>
         ) : null}
       </Card>
+      ) : null}
 
       <Card>
         <Body style={{ fontWeight: "700", marginBottom: space(1) }}>{STR.stfIssuedLetters}</Body>
@@ -640,7 +657,7 @@ function DocumentsTab({
                   {PDF_SUPPORTED ? (
                     <Button title={STR.stfViewPdf} variant="secondary" onPress={() => void openPdf(`/pdf/staff-letter/${l.id}`)} />
                   ) : null}
-                  {l.status === "issued" ? (
+                  {canVoid && l.status === "issued" ? (
                     <Button title={STR.stfVoidLetter} variant="ghost" onPress={() => setVoidingId(l.id)} />
                   ) : null}
                 </View>
@@ -660,12 +677,12 @@ function DocumentsTab({
   );
 }
 
-function PerformanceTab({ staff }: { staff: StaffT }): React.ReactElement {
+function PerformanceTab({ staff, canConduct }: { staff: StaffT; canConduct: boolean }): React.ReactElement {
   const [{ data: appr, fetching }] = useQuery({
     query: STAFF_APPRAISALS_QUERY, variables: { staffProfileId: staff.id }, requestPolicy: "cache-and-network",
   });
   const [{ data: cond }] = useQuery({
-    query: STAFF_CONDUCT_RECORDS_QUERY, variables: { staffProfileId: staff.id }, requestPolicy: "cache-and-network",
+    query: STAFF_CONDUCT_RECORDS_QUERY, variables: { staffProfileId: staff.id }, pause: !canConduct, requestPolicy: "cache-and-network",
   });
   const [{ data: obs }] = useQuery({
     query: STAFF_OBSERVATIONS_QUERY, variables: { staffProfileId: staff.id }, requestPolicy: "cache-and-network",
@@ -691,6 +708,7 @@ function PerformanceTab({ staff }: { staff: StaffT }): React.ReactElement {
         ))}
       </Card>
 
+      {canConduct ? (
       <Card>
         <Body style={{ fontWeight: "700", marginBottom: space(1) }}>{STR.hrMyConduct}</Body>
         {conduct.length === 0 ? <Muted>{STR.empty}</Muted> : conduct.map((c) => (
@@ -704,6 +722,7 @@ function PerformanceTab({ staff }: { staff: StaffT }): React.ReactElement {
           </View>
         ))}
       </Card>
+      ) : null}
 
       <Card>
         <Body style={{ fontWeight: "700", marginBottom: space(1) }}>{STR.stfObservations}</Body>
@@ -777,24 +796,29 @@ export default function StaffHubScreen({ route, navigation }: Props): React.Reac
   // The param paints the first frame; the live record replaces it the moment it lands.
   const staff: StaffT = data?.staffProfile ?? initial;
 
-  const canStaff = can("staff:manage");
-  // Provisioning a login is `user:manage`, NOT `staff:manage` — Office holds the
-  // second and not the first, and was offered a button that could only refuse
+  // PM (D-#790..#801): each tab and button follows the catalogue action its server
+  // resolver checks (was staff:manage / leave:manage / attendance:manage / …).
+  const canEditRecord = can("staff_records:edit");
+  const canConfirm = can("staff_records:confirm");
+  const canLetters = can("staff_letters:view");
+  const canExit = can("offboarding:view");
+  // Provisioning a login is a staff-login action, NOT a staff-record one — Office holds
+  // the second and not the first, and was offered a button that could only refuse
   // (D-#581). The gate here is now the same one the mutation asserts.
-  const canCredentials = can("user:manage");
-  const canLeave = can("leave:manage");
+  const canCredentials = can("staff_logins:create") || can("staff_logins:reset_password");
+  const canLeave = can("leave:view_all");
   const canAttendance = can("staff_attendance:view_all");
-  const canPayroll = can("payroll:manage");
-  const canPerformance = can("performance:manage");
+  const canPayroll = can("payroll:view");
+  const canPerformance = can("appraisal:view_all");
 
   const tabs: Array<{ key: TabKey; label: string }> = [
     { key: "profile", label: STR.stfTabProfile },
     ...(canAttendance ? [{ key: "attendance" as TabKey, label: STR.stfTabAttendance }] : []),
     ...(canLeave ? [{ key: "leave" as TabKey, label: STR.stfTabLeave }] : []),
     ...(canPayroll ? [{ key: "payroll" as TabKey, label: STR.stfTabPayroll }] : []),
-    ...(canStaff ? [{ key: "documents" as TabKey, label: STR.stfTabDocuments }] : []),
+    ...(canLetters ? [{ key: "documents" as TabKey, label: STR.stfTabDocuments }] : []),
     ...(canPerformance ? [{ key: "performance" as TabKey, label: STR.stfTabPerformance }] : []),
-    ...(canStaff ? [{ key: "exit" as TabKey, label: STR.stfTabExit }] : []),
+    ...(canExit ? [{ key: "exit" as TabKey, label: STR.stfTabExit }] : []),
   ];
   const [tab, setTab] = React.useState<TabKey>("profile");
   // Bumped on focus so the ACTIVE tab remounts when we return from a write. The hub
@@ -822,12 +846,14 @@ export default function StaffHubScreen({ route, navigation }: Props): React.Reac
         </ChipRow>
       </View>
 
-      {canStaff ? (
+      {canEditRecord || (canConfirm && !staff.confirmationDate) ? (
         <Card>
           <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.stfQuickActions}</Body>
           <View style={{ flexDirection: "row", gap: space(2), flexWrap: "wrap" }}>
-            <Button title={STR.staffEditAction} variant="secondary" onPress={() => nav.navigate("StaffForm", { staff })} />
-            {!staff.confirmationDate ? (
+            {canEditRecord ? (
+              <Button title={STR.staffEditAction} variant="secondary" onPress={() => nav.navigate("StaffForm", { staff })} />
+            ) : null}
+            {canConfirm && !staff.confirmationDate ? (
               <Button title={STR.stfConfirmTitle} onPress={() => nav.navigate("ConfirmEmployment", { staff })} />
             ) : null}
           </View>
@@ -843,18 +869,29 @@ export default function StaffHubScreen({ route, navigation }: Props): React.Reac
       {tab === "attendance" && canAttendance ? <AttendanceTab key={reloadKey} staff={staff} /> : null}
       {tab === "leave" && canLeave ? <LeaveTab key={reloadKey} staff={staff} /> : null}
       {tab === "payroll" && canPayroll ? (
-        <PayrollTab key={reloadKey} staff={staff} onSetPay={() => navigation.navigate("StaffPayEdit", { staff })} />
+        <PayrollTab
+          key={reloadKey}
+          staff={staff}
+          // StaffPayEdit writes the salary (payroll:edit) and/or the bank account (staff_records:edit).
+          onSetPay={can("payroll:edit") || canEditRecord ? () => navigation.navigate("StaffPayEdit", { staff }) : null}
+          canPolicy={can("hr_policy:view")}
+          canLateness={canAttendance}
+        />
       ) : null}
-      {tab === "documents" && canStaff ? (
+      {tab === "documents" && canLetters ? (
         <DocumentsTab
           key={reloadKey}
           staff={staff}
+          canIssue={can("staff_letters:issue")}
+          canVoid={can("staff_letters:void")}
           onIssue={(kind) => navigation.navigate("IssueLetter", { staff, kind })}
-          onConfirm={() => navigation.navigate("ConfirmEmployment", { staff })}
+          onConfirm={canConfirm ? () => navigation.navigate("ConfirmEmployment", { staff }) : null}
         />
       ) : null}
-      {tab === "performance" && canPerformance ? <PerformanceTab key={reloadKey} staff={staff} /> : null}
-      {tab === "exit" && canStaff ? <ExitTab key={reloadKey} staff={staff} /> : null}
+      {tab === "performance" && canPerformance ? (
+        <PerformanceTab key={reloadKey} staff={staff} canConduct={can("conduct:view_all")} />
+      ) : null}
+      {tab === "exit" && canExit ? <ExitTab key={reloadKey} staff={staff} /> : null}
     </Screen>
   );
 }

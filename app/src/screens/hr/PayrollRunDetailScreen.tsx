@@ -140,12 +140,14 @@ export default function PayrollRunDetailScreen({ route, navigation }: Props): Re
           ) : (
             <Notice message={STR.hrPayApproveOnly} tone="info" />
           )}
-          <View style={{ marginTop: space(2) }}>
-            <Button title={STR.hrCancelRun} variant="danger" onPress={runCancel} disabled={busy} />
-          </View>
+          {can("payroll:prepare") ? (
+            <View style={{ marginTop: space(2) }}>
+              <Button title={STR.hrCancelRun} variant="danger" onPress={runCancel} disabled={busy} />
+            </View>
+          ) : null}
         </Card>
       ) : null}
-      {status === "approved_locked" ? (
+      {status === "approved_locked" && can("payroll:export") ? (
         <Card onPress={() => navigation.navigate("PaymentExport", { runId, monthKey })}>
           <Body style={{ fontWeight: "700" }}>{STR.hrPaymentExport}</Body>
         </Card>

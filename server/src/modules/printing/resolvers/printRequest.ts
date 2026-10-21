@@ -1,11 +1,11 @@
 /**
  * Print-request resolvers (PQ-1, D-#281).
  *
- * RBAC — NO new permission (D-#281), exactly the gates the class-test print flow
- * already uses:
- *   tracker:write  (TEACHER) — file a request; cancel your OWN while REQUESTED.
- *   roster:manage  (Office/Principal) — work the queue: mark printed, mark
- *                  delivered, cancel any REQUESTED job, read every bucket.
+ * RBAC — PM catalogue actions (D-#790..#801; were tracker:write / roster:manage):
+ *   printing:create   (TEACHER) — file a request; cancel/tag/reprint your OWN; own history.
+ *   printing:view_all (Office/Principal) — read every bucket, the counts, anyone's history.
+ *   printing:process  (Office/Principal) — mark printed, mark delivered, cancel/tag/reprint
+ *                     ANY job.
  * A teacher reads only their own requests. All identity-plane; no corpus path.
  */
 import { builder } from "../../../schema";
@@ -47,16 +47,21 @@ import type { IPrintRequest } from "../models/PrintRequest";
 // Gates
 // ---------------------------------------------------------------------------
 
-/** Office / Principal — the print operator. Same lever as `assertPrintAdmin` in CT-1. */
-function assertPrintAdmin(ctx: AppContext): void {
-  if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  if (!callerHasPermission(ctx.auth, "roster:manage")) {
-    throw new ForbiddenError("ছাপানো/ডেলিভারি অফিস বা অধ্যক্ষের কাজ");
-  }
-}
+/** The print operator may act on ANY job (printing:process; was roster:manage). */
+const canProcess = (ctx: AppContext): boolean =>
+  ctx.auth !== null && callerHasPermission(ctx.auth, "printing:process");
+/** The print operator may READ every job (printing:view_all; was roster:manage). */
+const canViewAll = (ctx: AppContext): boolean =>
+  ctx.auth !== null && callerHasPermission(ctx.auth, "printing:view_all");
 
-const isOffice = (ctx: AppContext): boolean =>
-  ctx.auth !== null && callerHasPermission(ctx.auth, "roster:manage");
+/** Cancel/tag/reprint: any job with printing:process; otherwise the caller's own, for
+ *  someone who can request at all (printing:create). Returns "acts on any job". */
+function assertProcessOrCreate(ctx: AppContext, message: string): boolean {
+  if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+  const office = canProcess(ctx);
+  if (!office && !callerHasPermission(ctx.auth, "printing:create")) throw new ForbiddenError(message);
+  return office;
+}
 
 // ---------------------------------------------------------------------------
 // Shape
@@ -257,8 +262,8 @@ builder.mutationField("createPrintRequest", (t) =>
     type: PrintRequestRef,
     description:
       "File a print request (PQ-1). Exactly one source: setId | contentArtifactId | fileIds | linkUrl. " +
-      "Born REQUESTED, audited. Requires tracker:write.",
-    authScopes: { hasPermission: "tracker:write" },
+      "Born REQUESTED, audited. Requires printing:create.",
+    authScopes: { hasPermission: "printing:create" },
     args: {
       title: t.arg.string({ required: true }),
       purpose: t.arg.string({ required: true }),
@@ -292,17 +297,16 @@ builder.mutationField("markPrintRequestPrinted", (t) =>
   t.field({
     type: PrintRequestRef,
     description:
-      "REQUESTED → PRINTED. Office/Principal (roster:manage). Audited. For a CLASS_PRESENT " +
+      "REQUESTED → PRINTED. Office/Principal (printing:process). Audited. For a CLASS_PRESENT " +
       "job the count finalizes from the use day's attendance — or from `copies` (manual) " +
       "while that attendance is pending (D-#294).",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "printing:process" },
     args: {
       id: t.arg.string({ required: true }),
       /** Manual count for a CLASS_PRESENT job whose use-day attendance is pending. */
       copies: t.arg.int({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
-      assertPrintAdmin(ctx);
       return decorateOne(await markPrinted(args.id, ctx.auth!.userId, args.copies));
     },
   }),
@@ -313,11 +317,10 @@ builder.mutationField("markPrintRequestDelivered", (t) =>
     type: PrintRequestRef,
     description:
       "PRINTED → DELIVERED — the Office handed the job back to the requesting teacher. " +
-      "Office/Principal (roster:manage). Audited; the requester is notified (PQ-5).",
-    authScopes: { authenticated: true },
+      "Office/Principal (printing:process). Audited; the requester is notified (PQ-5).",
+    authScopes: { hasPermission: "printing:process" },
     args: { id: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
-      assertPrintAdmin(ctx);
       return decorateOne(await markDelivered(args.id, ctx.auth!.userId));
     },
   }),
@@ -329,18 +332,14 @@ builder.mutationField("cancelPrintRequest", (t) =>
     description:
       "Withdraw a REQUESTED job — the requester may cancel their own, the Office may cancel any. " +
       "A PRINTED job cannot be cancelled (the paper exists). Audited.",
-    authScopes: { authenticated: true },
+    authScopes: { hasAnyPermission: ["printing:process", "printing:create"] },
     args: {
       id: t.arg.string({ required: true }),
       reason: t.arg.string({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
-      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      const office = isOffice(ctx);
-      if (!office && !callerHasPermission(ctx.auth, "tracker:write")) {
-        throw new ForbiddenError("Not allowed to cancel a print request");
-      }
-      const doc = await cancelPrintRequest(args.id, ctx.auth.userId, { isOffice: office, reason: args.reason });
+      const office = assertProcessOrCreate(ctx, "Not allowed to cancel a print request");
+      const doc = await cancelPrintRequest(args.id, ctx.auth!.userId, { isOffice: office, reason: args.reason });
       return decorateOne(doc);
     },
   }),
@@ -375,15 +374,14 @@ builder.queryField("printQueue", (t) =>
       "One paginated bucket of the Office print queue: REQUESTED (yet to print), PRINTED " +
       "(printing done), DELIVERED, CANCELLED. The two ACTIVE buckets stay oldest-first (the " +
       "order the Office works them); the two TERMINAL buckets are newest-first history " +
-      "(D-#461). Requires roster:manage.",
-    authScopes: { authenticated: true },
+      "(D-#461). Requires printing:view_all.",
+    authScopes: { hasPermission: "printing:view_all" },
     args: {
       status: t.arg.string({ required: true }),
       limit: t.arg.int({ required: false }),
       offset: t.arg.int({ required: false }),
     },
-    resolve: async (_root, args, ctx) => {
-      assertPrintAdmin(ctx);
+    resolve: async (_root, args) => {
       const page = await printQueue(args.status, args.limit ?? undefined, args.offset ?? undefined);
       return { items: await decorate(page.items), total: page.total, hasMore: page.hasMore };
     },
@@ -403,10 +401,9 @@ const PrintQueueCountsRef = builder
 builder.queryField("printQueueCounts", (t) =>
   t.field({
     type: PrintQueueCountsRef,
-    description: "How many jobs await printing (REQUESTED) and delivery (PRINTED). roster:manage.",
-    authScopes: { authenticated: true },
-    resolve: async (_root, _args, ctx) => {
-      assertPrintAdmin(ctx);
+    description: "How many jobs await printing (REQUESTED) and delivery (PRINTED). printing:view_all.",
+    authScopes: { hasPermission: "printing:view_all" },
+    resolve: async () => {
       return printQueueCounts();
     },
   }),
@@ -415,8 +412,8 @@ builder.queryField("printQueueCounts", (t) =>
 builder.queryField("myPrintRequests", (t) =>
   t.field({
     type: [PrintRequestRef],
-    description: "The caller's own print requests, newest first. Requires tracker:write.",
-    authScopes: { hasPermission: "tracker:write" },
+    description: "The caller's own print requests, newest first. Requires printing:create.",
+    authScopes: { hasPermission: "printing:create" },
     args: { limit: t.arg.int({ required: false }) },
     resolve: async (_root, args, ctx) => decorate(await myPrintRequests(ctx.auth!.userId, args.limit ?? 50)),
   }),
@@ -430,8 +427,8 @@ builder.queryField("myPrintRequestsPage", (t) =>
     type: MyPrintRequestPageRef,
     description:
       "The caller's own print requests, newest first, one page at a time (D-#761). `active`: true = " +
-      "REQUESTED/PRINTED, false = everything else (delivered, cancelled), omitted = all. Requires tracker:write.",
-    authScopes: { hasPermission: "tracker:write" },
+      "REQUESTED/PRINTED, false = everything else (delivered, cancelled), omitted = all. Requires printing:create.",
+    authScopes: { hasPermission: "printing:create" },
     args: {
       active: t.arg.boolean({ required: false }),
       page: t.arg.int({ required: false }),
@@ -521,9 +518,9 @@ builder.queryField("printHistory", (t) =>
       "Already-printed jobs (PRINTED + DELIVERED), collapsed to ONE ROW PER DOCUMENT and ordered by " +
       "class → subject → purpose → newest print (D-#362). Filter by class / subject / purpose, by " +
       "requester and by printed-on window (PQ-7). " +
-      "The Office/Principal (roster:manage) see every requester's prints; a teacher (tracker:write) " +
+      "The Office/Principal (printing:view_all) see every requester's prints; a teacher (printing:create) " +
       "sees only their own — enforced server-side, not by an argument.",
-    authScopes: { authenticated: true },
+    authScopes: { hasAnyPermission: ["printing:create", "printing:view_all"] },
     args: {
       /** PQ-8: the EFFECTIVE class — matches a job's own `classId`, or `copiesClassId` on
        *  a job that names no class of its own. */
@@ -542,8 +539,8 @@ builder.queryField("printHistory", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      const office = isOffice(ctx);
-      if (!office && !callerHasPermission(ctx.auth, "tracker:write")) {
+      const office = canViewAll(ctx);
+      if (!office && !callerHasPermission(ctx.auth, "printing:create")) {
         throw new ForbiddenError("Not allowed to read the print history");
       }
       const page = await printHistory({
@@ -590,8 +587,8 @@ async function historyRowViews(rows: PrintHistoryRow[]): Promise<PrintHistoryRow
  *  their own jobs (enforced here, never by an argument). */
 function historyScope(ctx: AppContext): { office: boolean; userId: string } {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  const office = isOffice(ctx);
-  if (!office && !callerHasPermission(ctx.auth, "tracker:write")) {
+  const office = canViewAll(ctx);
+  if (!office && !callerHasPermission(ctx.auth, "printing:create")) {
     throw new ForbiddenError("Not allowed to read the print history");
   }
   return { office, userId: ctx.auth.userId };
@@ -608,7 +605,7 @@ builder.queryField("printHistoryPage", (t) =>
       "no scan cap, so every matching document is reachable and `total` counts all of them. " +
       "`printedBy` (Office only) keeps the documents that person printed at least once. A teacher " +
       "sees only their own prints — enforced server-side.",
-    authScopes: { authenticated: true },
+    authScopes: { hasAnyPermission: ["printing:create", "printing:view_all"] },
     args: {
       classId: t.arg.string({ required: false }),
       noClass: t.arg.boolean({ required: false }),
@@ -677,7 +674,7 @@ builder.queryField("printHistoryFacets", (t) =>
   t.field({
     type: PrintHistoryFacetsRef,
     description: "Chip options for `printHistoryPage` (D-#761). Same scope rule as the history.",
-    authScopes: { authenticated: true },
+    authScopes: { hasAnyPermission: ["printing:create", "printing:view_all"] },
     args: {
       fromKey: t.arg.string({ required: false }),
       toKey: t.arg.string({ required: false }),
@@ -732,9 +729,9 @@ builder.mutationField("tagPrintRequests", (t) =>
       "Name the class/subject a historical print job was FOR (PQ-9, D-#392). Pass EVERY job behind a " +
       "history row (`PrintHistoryRow.jobIds`) — the row stands for the document, so tagging one print " +
       "would split it. Omit an argument to leave that field alone; pass null to clear it. The Office " +
-      "(roster:manage) may tag any job, a teacher only their own; a class-test job is refused outright " +
+      "(printing:process) may tag any job, a teacher only their own; a class-test job is refused outright " +
       "because its class belongs to the exam record. Audited with both the old and the new value.",
-    authScopes: { authenticated: true },
+    authScopes: { hasAnyPermission: ["printing:process", "printing:create"] },
     args: {
       ids: t.arg.stringList({ required: true }),
       /** Omitted = leave; null = clear; an id = set. Validated against the roster. */
@@ -746,11 +743,7 @@ builder.mutationField("tagPrintRequests", (t) =>
       subject: t.arg.string({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
-      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      const office = isOffice(ctx);
-      if (!office && !callerHasPermission(ctx.auth, "tracker:write")) {
-        throw new ForbiddenError("Not allowed to tag a print request");
-      }
+      const office = assertProcessOrCreate(ctx, "Not allowed to tag a print request");
       const docs = await tagPrintRequests({
         ids: args.ids,
         // An omitted GraphQL argument is absent from `args`, an explicit null is null —
@@ -758,7 +751,7 @@ builder.mutationField("tagPrintRequests", (t) =>
         classId: args.classId === undefined ? undefined : args.classId,
         sectionId: args.sectionId === undefined ? undefined : args.sectionId,
         subject: args.subject === undefined ? undefined : args.subject,
-        actorId: ctx.auth.userId,
+        actorId: ctx.auth!.userId,
         isOffice: office,
       });
       return decorate(docs);
@@ -774,7 +767,7 @@ builder.mutationField("reprintPrintRequest", (t) =>
       "source, print settings and class/subject/purpose into a new REQUESTED job for `neededByKey`. " +
       "The original's requester (own-row) or the Office/Principal may reprint. A linked class test is " +
       "deliberately NOT re-linked — the exam record keeps its own lifecycle. Audited; the queue is notified.",
-    authScopes: { authenticated: true },
+    authScopes: { hasAnyPermission: ["printing:process", "printing:create"] },
     args: {
       id: t.arg.string({ required: true }),
       /** The date the reprint will be USED — a reprint is always for a new day. */
@@ -786,18 +779,14 @@ builder.mutationField("reprintPrintRequest", (t) =>
       notes: t.arg.string({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
-      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      const office = isOffice(ctx);
-      if (!office && !callerHasPermission(ctx.auth, "tracker:write")) {
-        throw new ForbiddenError("Not allowed to file a print request");
-      }
+      const office = assertProcessOrCreate(ctx, "Not allowed to file a print request");
       const doc = await reprintPrintRequest({
         sourceRequestId: args.id,
         neededByKey: args.neededByKey,
         copies: args.copies,
         copiesMode: args.copiesMode,
         notes: args.notes,
-        actorId: ctx.auth.userId,
+        actorId: ctx.auth!.userId,
         isOffice: office,
       });
       return decorateOne(doc);
@@ -810,13 +799,13 @@ builder.queryField("printRequest", (t) =>
     type: PrintRequestRef,
     nullable: true,
     description: "One print request — its requester, or the Office.",
-    authScopes: { authenticated: true },
+    authScopes: { hasAnyPermission: ["printing:view_all", "printing:create"] },
     args: { id: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       const doc = await printRequestById(args.id);
       if (!doc) return null;
-      if (!isOffice(ctx) && doc.requestedBy.toString() !== ctx.auth.userId) {
+      if (!canViewAll(ctx) && doc.requestedBy.toString() !== ctx.auth.userId) {
         throw new ForbiddenError("Not your print request");
       }
       return decorateOne(doc);
