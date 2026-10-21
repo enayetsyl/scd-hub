@@ -357,11 +357,12 @@ filesRouter.post("/chat", parseChatUpload, async (req: Request, res: Response) =
 
 filesRouter.post("/classtest", parseUpload, async (req: Request, res: Response) => {
   const ctx = buildContext(req, res);
-  // D-#342: the OFFICE (roster:manage) also uploads papers here — the question-
-  // request flow's produced paper — alongside the teacher's own (tracker:write).
+  // D-#342: the OFFICE (class_test_question:prepare) also uploads papers here — the
+  // question-request flow's produced paper — alongside the teacher's own (class_test:create).
   if (
     !ctx.auth ||
-    (!callerHasPermission(ctx.auth, "tracker:write") && !callerHasPermission(ctx.auth, "roster:manage"))
+    (!callerHasPermission(ctx.auth, "class_test:create") &&
+      !callerHasPermission(ctx.auth, "class_test_question:prepare"))
   ) {
     res.status(403).json({ error: FILE_ERRORS_BN.forbidden });
     return;
@@ -558,7 +559,7 @@ filesRouter.post("/classnote", parseClassNoteUpload, async (req: Request, res: R
 
 filesRouter.post("/ctscript", parseClassNoteUpload, async (req: Request, res: Response) => {
   const ctx = buildContext(req, res);
-  if (!ctx.auth || !callerHasPermission(ctx.auth, "roster:manage")) {
+  if (!ctx.auth || !callerHasPermission(ctx.auth, "class_test_script:scan")) {
     res.status(403).json({ error: FILE_ERRORS_BN.forbidden });
     return;
   }

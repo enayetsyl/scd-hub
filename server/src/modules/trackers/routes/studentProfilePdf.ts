@@ -13,7 +13,7 @@
  */
 import type { Router, Request, Response } from "express";
 import { Router as createRouter } from "express";
-import { HW_SUBJECT_LABELS_BN } from "@scd/shared";
+import { HW_SUBJECT_LABELS_BN, callerHasPermission } from "@scd/shared";
 import { buildContext } from "../../../context";
 import { markdownToPdf } from "../../../routes/pdfRenderer";
 import { isValidDateKey } from "../../attendance/dates";
@@ -36,6 +36,12 @@ studentProfilePdfRouter.get("/:studentId", async (req: Request, res: Response) =
   const ctx = buildContext(req, res);
   if (!ctx.auth) {
     res.status(401).json({ error: "Unauthenticated" });
+    return;
+  }
+  // PM: printing the sheet is its own action (student_profile:export); the read scope
+  // below still decides WHICH student (student_profile:view_all lifts it).
+  if (!callerHasPermission(ctx.auth, "student_profile:export")) {
+    res.status(403).json({ error: "Forbidden" });
     return;
   }
 

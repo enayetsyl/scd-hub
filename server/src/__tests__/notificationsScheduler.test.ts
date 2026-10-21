@@ -145,6 +145,13 @@ jest.mock("../modules/comments/services/MeetingChainService", () => ({
   emitMorningReminders: (now: Date) => mockMeetingReminders(now),
   MEETING_REMINDER_MINUTES: 8 * 60,
 }));
+// PM §5.5 — recipients picked by action (holderIdsOf) read the User model with a sort the
+// User stub above does not have; stubbed so each family names the action it asks about.
+const mockHolderIdsOf = jest.fn((_perm: string) => Promise.resolve([] as string[]));
+jest.mock("../modules/access-control/services/holders", () => ({
+  holderIdsOf: (perm: string) => mockHolderIdsOf(perm),
+  holdersOf: async () => [],
+}));
 
 import {
   runSchedulerTick,
@@ -171,6 +178,7 @@ beforeEach(() => {
   mockSubjectGroupFind.mockResolvedValue([]);
   mockSectionFind.mockResolvedValue([]);
   mockUserFind.mockResolvedValue([]);
+  mockHolderIdsOf.mockResolvedValue([]);
   mockDispatchAttendance.mockResolvedValue({});
   mockDispatchLibrary.mockResolvedValue({ dueSoonEmitted: 0, overdueEmitted: 0 });
   mockPendingHomework.mockResolvedValue([]);
@@ -386,22 +394,24 @@ describe("homework pending-confirm ladder", () => {
 // ---------------------------------------------------------------------------
 
 describe("class-test overdue digest (D-#603)", () => {
-  const OFFICE = { _id: { toString: () => "office-1" } };
-  const PRINCIPAL = { _id: { toString: () => "principal-1" } };
+  // PM §5.5: the recipients are the holders of class_test:remind (Office + Principal by default).
+  const OFFICE = "office-1";
+  const PRINCIPAL = "principal-1";
 
   it("sends ONE digest per recipient at 08:00, not one per pending exam", async () => {
     mockOverdueCounts.mockResolvedValue({ overdue: 7, awaitingSubmit: 5, awaitingPublish: 2 });
-    mockUserFind.mockResolvedValue([OFFICE, PRINCIPAL]);
+    mockHolderIdsOf.mockResolvedValue([OFFICE, PRINCIPAL]);
 
     const s = await runSchedulerTick(at(8, 0));
     expect(s.ctOverdueDigestEmitted).toBe(2); // two people, seven exams → two rows
+    expect(mockHolderIdsOf).toHaveBeenCalledWith("class_test:remind");
     const kinds = mockEmit.mock.calls.map((c) => c[0].kind);
     expect(kinds.filter((k: string) => k === "CLASS_TEST_OVERDUE_DIGEST")).toHaveLength(2);
   });
 
   it("puts the RECIPIENT in the dedupe key so the second person is not swallowed", async () => {
     mockOverdueCounts.mockResolvedValue({ overdue: 3, awaitingSubmit: 3, awaitingPublish: 0 });
-    mockUserFind.mockResolvedValue([OFFICE, PRINCIPAL]);
+    mockHolderIdsOf.mockResolvedValue([OFFICE, PRINCIPAL]);
 
     await runSchedulerTick(at(8, 0));
     const keys = mockEmit.mock.calls
@@ -413,14 +423,14 @@ describe("class-test overdue digest (D-#603)", () => {
 
   it("stays silent when nothing is overdue", async () => {
     mockOverdueCounts.mockResolvedValue({ overdue: 0, awaitingSubmit: 0, awaitingPublish: 0 });
-    mockUserFind.mockResolvedValue([OFFICE]);
+    mockHolderIdsOf.mockResolvedValue([OFFICE]);
     const s = await runSchedulerTick(at(8, 0));
     expect(s.ctOverdueDigestEmitted).toBe(0);
   });
 
   it("queries ONCE per day, not once per tick in the 30-minute stale window", async () => {
     mockOverdueCounts.mockResolvedValue({ overdue: 4, awaitingSubmit: 4, awaitingPublish: 0 });
-    mockUserFind.mockResolvedValue([OFFICE]);
+    mockHolderIdsOf.mockResolvedValue([OFFICE]);
 
     await runSchedulerTick(at(8, 0));
     await runSchedulerTick(at(8, 1));
@@ -430,7 +440,7 @@ describe("class-test overdue digest (D-#603)", () => {
 
   it("does not fire before 08:00", async () => {
     mockOverdueCounts.mockResolvedValue({ overdue: 4, awaitingSubmit: 4, awaitingPublish: 0 });
-    mockUserFind.mockResolvedValue([OFFICE]);
+    mockHolderIdsOf.mockResolvedValue([OFFICE]);
     await runSchedulerTick(at(7, 45));
     expect(mockOverdueCounts).not.toHaveBeenCalled();
   });
