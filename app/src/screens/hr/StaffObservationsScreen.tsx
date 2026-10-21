@@ -30,12 +30,14 @@ import { usePageState, PAGE_SIZE } from "../../lib/paging";
 import { STR, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
+import { useAuth } from "../../auth/AuthContext";
 
 type Props = NativeStackScreenProps<HrStackParamList, "StaffObservations">;
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 export default function StaffObservationsScreen({ route }: Props): React.ReactElement {
+  const { can } = useAuth();
   const { staffProfileId } = route.params;
   const [dateKey, setDateKey] = React.useState("");
   const [notes, setNotes] = React.useState("");
@@ -102,7 +104,9 @@ export default function StaffObservationsScreen({ route }: Props): React.ReactEl
         />
         <Field label={STR.hrObsNotes} value={notes} onChangeText={setNotes} placeholder={STR.hrObsNotesPlaceholder} multiline autoCapitalize="sentences" />
         <Field label={STR.hrObsFollowUp} value={followUp} onChangeText={setFollowUp} autoCapitalize="sentences" />
-        <Button title={STR.hrObsSubmit} onPress={runSubmit} loading={busy} disabled={busy || !valid} />
+        {can("appraisal:observe") ? (
+          <Button title={STR.hrObsSubmit} onPress={runSubmit} loading={busy} disabled={busy || !valid} />
+        ) : null}
       </Card>
 
       <Body style={{ fontWeight: "700", marginTop: space(4), marginBottom: space(2) }}>{STR.hrObservations}</Body>

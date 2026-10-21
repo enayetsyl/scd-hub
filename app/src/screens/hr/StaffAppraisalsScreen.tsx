@@ -107,7 +107,9 @@ export default function StaffAppraisalsScreen({ route }: Props): React.ReactElem
         <AcademicYearSelect label={STR.hrYear} value={yearId} onChange={setYearId} />
         <Field label={STR.hrGoals} value={goals} onChangeText={setGoals} multiline autoCapitalize="sentences" />
         <Field label={STR.hrDevNeeds} value={devNeeds} onChangeText={setDevNeeds} multiline autoCapitalize="sentences" />
-        <Button title={STR.hrAppraisalSave} onPress={runPrepare} loading={busy} disabled={busy || yearId === ""} />
+        {can("appraisal:prepare") ? (
+          <Button title={STR.hrAppraisalSave} onPress={runPrepare} loading={busy} disabled={busy || yearId === ""} />
+        ) : null}
       </Card>
 
       <Body style={{ fontWeight: "700", marginTop: space(4), marginBottom: space(2) }}>{STR.hrAppraisals}</Body>

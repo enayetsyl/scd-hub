@@ -33,12 +33,14 @@ import { required } from "../../lib/validate";
 import { useToast } from "../../state/ToastContext";
 import { space } from "../../theme/tokens";
 import { dateKey } from "../../lib/dates";
+import { useAuth } from "../../auth/AuthContext";
 
 type FeeLineRow = { head: string | null; amount: string };
 
 const todayISO = (): string => dateKey();
 
 export default function DailyEntryScreen(): React.ReactElement {
+  const { can } = useAuth();
   const [, record] = useMutation(RECORD_FINANCE_POSTING);
 
   // UX-6 default: the entry date is today (editable) — most postings are same-day.
@@ -184,7 +186,9 @@ export default function DailyEntryScreen(): React.ReactElement {
 
           <Field label={STR.finNote} value={note} onChangeText={setNote} multiline />
           <View style={{ marginTop: space(2) }}>
-            <Button title={STR.finSubmit} onPress={onSubmit} loading={busy} disabled={busy} />
+            {can("finance_ledger:create") ? (
+              <Button title={STR.finSubmit} onPress={onSubmit} loading={busy} disabled={busy} />
+            ) : null}
           </View>
         </Card>
       </ScrollView>

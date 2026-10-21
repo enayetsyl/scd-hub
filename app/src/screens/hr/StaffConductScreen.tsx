@@ -164,7 +164,9 @@ export default function StaffConductScreen({ route }: Props): React.ReactElement
         <View style={{ marginBottom: space(3) }}>
           <Chip label={`${gross ? "☑" : "☐"} ${STR.hrConductGross}`} selected={gross} onPress={() => setGross((g) => !g)} />
         </View>
-        <Button title={STR.hrObsSubmit} onPress={runRecord} loading={busy} disabled={busy || !stage || issue.trim() === ""} />
+        {can("conduct:create") ? (
+          <Button title={STR.hrObsSubmit} onPress={runRecord} loading={busy} disabled={busy || !stage || issue.trim() === ""} />
+        ) : null}
       </Card>
 
       {/* Ladder */}
@@ -198,7 +200,9 @@ export default function StaffConductScreen({ route }: Props): React.ReactElement
                   multiline
                   autoCapitalize="sentences"
                 />
-                <Button title={STR.hrRecordHearing} variant="secondary" onPress={() => runHearing(c.id)} disabled={busy || !hearing[c.id]} />
+                {can("conduct:record_hearing") ? (
+                  <Button title={STR.hrRecordHearing} variant="secondary" onPress={() => runHearing(c.id)} disabled={busy || !hearing[c.id]} />
+                ) : null}
               </>
             ) : null}
 

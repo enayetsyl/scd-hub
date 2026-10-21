@@ -33,8 +33,10 @@ import {
 } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
+import { useAuth } from "../../auth/AuthContext";
 
 export default function QardIouScreen(): React.ReactElement {
+  const { can } = useAuth();
   const [partiesQ, refetchParties] = useQuery({ query: FINANCE_PARTIES_QUERY, variables: {} });
   const parties = partiesQ.data?.financeParties ?? [];
 
@@ -147,7 +149,9 @@ export default function QardIouScreen(): React.ReactElement {
             onChange={setKind}
           />
           <Field label={STR.finContact} value={contact} onChangeText={setContact} />
-          <Button title={STR.finAddParty} onPress={onAddParty} loading={busy} disabled={busy} />
+          {can("qard:edit") ? (
+            <Button title={STR.finAddParty} onPress={onAddParty} loading={busy} disabled={busy} />
+          ) : null}
         </Card>
 
         {/* Register entry */}
@@ -176,7 +180,9 @@ export default function QardIouScreen(): React.ReactElement {
           />
           <DateField label={STR.finDueDate} value={dueDate} onChange={setDueDate} min={date || undefined} />
           <Field label={STR.finNote} value={note} onChangeText={setNote} multiline />
-          <Button title={STR.finRegisterEntry} onPress={onRecordEntry} loading={busy} disabled={busy} />
+          {can("qard:create") ? (
+            <Button title={STR.finRegisterEntry} onPress={onRecordEntry} loading={busy} disabled={busy} />
+          ) : null}
         </Card>
 
         {/* Party outstanding */}

@@ -30,10 +30,12 @@ import {
 } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
+import { useAuth } from "../../auth/AuthContext";
 
 type CoverageRow = { head: string | null; type: string | null; amount: string };
 
 export default function FeesZakatScreen(): React.ReactElement {
+  const { can } = useAuth();
   const [providersQ, refetchProviders] = useQuery({ query: FEE_PROVIDERS_QUERY, variables: {} });
   const providers = providersQ.data?.feeProviders ?? [];
 
@@ -157,7 +159,9 @@ export default function FeesZakatScreen(): React.ReactElement {
           <Field label={STR.finProviderName} value={name} onChangeText={setName} />
           <Field label={STR.finProviderNameBn} value={nameBn} onChangeText={setNameBn} autoCapitalize="sentences" />
           <Field label={STR.finContact} value={contact} onChangeText={setContact} />
-          <Button title={STR.finAddProvider} onPress={onAddProvider} loading={busy} disabled={busy} />
+          {can("fee_support:edit") ? (
+            <Button title={STR.finAddProvider} onPress={onAddProvider} loading={busy} disabled={busy} />
+          ) : null}
         </Card>
 
         {/* Allocation */}
@@ -187,7 +191,9 @@ export default function FeesZakatScreen(): React.ReactElement {
           ))}
           <Button title={STR.finAddFeeLine} variant="secondary" onPress={() => setCoverage((c) => [...c, { head: null, type: null, amount: "" }])} />
           <View style={{ marginTop: space(2) }}>
-            <Button title={STR.finSetAllocation} onPress={onSetAllocation} loading={busy} disabled={busy} />
+            {can("fee_support:edit") ? (
+              <Button title={STR.finSetAllocation} onPress={onSetAllocation} loading={busy} disabled={busy} />
+            ) : null}
           </View>
         </Card>
 
@@ -210,7 +216,9 @@ export default function FeesZakatScreen(): React.ReactElement {
         <Card>
           <Body style={{ fontWeight: "700" }}>{STR.finChaseFeeDue}</Body>
           <Field label={STR.finStudentId} value={chaseStudentId} onChangeText={setChaseStudentId} />
-          <Button title={STR.finChase} onPress={onChase} loading={busy} disabled={busy} />
+          {can("finance_ledger:remind") ? (
+            <Button title={STR.finChase} onPress={onChase} loading={busy} disabled={busy} />
+          ) : null}
           {chaseResult ? (
             <View style={{ marginTop: space(2) }}>
               <Row label={STR.finGuardianDue} value={money(chaseResult.guardianDue)} />

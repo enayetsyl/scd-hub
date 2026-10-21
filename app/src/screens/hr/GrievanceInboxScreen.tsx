@@ -30,12 +30,14 @@ import { STR, grievanceStatusLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
 import { personName } from "../../lib/personName";
+import { useAuth } from "../../auth/AuthContext";
 
 function statusTone(s: string): "info" | "ok" | "muted" {
   return s === "resolved" || s === "closed" ? "ok" : s === "under_review" ? "info" : "muted";
 }
 
 export default function GrievanceInboxScreen(): React.ReactElement {
+  const { can } = useAuth();
   const [status, setStatus] = React.useState<string | null>("open");
   const [newStatus, setNewStatus] = React.useState<Record<string, string>>({});
   const [note, setNote] = React.useState<Record<string, string>>({});
@@ -111,7 +113,9 @@ export default function GrievanceInboxScreen(): React.ReactElement {
               onChangeText={(v) => setNote((p) => ({ ...p, [g.id]: v }))}
               autoCapitalize="sentences"
             />
-            <Button title={STR.hrGrievanceUpdate} onPress={() => runUpdate(g.id)} loading={busy} disabled={busy || !newStatus[g.id]} />
+            {can("grievance:resolve") ? (
+              <Button title={STR.hrGrievanceUpdate} onPress={() => runUpdate(g.id)} loading={busy} disabled={busy || !newStatus[g.id]} />
+            ) : null}
           </Card>
         ))
       )}
