@@ -299,7 +299,7 @@ ConfirmResultRef.implement({
 builder.queryField("hrPolicy", (t) =>
   t.field({
     type: HrPolicyRef,
-    description: "The school-wide HR policy (SH-3). Requires payroll:manage.",
+    description: "The school-wide HR policy (SH-3). Requires hr_policy:view.",
     authScopes: { hasPermission: "hr_policy:view" },
     resolve: async () => getHrPolicy(),
   }),
@@ -308,7 +308,7 @@ builder.queryField("hrPolicy", (t) =>
 builder.queryField("staffLetters", (t) =>
   t.field({
     type: [StaffLetterRef],
-    description: "A staff member's issued letters, newest first (SH-1). Requires staff:manage.",
+    description: "A staff member's issued letters, newest first (SH-1). Requires staff_letters:view.",
     authScopes: { hasPermission: "staff_letters:view" },
     args: { staffProfileId: t.arg.string({ required: true }) },
     resolve: async (_r, args) => lettersForStaff(args.staffProfileId),
@@ -318,7 +318,7 @@ builder.queryField("staffLetters", (t) =>
 builder.queryField("staffLeavePool", (t) =>
   t.field({
     type: PooledBalanceRef,
-    description: "The shared 20-day pool for a staff member (SH-3, D-#539). Requires leave:manage.",
+    description: "The shared 20-day pool for a staff member (SH-3, D-#539). Requires leave:view_all.",
     authScopes: { hasPermission: "leave:view_all" },
     args: {
       staffProfileId: t.arg.string({ required: true }),
@@ -331,7 +331,7 @@ builder.queryField("staffLeavePool", (t) =>
 builder.queryField("staffProbationDebt", (t) =>
   t.field({
     type: HeldDebtRef,
-    description: "Held probation leave for a staff member (SH-3, D-#540). Requires leave:manage.",
+    description: "Held probation leave for a staff member (SH-3, D-#540). Requires leave:view_all.",
     authScopes: { hasPermission: "leave:view_all" },
     args: { staffProfileId: t.arg.string({ required: true }) },
     resolve: async (_r, args) => heldDebtForStaff(args.staffProfileId),
@@ -343,7 +343,7 @@ builder.queryField("staffAttendance", (t) =>
     type: [StaffDayRef],
     description:
       "One staff member's attendance over [fromKey, toKey], oldest first, with the " +
-      "AT-1 ✘=ABSENT → LEAVE overlay applied. Requires attendance:manage (the admin " +
+      "AT-1 ✘=ABSENT → LEAVE overlay applied. Requires staff_attendance:view_all (the admin " +
       "twin of the own-row myStaffAttendance).",
     authScopes: { hasPermission: "staff_attendance:view_all" },
     args: {
@@ -358,7 +358,7 @@ builder.queryField("staffAttendance", (t) =>
 builder.queryField("staffAttendanceSummary", (t) =>
   t.field({
     type: StaffSummaryRef,
-    description: "Counts + present% for ONE staff member over a range. Requires attendance:manage.",
+    description: "Counts + present% for ONE staff member over a range. Requires staff_attendance:view_all.",
     authScopes: { hasPermission: "staff_attendance:view_all" },
     args: {
       staffProfileId: t.arg.string({ required: true }),
@@ -382,7 +382,7 @@ builder.queryField("staffLatenessPreview", (t) =>
   t.field({
     type: LatenessPreviewRef,
     description:
-      "A month's lateness reckoning WITHOUT writing a charge (SH-4). Requires attendance:manage.",
+      "A month's lateness reckoning WITHOUT writing a charge (SH-4). Requires staff_attendance:view_all.",
     authScopes: { hasPermission: "staff_attendance:view_all" },
     args: {
       staffProfileId: t.arg.string({ required: true }),
@@ -397,7 +397,7 @@ builder.queryField("staffLatenessCharge", (t) =>
     type: LatenessPreviewRef,
     description:
       "The STORED charge for a month, shaped like the preview so one card renders both " +
-      "(a frozen charge wins over a live count). Requires payroll:manage.",
+      "(a frozen charge wins over a live count). Requires payroll:view.",
     authScopes: { hasPermission: "payroll:view" },
     args: {
       staffProfileId: t.arg.string({ required: true }),
@@ -463,7 +463,7 @@ builder.queryField("myProbationDebt", (t) =>
 builder.queryField("confirmationPreview", (t) =>
   t.field({
     type: ConfirmPreviewRef,
-    description: "What confirming would settle (SH-2) — a dry run. Requires staff:manage.",
+    description: "What confirming would settle (SH-2) — a dry run. Requires staff_records:confirm.",
     authScopes: { hasPermission: "staff_records:confirm" },
     args: { staffProfileId: t.arg.string({ required: true }) },
     resolve: async (_r, args) => previewConfirmation(args.staffProfileId),

@@ -232,7 +232,7 @@ builder.queryField("myObservations", (t) =>
 builder.queryField("staffObservations", (t) =>
   t.field({
     type: [ObservationRef],
-    description: "All observations of a staff member (admin read). Requires performance:manage.",
+    description: "All observations of a staff member (admin read). Requires appraisal:view_all.",
     authScopes: { hasPermission: "appraisal:view_all" },
     args: { staffProfileId: t.arg.string({ required: true }) },
     resolve: async (_root, args) => observationsForStaff(args.staffProfileId) as unknown as Promise<IObservation[]>,
@@ -259,7 +259,7 @@ builder.queryField("myObservationsPage", (t) =>
 builder.queryField("staffObservationsPage", (t) =>
   t.field({
     type: ObservationPageRef,
-    description: "One page of staffObservations, newest first (D-#761). Requires performance:manage.",
+    description: "One page of staffObservations, newest first (D-#761). Requires appraisal:view_all.",
     authScopes: { hasPermission: "appraisal:view_all" },
     args: {
       staffProfileId: t.arg.string({ required: true }),
@@ -279,7 +279,7 @@ builder.mutationField("upsertAppraisal", (t) =>
     type: AppraisalRef,
     description:
       "Prepare/edit a DRAFT annual appraisal — goals + development needs (prd-hr H5.1). " +
-      "Requires performance:manage. Outcome is set only at Principal sign-off. Audited.",
+      "Requires appraisal:prepare. Outcome is set only at Principal sign-off. Audited.",
     authScopes: { hasPermission: "appraisal:prepare" },
     args: {
       staffProfileId: t.arg.string({ required: true }),
@@ -307,7 +307,7 @@ builder.mutationField("signOffAppraisal", (t) =>
   t.field({
     type: AppraisalRef,
     description:
-      "PRINCIPAL-only sign-off (performance:signoff): set the overall outcome, lock the " +
+      "PRINCIPAL-only sign-off (appraisal:sign_off): set the overall outcome, lock the " +
       "appraisal, and emit its development needs into the CPD log (prd-hr H5.2/H5.4). Audited.",
     authScopes: { hasPermission: "appraisal:sign_off" },
     args: {
@@ -333,7 +333,7 @@ builder.mutationField("signOffAppraisal", (t) =>
 builder.queryField("staffAppraisals", (t) =>
   t.field({
     type: [AppraisalRef],
-    description: "All appraisals of a staff member (admin read). Requires performance:manage.",
+    description: "All appraisals of a staff member (admin read). Requires appraisal:view_all.",
     authScopes: { hasPermission: "appraisal:view_all" },
     args: { staffProfileId: t.arg.string({ required: true }) },
     resolve: async (_root, args) => appraisalsForStaff(args.staffProfileId) as unknown as Promise<IAppraisal[]>,
@@ -360,7 +360,7 @@ builder.mutationField("recordConductStep", (t) =>
     description:
       "Raise a DRAFT conduct-ladder step (prd-hr H5.3). The ladder enforces order " +
       "(verbal→written→final→termination, no rung-skip); gross misconduct may fast-track " +
-      "to final/termination. Requires performance:manage. Audited.",
+      "to final/termination. Requires conduct:create. Audited.",
     authScopes: { hasPermission: "conduct:create" },
     args: {
       staffProfileId: t.arg.string({ required: true }),
@@ -393,7 +393,7 @@ builder.mutationField("recordConductHearing", (t) =>
     type: ConductRecordRef,
     description:
       "Capture the person's response/hearing BEFORE finalisation ('adl, not optional, prd-hr H5.3). " +
-      "Moves the step to hearing_held. Requires performance:manage. Audited.",
+      "Moves the step to hearing_held. Requires conduct:record_hearing. Audited.",
     authScopes: { hasPermission: "conduct:record_hearing" },
     args: {
       recordId: t.arg.string({ required: true }),
@@ -413,7 +413,7 @@ builder.mutationField("finalizeConductStep", (t) =>
   t.field({
     type: ConductRecordRef,
     description:
-      "PRINCIPAL-only (performance:signoff): finalise a conduct step — the disciplinary " +
+      "PRINCIPAL-only (conduct:sign_off): finalise a conduct step — the disciplinary " +
       "judgement. Requires a recorded hearing first ('adl); a termination step writes " +
       "employmentStatus → terminated (offboarding trigger, prd-hr H5.3). Audited.",
     authScopes: { hasPermission: "conduct:sign_off" },
@@ -440,7 +440,7 @@ builder.mutationField("finalizeConductStep", (t) =>
 builder.queryField("staffConductRecords", (t) =>
   t.field({
     type: [ConductRecordRef],
-    description: "A staff member's conduct ladder (admin read; supervisors NEVER see conduct, H5.5). Requires performance:manage.",
+    description: "A staff member's conduct ladder (admin read; supervisors NEVER see conduct, H5.5). Requires conduct:view_all.",
     authScopes: { hasPermission: "conduct:view_all" },
     args: { staffProfileId: t.arg.string({ required: true }) },
     resolve: async (_root, args) => conductForStaff(args.staffProfileId) as unknown as Promise<IConductRecord[]>,
@@ -493,7 +493,7 @@ builder.mutationField("updateGrievance", (t) =>
     type: GrievanceRef,
     description:
       "Move a grievance under_review / resolved / closed with a note (prd-hr H5.4). " +
-      "Requires performance:manage (Principal/Office). Audited.",
+      "Requires grievance:resolve (Principal/Office). Audited.",
     authScopes: { hasPermission: "grievance:resolve" },
     args: {
       grievanceId: t.arg.string({ required: true }),
@@ -518,7 +518,7 @@ builder.mutationField("updateGrievance", (t) =>
 builder.queryField("grievances", (t) =>
   t.field({
     type: [GrievanceRef],
-    description: "All grievances, optionally by status (admin read, H5.5). Requires performance:manage.",
+    description: "All grievances, optionally by status (admin read, H5.5). Requires grievance:view_all.",
     authScopes: { hasPermission: "grievance:view_all" },
     args: { status: t.arg.string({ required: false }) },
     resolve: async (_root, args) => listGrievances(args.status ?? undefined) as unknown as Promise<IGrievance[]>,
@@ -542,7 +542,7 @@ builder.queryField("myGrievances", (t) =>
 builder.mutationField("addDevelopmentLog", (t) =>
   t.field({
     type: DevelopmentLogRef,
-    description: "Add a CPD development-log entry for a staff member (prd-hr H5.4). Requires performance:manage. Audited.",
+    description: "Add a CPD development-log entry for a staff member (prd-hr H5.4). Requires appraisal:log_cpd. Audited.",
     authScopes: { hasPermission: "appraisal:log_cpd" },
     args: {
       staffProfileId: t.arg.string({ required: true }),
@@ -569,7 +569,7 @@ builder.mutationField("addDevelopmentLog", (t) =>
 builder.queryField("staffDevelopmentLog", (t) =>
   t.field({
     type: [DevelopmentLogRef],
-    description: "A staff member's CPD log (admin read). Requires performance:manage.",
+    description: "A staff member's CPD log (admin read). Requires appraisal:view_all.",
     authScopes: { hasPermission: "appraisal:view_all" },
     args: { staffProfileId: t.arg.string({ required: true }) },
     resolve: async (_root, args) => developmentLogForStaff(args.staffProfileId) as unknown as Promise<IDevelopmentLog[]>,

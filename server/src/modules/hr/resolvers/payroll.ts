@@ -191,7 +191,7 @@ AdviceRef.implement({
 builder.queryField("paymentAdvice", (t) =>
   t.field({
     type: AdviceRef,
-    description: "The bank advice pack for a LOCKED run (D-#591). Requires payroll:manage.",
+    description: "The bank advice pack for a LOCKED run (D-#591). Requires payroll:export.",
     authScopes: { hasPermission: "payroll:export" },
     args: { runId: t.arg.string({ required: true }) },
     resolve: async (_root, args) => {
@@ -267,7 +267,7 @@ PayChangeRef.implement({
 builder.queryField("staffPayHistory", (t) =>
   t.field({
     type: [PayChangeRef],
-    description: "A staff member's recorded salary changes, newest first. payroll:manage.",
+    description: "A staff member's recorded salary changes, newest first. payroll:view.",
     authScopes: { hasPermission: "payroll:view" },
     args: { staffProfileId: t.arg.string({ required: true }) },
     resolve: async (_root, args) => {
@@ -300,7 +300,7 @@ StaffPayRef.implement({
 builder.mutationField("setStaffPay", (t) =>
   t.field({
     type: StaffPayRef,
-    description: "Set a staff member's consolidated monthly salary + payment method (§4.1/§4.6). Requires payroll:manage. Audited.",
+    description: "Set a staff member's consolidated monthly salary + payment method (§4.1/§4.6). Requires payroll:edit. Audited.",
     authScopes: { hasPermission: "payroll:edit" },
     args: {
       staffProfileId: t.arg.string({ required: true }),
@@ -368,7 +368,7 @@ builder.mutationField("preparePayrollRun", (t) =>
     type: PayrollRunRef,
     description:
       "Compute (or recompute) a monthly run: gross + unpaid-leave deduction (stored split, D-#110) + " +
-      "advance recovery (net-pay guard) + manual lines. Requires payroll:manage. Audited.",
+      "advance recovery (net-pay guard) + manual lines. Requires payroll:prepare. Audited.",
     authScopes: { hasPermission: "payroll:prepare" },
     args: {
       monthKey: t.arg.string({ required: true }),
@@ -411,7 +411,7 @@ builder.mutationField("approvePayrollRun", (t) =>
 builder.mutationField("cancelPayrollRun", (t) =>
   t.field({
     type: PayrollRunRef,
-    description: "Discard a prepared run (before approval). Requires payroll:manage. Audited.",
+    description: "Discard a prepared run (before approval). Requires payroll:prepare. Audited.",
     authScopes: { hasPermission: "payroll:prepare" },
     args: { runId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => cancelPayrollRun(args.runId, ctx.auth!.userId),
@@ -425,7 +425,7 @@ builder.mutationField("cancelPayrollRun", (t) =>
 builder.mutationField("issueStaffAdvance", (t) =>
   t.field({
     type: AdvanceLoanRef,
-    description: "Issue a qard-hasan advance/loan (interest- & fee-free, D-#27). PRINCIPAL only (payroll:approve). Audited.",
+    description: "Issue a qard-hasan advance/loan (interest- & fee-free, D-#27). PRINCIPAL only (salary_advance:issue). Audited.",
     authScopes: { hasPermission: "salary_advance:issue" },
     args: {
       staffProfileId: t.arg.string({ required: true }),
@@ -451,7 +451,7 @@ builder.mutationField("issueStaffAdvance", (t) =>
 builder.mutationField("settleStaffAdvance", (t) =>
   t.field({
     type: AdvanceLoanRef,
-    description: "Settle (early payoff) or write off an advance. PRINCIPAL only (payroll:approve). Audited.",
+    description: "Settle (early payoff) or write off an advance. PRINCIPAL only (salary_advance:settle). Audited.",
     authScopes: { hasPermission: "salary_advance:settle" },
     args: {
       advanceId: t.arg.string({ required: true }),
@@ -468,7 +468,7 @@ builder.mutationField("settleStaffAdvance", (t) =>
 builder.queryField("payrollRuns", (t) =>
   t.field({
     type: [PayrollRunRef],
-    description: "Recent payroll runs (newest first; cancelled excluded). Requires payroll:manage.",
+    description: "Recent payroll runs (newest first; cancelled excluded). Requires payroll:view.",
     authScopes: { hasPermission: "payroll:view" },
     resolve: async () => payrollRuns(),
   }),
@@ -477,7 +477,7 @@ builder.queryField("payrollRuns", (t) =>
 builder.queryField("payslipsForRun", (t) =>
   t.field({
     type: [PayslipRef],
-    description: "All payslips of a run. Requires payroll:manage.",
+    description: "All payslips of a run. Requires payroll:view.",
     authScopes: { hasPermission: "payroll:view" },
     args: { runId: t.arg.string({ required: true }) },
     resolve: async (_root, args) => payslipsForRun(args.runId),
@@ -492,7 +492,7 @@ builder.queryField("payrollPaymentExport", (t) =>
       "both derive from. This field has its own idea of payable and never reads the " +
       "routing number, so it reports a BEFTN row the advice pack refuses; that " +
       "disagreement is what the rebuild removed. No client uses it. " +
-      "Net-pay-per-staff export for bank/bKash bulk upload (cash excluded; locked run only, §4.6). Requires payroll:manage.",
+      "Net-pay-per-staff export for bank/bKash bulk upload (cash excluded; locked run only, §4.6). Requires payroll:export.",
     authScopes: { hasPermission: "payroll:export" },
     args: { runId: t.arg.string({ required: true }) },
     resolve: async (_root, args) => paymentExport(args.runId),
@@ -524,7 +524,7 @@ builder.queryField("staffPayslips", (t) =>
     description:
       "ONE staff member's payslips, newest month first — the admin twin of myPayslips, " +
       "for the staff hub's বেতন tab (SH-5). Same LOCKED-runs-only rule: a prepared run " +
-      "is not a payslip yet, whoever is looking. Requires payroll:manage.",
+      "is not a payslip yet, whoever is looking. Requires payroll:view.",
     authScopes: { hasPermission: "payroll:view" },
     args: { staffProfileId: t.arg.string({ required: true }) },
     resolve: async (_root, args) => payslipsForStaff(args.staffProfileId),
@@ -534,7 +534,7 @@ builder.queryField("staffPayslips", (t) =>
 builder.queryField("staffAdvances", (t) =>
   t.field({
     type: [AdvanceLoanRef],
-    description: "A staff member's advances/loans (newest first). Requires payroll:manage.",
+    description: "A staff member's advances/loans (newest first). Requires salary_advance:view.",
     authScopes: { hasPermission: "salary_advance:view" },
     args: { staffProfileId: t.arg.string({ required: true }) },
     resolve: async (_root, args) => advancesForStaff(args.staffProfileId),
