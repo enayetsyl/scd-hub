@@ -1,9 +1,11 @@
 /**
  * Student-attendance resolvers (AT-2/AT-3/AT-5, D-#63–#67).
  *
- * RBAC (§11):
- *   attendance:manage (Principal/Office) — assign/revoke markers, amend past
- *     days, full reports, record leave applications.
+ * RBAC (§11; PM catalogue actions, D-#790–#801):
+ *   attendance:assign / :edit / :view_all / :record_leave (Principal/Office by
+ *     default) — assign/revoke markers, amend past days, full reports, record
+ *     leave applications.
+ *   attendance:view + class teacher — own section's reports.
  *   attendance:mark (TEACHER) — the role-level grant; the ROW gate is the
  *     service's marker-of-the-day check (CT-2): override assignment, else the
  *     section's class teacher. Principal/Office do NOT mark (D-#64).
@@ -13,7 +15,7 @@
  */
 import { builder } from "../../../schema";
 import { ForbiddenError, isClassTeacher, resolveTeacherScopes } from "../../../middleware/authz";
-import { callerHasPermission } from "@scd/shared";
+import { callerHasPermission, type Permission } from "@scd/shared";
 import type { AppContext } from "../../../context";
 import { Section } from "../../foundation/models/Section";
 import { Class } from "../../foundation/models/Class";
@@ -66,8 +68,12 @@ import type { IStudentLeaveApplication } from "../models/StudentLeaveApplication
 // Local gates
 // ---------------------------------------------------------------------------
 
-function hasManage(ctx: AppContext): boolean {
-  return ctx.auth !== null && callerHasPermission(ctx.auth, "attendance:manage");
+/** PM (D-#790–#801): the caller holds this catalogue action (role default, role edit or
+ *  per-person grant). The old `attendance:manage` bypass is split by what it lifted: the
+ *  marker-of-the-day read gate → `attendance:edit`; the class-teacher report gate →
+ *  `attendance:view_all`. */
+function has(ctx: AppContext, perm: Permission): boolean {
+  return ctx.auth !== null && callerHasPermission(ctx.auth, perm);
 }
 
 /** Validate + build an attendance unit from GraphQL args (D-#278). */
@@ -78,26 +84,29 @@ function parseUnit(unitType: string, unitId: string): AttendanceUnit {
   return { unitType, unitId };
 }
 
-/** The caller must be the unit's marker-of-the-day (or hold attendance:manage). */
+/** The caller must be the unit's marker-of-the-day holding `attendance:mark` (or hold
+ *  `attendance:edit`, which lifts the designation). */
 async function assertUnitMarkerOrManage(
   ctx: AppContext,
   unit: AttendanceUnit,
   dateKey: string,
 ): Promise<void> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  if (hasManage(ctx)) return;
+  if (has(ctx, "attendance:edit")) return;
+  if (!has(ctx, "attendance:mark")) throw new ForbiddenError("Requires attendance:mark");
   const marker = await markerForUnit(unit, dateKey);
   if (marker.teacherId !== ctx.auth.userId) {
     throw new ForbiddenError("Only this unit's marker for the date may read it");
   }
 }
 
-/** §8 row-scope: manage roles pass; a TEACHER passes only as the section's
- *  class teacher (reports stay coordinator-scoped — a one-day marker override
+/** §8 row-scope: `attendance:view_all` passes; otherwise `attendance:view` + the
+ *  section's class teacher (reports stay coordinator-scoped — a one-day marker override
  *  doesn't open the section's history). */
 async function assertSectionReportAccess(ctx: AppContext, sectionId: string): Promise<void> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  if (hasManage(ctx)) return;
+  if (has(ctx, "attendance:view_all")) return;
+  if (!has(ctx, "attendance:view")) throw new ForbiddenError("Requires attendance:view");
   const section = await Section.findById(sectionId).lean();
   if (!section) throw new ForbiddenError("Section not found");
   const ctId = section.classTeacherId ? section.classTeacherId.toString() : null;
@@ -389,8 +398,8 @@ builder.mutationField("assignSectionMarker", (t) =>
     type: MarkerAssignmentRef,
     description:
       "Assign a teacher to mark a section for a day or date range (AT2.1, D-#64). The override " +
-      "wins over the class teacher for those dates. Requires attendance:manage.",
-    authScopes: { hasPermission: "attendance:manage" },
+      "wins over the class teacher for those dates. Requires attendance:assign.",
+    authScopes: { hasPermission: "attendance:assign" },
     args: {
       sectionId: t.arg.string({ required: true }),
       teacherId: t.arg.string({ required: true }),
@@ -416,8 +425,8 @@ builder.mutationField("assignUnitMarker", (t) =>
     description:
       "Assign a teacher to mark an attendance UNIT — a section or a Class 1–5 Quran group — " +
       "for a date range (AT2.1, D-#278). The override wins over the routine-derived " +
-      "first-class teacher. Requires attendance:manage.",
-    authScopes: { hasPermission: "attendance:manage" },
+      "first-class teacher. Requires attendance:assign.",
+    authScopes: { hasPermission: "attendance:assign" },
     args: {
       unitType: t.arg.string({ required: true }),
       unitId: t.arg.string({ required: true }),
@@ -441,8 +450,8 @@ builder.mutationField("assignUnitMarker", (t) =>
 builder.mutationField("revokeSectionMarker", (t) =>
   t.field({
     type: MarkerAssignmentRef,
-    description: "Deactivate a marker override (history preserved, ADR-008). Requires attendance:manage.",
-    authScopes: { hasPermission: "attendance:manage" },
+    description: "Deactivate a marker override (history preserved, ADR-008). Requires attendance:assign.",
+    authScopes: { hasPermission: "attendance:assign" },
     args: { assignmentId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       const assignment = await revokeSectionMarker(args.assignmentId, ctx.auth!.userId);
@@ -604,8 +613,8 @@ builder.mutationField("amendAttendanceUnit", (t) =>
     type: StudentAttendanceDayRef,
     description:
       "Principal/Office unlock-amend of a past (or missed) attendance unit's day (O2, D-#278) — " +
-      "audited with the amender stamped. Requires attendance:manage.",
-    authScopes: { hasPermission: "attendance:manage" },
+      "audited with the amender stamped. Requires attendance:edit.",
+    authScopes: { hasPermission: "attendance:edit" },
     args: {
       unitType: t.arg.string({ required: true }),
       unitId: t.arg.string({ required: true }),
@@ -627,8 +636,8 @@ builder.mutationField("amendStudentAttendance", (t) =>
     type: StudentAttendanceDayRef,
     description:
       "Principal/Office unlock-amend of a past (or missed) section day (O2) — audited with the " +
-      "amender stamped. Requires attendance:manage.",
-    authScopes: { hasPermission: "attendance:manage" },
+      "amender stamped. Requires attendance:edit.",
+    authScopes: { hasPermission: "attendance:edit" },
     args: {
       sectionId: t.arg.string({ required: true }),
       dateKey: t.arg.string({ required: true }),
@@ -651,7 +660,7 @@ builder.mutationField("submitLeaveApplication", (t) =>
       "Record a student leave application (AT3.1, D-#66 — recorded only, NO approval step). " +
       "Office/Principal record on the guardian's behalf; the guardian portal path is pipeline. " +
       "Audited as LEAVE_APPLICATION_SUBMITTED.",
-    authScopes: { hasPermission: "attendance:manage" },
+    authScopes: { hasPermission: "attendance:record_leave" },
     args: {
       studentId: t.arg.string({ required: true }),
       fromKey: t.arg.string({ required: true }),
@@ -713,8 +722,8 @@ builder.queryField("attendanceUnitRoster", (t) =>
     type: [RosterSectionRef],
     description:
       "The unit's students grouped under their own class/section heading (D-#278) — a Quran " +
-      "group's roster still READS as class/section. Marker of the date, or attendance:manage.",
-    authScopes: { authenticated: true },
+      "group's roster still READS as class/section. Marker of the date, or attendance:edit.",
+    authScopes: { hasAnyPermission: ["attendance:mark", "attendance:edit"] },
     args: {
       unitType: t.arg.string({ required: true }),
       unitId: t.arg.string({ required: true }),
@@ -752,8 +761,8 @@ builder.queryField("attendanceUnitsForDate", (t) =>
     type: [AdminUnitDayRef],
     description:
       "Every populated attendance unit for a date with marked state + marker (D-#292). " +
-      "attendance:manage — the Principal/Office mark/amend-any-day surface.",
-    authScopes: { hasPermission: "attendance:manage" },
+      "attendance:edit — the Principal/Office mark/amend-any-day surface.",
+    authScopes: { hasPermission: "attendance:edit" },
     args: { dateKey: t.arg.string({ required: true }) },
     resolve: (_root, args) => attendanceUnitsForDate(args.dateKey),
   }),
@@ -763,8 +772,8 @@ builder.queryField("attendanceUnitDay", (t) =>
   t.field({
     type: StudentAttendanceDayRef,
     nullable: true,
-    description: "A unit's day record, or null when unmarked. Marker of the date, or attendance:manage.",
-    authScopes: { authenticated: true },
+    description: "A unit's day record, or null when unmarked. Marker of the date, or attendance:edit.",
+    authScopes: { hasAnyPermission: ["attendance:mark", "attendance:edit"] },
     args: {
       unitType: t.arg.string({ required: true }),
       unitId: t.arg.string({ required: true }),
@@ -783,19 +792,19 @@ builder.queryField("sectionAttendance", (t) =>
     type: StudentAttendanceDayRef,
     nullable: true,
     description:
-      "A section's day record, or null when unmarked. Readable by attendance:manage, the section's " +
+      "A section's day record, or null when unmarked. Readable by attendance:view_all, the section's " +
       "class teacher, or the date's assigned marker.",
-    authScopes: { authenticated: true },
+    authScopes: { hasAnyPermission: ["attendance:view", "attendance:mark", "attendance:view_all"] },
     args: {
       sectionId: t.arg.string({ required: true }),
       dateKey: t.arg.string({ required: true }),
     },
     resolve: async (_root, args, ctx) => {
-      if (!hasManage(ctx)) {
-        // the date's marker may read the day they're responsible for (AT2.3);
-        // anyone else needs class-teacher report access (§8)
+      if (!has(ctx, "attendance:view_all")) {
+        // the date's marker (attendance:mark) may read the day they're responsible for
+        // (AT2.3); anyone else needs class-teacher report access (§8)
         const marker = await markerForDate(args.sectionId, args.dateKey);
-        if (marker.teacherId !== ctx.auth!.userId) {
+        if (!has(ctx, "attendance:mark") || marker.teacherId !== ctx.auth!.userId) {
           await assertSectionReportAccess(ctx, args.sectionId);
         }
       }
@@ -809,8 +818,8 @@ builder.queryField("sectionMarkerAssignments", (t) =>
     type: [MarkerAssignmentRef],
     description:
       "Active marker overrides covering a date, joined with teacher/section labels — surfaces a " +
-      "teacher holding multiple sections (AT2.1). Requires attendance:manage.",
-    authScopes: { hasPermission: "attendance:manage" },
+      "teacher holding multiple sections (AT2.1). Requires attendance:assign.",
+    authScopes: { hasPermission: "attendance:assign" },
     args: { dateKey: t.arg.string({ required: true }) },
     resolve: async (_root, args) => {
       const assignments = await assignmentsForDate(args.dateKey);
@@ -824,8 +833,8 @@ builder.queryField("absenteeReport", (t) =>
     type: [ClassAbsenteesRef],
     description:
       "Class-/section-wise absentee report for a date (AT2.5/§8): count + names + roll + ID; " +
-      "residential dropped (D-#63). Requires attendance:manage.",
-    authScopes: { hasPermission: "attendance:manage" },
+      "residential dropped (D-#63). Requires attendance:view_all.",
+    authScopes: { hasPermission: "attendance:view_all" },
     args: { dateKey: t.arg.string({ required: true }) },
     resolve: async (_root, args) => absenteeReport(args.dateKey),
   }),
@@ -856,7 +865,7 @@ builder.queryField("mySectionAttendance", (t) =>
     description:
       "Attendance for the caller's OWN sections on a date (D-#318): counts + absentee names. " +
       "Section set = teaching/proxy scopes ∪ class-teacher sections, derived server-side.",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "attendance:view" },
     args: { dateKey: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
@@ -881,8 +890,8 @@ builder.queryField("sectionAbsentees", (t) =>
     nullable: true,
     description:
       "One section's absentee list for a date — the class teacher's own-section view (§8). " +
-      "attendance:manage or the section's class teacher.",
-    authScopes: { authenticated: true },
+      "attendance:view_all or the section's class teacher.",
+    authScopes: { hasAnyPermission: ["attendance:view", "attendance:view_all"] },
     args: {
       sectionId: t.arg.string({ required: true }),
       dateKey: t.arg.string({ required: true }),
@@ -903,16 +912,16 @@ builder.queryField("studentAttendanceHistory", (t) =>
   t.field({
     type: StudentHistoryRef,
     description:
-      "Per-day present/absent + % for one student over [fromKey, toKey] (§8). attendance:manage " +
+      "Per-day present/absent + % for one student over [fromKey, toKey] (§8). attendance:view_all " +
       "or the student's section's class teacher.",
-    authScopes: { authenticated: true },
+    authScopes: { hasAnyPermission: ["attendance:view", "attendance:view_all"] },
     args: {
       studentId: t.arg.string({ required: true }),
       fromKey: t.arg.string({ required: true }),
       toKey: t.arg.string({ required: true }),
     },
     resolve: async (_root, args, ctx) => {
-      if (!hasManage(ctx)) {
+      if (!has(ctx, "attendance:view_all")) {
         const student = await Student.findById(args.studentId).select("sectionId").lean();
         if (!student) throw new ForbiddenError("Student not found");
         await assertSectionReportAccess(ctx, student.sectionId.toString());
@@ -927,16 +936,16 @@ builder.queryField("absentNoApplication", (t) =>
     type: [AbsentNoApplicationRef],
     description:
       "Absent dates with no covering leave application over a range (AT3.2/§8) — Office's " +
-      "guardian-chase list (AT4.7). attendance:manage may scan all sections; a class teacher " +
+      "guardian-chase list (AT4.7). attendance:view_all may scan all sections; a class teacher " +
       "must pass their own sectionId.",
-    authScopes: { authenticated: true },
+    authScopes: { hasAnyPermission: ["attendance:view", "attendance:view_all"] },
     args: {
       sectionId: t.arg.string({ required: false }),
       fromKey: t.arg.string({ required: true }),
       toKey: t.arg.string({ required: true }),
     },
     resolve: async (_root, args, ctx) => {
-      if (!hasManage(ctx)) {
+      if (!has(ctx, "attendance:view_all")) {
         if (!args.sectionId) throw new ForbiddenError("A class teacher must scope this report to their section");
         await assertSectionReportAccess(ctx, args.sectionId);
       }
@@ -950,8 +959,8 @@ builder.queryField("unmarkedSections", (t) =>
     type: [UnmarkedSectionRef],
     description:
       "Sections still unmarked for a date with their responsible marker (§8 log; AT4.2 detection — " +
-      "empty on non-FULL days). Requires attendance:manage.",
-    authScopes: { hasPermission: "attendance:manage" },
+      "empty on non-FULL days). Requires attendance:view_all.",
+    authScopes: { hasPermission: "attendance:view_all" },
     args: { dateKey: t.arg.string({ required: true }) },
     resolve: async (_root, args) => unmarkedSections(args.dateKey),
   }),
@@ -963,7 +972,7 @@ builder.queryField("leaveApplicationsForSection", (t) =>
     description:
       "Leave applications overlapping [fromKey, toKey] for a section's students (AT3.1 — visible " +
       "to the class teacher and Office).",
-    authScopes: { authenticated: true },
+    authScopes: { hasAnyPermission: ["attendance:view", "attendance:view_all"] },
     args: {
       sectionId: t.arg.string({ required: true }),
       fromKey: t.arg.string({ required: true }),

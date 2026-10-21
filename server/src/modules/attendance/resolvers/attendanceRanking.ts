@@ -2,7 +2,7 @@
  * Attendance ranking resolvers (AR-1 — docs/prd-attendance-ranking.md).
  *
  * Two read-only queries over the two EXISTING registers; no capture, no new model.
- * Both gated `attendance:manage`, which is held by exactly Principal + Office today
+ * Gated `attendance:view_all` (students) and `staff_attendance:view_all` (staff); Principal + Office by default
  * — the owner's scoping needed no new permission (PRD §1).
  *
  * Identity/operational plane (ADR-005) — no corpus path.
@@ -65,8 +65,8 @@ builder.queryField("studentAttendanceRanking", (t) =>
       "never mixed in one list. `axisValue` is the class/section/group id, or the track " +
       "(\"quran\"/\"arabic\") or level name. `sortBy` ∈ rank (default) | class — class regroups " +
       "the SAME numbered rows by the student’s general class and never renumbers them. " +
-      "Requires attendance:manage.",
-    authScopes: { hasPermission: "attendance:manage" },
+      "Requires attendance:view_all.",
+    authScopes: { hasPermission: "attendance:view_all" },
     args: {
       window: t.arg.string({ required: true }),
       anchorKey: t.arg.string({ required: true }),
@@ -93,8 +93,8 @@ builder.queryField("staffAttendanceRanking", (t) =>
     description:
       "Rank staff by present % over a window, from the AT-1 biometric register. Approved " +
       "LEAVE is excluded from the denominator (leave is not absence); LATE counts as present, " +
-      "is reported separately and breaks ties. Requires attendance:manage.",
-    authScopes: { hasPermission: "attendance:manage" },
+      "is reported separately and breaks ties. Requires staff_attendance:view_all.",
+    authScopes: { hasPermission: "staff_attendance:view_all" },
     args: {
       window: t.arg.string({ required: true }),
       anchorKey: t.arg.string({ required: true }),
@@ -150,8 +150,8 @@ builder.queryField("subjectGroupAttendanceBreakdown", (t) =>
       "denominator. `track` ∈ quran | arabic; `window` and `sortBy` behave exactly as on " +
       "`studentAttendanceRanking`. Unlike axis=track — which pools the whole track into one " +
       "list — this keeps each group's ranking separate, because a group that held 4 days and " +
-      "one that held 28 are not comparable on a shared list. Requires attendance:manage.",
-    authScopes: { hasPermission: "attendance:manage" },
+      "one that held 28 are not comparable on a shared list. Requires attendance:view_all.",
+    authScopes: { hasPermission: "attendance:view_all" },
     args: {
       window: t.arg.string({ required: true }),
       anchorKey: t.arg.string({ required: true }),

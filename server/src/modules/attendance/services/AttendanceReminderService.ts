@@ -9,8 +9,8 @@
  *   AT4.2  the work-list = sections still UNMARKED today (reuses unmarkedSections).
  *   AT4.3  T1210 → each section's marker-of-the-day + class teacher ("mark your
  *          section" — teachers NEVER chase guardians, O3).
- *   AT4.4  T1245 → all OFFICE users.
- *   AT4.5  T1400 → all PRINCIPAL users.
+ *   AT4.4  T1245 → the non-Principal holders of attendance:view_all (Office by default).
+ *   AT4.5  T1400 → the Principal holders of attendance:view_all.
  *   AT4.6  one AttendanceReminderDispatch row per (date, tier, section); a second
  *          call for the same date/tier re-sends NOTHING.
  *
@@ -25,14 +25,13 @@ import { resolveDayType } from "../../routine/calendar";
 import { parseDateKey, dateKeyOf } from "../dates";
 import { unmarkedSections } from "./AttendanceReportService";
 import { Section } from "../../foundation/models/Section";
-import { User } from "../../foundation/models/User";
+import { holdersOf } from "../../access-control/services/holders";
 import { AttendanceReminderDispatch } from "../models/AttendanceReminderDispatch";
 import { emit } from "../../notifications/services/NotificationService";
 import { writeAudit } from "../../platform/services/AuditService";
 import { renderTemplate } from "../../templates/services/MessageTemplateService";
 import type { MessageTemplateKey } from "@scd/shared";
 import { ATTENDANCE_REMINDER_TIERS, type AttendanceReminderTier } from "@scd/shared";
-import { actingAsFilter } from "../../foundation/services/RoleScope";
 
 export class AttendanceReminderError extends Error {}
 
@@ -85,9 +84,16 @@ export interface ReminderDispatchSummary {
   recipientCount: number;
 }
 
-async function userIdsByRole(role: "OFFICE" | "PRINCIPAL"): Promise<string[]> {
-  const users = await User.find(actingAsFilter([role])).select("_id").lean();
-  return users.map((u) => u._id.toString());
+/** PM (§5.5, D-#796): the escalation tiers follow the holders of `attendance:view_all`
+ *  (whole-school উপস্থিতি) instead of a role list. T1245 = the desk tier (every holder
+ *  whose primary role is not PRINCIPAL — Office and Office-template staff by default, plus
+ *  anyone granted the action); T1400 = the PRINCIPAL holders. With default switches the
+ *  recipients are the same people as the old acting-as OFFICE / PRINCIPAL lists. */
+async function escalationHolderIds(tier: "T1245" | "T1400"): Promise<string[]> {
+  const holders = await holdersOf("attendance:view_all");
+  return holders
+    .filter((u) => (tier === "T1400" ? u.role === "PRINCIPAL" : u.role !== "PRINCIPAL"))
+    .map((u) => u._id.toString());
 }
 
 /**
@@ -136,8 +142,8 @@ export async function dispatchAttendanceReminders(
 
   // Escalation recipients are the same for every section — load once per call.
   const escalation: TierEscalation = {
-    officeIds: tier === "T1245" ? await userIdsByRole("OFFICE") : [],
-    principalIds: tier === "T1400" ? await userIdsByRole("PRINCIPAL") : [],
+    officeIds: tier === "T1245" ? await escalationHolderIds("T1245") : [],
+    principalIds: tier === "T1400" ? await escalationHolderIds("T1400") : [],
   };
 
   // Class teacher per section (for T1210's "+ class teacher"); marker comes from
