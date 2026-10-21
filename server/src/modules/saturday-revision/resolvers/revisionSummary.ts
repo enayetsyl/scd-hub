@@ -1,21 +1,20 @@
 /**
  * Saturday-Revision analytics resolvers (SR-3, prd-sr3 §3/§5/§6, D-#246). All DERIVED
- * over the SR-1 entries (no new model). RBAC composes existing perms (no new permission):
- *   - Student/group reads: `tracker:read` + the Quran-group scope (teacher own groups /
- *     own students); Principal/Office unscoped.
- *   - School/level dashboards + completeness: Principal/Office.
- *   - The completeness-chase: `message:dispatch` + Principal/Office (Office chases the
- *     teacher, never the reverse — AS-T4/D-#88).
+ * over the SR-1 entries (no new model). RBAC = the `saturday_revision:*` catalogue
+ * actions (PM, D-#790–#801):
+ *   - Student/group reads: `saturday_revision:view` + the Quran-group scope (teacher own
+ *     groups / own students); `saturday_revision:view_all` unscoped (Principal/Office).
+ *   - Completeness status: `saturday_revision:view_all`.
+ *   - The completeness-chase: `saturday_revision:remind` (Office chases the teacher,
+ *     never the reverse — AS-T4/D-#88).
  *
- * authScopes `{ authenticated: true }` + the internal gates (OFFICE holds no tracker:*;
- * CT-4-FIX/D-#196). Identity plane (names studentIds); no corpus path.
+ * Identity plane (names studentIds); no corpus path.
  */
 import { builder } from "../../../schema";
 import type { AppContext } from "../../../context";
 import { callerHasPermission } from "@scd/shared";
 import { ForbiddenError } from "../../../middleware/authz";
 import { teacherTeachesGroup, teacherCanReadStudent } from "../services/RevisionService";
-import { isAdminStaff } from "../../foundation/services/RoleScope";
 import {
   studentJuzWeakness,
   groupCoverage,
@@ -39,14 +38,15 @@ import {
 // Gates
 // ---------------------------------------------------------------------------
 
-function isAdmin(ctx: AppContext): boolean {
-  return isAdminStaff(ctx.auth);
+/** Reads beyond the caller's own groups (was the isAdminStaff read bypass). */
+function canViewAll(ctx: AppContext): boolean {
+  return !!ctx.auth && callerHasPermission(ctx.auth, "saturday_revision:view_all");
 }
 
 async function assertReadStudent(ctx: AppContext, studentId: string): Promise<void> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  if (isAdmin(ctx)) return;
-  if (ctx.auth.role === "GUARDIAN" || !callerHasPermission(ctx.auth, "tracker:read")) {
+  if (canViewAll(ctx)) return;
+  if (ctx.auth.role === "GUARDIAN" || !callerHasPermission(ctx.auth, "saturday_revision:view")) {
     throw new ForbiddenError("You cannot read this child's revision");
   }
   if (!(await teacherCanReadStudent(ctx.auth.userId as string, studentId))) {
@@ -56,8 +56,8 @@ async function assertReadStudent(ctx: AppContext, studentId: string): Promise<vo
 
 async function assertReadGroup(ctx: AppContext, groupId: string): Promise<void> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  if (isAdmin(ctx)) return;
-  if (ctx.auth.role === "GUARDIAN" || !callerHasPermission(ctx.auth, "tracker:read")) {
+  if (canViewAll(ctx)) return;
+  if (ctx.auth.role === "GUARDIAN" || !callerHasPermission(ctx.auth, "saturday_revision:view")) {
     throw new ForbiddenError("You cannot read this group's revision");
   }
   if (!(await teacherTeachesGroup(ctx.auth.userId as string, groupId))) {
@@ -67,13 +67,13 @@ async function assertReadGroup(ctx: AppContext, groupId: string): Promise<void> 
 
 function assertDashboardAdmin(ctx: AppContext): void {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  if (!isAdmin(ctx)) throw new ForbiddenError("Principal/Office only");
+  if (!canViewAll(ctx)) throw new ForbiddenError("Principal/Office only");
 }
 
 function assertChaseAdmin(ctx: AppContext): void {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  if (!(isAdmin(ctx) && callerHasPermission(ctx.auth, "message:dispatch"))) {
-    throw new ForbiddenError("The completeness-chase is Principal/Office (message:dispatch) only");
+  if (!callerHasPermission(ctx.auth, "saturday_revision:remind")) {
+    throw new ForbiddenError("The completeness-chase needs saturday_revision:remind (Principal/Office)");
   }
 }
 
@@ -208,7 +208,7 @@ builder.queryField("studentJuzWeakness", (t) =>
   t.field({
     type: [JuzWeaknessRef],
     description: "Per-juz weakness heatmap for a child (SR-3, J-SR3-1). tracker:read + the child's group scope.",
-    authScopes: { authenticated: true },
+    authScopes: { hasAnyPermission: ["saturday_revision:view", "saturday_revision:view_all"] },
     args: { studentId: t.arg.string({ required: true }), asOf: t.arg.string({ required: false }) },
     resolve: async (_root, args, ctx) => {
       await assertReadStudent(ctx, args.studentId);
@@ -221,7 +221,7 @@ builder.queryField("revisionGroupCoverage", (t) =>
   t.field({
     type: [CoverageRowRef],
     description: "Per (student × juz) last-revised + overdue flag for a group (SR-3, J-SR3-2). tracker:read + group scope.",
-    authScopes: { authenticated: true },
+    authScopes: { hasAnyPermission: ["saturday_revision:view", "saturday_revision:view_all"] },
     args: {
       groupId: t.arg.string({ required: true }),
       asOf: t.arg.string({ required: false }),
@@ -238,7 +238,7 @@ builder.queryField("revisionWeeklyTrend", (t) =>
   t.field({
     type: WeeklyTrendRef,
     description: "Per-Saturday تنبیه/فتح/mistake trend (↑/↓/→) for a student or group (SR-3, J-SR3-3).",
-    authScopes: { authenticated: true },
+    authScopes: { hasAnyPermission: ["saturday_revision:view", "saturday_revision:view_all"] },
     args: {
       studentId: t.arg.string({ required: false }),
       groupId: t.arg.string({ required: false }),
@@ -255,7 +255,7 @@ builder.queryField("revisionLevelDashboard", (t) =>
   t.field({
     type: RevisionDashboardRef,
     description: "The level (group) rollup (SR-3, J-SR3-4). tracker:read + group scope (Principal/Office unscoped).",
-    authScopes: { authenticated: true },
+    authScopes: { hasAnyPermission: ["saturday_revision:view", "saturday_revision:view_all"] },
     args: { groupId: t.arg.string({ required: true }), asOf: t.arg.string({ required: false }) },
     resolve: async (_root, args, ctx) => {
       await assertReadGroup(ctx, args.groupId);
@@ -268,7 +268,7 @@ builder.queryField("revisionStudentDashboard", (t) =>
   t.field({
     type: RevisionDashboardRef,
     description: "The student rollup (SR-3, J-SR3-4). tracker:read + the child's group scope.",
-    authScopes: { authenticated: true },
+    authScopes: { hasAnyPermission: ["saturday_revision:view", "saturday_revision:view_all"] },
     args: { studentId: t.arg.string({ required: true }), asOf: t.arg.string({ required: false }) },
     resolve: async (_root, args, ctx) => {
       await assertReadStudent(ctx, args.studentId);
@@ -281,7 +281,7 @@ builder.queryField("revisionMistakeBreakdown", (t) =>
   t.field({
     type: MistakesRef,
     description: "harf/ghunnah/madd/other distribution for a student or group (SR-3, J-SR3-4).",
-    authScopes: { authenticated: true },
+    authScopes: { hasAnyPermission: ["saturday_revision:view", "saturday_revision:view_all"] },
     args: {
       studentId: t.arg.string({ required: false }),
       groupId: t.arg.string({ required: false }),
@@ -298,7 +298,7 @@ builder.queryField("revisionCompletenessStatus", (t) =>
   t.field({
     type: [CompletenessRowRef],
     description: "Hifz groups with no entry for a Saturday (SR-3, J-SR3-5). Principal/Office.",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "saturday_revision:view_all" },
     args: { date: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       assertDashboardAdmin(ctx);
@@ -311,7 +311,7 @@ builder.queryField("revisionCompletenessChase", (t) =>
   t.field({
     type: [CompletenessChaseRowRef],
     description: "A stateless wa.me nudge per teacher of an un-entered Hifz group (SR-3, J-SR3-5). message:dispatch + Principal/Office.",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "saturday_revision:remind" },
     args: { date: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       assertChaseAdmin(ctx);

@@ -1,15 +1,15 @@
 /**
  * Saturday-Revision delivery + escalation resolvers (SR-2, prd-sr2 §3/§5/§6, D-#244/#245).
  *
- * RBAC — composes EXISTING permissions only (no new role/permission):
- *   - Deliver (`deliverRevisionEntry` / `deliverGroupRevisionSaturday`): the SR-1 author
- *     (`tracker:write` + the Quran-group scope) OR Principal/Office (admin reach). The
- *     guardian is a recipient only — no SR resolver is guardian-writable.
+ * RBAC — the `saturday_revision:*` catalogue actions (PM, D-#790–#801):
+ *   - Deliver (`deliverRevisionEntry` / `deliverGroupRevisionSaturday`):
+ *     `saturday_revision:send` + the Quran-group scope, OR `saturday_revision:edit_all`
+ *     (Principal/Office by default). The guardian is a recipient only — no SR resolver
+ *     is guardian-writable.
  *   - The escalation threshold config (`revisionEscalationConfig` / `setRevisionEscalation
- *     Config`): Principal/Office only (the message:dispatch + P/O admin posture).
+ *     Config`): `saturday_revision:settings` (Principal/Office by default).
  *
- * authScopes gate `{ authenticated: true }` + the internal gates below (OFFICE holds no
- * tracker:*; the CT-4-FIX/D-#196 posture). Identity plane (names studentIds); no corpus path.
+ * Identity plane (names studentIds); no corpus path.
  */
 import { builder } from "../../../schema";
 import type { AppContext } from "../../../context";
@@ -17,7 +17,6 @@ import { ForbiddenError } from "../../../middleware/authz";
 import { callerHasPermission } from "@scd/shared";
 import { RevisionEntry } from "../models/RevisionEntry";
 import { teacherTeachesGroup } from "../services/RevisionService";
-import { isAdminStaff } from "../../foundation/services/RoleScope";
 import {
   deliverEntry,
   deliverGroupSaturday,
@@ -27,15 +26,11 @@ import {
   type RevisionEscalationConfigShape,
 } from "../services/RevisionDeliveryService";
 
-function isAdmin(ctx: AppContext): boolean {
-  return isAdminStaff(ctx.auth);
-}
-
-/** Deliver scope: P/O admin; else tracker:write + the teacher leads the group. */
+/** Deliver scope: edit_all (any group); else send + the teacher leads the group. */
 async function assertCanDeliver(ctx: AppContext, groupId: string): Promise<void> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  if (isAdmin(ctx)) return;
-  if (ctx.auth.role === "GUARDIAN" || !callerHasPermission(ctx.auth, "tracker:write")) {
+  if (callerHasPermission(ctx.auth, "saturday_revision:edit_all")) return;
+  if (ctx.auth.role === "GUARDIAN" || !callerHasPermission(ctx.auth, "saturday_revision:send")) {
     throw new ForbiddenError("You cannot deliver this group's revision");
   }
   if (!(await teacherTeachesGroup(ctx.auth.userId as string, groupId))) {
@@ -43,10 +38,10 @@ async function assertCanDeliver(ctx: AppContext, groupId: string): Promise<void>
   }
 }
 
-/** Config is admin-only (Principal/Office). */
+/** Config needs `saturday_revision:settings` (Principal/Office by default). */
 function assertConfigAdmin(ctx: AppContext): void {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  if (!isAdmin(ctx)) throw new ForbiddenError("Only Principal/Office may read or set the escalation threshold");
+  if (!callerHasPermission(ctx.auth, "saturday_revision:settings")) throw new ForbiddenError("Only Principal/Office may read or set the escalation threshold");
 }
 
 async function groupOfEntry(entryId: string): Promise<string> {
@@ -99,8 +94,8 @@ builder.mutationField("deliverRevisionEntry", (t) =>
     description:
       "Deliver one revision entry to the family (J-SR2-1/2/3): absent alert or weekly digest on the rails; " +
       "seals the entry; runs the consecutive-absence escalation on an absent entry. " +
-      "Requires being the group's teacher (tracker:write) or Principal/Office. Audited.",
-    authScopes: { authenticated: true },
+      "Requires being the group's teacher (saturday_revision:send) or saturday_revision:edit_all. Audited.",
+    authScopes: { hasAnyPermission: ["saturday_revision:send", "saturday_revision:edit_all"] },
     args: { entryId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       const groupId = await groupOfEntry(args.entryId);
@@ -116,7 +111,7 @@ builder.mutationField("deliverGroupRevisionSaturday", (t) =>
     description:
       "Batch-deliver every entry for a (group × Saturday). Requires being the group's teacher " +
       "(tracker:write) or Principal/Office. Audited per entry.",
-    authScopes: { authenticated: true },
+    authScopes: { hasAnyPermission: ["saturday_revision:send", "saturday_revision:edit_all"] },
     args: {
       groupId: t.arg.string({ required: true }),
       date: t.arg.string({ required: true }),
@@ -133,7 +128,7 @@ builder.mutationField("setRevisionEscalationConfig", (t) =>
     type: RevisionEscalationConfigRef,
     description:
       "Set the consecutive-absence escalation threshold (SR-2, D-#245). Principal/Office only. Audited.",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "saturday_revision:settings" },
     args: { consecutiveAbsenceThreshold: t.arg.int({ required: true }) },
     resolve: async (_root, args, ctx) => {
       assertConfigAdmin(ctx);
@@ -150,7 +145,7 @@ builder.queryField("revisionEscalationConfig", (t) =>
   t.field({
     type: RevisionEscalationConfigRef,
     description: "The consecutive-absence escalation threshold (SR-2). Principal/Office only.",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "saturday_revision:settings" },
     resolve: async (_root, _args, ctx) => {
       assertConfigAdmin(ctx);
       return getEscalationConfig();
