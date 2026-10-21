@@ -4,12 +4,15 @@
  * Server-side Markdown→PDF via pdfkit + NotoSansBengali font.
  * Returns application/pdf binary. JWT in Authorization header or query param.
  *
- * GATE — `content:read`, PLUS one print-scoped exception (D-#281): the Office holds
- * `roster:manage` but NOT `content:read`, yet it must open the plan a teacher sent to
- * the print queue. So a `roster:manage` caller may render an artifact **iff a live
+ * GATE — `lesson_plans:view`, PLUS one print-scoped exception (D-#281): the Office holds
+ * `printing:view_all` but NOT `lesson_plans:view`, yet it must open the plan a teacher sent to
+ * the print queue. So a `printing:view_all` caller may render an artifact **iff a live
  * PrintRequest references it**. That is the narrowest possible widening — it opens
  * exactly the plans submitted for printing and nothing else in the content plane.
  * Mirrors the `print_upload` branch of `GET /files/:id`.
+ *
+ * NOTE (PM sweep): no content ROW scope applies here — any `lesson_plans:view` holder may
+ * render any artifact id (the GraphQL reads apply contentScope; this route never did).
  */
 import type { Router, Request, Response } from "express";
 import { Router as createRouter } from "express";
@@ -22,8 +25,8 @@ import { callerHasPermission } from "@scd/shared";
 /** True when the caller may render this artifact (see the gate note above). */
 export async function mayRenderArtifact(ctx: AppContext, artifactId: string): Promise<boolean> {
   if (!ctx.auth) return false;
-  if (callerHasPermission(ctx.auth, "content:read")) return true;
-  if (!callerHasPermission(ctx.auth, "roster:manage")) return false;
+  if (callerHasPermission(ctx.auth, "lesson_plans:view")) return true;
+  if (!callerHasPermission(ctx.auth, "printing:view_all")) return false;
   // Print operator: ONLY artifacts actually queued for printing. Cancelling the job
   // withdraws the access again.
   const queued = await PrintRequest.exists({
