@@ -6,11 +6,11 @@
  * `StoredFile`, a nested Drive path, and this gate. `driveFileId` never leaves the
  * server — clients only ever stream through `GET /files/:id`.
  *
- * THE READ GATE IS DELIBERATELY SIMPLE: any holder of `book:read` may read any book
+ * THE READ GATE IS DELIBERATELY SIMPLE: any holder of `book_production:view` may read any book
  * file. Book production carries no student, guardian or staff PII — it is artwork and
  * page images for a textbook — so the per-row scoping that homework and chat files
  * need (where the file IS a child's work) has nothing to scope BY here. The gate that
- * matters is the module boundary itself: `book:read` is granted per user via AC-1, so
+ * matters is the module boundary itself: `book_production:view` is granted per user, so
  * a teacher with no production role sees nothing.
  */
 import type { AppContext } from "../../../context";
@@ -68,7 +68,7 @@ export function bookDrivePath(bookId: string, stage: ArtifactStage): string {
 
 /** `GET /files/:id` gate for a book file. */
 export function assertBookFileReadAccess(ctx: AppContext, _file: IStoredFile): void {
-  if (!ctx.auth || !callerHasPermission(ctx.auth, "book:read")) {
+  if (!ctx.auth || !callerHasPermission(ctx.auth, "book_production:view")) {
     throw new ForbiddenError(BOOK_FILE_ERRORS_BN.forbidden);
   }
 }

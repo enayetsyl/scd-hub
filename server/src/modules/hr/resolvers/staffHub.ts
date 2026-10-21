@@ -299,8 +299,8 @@ ConfirmResultRef.implement({
 builder.queryField("hrPolicy", (t) =>
   t.field({
     type: HrPolicyRef,
-    description: "The school-wide HR policy (SH-3). Requires payroll:manage.",
-    authScopes: { hasPermission: "payroll:manage" },
+    description: "The school-wide HR policy (SH-3). Requires hr_policy:view.",
+    authScopes: { hasPermission: "hr_policy:view" },
     resolve: async () => getHrPolicy(),
   }),
 );
@@ -308,8 +308,8 @@ builder.queryField("hrPolicy", (t) =>
 builder.queryField("staffLetters", (t) =>
   t.field({
     type: [StaffLetterRef],
-    description: "A staff member's issued letters, newest first (SH-1). Requires staff:manage.",
-    authScopes: { hasPermission: "staff:manage" },
+    description: "A staff member's issued letters, newest first (SH-1). Requires staff_letters:view.",
+    authScopes: { hasPermission: "staff_letters:view" },
     args: { staffProfileId: t.arg.string({ required: true }) },
     resolve: async (_r, args) => lettersForStaff(args.staffProfileId),
   }),
@@ -318,8 +318,8 @@ builder.queryField("staffLetters", (t) =>
 builder.queryField("staffLeavePool", (t) =>
   t.field({
     type: PooledBalanceRef,
-    description: "The shared 20-day pool for a staff member (SH-3, D-#539). Requires leave:manage.",
-    authScopes: { hasPermission: "leave:manage" },
+    description: "The shared 20-day pool for a staff member (SH-3, D-#539). Requires leave:view_all.",
+    authScopes: { hasPermission: "leave:view_all" },
     args: {
       staffProfileId: t.arg.string({ required: true }),
       academicYearId: t.arg.string({ required: false }),
@@ -331,8 +331,8 @@ builder.queryField("staffLeavePool", (t) =>
 builder.queryField("staffProbationDebt", (t) =>
   t.field({
     type: HeldDebtRef,
-    description: "Held probation leave for a staff member (SH-3, D-#540). Requires leave:manage.",
-    authScopes: { hasPermission: "leave:manage" },
+    description: "Held probation leave for a staff member (SH-3, D-#540). Requires leave:view_all.",
+    authScopes: { hasPermission: "leave:view_all" },
     args: { staffProfileId: t.arg.string({ required: true }) },
     resolve: async (_r, args) => heldDebtForStaff(args.staffProfileId),
   }),
@@ -343,9 +343,9 @@ builder.queryField("staffAttendance", (t) =>
     type: [StaffDayRef],
     description:
       "One staff member's attendance over [fromKey, toKey], oldest first, with the " +
-      "AT-1 ✘=ABSENT → LEAVE overlay applied. Requires attendance:manage (the admin " +
+      "AT-1 ✘=ABSENT → LEAVE overlay applied. Requires staff_attendance:view_all (the admin " +
       "twin of the own-row myStaffAttendance).",
-    authScopes: { hasPermission: "attendance:manage" },
+    authScopes: { hasPermission: "staff_attendance:view_all" },
     args: {
       staffProfileId: t.arg.string({ required: true }),
       fromKey: t.arg.string({ required: true }),
@@ -358,8 +358,8 @@ builder.queryField("staffAttendance", (t) =>
 builder.queryField("staffAttendanceSummary", (t) =>
   t.field({
     type: StaffSummaryRef,
-    description: "Counts + present% for ONE staff member over a range. Requires attendance:manage.",
-    authScopes: { hasPermission: "attendance:manage" },
+    description: "Counts + present% for ONE staff member over a range. Requires staff_attendance:view_all.",
+    authScopes: { hasPermission: "staff_attendance:view_all" },
     args: {
       staffProfileId: t.arg.string({ required: true }),
       fromKey: t.arg.string({ required: true }),
@@ -382,8 +382,8 @@ builder.queryField("staffLatenessPreview", (t) =>
   t.field({
     type: LatenessPreviewRef,
     description:
-      "A month's lateness reckoning WITHOUT writing a charge (SH-4). Requires attendance:manage.",
-    authScopes: { hasPermission: "attendance:manage" },
+      "A month's lateness reckoning WITHOUT writing a charge (SH-4). Requires staff_attendance:view_all.",
+    authScopes: { hasPermission: "staff_attendance:view_all" },
     args: {
       staffProfileId: t.arg.string({ required: true }),
       monthKey: t.arg.string({ required: true }),
@@ -397,8 +397,8 @@ builder.queryField("staffLatenessCharge", (t) =>
     type: LatenessPreviewRef,
     description:
       "The STORED charge for a month, shaped like the preview so one card renders both " +
-      "(a frozen charge wins over a live count). Requires payroll:manage.",
-    authScopes: { hasPermission: "payroll:manage" },
+      "(a frozen charge wins over a live count). Requires payroll:view.",
+    authScopes: { hasPermission: "payroll:view" },
     args: {
       staffProfileId: t.arg.string({ required: true }),
       monthKey: t.arg.string({ required: true }),
@@ -425,7 +425,7 @@ builder.queryField("myLeavePool", (t) =>
   t.field({
     type: PooledBalanceRef,
     description: "The caller's OWN pooled leave balance (SH-7). Own-row, no permission.",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "leave:apply" },
     resolve: async (_r, _a, ctx) => {
       const sid = await callerStaffId(ctx);
       if (!sid) {
@@ -451,7 +451,7 @@ builder.queryField("myProbationDebt", (t) =>
   t.field({
     type: HeldDebtRef,
     description: "The caller's OWN held probation leave (SH-7). Own-row, no permission.",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "leave:apply" },
     resolve: async (_r, _a, ctx) => {
       const sid = await callerStaffId(ctx);
       if (!sid) return { totalDays: 0, rows: [] };
@@ -463,8 +463,8 @@ builder.queryField("myProbationDebt", (t) =>
 builder.queryField("confirmationPreview", (t) =>
   t.field({
     type: ConfirmPreviewRef,
-    description: "What confirming would settle (SH-2) — a dry run. Requires staff:manage.",
-    authScopes: { hasPermission: "staff:manage" },
+    description: "What confirming would settle (SH-2) — a dry run. Requires staff_records:confirm.",
+    authScopes: { hasPermission: "staff_records:confirm" },
     args: { staffProfileId: t.arg.string({ required: true }) },
     resolve: async (_r, args) => previewConfirmation(args.staffProfileId),
   }),
@@ -478,8 +478,8 @@ builder.mutationField("setHrPolicy", (t) =>
   t.field({
     type: HrPolicyRef,
     description:
-      "Edit the HR policy (SH-3). Only the fields passed are written. Requires payroll:manage.",
-    authScopes: { hasPermission: "payroll:manage" },
+      "Edit the HR policy (SH-3). Only the fields passed are written. Requires hr_policy:settings.",
+    authScopes: { hasPermission: "hr_policy:settings" },
     args: {
       annualLeaveDays: t.arg.int({ required: false }),
       lateDaysPerCharge: t.arg.int({ required: false }),
@@ -504,7 +504,6 @@ builder.mutationField("setHrPolicy", (t) =>
       adviceLetterBody: t.arg.string({ required: false }),
     },
     resolve: async (_r, args, ctx) => {
-      require_(ctx, "payroll:manage");
       return setHrPolicy({
         annualLeaveDays: args.annualLeaveDays ?? undefined,
         lateDaysPerCharge: args.lateDaysPerCharge ?? undefined,
@@ -557,10 +556,9 @@ builder.queryField("supportContractDefaults", (t) =>
   t.field({
     type: ContractDefaultsRef,
     description: "Default title/hours/duties for a support-staff contract role (D-#586).",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "staff_letters:issue" },
     args: { role: t.arg.string({ required: true }) },
-    resolve: (_r, args, ctx) => {
-      require_(ctx, "staff:manage");
+    resolve: (_r, args) => {
       const role = args.role as SupportRole;
       if (!SUPPORT_ROLES.includes(role)) throw new ForbiddenError("অজানা পদ");
       return {
@@ -577,8 +575,8 @@ builder.mutationField("issueStaffLetter", (t) =>
   t.field({
     type: StaffLetterRef,
     description:
-      "Issue a letter, freezing its merge fields (SH-1, D-#542). Requires staff:manage.",
-    authScopes: { hasPermission: "staff:manage" },
+      "Issue a letter, freezing its merge fields (SH-1, D-#542). Requires staff_letters:issue.",
+    authScopes: { hasPermission: "staff_letters:issue" },
     args: {
       staffProfileId: t.arg.string({ required: true }),
       kind: t.arg.string({ required: true }),
@@ -592,7 +590,6 @@ builder.mutationField("issueStaffLetter", (t) =>
       contract: t.arg({ type: SupportContractInputRef, required: false }),
     },
     resolve: async (_r, args, ctx) => {
-      require_(ctx, "staff:manage");
       const input: IssueLetterInput = {
         staffProfileId: args.staffProfileId,
         kind: args.kind as StaffLetterKind,
@@ -627,14 +624,13 @@ builder.mutationField("voidStaffLetter", (t) =>
     type: StaffLetterRef,
     description:
       "Void a letter — kept and still renderable, marked VOID on its face (D-#542). " +
-      "Requires staff:manage.",
-    authScopes: { hasPermission: "staff:manage" },
+      "Requires staff_letters:void.",
+    authScopes: { hasPermission: "staff_letters:void" },
     args: {
       letterId: t.arg.string({ required: true }),
       reason: t.arg.string({ required: true }),
     },
     resolve: async (_r, args, ctx) => {
-      require_(ctx, "staff:manage");
       return voidLetter(args.letterId, args.reason, ctx.auth!.userId);
     },
   }),
@@ -646,8 +642,8 @@ builder.mutationField("confirmStaffEmployment", (t) =>
     description:
       "Confirm employment (SH-2): stamps the date, settles the held probation debt " +
       "against the new pool, and optionally issues the confirmation letter. Requires " +
-      "staff:manage.",
-    authScopes: { hasPermission: "staff:manage" },
+      "staff_records:confirm (+ staff_letters:issue when issueLetter).",
+    authScopes: { hasPermission: "staff_records:confirm" },
     args: {
       staffProfileId: t.arg.string({ required: true }),
       confirmationDate: t.arg.string({ required: true }),
@@ -655,7 +651,9 @@ builder.mutationField("confirmStaffEmployment", (t) =>
       issueLetter: t.arg.boolean({ required: false, defaultValue: true }),
     },
     resolve: async (_r, args, ctx) => {
-      require_(ctx, "staff:manage");
+      // The confirmation letter is a letter: issuing it (the default) also needs
+      // staff_letters:issue (PM; Office/Principal hold both by default).
+      if (args.issueLetter ?? true) require_(ctx, "staff_letters:issue");
       const res = await confirmEmployment({
         staffProfileId: args.staffProfileId,
         confirmationDate: args.confirmationDate,
@@ -682,8 +680,8 @@ builder.mutationField("confirmStaffEmployment", (t) =>
 builder.queryField("staffLetterCount", (t) =>
   t.field({
     type: "Int",
-    description: "How many LIVE (non-void) letters of a kind a staff member has. staff:manage.",
-    authScopes: { hasPermission: "staff:manage" },
+    description: "How many LIVE (non-void) letters of a kind a staff member has. staff_letters:view.",
+    authScopes: { hasPermission: "staff_letters:view" },
     args: {
       staffProfileId: t.arg.string({ required: true }),
       kind: t.arg.string({ required: true }),

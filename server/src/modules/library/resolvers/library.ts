@@ -2,10 +2,11 @@
  * Library catalog + policy + librarian-gate resolvers (LB-1, D-#81/#82).
  *
  * RBAC (prd-library §4):
- *   library:read (Principal/Teacher/Office) — browse catalog, policies, history.
- *   library:manage (Principal/Office) — catalog + policy + librarian assignment.
- *   Desk OPERATIONS (LB-2/LB-3) gate on `assertIsLibrarian` instead — a TEACHER
- *   passes via an active LibrarianAssignment; the role grant is never widened.
+ *   library:view (Principal/Teacher/Office) — browse catalog, policies, history.
+ *   library:edit / :settings / :assign (Principal/Office) — catalog, policy,
+ *   librarian assignment (PM catalogue actions, D-#790–#801).
+ *   Desk OPERATIONS (LB-2/LB-3) gate on `assertIsLibrarian` instead — the desk
+ *   action plus `library:edit_all` or an active LibrarianAssignment.
  *
  * All identity-plane; NO corpus path (ADR-005 — a reading record is identity).
  */
@@ -41,13 +42,12 @@ import {
 } from "../services/LibraryPolicyService";
 import {
   assertIsLibrarian,
-  isAssignedLibrarian,
+  canRunLibraryDesk,
   assignLibrarian,
   revokeLibrarian,
   librarianHistory,
   currentLibrarianIds,
 } from "../services/LibrarianService";
-import { callerHasPermission } from "@scd/shared";
 import type { Page } from "../../../lib/paging";
 
 // ---------------------------------------------------------------------------
@@ -181,14 +181,14 @@ async function decorateAssignments(rows: AssignmentShape[]): Promise<AssignmentV
 }
 
 // ---------------------------------------------------------------------------
-// Queries — library:read
+// Queries — library:view
 // ---------------------------------------------------------------------------
 
 builder.queryField("bookTitles", (t) =>
   t.field({
     type: [BookTitleRef],
     description: "Browse/search the catalog (text/language/category) with computed availability.",
-    authScopes: { hasPermission: "library:read" },
+    authScopes: { hasPermission: "library:view" },
     args: {
       search: t.arg.string({ required: false }),
       language: t.arg.string({ required: false }),
@@ -214,7 +214,7 @@ builder.queryField("bookTitlesPage", (t) =>
     description:
       "One page of the catalog (D-#761), titleBn order — the same filters as bookTitles, with " +
       "availability computed for the page's titles only.",
-    authScopes: { hasPermission: "library:read" },
+    authScopes: { hasPermission: "library:view" },
     args: {
       search: t.arg.string({ required: false }),
       language: t.arg.string({ required: false }),
@@ -241,7 +241,7 @@ builder.queryField("bookTitle", (t) =>
     type: BookTitleDetailRef,
     nullable: true,
     description: "One title with its copies + availability. WITHDRAWN copies stay listed (history).",
-    authScopes: { hasPermission: "library:read" },
+    authScopes: { hasPermission: "library:view" },
     args: { titleId: t.arg.string({ required: true }) },
     resolve: async (_root, args) => {
       const detail = await bookTitleDetail(args.titleId);
@@ -260,7 +260,7 @@ builder.queryField("libraryPolicies", (t) =>
   t.field({
     type: [LibraryPolicyRef],
     description: "Effective loan policy per borrower type (admin row else PRD working values).",
-    authScopes: { hasPermission: "library:read" },
+    authScopes: { hasPermission: "library:view" },
     resolve: async () => effectivePolicies(),
   }),
 );
@@ -269,7 +269,7 @@ builder.queryField("librarianHistory", (t) =>
   t.field({
     type: [LibrarianAssignmentRef],
     description: "The append-only librarian-duty log, newest first (D-#81; ADR-008).",
-    authScopes: { hasPermission: "library:read" },
+    authScopes: { hasPermission: "library:view" },
     resolve: async () =>
       decorateAssignments((await librarianHistory()) as unknown as AssignmentShape[]),
   }),
@@ -279,7 +279,7 @@ builder.queryField("currentLibrarians", (t) =>
   t.field({
     type: [LibrarianAssignmentRef],
     description: "Teachers whose latest duty row is `assign` (the active desk roster).",
-    authScopes: { hasPermission: "library:read" },
+    authScopes: { hasPermission: "library:view" },
     resolve: async () => {
       const ids = await currentLibrarianIds();
       const rows = ((await librarianHistory()) as unknown as AssignmentShape[]).filter(
@@ -302,26 +302,25 @@ builder.queryField("currentLibrarians", (t) =>
 builder.queryField("amILibrarian", (t) =>
   t.boolean({
     description:
-      "Does the caller pass the desk gate (library:manage OR an active LibrarianAssignment)? " +
+      "Does the caller pass the desk gate (library:lend + library:edit_all OR an active LibrarianAssignment)? " +
       "Drives the desk/manage entries on LibraryHome (LB-4).",
     authScopes: { authenticated: true },
     resolve: async (_root, _args, ctx) => {
-      if (!ctx.auth) return false;
-      if (callerHasPermission(ctx.auth, "library:manage")) return true;
-      return ctx.auth.role === "TEACHER" && (await isAssignedLibrarian(ctx.auth.userId));
+      // The shared desk predicate (assertIsLibrarian's), probing `library:lend`.
+      return canRunLibraryDesk(ctx, "library:lend");
     },
   }),
 );
 
 // ---------------------------------------------------------------------------
-// Mutations — library:manage (catalog / policy / duty assignment)
+// Mutations — library:edit / :settings / :assign (catalog / policy / duty assignment)
 // ---------------------------------------------------------------------------
 
 builder.mutationField("createBookTitle", (t) =>
   t.field({
     type: BookTitleRef,
     description: "Add a catalog title (copies are added per accession number). Audited.",
-    authScopes: { hasPermission: "library:manage" },
+    authScopes: { hasPermission: "library:edit" },
     args: {
       titleBn: t.arg.string({ required: true }),
       titleEn: t.arg.string({ required: false }),
@@ -353,7 +352,7 @@ builder.mutationField("updateBookTitle", (t) =>
   t.field({
     type: BookTitleRef,
     description: "Patch a title's bibliographic fields / active flag. Audited.",
-    authScopes: { hasPermission: "library:manage" },
+    authScopes: { hasPermission: "library:edit" },
     args: {
       titleId: t.arg.string({ required: true }),
       titleBn: t.arg.string({ required: false }),
@@ -394,7 +393,7 @@ builder.mutationField("addBookCopy", (t) =>
   t.field({
     type: BookCopyRef,
     description: "Add a physical copy with a unique accession number (duplicate rejected, J-L1). Audited.",
-    authScopes: { hasPermission: "library:manage" },
+    authScopes: { hasPermission: "library:edit" },
     args: {
       titleId: t.arg.string({ required: true }),
       accessionNo: t.arg.string({ required: true }),
@@ -411,7 +410,7 @@ builder.mutationField("setCopyStatus", (t) =>
     description:
       "Catalog-side copy status (AVAILABLE/LOST/DAMAGED/WITHDRAWN). ON_LOAN/ON_HOLD are " +
       "desk-managed and refused here. WITHDRAWN removes from circulation, never deletes. Audited.",
-    authScopes: { hasPermission: "library:manage" },
+    authScopes: { hasPermission: "library:edit" },
     args: {
       copyId: t.arg.string({ required: true }),
       status: t.arg.string({ required: true }),
@@ -431,7 +430,7 @@ builder.mutationField("upsertLibraryPolicy", (t) =>
   t.field({
     type: LibraryPolicyRef,
     description: "Create/replace the loan policy row for a borrower type (admin data, D-#82). Audited.",
-    authScopes: { hasPermission: "library:manage" },
+    authScopes: { hasPermission: "library:settings" },
     args: {
       borrowerType: t.arg.string({ required: true }),
       loanDays: t.arg.int({ required: true }),
@@ -459,7 +458,7 @@ builder.mutationField("assignLibrarian", (t) =>
     description:
       "Give a TEACHER the librarian desk duty (append-only log, D-#81 — no new role). " +
       "Audited as LIBRARIAN_ASSIGNED.",
-    authScopes: { hasPermission: "library:manage" },
+    authScopes: { hasPermission: "library:assign" },
     args: { teacherUserId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       const row = await assignLibrarian(args.teacherUserId, ctx.auth!.userId);
@@ -473,7 +472,7 @@ builder.mutationField("revokeLibrarian", (t) =>
   t.field({
     type: LibrarianAssignmentRef,
     description: "Revoke the desk duty (appends a revoke row — history preserved). Audited.",
-    authScopes: { hasPermission: "library:manage" },
+    authScopes: { hasPermission: "library:assign" },
     args: { teacherUserId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       const row = await revokeLibrarian(args.teacherUserId, ctx.auth!.userId);

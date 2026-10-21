@@ -7,7 +7,7 @@ import { queryPage, type Page, type PageArgs } from "../../../lib/paging";
 
 /**
  * Catalog operations (LB-1, D-#82): titles + per-copy accession numbers.
- * All mutations are `library:manage` (resolver-gated) and audited as
+ * All mutations are `library:edit` (resolver-gated) and audited as
  * LIBRARY_CATALOG_CHANGED. Availability is COMPUTED from copy statuses —
  * a WITHDRAWN/LOST/DAMAGED copy is excluded but stays readable in history.
  */

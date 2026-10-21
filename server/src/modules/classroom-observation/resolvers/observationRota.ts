@@ -162,7 +162,7 @@ builder.mutationField("generateObservationRota", (t) =>
       "routine into dated candidates FIRST; the model only picks candidate ids and restates the constraints, which " +
       "the server then checks. On violation it retries once and then REFUSES with the violations named — there is " +
       "no fallback table. Writes nothing. Requires observation:manage.",
-    authScopes: { hasPermission: "observation:manage" },
+    authScopes: { hasPermission: "classroom_observation:schedule" },
     args: {
       periodFrom: t.arg.string({ required: true }),
       periodTo: t.arg.string({ required: true }),
@@ -199,7 +199,7 @@ builder.mutationField("saveObservationRota", (t) =>
     description:
       "Store an accepted rota with the instruction that produced it (CO-14, D-#426). Creates NO observation " +
       "assignments — CO-6's suggest-never-assign guardrail is unchanged. Requires observation:manage. Audited.",
-    authScopes: { hasPermission: "observation:manage" },
+    authScopes: { hasPermission: "classroom_observation:schedule" },
     args: {
       periodFrom: t.arg.string({ required: true }),
       periodTo: t.arg.string({ required: true }),
@@ -234,7 +234,7 @@ builder.queryField("observationRotas", (t) =>
     description:
       "Saved review rotas, newest first (CO-14). Each row is re-checked against the LIVE routine — `slotChanged` " +
       "marks a row whose slot has moved. Requires observation:manage.",
-    authScopes: { hasPermission: "observation:manage" },
+    authScopes: { hasPermission: "classroom_observation:schedule" },
     args: { limit: t.arg.int({ required: false }) },
     resolve: async (_root, args) => listRotas(args.limit ?? 12),
   }),
@@ -245,7 +245,7 @@ builder.queryField("observationRota", (t) =>
     type: StoredRotaRef,
     nullable: true,
     description: "One saved rota, re-checked against the live routine (CO-14). Requires observation:manage.",
-    authScopes: { hasPermission: "observation:manage" },
+    authScopes: { hasPermission: "classroom_observation:schedule" },
     args: { rotaId: t.arg.string({ required: true }) },
     resolve: async (_root, args) => getRota(args.rotaId),
   }),

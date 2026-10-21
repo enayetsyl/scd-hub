@@ -64,7 +64,7 @@ export default function ScholarshipCandidatesScreen({ route }: Props): React.Rea
 
   const rows = (data?.scholarshipCandidates ?? []) as Candidate[];
   const sitting = rows.filter((r) => r.sitting).length;
-  const editable = can("scholarship:manage");
+  const editable = can("scholarship_practice:select_candidates");
 
   async function toggle(row: Candidate): Promise<void> {
     // `Chip` has no disabled state, so the guard lives here: a double tap would

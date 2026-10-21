@@ -13,6 +13,7 @@
  */
 import type { Router, Request, Response } from "express";
 import { Router as createRouter, json } from "express";
+import { callerHasPermission } from "@scd/shared";
 import { buildContext } from "../../../context";
 import { markdownToPdf } from "../../../routes/pdfRenderer";
 import { ENGLISH_DRIVE_MD_MAX_BYTES } from "../models/EnglishDriveDoc";
@@ -75,7 +76,9 @@ englishDrivePdfRouter.get("/:id", async (req: Request, res: Response) => {
 // Edit-before-print: render the caller's edited markdown with their layout knobs.
 englishDrivePdfRouter.post("/render", json({ limit: "2mb" }), async (req: Request, res: Response) => {
   const ctx = buildContext(req, res);
-  if (!ctx.auth || ctx.auth.role === "GUARDIAN") {
+  // PM: english_drive:send (edit-before-print). There is no doc id to read-gate here
+  // (pre-existing gap F-14); with default switches every staff login holds it, as today.
+  if (!ctx.auth || ctx.auth.role === "GUARDIAN" || !callerHasPermission(ctx.auth, "english_drive:send")) {
     res.status(403).json({ error: "Forbidden" });
     return;
   }

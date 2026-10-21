@@ -100,7 +100,7 @@ ImpersonationResultRef.implement({
 builder.queryField("impersonationTargets", (t) =>
   t.field({
     type: [ImpersonationTargetRef],
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "view_as:open" },
     description: "Accounts the Principal may view as. Ineligible rows come back locked, with a reason.",
     args: {
       kind: t.arg.string({ required: true }),
@@ -126,7 +126,7 @@ const ImpersonationTargetPageRef = pageRef("ImpersonationTargetPage", Impersonat
 builder.queryField("impersonationTargetsPage", (t) =>
   t.field({
     type: ImpersonationTargetPageRef,
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "view_as:open" },
     description: "One page of impersonationTargets (same eligibility + search), A→Z (D-#761).",
     args: {
       kind: t.arg.string({ required: true }),
@@ -147,7 +147,7 @@ builder.queryField("impersonationTargetsPage", (t) =>
 builder.mutationField("startImpersonation", (t) =>
   t.field({
     type: ImpersonationResultRef,
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "view_as:open" },
     description: "Mint a short-lived token for another account (Principal only).",
     args: {
       targetId: t.arg.string({ required: true }),

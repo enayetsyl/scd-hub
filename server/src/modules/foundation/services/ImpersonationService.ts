@@ -17,7 +17,7 @@
  *    can do, the Principal can do through them — no denylist, no read-only mode. The
  *    safeguard is that the log names the Principal, not that the app refuses.
  *
- * Since D-#639 the gate is the `user:view_as` permission rather than the PRINCIPAL role,
+ * Since D-#639 the gate is the `view_as:open` action (legacy `user:view_as`, PM) rather than the PRINCIPAL role,
  * so the owner can hand the same view to a named individual through the AC-1 editor. The
  * audit inversion follows the holder, not the office: `impersonatorRole` is whatever the
  * borrower's real role is, so an OFFICE grantee's rows read OFFICE, not PRINCIPAL.
@@ -66,7 +66,7 @@ const TARGET_INACTIVE = "অ্যাকাউন্টটি নিষ্ক্
 const TARGET_NO_LOGIN = "এই অভিভাবকের লগইন চালু নেই।";
 
 /**
- * The caller must hold `user:view_as` *in the database*, not merely by token claim (G3):
+ * The caller must hold `view_as:open` *in the database* (a legacy `user:view_as` grant expands to it), not merely by token claim (G3):
  * the token's own permission arrays are client-presented, and a token mint must not be
  * gated on a value the client influenced.
  *
@@ -99,7 +99,7 @@ async function assertMayViewAs(callerUserId: string): Promise<{ id: Types.Object
       grantedPermissions: (caller.grantedPermissions ?? []) as Permission[],
       revokedPermissions: (caller.revokedPermissions ?? []) as Permission[],
     },
-    "user:view_as",
+    "view_as:open",
   );
   if (!may) throw new Error(NOT_ALLOWED);
   return { id: caller._id as Types.ObjectId, role: caller.role as Role };

@@ -42,6 +42,7 @@ import { ForbiddenError } from "../../../middleware/authz";
 import {
   assertAnchorRead,
   assertAnchorWrite,
+  CLASS_TEST_REACH,
   classTestRosterStudents,
   subjectIdOrNull,
 } from "../classTestAnchor";
@@ -53,7 +54,7 @@ async function assertReadTest(ctx: AppContext, testId: string): Promise<void> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
   const test = await getClassTest(testId);
   if (!test) throw new ForbiddenError("Class test not found");
-  await assertAnchorRead(ctx, test);
+  await assertAnchorRead(ctx, test, CLASS_TEST_REACH);
 }
 
 /** Resolve the test's unit + enforce WRITE scope on it (publish/unpublish, J4).
@@ -63,7 +64,7 @@ async function assertWriteTest(ctx: AppContext, testId: string): Promise<void> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
   const test = await getClassTest(testId);
   if (!test) throw new ForbiddenError("Class test not found");
-  await assertAnchorWrite(ctx, test, () => subjectIdOrNull(test.subject), "enter_classtest_result");
+  await assertAnchorWrite(ctx, test, () => subjectIdOrNull(test.subject), "enter_classtest_result", CLASS_TEST_REACH);
 }
 
 // ---------------------------------------------------------------------------
@@ -138,8 +139,8 @@ builder.mutationField("enterClassTestResult", (t) =>
     description:
       "Record/edit one student's class-test result (J3): PRESENT + marks (0..totalMarks) or ABSENT, " +
       "plus weakness + teacher/guardian actions. Only on a PRINTED exam, on/after the exam date. " +
-      "One row per student per exam (no retake, D-#121). Requires tracker:write on the section. Audited.",
-    authScopes: { hasPermission: "tracker:write" },
+      "One row per student per exam (no retake, D-#121). Requires class_test:enter_results on the section. Audited.",
+    authScopes: { hasPermission: "class_test:enter_results" },
     args: {
       testId: t.arg.string({ required: true }),
       studentId: t.arg.string({ required: true }),
@@ -153,7 +154,13 @@ builder.mutationField("enterClassTestResult", (t) =>
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       const test = await getClassTest(args.testId);
       if (!test) throw new ForbiddenError("Class test not found");
-      await assertAnchorWrite(ctx, test, () => subjectIdOrNull(test.subject), "enter_classtest_result");
+      await assertAnchorWrite(
+        ctx,
+        test,
+        () => subjectIdOrNull(test.subject),
+        "enter_classtest_result",
+        CLASS_TEST_REACH,
+      );
       return enterResult({
         testId: args.testId,
         studentId: args.studentId,
@@ -176,8 +183,8 @@ builder.queryField("classTestStudentResult", (t) =>
   t.field({
     type: ClassTestResultRef,
     nullable: true,
-    description: "One student's derived class-test result (CT-2). Null if not yet entered. Requires tracker:read.",
-    authScopes: { hasPermission: "tracker:read" },
+    description: "One student's derived class-test result (CT-2). Null if not yet entered. Requires class_test:view.",
+    authScopes: { hasPermission: "class_test:view" },
     args: {
       testId: t.arg.string({ required: true }),
       studentId: t.arg.string({ required: true }),
@@ -214,8 +221,8 @@ builder.queryField("classTestRoster", (t) =>
     type: [ClassTestRosterStudentRef],
     description:
       "The active students who sat this exam (D-#507): the section's roster, or the Arabic " +
-      "GROUP's members for a group-anchored exam. Requires tracker:read + read scope on the unit.",
-    authScopes: { hasPermission: "tracker:read" },
+      "GROUP's members for a group-anchored exam. Requires class_test:view + read scope on the unit.",
+    authScopes: { hasPermission: "class_test:view" },
     args: { testId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       await assertReadTest(ctx, args.testId);
@@ -229,8 +236,8 @@ builder.queryField("classTestRoster", (t) =>
 builder.queryField("classTestResults", (t) =>
   t.field({
     type: [ClassTestResultRef],
-    description: "Every entered student result on a class test, with derived scores (CT-2). Requires tracker:read.",
-    authScopes: { hasPermission: "tracker:read" },
+    description: "Every entered student result on a class test, with derived scores (CT-2). Requires class_test:view.",
+    authScopes: { hasPermission: "class_test:view" },
     args: { testId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       await assertReadTest(ctx, args.testId);
@@ -244,8 +251,8 @@ builder.queryField("classTestReportStatus", (t) =>
     type: ExamReportStatusRef,
     description:
       "Per-exam completion + the exam-date-anchored, school-day-aware deadline/overdue (CT-2). " +
-      "`asOf` (ISO) overrides the clock for deterministic reads. Requires tracker:read.",
-    authScopes: { hasPermission: "tracker:read" },
+      "`asOf` (ISO) overrides the clock for deterministic reads. Requires class_test:view.",
+    authScopes: { hasPermission: "class_test:view" },
     args: {
       testId: t.arg.string({ required: true }),
       asOf: t.arg.string({ required: false }),
@@ -315,8 +322,8 @@ builder.mutationField("submitClassTestExam", (t) =>
     type: SubmitOutcomeRef,
     description:
       "CT-8: teacher submits an exam's results for Office/Principal approval. Marks rows SUBMITTED " +
-      "(guardians do NOT see yet) and clears any prior send-back. Requires tracker:write on the section.",
-    authScopes: { hasPermission: "tracker:write" },
+      "(guardians do NOT see yet) and clears any prior send-back. Requires class_test:enter_results on the section.",
+    authScopes: { hasPermission: "class_test:enter_results" },
     args: { testId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       await assertWriteTest(ctx, args.testId);
@@ -328,8 +335,8 @@ builder.mutationField("submitClassTestExam", (t) =>
 builder.mutationField("recallClassTestExam", (t) =>
   t.field({
     type: SubmitOutcomeRef,
-    description: "CT-8: teacher recalls a pending submission back to draft so it can be edited. Requires tracker:write.",
-    authScopes: { hasPermission: "tracker:write" },
+    description: "CT-8: teacher recalls a pending submission back to draft so it can be edited. Requires class_test:enter_results.",
+    authScopes: { hasPermission: "class_test:enter_results" },
     args: { testId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       await assertWriteTest(ctx, args.testId);
@@ -338,17 +345,17 @@ builder.mutationField("recallClassTestExam", (t) =>
   }),
 );
 
-// --- CT-8 approval gate: Office/Principal APPROVE / SEND-BACK / UNPUBLISH (roster:manage).
-// assertReadTest only enforces existence for admins (it skips the teacher section check for
-// PRINCIPAL/OFFICE) — NOT assertWriteTest, which denies OFFICE. ---
+// --- CT-8 approval gate: APPROVE / SEND-BACK (class_test:publish), UNPUBLISH (class_test:revoke).
+// assertReadTest only enforces existence for a class_test:view_all holder (Office/Principal by
+// default) and read scope for anyone else (F-18) — NOT assertWriteTest, the teacher's write scope. ---
 
 builder.mutationField("publishClassTestExam", (t) =>
   t.field({
     type: PublishResultOutcomeRef,
     description:
       "CT-8 APPROVE: Office/Principal releases a SUBMITTED exam's results → guardian delivery (wa.me + " +
-      "in-app). Requires the teacher to have submitted first. roster:manage.",
-    authScopes: { hasPermission: "roster:manage" },
+      "in-app). Requires the teacher to have submitted first. class_test:publish.",
+    authScopes: { hasPermission: "class_test:publish" },
     args: { testId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       await assertReadTest(ctx, args.testId);
@@ -362,8 +369,8 @@ builder.mutationField("publishClassTestResult", (t) =>
     type: PublishResultOutcomeRef,
     description:
       "CT-8: Office/Principal releases ONE student's result (per-student override of the per-exam approve). " +
-      "Stamps publishedAt + delivers; re-publish RE-notifies. roster:manage.",
-    authScopes: { hasPermission: "roster:manage" },
+      "Stamps publishedAt + delivers; re-publish RE-notifies. class_test:publish.",
+    authScopes: { hasPermission: "class_test:publish" },
     args: {
       testId: t.arg.string({ required: true }),
       studentId: t.arg.string({ required: true }),
@@ -378,8 +385,8 @@ builder.mutationField("publishClassTestResult", (t) =>
 builder.mutationField("sendBackClassTestExam", (t) =>
   t.field({
     type: SubmitOutcomeRef,
-    description: "CT-8: Office/Principal sends a submitted exam back to the teacher (→ draft) with a reason. roster:manage.",
-    authScopes: { hasPermission: "roster:manage" },
+    description: "CT-8: Office/Principal sends a submitted exam back to the teacher (→ draft) with a reason. class_test:publish.",
+    authScopes: { hasPermission: "class_test:publish" },
     args: {
       testId: t.arg.string({ required: true }),
       reason: t.arg.string({ required: true }),
@@ -396,8 +403,8 @@ builder.mutationField("unpublishClassTestResult", (t) =>
     type: UnpublishOutcomeRef,
     description:
       "CT-8: Office/Principal unpublishes ONE student's result — clears publishedAt (leaves the guardian card) " +
-      "and the submission, back to draft. roster:manage.",
-    authScopes: { hasPermission: "roster:manage" },
+      "and the submission, back to draft. class_test:revoke.",
+    authScopes: { hasPermission: "class_test:revoke" },
     args: {
       testId: t.arg.string({ required: true }),
       studentId: t.arg.string({ required: true }),
@@ -412,8 +419,8 @@ builder.mutationField("unpublishClassTestResult", (t) =>
 builder.mutationField("unpublishClassTestExam", (t) =>
   t.field({
     type: UnpublishOutcomeRef,
-    description: "CT-8: Office/Principal unpublishes ALL released results for a class test (→ draft). roster:manage.",
-    authScopes: { hasPermission: "roster:manage" },
+    description: "CT-8: Office/Principal unpublishes ALL released results for a class test (→ draft). class_test:revoke.",
+    authScopes: { hasPermission: "class_test:revoke" },
     args: { testId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       await assertReadTest(ctx, args.testId);

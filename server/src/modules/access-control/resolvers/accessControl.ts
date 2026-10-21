@@ -2,7 +2,7 @@
  * Access-control resolvers (AC-1, prd-access-control §6, D-#193/#210–#215).
  *
  * The Principal-only per-user permission editor. EVERY field here is gated
- * `authScopes: { hasPermission: "access:manage" }` — a RESERVED-locked, Principal-only
+ * `authScopes: { hasPermission: "access_control:edit" }` — a RESERVED-locked, Principal-only
  * permission (the server re-enforces what the AC-2 screen presents). The mutations tune
  * the three additive `User` fields; a reserved-locked perm is refused at write-time with a
  * Bangla message (surfaced as the GraphQL error); a revoke always wins. The read returns
@@ -23,6 +23,12 @@ import {
   type AccessActor,
   type UserAccessShape,
 } from "../services/AccessControlService";
+import {
+  roleTemplates,
+  setRoleTemplatePermission,
+  resetRoleTemplate,
+  type RoleTemplateShape,
+} from "../services/RoleTemplateService";
 
 /** The acting Principal (gated `access:manage`) — used as the audit actor. */
 function actorOf(ctx: AppContext): AccessActor {
@@ -55,7 +61,7 @@ builder.mutationField("setUserAdditionalTemplates", (t) =>
     description:
       "Set (or clear, with []) the additional role templates a staff user holds. Only " +
       "TEACHER/OFFICE are assignable (PRINCIPAL/GUARDIAN refused). Requires access:manage. Audited.",
-    authScopes: { hasPermission: "access:manage" },
+    authScopes: { hasPermission: "access_control:edit" },
     args: {
       userId: t.arg.string({ required: true }),
       templates: t.arg.stringList({ required: true }),
@@ -70,7 +76,7 @@ builder.mutationField("addUserGrantedPermission", (t) =>
     description:
       "Add a per-user granted permission. A RESERVED-locked perm or guardian:read_child is " +
       "refused (Bangla error). Requires access:manage. Audited.",
-    authScopes: { hasPermission: "access:manage" },
+    authScopes: { hasPermission: "access_control:edit" },
     args: {
       userId: t.arg.string({ required: true }),
       permission: t.arg.string({ required: true }),
@@ -83,7 +89,7 @@ builder.mutationField("removeUserGrantedPermission", (t) =>
   t.field({
     type: UserAccessRef,
     description: "Remove a per-user granted permission (back to the template baseline). Requires access:manage. Audited.",
-    authScopes: { hasPermission: "access:manage" },
+    authScopes: { hasPermission: "access_control:edit" },
     args: {
       userId: t.arg.string({ required: true }),
       permission: t.arg.string({ required: true }),
@@ -96,7 +102,7 @@ builder.mutationField("addUserRevokedPermission", (t) =>
   t.field({
     type: UserAccessRef,
     description: "Add a per-user revoked permission (a revoke always wins). Requires access:manage. Audited.",
-    authScopes: { hasPermission: "access:manage" },
+    authScopes: { hasPermission: "access_control:edit" },
     args: {
       userId: t.arg.string({ required: true }),
       permission: t.arg.string({ required: true }),
@@ -109,7 +115,7 @@ builder.mutationField("removeUserRevokedPermission", (t) =>
   t.field({
     type: UserAccessRef,
     description: "Remove a per-user revoked permission (the perm may flow from a template/grant again). Requires access:manage. Audited.",
-    authScopes: { hasPermission: "access:manage" },
+    authScopes: { hasPermission: "access_control:edit" },
     args: {
       userId: t.arg.string({ required: true }),
       permission: t.arg.string({ required: true }),
@@ -128,8 +134,62 @@ builder.queryField("userEffectiveAccess", (t) =>
     description:
       "A staff user's per-user access overrides + the DERIVED effective permission set " +
       "(for the AC-2 editor). Requires access:manage.",
-    authScopes: { hasPermission: "access:manage" },
+    authScopes: { hasPermission: "access_control:edit" },
     args: { userId: t.arg.string({ required: true }) },
     resolve: (_root, args) => effectiveUserAccess(args.userId),
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Role templates (PM, docs/prd-permission-matrix.md §7, D-#791/#800) — the Roles tab.
+// Gated `access_control:edit` (LOCKED, Principal-only; today's access:manage).
+// ---------------------------------------------------------------------------
+
+const RoleTemplateRef = builder.objectRef<RoleTemplateShape>("RoleTemplate");
+RoleTemplateRef.implement({
+  description:
+    "One editable role (TEACHER / OFFICE): the Principal's switches as a delta on the code " +
+    "default, the role's catalogue actions now, and how many active logins it reaches.",
+  fields: (t) => ({
+    role: t.exposeString("role"),
+    granted: t.exposeStringList("granted"),
+    revoked: t.exposeStringList("revoked"),
+    permissions: t.exposeStringList("permissions"),
+    userCount: t.exposeInt("userCount"),
+  }),
+});
+
+builder.queryField("roleTemplates", (t) =>
+  t.field({
+    type: [RoleTemplateRef],
+    description: "The editable role templates (TEACHER, OFFICE) with the Principal's edits. Requires access_control:edit.",
+    authScopes: { hasPermission: "access_control:edit" },
+    resolve: () => roleTemplates(),
+  }),
+);
+
+builder.mutationField("setRoleTemplatePermission", (t) =>
+  t.field({
+    type: RoleTemplateRef,
+    description:
+      "Switch one catalogue action on or off for every login of a role (TEACHER / OFFICE). " +
+      "LOCKED and SELF actions are refused (Bangla error). Requires access_control:edit. Audited.",
+    authScopes: { hasPermission: "access_control:edit" },
+    args: {
+      role: t.arg.string({ required: true }),
+      permission: t.arg.string({ required: true }),
+      enabled: t.arg.boolean({ required: true }),
+    },
+    resolve: (_root, args, ctx) => setRoleTemplatePermission(actorOf(ctx), args.role, args.permission, args.enabled),
+  }),
+);
+
+builder.mutationField("resetRoleTemplate", (t) =>
+  t.field({
+    type: RoleTemplateRef,
+    description: "Put a role (TEACHER / OFFICE) back to the code default. Requires access_control:edit. Audited.",
+    authScopes: { hasPermission: "access_control:edit" },
+    args: { role: t.arg.string({ required: true }) },
+    resolve: (_root, args, ctx) => resetRoleTemplate(actorOf(ctx), args.role),
   }),
 );

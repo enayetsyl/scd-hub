@@ -13,6 +13,7 @@ import { createYoga } from "graphql-yoga";
 import { clientIpFrom } from "./clientIp";
 import { graphqlDevToolsOptions } from "./graphqlDevTools";
 import { connectDb } from "./db";
+import { loadRoleTemplateOverrides, startRoleTemplateRefresh } from "./modules/access-control/services/RoleTemplateService";
 import { connectBookDb, BookDbNotConfiguredError } from "./bookDb";
 import { buildContext, verifyTokenFromRequest } from "./context";
 import { withActiveAccount } from "./sessionActive";
@@ -211,6 +212,9 @@ const PORT = Number(process.env.PORT ?? 4000);
 
 async function start() {
   await connectDb();
+  // PM (D-#792): publish the Principal's role-template edits before the first request.
+  await loadRoleTemplateOverrides();
+  startRoleTemplateRefresh();
   // The BOOK plane (D-#404) — a SECOND connection, opened here so the API can serve
   // book production once it is provisioned. Until this ran, setting BOOK_MONGODB_URI
   // did nothing at all: only the render worker opened the connection, so every

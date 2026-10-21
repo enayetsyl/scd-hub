@@ -30,7 +30,6 @@ import {
   DAY_SLOT_BOUNDARIES_MIN,
   ROUTINE_SUBJECT_LABELS_BN,
   WORK_EFFORT_MIN,
-  callerHasPermission,
   type DaySlot,
   type PeriodTrack,
   type TaskPriority,
@@ -65,7 +64,16 @@ import { actingAsFilter } from "../../foundation/services/RoleScope";
 import type { ITask } from "../models/Task";
 import { tasksOnBoards } from "./TaskService";
 import { ownerOf, resolveRecordOwners, routineSectionsOf } from "../../trackers/recordOwner";
-import { PULLABLE_KINDS, isBackup, officeRecipients, officeUncoveredToday, pullsFor } from "./OfficeCoverService";
+import {
+  CARD_ACTION,
+  PULLABLE_KINDS,
+  isBackup,
+  officeRecipients,
+  officeUncoveredToday,
+  pullsFor,
+  type CoverUser,
+  type PullableKind,
+} from "./OfficeCoverService";
 
 export interface WorkCardLink {
   screen: string;
@@ -126,13 +134,6 @@ export function slotForMinute(min: number | null | undefined): DaySlot {
 
 const actsAsAny = (u: BoardUser, roles: string[]): boolean =>
   roles.includes(u.role) || (u.additionalTemplates ?? []).some((t) => roles.includes(t));
-
-const profileOf = (u: BoardUser) => ({
-  role: u.role as "PRINCIPAL" | "TEACHER" | "OFFICE" | "GUARDIAN",
-  additionalTemplates: (u.additionalTemplates ?? []) as ("PRINCIPAL" | "TEACHER" | "OFFICE" | "GUARDIAN")[],
-  grantedPermissions: (u.grantedPermissions ?? []) as never[],
-  revokedPermissions: (u.revokedPermissions ?? []) as never[],
-});
 
 async function safe<T>(label: string, build: () => Promise<T[]>): Promise<T[]> {
   try {
@@ -957,16 +958,22 @@ export async function boardFor(users: BoardUser[], fromKey: string, toKey: strin
   // WB-5 (D-#702): office-queue cards belong to the DESK (primary-role OFFICE). While
   // the desk is on leave the backups (OFFICE-template teacher-admins, the Principal)
   // see them too and may pull one; a pulled card sits on the puller's board alone.
-  const uncovered = nowInRange ? await officeUncoveredToday(todayKey) : false;
+  // PM (§5.5): each queue follows its ACTION — print cards the printing:process holders,
+  // leave cards the leave:approve holders (was: role OFFICE, ∩ leave:manage for leave).
+  const [uncoveredPrint, uncoveredLeave] = nowInRange
+    ? await Promise.all([
+        officeUncoveredToday(todayKey, CARD_ACTION.PRINT_JOB),
+        officeUncoveredToday(todayKey, CARD_ACTION.LEAVE_APPROVAL),
+      ])
+    : [false, false];
   const pulls = nowInRange ? await pullsFor(PULLABLE_KINDS) : [];
   const pullerIds = new Set(pulls.map((p) => p.userId));
-  const officeRecipientsIn = officeRecipients(users, uncovered);
   const withPullers = (base: BoardUser[]): BoardUser[] => {
     const ids = new Set(base.map((u) => u._id.toString()));
     return [...base, ...users.filter((u) => pullerIds.has(u._id.toString()) && !ids.has(u._id.toString()))];
   };
-  const officeUsers = withPullers(officeRecipientsIn);
-  const approvers = withPullers(officeRecipientsIn.filter((u) => callerHasPermission(profileOf(u), "leave:manage")));
+  const officeUsers = withPullers(officeRecipients(users, uncoveredPrint, CARD_ACTION.PRINT_JOB));
+  const approvers = withPullers(officeRecipients(users, uncoveredLeave, CARD_ACTION.LEAVE_APPROVAL));
 
   const auto = await Promise.all([
     safe("period", () => periodCards(userIds, fromKey, toKey, keys)),
@@ -995,7 +1002,7 @@ export async function boardFor(users: BoardUser[], fromKey: string, toKey: strin
 export function applyPulls(
   cards: WorkCard[],
   pulls: Array<{ kind: string; sourceId: string; userId: string }>,
-  users: Array<{ _id: { toString(): string }; role: string; additionalTemplates?: string[] }>,
+  users: CoverUser[],
   names: Map<string, string>,
 ): WorkCard[] {
   const pulledBy = new Map(pulls.map((p) => [`${p.kind}:${p.sourceId}`, p.userId]));
@@ -1013,7 +1020,7 @@ export function applyPulls(
       continue;
     }
     const u = byId.get(c.userId);
-    out.push({ ...c, canPull: !!u && isBackup(u), pulledById: null, pulledByName: null });
+    out.push({ ...c, canPull: !!u && isBackup(u, CARD_ACTION[c.kind as PullableKind]), pulledById: null, pulledByName: null });
   }
   return out;
 }

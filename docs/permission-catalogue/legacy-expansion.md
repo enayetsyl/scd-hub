@@ -80,6 +80,10 @@ Only SELF actions sit outside the equality. They are on for everyone.
 | `book:manage` | any | `book_production:create`, `book_production:settings`, `book_production:assign` | |
 | `exam:manage` | any | `exam_syllabus:settings`, `exam_syllabus:edit` | |
 | `exam:manage` | admin template | `exam_syllabus:view_all` | today: exam:manage ∧ isAdminStaff |
+| `mastery:read` | any | `mastery:view` | M-0 (D-#775) |
+| `mastery:enter` | any | `mastery:enter_results`, `mastery:create` | M-2/M-4 |
+| `mastery:manage` | any | `mastery:settings`, `mastery:delete` | M-0 |
+| `mastery:approve` | any | `mastery:approve` | same name in both lists (M-5, D-#786) |
 | `exam:read` | any | `exam_syllabus:view` | never enforced (F-10); everyone authenticated reads today, see table 3 |
 | `scholarship:manage` | any | `scholarship_practice:create`, `scholarship_practice:enter_results`, `scholarship_practice:settings` | |
 | `scholarship:manage` | admin template (primary role P/O today) | `scholarship_practice:delete`, `scholarship_practice:select_candidates`, `scholarship_practice:edit_all` | today the primary role; template-aware after (2H, F-27) |

@@ -11,7 +11,8 @@
  *   assessmentSets  — list sets for a section (read-scope enforced)
  *
  * Write-scope rule (J3.5): assertCanWrite requires teaching or proxy grant for the
- * section. Supervisory-only teachers cannot write → ForbiddenError. PRINCIPAL can.
+ * section. Supervisory-only teachers cannot write → ForbiddenError. A holder of
+ * question_sets:edit_all (the Principal by default) can write in any section.
  */
 import { builder } from "../../../schema";
 import { pageRef } from "../../../pageRef";
@@ -33,11 +34,16 @@ import {
   type QuestionUseDTO,
 } from "../services/QuestionUsageService";
 import { ContentArtifact } from "../../content/models/ContentArtifact";
-import { assertCanWrite, assertCanRead, ForbiddenError } from "../../../middleware/authz";
+import { assertCanWrite, assertCanRead, ForbiddenError, type Reach } from "../../../middleware/authz";
 import type { Types, FlattenMaps } from "mongoose";
 import type { IAssessmentSet, BasketItem } from "../models/AssessmentSet";
 
 type LeanSet = FlattenMaps<IAssessmentSet> & { _id: Types.ObjectId };
+
+/** PM reach (D-#790): `question_sets:edit_all` (PRINCIPAL-DEFAULT) replaces the PRINCIPAL-pass /
+ *  OFFICE-refuse role bypass on set writes; `question_sets:view_all` replaces isAdminStaff on reads. */
+const SET_WRITE_REACH: Reach = { editAll: "question_sets:edit_all" };
+const SET_READ_REACH: Reach = { viewAll: "question_sets:view_all" };
 
 // ---------------------------------------------------------------------------
 // Return types
@@ -174,7 +180,7 @@ builder.mutationField("createSet", (t) =>
   t.field({
     type: AssessmentSetRef,
     description: "Create a draft assessment set. Requires write-scope for the section (J3.5).",
-    authScopes: { hasPermission: "set:assemble" },
+    authScopes: { hasPermission: "question_sets:create" },
     args: {
       setType: t.arg.string({ required: true }),
       sectionId: t.arg.string({ required: true }),
@@ -185,7 +191,7 @@ builder.mutationField("createSet", (t) =>
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       // J3.5 — only teaching or proxy grant permits assembly (supervisory is read-only)
-      await assertCanWrite(ctx, args.sectionId, args.subjectId ?? undefined);
+      await assertCanWrite(ctx, args.sectionId, args.subjectId ?? undefined, undefined, SET_WRITE_REACH);
 
       const result = await createSetSvc({
         setType: args.setType as import("@scd/shared").SetType,
@@ -214,7 +220,7 @@ builder.mutationField("createSetWithQuestions", (t) =>
       "directly in `assembled` status with the ordered basket. Atomic — a failure writes " +
       "nothing (no half-populated draft). Write-scope enforced (J3.5). Returns the full set " +
       "so the client document cache invalidates set lists.",
-    authScopes: { hasPermission: "set:assemble" },
+    authScopes: { hasPermission: "question_sets:create" },
     args: {
       setType: t.arg.string({ required: true }),
       sectionId: t.arg.string({ required: true }),
@@ -231,7 +237,7 @@ builder.mutationField("createSetWithQuestions", (t) =>
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       // J3.5 — only teaching or proxy grant permits assembly (supervisory is read-only)
-      await assertCanWrite(ctx, args.sectionId, args.subjectId ?? undefined);
+      await assertCanWrite(ctx, args.sectionId, args.subjectId ?? undefined, undefined, SET_WRITE_REACH);
 
       const result = await createSetWithQuestionsSvc({
         setType: args.setType as import("@scd/shared").SetType,
@@ -259,7 +265,7 @@ builder.mutationField("addQuestionToSet", (t) =>
   t.field({
     type: AssessmentSetRef,
     description: "Add a question to a draft set basket. Write-scope enforced (J3.5).",
-    authScopes: { hasPermission: "question:select" },
+    authScopes: { hasPermission: "question_sets:create" },
     args: {
       setId: t.arg.string({ required: true }),
       artifactId: t.arg.string({ required: true }),
@@ -270,7 +276,7 @@ builder.mutationField("addQuestionToSet", (t) =>
       // Resolve the set's sectionId for the write-scope check
       const setDoc = await AssessmentSet.findById(args.setId).lean() as LeanSet | null;
       if (!setDoc) throw new Error("AssessmentSet not found");
-      await assertCanWrite(ctx, setDoc.sectionId.toString(), setDoc.subjectId ? setDoc.subjectId.toString() : undefined);
+      await assertCanWrite(ctx, setDoc.sectionId.toString(), setDoc.subjectId ? setDoc.subjectId.toString() : undefined, undefined, SET_WRITE_REACH);
 
       await addQuestionSvc(
         args.setId,
@@ -292,7 +298,7 @@ builder.mutationField("renameSet", (t) =>
   t.field({
     type: AssessmentSetRef,
     description: "Set or clear a set's display name. Any status; write-scope enforced (J3.5).",
-    authScopes: { hasPermission: "set:assemble" },
+    authScopes: { hasPermission: "question_sets:create" },
     args: {
       setId: t.arg.string({ required: true }),
       name: t.arg.string({ required: true }),
@@ -302,7 +308,7 @@ builder.mutationField("renameSet", (t) =>
 
       const setDoc = await AssessmentSet.findById(args.setId).lean() as LeanSet | null;
       if (!setDoc) throw new Error("AssessmentSet not found");
-      await assertCanWrite(ctx, setDoc.sectionId.toString(), setDoc.subjectId ? setDoc.subjectId.toString() : undefined);
+      await assertCanWrite(ctx, setDoc.sectionId.toString(), setDoc.subjectId ? setDoc.subjectId.toString() : undefined, undefined, SET_WRITE_REACH);
 
       await renameSetSvc(args.setId, args.name);
 
@@ -320,7 +326,7 @@ builder.mutationField("removeQuestionFromSet", (t) =>
   t.field({
     type: AssessmentSetRef,
     description: "Remove a question from a draft set. Draft-only; write-scope enforced (J3.5).",
-    authScopes: { hasPermission: "question:select" },
+    authScopes: { hasPermission: "question_sets:create" },
     args: {
       setId: t.arg.string({ required: true }),
       artifactId: t.arg.string({ required: true }),
@@ -330,7 +336,7 @@ builder.mutationField("removeQuestionFromSet", (t) =>
 
       const setDoc = await AssessmentSet.findById(args.setId).lean() as LeanSet | null;
       if (!setDoc) throw new Error("AssessmentSet not found");
-      await assertCanWrite(ctx, setDoc.sectionId.toString(), setDoc.subjectId ? setDoc.subjectId.toString() : undefined);
+      await assertCanWrite(ctx, setDoc.sectionId.toString(), setDoc.subjectId ? setDoc.subjectId.toString() : undefined, undefined, SET_WRITE_REACH);
 
       await removeQuestionSvc(args.setId, args.artifactId);
 
@@ -348,7 +354,7 @@ builder.mutationField("assembleSet", (t) =>
   t.field({
     type: AssembleResultRef,
     description: "Finalise a draft set. Enforces write-scope (J3.5). Emits set_assembled event.",
-    authScopes: { hasPermission: "set:assemble" },
+    authScopes: { hasPermission: "question_sets:create" },
     args: {
       setId: t.arg.string({ required: true }),
       /** CT only */
@@ -361,7 +367,7 @@ builder.mutationField("assembleSet", (t) =>
 
       const setDoc = await AssessmentSet.findById(args.setId).lean() as LeanSet | null;
       if (!setDoc) throw new Error("AssessmentSet not found");
-      await assertCanWrite(ctx, setDoc.sectionId.toString(), setDoc.subjectId ? setDoc.subjectId.toString() : undefined);
+      await assertCanWrite(ctx, setDoc.sectionId.toString(), setDoc.subjectId ? setDoc.subjectId.toString() : undefined, undefined, SET_WRITE_REACH);
 
       const result = await assembleSetSvc({
         setId: args.setId,
@@ -384,7 +390,7 @@ builder.queryField("assessmentSet", (t) =>
     type: AssessmentSetRef,
     nullable: true,
     description: "Fetch an assessment set by id. Read-scope enforced.",
-    authScopes: { hasPermission: "set:read" },
+    authScopes: { hasPermission: "question_sets:view" },
     args: {
       id: t.arg.string({ required: true }),
     },
@@ -393,7 +399,7 @@ builder.queryField("assessmentSet", (t) =>
       const doc = await AssessmentSet.findById(args.id).lean() as LeanSet | null;
       if (!doc) return null;
       // Read-scope: sectionId-level check (classId as second param serves as classId)
-      await assertCanRead(ctx, doc.sectionId.toString(), doc.classId.toString());
+      await assertCanRead(ctx, doc.sectionId.toString(), doc.classId.toString(), undefined, SET_READ_REACH);
 
       // Enrich each basket item with its question payload so the detail screen can
       // render the full question + answer (J3 view). Batched in one query.
@@ -420,7 +426,7 @@ builder.queryField("assessmentSets", (t) =>
   t.field({
     type: [AssessmentSetRef],
     description: "List assessment sets for a section. Read-scope enforced.",
-    authScopes: { hasPermission: "set:read" },
+    authScopes: { hasPermission: "question_sets:view" },
     args: {
       sectionId: t.arg.string({ required: true }),
       classId: t.arg.string({ required: true }),
@@ -428,7 +434,7 @@ builder.queryField("assessmentSets", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanRead(ctx, args.sectionId, args.classId);
+      await assertCanRead(ctx, args.sectionId, args.classId, undefined, SET_READ_REACH);
 
       const filter: Record<string, unknown> = { sectionId: args.sectionId };
       if (args.status) filter.status = args.status;
@@ -447,7 +453,7 @@ builder.queryField("assessmentSetsPage", (t) =>
   t.field({
     type: AssessmentSetPageRef,
     description: "assessmentSets, one page at a time, newest first (D-#761). Read-scope enforced.",
-    authScopes: { hasPermission: "set:read" },
+    authScopes: { hasPermission: "question_sets:view" },
     args: {
       sectionId: t.arg.string({ required: true }),
       classId: t.arg.string({ required: true }),
@@ -458,7 +464,7 @@ builder.queryField("assessmentSetsPage", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      await assertCanRead(ctx, args.sectionId, args.classId);
+      await assertCanRead(ctx, args.sectionId, args.classId, undefined, SET_READ_REACH);
 
       const filter: Record<string, unknown> = { sectionId: args.sectionId };
       if (args.status) filter.status = args.status;
@@ -501,7 +507,7 @@ builder.queryField("myRecentSets", (t) =>
     description:
       "The caller's most recently created/assembled sets across ALL their sections. " +
       "Self-scoped (createdBy/assembledBy = caller), so no section read-scope check.",
-    authScopes: { hasPermission: "set:read" },
+    authScopes: { hasPermission: "question_sets:view" },
     args: {
       limit: t.arg.int({ required: false }),
     },
@@ -551,8 +557,8 @@ builder.queryField("questionUsageCounts", (t) =>
       "How many sets each question already appears in (QU-1). Keyed on the QID, not the " +
       "artifactId: a re-import creates a new artifact row for the same question, so a set " +
       "assembled last term points at the old one and the history would read as empty. " +
-      "Returns only qids WITH uses — an absent qid means zero. Requires set:read.",
-    authScopes: { hasPermission: "set:read" },
+      "Returns only qids WITH uses — an absent qid means zero. Requires question_sets:view.",
+    authScopes: { hasPermission: "question_sets:view" },
     args: { qids: t.arg.stringList({ required: true }) },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
@@ -568,8 +574,8 @@ builder.queryField("questionUsage", (t) =>
     description:
       "Every set ONE question appears in, newest use first (QU-1). The date is what decides " +
       "whether reuse is a problem — due date if the set had one, else assembled, else " +
-      "created. Requires set:read.",
-    authScopes: { hasPermission: "set:read" },
+      "created. Requires question_sets:view.",
+    authScopes: { hasPermission: "question_sets:view" },
     args: { qid: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");

@@ -60,8 +60,8 @@ jest.mock("../modules/foundation/models/Student", () => ({
   Student: { find: (q: unknown) => mockStudentFind(q) },
 }));
 
-// CT-8 submit/approve notify: the submit emitter resolves the approvers
-// (active Principal/Office) through User.find.
+// CT-8 submit/approve notify: the submit emitter resolves the approvers (every active
+// staff login holding class_test:publish — holdersOf) through User.find.
 const mockUserFind = jest.fn();
 jest.mock("../modules/foundation/models/User", () => ({
   User: { find: (q: unknown) => mockUserFind(q) },
@@ -151,8 +151,9 @@ beforeEach(() => {
   // one login-enabled guardian for the student
   mockLinkFind.mockReturnValue(leanChain([{ guardianId: GUARDIAN_OID }]));
   mockGuardianFind.mockReturnValue(leanChain([{ _id: GUARDIAN_OID }]));
-  // one active Office approver (CT-8 submit notify)
-  mockUserFind.mockReturnValue(leanChain([{ _id: OFFICE_OID }]));
+  // one active Office approver (CT-8 submit notify). PM §5.5: the approvers are the
+  // holders of class_test:publish, so the staff list carries each login's role.
+  mockUserFind.mockReturnValue(leanChain([{ _id: OFFICE_OID, name: "অফিস", role: "OFFICE" }]));
   mockEmit.mockResolvedValue({ created: true, dedupeKey: "x" });
   mockWriteAudit.mockResolvedValue(undefined);
 });
@@ -382,6 +383,26 @@ describe("CT-8 approval gate", () => {
         dedupeKey: expect.stringMatching(new RegExp(`^CTSUB:${TEST_OID.toString()}:\\d+:${OFFICE_OID.toString()}$`)),
       }),
     );
+  });
+
+  test("PM: approvers are the class_test:publish holders — a plain teacher is not told, a granted one is", async () => {
+    const TEACHER_OID = new mongoose.Types.ObjectId();
+    const GRANTED_OID = new mongoose.Types.ObjectId();
+    mockUserFind.mockReturnValue(
+      leanChain([
+        { _id: OFFICE_OID, name: "অফিস", role: "OFFICE" },
+        { _id: TEACHER_OID, name: "শিক্ষক", role: "TEACHER" },
+        { _id: GRANTED_OID, name: "শিক্ষক ২", role: "TEACHER", grantedPermissions: ["class_test:publish"] },
+      ]),
+    );
+    mockResCount.mockResolvedValue(3);
+    mockResUpdateMany.mockResolvedValue({ modifiedCount: 3 });
+    await submitExam(TEST_OID.toString(), ACTOR);
+    const told = mockEmit.mock.calls
+      .filter((c) => c[0].kind === "CT_RESULT_SUBMITTED")
+      .map((c) => c[0].recipientUserId)
+      .sort();
+    expect(told).toEqual([OFFICE_OID.toString(), GRANTED_OID.toString()].sort());
   });
 
   // D-#640 — a submit that changes nothing is a no-op, notification included.

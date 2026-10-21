@@ -15,7 +15,7 @@
  * A person missing from an advice sheet is a person who does not get paid that month,
  * and the failure is silent unless the document says so.
  *
- * GATE — `payroll:manage`, the same permission as the payment export, re-asserted here
+ * GATE — `payroll:export` (PM; was payroll:manage), the same permission as the payment export, re-asserted here
  * because a route is a second front door. Audited: this names everyone and their
  * account numbers.
  */
@@ -75,7 +75,7 @@ paymentAdvicePdfRouter.get("/:runId", async (req: Request, res: Response) => {
     res.status(401).json({ error: "Unauthenticated" });
     return;
   }
-  if (!callerHasPermission(ctx.auth, "payroll:manage")) {
+  if (!callerHasPermission(ctx.auth, "payroll:export")) {
     res.status(403).json({ error: "বেতন-তালিকা রপ্তানি অফিস/অধ্যক্ষের কাজ" });
     return;
   }

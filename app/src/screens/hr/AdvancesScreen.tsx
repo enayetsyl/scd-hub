@@ -41,7 +41,8 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 export default function AdvancesScreen(): React.ReactElement {
   const { role, can } = useAuth();
   const { confirmAction } = useConfirm();
-  const canApprove = can("payroll:approve");
+  const canSettle = can("salary_advance:settle");
+  const canIssue = can("salary_advance:issue");
 
   const [staffId, setStaffId] = React.useState("");
   const [principal, setPrincipal] = React.useState("");
@@ -137,7 +138,7 @@ export default function AdvancesScreen(): React.ReactElement {
                 </View>
                 <Row label={STR.hrAdvanceBalance} value={money(a.balance)} />
                 <Muted>{bnNum(a.issueDate.slice(0, 10))}{a.note ? ` · ${a.note}` : ""}</Muted>
-                {canApprove && a.status === "active" ? (
+                {canSettle && a.status === "active" ? (
                   <>
                     <Divider />
                     <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2) }}>
@@ -151,7 +152,7 @@ export default function AdvancesScreen(): React.ReactElement {
           )}
 
           {/* Issue a new advance (Principal only) */}
-          {canApprove ? (
+          {canIssue ? (
             <>
               <Body style={{ fontWeight: "700", marginTop: space(4), marginBottom: space(2) }}>{STR.hrIssueAdvance}</Body>
               <Card>

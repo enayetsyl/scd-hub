@@ -33,6 +33,17 @@ import { GuardianLink } from "../../foundation/models/GuardianLink";
 import { Student } from "../../foundation/models/Student";
 import { writeAudit } from "../../platform/services/AuditService";
 import { passOnItemOrRecordSection } from "../recordOwner";
+import { callerHasPermission } from "@scd/shared";
+
+/** PM (D-#790..#801): a staff reader needs `homework:view` (row-scoped) or
+ *  `homework:view_all` (unscoped — replaces the isAdminStaff bypass in assertCanRead). */
+function assertStaffHomeworkFileRead(ctx: AppContext): void {
+  if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+  if (callerHasPermission(ctx.auth, "homework:view")) return;
+  if (callerHasPermission(ctx.auth, "homework:view_all")) return;
+  throw new ForbiddenError();
+}
+const HW_READ = { viewAll: "homework:view_all" } as const;
 
 /** Load + kind-check a StoredFile for attaching. */
 async function requireFile(fileId: string, kind: IStoredFile["kind"]): Promise<IStoredFile> {
@@ -126,7 +137,8 @@ export async function assertFileReadAccess(ctx: AppContext, file: IStoredFile): 
       await assertGuardianOfStudent(ctx, rec.studentId.toString());
       return;
     }
-    await assertCanRead(ctx, rec.sectionId.toString(), rec.classId.toString());
+    assertStaffHomeworkFileRead(ctx);
+    await assertCanRead(ctx, rec.sectionId.toString(), rec.classId.toString(), undefined, HW_READ);
     return;
   }
 
@@ -152,11 +164,12 @@ export async function assertFileReadAccess(ctx: AppContext, file: IStoredFile): 
     }
     throw new ForbiddenError("এই শিক্ষার্থীর তথ্য দেখার অনুমতি নেই");
   }
+  assertStaffHomeworkFileRead(ctx);
   // D-#772: a pre-split item stays on the emptied সম্মিলিত while its records sit on
   // the halves — a reader of any section holding its records may open its files.
   await passOnItemOrRecordSection(
     item.sectionId.toString(),
     () => HomeworkStudentRecord.distinct("sectionId", { hwItemId: item._id }),
-    (sectionId) => assertCanRead(ctx, sectionId, item.classId.toString()),
+    (sectionId) => assertCanRead(ctx, sectionId, item.classId.toString(), undefined, HW_READ),
   );
 }

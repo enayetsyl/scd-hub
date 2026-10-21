@@ -124,8 +124,8 @@ builder.queryField("supportBookLessonContent", (t) =>
     description:
       "ONE পাঠ with its blocks and image slots — the reviewer's read. Deliberately " +
       "single-lesson: a 54-lesson book is 764 KB of JSON, and shipping all of it to " +
-      "render one page would be slow for everyone to serve nobody. Requires book:read.",
-    authScopes: { hasPermission: "book:read" },
+      "render one page would be slow for everyone to serve nobody. Requires book_production:view.",
+    authScopes: { hasPermission: "book_production:view" },
     args: { bookId: t.arg.string({ required: true }), lessonNo: t.arg.int({ required: true }) },
     resolve: async (_root, args) => {
       assertBookPlane();
@@ -227,8 +227,8 @@ builder.queryField("supportBookComments", (t) =>
     type: [CommentRef],
     description:
       "Review notes on a book or one পাঠ, oldest first — a thread reads forwards. " +
-      "Open-only by default: the open ones are the work. Requires book:read.",
-    authScopes: { hasPermission: "book:read" },
+      "Open-only by default: the open ones are the work. Requires book_production:view.",
+    authScopes: { hasPermission: "book_production:view" },
     args: {
       bookId: t.arg.string({ required: true }),
       lessonNo: t.arg.int({ required: false }),
@@ -252,8 +252,8 @@ builder.mutationField("commentOnSupportBookItem", (t) =>
     description:
       "Leave a note on a block, a slot, or the whole পাঠ. The ORDINARY reviewer→author " +
       "channel — an escalation is the exceptional one, for what a reviewer cannot rule " +
-      "on themselves. Requires book:review.",
-    authScopes: { hasPermission: "book:review" },
+      "on themselves. Requires book_production:review.",
+    authScopes: { hasPermission: "book_production:review" },
     args: {
       bookId: t.arg.string({ required: true }),
       lessonNo: t.arg.int({ required: true }),
@@ -285,15 +285,15 @@ builder.mutationField("resolveSupportBookComment", (t) =>
     type: CommentRef,
     description:
       "Mark a note dealt with. Changes NO lesson field — the text moves only through a " +
-      "validated patch (D-#410/#440). `book:author` resolves their own fixes; a " +
-      "reviewer may close a note they decided against. Requires book:author or " +
-      "book:review.",
+      "validated patch (D-#410/#440). `book_production:author` resolves their own fixes; a " +
+      "reviewer may close a note they decided against. Requires book_production:author or " +
+      "book_production:review.",
     // EITHER side of the channel may close a note — the author resolves what they
     // fixed, the reviewer withdraws what they thought better of; restricting it to one
     // side leaves the other stuck. Declared as a scope rather than checked inside the
-    // resolver: a `book:read` field gate with the real rule in the body reads as an
+    // resolver: a `book_production:view` field gate with the real rule in the body reads as an
     // ungated mutation, and the static resolver-gate guard caught exactly that.
-    authScopes: { hasAnyPermission: ["book:author", "book:review"] },
+    authScopes: { hasAnyPermission: ["book_production:author", "book_production:review"] },
     args: {
       commentId: t.arg.string({ required: true }),
       resolutionNote: t.arg.string({ required: false }),

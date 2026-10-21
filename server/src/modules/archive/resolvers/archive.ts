@@ -2,23 +2,23 @@
  * Answer-script archive resolvers (AR-1..AR-3, prd-script-archive §7,
  * D-#443–#447).
  *
- * RBAC — composes EXISTING permissions only (D-#447, the D-#94/#17 posture):
- *   - Reads (box register, bundles, lookup lines): staff read — Principal/
- *     Office (unscoped) or `tracker:read` (the classTest assertStaffRead
- *     pattern). `disposableScriptBundles` is `roster:manage` (retention is an
- *     office lever).
- *   - fileScriptBundle: declared `hasAnyPermission: [tracker:write,
- *     roster:manage]` (D-#441 — an OR over permissions is a SCOPE, never an
- *     in-body check); a plain teacher additionally passes `assertCanWrite` on
- *     the test's OWN section, so nobody files someone else's exam.
- *   - Desk ops (ack / checkout / check-in / dispose / void / box CRUD):
- *     `roster:manage` — the library-desk single-custodian posture (D-#444).
+ * RBAC — the `archive` catalogue feature (PM; was D-#447's composition of
+ * tracker:read / tracker:write / roster:manage):
+ *   - Reads (box register, bundles, lookup lines): `archive:view`.
+ *     `disposableScriptBundles` is `archive:delete` (retention is an office lever).
+ *   - fileScriptBundle: `archive:create`; a holder WITHOUT `archive:approve`
+ *     additionally passes `assertAnchorWrite` on the test's OWN section/group and
+ *     files CLASS_TEST only, so nobody files someone else's exam. Holders of
+ *     `archive:approve` take the desk path (any source, auto-acknowledged).
+ *   - Desk ops: ack `archive:approve`; checkout / check-in `archive:lend`;
+ *     dispose `archive:delete`; void `archive:void`; box CRUD `archive:settings`
+ *     — the library-desk single-custodian posture (D-#444).
  */
 import { builder } from "../../../schema";
 import { pageRef } from "../../../pageRef";
 import type { AppContext } from "../../../context";
 import { callerHasPermission } from "@scd/shared";
-import type { Role, ArchiveSourceKind } from "@scd/shared";
+import type { ArchiveSourceKind } from "@scd/shared";
 import { ARCHIVE_SOURCE_KINDS } from "@scd/shared";
 import {
   createBox as createBoxSvc,
@@ -51,18 +51,16 @@ import {
 import { ClassTest } from "../../trackers/models/ClassTest";
 import { assertCanWrite, ForbiddenError } from "../../../middleware/authz";
 import { assertAnchorWrite, subjectIdOrNull } from "../../trackers/classTestAnchor";
-import { isAdminStaff } from "../../foundation/services/RoleScope";
 
 // ---------------------------------------------------------------------------
 // Gate helpers (the classTest.ts pattern)
 // ---------------------------------------------------------------------------
 
-/** Staff read: Principal/Office (unscoped) or tracker:read. */
+/** Staff read: `archive:view` (P, T, O by default — was isAdminStaff OR tracker:read). The
+ *  fields also declare it as their scope; this is the in-body twin. */
 function assertStaffRead(ctx: AppContext): void {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  const role = ctx.auth.role as Role;
-  if (isAdminStaff(ctx.auth)) return;
-  if (callerHasPermission(ctx.auth, "tracker:read")) return;
+  if (callerHasPermission(ctx.auth, "archive:view")) return;
   throw new ForbiddenError();
 }
 
@@ -174,7 +172,7 @@ builder.queryField("storageBoxes", (t) =>
   t.field({
     type: [StorageBoxRef],
     description: "The box register with derived fill counts. Staff read.",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "archive:view" },
     args: { status: t.arg.string({ required: false }) },
     resolve: async (_root, args, ctx) => {
       assertStaffRead(ctx);
@@ -188,7 +186,7 @@ builder.queryField("storageBox", (t) =>
     type: StorageBoxRef,
     nullable: true,
     description: "One box. Staff read.",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "archive:view" },
     args: { id: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       assertStaffRead(ctx);
@@ -201,7 +199,7 @@ builder.queryField("storageBoxBundles", (t) =>
   t.field({
     type: [ScriptBundleRef],
     description: "A box's contents in exam-date order (every status). Staff read.",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "archive:view" },
     args: { boxId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       assertStaffRead(ctx);
@@ -215,7 +213,7 @@ builder.queryField("scriptBundle", (t) =>
     type: ScriptBundleRef,
     nullable: true,
     description: "One bundle by id, with the full desk log. Staff read.",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "archive:view" },
     args: { id: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       assertStaffRead(ctx);
@@ -233,7 +231,7 @@ builder.queryField("scriptBundleForTest", (t) =>
     description:
       "THE retrieval query: the live (non-VOID) bundle archiving this source row, or null when " +
       "nothing is filed yet. Staff read.",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "archive:view" },
     args: {
       sourceKind: t.arg.string({ required: true }),
       refId: t.arg.string({ required: true }),
@@ -253,7 +251,7 @@ builder.queryField("scriptBundles", (t) =>
     description:
       "Browse/search the archive — year/class/subject/status/box filters + a ctId substring " +
       "search over sourceLabel. Staff read.",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "archive:view" },
     args: {
       academicYearId: t.arg.string({ required: false }),
       classLevel: t.arg.int({ required: false }),
@@ -282,7 +280,7 @@ builder.queryField("openScriptCheckouts", (t) =>
   t.field({
     type: [ScriptBundleRef],
     description: "Bundles currently out of their box, oldest first; overdue is derived. Staff read.",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "archive:view" },
     args: { overdueOnly: t.arg.boolean({ required: false }) },
     resolve: async (_root, args, ctx) => {
       assertStaffRead(ctx);
@@ -297,7 +295,7 @@ builder.queryField("pendingScriptAcks", (t) =>
     description:
       "Teacher-filed bundles the office has not acknowledged yet (acknowledgedAt == null, " +
       "derived — D-#444). Staff read.",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "archive:view" },
     resolve: async (_root, _args, ctx) => {
       assertStaffRead(ctx);
       return decorateNames(await listPendingAcksSvc());
@@ -311,7 +309,7 @@ builder.queryField("archiveLocationsForTests", (t) =>
     description:
       "Batched lookup line for class-test screens: where are the scripts of these tests? One " +
       "entry per test with a live bundle; a missing entry means nothing is filed. Staff read.",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "archive:view" },
     args: { testIds: t.arg.stringList({ required: true }) },
     resolve: async (_root, args, ctx) => {
       assertStaffRead(ctx);
@@ -329,7 +327,7 @@ builder.queryField("scriptBundlesPage", (t) =>
     description:
       "scriptBundles, one page at a time, newest exam first — no 500-row cap; total is the real " +
       "match count (D-#761). Staff read.",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "archive:view" },
     args: {
       academicYearId: t.arg.string({ required: false }),
       classLevel: t.arg.int({ required: false }),
@@ -361,8 +359,8 @@ builder.queryField("scriptBundlesPage", (t) =>
 builder.queryField("disposableScriptBundlesPage", (t) =>
   t.field({
     type: ScriptBundlePageRef,
-    description: "disposableScriptBundles, one page at a time, oldest exam first (D-#761). roster:manage.",
-    authScopes: { hasPermission: "roster:manage" },
+    description: "disposableScriptBundles, one page at a time, oldest exam first (D-#761). archive:delete.",
+    authScopes: { hasPermission: "archive:delete" },
     args: {
       page: t.arg.int({ required: false }),
       pageSize: t.arg.int({ required: false }),
@@ -380,8 +378,8 @@ builder.queryField("disposableScriptBundles", (t) =>
     type: [ScriptBundleRef],
     description:
       "The DERIVED retention list (D-#446): FILED bundles outside the protected current + " +
-      "previous academic year. Office lever — roster:manage.",
-    authScopes: { hasPermission: "roster:manage" },
+      "previous academic year. Office lever — archive:delete.",
+    authScopes: { hasPermission: "archive:delete" },
     resolve: async (_root, _args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       return decorateNames(await listDisposableSvc());
@@ -397,10 +395,10 @@ builder.mutationField("fileScriptBundle", (t) =>
   t.field({
     type: ScriptBundleRef,
     description:
-      "Record 'N scripts of test X filed in box Y' (AR-1). Teacher (tracker:write, own section) " +
-      "or Office (roster:manage — auto-acknowledged). Source must be a PRINTED class test; box " +
+      "Record 'N scripts of test X filed in box Y' (AR-1). Teacher (archive:create, own section) " +
+      "or the desk (archive:approve — any source, auto-acknowledged). Source must be a PRINTED class test; box " +
       "ACTIVE; one live bundle per test.",
-    authScopes: { hasAnyPermission: ["tracker:write", "roster:manage"] },
+    authScopes: { hasPermission: "archive:create" },
     args: {
       sourceKind: t.arg.string({ required: true }),
       refId: t.arg.string({ required: true }),
@@ -412,7 +410,7 @@ builder.mutationField("fileScriptBundle", (t) =>
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       const kind = parseSourceKind(args.sourceKind);
-      const canManage = callerHasPermission(ctx.auth, "roster:manage");
+      const canManage = callerHasPermission(ctx.auth, "archive:approve");
       if (!canManage) {
         // Plain teacher: may only file THEIR OWN section's test (write-scope on
         // the test's real section + subject, resolved server-side).
@@ -454,7 +452,7 @@ builder.mutationField("acknowledgeScriptBundle", (t) =>
   t.field({
     type: ScriptBundleRef,
     description: "The ONE office acknowledgement of a teacher-filed bundle (additive stamp, D-#444).",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "archive:approve" },
     args: { id: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
@@ -469,7 +467,7 @@ builder.mutationField("checkOutScriptBundle", (t) =>
     description:
       "Desk action (Office only, D-#444): hand a FILED bundle to a staff member — borrower + " +
       "purpose mandatory, expected return optional (overdue derives from it).",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "archive:lend" },
     args: {
       id: t.arg.string({ required: true }),
       toUserId: t.arg.string({ required: true }),
@@ -495,7 +493,7 @@ builder.mutationField("checkInScriptBundle", (t) =>
     description:
       "Desk action (Office only): a CHECKED_OUT bundle returns — closes the open log row; " +
       "optionally re-files into a different ACTIVE box.",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "archive:lend" },
     args: {
       id: t.arg.string({ required: true }),
       note: t.arg.string({ required: false }),
@@ -519,7 +517,7 @@ builder.mutationField("disposeScriptBundle", (t) =>
     description:
       "Dispose an outside-retention FILED bundle with a reason (D-#446). Refused while checked " +
       "out or inside the protected window. Shred the paper only AFTER this succeeds.",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "archive:delete" },
     args: {
       id: t.arg.string({ required: true }),
       reason: t.arg.string({ required: true }),
@@ -541,7 +539,7 @@ builder.mutationField("voidScriptBundle", (t) =>
     description:
       "Void a filed-in-error bundle (terminal; record kept). Frees the one-live-bundle slot so " +
       "the correcting re-file can land.",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "archive:void" },
     args: {
       id: t.arg.string({ required: true }),
       reason: t.arg.string({ required: true }),
@@ -561,7 +559,7 @@ builder.mutationField("createStorageBox", (t) =>
   t.field({
     type: StorageBoxRef,
     description: "Register a new box — code is SERVER-MINTED BX-{year}-{seq} (D-#445).",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "archive:settings" },
     args: {
       label: t.arg.string({ required: false }),
       locationNote: t.arg.string({ required: true }),
@@ -583,7 +581,7 @@ builder.mutationField("updateStorageBox", (t) =>
     description:
       "Edit a box's label/location — relocating a box is THIS one edit; every bundle inside " +
       "follows (D-#445).",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "archive:settings" },
     args: {
       id: t.arg.string({ required: true }),
       label: t.arg.string({ required: false }),
@@ -606,7 +604,7 @@ builder.mutationField("retireStorageBox", (t) =>
     type: StorageBoxRef,
     description:
       "Close a box to NEW filings (contents stay findable; never deleted).",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "archive:settings" },
     args: { id: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");

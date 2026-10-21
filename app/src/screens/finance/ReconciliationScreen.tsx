@@ -16,8 +16,10 @@ import { dateKey, addDaysKey } from "../../lib/dates";
 import { STR, money } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
+import { useAuth } from "../../auth/AuthContext";
 
 export default function ReconciliationScreen(): React.ReactElement {
+  const { can } = useAuth();
   const [, record] = useMutation(RECORD_RECONCILIATION);
 
   const [date, setDate] = useState("");
@@ -84,7 +86,9 @@ export default function ReconciliationScreen(): React.ReactElement {
           <Field label={STR.finEximusBank} value={eximusBank} onChangeText={setEximusBank} keyboardType="number-pad" />
           <Field label={STR.finEximusOnline} value={eximusOnline} onChangeText={setEximusOnline} keyboardType="number-pad" />
           <Field label={STR.finNote} value={note} onChangeText={setNote} multiline />
-          <Button title={STR.finSubmit} onPress={onRecord} loading={busy} disabled={busy} />
+          {can("reconciliation:create") ? (
+            <Button title={STR.finSubmit} onPress={onRecord} loading={busy} disabled={busy} />
+          ) : null}
           {last ? (
             <View style={{ marginTop: space(2) }}>
               <Divider />

@@ -25,7 +25,7 @@ type Nav = NativeStackNavigationProp<VocabStackParamList>;
 export default function VocabHomeScreen(): React.ReactElement {
   const nav = useNavigation<Nav>();
   const { role, can } = useAuth();
-  const canAssign = can("roster:manage");
+  const canAssign = can("vocab_test:assign");
   // D-#761: one duty row per week, forever — page it on the server (newest week first).
   const [page, setPage] = usePageState();
   const [myQ, refetchMy] = useQuery({

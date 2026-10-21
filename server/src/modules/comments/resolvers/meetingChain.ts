@@ -69,8 +69,9 @@ const actorOf = (ctx: Ctx): string => {
   if (!ctx.auth?.userId) throw new ForbiddenError("Unauthenticated");
   return ctx.auth.userId;
 };
+/** `parents_meeting:view` lifts the row-teacher / class-teacher designation (any note screen, any brief; PM — was roster:manage). */
 const isAdmin = (ctx: { auth: unknown }): boolean =>
-  ctx.auth !== null && callerHasPermission(ctx.auth as Parameters<typeof callerHasPermission>[0], "roster:manage");
+  ctx.auth !== null && callerHasPermission(ctx.auth as Parameters<typeof callerHasPermission>[0], "parents_meeting:view");
 
 // ---------------------------------------------------------------------------
 // Shapes — roster / work lists
@@ -451,7 +452,7 @@ builder.mutationField("openMeetingComments", (t) =>
     description:
       "Open comment collection on a meeting (builds who-comments-on-whom from today's routine), or — when " +
       "already open — change the two due dates. roster:manage; audited MEETING_COMMENTS_OPENED.",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "parents_meeting:assign" },
     args: {
       meetingId: t.arg.string({ required: true }),
       subjectDueKey: t.arg.string({ required: true }),
@@ -465,7 +466,7 @@ builder.mutationField("refreshMeetingCommentRoster", (t) =>
   t.field({
     type: RosterResultRef,
     description: "Rebuild the roster from today's routine; written notes are kept. roster:manage.",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "parents_meeting:assign" },
     args: { meetingId: t.arg.string({ required: true }) },
     resolve: (_r, a, ctx) => refreshCommentRoster(a.meetingId, actorOf(ctx)),
   }),
@@ -475,7 +476,7 @@ builder.mutationField("setMeetingSubjectSkipped", (t) =>
   t.field({
     type: "Int",
     description: "Skip (reason given) or restore (no reason) a subject's unwritten notes for one section. roster:manage.",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "parents_meeting:assign" },
     args: {
       meetingId: t.arg.string({ required: true }),
       sectionId: t.arg.string({ required: true }),
@@ -490,7 +491,7 @@ builder.mutationField("remindMeetingTeacher", (t) =>
   t.field({
     type: "Boolean",
     description: "Send a teacher today's reminder about their meeting comments left. False = already sent today. roster:manage.",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "parents_meeting:assign" },
     args: { meetingId: t.arg.string({ required: true }), teacherId: t.arg.string({ required: true }) },
     resolve: (_r, a, ctx) => remindTeacher(a.meetingId, a.teacherId, actorOf(ctx)),
   }),
@@ -500,7 +501,7 @@ builder.queryField("meetingCommentProgress", (t) =>
   t.field({
     type: ProgressRef,
     description: "The meeting's comment chain progress for the Office/Principal. roster:manage.",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "parents_meeting:view" },
     args: { meetingId: t.arg.string({ required: true }) },
     resolve: (_r, a) => commentProgress(a.meetingId),
   }),
@@ -510,7 +511,7 @@ builder.queryField("meetingFinalQueue", (t) =>
   t.field({
     type: [FinalQueueRowRef],
     description: "Every child of the meeting with where their final comment stands, in slot order. roster:manage.",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "parents_meeting:review" },
     args: { meetingId: t.arg.string({ required: true }) },
     resolve: (_r, a) => finalQueue(a.meetingId),
   }),
@@ -522,7 +523,7 @@ builder.mutationField("saveMeetingFinalComment", (t) =>
     description:
       "The Principal's/Office's final word for a child (layer 1): AS_IS copies the class teacher's summary, " +
       "EDITED and OWN take the two boxes. The summary itself is never changed. roster:manage; audited.",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "parents_meeting:review" },
     args: {
       meetingId: t.arg.string({ required: true }),
       studentId: t.arg.string({ required: true }),
@@ -543,7 +544,7 @@ builder.mutationField("saveMeetingSubjectNote", (t) =>
   t.field({
     type: SubjectNoteRef,
     description: "A subject teacher's Strengths + Concerns for one child (layer 3). Only the row's teacher; frozen once the class teacher summarises.",
-    authScopes: { hasPermission: "tracker:write" },
+    authScopes: { hasPermission: "parents_meeting:write_notes" },
     args: {
       meetingId: t.arg.string({ required: true }),
       studentId: t.arg.string({ required: true }),
@@ -560,7 +561,7 @@ builder.queryField("myMeetingNoteWork", (t) =>
   t.field({
     type: [NoteWorkMeetingRef],
     description: "The caller's own parents'-meeting comments owed, per open meeting (the Today card). tracker:write.",
-    authScopes: { hasPermission: "tracker:write" },
+    authScopes: { hasPermission: "parents_meeting:write_notes" },
     resolve: (_r, _a, ctx) => mySubjectNoteWork(actorOf(ctx)),
   }),
 );
@@ -569,7 +570,7 @@ builder.queryField("myMeetingSummaryWork", (t) =>
   t.field({
     type: [SummaryWorkMeetingRef],
     description: "The caller's class-teacher summaries per open meeting (the Today card); empty when they class-teach no section. tracker:write.",
-    authScopes: { hasPermission: "tracker:write" },
+    authScopes: { hasPermission: "parents_meeting:write_notes" },
     resolve: (_r, _a, ctx) => mySummaryWork(actorOf(ctx)),
   }),
 );
@@ -578,7 +579,7 @@ builder.queryField("meetingSubjectNoteContext", (t) =>
   t.field({
     type: SubjectNoteContextRef,
     description: "The write screen for one child × subject: the row's teacher, or roster:manage.",
-    authScopes: { authenticated: true },
+    authScopes: { hasAnyPermission: ["parents_meeting:write_notes", "parents_meeting:view"] },
     args: {
       meetingId: t.arg.string({ required: true }),
       studentId: t.arg.string({ required: true }),
@@ -592,7 +593,7 @@ builder.queryField("meetingBrief", (t) =>
   t.field({
     type: BriefRef,
     description: "The meeting brief for one child: roster:manage, or the class teacher of the child's section.",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "parents_meeting:view_brief" },
     args: { meetingId: t.arg.string({ required: true }), studentId: t.arg.string({ required: true }) },
     resolve: async (_r, a, ctx) => {
       await assertBriefRead({ userId: actorOf(ctx), isAdmin: isAdmin(ctx) }, a.studentId);

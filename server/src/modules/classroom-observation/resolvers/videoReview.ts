@@ -75,7 +75,7 @@ builder.mutationField("createVideoReview", (t) =>
     description:
       "Log a class-session YouTube link with its day/time/class/room and assign a teacher to review it. " +
       "Requires observation:upload (Principal/Office). Audited.",
-    authScopes: { hasPermission: "observation:upload" },
+    authScopes: { hasPermission: "free_mixing_review:assign" },
     args: {
       youtubeUrl: t.arg.string({ required: true }),
       classDate: t.arg.string({ required: true }),
@@ -100,7 +100,7 @@ builder.queryField("myVideoReviews", (t) =>
     type: [VideoReviewRef],
     description:
       "The caller's assigned class-video reviews, PENDING first. Requires observation:review (teacher).",
-    authScopes: { hasPermission: "observation:review" },
+    authScopes: { hasPermission: "free_mixing_review:review" },
     resolve: async (_root, _args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       return myVideoReviews(ctx.auth.userId as string);
@@ -114,7 +114,7 @@ builder.mutationField("reviewVideo", (t) =>
     description:
       "The assigned teacher's verdict on a class video: ok=true closes it; ok=false requires a comment. " +
       "Row-gated to the assigned teacher. Requires observation:review. Audited.",
-    authScopes: { hasPermission: "observation:review" },
+    authScopes: { hasPermission: "free_mixing_review:review" },
     args: {
       id: t.arg.string({ required: true }),
       ok: t.arg.boolean({ required: true }),
@@ -139,7 +139,7 @@ builder.queryField("videoReviewOverview", (t) =>
     description:
       "Every class-video review with per-teacher pending/ok/not-ok counts. Requires observation:manage " +
       "(Principal/Office).",
-    authScopes: { hasPermission: "observation:manage" },
+    authScopes: { hasPermission: "free_mixing_review:view_all" },
     resolve: async () => videoReviewOverview(),
   }),
 );
@@ -153,7 +153,7 @@ builder.queryField("videoReviewRowsPage", (t) =>
     description:
       "The office board's rows, one page at a time (PENDING first, then newest class date), " +
       "optionally one status (D-#761). Requires observation:manage (Principal/Office).",
-    authScopes: { hasPermission: "observation:manage" },
+    authScopes: { hasPermission: "free_mixing_review:view_all" },
     args: {
       status: t.arg.string({ required: false }),
       page: t.arg.int({ required: false }),

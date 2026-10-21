@@ -2,13 +2,13 @@
  * Homework attachment mutations (GP-A, D-#70).
  *
  * Teachers attach; guardians only view (no guardian mutation exists). Both
- * mutations ride `tracker:write` + `assertCanWrite` on the OWNING doc's
+ * mutations ride `homework:declare` / `homework:check` (PM) + `assertCanWrite` on the OWNING doc's
  * section (the subject teacher) — NO new permission. Audit HW_FILE_ATTACHED.
  * Upload itself is the Express route POST /files/hw; these bind an uploaded
  * StoredFile to its homework doc. No GraphQL type here ever carries a Drive id.
  */
 import { builder } from "../../../schema";
-import { assertCanWrite, ForbiddenError } from "../../../middleware/authz";
+import { assertCanWrite, ForbiddenError, type Reach } from "../../../middleware/authz";
 import { Subject } from "../../foundation/models/Subject";
 import { HomeworkItem } from "../models/HomeworkItem";
 import {
@@ -18,6 +18,10 @@ import {
   requireRecord,
   type AttachResult,
 } from "../services/HomeworkFileService";
+
+/** PM reach (D-#793): `homework:edit_all` replaces the PRINCIPAL-pass / OFFICE-refuse role
+ *  bypass in the write-scope gate. */
+const HW_WRITE: Reach = { editAll: "homework:edit_all" };
 
 async function resolveSubjectId(subject: string): Promise<string> {
   const doc = await Subject.findOne({ code: subject }).select("_id").lean();
@@ -40,7 +44,7 @@ builder.mutationField("attachHomeworkQuestionFile", (t) =>
     description:
       "Attach (or replace) the question file on a Layer-A homework item. " +
       "Subject-teacher write-scope on the item's section (GP-A, D-#70).",
-    authScopes: { hasPermission: "tracker:write" },
+    authScopes: { hasPermission: "homework:declare" },
     args: {
       hwItemId: t.arg.string({ required: true }),
       fileId: t.arg.string({ required: true }),
@@ -54,6 +58,7 @@ builder.mutationField("attachHomeworkQuestionFile", (t) =>
         item.sectionId.toString(),
         await resolveSubjectId(item.subject),
         "declare_homework",
+        HW_WRITE,
       );
       return attachQuestionFile(args.hwItemId, args.fileId, ctx.auth.userId);
     },
@@ -66,7 +71,7 @@ builder.mutationField("attachHomeworkAnswerFile", (t) =>
     description:
       "Attach (or replace) the checked-answer file on a Layer-B student record. " +
       "Subject-teacher write-scope on the record's section (GP-A, D-#70).",
-    authScopes: { hasPermission: "tracker:write" },
+    authScopes: { hasPermission: "homework:check" },
     args: {
       recordId: t.arg.string({ required: true }),
       fileId: t.arg.string({ required: true }),
@@ -81,6 +86,7 @@ builder.mutationField("attachHomeworkAnswerFile", (t) =>
         rec.sectionId.toString(),
         item?.subject ? await resolveSubjectId(item.subject) : undefined,
         "check_homework",
+        HW_WRITE,
       );
       return attachAnswerFile(args.recordId, args.fileId, ctx.auth.userId);
     },

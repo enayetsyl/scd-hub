@@ -1,7 +1,7 @@
 /**
  * Routine module — R-2 resolvers (routine slots + conflict engine + scope binding).
  *
- * Reads gated `routine:read`, writes `routine:manage` (D-#46). The conflict engine,
+ * Reads gated `routine:view`, writes `routine:edit` / `cover:assign` (D-#46; PM catalogue). The conflict engine,
  * scope binding (D-#49), and effective-dating live in RoutineSlotService.
  */
 import { builder } from "../../../schema";
@@ -117,13 +117,13 @@ const CreateSlotResultRef = builder.objectRef<CreateSlotResult>("CreateSlotResul
 });
 
 // ---------------------------------------------------------------------------
-// Queries (routine:read)
+// Queries (routine:view)
 // ---------------------------------------------------------------------------
 
 builder.queryField("routineSlots", (t) =>
   t.field({
     type: [RoutineSlotRef],
-    authScopes: { hasPermission: "routine:read" },
+    authScopes: { hasPermission: "routine:view" },
     args: {
       groupType: t.arg.string({ required: true }),
       groupId: t.arg.string({ required: true }),
@@ -147,7 +147,7 @@ builder.queryField("routineSlots", (t) =>
 builder.queryField("myRoutineSlots", (t) =>
   t.field({
     type: [RoutineSlotRef],
-    authScopes: { hasPermission: "routine:read" },
+    authScopes: { hasPermission: "routine:view" },
     // Optional YYYY-MM-DD: the teacher's week as in force on that date (default today).
     args: { date: t.arg.string({ required: false }) },
     resolve: async (_r, args, ctx) => {
@@ -163,7 +163,7 @@ builder.queryField("myRoutineSlots", (t) =>
 builder.queryField("routineForDate", (t) =>
   t.field({
     type: [RoutineSlotRef],
-    authScopes: { hasPermission: "routine:read" },
+    authScopes: { hasPermission: "routine:view" },
     args: {
       groupType: t.arg.string({ required: true }),
       groupId: t.arg.string({ required: true }),
@@ -221,7 +221,7 @@ const RoutineMasterRef = builder.objectRef<RoutineMaster>("RoutineMaster").imple
 builder.queryField("routineMaster", (t) =>
   t.field({
     type: RoutineMasterRef,
-    authScopes: { hasPermission: "routine:manage" },
+    authScopes: { hasPermission: "routine:view_all" },
     args: { day: t.arg.string({ required: true }) },
     resolve: async (_r, args) => {
       if (!(DAYS_OF_WEEK as readonly string[]).includes(args.day)) throw new Error("Invalid day");
@@ -233,7 +233,7 @@ builder.queryField("routineMaster", (t) =>
 builder.queryField("routineMasterWeek", (t) =>
   t.field({
     type: [RoutineMasterRef],
-    authScopes: { hasPermission: "routine:manage" },
+    authScopes: { hasPermission: "routine:view_all" },
     // Optional YYYY-MM-DD: preview the routine in force on that date (default today).
     args: { date: t.arg.string({ required: false }) },
     resolve: async (_r, args) => routineMasterWeek(args.date ? parseDateKey(args.date) : new Date()),
@@ -261,7 +261,7 @@ builder.queryField("sectionSubjectRoutineTeachers", (t) =>
   t.field({
     type: [SubjectRoutineTeachersRef],
     description: "Per-subject routine teachers for a section's live slots (Assign-subject-teacher view).",
-    authScopes: { hasPermission: "user:manage" },
+    authScopes: { hasPermission: "teaching_assignments:assign_subject_teacher" },
     args: { sectionId: t.arg.string({ required: true }) },
     resolve: (_r, args) => sectionSubjectRoutineTeachers(args.sectionId),
   }),
@@ -284,7 +284,7 @@ builder.mutationField("reassignRoutineSubjectTeacher", (t) =>
       "'also update the routine' step after a subject-teacher assignment. Whole-or-nothing: pre-checks " +
       "the teacher's availability across all affected periods, then reuses the master-grid cell-edit " +
       "path per slot (conflict engine + grant re-binding + chat re-sync).",
-    authScopes: { hasPermission: "routine:manage" },
+    authScopes: { hasPermission: "routine:edit" },
     args: {
       sectionId: t.arg.string({ required: true }),
       subject: t.arg.string({ required: true }),
@@ -307,13 +307,13 @@ builder.mutationField("reassignRoutineSubjectTeacher", (t) =>
 );
 
 // ---------------------------------------------------------------------------
-// Mutations (routine:manage)
+// Mutations (routine:edit, cover:assign)
 // ---------------------------------------------------------------------------
 
 builder.mutationField("createRoutineSlot", (t) =>
   t.field({
     type: CreateSlotResultRef,
-    authScopes: { hasPermission: "routine:manage" },
+    authScopes: { hasPermission: "routine:edit" },
     args: {
       groupType: t.arg.string({ required: true }),
       groupId: t.arg.string({ required: true }),
@@ -365,7 +365,7 @@ builder.mutationField("createRoutineSlot", (t) =>
 builder.mutationField("updateRoutineSlot", (t) =>
   t.field({
     type: CreateSlotResultRef,
-    authScopes: { hasPermission: "routine:manage" },
+    authScopes: { hasPermission: "routine:edit" },
     args: {
       id: t.arg.string({ required: true }),
       subject: t.arg.string({ required: true }),
@@ -399,7 +399,7 @@ builder.mutationField("deleteRoutineSlot", (t) =>
       "Remove a cell from the timetable. A slot that has already applied is RETIRED from " +
       "`effectiveFrom` (default today) so history survives; one whose window has not started " +
       "is deleted outright (D-#47(3)).",
-    authScopes: { hasPermission: "routine:manage" },
+    authScopes: { hasPermission: "routine:edit" },
     args: {
       id: t.arg.string({ required: true }),
       effectiveFrom: t.arg.string({ required: false }),
@@ -420,9 +420,9 @@ builder.queryField("teacherAvailability", (t) =>
     type: [AvailabilityRowRef],
     description:
       "Free/busy + day class-count per teacher for a (date, period) — widened from routine:manage to " +
-      "any authenticated staff (D-#268 ruling, PXG-1): the applicant proposing a cover needs this too. " +
+      "any staff holding routine:view (D-#268 ruling, PXG-1): the applicant proposing a cover needs this too. " +
       "Guardians remain excluded (plane isolation).",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "routine:view" },
     args: {
       date: t.arg.string({ required: true }),
       periodNumber: t.arg.int({ required: true }),
@@ -439,7 +439,7 @@ builder.queryField("teacherAvailability", (t) =>
 builder.queryField("coversForDate", (t) =>
   t.field({
     type: [RoutineSubstitutionRef],
-    authScopes: { hasPermission: "routine:read" },
+    authScopes: { hasPermission: "routine:view" },
     args: { date: t.arg.string({ required: true }) },
     resolve: async (_r, args) => {
       const d = new Date(args.date);
@@ -452,7 +452,7 @@ builder.queryField("coversForDate", (t) =>
 builder.mutationField("assignCover", (t) =>
   t.field({
     type: RoutineSubstitutionRef,
-    authScopes: { hasPermission: "routine:manage" },
+    authScopes: { hasPermission: "cover:assign" },
     args: {
       slotId: t.arg.string({ required: true }),
       date: t.arg.string({ required: true }),
@@ -478,7 +478,7 @@ builder.mutationField("assignCover", (t) =>
 builder.mutationField("cancelCover", (t) =>
   t.field({
     type: "Boolean",
-    authScopes: { hasPermission: "routine:manage" },
+    authScopes: { hasPermission: "cover:assign" },
     args: { id: t.arg.string({ required: true }) },
     resolve: async (_r, args, ctx) => {
       await cancelCover(args.id, ctx.auth!.userId);

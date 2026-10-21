@@ -27,7 +27,7 @@ type Recurrence = "ONCE" | TaskRecurrence;
 export default function TaskFormScreen({ route, navigation }: Props): React.ReactElement {
   const { user, can } = useAuth();
   const editId = route.params?.taskId ?? null;
-  const canAssign = can("tasks:assign");
+  const canAssign = can("work_board:assign");
 
   const [title, setTitle] = React.useState("");
   const [notes, setNotes] = React.useState("");

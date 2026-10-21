@@ -23,7 +23,13 @@ export default function RoutineHomeScreen({ navigation }: Props): React.ReactEle
   const { selection, hasSection } = useSectionContext();
   const { role, user, can } = useAuth();
   const lang = getActiveLang();
-  const canManage = can("routine:manage");
+  // PM catalogue actions (D-#790–#801) — the old routine:manage covered all of these.
+  const canViewAll = can("routine:view_all"); // live board + master grid
+  const canSettings = can("routine:settings"); // bell schedule
+  const canCalendar = can("routine:edit_calendar"); // holidays
+  const canNotesAll = can("class_note:view_all"); // note report + notes admin
+  const canEdit = can("routine:edit"); // routine editor
+  const canCover = can("cover:assign"); // slot cover
   const [groupsQ, refetchGroups] = useQuery({ query: SUBJECT_GROUPS_QUERY, variables: { track: null } });
   const sectionLabel = lang === "en" ? selection.sectionCode ?? selection.sectionNameBn : selection.sectionNameBn;
   const routineTitle = sectionLabel ?? STR.rtSectionRoutine;
@@ -44,12 +50,20 @@ export default function RoutineHomeScreen({ navigation }: Props): React.ReactEle
             }
           />
         ) : null}
-        {canManage ? (
+        {canViewAll ? (
           <>
             <Button title={STR.lcbBoardTitle} onPress={() => navigation.navigate("LiveClassBoard")} />
             <Button title={STR.rtMasterGrid} onPress={() => navigation.navigate("RoutineMaster")} />
-            <Button title={STR.rtBellSchedule} variant="secondary" onPress={() => navigation.navigate("BellSchedule")} />
-            <Button title={STR.hxManage} variant="secondary" onPress={() => navigation.navigate("Holidays")} />
+          </>
+        ) : null}
+        {canSettings ? (
+          <Button title={STR.rtBellSchedule} variant="secondary" onPress={() => navigation.navigate("BellSchedule")} />
+        ) : null}
+        {canCalendar ? (
+          <Button title={STR.hxManage} variant="secondary" onPress={() => navigation.navigate("Holidays")} />
+        ) : null}
+        {canNotesAll ? (
+          <>
             <Button title={STR.rtNoteReportTitle} variant="secondary" onPress={() => navigation.navigate("ClassNoteReport")} />
             <Button title={STR.cnClassNotesAdmin} variant="secondary" onPress={() => navigation.navigate("ClassNotesAdmin")} />
           </>
@@ -82,31 +96,31 @@ export default function RoutineHomeScreen({ navigation }: Props): React.ReactEle
                   })
                 }
               />
-              {canManage ? (
-                <>
-                  <Button
-                    title={STR.rtEdit}
-                    variant="secondary"
-                    onPress={() =>
-                      navigation.navigate("RoutineEditor", {
-                        groupType: "section",
-                        groupId: selection.sectionId!,
-                        title: routineTitle,
-                      })
-                    }
-                  />
-                  <Button
-                    title={STR.rtCover}
-                    variant="secondary"
-                    onPress={() =>
-                      navigation.navigate("CoverManage", {
-                        groupType: "section",
-                        groupId: selection.sectionId!,
-                        title: routineTitle,
-                      })
-                    }
-                  />
-                </>
+              {canEdit ? (
+                <Button
+                  title={STR.rtEdit}
+                  variant="secondary"
+                  onPress={() =>
+                    navigation.navigate("RoutineEditor", {
+                      groupType: "section",
+                      groupId: selection.sectionId!,
+                      title: routineTitle,
+                    })
+                  }
+                />
+              ) : null}
+              {canCover ? (
+                <Button
+                  title={STR.rtCover}
+                  variant="secondary"
+                  onPress={() =>
+                    navigation.navigate("CoverManage", {
+                      groupType: "section",
+                      groupId: selection.sectionId!,
+                      title: routineTitle,
+                    })
+                  }
+                />
               ) : null}
             </View>
           ) : (
@@ -143,19 +157,19 @@ export default function RoutineHomeScreen({ navigation }: Props): React.ReactEle
                 variant="secondary"
                 onPress={() => navigation.navigate("DailyNote", { groupType: "subjectgroup", groupId: g.id, title: g.nameBn })}
               />
-              {canManage ? (
-                <>
-                  <Button
-                    title={STR.rtEdit}
-                    variant="secondary"
-                    onPress={() => navigation.navigate("RoutineEditor", { groupType: "subjectgroup", groupId: g.id, title: g.nameBn })}
-                  />
-                  <Button
-                    title={STR.rtCover}
-                    variant="secondary"
-                    onPress={() => navigation.navigate("CoverManage", { groupType: "subjectgroup", groupId: g.id, title: g.nameBn })}
-                  />
-                </>
+              {canEdit ? (
+                <Button
+                  title={STR.rtEdit}
+                  variant="secondary"
+                  onPress={() => navigation.navigate("RoutineEditor", { groupType: "subjectgroup", groupId: g.id, title: g.nameBn })}
+                />
+              ) : null}
+              {canCover ? (
+                <Button
+                  title={STR.rtCover}
+                  variant="secondary"
+                  onPress={() => navigation.navigate("CoverManage", { groupType: "subjectgroup", groupId: g.id, title: g.nameBn })}
+                />
               ) : null}
             </View>
           </Card>

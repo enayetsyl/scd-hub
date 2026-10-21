@@ -49,6 +49,7 @@ import { friendlyError } from "../../lib/errors";
 import { useConfirm } from "../../state/ConfirmContext";
 import { space } from "../../theme/tokens";
 import { personName } from "../../lib/personName";
+import { useAuth } from "../../auth/AuthContext";
 
 type Props = NativeStackScreenProps<HrStackParamList, "LeaveAdmin">;
 
@@ -66,6 +67,7 @@ function fmtDate(iso: string | null): string {
 }
 
 export default function LeaveAdminScreen({ navigation }: Props): React.ReactElement {
+  const { can } = useAuth();
   const { confirmAction } = useConfirm();
   const [status, setStatus] = React.useState<string | null>("applied");
   const [busy, setBusy] = React.useState(false);
@@ -200,11 +202,13 @@ export default function LeaveAdminScreen({ navigation }: Props): React.ReactElem
     <Screen scroll>
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
         <H2>{STR.hrLeaveAdmin}</H2>
-        <Button
-          title={STR.hrNeedsCoverTitle}
-          variant="secondary"
-          onPress={() => navigation.navigate("NeedsCoverInbox")}
-        />
+        {can("cover:view_all") ? (
+          <Button
+            title={STR.hrNeedsCoverTitle}
+            variant="secondary"
+            onPress={() => navigation.navigate("NeedsCoverInbox")}
+          />
+        ) : null}
       </View>
 
       {ok ? <Notice message={ok} tone="ok" /> : null}
@@ -235,7 +239,9 @@ export default function LeaveAdminScreen({ navigation }: Props): React.ReactElem
           multiline
           autoCapitalize="sentences"
         />
-        <Button title={STR.stfRecordLeaveSubmit} onPress={recordOnBehalf} loading={busy} disabled={busy || !obValid} />
+        {can("leave:create") ? (
+          <Button title={STR.stfRecordLeaveSubmit} onPress={recordOnBehalf} loading={busy} disabled={busy || !obValid} />
+        ) : null}
       </Card>
 
       {/* Status filter */}
@@ -277,15 +283,21 @@ export default function LeaveAdminScreen({ navigation }: Props): React.ReactElem
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2) }}>
               {a.status === "applied" ? (
                 <>
-                  <Button title={STR.hrLeaveApprove} onPress={() => runDecide(a.id, "approve")} disabled={busy} />
-                  <Button title={STR.hrLeaveReject} variant="danger" onPress={() => runDecide(a.id, "reject")} disabled={busy} />
+                  {can("leave:approve") ? (
+                    <Button title={STR.hrLeaveApprove} onPress={() => runDecide(a.id, "approve")} disabled={busy} />
+                  ) : null}
+                  {can("leave:approve") ? (
+                    <Button title={STR.hrLeaveReject} variant="danger" onPress={() => runDecide(a.id, "reject")} disabled={busy} />
+                  ) : null}
                 </>
               ) : null}
-              <Button
-                title={STR.hrLeaveManageCover}
-                variant="secondary"
-                onPress={() => navigation.navigate("LeaveCover", { leaveApplicationId: a.id, title: leaveTypeLabel(a.leaveType), manage: true })}
-              />
+              {can("cover:view_all") ? (
+                <Button
+                  title={STR.hrLeaveManageCover}
+                  variant="secondary"
+                  onPress={() => navigation.navigate("LeaveCover", { leaveApplicationId: a.id, title: leaveTypeLabel(a.leaveType), manage: true })}
+                />
+              ) : null}
             </View>
           </Card>
         ))
@@ -307,7 +319,9 @@ export default function LeaveAdminScreen({ navigation }: Props): React.ReactElem
         <Field label={STR.hrEntAllowance} value={entAllowance} onChangeText={setEntAllowance} keyboardType="number-pad" placeholder="0" />
         <Field label={STR.hrEntCarried} value={entCarried} onChangeText={setEntCarried} keyboardType="number-pad" placeholder="0" />
         <Field label={STR.hrEntNote} value={entNote} onChangeText={setEntNote} autoCapitalize="sentences" />
-        <Button title={STR.hrEntSave} onPress={saveEntitlement} loading={busy} disabled={busy || !entValid} />
+        {can("leave:settings") ? (
+          <Button title={STR.hrEntSave} onPress={saveEntitlement} loading={busy} disabled={busy || !entValid} />
+        ) : null}
       </Card>
     </Screen>
   );

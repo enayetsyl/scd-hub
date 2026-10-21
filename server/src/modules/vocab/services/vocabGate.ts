@@ -3,29 +3,48 @@
  * (no `builder` import here) so the DENY paths are unit-testable with mocks — closing
  * the VC-1 coordinator follow-up (resolver gate deny-paths previously uncovered).
  *
- * Both gates compose EXISTING scope/permission machinery — no new role/permission:
- *   - `assertCanManageClassLevel` (word bank, §7 J1): tracker:write + a teaching/proxy
- *     scope at the class level (Principal unscoped; Office/Guardian denied).
- *   - `assertCanOperateVocab` (test build/mark, §5): the assigned tester OR an active
- *     proxy on the section (Principal unscoped; Office/Guardian denied).
+ * Both gates compose the `vocab_test:*` catalogue actions (PM, D-#790–#801) with the
+ * existing scope machinery:
+ *   - `assertCanManageClassLevel` (word bank, §7 J1): `vocab_test:edit` + a teaching/
+ *     proxy scope at the class level.
+ *   - `assertCanOperateVocab` (test build/mark, §5): `vocab_test:create` /
+ *     `vocab_test:enter_results` + the assigned tester OR an active proxy on the section.
+ * `vocab_test:edit_all` (PRINCIPAL-DEFAULT) lifts the scope/designation — it replaces the
+ * old `role === "PRINCIPAL"` bypass. The old Office hard-deny is replaced too: Office
+ * holds none of these actions by default (so it is still refused), and passes only once
+ * granted the action AND holding the scope/designation, or `edit_all`. A GUARDIAN login
+ * is always refused (plane check).
  *
- * The coarse `tracker:write` RBAC is enforced by the resolver's authScopes; these add
- * the row/class-level reach on top (ADR-004 posture).
+ * The resolver's authScopes name the action or `edit_all`; these add the row/class-level
+ * reach on top (ADR-004 posture).
  */
+import { callerHasPermission, type Permission } from "@scd/shared";
 import type { AppContext } from "../../../context";
 import { ForbiddenError, resolveTeacherScopes } from "../../../middleware/authz";
 import { Class } from "../../foundation/models/Class";
 import { currentAssignment, isVocabOperator } from "./VocabAssignmentService";
 
+/** `vocab_test:edit_all` — run any শাখা's vocab (was the PRINCIPAL role bypass). */
+function holdsEditAll(ctx: AppContext): boolean {
+  return !!ctx.auth && callerHasPermission(ctx.auth, "vocab_test:edit_all");
+}
+
+/** The action half of a designation gate: a staff login holding `action`. */
+function assertHoldsAction(ctx: AppContext, action: Permission): void {
+  if (!ctx.auth || ctx.auth.role === "GUARDIAN" || !callerHasPermission(ctx.auth, action)) {
+    throw new ForbiddenError();
+  }
+}
+
 /**
- * Assert the caller may MANAGE the word bank for `classLevel`. Principal → unscoped;
- * Teacher → must hold a teaching/proxy scope on a section whose Class sits at that
- * level; Office/Guardian → denied (no tracker:write reach). Mirrors `assertCanWrite`
- * but resolves to a CLASS LEVEL (the bank's grain is per program × classLevel).
+ * Assert the caller may MANAGE the word bank for `classLevel`. `vocab_test:edit_all` →
+ * unscoped; otherwise `vocab_test:edit` + a teaching/proxy scope on a section whose
+ * Class sits at that level. Mirrors `assertCanWrite` but resolves to a CLASS LEVEL (the
+ * bank's grain is per program × classLevel).
  */
 export async function assertCanManageClassLevel(ctx: AppContext, classLevel: number): Promise<void> {
-  if (ctx.auth?.role === "PRINCIPAL") return;
-  if (ctx.auth?.role !== "TEACHER") throw new ForbiddenError();
+  if (holdsEditAll(ctx)) return;
+  assertHoldsAction(ctx, "vocab_test:edit");
   const scopes = await resolveTeacherScopes(ctx);
   const writableClassIds = scopes
     .filter((s) => s.kind === "teaching" || s.kind === "proxy")
@@ -40,21 +59,22 @@ export async function assertCanManageClassLevel(ctx: AppContext, classLevel: num
 }
 
 /**
- * Assert the caller may BUILD/MARK a test for (section × program × week). Principal →
- * unscoped; Teacher → the current assigned tester OR an active proxy on the section
- * (§5); Office/Guardian → denied.
+ * Assert the caller may BUILD (`vocab_test:create`) or MARK (`vocab_test:enter_results`)
+ * a test for (section × program × week). `vocab_test:edit_all` → unscoped; otherwise the
+ * action + the current assigned tester OR an active proxy on the section (§5).
  */
 export async function assertCanOperateVocab(
   ctx: AppContext,
   sectionId: string,
   program: string,
   weekOf: Date,
+  action: Extract<Permission, "vocab_test:create" | "vocab_test:enter_results"> = "vocab_test:create",
 ): Promise<void> {
-  if (ctx.auth?.role === "PRINCIPAL") return;
-  if (ctx.auth?.role !== "TEACHER") throw new ForbiddenError();
+  if (holdsEditAll(ctx)) return;
+  assertHoldsAction(ctx, action);
   const current = await currentAssignment(sectionId, program, weekOf);
   const scopes = await resolveTeacherScopes(ctx);
-  if (!isVocabOperator(ctx.auth.userId, sectionId, current, scopes)) {
+  if (!isVocabOperator(ctx.auth!.userId, sectionId, current, scopes)) {
     throw new ForbiddenError("Only the assigned vocab tester or a covering teacher may build/mark this test");
   }
 }

@@ -14,7 +14,8 @@
  */
 import { Types } from "mongoose";
 import { User } from "../../foundation/models/User";
-import { actingAsFilter, isAdminStaff } from "../../foundation/services/RoleScope";
+import { callerHasPermission } from "@scd/shared";
+import { holderIdsOf } from "../../access-control/services/holders";
 import type { AuthPayload } from "../../../context";
 import { resolveDayType } from "../../routine/calendar";
 import { dateKeyOf, parseDateKey } from "../../attendance/dates";
@@ -66,13 +67,21 @@ export async function digestExtraRecipientIds(): Promise<string[]> {
   return active.map((u) => u._id.toString());
 }
 
-/** Everyone the digest goes to: every Principal + Office user, plus the extras. */
+/**
+ * Everyone the digest goes to (PM §5.5, D-#796): every active staff login holding
+ * `work_claim:view_all` WITHOUT needing the digest designation — i.e. also holding its
+ * waiver `admin_dashboard:view` (Principal + Office by default, the old P/O role list) —
+ * plus the Principal-named extras (the digest_recipient designation).
+ */
 export async function digestRecipientIds(): Promise<string[]> {
-  const staff = (await User.find(actingAsFilter(["PRINCIPAL", "OFFICE"]))
-    .select("_id")
-    .lean()) as unknown as Array<{ _id: Types.ObjectId }>;
+  const [watchers, waived] = await Promise.all([
+    holderIdsOf("work_claim:view_all"),
+    holderIdsOf("admin_dashboard:view"),
+  ]);
+  const waivedSet = new Set(waived);
+  const staff = watchers.filter((id) => waivedSet.has(id));
   const extras = await digestExtraRecipientIds();
-  return [...new Set([...staff.map((u) => u._id.toString()), ...extras])];
+  return [...new Set([...staff, ...extras])];
 }
 
 /** Is this user one of the Principal-named extra recipients? */
@@ -81,13 +90,19 @@ export async function isDigestRecipient(userId: string): Promise<boolean> {
 }
 
 /**
- * May this caller watch the claim queue (read it, nudge from it)? Principal/Office
- * always; anyone else only while the Principal has them on the 10:30 digest — the
- * digest links to the queue, so a reader who could not open it would be stranded.
+ * May this caller watch the claim queue (read it — `work_claim:view_all`) or nudge from
+ * it (`work_claim:remind`)? PM (D-#790..#801): the caller must hold the action AND be on
+ * the 10:30 digest (the digest_recipient designation — the digest links to the queue, so
+ * a reader who could not open it would be stranded), unless they hold the waiver
+ * `admin_dashboard:view` (Principal/Office by default — the old isAdminStaff leg).
  */
-export async function canWatchClaims(ctx: { auth?: AuthPayload | null }): Promise<boolean> {
+export async function canWatchClaims(
+  ctx: { auth?: AuthPayload | null },
+  action: "work_claim:view_all" | "work_claim:remind" = "work_claim:view_all",
+): Promise<boolean> {
   if (!ctx.auth) return false;
-  if (isAdminStaff(ctx.auth)) return true;
+  if (!callerHasPermission(ctx.auth, action)) return false;
+  if (callerHasPermission(ctx.auth, "admin_dashboard:view")) return true;
   return isDigestRecipient(ctx.auth.userId);
 }
 

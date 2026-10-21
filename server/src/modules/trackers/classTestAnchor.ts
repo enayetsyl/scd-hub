@@ -21,11 +21,15 @@
  * Roles on a group exam mirror `assertCanWrite` exactly, so the two anchors behave
  * the same way for the same person: PRINCIPAL passes, OFFICE/GUARDIAN are refused
  * a write, and a TEACHER passes only if the routine names them on that group.
+ * PM (D-#793): the class-test resolvers pass `CLASS_TEST_REACH`, so the role bypass
+ * becomes `class_test:view_all` / `class_test:edit_all` and OFFICE passes a write only
+ * with scope or `edit_all`.
  */
 import { Types } from "mongoose";
 import type { AppContext } from "../../context";
-import { assertCanRead, assertCanWrite, ForbiddenError } from "../../middleware/authz";
+import { assertCanRead, assertCanWrite, ForbiddenError, type Reach } from "../../middleware/authz";
 import { isAdminStaff } from "../foundation/services/RoleScope";
+import { callerHasPermission, type Permission } from "@scd/shared";
 import { Student } from "../foundation/models/Student";
 import { Section } from "../foundation/models/Section";
 import { SectionMerge } from "../foundation/models/SectionMerge";
@@ -35,6 +39,34 @@ import { SubjectGroupMembership } from "../routine/models/SubjectGroupMembership
 import { Subject } from "../foundation/models/Subject";
 import { teachesSectionSubject, teachesSubjectGroup } from "./subjectTeacher";
 import type { DelegatedAction } from "@scd/shared";
+
+/** PM reach for the class-test feature (docs/prd-permission-matrix.md §5.4, D-#793):
+ *  `class_test:view_all` replaces the isAdminStaff read bypass, `class_test:edit_all`
+ *  the PRINCIPAL-pass / OFFICE-refuse write bypass. Callers outside the class-test
+ *  feature (archive) pass no reach and keep the pre-matrix role behaviour exactly. */
+export const CLASS_TEST_REACH: Reach = {
+  viewAll: "class_test:view_all",
+  editAll: "class_test:edit_all",
+};
+
+/** True when a staff caller holds the named reach action (never a guardian). */
+function holdsReach(ctx: AppContext, perm: Permission | undefined): boolean {
+  return !!perm && !!ctx.auth && ctx.auth.role !== "GUARDIAN" && callerHasPermission(ctx.auth, perm);
+}
+
+/** The write bypass on the paths that do not reach `assertCanWrite` (a group exam, a
+ *  routine-only subject) — the same rule `assertCanWrite` applies: with `reach.editAll`
+ *  the action decides (nobody refused by role alone); without it PRINCIPAL passes and
+ *  OFFICE/GUARDIAN are refused, as before. */
+function anchorWriteBypass(ctx: AppContext, reach: Reach | undefined): "pass" | "refuse" | "scopes" {
+  if (reach?.editAll) {
+    if (holdsReach(ctx, reach.editAll)) return "pass";
+    return !ctx.auth || ctx.auth.role === "GUARDIAN" ? "refuse" : "scopes";
+  }
+  if (ctx.auth?.role === "PRINCIPAL") return "pass";
+  if (ctx.auth?.role === "OFFICE" || ctx.auth?.role === "GUARDIAN") return "refuse";
+  return "scopes";
+}
 
 /** The anchor fields every caller already has on a `ClassTestShape`. */
 export interface AnchoredTest {
@@ -94,10 +126,11 @@ async function withEmptiedSectionOwner(
   }
 }
 
-/** Staff READ scope on the exam's unit. Principal/Office are unscoped, as before. */
-export async function assertAnchorRead(ctx: AppContext, test: AnchoredTest): Promise<void> {
+/** Staff READ scope on the exam's unit. Principal/Office are unscoped, as before —
+ *  or, with `reach.viewAll`, whoever holds that action. */
+export async function assertAnchorRead(ctx: AppContext, test: AnchoredTest, reach?: Reach): Promise<void> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  if (isAdminStaff(ctx.auth)) return;
+  if (reach?.viewAll ? holdsReach(ctx, reach.viewAll) : isAdminStaff(ctx.auth)) return;
   if (test.subjectGroupId) {
     if (!(await teachesSubjectGroup(ctx.auth.userId, test.subjectGroupId, test.subject))) {
       throw new ForbiddenError();
@@ -109,7 +142,7 @@ export async function assertAnchorRead(ctx: AppContext, test: AnchoredTest): Pro
   const userId = ctx.auth.userId;
   await withEmptiedSectionOwner(ctx, test, async () => {
     try {
-      await assertCanRead(ctx, sectionId, classId);
+      await assertCanRead(ctx, sectionId, classId, undefined, reach);
     } catch (err) {
       // A routine-only subject binds no grant, so its teacher may hold none on this
       // section at all (Sajeda, Nursery Arabic) — the routine answers instead.
@@ -147,11 +180,13 @@ export async function assertAnchorWrite(
   test: AnchoredTest,
   subjectId: () => Promise<string | null>,
   action?: DelegatedAction,
+  reach?: Reach,
 ): Promise<void> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
   if (test.subjectGroupId) {
-    if (ctx.auth.role === "PRINCIPAL") return;
-    if (ctx.auth.role === "OFFICE" || ctx.auth.role === "GUARDIAN") throw new ForbiddenError();
+    const bypass = anchorWriteBypass(ctx, reach);
+    if (bypass === "pass") return;
+    if (bypass === "refuse") throw new ForbiddenError();
     if (!(await teachesSubjectGroup(ctx.auth.userId, test.subjectGroupId, test.subject))) {
       throw new ForbiddenError();
     }
@@ -164,15 +199,16 @@ export async function assertAnchorWrite(
     // No `Subject` row ⇒ the routine slot bound no teaching grant, so the grant
     // check has nothing to match. Same roles as `assertCanWrite`; a teacher passes
     // only if the routine names them on this section × subject.
-    if (ctx.auth.role === "PRINCIPAL") return;
-    if (ctx.auth.role === "OFFICE" || ctx.auth.role === "GUARDIAN") throw new ForbiddenError();
+    const bypass = anchorWriteBypass(ctx, reach);
+    if (bypass === "pass") return;
+    if (bypass === "refuse") throw new ForbiddenError();
     const userId = ctx.auth.userId;
     await withEmptiedSectionOwner(ctx, test, async () => {
       if (!(await teachesSectionSubject(userId, sectionId, test.subject))) throw new ForbiddenError();
     });
     return;
   }
-  await withEmptiedSectionOwner(ctx, test, () => assertCanWrite(ctx, sectionId, subject, action));
+  await withEmptiedSectionOwner(ctx, test, () => assertCanWrite(ctx, sectionId, subject, action, reach));
 }
 
 /**

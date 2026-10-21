@@ -120,7 +120,7 @@ builder.mutationField("createParentMeeting", (t) =>
     description:
       "Create a parents' meeting in draft (academicYear defaults to the current; instanceLabel + date + " +
       "slotMinutes + dayStartMinutes + optional class/section scope). Requires roster:manage. Audited.",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "parents_meeting:create" },
     args: {
       instanceLabel: t.arg.string({ required: true }),
       meetingDate: t.arg.string({ required: true }),
@@ -153,7 +153,7 @@ builder.mutationField("generateMeetingSlots", (t) =>
       "Generate per-family slots for a draft meeting (siblings collapsed by Student.phone, default order " +
       "class→section→name, sequential timed slots). WHOLESALE / idempotent — re-running rebuilds the set. " +
       "Requires roster:manage. Audited.",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "parents_meeting:create" },
     args: { meetingId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
@@ -168,7 +168,7 @@ builder.mutationField("setMeetingSlotOnCall", (t) =>
     description:
       "Flag (or unflag) a family's slot as On-Call (no fixed time) and re-time the remaining slots. " +
       "Requires roster:manage. Returns the meeting's slots in order. Audited.",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "parents_meeting:create" },
     args: {
       slotId: t.arg.string({ required: true }),
       onCall: t.arg.boolean({ required: true }),
@@ -186,7 +186,7 @@ builder.mutationField("reorderMeetingSlots", (t) =>
     description:
       "Reorder a draft meeting's slots (the new order drives the slot times). The list must be exactly the " +
       "meeting's slots. Requires roster:manage. Returns the slots in the new order. Audited.",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "parents_meeting:create" },
     args: {
       meetingId: t.arg.string({ required: true }),
       slotIds: t.arg.stringList({ required: true }),
@@ -214,7 +214,7 @@ builder.mutationField("setMeetingBreaks", (t) =>
     description:
       "Replace a draft meeting's clock-time breaks (overlaps merge) and re-time its slots so none runs " +
       "into a break. Requires roster:manage. Audited.",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "parents_meeting:create" },
     args: {
       meetingId: t.arg.string({ required: true }),
       breaks: t.arg({ type: [MeetingBreakInput], required: true }),
@@ -234,7 +234,7 @@ builder.queryField("parentMeetings", (t) =>
   t.field({
     type: [ParentMeetingRef],
     description: "List parents' meetings (optionally by academic year), newest first. Requires roster:manage.",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "parents_meeting:view" },
     args: { academicYearId: t.arg.string({ required: false }) },
     resolve: async (_root, args) => listParentMeetings(args.academicYearId ?? undefined),
   }),
@@ -244,7 +244,7 @@ builder.queryField("parentMeeting", (t) =>
   t.field({
     type: ParentMeetingRef,
     description: "One parents' meeting by id. Requires roster:manage.",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "parents_meeting:view" },
     args: { meetingId: t.arg.string({ required: true }) },
     resolve: async (_root, args) => getParentMeeting(args.meetingId),
   }),
@@ -254,7 +254,7 @@ builder.queryField("parentMeetingSlots", (t) =>
   t.field({
     type: [ParentMeetingSlotRef],
     description: "A meeting's per-family slots in display order. Requires roster:manage.",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "parents_meeting:view" },
     args: { meetingId: t.arg.string({ required: true }) },
     resolve: async (_root, args) => listMeetingSlots(args.meetingId),
   }),

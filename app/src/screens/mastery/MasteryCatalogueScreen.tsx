@@ -37,7 +37,7 @@ export default function MasteryCatalogueScreen({ route }: Props): React.ReactEle
   const { classToken, subject } = route.params;
   const toast = useToast();
   const { can } = useAuth();
-  const canManage = can("mastery:manage");
+  const canManage = can("mastery:settings");
   const [showRetired, setShowRetired] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const [label, setLabel] = useState("");

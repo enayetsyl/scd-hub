@@ -7,14 +7,40 @@ import {
   type StaffProfileInput,
 } from "../services/StaffProfileService";
 import { expectedGraphQLError } from "../../../observability/sentry";
+import { callerHasPermission, type Permission } from "@scd/shared";
+import type { AppContext } from "../../../context";
 import type { Types } from "mongoose";
 
 /**
  * Staff-record reads (prd-hr H1). The whole `staff` query is gated on
- * `staff:manage` (Principal/Office) — a TEACHER, even with supervisory scope,
- * cannot read staff rows at all (default-deny row-scope, H1.4/H7.1). Identity
- * plane only; no corpus path (ADR-005 firewall unaffected).
+ * `staff_records:view` (Principal/Office; was staff:manage) — a TEACHER, even with
+ * supervisory scope, cannot read staff rows at all (default-deny row-scope, H1.4/H7.1).
+ * Identity plane only; no corpus path (ADR-005 firewall unaffected).
+ *
+ * SENSITIVE FIELDS (PM §5.8, F-24; owner ruling 2026-10-20, PRD §12 Q6): the pay fields
+ * resolve to null unless the caller holds `payroll:view`; NID and the bank fields resolve
+ * to null unless the caller holds `staff_records:view_sensitive`. Office and the
+ * Principal hold both by default, so a default login sees exactly what it saw before.
  */
+const PAY_FIELDS_PERMISSION: Permission = "payroll:view";
+const SENSITIVE_FIELDS_PERMISSION: Permission = "staff_records:view_sensitive";
+/** NID + every bank/disbursement detail — the `staff_records:view_sensitive` set. */
+export const STAFF_SENSITIVE_FIELDS = [
+  "nid",
+  "bankAccount",
+  "bankAccountName",
+  "bankName",
+  "bankBranch",
+  "routingNo",
+] as const;
+
+function callerMay(ctx: AppContext, perm: Permission): boolean {
+  return ctx.auth !== null && callerHasPermission(ctx.auth, perm);
+}
+/** A field gate: the value for a holder of `perm`, null for everyone else. */
+function gated<T>(ctx: AppContext, perm: Permission, value: T | null | undefined): T | null {
+  return callerMay(ctx, perm) ? (value ?? null) : null;
+}
 type StaffShape = Pick<
   IStaffProfile,
   | "schoolId" | "name" | "nameBn" | "category" | "designation" | "weeklyHours"
@@ -40,7 +66,7 @@ StaffRef.implement({
     category: t.exposeString("category"),
     designation: t.string({ nullable: true, resolve: (s) => s.designation ?? null }),
     weeklyHours: t.string({ nullable: true, resolve: (s) => s.weeklyHours ?? null }),
-    routingNo: t.string({ nullable: true, resolve: (s) => s.routingNo ?? null }),
+    routingNo: t.string({ nullable: true, resolve: (s, _a, ctx) => gated(ctx, SENSITIVE_FIELDS_PERMISSION, s.routingNo) }),
     employmentType: t.exposeString("employmentType"),
     employmentStatus: t.exposeString("employmentStatus"),
     joiningDate: t.string({ nullable: true, resolve: (s) => iso(s.joiningDate) }),
@@ -64,14 +90,15 @@ StaffRef.implement({
     email: t.string({ nullable: true, resolve: (s) => s.email ?? null }),
     presentAddress: t.string({ nullable: true, resolve: (s) => s.presentAddress ?? null }),
     permanentAddress: t.string({ nullable: true, resolve: (s) => s.permanentAddress ?? null }),
-    // sensitive rows (H1.4) — only reachable through this staff:manage-gated type
-    nid: t.string({ nullable: true, resolve: (s) => s.nid ?? null }),
-    bankAccount: t.string({ nullable: true, resolve: (s) => s.bankAccount ?? null }),
-    bankAccountName: t.string({ nullable: true, resolve: (s) => s.bankAccountName ?? null }),
-    bankName: t.string({ nullable: true, resolve: (s) => s.bankName ?? null }),
-    bankBranch: t.string({ nullable: true, resolve: (s) => s.bankBranch ?? null }),
-    monthlySalary: t.float({ nullable: true, resolve: (s) => s.monthlySalary ?? null }),
-    paymentMethod: t.string({ nullable: true, resolve: (s) => s.paymentMethod ?? null }),
+    // sensitive rows (H1.4) — field-gated (PM §5.8): NID + bank need
+    // staff_records:view_sensitive, pay needs payroll:view; null otherwise.
+    nid: t.string({ nullable: true, resolve: (s, _a, ctx) => gated(ctx, SENSITIVE_FIELDS_PERMISSION, s.nid) }),
+    bankAccount: t.string({ nullable: true, resolve: (s, _a, ctx) => gated(ctx, SENSITIVE_FIELDS_PERMISSION, s.bankAccount) }),
+    bankAccountName: t.string({ nullable: true, resolve: (s, _a, ctx) => gated(ctx, SENSITIVE_FIELDS_PERMISSION, s.bankAccountName) }),
+    bankName: t.string({ nullable: true, resolve: (s, _a, ctx) => gated(ctx, SENSITIVE_FIELDS_PERMISSION, s.bankName) }),
+    bankBranch: t.string({ nullable: true, resolve: (s, _a, ctx) => gated(ctx, SENSITIVE_FIELDS_PERMISSION, s.bankBranch) }),
+    monthlySalary: t.float({ nullable: true, resolve: (s, _a, ctx) => gated(ctx, PAY_FIELDS_PERMISSION, s.monthlySalary) }),
+    paymentMethod: t.string({ nullable: true, resolve: (s, _a, ctx) => gated(ctx, PAY_FIELDS_PERMISSION, s.paymentMethod) }),
     active: t.exposeBoolean("active"),
   }),
 });
@@ -79,7 +106,8 @@ StaffRef.implement({
 builder.queryField("staff", (t) =>
   t.field({
     type: [StaffRef],
-    authScopes: { hasPermission: "staff:manage" },
+    description: "Active staff records (prd-hr H1). Requires staff_records:view; pay/NID/bank fields are field-gated.",
+    authScopes: { hasPermission: "staff_records:view" },
     args: {
       category: t.arg.string({ required: false }),
     },
@@ -104,8 +132,8 @@ builder.queryField("staffProfile", (t) =>
   t.field({
     type: StaffRef,
     nullable: true,
-    description: "One staff record by id, live (SH-9). Requires staff:manage.",
-    authScopes: { hasPermission: "staff:manage" },
+    description: "One staff record by id, live (SH-9). Requires staff_records:view; same field gates as `staff`.",
+    authScopes: { hasPermission: "staff_records:view" },
     args: { staffProfileId: t.arg.string({ required: true }) },
     resolve: async (_root, args) => StaffProfile.findById(args.staffProfileId).lean(),
   }),
@@ -166,6 +194,16 @@ const StaffProfileInputRef = builder.inputType("StaffProfileInput", {
   }),
 });
 
+/** A caller who cannot see NID/bank (field-gated to null) re-saves a form with those
+ *  fields blank; an empty string CLEARS, so drop the blanks rather than wipe the record.
+ *  A non-empty value is still written (staff_records:edit covers the bank account). */
+function maskedInput(ctx: AppContext, input: StaffProfileInput): StaffProfileInput {
+  if (callerMay(ctx, SENSITIVE_FIELDS_PERMISSION)) return input;
+  const out: Record<string, unknown> = { ...input };
+  for (const k of STAFF_SENSITIVE_FIELDS) if (out[k] === "") delete out[k];
+  return out as StaffProfileInput;
+}
+
 /** A refusal the Principal can act on, not a stack trace. */
 function mapStaffError(err: unknown): never {
   if (err instanceof StaffProfileError) throw expectedGraphQLError(err.message);
@@ -177,8 +215,8 @@ builder.mutationField("createStaffProfile", (t) =>
     type: StaffRef,
     description:
       "Create an HR staff record (D-#526). Staff ID, name, category, employment type and " +
-      "status are required; everything else is optional. Requires staff:manage.",
-    authScopes: { hasPermission: "staff:manage" },
+      "status are required; everything else is optional. Requires staff_records:create.",
+    authScopes: { hasPermission: "staff_records:create" },
     args: { input: t.arg({ type: StaffProfileInputRef, required: true }) },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw expectedGraphQLError("Unauthenticated");
@@ -199,8 +237,10 @@ builder.mutationField("updateStaffProfile", (t) =>
     type: StaffRef,
     description:
       "Edit an HR staff record (D-#526). PATCH semantics — an omitted field is left alone, " +
-      "so a partial form cannot blank what it does not show. Requires staff:manage.",
-    authScopes: { hasPermission: "staff:manage" },
+      "so a partial form cannot blank what it does not show. Requires staff_records:edit. " +
+      "Without staff_records:view_sensitive an EMPTY NID/bank value is ignored — the caller " +
+      "was shown null, so a re-saved form must not clear what it never displayed.",
+    authScopes: { hasPermission: "staff_records:edit" },
     args: {
       staffProfileId: t.arg.string({ required: true }),
       input: t.arg({ type: StaffProfileInputRef, required: true }),
@@ -208,7 +248,7 @@ builder.mutationField("updateStaffProfile", (t) =>
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw expectedGraphQLError("Unauthenticated");
       try {
-        return (await updateStaffProfile(args.staffProfileId, args.input as StaffProfileInput, {
+        return (await updateStaffProfile(args.staffProfileId, maskedInput(ctx, args.input as StaffProfileInput), {
           userId: ctx.auth.userId,
           role: ctx.auth.role,
         })) as unknown as StaffShape;

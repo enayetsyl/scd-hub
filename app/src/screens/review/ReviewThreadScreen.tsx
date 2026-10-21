@@ -91,8 +91,8 @@ function RoundCard({ r }: { r: ReviewAssignmentT }): React.ReactElement {
 export default function ReviewThreadScreen({ route }: Props): React.ReactElement {
   const { artifactId } = route.params;
   const { role, can } = useAuth();
-  const canAssign = can("content:assign_review");
-  const canApprove = can("content:promote_gold");
+  const canAssign = can("plan_review:assign");
+  const canApprove = can("plan_review:approve");
 
   const [{ data: tData, fetching, error }, refetchThread] = useQuery({
     query: PLAN_REVIEW_THREAD,

@@ -30,10 +30,12 @@ type Nav = NativeStackNavigationProp<CommentsStackParamList>;
 export default function CommentsHomeScreen(): React.ReactElement {
   const nav = useNavigation<Nav>();
   const { role, can } = useAuth();
-  const canComments = can("tracker:read");
-  const canMeetings = can("roster:manage");
+  // PM: the daily-comment desk (write + my list) is student_comments:create — the
+  // teacher's flow, so Office's hub is unchanged; meetings = parents_meeting:view.
+  const canComments = can("student_comments:create");
+  const canMeetings = can("parents_meeting:view");
   // Principal/Office review + release comments to guardians (D-#264).
-  const canReview = can("roster:manage");
+  const canReview = can("student_comments:review");
 
   const [page, setPage] = usePageState();
   const [mineQ, refetchMine] = useQuery({

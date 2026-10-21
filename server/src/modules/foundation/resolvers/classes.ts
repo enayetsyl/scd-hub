@@ -122,7 +122,7 @@ builder.queryField("academicYears", (t) =>
 builder.mutationField("createAcademicYear", (t) =>
   t.field({
     type: AcademicYearRef,
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "classes_sections:settings" },
     description: "Create a new academic year; makeCurrent rolls the school over to it.",
     args: {
       label: t.arg.string({ required: true }),
@@ -158,7 +158,7 @@ builder.mutationField("createAcademicYear", (t) =>
 builder.mutationField("setCurrentAcademicYear", (t) =>
   t.field({
     type: AcademicYearRef,
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "classes_sections:settings" },
     description: "Mark one academic year current (clears the flag on all others).",
     args: { academicYearId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
@@ -181,7 +181,7 @@ builder.mutationField("setCurrentAcademicYear", (t) =>
 );
 
 // --- Section merge / split (D-#62) — Principal/Office combine a class's gender ---
-// sections into one (students moved) and reverse it later. `roster:manage`.
+// sections into one (students moved) and reverse it later. `classes_sections:merge_split`.
 
 const SectionMergeRef = builder
   .objectRef<{ id: string; classId: string; combinedSectionId: string; sourceSectionIds: string[] }>("SectionMerge")
@@ -198,7 +198,7 @@ const SectionMergeRef = builder
 builder.queryField("activeSectionMerges", (t) =>
   t.field({
     type: [SectionMergeRef],
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "classes_sections:merge_split" },
     resolve: async () => activeSectionMerges(),
   }),
 );
@@ -217,7 +217,7 @@ const SectionMergeResultRef = builder
 builder.mutationField("mergeSections", (t) =>
   t.field({
     type: SectionMergeResultRef,
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "classes_sections:merge_split" },
     args: {
       classId: t.arg.string({ required: true }),
       combinedNameBn: t.arg.string({ required: false }),
@@ -240,7 +240,7 @@ const SectionSplitResultRef = builder
 builder.mutationField("splitSections", (t) =>
   t.field({
     type: SectionSplitResultRef,
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "classes_sections:merge_split" },
     args: { classId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => splitSections(args.classId, ctx.auth!.userId),
   }),
@@ -249,7 +249,7 @@ builder.mutationField("splitSections", (t) =>
 builder.mutationField("createClass", (t) =>
   t.field({
     type: ClassRef,
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "classes_sections:create" },
     args: {
       level: t.arg.int({ required: true }),
       nameBn: t.arg.string({ required: true }),
@@ -274,14 +274,14 @@ builder.mutationField("createClass", (t) =>
 
 /**
  * Assign (or clear) a section's CLASS TEACHER — the section's daily coordinator
- * (D-#42, the general `assertIsClassTeacher` gate). Admin action (roster:manage =
+ * (D-#42, the general `assertIsClassTeacher` gate). Admin action (teaching_assignments:assign_class_teacher;
  * Principal/Office). Pass `userId: null` to clear. The assignee must be a TEACHER.
  * The change is appended to the immutable assignment log (CT-1/CT1.6).
  */
 builder.mutationField("assignClassTeacher", (t) =>
   t.field({
     type: SectionRef,
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "teaching_assignments:assign_class_teacher" },
     args: {
       sectionId: t.arg.string({ required: true }),
       userId: t.arg.string({ required: false }),
@@ -294,18 +294,18 @@ builder.mutationField("assignClassTeacher", (t) =>
 /**
  * Add (or remove) a SUPPORT / assistant teacher on a section (CT1.5, D-#53). The
  * class teacher stays the single coordinator gate; support is a recorded helper.
- * Admin action (roster:manage); the assignee must be a TEACHER. Logged (CT1.6).
+ * Admin action (teaching_assignments:assign_class_teacher); the assignee must be a TEACHER. Logged (CT1.6).
  */
 /**
  * Assign (or clear) a section's HOMEWORK-CONFIRM DELEGATE — a teacher who may ALSO
  * reconcile/confirm the section's daily homework, in addition to the class teacher and
- * the Principal (assertCanConfirmHomework). Admin action (roster:manage); the assignee
+ * the Principal (assertCanConfirmHomework). Admin action (teaching_assignments:assign_homework_checker); the assignee
  * must be a TEACHER. Pass `userId: null` to clear. Logged to the assignment history.
  */
 builder.mutationField("assignHomeworkConfirmer", (t) =>
   t.field({
     type: SectionRef,
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "teaching_assignments:assign_homework_checker" },
     args: {
       sectionId: t.arg.string({ required: true }),
       userId: t.arg.string({ required: false }),
@@ -332,7 +332,7 @@ builder.queryField("homeworkSupervisors", (t) =>
   t.field({
     type: [HomeworkSupervisorRef],
     description: "Active school-wide homework supervisors (may reconcile any section).",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "teaching_assignments:assign_homework_checker" },
     resolve: async () => svcHomeworkSupervisors() as unknown as Promise<SupervisorShape[]>,
   }),
 );
@@ -340,13 +340,13 @@ builder.queryField("homeworkSupervisors", (t) =>
 /**
  * Toggle a teacher's SCHOOL-WIDE homework-supervisor flag. A supervisor may reconcile/
  * confirm ANY section's daily homework, in addition to the class teacher + per-section
- * delegate + Principal. Admin action (roster:manage); the target must be a TEACHER.
+ * delegate + Principal. Admin action (teaching_assignments:assign_homework_checker); the target must be a TEACHER.
  * Takes effect immediately (read live, not JWT-baked). Returns the updated supervisor list.
  */
 builder.mutationField("setHomeworkSupervisor", (t) =>
   t.field({
     type: [HomeworkSupervisorRef],
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "teaching_assignments:assign_homework_checker" },
     args: {
       userId: t.arg.string({ required: true }),
       on: t.arg.boolean({ required: true }),
@@ -361,7 +361,7 @@ builder.mutationField("setHomeworkSupervisor", (t) =>
 builder.mutationField("setSupportTeacher", (t) =>
   t.field({
     type: SectionRef,
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "teaching_assignments:assign_class_teacher" },
     args: {
       sectionId: t.arg.string({ required: true }),
       userId: t.arg.string({ required: true }),
@@ -398,7 +398,7 @@ const ClassTeacherAssignmentRef = builder.objectRef<IClassTeacherAssignment>("Cl
 builder.queryField("classTeacherHistory", (t) =>
   t.field({
     type: [ClassTeacherAssignmentRef],
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "teaching_assignments:assign_class_teacher" },
     args: { sectionId: t.arg.string({ required: true }) },
     resolve: async (_root, args) => classTeacherHistory(args.sectionId),
   }),

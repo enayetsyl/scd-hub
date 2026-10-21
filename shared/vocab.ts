@@ -3878,15 +3878,47 @@ export const STORAGE_BOX_STATUS_LABELS_EN: Record<StorageBoxStatus, string> = {
 // resolvers (ADR-004), where row-scope (R-AC3) and the plane boundary (ADR-005)
 // are layered on top of the grant check below. Hardcoded now, data-drivable later
 // (no permission-admin UI in the build).
+// PM (D-#790–#801): the per-feature action catalogue lives in ./permissionCatalogue and
+// role templates become editable for TEACHER/OFFICE (RoleTemplateOverrides below).
+
+import {
+  CATALOGUE_PERMISSIONS,
+  LEGACY_PERMISSION_EXPANSION,
+  catalogueAction,
+  type CataloguePermission,
+} from "./permissionCatalogue";
+// Named (not `export *`): the verifier loads this file through tsx's CommonJS bridge,
+// whose static export scan cannot see star re-exports.
+export {
+  FEATURE_GROUPS,
+  FEATURE_GROUP_LABELS,
+  FEATURE_CATALOGUE,
+  CATALOGUE_PERMISSIONS,
+  catalogueAction,
+  LEGACY_PERMISSION_EXPANSION,
+  DELEGATED_ACTION_PERMISSIONS,
+} from "./permissionCatalogue";
+export type {
+  FeatureGroup,
+  CatalogueFlag,
+  CatalogueAction,
+  CatalogueFeature,
+  FeatureKey,
+  CataloguePermission,
+} from "./permissionCatalogue";
 
 /** Authenticated roles. Student is DATA-ONLY (no login, minor-safety posture,
  *  REQ §2) and therefore is not a role here. */
 export const ROLES = ["PRINCIPAL", "TEACHER", "OFFICE", "GUARDIAN"] as const;
 export type Role = (typeof ROLES)[number];
 
-/** Action-level permissions, `resource:action`. Default-deny: a permission not
- *  listed for a role is denied. */
-export const PERMISSIONS = [
+/** The PRE-matrix permissions, `resource:action` (PM transition, D-#790–#801). Every gate
+ *  still naming one of these resolves EXACTLY as before the matrix: from `ROLE_PERMISSIONS`
+ *  below plus the per-user arrays. The server sweep moves each gate onto its catalogue
+ *  action (`./permissionCatalogue`); when no gate names a legacy permission any more, this
+ *  list survives only to read per-user arrays stored under old names and to answer old
+ *  app bundles (`LEGACY_PERMISSION_EXPANSION`). Default-deny. */
+export const LEGACY_PERMISSIONS = [
   // content (publisher seam + lifecycle)
   "content:read",
   "content:import",        // the import gate; granted to Principal + Office
@@ -4005,11 +4037,30 @@ export const PERMISSIONS = [
   // guardian portal (ACTIVE since GP-1, D-#68)
   "guardian:read_child",   // reads linked children's permitted operational slices
 ] as const;
-export type Permission = (typeof PERMISSIONS)[number];
+export type LegacyPermission = (typeof LEGACY_PERMISSIONS)[number];
+
+/** Every permission a gate may name: the legacy names (during the PM transition) plus every
+ *  catalogued `feature:action`. Three strings are both (`attendance:mark`, `payroll:approve`,
+ *  `mastery:approve`)
+ *  and mean the same thing in both. */
+export type Permission = LegacyPermission | CataloguePermission;
+const LEGACY_PERMISSION_SET: ReadonlySet<string> = new Set<string>(LEGACY_PERMISSIONS);
+export const PERMISSIONS: readonly Permission[] = [
+  ...LEGACY_PERMISSIONS,
+  ...CATALOGUE_PERMISSIONS.filter((p) => !LEGACY_PERMISSION_SET.has(p)),
+];
+export function isLegacyPermission(p: string): p is LegacyPermission {
+  return LEGACY_PERMISSION_SET.has(p);
+}
+const CATALOGUE_PERMISSION_SET: ReadonlySet<string> = new Set<string>(CATALOGUE_PERMISSIONS);
+export function isCataloguePermission(p: string): p is CataloguePermission {
+  return CATALOGUE_PERMISSION_SET.has(p);
+}
 
 /** Which permissions are active in the first-priority build vs. land with a later
- *  module. The feature-flag/resolver layer gates "pipeline" perms off until shipped. */
-export const PERMISSION_BUILD_STATUS: Record<Permission, "build" | "pipeline"> = {
+ *  module. The feature-flag/resolver layer gates "pipeline" perms off until shipped.
+ *  Catalogue actions are all `build` (PERMISSION_BUILD_STATUS below). */
+const LEGACY_PERMISSION_BUILD_STATUS: Record<LegacyPermission, "build" | "pipeline"> = {
   "content:read": "build",
   "content:import": "build",
   "content:assign_review": "build",
@@ -4075,8 +4126,15 @@ export const PERMISSION_BUILD_STATUS: Record<Permission, "build" | "pipeline"> =
   "guardian:read_child": "build", // ACTIVATED by Guardian Portal GP-1 (D-#68; was pipeline since Slice 0)
 };
 
-/** ROLE → granted permissions. DEFAULT-DENY: anything not listed is denied. */
-export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
+export const PERMISSION_BUILD_STATUS: Record<Permission, "build" | "pipeline"> = {
+  ...LEGACY_PERMISSION_BUILD_STATUS,
+  ...(Object.fromEntries(CATALOGUE_PERMISSIONS.map((p) => [p, "build"])) as Record<CataloguePermission, "build">),
+};
+
+/** ROLE → granted LEGACY permissions. DEFAULT-DENY: anything not listed is denied.
+ *  The catalogue actions each role holds by default come from `FEATURE_CATALOGUE`
+ *  (`CATALOGUE_ROLE_DEFAULTS` below); `permissionsForRole` returns both. */
+export const ROLE_PERMISSIONS: Record<Role, readonly LegacyPermission[]> = {
   // Super-admin: full operational visibility + user/role management. Reads (never
   // edits) the audit log. No guardian:read_child — Principal sees children via
   // unscoped staff views (tracker:read), not the guardian-scoped resolver path.
@@ -4199,24 +4257,102 @@ export const SCOPE_RULES: Record<Role, string> = {
 
 // --- B.1 HELPERS (pure; resolver middleware composes row-scope on top) --------
 
+// --- B.0 PERMISSION MATRIX: catalogue role defaults + editable role templates (PM) ---
+
+/** Roles whose template the Principal may edit (D-#791). PRINCIPAL always holds every
+ *  catalogued action; GUARDIAN holds none of them (guardian plane, `guardian:read_child`). */
+export const EDITABLE_ROLES = ["TEACHER", "OFFICE"] as const satisfies readonly Role[];
+export type EditableRole = (typeof EDITABLE_ROLES)[number];
+
+/** A catalogue action no editor can switch: LOCKED (Principal-only) and SELF (everyone,
+ *  for themselves). */
+export function isSwitchablePermission(perm: CataloguePermission): boolean {
+  const flags = catalogueAction(perm).flags;
+  return !flags.includes("LOCKED") && !flags.includes("SELF");
+}
+const SELF_PERMISSIONS: readonly CataloguePermission[] = CATALOGUE_PERMISSIONS.filter((p) =>
+  catalogueAction(p).flags.includes("SELF"),
+);
+
+/** The code default — what each role holds before any Principal edit (ship day = today). */
+export const CATALOGUE_ROLE_DEFAULTS: Record<Role, readonly CataloguePermission[]> = {
+  PRINCIPAL: CATALOGUE_PERMISSIONS,
+  TEACHER: CATALOGUE_PERMISSIONS.filter((p) => catalogueAction(p).teacher || catalogueAction(p).flags.includes("SELF")),
+  OFFICE: CATALOGUE_PERMISSIONS.filter((p) => catalogueAction(p).office || catalogueAction(p).flags.includes("SELF")),
+  GUARDIAN: [],
+};
+
+/** A role edit, stored as a DELTA on the code default (D-#791): a later release's new
+ *  default action still reaches the role unless the Principal turned that action off. */
+export interface RoleTemplateDelta {
+  granted: readonly string[];
+  revoked: readonly string[];
+}
+export type RoleTemplateOverrides = Partial<Record<EditableRole, RoleTemplateDelta>>;
+
+// The server keeps the stored overrides in an in-process cache and publishes them here
+// (D-#792); the app never sets this — it reads its own permissions from `myPermissions`.
+let currentRoleTemplateOverrides: RoleTemplateOverrides = {};
+export function setRoleTemplateOverrides(overrides: RoleTemplateOverrides): void {
+  currentRoleTemplateOverrides = overrides;
+}
+export function getRoleTemplateOverrides(): RoleTemplateOverrides {
+  return currentRoleTemplateOverrides;
+}
+
+/** A role's catalogue actions after the Principal's edits. Unswitchable actions ignore the
+ *  delta: a LOCKED action never reaches TEACHER/OFFICE, a SELF action is never removed. */
+export function roleTemplatePermissions(
+  role: Role,
+  overrides: RoleTemplateOverrides = currentRoleTemplateOverrides,
+): Set<CataloguePermission> {
+  const out = new Set<CataloguePermission>(CATALOGUE_ROLE_DEFAULTS[role] ?? []);
+  if (role !== "TEACHER" && role !== "OFFICE") return out;
+  const delta = overrides[role];
+  if (!delta) return out;
+  for (const p of delta.granted) if (isCataloguePermission(p) && isSwitchablePermission(p)) out.add(p);
+  for (const p of delta.revoked) if (isCataloguePermission(p) && isSwitchablePermission(p)) out.delete(p);
+  return out;
+}
+
+/** Legacy name → its catalogue actions for this holder (`adminTemplate` rows only when the
+ *  holder also acts as PRINCIPAL or OFFICE — the isAdminStaff half they covered). */
+export function expandLegacyPermission(perm: string, adminTemplate: boolean): readonly CataloguePermission[] {
+  const e = LEGACY_PERMISSION_EXPANSION[perm];
+  if (!e) return [];
+  return adminTemplate && e.adminTemplate ? [...e.any, ...e.adminTemplate] : e.any;
+}
+
 const ROLE_PERMISSION_SETS: Record<Role, ReadonlySet<Permission>> = ROLES.reduce(
   (acc, r) => {
-    acc[r] = new Set<Permission>(ROLE_PERMISSIONS[r]);
+    acc[r] = new Set<Permission>([...ROLE_PERMISSIONS[r], ...CATALOGUE_ROLE_DEFAULTS[r]]);
     return acc;
   },
   {} as Record<Role, ReadonlySet<Permission>>,
 );
 
-/** Default-deny grant check. Row-scope and plane boundary are enforced separately
- *  in the resolver (ADR-004); a true here means "the role may attempt the action",
- *  not "for this row". */
+/** Default-deny grant check against the CODE default (legacy role map ∪ catalogue default;
+ *  no Principal edits). Row-scope and plane boundary are enforced separately in the
+ *  resolver (ADR-004); a true here means "the role may attempt the action", not "for this
+ *  row". Per-caller gates use `callerHasPermission`, which also applies role edits. */
 export function roleHasPermission(role: Role, perm: Permission): boolean {
   return ROLE_PERMISSION_SETS[role]?.has(perm) ?? false;
 }
 
-/** All permissions a role holds (read-only copy). */
+/** All permissions a role holds by CODE default (legacy ∪ catalogue; read-only copy). */
 export function permissionsForRole(role: Role): readonly Permission[] {
-  return ROLE_PERMISSIONS[role] ?? [];
+  return [...(ROLE_PERMISSION_SETS[role] ?? [])];
+}
+
+/** All permissions a role template holds NOW: the legacy role map ∪ the catalogue default
+ *  with the Principal's role edits applied. */
+export function templatePermissions(
+  role: Role,
+  overrides: RoleTemplateOverrides = currentRoleTemplateOverrides,
+): Set<Permission> {
+  const out = new Set<Permission>(ROLE_PERMISSIONS[role] ?? []);
+  for (const p of roleTemplatePermissions(role, overrides)) out.add(p);
+  return out;
 }
 
 /** True if the permission is active in the current build (not a deferred/pipeline grant). */
@@ -4235,13 +4371,21 @@ export function isPermissionActive(perm: Permission): boolean {
 /** PRINCIPAL-only, ungrantable permissions. They reach ONLY a PRINCIPAL login — a
  *  write-time rejection is the first gate, this set's subtraction the structural backstop
  *  (Fork-2 ruling, D-#193). Adding/removing one here is a deliberate, verifier-checked act. */
-export const RESERVED_PERMISSIONS = [
+export const LEGACY_RESERVED_PERMISSIONS = [
   "payroll:approve",
   "performance:signoff",
   "chat:oversee",
   "template:manage",
   "access:manage",
-] as const satisfies readonly Permission[];
+] as const satisfies readonly LegacyPermission[];
+/** Legacy five + every LOCKED catalogue action (D-#797; the same posture under the new
+ *  names). Verifier-pinned. */
+export const RESERVED_PERMISSIONS: readonly Permission[] = [
+  ...LEGACY_RESERVED_PERMISSIONS,
+  ...CATALOGUE_PERMISSIONS.filter(
+    (p) => catalogueAction(p).flags.includes("LOCKED") && !(LEGACY_RESERVED_PERMISSIONS as readonly string[]).includes(p),
+  ),
+];
 
 /** Roles a Principal may add to a staff User as an ADDITIONAL template (the deputy /
  *  acting-office config). PRINCIPAL is provisioned, not template-assigned; GUARDIAN is a
@@ -4264,13 +4408,40 @@ export interface AccessProfile {
  *    if role !== PRINCIPAL: eff = eff − RESERVED_PERMISSIONS   // structural backstop
  *  `roleHasPermission` / `permissionsForRole` are RETAINED — templates still consume them;
  *  they are simply no longer the per-caller authority. */
-export function effectivePermissions(profile: AccessProfile): Set<Permission> {
+//
+// PM (D-#790–#801) extends it without changing a legacy name's answer:
+//    base   = ⋃ templatePermissions(t)          // legacy role map ∪ catalogue role set (with edits)
+//    + catalogue expansion of every per-user grant stored under a LEGACY name
+//    − catalogue expansion of every per-user LEGACY revoke, except actions that a legacy
+//      permission the person still holds also covers (a revoke never strips more than it did)
+//    then catalogue-name grants (+) and revokes (−), SELF actions back on for staff, and the
+//    reserved backstop. Legacy names come out exactly as before.
+export function effectivePermissions(
+  profile: AccessProfile,
+  overrides: RoleTemplateOverrides = currentRoleTemplateOverrides,
+): Set<Permission> {
+  const templates = templatesOf(profile);
+  const adminTemplate = templates.includes("PRINCIPAL") || templates.includes("OFFICE");
+  const granted = profile.grantedPermissions ?? [];
+  const revoked = new Set<string>(profile.revokedPermissions ?? []);
+
   const eff = new Set<Permission>();
-  for (const t of [profile.role, ...(profile.additionalTemplates ?? [])]) {
-    for (const p of permissionsForRole(t)) eff.add(p);
+  for (const t of templates) for (const p of templatePermissions(t, overrides)) eff.add(p);
+  for (const p of granted) {
+    eff.add(p);
+    if (isLegacyPermission(p)) for (const x of expandLegacyPermission(p, adminTemplate)) eff.add(x);
   }
-  for (const p of profile.grantedPermissions ?? []) eff.add(p);
-  for (const p of profile.revokedPermissions ?? []) eff.delete(p); // revoke wins over template + grant
+  const legacyRevoked = [...revoked].filter(isLegacyPermission);
+  if (legacyRevoked.length > 0) {
+    const stillHeld = new Set<CataloguePermission>();
+    for (const t of templates)
+      for (const l of ROLE_PERMISSIONS[t] ?? []) if (!revoked.has(l)) for (const x of expandLegacyPermission(l, adminTemplate)) stillHeld.add(x);
+    for (const l of granted)
+      if (isLegacyPermission(l) && !revoked.has(l)) for (const x of expandLegacyPermission(l, adminTemplate)) stillHeld.add(x);
+    for (const l of legacyRevoked) for (const x of expandLegacyPermission(l, adminTemplate)) if (!stillHeld.has(x)) eff.delete(x);
+  }
+  for (const p of revoked) eff.delete(p as Permission); // revoke wins over template + grant
+  if (profile.role !== "GUARDIAN") for (const p of SELF_PERMISSIONS) eff.add(p);
   if (profile.role !== "PRINCIPAL") {
     for (const p of RESERVED_PERMISSIONS) eff.delete(p); // reserved perms reach ONLY a PRINCIPAL login
   }
@@ -4279,8 +4450,12 @@ export function effectivePermissions(profile: AccessProfile): Set<Permission> {
 
 /** Per-caller grant check (the `roleHasPermission` replacement at every gate). True =
  *  the caller's effective set holds the permission AND it is active in this build. */
-export function callerHasPermission(profile: AccessProfile, perm: Permission): boolean {
-  return effectivePermissions(profile).has(perm) && isPermissionActive(perm);
+export function callerHasPermission(
+  profile: AccessProfile,
+  perm: Permission,
+  overrides: RoleTemplateOverrides = currentRoleTemplateOverrides,
+): boolean {
+  return effectivePermissions(profile, overrides).has(perm) && isPermissionActive(perm);
 }
 
 /** The templates a login holds: its primary role first, then any additional ones, deduped.
@@ -4320,9 +4495,9 @@ export function viewModePermissions(
 ): Set<Permission> {
   const all = new Set(effective);
   if (!mode || templates.length < 2 || !templates.includes(mode)) return all;
-  const inMode = new Set<Permission>(permissionsForRole(mode));
+  const inMode = templatePermissions(mode);
   const fromAnyTemplate = new Set<Permission>();
-  for (const t of templates) for (const p of permissionsForRole(t)) fromAnyTemplate.add(p);
+  for (const t of templates) for (const p of templatePermissions(t)) fromAnyTemplate.add(p);
   const out = new Set<Permission>();
   for (const p of all) {
     // Keep it if THIS hat carries it, or if no hat does (⇒ it is a per-user grant).
@@ -4340,7 +4515,7 @@ export interface PermissionLabel {
   desc: string;
 }
 
-export const PERMISSION_LABELS_BN: Record<Permission, PermissionLabel> = {
+const LEGACY_PERMISSION_LABELS_BN: Record<LegacyPermission, PermissionLabel> = {
   "content:read": { name: "কনটেন্ট দেখা", desc: "প্রকাশিত পাঠ ও কনটেন্ট পড়া" },
   "content:import": { name: "কনটেন্ট ইম্পোর্ট", desc: "নতুন কনটেন্ট আমদানি ও প্রকাশ" },
   "content:assign_review": { name: "রিভিউ বরাদ্দ", desc: "প্ল্যান-রিভিউ রাউন্ড বরাদ্দ ও ইনবক্স" },
@@ -4409,7 +4584,7 @@ export const PERMISSION_LABELS_BN: Record<Permission, PermissionLabel> = {
   "guardian:read_child": { name: "সন্তানের তথ্য দেখা (অভিভাবক প্লেন)", desc: "অভিভাবক প্লেন — স্টাফকে দেওয়া যায় না" },
 };
 
-export const PERMISSION_LABELS_EN: Record<Permission, PermissionLabel> = {
+const LEGACY_PERMISSION_LABELS_EN: Record<LegacyPermission, PermissionLabel> = {
   "content:read": { name: "Read content", desc: "View published lessons and content" },
   "content:import": { name: "Import content", desc: "Import and publish new content" },
   "content:assign_review": { name: "Assign review", desc: "Assign plan-review rounds + inbox" },
@@ -4476,6 +4651,26 @@ export const PERMISSION_LABELS_EN: Record<Permission, PermissionLabel> = {
   "mastery:approve": { name: "Approve extra classes", desc: "Approve extra-class and re-test proposals for weak sections" },
   "tasks:assign": { name: "Assign tasks", desc: "Put work on other people's boards, read every board and the load grid" },
   "guardian:read_child": { name: "Read child (guardian plane)", desc: "Guardian plane — not grantable to staff" },
+};
+
+// Catalogue actions take their labels from FEATURE_CATALOGUE (bn/en name; the one-line
+// desc is English-only for now). A string that is both legacy and catalogued takes the
+// catalogue label so the editor reads one way.
+const catalogueLabels = (lang: "bn" | "en"): Record<CataloguePermission, PermissionLabel> =>
+  Object.fromEntries(
+    CATALOGUE_PERMISSIONS.map((p) => {
+      const a = catalogueAction(p);
+      return [p, { name: lang === "bn" ? a.bn : a.en, desc: a.desc }];
+    }),
+  ) as Record<CataloguePermission, PermissionLabel>;
+
+export const PERMISSION_LABELS_BN: Record<Permission, PermissionLabel> = {
+  ...LEGACY_PERMISSION_LABELS_BN,
+  ...catalogueLabels("bn"),
+};
+export const PERMISSION_LABELS_EN: Record<Permission, PermissionLabel> = {
+  ...LEGACY_PERMISSION_LABELS_EN,
+  ...catalogueLabels("en"),
 };
 
 // --- B.4 DELEGATED SCOPE ACTIONS (the EXTENT axis, ACS-1 — D-#484..#489) ------

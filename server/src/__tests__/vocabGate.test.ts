@@ -4,6 +4,7 @@
  * the authz scope resolver, the Class model, and the assignment model.
  */
 import mongoose from "mongoose";
+import { setRoleTemplateOverrides } from "@scd/shared";
 
 const oid = () => new mongoose.Types.ObjectId();
 
@@ -49,7 +50,7 @@ describe("assertCanManageClassLevel", () => {
     expect(mockResolveScopes).not.toHaveBeenCalled();
   });
 
-  test("OFFICE is denied (no tracker:write reach)", async () => {
+  test("OFFICE is denied (no vocab_test:edit by default)", async () => {
     await expect(assertCanManageClassLevel(ctxOf("OFFICE"), 3)).rejects.toThrow(FakeForbidden);
   });
 
@@ -110,5 +111,51 @@ describe("assertCanOperateVocab", () => {
     mockAssignFindOne.mockResolvedValue({ assignedTeacherId: { toString: () => oid().toString() } });
     mockResolveScopes.mockResolvedValue([{ kind: "teaching", sectionId: section }]);
     await expect(assertCanOperateVocab(ctxOf("TEACHER", me), section, "ENGLISH", new Date())).rejects.toThrow(/assigned vocab tester/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PM (D-#790–#801): vocab_test:edit_all replaces the PRINCIPAL bypass; the actions
+// replace the TEACHER-only test (Office passes only with the action + designation).
+// ---------------------------------------------------------------------------
+
+describe("PM — vocab_test actions + edit_all reach", () => {
+  const section = oid().toString();
+  afterEach(() => setRoleTemplateOverrides({}));
+
+  test("OFFICE given vocab_test:edit_all runs any section's vocab, no scope lookup", async () => {
+    setRoleTemplateOverrides({ OFFICE: { granted: ["vocab_test:edit_all"], revoked: [] } });
+    await expect(assertCanOperateVocab(ctxOf("OFFICE"), section, "ENGLISH", new Date())).resolves.toBeUndefined();
+    await expect(assertCanManageClassLevel(ctxOf("OFFICE"), 3)).resolves.toBeUndefined();
+    expect(mockResolveScopes).not.toHaveBeenCalled();
+  });
+
+  test("OFFICE granted vocab_test:enter_results passes only as the assigned tester", async () => {
+    setRoleTemplateOverrides({ OFFICE: { granted: ["vocab_test:enter_results"], revoked: [] } });
+    const me = oid().toString();
+    mockAssignFindOne.mockResolvedValue({ assignedTeacherId: { toString: () => me } });
+    mockResolveScopes.mockResolvedValue([]);
+    await expect(
+      assertCanOperateVocab(ctxOf("OFFICE", me), section, "ENGLISH", new Date(), "vocab_test:enter_results"),
+    ).resolves.toBeUndefined();
+    // …but not for building a test (vocab_test:create still off for Office).
+    await expect(assertCanOperateVocab(ctxOf("OFFICE", me), section, "ENGLISH", new Date())).rejects.toThrow(FakeForbidden);
+  });
+
+  test("an assigned TEACHER whose role lost vocab_test:enter_results is refused marking", async () => {
+    setRoleTemplateOverrides({ TEACHER: { granted: [], revoked: ["vocab_test:enter_results"] } });
+    const me = oid().toString();
+    mockAssignFindOne.mockResolvedValue({ assignedTeacherId: { toString: () => me } });
+    mockResolveScopes.mockResolvedValue([]);
+    await expect(
+      assertCanOperateVocab(ctxOf("TEACHER", me), section, "ENGLISH", new Date(), "vocab_test:enter_results"),
+    ).rejects.toThrow(FakeForbidden);
+    await expect(assertCanOperateVocab(ctxOf("TEACHER", me), section, "ENGLISH", new Date())).resolves.toBeUndefined();
+  });
+
+  test("a TEACHER granted vocab_test:edit_all per person manages any class level", async () => {
+    const ctx = { auth: { role: "TEACHER", userId: oid().toString(), grantedPermissions: ["vocab_test:edit_all"] } } as never;
+    await expect(assertCanManageClassLevel(ctx, 4)).resolves.toBeUndefined();
+    expect(mockResolveScopes).not.toHaveBeenCalled();
   });
 });

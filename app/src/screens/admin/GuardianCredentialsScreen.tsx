@@ -3,7 +3,9 @@
  * keyed by the family's contact phone. Both parents use it; it reaches every
  * sibling on that phone. The generated password is shown ONCE; the Principal/
  * Office shares it via WhatsApp (wa.me deep link — manual send, ADR-003).
- * Gated on guardian:link (Principal + Office).
+ * PM: the family-login list rides `guardians:reset_password`; the manual link /
+ * unlink rides `guardians:link` (its guardian picker reads `guardians:view_all`).
+ * Principal + Office by default; the server re-gates every call.
  */
 import React, { useMemo, useState } from "react";
 import { Linking, Pressable, View } from "react-native";
@@ -28,14 +30,21 @@ import { AcademicYearSelect } from "../../components/selects";
 import { STR } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useConfirm } from "../../state/ConfirmContext";
+import { useAuth } from "../../auth/AuthContext";
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<AdminStackParamList, "GuardianCredentials">;
 
 export default function GuardianCredentialsScreen(_props: Props): React.ReactElement {
   const { confirmAction } = useConfirm();
-  const [{ data, fetching, error }, refetch] = useQuery({ query: GUARDIAN_CREDENTIAL_CANDIDATES });
-  const [{ data: guardiansData }, refetchGuardians] = useQuery({ query: GUARDIANS_QUERY });
+  const { can } = useAuth();
+  const canReset = can("guardians:reset_password");
+  const canLink = can("guardians:link");
+  const [{ data, fetching, error }, refetch] = useQuery({ query: GUARDIAN_CREDENTIAL_CANDIDATES, pause: !canReset });
+  const [{ data: guardiansData }, refetchGuardians] = useQuery({
+    query: GUARDIANS_QUERY,
+    pause: !canLink || !can("guardians:view_all"),
+  });
   const [, linkGuardian] = useMutation(LINK_GUARDIAN_TO_STUDENT);
   const [, unlinkGuardian] = useMutation(UNLINK_GUARDIAN_FROM_STUDENT);
   const [, provision] = useMutation(PROVISION_GUARDIAN_LOGIN);
@@ -228,6 +237,8 @@ export default function GuardianCredentialsScreen(_props: Props): React.ReactEle
 
       {err ? <Notice message={err} tone="danger" /> : null}
 
+      {canReset ? (
+        <>
       <Divider />
 
       <Field
@@ -302,7 +313,11 @@ export default function GuardianCredentialsScreen(_props: Props): React.ReactEle
           );
         })
       )}
+        </>
+      ) : null}
 
+      {canLink ? (
+        <>
       <Divider />
 
       <H2>{STR.guardianLinkTitle}</H2>
@@ -362,6 +377,8 @@ export default function GuardianCredentialsScreen(_props: Props): React.ReactEle
         loading={linkBusy}
         disabled={linkBusy || !manualGuardianId || !manualStudentId || !manualRelation.trim()}
       />
+        </>
+      ) : null}
 
       <Divider />
 
@@ -384,6 +401,7 @@ export default function GuardianCredentialsScreen(_props: Props): React.ReactEle
               </View>
               <View style={{ alignItems: "flex-end" }}>
                 <Badge text={g.loginEnabled ? STR.loginExistsLabel : STR.noLoginLabel} tone={g.loginEnabled ? "ok" : "muted"} />
+                {canLink ? (
                 <Button
                   title={unlinkBusyId === `${g.id}:${selectedStudent.id}` ? STR.saving : STR.unlinkGuardian}
                   onPress={() => onUnlink(selectedStudent.id, g.id)}
@@ -391,6 +409,7 @@ export default function GuardianCredentialsScreen(_props: Props): React.ReactEle
                   variant="danger"
                   style={{ marginTop: space(1) }}
                 />
+                ) : null}
               </View>
             </View>
           ))}

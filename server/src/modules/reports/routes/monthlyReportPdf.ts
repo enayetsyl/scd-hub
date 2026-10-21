@@ -17,8 +17,8 @@ import { Router as createRouter } from "express";
 import { HW_SUBJECT_LABELS_BN, type Role } from "@scd/shared";
 import { buildContext } from "../../../context";
 import { markdownToPdf } from "../../../routes/pdfRenderer";
-import { allowedSubjectCodesForSection, assertGuardianOfStudent } from "../../../middleware/authz";
-import { assertReportRead } from "../../trackers/resolvers/classTestSummary";
+import { assertGuardianOfStudent } from "../../../middleware/authz";
+import { assertMonthlyReportRead, monthlyReportSubjects, seesMonthlyFees } from "../services/monthlyReportGate";
 import { Class } from "../../foundation/models/Class";
 import { Section } from "../../foundation/models/Section";
 import { Student } from "../../foundation/models/Student";
@@ -58,15 +58,11 @@ monthlyReportPdfRouter.get("/:reportId", async (req: Request, res: Response) => 
         return;
       }
     } else {
-      await assertReportRead(ctx, report.sectionId.toString());
-      const allowed = await allowedSubjectCodesForSection(
-        ctx,
-        report.sectionId.toString(),
-        report.classId.toString(),
-        { classTeacherOversight: true },
-      );
-      subjects = allowed === null ? null : [...allowed];
-      isTeacher = role === "TEACHER";
+      // PM: monthly_report:view (+ view_all lifts the scope); the fee block shows with
+      // monthly_report:view_all (was "hidden for primary role TEACHER").
+      await assertMonthlyReportRead(ctx, report.sectionId.toString());
+      subjects = await monthlyReportSubjects(ctx, report.sectionId.toString(), report.classId.toString());
+      isTeacher = !seesMonthlyFees(ctx);
     }
   } catch (err) {
     res.status(403).json({ error: err instanceof Error ? err.message : "Forbidden" });

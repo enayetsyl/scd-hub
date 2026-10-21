@@ -16,7 +16,7 @@
  * same `startTime`/`endTime` strings — but a card that only trusted the server's phase
  * would freeze on whatever period was running when the screen was opened.
  *
- * Gated by the caller on `routine:manage` (Principal/Office), the same permission the
+ * Gated by the caller on `routine:view_all` (Principal/Office by default), the same permission the
  * server requires — and by PERMISSION rather than role, so a per-user grant (D-#193)
  * reaches it on the teacher Today screen too (the D-#668 lesson).
  */

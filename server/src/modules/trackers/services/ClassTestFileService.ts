@@ -20,15 +20,21 @@ import { ForbiddenError, assertGuardianOfStudent } from "../../../middleware/aut
 import type { IStoredFile } from "../../platform/models/StoredFile";
 import { ClassTestQuestionRequest } from "../models/ClassTestQuestionRequest";
 import { scriptOwnerOf } from "./ClassTestScriptService";
-import { assertAnchorRead } from "../classTestAnchor";
+import { assertAnchorRead, CLASS_TEST_REACH } from "../classTestAnchor";
 
 export async function assertClassTestFileReadAccess(
   ctx: AppContext,
   file: IStoredFile,
 ): Promise<void> {
   if (!ctx.auth) throw new ForbiddenError("অনুমতি নেই");
-  // Office / Principal — the print operator opens the paper to print it.
-  if (callerHasPermission(ctx.auth, "roster:manage")) return;
+  // The print operator opens the paper to print it; the paper office prepares it
+  // (PM: printing:process / class_test_question:prepare — Office/Principal by default).
+  if (
+    callerHasPermission(ctx.auth, "printing:process") ||
+    callerHasPermission(ctx.auth, "class_test_question:prepare")
+  ) {
+    return;
+  }
   // The requesting teacher — the file's own uploader.
   if (file.uploadedBy.toString() === ctx.auth.userId) return;
   // CT-question flow (owner ask 2026-07-20): the OFFICE uploaded the paper; the
@@ -50,16 +56,17 @@ export async function assertClassTestFileReadAccess(
  * The read gate for a scanned script page (`classtest_script`, CS-2/CS-3,
  * docs/prd-ct-scripts.md §6, D-#716). The file carries no back-reference, so the
  * gate reverse-resolves the owning ClassTestResult row:
- *  - Office / Principal (`roster:manage`) — always (they scan and tag it).
+ *  - The scan desk (`class_test_script:scan`, Office/Principal) — always (they scan and tag it).
  *  - An untagged upload has no owner — Office only.
  *  - A GUARDIAN — only of that row's student, and only while the result AND the
  *    scripts are published (an unpublish of either hides it at once).
- *  - Other staff (`tracker:read`) — the test's read scope (`assertAnchorRead`).
+ *  - Other staff (`class_test_script:view`) — the test's read scope (`assertAnchorRead`).
  * A lookup failure denies (fail-closed).
  */
 export async function assertClassTestScriptReadAccess(ctx: AppContext, file: IStoredFile): Promise<void> {
   if (!ctx.auth) throw new ForbiddenError("অনুমতি নেই");
-  if (callerHasPermission(ctx.auth, "roster:manage")) return;
+  // The scan desk (PM: class_test_script:scan) reads every page, tagged or not.
+  if (callerHasPermission(ctx.auth, "class_test_script:scan")) return;
   const owner = await scriptOwnerOf(file._id);
   if (!owner) throw new ForbiddenError("অনুমতি নেই");
   if (ctx.auth.role === "GUARDIAN") {
@@ -70,7 +77,7 @@ export async function assertClassTestScriptReadAccess(ctx: AppContext, file: ISt
     }
     return;
   }
-  if (callerHasPermission(ctx.auth, "tracker:read")) {
+  if (callerHasPermission(ctx.auth, "class_test_script:view")) {
     const t = owner.test;
     await assertAnchorRead(ctx, {
       sectionId: t.sectionId ? t.sectionId.toString() : null,
@@ -78,7 +85,7 @@ export async function assertClassTestScriptReadAccess(ctx: AppContext, file: ISt
       subjectGroupId: t.subjectGroupId ? t.subjectGroupId.toString() : null,
       subject: t.subject,
       teacherId: (t.teacherId ?? t.requestedBy)?.toString() ?? null,
-    });
+    }, CLASS_TEST_REACH);
     return;
   }
   throw new ForbiddenError("অনুমতি নেই");

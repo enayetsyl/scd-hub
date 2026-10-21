@@ -37,7 +37,7 @@ export default function TeachingNoteCommentThread({
   onCountsChanged,
 }: Props): React.ReactElement {
   const { user, can } = useAuth();
-  const canManage = can("roster:manage");
+  const canManage = can("teaching_notes:review"); // PM: address / delete any (was roster:manage)
   const mayAddress = canManage || uploaderIsMe;
 
   const [q, refetch] = useQuery({ query: TEACHING_NOTE_COMMENTS, variables: { noteId } });

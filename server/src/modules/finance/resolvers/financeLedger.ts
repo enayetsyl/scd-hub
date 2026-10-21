@@ -73,8 +73,8 @@ builder.mutationField("setLedgerOpeningBalance", (t) =>
     description:
       "Declare a ledger's opening balance (effective-dated, append-only — a correction is " +
       "a NEW row). amount is SIGNED (a control ledger may be negative). effectiveDate is ISO. " +
-      "Requires finance:manage. Audited FINANCE_OPENING_BALANCE_SET.",
-    authScopes: { hasPermission: "finance:manage" },
+      "Requires finance_ledger:settings. Audited FINANCE_OPENING_BALANCE_SET.",
+    authScopes: { hasPermission: "finance_ledger:settings" },
     args: {
       ledger: t.arg.string({ required: true }),
       amount: t.arg.float({ required: true }),
@@ -101,8 +101,8 @@ builder.queryField("ledgerOpeningBalances", (t) =>
     type: [LedgerBalanceRef],
     description:
       "The authoritative opening per ledger as of `asOf` (default today), for all 5 ledgers " +
-      "(un-declared ⇒ 0), derived. Requires finance:manage.",
-    authScopes: { hasPermission: "finance:manage" },
+      "(un-declared ⇒ 0), derived. Requires finance_ledger:view.",
+    authScopes: { hasPermission: "finance_ledger:view" },
     args: { asOf: t.arg.string({ required: false }) },
     resolve: (_root, args) => openingBalances(args.asOf ? parseDate(args.asOf) : undefined),
   }),
@@ -113,8 +113,8 @@ builder.queryField("ledgerBalanceAsOf", (t) =>
     type: LedgerBalanceRef,
     description:
       "One ledger's balance as of `asOf` (default today) — the seam FIN-2 extends with " +
-      "Σ(postings). FIN-1 returns the authoritative opening. Requires finance:manage.",
-    authScopes: { hasPermission: "finance:manage" },
+      "Σ(postings). FIN-1 returns the authoritative opening. Requires finance_ledger:view.",
+    authScopes: { hasPermission: "finance_ledger:view" },
     args: {
       ledger: t.arg.string({ required: true }),
       asOf: t.arg.string({ required: false }),

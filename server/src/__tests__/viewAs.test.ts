@@ -17,7 +17,7 @@ import {
   ASSIGNABLE_TEMPLATES,
   PERMISSIONS,
   RESERVED_PERMISSIONS,
-  roleHasPermission,
+  roleHasPermission, setRoleTemplateOverrides,
   type Role,
 } from "@scd/shared";
 
@@ -190,6 +190,30 @@ describe("G3 — the gate is the `user:view_as` permission, read from the databa
     withCaller({ ...principalDoc, revokedPermissions: ["user:view_as"] });
     await expect(start()).rejects.toThrow(/অনুমতি আপনার নেই/);
     expect(mockWriteAudit).not.toHaveBeenCalled();
+  });
+
+  // PM: the DB re-read now asks for `view_as:open`; a legacy `user:view_as` grant (above)
+  // still reaches it through the read-time expansion, and the new name works directly.
+  test("an OFFICE account GRANTED view_as:open (the catalogue name) may start a session", async () => {
+    withCaller({ ...officeDoc, grantedPermissions: ["view_as:open"] });
+    const res = await start({ callerUserId: OFFICE.toString() });
+    expect(res.userId).toBe(TEACHER.toString());
+  });
+
+  test("a REVOKED view_as:open beats the PRINCIPAL template", async () => {
+    withCaller({ ...principalDoc, revokedPermissions: ["view_as:open"] });
+    await expect(start()).rejects.toThrow(/অনুমতি আপনার নেই/);
+  });
+
+  test("a Principal role edit granting view_as:open to OFFICE opens it to a plain Office login", async () => {
+    setRoleTemplateOverrides({ OFFICE: { granted: ["view_as:open"], revoked: [] } });
+    try {
+      withCaller(officeDoc);
+      const res = await start({ callerUserId: OFFICE.toString() });
+      expect(res.userId).toBe(TEACHER.toString());
+    } finally {
+      setRoleTemplateOverrides({});
+    }
   });
 
   test("the token's own claims cannot gate the mint — only the database row can", async () => {

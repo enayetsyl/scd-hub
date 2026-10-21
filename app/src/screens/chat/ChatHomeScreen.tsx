@@ -61,9 +61,9 @@ function ConversationRow({
 export default function ChatHomeScreen({ navigation }: Props): React.ReactElement {
   const { user, role, can } = useAuth();
   const myUserId = user?.id ?? "";
-  const canManage = can("chat:manage");
-  const canOversee = can("chat:oversee"); // PRINCIPAL
-  const canWrite = can("chat:write"); // staff (notice composer)
+  const canManage = can("chat:create") || can("chat:edit"); // PM: new group = chat:create (GroupManage also edits)
+  const canOversee = can("chat:view_all"); // LOCKED, PRINCIPAL only
+  const canWrite = can("chat:send_notice") || can("chat:send_notice_all"); // notice composer
 
   const [convQ, refetch] = useQuery({ query: MY_CONVERSATIONS_QUERY });
   // Refresh the list (unread/last-activity) whenever the tab regains focus.

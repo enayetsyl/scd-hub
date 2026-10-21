@@ -47,12 +47,12 @@ describe("TodayScreen — every card is inside the render", () => {
     expect(usage).toBeGreaterThan(RETURN_AT);
   });
 
-  test("the gift card is gated on gift:manage, not on a tracker permission", () => {
+  test("the gift card is gated on the gift actions (PM; was gift:manage), not on a tracker permission", () => {
     // The Office holds no tracker permission (D-#554); gating this card on one would
     // hide it from the very desk it was built for.
     const line = src.split(/\r?\n/).find((l) => l.includes("<GiftHandoverCard")) ?? "";
     expect(line).toContain("canGift");
-    expect(src).toMatch(/const canGift = can\("gift:manage"\)/);
+    expect(src).toMatch(/const canGift = can\("assignment_gift:issue"\) && can\("assignment_gift:view_all"\)/);
   });
 });
 
@@ -68,7 +68,9 @@ describe("AdminTodayScreen — the admin-only cards reach the roles that hold th
 
   test("AppTabs still routes PRINCIPAL and OFFICE to AdminTodayScreen (D-#316)", () => {
     // If this routing ever changes, the assertion below is measuring the wrong screen.
-    expect(tabsSrc).toMatch(/adminDash\s*=\s*role === "PRINCIPAL" \|\| role === "OFFICE"/);
+    // PM (F-28): the landing follows `admin_dashboard:view` — Principal + Office by default,
+    // template-aware like the server's adminToday gate (no longer a primary-role compare).
+    expect(tabsSrc).toMatch(/adminDash\s*=\s*can\("admin_dashboard:view"\)/);
     expect(tabsSrc).toMatch(/component=\{adminDash \? AdminTodayScreen : TodayScreen\}/);
   });
 
@@ -78,32 +80,32 @@ describe("AdminTodayScreen — the admin-only cards reach the roles that hold th
     expect(usage).toBeGreaterThan(ADMIN_RETURN_AT);
   });
 
-  test("it is gated on gift:manage there too", () => {
+  test("it is gated on the same gift actions there too", () => {
     const line = adminSrc.split(/\r?\n/).find((l) => l.includes("<GiftHandoverCard")) ?? "";
     expect(line).toContain("canGift");
-    expect(adminSrc).toMatch(/const canGift = can\("gift:manage"\)/);
+    expect(adminSrc).toMatch(/const canGift = can\("assignment_gift:issue"\) && can\("assignment_gift:view_all"\)/);
   });
 
   /**
    * D-#674: the live class card answers "who is teaching what RIGHT NOW", and the two
    * roles that need it (Principal, Office) land on the admin screen — the exact shape
-   * of the D-#668 miss. It is gated on `routine:manage`, the same permission the
-   * `liveClassBoard` resolver requires, so the card and the server can never disagree
-   * about who may see it.
+   * of the D-#668 miss. It is gated on `routine:view_all` (PM; was routine:manage), the
+   * same action the `liveClassBoard` resolver requires, so the card and the server can
+   * never disagree about who may see it.
    */
-  test("the live class card is on the ADMIN screen, gated on routine:manage", () => {
+  test("the live class card is on the ADMIN screen, gated on routine:view_all", () => {
     const usage = adminSrc.indexOf("<LiveClassCard");
     expect(usage).toBeGreaterThan(0);
     expect(usage).toBeGreaterThan(ADMIN_RETURN_AT);
     const line = adminSrc.split(/\r?\n/).find((l) => l.includes("<LiveClassCard")) ?? "";
     expect(line).toContain("canLiveBoard");
-    expect(adminSrc).toMatch(/const canLiveBoard = can\("routine:manage"\)/);
+    expect(adminSrc).toMatch(/const canLiveBoard = can\("routine:view_all"\)/);
   });
 
   test("the live class card is on the teacher screen too, on the same permission", () => {
     const line = src.split(/\r?\n/).find((l) => l.includes("<LiveClassCard")) ?? "";
     expect(line).toContain("canLiveBoard");
-    expect(src).toMatch(/const canLiveBoard = can\("routine:manage"\)/);
+    expect(src).toMatch(/const canLiveBoard = can\("routine:view_all"\)/);
   });
 
   test("it stays on the teacher screen as well — the permission, not the role, decides", () => {
@@ -119,19 +121,19 @@ describe("AdminTodayScreen — the admin-only cards reach the roles that hold th
    * desk can see those items at all. Gated on homework:void — the permission the
    * resolver checks — never on a tracker permission the Office does not hold.
    */
-  test("the unissued-homework card is on the ADMIN screen, gated on homework:void", () => {
+  test("the unissued-homework card is on the ADMIN screen, gated on homework:delete (was homework:void)", () => {
     const usage = adminSrc.indexOf("<UnissuedHomeworkCard");
     expect(usage).toBeGreaterThan(0);
     expect(usage).toBeGreaterThan(ADMIN_RETURN_AT);
     const line = adminSrc.split(/\r?\n/).find((l) => l.includes("<UnissuedHomeworkCard")) ?? "";
     expect(line).toContain("canVoidHomework");
-    expect(adminSrc).toMatch(/const canVoidHomework = can\("homework:void"\)/);
+    expect(adminSrc).toMatch(/const canVoidHomework = can\("homework:delete"\)/);
   });
 
   test("on the teacher screen it follows the same permission, outside the QueryGate", () => {
     const line = src.split(/\r?\n/).find((l) => l.includes("<UnissuedHomeworkCard")) ?? "";
     expect(line).toContain("canVoidHomework");
-    expect(src).toMatch(/const canVoidHomework = can\("homework:void"\)/);
+    expect(src).toMatch(/const canVoidHomework = can\("homework:delete"\)/);
     // Own-query cards inside the QueryGate vanish on an empty day — keep it before it.
     expect(src.indexOf("<UnissuedHomeworkCard")).toBeLessThan(src.indexOf("<QueryGate"));
   });

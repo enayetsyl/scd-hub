@@ -187,6 +187,7 @@ export type AuditEventKind =
   | "MEETING_SUBJECT_NOTE_SAVED"       // a subject teacher saved a child's Strengths + Concerns (meta.edit on a rewrite)
   | "MEETING_FINAL_COMMENT_SAVED"      // Principal/Office saved the final word (source AS_IS/EDITED/OWN in meta)
   | "MEETING_NOTE_REMINDER_SENT"       // the Office sent a teacher a reminder about comments left
+  | "ROLE_TEMPLATE_CHANGED" // Principal switched a catalogue action on/off for a whole role (TEACHER/OFFICE) — prior + next delta + affected login count (PM, D-#801)
   | "USER_ACCESS_CHANGED"   // Principal edited a staff User's per-user access — prior + new {templates, granted, revoked} retained here (Access Control AC-1, §6/J-AC6, D-#193/#214; ADR-008/D-#101 prior-state pattern)
   | "FINANCE_OPENING_BALANCE_SET" // an opening balance declared/re-declared for a ledger (effective-dated, append-only — Finance FIN-1, §3/J-FIN1-1, D-#222)
   | "FINANCE_POSTING_RECORDED"    // a finance money event (fee/income/expense/transfer) appended (Finance FIN-2A, §3.A/J-FIN2-1, D-#224)

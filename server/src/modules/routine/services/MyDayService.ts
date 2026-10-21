@@ -43,7 +43,6 @@ import {
   type ReturningStudent,
 } from "../../trackers/services/ReturnFromLeaveService";
 import { homeworkClassOverview } from "../../trackers/services/HomeworkSummaryService";
-import { isAdminStaff } from "../../foundation/services/RoleScope";
 import { myMarkingUnits } from "../../attendance/services/StudentAttendanceService";
 import { classPresenceForDate, type ClassPresence } from "../../attendance/services/AttendanceReportService";
 import { pendingWorkFor, type PendingAlert, type AssignmentPrep } from "./PendingAlertService";
@@ -107,7 +106,7 @@ export async function myDayFor(ctx: AppContext, dateStr: string): Promise<MyDayR
   //    date, cover-overlaid (R4.4) and day-type-filtered (R2.1: OFF/HOLIDAY admit
   //    nothing, QURAN_ONLY only the quran track).
   let slots: MyDaySlot[] = [];
-  if (callerHasPermission(auth, "routine:read")) {
+  if (callerHasPermission(auth, "routine:view")) {
     const dayOfWeek = DAYS_OF_WEEK[d.getDay()];
     const raw = (await RoutineSlot.find({
       teacherId: auth.userId,
@@ -199,7 +198,7 @@ export async function myDayFor(ctx: AppContext, dateStr: string): Promise<MyDayR
   //    identical to homeworkClassOverview (confirm-scope first, then read-scope;
   //    unreadable refs silently skipped so a stale ref never breaks the dashboard).
   const homework: MyDayHomeworkCounts = { pendingChecking: 0, openResubmissions: 0, activeChases: 0 };
-  if (callerHasPermission(auth, "tracker:read")) {
+  if (callerHasPermission(auth, "homework:view")) {
     const sections = (await Section.find({ active: true }).select("_id classId").lean()) as unknown as Array<{
       _id: { toString(): string };
       classId: { toString(): string };
@@ -225,7 +224,7 @@ export async function myDayFor(ctx: AppContext, dateStr: string): Promise<MyDayR
       // teacher's homework across every class they may read. Principal/Office keep
       // the school-wide totals — for them that IS their own work.
       const overview = await homeworkClassOverview([...authorized], Date.now(), {
-        teacherId: isAdminStaff(auth) ? null : (auth.userId as string),
+        teacherId: callerHasPermission(auth, "homework:view_all") ? null : (auth.userId as string),
       });
       for (const o of overview) {
         homework.pendingChecking += o.pendingChecking;
@@ -252,8 +251,10 @@ export async function myDayFor(ctx: AppContext, dateStr: string): Promise<MyDayR
 
   // 4b. The sections the caller class-teaches (daily coordinator, D-#42) — named on
   //     Today so the hw/as reconcile duty (and its red alerts) has a visible owner.
+  //     PM: the designation alone decides (the old TEACHER-role test is dropped); a
+  //     guardian login is never a section's classTeacherId.
   let classTeacherOf: ClassTeacherSection[] = [];
-  if (auth.role === "TEACHER") {
+  if (auth.role !== "GUARDIAN") {
     const mySections = (await Section.find({ classTeacherId: auth.userId, active: true })
       .select("nameBn classId")
       .lean()) as unknown as Array<{ _id: IdLike; nameBn: string; classId: IdLike }>;
@@ -272,7 +273,7 @@ export async function myDayFor(ctx: AppContext, dateStr: string): Promise<MyDayR
 
   // 5. Principal/Office: the per-class present/absent snapshot for the date (D-#279).
   //    Teachers get an empty list — they read their own worklist instead.
-  const classPresence = callerHasPermission(auth, "attendance:manage")
+  const classPresence = callerHasPermission(auth, "attendance:view_all")
     ? await classPresenceForDate(dateKey)
     : [];
 
@@ -324,7 +325,7 @@ export async function myDayFor(ctx: AppContext, dateStr: string): Promise<MyDayR
   //    (a guardian login contributes nothing) and, like every other card here,
   //    degrades to an empty list rather than sinking the dashboard.
   let assignmentHandout: HandoutSection[] = [];
-  if (callerHasPermission(auth, "tracker:read")) {
+  if (callerHasPermission(auth, "assignment:view")) {
     try {
       assignmentHandout = await myHandoutSections(auth.userId, d);
     } catch (err) {

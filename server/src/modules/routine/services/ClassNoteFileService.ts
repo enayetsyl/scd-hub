@@ -1,7 +1,7 @@
 /**
  * Class-note attachment read gate (guardian access follow-up to D-#52 / the R-5 notes).
  *
- * Staff read these under `routine:read`. A GUARDIAN may now open one too — but only an
+ * Staff read these under `class_note:view`. A GUARDIAN may now open one too — but only an
  * attachment hanging off a note for a group their OWN child sits in.
  *
  * Unlike a `comment_*` file, a `classnote_attachment` StoredFile carries NO back-

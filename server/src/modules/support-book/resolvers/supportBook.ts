@@ -6,9 +6,9 @@
  * everywhere else, and means those services must never be called from anywhere but a
  * gated field.
  *
- * Grants (D-#405/#424): `book:read` for every read, `book:author` to submit a patch,
- * `book:manage` to create a book or activate a policy version. All seven `book:*`
- * sit on the PRINCIPAL template; everyone else is granted per user via AC-1.
+ * Grants (D-#405/#424): `book_production:view` for every read, `book_production:author` to submit a patch,
+ * `book_production:create` / `book_production:settings` to create a book or activate a policy version. Every `book_production:*`
+ * action sits on the PRINCIPAL template; everyone else is granted per user (PM, D-#790).
  *
  * Book plane (D-#404): every id here is a bare ObjectId. Nothing populates across the
  * connection, and no field on these types reaches a student, guardian or staff row.
@@ -172,14 +172,14 @@ PolicySetRef.implement({
 });
 
 // ---------------------------------------------------------------------------
-// Queries (book:read)
+// Queries (book_production:view)
 // ---------------------------------------------------------------------------
 
 builder.queryField("supportBooks", (t) =>
   t.field({
     type: [BookRef],
-    description: "Every book in production, both lines. Requires book:read.",
-    authScopes: { hasPermission: "book:read" },
+    description: "Every book in production, both lines. Requires book_production:view.",
+    authScopes: { hasPermission: "book_production:view" },
     args: { bookType: t.arg.string({ required: false }) },
     resolve: async (_root, args) => {
       assertBookPlane();
@@ -205,8 +205,8 @@ builder.queryField("supportBooks", (t) =>
 builder.queryField("supportBookLessons", (t) =>
   t.field({
     type: [LessonRef],
-    description: "A book's পাঠ in NCTB order. Requires book:read.",
-    authScopes: { hasPermission: "book:read" },
+    description: "A book's পাঠ in NCTB order. Requires book_production:view.",
+    authScopes: { hasPermission: "book_production:view" },
     args: { bookId: t.arg.string({ required: true }) },
     resolve: async (_root, args) => {
       assertBookPlane();
@@ -229,8 +229,8 @@ builder.queryField("supportBookTimeline", (t) =>
     type: [EventRef],
     description:
       "The editorial timeline for a book, or one পাঠ — why the content reads as it " +
-      "does (SB-5's read, written from SB-1 onward). Requires book:read.",
-    authScopes: { hasPermission: "book:read" },
+      "does (SB-5's read, written from SB-1 onward). Requires book_production:view.",
+    authScopes: { hasPermission: "book_production:view" },
     args: {
       bookId: t.arg.string({ required: true }),
       lessonNo: t.arg.int({ required: false }),
@@ -253,8 +253,8 @@ builder.queryField("supportBookTimeline", (t) =>
 builder.queryField("supportBookPolicySet", (t) =>
   t.field({
     type: PolicySetRef,
-    description: "The active policy set + hash for a book (D-#403). Requires book:read.",
-    authScopes: { hasPermission: "book:read" },
+    description: "The active policy set + hash for a book (D-#403). Requires book_production:view.",
+    authScopes: { hasPermission: "book_production:view" },
     args: { bookId: t.arg.string({ required: true }) },
     resolve: async (_root, args) => {
       assertBookPlane();
@@ -275,8 +275,8 @@ builder.queryField("supportBookPolicySet", (t) =>
 builder.mutationField("createSupportBook", (t) =>
   t.field({
     type: BookRef,
-    description: "Create a book (either line). Requires book:manage. Audited.",
-    authScopes: { hasPermission: "book:manage" },
+    description: "Create a book (either line). Requires book_production:create. Audited.",
+    authScopes: { hasPermission: "book_production:create" },
     args: {
       bookId: t.arg.string({ required: true }),
       bookType: t.arg.string({ required: true }),
@@ -324,8 +324,8 @@ builder.mutationField("activateSupportBookPolicy", (t) =>
     type: PolicySetRef,
     description:
       "Upload + activate a new version of a governance document (D-#403). The prior " +
-      "active version is superseded, never deleted. Requires book:manage. Audited.",
-    authScopes: { hasPermission: "book:manage" },
+      "active version is superseded, never deleted. Requires book_production:settings. Audited.",
+    authScopes: { hasPermission: "book_production:settings" },
     args: {
       docKey: t.arg.string({ required: true }),
       body: t.arg.string({ required: true }),
@@ -366,8 +366,8 @@ builder.mutationField("submitSupportBookPatch", (t) =>
       "Submit a SCHEMA §5 patch. Validates against the merge candidate and merges " +
       "wholesale by lesson_no on a green result (D-#406/#408). A RED does NOT throw — " +
       "it returns merged:false with findings, and the patch is stored either way. " +
-      "Requires book:author.",
-    authScopes: { hasPermission: "book:author" },
+      "Requires book_production:author.",
+    authScopes: { hasPermission: "book_production:author" },
     args: {
       patchJson: t.arg.string({ required: true }),
       source: t.arg.string({ required: false }),
@@ -415,8 +415,8 @@ builder.queryField("supportBookPatches", (t) =>
     type: [FindingRef],
     description:
       "The findings on a book's most recent patch — including a REJECTED one, which " +
-      "is retained precisely because a refused report is the useful part. Requires book:read.",
-    authScopes: { hasPermission: "book:read" },
+      "is retained precisely because a refused report is the useful part. Requires book_production:view.",
+    authScopes: { hasPermission: "book_production:view" },
     args: { bookId: t.arg.string({ required: true }), lessonNo: t.arg.int({ required: false }) },
     resolve: async (_root, args) => {
       assertBookPlane();

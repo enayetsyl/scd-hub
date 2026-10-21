@@ -21,7 +21,7 @@ type Props = NativeStackScreenProps<MasteryStackParamList, "MasteryHome">;
 
 export default function MasteryHomeScreen({ navigation }: Props): React.ReactElement {
   const { can } = useAuth();
-  const canManage = can("mastery:manage");
+  const canManage = can("mastery:settings");
   const [{ data, fetching, error }] = useQuery({ query: MASTERY_COVERAGE_QUERY, requestPolicy: "cache-and-network" });
   const rows = (data?.masteryCoverage ?? []) as MasteryCoverageRow[];
 

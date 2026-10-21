@@ -8,9 +8,9 @@
  *                                   (the field lives on the myDay type; the object
  *                                   ref is exported from here so both share it)
  *
- * NO new permission. The board rides the SAME gate as the rest of the schedule/
- * expected-grid reads (`assertStaffScheduleRead`, D-#94): Principal/Office as
- * unscoped staff, or any role holding `tracker:read`. Deliberately not narrowed to
+ * The board rides the SAME gate as the rest of the schedule/expected-grid reads
+ * (`assertStaffScheduleRead`, D-#94): any-of `assignment:view` / `assignment:settings`
+ * (PM; was isAdminStaff OR `tracker:read` — Teacher holds view, Office settings). Deliberately not narrowed to
  * the caller's own sections — the cross-check is a whole-day coordination view, the
  * same reasoning that leaves `expectedAssignmentsForWeek` unscoped, and it carries
  * no student identity at all (section, subject, teacher name).
@@ -19,7 +19,6 @@ import { builder } from "../../../schema";
 import type { AppContext } from "../../../context";
 import { ForbiddenError } from "../../../middleware/authz";
 import { callerHasPermission } from "@scd/shared";
-import { isAdminStaff } from "../../foundation/services/RoleScope";
 import {
   handoutBoard as handoutBoardSvc,
   type HandoutBoard,
@@ -27,11 +26,11 @@ import {
   type HandoutSection,
 } from "../services/AssignmentHandoutService";
 
-/** Mirrors `assertStaffScheduleRead` in ./assignment — Principal/Office, or tracker:read. */
+/** Mirrors `assertStaffScheduleRead` in ./assignment — `assignment:view` or `assignment:settings`. */
 function assertHandoutRead(ctx: AppContext): void {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  if (isAdminStaff(ctx.auth)) return;
-  if (callerHasPermission(ctx.auth, "tracker:read")) return;
+  if (callerHasPermission(ctx.auth, "assignment:view")) return;
+  if (callerHasPermission(ctx.auth, "assignment:settings")) return;
   throw new ForbiddenError();
 }
 
@@ -93,8 +92,8 @@ builder.queryField("assignmentHandoutBoard", (t) =>
     type: HandoutBoardRef,
     description:
       "Which assignment packets go to which section in its last period, and who collects them " +
-      "from the office (AS-T7, D-#643). Staff read — no new permission.",
-    authScopes: { authenticated: true },
+      "from the office (AS-T7, D-#643). Staff read — assignment:view or assignment:settings.",
+    authScopes: { hasAnyPermission: ["assignment:view", "assignment:settings"] },
     args: { date: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       assertHandoutRead(ctx);

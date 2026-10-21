@@ -166,4 +166,11 @@ describe("users / proxyGrants RBAC posture (existing user:manage — no new perm
     expect(roleHasPermission("TEACHER", "user:manage")).toBe(false);
     expect(roleHasPermission("GUARDIAN", "user:manage")).toBe(false);
   });
+
+  test("PM: users rides staff_logins:view and proxyGrants cover:assign_proxy — Principal-only by default", () => {
+    for (const perm of ["staff_logins:view", "cover:assign_proxy"] as const) {
+      expect(roleHasPermission("PRINCIPAL", perm)).toBe(true);
+      for (const r of ["OFFICE", "TEACHER", "GUARDIAN"] as const) expect(roleHasPermission(r, perm)).toBe(false);
+    }
+  });
 });

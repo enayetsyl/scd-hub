@@ -15,6 +15,7 @@
  */
 import mongoose from "mongoose";
 import type { AppContext } from "../context";
+import { setRoleTemplateOverrides } from "@scd/shared";
 
 const oid = () => new mongoose.Types.ObjectId();
 
@@ -541,5 +542,41 @@ describe("classSyllabus with NO syllabus rows yet", () => {
     // The teacher scope mock decides this; what matters is that the ADMIN branch
     // did not leak the whole routine into a teacher's view.
     expect(view.subjects.every((s) => s.isMine)).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PM (D-#790): drafts ride exam_syllabus:view_all, staff reads exam_syllabus:view
+// ---------------------------------------------------------------------------
+
+describe("PM — syllabus read gates are actions", () => {
+  afterEach(() => setRoleTemplateOverrides({}));
+
+  test("default PRINCIPAL/OFFICE see drafts; TEACHER/GUARDIAN do not", async () => {
+    const { seesSyllabusDrafts } = await import("../modules/exams/services/ExamSyllabusReadService");
+    expect(seesSyllabusDrafts(ctxFor("PRINCIPAL").auth)).toBe(true);
+    expect(seesSyllabusDrafts(ctxFor("OFFICE").auth)).toBe(true);
+    expect(seesSyllabusDrafts(ctxFor("TEACHER").auth)).toBe(false);
+    expect(seesSyllabusDrafts(ctxFor("GUARDIAN").auth)).toBe(false);
+  });
+
+  test("Office with view_all switched off loses the board; a teacher granted it gains it", async () => {
+    const { examSyllabusBoard, seesSyllabusDrafts } = await import(
+      "../modules/exams/services/ExamSyllabusReadService"
+    );
+    setRoleTemplateOverrides({ OFFICE: { granted: [], revoked: ["exam_syllabus:view_all"] } });
+    await expect(examSyllabusBoard(ctxFor("OFFICE"), EXAM.toString())).rejects.toThrow(/অনুমতি নেই/);
+    const granted = ctxFor("TEACHER");
+    granted.auth!.grantedPermissions = ["exam_syllabus:view_all"];
+    expect(seesSyllabusDrafts(granted.auth)).toBe(true);
+  });
+
+  test("a staff reader needs exam_syllabus:view; a guardian keeps today's path (F-10)", async () => {
+    const { assertSyllabusReader } = await import("../modules/exams/services/ExamSyllabusReadService");
+    expect(() => assertSyllabusReader(ctxFor("TEACHER"))).not.toThrow();
+    expect(() => assertSyllabusReader(ctxFor("OFFICE"))).not.toThrow();
+    expect(() => assertSyllabusReader(ctxFor("GUARDIAN"))).not.toThrow();
+    setRoleTemplateOverrides({ TEACHER: { granted: [], revoked: ["exam_syllabus:view"] } });
+    expect(() => assertSyllabusReader(ctxFor("TEACHER"))).toThrow(/অনুমতি নেই/);
   });
 });

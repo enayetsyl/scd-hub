@@ -4,7 +4,7 @@
  * subject, Test #, exam date, script count, filed-by, box code. Rendered
  * on-demand through the existing markdown→PDF renderer (the /pdf/artifact
  * pattern); refused for VOID bundles (a voided record must not produce fresh
- * paper). Staff read: tracker:read or roster:manage.
+ * paper). Staff read: archive:view.
  */
 import type { Router, Request, Response } from "express";
 import { Router as createRouter } from "express";
@@ -23,8 +23,7 @@ archiveCoverPdfRouter.get("/:bundleId", async (req: Request, res: Response) => {
   const ctx = buildContext(req, res);
   if (
     !ctx.auth ||
-    (!callerHasPermission(ctx.auth, "tracker:read") &&
-      !callerHasPermission(ctx.auth, "roster:manage"))
+    !callerHasPermission(ctx.auth, "archive:view")
   ) {
     res.status(403).json({ error: "অনুমতি নেই" });
     return;

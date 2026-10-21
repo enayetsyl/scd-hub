@@ -20,14 +20,20 @@
  *     read that shows a slice of ANOTHER observer's row, so the returned field set is
  *     itself the visibility rule — see `PriorFocusContextRef` below.
  *
+ * PM (permission matrix): the gates are now the `classroom_observation` actions — upload,
+ * assign (assign/reassign, re-review, co-review, cancel/restore), review (+ the assigned-
+ * observer designation), edit, publish (publish/withhold/lift), settings, view (+ the
+ * row rule) and view_all (oversight list, any row, compare; replaces isAdminStaff). The
+ * fairness/usefulness scores follow view_reports. The legacy names in the field
+ * descriptions below are history.
+ *
  * Staff-internal — GUARDIAN holds no observation:* permission (§7). Identity plane
  * (names teacherId/observerId); no corpus path (ADR-005).
  */
 import { builder } from "../../../schema";
 import type { AppContext } from "../../../context";
 import { ForbiddenError } from "../../../middleware/authz";
-import { callerHasPermission } from "@scd/shared";
-import { isAdminStaff } from "../../foundation/services/RoleScope";
+import { callerHasPermission, type Permission } from "@scd/shared";
 import {
   uploadObservation,
   assignObserver,
@@ -62,11 +68,27 @@ import {
   type EffectiveEscalationConfig,
 } from "../services/ObservationEscalationService";
 
-/** Build the row-scope actor from the request context (manage = Principal/Office). */
+/** Build the row-scope actor from the request context. `canManage` (every row, any prior
+ *  focus) = `classroom_observation:view_all` (PM; was the isAdminStaff role bypass). */
 function actorOf(ctx: AppContext): ObservationActor {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  const role = ctx.auth.role;
-  return { userId: ctx.auth.userId as string, canManage: isAdminStaff(ctx.auth) };
+  return {
+    userId: ctx.auth.userId as string,
+    canManage: callerHasPermission(ctx.auth, "classroom_observation:view_all"),
+  };
+}
+
+/** In-resolver action check (PM §5.1) — the second action a resolver needs for some inputs. */
+function requireAction(ctx: AppContext, perm: Permission): void {
+  if (!ctx.auth || !callerHasPermission(ctx.auth, perm)) {
+    throw new ForbiddenError(`Requires ${perm}`);
+  }
+}
+
+/** CO-7 privacy: the per-observation fairness/usefulness scores are shown only to holders of
+ *  `classroom_observation:view_reports` (PM; was primary role PRINCIPAL/OFFICE). */
+function canSeeRatings(ctx: AppContext): boolean {
+  return !!ctx.auth && callerHasPermission(ctx.auth, "classroom_observation:view_reports");
 }
 
 // ---------------------------------------------------------------------------
@@ -179,17 +201,11 @@ ObservationRef.implement({
     hasFairnessRating: t.boolean({ resolve: (r) => r.fairnessRating !== null }),
     fairnessRating: t.int({
       nullable: true,
-      resolve: (r, _args, ctx: AppContext) => {
-        const role = ctx.auth?.role;
-        return role === "PRINCIPAL" || role === "OFFICE" ? r.fairnessRating : null;
-      },
+      resolve: (r, _args, ctx: AppContext) => (canSeeRatings(ctx) ? r.fairnessRating : null),
     }),
     usefulnessRating: t.int({
       nullable: true,
-      resolve: (r, _args, ctx: AppContext) => {
-        const role = ctx.auth?.role;
-        return role === "PRINCIPAL" || role === "OFFICE" ? r.usefulnessRating : null;
-      },
+      resolve: (r, _args, ctx: AppContext) => (canSeeRatings(ctx) ? r.usefulnessRating : null),
     }),
     recordingId: t.string({ nullable: true, resolve: (r) => r.recordingId }),
     teacherResponse: t.string({ nullable: true, resolve: (r) => r.teacherResponse }),
@@ -293,7 +309,7 @@ builder.mutationField("uploadClassroomObservation", (t) =>
     description:
       "Upload a recorded session + (optionally) assign a senior-teacher observer in one step (J1). " +
       "The observer can NOT be the observed teacher (refused). Requires observation:upload (Principal/Office). Audited.",
-    authScopes: { hasPermission: "observation:upload" },
+    authScopes: { hasPermission: "classroom_observation:upload" },
     args: {
       form: t.arg.string({ required: true }),
       subject: t.arg.string({ required: true }),
@@ -308,6 +324,8 @@ builder.mutationField("uploadClassroomObservation", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       const actor = actorOf(ctx);
+      // Upload + assign in one step also assigns the observer (PM).
+      if (args.observerId) requireAction(ctx, "classroom_observation:assign");
       return uploadObservation({
         form: args.form,
         subject: args.subject,
@@ -331,7 +349,7 @@ builder.mutationField("assignClassroomObserver", (t) =>
     description:
       "(Re)assign the observer on an uploaded/assigned observation → ASSIGNED. Observer ≠ observed teacher " +
       "(refused). Requires observation:upload (Principal/Office). Audited.",
-    authScopes: { hasPermission: "observation:upload" },
+    authScopes: { hasPermission: "classroom_observation:assign" },
     args: {
       observationId: t.arg.string({ required: true }),
       observerId: t.arg.string({ required: true }),
@@ -352,7 +370,7 @@ builder.mutationField("reviewClassroomObservation", (t) =>
       "QURAN form (CO-5): pass `quran` (8 ratings 1–5 + 7 yes/no + " +
       "strengths/improvements/suggestions). The form decides which payload is required. → REVIEWED, released to " +
       "the observed teacher (no Principal sign-off). Requires observation:review AND being the assigned observer. Audited.",
-    authScopes: { hasPermission: "observation:review" },
+    authScopes: { hasPermission: "classroom_observation:review" },
     args: {
       observationId: t.arg.string({ required: true }),
       // REF-11 payload (optional at the GraphQL layer; the service requires it for a
@@ -403,7 +421,7 @@ builder.mutationField("editClassroomObservationReview", (t) =>
       "and validation as reviewClassroomObservation, per the row's form. The observer's original is snapshotted on " +
       "the first edit and every edit is audited with the fields it changed. Refused once published or cancelled. " +
       "Requires observation:manage.",
-    authScopes: { hasPermission: "observation:manage" },
+    authScopes: { hasPermission: "classroom_observation:edit" },
     args: {
       observationId: t.arg.string({ required: true }),
       domains: t.arg({ type: [DomainInputType], required: false }),
@@ -449,7 +467,7 @@ builder.mutationField("rejectClassroomObservation", (t) =>
       "with a REQUIRED reason. Stored as the CO-15 cancel stamp, so the row leaves the observer's queue and the " +
       "toReview count and shows under the Cancelled filter; Principal/Office are notified and may restore it. " +
       "Only an ASSIGNED row, only by its own observer. Requires observation:review. Audited.",
-    authScopes: { hasPermission: "observation:review" },
+    authScopes: { hasPermission: "classroom_observation:review" },
     args: {
       observationId: t.arg.string({ required: true }),
       reason: t.arg.string({ required: true }),
@@ -473,7 +491,7 @@ builder.mutationField("reRequestClassroomObservation", (t) =>
       "Re-review a reviewed observation: creates a NEW assigned observation on the same recording/anchor and " +
       "marks the prior SUPERSEDED (enables CO-7 calibration). Observer ≠ observed teacher. Requires " +
       "observation:upload (Principal/Office). Audited.",
-    authScopes: { hasPermission: "observation:upload" },
+    authScopes: { hasPermission: "classroom_observation:assign" },
     args: {
       priorObservationId: t.arg.string({ required: true }),
       observerId: t.arg.string({ required: true }),
@@ -497,7 +515,7 @@ builder.mutationField("requestCoReviewObservation", (t) =>
       "the same recording/anchor as the source WITHOUT superseding it (unlike re-review). The source must have a " +
       "recording; the co-observer ≠ observed teacher and must not already be reviewing this recording. Requires " +
       "observation:upload (Principal/Office). Audited.",
-    authScopes: { hasPermission: "observation:upload" },
+    authScopes: { hasPermission: "classroom_observation:assign" },
     args: {
       sourceObservationId: t.arg.string({ required: true }),
       observerId: t.arg.string({ required: true }),
@@ -520,7 +538,7 @@ builder.mutationField("respondToClassroomObservation", (t) =>
       "The OBSERVED teacher acknowledges a released (REVIEWED) observation: records the response text and " +
       "transitions REVIEWED → TEACHER_RESPONDED. Scores are NOT editable here. Notifies the observer + " +
       "Principal. Requires observation:read AND being the observed teacher (a non-observed caller is refused). Audited.",
-    authScopes: { hasPermission: "observation:read" },
+    authScopes: { hasPermission: "classroom_observation:view" },
     args: {
       observationId: t.arg.string({ required: true }),
       responseText: t.arg.string({ required: true }),
@@ -543,7 +561,7 @@ builder.mutationField("publishClassroomObservation", (t) =>
       "Publish a REVIEWED observation to the observed teacher (CO-8, D-#271): stamps publishedAt/publishedBy and " +
       "releases + notifies the teacher. Only a REVIEWED, not-yet-published row (an already-published row is refused). " +
       "Requires observation:manage (Principal/Office). Audited.",
-    authScopes: { hasPermission: "observation:manage" },
+    authScopes: { hasPermission: "classroom_observation:publish" },
     args: { observationId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       const actor = actorOf(ctx);
@@ -560,7 +578,7 @@ builder.mutationField("withholdClassroomObservation", (t) =>
       "reason. Stamps withheldAt/withheldBy/withheldReason; the row leaves the awaiting-publish counts but stays " +
       "readable to the observer + Principal/Office. Silent to the observed teacher. Only a REVIEWED, unpublished, " +
       "not-already-withheld row. Requires observation:manage (Principal/Office). Audited.",
-    authScopes: { hasPermission: "observation:manage" },
+    authScopes: { hasPermission: "classroom_observation:publish" },
     args: {
       observationId: t.arg.string({ required: true }),
       reason: t.arg.string({ required: true }),
@@ -582,7 +600,7 @@ builder.mutationField("releaseClassroomObservationHold", (t) =>
     description:
       "Lift a withhold (CO-12, D-#369): clears withheldAt/withheldBy/withheldReason and puts the row back into the " +
       "awaiting-publish queue. Does NOT publish — that stays a separate act. Requires observation:manage. Audited.",
-    authScopes: { hasPermission: "observation:manage" },
+    authScopes: { hasPermission: "classroom_observation:publish" },
     args: { observationId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       const actor = actorOf(ctx);
@@ -601,7 +619,7 @@ builder.mutationField("cancelClassroomObservation", (t) =>
       "the cancelled filter. `state` is unchanged, so restoring is a clear, not a transition. A REVIEWED row is " +
       "REFUSED — use withholdClassroomObservation instead (cancel = 'will not happen', withhold = 'happened, not " +
       "released'). The linked SessionRecording is kept. Requires observation:manage. Audited.",
-    authScopes: { hasPermission: "observation:manage" },
+    authScopes: { hasPermission: "classroom_observation:assign" },
     args: {
       observationId: t.arg.string({ required: true }),
       reason: t.arg.string({ required: true }),
@@ -624,7 +642,7 @@ builder.mutationField("restoreCancelledClassroomObservation", (t) =>
       "Undo a cancel (CO-15, D-#428): clears cancelledAt/cancelledBy/cancelledReason and returns the row to the " +
       "SAME state and observer it had — UPLOADED comes back UPLOADED, ASSIGNED comes back ASSIGNED and reappears " +
       "in that observer's queue. Requires observation:manage. Audited with the prior reason.",
-    authScopes: { hasPermission: "observation:manage" },
+    authScopes: { hasPermission: "classroom_observation:assign" },
     args: { observationId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       const actor = actorOf(ctx);
@@ -655,7 +673,7 @@ builder.queryField("observationEscalationConfig", (t) =>
     type: EscalationConfigRef,
     description:
       "The current response-escalation cadence (the admin row, else the 2/4/7 defaults). Requires observation:manage.",
-    authScopes: { hasPermission: "observation:manage" },
+    authScopes: { hasPermission: "classroom_observation:settings" },
     resolve: async () => getEscalationConfig(),
   }),
 );
@@ -666,7 +684,7 @@ builder.mutationField("setObservationEscalationConfig", (t) =>
     description:
       "Set the response-escalation cadence (CALENDAR days, strictly increasing: 1st < 2nd < flag). " +
       "Requires observation:manage (Principal/Office). Audited.",
-    authScopes: { hasPermission: "observation:manage" },
+    authScopes: { hasPermission: "classroom_observation:settings" },
     args: {
       reminderDays1: t.arg.int({ required: true }),
       reminderDays2: t.arg.int({ required: true }),
@@ -697,7 +715,7 @@ builder.queryField("classroomObservation", (t) =>
     description:
       "One observation by id, ROW-SCOPED: the observer sees their own; the observed teacher sees their own " +
       "only at/after REVIEWED; Principal/Office see all. Requires observation:read.",
-    authScopes: { hasPermission: "observation:read" },
+    authScopes: { hasPermission: "classroom_observation:view" },
     args: { id: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       const actor = actorOf(ctx);
@@ -718,7 +736,7 @@ builder.queryField("teacherClassroomObservations", (t) =>
     description:
       "Observations about a teacher, newest first, ROW-SCOPED per row (the observed teacher sees only their " +
       "own released rows; an observer sees only rows they observed; Principal/Office see all). Requires observation:read.",
-    authScopes: { hasPermission: "observation:read" },
+    authScopes: { hasPermission: "classroom_observation:view" },
     args: { teacherId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       const actor = actorOf(ctx);
@@ -739,7 +757,7 @@ builder.queryField("observationPriorFocusContext", (t) =>
       "for a first-ever observation or a QURAN row (which has no growth focus). Gated to the row's ASSIGNED " +
       "OBSERVER or observation:manage — it exposes one narrow slice of another observer's row, so it is not open " +
       "to the observed teacher. Requires observation:read.",
-    authScopes: { hasPermission: "observation:read" },
+    authScopes: { hasAnyPermission: ["classroom_observation:review", "classroom_observation:view_all"] },
     args: { observationId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       const actor = actorOf(ctx);
@@ -758,7 +776,7 @@ builder.queryField("myObservationReviewQueue", (t) =>
     type: [ObservationRef],
     description:
       "The signed-in observer's open review queue (ASSIGNED observations assigned to them). Requires observation:review.",
-    authScopes: { hasPermission: "observation:review" },
+    authScopes: { hasPermission: "classroom_observation:review" },
     resolve: async (_root, _args, ctx) => {
       const actor = actorOf(ctx);
       return myReviewQueue(actor.userId);
@@ -784,11 +802,11 @@ builder.queryField("observationCounts", (t) =>
     description:
       "How many observations await MY review (observation:review) and await publish (observation:upload) — " +
       "the Observation drawer badge. Requires observation:read; each count is 0 without the matching permission.",
-    authScopes: { hasPermission: "observation:read" },
+    authScopes: { hasPermission: "classroom_observation:view" },
     resolve: async (_root, _args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      const canReview = callerHasPermission(ctx.auth, "observation:review");
-      const canPublish = callerHasPermission(ctx.auth, "observation:upload");
+      const canReview = callerHasPermission(ctx.auth, "classroom_observation:review");
+      const canPublish = callerHasPermission(ctx.auth, "classroom_observation:publish");
       return observationCounts(ctx.auth.userId as string, canReview, canPublish);
     },
   }),
@@ -803,7 +821,7 @@ builder.queryField("allClassroomObservations", (t) =>
       "CO-8 publish gate (D-#324); `withheld` true/false filters on the CO-12 withhold flag (D-#369) — the real " +
       "publish queue is published:false + withheld:false; `sectionId` filters by class/section (CO-11, D-#363). " +
       "omit for either. limit defaults 20 (max 100). Requires observation:upload.",
-    authScopes: { hasPermission: "observation:upload" },
+    authScopes: { hasPermission: "classroom_observation:view_all" },
     args: {
       teacherId: t.arg.string({ required: false }),
       observerId: t.arg.string({ required: false }),
@@ -848,7 +866,7 @@ builder.queryField("myObservationReviews", (t) =>
       "the open ones, filtered + paginated exactly like the oversight view. There is deliberately NO observerId " +
       "argument: it is forced to the caller server-side, so this cannot be pointed at a peer's reviews. Requires " +
       "observation:review.",
-    authScopes: { hasPermission: "observation:review" },
+    authScopes: { hasPermission: "classroom_observation:review" },
     args: {
       teacherId: t.arg.string({ required: false }),
       state: t.arg.string({ required: false }),
@@ -891,7 +909,7 @@ builder.queryField("classroomObservationsForRecording", (t) =>
     description:
       "Every observation on a recording — the CO-9 co-review group for the Principal compare view (each reviewer's " +
       "row, oldest first). Requires observation:upload (Principal/Office).",
-    authScopes: { hasPermission: "observation:upload" },
+    authScopes: { hasPermission: "classroom_observation:view_all" },
     args: { recordingId: t.arg.string({ required: true }) },
     resolve: async (_root, args) => observationsForRecording(args.recordingId),
   }),

@@ -91,8 +91,12 @@ function PayHistoryCard({ staffProfileId }: { staffProfileId: string }): React.R
 export default function StaffPayEditScreen({ route, navigation }: Props): React.ReactElement {
   const { staff } = route.params;
   const { can } = useAuth();
-  const canPay = can("payroll:manage");
-  const canStaff = can("staff:manage");
+  // PM: the salary is payroll:edit, the history payroll:view; the bank account is a
+  // staff-record edit AND sensitive (NID/bank resolve to null without
+  // staff_records:view_sensitive, so editing them blind would only ever clear them).
+  const canPay = can("payroll:edit");
+  const canPayHistory = can("payroll:view");
+  const canStaff = can("staff_records:edit") && can("staff_records:view_sensitive");
 
   const [, setPay] = useMutation(SET_STAFF_PAY);
   const [, updateStaff] = useMutation(UPDATE_STAFF_PROFILE);
@@ -209,7 +213,7 @@ export default function StaffPayEditScreen({ route, navigation }: Props): React.
         </Card>
       ) : null}
 
-      {canPay ? <PayHistoryCard staffProfileId={staff.id} /> : null}
+      {canPayHistory ? <PayHistoryCard staffProfileId={staff.id} /> : null}
 
       {canStaff ? (
         <Card>

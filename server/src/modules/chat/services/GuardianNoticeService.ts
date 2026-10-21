@@ -10,8 +10,9 @@
  * phone on file are reported as `unreachableCount` (no link can be built).
  *
  * AUTHORIZATION is enforced at the RESOLVER (the D-#42 pattern, no new perm):
- * SECTION → the section's class teacher (assertIsClassTeacher) OR chat:manage;
- * SCHOOL → chat:manage. This service only composes + persists + audits.
+ * SECTION → chat:send_notice + the section's class teacher (assertIsClassTeacher)
+ * OR chat:send_notice_all; SCHOOL → chat:send_notice_all. This service only
+ * composes + persists + audits.
  *
  * Identity-plane (ADR-005) — students/sections/composer; no corpus path.
  */
@@ -27,9 +28,10 @@ import { personName } from "../../../lib/personName";
 
 /**
  * The D-#45 parent-comms authorization (no new permission, the D-#42 pattern):
- *   SCHOOL  → chat:manage (Principal/Office) only.
- *   SECTION → the section's class teacher (assertIsClassTeacher) OR chat:manage.
- * `canManage` = does the caller hold chat:manage (computed at the resolver).
+ *   SCHOOL  → chat:send_notice_all (Principal/Office by default) only.
+ *   SECTION → the section's class teacher (assertIsClassTeacher) OR chat:send_notice_all.
+ * `canManage` = does the caller hold chat:send_notice_all (computed at the resolver,
+ * whose field gate already requires chat:send_notice when it is false).
  * Throws ForbiddenError (Bangla) when denied — the J-M8 acceptance.
  */
 export async function assertCanComposeNotice(

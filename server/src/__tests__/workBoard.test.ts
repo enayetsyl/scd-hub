@@ -8,7 +8,7 @@
  *   5. TaskService — who may create/status/block/reassign/cancel; DONE stamps + notifies
  */
 import { Types } from "mongoose";
-import { loadLevelFor } from "@scd/shared";
+import { loadLevelFor, setRoleTemplateOverrides } from "@scd/shared";
 
 const mockCreate = jest.fn();
 const mockFindById = jest.fn();
@@ -62,6 +62,7 @@ import { deskUncovered, officeRecipients } from "../modules/workboard/services/O
 import { aggregateLoad } from "../modules/workboard/services/LoadService";
 import { digestLines, overdueLines } from "../modules/workboard/services/TaskSweepService";
 import {
+  assertCanReadTask,
   cancelTask,
   createTask,
   reassignTask,
@@ -212,8 +213,39 @@ describe("office cover: desk, backups, pulls", () => {
   });
 
   test("office cards go to the desk alone normally, and to the backups too while uncovered", () => {
-    expect(officeRecipients(all, false).map((u) => u._id)).toEqual(["akmol"]);
-    expect(officeRecipients(all, true).map((u) => u._id)).toEqual(["akmol", "tazkir", "principal"]);
+    for (const perm of ["printing:process", "leave:approve"] as const) {
+      expect(officeRecipients(all, false, perm).map((u) => u._id)).toEqual(["akmol"]);
+      expect(officeRecipients(all, true, perm).map((u) => u._id)).toEqual(["akmol", "tazkir", "principal"]);
+    }
+  });
+
+  // PM (§5.5): recipients follow the card's ACTION, not the role.
+  describe("recipients follow the action (PM)", () => {
+    afterEach(() => setRoleTemplateOverrides({}));
+
+    test("a teacher granted printing:process per person is on the print desk (not the leave desk)", () => {
+      const granted = { _id: "rumana", role: "TEACHER", additionalTemplates: [] as string[], grantedPermissions: ["printing:process"] };
+      expect(officeRecipients([...all, granted], false, "printing:process").map((u) => u._id)).toEqual(["akmol", "rumana"]);
+      expect(officeRecipients([...all, granted], false, "leave:approve").map((u) => u._id)).toEqual(["akmol"]);
+    });
+
+    test("Office with leave:approve switched off gets no leave card; print cards are untouched", () => {
+      setRoleTemplateOverrides({ OFFICE: { granted: [], revoked: ["leave:approve"] } });
+      expect(officeRecipients(all, false, "leave:approve").map((u) => u._id)).toEqual([]);
+      expect(officeRecipients(all, false, "printing:process").map((u) => u._id)).toEqual(["akmol"]);
+      // The OFFICE-template teacher loses the backup seat for leave too; the Principal keeps it.
+      expect(officeRecipients(all, true, "leave:approve").map((u) => u._id)).toEqual(["principal"]);
+    });
+
+    test("an Office login with printing:process revoked per person is off the print desk", () => {
+      const revoked = { ...akmol, revokedPermissions: ["printing:process"] };
+      expect(officeRecipients([revoked, tazkir, principal], false, "printing:process")).toEqual([]);
+    });
+
+    test("a backup needs work_board:cover_desk: switched off for OFFICE, the OFFICE-template teacher is no backup", () => {
+      setRoleTemplateOverrides({ OFFICE: { granted: [], revoked: ["work_board:cover_desk"] } });
+      expect(officeRecipients(all, true, "printing:process").map((u) => u._id)).toEqual(["akmol", "principal"]);
+    });
   });
 
   test("applyPulls: a pulled card shows on the puller's board alone; a backup's unpulled card is pullable; the desk's never is", () => {
@@ -393,6 +425,32 @@ describe("TaskService", () => {
     await expect(createTask(teacher(me), { titleBn: "x", assigneeUserId: other, dueKey: "2026-09-30", effortMin: 30 })).rejects.toThrow(/অনুমতি/);
     await createTask(assigner(me), { titleBn: "x", assigneeUserId: other, dueKey: "2026-09-30", effortMin: 30 });
     expect(mockEmitAssigned).toHaveBeenCalledTimes(1);
+  });
+
+  // PM: tasks:assign split into work_board:assign (write) + work_board:view_all (read).
+  describe("catalogue actions (PM)", () => {
+    afterEach(() => setRoleTemplateOverrides({}));
+    const office = (id: string): AuthPayload => ({ userId: id, role: "OFFICE" });
+
+    test("default Office assigns to others; with work_board:assign switched off it cannot; a teacher granted it can", async () => {
+      const me = new Types.ObjectId().toString();
+      const other = new Types.ObjectId().toString();
+      const input = { titleBn: "x", assigneeUserId: other, dueKey: "2026-09-30", effortMin: 30 };
+      await createTask(office(me), input);
+      setRoleTemplateOverrides({ OFFICE: { granted: [], revoked: ["work_board:assign"] } });
+      await expect(createTask(office(me), input)).rejects.toThrow(/অনুমতি/);
+      await createTask({ userId: me, role: "TEACHER", grantedPermissions: ["work_board:assign"] }, input);
+    });
+
+    test("reading someone else's task: work_board:view_all (default Office), not a plain teacher", () => {
+      const doc = fakeDoc({}) as unknown as Parameters<typeof assertCanReadTask>[1];
+      const stranger = new Types.ObjectId().toString();
+      expect(() => assertCanReadTask(office(stranger), doc)).not.toThrow();
+      expect(() => assertCanReadTask(teacher(stranger), doc)).toThrow();
+      setRoleTemplateOverrides({ OFFICE: { granted: [], revoked: ["work_board:view_all", "work_board:assign"] } });
+      expect(() => assertCanReadTask(office(stranger), doc)).toThrow();
+      expect(() => assertCanReadTask({ userId: stranger, role: "TEACHER", grantedPermissions: ["work_board:view_all"] }, doc)).not.toThrow();
+    });
   });
 
   test("validation: empty title, bad date, effort out of range", async () => {

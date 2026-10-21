@@ -147,11 +147,14 @@ jest.mock("../modules/foundation/models/User", () => ({
 // Import AFTER mocks
 import { createRequest, generateGroupCtId } from "../modules/trackers/services/ClassTestService";
 import {
+  assertAnchorRead,
   assertAnchorWrite,
+  CLASS_TEST_REACH,
   rosterCount,
   rosterStudentIds,
 } from "../modules/trackers/classTestAnchor";
 import { ForbiddenError } from "../middleware/authz";
+import { setRoleTemplateOverrides } from "@scd/shared";
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -447,5 +450,87 @@ describe("assertAnchorWrite on a group exam (D-#507)", () => {
     await expect(
       assertAnchorWrite(ctxOf(OTHER_TEACHER_ID, "TEACHER"), groupTest, subjectId),
     ).rejects.toThrow(ForbiddenError);
+  });
+});
+
+// ===========================================================================
+// PM reach (D-#793) — with CLASS_TEST_REACH the role bypass becomes the actions
+// ===========================================================================
+
+describe("assertAnchorWrite/Read on a group exam with CLASS_TEST_REACH (PM)", () => {
+  const groupTest = {
+    sectionId: null,
+    classId: null,
+    subjectGroupId: GROUP_OID.toString(),
+    subject: "ARABIC",
+  };
+  const subjectId = async () => oid().toString();
+  const ctxWith = (userId: string, role: string, grantedPermissions: string[] = []) =>
+    ({ auth: { userId, role, grantedPermissions } }) as unknown as AppContext;
+
+  afterEach(() => setRoleTemplateOverrides({}));
+
+  test("default switches: PRINCIPAL and OFFICE (class_test:edit_all) pass; GUARDIAN is refused", async () => {
+    mockSlotFind.mockReturnValue(leanChain([]));
+    await expect(
+      assertAnchorWrite(ctxOf(oid().toString(), "PRINCIPAL"), groupTest, subjectId, undefined, CLASS_TEST_REACH),
+    ).resolves.toBeUndefined();
+    await expect(
+      assertAnchorWrite(ctxOf(oid().toString(), "OFFICE"), groupTest, subjectId, undefined, CLASS_TEST_REACH),
+    ).resolves.toBeUndefined();
+    await expect(
+      assertAnchorWrite(ctxOf(oid().toString(), "GUARDIAN"), groupTest, subjectId, undefined, CLASS_TEST_REACH),
+    ).rejects.toThrow(ForbiddenError);
+  });
+
+  test("a plain teacher still needs the routine (no edit_all by default)", async () => {
+    mockSlotFind.mockReturnValue(leanChain([]));
+    await expect(
+      assertAnchorWrite(ctxOf(OTHER_TEACHER_ID, "TEACHER"), groupTest, subjectId, undefined, CLASS_TEST_REACH),
+    ).rejects.toThrow(ForbiddenError);
+  });
+
+  test("OFFICE with class_test:edit_all switched off is scoped like anyone else", async () => {
+    setRoleTemplateOverrides({ OFFICE: { granted: [], revoked: ["class_test:edit_all"] } });
+    mockSlotFind.mockReturnValue(leanChain([]));
+    await expect(
+      assertAnchorWrite(ctxOf(oid().toString(), "OFFICE"), groupTest, subjectId, undefined, CLASS_TEST_REACH),
+    ).rejects.toThrow(ForbiddenError);
+    // …and no longer refused by role alone: the routine can still answer for them.
+    mockSlotFind.mockReturnValue(leanChain([{ _id: oid() }]));
+    await expect(
+      assertAnchorWrite(ctxOf(oid().toString(), "OFFICE"), groupTest, subjectId, undefined, CLASS_TEST_REACH),
+    ).resolves.toBeUndefined();
+  });
+
+  test("a teacher granted class_test:edit_all per person passes without the routine", async () => {
+    mockSlotFind.mockReturnValue(leanChain([]));
+    await expect(
+      assertAnchorWrite(
+        ctxWith(OTHER_TEACHER_ID, "TEACHER", ["class_test:edit_all"]),
+        groupTest,
+        subjectId,
+        undefined,
+        CLASS_TEST_REACH,
+      ),
+    ).resolves.toBeUndefined();
+  });
+
+  test("read: OFFICE passes on class_test:view_all; switched off, it needs the routine", async () => {
+    mockSlotFind.mockReturnValue(leanChain([]));
+    await expect(assertAnchorRead(ctxOf(oid().toString(), "OFFICE"), groupTest, CLASS_TEST_REACH)).resolves.toBeUndefined();
+    setRoleTemplateOverrides({ OFFICE: { granted: [], revoked: ["class_test:view_all"] } });
+    await expect(assertAnchorRead(ctxOf(oid().toString(), "OFFICE"), groupTest, CLASS_TEST_REACH)).rejects.toThrow(
+      ForbiddenError,
+    );
+    // Without the reach (the archive caller) the old isAdminStaff bypass still applies.
+    await expect(assertAnchorRead(ctxOf(oid().toString(), "OFFICE"), groupTest)).resolves.toBeUndefined();
+  });
+
+  test("read: a teacher granted class_test:view_all per person passes without the routine", async () => {
+    mockSlotFind.mockReturnValue(leanChain([]));
+    await expect(
+      assertAnchorRead(ctxWith(OTHER_TEACHER_ID, "TEACHER", ["class_test:view_all"]), groupTest, CLASS_TEST_REACH),
+    ).resolves.toBeUndefined();
   });
 });

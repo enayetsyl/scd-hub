@@ -18,7 +18,7 @@ import { builder } from "../../../schema";
 import type { AppContext } from "../../../context";
 import { ForbiddenError } from "../../../middleware/authz";
 import type { ObservationActor } from "../services/ClassroomObservationService";
-import { isAdminStaff } from "../../foundation/services/RoleScope";
+import { callerHasPermission } from "@scd/shared";
 import {
   teacherDomainTrend,
   schoolObservationPatterns,
@@ -29,11 +29,14 @@ import {
   type DomainSignalRow,
 } from "../services/ClassroomObservationTrendService";
 
-/** Build the row-scope actor from the request context (manage = Principal/Office). */
+/** Build the row-scope actor from the request context. `canManage` (any row / any
+ *  teacher) = `classroom_observation:view_all` (PM; was the isAdminStaff role bypass). */
 function actorOf(ctx: AppContext): ObservationActor {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  const role = ctx.auth.role;
-  return { userId: ctx.auth.userId as string, canManage: isAdminStaff(ctx.auth) };
+  return {
+    userId: ctx.auth.userId as string,
+    canManage: callerHasPermission(ctx.auth, "classroom_observation:view_all"),
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -118,7 +121,7 @@ builder.queryField("teacherObservationTrend", (t) =>
       "One teacher's per-domain REF-11 level trend over their released observations (CO-4, §2.2). Requires " +
       "observation:read, then ROW-SCOPED: observation:manage (Principal/Office) may read any teacher's trend; " +
       "otherwise only your own. No average across domains.",
-    authScopes: { hasPermission: "observation:read" },
+    authScopes: { hasPermission: "classroom_observation:view" },
     args: { teacherId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       const actor = actorOf(ctx);
@@ -139,7 +142,7 @@ builder.queryField("schoolObservationPatterns", (t) =>
       "The school-wide weakest-domain training-need signal over staff-wide released REF-11 observations " +
       "(CO-4, REF-11 §8). A staff aggregate — never an individual score. Requires observation:manage " +
       "(Principal/Office).",
-    authScopes: { hasPermission: "observation:manage" },
+    authScopes: { hasPermission: "classroom_observation:view_reports" },
     resolve: async () => schoolObservationPatterns(),
   }),
 );

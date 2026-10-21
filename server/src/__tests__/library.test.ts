@@ -4,7 +4,7 @@
  *   J-L1  duplicate accession number rejected (up-front + the E11000 race)
  *   availability computed — WITHDRAWN/ON_LOAN/etc. excluded, AVAILABLE counted
  *   catalog setCopyStatus refuses circulation states + busy copies
- *   J-L3  assertIsLibrarian: Principal/Office pass via library:manage; a TEACHER
+ *   J-L3  assertIsLibrarian: Principal/Office pass via library:edit_all; a TEACHER
  *         only with an active (latest=assign) LibrarianAssignment; Bangla deny
  *   assign/revoke append-only rows + LIBRARIAN_ASSIGNED audit
  *   policy: DB row wins, missing row falls back to the PRD working values
@@ -15,6 +15,7 @@
 import mongoose from "mongoose";
 import { ForbiddenError } from "../middleware/authz";
 import type { AppContext } from "../context";
+import { setRoleTemplateOverrides } from "@scd/shared";
 
 const oid = () => new mongoose.Types.ObjectId();
 
@@ -243,7 +244,7 @@ describe("setCopyStatus — circulation states protected", () => {
 // ===========================================================================
 
 describe("assertIsLibrarian — desk gate", () => {
-  test("PRINCIPAL and OFFICE pass via library:manage (no assignment row needed)", async () => {
+  test("PRINCIPAL and OFFICE pass via library:edit_all (no assignment row needed)", async () => {
     await expect(assertIsLibrarian(ctxOf("PRINCIPAL"))).resolves.toBeUndefined();
     await expect(assertIsLibrarian(ctxOf("OFFICE"))).resolves.toBeUndefined();
     expect(mockAssignFindOne).not.toHaveBeenCalled();
@@ -268,6 +269,40 @@ describe("assertIsLibrarian — desk gate", () => {
     await expect(assertIsLibrarian({ auth: null } as unknown as AppContext)).rejects.toThrow(
       ForbiddenError,
     );
+  });
+
+  describe("PM — the desk action + library:edit_all waiver (D-#790–#801)", () => {
+    afterEach(() => setRoleTemplateOverrides({}));
+
+    test("Office with library:edit_all switched off needs the duty like a teacher", async () => {
+      setRoleTemplateOverrides({ OFFICE: { granted: [], revoked: ["library:edit_all"] } });
+      mockAssignFindOne.mockResolvedValue(null);
+      await expect(assertIsLibrarian(ctxOf("OFFICE"))).rejects.toThrow(ForbiddenError);
+    });
+
+    test("a Teacher granted library:edit_all per person runs the desk with no duty", async () => {
+      const ctx = {
+        auth: { userId: oid().toString(), role: "TEACHER", grantedPermissions: ["library:edit_all"] },
+      } as unknown as AppContext;
+      mockAssignFindOne.mockResolvedValue(null);
+      await expect(assertIsLibrarian(ctx)).resolves.toBeUndefined();
+      expect(mockAssignFindOne).not.toHaveBeenCalled();
+    });
+
+    test("an assigned librarian whose role lost the desk action is refused that action only", async () => {
+      setRoleTemplateOverrides({ TEACHER: { granted: [], revoked: ["library:return"] } });
+      mockAssignFindOne.mockResolvedValue({ action: "assign" });
+      await expect(assertIsLibrarian(ctxOf("TEACHER"), "library:return")).rejects.toThrow(ForbiddenError);
+      await expect(assertIsLibrarian(ctxOf("TEACHER"), "library:lend")).resolves.toBeUndefined();
+    });
+
+    test("assignLibrarian refuses a teacher who does not hold library:lend", async () => {
+      setRoleTemplateOverrides({ TEACHER: { granted: [], revoked: ["library:lend"] } });
+      mockUserFindById.mockResolvedValue({ _id: oid(), role: "TEACHER", active: true });
+      await expect(assignLibrarian(oid().toString(), oid().toString())).rejects.toThrow(
+        /শুধুমাত্র একজন শিক্ষক/,
+      );
+    });
   });
 
   test("latestRowGrantsDuty pure predicate", () => {

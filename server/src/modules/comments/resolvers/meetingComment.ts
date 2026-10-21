@@ -15,8 +15,6 @@
  * Identity plane (names studentIds); no corpus path (ADR-005).
  */
 import { builder } from "../../../schema";
-import type { Role } from "@scd/shared";
-import { roleHasPermission } from "@scd/shared";
 import { ForbiddenError, assertIsClassTeacher, assertGuardianOfStudent } from "../../../middleware/authz";
 import { resolveCommentSection } from "../services/StudentCommentService";
 import { assertSummaryWritable } from "../services/MeetingChainService";
@@ -34,11 +32,9 @@ import {
   type GuardianMeetingSlot,
 } from "../services/MeetingCommentService";
 
-/** Staff comparison reads — reps gate: tracker:read OR roster:manage (§8). */
-const repsScope = (_p: unknown, _a: unknown, ctx: { auth: { role: string } | null }) =>
-  ctx.auth !== null &&
-  (roleHasPermission(ctx.auth.role as Role, "tracker:read") ||
-    roleHasPermission(ctx.auth.role as Role, "roster:manage"));
+/** Staff comparison reads — `parents_meeting:view_brief` (PM; was the primary-role
+ *  tracker:read OR roster:manage check). No row scope yet — pre-existing gap F-13. */
+const repsScope = { hasPermission: "parents_meeting:view_brief" } as const;
 
 // ---------------------------------------------------------------------------
 // GraphQL shapes
@@ -148,7 +144,7 @@ builder.mutationField("saveMeetingComment", (t) =>
     description:
       "Save (upsert) the class teacher's positive+concern note for one child at one meeting (J-CM6). " +
       "Requires tracker:write AND being the child's section class teacher (Office/Principal denied). Audited.",
-    authScopes: { hasPermission: "tracker:write" },
+    authScopes: { hasPermission: "parents_meeting:write_notes" },
     args: {
       meetingId: t.arg.string({ required: true }),
       studentId: t.arg.string({ required: true }),

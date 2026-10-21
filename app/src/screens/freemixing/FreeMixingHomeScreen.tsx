@@ -12,6 +12,7 @@ import MyVideoReviewsScreen from "./MyVideoReviewsScreen";
 
 export default function FreeMixingHomeScreen(): React.ReactElement {
   const { role, can } = useAuth();
-  const canUpload = can("observation:upload");
-  return canUpload ? <VideoReviewAdminScreen /> : <MyVideoReviewsScreen />;
+  // PM: the admin board needs free_mixing_review:view_all (was observation:upload).
+  const canBoard = can("free_mixing_review:view_all");
+  return canBoard ? <VideoReviewAdminScreen /> : <MyVideoReviewsScreen />;
 }

@@ -3,14 +3,14 @@
  * #105/#126).
  *
  * RBAC (D-#126 — composes existing perms, NO new permission, the D-#94 pattern):
- *   - READ (`vocabWords` / `vocabWord`): `tracker:read` (Principal/Teacher). The
+ *   - READ (`vocabWords` / `vocabWord`): `vocab_test:view` (Principal/Teacher). The
  *     word bank is shared content (no identity), so reading is not class-level
- *     restricted — any holder of tracker:read may browse any bank.
- *   - WRITE (add/edit/(de)activate): `tracker:write` (the J1 actor — "a teacher
- *     with tracker:write on a class") PLUS class-level write-reach: a TEACHER may
+ *     restricted — any holder of vocab_test:view may browse any bank.
+ *   - WRITE (add/edit/(de)activate): `vocab_test:edit` (the J1 actor — "a teacher
+ *     with vocab_test:edit on a class") PLUS class-level write-reach: a TEACHER may
  *     manage only the bank of a class level they hold a teaching/proxy scope on
- *     (PoLP); the PRINCIPAL is unscoped; OFFICE/GUARDIAN are denied (they lack
- *     tracker:write — the weekly TESTER assignment is the roster:manage surface at
+ *     (PoLP); vocab_test:edit_all (Principal by default) is unscoped; OFFICE/GUARDIAN are denied (they lack
+ *     vocab_test:edit — the weekly TESTER assignment is the vocab_test:assign surface at
  *     VC-2, a separate admin action).
  *
  * Identity/operational plane; NO corpus path (ADR-005).
@@ -47,16 +47,16 @@ VocabWordRef.implement({
 });
 
 // ---------------------------------------------------------------------------
-// Mutations (tracker:write + class-level reach)
+// Mutations (vocab_test:edit + class-level reach)
 // ---------------------------------------------------------------------------
 
 builder.mutationField("addVocabWord", (t) =>
   t.field({
     type: VocabWordRef,
     description:
-      "Add a word to a (program × classLevel) bank (J1). Requires tracker:write + a " +
+      "Add a word to a (program × classLevel) bank (J1). Requires vocab_test:edit + a " +
       "teaching/proxy scope on that class level (Principal unscoped). Audited.",
-    authScopes: { hasPermission: "tracker:write" },
+    authScopes: { hasAnyPermission: ["vocab_test:edit", "vocab_test:edit_all"] },
     args: {
       program: t.arg.string({ required: true }),
       classLevel: t.arg.int({ required: true }),
@@ -80,9 +80,9 @@ builder.mutationField("editVocabWord", (t) =>
   t.field({
     type: VocabWordRef,
     description:
-      "Edit a word's headword and/or Bangla meaning. Requires tracker:write + reach " +
+      "Edit a word's headword and/or Bangla meaning. Requires vocab_test:edit + reach " +
       "on the word's class level (Principal unscoped). Audited.",
-    authScopes: { hasPermission: "tracker:write" },
+    authScopes: { hasAnyPermission: ["vocab_test:edit", "vocab_test:edit_all"] },
     args: {
       wordId: t.arg.string({ required: true }),
       headword: t.arg.string({ required: false }),
@@ -107,8 +107,8 @@ builder.mutationField("setVocabWordActive", (t) =>
     type: VocabWordRef,
     description:
       "Deactivate or reactivate a word (soft, never deleted — D-#104). Requires " +
-      "tracker:write + reach on the word's class level (Principal unscoped). Audited.",
-    authScopes: { hasPermission: "tracker:write" },
+      "vocab_test:edit + reach on the word's class level (Principal unscoped). Audited.",
+    authScopes: { hasAnyPermission: ["vocab_test:edit", "vocab_test:edit_all"] },
     args: {
       wordId: t.arg.string({ required: true }),
       active: t.arg.boolean({ required: true }),
@@ -123,7 +123,7 @@ builder.mutationField("setVocabWordActive", (t) =>
 );
 
 // ---------------------------------------------------------------------------
-// Queries (tracker:read — shared content, not class-level restricted)
+// Queries (vocab_test:view — shared content, not class-level restricted)
 // ---------------------------------------------------------------------------
 
 builder.queryField("vocabWords", (t) =>
@@ -131,8 +131,8 @@ builder.queryField("vocabWords", (t) =>
     type: [VocabWordRef],
     description:
       "The word bank for a (program × classLevel). Active rows by default; " +
-      "includeInactive surfaces deactivated words. Requires tracker:read.",
-    authScopes: { hasPermission: "tracker:read" },
+      "includeInactive surfaces deactivated words. Requires vocab_test:view.",
+    authScopes: { hasPermission: "vocab_test:view" },
     args: {
       program: t.arg.string({ required: true }),
       classLevel: t.arg.int({ required: true }),
@@ -151,8 +151,8 @@ builder.queryField("vocabWord", (t) =>
   t.field({
     type: VocabWordRef,
     nullable: true,
-    description: "One word by id (VC-1). Requires tracker:read.",
-    authScopes: { hasPermission: "tracker:read" },
+    description: "One word by id (VC-1). Requires vocab_test:view.",
+    authScopes: { hasPermission: "vocab_test:view" },
     args: { wordId: t.arg.string({ required: true }) },
     resolve: async (_root, args) => getVocabWord(args.wordId) as unknown as Promise<IVocabWord | null>,
   }),

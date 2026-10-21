@@ -108,14 +108,15 @@ const BADGE_TARGETS: Record<string, CardMeta["target"] & { params?: object }> = 
 export default function AdminTodayScreen(): React.ReactElement {
   const nav = useNavigation<NavigationProp<TabParamList>>();
   const date = dateKey();
-  // AG-3 — the desk that physically hands out the weekly gift (Principal + Office).
+  // AG-3 — the desk that physically hands out the weekly gift: `assignment_gift:issue`
+  // over the whole school (`assignment_gift:view_all`) — Principal + Office by default.
   const { can } = useAuth();
-  const canGift = can("gift:manage");
+  const canGift = can("assignment_gift:issue") && can("assignment_gift:view_all");
   // D-#674 — the live class board follows the PERMISSION the server gates on.
-  const canLiveBoard = can("routine:manage");
+  const canLiveBoard = can("routine:view_all");
   // HW-VOID (D-#741) — Principal + Office remove 0-question homework from here; the
   // Office has no Homework tab (no tracker permission, D-#554).
-  const canVoidHomework = can("homework:void");
+  const canVoidHomework = can("homework:delete");
 
   const [q, refetch] = useQuery({ query: ADMIN_TODAY_QUERY, variables: { date }, requestPolicy: "cache-and-network" });
   const cards = q.data?.adminToday ?? [];
@@ -211,17 +212,17 @@ export default function AdminTodayScreen(): React.ReactElement {
 
         {/* CS-1..CS-3 (D-#715–#719) — ক্লাস টেস্টের খাতা: receive, scan & tag, publish,
             hand back. Everyone here holds roster:manage (Principal + Office). */}
-        {can("roster:manage") ? <CtScriptOfficeCard /> : null}
+        {can("class_test_script:scan") ? <CtScriptOfficeCard /> : null}
 
         {/* SP-4 (D-#738) — improvement tasks of today not yet ticked, with the list to mark
             on the teacher's behalf; and any task this person was given to do themselves. */}
-        {can("roster:manage") ? <ImprovementTasksOfficeCard /> : null}
+        {can("improvement_plan:view_all") ? <ImprovementTasksOfficeCard /> : null}
         <ImprovementTasksTeacherCard />
 
         {/* MC-3 (D-#752) — a Principal who also teaches (or class-teaches) gets the same
             meeting-comment cards; each renders nothing when the caller owes nothing. */}
-        {can("tracker:write") ? <MeetingNotesTeacherCard /> : null}
-        {can("tracker:write") ? <MeetingSummaryTeacherCard /> : null}
+        {can("parents_meeting:write_notes") ? <MeetingNotesTeacherCard /> : null}
+        {can("parents_meeting:write_notes") ? <MeetingSummaryTeacherCard /> : null}
 
         {/* HW-VOID (D-#741) — homework declared with 0 questions (usually a class note
             filed as homework): confirm never issues it; delete it here. Hidden when none. */}

@@ -3,13 +3,14 @@
  * (ADR-003). THE SERVER IS ALWAYS IN THE MIDDLE: bytes stream through here;
  * no Drive id, URL, or redirect ever reaches any client.
  *
- *   POST /files/hw   — staff upload (JWT + tracker:write). Multipart field
+ *   POST /files/hw   — staff upload (JWT + homework:declare for a question,
+ *                      homework:check for an answer; PM). Multipart field
  *                      `file` + field/query `kind` = question|answer. Validates
  *                      mime ∈ {jpeg,png,pdf} + size ≤ 5 MB, streams to Drive,
  *                      persists StoredFile, returns { fileId, ... }. On Drive
  *                      failure: Bangla error, NOTHING persisted (GP-J8) — the
  *                      declare/check flow is never blocked by a file.
- *   POST /files/chat — staff upload for a chat attachment (M-4, JWT + chat:write
+ *   POST /files/chat — staff upload for a chat attachment (M-4, JWT + chat:send
  *                      + membership of `conversationId`). Multipart `file` +
  *                      field/query `conversationId`. Validates mime ∈ image/pdf/
  *                      video/audio + size ≤ 10 MB, streams to the Drive `chat`
@@ -204,7 +205,13 @@ const parseUpload: express.RequestHandler = (req, res, next) => {
 
 filesRouter.post("/hw", parseUpload, async (req: Request, res: Response) => {
   const ctx = buildContext(req, res);
-  if (!ctx.auth || !callerHasPermission(ctx.auth, "tracker:write")) {
+  // PM (D-#790..#801): a question file is part of declaring (`homework:declare`), a
+  // checked-answer file part of checking (`homework:check`). Row scope is enforced when
+  // the id is bound (attachHomeworkQuestionFile / attachHomeworkAnswerFile).
+  if (
+    !ctx.auth ||
+    (!callerHasPermission(ctx.auth, "homework:declare") && !callerHasPermission(ctx.auth, "homework:check"))
+  ) {
     res.status(403).json({ error: FILE_ERRORS_BN.forbidden });
     return;
   }
@@ -212,6 +219,10 @@ filesRouter.post("/hw", parseUpload, async (req: Request, res: Response) => {
   const kindArg = (req.body?.kind ?? req.query.kind) as string | undefined;
   if (kindArg !== "question" && kindArg !== "answer") {
     res.status(400).json({ error: "kind must be question or answer" });
+    return;
+  }
+  if (!callerHasPermission(ctx.auth, kindArg === "question" ? "homework:declare" : "homework:check")) {
+    res.status(403).json({ error: FILE_ERRORS_BN.forbidden });
     return;
   }
   const kind: StoredFileKind = kindArg === "question" ? "hw_question" : "hw_answer";
@@ -260,7 +271,7 @@ filesRouter.post("/hw", parseUpload, async (req: Request, res: Response) => {
 });
 
 // ---------------------------------------------------------------------------
-// POST /files/chat — staff upload a chat attachment (M-4, chat:write + member)
+// POST /files/chat — staff upload a chat attachment (M-4, chat:send + member)
 // ---------------------------------------------------------------------------
 
 const parseChatUpload: express.RequestHandler = (req, res, next) => {
@@ -275,7 +286,7 @@ const parseChatUpload: express.RequestHandler = (req, res, next) => {
 
 filesRouter.post("/chat", parseChatUpload, async (req: Request, res: Response) => {
   const ctx = buildContext(req, res);
-  if (!ctx.auth || !callerHasPermission(ctx.auth, "chat:write")) {
+  if (!ctx.auth || !callerHasPermission(ctx.auth, "chat:send")) {
     res.status(403).json({ error: CHAT_FILE_ERRORS_BN.forbidden });
     return;
   }
@@ -357,11 +368,12 @@ filesRouter.post("/chat", parseChatUpload, async (req: Request, res: Response) =
 
 filesRouter.post("/classtest", parseUpload, async (req: Request, res: Response) => {
   const ctx = buildContext(req, res);
-  // D-#342: the OFFICE (roster:manage) also uploads papers here — the question-
-  // request flow's produced paper — alongside the teacher's own (tracker:write).
+  // D-#342: the OFFICE (class_test_question:prepare) also uploads papers here — the
+  // question-request flow's produced paper — alongside the teacher's own (class_test:create).
   if (
     !ctx.auth ||
-    (!callerHasPermission(ctx.auth, "tracker:write") && !callerHasPermission(ctx.auth, "roster:manage"))
+    (!callerHasPermission(ctx.auth, "class_test:create") &&
+      !callerHasPermission(ctx.auth, "class_test_question:prepare"))
   ) {
     res.status(403).json({ error: FILE_ERRORS_BN.forbidden });
     return;
@@ -413,8 +425,8 @@ filesRouter.post("/classtest", parseUpload, async (req: Request, res: Response) 
 
 // ---------------------------------------------------------------------------
 // POST /files/archive — a photo of an archived script bundle / its cover sheet
-// (AR-3, prd-script-archive §5). Filers upload: teacher tracker:write or Office
-// roster:manage (the /classtest gate). Images only (a photo, not a document),
+// (AR-3, prd-script-archive §5). Filers upload: `archive:create` (P, T, O by
+// default — was tracker:write OR roster:manage). Images only (a photo, not a document),
 // ≤ 5 MB; the returned fileId is carried into fileScriptBundle as an
 // attachmentFileId.
 // ---------------------------------------------------------------------------
@@ -433,10 +445,7 @@ export function validateArchivePhotoUpload(mime: string, sizeBytes: number): str
 
 filesRouter.post("/archive", parseUpload, async (req: Request, res: Response) => {
   const ctx = buildContext(req, res);
-  if (
-    !ctx.auth ||
-    (!callerHasPermission(ctx.auth, "tracker:write") && !callerHasPermission(ctx.auth, "roster:manage"))
-  ) {
+  if (!ctx.auth || !callerHasPermission(ctx.auth, "archive:create")) {
     res.status(403).json({ error: FILE_ERRORS_BN.forbidden });
     return;
   }
@@ -488,7 +497,8 @@ filesRouter.post("/archive", parseUpload, async (req: Request, res: Response) =>
 // ---------------------------------------------------------------------------
 // POST /files/classnote — staff attach a file to a class note (≤ 10 MB, jpeg/png/pdf).
 // The 5-per-note cap is enforced when attachmentIds are bound (publish/update). Read
-// gate = staff routine:read. tracker/routine publisher then carries the fileId along.
+// gate = a class-note writer (class_note:create / :edit / :edit_all). tracker/routine
+// publisher then carries the fileId along.
 // ---------------------------------------------------------------------------
 
 const parseClassNoteUpload: express.RequestHandler = (req, res, next) => {
@@ -503,7 +513,12 @@ const parseClassNoteUpload: express.RequestHandler = (req, res, next) => {
 
 filesRouter.post("/classnote", parseClassNoteUpload, async (req: Request, res: Response) => {
   const ctx = buildContext(req, res);
-  if (!ctx.auth || !callerHasPermission(ctx.auth, "routine:read")) {
+  if (
+    !ctx.auth ||
+    !(["class_note:create", "class_note:edit", "class_note:edit_all"] as const).some((p) =>
+      callerHasPermission(ctx.auth!, p),
+    )
+  ) {
     res.status(403).json({ error: FILE_ERRORS_BN.forbidden });
     return;
   }
@@ -558,7 +573,7 @@ filesRouter.post("/classnote", parseClassNoteUpload, async (req: Request, res: R
 
 filesRouter.post("/ctscript", parseClassNoteUpload, async (req: Request, res: Response) => {
   const ctx = buildContext(req, res);
-  if (!ctx.auth || !callerHasPermission(ctx.auth, "roster:manage")) {
+  if (!ctx.auth || !callerHasPermission(ctx.auth, "class_test_script:scan")) {
     res.status(403).json({ error: FILE_ERRORS_BN.forbidden });
     return;
   }
@@ -608,12 +623,13 @@ filesRouter.post("/ctscript", parseClassNoteUpload, async (req: Request, res: Re
 // POST /files/assignment — a teacher uploads an assignment sheet/instruction file
 // for the delivery pass (D-#298). Same envelope as /files/classnote: ≤ 10 MB,
 // jpeg/png/pdf, Drive-first. The ≤5-per-item cap is enforced when the ids are
-// bound at deliverAssignment. Upload gate = tracker:write (who may deliver).
+// bound at deliverAssignment. Upload gate = assignment:declare (who may deliver; PM,
+// was tracker:write).
 // ---------------------------------------------------------------------------
 
 filesRouter.post("/assignment", parseClassNoteUpload, async (req: Request, res: Response) => {
   const ctx = buildContext(req, res);
-  if (!ctx.auth || !callerHasPermission(ctx.auth, "tracker:write")) {
+  if (!ctx.auth || !callerHasPermission(ctx.auth, "assignment:declare")) {
     res.status(403).json({ error: FILE_ERRORS_BN.forbidden });
     return;
   }
@@ -669,7 +685,8 @@ filesRouter.post("/assignment", parseClassNoteUpload, async (req: Request, res: 
 
 filesRouter.post("/print", parseClassNoteUpload, async (req: Request, res: Response) => {
   const ctx = buildContext(req, res);
-  if (!ctx.auth || !callerHasPermission(ctx.auth, "tracker:write")) {
+  // PM: printing:create (was tracker:write) — who may file a print request at all.
+  if (!ctx.auth || !callerHasPermission(ctx.auth, "printing:create")) {
     res.status(403).json({ error: FILE_ERRORS_BN.forbidden });
     return;
   }
@@ -725,7 +742,7 @@ filesRouter.post("/print", parseClassNoteUpload, async (req: Request, res: Respo
 
 filesRouter.post("/english-drive", parseClassNoteUpload, async (req: Request, res: Response) => {
   const ctx = buildContext(req, res);
-  if (!ctx.auth || !callerHasPermission(ctx.auth, "roster:manage")) {
+  if (!ctx.auth || !callerHasPermission(ctx.auth, "english_drive:upload")) {
     res.status(403).json({ error: FILE_ERRORS_BN.forbidden });
     return;
   }
@@ -814,7 +831,7 @@ filesRouter.post("/english-drive", parseClassNoteUpload, async (req: Request, re
 
 filesRouter.post("/teaching-note", parseClassNoteUpload, async (req: Request, res: Response) => {
   const ctx = buildContext(req, res);
-  if (!ctx.auth || !callerHasPermission(ctx.auth, "roster:manage")) {
+  if (!ctx.auth || !callerHasPermission(ctx.auth, "teaching_notes:upload")) {
     res.status(403).json({ error: FILE_ERRORS_BN.forbidden });
     return;
   }
@@ -940,8 +957,9 @@ filesRouter.post("/comment", parseCommentUpload, async (req: Request, res: Respo
     res.status(409).json({ error: "একটি ডেলিভার হওয়া মন্তব্যে ফাইল সংযুক্ত করা যাবে না" });
     return;
   }
-  const isAuthor = target.authorUserId === ctx.auth.userId;
-  const isReviewer = callerHasPermission(ctx.auth, "roster:manage"); // Principal/Office
+  // PM: own comment → student_comments:create + author; any → student_comments:review.
+  const isAuthor = target.authorUserId === ctx.auth.userId && callerHasPermission(ctx.auth, "student_comments:create");
+  const isReviewer = callerHasPermission(ctx.auth, "student_comments:review");
   if (!isAuthor && !isReviewer) {
     res.status(403).json({ error: COMMENT_FILE_ERRORS_BN.forbidden });
     return;
@@ -1021,10 +1039,11 @@ const parseBookUpload: express.RequestHandler = (req, res, next) => {
 
 filesRouter.post("/book", parseBookUpload, async (req: Request, res: Response) => {
   const ctx = buildContext(req, res);
-  // book:illustrate brings artwork in; book:assemble files a rendered edition.
+  // book_production:illustrate brings artwork in; book_production:assemble files a rendered
+  // edition. Both land as a slot asset here (no separate edition kind), so either action passes.
   const mayUpload =
     !!ctx.auth &&
-    (callerHasPermission(ctx.auth, "book:illustrate") || callerHasPermission(ctx.auth, "book:assemble"));
+    (callerHasPermission(ctx.auth, "book_production:illustrate") || callerHasPermission(ctx.auth, "book_production:assemble"));
   if (!mayUpload) {
     res.status(403).json({ error: BOOK_FILE_ERRORS_BN.forbidden });
     return;
@@ -1151,10 +1170,10 @@ filesRouter.get("/:id", async (req: Request, res: Response) => {
     } else if (file.kind === "classtest_question") {
       await assertClassTestFileReadAccess(ctx, file);
     } else if (file.kind === "classnote_attachment") {
-      // Staff read under routine:read. A GUARDIAN may read one too, but only an
+      // Staff read under class_note:view. A GUARDIAN may read one too, but only an
       // attachment on a note for a group their own child sits in — the file carries no
       // back-reference, so the gate reverse-resolves the owning ClassNote.
-      if (!callerHasPermission(ctx.auth, "routine:read")) {
+      if (!callerHasPermission(ctx.auth, "class_note:view")) {
         await assertClassNoteFileReadAccess(ctx, file._id.toString());
       }
     } else if (file.kind === "assignment_attachment") {
@@ -1171,11 +1190,8 @@ filesRouter.get("/:id", async (req: Request, res: Response) => {
       await assertClassTestScriptReadAccess(ctx, file);
     } else if (file.kind === "archive_photo") {
       // A bundle photo is operational staff metadata (AR-3): the class-test
-      // screens' read audience — tracker:read staff or the Office/Principal.
-      if (
-        !callerHasPermission(ctx.auth, "tracker:read") &&
-        !callerHasPermission(ctx.auth, "roster:manage")
-      ) {
+      // screens' read audience — `archive:view` (P, T, O by default).
+      if (!callerHasPermission(ctx.auth, "archive:view")) {
         throw new ForbiddenError(FILE_ERRORS_BN.forbidden);
       }
     } else if (file.kind === "english_drive") {
@@ -1188,7 +1204,7 @@ filesRouter.get("/:id", async (req: Request, res: Response) => {
       // A print upload is readable by the teacher who sent it and by the Office/Principal
       // who has to print it (PQ-2, D-#281) — nobody else.
       const isUploader = file.uploadedBy?.toString() === ctx.auth.userId;
-      if (!isUploader && !callerHasPermission(ctx.auth, "roster:manage")) {
+      if (!isUploader && !callerHasPermission(ctx.auth, "printing:view_all")) {
         throw new ForbiddenError(FILE_ERRORS_BN.forbidden);
       }
     } else {

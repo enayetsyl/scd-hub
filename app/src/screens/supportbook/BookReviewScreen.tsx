@@ -274,8 +274,8 @@ export default function BookReviewScreen(): React.ReactElement {
   // Writing a note is the reviewer's job; closing one belongs to EITHER side — the
   // author resolves what they fixed, the reviewer withdraws what they thought better
   // of. The server enforces the same split (D-#440).
-  const canComment = can("book:review") || can("book:review_senior");
-  const canResolve = canComment || can("book:author");
+  const canComment = can("book_production:review") || can("book_production:approve");
+  const canResolve = canComment || can("book_production:author");
 
   const [booksQ, refetchBooks] = useQuery<{ supportBooks: SupportBookT[] }>({ query: SUPPORT_BOOKS });
   const books = booksQ.data?.supportBooks ?? [];

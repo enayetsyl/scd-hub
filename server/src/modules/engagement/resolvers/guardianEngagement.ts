@@ -1,7 +1,7 @@
 /**
  * Guardian-engagement report resolver (GE-1/GE-3, D-#464/#465).
  *
- * READ-ONLY. Gated on `audit:read` — Principal-only in the role map, and no new
+ * READ-ONLY. Gated on `guardian_engagement:view` (was `audit:read`) — Principal-only in the role map, and no new
  * permission is minted (the D-#414 system-health precedent, which avoids a two-place
  * contract sync for what is a reporting surface, not a new capability).
  *
@@ -130,8 +130,8 @@ builder.queryField("guardianEngagement", (t) =>
       "How regularly families use the portal and what they open (GE-1/GE-3). Three " +
       "independent signals — logins (from the audit log), views (GE-2), inbox " +
       "delivered/read — kept separate so a broken one is visible instead of averaged " +
-      "away. Requires audit:read (Principal).",
-    authScopes: { hasPermission: "audit:read" },
+      "away. Requires guardian_engagement:view (Principal by default).",
+    authScopes: { hasPermission: "guardian_engagement:view" },
     args: {
       days: t.arg.int({ required: false }),
       sectionId: t.arg.string({ required: false }),

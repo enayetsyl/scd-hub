@@ -178,7 +178,7 @@ export default function QuestionBankScreen({ navigation, route }: Props): React.
    */
   const nothingNarrowed = chips.length === 0 && qb.search.trim() === "";
   /** That note is only TRUE for a caller the publish gate actually applies to. */
-  const gatedToPublished = !can("question:manage");
+  const gatedToPublished = !can("question_bank:view_all");
   const loadingMore = fetching && qb.after !== null;
 
   /**

@@ -21,6 +21,7 @@ import { friendlyError } from "../../lib/errors";
 import { groupByDate } from "../../lib/groupByDate";
 import { space } from "../../theme/tokens";
 import { dateKey } from "../../lib/dates";
+import { useAuth } from "../../auth/AuthContext";
 
 type Props = NativeStackScreenProps<HrStackParamList, "NeedsCoverInbox">;
 
@@ -38,6 +39,7 @@ function plusDaysKey(days: number): string {
 }
 
 export default function NeedsCoverInboxScreen(_props: Props): React.ReactElement {
+  const { can } = useAuth();
   const [from, setFrom] = React.useState(todayKey());
   const [to, setTo] = React.useState(plusDaysKey(7));
   const [assignFor, setAssignFor] = React.useState<Record<string, string>>({});
@@ -115,12 +117,14 @@ export default function NeedsCoverInboxScreen(_props: Props): React.ReactElement
                   value={assignFor[r.slotId] ?? ""}
                   onChange={(v) => setAssignFor((a) => ({ ...a, [r.slotId]: v }))}
                 />
-                <Button
-                  title={STR.hrCoverApprove}
-                  onPress={() => assign(r.slotId)}
-                  loading={busyId === r.slotId}
-                  disabled={busyId !== null || !assignFor[r.slotId]}
-                />
+                {can("cover:approve") ? (
+                  <Button
+                    title={STR.hrCoverApprove}
+                    onPress={() => assign(r.slotId)}
+                    loading={busyId === r.slotId}
+                    disabled={busyId !== null || !assignFor[r.slotId]}
+                  />
+                ) : null}
               </Card>
             ))}
           </View>

@@ -303,14 +303,14 @@ builder.queryFields((t) => ({
   masteryCoverage: t.field({
     type: [CoverageRef],
     description: "Every class × subject that has a catalogue, with counts by status.",
-    authScopes: { hasPermission: "mastery:read" },
+    authScopes: { hasPermission: "mastery:view" },
     resolve: async () => listCoverage(),
   }),
 
   masteryCatalogue: t.field({
     type: CatalogueRef,
     description: "Chapters, learning outcomes (incl. skill strands) and question-type marks for one class × subject.",
-    authScopes: { hasPermission: "mastery:read" },
+    authScopes: { hasPermission: "mastery:view" },
     args: {
       classToken: t.arg.string({ required: true }),
       subject: t.arg.string({ required: true }),
@@ -323,14 +323,14 @@ builder.queryFields((t) => ({
   masteryTags: t.field({
     type: [TagRef],
     description: "The diagnosis tags, in display order. The seed tags are created on first read.",
-    authScopes: { hasPermission: "mastery:read" },
+    authScopes: { hasPermission: "mastery:view" },
     resolve: async () => listTags(),
   }),
 
   masteryPolicy: t.field({
     type: PolicyRef,
     description: "The resolved policy for the school (no args) or one class × subject (both args).",
-    authScopes: { hasPermission: "mastery:read" },
+    authScopes: { hasPermission: "mastery:view" },
     args: {
       classToken: t.arg.string({ required: false }),
       subject: t.arg.string({ required: false }),
@@ -342,7 +342,7 @@ builder.queryFields((t) => ({
   masteryEnablements: t.field({
     type: [EnablementRef],
     description: "The add-on switch rows for one academic year (D-#775).",
-    authScopes: { hasPermission: "mastery:read" },
+    authScopes: { hasPermission: "mastery:view" },
     args: { academicYearId: t.arg.string({ required: true }) },
     resolve: async (_r, args) => listEnablements(args.academicYearId),
   }),
@@ -358,7 +358,7 @@ builder.mutationFields((t) => ({
     description:
       "Dry run (apply=false) or apply a class × subject catalogue converted from its locked file. " +
       "The dry run is the same computation the apply uses.",
-    authScopes: { hasPermission: "mastery:manage" },
+    authScopes: { hasPermission: "mastery:settings" },
     args: {
       catalogueJson: t.arg.string({ required: true }),
       apply: t.arg.boolean({ required: true }),
@@ -369,7 +369,7 @@ builder.mutationFields((t) => ({
   lockMasteryCatalogue: t.field({
     type: "Int",
     description: "DRAFT → LOCKED for one class × subject; returns how many outcomes were locked (D-#776).",
-    authScopes: { hasPermission: "mastery:manage" },
+    authScopes: { hasPermission: "mastery:settings" },
     args: {
       classToken: t.arg.string({ required: true }),
       subject: t.arg.string({ required: true }),
@@ -381,7 +381,7 @@ builder.mutationFields((t) => ({
   saveMasteryOutcome: t.field({
     type: OutcomeRef,
     description: "Edit an outcome's label, home tip, source text or question types (never its code or assessment mode).",
-    authScopes: { hasPermission: "mastery:manage" },
+    authScopes: { hasPermission: "mastery:settings" },
     args: {
       code: t.arg.string({ required: true }),
       labelBn: t.arg.string({ required: false }),
@@ -407,7 +407,7 @@ builder.mutationFields((t) => ({
   retireMasteryOutcome: t.field({
     type: "String",
     description: "LOCKED → RETIRED (kept for old evidence); a DRAFT is removed. Returns RETIRED or DELETED.",
-    authScopes: { hasPermission: "mastery:manage" },
+    authScopes: { hasPermission: "mastery:delete" },
     args: { code: t.arg.string({ required: true }) },
     resolve: async (_r, args, ctx) => retireOutcome(args.code, actorOf(ctx)),
   }),
@@ -415,7 +415,7 @@ builder.mutationFields((t) => ({
   saveMasteryQuestionType: t.field({
     type: QuestionTypeRef,
     description: "Create or edit a question type's marks for one class × subject; a marks change is kept in history (D-#777).",
-    authScopes: { hasPermission: "mastery:manage" },
+    authScopes: { hasPermission: "mastery:settings" },
     args: {
       classToken: t.arg.string({ required: true }),
       subject: t.arg.string({ required: true }),
@@ -445,7 +445,7 @@ builder.mutationFields((t) => ({
   saveMasteryTag: t.field({
     type: TagRef,
     description: "Add or edit a diagnosis tag, including routing tags (D-#787: the strand must exist in every scope).",
-    authScopes: { hasPermission: "mastery:manage" },
+    authScopes: { hasPermission: "mastery:settings" },
     args: { input: t.arg({ type: TagInputRef, required: true }) },
     resolve: async (_r, { input }, ctx) =>
       saveTag(
@@ -476,7 +476,7 @@ builder.mutationFields((t) => ({
     description:
       "Save the school policy (no class/subject) or one class × subject override. `values` replaces the " +
       "scope's own keys; validated on the resolved result.",
-    authScopes: { hasPermission: "mastery:manage" },
+    authScopes: { hasPermission: "mastery:settings" },
     args: {
       classToken: t.arg.string({ required: false }),
       subject: t.arg.string({ required: false }),
@@ -494,7 +494,7 @@ builder.mutationFields((t) => ({
   setMasteryEnablement: t.field({
     type: EnablementRef,
     description: "Switch the add-on on/off for a year × class × subject (D-#775). On requires a LOCKED catalogue.",
-    authScopes: { hasPermission: "mastery:manage" },
+    authScopes: { hasPermission: "mastery:settings" },
     args: {
       academicYearId: t.arg.string({ required: true }),
       classToken: t.arg.string({ required: true }),

@@ -12,7 +12,6 @@
  */
 import { builder } from "../../../schema";
 import { ForbiddenError, assertGuardianOfStudent } from "../../../middleware/authz";
-import type { Role } from "@scd/shared";
 import type { Types } from "mongoose";
 import { Student } from "../../foundation/models/Student";
 import {
@@ -24,8 +23,12 @@ import {
   type AttendancePicture,
   type GuardianTrajectory,
 } from "../services/WholePictureService";
-import { assertReportRead, StudentAnalyticsRef } from "./classTestSummary";
-import { isAdminStaff } from "../../foundation/services/RoleScope";
+import {
+  assertReportRead,
+  holdsViewAll,
+  STUDENT_PROFILE_REPORT_GATE,
+  StudentAnalyticsRef,
+} from "./classTestSummary";
 
 const HomeworkPictureRef = builder.objectRef<HomeworkPicture>("HomeworkPicture").implement({
   description: "Homework completion + chase behaviour over the window — the earliest warning signal.",
@@ -97,19 +100,18 @@ builder.queryField("studentWholePicture", (t) =>
   t.field({
     type: WholePictureRef,
     description:
-      "One student across the four core trackers. Principal/Office unscoped; a teacher is scoped " +
-      "to the student's own section (same rule as classTestStudentProfile).",
-    authScopes: { authenticated: true },
+      "One student across the four core trackers. student_profile:view_all unscoped; " +
+      "student_profile:view is scoped to the student's own section (same rule as classTestStudentProfile).",
+    authScopes: { hasPermission: "student_profile:view" },
     args: { studentId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      const role = ctx.auth.role as Role;
-      if (!isAdminStaff(ctx.auth)) {
+      if (!holdsViewAll(ctx, STUDENT_PROFILE_REPORT_GATE)) {
         const student = (await Student.findById(args.studentId).select("sectionId").lean()) as {
           sectionId: Types.ObjectId;
         } | null;
         if (!student) throw new ForbiddenError("Student not found");
-        await assertReportRead(ctx, student.sectionId.toString());
+        await assertReportRead(ctx, student.sectionId.toString(), { gate: STUDENT_PROFILE_REPORT_GATE });
       }
       return wholePicture(args.studentId);
     },

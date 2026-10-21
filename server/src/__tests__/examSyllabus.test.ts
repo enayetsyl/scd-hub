@@ -92,6 +92,7 @@ import {
   sendBackSyllabus,
   publishSyllabus,
 } from "../modules/exams/services/ExamSyllabusService";
+import { setRoleTemplateOverrides } from "@scd/shared";
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -577,7 +578,7 @@ describe("publishSyllabus", () => {
     expect(mockEmitPublished).not.toHaveBeenCalled();
   });
 
-  test("OFFICE holds exam:manage and is STILL refused — publish rides the role (§7.4)", async () => {
+  test("OFFICE holds exam_syllabus:edit and is STILL refused — publish is exam_syllabus:publish (§7.4)", async () => {
     const doc = docFor({ status: "PRINCIPAL_REVIEW" });
     mockSyllabusFindById.mockReturnValue(doc);
     await expect(publishSyllabus(OFFICE, "s1")).rejects.toThrow(/প্রধান শিক্ষক/);
@@ -600,6 +601,43 @@ describe("publishSyllabus", () => {
     mockSyllabusFindById.mockReturnValue(doc);
     await expect(publishSyllabus(PRINCIPAL, "s1")).rejects.toThrow(/30|৩০/);
     expect(doc.status).toBe("PRINCIPAL_REVIEW");
+  });
+});
+
+// PM (D-#790): publish + the no-holder bypass ride exam_syllabus:publish (PRINCIPAL-DEFAULT);
+// the desk's TEACHER_REVIEW send-back rides exam_syllabus:edit (was isAdminStaff).
+describe("PM — syllabus actions", () => {
+  afterEach(() => setRoleTemplateOverrides({}));
+
+  test("Office granted exam_syllabus:publish may publish", async () => {
+    setRoleTemplateOverrides({ OFFICE: { granted: ["exam_syllabus:publish"], revoked: [] } });
+    const doc = docFor({ status: "PRINCIPAL_REVIEW" });
+    mockSyllabusFindById.mockReturnValue(doc);
+    await publishSyllabus(OFFICE, "s1");
+    expect(doc.status).toBe("PUBLISHED");
+  });
+
+  test("a teacher granted publish per person may take the no-holder bypass", async () => {
+    mockSlots.mockReturnValue([]);
+    const ctx = ctxFor("TEACHER", OUTSIDER);
+    ctx.auth!.grantedPermissions = ["exam_syllabus:publish"];
+    const doc = docFor({ status: "TEACHER_REVIEW" });
+    mockSyllabusFindById.mockReturnValue(doc);
+    await approveSyllabusAsTeacher(ctx, "s1");
+    expect(doc.teacherBypass).toBe(true);
+  });
+
+  test("Office sends back at TEACHER_REVIEW by default; not with exam_syllabus:edit switched off", async () => {
+    const doc = docFor({ status: "TEACHER_REVIEW", approverUserId: new mongoose.Types.ObjectId(ROKSANA) });
+    mockSyllabusFindById.mockReturnValue(doc);
+    await sendBackSyllabus(OFFICE, "s1", "কারণ");
+    expect(doc.status).toBe("DRAFT");
+
+    setRoleTemplateOverrides({ OFFICE: { granted: [], revoked: ["exam_syllabus:edit"] } });
+    mockSyllabusFindById.mockReturnValue(
+      docFor({ status: "TEACHER_REVIEW", approverUserId: new mongoose.Types.ObjectId(ROKSANA) }),
+    );
+    await expect(sendBackSyllabus(OFFICE, "s1", "কারণ")).rejects.toThrow(/অনুমতি নেই/);
   });
 });
 

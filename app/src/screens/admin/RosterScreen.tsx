@@ -1,5 +1,5 @@
 /**
- * RosterScreen — the whole-school student table (Office/Principal, roster:manage).
+ * RosterScreen — the whole-school student table (Office/Principal, students:view_all).
  * One row per active student: SL, ID, name (→ student profile), class, Quran
  * group, Arabic group, guardian phone. Replaces the old one-section card list
  * (owner ask 2026-09-30: "make it tabular, default pagination 100").

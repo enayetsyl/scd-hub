@@ -84,7 +84,7 @@ builder.mutationField("rateObservationReview", (t) =>
     description:
       "The observed teacher rates a released review's fairness (+ optional usefulness), 1–5 (CO-7, §CO-7(5)). " +
       "Requires observation:read; the service enforces the observed-teacher + released-state checks. Audited.",
-    authScopes: { hasPermission: "observation:read" },
+    authScopes: { hasPermission: "classroom_observation:view" },
     args: {
       observationId: t.arg.string({ required: true }),
       fairnessRating: t.arg.int({ required: true }),
@@ -112,7 +112,7 @@ builder.queryField("reviewerEffectiveness", (t) =>
     description:
       "The private reviewer-effectiveness read across observers (CO-7, §CO-7). Requires observation:manage " +
       "(Principal/Office) — never exposed to wider staff.",
-    authScopes: { hasPermission: "observation:manage" },
+    authScopes: { hasPermission: "classroom_observation:view_reports" },
     resolve: async () => reviewerEffectiveness(),
   }),
 );

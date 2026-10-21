@@ -3,9 +3,9 @@
  * tracker §3.6/§4/§6, D-#142).
  *
  * RBAC (composes existing perms — D-#94/#106/#127, no new permission):
- *   - Mark (`submitVocabStudentResult`): `tracker:write` + the OPERATOR gate
+ *   - Mark (`submitVocabStudentResult`): `vocab_test:enter_results` + the OPERATOR gate
  *     (assigned/covering tester on the test's section, §5).
- *   - Reads (`vocabStudentResult` / `vocabTestResults`): `tracker:read`.
+ *   - Reads (`vocabStudentResult` / `vocabTestResults`): `vocab_test:view`.
  *
  * Identity-plane (names studentIds); NO corpus path (ADR-005).
  */
@@ -63,7 +63,7 @@ const MistakeInputType = builder.inputType("VocabMistakeInput", {
 });
 
 // ---------------------------------------------------------------------------
-// Mutation — record a student's marks (tracker:write + operator gate)
+// Mutation — record a student's marks (vocab_test:enter_results + operator gate)
 // ---------------------------------------------------------------------------
 
 builder.mutationField("submitVocabStudentResult", (t) =>
@@ -72,8 +72,8 @@ builder.mutationField("submitVocabStudentResult", (t) =>
     description:
       "Record a student's result for a test (wholesale, §3.6): set PRESENT/ABSENT + replace their " +
       "per-position mistakes. ABSENT clears marks + is excluded from scoring (§4). Flips the test to " +
-      "marked. Requires tracker:write + being the assigned/covering tester. Audited.",
-    authScopes: { hasPermission: "tracker:write" },
+      "marked. Requires vocab_test:enter_results + being the assigned/covering tester. Audited.",
+    authScopes: { hasAnyPermission: ["vocab_test:enter_results", "vocab_test:edit_all"] },
     args: {
       testId: t.arg.string({ required: true }),
       studentId: t.arg.string({ required: true }),
@@ -83,7 +83,7 @@ builder.mutationField("submitVocabStudentResult", (t) =>
     resolve: async (_root, args, ctx) => {
       const test = await getVocabTest(args.testId);
       if (!test) throw new ForbiddenError("Test not found");
-      await assertCanOperateVocab(ctx, test.sectionId.toString(), test.program, test.weekOf);
+      await assertCanOperateVocab(ctx, test.sectionId.toString(), test.program, test.weekOf, "vocab_test:enter_results");
       const mistakes: MistakeInput[] = (args.mistakes ?? []).map((m) => ({
         positionId: m.positionId,
         wrongFields: m.wrongFields,
@@ -103,15 +103,15 @@ builder.mutationField("submitVocabStudentResult", (t) =>
 );
 
 // ---------------------------------------------------------------------------
-// Queries (tracker:read)
+// Queries (vocab_test:view)
 // ---------------------------------------------------------------------------
 
 builder.queryField("vocabStudentResult", (t) =>
   t.field({
     type: DerivedStudentResultRef,
     nullable: true,
-    description: "A student's derived result on a test (VC-3). Null if not yet recorded. Requires tracker:read.",
-    authScopes: { hasPermission: "tracker:read" },
+    description: "A student's derived result on a test (VC-3). Null if not yet recorded. Requires vocab_test:view.",
+    authScopes: { hasPermission: "vocab_test:view" },
     args: {
       testId: t.arg.string({ required: true }),
       studentId: t.arg.string({ required: true }),
@@ -123,8 +123,8 @@ builder.queryField("vocabStudentResult", (t) =>
 builder.queryField("vocabTestResults", (t) =>
   t.field({
     type: [DerivedStudentResultRef],
-    description: "The derived results for every recorded student on a test (VC-3 per-test report). Requires tracker:read.",
-    authScopes: { hasPermission: "tracker:read" },
+    description: "The derived results for every recorded student on a test (VC-3 per-test report). Requires vocab_test:view.",
+    authScopes: { hasPermission: "vocab_test:view" },
     args: { testId: t.arg.string({ required: true }) },
     resolve: async (_root, args) => testResults(args.testId),
   }),

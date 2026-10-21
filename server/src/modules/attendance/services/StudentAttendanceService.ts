@@ -28,6 +28,7 @@
  * (Saturdays stay attendance-free by ruling, D-#278).
  */
 import { Types } from "mongoose";
+import { callerHasPermission } from "@scd/shared";
 import {
   returningStudentsFor,
   previousSchoolDayKey,
@@ -192,7 +193,24 @@ export async function assignUnitMarker(
     if (!section) throw new AttendanceError("Section not found");
   }
   const teacher = await User.findById(teacherId).lean();
-  if (!teacher || teacher.role !== "TEACHER") throw new AttendanceError("Marker must be a TEACHER");
+  // PM: the target must hold `attendance:mark` (role default or per-person grant). The
+  // TEACHER-role conjunct stays so ship day changes nobody's access: the Principal holds
+  // every catalogue action by default, yet never marks (D-#64).
+  if (
+    !teacher ||
+    teacher.role !== "TEACHER" ||
+    !callerHasPermission(
+      {
+        role: teacher.role,
+        additionalTemplates: teacher.additionalTemplates ?? [],
+        grantedPermissions: teacher.grantedPermissions ?? [],
+        revokedPermissions: teacher.revokedPermissions ?? [],
+      },
+      "attendance:mark",
+    )
+  ) {
+    throw new AttendanceError("Marker must be a TEACHER who may take attendance");
+  }
 
   const assignment = await SectionAttendanceAssignment.create({
     ...(unit.unitType === "section"

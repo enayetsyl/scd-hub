@@ -425,8 +425,8 @@ function ItemCard({
   // teacher revert their own last action until the end of that Dhaka day, and lets
   // admin revert at any time. Offering a teacher the button here would hand them one
   // that always refuses — the same dishonest rendering the D-#388 read-out avoids.
-  const { role } = useAuth();
-  const canRevertPrior = role === "PRINCIPAL" || role === "OFFICE";
+  const { can } = useAuth();
+  const canRevertPrior = can("assignment:undo_any"); // PM: was role P/O (the server's admin flag)
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const submitRows = group.rows.filter((r) => SUBMIT_STATES.has(r.state));

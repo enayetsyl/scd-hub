@@ -104,7 +104,7 @@ builder.mutationField("dispatchMeetingSchedule", (t) =>
       "Dispatch a meeting's per-family timing notices (J-CM5): flips draft → scheduled, stamps dispatchedAt, " +
       "renders the Bangla slot message (time, or On-Call), builds wa.me links for families with a phone, and " +
       "emits MEETING_SCHEDULE kind-gated. Requires roster:manage. Audited.",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "parents_meeting:send" },
     args: { meetingId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
@@ -119,7 +119,7 @@ builder.mutationField("setMeetingSlotAttendance", (t) =>
     description:
       "Capture present/absent (+ optional remark) for one family slot at the meeting (the meeting must be " +
       "dispatched first). Requires roster:manage. Audited.",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "parents_meeting:mark_attendance" },
     args: {
       slotId: t.arg.string({ required: true }),
       attended: t.arg.boolean({ required: true }),
@@ -142,7 +142,7 @@ builder.queryField("meetingAttendanceSummary", (t) =>
     description:
       "Derived present/absent/total aggregates for a meeting (CM-4 — replaces the Office-Copy counts). " +
       "Requires roster:manage.",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "parents_meeting:view" },
     args: { meetingId: t.arg.string({ required: true }) },
     resolve: async (_root, args) => meetingAttendanceSummary(args.meetingId),
   }),

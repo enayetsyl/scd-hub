@@ -1,6 +1,6 @@
 /**
  * ScopeGrantScreen (S15 / J5.4, J5.7) — assign / extend / revoke proxy (cover)
- * grants. Requires user:manage (Principal). The active grants list (proxyGrants,
+ * grants. Requires cover:assign_proxy (Principal by default). The active grants list (proxyGrants,
  * Slice-4 follow-up) drives extend/revoke — no pasted GRANT_IDs; teachers and
  * class/section come from name pickers. Teaching/supervisory grant CRUD needs
  * server mutations not yet exposed — see STATUS follow-ups.
@@ -53,7 +53,7 @@ export default function ScopeGrantScreen(_props: Props): React.ReactElement {
   const { user, can } = useAuth();
   const { confirmAction } = useConfirm();
   const toast = useToast();
-  const canManage = !!user && can("user:manage");
+  const canManage = !!user && can("cover:assign_proxy");
 
   // Active grants list (Slice-4 follow-up): pick a grant to extend/revoke.
   // D-#761: server-paged; grants whose window has ended no longer linger in it.

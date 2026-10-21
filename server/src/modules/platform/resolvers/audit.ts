@@ -2,7 +2,7 @@
  * Audit-log resolver (owner ask 2026-07-20) — the in-app viewer read over the
  * append-only audit log (ADR-008). READ-ONLY by construction: no mutation is
  * exposed here, ever — rows are written only by the server-internal writeAudit.
- * Gated on `audit:read` (Principal only, verifier-proven).
+ * Gated on `audit_log:view` (was audit:read; Principal by default).
  */
 import { builder } from "../../../schema";
 import {
@@ -40,8 +40,8 @@ builder.queryField("auditLog", (t) =>
     type: [AuditRowRef],
     description:
       "Newest-first page of the audit log; `before` (ISO instant) pages older rows; optional " +
-      "eventKind/actorRole/actorId filters and a from/to Dhaka-day window. Requires audit:read (Principal).",
-    authScopes: { hasPermission: "audit:read" },
+      "eventKind/actorRole/actorId filters and a from/to Dhaka-day window. Requires audit_log:view (Principal by default).",
+    authScopes: { hasPermission: "audit_log:view" },
     args: {
       before: t.arg.string({ required: false }),
       limit: t.arg.int({ required: false }),

@@ -13,6 +13,11 @@
  *                coverage block, revoke, hard-lock reopen — are PRINCIPAL-ONLY BY
  *                ROLE (D-#397), so AC-1 can hand the Office release without the
  *                overrides.
+ *
+ *   PM (permission matrix): the gates are now the `monthly_report` actions —
+ *   view / view_all (read, fee block), create (build + drafts), export (comment
+ *   file in/out), review (accept the paragraph), release, and the PRINCIPAL-DEFAULT
+ *   override / revoke / settings. See services/monthlyReportGate.ts.
  *   guardian     RELEASED revisions of their OWN child only, over the existing
  *                guardian link gate. No staff field is reachable from that path.
  *
@@ -20,16 +25,17 @@
  * DOCUMENT, and typing it in the schema would freeze its shape a second time.
  */
 import type { Types } from "mongoose";
-import { callerHasPermission, type Role } from "@scd/shared";
+import type { Permission } from "@scd/shared";
 import { builder } from "../../../schema";
 import type { AppContext } from "../../../context";
+import { ForbiddenError, assertGuardianOfStudent } from "../../../middleware/authz";
 import {
-  ForbiddenError,
-  allowedSubjectCodesForSection,
-  assertGuardianOfStudent,
-} from "../../../middleware/authz";
-import { assertReportRead } from "../../trackers/resolvers/classTestSummary";
-import { isAdminStaff } from "../../foundation/services/RoleScope";
+  assertMonthlyReportRead,
+  canOverrideMonthly,
+  monthlyReportSubjects,
+  requireMonthly,
+  seesMonthlyFees,
+} from "../services/monthlyReportGate";
 import { Section } from "../../foundation/models/Section";
 import { Student } from "../../foundation/models/Student";
 import { MonthlyReport, type IMonthlyReport } from "../models/MonthlyReport";
@@ -68,44 +74,23 @@ import { personName } from "../../../lib/personName";
 // Gates
 // ---------------------------------------------------------------------------
 
-function assertRelease(ctx: AppContext): { isPrincipal: boolean; actorId: string } {
-  if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  const role = ctx.auth.role as Role;
-  // Template-aware (D-#474): an OFFICE template added on top of TEACHER already hands
-  // the caller the report:release PERMISSION via effectivePermissions — a bare role
-  // comparison here would silently ignore that grant, the exact D-#467/#468 pattern.
-  // isPrincipal stays PRIMARY-role-only on purpose: the override/revoke/reopen powers
-  // built on top of this gate (assertPrincipal below) are Principal-only BY ROLE,
-  // not by template, so an office-by-template caller must not inherit them.
-  if (!callerHasPermission(ctx.auth, "report:release") || !isAdminStaff(ctx.auth)) {
-    throw new ForbiddenError("মাসিক রিপোর্ট প্রকাশ অফিস/অধ্যক্ষের কাজ");
-  }
-  return { isPrincipal: role === "PRINCIPAL", actorId: ctx.auth.userId as string };
+/** The office desk's monthly actions (PM: the old `assertRelease` = report:release ∧
+ *  isAdminStaff, split into create / view_all / release / export — the role half dropped). */
+function assertAction(ctx: AppContext, perm: Permission): { isPrincipal: boolean; actorId: string } {
+  const actorId = requireMonthly(ctx, perm);
+  // `isPrincipal` = "may override a block" (monthly_report:override, PRINCIPAL-DEFAULT).
+  return { isPrincipal: canOverrideMonthly(ctx), actorId };
 }
 
-/** The Principal-only powers (D-#397): override, revoke, reopen. */
-function assertPrincipal(ctx: AppContext, what: string): string {
-  const { isPrincipal, actorId } = assertRelease(ctx);
-  if (!isPrincipal) throw new ForbiddenError(`${what} শুধু অধ্যক্ষ করতে পারেন`);
-  return actorId;
-}
-
-/** Staff read + the SP-1 narrowing, resolved from the report's own student. */
+/** Staff read + the SP-1 narrowing, resolved from the report's own student.
+ *  `isTeacher` = "hide the fee block" (no monthly_report:view_all; owner call). */
 async function assertStaffReportRead(
   ctx: AppContext,
   report: Pick<IMonthlyReport, "sectionId" | "classId">,
 ): Promise<{ subjects: string[] | null; isTeacher: boolean }> {
-  await assertReportRead(ctx, report.sectionId.toString());
-  const allowed = await allowedSubjectCodesForSection(
-    ctx,
-    report.sectionId.toString(),
-    report.classId.toString(),
-    { classTeacherOversight: true },
-  );
-  return {
-    subjects: allowed === null ? null : [...allowed],
-    isTeacher: (ctx.auth?.role as Role) === "TEACHER",
-  };
+  await assertMonthlyReportRead(ctx, report.sectionId.toString());
+  const subjects = await monthlyReportSubjects(ctx, report.sectionId.toString(), report.classId.toString());
+  return { subjects, isTeacher: !seesMonthlyFees(ctx) };
 }
 
 // ---------------------------------------------------------------------------
@@ -301,19 +286,19 @@ builder.queryField("monthlyReportsForSection", (t) =>
     description:
       "The release console: the NEWEST revision per child in a section for one month, plus the " +
       "released one where a newer draft exists.",
-    authScopes: { authenticated: true },
+    authScopes: { hasAnyPermission: ["monthly_report:view", "monthly_report:view_all"] },
     args: {
       sectionId: t.arg.string({ required: true }),
       periodKey: t.arg.string({ required: true, description: "YYYY-MM" }),
     },
     resolve: async (_root, args, ctx) => {
-      await assertReportRead(ctx, args.sectionId);
+      await assertMonthlyReportRead(ctx, args.sectionId);
       const rows = await MonthlyReport.find({ sectionId: args.sectionId, periodKey: args.periodKey })
         .sort({ revision: -1 })
         .exec();
       if (rows.length === 0) return [];
       const { subjects, isTeacher } = await assertStaffReportRead(ctx, rows[0]);
-      const isPrincipal = (ctx.auth?.role as Role) === "PRINCIPAL";
+      const isPrincipal = canOverrideMonthly(ctx);
       // Newest revision per child, plus whatever the family is currently seeing.
       const newest = new Map<string, IMonthlyReport>();
       const released: IMonthlyReport[] = [];
@@ -344,13 +329,13 @@ builder.queryField("monthlyReportsForSection", (t) =>
 builder.queryField("monthlyReport", (t) =>
   t.field({
     type: ReportRef,
-    authScopes: { authenticated: true },
+    authScopes: { hasAnyPermission: ["monthly_report:view", "monthly_report:view_all"] },
     args: { reportId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       const report = await MonthlyReport.findById(args.reportId);
       if (!report) throw new ForbiddenError("রিপোর্ট পাওয়া যায়নি");
       const { subjects, isTeacher } = await assertStaffReportRead(ctx, report);
-      return viewOf(report, subjects, isTeacher, (ctx.auth?.role as Role) === "PRINCIPAL");
+      return viewOf(report, subjects, isTeacher, canOverrideMonthly(ctx));
     },
   }),
 );
@@ -381,12 +366,12 @@ builder.queryField("monthlyClassRollups", (t) =>
     description:
       "The Principal/Office view: every section's month at once, so a struggling class or an " +
       "unreviewed pile is visible without opening each console in turn.",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "monthly_report:view_all" },
     args: { periodKey: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       // Whole-school by definition, so it rides the release gate rather than a
       // per-section read: a teacher has no business with other classes' totals.
-      assertRelease(ctx);
+      requireMonthly(ctx, "monthly_report:view_all");
       const sections = (await Section.find({ active: { $ne: false } })
         .select("_id")
         .lean()) as unknown as Array<{ _id: { toString(): string } }>;
@@ -467,10 +452,10 @@ builder.queryField("monthlyPendingWork", (t) =>
     description:
       "Whole-school by definition — it names other teachers' outstanding work — so it rides the " +
       "release gate rather than a per-section read.",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "monthly_report:view_all" },
     args: { periodKey: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
-      assertRelease(ctx);
+      requireMonthly(ctx, "monthly_report:view_all");
       return monthlyPendingWork(args.periodKey);
     },
   }),
@@ -501,10 +486,10 @@ builder.queryField("monthlyTeacherChase", (t) =>
   t.field({
     type: [TeacherChaseRef],
     description: "Per-teacher pending-work messages for a month, heaviest first.",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "monthly_report:view_all" },
     args: { periodKey: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
-      assertRelease(ctx);
+      requireMonthly(ctx, "monthly_report:view_all");
       return monthlyTeacherChase(args.periodKey);
     },
   }),
@@ -513,9 +498,9 @@ builder.queryField("monthlyTeacherChase", (t) =>
 builder.queryField("monthlyReportConfig", (t) =>
   t.field({
     type: ConfigRef,
-    authScopes: { authenticated: true },
+    authScopes: { hasAnyPermission: ["monthly_report:settings", "monthly_report:view_all"] },
     resolve: async (_root, _args, ctx) => {
-      assertRelease(ctx);
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       return readMonthlyReportConfig();
     },
   }),
@@ -527,7 +512,7 @@ builder.queryField("childMonthlyReports", (t) =>
     description:
       "GUARDIAN PATH — RELEASED revisions of one linked child, newest first. A draft, a superseded " +
       "revision and every staff-only field are unreachable here (§4).",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "guardian:read_child" },
     args: {
       studentId: t.arg.string({ required: true }),
       limit: t.arg.int({ required: false }),
@@ -557,13 +542,13 @@ builder.mutationField("buildMonthlyReports", (t) =>
   t.field({
     type: "Int",
     description: "Compute (or recompute) a section's month. Returns how many revisions were raised.",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "monthly_report:create" },
     args: {
       sectionId: t.arg.string({ required: true }),
       periodKey: t.arg.string({ required: true }),
     },
     resolve: async (_root, args, ctx) => {
-      assertRelease(ctx);
+      requireMonthly(ctx, "monthly_report:create");
       const outcomes = await buildSectionMonthlyReports(args.sectionId, args.periodKey);
       return outcomes.filter((o) => o.created).length;
     },
@@ -574,13 +559,13 @@ builder.mutationField("draftMonthlyReportComment", (t) =>
   t.field({
     type: ReportRef,
     description: "Generate the guardian paragraph. Writes a DRAFT only — a person must accept it.",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "monthly_report:create" },
     args: { reportId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
-      assertRelease(ctx);
+      requireMonthly(ctx, "monthly_report:create");
       const report = await draftMonthlyComment(args.reportId);
       const { subjects, isTeacher } = await assertStaffReportRead(ctx, report);
-      return viewOf(report, subjects, isTeacher, (ctx.auth?.role as Role) === "PRINCIPAL");
+      return viewOf(report, subjects, isTeacher, canOverrideMonthly(ctx));
     },
   }),
 );
@@ -606,10 +591,10 @@ builder.mutationField("draftMonthlyReportComments", (t) =>
       "Generate the paragraph for MANY reports, one after another. Sequential on purpose: " +
       "the model's free tier is rated per minute, so a parallel burst would turn a whole " +
       "class into template fallbacks.",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "monthly_report:create" },
     args: { reportIds: t.arg.stringList({ required: true }) },
     resolve: async (_root, args, ctx) => {
-      assertRelease(ctx);
+      requireMonthly(ctx, "monthly_report:create");
       // Every id is gated individually — a bulk argument must never be a way past the
       // per-report read gate.
       for (const id of args.reportIds) {
@@ -642,10 +627,10 @@ builder.mutationField("importMonthlyComments", (t) =>
       "Paste back the JSON envelope authored in Desktop (MR-8). Each row faces the same " +
       "guards a generated draft faces, plus the revision binding; a bad row is refused BY " +
       "NAME and the rest still import. Writes commentDraft only — a person still accepts.",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "monthly_report:export" },
     args: { payload: t.arg.string({ required: true, description: "The JSON envelope, verbatim" }) },
     resolve: async (_root, args, ctx) => {
-      const { actorId } = assertRelease(ctx);
+      const { actorId } = assertAction(ctx, "monthly_report:export");
       let env;
       try {
         env = parseImportEnvelope(args.payload);
@@ -671,7 +656,7 @@ builder.mutationField("reviewMonthlyReportComment", (t) =>
     description:
       "Accept or edit the paragraph. The class teacher of the child's section may do this, as well " +
       "as Principal/Office — the words are theirs to own.",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "monthly_report:review" },
     args: {
       reportId: t.arg.string({ required: true }),
       text: t.arg.string({ required: true }),
@@ -684,7 +669,7 @@ builder.mutationField("reviewMonthlyReportComment", (t) =>
       // A narrowed caller cannot even SEE the paragraph, so they cannot own it.
       if (subjects !== null) throw new ForbiddenError("মন্তব্য অনুমোদন শ্রেণি শিক্ষক/অফিসের কাজ");
       const report = await reviewMonthlyReport(args.reportId, args.text, ctx.auth.userId as string);
-      return viewOf(report, subjects, isTeacher, (ctx.auth.role as Role) === "PRINCIPAL");
+      return viewOf(report, subjects, isTeacher, canOverrideMonthly(ctx));
     },
   }),
 );
@@ -692,13 +677,13 @@ builder.mutationField("reviewMonthlyReportComment", (t) =>
 builder.mutationField("releaseMonthlyReport", (t) =>
   t.field({
     type: ReportRef,
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "monthly_report:release" },
     args: {
       reportId: t.arg.string({ required: true }),
       overrideReason: t.arg.string({ required: false, description: "Principal only — unlocks a provisional or hard-locked report" }),
     },
     resolve: async (_root, args, ctx) => {
-      const { isPrincipal, actorId } = assertRelease(ctx);
+      const { isPrincipal, actorId } = assertAction(ctx, "monthly_report:release");
       const report = await releaseMonthlyReport(args.reportId, actorId, {
         isPrincipal,
         overrideReason: args.overrideReason ?? null,
@@ -715,13 +700,13 @@ builder.mutationField("bulkReleaseMonthlyReports", (t) =>
     description:
       "Release many under ONE batch id, so a wrong bulk release is revocable as a batch. A refusal " +
       "on one child does not abort the rest — every outcome comes back with its reason.",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "monthly_report:release" },
     args: {
       reportIds: t.arg.stringList({ required: true }),
       overrideReason: t.arg.string({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
-      const { isPrincipal, actorId } = assertRelease(ctx);
+      const { isPrincipal, actorId } = assertAction(ctx, "monthly_report:release");
       return bulkReleaseMonthlyReports(args.reportIds, actorId, {
         isPrincipal,
         overrideReason: args.overrideReason ?? null,
@@ -734,13 +719,13 @@ builder.mutationField("revokeMonthlyReport", (t) =>
   t.field({
     type: "Boolean",
     description: "PRINCIPAL ONLY — withdraw a released report; the family loses access (D-#397).",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "monthly_report:revoke" },
     args: {
       reportId: t.arg.string({ required: true }),
       reason: t.arg.string({ required: true }),
     },
     resolve: async (_root, args, ctx) => {
-      const actorId = assertPrincipal(ctx, "রিপোর্ট প্রত্যাহার");
+      const actorId = requireMonthly(ctx, "monthly_report:revoke");
       await revokeMonthlyReport(args.reportId, actorId, args.reason);
       return true;
     },
@@ -751,13 +736,13 @@ builder.mutationField("revokeMonthlyReleaseBatch", (t) =>
   t.field({
     type: "Int",
     description: "PRINCIPAL ONLY — undo a whole bulk release. Returns how many were withdrawn.",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "monthly_report:revoke" },
     args: {
       batchId: t.arg.string({ required: true }),
       reason: t.arg.string({ required: true }),
     },
     resolve: async (_root, args, ctx) => {
-      const actorId = assertPrincipal(ctx, "ব্যাচ প্রত্যাহার");
+      const actorId = requireMonthly(ctx, "monthly_report:revoke");
       return revokeReleaseBatch(args.batchId, actorId, args.reason);
     },
   }),
@@ -767,7 +752,7 @@ builder.mutationField("setMonthlyReportConfig", (t) =>
   t.field({
     type: ConfigRef,
     description: "PRINCIPAL ONLY — edit the thresholds, the coverage gate and the revision calendar.",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "monthly_report:settings" },
     args: {
       attendanceThresholdPp: t.arg.float({ required: false }),
       attendanceMinDays: t.arg.int({ required: false }),
@@ -788,7 +773,7 @@ builder.mutationField("setMonthlyReportConfig", (t) =>
       hardLockDays: t.arg.int({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
-      const actorId = assertPrincipal(ctx, "রিপোর্টের সীমা পরিবর্তন");
+      const actorId = requireMonthly(ctx, "monthly_report:settings");
       const patch: Partial<MonthlyReportConfigShape> = {};
       for (const [k, v] of Object.entries(args)) {
         if (v !== null && v !== undefined) (patch as Record<string, unknown>)[k] = v;

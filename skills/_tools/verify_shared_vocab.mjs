@@ -34,7 +34,7 @@ check("default-deny: unknown role", V.roleHasPermission("GHOST", "content:read")
 check("PRINCIPAL has user:manage + audit:read", V.roleHasPermission("PRINCIPAL", "user:manage") && V.roleHasPermission("PRINCIPAL", "audit:read"));
 check("TEACHER lacks user:manage / audit:read / content:import", !["user:manage","audit:read","content:import"].some((p) => V.roleHasPermission("TEACHER", p)));
 check("TEACHER can read content + assemble + write trackers", ["content:read","set:assemble","tracker:write"].every((p) => V.roleHasPermission("TEACHER", p)));
-check("OFFICE = roster/staff/leave/payroll/performance/guardian/message/import/assign_review/question(read+manage)/routine/attendance/library/chat/observation/finance/report/gift/homework-void/exam/scholarship/mastery-read/tasks", eq(V.permissionsForRole("OFFICE"), ["roster:manage","staff:manage","leave:manage","payroll:manage","performance:manage","guardian:link","message:dispatch","content:import","content:assign_review","question:read","question:manage","routine:read","routine:manage","attendance:manage","library:read","library:manage","chat:read","chat:write","chat:manage","observation:upload","observation:read","observation:manage","finance:manage","report:release","gift:manage","homework:void","exam:manage","exam:read","scholarship:manage","scholarship:read","mastery:read","tasks:assign"]));
+check("OFFICE = roster/staff/leave/payroll/performance/guardian/message/import/assign_review/question(read+manage)/routine/attendance/library/chat/observation/finance/report/gift/homework-void/exam/scholarship/mastery-read/tasks", eq(V.ROLE_PERMISSIONS.OFFICE, ["roster:manage","staff:manage","leave:manage","payroll:manage","performance:manage","guardian:link","message:dispatch","content:import","content:assign_review","question:read","question:manage","routine:read","routine:manage","attendance:manage","library:read","library:manage","chat:read","chat:write","chat:manage","observation:upload","observation:read","observation:manage","finance:manage","report:release","gift:manage","homework:void","exam:manage","exam:read","scholarship:manage","scholarship:read","mastery:read","tasks:assign"]));
 // question:manage is the desk's correction power, NOT a teaching one (D-#548): Office and the
 // Principal hold it; a TEACHER — reviewer included — must still go through a review verdict.
 check("question:manage is Principal + Office only; TEACHER and GUARDIAN never", V.roleHasPermission("PRINCIPAL","question:manage") && V.roleHasPermission("OFFICE","question:manage") && !V.roleHasPermission("TEACHER","question:manage") && !V.roleHasPermission("GUARDIAN","question:manage"));
@@ -116,7 +116,8 @@ check("ATTENDANCE_REMINDER_TIER_LABELS_BN total",  total(V.ATTENDANCE_REMINDER_T
 check("ATTENDANCE_REMINDER_TIER_LABELS_EN total",  total(V.ATTENDANCE_REMINDER_TIER_LABELS_EN, V.ATTENDANCE_REMINDER_TIERS));
 check("reminder tiers are exactly T1210/T1245/T1400 (D-#65)", eq(V.ATTENDANCE_REMINDER_TIERS, ["T1210","T1245","T1400"]));
 check("attendance: PRINCIPAL+OFFICE manage (not mark), TEACHER mark (not manage), GUARDIAN none",
-  V.roleHasPermission("PRINCIPAL","attendance:manage") && !V.roleHasPermission("PRINCIPAL","attendance:mark") &&
+  V.roleHasPermission("PRINCIPAL","attendance:manage") && !V.ROLE_PERMISSIONS.PRINCIPAL.includes("attendance:mark") && // PM: the Principal now holds the catalogue action attendance:mark, still gated by the marker-of-the-day designation (D-#797)
+ 
   V.roleHasPermission("OFFICE","attendance:manage") && !V.roleHasPermission("OFFICE","attendance:mark") &&
   V.roleHasPermission("TEACHER","attendance:mark") && !V.roleHasPermission("TEACHER","attendance:manage") &&
   !V.roleHasPermission("GUARDIAN","attendance:mark") && !V.roleHasPermission("GUARDIAN","attendance:manage"));
@@ -155,7 +156,7 @@ check("EXAM_SYLLABUS_PUBLISHED + EXAM_SYLLABUS_AWAITING_PUBLISH are registered N
   V.NOTIFICATION_KINDS.includes("EXAM_SYLLABUS_PUBLISHED") && V.NOTIFICATION_KINDS.includes("EXAM_SYLLABUS_AWAITING_PUBLISH"));
 check("syllabus.{published,awaitingPublish}.* template keys registered (title + body each — MT registry, D-#131/#643)",
   ["syllabus.published.title","syllabus.published.body","syllabus.awaitingPublish.title","syllabus.awaitingPublish.body"].every((k) => V.MESSAGE_TEMPLATE_KEYS.includes(k) && V.MESSAGE_TEMPLATE_REGISTRY[k]));
-check("no notification:* permission added (inbox is own-row, emission server-internal, D-#72)", !V.PERMISSIONS.some((p) => p.startsWith("notification")));
+check("no notification:* permission added (inbox is own-row, emission server-internal, D-#72)", !V.LEGACY_PERMISSIONS.some((p) => p.startsWith("notification")));
 
 console.log("=== C.6 Library vocab + RBAC invariants (D-#81–#84) ===");
 check("BORROWER_TYPE_LABELS_BN total",      total(V.BORROWER_TYPE_LABELS_BN, V.BORROWER_TYPES));
@@ -310,7 +311,7 @@ check("EMPLOYMENT_STATUSES gained retired + contract_ended so each H6.1 trigger 
   V.EMPLOYMENT_STATUSES.includes("retired") && V.EMPLOYMENT_STATUSES.includes("contract_ended") &&
   ["resigned","terminated"].every((s) => V.EMPLOYMENT_STATUSES.includes(s)));
 check("offboarding adds NO new permission — it composes from staff:manage (admin/clearance/access) + payroll:manage (settlement compute) + payroll:approve (settlement release/lock, D-#29/#117)",
-  !V.PERMISSIONS.some((p) => p.startsWith("offboard")) &&
+  !V.LEGACY_PERMISSIONS.some((p) => p.startsWith("offboard")) &&
   V.roleHasPermission("OFFICE","staff:manage") && V.roleHasPermission("PRINCIPAL","payroll:approve") && !V.roleHasPermission("OFFICE","payroll:approve"));
 
 console.log("=== C.12 Vocabulary-tracker vocab + data-driven program/direction model (VC-1 — prd-vocabulary-tracker §3, D-#104/#105) ===");
@@ -332,7 +333,7 @@ check("ENGLISH+ARABIC dictation = 2 fields, BANGLA = 1 (§3.1)",
 check("BANGLA omits the reverse meaning direction (DICTATION + HEADWORD_TO_BANGLA only, §3.1)",
   eq(V.VOCAB_PROGRAM_DIRECTIONS.BANGLA, ["DICTATION", "HEADWORD_TO_BANGLA"]));
 check("no vocab:* permission — word bank rides tracker:write/tracker:read; weekly assignment rides roster:manage (D-#94/#106 compose, no new perm)",
-  !V.PERMISSIONS.some((p) => p.startsWith("vocab")));
+  !V.LEGACY_PERMISSIONS.some((p) => p.startsWith("vocab")));
 // VC-2 — test lifecycle + assignment source (prd-vocabulary-tracker §3.3/§3.5, D-#106)
 check("VOCAB_TEST_STATUS_LABELS_BN total",        total(V.VOCAB_TEST_STATUS_LABELS_BN, V.VOCAB_TEST_STATUSES));
 check("VOCAB_TEST_STATUS_LABELS_EN total",        total(V.VOCAB_TEST_STATUS_LABELS_EN, V.VOCAB_TEST_STATUSES));
@@ -407,7 +408,7 @@ check("class_test.result.* guardian-message template keys registered (Regular/Ex
 check("class_test.overdue_chase.wa template key registered (Office overdue-chase, §6 — built on the MT registry, D-#131)",
   V.MESSAGE_TEMPLATE_KEYS.includes("class_test.overdue_chase.wa") && !!V.MESSAGE_TEMPLATE_REGISTRY["class_test.overdue_chase.wa"]);
 check("class test composes existing perms — no class-test:* permission (D-#94/#17)",
-  !V.PERMISSIONS.some((p) => p.startsWith("class") || p.startsWith("classtest")));
+  !V.LEGACY_PERMISSIONS.some((p) => p.startsWith("class") || p.startsWith("classtest")));
 
 console.log("=== C.15 Student-Comments / Parents-Meeting vocab (CM-1 — prd-comments-meetings §4, D-#114/#115) ===");
 check("comment types exact (§3/§4 — the Form's M-column taxonomy)", eq(V.COMMENT_TYPES, ["GENERAL", "ATTENDANCE", "STUDY_HOMEWORK", "BEHAVIOUR", "SERIOUS_MATTER"]));
@@ -520,7 +521,7 @@ check("no ASSIGNABLE_TEMPLATE carries user:view_as (an added OFFICE/TEACHER hat 
   !V.ASSIGNABLE_TEMPLATES.some((r) => V.roleHasPermission(r, "user:view_as")));
 // RESERVED_PERMISSIONS — exactly the five, all real perms, none reachable by a non-Principal template (the structural backstop, §5)
 check("RESERVED_PERMISSIONS is exactly the five (§5/§8)",
-  eq(V.RESERVED_PERMISSIONS, ["payroll:approve", "performance:signoff", "chat:oversee", "template:manage", "access:manage"]));
+  eq(V.LEGACY_RESERVED_PERMISSIONS, ["payroll:approve", "performance:signoff", "chat:oversee", "template:manage", "access:manage"]));
 check("every RESERVED_PERMISSION is a declared PERMISSION",
   V.RESERVED_PERMISSIONS.every((p) => V.PERMISSIONS.includes(p)));
 check("no RESERVED_PERMISSION appears in ROLE_PERMISSIONS.TEACHER or .OFFICE (reserved perms reach only PRINCIPAL, §8)",
@@ -686,7 +687,7 @@ check("SCRIPT_BUNDLE_STATUS_LABELS_BN total",  total(V.SCRIPT_BUNDLE_STATUS_LABE
 check("SCRIPT_BUNDLE_STATUS_LABELS_EN total",  total(V.SCRIPT_BUNDLE_STATUS_LABELS_EN, V.SCRIPT_BUNDLE_STATUSES));
 check("STORAGE_BOX_STATUS_LABELS_BN total",    total(V.STORAGE_BOX_STATUS_LABELS_BN, V.STORAGE_BOX_STATUSES));
 check("STORAGE_BOX_STATUS_LABELS_EN total",    total(V.STORAGE_BOX_STATUS_LABELS_EN, V.STORAGE_BOX_STATUSES));
-check("no archive:* permission declared — composed perms only (D-#447)", !V.PERMISSIONS.some((p) => p.startsWith("archive:")));
+check("no archive:* permission declared — composed perms only (D-#447)", !V.LEGACY_PERMISSIONS.some((p) => p.startsWith("archive:")));
 
 console.log("=== SY. Exam syllabus (docs/prd-exam-syllabus.md §4, D-#530–#532; APP-NATIVE, NO wire twin) ===");
 check("EXAM_TERMS exact — HALF_YEARLY/ANNUAL (§4)", eq(V.EXAM_TERMS, ["HALF_YEARLY","ANNUAL"]));
@@ -745,7 +746,7 @@ check("ONE daily escalation digest at 10:30, before the 14:00 same-day floor —
 check("one re-claim only, and a 7-school-day window (D-#553)",
   V.WORK_CLAIM_MAX_ATTEMPTS === 2 && V.WORK_CLAIM_WINDOW_SCHOOL_DAYS === 7);
 check("NO work-claim permission is added — guardians file under guardian:read_child, teachers resolve under tracker:write, Office reads under tracker:read (D-#551/#554)",
-  !V.PERMISSIONS.some((p) => p.startsWith("claim") || p.startsWith("workclaim") || p.startsWith("work_claim")));
+  !V.LEGACY_PERMISSIONS.some((p) => p.startsWith("claim") || p.startsWith("workclaim") || p.startsWith("work_claim")));
 check("OFFICE still holds NO tracker permission — the Office nudges and can never resolve a claim (D-#554)",
   !V.ROLE_PERMISSIONS.OFFICE.some((p) => p.startsWith("tracker:")));
 check("GUARDIAN gains no new permission for filing a claim (D-#551)",
@@ -841,6 +842,91 @@ check("mastery policy defaults: thresholds ordered and inside 0..100 (D-#779/#78
     !topicPat.test("LO-C3-MATH-7-3") && !topicPat.test("LO-C3-QURAN-01-01"));
   check("lo_codes stays OPTIONAL in the payload (a legacy question needs none)",
     !PAYLOAD.required.includes("lo_codes"));
+}
+
+// --- §C.PM: the permission matrix (D-#790–#801, docs/prd-permission-matrix.md) ---------------
+// The D-#94 "compose existing permissions, no new permission" checks above now read the LEGACY
+// list only: D-#799 supersedes that posture — a feature registers ALL its actions in the catalogue.
+console.log("=== C.PM permission matrix (catalogue, role templates, ship-day equality) ===");
+const CAT = V.CATALOGUE_PERMISSIONS;
+const act = (p) => V.catalogueAction(p);
+const flagged = (flag) => CAT.filter((p) => act(p).flags.includes(flag));
+check("catalogue permissions are unique `feature:action` snake_case strings",
+  new Set(CAT).size === CAT.length && CAT.every((p) => /^[a-z_]+:[a-z_]+$/.test(p)));
+check("every feature sits in a known editor group and has BN + EN names",
+  Object.values(V.FEATURE_CATALOGUE).every((f) => V.FEATURE_GROUPS.includes(f.group) && f.bn && f.en && Object.keys(f.actions).length > 0));
+check("every action has a BN name, an EN name and a one-line description",
+  CAT.every((p) => act(p).bn && act(p).en && act(p).desc));
+check("legacy ∩ catalogue is exactly {attendance:mark, payroll:approve, mastery:approve} (same meaning in both)",
+  eq(V.LEGACY_PERMISSIONS.filter((p) => CAT.includes(p)), ["attendance:mark", "payroll:approve", "mastery:approve"]));
+check("PERMISSIONS = legacy ∪ catalogue, no duplicates",
+  new Set(V.PERMISSIONS).size === V.PERMISSIONS.length && V.PERMISSIONS.length === new Set([...V.LEGACY_PERMISSIONS, ...CAT]).size);
+check("PERMISSION_LABELS_BN / _EN and PERMISSION_BUILD_STATUS are total over PERMISSIONS",
+  V.PERMISSIONS.every((p) => V.PERMISSION_LABELS_BN[p]?.name && V.PERMISSION_LABELS_EN[p]?.name && V.PERMISSION_BUILD_STATUS[p] === "build"));
+check("LOCKED actions are exactly the eleven reserved catalogue actions (D-#797)",
+  eq(flagged("LOCKED"), ["payroll:approve", "salary_advance:issue", "salary_advance:settle", "offboarding:settle",
+    "appraisal:sign_off", "conduct:sign_off", "chat:view_all", "message_templates:view", "message_templates:edit",
+    "access_control:edit", "access_control:delegate"]));
+check("RESERVED_PERMISSIONS = the legacy five ∪ every LOCKED action",
+  eq(V.RESERVED_PERMISSIONS, [...new Set([...V.LEGACY_RESERVED_PERMISSIONS, ...flagged("LOCKED")])]));
+check("no LOCKED / PRINCIPAL_DEFAULT / ESCALATION action is on by default for TEACHER or OFFICE",
+  [...flagged("LOCKED"), ...flagged("PRINCIPAL_DEFAULT"), ...flagged("ESCALATION")].every((p) => !act(p).teacher && !act(p).office));
+check("PRINCIPAL holds every catalogue action; GUARDIAN holds none",
+  eq(V.CATALOGUE_ROLE_DEFAULTS.PRINCIPAL, CAT) && V.CATALOGUE_ROLE_DEFAULTS.GUARDIAN.length === 0);
+check("SELF actions are on for TEACHER and OFFICE and are not switchable",
+  flagged("SELF").every((p) => V.CATALOGUE_ROLE_DEFAULTS.TEACHER.includes(p) && V.CATALOGUE_ROLE_DEFAULTS.OFFICE.includes(p) && !V.isSwitchablePermission(p)));
+check("EDITABLE_ROLES is exactly TEACHER + OFFICE (D-#791)", eq(V.EDITABLE_ROLES, ["TEACHER", "OFFICE"]));
+check("DELEGATED_ACTION_PERMISSIONS covers every delegated action with catalogue actions",
+  eq(Object.keys(V.DELEGATED_ACTION_PERMISSIONS), V.DELEGATED_ACTIONS) &&
+  Object.values(V.DELEGATED_ACTION_PERMISSIONS).every((l) => l.length > 0 && l.every((p) => CAT.includes(p))));
+check("every LEGACY_PERMISSION_EXPANSION key is a legacy permission and every target is catalogued",
+  Object.entries(V.LEGACY_PERMISSION_EXPANSION).every(([k, e]) => V.LEGACY_PERMISSIONS.includes(k) &&
+    [...e.any, ...(e.adminTemplate ?? [])].every((p) => CAT.includes(p))));
+
+// Ship day changes nobody's access (D-#795): a role's catalogue default = the expansion of its legacy
+// permissions ∪ the actions it reached by a ROLE CHECK / designation today (pinned below; changing a
+// default beyond the expansion means editing this list on purpose) ∪ SELF.
+const ROLE_CHECK_DEFAULTS = {
+  TEACHER: ["assignment:confirm_week", "assignment_gift:issue", "work_claim:view_all", "work_claim:remind",
+    "student_comments:view", "parents_meeting:view_brief", "monthly_report:review", "attendance:view",
+    "teaching_notes:view", "teaching_notes:send", "english_drive:view", "english_drive:send",
+    "library:lend", "library:return", "library:remind"],
+  OFFICE: ["homework:view_all", "homework:undo_any", "homework:view_reports", "homework:remind",
+    "assignment:view_all", "assignment:undo_any", "work_claim:view_all", "work_claim:remind", "set_tracker:view_all",
+    "saturday_revision:view", "saturday_revision:view_all", "saturday_revision:enter_results", "saturday_revision:edit_all",
+    "saturday_revision:send", "saturday_revision:settings", "class_test:view_all", "class_test:register",
+    "question_sets:view_all", "student_profile:view", "student_profile:view_all", "student_profile:export",
+    "student_comments:view", "student_comments:view_all", "monthly_report:view", "monthly_report:review",
+    "staff_records:view_sensitive", "lesson_plans:view_all", "question_bank:view_all", "teaching_notes:view",
+    "teaching_notes:view_all", "teaching_notes:send", "english_drive:view", "english_drive:view_all",
+    "english_drive:send", "admin_dashboard:view"],
+};
+for (const role of ["TEACHER", "OFFICE"]) {
+  const expanded = new Set();
+  for (const l of V.ROLE_PERMISSIONS[role]) for (const x of V.expandLegacyPermission(l, role === "OFFICE")) expanded.add(x);
+  check(`ship-day equality: ${role} catalogue default = legacy expansion ∪ pinned role-check actions ∪ SELF`,
+    eq(V.CATALOGUE_ROLE_DEFAULTS[role], [...new Set([...expanded, ...ROLE_CHECK_DEFAULTS[role], ...flagged("SELF")])]));
+}
+// The one deliberate change: the Principal holds every catalogue action, and attendance:mark is also
+// a legacy name. Safe — assertMayMarkUnit still admits only the unit's marker of the day (no admin
+// bypass), so a Principal marks only if he assigns himself (PRD §4.4).
+check("transition: every role's LEGACY names resolve exactly as before the matrix (Principal + attendance:mark only)",
+  V.ROLES.every((r) => eq([...V.effectivePermissions({ role: r })].filter((p) => V.LEGACY_PERMISSIONS.includes(p)),
+    r === "PRINCIPAL" ? [...V.ROLE_PERMISSIONS[r], "attendance:mark"] : V.ROLE_PERMISSIONS[r].filter((p) => !V.RESERVED_PERMISSIONS.includes(p)))));
+{
+  const o = { TEACHER: { granted: ["homework:delete", "payroll:approve"], revoked: ["homework:return", "leave:apply"] } };
+  const t = V.effectivePermissions({ role: "TEACHER" }, o);
+  check("role edit: a TEACHER grant/revoke applies; a LOCKED grant and a SELF revoke are ignored",
+    t.has("homework:delete") && !t.has("homework:return") && !t.has("payroll:approve") && t.has("leave:apply"));
+  check("role edit: the legacy name tracker:write still answers as before (unswept gates unchanged)",
+    t.has("tracker:write"));
+  const jerin = V.effectivePermissions({ role: "TEACHER", grantedPermissions: ["homework:return"] }, o);
+  check("a per-person grant beats the role revoke (D-#791)", jerin.has("homework:return"));
+  const noRead = V.effectivePermissions({ role: "TEACHER", revokedPermissions: ["tracker:read"] });
+  check("a legacy per-person revoke expands — and spares actions another held permission covers",
+    !noRead.has("tracker:read") && !noRead.has("homework:view") && noRead.has("class_test:view"));
+  const office = V.effectivePermissions({ role: "OFFICE", grantedPermissions: ["access_control:edit"] });
+  check("a LOCKED action never reaches a non-Principal, even by per-person grant", !office.has("access_control:edit"));
 }
 
 console.log(`\nRESULT: ${fails === 0 ? "PASS — all checks green" : fails + " FAILED"}`);
