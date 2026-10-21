@@ -130,6 +130,10 @@ describe("RBAC", () => {
     expect(holders).toEqual(["PRINCIPAL"]);
   });
 
+  test("the report resolver rides guardian_engagement:view — Principal-only by default (PM)", () => {
+    expect(ROLES.filter((r) => roleHasPermission(r, "guardian_engagement:view"))).toEqual(["PRINCIPAL"]);
+  });
+
   test("guardian:read_child (the view-recording gate) is GUARDIAN-only", () => {
     const holders = ROLES.filter((r) => roleHasPermission(r, "guardian:read_child"));
     expect(holders).toEqual(["GUARDIAN"]);
