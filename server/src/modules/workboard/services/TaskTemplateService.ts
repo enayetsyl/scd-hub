@@ -15,7 +15,7 @@ import { User } from "../../foundation/models/User";
 import { writeAudit } from "../../platform/services/AuditService";
 import { Task } from "../models/Task";
 import { TaskTemplate, type ITaskTemplate } from "../models/TaskTemplate";
-import { canAssign } from "./TaskService";
+import { canAssign, canViewAllBoards } from "./TaskService";
 
 export interface TaskTemplateInput {
   titleBn: string;
@@ -138,9 +138,9 @@ export async function setTaskTemplateActive(authIn: AuthPayload | null, id: stri
   return doc;
 }
 
-/** tasks:assign sees every template; anyone else sees the ones on their own board. */
+/** work_board:view_all sees every template; anyone else sees the ones on their own board. */
 export async function listTaskTemplates(auth: AuthPayload): Promise<ITaskTemplate[]> {
-  const filter = canAssign(auth) ? {} : { assigneeUserId: new Types.ObjectId(auth.userId) };
+  const filter = canViewAllBoards(auth) ? {} : { assigneeUserId: new Types.ObjectId(auth.userId) };
   return TaskTemplate.find(filter).sort({ active: -1, createdAt: -1 }).lean() as unknown as Promise<ITaskTemplate[]>;
 }
 
