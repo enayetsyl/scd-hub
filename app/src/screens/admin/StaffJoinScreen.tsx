@@ -10,7 +10,7 @@
  * should walk four steps to fix a phone number. This screen is create-only.
  *
  * PERMISSIONS. Office holds `staff:manage` AND `payroll:manage`, so steps 1, 2 and 4
- * are open to them; only step 3 (login) is Principal-only (`user:manage`). So step 3
+ * are open to them; only step 3 (login) is Principal-only by default (`staff_logins:create`). So step 3
  * DEGRADES to a waiting state and lets an Office user finish, rather than erroring or
  * silently vanishing — the record and the letter still get made today, and the
  * Principal mints the login later from the hub.
@@ -105,7 +105,7 @@ function Stepper({ step }: { step: number }): React.ReactElement {
 
 export default function StaffJoinScreen({ navigation }: Props): React.ReactElement {
   const { can } = useAuth();
-  const canProvision = can("user:manage");
+  const canProvision = can("staff_logins:create");
 
   const [, createStaff] = useMutation(CREATE_STAFF_PROFILE);
   const [, setPay] = useMutation(SET_STAFF_PAY);

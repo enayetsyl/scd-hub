@@ -2,7 +2,7 @@
  * StorageBoxScreen (AR-1/AR-3, prd-script-archive §8) — one box: edit its
  * label/location (relocation = this one edit; every bundle follows, D-#445),
  * retire it (no new filings; contents stay findable) and browse its bundles in
- * exam-date order. Edits are `can("roster:manage")`-offered, server-re-gated.
+ * exam-date order. Edits are `can("archive:settings")`-offered, server-re-gated.
  */
 import React from "react";
 import { Pressable, ScrollView, View } from "react-native";
@@ -37,7 +37,7 @@ export default function StorageBoxScreen(): React.ReactElement {
   const route = useRoute<Route>();
   const { boxId } = route.params;
   const { can } = useAuth();
-  const canManage = can("roster:manage");
+  const canManage = can("archive:settings");
 
   const [boxQ, refetchBox] = useQuery({ query: STORAGE_BOX_QUERY, variables: { id: boxId } });
   const box = boxQ.data?.storageBox ?? null;

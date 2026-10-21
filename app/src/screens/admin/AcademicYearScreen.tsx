@@ -1,7 +1,7 @@
 /**
  * AcademicYearScreen (design-A) — Principal/Office set the school's ACTIVE academic
  * year once a year; every operational screen then defaults to it (no per-screen year
- * picker). Add a new year and switch the current one. Gated roster:manage.
+ * picker). Add a new year and switch the current one. Gated classes_sections:settings.
  */
 import React, { useCallback, useState } from "react";
 import { View } from "react-native";

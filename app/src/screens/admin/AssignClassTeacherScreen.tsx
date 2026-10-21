@@ -2,7 +2,10 @@
  * AssignClassTeacherScreen (D-#42, CT-1) — Principal/Office manage a section's
  * daily-coordinator (CLASS TEACHER) + its SUPPORT teachers, with an overview of all
  * sections (unassigned flagged + per-teacher load) and the append-only assignment
- * history. `roster:manage`.
+ * history. PM: class teacher + support + history ride
+ * `teaching_assignments:assign_class_teacher`; the homework confirmer + the school-wide
+ * supervisor ride `teaching_assignments:assign_homework_checker` (each block is shown
+ * only to a holder of its action; the server re-gates every call).
  */
 import React, { useState } from "react";
 import { View, ScrollView, Pressable } from "react-native";
@@ -26,6 +29,7 @@ import { STR, classLevelLabel, bnNum, getActiveLang, isoDateTimeLabel } from "..
 import { friendlyError } from "../../lib/errors";
 import { useSectionContext } from "../../state/SectionContext";
 import { useConfirm } from "../../state/ConfirmContext";
+import { useAuth } from "../../auth/AuthContext";
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<AdminStackParamList, "AssignClassTeacher">;
@@ -33,6 +37,9 @@ type Props = NativeStackScreenProps<AdminStackParamList, "AssignClassTeacher">;
 export default function AssignClassTeacherScreen({ navigation }: Props): React.ReactElement {
   const { selection, hasSection, setSection } = useSectionContext();
   const { confirmAction } = useConfirm();
+  const { can } = useAuth();
+  const canCT = can("teaching_assignments:assign_class_teacher");
+  const canHW = can("teaching_assignments:assign_homework_checker");
   const lang = getActiveLang();
   const [teacherId, setTeacherId] = useState("");
   const [supportId, setSupportId] = useState("");
@@ -45,7 +52,7 @@ export default function AssignClassTeacherScreen({ navigation }: Props): React.R
   const [, assignConfirmer] = useMutation(ASSIGN_HOMEWORK_CONFIRMER);
   const [, setSupervisor] = useMutation(SET_HOMEWORK_SUPERVISOR);
   const [, setSupport] = useMutation(SET_SUPPORT_TEACHER);
-  const [supervisorsQ, refetchSupervisors] = useQuery({ query: HOMEWORK_SUPERVISORS_QUERY });
+  const [supervisorsQ, refetchSupervisors] = useQuery({ query: HOMEWORK_SUPERVISORS_QUERY, pause: !canHW });
   const supervisors = supervisorsQ.data?.homeworkSupervisors ?? [];
 
   const [classesQ, refetchClasses] = useQuery({
@@ -56,7 +63,7 @@ export default function AssignClassTeacherScreen({ navigation }: Props): React.R
   const [historyQ, refetchHistory] = useQuery({
     query: CLASS_TEACHER_HISTORY_QUERY,
     variables: { sectionId: selection.sectionId ?? "" },
-    pause: !selection.sectionId,
+    pause: !selection.sectionId || !canCT,
   });
   const [{ data: teacherData }] = useQuery({ query: TEACHERS_QUERY });
   const teacherName = new Map((teacherData?.teachers ?? []).map((t) => [t.id, t.name]));
@@ -155,6 +162,8 @@ export default function AssignClassTeacherScreen({ navigation }: Props): React.R
         {error ? <Notice message={error} tone="danger" /> : null}
 
         {/* School-wide homework supervisors — may reconcile ANY section (not section-scoped). */}
+        {canHW ? (
+          <>
         <Body style={{ fontWeight: "700", marginBottom: space(1) }}>{STR.ctSupervisor}</Body>
         <Muted style={{ marginBottom: space(2) }}>{STR.ctSupervisorHint}</Muted>
         {supervisors.length === 0 ? <Muted>{STR.ctNone}</Muted> : null}
@@ -168,6 +177,8 @@ export default function AssignClassTeacherScreen({ navigation }: Props): React.R
         ))}
         <TeacherSelect label={STR.ctSupervisor} value={supervisorId} onChange={setSupervisorId} />
         <Button title={STR.ctSupervisorAdd} variant="secondary" onPress={() => runSetSupervisor(supervisorId, true)} disabled={busy || supervisorId.trim() === ""} style={{ marginTop: space(2), marginBottom: space(3) }} />
+          </>
+        ) : null}
 
         {/* Overview of all sections (CT1.3/CT1.4) — tap a row to manage that section. */}
         <Body style={{ fontWeight: "700", marginBottom: space(1) }}>{STR.ctOverview}</Body>
@@ -227,6 +238,8 @@ export default function AssignClassTeacherScreen({ navigation }: Props): React.R
             <Muted style={{ marginTop: space(3), marginBottom: space(2) }}>{STR.ctHint}</Muted>
 
             {/* Class teacher (CT1.1) */}
+            {canCT ? (
+              <>
             <Card>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                 <Body style={{ fontWeight: "700" }}>{STR.ctCurrent}</Body>
@@ -239,8 +252,12 @@ export default function AssignClassTeacherScreen({ navigation }: Props): React.R
               <Button title={STR.ctAssign} onPress={() => runAssign(teacherId.trim())} loading={busy} disabled={busy || teacherId.trim() === ""} />
               {currentCt ? <Button title={STR.ctClear} variant="danger" onPress={() => runAssign(null)} disabled={busy} /> : null}
             </View>
+              </>
+            ) : null}
 
             {/* Homework confirm delegate — may also reconcile/confirm the daily homework */}
+            {canHW ? (
+              <>
             <Body style={{ fontWeight: "700", marginTop: space(4), marginBottom: space(1) }}>{STR.ctConfirmer}</Body>
             <Muted style={{ marginBottom: space(2) }}>{STR.ctConfirmerHint}</Muted>
             <Card>
@@ -254,8 +271,12 @@ export default function AssignClassTeacherScreen({ navigation }: Props): React.R
               <Button title={STR.ctAssign} onPress={() => runAssignConfirmer(confirmerId.trim())} loading={busy} disabled={busy || confirmerId.trim() === ""} />
               {currentConfirmer ? <Button title={STR.ctClear} variant="danger" onPress={() => runAssignConfirmer(null)} disabled={busy} /> : null}
             </View>
+              </>
+            ) : null}
 
-            {/* Support teachers (CT1.5) */}
+            {/* Support teachers + history (CT1.5/CT1.6) */}
+            {canCT ? (
+              <>
             <Body style={{ fontWeight: "700", marginTop: space(4), marginBottom: space(1) }}>{STR.ctSupport}</Body>
             {support.length === 0 ? <Muted>{STR.ctNone}</Muted> : null}
             {support.map((id) => (
@@ -282,6 +303,8 @@ export default function AssignClassTeacherScreen({ navigation }: Props): React.R
                 </Muted>
               </Card>
             ))}
+              </>
+            ) : null}
           </>
         )}
       </ScrollView>

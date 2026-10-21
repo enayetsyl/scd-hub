@@ -2,8 +2,9 @@
  * ArchiveHomeScreen (AR-1/AR-3, prd-script-archive §8) — the archive hub:
  * search by ctId, the box register (+ create), pending office
  * acknowledgements, open checkouts (overdue badged) and the derived
- * disposable list. Views under the tab's own gate; actions re-gated by
- * `can("roster:manage")` client-side and by the server always.
+ * disposable list. Views under the tab's own gate; each control checks its
+ * archive action client-side (box create `archive:settings`, the retention list
+ * `archive:delete`) and the server re-gates always.
  */
 import React from "react";
 import { Pressable, ScrollView, View } from "react-native";
@@ -69,7 +70,8 @@ function BundleRow({ b, onPress }: { b: ScriptBundleT; onPress: () => void }): R
 export default function ArchiveHomeScreen(): React.ReactElement {
   const nav = useNavigation<Nav>();
   const { can } = useAuth();
-  const canManage = can("roster:manage");
+  const canBoxes = can("archive:settings");
+  const canDispose = can("archive:delete");
 
   const [search, setSearch] = React.useState("");
   const doSearch = search.trim().length >= 3;
@@ -89,7 +91,7 @@ export default function ArchiveHomeScreen(): React.ReactElement {
   const [dispQ, refetchDisp] = useQuery({
     query: DISPOSABLE_BUNDLES_PAGE_QUERY,
     variables: { page: dispPage, pageSize: PAGE_SIZE },
-    pause: !canManage,
+    pause: !canDispose,
   });
 
   const [newLabel, setNewLabel] = React.useState("");
@@ -188,7 +190,7 @@ export default function ArchiveHomeScreen(): React.ReactElement {
               ))
             )}
           </QueryGate>
-          {canManage ? (
+          {canBoxes ? (
             <View style={{ marginTop: space(3) }}>
               <Body style={{ fontWeight: "700" }}>{STR.arNewBox}</Body>
               <Field value={newLabel} onChangeText={setNewLabel} placeholder={STR.arBoxLabel} />
@@ -245,7 +247,7 @@ export default function ArchiveHomeScreen(): React.ReactElement {
           </QueryGate>
         </Card>
 
-        {canManage ? (
+        {canDispose ? (
           <Card>
             <Body style={{ fontWeight: "700" }}>{STR.arDisposable}</Body>
             <QueryGate
