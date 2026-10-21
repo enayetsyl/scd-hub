@@ -54,8 +54,10 @@ builder.queryField("myReviewQuota", (t) =>
 builder.mutationField("setReviewQuota", (t) =>
   t.field({
     type: "Boolean",
-    description: "Set, change or switch off an observer's daily review target. PRINCIPAL only.",
-    authScopes: { authenticated: true },
+    description:
+      "Set, change or switch off an observer's daily review target. Requires classroom_observation:set_quota " +
+      "(default Principal only).",
+    authScopes: { hasPermission: "classroom_observation:set_quota" },
     args: {
       userId: t.arg.string({ required: true }),
       perDay: t.arg.int({ required: true }),
@@ -64,7 +66,7 @@ builder.mutationField("setReviewQuota", (t) =>
       active: t.arg.boolean({ required: false }),
     },
     resolve: async (_r, args, ctx) => {
-      if (ctx.auth?.role !== "PRINCIPAL") throw new ForbiddenError();
+      if (!ctx.auth) throw new ForbiddenError();
       await setReviewQuota({ ...args, actorId: ctx.auth.userId });
       return true;
     },
