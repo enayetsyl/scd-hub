@@ -2,7 +2,7 @@
  * SupervisoryGrantScreen (D-#262) — grant / revoke a teacher's READ-OVERSIGHT
  * access at a configurable extent (ADR-017 / D-#17): whole_school, subject_dept
  * (one subject across all classes), grade_class (one class across all subjects),
- * or explicit_set (hand-picked class+subject pairs). Requires user:manage
+ * or explicit_set (hand-picked class+subject pairs). Requires teaching_assignments:assign_supervisor
  * (Principal). A supervisory grant is read-only — it lets the teacher SEE content
  * (lesson plans) + trackers at the chosen scope, never write them.
  */
@@ -36,7 +36,7 @@ type Pair = { classId: string; subjectId: string };
 export default function SupervisoryGrantScreen(_props: Props): React.ReactElement {
   const { user, can } = useAuth();
   const { confirmAction } = useConfirm();
-  const canManage = !!user && can("user:manage");
+  const canManage = !!user && can("teaching_assignments:assign_supervisor");
 
   // Assign form
   const [teacherId, setTeacherId] = useState("");

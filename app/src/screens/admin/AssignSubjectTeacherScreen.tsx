@@ -1,7 +1,7 @@
 /**
  * AssignSubjectTeacherScreen — Principal/Admin assign a SUBJECT TEACHER (teaching
  * grant, ADR-017) to the selected section: teacher + subject → grantTeaching. Lists
- * the section's current subject teachers with revoke. Gated on user:manage.
+ * the section's current subject teachers with revoke. Gated on teaching_assignments:assign_subject_teacher.
  *
  * D-#291: the grant is ACCESS, the routine is the TIMETABLE — and their sync runs
  * routine → grants (D-#257), never the other way. To keep the two from drifting,

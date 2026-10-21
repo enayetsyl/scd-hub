@@ -252,7 +252,7 @@ describe("fileBundle", () => {
     );
   });
 
-  it("auto-acknowledges when the filer holds roster:manage (D-#444)", async () => {
+  it("auto-acknowledges when the filer holds archive:approve (desk path, D-#444)", async () => {
     mockTestFindById.mockReturnValue(leanChain(printedTest()));
     mockBoxFindById.mockReturnValue(leanChain(activeBox()));
     mockBundleFindOne.mockReturnValue(leanChain(null));

@@ -24,7 +24,7 @@ GuardianRef.implement({
 builder.queryField("guardians", (t) =>
   t.field({
     type: [GuardianRef],
-    authScopes: { hasPermission: "guardian:link" },
+    authScopes: { hasPermission: "guardians:view_all" },
     description: "All guardians in the directory (principal/office).",
     resolve: async () => Guardian.find().sort({ name: 1 }).lean(),
   }),
@@ -33,7 +33,7 @@ builder.queryField("guardians", (t) =>
 builder.mutationField("createGuardian", (t) =>
   t.field({
     type: GuardianRef,
-    authScopes: { hasPermission: "guardian:link" },
+    authScopes: { hasPermission: "guardians:create" },
     args: {
       name: t.arg.string({ required: true }),
       identifierKind: t.arg.string({ required: true }),
@@ -60,7 +60,7 @@ builder.mutationField("createGuardian", (t) =>
 builder.mutationField("linkGuardianToStudent", (t) =>
   t.field({
     type: "Boolean",
-    authScopes: { hasPermission: "guardian:link" },
+    authScopes: { hasPermission: "guardians:link" },
     description: "Create a guardian↔student link (many-to-many, uniform access ADR-013)",
     args: {
       guardianId: t.arg.string({ required: true }),
@@ -92,7 +92,7 @@ builder.mutationField("linkGuardianToStudent", (t) =>
 builder.mutationField("unlinkGuardianFromStudent", (t) =>
   t.field({
     type: "Boolean",
-    authScopes: { hasPermission: "guardian:link" },
+    authScopes: { hasPermission: "guardians:link" },
     description: "Deactivate a guardian↔student link so the portal no longer reaches that child.",
     args: {
       guardianId: t.arg.string({ required: true }),

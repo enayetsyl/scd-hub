@@ -2,7 +2,7 @@
  * System-health resolver (SH-1..SH-3, D-#414) — the Principal's "are we still inside the
  * free tiers?" read.
  *
- * READ-ONLY by construction: no mutation is exposed here. Gated on `audit:read`, which in
+ * READ-ONLY by construction: no mutation is exposed here. Gated on `system_health:view` (was `audit:read`), which in
  * the role map is Principal-only — the same lever the audit viewer uses, and no new
  * permission (so no two-place contract sync, per the D-#281 precedent).
  *
@@ -208,10 +208,10 @@ builder.queryField("systemHealth", (t) =>
   t.field({
     type: SystemHealthRef,
     description:
-      "Storage/disk/egress headroom against the free-tier ceilings (D-#414). Requires audit:read " +
+      "Storage/disk/egress headroom against the free-tier ceilings (D-#414). Requires system_health:view " +
       "(Principal). Each section carries its own `error` and the query still answers, so one dead " +
       "probe never hides the numbers that were fine.",
-    authScopes: { hasPermission: "audit:read" },
+    authScopes: { hasPermission: "system_health:view" },
     resolve: async () => systemHealth(),
   }),
 );

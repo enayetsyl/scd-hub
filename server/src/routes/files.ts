@@ -414,8 +414,8 @@ filesRouter.post("/classtest", parseUpload, async (req: Request, res: Response) 
 
 // ---------------------------------------------------------------------------
 // POST /files/archive — a photo of an archived script bundle / its cover sheet
-// (AR-3, prd-script-archive §5). Filers upload: teacher tracker:write or Office
-// roster:manage (the /classtest gate). Images only (a photo, not a document),
+// (AR-3, prd-script-archive §5). Filers upload: `archive:create` (P, T, O by
+// default — was tracker:write OR roster:manage). Images only (a photo, not a document),
 // ≤ 5 MB; the returned fileId is carried into fileScriptBundle as an
 // attachmentFileId.
 // ---------------------------------------------------------------------------
@@ -434,10 +434,7 @@ export function validateArchivePhotoUpload(mime: string, sizeBytes: number): str
 
 filesRouter.post("/archive", parseUpload, async (req: Request, res: Response) => {
   const ctx = buildContext(req, res);
-  if (
-    !ctx.auth ||
-    (!callerHasPermission(ctx.auth, "tracker:write") && !callerHasPermission(ctx.auth, "roster:manage"))
-  ) {
+  if (!ctx.auth || !callerHasPermission(ctx.auth, "archive:create")) {
     res.status(403).json({ error: FILE_ERRORS_BN.forbidden });
     return;
   }
@@ -1172,11 +1169,8 @@ filesRouter.get("/:id", async (req: Request, res: Response) => {
       await assertClassTestScriptReadAccess(ctx, file);
     } else if (file.kind === "archive_photo") {
       // A bundle photo is operational staff metadata (AR-3): the class-test
-      // screens' read audience — tracker:read staff or the Office/Principal.
-      if (
-        !callerHasPermission(ctx.auth, "tracker:read") &&
-        !callerHasPermission(ctx.auth, "roster:manage")
-      ) {
+      // screens' read audience — `archive:view` (P, T, O by default).
+      if (!callerHasPermission(ctx.auth, "archive:view")) {
         throw new ForbiddenError(FILE_ERRORS_BN.forbidden);
       }
     } else if (file.kind === "english_drive") {

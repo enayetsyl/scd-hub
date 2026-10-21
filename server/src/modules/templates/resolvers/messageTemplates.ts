@@ -1,7 +1,7 @@
 /**
  * Message-template resolvers (MT-1/MT-3; prd-message-templates §4/§5, D-#129).
  *
- * RBAC: EVERY field here gates `template:manage` — PRINCIPAL only (the verifier-proven
+ * RBAC: EVERY field here gates `message_templates:view` or `:edit` (LOCKED; was `template:manage`) — PRINCIPAL only (the verifier-proven
  * exact-holder set, D-#129). The whole surface (list/read/history/edit/reset) is the
  * Principal's admin screen; Office/Teacher/Guardian never reach it.
  *
@@ -70,14 +70,14 @@ ResetResultRef.implement({
 });
 
 // ---------------------------------------------------------------------------
-// Queries (template:manage — Principal only)
+// Queries (message_templates:view / :edit — LOCKED, Principal only)
 // ---------------------------------------------------------------------------
 
 builder.queryField("messageTemplates", (t) =>
   t.field({
     type: [MessageTemplateRef],
-    description: "Every generated-message template with its effective + default bodies (MT-3 list). Requires template:manage.",
-    authScopes: { hasPermission: "template:manage" },
+    description: "Every generated-message template with its effective + default bodies (MT-3 list). Requires message_templates:view.",
+    authScopes: { hasPermission: "message_templates:view" },
     resolve: async () => listMessageTemplates(),
   }),
 );
@@ -86,8 +86,8 @@ builder.queryField("messageTemplate", (t) =>
   t.field({
     type: MessageTemplateRef,
     nullable: true,
-    description: "One template by key. Requires template:manage.",
-    authScopes: { hasPermission: "template:manage" },
+    description: "One template by key. Requires message_templates:view.",
+    authScopes: { hasPermission: "message_templates:view" },
     args: { key: t.arg.string({ required: true }) },
     resolve: async (_root, args) => {
       if (!isMessageTemplateKey(args.key)) return null;
@@ -100,8 +100,8 @@ builder.queryField("messageTemplate", (t) =>
 builder.queryField("messageTemplateHistory", (t) =>
   t.field({
     type: [MessageTemplateHistoryRef],
-    description: "The append-only edit/reset history for a template key. Requires template:manage.",
-    authScopes: { hasPermission: "template:manage" },
+    description: "The append-only edit/reset history for a template key. Requires message_templates:view.",
+    authScopes: { hasPermission: "message_templates:view" },
     args: {
       key: t.arg.string({ required: true }),
       limit: t.arg.int({ required: false }),
@@ -114,15 +114,15 @@ builder.queryField("messageTemplateHistory", (t) =>
 );
 
 // ---------------------------------------------------------------------------
-// Mutations (template:manage — Principal only)
+// Mutations (message_templates:view / :edit — LOCKED, Principal only)
 // ---------------------------------------------------------------------------
 
 builder.mutationField("editMessageTemplate", (t) =>
   t.field({
     type: MessageTemplateRef,
     description:
-      "Save an admin override for a template (MT-1, J1). Edit-time placeholder validation + empty-EN guard; prior body audited. Requires template:manage.",
-    authScopes: { hasPermission: "template:manage" },
+      "Save an admin override for a template (MT-1, J1). Edit-time placeholder validation + empty-EN guard; prior body audited. Requires message_templates:edit.",
+    authScopes: { hasPermission: "message_templates:edit" },
     args: {
       key: t.arg.string({ required: true }),
       bnBody: t.arg.string({ required: true }),
@@ -146,8 +146,8 @@ builder.mutationField("editMessageTemplate", (t) =>
 builder.mutationField("resetMessageTemplate", (t) =>
   t.field({
     type: ResetResultRef,
-    description: "Delete the admin override → the code default returns instantly (J3). Audited. Requires template:manage.",
-    authScopes: { hasPermission: "template:manage" },
+    description: "Delete the admin override → the code default returns instantly (J3). Audited. Requires message_templates:edit.",
+    authScopes: { hasPermission: "message_templates:edit" },
     args: { key: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => resetMessageTemplate(args.key, ctx.auth!.userId),
   }),

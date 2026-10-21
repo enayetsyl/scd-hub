@@ -4,6 +4,7 @@ import { Guardian } from "../models/Guardian";
 import { hashPassword } from "../services/AuthService";
 import type { Role } from "@scd/shared";
 import { ROLES, effectivePermissions, isPermissionActive, templatesOf } from "@scd/shared";
+import { assertMayMintRole } from "../services/ProvisioningService";
 
 type UserShape = Pick<IUser, "email" | "phone" | "role" | "name" | "active" | "homeworkSupervisor"> & {
   _id: { toString(): string };
@@ -115,10 +116,10 @@ builder.queryField("teachers", (t) =>
 builder.queryField("users", (t) =>
   t.field({
     type: [UserRef],
-    authScopes: { hasPermission: "user:manage" },
+    authScopes: { hasPermission: "staff_logins:view" },
     description:
       "All staff accounts (incl. inactive) for the admin user list — Slice-4 follow-up. " +
-      "Gated user:manage (Principal), same as createUser.",
+      "Gated staff_logins:view (Principal by default).",
     resolve: async () => User.find({}).sort({ name: 1 }).lean(),
   }),
 );
@@ -126,18 +127,21 @@ builder.queryField("users", (t) =>
 builder.mutationField("createUser", (t) =>
   t.field({
     type: UserRef,
-    authScopes: { hasPermission: "user:manage" },
-    description: "Create a new staff account (Principal only)",
+    authScopes: { hasPermission: "staff_logins:create" },
+    description:
+      "Create a new staff account (staff_logins:create, Principal by default). A PRINCIPAL or " +
+      "GUARDIAN role is minted only by the Principal (PM F-3).",
     args: {
       email: t.arg.string({ required: true }),
       password: t.arg.string({ required: true }),
       role: t.arg.string({ required: true }),
       name: t.arg.string({ required: true }),
     },
-    resolve: async (_root, args) => {
+    resolve: async (_root, args, ctx) => {
       if (!ROLES.includes(args.role as Role)) {
         throw new Error(`Invalid role: ${args.role}`);
       }
+      assertMayMintRole(args.role, { userId: ctx.auth?.userId, role: ctx.auth?.role });
       const passwordHash = await hashPassword(args.password);
       return User.create({ email: args.email, passwordHash, role: args.role as Role, name: args.name });
     },

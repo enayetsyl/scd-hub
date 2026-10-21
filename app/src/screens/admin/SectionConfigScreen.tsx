@@ -2,7 +2,7 @@
  * SectionConfigScreen (D-#62) — the Principal/Office combine a class's gender-split
  * sections (Boys + Girls) into one combined section so the children sit as a single
  * class, and split them back later. Merging moves the students; splitting restores
- * them (originals to their old section, post-merge newcomers by gender). `roster:manage`.
+ * them (originals to their old section, post-merge newcomers by gender). `classes_sections:merge_split`.
  */
 import React, { useState } from "react";
 import { View } from "react-native";

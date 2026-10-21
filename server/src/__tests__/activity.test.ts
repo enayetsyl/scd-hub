@@ -93,6 +93,9 @@ describe("RBAC — the timeline adds no permission", () => {
   test("audit:read is still PRINCIPAL-only", () => {
     expect(ROLES.filter((r) => roleHasPermission(r, "audit:read"))).toEqual(["PRINCIPAL"]);
   });
+  test("the resolvers ride audit_log:view_activity — Principal-only by default (PM)", () => {
+    expect(ROLES.filter((r) => roleHasPermission(r, "audit_log:view_activity"))).toEqual(["PRINCIPAL"]);
+  });
 });
 
 describe("kind labels", () => {

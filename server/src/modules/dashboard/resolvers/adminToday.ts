@@ -1,13 +1,13 @@
 /**
  * adminToday resolver (D-#316) — the Principal/Office Today dashboard: one
- * generic-card aggregate per day. Gate: Principal/Office by ROLE (the
+ * generic-card aggregate per day. Gate: `admin_dashboard:view` (P + O by default; was Principal/Office by ROLE, the
  * reconciliationReport precedent, D-#88/#290) — school-wide oversight, and
  * OFFICE holds no tracker:read.
  */
 import { builder } from "../../../schema";
 import type { AppContext } from "../../../context";
 import { ForbiddenError } from "../../../middleware/authz";
-import { actsAsRole } from "@scd/shared";
+import { callerHasPermission } from "@scd/shared";
 import {
   adminToday,
   type AdminTodayCard,
@@ -17,10 +17,10 @@ import {
 
 function assertDashboardAdmin(ctx: AppContext): void {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  // D-#467: TEMPLATE-aware, not primary-role. An OFFICE template the Principal added to
-  // a teacher already carries every OFFICE permission via effectivePermissions; this gate
-  // was the one place that ignored it, so the office desk 403d on its own oversight reads.
-  if (!actsAsRole(ctx.auth, "PRINCIPAL") && !actsAsRole(ctx.auth, "OFFICE")) {
+  // PM: `admin_dashboard:view` (P + O by default) replaces the actsAs P/O role check
+  // (D-#467). It stays template-aware: an added OFFICE template carries the action.
+  // The field's declarative scope is the gate; this re-check is defence in depth.
+  if (!callerHasPermission(ctx.auth, "admin_dashboard:view")) {
     throw new ForbiddenError("ড্যাশবোর্ড শুধুমাত্র অধ্যক্ষ/অফিসের জন্য");
   }
 }
@@ -58,7 +58,7 @@ builder.queryField("adminToday", (t) =>
   t.field({
     type: [AdminTodayCardRef],
     description: "The Principal/Office Today dashboard — every module's day at a glance (D-#316).",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "admin_dashboard:view" },
     args: { date: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       assertDashboardAdmin(ctx);
