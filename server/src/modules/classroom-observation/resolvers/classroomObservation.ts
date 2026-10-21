@@ -20,6 +20,13 @@
  *     read that shows a slice of ANOTHER observer's row, so the returned field set is
  *     itself the visibility rule — see `PriorFocusContextRef` below.
  *
+ * PM (permission matrix): the gates are now the `classroom_observation` actions — upload,
+ * assign (assign/reassign, re-review, co-review, cancel/restore), review (+ the assigned-
+ * observer designation), edit, publish (publish/withhold/lift), settings, view (+ the
+ * row rule) and view_all (oversight list, any row, compare; replaces isAdminStaff). The
+ * fairness/usefulness scores follow view_reports. The legacy names in the field
+ * descriptions below are history.
+ *
  * Staff-internal — GUARDIAN holds no observation:* permission (§7). Identity plane
  * (names teacherId/observerId); no corpus path (ADR-005).
  */
