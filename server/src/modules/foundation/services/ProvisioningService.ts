@@ -9,6 +9,7 @@ import { hashPassword } from "./AuthService";
 import { clearAccountThrottle } from "./LoginThrottleService";
 import { generatePassword, normalizePhone, buildCredentialShareLink } from "./credentials";
 import { writeAudit } from "../../platform/services/AuditService";
+import { ForbiddenError } from "../../../middleware/authz";
 
 /**
  * Login provisioning (D-#59 guardians, D-#60 staff).
@@ -64,6 +65,36 @@ export interface StaffCandidate {
 export interface Actor {
   userId?: string;
   role?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Escalation target guard (PM F-4, PRD §5.6). `staff_logins:create` /
+// `staff_logins:reset_password` are switchable; only the Principal may reset,
+// re-activate or re-provision a PRINCIPAL login — otherwise a holder could take
+// over the Principal's account. PRINCIPAL is never an assignable template, but the
+// template is checked too (the same belt-and-braces as View-as's target guard).
+// ---------------------------------------------------------------------------
+export const PRINCIPAL_LOGIN_GUARD_BN = "প্রধান শিক্ষকের লগইন শুধু প্রধান শিক্ষক নিজে রিসেট বা পরিবর্তন করতে পারেন";
+
+export function isPrincipalLogin(u: { role?: string | null; additionalTemplates?: readonly string[] | null }): boolean {
+  return u.role === "PRINCIPAL" || (u.additionalTemplates ?? []).includes("PRINCIPAL");
+}
+
+export function assertMayTouchLogin(
+  target: { role?: string | null; additionalTemplates?: readonly string[] | null },
+  actor: Actor,
+): void {
+  if (isPrincipalLogin(target) && actor.role !== "PRINCIPAL") throw new ForbiddenError(PRINCIPAL_LOGIN_GUARD_BN);
+}
+
+/** PM F-3: `createUser` (staff_logins:create) mints a PRINCIPAL or GUARDIAN role only for
+ *  the Principal — otherwise a holder could create a second Principal login. */
+export const MINT_ROLE_GUARD_BN = "প্রধান শিক্ষক বা অভিভাবক ভূমিকার অ্যাকাউন্ট শুধু প্রধান শিক্ষক তৈরি করতে পারেন";
+
+export function assertMayMintRole(role: string, actor: Actor): void {
+  if ((role === "PRINCIPAL" || role === "GUARDIAN") && actor.role !== "PRINCIPAL") {
+    throw new ForbiddenError(MINT_ROLE_GUARD_BN);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -277,6 +308,8 @@ export async function provisionStaffLogin(staffProfileId: string, actor: Actor):
   let user = await User.findOne({ phone });
   let alreadyExisted = false;
   if (user) {
+    // Re-provisioning resets the existing login on this phone — same guard as a reset.
+    assertMayTouchLogin(user, actor);
     alreadyExisted = true;
     user.passwordHash = passwordHash;
     user.active = true;
@@ -327,6 +360,7 @@ export async function resetUserPassword(userId: string, actor: Actor): Promise<P
     // Phone logins keep their own path, which also re-derives the role from HR category.
     throw new Error("This is a phone login — reset it from the staff credentials screen");
   }
+  assertMayTouchLogin(user, actor);
 
   const password = generatePassword();
   user.passwordHash = await hashPassword(password);
@@ -360,6 +394,7 @@ export async function resetStaffPassword(userId: string, actor: Actor): Promise<
   const user = await User.findById(userId);
   if (!user) throw new Error("User not found");
   if (!user.phone) throw new Error("Only phone-login staff are managed here");
+  assertMayTouchLogin(user, actor);
 
   const password = generatePassword();
   user.passwordHash = await hashPassword(password);

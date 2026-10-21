@@ -15,9 +15,10 @@ import {
 /**
  * Credential-provisioning resolvers (D-#59 guardians, D-#60 staff).
  *
- * Guardian provisioning is gated on `guardian:link` (Principal + Office) — the
- * same permission that already creates/links guardians. Staff provisioning is
- * gated on `user:manage` (Principal only) — the same permission as createUser.
+ * Guardian provisioning is gated on `guardians:reset_password` (Principal + Office by
+ * default). Staff provisioning is gated on `staff_logins:view` / `:create` /
+ * `:reset_password` (Principal by default; ESCALATION) — and a PRINCIPAL login is only
+ * ever reset or re-provisioned by the Principal (assertMayTouchLogin, PM F-4).
  * Identity-plane only; no corpus path (ADR-005 firewall unaffected).
  */
 
@@ -77,12 +78,12 @@ StaffCandidateRef.implement({
   }),
 });
 
-// --- guardian queries / mutations (guardian:link) --------------------------
+// --- guardian queries / mutations (guardians:reset_password) --------------------------
 
 builder.queryField("guardianCredentialCandidates", (t) =>
   t.field({
     type: [GuardianCandidateRef],
-    authScopes: { hasPermission: "guardian:link" },
+    authScopes: { hasPermission: "guardians:reset_password" },
     description: "Families grouped by contact phone, each eligible for one shared guardian login (D-#59).",
     resolve: () => guardianCredentialCandidates(),
   }),
@@ -91,7 +92,7 @@ builder.queryField("guardianCredentialCandidates", (t) =>
 builder.mutationField("provisionGuardianLogin", (t) =>
   t.field({
     type: ProvisionedCredentialRef,
-    authScopes: { hasPermission: "guardian:link" },
+    authScopes: { hasPermission: "guardians:reset_password" },
     description: "Generate (or reset) a phone-keyed guardian login covering every sibling on that phone (D-#59).",
     args: { phone: t.arg.string({ required: true }) },
     resolve: (_root, args, ctx) =>
@@ -102,7 +103,7 @@ builder.mutationField("provisionGuardianLogin", (t) =>
 builder.mutationField("resetGuardianPassword", (t) =>
   t.field({
     type: ProvisionedCredentialRef,
-    authScopes: { hasPermission: "guardian:link" },
+    authScopes: { hasPermission: "guardians:reset_password" },
     description: "Reset an existing guardian login's password (D-#59).",
     args: { guardianId: t.arg.string({ required: true }) },
     resolve: (_root, args, ctx) =>
@@ -110,12 +111,12 @@ builder.mutationField("resetGuardianPassword", (t) =>
   }),
 );
 
-// --- staff queries / mutations (user:manage) -------------------------------
+// --- staff queries / mutations (staff_logins:*) -------------------------------
 
 builder.queryField("staffCredentialCandidates", (t) =>
   t.field({
     type: [StaffCandidateRef],
-    authScopes: { hasPermission: "user:manage" },
+    authScopes: { hasPermission: "staff_logins:view" },
     description: "Staff members and whether each has / can have an app login (D-#60).",
     resolve: () => staffCredentialCandidates(),
   }),
@@ -124,7 +125,7 @@ builder.queryField("staffCredentialCandidates", (t) =>
 builder.mutationField("provisionStaffLogin", (t) =>
   t.field({
     type: ProvisionedCredentialRef,
-    authScopes: { hasPermission: "user:manage" },
+    authScopes: { hasPermission: "staff_logins:create" },
     description: "Generate (or reset) a phone-login for a staff member, role mapped from HR category (D-#60).",
     args: { staffProfileId: t.arg.string({ required: true }) },
     resolve: (_root, args, ctx) =>
@@ -135,7 +136,7 @@ builder.mutationField("provisionStaffLogin", (t) =>
 builder.mutationField("resetStaffPassword", (t) =>
   t.field({
     type: ProvisionedCredentialRef,
-    authScopes: { hasPermission: "user:manage" },
+    authScopes: { hasPermission: "staff_logins:reset_password" },
     description: "Reset an existing staff login's password (D-#60).",
     args: { userId: t.arg.string({ required: true }) },
     resolve: (_root, args, ctx) =>
@@ -146,7 +147,7 @@ builder.mutationField("resetStaffPassword", (t) =>
 builder.mutationField("resetUserPassword", (t) =>
   t.field({
     type: ProvisionedCredentialRef,
-    authScopes: { hasPermission: "user:manage" },
+    authScopes: { hasPermission: "staff_logins:reset_password" },
     description:
       "Reset an EMAIL login's password and return it once (D-#526). Phone logins keep " +
       "resetStaffPassword, which also re-derives the role from the HR category.",
