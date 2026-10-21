@@ -26,7 +26,7 @@ import { StoredFile } from "../../platform/models/StoredFile";
 import { uploadToDrive, DriveUnavailableError } from "../../platform/services/DriveStore";
 import { createPrintRequest } from "../../printing/services/PrintRequestService";
 import { printTargetFields } from "../../printing/printTarget";
-import { isAdminStaff } from "../../foundation/services/RoleScope";
+import { callerHasPermission } from "@scd/shared";
 import {
   EnglishDriveDoc,
   ENGLISH_DRIVE_KINDS,
@@ -106,8 +106,10 @@ export async function allowedEnglishDriveClassLevels(
   ctx: AppContext,
 ): Promise<Set<number> | null> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  if (isAdminStaff(ctx.auth)) return null;
-  if (ctx.auth.role !== "TEACHER") {
+  // PM: english_drive:view_all = all five levels (was isAdminStaff); english_drive:view =
+  // the English-class scope below (was "primary role TEACHER").
+  if (ctx.auth.role !== "GUARDIAN" && callerHasPermission(ctx.auth, "english_drive:view_all")) return null;
+  if (ctx.auth.role === "GUARDIAN" || !callerHasPermission(ctx.auth, "english_drive:view")) {
     throw new ForbiddenError("ইংরেজি ড্রাইভ দেখার অনুমতি নেই");
   }
 
