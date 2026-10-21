@@ -113,6 +113,9 @@ export interface GenerateInput {
   scope: Scope;
   seed: number;
   pictures: PictureRef[];
+  /** The book a picture/word question draws on, when the subject alone does not say: a KG
+   *  আরবি paper uses রওযাতুল আতফাল ২ (ARABIC_KG, D-#806). Absent = the subject's book. */
+  pictureBook?: WorksheetPictureBook | null;
 }
 
 export interface WorksheetDoc {
