@@ -8,10 +8,10 @@
  * year of notes never lands in one payload).
  *
  * Scope is the SERVER's decision, not this screen's: `classNotesPage` gives
- * routine:manage the whole school and pins everyone else to their own notes
- * (`classNoteFilterOptions.canManage` says which happened). The row actions
- * follow the same line — a teacher edits the note they authored, deleting stays
- * routine:manage.
+ * class_note:view_all the whole school and pins everyone else to their own notes
+ * (`classNoteFilterOptions.canManage` says which happened). The row actions follow
+ * the server's write gates (PM catalogue): class_note:edit_all edits any note,
+ * class_note:edit only the note you authored; deleting is class_note:delete.
  *
  * The note's text is a COLUMN (owner ask, 2026-08-17), clamped to two lines with a
  * ▸/▾ caret; pressing anywhere on the row unclamps it and reveals its attachment
@@ -77,7 +77,10 @@ function Cell({ width, children }: { width: number; children: React.ReactNode })
 }
 
 export default function AllClassNotesScreen(): React.ReactElement {
-  const { user } = useAuth();
+  const { user, can } = useAuth();
+  const canEditAll = can("class_note:edit_all");
+  const canEditOwn = can("class_note:edit");
+  const canDelete = can("class_note:delete");
   const toast = useToast();
   const { confirmAction } = useConfirm();
 
@@ -223,7 +226,8 @@ export default function AllClassNotesScreen(): React.ReactElement {
     refetch({ requestPolicy: "network-only" });
   }
 
-  const mayEdit = (r: ClassNoteAdminRowT): boolean => canManage || (!!user?.id && r.authorId === user.id);
+  const mayEdit = (r: ClassNoteAdminRowT): boolean =>
+    canEditAll || (canEditOwn && !!user?.id && r.authorId === user.id);
 
   return (
     <Screen padded={false}>
@@ -380,10 +384,10 @@ export default function AllClassNotesScreen(): React.ReactElement {
                             {mayEdit(r) ? (
                               <Button title={`✏️ ${STR.cnActionEdit}`} variant="secondary" onPress={() => startEdit(r)} />
                             ) : null}
-                            {canManage ? (
+                            {canDelete ? (
                               <Button title={`🗑 ${STR.cnActionDelete}`} variant="danger" onPress={() => void onDelete(r)} />
                             ) : null}
-                            {!mayEdit(r) && !canManage ? <Muted style={{ color: REPORT.textMuted }}>—</Muted> : null}
+                            {!mayEdit(r) && !canDelete ? <Muted style={{ color: REPORT.textMuted }}>—</Muted> : null}
                           </View>
                         </Cell>
                       </Pressable>

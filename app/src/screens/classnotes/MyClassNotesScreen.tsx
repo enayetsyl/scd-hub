@@ -104,7 +104,7 @@ function PeriodNoteCard({ slot, date }: { slot: RoutineSlotT; date: string }): R
   const isSection = canCarryHomework(slot);
   // The homework block is offered only to a caller who could actually write it —
   // the server gates the half independently either way (D-#477).
-  const mayDeclare = isSection && can("tracker:write");
+  const mayDeclare = isSection && can("homework:declare");
 
   // The day's already-declared items for this slot's section+subject.
   const [tallyQ, refetchTally] = useQuery({
