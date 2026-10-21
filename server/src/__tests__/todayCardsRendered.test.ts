@@ -68,7 +68,9 @@ describe("AdminTodayScreen — the admin-only cards reach the roles that hold th
 
   test("AppTabs still routes PRINCIPAL and OFFICE to AdminTodayScreen (D-#316)", () => {
     // If this routing ever changes, the assertion below is measuring the wrong screen.
-    expect(tabsSrc).toMatch(/adminDash\s*=\s*role === "PRINCIPAL" \|\| role === "OFFICE"/);
+    // PM (F-28): the landing follows `admin_dashboard:view` — Principal + Office by default,
+    // template-aware like the server's adminToday gate (no longer a primary-role compare).
+    expect(tabsSrc).toMatch(/adminDash\s*=\s*can\("admin_dashboard:view"\)/);
     expect(tabsSrc).toMatch(/component=\{adminDash \? AdminTodayScreen : TodayScreen\}/);
   });
 

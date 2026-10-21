@@ -1,6 +1,6 @@
 # Permission catalogue — every feature × every action
 
-**Serves:** [`docs/prd-permission-matrix.md`](../prd-permission-matrix.md) (PM, D-#790–#801). **Source:** seven read-only permission inventories of `origin/dev` (2026-10-20), consolidated here. **Status:** planning artifact, no code yet.
+**Serves:** [`docs/prd-permission-matrix.md`](../prd-permission-matrix.md) (PM, D-#790–#801). **Source of truth:** `FEATURE_CATALOGUE` in [`shared/permissionCatalogue.ts`](../../shared/permissionCatalogue.ts) (BUILT 2026-10-21, D-#805) — this README and the area files describe it and must change in the same commit. Originally consolidated from seven read-only inventories of `origin/dev` (2026-10-20).
 
 ## Purpose
 This catalogue is the build checklist for the permission matrix. It names every feature and every action a person can take in it, as a `feature:action` permission, with the Teacher and Office default that reproduces today's access exactly, so ship day changes nobody's access. The per-area files list every resolver, REST route, hidden role gate and app gate that must be re-pointed at these actions. [`legacy-expansion.md`](legacy-expansion.md) is the source for `LEGACY_PERMISSION_EXPANSION`, `LEGACY_PERMISSION_ALIASES` and `DELEGATED_ACTION_PERMISSIONS`. [`findings.md`](findings.md) lists gaps in today's gates that the inventory found. This plan did not cause them.

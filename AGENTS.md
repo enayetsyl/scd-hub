@@ -62,10 +62,11 @@ auto-deploys (`.github/workflows`, `scripts/deploy.sh`). So:
 - **Every feature registers all its actions in the permission catalogue (D-#799).** A new feature, or a
   new action in an existing one, adds a `feature:action` entry for **every** thing a person can do in
   it (view, declare, check, return, approve, publish…), with default roles (TEACHER/OFFICE; the
-  Principal holds all) and BN/EN labels, to `docs/permission-catalogue/` (and to `FEATURE_CATALOGUE` in
-  `/shared/vocab.ts` once PM ships). Every resolver, REST route and app button names its action; never
+  Principal holds all) and BN/EN labels, to `FEATURE_CATALOGUE` in `/shared/permissionCatalogue.ts` AND
+  `docs/permission-catalogue/`. Every resolver, REST route and app button names its action; never
   decide capability with a role check (`isAdminStaff`, `role === …`). It then appears in the Access
-  control role editor with no editor change. See `docs/prd-permission-matrix.md` §9.
+  control role editor with no editor change. CI enforces it (`permissionCatalogueGates.test.ts` +
+  verifier §C.PM). See `docs/prd-permission-matrix.md` §9.
 
 ## Commands
 > Fill the app/server rows when those packages are scaffolded; the two verifiers below are live now.

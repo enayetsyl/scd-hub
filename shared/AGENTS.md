@@ -17,7 +17,8 @@ App-native vocab (SetType, TrackerKind, Role, Permission, default section) lives
 RBAC here is GRANTS ONLY (default-deny). Row-scope and the PII-firewall plane boundary are enforced
 in resolvers (architecture ADR-004/005), not in this file.
 
-Permissions are moving to a per-feature catalogue (`docs/prd-permission-matrix.md`, D-#790–#801):
-`FEATURE_CATALOGUE` → derived `PERMISSIONS` / `ROLE_PERMISSIONS`, named `feature:action`. Until it
-ships, `docs/permission-catalogue/` is the registry. A new feature adds ALL its actions there
-(D-#799) instead of reusing another feature's permission.
+Permissions come from a per-feature catalogue (`docs/prd-permission-matrix.md`, D-#790–#801, #805):
+`FEATURE_CATALOGUE` in `permissionCatalogue.ts` (the source of truth) → `CATALOGUE_PERMISSIONS`,
+`CATALOGUE_ROLE_DEFAULTS`, labels; `vocab.ts` keeps the LEGACY names only to read per-user arrays
+stored under them and to answer old app bundles. Code never names a legacy permission (the
+source-scanning test fails CI). A new feature adds ALL its actions to the catalogue (D-#799).

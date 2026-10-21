@@ -104,7 +104,7 @@ export default function AccessControlRolesPanel(): React.ReactElement {
         busy={busy}
         badge={(p) =>
           changed.has(p)
-            ? { text: `${STR.acBadgeChanged} (${defaults.has(p) ? STR.acOn : STR.acOff} →)`, tone: "warn" }
+            ? { text: `${STR.acBadgeChanged} (${STR.acDefaultIs}: ${defaults.has(p) ? STR.acOn : STR.acOff})`, tone: "warn" }
             : null
         }
         onToggle={toggle}

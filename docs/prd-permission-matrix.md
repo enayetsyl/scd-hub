@@ -1,6 +1,6 @@
 # PRD — Permission Matrix (every feature × every action, editable per role)
 
-**Status:** Planned — owner questions answered 2026-10-20 (§12); ready to build. No feature code yet. Gaps in today's gates found along the way are listed separately (§12a).
+**Status:** BUILT 2026-10-21 (branch `feat/permission-matrix`; build notes D-#805). Owner questions answered 2026-10-20 (§12). Gaps in today's gates found along the way are listed separately (§12a).
 **Owner:** Principal (SCD)
 **Module prefix:** PM  ·  **Plane:** identity/operational (ADR-005)
 **Traceability:** D-#790–#801 · refines D-#193 (AC-1, role-as-template) and its §10 deferral ("editing the templates themselves") · composes with D-#484 (delegated scope — the *where* axis, unchanged) · D-#17 (role set unchanged) · ADR-004 (row-scope) · ADR-008 (append-only audit)
