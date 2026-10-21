@@ -49,7 +49,14 @@
         "topic_tag": { "type": "string" },
         "paper_role": { "enum": ["mcq", "short", "structured", "creative"], "description": "REF-09 §4/§5.3 paper-section family; the app filter for set assembly. MIRROR of payload.paper_role / vocab.ts PAPER_ROLES." },
         "chapter_ref": { "type": "string" },
-        "lesson_ref": { "type": "string" }
+        "lesson_ref": { "type": "string" },
+        "lo_codes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^LO-(NUR|KG|C[1-6])-(BAN|ENG|MATH|SCI|BGS|ARABIC|ISLAM)-(\\d{2}|SK-[A-Z]{2,8})-\\d{2}$" },
+          "description": "OPTIONAL (D-#785): the mastery learning outcomes a question assesses, primary first. MIRROR of payload.lo_codes (harness L3 asserts equality). Pattern = shared/vocab.ts MASTERY_LO_CODE_RE."
+        }
       }
     },
     "review_status": { "enum": ["draft", "reviewed", "gold"], "description": "Quality gate (D-#3). draft=authored; reviewed=passed substance REVIEW; gold=Principal-locked. Defaults to draft on import." },

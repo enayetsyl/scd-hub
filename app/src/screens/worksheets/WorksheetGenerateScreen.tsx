@@ -37,7 +37,12 @@ import { openPdf, openPdfPost, PDF_SUPPORTED } from "../../lib/pdf";
 import { useColors } from "../../theme";
 import { space } from "../../theme/tokens";
 
-const SUBJECTS = ["BAN", "ENG", "MATH"] as const;
+const SUBJECTS = ["BAN", "ENG", "MATH", "ARABIC"] as const;
+/** রওযাতুল আতফাল ১ in book order — mirrors server engine/sequences.ts ARABIC_LETTERS. */
+const ARABIC_LETTERS = [
+  "ا", "ب", "ت", "ث", "ج", "ح", "خ", "د", "ذ", "ر", "ز", "س", "ش", "ص", "ض",
+  "ط", "ظ", "ع", "غ", "ف", "ق", "ك", "ل", "م", "ن", "و", "ه", "ء", "ي",
+];
 const BAN_CONSONANTS = [
   "ক", "খ", "গ", "ঘ", "ঙ", "চ", "ছ", "জ", "ঝ", "ঞ", "ট", "ঠ", "ড", "ঢ", "ণ", "ত", "থ", "দ", "ধ", "ন",
   "প", "ফ", "ব", "ভ", "ম", "য", "র", "ল", "শ", "ষ", "স", "হ", "ড়", "ঢ়", "য়", "ৎ", "ং", "ঃ", "ঁ",
@@ -73,6 +78,8 @@ function axisOptions(axis: string | null): string[] {
       return Array.from({ length: 100 }, (_, i) => String(i + 1).replace(/\d/g, (d) => BN_DIGITS[Number(d)]));
     case "NUM_EN":
       return Array.from({ length: 100 }, (_, i) => String(i + 1));
+    case "ARABIC":
+      return ARABIC_LETTERS;
     default:
       return [];
   }
@@ -123,6 +130,7 @@ function rangeParts(
 function allLettersFor(subject: string): string[] {
   if (subject === "BAN") return [...BAN_VOWELS, ...BAN_CONSONANTS];
   if (subject === "ENG") return [...ENG_LETTERS];
+  if (subject === "ARABIC") return [...ARABIC_LETTERS];
   return [];
 }
 
@@ -318,7 +326,7 @@ export default function WorksheetGenerateScreen(): React.ReactElement {
     <Screen scroll>
       <H2>{STR.wsTitle}</H2>
       <Muted style={{ marginBottom: space(3) }}>
-        {STR.wsOnlyPrePrimary} {STR.wsArabicLater}
+        {STR.wsOnlyPrePrimary}
       </Muted>
 
       <Card>
@@ -370,7 +378,9 @@ export default function WorksheetGenerateScreen(): React.ReactElement {
                   { label: STR.wsRangeVowels, letters: BAN_VOWELS },
                   { label: STR.wsRangeConsonants, letters: BAN_CONSONANTS },
                 ]
-              : [{ label: STR.wsRangeCapital, letters: ENG_LETTERS }]
+              : subject === "ARABIC"
+                ? [{ label: STR.wsArabicLetters, letters: ARABIC_LETTERS }]
+                : [{ label: STR.wsRangeCapital, letters: ENG_LETTERS }]
             ).map((g) => (
               <View key={g.label} style={{ gap: space(1) }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: space(2), flexWrap: "wrap" }}>

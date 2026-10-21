@@ -4021,6 +4021,14 @@ export const LEGACY_PERMISSIONS = [
                            // guardian is deliberately NOT a permission — it rides the PRINCIPAL role inside the resolver
                            // (the exam:manage / D-#397 posture), so authoring can be delegated without the release.
                            // Staff-internal — GUARDIAN reads a released analysis via guardian:read_child (SC-5).
+  // learning-outcome mastery tracker (docs/prd-mastery.md, D-#775–#787)
+  "mastery:read",          // read the catalogue, mark table, tags, policy and (later) diagnosis views, ROW-SCOPED in the
+                           // resolver for teachers. GUARDIAN reads own child via guardian:read_child (D-#783).
+  "mastery:enter",         // enter per-question results / build assignments — held by TEACHER as a BASE permission;
+                           // the ROUTINE (class × subject she teaches) is the scope, checked in the service (M-2+).
+  "mastery:manage",        // catalogue (import, lock, retire), question-type marks, tags, policy, the class × subject switch.
+  "mastery:approve",       // approve an extra-class proposal (D-#781). PRINCIPAL by role; selected OFFICE holders receive it
+                           // as a PER-USER grant (AC-1) — there is no coordinator role (D-#786).
   // work board (WB-1, D-#701): put a task on SOMEONE ELSE's board, read anyone's board,
   // the load grid and the templates. Everyone creates tasks for THEMSELVES with no
   // permission at all. Principal + Office by template; a teacher-admin (Taskir/Akhtar)
@@ -4109,6 +4117,10 @@ const LEGACY_PERMISSION_BUILD_STATUS: Record<LegacyPermission, "build" | "pipeli
   "exam:read": "build",           // SY-1 (row-scoped syllabus read)
   "scholarship:manage": "build",  // SC-0/SC-1/SC-2 (topic catalogue, paper declaration, mark entry)
   "scholarship:read": "build",    // SC-3/SC-4 (per-student + class weakness analysis)
+  "mastery:read": "build",        // M-0 (catalogue / marks / tags / policy reads)
+  "mastery:enter": "build",       // M-2 (per-question entry) — declared with M-0 so the role map is settled once
+  "mastery:manage": "build",      // M-0 (catalogue import/lock/retire, marks, tags, policy, switch)
+  "mastery:approve": "build",     // M-5 (extra-class approval) — declared with M-0 for the same reason
   "tasks:assign": "build",        // WB-1 (D-#701): assign tasks, read others' boards, the load grid
   "guardian:read_child": "build", // ACTIVATED by Guardian Portal GP-1 (D-#68; was pipeline since Slice 0)
 };
@@ -4158,6 +4170,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly LegacyPermission[]> = {
     "book:review_senior", "book:assemble", "book:manage",
     "exam:manage", "exam:read", // exam syllabus (SY-1, D-#533) — the Principal is the publish gate
     "scholarship:manage", "scholarship:read", // scholarship practice papers (SC-1, D-#656); RELEASE to a guardian rides this role
+    "mastery:read", "mastery:enter", "mastery:manage", "mastery:approve", // mastery tracker (D-#775/#786): the Principal runs it end to end
   ],
   // Row-scoped to own sections (SCOPE_RULES). Consumes content, assembles sets,
   // fills trackers; authors nothing in-app (no content:import). message:dispatch
@@ -4179,6 +4192,8 @@ export const ROLE_PERMISSIONS: Record<Role, readonly LegacyPermission[]> = {
     "scholarship:manage", "scholarship:read", // declare + score a practice paper for the class × subject she holds in the
                              // ROUTINE, and read its analysis. The routine check is in the service, NOT here (D-#656) —
                              // this is a TEACHER base permission, so an unscoped write would reach every class.
+    "mastery:read", "mastery:enter", // mastery tracker: read + enter for the class × subject the ROUTINE gives her
+                             // (scope checked in the service, the scholarship:manage posture). No manage, no approve.
   ],
   // Roster, guardian linkage, messaging dispatch (REQ §2), plus content import (the
   // publisher seam), plan-review assignment (D-#39), and routine authoring (D-#46).
@@ -4210,7 +4225,9 @@ export const ROLE_PERMISSIONS: Record<Role, readonly LegacyPermission[]> = {
                              // PRINCIPAL_REVIEW and only the Principal moves it on (D-#533, §7.4).
     "scholarship:manage", "scholarship:read", // the desk declares and scores a practice paper on a teacher's behalf
                              // (SC-1). RELEASE to a guardian is refused to Office by ROLE, not by permission (D-#656).
-    "tasks:assign",          // work board (WB-1, D-#701): the desk puts work on colleagues' boards and reads the load grid
+    "mastery:read",          // mastery tracker: the desk reads the dashboards. mastery:approve is NOT on the template —
+                             // the owner grants it per user to the office holders who approve extra classes (D-#786).
+    "tasks:assign",         // work board (WB-1, D-#701): the desk puts work on colleagues' boards and reads the load grid
   ],
   // Guardian portal v1 (GP-1, D-#68): the single grant is ACTIVE — guardian-scoped
   // resolvers read linked children only (assertGuardianOfStudent, link-scoped).
@@ -4558,6 +4575,10 @@ const LEGACY_PERMISSION_LABELS_BN: Record<LegacyPermission, PermissionLabel> = {
   "exam:read": { name: "পরীক্ষার সিলেবাস দেখা", desc: "প্রকাশিত সিলেবাস ও মানবন্টন দেখা" },
   "scholarship:manage": { name: "বৃত্তি অনুশীলন ব্যবস্থাপনা", desc: "অনুশীলন প্রশ্ন ঘোষণা, টপিক তালিকা রক্ষণাবেক্ষণ ও আইটেমভিত্তিক নম্বর লেখা" },
   "scholarship:read": { name: "বৃত্তি অনুশীলন বিশ্লেষণ দেখা", desc: "অনুশীলন প্রশ্ন ও কোন শিক্ষার্থী কোন টপিকে দুর্বল তার বিশ্লেষণ দেখা" },
+  "mastery:read": { name: "শিখন-দক্ষতা দেখা", desc: "শিখনফল তালিকা, নম্বর, ট্যাগ, পলিসি ও শিক্ষার্থীর শিখন-দক্ষতা দেখা" },
+  "mastery:enter": { name: "শিখন-দক্ষতার নম্বর তোলা", desc: "নিজের শ্রেণি-বিষয়ের প্রশ্নভিত্তিক নম্বর তোলা ও অ্যাসাইনমেন্ট তৈরি" },
+  "mastery:manage": { name: "শিখন-দক্ষতা ব্যবস্থাপনা", desc: "শিখনফল তালিকা, প্রশ্নের নম্বর, ট্যাগ, পলিসি ও শ্রেণি-বিষয় চালু/বন্ধ" },
+  "mastery:approve": { name: "অতিরিক্ত ক্লাস অনুমোদন", desc: "শাখার দুর্বলতায় অতিরিক্ত ক্লাস ও রি-টেস্টের প্রস্তাব অনুমোদন" },
   "tasks:assign": { name: "কাজ দেওয়া", desc: "অন্যের বোর্ডে কাজ দেওয়া, সবার বোর্ড ও কাজের চাপ দেখা" },
   "guardian:read_child": { name: "সন্তানের তথ্য দেখা (অভিভাবক প্লেন)", desc: "অভিভাবক প্লেন — স্টাফকে দেওয়া যায় না" },
 };
@@ -4623,6 +4644,10 @@ const LEGACY_PERMISSION_LABELS_EN: Record<LegacyPermission, PermissionLabel> = {
   "exam:read": { name: "Read exam syllabus", desc: "Read published syllabuses and mark distributions" },
   "scholarship:manage": { name: "Manage scholarship practice", desc: "Declare a practice paper and its items, maintain the topic catalogue, enter per-item marks" },
   "scholarship:read": { name: "Read scholarship analysis", desc: "Read practice papers and the topic-wise weakness analysis" },
+  "mastery:read": { name: "Read learning mastery", desc: "Read the outcome catalogue, marks, tags, policy and students' mastery" },
+  "mastery:enter": { name: "Enter mastery results", desc: "Enter per-question results and build assignments for own class × subject" },
+  "mastery:manage": { name: "Manage learning mastery", desc: "Outcome catalogue, question-type marks, tags, policy and the class × subject switch" },
+  "mastery:approve": { name: "Approve extra classes", desc: "Approve extra-class and re-test proposals for weak sections" },
   "tasks:assign": { name: "Assign tasks", desc: "Put work on other people's boards, read every board and the load grid" },
   "guardian:read_child": { name: "Read child (guardian plane)", desc: "Guardian plane — not grantable to staff" },
 };
@@ -5037,6 +5062,148 @@ export const SCHOLARSHIP_CLASS_GAP_FLAG = -15;
 export const SCHOLARSHIP_CLASS_LEVELS: readonly number[] = [5];
 
 // ===========================================================================
+// Learning-outcome mastery tracker (`mastery`, docs/prd-mastery.md, D-#775–#787).
+// An ADD-ON module: per-question evidence → learning-outcome (LO) state → tailored
+// weekly assignment → section trigger / extra class. App-native vocabulary only —
+// the ONE wire-contract touch (LO codes in the bank's topic_tag) is M-1, not here.
+// ===========================================================================
+
+/** Class tokens used in LO codes and catalogue keys (D-#776). Nursery and KG are
+ *  lettered because they have no class number. */
+export const MASTERY_CLASS_TOKENS = ["NUR", "KG", "C1", "C2", "C3", "C4", "C5", "C6"] as const;
+export type MasteryClassToken = (typeof MASTERY_CLASS_TOKENS)[number];
+
+/** Subjects the module covers: every homework subject — Quran is not one (D-#784). */
+export const MASTERY_SUBJECTS = HW_SUBJECTS;
+export type MasterySubject = HwSubject;
+
+/** How an LO is assessed: a written question, or the 4-step rubric (D-#778). */
+export const MASTERY_ASSESS = ["QUESTION", "RUBRIC"] as const;
+export type MasteryAssess = (typeof MASTERY_ASSESS)[number];
+
+/** Catalogue row lifecycle (D-#776): codes may change while DRAFT; a LOCKED code is
+ *  permanent and can only be RETIRED (old evidence keeps resolving). */
+export const MASTERY_OUTCOME_STATUSES = ["DRAFT", "LOCKED", "RETIRED"] as const;
+export type MasteryOutcomeStatus = (typeof MASTERY_OUTCOME_STATUSES)[number];
+
+/** Per student × LO state (D-#779). */
+export const MASTERY_STATES = ["NOT_ASSESSED", "INSUFFICIENT", "WEAK", "IMPROVING", "MASTERED", "REVISION_DUE"] as const;
+export type MasteryState = (typeof MASTERY_STATES)[number];
+
+export const MASTERY_STATE_LABELS_BN: Record<MasteryState, string> = {
+  NOT_ASSESSED: "যাচাই হয়নি",
+  INSUFFICIENT: "তথ্য কম",
+  WEAK: "দুর্বল",
+  IMPROVING: "উন্নতি হচ্ছে",
+  MASTERED: "আয়ত্তে",
+  REVISION_DUE: "রিভিশন বাকি",
+};
+
+/** The guardian-facing wording (D-#783) — plain, never a verdict word like দুর্বল. */
+export const MASTERY_STATE_LABELS_GUARDIAN_BN: Record<MasteryState, string> = {
+  NOT_ASSESSED: "এখনো যাচাই হয়নি",
+  INSUFFICIENT: "এখনো জানা যায়নি",
+  WEAK: "মনোযোগ দরকার",
+  IMPROVING: "উন্নতি হচ্ছে",
+  MASTERED: "ভালো পারে",
+  REVISION_DUE: "ভালো পারে",
+};
+
+/** What a diagnosis tag does to the evidence (D-#778/#787). */
+export const MASTERY_TAG_EFFECTS = ["WEAK", "LIGHT", "NO_EVIDENCE", "VOID_BEHAVIOUR", "ROUTE_STRAND"] as const;
+export type MasteryTagEffect = (typeof MASTERY_TAG_EFFECTS)[number];
+
+/** Where a tag may be put: on one question, on the whole piece of work, or either. */
+export const MASTERY_TAG_APPLIES = ["ITEM", "WORK", "BOTH"] as const;
+export type MasteryTagApplies = (typeof MASTERY_TAG_APPLIES)[number];
+
+/** A routing tag's level (D-#787): it judges each eligible ITEM, or each whole WORK. */
+export const MASTERY_ROUTE_LEVELS = ["ITEM", "WORK"] as const;
+export type MasteryRouteLevel = (typeof MASTERY_ROUTE_LEVELS)[number];
+
+export const MASTERY_TAG_EFFECT_LABELS_BN: Record<MasteryTagEffect, string> = {
+  WEAK: "দুর্বলতার সংকেত",
+  LIGHT: "হালকা সংকেত",
+  NO_EVIDENCE: "প্রমাণ নেই",
+  VOID_BEHAVIOUR: "প্রমাণ বাতিল · আচরণ নোট",
+  ROUTE_STRAND: "দক্ষতা-ধারায় যায়",
+};
+
+/** The 4-step rubric (D-#778): ১ পারে না · ২ সাহায্যে পারে · ৩ প্রায় পারে · ৪ ভালো পারে. */
+export const MASTERY_RUBRIC_STEPS = [1, 2, 3, 4] as const;
+export const MASTERY_RUBRIC_LABELS_BN: Record<1 | 2 | 3 | 4, string> = {
+  1: "পারে না",
+  2: "সাহায্যে পারে",
+  3: "প্রায় পারে",
+  4: "ভালো পারে",
+};
+
+/** An LO code (D-#776): `LO-<class>-<subject>-<CC>-<NN>` for a chapter outcome, or
+ *  `LO-<class>-<subject>-SK-<STRAND>-<NN>` for a skill that spans chapters. */
+export const MASTERY_LO_CODE_RE =
+  /^LO-(NUR|KG|C[1-6])-(BAN|ENG|MATH|SCI|BGS|ARABIC|ISLAM)-(\d{2}|SK-[A-Z]{2,8})-\d{2}$/;
+
+/** A question-type code (D-#777): `QT-<SLUG>`, uppercase, hyphenated. */
+export const MASTERY_QT_CODE_RE = /^QT-[A-Z0-9]+(?:-[A-Z0-9]+)*$/;
+
+/** A skill-strand tag inside an LO code (`SK-ANS` → "ANS"). */
+export const MASTERY_STRAND_RE = /^[A-Z]{2,8}$/;
+
+/** The policy defaults (D-#779/#780/#781) — what a fresh school row holds. */
+export const MASTERY_POLICY_DEFAULTS = {
+  weakBelowPct: 50,
+  weakGapVsSection: 15,
+  minQuestionsForVerdict: 2,
+  improvingAtPct: 70,
+  masteredAtPct: 70,
+  masteredDistinctQuestions: 2,
+  masteredSeparateWeeks: true,
+  revisionFirstWeeks: 4,
+  revisionThenWeeks: 8,
+  reworkIsWeak: true,
+  workReworkIsLight: true,
+  lightSignalsMakeWeak: 2,
+  lightSignalWindowWeeks: 3,
+  sectionTriggerPct: 50,
+  sectionTriggerMinAssessments: 2,
+  retestAfterDays: 7,
+  rubricWeakAtOrBelow: 2,
+  rubricGoodAt: 4,
+  assignmentTotalMarks: 15,
+  assignmentMinutes: 30,
+  assignmentPartAOn: true,
+  assignmentPartAMarks: 5,
+  assignmentPartBMarks: 10,
+  assignmentMixWeak: 60,
+  assignmentMixImproving: 25,
+  assignmentMixRevision: 15,
+} as const;
+export type MasteryPolicyValues = { -readonly [K in keyof typeof MASTERY_POLICY_DEFAULTS]: (typeof MASTERY_POLICY_DEFAULTS)[K] extends boolean ? boolean : number };
+
+/** Parse an LO code into its parts, or null when it is not one. */
+export function parseMasteryLoCode(code: string): {
+  classToken: MasteryClassToken;
+  subject: MasterySubject;
+  chapterNumber: number | null;
+  strand: string | null;
+  seq: number;
+} | null {
+  const m = MASTERY_LO_CODE_RE.exec(code);
+  if (!m) return null;
+  const mid = m[3];
+  const seq = Number(code.slice(-2));
+  if (mid.startsWith("SK-")) {
+    return { classToken: m[1] as MasteryClassToken, subject: m[2] as MasterySubject, chapterNumber: null, strand: mid.slice(3), seq };
+  }
+  return { classToken: m[1] as MasteryClassToken, subject: m[2] as MasterySubject, chapterNumber: Number(mid), strand: null, seq };
+}
+
+/** The class token for a class level (0 = KG is not a level here; Nursery/KG come by token). */
+export function masteryClassTokenForLevel(level: number): MasteryClassToken | null {
+  return level >= 1 && level <= 6 ? (`C${level}` as MasteryClassToken) : null;
+}
+
+// ===========================================================================
 // Work board (WB-1, D-#701) — one board per staff member: MANUAL tasks (a Task
 // row, typed by a person) beside AUTO cards (projections over records other
 // modules already keep — a routine period, a proxy class, homework awaiting
@@ -5244,6 +5411,15 @@ export const WORKSHEET_ITEM_KINDS = [
   "MATCH_NUMERAL",
   "COUNT_PICTURES",
   "MATCH_COUNT",
+  // Arabic (D-#802, the 2026 Nursery/KG আরবি মানবন্টন), though nothing in them is Arabic-only
+  "PICTURE_CIRCLE_LETTER",
+  "PICTURE_CHOOSE_WORD",
+  "PICTURE_WRITE_WORD",
+  "MATCH_LETTER_FORM",
+  "LETTER_FROM_FORM",
+  "MATCH_LETTER_WORD",
+  "SPLIT_WORD",
+  "JOIN_LETTERS",
   "ORAL",
   "MANUAL",
 ] as const;
@@ -5262,6 +5438,14 @@ export const WORKSHEET_ITEM_KIND_LABELS_BN: Record<WorksheetItemKind, string> = 
   MATCH_NUMERAL: "Number ↔ সংখ্যা",
   COUNT_PICTURES: "ছবি গুনে সংখ্যা লেখা",
   MATCH_COUNT: "ছবির সাথে সংখ্যার মিল",
+  PICTURE_CIRCLE_LETTER: "ছবি দেখে সঠিক হরফে বৃত্ত",
+  PICTURE_CHOOSE_WORD: "ছবি দেখে সঠিক শব্দ বাছাই",
+  PICTURE_WRITE_WORD: "ছবি দেখে শব্দ লেখা",
+  MATCH_LETTER_FORM: "হরফ ↔ মাঝের রূপ মিল",
+  LETTER_FROM_FORM: "রূপ দেখে পূর্ণ হরফ লেখা",
+  MATCH_LETTER_WORD: "হরফ ↔ শব্দ মিল",
+  SPLIT_WORD: "শব্দ ভেঙে হরফ লেখা",
+  JOIN_LETTERS: "হরফ জুড়ে শব্দ লেখা",
   ORAL: "মৌখিক (ছাপা হয় না)",
   MANUAL: "নিজে লিখুন (ফাঁকা জায়গা)",
 };
@@ -5279,6 +5463,14 @@ export const WORKSHEET_ITEM_KIND_LABELS_EN: Record<WorksheetItemKind, string> = 
   MATCH_NUMERAL: "Numeral ↔ Bangla number",
   COUNT_PICTURES: "Count and write",
   MATCH_COUNT: "Match picture ↔ number",
+  PICTURE_CIRCLE_LETTER: "Picture → circle the letter",
+  PICTURE_CHOOSE_WORD: "Picture → choose the word",
+  PICTURE_WRITE_WORD: "Picture → write the word",
+  MATCH_LETTER_FORM: "Match letter ↔ middle form",
+  LETTER_FROM_FORM: "Form → write the full letter",
+  MATCH_LETTER_WORD: "Match letter ↔ word",
+  SPLIT_WORD: "Break the word into letters",
+  JOIN_LETTERS: "Join the letters into a word",
   ORAL: "Oral (not printed)",
   MANUAL: "Write it yourself (blank space)",
 };
@@ -5292,6 +5484,7 @@ export const WORKSHEET_AXES = [
   "ENG_LOWER",
   "NUM_BN",
   "NUM_EN",
+  "ARABIC",
 ] as const;
 export type WorksheetAxis = (typeof WORKSHEET_AXES)[number];
 export const WORKSHEET_AXIS_LABELS_BN: Record<WorksheetAxis, string> = {
@@ -5302,6 +5495,7 @@ export const WORKSHEET_AXIS_LABELS_BN: Record<WorksheetAxis, string> = {
   ENG_LOWER: "a–z",
   NUM_BN: "সংখ্যা (বাংলা)",
   NUM_EN: "Number (English)",
+  ARABIC: "আরবি হরফ (ا থেকে ي)",
 };
 
 /** Which school book a bank picture was taken from (owner 2026-10-16: the book's

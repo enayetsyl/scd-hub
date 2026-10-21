@@ -43,6 +43,7 @@ export const ACTIVITY_GROUPS = [
   "FINANCE",
   "WORK_CLAIM",
   "SCHOLARSHIP",
+  "MASTERY",
   "OTHER",
 ] as const;
 export type ActivityGroup = (typeof ACTIVITY_GROUPS)[number];
@@ -70,6 +71,7 @@ export const ACTIVITY_GROUP_LABELS: Record<ActivityGroup, { bn: string; en: stri
   FINANCE: { bn: "আর্থিক", en: "Finance" },
   WORK_CLAIM: { bn: "অভিভাবকের দাবি", en: "Guardian work claim" },
   SCHOLARSHIP: { bn: "বৃত্তি অনুশীলন", en: "Scholarship practice" },
+  MASTERY: { bn: "শিখন-দক্ষতা", en: "Learning mastery" },
   OTHER: { bn: "অন্যান্য", en: "Other" },
 };
 
@@ -379,6 +381,14 @@ export const AUDIT_KIND_LABELS: Record<AuditEventKind, AuditKindLabel> = {
   WORK_CLAIM_DIGEST_RECIPIENTS_SET: { bn: "সকাল ১০:৩০-এর সারসংক্ষেপ কারা পাবেন ঠিক করেছেন", en: "Changed who gets the 10:30 claim digest", group: "WORK_CLAIM" },
   SCHOLARSHIP_TOPIC_SAVED: { bn: "বৃত্তি অনুশীলনের টপিক লিখেছেন", en: "Saved a scholarship topic", group: "SCHOLARSHIP" },
   SCHOLARSHIP_TOPIC_RETIRED: { bn: "বৃত্তি অনুশীলনের টপিক বাতিল করেছেন", en: "Retired a scholarship topic", group: "SCHOLARSHIP" },
+  MASTERY_CATALOGUE_IMPORTED: { bn: "শিখনফল তালিকা ইমপোর্ট করেছেন", en: "Imported an outcome catalogue", group: "MASTERY" },
+  MASTERY_CATALOGUE_LOCKED: { bn: "শিখনফল তালিকা লক করেছেন", en: "Locked an outcome catalogue", group: "MASTERY" },
+  MASTERY_OUTCOME_SAVED: { bn: "শিখনফল সম্পাদনা করেছেন", en: "Edited a learning outcome", group: "MASTERY" },
+  MASTERY_OUTCOME_RETIRED: { bn: "শিখনফল অবসরে দিয়েছেন", en: "Retired a learning outcome", group: "MASTERY" },
+  MASTERY_QT_SAVED: { bn: "প্রশ্নের ধরনের নম্বর লিখেছেন", en: "Saved question-type marks", group: "MASTERY" },
+  MASTERY_TAG_SAVED: { bn: "নির্ণয়ের ট্যাগ লিখেছেন", en: "Saved a diagnosis tag", group: "MASTERY" },
+  MASTERY_POLICY_SAVED: { bn: "শিখন-দক্ষতার পলিসি লিখেছেন", en: "Saved the mastery policy", group: "MASTERY" },
+  MASTERY_ENABLEMENT_SET: { bn: "শিখন-দক্ষতা চালু/বন্ধ করেছেন", en: "Switched mastery on/off", group: "MASTERY" },
   SCHOLARSHIP_PAPER_DECLARED: { bn: "অনুশীলন প্রশ্ন ঘোষণা করেছেন", en: "Declared a practice paper", group: "SCHOLARSHIP" },
   SCHOLARSHIP_PAPER_UPDATED: { bn: "অনুশীলন প্রশ্ন সম্পাদনা করেছেন", en: "Edited a practice paper", group: "SCHOLARSHIP" },
   SCHOLARSHIP_SCORES_ENTERED: { bn: "অনুশীলনের নম্বর লিখেছেন", en: "Entered practice marks", group: "SCHOLARSHIP" },

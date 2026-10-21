@@ -27,6 +27,7 @@ function section(s: Section): Section {
     groups: s.groups?.map((g) => ({ ...g, cells: g.cells.map(cell) })),
     sets: s.sets?.map((x) => ({ shown: x.shown.map((t) => markBase(t)), answer: x.answer.map((t) => markBase(t)) })),
     pictures: s.pictures?.map((p) => ({ ...p, a: markBase(p.a) })),
+    choices: s.choices?.map((x) => ({ ...x, options: x.options.map((t) => markBase(t)) })),
     left: s.left?.map((l) => ({ ...l, t: markBase(l.t) ?? null })),
     right: s.right?.map((t) => markBase(t)),
   };

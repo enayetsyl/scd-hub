@@ -2,6 +2,7 @@ import { builder } from "../../../schema";
 import { User, type IUser } from "../models/User";
 import { Guardian } from "../models/Guardian";
 import { hashPassword } from "../services/AuthService";
+import { ForbiddenError } from "../../../middleware/authz";
 import type { Role } from "@scd/shared";
 import { ROLES, effectivePermissions, isPermissionActive, templatesOf } from "@scd/shared";
 import { assertMayMintRole } from "../services/ProvisioningService";
@@ -108,8 +109,12 @@ builder.queryField("teachers", (t) =>
     description:
       "Active teacher accounts — for name pickers (reviewer assignment, routine/cover, class-teacher). " +
       "Names are non-sensitive and already shown in rosters; any authenticated staff may read.",
-    resolve: async () =>
-      User.find({ role: "TEACHER", active: true }).sort({ name: 1 }).lean(),
+    // UserRef also carries email + phone, and a guardian login passes `authenticated`,
+    // so staff-only is enforced here (findings F-2). Every caller is a staff picker.
+    resolve: async (_root, _args, ctx) => {
+      if (ctx.auth?.role === "GUARDIAN") throw new ForbiddenError();
+      return User.find({ role: "TEACHER", active: true }).sort({ name: 1 }).lean();
+    },
   }),
 );
 

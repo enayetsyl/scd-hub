@@ -100,6 +100,10 @@ export const EXPECTED_ERROR_NAMES: ReadonlySet<string> = new Set([
   // refusal is the feature, since the alternative is a wrong letter someone signs.
   "LetterError",
   "LibraryError",
+  // Mastery tracker catalogue (M-0, D-#775–#787): an import that would re-code a locked
+  // outcome, a routing tag whose strand is missing, an inconsistent policy — sentences for
+  // the Principal, never faults.
+  "MasteryCatalogueError",
   // Parents'-meeting comment chain (MC-1..MC-4, D-#752..#756): a note by the wrong teacher,
   // a summary before every subject note is in, a frozen layer — sentences for the person.
   "MeetingBriefError",

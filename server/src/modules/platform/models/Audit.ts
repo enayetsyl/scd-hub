@@ -286,6 +286,15 @@ export type AuditEventKind =
   // scholarship practice papers (SC-0.., D-#656)
   | "SCHOLARSHIP_TOPIC_SAVED"   // a topic added or edited in the per-(subject, class) catalogue
   | "SCHOLARSHIP_TOPIC_RETIRED"  // soft retire — historical items tagged with it keep resolving
+  // mastery tracker catalogue (M-0, docs/prd-mastery.md, D-#775–#787)
+  | "MASTERY_CATALOGUE_IMPORTED" // a class × subject catalogue applied from its locked file; meta = counts + marks changes
+  | "MASTERY_CATALOGUE_LOCKED"   // DRAFT → LOCKED; codes became permanent (D-#776)
+  | "MASTERY_OUTCOME_SAVED"      // label / home tip / source text / question types edited
+  | "MASTERY_OUTCOME_RETIRED"    // LOCKED → RETIRED, or a DRAFT removed
+  | "MASTERY_QT_SAVED"           // a question type's marks/label saved; marks history appended (D-#777)
+  | "MASTERY_TAG_SAVED"          // a diagnosis tag added or edited (D-#778/#787)
+  | "MASTERY_POLICY_SAVED"       // the school policy or a class × subject override saved
+  | "MASTERY_ENABLEMENT_SET"     // the add-on switched on/off for a year × class × subject (D-#775)
   | "SCHOLARSHIP_PAPER_DECLARED" // a practice paper and its item structure declared; meta carries the item count + total
   | "SCHOLARSHIP_PAPER_UPDATED"  // the item list or header edited after declaration; meta names WHICH fields moved
   | "SCHOLARSHIP_SCORES_ENTERED" // per-item marks written for one or more students on one paper

@@ -481,6 +481,15 @@ export type ScholarshipStackParamList = {
   ScholarshipTopics: { classLevel?: number } | undefined;
   ScholarshipCandidates: { sectionId: string };
 };
+/** Mastery tracker (M-0, docs/prd-mastery.md). MasteryHome is FIRST and param-free. */
+export type MasteryStackParamList = {
+  MasteryHome: undefined;
+  MasteryCatalogue: { classToken: string; subject: string };
+  MasteryMarks: { classToken: string; subject: string };
+  MasteryImport: undefined;
+  MasteryTags: undefined;
+  MasteryPolicy: undefined;
+};
 export type TeachingNotesStackParamList = {
   TeachingNotesHome: undefined;
   TeachingNoteDoc: { noteId: string; title?: string };
@@ -648,6 +657,7 @@ export type TabParamList = {
   TeachingNotesTab: NavigatorScreenParams<TeachingNotesStackParamList>;
   SyllabusTab: NavigatorScreenParams<SyllabusStackParamList>;
   ScholarshipTab: NavigatorScreenParams<ScholarshipStackParamList>;
+  MasteryTab: NavigatorScreenParams<MasteryStackParamList>;
   GuardianSyllabusTab: NavigatorScreenParams<GuardianSyllabusStackParamList>;
   RevisionTab: NavigatorScreenParams<RevisionStackParamList>;
   FinanceTab: NavigatorScreenParams<FinanceStackParamList>;

@@ -18,7 +18,7 @@ This catalogue is the build checklist for the permission matrix. It names every 
 | [`hr-finance.md`](hr-finance.md) | staff_records, hr_policy, leave, cover, payroll, salary_advance, appraisal, conduct, grievance, staff_letters, offboarding, finance_*, budget, fee_support, qard, reconciliation, work_board, printing |
 | [`attendance-routine-library.md`](attendance-routine-library.md) | attendance, staff_attendance, routine, class_note, library, chat, saturday_revision, vocab_test |
 | [`observation-comments-reports.md`](observation-comments-reports.md) | classroom_observation, free_mixing_review, student_comments, parents_meeting, monthly_report, improvement_plan, teaching_notes, english_drive, worksheets |
-| [`content-questions-exams.md`](content-questions-exams.md) | lesson_plans, plan_review, question_bank, question_review, question_sets, exam_syllabus, scholarship_practice, book_production |
+| [`content-questions-exams.md`](content-questions-exams.md) | lesson_plans, plan_review, question_bank, question_review, question_sets, exam_syllabus, scholarship_practice, mastery, book_production |
 
 ## Flag legend
 | flag | meaning |
@@ -126,6 +126,7 @@ Several of today's bypasses are template-aware (`isAdminStaff`, `actsAsRole`), w
 | Assessment & exams | `question_sets` | Question sets | প্রশ্ন সেট | 5 | content-questions-exams |
 | Assessment & exams | `exam_syllabus` | Exam syllabus | পরীক্ষার সিলেবাস | 5 | content-questions-exams |
 | Assessment & exams | `scholarship_practice` | Scholarship practice | বৃত্তি অনুশীলন | 7 | content-questions-exams |
+| Assessment & exams | `mastery` | Learning mastery | শিখন-দক্ষতা | 6 | content-questions-exams |
 | Students & families | `students` | Students | শিক্ষার্থী | 3 | foundation-platform |
 | Students & families | `guardians` | Guardians | অভিভাবক | 4 | foundation-platform |
 | Students & families | `student_profile` | Student profile | শিক্ষার্থী প্রোফাইল | 3 | trackers-classtest |
@@ -181,7 +182,7 @@ Several of today's bypasses are template-aware (`isAdminStaff`, `actsAsRole`), w
 | Admin & access | `guardian_engagement` | Guardian app usage | অভিভাবকদের অ্যাপ ব্যবহার | 1 | foundation-platform |
 | Admin & access | `my_account` | My account | আমার অ্যাকাউন্ট | 1 | foundation-platform |
 
-**Totals: 68 features, 324 actions.** By flag: LOCKED 11 · PRINCIPAL-DEFAULT 13 · DESIGNATION 24 · ESCALATION 5 · SELF 12 · unflagged 259. Defaults: TEACHER on 98 · OFFICE on 237. A row may carry a `†`/`F-n`/`2H` note in addition to its flag. Those notes are not counted as flags. Not counted: `guardian:read_child` (GUARDIAN plane), and the future `scholarship_practice:release` (SC-5, not built) and `announcements:publish` (no staff surface yet).
+**Totals: 69 features, 330 actions** (`mastery` added with M-0, 2026-10-20: +6 actions, all unflagged, TEACHER on +3, OFFICE on +1). By flag: LOCKED 11 · PRINCIPAL-DEFAULT 13 · DESIGNATION 24 · ESCALATION 5 · SELF 12 · unflagged 265. Defaults: TEACHER on 101 · OFFICE on 238. A row may carry a `†`/`F-n`/`2H` note in addition to its flag. Those notes are not counted as flags. Not counted: `guardian:read_child` (GUARDIAN plane), and the future `scholarship_practice:release` (SC-5, not built) and `announcements:publish` (no staff surface yet).
 
 ---
 
@@ -345,6 +346,17 @@ Several of today's bypasses are template-aware (`isAdminStaff`, `actsAsRole`), w
 | `scholarship_practice:delete` | Retire a topic | টপিক বাদ দেওয়া | Retire a topic | — | on | | scholarship:manage + role ∈ {P,O} |
 | `scholarship_practice:select_candidates` | Choose exam candidates | বৃত্তি পরীক্ষার্থী বাছাই করা | Enter or withdraw a child | — | on | F-32 | scholarship:manage + role ∈ {P,O} |
 | `scholarship_practice:edit_all` | Work on every শাখা | যেকোনো শাখার অনুশীলন সামলানো | Skip the routine class × subject check | — | on | 2H | assertMayManage primary-role P/O bypass |
+
+#### `mastery` — শিখন-দক্ষতা
+Learning-outcome mastery tracker (`docs/prd-mastery.md`, D-#775–#787). Registered with M-0; `enter_results`, `create` and `approve` gate slices M-2..M-5 and are declared now so the role map is settled once. Today's permissions are already one-to-one (`mastery:read/enter/manage/approve`).
+| permission | EN | BN | what it allows | T | O | flags | replaces |
+|---|---|---|---|---|---|---|---|
+| `mastery:view` | View catalogue, marks, tags, policy | শিখনফল তালিকা, নম্বর, ট্যাগ ও পলিসি দেখা | Read the outcome catalogue, question-type marks, tags, policy and the switch (later: diagnosis views, row-scoped for teachers) | on | on | | mastery:read |
+| `mastery:settings` | Manage the catalogue & policy | শিখনফল তালিকা ও পলিসি ঠিক করা | Import (preview/apply) and lock a catalogue, edit outcomes, question-type marks, tags, policy, the year × class × subject switch | — | — | | mastery:manage |
+| `mastery:delete` | Retire an outcome | শিখনফল অবসরে দেওয়া | LOCKED → RETIRED; a draft is removed | — | — | | mastery:manage |
+| `mastery:enter_results` | Enter per-question results | প্রশ্নভিত্তিক নম্বর তোলা | Exceptions-only entry, re-work, tags, rubric (M-2), routine-held class × subject | on | — | | mastery:enter |
+| `mastery:create` | Build homework sheets & assignments | বাড়ির কাজ ও অ্যাসাইনমেন্ট তৈরি | Work sheets, the weekly tailored assignment and its layout (M-2/M-4), routine-held class × subject | on | — | | mastery:enter |
+| `mastery:approve` | Approve extra classes | অতিরিক্ত ক্লাস অনুমোদন | Approve a section-trigger proposal, pick slot/teacher, close the action (M-5). Principal by role; selected Office holders by per-user grant (D-#786) | — | — | | mastery:approve |
 
 ### Students & families
 

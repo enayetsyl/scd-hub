@@ -9,6 +9,7 @@ import {
   type DirectoryRow,
 } from "../services/StudentDirectoryService";
 import type { Types } from "mongoose";
+import { ForbiddenError } from "../../../middleware/authz";
 
 type StudentShape = Pick<
   IStudent,
@@ -80,8 +81,13 @@ builder.queryField("studentsInSection", (t) =>
     args: {
       sectionId: t.arg.string({ required: true }),
     },
-    resolve: async (_root, args) =>
-      Student.find({ sectionId: args.sectionId, active: true }).sort({ name: 1 }).lean(),
+    // A staff roster: DOB, phone, address, blood group and guardian phones. A guardian
+    // login passes `authenticated`, so it is refused here — a family reaches its own
+    // children through the guardian-plane queries only (findings F-1).
+    resolve: async (_root, args, ctx) => {
+      if (ctx.auth?.role === "GUARDIAN") throw new ForbiddenError();
+      return Student.find({ sectionId: args.sectionId, active: true }).sort({ name: 1 }).lean();
+    },
   }),
 );
 

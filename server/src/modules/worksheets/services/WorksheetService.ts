@@ -46,7 +46,7 @@ import { WorksheetPlan, type IWorksheetPlan } from "../models/WorksheetPlan";
 import { Worksheet, type IWorksheet } from "../models/Worksheet";
 import { generateWorksheet } from "../engine/generate";
 import { mergePlanRows, rowsForKind, defaultPreset, type PlanRow, type PresetRow } from "../engine/plan";
-import { bnNumber, BAN_CONSONANTS } from "../engine/sequences";
+import { bnNumber, BAN_CONSONANTS, ARABIC_LETTERS } from "../engine/sequences";
 import type { PictureRef, WorksheetDoc } from "../engine/types";
 import { renderWorksheetPdf, type WorksheetHeader } from "../render/worksheetPdf";
 
@@ -59,8 +59,9 @@ export class WorksheetError extends Error {
 
 /** The levels the item kinds were designed for: Nursery and KG. */
 export const WORKSHEET_CLASS_LEVELS = [-1, 0] as const;
-/** Arabic waits for the scanned রওযাতুল আতফাল ১ (owner 2026-10-16). */
-export const WORKSHEET_SUBJECTS = ["BAN", "ENG", "MATH"] as const;
+/** Arabic since the clean scan of রওযাতুল আতফাল ১ (D-#802). Below class one Arabic is class-wise,
+ *  so its মানবন্টন is found by class like the rest. */
+export const WORKSHEET_SUBJECTS = ["BAN", "ENG", "MATH", "ARABIC"] as const;
 /** A picture printed within this window is drawn only when the pool runs short. */
 export const RECENT_USE_DAYS = 28;
 
@@ -363,7 +364,8 @@ export async function generate(ctx: AppContext, args: GenerateArgs, pictures?: P
   const rows = rowsForKind(kind, plan.rows, picks);
   if (!rows.length) throw new WorksheetError("অন্তত একটি প্রশ্নের সারি বাছাই করুন");
 
-  const letterMax = plan.subject === "ENG" ? 25 : BAN_CONSONANTS.length - 1;
+  const letterMax =
+    plan.subject === "ENG" ? 25 : plan.subject === "ARABIC" ? ARABIC_LETTERS.length - 1 : BAN_CONSONANTS.length - 1;
   const doc = generateWorksheet({
     kind,
     subject: plan.subject,

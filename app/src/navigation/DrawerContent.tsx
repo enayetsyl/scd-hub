@@ -121,6 +121,18 @@ const STAFF_NAV: NavSection[] = [
       { route: "ScholarshipTab", labelKey: "scTopics", icon: "🏷️", screen: "ScholarshipTopics", perms: ["scholarship_practice:settings"] },
     ],
   },
+  // Mastery tracker (M-0, docs/prd-mastery.md): catalogue + marks, import, tags, policy & switch.
+  {
+    type: "group",
+    titleKey: "msDrawerGroup",
+    icon: "🎯",
+    items: [
+      { route: "MasteryTab", labelKey: "msCatalogueHome", icon: "📚", screen: "MasteryHome", perms: ["mastery:read"] },
+      { route: "MasteryTab", labelKey: "msImport", icon: "📥", screen: "MasteryImport", perms: ["mastery:manage"] },
+      { route: "MasteryTab", labelKey: "msTags", icon: "🏷️", screen: "MasteryTags", perms: ["mastery:read"] },
+      { route: "MasteryTab", labelKey: "msPolicy", icon: "⚙️", screen: "MasteryPolicy", perms: ["mastery:read"] },
+    ],
+  },
   { type: "item", route: "AttendanceTab", labelKey: "tabAttendance", icon: "🙋" },
   { type: "item", route: "PrintTab", labelKey: "tabPrint", icon: "🖨️" },
   // Work board (WB-1..WB-3, D-#701). My board is every staff login; the other three

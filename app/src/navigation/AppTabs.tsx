@@ -38,6 +38,7 @@ import type {
   TeachingNotesStackParamList,
   SyllabusStackParamList,
   ScholarshipStackParamList,
+  MasteryStackParamList,
   GuardianSyllabusStackParamList,
   RevisionStackParamList,
   FinanceStackParamList,
@@ -228,6 +229,12 @@ import ScholarshipStudentScreen from "../screens/scholarship/ScholarshipStudentS
 import ScholarshipClassScreen from "../screens/scholarship/ScholarshipClassScreen";
 import ScholarshipTopicsScreen from "../screens/scholarship/ScholarshipTopicsScreen";
 import ScholarshipCandidatesScreen from "../screens/scholarship/ScholarshipCandidatesScreen";
+import MasteryHomeScreen from "../screens/mastery/MasteryHomeScreen";
+import MasteryCatalogueScreen from "../screens/mastery/MasteryCatalogueScreen";
+import MasteryMarksScreen from "../screens/mastery/MasteryMarksScreen";
+import MasteryImportScreen from "../screens/mastery/MasteryImportScreen";
+import MasteryTagsScreen from "../screens/mastery/MasteryTagsScreen";
+import MasteryPolicyScreen from "../screens/mastery/MasteryPolicyScreen";
 import TeachingNoteDocScreen from "../screens/teachingnotes/TeachingNoteDocScreen";
 import TeachingNoteUploadScreen from "../screens/teachingnotes/TeachingNoteUploadScreen";
 import TeachingNoteOpenCommentsScreen from "../screens/teachingnotes/TeachingNoteOpenCommentsScreen";
@@ -1234,6 +1241,22 @@ function ScholarshipNavigator(): React.ReactElement {
   );
 }
 
+const MasteryStack = createNativeStackNavigator<MasteryStackParamList>();
+function MasteryNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    // MasteryHome stays FIRST — the only param-free screen (the RN initial-route trap).
+    <MasteryStack.Navigator screenOptions={stackOptions}>
+      <MasteryStack.Screen name="MasteryHome" component={MasteryHomeScreen} options={{ title: STR.msCatalogueHome }} />
+      <MasteryStack.Screen name="MasteryCatalogue" component={MasteryCatalogueScreen} options={{ title: STR.msOutcomes }} />
+      <MasteryStack.Screen name="MasteryMarks" component={MasteryMarksScreen} options={{ title: STR.msMarks }} />
+      <MasteryStack.Screen name="MasteryImport" component={MasteryImportScreen} options={{ title: STR.msImport }} />
+      <MasteryStack.Screen name="MasteryTags" component={MasteryTagsScreen} options={{ title: STR.msTags }} />
+      <MasteryStack.Screen name="MasteryPolicy" component={MasteryPolicyScreen} options={{ title: STR.msPolicy }} />
+    </MasteryStack.Navigator>
+  );
+}
+
 const GuardianSyllabusStack = createNativeStackNavigator<GuardianSyllabusStackParamList>();
 function GuardianSyllabusNavigator(): React.ReactElement {
   const stackOptions = useStackOptions();
@@ -1763,6 +1786,9 @@ export function AppTabs(): React.ReactElement {
   const canScholarship = any("scholarship_practice:view", "scholarship_practice:create", "scholarship_practice:enter_results");
   // F-30: the Reports hub opens on any report leaf's action (DrawerContent gates each leaf).
   const canReports = any(...REPORT_ACTIONS);
+  // Mastery tracker (M-0): the catalogue/policy admin. Every staff role holds mastery:read;
+  // writes are shown per screen to mastery:manage and re-gated server-side.
+  const canMastery = can("mastery:read") || can("mastery:manage");
   // GP-2 (D-#68): the GUARDIAN role holds ONLY guardian:read_child, so every
   // staff gate above is false for guardians — the guardian tab set is all they see.
   const canGuardian = can("guardian:read_child");
@@ -1777,7 +1803,7 @@ export function AppTabs(): React.ReactElement {
     canAssignment || canReview || canRoutine || canClassNotes || canAttendance || canPrint || canLibrary ||
     canChat || canVocab || canClassTest || canComments || canObservation || canFreeMixing ||
     canEnglishDrive || canTeachingNotes || canRevision || canFinance || canHr || canReports ||
-    canSupportBook || canAdmin || canGuardian || canSyllabus || canScholarship;
+    canSupportBook || canAdmin || canGuardian || canSyllabus || canScholarship || canMastery;
   if (!hasAnyTab) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: space(6), backgroundColor: colors.bg }}>
@@ -1855,6 +1881,7 @@ export function AppTabs(): React.ReactElement {
         {canTeachingNotes ? <Drawer.Screen name="TeachingNotesTab" component={TeachingNotesNavigator} /> : null}
         {canSyllabus ? <Drawer.Screen name="SyllabusTab" component={SyllabusNavigator} /> : null}
         {canScholarship ? <Drawer.Screen name="ScholarshipTab" component={ScholarshipNavigator} /> : null}
+        {canMastery ? <Drawer.Screen name="MasteryTab" component={MasteryNavigator} /> : null}
         {canRevision ? <Drawer.Screen name="RevisionTab" component={RevisionNavigator} /> : null}
         {canFinance ? <Drawer.Screen name="FinanceTab" component={FinanceNavigator} /> : null}
         {canHr ? <Drawer.Screen name="HrTab" component={HrNavigator} /> : null}
