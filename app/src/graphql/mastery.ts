@@ -281,3 +281,192 @@ export type MasteryTagRow = {
   active: boolean;
   order: number;
 };
+
+// ---------------------------------------------------------------------------
+// M-2 — work sheets, exceptions-only entry, confirmation
+// ---------------------------------------------------------------------------
+
+const PAPER_FIELDS = `
+  paperId
+  source
+  title
+  sectionId
+  classToken
+  subject
+  date
+  hwItemId
+  entryState
+  totalMarks
+  rubricLoCodes
+  items {
+    itemNo
+    origin
+    qid
+    textBn
+    loCodes
+    chapterNumber
+    questionTypeCode
+    marks
+  }
+`;
+
+export const MASTERY_PAPERS_PAGE_QUERY = gql`
+  query MasteryPapersPage($sectionId: String!, $subject: String!, $page: Int, $pageSize: Int) {
+    masteryPapersPage(sectionId: $sectionId, subject: $subject, page: $page, pageSize: $pageSize) {
+      total
+      page
+      pageSize
+      rows { ${PAPER_FIELDS} }
+    }
+  }
+`;
+
+export const MASTERY_PAPER_QUERY = gql`
+  query MasteryPaper($paperId: String!) {
+    masteryPaper(paperId: $paperId) {
+      paper { ${PAPER_FIELDS} }
+      roster {
+        studentId
+        name
+        rollNumber
+        defaultStatus
+        result {
+          status
+          workRework
+          workTags
+          note
+          items {
+            itemNo
+            marks
+            rework
+            tags
+          }
+          rubric {
+            loCode
+            step
+          }
+        }
+      }
+    }
+  }
+`;
+
+export const MASTERY_HOMEWORK_OPTIONS_QUERY = gql`
+  query MasteryHomeworkOptions($sectionId: String!, $subject: String!) {
+    masteryHomeworkOptions(sectionId: $sectionId, subject: $subject) {
+      hwItemId
+      hwId
+      date
+      description
+    }
+  }
+`;
+
+export const MASTERY_BANK_QUESTIONS_QUERY = gql`
+  query MasteryBankQuestions($loCodes: [String!], $subject: String, $classLevel: Int) {
+    questions(loCodes: $loCodes, subject: $subject, classLevel: $classLevel, reviewStatus: "gold", limit: 50) {
+      id
+      qid
+      loCodes
+      questionType
+      marks
+      payloadJson
+    }
+  }
+`;
+
+export const CREATE_MASTERY_PAPER = gql`
+  mutation CreateMasteryPaper(
+    $sectionId: String!
+    $subject: String!
+    $source: String!
+    $date: String!
+    $title: String
+    $hwItemId: String
+    $items: [MasteryPaperItemInput!]!
+    $rubricLoCodes: [String!]
+  ) {
+    createMasteryPaper(
+      sectionId: $sectionId
+      subject: $subject
+      source: $source
+      date: $date
+      title: $title
+      hwItemId: $hwItemId
+      items: $items
+      rubricLoCodes: $rubricLoCodes
+    ) {
+      paperId
+    }
+  }
+`;
+
+export const DELETE_MASTERY_PAPER = gql`
+  mutation DeleteMasteryPaper($paperId: String!) {
+    deleteMasteryPaper(paperId: $paperId)
+  }
+`;
+
+export const SAVE_MASTERY_RESULTS = gql`
+  mutation SaveMasteryResults($paperId: String!, $rows: [MasteryResultInput!]!) {
+    saveMasteryResults(paperId: $paperId, rows: $rows) {
+      saved
+      evidenceRows
+    }
+  }
+`;
+
+export const CONFIRM_MASTERY_PAPER = gql`
+  mutation ConfirmMasteryPaper($paperId: String!) {
+    confirmMasteryPaper(paperId: $paperId) {
+      paperId
+      students
+      evidenceRows
+      skipped
+      behaviourNotes
+    }
+  }
+`;
+
+export type MasteryPaperItemRow = {
+  itemNo: number;
+  origin: string;
+  qid: string | null;
+  textBn: string | null;
+  loCodes: string[];
+  chapterNumber: number | null;
+  questionTypeCode: string;
+  marks: number;
+};
+
+export type MasteryPaperRow = {
+  paperId: string;
+  source: string;
+  title: string | null;
+  sectionId: string;
+  classToken: string;
+  subject: string;
+  date: string;
+  hwItemId: string | null;
+  entryState: string;
+  totalMarks: number;
+  rubricLoCodes: string[];
+  items: MasteryPaperItemRow[];
+};
+
+export type MasteryResultRow = {
+  status: string | null;
+  workRework: boolean;
+  workTags: string[];
+  note: string | null;
+  items: { itemNo: number; marks: number | null; rework: boolean; tags: string[] }[];
+  rubric: { loCode: string; step: number }[];
+};
+
+export type MasteryRosterEntry = {
+  studentId: string;
+  name: string;
+  rollNumber: string | null;
+  defaultStatus: string;
+  result: MasteryResultRow | null;
+};

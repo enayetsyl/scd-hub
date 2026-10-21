@@ -295,6 +295,10 @@ export type AuditEventKind =
   | "MASTERY_TAG_SAVED"          // a diagnosis tag added or edited (D-#778/#787)
   | "MASTERY_POLICY_SAVED"       // the school policy or a class × subject override saved
   | "MASTERY_ENABLEMENT_SET"     // the add-on switched on/off for a year × class × subject (D-#775)
+  | "MASTERY_PAPER_CREATED"      // a work sheet (HW / CT / rubric) created with its items (M-2)
+  | "MASTERY_PAPER_DELETED"      // an OPEN sheet with no results removed
+  | "MASTERY_RESULTS_SAVED"      // exceptions saved; meta.correction = after confirmation (evidence rewritten)
+  | "MASTERY_PAPER_CONFIRMED"    // "সব ঠিক আছে" — evidence written for the whole roster (D-#778)
   | "SCHOLARSHIP_PAPER_DECLARED" // a practice paper and its item structure declared; meta carries the item count + total
   | "SCHOLARSHIP_PAPER_UPDATED"  // the item list or header edited after declaration; meta names WHICH fields moved
   | "SCHOLARSHIP_SCORES_ENTERED" // per-item marks written for one or more students on one paper

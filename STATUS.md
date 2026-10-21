@@ -1,5 +1,9 @@
 # STATUS
 
+- 2026-10-21: **BUILT — Mastery M-2 (D-#807)** (branch `feat/mastery-m2`, worktree `C:/w/m2`). Work sheets (homework / class test / rubric) per শাখা × subject, exceptions-only entry, evidence written on confirm (no row = full marks; re-work / tags ⇒ weak or light; routing tags ⇒ cross-chapter strand rows).
+  - Reach: the routine holder, or `mastery:edit_all` (new, PRINCIPAL_DEFAULT). Office sees no sheets until M-3 `view_all`.
+  - App: drawer শিখন-দক্ষতা → প্রশ্নভিত্তিক নম্বর (list → new sheet from bank/own question → entry → সব ঠিক আছে).
+  - Next: M-3 diagnosis engine + student/section views + teacher exclusion. Promotion dev→main + OTA pending for M-0..M-2.
 - 2026-10-21: **BUILT — permission matrix (D-#790–#801, #805)** (branch `feat/permission-matrix`, worktree `C:/w/pm`). Owner ask 2026-10-20: pick a role → every feature with every action; new features join the list.
   - Access control → **By role**: Teacher / Office, 69 features, 330 actions, on/off per action, "changed" badges, reset; **By person**: the same grid on top of the role. Principal always holds everything; Guardian not in the editor.
   - Every server gate, REST route, role bypass, notification recipient and app tab/button now names a catalogue action; CI (`permissionCatalogueGates.test.ts`) keeps it that way.

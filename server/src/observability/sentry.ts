@@ -104,6 +104,9 @@ export const EXPECTED_ERROR_NAMES: ReadonlySet<string> = new Set([
   // outcome, a routing tag whose strand is missing, an inconsistent policy — sentences for
   // the Principal, never faults.
   "MasteryCatalogueError",
+  // Mastery M-2: a sheet outside the caller's routine, an unlocked outcome, marks above the
+  // item, a tag that does not apply — sentences for the teacher.
+  "MasteryWorkError",
   // Parents'-meeting comment chain (MC-1..MC-4, D-#752..#756): a note by the wrong teacher,
   // a summary before every subject note is in, a frozen layer — sentences for the person.
   "MeetingBriefError",

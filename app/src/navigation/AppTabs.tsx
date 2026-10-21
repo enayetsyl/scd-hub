@@ -235,6 +235,9 @@ import MasteryMarksScreen from "../screens/mastery/MasteryMarksScreen";
 import MasteryImportScreen from "../screens/mastery/MasteryImportScreen";
 import MasteryTagsScreen from "../screens/mastery/MasteryTagsScreen";
 import MasteryPolicyScreen from "../screens/mastery/MasteryPolicyScreen";
+import MasteryWorkHomeScreen from "../screens/mastery/MasteryWorkHomeScreen";
+import MasteryNewPaperScreen from "../screens/mastery/MasteryNewPaperScreen";
+import MasteryEntryScreen from "../screens/mastery/MasteryEntryScreen";
 import TeachingNoteDocScreen from "../screens/teachingnotes/TeachingNoteDocScreen";
 import TeachingNoteUploadScreen from "../screens/teachingnotes/TeachingNoteUploadScreen";
 import TeachingNoteOpenCommentsScreen from "../screens/teachingnotes/TeachingNoteOpenCommentsScreen";
@@ -1253,6 +1256,9 @@ function MasteryNavigator(): React.ReactElement {
       <MasteryStack.Screen name="MasteryImport" component={MasteryImportScreen} options={{ title: STR.msImport }} />
       <MasteryStack.Screen name="MasteryTags" component={MasteryTagsScreen} options={{ title: STR.msTags }} />
       <MasteryStack.Screen name="MasteryPolicy" component={MasteryPolicyScreen} options={{ title: STR.msPolicy }} />
+      <MasteryStack.Screen name="MasteryWork" component={MasteryWorkHomeScreen} options={{ title: STR.msWork }} />
+      <MasteryStack.Screen name="MasteryNewPaper" component={MasteryNewPaperScreen} options={{ title: STR.msNewSheet }} />
+      <MasteryStack.Screen name="MasteryEntry" component={MasteryEntryScreen} options={{ title: STR.msEntry }} />
     </MasteryStack.Navigator>
   );
 }
@@ -1788,7 +1794,7 @@ export function AppTabs(): React.ReactElement {
   const canReports = any(...REPORT_ACTIONS);
   // Mastery tracker (M-0): the catalogue/policy admin. Every staff role holds mastery:read;
   // writes are shown per screen to mastery:manage and re-gated server-side.
-  const canMastery = any("mastery:view", "mastery:settings");
+  const canMastery = any("mastery:view", "mastery:settings", "mastery:enter_results");
   // GP-2 (D-#68): the GUARDIAN role holds ONLY guardian:read_child, so every
   // staff gate above is false for guardians — the guardian tab set is all they see.
   const canGuardian = can("guardian:read_child");
