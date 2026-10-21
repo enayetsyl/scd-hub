@@ -55,26 +55,29 @@ describe("support-book resolvers — every field is permission-gated", () => {
   });
 
   it.each(fields().map((f) => [f.kind, f.name] as const))(
-    "%s field %s declares an authScopes with a book:* permission",
+    "%s field %s declares an authScopes with a book_production:* permission",
     (_kind, name) => {
       const f = all.find((x) => x.name === name)!;
       // Two legal shapes: ONE permission, or an OR over several (`hasAnyPermission`,
       // added for the comment-resolve rule where either side of the channel may act).
       // A field with no authScopes at all matches neither and still fails — the point.
       expect(f.body).toMatch(
-        /authScopes:\s*\{\s*(hasPermission:\s*"book:[a-z_]+"|hasAnyPermission:\s*\[[^\]]*"book:[a-z_]+"[^\]]*\])\s*\}/,
+        /authScopes:\s*\{\s*(hasPermission:\s*"book_production:[a-z_]+"|hasAnyPermission:\s*\[[^\]]*"book_production:[a-z_]+"[^\]]*\])\s*\}/,
       );
     },
   );
 
-  it("writes go to a WRITE permission — never to book:read, in ANY position", () => {
-    const WRITES = ["book:author", "book:manage", "book:illustrate", "book:review", "book:review_senior", "book:assemble"];
+  it("writes go to a WRITE permission — never to book_production:view, in ANY position", () => {
+    const WRITES = [
+      "book_production:author", "book_production:create", "book_production:settings", "book_production:assign",
+      "book_production:illustrate", "book_production:review", "book_production:approve", "book_production:assemble",
+    ];
     for (const f of all.filter((x) => x.kind === "mutation")) {
       // The authScopes BLOCK only. A permission named in a description or a comment
       // further down the field is not a gate and must not be read as one.
       const scope = f.body.match(/authScopes:\s*\{[^}]*\}/);
       expect(scope).not.toBeNull();
-      const perms = [...scope![0].matchAll(/"(book:[a-z_]+)"/g)].map((x) => x[1]);
+      const perms = [...scope![0].matchAll(/"(book_production:[a-z_]+)"/g)].map((x) => x[1]);
       expect(perms.length).toBeGreaterThan(0);
       // EVERY permission in an OR must be a write. One read-level member would let any
       // production role through a mutation — which is what the first version of the
