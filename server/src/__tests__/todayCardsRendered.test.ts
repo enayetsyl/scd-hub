@@ -47,12 +47,12 @@ describe("TodayScreen — every card is inside the render", () => {
     expect(usage).toBeGreaterThan(RETURN_AT);
   });
 
-  test("the gift card is gated on gift:manage, not on a tracker permission", () => {
+  test("the gift card is gated on the gift actions (PM; was gift:manage), not on a tracker permission", () => {
     // The Office holds no tracker permission (D-#554); gating this card on one would
     // hide it from the very desk it was built for.
     const line = src.split(/\r?\n/).find((l) => l.includes("<GiftHandoverCard")) ?? "";
     expect(line).toContain("canGift");
-    expect(src).toMatch(/const canGift = can\("gift:manage"\)/);
+    expect(src).toMatch(/const canGift = can\("assignment_gift:issue"\) && can\("assignment_gift:view_all"\)/);
   });
 });
 
@@ -78,10 +78,10 @@ describe("AdminTodayScreen — the admin-only cards reach the roles that hold th
     expect(usage).toBeGreaterThan(ADMIN_RETURN_AT);
   });
 
-  test("it is gated on gift:manage there too", () => {
+  test("it is gated on the same gift actions there too", () => {
     const line = adminSrc.split(/\r?\n/).find((l) => l.includes("<GiftHandoverCard")) ?? "";
     expect(line).toContain("canGift");
-    expect(adminSrc).toMatch(/const canGift = can\("gift:manage"\)/);
+    expect(adminSrc).toMatch(/const canGift = can\("assignment_gift:issue"\) && can\("assignment_gift:view_all"\)/);
   });
 
   /**
@@ -119,19 +119,19 @@ describe("AdminTodayScreen — the admin-only cards reach the roles that hold th
    * desk can see those items at all. Gated on homework:void — the permission the
    * resolver checks — never on a tracker permission the Office does not hold.
    */
-  test("the unissued-homework card is on the ADMIN screen, gated on homework:void", () => {
+  test("the unissued-homework card is on the ADMIN screen, gated on homework:delete (was homework:void)", () => {
     const usage = adminSrc.indexOf("<UnissuedHomeworkCard");
     expect(usage).toBeGreaterThan(0);
     expect(usage).toBeGreaterThan(ADMIN_RETURN_AT);
     const line = adminSrc.split(/\r?\n/).find((l) => l.includes("<UnissuedHomeworkCard")) ?? "";
     expect(line).toContain("canVoidHomework");
-    expect(adminSrc).toMatch(/const canVoidHomework = can\("homework:void"\)/);
+    expect(adminSrc).toMatch(/const canVoidHomework = can\("homework:delete"\)/);
   });
 
   test("on the teacher screen it follows the same permission, outside the QueryGate", () => {
     const line = src.split(/\r?\n/).find((l) => l.includes("<UnissuedHomeworkCard")) ?? "";
     expect(line).toContain("canVoidHomework");
-    expect(src).toMatch(/const canVoidHomework = can\("homework:void"\)/);
+    expect(src).toMatch(/const canVoidHomework = can\("homework:delete"\)/);
     // Own-query cards inside the QueryGate vanish on an empty day — keep it before it.
     expect(src.indexOf("<UnissuedHomeworkCard")).toBeLessThan(src.indexOf("<QueryGate"));
   });
