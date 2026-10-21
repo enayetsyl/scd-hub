@@ -98,7 +98,7 @@ builder.queryField("myScopes", (t) =>
 builder.queryField("proxyGrants", (t) =>
   t.field({
     type: [ScopeGrantRef],
-    authScopes: { hasPermission: "user:manage" },
+    authScopes: { hasPermission: "cover:assign_proxy" },
     description:
       "Proxy/cover grants for the admin grant list (newest first) — extend/revoke " +
       "without pasting GRANT_IDs. activeOnly=false includes revoked/expired history.",
@@ -120,7 +120,7 @@ const ScopeGrantPageRef = pageRef("ScopeGrantPage", ScopeGrantRef);
 builder.queryField("proxyGrantsPage", (t) =>
   t.field({
     type: ScopeGrantPageRef,
-    authScopes: { hasPermission: "user:manage" },
+    authScopes: { hasPermission: "cover:assign_proxy" },
     description:
       "One page of proxy/cover grants, newest first (D-#761). activeOnly (default true) also leaves " +
       "out grants whose window has ended but are not yet stamped inactive; false = full history.",
@@ -136,7 +136,7 @@ builder.queryField("proxyGrantsPage", (t) =>
 builder.queryField("teachingGrants", (t) =>
   t.field({
     type: [ScopeGrantRef],
-    authScopes: { hasPermission: "user:manage" },
+    authScopes: { hasPermission: "teaching_assignments:assign_subject_teacher" },
     description: "Active teaching grants (subject-teacher assignments) for a section — D-#17.",
     args: { sectionId: t.arg.string({ required: true }) },
     resolve: (_root, args) => teachingGrantsForSection(args.sectionId),
@@ -146,7 +146,7 @@ builder.queryField("teachingGrants", (t) =>
 builder.queryField("supervisoryGrants", (t) =>
   t.field({
     type: [ScopeGrantRef],
-    authScopes: { hasPermission: "user:manage" },
+    authScopes: { hasPermission: "teaching_assignments:assign_supervisor" },
     description:
       "Active supervisory (read-oversight) grants for the admin list, newest first — D-#262. " +
       "Pass teacherId to scope to one teacher; omit to list all.",
@@ -158,7 +158,7 @@ builder.queryField("supervisoryGrants", (t) =>
 builder.mutationField("grantTeaching", (t) =>
   t.field({
     type: ProxyGrantIdResultRef,
-    authScopes: { hasPermission: "user:manage" },
+    authScopes: { hasPermission: "teaching_assignments:assign_subject_teacher" },
     description: "Assign a subject teacher (teaching grant) to a section — Principal/Admin only. Idempotent on (teacher, section, subject).",
     args: {
       teacherId: t.arg.string({ required: true }),
@@ -181,7 +181,7 @@ builder.mutationField("grantTeaching", (t) =>
 builder.mutationField("revokeTeaching", (t) =>
   t.field({
     type: "Boolean",
-    authScopes: { hasPermission: "user:manage" },
+    authScopes: { hasPermission: "teaching_assignments:assign_subject_teacher" },
     description: "Revoke a subject-teacher (teaching) grant",
     args: { grantId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
@@ -195,7 +195,7 @@ builder.mutationField("revokeTeaching", (t) =>
 builder.mutationField("grantSupervisory", (t) =>
   t.field({
     type: ProxyGrantIdResultRef,
-    authScopes: { hasPermission: "user:manage" },
+    authScopes: { hasPermission: "teaching_assignments:assign_supervisor" },
     description:
       "Grant a teacher read-oversight at a configurable extent (D-#262) — Principal/Admin only. " +
       "extent ∈ whole_school | subject_dept (needs subjectId) | grade_class (needs classId) | " +
@@ -225,7 +225,7 @@ builder.mutationField("grantSupervisory", (t) =>
 builder.mutationField("revokeSupervisory", (t) =>
   t.field({
     type: "Boolean",
-    authScopes: { hasPermission: "user:manage" },
+    authScopes: { hasPermission: "teaching_assignments:assign_supervisor" },
     description: "Revoke a supervisory (read-oversight) grant — D-#262",
     args: { grantId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
@@ -238,8 +238,8 @@ builder.mutationField("revokeSupervisory", (t) =>
 
 // ---------------------------------------------------------------------------
 // Delegation grants (ACS-1, D-#484..#489) — the fine-grained "who may do what,
-// WHERE" kind. Gated `access:manage`: RESERVED, Principal-only and ungrantable,
-// NOT the `user:manage` the other grant mutations use. A delegation manufactures
+// WHERE" kind. Gated `access_control:delegate` (was access:manage): LOCKED, Principal-only and ungrantable,
+// NOT the ESCALATION actions the other grant mutations use. A delegation manufactures
 // write authority across the school, so the power to mint one must not itself be
 // handed onward by AC-1 (D-#487).
 // ---------------------------------------------------------------------------
@@ -247,7 +247,7 @@ builder.mutationField("revokeSupervisory", (t) =>
 builder.queryField("delegationGrants", (t) =>
   t.field({
     type: [ScopeGrantRef],
-    authScopes: { hasPermission: "access:manage" },
+    authScopes: { hasPermission: "access_control:delegate" },
     description:
       "Active delegation grants (write-capable extent + action allow-list) for the access " +
       "editor, newest first — ACS-1. Pass teacherId to scope to one person; omit to list all.",
@@ -259,7 +259,7 @@ builder.queryField("delegationGrants", (t) =>
 builder.mutationField("grantDelegation", (t) =>
   t.field({
     type: ProxyGrantIdResultRef,
-    authScopes: { hasPermission: "access:manage" },
+    authScopes: { hasPermission: "access_control:delegate" },
     description:
       "Grant one person a named DUTY across a wider extent than they teach (D-#484) — " +
       "e.g. {extent: whole_school, actions: [declare_assignment]}. Read over the extent " +
@@ -295,7 +295,7 @@ builder.mutationField("grantDelegation", (t) =>
 builder.mutationField("revokeDelegation", (t) =>
   t.field({
     type: "Boolean",
-    authScopes: { hasPermission: "access:manage" },
+    authScopes: { hasPermission: "access_control:delegate" },
     description: "Revoke a delegation grant — ACS-1, D-#484",
     args: { grantId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
@@ -309,7 +309,7 @@ builder.mutationField("revokeDelegation", (t) =>
 builder.mutationField("assignProxy", (t) =>
   t.field({
     type: ProxyGrantIdResultRef,
-    authScopes: { hasPermission: "user:manage" },
+    authScopes: { hasPermission: "cover:assign_proxy" },
     description: "Assign a proxy/cover grant (Principal/Admin only) — D-#20",
     args: {
       coveringTeacherId: t.arg.string({ required: true }),
@@ -340,7 +340,7 @@ builder.mutationField("assignProxy", (t) =>
 builder.mutationField("revokeProxy", (t) =>
   t.field({
     type: "Boolean",
-    authScopes: { hasPermission: "user:manage" },
+    authScopes: { hasPermission: "cover:assign_proxy" },
     description: "Early-revoke a proxy grant",
     args: { grantId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
@@ -354,7 +354,7 @@ builder.mutationField("revokeProxy", (t) =>
 builder.mutationField("extendProxy", (t) =>
   t.field({
     type: "Boolean",
-    authScopes: { hasPermission: "user:manage" },
+    authScopes: { hasPermission: "cover:assign_proxy" },
     description: "Extend a proxy grant by N additional days",
     args: {
       grantId: t.arg.string({ required: true }),

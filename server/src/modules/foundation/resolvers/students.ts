@@ -129,7 +129,7 @@ DirectoryRowRef.implement({
 builder.queryField("studentDirectory", (t) =>
   t.field({
     type: [DirectoryRowRef],
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "students:view_all" },
     resolve: () => loadStudentDirectory(),
   }),
 );
@@ -139,7 +139,7 @@ builder.queryField("studentDirectory", (t) =>
 builder.mutationField("setStudentRollNumber", (t) =>
   t.field({
     type: StudentRef,
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "students:edit" },
     args: {
       studentId: t.arg.string({ required: true }),
       rollNumber: t.arg.string({ required: false }),
@@ -157,7 +157,7 @@ builder.mutationField("setStudentRollNumber", (t) =>
 builder.mutationField("createStudent", (t) =>
   t.field({
     type: StudentRef,
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "students:create" },
     args: {
       schoolId: t.arg.string({ required: true }),
       name: t.arg.string({ required: true }),
