@@ -129,13 +129,18 @@ export default function TodayScreen(): React.ReactElement {
 
   // The SAME gates AppTabs uses for the target tabs (no new gating logic).
   const canDeclare = can("tracker:read");
-  const canManage = can("attendance:manage");
+  const canManage = can("attendance:view_all"); // PM: whole-school উপস্থিতি
   const canAttendance =
     !!role &&
-    (can("attendance:mark") || can("attendance:manage"));
+    (can("attendance:mark") ||
+      can("attendance:view") ||
+      can("attendance:view_all") ||
+      can("attendance:edit") ||
+      can("attendance:assign") ||
+      can("staff_attendance:upload"));
   const canClassTest =
     !!role && (can("tracker:read") || can("roster:manage"));
-  const canClassNotes = can("routine:read");
+  const canClassNotes = can("class_note:create");
   const canQuestions = can("question:read");
   const canSets = can("set:read");
   const canTrackers = can("tracker:read");
@@ -143,8 +148,8 @@ export default function TodayScreen(): React.ReactElement {
   // AG-3 — the desk that physically hands out the gifts (Principal + Office, D-#667).
   const canGift = can("gift:manage");
   // D-#674 — the live class board follows the PERMISSION, not the role: a per-user
-  // routine:manage grant (D-#193) lands on THIS screen, not the admin dashboard.
-  const canLiveBoard = can("routine:manage");
+  // routine:view_all grant (D-#193, PM) lands on THIS screen, not the admin dashboard.
+  const canLiveBoard = can("routine:view_all");
   // HW-VOID (D-#741) — removing never-issued homework follows its own permission.
   const canVoidHomework = can("homework:void");
 

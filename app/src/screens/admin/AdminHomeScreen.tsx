@@ -17,7 +17,9 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
   const canImport = can("content:import");
   const canManageUsers = can("user:manage");
   const canRoster = can("roster:manage");
-  const canRoutine = can("routine:manage");
+  // PM: the routine card opens subject-group membership (addGroupMember etc. =
+  // routine:settings).
+  const canRoutine = can("routine:settings");
   const canStaff = can("staff:manage");
   const canGuardianCreds = can("guardian:link");
   const canTemplates = can("template:manage");
@@ -32,9 +34,10 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
   // (isAdminStaff) — a teacher holding the Office template from Access control
   // (Akter, Tazkir) could already read the queue but never saw this card.
   const canWorkClaims = isRole("PRINCIPAL") || isRole("OFFICE");
-  // AR-2: the ranking reads the two attendance registers, so it sits behind the gate
-  // that already owns them — `attendance:manage` is Principal + Office exactly.
-  const canAttendance = can("attendance:manage");
+  // AR-2: the ranking reads the two attendance registers, so it sits behind the
+  // actions that own them (PM): student ranking attendance:view_all, staff ranking
+  // staff_attendance:view_all — Principal + Office by default.
+  const canAttendance = can("attendance:view_all") || can("staff_attendance:view_all");
 
   return (
     <Screen scroll>

@@ -112,7 +112,7 @@ export default function AdminTodayScreen(): React.ReactElement {
   const { can } = useAuth();
   const canGift = can("gift:manage");
   // D-#674 — the live class board follows the PERMISSION the server gates on.
-  const canLiveBoard = can("routine:manage");
+  const canLiveBoard = can("routine:view_all");
   // HW-VOID (D-#741) — Principal + Office remove 0-question homework from here; the
   // Office has no Homework tab (no tracker permission, D-#554).
   const canVoidHomework = can("homework:void");

@@ -87,23 +87,23 @@ describe("AdminTodayScreen — the admin-only cards reach the roles that hold th
   /**
    * D-#674: the live class card answers "who is teaching what RIGHT NOW", and the two
    * roles that need it (Principal, Office) land on the admin screen — the exact shape
-   * of the D-#668 miss. It is gated on `routine:manage`, the same permission the
-   * `liveClassBoard` resolver requires, so the card and the server can never disagree
-   * about who may see it.
+   * of the D-#668 miss. It is gated on `routine:view_all` (PM; was routine:manage), the
+   * same action the `liveClassBoard` resolver requires, so the card and the server can
+   * never disagree about who may see it.
    */
-  test("the live class card is on the ADMIN screen, gated on routine:manage", () => {
+  test("the live class card is on the ADMIN screen, gated on routine:view_all", () => {
     const usage = adminSrc.indexOf("<LiveClassCard");
     expect(usage).toBeGreaterThan(0);
     expect(usage).toBeGreaterThan(ADMIN_RETURN_AT);
     const line = adminSrc.split(/\r?\n/).find((l) => l.includes("<LiveClassCard")) ?? "";
     expect(line).toContain("canLiveBoard");
-    expect(adminSrc).toMatch(/const canLiveBoard = can\("routine:manage"\)/);
+    expect(adminSrc).toMatch(/const canLiveBoard = can\("routine:view_all"\)/);
   });
 
   test("the live class card is on the teacher screen too, on the same permission", () => {
     const line = src.split(/\r?\n/).find((l) => l.includes("<LiveClassCard")) ?? "";
     expect(line).toContain("canLiveBoard");
-    expect(src).toMatch(/const canLiveBoard = can\("routine:manage"\)/);
+    expect(src).toMatch(/const canLiveBoard = can\("routine:view_all"\)/);
   });
 
   test("it stays on the teacher screen as well — the permission, not the role, decides", () => {

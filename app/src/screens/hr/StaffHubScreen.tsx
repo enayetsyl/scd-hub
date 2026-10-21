@@ -783,7 +783,7 @@ export default function StaffHubScreen({ route, navigation }: Props): React.Reac
   // (D-#581). The gate here is now the same one the mutation asserts.
   const canCredentials = can("user:manage");
   const canLeave = can("leave:manage");
-  const canAttendance = can("attendance:manage");
+  const canAttendance = can("staff_attendance:view_all");
   const canPayroll = can("payroll:manage");
   const canPerformance = can("performance:manage");
 

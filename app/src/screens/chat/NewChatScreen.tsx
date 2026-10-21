@@ -26,7 +26,7 @@ type Props = NativeStackScreenProps<ChatStackParamList, "NewChat">;
 export default function NewChatScreen({ navigation }: Props): React.ReactElement {
   const { user, role, can } = useAuth();
   const myUserId = user?.id ?? "";
-  const canManage = can("chat:manage");
+  const canManage = can("chat:create"); // PM: new group = chat:create
   const [search, setSearch] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
