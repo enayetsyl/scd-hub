@@ -26,7 +26,15 @@ import {
   WORKSHEET_PICTURE_USES,
   callerHasPermission,
 } from "@scd/shared";
-import type { Permission, PrintPurpose, RosterClassLevel, RoutineSubject, WorksheetKind, WorksheetPictureUse } from "@scd/shared";
+import type {
+  Permission,
+  PrintPurpose,
+  RosterClassLevel,
+  RoutineSubject,
+  WorksheetKind,
+  WorksheetPictureBook,
+  WorksheetPictureUse,
+} from "@scd/shared";
 import type { AppContext } from "../../../context";
 import { normalizePage, type Page, type PageArgs } from "../../../lib/paging";
 import { ForbiddenError } from "../../../middleware/authz";
@@ -339,6 +347,12 @@ function buildHeader(args: GenerateArgs, plan: PlanView, kind: WorksheetKind, to
   };
 }
 
+/** KG আরবি is taught from রওযাতুল আতফাল ২, so its papers draw on that book (D-#806); Nursery
+ *  keeps book 1. Null = the subject's own book. */
+export function arabicBookFor(subject: string, classLevel: number): WorksheetPictureBook | null {
+  return subject === "ARABIC" && classLevel === 0 ? "ARABIC_KG" : null;
+}
+
 /** At most the whole alphabet, each a short string — the set is just a filter. */
 function cleanLetters(letters: string[] | null | undefined): string[] | null {
   if (!letters || letters.length === 0) return null;
@@ -378,6 +392,7 @@ export async function generate(ctx: AppContext, args: GenerateArgs, pictures?: P
     },
     seed: args.seed,
     pictures: pictures ?? (await loadPictureRefs()),
+    pictureBook: arabicBookFor(plan.subject, plan.classLevel),
   });
   const examYear = (await examYearFor(plan)) ?? String(new Date().getFullYear());
   return { plan, kind, doc, rows, header: buildHeader(args, plan, kind, doc.total, examYear) };

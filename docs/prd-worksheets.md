@@ -1,7 +1,7 @@
 # PRD — Worksheet generator (Nursery/KG papers in final-exam style)
 
 Decisions: D-#744 (engine), D-#745 (plan), D-#746 (picture bank), D-#747 (print + answer key), D-#802–#804 (Arabic).
-Status: WS-1 built (BAN/ENG/MATH, Nursery + KG). WS-2 built (আরবি, Nursery + KG, §2a): pictures cut from the clean scan of রওযাতুল আতফাল ১ (§5); prod picture import pending.
+Status: WS-1 built (BAN/ENG/MATH, Nursery + KG). WS-2 live (আরবি, Nursery + KG, §2a): Nursery draws on রওযাতুল আতফাল ১, KG on রওযাতুল আতফাল ২ (D-#806, §5).
 
 ## 1. Why
 
@@ -77,9 +77,13 @@ subjects. The published 2026 rows (Nursery 6 rows = 50, KG 10 rows = 100) all au
 - **Font.** Noto Naskh Arabic (`server/assets/fonts`, OFL). pdfkit shapes one Arabic word
   correctly but lays several out left to right, so the renderer draws Arabic word by word from
   the right. Arabic boxes are unruled (no Arabic copybook spec yet).
-- **Pictures (D-#804).** The book has 27 usable pictures and a Nursery final prints 30 (KG 40), so
-  on an Arabic paper a picture may come back in a later question once the fresh ones run out —
-  never twice in one question. Other subjects still never reuse a picture on a paper.
+- **Which book (D-#806).** A Nursery আরবি paper draws on রওযাতুল আতফাল ১ (`ARABIC`), a KG one on
+  রওযাতুল আতফাল ২ (`ARABIC_KG`) — pictures, word distractors and the words of split/join/letter–word
+  rows alike (`GenerateInput.pictureBook`, set by the service from the class level).
+- **Pictures (D-#804).** Book 1 has 27 usable pictures and a Nursery final prints 30, so on an
+  Arabic paper a picture may come back in a later question once the fresh ones run out — never
+  twice in one question. Book 2 has 51 for the KG final's 40, so a KG paper does not repeat. Other
+  subjects still never reuse a picture on a paper.
 
 ## 3. Roles (no new permission)
 
@@ -110,6 +114,7 @@ python -I server/scripts/worksheet-pictures/extract.py --book ENG    "<Nursery (
 python -I server/scripts/worksheet-pictures/extract.py --book MATH_B "<Nursery - Math [B] … .pdf>" --out <dir>
 python -I server/scripts/worksheet-pictures/extract.py --book MATH_E "<Math (E) Nursery … .pdf>"  --out <dir>
 python -I server/scripts/worksheet-pictures/extract.py --book ARABIC "<রওদাতুল আতফাল ১ম ভাগ.pdf>"   --out <dir>
+python -I server/scripts/worksheet-pictures/extract.py --book ARABIC_KG "<রওদাতুল আতফাল ২য় ভাগ.pdf>" --out <dir>
 node server/scripts/worksheet-pictures/import.cjs <dir>/bundle.json          # dry run, prints the DB name
 APPLY=1 node server/scripts/worksheet-pictures/import.cjs <dir>/bundle.json  # writes
 ```
@@ -135,6 +140,17 @@ page; `letter` is the word's first letter (أَرْنَب sits on the ء page, s
 (غُرْفَة, a room) prints the word inside the picture, so it is imported hidden. The ص page prints
 صُورَة under a fence; it is tagged as printed.
 
+**রওযাতুল আতফাল ২ (KG, D-#806).** 121 scanned pages. Its letter pages teach letter forms and have no
+pictures, and its lesson pages are scenes with the words printed on them, so the pictures come
+from the التمرينات word pages (pp. 88–107): three pictures a page, each with its word printed under
+it. 53 cut (`tags/ARABIC_KG.json`), 51 active: the school prints مدرسة on its sign and the mosque
+stands on its caption مسجد الأقصى, so both are hidden; p. 95 repeats p. 94, p. 98 is counting and
+p. 106's fence repeats p. 91's, so they are not cut. The six verb pictures (أَلْعَبُ … أَغْسِلُ) all
+start with أ, so they serve word questions only. The pages are paler than book 1's: the book's
+lift defaults (`SCAN_DEFAULTS`) also count near-white and the box edge's own colour as page;
+`pockets: false` keeps the canal's water, the screen and the bowl's inside, and `raw: true` keeps
+the river as the framed scene it is.
+
 **Book letter (D-#757).** A Bangla picture carries two letters: `letter`, the word's first letter
 (what "ছবি দেখে সঠিক বর্ণ লেখ" asks for), and `pageLetter`, the letter page it sits on (ব্যাঙ → ঙ,
 বাঁশ → ঁ, চিংড়ি → ং). Picture–letter matching pairs a picture with its `pageLetter` (falling back to
@@ -154,8 +170,6 @@ The bundle holds the books' pictures and is never committed.
 
 ## 6. Out of scope / next
 
-- **KG Arabic book (রওযাতুল আতফাল ২):** not in the bank. The KG paper draws on book 1's 27
-  pictures and their words until it is scanned.
 - **Classes 1–5:** their rows are mostly authored questions, so the generator would print MANUAL
   rows. That work belongs to the question bank, not here.
 - **A worksheet ↔ AssignmentItem link:** today the print request is tagged with class, section and

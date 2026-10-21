@@ -42,9 +42,9 @@ const KG_ROWS: Row[] = [
   row(10, "খালি জায়গা পূরণ করা (ا-ي)", "fill_blank", 1, 10),
 ];
 
-/** The active pictures of tags/ARABIC.json, as the importer would load them. */
-function bank(): PictureRef[] {
-  const file = path.resolve(__dirname, "../../scripts/worksheet-pictures/tags/ARABIC.json");
+/** The active pictures of tags/<book>.json, as the importer would load them. */
+function bank(book: "ARABIC" | "ARABIC_KG" = "ARABIC"): PictureRef[] {
+  const file = path.resolve(__dirname, `../../scripts/worksheet-pictures/tags/${book}.json`);
   const tags = JSON.parse(fs.readFileSync(file, "utf8")) as Record<
     string,
     { word?: string; letter?: string; pageLetter?: string; uses?: string[]; active?: boolean }
@@ -52,8 +52,8 @@ function bank(): PictureRef[] {
   return Object.entries(tags)
     .filter(([, t]) => t.active !== false)
     .map(([key, t]) => ({
-      id: `ARABIC:${key}`,
-      book: "ARABIC" as const,
+      id: `${book}:${key}`,
+      book,
       word: t.word ?? null,
       letter: t.letter ?? null,
       pageLetter: t.pageLetter ?? null,
@@ -179,7 +179,36 @@ describe("generateWorksheet — Arabic", () => {
     expect(fill.cells!.filter((c) => c.t === "").length).toBe(10);
   });
 
-  it("fills a whole KG final from the Nursery book's 27 pictures", () => {
+  it("draws a KG paper from রওযাতুল আতফাল ২ in full, never repeating a picture (D-#806)", () => {
+    // Both books in the pool, as on prod: the KG paper takes book 2 only.
+    const pool = [...bank("ARABIC"), ...bank("ARABIC_KG")];
+    for (const seed of [1, 2, 3, 4]) {
+      const d = generateWorksheet({
+        kind: "FINAL", subject: "ARABIC", rows: rowsForKind("FINAL", plan(KG_ROWS), null), scope: {}, seed,
+        pictures: pool, pictureBook: "ARABIC_KG",
+      });
+      expect(d.warnings).toEqual([]);
+      expect(d.total).toBe(100);
+      expect(d.pictureIds.every((id) => id.startsWith("ARABIC_KG:"))).toBe(true);
+      const printed = d.sections.flatMap((s) => [
+        ...(s.pictures ?? []).map((p) => p.pictureId),
+        ...(s.choices ?? []).map((c) => c.pictureId),
+        ...(s.left ?? []).map((l) => l.pictureId).filter(Boolean),
+      ]);
+      expect(printed).toHaveLength(40);
+      expect(new Set(printed).size).toBe(40);
+      // the words asked come from book 2 as well
+      const kgWords = new Set(bank("ARABIC_KG").map((p) => bareWord(p.word!)));
+      for (const [w] of bySeq(d.sections, KG_ROWS[6].label).rows!) expect(kgWords.has(w.t)).toBe(true);
+    }
+  });
+
+  it("leaves a verb picture out of the letter questions (all six start with أ)", () => {
+    const verbs = bank("ARABIC_KG").filter((p) => !p.uses.includes("FIRST_LETTER"));
+    expect(verbs.map((p) => p.word)).toEqual(["أَلْعَبُ", "أَكْتُبُ", "أَقْرَأُ", "أَرْكُضُ", "أَمْشِيْ", "أَغْسِلُ"]);
+  });
+
+  it("fills a whole KG final from book 1 alone too (no book 2 in the pool, D-#804)", () => {
     // The KG rows print 40 pictures: the book's 27 first, then repeats in later questions.
     for (const seed of [1, 2, 3]) {
       const d = paper(KG_ROWS, seed);

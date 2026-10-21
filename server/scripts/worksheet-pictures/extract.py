@@ -6,6 +6,7 @@ Extract the picture bank from the school's Nursery book PDFs (D-#746).
     python -I extract.py --book MATH_B "<Nursery - Math [B] ... .pdf>"      --out <dir>
     python -I extract.py --book MATH_E "<Math (E) Nursery ... .pdf>"         --out <dir>
     python -I extract.py --book ARABIC "<রওদাতুল আতফাল ১ম ভাগ.pdf>"          --out <dir>
+    python -I extract.py --book ARABIC_KG "<রওদাতুল আতফাল ২য় ভাগ.pdf>"       --out <dir>
 
 Then `node import.cjs <dir>/bundle.json` loads the bundle into Mongo.
 
@@ -18,8 +19,8 @@ What it does, per embedded image (poppler's `pdfimages`, page-numbered):
   * writes `image` (≤600 px PNG) and `thumb` (≤240 px JPEG) as base64 into
     bundle.json, with any curated tags from tags/<book>.json ("page:index" keys).
 
-The Arabic book is a page scan, so its pictures are cut by hand instead: every
-tags/ARABIC.json entry carries a `scan` box and is lifted off the sky-blue page
+The Arabic books are page scans, so their pictures are cut by hand instead: every
+tags/ARABIC.json / tags/ARABIC_KG.json entry carries a `scan` box and is lifted off the sky-blue page
 (`lift_from_scan`).
 
 The output is a work file, never committed (it is the books' pictures).
@@ -40,7 +41,11 @@ import numpy as np
 
 # Books printed as page scans (one image per page): their pictures come only from the
 # hand-drawn `scan` boxes in tags/<book>.json, never from the embedded images.
-SCANNED_BOOKS = {"ARABIC"}
+SCANNED_BOOKS = {"ARABIC", "ARABIC_KG"}
+# Lift settings a scanned book's tags start from (a tag's own value wins). Book 2's word
+# pages are paler than book 1's, so its page is also "near-white" and "near the box edge's
+# own colour" (Euclidean distance in RGB).
+SCAN_DEFAULTS = {"ARABIC_KG": {"white": 226, "near": 34}}
 
 MIN_SIDE = 90
 MAX_ASPECT = 4.0
@@ -175,7 +180,7 @@ def _components(m):
     return lab, sizes
 
 
-def lift_from_scan(page_im, box, keep=0.05, pockets=True):
+def lift_from_scan(page_im, box, keep=0.05, pockets=True, white=None, near=None, raw=False):
     """Cut [x0, y0, x1, y1] (scan pixels) out of a scanned page and lift the picture off the
     book's sky-blue page (রওযাতুল আতফাল ১, scanned one image per page):
       * the page is pale sky blue — blue clearly above red, and light; only the sky reachable
@@ -187,12 +192,23 @@ def lift_from_scan(page_im, box, keep=0.05, pockets=True):
       * of what is left, only parts at least `keep` × the largest survive — the printed word
         beside the picture and stray grid dots go."""
     x0, y0, x1, y1 = box
+    if raw:
+        # A picture printed as a framed scene (book 2's river): keep the box as it is.
+        return page_im.crop((x0, y0, x1, y1)).convert("RGB")
     a = np.asarray(page_im.crop((x0, y0, x1, y1)).convert("RGB")).astype(np.int16)
     r, g, b = a[..., 0], a[..., 1], a[..., 2]
     sky = (b - r >= 28) & (b >= 170) & (g >= 160)
     border = np.zeros(sky.shape, dtype=bool)
     border[0] = border[-1] = True
     border[:, 0] = border[:, -1] = True
+    # Book 2's word pages are paler, with white clouds behind some pictures: `white` also
+    # counts near-white (every channel >= white) as page, from the box edge only.
+    if white:
+        sky = sky | (a.min(axis=2) >= white)
+    if near:
+        edge = np.concatenate([a[0], a[-1], a[:, 0], a[:, -1]])
+        med = np.median(edge, axis=0)
+        sky = sky | (np.sqrt(((a - med) ** 2).sum(axis=2)) < near)
     page = _reach(border, sky)
     if pockets:
         holes, sizes = _components(sky & ~page)
@@ -226,7 +242,7 @@ def encode(im, max_side, fmt):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--book", required=True, choices=["BAN", "ENG", "MATH_B", "MATH_E", "ARABIC"])
+    ap.add_argument("--book", required=True, choices=["BAN", "ENG", "MATH_B", "MATH_E", "ARABIC", "ARABIC_KG"])
     ap.add_argument("pdf")
     ap.add_argument("--out", required=True)
     args = ap.parse_args()
@@ -295,7 +311,8 @@ def main():
                 # A scanned book (Arabic): "<page>:<n>" is the n-th picture on that page,
                 # cut by hand from the page scan — [x0, y0, x1, y1] in scan pixels.
                 scan = Image.open(os.path.join(tmp, "i-%03d.jpg" % page_image[page]))
-                im = lift_from_scan(scan, t["scan"], t.get("keep", 0.05), t.get("pockets", True))
+                o = {**SCAN_DEFAULTS.get(args.book, {}), **t}
+                im = lift_from_scan(scan, t["scan"], o.get("keep", 0.05), o.get("pockets", True), o.get("white"), o.get("near"), o.get("raw", False))
             elif t.get("tiles"):
                 # The book's PDF places this picture's tiles slightly APART, so even its own
                 # page shows white seams (the মৎস্য fish, owner 2026-10-17): butt the tiles
