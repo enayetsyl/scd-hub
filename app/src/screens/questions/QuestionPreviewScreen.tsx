@@ -109,7 +109,9 @@ function AnswerCarrier({ p }: { p: QuestionPayload }): React.ReactElement | null
 export default function QuestionPreviewScreen({ route }: Props): React.ReactElement {
   const { id } = route.params;
   const { can } = useAuth();
-  const mayManage = can("question:manage");
+  // Correct + mark: question_bank:edit; restore a retired one: question_bank:delete (PM, D-#790).
+  const mayManage = can("question_bank:edit");
+  const mayRetire = can("question_bank:delete");
   const [editing, setEditing] = useState(false);
   const [markBusy, setMarkBusy] = useState(false);
   const [, setImportant] = useMutation(SET_QUESTION_IMPORTANT);
@@ -223,7 +225,7 @@ export default function QuestionPreviewScreen({ route }: Props): React.ReactElem
       {/* Correct or retire the question in place (QR-8, D-#548) — Principal + Office. The
           bank is where a wrong answer is usually spotted, so the fix belongs here too, not
           only on the review screens. */}
-      {mayManage ? (
+      {mayManage || mayRetire ? (
         editing ? (
           <QuestionEditSheet
             artifactId={q.id}
@@ -244,6 +246,7 @@ export default function QuestionPreviewScreen({ route }: Props): React.ReactElem
             {q.retired ? (
               <View>
                 <Notice tone="warn" message={STR.qeRetiredNotice} />
+                {mayRetire ? (
                 <View style={{ marginTop: space(2) }}>
                   <Button
                     title={STR.qeRestore}
@@ -259,8 +262,9 @@ export default function QuestionPreviewScreen({ route }: Props): React.ReactElem
                     }}
                   />
                 </View>
+                ) : null}
               </View>
-            ) : (
+            ) : !mayManage ? null : (
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2) }}>
             <Button title={STR.qeEdit} variant="secondary" onPress={() => setEditing(true)} />
             {/* Office and the Principal mark from the bank at ANY time (QR-9, D-#550) — not

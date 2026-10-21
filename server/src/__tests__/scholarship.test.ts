@@ -94,7 +94,9 @@ jest.mock("../modules/platform/services/AuditService", () => ({
   writeAudit: (...a: unknown[]) => mockWriteAudit(...a),
 }));
 
+import { setRoleTemplateOverrides } from "@scd/shared";
 import {
+  actorCan,
   assertMayManage,
   declarePaper,
   enterScores,
@@ -344,6 +346,43 @@ describe("assertMayManage", () => {
 
   it("refuses a guardian outright", async () => {
     await expect(assertMayManage({ userId: String(oid()), role: "GUARDIAN" }, sectionId, ["ENG"], new Date())).rejects.toThrow("অনুমতি");
+  });
+
+  // PM (D-#790): the desk bypass is scholarship_practice:edit_all, not the primary role.
+  describe("PM — the bypass is an action", () => {
+    afterEach(() => setRoleTemplateOverrides({}));
+
+    it("Office with edit_all switched off falls back to the routine check", async () => {
+      setRoleTemplateOverrides({ OFFICE: { granted: [], revoked: ["scholarship_practice:edit_all"] } });
+      mockResolveTeacher.mockResolvedValue(String(oid()));
+      await expect(assertMayManage({ userId: String(oid()), role: "OFFICE" }, sectionId, ["ENG"], new Date())).rejects.toThrow("রুটিন");
+    });
+
+    it("a teacher granted edit_all per person passes without the routine", async () => {
+      const actor = { ...teacher, profile: { role: "TEACHER" as const, grantedPermissions: ["scholarship_practice:edit_all" as const] } };
+      await expect(assertMayManage(actor, sectionId, ["ENG"], new Date())).resolves.toBeUndefined();
+      expect(mockResolveTeacher).not.toHaveBeenCalled();
+    });
+
+    it("a teacher with enter_results switched off is refused score entry even on her own cell", async () => {
+      setRoleTemplateOverrides({ TEACHER: { granted: [], revoked: ["scholarship_practice:enter_results"] } });
+      mockResolveTeacher.mockResolvedValue(teacher.userId);
+      await expect(
+        assertMayManage(teacher, sectionId, ["ENG"], new Date(), "scholarship_practice:enter_results"),
+      ).rejects.toThrow("অনুমতি");
+      // ...while declaring (create) still works on her cell.
+      await expect(assertMayManage(teacher, sectionId, ["ENG"], new Date())).resolves.toBeUndefined();
+    });
+
+    it("topic save / retire / candidates read their own actions", () => {
+      const office = { userId: String(oid()), role: "OFFICE" };
+      expect(actorCan(teacher, "scholarship_practice:settings")).toBe(true);
+      expect(actorCan(teacher, "scholarship_practice:delete")).toBe(false);
+      expect(actorCan(teacher, "scholarship_practice:select_candidates")).toBe(false);
+      expect(actorCan(office, "scholarship_practice:delete")).toBe(true);
+      expect(actorCan(office, "scholarship_practice:select_candidates")).toBe(true);
+      expect(actorCan({ userId: "g", role: "GUARDIAN" }, "scholarship_practice:settings")).toBe(false);
+    });
   });
 });
 

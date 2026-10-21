@@ -272,9 +272,9 @@ describe("examSyllabusLevels — the level board", () => {
     ).rejects.toThrow();
   });
 
-  test("it is exam:manage on the wire", () => {
+  test("it is exam_syllabus:view_all on the wire", () => {
     expect(RESOLVER).toMatch(
-      /examSyllabusLevels[\s\S]{0,900}?authScopes: \{ hasPermission: "exam:manage" \}/,
+      /examSyllabusLevels[\s\S]{0,900}?authScopes: \{ hasPermission: "exam_syllabus:view_all" \}/,
     );
   });
 });

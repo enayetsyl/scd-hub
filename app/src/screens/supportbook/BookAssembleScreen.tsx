@@ -5,8 +5,8 @@
  * once — being told about the next blocker only after fixing the last one is the worst
  * version of a gate, and the server returns them all for exactly that reason.
  *
- * FORCE IS PRINCIPAL-ONLY AND DELIBERATELY UGLY. Overriding the gate decides what
- * reaches print, so it is a role property rather than a grant AC-1 can hand out, it is
+ * FORCE IS PRINCIPAL-DEFAULT AND DELIBERATELY UGLY. Overriding the gate decides what
+ * reaches print, so it is `book_production:override` (only the Principal switches it on), it is
  * recorded on the job and in the timeline, and here it is a switch you have to find
  * rather than the obvious next tap after a refusal.
  *
@@ -129,10 +129,10 @@ function JobCard({ job }: { job: SupportBookBuildJobT }): React.ReactElement {
 export default function BookAssembleScreen(): React.ReactElement {
   const colors = useColors();
   const client = useClient();
-  const { role } = useAuth();
-  // The server refuses a non-Principal force regardless; not rendering the switch just
-  // means nobody else has to wonder why it does nothing.
-  const mayForce = role === "PRINCIPAL";
+  const { can } = useAuth();
+  // Mirrors the server: `force` needs book_production:override (PRINCIPAL-DEFAULT, PM D-#790).
+  // Not rendering the switch means nobody else has to wonder why it does nothing.
+  const mayForce = can("book_production:override");
 
   const [booksQ, refetchBooks] = useQuery<{ supportBooks: SupportBookT[] }>({ query: SUPPORT_BOOKS });
   const books = booksQ.data?.supportBooks ?? [];

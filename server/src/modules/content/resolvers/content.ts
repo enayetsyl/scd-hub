@@ -1,22 +1,27 @@
 /**
  * Content module resolvers — import + browse (J1 journeys).
  *
- * importEnvelope — J1.1–J1.4 (requires content:import; TEACHER denied)
+ * importEnvelope — J1.1–J1.4 (lesson_plans:import or question_bank:import by the doc kind,
+ *                  PRD §5.7 / PM D-#790; TEACHER denied by default)
  * contentTree    — J1.5 browse Subject×Class→Chapter→Lesson tree
  * contentArtifacts — J1.5 filtered list
  * artifact       — J1.5/J1.7 open one plan (returns rendered_markdown; app never re-renders)
  */
 import { builder } from "../../../schema";
-import { PLAN_DOC_TYPES } from "@scd/shared";
+import { PLAN_DOC_TYPES, callerHasPermission } from "@scd/shared";
 import {
   importEnvelope as importEnvelopeSvc,
   importContentFiles,
+  envelopeImportKind,
+  importFilesKind,
+  type ImportKind,
   type ImportFile,
   type BatchItemVerdict,
 } from "../services/ContentService";
 import { ContentArtifact } from "../models/ContentArtifact";
 import { User } from "../../foundation/models/User";
 import { ForbiddenError } from "../../../middleware/authz";
+import type { AppContext } from "../../../context";
 import { buildContentScope, contentScopeAllows } from "../contentScope";
 import { reviewerMayReadArtifact } from "../services/ReviewService";
 import { applyMixedDocTypeGate } from "../../questions/publishGate";
@@ -25,6 +30,19 @@ import type { FilterQuery } from "mongoose";
 import type { IContentArtifact } from "../models/ContentArtifact";
 
 type LeanArtifact = FlattenMaps<IContentArtifact> & { _id: Types.ObjectId };
+
+/** One import mutation, two features (PM, D-#790; PRD §5.7): the field gate is either
+ *  import action, then the doc kind actually received decides which one is required. An
+ *  unrecognised kind is left to the import gate, which rejects it with its own message. */
+function assertMayImport(ctx: AppContext, kind: ImportKind | null): void {
+  if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+  if (kind === "plan" && !callerHasPermission(ctx.auth, "lesson_plans:import")) {
+    throw new ForbiddenError("পাঠ পরিকল্পনা ইম্পোর্ট করার অনুমতি নেই");
+  }
+  if (kind === "question" && !callerHasPermission(ctx.auth, "question_bank:import")) {
+    throw new ForbiddenError("প্রশ্নব্যাংক ইম্পোর্ট করার অনুমতি নেই");
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Return types
@@ -193,8 +211,10 @@ ContentTreeNodeRef.implement({
 builder.mutationField("importEnvelope", (t) =>
   t.field({
     type: ImportResultRef,
-    description: "Import a validated envelope. Requires content:import (Principal/Office only — J1.4).",
-    authScopes: { hasPermission: "content:import" },
+    description:
+      "Import a validated envelope. Requires lesson_plans:import (a plan) or question_bank:import " +
+      "(a question / stimulus / batch) — Principal/Office by default (J1.4).",
+    authScopes: { hasAnyPermission: ["lesson_plans:import", "question_bank:import"] },
     args: {
       envelopeJson: t.arg.string({ required: true, description: "The full envelope as a JSON string" }),
     },
@@ -213,6 +233,7 @@ builder.mutationField("importEnvelope", (t) =>
           batchId: "n/a",
         };
       }
+      assertMayImport(ctx, envelopeImportKind(envelope));
       const result = await importEnvelopeSvc(envelope, ctx.auth.userId as unknown as import("mongoose").Types.ObjectId);
       return result;
     },
@@ -230,8 +251,9 @@ builder.mutationField("importFiles", (t) =>
       "Import a Project-03 plan as a JSON + Markdown pair (the app auto-wraps it into an envelope), " +
       "a Project-04 question bank ({stimuli,questions} collection, fanned out into N envelopes; pass " +
       "curationTag), or a single built envelope JSON. Same gate + persistence as importEnvelope. " +
-      "Requires content:import (J1.1).",
-    authScopes: { hasPermission: "content:import" },
+      "Requires lesson_plans:import (plan pair / plan envelope) or question_bank:import (bank / " +
+      "question envelope), checked against the kind received (J1.1).",
+    authScopes: { hasAnyPermission: ["lesson_plans:import", "question_bank:import"] },
     args: {
       files: t.arg({ type: [ImportFileInput], required: true }),
       /** Question-bank only: the curation tag for every fanned-out item (model-required; questions carry none). */
@@ -244,6 +266,7 @@ builder.mutationField("importFiles", (t) =>
       const user = await User.findById(ctx.auth.userId).lean();
       const author = user?.name ?? ctx.auth.userId;
       const files: ImportFile[] = args.files.map((f) => ({ filename: f.filename, content: f.content }));
+      assertMayImport(ctx, importFilesKind(files));
       return importContentFiles(
         files,
         ctx.auth.userId as unknown as import("mongoose").Types.ObjectId,
@@ -264,20 +287,24 @@ builder.queryField("artifact", (t) =>
     type: ArtifactRef,
     nullable: true,
     description: "Fetch a single content artifact by id. TEACHER scope enforced.",
-    authScopes: { hasPermission: "content:read" },
+    authScopes: { hasPermission: "lesson_plans:view" },
     args: {
       id: t.arg.string({ required: true }),
     },
     resolve: async (_root, args, ctx) => {
       const doc = await ContentArtifact.findById(args.id).lean();
       if (!doc) return null;
-      // Row-scope (D-#257): PRINCIPAL/OFFICE bypass; a TEACHER sees it iff a routine
+      // Row-scope (D-#257): lesson_plans:view_all bypasses; anyone else sees it iff a routine
       // teaching/proxy or supervisory grant covers (subject, classLevel).
-      // Override (D-#39): a teacher with an active review assignment for this exact version
-      // may read it even outside their teaching subject (read-only, artifact-scoped).
-      const scope = await buildContentScope(ctx);
+      // Override (D-#39): a reviewer (plan_review:review / question_review:review) with an
+      // active review assignment for this exact version may read it even outside their
+      // teaching subject (read-only, artifact-scoped).
+      const scope = await buildContentScope(ctx, "lesson_plans:view_all");
       if (!contentScopeAllows(scope, doc.subject, doc.classLevel)) {
-        if (!(ctx.auth && (await reviewerMayReadArtifact(ctx.auth.userId, doc._id)))) throw new ForbiddenError();
+        const mayReview =
+          !!ctx.auth &&
+          (callerHasPermission(ctx.auth, "plan_review:review") || callerHasPermission(ctx.auth, "question_review:review"));
+        if (!(mayReview && (await reviewerMayReadArtifact(ctx.auth!.userId, doc._id)))) throw new ForbiddenError();
       }
       return docToShape(doc);
     },
@@ -292,7 +319,7 @@ builder.queryField("contentArtifacts", (t) =>
   t.field({
     type: [ArtifactRef],
     description: "Browse content artifacts with optional filters. TEACHER scope enforced. Returns current versions only by default.",
-    authScopes: { hasPermission: "content:read" },
+    authScopes: { hasPermission: "lesson_plans:view" },
     args: {
       subject: t.arg.string({ required: false }),
       classLevel: t.arg.int({ required: false }),
@@ -313,7 +340,7 @@ builder.queryField("contentArtifacts", (t) =>
       if (args.reviewStatus) filter.reviewStatus = args.reviewStatus;
       applyMixedDocTypeGate(filter as Record<string, unknown>, ctx.auth);
 
-      // Scope (J1.6 / D-#257): PRINCIPAL/OFFICE see everything; a TEACHER sees content
+      // Scope (J1.6 / D-#257): lesson_plans:view_all sees everything; a TEACHER sees content
       // covered by a routine teaching/proxy or supervisory grant (subject + class). Scope
       // is resolved once, then each artifact is matched cheaply.
       // Projected for the same reason as the tree: the list never renders a plan's markdown
@@ -322,7 +349,7 @@ builder.queryField("contentArtifacts", (t) =>
       const docs = (await ContentArtifact.find(filter)
         .select(TREE_PROJECTION)
         .lean()) as unknown as LeanArtifact[];
-      const scope = await buildContentScope(ctx);
+      const scope = await buildContentScope(ctx, "lesson_plans:view_all");
       return docs.filter((d) => contentScopeAllows(scope, d.subject, d.classLevel)).map(docToShape);
     },
   }),
@@ -420,7 +447,7 @@ builder.queryField("contentTree", (t) =>
   t.field({
     type: [ContentTreeNodeRef],
     description: "Hierarchical content tree: Subject×Class → Chapter → Lesson (current only, scope-filtered).",
-    authScopes: { hasPermission: "content:read" },
+    authScopes: { hasPermission: "lesson_plans:view" },
     args: {
       subject: t.arg.string({ required: false }),
       classLevel: t.arg.int({ required: false }),
@@ -448,7 +475,7 @@ builder.queryField("contentTree", (t) =>
       docs.sort(compareForTree);
 
       // Scope filter (J1.6 / D-#257): routine teaching/proxy or supervisory grant by subject+class.
-      const scope = await buildContentScope(ctx);
+      const scope = await buildContentScope(ctx, "lesson_plans:view_all");
       const visibleDocs = docs.filter((d) => contentScopeAllows(scope, d.subject, d.classLevel));
 
       return groupContentTree(visibleDocs);
@@ -541,7 +568,7 @@ builder.queryField("contentTreePage", (t) =>
     description:
       "Lesson Plans, one page of chapters at a time: plans only, filtered server-side by subject, class, " +
       "plan type and curation tag (current versions unless currentOnly=false), scope-filtered.",
-    authScopes: { hasPermission: "content:read" },
+    authScopes: { hasPermission: "lesson_plans:view" },
     args: {
       subject: t.arg.string({ required: false }),
       classLevel: t.arg.int({ required: false }),
@@ -573,7 +600,7 @@ builder.queryField("contentTreePage", (t) =>
         .lean()) as unknown as LeanArtifact[];
       docs.sort(compareForTree);
 
-      const scope = await buildContentScope(ctx);
+      const scope = await buildContentScope(ctx, "lesson_plans:view_all");
       const visibleDocs = docs.filter((d) => contentScopeAllows(scope, d.subject, d.classLevel));
 
       return pageContentTree(groupContentTree(visibleDocs), args.page ?? 1, args.pageSize ?? CONTENT_TREE_PAGE_SIZE);

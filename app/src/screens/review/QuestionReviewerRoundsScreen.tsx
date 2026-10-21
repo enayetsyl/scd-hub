@@ -80,7 +80,7 @@ export default function QuestionReviewerRoundsScreen({
    * drill-down did not, so reading the condition here meant navigating away to act on it.
    */
   const { can } = useAuth();
-  const mayManage = can("question:manage");
+  const mayManage = can("question_bank:edit");
   const [editing, setEditing] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [failure, setFailure] = useState<string | null>(null);

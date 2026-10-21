@@ -32,17 +32,17 @@ const FONT_PATH = path.resolve(__dirname, "../../../../assets/fonts/NotoSansBeng
 export const setPdfRouter: Router = createRouter();
 
 /**
- * GATE — `set:read`, PLUS the print-scoped exception (D-#281): the Office holds
- * `roster:manage` but NOT `set:read`, yet it must open the paper a teacher sent to the
- * print queue. So a `roster:manage` caller may render a set **iff a live PrintRequest
+ * GATE — `question_sets:export`, PLUS the print-scoped exception (D-#281): the Office holds
+ * `printing:view_all` but NOT `question_sets:export`, yet it must open the paper a teacher sent to the
+ * print queue. So a `printing:view_all` caller may render a set **iff a live PrintRequest
  * references it** — the narrowest widening, and cancelling the job withdraws it again.
  * Identical to the `/pdf/artifact/:id` rule; found in live testing (the Office's "Open"
  * button 403'd on every question-set job).
  */
 export async function mayRenderSet(ctx: AppContext, setId: string): Promise<boolean> {
   if (!ctx.auth) return false;
-  if (callerHasPermission(ctx.auth, "set:read")) return true;
-  if (!callerHasPermission(ctx.auth, "roster:manage")) return false;
+  if (callerHasPermission(ctx.auth, "question_sets:export")) return true;
+  if (!callerHasPermission(ctx.auth, "printing:view_all")) return false;
   const queued = await PrintRequest.exists({ setId, status: { $ne: "CANCELLED" } });
   return queued !== null;
 }

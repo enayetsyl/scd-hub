@@ -1019,10 +1019,11 @@ const parseBookUpload: express.RequestHandler = (req, res, next) => {
 
 filesRouter.post("/book", parseBookUpload, async (req: Request, res: Response) => {
   const ctx = buildContext(req, res);
-  // book:illustrate brings artwork in; book:assemble files a rendered edition.
+  // book_production:illustrate brings artwork in; book_production:assemble files a rendered
+  // edition. Both land as a slot asset here (no separate edition kind), so either action passes.
   const mayUpload =
     !!ctx.auth &&
-    (callerHasPermission(ctx.auth, "book:illustrate") || callerHasPermission(ctx.auth, "book:assemble"));
+    (callerHasPermission(ctx.auth, "book_production:illustrate") || callerHasPermission(ctx.auth, "book_production:assemble"));
   if (!mayUpload) {
     res.status(403).json({ error: BOOK_FILE_ERRORS_BN.forbidden });
     return;

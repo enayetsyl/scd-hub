@@ -1,7 +1,8 @@
 /**
  * Assembly resolvers (SB-4, D-#407/#413/#417).
  *
- * `book:assemble` queues and reads; the gate override is PRINCIPAL-only, because
+ * `book_production:assemble` queues and reads; the gate override is `book_production:override`
+ * (PRINCIPAL-DEFAULT), because
  * building over a known-stale artifact is a judgement about what reaches print rather
  * than a routine action, and it is recorded either way (never silent).
  */
@@ -9,7 +10,7 @@ import { Types } from "mongoose";
 import { builder } from "../../../schema";
 import type { AppContext } from "../../../context";
 import { ForbiddenError } from "../../../middleware/authz";
-import { BUILD_SCOPES, type BuildScope } from "@scd/shared";
+import { BUILD_SCOPES, callerHasPermission, type BuildScope } from "@scd/shared";
 import { BookBuildJob } from "../models/BookBuildJob";
 import { assemblyGate, queueBuild, materializeBookJson, buildJobsPage } from "../services/BookBuildService";
 import { pageRef } from "../../../pageRef";
@@ -83,8 +84,8 @@ const toJob = (j: Record<string, unknown>): JobShape => ({
 builder.queryField("supportBookAssemblyGate", (t) =>
   t.field({
     type: GateRef,
-    description: "Preview the gate WITHOUT queueing — what would stop this build. Requires book:read.",
-    authScopes: { hasPermission: "book:read" },
+    description: "Preview the gate WITHOUT queueing — what would stop this build. Requires book_production:view.",
+    authScopes: { hasPermission: "book_production:view" },
     args: { bookId: t.arg.string({ required: true }), lessonNos: t.arg.intList({ required: false }) },
     resolve: async (_root, args) => {
       assertBookPlane();
@@ -96,8 +97,8 @@ builder.queryField("supportBookAssemblyGate", (t) =>
 builder.queryField("supportBookBuildJobs", (t) =>
   t.field({
     type: [JobRef],
-    description: "A book's render history, newest first. Requires book:read.",
-    authScopes: { hasPermission: "book:read" },
+    description: "A book's render history, newest first. Requires book_production:view.",
+    authScopes: { hasPermission: "book_production:view" },
     args: { bookId: t.arg.string({ required: true }), limit: t.arg.int({ required: false }) },
     resolve: async (_root, args) => {
       assertBookPlane();
@@ -116,8 +117,8 @@ const JobPageRef = pageRef("SupportBookBuildJobPage", JobRef);
 builder.queryField("supportBookBuildJobsPage", (t) =>
   t.field({
     type: JobPageRef,
-    description: "A book's render history, newest first, one page at a time (D-#761). Requires book:read.",
-    authScopes: { hasPermission: "book:read" },
+    description: "A book's render history, newest first, one page at a time (D-#761). Requires book_production:view.",
+    authScopes: { hasPermission: "book_production:view" },
     args: {
       bookId: t.arg.string({ required: true }),
       page: t.arg.int({ required: false }),
@@ -137,8 +138,8 @@ builder.queryField("supportBookExportJson", (t) =>
     description:
       "The book folder's `book.json`, materialized from the lesson rows — the export " +
       "escape hatch (D-#406). The app must never become the only way to build a book. " +
-      "Requires book:assemble.",
-    authScopes: { hasPermission: "book:assemble" },
+      "Requires book_production:assemble.",
+    authScopes: { hasPermission: "book_production:assemble" },
     args: { bookId: t.arg.string({ required: true }), lessonNos: t.arg.intList({ required: false }) },
     resolve: async (_root, args) => {
       assertBookPlane();
@@ -153,9 +154,9 @@ builder.mutationField("queueSupportBookBuild", (t) =>
     type: JobRef,
     description:
       "Queue a render (per-chapter, range or full). Refuses on a failed gate; `force` " +
-      "overrides it and is PRINCIPAL-only, recorded on the job and in the timeline. " +
-      "Requires book:assemble.",
-    authScopes: { hasPermission: "book:assemble" },
+      "overrides it (book_production:override, PRINCIPAL-DEFAULT), recorded on the job and in the timeline. " +
+      "Requires book_production:assemble.",
+    authScopes: { hasPermission: "book_production:assemble" },
     args: {
       bookId: t.arg.string({ required: true }),
       scope: t.arg.string({ required: true }),
@@ -168,9 +169,9 @@ builder.mutationField("queueSupportBookBuild", (t) =>
       if (!(BUILD_SCOPES as readonly string[]).includes(args.scope)) {
         throw new ForbiddenError(`unknown build scope: ${args.scope}`);
       }
-      // Overriding the gate decides what reaches print — a role property, not a grant
-      // AC-1 could hand to anyone.
-      const force = !!args.force && ctx.auth?.role === "PRINCIPAL";
+      // Overriding the gate decides what reaches print — `book_production:override`,
+      // PRINCIPAL-DEFAULT (D-#424; switchable only by the Principal, PM D-#790).
+      const force = !!args.force && !!ctx.auth && callerHasPermission(ctx.auth, "book_production:override");
       if (args.force && !force) {
         throw new ForbiddenError("গেট override শুধু প্রিন্সিপাল করতে পারেন");
       }

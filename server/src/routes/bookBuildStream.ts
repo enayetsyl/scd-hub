@@ -29,7 +29,7 @@ const LINGER_MS = 5_000;
 
 bookBuildStreamRouter.get("/:jobId/stream", async (req: Request, res: Response) => {
   const ctx = buildContext(req, res);
-  if (!ctx.auth || !callerHasPermission(ctx.auth, "book:read")) {
+  if (!ctx.auth || !callerHasPermission(ctx.auth, "book_production:view")) {
     res.status(403).json({ error: "অনুমতি নেই" });
     return;
   }

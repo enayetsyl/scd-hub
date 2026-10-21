@@ -2,7 +2,7 @@
  * Slot-workspace resolvers (SB-2, D-#409/#417/#419) — what the illustrator works from.
  *
  * Same gate boundary rules as `supportBook.ts`: `BookImageService` carries no
- * permission checks, so every field here declares its `book:*` scope and checks the
+ * permission checks, so every field here declares its `book_production:*` scope and checks the
  * book plane before touching it.
  *
  * ONE DOCTRINE RULE IS ENFORCED BY OMISSION: `compliance_note` is never exposed. The
@@ -106,8 +106,8 @@ builder.queryField("supportBookSlots", (t) =>
     type: [SlotRef],
     description:
       "The illustrator's queue: every image slot in a book (or one পাঠ) with its prompt, " +
-      "refs and per-stage lineage. Requires book:read.",
-    authScopes: { hasPermission: "book:read" },
+      "refs and per-stage lineage. Requires book_production:view.",
+    authScopes: { hasPermission: "book_production:view" },
     args: { bookId: t.arg.string({ required: true }), lessonNo: t.arg.int({ required: false }) },
     resolve: async (_root, args) => {
       assertBookPlane();
@@ -151,8 +151,8 @@ builder.queryField("supportBookSlots", (t) =>
 builder.queryField("supportBookStaleness", (t) =>
   t.field({
     type: StaleReportRef,
-    description: "Every stale artifact in a book. Any STALE anywhere locks assembly (D-#417). Requires book:read.",
-    authScopes: { hasPermission: "book:read" },
+    description: "Every stale artifact in a book. Any STALE anywhere locks assembly (D-#417). Requires book_production:view.",
+    authScopes: { hasPermission: "book_production:view" },
     args: { bookId: t.arg.string({ required: true }) },
     resolve: async (_root, args) => {
       assertBookPlane();
@@ -167,8 +167,8 @@ builder.queryField("supportBookSlotHistory", (t) =>
     type: [AssetRef],
     description:
       "Every artifact ever registered for one slot, newest first — including superseded " +
-      "ones, which is the point (D-#409). Requires book:read.",
-    authScopes: { hasPermission: "book:read" },
+      "ones, which is the point (D-#409). Requires book_production:view.",
+    authScopes: { hasPermission: "book_production:view" },
     args: { bookId: t.arg.string({ required: true }), slotId: t.arg.string({ required: true }) },
     resolve: async (_root, args) => {
       assertBookPlane();

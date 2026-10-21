@@ -154,7 +154,7 @@ function Thread({
 
 export default function BookEscalationInboxScreen(): React.ReactElement {
   const { can } = useAuth();
-  const canResolve = can("book:review_senior");
+  const canResolve = can("book_production:approve");
 
   const [booksQ, refetchBooks] = useQuery<{ supportBooks: SupportBookT[] }>({ query: SUPPORT_BOOKS });
   const books = booksQ.data?.supportBooks ?? [];

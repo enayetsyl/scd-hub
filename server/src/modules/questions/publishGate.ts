@@ -15,9 +15,10 @@
  *     must resolve, so gating shared passages would render a PUBLISHED question without its
  *     text — a silent failure on a paper in a child's hand (§5a of docs/prd-question-review.md).
  *
- * Principal/Office are unrestricted — they run the loop and must see drafts to assign them.
+ * Holders of `question_bank:view_all` (Principal/Office by default; PM, D-#790 — was
+ * isAdminStaff) are unrestricted — they run the loop and must see drafts to assign them.
  */
-import { isAdminStaff } from "../foundation/services/RoleScope";
+import { callerHasPermission } from "@scd/shared";
 import type { AuthPayload } from "../../context";
 
 /** The one published state. */
@@ -25,7 +26,7 @@ export const PUBLISHED_REVIEW_STATUS = "gold";
 
 /** True when this caller may see only PUBLISHED questions. */
 export function seesPublishedOnly(auth: AuthPayload | null | undefined): boolean {
-  return !isAdminStaff(auth);
+  return !(auth && auth.role !== "GUARDIAN" && callerHasPermission(auth, "question_bank:view_all"));
 }
 
 /**

@@ -155,7 +155,7 @@ export default function ScholarshipMarksScreen({ route }: Props): React.ReactEle
   if (error) return <Screen><Notice message={friendlyError(error)} tone="danger" /></Screen>;
   if (!paper) return <Screen><Notice message={STR.errGeneric} tone="danger" /></Screen>;
 
-  const readOnly = !can("scholarship:manage");
+  const readOnly = !can("scholarship_practice:enter_results");
 
   return (
     <Screen scroll>

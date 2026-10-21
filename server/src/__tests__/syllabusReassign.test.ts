@@ -62,10 +62,10 @@ describe("the reassign service", () => {
     expect(FN).toMatch(/\.userId === approverUserId/);
   });
 
-  test("it is exam:manage, so Office can do it and not only the Principal", () => {
+  test("it is exam_syllabus:edit, so Office can do it and not only the Principal", () => {
     expect(FN).toMatch(/assertCanManage\(ctx\)/);
     expect(RESOLVER).toMatch(
-      /reassignExamSyllabus[\s\S]{0,900}?authScopes: \{ hasPermission: "exam:manage" \}/,
+      /reassignExamSyllabus[\s\S]{0,900}?authScopes: \{ hasPermission: "exam_syllabus:edit" \}/,
     );
   });
 
@@ -120,9 +120,10 @@ describe("the approvals screen", () => {
     expect(SCREEN).toMatch(/EXAM_SYLLABUS_APPROVER/);
   });
 
-  test("Office reaches the board, but publish still rides the PRINCIPAL role", () => {
-    expect(SCREEN).toMatch(/const canManage = can\("exam:manage"\)/);
-    expect(SCREEN).toMatch(/canPublish=\{isPrincipal\}/);
+  test("Office reaches the board, but publish rides exam_syllabus:publish (PRINCIPAL-DEFAULT)", () => {
+    expect(SCREEN).toMatch(/const canManage = can\("exam_syllabus:view_all"\)/);
+    expect(SCREEN).toMatch(/const canPublish = can\("exam_syllabus:publish"\)/);
+    expect(SCREEN).toMatch(/canPublish=\{canPublish\}/);
     // The publish button must actually consult it, not merely receive it.
     expect(SCREEN).toMatch(/disabled=\{row\.status === "TEACHER_REVIEW" \|\| !balanced \|\| !canPublish\}/);
   });

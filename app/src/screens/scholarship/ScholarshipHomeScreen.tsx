@@ -178,7 +178,7 @@ export default function ScholarshipHomeScreen(): React.ReactElement {
               })
             }
           />
-          {can("scholarship:manage") ? (
+          {can("scholarship_practice:create") ? (
             <>
               <Button
                 title={STR.scNewPaper}
