@@ -69,9 +69,13 @@ const RATE_OPTS = [1, 2, 3, 4, 5].map((n) => ({ label: String(n), value: String(
 export default function ObservationDetailScreen({ route, navigation }: Props): React.ReactElement {
   const { observationId } = route.params;
   const { user, role, can } = useAuth();
-  const canUpload = can("observation:upload");
-  const canManage = can("observation:manage");
-  const canReview = can("observation:review");
+  // PM: one catalogue action per control (the server checks the same one).
+  const canUpload = can("classroom_observation:upload"); // link footage
+  const canAssign = can("classroom_observation:assign"); // re-review, co-review, cancel/restore
+  const canViewAll = can("classroom_observation:view_all"); // observer name, response, compare
+  const canPublish = can("classroom_observation:publish");
+  const canEdit = can("classroom_observation:edit");
+  const canReview = can("classroom_observation:review");
 
   const [obsQ, refetchObs] = useQuery({ query: CLASSROOM_OBSERVATION_QUERY, variables: { id: observationId } });
   const obs = obsQ.data?.classroomObservation ?? null;
@@ -120,7 +124,7 @@ export default function ObservationDetailScreen({ route, navigation }: Props): R
   const [groupQ, refetchGroup] = useQuery({
     query: OBSERVATIONS_FOR_RECORDING_QUERY,
     variables: { recordingId: obs?.recordingId ?? "" },
-    pause: !canUpload || !obs?.recordingId,
+    pause: !canViewAll || !obs?.recordingId,
   });
   const group = groupQ.data?.classroomObservationsForRecording ?? [];
   const activeReviewers = group.filter((g) => g.state !== "SUPERSEDED");
@@ -262,7 +266,7 @@ export default function ObservationDetailScreen({ route, navigation }: Props): R
             <Badge text={obsStateLabel(obs.state)} tone={obs.state === "SUPERSEDED" ? "muted" : "brand"} />
           </View>
           <Row label={STR.obsTeacher} value={nameById[obs.teacherId] ?? obs.teacherId} />
-          {canUpload && obs.observerId ? (
+          {canViewAll && obs.observerId ? (
             <Row label={STR.obsObserver} value={nameById[obs.observerId] ?? obs.observerId} />
           ) : null}
           {obs.sectionId ? (
@@ -322,7 +326,7 @@ export default function ObservationDetailScreen({ route, navigation }: Props): R
 
         {/* The observer's own view of a video they rejected — the review card is gone, so
             say what happened rather than leave an empty row. */}
-        {isObserver && !canManage && obs.cancelledAt ? (
+        {isObserver && !canAssign && obs.cancelledAt ? (
           <Card>
             <View style={{ flexDirection: "row", marginBottom: space(2) }}>
               <Badge text={obs.rejectedByObserver ? STR.obsRejectedByObserver : STR.obsCancelled} tone="warn" />
@@ -337,7 +341,7 @@ export default function ObservationDetailScreen({ route, navigation }: Props): R
             reviewed (that one). Cancel = "this review will not happen"; withhold = "it
             happened and is not being released". A cancelled row shows the cancel with its
             reason and a Restore action instead of the cancel form. */}
-        {canManage && (obs.state === "UPLOADED" || obs.state === "ASSIGNED") ? (
+        {canAssign && (obs.state === "UPLOADED" || obs.state === "ASSIGNED") ? (
           <Card>
             <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.obsCancelTitle}</Body>
             {obs.cancelledAt ? (
@@ -385,7 +389,7 @@ export default function ObservationDetailScreen({ route, navigation }: Props): R
             publish, which takes the row out of the awaiting-publish counts. A withheld
             row shows the hold (with its reason) instead of the publish action; publishing
             it means lifting the hold first, which the server also enforces. */}
-        {canManage && (obs.state === "REVIEWED" || obs.publishedAt) ? (
+        {(canPublish || canEdit) && (obs.state === "REVIEWED" || obs.publishedAt) ? (
           <Card>
             <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.obsPublishTitle}</Body>
             {obs.reviewEditedAt ? (
@@ -396,7 +400,7 @@ export default function ObservationDetailScreen({ route, navigation }: Props): R
             ) : null}
             {/* Like the Comments reviewer edit: fix the review before the teacher sees it.
                 The observer's original is kept on the server. */}
-            {!obs.publishedAt ? (
+            {canEdit && !obs.publishedAt ? (
               <Button
                 title={STR.obsEditReview}
                 variant="secondary"
@@ -413,7 +417,7 @@ export default function ObservationDetailScreen({ route, navigation }: Props): R
             ) : null}
             {obs.publishedAt ? (
               <Row label={STR.obsPublishedOn} value={isoDateTimeLabel(obs.publishedAt)} />
-            ) : obs.withheldAt ? (
+            ) : !canPublish ? null : obs.withheldAt ? (
               <>
                 <View style={{ flexDirection: "row", marginBottom: space(2) }}>
                   <Badge text={STR.obsWithheld} tone="warn" />
@@ -566,7 +570,7 @@ export default function ObservationDetailScreen({ route, navigation }: Props): R
         </Card>
 
         {/* Principal/Office + the assigned observer: teacher response + rating — always visible once observation is released */}
-        {(canUpload || isObserver) && released ? (
+        {(canViewAll || isObserver) && released ? (
           <Card>
             <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.obsTeacherResponseLabel}</Body>
             {obs.teacherResponse ? (
@@ -639,7 +643,7 @@ export default function ObservationDetailScreen({ route, navigation }: Props): R
         ) : null}
 
         {/* Principal/Office: re-request a re-review — observer dropdown excludes observed teacher */}
-        {canUpload && released ? (
+        {canAssign && released ? (
           <Card>
             <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.obsReReview}</Body>
             <Select
@@ -668,7 +672,7 @@ export default function ObservationDetailScreen({ route, navigation }: Props): R
         ) : null}
         {/* CO-9 (D-#272): Principal/Office add a PARALLEL co-reviewer to this recording +
             open the side-by-side compare when >1 reviewer exists. */}
-        {canUpload && obs.recordingId ? (
+        {canAssign && obs.recordingId ? (
           <Card>
             <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.obsCoReviewTitle}</Body>
             <Muted style={{ marginBottom: space(2) }}>{STR.obsCoReviewHint}</Muted>

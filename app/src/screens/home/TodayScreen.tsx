@@ -549,13 +549,13 @@ export default function TodayScreen(): React.ReactElement {
       {/* SP-2/SP-3 (D-#735/#736) — improvement actions: the teacher's own and covered tasks;
           and for an OFFICE-template teacher login, today's not-ticked list. OUTSIDE the
           QueryGate: owed on a day with no periods too. */}
-      {can("tracker:write") ? <ImprovementTasksTeacherCard /> : null}
-      {can("roster:manage") ? <ImprovementTasksOfficeCard /> : null}
+      {can("improvement_plan:tick") ? <ImprovementTasksTeacherCard /> : null}
+      {can("improvement_plan:view_all") ? <ImprovementTasksOfficeCard /> : null}
 
       {/* MC-3 (D-#752) — parents'-meeting comments owed (subject teacher) and summaries to
           write (class teacher). OUTSIDE the QueryGate: owed on a day with no periods too. */}
-      {can("tracker:write") ? <MeetingNotesTeacherCard /> : null}
-      {can("tracker:write") ? <MeetingSummaryTeacherCard /> : null}
+      {can("parents_meeting:write_notes") ? <MeetingNotesTeacherCard /> : null}
+      {can("parents_meeting:write_notes") ? <MeetingSummaryTeacherCard /> : null}
 
       {/* আমার রিভিউ লক্ষ্য (owner ask 2026-10-12): renders only for an observer with a
           daily review target — myReviewQuota is null for everyone else. OUTSIDE the

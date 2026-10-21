@@ -54,7 +54,7 @@ export default function CommentEntryScreen({ route }: Props): React.ReactElement
   const { role, can } = useAuth();
   const { confirmAction } = useConfirm();
   const toast = useToast();
-  const canDeliver = can("roster:manage");
+  const canDeliver = can("student_comments:send"); // PM: was roster:manage
 
   // The edit/deliver path needs the live comment row. Load it from BOTH the section
   // timeline (`studentComments` — scoped; serves Principal/Office + section-scoped

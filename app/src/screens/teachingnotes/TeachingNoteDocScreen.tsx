@@ -49,7 +49,7 @@ export default function TeachingNoteDocScreen({
 }: Props): React.ReactElement {
   const { noteId } = route.params;
   const { can, user } = useAuth();
-  const canUpload = can("roster:manage");
+  const canUpload = can("teaching_notes:upload"); // PM: was roster:manage
 
   const [noteQ, refetchNote] = useQuery({ query: TEACHING_NOTE, variables: { id: noteId } });
   const note = noteQ.data?.teachingNote ?? null;

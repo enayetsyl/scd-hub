@@ -20,7 +20,8 @@ import { space } from "../../theme/tokens";
 
 export default function ObservationTrendScreen(): React.ReactElement {
   const { user, role, can } = useAuth();
-  const canManage = can("observation:manage");
+  const canViewAll = can("classroom_observation:view_all"); // any teacher's trend (PM)
+  const canReports = can("classroom_observation:view_reports"); // school patterns (PM)
 
   // Default to the caller's own id; a manager may type any teacher id.
   const [teacherId, setTeacherId] = useState(user?.id ?? "");
@@ -36,14 +37,14 @@ export default function ObservationTrendScreen(): React.ReactElement {
   const [patternsQ] = useQuery({
     query: SCHOOL_OBSERVATION_PATTERNS_QUERY,
     variables: {},
-    pause: !canManage,
+    pause: !canReports,
   });
   const patterns = patternsQ.data?.schoolObservationPatterns ?? null;
 
   return (
     <Screen padded={false}>
       <ScrollView contentContainerStyle={{ padding: space(4) }} keyboardShouldPersistTaps="handled">
-        {canManage ? (
+        {canViewAll ? (
           <Card>
             <Field label={STR.obsTrendTeacherId} value={teacherId} onChangeText={setTeacherId} />
             <Button title={STR.obsTrendNav} variant="secondary" onPress={() => setActive(teacherId.trim())} />
@@ -83,7 +84,7 @@ export default function ObservationTrendScreen(): React.ReactElement {
           )}
         </Card>
 
-        {canManage ? (
+        {canReports ? (
           <Card>
             <Body style={{ fontWeight: "700" }}>{STR.obsSchoolPatterns}</Body>
             {patternsQ.fetching ? (

@@ -14,6 +14,7 @@ import { Badge, Body, Button, Card, Muted, Notice, Select } from "./ui";
 import { STR, bnNum } from "../lib/labels";
 import { friendlyError } from "../lib/errors";
 import { taskTargetLabel } from "./ImprovementTasksTeacherCard";
+import { useAuth } from "../auth/AuthContext";
 import { useColors } from "../theme";
 import { space } from "../theme/tokens";
 
@@ -28,11 +29,14 @@ export function LeaveImprovementTasks({
   refreshKey: string;
 }): React.ReactElement | null {
   const c = useColors();
+  const { can } = useAuth();
+  // PM: the assignee picker is improvement_plan:assign (on the desk's view of the leave).
+  const canAssign = manage && can("improvement_plan:assign");
   const [q, refetch] = useQuery({ query: LEAVE_IMPROVEMENT_TASKS, variables: { leaveApplicationId }, requestPolicy: "cache-and-network" });
   React.useEffect(() => {
     refetch({ requestPolicy: "network-only" });
   }, [refreshKey, refetch]);
-  const [teachersQ] = useQuery({ query: TEACHERS_QUERY, pause: !manage });
+  const [teachersQ] = useQuery({ query: TEACHERS_QUERY, pause: !canAssign });
   const options = (teachersQ.data?.teachers ?? []).map((t) => ({ value: t.id, label: t.name }));
   const [m, setAssignee] = useMutation(SET_IMPROVEMENT_DAY_ASSIGNEE);
   const [err, setErr] = React.useState<string | null>(null);
@@ -69,7 +73,7 @@ export function LeaveImprovementTasks({
           <Muted>
             {STR.impDay} {bnNum(r.dayNumber)}/{bnNum(r.totalDays)}
           </Muted>
-          {manage ? (
+          {canAssign ? (
             <View style={{ gap: 4 }}>
               <Select
                 label={STR.impDoneBy}

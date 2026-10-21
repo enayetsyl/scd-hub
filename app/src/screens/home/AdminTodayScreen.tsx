@@ -215,13 +215,13 @@ export default function AdminTodayScreen(): React.ReactElement {
 
         {/* SP-4 (D-#738) — improvement tasks of today not yet ticked, with the list to mark
             on the teacher's behalf; and any task this person was given to do themselves. */}
-        {can("roster:manage") ? <ImprovementTasksOfficeCard /> : null}
+        {can("improvement_plan:view_all") ? <ImprovementTasksOfficeCard /> : null}
         <ImprovementTasksTeacherCard />
 
         {/* MC-3 (D-#752) — a Principal who also teaches (or class-teaches) gets the same
             meeting-comment cards; each renders nothing when the caller owes nothing. */}
-        {can("tracker:write") ? <MeetingNotesTeacherCard /> : null}
-        {can("tracker:write") ? <MeetingSummaryTeacherCard /> : null}
+        {can("parents_meeting:write_notes") ? <MeetingNotesTeacherCard /> : null}
+        {can("parents_meeting:write_notes") ? <MeetingSummaryTeacherCard /> : null}
 
         {/* HW-VOID (D-#741) — homework declared with 0 questions (usually a class note
             filed as homework): confirm never issues it; delete it here. Hidden when none. */}

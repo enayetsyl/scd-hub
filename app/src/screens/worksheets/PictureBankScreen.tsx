@@ -26,7 +26,7 @@ const bookLabel = (b: string): string =>
 
 export default function PictureBankScreen(): React.ReactElement {
   const { can } = useAuth();
-  const canEdit = can("roster:manage");
+  const canEdit = can("worksheets:edit"); // PM: picture bank edit (was roster:manage)
   const colors = useColors();
 
   const [book, setBook] = useState<string | null>("BAN");
