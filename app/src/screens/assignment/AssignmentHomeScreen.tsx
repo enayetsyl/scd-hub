@@ -58,11 +58,15 @@ const day = (iso?: string | null): string => (iso ? iso.slice(0, 10) : "—");
 export default function AssignmentHomeScreen({ navigation }: Props): React.ReactElement {
   // D-#723: C4/C5 বালক/বালিকা — two cards per subject must say which half they are.
   const sectionName = useSectionNames();
-  const { role, user, can } = useAuth();
-  const canTrackerRead = can("tracker:read");
-  const canSchedule = can("roster:manage");
-  const canGift = can("gift:manage");
-  const isFollowUpAdmin = role === "PRINCIPAL" || role === "OFFICE";
+  const { user, can } = useAuth();
+  // PM (D-#790..#801): each chip / button checks the catalogue action its server call does.
+  const canView = can("assignment:view");
+  const canDeclare = can("assignment:declare");
+  const canEditAll = can("assignment:edit_all"); // others' cells (was role !== TEACHER)
+  const canViewAll = can("assignment:view_all"); // every row (was role !== TEACHER)
+  const canSchedule = can("assignment:settings");
+  const canGift = can("assignment_gift:view");
+  const isFollowUpAdmin = can("assignment:remind");
   const toast = useToast();
 
   const [yearsQ, refetchYears] = useQuery({ query: ACADEMIC_YEARS_QUERY });
@@ -103,13 +107,13 @@ export default function AssignmentHomeScreen({ navigation }: Props): React.React
   const [promptsQ, refetchPrompts] = useQuery({
     query: MY_AS_PREP_PROMPTS,
     variables: { academicYearId: yearId },
-    pause: !yearId || !canTrackerRead,
+    pause: !yearId || !canView,
   });
   const prompts = promptsQ.data?.myAssignmentPrepPrompts ?? [];
 
   // Sections where this teacher is the class teacher — they own the weekly reconcile
   // for those sections even when they don't personally teach the subjects (AS-T6).
-  const [ctQ, refetchCt] = useQuery({ query: MY_SECTIONS_AS_CLASS_TEACHER_QUERY, pause: role !== "TEACHER" });
+  const [ctQ, refetchCt] = useQuery({ query: MY_SECTIONS_AS_CLASS_TEACHER_QUERY, pause: canViewAll });
   const myCtSectionIds = useMemo(
     () => new Set((ctQ.data?.mySectionsAsClassTeacher ?? []).map((s) => s.id)),
     [ctQ.data],
@@ -119,16 +123,16 @@ export default function AssignmentHomeScreen({ navigation }: Props): React.React
   // class-teach (so they can reconcile the week); Principal/Office see all.
   const visibleItems = useMemo(() => {
     const items = expected?.items ?? [];
-    if (role === "TEACHER" && user) {
+    if (!canViewAll && user) {
       return items.filter((i) => i.teacherId === user.id || myCtSectionIds.has(i.sectionId));
     }
     return items;
-  }, [expected, role, user, myCtSectionIds]);
+  }, [expected, canViewAll, user, myCtSectionIds]);
 
   /** D-#353: the cell's own subject teacher, or Principal/Office — mirrors the server gate. */
   function canEditItem(item: ExpectedAsItemT): boolean {
     if (!item.asItemId) return false;
-    return role !== "TEACHER" || item.teacherId === user?.id;
+    return canDeclare && (canEditAll || item.teacherId === user?.id);
   }
 
   function openEdit(item: ExpectedAsItemT): void {
@@ -164,7 +168,7 @@ export default function AssignmentHomeScreen({ navigation }: Props): React.React
 
   function canDeclareNil(item: ExpectedAsItemT): boolean {
     if (item.delivered) return false;
-    return canTrackerRead && (item.teacherId === user?.id || role !== "TEACHER");
+    return canDeclare && (item.teacherId === user?.id || canEditAll);
   }
 
   async function onDeclareNil(item: ExpectedAsItemT): Promise<void> {
@@ -367,7 +371,7 @@ export default function AssignmentHomeScreen({ navigation }: Props): React.React
                           ) : null}
                         </ChipRow>
                       </View>
-                    ) : !item.nilDeclared && canTrackerRead && (item.teacherId === user?.id || role !== "TEACHER") ? (
+                    ) : !item.nilDeclared && canDeclare && (item.teacherId === user?.id || canEditAll) ? (
                       // Only the subject teacher (or an unscoped admin) delivers; a
                       // class teacher reconciles but doesn't deliver others' subjects.
                       <Button title={STR.asDeliver} onPress={() => openDeliver(item)} />
@@ -427,7 +431,7 @@ export default function AssignmentHomeScreen({ navigation }: Props): React.React
               <ChipRow>
                 {/* D-#385: browse the whole section by class chip, without first
                     drilling into one week's cell — the homework workspace entry. */}
-                {canTrackerRead ? (
+                {canView ? (
                   <Chip label={`📋 ${STR.asWorkspace}`} onPress={() => navigation.navigate("AssignmentWorkspace")} />
                 ) : null}
                 {canSchedule ? (
@@ -436,24 +440,24 @@ export default function AssignmentHomeScreen({ navigation }: Props): React.React
                 {isFollowUpAdmin ? (
                   <Chip label={`📣 ${STR.asChaseTitle}`} onPress={() => navigation.navigate("AssignmentChase")} />
                 ) : null}
-                {canTrackerRead ? (
+                {canView ? (
                   <Chip
                     label={`📊 ${STR.asRollupsTitle}`}
                     onPress={() => navigation.navigate("AssignmentRollups", { academicYearId: yearId })}
                   />
                 ) : null}
-                {/* AG-1 (D-#479–#483): the Office hands the gifts out under gift:manage and
-                    holds NO tracker permission (D-#554) — the server accepts either, so must
-                    this chip. Owner 2026-09-30, viewing as Akmol: the button was missing. */}
-                {canTrackerRead || canGift ? (
+                {/* AG-1 (D-#479–#483): the gift report is `assignment_gift:view` — Teacher and
+                    Office both hold it (PM; was tracker:read OR gift:manage). Owner
+                    2026-09-30, viewing as Akmol: the button was missing. */}
+                {canGift ? (
                   <Chip
                     label={`🎁 ${STR.agTitle}`}
                     onPress={() => navigation.navigate("AssignmentGift", { academicYearId: yearId })}
                   />
                 ) : null}
-                {/* AS-T7 (D-#643): who carries which packets into the last period.
-                    Office reaches it under roster:manage — it holds no tracker:read. */}
-                {canTrackerRead || canSchedule ? (
+                {/* AS-T7 (D-#643): who carries which packets into the last period —
+                    `assignment:view` or `assignment:settings` (Office), the server's gate. */}
+                {canView || canSchedule ? (
                   <Chip label={`📦 ${STR.hoBoardTitle}`} onPress={() => navigation.navigate("AssignmentHandout")} />
                 ) : null}
               </ChipRow>

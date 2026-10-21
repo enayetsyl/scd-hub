@@ -42,7 +42,8 @@ export default function HomeworkReconcileScreen({ navigation, route }: Props): R
   const colors = useColors();
   const { role, user, can } = useAuth();
   const { selection, hasSection } = useSectionContext();
-  const isAdmin = (can("roster:manage")) || !!user?.homeworkSupervisor;
+  // PM: the designation waiver is `homework:edit_all` (+ the supervisor flag, a designation).
+  const isAdmin = can("homework:edit_all") || !!user?.homeworkSupervisor;
   // R-Context (UX-5): inherit the date picked on Homework home; still editable here.
   const [date, setDate] = useState(route.params?.date ?? today());
   const [trimTo, setTrimTo] = useState<Record<string, string>>({});
@@ -78,7 +79,7 @@ export default function HomeworkReconcileScreen({ navigation, route }: Props): R
   const [, confirm] = useMutation(CONFIRM_HOMEWORK_DAY);
   // D-#741: Principal/Office remove a never-issued item (e.g. a class note filed as
   // 0-question homework) — still possible after the day is confirmed.
-  const canVoid = can("homework:void");
+  const canVoid = can("homework:delete");
   const [, voidItem] = useMutation(VOID_HOMEWORK_ITEM);
   const { confirmAction } = useConfirm();
 
@@ -104,7 +105,9 @@ export default function HomeworkReconcileScreen({ navigation, route }: Props): R
       .find((c) => c.id === selection.classId)
       ?.sections.find((s) => s.id === selection.sectionId) ?? null;
   const canReconcileHomework =
-    isAdmin || (!!selectedSection && (selectedSection.classTeacherId === user?.id || selectedSection.homeworkConfirmerId === user?.id));
+    can("homework:confirm_day") &&
+    (isAdmin ||
+      (!!selectedSection && (selectedSection.classTeacherId === user?.id || selectedSection.homeworkConfirmerId === user?.id)));
 
   async function onTrim(itemId: string, qCount: number, revItem: boolean): Promise<void> {
     setTrimErrors({});

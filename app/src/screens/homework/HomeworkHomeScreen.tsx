@@ -56,8 +56,9 @@ const today = (): string => dateKey();
 export default function HomeworkHomeScreen({ navigation }: Props): React.ReactElement {
   const colors = useColors();
   const { user, can } = useAuth();
-  // D-#741: Principal/Office may remove a never-issued item even once the day is closed.
-  const canVoid = can("homework:void");
+  // D-#741: `homework:delete` (Principal/Office by default) may remove a never-issued
+  // item even once the day is closed.
+  const canVoid = can("homework:delete");
   const { selection } = useSectionContext();
 
   const [date, setDate] = useState(today());
@@ -67,8 +68,8 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
   const [chaseOpen, setChaseOpen] = useState(false);
 
   // The caller's accessible classes — the shared UX-5 hook (also feeds the badge refs).
-  const accessible = useAccessibleClasses();
-  const { myClasses, isAdmin } = accessible;
+  const accessible = useAccessibleClasses({ viewAll: "homework:view_all" });
+  const { myClasses } = accessible;
 
   // D-#770: one ref per accessible SECTION, one row back per section. A class-keyed
   // fold pooled a split class's বালক and বালিকা (one badge, and over-ceiling days that
@@ -145,7 +146,7 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
       if (deletingId) return;
       if (!(await confirmAction({ title: STR.hwDeleteAction, message: STR.hwDeleteConfirm, confirmLabel: STR.hwDeleteAction }))) return;
       setDeletingId(itemId);
-      // homework:void holders take the D-#741 path — it also works on a closed day.
+      // homework:delete holders take the D-#741 path — it also works on a closed day.
       const res = canVoid ? await voidItem({ itemId }) : await deleteItem({ itemId });
       setDeletingId(null);
       const ok = canVoid
@@ -163,8 +164,13 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
 
   const selectedSection =
     myClasses.find((m) => m.cls.id === selection.classId)?.sections.find((s) => s.id === selection.sectionId) ?? null;
+  // PM: `homework:confirm_day` + the designation (class teacher / confirmer / supervisor),
+  // waived by `homework:edit_all` — the server's confirm gate.
   const canReconcileHomework =
-    isAdmin || (!!selectedSection && (selectedSection.classTeacherId === user?.id || selectedSection.homeworkConfirmerId === user?.id));
+    can("homework:confirm_day") &&
+    (can("homework:edit_all") ||
+      !!user?.homeworkSupervisor ||
+      (!!selectedSection && (selectedSection.classTeacherId === user?.id || selectedSection.homeworkConfirmerId === user?.id)));
 
   const tally = tallyQ.data?.homeworkDayTally;
   const summary = sumQ.data?.homeworkSummary;
@@ -213,7 +219,11 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
                 // must not be able to rewrite or delete homework they did not set
                 // (owner report 2026-08-04); Office/Principal keep the override. The
                 // reconciled-day rule still applies on top.
-                const mine = isAdmin || (!!user && it.declaredBy === user.id);
+                // PM: own item under `homework:declare`; others' under `homework:edit_all`
+                // (the supervisor keeps today's override). F-9: the server checks no owner.
+                const mine =
+                  can("homework:declare") &&
+                  (can("homework:edit_all") || !!user?.homeworkSupervisor || (!!user && it.declaredBy === user.id));
                 const dayOpen = it.status === "declared" ? tally?.state !== "reconciled" : true;
                 const editable = mine && dayOpen;
                 const canDelete = it.status === "declared" && (editable || canVoid);

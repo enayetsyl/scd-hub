@@ -16,7 +16,7 @@
  */
 import { readFileSync } from "fs";
 import path from "path";
-import { roleHasPermission, PERMISSIONS, ROLE_PERMISSIONS } from "@scd/shared";
+import { roleHasPermission, PERMISSIONS, ROLE_PERMISSIONS, CATALOGUE_ROLE_DEFAULTS } from "@scd/shared";
 
 const RESOLVER = path.resolve(
   __dirname,
@@ -64,14 +64,25 @@ describe("gift resolvers — the gates", () => {
     expect(gates).toHaveLength(3);
   });
 
-  test("every gate accepts BOTH tracker:read and gift:manage", () => {
-    // Either alone is a bug: tracker:read alone locks the Office out (the reported
-    // problem); gift:manage alone locks the class teacher out of her own section.
-    for (const g of gates) {
-      expect(g).toContain("hasAnyPermission");
-      expect(g).toContain("tracker:read");
-      expect(g).toContain("gift:manage");
+  test("PM: the report is assignment_gift:view, the ticks assignment_gift:issue", () => {
+    // Was tracker:read OR gift:manage (either alone locked one caller out). The catalogue
+    // actions are held by BOTH callers by default, so one action per field is enough.
+    expect(gates[0]).toContain('"assignment_gift:view"');
+    expect(gates[1]).toContain('"assignment_gift:issue"');
+    expect(gates[2]).toContain('"assignment_gift:issue"');
+    for (const g of gates) expect(g).not.toContain("tracker:");
+  });
+
+  test("PM: Teacher and Office both hold the gates' actions by default; only Office lifts the scope", () => {
+    for (const r of ["TEACHER", "OFFICE"] as const) {
+      expect(CATALOGUE_ROLE_DEFAULTS[r]).toContain("assignment_gift:view");
+      expect(CATALOGUE_ROLE_DEFAULTS[r]).toContain("assignment_gift:issue");
     }
+    // view_all replaces isAdminStaff (unscoped report + the class-teacher waiver).
+    expect(CATALOGUE_ROLE_DEFAULTS.OFFICE).toContain("assignment_gift:view_all");
+    expect(CATALOGUE_ROLE_DEFAULTS.TEACHER).not.toContain("assignment_gift:view_all");
+    expect(source).toContain('callerHasPermission(ctx.auth, "assignment_gift:view_all")');
+    expect(source).not.toContain("isAdminStaff(");
   });
 
   test("no gate was left as a bare single-permission check", () => {

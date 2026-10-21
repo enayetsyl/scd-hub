@@ -8,15 +8,24 @@
  *
  *   myWorkClaims     — the teacher's own open claims (Today card + roster badge)
  *   workClaimQueue   — the unresolved queue, oldest (school days pending) first
- *   rejectWorkClaim  — the ONE manual close; needs tracker:write, so Office cannot
+ *   rejectWorkClaim  — the ONE manual close; `work_claim:reject` (Office off by default)
  *   nudgeWorkClaim   — re-fire the teacher's notification; Office's ENTIRE power here
  *
- * `myWorkClaims` is `authenticated: true` and degrades to [] for a caller with no
- * claims of their own — the D-#535 rule: a dashboard field that can refuse is a
+ * PM (D-#790..#801): the queue / recipient list are `work_claim:view_all`, the nudge
+ * `work_claim:remind` — both "when on the digest" (digest_recipient), waived by
+ * `admin_dashboard:view` (the old isAdminStaff leg; see canWatchClaims).
+ *
+ * `myWorkClaims` (`work_claim:view_own`, SELF) is `authenticated: true` and degrades
+ * to [] for a caller with no claims of their own — the D-#535 rule: a dashboard field that can refuse is a
  * field that can white-screen the app.
  */
 import { Types } from "mongoose";
-import { WORK_CLAIM_REJECT_REASONS, WORK_CLAIM_STATUS_LABELS_BN, WORK_CLAIM_REJECT_REASON_LABELS_BN } from "@scd/shared";
+import {
+  WORK_CLAIM_REJECT_REASONS,
+  WORK_CLAIM_STATUS_LABELS_BN,
+  WORK_CLAIM_REJECT_REASON_LABELS_BN,
+  callerHasPermission,
+} from "@scd/shared";
 import type { WorkClaimRejectReason } from "@scd/shared";
 import { builder } from "../../../schema";
 import { ForbiddenError } from "../../../middleware/authz";
@@ -235,7 +244,7 @@ async function toRows(claims: Array<Record<string, any>>, now: Date): Promise<Wo
 // NOT gated on tracker:read (BUG-WC-3): OFFICE holds no tracker permission at
 // all — that is the very guarantee that stops it marking work submitted — so
 // gating its own queue on that permission locked the Office out of the screen
-// built for it. The isAdminStaff check in each resolver is the real gate.
+// built for it. `work_claim:view_all` + canWatchClaims (designation / waiver) is the gate.
 // ---------------------------------------------------------------------------
 
 builder.queryField("myWorkClaims", (t) =>
@@ -247,7 +256,8 @@ builder.queryField("myWorkClaims", (t) =>
       "badge read this. Returns [] for a caller with none (a guardian, the Office), " +
       "never an error: a dashboard field that can refuse can white-screen the app (D-#535).",
     resolve: async (_r, _a, ctx) => {
-      if (!ctx.auth) return [];
+      // SELF action, checked in the body so it degrades to [] instead of refusing (D-#535).
+      if (!ctx.auth || !callerHasPermission(ctx.auth, "work_claim:view_own")) return [];
       const claims = (await GuardianWorkClaim.find({
         teacherId: new Types.ObjectId(ctx.auth.userId),
         status: "PENDING",
@@ -262,7 +272,7 @@ builder.queryField("myWorkClaims", (t) =>
 builder.queryField("workClaimQueue", (t) =>
   t.field({
     type: [WorkClaimRowRef],
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "work_claim:view_all" },
     description:
       "Every unresolved guardian claim, longest-waiting first (school days pending, D-#710). " +
       "The Office/Principal queue, also open to the Principal's chosen digest recipients.",
@@ -281,7 +291,7 @@ builder.queryField("workClaimQueue", (t) =>
 );
 
 // ---------------------------------------------------------------------------
-// The one manual close (D-#552) — needs tracker:write, which OFFICE never holds
+// The one manual close (D-#552) — needs work_claim:reject, which OFFICE does not hold by default
 // ---------------------------------------------------------------------------
 
 const RejectReasonEnum = builder.enumType("WorkClaimRejectReason", {
@@ -292,7 +302,7 @@ const RejectReasonEnum = builder.enumType("WorkClaimRejectReason", {
 builder.mutationField("rejectWorkClaim", (t) =>
   t.field({
     type: WorkClaimRowRef,
-    authScopes: { hasPermission: "tracker:write" },
+    authScopes: { hasPermission: "work_claim:reject" },
     description:
       "Close a guardian claim with a reason the family will see (D-#552). The ONLY " +
       "manual close — accepting happens automatically when the teacher marks the " +
@@ -323,7 +333,7 @@ builder.mutationField("rejectWorkClaim", (t) =>
 builder.mutationField("nudgeWorkClaim", (t) =>
   t.field({
     type: WorkClaimRowRef,
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "work_claim:remind" },
     description:
       "Re-fire the teacher's notification for one open claim, at most once per claim " +
       "per day. This is ALL the Office can do — it holds no tracker:write and can " +
@@ -332,7 +342,7 @@ builder.mutationField("nudgeWorkClaim", (t) =>
     resolve: async (_r, args, ctx) => {
       // Whoever may watch the queue may nudge from it (D-#554, D-#710) — the nudge is
       // a reminder to the teacher, never a change to the work.
-      if (!(await canWatchClaims(ctx))) throw new ForbiddenError();
+      if (!(await canWatchClaims(ctx, "work_claim:remind"))) throw new ForbiddenError();
       const claim = await GuardianWorkClaim.findById(args.claimId);
       if (!claim) throw new Error("জানানোটি পাওয়া যায়নি");
       if (claim.status !== "PENDING") throw new Error("এই জানানোটি ইতিমধ্যেই নিষ্পন্ন হয়েছে");
@@ -410,7 +420,7 @@ async function extraRecipients(): Promise<DigestRecipient[]> {
 builder.queryField("workClaimDigestRecipients", (t) =>
   t.field({
     type: [DigestRecipientRef],
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "work_claim:view_all" },
     description:
       "Who the Principal added to the 10:30 digest, on top of every Principal and Office user " +
       "(D-#710). Readable by whoever may watch the queue.",
@@ -424,14 +434,14 @@ builder.queryField("workClaimDigestRecipients", (t) =>
 builder.mutationField("setWorkClaimDigestRecipients", (t) =>
   t.field({
     type: [DigestRecipientRef],
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "work_claim:settings" },
     description:
-      "Replace the 10:30 digest's extra recipients (D-#710). PRINCIPAL only. Every Principal " +
+      "Replace the 10:30 digest's extra recipients (D-#710). work_claim:settings (Principal by default). Every Principal " +
       "and Office user always receives it; these are the people added on top, and they may " +
       "also open the claim queue and nudge from it.",
     args: { userIds: t.arg.stringList({ required: true }) },
     resolve: async (_r, args, ctx) => {
-      if (ctx.auth?.role !== "PRINCIPAL") throw new ForbiddenError();
+      if (!ctx.auth || !callerHasPermission(ctx.auth, "work_claim:settings")) throw new ForbiddenError();
       const unique = [...new Set(args.userIds)];
       if (unique.some((id) => !Types.ObjectId.isValid(id))) throw new Error("অজানা ব্যবহারকারী");
       const users = (await User.find({

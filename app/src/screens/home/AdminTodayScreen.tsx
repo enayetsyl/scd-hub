@@ -108,14 +108,15 @@ const BADGE_TARGETS: Record<string, CardMeta["target"] & { params?: object }> = 
 export default function AdminTodayScreen(): React.ReactElement {
   const nav = useNavigation<NavigationProp<TabParamList>>();
   const date = dateKey();
-  // AG-3 — the desk that physically hands out the weekly gift (Principal + Office).
+  // AG-3 — the desk that physically hands out the weekly gift: `assignment_gift:issue`
+  // over the whole school (`assignment_gift:view_all`) — Principal + Office by default.
   const { can } = useAuth();
-  const canGift = can("gift:manage");
+  const canGift = can("assignment_gift:issue") && can("assignment_gift:view_all");
   // D-#674 — the live class board follows the PERMISSION the server gates on.
   const canLiveBoard = can("routine:view_all");
   // HW-VOID (D-#741) — Principal + Office remove 0-question homework from here; the
   // Office has no Homework tab (no tracker permission, D-#554).
-  const canVoidHomework = can("homework:void");
+  const canVoidHomework = can("homework:delete");
 
   const [q, refetch] = useQuery({ query: ADMIN_TODAY_QUERY, variables: { date }, requestPolicy: "cache-and-network" });
   const cards = q.data?.adminToday ?? [];

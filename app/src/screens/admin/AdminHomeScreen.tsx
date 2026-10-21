@@ -14,7 +14,7 @@ import { useAuth } from "../../auth/AuthContext";
 type Props = NativeStackScreenProps<AdminStackParamList, "AdminHome">;
 
 export default function AdminHomeScreen({ navigation }: Props): React.ReactElement {
-  const { isRole, can } = useAuth();
+  const { can } = useAuth();
   const canImport = can("lesson_plans:import") || can("question_bank:import");
   const canStaffLogins = can("staff_logins:view");
   const canProxy = can("cover:assign_proxy");
@@ -46,7 +46,9 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
   // Owner ask 2026-10-04: template-aware, matching the server's `canWatchClaims`
   // (isAdminStaff) — a teacher holding the Office template from Access control
   // (Akter, Tazkir) could already read the queue but never saw this card.
-  const canWorkClaims = isRole("PRINCIPAL") || isRole("OFFICE");
+  // PM: `work_claim:view_all` without the digest designation — i.e. with its waiver
+  // `admin_dashboard:view` (Principal + Office by default, template-aware like isRole was).
+  const canWorkClaims = can("work_claim:view_all") && can("admin_dashboard:view");
   // AR-2: the ranking reads the two attendance registers, so it sits behind the
   // actions that own them (PM): student ranking attendance:view_all, staff ranking
   // staff_attendance:view_all — Principal + Office by default.

@@ -8,7 +8,8 @@
  *   3. refused: issued item, declared item that already has student records, an item
  *      issued between the check and the delete, an unknown id
  *   4. the clean-up list asks for declared + 0-question items in the lookback window
- *   5. both resolver fields are gated on homework:void, not on a tracker permission
+ *   5. both resolver fields are gated on homework:delete (PM; was homework:void), not on a
+ *      tracker permission
  *
  * DB-free: every model + the audit writer is mocked; the rule logic is real.
  */
@@ -195,12 +196,13 @@ describe("resolver gates", () => {
     path.resolve(__dirname, "../modules/trackers/resolvers/homework.ts"),
     "utf8",
   );
-  test.each(["voidHomeworkItem", "unissuedHomework"])("%s is gated on homework:void", (field) => {
+  test.each(["voidHomeworkItem", "unissuedHomework"])("%s is gated on homework:delete", (field) => {
     const at = source.indexOf(`Field("${field}"`);
     expect(at).toBeGreaterThan(0);
     const gate = source.slice(at).match(/authScopes:\s*\{([^}]*)\}/)?.[1] ?? "";
     // NOT tracker:* — the Office has none (D-#554), so such a gate would lock it out.
-    expect(gate).toContain('"homework:void"');
+    // PM: the catalogue action that replaced homework:void (same holders: P + O).
+    expect(gate).toContain('"homework:delete"');
     expect(gate).not.toContain("tracker:");
   });
 });

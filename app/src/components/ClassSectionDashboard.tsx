@@ -47,7 +47,11 @@ function shortClassLabel(level: number): string {
  *  teaching scopes ∪ class-teacher sections ∪ routine section slots ∪ the extent of
  *  any live DELEGATION grant (ACS-1); admins (roster:manage / homework supervisor)
  *  see every active class. */
-export function useAccessibleClasses(): {
+export function useAccessibleClasses(opts?: {
+  /** PM: the catalogue action that means "every class" for the host screen (e.g.
+   *  `homework:view_all`). Omitted = the pre-PM `roster:manage` rule, unchanged. */
+  viewAll?: string;
+}): {
   myClasses: MyClass[];
   fetching: boolean;
   error: CombinedError | undefined;
@@ -56,7 +60,7 @@ export function useAccessibleClasses(): {
   const { role, user, can } = useAuth();
   const { selection } = useSectionContext();
   const ayId = selection.academicYearId;
-  const isAdmin = (can("roster:manage")) || !!user?.homeworkSupervisor;
+  const isAdmin = (opts?.viewAll ? can(opts.viewAll) : can("roster:manage")) || !!user?.homeworkSupervisor;
 
   const [{ data: classesData, fetching, error }] = useQuery({
     query: CLASSES_QUERY,
