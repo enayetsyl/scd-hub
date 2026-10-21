@@ -9,7 +9,7 @@
  *                      persists StoredFile, returns { fileId, ... }. On Drive
  *                      failure: Bangla error, NOTHING persisted (GP-J8) — the
  *                      declare/check flow is never blocked by a file.
- *   POST /files/chat — staff upload for a chat attachment (M-4, JWT + chat:write
+ *   POST /files/chat — staff upload for a chat attachment (M-4, JWT + chat:send
  *                      + membership of `conversationId`). Multipart `file` +
  *                      field/query `conversationId`. Validates mime ∈ image/pdf/
  *                      video/audio + size ≤ 10 MB, streams to the Drive `chat`
@@ -260,7 +260,7 @@ filesRouter.post("/hw", parseUpload, async (req: Request, res: Response) => {
 });
 
 // ---------------------------------------------------------------------------
-// POST /files/chat — staff upload a chat attachment (M-4, chat:write + member)
+// POST /files/chat — staff upload a chat attachment (M-4, chat:send + member)
 // ---------------------------------------------------------------------------
 
 const parseChatUpload: express.RequestHandler = (req, res, next) => {
@@ -275,7 +275,7 @@ const parseChatUpload: express.RequestHandler = (req, res, next) => {
 
 filesRouter.post("/chat", parseChatUpload, async (req: Request, res: Response) => {
   const ctx = buildContext(req, res);
-  if (!ctx.auth || !callerHasPermission(ctx.auth, "chat:write")) {
+  if (!ctx.auth || !callerHasPermission(ctx.auth, "chat:send")) {
     res.status(403).json({ error: CHAT_FILE_ERRORS_BN.forbidden });
     return;
   }
@@ -488,7 +488,8 @@ filesRouter.post("/archive", parseUpload, async (req: Request, res: Response) =>
 // ---------------------------------------------------------------------------
 // POST /files/classnote — staff attach a file to a class note (≤ 10 MB, jpeg/png/pdf).
 // The 5-per-note cap is enforced when attachmentIds are bound (publish/update). Read
-// gate = staff routine:read. tracker/routine publisher then carries the fileId along.
+// gate = a class-note writer (class_note:create / :edit / :edit_all). tracker/routine
+// publisher then carries the fileId along.
 // ---------------------------------------------------------------------------
 
 const parseClassNoteUpload: express.RequestHandler = (req, res, next) => {
@@ -503,7 +504,12 @@ const parseClassNoteUpload: express.RequestHandler = (req, res, next) => {
 
 filesRouter.post("/classnote", parseClassNoteUpload, async (req: Request, res: Response) => {
   const ctx = buildContext(req, res);
-  if (!ctx.auth || !callerHasPermission(ctx.auth, "routine:read")) {
+  if (
+    !ctx.auth ||
+    !(["class_note:create", "class_note:edit", "class_note:edit_all"] as const).some((p) =>
+      callerHasPermission(ctx.auth!, p),
+    )
+  ) {
     res.status(403).json({ error: FILE_ERRORS_BN.forbidden });
     return;
   }
@@ -1151,10 +1157,10 @@ filesRouter.get("/:id", async (req: Request, res: Response) => {
     } else if (file.kind === "classtest_question") {
       await assertClassTestFileReadAccess(ctx, file);
     } else if (file.kind === "classnote_attachment") {
-      // Staff read under routine:read. A GUARDIAN may read one too, but only an
+      // Staff read under class_note:view. A GUARDIAN may read one too, but only an
       // attachment on a note for a group their own child sits in — the file carries no
       // back-reference, so the gate reverse-resolves the owning ClassNote.
-      if (!callerHasPermission(ctx.auth, "routine:read")) {
+      if (!callerHasPermission(ctx.auth, "class_note:view")) {
         await assertClassNoteFileReadAccess(ctx, file._id.toString());
       }
     } else if (file.kind === "assignment_attachment") {

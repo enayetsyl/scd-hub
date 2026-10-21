@@ -1,7 +1,7 @@
 /**
  * myDay resolver (UX-4, prd-ux-improvements.md §4.4, D-#265) — the staff "Today"
  * dashboard read. `authenticated` only: every field internally reuses an existing
- * gate (routine:read for slots, the homeworkClassOverview read/confirm scope per
+ * gate (routine:view for slots, the homeworkClassOverview read/confirm scope per
  * section, attendance:mark for the pending flag) and degrades to empty/zero for
  * callers without it — a guardian or office login renders an empty dashboard,
  * never an error. NO new permission, NO vocab/wire change (server-owned type).
