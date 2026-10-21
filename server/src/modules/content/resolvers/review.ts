@@ -2,21 +2,21 @@
  * Plan-review resolvers — assign / submit / cancel + the teacher's queue (PR-1).
  *
  * Mutations:
- *   assignPlanReview  — content:assign_review (Principal/Office). Assign a plan to one
+ *   assignPlanReview  — plan_review:assign (Principal/Office). Assign a plan to one
  *                       reviewer; supersedes any open round for that address (D-#40).
- *   submitPlanReview  — content:review (the *assigned* reviewer only, R4.2). APPROVE
+ *   submitPlanReview  — plan_review:review (the *assigned* reviewer only, R4.2). APPROVE
  *                       drives the artifact draft→reviewed (D-#38).
- *   cancelPlanReview  — content:assign_review (Principal/Office).
+ *   cancelPlanReview  — plan_review:assign (Principal/Office).
  *
  * Query:
- *   myReviewAssignments — content:review. The caller's open review queue.
+ *   myReviewAssignments — plan_review:review. The caller's open review queue.
  *
  * The Principal sign-off (reviewed→gold) + inbox/thread queries land in PR-2.
  */
 import { builder } from "../../../schema";
 import { ForbiddenError } from "../../../middleware/authz";
 import { expectedGraphQLError } from "../../../observability/sentry";
-import { isAdminStaff } from "../../foundation/services/RoleScope";
+import { callerHasPermission } from "@scd/shared";
 import {
   assignPlanReview as assignSvc,
   assignPlanReviewBulk as assignBulkSvc,
@@ -106,8 +106,8 @@ builder.mutationField("assignPlanReview", (t) =>
     type: ReviewAssignmentRef,
     description:
       "Assign a plan (chapter_plan/session_plan) to one teacher reviewer. Supersedes any open " +
-      "round for the same plan address. Requires content:assign_review (Principal/Office).",
-    authScopes: { hasPermission: "content:assign_review" },
+      "round for the same plan address. Requires plan_review:assign (Principal/Office).",
+    authScopes: { hasPermission: "plan_review:assign" },
     args: {
       artifactId: t.arg.string({ required: true }),
       reviewerId: t.arg.string({ required: true }),
@@ -139,8 +139,8 @@ builder.mutationField("submitPlanReview", (t) =>
       "Submit (or resubmit) a verdict (APPROVE | CHANGES_REQUESTED) + feedback on an assigned plan. " +
       "Only the assigned reviewer may submit; they may edit their own decision until the round closes " +
       "(version superseded / signed off). APPROVE drives draft→reviewed; a resubmitted CHANGES_REQUESTED " +
-      "reverts reviewed→draft. Requires content:review.",
-    authScopes: { hasPermission: "content:review" },
+      "reverts reviewed→draft. Requires plan_review:review.",
+    authScopes: { hasPermission: "plan_review:review" },
     args: {
       assignmentId: t.arg.string({ required: true }),
       verdict: t.arg.string({ required: true }),
@@ -170,8 +170,8 @@ builder.mutationField("submitPlanReview", (t) =>
 builder.mutationField("cancelPlanReview", (t) =>
   t.field({
     type: ReviewAssignmentRef,
-    description: "Cancel an open review round. Requires content:assign_review (Principal/Office).",
-    authScopes: { hasPermission: "content:assign_review" },
+    description: "Cancel an open review round. Requires plan_review:assign (Principal/Office).",
+    authScopes: { hasPermission: "plan_review:assign" },
     args: {
       assignmentId: t.arg.string({ required: true }),
     },
@@ -199,8 +199,8 @@ builder.queryField("myReviewAssignments", (t) =>
     type: [ReviewAssignmentRef],
     description:
       "The caller's review queue: assigned (awaiting verdict) + submitted (decided, still " +
-      "editable). Closed rounds drop off. Requires content:review.",
-    authScopes: { hasPermission: "content:review" },
+      "editable). Closed rounds drop off. Requires plan_review:review.",
+    authScopes: { hasPermission: "plan_review:review" },
     resolve: async (_root, _args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       return listMyReviewAssignments(ctx.auth.userId);
@@ -228,8 +228,8 @@ builder.mutationField("approvePlan", (t) =>
       "Principal sign-off: advance a plan to gold and close its review thread. A 'reviewed' " +
       "plan signs off directly; a non-'reviewed' plan (e.g. one a reviewer flagged " +
       "CHANGES_REQUESTED) may be approved by override — `overrideReason` is then REQUIRED " +
-      "and recorded. Requires content:promote_gold (Principal-locked).",
-    authScopes: { hasPermission: "content:promote_gold" },
+      "and recorded. Requires plan_review:approve (Principal-locked).",
+    authScopes: { hasPermission: "plan_review:approve" },
     args: {
       artifactId: t.arg.string({ required: true }),
       overrideReason: t.arg.string({ required: false }),
@@ -268,8 +268,8 @@ builder.mutationField("approvePlanBulk", (t) =>
     description:
       "Principal sign-off of MANY reviewer-approved plans in one call (each → gold, its thread " +
       "closed, audited — exactly as approvePlan). No override path: a plan that is not 'reviewed' " +
-      "fails with a reason and stays for a one-at-a-time decision. Requires content:promote_gold.",
-    authScopes: { hasPermission: "content:promote_gold" },
+      "fails with a reason and stays for a one-at-a-time decision. Requires plan_review:approve.",
+    authScopes: { hasPermission: "plan_review:approve" },
     args: {
       artifactIds: t.arg.stringList({ required: true }),
     },
@@ -293,8 +293,8 @@ builder.queryField("planReviewInbox", (t) =>
     type: [ReviewAssignmentRef],
     description:
       "Submitted review rounds awaiting admin action (newest first); `feedback` is the text to " +
-      "carry to Claude Desktop. Requires content:assign_review (Principal/Office).",
-    authScopes: { hasPermission: "content:assign_review" },
+      "carry to Claude Desktop. Requires plan_review:assign (Principal/Office).",
+    authScopes: { hasPermission: "plan_review:assign" },
     resolve: async (_root, _args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       return planReviewInboxSvc();
@@ -311,7 +311,7 @@ builder.queryField("planReviewThread", (t) =>
     type: [ReviewAssignmentRef],
     description:
       "The full review-round history for a plan (by any of its artifact versions), oldest→newest. " +
-      "Principal/Office see any thread; a teacher sees only threads they reviewed.",
+      "plan_review:assign holders see any thread; anyone else only threads they reviewed.",
     authScopes: { authenticated: true },
     args: {
       artifactId: t.arg.string({ required: true }),
@@ -324,8 +324,9 @@ builder.queryField("planReviewThread", (t) =>
       } catch (err) {
         return mapReviewError(err);
       }
-      // Row-scope (R4): admins see all; a teacher only threads they participated in.
-      if (!isAdminStaff(ctx.auth)) {
+      // Row-scope (R4): plan_review:assign sees all (PM, D-#790; was isAdminStaff); anyone
+      // else only threads they participated in (SELF).
+      if (!callerHasPermission(ctx.auth, "plan_review:assign")) {
         const isParticipant = thread.some((r) => r.reviewerId === ctx.auth!.userId);
         if (!isParticipant) throw new ForbiddenError();
       }
@@ -356,8 +357,8 @@ builder.mutationField("assignPlanReviewBulk", (t) =>
     type: BulkAssignResultRef,
     description:
       "Assign MANY plans to ONE reviewer in a single call. Each plan supersedes its own open round; " +
-      "per-plan failures are collected, not fatal. Requires content:assign_review (Principal/Office).",
-    authScopes: { hasPermission: "content:assign_review" },
+      "per-plan failures are collected, not fatal. Requires plan_review:assign (Principal/Office).",
+    authScopes: { hasPermission: "plan_review:assign" },
     args: {
       artifactIds: t.arg.stringList({ required: true }),
       reviewerId: t.arg.string({ required: true }),
@@ -390,8 +391,8 @@ builder.queryField("reviewerAssignmentLoad", (t) =>
     type: [ReviewerLoadRef],
     description:
       "Per-reviewer open review-round counts (assigned + submitted), busiest first. " +
-      "Requires content:assign_review (Principal/Office).",
-    authScopes: { hasPermission: "content:assign_review" },
+      "Requires plan_review:assign (Principal/Office).",
+    authScopes: { hasPermission: "plan_review:assign" },
     resolve: async (_root, _args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       return reviewerLoadSvc();
@@ -427,8 +428,8 @@ builder.queryField("assignablePlans", (t) =>
     type: [AssignablePlanRef],
     description:
       "Current plans (chapter_plan/session_plan) with their open-round assignment state, for the " +
-      "bulk-assign picker. Requires content:assign_review (Principal/Office).",
-    authScopes: { hasPermission: "content:assign_review" },
+      "bulk-assign picker. Requires plan_review:assign (Principal/Office).",
+    authScopes: { hasPermission: "plan_review:assign" },
     resolve: async (_root, _args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       return assignablePlansSvc();
@@ -451,8 +452,8 @@ builder.queryField("assignablePlansPage", (t) =>
     type: AssignablePlansPageRef,
     description:
       "One page of the plan-review board — current plans filtered server-side (subject, class, type, " +
-      "board state unassigned|awaiting|reviewed|signed, reviewer). Requires content:assign_review.",
-    authScopes: { hasPermission: "content:assign_review" },
+      "board state unassigned|awaiting|reviewed|signed, reviewer). Requires plan_review:assign.",
+    authScopes: { hasPermission: "plan_review:assign" },
     args: {
       subject: t.arg.string({ required: false }),
       classLevel: t.arg.int({ required: false }),
@@ -505,8 +506,8 @@ builder.mutationField("movePlanReviews", (t) =>
     type: PlanReviewMoveResultRef,
     description:
       "Hand open plan-review rounds to another reviewer, in place. Only rounds with no verdict yet move; " +
-      "a reviewed round is skipped (send it for a new round instead). Requires content:assign_review.",
-    authScopes: { hasPermission: "content:assign_review" },
+      "a reviewed round is skipped (send it for a new round instead). Requires plan_review:assign.",
+    authScopes: { hasPermission: "plan_review:assign" },
     args: {
       assignmentIds: t.arg.stringList({ required: true }),
       toReviewerId: t.arg.string({ required: true }),
@@ -542,8 +543,8 @@ PlanReviewCancelResultRef.implement({
 builder.mutationField("cancelPlanReviews", (t) =>
   t.field({
     type: PlanReviewCancelResultRef,
-    description: "Unassign several open plan-review rounds at once. Requires content:assign_review.",
-    authScopes: { hasPermission: "content:assign_review" },
+    description: "Unassign several open plan-review rounds at once. Requires plan_review:assign.",
+    authScopes: { hasPermission: "plan_review:assign" },
     args: { assignmentIds: t.arg.stringList({ required: true }) },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");

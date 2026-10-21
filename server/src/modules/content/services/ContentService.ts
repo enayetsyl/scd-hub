@@ -19,7 +19,7 @@ import * as os from "os";
 import * as path from "path";
 import * as fs from "fs/promises";
 import type { Types } from "mongoose";
-import { BATCH_DOC_TYPE, BATCH_MAX_ITEMS } from "@scd/shared";
+import { BATCH_DOC_TYPE, BATCH_MAX_ITEMS, PLAN_DOC_TYPES } from "@scd/shared";
 import { ContentArtifact } from "../models/ContentArtifact";
 import { ImportBatch } from "../../platform/models/ImportBatch";
 import { CorpusEvent } from "../../corpus/models/CorpusEvent";
@@ -796,6 +796,31 @@ function classify(f: ImportFile): ClassifiedFile {
     }
   }
   return { ...f, stem, ext, json };
+}
+
+/** Which feature an import belongs to (PM, D-#790; PRD §5.7): `plan` → `lesson_plans:import`,
+ *  `question` → `question_bank:import`. `null` = unrecognised — the gate rejects it anyway. */
+export type ImportKind = "plan" | "question";
+
+const QUESTION_SIDE_DOC_TYPES: readonly string[] = ["question", "stimulus", "question_set", BATCH_DOC_TYPE];
+
+/** The kind of ONE envelope, by its `doc_type`. */
+export function envelopeImportKind(envelope: Record<string, unknown> | null): ImportKind | null {
+  const dt = typeof envelope?.doc_type === "string" ? envelope.doc_type : "";
+  if ((PLAN_DOC_TYPES as readonly string[]).includes(dt)) return "plan";
+  if (QUESTION_SIDE_DOC_TYPES.includes(dt)) return "question";
+  return null;
+}
+
+/** The kind of an `importContentFiles` upload — the same precedence `importContentFiles` uses
+ *  (built envelope → question bank → plan pair), so the gate checks what will be imported. */
+export function importFilesKind(files: ImportFile[]): ImportKind | null {
+  const items = (files ?? []).map(classify);
+  const envelopeFile = items.find((c) => c.ext === "json" && c.json && "envelope_version" in c.json);
+  if (envelopeFile) return envelopeImportKind(envelopeFile.json);
+  if (items.some((c) => c.ext === "json" && isQuestionBank(c.json))) return "question";
+  if (items.some((c) => c.ext === "json" && c.json && c.json.plan_type)) return "plan";
+  return null;
 }
 
 /**
