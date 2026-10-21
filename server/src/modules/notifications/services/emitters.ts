@@ -28,6 +28,7 @@ import { RoutineSlot } from "../../routine/models/RoutineSlot";
 import { SubjectGroupMembership } from "../../routine/models/SubjectGroupMembership";
 import { dateKeyOf } from "../../attendance/dates";
 import { actingAsFilter } from "../../foundation/services/RoleScope";
+import { holderIdsOf } from "../../access-control/services/holders";
 import { bnNum } from "../../../lib/bnNum";
 import { personName } from "../../../lib/personName";
 
@@ -1311,15 +1312,14 @@ export interface PrintRequestedEvent {
 }
 
 /**
- * Tell every queue OPERATOR (active Principal/Office user) a new print request
- * was filed (D-#296) — the row rides every channel: the bell, native push, and
- * browser web-push. Best-effort; deduped per (job, operator).
+ * Tell every queue OPERATOR (an active printing:process holder — Principal/Office by
+ * default; PM §5.5, was "acting as Principal/Office") a new print request was filed
+ * (D-#296) — the row rides every channel: the bell, native push, and browser web-push.
+ * Best-effort; deduped per (job, operator).
  */
 export async function emitPrintRequested(event: PrintRequestedEvent): Promise<void> {
   return bestEffort("print requested", async () => {
-    const operators = (await User.find(actingAsFilter(["PRINCIPAL", "OFFICE"]))
-      .select("_id")
-      .lean()) as unknown as Array<{ _id: IdLike }>;
+    const operators = (await holderIdsOf("printing:process")).map((id) => ({ _id: id }));
     const titleBn = await renderTemplate("print.requested.title");
     const bodyBn = await renderTemplate("print.requested.body", {
       title: event.title,
@@ -1434,13 +1434,12 @@ export interface StaffLeaveSubmittedEvent {
   bodyBn: string;
 }
 
-/** Tell every approver (active Principal/Office) that a teacher submitted a leave
- *  application awaiting their approval. Best-effort. */
+/** Tell every approver (an active leave:approve holder — Principal/Office by default;
+ *  PM §5.5) that a teacher submitted a leave application awaiting their approval.
+ *  Best-effort. */
 export async function emitStaffLeaveSubmitted(event: StaffLeaveSubmittedEvent): Promise<void> {
   return bestEffort("staff leave submitted → office", async () => {
-    const operators = (await User.find(actingAsFilter(["PRINCIPAL", "OFFICE"]))
-      .select("_id")
-      .lean()) as unknown as Array<{ _id: IdLike }>;
+    const operators = (await holderIdsOf("leave:approve")).map((id) => ({ _id: id }));
     for (const op of operators) {
       await emit({
         recipientUserId: op._id.toString(),
