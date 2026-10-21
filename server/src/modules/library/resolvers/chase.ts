@@ -33,9 +33,9 @@ builder.queryField("libraryChaseList", (t) =>
     description:
       "Overdue ACTIVE loans grouped by borrower type with wa.me reminder links (LB-5, J-L8). " +
       "Librarian gate.",
-    authScopes: { hasPermission: "library:read" },
+    authScopes: { hasPermission: "library:remind" },
     resolve: async (_root, _args, ctx) => {
-      await assertIsLibrarian(ctx);
+      await assertIsLibrarian(ctx, "library:remind");
       return libraryChaseList();
     },
   }),
