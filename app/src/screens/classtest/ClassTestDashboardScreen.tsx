@@ -114,8 +114,9 @@ function Kpi({
 export default function ClassTestDashboardScreen(): React.ReactElement {
   const sectionName = useSectionNames();
   const nav = useNavigation<Nav>();
-  // The archive desk permission — the same one fileScriptBundle lets file any test.
-  const canFile = useAuth().can("roster:manage");
+  // The archive desk path — any-test filing with auto-ack (PM: archive:approve, the
+  // lever fileScriptBundle reads for "file any test").
+  const canFile = useAuth().can("archive:approve");
   // D-#339: tap a tile → filter the per-test drill-down below (logged = all).
   const [stateFilter, setStateFilter] = useState<StateFilter>(null);
   // Owner ask 2026-07-28: the PUBLISH axis, independent of the entry state above — the

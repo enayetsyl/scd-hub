@@ -211,7 +211,7 @@ export default function AdminTodayScreen(): React.ReactElement {
 
         {/* CS-1..CS-3 (D-#715–#719) — ক্লাস টেস্টের খাতা: receive, scan & tag, publish,
             hand back. Everyone here holds roster:manage (Principal + Office). */}
-        {can("roster:manage") ? <CtScriptOfficeCard /> : null}
+        {can("class_test_script:scan") ? <CtScriptOfficeCard /> : null}
 
         {/* SP-4 (D-#738) — improvement tasks of today not yet ticked, with the list to mark
             on the teacher's behalf; and any task this person was given to do themselves. */}

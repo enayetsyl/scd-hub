@@ -38,7 +38,11 @@ export default function ClassTestPublishScreen({ route }: Props): React.ReactEle
   const { testId, title } = route.params;
   // CT-8 role split: teacher submits; Office/Principal (roster:manage) approve + send WhatsApp.
   const { role, can, user } = useAuth();
-  const isAdmin = can("roster:manage");
+  // PM: approve / send back / WhatsApp = class_test:publish; withdraw = class_test:revoke;
+  // the teacher's submit / recall = class_test:enter_results (the same actions the server checks).
+  const isAdmin = can("class_test:publish");
+  const canRevoke = can("class_test:revoke");
+  const canEnter = can("class_test:enter_results");
 
   const [testQ] = useQuery({ query: CLASS_TEST_QUERY, variables: { id: testId } });
   const test = testQ.data?.classTest ?? null;
@@ -48,7 +52,7 @@ export default function ClassTestPublishScreen({ route }: Props): React.ReactEle
   // report 2026-09-28: Tazkir, Class 5 English Test 5, "I don't have submit option").
   // The test's own teacher always gets the teacher leg; the office leg sits beside it.
   const ownsTest = !!test && !!user && (test.teacherId === user.id || test.requestedBy === user.id);
-  const showTeacherLeg = !isAdmin || ownsTest;
+  const showTeacherLeg = canEnter && (!isAdmin || ownsTest);
   // The EXAM's roster, not the section's current students: a pre-split test on the
   // emptied সম্মিলিত (and a group exam) has none, so every row showed a raw id.
   const [studentsQ] = useQuery({ query: CLASS_TEST_ROSTER_QUERY, variables: { testId }, pause: !test });
@@ -159,7 +163,9 @@ export default function ClassTestPublishScreen({ route }: Props): React.ReactEle
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: space(2) }}>
               <Button title={STR.ctApproveRelease} onPress={onApprove} loading={busy} disabled={busy || blockEmpty} />
               <Button title={STR.ctSendBack} variant="secondary" onPress={() => setSendBackOpen((v) => !v)} disabled={busy} />
-              <Button title={STR.ctUnpublishAll} variant="ghost" onPress={() => void run(() => unpublishExam({ testId }), STR.ctUnpublishedBadge)} disabled={busy} />
+              {canRevoke ? (
+                <Button title={STR.ctUnpublishAll} variant="ghost" onPress={() => void run(() => unpublishExam({ testId }), STR.ctUnpublishedBadge)} disabled={busy} />
+              ) : null}
             </View>
           ) : null}
 
@@ -236,7 +242,7 @@ export default function ClassTestPublishScreen({ route }: Props): React.ReactEle
                   />
                 </View>
                 {/* Admin can retract a single released student (per-student override). */}
-                {isAdmin && published ? (
+                {canRevoke && published ? (
                   <View style={{ marginTop: space(2) }}>
                     <Button
                       title={STR.ctUnpublish}

@@ -133,8 +133,19 @@ export default function TodayScreen(): React.ReactElement {
   const canAttendance =
     !!role &&
     (can("attendance:mark") || can("attendance:manage"));
+  // PM (trackers-classtest.md §f): any class-test, paper, script or print-queue action.
   const canClassTest =
-    !!role && (can("tracker:read") || can("roster:manage"));
+    !!role &&
+    [
+      "class_test:view",
+      "class_test:view_all",
+      "class_test:create",
+      "class_test:register",
+      "class_test_question:create",
+      "class_test_question:prepare",
+      "class_test_script:view",
+      "printing:view_all",
+    ].some((p) => can(p));
   const canClassNotes = can("routine:read");
   const canQuestions = can("question:read");
   const canSets = can("set:read");
@@ -168,7 +179,7 @@ export default function TodayScreen(): React.ReactElement {
   // D-#340: MY class tests already held but with incomplete result entry — each
   // renders as a pending alert that deep-links into its entry grid. Self-scoped
   // read (teacherId = me), so no section context is needed.
-  const canFileTests = can("tracker:write");
+  const canFileTests = can("class_test:enter_results");
   const [ctPendingQ, refetchCtPending] = useQuery({
     query: CLASS_TEST_REPORTS_STATUS_QUERY,
     variables: { teacherId: user?.id ?? null },
@@ -541,10 +552,10 @@ export default function TodayScreen(): React.ReactElement {
           and later return them to the students. OUTSIDE the QueryGate for the same
           reason as the live board: the paper is owed even on a day with no periods
           (found driving the app — the gate's empty state swallowed the card). */}
-      {can("tracker:write") ? <CtScriptTeacherCard /> : null}
+      {can("class_test_script:return") ? <CtScriptTeacherCard /> : null}
       {/* The Office's queue, for a TEACHER login carrying the OFFICE template — AppTabs
           routes by primary role, so Tazkir/Akter Hossen land here, not on AdminToday. */}
-      {can("roster:manage") ? <CtScriptOfficeCard /> : null}
+      {can("class_test_script:scan") ? <CtScriptOfficeCard /> : null}
 
       {/* SP-2/SP-3 (D-#735/#736) — improvement actions: the teacher's own and covered tasks;
           and for an OFFICE-template teacher login, today's not-ticked list. OUTSIDE the

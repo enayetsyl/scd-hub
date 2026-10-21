@@ -40,7 +40,13 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
   // Admin viewer (Principal/Office — the house roster:manage check): sees the
   // teacher's comment texts read-only per student (owner ask 2026-07-21).
   const { role, user, can } = useAuth();
-  const isAdmin = can("roster:manage");
+  // PM: each admin panel checks its own action — approve label = class_test:publish,
+  // retire/restore = class_test:delete, the comment read-out = class_test:view_all,
+  // the scan desk = class_test_script:scan (Office/Principal by default, as before).
+  const isAdmin = can("class_test:view_all");
+  const canPublish = can("class_test:publish");
+  const canRetire = can("class_test:delete");
+  const canScan = can("class_test_script:scan");
 
   const [testQ, refetchTest] = useQuery({ query: CLASS_TEST_QUERY, variables: { id: testId } });
   const test = testQ.data?.classTest ?? null;
@@ -67,7 +73,7 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
   // accountable subject teacher or whoever filed it (the same "mine" listMyClassTests
   // uses). The server enforces this too; this only decides whether the button shows.
   const ownsTest = !!user && !!test && (test.teacherId === user.id || test.requestedBy === user.id);
-  const canEditDetails = isAdmin || ownsTest;
+  const canEditDetails = can("class_test:edit_all") || (can("class_test:edit") && ownsTest);
 
   const [, enter] = useMutation(ENTER_CLASS_TEST_RESULT);
   const [, retire] = useMutation(RETIRE_CLASS_TEST);
@@ -227,7 +233,7 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
               {STR.ctRetiredReasonLabel}: {test.cancelReason ?? test.notes}
             </Muted>
           ) : null}
-          {isAdmin ? (
+          {canRetire ? (
             <View style={{ marginTop: space(3) }}>
               <Button
                 title={STR.ctRestoreExam}
@@ -282,7 +288,7 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
               // the label stops asking for a submit that has already happened. The
               // test's own teacher reads the teacher label even with an OFFICE template —
               // their first job on the next screen is the submit.
-              title={isAdmin && !ownsTest ? STR.ctPublishTitle : allSubmitted ? STR.ctSubmittedForApproval : STR.ctSubmitShort}
+              title={canPublish && !ownsTest ? STR.ctPublishTitle : allSubmitted ? STR.ctSubmittedForApproval : STR.ctSubmitShort}
               variant="secondary"
               onPress={() => nav.navigate("ClassTestPublish", { testId, title })}
             />
@@ -344,7 +350,7 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
           {/* Retire (Principal/Office). The domain's own "delete": the exam leaves every
               board and the Overdue counts, the record survives, and it can be restored.
               Refused server-side once any mark exists. */}
-          {isAdmin ? (
+          {canRetire ? (
             <View style={{ marginTop: space(3) }}>
               {retireOpen ? (
                 <>
@@ -375,10 +381,10 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
           // it does on a test — receiving and scanning the scripts (CS-1/CS-2).
           <Card>
             <Notice
-              message={can("tracker:read") ? friendlyError(studentsQ.error) : STR.ctResultsTeacherOnly}
+              message={can("class_test:view") ? friendlyError(studentsQ.error) : STR.ctResultsTeacherOnly}
               tone="info"
             />
-            {isAdmin ? (
+            {canScan ? (
               <Button
                 title={`${STR.csUploadTitle} ›`}
                 variant="secondary"
