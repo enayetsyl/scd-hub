@@ -23,8 +23,7 @@ import { callerHasPermission } from "@scd/shared";
 export async function mayRenderArtifact(ctx: AppContext, artifactId: string): Promise<boolean> {
   if (!ctx.auth) return false;
   if (callerHasPermission(ctx.auth, "content:read")) return true;
-  // PM: the print operator is a printing:view_all holder (was roster:manage).
-  if (!callerHasPermission(ctx.auth, "printing:view_all")) return false;
+  if (!callerHasPermission(ctx.auth, "roster:manage")) return false;
   // Print operator: ONLY artifacts actually queued for printing. Cancelling the job
   // withdraws the access again.
   const queued = await PrintRequest.exists({

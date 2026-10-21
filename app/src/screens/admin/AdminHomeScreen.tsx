@@ -18,7 +18,7 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
   const canManageUsers = can("user:manage");
   const canRoster = can("roster:manage");
   const canRoutine = can("routine:manage");
-  const canStaff = can("staff_records:view");
+  const canStaff = can("staff:manage");
   const canGuardianCreds = can("guardian:link");
   const canTemplates = can("template:manage");
   // access:manage is RESERVED-locked + Principal-only — roleHasPermission is exact here.
