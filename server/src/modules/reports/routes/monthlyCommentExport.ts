@@ -23,7 +23,7 @@
 import type { Router, Request, Response } from "express";
 import { Router as createRouter } from "express";
 import JSZip from "jszip";
-import { callerHasPermission, type Role } from "@scd/shared";
+import { callerHasPermission } from "@scd/shared";
 import { buildContext } from "../../../context";
 import { Section } from "../../foundation/models/Section";
 import { Class } from "../../foundation/models/Class";
@@ -99,8 +99,8 @@ monthlyCommentExportRouter.get("/", async (req: Request, res: Response) => {
     res.status(401).json({ error: "Unauthenticated" });
     return;
   }
-  const role = ctx.auth.role as Role;
-  if (!callerHasPermission(ctx.auth, "report:release") || (role !== "PRINCIPAL" && role !== "OFFICE")) {
+  // PM: monthly_report:export (was report:release ∧ primary role PRINCIPAL/OFFICE, F-22).
+  if (ctx.auth.role === "GUARDIAN" || !callerHasPermission(ctx.auth, "monthly_report:export")) {
     res.status(403).json({ error: "মাসিক রিপোর্ট প্রকাশ অফিস/অধ্যক্ষের কাজ" });
     return;
   }
