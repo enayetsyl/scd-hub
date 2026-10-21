@@ -55,6 +55,7 @@ import { emit } from "../../notifications/services/NotificationService";
 import { User } from "../../foundation/models/User";
 import { SubjectGroup } from "../../routine/models/SubjectGroup";
 import { actingAsFilter } from "../../foundation/services/RoleScope";
+import { holderIdsOf } from "../../access-control/services/holders";
 
 export class ClassroomObservationError extends Error {}
 
@@ -666,7 +667,7 @@ async function emitObservationAssigned(doc: IClassroomObservation): Promise<void
  *  inbox row per manager; never blocks the review. */
 async function emitReadyToPublish(doc: IClassroomObservation): Promise<void> {
   try {
-    const managerIds = await managerRecipientIds();
+    const managerIds = await holderIdsOf("classroom_observation:publish");
     const obsId = doc._id.toString();
     await Promise.all(
       managerIds.map((userId) =>
@@ -690,7 +691,7 @@ async function emitReadyToPublish(doc: IClassroomObservation): Promise<void> {
  *  never blocks the rejection. */
 async function emitRejected(doc: IClassroomObservation, reason: string): Promise<void> {
   try {
-    const managerIds = await managerRecipientIds();
+    const managerIds = await holderIdsOf("classroom_observation:assign"); // who may restore it
     const obsId = doc._id.toString();
     await Promise.all(
       managerIds.map((userId) =>
@@ -710,13 +711,8 @@ async function emitRejected(doc: IClassroomObservation, reason: string): Promise
   }
 }
 
-/** Principal + Office — the observation:manage holders who may publish. */
-async function managerRecipientIds(): Promise<string[]> {
-  const users = (await User.find(actingAsFilter(["PRINCIPAL", "OFFICE"]))
-    .select("_id")
-    .lean()) as Array<{ _id: Types.ObjectId }>;
-  return users.map((u) => u._id.toString());
-}
+// Manager recipients (PM §5.5): every active holder of the action — publish for "ready to
+// publish", assign (cancel/restore) for an observer's rejection. Default = Principal + Office.
 
 // ---------------------------------------------------------------------------
 // publishObservation (CO-8, D-#271 — Principal/Office release to the teacher)

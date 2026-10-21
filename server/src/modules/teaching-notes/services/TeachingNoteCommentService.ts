@@ -185,7 +185,7 @@ export async function teachingNoteComments(
 export async function openTeachingNoteComments(
   ctx: AppContext,
 ): Promise<TeachingNoteCommentShape[]> {
-  if (!ctx.auth || !callerHasPermission(ctx.auth, "roster:manage")) {
+  if (!ctx.auth || !callerHasPermission(ctx.auth, "teaching_notes:review")) {
     throw new ForbiddenError("অনুমতি নেই");
   }
   const rows = (await TeachingNoteComment.find({
@@ -346,7 +346,7 @@ export async function addTeachingNoteComment(
 /** May the caller close this comment? The note's uploader, or P/O. */
 async function assertMayAddress(ctx: AppContext, c: ITeachingNoteComment): Promise<void> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  if (callerHasPermission(ctx.auth, "roster:manage")) return;
+  if (callerHasPermission(ctx.auth, "teaching_notes:review")) return;
   const current = (await TeachingNote.findOne({ ...identityFilter(c), replacedAt: null })
     .select("uploadedBy")
     .lean()) as unknown as { uploadedBy: Types.ObjectId } | null;
@@ -427,7 +427,7 @@ export async function deleteTeachingNoteComment(
   if (!c || c.deletedAt) throw new Error("মন্তব্যটি পাওয়া যায়নি");
 
   const isAuthor = c.authorId.toString() === ctx.auth.userId;
-  if (!isAuthor && !callerHasPermission(ctx.auth, "roster:manage")) {
+  if (!isAuthor && !callerHasPermission(ctx.auth, "teaching_notes:review")) {
     throw new ForbiddenError("মন্তব্যটি মুছে ফেলার অনুমতি নেই");
   }
   c.deletedAt = new Date();

@@ -956,8 +956,9 @@ filesRouter.post("/comment", parseCommentUpload, async (req: Request, res: Respo
     res.status(409).json({ error: "একটি ডেলিভার হওয়া মন্তব্যে ফাইল সংযুক্ত করা যাবে না" });
     return;
   }
-  const isAuthor = target.authorUserId === ctx.auth.userId;
-  const isReviewer = callerHasPermission(ctx.auth, "roster:manage"); // Principal/Office
+  // PM: own comment → student_comments:create + author; any → student_comments:review.
+  const isAuthor = target.authorUserId === ctx.auth.userId && callerHasPermission(ctx.auth, "student_comments:create");
+  const isReviewer = callerHasPermission(ctx.auth, "student_comments:review");
   if (!isAuthor && !isReviewer) {
     res.status(403).json({ error: COMMENT_FILE_ERRORS_BN.forbidden });
     return;

@@ -44,7 +44,7 @@ builder.mutationField("deliverStudentComment", (t) =>
       "+ deliveryChannels, returns a wa.me link for the family phone, and emits an in-app Notification for " +
       "login-enabled guardians. Per-comment. Delivery authority = Principal/Office only (`roster:manage`) — " +
       "the authoring teacher cannot deliver; comments are reviewed + released from the admin dashboard (D-#264). Audited.",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "student_comments:send" },
     args: { commentId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");

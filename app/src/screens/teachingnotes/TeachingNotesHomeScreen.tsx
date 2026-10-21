@@ -32,7 +32,7 @@ type Props = NativeStackScreenProps<TeachingNotesStackParamList, "TeachingNotesH
 
 export default function TeachingNotesHomeScreen({ navigation }: Props): React.ReactElement {
   const { can } = useAuth();
-  const canUpload = can("roster:manage");
+  const canUpload = can("teaching_notes:upload"); // PM: was roster:manage
 
   const [scopeQ, refetchScope] = useQuery({ query: TEACHING_NOTE_MY_SCOPE });
   const pairs = useMemo(

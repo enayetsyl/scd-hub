@@ -19,10 +19,14 @@ type Nav = NativeStackNavigationProp<ObservationStackParamList>;
 export default function ObservationHomeScreen(): React.ReactElement {
   const nav = useNavigation<Nav>();
   const { role, can } = useAuth();
-  const canUpload = can("observation:upload");
-  const canReview = can("observation:review");
-  const canRead = can("observation:read");
-  const canManage = can("observation:manage");
+  // PM: one catalogue action per button (classroom_observation:*).
+  const canUpload = can("classroom_observation:upload");
+  const canViewAll = can("classroom_observation:view_all");
+  const canReview = can("classroom_observation:review");
+  const canRead = can("classroom_observation:view");
+  const canSchedule = can("classroom_observation:schedule");
+  const canReports = can("classroom_observation:view_reports");
+  const canSettings = can("classroom_observation:settings");
 
   return (
     <Screen padded={false}>
@@ -31,7 +35,7 @@ export default function ObservationHomeScreen(): React.ReactElement {
           <Body style={{ fontWeight: "700" }}>{STR.obsHomeTitle}</Body>
           <View style={{ marginTop: space(2), gap: space(2) }}>
             {canUpload ? <Button title={STR.obsUploadNav} onPress={() => nav.navigate("UploadObservation")} /> : null}
-            {canUpload ? (
+            {canViewAll ? (
               <Button title={STR.obsAllObservationsNav} variant="secondary" onPress={() => nav.navigate("AllObservations")} />
             ) : null}
             {canRead ? (
@@ -48,17 +52,17 @@ export default function ObservationHomeScreen(): React.ReactElement {
             {canRead ? (
               <Button title={STR.obsTrendNav} variant="secondary" onPress={() => nav.navigate("ObservationTrend")} />
             ) : null}
-            {canManage ? (
+            {canSchedule ? (
               <Button title={STR.obsDueListNav} variant="secondary" onPress={() => nav.navigate("ObservationDueList")} />
             ) : null}
             {/* CO-14 (D-#426): the due list says WHO; this turns that into dated sessions. */}
-            {canManage ? (
+            {canSchedule ? (
               <Button title={STR.obsRotaTitle} variant="secondary" onPress={() => nav.navigate("ObservationRota")} />
             ) : null}
-            {canManage ? (
+            {canReports ? (
               <Button title={STR.obsReviewerEffNav} variant="secondary" onPress={() => nav.navigate("ReviewerEffectiveness")} />
             ) : null}
-            {canManage ? (
+            {canSettings ? (
               <Button title={STR.obsConfigNav} variant="ghost" onPress={() => nav.navigate("ObservationConfig")} />
             ) : null}
           </View>

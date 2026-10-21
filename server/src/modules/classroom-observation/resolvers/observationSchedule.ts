@@ -86,7 +86,7 @@ builder.queryField("observationDueList", (t) =>
     description:
       "The ranked 'due for review' suggestion list over teachers with real teaching sessions (CO-6, §CO-6). " +
       "Requires observation:manage (Principal/Office). Suggestion only — never assigns.",
-    authScopes: { hasPermission: "observation:manage" },
+    authScopes: { hasPermission: "classroom_observation:schedule" },
     resolve: async () => dueForReview(),
   }),
 );
@@ -97,7 +97,7 @@ builder.queryField("observationScheduleConfig", (t) =>
     description:
       "The review-scheduler cadence in force (CO-6, §CO-6) — the admin row or the working defaults. Requires " +
       "observation:manage (Principal/Office).",
-    authScopes: { hasPermission: "observation:manage" },
+    authScopes: { hasPermission: "classroom_observation:settings" },
     resolve: async () => getScheduleConfig(),
   }),
 );
@@ -112,7 +112,7 @@ builder.mutationField("setObservationScheduleConfig", (t) =>
     description:
       "Set the review-scheduler cadence: base interval (DEVELOPING) + STRONG/NEEDS_SUPPORT multipliers + the " +
       "frequency cap (CO-6, §CO-6). Requires observation:manage (Principal/Office). Audited.",
-    authScopes: { hasPermission: "observation:manage" },
+    authScopes: { hasPermission: "classroom_observation:settings" },
     args: {
       baseIntervalDays: t.arg.int({ required: true }),
       strongMultiplier: t.arg.float({ required: true }),

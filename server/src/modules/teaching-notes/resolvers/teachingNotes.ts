@@ -80,7 +80,7 @@ builder.queryField("teachingNotes", (t) =>
     description:
       "The teaching-note library — the latest note of every (class, subject, kind, seq) the " +
       "caller may see. Teachers get the pairs they teach; Principal/Office all; guardians denied.",
-    authScopes: { authenticated: true },
+    authScopes: { hasAnyPermission: ["teaching_notes:view", "teaching_notes:view_all"] },
     args: {
       classLevel: t.arg.int({ required: false }),
       subject: t.arg.string({ required: false }),
@@ -99,7 +99,7 @@ builder.queryField("teachingNote", (t) =>
   t.field({
     type: TeachingNoteRef,
     description: "One teaching note with its markdown. Scope-checked like the library.",
-    authScopes: { authenticated: true },
+    authScopes: { hasAnyPermission: ["teaching_notes:view", "teaching_notes:view_all"] },
     args: { id: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => teachingNoteById(ctx, args.id),
   }),
@@ -111,7 +111,7 @@ builder.queryField("teachingNoteVersions", (t) =>
     description:
       "Every retained version of one note's identity, newest first — superseded rows are never " +
       "deleted, so an older version stays readable beside the current one.",
-    authScopes: { authenticated: true },
+    authScopes: { hasAnyPermission: ["teaching_notes:view", "teaching_notes:view_all"] },
     args: { id: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => teachingNoteVersions(ctx, args.id),
   }),
@@ -123,7 +123,7 @@ builder.queryField("teachingNoteMyScope", (t) =>
     description:
       "The (class, subject) pairs the caller may read — the drawer gate and the picker. " +
       "Empty hides the tab; guardians always get [].",
-    authScopes: { authenticated: true },
+    authScopes: { hasAnyPermission: ["teaching_notes:view", "teaching_notes:view_all"] },
     resolve: async (_root, _args, ctx) => myTeachingNoteScope(ctx),
   }),
 );
@@ -143,7 +143,7 @@ builder.mutationField("sendTeachingNoteToPrint", (t) =>
     description:
       "File a teaching note into the office print queue. Same read gate as the doc screen — a " +
       "teacher can only print what they can read. Reuses createPrintRequest untouched.",
-    authScopes: { authenticated: true },
+    authScopes: { hasPermission: "teaching_notes:send" },
     args: {
       id: t.arg.string({ required: true }),
       colour: t.arg.string({ required: true }),
@@ -172,7 +172,7 @@ builder.mutationField("uploadTeachingNote", (t) =>
     description:
       "Upload one teaching note; an existing (class, subject, kind, seq) is replaced (old row " +
       "stamped replacedAt, retained). Version is server-assigned. Requires roster:manage. Audited.",
-    authScopes: { hasPermission: "roster:manage" },
+    authScopes: { hasPermission: "teaching_notes:upload" },
     args: {
       classLevel: t.arg.int({ required: true }),
       subject: t.arg.string({ required: true }),

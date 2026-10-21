@@ -50,7 +50,7 @@ import { ForbiddenError, resolveTeacherScopes } from "../../../middleware/authz"
 import { Subject } from "../../foundation/models/Subject";
 import { Class } from "../../foundation/models/Class";
 import { User } from "../../foundation/models/User";
-import { isAdminStaff } from "../../foundation/services/RoleScope";
+import { callerHasPermission } from "@scd/shared";
 import { writeAudit } from "../../platform/services/AuditService";
 import { StoredFile } from "../../platform/models/StoredFile";
 import { uploadToDrive, DriveUnavailableError } from "../../platform/services/DriveStore";
@@ -116,8 +116,10 @@ export {
  */
 export async function teachingNoteVisibility(ctx: AppContext): Promise<Set<string> | null> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  if (isAdminStaff(ctx.auth)) return null;
-  if (ctx.auth.role !== "TEACHER") {
+  // PM: teaching_notes:view_all = every pair (was isAdminStaff); teaching_notes:view =
+  // the taught-pair scope below (was "primary role TEACHER").
+  if (ctx.auth.role !== "GUARDIAN" && callerHasPermission(ctx.auth, "teaching_notes:view_all")) return null;
+  if (ctx.auth.role === "GUARDIAN" || !callerHasPermission(ctx.auth, "teaching_notes:view")) {
     throw new ForbiddenError("শিক্ষক নোট দেখার অনুমতি নেই");
   }
 
