@@ -210,6 +210,23 @@ export function notificationTarget(
     case "MEETING_NOTE_REMINDER":
     case "MEETING_SUMMARY_REMINDER":
       return { tab: "HomeTab", screen: "Today" };
+    // Mastery (M-6, D-#812). Staff land on the action; without an id, on the school's list.
+    case "MASTERY_PROPOSAL":
+      return refs?.masteryActionId
+        ? { tab: "MasteryTab", screen: "MasteryAction", params: { actionId: refs.masteryActionId } }
+        : { tab: "MasteryTab", screen: "MasteryLeader" };
+    case "MASTERY_EXTRA_CLASS":
+      // A guardian's notice has no action id (they never see the action): their child's progress.
+      return guardian
+        ? { tab: "GuardianHomeTab", screen: "ChildMastery" }
+        : refs?.masteryActionId
+          ? { tab: "MasteryTab", screen: "MasteryAction", params: { actionId: refs.masteryActionId } }
+          : { tab: "MasteryTab", screen: "MasteryWork" };
+    case "MASTERY_ASSIGNMENT_SENT":
+      // Guardian-only: the week's assignment sits on the Assignments tab (M-4b).
+      return guardian
+        ? { tab: "GuardianAssignmentsTab", screen: "ChildAssignments" }
+        : { tab: "MasteryTab", screen: "MasteryWork" };
     case "VOCAB_RESULT":
       return guardian
         ? { tab: "GuardianHomeTab", screen: "GuardianHome" }
