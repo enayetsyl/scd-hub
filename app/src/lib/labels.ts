@@ -422,6 +422,29 @@ export const masteryQualityLabel = (s: string): string => {
   const l = MASTERY_QUALITY_LABELS[s];
   return l ? pick(l[0], l[1]) : s;
 };
+// --- Mastery M-4: sheet sources and why a question was picked ---
+const MASTERY_SOURCE_LABELS: Record<string, [string, string]> = {
+  HW: ["বাড়ির কাজ", "Homework"],
+  CT: ["শ্রেণি পরীক্ষা", "Class test"],
+  RUBRIC: ["রুব্রিক", "Rubric"],
+  AS: ["সাপ্তাহিক অ্যাসাইনমেন্ট", "Weekly assignment"],
+};
+export const masterySourceLabel = (s: string): string => {
+  const l = MASTERY_SOURCE_LABELS[s];
+  return l ? pick(l[0], l[1]) : s;
+};
+const MASTERY_BAND_LABELS: Record<string, [string, string]> = {
+  WEAK: ["দুর্বল", "Weak"],
+  IMPROVING: ["উন্নতি হচ্ছে", "Improving"],
+  REVISION: ["রিভিশন", "Revision"],
+  INSUFFICIENT: ["তথ্য কম — যাচাই", "Gathering evidence"],
+  SECTION: ["পুরো শাখা", "Whole section"],
+  TEACHER: ["শিক্ষকের প্রশ্ন", "Teacher's question"],
+};
+export const masteryBandLabel = (b: string): string => {
+  const l = MASTERY_BAND_LABELS[b];
+  return l ? pick(l[0], l[1]) : b;
+};
 export const masteryTagEffectLabel = (effect: string): string =>
   pick(
     { WEAK: "দুর্বলতার সংকেত", LIGHT: "হালকা সংকেত", NO_EVIDENCE: "প্রমাণ নেই", VOID_BEHAVIOUR: "প্রমাণ বাতিল · আচরণ নোট", ROUTE_STRAND: "দক্ষতা-ধারায় যায়" } as Record<string, string>,
@@ -6577,6 +6600,48 @@ const STR_BN = {
   msExcludeConfirm: "বাদ দিন",
   msExcludedBy: "বাদ দিয়েছেন {by} · কারণ: {reason}",
   msRevoke: "ফিরিয়ে আনুন",
+  msAssignment: "সাপ্তাহিক অ্যাসাইনমেন্ট",
+  msAsSheet: "শিক্ষার্থীর অংশ খ",
+  msAsDueDate: "জমার তারিখ (YYYY-MM-DD)",
+  msAsLayout: "লেআউট · আপনি ঠিক করুন",
+  msAsTotal: "মোট নম্বর",
+  msAsMinutes: "সময় (মিনিট)",
+  msAsPartA: "অংশ ক · সবার জন্য",
+  msAsPartAMarks: "অংশ ক-এর নম্বর",
+  msAsPartB: "অংশ খ · প্রত্যেকের আলাদা",
+  msAsPartBMarks: "অংশ খ-এর নম্বর",
+  msAsMixWeak: "দুর্বল %",
+  msAsMixImproving: "উন্নতি %",
+  msAsMixRevision: "রিভিশন %",
+  msAsAllTypes: "সব ধরন",
+  msAsRemember: "পরের সপ্তাহেও এই লেআউট",
+  msAsTrackerLink: "ট্র্যাকারের অ্যাসাইনমেন্ট (অনুপস্থিত / জমা দেয়নি জানতে)",
+  msAsNoLink: "যুক্ত নয়",
+  msAsBuild: "বাছাই করুন",
+  msAsRebuild: "লেআউট বদলে আবার বাছাই",
+  msAsReady: "প্রস্তুত {n}",
+  msAsNeedsReview: "দেখা দরকার {n}",
+  msAsApproved: "অনুমোদিত {n}",
+  msAsApproveAll: "পরিষ্কার শিটগুলো অনুমোদন",
+  msAsSend: "সব অনুমোদিত · পাঠান",
+  msAsAllPdf: "সবার PDF",
+  msAsPdf: "PDF দেখুন",
+  msAsSent: "পাঠানো হয়েছে · {paper}",
+  msAsEnterMarks: "নম্বর তুলুন",
+  msAsSentNote: "এখন থেকে শিট বদলানো যায় না; নম্বর তোলা হয় সাধারণ কাজের মতো, প্রত্যেকের নিজের প্রশ্নে।",
+  msAsNoUnseen: "{lo}: এই শিক্ষার্থীর জন্য নতুন গোল্ড প্রশ্ন নেই — নিজে লিখুন বা এ সপ্তাহ বাদ দিন",
+  msAsNothing: "অনুশীলনের মতো কিছু নেই — সব আয়ত্তে বা যাচাই হয়নি",
+  msAsSwap: "বদলান",
+  msAsRemove: "সরান",
+  msAsAddOwn: "নিজের প্রশ্ন যোগ করুন",
+  msAsOutcome: "শিখনফল",
+  msAsType: "প্রশ্নের ধরন",
+  msAsText: "প্রশ্ন",
+  msAsAdd: "যোগ করুন",
+  msAsApprove: "অনুমোদন",
+  msAsMarksOf: "{have} / {target} নম্বর",
+  msAsWhy: "কেন: {why}",
+  msAsDraft: "খসড়া",
 } as const;
 
 type StrTable = Record<keyof typeof STR_BN, string>;
@@ -11886,6 +11951,48 @@ const STR_EN: StrTable = {
   msExcludeConfirm: "Exclude",
   msExcludedBy: "Excluded by {by} · reason: {reason}",
   msRevoke: "Bring back",
+  msAssignment: "Weekly assignment",
+  msAsSheet: "Student's Part B",
+  msAsDueDate: "Due date (YYYY-MM-DD)",
+  msAsLayout: "Layout · your choice",
+  msAsTotal: "Total marks",
+  msAsMinutes: "Time (minutes)",
+  msAsPartA: "Part A · everyone",
+  msAsPartAMarks: "Part A marks",
+  msAsPartB: "Part B · each their own",
+  msAsPartBMarks: "Part B marks",
+  msAsMixWeak: "Weak %",
+  msAsMixImproving: "Improving %",
+  msAsMixRevision: "Revision %",
+  msAsAllTypes: "All types",
+  msAsRemember: "Use this layout next week too",
+  msAsTrackerLink: "Tracker assignment (to know who was absent / did not submit)",
+  msAsNoLink: "Not linked",
+  msAsBuild: "Pick questions",
+  msAsRebuild: "Re-pick with this layout",
+  msAsReady: "Ready {n}",
+  msAsNeedsReview: "To look at {n}",
+  msAsApproved: "Approved {n}",
+  msAsApproveAll: "Approve the clean sheets",
+  msAsSend: "All approved · send",
+  msAsAllPdf: "Everyone's PDF",
+  msAsPdf: "View PDF",
+  msAsSent: "Sent · {paper}",
+  msAsEnterMarks: "Enter marks",
+  msAsSentNote: "Sheets can no longer change; marks are entered like any sheet, each on their own questions.",
+  msAsNoUnseen: "{lo}: no unseen gold question for this student — write one or skip it this week",
+  msAsNothing: "Nothing to practise — all mastered or not yet assessed",
+  msAsSwap: "Swap",
+  msAsRemove: "Remove",
+  msAsAddOwn: "Add your own question",
+  msAsOutcome: "Outcome",
+  msAsType: "Question type",
+  msAsText: "Question",
+  msAsAdd: "Add",
+  msAsApprove: "Approve",
+  msAsMarksOf: "{have} / {target} marks",
+  msAsWhy: "Why: {why}",
+  msAsDraft: "Draft",
 };
 
 /** UI chrome strings — resolves to the active language at read time (Proxy). Use

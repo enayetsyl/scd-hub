@@ -10,7 +10,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
 import { MASTERY_OUTCOME_TRAIL_QUERY, type MasteryTrailData } from "../../graphql/mastery";
 import { Screen, Card, Body, Muted, Badge, Loader, Notice, H2 } from "../../components/ui";
-import { STR, bnNum, masteryReasonLabel, masteryStateLabel } from "../../lib/labels";
+import { STR, bnNum, masteryReasonLabel, masteryStateLabel, masterySourceLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space, useColors } from "../../theme";
 import type { MasteryStackParamList } from "../../navigation/types";
@@ -18,7 +18,7 @@ import { fill, stateTone } from "./masteryStateUi";
 
 type Props = NativeStackScreenProps<MasteryStackParamList, "MasteryOutcomeTrail">;
 
-const sourceLabel = (s: string) => (s === "HW" ? STR.msSourceHW : s === "CT" ? STR.msSourceCT : STR.msSourceRubric);
+const sourceLabel = masterySourceLabel;
 const day = (iso: string | null) => (iso ? bnNum(iso.slice(0, 10)) : "");
 
 export default function MasteryOutcomeTrailScreen({ route }: Props): React.ReactElement {

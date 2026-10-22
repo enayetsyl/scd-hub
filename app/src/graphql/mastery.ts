@@ -330,6 +330,7 @@ export const MASTERY_PAPER_QUERY = gql`
         name
         rollNumber
         defaultStatus
+        itemNos
         result {
           status
           workRework
@@ -468,6 +469,8 @@ export type MasteryRosterEntry = {
   name: string;
   rollNumber: string | null;
   defaultStatus: string;
+  /** AS sheets (M-4): the items this student was given; null ⇒ every item. */
+  itemNos: number[] | null;
   result: MasteryResultRow | null;
 };
 
@@ -764,4 +767,241 @@ export type MasteryPaperQualityData = {
     signals: string[];
     exclusion: MasteryExclusionRow | null;
   }[];
+};
+
+// ---------------------------------------------------------------------------
+// M-4 — the weekly tailored assignment (docs/prd-mastery.md §5.4 / §6.1)
+// ---------------------------------------------------------------------------
+
+const LAYOUT_FIELDS = `
+  totalMarks
+  minutes
+  partAOn
+  partAMarks
+  partALoCodes
+  partBMarks
+  mixWeak
+  mixImproving
+  mixRevision
+  questionTypeCodes
+`;
+
+const AS_QUESTION_FIELDS = `
+  origin
+  artifactId
+  qid
+  textBn
+  loCode
+  labelBn
+  chapterNumber
+  questionTypeCode
+  marks
+  band
+`;
+
+const ASSIGNMENT_FIELDS = `
+  id
+  sectionId
+  subject
+  classToken
+  dueDate
+  week
+  rememberLayout
+  status
+  paperId
+  asItemId
+  layout { ${LAYOUT_FIELDS} }
+  partA { ${AS_QUESTION_FIELDS} }
+  sheets {
+    studentId
+    name
+    rollNumber
+    status
+    marks
+    items {
+      loCode
+      labelBn
+      band
+    }
+    warnings {
+      code
+      loCode
+      labelBn
+    }
+  }
+`;
+
+const SHEET_FIELDS = `
+  assignmentId
+  assignmentStatus
+  studentId
+  name
+  rollNumber
+  status
+  marks
+  targetMarks
+  items { ${AS_QUESTION_FIELDS} }
+  warnings {
+    code
+    loCode
+    labelBn
+  }
+  outcomeChoices {
+    loCode
+    labelBn
+    questionTypeCodes
+  }
+`;
+
+export const MASTERY_ASSIGNMENT_QUERY = gql`
+  query MasteryAssignment($sectionId: String!, $subject: String!, $dueDate: String!) {
+    masteryAssignment(sectionId: $sectionId, subject: $subject, dueDate: $dueDate) {
+      week
+      startingLayout { ${LAYOUT_FIELDS} }
+      assignment { ${ASSIGNMENT_FIELDS} }
+    }
+  }
+`;
+
+export const MASTERY_ASSIGNMENT_SHEET_QUERY = gql`
+  query MasteryAssignmentSheet($assignmentId: String!, $studentId: String!) {
+    masteryAssignmentSheet(assignmentId: $assignmentId, studentId: $studentId) { ${SHEET_FIELDS} }
+  }
+`;
+
+export const MASTERY_ASSIGNMENT_TRACKER_ITEMS_QUERY = gql`
+  query MasteryAssignmentTrackerItems($sectionId: String!, $subject: String!) {
+    masteryAssignmentTrackerItems(sectionId: $sectionId, subject: $subject) {
+      asItemId
+      asId
+      dueDate
+      description
+    }
+  }
+`;
+
+export const BUILD_MASTERY_ASSIGNMENT = gql`
+  mutation BuildMasteryAssignment(
+    $sectionId: String!
+    $subject: String!
+    $dueDate: String!
+    $layout: MasteryAssignmentLayoutInput!
+    $rememberLayout: Boolean!
+    $asItemId: String
+  ) {
+    buildMasteryAssignment(
+      sectionId: $sectionId
+      subject: $subject
+      dueDate: $dueDate
+      layout: $layout
+      rememberLayout: $rememberLayout
+      asItemId: $asItemId
+    ) { ${ASSIGNMENT_FIELDS} }
+  }
+`;
+
+export const EDIT_MASTERY_ASSIGNMENT_SHEET = gql`
+  mutation EditMasteryAssignmentSheet(
+    $assignmentId: String!
+    $studentId: String!
+    $op: String!
+    $index: Int
+    $loCode: String
+    $questionTypeCode: String
+    $textBn: String
+  ) {
+    editMasteryAssignmentSheet(
+      assignmentId: $assignmentId
+      studentId: $studentId
+      op: $op
+      index: $index
+      loCode: $loCode
+      questionTypeCode: $questionTypeCode
+      textBn: $textBn
+    ) { ${SHEET_FIELDS} }
+  }
+`;
+
+export const APPROVE_MASTERY_ASSIGNMENT_SHEETS = gql`
+  mutation ApproveMasteryAssignmentSheets($assignmentId: String!) {
+    approveMasteryAssignmentSheets(assignmentId: $assignmentId) { ${ASSIGNMENT_FIELDS} }
+  }
+`;
+
+export const SEND_MASTERY_ASSIGNMENT = gql`
+  mutation SendMasteryAssignment($assignmentId: String!) {
+    sendMasteryAssignment(assignmentId: $assignmentId) { ${ASSIGNMENT_FIELDS} }
+  }
+`;
+
+export const DELETE_MASTERY_ASSIGNMENT = gql`
+  mutation DeleteMasteryAssignment($assignmentId: String!) {
+    deleteMasteryAssignment(assignmentId: $assignmentId)
+  }
+`;
+
+export type MasteryAssignmentLayout = {
+  totalMarks: number;
+  minutes: number;
+  partAOn: boolean;
+  partAMarks: number;
+  partALoCodes: string[];
+  partBMarks: number;
+  mixWeak: number;
+  mixImproving: number;
+  mixRevision: number;
+  questionTypeCodes: string[];
+};
+
+export type MasteryAssignmentQuestionRow = {
+  origin: string;
+  artifactId: string | null;
+  qid: string | null;
+  textBn: string | null;
+  loCode: string;
+  labelBn: string;
+  chapterNumber: number | null;
+  questionTypeCode: string;
+  marks: number;
+  band: string;
+};
+
+export type MasteryAssignmentWarningRow = { code: string; loCode: string | null; labelBn: string | null };
+
+export type MasteryAssignmentData = {
+  id: string;
+  sectionId: string;
+  subject: string;
+  classToken: string;
+  dueDate: string;
+  week: string;
+  rememberLayout: boolean;
+  status: string;
+  paperId: string | null;
+  asItemId: string | null;
+  layout: MasteryAssignmentLayout;
+  partA: MasteryAssignmentQuestionRow[];
+  sheets: {
+    studentId: string;
+    name: string;
+    rollNumber: string | null;
+    status: string;
+    marks: number;
+    items: { loCode: string; labelBn: string; band: string }[];
+    warnings: MasteryAssignmentWarningRow[];
+  }[];
+};
+
+export type MasteryAssignmentSheetData = {
+  assignmentId: string;
+  assignmentStatus: string;
+  studentId: string;
+  name: string;
+  rollNumber: string | null;
+  status: string;
+  marks: number;
+  targetMarks: number;
+  items: MasteryAssignmentQuestionRow[];
+  warnings: MasteryAssignmentWarningRow[];
+  outcomeChoices: { loCode: string; labelBn: string; questionTypeCodes: string[] }[];
 };

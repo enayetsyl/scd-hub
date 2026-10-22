@@ -14,7 +14,7 @@ import { MASTERY_SUBJECTS } from "@scd/shared";
 import { MASTERY_PAPERS_PAGE_QUERY, type MasteryPaperRow } from "../../graphql/mastery";
 import { Screen, Card, Body, Muted, Badge, Button, Chip, ChipRow, Loader, EmptyState, Notice } from "../../components/ui";
 import { useAccessibleClasses } from "../../components/ClassSectionDashboard";
-import { STR, bnNum, classLevelLabel, hwSubjectLabel } from "../../lib/labels";
+import { STR, bnNum, classLevelLabel, hwSubjectLabel, masterySourceLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useAuth } from "../../auth/AuthContext";
 import { space } from "../../theme";
@@ -22,7 +22,7 @@ import type { MasteryStackParamList } from "../../navigation/types";
 
 type Props = NativeStackScreenProps<MasteryStackParamList, "MasteryWork">;
 
-const sourceLabel = (s: string) => (s === "HW" ? STR.msSourceHW : s === "CT" ? STR.msSourceCT : STR.msSourceRubric);
+const sourceLabel = masterySourceLabel;
 
 export default function MasteryWorkHomeScreen({ navigation }: Props): React.ReactElement {
   const { can } = useAuth();
@@ -84,6 +84,7 @@ export default function MasteryWorkHomeScreen({ navigation }: Props): React.Reac
         <View style={{ flexDirection: "row", gap: space(2), flexWrap: "wrap" }}>
           <Button title={STR.msHeatmap} variant="secondary" onPress={() => navigation.navigate("MasteryHeatmap", { sectionId: active, subject })} />
           <Button title={STR.msQuality} variant="secondary" onPress={() => navigation.navigate("MasteryQuality", { sectionId: active, subject })} />
+          <Button title={STR.msAssignment} variant="secondary" onPress={() => navigation.navigate("MasteryAssignment", { sectionId: active, subject })} />
         </View>
       ) : null}
 
