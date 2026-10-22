@@ -113,7 +113,12 @@ export default function MasteryStudentScreen({ navigation, route }: Props): Reac
           style={{ flexDirection: "row", height: 14, borderRadius: 999, overflow: "hidden", backgroundColor: colors.surfaceAlt }}
         >
           {STATE_ORDER.map((s) =>
-            counts.get(s) ? <View key={s} style={{ flex: counts.get(s), backgroundColor: stateCell(colors, s).bg }} /> : null,
+            counts.get(s) ? (
+              <View
+                key={s}
+                style={{ flex: counts.get(s), backgroundColor: s === "NOT_ASSESSED" ? colors.border : stateCell(colors, s).bg }}
+              />
+            ) : null,
           )}
         </View>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(1) }}>
