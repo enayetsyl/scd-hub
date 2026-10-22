@@ -1,5 +1,8 @@
 # STATUS
 
+- 2026-10-22: **BUILT — Mastery M-6 thin (D-#812)** (branch `feat/mastery-m6`, worktree `C:/w/m6`). Guardians: শিখন-দক্ষতা screen (plain buckets, home tips, what the school did). Notifications: proposal → approvers; extra class → teacher + guardians; weekly assignment → guardians. The whole thin loop M-0..M-6 is now built.
+  - Open (owner): AI-assisted question drafting needs a provider key decision; promotion dev→main + OTA for M-0..M-6 (none promoted yet); switch a class × subject on in prod once its catalogue is locked.
+  - Deferred: routine slot finder + Today card for the extra class, per-student cross-subject timeline, scheduler families (drafts, revision-due), class-teacher behaviour / not-submitted notices.
 - 2026-10-22: **BUILT — Mastery M-5 thin (D-#811)** (branch `feat/mastery-m5`, worktree `C:/w/m5`). When a section crosses the line on an outcome (≥50 % weak after ≥2 sheets) the app opens a proposal; an approver (Principal, or an Office holder of `mastery:approve`) plans an extra class or a re-teach; the teacher records who came, builds the re-test (unseen questions each), marks it; the action closes with before / after and an outcome. Leader dashboard: drawer শিখন-দক্ষতা → পুরো স্কুল · পদক্ষেপ.
   - Not yet: routine slot finder + Today card for the extra class, notifications, per-student timeline across subjects (M-6).
   - Next: M-6 guardian progress + notifications. Promotion dev→main + OTA still pending for M-0..M-5.
