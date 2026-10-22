@@ -498,6 +498,9 @@ export type MasteryStackParamList = {
   MasteryStudent: { studentId: string; subject: string };
   MasteryOutcomeTrail: { studentId: string; loCode: string };
   MasteryQuality: { sectionId: string; subject: string };
+  /** M-4: the weekly tailored assignment and one student's Part B. */
+  MasteryAssignment: { sectionId: string; subject: string };
+  MasteryAssignmentSheet: { assignmentId: string; studentId: string; subject: string };
 };
 export type TeachingNotesStackParamList = {
   TeachingNotesHome: undefined;

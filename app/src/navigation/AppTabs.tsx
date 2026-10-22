@@ -242,6 +242,8 @@ import MasteryHeatmapScreen from "../screens/mastery/MasteryHeatmapScreen";
 import MasteryStudentScreen from "../screens/mastery/MasteryStudentScreen";
 import MasteryOutcomeTrailScreen from "../screens/mastery/MasteryOutcomeTrailScreen";
 import MasteryQualityScreen from "../screens/mastery/MasteryQualityScreen";
+import MasteryAssignmentScreen from "../screens/mastery/MasteryAssignmentScreen";
+import MasteryAssignmentSheetScreen from "../screens/mastery/MasteryAssignmentSheetScreen";
 import TeachingNoteDocScreen from "../screens/teachingnotes/TeachingNoteDocScreen";
 import TeachingNoteUploadScreen from "../screens/teachingnotes/TeachingNoteUploadScreen";
 import TeachingNoteOpenCommentsScreen from "../screens/teachingnotes/TeachingNoteOpenCommentsScreen";
@@ -1267,6 +1269,8 @@ function MasteryNavigator(): React.ReactElement {
       <MasteryStack.Screen name="MasteryStudent" component={MasteryStudentScreen} options={{ title: STR.msStudent }} />
       <MasteryStack.Screen name="MasteryOutcomeTrail" component={MasteryOutcomeTrailScreen} options={{ title: STR.msTrail }} />
       <MasteryStack.Screen name="MasteryQuality" component={MasteryQualityScreen} options={{ title: STR.msQuality }} />
+      <MasteryStack.Screen name="MasteryAssignment" component={MasteryAssignmentScreen} options={{ title: STR.msAssignment }} />
+      <MasteryStack.Screen name="MasteryAssignmentSheet" component={MasteryAssignmentSheetScreen} options={{ title: STR.msAsSheet }} />
     </MasteryStack.Navigator>
   );
 }

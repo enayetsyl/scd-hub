@@ -305,4 +305,19 @@ App: `MasteryTab` opens on `mastery:view` || `mastery:settings` || `mastery:ente
 
 App: the heat-map and quality buttons on `MasteryWorkHomeScreen` (reached as in M-2); exclude / bring back on `mastery:enter_results`. No new catalogue action: the views reuse `mastery:view` + the M-2 row rule; a school-wide `view_all` waits for M-5.
 
+### M-4 (2026-10-22, D-#809) — weekly tailored assignment
+| file | resolver / route | gate (already catalogue-native) |
+|---|---|---|
+| server/src/modules/mastery/resolvers/masteryAssignment.ts | masteryAssignment | `mastery:view`; svc: routine holder or `mastery:edit_all` |
+| server/src/modules/mastery/resolvers/masteryAssignment.ts | masteryAssignmentSheet | `mastery:view`; svc: routine holder or `mastery:edit_all` |
+| server/src/modules/mastery/resolvers/masteryAssignment.ts | masteryAssignmentTrackerItems | `mastery:create`; svc: routine holder or `mastery:edit_all` (read-only link options) |
+| server/src/modules/mastery/resolvers/masteryAssignment.ts | buildMasteryAssignment | `mastery:create`; svc: row rule + switch on |
+| server/src/modules/mastery/resolvers/masteryAssignment.ts | editMasteryAssignmentSheet | `mastery:create`; svc: row rule; DRAFT only |
+| server/src/modules/mastery/resolvers/masteryAssignment.ts | approveMasteryAssignmentSheets | `mastery:create`; svc: row rule; DRAFT only |
+| server/src/modules/mastery/resolvers/masteryAssignment.ts | sendMasteryAssignment | `mastery:create`; svc: row rule + switch; every sheet approved |
+| server/src/modules/mastery/resolvers/masteryAssignment.ts | deleteMasteryAssignment | `mastery:create`; svc: row rule; DRAFT only |
+| server/src/modules/mastery/routes/masteryAssignmentPdf.ts | GET /pdf/mastery-assignment/:id | `mastery:view` (route) + svc row rule |
+
+App: the সাপ্তাহিক অ্যাসাইনমেন্ট button on `MasteryWorkHomeScreen`; layout, rebuild, approve and send on `mastery:create`. Entry of the sent AS sheet reuses M-2 (`mastery:enter_results`).
+
 Later slices add their rows here: M-2/M-4 entry and builder (`mastery:enter_results`, `mastery:create`, routine class × subject check in the service), M-5 approval (`mastery:approve`), M-6 guardian reads (`guardian:read_child` + assertGuardianOfStudent).

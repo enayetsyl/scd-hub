@@ -301,6 +301,8 @@ export type AuditEventKind =
   | "MASTERY_PAPER_CONFIRMED"    // "সব ঠিক আছে" — evidence written for the whole roster (D-#778)
   | "MASTERY_ITEM_EXCLUDED"      // a teacher took an item (or a bank question, scope QID) out of diagnosis for their section (D-#782)
   | "MASTERY_EXCLUSION_REVOKED"  // that exclusion undone; the evidence counts again
+  | "MASTERY_ASSIGNMENT_BUILT"   // a weekly tailored assignment built / rebuilt from the teacher's layout (M-4)
+  | "MASTERY_ASSIGNMENT_SENT"    // sent: one AS work sheet written with each student's own items (D-#809)
   | "SCHOLARSHIP_PAPER_DECLARED" // a practice paper and its item structure declared; meta carries the item count + total
   | "SCHOLARSHIP_PAPER_UPDATED"  // the item list or header edited after declaration; meta names WHICH fields moved
   | "SCHOLARSHIP_SCORES_ENTERED" // per-item marks written for one or more students on one paper

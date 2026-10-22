@@ -18,7 +18,7 @@ import {
   type MasteryQualityPaperRow,
 } from "../../graphql/mastery";
 import { Screen, Card, Body, Muted, Badge, Button, Chip, ChipRow, Field, Loader, EmptyState, Notice } from "../../components/ui";
-import { STR, bnNum, masteryQualityLabel } from "../../lib/labels";
+import { STR, bnNum, masteryQualityLabel, masterySourceLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useAuth } from "../../auth/AuthContext";
 import { space, useColors } from "../../theme";
@@ -27,7 +27,7 @@ import { fill } from "./masteryStateUi";
 
 type Props = NativeStackScreenProps<MasteryStackParamList, "MasteryQuality">;
 
-const sourceLabel = (s: string) => (s === "HW" ? STR.msSourceHW : s === "CT" ? STR.msSourceCT : STR.msSourceRubric);
+const sourceLabel = masterySourceLabel;
 const signalTone = (s: string) => (s === "MAY_BE_UNCLEAR" ? "danger" : s === "TOO_EASY" ? "gold" : "info");
 
 export default function MasteryQualityScreen({ route }: Props): React.ReactElement {

@@ -178,7 +178,10 @@ export default function MasteryEntryScreen({ route }: Props): React.ReactElement
         const d = drafts[s.studentId] ?? emptyDraft();
         const status = d.status ?? s.defaultStatus;
         const off = status !== "PRESENT";
-        const earned = paper.items.reduce((sum, it) => {
+        // AS sheets (M-4): only the items this student was given.
+        const items = s.itemNos ? paper.items.filter((it) => s.itemNos!.includes(it.itemNo)) : paper.items;
+        const outOf = items.reduce((sum, it) => sum + it.marks, 0);
+        const earned = items.reduce((sum, it) => {
           const x = d.items.find((i) => i.itemNo === it.itemNo);
           return sum + (x?.marks ?? it.marks);
         }, 0);
@@ -189,7 +192,7 @@ export default function MasteryEntryScreen({ route }: Props): React.ReactElement
                 {s.rollNumber ? `${bnNum(s.rollNumber)}. ` : ""}
                 {s.name}
               </Body>
-              {!isRubric ? <Badge text={off ? "—" : `${bnNum(earned)}/${bnNum(paper.totalMarks)}`} tone={off ? "muted" : "brand"} /> : null}
+              {!isRubric ? <Badge text={off ? "—" : `${bnNum(earned)}/${bnNum(outOf)}`} tone={off ? "muted" : "brand"} /> : null}
             </View>
             <ChipRow>
               {STATUSES.map(([code, label]) => (
@@ -222,14 +225,16 @@ export default function MasteryEntryScreen({ route }: Props): React.ReactElement
             {!off && !isRubric ? (
               <>
                 <ChipRow>
-                  {paper.items.map((it) => {
+                  {items.map((it, idx) => {
                     const x = d.items.find((i) => i.itemNo === it.itemNo);
                     const changed = Boolean(x && (x.marks !== null || x.rework || x.tags.length > 0));
                     const shown = x?.marks ?? it.marks;
+                    // AS sheets: number as printed on this student's own page (1…n), not the paper's item no.
+                    const printedNo = s.itemNos ? idx + 1 : it.itemNo;
                     return (
                       <Chip
                         key={it.itemNo}
-                        label={`${bnNum(it.itemNo)}${changed ? ` · ${bnNum(shown)}${x?.rework ? " ↺" : ""}` : ""}`}
+                        label={`${bnNum(printedNo)}${changed ? ` · ${bnNum(shown)}${x?.rework ? " ↺" : ""}` : ""}`}
                         selected={open?.studentId === s.studentId && open.itemNo === it.itemNo}
                         onPress={() => setOpen(open?.studentId === s.studentId && open.itemNo === it.itemNo ? null : { studentId: s.studentId, itemNo: it.itemNo })}
                       />

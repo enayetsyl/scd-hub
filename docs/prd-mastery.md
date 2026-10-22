@@ -6,7 +6,9 @@ import + `skills/_tools/mastery_catalogue_to_json.mjs`; merged to dev #1114); M-
 `questions(loCodes)` filter + `loCodes` field); M-2 BUILT 2026-10-21 (branch `feat/mastery-m2`: work sheets
 HW / class test / rubric, exceptions-only entry, append-only evidence + strand routing, `mastery:edit_all`, D-#807);
 M-3 BUILT 2026-10-22 (branch `feat/mastery-m3`: diagnosis computed on read, student / outcome-trail / section heat-map
-views, quality report + teacher exclusion, D-#808); M-4..M-6 contracted. Mock canvas (32 screens, C3 Math sample):
+views, quality report + teacher exclusion, D-#808); M-4 BUILT thin 2026-10-22 (branch `feat/mastery-m4`: teacher
+layout, builder, review, send → AS work sheet with per-student items, PDF; tracker linked read-only, D-#809; the guardian
+view G3 is M-4b); M-5..M-6 contracted. Mock canvas (32 screens, C3 Math sample):
 https://claude.ai/artifact/41PHE293FUroM64pWFH6u1 (owner-private; open it before building a screen).
 **Decision block:** D-#775–#785, reserved against `origin/main@b96af3ae` = `origin/dev@569d60ec`
 (2026-10-20, max D-#774; open PRs hold only D-#650/#651/#761). D-#786 (approvers) amends D-#781.
