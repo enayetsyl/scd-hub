@@ -48,6 +48,14 @@ import {
   type ClassNotesAdminOptions,
 } from "../services/RoutineTriggerService";
 import { pageRef } from "../../../pageRef";
+import { LessonDeliveryRef, LessonPlanInputRef } from "../../lesson-progress/resolvers/lessonDelivery";
+import {
+  deleteDeliveryForNote,
+  deliveriesForNotes,
+  deliveryView,
+  prepareDelivery,
+  recordDelivery,
+} from "../../lesson-progress/services/LessonDeliveryService";
 
 const BellTriggerRef = builder.objectRef<BellTrigger>("BellTrigger").implement({
   fields: (t) => ({
@@ -81,6 +89,15 @@ const ClassNoteRef = builder.objectRef<IClassNote>("ClassNote").implement({
     attachmentIds: t.stringList({ resolve: (n) => (n.attachmentIds ?? []).map((a) => a.toString()) }),
     publishedBy: t.string({ resolve: (n) => n.publishedBy.toString() }),
     publishedAt: t.string({ resolve: (n) => new Date(n.publishedAt).toISOString() }),
+    /** LP-1 (D-#822): the session plan(s) this period taught, or why none. */
+    lessonDelivery: t.field({
+      type: LessonDeliveryRef,
+      nullable: true,
+      resolve: async (n) => {
+        const d = (await deliveriesForNotes([n._id])).get(n._id.toString());
+        return d ? deliveryView(d) : null;
+      },
+    }),
   }),
 });
 
