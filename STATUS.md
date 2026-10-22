@@ -1,5 +1,8 @@
 # STATUS
 
+- 2026-10-22: **BUILT — Mastery M-4 thin (D-#809)** (branch `feat/mastery-m4`, worktree `C:/w/m4`). Weekly tailored assignment: the teacher sets the layout, the app picks per student from the gold bank (never a seen question; gaps flagged), the teacher swaps / removes / adds own / approves, sends → one AS work sheet with each student's own items; marks entered on it like any sheet; A4 PDF per student.
+  - Not yet: the scheduler that drafts it automatically; writing the assignment tracker (linked read-only); the guardian view (M-4b).
+  - Next: M-4b guardian assignment view, then M-5 trigger → extra class → re-test. Promotion dev→main + OTA still pending for M-0..M-4.
 - 2026-10-22: **BUILT — Mastery M-3 (D-#808)** (branch `feat/mastery-m3`, worktree `C:/w/m3`). Diagnosis computed on read from the evidence; student view (summary, মনোযোগ দরকার with why, chapter grid), one outcome's evidence trail, section heat-map with the ≥50 % trigger banner, work-quality report with teacher exclusion (this sheet / every sheet, reason, reversible).
   - Reach as M-2 (routine holder or `mastery:edit_all`); no new catalogue action. Deferred: cross-section per-question view for reviewers; materialised state (until M-5's school-wide views need it).
   - Next: M-4 weekly tailored assignment. Promotion dev→main + OTA still pending for M-0..M-3.

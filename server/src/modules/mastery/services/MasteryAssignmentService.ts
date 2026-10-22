@@ -646,6 +646,7 @@ export async function renderAssignmentPdf(assignmentId: string, studentId: strin
       const y0 = doc.y;
       doc.fontSize(12).fillColor("#111111");
       doc.font(BENGALI_FONT).text(`${bn(n)}.`, M, y0, { width: 24 });
+      doc.x = M + 24;
       doc.y = y0;
       mixedText(doc, q.textBn ?? q.qid ?? "", { width: W - 24 - 60 } as PDFKit.Mixins.TextOptions);
       const after = Math.max(doc.y, y0 + 16);
@@ -658,8 +659,10 @@ export async function renderAssignmentPdf(assignmentId: string, studentId: strin
     };
     const head = (t: string, marks: number) => {
       const y = doc.y;
-      doc.fontSize(12).fillColor("#111111").font(BENGALI_FONT).text(t, M, y, { width: W - 90 });
-      doc.fontSize(11).text(`${bn(marks)} নম্বর`, M + W - 90, y, { width: 90, align: "right" });
+      doc.x = M;
+      doc.fontSize(12).fillColor("#111111");
+      mixedText(doc, t, { width: W - 90 } as PDFKit.Mixins.TextOptions);
+      doc.font(BENGALI_FONT).fontSize(11).text(`${bn(marks)} নম্বর`, M + W - 90, y, { width: 90, align: "right" });
       const line = y + 20;
       doc.moveTo(M, line).lineTo(M + W, line).strokeColor("#111111").lineWidth(1.2).stroke();
       doc.x = M;
@@ -668,8 +671,13 @@ export async function renderAssignmentPdf(assignmentId: string, studentId: strin
 
     for (const { st, sheet } of pages) {
       doc.addPage();
-      doc.fontSize(17).fillColor("#111111").font(BENGALI_FONT).text(`সাপ্তাহিক অ্যাসাইনমেন্ট · ${subjectBn}`, M, M, { width: W - 170 });
-      doc.fontSize(11).text(`${label.className} ${label.sectionName} · জমা: ${bn(a.dueDate.toISOString().slice(0, 10))} · সময় ${bn(a.layout.minutes)} মিনিট`, { width: W - 170 });
+      // The Bengali font has no middle dot; separators go through mixedText (Latin runs use Helvetica).
+      doc.x = M;
+      doc.y = M;
+      doc.fontSize(17).fillColor("#111111");
+      mixedText(doc, `সাপ্তাহিক অ্যাসাইনমেন্ট · ${subjectBn}`, { width: W - 170 } as PDFKit.Mixins.TextOptions);
+      doc.fontSize(11);
+      mixedText(doc, `${label.className} ${label.sectionName} · জমা: ${bn(a.dueDate.toISOString().slice(0, 10))} · সময় ${bn(a.layout.minutes)} মিনিট`, { width: W - 170 } as PDFKit.Mixins.TextOptions);
       const total = sum(partA) + sum(sheet.items);
       doc.fontSize(11).text(`নাম: ${personName(st)}`, M + W - 165, M, { width: 165, align: "right" });
       doc.text(`রোল: ${st.rollNumber ? bn(st.rollNumber) : "—"}`, { width: 165, align: "right" });

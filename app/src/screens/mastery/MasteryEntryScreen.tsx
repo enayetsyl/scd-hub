@@ -225,14 +225,16 @@ export default function MasteryEntryScreen({ route }: Props): React.ReactElement
             {!off && !isRubric ? (
               <>
                 <ChipRow>
-                  {items.map((it) => {
+                  {items.map((it, idx) => {
                     const x = d.items.find((i) => i.itemNo === it.itemNo);
                     const changed = Boolean(x && (x.marks !== null || x.rework || x.tags.length > 0));
                     const shown = x?.marks ?? it.marks;
+                    // AS sheets: number as printed on this student's own page (1…n), not the paper's item no.
+                    const printedNo = s.itemNos ? idx + 1 : it.itemNo;
                     return (
                       <Chip
                         key={it.itemNo}
-                        label={`${bnNum(it.itemNo)}${changed ? ` · ${bnNum(shown)}${x?.rework ? " ↺" : ""}` : ""}`}
+                        label={`${bnNum(printedNo)}${changed ? ` · ${bnNum(shown)}${x?.rework ? " ↺" : ""}` : ""}`}
                         selected={open?.studentId === s.studentId && open.itemNo === it.itemNo}
                         onPress={() => setOpen(open?.studentId === s.studentId && open.itemNo === it.itemNo ? null : { studentId: s.studentId, itemNo: it.itemNo })}
                       />
