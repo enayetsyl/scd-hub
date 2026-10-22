@@ -12,7 +12,9 @@
  *  3. Per outcome: a gold question of an allowed type, NEVER one in the student's seenQids nor one
  *     already on their sheet (Part A included); least used in the section first. None left ⇒
  *     warning NO_UNSEEN_QUESTION for that outcome.
- *  4. The sheet stops once its marks reach the target (it may go over by less than one item).
+ *  4. Each pick takes the largest allowed type that fits the marks still open on the sheet (D-#829),
+ *     so the sheet never goes over its target; it may fall short by less than the smallest type.
+ *     Only an otherwise empty sheet may take one item over.
  * Part A (if on): the layout's outcomes, else the section's weakest (weak % ≥ the trigger line,
  * else the highest > 0); questions nobody in the section has seen where possible.
  *
@@ -75,10 +77,25 @@ export interface BuilderContext {
   layout: BuilderLayout;
 }
 
-/** The type a pick for `lo` takes under the layout, or null if none is usable. */
-export function typeFor(lo: OutcomeInfo, ctx: Pick<BuilderContext, "marksOf" | "layout">): string | null {
+/**
+ * The type a pick for `lo` takes under the layout, or null if none is usable. With `room` (Part B),
+ * the largest usable type whose marks fit the marks still open — so a 5-mark word problem never lands
+ * in a band with 2 marks left (the 2026-10-22 dev finding: sheets of 12 against a target of 8).
+ * `allowOver` (an otherwise empty sheet) falls back to the smallest type rather than leave it blank.
+ */
+export function typeFor(
+  lo: OutcomeInfo,
+  ctx: Pick<BuilderContext, "marksOf" | "layout">,
+  room?: number,
+  allowOver = false,
+): string | null {
   const allowed = ctx.layout.questionTypeCodes.length > 0 ? lo.questionTypeCodes.filter((t) => ctx.layout.questionTypeCodes.includes(t)) : lo.questionTypeCodes;
-  return allowed.find((t) => (ctx.marksOf.get(t) ?? 0) > 0) ?? null;
+  const usable = allowed.filter((t) => (ctx.marksOf.get(t) ?? 0) > 0);
+  if (room === undefined) return usable[0] ?? null;
+  const marks = (t: string) => ctx.marksOf.get(t)!;
+  const fits = usable.filter((t) => marks(t) <= room + 1e-9).sort((a, b) => marks(b) - marks(a));
+  if (fits.length) return fits[0];
+  return allowOver ? [...usable].sort((a, b) => marks(a) - marks(b))[0] ?? null : null;
 }
 
 /** The best unseen gold question for `lo`, or null. */
@@ -135,7 +152,10 @@ export function buildPartB(
           continue;
         }
         const info = ctx.outcomes.get(lo)!;
-        const qt = typeFor(info, ctx);
+        // Fit the type to the marks still open on the sheet (D-#829). Bands stay soft (a band's
+        // unused marks carry on); the sheet's target is the hard line.
+        const room = target - total();
+        const qt = typeFor(info, ctx, room, total() === 0);
         if (!qt) {
           dead.add(lo);
           continue;
