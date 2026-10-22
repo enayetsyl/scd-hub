@@ -237,7 +237,7 @@ export async function createPaper(input: CreatePaperInput, auth: Auth): Promise<
 /** An OPEN sheet with no results yet may be removed (a mistake); a confirmed one never. */
 export async function deletePaper(paperId: string, auth: Auth): Promise<boolean> {
   const paper = await loadPaperFor(paperId, auth);
-  if (paper.source === "AS") throw new MasteryWorkError("পাঠানো অ্যাসাইনমেন্ট এখান থেকে মোছা যায় না।");
+  if (paper.source === "AS" || paper.source === "RETEST") throw new MasteryWorkError("অ্যাসাইনমেন্ট বা রি-টেস্টের কাজ এখান থেকে মোছা যায় না।");
   if (paper.entryState === "CONFIRMED") throw new MasteryWorkError("নিশ্চিত করা কাজ মুছে ফেলা যায় না।");
   if (await MasteryResult.exists({ paperId: paper._id })) throw new MasteryWorkError("নম্বর তোলা শুরু হয়েছে — মুছে ফেলা যায় না।");
   await MasteryPaper.deleteOne({ _id: paper._id, entryState: "OPEN" });
@@ -344,7 +344,7 @@ export async function rosterOf(sectionId: Types.ObjectId) {
 
 /** AS papers: studentId → the item numbers on that student's sheet; null on every other paper. */
 export function studentItemsOf(paper: Pick<IMasteryPaper, "source" | "perStudentItems">): Map<string, Set<number>> | null {
-  if (paper.source !== "AS") return null;
+  if (paper.source !== "AS" && paper.source !== "RETEST") return null;
   return new Map((paper.perStudentItems ?? []).map((x) => [String(x.studentId), new Set(x.itemNos)]));
 }
 
@@ -437,7 +437,7 @@ function validateResult(
 ): string | null {
   if (!rosterIds.has(r.studentId)) return "শিক্ষার্থী এই শাখার তালিকায় নেই।";
   const given = studentItemsOf(paper)?.get(r.studentId);
-  if (paper.source === "AS" && !given) return "এই শিক্ষার্থীর জন্য এই অ্যাসাইনমেন্টে কোনো শিট নেই।";
+  if (studentItemsOf(paper) && !given) return "এই কাজে এই শিক্ষার্থীর কোনো প্রশ্ন নেই।";
   for (const it of r.items ?? []) {
     if (given && !given.has(it.itemNo)) return `প্রশ্ন ${bn(it.itemNo)} এই শিক্ষার্থীর শিটে নেই।`;
   }
@@ -546,6 +546,20 @@ async function writeEvidenceFor(paper: IMasteryPaper, studentIds: string[]): Pro
 }
 
 /**
+ * New evidence may push an outcome over the section trigger (M-5, D-#811): open a PROPOSED action
+ * if so. Imported lazily (the action service reads diagnosis, which reads this file) and never
+ * allowed to fail the save — the next confirmation evaluates again.
+ */
+async function afterEvidence(paper: IMasteryPaper): Promise<void> {
+  try {
+    const { evaluateSectionTriggers } = await import("./MasteryActionService");
+    await evaluateSectionTriggers(paper.sectionId, paper.subject);
+  } catch (err) {
+    console.error(`[mastery] trigger evaluation failed for ${paper.paperId}:`, err);
+  }
+}
+
+/**
  * Save exceptions for any number of students. Each row REPLACES that student's exceptions; a
  * row with nothing in it removes them. On a CONFIRMED paper the saved students' evidence is
  * superseded and rewritten at once (a correction).
@@ -586,6 +600,7 @@ export async function saveResults(paperId: string, rows: ResultInput[], auth: Au
   let evidenceRows = 0;
   if (paper.entryState === "CONFIRMED") {
     evidenceRows = (await writeEvidenceFor(paper, rows.map((r) => r.studentId))).rows;
+    await afterEvidence(paper);
   }
   void writeAudit({
     eventKind: "MASTERY_RESULTS_SAVED",
@@ -616,6 +631,7 @@ export async function confirmPaper(paperId: string, auth: Auth): Promise<Confirm
   paper.confirmedAt = new Date();
   paper.confirmedBy = Types.ObjectId.isValid(auth.userId) ? oid(auth.userId) : undefined;
   await paper.save();
+  await afterEvidence(paper);
   void writeAudit({
     eventKind: "MASTERY_PAPER_CONFIRMED",
     actorId: auth.userId,

@@ -128,6 +128,7 @@ const STAFF_NAV: NavSection[] = [
     icon: "🎯",
     items: [
       { route: "MasteryTab", labelKey: "msWork", icon: "✍️", screen: "MasteryWork", perms: ["mastery:enter_results"] },
+      { route: "MasteryTab", labelKey: "msLeader", icon: "🧭", screen: "MasteryLeader", perms: ["mastery:approve"] },
       { route: "MasteryTab", labelKey: "msCatalogueHome", icon: "📚", screen: "MasteryHome", perms: ["mastery:view"] },
       { route: "MasteryTab", labelKey: "msImport", icon: "📥", screen: "MasteryImport", perms: ["mastery:settings"] },
       { route: "MasteryTab", labelKey: "msTags", icon: "🏷️", screen: "MasteryTags", perms: ["mastery:view"] },

@@ -19,6 +19,7 @@ import { MasteryOutcome } from "../models/MasteryOutcome";
 import { MasteryPaper, type IMasteryPaper } from "../models/MasteryPaper";
 import { MasteryTag } from "../models/MasteryTag";
 import { MasteryExclusion, type IMasteryExclusion, type MasteryExclusionScope } from "../models/MasteryExclusion";
+import { MasteryAction } from "../models/MasteryAction";
 import { Student } from "../../foundation/models/Student";
 import { Section } from "../../foundation/models/Section";
 import { Class } from "../../foundation/models/Class";
@@ -363,6 +364,9 @@ export interface HeatOutcome {
   weakPct: number | null;
   triggered: boolean;
   sectionMeanPct: number | null;
+  /** The open action on this outcome, if any (M-5) — the banner links to it. */
+  actionId: string | null;
+  actionStatus: string | null;
   /** One cell per student, in `students` order. */
   cells: { state: MasteryState; pct: number | null }[];
 }
@@ -383,13 +387,17 @@ export interface SectionHeatmap {
 export async function sectionHeatmap(sectionId: string, subject: MasterySubject, auth: Auth): Promise<SectionHeatmap> {
   const ctx = await sectionContext(sectionId);
   await assertMayWork(auth, ctx.sectionId, subject, new Date());
-  const [outcomes, rows, policy, label, roster] = await Promise.all([
+  const [outcomes, rows, policy, label, roster, actions] = await Promise.all([
     lockedOutcomes(ctx.classToken, subject),
     liveSectionRows(ctx.sectionId, subject),
     diagnosisPolicy(ctx.classToken, subject),
     sectionLabel(ctx.sectionId),
     rosterOf(ctx.sectionId),
+    MasteryAction.find({ sectionId: ctx.sectionId, subject, status: { $in: ["PROPOSED", "APPROVED", "IN_PROGRESS", "CHECKING"] } })
+      .select("loCode status")
+      .lean(),
   ]);
+  const actionOf = new Map(actions.map((x) => [x.loCode, { id: String(x._id), status: x.status as string }]));
   const sec = computeSection(rows, policy, new Date());
   const students = roster.map((s) => String(s._id));
   const heat: HeatOutcome[] = [];
@@ -404,7 +412,8 @@ export async function sectionHeatmap(sectionId: string, subject: MasterySubject,
     const sum = sectionOutcomeSummary(cells.map((c) => c.state), assessments, policy);
     heat.push({
       loCode: o.code, labelBn: o.labelBn, chapterNumber: o.chapterNumber ?? null, strand: o.strand ?? null,
-      assessments, ...sum, sectionMeanPct: round(sec.means.get(o.code)), cells,
+      assessments, ...sum, sectionMeanPct: round(sec.means.get(o.code)),
+      actionId: actionOf.get(o.code)?.id ?? null, actionStatus: actionOf.get(o.code)?.status ?? null, cells,
     });
   }
   return {

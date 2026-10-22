@@ -1,5 +1,8 @@
 # STATUS
 
+- 2026-10-22: **BUILT — Mastery M-5 thin (D-#811)** (branch `feat/mastery-m5`, worktree `C:/w/m5`). When a section crosses the line on an outcome (≥50 % weak after ≥2 sheets) the app opens a proposal; an approver (Principal, or an Office holder of `mastery:approve`) plans an extra class or a re-teach; the teacher records who came, builds the re-test (unseen questions each), marks it; the action closes with before / after and an outcome. Leader dashboard: drawer শিখন-দক্ষতা → পুরো স্কুল · পদক্ষেপ.
+  - Not yet: routine slot finder + Today card for the extra class, notifications, per-student timeline across subjects (M-6).
+  - Next: M-6 guardian progress + notifications. Promotion dev→main + OTA still pending for M-0..M-5.
 - 2026-10-22: **BUILT — Mastery M-4b (D-#810)** (branch `feat/mastery-m4b`, worktree `C:/w/m4b`). Guardians see the weekly tailored assignment on their Assignments tab: the child's questions as printed, the PDF of the child's page, and after marking "কেমন হলো" per topic in plain words (no codes, no verdict words).
   - Next: M-5 section trigger → extra class → re-test. Promotion dev→main + OTA still pending for M-0..M-4b.
 - 2026-10-22: **BUILT — Mastery M-4 thin (D-#809)** (branch `feat/mastery-m4`, worktree `C:/w/m4`). Weekly tailored assignment: the teacher sets the layout, the app picks per student from the gold bank (never a seen question; gaps flagged), the teacher swaps / removes / adds own / approves, sends → one AS work sheet with each student's own items; marks entered on it like any sheet; A4 PDF per student.

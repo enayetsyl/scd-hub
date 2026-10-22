@@ -153,6 +153,8 @@ HeatOutcomeRef.implement({
     weakPct: t.int({ nullable: true, resolve: (o) => o.weakPct }),
     triggered: t.exposeBoolean("triggered"),
     sectionMeanPct: t.int({ nullable: true, resolve: (o) => o.sectionMeanPct }),
+    actionId: t.string({ nullable: true, resolve: (o) => o.actionId }),
+    actionStatus: t.string({ nullable: true, resolve: (o) => o.actionStatus }),
     cells: t.field({ type: [HeatCellRef], resolve: (o) => o.cells }),
   }),
 });

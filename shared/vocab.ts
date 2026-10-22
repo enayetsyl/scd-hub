@@ -5114,6 +5114,19 @@ export const MASTERY_STATE_LABELS_GUARDIAN_BN: Record<MasteryState, string> = {
 export const MASTERY_TAG_EFFECTS = ["WEAK", "LIGHT", "NO_EVIDENCE", "VOID_BEHAVIOUR", "ROUTE_STRAND"] as const;
 export type MasteryTagEffect = (typeof MASTERY_TAG_EFFECTS)[number];
 
+/** What the school does about an outcome (D-#781, M-5). A SECTION trigger proposes EXTRA_CLASS;
+ *  the approver may turn it into RETEACH (in the normal period, no extra slot). */
+export const MASTERY_ACTION_KINDS = ["TAILORED_ASSIGNMENT", "EXTRA_CLASS", "RETEACH", "REVISION_SHEET", "GUARDIAN_NOTE"] as const;
+export type MasteryActionKind = (typeof MASTERY_ACTION_KINDS)[number];
+/** PROPOSED (app) → APPROVED (scheduled) → IN_PROGRESS (class held) → CHECKING (re-test built) → CLOSED; or REJECTED. */
+export const MASTERY_ACTION_STATUSES = ["PROPOSED", "APPROVED", "IN_PROGRESS", "CHECKING", "CLOSED", "REJECTED"] as const;
+export type MasteryActionStatus = (typeof MASTERY_ACTION_STATUSES)[number];
+export const MASTERY_ACTION_OUTCOMES = ["SUCCESS", "PARTIAL", "NOT_RESOLVED"] as const;
+export type MasteryActionOutcome = (typeof MASTERY_ACTION_OUTCOMES)[number];
+/** Who attends an extra class: the WEAK students, WEAK + IMPROVING, or the whole SECTION. */
+export const MASTERY_ATTENDEE_SETS = ["WEAK", "WEAK_IMPROVING", "SECTION"] as const;
+export type MasteryAttendeeSet = (typeof MASTERY_ATTENDEE_SETS)[number];
+
 /** Where a tag may be put: on one question, on the whole piece of work, or either. */
 export const MASTERY_TAG_APPLIES = ["ITEM", "WORK", "BOTH"] as const;
 export type MasteryTagApplies = (typeof MASTERY_TAG_APPLIES)[number];

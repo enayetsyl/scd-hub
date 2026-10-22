@@ -7,13 +7,13 @@
  * The table scrolls sideways inside its card; the name column stays readable on a phone by
  * being the first column of a fixed width.
  */
-import React from "react";
+import React, { useEffect } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
 import { MASTERY_SECTION_HEATMAP_QUERY, type MasteryHeatmap } from "../../graphql/mastery";
-import { Screen, Card, Body, Muted, Loader, EmptyState, Notice, H2 } from "../../components/ui";
-import { STR, bnNum, hwSubjectLabel, masteryStateLabel } from "../../lib/labels";
+import { Screen, Card, Body, Muted, Badge, Button, Loader, EmptyState, Notice, H2 } from "../../components/ui";
+import { STR, bnNum, hwSubjectLabel, masteryActionLabel, masteryStateLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space, useColors } from "../../theme";
 import type { MasteryStackParamList } from "../../navigation/types";
@@ -27,12 +27,18 @@ const CELL_W = 64;
 export default function MasteryHeatmapScreen({ navigation, route }: Props): React.ReactElement {
   const { sectionId, subject } = route.params;
   const colors = useColors();
-  const [{ data, fetching, error }] = useQuery({
+  const [{ data, fetching, error }, refetch] = useQuery({
     query: MASTERY_SECTION_HEATMAP_QUERY,
     variables: { sectionId, subject },
     requestPolicy: "cache-and-network",
   });
   const h = data?.masterySectionHeatmap as MasteryHeatmap | undefined;
+  // Back from a child screen (entry, sheet, action) must show what changed there.
+  useEffect(() => {
+    const unsub = navigation.addListener("focus", () => refetch({ requestPolicy: "network-only" }));
+    return unsub;
+  }, [navigation, refetch]);
+
 
   if (fetching && !h) {
     return (
@@ -77,6 +83,12 @@ export default function MasteryHeatmapScreen({ navigation, route }: Props): Reac
             })}
           </Body>
           <Body style={{ color: colors.onErrorContainer }}>{fill(STR.msTriggerAfter, { n: bnNum(o.assessments) })}</Body>
+          {o.actionId ? (
+            <View style={{ flexDirection: "row", gap: space(2), alignItems: "center", flexWrap: "wrap" }}>
+              <Badge text={masteryActionLabel(o.actionStatus ?? "")} tone="gold" />
+              <Button title={STR.msSeeAction} variant="secondary" onPress={() => navigation.navigate("MasteryAction", { actionId: o.actionId! })} />
+            </View>
+          ) : null}
         </View>
       ))}
 
