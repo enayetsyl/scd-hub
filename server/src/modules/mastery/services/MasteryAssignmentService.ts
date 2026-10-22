@@ -56,13 +56,13 @@ const sum = (qs: { marks: number }[]) => qs.reduce((s, q) => s + q.marks, 0);
 
 export type LayoutInput = MasteryAssignmentLayout;
 
-async function marksTable(classToken: MasteryClassToken, subject: MasterySubject): Promise<Map<string, number>> {
+export async function marksTable(classToken: MasteryClassToken, subject: MasterySubject): Promise<Map<string, number>> {
   const rows = await MasteryQuestionType.find({ classToken, subject, active: true }).select("code marks").lean();
   return new Map(rows.filter((r) => typeof r.marks === "number" && r.marks > 0).map((r) => [r.code, r.marks as number]));
 }
 
 /** The gold, current, not-retired questions tagged with any of `codes`, with their text. */
-async function goldBank(codes: string[]): Promise<(BankQuestion & { textBn: string | null })[]> {
+export async function goldBank(codes: string[]): Promise<(BankQuestion & { textBn: string | null })[]> {
   if (codes.length === 0) return [];
   const arts = await ContentArtifact.find({
     docType: "question", current: true, retiredAt: null, reviewStatus: "gold", ...loCodeMongoFilter(codes),

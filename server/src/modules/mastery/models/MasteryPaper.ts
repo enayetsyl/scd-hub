@@ -11,8 +11,9 @@ import { Schema, model, Document, Types } from "mongoose";
 import { MASTERY_CLASS_TOKENS, MASTERY_SUBJECTS } from "@scd/shared";
 import type { MasteryClassToken, MasterySubject } from "@scd/shared";
 
-/** AS = the weekly tailored assignment (M-4): created only by sending one, never by hand. */
-export const MASTERY_PAPER_SOURCES = ["HW", "CT", "RUBRIC", "AS"] as const;
+/** AS = the weekly tailored assignment (M-4), RETEST = an action's re-test (M-5): both created
+ *  only by their flow, never by hand, and both carry per-student item lists. */
+export const MASTERY_PAPER_SOURCES = ["HW", "CT", "RUBRIC", "AS", "RETEST"] as const;
 export type MasteryPaperSource = (typeof MASTERY_PAPER_SOURCES)[number];
 export const MASTERY_ITEM_ORIGINS = ["BANK", "TEACHER", "TEACHER_AI"] as const;
 export type MasteryItemOrigin = (typeof MASTERY_ITEM_ORIGINS)[number];
@@ -44,7 +45,7 @@ export interface IMasteryPaper extends Document {
   subject: MasterySubject;
   /** The day the work was given / sat (Dhaka date, stored at 00:00 UTC of that date). */
   date: Date;
-  links: { hwItemId?: Types.ObjectId; classTestId?: Types.ObjectId; assignmentId?: Types.ObjectId; asItemId?: Types.ObjectId };
+  links: { hwItemId?: Types.ObjectId; classTestId?: Types.ObjectId; assignmentId?: Types.ObjectId; asItemId?: Types.ObjectId; actionId?: Types.ObjectId };
   /**
    * AS papers only: the items each student was given (Part A + their own Part B). An item not
    * on a student's sheet is "not given" — never wrong, never evidence (M-4, D-#809). Empty on
@@ -93,6 +94,7 @@ const MasteryPaperSchema = new Schema<IMasteryPaper>(
       classTestId: { type: Schema.Types.ObjectId },
       assignmentId: { type: Schema.Types.ObjectId },
       asItemId: { type: Schema.Types.ObjectId },
+      actionId: { type: Schema.Types.ObjectId },
     },
     perStudentItems: {
       type: [{ _id: false, studentId: { type: Schema.Types.ObjectId, required: true }, itemNos: { type: [Number], default: [] } }],

@@ -129,4 +129,5 @@ import "./modules/mastery/resolvers/masteryWork";
 import "./modules/mastery/resolvers/masteryDiagnosis";
 import "./modules/mastery/resolvers/masteryAssignment";
 import "./modules/mastery/resolvers/masteryGuardian";
+import "./modules/mastery/resolvers/masteryAction";
 import "./modules/worksheets/resolvers/worksheet";
