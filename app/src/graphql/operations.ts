@@ -4759,10 +4759,65 @@ export interface ClassNoteT {
   attachmentIds: string[];
   publishedBy: string;
   publishedAt: string;
+  /** LP-1 (D-#822): the session plan(s) this period taught, or why none; null = not answered. */
+  lessonDelivery: LessonDeliveryT | null;
 }
+
+// --- Lesson-plan progress LP-1 (D-#820–#822) -------------------------------
+
+export interface LessonDeliveryT {
+  noteId: string;
+  dateKey: string;
+  sessions: Array<{ key: string; chapter: string; sessionIndex: number; sessionOf: number; titleBn: string; finished: boolean }>;
+  noneReason: string | null;
+  noneNote: string | null;
+}
+
+export interface LessonPlanSessionT {
+  key: string;
+  chapter: string;
+  anchorWord: string;
+  chapterTitle: string | null;
+  sessionIndex: number;
+  sessionOf: number;
+  titleBn: string;
+  artifactId: string;
+  finishedOn: string[];
+  startedOn: string[];
+}
+
+/** The class note's lesson-plan answer: sessions, OR a reason (D-#821). */
+export interface LessonPlanIn {
+  sessions?: Array<{ key: string; finished: boolean }>;
+  noneReason?: string | null;
+  noneNote?: string | null;
+}
+
+const LESSON_DELIVERY_FIELDS = `noteId dateKey sessions { key chapter sessionIndex sessionOf titleBn finished } noneReason noneNote`;
+
+export const LESSON_PLAN_FOR_SLOT_QUERY = gql<
+  {
+    lessonPlanForSlot: {
+      applies: boolean;
+      sessions: LessonPlanSessionT[];
+      suggestedKey: string | null;
+      delivery: LessonDeliveryT | null;
+    };
+  },
+  { slotId: string; date: string }
+>`
+  query LessonPlanForSlot($slotId: String!, $date: String!) {
+    lessonPlanForSlot(slotId: $slotId, date: $date) {
+      applies suggestedKey
+      sessions { key chapter anchorWord chapterTitle sessionIndex sessionOf titleBn artifactId finishedOn startedOn }
+      delivery { ${LESSON_DELIVERY_FIELDS} }
+    }
+  }
+`;
 
 const CLASS_NOTE_FIELDS = `
   id slotId groupType groupId date subject taughtSummaryBn homeworkItemId attachmentIds publishedBy publishedAt
+  lessonDelivery { ${LESSON_DELIVERY_FIELDS} }
 `;
 
 export const CLASS_NOTES_FOR_DATE_QUERY = gql<
@@ -4807,10 +4862,12 @@ export const PUBLISH_CLASS_NOTE = gql<
     attachmentIds?: string[] | null;
     /** DE-3 (D-#477): declare the day's homework in the SAME call. */
     homework?: ClassNoteHomeworkIn | null;
+    /** LP-1 (D-#820): which session plan(s) this period taught, or why none. */
+    lessonPlan?: LessonPlanIn | null;
   }
 >`
-  mutation PublishClassNote($slotId: String!, $date: String!, $taughtSummaryBn: String!, $homeworkItemId: String, $attachmentIds: [String!], $homework: ClassNoteHomeworkInput) {
-    publishClassNote(slotId: $slotId, date: $date, taughtSummaryBn: $taughtSummaryBn, homeworkItemId: $homeworkItemId, attachmentIds: $attachmentIds, homework: $homework) {
+  mutation PublishClassNote($slotId: String!, $date: String!, $taughtSummaryBn: String!, $homeworkItemId: String, $attachmentIds: [String!], $homework: ClassNoteHomeworkInput, $lessonPlan: LessonPlanInput) {
+    publishClassNote(slotId: $slotId, date: $date, taughtSummaryBn: $taughtSummaryBn, homeworkItemId: $homeworkItemId, attachmentIds: $attachmentIds, homework: $homework, lessonPlan: $lessonPlan) {
       ${CLASS_NOTE_FIELDS}
     }
   }
@@ -4902,10 +4959,10 @@ export const CLASS_NOTES_ADMIN_OPTIONS_QUERY = gql<
 `;
 export const UPDATE_CLASS_NOTE = gql<
   { updateClassNote: ClassNoteT },
-  { id: string; taughtSummaryBn?: string | null; attachmentIds?: string[] | null }
+  { id: string; taughtSummaryBn?: string | null; attachmentIds?: string[] | null; lessonPlan?: LessonPlanIn | null }
 >`
-  mutation UpdateClassNote($id: String!, $taughtSummaryBn: String, $attachmentIds: [String!]) {
-    updateClassNote(id: $id, taughtSummaryBn: $taughtSummaryBn, attachmentIds: $attachmentIds) {
+  mutation UpdateClassNote($id: String!, $taughtSummaryBn: String, $attachmentIds: [String!], $lessonPlan: LessonPlanInput) {
+    updateClassNote(id: $id, taughtSummaryBn: $taughtSummaryBn, attachmentIds: $attachmentIds, lessonPlan: $lessonPlan) {
       ${CLASS_NOTE_FIELDS}
     }
   }
