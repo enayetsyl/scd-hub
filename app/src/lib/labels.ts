@@ -6545,7 +6545,6 @@ const STR_BN = {
   msNeedsAttention: "মনোযোগ দরকার",
   msNothingWeak: "এই বিষয়ে এখন কোনো দুর্বল শিখনফল নেই।",
   msByChapter: "অধ্যায় অনুযায়ী",
-  msStrands: "দক্ষতা-ধারা (SK)",
   msChapterN: "অধ্যায় {n}",
   msStanding: "শাখার {size} জনের মধ্যে {n} জনের চেয়ে বেশি দুর্বল শিখনফল",
   msRecent: "সাম্প্রতিক",
@@ -6561,7 +6560,6 @@ const STR_BN = {
   msBank: "ব্যাংক",
   msBankLine: "গোল্ড প্রশ্ন {gold}টি · দেখেছে {seen}টি · নতুন বাকি {left}টি",
   msBankNote: "রি-চেক সবসময় না-দেখা প্রশ্ন থেকে আসে।",
-  msHomeTip: "বাড়িতে যা করা যায়",
   msNextRevision: "পরের রিভিশন: {d}",
   msQualityIntro: "প্রতিটি কাজের প্রশ্ন কতটা কাজে লেগেছে — নম্বর ও রি-ওয়ার্ক থেকে। এটি শুধু রিপোর্ট; কোনো প্রশ্ন নিজে থেকে বাদ যায় না।",
   msNoConfirmed: "এখনো কোনো নিশ্চিত প্রশ্নভিত্তিক কাজ নেই।",
@@ -6579,7 +6577,6 @@ const STR_BN = {
   msExcludeConfirm: "বাদ দিন",
   msExcludedBy: "বাদ দিয়েছেন {by} · কারণ: {reason}",
   msRevoke: "ফিরিয়ে আনুন",
-  msCancel: "বাতিল",
 } as const;
 
 type StrTable = Record<keyof typeof STR_BN, string>;
@@ -11857,7 +11854,6 @@ const STR_EN: StrTable = {
   msNeedsAttention: "Needs attention",
   msNothingWeak: "Nothing weak in this subject right now.",
   msByChapter: "By chapter",
-  msStrands: "Skill strands (SK)",
   msChapterN: "Chapter {n}",
   msStanding: "More weak outcomes than {n} of the section's {size}",
   msRecent: "Recent",
@@ -11873,7 +11869,6 @@ const STR_EN: StrTable = {
   msBank: "Bank",
   msBankLine: "Gold questions {gold} · seen {seen} · unseen left {left}",
   msBankNote: "A re-check always comes from an unseen question.",
-  msHomeTip: "What to do at home",
   msNextRevision: "Next revision: {d}",
   msQualityIntro: "How well each sheet's questions worked — from marks and re-work. Report only; nothing is removed automatically.",
   msNoConfirmed: "No confirmed question sheet yet.",
@@ -11891,7 +11886,6 @@ const STR_EN: StrTable = {
   msExcludeConfirm: "Exclude",
   msExcludedBy: "Excluded by {by} · reason: {reason}",
   msRevoke: "Bring back",
-  msCancel: "Cancel",
 };
 
 /** UI chrome strings — resolves to the active language at read time (Proxy). Use

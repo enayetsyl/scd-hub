@@ -493,6 +493,11 @@ export type MasteryStackParamList = {
   MasteryWork: undefined;
   MasteryNewPaper: { sectionId: string; subject: string; classLevel: number };
   MasteryEntry: { paperId: string };
+  /** M-3: diagnosis views + quality report (all param-requiring — never register one first). */
+  MasteryHeatmap: { sectionId: string; subject: string };
+  MasteryStudent: { studentId: string; subject: string };
+  MasteryOutcomeTrail: { studentId: string; loCode: string };
+  MasteryQuality: { sectionId: string; subject: string };
 };
 export type TeachingNotesStackParamList = {
   TeachingNotesHome: undefined;
