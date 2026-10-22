@@ -474,7 +474,10 @@ export async function editSheet(assignmentId: string, studentId: string, edit: S
       const next = pickQuestion(cur.loCode, seen, { bank: await goldBank([cur.loCode]), exposure });
       if (!next) throw new MasteryWorkError("এই শিখনফলে এই শিক্ষার্থীর জন্য আর নতুন গোল্ড প্রশ্ন নেই — নিজে লিখুন।");
       const bank = (await goldBank([cur.loCode])).find((q) => q.qid === next.qid);
-      sheet.items.splice(i, 1, { ...cur, artifactId: oid(next.artifactId), qid: next.qid, textBn: bank?.textBn ?? undefined });
+      sheet.items.splice(i, 1, {
+        origin: "BANK", artifactId: oid(next.artifactId), qid: next.qid, textBn: bank?.textBn ?? undefined, loCode: cur.loCode,
+        chapterNumber: cur.chapterNumber ?? null, questionTypeCode: cur.questionTypeCode, marks: cur.marks, band: cur.band,
+      });
     } else if (edit.op === "ADD_OWN") {
       const text = (edit.textBn ?? "").trim();
       if (!text) throw new MasteryWorkError("নিজের প্রশ্নের লেখা দিন।");
