@@ -1,5 +1,7 @@
 # STATUS
 
+- 2026-10-22: **PLANNED — prod MongoDB moves from Atlas M0 to the VM** (`docs/db-on-vm-plan.md`). Atlas M0 is at ~453/512 MB (hard cap). Phases: 0 vault + #1138 → 1 harden the VM mongod (auth, rs0, cache 6 GB) → 2 hourly Drive backups + alerts + weekly restore check → 3 rebuild runbook + one drill → 4 dev move (rehearsal), then the prod cutover night → 5 health card / Atlas retire / D-#817.
+  - **Now / next:** owner answers §9 (drill VM, alert email, Atlas after 14 days, book work files, cutover date) and fills the secrets vault (§3 0.2). Then Phase 1 in a session with auto mode OFF.
 - 2026-10-22: **SHIPPED — Mastery tracker M-2…M-6 on prod and on phones.** Promotion #1135 (`72cee992`, Deploy prod success, `/healthz` 200; new fields answer "not authorized" on prod, not "cannot query"). OTA update group `0adfca82` (channel `production`, runtime 1.1.0, android), bundle verified: prod URL present, localhost absent, new screens' strings present; Android sourcemaps uploaded.
   - **Nothing is visible yet:** the add-on is switched off for every class × subject. To start: lock + import a class × subject's catalogue, set its question-type marks, switch it on for the year.
 - 2026-10-22: **BUILT — Mastery M-6 thin (D-#812)** (branch `feat/mastery-m6`, worktree `C:/w/m6`). Guardians: শিখন-দক্ষতা screen (plain buckets, home tips, what the school did). Notifications: proposal → approvers; extra class → teacher + guardians; weekly assignment → guardians. The whole thin loop M-0..M-6 is now built.
