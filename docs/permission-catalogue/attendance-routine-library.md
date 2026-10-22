@@ -1,6 +1,6 @@
 # Attendance, routine & library — build checklist
 
-Features: `attendance`, `staff_attendance`, `routine`, `class_note`, `library`, `chat`, `saturday_revision`, `vocab_test`, plus the routine-slot half of `cover` (`cover:assign`; the rest of `cover` lives in hr-finance.md) (owner rows: see README). Source: inventory D, origin/dev 2026-10-20.
+Features: `attendance`, `staff_attendance`, `routine`, `class_note`, `lesson_progress`, `library`, `chat`, `saturday_revision`, `vocab_test`, plus the routine-slot half of `cover` (`cover:assign`; the rest of `cover` lives in hr-finance.md) (owner rows: see README). Source: inventory D, origin/dev 2026-10-20.
 Counts: 76 mutations, 108 queries, 4 REST rows (5 routes).
 
 Designation names used below: `marker_of_the_day`, `class_teacher`, `slot_teacher_or_cover`, `librarian`, `group_lead`, `vocab_tester`. Each stays as the row gate under its action (README `DESIGNATION:`).
@@ -414,3 +414,18 @@ No other role-routed recipient is named for this area.
 - Library BN wording uses ধার, never ঋণ; one server error string (circulation.ts:435) still says "ঋণের অবস্থা" (F-33).
 
 Listed elsewhere: `server/src/modules/hr/resolvers/staffHub.ts:348` staffAttendance, `:362` staffAttendanceSummary, `:386` staffLatenessPreview → hr-finance.md (new gate `staff_attendance:view_all`). The other `cover` actions (`view_all`, `approve`, `assign_proxy`, `propose`) → hr-finance.md.
+
+## (e) `lesson_progress` — lesson-plan progress (added with LP-1/LP-2, 2026-10-22, D-#820–#826)
+
+| file | field | gate |
+|---|---|---|
+| server/src/modules/lesson-progress/resolvers/lessonDelivery.ts | lessonPlanForSlot (LP-1) | hasAnyPermission(`class_note:create`, `class_note:edit`, `class_note:edit_all`) + slot teacher / cover / note author, or `class_note:edit_all` |
+| server/src/modules/routine/resolvers/routineTriggers.ts | publishClassNote / updateClassNote `lessonPlan` arg (LP-1) | rides the note's own gate (no new action) |
+| server/src/modules/lesson-progress/resolvers/lessonProgress.ts | lessonProgressOverview (LP-2) | `lesson_progress:view_all` |
+| server/src/modules/lesson-progress/resolvers/lessonProgress.ts | myLessonProgress (LP-2) | hasAnyPermission(`lesson_progress:view`, `lesson_progress:view_all`); own routine শাখা × subjects + class-teacher শাখা |
+| server/src/modules/lesson-progress/resolvers/lessonProgress.ts | lessonSectionTracker (LP-2) | hasAnyPermission(`lesson_progress:view`, `lesson_progress:view_all`) + row rule (routine holder / class teacher; `view_all` lifts it) |
+| app DrawerContent | ক্লাস নোট → পাঠ পরিকল্পনার অগ্রগতি leaf | perms `lesson_progress:view` / `view_all` (inside the `class_note:view` route) |
+| server/src/modules/lesson-progress/resolvers/studentLessons.ts | studentLessons (LP-3) | hasAnyPermission(`lesson_progress:view`, `lesson_progress:view_all`) + row rule: `view_all` / class teacher of the child's শাখা see every subject; a subject teacher only the routine-held subjects (`narrowed`); anyone else refused |
+| server/src/modules/mastery/resolvers/masteryDiagnosis.ts | MasteryOutcomeTrail.chapterLessons (LP-3) | rides `masteryOutcomeTrail`'s gate (routine holder / `mastery:edit_all`) |
+| server/src/modules/mastery/resolvers/masteryAction.ts | MasteryAction.lessonGap (LP-3) | rides `masteryAction`'s gate |
+| app StudentProfileScreen | পাঠ tab | `lesson_progress:view` / `view_all` |

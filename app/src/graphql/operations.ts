@@ -10,6 +10,7 @@
  */
 import { gql } from "urql";
 import type { Role } from "@scd/shared";
+import { STUDENT_LESSON_SESSION_FIELDS, type StudentLessonSessionT } from "./mastery";
 
 type NoVars = Record<string, never>;
 
@@ -4759,10 +4760,156 @@ export interface ClassNoteT {
   attachmentIds: string[];
   publishedBy: string;
   publishedAt: string;
+  /** LP-1 (D-#822): the session plan(s) this period taught, or why none; null = not answered. */
+  lessonDelivery: LessonDeliveryT | null;
 }
+
+// --- Lesson-plan progress LP-1 (D-#820–#822) -------------------------------
+
+export interface LessonDeliveryT {
+  noteId: string;
+  dateKey: string;
+  sessions: Array<{ key: string; chapter: string; anchorWord: string; sessionIndex: number; sessionOf: number; titleBn: string; finished: boolean }>;
+  noneReason: string | null;
+  noneNote: string | null;
+}
+
+export interface LessonPlanSessionT {
+  key: string;
+  chapter: string;
+  anchorWord: string;
+  chapterTitle: string | null;
+  sessionIndex: number;
+  sessionOf: number;
+  titleBn: string;
+  artifactId: string;
+  finishedOn: string[];
+  startedOn: string[];
+}
+
+/** The class note's lesson-plan answer: sessions, OR a reason (D-#821). */
+export interface LessonPlanIn {
+  sessions?: Array<{ key: string; finished: boolean }>;
+  noneReason?: string | null;
+  noneNote?: string | null;
+}
+
+const LESSON_DELIVERY_FIELDS = `noteId dateKey sessions { key chapter anchorWord sessionIndex sessionOf titleBn finished } noneReason noneNote`;
+
+export const LESSON_PLAN_FOR_SLOT_QUERY = gql<
+  {
+    lessonPlanForSlot: {
+      applies: boolean;
+      sessions: LessonPlanSessionT[];
+      suggestedKey: string | null;
+      delivery: LessonDeliveryT | null;
+    };
+  },
+  { slotId: string; date: string }
+>`
+  query LessonPlanForSlot($slotId: String!, $date: String!) {
+    lessonPlanForSlot(slotId: $slotId, date: $date) {
+      applies suggestedKey
+      sessions { key chapter anchorWord chapterTitle sessionIndex sessionOf titleBn artifactId finishedOn startedOn }
+      delivery { ${LESSON_DELIVERY_FIELDS} }
+    }
+  }
+`;
+
+// --- Lesson-plan progress LP-2 (D-#824/#826) --------------------------------
+
+export interface LessonProgressRowT {
+  sectionId: string;
+  classLevel: number;
+  classNameBn: string;
+  sectionNameBn: string;
+  subject: string;
+  total: number;
+  finished: number;
+  pct: number;
+  finishedLast4Weeks: number;
+  pacePerWeek: number;
+  projectedFinishKey: string | null;
+  lastFinishedKey: string | null;
+  daysSinceLastFinished: number | null;
+  skipped: number;
+  reasons: { revision: number; test: number; other: number };
+  unansweredNotes: number;
+  lagSessions: number;
+}
+
+export interface LessonTrackerSessionT {
+  key: string;
+  chapter: string;
+  anchorWord: string;
+  chapterTitle: string | null;
+  sessionIndex: number;
+  sessionOf: number;
+  titleBn: string;
+  artifactId: string;
+  /** FINISHED | STARTED | SKIPPED | NOT_YET */
+  status: string;
+  finishedOn: string[];
+  startedOn: string[];
+  teacherNames: string[];
+}
+
+const LESSON_PROGRESS_ROW_FIELDS = `
+  sectionId classLevel classNameBn sectionNameBn subject total finished pct finishedLast4Weeks pacePerWeek
+  projectedFinishKey lastFinishedKey daysSinceLastFinished skipped reasons { revision test other } unansweredNotes lagSessions
+`;
+
+export const LESSON_PROGRESS_OVERVIEW_QUERY = gql<
+  { lessonProgressOverview: LessonProgressRowT[] },
+  { classLevel?: number | null; subject?: string | null }
+>`
+  query LessonProgressOverview($classLevel: Int, $subject: String) {
+    lessonProgressOverview(classLevel: $classLevel, subject: $subject) { ${LESSON_PROGRESS_ROW_FIELDS} }
+  }
+`;
+
+export const MY_LESSON_PROGRESS_QUERY = gql<{ myLessonProgress: LessonProgressRowT[] }, Record<string, never>>`
+  query MyLessonProgress {
+    myLessonProgress { ${LESSON_PROGRESS_ROW_FIELDS} }
+  }
+`;
+
+export const LESSON_SECTION_TRACKER_QUERY = gql<
+  { lessonSectionTracker: { row: LessonProgressRowT; sessions: LessonTrackerSessionT[] } },
+  { sectionId: string; subject: string }
+>`
+  query LessonSectionTracker($sectionId: String!, $subject: String!) {
+    lessonSectionTracker(sectionId: $sectionId, subject: $subject) {
+      row { ${LESSON_PROGRESS_ROW_FIELDS} }
+      sessions { key chapter anchorWord chapterTitle sessionIndex sessionOf titleBn artifactId status finishedOn startedOn teacherNames }
+    }
+  }
+`;
+
+// --- Lesson-plan progress LP-3 (D-#823/#826) --------------------------------
+
+export interface StudentLessonsT {
+  studentId: string;
+  narrowed: boolean;
+  subjects: Array<{
+    subject: string;
+    counts: { present: number; partial: number; absent: number; unknown: number };
+    sessions: StudentLessonSessionT[];
+  }>;
+}
+
+export const STUDENT_LESSONS_QUERY = gql<{ studentLessons: StudentLessonsT }, { studentId: string }>`
+  query StudentLessons($studentId: String!) {
+    studentLessons(studentId: $studentId) {
+      studentId narrowed
+      subjects { subject counts { present partial absent unknown } sessions { ${STUDENT_LESSON_SESSION_FIELDS} } }
+    }
+  }
+`;
 
 const CLASS_NOTE_FIELDS = `
   id slotId groupType groupId date subject taughtSummaryBn homeworkItemId attachmentIds publishedBy publishedAt
+  lessonDelivery { ${LESSON_DELIVERY_FIELDS} }
 `;
 
 export const CLASS_NOTES_FOR_DATE_QUERY = gql<
@@ -4807,10 +4954,12 @@ export const PUBLISH_CLASS_NOTE = gql<
     attachmentIds?: string[] | null;
     /** DE-3 (D-#477): declare the day's homework in the SAME call. */
     homework?: ClassNoteHomeworkIn | null;
+    /** LP-1 (D-#820): which session plan(s) this period taught, or why none. */
+    lessonPlan?: LessonPlanIn | null;
   }
 >`
-  mutation PublishClassNote($slotId: String!, $date: String!, $taughtSummaryBn: String!, $homeworkItemId: String, $attachmentIds: [String!], $homework: ClassNoteHomeworkInput) {
-    publishClassNote(slotId: $slotId, date: $date, taughtSummaryBn: $taughtSummaryBn, homeworkItemId: $homeworkItemId, attachmentIds: $attachmentIds, homework: $homework) {
+  mutation PublishClassNote($slotId: String!, $date: String!, $taughtSummaryBn: String!, $homeworkItemId: String, $attachmentIds: [String!], $homework: ClassNoteHomeworkInput, $lessonPlan: LessonPlanInput) {
+    publishClassNote(slotId: $slotId, date: $date, taughtSummaryBn: $taughtSummaryBn, homeworkItemId: $homeworkItemId, attachmentIds: $attachmentIds, homework: $homework, lessonPlan: $lessonPlan) {
       ${CLASS_NOTE_FIELDS}
     }
   }
@@ -4902,10 +5051,10 @@ export const CLASS_NOTES_ADMIN_OPTIONS_QUERY = gql<
 `;
 export const UPDATE_CLASS_NOTE = gql<
   { updateClassNote: ClassNoteT },
-  { id: string; taughtSummaryBn?: string | null; attachmentIds?: string[] | null }
+  { id: string; taughtSummaryBn?: string | null; attachmentIds?: string[] | null; lessonPlan?: LessonPlanIn | null }
 >`
-  mutation UpdateClassNote($id: String!, $taughtSummaryBn: String, $attachmentIds: [String!]) {
-    updateClassNote(id: $id, taughtSummaryBn: $taughtSummaryBn, attachmentIds: $attachmentIds) {
+  mutation UpdateClassNote($id: String!, $taughtSummaryBn: String, $attachmentIds: [String!], $lessonPlan: LessonPlanInput) {
+    updateClassNote(id: $id, taughtSummaryBn: $taughtSummaryBn, attachmentIds: $attachmentIds, lessonPlan: $lessonPlan) {
       ${CLASS_NOTE_FIELDS}
     }
   }

@@ -130,4 +130,7 @@ import "./modules/mastery/resolvers/masteryDiagnosis";
 import "./modules/mastery/resolvers/masteryAssignment";
 import "./modules/mastery/resolvers/masteryGuardian";
 import "./modules/mastery/resolvers/masteryAction";
+import "./modules/lesson-progress/resolvers/lessonDelivery";
+import "./modules/lesson-progress/resolvers/lessonProgress";
+import "./modules/lesson-progress/resolvers/studentLessons";
 import "./modules/worksheets/resolvers/worksheet";

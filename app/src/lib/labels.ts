@@ -325,6 +325,7 @@ import {
   type LessonState,
 } from "@scd/shared";
 import { IMPROVEMENT_REASON_LABELS_BN, IMPROVEMENT_REASON_LABELS_EN, type ImprovementReason } from "@scd/shared";
+import { LESSON_NONE_REASON_LABELS_BN, type LessonNoneReason } from "@scd/shared";
 
 // --- Active language (module-level; read at render time) ---------------------
 
@@ -834,6 +835,15 @@ const HW_NIL_REASON_EN: Record<string, string> = {
 };
 export const hwNilReasonLabel = (v?: string | null): string =>
   (v && pick(HW_NIL_REASON_BN, HW_NIL_REASON_EN)[v]) || v || DASH;
+
+// Lesson-plan progress (LP-1, D-#821): why a class note names no session plan.
+const LESSON_NONE_REASON_EN: Record<LessonNoneReason, string> = {
+  REVISION: "Revision",
+  TEST: "Test / class test",
+  OTHER: "Other work outside the plan",
+};
+export const lessonNoneReasonLabel = (v?: string | null): string =>
+  (v && pick(LESSON_NONE_REASON_LABELS_BN as Record<string, string>, LESSON_NONE_REASON_EN as Record<string, string>)[v]) || v || DASH;
 
 // Class Test tracker (CT-5)
 export const classTestStatusLabel = (v?: string | null): string =>
@@ -6750,6 +6760,61 @@ const STR_BN = {
   msFilterOpen: "চলমান",
   msFilterClosed: "বন্ধ",
   msFilterAll: "সব",
+  // Lesson-plan progress LP-1 (D-#820–#822)
+  lpBlockTitle: "পাঠ পরিকল্পনা — আজ কোন সেশন পড়ালেন?",
+  lpSession: "সেশন",
+  lpFinished: "শেষ হয়েছে",
+  lpStarted: "চলমান",
+  lpNext: "পরের সেশন",
+  lpShowAll: "সব সেশন দেখুন",
+  lpShowLess: "কম দেখুন",
+  lpDoneOn: "শেষ",
+  lpNoneTitle: "পরিকল্পনার কোনো সেশন হয়নি — কেন?",
+  lpNoneNote: "সংক্ষেপে লিখুন (ঐচ্ছিক)",
+  lpRequired: "কোন সেশন পড়ালেন বাছাই করুন, অথবা কেন হয়নি বলুন",
+  lpRemove: "বাদ দিন",
+  lpEditMarks: "সেশন সংশোধন",
+  lpSaveMarks: "সেশন সংরক্ষণ",
+  lpSaved: "সেশন সংরক্ষিত হয়েছে",
+  lpNotAnswered: "পাঠ পরিকল্পনার সেশন বাছাই করা হয়নি",
+  // LP-2 (D-#824)
+  lpNavTitle: "পাঠ পরিকল্পনার অগ্রগতি",
+  lpOverviewHint: "প্রতিটি শাখা ও বিষয়ে কয়টি সেশন শেষ, গত ৪ সপ্তাহের গতি, পাশের শাখার চেয়ে কতটা পিছিয়ে।",
+  lpMine: "আমার শাখা",
+  lpAllSchool: "পুরো স্কুল",
+  lpAllClasses: "সব শ্রেণি",
+  lpAllSubjects: "সব বিষয়",
+  lpSessionsDone: "সেশন শেষ",
+  lpLast4Weeks: "গত ৪ সপ্তাহে",
+  lpPerWeek: "সপ্তাহে",
+  lpProjected: "এই গতিতে শেষ হবে",
+  lpBehind: "সেশন পিছিয়ে",
+  lpLastDone: "শেষ সেশন",
+  lpDaysAgo: "দিন আগে",
+  lpToday: "আজ",
+  lpNoFinishYet: "এখনও কোনো সেশন শেষ হয়নি",
+  lpUnanswered: "সেশন বাছাই ছাড়া নোট",
+  lpSkipped: "বাদ পড়েছে",
+  lpNotYet: "বাকি",
+  lpInsteadOf: "সেশনের বদলে",
+  lpEmpty: "পাঠ পরিকল্পনা আছে এমন কোনো শাখা-বিষয় পাওয়া যায়নি।",
+  lpTeacher: "শিক্ষক",
+  // LP-3 (D-#823/#825)
+  lpTabLessons: "পাঠ",
+  lpPresent: "উপস্থিত",
+  lpPartial: "আংশিক",
+  lpAbsent: "অনুপস্থিত",
+  lpUnknown: "অজানা",
+  lpOnLeave: "ছুটিতে",
+  lpMissedTitle: "যে পাঠে অনুপস্থিত ছিল",
+  lpAllLessons: "সব পাঠ",
+  lpNarrowed: "শুধু আপনার বিষয়গুলো দেখানো হচ্ছে।",
+  lpNoLessons: "এখনও কোনো পাঠ চিহ্নিত হয়নি।",
+  lpChapterInClass: "এই অধ্যায় ক্লাসে",
+  lpChapterNotYet: "এই অধ্যায়ের কোনো ক্লাস এখনও চিহ্নিত হয়নি।",
+  lpGapLine: "দুর্বল {weak} জনের {missed} জন এই অধ্যায়ের অন্তত একটি ক্লাসে অনুপস্থিত ছিল",
+  lpGapNone: "দুর্বল কেউ এই অধ্যায়ের ক্লাস মিস করেনি।",
+  lpUnknownHint: "অজানা = সেদিন হাজিরা নেওয়া হয়নি",
 } as const;
 
 type StrTable = Record<keyof typeof STR_BN, string>;
@@ -12178,6 +12243,58 @@ const STR_EN: StrTable = {
   msFilterOpen: "Running",
   msFilterClosed: "Closed",
   msFilterAll: "All",
+  lpBlockTitle: "Lesson plan — which session did you teach today?",
+  lpSession: "Session",
+  lpFinished: "Finished",
+  lpStarted: "Continues",
+  lpNext: "Next session",
+  lpShowAll: "Show all sessions",
+  lpShowLess: "Show fewer",
+  lpDoneOn: "Done",
+  lpNoneTitle: "No session from the plan — why?",
+  lpNoneNote: "A short note (optional)",
+  lpRequired: "Pick the session you taught, or say why none",
+  lpRemove: "Remove",
+  lpEditMarks: "Correct sessions",
+  lpSaveMarks: "Save sessions",
+  lpSaved: "Sessions saved",
+  lpNotAnswered: "No lesson-plan session marked",
+  lpNavTitle: "Lesson-plan progress",
+  lpOverviewHint: "For every section and subject: sessions finished, pace over the last 4 weeks, how far behind the parallel section.",
+  lpMine: "My sections",
+  lpAllSchool: "Whole school",
+  lpAllClasses: "All classes",
+  lpAllSubjects: "All subjects",
+  lpSessionsDone: "sessions done",
+  lpLast4Weeks: "Last 4 weeks",
+  lpPerWeek: "per week",
+  lpProjected: "At this pace, done by",
+  lpBehind: "sessions behind",
+  lpLastDone: "Last session",
+  lpDaysAgo: "days ago",
+  lpToday: "today",
+  lpNoFinishYet: "No session finished yet",
+  lpUnanswered: "Notes without a session",
+  lpSkipped: "Skipped",
+  lpNotYet: "Not yet",
+  lpInsteadOf: "Instead of a session",
+  lpEmpty: "No section and subject with lesson plans was found.",
+  lpTeacher: "Teacher",
+  lpTabLessons: "Lessons",
+  lpPresent: "Present",
+  lpPartial: "Partly",
+  lpAbsent: "Absent",
+  lpUnknown: "Unknown",
+  lpOnLeave: "On leave",
+  lpMissedTitle: "Lessons missed",
+  lpAllLessons: "All lessons",
+  lpNarrowed: "Only your subjects are shown.",
+  lpNoLessons: "No lesson has been marked yet.",
+  lpChapterInClass: "This chapter in class",
+  lpChapterNotYet: "No class of this chapter has been marked yet.",
+  lpGapLine: "{missed} of the {weak} weak students missed at least one class of this chapter",
+  lpGapNone: "None of the weak students missed a class of this chapter.",
+  lpUnknownHint: "Unknown = attendance not taken that day",
 };
 
 /** UI chrome strings — resolves to the active language at read time (Proxy). Use

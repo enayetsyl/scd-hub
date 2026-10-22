@@ -16,7 +16,7 @@ This catalogue is the build checklist for the permission matrix. It names every 
 | [`trackers-classtest.md`](trackers-classtest.md) | class_test, class_test_question, class_test_script, set_tracker, student_profile (+ cross-refs to work_claim, question_sets, printing) |
 | [`foundation-platform.md`](foundation-platform.md) | students, guardians, classes_sections, teaching_assignments, staff_logins, view_as, access_control, audit_log, system_health, guardian_engagement, message_templates, admin_dashboard, archive, notifications, my_account |
 | [`hr-finance.md`](hr-finance.md) | staff_records, hr_policy, leave, cover, payroll, salary_advance, appraisal, conduct, grievance, staff_letters, offboarding, finance_*, budget, fee_support, qard, reconciliation, work_board, printing |
-| [`attendance-routine-library.md`](attendance-routine-library.md) | attendance, staff_attendance, routine, class_note, library, chat, saturday_revision, vocab_test |
+| [`attendance-routine-library.md`](attendance-routine-library.md) | attendance, staff_attendance, routine, class_note, lesson_progress, library, chat, saturday_revision, vocab_test |
 | [`observation-comments-reports.md`](observation-comments-reports.md) | classroom_observation, free_mixing_review, student_comments, parents_meeting, monthly_report, improvement_plan, teaching_notes, english_drive, worksheets |
 | [`content-questions-exams.md`](content-questions-exams.md) | lesson_plans, plan_review, question_bank, question_review, question_sets, exam_syllabus, scholarship_practice, mastery, book_production |
 
@@ -118,6 +118,7 @@ Several of today's bypasses are template-aware (`isAdminStaff`, `actsAsRole`), w
 | Teaching & trackers | `work_claim` | Guardian "done at home" claims | অভিভাবকের জানানো | 5 | trackers-homework-assignment |
 | Teaching & trackers | `set_tracker` | Set tracker (legacy) | সেট ট্র্যাকার | 5 | trackers-classtest |
 | Teaching & trackers | `class_note` | Class notes | ক্লাস নোট | 6 | attendance-routine-library |
+| Teaching & trackers | `lesson_progress` | Lesson-plan progress | পাঠ পরিকল্পনার অগ্রগতি | 2 | attendance-routine-library |
 | Teaching & trackers | `saturday_revision` | Saturday revision (Hifz) | শনিবারের রিভিশন | 7 | attendance-routine-library |
 | Teaching & trackers | `vocab_test` | Vocabulary test | ভোকাবুলারি টেস্ট | 7 | attendance-routine-library |
 | Assessment & exams | `class_test` | Class test | ক্লাস টেস্ট | 12 | trackers-classtest |
@@ -182,7 +183,7 @@ Several of today's bypasses are template-aware (`isAdminStaff`, `actsAsRole`), w
 | Admin & access | `guardian_engagement` | Guardian app usage | অভিভাবকদের অ্যাপ ব্যবহার | 1 | foundation-platform |
 | Admin & access | `my_account` | My account | আমার অ্যাকাউন্ট | 1 | foundation-platform |
 
-**Totals: 69 features, 331 actions** (`mastery` added with M-0, 2026-10-20: +6 actions, all unflagged, TEACHER on +3, OFFICE on +1; M-2, 2026-10-21: +`mastery:edit_all`, PRINCIPAL-DEFAULT). By flag: LOCKED 11 · PRINCIPAL-DEFAULT 14 · DESIGNATION 24 · ESCALATION 5 · SELF 12 · unflagged 265. Defaults: TEACHER on 101 · OFFICE on 238. A row may carry a `†`/`F-n`/`2H` note in addition to its flag. Those notes are not counted as flags. Not counted: `guardian:read_child` (GUARDIAN plane), and the future `scholarship_practice:release` (SC-5, not built) and `announcements:publish` (no staff surface yet).
+**Totals: 70 features, 333 actions** (`lesson_progress` added with LP-2, 2026-10-22: +2 actions, unflagged, TEACHER on +1, OFFICE on +2) (`mastery` added with M-0, 2026-10-20: +6 actions, all unflagged, TEACHER on +3, OFFICE on +1; M-2, 2026-10-21: +`mastery:edit_all`, PRINCIPAL-DEFAULT). By flag: LOCKED 11 · PRINCIPAL-DEFAULT 14 · DESIGNATION 24 · ESCALATION 5 · SELF 12 · unflagged 265. Defaults: TEACHER on 101 · OFFICE on 238. A row may carry a `†`/`F-n`/`2H` note in addition to its flag. Those notes are not counted as flags. Not counted: `guardian:read_child` (GUARDIAN plane), and the future `scholarship_practice:release` (SC-5, not built) and `announcements:publish` (no staff surface yet).
 
 ---
 
@@ -261,6 +262,12 @@ Several of today's bypasses are template-aware (`isAdminStaff`, `actsAsRole`), w
 | `class_note:view_all` | All teachers' notes | সব শিক্ষকের ক্লাস নোট দেখা | Admin list, submission report, school-wide archive | — | on | | routine:manage |
 | `class_note:edit_all` | Write/correct any note | যেকোনো ক্লাস নোট লেখা/সংশোধন | Publish on any slot; edit any note | — | on | | isAdminStaff (publish); routine:manage (update) |
 | `class_note:delete` | Delete a class note | ক্লাস নোট মুছে ফেলা | Remove a note | — | on | | routine:manage |
+
+#### `lesson_progress` — পাঠ পরিকল্পনার অগ্রগতি (LP-2/LP-3, D-#826)
+| permission | EN | BN | what it allows | T | O | flags | replaces |
+|---|---|---|---|---|---|---|---|
+| `lesson_progress:view` | See lesson-plan progress | পাঠ পরিকল্পনার অগ্রগতি দেখা | A শাখা × subject's sessions taught (routine holder or class teacher), a student's lessons and presence | on | on | | routine:read (expansion, like class_note) |
+| `lesson_progress:view_all` | Any শাখা + the overview | সব শাখার অগ্রগতি ও সারসংক্ষেপ | School-wide overview, any শাখা's tracker, any student's lessons | — | on | | routine:manage (expansion, like class_note) |
 
 #### `saturday_revision` — শনিবারের রিভিশন
 | permission | EN | BN | what it allows | T | O | flags | replaces |

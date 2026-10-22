@@ -69,7 +69,8 @@ describe("submit flow", () => {
 
   test("onSave hands back the id so a first write can save-and-submit in one press", () => {
     expect(SRC).toMatch(/async function onSave\(\): Promise<string \| null>/);
-    expect(SRC).toMatch(/return res\.data\?\.saveExamSyllabus\.id/);
+    // `?.` on the root field too: a nullable field comes back null beside an error (#1142).
+    expect(SRC).toMatch(/return res\.data\?\.saveExamSyllabus\??\.id/);
   });
 
   test("a refused save aborts the submit rather than sending a half-written row", () => {

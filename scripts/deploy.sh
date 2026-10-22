@@ -28,16 +28,20 @@ build() {
   # SENTRY_AUTH_TOKEN (a VM-only build secret, never committed) so it's INERT until the
   # operator provides it; the upload is NON-FATAL so a Sentry hiccup never blocks a
   # deploy; the .map files are DELETED after upload so they are never served publicly.
+  # --clear: Metro's transform cache ignores EXPO_PUBLIC_* values (the VM-only app/.env
+  # holds the GlitchTip DSN + EXPO_PUBLIC_ENV) and is likely shared by the prod and dev
+  # checkouts — a cached export shipped a bundle with NO DSN on 2026-10-22, and could
+  # bake the other env's label. A cold export costs a few minutes; a silent web is worse.
   if [ -n "${SENTRY_AUTH_TOKEN:-}" ]; then
     ( cd app \
-        && npx expo export --platform web --source-maps \
+        && npx expo export --platform web --clear --source-maps \
         && { npx sentry-cli sourcemaps upload \
                --url https://scdhub-errors.shafayet.me --org scd --project scdhub-app \
                --release "$(git rev-parse HEAD)" dist \
              || say "sentry sourcemap upload failed (non-fatal)"; } \
         ; find dist -name '*.map' -delete )
   else
-    ( cd app && npx expo export --platform web )
+    ( cd app && npx expo export --platform web --clear )
   fi
 }
 healthy() {

@@ -56,6 +56,10 @@ export type ClassNotesStackParamList = {
   MyClassNotes: { date?: string } | undefined;
   /** The archive: every note the caller may see, filtered + paginated. */
   AllClassNotes: undefined;
+  /** LP-2 (D-#824): lesson-plan progress — the Office overview / a teacher's own শাখা. */
+  LessonProgress: undefined;
+  /** LP-2: one শাখা × subject's sessions in book order. Never the stack's first screen (it needs params). */
+  LessonTracker: { sectionId: string; subject: string; title?: string };
 };
 
 export type ContentStackParamList = {

@@ -182,15 +182,15 @@ export default function PrintHistoryScreen({ navigation }: Props): React.ReactEl
   const { selection } = useSectionContext();
   const [{ data: yearsData }] = useQuery({ query: ACADEMIC_YEARS_QUERY });
   const academicYearId =
-    selection.academicYearId ?? yearsData?.academicYears.find((y) => y.current)?.id ?? null;
+    selection.academicYearId ?? yearsData?.academicYears?.find((y) => y.current)?.id ?? null;
   const [{ data: classData }] = useQuery({
     query: CLASSES_QUERY,
     variables: { academicYearId: academicYearId ?? "" },
     pause: !academicYearId,
   });
 
-  const rows = historyQ.data?.printHistoryPage.rows ?? [];
-  const total = historyQ.data?.printHistoryPage.total ?? 0;
+  const rows = historyQ.data?.printHistoryPage?.rows ?? [];
+  const total = historyQ.data?.printHistoryPage?.total ?? 0;
 
   // Every roster class, PLUS any class the history names that the roster no longer lists
   // (a job filed against an earlier year's class), PLUS "no class" for the remainder that

@@ -385,18 +385,18 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
     </Card>
   );
 
-  const queue = queueQ.data?.printQueue.items ?? [];
-  const queueTotal = queueQ.data?.printQueue.total ?? 0;
-  const queueHasMore = queueQ.data?.printQueue.hasMore ?? false;
+  const queue = queueQ.data?.printQueue?.items ?? [];
+  const queueTotal = queueQ.data?.printQueue?.total ?? 0;
+  const queueHasMore = queueQ.data?.printQueue?.hasMore ?? false;
   // D-#461: the 1-based range this page covers, for the "১–২৫ / ৩৪১" pager label.
   const pageFrom = queueTotal === 0 ? 0 : page * PAGE_SIZE + 1;
   const pageTo = page * PAGE_SIZE + queue.length;
   // D-#302: in-flight jobs on top; delivered/cancelled behind the fold. D-#761: each is
   // one server page; the totals are the real counts.
-  const mineActive = mineQ.data?.myPrintRequestsPage.rows ?? [];
-  const mineActiveTotal = mineQ.data?.myPrintRequestsPage.total ?? 0;
-  const minePast = pastQ.data?.myPrintRequestsPage.rows ?? [];
-  const minePastTotal = pastQ.data?.myPrintRequestsPage.total ?? 0;
+  const mineActive = mineQ.data?.myPrintRequestsPage?.rows ?? [];
+  const mineActiveTotal = mineQ.data?.myPrintRequestsPage?.total ?? 0;
+  const minePast = pastQ.data?.myPrintRequestsPage?.rows ?? [];
+  const minePastTotal = pastQ.data?.myPrintRequestsPage?.total ?? 0;
   const mineTotal = mineActiveTotal + minePastTotal;
 
   return (

@@ -32,7 +32,7 @@ export default function VocabHomeScreen(): React.ReactElement {
     query: MY_VOCAB_ASSIGNMENTS_PAGE_QUERY,
     variables: { page, pageSize: PAGE_SIZE },
   });
-  const mine = myQ.data?.myVocabAssignmentsPage.rows ?? [];
+  const mine = myQ.data?.myVocabAssignmentsPage?.rows ?? [];
 
   return (
     <Screen padded={false}>
@@ -68,7 +68,7 @@ export default function VocabHomeScreen(): React.ReactElement {
                 </View>
               ))
             )}
-            <Pager page={page} pageSize={PAGE_SIZE} total={myQ.data?.myVocabAssignmentsPage.total ?? 0} onPage={setPage} />
+            <Pager page={page} pageSize={PAGE_SIZE} total={myQ.data?.myVocabAssignmentsPage?.total ?? 0} onPage={setPage} />
           </QueryGate>
         </Card>
       </ScrollView>
