@@ -1,5 +1,7 @@
 # STATUS
 
+- 2026-10-22: **SHIPPED — Mastery tracker M-2…M-6 on prod and on phones.** Promotion #1135 (`72cee992`, Deploy prod success, `/healthz` 200; new fields answer "not authorized" on prod, not "cannot query"). OTA update group `0adfca82` (channel `production`, runtime 1.1.0, android), bundle verified: prod URL present, localhost absent, new screens' strings present; Android sourcemaps uploaded.
+  - **Nothing is visible yet:** the add-on is switched off for every class × subject. To start: lock + import a class × subject's catalogue, set its question-type marks, switch it on for the year.
 - 2026-10-22: **BUILT — Mastery M-6 thin (D-#812)** (branch `feat/mastery-m6`, worktree `C:/w/m6`). Guardians: শিখন-দক্ষতা screen (plain buckets, home tips, what the school did). Notifications: proposal → approvers; extra class → teacher + guardians; weekly assignment → guardians. The whole thin loop M-0..M-6 is now built.
   - Open (owner): AI-assisted question drafting needs a provider key decision; promotion dev→main + OTA for M-0..M-6 (none promoted yet); switch a class × subject on in prod once its catalogue is locked.
   - Deferred: routine slot finder + Today card for the extra class, per-student cross-subject timeline, scheduler families (drafts, revision-due), class-teacher behaviour / not-submitted notices.
