@@ -7,8 +7,8 @@ LP-2 BUILT 2026-10-22 (branch `feat/lesson-progress-lp2`: `lesson_progress` cata
 needs session plans AND a live routine slot for that শাখা × subject); LP-3 BUILT 2026-10-22 (branch
 `feat/lesson-progress-lp3`: `studentLessons` + student-profile পাঠ tab, `MasteryOutcomeTrail.chapterLessons`,
 `MasteryAction.lessonGap`; presence reads the attendance units the delivery snapshotted — `attendanceUnits` — because
-Quran-group membership is not dated, then falls back to the child's current unit). Corrective action and a guardian
-view remain for the owner.
+Quran-group membership is not dated, then falls back to the child's current unit). LP-4 BUILT 2026-10-22 (branch `feat/lesson-progress-lp4`: §7 — catch-up task
++ guardian missed lessons + 18:00 notice, D-#827/#828). Only the dated pacing plan remains open.
 **Decision block:** D-#820–#826, reserved against `origin/dev@009ec1fa` (2026-10-22, max D-#813; open PR #1138
 holds D-#815/#816, so D-#814–#819 are left free).
 
@@ -31,7 +31,8 @@ Owner rulings in the same conversation (AskUserQuestion):
 | LP-1 | The class note asks "which session plan(s) did you finish?" — picker in book order, next session pre-selected; stored as a `LessonDelivery` row with the section's roster that day | session plans imported for the class × subject |
 | LP-2 | Tracker: one section × subject in book order (done / in progress / skipped / not yet, date, teacher) + the school-wide overview for the Office (progress, pace, lag behind the parallel শাখা, periods with no plan mark) | LP-1 |
 | LP-3 | Student link: a student's lessons per subject with present / absent from the day's attendance, "missed lessons"; mastery shows, for a weak topic's chapter, which sessions the child sat and missed (student trail + extra-class proposal) | LP-1, mastery M-3/M-5 |
-| Later | Corrective action (owner: decide later); a guardian "lessons missed" view; a date-based term pacing plan | owner |
+| LP-4 | Corrective action = a catch-up TASK on the teacher's work board, recorded per শাখা × subject (D-#827); guardians see the lessons their child missed + an 18:00 notice (D-#828) — §7 | LP-2, LP-3 |
+| Later | A date-based term pacing plan | owner |
 
 ## §1 — What exists (re-used, not rebuilt)
 
@@ -116,6 +117,22 @@ New feature `lesson_progress` in `shared/permissionCatalogue.ts`:
 
 Marking needs no new action — it rides `class_note:create` / `class_note:edit` / `class_note:edit_all`. Mastery views
 keep their own gates and only add rows.
+
+## §7 — LP-4: corrective action and guardians (owner rulings 2026-10-22)
+
+**Catch-up task (D-#827).** On a শাখা × subject's tracker the Office (`lesson_progress:view_all` + `work_board:assign`)
+taps **ক্যাচ-আপ কাজ দিন**. The form is pre-filled: the routine teacher(s) of that শাখা × subject and its class teacher to
+pick from, a title, notes naming the skipped sessions and every session three or more children missed (with the count),
+due a week out. It becomes an ordinary work-board task (createTask — its gate, audit, TASK_ASSIGNED notice, digests and
+done/blocked), and a `LessonCatchup` row ties it to the শাখা × subject with the progress at that moment. The tracker
+lists the catch-ups with the task's live state; the overview row shows "ক্যাচ-আপ চলছে N" until the task is DONE. The
+tracker also shows, per session, how many children on the roster were absent on a day it was taught ("+" when some
+day had no attendance).
+
+**Guardians (D-#828).** A guardian screen **যে পাঠ মিস হয়েছে** (drawer, Today shortcut): every marked class this academic
+year where the child was listed absent — date, subject, the session(s) and the teacher's class-note text — newest first,
+paged. At **18:00 on school days** a `LESSON_MISSED` notice goes to each linked guardian naming today's subjects/sessions
+missed (one per guardian × child × day; only real absences — no attendance, no notice). Tapping it opens the screen.
 
 ## §6 — Acceptance (feeds tests)
 

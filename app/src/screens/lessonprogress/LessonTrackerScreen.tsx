@@ -3,15 +3,24 @@
  * finished (date, teacher), continuing, skipped (a later one is finished) or not yet. The header is
  * the overview row: progress, pace, projection, lag. Pages by chapter (D-#761: bounded by the book).
  */
-import React, { useCallback, useMemo, useRef } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import { ScrollView, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useQuery } from "urql";
-import { LESSON_SECTION_TRACKER_QUERY, type LessonTrackerSessionT } from "../../graphql/operations";
-import { Screen, Card, Body, Muted, Badge, Loader, ErrorBanner, EmptyState } from "../../components/ui";
+import { useMutation, useQuery } from "urql";
+import type { TaskStatus } from "@scd/shared";
+import {
+  CREATE_LESSON_CATCHUP,
+  LESSON_CATCHUP_SUGGESTION_QUERY,
+  LESSON_SECTION_TRACKER_QUERY,
+  type LessonCatchupT,
+  type LessonTrackerSessionT,
+} from "../../graphql/operations";
+import { Screen, Card, Body, Muted, Badge, Button, Chip, ChipRow, Field, Loader, Notice, ErrorBanner, EmptyState } from "../../components/ui";
 import { Pager } from "../../components/Pager";
-import { STR, bnNum } from "../../lib/labels";
+import { useAuth } from "../../auth/AuthContext";
+import { useToast } from "../../state/ToastContext";
+import { STR, bnNum, taskStatusLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { usePagedRows } from "../../lib/paging";
 import { space } from "../../theme/tokens";
@@ -41,11 +50,137 @@ function SessionLine({ s }: { s: LessonTrackerSessionT }): React.ReactElement {
           <Muted>
             {dates.map(dayMonth).join(", ")}
             {teachers.length ? ` · ${teachers.join(", ")}` : ""}
+            {/* LP-4: how many on the roster missed it ("+" = some day had no attendance). */}
+            {s.absentCount > 0 ? ` · ${bnNum(s.absentCount)}${s.attendanceComplete ? "" : "+"} ${STR.lpAbsentN}` : ""}
           </Muted>
         ) : null}
       </View>
       <Badge text={st.label()} tone={st.tone} />
     </View>
+  );
+}
+
+const catchupStatus = (c: LessonCatchupT): { text: string; tone: "ok" | "info" | "muted" | "danger" } =>
+  c.status === "CANCELLED"
+    ? { text: STR.lpCatchupCancelled, tone: "muted" }
+    : c.blockedReason && c.status !== "DONE"
+      ? { text: STR.lpCatchupBlocked, tone: "danger" }
+      : { text: taskStatusLabel(c.status as TaskStatus), tone: c.status === "DONE" ? "ok" : "info" };
+
+/**
+ * LP-4 (D-#827): the Office's corrective action — the catch-ups raised here (the task's live state)
+ * and, for a caller who may (lesson_progress:view_all + work_board:assign), a pre-filled form that
+ * puts a catch-up task on the teacher's work board.
+ */
+function CatchupCard({
+  sectionId,
+  subject,
+  catchups,
+  onCreated,
+}: {
+  sectionId: string;
+  subject: string;
+  catchups: LessonCatchupT[];
+  onCreated: () => void;
+}): React.ReactElement | null {
+  const { can } = useAuth();
+  const toast = useToast();
+  const mayRaise = can("lesson_progress:view_all") && can("work_board:assign");
+  const [open, setOpen] = useState(false);
+  const [sugQ] = useQuery({ query: LESSON_CATCHUP_SUGGESTION_QUERY, variables: { sectionId, subject }, pause: !open });
+  const sug = sugQ.data?.lessonCatchupSuggestion;
+  const [assignee, setAssignee] = useState<string | null>(null);
+  const [title, setTitle] = useState("");
+  const [notes, setNotes] = useState("");
+  const [due, setDue] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [, create] = useMutation(CREATE_LESSON_CATCHUP);
+
+  // Seed the form once the suggestion arrives.
+  const seeded = useRef(false);
+  React.useEffect(() => {
+    if (!sug || seeded.current) return;
+    seeded.current = true;
+    setAssignee(sug.assignees[0]?.userId ?? null);
+    setTitle(sug.titleBn);
+    setNotes(sug.notes);
+    setDue(sug.dueKey);
+  }, [sug]);
+
+  if (!mayRaise && catchups.length === 0) return null;
+
+  async function submit(): Promise<void> {
+    if (!assignee) {
+      toast.show(STR.lpCatchupAssignee, "danger");
+      return;
+    }
+    setBusy(true);
+    const res = await create({
+      sectionId,
+      subject,
+      input: { assigneeUserId: assignee, titleBn: title.trim(), notes: notes.trim(), dueKey: due.trim(), sessionKeys: sug?.sessionKeys ?? [] },
+    });
+    setBusy(false);
+    if (res.error || !res.data?.createLessonCatchup) {
+      toast.show(friendlyError(res.error), "danger");
+      return;
+    }
+    toast.show(STR.lpCatchupCreated, "ok");
+    setOpen(false);
+    seeded.current = false;
+    onCreated();
+  }
+
+  return (
+    <Card>
+      <Body style={{ fontWeight: "700" }}>{STR.lpCatchupTitle}</Body>
+      {catchups.length === 0 ? <Muted>{STR.lpCatchupNone}</Muted> : null}
+      {catchups.map((c) => {
+        const st = catchupStatus(c);
+        return (
+          <View key={c.id} style={{ flexDirection: "row", alignItems: "flex-start", gap: space(2), marginTop: space(1) }}>
+            <View style={{ flex: 1 }}>
+              <Body>{c.titleBn}</Body>
+              <Muted>
+                {c.assigneeName} · {dayMonth(c.dueKey)} · {STR.lpCatchupAtRaise}: {bnNum(c.snapshot.finished)}/{bnNum(c.snapshot.total)}
+                {c.snapshot.lagSessions > 0 ? `, ${bnNum(c.snapshot.lagSessions)} ${STR.lpBehind}` : ""}
+              </Muted>
+              {c.blockedReason && c.status !== "DONE" ? <Muted>⚠ {c.blockedReason}</Muted> : null}
+            </View>
+            <Badge text={st.text} tone={st.tone} />
+          </View>
+        );
+      })}
+      {mayRaise && !open ? <Button title={STR.lpCatchupNew} variant="secondary" onPress={() => setOpen(true)} style={{ marginTop: space(2) }} /> : null}
+      {open ? (
+        <View style={{ marginTop: space(2), gap: space(1) }}>
+          {sugQ.error ? <Notice message={friendlyError(sugQ.error)} tone="danger" /> : null}
+          {!sug && !sugQ.error ? <Loader label={STR.loading} /> : null}
+          {sug ? (
+            <>
+              <Muted>{STR.lpCatchupAssignee}</Muted>
+              <ChipRow>
+                {sug.assignees.map((a) => (
+                  <Chip
+                    key={a.userId}
+                    label={`${a.name} · ${a.why === "ROUTINE" ? STR.lpWhyRoutine : STR.lpWhyClassTeacher}`}
+                    selected={assignee === a.userId}
+                    onPress={() => setAssignee(a.userId)}
+                  />
+                ))}
+              </ChipRow>
+              <Field label={STR.lpCatchupTitleField} value={title} onChangeText={setTitle} />
+              <Field label={STR.lpCatchupNotes} value={notes} onChangeText={setNotes} multiline />
+              <Field label={STR.lpCatchupDue} value={due} onChangeText={setDue} />
+              <View style={{ flexDirection: "row", gap: space(2) }}>
+                <Button title={STR.lpCatchupCreate} onPress={() => void submit()} loading={busy} disabled={busy} />
+                <Button title={STR.cancel} variant="ghost" onPress={() => setOpen(false)} />
+              </View>
+            </>
+          ) : null}
+        </View>
+      ) : null}
+    </Card>
   );
 }
 
@@ -110,6 +245,7 @@ export default function LessonTrackerScreen({ route, navigation }: Props): React
             </Muted>
           ) : null}
         </Card>
+        <CatchupCard sectionId={sectionId} subject={subject} catchups={t.catchups} onCreated={() => refetch({ requestPolicy: "network-only" })} />
         {shown.map((c) => (
           <Card key={c.chapter}>
             <Body style={{ fontWeight: "700" }}>{c.heading}</Body>

@@ -4836,6 +4836,8 @@ export interface LessonProgressRowT {
   reasons: { revision: number; test: number; other: number };
   unansweredNotes: number;
   lagSessions: number;
+  /** LP-4 (D-#827): catch-up tasks raised here that are not done. */
+  openCatchups: number;
 }
 
 export interface LessonTrackerSessionT {
@@ -4852,11 +4854,82 @@ export interface LessonTrackerSessionT {
   finishedOn: string[];
   startedOn: string[];
   teacherNames: string[];
+  /** LP-4: roster students absent on a day it was taught; a floor when attendanceComplete is false. */
+  absentCount: number;
+  attendanceComplete: boolean;
 }
+
+export interface LessonCatchupT {
+  id: string;
+  taskId: string;
+  titleBn: string;
+  assigneeName: string;
+  dueKey: string;
+  /** TODO | DOING | DONE | CANCELLED */
+  status: string;
+  blockedReason: string | null;
+  createdAt: string;
+  snapshot: { finished: number; total: number; lagSessions: number; skipped: number };
+}
+
+const LESSON_CATCHUP_FIELDS = `id taskId titleBn assigneeName dueKey status blockedReason createdAt snapshot { finished total lagSessions skipped }`;
+
+export const LESSON_CATCHUP_SUGGESTION_QUERY = gql<
+  {
+    lessonCatchupSuggestion: {
+      assignees: Array<{ userId: string; name: string; why: string }>;
+      titleBn: string;
+      notes: string;
+      dueKey: string;
+      sessionKeys: string[];
+    };
+  },
+  { sectionId: string; subject: string }
+>`
+  query LessonCatchupSuggestion($sectionId: String!, $subject: String!) {
+    lessonCatchupSuggestion(sectionId: $sectionId, subject: $subject) {
+      assignees { userId name why } titleBn notes dueKey sessionKeys
+    }
+  }
+`;
+
+export const CREATE_LESSON_CATCHUP = gql<
+  { createLessonCatchup: LessonCatchupT },
+  {
+    sectionId: string;
+    subject: string;
+    input: { assigneeUserId: string; titleBn: string; notes?: string | null; dueKey: string; effortMin?: number | null; sessionKeys?: string[] | null };
+  }
+>`
+  mutation CreateLessonCatchup($sectionId: String!, $subject: String!, $input: LessonCatchupInput!) {
+    createLessonCatchup(sectionId: $sectionId, subject: $subject, input: $input) { ${LESSON_CATCHUP_FIELDS} }
+  }
+`;
+
+/** LP-4 (D-#828): one class the child missed while a lesson-plan session was taught. */
+export interface MissedLessonT {
+  dateKey: string;
+  subject: string;
+  sessions: Array<{ chapter: string; anchorWord: string; sessionIndex: number; sessionOf: number; titleBn: string; finished: boolean }>;
+  noteBn: string | null;
+  onLeave: boolean;
+}
+
+export const CHILD_MISSED_LESSONS_PAGE_QUERY = gql<
+  { childMissedLessonsPage: { rows: MissedLessonT[]; total: number; page: number; pageSize: number } },
+  { studentId: string; page?: number | null; pageSize?: number | null }
+>`
+  query ChildMissedLessonsPage($studentId: String!, $page: Int, $pageSize: Int) {
+    childMissedLessonsPage(studentId: $studentId, page: $page, pageSize: $pageSize) {
+      total page pageSize
+      rows { dateKey subject noteBn onLeave sessions { chapter anchorWord sessionIndex sessionOf titleBn finished } }
+    }
+  }
+`;
 
 const LESSON_PROGRESS_ROW_FIELDS = `
   sectionId classLevel classNameBn sectionNameBn subject total finished pct finishedLast4Weeks pacePerWeek
-  projectedFinishKey lastFinishedKey daysSinceLastFinished skipped reasons { revision test other } unansweredNotes lagSessions
+  projectedFinishKey lastFinishedKey daysSinceLastFinished skipped reasons { revision test other } unansweredNotes lagSessions openCatchups
 `;
 
 export const LESSON_PROGRESS_OVERVIEW_QUERY = gql<
@@ -4875,13 +4948,14 @@ export const MY_LESSON_PROGRESS_QUERY = gql<{ myLessonProgress: LessonProgressRo
 `;
 
 export const LESSON_SECTION_TRACKER_QUERY = gql<
-  { lessonSectionTracker: { row: LessonProgressRowT; sessions: LessonTrackerSessionT[] } },
+  { lessonSectionTracker: { row: LessonProgressRowT; sessions: LessonTrackerSessionT[]; catchups: LessonCatchupT[] } },
   { sectionId: string; subject: string }
 >`
   query LessonSectionTracker($sectionId: String!, $subject: String!) {
     lessonSectionTracker(sectionId: $sectionId, subject: $subject) {
       row { ${LESSON_PROGRESS_ROW_FIELDS} }
-      sessions { key chapter anchorWord chapterTitle sessionIndex sessionOf titleBn artifactId status finishedOn startedOn teacherNames }
+      sessions { key chapter anchorWord chapterTitle sessionIndex sessionOf titleBn artifactId status finishedOn startedOn teacherNames absentCount attendanceComplete }
+      catchups { ${LESSON_CATCHUP_FIELDS} }
     }
   }
 `;

@@ -1,5 +1,6 @@
 # STATUS
 
+- 2026-10-22: **BUILT — Lesson-plan progress LP-4 (D-#827/#828)** (branch `feat/lesson-progress-lp4`, worktree `C:/w/lp`). Owner rulings: corrective action = task to the teacher; guardians = list + notify. Catch-up task from the tracker (work board, `LessonCatchup` record, per-session absentee counts); guardian যে পাঠ মিস হয়েছে screen; `LESSON_MISSED` 18:00 notice. +4 `lessonCatchup` tests.
 - 2026-10-22: **FIX — mastery assignment Part B fits the target (D-#829)** (branch `fix/mastery-partb-budget`). Owner said yes to the fix found on the dev seed. +2 builder tests; mastery assignment/action suites 20/20.
 - 2026-10-22 (late): **DB-on-VM Phase 0 + Phase 1 DONE** (`docs/db-on-vm-plan.md`). #1138 + #1139 merged to dev. Prod snapshot backfill applied (`importbatches` 98.4 → 29.8 MB; Atlas ≈ 385/512 MB). The VM mongod is hardened: auth + keyFile, replica set rs0, 6 GB cache, five users (passwords in `/opt/scdhub/mongo-credentials.env`), and prod reconnected the book plane with its own user. Book worker retired + disabled.
   - **Now / next:** owner reruns `make-kit.ps1` (it now includes the Mongo credentials). Promote dev→main so prod gets D-#815/#816 (notification TTL). Then Phase 2 (hourly backups + alerts).

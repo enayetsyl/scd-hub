@@ -286,6 +286,8 @@ const GUARDIAN_NAV: NavSection[] = [
   { type: "item", route: "GuardianHomeTab", screen: "ChildComments", labelKey: "gpComments", icon: "💬" },
   { type: "item", route: "GuardianHomeTab", screen: "ChildRevision", labelKey: "gpRevision", icon: "📖" },
   { type: "item", route: "GuardianHomeTab", screen: "ChildMastery", labelKey: "gpMsProgress", icon: "🎯" },
+  // LP-4 (D-#828): the lessons the child missed (with what was taught that day).
+  { type: "item", route: "GuardianHomeTab", screen: "ChildMissedLessons", labelKey: "gpMissedLessons", icon: "📘" },
 ];
 
 const NAV: NavSection[] = [...STAFF_NAV, ...GUARDIAN_NAV];
