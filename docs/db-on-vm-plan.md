@@ -189,9 +189,9 @@ and it also frees ~28 MB on Atlas.
 4. **Book pipeline:** no longer used. Stop backing it up; no working-file backup.
 5. **Cutover night:** **OPEN.** The owner sets it once the earlier phases are done.
 
-Still to confirm (not blocking Phases 0–3): since the book pipeline is retired, should the
-`scdhub-book-worker-prod` service be stopped and disabled? Its database would be kept, untouched, as a
-one-off archive.
+**Done 2026-10-22:** `scdhub-book-worker-prod` is stopped and disabled (owner: yes). It had been idle since
+2026-09-11, nothing in `deploy.sh`/CI restarts it, and prod `/healthz` was 200 afterwards. Its database stays
+untouched as an archive. To undo: `sudo systemctl enable --now scdhub-book-worker-prod`.
 
 ## 10. Order and owners
 
