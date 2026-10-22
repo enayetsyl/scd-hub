@@ -33,6 +33,17 @@ export const BACKUP_FOLDER = process.env.BACKUP_FOLDER_NAME ?? "SCD-Hub-Backups"
 export const BACKUP_WARN_DAYS = 2;
 export const BACKUP_CRITICAL_DAYS = 3;
 
+/** The hourly pool (D-#818): `backup.sh hourly` keeps the newest 48 here. */
+export const HOURLY_BACKUP_FOLDER = process.env.HOURLY_BACKUP_FOLDER_NAME ?? "SCD-Hub-Backups-Hourly";
+
+/** Hourly thresholds depend on WHERE prod lives, mirroring backup.sh: on the VM's own mongod
+ *  the job runs every hour (warn after 2 h, critical after 6 h); while prod is still on Atlas
+ *  the M0 egress cap limits it to one midday run, so a day-old copy is normal there. */
+export const HOURLY_WARN_HOURS_LOCAL = 2;
+export const HOURLY_CRITICAL_HOURS_LOCAL = 6;
+export const HOURLY_WARN_HOURS_REMOTE = 25;
+export const HOURLY_CRITICAL_HOURS_REMOTE = 49;
+
 export type BackupBand = "ok" | "warn" | "critical" | "unknown";
 
 export interface BackupArchive {
@@ -58,6 +69,8 @@ export interface BackupStatus {
   newestSizeBytes: number | null;
   /** Whole days since the newest archive. */
   ageDays: number | null;
+  /** Whole hours since the newest archive — the unit the hourly card reads. */
+  ageHours: number | null;
   /** Total size of everything kept, so unbounded growth is visible. */
   totalSizeBytes: number;
   band: BackupBand;
@@ -72,22 +85,44 @@ export function backupBand(found: boolean, ageDays: number | null): BackupBand {
   return "ok";
 }
 
+/** True when the app's own database is the VM's local mongod — then `backup.sh hourly`
+ *  runs every hour; otherwise (Atlas) once a day. Same test the script applies. */
+export function prodDbIsLocal(uri = process.env.MONGODB_URI ?? ""): boolean {
+  return /^mongodb:\/\/([^@/]*@)?(127\.0\.0\.1|localhost)([:/?]|$)/.test(uri);
+}
+
+export function hourlyBackupBand(found: boolean, ageHours: number | null, local = prodDbIsLocal()): BackupBand {
+  if (!found || ageHours === null) return "critical";
+  const warn = local ? HOURLY_WARN_HOURS_LOCAL : HOURLY_WARN_HOURS_REMOTE;
+  const critical = local ? HOURLY_CRITICAL_HOURS_LOCAL : HOURLY_CRITICAL_HOURS_REMOTE;
+  if (ageHours >= critical) return "critical";
+  if (ageHours >= warn) return "warn";
+  return "ok";
+}
+
 /** Whole days between two instants, floored — "yesterday's backup" reads as 1, not 0.9. */
 function daysBetween(from: Date, to: Date): number {
   return Math.floor((to.getTime() - from.getTime()) / 86_400_000);
 }
 
-/** Drive is a network hop; the panel may be refreshed freely without re-listing. */
-let cache: { at: number; value: BackupStatus } | null = null;
+/** Whole hours between two instants, floored. */
+function hoursBetween(from: Date, to: Date): number {
+  return Math.floor((to.getTime() - from.getTime()) / 3_600_000);
+}
+
+/** Drive is a network hop; the panel may be refreshed freely without re-listing.
+ *  One cache entry per folder (daily + hourly pools). */
+const cache = new Map<string, { at: number; value: BackupStatus }>();
 const TTL_MS = 5 * 60_000;
 
 export function resetBackupCache(): void {
-  cache = null;
+  cache.clear();
 }
 
-export async function backupStatus(now = new Date()): Promise<BackupStatus> {
-  const base: BackupStatus = {
-    folder: BACKUP_FOLDER,
+/** The empty shape for a folder — also what SystemHealthService reports when a probe throws. */
+export function emptyBackupStatus(folder: string, band: BackupBand, error: string | null = null): BackupStatus {
+  return {
+    folder,
     found: false,
     count: 0,
     archives: [],
@@ -95,34 +130,42 @@ export async function backupStatus(now = new Date()): Promise<BackupStatus> {
     newestAt: null,
     newestSizeBytes: null,
     ageDays: null,
+    ageHours: null,
     totalSizeBytes: 0,
-    band: "critical",
-    error: null,
+    band,
+    error,
   };
+}
 
-  if (cache && Date.now() - cache.at < TTL_MS) {
+type BandRule = (found: boolean, ageDays: number | null, ageHours: number | null) => BackupBand;
+
+async function folderStatus(folder: string, bandOf: BandRule, now: Date): Promise<BackupStatus> {
+  const cached = cache.get(folder);
+  if (cached && Date.now() - cached.at < TTL_MS) {
     // Age is recomputed from the cached listing rather than served stale: the folder
-    // changes once a day, but "how old is it" changes continuously.
-    const v = cache.value;
+    // changes once a day (or hour), but "how old is it" changes continuously.
+    const v = cached.value;
     const ageDays = v.newestAt ? daysBetween(new Date(v.newestAt), now) : null;
-    return { ...v, ageDays, band: backupBand(v.found, ageDays) };
+    const ageHours = v.newestAt ? hoursBetween(new Date(v.newestAt), now) : null;
+    return { ...v, ageDays, ageHours, band: bandOf(v.found, ageDays, ageHours) };
   }
 
   let files: DriveFileRef[] | null;
   try {
-    files = await listFolderByName(BACKUP_FOLDER);
+    files = await listFolderByName(folder);
   } catch (e) {
     // Unknown, NOT "missing": an unreachable Drive must not be reported as "no backups".
-    return { ...base, band: "unknown", error: (e as Error).message };
+    return emptyBackupStatus(folder, "unknown", (e as Error).message);
   }
 
-  if (files === null) return { ...base, found: false, band: "critical" };
+  if (files === null) return emptyBackupStatus(folder, "critical");
 
   const sorted = [...files].sort((a, b) => b.createdTime.localeCompare(a.createdTime));
   const newest = sorted[0] ?? null;
   const ageDays = newest ? daysBetween(new Date(newest.createdTime), now) : null;
+  const ageHours = newest ? hoursBetween(new Date(newest.createdTime), now) : null;
   const value: BackupStatus = {
-    folder: BACKUP_FOLDER,
+    folder,
     found: true,
     count: sorted.length,
     archives: sorted.slice(0, BACKUP_LIST_LIMIT).map((f) => ({
@@ -134,10 +177,21 @@ export async function backupStatus(now = new Date()): Promise<BackupStatus> {
     newestAt: newest?.createdTime ?? null,
     newestSizeBytes: newest?.sizeBytes ?? null,
     ageDays,
+    ageHours,
     totalSizeBytes: sorted.reduce((n, f) => n + (f.sizeBytes ?? 0), 0),
-    band: backupBand(true, ageDays),
+    band: bandOf(true, ageDays, ageHours),
     error: null,
   };
-  cache = { at: Date.now(), value };
+  cache.set(folder, { at: Date.now(), value });
   return value;
+}
+
+/** The nightly pool (SH-7): banded in days. */
+export function backupStatus(now = new Date()): Promise<BackupStatus> {
+  return folderStatus(BACKUP_FOLDER, (found, ageDays) => backupBand(found, ageDays), now);
+}
+
+/** The hourly pool (D-#818): banded in hours, thresholds by where prod lives. */
+export function hourlyBackupStatus(now = new Date()): Promise<BackupStatus> {
+  return folderStatus(HOURLY_BACKUP_FOLDER, (found, _d, ageHours) => hourlyBackupBand(found, ageHours), now);
 }

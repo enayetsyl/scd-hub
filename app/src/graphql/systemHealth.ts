@@ -87,20 +87,26 @@ export interface SystemHealthT {
   /** SH-7: freshness of the school's OWN nightly backup (ADR-011) — the app watches that
    *  folder, it does not write one. Sparse older archives are the 7/4/3 rotation working;
    *  only `ageDays` says whether last night ran. */
-  backup: {
-    folder: string;
-    found: boolean;
-    count: number;
-    archives: { name: string; createdAt: string; sizeBytes: number | null }[];
-    newestName: string | null;
-    newestAt: string | null;
-    newestSizeBytes: number | null;
-    ageDays: number | null;
-    totalSizeBytes: number;
-    band: HealthBandT;
-    error: string | null;
-  };
+  backup: BackupStatusT;
+  /** D-#818: the hourly pool (newest 48 kept), banded in hours. While prod is still on
+   *  Atlas the job runs once a day (egress cap), and the server bands it accordingly. */
+  hourlyBackup: BackupStatusT;
   checkedAt: string;
+}
+
+export interface BackupStatusT {
+  folder: string;
+  found: boolean;
+  count: number;
+  archives: { name: string; createdAt: string; sizeBytes: number | null }[];
+  newestName: string | null;
+  newestAt: string | null;
+  newestSizeBytes: number | null;
+  ageDays: number | null;
+  ageHours: number | null;
+  totalSizeBytes: number;
+  band: HealthBandT;
+  error: string | null;
 }
 
 export const SYSTEM_HEALTH_QUERY = gql<{ systemHealth: SystemHealthT }, Record<string, never>>`
@@ -127,7 +133,8 @@ export const SYSTEM_HEALTH_QUERY = gql<{ systemHealth: SystemHealthT }, Record<s
       history { dateKey dbStorageBytes diskUsedBytes driveUsageBytes totalDocs estimated }
       projection { bytesPerDay daysToLimit limitDateKey points usesEstimates }
       prunable { collection olderThanDays reason docCount reclaimableBytes }
-      backup { folder found count archives { name createdAt sizeBytes } newestName newestAt newestSizeBytes ageDays totalSizeBytes band error }
+      backup { folder found count archives { name createdAt sizeBytes } newestName newestAt newestSizeBytes ageDays ageHours totalSizeBytes band error }
+      hourlyBackup { folder found count archives { name createdAt sizeBytes } newestName newestAt newestSizeBytes ageDays ageHours totalSizeBytes band error }
     }
   }
 `;

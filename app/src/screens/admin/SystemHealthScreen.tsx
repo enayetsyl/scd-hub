@@ -30,6 +30,14 @@ import { space, radius } from "../../theme/tokens";
 type Props = NativeStackScreenProps<AdminStackParamList, "SystemHealth">;
 
 /** Bytes in the unit a person reads at a glance — MB below a gigabyte, GB above. */
+/** How many hourly archives the card lists (the pool keeps 48). */
+const HOURLY_LIST_SHOWN = 6;
+
+/** "YYYY-MM-DD HH:MM" in Dhaka time. Dhaka is UTC+6 all year (no DST), so a fixed offset is exact. */
+function dhakaStamp(iso: string): string {
+  return new Date(Date.parse(iso) + 6 * 3_600_000).toISOString().slice(0, 16).replace("T", " ");
+}
+
 function bytesLabel(n: number | null | undefined): string {
   if (n === null || n === undefined) return "—";
   if (n >= 1024 ** 3) return `${bnNum((n / 1024 ** 3).toFixed(2))} GB`;
@@ -346,6 +354,48 @@ export default function SystemHealthScreen(_props: Props): React.ReactElement {
         {h.backup.error ? (
           <Muted style={{ marginTop: space(1) }}>
             {STR.shUnavailable}: {h.backup.error}
+          </Muted>
+        ) : null}
+      </Card>
+
+      {/* ---------------- D-#818: the hourly pool ----------------
+          Same watching-only card, read in HOURS. The server picks the thresholds by where
+          prod lives: hourly once the database is on the VM, once a day while it is on Atlas
+          (the M0 egress cap). Only the newest few are listed — the pool keeps 48. */}
+      <Card>
+        <SectionHeader title={STR.shBackupHourly} band={h.hourlyBackup.band} />
+        {!h.hourlyBackup.found ? (
+          <Notice message={STR.shBackupHourlyMissing} tone="warn" />
+        ) : h.hourlyBackup.ageHours === null ? (
+          <Notice message={STR.shBackupNever} tone="danger" />
+        ) : (
+          <>
+            <Body style={{ marginTop: space(1) }}>
+              {STR.shBackupLast}:{" "}
+              {h.hourlyBackup.ageHours === 0
+                ? STR.shBackupWithinHour
+                : `${bnNum(h.hourlyBackup.ageHours)} ${STR.shBackupHoursAgo}`}
+              {h.hourlyBackup.newestSizeBytes ? ` · ${bytesLabel(h.hourlyBackup.newestSizeBytes)}` : ""}
+            </Body>
+            <Muted style={{ marginTop: space(1) }}>
+              {bnNum(h.hourlyBackup.count)} {STR.shBackupKept} · {bytesLabel(h.hourlyBackup.totalSizeBytes)}
+            </Muted>
+            {h.hourlyBackup.band !== "ok" ? <Notice message={STR.shBackupHourlyStale} tone="danger" /> : null}
+            {h.hourlyBackup.archives.slice(0, HOURLY_LIST_SHOWN).map((a) => (
+              <View
+                key={a.name}
+                style={{ flexDirection: "row", justifyContent: "space-between", gap: space(2), marginTop: space(1) }}
+              >
+                <Muted>{dhakaStamp(a.createdAt)}</Muted>
+                <Muted>{a.sizeBytes ? bytesLabel(a.sizeBytes) : ""}</Muted>
+              </View>
+            ))}
+            <Muted style={{ marginTop: space(2) }}>{STR.shBackupHourlyRotation}</Muted>
+          </>
+        )}
+        {h.hourlyBackup.error ? (
+          <Muted style={{ marginTop: space(1) }}>
+            {STR.shUnavailable}: {h.hourlyBackup.error}
           </Muted>
         ) : null}
       </Card>

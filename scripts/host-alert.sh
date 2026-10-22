@@ -36,7 +36,9 @@ if [ -n "$msg" ]; then
   if [ -n "$ALERT_TO" ] && command -v mail >/dev/null 2>&1; then
     printf '%s\n' "$msg" | mail -s "[scdhub] host alert: $(hostname)" "$ALERT_TO"
   else
-    # ALERT_EMAIL unset or no mailer — surface to stdout/journal; never fail the cron.
-    echo "[host-alert] $msg(no mailer / ALERT_EMAIL unset — not emailed)"
+    # No `mail` on the VM: send through the same SMTP path as the backups (D-#818), which
+    # reads ALERT_EMAIL + ALERT_SMTP_URL from the prod .env and only logs when they are unset.
+    echo "[host-alert] $msg"
+    node /opt/scdhub/prod/scripts/send-alert.mjs "[scdhub] host alert: $(hostname)" "$msg" || true
   fi
 fi

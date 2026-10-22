@@ -41,7 +41,14 @@ import {
   type Projection,
   type PrunableEstimate,
 } from "./HealthHistoryService";
-import { backupStatus, BACKUP_FOLDER, type BackupStatus } from "./BackupService";
+import {
+  backupStatus,
+  hourlyBackupStatus,
+  emptyBackupStatus,
+  BACKUP_FOLDER,
+  HOURLY_BACKUP_FOLDER,
+  type BackupStatus,
+} from "./BackupService";
 
 /**
  * The Atlas M0 storage ceiling. It is a CONSTANT because the driver cannot ask: no
@@ -191,6 +198,8 @@ export interface SystemHealth {
   projection: Projection;
   prunable: PrunableEstimate[];
   backup: BackupStatus;
+  /** The hourly pool (D-#818), banded in hours. */
+  hourlyBackup: BackupStatus;
   checkedAt: Date;
 }
 
@@ -495,7 +504,7 @@ export async function driveHealth(): Promise<DriveHealth> {
 /** The whole panel in one read. Sections run in parallel and each carries its own error,
  *  so one dead probe never costs the others. */
 export async function systemHealth(now = new Date()): Promise<SystemHealth> {
-  const [mongo, host, drive, history, backup] = await Promise.all([
+  const [mongo, host, drive, history, backup, hourlyBackup] = await Promise.all([
     mongoHealth(),
     hostHealth(now),
     driveHealth(),
@@ -503,20 +512,9 @@ export async function systemHealth(now = new Date()): Promise<SystemHealth> {
     // A Drive hiccup must leave the backup card "unknown", never "no backups" — the
     // difference between "we could not look" and "there is nothing there" is the whole
     // value of this card.
-    backupStatus(now).catch(
-      (e): BackupStatus => ({
-        folder: BACKUP_FOLDER,
-        found: false,
-        count: 0,
-        archives: [],
-        newestName: null,
-        newestAt: null,
-        newestSizeBytes: null,
-        ageDays: null,
-        totalSizeBytes: 0,
-        band: "unknown",
-        error: (e as Error).message,
-      }),
+    backupStatus(now).catch((e): BackupStatus => emptyBackupStatus(BACKUP_FOLDER, "unknown", (e as Error).message)),
+    hourlyBackupStatus(now).catch(
+      (e): BackupStatus => emptyBackupStatus(HOURLY_BACKUP_FOLDER, "unknown", (e as Error).message),
     ),
   ]);
 
@@ -545,6 +543,7 @@ export async function systemHealth(now = new Date()): Promise<SystemHealth> {
     ),
     prunable,
     backup,
+    hourlyBackup,
     checkedAt: now,
   };
 }

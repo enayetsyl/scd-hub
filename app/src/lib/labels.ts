@@ -4890,6 +4890,14 @@ const STR_BN = {
   shServerTrend: "ডিস্ক ব্যবহারের ধারা",
   shServerTrendPending: "আজ থেকে হিসাব শুরু — পুরোনো দিনের ডিস্ক তথ্য কোথাও রাখা ছিল না",
   shBackupStale: "গতরাতের ব্যাকআপ হয়নি — সার্ভারের ব্যাকআপ কাজ দেখুন",
+  // Hourly backup card (D-#818)
+  shBackupHourly: "ঘণ্টাভিত্তিক ব্যাকআপ",
+  shBackupHourlyMissing: "ঘণ্টাভিত্তিক ব্যাকআপ এখনো শুরু হয়নি",
+  shBackupWithinHour: "গত এক ঘণ্টার মধ্যে",
+  shBackupHoursAgo: "ঘণ্টা আগে",
+  shBackupHourlyStale: "ঘণ্টাভিত্তিক ব্যাকআপ সময়মতো আসেনি — সার্ভারের ব্যাকআপ কাজ দেখুন",
+  shBackupHourlyRotation:
+    "সর্বশেষ ৪৮টি রাখা হয়। ডেটাবেস Atlas-এ থাকা পর্যন্ত দিনে একবার (দুপুরে), সার্ভারে আনার পর প্রতি ঘণ্টায়।",
   shDriveTrash: "ট্র্যাশে আছে (খালি করলে জায়গা ফেরত পাবেন)",
   shPrunable: "যা মুছে জায়গা ফেরানো যায়",
   shPrunableNote: "শুধু হিসাব — অ্যাপ নিজে কিছু মোছে না। অডিট লগ কখনো মোছা যাবে না।",
@@ -10385,6 +10393,14 @@ const STR_EN: StrTable = {
   shServerTrend: "Disk usage trend",
   shServerTrendPending: "Starts from today — nothing recorded yesterday's disk usage",
   shBackupStale: "Last night's backup did not arrive — check the backup job on the VM",
+  // Hourly backup card (D-#818)
+  shBackupHourly: "Hourly backup",
+  shBackupHourlyMissing: "Hourly backups have not started yet",
+  shBackupWithinHour: "within the last hour",
+  shBackupHoursAgo: "hours ago",
+  shBackupHourlyStale: "The hourly backup is late — check the backup job on the VM",
+  shBackupHourlyRotation:
+    "The newest 48 are kept. Once a day (midday) while the database is on Atlas; every hour once it is on the VM.",
   shDriveTrash: "In trash (emptying it returns this space)",
   shPrunable: "Space that could be reclaimed",
   shPrunableNote: "Estimate only — the app deletes nothing. The audit log can never be pruned.",
