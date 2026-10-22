@@ -247,6 +247,8 @@ export async function updateClassNote(input: {
   attachmentIds?: string[] | null;
   actorId?: string;
   canManage?: boolean;
+  /** LP-1 (D-#822): the call only corrects the lesson-plan marks — the note itself is unchanged. */
+  lessonOnly?: boolean;
 }): Promise<IClassNote> {
   if (input.actorId && !input.canManage) {
     const existing = (await ClassNote.findById(input.id).select("publishedBy").lean()) as unknown as {
@@ -260,7 +262,12 @@ export async function updateClassNote(input: {
   const set: Record<string, unknown> = {};
   if (input.taughtSummaryBn != null && input.taughtSummaryBn.trim() !== "") set.taughtSummaryBn = input.taughtSummaryBn.trim();
   if (input.attachmentIds !== undefined) set.attachmentIds = normalizeAttachmentIds(input.attachmentIds);
-  if (Object.keys(set).length === 0) throw new Error("Nothing to update");
+  if (Object.keys(set).length === 0) {
+    if (!input.lessonOnly) throw new Error("Nothing to update");
+    const existing = (await ClassNote.findById(input.id).lean()) as unknown as IClassNote | null;
+    if (!existing) throw new Error("Class note not found");
+    return existing;
+  }
   const updated = (await ClassNote.findByIdAndUpdate(input.id, { $set: set }, { new: true }).lean()) as unknown as IClassNote | null;
   if (!updated) throw new Error("Class note not found");
   return updated;
