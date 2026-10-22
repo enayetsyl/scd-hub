@@ -8,9 +8,15 @@ import type { NotificationKind } from "@scd/shared";
  * contact-only guardians have no inbox, the recorded D-#31/D-#72 limitation).
  *
  * Append + markRead ONLY — no edit, no delete (the service exposes nothing else).
- * `dedupeKey` is the idempotency contract: one row per key, ever; a duplicate
- * emit() is a silent no-op (N1.1), which also makes the D-#73 scheduler
+ * `dedupeKey` is the idempotency contract: one row per key while the row lives; a
+ * duplicate emit() is a silent no-op (N1.1), which also makes the D-#73 scheduler
  * restart-safe in N-2.
+ *
+ * RETENTION (D-#815): rows expire NOTIFICATION_RETENTION_DAYS after creation (TTL
+ * index below) — the inbox was the only steadily growing collection on the 512 MB
+ * Atlas cluster. Safe for dedupe because every ladder that re-runs (assignment chase,
+ * revision escalation) also keeps its own durable record; the rest key on a day or a
+ * one-off event, so a key 90 days old is never re-emitted.
  *
  * Identity-plane (names recipients) behind the ADR-005 firewall — the corpus
  * plane never imports this model and no analytics/export path joins it back
@@ -219,5 +225,10 @@ NotificationSchema.index({ recipientUserId: 1, createdAt: -1 });
 NotificationSchema.index({ recipientGuardianId: 1, createdAt: -1 });
 NotificationSchema.index({ recipientUserId: 1, readAt: 1, createdAt: -1 });
 NotificationSchema.index({ recipientGuardianId: 1, readAt: 1, createdAt: -1 });
+
+/** Inbox rows older than this are deleted by MongoDB's TTL monitor (D-#815). Matches the
+ *  guardian-engagement default window, whose inbox signal reads this collection. */
+export const NOTIFICATION_RETENTION_DAYS = 90;
+NotificationSchema.index({ createdAt: 1 }, { expireAfterSeconds: NOTIFICATION_RETENTION_DAYS * 24 * 60 * 60 });
 
 export const Notification = model<INotification>("Notification", NotificationSchema);
