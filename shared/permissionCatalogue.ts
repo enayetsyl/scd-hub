@@ -150,6 +150,15 @@ export const FEATURE_CATALOGUE = {
       delete: { en: "Delete a class note", bn: "ক্লাস নোট মুছে ফেলা", desc: "Remove a note", teacher: false, office: true, flags: [] },
     },
   },
+  lesson_progress: {
+    group: "teaching_and_trackers",
+    en: "Lesson-plan progress",
+    bn: "পাঠ পরিকল্পনার অগ্রগতি",
+    actions: {
+      view: { en: "See lesson-plan progress", bn: "পাঠ পরিকল্পনার অগ্রগতি দেখা", desc: "A শাখা × subject's sessions taught (the routine gives it to you, or you are its class teacher), a student's lessons and presence (LP-2/LP-3, D-#826)", teacher: true, office: true, flags: [] },
+      view_all: { en: "Any শাখা + the overview", bn: "সব শাখার অগ্রগতি ও সারসংক্ষেপ", desc: "The school-wide overview (progress, pace, lag behind the parallel শাখা), any শাখা's tracker and any student's lessons", teacher: false, office: true, flags: [] },
+    },
+  },
   saturday_revision: {
     group: "teaching_and_trackers",
     en: "Saturday revision (Hifz)",
