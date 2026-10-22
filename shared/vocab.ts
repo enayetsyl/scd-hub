@@ -5549,3 +5549,13 @@ export const WORKSHEET_PICTURE_USE_LABELS_BN: Record<WorksheetPictureUse, string
   WORD: "ছবির সাথে শব্দের মিল",
   COUNT: "গণনা",
 };
+
+/** Lesson-plan progress (D-#820/#821): why a class note names no session plan. A section period
+ *  of a class × subject that has session plans answers with sessions OR one of these. */
+export const LESSON_NONE_REASONS = ["REVISION", "TEST", "OTHER"] as const;
+export type LessonNoneReason = (typeof LESSON_NONE_REASONS)[number];
+export const LESSON_NONE_REASON_LABELS_BN: Record<LessonNoneReason, string> = {
+  REVISION: "রিভিশন",
+  TEST: "পরীক্ষা বা ক্লাস টেস্ট",
+  OTHER: "পরিকল্পনার বাইরে অন্য কাজ",
+};

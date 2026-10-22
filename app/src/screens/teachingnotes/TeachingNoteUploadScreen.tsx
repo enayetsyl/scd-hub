@@ -241,13 +241,13 @@ export default function TeachingNoteUploadScreen({ route }: Props): React.ReactE
         setError(friendlyError(res.error));
         return;
       }
-      const replaced = res.data?.uploadTeachingNote.replacedVersion ?? null;
+      const replaced = res.data?.uploadTeachingNote?.replacedVersion ?? null;
       setDone(replaced === null ? STR.tnUploaded : `${STR.tnUploaded} ${STR.tnReplacedToast}`);
       // A replacing upload is the ONE moment the uploader remembers what they
       // changed — so this is where the open suggestions get offered for closing,
       // rather than leaving them to rot until someone opens the file again.
-      const newNoteId = res.data?.uploadTeachingNote.note.id ?? null;
-      const stillOpen = res.data?.uploadTeachingNote.openCommentCount ?? 0;
+      const newNoteId = res.data?.uploadTeachingNote?.note.id ?? null;
+      const stillOpen = res.data?.uploadTeachingNote?.openCommentCount ?? 0;
       setPendingAddress(replaced !== null && stillOpen > 0 && newNoteId ? newNoteId : null);
       setPendingCount(stillOpen);
       setStaged(null);

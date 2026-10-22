@@ -26,12 +26,15 @@ import {
   MY_DAY_QUERY,
   CLASS_NOTES_FOR_DATE_QUERY,
   PUBLISH_CLASS_NOTE,
+  UPDATE_CLASS_NOTE,
   HOMEWORK_DAY_TALLY,
   HOMEWORK_TOPICS_QUERY,
   HW_NIL_DECLARATIONS,
   type ClassNoteHomeworkIn,
+  type LessonPlanIn,
   type RoutineSlotT,
 } from "../../graphql/operations";
+import { LessonPlanBlock, deliverySummary, lessonPlanError } from "../../components/LessonPlanBlock";
 import {
   Screen,
   Body,
@@ -68,6 +71,11 @@ function canCarryHomework(slot: RoutineSlotT): boolean {
   return slot.groupType === "section" && !!slot.classId && slot.subject !== "QURAN";
 }
 
+/** Session plans exist only for section periods of Classes 1–5 (D-#820); the server has the final say. */
+function mayHavePlan(slot: RoutineSlotT): boolean {
+  return canCarryHomework(slot) && (slot.classLevel ?? 0) >= 1 && (slot.classLevel ?? 0) <= 5;
+}
+
 
 /**
  * One period card: the published note, or the inline entry box for the whole
@@ -93,6 +101,15 @@ function PeriodNoteCard({ slot, date }: { slot: RoutineSlotT; date: string }): R
   const [timeDecl, setTimeDecl] = useState("20");
   const [nilReason, setNilReason] = useState<string | null>(null);
   const [hwError, setHwError] = useState<string | undefined>(undefined);
+
+  // LP-1 (D-#820/#821): which session plan(s) this period taught. `lpApplies` is reported by the
+  // block — a period with no lesson plan needs no answer. `lpEdit` = correcting the marks only
+  // (updateClassNote; no guardian re-notify, unlike a re-publish).
+  const [lessonPlan, setLessonPlan] = useState<LessonPlanIn | null>(null);
+  const [lpApplies, setLpApplies] = useState(false);
+  const [lpError, setLpError] = useState<string | undefined>(undefined);
+  const [lpEdit, setLpEdit] = useState(false);
+  const [, updateNote] = useMutation(UPDATE_CLASS_NOTE);
 
   const [notesQ, refetchNotes] = useQuery({
     query: CLASS_NOTES_FOR_DATE_QUERY,
@@ -193,10 +210,49 @@ function PeriodNoteCard({ slot, date }: { slot: RoutineSlotT; date: string }): R
     };
   }
 
+  /** The session titles stand in for "যা পড়ালাম" when the teacher left it empty. */
+  function taughtText(): string {
+    if (taught.trim()) return taught.trim();
+    if (!lpApplies || !lessonPlan?.sessions?.length) return "";
+    return lpTitles.join("\n");
+  }
+  const [lpTitles, setLpTitles] = useState<string[]>([]);
+
+  async function saveLessonOnly(): Promise<void> {
+    if (!note) return;
+    const err = lessonPlanError(lessonPlan);
+    setLpError(err ?? undefined);
+    if (err) {
+      toast.show(err, "danger");
+      return;
+    }
+    setBusy(true);
+    const res = await updateNote({ id: note.id, lessonPlan });
+    setBusy(false);
+    if (res.error || !res.data?.updateClassNote) {
+      toast.show(friendlyError(res.error), "danger");
+      return;
+    }
+    toast.show(STR.lpSaved, "ok");
+    setLpEdit(false);
+    setLessonPlan(null);
+    refetchNotes({ requestPolicy: "network-only" });
+  }
+
   async function submit(): Promise<void> {
     setTaughtError(undefined);
     setHwError(undefined);
-    if (!taught.trim()) {
+    setLpError(undefined);
+    if (lpApplies) {
+      const err = lessonPlanError(lessonPlan);
+      if (err) {
+        setLpError(err);
+        toast.show(err, "danger");
+        return;
+      }
+    }
+    const summary = taughtText();
+    if (!summary) {
       const msg = `${STR.rtTaughtSummary} — ${STR.fieldRequired}`;
       setTaughtError(msg);
       toast.show(msg, "danger");
@@ -212,12 +268,13 @@ function PeriodNoteCard({ slot, date }: { slot: RoutineSlotT; date: string }): R
     const res = await publish({
       slotId: slot.id,
       date,
-      taughtSummaryBn: taught.trim(),
+      taughtSummaryBn: summary,
       // When the card declares homework the server links what it created; the
       // manual link is only for the pick-an-existing-item path.
       homeworkItemId: hw ? null : hwItemId,
       attachmentIds: files.map((f) => f.fileId),
       homework: hw ?? null,
+      lessonPlan: lpApplies ? lessonPlan : null,
     });
     setBusy(false);
     if (res.error || !res.data?.publishClassNote) {
@@ -235,6 +292,7 @@ function PeriodNoteCard({ slot, date }: { slot: RoutineSlotT; date: string }): R
     setQCount("");
     setTimeDecl("20");
     setNilReason(null);
+    setLessonPlan(null);
     refetchNotes({ requestPolicy: "network-only" });
     refetchTally({ requestPolicy: "network-only" });
     refetchNil({ requestPolicy: "network-only" });
@@ -256,9 +314,37 @@ function PeriodNoteCard({ slot, date }: { slot: RoutineSlotT; date: string }): R
         {note ? <Badge text={`✓ ${STR.rtPublished}`} tone="ok" /> : null}
       </View>
 
-      {note && !open ? (
+      {note && !open && lpEdit ? (
+        <View style={{ marginTop: space(2), gap: space(1) }}>
+          <LessonPlanBlock
+            slotId={slot.id}
+            date={date}
+            value={lessonPlan}
+            onChange={setLessonPlan}
+            onApplies={setLpApplies}
+            error={lpError}
+          />
+          <View style={{ flexDirection: "row", gap: space(2) }}>
+            {lpApplies ? (
+              <Button title={STR.lpSaveMarks} onPress={() => void saveLessonOnly()} loading={busy} disabled={busy} />
+            ) : null}
+            <Button
+              title={STR.cancel}
+              variant="ghost"
+              onPress={() => {
+                setLpEdit(false);
+                setLessonPlan(null);
+                setLpError(undefined);
+              }}
+            />
+          </View>
+        </View>
+      ) : note && !open ? (
         <>
           <Muted style={{ marginTop: space(1) }}>{note.taughtSummaryBn}</Muted>
+          {note.lessonDelivery ? (
+            <Muted style={{ marginTop: 2 }}>📘 {deliverySummary(note.lessonDelivery)}</Muted>
+          ) : null}
           {note.homeworkItemId ? (
             <Muted style={{ marginTop: 2 }}>
               {STR.rtHomeworkId}: {dayItems.find((it) => it.itemId === note.homeworkItemId)?.hwId ?? "✓"}
@@ -284,9 +370,22 @@ function PeriodNoteCard({ slot, date }: { slot: RoutineSlotT; date: string }): R
             }}
             style={{ marginTop: space(2) }}
           />
+          {/* LP-1: correct the session marks alone — guardians are not re-notified. */}
+          {mayHavePlan(slot) ? (
+            <Button title={STR.lpEditMarks} variant="ghost" onPress={() => setLpEdit(true)} style={{ marginTop: space(1) }} />
+          ) : null}
         </>
       ) : open ? (
         <View style={{ marginTop: space(2), gap: space(1) }}>
+          <LessonPlanBlock
+            slotId={slot.id}
+            date={date}
+            value={lessonPlan}
+            onChange={setLessonPlan}
+            onApplies={setLpApplies}
+            onTitles={setLpTitles}
+            error={lpError}
+          />
           <Field label={STR.rtTaughtSummary} value={taught} onChangeText={setTaught} multiline error={taughtError} />
 
           {/* DE-4: the day's homework, in the same card. */}

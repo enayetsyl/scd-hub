@@ -72,8 +72,8 @@ export default function NotificationCenterScreen({ navigation }: { navigation: R
   // D-#307: the picked unread rows (checkbox multi-select).
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
-  const rows = data?.myNotificationsPage.rows ?? [];
-  const total = data?.myNotificationsPage.total ?? 0;
+  const rows = data?.myNotificationsPage?.rows ?? [];
+  const total = data?.myNotificationsPage?.total ?? 0;
   // D-#761: the server already puts every unread row first (newest first), then the read
   // ones — partitioning here would only sort within one page.
   const sorted = rows;

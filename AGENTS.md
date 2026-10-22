@@ -104,6 +104,7 @@ auto-deploys (`.github/workflows`, `scripts/deploy.sh`). So:
   prd-plan-review.md  ← Plan review/approval loop: assign→review→re-import→sign-off, slices PR-1..3 (D-#38–#40)
   prd-routine.md      ← Routine/Timetable module build contract: rooms+period-defs+slots+conflict-engine, slices R-1..3 (D-#46/#47)
   prd-class-teacher.md ← Class-teacher → section daily-coordinator gate (attendance/leave/report-card/comms), slice CT-1 now (D-#45)
+  prd-lesson-progress.md ← Lesson-plan progress: session marked on the class note → শাখা tracker, Office overview, student presence + mastery link, LP-1..3 (D-#820–#826)
   prd-worksheets.md   ← Nursery/KG worksheet generator: engine, plan, book picture bank, print + answer key (D-#744–#747)
   prd-ct-scripts.md   ← Class-test scripts: teacher hand-in → office receive → scan/tag per student → guardian view → return, slices CS-1..3 (D-#715–#719)
   prd-student-progress.md ← Office/Principal progress board (student × subject) + two-part improvement actions ticked daily by teacher/guardian, leave hand-over, 11:00 check, SP-1..4 (D-#734–#738)
