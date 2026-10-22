@@ -1,5 +1,8 @@
 # STATUS
 
+- 2026-10-21 (cont. 2): **LIVE + OTA — KG আরবি papers from রওযাতুল আতফাল ২ (D-#806), promoted together with the permission matrix (#1125, owner: promote all of dev).** #1126 → dev (`62bd2e49`), promoted in #1127 (`2b9ee287`): prod deploy green, `/healthz` ok, web 200. OTA group `1f65f66f` (runtime 1.1.0, android, commit 2b9ee287). Bundle check: prod URL 1, localhost 0, ARABIC_KG present. Sourcemaps uploaded (debug id 2abc4c5d, "1 of 2" as usual).
+  **Prod data:** book-2 pictures imported (dry run, then APPLY: 53 new; bank now 556). A re-read shows 51 active, with the school and the mosque hidden. **Live check** (prod `dist` on the VM, read-only): the real KG আরবি final generates at 100 marks with no warnings, all 40 pictures from `ARABIC_KG`; the Nursery final is unchanged (50, book 1).
+  **Now / next:** nothing pending for Arabic worksheets. Phones pick up the OTA on the next cold start; web users get it on reload. The permission matrix went live in this promotion without the owner's dev-site check (owner's choice).
 - 2026-10-21: **BUILT — Mastery M-2 (D-#807)** (branch `feat/mastery-m2`, worktree `C:/w/m2`). Work sheets (homework / class test / rubric) per শাখা × subject, exceptions-only entry, evidence written on confirm (no row = full marks; re-work / tags ⇒ weak or light; routing tags ⇒ cross-chapter strand rows).
   - Reach: the routine holder, or `mastery:edit_all` (new, PRINCIPAL_DEFAULT). Office sees no sheets until M-3 `view_all`.
   - App: drawer শিখন-দক্ষতা → প্রশ্নভিত্তিক নম্বর (list → new sheet from bank/own question → entry → সব ঠিক আছে).
