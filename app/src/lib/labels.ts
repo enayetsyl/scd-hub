@@ -6799,6 +6799,22 @@ const STR_BN = {
   lpInsteadOf: "সেশনের বদলে",
   lpEmpty: "পাঠ পরিকল্পনা আছে এমন কোনো শাখা-বিষয় পাওয়া যায়নি।",
   lpTeacher: "শিক্ষক",
+  // LP-3 (D-#823/#825)
+  lpTabLessons: "পাঠ",
+  lpPresent: "উপস্থিত",
+  lpPartial: "আংশিক",
+  lpAbsent: "অনুপস্থিত",
+  lpUnknown: "অজানা",
+  lpOnLeave: "ছুটিতে",
+  lpMissedTitle: "যে পাঠে অনুপস্থিত ছিল",
+  lpAllLessons: "সব পাঠ",
+  lpNarrowed: "শুধু আপনার বিষয়গুলো দেখানো হচ্ছে।",
+  lpNoLessons: "এখনও কোনো পাঠ চিহ্নিত হয়নি।",
+  lpChapterInClass: "এই অধ্যায় ক্লাসে",
+  lpChapterNotYet: "এই অধ্যায়ের কোনো ক্লাস এখনও চিহ্নিত হয়নি।",
+  lpGapLine: "দুর্বল {weak} জনের {missed} জন এই অধ্যায়ের অন্তত একটি ক্লাসে অনুপস্থিত ছিল",
+  lpGapNone: "দুর্বল কেউ এই অধ্যায়ের ক্লাস মিস করেনি।",
+  lpUnknownHint: "অজানা = সেদিন হাজিরা নেওয়া হয়নি",
 } as const;
 
 type StrTable = Record<keyof typeof STR_BN, string>;
@@ -12264,6 +12280,21 @@ const STR_EN: StrTable = {
   lpInsteadOf: "Instead of a session",
   lpEmpty: "No section and subject with lesson plans was found.",
   lpTeacher: "Teacher",
+  lpTabLessons: "Lessons",
+  lpPresent: "Present",
+  lpPartial: "Partly",
+  lpAbsent: "Absent",
+  lpUnknown: "Unknown",
+  lpOnLeave: "On leave",
+  lpMissedTitle: "Lessons missed",
+  lpAllLessons: "All lessons",
+  lpNarrowed: "Only your subjects are shown.",
+  lpNoLessons: "No lesson has been marked yet.",
+  lpChapterInClass: "This chapter in class",
+  lpChapterNotYet: "No class of this chapter has been marked yet.",
+  lpGapLine: "{missed} of the {weak} weak students missed at least one class of this chapter",
+  lpGapNone: "None of the weak students missed a class of this chapter.",
+  lpUnknownHint: "Unknown = attendance not taken that day",
 };
 
 /** UI chrome strings — resolves to the active language at read time (Proxy). Use

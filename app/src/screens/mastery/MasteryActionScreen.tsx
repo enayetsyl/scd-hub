@@ -129,6 +129,22 @@ export default function MasteryActionScreen({ navigation, route }: Props): React
       </View>
       {msg ? <Notice message={msg} tone="danger" /> : null}
 
+      {/* LP-3 (D-#825): did the weak students miss the class where this chapter was taught?
+          Missed-the-lesson points to catch-up rather than re-teach — information, not a rule. */}
+      <Card>
+        <Body style={{ fontWeight: "700" }}>{STR.lpChapterInClass}</Body>
+        {!a.lessonGap.taught ? (
+          <Muted>{STR.lpChapterNotYet}</Muted>
+        ) : a.lessonGap.missedNames.length === 0 ? (
+          <Muted>{STR.lpGapNone}</Muted>
+        ) : (
+          <>
+            <Body>{fill(STR.lpGapLine, { weak: bnNum(a.lessonGap.weakCount), missed: bnNum(a.lessonGap.missedNames.length) })}</Body>
+            <Muted>{a.lessonGap.missedNames.join(", ")}</Muted>
+          </>
+        )}
+      </Card>
+
       {a.status === "PROPOSED" && a.canApprove ? (
         <Card>
           <Body style={{ fontWeight: "700" }}>{STR.msWhoComes}</Body>
