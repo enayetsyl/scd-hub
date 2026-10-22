@@ -1,5 +1,7 @@
 # STATUS
 
+- 2026-10-22: **BUILT — Mastery M-4b (D-#810)** (branch `feat/mastery-m4b`, worktree `C:/w/m4b`). Guardians see the weekly tailored assignment on their Assignments tab: the child's questions as printed, the PDF of the child's page, and after marking "কেমন হলো" per topic in plain words (no codes, no verdict words).
+  - Next: M-5 section trigger → extra class → re-test. Promotion dev→main + OTA still pending for M-0..M-4b.
 - 2026-10-22: **BUILT — Mastery M-4 thin (D-#809)** (branch `feat/mastery-m4`, worktree `C:/w/m4`). Weekly tailored assignment: the teacher sets the layout, the app picks per student from the gold bank (never a seen question; gaps flagged), the teacher swaps / removes / adds own / approves, sends → one AS work sheet with each student's own items; marks entered on it like any sheet; A4 PDF per student.
   - Not yet: the scheduler that drafts it automatically; writing the assignment tracker (linked read-only); the guardian view (M-4b).
   - Next: M-4b guardian assignment view, then M-5 trigger → extra class → re-test. Promotion dev→main + OTA still pending for M-0..M-4.

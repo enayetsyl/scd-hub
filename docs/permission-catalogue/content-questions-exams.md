@@ -320,4 +320,12 @@ App: the heat-map and quality buttons on `MasteryWorkHomeScreen` (reached as in 
 
 App: the সাপ্তাহিক অ্যাসাইনমেন্ট button on `MasteryWorkHomeScreen`; layout, rebuild, approve and send on `mastery:create`. Entry of the sent AS sheet reuses M-2 (`mastery:enter_results`).
 
+### M-4b (2026-10-22, D-#810) — guardian view of the weekly assignment
+| file | resolver / route | gate |
+|---|---|---|
+| server/src/modules/mastery/resolvers/masteryGuardian.ts | childMasteryAssignments | `guardian:read_child` (non-catalogue guardian plane) + `assertGuardianOfStudent`; switched-off subjects hidden |
+| server/src/modules/mastery/routes/masteryAssignmentPdf.ts | GET /pdf/mastery-assignment/:id?studentId= (guardian path) | `guardian:read_child` + `assertGuardianOfStudent(studentId)`; SENT only; that child's page only; switch on |
+
+App: `ChildMasteryAssignments` on the guardian's Assignments tab (`ChildAssignmentsScreen`), rendered only when the query returns weeks.
+
 Later slices add their rows here: M-2/M-4 entry and builder (`mastery:enter_results`, `mastery:create`, routine class × subject check in the service), M-5 approval (`mastery:approve`), M-6 guardian reads (`guardian:read_child` + assertGuardianOfStudent).
