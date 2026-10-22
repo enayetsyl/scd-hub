@@ -6779,6 +6779,8 @@ export interface NotificationRefsT {
   subject: string | null;
   /** SP-4 (D-#738) — deep-links to the improvement action. */
   improvementActionId: string | null;
+  /** M-6 (D-#812) — deep-links staff to the mastery action. */
+  masteryActionId: string | null;
 }
 
 export interface NotificationT {
@@ -6800,7 +6802,7 @@ const NOTIFICATION_FIELDS = `
     workClaimId workClaimTracker
     classTestId ctId taskId
     syllabusId examId classId subject
-    improvementActionId
+    improvementActionId masteryActionId
   }
 `;
 

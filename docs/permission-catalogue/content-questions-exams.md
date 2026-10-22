@@ -341,4 +341,11 @@ App: `ChildMasteryAssignments` on the guardian's Assignments tab (`ChildAssignme
 
 `mastery:approve` now gates real fields, so it left `DECLARED_AHEAD` in `permissionCatalogueGates.test.ts` (the list is empty). App: drawer leaf পুরো স্কুল · পদক্ষেপ (`MasteryLeader`) on `mastery:approve`; `MasteryTab` also opens on `mastery:approve`; পদক্ষেপের রেকর্ড on the work home; the heat-map banner links an open action.
 
+### M-6 (2026-10-22, D-#812) — guardian progress, notifications
+| file | resolver | gate |
+|---|---|---|
+| server/src/modules/mastery/resolvers/masteryGuardian.ts | childMasteryProgress | `guardian:read_child` (non-catalogue guardian plane) + `assertGuardianOfStudent`; switched-off subjects hidden |
+
+Notifications (no new catalogue action): MASTERY_PROPOSAL recipients = `holderIdsOf("mastery:approve")`; MASTERY_EXTRA_CLASS = the routine teacher + planned students' guardians; MASTERY_ASSIGNMENT_SENT = the students' guardians. App: guardian drawer item + Today shortcut শিখন-দক্ষতা (`ChildMastery`).
+
 Later slices add their rows here: M-2/M-4 entry and builder (`mastery:enter_results`, `mastery:create`, routine class × subject check in the service), M-5 approval (`mastery:approve`), M-6 guardian reads (`guardian:read_child` + assertGuardianOfStudent).

@@ -45,6 +45,7 @@ import { buildPartA, buildPartB, pickQuestion, type BankQuestion, type BuilderCo
 import { sectionOutcomeSummary } from "../diagnosis";
 import { loCodeMongoFilter, loCodesOf } from "../bank";
 import { isoWeekKey } from "../evidence";
+import { notifyAssignmentSent } from "../notify";
 
 const oid = (s: string) => new Types.ObjectId(s);
 const bn = (n: number | string) => String(n).replace(/[0-9]/g, (d) => "০১২৩৪৫৬৭৮৯"[Number(d)]);
@@ -576,6 +577,17 @@ export async function sendAssignment(assignmentId: string, auth: Auth): Promise<
   a.sentAt = new Date();
   a.sentBy = Types.ObjectId.isValid(auth.userId) ? oid(auth.userId) : undefined;
   await a.save();
+  try {
+    const names = new Map(roster.map((st) => [String(st._id), personName(st)]));
+    await notifyAssignmentSent({
+      assignmentId: String(a._id),
+      subject: a.subject,
+      dueYmd: a.dueDate.toISOString().slice(0, 10),
+      students: ordered.map((s) => ({ studentId: String(s.studentId), name: names.get(String(s.studentId)) ?? "" })),
+    });
+  } catch (err) {
+    console.error("[mastery] assignment notice failed:", err);
+  }
   void writeAudit({
     eventKind: "MASTERY_ASSIGNMENT_SENT",
     actorId: auth.userId,

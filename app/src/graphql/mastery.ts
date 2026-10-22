@@ -1281,3 +1281,46 @@ export type MasteryActionRow = {
   outcome: string | null;
   createdAt: string;
 };
+
+// ---------------------------------------------------------------------------
+// M-6 — the guardian's progress view (mocks G1 / G2 / G4, D-#783 / #812)
+// ---------------------------------------------------------------------------
+
+export const CHILD_MASTERY_PROGRESS = gql`
+  query ChildMasteryProgress($studentId: String!) {
+    childMasteryProgress(studentId: $studentId) {
+      subject
+      assignmentsSent
+      counts {
+        attention
+        improving
+        good
+        unknown
+      }
+      attention {
+        labelBn
+        homeTipBn
+      }
+      improving {
+        labelBn
+      }
+      schoolDid {
+        date
+        kind
+        labelBn
+        status
+        present
+        retestPct
+      }
+    }
+  }
+`;
+
+export type ChildMasteryProgressRow = {
+  subject: string;
+  assignmentsSent: number;
+  counts: { attention: number; improving: number; good: number; unknown: number };
+  attention: { labelBn: string; homeTipBn: string | null }[];
+  improving: { labelBn: string }[];
+  schoolDid: { date: string; kind: string; labelBn: string; status: string; present: boolean | null; retestPct: number | null }[];
+};
