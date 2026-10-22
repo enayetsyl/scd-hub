@@ -251,7 +251,7 @@ export default function HomeworkWorkspaceScreen({ navigation }: Props): React.Re
     pause: !hasSection || !showDone,
   });
   const shownDone = useMemo(
-    () => (doneQ.data?.homeworkDoneItemsPage.rows ?? []).flatMap((d) => d.records),
+    () => (doneQ.data?.homeworkDoneItemsPage?.rows ?? []).flatMap((d) => d.records),
     [doneQ.data],
   );
 
@@ -410,7 +410,7 @@ export default function HomeworkWorkspaceScreen({ navigation }: Props): React.Re
                     <Pager
                       page={donePage}
                       pageSize={PAGE_SIZE}
-                      total={doneQ.data?.homeworkDoneItemsPage.total ?? 0}
+                      total={doneQ.data?.homeworkDoneItemsPage?.total ?? 0}
                       onPage={setDonePage}
                     />
                   </View>

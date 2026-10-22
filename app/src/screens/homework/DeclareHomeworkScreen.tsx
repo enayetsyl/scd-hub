@@ -153,7 +153,7 @@ export default function DeclareHomeworkScreen({ navigation, route }: Props): Rea
     variables: { academicYearId: selection.academicYearId ?? "" },
     pause: !selection.academicYearId,
   });
-  const classLevel = classesQ.data?.classes.find((c) => c.id === selection.classId)?.level ?? null;
+  const classLevel = classesQ.data?.classes?.find((c) => c.id === selection.classId)?.level ?? null;
 
   // Topic picker — load the catalog for the chosen (subject, class); a topic code is
   // subject-specific, so clear the selection whenever the subject changes.

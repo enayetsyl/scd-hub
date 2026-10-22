@@ -184,7 +184,7 @@ export default function PlanReviewBoardScreen({ navigation }: Props): React.Reac
     if (rowAction.kind === "move" && p.currentAssignmentId) {
       const res = await moveMany({ assignmentIds: [p.currentAssignmentId], toReviewerId: rowReviewer });
       error = res.error;
-      if (!res.error && res.data?.movePlanReviews.moved === 0) {
+      if (!res.error && res.data?.movePlanReviews?.moved === 0) {
         error = new Error(res.data.movePlanReviews.skipped.join("; ") || STR.prbSkippedReviewed);
       }
     } else {

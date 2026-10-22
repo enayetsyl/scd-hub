@@ -35,7 +35,7 @@ export default function VocabTestsScreen(): React.ReactElement {
     variables: { sectionId: section?.sectionId ?? null, program: program ?? null, page, pageSize: PAGE_SIZE },
     pause: !section,
   });
-  const tests = testsQ.data?.vocabTestsPage.rows ?? [];
+  const tests = testsQ.data?.vocabTestsPage?.rows ?? [];
 
   return (
     <Screen padded={false}>
@@ -80,7 +80,7 @@ export default function VocabTestsScreen(): React.ReactElement {
                   );
                 })
               )}
-              <Pager page={page} pageSize={PAGE_SIZE} total={testsQ.data?.vocabTestsPage.total ?? 0} onPage={setPage} />
+              <Pager page={page} pageSize={PAGE_SIZE} total={testsQ.data?.vocabTestsPage?.total ?? 0} onPage={setPage} />
             </QueryGate>
           </Card>
         ) : null}

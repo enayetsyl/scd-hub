@@ -94,8 +94,8 @@ export default function AssignReviewsScreen(_props: Props): React.ReactElement {
   const plansPage = plansData?.assignablePlansPage;
   const visible = plansPage?.rows ?? [];
   const visibleTotal = plansPage?.total ?? 0;
-  const reviewerPlans = reviewerId ? reviewerData?.assignablePlansPage.rows ?? [] : [];
-  const reviewerTotal = reviewerData?.assignablePlansPage.total ?? 0;
+  const reviewerPlans = reviewerId ? reviewerData?.assignablePlansPage?.rows ?? [] : [];
+  const reviewerTotal = reviewerData?.assignablePlansPage?.total ?? 0;
   const load = loadData?.reviewerAssignmentLoad ?? [];
   const teacherOptions = (teacherData?.teachers ?? []).map((t) => ({ label: t.name, value: t.id, hint: t.phone ?? undefined }));
 
@@ -227,7 +227,7 @@ export default function AssignReviewsScreen(_props: Props): React.ReactElement {
         ))
       )}
       {reviewerId ? (
-        <Pager page={reviewerData?.assignablePlansPage.page ?? reviewerPage} pageSize={PAGE_SIZE} total={reviewerTotal} onPage={setReviewerPage} />
+        <Pager page={reviewerData?.assignablePlansPage?.page ?? reviewerPage} pageSize={PAGE_SIZE} total={reviewerTotal} onPage={setReviewerPage} />
       ) : null}
 
       <Divider />

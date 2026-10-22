@@ -122,7 +122,7 @@ export default function NewPrintRequestScreen({ route, navigation }: Props): Rea
   const { selection } = useSectionContext();
   const [{ data: yearsData }] = useQuery({ query: ACADEMIC_YEARS_QUERY });
   const academicYearId =
-    selection.academicYearId ?? yearsData?.academicYears.find((y) => y.current)?.id ?? null;
+    selection.academicYearId ?? yearsData?.academicYears?.find((y) => y.current)?.id ?? null;
   const [{ data: classData }] = useQuery({
     query: CLASSES_QUERY,
     variables: { academicYearId: academicYearId ?? "" },

@@ -132,7 +132,7 @@ export default function CoverManageScreen({ route }: Props): React.ReactElement 
               <View style={{ marginTop: space(2), gap: space(1) }}>
                 <Muted style={{ fontWeight: "700" }}>{STR.rtAvailableTeachers}</Muted>
                 {availQ.fetching ? <Loader /> : null}
-                {availQ.data?.teacherAvailability.map((a, i) => (
+                {availQ.data?.teacherAvailability?.map((a, i) => (
                   <View
                     key={a.teacherId}
                     style={{

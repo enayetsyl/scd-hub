@@ -31,7 +31,7 @@ export default function StudentRevisionHistoryScreen({ route }: Props): React.Re
     query: STUDENT_REVISION_HISTORY_PAGE_QUERY,
     variables: { studentId, page, pageSize: PAGE_SIZE },
   });
-  const entries = [...(histQ.data?.studentRevisionHistoryPage.rows ?? [])].sort((a, b) => b.date.localeCompare(a.date));
+  const entries = [...(histQ.data?.studentRevisionHistoryPage?.rows ?? [])].sort((a, b) => b.date.localeCompare(a.date));
 
   return (
     <Screen padded={false}>
@@ -76,7 +76,7 @@ export default function StudentRevisionHistoryScreen({ route }: Props): React.Re
           ))
         )}
         {!histQ.fetching && !histQ.error ? (
-          <Pager page={page} pageSize={PAGE_SIZE} total={histQ.data?.studentRevisionHistoryPage.total ?? 0} onPage={setPage} />
+          <Pager page={page} pageSize={PAGE_SIZE} total={histQ.data?.studentRevisionHistoryPage?.total ?? 0} onPage={setPage} />
         ) : null}
       </ScrollView>
     </Screen>

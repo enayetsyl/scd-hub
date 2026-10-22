@@ -136,7 +136,7 @@ export function QuestionEditSheet({
       setFailure(friendlyError(res.error));
       return;
     }
-    const changed = res.data?.updateQuestionContent.changedFields ?? [];
+    const changed = res.data?.updateQuestionContent?.changedFields ?? [];
     onDone(changed.length === 0 ? STR.qeNoChange : STR.qeSaved);
   }
 
