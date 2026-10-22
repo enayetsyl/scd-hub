@@ -522,6 +522,8 @@ export const MASTERY_SECTION_HEATMAP_QUERY = gql`
         weakPct
         triggered
         sectionMeanPct
+        actionId
+        actionStatus
         cells {
           state
           pct
@@ -689,6 +691,8 @@ export type MasteryHeatmap = {
     weakPct: number | null;
     triggered: boolean;
     sectionMeanPct: number | null;
+    actionId: string | null;
+    actionStatus: string | null;
     cells: { state: string; pct: number | null }[];
   }[];
 };
@@ -1060,4 +1064,220 @@ export type ChildMasteryAssignment = {
     notMarked: boolean;
     rows: { labelBn: string; earned: number; available: number; again: boolean }[];
   } | null;
+};
+
+// ---------------------------------------------------------------------------
+// M-5 — actions: trigger → extra class → re-test → close (docs/prd-mastery.md §5.5)
+// ---------------------------------------------------------------------------
+
+const NUMBERS = `
+  weakPct
+  meanPct
+`;
+
+const ACTION_FIELDS = `
+  id
+  sectionId
+  sectionName
+  className
+  subject
+  loCode
+  labelBn
+  kind
+  status
+  retestPaperId
+  retestConfirmed
+  suggestedOutcome
+  outcome
+  canApprove
+  canWork
+  trigger {
+    at
+    weakPct
+    weak
+    verdicts
+    assessments
+  }
+  plan {
+    date
+    slotKind
+    periodNumber
+    teacherName
+    attendees
+    retestDate
+    note
+  }
+  students {
+    studentId
+    name
+    rollNumber
+    stateNow
+    weakAtTrigger
+    inPlan
+    present
+    recentPct
+    retestPct
+  }
+  before { ${NUMBERS} }
+  after { ${NUMBERS} }
+  now { ${NUMBERS} }
+  events {
+    at
+    kind
+    byName
+    note
+  }
+`;
+
+export const MASTERY_ACTION_QUERY = gql`
+  query MasteryAction($actionId: String!) {
+    masteryAction(actionId: $actionId) { ${ACTION_FIELDS} }
+  }
+`;
+
+export const MASTERY_ACTIONS_PAGE_QUERY = gql`
+  query MasteryActionsPage($filter: String!, $sectionId: String, $subject: String, $page: Int, $pageSize: Int) {
+    masteryActionsPage(filter: $filter, sectionId: $sectionId, subject: $subject, page: $page, pageSize: $pageSize) {
+      total
+      page
+      pageSize
+      rows {
+        id
+        sectionId
+        sectionName
+        className
+        subject
+        loCode
+        labelBn
+        kind
+        status
+        weakPct
+        weak
+        verdicts
+        assessments
+        planDate
+        retestDate
+        outcome
+        createdAt
+      }
+    }
+  }
+`;
+
+export const MASTERY_ACTION_COUNTS_QUERY = gql`
+  query MasteryActionCounts {
+    masteryActionCounts {
+      proposed
+      running
+      retestThisWeek
+      closed30
+    }
+  }
+`;
+
+export const DECIDE_MASTERY_ACTION = gql`
+  mutation DecideMasteryAction(
+    $actionId: String!
+    $decision: String!
+    $date: String
+    $slotKind: String
+    $periodNumber: Int
+    $attendees: String
+    $retestDate: String
+    $note: String
+  ) {
+    decideMasteryAction(
+      actionId: $actionId
+      decision: $decision
+      date: $date
+      slotKind: $slotKind
+      periodNumber: $periodNumber
+      attendees: $attendees
+      retestDate: $retestDate
+      note: $note
+    ) { ${ACTION_FIELDS} }
+  }
+`;
+
+export const RECORD_MASTERY_EXTRA_CLASS = gql`
+  mutation RecordMasteryExtraClass($actionId: String!, $attendance: [MasteryAttendanceInput!]!) {
+    recordMasteryExtraClass(actionId: $actionId, attendance: $attendance) { ${ACTION_FIELDS} }
+  }
+`;
+
+export const BUILD_MASTERY_RETEST = gql`
+  mutation BuildMasteryRetest($actionId: String!) {
+    buildMasteryRetest(actionId: $actionId) { ${ACTION_FIELDS} }
+  }
+`;
+
+export const CLOSE_MASTERY_ACTION = gql`
+  mutation CloseMasteryAction($actionId: String!, $outcome: String!, $note: String) {
+    closeMasteryAction(actionId: $actionId, outcome: $outcome, note: $note) { ${ACTION_FIELDS} }
+  }
+`;
+
+type Numbers = { weakPct: number | null; meanPct: number | null };
+
+export type MasteryActionData = {
+  id: string;
+  sectionId: string;
+  sectionName: string;
+  className: string;
+  subject: string;
+  loCode: string;
+  labelBn: string;
+  kind: string;
+  status: string;
+  retestPaperId: string | null;
+  retestConfirmed: boolean;
+  suggestedOutcome: string | null;
+  outcome: string | null;
+  canApprove: boolean;
+  canWork: boolean;
+  trigger: { at: string; weakPct: number; weak: number; verdicts: number; assessments: number };
+  plan: {
+    date: string | null;
+    slotKind: string | null;
+    periodNumber: number | null;
+    teacherName: string | null;
+    attendees: string;
+    retestDate: string | null;
+    note: string | null;
+  } | null;
+  students: {
+    studentId: string;
+    name: string;
+    rollNumber: string | null;
+    stateNow: string;
+    weakAtTrigger: boolean;
+    inPlan: boolean;
+    present: boolean | null;
+    recentPct: number | null;
+    retestPct: number | null;
+  }[];
+  before: Numbers | null;
+  after: Numbers | null;
+  now: Numbers;
+  events: { at: string; kind: string; byName: string | null; note: string | null }[];
+};
+
+export type MasteryActionRow = {
+  id: string;
+  sectionId: string;
+  sectionName: string;
+  className: string;
+  subject: string;
+  loCode: string;
+  labelBn: string;
+  kind: string;
+  status: string;
+  weakPct: number;
+  weak: number;
+  verdicts: number;
+  assessments: number;
+  planDate: string | null;
+  retestDate: string | null;
+  outcome: string | null;
+  createdAt: string;
 };

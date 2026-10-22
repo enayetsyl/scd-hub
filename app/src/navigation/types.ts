@@ -501,6 +501,10 @@ export type MasteryStackParamList = {
   /** M-4: the weekly tailored assignment and one student's Part B. */
   MasteryAssignment: { sectionId: string; subject: string };
   MasteryAssignmentSheet: { assignmentId: string; studentId: string; subject: string };
+  /** M-5: the whole school's actions (param-free, drawer), a section's record, one action. */
+  MasteryLeader: undefined;
+  MasteryActions: { sectionId: string; subject: string };
+  MasteryAction: { actionId: string };
 };
 export type TeachingNotesStackParamList = {
   TeachingNotesHome: undefined;

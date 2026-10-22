@@ -12,8 +12,8 @@ import { Pressable, ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
 import { MASTERY_SECTION_HEATMAP_QUERY, type MasteryHeatmap } from "../../graphql/mastery";
-import { Screen, Card, Body, Muted, Loader, EmptyState, Notice, H2 } from "../../components/ui";
-import { STR, bnNum, hwSubjectLabel, masteryStateLabel } from "../../lib/labels";
+import { Screen, Card, Body, Muted, Badge, Button, Loader, EmptyState, Notice, H2 } from "../../components/ui";
+import { STR, bnNum, hwSubjectLabel, masteryActionLabel, masteryStateLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space, useColors } from "../../theme";
 import type { MasteryStackParamList } from "../../navigation/types";
@@ -77,6 +77,12 @@ export default function MasteryHeatmapScreen({ navigation, route }: Props): Reac
             })}
           </Body>
           <Body style={{ color: colors.onErrorContainer }}>{fill(STR.msTriggerAfter, { n: bnNum(o.assessments) })}</Body>
+          {o.actionId ? (
+            <View style={{ flexDirection: "row", gap: space(2), alignItems: "center", flexWrap: "wrap" }}>
+              <Badge text={masteryActionLabel(o.actionStatus ?? "")} tone="gold" />
+              <Button title={STR.msSeeAction} variant="secondary" onPress={() => navigation.navigate("MasteryAction", { actionId: o.actionId! })} />
+            </View>
+          ) : null}
         </View>
       ))}
 

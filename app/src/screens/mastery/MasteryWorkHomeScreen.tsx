@@ -85,6 +85,7 @@ export default function MasteryWorkHomeScreen({ navigation }: Props): React.Reac
           <Button title={STR.msHeatmap} variant="secondary" onPress={() => navigation.navigate("MasteryHeatmap", { sectionId: active, subject })} />
           <Button title={STR.msQuality} variant="secondary" onPress={() => navigation.navigate("MasteryQuality", { sectionId: active, subject })} />
           <Button title={STR.msAssignment} variant="secondary" onPress={() => navigation.navigate("MasteryAssignment", { sectionId: active, subject })} />
+          <Button title={STR.msActions} variant="secondary" onPress={() => navigation.navigate("MasteryActions", { sectionId: active, subject })} />
         </View>
       ) : null}
 
