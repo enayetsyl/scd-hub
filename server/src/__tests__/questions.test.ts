@@ -50,6 +50,7 @@ jest.mock("../modules/platform/models/ImportBatch", () => ({
     findById: jest.fn(),
     deleteMany: jest.fn(),
   },
+  envelopeSha256: jest.requireActual("../modules/platform/models/ImportBatch").envelopeSha256,
 }));
 
 jest.mock("../modules/corpus/models/CorpusEvent", () => ({

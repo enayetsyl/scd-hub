@@ -60,6 +60,7 @@ function makeStore(rows: Row[]) {
     updateOne: async (query: Row, update: Row) => {
       const row = rows.find((r) => matches(r, query));
       if (row) Object.assign(row, update.$set ?? {});
+      if (row) for (const k of Object.keys((update.$unset ?? {}) as Row)) delete row[k];
       return { acknowledged: true };
     },
   };
@@ -79,6 +80,7 @@ jest.mock("../modules/platform/models/ImportBatch", () => ({
     findOne: (q: unknown) => (globalThis as any).__batchStore.findOne(q),
     updateOne: (q: unknown, u: unknown) => (globalThis as any).__batchStore.updateOne(q, u),
   },
+  envelopeSha256: jest.requireActual("../modules/platform/models/ImportBatch").envelopeSha256,
 }));
 
 jest.mock("../modules/corpus/models/CorpusEvent", () => ({

@@ -4967,7 +4967,7 @@ const STR_BN = {
   geTitle: "অভিভাবকদের ব্যবহার",
   geSubtitle: "কোন অভিভাবক নিয়মিত অ্যাপ দেখেন, কোনটি কেউ খোলেননি",
   geHint:
-    "লগইনের হিসাব অডিট লগ থেকে; কোন পর্দা দেখা হয়েছে তার হিসাব শুধু এই সুবিধা চালুর পর থেকে।",
+    "লগইনের হিসাব অডিট লগ থেকে; কোন পর্দা দেখা হয়েছে তার হিসাব শুধু এই সুবিধা চালুর পর থেকে। বিজ্ঞপ্তির হিসাব সর্বোচ্চ শেষ ৯০ দিনের।",
   geWindow: "সময়সীমা",
   geDays30: "৩০ দিন",
   geDays90: "৯০ দিন",
@@ -10460,7 +10460,7 @@ const STR_EN: StrTable = {
   geTitle: "Guardian engagement",
   geSubtitle: "Which families use the app, and which screens nobody opens",
   geHint:
-    "Login figures come from the audit log; screen-view figures only exist from the day view tracking shipped.",
+    "Login figures come from the audit log; screen-view figures only exist from the day view tracking shipped. Notification figures cover the last 90 days at most.",
   geWindow: "Window",
   geDays30: "30 days",
   geDays90: "90 days",
