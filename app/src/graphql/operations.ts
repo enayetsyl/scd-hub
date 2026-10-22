@@ -4768,7 +4768,7 @@ export interface ClassNoteT {
 export interface LessonDeliveryT {
   noteId: string;
   dateKey: string;
-  sessions: Array<{ key: string; chapter: string; sessionIndex: number; sessionOf: number; titleBn: string; finished: boolean }>;
+  sessions: Array<{ key: string; chapter: string; anchorWord: string; sessionIndex: number; sessionOf: number; titleBn: string; finished: boolean }>;
   noneReason: string | null;
   noneNote: string | null;
 }
@@ -4793,7 +4793,7 @@ export interface LessonPlanIn {
   noneNote?: string | null;
 }
 
-const LESSON_DELIVERY_FIELDS = `noteId dateKey sessions { key chapter sessionIndex sessionOf titleBn finished } noneReason noneNote`;
+const LESSON_DELIVERY_FIELDS = `noteId dateKey sessions { key chapter anchorWord sessionIndex sessionOf titleBn finished } noneReason noneNote`;
 
 export const LESSON_PLAN_FOR_SLOT_QUERY = gql<
   {

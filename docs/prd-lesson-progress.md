@@ -1,6 +1,8 @@
 # PRD — Lesson-plan progress (`lesson_progress` module · পাঠ পরিকল্পনার অগ্রগতি)
 
-**Status:** PLANNED 2026-10-22 — LP-1..LP-3 below are the build contract; nothing built yet.
+**Status:** LP-1 BUILT 2026-10-22 (branch `feat/lesson-progress-lp1`: `LessonDelivery` + roster snapshot, `lessonPlanForSlot`,
+`lessonPlan` on `publishClassNote` / `updateClassNote`, picker on both class-note screens, mark-only correction);
+LP-2, LP-3 not yet built.
 **Decision block:** D-#820–#826, reserved against `origin/dev@009ec1fa` (2026-10-22, max D-#813; open PR #1138
 holds D-#815/#816, so D-#814–#819 are left free).
 
@@ -51,7 +53,10 @@ Owner rulings in the same conversation (AskUserQuestion):
    teaching days = every period it was picked on, finished or not (§3 presence uses all of them).
 4. If nothing from the plan was taught, the teacher picks a reason instead: রিভিশন / পরীক্ষা বা ক্লাস টেস্ট /
    পরিকল্পনার বাইরে অন্য কাজ (+ optional note). **An answer is required** to publish — sessions or a reason — exactly
-   like the homework yes/no (D-#299): silence is not data.
+   like the homework yes/no (D-#299): silence is not data. **The app enforces it; the server does not** — a phone on
+   an older app build publishes without the field and must keep working, so such a note simply has no delivery row
+   (the overview counts it as unanswered). A wrong answer that IS sent (unknown or duplicate session, no reason) is
+   refused before the note is written.
 5. The block pre-fills the "যা পড়ালাম" text with the picked session titles when that text is still empty (guardians
    keep reading the note as today).
 6. **Correcting a mark** goes through `updateClassNote` (the author, or `class_note:edit_all`) and does **not**
@@ -108,8 +113,8 @@ keep their own gates and only add rows.
 
 ## §6 — Acceptance (feeds tests)
 
-1. A section period of a class × subject with plans cannot publish without a session or a reason; one without plans
-   publishes as before.
+1. A section period of a class × subject with plans cannot publish **from the current app** without a session or a
+   reason; one without plans publishes as before; an older app build (no field) still publishes.
 2. The next session is the first in book order not finished in that শাখা; a later re-import of a plan keeps marks
    (stable key), and the tracker shows the current title.
 3. A session picked চলমান on day 1 and শেষ on day 2 has two teaching days; a student absent on day 1 only is আংশিক.

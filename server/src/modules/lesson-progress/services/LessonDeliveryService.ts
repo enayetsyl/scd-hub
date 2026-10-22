@@ -162,7 +162,7 @@ export interface LessonPlanSessionView extends PlanSession {
 export interface LessonDeliveryView {
   noteId: string;
   dateKey: string;
-  sessions: Array<{ key: string; chapter: string; sessionIndex: number; sessionOf: number; titleBn: string; finished: boolean }>;
+  sessions: Array<{ key: string; chapter: string; anchorWord: string; sessionIndex: number; sessionOf: number; titleBn: string; finished: boolean }>;
   noneReason: LessonNoneReason | null;
   noneNote: string | null;
 }
@@ -183,6 +183,7 @@ export function deliveryView(d: Pick<ILessonDelivery, "noteId" | "dateKey" | "se
     sessions: d.sessions.map((s) => ({
       key: sessionKey(s.chapter, s.sessionIndex),
       chapter: s.chapter,
+      anchorWord: s.anchorWord ?? "",
       sessionIndex: s.sessionIndex,
       sessionOf: s.sessionOf,
       titleBn: s.titleBn,
@@ -264,6 +265,7 @@ export async function prepareDelivery(slotId: Types.ObjectId | string, input: Le
     seen.add(s.key);
     return {
       chapter: p.chapter,
+      anchorWord: p.anchorWord,
       sessionIndex: p.sessionIndex,
       sessionOf: p.sessionOf,
       artifactId: new Types.ObjectId(p.artifactId),

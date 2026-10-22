@@ -1,5 +1,7 @@
 # STATUS
 
+- 2026-10-22: **BUILT — Lesson-plan progress LP-1 (D-#820–#822)** (branch `feat/lesson-progress-lp1`, worktree `C:/w/lp`). After each period the teacher's class-note card asks which session plan(s) were taught (next session pre-selected; শেষ হয়েছে / চলমান; or a reason). Periods of a class × subject with no session plans are unchanged. Gate green (tsc ×3, vocab verifier, jest 328 suites / 5,765 tests incl. +6 `lessonDelivery`); local click-through 12/12 on an in-memory DB.
+  - Next: LP-2 শাখা tracker + Office overview, then LP-3 student presence + mastery chapter link. Dev has no session plans — copy a few for the dev check.
 - 2026-10-22: **PLANNED — Lesson-plan progress (D-#820–#826, `docs/prd-lesson-progress.md`).** Owner ask: the teacher marks after each class what was taught, the Office monitors progress against the plan, and a weak topic can be traced to whether the child was in that class. Owner rulings: the imported session plans are the plan; mark "which session plan was completed that day" on the class note; presence = that day's attendance; corrective action decided later.
   - Slices: LP-1 marking on the class note (`LessonDelivery` + roster snapshot), LP-2 শাখা tracker + Office overview, LP-3 student lessons + mastery chapter link.
   - Dev has no session plans — the dev test needs a few imported (or copied) before LP-1 can be clicked through there.

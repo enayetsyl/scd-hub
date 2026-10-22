@@ -37,6 +37,7 @@ const LessonDeliverySessionRef = builder.objectRef<DeliverySessionView>("LessonD
   fields: (t) => ({
     key: t.exposeString("key"),
     chapter: t.exposeString("chapter"),
+    anchorWord: t.exposeString("anchorWord"),
     sessionIndex: t.exposeInt("sessionIndex"),
     sessionOf: t.exposeInt("sessionOf"),
     titleBn: t.exposeString("titleBn"),

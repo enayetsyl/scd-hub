@@ -16,6 +16,8 @@ import { LESSON_NONE_REASONS, type LessonNoneReason } from "@scd/shared";
 
 export interface ILessonDeliverySession {
   chapter: string;
+  /** পাঠ / অধ্যায় / Unit / Lesson — snapshot, so a past note reads like the plan did. */
+  anchorWord?: string;
   sessionIndex: number;
   sessionOf: number;
   artifactId?: Types.ObjectId;
@@ -46,6 +48,7 @@ export interface ILessonDelivery extends Document {
 const SessionSchema = new Schema<ILessonDeliverySession>(
   {
     chapter: { type: String, required: true },
+    anchorWord: { type: String },
     sessionIndex: { type: Number, required: true, min: 1 },
     sessionOf: { type: Number, required: true, min: 1 },
     artifactId: { type: Schema.Types.ObjectId, ref: "ContentArtifact" },
