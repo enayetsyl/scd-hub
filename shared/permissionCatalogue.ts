@@ -150,6 +150,15 @@ export const FEATURE_CATALOGUE = {
       delete: { en: "Delete a class note", bn: "ক্লাস নোট মুছে ফেলা", desc: "Remove a note", teacher: false, office: true, flags: [] },
     },
   },
+  lesson_progress: {
+    group: "teaching_and_trackers",
+    en: "Lesson-plan progress",
+    bn: "পাঠ পরিকল্পনার অগ্রগতি",
+    actions: {
+      view: { en: "See lesson-plan progress", bn: "পাঠ পরিকল্পনার অগ্রগতি দেখা", desc: "A শাখা × subject's sessions taught (the routine gives it to you, or you are its class teacher), a student's lessons and presence (LP-2/LP-3, D-#826)", teacher: true, office: true, flags: [] },
+      view_all: { en: "Any শাখা + the overview", bn: "সব শাখার অগ্রগতি ও সারসংক্ষেপ", desc: "The school-wide overview (progress, pace, lag behind the parallel শাখা), any শাখা's tracker and any student's lessons", teacher: false, office: true, flags: [] },
+    },
+  },
   saturday_revision: {
     group: "teaching_and_trackers",
     en: "Saturday revision (Hifz)",
@@ -920,8 +929,8 @@ export const LEGACY_PERMISSION_EXPANSION: Record<string, { any: readonly Catalog
   "tracker:export": { any: [] },
   "gift:manage": { any: ["assignment_gift:view","assignment_gift:view_all","assignment_gift:issue"] },
   "homework:void": { any: ["homework:delete"] },
-  "routine:read": { any: ["routine:view","class_note:view","class_note:create","class_note:edit"] },
-  "routine:manage": { any: ["routine:view_all","routine:edit","routine:edit_calendar","routine:settings","cover:assign","class_note:view_all","class_note:edit_all","class_note:delete"] },
+  "routine:read": { any: ["routine:view","class_note:view","class_note:create","class_note:edit","lesson_progress:view"] },
+  "routine:manage": { any: ["routine:view_all","routine:edit","routine:edit_calendar","routine:settings","cover:assign","class_note:view_all","class_note:edit_all","class_note:delete","lesson_progress:view_all"] },
   "attendance:mark": { any: ["attendance:mark"] },
   "attendance:manage": { any: ["attendance:view","attendance:view_all","attendance:edit","attendance:assign","attendance:record_leave","attendance:remind","staff_attendance:upload","staff_attendance:view_all"] },
   "library:read": { any: ["library:view"] },

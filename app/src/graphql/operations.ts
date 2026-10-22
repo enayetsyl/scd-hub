@@ -4815,6 +4815,76 @@ export const LESSON_PLAN_FOR_SLOT_QUERY = gql<
   }
 `;
 
+// --- Lesson-plan progress LP-2 (D-#824/#826) --------------------------------
+
+export interface LessonProgressRowT {
+  sectionId: string;
+  classLevel: number;
+  classNameBn: string;
+  sectionNameBn: string;
+  subject: string;
+  total: number;
+  finished: number;
+  pct: number;
+  finishedLast4Weeks: number;
+  pacePerWeek: number;
+  projectedFinishKey: string | null;
+  lastFinishedKey: string | null;
+  daysSinceLastFinished: number | null;
+  skipped: number;
+  reasons: { revision: number; test: number; other: number };
+  unansweredNotes: number;
+  lagSessions: number;
+}
+
+export interface LessonTrackerSessionT {
+  key: string;
+  chapter: string;
+  anchorWord: string;
+  chapterTitle: string | null;
+  sessionIndex: number;
+  sessionOf: number;
+  titleBn: string;
+  artifactId: string;
+  /** FINISHED | STARTED | SKIPPED | NOT_YET */
+  status: string;
+  finishedOn: string[];
+  startedOn: string[];
+  teacherNames: string[];
+}
+
+const LESSON_PROGRESS_ROW_FIELDS = `
+  sectionId classLevel classNameBn sectionNameBn subject total finished pct finishedLast4Weeks pacePerWeek
+  projectedFinishKey lastFinishedKey daysSinceLastFinished skipped reasons { revision test other } unansweredNotes lagSessions
+`;
+
+export const LESSON_PROGRESS_OVERVIEW_QUERY = gql<
+  { lessonProgressOverview: LessonProgressRowT[] },
+  { classLevel?: number | null; subject?: string | null }
+>`
+  query LessonProgressOverview($classLevel: Int, $subject: String) {
+    lessonProgressOverview(classLevel: $classLevel, subject: $subject) { ${LESSON_PROGRESS_ROW_FIELDS} }
+  }
+`;
+
+export const MY_LESSON_PROGRESS_QUERY = gql<{ myLessonProgress: LessonProgressRowT[] }, Record<string, never>>`
+  query MyLessonProgress {
+    myLessonProgress { ${LESSON_PROGRESS_ROW_FIELDS} }
+  }
+`;
+
+export const LESSON_SECTION_TRACKER_QUERY = gql<
+  { lessonSectionTracker: { row: LessonProgressRowT; sessions: LessonTrackerSessionT[] } },
+  { sectionId: string; subject: string }
+>`
+  query LessonSectionTracker($sectionId: String!, $subject: String!) {
+    lessonSectionTracker(sectionId: $sectionId, subject: $subject) {
+      row { ${LESSON_PROGRESS_ROW_FIELDS} }
+      sessions { key chapter anchorWord chapterTitle sessionIndex sessionOf titleBn artifactId status finishedOn startedOn teacherNames }
+    }
+  }
+`;
+
 const CLASS_NOTE_FIELDS = `
   id slotId groupType groupId date subject taughtSummaryBn homeworkItemId attachmentIds publishedBy publishedAt
   lessonDelivery { ${LESSON_DELIVERY_FIELDS} }
