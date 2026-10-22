@@ -53,7 +53,7 @@ export default function TrackerListScreen({ navigation }: Props): React.ReactEle
     pause: !hasSection,
   });
 
-  const trackers = data?.trackersPage.rows ?? [];
+  const trackers = data?.trackersPage?.rows ?? [];
 
   return (
     <Screen padded={false}>
@@ -113,7 +113,7 @@ export default function TrackerListScreen({ navigation }: Props): React.ReactEle
           })
         )}
         {hasSection && !error && !fetching ? (
-          <Pager page={page} pageSize={PAGE_SIZE} total={data?.trackersPage.total ?? 0} onPage={setPage} />
+          <Pager page={page} pageSize={PAGE_SIZE} total={data?.trackersPage?.total ?? 0} onPage={setPage} />
         ) : null}
       </ScrollView>
     </Screen>

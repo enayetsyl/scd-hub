@@ -160,6 +160,8 @@ const STAFF_NAV: NavSection[] = [
     items: [
       { route: "ClassNotesTab", labelKey: "cnMyPeriods", icon: "📓", screen: "MyClassNotes" },
       { route: "ClassNotesTab", labelKey: "cnAllNotesTitle", icon: "🗃️", screen: "AllClassNotes" },
+      // LP-2 (D-#824/#826): lesson-plan progress — the Office overview, or a teacher's own শাখা.
+      { route: "ClassNotesTab", labelKey: "lpNavTitle", icon: "📘", screen: "LessonProgress", perms: ["lesson_progress:view", "lesson_progress:view_all"] },
     ],
   },
   { type: "item", route: "CommentsTab", labelKey: "tabComments", icon: "🗣️" },

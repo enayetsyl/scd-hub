@@ -341,7 +341,7 @@ export default function CtScriptUploadScreen(): React.ReactElement {
                             setNote({ text: friendlyError(res.error), tone: "danger" });
                             return;
                           }
-                          const n = res.data?.publishClassTestScripts.notifiedGuardianCount ?? 0;
+                          const n = res.data?.publishClassTestScripts?.notifiedGuardianCount ?? 0;
                           setNote({ text: `${bnNum(n)} ${STR.csPublishedNote}`, tone: "ok" });
                           refetch();
                         } finally {

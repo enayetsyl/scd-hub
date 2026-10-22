@@ -121,8 +121,8 @@ export default function MyRecordScreen(): React.ReactElement {
   const conduct = conductQ.data?.myConductRecords ?? [];
   const grievances = grievQ.data?.myGrievances ?? [];
   const cpd = cpdQ.data?.myDevelopmentLog ?? [];
-  const observations = obsQ.data?.myObservationsPage.rows ?? [];
-  const observationsTotal = obsQ.data?.myObservationsPage.total ?? 0;
+  const observations = obsQ.data?.myObservationsPage?.rows ?? [];
+  const observationsTotal = obsQ.data?.myObservationsPage?.total ?? 0;
   const subjectName = new Map((subjectsQ.data?.subjects ?? []).map((s) => [s.id, s.nameBn]));
   const pool = poolQ.data?.myLeavePool;
   const heldDebt = debtQ.data?.myProbationDebt;

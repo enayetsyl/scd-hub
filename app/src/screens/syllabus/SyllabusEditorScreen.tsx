@@ -156,8 +156,8 @@ export default function SyllabusEditorScreen({ route, navigation }: Props): Reac
       ? { classId: null, subject, track, level }
       : { classId, subject, track: null, level: null },
   });
-  const holders = approverQ.data?.examSyllabusApprover.holders ?? [];
-  const defaultApprover = approverQ.data?.examSyllabusApprover.defaultUserId ?? null;
+  const holders = approverQ.data?.examSyllabusApprover?.holders ?? [];
+  const defaultApprover = approverQ.data?.examSyllabusApprover?.defaultUserId ?? null;
 
   const [teachersQ] = useQuery({ query: TEACHERS_QUERY });
   const teacherName = (id: string): string =>
@@ -221,7 +221,7 @@ export default function SyllabusEditorScreen({ route, navigation }: Props): Reac
     }
     setSaved(true);
     refetchDetail({ requestPolicy: "network-only" });
-    return res.data?.saveExamSyllabus.id ?? stored?.id ?? null;
+    return res.data?.saveExamSyllabus?.id ?? stored?.id ?? null;
   }
 
   /**

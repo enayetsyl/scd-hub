@@ -30,7 +30,7 @@ export default function AssignmentChaseScreen(_props: Props): React.ReactElement
   // D-#761: every CHASE record school-wide — page it on the server (most overdue first).
   const [page, setPage] = usePageState();
   const [listQ, refetchList] = useQuery({ query: AS_CHASE_LIST_PAGE, variables: { page, pageSize: PAGE_SIZE } });
-  const entries = listQ.data?.assignmentChaseListPage.rows ?? [];
+  const entries = listQ.data?.assignmentChaseListPage?.rows ?? [];
   // D-#723: the asId cannot tell C4 বালক from বালিকা — say the class + section.
   const sectionLabel = useSectionLabel();
 
@@ -165,7 +165,7 @@ export default function AssignmentChaseScreen(_props: Props): React.ReactElement
             );
           })
         )}
-        <Pager page={page} pageSize={PAGE_SIZE} total={listQ.data?.assignmentChaseListPage.total ?? 0} onPage={setPage} />
+        <Pager page={page} pageSize={PAGE_SIZE} total={listQ.data?.assignmentChaseListPage?.total ?? 0} onPage={setPage} />
       </ScrollView>
     </Screen>
   );

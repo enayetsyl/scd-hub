@@ -141,7 +141,7 @@ export default function MessageTemplateEditScreen({ route, navigation }: Props):
       setErr(friendlyError(res.error));
       return;
     }
-    setOk(res.data?.resetMessageTemplate.reset ? STR.mtResetDone : STR.mtNoOverrideToReset);
+    setOk(res.data?.resetMessageTemplate?.reset ? STR.mtResetDone : STR.mtNoOverrideToReset);
     // Re-seed from the (now default) server value.
     setLoaded(false);
     refetch({ requestPolicy: "network-only" });

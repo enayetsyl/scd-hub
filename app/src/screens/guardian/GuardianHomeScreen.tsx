@@ -310,8 +310,8 @@ export default function GuardianHomeScreen(): React.ReactElement {
   // D-#732: the shared rule, so this count, the sidebar badge and the tab's NEW
   // tags always agree.
   const recentTests = countNewResults(testStatsQ.data?.childTestResultStats ?? [], Date.now());
-  const testResults = testResultsQ.data?.childTestResultsPage.rows ?? [];
-  const testResultsTotal = testResultsQ.data?.childTestResultsPage.total ?? 0;
+  const testResults = testResultsQ.data?.childTestResultsPage?.rows ?? [];
+  const testResultsTotal = testResultsQ.data?.childTestResultsPage?.total ?? 0;
   const goClassTests = (): void =>
     (nav as unknown as { navigate: (name: string, params?: object) => void }).navigate(
       "GuardianClassTestTab",

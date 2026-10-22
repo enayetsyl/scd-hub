@@ -70,7 +70,7 @@ export default function GuardianCredentialsScreen(_props: Props): React.ReactEle
 
   const [{ data: yearData }] = useQuery({ query: CLASSES_QUERY, variables: { academicYearId: manualYearId }, pause: manualYearId === "" });
   const classOptions = (yearData?.classes ?? []).map((c) => ({ label: c.nameBn, value: c.id }));
-  const sectionOptions = (yearData?.classes.find((c) => c.id === manualClassId)?.sections ?? []).map((s) => ({
+  const sectionOptions = (yearData?.classes?.find((c) => c.id === manualClassId)?.sections ?? []).map((s) => ({
     label: s.nameBn,
     value: s.id,
     hint: s.code,
@@ -101,7 +101,7 @@ export default function GuardianCredentialsScreen(_props: Props): React.ReactEle
       })),
     [rosterData],
   );
-  const selectedStudent = rosterData?.studentsInSection.find((s) => s.id === manualStudentId) ?? null;
+  const selectedStudent = rosterData?.studentsInSection?.find((s) => s.id === manualStudentId) ?? null;
 
   async function onGenerate(phone: string, hasLogin: boolean, guardianId: string | null): Promise<void> {
     if (busyPhone) return;

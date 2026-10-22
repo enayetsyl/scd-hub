@@ -73,6 +73,8 @@ import TodayScreen from "../screens/home/TodayScreen";
 import AdminTodayScreen from "../screens/home/AdminTodayScreen";
 import MyClassNotesScreen from "../screens/classnotes/MyClassNotesScreen";
 import AllClassNotesScreen from "../screens/classnotes/AllClassNotesScreen";
+import LessonProgressScreen from "../screens/lessonprogress/LessonProgressScreen";
+import LessonTrackerScreen from "../screens/lessonprogress/LessonTrackerScreen";
 import PrintHomeScreen from "../screens/printing/PrintHomeScreen";
 import WorkBoardScreen from "../screens/workboard/WorkBoardScreen";
 import TaskDetailScreen from "../screens/workboard/TaskDetailScreen";
@@ -695,6 +697,8 @@ function ClassNotesNavigator(): React.ReactElement {
     <ClassNotesStack.Navigator screenOptions={stackOptions}>
       <ClassNotesStack.Screen name="MyClassNotes" component={MyClassNotesScreen} options={{ title: STR.drawerItemClassNotes }} />
       <ClassNotesStack.Screen name="AllClassNotes" component={AllClassNotesScreen} options={{ title: STR.cnAllNotesTitle }} />
+      <ClassNotesStack.Screen name="LessonProgress" component={LessonProgressScreen} options={{ title: STR.lpNavTitle }} />
+      <ClassNotesStack.Screen name="LessonTracker" component={LessonTrackerScreen} options={{ title: STR.lpNavTitle }} />
     </ClassNotesStack.Navigator>
   );
 }

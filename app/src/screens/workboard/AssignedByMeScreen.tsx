@@ -59,8 +59,8 @@ export default function AssignedByMeScreen({ navigation }: Props): React.ReactEl
     requestPolicy: "cache-and-network",
   });
   const refetch = (): void => refetchQ({ requestPolicy: "network-only" });
-  const tasks = q.data?.tasksAssignedByMePage.rows ?? [];
-  const total = q.data?.tasksAssignedByMePage.total ?? 0;
+  const tasks = q.data?.tasksAssignedByMePage?.rows ?? [];
+  const total = q.data?.tasksAssignedByMePage?.total ?? 0;
   const today = dateKey();
 
   const byPerson = new Map<string, { name: string; tasks: TaskT[] }>();

@@ -63,7 +63,7 @@ export default function LibraryHomeScreen({ navigation }: Props): React.ReactEle
 
   const myLoans = (loansQ.data?.myLoans ?? []).filter((l) => l.status === "ACTIVE");
   const myResv = (resvQ.data?.myReservations ?? []).filter((r) => r.status === "QUEUED" || r.status === "READY");
-  const titles = titlesQ.data?.bookTitlesPage.rows ?? [];
+  const titles = titlesQ.data?.bookTitlesPage?.rows ?? [];
 
   async function runCancel(reservationId: string): Promise<void> {
     if (!(await confirmAction({ confirmLabel: STR.libCancelReservation }))) return;
@@ -188,7 +188,7 @@ export default function LibraryHomeScreen({ navigation }: Props): React.ReactEle
           </Muted>
         </Card>
       ))}
-      <Pager page={titlePage} pageSize={PAGE_SIZE} total={titlesQ.data?.bookTitlesPage.total ?? 0} onPage={setTitlePage} />
+      <Pager page={titlePage} pageSize={PAGE_SIZE} total={titlesQ.data?.bookTitlesPage?.total ?? 0} onPage={setTitlePage} />
     </Screen>
   );
 }
