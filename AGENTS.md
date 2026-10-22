@@ -126,6 +126,7 @@ auto-deploys (`.github/workflows`, `scripts/deploy.sh`). So:
   import-contract.md  ← the envelope contract narrative
   import-workflow.md  ← how content is authored (Claude Desktop) and imported into the app
   roadmap.md          ← deferred pipeline / backlog (build-later work; not the live cursor)
+  db-on-vm-plan.md    ← prod MongoDB Atlas → VM move: harden mongod, hourly backups, rebuild runbook, cutover (D-#817 pending)
   import-contract.schema.json  ← the wire-contract JSON Schema (a source of truth)
   adr/                ← long-form ADRs if/when they outgrow DECISIONS.md
   issues/             ← testing-bug backlog: BACKLOG.md (BUG-NNN sections) + README SOP + assets/ screenshots
