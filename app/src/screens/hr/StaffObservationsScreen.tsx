@@ -56,7 +56,7 @@ export default function StaffObservationsScreen({ route }: Props): React.ReactEl
   const [subjectsQ] = useQuery({ query: SUBJECTS_QUERY });
   const [, submit] = useMutation(SUBMIT_OBSERVATION);
 
-  const observations = obsQ.data?.staffObservationsPage.rows ?? [];
+  const observations = obsQ.data?.staffObservationsPage?.rows ?? [];
   const subjectName = new Map((subjectsQ.data?.subjects ?? []).map((s) => [s.id, s.nameBn]));
 
   const valid = ISO_DATE.test(dateKey) && notes.trim() !== "";
@@ -128,7 +128,7 @@ export default function StaffObservationsScreen({ route }: Props): React.ReactEl
           </Card>
         ))
       )}
-      <Pager page={page} pageSize={PAGE_SIZE} total={obsQ.data?.staffObservationsPage.total ?? 0} onPage={setPage} />
+      <Pager page={page} pageSize={PAGE_SIZE} total={obsQ.data?.staffObservationsPage?.total ?? 0} onPage={setPage} />
     </Screen>
   );
 }

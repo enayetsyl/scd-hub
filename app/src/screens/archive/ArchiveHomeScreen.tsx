@@ -115,10 +115,10 @@ export default function ArchiveHomeScreen(): React.ReactElement {
   }
 
   const boxes = boxesQ.data?.storageBoxes ?? [];
-  const found = searchQ.data?.scriptBundlesPage.rows ?? [];
+  const found = searchQ.data?.scriptBundlesPage?.rows ?? [];
   const acks = acksQ.data?.pendingScriptAcks ?? [];
   const out = outQ.data?.openScriptCheckouts ?? [];
-  const disposable = dispQ.data?.disposableScriptBundlesPage.rows ?? [];
+  const disposable = dispQ.data?.disposableScriptBundlesPage?.rows ?? [];
 
   return (
     <Screen padded={false}>
@@ -146,7 +146,7 @@ export default function ArchiveHomeScreen(): React.ReactElement {
               <Pager
                 page={searchPage}
                 pageSize={PAGE_SIZE}
-                total={searchQ.data?.scriptBundlesPage.total ?? 0}
+                total={searchQ.data?.scriptBundlesPage?.total ?? 0}
                 onPage={setSearchPage}
               />
             </QueryGate>
@@ -269,7 +269,7 @@ export default function ArchiveHomeScreen(): React.ReactElement {
               <Pager
                 page={dispPage}
                 pageSize={PAGE_SIZE}
-                total={dispQ.data?.disposableScriptBundlesPage.total ?? 0}
+                total={dispQ.data?.disposableScriptBundlesPage?.total ?? 0}
                 onPage={setDispPage}
               />
             </QueryGate>

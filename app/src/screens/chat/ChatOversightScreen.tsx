@@ -40,7 +40,7 @@ export default function ChatOversightScreen({ navigation }: Props): React.ReactE
     }, [refetch]),
   );
 
-  const conversations: ConversationT[] = q.data?.oversightConversationsPage.rows ?? [];
+  const conversations: ConversationT[] = q.data?.oversightConversationsPage?.rows ?? [];
 
   return (
     <Screen>
@@ -80,7 +80,7 @@ export default function ChatOversightScreen({ navigation }: Props): React.ReactE
           );
         })
       )}
-      <Pager page={page} pageSize={PAGE_SIZE} total={q.data?.oversightConversationsPage.total ?? 0} onPage={setPage} />
+      <Pager page={page} pageSize={PAGE_SIZE} total={q.data?.oversightConversationsPage?.total ?? 0} onPage={setPage} />
       </QueryGate>
     </Screen>
   );

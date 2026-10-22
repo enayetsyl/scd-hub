@@ -89,7 +89,7 @@ export default function FileBundleScreen(): React.ReactElement {
       setNote({ text: friendlyError(res.error), bad: true });
       return;
     }
-    const bundleId = res.data?.fileScriptBundle.id;
+    const bundleId = res.data?.fileScriptBundle?.id;
     if (bundleId) {
       nav.replace("ArchiveBundle", { bundleId });
     } else {

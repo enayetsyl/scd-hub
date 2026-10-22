@@ -54,7 +54,7 @@ export default function VideoReviewAdminScreen(): React.ReactElement {
     query: VIDEO_REVIEW_ROWS_PAGE,
     variables: { status: statusFilter === "" ? null : statusFilter, page, pageSize: PAGE_SIZE },
   });
-  const rows = rowsData?.videoReviewRowsPage.rows ?? [];
+  const rows = rowsData?.videoReviewRowsPage?.rows ?? [];
   const fetching = summaryFetching || rowsFetching;
   const refetch = (opts: { requestPolicy: "network-only" }): void => {
     refetchSummary(opts);
@@ -193,7 +193,7 @@ export default function VideoReviewAdminScreen(): React.ReactElement {
             );
           })
         )}
-        <Pager page={page} pageSize={PAGE_SIZE} total={rowsData?.videoReviewRowsPage.total ?? 0} onPage={setPage} />
+        <Pager page={page} pageSize={PAGE_SIZE} total={rowsData?.videoReviewRowsPage?.total ?? 0} onPage={setPage} />
       </ScrollView>
     </Screen>
   );

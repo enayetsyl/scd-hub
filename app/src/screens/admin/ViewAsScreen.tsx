@@ -40,7 +40,7 @@ export default function ViewAsScreen(): React.ReactElement {
     query: IMPERSONATION_TARGETS_PAGE,
     variables: { kind: tab, search: search.trim() === "" ? null : search.trim(), page, pageSize: PAGE_SIZE },
   });
-  const rows = q.data?.impersonationTargetsPage.rows ?? [];
+  const rows = q.data?.impersonationTargetsPage?.rows ?? [];
 
   const open = async (row: ImpersonationTargetT) => {
     if (!row.eligible || busyId) return;
@@ -114,7 +114,7 @@ export default function ViewAsScreen(): React.ReactElement {
             </Card>
           </Pressable>
         ))}
-        <Pager page={page} pageSize={PAGE_SIZE} total={q.data?.impersonationTargetsPage.total ?? 0} onPage={setPage} />
+        <Pager page={page} pageSize={PAGE_SIZE} total={q.data?.impersonationTargetsPage?.total ?? 0} onPage={setPage} />
       </ScrollView>
     </Screen>
   );

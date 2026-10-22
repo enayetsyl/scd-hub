@@ -171,7 +171,7 @@ export default function BookEscalationInboxScreen(): React.ReactElement {
     query: SUPPORT_BOOK_ESCALATIONS_PAGE,
     variables: { bookId: bookId ?? undefined, openOnly, page, pageSize: PAGE_SIZE },
   });
-  const threads = escQ.data?.supportBookEscalationsPage.rows ?? [];
+  const threads = escQ.data?.supportBookEscalationsPage?.rows ?? [];
 
   return (
     <Screen padded={false}>
@@ -217,7 +217,7 @@ export default function BookEscalationInboxScreen(): React.ReactElement {
           <Pager
             page={page}
             pageSize={PAGE_SIZE}
-            total={escQ.data?.supportBookEscalationsPage.total ?? 0}
+            total={escQ.data?.supportBookEscalationsPage?.total ?? 0}
             onPage={setPage}
           />
         </QueryGate>

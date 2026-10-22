@@ -116,7 +116,7 @@ export default function LeaveAdminScreen({ navigation }: Props): React.ReactElem
   const [, upsertEnt] = useMutation(UPSERT_STAFF_LEAVE_ENTITLEMENT);
   const [, applyLeave] = useMutation(APPLY_FOR_STAFF_LEAVE);
 
-  const apps = appsQ.data?.staffLeaveApplicationsPage.rows ?? [];
+  const apps = appsQ.data?.staffLeaveApplicationsPage?.rows ?? [];
   const staffName = new Map((staffQ.data?.staff ?? []).map((s) => [s.id, personName(s)]));
 
   async function runDecide(applicationId: string, decision: "approve" | "reject"): Promise<void> {
@@ -302,7 +302,7 @@ export default function LeaveAdminScreen({ navigation }: Props): React.ReactElem
           </Card>
         ))
       )}
-      <Pager page={page} pageSize={PAGE_SIZE} total={appsQ.data?.staffLeaveApplicationsPage.total ?? 0} onPage={setPage} />
+      <Pager page={page} pageSize={PAGE_SIZE} total={appsQ.data?.staffLeaveApplicationsPage?.total ?? 0} onPage={setPage} />
 
       {/* Entitlement editor */}
       <Body style={{ fontWeight: "700", marginTop: space(4), marginBottom: space(2) }}>{STR.hrEntitlements}</Body>
