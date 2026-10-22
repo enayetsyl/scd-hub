@@ -1,6 +1,6 @@
 # Plan — Production MongoDB moves from Atlas M0 to the VM
 
-Status: **DRAFT, 2026-10-22**. Owner approves the open questions (§9), then the phases run in order.
+Status: **APPROVED IN PRINCIPLE, 2026-10-22**. The owner answered §9 Q1–Q4; only the cutover date (Q5) is open. The phases run in order.
 Decision row: **D-#817** (to be appended when the cutover is scheduled).
 
 ## 1. Why
@@ -32,7 +32,7 @@ Decision row: **D-#817** (to be appended when the cutover is scheduled).
 | Deploy | GitHub Actions secrets `VM_HOST`, `VM_USER`, `VM_SSH_KEY`; `scripts/deploy.sh` |
 | Services | `scdhub-prod` (4000), `scdhub-dev` (4001), `scdhub-book-worker-prod`, `caddy`, `mongod`, `docker` (GlitchTip) |
 | Not in the repo | systemd unit files, `/etc/caddy/Caddyfile`, `/etc/mongod.conf`, GlitchTip `compose.yml` |
-| Not backed up | book pipeline working files on disk (`BOOK_WORK_ROOT`, `BOOK_PIPELINE_ROOT`) |
+| Book pipeline | **no longer used** (owner, 2026-10-22). Its working files are not backed up and won't be. The nightly book-plane dump is to be removed (Phase 2). |
 
 ## 3. Phase 0 — Preconditions (owner)
 
@@ -58,7 +58,7 @@ Done **before** any prod data lands there. The book plane gets a short (~1 minut
    - `admin` (`root`)
    - `scdhub_prod` (readWrite `scdhub_prod`)
    - `scdhub_dev` (readWrite `scdhub_dev`)
-   - `scdhub_books` (readWrite `scdhub_books_prod`)
+   - `scdhub_books` (readWrite `scdhub_books_prod`), needed for as long as the app still opens `BOOK_MONGODB_URI`
    - `scdhub_backup` (`backup` + `restore` roles)
 3. Write `BOOK_MONGODB_URI` with the `scdhub_books` credentials into prod `.env` (still works while auth is off).
 4. `mongod.conf`:
@@ -92,7 +92,12 @@ URI shape: `mongodb://<user>:<pass>@127.0.0.1:27017/<db>?replicaSet=rs0&authSour
    critical when older than **6 h**. The daily card is unchanged.
 5. **Alert on failure:** `backup.sh` sends an email on any failed run, using the same `mail` path as
    `host-alert.sh`, which also goes into cron (`*/15`).
-6. **Restore check:** a weekly cron restores the newest hourly dump into a throwaway `scdhub_restorecheck`
+   - Recipients: the **four addresses the owner chose on 2026-10-22**. They are set as `ALERT_EMAIL`
+     (comma list) in the VM `.env` and in the vault, and are **never committed** (public repo).
+   - Sender: the GlitchTip SMTP account; check first that it can send.
+6. **Drop the book-plane step** from the nightly `backup.sh`. The pipeline is retired (owner, 2026-10-22).
+   The GlitchTip step stays.
+7. **Restore check:** a weekly cron restores the newest hourly dump into a throwaway `scdhub_restorecheck`
    database, compares per-collection counts with prod (±1 hour of writes), drops it, and logs the result.
    A backup that is never restored is not a backup.
 
@@ -132,9 +137,9 @@ All are sanitised: secrets stay in the vault, and **no IP addresses are committe
    - today's attendance is visible
    - the Drive upload of a manual backup succeeds
    - cron is installed
-9. Book pipeline working files are **lost** in a rebuild (not backed up). See §9 Q4.
+9. The book pipeline is retired, so no book working files are restored.
 
-**Drill:** once, on a temporary VM, end to end, stopping before the Cloudflare switch. The drill
+**Drill:** once, on a **temporary paid A1 VM** (owner, Q1; ~2 hours on Pay-As-You-Go, then terminated), end to end, stopping before the Cloudflare switch. The drill
 restores into the temporary VM, never prod. Record the actual RTO in the runbook.
 
 ## 7. Phase 4 — Cutover (owner picks the night; Claude runs it, auto mode OFF)
@@ -166,25 +171,27 @@ and it also frees ~28 MB on Atlas.
 
 - **System Health (code PR):** the DB card stops presenting an Atlas M0 cap. It shows DB size against the
   VM disk, and the disk card already exists. Retire `ATLAS_M0_LIMIT_BYTES` and keep the env override.
-- **Atlas:** keep it untouched for **14 days** as a cold copy, then drop `scdhub_dev`/`scdhub_local`, and decide
-  whether to delete the cluster or keep it as an emergency target (§9 Q3).
+- **Atlas:** keep it untouched for **14 days** as a cold copy, then drop `scdhub_dev`/`scdhub_local`.
+  **Keep the M0 cluster as an emergency restore target** (owner, Q3): it holds prod's last copy, for the case
+  where the VM and its whole Oracle region are gone. It stops being usable once prod passes ~500 MB of
+  dataSize + indexSize; re-check this at each quarterly review.
 - **Docs:** `deployment.md` topology, `architecture.md` ADR-011 note, `scripts/restore.md`, and **D-#817**.
 - **Optional extra layer:** an Oracle boot-volume backup policy (weekly, keep 4; inside the free 5-backup
   allowance). It restores the whole VM quickly on a disk fault, but it is **not** protection against
   losing the account, which is why the Drive copies stay the primary backup.
 
-## 9. Open questions (owner)
+## 9. Owner answers (2026-10-22)
 
-1. **Drill VM:** the free A1 allowance (4 OCPU / 24 GB) is fully used by the current VM. Choose one:
-   - a temporary paid A1 VM for ~2 hours (cents on Pay-As-You-Go)
-   - a Docker rehearsal on the laptop, which does not test provisioning
-2. **Alert channel:** which email address receives backup-failure and disk/RAM alerts? Does the GlitchTip
-   SMTP account work for sending?
-3. **Atlas after 14 days:** delete the cluster, or keep M0 as an emergency restore target? It stops
-   fitting once prod passes ~500 MB.
-4. **Book pipeline working files:** add them to the nightly backup (size to be measured), or accept that
-   a rebuild loses in-progress book jobs?
-5. **Cutover night:** which date? Weekend night, after 22:00 Dhaka?
+1. **Drill VM:** a temporary paid A1 VM, deleted after the drill.
+2. **Alert channel:** four owner-chosen addresses, kept in the VM `.env` `ALERT_EMAIL` and the vault, never in
+   the repo. Sent via the GlitchTip SMTP account (check it can send in Phase 2).
+3. **Atlas after 14 days:** keep M0 as an emergency restore target while prod fits.
+4. **Book pipeline:** no longer used. Stop backing it up; no working-file backup.
+5. **Cutover night:** **OPEN.** The owner sets it once the earlier phases are done.
+
+Still to confirm (not blocking Phases 0–3): since the book pipeline is retired, should the
+`scdhub-book-worker-prod` service be stopped and disabled? Its database would be kept, untouched, as a
+one-off archive.
 
 ## 10. Order and owners
 
@@ -192,8 +199,8 @@ and it also frees ~28 MB on Atlas.
 |---|---|---|---|
 | 0 | Vault + #1138 | owner (+ Claude for the backfill) | — |
 | 1 | Harden `mongod` | Claude (auto mode off) | 0.2 (passwords go to the vault) |
-| 2 | Hourly backups + alerts | Claude (PR + VM) | 1, Q2 |
-| 3 | Runbook + drill | Claude writes; drill together | 2, Q1 |
+| 2 | Hourly backups + alerts | Claude (PR + VM) | 1 |
+| 3 | Runbook + drill | Claude writes; drill together | 2 |
 | 4a | Dev move (rehearsal) | Claude | 1 |
 | 4b | Prod cutover | Claude, owner present | 2, 3, 4a, Q5 |
 | 5 | Health card, Atlas, docs | Claude | 4b + 14 days |
