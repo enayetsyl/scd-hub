@@ -240,16 +240,21 @@ export function computeOutcomeState(
 export const VERDICT_STATES: readonly MasteryState[] = ["WEAK", "IMPROVING", "MASTERED", "REVISION_DUE"];
 
 /**
- * Section % for one outcome = WEAK students ÷ students with a verdict. Triggered when it
- * reaches sectionTriggerPct after at least sectionTriggerMinAssessments confirmed papers.
- * M-3 shows the banner; M-5 turns it into an extra-class proposal.
+ * Section % for one outcome = WEAK students ÷ students ASSESSED on it (any state but
+ * NOT_ASSESSED). Triggered when it reaches sectionTriggerPct after at least
+ * sectionTriggerMinAssessments confirmed papers. M-3 shows the banner; M-5 opens a proposal.
+ *
+ * The denominator counts INSUFFICIENT (D-#813): early in a topic most students who are doing
+ * fine have not yet earned MASTERED (it needs separate weeks), so dividing by verdicts only
+ * made 2 struggling students out of 17 read as "100 % weak" and propose an extra class.
+ * (`verdicts` keeps its name in the API; it now means "assessed".)
  */
 export function sectionOutcomeSummary(
   states: MasteryState[],
   assessments: number,
   policy: Pick<DiagnosisPolicy, "sectionTriggerPct" | "sectionTriggerMinAssessments">,
 ): { weak: number; verdicts: number; weakPct: number | null; triggered: boolean } {
-  const verdicts = states.filter((s) => VERDICT_STATES.includes(s)).length;
+  const verdicts = states.filter((s) => s !== "NOT_ASSESSED").length;
   const weak = states.filter((s) => s === "WEAK").length;
   const weakPct = verdicts > 0 ? Math.round((weak / verdicts) * 100) : null;
   return {
