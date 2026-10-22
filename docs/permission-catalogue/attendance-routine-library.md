@@ -425,3 +425,7 @@ Listed elsewhere: `server/src/modules/hr/resolvers/staffHub.ts:348` staffAttenda
 | server/src/modules/lesson-progress/resolvers/lessonProgress.ts | myLessonProgress (LP-2) | hasAnyPermission(`lesson_progress:view`, `lesson_progress:view_all`); own routine শাখা × subjects + class-teacher শাখা |
 | server/src/modules/lesson-progress/resolvers/lessonProgress.ts | lessonSectionTracker (LP-2) | hasAnyPermission(`lesson_progress:view`, `lesson_progress:view_all`) + row rule (routine holder / class teacher; `view_all` lifts it) |
 | app DrawerContent | ক্লাস নোট → পাঠ পরিকল্পনার অগ্রগতি leaf | perms `lesson_progress:view` / `view_all` (inside the `class_note:view` route) |
+| server/src/modules/lesson-progress/resolvers/studentLessons.ts | studentLessons (LP-3) | hasAnyPermission(`lesson_progress:view`, `lesson_progress:view_all`) + row rule: `view_all` / class teacher of the child's শাখা see every subject; a subject teacher only the routine-held subjects (`narrowed`); anyone else refused |
+| server/src/modules/mastery/resolvers/masteryDiagnosis.ts | MasteryOutcomeTrail.chapterLessons (LP-3) | rides `masteryOutcomeTrail`'s gate (routine holder / `mastery:edit_all`) |
+| server/src/modules/mastery/resolvers/masteryAction.ts | MasteryAction.lessonGap (LP-3) | rides `masteryAction`'s gate |
+| app StudentProfileScreen | পাঠ tab | `lesson_progress:view` / `view_all` |

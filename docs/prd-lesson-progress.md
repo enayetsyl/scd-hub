@@ -4,7 +4,11 @@
 `lessonPlan` on `publishClassNote` / `updateClassNote`, picker on both class-note screens, mark-only correction);
 LP-2 BUILT 2026-10-22 (branch `feat/lesson-progress-lp2`: `lesson_progress` catalogue feature, `lessonProgressOverview` /
 `myLessonProgress` / `lessonSectionTracker`, drawer ক্লাস নোট → পাঠ পরিকল্পনার অগ্রগতি, overview + tracker screens; a row
-needs session plans AND a live routine slot for that শাখা × subject); LP-3 not yet built.
+needs session plans AND a live routine slot for that শাখা × subject); LP-3 BUILT 2026-10-22 (branch
+`feat/lesson-progress-lp3`: `studentLessons` + student-profile পাঠ tab, `MasteryOutcomeTrail.chapterLessons`,
+`MasteryAction.lessonGap`; presence reads the attendance units the delivery snapshotted — `attendanceUnits` — because
+Quran-group membership is not dated, then falls back to the child's current unit). Corrective action and a guardian
+view remain for the owner.
 **Decision block:** D-#820–#826, reserved against `origin/dev@009ec1fa` (2026-10-22, max D-#813; open PR #1138
 holds D-#815/#816, so D-#814–#819 are left free).
 
