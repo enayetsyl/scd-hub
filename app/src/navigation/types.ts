@@ -251,6 +251,8 @@ export type GuardianHomeStackParamList = {
   ChildRevision: undefined;
   /** M-6 (D-#812): the child's learning progress per subject, in plain words. */
   ChildMastery: undefined;
+  /** LP-4 (D-#828): the classes the child missed while a lesson-plan session was taught. */
+  ChildMissedLessons: undefined;
 };
 export type GuardianHomeworkStackParamList = {
   // Optional deep-link params (D-#452 weekly digest): preselect the child and

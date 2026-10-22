@@ -23,6 +23,8 @@ import { teachesSectionSubject } from "../../trackers/subjectTeacher";
 import { dateKeyOf, parseDateKey } from "../../attendance/dates";
 import { LessonDelivery, type ILessonDelivery } from "../models/LessonDelivery";
 import { LessonProgressError, sessionKey, sessionPlansFor, type PlanSession } from "./LessonDeliveryService";
+import { absencesByNote } from "../presence";
+import { catchupsFor, openCatchupCounts } from "./LessonCatchupService";
 
 export type Auth = AccessProfile & { userId: string; role: string };
 
@@ -33,6 +35,10 @@ export interface TrackerSession extends PlanSession {
   finishedOn: string[];
   startedOn: string[];
   teacherNames: string[];
+  /** LP-4 (D-#827): roster students absent on at least one day this session was taught. */
+  absentCount: number;
+  /** False when some teaching day had no attendance taken (the count is then a floor). */
+  attendanceComplete: boolean;
 }
 
 export interface ProgressSummary {
@@ -61,11 +67,27 @@ export interface ProgressRow extends ProgressSummary {
   subject: string;
   /** Sessions behind the furthest parallel শাখা of the same class level × subject (0 = leading / alone). */
   lagSessions: number;
+  /** LP-4 (D-#827): catch-up tasks raised on this শাখা × subject that are not done yet. */
+  openCatchups: number;
+}
+
+export interface CatchupView {
+  id: string;
+  taskId: string;
+  titleBn: string;
+  assigneeName: string;
+  dueKey: string;
+  /** TODO | DOING | DONE | CANCELLED */
+  status: string;
+  blockedReason: string | null;
+  createdAt: string;
+  snapshot: { finished: number; total: number; lagSessions: number; skipped: number };
 }
 
 export interface SectionTracker {
   row: ProgressRow;
   sessions: TrackerSession[];
+  catchups: CatchupView[];
 }
 
 const DAY = 24 * 3600 * 1000;
@@ -271,6 +293,7 @@ async function rowsFor(pairs: Pair[], sections: Map<string, SectionInfo>, allPai
       ...info,
       subject: p.subject,
       lagSessions: 0,
+      openCatchups: 0,
       ...summarize(plans.get(planKey)!, byPair.get(k) ?? [], notesByPair.get(k) ?? [], todayKey),
     });
   }
@@ -280,6 +303,8 @@ async function rowsFor(pairs: Pair[], sections: Map<string, SectionInfo>, allPai
     lead.set(k, Math.max(lead.get(k) ?? 0, r.finished));
   }
   for (const r of rows) r.lagSessions = (lead.get(`${r.classLevel}|${r.subject}`) ?? 0) - r.finished;
+  const open = await openCatchupCounts(rows.map((r) => ({ sectionId: r.sectionId, subject: r.subject })));
+  for (const r of rows) r.openCatchups = open.get(`${r.sectionId}|${r.subject}`) ?? 0;
   const asked = new Set(pairs.map((p) => `${p.sectionId}|${p.subject}`));
   return rows
     .filter((r) => asked.has(`${r.sectionId}|${r.subject}`))
@@ -342,9 +367,21 @@ export async function sectionTracker(sectionId: string, subject: string, auth: A
   const [row] = await rowsFor([pair], sections, [...all, pair], dateKeyOf(today));
   const plan = await sessionPlansFor(info.classLevel, subject);
   const deliveries = (await LessonDelivery.find({ sectionId: new Types.ObjectId(sectionId), subject })
-    .select("noteId dateKey sessions noneReason teacherId")
-    .lean()) as unknown as DeliveryLite[];
+    .select("noteId dateKey sessions noneReason teacherId rosterStudentIds attendanceUnits")
+    .lean()) as unknown as Array<DeliveryLite & { rosterStudentIds: Types.ObjectId[]; attendanceUnits?: string[] }>;
   const states = sessionStates(plan, deliveries);
+  const absences = await absencesByNote(deliveries);
+  const absentBySession = new Map<string, { ids: Set<string>; complete: boolean }>();
+  for (const d of deliveries) {
+    const a = absences.get(String(d.noteId));
+    for (const s of d.sessions) {
+      const k = sessionKey(s.chapter, s.sessionIndex);
+      const cur = absentBySession.get(k) ?? { ids: new Set<string>(), complete: true };
+      for (const id of a?.absent ?? []) cur.ids.add(id);
+      cur.complete = cur.complete && (a?.recorded ?? false);
+      absentBySession.set(k, cur);
+    }
+  }
   const teacherIds = [...new Set(states.flatMap((s) => s.teacherIds))];
   const names = new Map(
     ((await User.find({ _id: { $in: teacherIds.map((id) => new Types.ObjectId(id)) } }).select("name").lean()) as unknown as Array<{ _id: Types.ObjectId; name: string }>).map(
@@ -359,6 +396,9 @@ export async function sectionTracker(sectionId: string, subject: string, auth: A
       finishedOn: states[i].finishedOn,
       startedOn: states[i].startedOn,
       teacherNames: states[i].teacherIds.map((id) => names.get(id) ?? ""),
+      absentCount: absentBySession.get(p.key)?.ids.size ?? 0,
+      attendanceComplete: absentBySession.get(p.key)?.complete ?? true,
     })),
+    catchups: await catchupsFor(sectionId, subject),
   };
 }

@@ -1480,6 +1480,7 @@ export const NOTIFICATION_KINDS = [
   "MASTERY_PROPOSAL",
   "MASTERY_EXTRA_CLASS",
   "MASTERY_ASSIGNMENT_SENT",
+  "LESSON_MISSED",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
@@ -1547,6 +1548,7 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   MASTERY_PROPOSAL: "অতিরিক্ত ক্লাসের প্রস্তাব",
   MASTERY_EXTRA_CLASS: "অতিরিক্ত ক্লাস",
   MASTERY_ASSIGNMENT_SENT: "সাপ্তাহিক অ্যাসাইনমেন্ট",
+  LESSON_MISSED: "ক্লাসের পাঠ মিস হয়েছে",
 };
 export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   BELL_REMINDER: "Bell reminder",
@@ -1612,6 +1614,7 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   MASTERY_PROPOSAL: "Extra-class proposal",
   MASTERY_EXTRA_CLASS: "Extra class",
   MASTERY_ASSIGNMENT_SENT: "Weekly assignment",
+  LESSON_MISSED: "Missed a lesson",
 };
 
 /**

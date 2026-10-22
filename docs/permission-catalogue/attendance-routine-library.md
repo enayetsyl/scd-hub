@@ -429,3 +429,6 @@ Listed elsewhere: `server/src/modules/hr/resolvers/staffHub.ts:348` staffAttenda
 | server/src/modules/mastery/resolvers/masteryDiagnosis.ts | MasteryOutcomeTrail.chapterLessons (LP-3) | rides `masteryOutcomeTrail`'s gate (routine holder / `mastery:edit_all`) |
 | server/src/modules/mastery/resolvers/masteryAction.ts | MasteryAction.lessonGap (LP-3) | rides `masteryAction`'s gate |
 | app StudentProfileScreen | পাঠ tab | `lesson_progress:view` / `view_all` |
+| server/src/modules/lesson-progress/resolvers/lessonProgress.ts | lessonCatchupSuggestion (LP-4) | `lesson_progress:view_all` |
+| server/src/modules/lesson-progress/resolvers/lessonProgress.ts | createLessonCatchup (LP-4) | `lesson_progress:view_all`; the task itself through createTask (`work_board:assign` to give it to another person) |
+| server/src/modules/lesson-progress/resolvers/guardianLessons.ts | childMissedLessonsPage (LP-4) | GUARDIAN `guardian:read_child` + assertGuardianOfStudent |

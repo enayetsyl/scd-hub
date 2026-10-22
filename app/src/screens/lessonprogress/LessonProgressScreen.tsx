@@ -36,6 +36,7 @@ function Row({ r, onOpen }: { r: LessonProgressRowT; onOpen: () => void }): Reac
             {r.classNameBn} · {r.sectionNameBn} — {routineSubjectLabel(r.subject)}
           </Body>
           {r.lagSessions > 0 ? <Badge text={`${bnNum(r.lagSessions)} ${STR.lpBehind}`} tone="gold" /> : null}
+          {r.openCatchups > 0 ? <Badge text={`${STR.lpCatchupOpen} ${bnNum(r.openCatchups)}`} tone="info" /> : null}
         </View>
         <Body style={{ marginTop: 4 }}>{progressLine(r)}</Body>
         <Muted style={{ marginTop: 2 }}>{paceLine(r)}</Muted>

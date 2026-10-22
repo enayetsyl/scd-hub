@@ -227,6 +227,9 @@ export function notificationTarget(
       return guardian
         ? { tab: "GuardianAssignmentsTab", screen: "ChildAssignments" }
         : { tab: "MasteryTab", screen: "MasteryWork" };
+    // LP-4 (D-#828): guardian-only — the child's missed-lessons list.
+    case "LESSON_MISSED":
+      return guardian ? { tab: "GuardianHomeTab", screen: "ChildMissedLessons" } : { tab: "HomeTab", screen: "Today" };
     case "VOCAB_RESULT":
       return guardian
         ? { tab: "GuardianHomeTab", screen: "GuardianHome" }
