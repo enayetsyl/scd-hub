@@ -11,7 +11,8 @@
  *   2. VIEWS   — `guardianviews` (GE-2). Starts empty and is only meaningful for days
  *                AFTER the instrumentation shipped; `viewsSince` states that date so
  *                the screen never presents a pre-launch zero as disengagement.
- *   3. INBOX   — `notifications` delivered-vs-read for guardian recipients.
+ *   3. INBOX   — `notifications` delivered-vs-read for guardian recipients. Rows expire
+ *                after 90 days (D-#815), so a longer window counts only the last 90.
  *
  * IDENTITY PLANE. This joins guardians to students by design and therefore must never
  * move into `modules/corpus`, which the ADR-005 fail-closed firewall test forbids from

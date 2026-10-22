@@ -11,6 +11,7 @@
  */
 
 import * as cp from "child_process";
+import { createHash } from "crypto";
 import mongoose from "mongoose";
 import { roleHasPermission } from "@scd/shared";
 
@@ -43,6 +44,7 @@ jest.mock("../modules/platform/models/ImportBatch", () => ({
     findById: jest.fn(),
     deleteMany: jest.fn(),
   },
+  envelopeSha256: jest.requireActual("../modules/platform/models/ImportBatch").envelopeSha256,
 }));
 
 jest.mock("../modules/corpus/models/CorpusEvent", () => ({
@@ -242,6 +244,24 @@ describe("J1.2 — reject invalid envelope", () => {
     expect(result.batchId).toBeDefined();
     const batchArg = mockBatchCreate.mock.calls[0][0] as Record<string, unknown>;
     expect(batchArg.verdict).toBe("FAIL");
+    // A refused upload keeps its snapshot — the only record of why it failed (D-#816).
+    expect(batchArg.envelopeSnapshot).toBeDefined();
+    expect(mockBatchUpdateOne).not.toHaveBeenCalled();
+  });
+
+  test("PASS → snapshot stripped once the artifact exists; the sha256 stays (D-#816)", async () => {
+    mockHarnessPass();
+    const envelope = { ...VALID_ENVELOPE };
+    await importEnvelope(envelope, ACTOR_ID);
+
+    const batchArg = mockBatchCreate.mock.calls[0][0] as Record<string, unknown>;
+    expect(batchArg.snapshotSha256).toMatch(/^[0-9a-f]{64}$/);
+    expect(batchArg.snapshotSha256).toBe(
+      createHash("sha256").update(JSON.stringify(batchArg.envelopeSnapshot)).digest("hex"),
+    );
+    const [, update] = mockBatchUpdateOne.mock.calls[0] as [unknown, Record<string, Record<string, unknown>>];
+    expect(update.$set.artifactId).toBeDefined();
+    expect(update.$unset).toEqual({ envelopeSnapshot: 1 });
   });
 });
 
