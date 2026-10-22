@@ -127,6 +127,8 @@ const STAFF_NAV: NavSection[] = [
     titleKey: "msDrawerGroup",
     icon: "🎯",
     items: [
+      { route: "MasteryTab", labelKey: "msWork", icon: "✍️", screen: "MasteryWork", perms: ["mastery:enter_results"] },
+      { route: "MasteryTab", labelKey: "msLeader", icon: "🧭", screen: "MasteryLeader", perms: ["mastery:approve"] },
       { route: "MasteryTab", labelKey: "msCatalogueHome", icon: "📚", screen: "MasteryHome", perms: ["mastery:view"] },
       { route: "MasteryTab", labelKey: "msImport", icon: "📥", screen: "MasteryImport", perms: ["mastery:settings"] },
       { route: "MasteryTab", labelKey: "msTags", icon: "🏷️", screen: "MasteryTags", perms: ["mastery:view"] },
@@ -281,6 +283,7 @@ const GUARDIAN_NAV: NavSection[] = [
   { type: "item", route: "GuardianHomeTab", screen: "ChildLeave", labelKey: "gpLeave", icon: "📝" },
   { type: "item", route: "GuardianHomeTab", screen: "ChildComments", labelKey: "gpComments", icon: "💬" },
   { type: "item", route: "GuardianHomeTab", screen: "ChildRevision", labelKey: "gpRevision", icon: "📖" },
+  { type: "item", route: "GuardianHomeTab", screen: "ChildMastery", labelKey: "gpMsProgress", icon: "🎯" },
 ];
 
 const NAV: NavSection[] = [...STAFF_NAV, ...GUARDIAN_NAV];

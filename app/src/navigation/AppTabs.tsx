@@ -235,6 +235,17 @@ import MasteryMarksScreen from "../screens/mastery/MasteryMarksScreen";
 import MasteryImportScreen from "../screens/mastery/MasteryImportScreen";
 import MasteryTagsScreen from "../screens/mastery/MasteryTagsScreen";
 import MasteryPolicyScreen from "../screens/mastery/MasteryPolicyScreen";
+import MasteryWorkHomeScreen from "../screens/mastery/MasteryWorkHomeScreen";
+import MasteryNewPaperScreen from "../screens/mastery/MasteryNewPaperScreen";
+import MasteryEntryScreen from "../screens/mastery/MasteryEntryScreen";
+import MasteryHeatmapScreen from "../screens/mastery/MasteryHeatmapScreen";
+import MasteryStudentScreen from "../screens/mastery/MasteryStudentScreen";
+import MasteryOutcomeTrailScreen from "../screens/mastery/MasteryOutcomeTrailScreen";
+import MasteryQualityScreen from "../screens/mastery/MasteryQualityScreen";
+import MasteryAssignmentScreen from "../screens/mastery/MasteryAssignmentScreen";
+import MasteryAssignmentSheetScreen from "../screens/mastery/MasteryAssignmentSheetScreen";
+import MasteryActionsScreen from "../screens/mastery/MasteryActionsScreen";
+import MasteryActionScreen from "../screens/mastery/MasteryActionScreen";
 import TeachingNoteDocScreen from "../screens/teachingnotes/TeachingNoteDocScreen";
 import TeachingNoteUploadScreen from "../screens/teachingnotes/TeachingNoteUploadScreen";
 import TeachingNoteOpenCommentsScreen from "../screens/teachingnotes/TeachingNoteOpenCommentsScreen";
@@ -339,6 +350,7 @@ import ChildFeesScreen from "../screens/guardian/ChildFeesScreen";
 import ChildLeaveScreen from "../screens/guardian/ChildLeaveScreen";
 import ChildCommentsScreen from "../screens/guardian/ChildCommentsScreen";
 import ChildRevisionScreen from "../screens/guardian/ChildRevisionScreen";
+import ChildMasteryScreen from "../screens/guardian/ChildMasteryScreen";
 import ChildHomeworkScreen from "../screens/guardian/ChildHomeworkScreen";
 import ChildRoutineScreen from "../screens/guardian/ChildRoutineScreen";
 import { GuardianChildProvider } from "../state/GuardianChildContext";
@@ -1253,6 +1265,18 @@ function MasteryNavigator(): React.ReactElement {
       <MasteryStack.Screen name="MasteryImport" component={MasteryImportScreen} options={{ title: STR.msImport }} />
       <MasteryStack.Screen name="MasteryTags" component={MasteryTagsScreen} options={{ title: STR.msTags }} />
       <MasteryStack.Screen name="MasteryPolicy" component={MasteryPolicyScreen} options={{ title: STR.msPolicy }} />
+      <MasteryStack.Screen name="MasteryWork" component={MasteryWorkHomeScreen} options={{ title: STR.msWork }} />
+      <MasteryStack.Screen name="MasteryNewPaper" component={MasteryNewPaperScreen} options={{ title: STR.msNewSheet }} />
+      <MasteryStack.Screen name="MasteryEntry" component={MasteryEntryScreen} options={{ title: STR.msEntry }} />
+      <MasteryStack.Screen name="MasteryHeatmap" component={MasteryHeatmapScreen} options={{ title: STR.msHeatmap }} />
+      <MasteryStack.Screen name="MasteryStudent" component={MasteryStudentScreen} options={{ title: STR.msStudent }} />
+      <MasteryStack.Screen name="MasteryOutcomeTrail" component={MasteryOutcomeTrailScreen} options={{ title: STR.msTrail }} />
+      <MasteryStack.Screen name="MasteryQuality" component={MasteryQualityScreen} options={{ title: STR.msQuality }} />
+      <MasteryStack.Screen name="MasteryAssignment" component={MasteryAssignmentScreen} options={{ title: STR.msAssignment }} />
+      <MasteryStack.Screen name="MasteryAssignmentSheet" component={MasteryAssignmentSheetScreen} options={{ title: STR.msAsSheet }} />
+      <MasteryStack.Screen name="MasteryLeader" component={MasteryActionsScreen} options={{ title: STR.msLeader }} />
+      <MasteryStack.Screen name="MasteryActions" component={MasteryActionsScreen} options={{ title: STR.msActions }} />
+      <MasteryStack.Screen name="MasteryAction" component={MasteryActionScreen} options={{ title: STR.msAction }} />
     </MasteryStack.Navigator>
   );
 }
@@ -1523,6 +1547,7 @@ function GuardianHomeNavigator(): React.ReactElement {
         <GuardianHomeStack.Screen name="ChildLeave" component={ChildLeaveScreen} options={{ title: STR.gpLeave }} />
         <GuardianHomeStack.Screen name="ChildComments" component={ChildCommentsScreen} options={{ title: STR.gpComments }} />
         <GuardianHomeStack.Screen name="ChildRevision" component={ChildRevisionScreen} options={{ title: STR.gpRevision }} />
+        <GuardianHomeStack.Screen name="ChildMastery" component={ChildMasteryScreen} options={{ title: STR.gpMsProgress }} />
       </GuardianHomeStack.Navigator>
     );
   }
@@ -1788,7 +1813,7 @@ export function AppTabs(): React.ReactElement {
   const canReports = any(...REPORT_ACTIONS);
   // Mastery tracker (M-0): the catalogue/policy admin. Every staff role holds mastery:read;
   // writes are shown per screen to mastery:manage and re-gated server-side.
-  const canMastery = any("mastery:view", "mastery:settings");
+  const canMastery = any("mastery:view", "mastery:settings", "mastery:enter_results", "mastery:approve");
   // GP-2 (D-#68): the GUARDIAN role holds ONLY guardian:read_child, so every
   // staff gate above is false for guardians — the guardian tab set is all they see.
   const canGuardian = can("guardian:read_child");

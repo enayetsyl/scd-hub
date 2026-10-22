@@ -86,11 +86,7 @@ const OPEN_FIELDS: Record<string, string> = {
 };
 
 /** Catalogue actions declared ahead of the slice that will gate them. */
-const DECLARED_AHEAD: Record<string, string> = {
-  "mastery:enter_results": "Mastery M-2 (per-question entry)",
-  "mastery:create": "Mastery M-2/M-4 (sheets, tailored assignment)",
-  "mastery:approve": "Mastery M-5 (extra-class approval)",
-};
+const DECLARED_AHEAD: Record<string, string> = {};
 
 /** Role-based checks that remain on purpose (frozen; the count may only go DOWN):
  *  target-protection guards (whose login is touched), recipient routing splits, the book

@@ -278,4 +278,74 @@ Already one-to-one with today's permissions; no hidden role gate, no REST route 
 | app/src/navigation/DrawerContent.tsx:129–132 | msCatalogueHome/msTags/msPolicy `["mastery:read"]`, msImport `["mastery:manage"]` | `mastery:view` / `mastery:settings` |
 | app/src/screens/mastery/*.tsx (Home :24, Catalogue :40, Marks :33, Policy :38, Tags :81) | `can("mastery:manage")` shows write controls | `can("mastery:settings")` (retire on Catalogue → `mastery:delete`) |
 
+
+### M-2 (2026-10-21, D-#807) — work sheets & exceptions-only entry
+| file | resolver | gate (already catalogue-native) |
+|---|---|---|
+| server/src/modules/mastery/resolvers/masteryWork.ts | masteryPapersPage | `mastery:view`; svc: routine holder or `mastery:edit_all` |
+| server/src/modules/mastery/resolvers/masteryWork.ts | masteryPaper | `mastery:view`; svc: routine holder or `mastery:edit_all` |
+| server/src/modules/mastery/resolvers/masteryWork.ts | masteryHomeworkOptions | `mastery:create`; svc: routine holder or `mastery:edit_all` |
+| server/src/modules/mastery/resolvers/masteryWork.ts | createMasteryPaper | `mastery:create`; svc: routine holder or `mastery:edit_all`; switch on; LOCKED outcomes; gold bank items |
+| server/src/modules/mastery/resolvers/masteryWork.ts | deleteMasteryPaper | `mastery:create`; svc: OPEN + no results |
+| server/src/modules/mastery/resolvers/masteryWork.ts | saveMasteryResults | `mastery:enter_results`; svc: routine holder or `mastery:edit_all` |
+| server/src/modules/mastery/resolvers/masteryWork.ts | confirmMasteryPaper | `mastery:enter_results`; svc: routine holder or `mastery:edit_all` |
+
+App: `MasteryTab` opens on `mastery:view` || `mastery:settings` || `mastery:enter_results`; the drawer leaf প্রশ্নভিত্তিক নম্বর on `mastery:enter_results`; the new-sheet button on `mastery:create`. Reach: `MasteryWorkHomeScreen` lists sections via `useAccessibleClasses({ viewAll: "mastery:edit_all" })`.
+
+### M-3 (2026-10-22, D-#808) — diagnosis views, quality report, exclusion
+| file | resolver | gate (already catalogue-native) |
+|---|---|---|
+| server/src/modules/mastery/resolvers/masteryDiagnosis.ts | masteryStudentDiagnosis | `mastery:view`; svc: routine holder or `mastery:edit_all` (the student's section × subject) |
+| server/src/modules/mastery/resolvers/masteryDiagnosis.ts | masteryOutcomeTrail | `mastery:view`; svc: routine holder or `mastery:edit_all` |
+| server/src/modules/mastery/resolvers/masteryDiagnosis.ts | masterySectionHeatmap | `mastery:view`; svc: routine holder or `mastery:edit_all` |
+| server/src/modules/mastery/resolvers/masteryDiagnosis.ts | masteryQualityPapersPage | `mastery:view`; svc: routine holder or `mastery:edit_all` |
+| server/src/modules/mastery/resolvers/masteryDiagnosis.ts | masteryPaperQuality | `mastery:view`; svc: routine holder or `mastery:edit_all` |
+| server/src/modules/mastery/resolvers/masteryDiagnosis.ts | excludeMasteryItem | `mastery:enter_results`; svc: routine holder or `mastery:edit_all`; reason required |
+| server/src/modules/mastery/resolvers/masteryDiagnosis.ts | revokeMasteryExclusion | `mastery:enter_results`; svc: routine holder or `mastery:edit_all` |
+
+App: the heat-map and quality buttons on `MasteryWorkHomeScreen` (reached as in M-2); exclude / bring back on `mastery:enter_results`. No new catalogue action: the views reuse `mastery:view` + the M-2 row rule; a school-wide `view_all` waits for M-5.
+
+### M-4 (2026-10-22, D-#809) — weekly tailored assignment
+| file | resolver / route | gate (already catalogue-native) |
+|---|---|---|
+| server/src/modules/mastery/resolvers/masteryAssignment.ts | masteryAssignment | `mastery:view`; svc: routine holder or `mastery:edit_all` |
+| server/src/modules/mastery/resolvers/masteryAssignment.ts | masteryAssignmentSheet | `mastery:view`; svc: routine holder or `mastery:edit_all` |
+| server/src/modules/mastery/resolvers/masteryAssignment.ts | masteryAssignmentTrackerItems | `mastery:create`; svc: routine holder or `mastery:edit_all` (read-only link options) |
+| server/src/modules/mastery/resolvers/masteryAssignment.ts | buildMasteryAssignment | `mastery:create`; svc: row rule + switch on |
+| server/src/modules/mastery/resolvers/masteryAssignment.ts | editMasteryAssignmentSheet | `mastery:create`; svc: row rule; DRAFT only |
+| server/src/modules/mastery/resolvers/masteryAssignment.ts | approveMasteryAssignmentSheets | `mastery:create`; svc: row rule; DRAFT only |
+| server/src/modules/mastery/resolvers/masteryAssignment.ts | sendMasteryAssignment | `mastery:create`; svc: row rule + switch; every sheet approved |
+| server/src/modules/mastery/resolvers/masteryAssignment.ts | deleteMasteryAssignment | `mastery:create`; svc: row rule; DRAFT only |
+| server/src/modules/mastery/routes/masteryAssignmentPdf.ts | GET /pdf/mastery-assignment/:id | `mastery:view` (route) + svc row rule |
+
+App: the সাপ্তাহিক অ্যাসাইনমেন্ট button on `MasteryWorkHomeScreen`; layout, rebuild, approve and send on `mastery:create`. Entry of the sent AS sheet reuses M-2 (`mastery:enter_results`).
+
+### M-4b (2026-10-22, D-#810) — guardian view of the weekly assignment
+| file | resolver / route | gate |
+|---|---|---|
+| server/src/modules/mastery/resolvers/masteryGuardian.ts | childMasteryAssignments | `guardian:read_child` (non-catalogue guardian plane) + `assertGuardianOfStudent`; switched-off subjects hidden |
+| server/src/modules/mastery/routes/masteryAssignmentPdf.ts | GET /pdf/mastery-assignment/:id?studentId= (guardian path) | `guardian:read_child` + `assertGuardianOfStudent(studentId)`; SENT only; that child's page only; switch on |
+
+App: `ChildMasteryAssignments` on the guardian's Assignments tab (`ChildAssignmentsScreen`), rendered only when the query returns weeks.
+
+### M-5 (2026-10-22, D-#811) — section trigger → extra class → re-test → close
+| file | resolver | gate |
+|---|---|---|
+| server/src/modules/mastery/resolvers/masteryAction.ts | masteryAction | `mastery:view`; svc: `mastery:approve` OR the routine holder (or `mastery:edit_all`) of its section × subject |
+| server/src/modules/mastery/resolvers/masteryAction.ts | masteryActionsPage | `mastery:view`; svc: school-wide needs `mastery:approve`; one section × subject needs approve or the row rule |
+| server/src/modules/mastery/resolvers/masteryAction.ts | masteryActionCounts | `mastery:approve` |
+| server/src/modules/mastery/resolvers/masteryAction.ts | decideMasteryAction | `mastery:approve` (checked again in the svc) |
+| server/src/modules/mastery/resolvers/masteryAction.ts | recordMasteryExtraClass | `mastery:enter_results`; svc: approve OR row rule |
+| server/src/modules/mastery/resolvers/masteryAction.ts | buildMasteryRetest | `mastery:create`; svc: approve OR row rule |
+| server/src/modules/mastery/resolvers/masteryAction.ts | closeMasteryAction | `mastery:enter_results`; svc: approve OR row rule |
+
+`mastery:approve` now gates real fields, so it left `DECLARED_AHEAD` in `permissionCatalogueGates.test.ts` (the list is empty). App: drawer leaf পুরো স্কুল · পদক্ষেপ (`MasteryLeader`) on `mastery:approve`; `MasteryTab` also opens on `mastery:approve`; পদক্ষেপের রেকর্ড on the work home; the heat-map banner links an open action.
+
+### M-6 (2026-10-22, D-#812) — guardian progress, notifications
+| file | resolver | gate |
+|---|---|---|
+| server/src/modules/mastery/resolvers/masteryGuardian.ts | childMasteryProgress | `guardian:read_child` (non-catalogue guardian plane) + `assertGuardianOfStudent`; switched-off subjects hidden |
+
+Notifications (no new catalogue action): MASTERY_PROPOSAL recipients = `holderIdsOf("mastery:approve")`; MASTERY_EXTRA_CLASS = the routine teacher + planned students' guardians; MASTERY_ASSIGNMENT_SENT = the students' guardians. App: guardian drawer item + Today shortcut শিখন-দক্ষতা (`ChildMastery`).
+
 Later slices add their rows here: M-2/M-4 entry and builder (`mastery:enter_results`, `mastery:create`, routine class × subject check in the service), M-5 approval (`mastery:approve`), M-6 guardian reads (`guardian:read_child` + assertGuardianOfStudent).

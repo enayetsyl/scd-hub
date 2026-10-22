@@ -365,6 +365,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
     { key: "attendance", title: STR.gpAttendance, onPress: () => nav.navigate("ChildAttendance") },
     { key: "fees", title: STR.gpFees, onPress: () => nav.navigate("ChildFees") },
     { key: "leave", title: STR.gpLeave, onPress: () => nav.navigate("ChildLeave") },
+    { key: "mastery", title: STR.gpMsProgress, onPress: () => nav.navigate("ChildMastery") },
     { key: "notifications", title: STR.gpPush, onPress: () => openNotificationCenter() },
   ];
 

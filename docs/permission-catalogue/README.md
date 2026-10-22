@@ -126,7 +126,7 @@ Several of today's bypasses are template-aware (`isAdminStaff`, `actsAsRole`), w
 | Assessment & exams | `question_sets` | Question sets | প্রশ্ন সেট | 5 | content-questions-exams |
 | Assessment & exams | `exam_syllabus` | Exam syllabus | পরীক্ষার সিলেবাস | 5 | content-questions-exams |
 | Assessment & exams | `scholarship_practice` | Scholarship practice | বৃত্তি অনুশীলন | 7 | content-questions-exams |
-| Assessment & exams | `mastery` | Learning mastery | শিখন-দক্ষতা | 6 | content-questions-exams |
+| Assessment & exams | `mastery` | Learning mastery | শিখন-দক্ষতা | 7 | content-questions-exams |
 | Students & families | `students` | Students | শিক্ষার্থী | 3 | foundation-platform |
 | Students & families | `guardians` | Guardians | অভিভাবক | 4 | foundation-platform |
 | Students & families | `student_profile` | Student profile | শিক্ষার্থী প্রোফাইল | 3 | trackers-classtest |
@@ -182,7 +182,7 @@ Several of today's bypasses are template-aware (`isAdminStaff`, `actsAsRole`), w
 | Admin & access | `guardian_engagement` | Guardian app usage | অভিভাবকদের অ্যাপ ব্যবহার | 1 | foundation-platform |
 | Admin & access | `my_account` | My account | আমার অ্যাকাউন্ট | 1 | foundation-platform |
 
-**Totals: 69 features, 330 actions** (`mastery` added with M-0, 2026-10-20: +6 actions, all unflagged, TEACHER on +3, OFFICE on +1). By flag: LOCKED 11 · PRINCIPAL-DEFAULT 13 · DESIGNATION 24 · ESCALATION 5 · SELF 12 · unflagged 265. Defaults: TEACHER on 101 · OFFICE on 238. A row may carry a `†`/`F-n`/`2H` note in addition to its flag. Those notes are not counted as flags. Not counted: `guardian:read_child` (GUARDIAN plane), and the future `scholarship_practice:release` (SC-5, not built) and `announcements:publish` (no staff surface yet).
+**Totals: 69 features, 331 actions** (`mastery` added with M-0, 2026-10-20: +6 actions, all unflagged, TEACHER on +3, OFFICE on +1; M-2, 2026-10-21: +`mastery:edit_all`, PRINCIPAL-DEFAULT). By flag: LOCKED 11 · PRINCIPAL-DEFAULT 14 · DESIGNATION 24 · ESCALATION 5 · SELF 12 · unflagged 265. Defaults: TEACHER on 101 · OFFICE on 238. A row may carry a `†`/`F-n`/`2H` note in addition to its flag. Those notes are not counted as flags. Not counted: `guardian:read_child` (GUARDIAN plane), and the future `scholarship_practice:release` (SC-5, not built) and `announcements:publish` (no staff surface yet).
 
 ---
 
@@ -357,6 +357,7 @@ Learning-outcome mastery tracker (`docs/prd-mastery.md`, D-#775–#787). Registe
 | `mastery:enter_results` | Enter per-question results | প্রশ্নভিত্তিক নম্বর তোলা | Exceptions-only entry, re-work, tags, rubric (M-2), routine-held class × subject | on | — | | mastery:enter |
 | `mastery:create` | Build homework sheets & assignments | বাড়ির কাজ ও অ্যাসাইনমেন্ট তৈরি | Work sheets, the weekly tailored assignment and its layout (M-2/M-4), routine-held class × subject | on | — | | mastery:enter |
 | `mastery:approve` | Approve extra classes | অতিরিক্ত ক্লাস অনুমোদন | Approve a section-trigger proposal, pick slot/teacher, close the action (M-5). Principal by role; selected Office holders by per-user grant (D-#786) | — | — | | mastery:approve |
+| `mastery:edit_all` | Work in any শাখা | যেকোনো শাখার শিখন-দক্ষতার কাজ | Build sheets, enter and read results for a class × subject the routine does not give you (M-2, D-#807) | — | — | PRINCIPAL-DEFAULT | (new) |
 
 ### Students & families
 

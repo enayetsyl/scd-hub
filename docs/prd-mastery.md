@@ -3,7 +3,16 @@
 **Status:** M-0 BUILT 2026-10-20 (branch `feat/mastery-m0`: catalogue, mark table, tags, policy, switch,
 import + `skills/_tools/mastery_catalogue_to_json.mjs`; merged to dev #1114); M-1 BUILT 2026-10-20 (branch
 `feat/mastery-m1`: bank accepts LO codes + `lo_codes`, harness L3/L4, `[MASTERY-LO]` import warning,
-`questions(loCodes)` filter + `loCodes` field); M-2..M-6 contracted. Mock canvas (32 screens, C3 Math sample):
+`questions(loCodes)` filter + `loCodes` field); M-2 BUILT 2026-10-21 (branch `feat/mastery-m2`: work sheets
+HW / class test / rubric, exceptions-only entry, append-only evidence + strand routing, `mastery:edit_all`, D-#807);
+M-3 BUILT 2026-10-22 (branch `feat/mastery-m3`: diagnosis computed on read, student / outcome-trail / section heat-map
+views, quality report + teacher exclusion, D-#808); M-4 BUILT thin 2026-10-22 (branch `feat/mastery-m4`: teacher
+layout, builder, review, send → AS work sheet with per-student items, PDF; tracker linked read-only, D-#809; the guardian
+view G3 is M-4b); M-4b BUILT 2026-10-22 (branch `feat/mastery-m4b`: guardian Assignments tab shows the sent weeks as
+printed + PDF + per-topic result in plain words, D-#810); M-5 BUILT thin 2026-10-22 (branch `feat/mastery-m5`: trigger on
+evidence → approver plans extra class / re-teach → attendance → RETEST sheet → close with before/after, leader dashboard,
+D-#811; slot finder, Today card and notifications deferred); M-6 BUILT thin 2026-10-22 (branch `feat/mastery-m6`: guardian
+progress screen, notifications for proposal / extra class / assignment, D-#812; AI drafting awaits an owner key decision). Mock canvas (32 screens, C3 Math sample):
 https://claude.ai/artifact/41PHE293FUroM64pWFH6u1 (owner-private; open it before building a screen).
 **Decision block:** D-#775–#785, reserved against `origin/main@b96af3ae` = `origin/dev@569d60ec`
 (2026-10-20, max D-#774; open PRs hold only D-#650/#651/#761). D-#786 (approvers) amends D-#781.

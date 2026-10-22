@@ -245,6 +245,8 @@ export type GuardianHomeStackParamList = {
   ChildLeave: undefined;
   ChildComments: undefined;
   ChildRevision: undefined;
+  /** M-6 (D-#812): the child's learning progress per subject, in plain words. */
+  ChildMastery: undefined;
 };
 export type GuardianHomeworkStackParamList = {
   // Optional deep-link params (D-#452 weekly digest): preselect the child and
@@ -489,6 +491,22 @@ export type MasteryStackParamList = {
   MasteryImport: undefined;
   MasteryTags: undefined;
   MasteryPolicy: undefined;
+  /** M-2: param-free — the drawer leaf; the screen picks its own section and subject. */
+  MasteryWork: undefined;
+  MasteryNewPaper: { sectionId: string; subject: string; classLevel: number };
+  MasteryEntry: { paperId: string };
+  /** M-3: diagnosis views + quality report (all param-requiring — never register one first). */
+  MasteryHeatmap: { sectionId: string; subject: string };
+  MasteryStudent: { studentId: string; subject: string };
+  MasteryOutcomeTrail: { studentId: string; loCode: string };
+  MasteryQuality: { sectionId: string; subject: string };
+  /** M-4: the weekly tailored assignment and one student's Part B. */
+  MasteryAssignment: { sectionId: string; subject: string };
+  MasteryAssignmentSheet: { assignmentId: string; studentId: string; subject: string };
+  /** M-5: the whole school's actions (param-free, drawer), a section's record, one action. */
+  MasteryLeader: undefined;
+  MasteryActions: { sectionId: string; subject: string };
+  MasteryAction: { actionId: string };
 };
 export type TeachingNotesStackParamList = {
   TeachingNotesHome: undefined;

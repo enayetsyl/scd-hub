@@ -1473,6 +1473,13 @@ export const NOTIFICATION_KINDS = [
   //                      days before the summary due date)
   "MEETING_NOTE_REMINDER",
   "MEETING_SUMMARY_REMINDER",
+  // Mastery tracker (M-6, docs/prd-mastery.md §9, D-#812; app-native, NO wire twin):
+  //   PROPOSAL        → every holder of mastery:approve when a section crosses the line
+  //   EXTRA_CLASS     → the routine teacher, and each planned student's guardians, when planned
+  //   ASSIGNMENT_SENT → each student's guardians when the weekly assignment is sent
+  "MASTERY_PROPOSAL",
+  "MASTERY_EXTRA_CLASS",
+  "MASTERY_ASSIGNMENT_SENT",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
@@ -1537,6 +1544,9 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   IMPROVEMENT_GUARDIAN_MISSED: "অভিভাবক কাজ চিহ্নিত করেননি",
   MEETING_NOTE_REMINDER: "অভিভাবক সভার মন্তব্য বাকি",
   MEETING_SUMMARY_REMINDER: "সভার সারাংশ লেখার সময়",
+  MASTERY_PROPOSAL: "অতিরিক্ত ক্লাসের প্রস্তাব",
+  MASTERY_EXTRA_CLASS: "অতিরিক্ত ক্লাস",
+  MASTERY_ASSIGNMENT_SENT: "সাপ্তাহিক অ্যাসাইনমেন্ট",
 };
 export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   BELL_REMINDER: "Bell reminder",
@@ -1599,6 +1609,9 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   IMPROVEMENT_GUARDIAN_MISSED: "Guardian missed improvement days",
   MEETING_NOTE_REMINDER: "Meeting comments left",
   MEETING_SUMMARY_REMINDER: "Meeting summaries to write",
+  MASTERY_PROPOSAL: "Extra-class proposal",
+  MASTERY_EXTRA_CLASS: "Extra class",
+  MASTERY_ASSIGNMENT_SENT: "Weekly assignment",
 };
 
 /**
@@ -5113,6 +5126,19 @@ export const MASTERY_STATE_LABELS_GUARDIAN_BN: Record<MasteryState, string> = {
 /** What a diagnosis tag does to the evidence (D-#778/#787). */
 export const MASTERY_TAG_EFFECTS = ["WEAK", "LIGHT", "NO_EVIDENCE", "VOID_BEHAVIOUR", "ROUTE_STRAND"] as const;
 export type MasteryTagEffect = (typeof MASTERY_TAG_EFFECTS)[number];
+
+/** What the school does about an outcome (D-#781, M-5). A SECTION trigger proposes EXTRA_CLASS;
+ *  the approver may turn it into RETEACH (in the normal period, no extra slot). */
+export const MASTERY_ACTION_KINDS = ["TAILORED_ASSIGNMENT", "EXTRA_CLASS", "RETEACH", "REVISION_SHEET", "GUARDIAN_NOTE"] as const;
+export type MasteryActionKind = (typeof MASTERY_ACTION_KINDS)[number];
+/** PROPOSED (app) → APPROVED (scheduled) → IN_PROGRESS (class held) → CHECKING (re-test built) → CLOSED; or REJECTED. */
+export const MASTERY_ACTION_STATUSES = ["PROPOSED", "APPROVED", "IN_PROGRESS", "CHECKING", "CLOSED", "REJECTED"] as const;
+export type MasteryActionStatus = (typeof MASTERY_ACTION_STATUSES)[number];
+export const MASTERY_ACTION_OUTCOMES = ["SUCCESS", "PARTIAL", "NOT_RESOLVED"] as const;
+export type MasteryActionOutcome = (typeof MASTERY_ACTION_OUTCOMES)[number];
+/** Who attends an extra class: the WEAK students, WEAK + IMPROVING, or the whole SECTION. */
+export const MASTERY_ATTENDEE_SETS = ["WEAK", "WEAK_IMPROVING", "SECTION"] as const;
+export type MasteryAttendeeSet = (typeof MASTERY_ATTENDEE_SETS)[number];
 
 /** Where a tag may be put: on one question, on the whole piece of work, or either. */
 export const MASTERY_TAG_APPLIES = ["ITEM", "WORK", "BOTH"] as const;
