@@ -98,6 +98,8 @@ export interface NotificationRefs {
   subject?: string;
   /** Improvement action (SP-4, D-#738) — deep-link: the action's tracking screen. */
   improvementActionId?: string;
+  /** Mastery action (M-6, D-#812) — deep-link: MasteryAction for staff. */
+  masteryActionId?: string;
 }
 
 export interface INotification extends Document {
@@ -167,6 +169,8 @@ const RefsSchema = new Schema<NotificationRefs>(
     subject: { type: String },
     // SP-4 (D-#738) — same lockstep rule: model, resolver, app query.
     improvementActionId: { type: String },
+    // M-6 (D-#812) — same lockstep rule: model, resolver, app query.
+    masteryActionId: { type: String },
   },
   { _id: false },
 );

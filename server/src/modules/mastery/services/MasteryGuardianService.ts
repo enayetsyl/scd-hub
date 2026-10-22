@@ -19,6 +19,10 @@ import { MasteryPaper } from "../models/MasteryPaper";
 import { MasteryResult } from "../models/MasteryResult";
 import { Student } from "../../foundation/models/Student";
 import { isMasteryEnabled } from "./MasteryCatalogueService";
+import { MasteryAction } from "../models/MasteryAction";
+import { sectionContext } from "./MasteryWorkService";
+import { computeSection, diagnosisPolicy, liveSectionRows, lockedOutcomes } from "./MasteryDiagnosisService";
+import type { MasterySubject } from "@scd/shared";
 
 const oid = (s: string) => new Types.ObjectId(s);
 /** The newest N weeks; the app asks for more with LoadOlder (D-#761 — paged, never silently capped). */
@@ -111,6 +115,82 @@ export async function childMasteryAssignments(studentId: string, limit: number |
       partB,
       result,
     });
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------
+// M-6 — the child's progress and what the school did (mocks G1 / G2 / G4, D-#783 / #812)
+// ---------------------------------------------------------------------------
+
+export interface ChildProgressSubject {
+  subject: string;
+  /** Plain buckets (D-#783): মনোযোগ দরকার / উন্নতি হচ্ছে / ভালো পারে / এখনো জানা যায়নি. */
+  counts: { attention: number; improving: number; good: number; unknown: number };
+  attention: { labelBn: string; homeTipBn: string | null }[];
+  improving: { labelBn: string }[];
+  /** Extra classes / re-teaches the child was part of, newest first. */
+  schoolDid: { date: string; kind: string; labelBn: string; status: string; present: boolean | null; retestPct: number | null }[];
+  assignmentsSent: number;
+}
+
+export async function childMasteryProgress(studentId: string): Promise<ChildProgressSubject[]> {
+  if (!Types.ObjectId.isValid(studentId)) return [];
+  const st = await Student.findById(studentId).select("sectionId").lean();
+  if (!st) return [];
+  const ctx = await sectionContext(String(st.sectionId));
+  const subjects = ((await MasteryOutcome.distinct("subject", { classToken: ctx.classToken, status: "LOCKED" })) as MasterySubject[]).sort();
+  const sid = oid(studentId);
+  const out: ChildProgressSubject[] = [];
+  for (const subject of subjects) {
+    if (!(await isMasteryEnabled(ctx.academicYearId, ctx.classToken, subject))) continue;
+    const [outcomes, rows, policy, actions, sheets] = await Promise.all([
+      lockedOutcomes(ctx.classToken, subject),
+      liveSectionRows(ctx.sectionId, subject),
+      diagnosisPolicy(ctx.classToken, subject),
+      MasteryAction.find({ sectionId: ctx.sectionId, subject, "plan.studentIds": sid, status: { $nin: ["PROPOSED", "REJECTED"] } })
+        .sort({ createdAt: -1 })
+        .lean(), // bounded: the actions one child was part of in one subject
+      MasteryAssignmentSheet.find({ studentId: sid }).select("assignmentId").lean(),
+    ]);
+    const sec = computeSection(rows, policy, new Date());
+    const counts = { attention: 0, improving: 0, good: 0, unknown: 0 };
+    const attention: ChildProgressSubject["attention"] = [];
+    const improving: ChildProgressSubject["improving"] = [];
+    for (const o of outcomes) {
+      const s = sec.states.get(o.code)?.get(studentId)?.state;
+      if (s === "WEAK") {
+        counts.attention++;
+        attention.push({ labelBn: o.labelBn, homeTipBn: o.homeTipBn ?? null });
+      } else if (s === "IMPROVING") {
+        counts.improving++;
+        improving.push({ labelBn: o.labelBn });
+      } else if (s === "MASTERED" || s === "REVISION_DUE") counts.good++;
+      else if (s === "INSUFFICIENT") counts.unknown++;
+    }
+    const labels = new Map(outcomes.map((o) => [o.code, o.labelBn]));
+    const schoolDid: ChildProgressSubject["schoolDid"] = [];
+    for (const a of actions) {
+      let retestPct: number | null = null;
+      if (a.retestPaperId) {
+        const ev = await MasteryEvidence.find({ paperId: a.retestPaperId, studentId: sid, supersededAt: null, routed: false }).select("earned available").lean();
+        const v = ev.reduce((s, r) => s + r.available, 0);
+        if (v > 0) retestPct = Math.round((ev.reduce((s, r) => s + r.earned, 0) / v) * 100);
+      }
+      const att = (a.attendance ?? []).find((x) => String(x.studentId) === studentId);
+      schoolDid.push({
+        date: (a.plan?.date ?? a.createdAt).toISOString().slice(0, 10),
+        kind: a.kind,
+        labelBn: labels.get(a.loCode) ?? "",
+        status: a.status,
+        present: att ? att.present : null,
+        retestPct,
+      });
+    }
+    const assignmentsSent = sheets.length
+      ? await MasteryAssignment.countDocuments({ _id: { $in: sheets.map((s) => s.assignmentId) }, subject, status: "SENT" })
+      : 0;
+    out.push({ subject, counts, attention, improving, schoolDid, assignmentsSent });
   }
   return out;
 }

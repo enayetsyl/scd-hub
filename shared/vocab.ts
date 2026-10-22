@@ -1473,6 +1473,13 @@ export const NOTIFICATION_KINDS = [
   //                      days before the summary due date)
   "MEETING_NOTE_REMINDER",
   "MEETING_SUMMARY_REMINDER",
+  // Mastery tracker (M-6, docs/prd-mastery.md §9, D-#812; app-native, NO wire twin):
+  //   PROPOSAL        → every holder of mastery:approve when a section crosses the line
+  //   EXTRA_CLASS     → the routine teacher, and each planned student's guardians, when planned
+  //   ASSIGNMENT_SENT → each student's guardians when the weekly assignment is sent
+  "MASTERY_PROPOSAL",
+  "MASTERY_EXTRA_CLASS",
+  "MASTERY_ASSIGNMENT_SENT",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
@@ -1537,6 +1544,9 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   IMPROVEMENT_GUARDIAN_MISSED: "অভিভাবক কাজ চিহ্নিত করেননি",
   MEETING_NOTE_REMINDER: "অভিভাবক সভার মন্তব্য বাকি",
   MEETING_SUMMARY_REMINDER: "সভার সারাংশ লেখার সময়",
+  MASTERY_PROPOSAL: "অতিরিক্ত ক্লাসের প্রস্তাব",
+  MASTERY_EXTRA_CLASS: "অতিরিক্ত ক্লাস",
+  MASTERY_ASSIGNMENT_SENT: "সাপ্তাহিক অ্যাসাইনমেন্ট",
 };
 export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   BELL_REMINDER: "Bell reminder",
@@ -1599,6 +1609,9 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   IMPROVEMENT_GUARDIAN_MISSED: "Guardian missed improvement days",
   MEETING_NOTE_REMINDER: "Meeting comments left",
   MEETING_SUMMARY_REMINDER: "Meeting summaries to write",
+  MASTERY_PROPOSAL: "Extra-class proposal",
+  MASTERY_EXTRA_CLASS: "Extra class",
+  MASTERY_ASSIGNMENT_SENT: "Weekly assignment",
 };
 
 /**

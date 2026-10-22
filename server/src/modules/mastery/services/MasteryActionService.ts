@@ -33,6 +33,7 @@ import { computeSection, liveSectionRows, sectionLabel } from "./MasteryDiagnosi
 import { goldBank, marksTable } from "./MasteryAssignmentService";
 import { pickQuestion, typeFor } from "../assignmentBuilder";
 import { sectionOutcomeSummary } from "../diagnosis";
+import { notifyExtraClass, notifyProposal } from "../notify";
 
 const oid = (s: string) => new Types.ObjectId(s);
 const DAY = 86_400_000;
@@ -114,6 +115,18 @@ export async function evaluateSectionTriggers(sectionId: Types.ObjectId, subject
         events: [{ at: now, kind: "PROPOSED" }],
       });
       opened++;
+      try {
+        const [label, outcome] = await Promise.all([
+          sectionLabel(ctx.sectionId),
+          MasteryOutcome.findOne({ code: loCode }).select("labelBn").lean(),
+        ]);
+        await notifyProposal({
+          actionId: String(a._id), sectionId: String(ctx.sectionId), where: `${label.className} ${label.sectionName}`,
+          subject, outcomeBn: outcome?.labelBn ?? loCode, weakPct: s.weakPct ?? 0,
+        });
+      } catch (err) {
+        console.error("[mastery] proposal notice failed:", err);
+      }
       void writeAudit({
         eventKind: "MASTERY_ACTION_PROPOSED",
         targetKind: "MasteryAction",
@@ -189,6 +202,27 @@ export async function decideAction(id: string, input: DecideInput, auth: Auth): 
     a.events.push({ at: now, kind: isClass ? "APPROVED" : "RETEACH", by: byOf(auth), note });
   }
   await a.save();
+  if (a.status === "APPROVED" && a.plan) {
+    try {
+      const [outcome, roster] = await Promise.all([MasteryOutcome.findOne({ code: a.loCode }).select("labelBn").lean(), rosterOf(a.sectionId)]);
+      const planned = new Set((a.plan.studentIds ?? []).map(String));
+      await notifyExtraClass({
+        actionId: String(a._id),
+        sectionId: String(a.sectionId),
+        subject: a.subject,
+        outcomeBn: outcome?.labelBn ?? a.loCode,
+        kind: a.kind === "EXTRA_CLASS" ? "EXTRA_CLASS" : "RETEACH",
+        teacherId: a.plan.teacherId ? String(a.plan.teacherId) : null,
+        dateYmd: ymd(a.plan.date),
+        periodNumber: a.plan.periodNumber ?? null,
+        afterSchool: a.plan.slotKind === "AFTER_SCHOOL",
+        retestYmd: ymd(a.plan.retestDate) ?? "",
+        students: roster.filter((s) => planned.has(String(s._id))).map((s) => ({ studentId: String(s._id), name: personName(s) })),
+      });
+    } catch (err) {
+      console.error("[mastery] extra-class notice failed:", err);
+    }
+  }
   void writeAudit({
     eventKind: "MASTERY_ACTION_DECIDED",
     actorId: auth.userId,
