@@ -1,5 +1,7 @@
 # STATUS
 
+- 2026-10-22 (late): **DB-on-VM Phase 0 + Phase 1 DONE** (`docs/db-on-vm-plan.md`). #1138 + #1139 merged to dev. Prod snapshot backfill applied (`importbatches` 98.4 → 29.8 MB; Atlas ≈ 385/512 MB). The VM mongod is hardened: auth + keyFile, replica set rs0, 6 GB cache, five users (passwords in `/opt/scdhub/mongo-credentials.env`), and prod reconnected the book plane with its own user. Book worker retired + disabled.
+  - **Now / next:** owner reruns `make-kit.ps1` (it now includes the Mongo credentials). Promote dev→main so prod gets D-#815/#816 (notification TTL). Then Phase 2 (hourly backups + alerts).
 - 2026-10-22: **PLANNED — prod MongoDB moves from Atlas M0 to the VM** (`docs/db-on-vm-plan.md`). Atlas M0 is at ~453/512 MB (hard cap). Phases: 0 vault + #1138 → 1 harden the VM mongod (auth, rs0, cache 6 GB) → 2 hourly Drive backups + alerts + weekly restore check → 3 rebuild runbook + one drill → 4 dev move (rehearsal), then the prod cutover night → 5 health card / Atlas retire / D-#817.
   - Owner answered §9 Q1–Q4: drill on a temporary paid A1 VM; alerts to four addresses (VM `.env` only); keep Atlas M0 as an emergency target; the book pipeline is retired (stop backing it up).
   - **Now / next:** the owner fills the secrets vault (§3 0.2). Then Phase 1 in a session with auto mode OFF. The cutover date is set later. Book worker `scdhub-book-worker-prod` stopped + disabled 2026-10-22 (owner).
