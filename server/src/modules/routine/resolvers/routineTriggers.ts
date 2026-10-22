@@ -327,6 +327,9 @@ builder.mutationField("publishClassNote", (t) =>
       homeworkItemId: t.arg.string({ required: false }),
       attachmentIds: t.arg.stringList({ required: false }),
       homework: t.arg({ type: ClassNoteHomeworkInput, required: false }),
+      /** LP-1 (D-#820/#821): which session plan(s) this period taught, or why none. Optional on the
+       *  wire so an older app build still publishes; the app requires it where a plan applies. */
+      lessonPlan: t.arg({ type: LessonPlanInputRef, required: false }),
     },
     resolve: async (_r, args, ctx) => {
       const date = parseDate(args.date);
@@ -340,6 +343,9 @@ builder.mutationField("publishClassNote", (t) =>
         actorId: ctx.auth!.userId,
         canManage: canEditAnyNote(ctx),
       });
+      // A bad lesson-plan answer is refused before anything is written (D-#821).
+      const lessonPlan = args.lessonPlan ?? null;
+      if (lessonPlan) await prepareDelivery(slot._id, lessonPlan);
       let linkedItemId = args.homeworkItemId ?? null;
       if (args.homework) {
         // Ids come from the SLOT, never from the client — a forged sectionId cannot
@@ -353,7 +359,7 @@ builder.mutationField("publishClassNote", (t) =>
           actorId: ctx.auth!.userId,
         });
       }
-      return publishClassNote({
+      const note = await publishClassNote({
         slotId: args.slotId,
         date,
         taughtSummaryBn: args.taughtSummaryBn,
@@ -362,6 +368,8 @@ builder.mutationField("publishClassNote", (t) =>
         actorId: ctx.auth!.userId,
         canManage: canEditAnyNote(ctx),
       });
+      if (lessonPlan) await recordDelivery(note, lessonPlan, ctx.auth!.userId);
+      return note;
     },
   }),
 );
@@ -545,15 +553,23 @@ builder.mutationField("updateClassNote", (t) =>
       id: t.arg.string({ required: true }),
       taughtSummaryBn: t.arg.string({ required: false }),
       attachmentIds: t.arg.stringList({ required: false }),
+      /** LP-1 (D-#822): correct the lesson-plan marks — no guardian re-notify (unlike a re-publish). */
+      lessonPlan: t.arg({ type: LessonPlanInputRef, required: false }),
     },
-    resolve: async (_r, args, ctx) =>
-      updateClassNote({
+    resolve: async (_r, args, ctx) => {
+      const lessonPlan = args.lessonPlan ?? null;
+      const textOrFiles = (args.taughtSummaryBn ?? "").trim() !== "" || args.attachmentIds != null;
+      const note = await updateClassNote({
         id: args.id,
         taughtSummaryBn: args.taughtSummaryBn ?? undefined,
         attachmentIds: args.attachmentIds ?? undefined,
         actorId: ctx.auth!.userId,
         canManage: canEditAnyNote(ctx),
-      }),
+        lessonOnly: !!lessonPlan && !textOrFiles,
+      });
+      if (lessonPlan) await recordDelivery(note, lessonPlan, ctx.auth!.userId);
+      return note;
+    },
   }),
 );
 
@@ -566,6 +582,10 @@ builder.mutationField("deleteClassNote", (t) =>
     type: DeleteResultRef,
     authScopes: { hasPermission: "class_note:delete" },
     args: { id: t.arg.string({ required: true }) },
-    resolve: async (_r, args) => deleteClassNote(args.id),
+    resolve: async (_r, args) => {
+      const res = await deleteClassNote(args.id);
+      await deleteDeliveryForNote(args.id);
+      return res;
+    },
   }),
 );
