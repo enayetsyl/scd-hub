@@ -139,7 +139,7 @@ export default function PersonActivityScreen({ route }: Props): React.ReactEleme
   });
 
   const person = personQ.data?.activityPerson ?? null;
-  const rows = useMemo(() => feedQ.data?.personActivityPage.rows ?? [], [feedQ.data]);
+  const rows = useMemo(() => feedQ.data?.personActivityPage?.rows ?? [], [feedQ.data]);
   const days = daysQ.data?.personActivityDays ?? [];
   const totalActions = days.reduce((n, d) => n + d.total, 0);
 
@@ -336,7 +336,7 @@ export default function PersonActivityScreen({ route }: Props): React.ReactEleme
               })}
             </View>
           ))}
-          <Pager page={page} pageSize={PAGE_SIZE} total={feedQ.data?.personActivityPage.total ?? 0} onPage={setPage} />
+          <Pager page={page} pageSize={PAGE_SIZE} total={feedQ.data?.personActivityPage?.total ?? 0} onPage={setPage} />
         </>
       </QueryGate>
     </Screen>

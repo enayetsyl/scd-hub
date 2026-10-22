@@ -199,7 +199,7 @@ export default function UploadObservationScreen(): React.ReactElement {
       return setError(friendlyError(res.error));
     }
 
-    const observationId = res.data?.uploadClassroomObservation.id;
+    const observationId = res.data?.uploadClassroomObservation?.id;
 
     // Attach YouTube footage (always present — URL is mandatory)
     if (observationId) {

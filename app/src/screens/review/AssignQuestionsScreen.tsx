@@ -177,8 +177,8 @@ export default function AssignQuestionsScreen({ navigation }: Props): React.Reac
     }, [refetch]),
   );
 
-  const rows = data?.assignableQuestionsPage.rows ?? [];
-  const total = data?.assignableQuestionsPage.total ?? 0;
+  const rows = data?.assignableQuestionsPage?.rows ?? [];
+  const total = data?.assignableQuestionsPage?.total ?? 0;
   const teachers = teacherData?.teachers ?? [];
 
   const toggle = (id: string): void => {

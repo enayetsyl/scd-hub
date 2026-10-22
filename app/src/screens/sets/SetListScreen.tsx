@@ -56,7 +56,7 @@ export default function SetListScreen({ navigation }: Props): React.ReactElement
     requestPolicy: "cache-and-network",
   });
 
-  const sets = data?.assessmentSetsPage.rows ?? [];
+  const sets = data?.assessmentSetsPage?.rows ?? [];
 
   return (
     <Screen padded={false}>
@@ -108,7 +108,7 @@ export default function SetListScreen({ navigation }: Props): React.ReactElement
           ))
         )}
         {hasSection && !error && !fetching ? (
-          <Pager page={page} pageSize={PAGE_SIZE} total={data?.assessmentSetsPage.total ?? 0} onPage={setPage} />
+          <Pager page={page} pageSize={PAGE_SIZE} total={data?.assessmentSetsPage?.total ?? 0} onPage={setPage} />
         ) : null}
       </ScrollView>
     </Screen>

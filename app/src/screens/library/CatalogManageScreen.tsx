@@ -59,7 +59,7 @@ export default function CatalogManageScreen(): React.ReactElement {
   const [, addCopy] = useMutation(ADD_BOOK_COPY);
   const [, setCopyStatus] = useMutation(SET_COPY_STATUS);
 
-  const titles = titlesQ.data?.bookTitlesPage.rows ?? [];
+  const titles = titlesQ.data?.bookTitlesPage?.rows ?? [];
   const detail = selectedId ? detailQ.data?.bookTitle ?? null : null;
 
   function refresh(): void {
@@ -193,7 +193,7 @@ export default function CatalogManageScreen(): React.ReactElement {
           ) : null}
         </Card>
       ))}
-      <Pager page={titlePage} pageSize={PAGE_SIZE} total={titlesQ.data?.bookTitlesPage.total ?? 0} onPage={setTitlePage} />
+      <Pager page={titlePage} pageSize={PAGE_SIZE} total={titlesQ.data?.bookTitlesPage?.total ?? 0} onPage={setTitlePage} />
     </Screen>
   );
 }
