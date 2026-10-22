@@ -141,6 +141,11 @@ jest.mock("../modules/improvement/services/ImprovementSweepService", () => ({
 }));
 // MC-2 (D-#756) — the 08:00 meeting-comment reminders read real models; stubbed the same way.
 const mockMeetingReminders = jest.fn((_now: Date) => Promise.resolve({ notes: 0, summaries: 0 }));
+// LP-4 (D-#828) — the 18:00 missed-lesson family reads real models; stubbed like the rest.
+jest.mock("../modules/lesson-progress/services/GuardianLessonService", () => ({
+  dispatchLessonMissed: jest.fn(async () => 0),
+  LESSON_MISSED_MINUTES: 18 * 60,
+}));
 jest.mock("../modules/comments/services/MeetingChainService", () => ({
   emitMorningReminders: (now: Date) => mockMeetingReminders(now),
   MEETING_REMINDER_MINUTES: 8 * 60,

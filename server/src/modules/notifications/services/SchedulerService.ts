@@ -88,6 +88,7 @@ import {
   emitMorningReminders as emitMeetingCommentReminders,
   MEETING_REMINDER_MINUTES,
 } from "../../comments/services/MeetingChainService";
+import { dispatchLessonMissed, LESSON_MISSED_MINUTES } from "../../lesson-progress/services/GuardianLessonService";
 import {
   dispatchTaskDigest,
   dispatchTaskOverdue,
@@ -259,6 +260,8 @@ export interface TickSummary {
   /** 08:00 parents'-meeting comment reminders (MC-2, D-#756). */
   meetingNoteRemindersEmitted: number;
   meetingSummaryRemindersEmitted: number;
+  /** 18:00 missed-lesson notices to guardians (LP-4, D-#828). */
+  lessonMissedEmitted: number;
 }
 
 const subjectBn = (subject: string): string =>
@@ -303,6 +306,7 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
     improvementMissedEmitted: 0,
     meetingNoteRemindersEmitted: 0,
     meetingSummaryRemindersEmitted: 0,
+    lessonMissedEmitted: 0,
   };
 
   // --- Classroom-observation response escalation (CO-3) — the teacher-response ladder
@@ -684,6 +688,16 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
         const r = await emitMeetingCommentReminders(now);
         summary.meetingNoteRemindersEmitted = r.notes;
         summary.meetingSummaryRemindersEmitted = r.summaries;
+      });
+    });
+
+    // --- Missed lessons (LP-4, D-#828) — 18:00, FULL days: one row per guardian × child naming
+    // the lesson-plan sessions taught today while the child was listed absent, so the family can go
+    // over them at home. runOnce guards the reads; the dedupe key (child, day, guardian) guards rows.
+    await family("lesson missed", async () => {
+      if (!windowOpen(nowMin, LESSON_MISSED_MINUTES)) return;
+      await runOnce(dateKey, "LPMISS", async () => {
+        summary.lessonMissedEmitted = await dispatchLessonMissed(now);
       });
     });
   }
