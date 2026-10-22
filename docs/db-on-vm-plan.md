@@ -37,7 +37,9 @@ Decision row: **D-#817** (to be appended when the cutover is scheduled).
 ## 3. Phase 0 — Preconditions (owner)
 
 - [x] 0.1 Oracle account is Pay-As-You-Go.
-- [ ] 0.2 **Secrets vault off the VM** (password manager). Store each item below, then tick:
+- [ ] 0.2 **Secrets vault off the VM.** The owner chose an AES-256 7-Zip "break-glass kit" (2026-10-22), built by a
+  script kept outside the repo (it names the VM) at `%USERPROFILE%DocumentsSCD-Vaultmake-kit.ps1`, with copies on a
+  USB stick and on Drive, and the password on paper only. Re-run it after Phase 1 and after the cutover. It holds:
   - prod `.env`: all 18 keys, including `MONGODB_URI`, `JWT_SECRET`, `GOOGLE_OAUTH_*`, `GOOGLE_DRIVE_ROOT_FOLDER_ID`,
     `WEB_PUSH_VAPID_*`, `GEMINI_API_KEY`, `SENTRY_DSN`, `BOOK_MONGODB_URI`
   - dev `.env`: its own `JWT_SECRET` + the same Google/VAPID keys
