@@ -37,7 +37,8 @@ Decision row: **D-#817** (to be appended when the cutover is scheduled).
 ## 3. Phase 0 — Preconditions (owner)
 
 - [x] 0.1 Oracle account is Pay-As-You-Go.
-- [ ] 0.2 **Secrets vault off the VM.** The owner chose an AES-256 7-Zip "break-glass kit" (2026-10-22), built by a
+- [x] 0.2 **Secrets vault off the VM.** (Done 2026-10-22; logins added for Google, GitHub, Cloudflare and Oracle.
+  Spaceship, Expo, Atlas and AI Studio are still to add on a later rerun.) The owner chose an AES-256 7-Zip "break-glass kit" (2026-10-22), built by a
   script kept outside the repo (it names the VM) at `%USERPROFILE%DocumentsSCD-Vaultmake-kit.ps1`, with copies on a
   USB stick and on Drive, and the password on paper only. Re-run it after Phase 1 and after the cutover. It holds:
   - prod `.env`: all 18 keys, including `MONGODB_URI`, `JWT_SECRET`, `GOOGLE_OAUTH_*`, `GOOGLE_DRIVE_ROOT_FOLDER_ID`,
@@ -48,12 +49,22 @@ Decision row: **D-#817** (to be appended when the cutover is scheduled).
   - the new Mongo user passwords from Phase 1
   - logins: Oracle, Cloudflare, GitHub, the Google account that owns Drive, Expo
   - the deploy SSH key `scdhub-deploy-2026` (already on the laptop; keep a second copy in the vault)
-- [ ] 0.3 Merge PR #1138 and run the snapshot backfill (`APPLY=1`). This is optional, but it makes every
-  hourly dump ~30% smaller.
+- [x] 0.3 Merge PR #1138 and run the snapshot backfill (`APPLY=1`). This is optional, but it makes every
+  hourly dump ~30% smaller. **Done 2026-10-22:** #1138 merged to dev, and the backfill was applied on prod:
+  24,869 snapshots stripped, `importbatches` 98.4 → 29.8 MB (Atlas ≈ 385/512 MB). Archive:
+  `/opt/scdhub/backups/import-snapshots-scdhub_prod-2026-10-22T1648/` (7.4 MB gz).
 
 ## 4. Phase 1 — Harden the VM `mongod` (Claude, auto mode OFF)
 
 Done **before** any prod data lands there. The book plane gets a short (~1 minute) blip.
+
+**DONE 2026-10-22 22:51 Dhaka** with `ops/phase1-harden-mongod.sh`; the live config is `ops/mongod.conf`.
+- Five users created. Passwords are in `/opt/scdhub/mongo-credentials.env` (mode 600), which `make-kit.ps1` now collects.
+- Auth + keyFile `/etc/mongod.keyfile`, rs0 PRIMARY, cache 6.0 GB (mongod 8.0.28).
+- Checks: anonymous access refused; the books user cannot read other databases; prod `/readyz` ok and
+  `[book] plane connected`; public `/healthz` 200; the nightly book-plane dump works with the new URI.
+- Rollback material: `/opt/scdhub/backups/phase1-20261022T225128/` (original conf, prod `.env`, full local dump).
+- The book worker was already retired, so step 5's worker restart did not apply.
 
 1. Back up `/etc/mongod.conf` and dump `scdhub_books_prod` to `/opt/scdhub/backups/`.
 2. **Users** (created while auth is still off):
