@@ -49,8 +49,8 @@ export default function SectionCommentsScreen(): React.ReactElement {
     pause: !sectionId,
   });
   // Newest first (the server pages in that order).
-  const comments = commentsQ.data?.sectionStudentCommentsPage.rows ?? [];
-  const commentsTotal = commentsQ.data?.sectionStudentCommentsPage.total ?? 0;
+  const comments = commentsQ.data?.sectionStudentCommentsPage?.rows ?? [];
+  const commentsTotal = commentsQ.data?.sectionStudentCommentsPage?.total ?? 0;
 
   useEffect(() => {
     const unsub = nav.addListener("focus", () => {

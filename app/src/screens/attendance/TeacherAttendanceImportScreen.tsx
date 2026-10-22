@@ -253,7 +253,7 @@ export default function TeacherAttendanceImportScreen(_props: Props): React.Reac
 
       <Divider />
       <H2>{STR.attPastImports}</H2>
-      {(importsQ.data?.teacherAttendanceImportsPage.rows ?? []).map((d) => (
+      {(importsQ.data?.teacherAttendanceImportsPage?.rows ?? []).map((d) => (
         <Card key={d.dateKey} onPress={() => setRosterDate(rosterDate === d.dateKey ? null : d.dateKey)}>
           <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
             <Body style={{ fontWeight: "700" }}>{d.dateKey}</Body>
@@ -281,7 +281,7 @@ export default function TeacherAttendanceImportScreen(_props: Props): React.Reac
       <Pager
         page={importsPage}
         pageSize={PAGE_SIZE}
-        total={importsQ.data?.teacherAttendanceImportsPage.total ?? 0}
+        total={importsQ.data?.teacherAttendanceImportsPage?.total ?? 0}
         onPage={setImportsPage}
       />
       <View style={{ height: space(4) }} />

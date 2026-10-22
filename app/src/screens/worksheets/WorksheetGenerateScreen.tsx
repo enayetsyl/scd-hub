@@ -287,7 +287,7 @@ export default function WorksheetGenerateScreen(): React.ReactElement {
     query: MY_WORKSHEETS_PAGE,
     variables: { page: madePage, pageSize: MADE_PAGE_SIZE },
   });
-  const made = mineQ.data?.myWorksheetsPage.rows ?? [];
+  const made = mineQ.data?.myWorksheetsPage?.rows ?? [];
   const [, sendToPrint] = useMutation(SEND_WORKSHEET_TO_PRINT);
   const [pdfErr, setPdfErr] = useState<string | null>(null);
 
@@ -646,7 +646,7 @@ export default function WorksheetGenerateScreen(): React.ReactElement {
         <Pager
           page={madePage}
           pageSize={MADE_PAGE_SIZE}
-          total={mineQ.data?.myWorksheetsPage.total ?? 0}
+          total={mineQ.data?.myWorksheetsPage?.total ?? 0}
           onPage={setMadePage}
         />
       </Card>

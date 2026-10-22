@@ -96,7 +96,7 @@ function ApprovalCard({
     pause: !isManage,
   });
   const [teachersQ] = useQuery({ query: TEACHERS_QUERY, pause: !isManage });
-  const holders = approverQ.data?.examSyllabusApprover.holders ?? [];
+  const holders = approverQ.data?.examSyllabusApprover?.holders ?? [];
   const teacherName = (id: string): string =>
     (teachersQ.data?.teachers ?? []).find((t) => t.id === id)?.name ?? id;
 

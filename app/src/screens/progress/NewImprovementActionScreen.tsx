@@ -141,7 +141,7 @@ export default function NewImprovementActionScreen({ route, navigation }: Props)
       setErr(friendlyError(res.error));
       return;
     }
-    const id = res.data?.createImprovementAction.id;
+    const id = res.data?.createImprovementAction?.id;
     if (id) navigation.replace("ImprovementAction", { id });
   }
 

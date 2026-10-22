@@ -43,8 +43,8 @@ export default function CommentsHomeScreen(): React.ReactElement {
     variables: { page, pageSize: PAGE_SIZE },
     pause: !canComments,
   });
-  const mine = mineQ.data?.myStudentCommentsPage.rows ?? [];
-  const mineTotal = mineQ.data?.myStudentCommentsPage.total ?? 0;
+  const mine = mineQ.data?.myStudentCommentsPage?.rows ?? [];
+  const mineTotal = mineQ.data?.myStudentCommentsPage?.total ?? 0;
 
   // Refresh the "my comments" list whenever the hub regains focus (e.g. after
   // recording/editing one on the entry screen).

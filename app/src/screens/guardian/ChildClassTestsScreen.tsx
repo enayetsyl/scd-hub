@@ -91,7 +91,7 @@ export default function ChildClassTestsScreen(): React.ReactElement {
     variables: { studentId: sid, subject: subject === "all" ? null : subject, page, pageSize: PAGE_SIZE },
     pause: !selected,
   });
-  const shown = resultsQ.data?.childTestResultsPage.rows ?? [];
+  const shown = resultsQ.data?.childTestResultsPage?.rows ?? [];
   const now = Date.now();
 
   const refetchAll = (): void => {
@@ -204,7 +204,7 @@ export default function ChildClassTestsScreen(): React.ReactElement {
               <Pager
                 page={page}
                 pageSize={PAGE_SIZE}
-                total={resultsQ.data?.childTestResultsPage.total ?? 0}
+                total={resultsQ.data?.childTestResultsPage?.total ?? 0}
                 onPage={setPage}
               />
             </Card>

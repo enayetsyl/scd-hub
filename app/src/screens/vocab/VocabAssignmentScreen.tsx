@@ -49,7 +49,7 @@ export default function VocabAssignmentScreen(): React.ReactElement {
     pause: !section || !program,
   });
   const [teachersQ] = useQuery({ query: TEACHERS_QUERY });
-  const teacherName = (id: string): string => teachersQ.data?.teachers.find((t) => t.id === id)?.name ?? id;
+  const teacherName = (id: string): string => teachersQ.data?.teachers?.find((t) => t.id === id)?.name ?? id;
 
   const [, assign] = useMutation(ASSIGN_VOCAB_TESTER);
 
@@ -67,7 +67,7 @@ export default function VocabAssignmentScreen(): React.ReactElement {
   }
 
   const current = currentQ.data?.vocabTesterAssignment ?? null;
-  const history = historyQ.data?.vocabAssignmentHistoryPage.rows ?? [];
+  const history = historyQ.data?.vocabAssignmentHistoryPage?.rows ?? [];
 
   return (
     <Screen padded={false}>
@@ -126,7 +126,7 @@ export default function VocabAssignmentScreen(): React.ReactElement {
             <Pager
               page={historyPage}
               pageSize={PAGE_SIZE}
-              total={historyQ.data?.vocabAssignmentHistoryPage.total ?? 0}
+              total={historyQ.data?.vocabAssignmentHistoryPage?.total ?? 0}
               onPage={setHistoryPage}
             />
           </Card>

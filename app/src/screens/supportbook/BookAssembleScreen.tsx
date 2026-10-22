@@ -167,7 +167,7 @@ export default function BookAssembleScreen(): React.ReactElement {
   const [queueRes, queueBuild] = useMutation(QUEUE_SUPPORT_BOOK_BUILD);
 
   const gate = gateQ.data?.supportBookAssemblyGate ?? null;
-  const jobs = jobsQ.data?.supportBookBuildJobsPage.rows ?? [];
+  const jobs = jobsQ.data?.supportBookBuildJobsPage?.rows ?? [];
 
   async function onQueue(): Promise<void> {
     setNote(null);
@@ -304,7 +304,7 @@ export default function BookAssembleScreen(): React.ReactElement {
           <Pager
             page={jobsPage}
             pageSize={PAGE_SIZE}
-            total={jobsQ.data?.supportBookBuildJobsPage.total ?? 0}
+            total={jobsQ.data?.supportBookBuildJobsPage?.total ?? 0}
             onPage={setJobsPage}
           />
         </QueryGate>

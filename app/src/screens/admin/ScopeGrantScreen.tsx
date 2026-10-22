@@ -63,11 +63,11 @@ export default function ScopeGrantScreen(_props: Props): React.ReactElement {
     variables: { page: grantPage, pageSize: PAGE_SIZE },
     pause: !canManage,
   });
-  const grants = grantData?.proxyGrantsPage.rows ?? [];
+  const grants = grantData?.proxyGrantsPage?.rows ?? [];
   const [{ data: teacherData }] = useQuery({ query: TEACHERS_QUERY, pause: !canManage });
   const teacherById = new Map((teacherData?.teachers ?? []).map((t) => [t.id, t.name]));
   const [{ data: yearsData }] = useQuery({ query: ACADEMIC_YEARS_QUERY, pause: !canManage });
-  const currentYearId = yearsData?.academicYears.find((y) => y.current)?.id ?? yearsData?.academicYears[0]?.id ?? "";
+  const currentYearId = yearsData?.academicYears?.find((y) => y.current)?.id ?? yearsData?.academicYears?.[0]?.id ?? "";
   const [{ data: subjectData }] = useQuery({ query: SUBJECTS_QUERY, pause: !canManage });
   const subjectById = new Map((subjectData?.subjects ?? []).map((s) => [s.id, subjectLabel(s.code)]));
   const teacherName = (id: string | null): string => {
@@ -262,7 +262,7 @@ export default function ScopeGrantScreen(_props: Props): React.ReactElement {
           </Card>
         ))
       )}
-      <Pager page={grantPage} pageSize={PAGE_SIZE} total={grantData?.proxyGrantsPage.total ?? 0} onPage={setGrantPage} />
+      <Pager page={grantPage} pageSize={PAGE_SIZE} total={grantData?.proxyGrantsPage?.total ?? 0} onPage={setGrantPage} />
     </Screen>
   );
 }

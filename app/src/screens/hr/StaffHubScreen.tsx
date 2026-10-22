@@ -247,7 +247,7 @@ function ProfileTab({ staff, canLeave }: { staff: StaffT; canLeave: boolean }): 
   const onProbation = !staff.confirmationDate;
   const [{ data: policyData }] = useQuery({ query: HR_POLICY_QUERY });
   const probationEnd = onProbation
-    ? probationEndKey(staff.joiningDate, policyData?.hrPolicy.probationMonths ?? 0)
+    ? probationEndKey(staff.joiningDate, policyData?.hrPolicy?.probationMonths ?? 0)
     : null;
   // Overdue is the whole reason to compute the date: the confirmation, its held-leave
   // settlement (D-#540) and the letter all wait on someone noticing.
