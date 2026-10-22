@@ -470,3 +470,298 @@ export type MasteryRosterEntry = {
   defaultStatus: string;
   result: MasteryResultRow | null;
 };
+
+// ---------------------------------------------------------------------------
+// M-3 — diagnosis views, quality report, exclusion (docs/prd-mastery.md §5.3 / §6.4)
+// ---------------------------------------------------------------------------
+
+const STATE_FIELDS = `
+  loCode
+  labelBn
+  chapterNumber
+  strand
+  state
+  since
+  lastEvidenceAt
+  evidenceCount
+  assessments
+  earnedPct
+  recentPct
+  sectionMeanPct
+  reworkCount
+  reasons
+  nextRevisionAt
+`;
+
+export const MASTERY_SECTION_HEATMAP_QUERY = gql`
+  query MasterySectionHeatmap($sectionId: String!, $subject: String!) {
+    masterySectionHeatmap(sectionId: $sectionId, subject: $subject) {
+      sectionId
+      sectionName
+      className
+      subject
+      triggerPct
+      notYetAssessed
+      students {
+        studentId
+        name
+        rollNumber
+        weakCount
+      }
+      outcomes {
+        loCode
+        labelBn
+        chapterNumber
+        strand
+        assessments
+        weak
+        verdicts
+        weakPct
+        triggered
+        sectionMeanPct
+        cells {
+          state
+          pct
+        }
+      }
+    }
+  }
+`;
+
+export const MASTERY_STUDENT_DIAGNOSIS_QUERY = gql`
+  query MasteryStudentDiagnosis($studentId: String!, $subject: String!) {
+    masteryStudentDiagnosis(studentId: $studentId, subject: $subject) {
+      studentId
+      name
+      rollNumber
+      sectionId
+      sectionName
+      className
+      classToken
+      subject
+      subjects
+      sectionSize
+      moreWeakThan
+      outcomes { ${STATE_FIELDS} }
+    }
+  }
+`;
+
+export const MASTERY_OUTCOME_TRAIL_QUERY = gql`
+  query MasteryOutcomeTrail($studentId: String!, $loCode: String!) {
+    masteryOutcomeTrail(studentId: $studentId, loCode: $loCode) {
+      studentId
+      name
+      homeTipBn
+      bankGold
+      bankSeen
+      outcome { ${STATE_FIELDS} }
+      history {
+        state
+        at
+        paperId
+      }
+      rows {
+        paperId
+        source
+        title
+        date
+        itemNo
+        qid
+        questionTypeCode
+        earned
+        available
+        rubricStep
+        rework
+        workRework
+        signal
+        routed
+        excluded
+        excludeReason
+        tags {
+          code
+          labelBn
+        }
+      }
+    }
+  }
+`;
+
+export const MASTERY_QUALITY_PAPERS_PAGE_QUERY = gql`
+  query MasteryQualityPapersPage($sectionId: String!, $subject: String!, $page: Int, $pageSize: Int) {
+    masteryQualityPapersPage(sectionId: $sectionId, subject: $subject, page: $page, pageSize: $pageSize) {
+      total
+      page
+      pageSize
+      rows {
+        students
+        meanPct
+        flagged
+        paper { ${PAPER_FIELDS} }
+      }
+    }
+  }
+`;
+
+const EXCLUSION_FIELDS = `
+  id
+  scope
+  paperId
+  itemNo
+  qid
+  reason
+  at
+  byName
+`;
+
+export const MASTERY_PAPER_QUALITY_QUERY = gql`
+  query MasteryPaperQuality($paperId: String!) {
+    masteryPaperQuality(paperId: $paperId) {
+      students
+      rosterSize
+      meanPct
+      flagged
+      paper { ${PAPER_FIELDS} }
+      items {
+        itemNo
+        students
+        facility
+        reworkRate
+        meanPct
+        discrimination
+        topMeanPct
+        signals
+        exclusion { ${EXCLUSION_FIELDS} }
+      }
+    }
+  }
+`;
+
+export const EXCLUDE_MASTERY_ITEM = gql`
+  mutation ExcludeMasteryItem($paperId: String!, $itemNo: Int!, $scope: String!, $reason: String!) {
+    excludeMasteryItem(paperId: $paperId, itemNo: $itemNo, scope: $scope, reason: $reason) { ${EXCLUSION_FIELDS} }
+  }
+`;
+
+export const REVOKE_MASTERY_EXCLUSION = gql`
+  mutation RevokeMasteryExclusion($exclusionId: String!) {
+    revokeMasteryExclusion(exclusionId: $exclusionId)
+  }
+`;
+
+export type MasteryOutcomeStateRow = {
+  loCode: string;
+  labelBn: string;
+  chapterNumber: number | null;
+  strand: string | null;
+  state: string;
+  since: string | null;
+  lastEvidenceAt: string | null;
+  evidenceCount: number;
+  assessments: number;
+  earnedPct: number | null;
+  recentPct: number | null;
+  sectionMeanPct: number | null;
+  reworkCount: number;
+  reasons: string[];
+  nextRevisionAt: string | null;
+};
+
+export type MasteryHeatmap = {
+  sectionId: string;
+  sectionName: string;
+  className: string;
+  subject: string;
+  triggerPct: number;
+  notYetAssessed: number;
+  students: { studentId: string; name: string; rollNumber: string | null; weakCount: number }[];
+  outcomes: {
+    loCode: string;
+    labelBn: string;
+    chapterNumber: number | null;
+    strand: string | null;
+    assessments: number;
+    weak: number;
+    verdicts: number;
+    weakPct: number | null;
+    triggered: boolean;
+    sectionMeanPct: number | null;
+    cells: { state: string; pct: number | null }[];
+  }[];
+};
+
+export type MasteryStudentDiagnosisData = {
+  studentId: string;
+  name: string;
+  rollNumber: string | null;
+  sectionId: string;
+  sectionName: string;
+  className: string;
+  classToken: string;
+  subject: string;
+  subjects: string[];
+  sectionSize: number;
+  moreWeakThan: number;
+  outcomes: MasteryOutcomeStateRow[];
+};
+
+export type MasteryTrailData = {
+  studentId: string;
+  name: string;
+  homeTipBn: string | null;
+  bankGold: number;
+  bankSeen: number;
+  outcome: MasteryOutcomeStateRow;
+  history: { state: string; at: string; paperId: string | null }[];
+  rows: {
+    paperId: string;
+    source: string;
+    title: string | null;
+    date: string;
+    itemNo: number | null;
+    qid: string | null;
+    questionTypeCode: string | null;
+    earned: number;
+    available: number;
+    rubricStep: number | null;
+    rework: boolean;
+    workRework: boolean;
+    signal: string;
+    routed: boolean;
+    excluded: boolean;
+    excludeReason: string | null;
+    tags: { code: string; labelBn: string }[];
+  }[];
+};
+
+export type MasteryExclusionRow = {
+  id: string;
+  scope: string;
+  paperId: string;
+  itemNo: number;
+  qid: string | null;
+  reason: string;
+  at: string;
+  byName: string;
+};
+
+export type MasteryQualityPaperRow = { students: number; meanPct: number | null; flagged: number; paper: MasteryPaperRow };
+
+export type MasteryPaperQualityData = {
+  students: number;
+  rosterSize: number;
+  meanPct: number | null;
+  flagged: number;
+  paper: MasteryPaperRow;
+  items: {
+    itemNo: number;
+    students: number;
+    facility: number | null;
+    reworkRate: number | null;
+    meanPct: number | null;
+    discrimination: number | null;
+    topMeanPct: number | null;
+    signals: string[];
+    exclusion: MasteryExclusionRow | null;
+  }[];
+};

@@ -80,6 +80,13 @@ export default function MasteryWorkHomeScreen({ navigation }: Props): React.Reac
         ))}
       </ChipRow>
 
+      {active ? (
+        <View style={{ flexDirection: "row", gap: space(2), flexWrap: "wrap" }}>
+          <Button title={STR.msHeatmap} variant="secondary" onPress={() => navigation.navigate("MasteryHeatmap", { sectionId: active, subject })} />
+          <Button title={STR.msQuality} variant="secondary" onPress={() => navigation.navigate("MasteryQuality", { sectionId: active, subject })} />
+        </View>
+      ) : null}
+
       {canCreate && active && activeLevel !== null ? (
         <Button
           title={STR.msNewSheet}

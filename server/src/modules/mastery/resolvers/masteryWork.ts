@@ -57,7 +57,7 @@ PaperItemRef.implement({
   }),
 });
 
-const PaperRef = builder.objectRef<PaperView>("MasteryPaper");
+export const PaperRef = builder.objectRef<PaperView>("MasteryPaper");
 PaperRef.implement({
   fields: (t) => ({
     paperId: t.exposeString("paperId"),

@@ -1,5 +1,8 @@
 # STATUS
 
+- 2026-10-22: **BUILT — Mastery M-3 (D-#808)** (branch `feat/mastery-m3`, worktree `C:/w/m3`). Diagnosis computed on read from the evidence; student view (summary, মনোযোগ দরকার with why, chapter grid), one outcome's evidence trail, section heat-map with the ≥50 % trigger banner, work-quality report with teacher exclusion (this sheet / every sheet, reason, reversible).
+  - Reach as M-2 (routine holder or `mastery:edit_all`); no new catalogue action. Deferred: cross-section per-question view for reviewers; materialised state (until M-5's school-wide views need it).
+  - Next: M-4 weekly tailored assignment. Promotion dev→main + OTA still pending for M-0..M-3.
 - 2026-10-21 (cont. 2): **LIVE + OTA — KG আরবি papers from রওযাতুল আতফাল ২ (D-#806), promoted together with the permission matrix (#1125, owner: promote all of dev).** #1126 → dev (`62bd2e49`), promoted in #1127 (`2b9ee287`): prod deploy green, `/healthz` ok, web 200. OTA group `1f65f66f` (runtime 1.1.0, android, commit 2b9ee287). Bundle check: prod URL 1, localhost 0, ARABIC_KG present. Sourcemaps uploaded (debug id 2abc4c5d, "1 of 2" as usual).
   **Prod data:** book-2 pictures imported (dry run, then APPLY: 53 new; bank now 556). A re-read shows 51 active, with the school and the mosque hidden. **Live check** (prod `dist` on the VM, read-only): the real KG আরবি final generates at 100 marks with no warnings, all 40 pictures from `ARABIC_KG`; the Nursery final is unchanged (50, book 1).
   **Now / next:** nothing pending for Arabic worksheets. Phones pick up the OTA on the next cold start; web users get it on reload. The permission matrix went live in this promotion without the owner's dev-site check (owner's choice).

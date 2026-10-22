@@ -387,6 +387,41 @@ export const masteryPolicyLabel = (key: string): string => {
   const l = MASTERY_POLICY_FIELD_LABELS[key];
   return l ? pick(l[0], l[1]) : key;
 };
+// --- Mastery M-3: states, why-weak reasons, quality signals ---
+const MASTERY_STATE_LABELS: Record<string, [string, string]> = {
+  NOT_ASSESSED: ["যাচাই হয়নি", "Not assessed"],
+  INSUFFICIENT: ["তথ্য কম", "Too little evidence"],
+  WEAK: ["দুর্বল", "Weak"],
+  IMPROVING: ["উন্নতি হচ্ছে", "Improving"],
+  MASTERED: ["আয়ত্তে", "Mastered"],
+  REVISION_DUE: ["রিভিশন বাকি", "Revision due"],
+};
+export const masteryStateLabel = (s: string): string => {
+  const l = MASTERY_STATE_LABELS[s];
+  return l ? pick(l[0], l[1]) : s;
+};
+const MASTERY_REASON_LABELS: Record<string, [string, string]> = {
+  LOW_PCT: ["সাম্প্রতিক নম্বর কম", "Recent marks low"],
+  BELOW_SECTION: ["শাখার গড়ের চেয়ে অনেক কম", "Well below the section"],
+  REWORK: ["রি-ওয়ার্ক", "Re-work"],
+  WEAK_TAG: ["দুর্বলতার ট্যাগ", "Weak tag"],
+  RUBRIC_LOW: ["রুব্রিকে নিচের ধাপ", "Low rubric step"],
+  LIGHT_SIGNALS: ["বারবার হালকা সংকেত", "Repeated light signals"],
+  REVISION_FAILED: ["রিভিশনে পারেনি", "Failed the revision"],
+};
+export const masteryReasonLabel = (r: string): string => {
+  const l = MASTERY_REASON_LABELS[r];
+  return l ? pick(l[0], l[1]) : r;
+};
+const MASTERY_QUALITY_LABELS: Record<string, [string, string]> = {
+  TOO_EASY: ["খুব সহজ", "Too easy"],
+  MAY_BE_UNCLEAR: ["অস্পষ্ট হতে পারে", "May be unclear"],
+  DISCRIMINATES: ["ভালো পার্থক্য করে", "Discriminates well"],
+};
+export const masteryQualityLabel = (s: string): string => {
+  const l = MASTERY_QUALITY_LABELS[s];
+  return l ? pick(l[0], l[1]) : s;
+};
 export const masteryTagEffectLabel = (effect: string): string =>
   pick(
     { WEAK: "দুর্বলতার সংকেত", LIGHT: "হালকা সংকেত", NO_EVIDENCE: "প্রমাণ নেই", VOID_BEHAVIOUR: "প্রমাণ বাতিল · আচরণ নোট", ROUTE_STRAND: "দক্ষতা-ধারায় যায়" } as Record<string, string>,
@@ -6496,6 +6531,52 @@ const STR_BN = {
   msNoSheets: "এখনো কোনো কাজ নেই।",
   msDelete: "মুছুন",
   msPickSection: "শাখা বাছুন",
+  msHeatmap: "শাখার হিট-ম্যাপ",
+  msQuality: "কাজের মান",
+  msStudent: "শিক্ষার্থীর অবস্থা",
+  msTrail: "শিখনফলের প্রমাণ",
+  msNoEvidenceYet: "এই শাখা-বিষয়ে এখনো কোনো নিশ্চিত কাজ নেই।",
+  msNotYetAssessed: "{n}টি শিখনফল এখনো যাচাই হয়নি",
+  msSectionWeakPct: "শাখার দুর্বল %",
+  msTriggerBanner: "{pct}% শিক্ষার্থী ({weak}/{of}) “{lo}”-এ দুর্বল — সীমা {line}%",
+  msTriggerAfter: "{n}টি মূল্যায়নের পর · অতিরিক্ত ক্লাস ও রি-টেস্ট বিবেচনা করুন",
+  msTapStudent: "নাম চাপলে শিক্ষার্থীর পাতা, ঘর চাপলে ঐ শিখনফলের প্রমাণ",
+  msOutcomesCount: "{n}টি শিখনফল",
+  msNeedsAttention: "মনোযোগ দরকার",
+  msNothingWeak: "এই বিষয়ে এখন কোনো দুর্বল শিখনফল নেই।",
+  msByChapter: "অধ্যায় অনুযায়ী",
+  msChapterN: "অধ্যায় {n}",
+  msStanding: "শাখার {size} জনের মধ্যে {n} জনের চেয়ে বেশি দুর্বল শিখনফল",
+  msRecent: "সাম্প্রতিক",
+  msTotal: "মোট",
+  msSectionMean: "শাখার গড়",
+  msReworkCount: "রি-ওয়ার্ক",
+  msSince: "{d} থেকে",
+  msStatePath: "অবস্থার পথ",
+  msPerAttempt: "প্রতি চেষ্টায় %",
+  msEvidenceEach: "প্রমাণ — প্রতিটি প্রশ্ন",
+  msExcludedRow: "নির্ণয়ে ধরা হয়নি",
+  msRouted: "দক্ষতা-ধারা",
+  msBank: "ব্যাংক",
+  msBankLine: "গোল্ড প্রশ্ন {gold}টি · দেখেছে {seen}টি · নতুন বাকি {left}টি",
+  msBankNote: "রি-চেক সবসময় না-দেখা প্রশ্ন থেকে আসে।",
+  msNextRevision: "পরের রিভিশন: {d}",
+  msQualityIntro: "প্রতিটি কাজের প্রশ্ন কতটা কাজে লেগেছে — নম্বর ও রি-ওয়ার্ক থেকে। এটি শুধু রিপোর্ট; কোনো প্রশ্ন নিজে থেকে বাদ যায় না।",
+  msNoConfirmed: "এখনো কোনো নিশ্চিত প্রশ্নভিত্তিক কাজ নেই।",
+  msMean: "গড় {n}%",
+  msFlagged: "{n} প্রশ্নে নজর",
+  msAllFine: "ঠিক আছে",
+  msEvidenceOf: "{n} জনের প্রমাণ (তালিকায় {of} জন)",
+  msFullMarks: "পূর্ণ নম্বর",
+  msGap: "ফারাক",
+  msGapNote: "“ফারাক” = শাখার ওপরের এক-তৃতীয়াংশ আর নিচের এক-তৃতীয়াংশের গড় নম্বরের পার্থক্য (পয়েন্ট)। বড় ফারাক = প্রশ্নটি কে পারে আর কে পারে না তা ভালো ধরে।",
+  msExclude: "এই শাখায় নির্ণয়ে ধরবেন না",
+  msExcludeReason: "কারণ (রেকর্ডে থাকবে)",
+  msExcludeThisSheet: "শুধু এই কাজে",
+  msExcludeEverySheet: "এই প্রশ্ন সব কাজে",
+  msExcludeConfirm: "বাদ দিন",
+  msExcludedBy: "বাদ দিয়েছেন {by} · কারণ: {reason}",
+  msRevoke: "ফিরিয়ে আনুন",
 } as const;
 
 type StrTable = Record<keyof typeof STR_BN, string>;
@@ -11759,6 +11840,52 @@ const STR_EN: StrTable = {
   msNoSheets: "No sheets yet.",
   msDelete: "Delete",
   msPickSection: "Pick a section",
+  msHeatmap: "Section heat-map",
+  msQuality: "Work quality",
+  msStudent: "Student mastery",
+  msTrail: "Outcome evidence",
+  msNoEvidenceYet: "No confirmed sheet for this section and subject yet.",
+  msNotYetAssessed: "{n} outcomes not yet assessed",
+  msSectionWeakPct: "Section weak %",
+  msTriggerBanner: "{pct}% of students ({weak}/{of}) weak in “{lo}” — line {line}%",
+  msTriggerAfter: "After {n} assessments · consider an extra class and a re-test",
+  msTapStudent: "Tap a name for the student, a cell for that outcome's evidence",
+  msOutcomesCount: "{n} outcomes",
+  msNeedsAttention: "Needs attention",
+  msNothingWeak: "Nothing weak in this subject right now.",
+  msByChapter: "By chapter",
+  msChapterN: "Chapter {n}",
+  msStanding: "More weak outcomes than {n} of the section's {size}",
+  msRecent: "Recent",
+  msTotal: "Overall",
+  msSectionMean: "Section mean",
+  msReworkCount: "Re-work",
+  msSince: "since {d}",
+  msStatePath: "State path",
+  msPerAttempt: "% per attempt",
+  msEvidenceEach: "Evidence — each question",
+  msExcludedRow: "Not used in diagnosis",
+  msRouted: "Skill strand",
+  msBank: "Bank",
+  msBankLine: "Gold questions {gold} · seen {seen} · unseen left {left}",
+  msBankNote: "A re-check always comes from an unseen question.",
+  msNextRevision: "Next revision: {d}",
+  msQualityIntro: "How well each sheet's questions worked — from marks and re-work. Report only; nothing is removed automatically.",
+  msNoConfirmed: "No confirmed question sheet yet.",
+  msMean: "mean {n}%",
+  msFlagged: "{n} to look at",
+  msAllFine: "Fine",
+  msEvidenceOf: "evidence from {n} (roster {of})",
+  msFullMarks: "Full marks",
+  msGap: "Gap",
+  msGapNote: "“Gap” = mean % of the section's top third minus its bottom third (points). A big gap = the question separates who can from who can't.",
+  msExclude: "Don't use in this section's diagnosis",
+  msExcludeReason: "Reason (kept on record)",
+  msExcludeThisSheet: "This sheet only",
+  msExcludeEverySheet: "This question on every sheet",
+  msExcludeConfirm: "Exclude",
+  msExcludedBy: "Excluded by {by} · reason: {reason}",
+  msRevoke: "Bring back",
 };
 
 /** UI chrome strings — resolves to the active language at read time (Proxy). Use
