@@ -29,7 +29,7 @@ import { AssignmentItem } from "../../trackers/models/AssignmentItem";
 import { writeAudit } from "../../platform/services/AuditService";
 import { personName } from "../../../lib/personName";
 import { BENGALI_FONT, mixedText } from "../../../routes/pdfRenderer";
-import { getPolicy } from "./MasteryCatalogueService";
+import { getPolicy, isMasteryEnabled } from "./MasteryCatalogueService";
 import {
   MasteryWorkError,
   assertEnabled,
@@ -618,7 +618,26 @@ export async function trackerOptions(sectionId: string, subject: MasterySubject,
 const FONT_PATH = path.resolve(__dirname, "../../../../assets/fonts/NotoSansBengali-Regular.ttf");
 
 export async function renderAssignmentPdf(assignmentId: string, studentId: string | null, auth: Auth): Promise<{ pdf: Buffer; filename: string }> {
-  const a = await loadAssignment(assignmentId, auth);
+  return renderPdfOf(await loadAssignment(assignmentId, auth), studentId);
+}
+
+/**
+ * A guardian's copy (M-4b): only a SENT assignment, only their child's page, only while the
+ * add-on is on for that class × subject. The caller has already checked the guardian link.
+ */
+export async function renderAssignmentPdfForChild(assignmentId: string, studentId: string): Promise<{ pdf: Buffer; filename: string }> {
+  const a = Types.ObjectId.isValid(assignmentId) ? await MasteryAssignment.findById(assignmentId) : null;
+  const ok =
+    a &&
+    a.status === "SENT" &&
+    Types.ObjectId.isValid(studentId) &&
+    (await MasteryAssignmentSheet.exists({ assignmentId: a._id, studentId: oid(studentId) })) &&
+    (await isMasteryEnabled(a.academicYearId, a.classToken, a.subject));
+  if (!a || !ok) throw new MasteryWorkError("অ্যাসাইনমেন্ট পাওয়া যায়নি।");
+  return renderPdfOf(a, studentId);
+}
+
+async function renderPdfOf(a: IMasteryAssignment, studentId: string | null): Promise<{ pdf: Buffer; filename: string }> {
   const [sheets, roster, label, paper] = await Promise.all([
     MasteryAssignmentSheet.find({ assignmentId: a._id, ...(studentId && Types.ObjectId.isValid(studentId) ? { studentId: oid(studentId) } : {}) }).lean(),
     rosterOf(a.sectionId),

@@ -1005,3 +1005,59 @@ export type MasteryAssignmentSheetData = {
   warnings: MasteryAssignmentWarningRow[];
   outcomeChoices: { loCode: string; labelBn: string; questionTypeCodes: string[] }[];
 };
+
+// ---------------------------------------------------------------------------
+// M-4b — the guardian's view of the weekly assignment (mock G3, D-#783 / #810)
+// ---------------------------------------------------------------------------
+
+export const CHILD_MASTERY_ASSIGNMENTS = gql`
+  query ChildMasteryAssignments($studentId: String!, $limit: Int) {
+    childMasteryAssignments(studentId: $studentId, limit: $limit) {
+      id
+      subject
+      dueDate
+      minutes
+      totalMarks
+      partA {
+        n
+        textBn
+        marks
+      }
+      partB {
+        n
+        textBn
+        marks
+      }
+      result {
+        earned
+        available
+        note
+        notMarked
+        rows {
+          labelBn
+          earned
+          available
+          again
+        }
+      }
+    }
+  }
+`;
+
+export type ChildMasteryQuestion = { n: number; textBn: string; marks: number };
+export type ChildMasteryAssignment = {
+  id: string;
+  subject: string;
+  dueDate: string;
+  minutes: number;
+  totalMarks: number;
+  partA: ChildMasteryQuestion[];
+  partB: ChildMasteryQuestion[];
+  result: {
+    earned: number;
+    available: number;
+    note: string | null;
+    notMarked: boolean;
+    rows: { labelBn: string; earned: number; available: number; again: boolean }[];
+  } | null;
+};
