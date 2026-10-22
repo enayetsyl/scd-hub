@@ -292,4 +292,17 @@ Already one-to-one with today's permissions; no hidden role gate, no REST route 
 
 App: `MasteryTab` opens on `mastery:view` || `mastery:settings` || `mastery:enter_results`; the drawer leaf প্রশ্নভিত্তিক নম্বর on `mastery:enter_results`; the new-sheet button on `mastery:create`. Reach: `MasteryWorkHomeScreen` lists sections via `useAccessibleClasses({ viewAll: "mastery:edit_all" })`.
 
+### M-3 (2026-10-22, D-#808) — diagnosis views, quality report, exclusion
+| file | resolver | gate (already catalogue-native) |
+|---|---|---|
+| server/src/modules/mastery/resolvers/masteryDiagnosis.ts | masteryStudentDiagnosis | `mastery:view`; svc: routine holder or `mastery:edit_all` (the student's section × subject) |
+| server/src/modules/mastery/resolvers/masteryDiagnosis.ts | masteryOutcomeTrail | `mastery:view`; svc: routine holder or `mastery:edit_all` |
+| server/src/modules/mastery/resolvers/masteryDiagnosis.ts | masterySectionHeatmap | `mastery:view`; svc: routine holder or `mastery:edit_all` |
+| server/src/modules/mastery/resolvers/masteryDiagnosis.ts | masteryQualityPapersPage | `mastery:view`; svc: routine holder or `mastery:edit_all` |
+| server/src/modules/mastery/resolvers/masteryDiagnosis.ts | masteryPaperQuality | `mastery:view`; svc: routine holder or `mastery:edit_all` |
+| server/src/modules/mastery/resolvers/masteryDiagnosis.ts | excludeMasteryItem | `mastery:enter_results`; svc: routine holder or `mastery:edit_all`; reason required |
+| server/src/modules/mastery/resolvers/masteryDiagnosis.ts | revokeMasteryExclusion | `mastery:enter_results`; svc: routine holder or `mastery:edit_all` |
+
+App: the heat-map and quality buttons on `MasteryWorkHomeScreen` (reached as in M-2); exclude / bring back on `mastery:enter_results`. No new catalogue action: the views reuse `mastery:view` + the M-2 row rule; a school-wide `view_all` waits for M-5.
+
 Later slices add their rows here: M-2/M-4 entry and builder (`mastery:enter_results`, `mastery:create`, routine class × subject check in the service), M-5 approval (`mastery:approve`), M-6 guardian reads (`guardian:read_child` + assertGuardianOfStudent).

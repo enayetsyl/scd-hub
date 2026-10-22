@@ -1,5 +1,8 @@
 # STATUS
 
+- 2026-10-22: **BUILT — Mastery M-3 (D-#808)** (branch `feat/mastery-m3`, worktree `C:/w/m3`). Diagnosis computed on read from the evidence; student view (summary, মনোযোগ দরকার with why, chapter grid), one outcome's evidence trail, section heat-map with the ≥50 % trigger banner, work-quality report with teacher exclusion (this sheet / every sheet, reason, reversible).
+  - Reach as M-2 (routine holder or `mastery:edit_all`); no new catalogue action. Deferred: cross-section per-question view for reviewers; materialised state (until M-5's school-wide views need it).
+  - Next: M-4 weekly tailored assignment. Promotion dev→main + OTA still pending for M-0..M-3.
 - 2026-10-21: **BUILT — Mastery M-2 (D-#807)** (branch `feat/mastery-m2`, worktree `C:/w/m2`). Work sheets (homework / class test / rubric) per শাখা × subject, exceptions-only entry, evidence written on confirm (no row = full marks; re-work / tags ⇒ weak or light; routing tags ⇒ cross-chapter strand rows).
   - Reach: the routine holder, or `mastery:edit_all` (new, PRINCIPAL_DEFAULT). Office sees no sheets until M-3 `view_all`.
   - App: drawer শিখন-দক্ষতা → প্রশ্নভিত্তিক নম্বর (list → new sheet from bank/own question → entry → সব ঠিক আছে).
