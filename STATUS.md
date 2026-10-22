@@ -1,5 +1,8 @@
 # STATUS
 
+- 2026-10-22: **PLANNED — Lesson-plan progress (D-#820–#826, `docs/prd-lesson-progress.md`).** Owner ask: the teacher marks after each class what was taught, the Office monitors progress against the plan, and a weak topic can be traced to whether the child was in that class. Owner rulings: the imported session plans are the plan; mark "which session plan was completed that day" on the class note; presence = that day's attendance; corrective action decided later.
+  - Slices: LP-1 marking on the class note (`LessonDelivery` + roster snapshot), LP-2 শাখা tracker + Office overview, LP-3 student lessons + mastery chapter link.
+  - Dev has no session plans — the dev test needs a few imported (or copied) before LP-1 can be clicked through there.
 - 2026-10-22: **SHIPPED — Mastery tracker M-2…M-6 on prod and on phones.** Promotion #1135 (`72cee992`, Deploy prod success, `/healthz` 200; new fields answer "not authorized" on prod, not "cannot query"). OTA update group `0adfca82` (channel `production`, runtime 1.1.0, android), bundle verified: prod URL present, localhost absent, new screens' strings present; Android sourcemaps uploaded.
   - **Nothing is visible yet:** the add-on is switched off for every class × subject. To start: lock + import a class × subject's catalogue, set its question-type marks, switch it on for the year.
 - 2026-10-22: **BUILT — Mastery M-6 thin (D-#812)** (branch `feat/mastery-m6`, worktree `C:/w/m6`). Guardians: শিখন-দক্ষতা screen (plain buckets, home tips, what the school did). Notifications: proposal → approvers; extra class → teacher + guardians; weekly assignment → guardians. The whole thin loop M-0..M-6 is now built.
