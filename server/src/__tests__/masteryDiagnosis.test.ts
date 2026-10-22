@@ -130,11 +130,16 @@ describe("computeOutcomeState (pure)", () => {
 });
 
 describe("sectionOutcomeSummary / paperQuality (pure)", () => {
-  it("section % = WEAK ÷ verdicts; triggered only after enough assessments", () => {
-    const states = ["WEAK", "WEAK", "MASTERED", "IMPROVING", "INSUFFICIENT", "NOT_ASSESSED"] as const;
-    expect(sectionOutcomeSummary([...states], 2, P)).toEqual({ weak: 2, verdicts: 4, weakPct: 50, triggered: true });
+  it("section % = WEAK ÷ students assessed (INSUFFICIENT counts); triggered only after enough assessments", () => {
+    const states = ["WEAK", "WEAK", "WEAK", "MASTERED", "IMPROVING", "INSUFFICIENT", "NOT_ASSESSED"] as const;
+    expect(sectionOutcomeSummary([...states], 2, P)).toEqual({ weak: 3, verdicts: 6, weakPct: 50, triggered: true });
     expect(sectionOutcomeSummary([...states], 1, P).triggered).toBe(false);
-    expect(sectionOutcomeSummary(["INSUFFICIENT"], 3, P)).toMatchObject({ weakPct: null, triggered: false });
+    expect(sectionOutcomeSummary(["NOT_ASSESSED"], 3, P)).toMatchObject({ weakPct: null, triggered: false });
+  });
+
+  it("D-#813: two struggling students among fifteen not-yet-mastered do NOT trigger", () => {
+    const states = [...Array(2).fill("WEAK"), ...Array(15).fill("INSUFFICIENT")];
+    expect(sectionOutcomeSummary(states, 2, P)).toEqual({ weak: 2, verdicts: 17, weakPct: 12, triggered: false });
   });
 
   it("flags too easy, maybe unclear (top third low) and discriminating items", () => {
