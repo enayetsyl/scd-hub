@@ -19,6 +19,7 @@ import { Student } from "../../foundation/models/Student";
 import { ClassNote, type IClassNote } from "../../routine/models/ClassNote";
 import { RoutineSlot, type IRoutineSlot } from "../../routine/models/RoutineSlot";
 import { dateKeyOf } from "../../attendance/dates";
+import { resolveUnitsForIds } from "../../attendance/attendanceUnit";
 import { LessonDelivery, type ILessonDelivery } from "../models/LessonDelivery";
 
 export class LessonProgressError extends Error {
@@ -309,6 +310,7 @@ export async function recordDelivery(
     teacherId: note.publishedBy,
     sessions,
     rosterStudentIds: roster.map((s) => s._id),
+    attendanceUnits: [...new Set([...(await resolveUnitsForIds(roster.map((s) => String(s._id)))).values()].map((u) => `${u.unitType}:${u.unitId}`))],
     updatedBy: new Types.ObjectId(actorId),
   };
   // A correction can flip sessions ⇄ reason, so the side not given is cleared.

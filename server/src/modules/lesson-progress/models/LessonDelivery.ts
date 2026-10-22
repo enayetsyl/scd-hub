@@ -40,6 +40,10 @@ export interface ILessonDelivery extends Document {
   noneReason?: LessonNoneReason;
   noneNote?: string;
   rosterStudentIds: Types.ObjectId[];
+  /** The roster's attendance units at marking (`section:<id>` / `subjectgroup:<id>`, usually one or two).
+   *  Group membership is not dated, so after a split this is the only way to find the record a child
+   *  was marked on that day (LP-3, D-#823). */
+  attendanceUnits?: string[];
   updatedBy: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -71,6 +75,7 @@ const LessonDeliverySchema = new Schema<ILessonDelivery>(
     noneReason: { type: String, enum: LESSON_NONE_REASONS },
     noneNote: { type: String, trim: true },
     rosterStudentIds: { type: [Schema.Types.ObjectId], ref: "Student", default: [] },
+    attendanceUnits: { type: [String], default: undefined },
     updatedBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
   },
   { timestamps: true },
