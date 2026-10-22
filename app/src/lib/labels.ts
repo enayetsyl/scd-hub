@@ -6642,6 +6642,17 @@ const STR_BN = {
   msAsMarksOf: "{have} / {target} নম্বর",
   msAsWhy: "কেন: {why}",
   msAsDraft: "খসড়া",
+  gpMsAssignments: "সাপ্তাহিক অ্যাসাইনমেন্ট (শিখন-দক্ষতা)",
+  gpMsChecked: "দেখা হয়েছে",
+  gpMsFullMarks: "পূর্ণমান",
+  gpMsMinutes: "মিনিট",
+  gpMsPdf: "PDF ডাউনলোড",
+  gpMsPartA: "অংশ ক · পুরো ক্লাসের জন্য",
+  gpMsPartB: "অংশ খ · {name}-এর জন্য",
+  gpMsPartBWhy: "যেখানে একটু সাহায্য দরকার, সেখান থেকেই প্রশ্ন",
+  gpMsHowItWent: "কেমন হলো",
+  gpMsAgain: "আবার করবে",
+  gpMsTeacherNote: "শিক্ষকের মন্তব্য:",
 } as const;
 
 type StrTable = Record<keyof typeof STR_BN, string>;
@@ -11993,6 +12004,17 @@ const STR_EN: StrTable = {
   msAsMarksOf: "{have} / {target} marks",
   msAsWhy: "Why: {why}",
   msAsDraft: "Draft",
+  gpMsAssignments: "Weekly assignment (mastery)",
+  gpMsChecked: "Checked",
+  gpMsFullMarks: "Full marks",
+  gpMsMinutes: "minutes",
+  gpMsPdf: "Download PDF",
+  gpMsPartA: "Part A · for the whole class",
+  gpMsPartB: "Part B · for {name}",
+  gpMsPartBWhy: "Questions from where a little help is needed",
+  gpMsHowItWent: "How it went",
+  gpMsAgain: "will redo",
+  gpMsTeacherNote: "Teacher's note:",
 };
 
 /** UI chrome strings — resolves to the active language at read time (Proxy). Use
