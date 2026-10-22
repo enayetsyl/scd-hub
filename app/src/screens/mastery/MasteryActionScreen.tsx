@@ -37,6 +37,11 @@ export default function MasteryActionScreen({ navigation, route }: Props): React
   const [{ data, fetching, error }, refetch] = useQuery({ query: MASTERY_ACTION_QUERY, variables: { actionId }, requestPolicy: "cache-and-network" });
   const a = data?.masteryAction as MasteryActionData | undefined;
   const [msg, setMsg] = useState<string | null>(null);
+  // Coming back from the re-test's entry screen must show the marked result and the close step.
+  useEffect(() => {
+    const unsub = navigation.addListener("focus", () => refetch({ requestPolicy: "network-only" }));
+    return unsub;
+  }, [navigation, refetch]);
 
   // Decision form
   const [attendees, setAttendees] = useState("WEAK");
@@ -53,8 +58,14 @@ export default function MasteryActionScreen({ navigation, route }: Props): React
   useEffect(() => {
     if (!a) return;
     setPresent(Object.fromEntries(a.students.filter((s) => s.inPlan).map((s) => [s.studentId, s.present ?? true])));
-    setOutcome(a.outcome ?? a.suggestedOutcome);
   }, [a?.id, a?.status]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Pre-select the app's suggestion — and follow it when the re-test gets marked (same status,
+  // new numbers), unless the teacher has already picked an outcome themselves.
+  const [outcomeTouched, setOutcomeTouched] = useState(false);
+  useEffect(() => {
+    if (!a || outcomeTouched) return;
+    setOutcome(a.outcome ?? a.suggestedOutcome);
+  }, [a?.outcome, a?.suggestedOutcome, a?.retestConfirmed, outcomeTouched]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [decideState, decide] = useMutation(DECIDE_MASTERY_ACTION);
   const [heldState, held] = useMutation(RECORD_MASTERY_EXTRA_CLASS);
@@ -148,7 +159,7 @@ export default function MasteryActionScreen({ navigation, route }: Props): React
           <Body style={{ fontWeight: "700" }}>{STR.msPlan}</Body>
           <Body>
             {a.plan.date ? `${bnNum(a.plan.date)} · ` : ""}
-            {a.plan.slotKind === "PERIOD" && a.plan.periodNumber ? `${bnNum(a.plan.periodNumber)} ${STR.msPeriodNo}` : a.plan.slotKind ? masteryActionLabel(a.plan.slotKind) : masteryActionLabel(a.kind)}
+            {a.plan.slotKind === "PERIOD" && a.plan.periodNumber ? fill(STR.msPeriodN, { n: bnNum(a.plan.periodNumber) }) : a.plan.slotKind ? masteryActionLabel(a.plan.slotKind) : masteryActionLabel(a.kind)}
           </Body>
           <Muted>
             {masteryActionLabel(a.plan.attendees)} · {fill(STR.msStudentsInPlan, { n: bnNum(inPlan.length) })}
@@ -220,7 +231,7 @@ export default function MasteryActionScreen({ navigation, route }: Props): React
           {a.suggestedOutcome ? <Muted>{fill(STR.msSuggested, { o: masteryActionLabel(a.suggestedOutcome) })}</Muted> : null}
           <ChipRow>
             {(["SUCCESS", "PARTIAL", "NOT_RESOLVED"] as const).map((o) => (
-              <Chip key={o} label={masteryActionLabel(o)} selected={outcome === o} onPress={() => setOutcome(o)} />
+              <Chip key={o} label={masteryActionLabel(o)} selected={outcome === o} onPress={() => { setOutcome(o); setOutcomeTouched(true); }} />
             ))}
           </ChipRow>
           {a.status !== "CHECKING" || !a.retestConfirmed ? (

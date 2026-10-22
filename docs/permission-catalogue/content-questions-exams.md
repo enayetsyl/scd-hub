@@ -328,4 +328,17 @@ App: the সাপ্তাহিক অ্যাসাইনমেন্ট but
 
 App: `ChildMasteryAssignments` on the guardian's Assignments tab (`ChildAssignmentsScreen`), rendered only when the query returns weeks.
 
+### M-5 (2026-10-22, D-#811) — section trigger → extra class → re-test → close
+| file | resolver | gate |
+|---|---|---|
+| server/src/modules/mastery/resolvers/masteryAction.ts | masteryAction | `mastery:view`; svc: `mastery:approve` OR the routine holder (or `mastery:edit_all`) of its section × subject |
+| server/src/modules/mastery/resolvers/masteryAction.ts | masteryActionsPage | `mastery:view`; svc: school-wide needs `mastery:approve`; one section × subject needs approve or the row rule |
+| server/src/modules/mastery/resolvers/masteryAction.ts | masteryActionCounts | `mastery:approve` |
+| server/src/modules/mastery/resolvers/masteryAction.ts | decideMasteryAction | `mastery:approve` (checked again in the svc) |
+| server/src/modules/mastery/resolvers/masteryAction.ts | recordMasteryExtraClass | `mastery:enter_results`; svc: approve OR row rule |
+| server/src/modules/mastery/resolvers/masteryAction.ts | buildMasteryRetest | `mastery:create`; svc: approve OR row rule |
+| server/src/modules/mastery/resolvers/masteryAction.ts | closeMasteryAction | `mastery:enter_results`; svc: approve OR row rule |
+
+`mastery:approve` now gates real fields, so it left `DECLARED_AHEAD` in `permissionCatalogueGates.test.ts` (the list is empty). App: drawer leaf পুরো স্কুল · পদক্ষেপ (`MasteryLeader`) on `mastery:approve`; `MasteryTab` also opens on `mastery:approve`; পদক্ষেপের রেকর্ড on the work home; the heat-map banner links an open action.
+
 Later slices add their rows here: M-2/M-4 entry and builder (`mastery:enter_results`, `mastery:create`, routine class × subject check in the service), M-5 approval (`mastery:approve`), M-6 guardian reads (`guardian:read_child` + assertGuardianOfStudent).

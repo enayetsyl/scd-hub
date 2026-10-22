@@ -60,6 +60,12 @@ export default function MasteryAssignmentScreen({ navigation, route }: Props): R
   });
   const week = data?.masteryAssignment as { week: string; startingLayout: MasteryAssignmentLayout; assignment: MasteryAssignmentData | null } | undefined;
   const a = week?.assignment ?? null;
+  // Back from a child screen (entry, sheet, action) must show what changed there.
+  useEffect(() => {
+    const unsub = navigation.addListener("focus", () => refetch({ requestPolicy: "network-only" }));
+    return unsub;
+  }, [navigation, refetch]);
+
   const [{ data: trackerData }] = useQuery({ query: MASTERY_ASSIGNMENT_TRACKER_ITEMS_QUERY, variables: { sectionId, subject }, pause: !canCreate });
   const trackerItems = (trackerData?.masteryAssignmentTrackerItems ?? []) as { asItemId: string; asId: string; dueDate: string }[];
   const [{ data: catData }] = useQuery({

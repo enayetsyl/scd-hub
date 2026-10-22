@@ -6,7 +6,7 @@
  * subject the routine does not give the caller (unless they hold mastery:edit_all), so the
  * list is the caller's own classes from useAccessibleClasses.
  */
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
@@ -41,13 +41,19 @@ export default function MasteryWorkHomeScreen({ navigation }: Props): React.Reac
   const active = sectionId ?? sections[0]?.id ?? null;
   const activeLevel = sections.find((s) => s.id === active)?.level ?? null;
 
-  const [{ data, fetching, error }] = useQuery({
+  const [{ data, fetching, error }, refetch] = useQuery({
     query: MASTERY_PAPERS_PAGE_QUERY,
     variables: { sectionId: active ?? "", subject, page, pageSize: 20 },
     pause: !active,
     requestPolicy: "cache-and-network",
   });
   const pg = data?.masteryPapersPage as { rows: MasteryPaperRow[]; total: number; page: number; pageSize: number } | undefined;
+  // Back from a child screen (entry, sheet, action) must show what changed there.
+  useEffect(() => {
+    const unsub = navigation.addListener("focus", () => refetch({ requestPolicy: "network-only" }));
+    return unsub;
+  }, [navigation, refetch]);
+
   const rows = pg?.rows ?? [];
   const pages = pg ? Math.max(1, Math.ceil(pg.total / pg.pageSize)) : 1;
 

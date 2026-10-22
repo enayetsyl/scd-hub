@@ -478,7 +478,8 @@ export async function actionDetail(id: string, auth: Auth): Promise<ActionDetail
     }),
     retestPaperId: paper?.paperId ?? null,
     retestConfirmed: after.retestConfirmed,
-    before: a.before ? { weakPct: a.before.weakPct ?? null, meanPct: a.before.meanPct ?? null } : null,
+    // Recorded when the plan is made; Mongoose returns an empty subdocument before that.
+    before: a.plan?.attendees && a.before ? { weakPct: a.before.weakPct ?? null, meanPct: a.before.meanPct ?? null } : null,
     after: a.after && a.status === "CLOSED" ? { weakPct: a.after.weakPct ?? null, meanPct: a.after.meanPct ?? null } : null,
     now: nowNumbers,
     suggestedOutcome: open && a.status !== "PROPOSED" ? suggestOutcome(a.before, nowNumbers, policy.sectionTriggerPct) : null,
