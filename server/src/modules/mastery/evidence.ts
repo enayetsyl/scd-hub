@@ -94,6 +94,9 @@ export function computeEvidence(input: {
   policy: { reworkIsWeak: boolean; workReworkIsLight: boolean };
   /** Live (non-retired) LO codes — a routing tag whose strand LO is missing writes nothing. */
   liveCodes: Set<string>;
+  /** AS papers (M-4): the items each student was given; any other item is "not given" and
+   *  writes nothing. Absent ⇒ everyone was given every item. */
+  studentItems?: Map<string, Set<number>>;
 }): EvidenceOutput {
   const { paper, results, statusDefaults, policy, liveCodes } = input;
   const tags = new Map(input.tags.filter((t) => inScope(t, paper)).map((t) => [t.code, t]));
@@ -141,8 +144,10 @@ export function computeEvidence(input: {
     const workWeak = workTags.some((t) => t.effect === "WEAK");
     const workLight = (workRework && policy.workReworkIsLight) || workTags.some((t) => t.effect === "LIGHT");
     let voided = false;
+    const given = input.studentItems?.get(studentId);
 
     for (const item of paper.items) {
+      if (input.studentItems && !given?.has(item.itemNo)) continue;
       const ri = r?.items.find((x) => x.itemNo === item.itemNo);
       const itemTags = (ri?.tags ?? []).map((c) => tags.get(c)).filter((t): t is TagLike => Boolean(t));
       if (itemTags.some((t) => t.effect === "VOID_BEHAVIOUR")) {

@@ -113,6 +113,7 @@ RosterRowRef.implement({
     name: t.exposeString("name"),
     rollNumber: t.string({ nullable: true, resolve: (r) => r.rollNumber }),
     defaultStatus: t.exposeString("defaultStatus"),
+    itemNos: t.intList({ nullable: true, description: "AS sheets: the items this student was given; null ⇒ every item.", resolve: (r) => r.itemNos }),
     result: t.field({ type: ResultRef, nullable: true, resolve: (r) => r.result }),
   }),
 });

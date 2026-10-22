@@ -26,6 +26,7 @@ import { Student } from "../../foundation/models/Student";
 import { ContentArtifact } from "../../content/models/ContentArtifact";
 import { HomeworkItem } from "../../trackers/models/HomeworkItem";
 import { HomeworkStudentRecord } from "../../trackers/models/HomeworkStudentRecord";
+import { AssignmentStudentRecord } from "../../trackers/models/AssignmentStudentRecord";
 import { resolveSubjectTeacher } from "../../trackers/subjectTeacher";
 import { writeAudit } from "../../platform/services/AuditService";
 import { queryPage, type Page, type PageArgs } from "../../../lib/paging";
@@ -90,7 +91,7 @@ export async function assertMayWork(auth: Auth, sectionId: Types.ObjectId, subje
   throw new MasteryWorkError("রুটিন অনুযায়ী এই শাখা ও বিষয়ের দায়িত্ব আপনার নয়।");
 }
 
-async function assertEnabled(ctx: SectionCtx, subject: MasterySubject): Promise<void> {
+export async function assertEnabled(ctx: SectionCtx, subject: MasterySubject): Promise<void> {
   if (!(await isMasteryEnabled(ctx.academicYearId, ctx.classToken, subject))) {
     throw new MasteryWorkError("এই শ্রেণি-বিষয়ে এই শিক্ষাবর্ষে শিখন-দক্ষতা চালু নেই।");
   }
@@ -126,7 +127,7 @@ export interface CreatePaperInput {
   rubricLoCodes?: string[] | null;
 }
 
-async function nextPaperId(classToken: string, subject: string): Promise<string> {
+export async function nextPaperId(classToken: string, subject: string): Promise<string> {
   const key = `${classToken}-${subject}`;
   const s = await MasterySequence.findOneAndUpdate({ key }, { $inc: { seq: 1 } }, { upsert: true, new: true }).lean();
   return `MP-${key}-${String(s!.seq).padStart(4, "0")}`;
@@ -138,6 +139,9 @@ export async function createPaper(input: CreatePaperInput, auth: Auth): Promise<
   await assertEnabled(ctx, input.subject);
   await assertMayWork(auth, ctx.sectionId, input.subject, date);
 
+  if (!["HW", "CT", "RUBRIC"].includes(input.source)) {
+    throw new MasteryWorkError("অ্যাসাইনমেন্টের কাজ সাপ্তাহিক অ্যাসাইনমেন্ট পাঠালে তৈরি হয়।");
+  }
   const isRubric = input.source === "RUBRIC";
   const rubricCodes = [...new Set(input.rubricLoCodes ?? [])];
   if (isRubric && rubricCodes.length === 0) throw new MasteryWorkError("রুব্রিকের জন্য অন্তত একটি শিখনফল বাছুন।");
@@ -233,6 +237,7 @@ export async function createPaper(input: CreatePaperInput, auth: Auth): Promise<
 /** An OPEN sheet with no results yet may be removed (a mistake); a confirmed one never. */
 export async function deletePaper(paperId: string, auth: Auth): Promise<boolean> {
   const paper = await loadPaperFor(paperId, auth);
+  if (paper.source === "AS") throw new MasteryWorkError("পাঠানো অ্যাসাইনমেন্ট এখান থেকে মোছা যায় না।");
   if (paper.entryState === "CONFIRMED") throw new MasteryWorkError("নিশ্চিত করা কাজ মুছে ফেলা যায় না।");
   if (await MasteryResult.exists({ paperId: paper._id })) throw new MasteryWorkError("নম্বর তোলা শুরু হয়েছে — মুছে ফেলা যায় না।");
   await MasteryPaper.deleteOne({ _id: paper._id, entryState: "OPEN" });
@@ -314,6 +319,8 @@ export interface RosterRow {
   rollNumber: string | null;
   /** What the student counts as if nothing is entered: the homework record, else PRESENT. */
   defaultStatus: "PRESENT" | "ABSENT" | "NOT_SUBMITTED";
+  /** AS papers: the items this student was given; null ⇒ every item. */
+  itemNos: number[] | null;
   result: {
     status: MasteryResultStatus | null;
     items: { itemNo: number; marks: number | null; rework: boolean; tags: string[] }[];
@@ -335,13 +342,20 @@ export async function rosterOf(sectionId: Types.ObjectId) {
   >;
 }
 
-/** Homework record state → the student's default status on a linked sheet. */
+/** AS papers: studentId → the item numbers on that student's sheet; null on every other paper. */
+export function studentItemsOf(paper: Pick<IMasteryPaper, "source" | "perStudentItems">): Map<string, Set<number>> | null {
+  if (paper.source !== "AS") return null;
+  return new Map((paper.perStudentItems ?? []).map((x) => [String(x.studentId), new Set(x.itemNos)]));
+}
+
+/** Homework / assignment record state → the student's default status on a linked sheet. */
 async function trackerDefaults(paper: IMasteryPaper): Promise<Map<string, "PRESENT" | "ABSENT" | "NOT_SUBMITTED">> {
   const out = new Map<string, "PRESENT" | "ABSENT" | "NOT_SUBMITTED">();
-  if (!paper.links?.hwItemId) return out;
-  const recs = await HomeworkStudentRecord.find({ hwItemId: paper.links.hwItemId, resubOf: null })
-    .select("studentId state")
-    .lean();
+  const recs = paper.links?.hwItemId
+    ? await HomeworkStudentRecord.find({ hwItemId: paper.links.hwItemId, resubOf: null }).select("studentId state").lean()
+    : paper.links?.asItemId
+      ? await AssignmentStudentRecord.find({ asItemId: paper.links.asItemId, resubOf: null }).select("studentId state").lean()
+      : [];
   for (const r of recs) {
     const s = r.state as string;
     out.set(String(r.studentId), s === "ABSENT_REDELIVER" ? "ABSENT" : s === "DUE" || s === "CHASE" ? "NOT_SUBMITTED" : "PRESENT");
@@ -357,15 +371,17 @@ export async function paperDetail(paperId: string, auth: Auth): Promise<PaperDet
     trackerDefaults(paper),
   ]);
   const byStudent = new Map(results.map((r) => [String(r.studentId), r]));
+  const given = studentItemsOf(paper);
   return {
     paper: paperView(paper),
-    roster: students.map((s) => {
+    roster: students.filter((s) => !given || given.has(String(s._id))).map((s) => {
       const r = byStudent.get(String(s._id));
       return {
         studentId: String(s._id),
         name: personName(s),
         rollNumber: s.rollNumber ?? null,
         defaultStatus: defaults.get(String(s._id)) ?? "PRESENT",
+        itemNos: given ? [...(given.get(String(s._id)) ?? [])].sort((a, b) => a - b) : null,
         result: r
           ? {
               status: (r.status as MasteryResultStatus) ?? null,
@@ -420,6 +436,11 @@ function validateResult(
   tags: Map<string, TagLike & { appliesTo: string }>,
 ): string | null {
   if (!rosterIds.has(r.studentId)) return "শিক্ষার্থী এই শাখার তালিকায় নেই।";
+  const given = studentItemsOf(paper)?.get(r.studentId);
+  if (paper.source === "AS" && !given) return "এই শিক্ষার্থীর জন্য এই অ্যাসাইনমেন্টে কোনো শিট নেই।";
+  for (const it of r.items ?? []) {
+    if (given && !given.has(it.itemNo)) return `প্রশ্ন ${bn(it.itemNo)} এই শিক্ষার্থীর শিটে নেই।`;
+  }
   const usable = (code: string, where: "ITEM" | "WORK") => {
     const t = tags.get(code);
     if (!t || !t.active) return `ট্যাগ ${code} চালু নেই।`;
@@ -496,6 +517,7 @@ async function writeEvidenceFor(paper: IMasteryPaper, studentIds: string[]): Pro
     tags,
     policy: { reworkIsWeak: policy.resolved.reworkIsWeak, workReworkIsLight: policy.resolved.workReworkIsLight },
     liveCodes: new Set(live.map((o) => o.code)),
+    studentItems: studentItemsOf(paper) ?? undefined,
   });
   const now = new Date();
   await MasteryEvidence.updateMany(

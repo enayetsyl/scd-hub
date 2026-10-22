@@ -58,7 +58,7 @@ const iso = (d: Date | null | undefined) => (d ? new Date(d).toISOString() : nul
 type LiveRow = EvidenceLike & { studentId: string };
 
 /** The live rows (not superseded, not excluded) of one section × subject. */
-async function liveSectionRows(sectionId: Types.ObjectId, subject: MasterySubject, loCode?: string): Promise<LiveRow[]> {
+export async function liveSectionRows(sectionId: Types.ObjectId, subject: MasterySubject, loCode?: string): Promise<LiveRow[]> {
   const rows = await MasteryEvidence.find({
     sectionId, subject, supersededAt: null, excludedAt: null, ...(loCode ? { loCode } : {}),
   })
@@ -81,7 +81,7 @@ async function liveSectionRows(sectionId: Types.ObjectId, subject: MasterySubjec
   }));
 }
 
-async function diagnosisPolicy(classToken: MasteryClassToken, subject: MasterySubject): Promise<DiagnosisPolicy> {
+export async function diagnosisPolicy(classToken: MasteryClassToken, subject: MasterySubject): Promise<DiagnosisPolicy> {
   return (await getPolicy(classToken, subject)).resolved;
 }
 
@@ -95,7 +95,7 @@ interface SectionStates {
 }
 
 /** Every student × outcome state of one section × subject, plus the section means. */
-function computeSection(rows: LiveRow[], policy: DiagnosisPolicy, now: Date): SectionStates {
+export function computeSection(rows: LiveRow[], policy: DiagnosisPolicy, now: Date): SectionStates {
   const byLo = new Map<string, Map<string, LiveRow[]>>();
   for (const r of rows) {
     const m = byLo.get(r.loCode) ?? new Map<string, LiveRow[]>();
@@ -118,14 +118,14 @@ function computeSection(rows: LiveRow[], policy: DiagnosisPolicy, now: Date): Se
   return out;
 }
 
-async function lockedOutcomes(classToken: MasteryClassToken, subject: MasterySubject) {
+export async function lockedOutcomes(classToken: MasteryClassToken, subject: MasterySubject) {
   return MasteryOutcome.find({ classToken, subject, status: "LOCKED" })
-    .select("code labelBn chapterNumber strand order homeTipBn")
+    .select("code labelBn chapterNumber strand order homeTipBn assess questionTypeCodes")
     .sort({ chapterNumber: 1, order: 1, code: 1 })
     .lean();
 }
 
-async function sectionLabel(sectionId: Types.ObjectId): Promise<{ sectionName: string; className: string }> {
+export async function sectionLabel(sectionId: Types.ObjectId): Promise<{ sectionName: string; className: string }> {
   const s = await Section.findById(sectionId).select("nameBn classId").lean();
   const c = s ? await Class.findById(s.classId).select("nameBn").lean() : null;
   return { sectionName: s?.nameBn ?? "", className: c?.nameBn ?? "" };
