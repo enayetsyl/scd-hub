@@ -21,7 +21,7 @@ import * as fs from "fs/promises";
 import type { Types } from "mongoose";
 import { BATCH_DOC_TYPE, BATCH_MAX_ITEMS, PLAN_DOC_TYPES } from "@scd/shared";
 import { ContentArtifact } from "../models/ContentArtifact";
-import { ImportBatch } from "../../platform/models/ImportBatch";
+import { ImportBatch, envelopeSha256 } from "../../platform/models/ImportBatch";
 import { masteryImportWarnings } from "../../mastery/bank";
 import { CorpusEvent } from "../../corpus/models/CorpusEvent";
 import {
@@ -186,6 +186,7 @@ async function persistEnvelope(
   const batchDoc = await ImportBatch.create({
     parentBatchId,
     envelopeSnapshot: envelope,
+    snapshotSha256: envelopeSha256(envelope),
     // A malformed envelope may omit doc_type; the harness already FAILed it, but
     // the audit row must still be written (J1.2), so fall back to a sentinel
     // rather than throwing a validation error on the required field.
@@ -306,8 +307,12 @@ async function persistEnvelope(
     importedAt: new Date(),
   });
 
-  // Update batch with artifactId
-  await ImportBatch.updateOne({ _id: batchDoc._id }, { $set: { artifactId: artifact._id } });
+  // Update batch with artifactId, and drop the snapshot now the artifact holds the same
+  // envelope (D-#816) — it was a second full copy of every import on a 512 MB cluster.
+  await ImportBatch.updateOne(
+    { _id: batchDoc._id },
+    { $set: { artifactId: artifact._id }, $unset: { envelopeSnapshot: 1 } },
+  );
 
   // De-identified corpus event — NO identity fields (ADR-005)
   const pseudoId = Buffer.from(actorId.toString()).toString("base64");
