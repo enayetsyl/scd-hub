@@ -2,7 +2,9 @@
 
 **Status:** LP-1 BUILT 2026-10-22 (branch `feat/lesson-progress-lp1`: `LessonDelivery` + roster snapshot, `lessonPlanForSlot`,
 `lessonPlan` on `publishClassNote` / `updateClassNote`, picker on both class-note screens, mark-only correction);
-LP-2, LP-3 not yet built.
+LP-2 BUILT 2026-10-22 (branch `feat/lesson-progress-lp2`: `lesson_progress` catalogue feature, `lessonProgressOverview` /
+`myLessonProgress` / `lessonSectionTracker`, drawer ক্লাস নোট → পাঠ পরিকল্পনার অগ্রগতি, overview + tracker screens; a row
+needs session plans AND a live routine slot for that শাখা × subject); LP-3 not yet built.
 **Decision block:** D-#820–#826, reserved against `origin/dev@009ec1fa` (2026-10-22, max D-#813; open PR #1138
 holds D-#815/#816, so D-#814–#819 are left free).
 

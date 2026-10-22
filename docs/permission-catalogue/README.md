@@ -266,8 +266,8 @@ Several of today's bypasses are template-aware (`isAdminStaff`, `actsAsRole`), w
 #### `lesson_progress` — পাঠ পরিকল্পনার অগ্রগতি (LP-2/LP-3, D-#826)
 | permission | EN | BN | what it allows | T | O | flags | replaces |
 |---|---|---|---|---|---|---|---|
-| `lesson_progress:view` | See lesson-plan progress | পাঠ পরিকল্পনার অগ্রগতি দেখা | A শাখা × subject's sessions taught (routine holder or class teacher), a student's lessons and presence | on | on | | — (new) |
-| `lesson_progress:view_all` | Any শাখা + the overview | সব শাখার অগ্রগতি ও সারসংক্ষেপ | School-wide overview, any শাখা's tracker, any student's lessons | — | on | | — (new) |
+| `lesson_progress:view` | See lesson-plan progress | পাঠ পরিকল্পনার অগ্রগতি দেখা | A শাখা × subject's sessions taught (routine holder or class teacher), a student's lessons and presence | on | on | | routine:read (expansion, like class_note) |
+| `lesson_progress:view_all` | Any শাখা + the overview | সব শাখার অগ্রগতি ও সারসংক্ষেপ | School-wide overview, any শাখা's tracker, any student's lessons | — | on | | routine:manage (expansion, like class_note) |
 
 #### `saturday_revision` — শনিবারের রিভিশন
 | permission | EN | BN | what it allows | T | O | flags | replaces |
