@@ -10,6 +10,7 @@
  */
 import { gql } from "urql";
 import type { Role } from "@scd/shared";
+import { STUDENT_LESSON_SESSION_FIELDS, type StudentLessonSessionT } from "./mastery";
 
 type NoVars = Record<string, never>;
 
@@ -4881,6 +4882,27 @@ export const LESSON_SECTION_TRACKER_QUERY = gql<
     lessonSectionTracker(sectionId: $sectionId, subject: $subject) {
       row { ${LESSON_PROGRESS_ROW_FIELDS} }
       sessions { key chapter anchorWord chapterTitle sessionIndex sessionOf titleBn artifactId status finishedOn startedOn teacherNames }
+    }
+  }
+`;
+
+// --- Lesson-plan progress LP-3 (D-#823/#826) --------------------------------
+
+export interface StudentLessonsT {
+  studentId: string;
+  narrowed: boolean;
+  subjects: Array<{
+    subject: string;
+    counts: { present: number; partial: number; absent: number; unknown: number };
+    sessions: StudentLessonSessionT[];
+  }>;
+}
+
+export const STUDENT_LESSONS_QUERY = gql<{ studentLessons: StudentLessonsT }, { studentId: string }>`
+  query StudentLessons($studentId: String!) {
+    studentLessons(studentId: $studentId) {
+      studentId narrowed
+      subjects { subject counts { present partial absent unknown } sessions { ${STUDENT_LESSON_SESSION_FIELDS} } }
     }
   }
 `;

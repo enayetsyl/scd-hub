@@ -7,6 +7,9 @@
  */
 import { gql } from "urql";
 
+/** LP-3 (D-#823/#825) — defined first: the trail query below interpolates it. */
+export const STUDENT_LESSON_SESSION_FIELDS = `subject key chapter anchorWord sessionIndex sessionOf titleBn taughtOn absentOn unknownOn presence onLeave`;
+
 export const MASTERY_COVERAGE_QUERY = gql`
   query MasteryCoverage {
     masteryCoverage {
@@ -560,6 +563,7 @@ export const MASTERY_OUTCOME_TRAIL_QUERY = gql`
       homeTipBn
       bankGold
       bankSeen
+      chapterLessons { ${STUDENT_LESSON_SESSION_FIELDS} }
       outcome { ${STATE_FIELDS} }
       history {
         state
@@ -712,12 +716,31 @@ export type MasteryStudentDiagnosisData = {
   outcomes: MasteryOutcomeStateRow[];
 };
 
+/** LP-3 (D-#823/#825): one session plan as taught to one child, with presence from day attendance. */
+export type StudentLessonSessionT = {
+  subject: string;
+  key: string;
+  chapter: string;
+  anchorWord: string;
+  sessionIndex: number;
+  sessionOf: number;
+  titleBn: string;
+  taughtOn: string[];
+  absentOn: string[];
+  unknownOn: string[];
+  /** PRESENT | PARTIAL | ABSENT | UNKNOWN */
+  presence: string;
+  onLeave: boolean;
+};
+
 export type MasteryTrailData = {
   studentId: string;
   name: string;
   homeTipBn: string | null;
   bankGold: number;
   bankSeen: number;
+  /** LP-3: the outcome's chapter as taught in class (empty = not marked yet). */
+  chapterLessons: StudentLessonSessionT[];
   outcome: MasteryOutcomeStateRow;
   history: { state: string; at: string; paperId: string | null }[];
   rows: {
@@ -1091,6 +1114,11 @@ const ACTION_FIELDS = `
   outcome
   canApprove
   canWork
+  lessonGap {
+    taught
+    weakCount
+    missedNames
+  }
   trigger {
     at
     weakPct
@@ -1235,6 +1263,8 @@ export type MasteryActionData = {
   outcome: string | null;
   canApprove: boolean;
   canWork: boolean;
+  /** LP-3 (D-#825): the weak students who missed a class of this outcome's chapter. */
+  lessonGap: { taught: boolean; weakCount: number; missedNames: string[] };
   trigger: { at: string; weakPct: number; weak: number; verdicts: number; assessments: number };
   plan: {
     date: string | null;

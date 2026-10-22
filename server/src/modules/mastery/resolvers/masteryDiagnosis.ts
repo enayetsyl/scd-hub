@@ -36,6 +36,9 @@ import {
 import type { Auth } from "../services/MasteryWorkService";
 import type { MasteryExclusionScope } from "../models/MasteryExclusion";
 import { PaperRef } from "./masteryWork";
+import { parseMasteryLoCode } from "@scd/shared";
+import { StudentSessionRef } from "../../lesson-progress/resolvers/studentLessons";
+import { chapterLessons } from "../../lesson-progress/services/StudentLessonService";
 
 function authOf(ctx: { auth: Auth | null }): Auth {
   if (!ctx.auth) throw new Error("লগইন প্রয়োজন।");
@@ -132,6 +135,16 @@ TrailRef.implement({
     rows: t.field({ type: [TrailRowRef], resolve: (x) => x.rows }),
     bankGold: t.exposeInt("bankGold"),
     bankSeen: t.exposeInt("bankSeen"),
+    /** LP-3 (D-#825): the outcome's chapter as taught in class — each session with the child's presence.
+     *  Empty = not taught (or not marked) yet. Rides the trail's own gate. */
+    chapterLessons: t.field({
+      type: [StudentSessionRef],
+      resolve: async (x) => {
+        const subject = parseMasteryLoCode(x.outcome.loCode)?.subject;
+        if (!subject || x.outcome.chapterNumber == null) return [];
+        return chapterLessons(x.studentId, subject, String(x.outcome.chapterNumber));
+      },
+    }),
   }),
 });
 
