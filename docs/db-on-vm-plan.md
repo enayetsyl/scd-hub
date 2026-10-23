@@ -125,6 +125,10 @@ upload, confirm the card shows "ok", and force a failure (bad URI) to confirm th
 
 ## 6. Phase 3 — Rebuild runbook + one drill (Claude writes, owner and Claude drill)
 
+**DONE 2026-10-23 (D-#819).** The owner declined a paid drill VM, so the drill runs in a container on the current VM
+(`scripts/vm-drill.sh`). Runbook: `docs/runbook-vm-rebuild.md`. The first drill found a build OOM on smaller hosts (fixed);
+the second passed in 377 s (361,978 docs restored, 0 failed).
+
 **Deliverables (repo):**
 - `docs/runbook-vm-rebuild.md`
 - `scripts/vm-bootstrap.sh` (idempotent)

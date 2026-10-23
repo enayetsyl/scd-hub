@@ -1,14 +1,16 @@
-// Download a backup archive from the school Drive (SCD-Hub-Backups) for a
-// restore. Uses the GOOGLE_OAUTH_* creds in /opt/scdhub/prod/.env. Plain fetch.
+// Download a backup archive from the school Drive for a restore. Looks in BOTH pools —
+// the hourly one (SCD-Hub-Backups-Hourly, D-#818) and the nightly one (SCD-Hub-Backups) —
+// so `latest` is the newest copy that exists anywhere. Uses the GOOGLE_OAUTH_* creds in
+// /opt/scdhub/prod/.env. Plain fetch.
 //
 //   node scripts/restore-fetch.mjs [latest|<filename>] [outPath]
 //     default: latest -> /tmp/restore.archive.gz
 //
-// Then restore with mongorestore (see scripts/restore.md).
+// Then restore with mongorestore (see scripts/restore.md, docs/runbook-vm-rebuild.md).
 import fs from "fs";
 
 const ENVF = "/opt/scdhub/prod/.env";
-const FOLDER = "SCD-Hub-Backups";
+const FOLDERS = ["SCD-Hub-Backups-Hourly", "SCD-Hub-Backups"];
 const WHICH = process.argv[2] || "latest";
 const OUT = process.argv[3] || "/tmp/restore.archive.gz";
 
@@ -25,21 +27,21 @@ async function token() {
 }
 (async () => {
   const t = await token();
-  const fq = encodeURIComponent(`name='${FOLDER}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
-  const fol = await (await fetch(`https://www.googleapis.com/drive/v3/files?q=${fq}&fields=files(id)`, { headers: { Authorization: "Bearer " + t } })).json();
-  if (!fol.files || !fol.files[0]) throw new Error("backup folder not found");
-  const folderId = fol.files[0].id;
-  let file;
-  if (WHICH === "latest") {
-    const lq = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
-    const list = await (await fetch(`https://www.googleapis.com/drive/v3/files?q=${lq}&fields=files(id,name)&orderBy=createdTime desc&pageSize=1`, { headers: { Authorization: "Bearer " + t } })).json();
-    file = list.files && list.files[0];
-  } else {
-    const nq = encodeURIComponent(`'${folderId}' in parents and name='${WHICH}' and trashed=false`);
-    const list = await (await fetch(`https://www.googleapis.com/drive/v3/files?q=${nq}&fields=files(id,name)`, { headers: { Authorization: "Bearer " + t } })).json();
-    file = list.files && list.files[0];
+  const get = async (q, fields) =>
+    (await (await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(${fields})&orderBy=createdTime desc&pageSize=1`, { headers: { Authorization: "Bearer " + t } })).json()).files || [];
+  const candidates = [];
+  for (const name of FOLDERS) {
+    const [folder] = await get(`name='${name}' and mimeType='application/vnd.google-apps.folder' and trashed=false`, "id");
+    if (!folder) continue;
+    const q = WHICH === "latest"
+      ? `'${folder.id}' in parents and trashed=false`
+      : `'${folder.id}' in parents and name='${WHICH}' and trashed=false`;
+    const [f] = await get(q, "id,name,createdTime");
+    if (f) candidates.push({ ...f, folder: name });
   }
-  if (!file) throw new Error("no backup matching: " + WHICH);
+  if (candidates.length === 0) throw new Error("no backup matching: " + WHICH + " (looked in " + FOLDERS.join(", ") + ")");
+  const file = candidates.sort((a, b) => b.createdTime.localeCompare(a.createdTime))[0];
+  console.log("newest match: " + file.name + " in " + file.folder + " (created " + file.createdTime + ")");
   const dl = await fetch("https://www.googleapis.com/drive/v3/files/" + file.id + "?alt=media", { headers: { Authorization: "Bearer " + t } });
   if (!dl.ok) throw new Error("download " + dl.status);
   fs.writeFileSync(OUT, Buffer.from(await dl.arrayBuffer()));

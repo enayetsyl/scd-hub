@@ -1,0 +1,20 @@
+[Unit]
+Description=SCD Hub DEV server (Node/GraphQL)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=deploy
+WorkingDirectory=/opt/scdhub/dev
+ExecStart=/usr/bin/node server/dist/index.js
+Restart=always
+RestartSec=5
+Environment=NODE_ENV=production
+Environment=TZ=Asia/Dhaka
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=scdhub-dev
+
+[Install]
+WantedBy=multi-user.target
