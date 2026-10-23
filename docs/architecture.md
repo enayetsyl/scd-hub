@@ -20,7 +20,7 @@
 | ADR-008 | **`audit` log separate from `events`**, inside the firewall, append-only | Access accountability without polluting the corpus. |
 | ADR-009 | **Server-side Markdown→PDF**, one implementation | One Bangla-typography surface for all 3 clients. |
 | ADR-010 | **Expo (RN + RN-for-Web)** monorepo `/server` `/app` `/shared` | iOS + Android + Web from one codebase. |
-| ADR-011 | **Files in Drive, pointers in Mongo**; **scheduled Atlas→Drive backup + restore drill** | Cost-minimal storage; tested recoverability. |
+| ADR-011 | **Files in Drive, pointers in Mongo**; **scheduled mongodump→Drive backup + restore drill** (hourly + nightly since D-#818; the database itself on the VM since D-#817; a drilled rebuild runbook since D-#819) | Cost-minimal storage; tested recoverability. |
 | ADR-012 | **CI gate** with depth on dense logic + **fail-closed firewall test** | Confident refactoring of a long-lived monolith. |
 | ADR-013 | **Guardian = own collection; guardian↔student many-to-many; child-switcher** | One guardian, many children; one child, many guardians. |
 | ADR-014 | **GraphQL stack:** Yoga + Pothos + Envelop (server); graphql-codegen client-preset; **urql** client | Lightweight + free-tier-friendly vs Apollo platform gravity; Envelop/Pothos = home for resolver authz; codegen client-agnostic. |
@@ -177,10 +177,10 @@ The two logs answer different questions — `events` = "what pedagogy happened,"
 
 ## 11. Reliability & backup (ADR-011)
 
-- **Daily Atlas→Drive export** of structured records (ADR-016, D-#7a), with snapshot rotation (e.g. 7 daily / 4 weekly / a few monthly) against the 100 GB Drive.
+- **Drive backups** of the database (ADR-016, D-#7a): **hourly** (newest 48 kept) plus the **nightly** 7 daily / 4 weekly / 3 monthly rotation, against the 100 GB Drive. A weekly `restorecheck` restores the newest copy into a scratch DB. Failures are emailed (D-#818).
 - **Restore drill** is part of the requirement — an untested backup is not a backup. Document the restore procedure and run it before relying on it.
 - **Graceful degradation:** if a free tier throttles, reads (cached content/plans) keep working; writes queue or surface a clear retry.
-- Define a **capacity upgrade trigger** (M0 / Always-Free limits) and the migration path before the limit bites.
+- Define a **capacity upgrade trigger** (M0 / Always-Free limits) and the migration path before the limit bites. **Triggered 2026-10-22, executed 2026-10-23:** Atlas M0 reached ~88% of its 512 MB (dataSize + indexSize), and its 10 GB/week egress cap ruled out hourly backups, so the databases moved to the VM's own mongod (D-#817; 45 s downtime). Atlas M0 remains an emergency restore target. The rebuild procedure is `docs/runbook-vm-rebuild.md`, drilled in a container (D-#819).
 
 ---
 

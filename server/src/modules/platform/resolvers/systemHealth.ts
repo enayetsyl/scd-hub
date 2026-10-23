@@ -52,10 +52,14 @@ CollectionUsageRef.implement({
 
 const MongoHealthRef = builder.objectRef<MongoHealth>("MongoHealth");
 MongoHealthRef.implement({
-  description: "Atlas storage against the plan ceiling (a documented constant — no command reports it).",
+  description:
+    "Database size against its ceiling. `limitKind` says which ceiling (D-#832): VM_DISK = the " +
+    "database's size plus the VM disk's free space (prod's own mongod), ATLAS_M0 = the 512 MB " +
+    "plan cap, CONFIGURED = an explicit budget (ATLAS_STORAGE_LIMIT_MB).",
   fields: (t) => ({
     totalStorageBytes: t.float({ resolve: (m) => m.totalStorageBytes }),
     limitBytes: t.float({ resolve: (m) => m.limitBytes }),
+    limitKind: t.string({ resolve: (m) => m.limitKind }),
     band: t.string({ resolve: (m) => m.band }),
     databases: t.field({ type: [DatabaseUsageRef], resolve: (m) => m.databases }),
     topCollections: t.field({ type: [CollectionUsageRef], resolve: (m) => m.topCollections }),

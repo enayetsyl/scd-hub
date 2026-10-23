@@ -30,6 +30,8 @@ import {
   hostHealth,
   captureNetSnapshot,
   ATLAS_M0_LIMIT_BYTES,
+  resolveDbLimit,
+  countedBytes,
   DRIVE_DEFAULT_LIMIT_BYTES,
   WARN_RATIO,
   CRITICAL_RATIO,
@@ -77,6 +79,52 @@ describe("limits", () => {
     expect(atlasLimitBytes()).toBe(ATLAS_M0_LIMIT_BYTES);
     process.env.VM_EGRESS_LIMIT_GB = "not-a-number";
     expect(egressLimitBytes()).toBe(10 * 1024 ** 4);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// D-#832 — the database card after prod moved to the VM's own mongod (D-#817)
+// ---------------------------------------------------------------------------
+
+describe("resolveDbLimit — which ceiling the database card shows", () => {
+  const GB = 1024 ** 3;
+
+  test("on the VM: the database's size PLUS the disk's free space (how far it can still grow)", () => {
+    const r = resolveDbLimit({ configuredBytes: null, local: true, countedBytes: 0.3 * GB, diskFreeBytes: 77 * GB });
+    expect(r.limitKind).toBe("VM_DISK");
+    expect(r.limitBytes).toBe(77.3 * GB);
+    expect(bandFor(0.3 * GB, r.limitBytes)).toBe("ok");
+  });
+
+  test("the band rises when the DISK fills, even if the database has not grown", () => {
+    const r = resolveDbLimit({ configuredBytes: null, local: true, countedBytes: 10 * GB, diskFreeBytes: 1 * GB });
+    expect(bandFor(10 * GB, r.limitBytes)).toBe("critical");
+  });
+
+  test("no disk reading is UNKNOWN, never a false all-clear", () => {
+    const r = resolveDbLimit({ configuredBytes: null, local: true, countedBytes: 1 * GB, diskFreeBytes: null });
+    expect(bandFor(1 * GB, r.limitBytes)).toBe("unknown");
+  });
+
+  test("on Atlas the M0 cap still applies; a configured budget overrides both", () => {
+    expect(resolveDbLimit({ configuredBytes: null, local: false, countedBytes: 1, diskFreeBytes: 99 })).toEqual({
+      limitBytes: ATLAS_M0_LIMIT_BYTES,
+      limitKind: "ATLAS_M0",
+    });
+    expect(resolveDbLimit({ configuredBytes: 5 * GB, local: true, countedBytes: 1, diskFreeBytes: 99 })).toEqual({
+      limitBytes: 5 * GB,
+      limitKind: "CONFIGURED",
+    });
+  });
+});
+
+describe("countedBytes — measure what the ceiling actually counts", () => {
+  const stats = { dataSize: 354, storageSize: 133, indexSize: 39 };
+  test("on the VM: what the disk holds (compressed storage + indexes)", () => {
+    expect(countedBytes(stats, true)).toBe(172);
+  });
+  test("on Atlas: uncompressed data + indexes — M0 enforces that, and storageSize understated it", () => {
+    expect(countedBytes(stats, false)).toBe(393);
   });
 });
 
