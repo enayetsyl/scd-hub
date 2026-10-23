@@ -32,6 +32,12 @@ build() {
   # holds the GlitchTip DSN + EXPO_PUBLIC_ENV) and is likely shared by the prod and dev
   # checkouts — a cached export shipped a bundle with NO DSN on 2026-10-22, and could
   # bake the other env's label. A cold export costs a few minutes; a silent web is worse.
+  # The CI deploy's ssh carries no env, so the token also comes from the VM-only
+  # app/.env (gitignored, mode 600). Read the one line — never source that file.
+  if [ -z "${SENTRY_AUTH_TOKEN:-}" ] && [ -f app/.env ]; then
+    SENTRY_AUTH_TOKEN="$(sed -n 's/^SENTRY_AUTH_TOKEN=//p' app/.env | tail -1 | tr -d '"\r')"
+    export SENTRY_AUTH_TOKEN
+  fi
   if [ -n "${SENTRY_AUTH_TOKEN:-}" ]; then
     ( cd app \
         && npx expo export --platform web --clear --source-maps \

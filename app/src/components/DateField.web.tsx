@@ -24,9 +24,15 @@ export function DateField({ label, value, onChange, min, max, helper, error }: D
 
   const openPicker = (): void => {
     const input = inputRef.current as (HTMLInputElement & { showPicker?: () => void }) | null;
-    input?.showPicker?.();
-    input?.click();
-    input?.focus();
+    if (!input) return;
+    input.focus();
+    // showPicker throws NotAllowedError without a fresh user gesture; fall back to a click then.
+    try {
+      if (input.showPicker) return input.showPicker();
+    } catch {
+      /* fall through */
+    }
+    input.click();
   };
 
   return (
@@ -59,6 +65,8 @@ export function DateField({ label, value, onChange, min, max, helper, error }: D
           min={min}
           max={max}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e.currentTarget.value)}
+          // input.click() must not bubble back to the Pressable and re-enter openPicker.
+          onClick={(e: React.MouseEvent<HTMLInputElement>) => e.stopPropagation()}
           aria-label={label ?? "Date picker"}
           tabIndex={-1}
           style={{
