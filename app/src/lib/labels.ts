@@ -4762,6 +4762,8 @@ const STR_BN = {
   cmNewComment: "নতুন মন্তব্য",
   cmCommentsFor: "মন্তব্যসমূহ",
   cmNoComments: "এখনো কোনো মন্তব্য নেই।",
+  cmCommentsOtherSection:
+    "এই শাখার আগের মন্তব্যগুলো শুধু এই শাখার শিক্ষকরা দেখতে পারেন। আপনি উপরের তালিকা থেকে যেকোনো শিক্ষার্থীর জন্য নতুন মন্তব্য লিখতে পারবেন।",
   cmEntryTitle: "মন্তব্য এন্ট্রি",
   cmSave: "মন্তব্য সংরক্ষণ",
   cmSaved: "মন্তব্য সংরক্ষিত হয়েছে",
@@ -10258,6 +10260,8 @@ const STR_EN: StrTable = {
   cmNewComment: "New comment",
   cmCommentsFor: "Comments",
   cmNoComments: "No comments yet.",
+  cmCommentsOtherSection:
+    "Past comments for this section are visible only to its teachers. You can still write a new comment for any student above.",
   cmEntryTitle: "Comment entry",
   cmSave: "Save comment",
   cmSaved: "Comment saved",
