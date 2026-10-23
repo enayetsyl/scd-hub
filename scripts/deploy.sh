@@ -41,8 +41,8 @@ build() {
   if [ -n "${SENTRY_AUTH_TOKEN:-}" ]; then
     ( cd app \
         && npx expo export --platform web --clear --source-maps \
-        && { npx sentry-cli sourcemaps upload \
-               --url https://scdhub-errors.shafayet.me --org scd --project scdhub-app \
+        && { npx sentry-cli --url https://scdhub-errors.shafayet.me sourcemaps upload \
+               --org scd --project scdhub-app \
                --release "$(git rev-parse HEAD)" dist \
              || say "sentry sourcemap upload failed (non-fatal)"; } \
         ; find dist -name '*.map' -delete )
