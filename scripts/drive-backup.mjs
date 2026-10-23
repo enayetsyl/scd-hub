@@ -4,22 +4,29 @@
 // rest. Only files with a YYYY-MM-DD date in their name are considered/deleted;
 // anything else in the folder is left untouched. Plain fetch, no deps.
 //
-//   node scripts/drive-backup.mjs <archive-file> [folder-name]
+//   node scripts/drive-backup.mjs <archive-file> [folder-name] [--keep-newest=N]
 //
 // [folder-name] defaults to "SCD-Hub-Backups" (the prod Mongo archives). Pass a
 // distinct folder (e.g. "SCD-Hub-Backups-GlitchTip", MON-1) to keep a separate
 // rotation pool so unrelated backups never rotate against each other.
+// --keep-newest=N replaces the 7/4/3 rotation with "keep the newest N" — the hourly pool
+// (SCD-Hub-Backups-Hourly, DB-on-VM plan Phase 2) keeps 48, i.e. two days of hours.
 //
 // Reads GOOGLE_OAUTH_* from /opt/scdhub/prod/.env.
 import fs from "fs";
 import path from "path";
 
 const ENVF = "/opt/scdhub/prod/.env";
-const FOLDER = process.argv[3] || "SCD-Hub-Backups";
 const DAY = 86400000;
+const ARGS = process.argv.slice(2);
+const POS = ARGS.filter((a) => !a.startsWith("--"));
+const FILE = POS[0];
+const FOLDER = POS[1] || "SCD-Hub-Backups";
+const KEEP_FLAG = ARGS.find((a) => a.startsWith("--keep-newest="));
+const KEEP_NEWEST = KEEP_FLAG ? Number(KEEP_FLAG.split("=")[1]) : null;
 
-const FILE = process.argv[2];
-if (!FILE || !fs.existsSync(FILE)) { console.error("usage: drive-backup.mjs <file>"); process.exit(1); }
+if (!FILE || !fs.existsSync(FILE)) { console.error("usage: drive-backup.mjs <file> [folder] [--keep-newest=N]"); process.exit(1); }
+if (KEEP_FLAG && !(Number.isInteger(KEEP_NEWEST) && KEEP_NEWEST >= 1)) { console.error("--keep-newest needs a whole number >= 1"); process.exit(1); }
 
 const env = fs.readFileSync(ENVF, "utf8");
 const v = (k) => { const m = env.match(new RegExp("^" + k + "=(.*)$", "m")); return m ? m[1].trim() : null; };
@@ -69,6 +76,10 @@ const weekKey = (d) => {
 const monthKey = (d) => { const x = new Date(d); return x.getUTCFullYear() + "-" + String(x.getUTCMonth() + 1).padStart(2, "0"); };
 
 function toDelete(files, now) {
+  if (KEEP_NEWEST) {
+    // Names carry YYYY-MM-DD_HHMMSS, so name order is time order (several per day).
+    return [...files].sort((a, b) => b.name.localeCompare(a.name)).slice(KEEP_NEWEST).map((f) => f.id);
+  }
   const keep = new Set();
   const sorted = [...files].sort((a, b) => b.date - a.date);
   for (const f of sorted) if (now - f.date <= 7 * DAY) keep.add(f.id);     // daily: last 7 days

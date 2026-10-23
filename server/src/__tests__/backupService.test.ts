@@ -20,6 +20,14 @@ import {
   BACKUP_WARN_DAYS,
   BACKUP_CRITICAL_DAYS,
   BACKUP_LIST_LIMIT,
+  hourlyBackupStatus,
+  hourlyBackupBand,
+  prodDbIsLocal,
+  HOURLY_BACKUP_FOLDER,
+  HOURLY_WARN_HOURS_LOCAL,
+  HOURLY_CRITICAL_HOURS_LOCAL,
+  HOURLY_WARN_HOURS_REMOTE,
+  HOURLY_CRITICAL_HOURS_REMOTE,
 } from "../modules/platform/services/BackupService";
 
 const NOW = new Date("2026-08-01T12:00:00Z");
@@ -147,5 +155,66 @@ describe("backupStatus", () => {
     expect(mockList).toHaveBeenCalledTimes(1);
     expect(later.ageDays).toBe(2);
     expect(later.band).toBe("warn");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// D-#818 — the hourly pool, banded in hours by where prod lives
+// ---------------------------------------------------------------------------
+
+describe("prodDbIsLocal", () => {
+  test("the VM's own mongod is local, with or without credentials", () => {
+    expect(prodDbIsLocal("mongodb://127.0.0.1:27017/scdhub_prod")).toBe(true);
+    expect(prodDbIsLocal("mongodb://scdhub_prod:pw@127.0.0.1:27017/scdhub_prod?authSource=admin&replicaSet=rs0")).toBe(true);
+    expect(prodDbIsLocal("mongodb://localhost/scdhub_prod")).toBe(true);
+  });
+
+  test("Atlas (and a host that merely CONTAINS 127.0.0.1) is not", () => {
+    expect(prodDbIsLocal("mongodb+srv://u:p@cluster0.twe5xqs.mongodb.net/scdhub_prod")).toBe(false);
+    expect(prodDbIsLocal("mongodb://u:p@127.0.0.1.evil.example/x")).toBe(false);
+    expect(prodDbIsLocal("")).toBe(false);
+  });
+});
+
+describe("hourlyBackupBand", () => {
+  test("on the VM: warn after 2 h, critical after 6 h", () => {
+    expect(hourlyBackupBand(true, 1, true)).toBe("ok");
+    expect(hourlyBackupBand(true, HOURLY_WARN_HOURS_LOCAL, true)).toBe("warn");
+    expect(hourlyBackupBand(true, HOURLY_CRITICAL_HOURS_LOCAL, true)).toBe("critical");
+  });
+
+  test("on Atlas the job runs once a day, so a day-old copy is still ok", () => {
+    expect(hourlyBackupBand(true, 20, false)).toBe("ok");
+    expect(hourlyBackupBand(true, HOURLY_WARN_HOURS_REMOTE, false)).toBe("warn");
+    expect(hourlyBackupBand(true, HOURLY_CRITICAL_HOURS_REMOTE, false)).toBe("critical");
+  });
+
+  test("no folder / empty folder is critical either way", () => {
+    expect(hourlyBackupBand(false, null, true)).toBe("critical");
+    expect(hourlyBackupBand(true, null, false)).toBe("critical");
+  });
+});
+
+describe("hourlyBackupStatus", () => {
+  test("lists the hourly folder, reports age in hours, and caches apart from the daily pool", async () => {
+    const hourAgo = (h: number, id: string) => ({
+      id,
+      name: `scdhub_prod-2026-08-01_${String(12 - h).padStart(2, "0")}0501.archive.gz`,
+      createdTime: new Date(NOW.getTime() - h * 3_600_000).toISOString(),
+      sizeBytes: 50_000_000,
+    });
+    mockList.mockImplementation(async (name: string) =>
+      name === HOURLY_BACKUP_FOLDER ? [hourAgo(3, "h3"), hourAgo(1, "h1")] : [archive(0)],
+    );
+    const hourly = await hourlyBackupStatus(NOW);
+    const daily = await backupStatus(NOW);
+    expect(mockList).toHaveBeenCalledWith(HOURLY_BACKUP_FOLDER);
+    expect(hourly.folder).toBe(HOURLY_BACKUP_FOLDER);
+    expect(hourly.count).toBe(2);
+    expect(hourly.ageHours).toBe(1);
+    expect(hourly.newestName).toContain("_110501");
+    // One folder's cache never answers for the other.
+    expect(daily.folder).toBe(BACKUP_FOLDER);
+    expect(daily.count).toBe(1);
   });
 });
