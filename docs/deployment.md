@@ -117,13 +117,21 @@ One Oracle Always-Free VM (Ubuntu, ARM Ampere shape) runs everything server-side
                   ┌──────────────── Oracle VM ────────────────┐
 yourdomain  ──►   │ Caddy (auto-HTTPS, reverse proxy)         │
 dev.yourdomain ─► │  ├─ / → prod web export   (static files)  │
-                  │  ├─ /graphql,/pdf,/healthz → prod server  │──► Atlas M0 (prod DB)
-                  │  └─ dev.* → dev web + dev server          │──► Atlas (separate dev DB)
+                  │  ├─ /graphql,/pdf,/healthz → prod server  │
+                  │  └─ dev.* → dev web + dev server          │
                   │ systemd: scdhub-prod.service              │
                   │          scdhub-dev.service               │
-                  │ cron: nightly Atlas→Drive backup (prod)   │
+                  │ mongod (127.0.0.1, auth, rs0): prod + dev │
+                  │ cron: hourly + nightly mongodump → Drive  │
                   └───────────────────────────────────────────┘
 ```
+
+> **Since 2026-10-23 (D-#817) the databases run on the VM's own `mongod`, not Atlas M0.**
+> Atlas hit its 512 MB hard cap (dataSize + indexSize), and its 10 GB/week egress cap made
+> hourly backups impossible. Backups are hourly (newest 48) plus the nightly 7/4/3 rotation, both
+> on Drive, with failures emailed (D-#818). A rebuild is drilled: `docs/runbook-vm-rebuild.md`
+> (D-#819). The VM config lives in `ops/`. The diagram above replaces the original Atlas topology;
+> Atlas M0 is kept only as an emergency restore target.
 
 - **Caddy** chosen for automatic TLS issuance/renewal (zero-touch certificates for a solo
   operator). Nginx is the fallback if Caddy misbehaves on the ARM shape.

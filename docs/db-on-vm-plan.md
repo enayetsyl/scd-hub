@@ -199,6 +199,8 @@ and it also frees ~28 MB on Atlas.
 
 ## 8. Phase 5 — After the cutover
 
+**DONE 2026-10-23 (D-#832).** The health card and docs are done, and the stop-gap is removed. Only the Atlas cleanup on **2026-11-06** remains.
+
 - **System Health (code PR):** the DB card stops presenting an Atlas M0 cap. It shows DB size against the
   VM disk, and the disk card already exists. Retire `ATLAS_M0_LIMIT_BYTES` and keep the env override.
 - **Atlas:** keep it untouched for **14 days** as a cold copy, then drop `scdhub_dev`/`scdhub_local`.

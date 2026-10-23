@@ -29,6 +29,8 @@ export interface SystemHealthT {
   mongo: {
     totalStorageBytes: number;
     limitBytes: number;
+    /** D-#832: which ceiling `limitBytes` is. */
+    limitKind: "VM_DISK" | "ATLAS_M0" | "CONFIGURED";
     band: HealthBandT;
     databases: DatabaseUsageT[];
     topCollections: CollectionUsageT[];
@@ -115,6 +117,7 @@ export const SYSTEM_HEALTH_QUERY = gql<{ systemHealth: SystemHealthT }, Record<s
       checkedAt
       mongo {
         totalStorageBytes
+        limitKind
         limitBytes
         band
         clusterWide

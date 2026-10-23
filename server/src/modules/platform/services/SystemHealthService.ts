@@ -44,6 +44,7 @@ import {
 import {
   backupStatus,
   hourlyBackupStatus,
+  prodDbIsLocal,
   emptyBackupStatus,
   BACKUP_FOLDER,
   HOURLY_BACKUP_FOLDER,
@@ -61,9 +62,39 @@ export const ATLAS_M0_LIMIT_BYTES = 512 * 1024 * 1024;
 /** The VM's monthly egress allowance, likewise a documented constant. */
 export const VM_EGRESS_LIMIT_BYTES = 10 * 1024 ** 4; // 10 TB
 
-export function atlasLimitBytes(): number {
+/** An explicit DB budget in MB, if one is configured. The env name predates the move off
+ *  Atlas (D-#817) and is kept so existing .env files keep meaning the same thing. */
+function configuredDbLimitBytes(): number | null {
   const override = Number(process.env.ATLAS_STORAGE_LIMIT_MB);
-  return Number.isFinite(override) && override > 0 ? override * 1024 * 1024 : ATLAS_M0_LIMIT_BYTES;
+  return Number.isFinite(override) && override > 0 ? override * 1024 * 1024 : null;
+}
+
+export function atlasLimitBytes(): number {
+  return configuredDbLimitBytes() ?? ATLAS_M0_LIMIT_BYTES;
+}
+
+/**
+ * What the database card measures against (D-#832). Since prod moved to the VM's own
+ * mongod (D-#817) there is no plan cap: the honest ceiling is how far the database can
+ * still grow, i.e. its own size PLUS the disk's free space, so the band rises when either
+ * the data grows or something else (backups, logs) eats the disk. On Atlas the M0 cap
+ * still applies. A configured budget overrides both.
+ */
+export type DbLimitKind = "VM_DISK" | "ATLAS_M0" | "CONFIGURED";
+
+export function resolveDbLimit(input: {
+  configuredBytes: number | null;
+  local: boolean;
+  countedBytes: number;
+  diskFreeBytes: number | null;
+}): { limitBytes: number; limitKind: DbLimitKind } {
+  if (input.configuredBytes) return { limitBytes: input.configuredBytes, limitKind: "CONFIGURED" };
+  if (!input.local) return { limitBytes: ATLAS_M0_LIMIT_BYTES, limitKind: "ATLAS_M0" };
+  // No disk reading → 0, which bandFor() turns into "unknown" rather than a false all-clear.
+  return {
+    limitBytes: input.diskFreeBytes === null ? 0 : input.countedBytes + input.diskFreeBytes,
+    limitKind: "VM_DISK",
+  };
 }
 
 export function egressLimitBytes(): number {
@@ -96,7 +127,8 @@ export interface CollectionUsage {
 
 export interface DatabaseUsage {
   name: string;
-  /** Compressed storage + indexes — the figure Atlas bills against the 512 MB. */
+  /** The bytes counted against the limit: on the VM, compressed storage + indexes (what
+   *  the disk actually holds); on Atlas, dataSize + indexSize (what M0 enforces, D-#832). */
   storageBytes: number;
   dataSizeBytes: number;
   objects: number;
@@ -108,6 +140,8 @@ export interface MongoHealth {
   /** Sum of `storageBytes` across every database visible on the cluster. */
   totalStorageBytes: number;
   limitBytes: number;
+  /** What `limitBytes` means — the card names it (D-#832). */
+  limitKind: DbLimitKind;
   band: HealthBand;
   databases: DatabaseUsage[];
   /** Largest collections in the CURRENT database — where the growth actually is. */
@@ -207,23 +241,35 @@ export interface SystemHealth {
 // Mongo
 // ---------------------------------------------------------------------------
 
-interface DbStatsShape {
+export interface DbStatsShape {
   dataSize?: number;
   storageSize?: number;
   indexSize?: number;
   objects?: number;
 }
 
-/** Storage as the cap counts it: compressed collection storage PLUS indexes. */
-function billedBytes(s: DbStatsShape): number {
-  return (s.storageSize ?? 0) + (s.indexSize ?? 0);
+/** The bytes a database counts against its limit. On the VM that is what the disk holds
+ *  (compressed storage + indexes). Atlas M0 enforces the UNCOMPRESSED dataSize + indexSize
+ *  — reading storageSize there understated usage by more than half (D-#832). */
+export function countedBytes(s: DbStatsShape, local: boolean): number {
+  return local ? (s.storageSize ?? 0) + (s.indexSize ?? 0) : (s.dataSize ?? 0) + (s.indexSize ?? 0);
+}
+
+async function rootDiskFreeBytes(): Promise<number | null> {
+  try {
+    const s = await statfs(process.platform === "win32" ? "C:\\" : "/");
+    return Number(s.bavail) * Number(s.bsize);
+  } catch {
+    return null;
+  }
 }
 
 export async function mongoHealth(): Promise<MongoHealth> {
-  const limitBytes = atlasLimitBytes();
+  const local = prodDbIsLocal();
+  const configuredBytes = configuredDbLimitBytes();
   const empty: MongoHealth = {
     totalStorageBytes: 0,
-    limitBytes,
+    ...resolveDbLimit({ configuredBytes, local, countedBytes: 0, diskFreeBytes: null }),
     band: "unknown",
     databases: [],
     topCollections: [],
@@ -264,7 +310,7 @@ export async function mongoHealth(): Promise<MongoHealth> {
       const stats = (await sibling.stats()) as DbStatsShape;
       databases.push({
         name,
-        storageBytes: billedBytes(stats),
+        storageBytes: countedBytes(stats, local),
         dataSizeBytes: stats.dataSize ?? 0,
         objects: stats.objects ?? 0,
         isCurrent: name === currentName,
@@ -304,9 +350,16 @@ export async function mongoHealth(): Promise<MongoHealth> {
   }
 
   const totalStorageBytes = databases.reduce((n, d) => n + d.storageBytes, 0);
+  const { limitBytes, limitKind } = resolveDbLimit({
+    configuredBytes,
+    local,
+    countedBytes: totalStorageBytes,
+    diskFreeBytes: local && !configuredBytes ? await rootDiskFreeBytes() : null,
+  });
   return {
     totalStorageBytes,
     limitBytes,
+    limitKind,
     band: bandFor(totalStorageBytes, limitBytes),
     databases: databases.sort((a, b) => b.storageBytes - a.storageBytes),
     topCollections: topCollections.slice(0, 10),
