@@ -182,6 +182,7 @@ BackupStatusRef.implement({
     newestAt: t.string({ nullable: true, resolve: (b) => b.newestAt }),
     newestSizeBytes: t.float({ nullable: true, resolve: (b) => b.newestSizeBytes }),
     ageDays: t.int({ nullable: true, resolve: (b) => b.ageDays }),
+    ageHours: t.int({ nullable: true, resolve: (b) => b.ageHours }),
     totalSizeBytes: t.float({ resolve: (b) => b.totalSizeBytes }),
     band: t.string({ resolve: (b) => b.band }),
     error: t.string({ nullable: true, resolve: (b) => b.error }),
@@ -200,6 +201,7 @@ SystemHealthRef.implement({
     projection: t.field({ type: ProjectionRef, resolve: (s) => s.projection }),
     prunable: t.field({ type: [PrunableRef], resolve: (s) => s.prunable }),
     backup: t.field({ type: BackupStatusRef, resolve: (s) => s.backup }),
+    hourlyBackup: t.field({ type: BackupStatusRef, resolve: (s) => s.hourlyBackup }),
     checkedAt: t.string({ resolve: (s) => s.checkedAt.toISOString() }),
   }),
 });
