@@ -155,10 +155,10 @@ estimates for the console steps:
 | Step | Drill | Estimate |
 |---|---|---|
 | 2 provision (console) | — | 15 min |
-| 3 bootstrap | _see §11_ | 10 min |
+| 3 bootstrap | 73 s | 10 min |
 | 4 secrets | — | 10 min |
-| 5 restore | _see §11_ | 5 min |
-| 6 build + start | _see §11_ | 10 min |
+| 5 restore (download 9 s + mongorestore 17 s) | 26 s | 5 min |
+| 6 build + start (npm + server 126 s, web 121 s, boot 5 s) | 252 s | 10 min |
 | 7 DNS + GitHub | — | 5 min |
 | 8 verify | — | 10 min |
 
@@ -172,3 +172,5 @@ change to the bootstrap or to `deploy.sh`.
 
 | Date | Ref | Result | Total |
 |---|---|---|---|
+| 2026-10-23 | feat/vm-runbook | **FAIL** at the server build: `tsc` ran out of heap. Node sizes its heap from RAM (~2 GB in an 8 GB box vs ~4 GB on the 24 GB VM). Fixed: `deploy.sh` pins `--max-old-space-size=4096`. | 100 s |
+| 2026-10-23 | feat/vm-runbook | **PASS.** Newest backup `scdhub_prod-2026-10-23_023001` (nightly pool); 361,978 docs restored, 0 failed; 170 collections, 91 students, 29 users; `/readyz` ok, GraphQL ok, web bundle built, 0 error lines; network cut before boot | 377 s |
