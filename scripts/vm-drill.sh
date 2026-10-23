@@ -47,10 +47,10 @@ lap "kit material in place (.env -> container mongod only)"
 inside "bash /opt/scdhub/prod/scripts/vm-bootstrap.sh --drill" | sed 's/^/    /'
 lap "vm-bootstrap.sh --drill (node, mongo, users, rs0)"
 
-inside "cd /opt/scdhub/prod && npm install --no-audit --no-fund >/tmp/npm.log 2>&1 && npm run build --workspace=shared >/dev/null && npm run build --workspace=server >/dev/null"
+inside "export NODE_OPTIONS=--max-old-space-size=4096; cd /opt/scdhub/prod && npm install --no-audit --no-fund >/tmp/npm.log 2>&1 && npm run build --workspace=shared >/dev/null && npm run build --workspace=server >/dev/null"
 lap "npm install + build shared + server"
 
-inside "cd /opt/scdhub/prod/app && npx expo export --platform web --clear >/tmp/export.log 2>&1 && test -f dist/index.html"
+inside "export NODE_OPTIONS=--max-old-space-size=4096; cd /opt/scdhub/prod/app && npx expo export --platform web --clear >/tmp/export.log 2>&1 && test -f dist/index.html"
 lap "web export (expo, --clear)"
 
 inside "cd /opt/scdhub/prod && node scripts/restore-fetch.mjs latest /tmp/restore.archive.gz" | sed 's/^/    /'
