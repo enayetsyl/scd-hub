@@ -167,6 +167,13 @@ restores into the temporary VM, never prod. Record the actual RTO in the runbook
 
 ## 7. Phase 4 — Cutover (owner picks the night; Claude runs it, auto mode OFF)
 
+**DONE 2026-10-23 (D-#817)** with `ops/phase4-move-db.sh`, on the owner's "do phase 4 now".
+- Dev: 21:54, 28 s, 16,724 docs.
+- Prod: 21:56, **45 s downtime**, 362,265 docs / 169 collections, every count and index equal to Atlas.
+- The first local hourly backup ran at 21:57.
+- Rollback material: `/opt/scdhub/backups/phase4-{dev,prod}-20261023T*`.
+- Atlas: untouched until 2026-11-06.
+
 **Rehearsal first: move `dev` on an earlier day using the same procedure.** It is the low-risk dry run,
 and it also frees ~28 MB on Atlas.
 
