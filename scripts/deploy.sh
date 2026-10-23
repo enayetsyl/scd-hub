@@ -19,6 +19,11 @@ esac
 
 say() { echo "[deploy:$ENV] $*"; }
 build() {
+  # The server's `tsc --build` needs more than Node's default heap on a smaller machine: Node
+  # sizes it from RAM, so the 24 GB VM gets ~4 GB but an 8 GB host gets ~2 GB, and the build
+  # died there with "JavaScript heap out of memory" (rebuild drill, 2026-10-23, D-#819).
+  # Pinning the 4 GB the VM already uses keeps a rebuild on a smaller VM from failing here.
+  export NODE_OPTIONS="${NODE_OPTIONS:-} --max-old-space-size=4096"
   npm install --no-audit --no-fund
   npm run build --workspace=shared
   npm run build --workspace=server

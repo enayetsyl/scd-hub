@@ -1,0 +1,5 @@
+PATH=/usr/local/bin:/usr/bin:/bin
+30 2 * * * /bin/bash /opt/scdhub/prod/scripts/backup.sh >> /opt/scdhub/cron.log 2>&1
+5 * * * * /bin/bash /opt/scdhub/prod/scripts/backup.sh hourly >> /opt/scdhub/cron.log 2>&1
+45 3 * * 0 /bin/bash /opt/scdhub/prod/scripts/backup.sh restorecheck >> /opt/scdhub/cron.log 2>&1
+*/15 * * * * /bin/bash /opt/scdhub/prod/scripts/host-alert.sh >> /opt/scdhub/cron.log 2>&1

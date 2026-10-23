@@ -1,0 +1,105 @@
+{
+	# D-#765/#766: requests reach Caddy through Cloudflare, so the visitor's address is in
+	# Cf-Connecting-Ip. Trust that header ONLY from Cloudflare's published ranges
+	# (https://www.cloudflare.com/ips) -- anything connecting directly keeps its own
+	# address, so the header cannot be forged by skipping Cloudflare. {client_ip} below
+	# is the result; the API reads it as X-Real-IP for the login lockout.
+	servers {
+		trusted_proxies static 173.245.48.0/20 103.21.244.0/22 103.22.200.0/22 103.31.4.0/22 141.101.64.0/18 108.162.192.0/18 190.93.240.0/20 188.114.96.0/20 197.234.240.0/22 198.41.128.0/17 162.158.0.0/15 104.16.0.0/13 104.24.0.0/14 172.64.0.0/13 131.0.72.0/22 2400:cb00::/32 2606:4700::/32 2803:f800::/32 2405:b500::/32 2405:8100::/32 2a06:98c0::/29 2c0f:f248::/32
+		client_ip_headers Cf-Connecting-Ip
+	}
+}
+
+# D-#766: browser security headers for the app (prod + dev). HSTS without
+# includeSubDomains (other shafayet.me sites are not ours to pin); framing allowed only
+# from the same origin; no MIME sniffing; referrer trimmed to the origin cross-site.
+(security_headers) {
+	header {
+		Strict-Transport-Security "max-age=15552000"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+}
+
+# Origin lockdown (docs/origin-lockdown-plan.md, 2026-10-18): Cloudflare Origin CA
+# certificate (*.shafayet.me, valid to 2041; replaces Let's Encrypt, whose HTTP-01 check
+# cannot pass once 80/443 only accept Cloudflare) + Authenticated Origin Pulls: a TLS
+# connection without Cloudflare's client certificate is refused. The pull CA expires
+# 2029-11-01 -- replace /etc/caddy/certs/cf-origin-pull-ca.pem before then.
+(cloudflare_only) {
+	tls /etc/caddy/certs/origin.pem /etc/caddy/certs/origin.key {
+		client_auth {
+			mode require_and_verify
+			trust_pool file /etc/caddy/certs/cf-origin-pull-ca.pem
+		}
+	}
+}
+
+scdhub.shafayet.me {
+	import cloudflare_only
+	encode gzip zstd
+	import security_headers
+	@api path /graphql* /healthz /readyz /pdf* /files* /triggers* /events* /export*
+	handle @api {
+		reverse_proxy 127.0.0.1:4000 {
+			header_up X-Real-IP {client_ip}
+		}
+	}
+	# Self-hosted Android distribution (D-#311): APK + version.json live outside the
+	# deploy dirs so deploys/rollbacks never touch them. version.json is no-store so
+	# the in-app update gate never reads a stale versionCode through Cloudflare.
+	handle_path /downloads/* {
+		root * /opt/scdhub/downloads
+		header /scd-hub-latest.apk Content-Type application/vnd.android.package-archive
+		header /scd-hub-latest.apk Content-Disposition "attachment; filename=scd-hub.apk"
+		header /version.json Cache-Control "no-store"
+		file_server
+	}
+	handle {
+		root * /opt/scdhub/prod/app/dist
+		@immutable path /_expo/static/* /assets/*
+		header @immutable Cache-Control "public, max-age=31536000, immutable"
+		@nonasset not path /_expo/static/* /assets/*
+		header @nonasset Cache-Control "no-cache"
+		try_files {path} /index.html
+		file_server
+	}
+}
+
+(dev_site) {
+	encode gzip zstd
+	import security_headers
+	@api path /graphql* /healthz /readyz /pdf* /files* /triggers* /events* /export*
+	handle @api {
+		reverse_proxy 127.0.0.1:4001 {
+			header_up X-Real-IP {client_ip}
+		}
+	}
+	handle {
+		basic_auth {
+			dev <DEV_BASIC_AUTH_BCRYPT_HASH - from the kit (vm-files.tgz etc/caddy/Caddyfile) or: caddy hash-password>
+		}
+		root * /opt/scdhub/dev/app/dist
+		@immutable path /_expo/static/* /assets/*
+		header @immutable Cache-Control "public, max-age=31536000, immutable"
+		@nonasset not path /_expo/static/* /assets/*
+		header @nonasset Cache-Control "no-cache"
+		try_files {path} /index.html
+		file_server
+	}
+}
+
+# Dev, single-label so Cloudflare can proxy it (was dev.scdhub, two labels deep).
+scdhub-dev.shafayet.me {
+	import cloudflare_only
+	import dev_site
+}
+
+# Single-label host so Cloudflare Universal SSL (*.shafayet.me) covers it and it
+# can be PROXIED like prod. errors.scdhub.shafayet.me is two labels deep -> not covered.
+scdhub-errors.shafayet.me {
+	import cloudflare_only
+	reverse_proxy 127.0.0.1:8050
+}
