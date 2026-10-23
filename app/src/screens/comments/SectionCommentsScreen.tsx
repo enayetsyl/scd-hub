@@ -23,6 +23,7 @@ import { usePageState, PAGE_SIZE } from "../../lib/paging";
 import { ClassSectionSelect, type SectionPick } from "../../components/vocabPickers";
 import { AcademicYearSelect } from "../../components/selects";
 import { STR, commentTypeLabel, commentSentimentLabel, isoDateLabel } from "../../lib/labels";
+import { isForbidden } from "../../lib/errors";
 import { space } from "../../theme/tokens";
 import type { CommentsStackParamList } from "../../navigation/types";
 
@@ -51,6 +52,10 @@ export default function SectionCommentsScreen(): React.ReactElement {
   // Newest first (the server pages in that order).
   const comments = commentsQ.data?.sectionStudentCommentsPage?.rows ?? [];
   const commentsTotal = commentsQ.data?.sectionStudentCommentsPage?.total ?? 0;
+  // A teacher may WRITE on any student (D-#263) but only READS her own sections'
+  // comment list — a Forbidden here is expected, not a failure: say so in the card
+  // instead of the generic "no write permission" banner (which read as "can't write").
+  const commentsHidden = isForbidden(commentsQ.error);
 
   useEffect(() => {
     const unsub = nav.addListener("focus", () => {
@@ -74,7 +79,7 @@ export default function SectionCommentsScreen(): React.ReactElement {
           </Card>
         ) : (
           <QueryGate
-            results={[studentsQ, commentsQ]}
+            results={commentsHidden ? [studentsQ] : [studentsQ, commentsQ]}
             onRetry={() => {
               refetchStudents({ requestPolicy: "network-only" });
               refetchComments({ requestPolicy: "network-only" });
@@ -109,7 +114,9 @@ export default function SectionCommentsScreen(): React.ReactElement {
 
             <Card>
               <Body style={{ fontWeight: "700" }}>{STR.cmCommentsFor}</Body>
-              {comments.length === 0 ? (
+              {commentsHidden ? (
+                <Muted style={{ marginTop: space(2) }}>{STR.cmCommentsOtherSection}</Muted>
+              ) : comments.length === 0 ? (
                 <Muted style={{ marginTop: space(2) }}>{STR.cmNoComments}</Muted>
               ) : (
                 comments.map((c) => {
