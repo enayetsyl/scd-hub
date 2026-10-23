@@ -153,6 +153,15 @@ export default function SystemHealthScreen(_props: Props): React.ReactElement {
           {dbPct !== null ? ` · ${bnNum(dbPct.toFixed(1))}%` : ""}
         </Body>
         <UsageBar ratio={dbPct} band={h.mongo.band} />
+        {/* D-#832: name the ceiling — since D-#817 prod runs on the VM's own mongod, where the
+            limit is "how far it can still grow", not a plan cap. */}
+        <Muted style={{ marginTop: space(1) }}>
+          {h.mongo.limitKind === "VM_DISK"
+            ? STR.shDbLimitVmDisk
+            : h.mongo.limitKind === "ATLAS_M0"
+              ? STR.shDbLimitAtlas
+              : STR.shDbLimitConfigured}
+        </Muted>
         {/* The cap is cluster-wide, so a total that silently omitted the test copies
             would read as far more headroom than the school actually has. */}
         {!h.mongo.clusterWide ? <Notice message={STR.shNotClusterWide} tone="warn" /> : null}

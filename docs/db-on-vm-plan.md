@@ -167,6 +167,13 @@ restores into the temporary VM, never prod. Record the actual RTO in the runbook
 
 ## 7. Phase 4 — Cutover (owner picks the night; Claude runs it, auto mode OFF)
 
+**DONE 2026-10-23 (D-#817)** with `ops/phase4-move-db.sh`, on the owner's "do phase 4 now".
+- Dev: 21:54, 28 s, 16,724 docs.
+- Prod: 21:56, **45 s downtime**, 362,265 docs / 169 collections, every count and index equal to Atlas.
+- The first local hourly backup ran at 21:57.
+- Rollback material: `/opt/scdhub/backups/phase4-{dev,prod}-20261023T*`.
+- Atlas: untouched until 2026-11-06.
+
 **Rehearsal first: move `dev` on an earlier day using the same procedure.** It is the low-risk dry run,
 and it also frees ~28 MB on Atlas.
 
@@ -191,6 +198,8 @@ and it also frees ~28 MB on Atlas.
   evening only**. After that, roll forward: fix on the VM, and use the hourly backups if needed.
 
 ## 8. Phase 5 — After the cutover
+
+**DONE 2026-10-23 (D-#832).** The health card and docs are done, and the stop-gap is removed. Only the Atlas cleanup on **2026-11-06** remains.
 
 - **System Health (code PR):** the DB card stops presenting an Atlas M0 cap. It shows DB size against the
   VM disk, and the disk card already exists. Retire `ATLAS_M0_LIMIT_BYTES` and keep the env override.
