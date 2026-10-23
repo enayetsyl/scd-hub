@@ -103,6 +103,27 @@ describe("assignment builder (pure)", () => {
     expect(out.items.every((i) => i.questionTypeCode === "QT-SOLVE")).toBe(true);
   });
 
+  it("D-#829: a pick takes the largest type that fits the marks still open — the sheet never goes over", () => {
+    // 8 marks: weak 6, improving 2. E allows WORD (5) or SOLVE (2); D allows only WORD (5).
+    const layout = { ...LAYOUT, partBMarks: 8, mixWeak: 75, mixImproving: 25 };
+    const outcomes = new Map([...ctxOf().outcomes, ["E", { code: "E", chapterNumber: 3, questionTypeCodes: ["QT-WORD", "QT-SOLVE"] }]]);
+    const ctx = ctxOf({ layout, outcomes, taught: new Set(["A", "D", "E"]), bank: [...bank("A", 6), ...bank("D", 2), ...bank("E", 2)] });
+    const out = buildPartB(new Map([["A", st("WEAK")], ["E", st("IMPROVING")], ["D", st("IMPROVING", [], "2027-01-01")]]), ctx);
+    expect(out.items.map((i) => `${i.loCode}:${i.questionTypeCode}:${i.band}`)).toEqual([
+      "A:QT-SOLVE:WEAK", "A:QT-SOLVE:WEAK", "A:QT-SOLVE:WEAK", "E:QT-SOLVE:IMPROVING",
+    ]);
+    expect(out.items.reduce((s, i) => s + i.marks, 0)).toBe(8);
+    // A band with 5 marks open takes the 5-mark word problem.
+    const wide = buildPartB(new Map([["E", st("WEAK")]]), ctxOf({ layout: { ...layout, partBMarks: 5, mixWeak: 100, mixImproving: 0 }, outcomes, taught: new Set(["E"]), bank: bank("E", 2) }));
+    expect(wide.items.map((i) => i.questionTypeCode)).toEqual(["QT-WORD"]);
+  });
+
+  it("D-#829: an otherwise empty sheet still gets one item when nothing fits", () => {
+    const layout = { ...LAYOUT, partBMarks: 3, mixWeak: 100, mixImproving: 0 };
+    const out = buildPartB(new Map([["D", st("WEAK")]]), ctxOf({ layout }));
+    expect(out.items.map((i) => `${i.loCode}:${i.marks}`)).toEqual(["D:5"]);
+  });
+
   it("an outcome not yet taught in the section is not practised", () => {
     const out = buildPartB(new Map([["A", st("WEAK")]]), ctxOf({ taught: new Set(["B"]) }));
     expect(out.items).toEqual([]);

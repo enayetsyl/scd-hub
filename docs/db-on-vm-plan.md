@@ -89,6 +89,12 @@ URI shape: `mongodb://<user>:<pass>@127.0.0.1:27017/<db>?replicaSet=rs0&authSour
 
 ## 5. Phase 2 — Hourly off-site backups + alerts (Claude, code PR + VM)
 
+**BUILT 2026-10-22 (D-#818).** One change from the plan above: **hourly runs every hour only once prod is on the VM.** While
+prod is on Atlas it runs once, at 14:00. Measured: one dump moves 289 MB out of Atlas with no wire compression
+available on M0, and M0 allows 10 GB out per rolling 7 days, so hourly from Atlas would be ~49 GB a week and get
+the app throttled. So the 1-hour RPO starts at the cutover (Phase 4); until then it is ~12 h. The cron lines go in only after
+the new scripts reach prod. Alerts: `scripts/send-alert.mjs` (no `mail` on the VM).
+
 1. **`scripts/backup.sh` gains a mode.** With no argument it is the existing nightly run.
    `backup.sh hourly`:
    - dumps prod only
