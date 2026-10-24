@@ -255,11 +255,95 @@ export interface ParentMeetingSlotT {
   dispatchedAt: string | null;
   attended: boolean | null;
   attendanceRemark: string | null;
+  /** The family's answer (D-#840); null = not answered. */
+  response: MeetingSlotResponseT | null;
+  rescheduledAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
 
-const PARENT_MEETING_SLOT_FIELDS = `id meetingId familyKey studentIds classLabels studentNames order slotTime onCall dispatchedAt attended attendanceRemark createdAt updatedAt`;
+/** A family's one, final answer + the Principal/VP's ruling on a change (D-#840/#842). */
+export interface MeetingSlotResponseT {
+  choice: "CONFIRMED" | "CHANGE_REQUESTED" | "CANT_COME";
+  preferredSlotTime: number | null;
+  reason: string | null;
+  respondedAt: string;
+  reviewOutcome: "APPROVED" | "DECLINED" | null;
+  reviewNote: string | null;
+  reviewFromSlotTime: number | null;
+  reviewedAt: string | null;
+}
+
+const MEETING_SLOT_RESPONSE_FIELDS = `choice preferredSlotTime reason respondedAt reviewOutcome reviewNote reviewFromSlotTime reviewedAt`;
+
+const PARENT_MEETING_SLOT_FIELDS = `id meetingId familyKey studentIds classLabels studentNames order slotTime onCall dispatchedAt attended attendanceRemark response { ${MEETING_SLOT_RESPONSE_FIELDS} } rescheduledAt createdAt updatedAt`;
+
+// --- Guardian answer to the meeting slot (D-#840–#843) ------------------------
+
+export interface GuardianMeetingAskT {
+  slotId: string;
+  meetingId: string;
+  instanceLabel: string;
+  meetingDate: string;
+  slotTime: number | null;
+  onCall: boolean;
+  childNames: string[];
+  classLabels: string[];
+  response: MeetingSlotResponseT | null;
+  rescheduledAt: string | null;
+  /** Other timed slots, as times only (option 2). */
+  choices: { slotId: string; slotTime: number }[];
+}
+
+const GUARDIAN_MEETING_ASK_FIELDS = `slotId meetingId instanceLabel meetingDate slotTime onCall childNames classLabels response { ${MEETING_SLOT_RESPONSE_FIELDS} } rescheduledAt choices { slotId slotTime }`;
+
+export const MY_MEETING_SLOTS_QUERY = gql<{ myMeetingSlots: GuardianMeetingAskT[] }, Record<string, never>>`
+  query MyMeetingSlots {
+    myMeetingSlots { ${GUARDIAN_MEETING_ASK_FIELDS} }
+  }
+`;
+
+export const RESPOND_TO_MEETING_SLOT = gql<
+  { respondToMeetingSlot: GuardianMeetingAskT },
+  { slotId: string; choice: string; preferredSlotId?: string | null; reason?: string | null }
+>`
+  mutation RespondToMeetingSlot($slotId: String!, $choice: String!, $preferredSlotId: String, $reason: String) {
+    respondToMeetingSlot(slotId: $slotId, choice: $choice, preferredSlotId: $preferredSlotId, reason: $reason) {
+      ${GUARDIAN_MEETING_ASK_FIELDS}
+    }
+  }
+`;
+
+export interface MeetingResponseSummaryT {
+  meetingId: string;
+  total: number;
+  confirmed: number;
+  changePending: number;
+  changeApproved: number;
+  changeDeclined: number;
+  cantCome: number;
+  noAnswer: number;
+}
+
+export const MEETING_RESPONSE_SUMMARY_QUERY = gql<
+  { meetingResponseSummary: MeetingResponseSummaryT },
+  { meetingId: string }
+>`
+  query MeetingResponseSummary($meetingId: String!) {
+    meetingResponseSummary(meetingId: $meetingId) {
+      meetingId total confirmed changePending changeApproved changeDeclined cantCome noAnswer
+    }
+  }
+`;
+
+export const REVIEW_MEETING_CHANGE = gql<
+  { reviewMeetingChange: { slotId: string; outcome: string; movedSlotId: string | null; mutual: boolean } },
+  { slotId: string; approve: boolean; note?: string | null }
+>`
+  mutation ReviewMeetingChange($slotId: String!, $approve: Boolean!, $note: String) {
+    reviewMeetingChange(slotId: $slotId, approve: $approve, note: $note) { slotId outcome movedSlotId mutual }
+  }
+`;
 
 export const PARENT_MEETINGS_QUERY = gql<
   { parentMeetings: ParentMeetingT[] },

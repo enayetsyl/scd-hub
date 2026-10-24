@@ -28,6 +28,8 @@ import {
   SET_MEETING_SLOT_ATTENDANCE,
   MEETING_ATTENDANCE_SUMMARY_QUERY,
   SET_MEETING_BREAKS,
+  MEETING_RESPONSE_SUMMARY_QUERY,
+  REVIEW_MEETING_CHANGE,
   type GenerateSlotsResultT,
   type MeetingBreakT,
   type MeetingDispatchResultT,
@@ -36,6 +38,8 @@ import {
 import { Screen, Card, Body, Muted, Button, Badge, Field, Loader, Notice } from "../../components/ui";
 import { STR, meetingStatusLabel, minutesToHHMM, bnNum, isoDateLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { rsvpStatus } from "../../lib/meetingRsvp";
+import { useAuth } from "../../auth/AuthContext";
 import { space } from "../../theme/tokens";
 import type { CommentsStackParamList } from "../../navigation/types";
 
@@ -75,6 +79,18 @@ export default function MeetingAdminScreen({ route }: Props): React.ReactElement
   });
   const summary = summaryQ.data?.meetingAttendanceSummary ?? null;
 
+  // Guardians' answers to their slots (D-#843) — after dispatch only.
+  const [answersQ, refetchAnswers] = useQuery({
+    query: MEETING_RESPONSE_SUMMARY_QUERY,
+    variables: { meetingId },
+    pause: isDraft,
+  });
+  const answers = answersQ.data?.meetingResponseSummary ?? null;
+  const { can } = useAuth();
+  const canApprove = can("parents_meeting:approve_change");
+  const [, reviewChange] = useMutation(REVIEW_MEETING_CHANGE);
+  const changeRequests = slots.filter((s) => s.response?.choice === "CHANGE_REQUESTED" && !s.response.reviewOutcome);
+
   const [, generate] = useMutation(GENERATE_MEETING_SLOTS);
   const [, setOnCall] = useMutation(SET_MEETING_SLOT_ON_CALL);
   const [, reorder] = useMutation(REORDER_MEETING_SLOTS);
@@ -98,7 +114,10 @@ export default function MeetingAdminScreen({ route }: Props): React.ReactElement
   function refreshAll(): void {
     refetchMeeting({ requestPolicy: "network-only" });
     refetchSlots({ requestPolicy: "network-only" });
-    if (!isDraft) refetchSummary({ requestPolicy: "network-only" });
+    if (!isDraft) {
+      refetchSummary({ requestPolicy: "network-only" });
+      refetchAnswers({ requestPolicy: "network-only" });
+    }
   }
 
   useEffect(() => {
@@ -274,6 +293,70 @@ export default function MeetingAdminScreen({ route }: Props): React.ReactElement
           </Card>
         ) : null}
 
+        {/* Guardians' answers + change requests (D-#842/#843) */}
+        {!isDraft && answers ? (
+          <Card>
+            <Body style={{ fontWeight: "700" }}>{STR.rsResponses}</Body>
+            <Muted style={{ marginTop: space(1) }}>
+              {STR.cmTotal}: {bnNum(answers.total)} · {STR.rsConfirmedCount}: {bnNum(answers.confirmed)} ·{" "}
+              {STR.rsStCantCome}: {bnNum(answers.cantCome)} · {STR.rsStNoAnswer}: {bnNum(answers.noAnswer)}
+            </Muted>
+            <Muted>
+              {STR.rsPendingCount}: {bnNum(answers.changePending)} · {STR.rsApprovedCount}:{" "}
+              {bnNum(answers.changeApproved)} · {STR.rsDeclinedCount}: {bnNum(answers.changeDeclined)}
+            </Muted>
+
+            <Body style={{ fontWeight: "700", marginTop: space(3) }}>{STR.rsChangeRequests}</Body>
+            {changeRequests.length === 0 ? (
+              <Muted style={{ marginTop: space(1) }}>{STR.rsNoRequests}</Muted>
+            ) : (
+              changeRequests.map((s) => {
+                const wanted = s.response?.preferredSlotTime ?? null;
+                const holder = slots.find((o) => !o.onCall && o.slotTime === wanted) ?? null;
+                const mutual =
+                  !!holder &&
+                  holder.response?.choice === "CHANGE_REQUESTED" &&
+                  !holder.response.reviewOutcome &&
+                  holder.response.preferredSlotTime === s.slotTime;
+                return (
+                  <View key={s.id} style={{ marginTop: space(2) }}>
+                    <Body>{childNames(s).join(", ")}</Body>
+                    <Muted>
+                      {s.onCall ? STR.cmOnCall : minutesToHHMM(s.slotTime)} → {minutesToHHMM(wanted)}
+                    </Muted>
+                    {holder ? (
+                      <Muted>
+                        {STR.rsHeldBy}: {childNames(holder).join(", ")} ({rsvpStatus(holder.response).text})
+                      </Muted>
+                    ) : null}
+                    {mutual ? <Notice tone="info" message={STR.rsMutual} /> : null}
+                    {canApprove ? (
+                      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: space(1) }}>
+                        <Button
+                          title={STR.rsApprove}
+                          onPress={() =>
+                            void run(
+                              () => reviewChange({ slotId: s.id, approve: true }),
+                              mutual ? STR.rsApproved : `${STR.rsApproved}. ${STR.rsMovedNote}`,
+                            )
+                          }
+                          disabled={busy}
+                        />
+                        <Button
+                          title={STR.rsDecline}
+                          variant="ghost"
+                          onPress={() => void run(() => reviewChange({ slotId: s.id, approve: false }), STR.rsDeclined)}
+                          disabled={busy}
+                        />
+                      </View>
+                    ) : null}
+                  </View>
+                );
+              })
+            )}
+          </Card>
+        ) : null}
+
         {/* Dispatch outcome — per-slot wa.me links */}
         {dispatchResult ? (
           <Card>
@@ -339,6 +422,12 @@ export default function MeetingAdminScreen({ route }: Props): React.ReactElement
                     <Muted>
                       {s.onCall ? STR.cmOnCall : minutesToHHMM(s.slotTime)} · {s.classLabels.join(", ")}
                     </Muted>
+                    {!isDraft ? (
+                      <Muted>
+                        {rsvpStatus(s.response).text}
+                        {s.response?.reason ? ` — ${STR.rsReasonPrefix}: ${s.response.reason}` : ""}
+                      </Muted>
+                    ) : null}
                   </View>
                   {s.attended != null ? (
                     <Badge text={s.attended ? STR.cmPresent : STR.cmAbsent} tone={s.attended ? "ok" : "danger"} />
