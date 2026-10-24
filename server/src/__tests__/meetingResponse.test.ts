@@ -24,6 +24,7 @@ import { Student } from "../modules/foundation/models/Student";
 import {
   myMeetingSlots,
   respondToMeetingSlot,
+  acknowledgeMeetingChange,
   reviewMeetingChange,
   meetingResponseSummary,
   isMeetingOpenForAnswers,
@@ -324,6 +325,38 @@ describe("reviewMeetingChange", () => {
     expect((await reload(slots[2]))?.slotTime).toBe(610);
     // B had an approved change; being moved again clears it so B is asked about 10:00.
     expect((await reload(slots[1]))?.response).toBeUndefined();
+  });
+});
+
+describe("acknowledgeMeetingChange (D-#844)", () => {
+  it("is refused before a ruling and for an unlinked guardian", async () => {
+    const { gs, slots } = await fourFamilies();
+    await answer(slots[0], gs[0], "CHANGE_REQUESTED", { preferredSlotId: slots[2] });
+    await expect(acknowledgeMeetingChange(slots[0], gs[0], NOW)).rejects.toThrow("সিদ্ধান্ত হয়নি");
+    await reviewMeetingChange(slots[0], false, null, PRINCIPAL, NOW);
+    await expect(acknowledgeMeetingChange(slots[0], gs[1], NOW)).rejects.toThrow(ParentMeetingError);
+  });
+
+  it("stamps seenAt once; a second call (other parent) keeps the first stamp", async () => {
+    const { kids, gs, slots } = await fourFamilies();
+    await answer(slots[0], gs[0], "CHANGE_REQUESTED", { preferredSlotId: slots[2] });
+    await reviewMeetingChange(slots[0], true, null, PRINCIPAL, NOW);
+    const before = (await myMeetingSlots(gs[0], NOW))[0];
+    expect([before.response?.reviewOutcome, before.response?.reviewSeenAt]).toEqual(["APPROVED", null]);
+    const ask = await acknowledgeMeetingChange(slots[0], gs[0], NOW);
+    expect(ask.response?.reviewSeenAt).toBe(NOW.toISOString());
+    const mother = await guardian([kids[0]]);
+    const later = new Date(NOW.getTime() + 60_000);
+    expect((await acknowledgeMeetingChange(slots[0], mother, later)).response?.reviewSeenAt).toBe(NOW.toISOString());
+  });
+
+  it("a mutual request's other family also has an outcome to see", async () => {
+    const { gs, slots } = await fourFamilies();
+    await answer(slots[0], gs[0], "CHANGE_REQUESTED", { preferredSlotId: slots[1] });
+    await answer(slots[1], gs[1], "CHANGE_REQUESTED", { preferredSlotId: slots[0] });
+    await reviewMeetingChange(slots[0], true, null, PRINCIPAL, NOW);
+    const other = (await myMeetingSlots(gs[1], NOW))[0];
+    expect([other.response?.reviewOutcome, other.response?.reviewSeenAt, other.slotTime]).toEqual(["APPROVED", null, 600]);
   });
 });
 

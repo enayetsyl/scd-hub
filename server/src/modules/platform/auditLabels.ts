@@ -232,6 +232,7 @@ export const AUDIT_KIND_LABELS: Record<AuditEventKind, AuditKindLabel> = {
   MEETING_SLOT_RESPONDED: { bn: "সভার সময়ের উত্তর দিয়েছেন", en: "Answered a meeting slot", group: "MESSAGING" },
   MEETING_CHANGE_APPROVED: { bn: "সভার সময় পরিবর্তন অনুমোদন করেছেন", en: "Approved a meeting time change", group: "MESSAGING" },
   MEETING_CHANGE_DECLINED: { bn: "সভার সময় পরিবর্তন নাকচ করেছেন", en: "Declined a meeting time change", group: "MESSAGING" },
+  MEETING_CHANGE_OUTCOME_SEEN: { bn: "সময় পরিবর্তনের সিদ্ধান্ত দেখেছেন", en: "Saw a meeting time-change outcome", group: "MESSAGING" },
   MEETING_COMMENT_SAVED: { bn: "সভার জন্য মন্তব্য লিখেছেন", en: "Saved a meeting comment", group: "MESSAGING" },
   MEETING_COMMENTS_OPENED: { bn: "সভার মন্তব্য সংগ্রহ শুরু করেছেন", en: "Opened meeting comment collection", group: "MESSAGING" },
   MEETING_COMMENT_ROSTER_REFRESHED: { bn: "সভার মন্তব্যের শিক্ষক তালিকা হালনাগাদ করেছেন", en: "Refreshed the meeting comment teacher list", group: "MESSAGING" },

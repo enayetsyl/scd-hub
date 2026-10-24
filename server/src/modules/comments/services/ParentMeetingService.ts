@@ -88,6 +88,8 @@ export interface MeetingSlotResponseShape {
   reviewNote: string | null;
   reviewFromSlotTime: number | null;
   reviewedAt: string | null;
+  /** The family acknowledged the outcome pop-up (D-#844). */
+  reviewSeenAt: string | null;
 }
 
 export function slotResponseShape(r: IParentMeetingSlot["response"] | undefined | null): MeetingSlotResponseShape | null {
@@ -101,6 +103,7 @@ export function slotResponseShape(r: IParentMeetingSlot["response"] | undefined 
     reviewNote: r.review?.note ?? null,
     reviewFromSlotTime: r.review?.fromSlotTime ?? null,
     reviewedAt: r.review?.reviewedAt ? new Date(r.review.reviewedAt).toISOString() : null,
+    reviewSeenAt: r.review?.seenAt ? new Date(r.review.seenAt).toISOString() : null,
   };
 }
 

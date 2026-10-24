@@ -244,6 +244,45 @@ export async function respondToMeetingSlot(input: RespondInput): Promise<Guardia
   return ask;
 }
 
+/**
+ * The family has seen the outcome of its change request (D-#844) — stamps
+ * `review.seenAt` so the outcome pop-up stops. Idempotent: a second call (the other
+ * parent's phone) leaves the first stamp and returns the same ask.
+ */
+export async function acknowledgeMeetingChange(
+  slotId: string,
+  guardianId: string,
+  now: Date = new Date(),
+): Promise<GuardianMeetingAsk> {
+  if (!Types.ObjectId.isValid(slotId)) throw new ParentMeetingError("সভার সময়টি পাওয়া যায়নি");
+  const slot = (await ParentMeetingSlot.findById(slotId).lean()) as unknown as IParentMeetingSlot | null;
+  if (!slot) throw new ParentMeetingError("সভার সময়টি পাওয়া যায়নি");
+  const childIds = new Set((await activeGuardianChildIds(guardianId)).map((id) => id.toString()));
+  if (!slot.studentIds.some((id) => childIds.has(id.toString()))) {
+    throw new ParentMeetingError("এই শিক্ষার্থীর তথ্য দেখার অনুমতি নেই");
+  }
+  if (!slot.response?.review) throw new ParentMeetingError("এই অনুরোধের এখনো কোনো সিদ্ধান্ত হয়নি");
+
+  const stamped = await ParentMeetingSlot.updateOne(
+    { _id: slot._id, "response.review": { $exists: true }, "response.review.seenAt": { $exists: false } },
+    { $set: { "response.review.seenAt": now } },
+  );
+  if (stamped.modifiedCount === 1) {
+    await writeAudit({
+      eventKind: "MEETING_CHANGE_OUTCOME_SEEN",
+      actorId: guardianId,
+      actorRole: "GUARDIAN",
+      targetId: slot._id,
+      targetKind: "ParentMeetingSlot",
+      meta: { meetingId: slot.meetingId.toString(), outcome: slot.response.review.outcome },
+    });
+  }
+
+  const ask = (await myMeetingSlots(guardianId, now)).find((a) => a.slotId === slot._id.toString());
+  if (!ask) throw new ParentMeetingError("সভার সময়টি পাওয়া যায়নি");
+  return ask;
+}
+
 // ===========================================================================
 // Principal / VP side
 // ===========================================================================

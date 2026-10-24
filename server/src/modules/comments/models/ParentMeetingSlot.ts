@@ -67,6 +67,8 @@ export interface IMeetingChangeReview {
   fromSlotTime?: number | null;
   reviewedAt: Date;
   reviewedBy: Types.ObjectId;
+  /** The family acknowledged the outcome pop-up (D-#844); absent = still to be shown. */
+  seenAt?: Date;
 }
 
 export interface IMeetingSlotResponse {
@@ -89,6 +91,7 @@ const MeetingChangeReviewSchema = new Schema<IMeetingChangeReview>(
     fromSlotTime: { type: Number, default: null },
     reviewedAt: { type: Date, required: true },
     reviewedBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    seenAt: { type: Date },
   },
   { _id: false },
 );

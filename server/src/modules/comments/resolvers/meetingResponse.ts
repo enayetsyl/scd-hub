@@ -1,7 +1,7 @@
 /**
  * Parents'-meeting slot answers (D-#840–#843, docs/prd-meeting-rsvp.md).
  *
- *   myMeetingSlots / respondToMeetingSlot — GUARDIAN plane (`guardian:read_child`); the
+ *   myMeetingSlots / respondToMeetingSlot / acknowledgeMeetingChange — GUARDIAN plane (`guardian:read_child`); the
  *     service scopes to the caller's own linked children by Guardian id.
  *   reviewMeetingChange — `parents_meeting:approve_change` (PRINCIPAL_DEFAULT; the
  *     Principal turns it on for the Vice Principal).
@@ -14,6 +14,7 @@ import { ForbiddenError } from "../../../middleware/authz";
 import {
   myMeetingSlots,
   respondToMeetingSlot,
+  acknowledgeMeetingChange,
   reviewMeetingChange,
   meetingResponseSummary,
   type GuardianMeetingAsk,
@@ -117,6 +118,21 @@ builder.mutationField("respondToMeetingSlot", (t) =>
         preferredSlotId: args.preferredSlotId,
         reason: args.reason,
       });
+    },
+  }),
+);
+
+builder.mutationField("acknowledgeMeetingChange", (t) =>
+  t.field({
+    type: GuardianMeetingAskRef,
+    description:
+      "The family has seen the approved/declined outcome of its change request — stops the outcome " +
+      "pop-up (D-#844). Idempotent.",
+    authScopes: { hasPermission: "guardian:read_child" },
+    args: { slotId: t.arg.string({ required: true }) },
+    resolve: async (_root, args, ctx) => {
+      if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      return acknowledgeMeetingChange(args.slotId, ctx.auth.userId as string);
     },
   }),
 );

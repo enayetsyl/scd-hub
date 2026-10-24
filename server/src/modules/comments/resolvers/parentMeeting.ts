@@ -83,6 +83,7 @@ MeetingSlotResponseRef.implement({
     reviewNote: t.string({ nullable: true, resolve: (r) => r.reviewNote }),
     reviewFromSlotTime: t.int({ nullable: true, resolve: (r) => r.reviewFromSlotTime }),
     reviewedAt: t.string({ nullable: true, resolve: (r) => r.reviewedAt }),
+    reviewSeenAt: t.string({ nullable: true, resolve: (r) => r.reviewSeenAt }),
   }),
 });
 

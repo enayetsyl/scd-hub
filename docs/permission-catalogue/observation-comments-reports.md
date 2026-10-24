@@ -59,6 +59,7 @@ Counts: 70 mutations, 76 queries, 7 REST/SSE.
 | parentMeeting.ts:211 | setMeetingBreaks | roster:manage; draft meeting | `parents_meeting:create`; draft (stays) |
 | meetingResponse.ts | reviewMeetingChange | new (D-#842) | `parents_meeting:approve_change`; meeting scheduled |
 | meetingResponse.ts | respondToMeetingSlot | new (D-#840) | `guardian:read_child` + a linked child in the slot (GUARDIAN plane) |
+| meetingResponse.ts | acknowledgeMeetingChange | new (D-#844) | `guardian:read_child` + a linked child in the slot (GUARDIAN plane) |
 
 ### `server/src/modules/reports/resolvers/monthlyReport.ts`
 | file:line | resolver | today's gate (authScopes + extra) | → new gate (permission, plus extra gates that stay) |

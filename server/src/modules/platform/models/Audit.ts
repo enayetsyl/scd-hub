@@ -182,6 +182,7 @@ export type AuditEventKind =
   | "MEETING_SLOT_RESPONDED"    // a guardian answered the family's slot: confirmed / change requested / can't come (D-#840)
   | "MEETING_CHANGE_APPROVED"   // Principal/VP approved a change request — the two families swapped (D-#842)
   | "MEETING_CHANGE_DECLINED"   // Principal/VP declined a change request — the time stays (D-#842)
+  | "MEETING_CHANGE_OUTCOME_SEEN" // the family acknowledged the approved/declined pop-up (D-#844)
   | "MEETING_COMMENT_SAVED"     // a class teacher saved a (student × meeting) positive+concern note (CM-5, §3/§6/J-CM6, D-#124)
   // Parents'-meeting comment chain (MC-1..MC-4, docs/prd-meeting-comments.md, D-#752..#756)
   | "MEETING_COMMENTS_OPENED"          // collection opened (roster counts in meta) or its due dates changed (meta.datesOnly)
