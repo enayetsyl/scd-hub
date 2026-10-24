@@ -24,6 +24,7 @@
  * the corpus module imports none of it (ADR-005).
  */
 import { Types } from "mongoose";
+import { rangeJuzAmount } from "@scd/shared";
 import { BookLoan } from "../../library/models/BookLoan";
 import { FeeSupportAllocation } from "../../finance/models/FeeSupportAllocation";
 import { FinancePosting } from "../../finance/models/FinancePosting";
@@ -210,7 +211,7 @@ export interface HifzMonth {
   sessions: number;
   present: number;
   absent: number;
-  /** Juz heard across the month (the `amountJuz` sum — 1.5 juz over two records = 1.5). */
+  /** Juz heard across the month — Σ the juz amount derived from each portion range (SR-5, D-#837). */
   juzHeard: number;
   tanbih: number;
   fath: number;
@@ -222,8 +223,11 @@ export interface HifzMonth {
 export interface HifzEntryShape {
   date: Date;
   present: boolean;
-  juzRecords?: Array<{
-    amountJuz: number;
+  portions?: Array<{
+    fromSurah?: number | null;
+    fromAyah?: number | null;
+    toSurah?: number | null;
+    toAyah?: number | null;
     tanbih: number;
     fath: number;
     mistakes: { harf: number; ghunnah: number; madd: number; other: number };
@@ -231,7 +235,7 @@ export interface HifzEntryShape {
   teacherComment?: string | null;
 }
 
-/** PURE. `RevisionEntry` carries no grade — effort (`amountJuz`), prompts
+/** PURE. `RevisionEntry` carries no grade — effort (the derived juz amount), prompts
  *  (tanbih/fath) and structured tajweed mistakes are what it actually records, so
  *  those are what the report states. No evaluation band is invented. */
 export function hifzMonthOf(entries: readonly HifzEntryShape[]): HifzMonth {
@@ -245,8 +249,10 @@ export function hifzMonthOf(entries: readonly HifzEntryShape[]): HifzMonth {
 
   for (const e of sorted) {
     if (e.present) present += 1;
-    for (const j of e.juzRecords ?? []) {
-      juzHeard += j.amountJuz;
+    for (const j of e.portions ?? []) {
+      if (j.fromSurah != null && j.fromAyah != null && j.toSurah != null && j.toAyah != null) {
+        juzHeard += rangeJuzAmount({ fromSurah: j.fromSurah, fromAyah: j.fromAyah, toSurah: j.toSurah, toAyah: j.toAyah });
+      }
       tanbih += j.tanbih;
       fath += j.fath;
       mistakes += j.mistakes.harf + j.mistakes.ghunnah + j.mistakes.madd + j.mistakes.other;
@@ -587,7 +593,7 @@ export async function studentMonthMetrics(
 
   const [hifzDocs, loanDocs, feeDocs, ytdFeeDocs, supportDocs, noticeCount] = await Promise.all([
     RevisionEntry.find({ studentId: oid, date: { $gte: monthStart, $lte: monthEnd } })
-      .select("date present juzRecords teacherComment")
+      .select("date present portions teacherComment")
       .lean() as Promise<HifzEntryShape[]>,
     // Every loan that could still be open at month end, plus the month's activity.
     BookLoan.find({ studentId: oid, issuedAt: { $lte: monthEnd } })

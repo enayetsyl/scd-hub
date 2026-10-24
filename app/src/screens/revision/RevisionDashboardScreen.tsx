@@ -18,6 +18,7 @@ import {
   REVISION_WEEKLY_TREND_QUERY,
   REVISION_MISTAKE_BREAKDOWN_QUERY,
   STUDENT_JUZ_WEAKNESS_QUERY,
+  STUDENT_SURAH_WEAKNESS_QUERY,
   REVISION_COMPLETENESS_STATUS_QUERY,
   REVISION_COMPLETENESS_CHASE_QUERY,
   type RevisionDashboardT,
@@ -25,7 +26,7 @@ import {
 } from "../../graphql/revision";
 import { Screen, Card, Body, Muted, Button, Field, Badge, Notice } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
-import { STR, bnNum, classLevelLabel, revCategoryLabel, revMistakeLabel, revTrendGlyph } from "../../lib/labels";
+import { STR, bnNum, classLevelLabel, revCategoryLabel, revMistakeLabel, revStatusLabel, revTrendGlyph } from "../../lib/labels";
 import { space } from "../../theme/tokens";
 import type { RevisionStackParamList } from "../../navigation/types";
 
@@ -76,12 +77,35 @@ function DashboardCard({ dash }: { dash: RevisionDashboardT }): React.ReactEleme
       </View>
       <Muted style={{ marginTop: space(2) }}>{STR.revMistakeBreakdown}</Muted>
       <MistakeList m={dash.mistakes} />
-      {dash.weakestJuz ? (
+      {/* SR-5 (D-#837, provisional): ayahs heard, outcomes, weakest juz + surahs. */}
+      <Muted style={{ marginTop: space(2) }}>{STR.revAyahs}</Muted>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: space(1) }}>
+        <Badge text={`${revCategoryLabel("SABAQ")}: ${bnNum(dash.ayahsByCategory.SABAQ)}`} tone="muted" />
+        <Badge text={`${revCategoryLabel("SABQI")}: ${bnNum(dash.ayahsByCategory.SABQI)}`} tone="muted" />
+        <Badge text={`${revCategoryLabel("MANZIL")}: ${bnNum(dash.ayahsByCategory.MANZIL)}`} tone="muted" />
+      </View>
+      <Muted style={{ marginTop: space(2) }}>{STR.revStatusCounts}</Muted>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: space(1) }}>
+        {(["COMPLETED", "PARTIAL", "NOT_DONE", "FAILED"] as const).map((s) => (
+          <Badge
+            key={s}
+            text={`${revStatusLabel(s)}: ${bnNum(dash.statusCounts[s])}`}
+            tone={s === "FAILED" && dash.statusCounts[s] > 0 ? "danger" : "muted"}
+          />
+        ))}
+      </View>
+      {dash.weakestJuz.length > 0 ? (
         <Muted style={{ marginTop: space(2) }}>
-          {STR.revWeakestJuz}: {STR.revJuz} {bnNum(dash.weakestJuz.juz)} ({STR.revTotalMistakes}{" "}
-          {bnNum(dash.weakestJuz.total)})
+          {STR.revWeakestJuz}:{" "}
+          {dash.weakestJuz.map((w) => `${STR.revJuz} ${bnNum(w.juz)} (${bnNum(w.total)})`).join(" · ")}
         </Muted>
       ) : null}
+      {dash.weakestSurahs.length > 0 ? (
+        <Muted style={{ marginTop: space(1) }}>
+          {STR.revWeakestSurah}: {dash.weakestSurahs.map((w) => `${w.nameBn} (${bnNum(w.total)})`).join(" · ")}
+        </Muted>
+      ) : null}
+      <Muted style={{ marginTop: space(2) }}>{STR.revProvisional}</Muted>
     </Card>
   );
 }
@@ -114,6 +138,11 @@ export default function RevisionDashboardScreen({ route }: Props): React.ReactEl
   });
   const [weaknessQ, refetchWeakness] = useQuery({
     query: STUDENT_JUZ_WEAKNESS_QUERY,
+    variables: { studentId: activeStudent ?? "", asOf },
+    pause: !activeStudent,
+  });
+  const [surahQ] = useQuery({
+    query: STUDENT_SURAH_WEAKNESS_QUERY,
     variables: { studentId: activeStudent ?? "", asOf },
     pause: !activeStudent,
   });
@@ -174,7 +203,7 @@ export default function RevisionDashboardScreen({ route }: Props): React.ReactEl
                   <Muted>{bnNum(p.date)}</Muted>
                   <Body>
                     {STR.revTanbih} {bnNum(p.tanbih)} · {STR.revFath} {bnNum(p.fath)} · {STR.revMistakes}{" "}
-                    {bnNum(p.mistakes)}
+                    {bnNum(p.mistakes)} · {STR.revSabaqAyahs} {bnNum(p.sabaqAyahs)}
                   </Body>
                 </View>
               ))
@@ -243,6 +272,25 @@ export default function RevisionDashboardScreen({ route }: Props): React.ReactEl
                 </View>
               ))
             )
+          ) : null}
+          {activeStudent && (surahQ.data?.studentSurahWeakness ?? []).length > 0 ? (
+            <>
+              <Body style={{ fontWeight: "700", marginTop: space(3) }}>{STR.revSurahWeakness}</Body>
+              {(surahQ.data?.studentSurahWeakness ?? []).map((w) => (
+                <View
+                  key={w.surah}
+                  style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: space(2) }}
+                >
+                  <Body style={{ flexShrink: 1 }}>
+                    {w.nameBn} · {bnNum(w.ayahsHeard)} {STR.revAyahs}
+                  </Body>
+                  <Badge
+                    text={`${STR.revTotalMistakes}: ${bnNum(w.total)}`}
+                    tone={w.total >= 10 ? "danger" : w.total >= 3 ? "warn" : "muted"}
+                  />
+                </View>
+              ))}
+            </>
           ) : null}
         </Card>
 
