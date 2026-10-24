@@ -17,6 +17,7 @@ import { ForbiddenError } from "../../../middleware/authz";
 import { teacherTeachesGroup, teacherCanReadStudent } from "../services/RevisionService";
 import {
   studentJuzWeakness,
+  studentSurahWeakness,
   groupCoverage,
   weeklyTrend,
   levelDashboard,
@@ -25,6 +26,7 @@ import {
   completenessStatus,
   completenessChase,
   type JuzWeakness,
+  type SurahWeakness,
   type CoverageRow,
   type TrendPoint,
   type WeeklyTrend,
@@ -112,16 +114,56 @@ MistakesRef.implement({
 
 const JuzWeaknessRef = builder.objectRef<JuzWeakness>("RevisionJuzWeakness");
 JuzWeaknessRef.implement({
-  description: "Per-juz weakness: Σ تنبیه/فتح + mistake totals (higher = weaker). SR-3 heatmap.",
+  description:
+    "Per-juz weakness: Σ تنبیه/فتح + mistake totals (higher = weaker). SR-3 heatmap. Derived from the ranges; " +
+    "a count on a range is split across the juz by ayah share (SR-5, D-#837), so values may be fractional.",
   fields: (t) => ({
     juz: t.exposeInt("juz"),
-    tanbih: t.exposeInt("tanbih"),
-    fath: t.exposeInt("fath"),
-    harf: t.exposeInt("harf"),
-    ghunnah: t.exposeInt("ghunnah"),
-    madd: t.exposeInt("madd"),
-    other: t.exposeInt("other"),
-    total: t.exposeInt("total"),
+    ayahsHeard: t.exposeInt("ayahsHeard"),
+    tanbih: t.exposeFloat("tanbih"),
+    fath: t.exposeFloat("fath"),
+    harf: t.exposeFloat("harf"),
+    ghunnah: t.exposeFloat("ghunnah"),
+    madd: t.exposeFloat("madd"),
+    other: t.exposeFloat("other"),
+    total: t.exposeFloat("total"),
+  }),
+});
+
+const SurahWeaknessRef = builder.objectRef<SurahWeakness>("RevisionSurahWeakness");
+SurahWeaknessRef.implement({
+  description: "Per-surah weakness (SR-5, D-#837): the juz heatmap's numbers per surah, split by ayah share.",
+  fields: (t) => ({
+    surah: t.exposeInt("surah"),
+    nameBn: t.exposeString("nameBn"),
+    ayahsHeard: t.exposeInt("ayahsHeard"),
+    tanbih: t.exposeFloat("tanbih"),
+    fath: t.exposeFloat("fath"),
+    harf: t.exposeFloat("harf"),
+    ghunnah: t.exposeFloat("ghunnah"),
+    madd: t.exposeFloat("madd"),
+    other: t.exposeFloat("other"),
+    total: t.exposeFloat("total"),
+  }),
+});
+
+const AyahsByCategoryRef = builder.objectRef<RevisionDashboard["ayahsByCategory"]>("RevisionAyahsByCategory");
+AyahsByCategoryRef.implement({
+  fields: (t) => ({
+    SABAQ: t.exposeInt("SABAQ"),
+    SABQI: t.exposeInt("SABQI"),
+    MANZIL: t.exposeInt("MANZIL"),
+  }),
+});
+
+const StatusCountsRef = builder.objectRef<RevisionDashboard["statusCounts"]>("RevisionStatusCounts");
+StatusCountsRef.implement({
+  description: "How many portions ended in each status (SR-5, D-#835).",
+  fields: (t) => ({
+    COMPLETED: t.exposeInt("COMPLETED"),
+    PARTIAL: t.exposeInt("PARTIAL"),
+    NOT_DONE: t.exposeInt("NOT_DONE"),
+    FAILED: t.exposeInt("FAILED"),
   }),
 });
 
@@ -146,6 +188,7 @@ TrendPointRef.implement({
     fath: t.exposeInt("fath"),
     mistakes: t.exposeInt("mistakes"),
     total: t.exposeInt("total"),
+    sabaqAyahs: t.exposeInt("sabaqAyahs"),
   }),
 });
 
@@ -167,10 +210,13 @@ RevisionDashboardRef.implement({
     present: t.exposeInt("present"),
     absent: t.exposeInt("absent"),
     portionsByCategory: t.field({ type: PortionsRef, resolve: (r) => r.portionsByCategory }),
+    ayahsByCategory: t.field({ type: AyahsByCategoryRef, resolve: (r) => r.ayahsByCategory }),
+    statusCounts: t.field({ type: StatusCountsRef, resolve: (r) => r.statusCounts }),
     totalTanbih: t.exposeInt("totalTanbih"),
     totalFath: t.exposeInt("totalFath"),
     mistakes: t.field({ type: MistakesRef, resolve: (r) => r.mistakes }),
     weakestJuz: t.field({ type: [JuzWeaknessRef], resolve: (r) => r.weakestJuz }),
+    weakestSurahs: t.field({ type: [SurahWeaknessRef], resolve: (r) => r.weakestSurahs }),
   }),
 });
 
@@ -213,6 +259,19 @@ builder.queryField("studentJuzWeakness", (t) =>
     resolve: async (_root, args, ctx) => {
       await assertReadStudent(ctx, args.studentId);
       return studentJuzWeakness(args.studentId, asOfDate(args.asOf));
+    },
+  }),
+);
+
+builder.queryField("studentSurahWeakness", (t) =>
+  t.field({
+    type: [SurahWeaknessRef],
+    description: "Per-surah weakness for a child, weakest first (SR-5, D-#837). saturday_revision:view + the child's group scope.",
+    authScopes: { hasAnyPermission: ["saturday_revision:view", "saturday_revision:view_all"] },
+    args: { studentId: t.arg.string({ required: true }), asOf: t.arg.string({ required: false }) },
+    resolve: async (_root, args, ctx) => {
+      await assertReadStudent(ctx, args.studentId);
+      return studentSurahWeakness(args.studentId, asOfDate(args.asOf));
     },
   }),
 );

@@ -38,12 +38,14 @@ const mockEntryFindOne = jest.fn();
 const mockEntryFindById = jest.fn();
 const mockEntryFind = jest.fn();
 const mockEntryCreate = jest.fn();
+const mockEntryAggregate = jest.fn();
 jest.mock("../modules/saturday-revision/models/RevisionEntry", () => ({
   RevisionEntry: {
     findOne: (q: unknown) => mockEntryFindOne(q),
     findById: (id: unknown) => mockEntryFindById(id),
     find: (q: unknown) => mockEntryFind(q),
     create: (doc: unknown) => mockEntryCreate(doc),
+    aggregate: (p: unknown) => mockEntryAggregate(p),
   },
 }));
 
@@ -125,10 +127,11 @@ function happyContext() {
 beforeEach(() => {
   jest.clearAllMocks();
   mockWriteAudit.mockResolvedValue(undefined);
+  mockEntryAggregate.mockResolvedValue([]);
   mockEntryCreate.mockImplementation(async (doc: Record<string, unknown>) => ({
     _id: oid(),
     ...doc,
-    juzRecords: doc.juzRecords ?? [],
+    portions: doc.portions ?? [],
     deliveryChannels: doc.deliveryChannels ?? [],
     createdAt: new Date("2026-06-13T01:00:00Z"),
     updatedAt: new Date("2026-06-13T01:00:00Z"),
@@ -170,7 +173,7 @@ describe("REVISION_* vocab", () => {
 // ===========================================================================
 
 describe("recordEntry", () => {
-  test("stores a present entry with per-juz records + audits SR_REVISION_RECORDED", async () => {
+  test("stores a present entry with surah:ayah portions + audits SR_REVISION_RECORDED", async () => {
     happyContext();
     mockEntryFindOne.mockResolvedValue(null);
     const res = await recordEntry({
@@ -178,24 +181,27 @@ describe("recordEntry", () => {
       studentId: STUDENT_OID.toString(),
       date: SAT,
       present: true,
-      juzRecords: [
-        { juz: 1, category: "MANZIL", amountJuz: 0.5, tanbih: 2, fath: 1, mistakes: { harf: 1 } },
-        { juz: 2, category: "MANZIL", amountJuz: 1 },
+      portions: [
+        { category: "SABAQ", status: "COMPLETED", fromSurah: 2, fromAyah: 247, toSurah: 2, toAyah: 259, tanbih: 2, fath: 1, mistakes: { harf: 1 } },
+        { category: "MANZIL", status: "PARTIAL", fromSurah: 78, fromAyah: 1, toSurah: 79, toAyah: 46 },
       ],
       teacherComment: "ভালো",
       actorId: TEACHER_ID,
     });
     expect(res.present).toBe(true);
-    expect(res.juzRecords).toHaveLength(2); // J-SR1-3 per-juz split
-    expect(res.juzRecords[0]).toMatchObject({ juz: 1, category: "MANZIL", amountJuz: 0.5, tanbih: 2, fath: 1 });
-    expect(res.juzRecords[0].mistakes).toEqual({ harf: 1, ghunnah: 0, madd: 0, other: 0 });
+    expect(res.portions).toHaveLength(2);
+    // Baqara 247–259 crosses into juz 3 at ayah 253 — the juz are derived, never stored.
+    expect(res.portions[0]).toMatchObject({ category: "SABAQ", status: "COMPLETED", ayahs: 13, juzs: [2, 3], tanbih: 2, fath: 1 });
+    expect(res.portions[0].rangeBn).toBe("বাকারা ২৪৭–২৫৯");
+    expect(res.portions[0].mistakes).toEqual({ harf: 1, ghunnah: 0, madd: 0, other: 0 });
+    expect(res.portions[1]).toMatchObject({ ayahs: 86, juzs: [30], rangeBn: "নাবা ১ – নাযিয়াত ৪৬" });
     expect(res.deliveredAt).toBeNull();
     expect(mockWriteAudit).toHaveBeenCalledWith(
       expect.objectContaining({ eventKind: "SR_REVISION_RECORDED", targetKind: "RevisionEntry" }),
     );
   });
 
-  test("an absent student stores no juz records (J-SR1-2)", async () => {
+  test("an absent student stores no portions (J-SR1-2)", async () => {
     happyContext();
     mockEntryFindOne.mockResolvedValue(null);
     const res = await recordEntry({
@@ -206,27 +212,42 @@ describe("recordEntry", () => {
       actorId: TEACHER_ID,
     });
     expect(res.present).toBe(false);
-    expect(res.juzRecords).toHaveLength(0);
+    expect(res.portions).toHaveLength(0);
   });
 
-  test("rejects juz records on an absent student", async () => {
+  test("rejects portions on an absent student", async () => {
     happyContext();
     mockEntryFindOne.mockResolvedValue(null);
     await expect(
       recordEntry({
         groupId: GROUP_OID.toString(), studentId: STUDENT_OID.toString(), date: SAT, present: false,
-        juzRecords: [{ juz: 1, category: "SABAQ", amountJuz: 1 }], actorId: TEACHER_ID,
+        portions: [{ category: "SABAQ", status: "COMPLETED", fromSurah: 1, fromAyah: 1, toSurah: 1, toAyah: 7 }], actorId: TEACHER_ID,
       }),
-    ).rejects.toThrow(/absent student carries no juz records/i);
+    ).rejects.toThrow(/absent student carries no portions/i);
   });
 
-  test("rejects a bad juz / category / amount", async () => {
+  test("rejects a bad category / status / range (SR-5)", async () => {
     happyContext();
     mockEntryFindOne.mockResolvedValue(null);
     const base = { groupId: GROUP_OID.toString(), studentId: STUDENT_OID.toString(), date: SAT, present: true, actorId: TEACHER_ID };
-    await expect(recordEntry({ ...base, juzRecords: [{ juz: 31, category: "SABAQ", amountJuz: 1 }] })).rejects.toThrow(/juz must be/i);
-    await expect(recordEntry({ ...base, juzRecords: [{ juz: 1, category: "NOPE", amountJuz: 1 }] })).rejects.toThrow(/category must be/i);
-    await expect(recordEntry({ ...base, juzRecords: [{ juz: 1, category: "SABAQ", amountJuz: 0 }] })).rejects.toThrow(/amountJuz must be greater than 0/i);
+    const ok = { fromSurah: 2, fromAyah: 1, toSurah: 2, toAyah: 5 };
+    await expect(recordEntry({ ...base, portions: [{ category: "NOPE", status: "COMPLETED", ...ok }] })).rejects.toThrow(/category must be/i);
+    await expect(recordEntry({ ...base, portions: [{ category: "SABAQ", status: "MAYBE", ...ok }] })).rejects.toThrow(/status must be/i);
+    // Baqara has 286 ayahs — 287 is out of range.
+    await expect(recordEntry({ ...base, portions: [{ category: "SABAQ", status: "COMPLETED", fromSurah: 2, fromAyah: 280, toSurah: 2, toAyah: 287 }] })).rejects.toThrow(/out of range/i);
+    await expect(recordEntry({ ...base, portions: [{ category: "SABAQ", status: "COMPLETED", fromSurah: 3, fromAyah: 1, toSurah: 2, toAyah: 5 }] })).rejects.toThrow(/end comes before the start/i);
+    await expect(recordEntry({ ...base, portions: [{ category: "SABAQ", status: "COMPLETED", fromSurah: 2, fromAyah: 1 }] })).rejects.toThrow(/both the start and the end/i);
+    await expect(recordEntry({ ...base, portions: [{ category: "SABAQ", status: "COMPLETED" }] })).rejects.toThrow(/needs its start and end/i);
+  });
+
+  test("a NOT_DONE portion may carry no range (the bare সবক হয়নি)", async () => {
+    happyContext();
+    mockEntryFindOne.mockResolvedValue(null);
+    const res = await recordEntry({
+      groupId: GROUP_OID.toString(), studentId: STUDENT_OID.toString(), date: SAT, present: true,
+      portions: [{ category: "SABAQ", status: "NOT_DONE", tanbih: 1 }], actorId: TEACHER_ID,
+    });
+    expect(res.portions[0]).toMatchObject({ status: "NOT_DONE", fromSurah: null, rangeBn: null, ayahs: 0, juzs: [], tanbih: 1 });
   });
 
   test("rejects a non-QURAN_ONLY date", async () => {
@@ -257,17 +278,17 @@ describe("recordEntry", () => {
     happyContext();
     const doc: Record<string, unknown> = {
       _id: oid(), groupId: GROUP_OID, studentId: STUDENT_OID, date: SAT, present: true,
-      juzRecords: [], deliveryChannels: [], deliveredAt: undefined,
+      portions: [], deliveryChannels: [], deliveredAt: undefined,
       createdAt: new Date("2026-06-13T01:00:00Z"), updatedAt: new Date("2026-06-13T01:00:00Z"),
     };
     doc.save = jest.fn(async () => doc);
     mockEntryFindOne.mockResolvedValue(doc);
     const res = await recordEntry({
       groupId: GROUP_OID.toString(), studentId: STUDENT_OID.toString(), date: SAT, present: true,
-      juzRecords: [{ juz: 5, category: "SABQI", amountJuz: 0.25 }], actorId: TEACHER_ID,
+      portions: [{ category: "SABQI", status: "COMPLETED", fromSurah: 4, fromAyah: 24, toSurah: 4, toAyah: 30 }], actorId: TEACHER_ID,
     });
     expect((doc.save as jest.Mock)).toHaveBeenCalled();
-    expect(res.juzRecords).toHaveLength(1);
+    expect(res.portions).toHaveLength(1);
     expect(mockEntryCreate).not.toHaveBeenCalled();
     expect(mockWriteAudit).toHaveBeenCalledWith(expect.objectContaining({ meta: expect.objectContaining({ edited: true }) }));
   });
@@ -276,7 +297,7 @@ describe("recordEntry", () => {
     happyContext();
     mockEntryFindOne.mockResolvedValue({ _id: oid(), deliveredAt: new Date("2026-06-13T02:00:00Z") });
     await expect(
-      recordEntry({ groupId: GROUP_OID.toString(), studentId: STUDENT_OID.toString(), date: SAT, present: true, juzRecords: [], actorId: TEACHER_ID }),
+      recordEntry({ groupId: GROUP_OID.toString(), studentId: STUDENT_OID.toString(), date: SAT, present: true, portions: [], actorId: TEACHER_ID }),
     ).rejects.toThrow(/immutable/i);
   });
 });
@@ -315,13 +336,22 @@ describe("groupSaturday (the grid)", () => {
       { _id: s2, nameBn: "বিলাল" },
     ]));
     mockEntryFind.mockReturnValue(leanChain([
-      { _id: oid(), groupId: GROUP_OID, studentId: s1, date: SAT, present: true, juzRecords: [], teacherUserId: new mongoose.Types.ObjectId(TEACHER_ID), deliveryChannels: [], createdAt: SAT, updatedAt: SAT },
+      { _id: oid(), groupId: GROUP_OID, studentId: s1, date: SAT, present: true, portions: [], teacherUserId: new mongoose.Types.ObjectId(TEACHER_ID), deliveryChannels: [], createdAt: SAT, updatedAt: SAT },
     ]));
+    const EARLIER = new Date("2026-06-06T00:00:00Z");
+    mockEntryAggregate.mockResolvedValue([
+      { _id: s2, doc: { _id: oid(), groupId: GROUP_OID, studentId: s2, date: EARLIER, present: true,
+        portions: [{ category: "SABAQ", status: "COMPLETED", fromSurah: 2, fromAyah: 173, toSurah: 2, toAyah: 181, tanbih: 0, fath: 0, mistakes: { harf: 0, ghunnah: 0, madd: 0, other: 0 } }],
+        teacherUserId: new mongoose.Types.ObjectId(TEACHER_ID), deliveryChannels: [], createdAt: EARLIER, updatedAt: EARLIER } },
+    ]);
     const rows = await groupSaturday(GROUP_OID.toString(), SAT);
     expect(rows).toHaveLength(2);
     const byId = Object.fromEntries(rows.map((r) => [r.studentId, r]));
     expect(byId[s1.toString()].entry).not.toBeNull();
     expect(byId[s2.toString()].entry).toBeNull();
+    // The prefill source: the latest earlier entry, else null (SR-5).
+    expect(byId[s1.toString()].previous).toBeNull();
+    expect(byId[s2.toString()].previous?.portions[0]).toMatchObject({ category: "SABAQ", rangeBn: "বাকারা ১৭৩–১৮১" });
   });
 
   test("an empty group returns no rows", async () => {
@@ -334,12 +364,12 @@ describe("studentRevisionHistory", () => {
   test("returns the child's entries newest-first shape", async () => {
     mockEntryFind.mockReturnValue(leanChain([
       { _id: oid(), groupId: GROUP_OID, studentId: STUDENT_OID, date: SAT, present: true,
-        juzRecords: [{ juz: 3, category: "SABAQ", amountJuz: 1, tanbih: 0, fath: 0, mistakes: { harf: 0, ghunnah: 0, madd: 0, other: 0 } }],
+        portions: [{ category: "SABAQ", status: "COMPLETED", fromSurah: 3, fromAyah: 93, toSurah: 3, toAyah: 100, tanbih: 0, fath: 0, mistakes: { harf: 0, ghunnah: 0, madd: 0, other: 0 } }],
         teacherUserId: new mongoose.Types.ObjectId(TEACHER_ID), deliveryChannels: ["wa"], deliveredAt: SAT, createdAt: SAT, updatedAt: SAT },
     ]));
     const rows = await studentRevisionHistory(STUDENT_OID.toString());
     expect(rows).toHaveLength(1);
-    expect(rows[0].juzRecords[0]).toMatchObject({ juz: 3, category: "SABAQ" });
+    expect(rows[0].portions[0]).toMatchObject({ category: "SABAQ", juzs: [4] });
     expect(rows[0].deliveredAt).toBe(SAT.toISOString());
   });
 });
@@ -348,7 +378,7 @@ describe("childRevision (SR-4 guardian card)", () => {
   test("returns DELIVERED entries only, structurally omitting staff fields", async () => {
     mockEntryFind.mockReturnValue(leanChain([
       { _id: oid(), studentId: STUDENT_OID, groupId: GROUP_OID, date: SAT, present: true,
-        juzRecords: [{ juz: 1, category: "SABAQ", amountJuz: 1, tanbih: 0, fath: 0, mistakes: { harf: 0, ghunnah: 0, madd: 0, other: 0 } }],
+        portions: [{ category: "SABAQ", status: "COMPLETED", fromSurah: 1, fromAyah: 1, toSurah: 1, toAyah: 7, tanbih: 0, fath: 0, mistakes: { harf: 0, ghunnah: 0, madd: 0, other: 0 } }],
         teacherUserId: new mongoose.Types.ObjectId(TEACHER_ID), teacherComment: "ভালো",
         deliveryChannels: ["wa"], deliveredAt: SAT, createdAt: SAT, updatedAt: SAT },
     ]));
