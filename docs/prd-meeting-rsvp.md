@@ -1,6 +1,6 @@
 # PRD — Parents'-meeting slot response (guardian RSVP + change approval)
 
-Owner ask, 2026-10-24. Decisions D-#840–#843. Builds on CM-3/CM-4 (`ParentMeeting`,
+Owner ask, 2026-10-24. Decisions D-#840–#844. Builds on CM-3/CM-4 (`ParentMeeting`,
 `ParentMeetingSlot`, dispatch) — see `prd-comments-meetings.md`.
 
 ## 1. Goal
@@ -29,9 +29,11 @@ answer; the first answer wins (atomic: the write only lands while the slot is un
 A guardian cannot change it later. Answering removes the pop-up on every device (server
 state, not device storage).
 
-The guardian Home shows a small meeting card: the time, and the answer's state
-(confirmed / change awaiting approval / approved → new time / declined → original time /
-can't come).
+**The Today (আজ) section** (owner, 2026-10-24): the guardian's Today screen shows a meeting
+card at the top — date, the family's CURRENT time (or On-Call) and the answer's state
+(confirmed / change awaiting approval / approved / declined / can't come) — from dispatch
+until the meeting day ends. It reads the live slot, so an approved swap shows the new time
+there at once.
 
 ## 3. Approving a change (D-#842)
 New action **`parents_meeting:approve_change`** — "সময় পরিবর্তনের অনুরোধ অনুমোদন",
@@ -50,6 +52,16 @@ in Access control → By person). Office/Teacher templates: off.
 - **Decline** keeps the original time; optional note.
 - Approve/decline is allowed only while the meeting is `scheduled`. Both are audited.
 
+**Telling the family the outcome — a pop-up, not a notification (D-#844, owner ruling
+2026-10-24: "most of them don't see the notification").** When a family's change request
+has been ruled on, its next app open shows a pop-up that, like the answer pop-up, cannot be
+closed any other way: approved → "আপনার সময় পরিবর্তনের অনুরোধ অনুমোদিত হয়েছে — নতুন
+সময় X"; declined → "অনুরোধটি রাখা সম্ভব হয়নি — আপনার সময় আগের মতোই X" (+ the note, if
+any). One button, "ঠিক আছে, দেখেছি", records `review.seenAt`
+(`acknowledgeMeetingChange`, guardian plane, idempotent). A mutual request's other family
+gets the same approved pop-up. A family moved by someone else's swap is covered by the
+re-ask pop-up (§3 above). Unanswered slots are asked first; outcomes come after.
+
 ## 4. What office and Principal see (D-#843)
 On the meeting screen (`parents_meeting:view`, Office + Principal), once dispatched:
 - counts: confirmed · change requested (pending) · approved · declined · can't come · no answer;
@@ -61,7 +73,7 @@ On the meeting screen (`parents_meeting:view`, Office + Principal), once dispatc
 ## 5. Data (identity plane, ADR-005; vocab-free)
 `ParentMeetingSlot.response` (sub-document, absent = unanswered):
 `choice`, `preferredSlotId?`, `preferredSlotTime?`, `reason?`, `respondedAt`,
-`respondedByGuardianId`, `review? { outcome APPROVED|DECLINED, note?, fromSlotTime?, reviewedAt, reviewedBy }`.
+`respondedByGuardianId`, `review? { outcome APPROVED|DECLINED, note?, fromSlotTime?, reviewedAt, reviewedBy, seenAt? }`.
 `ParentMeetingSlot.rescheduledAt?` — set when a swap moved this family. Choice/outcome are
 **model-local literal unions** (like `ParentMeeting.status`), not `shared/vocab.ts` enums.
 
@@ -72,6 +84,8 @@ On the meeting screen (`parents_meeting:view`, Office + Principal), once dispatc
 - `respondToMeetingSlot(slotId, choice, preferredSlotId?, reason?)` (guardian,
   `guardian:read_child` + link check on a child in the slot).
 - `reviewMeetingChange(slotId, approve, note?)` (`parents_meeting:approve_change`).
+- `acknowledgeMeetingChange(slotId)` (guardian, `guardian:read_child` + link check): marks
+  the outcome pop-up seen (D-#844).
 - `parentMeetingSlots` gains `response` + `rescheduledAt`;
   `meetingResponseSummary(meetingId)` (`parents_meeting:view`).
 
@@ -88,10 +102,18 @@ On the meeting screen (`parents_meeting:view`, Office + Principal), once dispatc
 - **J-RS5** A second guardian of the same family opening the app after the first answered
   sees no pop-up; a direct API answer is refused ("ইতিমধ্যে উত্তর দেওয়া হয়েছে").
 - **J-RS6** An Office user without `approve_change` sees the requests but no Approve/Decline.
+- **J-RS7** Given the Principal approved the 10:20 → 11:00 request, when that guardian next
+  opens the app, a pop-up says the change was approved and the new time is 11:00; it stays
+  until "ঠিক আছে, দেখেছি", and does not return after that on any device.
+- **J-RS8** Given a declined request with a note, the pop-up says the time stays 10:20 and
+  shows the note; same acknowledgement rule.
+- **J-RS9** The Today card shows the family's current time from dispatch until the meeting
+  day ends, and the new time right after a swap.
 
-## 8. Out of scope (v1)
-- A push/inbox notice when a request is approved/declined or a family is moved
-  (`MEETING_SCHEDULE` is still unregistered — CM-4 vocab lock). The Home card and the
-  re-ask pop-up carry it; the office can re-send timings via the existing dispatch.
+## 8. Out of scope (by design)
+- **Push / inbox notifications for any of this** (owner ruling 2026-10-24, D-#844): guardians
+  mostly do not read notifications, so every message here is a pop-up that blocks the app
+  until it is answered or acknowledged. The office can still re-send timings by wa.me via the
+  existing dispatch.
 - Changing an answer after it is given (owner ruling: final).
 - Contact-only guardians (no login) — reached by wa.me as today.
