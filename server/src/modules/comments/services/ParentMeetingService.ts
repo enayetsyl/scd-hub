@@ -71,8 +71,37 @@ export interface ParentMeetingSlotShape {
   dispatchedAt: string | null;
   attended: boolean | null;
   attendanceRemark: string | null;
+  /** The family's answer (D-#840); null = not answered. */
+  response: MeetingSlotResponseShape | null;
+  rescheduledAt: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+/** A slot's answer + the change ruling, flattened for GraphQL (D-#840/#842). */
+export interface MeetingSlotResponseShape {
+  choice: string;
+  preferredSlotTime: number | null;
+  reason: string | null;
+  respondedAt: string;
+  reviewOutcome: string | null;
+  reviewNote: string | null;
+  reviewFromSlotTime: number | null;
+  reviewedAt: string | null;
+}
+
+export function slotResponseShape(r: IParentMeetingSlot["response"] | undefined | null): MeetingSlotResponseShape | null {
+  if (!r) return null;
+  return {
+    choice: r.choice,
+    preferredSlotTime: r.preferredSlotTime ?? null,
+    reason: r.reason ?? null,
+    respondedAt: new Date(r.respondedAt).toISOString(),
+    reviewOutcome: r.review?.outcome ?? null,
+    reviewNote: r.review?.note ?? null,
+    reviewFromSlotTime: r.review?.fromSlotTime ?? null,
+    reviewedAt: r.review?.reviewedAt ? new Date(r.review.reviewedAt).toISOString() : null,
+  };
 }
 
 export interface GenerateSlotsResult {
@@ -116,6 +145,8 @@ function slotShape(d: IParentMeetingSlot): ParentMeetingSlotShape {
     dispatchedAt: d.dispatchedAt ? new Date(d.dispatchedAt).toISOString() : null,
     attended: d.attended ?? null,
     attendanceRemark: d.attendanceRemark ?? null,
+    response: slotResponseShape(d.response),
+    rescheduledAt: d.rescheduledAt ? new Date(d.rescheduledAt).toISOString() : null,
     createdAt: new Date(d.createdAt).toISOString(),
     updatedAt: new Date(d.updatedAt).toISOString(),
   };

@@ -132,7 +132,7 @@ Several of today's bypasses are template-aware (`isAdminStaff`, `actsAsRole`), w
 | Students & families | `guardians` | Guardians | অভিভাবক | 4 | foundation-platform |
 | Students & families | `student_profile` | Student profile | শিক্ষার্থী প্রোফাইল | 3 | trackers-classtest |
 | Students & families | `student_comments` | Daily comments | দৈনিক মন্তব্য | 5 | observation-comments-reports |
-| Students & families | `parents_meeting` | Parents' meeting | অভিভাবক সভা | 8 | observation-comments-reports |
+| Students & families | `parents_meeting` | Parents' meeting | অভিভাবক সভা | 9 | observation-comments-reports |
 | Students & families | `monthly_report` | Monthly progress report | মাসিক অগ্রগতি রিপোর্ট | 9 | observation-comments-reports |
 | Students & families | `improvement_plan` | Student progress & improvement | শিক্ষার্থীর অগ্রগতি ও উন্নতির কাজ | 6 | observation-comments-reports |
 | Attendance & routine | `attendance` | Student attendance | শিক্ষার্থীর উপস্থিতি | 7 | attendance-routine-library |
@@ -183,7 +183,7 @@ Several of today's bypasses are template-aware (`isAdminStaff`, `actsAsRole`), w
 | Admin & access | `guardian_engagement` | Guardian app usage | অভিভাবকদের অ্যাপ ব্যবহার | 1 | foundation-platform |
 | Admin & access | `my_account` | My account | আমার অ্যাকাউন্ট | 1 | foundation-platform |
 
-**Totals: 70 features, 333 actions** (`lesson_progress` added with LP-2, 2026-10-22: +2 actions, unflagged, TEACHER on +1, OFFICE on +2) (`mastery` added with M-0, 2026-10-20: +6 actions, all unflagged, TEACHER on +3, OFFICE on +1; M-2, 2026-10-21: +`mastery:edit_all`, PRINCIPAL-DEFAULT). By flag: LOCKED 11 · PRINCIPAL-DEFAULT 14 · DESIGNATION 24 · ESCALATION 5 · SELF 12 · unflagged 265. Defaults: TEACHER on 101 · OFFICE on 238. A row may carry a `†`/`F-n`/`2H` note in addition to its flag. Those notes are not counted as flags. Not counted: `guardian:read_child` (GUARDIAN plane), and the future `scholarship_practice:release` (SC-5, not built) and `announcements:publish` (no staff surface yet).
+**Totals: 70 features, 334 actions** (`parents_meeting:approve_change` added with meeting RSVP, 2026-10-24: +1 action, PRINCIPAL-DEFAULT, D-#842) (`lesson_progress` added with LP-2, 2026-10-22: +2 actions, unflagged, TEACHER on +1, OFFICE on +2) (`mastery` added with M-0, 2026-10-20: +6 actions, all unflagged, TEACHER on +3, OFFICE on +1; M-2, 2026-10-21: +`mastery:edit_all`, PRINCIPAL-DEFAULT). By flag: LOCKED 11 · PRINCIPAL-DEFAULT 15 · DESIGNATION 24 · ESCALATION 5 · SELF 12 · unflagged 265. Defaults: TEACHER on 101 · OFFICE on 238. A row may carry a `†`/`F-n`/`2H` note in addition to its flag. Those notes are not counted as flags. Not counted: `guardian:read_child` (GUARDIAN plane), and the future `scholarship_practice:release` (SC-5, not built) and `announcements:publish` (no staff surface yet).
 
 ---
 
@@ -410,6 +410,7 @@ Learning-outcome mastery tracker (`docs/prd-mastery.md`, D-#775–#787). Registe
 | `parents_meeting:review` | Write the final comment | চূড়ান্ত মন্তব্য লেখা | Final word per child; final queue | — | on | | roster:manage |
 | `parents_meeting:write_notes` | Write my meeting notes | সভার মন্তব্য লেখা (শিক্ষক) | Subject note; শ্রেণি শিক্ষক summary; Today cards | on | — | DESIGNATION:row_teacher/class_teacher | tracker:write |
 | `parents_meeting:view_brief` | Brief & comparison | সভার সারসংক্ষেপ ও তুলনা দেখা | Per-child brief + PDF, timeline, comparison | on | on | DESIGNATION:class_teacher (brief; waived by `parents_meeting:view`), F-13 | roster:manage OR class teacher; repsScope |
+| `parents_meeting:approve_change` | Approve a time change | সময় পরিবর্তনের অনুরোধ অনুমোদন | Approve (swap two families) or decline a guardian's slot-change request (D-#842) | — | — | PRINCIPAL-DEFAULT | new (D-#842) |
 
 #### `monthly_report` — মাসিক অগ্রগতি রিপোর্ট
 | permission | EN | BN | what it allows | T | O | flags | replaces |
