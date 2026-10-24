@@ -102,7 +102,7 @@ const SAT = new Date("2026-06-13T00:00:00Z");
 const makeEntry = (over: Record<string, unknown> = {}) => {
   const doc: Record<string, unknown> = {
     _id: oid(), groupId: GROUP_OID, studentId: STUDENT_OID, date: SAT,
-    present: false, juzRecords: [], teacherComment: undefined,
+    present: false, portions: [], teacherComment: undefined,
     deliveredAt: undefined, deliveryChannels: [], ...over,
   };
   doc.save = jest.fn(async () => doc);
@@ -145,13 +145,14 @@ describe("buildDigestSummary", () => {
   test("summarises portions, tanbih/fath, mistakes, and the comment", () => {
     const s = buildDigestSummary(
       [
-        { juz: 1, category: "MANZIL", amountJuz: 0.5, tanbih: 2, fath: 1, mistakes: { harf: 1, ghunnah: 0, madd: 0, other: 0 } },
-        { juz: 2, category: "MANZIL", amountJuz: 1, tanbih: 1, fath: 0, mistakes: { harf: 0, ghunnah: 2, madd: 0, other: 0 } },
+        { category: "SABAQ", status: "COMPLETED", fromSurah: 2, fromAyah: 173, toSurah: 2, toAyah: 181, tanbih: 2, fath: 1, mistakes: { harf: 1, ghunnah: 0, madd: 0, other: 0 } },
+        { category: "MANZIL", status: "FAILED", fromSurah: 46, fromAyah: 1, toSurah: 51, toAyah: 30, tanbih: 1, fath: 0, mistakes: { harf: 0, ghunnah: 2, madd: 0, other: 0 } },
       ],
       "ভালো",
     );
-    expect(s).toMatch(/পুরনো রিভিশন: 1.5 পারা/);
-    expect(s).toMatch(/তানবিহ: 3, ফাতহ: 1/);
+    // One line per portion: the range text + status + its own counts (SR-5).
+    expect(s).toMatch(/নতুন মুখস্ত: বাকারা ১৭৩–১৮১ \(সম্পন্ন\) · তানবিহ 2 · ফাতহ 1/);
+    expect(s).toMatch(/পুরনো রিভিশন: পারা ২৬ \(পুরো\) \(অকৃতকার্য\) · তানবিহ 1 · ফাতহ 0/);
     expect(s).toMatch(/হরফে সমস্যা: 1/);
     expect(s).toMatch(/গুন্নাহ: 2/);
     expect(s).toMatch(/মন্তব্য: ভালো/);
@@ -189,7 +190,7 @@ describe("deliverEntry", () => {
   });
 
   test("a PRESENT entry delivers SR_DIGEST and does NOT escalate", async () => {
-    const doc = makeEntry({ present: true, juzRecords: [{ juz: 1, category: "SABAQ", amountJuz: 1, tanbih: 0, fath: 0, mistakes: { harf: 0, ghunnah: 0, madd: 0, other: 0 } }] });
+    const doc = makeEntry({ present: true, portions: [{ category: "SABAQ", status: "COMPLETED", fromSurah: 1, fromAyah: 1, toSurah: 1, toAyah: 7, tanbih: 0, fath: 0, mistakes: { harf: 0, ghunnah: 0, madd: 0, other: 0 } }] });
     mockEntryFindById.mockResolvedValue(doc);
     const res = await deliverEntry(String(doc._id), ACTOR);
     expect(res.kind).toBe("SR_DIGEST");

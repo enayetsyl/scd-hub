@@ -12,31 +12,7 @@
 import { builder } from "../../../schema";
 import { assertGuardianOfStudent } from "../../../middleware/authz";
 import { childRevision, type GuardianRevisionEntry } from "../services/RevisionService";
-
-const GuardianJuzMistakesRef = builder.objectRef<GuardianRevisionEntry["juzRecords"][number]["mistakes"]>(
-  "GuardianRevisionJuzMistakes",
-);
-GuardianJuzMistakesRef.implement({
-  fields: (t) => ({
-    harf: t.exposeInt("harf"),
-    ghunnah: t.exposeInt("ghunnah"),
-    madd: t.exposeInt("madd"),
-    other: t.exposeInt("other"),
-  }),
-});
-
-const GuardianJuzRecordRef = builder.objectRef<GuardianRevisionEntry["juzRecords"][number]>("GuardianRevisionJuzRecord");
-GuardianJuzRecordRef.implement({
-  fields: (t) => ({
-    juz: t.exposeInt("juz"),
-    category: t.exposeString("category"),
-    amountJuz: t.exposeFloat("amountJuz"),
-    tanbih: t.exposeInt("tanbih"),
-    fath: t.exposeInt("fath"),
-    mistakes: t.field({ type: GuardianJuzMistakesRef, resolve: (r) => r.mistakes }),
-    note: t.string({ nullable: true, resolve: (r) => r.note }),
-  }),
-});
+import { RevisionPortionRef } from "./revision";
 
 const GuardianRevisionEntryRef = builder.objectRef<GuardianRevisionEntry>("GuardianRevisionEntry");
 GuardianRevisionEntryRef.implement({
@@ -47,7 +23,7 @@ GuardianRevisionEntryRef.implement({
     id: t.exposeString("id"),
     date: t.exposeString("date"),
     present: t.exposeBoolean("present"),
-    juzRecords: t.field({ type: [GuardianJuzRecordRef], resolve: (r) => r.juzRecords }),
+    portions: t.field({ type: [RevisionPortionRef], resolve: (r) => r.portions }),
     teacherComment: t.string({ nullable: true, resolve: (r) => r.teacherComment }),
     deliveredAt: t.exposeString("deliveredAt"),
   }),

@@ -5,8 +5,10 @@
  * no server change. Kept in its own module to avoid bloating the 4.7k-line
  * operations.ts (the same convention as observation.ts / comments.ts).
  *
- * Server convention: ISO dates are String; juz numbers / counts are Int; amountJuz
- * is Float. Category enum = SABAQ|SABQI|MANZIL; mistake keys = harf|ghunnah|madd|other.
+ * Server convention: ISO dates are String; surah/ayah numbers and counts are Int. A portion
+ * is a surah:ayah range (SR-5, D-#833); the juz and ayah counts are derived server-side.
+ * Category enum = SABAQ|SABQI|MANZIL; status = COMPLETED|PARTIAL|NOT_DONE|FAILED;
+ * mistake keys = harf|ghunnah|madd|other. Report tallies split by ayah share are Float.
  */
 import { gql } from "urql";
 
@@ -16,19 +18,25 @@ type NoVars = Record<string, never>;
 // Core revision entry (SR-1) — the per-student Saturday record
 // ---------------------------------------------------------------------------
 
-export interface RevisionJuzMistakesT {
+export interface RevisionPortionMistakesT {
   harf: number;
   ghunnah: number;
   madd: number;
   other: number;
 }
-export interface RevisionJuzRecordT {
-  juz: number;
+export interface RevisionPortionT {
   category: string;
-  amountJuz: number;
+  status: string;
+  fromSurah: number | null;
+  fromAyah: number | null;
+  toSurah: number | null;
+  toAyah: number | null;
+  rangeBn: string | null;
+  ayahs: number;
+  juzs: number[];
   tanbih: number;
   fath: number;
-  mistakes: RevisionJuzMistakesT;
+  mistakes: RevisionPortionMistakesT;
   note: string | null;
 }
 export interface RevisionEntryT {
@@ -37,7 +45,7 @@ export interface RevisionEntryT {
   studentId: string;
   date: string;
   present: boolean;
-  juzRecords: RevisionJuzRecordT[];
+  portions: RevisionPortionT[];
   teacherComment: string | null;
   teacherUserId: string | null;
   deliveredAt: string | null;
@@ -46,8 +54,8 @@ export interface RevisionEntryT {
   updatedAt: string;
 }
 
-const JUZ_RECORD_FIELDS = `juz category amountJuz tanbih fath mistakes { harf ghunnah madd other } note`;
-const REVISION_ENTRY_FIELDS = `id groupId studentId date present juzRecords { ${JUZ_RECORD_FIELDS} } teacherComment teacherUserId deliveredAt deliveryChannels createdAt updatedAt`;
+const PORTION_FIELDS = `category status fromSurah fromAyah toSurah toAyah rangeBn ayahs juzs tanbih fath mistakes { harf ghunnah madd other } note`;
+const REVISION_ENTRY_FIELDS = `id groupId studentId date present portions { ${PORTION_FIELDS} } teacherComment teacherUserId deliveredAt deliveryChannels createdAt updatedAt`;
 
 export interface RevisionGroupT {
   id: string;
@@ -67,6 +75,8 @@ export interface RevisionGridRowT {
   studentId: string;
   studentName: string;
   entry: RevisionEntryT | null;
+  /** The latest earlier entry — the prefill source (SR-5). */
+  previous: RevisionEntryT | null;
 }
 
 export const GROUP_REVISION_SATURDAY_QUERY = gql<
@@ -77,6 +87,7 @@ export const GROUP_REVISION_SATURDAY_QUERY = gql<
     groupRevisionSaturday(groupId: $groupId, date: $date) {
       studentId studentName
       entry { ${REVISION_ENTRY_FIELDS} }
+      previous { ${REVISION_ENTRY_FIELDS} }
     }
   }
 `;
@@ -105,19 +116,22 @@ export const STUDENT_REVISION_HISTORY_PAGE_QUERY = gql<
 
 // --- Inputs (SR-1) ---------------------------------------------------------
 
-export interface RevisionJuzMistakesInput {
+export interface RevisionPortionMistakesInput {
   harf?: number | null;
   ghunnah?: number | null;
   madd?: number | null;
   other?: number | null;
 }
-export interface RevisionJuzRecordInput {
-  juz: number;
+export interface RevisionPortionInput {
   category: string;
-  amountJuz: number;
+  status: string;
+  fromSurah?: number | null;
+  fromAyah?: number | null;
+  toSurah?: number | null;
+  toAyah?: number | null;
   tanbih?: number | null;
   fath?: number | null;
-  mistakes?: RevisionJuzMistakesInput | null;
+  mistakes?: RevisionPortionMistakesInput | null;
   note?: string | null;
 }
 
@@ -128,17 +142,17 @@ export const RECORD_REVISION_ENTRY = gql<
     studentId: string;
     date: string;
     present: boolean;
-    juzRecords?: RevisionJuzRecordInput[] | null;
+    portions?: RevisionPortionInput[] | null;
     teacherComment?: string | null;
   }
 >`
   mutation RecordRevisionEntry(
     $groupId: String!, $studentId: String!, $date: String!, $present: Boolean!,
-    $juzRecords: [RevisionJuzRecordInput!], $teacherComment: String
+    $portions: [RevisionPortionInput!], $teacherComment: String
   ) {
     recordRevisionEntry(
       groupId: $groupId, studentId: $studentId, date: $date, present: $present,
-      juzRecords: $juzRecords, teacherComment: $teacherComment
+      portions: $portions, teacherComment: $teacherComment
     ) { ${REVISION_ENTRY_FIELDS} }
   }
 `;
@@ -149,17 +163,17 @@ export const EDIT_REVISION_ENTRY = gql<
     entryId: string;
     groupId: string;
     present: boolean;
-    juzRecords?: RevisionJuzRecordInput[] | null;
+    portions?: RevisionPortionInput[] | null;
     teacherComment?: string | null;
   }
 >`
   mutation EditRevisionEntry(
     $entryId: String!, $groupId: String!, $present: Boolean!,
-    $juzRecords: [RevisionJuzRecordInput!], $teacherComment: String
+    $portions: [RevisionPortionInput!], $teacherComment: String
   ) {
     editRevisionEntry(
       entryId: $entryId, groupId: $groupId, present: $present,
-      juzRecords: $juzRecords, teacherComment: $teacherComment
+      portions: $portions, teacherComment: $teacherComment
     ) { ${REVISION_ENTRY_FIELDS} }
   }
 `;
@@ -233,6 +247,7 @@ export const SET_REVISION_ESCALATION_CONFIG = gql<
 
 export interface RevisionJuzWeaknessT {
   juz: number;
+  ayahsHeard: number;
   tanbih: number;
   fath: number;
   harf: number;
@@ -248,8 +263,32 @@ export const STUDENT_JUZ_WEAKNESS_QUERY = gql<
 >`
   query StudentJuzWeakness($studentId: String!, $asOf: String) {
     studentJuzWeakness(studentId: $studentId, asOf: $asOf) {
-      juz tanbih fath harf ghunnah madd other total
+      juz ayahsHeard tanbih fath harf ghunnah madd other total
     }
+  }
+`;
+
+export interface RevisionSurahWeaknessT {
+  surah: number;
+  nameBn: string;
+  ayahsHeard: number;
+  tanbih: number;
+  fath: number;
+  harf: number;
+  ghunnah: number;
+  madd: number;
+  other: number;
+  total: number;
+}
+
+const SURAH_WEAKNESS_FIELDS = `surah nameBn ayahsHeard tanbih fath harf ghunnah madd other total`;
+
+export const STUDENT_SURAH_WEAKNESS_QUERY = gql<
+  { studentSurahWeakness: RevisionSurahWeaknessT[] },
+  { studentId: string; asOf?: string | null }
+>`
+  query StudentSurahWeakness($studentId: String!, $asOf: String) {
+    studentSurahWeakness(studentId: $studentId, asOf: $asOf) { ${SURAH_WEAKNESS_FIELDS} }
   }
 `;
 
@@ -279,6 +318,7 @@ export interface RevisionTrendPointT {
   fath: number;
   mistakes: number;
   total: number;
+  sabaqAyahs: number;
 }
 export interface RevisionWeeklyTrendT {
   points: RevisionTrendPointT[];
@@ -292,7 +332,7 @@ export const REVISION_WEEKLY_TREND_QUERY = gql<
   query RevisionWeeklyTrend($studentId: String, $groupId: String, $asOf: String) {
     revisionWeeklyTrend(studentId: $studentId, groupId: $groupId, asOf: $asOf) {
       trend
-      points { date tanbih fath mistakes total }
+      points { date tanbih fath mistakes total sabaqAyahs }
     }
   }
 `;
@@ -314,13 +354,16 @@ export interface RevisionDashboardT {
   present: number;
   absent: number;
   portionsByCategory: RevisionPortionsByCategoryT;
+  ayahsByCategory: RevisionPortionsByCategoryT;
+  statusCounts: { COMPLETED: number; PARTIAL: number; NOT_DONE: number; FAILED: number };
   totalTanbih: number;
   totalFath: number;
   mistakes: RevisionMistakesAggT;
-  weakestJuz: RevisionJuzWeaknessT | null;
+  weakestJuz: RevisionJuzWeaknessT[];
+  weakestSurahs: RevisionSurahWeaknessT[];
 }
 
-const DASH_FIELDS = `scopeId entries present absent portionsByCategory { SABAQ SABQI MANZIL } totalTanbih totalFath mistakes { harf ghunnah madd other } weakestJuz { juz tanbih fath harf ghunnah madd other total }`;
+const DASH_FIELDS = `scopeId entries present absent portionsByCategory { SABAQ SABQI MANZIL } ayahsByCategory { SABAQ SABQI MANZIL } statusCounts { COMPLETED PARTIAL NOT_DONE FAILED } totalTanbih totalFath mistakes { harf ghunnah madd other } weakestJuz { juz ayahsHeard tanbih fath harf ghunnah madd other total } weakestSurahs { ${SURAH_WEAKNESS_FIELDS} }`;
 
 export const REVISION_LEVEL_DASHBOARD_QUERY = gql<
   { revisionLevelDashboard: RevisionDashboardT },
@@ -398,26 +441,11 @@ export const REVISION_COMPLETENESS_CHASE_QUERY = gql<
 // Guardian child read (SR-4) — delivered Saturdays only
 // ---------------------------------------------------------------------------
 
-export interface GuardianRevisionMistakesT {
-  harf: number;
-  ghunnah: number;
-  madd: number;
-  other: number;
-}
-export interface GuardianRevisionJuzRecordT {
-  juz: number;
-  category: string;
-  amountJuz: number;
-  tanbih: number;
-  fath: number;
-  mistakes: GuardianRevisionMistakesT;
-  note: string | null;
-}
 export interface GuardianRevisionEntryT {
   id: string;
   date: string;
   present: boolean;
-  juzRecords: GuardianRevisionJuzRecordT[];
+  portions: RevisionPortionT[];
   teacherComment: string | null;
   deliveredAt: string | null;
 }
@@ -430,7 +458,7 @@ export const CHILD_REVISION_QUERY = gql<
   query ChildRevision($studentId: String!, $limit: Int) {
     childRevision(studentId: $studentId, limit: $limit) {
       id date present
-      juzRecords { ${JUZ_RECORD_FIELDS} }
+      portions { ${PORTION_FIELDS} }
       teacherComment deliveredAt
     }
   }
