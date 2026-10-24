@@ -1,5 +1,5 @@
 /**
- * AssignmentAutoIssueService (D-#833) — the system confirms a section's assignment
+ * AssignmentAutoIssueService (D-#839) — the system confirms a section's assignment
  * WEEK when nothing is left for the human to decide: the D-#314 homework auto-issue
  * twin, on the weekly AS-T6 gate.
  *

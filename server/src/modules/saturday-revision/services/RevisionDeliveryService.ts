@@ -26,9 +26,11 @@ import { Types } from "mongoose";
 import {
   REVISION_CATEGORY_LABELS_BN,
   REVISION_MISTAKE_CATEGORY_LABELS_BN,
+  REVISION_PORTION_STATUS_LABELS_BN,
+  formatRangeBn,
 } from "@scd/shared";
-import type { RevisionCategory, RevisionMistakeCategory } from "@scd/shared";
-import { RevisionEntry, type IRevisionEntry, type IJuzRecord } from "../models/RevisionEntry";
+import type { RevisionMistakeCategory } from "@scd/shared";
+import { RevisionEntry, type IRevisionEntry, type IRevisionPortion } from "../models/RevisionEntry";
 import { RevisionEscalationConfig } from "../models/RevisionEscalationConfig";
 import { RevisionAbsenceDispatch } from "../models/RevisionAbsenceDispatch";
 import { Student } from "../../foundation/models/Student";
@@ -37,7 +39,7 @@ import { renderTemplate } from "../../templates/services/MessageTemplateService"
 import { emitRevisionDelivery, emitRevisionEscalation } from "../../notifications/services/emitters";
 import { dateKeyOf } from "../../attendance/dates";
 import { writeAudit } from "../../platform/services/AuditService";
-import { RevisionError } from "./RevisionService";
+import { RevisionError, portionRange } from "./RevisionService";
 import { actingAsFilter } from "../../foundation/services/RoleScope";
 import { personName } from "../../../lib/personName";
 
@@ -71,34 +73,28 @@ export interface RevisionDeliveryOutcome {
 
 type StudentLite = { _id: Types.ObjectId; name?: string; nameBn?: string; phone?: string };
 
-/** A Bangla per-juz digest of a present student's Saturday (the sr.digest.body `Summary`). */
-export function buildDigestSummary(records: IJuzRecord[], teacherComment?: string): string {
-  if (records.length === 0) return teacherComment?.trim() || "—";
-  // Portions heard per category (Σ amountJuz).
-  const byCategory = new Map<RevisionCategory, number>();
-  let tanbih = 0;
-  let fath = 0;
+/** A Bangla digest of a present student's Saturday (the sr.digest.body `Summary`) — one
+ *  line per portion with its range + status (SR-5, D-#837), then the mistake totals. */
+export function buildDigestSummary(portions: IRevisionPortion[], teacherComment?: string): string {
+  if (portions.length === 0) return teacherComment?.trim() || "—";
   const mistakeTotals: Record<RevisionMistakeCategory, number> = { HARF: 0, GHUNNAH: 0, MADD: 0, OTHER: 0 };
-  for (const r of records) {
-    byCategory.set(r.category, (byCategory.get(r.category) ?? 0) + r.amountJuz);
-    tanbih += r.tanbih ?? 0;
-    fath += r.fath ?? 0;
-    mistakeTotals.HARF += r.mistakes?.harf ?? 0;
-    mistakeTotals.GHUNNAH += r.mistakes?.ghunnah ?? 0;
-    mistakeTotals.MADD += r.mistakes?.madd ?? 0;
-    mistakeTotals.OTHER += r.mistakes?.other ?? 0;
+  const lines: string[] = [];
+  for (const p of portions) {
+    const range = portionRange(p);
+    const what = range ? formatRangeBn(range) : "—";
+    lines.push(
+      `${REVISION_CATEGORY_LABELS_BN[p.category]}: ${what} (${REVISION_PORTION_STATUS_LABELS_BN[p.status]}) · ` +
+        `তানবিহ ${p.tanbih ?? 0} · ফাতহ ${p.fath ?? 0}`,
+    );
+    mistakeTotals.HARF += p.mistakes?.harf ?? 0;
+    mistakeTotals.GHUNNAH += p.mistakes?.ghunnah ?? 0;
+    mistakeTotals.MADD += p.mistakes?.madd ?? 0;
+    mistakeTotals.OTHER += p.mistakes?.other ?? 0;
   }
-  const portions = [...byCategory.entries()]
-    .map(([cat, amt]) => `${REVISION_CATEGORY_LABELS_BN[cat]}: ${amt} পারা`)
-    .join("; ");
   const mistakeStr = (Object.keys(mistakeTotals) as RevisionMistakeCategory[])
     .filter((k) => mistakeTotals[k] > 0)
     .map((k) => `${REVISION_MISTAKE_CATEGORY_LABELS_BN[k]}: ${mistakeTotals[k]}`)
     .join(", ");
-
-  const lines: string[] = [];
-  if (portions) lines.push(portions);
-  lines.push(`তানবিহ: ${tanbih}, ফাতহ: ${fath}`);
   lines.push(mistakeStr ? `ভুল — ${mistakeStr}` : "ভুল নেই — মাশাআল্লাহ");
   if (teacherComment?.trim()) lines.push(`মন্তব্য: ${teacherComment.trim()}`);
   return lines.join("\n");
@@ -128,7 +124,7 @@ export async function deliverEntry(entryId: string, actorId: string): Promise<Re
     ? await renderTemplate("sr.digest.body", {
         StudentName: studentName,
         Date: dateKey,
-        Summary: buildDigestSummary(entry.juzRecords ?? [], entry.teacherComment),
+        Summary: buildDigestSummary(entry.portions ?? [], entry.teacherComment),
       })
     : await renderTemplate("sr.absent.body", { StudentName: studentName, Date: dateKey });
 

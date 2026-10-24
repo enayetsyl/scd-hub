@@ -1,5 +1,5 @@
 /**
- * D-#833 — assignment-week auto-issue sweep (the D-#314 homework twin, weekly).
+ * D-#839 — assignment-week auto-issue sweep (the D-#314 homework twin, weekly).
  *
  * The system confirms a (section × week) ONLY when nothing is left for the human:
  *   - ≥1 DRAFT whose delivery day arrived, inside the lookback window

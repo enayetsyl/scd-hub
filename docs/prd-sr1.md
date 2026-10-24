@@ -1,5 +1,7 @@
 # PRD — Saturday Revision SR-1: Models + entry + reads (server)
 
+> **Amended by SR-5 (`docs/prd-sr5-surah-ranges.md`, D-#833–#838):** portions are surah:ayah ranges; the juz is derived, not stored.
+
 **Status:** Planned — build contract (slice 1 of 4). No feature code yet.
 **Owner:** Principal (SCD) · **Module prefix:** SR · **Plane:** identity (ADR-005)
 **Source REQ:** `docs/saturday-revision-requirements.md` (LOCKED) · **Traceability:** D-#197–#201 (REQ) · **new D-#241–#243** · ADR-005/008 · D-#48/#56/#50/#85/#17/#94/#145

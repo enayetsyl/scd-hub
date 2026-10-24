@@ -646,7 +646,7 @@ export async function confirmAssignmentWeek(input: {
   let recordsIssued = 0;
   let itemsIssued = 0;
   for (const item of drafts) {
-    // D-#833: claim the draft atomically before spawning its records. Records carry
+    // D-#839: claim the draft atomically before spawning its records. Records carry
     // no unique index (a resubmission shares asItemId+studentId), so a class teacher's
     // confirm racing the auto-issue sweep would otherwise insert every roster twice.
     // The loser of the claim skips the item; the winner owns its records.

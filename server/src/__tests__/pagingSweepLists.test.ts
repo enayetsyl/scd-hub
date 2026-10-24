@@ -149,7 +149,7 @@ describe("studentRevisionHistoryPage", () => {
     revDocs = [
       {
         _id: oid(), groupId: oid(), studentId: new mongoose.Types.ObjectId(studentId), date: new Date(2026, 9, 17),
-        present: true, juzRecords: [{ juz: 3, category: "NEW", amountJuz: 0.5, tanbih: 1, fath: 0 }],
+        present: true, portions: [{ category: "SABAQ", status: "COMPLETED", fromSurah: 2, fromAyah: 253, toSurah: 2, toAyah: 260, tanbih: 1, fath: 0 }],
         teacherUserId: oid(), createdAt: new Date(), updatedAt: new Date(),
       },
     ];
@@ -157,7 +157,7 @@ describe("studentRevisionHistoryPage", () => {
     expect(revCalls.find).toEqual({ studentId: new mongoose.Types.ObjectId(studentId) });
     expect(revCalls).toMatchObject({ sort: { date: -1, _id: -1 }, skip: 0, limit: 50 });
     expect(page.total).toBe(60);
-    expect(page.rows[0].juzRecords[0].mistakes).toEqual({ harf: 0, ghunnah: 0, madd: 0, other: 0 });
+    expect(page.rows[0].portions[0].mistakes).toEqual({ harf: 0, ghunnah: 0, madd: 0, other: 0 });
   });
 
   test("a bad id is refused before any read", async () => {

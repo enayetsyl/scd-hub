@@ -117,7 +117,7 @@ jest.mock("../modules/trackers/services/HomeworkAutoIssueService", () => ({
   HW_AUTO_ISSUE_START_HOUR: 12,
   HW_AUTO_ISSUE_END_HOUR: 17,
 }));
-// D-#833: the assignment-week auto-issue sweep (covered in assignmentAutoIssue.test.ts)
+// D-#839: the assignment-week auto-issue sweep (covered in assignmentAutoIssue.test.ts)
 // runs every school-day tick — a quiet no-op here keeps the suite DB-free.
 const mockAsAutoIssue = jest.fn().mockResolvedValue({ issued: 0, deferred: 0 });
 jest.mock("../modules/trackers/services/AssignmentAutoIssueService", () => ({
@@ -548,7 +548,7 @@ describe("homework auto-DUE sweep", () => {
   });
 });
 
-describe("assignment auto-ISSUE sweep (D-#833)", () => {
+describe("assignment auto-ISSUE sweep (D-#839)", () => {
   it("runs on EVERY school-day tick, evening included, and reports the issue count", async () => {
     mockAsAutoIssue.mockResolvedValueOnce({ issued: 2, deferred: 1 });
     const s1 = await runSchedulerTick(at(9, 0));

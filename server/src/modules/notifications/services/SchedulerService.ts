@@ -244,7 +244,7 @@ export interface TickSummary {
   hwPendingEmitted: number;
   hwDueFlipped: number;
   hwAutoIssued: number;
-  /** Assignment (section × week)s confirmed+issued by the D-#833 sweep this pass. */
+  /** Assignment (section × week)s confirmed+issued by the D-#839 sweep this pass. */
   asAutoIssued: number;
   /** End-of-due-day system chases (owner ruling 2026-08-04). */
   hwAutoChased: number;
@@ -382,7 +382,7 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
     }
   });
 
-  // --- Assignment auto-ISSUE (D-#833) — every school-day tick, no hour window: the
+  // --- Assignment auto-ISSUE (D-#839) — every school-day tick, no hour window: the
   // roster is captured at delivery (no attendance to wait for), and a Thursday-evening
   // last delivery must still issue before Sunday's due-day pass. NOT runOnce — a week
   // becomes ready whenever its last delivery/nil lands. Idempotent: confirm claims

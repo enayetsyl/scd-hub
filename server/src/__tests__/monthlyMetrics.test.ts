@@ -182,24 +182,27 @@ describe("MR-1 §5.6 — class test", () => {
 });
 
 describe("MR-1 §5.7 — Hifz reports what RevisionEntry actually stores", () => {
-  const juz = (amountJuz: number, tanbih = 0, fath = 0, mistakes = { harf: 0, ghunnah: 0, madd: 0, other: 0 }) => ({
-    amountJuz, tanbih, fath, mistakes,
+  // SR-5: a portion is a surah:ayah range; the juz amount is derived from it.
+  const HALF_JUZ_1 = { fromSurah: 1, fromAyah: 1, toSurah: 2, toAyah: 67 }; // 74 of juz 1's 148 ayahs
+  const WHOLE_JUZ_30 = { fromSurah: 78, fromAyah: 1, toSurah: 114, toAyah: 6 };
+  const portion = (range: typeof HALF_JUZ_1, tanbih = 0, fath = 0, mistakes = { harf: 0, ghunnah: 0, madd: 0, other: 0 }) => ({
+    ...range, tanbih, fath, mistakes,
   });
 
   test("sessions, presence, juz heard, prompts and mistakes are summed", () => {
     const h = hifzMonthOf([
-      { date: new Date(2026, 6, 4), present: true, juzRecords: [juz(0.5, 1, 0, { harf: 2, ghunnah: 1, madd: 0, other: 0 })], teacherComment: "ভালো" },
-      { date: new Date(2026, 6, 11), present: true, juzRecords: [juz(1, 0, 2)], teacherComment: "  " },
-      { date: new Date(2026, 6, 18), present: false, juzRecords: [] },
+      { date: new Date(2026, 6, 4), present: true, portions: [portion(HALF_JUZ_1, 1, 0, { harf: 2, ghunnah: 1, madd: 0, other: 0 })], teacherComment: "ভালো" },
+      { date: new Date(2026, 6, 11), present: true, portions: [portion(WHOLE_JUZ_30, 0, 2)], teacherComment: "  " },
+      { date: new Date(2026, 6, 18), present: false, portions: [] },
     ]);
     expect(h).toMatchObject({ sessions: 3, present: 2, absent: 1, juzHeard: 1.5, tanbih: 1, fath: 2, mistakes: 3 });
   });
 
   test("the latest NON-EMPTY teacher note wins, whatever order the rows arrive in", () => {
     const h = hifzMonthOf([
-      { date: new Date(2026, 6, 18), present: true, juzRecords: [], teacherComment: "   " },
-      { date: new Date(2026, 6, 4), present: true, juzRecords: [], teacherComment: "প্রথম" },
-      { date: new Date(2026, 6, 11), present: true, juzRecords: [], teacherComment: "দ্বিতীয়" },
+      { date: new Date(2026, 6, 18), present: true, portions: [], teacherComment: "   " },
+      { date: new Date(2026, 6, 4), present: true, portions: [], teacherComment: "প্রথম" },
+      { date: new Date(2026, 6, 11), present: true, portions: [], teacherComment: "দ্বিতীয়" },
     ]);
     expect(h.latestNote).toBe("দ্বিতীয়");
   });

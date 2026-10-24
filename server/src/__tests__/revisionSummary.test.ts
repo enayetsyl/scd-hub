@@ -9,6 +9,7 @@
  * DB-free (the repo convention): models + the template renderer are mocked.
  */
 import mongoose from "mongoose";
+import { wholeJuzRange } from "@scd/shared";
 
 const oid = () => new mongoose.Types.ObjectId();
 const leanChain = (val: unknown) => {
@@ -59,13 +60,14 @@ import {
   completenessChase,
 } from "../modules/saturday-revision/services/RevisionSummaryService";
 
-const juz = (over: Record<string, unknown> = {}) => ({
-  juz: 1, category: "MANZIL", amountJuz: 1, tanbih: 0, fath: 0,
+/** A portion covering the whole of juz `juz` (SR-5: ranges, the juz is derived). */
+const juz = ({ juz: j = 1, ...over }: Record<string, unknown> = {}) => ({
+  category: "MANZIL", status: "COMPLETED", ...wholeJuzRange(j as number), tanbih: 0, fath: 0,
   mistakes: { harf: 0, ghunnah: 0, madd: 0, other: 0 }, ...over,
 });
 const entry = (over: Record<string, unknown> = {}) => ({
   _id: oid(), groupId: oid(), studentId: oid(), date: new Date("2026-06-13T00:00:00Z"),
-  present: true, juzRecords: [], deliveryChannels: [], ...over,
+  present: true, portions: [], deliveryChannels: [], ...over,
 });
 
 beforeEach(() => {
@@ -78,18 +80,34 @@ beforeEach(() => {
 // ===========================================================================
 
 describe("aggregate (pure)", () => {
-  test("folds present/absent + per-juz tanbih/fath/mistakes", () => {
+  test("folds present/absent + tanbih/fath/mistakes, split by ayah share (SR-5)", () => {
     const agg = aggregate([
-      entry({ present: true, juzRecords: [juz({ juz: 1, amountJuz: 0.5, tanbih: 2, fath: 1, mistakes: { harf: 1, ghunnah: 0, madd: 0, other: 0 } }), juz({ juz: 2, amountJuz: 1, tanbih: 1 })] }),
-      entry({ present: false, juzRecords: [] }),
+      entry({
+        present: true,
+        portions: [
+          // Half of juz 1 (74 of 148 ayahs) — all in juz 1.
+          juz({ fromSurah: 1, fromAyah: 1, toSurah: 2, toAyah: 67, tanbih: 2, fath: 1, mistakes: { harf: 1, ghunnah: 0, madd: 0, other: 0 } }),
+          juz({ juz: 2, tanbih: 1 }),
+          // Naba 1 → Naziat 46 (40 + 46 ayahs): 6 tanbih split 40/86 vs 46/86.
+          juz({ category: "SABAQ", status: "PARTIAL", fromSurah: 78, fromAyah: 1, toSurah: 79, toAyah: 46, tanbih: 6 }),
+          juz({ category: "SABQI", status: "NOT_DONE", fromSurah: undefined, fromAyah: undefined, toSurah: undefined, toAyah: undefined, fath: 2 }),
+        ],
+      }),
+      entry({ present: false, portions: [] }),
     ] as never);
     expect(agg.present).toBe(1);
     expect(agg.absent).toBe(1);
-    expect(agg.portionsByCategory.MANZIL).toBe(1.5);
-    expect(agg.totalTanbih).toBe(3);
-    expect(agg.totalFath).toBe(1);
+    expect(agg.portionsByCategory.MANZIL).toBeCloseTo(1.5, 5);
+    expect(agg.ayahsByCategory).toEqual({ SABAQ: 86, SABQI: 0, MANZIL: 74 + 111 });
+    expect(agg.statusCounts).toEqual({ COMPLETED: 2, PARTIAL: 1, NOT_DONE: 1, FAILED: 0 });
+    expect(agg.totalTanbih).toBe(9);
+    expect(agg.totalFath).toBe(3); // a range-less NOT_DONE still counts in the totals
     expect(agg.mistakes.harf).toBe(1);
-    expect(agg.perJuz.get(1)!.total).toBe(2 + 1 + 1); // tanbih+fath+harf
+    const j1 = agg.perJuz.get(1)!;
+    expect(j1.tanbih + j1.fath + j1.harf).toBe(2 + 1 + 1);
+    expect(agg.perSurah.get(78)!.tanbih).toBeCloseTo((6 * 40) / 86, 5);
+    expect(agg.perSurah.get(79)!.tanbih).toBeCloseTo((6 * 46) / 86, 5);
+    expect(agg.perJuz.get(30)!.ayahsHeard).toBe(86);
   });
 });
 
@@ -109,7 +127,7 @@ describe("trendOf", () => {
 describe("studentJuzWeakness", () => {
   test("returns per-juz weakness, weakest first", async () => {
     mockEntryFind.mockReturnValue(leanChain([
-      entry({ juzRecords: [juz({ juz: 5, tanbih: 1 }), juz({ juz: 9, tanbih: 4, mistakes: { harf: 2, ghunnah: 0, madd: 0, other: 0 } })] }),
+      entry({ portions: [juz({ juz: 5, tanbih: 1 }), juz({ juz: 9, tanbih: 4, mistakes: { harf: 2, ghunnah: 0, madd: 0, other: 0 } })] }),
     ]));
     const rows = await studentJuzWeakness(oid().toString());
     expect(rows[0].juz).toBe(9); // weakest (total 6) first
@@ -123,8 +141,8 @@ describe("groupCoverage", () => {
     const s = oid();
     const asOf = new Date("2026-06-13T00:00:00Z");
     mockEntryFind.mockReturnValue(leanChain([
-      entry({ studentId: s, date: new Date("2026-04-01T00:00:00Z"), juzRecords: [juz({ juz: 3 })] }), // ~73d ago
-      entry({ studentId: s, date: new Date("2026-06-06T00:00:00Z"), juzRecords: [juz({ juz: 4 })] }), // 7d ago
+      entry({ studentId: s, date: new Date("2026-04-01T00:00:00Z"), portions: [juz({ juz: 3 })] }), // ~73d ago
+      entry({ studentId: s, date: new Date("2026-06-06T00:00:00Z"), portions: [juz({ juz: 4 })] }), // 7d ago
     ]));
     mockStudentFind.mockReturnValue(leanChain([{ _id: s, nameBn: "আমিনা" }]));
     const rows = await groupCoverage(oid().toString(), asOf, 28);
@@ -137,8 +155,8 @@ describe("groupCoverage", () => {
 describe("weeklyTrend", () => {
   test("per-Saturday totals + trend (latest vs previous)", async () => {
     mockEntryFind.mockReturnValue(leanChain([
-      entry({ date: new Date("2026-06-06T00:00:00Z"), juzRecords: [juz({ tanbih: 1 })] }), // total 1
-      entry({ date: new Date("2026-06-13T00:00:00Z"), juzRecords: [juz({ tanbih: 3 })] }), // total 3
+      entry({ date: new Date("2026-06-06T00:00:00Z"), portions: [juz({ tanbih: 1 })] }), // total 1
+      entry({ date: new Date("2026-06-13T00:00:00Z"), portions: [juz({ tanbih: 3 })] }), // total 3
     ]));
     const res = await weeklyTrend({ studentId: oid().toString() });
     expect(res.points).toHaveLength(2);
@@ -154,7 +172,7 @@ describe("weeklyTrend", () => {
 describe("levelDashboard", () => {
   test("rolls up present/absent + weakest juz", async () => {
     mockEntryFind.mockReturnValue(leanChain([
-      entry({ present: true, juzRecords: [juz({ juz: 7, tanbih: 5 })] }),
+      entry({ present: true, portions: [juz({ juz: 7, tanbih: 5 })] }),
       entry({ present: false }),
     ]));
     const d = await levelDashboard(oid().toString());

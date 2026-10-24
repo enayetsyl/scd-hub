@@ -31,7 +31,7 @@ jest.mock("../modules/trackers/models/AssignmentSchedule", () => ({
 jest.mock("../modules/trackers/models/AssignmentItem", () => ({
   AssignmentItem: {
     create: (a: unknown) => mockItemCreate(a),
-    // D-#833: confirm claims each draft atomically (status DRAFT → ISSUED).
+    // D-#839: confirm claims each draft atomically (status DRAFT → ISSUED).
     updateOne: (q: unknown, u: unknown) => mockItemUpdateOne(q, u),
     findOne: (q: unknown) => ({ lean: () => mockItemFindOne(q) }),
     // findById() supports both `await findById(id)` (trim — a savable doc) and
@@ -490,7 +490,7 @@ describe("AJ-9 — confirmAssignmentWeek (360-min weekly gate)", () => {
     expect(docs.some((d) => d.state === "ABSENT_REDELIVER")).toBe(true);
   });
 
-  test("D-#833: a draft another confirm already claimed is skipped — its records are never inserted twice", async () => {
+  test("D-#839: a draft another confirm already claimed is skipped — its records are never inserted twice", async () => {
     const a = draftItem({ estMinutes: 60 });
     const b = draftItem({ estMinutes: 60 });
     mockItemFind.mockReturnValue([a, b]);
@@ -504,7 +504,7 @@ describe("AJ-9 — confirmAssignmentWeek (360-min weekly gate)", () => {
     expect(docs.every((d) => d.asItemId === b._id)).toBe(true);
   });
 
-  test("D-#833: a failed record insert hands the draft back (DRAFT + its roster), never ISSUED with no records", async () => {
+  test("D-#839: a failed record insert hands the draft back (DRAFT + its roster), never ISSUED with no records", async () => {
     const a = draftItem({ estMinutes: 60 });
     mockItemFind.mockReturnValue([a]);
     mockRecInsertMany.mockRejectedValueOnce(new Error("write failed"));
