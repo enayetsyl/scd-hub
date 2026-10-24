@@ -1,6 +1,6 @@
 /**
  * StudentRevisionHistoryScreen (SR-1) — one student's revision entries, newest-first,
- * with per-juz detail. Read-only. tracker:read re-gated + row-scoped server-side.
+ * with each portion's surah:ayah range + status (SR-5). Read-only. tracker:read re-gated + row-scoped server-side.
  */
 import React from "react";
 import { ScrollView, View } from "react-native";
@@ -10,15 +10,15 @@ import { STUDENT_REVISION_HISTORY_PAGE_QUERY, type RevisionEntryT } from "../../
 import { Screen, Card, Body, Muted, Badge, Notice, Loader, EmptyState } from "../../components/ui";
 import { Pager } from "../../components/Pager";
 import { usePageState, PAGE_SIZE } from "../../lib/paging";
-import { STR, bnNum, revCategoryLabel } from "../../lib/labels";
+import { STR, bnNum, revCategoryLabel, revStatusLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
 import type { RevisionStackParamList } from "../../navigation/types";
 
 type Props = NativeStackScreenProps<RevisionStackParamList, "StudentRevisionHistory">;
 
-/** Sum of the four structured mistake counts on one juz record. */
-function juzMistakeTotal(r: RevisionEntryT["juzRecords"][number]): number {
+/** Sum of the four structured mistake counts on one portion. */
+function portionMistakeTotal(r: RevisionEntryT["portions"][number]): number {
   return r.mistakes.harf + r.mistakes.ghunnah + r.mistakes.madd + r.mistakes.other;
 }
 
@@ -54,14 +54,14 @@ export default function StudentRevisionHistoryScreen({ route }: Props): React.Re
                 <Badge text={e.present ? STR.revPresent : STR.revAbsent} tone={e.present ? "brand" : "muted"} />
               </View>
               {e.present
-                ? e.juzRecords.map((r, i) => (
+                ? e.portions.map((r, i) => (
                     <View key={i} style={{ marginTop: space(2) }}>
                       <Body>
-                        {revCategoryLabel(r.category)} · {STR.revJuz} {bnNum(r.juz)} · {bnNum(r.amountJuz)}
+                        {revCategoryLabel(r.category)} · {r.rangeBn ?? "—"} · {revStatusLabel(r.status)}
                       </Body>
                       <Muted>
                         {STR.revTanbih} {bnNum(r.tanbih)} · {STR.revFath} {bnNum(r.fath)} · {STR.revTotalMistakes}{" "}
-                        {bnNum(juzMistakeTotal(r))}
+                        {bnNum(portionMistakeTotal(r))}
                       </Muted>
                       {r.note ? <Muted>{r.note}</Muted> : null}
                     </View>
