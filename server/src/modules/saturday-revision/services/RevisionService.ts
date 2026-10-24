@@ -3,8 +3,9 @@
  * revision store: record / edit (upsert per student × Saturday) + the staff grid
  * reads. NO delivery here (no emit()/wa.me) — that is SR-2.
  *
- *   recordEntry            — upsert ONE (student × Saturday) entry: per-juz records
- *                            (category/juz/amount/تنبیه/فتح/mistake counts) + comment;
+ *   recordEntry            — upsert ONE (student × Saturday) entry: portions (category /
+ *                            surah:ayah range / status / تنبیه/فتح / mistake counts —
+ *                            SR-5, D-#833) + comment;
  *                            the group is a Hifz Quran SubjectGroup, the date a
  *                            QURAN_ONLY Saturday (the D-#50 one calendar), the student
  *                            an active membership — all validated server-side. Author
@@ -21,9 +22,17 @@
  * plane (names studentIds); NO corpus path (ADR-005).
  */
 import { Types } from "mongoose";
-import { REVISION_CATEGORIES, REVISION_MISTAKE_CATEGORIES } from "@scd/shared";
-import type { RevisionCategory } from "@scd/shared";
-import { RevisionEntry, type IRevisionEntry, type IJuzRecord } from "../models/RevisionEntry";
+import {
+  REVISION_CATEGORIES,
+  REVISION_MISTAKE_CATEGORIES,
+  REVISION_PORTION_STATUSES,
+  formatRangeBn,
+  rangeAyahCount,
+  rangeError,
+  splitRangeByJuz,
+} from "@scd/shared";
+import type { AyahRange, RevisionCategory, RevisionPortionStatus } from "@scd/shared";
+import { RevisionEntry, type IRevisionEntry, type IRevisionPortion } from "../models/RevisionEntry";
 import { SubjectGroup } from "../../routine/models/SubjectGroup";
 import { SubjectGroupMembership } from "../../routine/models/SubjectGroupMembership";
 import { RoutineSlot } from "../../routine/models/RoutineSlot";
@@ -41,10 +50,18 @@ export class RevisionError extends Error {}
 // Shapes
 // ---------------------------------------------------------------------------
 
-export interface JuzRecordShape {
-  juz: number;
+export interface RevisionPortionShape {
   category: RevisionCategory;
-  amountJuz: number;
+  status: RevisionPortionStatus;
+  fromSurah: number | null;
+  fromAyah: number | null;
+  toSurah: number | null;
+  toAyah: number | null;
+  /** Bangla range text ("বাকারা ১৭৩–১৮১"); null for a range-less NOT_DONE. */
+  rangeBn: string | null;
+  /** Derived from the range (D-#837): ayahs heard and the juz it touches. */
+  ayahs: number;
+  juzs: number[];
   tanbih: number;
   fath: number;
   mistakes: { harf: number; ghunnah: number; madd: number; other: number };
@@ -57,7 +74,7 @@ export interface RevisionEntryShape {
   studentId: string;
   date: string;
   present: boolean;
-  juzRecords: JuzRecordShape[];
+  portions: RevisionPortionShape[];
   teacherComment: string | null;
   teacherUserId: string;
   deliveredAt: string | null;
@@ -70,6 +87,8 @@ export interface RevisionGridRow {
   studentId: string;
   studentName: string;
   entry: RevisionEntryShape | null;
+  /** The student's latest entry BEFORE this Saturday — the grid's prefill source (SR-5). */
+  previous: RevisionEntryShape | null;
 }
 
 export interface RevisionGroupShape {
@@ -80,20 +99,33 @@ export interface RevisionGroupShape {
   gender: string;
 }
 
-function shapeJuz(r: IJuzRecord): JuzRecordShape {
+/** The portion's range, or null for a range-less NOT_DONE. */
+export function portionRange(p: IRevisionPortion): AyahRange | null {
+  if (p.fromSurah == null || p.fromAyah == null || p.toSurah == null || p.toAyah == null) return null;
+  return { fromSurah: p.fromSurah, fromAyah: p.fromAyah, toSurah: p.toSurah, toAyah: p.toAyah };
+}
+
+export function shapePortion(p: IRevisionPortion): RevisionPortionShape {
+  const range = portionRange(p);
   return {
-    juz: r.juz,
-    category: r.category,
-    amountJuz: r.amountJuz,
-    tanbih: r.tanbih,
-    fath: r.fath,
+    category: p.category,
+    status: p.status,
+    fromSurah: range?.fromSurah ?? null,
+    fromAyah: range?.fromAyah ?? null,
+    toSurah: range?.toSurah ?? null,
+    toAyah: range?.toAyah ?? null,
+    rangeBn: range ? formatRangeBn(range) : null,
+    ayahs: range ? rangeAyahCount(range) : 0,
+    juzs: range ? splitRangeByJuz(range).map((j) => j.juz) : [],
+    tanbih: p.tanbih,
+    fath: p.fath,
     mistakes: {
-      harf: r.mistakes?.harf ?? 0,
-      ghunnah: r.mistakes?.ghunnah ?? 0,
-      madd: r.mistakes?.madd ?? 0,
-      other: r.mistakes?.other ?? 0,
+      harf: p.mistakes?.harf ?? 0,
+      ghunnah: p.mistakes?.ghunnah ?? 0,
+      madd: p.mistakes?.madd ?? 0,
+      other: p.mistakes?.other ?? 0,
     },
-    note: r.note ?? null,
+    note: p.note ?? null,
   };
 }
 
@@ -104,7 +136,7 @@ function shape(d: IRevisionEntry): RevisionEntryShape {
     studentId: d.studentId.toString(),
     date: new Date(d.date).toISOString(),
     present: d.present,
-    juzRecords: (d.juzRecords ?? []).map(shapeJuz),
+    portions: (d.portions ?? []).map(shapePortion),
     teacherComment: d.teacherComment ?? null,
     teacherUserId: d.teacherUserId.toString(),
     deliveredAt: d.deliveredAt ? new Date(d.deliveredAt).toISOString() : null,
@@ -127,25 +159,44 @@ function isNonNegInt(n: unknown): boolean {
   return typeof n === "number" && Number.isFinite(n) && n >= 0 && Number.isInteger(n);
 }
 
-export interface JuzRecordInput {
-  juz: number;
+export interface PortionInput {
   category: string;
-  amountJuz: number;
+  status: string;
+  fromSurah?: number | null;
+  fromAyah?: number | null;
+  toSurah?: number | null;
+  toAyah?: number | null;
   tanbih?: number;
   fath?: number;
   mistakes?: { harf?: number; ghunnah?: number; madd?: number; other?: number };
   note?: string;
 }
 
-function validateJuzRecord(input: JuzRecordInput): IJuzRecord {
-  if (!Number.isInteger(input.juz) || input.juz < 1 || input.juz > 30) {
-    throw new RevisionError("juz must be an integer 1–30");
-  }
+/** One portion (SR-5, D-#833/#835): a valid mushaf-order range — or, for NOT_DONE only,
+ *  no range at all (all four fields absent; a half-filled range is refused). */
+function validatePortion(input: PortionInput): IRevisionPortion {
   if (!(REVISION_CATEGORIES as readonly string[]).includes(input.category)) {
     throw new RevisionError(`category must be one of: ${REVISION_CATEGORIES.join(", ")}`);
   }
-  if (typeof input.amountJuz !== "number" || !Number.isFinite(input.amountJuz) || input.amountJuz <= 0) {
-    throw new RevisionError("amountJuz must be greater than 0");
+  if (!(REVISION_PORTION_STATUSES as readonly string[]).includes(input.status)) {
+    throw new RevisionError(`status must be one of: ${REVISION_PORTION_STATUSES.join(", ")}`);
+  }
+  const parts = [input.fromSurah, input.fromAyah, input.toSurah, input.toAyah];
+  const given = parts.filter((v) => v != null).length;
+  let range: AyahRange | null = null;
+  if (given === 0) {
+    if (input.status !== "NOT_DONE") throw new RevisionError("A portion needs its start and end surah/ayah");
+  } else if (given < 4) {
+    throw new RevisionError("Give both the start and the end surah/ayah");
+  } else {
+    range = {
+      fromSurah: input.fromSurah as number,
+      fromAyah: input.fromAyah as number,
+      toSurah: input.toSurah as number,
+      toAyah: input.toAyah as number,
+    };
+    const err = rangeError(range);
+    if (err) throw new RevisionError(`Invalid range: ${err}`);
   }
   const tanbih = input.tanbih ?? 0;
   const fath = input.fath ?? 0;
@@ -165,9 +216,9 @@ function validateJuzRecord(input: JuzRecordInput): IJuzRecord {
     }
   }
   return {
-    juz: input.juz,
     category: input.category as RevisionCategory,
-    amountJuz: input.amountJuz,
+    status: input.status as RevisionPortionStatus,
+    ...(range ?? {}),
     tanbih,
     fath,
     mistakes,
@@ -225,7 +276,7 @@ export interface RecordEntryInput {
   studentId: string;
   date: Date;
   present: boolean;
-  juzRecords?: JuzRecordInput[];
+  portions?: PortionInput[];
   teacherComment?: string;
   /** The authenticated teacher (ctx.auth.userId) — the author (D-#242). */
   actorId: string;
@@ -234,12 +285,12 @@ export interface RecordEntryInput {
 export async function recordEntry(input: RecordEntryInput): Promise<RevisionEntryShape> {
   const { date } = await resolveRevisionContext(input.groupId, input.studentId, input.date);
 
-  // present=false ⇒ NO juz records (absent — J-SR1-2); present=true ⇒ validate each.
-  const rawRecords = input.juzRecords ?? [];
+  // present=false ⇒ NO portions (absent — J-SR1-2); present=true ⇒ validate each.
+  const rawRecords = input.portions ?? [];
   if (!input.present && rawRecords.length > 0) {
-    throw new RevisionError("An absent student carries no juz records");
+    throw new RevisionError("An absent student carries no portions");
   }
-  const juzRecords = input.present ? rawRecords.map(validateJuzRecord) : [];
+  const portions = input.present ? rawRecords.map(validatePortion) : [];
 
   const existing = (await RevisionEntry.findOne({
     studentId: new Types.ObjectId(input.studentId),
@@ -255,7 +306,7 @@ export async function recordEntry(input: RecordEntryInput): Promise<RevisionEntr
   if (existing) {
     existing.groupId = new Types.ObjectId(input.groupId);
     existing.present = input.present;
-    existing.juzRecords = juzRecords;
+    existing.portions = portions;
     existing.teacherComment = input.teacherComment?.trim() || undefined;
     existing.teacherUserId = new Types.ObjectId(input.actorId);
     await existing.save();
@@ -266,7 +317,7 @@ export async function recordEntry(input: RecordEntryInput): Promise<RevisionEntr
       studentId: new Types.ObjectId(input.studentId),
       date,
       present: input.present,
-      juzRecords,
+      portions,
       teacherComment: input.teacherComment?.trim() || undefined,
       teacherUserId: new Types.ObjectId(input.actorId),
       deliveryChannels: [],
@@ -283,7 +334,7 @@ export async function recordEntry(input: RecordEntryInput): Promise<RevisionEntr
       studentId: input.studentId,
       date: date.toISOString(),
       present: input.present,
-      juzCount: juzRecords.length,
+      portionCount: portions.length,
       edited: !!existing,
     },
   });
@@ -298,7 +349,7 @@ export async function recordEntry(input: RecordEntryInput): Promise<RevisionEntr
 export interface EditEntryInput {
   entryId: string;
   present: boolean;
-  juzRecords?: JuzRecordInput[];
+  portions?: PortionInput[];
   teacherComment?: string;
   actorId: string;
 }
@@ -317,7 +368,7 @@ export async function editEntry(input: EditEntryInput): Promise<RevisionEntrySha
     studentId: doc.studentId.toString(),
     date: new Date(doc.date),
     present: input.present,
-    juzRecords: input.juzRecords,
+    portions: input.portions,
     teacherComment: input.teacherComment,
     actorId: input.actorId,
   });
@@ -350,12 +401,21 @@ export async function groupSaturday(groupId: string, date: Date): Promise<Revisi
   }).lean()) as unknown as IRevisionEntry[];
   const entryByStudent = new Map(entries.map((e) => [e.studentId.toString(), shape(e)]));
 
+  // Each student's latest earlier entry (any group) — the prefill source (SR-5).
+  const previous = (await RevisionEntry.aggregate([
+    { $match: { studentId: { $in: studentIds }, date: { $lt: date } } },
+    { $sort: { date: -1 } },
+    { $group: { _id: "$studentId", doc: { $first: "$$ROOT" } } },
+  ])) as Array<{ _id: Types.ObjectId; doc: IRevisionEntry }>;
+  const previousByStudent = new Map(previous.map((p) => [p._id.toString(), shape(p.doc)]));
+
   // Only active students appear in the grid; ordered by name.
   return students
     .map((s) => ({
       studentId: s._id.toString(),
       studentName: nameById.get(s._id.toString()) ?? "শিক্ষার্থী",
       entry: entryByStudent.get(s._id.toString()) ?? null,
+      previous: previousByStudent.get(s._id.toString()) ?? null,
     }))
     .sort((a, b) => a.studentName.localeCompare(b.studentName, "bn"));
 }
@@ -366,7 +426,7 @@ export interface GuardianRevisionEntry {
   id: string;
   date: string;
   present: boolean;
-  juzRecords: JuzRecordShape[];
+  portions: RevisionPortionShape[];
   teacherComment: string | null;
   deliveredAt: string;
 }
@@ -390,7 +450,7 @@ export async function childRevision(studentId: string, limit?: number | null): P
       id: d._id.toString(),
       date: new Date(d.date).toISOString(),
       present: d.present,
-      juzRecords: (d.juzRecords ?? []).map(shapeJuz),
+      portions: (d.portions ?? []).map(shapePortion),
       teacherComment: d.teacherComment ?? null,
       deliveredAt: new Date(d.deliveredAt as Date).toISOString(),
     }));

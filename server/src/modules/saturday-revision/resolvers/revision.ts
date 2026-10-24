@@ -29,10 +29,10 @@ import {
   teacherTeachesGroup,
   teacherCanReadStudent,
   type RevisionEntryShape,
-  type JuzRecordShape,
+  type RevisionPortionShape,
   type RevisionGridRow,
   type RevisionGroupShape,
-  type JuzRecordInput,
+  type PortionInput,
 } from "../services/RevisionService";
 
 // ---------------------------------------------------------------------------
@@ -90,9 +90,9 @@ async function assertCanReadStudent(ctx: AppContext, studentId: string): Promise
 // GraphQL shapes
 // ---------------------------------------------------------------------------
 
-const JuzMistakesRef = builder.objectRef<JuzRecordShape["mistakes"]>("RevisionJuzMistakes");
-JuzMistakesRef.implement({
-  description: "Structured tajweed-mistake counts for one juz record (SR-1).",
+export const PortionMistakesRef = builder.objectRef<RevisionPortionShape["mistakes"]>("RevisionPortionMistakes");
+PortionMistakesRef.implement({
+  description: "Structured tajweed-mistake counts for one revision portion (SR-5, D-#836).",
   fields: (t) => ({
     harf: t.exposeInt("harf"),
     ghunnah: t.exposeInt("ghunnah"),
@@ -101,16 +101,24 @@ JuzMistakesRef.implement({
   }),
 });
 
-const JuzRecordRef = builder.objectRef<JuzRecordShape>("RevisionJuzRecord");
-JuzRecordRef.implement({
-  description: "One juz heard in a revision entry: category / amount / تنبیه/فتح / mistake counts (SR-1, §3).",
+export const RevisionPortionRef = builder.objectRef<RevisionPortionShape>("RevisionPortion");
+RevisionPortionRef.implement({
+  description:
+    "One portion heard in a revision entry (SR-5, D-#833): category, a surah:ayah range in mushaf order " +
+    "(null on a range-less NOT_DONE), status, تنبیه/فتح and mistake counts. ayahs/juzs are derived.",
   fields: (t) => ({
-    juz: t.exposeInt("juz"),
     category: t.exposeString("category"),
-    amountJuz: t.exposeFloat("amountJuz"),
+    status: t.exposeString("status"),
+    fromSurah: t.int({ nullable: true, resolve: (r) => r.fromSurah }),
+    fromAyah: t.int({ nullable: true, resolve: (r) => r.fromAyah }),
+    toSurah: t.int({ nullable: true, resolve: (r) => r.toSurah }),
+    toAyah: t.int({ nullable: true, resolve: (r) => r.toAyah }),
+    rangeBn: t.string({ nullable: true, resolve: (r) => r.rangeBn }),
+    ayahs: t.exposeInt("ayahs"),
+    juzs: t.exposeIntList("juzs"),
     tanbih: t.exposeInt("tanbih"),
     fath: t.exposeInt("fath"),
-    mistakes: t.field({ type: JuzMistakesRef, resolve: (r) => r.mistakes }),
+    mistakes: t.field({ type: PortionMistakesRef, resolve: (r) => r.mistakes }),
     note: t.string({ nullable: true, resolve: (r) => r.note }),
   }),
 });
@@ -118,7 +126,7 @@ JuzRecordRef.implement({
 const RevisionEntryRef = builder.objectRef<RevisionEntryShape>("RevisionEntry");
 RevisionEntryRef.implement({
   description:
-    "One Saturday Hifz revision entry (SR-1): per-juz records + present/absent + comment. " +
+    "One Saturday Hifz revision entry (SR-1/SR-5): portions (surah:ayah ranges) + present/absent + comment. " +
     "Editable until delivered (SR-2), then immutable (§3/D-#242). Identity plane (ADR-005).",
   fields: (t) => ({
     id: t.exposeString("id"),
@@ -126,7 +134,7 @@ RevisionEntryRef.implement({
     studentId: t.exposeString("studentId"),
     date: t.exposeString("date"),
     present: t.exposeBoolean("present"),
-    juzRecords: t.field({ type: [JuzRecordRef], resolve: (r) => r.juzRecords }),
+    portions: t.field({ type: [RevisionPortionRef], resolve: (r) => r.portions }),
     teacherComment: t.string({ nullable: true, resolve: (r) => r.teacherComment }),
     teacherUserId: t.exposeString("teacherUserId"),
     deliveredAt: t.string({ nullable: true, resolve: (r) => r.deliveredAt }),
@@ -138,11 +146,14 @@ RevisionEntryRef.implement({
 
 const RevisionGridRowRef = builder.objectRef<RevisionGridRow>("RevisionGridRow");
 RevisionGridRowRef.implement({
-  description: "One row of the group × Saturday grid: a student + their entry (null if not yet recorded).",
+  description:
+    "One row of the group × Saturday grid: a student + their entry (null if not yet recorded) + their latest " +
+    "earlier entry (the prefill source, SR-5).",
   fields: (t) => ({
     studentId: t.exposeString("studentId"),
     studentName: t.exposeString("studentName"),
     entry: t.field({ type: RevisionEntryRef, nullable: true, resolve: (r) => r.entry }),
+    previous: t.field({ type: RevisionEntryRef, nullable: true, resolve: (r) => r.previous }),
   }),
 });
 
@@ -162,8 +173,8 @@ RevisionGroupRef.implement({
 // Input types
 // ---------------------------------------------------------------------------
 
-const JuzMistakesInputType = builder.inputType("RevisionJuzMistakesInput", {
-  description: "Mistake counts for one juz (each ≥ 0; defaults 0).",
+const PortionMistakesInputType = builder.inputType("RevisionPortionMistakesInput", {
+  description: "Mistake counts for one portion (each ≥ 0; defaults 0).",
   fields: (t) => ({
     harf: t.int({ required: false }),
     ghunnah: t.int({ required: false }),
@@ -172,32 +183,43 @@ const JuzMistakesInputType = builder.inputType("RevisionJuzMistakesInput", {
   }),
 });
 
-const JuzRecordInputType = builder.inputType("RevisionJuzRecordInput", {
-  description: "One juz heard: juz 1–30, category, amount (>0), تنبیه/فتح, mistake counts, note.",
+const PortionInputType = builder.inputType("RevisionPortionInput", {
+  description:
+    "One portion heard: category, status, the start/end surah:ayah (all four, or none on NOT_DONE), " +
+    "تنبیه/فتح, mistake counts, note.",
   fields: (t) => ({
-    juz: t.int({ required: true }),
     category: t.string({ required: true }),
-    amountJuz: t.float({ required: true }),
+    status: t.string({ required: true }),
+    fromSurah: t.int({ required: false }),
+    fromAyah: t.int({ required: false }),
+    toSurah: t.int({ required: false }),
+    toAyah: t.int({ required: false }),
     tanbih: t.int({ required: false }),
     fath: t.int({ required: false }),
-    mistakes: t.field({ type: JuzMistakesInputType, required: false }),
+    mistakes: t.field({ type: PortionMistakesInputType, required: false }),
     note: t.string({ required: false }),
   }),
 });
 
-function toJuzInputs(rows: ReadonlyArray<{
-  juz: number;
+function toPortionInputs(rows: ReadonlyArray<{
   category: string;
-  amountJuz: number;
+  status: string;
+  fromSurah?: number | null;
+  fromAyah?: number | null;
+  toSurah?: number | null;
+  toAyah?: number | null;
   tanbih?: number | null;
   fath?: number | null;
   mistakes?: { harf?: number | null; ghunnah?: number | null; madd?: number | null; other?: number | null } | null;
   note?: string | null;
-}> | null | undefined): JuzRecordInput[] {
+}> | null | undefined): PortionInput[] {
   return (rows ?? []).map((r) => ({
-    juz: r.juz,
     category: r.category,
-    amountJuz: r.amountJuz,
+    status: r.status,
+    fromSurah: r.fromSurah ?? undefined,
+    fromAyah: r.fromAyah ?? undefined,
+    toSurah: r.toSurah ?? undefined,
+    toAyah: r.toAyah ?? undefined,
     tanbih: r.tanbih ?? undefined,
     fath: r.fath ?? undefined,
     mistakes: r.mistakes
@@ -221,7 +243,7 @@ builder.mutationField("recordRevisionEntry", (t) =>
     type: RevisionEntryRef,
     description:
       "Record one (student × Saturday) Hifz revision entry (J-SR1; upsert, prefilled-then-edit). " +
-      "present=false ⇒ no juz records. Requires saturday_revision:enter_results + leading the Qur'an group. " +
+      "present=false ⇒ no portions. Requires saturday_revision:enter_results + leading the Qur'an group. " +
       "Immutable once delivered (SR-2). Audited.",
     authScopes: { hasAnyPermission: ["saturday_revision:enter_results", "saturday_revision:edit_all"] },
     args: {
@@ -229,7 +251,7 @@ builder.mutationField("recordRevisionEntry", (t) =>
       studentId: t.arg.string({ required: true }),
       date: t.arg.string({ required: true }),
       present: t.arg.boolean({ required: true }),
-      juzRecords: t.arg({ type: [JuzRecordInputType], required: false }),
+      portions: t.arg({ type: [PortionInputType], required: false }),
       teacherComment: t.arg.string({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
@@ -239,7 +261,7 @@ builder.mutationField("recordRevisionEntry", (t) =>
         studentId: args.studentId,
         date: new Date(args.date),
         present: args.present,
-        juzRecords: toJuzInputs(args.juzRecords),
+        portions: toPortionInputs(args.portions),
         teacherComment: args.teacherComment ?? undefined,
         actorId: ctx.auth!.userId as string,
       });
@@ -258,7 +280,7 @@ builder.mutationField("editRevisionEntry", (t) =>
       entryId: t.arg.string({ required: true }),
       groupId: t.arg.string({ required: true }),
       present: t.arg.boolean({ required: true }),
-      juzRecords: t.arg({ type: [JuzRecordInputType], required: false }),
+      portions: t.arg({ type: [PortionInputType], required: false }),
       teacherComment: t.arg.string({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
@@ -266,7 +288,7 @@ builder.mutationField("editRevisionEntry", (t) =>
       return editEntry({
         entryId: args.entryId,
         present: args.present,
-        juzRecords: toJuzInputs(args.juzRecords),
+        portions: toPortionInputs(args.portions),
         teacherComment: args.teacherComment ?? undefined,
         actorId: ctx.auth!.userId as string,
       });

@@ -1,9 +1,10 @@
 /**
  * RevisionSummaryService (SR-3, prd-sr3 §3, D-#246) — the DERIVED analytics over the
- * SR-1 `RevisionEntry`/`juzRecords` (the CT-4/VC-4 posture). **No new model, nothing
+ * SR-1 `RevisionEntry`/`portions` (the CT-4/VC-4 posture; SR-5 ranges, D-#837). **No new model, nothing
  * stored** (D-#85); every read aggregates the entries on the fly, `asOf` injected.
  *
  *   studentJuzWeakness  — per juz: Σ تنبیه + Σ فتح + mistake totals (the weakness heatmap).
+ *   studentSurahWeakness — the same per surah (SR-5); counts split by ayah share.
  *   groupCoverage       — per (student × juz): last-revised Saturday + an overdue flag.
  *   weeklyTrend         — per Saturday totals + a ↑/↓/→ indicator (latest vs previous).
  *   levelDashboard /
@@ -17,9 +18,14 @@
 import { Types } from "mongoose";
 import {
   REVISION_MISTAKE_CATEGORY_LABELS_BN,
+  rangeAyahCount,
+  rangeJuzAmount,
+  splitRangeByJuz,
+  splitRangeBySurah,
+  surahInfo,
 } from "@scd/shared";
-import type { RevisionCategory } from "@scd/shared";
-import { RevisionEntry, type IRevisionEntry, type IJuzRecord } from "../models/RevisionEntry";
+import type { RevisionCategory, RevisionPortionStatus } from "@scd/shared";
+import { RevisionEntry, type IRevisionEntry, type IRevisionPortion } from "../models/RevisionEntry";
 import { SubjectGroup } from "../../routine/models/SubjectGroup";
 import { SubjectGroupMembership } from "../../routine/models/SubjectGroupMembership";
 import { RoutineSlot } from "../../routine/models/RoutineSlot";
@@ -28,7 +34,7 @@ import { Student } from "../../foundation/models/Student";
 import { User } from "../../foundation/models/User";
 import { renderTemplate } from "../../templates/services/MessageTemplateService";
 import { dateKeyOf } from "../../attendance/dates";
-import { isHifzLevel, RevisionError } from "./RevisionService";
+import { isHifzLevel, portionRange, RevisionError } from "./RevisionService";
 import { personName } from "../../../lib/personName";
 
 /** The read-time default coverage window — a juz not revised within this many days is
@@ -45,29 +51,55 @@ export function trendOf(latest: number | null, previous: number | null): Trend {
 }
 
 // ---------------------------------------------------------------------------
-// Pure aggregation
+// Pure aggregation (SR-5, D-#837 — provisional)
 // ---------------------------------------------------------------------------
 
-export interface JuzWeakness {
-  juz: number;
+/** A count recorded on a range is split across the surahs / juz it covers by ayah
+ *  share; the attributed values are rounded to 2 decimals at the edge. */
+const round2 = (n: number): number => Math.round(n * 100) / 100;
+
+interface Tally {
   tanbih: number;
   fath: number;
   harf: number;
   ghunnah: number;
   madd: number;
   other: number;
+}
+
+export interface JuzWeakness extends Tally {
+  juz: number;
+  /** Ayahs of this juz heard over the scope. */
+  ayahsHeard: number;
   /** Σ tanbih + fath + all mistakes — higher = weaker (lower = stronger). */
   total: number;
 }
 
+export interface SurahWeakness extends Tally {
+  surah: number;
+  nameBn: string;
+  ayahsHeard: number;
+  total: number;
+}
+
+type StatusCounts = Record<RevisionPortionStatus, number>;
+
 interface Aggregate {
   present: number;
   absent: number;
+  /** Derived juz amount per category (Σ rangeJuzAmount). */
   portionsByCategory: Record<RevisionCategory, number>;
+  ayahsByCategory: Record<RevisionCategory, number>;
+  statusCounts: StatusCounts;
   totalTanbih: number;
   totalFath: number;
   mistakes: { harf: number; ghunnah: number; madd: number; other: number };
-  perJuz: Map<number, JuzWeakness>;
+  perJuz: Map<number, Tally & { ayahsHeard: number }>;
+  perSurah: Map<number, Tally & { ayahsHeard: number }>;
+}
+
+function emptyTally(): Tally & { ayahsHeard: number } {
+  return { tanbih: 0, fath: 0, harf: 0, ghunnah: 0, madd: 0, other: 0, ayahsHeard: 0 };
 }
 
 function emptyAggregate(): Aggregate {
@@ -75,31 +107,51 @@ function emptyAggregate(): Aggregate {
     present: 0,
     absent: 0,
     portionsByCategory: { SABAQ: 0, SABQI: 0, MANZIL: 0 },
+    ayahsByCategory: { SABAQ: 0, SABQI: 0, MANZIL: 0 },
+    statusCounts: { COMPLETED: 0, PARTIAL: 0, NOT_DONE: 0, FAILED: 0 },
     totalTanbih: 0,
     totalFath: 0,
     mistakes: { harf: 0, ghunnah: 0, madd: 0, other: 0 },
     perJuz: new Map(),
+    perSurah: new Map(),
   };
 }
 
-function foldJuz(agg: Aggregate, r: IJuzRecord): void {
-  agg.portionsByCategory[r.category] += r.amountJuz;
-  agg.totalTanbih += r.tanbih ?? 0;
-  agg.totalFath += r.fath ?? 0;
-  const m = r.mistakes ?? { harf: 0, ghunnah: 0, madd: 0, other: 0 };
+function addShare(t: Tally & { ayahsHeard: number }, p: IRevisionPortion, ayahs: number, share: number): void {
+  const m = p.mistakes ?? { harf: 0, ghunnah: 0, madd: 0, other: 0 };
+  t.ayahsHeard += ayahs;
+  t.tanbih += (p.tanbih ?? 0) * share;
+  t.fath += (p.fath ?? 0) * share;
+  t.harf += (m.harf ?? 0) * share;
+  t.ghunnah += (m.ghunnah ?? 0) * share;
+  t.madd += (m.madd ?? 0) * share;
+  t.other += (m.other ?? 0) * share;
+}
+
+function foldPortion(agg: Aggregate, p: IRevisionPortion): void {
+  const m = p.mistakes ?? { harf: 0, ghunnah: 0, madd: 0, other: 0 };
+  agg.statusCounts[p.status] = (agg.statusCounts[p.status] ?? 0) + 1;
+  agg.totalTanbih += p.tanbih ?? 0;
+  agg.totalFath += p.fath ?? 0;
   agg.mistakes.harf += m.harf ?? 0;
   agg.mistakes.ghunnah += m.ghunnah ?? 0;
   agg.mistakes.madd += m.madd ?? 0;
   agg.mistakes.other += m.other ?? 0;
-  const w = agg.perJuz.get(r.juz) ?? { juz: r.juz, tanbih: 0, fath: 0, harf: 0, ghunnah: 0, madd: 0, other: 0, total: 0 };
-  w.tanbih += r.tanbih ?? 0;
-  w.fath += r.fath ?? 0;
-  w.harf += m.harf ?? 0;
-  w.ghunnah += m.ghunnah ?? 0;
-  w.madd += m.madd ?? 0;
-  w.other += m.other ?? 0;
-  w.total = w.tanbih + w.fath + w.harf + w.ghunnah + w.madd + w.other;
-  agg.perJuz.set(r.juz, w);
+  const range = portionRange(p);
+  if (!range) return; // a range-less NOT_DONE counts in the totals only
+  const total = rangeAyahCount(range);
+  agg.ayahsByCategory[p.category] += total;
+  agg.portionsByCategory[p.category] += rangeJuzAmount(range);
+  for (const s of splitRangeBySurah(range)) {
+    const t = agg.perSurah.get(s.surah) ?? emptyTally();
+    addShare(t, p, s.ayahs, s.ayahs / total);
+    agg.perSurah.set(s.surah, t);
+  }
+  for (const j of splitRangeByJuz(range)) {
+    const t = agg.perJuz.get(j.juz) ?? emptyTally();
+    addShare(t, p, j.ayahs, j.ayahs / total);
+    agg.perJuz.set(j.juz, t);
+  }
 }
 
 export function aggregate(entries: IRevisionEntry[]): Aggregate {
@@ -107,7 +159,7 @@ export function aggregate(entries: IRevisionEntry[]): Aggregate {
   for (const e of entries) {
     if (e.present) {
       agg.present += 1;
-      for (const r of e.juzRecords ?? []) foldJuz(agg, r);
+      for (const p of e.portions ?? []) foldPortion(agg, p);
     } else {
       agg.absent += 1;
     }
@@ -115,8 +167,28 @@ export function aggregate(entries: IRevisionEntry[]): Aggregate {
   return agg;
 }
 
+function finishTally(t: Tally): Tally & { total: number } {
+  const r = {
+    tanbih: round2(t.tanbih),
+    fath: round2(t.fath),
+    harf: round2(t.harf),
+    ghunnah: round2(t.ghunnah),
+    madd: round2(t.madd),
+    other: round2(t.other),
+  };
+  return { ...r, total: round2(t.tanbih + t.fath + t.harf + t.ghunnah + t.madd + t.other) };
+}
+
 function weaknessList(agg: Aggregate): JuzWeakness[] {
-  return [...agg.perJuz.values()].sort((a, b) => b.total - a.total || a.juz - b.juz);
+  return [...agg.perJuz.entries()]
+    .map(([juz, t]) => ({ juz, ayahsHeard: t.ayahsHeard, ...finishTally(t) }))
+    .sort((a, b) => b.total - a.total || a.juz - b.juz);
+}
+
+function surahWeaknessList(agg: Aggregate): SurahWeakness[] {
+  return [...agg.perSurah.entries()]
+    .map(([surah, t]) => ({ surah, nameBn: surahInfo(surah)?.bn ?? String(surah), ayahsHeard: t.ayahsHeard, ...finishTally(t) }))
+    .sort((a, b) => b.total - a.total || a.surah - b.surah);
 }
 
 // ---------------------------------------------------------------------------
@@ -150,6 +222,11 @@ export async function studentJuzWeakness(studentId: string, asOf?: Date): Promis
   return weaknessList(aggregate(await entriesForStudent(studentId, asOf)));
 }
 
+/** Per-surah weakness for a student, weakest first (SR-5, D-#837). */
+export async function studentSurahWeakness(studentId: string, asOf?: Date): Promise<SurahWeakness[]> {
+  return surahWeaknessList(aggregate(await entriesForStudent(studentId, asOf)));
+}
+
 export interface CoverageRow {
   studentId: string;
   studentName: string;
@@ -159,8 +236,9 @@ export interface CoverageRow {
   overdue: boolean;
 }
 
-/** Per (student × juz): last-revised Saturday + an overdue flag (J-SR3-2). A juz the
- *  student has revised but not within `windowDays` is overdue. */
+/** Per (student × juz): last-revised Saturday + an overdue flag (J-SR3-2). The juz a
+ *  portion touches are derived from its range. A juz the student has revised but not
+ *  within `windowDays` is overdue. */
 export async function groupCoverage(
   groupId: string,
   asOf?: Date,
@@ -172,11 +250,15 @@ export async function groupCoverage(
   const last = new Map<string, { studentId: string; juz: number; date: Date }>();
   for (const e of entries) {
     if (!e.present) continue;
-    for (const r of e.juzRecords ?? []) {
-      const key = `${e.studentId.toString()}:${r.juz}`;
-      const prev = last.get(key);
-      if (!prev || new Date(e.date) > prev.date) {
-        last.set(key, { studentId: e.studentId.toString(), juz: r.juz, date: new Date(e.date) });
+    for (const p of e.portions ?? []) {
+      const range = portionRange(p);
+      if (!range) continue;
+      for (const { juz } of splitRangeByJuz(range)) {
+        const key = `${e.studentId.toString()}:${juz}`;
+        const prev = last.get(key);
+        if (!prev || new Date(e.date) > prev.date) {
+          last.set(key, { studentId: e.studentId.toString(), juz, date: new Date(e.date) });
+        }
       }
     }
   }
@@ -203,6 +285,8 @@ export interface TrendPoint {
   fath: number;
   mistakes: number;
   total: number;
+  /** New-lesson (SABAQ) ayahs heard that Saturday (SR-5). */
+  sabaqAyahs: number;
 }
 export interface WeeklyTrend {
   points: TrendPoint[];
@@ -224,16 +308,18 @@ export async function weeklyTrend(
         })();
 
   // date key → totals.
-  const byDate = new Map<string, { date: Date; tanbih: number; fath: number; mistakes: number }>();
+  const byDate = new Map<string, { date: Date; tanbih: number; fath: number; mistakes: number; sabaqAyahs: number }>();
   for (const e of entries) {
     if (!e.present) continue;
     const key = dateKeyOf(new Date(e.date));
-    const acc = byDate.get(key) ?? { date: new Date(e.date), tanbih: 0, fath: 0, mistakes: 0 };
-    for (const r of e.juzRecords ?? []) {
-      acc.tanbih += r.tanbih ?? 0;
-      acc.fath += r.fath ?? 0;
-      const m = r.mistakes ?? { harf: 0, ghunnah: 0, madd: 0, other: 0 };
+    const acc = byDate.get(key) ?? { date: new Date(e.date), tanbih: 0, fath: 0, mistakes: 0, sabaqAyahs: 0 };
+    for (const p of e.portions ?? []) {
+      acc.tanbih += p.tanbih ?? 0;
+      acc.fath += p.fath ?? 0;
+      const m = p.mistakes ?? { harf: 0, ghunnah: 0, madd: 0, other: 0 };
       acc.mistakes += (m.harf ?? 0) + (m.ghunnah ?? 0) + (m.madd ?? 0) + (m.other ?? 0);
+      const range = portionRange(p);
+      if (p.category === "SABAQ" && range) acc.sabaqAyahs += rangeAyahCount(range);
     }
     byDate.set(key, acc);
   }
@@ -245,6 +331,7 @@ export async function weeklyTrend(
       fath: p.fath,
       mistakes: p.mistakes,
       total: p.tanbih + p.fath + p.mistakes,
+      sabaqAyahs: p.sabaqAyahs,
     }));
   const latest = points.length > 0 ? points[points.length - 1].total : null;
   const previous = points.length > 1 ? points[points.length - 2].total : null;
@@ -256,11 +343,15 @@ export interface RevisionDashboard {
   entries: number;
   present: number;
   absent: number;
+  /** Derived juz amount per category (D-#837). */
   portionsByCategory: { SABAQ: number; SABQI: number; MANZIL: number };
+  ayahsByCategory: { SABAQ: number; SABQI: number; MANZIL: number };
+  statusCounts: StatusCounts;
   totalTanbih: number;
   totalFath: number;
   mistakes: { harf: number; ghunnah: number; madd: number; other: number };
   weakestJuz: JuzWeakness[];
+  weakestSurahs: SurahWeakness[];
 }
 
 function dashboardFrom(scopeId: string, entries: IRevisionEntry[]): RevisionDashboard {
@@ -270,11 +361,18 @@ function dashboardFrom(scopeId: string, entries: IRevisionEntry[]): RevisionDash
     entries: entries.length,
     present: agg.present,
     absent: agg.absent,
-    portionsByCategory: agg.portionsByCategory,
+    portionsByCategory: {
+      SABAQ: round2(agg.portionsByCategory.SABAQ),
+      SABQI: round2(agg.portionsByCategory.SABQI),
+      MANZIL: round2(agg.portionsByCategory.MANZIL),
+    },
+    ayahsByCategory: agg.ayahsByCategory,
+    statusCounts: agg.statusCounts,
     totalTanbih: agg.totalTanbih,
     totalFath: agg.totalFath,
     mistakes: agg.mistakes,
     weakestJuz: weaknessList(agg).slice(0, 5),
+    weakestSurahs: surahWeaknessList(agg).slice(0, 5),
   };
 }
 
