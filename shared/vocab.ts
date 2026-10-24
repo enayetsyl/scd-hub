@@ -2989,6 +2989,23 @@ export const REVISION_MISTAKE_CATEGORY_LABELS_EN: Record<RevisionMistakeCategory
   OTHER: "Other",
 };
 
+/** The outcome of one revision portion (SR-5, D-#835). NOT_DONE may carry no range
+ *  (the paper's bare "সবক হয়নি"); counts are allowed on every status. */
+export const REVISION_PORTION_STATUSES = ["COMPLETED", "PARTIAL", "NOT_DONE", "FAILED"] as const;
+export type RevisionPortionStatus = (typeof REVISION_PORTION_STATUSES)[number];
+export const REVISION_PORTION_STATUS_LABELS_BN: Record<RevisionPortionStatus, string> = {
+  COMPLETED: "সম্পন্ন",
+  PARTIAL: "আংশিক",
+  NOT_DONE: "হয়নি",
+  FAILED: "অকৃতকার্য",
+};
+export const REVISION_PORTION_STATUS_LABELS_EN: Record<RevisionPortionStatus, string> = {
+  COMPLETED: "Completed",
+  PARTIAL: "Partly done",
+  NOT_DONE: "Not done",
+  FAILED: "Failed",
+};
+
 
 // --- A.16 CLASSROOM-OBSERVATION ENUMS (app-native; Classroom-Observation module --
 // — prd-classroom-observation §4, D-#146/#147, build rulings D-#194/#191). NO
