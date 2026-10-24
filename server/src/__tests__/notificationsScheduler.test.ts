@@ -117,6 +117,12 @@ jest.mock("../modules/trackers/services/HomeworkAutoIssueService", () => ({
   HW_AUTO_ISSUE_START_HOUR: 12,
   HW_AUTO_ISSUE_END_HOUR: 17,
 }));
+// D-#833: the assignment-week auto-issue sweep (covered in assignmentAutoIssue.test.ts)
+// runs every school-day tick — a quiet no-op here keeps the suite DB-free.
+const mockAsAutoIssue = jest.fn().mockResolvedValue({ issued: 0, deferred: 0 });
+jest.mock("../modules/trackers/services/AssignmentAutoIssueService", () => ({
+  sweepAssignmentAutoIssue: (now: unknown) => mockAsAutoIssue(now),
+}));
 jest.mock("../modules/notifications/services/NotificationService", () => ({
   emit: (input: unknown) => mockEmit(input),
 }));
@@ -539,6 +545,23 @@ describe("homework auto-DUE sweep", () => {
     mockResolveDayType.mockResolvedValue(dayType);
     await runSchedulerTick(at(8, 0));
     expect(mockSweepHomeworkDue).not.toHaveBeenCalled();
+  });
+});
+
+describe("assignment auto-ISSUE sweep (D-#833)", () => {
+  it("runs on EVERY school-day tick, evening included, and reports the issue count", async () => {
+    mockAsAutoIssue.mockResolvedValueOnce({ issued: 2, deferred: 1 });
+    const s1 = await runSchedulerTick(at(9, 0));
+    expect(s1.asAutoIssued).toBe(2);
+    const s2 = await runSchedulerTick(at(19, 30)); // not runOnce, no hour window
+    expect(mockAsAutoIssue).toHaveBeenCalledTimes(2);
+    expect(s2.asAutoIssued).toBe(0);
+  });
+
+  it.each(["OFF", "HOLIDAY"] as const)("does NOT run on a %s day", async (dayType) => {
+    mockResolveDayType.mockResolvedValue(dayType);
+    await runSchedulerTick(at(9, 0));
+    expect(mockAsAutoIssue).not.toHaveBeenCalled();
   });
 });
 

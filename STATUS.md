@@ -1,5 +1,7 @@
 # STATUS
 
+- 2026-10-24: **BUILT — Assignment auto-issue (D-#833)** (branch `feat/assignment-auto-issue`, worktree `C:/w/asg-auto`). Server-only: `AssignmentAutoIssueService` + a scheduler family; confirm claims drafts atomically. Server suite 331/331 suites, 5808 tests.
+  - **Now / next:** PR → dev → check on the dev site that a fully delivered/nil'd week flips ISSUED without a tap → promotion (no OTA needed). Follow-up once #1151 lands: an `ASSIGNMENT_AUTO_ISSUED` notice to the class teacher (new kind in `shared/vocab.ts` + verifier pin + template).
 - 2026-10-23 (late): **BUILT — DB-on-VM Phase 5 (D-#832)** (branch `feat/health-db-card-local`): the System Health DB card measures against "database size + free disk" on the VM and names its ceiling; docs no longer describe Atlas as the database.
   - **Now / next:** PR → dev → partial promotion; remove the `ATLAS_STORAGE_LIMIT_MB=40960` stop-gap from the VM prod/dev `.env` so VM_DISK applies. **The DB-on-VM plan is then complete** apart from 2026-11-06 (drop scdhub_dev + scdhub_local on Atlas). OTA optional (the hourly card + DB card text for phones).
 - 2026-10-23 21:56: **PROD DATABASE IS ON THE VM (D-#817).** Phase 4 done tonight: dev moved (28 s), then the prod cutover (45 s downtime; 362,265 docs / 169 collections, every count + index equal to Atlas). The first local hourly backup ran at 21:57; the hourly cron now runs every hour (RPO ≤ 1 h). #1163 (runbook) promoted.

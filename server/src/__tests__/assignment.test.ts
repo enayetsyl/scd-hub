@@ -17,6 +17,7 @@ const mockItemCreate = jest.fn();
 const mockItemFindOne = jest.fn();
 const mockItemFindById = jest.fn();
 const mockItemFind = jest.fn();
+const mockItemUpdateOne = jest.fn();
 const mockAsNilDeleteOne = jest.fn();
 const mockRecInsertMany = jest.fn();
 const mockRecFindById = jest.fn();
@@ -30,6 +31,8 @@ jest.mock("../modules/trackers/models/AssignmentSchedule", () => ({
 jest.mock("../modules/trackers/models/AssignmentItem", () => ({
   AssignmentItem: {
     create: (a: unknown) => mockItemCreate(a),
+    // D-#833: confirm claims each draft atomically (status DRAFT → ISSUED).
+    updateOne: (q: unknown, u: unknown) => mockItemUpdateOne(q, u),
     findOne: (q: unknown) => ({ lean: () => mockItemFindOne(q) }),
     // findById() supports both `await findById(id)` (trim — a savable doc) and
     // `findById(id).lean()` (scope checks — a plain row).
@@ -152,6 +155,8 @@ beforeEach(() => {
   mockStudentCount.mockImplementation(async (q: { _id: { $in: unknown[] } }) => q._id.$in.length);
   mockHolidayFind.mockResolvedValue([]);
   mockItemFindOne.mockResolvedValue(null);
+  mockItemUpdateOne.mockResolvedValue({ modifiedCount: 1 });
+  mockRecInsertMany.mockResolvedValue([]);
   mockAsNilDeleteOne.mockResolvedValue({ deletedCount: 0 });
   mockSeqUpdate.mockResolvedValue({ seq: 1 });
   mockItemCreate.mockImplementation((a: Record<string, unknown>) =>
@@ -461,7 +466,7 @@ describe("AJ-9 — confirmAssignmentWeek (360-min weekly gate)", () => {
     mockItemFind.mockReturnValue(items);
     await expect(confirmAssignmentWeek(args)).rejects.toThrow(/exceeds the 360-min weekly ceiling/);
     expect(mockRecInsertMany).not.toHaveBeenCalled();
-    expect(items[0].save).not.toHaveBeenCalled();
+    expect(mockItemUpdateOne).not.toHaveBeenCalled();
   });
 
   test("≤360 → issues each DRAFT's per-student records (GIVEN/ABSENT_REDELIVER) + flips ISSUED", async () => {
@@ -472,11 +477,42 @@ describe("AJ-9 — confirmAssignmentWeek (360-min weekly gate)", () => {
     expect(res.totalMinutes).toBe(120);
     expect(res.itemsIssued).toBe(2);
     expect(res.recordsIssued).toBe(4); // 2 roster rows each
-    expect(a.status).toBe("ISSUED");
-    expect(a.save).toHaveBeenCalled();
+    // Flipped ISSUED by a conditional claim on status DRAFT, roster dropped.
+    expect(mockItemUpdateOne).toHaveBeenCalledWith(
+      { _id: a._id, status: "DRAFT" },
+      expect.objectContaining({
+        $set: expect.objectContaining({ status: "ISSUED", issuedBy: ACTOR }),
+        $unset: { draftRoster: 1 },
+      }),
+    );
     const docs = mockRecInsertMany.mock.calls[0][0] as Array<Record<string, unknown>>;
     expect(docs.some((d) => d.state === "GIVEN")).toBe(true);
     expect(docs.some((d) => d.state === "ABSENT_REDELIVER")).toBe(true);
+  });
+
+  test("D-#833: a draft another confirm already claimed is skipped — its records are never inserted twice", async () => {
+    const a = draftItem({ estMinutes: 60 });
+    const b = draftItem({ estMinutes: 60 });
+    mockItemFind.mockReturnValue([a, b]);
+    // The sweep (or a second tap) won `a`'s claim between our read and our write.
+    mockItemUpdateOne.mockImplementation(async (q: { _id: unknown }) => ({ modifiedCount: q._id === a._id ? 0 : 1 }));
+    const res = await confirmAssignmentWeek(args);
+    expect(res.itemsIssued).toBe(1);
+    expect(res.recordsIssued).toBe(2);
+    expect(mockRecInsertMany).toHaveBeenCalledTimes(1);
+    const docs = mockRecInsertMany.mock.calls[0][0] as Array<{ asItemId: unknown }>;
+    expect(docs.every((d) => d.asItemId === b._id)).toBe(true);
+  });
+
+  test("D-#833: a failed record insert hands the draft back (DRAFT + its roster), never ISSUED with no records", async () => {
+    const a = draftItem({ estMinutes: 60 });
+    mockItemFind.mockReturnValue([a]);
+    mockRecInsertMany.mockRejectedValueOnce(new Error("write failed"));
+    await expect(confirmAssignmentWeek(args)).rejects.toThrow(/write failed/);
+    expect(mockItemUpdateOne).toHaveBeenLastCalledWith(
+      { _id: a._id },
+      expect.objectContaining({ $set: { status: "DRAFT", draftRoster: a.draftRoster } }),
+    );
   });
 
   test("the cap counts DRAFT + already-ISSUED — it can't be split across confirm batches", async () => {
