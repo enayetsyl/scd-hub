@@ -1,5 +1,7 @@
 # STATUS
 
+- 2026-10-25 (cont.): **LIVE + OTA — reports as permissions + one-person-first access editor (D-#846).** #1176 → dev (`d307203c`); partial promotion #1178 (`aa23231a`, lesson progress still held back): Deploy prod success, `/healthz` 200, prod refuses an anonymous `reconciliationReport` with the new gate. OTA group `c830b0c7` (production/android, runtime 1.1.0, commit aa23231a) — also carries the parents'-meeting slot pop-ups (#1175, D-#840–#844), the class-test request fix (D-#845) and assignment auto-issue; bundle: prod URL 1, localhost 0, `reports:hw_issue_pending` present; prior OTA 75e0adbc (ac1b0463) ancestor-checked; sourcemaps uploaded (debug id 65dbcb47).
+  **Now / next:** owner gives Shahida her reports (Access control → একজনকে দিন → Shahida → রিপোর্ট). Phones pick up the OTA on the next cold start.
 - 2026-10-25: **BUILT — reports as permissions + one-person-first access editor (D-#846)** (branch `feat/pm-reports-person`, worktree `C:/w/pm-rpt`). Owner ask: give Shahida only some reports; give permissions per teacher, not per role; cross-role permissions.
   - Access control → "একজনকে দিন" (default) → a person → রিপোর্ট group: 13 switches, one per report, same names as the menu, each = that report for the whole school. Role tab = "সবাইকে দিন" with a warning.
   - Cross-role: switch on any action for one person, or "পুরো ভূমিকা যোগ করুন". A teaching action for someone with no class there also needs the card's every-section switch (named on the card) or a delegated duty.
