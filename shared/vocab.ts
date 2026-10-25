@@ -3914,6 +3914,7 @@ export const STORAGE_BOX_STATUS_LABELS_EN: Record<StorageBoxStatus, string> = {
 import {
   CATALOGUE_PERMISSIONS,
   LEGACY_PERMISSION_EXPANSION,
+  RETIRED_CATALOGUE_ACTIONS,
   catalogueAction,
   type CataloguePermission,
 } from "./permissionCatalogue";
@@ -3927,6 +3928,7 @@ export {
   catalogueAction,
   LEGACY_PERMISSION_EXPANSION,
   DELEGATED_ACTION_PERMISSIONS,
+  RETIRED_CATALOGUE_ACTIONS,
 } from "./permissionCatalogue";
 export type {
   FeatureGroup,
@@ -4066,6 +4068,12 @@ export const LEGACY_PERMISSIONS = [
   "tasks:assign",
   // guardian portal (ACTIVE since GP-1, D-#68)
   "guardian:read_child",   // reads linked children's permitted operational slices
+  // RETIRED catalogue actions (D-#846) — replaced by one switch per report (reports:*). Kept as
+  // names only: stored grants/revokes/role edits naming them are translated through
+  // LEGACY_PERMISSION_EXPANSION; no code may gate on them (permissionCatalogueGates test).
+  "homework:view_reports",
+  "assignment:view_reports",
+  "homework:remind",
 ] as const;
 export type LegacyPermission = (typeof LEGACY_PERMISSIONS)[number];
 
@@ -4154,6 +4162,9 @@ const LEGACY_PERMISSION_BUILD_STATUS: Record<LegacyPermission, "build" | "pipeli
   "mastery:approve": "build",     // M-5 (extra-class approval) — declared with M-0 for the same reason
   "tasks:assign": "build",        // WB-1 (D-#701): assign tasks, read others' boards, the load grid
   "guardian:read_child": "build", // ACTIVATED by Guardian Portal GP-1 (D-#68; was pipeline since Slice 0)
+  "homework:view_reports": "build",   // retired (D-#846) → reports:*
+  "assignment:view_reports": "build", // retired (D-#846) → reports:*
+  "homework:remind": "build",         // retired (D-#846) → reports:hw_weekly_unsubmitted
 };
 
 export const PERMISSION_BUILD_STATUS: Record<Permission, "build" | "pipeline"> = {
@@ -4340,9 +4351,21 @@ export function roleTemplatePermissions(
   if (role !== "TEACHER" && role !== "OFFICE") return out;
   const delta = overrides[role];
   if (!delta) return out;
-  for (const p of delta.granted) if (isCataloguePermission(p) && isSwitchablePermission(p)) out.add(p);
-  for (const p of delta.revoked) if (isCataloguePermission(p) && isSwitchablePermission(p)) out.delete(p);
+  // A role edit stored under a RETIRED action (D-#846) applies to the actions that replaced it.
+  const terms = (list: readonly string[]): string[] =>
+    list.flatMap((p) => ((RETIRED_SET as ReadonlySet<string>).has(p) ? [...expandLegacyPermission(p, false)] : [p]));
+  for (const p of terms(delta.granted)) if (isCataloguePermission(p) && isSwitchablePermission(p)) out.add(p);
+  for (const p of terms(delta.revoked)) if (isCataloguePermission(p) && isSwitchablePermission(p)) out.delete(p);
   return out;
+}
+
+const RETIRED_SET: ReadonlySet<string> = new Set<string>(RETIRED_CATALOGUE_ACTIONS);
+
+/** For `myPermissions` only: the RETIRED action names an app bundle from before D-#846 still
+ *  checks, answered when the caller holds any action that replaced it — so an old bundle keeps
+ *  showing the Reports leaves its holder may open. Never used as a server gate. */
+export function retiredAliasesFor(effective: ReadonlySet<string>): string[] {
+  return RETIRED_CATALOGUE_ACTIONS.filter((r) => expandLegacyPermission(r, false).some((p) => effective.has(p)));
 }
 
 /** Legacy name → its catalogue actions for this holder (`adminTemplate` rows only when the
@@ -4612,6 +4635,9 @@ const LEGACY_PERMISSION_LABELS_BN: Record<LegacyPermission, PermissionLabel> = {
   "mastery:approve": { name: "অতিরিক্ত ক্লাস অনুমোদন", desc: "শাখার দুর্বলতায় অতিরিক্ত ক্লাস ও রি-টেস্টের প্রস্তাব অনুমোদন" },
   "tasks:assign": { name: "কাজ দেওয়া", desc: "অন্যের বোর্ডে কাজ দেওয়া, সবার বোর্ড ও কাজের চাপ দেখা" },
   "guardian:read_child": { name: "সন্তানের তথ্য দেখা (অভিভাবক প্লেন)", desc: "অভিভাবক প্লেন — স্টাফকে দেওয়া যায় না" },
+  "homework:view_reports": { name: "বাড়ির কাজের রিপোর্ট (পুরনো)", desc: "এখন প্রতিটি রিপোর্টের আলাদা অনুমতি (রিপোর্ট)" },
+  "assignment:view_reports": { name: "অ্যাসাইনমেন্টের রিপোর্ট (পুরনো)", desc: "এখন প্রতিটি রিপোর্টের আলাদা অনুমতি (রিপোর্ট)" },
+  "homework:remind": { name: "সাপ্তাহিক জমা না দেওয়া (পুরনো)", desc: "এখন রিপোর্ট → বাড়ির কাজ জমা না দেওয়া (সাপ্তাহিক)" },
 };
 
 const LEGACY_PERMISSION_LABELS_EN: Record<LegacyPermission, PermissionLabel> = {
@@ -4681,6 +4707,9 @@ const LEGACY_PERMISSION_LABELS_EN: Record<LegacyPermission, PermissionLabel> = {
   "mastery:approve": { name: "Approve extra classes", desc: "Approve extra-class and re-test proposals for weak sections" },
   "tasks:assign": { name: "Assign tasks", desc: "Put work on other people's boards, read every board and the load grid" },
   "guardian:read_child": { name: "Read child (guardian plane)", desc: "Guardian plane — not grantable to staff" },
+  "homework:view_reports": { name: "Homework reports (retired)", desc: "Now one permission per report (Reports)" },
+  "assignment:view_reports": { name: "Assignment reports (retired)", desc: "Now one permission per report (Reports)" },
+  "homework:remind": { name: "Weekly unsubmitted (retired)", desc: "Now Reports → Homework not submitted (weekly)" },
 };
 
 // Catalogue actions take their labels from FEATURE_CATALOGUE (bn/en name; the one-line

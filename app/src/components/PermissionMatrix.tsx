@@ -48,6 +48,7 @@ const GROUP_BN: Record<FeatureGroup, string> = {
   content_and_books: "কনটেন্ট ও বই",
   communication: "যোগাযোগ",
   school_operations: "স্কুল পরিচালনা",
+  reports: "রিপোর্ট",
   admin_and_access: "অ্যাডমিন ও অনুমতি",
 };
 const GROUP_EN: Record<FeatureGroup, string> = {
@@ -60,6 +61,7 @@ const GROUP_EN: Record<FeatureGroup, string> = {
   content_and_books: "Content & books",
   communication: "Communication",
   school_operations: "School operations",
+  reports: "Reports",
   admin_and_access: "Admin & access",
 };
 
@@ -183,6 +185,19 @@ export default function PermissionMatrix({
                           />
                         </ChipRow>
                       ) : null}
+                      {(() => {
+                        // Reach hint (owner 2026-10-25): an action switched on for someone who
+                        // teaches no class here (e.g. an Office person given "declare") only works
+                        // where they have a teaching grant — unless the feature's "every section"
+                        // switch is on too. Name that switch so the Principal can find it.
+                        const reach = f.rows.find((r) => r.perm.endsWith(":edit_all")) ?? f.rows.find((r) => r.perm.endsWith(":view_all"));
+                        if (!reach || f.rows.length < 2) return null;
+                        return (
+                          <Muted style={{ marginTop: space(1) }}>
+                            {STR.acReachHint.replace("{reach}", en ? reach.action.en : reach.action.bn)}
+                          </Muted>
+                        );
+                      })()}
                       {rows.map((r) => {
                         const on = isOn(r.perm);
                         const flags = r.action.flags;

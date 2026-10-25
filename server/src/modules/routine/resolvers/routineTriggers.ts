@@ -221,7 +221,7 @@ builder.queryField("myClassNotePrompts", (t) =>
 builder.queryField("classNoteSubmissionReport", (t) =>
   t.field({
     type: [ClassNoteSubmissionRowRef],
-    authScopes: { hasPermission: "class_note:view_all" },
+    authScopes: { hasAnyPermission: ["class_note:view_all", "reports:class_note"] },
     args: { date: t.arg.string({ required: true }) },
     resolve: async (_r, args) => classNoteSubmissionReport(parseDate(args.date)),
   }),

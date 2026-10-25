@@ -20,7 +20,7 @@
 //   designation      — the action means "may do this WHEN designated" (PRD §5.2); a holder
 //                      of the feature's view_all/edit_all (or `waiver`) passes without it.
 
-export const FEATURE_GROUPS = ["teaching_and_trackers","assessment_and_exams","students_and_families","attendance_and_routine","staff_and_hr","finance","content_and_books","communication","school_operations","admin_and_access"] as const;
+export const FEATURE_GROUPS = ["teaching_and_trackers","assessment_and_exams","students_and_families","attendance_and_routine","staff_and_hr","finance","content_and_books","communication","school_operations","reports","admin_and_access"] as const;
 export type FeatureGroup = (typeof FEATURE_GROUPS)[number];
 
 export const FEATURE_GROUP_LABELS: Record<FeatureGroup, string> = {
@@ -33,6 +33,7 @@ export const FEATURE_GROUP_LABELS: Record<FeatureGroup, string> = {
   content_and_books: "Content & books",
   communication: "Communication",
   school_operations: "School operations",
+  reports: "Reports",
   admin_and_access: "Admin & access",
 };
 
@@ -77,8 +78,6 @@ export const FEATURE_CATALOGUE = {
       undo_any: { en: "Undo anyone's step", bn: "যেকোনো ধাপ ফিরিয়ে নেওয়া", desc: "Undo another teacher's step or an earlier day's", teacher: false, office: true, flags: [] },
       edit_all: { en: "Work in any section", bn: "যেকোনো শাখার বাড়ির কাজে কাজ করা", desc: "Declare/submit/check/return outside own grants", teacher: false, office: false, flags: ["PRINCIPAL_DEFAULT"] },
       delete: { en: "Delete never-issued homework", bn: "না-দেওয়া বাড়ির কাজ মুছে ফেলা", desc: "List never-issued items school-wide and remove one, even on a closed day", teacher: false, office: true, flags: [] },
-      view_reports: { en: "Homework oversight reports", bn: "বাড়ির কাজের রিপোর্ট দেখা", desc: "Per-teacher lifecycle report and pending drill; reconciliation report", teacher: false, office: true, flags: [] },
-      remind: { en: "Weekly guardian follow-up", bn: "অভিভাবককে সাপ্তাহিক রিমাইন্ডার", desc: "Weekly unsubmitted list with guardian messages and wa.me links", teacher: false, office: true, flags: [] },
     },
   },
   assignment: {
@@ -100,7 +99,6 @@ export const FEATURE_CATALOGUE = {
       undo_any: { en: "Undo anyone's step", bn: "যেকোনো ধাপ ফিরিয়ে নেওয়া", desc: "Admin revert, any actor, any day", teacher: false, office: true, flags: [] },
       remind: { en: "Guardian chase ladder", bn: "অভিভাবককে রিমাইন্ডার", desc: "Chase list, ladder step, outcome, history, bulk sweep", teacher: false, office: true, flags: [] },
       settings: { en: "Rotation schedule", bn: "রোটেশন সূচি ঠিক করা", desc: "Term anchor, cadence, rotation cells; read schedule / grid / handout board", teacher: false, office: true, flags: [] },
-      view_reports: { en: "Assignment oversight reports", bn: "অ্যাসাইনমেন্টের রিপোর্ট দেখা", desc: "Planned-vs-given load report; reconciliation report", teacher: false, office: true, flags: [] },
     },
   },
   assignment_gift: {
@@ -875,6 +873,28 @@ export const FEATURE_CATALOGUE = {
       view: { en: "My account", bn: "আমার অ্যাকাউন্ট", desc: "me, my permissions/templates/scopes, my class teacher section, session refresh, end View-as", teacher: true, office: true, flags: ["SELF"] },
     },
   },
+  // One switch per Reports-hub leaf (owner 2026-10-25, D-#846): each shows that one report for
+  // the WHOLE school, so the Principal can hand a teacher exactly the reports she needs.
+  reports: {
+    group: "reports",
+    en: "Reports",
+    bn: "রিপোর্ট",
+    actions: {
+      hw_declare_pending: { en: "Homework declare pending", bn: "বাড়ির কাজ ঘোষণা বাকি", desc: "Which classes/subjects have not declared homework (whole school)", teacher: false, office: true, flags: [] },
+      hw_issue_pending: { en: "Homework issue pending", bn: "বাড়ির কাজ ইস্যু বাকি", desc: "Declared but not confirmed/issued homework (whole school)", teacher: false, office: true, flags: [] },
+      hw_lifecycle: { en: "Homework lifecycle report", bn: "বাড়ির কাজ লাইফসাইকেল রিপোর্ট", desc: "Per-teacher submitted, checked, returned and pending students (whole school)", teacher: false, office: true, flags: [] },
+      hw_weekly_unsubmitted: { en: "Weekly unsubmitted homework", bn: "সাপ্তাহিক বাড়ির কাজ জমা-বাকি রিপোর্ট", desc: "Weekly unsubmitted list with guardian messages and wa.me links (whole school)", teacher: false, office: true, flags: [] },
+      as_declare_pending: { en: "Assignment declare pending", bn: "অ্যাসাইনমেন্ট ঘোষণা বাকি", desc: "Rotation cells with no assignment declared (whole school)", teacher: false, office: true, flags: [] },
+      as_deliver_pending: { en: "Assignment deliver pending", bn: "অ্যাসাইনমেন্ট ডেলিভারি বাকি", desc: "Declared but not delivered/issued assignments (whole school)", teacher: false, office: true, flags: [] },
+      as_print_pending: { en: "Assignment print pending", bn: "অ্যাসাইনমেন্ট প্রিন্ট বাকি", desc: "Assignments still waiting for printing (whole school)", teacher: false, office: true, flags: [] },
+      reconciliation: { en: "Reconciliation report", bn: "সমন্বয় রিপোর্ট", desc: "Day/week misses for both trackers in one view (whole school)", teacher: false, office: true, flags: [] },
+      assignment_load: { en: "Assignment load", bn: "অ্যাসাইনমেন্ট লোড", desc: "Planned vs given assignment load per class (whole school)", teacher: false, office: true, flags: [] },
+      class_note: { en: "Class note submissions", bn: "ক্লাস নোট জমা", desc: "Who has / has not written today's class notes (whole school)", teacher: false, office: true, flags: [] },
+      class_test: { en: "Class-test report", bn: "ক্লাস টেস্ট রিপোর্ট", desc: "Class-test status: taken, results entered, published (whole school)", teacher: false, office: true, flags: [] },
+      attendance: { en: "Absentee report", bn: "অনুপস্থিতির প্রতিবেদন", desc: "Absentees, unmarked sections, absent without application (whole school)", teacher: false, office: true, flags: [] },
+      class_load: { en: "Teacher class load", bn: "শিক্ষকের ক্লাস লোড", desc: "Periods per teacher for a month (whole school)", teacher: false, office: true, flags: [] },
+    },
+  },
 } as const satisfies Record<string, CatalogueFeature>;
 
 export type FeatureKey = keyof typeof FEATURE_CATALOGUE;
@@ -901,6 +921,11 @@ export function catalogueAction(perm: CataloguePermission): CatalogueAction {
  *  part only together with an isAdminStaff check). Used to expand per-user grants/revokes
  *  still stored under old names (read-time, D-#795) and by the ship-day equality check. */
 export const LEGACY_PERMISSION_EXPANSION: Record<string, { any: readonly CataloguePermission[]; adminTemplate?: readonly CataloguePermission[] }> = {
+  // Retired catalogue actions (D-#846): they gated only report screens and became one switch
+  // per report. Stored role edits / per-person arrays / old app bundles may still name them.
+  "homework:view_reports": { any: ["reports:hw_declare_pending","reports:hw_issue_pending","reports:hw_lifecycle","reports:reconciliation"] },
+  "assignment:view_reports": { any: ["reports:assignment_load","reports:as_declare_pending","reports:as_deliver_pending","reports:as_print_pending","reports:reconciliation"] },
+  "homework:remind": { any: ["reports:hw_weekly_unsubmitted"] },
   "mastery:read": { any: ["mastery:view"] },
   "mastery:enter": { any: ["mastery:enter_results", "mastery:create"] },
   "mastery:manage": { any: ["mastery:settings", "mastery:delete"] },
@@ -931,7 +956,7 @@ export const LEGACY_PERMISSION_EXPANSION: Record<string, { any: readonly Catalog
   "chat:write": { any: ["chat:send","chat:send_notice"] },
   "chat:manage": { any: ["chat:create","chat:edit","chat:publish","chat:send_notice_all"] },
   "chat:oversee": { any: ["chat:view_all"] },
-  "roster:manage": { any: ["students:view_all","students:create","students:edit","classes_sections:create","classes_sections:merge_split","classes_sections:settings","teaching_assignments:assign_class_teacher","teaching_assignments:assign_homework_checker","assignment:settings","assignment:view_reports","assignment:confirm_week","class_test:edit_all","class_test:delete","class_test:publish","class_test:revoke","class_test_question:prepare","class_test_question:delete","class_test_script:view","class_test_script:scan","class_test_script:publish","class_test_script:hand_back","printing:view_all","printing:process","archive:view","archive:create","archive:approve","archive:lend","archive:void","archive:delete","archive:settings","vocab_test:assign","student_comments:review","student_comments:send","parents_meeting:view","parents_meeting:create","parents_meeting:send","parents_meeting:mark_attendance","parents_meeting:assign","parents_meeting:review","parents_meeting:view_brief","improvement_plan:view_all","improvement_plan:create","improvement_plan:edit","improvement_plan:assign","improvement_plan:edit_all","teaching_notes:upload","teaching_notes:review","english_drive:upload","worksheets:create","worksheets:send","worksheets:edit_all","worksheets:edit","worksheets:settings"] },
+  "roster:manage": { any: ["students:view_all","students:create","students:edit","classes_sections:create","classes_sections:merge_split","classes_sections:settings","teaching_assignments:assign_class_teacher","teaching_assignments:assign_homework_checker","assignment:settings","reports:assignment_load","assignment:confirm_week","class_test:edit_all","class_test:delete","class_test:publish","class_test:revoke","class_test_question:prepare","class_test_question:delete","class_test_script:view","class_test_script:scan","class_test_script:publish","class_test_script:hand_back","printing:view_all","printing:process","archive:view","archive:create","archive:approve","archive:lend","archive:void","archive:delete","archive:settings","vocab_test:assign","student_comments:review","student_comments:send","parents_meeting:view","parents_meeting:create","parents_meeting:send","parents_meeting:mark_attendance","parents_meeting:assign","parents_meeting:review","parents_meeting:view_brief","improvement_plan:view_all","improvement_plan:create","improvement_plan:edit","improvement_plan:assign","improvement_plan:edit_all","teaching_notes:upload","teaching_notes:review","english_drive:upload","worksheets:create","worksheets:send","worksheets:edit_all","worksheets:edit","worksheets:settings"] },
   "staff:manage": { any: ["staff_records:view","staff_records:create","staff_records:edit","staff_records:confirm","staff_letters:view","staff_letters:issue","staff_letters:void","offboarding:view","offboarding:create","offboarding:edit","offboarding:revoke","offboarding:issue","offboarding:cancel"] },
   "leave:manage": { any: ["leave:view_all","leave:approve","leave:create","leave:settings","cover:view_all","cover:approve"] },
   "payroll:manage": { any: ["payroll:view","payroll:edit","payroll:prepare","payroll:export","salary_advance:view","hr_policy:view","hr_policy:settings","offboarding:prepare"] },
@@ -968,6 +993,12 @@ export const LEGACY_PERMISSION_EXPANSION: Record<string, { any: readonly Catalog
 /** Delegated duty → the catalogue actions it covers today (D-#592 "a duty covers its whole
  *  tail"). The delegate must ALSO hold each of these to act (D-#484/#794): a delegation
  *  widens WHERE, never WHAT. */
+/** Catalogue actions that were retired and replaced (D-#846). They are listed with the legacy
+ *  names in vocab.ts so stored data that still names them stays valid; role edits naming one are
+ *  translated through LEGACY_PERMISSION_EXPANSION, and `myPermissions` keeps answering it for
+ *  app bundles from before the change. */
+export const RETIRED_CATALOGUE_ACTIONS = ["homework:view_reports", "assignment:view_reports", "homework:remind"] as const;
+
 export const DELEGATED_ACTION_PERMISSIONS: Record<string, readonly CataloguePermission[]> = {
   declare_homework: ["homework:declare","homework:undo"],
   submit_homework: ["homework:mark_submitted","homework:undo"],

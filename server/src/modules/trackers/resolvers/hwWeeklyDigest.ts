@@ -27,9 +27,9 @@ import {
 
 function assertWeeklyReportAdmin(ctx: AppContext): void {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  // PM (D-#790..#801): the `homework:remind` action (Office + Principal by default — the
-  // old template-aware P/O check, D-#467).
-  if (!callerHasPermission(ctx.auth, "homework:remind")) {
+  // D-#846: the Reports-hub switch for this report (Office + Principal by default). It carries
+  // guardian phones, so it is never a side effect of homework:view.
+  if (!callerHasPermission(ctx.auth, "reports:hw_weekly_unsubmitted")) {
     throw new ForbiddenError("সাপ্তাহিক রিপোর্ট শুধুমাত্র অধ্যক্ষ/অফিসের জন্য");
   }
 }
@@ -121,9 +121,9 @@ builder.queryField("homeworkWeeklyUnsubmitted", (t) =>
       "Per-student weekly unsubmitted homework + digest-day heads-up, with the guardian-identical " +
       "rendered message and a manual wa.me line per student (D-#453). weekStart omitted = current week; " +
       "any dateKey is snapped to its week's Sunday. Principal/Office by role.",
-    // PM: its own action (`homework:remind`, Office + Principal by default) — not
-    // `homework:view`, which would hand every guardian phone to any teacher.
-    authScopes: { hasPermission: "homework:remind" },
+    // D-#846: its own report switch (Office + Principal by default) — not `homework:view`,
+    // which would hand every guardian phone to any teacher.
+    authScopes: { hasPermission: "reports:hw_weekly_unsubmitted" },
     args: {
       weekStart: t.arg.string({ required: false }),
       sectionId: t.arg.string({ required: false }),

@@ -211,8 +211,8 @@ builder.queryField("classTestReportsStatus", (t) =>
     type: [ReportStatusRowRef],
     description:
       "Per-exam Reports Status (CT-4, J5): submitted/pending/overdue + school-days late + report state. " +
-      "class_test:view_all unscoped; class_test:view must pass a section they can read (assertReportRead, D-#196).",
-    authScopes: { hasAnyPermission: ["class_test:view", "class_test:view_all"] },
+      "class_test:view_all or the reports:class_test switch (D-#846) unscoped; class_test:view must pass a section they can read (assertReportRead, D-#196).",
+    authScopes: { hasAnyPermission: ["class_test:view", "class_test:view_all", "reports:class_test"] },
     args: {
       academicYearId: t.arg.string({ required: false }),
       classLevel: t.arg.int({ required: false }),
@@ -228,7 +228,10 @@ builder.queryField("classTestReportsStatus", (t) =>
       examTo: t.arg.string({ required: false, description: "Latest exam date, YYYY-MM-DD (Dhaka), inclusive." }),
     },
     resolve: async (_root, args, ctx) => {
-      await assertReportRead(ctx, args.sectionId, { selfTeacherId: args.teacherId, gate: CLASS_TEST_REPORT_GATE });
+      // D-#846: the Reports-hub switch shows this report for the whole school.
+      if (!(ctx.auth && callerHasPermission(ctx.auth, "reports:class_test"))) {
+        await assertReportRead(ctx, args.sectionId, { selfTeacherId: args.teacherId, gate: CLASS_TEST_REPORT_GATE });
+      }
       return reportsStatus(filterFromArgs(args), { withScriptStages: true });
     },
   }),

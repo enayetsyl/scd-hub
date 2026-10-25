@@ -100,10 +100,13 @@ describe("reconciliationReport — either tracker's view_reports", () => {
     expect(ok(await run(RECON, "TEACHER"))).toBe(false);
   });
 
-  test("one half is enough; both off refuses the Office", async () => {
+  test("a role edit stored under the RETIRED names still applies (D-#846 translation)", async () => {
     setRoleTemplateOverrides({ OFFICE: { granted: [], revoked: ["homework:view_reports"] } });
     expect(ok(await run(RECON, "OFFICE"))).toBe(true);
-    setRoleTemplateOverrides({ OFFICE: { granted: [], revoked: ["homework:view_reports", "assignment:view_reports"] } });
+    // Both retired names off + the print desk off: no part of the payload is left for the Office.
+    setRoleTemplateOverrides({
+      OFFICE: { granted: [], revoked: ["homework:view_reports", "assignment:view_reports", "printing:view_all"] },
+    });
     expect(ok(await run(RECON, "OFFICE"))).toBe(false);
   });
 

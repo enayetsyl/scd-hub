@@ -12,7 +12,7 @@
 import { builder } from "../../../schema";
 import type { AppContext } from "../../../context";
 import { ForbiddenError } from "../../../middleware/authz";
-import { callerHasPermission } from "@scd/shared";
+import { callerHasPermission, type Permission } from "@scd/shared";
 import {
   reconciliationReport,
   type ReconReport,
@@ -25,16 +25,34 @@ import {
   type AsNotPrinted,
 } from "../services/ReconReportService";
 
+/** One payload serves six Reports-hub leaves (D-#846). Each part opens on its own report switch
+ *  (or the combined reconciliation one); the printing desk keeps the print-gap part it uses on the
+ *  print screen. Parts the caller was not given come back EMPTY, so a teacher handed one report
+ *  never receives the rest. */
+const RECON_PART_GATES = {
+  hwNotDeclared: ["reports:hw_declare_pending", "reports:reconciliation"],
+  hwNilDeclared: ["reports:hw_declare_pending", "reports:reconciliation"],
+  hwMisses: ["reports:hw_issue_pending", "reports:reconciliation"],
+  asNotDeclared: ["reports:as_declare_pending", "reports:reconciliation"],
+  asNilDeclared: ["reports:as_declare_pending", "reports:reconciliation"],
+  asMisses: ["reports:as_deliver_pending", "reports:reconciliation"],
+  asNotPrinted: ["reports:as_print_pending", "reports:reconciliation", "printing:view_all"],
+} as const satisfies Record<string, readonly Permission[]>;
+const RECON_ANY: Permission[] = [...new Set(Object.values(RECON_PART_GATES).flat())];
+
 function assertReconReportAdmin(ctx: AppContext): void {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  // PM (D-#790..#801): either tracker's oversight-report action (Office + Principal by
-  // default — the old template-aware P/O check, D-#467). One payload covers both trackers.
-  if (
-    !callerHasPermission(ctx.auth, "homework:view_reports") &&
-    !callerHasPermission(ctx.auth, "assignment:view_reports")
-  ) {
-    throw new ForbiddenError("রিকনসিলিয়েশন রিপোর্ট শুধুমাত্র অধ্যক্ষ/অফিসের জন্য");
+  if (!RECON_ANY.some((p) => callerHasPermission(ctx.auth!, p))) {
+    throw new ForbiddenError("এই রিপোর্ট দেখার অনুমতি নেই");
   }
+}
+
+function filterReconParts<T extends Record<keyof typeof RECON_PART_GATES, unknown[]>>(ctx: AppContext, report: T): T {
+  const out = { ...report };
+  for (const [part, perms] of Object.entries(RECON_PART_GATES) as [keyof typeof RECON_PART_GATES, readonly Permission[]][]) {
+    if (!perms.some((p) => callerHasPermission(ctx.auth!, p))) (out as Record<string, unknown[]>)[part] = [];
+  }
+  return out;
 }
 
 const HwReconMissRef = builder.objectRef<HwReconMiss>("HwReconMiss").implement({
@@ -163,14 +181,14 @@ builder.queryField("reconciliationReport", (t) =>
   t.field({
     type: ReconReportRef,
     description: "Per-day homework + per-week assignment reconciliation misses (Principal/Office).",
-    authScopes: { hasAnyPermission: ["homework:view_reports", "assignment:view_reports"] },
+    authScopes: { hasAnyPermission: RECON_ANY },
     args: {
       from: t.arg.string({ required: true }),
       to: t.arg.string({ required: true }),
     },
     resolve: async (_root, args, ctx) => {
       assertReconReportAdmin(ctx);
-      return reconciliationReport(args.from, args.to);
+      return filterReconParts(ctx, await reconciliationReport(args.from, args.to));
     },
   }),
 );

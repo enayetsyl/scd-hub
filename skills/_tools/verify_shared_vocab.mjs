@@ -895,7 +895,11 @@ const ROLE_CHECK_DEFAULTS = {
     "student_comments:view", "parents_meeting:view_brief", "monthly_report:review", "attendance:view",
     "teaching_notes:view", "teaching_notes:send", "english_drive:view", "english_drive:send",
     "library:lend", "library:return", "library:remind"],
-  OFFICE: ["homework:view_all", "homework:undo_any", "homework:view_reports", "homework:remind",
+  OFFICE: ["homework:view_all", "homework:undo_any",
+    // One switch per report (D-#846) — the Office read every report by role before the matrix.
+    "reports:hw_declare_pending", "reports:hw_issue_pending", "reports:hw_lifecycle", "reports:hw_weekly_unsubmitted",
+    "reports:as_declare_pending", "reports:as_deliver_pending", "reports:as_print_pending", "reports:reconciliation",
+    "reports:class_note", "reports:class_test", "reports:attendance", "reports:class_load",
     "assignment:view_all", "assignment:undo_any", "work_claim:view_all", "work_claim:remind", "set_tracker:view_all",
     "saturday_revision:view", "saturday_revision:view_all", "saturday_revision:enter_results", "saturday_revision:edit_all",
     "saturday_revision:send", "saturday_revision:settings", "class_test:view_all", "class_test:register",
