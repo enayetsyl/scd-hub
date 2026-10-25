@@ -197,6 +197,8 @@ export default function WorksheetGenerateScreen(): React.ReactElement {
   // Starts with every letter ticked; a full set is sent as null (= the whole alphabet).
   const [taught, setTaught] = useState<Set<string>>(() => new Set(allLettersFor("BAN")));
   const [numberUpTo, setNumberUpTo] = useState<number>(50);
+  // The KG maths book runs to ১০০, Nursery's to ৫০ (D-#846): start each class at its book's end.
+  useEffect(() => setNumberUpTo(cls?.level === 0 ? 100 : 50), [cls?.level]);
   useEffect(() => setTaught(new Set(allLettersFor(subject))), [subject]);
   const toggleLetter = (l: string): void =>
     setTaught((cur) => {
