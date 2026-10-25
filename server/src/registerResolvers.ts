@@ -97,6 +97,7 @@ import "./modules/engagement/resolvers/guardianEngagement";
 import "./modules/trackers/resolvers/classTestQuestion";
 import "./modules/comments/resolvers/parentMeeting";
 import "./modules/comments/resolvers/meetingDispatch";
+import "./modules/comments/resolvers/meetingResponse";
 import "./modules/comments/resolvers/meetingComment";
 import "./modules/comments/resolvers/meetingChain";
 import "./modules/access-control/resolvers/accessControl";

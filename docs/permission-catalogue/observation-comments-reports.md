@@ -57,6 +57,9 @@ Counts: 70 mutations, 76 queries, 7 REST/SSE.
 | parentMeeting.ts:165 | setMeetingSlotOnCall | roster:manage | `parents_meeting:create` |
 | parentMeeting.ts:183 | reorderMeetingSlots | roster:manage; draft meeting | `parents_meeting:create`; draft (stays) |
 | parentMeeting.ts:211 | setMeetingBreaks | roster:manage; draft meeting | `parents_meeting:create`; draft (stays) |
+| meetingResponse.ts | reviewMeetingChange | new (D-#842) | `parents_meeting:approve_change`; meeting scheduled |
+| meetingResponse.ts | respondToMeetingSlot | new (D-#840) | `guardian:read_child` + a linked child in the slot (GUARDIAN plane) |
+| meetingResponse.ts | acknowledgeMeetingChange | new (D-#844) | `guardian:read_child` + a linked child in the slot (GUARDIAN plane) |
 
 ### `server/src/modules/reports/resolvers/monthlyReport.ts`
 | file:line | resolver | today's gate (authScopes + extra) | → new gate (permission, plus extra gates that stay) |
@@ -137,6 +140,8 @@ Counts: 70 mutations, 76 queries, 7 REST/SSE.
 | studentComment.ts:330 | commentReviewInbox | roster:manage | `student_comments:review` |
 | studentComment.ts:347 | commentReviewInboxPage | roster:manage | `student_comments:review` |
 | studentComment.ts:363 | commentReviewCount | roster:manage | `student_comments:review` |
+| meetingResponse.ts | meetingResponseSummary | new (D-#843) | `parents_meeting:view` |
+| meetingResponse.ts | myMeetingSlots | new (D-#841) | `guardian:read_child`; own linked children only (GUARDIAN plane) |
 | meetingChain.ts:499 | meetingCommentProgress | roster:manage | `parents_meeting:view` |
 | meetingChain.ts:509 | meetingFinalQueue | roster:manage | `parents_meeting:review` |
 | meetingChain.ts:559 | myMeetingNoteWork | tracker:write; self | `parents_meeting:write_notes` (own rows) |

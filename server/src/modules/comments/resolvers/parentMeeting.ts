@@ -25,6 +25,7 @@ import {
   type ParentMeetingShape,
   type ParentMeetingSlotShape,
   type GenerateSlotsResult,
+  type MeetingSlotResponseShape,
 } from "../services/ParentMeetingService";
 
 // ---------------------------------------------------------------------------
@@ -68,6 +69,24 @@ ParentMeetingRef.implement({
   }),
 });
 
+export const MeetingSlotResponseRef = builder.objectRef<MeetingSlotResponseShape>("MeetingSlotResponse");
+MeetingSlotResponseRef.implement({
+  description:
+    "A family's one, final answer to its slot (D-#840): choice CONFIRMED | CHANGE_REQUESTED | CANT_COME, " +
+    "plus the Principal/VP ruling on a change (reviewOutcome APPROVED | DECLINED, D-#842).",
+  fields: (t) => ({
+    choice: t.exposeString("choice"),
+    preferredSlotTime: t.int({ nullable: true, resolve: (r) => r.preferredSlotTime }),
+    reason: t.string({ nullable: true, resolve: (r) => r.reason }),
+    respondedAt: t.exposeString("respondedAt"),
+    reviewOutcome: t.string({ nullable: true, resolve: (r) => r.reviewOutcome }),
+    reviewNote: t.string({ nullable: true, resolve: (r) => r.reviewNote }),
+    reviewFromSlotTime: t.int({ nullable: true, resolve: (r) => r.reviewFromSlotTime }),
+    reviewedAt: t.string({ nullable: true, resolve: (r) => r.reviewedAt }),
+    reviewSeenAt: t.string({ nullable: true, resolve: (r) => r.reviewSeenAt }),
+  }),
+});
+
 const ParentMeetingSlotRef = builder.objectRef<ParentMeetingSlotShape>("ParentMeetingSlot");
 ParentMeetingSlotRef.implement({
   description:
@@ -91,6 +110,8 @@ ParentMeetingSlotRef.implement({
     dispatchedAt: t.string({ nullable: true, resolve: (s) => s.dispatchedAt }),
     attended: t.boolean({ nullable: true, resolve: (s) => s.attended }),
     attendanceRemark: t.string({ nullable: true, resolve: (s) => s.attendanceRemark }),
+    response: t.field({ type: MeetingSlotResponseRef, nullable: true, resolve: (s) => s.response }),
+    rescheduledAt: t.string({ nullable: true, resolve: (s) => s.rescheduledAt }),
     createdAt: t.exposeString("createdAt"),
     updatedAt: t.exposeString("updatedAt"),
   }),

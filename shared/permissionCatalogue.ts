@@ -327,6 +327,7 @@ export const FEATURE_CATALOGUE = {
       review: { en: "Write the final comment", bn: "চূড়ান্ত মন্তব্য লেখা", desc: "Final word per child; final queue", teacher: false, office: true, flags: [] },
       write_notes: { en: "Write my meeting notes", bn: "সভার মন্তব্য লেখা (শিক্ষক)", desc: "Subject note; class teacher summary; Today cards", teacher: true, office: false, flags: [], designation: "row_teacher/class_teacher" },
       view_brief: { en: "Brief & comparison", bn: "সভার সারসংক্ষেপ ও তুলনা দেখা", desc: "Per-child brief + PDF, timeline, comparison", teacher: true, office: true, flags: [], designation: "class_teacher", waiver: "parents_meeting:view" },
+      approve_change: { en: "Approve a time change", bn: "সময় পরিবর্তনের অনুরোধ অনুমোদন", desc: "Approve (swap two families) or decline a guardian's slot-change request", teacher: false, office: false, flags: ["PRINCIPAL_DEFAULT"] },
     },
   },
   monthly_report: {
