@@ -26,8 +26,9 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
   const canSections = can("classes_sections:merge_split");
   const canYears = can("classes_sections:settings");
   // PM: the routine card opens subject-group membership (addGroupMember etc. =
-  // routine:settings).
-  const canRoutine = can("routine:settings");
+  // routine:settings). The screen first lists the groups on routine:view, so the card
+  // needs both (owner rule 2026-10-25: no card onto a refusal).
+  const canRoutine = can("routine:settings") && can("routine:view");
   const canStaff = can("staff_records:view");
   const canGuardianCreds = can("guardians:reset_password") || can("guardians:link");
   // message_templates:* and access_control:* are LOCKED (Principal-only).

@@ -1,5 +1,6 @@
 # STATUS
 
+- 2026-10-25 (cont. 2): **BUILT — no card for what you cannot open** (branch `fix/reports-home-gates`). Owner: Reports home showed every report to everyone. Reports home + 14 other launcher surfaces now hide entries whose target the viewer cannot open. Gate green (jest 334/334; Chrome check). **Now / next:** dev → partial promotion → OTA.
 - 2026-10-25: **BUILT — reports as permissions + one-person-first access editor (D-#846)** (branch `feat/pm-reports-person`, worktree `C:/w/pm-rpt`). Owner ask: give Shahida only some reports; give permissions per teacher, not per role; cross-role permissions.
   - Access control → "একজনকে দিন" (default) → a person → রিপোর্ট group: 13 switches, one per report, same names as the menu, each = that report for the whole school. Role tab = "সবাইকে দিন" with a warning.
   - Cross-role: switch on any action for one person, or "পুরো ভূমিকা যোগ করুন". A teaching action for someone with no class there also needs the card's every-section switch (named on the card) or a delegated duty.

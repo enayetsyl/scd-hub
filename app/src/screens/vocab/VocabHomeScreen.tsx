@@ -26,11 +26,15 @@ export default function VocabHomeScreen(): React.ReactElement {
   const nav = useNavigation<Nav>();
   const { role, can } = useAuth();
   const canAssign = can("vocab_test:assign");
+  // Owner rule (2026-10-25): a link shows only when its screen opens — the word bank,
+  // tests, class report and the caller's own duty list all read on vocab_test:view.
+  const canView = can("vocab_test:view");
   // D-#761: one duty row per week, forever — page it on the server (newest week first).
   const [page, setPage] = usePageState();
   const [myQ, refetchMy] = useQuery({
     query: MY_VOCAB_ASSIGNMENTS_PAGE_QUERY,
     variables: { page, pageSize: PAGE_SIZE },
+    pause: !canView,
   });
   const mine = myQ.data?.myVocabAssignmentsPage?.rows ?? [];
 
@@ -40,16 +44,21 @@ export default function VocabHomeScreen(): React.ReactElement {
         <Card>
           <Body style={{ fontWeight: "700" }}>{STR.vbHomeTitle}</Body>
           <View style={{ marginTop: space(2), gap: space(2) }}>
-            <Button title={STR.vbWordBank} onPress={() => nav.navigate("VocabWordBank")} />
-            <Button title={STR.vbTests} variant="secondary" onPress={() => nav.navigate("VocabTests")} />
-            <Button title={STR.vbClassReportNav} variant="secondary" onPress={() => nav.navigate("VocabClassReport")} />
+            {canView ? (
+              <>
+                <Button title={STR.vbWordBank} onPress={() => nav.navigate("VocabWordBank")} />
+                <Button title={STR.vbTests} variant="secondary" onPress={() => nav.navigate("VocabTests")} />
+                <Button title={STR.vbClassReportNav} variant="secondary" onPress={() => nav.navigate("VocabClassReport")} />
+              </>
+            ) : null}
             {canAssign ? (
               <Button title={STR.vbAssignmentNav} variant="secondary" onPress={() => nav.navigate("VocabAssignment")} />
             ) : null}
           </View>
         </Card>
 
-        <Card>
+        {canView ? (
+          <Card>
           <Body style={{ fontWeight: "700" }}>{STR.vbMyAssignments}</Body>
           <QueryGate
             result={myQ}
@@ -70,7 +79,8 @@ export default function VocabHomeScreen(): React.ReactElement {
             )}
             <Pager page={page} pageSize={PAGE_SIZE} total={myQ.data?.myVocabAssignmentsPage?.total ?? 0} onPage={setPage} />
           </QueryGate>
-        </Card>
+          </Card>
+        ) : null}
       </ScrollView>
     </Screen>
   );
