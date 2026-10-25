@@ -66,9 +66,43 @@ export type SectionLayout =
   | "columns"
   | "pictures"
   | "choice"
+  | "prompts"
+  | "vertical"
   | "match"
   | "oral"
   | "manual";
+
+/** One line of answer boxes under (or beside) a prompt — e.g. "জোড় | _ | _ | _". */
+export interface PromptLine {
+  /** Caption before the boxes ("জোড়", "ভেঙে লেখ"). */
+  label?: string | null;
+  blanks: number;
+  /** The key, one per box. */
+  answers?: string[] | null;
+  /** One wide box for a word or a sentence instead of letter-sized boxes. */
+  wide?: boolean;
+}
+
+/** A KG prompt question (D-#846): what is given, then the child's boxes. */
+export interface PromptItem {
+  /** What is given ("২২ =", "বিপরীত শব্দ: ভালো", a sentence with "____"); "" = none. */
+  prompt: string;
+  /** `prompt` is a sentence with a "____" gap the child writes in (a/an, আমার পরিচয়). */
+  sentence?: boolean;
+  /** Leave room under the prompt to draw (দাগ টেনে যোগ — tally sticks). */
+  tall?: boolean;
+  lines: PromptLine[];
+  /** The key for a sentence gap. */
+  gapAnswer?: string | null;
+}
+
+/** উপরে-নিচে যোগ/বিয়োগ: a over b with the operator, an answer box below. */
+export interface VerticalSum {
+  a: string;
+  b: string;
+  op: "+" | "−";
+  answer: string;
+}
 
 /** A picture with printed options; the child circles (or ticks) one. `answer` indexes `options`. */
 export interface Choice {
@@ -89,7 +123,8 @@ export interface Section {
   layout: SectionLayout;
   cols?: number;
   cells?: Cell[];
-  sets?: Array<{ shown: string[]; answer: string[] }>;
+  /** jumble: one line per set; `label` names the direction of an ordering set ("ছোট থেকে বড়"). */
+  sets?: Array<{ shown: string[]; answer: string[]; label?: string | null }>;
   rows?: Cell[][];
   /** groups: sub-questions under one number (ক) স্বরবর্ণ, খ) ব্যঞ্জনবর্ণ). */
   groups?: Array<{ label: string; note?: string | null; cols: number; cells: Cell[] }>;
@@ -97,6 +132,8 @@ export interface Section {
   columns?: Cell[][][];
   pictures?: Array<{ pictureId: string; repeat: number; a: string }>;
   choices?: Choice[];
+  items?: PromptItem[];
+  sums?: VerticalSum[];
   /** rows / pictures: the answer is a word, so one wide box per item, not a letter box. */
   wide?: boolean;
   left?: Array<{ pictureId: string | null; repeat: number; t: string | null }>;

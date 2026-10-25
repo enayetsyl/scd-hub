@@ -53,6 +53,23 @@ const isAxis = (a: string | null | undefined): a is WorksheetAxis =>
 /** Kinds whose single "item" is the whole lump (the alphabet, the oral, a blank space). */
 const LUMP_KINDS: ReadonlySet<string> = new Set(["WRITE_SEQUENCE", "ORAL", "MANUAL"]);
 
+const BN_DIGITS = "০১২৩৪৫৬৭৮৯";
+const ascii = (s: string): string => s.replace(/[০-৯]/g, (d) => String(BN_DIGITS.indexOf(d)));
+
+/**
+ * "— ০.৫ × ২০ = ১০" in a row's wording (the 2026 KG মানবন্টন): twenty items of half a mark,
+ * though the row's fields say 1 × 10 (D-#846). Used only when it agrees with the row's total.
+ */
+export function labelItems(label: string, total: number): { count: number; marksEach: number } | null {
+  const m = /([০-৯\d.]+)\s*[×x]\s*([০-৯\d]+)\s*=\s*([০-৯\d.]+)/.exec(label);
+  if (!m) return null;
+  const each = Number(ascii(m[1]));
+  const n = Number(ascii(m[2]));
+  const sum = Number(ascii(m[3]));
+  if (!(n > 0) || !(each > 0) || Math.abs(each * n - sum) > 1e-9 || Math.abs(sum - total) > 1e-9) return null;
+  return { count: n, marksEach: each };
+}
+
 /**
  * A row written "1 × 10" for an item question (every row of the 2026 আরবি মানবন্টন) means
  * ten one-mark items, not one item worth ten (D-#802). Lump kinds keep their one item.
@@ -83,7 +100,7 @@ export function mergePlanRows(
         seq: r.seq,
         label: r.label,
         itemType: r.itemType ?? null,
-        ...itemsOf(kind, r.count as number, r.marksEach as number),
+        ...(labelItems(r.label, r.total) ?? itemsOf(kind, r.count as number, r.marksEach as number)),
         total: r.total,
         kind,
         axis: usable ? (isAxis(s!.axis) ? s!.axis : auto.axis) : auto.axis,

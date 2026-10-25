@@ -391,7 +391,8 @@ export async function generate(ctx: AppContext, args: GenerateArgs, pictures?: P
     scope: {
       // A final covers the whole book (the syllabus says সম্পূর্ণ পাঠ্যবই).
       letterUpTo: kind === "FINAL" ? letterMax : args.letterUpTo ?? letterMax,
-      numberUpTo: kind === "FINAL" ? null : args.numberUpTo ?? null,
+      // The KG maths book runs to ১০০ (D-#846); Nursery's ends at ৫০ (the engine default).
+      numberUpTo: kind === "FINAL" ? (plan.classLevel === 0 ? 100 : null) : args.numberUpTo ?? (plan.classLevel === 0 ? 100 : null),
       letters: kind === "FINAL" ? null : cleanLetters(args.letters),
     },
     seed: args.seed,
