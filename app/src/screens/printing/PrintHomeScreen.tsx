@@ -96,6 +96,9 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
   const isOffice = can("printing:view_all");
   const canProcess = can("printing:process");
   const canRequest = can("printing:create");
+  const canHistory = canRequest || isOffice;
+  const canPictureBank = can("worksheets:edit") && can("worksheets:create");
+  const canWorksheetPlan = can("worksheets:settings") && can("worksheets:create");
 
   const [bucket, setBucket] = useState<string>("REQUESTED");
   // D-#461: 0-based page within the current bucket; reset whenever the bucket changes
@@ -414,22 +417,28 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
           onPress={() => navigation.navigate("WorksheetGenerate")}
         />
       ) : null}
-      {can("worksheets:edit") || can("worksheets:settings") ? (
+      {/* Owner rule (2026-10-25): each link shows only when its screen opens — the
+          picture bank and the plan both load on worksheets:create as well. */}
+      {canPictureBank || canWorksheetPlan ? (
         <View style={{ flexDirection: "row", gap: space(2), flexWrap: "wrap" }}>
-          {can("worksheets:edit") ? (
+          {canPictureBank ? (
             <Button title={`🖼 ${STR.wsBank}`} variant="ghost" onPress={() => navigation.navigate("PictureBank")} />
           ) : null}
-          {can("worksheets:settings") ? (
+          {canWorksheetPlan ? (
             <Button title={`📋 ${STR.wsPlan}`} variant="ghost" onPress={() => navigation.navigate("WorksheetPlan")} />
           ) : null}
         </View>
       ) : null}
-      <Button
-        title={`🗂 ${STR.prHistory}`}
-        variant="secondary"
-        onPress={() => navigation.navigate("PrintHistory")}
-      />
-      <Muted style={{ marginBottom: space(2) }}>{STR.prHistoryHint}</Muted>
+      {canHistory ? (
+        <>
+          <Button
+            title={`🗂 ${STR.prHistory}`}
+            variant="secondary"
+            onPress={() => navigation.navigate("PrintHistory")}
+          />
+          <Muted style={{ marginBottom: space(2) }}>{STR.prHistoryHint}</Muted>
+        </>
+      ) : null}
 
       {isOffice ? (
         <>

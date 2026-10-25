@@ -371,7 +371,9 @@ export default function HomeworkHomeScreen({ navigation }: Props): React.ReactEl
 
             {/* Actions — the chosen date rides along (R-Context: never re-ask). */}
             <View style={{ gap: space(2), marginTop: space(2) }}>
-              <Button title={STR.hwDeclare} onPress={() => navigation.navigate("DeclareHomework", { date })} />
+              {can("homework:declare") ? (
+                <Button title={STR.hwDeclare} onPress={() => navigation.navigate("DeclareHomework", { date })} />
+              ) : null}
               {canReconcileHomework ? (
                 <Button title={STR.hwReconcile} variant="secondary" onPress={() => navigation.navigate("HomeworkReconcile", { date })} />
               ) : null}

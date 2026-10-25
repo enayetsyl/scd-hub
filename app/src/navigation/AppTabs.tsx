@@ -1728,7 +1728,10 @@ export function AppTabs(): React.ReactElement {
   const canTrackers = can("set_tracker:view");
   const canHomework = can("homework:view");
   // Assignment tab: teachers the workspace; Office the rotation schedule + follow-up.
-  const canAssignment = any("assignment:view", "assignment:settings", "assignment:remind");
+  // Not on assignment:remind alone — the hub's own reads need view or settings, so a
+  // remind-only holder would open onto a refusal (owner rule 2026-10-25). Every default
+  // holder of remind (Principal, Office) also holds settings.
+  const canAssignment = any("assignment:view", "assignment:settings");
   const canReview = any(
     "plan_review:assign", "plan_review:review", "plan_review:approve",
     "question_review:assign", "question_review:view_all", "question_review:review", "question_review:publish",

@@ -138,20 +138,10 @@ export default function TodayScreen(): React.ReactElement {
       can("attendance:edit") ||
       can("attendance:assign") ||
       can("staff_attendance:upload"));
-  // PM (trackers-classtest.md §f): any class-test, paper, script or print-queue action.
-  const canClassTest =
-    !!role &&
-    [
-      "class_test:view",
-      "class_test:view_all",
-      "class_test:create",
-      "class_test:register",
-      "class_test_question:create",
-      "class_test_question:prepare",
-      "class_test_script:view",
-      "printing:view_all",
-    ].some((p) => can(p));
   const canClassNotes = can("class_note:create");
+  const canClassNotesView = can("class_note:view");
+  // The Today tile opens RequestClassTest, which files on create | register.
+  const canRequestClassTest = can("class_test:create") || can("class_test:register");
   const canQuestions = can("question_bank:view");
   const canSets = can("question_sets:view");
   const canTrackers = can("set_tracker:view");
@@ -469,8 +459,11 @@ export default function TodayScreen(): React.ReactElement {
   );
 
   type Tile = { key: string; icon: IconName; label: string; go: () => void };
+  // Owner rule (2026-10-25): a tile shows only when its TARGET screen opens — the
+  // declare form reads homework:view, MyClassNotes reads class_note:view, and
+  // RequestClassTest submits on class_test:create | class_test:register.
   const tiles: (Tile | false)[] = [
-    canDeclare && {
+    canDeclare && canHwView && {
       key: "hw",
       icon: "book-open" as const,
       label: STR.hwDeclareTitle,
@@ -482,13 +475,13 @@ export default function TodayScreen(): React.ReactElement {
       label: STR.tabAttendance,
       go: () => nav.navigate("AttendanceTab", { screen: "AttendanceHome" }),
     },
-    canClassNotes && {
+    canClassNotes && canClassNotesView && {
       key: "notes",
       icon: "square-pen" as const,
       label: STR.drawerItemClassNotes,
       go: () => nav.navigate("ClassNotesTab", { screen: "MyClassNotes" }),
     },
-    canClassTest && {
+    canRequestClassTest && {
       key: "ct",
       icon: "flask-conical" as const,
       label: STR.tabClassTest,
@@ -734,8 +727,11 @@ export default function TodayScreen(): React.ReactElement {
               return (
                 <Pressable
                   key={s.id}
-                  onPress={() => nav.navigate("ClassNotesTab", { screen: "MyClassNotes" })}
-                  accessibilityRole="button"
+                  // Owner rule (2026-10-25): the slot opens MyClassNotes only for a
+                  // viewer who can read class notes; otherwise it is a plain card.
+                  disabled={!canClassNotesView}
+                  onPress={canClassNotesView ? () => nav.navigate("ClassNotesTab", { screen: "MyClassNotes" }) : undefined}
+                  accessibilityRole={canClassNotesView ? "button" : undefined}
                   accessibilityLabel={`${STR.rtPeriodN} ${bnNum(s.periodNumber)} — ${routineSubjectLabel(s.subject)}${current ? ` — ${STR.tdNow}` : ""}`}
                   style={({ pressed }) => [
                     {
@@ -957,29 +953,36 @@ export default function TodayScreen(): React.ReactElement {
         ) : null}
 
         {/* অমীমাংসিত কাজ — display-numeral count rows, one-tap deep links */}
-        {day ? (
+        {/* Owner rule (2026-10-25): the homework rows open the Homework tab, which
+            reads on homework:view — hidden without it (and the card with them when
+            there is no attendance row either). */}
+        {day && (canHwView || canAttendance) ? (
           <>
             <H2>{STR.pendingWork}</H2>
             <Card>
-              <CountRow
-                label={STR.hwCheckingTitle}
-                count={hw?.pendingChecking ?? 0}
-                color={colors.error}
-                onPress={() => nav.navigate("HomeworkTab", { screen: "HomeworkWorkspace", initial: false })}
-              />
-              <CountRow
-                label={STR.hwChaseList}
-                count={hw?.activeChases ?? 0}
-                color={colors.warning}
-                onPress={() => nav.navigate("HomeworkTab", { screen: "HomeworkHome" })}
-              />
-              <CountRow
-                label={STR.hwOpenResubmissions}
-                count={hw?.openResubmissions ?? 0}
-                color={colors.info}
-                onPress={() => nav.navigate("HomeworkTab", { screen: "HomeworkWorkspace", initial: false })}
-                last={!canAttendance}
-              />
+              {canHwView ? (
+                <>
+                  <CountRow
+                    label={STR.hwCheckingTitle}
+                    count={hw?.pendingChecking ?? 0}
+                    color={colors.error}
+                    onPress={() => nav.navigate("HomeworkTab", { screen: "HomeworkWorkspace", initial: false })}
+                  />
+                  <CountRow
+                    label={STR.hwChaseList}
+                    count={hw?.activeChases ?? 0}
+                    color={colors.warning}
+                    onPress={() => nav.navigate("HomeworkTab", { screen: "HomeworkHome" })}
+                  />
+                  <CountRow
+                    label={STR.hwOpenResubmissions}
+                    count={hw?.openResubmissions ?? 0}
+                    color={colors.info}
+                    onPress={() => nav.navigate("HomeworkTab", { screen: "HomeworkWorkspace", initial: false })}
+                    last={!canAttendance}
+                  />
+                </>
+              ) : null}
               {canAttendance ? (
                 <CountRow
                   label={STR.attMarkTitle}

@@ -27,6 +27,7 @@ import { ImprovementTasksTeacherCard } from "../../components/ImprovementTasksTe
 import { MeetingNotesTeacherCard } from "../../components/MeetingNotesTeacherCard";
 import { MeetingSummaryTeacherCard } from "../../components/MeetingSummaryTeacherCard";
 import { useAuth } from "../../auth/AuthContext";
+import { REPORT_ACTIONS } from "../../lib/navGates";
 import { STR, bnNum, dayOfWeekLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { usePullRefresh } from "../../lib/useRefresh";
@@ -42,20 +43,63 @@ interface CardMeta {
   icon: string;
   titleKey: LabelKey;
   target: { tab: keyof TabParamList; screen: string };
+  /** Owner rule (2026-10-25): the card shows only when the viewer holds ANY of these —
+   *  what the target screen's first read is gated on. Omitted = always shown. */
+  anyOf?: string[];
 }
 
 /** key → icon/title/deep-link. The server decides card content; this decides looks. */
 const REGISTRY: Record<string, CardMeta> = {
-  attendance: { icon: "🙋", titleKey: "dcAttendance", target: { tab: "AttendanceTab", screen: "AttendanceReport" } },
-  hwCycle: { icon: "📒", titleKey: "dcHwCycle", target: { tab: "AdminTab", screen: "ReconciliationReport" } },
-  hwLifecycle: { icon: "📘", titleKey: "dcHwLifecycle", target: { tab: "AdminTab", screen: "HwLifecycleReport" } },
-  assignments: { icon: "📋", titleKey: "dcAssignments", target: { tab: "ReportsTab", screen: "AsDeclarePending" } },
-  handout: { icon: "📦", titleKey: "dcHandout", target: { tab: "AssignmentTab", screen: "AssignmentHandout" } },
-  leave: { icon: "🏖️", titleKey: "dcLeave", target: { tab: "HrTab", screen: "LeaveAdmin" } },
-  observations: { icon: "👁️", titleKey: "dcObservations", target: { tab: "ObservationTab", screen: "ObservationHome" } },
-  comments: { icon: "🗣️", titleKey: "dcComments", target: { tab: "CommentsTab", screen: "CommentReview" } },
-  classTests: { icon: "🧪", titleKey: "dcClassTests", target: { tab: "ClassTestTab", screen: "ClassTestDashboard" } },
-  print: { icon: "🖨️", titleKey: "dcPrint", target: { tab: "PrintTab", screen: "PrintHome" } },
+  attendance: {
+    icon: "🙋",
+    titleKey: "dcAttendance",
+    target: { tab: "AttendanceTab", screen: "AttendanceReport" },
+    anyOf: ["attendance:view_all", "reports:attendance"],
+  },
+  hwCycle: {
+    icon: "📒",
+    titleKey: "dcHwCycle",
+    target: { tab: "AdminTab", screen: "ReconciliationReport" },
+    anyOf: ["reports:reconciliation"],
+  },
+  hwLifecycle: {
+    icon: "📘",
+    titleKey: "dcHwLifecycle",
+    target: { tab: "AdminTab", screen: "HwLifecycleReport" },
+    anyOf: ["reports:hw_lifecycle"],
+  },
+  assignments: {
+    icon: "📋",
+    titleKey: "dcAssignments",
+    target: { tab: "ReportsTab", screen: "AsDeclarePending" },
+    anyOf: ["reports:as_declare_pending", "reports:reconciliation"],
+  },
+  handout: {
+    icon: "📦",
+    titleKey: "dcHandout",
+    target: { tab: "AssignmentTab", screen: "AssignmentHandout" },
+    anyOf: ["assignment:view", "assignment:settings"],
+  },
+  leave: { icon: "🏖️", titleKey: "dcLeave", target: { tab: "HrTab", screen: "LeaveAdmin" }, anyOf: ["leave:view_all"] },
+  observations: {
+    icon: "👁️",
+    titleKey: "dcObservations",
+    target: { tab: "ObservationTab", screen: "ObservationHome" },
+    anyOf: ["classroom_observation:view_all"],
+  },
+  comments: {
+    icon: "🗣️",
+    titleKey: "dcComments",
+    target: { tab: "CommentsTab", screen: "CommentReview" },
+    anyOf: ["student_comments:review"],
+  },
+  classTests: {
+    icon: "🧪",
+    titleKey: "dcClassTests",
+    target: { tab: "ClassTestTab", screen: "ClassTestDashboard" },
+    anyOf: ["class_test:view_all"],
+  },
+  print: { icon: "🖨️", titleKey: "dcPrint", target: { tab: "PrintTab", screen: "PrintHome" }, anyOf: ["printing:view_all"] },
 };
 
 /** badge key → label key (language-free wire keys, client labels). */
@@ -137,6 +181,8 @@ export default function AdminTodayScreen(): React.ReactElement {
   const renderCard = (card: AdminTodayCardT): React.ReactElement | null => {
     const meta = REGISTRY[card.key];
     if (!meta) return null; // a future server card this app version doesn't know — skip
+    // Owner rule (2026-10-25): no card that opens onto a refusal.
+    if (meta.anyOf && !meta.anyOf.some(can)) return null;
     // D-#758: the same FoldCard as every other Today card, so they all read alike.
     return (
       <FoldCard
@@ -237,14 +283,17 @@ export default function AdminTodayScreen(): React.ReactElement {
             so it rendered for nobody. */}
         {canGift ? <GiftHandoverCard /> : null}
 
-        {/* Static launcher card — the Reports hub (client-side, no server data). */}
-        <Card onPress={() => goTo({ icon: "📊", titleKey: "dcReports", target: { tab: "ReportsTab", screen: "ReportsHome" } })}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
-            <Text style={{ fontSize: 18 }}>📊</Text>
-            <Body style={{ fontWeight: "700", flex: 1 }}>{STR.dcReports}</Body>
-            <Text style={{ fontSize: 12 }}>→</Text>
-          </View>
-        </Card>
+        {/* Static launcher card — the Reports hub (client-side, no server data); shown
+            only when at least one report under it opens for this viewer. */}
+        {REPORT_ACTIONS.some(can) ? (
+          <Card onPress={() => goTo({ icon: "📊", titleKey: "dcReports", target: { tab: "ReportsTab", screen: "ReportsHome" } })}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
+              <Text style={{ fontSize: 18 }}>📊</Text>
+              <Body style={{ fontWeight: "700", flex: 1 }}>{STR.dcReports}</Body>
+              <Text style={{ fontSize: 12 }}>→</Text>
+            </View>
+          </Card>
+        ) : null}
       </ScrollView>
     </Screen>
   );

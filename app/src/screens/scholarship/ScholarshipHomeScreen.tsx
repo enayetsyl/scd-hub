@@ -164,7 +164,9 @@ export default function ScholarshipHomeScreen(): React.ReactElement {
       })}
       <Pager page={page} pageSize={PAGE_SIZE} total={data?.scholarshipPapersPage?.total ?? 0} onPage={setPage} />
 
-      {activeSection ? (
+      {/* Owner rule (2026-10-25): every screen below reads on scholarship_practice:view
+          (the authoring ones also need :create) — none of them shows without it. */}
+      {activeSection && can("scholarship_practice:view") ? (
         <View style={{ gap: space(3), marginTop: space(2) }}>
           <H2>{STR.scAnalysis}</H2>
           <Button

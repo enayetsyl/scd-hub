@@ -47,13 +47,14 @@ export default function PayrollHomeScreen({ navigation }: Props): React.ReactEle
           <Body style={{ fontWeight: "700" }}>{STR.hrPrepareRun}</Body>
         </Card>
       ) : null}
-      {can("payroll:edit") ? (
+      {/* StaffPay and Advances both open on the staff list (staff_records:view). */}
+      {can("payroll:edit") && can("staff_records:view") ? (
         <Card onPress={() => navigation.navigate("StaffPay")}>
           <Body style={{ fontWeight: "700" }}>{STR.hrStaffPay}</Body>
           <Muted>{STR.hrStaffPaySub}</Muted>
         </Card>
       ) : null}
-      {can("salary_advance:view") ? (
+      {can("salary_advance:view") && can("staff_records:view") ? (
         <Card onPress={() => navigation.navigate("Advances")}>
           <Body style={{ fontWeight: "700" }}>{STR.hrAdvances}</Body>
           <Muted>{STR.hrAdvancesSub}</Muted>
