@@ -9,6 +9,24 @@ import { Image, Text, View, type TextStyle, type ViewStyle } from "react-native"
 import { fonts } from "../theme/tokens";
 import type { WorksheetHeaderT } from "../graphql/worksheet";
 
+interface PromptLine {
+  label?: string | null;
+  blanks: number;
+  answers?: string[] | null;
+  wide?: boolean;
+}
+
+interface PromptItem {
+  prompt: string;
+  sentence?: boolean;
+  tall?: boolean;
+  lines: PromptLine[];
+  gapAnswer?: string | null;
+}
+
+/** "×", "=" between the boxes of a times-table line print bare, as on the 2025 KG paper. */
+const OPERATORS = new Set(["×", "=", "+", "-"]);
+
 interface Cell {
   t: string;
   a?: string | null;
@@ -20,10 +38,11 @@ export interface WorksheetSection {
   note?: string | null;
   marks: number;
   kind: string;
-  layout: "grid" | "groups" | "jumble" | "rows" | "columns" | "pictures" | "choice" | "match" | "oral" | "manual";
+  layout: "grid" | "groups" | "jumble" | "rows" | "columns" | "pictures" | "choice" | "prompts" | "vertical" | "match" | "oral" | "manual";
   cols?: number;
   cells?: Cell[];
-  sets?: Array<{ shown: string[]; answer: string[] }>;
+  /** `label` names an ordering set's direction ("ছোট থেকে বড়"). */
+  sets?: Array<{ shown: string[]; answer: string[]; label?: string | null }>;
   rows?: Cell[][];
   groups?: Array<{ label: string; note?: string | null; cols: number; cells: Cell[] }>;
   columns?: Cell[][][];
@@ -32,6 +51,10 @@ export interface WorksheetSection {
   choices?: Array<{ pictureId: string | null; options: string[]; answer: number }>;
   /** rows / pictures: the answer is a word — one wide box per item. */
   wide?: boolean;
+  /** KG prompt questions (D-#847): what is given, then the child's boxes. */
+  items?: PromptItem[];
+  /** উপরে-নিচে যোগ/বিয়োগ. */
+  sums?: Array<{ a: string; b: string; op: string; answer: string }>;
   left?: Array<{ pictureId: string | null; repeat: number; t: string | null }>;
   right?: string[];
   answer?: number[];
@@ -197,13 +220,42 @@ function Body({
     </View>
   );
   const itemRow = (cells: Cell[], key: number): React.ReactElement => (
-    <View key={key} style={{ flexDirection: row, gap: 6 }}>
-      {cells.map((c, j) => (
-        <View key={j} style={box(44, ch)}>
-          <Guides on={ruled && !c.t} />
-          <CellText c={c} showAnswers={showAnswers} />
+    <View key={key} style={{ flexDirection: row, gap: cells.length > 3 ? 4 : 6, alignItems: "center" }}>
+      {cells.map((c, j) =>
+        OPERATORS.has(c.t) ? (
+          <Text key={j} style={[txt(17), { width: 16, textAlign: "center" }]}>
+            {c.t}
+          </Text>
+        ) : (
+          <View key={j} style={box(cells.length > 3 ? 38 : 44, ch)}>
+            <Guides on={ruled && !c.t} />
+            <CellText c={c} showAnswers={showAnswers} />
+          </View>
+        ),
+      )}
+    </View>
+  );
+  /** One line of answer boxes: an optional caption, then the boxes (or one wide box). */
+  const promptLine = (ln: PromptLine, key: number): React.ReactElement => (
+    <View key={key} style={{ flexDirection: row, flexWrap: "wrap", gap: 6, flex: 1, alignItems: "center" }}>
+      {ln.label ? (
+        <View style={box(70, ch)}>
+          <Text style={txt(14)}>{ln.label}</Text>
         </View>
-      ))}
+      ) : null}
+      {ln.wide ? (
+        <View style={[box("100%", ch), { flex: 1, minWidth: 140 }]}>
+          <Guides on={ruled} />
+          {showAnswers && ln.answers?.length ? <Text style={txt(15, ANSWER)}>{ln.answers.filter(Boolean).join(", ")}</Text> : null}
+        </View>
+      ) : (
+        Array.from({ length: ln.blanks }, (_, i) => (
+          <View key={i} style={[box(ln.blanks === 1 ? 90 : 100, ch), { flexGrow: ln.blanks === 1 ? 0 : 1 }]}>
+            <Guides on={ruled} />
+            {showAnswers && ln.answers?.[i] ? <Text style={txt(15, ANSWER)}>{ln.answers[i]}</Text> : null}
+          </View>
+        ))
+      )}
     </View>
   );
   switch (s.layout) {
@@ -229,6 +281,7 @@ function Body({
         <View style={{ gap: 10 }}>
           {(s.sets ?? []).map((set, k) => (
             <View key={k}>
+              {set.label ? <Text style={[txt(13, "#333333"), { marginBottom: 2 }]}>{set.label}</Text> : null}
               <View style={{ flexDirection: row }}>
                 {set.shown.map((t, i) => (
                   <View key={i} style={[box(`${100 / set.shown.length}%`, 34), overlap(i > 0)]}>
@@ -282,6 +335,60 @@ function Body({
           {(s.columns ?? []).map((col, k) => (
             <View key={k} style={{ width: "50%", minWidth: 150, gap: 6 }}>
               {col.map((cells, i) => itemRow(cells, i))}
+            </View>
+          ))}
+        </View>
+      );
+    case "prompts":
+      // KG prompt questions (D-#847): one item a line — given, then the child's boxes.
+      return (
+        <View style={{ gap: 8 }}>
+          {(s.items ?? []).map((it, k) => {
+            if (it.sentence) {
+              const [before, after = ""] = it.prompt.split("____");
+              return (
+                <Text key={k} style={[txt(16), { marginLeft: 8 }]}>
+                  {before}
+                  <Text style={txt(16, showAnswers && it.gapAnswer ? ANSWER : "#777777")}>
+                    {showAnswers && it.gapAnswer ? ` ${it.gapAnswer} ` : " ________________ "}
+                  </Text>
+                  {after}
+                </Text>
+              );
+            }
+            if (it.lines.length === 1) {
+              return (
+                <View key={k} style={{ flexDirection: "row", gap: 8, alignItems: "flex-start" }}>
+                  {it.prompt ? (
+                    <View style={box(110, it.tall ? ch + 30 : ch)}>
+                      <Text style={txt(16)}>{it.prompt}</Text>
+                    </View>
+                  ) : null}
+                  {promptLine(it.lines[0], 0)}
+                </View>
+              );
+            }
+            return (
+              <View key={k} style={{ gap: 4 }}>
+                <Text style={txt(16)}>{it.prompt}</Text>
+                <View style={{ gap: 4, marginLeft: 14 }}>{it.lines.map((ln, j) => promptLine(ln, j))}</View>
+              </View>
+            );
+          })}
+        </View>
+      );
+    case "vertical":
+      // উপরে-নিচে যোগ/বিয়োগ: a over b, a rule, an answer box — five a line on paper, wrapping here.
+      return (
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+          {(s.sums ?? []).map((sm, i) => (
+            <View key={i} style={{ width: 96, borderWidth: 1, borderColor: LINE, padding: 6, alignItems: "flex-end" }}>
+              <Text style={txt(18)}>{sm.a}</Text>
+              <Text style={txt(18)}>
+                {sm.op}  {sm.b}
+              </Text>
+              <View style={{ alignSelf: "stretch", height: 1, backgroundColor: LINE, marginVertical: 3 }} />
+              <View style={box(56, 30)}>{showAnswers ? <Text style={txt(16, ANSWER)}>{sm.answer}</Text> : null}</View>
             </View>
           ))}
         </View>

@@ -15,7 +15,7 @@
 import PDFDocument from "pdfkit";
 import * as path from "path";
 import { BENGALI_FONT, splitScriptRuns } from "../../../routes/pdfRenderer";
-import type { Cell, Choice, Section, WorksheetDoc } from "../engine/types";
+import type { Cell, Choice, PromptItem, PromptLine, Section, WorksheetDoc } from "../engine/types";
 import { bnNumber } from "../engine/sequences";
 import { withMarkBases } from "./markBase";
 
@@ -239,8 +239,12 @@ export async function renderWorksheetPdf(
 
     // ---- Sections --------------------------------------------------------
     for (const s of wsDoc.sections) {
+      // A short question stays on one page. A long one starts wherever its title and first
+      // line fit and runs on to the next page — every layout breaks between its own rows.
+      // (Teacher feedback 2026-10-25: a whole question jumping pages left half a page empty.)
       const bodyH = estimateHeight(s);
-      ensure(Math.min(bodyH + 34, bottom() - MARGIN));
+      const need = bodyH <= KEEP_WHOLE ? bodyH + 34 : 34 + firstRowHeight(s);
+      ensure(Math.min(need, bottom() - MARGIN));
       const title = `${num(s.n)}. ${s.label}`;
       line(doc, title, MARGIN, y, 11.5);
       const mk = `[${num(s.marks)}]`;
@@ -262,6 +266,42 @@ const CHOICE_H = 58;
 /** Letter choices sit two to a line; word choices (four words) need the whole width. */
 const choicesPerLine = (cs: Choice[]): number => (cs.some((c) => c.options.some((o) => [...o].length > 2)) ? 1 : 2);
 
+const OPERATORS: ReadonlySet<string> = new Set(["×", "=", "+", "-"]);
+/** Two items a line (a five-cell times-table line fits in half the page with compact cells). */
+const rowsPerLine = (_rows: Cell[][]): number => 2;
+const VERTICAL_H = 84;
+const PROMPT_LABEL_W = 64;
+const BOXES_PER_ROW = 6;
+
+/** Rows of boxes a prompt line needs (a wide box is one row). */
+const boxRows = (ln: PromptLine): number => (ln.wide ? 1 : Math.max(1, Math.ceil(ln.blanks / BOXES_PER_ROW)));
+
+function promptItemHeight(it: PromptItem, h: number): number {
+  if (it.sentence) return 26;
+  const body = it.lines.reduce((s, ln) => s + boxRows(ln) * (h + 4), 0);
+  if (it.lines.length === 1) return Math.max(body, h + 4 + (it.tall ? 24 : 0)) + 4;
+  return 18 + body + 4;
+}
+
+/** A question this short (PDF points) is never split across pages. */
+const KEEP_WHOLE = 180;
+
+/** Room for a question's first line of items — what must fit under its title on a page. */
+function firstRowHeight(s: Section): number {
+  switch (s.layout) {
+    case "pictures":
+      return (s.pictures ?? []).some((p) => p.repeat > 1) ? 74 : 112;
+    case "jumble":
+      return 80;
+    case "groups":
+      return 70;
+    case "choice":
+      return CHOICE_H + 6;
+    default:
+      return 56;
+  }
+}
+
 function estimateHeight(s: Section): number {
   switch (s.layout) {
     case "grid":
@@ -273,7 +313,11 @@ function estimateHeight(s: Section): number {
     case "jumble":
       return (s.sets?.length ?? 0) * 76;
     case "rows":
-      return s.wide ? (s.rows?.length ?? 0) * 38 : Math.ceil((s.rows?.length ?? 0) / 2) * 30;
+      return s.wide ? (s.rows?.length ?? 0) * 38 : Math.ceil((s.rows?.length ?? 0) / rowsPerLine(s.rows ?? [])) * 34;
+    case "prompts":
+      return (s.items ?? []).reduce((h, it) => h + promptItemHeight(it, 30), 0);
+    case "vertical":
+      return Math.ceil((s.sums?.length ?? 0) / 5) * VERTICAL_H;
     case "choice":
       return Math.ceil((s.choices?.length ?? 0) / choicesPerLine(s.choices ?? [])) * CHOICE_H;
     case "pictures": {
@@ -359,7 +403,11 @@ function drawBody(
       const topH = 28;
       const ansH = ruled ? ruledHeight(ruling) : 30;
       for (const set of s.sets ?? []) {
-        breakIfNeeded(topH + ansH + 4);
+        breakIfNeeded(topH + ansH + 4 + (set.label ? 16 : 0));
+        if (set.label) {
+          line(doc, set.label, MARGIN + 4, y, 10.5, "#333333");
+          y += 16;
+        }
         const cw = W / set.shown.length;
         set.shown.forEach((t, i) => {
           const x = mx(MARGIN + i * cw, cw);
@@ -394,17 +442,22 @@ function drawBody(
         });
         return y + (items.length ? h : 0);
       }
-      const colW = W / 2;
+      const perLine = rowsPerLine(items);
+      const colW = W / perLine;
       items.forEach((row, i) => {
-        const col = i % 2;
+        const col = i % perLine;
         if (col === 0 && i > 0) y += cell + 4;
         if (col === 0) breakIfNeeded(cell);
         let x = MARGIN + col * colW + 10;
+        const compact = row.length > 3;
         for (const c of row) {
-          writeBox(doc, mx(x, 48), y, 48, cell, ruled && !c.t, ruling);
+          // the operators between the boxes print bare, as on the 2025 KG paper's table grid
+          const op = OPERATORS.has(c.t);
+          const cw = op ? 18 : compact ? 40 : 48;
+          if (!op) writeBox(doc, mx(x, cw), y, cw, cell, ruled && !c.t, ruling);
           const { text, color } = cellText(c, answers);
-          centered(doc, text, mx(x, 48), y, 48, cell, 14, color);
-          x += 56;
+          centered(doc, text, mx(x, cw), y, cw, cell, 14, color);
+          x += cw + (compact ? 5 : 8);
         }
       });
       return y + (items.length ? cell : 0);
@@ -498,6 +551,96 @@ function drawBody(
         if (answers) centered(doc, p.a, bx, y + h - bh - 6, 40, bh, 14, ANSWER);
       });
       return y + (items.length ? h : 0);
+    }
+
+    case "prompts": {
+      // KG prompt questions (D-#847): what is given, then the child's boxes — one item a line.
+      const h = ruled ? ruledHeight(ruling) : 30;
+      const promptW = W * 0.26;
+      const drawBoxes = (ln: PromptLine, x0: number, width: number, top: number): number => {
+        let x = x0;
+        let w = width;
+        let yy = top;
+        if (ln.label) {
+          box(doc, x, yy, PROMPT_LABEL_W, h);
+          centered(doc, ln.label, x, yy, PROMPT_LABEL_W, h, 11);
+          x += PROMPT_LABEL_W + 6;
+          w -= PROMPT_LABEL_W + 6;
+        }
+        if (ln.wide) {
+          writeBox(doc, x, yy, w, h, ruled, ruling);
+          const a = ln.answers?.filter(Boolean).join(", ");
+          if (answers && a) centered(doc, a, x, yy, w, h, 12, ANSWER);
+          return yy + h + 4;
+        }
+        const per = Math.min(ln.blanks, BOXES_PER_ROW);
+        const bw = per === 1 ? Math.min(w, 110) : (w - 6 * (per - 1)) / per;
+        for (let i = 0; i < ln.blanks; i++) {
+          const col = i % per;
+          if (col === 0 && i > 0) yy += h + 4;
+          const bx = x + col * (bw + 6);
+          writeBox(doc, bx, yy, bw, h, ruled, ruling);
+          const a = ln.answers?.[i];
+          if (answers && a) centered(doc, a, bx, yy, bw, h, 12, ANSWER);
+        }
+        return yy + h + 4;
+      };
+      for (const it of s.items ?? []) {
+        const ih = promptItemHeight(it, h);
+        breakIfNeeded(ih);
+        if (it.sentence) {
+          // a framed sentence: the text with a ruled gap the child writes in
+          const [before, after = ""] = it.prompt.split("____");
+          let x = MARGIN + 10;
+          x += line(doc, before, x, y + 5, 13);
+          const gapW = 110;
+          doc.moveTo(x + 2, y + 21).lineTo(x + gapW - 2, y + 21).lineWidth(0.6).strokeColor("#555555").stroke();
+          if (answers && it.gapAnswer) centered(doc, it.gapAnswer, x, y + 2, gapW, 20, 12, ANSWER);
+          line(doc, after, x + gapW, y + 5, 13);
+          y += ih;
+          continue;
+        }
+        if (it.lines.length === 1) {
+          const ln = it.lines[0];
+          const ph = Math.max(boxRows(ln) * (h + 4) - 4, it.tall ? h + 24 : h);
+          if (it.prompt) {
+            box(doc, MARGIN, y, promptW, ph);
+            centered(doc, it.prompt, MARGIN, y, promptW, it.tall ? Math.min(ph, 30) : ph, 14);
+            drawBoxes(ln, MARGIN + promptW + 8, W - promptW - 8, y + (it.tall ? ph - h : 0));
+          } else {
+            drawBoxes(ln, MARGIN, W, y);
+          }
+          y += ih;
+          continue;
+        }
+        // several lines (even / odd, break / words): the prompt above, the lines under it
+        line(doc, it.prompt, MARGIN + 4, y, 13);
+        let yy = y + 18;
+        for (const ln of it.lines) yy = drawBoxes(ln, MARGIN + 18, W - 18, yy);
+        y += ih;
+      }
+      return y - 4;
+    }
+
+    case "vertical": {
+      // add / subtract one under the other: five sums a line, a over b, a rule, an answer box.
+      const sums = s.sums ?? [];
+      const bw = W / 5;
+      sums.forEach((sm, i) => {
+        const col = i % 5;
+        if (col === 0 && i > 0) y += VERTICAL_H;
+        if (col === 0) breakIfNeeded(VERTICAL_H);
+        const x = MARGIN + col * bw;
+        box(doc, x + 4, y, bw - 8, VERTICAL_H - 8);
+        const right = x + bw - 30;
+        line(doc, sm.a, right - textWidth(doc, sm.a, 16), y + 6, 16);
+        line(doc, sm.b, right - textWidth(doc, sm.b, 16), y + 26, 16);
+        line(doc, sm.op, right - 62, y + 26, 16);
+        doc.moveTo(right - 64, y + 46).lineTo(right + 2, y + 46).lineWidth(0.9).strokeColor(LINE).stroke();
+        box(doc, right - 52, y + 50, 54, 24);
+        if (answers) centered(doc, sm.answer, right - 52, y + 50, 54, 24, 14, ANSWER);
+      });
+      return y + (sums.length ? VERTICAL_H - 8 : 0);
     }
 
     case "choice": {
