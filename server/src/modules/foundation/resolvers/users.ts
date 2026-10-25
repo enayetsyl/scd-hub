@@ -4,7 +4,7 @@ import { Guardian } from "../models/Guardian";
 import { hashPassword } from "../services/AuthService";
 import { ForbiddenError } from "../../../middleware/authz";
 import type { Role } from "@scd/shared";
-import { ROLES, effectivePermissions, isPermissionActive, templatesOf } from "@scd/shared";
+import { ROLES, effectivePermissions, isPermissionActive, retiredAliasesFor, templatesOf } from "@scd/shared";
 import { assertMayMintRole } from "../services/ProvisioningService";
 
 type UserShape = Pick<IUser, "email" | "phone" | "role" | "name" | "active" | "homeworkSupervisor"> & {
@@ -80,7 +80,12 @@ builder.queryField("myPermissions", (t) =>
       // This is a READ OF THE CALLER'S OWN TOKEN — no new data surface, and no new
       // authority: every resolver still checks `callerHasPermission` for itself. Hiding
       // a screen is a courtesy, never the gate.
-      return [...effectivePermissions(ctx.auth)].filter((p) => isPermissionActive(p)).sort();
+      const eff = new Set<string>([...effectivePermissions(ctx.auth)].filter((p) => isPermissionActive(p)));
+      // D-#846: an app bundle from before the per-report switches checks the retired
+      // report actions (homework:view_reports …) — answer them while the caller holds any
+      // report that replaced them, so those phones keep their Reports leaves until the OTA.
+      for (const alias of retiredAliasesFor(eff)) eff.add(alias);
+      return [...eff].sort();
     },
   }),
 );

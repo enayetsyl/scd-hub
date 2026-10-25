@@ -22,7 +22,9 @@ type Props = NativeStackScreenProps<AdminStackParamList, "AccessControlUsers">;
 
 export default function AccessControlUsersScreen({ navigation }: Props): React.ReactElement {
   const [{ data, fetching, error }, refetch] = useQuery({ query: USERS_QUERY });
-  const [view, setView] = React.useState<"roles" | "people">("roles");
+  // "One person" first and by default: giving an action to one teacher is the common case;
+  // a role edit reaches everyone in the role (owner, 2026-10-25).
+  const [view, setView] = React.useState<"roles" | "people">("people");
 
   React.useEffect(() => {
     const unsub = navigation.addListener("focus", () => refetch({ requestPolicy: "network-only" }));
@@ -31,8 +33,8 @@ export default function AccessControlUsersScreen({ navigation }: Props): React.R
 
   const tabs = (
     <ChipRow>
-      <Chip label={STR.acTabRoles} selected={view === "roles"} onPress={() => setView("roles")} />
       <Chip label={STR.acTabPeople} selected={view === "people"} onPress={() => setView("people")} />
+      <Chip label={STR.acTabRoles} selected={view === "roles"} onPress={() => setView("roles")} />
     </ChipRow>
   );
   if (view === "roles")
@@ -58,7 +60,7 @@ export default function AccessControlUsersScreen({ navigation }: Props): React.R
   return (
     <Screen scroll>
       {tabs}
-      <Muted style={{ marginBottom: space(3) }}>{STR.acSubtitle}</Muted>
+      <Muted style={{ marginBottom: space(3) }}>{STR.acPeopleListIntro}</Muted>
       {staff.map((u) => (
         <Card
           key={u.id}

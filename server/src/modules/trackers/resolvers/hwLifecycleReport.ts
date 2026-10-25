@@ -26,10 +26,9 @@ import {
 
 function assertLifecycleReportAdmin(ctx: AppContext): void {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-  // PM (D-#790..#801): the oversight read is the `homework:view_reports` action (Office +
-  // Principal by default — the old template-aware P/O check, D-#467), so the Principal can
-  // hand it to a teacher or switch it off for the desk.
-  if (!callerHasPermission(ctx.auth, "homework:view_reports")) {
+  // D-#846: the Reports-hub switch for this report (Office + Principal by default), so the
+  // Principal can hand it to one teacher or switch it off for the desk.
+  if (!callerHasPermission(ctx.auth, "reports:hw_lifecycle")) {
     throw new ForbiddenError("লাইফসাইকেল রিপোর্ট শুধুমাত্র অধ্যক্ষ/অফিসের জন্য");
   }
 }
@@ -114,7 +113,7 @@ builder.queryField("homeworkLifecycleReport", (t) =>
   t.field({
     type: HwLifecycleReportRef,
     description: "Per-teacher homework lifecycle monitoring, filterable (Principal/Office).",
-    authScopes: { hasPermission: "homework:view_reports" },
+    authScopes: { hasPermission: "reports:hw_lifecycle" },
     args: {
       from: t.arg.string({ required: true }),
       to: t.arg.string({ required: true }),
@@ -149,7 +148,7 @@ builder.queryField("homeworkLifecyclePending", (t) =>
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       // SELF-scope: a teacher may drill their own pending; anyone else needs
-      // `homework:view_reports`.
+      // `reports:hw_lifecycle`.
       if (args.teacherId !== ctx.auth.userId) assertLifecycleReportAdmin(ctx);
       if (!isHwPendingStage(args.stage)) {
         throw new ForbiddenError(`অজানা ধাপ: ${args.stage}`);

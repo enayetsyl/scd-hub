@@ -129,7 +129,8 @@ describe("teacherClassLoad — every teacher's load needs routine:view_all", () 
   });
 
   test("Office with routine:view_all switched off is refused", async () => {
-    setRoleTemplateOverrides({ OFFICE: { granted: [], revoked: ["routine:view_all"] } });
+    // D-#846: the Reports-hub switch reports:class_load also opens every teacher's load — both off.
+    setRoleTemplateOverrides({ OFFICE: { granted: [], revoked: ["routine:view_all", "reports:class_load"] } });
     expect(ok(await run(as("OFFICE"), LOAD_ALL_Q))).toBe(false);
   });
 

@@ -56,7 +56,8 @@ export default function AttendanceReportScreen(_props: Props): React.ReactElemen
   // PM catalogue actions (D-#790–#801): the student reports ride attendance:view_all,
   // the staff summary staff_attendance:view_all; the row buttons their own actions.
   const { can } = useAuth();
-  const canStudents = can("attendance:view_all");
+  // D-#846: the Reports-hub switch opens the student part for the whole school too.
+  const canStudents = can("attendance:view_all") || can("reports:attendance");
   const canStaff = can("staff_attendance:view_all");
   const canRecordLeave = can("attendance:record_leave");
   const canRemind = can("attendance:remind");
