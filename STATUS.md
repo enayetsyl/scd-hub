@@ -1,5 +1,10 @@
 # STATUS
 
+- 2026-10-25: **BUILT — reports as permissions + one-person-first access editor (D-#846)** (branch `feat/pm-reports-person`, worktree `C:/w/pm-rpt`). Owner ask: give Shahida only some reports; give permissions per teacher, not per role; cross-role permissions.
+  - Access control → "একজনকে দিন" (default) → a person → রিপোর্ট group: 13 switches, one per report, same names as the menu, each = that report for the whole school. Role tab = "সবাইকে দিন" with a warning.
+  - Cross-role: switch on any action for one person, or "পুরো ভূমিকা যোগ করুন". A teaching action for someone with no class there also needs the card's every-section switch (named on the card) or a delegated duty.
+  - Gate: verifier PASS; server + app tsc 0; jest 333/333 suites; /verify Chrome 12/12.
+  - **Now / next:** PR → dev → promote + OTA when the owner says.
 - 2026-10-24: **BUILT — Assignment auto-issue (D-#839)** (branch `feat/assignment-auto-issue`, worktree `C:/w/asg-auto`). Server-only: `AssignmentAutoIssueService` + a scheduler family; confirm claims drafts atomically. Server suite 331/331 suites, 5808 tests.
   - **Now / next:** PR → dev → check on the dev site that a fully delivered/nil'd week flips ISSUED without a tap → promotion (no OTA needed). Follow-up once #1151 lands: an `ASSIGNMENT_AUTO_ISSUED` notice to the class teacher (new kind in `shared/vocab.ts` + verifier pin + template).
 - 2026-10-24: **BUILT — Saturday revision records surah:ayah ranges (SR-5, D-#833–#838)** (branch `feat/revision-surah-ranges`, worktree `C:/w/rev`). Owner read 143 paper sheets (Jan–Apr 2026) against the feature: teachers write surah/ayah, never a juz. Each portion is now category + start/end surah:ayah (searchable dropdowns, "পুরো পারা" shortcut) + status (সম্পন্ন/আংশিক/হয়নি/অকৃতকার্য) + +/− counters; juz and amount are derived; reports split counts by ayah share (weakness by surah added, provisional). Shared Quran table `shared/quran.ts` (quran.com counts + Bangla Wikipedia names; spellings await owner review). Gate: verifier PASS; shared/server/app tsc 0; jest 330 suites / 5,797 tests.

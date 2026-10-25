@@ -983,8 +983,8 @@ builder.queryField("assignmentLoadReport", (t) =>
     type: AssignmentLoadReportRef,
     description:
       "D-#329: assignments PLANNED (rotation cells) vs GIVEN (delivered items, all weeks; issued of those), " +
-      "by subject and by teacher. assignment:view_reports (Principal/Office by default).",
-    authScopes: { hasPermission: "assignment:view_reports" },
+      "by subject and by teacher. reports:assignment_load (Principal/Office by default; D-#846).",
+    authScopes: { hasPermission: "reports:assignment_load" },
     args: { academicYearId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");

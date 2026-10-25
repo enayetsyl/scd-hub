@@ -174,6 +174,7 @@ Several of today's bypasses are template-aware (`isAdminStaff`, `actsAsRole`), w
 | School operations | `admin_dashboard` | Admin Today dashboard | অ্যাডমিন ড্যাশবোর্ড | 1 | foundation-platform |
 | School operations | `classes_sections` | Classes & sections | শ্রেণি ও শাখা | 3 | foundation-platform |
 | School operations | `teaching_assignments` | Teaching assignments | শিক্ষক বরাদ্দ | 4 | foundation-platform |
+| Reports | `reports` | Reports | রিপোর্ট | 13 | trackers-homework-assignment |
 | Admin & access | `access_control` | Access control | অনুমতি নিয়ন্ত্রণ | 2 | foundation-platform |
 | Admin & access | `view_as` | View as another account | অন্যের অ্যাকাউন্ট দেখা | 1 | foundation-platform |
 | Admin & access | `staff_logins` | Staff logins | কর্মীদের লগইন | 3 | foundation-platform |
@@ -182,7 +183,7 @@ Several of today's bypasses are template-aware (`isAdminStaff`, `actsAsRole`), w
 | Admin & access | `guardian_engagement` | Guardian app usage | অভিভাবকদের অ্যাপ ব্যবহার | 1 | foundation-platform |
 | Admin & access | `my_account` | My account | আমার অ্যাকাউন্ট | 1 | foundation-platform |
 
-**Totals: 69 features, 332 actions** (`parents_meeting:approve_change` added with meeting RSVP, 2026-10-24: +1 action, PRINCIPAL-DEFAULT, D-#842) (`mastery` added with M-0, 2026-10-20: +6 actions, all unflagged, TEACHER on +3, OFFICE on +1; M-2, 2026-10-21: +`mastery:edit_all`, PRINCIPAL-DEFAULT). By flag: LOCKED 11 · PRINCIPAL-DEFAULT 15 · DESIGNATION 24 · ESCALATION 5 · SELF 12 · unflagged 265. Defaults: TEACHER on 101 · OFFICE on 238. A row may carry a `†`/`F-n`/`2H` note in addition to its flag. Those notes are not counted as flags. Not counted: `guardian:read_child` (GUARDIAN plane), and the future `scholarship_practice:release` (SC-5, not built) and `announcements:publish` (no staff surface yet).
+**Totals: 70 features, 342 actions** (`reports` added 2026-10-25, D-#846: +13 report switches, −3 retired report-only actions) (`parents_meeting:approve_change` added with meeting RSVP, 2026-10-24: +1 action, PRINCIPAL-DEFAULT, D-#842) (`mastery` added with M-0, 2026-10-20: +6 actions, all unflagged, TEACHER on +3, OFFICE on +1; M-2, 2026-10-21: +`mastery:edit_all`, PRINCIPAL-DEFAULT). By flag: LOCKED 11 · PRINCIPAL-DEFAULT 15 · DESIGNATION 24 · ESCALATION 5 · SELF 12 · unflagged 265. Defaults: TEACHER on 101 · OFFICE on 238. A row may carry a `†`/`F-n`/`2H` note in addition to its flag. Those notes are not counted as flags. Not counted: `guardian:read_child` (GUARDIAN plane), and the future `scholarship_practice:release` (SC-5, not built) and `announcements:publish` (no staff surface yet).
 
 ---
 
@@ -205,8 +206,8 @@ Several of today's bypasses are template-aware (`isAdminStaff`, `actsAsRole`), w
 | `homework:undo_any` | Undo anyone's step | যেকোনো ধাপ ফিরিয়ে নেওয়া | Undo another teacher's step or an earlier day's | — | on | F-7 | isAdminStaff `admin` flag in revertHomeworkRecord |
 | `homework:edit_all` | Work in any শাখা | যেকোনো শাখার বাড়ির কাজে কাজ করা | Declare/submit/check/return outside own grants | — | — | PRINCIPAL-DEFAULT | PRINCIPAL bypass in assertCanWrite / assertCanWriteAny |
 | `homework:delete` | Delete never-issued homework | না-দেওয়া বাড়ির কাজ মুছে ফেলা | List never-issued items school-wide and remove one, even on a closed day | — | on | | homework:void |
-| `homework:view_reports` | Homework oversight reports | বাড়ির কাজের রিপোর্ট দেখা | Per-teacher lifecycle report and pending drill; reconciliation report | — | on | | actsAsRole(P\|O) |
-| `homework:remind` | Weekly guardian follow-up | অভিভাবককে সাপ্তাহিক রিমাইন্ডার | Weekly unsubmitted list with guardian messages and wa.me links | — | on | | actsAsRole(P\|O) |
+| ~~`homework:view_reports`~~ | RETIRED (D-#846) | — | Replaced by one switch per report: `reports:hw_declare_pending`, `reports:hw_issue_pending`, `reports:hw_lifecycle`, `reports:reconciliation` | — | — | | stored grants / role edits translate |
+| ~~`homework:remind`~~ | RETIRED (D-#846) | — | Replaced by one switch per report: `reports:hw_weekly_unsubmitted` | — | — | | stored grants / role edits translate |
 
 #### `assignment` — সাপ্তাহিক অ্যাসাইনমেন্ট
 | permission | EN | BN | what it allows | T | O | flags | replaces |
@@ -225,7 +226,7 @@ Several of today's bypasses are template-aware (`isAdminStaff`, `actsAsRole`), w
 | `assignment:undo_any` | Undo anyone's step | যেকোনো ধাপ ফিরিয়ে নেওয়া | Admin revert, any actor, any day | — | on | F-7 | isAdminStaff `admin` flag |
 | `assignment:remind` | Guardian chase ladder | অভিভাবককে রিমাইন্ডার | Chase list, ladder step, outcome, history, bulk sweep | — | on | | message:dispatch + assertFollowUpAdmin (isAdminStaff) |
 | `assignment:settings` | Rotation schedule | রোটেশন সূচি ঠিক করা | Term anchor, cadence, rotation cells; read schedule / grid / handout board | — | on | | roster:manage |
-| `assignment:view_reports` | Assignment oversight reports | অ্যাসাইনমেন্টের রিপোর্ট দেখা | Planned-vs-given load report; reconciliation report | — | on | | roster:manage; actsAsRole(P\|O) |
+| ~~`assignment:view_reports`~~ | RETIRED (D-#846) | — | Replaced by one switch per report: `reports:assignment_load`, `reports:as_declare_pending`, `reports:as_deliver_pending`, `reports:as_print_pending`, `reports:reconciliation` | — | — | | stored grants / role edits translate |
 
 #### `assignment_gift` — সাপ্তাহিক উপহার
 | permission | EN | BN | what it allows | T | O | flags | replaces |
@@ -731,6 +732,26 @@ Learning-outcome mastery tracker (`docs/prd-mastery.md`, D-#775–#787). Registe
 | `teaching_assignments:assign_homework_checker` | Assign homework confirmers | বাড়ির কাজ চূড়ান্ত করার দায়িত্ব বরাদ্দ | Confirm delegate per শাখা; school-wide supervisor flag | — | on | | roster:manage |
 | `teaching_assignments:assign_subject_teacher` | Assign subject teacher | বিষয় শিক্ষক বরাদ্দ | Grant/revoke teaching scope; routine teacher read | — | — | ESCALATION | user:manage |
 | `teaching_assignments:assign_supervisor` | Assign oversight | তদারকি (দেখার) দায়িত্ব বরাদ্দ | Grant/revoke supervisory read scope | — | — | ESCALATION | user:manage |
+
+### Reports
+
+#### `reports` — রিপোর্ট
+One switch per Reports-hub report (owner 2026-10-25, D-#846). Each shows that ONE report for the WHOLE school, so the Principal can hand a teacher exactly the reports she needs (e.g. Shahida: homework not declared / not issued, assignment not delivered, class note pending, homework not submitted). The shared reconciliation payload returns only the parts the caller was given. A holder of the feature's own whole-school read (`routine:view_all`, `class_test:view_all`, `attendance:view_all`, `class_note:view_all`) keeps that report too.
+| permission | EN | BN | what it allows | T | O | flags | replaces |
+|---|---|---|---|---|---|---|---|
+| `reports:hw_declare_pending` | Homework declare pending | বাড়ির কাজ ঘোষণা বাকি | Classes/subjects with no homework declared | — | on | | the report's old gate (P/O) |
+| `reports:hw_issue_pending` | Homework issue pending | বাড়ির কাজ ইস্যু বাকি | Declared but not confirmed/issued homework | — | on | | the report's old gate (P/O) |
+| `reports:hw_lifecycle` | Homework lifecycle report | বাড়ির কাজ লাইফসাইকেল রিপোর্ট | Per-teacher submitted / checked / returned + pending drill | — | on | | the report's old gate (P/O) |
+| `reports:hw_weekly_unsubmitted` | Weekly unsubmitted homework | সাপ্তাহিক বাড়ির কাজ জমা-বাকি রিপোর্ট | Weekly unsubmitted list with guardian messages + wa.me | — | on | | the report's old gate (P/O) |
+| `reports:as_declare_pending` | Assignment declare pending | অ্যাসাইনমেন্ট ঘোষণা বাকি | Rotation cells with no assignment declared | — | on | | the report's old gate (P/O) |
+| `reports:as_deliver_pending` | Assignment deliver pending | অ্যাসাইনমেন্ট ডেলিভারি বাকি | Declared but not delivered/issued | — | on | | the report's old gate (P/O) |
+| `reports:as_print_pending` | Assignment print pending | অ্যাসাইনমেন্ট প্রিন্ট বাকি | Waiting for printing (the print desk's `printing:view_all` also reads this part) | — | on | | the report's old gate (P/O) |
+| `reports:reconciliation` | Reconciliation report | সমন্বয় রিপোর্ট | Both trackers' misses in one view (every part) | — | on | | the report's old gate (P/O) |
+| `reports:assignment_load` | Assignment load | অ্যাসাইনমেন্ট লোড | Planned vs given load | — | on | | assignment:view_reports (roster:manage) |
+| `reports:class_note` | Class note submissions | ক্লাস নোট জমা | Who has / has not written today's class notes | — | on | | the report's old gate (P/O) |
+| `reports:class_test` | Class-test report | ক্লাস টেস্ট রিপোর্ট | Class-test status, school-wide (no section needed) | — | on | | the report's old gate (P/O) |
+| `reports:attendance` | Absentee report | অনুপস্থিতির প্রতিবেদন | Absentees, unmarked sections, absent without application (staff attendance keeps `staff_attendance:view_all`) | — | on | | the report's old gate (P/O) |
+| `reports:class_load` | Teacher class load | শিক্ষকের ক্লাস লোড | Every teacher's periods for a month | — | on | | the report's old gate (P/O) |
 
 ### Admin & access
 
