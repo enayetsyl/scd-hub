@@ -1,5 +1,6 @@
 # STATUS
 
+- 2026-10-25 (cont. 2): **CONFIRMED — দাগ টেনে যোগ/বিয়োগ is the stick-drawing strip ("৬ - ৩ = □" with room to draw), as printed since D-#847.** Owner confirmed; no code change. Remaining open item from the KG round: the KG ENG syllabus wording vs its numbers ("(6 letters)" published 9 × 3, "six framed sentences" 4 × 2) — the Office's to fix in the syllabus.
 - 2026-10-25 (cont.): **LIVE + OTA — KG worksheets generate every row + the teacher's fixes (D-#847–#849).** #1177 → dev (`0673366c`), PARTIAL promotion #1180 (`880f63cd`; only #1177 cherry-picked, lesson progress still held back): prod deploy green, `/healthz` ok, web 200. OTA group `91d56729` (runtime 1.1.0, android, commit 880f63cd); bundle e4722b05 checked: prod URL 1, localhost 0, the new kinds present. Sourcemaps uploaded (debug id ccacf0df, "1 of 2" as usual).
   **Live check** (prod `dist` on the VM, read-only): the real KG BAN / ENG / MATH syllabi generate with 0 MANUAL rows, 100 marks each, no warnings.
   **Now / next:** tell the teacher (Hamida Akter) — phones pick up the OTA on the next cold start, the web on reload. Open: confirm দাগ টেনে যোগ/বিয়োগ with the KG maths teacher; the KG ENG syllabus wording vs numbers (9 × 3 for "(6 letters)", 4 × 2 for "six").
