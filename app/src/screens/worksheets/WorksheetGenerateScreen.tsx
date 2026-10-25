@@ -110,6 +110,13 @@ function rangeParts(
       }
       return [{ label: shownLabel, options: opts }];
     case "FILL_MISSING":
+      // স্বরবর্ণ and ব্যঞ্জনবর্ণ print as two sub-questions, each with its own range.
+      if (r.axis === "BAN_ALL") {
+        return [
+          { label: STR.wsRangeVowels, options: BAN_VOWELS },
+          { label: STR.wsRangeConsonants, options: BAN_CONSONANTS },
+        ];
+      }
       return [{ label: shownLabel, options: opts }];
     case "REARRANGE": {
       const numeric = r.axis === "NUM_BN" || r.axis === "NUM_EN";
@@ -178,7 +185,7 @@ export default function WorksheetGenerateScreen(): React.ReactElement {
   useEffect(() => {
     if (!plan) return;
     const base: WorksheetPresetRowT[] =
-      kind === "ASSIGNMENT"
+      kind === "ASSIGNMENT" || kind === "CLASSWORK" || kind === "HOMEWORK"
         ? plan.assignmentPreset
         : kind === "CLASS_TEST"
           ? plan.classTestPreset
@@ -190,6 +197,8 @@ export default function WorksheetGenerateScreen(): React.ReactElement {
   // Starts with every letter ticked; a full set is sent as null (= the whole alphabet).
   const [taught, setTaught] = useState<Set<string>>(() => new Set(allLettersFor("BAN")));
   const [numberUpTo, setNumberUpTo] = useState<number>(50);
+  // The KG maths book runs to ১০০, Nursery's to ৫০ (D-#847): start each class at its book's end.
+  useEffect(() => setNumberUpTo(cls?.level === 0 ? 100 : 50), [cls?.level]);
   useEffect(() => setTaught(new Set(allLettersFor(subject))), [subject]);
   const toggleLetter = (l: string): void =>
     setTaught((cur) => {
