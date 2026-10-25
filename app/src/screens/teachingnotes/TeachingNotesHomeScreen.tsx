@@ -123,8 +123,13 @@ export default function TeachingNotesHomeScreen({ navigation }: Props): React.Re
               variant="secondary"
               onPress={() => navigation.navigate("TeachingNoteUpload", {})}
             />
-            {/* The outstanding list is what makes the status worth carrying — without
-                it, feedback is only ever seen by whoever opens that one file. */}
+          </View>
+        ) : null}
+        {/* The outstanding list is what makes the status worth carrying — without
+            it, feedback is only ever seen by whoever opens that one file. It reads on
+            teaching_notes:review (owner rule 2026-10-25: no link onto a refusal). */}
+        {can("teaching_notes:review") ? (
+          <View style={{ marginBottom: space(2) }}>
             <Button
               title={`💬 ${STR.tnOpenComments}`}
               variant="secondary"

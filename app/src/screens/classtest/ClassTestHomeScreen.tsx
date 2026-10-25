@@ -48,13 +48,23 @@ export default function ClassTestHomeScreen(): React.ReactElement {
   const canPrintQueue = can("printing:view_all");
   const canEnterResults = can("class_test:enter_results");
   const canEditDetails = can("class_test:edit") || can("class_test:edit_all");
-  const canFileScripts = can("archive:create");
+  // Owner rule (2026-10-25): a link shows only when its screen opens. Filing needs
+  // the archive read too (ArchiveFileBundle loads the boxes on archive:view).
+  const canArchive = can("archive:view");
+  const canFileScripts = can("archive:create") && canArchive;
+  const canReports = can("class_test:view") || can("class_test:view_all") || can("reports:class_test");
+  // The caller's own tests read on class_test:view — no list (and no query) without it.
+  const canViewMine = can("class_test:view");
   // The school-wide dashboard + its counts (server: class_test:view_all).
   const isAdmin = can("class_test:view_all");
 
   // D-#761: server-paged — the list is every test the caller ever owned, any status.
   const [page, setPage] = usePageState();
-  const [myQ, refetchMy] = useQuery({ query: MY_CLASS_TESTS_PAGE_QUERY, variables: { page, pageSize: PAGE_SIZE } });
+  const [myQ, refetchMy] = useQuery({
+    query: MY_CLASS_TESTS_PAGE_QUERY,
+    variables: { page, pageSize: PAGE_SIZE },
+    pause: !canViewMine,
+  });
   const mine = React.useMemo(() => myQ.data?.myClassTestsPage?.rows ?? [], [myQ.data]);
 
   // D-#620: the Dashboard button carries its own counts. Paused for non-admins —
@@ -142,9 +152,13 @@ export default function ClassTestHomeScreen(): React.ReactElement {
                 onPress={() => tabNav.navigate("PrintTab", { screen: "PrintHome" })}
               />
             ) : null}
-            <Button title={STR.ctReportsNav} variant="secondary" onPress={() => nav.navigate("ClassTestReports")} />
+            {canReports ? (
+              <Button title={STR.ctReportsNav} variant="secondary" onPress={() => nav.navigate("ClassTestReports")} />
+            ) : null}
             {/* AR-1: the answer-script archive hub (physical storage + retrieval). */}
-            <Button title={STR.arHomeNav} variant="secondary" onPress={() => nav.navigate("ArchiveHome")} />
+            {canArchive ? (
+              <Button title={STR.arHomeNav} variant="secondary" onPress={() => nav.navigate("ArchiveHome")} />
+            ) : null}
             {isAdmin ? (
               <Button
                 // D-#620: the two numbers the owner reads this button for — the
@@ -163,6 +177,7 @@ export default function ClassTestHomeScreen(): React.ReactElement {
           </View>
         </Card>
 
+        {canViewMine ? (
         <Card>
           <Body style={{ fontWeight: "700" }}>{STR.ctMyTests}</Body>
           <QueryGate
@@ -304,6 +319,7 @@ export default function ClassTestHomeScreen(): React.ReactElement {
           <Pager page={page} pageSize={PAGE_SIZE} total={myQ.data?.myClassTestsPage?.total ?? 0} onPage={setPage} />
           </QueryGate>
         </Card>
+        ) : null}
       </ScrollView>
     </Screen>
   );

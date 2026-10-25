@@ -29,6 +29,10 @@ export const REPORT_LEAF_ACTIONS: Record<string, string[]> = {
   ReconciliationReport: ["reports:reconciliation"],
   HwLifecycleReport: ["reports:hw_lifecycle"],
   HwWeeklyUnsubmitted: ["reports:hw_weekly_unsubmitted"],
+  // The two monthly-report cards on the Reports home (their queries need monthly_report:view_all;
+  // a teacher's own monthly_report:view does not open them, so it must not show them either).
+  MonthlyReportConsole: ["monthly_report:view_all"],
+  MonthlyPendingWork: ["monthly_report:view_all"],
 };
 
 /** Any of these opens the Reports tab. */

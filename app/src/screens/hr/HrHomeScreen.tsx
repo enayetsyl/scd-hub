@@ -21,7 +21,9 @@ export default function HrHomeScreen({ navigation }: Props): React.ReactElement 
   const canLeaveManage = can("leave:view_all");
   const canPayroll = can("payroll:view");
   const canHrPolicy = can("hr_policy:view");
-  const canPerformance = can("appraisal:view_all") || can("conduct:view_all") || can("grievance:view_all");
+  // PerformanceHome lists staff first (staff_records:view) — owner rule 2026-10-25.
+  const canPerformance =
+    (can("appraisal:view_all") || can("conduct:view_all") || can("grievance:view_all")) && can("staff_records:view");
   const canOffboarding = can("offboarding:view");
   const showAdmin = canLeaveManage || canPayroll || canHrPolicy || canPerformance || canOffboarding;
 

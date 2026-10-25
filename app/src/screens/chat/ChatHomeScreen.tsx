@@ -83,7 +83,9 @@ export default function ChatHomeScreen({ navigation }: Props): React.ReactElemen
   return (
     <Screen scroll refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginBottom: space(2) }}>
-        <Button title={STR.chatNewChat} onPress={() => navigation.navigate("NewChat")} style={{ flexGrow: 1 }} />
+        {can("chat:send") ? (
+          <Button title={STR.chatNewChat} onPress={() => navigation.navigate("NewChat")} style={{ flexGrow: 1 }} />
+        ) : null}
         {canManage ? (
           <Button
             title={STR.chatNewGroup}

@@ -8,33 +8,41 @@
 import React from "react";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { ReportsStackParamList } from "../../navigation/types";
-import { Screen, H2, Body, Muted, Card } from "../../components/ui";
+import { Screen, H2, Body, Muted, Card, EmptyState } from "../../components/ui";
+import { useAuth } from "../../auth/AuthContext";
+import { REPORT_LEAF_ACTIONS } from "../../lib/navGates";
 import { STR } from "../../lib/labels";
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<ReportsStackParamList, "ReportsHome">;
 
 export default function ReportsHomeScreen({ navigation }: Props): React.ReactElement {
-  const cards: Array<{ icon: string; title: string; sub?: string; onPress: () => void }> = [
-    { icon: "🧑‍🏫", title: STR.clTitle, sub: STR.clSub, onPress: () => navigation.navigate("TeacherClassLoad") },
-    { icon: "📋", title: STR.alReportTitle, sub: STR.alReportSub, onPress: () => navigation.navigate("AssignmentLoadReport") },
-    { icon: "🧪", title: STR.ctReportTitle, sub: STR.ctReportSub, onPress: () => navigation.navigate("ClassTestReport") },
-    { icon: "🗓️", title: STR.mrConsoleTitle, sub: STR.mrConsoleSub, onPress: () => navigation.navigate("MonthlyReportConsole") },
-    { icon: "⏳", title: STR.mpTitle, sub: STR.mpSub, onPress: () => navigation.navigate("MonthlyPendingWork") },
-    { icon: "📅", title: STR.hwwdTitle, sub: STR.hwwdSub, onPress: () => navigation.navigate("HwWeeklyUnsubmitted") },
-    { icon: "🙋", title: STR.attReportTitle, onPress: () => navigation.navigate("AttendanceReport") },
-    { icon: "📓", title: STR.rtNoteReportTitle, onPress: () => navigation.navigate("ClassNoteReport") },
-    { icon: "📕", title: STR.rptHwDeclarePending, sub: STR.rrHwNdSub, onPress: () => navigation.navigate("HwDeclarePending") },
-    { icon: "📒", title: STR.rptHwIssuePending, sub: STR.admSubReconReport, onPress: () => navigation.navigate("HwIssuePending") },
-    { icon: "📋", title: STR.rptAsDeclarePending, sub: STR.rptAsNdSub, onPress: () => navigation.navigate("AsDeclarePending") },
-    { icon: "📦", title: STR.rptAsDeliverPending, onPress: () => navigation.navigate("AsDeliverPending") },
-    { icon: "🖨️", title: STR.rptAsPrintPending, sub: STR.rptAsPrintPendingSub, onPress: () => navigation.navigate("AsPrintPending") },
+  const { can } = useAuth();
+  // Owner 2026-10-25: a report the viewer cannot open is not listed at all. Each card checks the
+  // same actions as its sidebar leaf and its server query (REPORT_LEAF_ACTIONS, D-#846).
+  const allowed = (screen: string): boolean => (REPORT_LEAF_ACTIONS[screen] ?? []).some((p) => can(p));
+  const all: Array<{ screen: string; icon: string; title: string; sub?: string; onPress: () => void }> = [
+    { screen: "TeacherClassLoad", icon: "🧑‍🏫", title: STR.clTitle, sub: STR.clSub, onPress: () => navigation.navigate("TeacherClassLoad") },
+    { screen: "AssignmentLoadReport", icon: "📋", title: STR.alReportTitle, sub: STR.alReportSub, onPress: () => navigation.navigate("AssignmentLoadReport") },
+    { screen: "ClassTestReport", icon: "🧪", title: STR.ctReportTitle, sub: STR.ctReportSub, onPress: () => navigation.navigate("ClassTestReport") },
+    { screen: "MonthlyReportConsole", icon: "🗓️", title: STR.mrConsoleTitle, sub: STR.mrConsoleSub, onPress: () => navigation.navigate("MonthlyReportConsole") },
+    { screen: "MonthlyPendingWork", icon: "⏳", title: STR.mpTitle, sub: STR.mpSub, onPress: () => navigation.navigate("MonthlyPendingWork") },
+    { screen: "HwWeeklyUnsubmitted", icon: "📅", title: STR.hwwdTitle, sub: STR.hwwdSub, onPress: () => navigation.navigate("HwWeeklyUnsubmitted") },
+    { screen: "AttendanceReport", icon: "🙋", title: STR.attReportTitle, onPress: () => navigation.navigate("AttendanceReport") },
+    { screen: "ClassNoteReport", icon: "📓", title: STR.rtNoteReportTitle, onPress: () => navigation.navigate("ClassNoteReport") },
+    { screen: "HwDeclarePending", icon: "📕", title: STR.rptHwDeclarePending, sub: STR.rrHwNdSub, onPress: () => navigation.navigate("HwDeclarePending") },
+    { screen: "HwIssuePending", icon: "📒", title: STR.rptHwIssuePending, sub: STR.admSubReconReport, onPress: () => navigation.navigate("HwIssuePending") },
+    { screen: "AsDeclarePending", icon: "📋", title: STR.rptAsDeclarePending, sub: STR.rptAsNdSub, onPress: () => navigation.navigate("AsDeclarePending") },
+    { screen: "AsDeliverPending", icon: "📦", title: STR.rptAsDeliverPending, onPress: () => navigation.navigate("AsDeliverPending") },
+    { screen: "AsPrintPending", icon: "🖨️", title: STR.rptAsPrintPending, sub: STR.rptAsPrintPendingSub, onPress: () => navigation.navigate("AsPrintPending") },
   ];
+  const cards = all.filter((c) => allowed(c.screen));
 
   return (
     <Screen scroll>
       <H2>{STR.tabReports}</H2>
       <Muted style={{ marginBottom: space(2) }}>{STR.rptHomeSub}</Muted>
+      {cards.length === 0 ? <EmptyState message={STR.errForbiddenWrite} /> : null}
       {cards.map((c) => (
         <Card key={c.title} onPress={c.onPress}>
           <Body style={{ fontWeight: "700" }}>

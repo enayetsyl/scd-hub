@@ -324,15 +324,17 @@ export default function AssignmentHomeScreen({ navigation }: Props): React.React
                     {item.status === "ISSUED" && item.asItemId ? (
                       // RP-4 (D-#356): one workspace replaces সংগ্রহ + যাচাই.
                       <ChipRow>
-                        <Chip
-                          label={STR.asWorkspace}
-                          onPress={() =>
-                            navigation.navigate("AssignmentWorkspace", {
-                              sectionId: item.sectionId,
-                              classId: item.classId,
-                            })
-                          }
-                        />
+                        {canView ? (
+                          <Chip
+                            label={STR.asWorkspace}
+                            onPress={() =>
+                              navigation.navigate("AssignmentWorkspace", {
+                                sectionId: item.sectionId,
+                                classId: item.classId,
+                              })
+                            }
+                          />
+                        ) : null}
                         {canEditItem(item) ? (
                           <Chip label={`✎ ${STR.asEdit}`} onPress={() => openEdit(item)} />
                         ) : null}
@@ -342,19 +344,21 @@ export default function AssignmentHomeScreen({ navigation }: Props): React.React
                       <View>
                         <Muted style={{ marginBottom: 6 }}>{STR.asAwaitingConfirm}</Muted>
                         <ChipRow>
-                          <Chip
-                            label={`⚖️ ${STR.asReconcileTitle}`}
-                            onPress={() =>
-                              navigation.navigate("AssignmentReconcile", {
-                                academicYearId: yearId,
-                                sectionId: item.sectionId,
-                                classId: item.classId,
-                                weekNumber,
-                                month: expected?.month,
-                                weekOfMonth: expected?.weekOfMonth,
-                              })
-                            }
-                          />
+                          {canView ? (
+                            <Chip
+                              label={`⚖️ ${STR.asReconcileTitle}`}
+                              onPress={() =>
+                                navigation.navigate("AssignmentReconcile", {
+                                  academicYearId: yearId,
+                                  sectionId: item.sectionId,
+                                  classId: item.classId,
+                                  weekNumber,
+                                  month: expected?.month,
+                                  weekOfMonth: expected?.weekOfMonth,
+                                })
+                              }
+                            />
+                          ) : null}
                           {canEditItem(item) ? (
                             <>
                               <Chip label={`✎ ${STR.asEdit}`} onPress={() => openEdit(item)} />

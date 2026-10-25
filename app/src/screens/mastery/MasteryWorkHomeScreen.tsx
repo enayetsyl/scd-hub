@@ -86,7 +86,8 @@ export default function MasteryWorkHomeScreen({ navigation }: Props): React.Reac
         ))}
       </ChipRow>
 
-      {active ? (
+      {/* The four views below all read on mastery:view (owner rule 2026-10-25). */}
+      {active && can("mastery:view") ? (
         <View style={{ flexDirection: "row", gap: space(2), flexWrap: "wrap" }}>
           <Button title={STR.msHeatmap} variant="secondary" onPress={() => navigation.navigate("MasteryHeatmap", { sectionId: active, subject })} />
           <Button title={STR.msQuality} variant="secondary" onPress={() => navigation.navigate("MasteryQuality", { sectionId: active, subject })} />
