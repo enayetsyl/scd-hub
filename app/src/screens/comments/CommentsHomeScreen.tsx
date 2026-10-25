@@ -61,7 +61,9 @@ export default function CommentsHomeScreen(): React.ReactElement {
           <Body style={{ fontWeight: "700" }}>{STR.cmHomeTitle}</Body>
         </Card>
 
-        {canComments ? (
+        {/* Owner rule (2026-10-25): SectionComments reads the section's comments on
+            student_comments:view as well — the card shows only when both are held. */}
+        {canComments && can("student_comments:view") ? (
           <Card onPress={() => nav.navigate("SectionComments")}>
             <Body style={{ fontWeight: "700" }}>{STR.cmDailyComments}</Body>
             <Muted style={{ marginTop: space(1) }}>{STR.cmDailyCommentsSub}</Muted>

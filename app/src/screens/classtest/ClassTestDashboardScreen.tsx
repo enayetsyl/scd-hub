@@ -116,7 +116,10 @@ export default function ClassTestDashboardScreen(): React.ReactElement {
   const nav = useNavigation<Nav>();
   // The archive desk path — any-test filing with auto-ack (PM: archive:approve, the
   // lever fileScriptBundle reads for "file any test").
-  const canFile = useAuth().can("archive:approve");
+  const { can } = useAuth();
+  const canFile = can("archive:approve");
+  // CS-2: the scan & tag screen is class_test_script:scan.
+  const canScan = can("class_test_script:scan");
   // D-#339: tap a tile → filter the per-test drill-down below (logged = all).
   const [stateFilter, setStateFilter] = useState<StateFilter>(null);
   // Owner ask 2026-07-28: the PUBLISH axis, independent of the entry state above — the
@@ -432,7 +435,9 @@ export default function ClassTestDashboardScreen(): React.ReactElement {
                         : ""}
                     </Muted>
                     {/* CS-2: straight to the scan & tag screen for a test in the script flow. */}
-                    {r.scriptStage ? (
+                    {/* Owner rule (2026-10-25): only for a viewer who can scan (the
+                        stage itself still reads on the badge above). */}
+                    {r.scriptStage && canScan ? (
                       <Pressable
                         onPress={() => nav.navigate("CtScriptUpload", { testId: r.testId, title: r.ctId })}
                         style={{ marginTop: space(1) }}

@@ -54,7 +54,18 @@ type LabelKey = keyof typeof STR;
  * everyone WITHOUT unregistering its route — notification deep links and in-app
  * links into it keep working. Delete the flag to bring the entry back.
  */
-type NavLeaf = { route: RouteName; labelKey: LabelKey; icon: string; screen?: string; perms?: string[]; hidden?: boolean };
+/** `perms` is ANY-of; `allOf` adds actions that must ALL be held too — the target
+ *  screen's first read when it differs from the action that names the leaf
+ *  (owner rule 2026-10-25: no leaf onto a refusal). */
+type NavLeaf = {
+  route: RouteName;
+  labelKey: LabelKey;
+  icon: string;
+  screen?: string;
+  perms?: string[];
+  allOf?: string[];
+  hidden?: boolean;
+};
 type NavSection =
   | ({ type: "item" } & NavLeaf)
   | { type: "group"; titleKey: LabelKey; icon: string; items: NavLeaf[]; hidden?: boolean };
@@ -117,8 +128,15 @@ const STAFF_NAV: NavSection[] = [
     titleKey: "scDrawerGroup",
     icon: "🎓",
     items: [
-      { route: "ScholarshipTab", labelKey: "scPapers", icon: "🎓", screen: "ScholarshipHome" },
-      { route: "ScholarshipTab", labelKey: "scTopics", icon: "🏷️", screen: "ScholarshipTopics", perms: ["scholarship_practice:settings"] },
+      { route: "ScholarshipTab", labelKey: "scPapers", icon: "🎓", screen: "ScholarshipHome", perms: ["scholarship_practice:view"] },
+      {
+        route: "ScholarshipTab",
+        labelKey: "scTopics",
+        icon: "🏷️",
+        screen: "ScholarshipTopics",
+        perms: ["scholarship_practice:settings"],
+        allOf: ["scholarship_practice:view"],
+      },
     ],
   },
   // Mastery tracker (M-0, docs/prd-mastery.md): catalogue + marks, import, tags, policy & switch.
@@ -127,8 +145,22 @@ const STAFF_NAV: NavSection[] = [
     titleKey: "msDrawerGroup",
     icon: "🎯",
     items: [
-      { route: "MasteryTab", labelKey: "msWork", icon: "✍️", screen: "MasteryWork", perms: ["mastery:enter_results"] },
-      { route: "MasteryTab", labelKey: "msLeader", icon: "🧭", screen: "MasteryLeader", perms: ["mastery:approve"] },
+      {
+        route: "MasteryTab",
+        labelKey: "msWork",
+        icon: "✍️",
+        screen: "MasteryWork",
+        perms: ["mastery:enter_results"],
+        allOf: ["mastery:view"],
+      },
+      {
+        route: "MasteryTab",
+        labelKey: "msLeader",
+        icon: "🧭",
+        screen: "MasteryLeader",
+        perms: ["mastery:approve"],
+        allOf: ["mastery:view"],
+      },
       { route: "MasteryTab", labelKey: "msCatalogueHome", icon: "📚", screen: "MasteryHome", perms: ["mastery:view"] },
       { route: "MasteryTab", labelKey: "msImport", icon: "📥", screen: "MasteryImport", perms: ["mastery:settings"] },
       { route: "MasteryTab", labelKey: "msTags", icon: "🏷️", screen: "MasteryTags", perms: ["mastery:view"] },
@@ -215,6 +247,7 @@ const STAFF_NAV: NavSection[] = [
         // Step one of the module: the author brings book.json/patch.json in, and
         // book:manage creates the title. Everything below is downstream of this.
         perms: ["book_production:author", "book_production:create"],
+        allOf: ["book_production:view"],
       },
       {
         route: "SupportBookTab",
@@ -224,6 +257,7 @@ const STAFF_NAV: NavSection[] = [
         // The validator runs against these; a missing one silently weakens every
         // check that depends on it, so whoever loads books needs to see the gaps.
         perms: ["book_production:settings"],
+        allOf: ["book_production:view"],
       },
       {
         route: "SupportBookTab",
@@ -233,6 +267,7 @@ const STAFF_NAV: NavSection[] = [
         // The reviewers see the queue too — they look at what came back. `book:read`
         // alone is not enough; that is a spectator.
         perms: ["book_production:illustrate", "book_production:review", "book_production:approve"],
+        allOf: ["book_production:view"],
       },
       {
         route: "SupportBookTab",
@@ -240,6 +275,7 @@ const STAFF_NAV: NavSection[] = [
         icon: "🔎",
         screen: "BookReview",
         perms: ["book_production:review", "book_production:approve"],
+        allOf: ["book_production:view"],
       },
       {
         route: "SupportBookTab",
@@ -250,6 +286,7 @@ const STAFF_NAV: NavSection[] = [
         // follow the thread they raised. Only a senior gets the resolve form, and
         // that is decided inside the screen.
         perms: ["book_production:review", "book_production:approve"],
+        allOf: ["book_production:view"],
       },
       {
         route: "SupportBookTab",
@@ -257,6 +294,7 @@ const STAFF_NAV: NavSection[] = [
         icon: "🏗️",
         screen: "BookAssemble",
         perms: ["book_production:assemble"],
+        allOf: ["book_production:view"],
       },
     ],
   },
@@ -304,7 +342,11 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
   const present = React.useMemo(() => new Set(props.state.routeNames), [props.state.routeNames]);
   /** Route-gate + the optional per-leaf effective-permission gate (see NavLeaf). */
   const visibleLeaf = React.useCallback(
-    (leaf: NavLeaf): boolean => !leaf.hidden && present.has(leaf.route) && (!leaf.perms || leaf.perms.some(can)),
+    (leaf: NavLeaf): boolean =>
+      !leaf.hidden &&
+      present.has(leaf.route) &&
+      (!leaf.perms || leaf.perms.some(can)) &&
+      (leaf.allOf ?? []).every(can),
     [present, can],
   );
   const focusedTab = props.state.routes[props.state.index];

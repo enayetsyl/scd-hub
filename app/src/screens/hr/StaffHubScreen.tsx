@@ -567,10 +567,11 @@ function PayrollTab({
 }
 
 function DocumentsTab({
-  staff, canIssue, canVoid, onIssue, onConfirm,
+  staff, canIssue, canAppointment, canVoid, onIssue, onConfirm,
 }: {
   staff: StaffT;
   canIssue: boolean;
+  canAppointment: boolean;
   canVoid: boolean;
   onIssue: (kind: string) => void;
   onConfirm: (() => void) | null;
@@ -606,8 +607,14 @@ function DocumentsTab({
       {canIssue ? (
       <Card>
         <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.stfNewLetter}</Body>
-        <Button title={STR.stfLetterAppointment} onPress={() => onIssue("appointment")} />
-        <View style={{ height: space(2) }} />
+        {/* Owner rule (2026-10-25): the appointment letter reads the HR policy
+            (hr_policy:view) to draft — no button for a viewer who can't open it. */}
+        {canAppointment ? (
+          <>
+            <Button title={STR.stfLetterAppointment} onPress={() => onIssue("appointment")} />
+            <View style={{ height: space(2) }} />
+          </>
+        ) : null}
         {confirmed ? (
           <Button title={STR.stfLetterConfirmation} variant="secondary" onPress={() => onIssue("confirmation")} />
         ) : (
@@ -883,6 +890,7 @@ export default function StaffHubScreen({ route, navigation }: Props): React.Reac
           key={reloadKey}
           staff={staff}
           canIssue={can("staff_letters:issue")}
+          canAppointment={can("hr_policy:view")}
           canVoid={can("staff_letters:void")}
           onIssue={(kind) => navigation.navigate("IssueLetter", { staff, kind })}
           onConfirm={canConfirm ? () => navigation.navigate("ConfirmEmployment", { staff }) : null}

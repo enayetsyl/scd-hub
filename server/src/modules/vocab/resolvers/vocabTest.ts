@@ -310,8 +310,9 @@ builder.queryField("vocabTesterAssignment", (t) =>
   t.field({
     type: VocabTestAssignmentRef,
     nullable: true,
-    description: "The CURRENT weekly tester assignment for a (section × program × week) (VC-2). Requires vocab_test:view.",
-    authScopes: { hasPermission: "vocab_test:view" },
+    description:
+      "The CURRENT weekly tester assignment for a (section × program × week) (VC-2). Requires vocab_test:view or vocab_test:assign (the assigner reads back what they set).",
+    authScopes: { hasAnyPermission: ["vocab_test:view", "vocab_test:assign"] },
     args: {
       sectionId: t.arg.string({ required: true }),
       program: t.arg.string({ required: true }),
