@@ -77,6 +77,7 @@ import {
   HW_AUTO_ISSUE_START_HOUR,
   HW_AUTO_ISSUE_END_HOUR,
 } from "../../trackers/services/HomeworkAutoIssueService";
+import { sweepAssignmentAutoIssue } from "../../trackers/services/AssignmentAutoIssueService";
 import { captureNetSnapshot, captureDailyHealth } from "../../platform/services/SystemHealthService";
 import { materializeTaskTemplates } from "../../workboard/services/TaskTemplateService";
 import {
@@ -243,6 +244,8 @@ export interface TickSummary {
   hwPendingEmitted: number;
   hwDueFlipped: number;
   hwAutoIssued: number;
+  /** Assignment (section × week)s confirmed+issued by the D-#839 sweep this pass. */
+  asAutoIssued: number;
   /** End-of-due-day system chases (owner ruling 2026-08-04). */
   hwAutoChased: number;
   /** Weekly guardian homework-digest notifications emitted (D-#452). */
@@ -293,6 +296,7 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
     hwPendingEmitted: 0,
     hwDueFlipped: 0,
     hwAutoIssued: 0,
+    asAutoIssued: 0,
     hwAutoChased: 0,
     hwWeeklyDigestEmitted: 0,
     ctOverdueDigestEmitted: 0,
@@ -375,6 +379,19 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
     summary.hwAutoIssued = res.issued;
     if (res.issued > 0) {
       console.log(`[scheduler] homework auto-issue: ${res.issued} class-day(s) confirmed+issued`);
+    }
+  });
+
+  // --- Assignment auto-ISSUE (D-#839) — every school-day tick, no hour window: the
+  // roster is captured at delivery (no attendance to wait for), and a Thursday-evening
+  // last delivery must still issue before Sunday's due-day pass. NOT runOnce — a week
+  // becomes ready whenever its last delivery/nil lands. Idempotent: confirm claims
+  // each draft atomically; an uncovered or over-cap week simply waits.
+  await family("assignment auto-issue", async () => {
+    const res = await sweepAssignmentAutoIssue(now);
+    summary.asAutoIssued = res.issued;
+    if (res.issued > 0) {
+      console.log(`[scheduler] assignment auto-issue: ${res.issued} section-week(s) confirmed+issued`);
     }
   });
 
