@@ -205,6 +205,7 @@ import MeetingFinalScreen from "../screens/comments/MeetingFinalScreen";
 import MeetingBriefScreen from "../screens/comments/MeetingBriefScreen";
 import MeetingSubjectNoteScreen from "../screens/meetings/MeetingSubjectNoteScreen";
 import MeetingSummaryWriteScreen from "../screens/meetings/MeetingSummaryWriteScreen";
+import MeetingCommentGuideScreen from "../screens/meetings/MeetingCommentGuideScreen";
 import ObservationHomeScreen from "../screens/observation/ObservationHomeScreen";
 import MyObservationsScreen from "../screens/observation/MyObservationsScreen";
 import AllObservationsScreen from "../screens/observation/AllObservationsScreen";
@@ -682,6 +683,8 @@ function HomeNavigator(): React.ReactElement {
         component={MeetingSummaryWriteScreen}
         options={({ route }) => ({ title: route.params.studentName || STR.mcSummaryCardTitle })}
       />
+      {/* D-#850: the comment guideline — from the write screens and the daily reminder. */}
+      <HomeStack.Screen name="MeetingCommentGuide" component={MeetingCommentGuideScreen} options={{ title: STR.mcGuideTitle }} />
     </HomeStack.Navigator>
   );
 }

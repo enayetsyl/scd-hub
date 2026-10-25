@@ -28,6 +28,9 @@ export type HomeStackParamList = {
   MeetingSubjectNote: { meetingId: string; studentId: string; subject: string; queue?: string[] };
   /** MC-3: the class teacher writes a child's summary from every subject comment. */
   MeetingSummaryWrite: { meetingId: string; studentId: string; studentName: string };
+  /** D-#850: the comment-writing guideline (static). Opened from both write screens and
+   *  the daily reminder popup; never first in the stack. */
+  MeetingCommentGuide: undefined;
 };
 
 /** Which panel the Student Profile opens on (SP-3, prd-student-profile §8.1). */

@@ -16,6 +16,7 @@ import { useMutation, useQuery } from "urql";
 import { MEETING_SUBJECT_NOTE_CONTEXT, SAVE_MEETING_SUBJECT_NOTE } from "../../graphql/meetingChain";
 import { Body, Button, Card, Field, Loader, Muted, Notice, Screen } from "../../components/ui";
 import { NumbersTiles, TwoBoxes, placeLabel } from "../../components/MeetingChainParts";
+import { MeetingCommentGuideLink } from "../../components/MeetingCommentGuideLink";
 import { STR, bnNum, routineSubjectLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
@@ -77,6 +78,7 @@ export default function MeetingSubjectNoteScreen({ route, navigation }: Props): 
   return (
     <Screen padded={false}>
       <ScrollView contentContainerStyle={{ padding: space(4), gap: space(3) }} keyboardShouldPersistTaps="handled">
+        <MeetingCommentGuideLink />
         <Muted>
           {placeLabel(ctx)} · {routineSubjectLabel(subject)}
           {pos >= 0 ? ` · ${bnNum(pos + 1)}/${bnNum(queue.length)}` : ""}

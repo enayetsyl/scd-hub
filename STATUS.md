@@ -1,5 +1,6 @@
 # STATUS
 
+- 2026-10-25: **BUILT — meeting-comment guideline + daily reminder (D-#850/#851)** (branch `feat/meeting-comment-guide`): guideline screen `MeetingCommentGuide` (content in `app/src/content/meetingCommentGuide.ts`, linked from both write screens) and a once-a-day staff pop-up with the count of comments still owed. App-only; verified app tsc + permission-gate scan + an 11-check Playwright walk (canned work queries).
 - 2026-10-25 (cont. 3): **LIVE + OTA — a card or menu entry you cannot open is not shown at all.** #1182 → dev (`8497bdd9`); partial promotion #1186 (`7421e510`, lesson progress still held back): Deploy prod success, `/healthz` 200. OTA group `7e97bd60` (production/android, runtime 1.1.0, commit 7421e510); bundle: prod URL 1, localhost 0; prior OTA f0333488 (febe4de6) ancestor-checked; sourcemaps uploaded (debug id 66d12ab5).
   **Now / next:** nothing pending; phones pick it up on the next cold start.
 - 2026-10-25 (cont. 2): **BUILT — no card for what you cannot open** (branch `fix/reports-home-gates`). Owner: Reports home showed every report to everyone. Reports home + 14 other launcher surfaces now hide entries whose target the viewer cannot open. Gate green (jest 334/334; Chrome check). **Now / next:** dev → partial promotion → OTA.
