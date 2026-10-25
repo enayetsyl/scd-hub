@@ -19,6 +19,9 @@
  *   dispatchedAt?    — the timing-notice dispatch stamp (CM-4 — NOT written here).
  *   attended?        — present/absent capture (CM-4 — NOT written here).
  *   attendanceRemark? — optional attendance note (CM-4 — NOT written here).
+ *   response?        — the family's one, final answer (D-#840) + the Principal/VP's
+ *                      review of a change request (D-#842). Absent = unanswered.
+ *   rescheduledAt?   — an approved swap moved this family (D-#842).
  *
  * Identity plane behind the ADR-005 firewall (names studentIds, family phone) — no
  * corpus path. No `schoolId` (D-#145, single-school convention).
@@ -42,9 +45,69 @@ export interface IParentMeetingSlot extends Document {
   attended?: boolean;
   /** CM-4 — optional attendance note. Present on the shape now; never written in CM-3. */
   attendanceRemark?: string;
+  /** The family's answer to its slot (D-#840); absent = not answered yet. */
+  response?: IMeetingSlotResponse;
+  /** Set when an approved swap moved this family to another time (D-#842) — the pop-up says so. */
+  rescheduledAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
+
+/** Model-local (NOT vocab — like ParentMeeting.status). D-#840. */
+export type MeetingSlotChoice = "CONFIRMED" | "CHANGE_REQUESTED" | "CANT_COME";
+export const MEETING_SLOT_CHOICES: MeetingSlotChoice[] = ["CONFIRMED", "CHANGE_REQUESTED", "CANT_COME"];
+export type MeetingChangeOutcome = "APPROVED" | "DECLINED";
+export const MEETING_CHANGE_OUTCOMES: MeetingChangeOutcome[] = ["APPROVED", "DECLINED"];
+
+/** The Principal/VP's ruling on a CHANGE_REQUESTED answer (D-#842). */
+export interface IMeetingChangeReview {
+  outcome: MeetingChangeOutcome;
+  note?: string;
+  /** The family's time before an approved swap (null when it was On-Call). */
+  fromSlotTime?: number | null;
+  reviewedAt: Date;
+  reviewedBy: Types.ObjectId;
+  /** The family acknowledged the outcome pop-up (D-#844); absent = still to be shown. */
+  seenAt?: Date;
+}
+
+export interface IMeetingSlotResponse {
+  choice: MeetingSlotChoice;
+  /** CHANGE_REQUESTED — the slot whose time the family wants. */
+  preferredSlotId?: Types.ObjectId;
+  /** Snapshot of that slot's time when asked (the slot itself may move later). */
+  preferredSlotTime?: number | null;
+  /** CANT_COME — optional reason. */
+  reason?: string;
+  respondedAt: Date;
+  respondedByGuardianId: Types.ObjectId;
+  review?: IMeetingChangeReview;
+}
+
+const MeetingChangeReviewSchema = new Schema<IMeetingChangeReview>(
+  {
+    outcome: { type: String, enum: MEETING_CHANGE_OUTCOMES, required: true },
+    note: { type: String, trim: true },
+    fromSlotTime: { type: Number, default: null },
+    reviewedAt: { type: Date, required: true },
+    reviewedBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    seenAt: { type: Date },
+  },
+  { _id: false },
+);
+
+const MeetingSlotResponseSchema = new Schema<IMeetingSlotResponse>(
+  {
+    choice: { type: String, enum: MEETING_SLOT_CHOICES, required: true },
+    preferredSlotId: { type: Schema.Types.ObjectId, ref: "ParentMeetingSlot" },
+    preferredSlotTime: { type: Number, default: null },
+    reason: { type: String, trim: true, maxlength: 500 },
+    respondedAt: { type: Date, required: true },
+    respondedByGuardianId: { type: Schema.Types.ObjectId, ref: "Guardian", required: true },
+    review: { type: MeetingChangeReviewSchema },
+  },
+  { _id: false },
+);
 
 const ParentMeetingSlotSchema = new Schema<IParentMeetingSlot>(
   {
@@ -58,6 +121,8 @@ const ParentMeetingSlotSchema = new Schema<IParentMeetingSlot>(
     dispatchedAt: { type: Date },
     attended: { type: Boolean },
     attendanceRemark: { type: String, trim: true },
+    response: { type: MeetingSlotResponseSchema },
+    rescheduledAt: { type: Date },
   },
   { timestamps: true },
 );

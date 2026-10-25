@@ -26,6 +26,7 @@ import { RootNavigator } from "./src/navigation/RootNavigator";
 import { WebPushGate } from "./src/components/WebPushGate";
 import { UpdateGate } from "./src/components/UpdateGate";
 import { AnnouncementPopup } from "./src/components/AnnouncementPopup";
+import { MeetingRsvpPopup } from "./src/components/MeetingRsvpPopup";
 import {
   navigationRef,
   openNotificationCenter,
@@ -227,6 +228,9 @@ function App(): React.ReactElement | null {
                                   sub-screen). Renders null for staff and whenever
                                   nothing is live (D-#700). */}
                               <AnnouncementPopup />
+                              {/* After the announcement so it renders on top: it cannot be
+                                  closed until the family answers its meeting slot (D-#841). */}
+                              <MeetingRsvpPopup />
                             </WebPushGate>
                           </UpdateGate>
                         </ConfirmProvider>
