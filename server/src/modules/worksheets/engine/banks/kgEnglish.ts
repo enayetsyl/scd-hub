@@ -139,12 +139,9 @@ export const ENG_LETTER_WORDS: Record<string, string[]> = {
   ]
 };
 
-/** The book's own jumbled words [jumbled, answer] (pp. 58–60); answers are the book's vocabulary. */
+/** The book's own jumbled words [jumbled, answer] (pp. 58–60); answers are the book's vocabulary.
+ *  Left out: the five that unscramble two ways (era: ear/are; roes; noes; stra; cra). */
 export const ENG_JUMBLED: Array<[string, string]> = [
-  [
-    "cra",
-    "car"
-  ],
   [
     "ikn",
     "ink"
@@ -170,10 +167,6 @@ export const ENG_JUMBLED: Array<[string, string]> = [
     "banana"
   ],
   [
-    "era",
-    "ear"
-  ],
-  [
     "mnago",
     "mango"
   ],
@@ -194,20 +187,12 @@ export const ENG_JUMBLED: Array<[string, string]> = [
     "hand"
   ],
   [
-    "noes",
-    "nose"
-  ],
-  [
     "snu",
     "sun"
   ],
   [
     "taebl",
     "table"
-  ],
-  [
-    "roes",
-    "rose"
   ],
   [
     "vsae",
@@ -228,10 +213,6 @@ export const ENG_JUMBLED: Array<[string, string]> = [
   [
     "shpee",
     "sheep"
-  ],
-  [
-    "stra",
-    "star"
   ],
   [
     "zkaat",

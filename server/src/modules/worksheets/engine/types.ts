@@ -100,7 +100,7 @@ export interface PromptItem {
 export interface VerticalSum {
   a: string;
   b: string;
-  op: "+" | "−";
+  op: "+" | "-";
   answer: string;
 }
 

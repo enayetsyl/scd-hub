@@ -112,8 +112,9 @@ function freshFirst<T>(k: KgCtx, list: readonly T[], key: (x: T) => string): T[]
 /** কথায় লেখ / Write in words: "২২ =" + a wide box (2025 paper: ascending, 21–50). */
 function numberWords(row: RowSpec, k: KgCtx): KgBuilt {
   const en = english(k, row);
-  // The Bangla book spells number words only up to 50 — never print a word it does not have.
-  const top = Math.min(en ? 100 : BN_NUMBER_WORDS_MAX, numberUpTo(k.scope));
+  // The Bangla book spells number words only up to 50 — never print a word it does not have —
+  // and the 2025 paper asks both languages within 21–50.
+  const top = Math.min(BN_NUMBER_WORDS_MAX, numberUpTo(k.scope));
   const lo = top >= 30 ? 21 : 1;
   const picks = pickIndices(k.rng, lo, top, row.count).sort((a, b) => a - b);
   return prompts(
@@ -171,7 +172,7 @@ function orderNumbers(row: RowSpec, k: KgCtx): KgBuilt {
 }
 
 /** উপরে-নিচে: 2-digit + 1-digit without carrying; 1-digit − 1-digit without borrowing (2025). */
-function vertical(row: RowSpec, k: KgCtx, op: "+" | "−"): KgBuilt {
+function vertical(row: RowSpec, k: KgCtx, op: "+" | "-"): KgBuilt {
   const en = english(k, row);
   const top = Math.max(20, Math.min(99, numberUpTo(k.scope)));
   const sums: VerticalSum[] = [];
@@ -197,7 +198,7 @@ function vertical(row: RowSpec, k: KgCtx, op: "+" | "−"): KgBuilt {
 }
 
 /** দাগ টেনে যোগ/বিয়োগ: "৬ − ৩ = □" with room above to draw the sticks (within ১০). */
-function lineSum(row: RowSpec, k: KgCtx, op: "+" | "−"): KgBuilt {
+function lineSum(row: RowSpec, k: KgCtx, op: "+" | "-"): KgBuilt {
   const en = english(k, row);
   const items: PromptItem[] = [];
   const seen = new Set<string>();
@@ -230,7 +231,7 @@ function matchSums(row: RowSpec, k: KgCtx): KgBuilt {
     const ans = plus ? a + b : a - b;
     if (answers.has(ans)) continue; // one right answer per sum
     answers.add(ans);
-    chosen.push({ t: `${fmt(a, en)} ${plus ? "+" : "−"} ${fmt(b, en)}`, answer: fmt(ans, en) });
+    chosen.push({ t: `${fmt(a, en)} ${plus ? "+" : "-"} ${fmt(b, en)}`, answer: fmt(ans, en) });
   }
   // Each of the two printed columns is its own puzzle (item i sits in column i % 2).
   const right: string[] = new Array(chosen.length);
@@ -491,11 +492,11 @@ export function buildKgRow(row: RowSpec, k: KgCtx): KgBuilt {
     case "VERTICAL_ADD":
       return vertical(row, k, "+");
     case "VERTICAL_SUB":
-      return vertical(row, k, "−");
+      return vertical(row, k, "-");
     case "LINE_ADD":
       return lineSum(row, k, "+");
     case "LINE_SUB":
-      return lineSum(row, k, "−");
+      return lineSum(row, k, "-");
     case "MATCH_SUMS":
       return matchSums(row, k);
     case "TIMES_TABLE":
