@@ -27,6 +27,7 @@ import { WebPushGate } from "./src/components/WebPushGate";
 import { UpdateGate } from "./src/components/UpdateGate";
 import { AnnouncementPopup } from "./src/components/AnnouncementPopup";
 import { MeetingRsvpPopup } from "./src/components/MeetingRsvpPopup";
+import { MeetingCommentReminderPopup } from "./src/components/MeetingCommentReminderPopup";
 import {
   navigationRef,
   openNotificationCenter,
@@ -231,6 +232,8 @@ function App(): React.ReactElement | null {
                               {/* After the announcement so it renders on top: it cannot be
                                   closed until the family answers its meeting slot (D-#841). */}
                               <MeetingRsvpPopup />
+                              {/* Staff: once a day, how many meeting comments are still owed (D-#851). */}
+                              <MeetingCommentReminderPopup />
                             </WebPushGate>
                           </UpdateGate>
                         </ConfirmProvider>
