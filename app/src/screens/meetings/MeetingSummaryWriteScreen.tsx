@@ -15,6 +15,7 @@ import { MEETING_BRIEF } from "../../graphql/meetingChain";
 import { SAVE_MEETING_COMMENT } from "../../graphql/comments";
 import { Body, Button, Card, Field, Loader, Muted, Notice, Screen } from "../../components/ui";
 import { Expander, NumbersTiles, TwoBoxes, dayLabel, placeLabel } from "../../components/MeetingChainParts";
+import { MeetingCommentGuideLink } from "../../components/MeetingCommentGuideLink";
 import { STR, bnNum, routineSubjectLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
@@ -60,6 +61,7 @@ export default function MeetingSummaryWriteScreen({ route }: Props): React.React
   return (
     <Screen padded={false}>
       <ScrollView contentContainerStyle={{ padding: space(4), gap: space(3) }} keyboardShouldPersistTaps="handled">
+        <MeetingCommentGuideLink />
         <Muted>
           {placeLabel(b)} · {b.instanceLabel} · {dayLabel(b.meetingDateKey)}
         </Muted>
