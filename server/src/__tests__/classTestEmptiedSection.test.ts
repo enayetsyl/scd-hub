@@ -226,3 +226,29 @@ describe("access to an exam whose section was emptied", () => {
     expect(mockStudentCount).not.toHaveBeenCalled();
   });
 });
+
+describe("D-#845: a question request on a section emptied after it was filed", () => {
+  // The resolver's assertQuestionWrite anchor: no classId, the requester as the owner.
+  // C3 2026-10-25 — Tahmina's confirmed Science Test #2 request (filed 10-24 on সম্মিলিত)
+  // could not be sent to print once the split emptied the section and lapsed her grant.
+  const REQUEST = { sectionId: SECTION, classId: null, subjectGroupId: null, subject: "SCIENCE", teacherId: TAMANY };
+
+  test("the requester may still send it to print / correct it", async () => {
+    await expect(assertAnchorWrite(ctxOf(TAMANY), REQUEST, subjectId)).resolves.toBeUndefined();
+  });
+
+  test("another teacher is refused", async () => {
+    await expect(assertAnchorWrite(ctxOf(OTHER), REQUEST, subjectId)).rejects.toBeInstanceOf(ForbiddenError);
+  });
+
+  test("a request with no recorded requester gets no fallback", async () => {
+    await expect(
+      assertAnchorWrite(ctxOf(TAMANY), { ...REQUEST, teacherId: null }, subjectId),
+    ).rejects.toBeInstanceOf(ForbiddenError);
+  });
+
+  test("the requester is refused while the section still has students", async () => {
+    mockStudentCount.mockImplementation(async () => 17);
+    await expect(assertAnchorWrite(ctxOf(TAMANY), REQUEST, subjectId)).rejects.toBeInstanceOf(ForbiddenError);
+  });
+});

@@ -58,10 +58,18 @@ function assertOffice(
  * an ARABIC request (no `Subject` row, no routine grant) is decided by the routine
  * instead of failing with "Subject not found: ARABIC" (owner report 2026-10-11).
  */
-async function assertQuestionWrite(ctx: AppContext, sectionId: string, subject: string): Promise<void> {
+async function assertQuestionWrite(
+  ctx: AppContext,
+  sectionId: string,
+  subject: string,
+  requestedBy?: string | null,
+): Promise<void> {
   await assertAnchorWrite(
     ctx,
-    { sectionId, classId: null, subjectGroupId: null, subject },
+    // D-#845: an EXISTING request carries its requester as the accountable teacher, so once
+    // a split empties its section (C3 সম্মিলিত, 2026-10-25) the requester can still send it
+    // to print / correct it — the same emptied-section rule a class test's own teacher has.
+    { sectionId, classId: null, subjectGroupId: null, subject, teacherId: requestedBy ?? null },
     () => subjectIdOrNull(subject),
     undefined,
     CLASS_TEST_REACH,
@@ -206,9 +214,9 @@ builder.mutationField("requestCtQuestionPrint", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      const doc = await ClassTestQuestionRequest.findById(args.id).select("sectionId subject").lean();
+      const doc = await ClassTestQuestionRequest.findById(args.id).select("sectionId subject requestedBy").lean();
       if (!doc) throw new Error("অনুরোধটি পাওয়া যায়নি");
-      await assertQuestionWrite(ctx, doc.sectionId.toString(), doc.subject as string);
+      await assertQuestionWrite(ctx, doc.sectionId.toString(), doc.subject as string, doc.requestedBy?.toString());
       return requestCtQuestionPrint({
         id: args.id,
         colour: args.colour ?? null,
@@ -240,9 +248,9 @@ builder.mutationField("editCtQuestionRequest", (t) =>
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      const doc = await ClassTestQuestionRequest.findById(args.id).select("sectionId subject").lean();
+      const doc = await ClassTestQuestionRequest.findById(args.id).select("sectionId subject requestedBy").lean();
       if (!doc) throw new Error("অনুরোধটি পাওয়া যায়নি");
-      await assertQuestionWrite(ctx, doc.sectionId.toString(), doc.subject as string);
+      await assertQuestionWrite(ctx, doc.sectionId.toString(), doc.subject as string, doc.requestedBy?.toString());
       return editCtQuestionRequest({
         id: args.id,
         chapter: args.chapter,
