@@ -834,7 +834,7 @@ builder.queryField("absenteeReport", (t) =>
     description:
       "Class-/section-wise absentee report for a date (AT2.5/§8): count + names + roll + ID; " +
       "residential dropped (D-#63). Requires attendance:view_all.",
-    authScopes: { hasPermission: "attendance:view_all" },
+    authScopes: { hasAnyPermission: ["attendance:view_all", "reports:attendance"] },
     args: { dateKey: t.arg.string({ required: true }) },
     resolve: async (_root, args) => absenteeReport(args.dateKey),
   }),
@@ -938,14 +938,14 @@ builder.queryField("absentNoApplication", (t) =>
       "Absent dates with no covering leave application over a range (AT3.2/§8) — Office's " +
       "guardian-chase list (AT4.7). attendance:view_all may scan all sections; a class teacher " +
       "must pass their own sectionId.",
-    authScopes: { hasAnyPermission: ["attendance:view", "attendance:view_all"] },
+    authScopes: { hasAnyPermission: ["attendance:view", "attendance:view_all", "reports:attendance"] },
     args: {
       sectionId: t.arg.string({ required: false }),
       fromKey: t.arg.string({ required: true }),
       toKey: t.arg.string({ required: true }),
     },
     resolve: async (_root, args, ctx) => {
-      if (!has(ctx, "attendance:view_all")) {
+      if (!has(ctx, "attendance:view_all") && !has(ctx, "reports:attendance")) {
         if (!args.sectionId) throw new ForbiddenError("A class teacher must scope this report to their section");
         await assertSectionReportAccess(ctx, args.sectionId);
       }
@@ -960,7 +960,7 @@ builder.queryField("unmarkedSections", (t) =>
     description:
       "Sections still unmarked for a date with their responsible marker (§8 log; AT4.2 detection — " +
       "empty on non-FULL days). Requires attendance:view_all.",
-    authScopes: { hasPermission: "attendance:view_all" },
+    authScopes: { hasAnyPermission: ["attendance:view_all", "reports:attendance"] },
     args: { dateKey: t.arg.string({ required: true }) },
     resolve: async (_root, args) => unmarkedSections(args.dateKey),
   }),

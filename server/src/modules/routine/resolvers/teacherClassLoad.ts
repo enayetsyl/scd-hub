@@ -21,6 +21,8 @@ import {
 function assertClassLoadScope(ctx: AppContext, teacherId?: string | null): void {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
   if (callerHasPermission(ctx.auth, "routine:view_all")) return;
+  // D-#846: the Reports-hub switch for this one report — every teacher's load, nothing else.
+  if (callerHasPermission(ctx.auth, "reports:class_load")) return;
   if (teacherId && teacherId === ctx.auth.userId && callerHasPermission(ctx.auth, "routine:view")) return;
   throw new ForbiddenError("A teacher may view only their own class load; all-teacher view is Principal/Office only");
 }
@@ -68,7 +70,7 @@ builder.queryField("teacherClassLoad", (t) =>
     description:
       "Per-teacher teaching load for a month (YYYY-MM). Omit teacherId for every teacher (Principal/Office); " +
       "pass your own id for your own load. Counts scheduled routine periods.",
-    authScopes: { hasAnyPermission: ["routine:view", "routine:view_all"] },
+    authScopes: { hasAnyPermission: ["routine:view", "routine:view_all", "reports:class_load"] },
     args: {
       month: t.arg.string({ required: true }),
       teacherId: t.arg.string({ required: false }),
