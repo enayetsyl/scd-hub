@@ -422,15 +422,25 @@ export default function MeetingAdminScreen({ route }: Props): React.ReactElement
                     <Muted>
                       {s.onCall ? STR.cmOnCall : minutesToHHMM(s.slotTime)} · {s.classLabels.join(", ")}
                     </Muted>
-                    {!isDraft ? (
+                    {/* The answer itself is the badge; this line only carries its detail. */}
+                    {!isDraft && s.response?.reason ? (
                       <Muted>
-                        {rsvpStatus(s.response).text}
-                        {s.response?.reason ? ` — ${STR.rsReasonPrefix}: ${s.response.reason}` : ""}
+                        {STR.rsReasonPrefix}: {s.response.reason}
+                      </Muted>
+                    ) : null}
+                    {!isDraft && s.response?.choice === "CHANGE_REQUESTED" && !s.response.reviewOutcome ? (
+                      <Muted>
+                        {STR.rsWanted}: {minutesToHHMM(s.response.preferredSlotTime)}
                       </Muted>
                     ) : null}
                   </View>
+                  {/* Present/Absent once the meeting day is marked; until then, after dispatch,
+                      the family's answer — the office's question is "who answered what", and
+                      every slot of a dispatched meeting is dispatched, so that badge said nothing. */}
                   {s.attended != null ? (
                     <Badge text={s.attended ? STR.cmPresent : STR.cmAbsent} tone={s.attended ? "ok" : "danger"} />
+                  ) : !isDraft && s.dispatchedAt ? (
+                    <Badge text={rsvpStatus(s.response).text} tone={rsvpStatus(s.response).tone} />
                   ) : s.dispatchedAt ? (
                     <Badge text={STR.cmDispatchedBadge} tone="brand" />
                   ) : null}
