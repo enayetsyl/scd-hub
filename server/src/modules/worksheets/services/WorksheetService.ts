@@ -321,11 +321,15 @@ function buildHeader(args: GenerateArgs, plan: PlanView, kind: WorksheetKind, to
   const defaults: Record<WorksheetKind, { title: string; meta: string | null }> = english
     ? {
         ASSIGNMENT: { title: "Weekly Assignment", meta: null },
+        CLASSWORK: { title: "Class Worksheet", meta: null },
+        HOMEWORK: { title: "Homework", meta: null },
         CLASS_TEST: { title: "Class Test", meta: "Time: 30 minutes" },
         FINAL: { title: `Annual Examination ${examYear}`, meta: "Time: 1 hour 30 minutes" },
       }
     : {
         ASSIGNMENT: { title: "সাপ্তাহিক অ্যাসাইনমেন্ট", meta: null },
+        CLASSWORK: { title: "ক্লাস ওয়ার্কশিট", meta: null },
+        HOMEWORK: { title: "বাড়ির কাজ", meta: null },
         CLASS_TEST: { title: "ক্লাস টেস্ট", meta: "সময়: ৩০ মিনিট" },
         FINAL: { title: `বার্ষিক পরীক্ষা — ${bnNumber(examYear)}`, meta: "সময়: ১ ঘণ্টা ৩০ মিনিট" },
       };
@@ -370,7 +374,7 @@ export async function generate(ctx: AppContext, args: GenerateArgs, pictures?: P
   const picks =
     args.rows && args.rows.length
       ? args.rows
-      : kind === "ASSIGNMENT"
+      : kind === "ASSIGNMENT" || kind === "CLASSWORK" || kind === "HOMEWORK"
         ? plan.assignmentPreset
         : kind === "CLASS_TEST"
           ? plan.classTestPreset
@@ -460,6 +464,8 @@ export async function pictureBytes(ids: string[], field: "image" | "thumb" = "im
 
 const PURPOSE: Record<WorksheetKind, PrintPurpose> = {
   ASSIGNMENT: "ASSIGNMENT",
+  CLASSWORK: "CLASSWORK",
+  HOMEWORK: "HOMEWORK",
   CLASS_TEST: "CLASS_TEST",
   FINAL: "OTHER",
 };

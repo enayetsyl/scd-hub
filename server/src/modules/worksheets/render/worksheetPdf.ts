@@ -239,8 +239,12 @@ export async function renderWorksheetPdf(
 
     // ---- Sections --------------------------------------------------------
     for (const s of wsDoc.sections) {
+      // A short question stays on one page. A long one starts wherever its title and first
+      // line fit and runs on to the next page — every layout breaks between its own rows.
+      // (Teacher feedback 2026-10-25: a whole question jumping pages left half a page empty.)
       const bodyH = estimateHeight(s);
-      ensure(Math.min(bodyH + 34, bottom() - MARGIN));
+      const need = bodyH <= KEEP_WHOLE ? bodyH + 34 : 34 + firstRowHeight(s);
+      ensure(Math.min(need, bottom() - MARGIN));
       const title = `${num(s.n)}. ${s.label}`;
       line(doc, title, MARGIN, y, 11.5);
       const mk = `[${num(s.marks)}]`;
@@ -261,6 +265,25 @@ export async function renderWorksheetPdf(
 const CHOICE_H = 58;
 /** Letter choices sit two to a line; word choices (four words) need the whole width. */
 const choicesPerLine = (cs: Choice[]): number => (cs.some((c) => c.options.some((o) => [...o].length > 2)) ? 1 : 2);
+
+/** A question this short (PDF points) is never split across pages. */
+const KEEP_WHOLE = 180;
+
+/** Room for a question's first line of items — what must fit under its title on a page. */
+function firstRowHeight(s: Section): number {
+  switch (s.layout) {
+    case "pictures":
+      return (s.pictures ?? []).some((p) => p.repeat > 1) ? 74 : 112;
+    case "jumble":
+      return 80;
+    case "groups":
+      return 70;
+    case "choice":
+      return CHOICE_H + 6;
+    default:
+      return 56;
+  }
+}
 
 function estimateHeight(s: Section): number {
   switch (s.layout) {

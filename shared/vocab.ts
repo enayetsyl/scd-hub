@@ -5454,15 +5454,21 @@ export function loadLevelFor(category: HrCategory | null | undefined, minutes: n
 
 /** What a generated paper is for. FINAL follows the published মানবন্টন row for row;
  *  ASSIGNMENT and CLASS_TEST take a preset subset of the same rows. */
-export const WORKSHEET_KINDS = ["ASSIGNMENT", "CLASS_TEST", "FINAL"] as const;
+export const WORKSHEET_KINDS = ["ASSIGNMENT", "CLASSWORK", "HOMEWORK", "CLASS_TEST", "FINAL"] as const;
 export type WorksheetKind = (typeof WORKSHEET_KINDS)[number];
+/** CLASSWORK and HOMEWORK (D-#846, teacher ask 2026-10-25) take the assignment preset and
+ *  differ only in their title and print purpose. */
 export const WORKSHEET_KIND_LABELS_BN: Record<WorksheetKind, string> = {
   ASSIGNMENT: "অ্যাসাইনমেন্ট",
+  CLASSWORK: "ক্লাস ওয়ার্কশিট",
+  HOMEWORK: "বাড়ির কাজ",
   CLASS_TEST: "ক্লাস টেস্ট",
   FINAL: "বার্ষিক পরীক্ষা",
 };
 export const WORKSHEET_KIND_LABELS_EN: Record<WorksheetKind, string> = {
   ASSIGNMENT: "Assignment",
+  CLASSWORK: "Class worksheet",
+  HOMEWORK: "Homework sheet",
   CLASS_TEST: "Class test",
   FINAL: "Final exam",
 };

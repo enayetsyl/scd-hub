@@ -191,31 +191,68 @@ function buildWriteSequence(row: RowSpec, c: RowCtx): Built {
   };
 }
 
-function buildFillMissing(row: RowSpec, c: RowCtx): Built {
-  const axis = row.axis ?? "BAN_ALL";
-  const numeric = isNumberAxis(axis);
-  const full = fullSequence(axis);
-  const rr = resolveRange(full, partRange(row, 0));
+/** One fill-the-gaps line: the teacher's range as shown, else a window around `want` blanks. */
+function fillCells(
+  full: readonly string[],
+  seq: readonly string[],
+  range: [number, number] | null,
+  want: number,
+  numeric: boolean,
+  rng: Rng,
+): { cells: Cell[]; blanks: number } {
   let run: string[];
-  if (rr) {
+  if (range) {
     // The teacher's range IS the cells shown (owner 2026-10-16).
-    run = full.slice(rr[0], rr[1] + 1);
+    run = full.slice(range[0], range[1] + 1);
   } else {
-    const seq = axisSequence(axis, c.input.scope);
-    const want = Math.min(row.count, Math.max(0, seq.length - 2));
+    const w = Math.min(want, Math.max(0, seq.length - 2));
     // A window wide enough that the blanks are surrounded by givens.
-    let win = numeric ? Math.ceil((want * 2.5) / 10) * 10 : Math.max(want * 2 + 2, 10);
-    win = Math.min(seq.length, Math.max(win, want + 2));
-    const start = randInt(c.rng, 0, seq.length - win);
+    let win = numeric ? Math.ceil((w * 2.5) / 10) * 10 : Math.max(w * 2 + 2, 10);
+    win = Math.min(seq.length, Math.max(win, w + 2));
+    const start = randInt(rng, 0, seq.length - win);
     run = seq.slice(start, start + win);
   }
   // The first cell is always given — it tells the child where the line starts.
-  const blanksWanted = Math.min(row.count, Math.max(0, run.length - 1));
-  const blanks = new Set(pickIndices(c.rng, 1, run.length - 1, blanksWanted));
-  const cells: Cell[] = run.map((t, i) => (blanks.has(i) ? { t: "", a: t } : { t }));
+  const blanksWanted = Math.min(want, Math.max(0, run.length - 1));
+  const blanks = new Set(pickIndices(rng, 1, run.length - 1, blanksWanted));
+  return { cells: run.map((t, i) => (blanks.has(i) ? { t: "", a: t } : { t })), blanks: blanks.size };
+}
+
+function buildFillMissing(row: RowSpec, c: RowCtx): Built {
+  const axis = row.axis ?? "BAN_ALL";
+  if (axis === "BAN_ALL") {
+    // স্বরবর্ণ and ব্যঞ্জনবর্ণ are two sub-questions, never one mixed line (teacher feedback
+    // 2026-10-25, as the alphabet row since 2026-10-16). Each part takes its own range; the
+    // blanks are shared, the consonants taking the odd one.
+    const parts = [
+      { label: "ক) স্বরবর্ণ", full: [...BAN_VOWELS], seq: axisSequence("BAN_VOWEL", c.input.scope) },
+      { label: "খ) ব্যঞ্জনবর্ণ", full: [...BAN_CONSONANTS], seq: axisSequence("BAN_CONSONANT", c.input.scope) },
+    ]
+      .map((p, k) => ({ ...p, range: resolveRange(p.full, partRange(row, k)) }))
+      .filter((p) => p.range || p.seq.length >= 3);
+    const shares = parts.length === 2 ? [Math.floor(row.count / 2), Math.ceil(row.count / 2)] : [row.count];
+    const groups = parts
+      .map((p, k) => ({ p, built: fillCells(p.full, p.seq, p.range, shares[k], false, c.rng) }))
+      .filter((x) => x.built.blanks > 0);
+    const blanks = groups.reduce((s, x) => s + x.built.blanks, 0);
+    return {
+      section: { layout: "groups", groups: groups.map((x) => ({ label: x.p.label, cols: 7, cells: x.built.cells })) },
+      printed: blanks === row.count ? null : blanks,
+    };
+  }
+  const numeric = isNumberAxis(axis);
+  const full = fullSequence(axis);
+  const { cells, blanks } = fillCells(
+    full,
+    axisSequence(axis, c.input.scope),
+    resolveRange(full, partRange(row, 0)),
+    row.count,
+    numeric,
+    c.rng,
+  );
   return {
     section: { layout: "grid", cols: numeric ? 10 : 7, cells },
-    printed: blanks.size === row.count ? null : blanks.size,
+    printed: blanks === row.count ? null : blanks,
   };
 }
 

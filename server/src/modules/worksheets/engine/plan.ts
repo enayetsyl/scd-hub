@@ -101,7 +101,8 @@ const PRINTABLE = (r: PlanRow): boolean =>
 /** The out-of-the-box presets until the Office saves its own (mockup defaults). */
 export function defaultPreset(kind: Exclude<WorksheetKind, "FINAL">, rows: PlanRow[]): PresetRow[] {
   const printable = rows.filter(PRINTABLE);
-  if (kind === "ASSIGNMENT") {
+  // A class worksheet and a homework sheet are assignment-sized (D-#846).
+  if (kind === "ASSIGNMENT" || kind === "CLASSWORK" || kind === "HOMEWORK") {
     return printable.slice(0, 5).map((r) => ({ seq: r.seq, count: Math.min(r.count, 8) }));
   }
   // A class test leans on the picture and before/after rows — quick to mark, 20-ish marks.
