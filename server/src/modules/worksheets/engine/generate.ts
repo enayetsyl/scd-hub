@@ -25,40 +25,10 @@ import {
 } from "./sequences";
 import type { Cell, Choice, GenerateInput, LetterRange, PictureRef, RowSpec, Section, WorksheetDoc } from "./types";
 
-// ---------------------------------------------------------------------------
-// Seeded randomness
-// ---------------------------------------------------------------------------
-
-export type Rng = () => number;
-
-/** mulberry32 — tiny, fast, good enough for shuffling a worksheet. */
-export function makeRng(seed: number): Rng {
-  let a = seed >>> 0;
-  return () => {
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-export function shuffle<T>(arr: readonly T[], rng: Rng): T[] {
-  const a = arr.slice();
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
-const randInt = (rng: Rng, lo: number, hi: number): number => lo + Math.floor(rng() * (hi - lo + 1));
-
-/** Distinct indices from [lo, hi], in random order. */
-function pickIndices(rng: Rng, lo: number, hi: number, n: number): number[] {
-  const all: number[] = [];
-  for (let i = lo; i <= hi; i++) all.push(i);
-  return shuffle(all, rng).slice(0, Math.max(0, n));
-}
+// Seeded randomness lives in random.ts (shared with the KG rules); re-exported for callers.
+import { makeRng, pickIndices, randInt, shuffle, type Rng } from "./random";
+import { buildKgRow, isKgKind } from "./kg";
+export { makeRng, shuffle, type Rng };
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -132,6 +102,18 @@ export function resolveRange(seq: readonly string[], r: LetterRange | null | und
 }
 
 const partRange = (row: RowSpec, k: number): LetterRange | null => row.ranges?.[k] ?? null;
+
+const toAscii = (d: string): string => d.replace(/[০-৯]/g, (x) => String("০১২৩৪৫৬৭৮৯".indexOf(x)));
+
+/** A number range the row's own wording names — "বাংলা অঙ্কে লেখ (৬১–৮০)", "(81–100)" — as the
+ *  default when the teacher sets none (D-#847). */
+function labelRange(row: RowSpec, full: readonly string[], axis: WorksheetAxis): [number, number] | null {
+  if (!isNumberAxis(axis)) return null;
+  const m = /\(\s*([০-৯0-9]+)\s*[–—-]\s*([০-৯0-9]+)\s*\)/.exec(row.label);
+  if (!m) return null;
+  const show = (d: string): string => fmtNum(Number(toAscii(d)), axis);
+  return resolveRange(full, { from: show(m[1]), to: show(m[2]) });
+}
 const blankCells = (run: string[]): Cell[] => run.map((a) => ({ t: "", a }));
 
 function buildWriteSequence(row: RowSpec, c: RowCtx): Built {
@@ -168,10 +150,16 @@ function buildWriteSequence(row: RowSpec, c: RowCtx): Built {
 
   const seq = axisSequence(axis, c.input.scope);
   const full = fullSequence(axis);
-  const rr = resolveRange(full, partRange(row, 0));
+  const fromLabel = partRange(row, 0) ? null : labelRange(row, full, axis);
+  const rr = resolveRange(full, partRange(row, 0)) ?? fromLabel;
   let run: string[];
   if (rr) {
     run = full.slice(rr[0], rr[1] + 1);
+    // An assignment asking for fewer numbers than the wording's range takes a window of it.
+    if (fromLabel && rr === fromLabel && row.count > 1 && row.count < run.length) {
+      const st = randInt(c.rng, 0, run.length - row.count);
+      run = run.slice(st, st + row.count);
+    }
   } else if (row.count > 1 && row.count < seq.length) {
     // "১১ থেকে ২৫ পর্যন্ত সংখ্যাগুলো লেখ" — a random window, each cell one mark.
     const start = randInt(c.rng, 0, seq.length - row.count);
@@ -183,7 +171,8 @@ function buildWriteSequence(row: RowSpec, c: RowCtx): Built {
   return {
     section: {
       layout: "grid",
-      cols: isNumberAxis(axis) && run.length <= 30 ? 5 : 10,
+      // the 2025 KG paper's 2 × 10 grid for a range its wording names
+      cols: fromLabel ? 10 : isNumberAxis(axis) && run.length <= 30 ? 5 : 10,
       note: rangeNote(c.input.subject, axis, run[0], run[run.length - 1]),
       cells: blankCells(run),
     },
@@ -191,31 +180,68 @@ function buildWriteSequence(row: RowSpec, c: RowCtx): Built {
   };
 }
 
-function buildFillMissing(row: RowSpec, c: RowCtx): Built {
-  const axis = row.axis ?? "BAN_ALL";
-  const numeric = isNumberAxis(axis);
-  const full = fullSequence(axis);
-  const rr = resolveRange(full, partRange(row, 0));
+/** One fill-the-gaps line: the teacher's range as shown, else a window around `want` blanks. */
+function fillCells(
+  full: readonly string[],
+  seq: readonly string[],
+  range: [number, number] | null,
+  want: number,
+  numeric: boolean,
+  rng: Rng,
+): { cells: Cell[]; blanks: number } {
   let run: string[];
-  if (rr) {
+  if (range) {
     // The teacher's range IS the cells shown (owner 2026-10-16).
-    run = full.slice(rr[0], rr[1] + 1);
+    run = full.slice(range[0], range[1] + 1);
   } else {
-    const seq = axisSequence(axis, c.input.scope);
-    const want = Math.min(row.count, Math.max(0, seq.length - 2));
+    const w = Math.min(want, Math.max(0, seq.length - 2));
     // A window wide enough that the blanks are surrounded by givens.
-    let win = numeric ? Math.ceil((want * 2.5) / 10) * 10 : Math.max(want * 2 + 2, 10);
-    win = Math.min(seq.length, Math.max(win, want + 2));
-    const start = randInt(c.rng, 0, seq.length - win);
+    let win = numeric ? Math.ceil((w * 2.5) / 10) * 10 : Math.max(w * 2 + 2, 10);
+    win = Math.min(seq.length, Math.max(win, w + 2));
+    const start = randInt(rng, 0, seq.length - win);
     run = seq.slice(start, start + win);
   }
   // The first cell is always given — it tells the child where the line starts.
-  const blanksWanted = Math.min(row.count, Math.max(0, run.length - 1));
-  const blanks = new Set(pickIndices(c.rng, 1, run.length - 1, blanksWanted));
-  const cells: Cell[] = run.map((t, i) => (blanks.has(i) ? { t: "", a: t } : { t }));
+  const blanksWanted = Math.min(want, Math.max(0, run.length - 1));
+  const blanks = new Set(pickIndices(rng, 1, run.length - 1, blanksWanted));
+  return { cells: run.map((t, i) => (blanks.has(i) ? { t: "", a: t } : { t })), blanks: blanks.size };
+}
+
+function buildFillMissing(row: RowSpec, c: RowCtx): Built {
+  const axis = row.axis ?? "BAN_ALL";
+  if (axis === "BAN_ALL") {
+    // স্বরবর্ণ and ব্যঞ্জনবর্ণ are two sub-questions, never one mixed line (teacher feedback
+    // 2026-10-25, as the alphabet row since 2026-10-16). Each part takes its own range; the
+    // blanks are shared, the consonants taking the odd one.
+    const parts = [
+      { label: "ক) স্বরবর্ণ", full: [...BAN_VOWELS], seq: axisSequence("BAN_VOWEL", c.input.scope) },
+      { label: "খ) ব্যঞ্জনবর্ণ", full: [...BAN_CONSONANTS], seq: axisSequence("BAN_CONSONANT", c.input.scope) },
+    ]
+      .map((p, k) => ({ ...p, range: resolveRange(p.full, partRange(row, k)) }))
+      .filter((p) => p.range || p.seq.length >= 3);
+    const shares = parts.length === 2 ? [Math.floor(row.count / 2), Math.ceil(row.count / 2)] : [row.count];
+    const groups = parts
+      .map((p, k) => ({ p, built: fillCells(p.full, p.seq, p.range, shares[k], false, c.rng) }))
+      .filter((x) => x.built.blanks > 0);
+    const blanks = groups.reduce((s, x) => s + x.built.blanks, 0);
+    return {
+      section: { layout: "groups", groups: groups.map((x) => ({ label: x.p.label, cols: 7, cells: x.built.cells })) },
+      printed: blanks === row.count ? null : blanks,
+    };
+  }
+  const numeric = isNumberAxis(axis);
+  const full = fullSequence(axis);
+  const { cells, blanks } = fillCells(
+    full,
+    axisSequence(axis, c.input.scope),
+    resolveRange(full, partRange(row, 0)),
+    row.count,
+    numeric,
+    c.rng,
+  );
   return {
     section: { layout: "grid", cols: numeric ? 10 : 7, cells },
-    printed: blanks.size === row.count ? null : blanks.size,
+    printed: blanks === row.count ? null : blanks,
   };
 }
 
@@ -646,6 +672,12 @@ function buildRow(row: RowSpec, c: RowCtx): Built {
       return { section: { layout: "oral" }, printed: null };
     case "MANUAL":
       return { section: { layout: "manual", lines: Math.max(2, Math.min(row.count, 8)) }, printed: null };
+    default:
+      // The KG rules (D-#847): kg.ts, over the KG books' own words.
+      if (isKgKind(row.kind)) {
+        return buildKgRow(row, { rng: c.rng, subject: c.input.subject, scope: c.input.scope, usedWords: c.usedWords });
+      }
+      return { section: { layout: "manual", lines: 2 }, printed: null };
   }
 }
 
@@ -681,8 +713,8 @@ export function generateWorksheet(input: GenerateInput): WorksheetDoc {
     if (printed === 0) {
       warnings.push(
         eng
-          ? `"${row.label}" — no pictures in scope; the question was left out.`
-          : `"${row.label}" — সীমার ভেতরে কোনো ছবি নেই; প্রশ্নটি বাদ গেছে।`,
+          ? `"${row.label}" — ${isKgKind(row.kind) ? "nothing to ask" : "no pictures"} in scope; the question was left out.`
+          : `"${row.label}" — সীমার ভেতরে ${isKgKind(row.kind) ? "প্রশ্ন বানানোর কিছু" : "কোনো ছবি"} নেই; প্রশ্নটি বাদ গেছে।`,
       );
       continue;
     }

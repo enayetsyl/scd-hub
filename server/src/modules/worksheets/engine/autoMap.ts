@@ -28,6 +28,45 @@ export function defaultAxis(subject: string, label = ""): WorksheetAxis | null {
   return null;
 }
 
+/**
+ * The 2026 KG BAN/ENG/MATH rows (D-#847). Each pattern is narrow enough that no Nursery or Arabic
+ * row matches it (the published rows are pinned in the tests).
+ */
+function kgRule(l: string, axis: WorksheetAxis | null): RowMapping | null {
+  const m = (kind: WorksheetItemKind, ax: WorksheetAxis | null = axis, setSize: number | null = null): RowMapping => ({
+    kind,
+    axis: ax,
+    setSize,
+  });
+  // Maths
+  if (/মিলকরণ|match the (sums|answers)/i.test(l) && /যোগ|বিয়োগ|sum|differ/i.test(l)) return m("MATCH_SUMS");
+  if (/দাগ টেনে যোগ/.test(l)) return m("LINE_ADD");
+  if (/দাগ টেনে বিয়োগ/.test(l)) return m("LINE_SUB");
+  if (/উপরে[-\s]*নিচে যোগ/.test(l)) return m("VERTICAL_ADD");
+  if (/উপরে[-\s]*নিচে বিয়োগ/.test(l)) return m("VERTICAL_SUB");
+  if (/নামতা|times table|multiplication table/i.test(l)) return m("TIMES_TABLE");
+  if (/মাঝের সংখ্যা|number between/i.test(l)) return m("NEIGHBOURS");
+  if (/জোড়.*বিজোড়|odd.*even|even.*odd/i.test(l)) return m("ODD_EVEN");
+  if (/বড় থেকে ছোট/.test(l)) return m("ORDER_NUMBERS", axis, 8);
+  if (/কথায় লেখ|write in words/i.test(l)) return m("NUMBER_WORDS", /English|ইংরেজি/i.test(l) ? "NUM_EN" : "NUM_BN");
+  if (/অঙ্কে লেখ|write in numbers/i.test(l)) return m("WRITE_SEQUENCE");
+  // Bangla / English
+  if (/হারিয়ে যাওয়া/.test(l)) return m("FILL_MISSING");
+  if (/কার চিহ্ন/.test(l)) return m("KAR_WORDS", null);
+  if (/যুক্তবর্ণ ভে/.test(l)) return m("CONJUNCT_BREAK", null);
+  if (/বর্ণ দিয়ে.*শব্দ|words with the given letter/i.test(l)) return m("LETTER_WORDS");
+  if (/এলোমেলো শব্দ|jumbled letters to make words/i.test(l)) return m("JUMBLED_WORD", null);
+  if (/বিপরীত|opposite/i.test(l)) return m("OPPOSITES", null);
+  if (/English meaning/i.test(l)) return m("MEANING_TO_EN", null);
+  if (/Bangla meaning|বাংলা অর্থ/i.test(l)) return m("MEANING_TO_BN", null);
+  if (/\ba\s*\/\s*an\b/i.test(l)) return m("ARTICLE_A_AN", null);
+  if (/বাক্য গঠন/.test(l)) return m("MAKE_SENTENCE", null);
+  if (/আমার পরিচয়|myself/i.test(l)) return m("FRAMED_SENTENCES", null);
+  if (/দিকের নাম|দিনের নাম|মাসের নাম|days of the week|months of the year/i.test(l)) return m("WRITE_LIST", null);
+  if (/নাম লেখ.*\(|name five/i.test(l)) return m("NAME_FIVE", null);
+  return null;
+}
+
 export function autoMapRow(label: string, itemType: string | null | undefined, subject: string): RowMapping {
   const l = label.trim();
   const axis = defaultAxis(subject, l);
@@ -38,6 +77,8 @@ export function autoMapRow(label: string, itemType: string | null | undefined, s
   });
 
   if (itemType === "oral" || /মৌখিক|oral|শ্রুতলিপি|dictation|পরিচ্ছন্নতা|neat/i.test(l)) return m("ORAL", null);
+  const kg = kgRule(l, axis);
+  if (kg) return kg;
   // The 2026 আরবি rows (D-#802). Circling: a row that names a letter (প্রথম অক্ষরে বৃত্ত,
   // হরফে বৃত্ত) circles a letter; otherwise it circles a word (ছবির শব্দে বৃত্ত).
   if (/বৃত্ত|circle/i.test(l)) {

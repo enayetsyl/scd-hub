@@ -25,7 +25,7 @@ function section(s: Section): Section {
     rows: s.rows?.map((r) => r.map(cell)),
     columns: s.columns?.map((col) => col.map((r) => r.map(cell))),
     groups: s.groups?.map((g) => ({ ...g, cells: g.cells.map(cell) })),
-    sets: s.sets?.map((x) => ({ shown: x.shown.map((t) => markBase(t)), answer: x.answer.map((t) => markBase(t)) })),
+    sets: s.sets?.map((x) => ({ ...x, shown: x.shown.map((t) => markBase(t)), answer: x.answer.map((t) => markBase(t)) })),
     pictures: s.pictures?.map((p) => ({ ...p, a: markBase(p.a) })),
     choices: s.choices?.map((x) => ({ ...x, options: x.options.map((t) => markBase(t)) })),
     left: s.left?.map((l) => ({ ...l, t: markBase(l.t) ?? null })),

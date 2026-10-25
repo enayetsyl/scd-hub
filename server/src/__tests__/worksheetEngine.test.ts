@@ -284,8 +284,23 @@ describe("teacher ranges (owner 2026-10-16)", () => {
 
   it("a range the sequence does not know falls back to the automatic choice", () => {
     const d = gen([{ seq: 1, label: "খালি ঘর", kind: "FILL_MISSING", axis: "BAN_ALL", count: 3, marksEach: 1, ranges: [{ from: "X", to: "" }] }]);
-    expect(d.sections[0].cells!.length).toBeGreaterThan(3);
+    expect(d.sections[0].groups!.flatMap((g) => g.cells).length).toBeGreaterThan(3);
     expect(d.warnings).toEqual([]);
+  });
+
+  it("fill-the-gaps over the whole alphabet is two sub-questions, never one mixed line (2026-10-25)", () => {
+    const d = gen([{ seq: 1, label: "খালি ঘর", kind: "FILL_MISSING", axis: "BAN_ALL", count: 5, marksEach: 1 }]);
+    const [v, k] = d.sections[0].groups!;
+    expect([v.label, k.label]).toEqual(["ক) স্বরবর্ণ", "খ) ব্যঞ্জনবর্ণ"]);
+    const all = (cs: { t: string; a?: string | null }[]) => cs.map((c) => c.t || c.a!);
+    expect(all(v.cells).every((x) => (BAN_VOWELS as readonly string[]).includes(x))).toBe(true);
+    expect(all(k.cells).every((x) => (BAN_CONSONANTS as readonly string[]).includes(x))).toBe(true);
+    const blanks = (cs: { t: string }[]) => cs.filter((c) => c.t === "").length;
+    expect([blanks(v.cells), blanks(k.cells)]).toEqual([2, 3]);
+    expect(d.sections[0].marks).toBe(5);
+    // each part keeps its own teacher range
+    const r = gen([{ seq: 1, label: "খালি ঘর", kind: "FILL_MISSING", axis: "BAN_ALL", count: 4, marksEach: 1, ranges: [{ from: "অ", to: "ঊ" }, { from: "ক", to: "ঞ" }] }]);
+    expect(r.sections[0].groups!.map((g) => g.cells.length)).toEqual([6, 10]);
   });
 
   it("English letter-writing is two sub-questions too: capital letters, then small letters", () => {
