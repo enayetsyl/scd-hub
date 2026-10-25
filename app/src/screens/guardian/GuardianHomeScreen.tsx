@@ -26,6 +26,7 @@ import { CHILD_COMMENTS_QUERY } from "../../graphql/comments";
 import { CHILD_REVISION_QUERY } from "../../graphql/revision";
 import { Screen, Body, Muted, Card, Badge, Button, Notice, Loader, EmptyState } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
+import { GuardianMeetingCard } from "../../components/GuardianMeetingCard";
 import { LoadOlder } from "../../components/LoadOlder";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
@@ -211,11 +212,8 @@ export default function GuardianHomeScreen(): React.ReactElement {
     refetchAsgnTodo(opts);
     refetchFee(opts);
   });
-  // CM-6 follow-up: no guardian meeting-slot card is rendered. The server's
-  // childMeetingSlot(meetingId, studentId) read needs a meetingId, but there is NO
-  // guardian-facing "list my meetings" query to obtain one — so a guardian cannot
-  // reach it. Surface a slot card only once a server read yields the family's
-  // meetings (or childMeetingSlot drops the meetingId arg).
+  // The family's meeting slot is GuardianMeetingCard (myMeetingSlots, D-#841), mounted
+  // beside the QueryGate below.
 
   if (fetching && !selected) {
     return (
@@ -376,6 +374,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         <ChildSwitcher />
+        <GuardianMeetingCard />
 
         <QueryGate
           results={[

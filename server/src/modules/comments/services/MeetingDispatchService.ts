@@ -31,7 +31,7 @@ import { ParentMeeting, type IParentMeeting } from "../models/ParentMeeting";
 import { ParentMeetingSlot, type IParentMeetingSlot } from "../models/ParentMeetingSlot";
 import { emitMeetingSchedule } from "../../notifications/services/emitters";
 import { writeAudit } from "../../platform/services/AuditService";
-import { ParentMeetingError, type ParentMeetingSlotShape } from "./ParentMeetingService";
+import { ParentMeetingError, slotResponseShape, type ParentMeetingSlotShape } from "./ParentMeetingService";
 
 // ===========================================================================
 // Pure formatters (no DB/clock — unit-tested directly)
@@ -104,6 +104,8 @@ function toSlotShape(d: IParentMeetingSlot): ParentMeetingSlotShape {
     dispatchedAt: d.dispatchedAt ? new Date(d.dispatchedAt).toISOString() : null,
     attended: d.attended ?? null,
     attendanceRemark: d.attendanceRemark ?? null,
+    response: slotResponseShape(d.response),
+    rescheduledAt: d.rescheduledAt ? new Date(d.rescheduledAt).toISOString() : null,
     createdAt: new Date(d.createdAt).toISOString(),
     updatedAt: new Date(d.updatedAt).toISOString(),
   };
