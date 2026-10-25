@@ -644,7 +644,18 @@ export async function confirmAssignmentWeek(input: {
 
   const at = input.at ?? new Date();
   let recordsIssued = 0;
+  let itemsIssued = 0;
   for (const item of drafts) {
+    // D-#839: claim the draft atomically before spawning its records. Records carry
+    // no unique index (a resubmission shares asItemId+studentId), so a class teacher's
+    // confirm racing the auto-issue sweep would otherwise insert every roster twice.
+    // The loser of the claim skips the item; the winner owns its records.
+    const claimed = await AssignmentItem.updateOne(
+      { _id: item._id, status: "DRAFT" },
+      { $set: { status: "ISSUED", issuedAt: at, issuedBy: input.actorId }, $unset: { draftRoster: 1 } },
+    );
+    if (claimed.modifiedCount === 0) continue;
+    itemsIssued += 1;
     const roster = item.draftRoster ?? [];
     const records = roster.map((r) => {
       const state: LifecycleState = r.present ? "GIVEN" : "ABSENT_REDELIVER";
@@ -662,14 +673,18 @@ export async function confirmAssignmentWeek(input: {
       };
     });
     if (records.length > 0) {
-      await AssignmentStudentRecord.insertMany(records);
+      try {
+        await AssignmentStudentRecord.insertMany(records);
+      } catch (err) {
+        // Hand the draft back so the next confirm can issue it, not an ISSUED item with no records.
+        await AssignmentItem.updateOne(
+          { _id: item._id },
+          { $set: { status: "DRAFT", draftRoster: roster }, $unset: { issuedAt: 1, issuedBy: 1 } },
+        );
+        throw err;
+      }
       recordsIssued += records.length;
     }
-    item.status = "ISSUED";
-    item.issuedAt = at;
-    item.issuedBy = input.actorId as unknown as IAssignmentItem["issuedBy"];
-    item.draftRoster = undefined;
-    await item.save();
   }
 
   return {
@@ -678,7 +693,7 @@ export async function confirmAssignmentWeek(input: {
     weekNumber: input.weekNumber,
     ceiling: AS_WEEKLY_CEILING_MIN,
     totalMinutes,
-    itemsIssued: drafts.length,
+    itemsIssued,
     recordsIssued,
   };
 }
