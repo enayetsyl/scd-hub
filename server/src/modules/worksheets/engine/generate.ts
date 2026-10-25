@@ -106,7 +106,7 @@ const partRange = (row: RowSpec, k: number): LetterRange | null => row.ranges?.[
 const toAscii = (d: string): string => d.replace(/[০-৯]/g, (x) => String("০১২৩৪৫৬৭৮৯".indexOf(x)));
 
 /** A number range the row's own wording names — "বাংলা অঙ্কে লেখ (৬১–৮০)", "(81–100)" — as the
- *  default when the teacher sets none (D-#846). */
+ *  default when the teacher sets none (D-#847). */
 function labelRange(row: RowSpec, full: readonly string[], axis: WorksheetAxis): [number, number] | null {
   if (!isNumberAxis(axis)) return null;
   const m = /\(\s*([০-৯0-9]+)\s*[–—-]\s*([০-৯0-9]+)\s*\)/.exec(row.label);
@@ -673,7 +673,7 @@ function buildRow(row: RowSpec, c: RowCtx): Built {
     case "MANUAL":
       return { section: { layout: "manual", lines: Math.max(2, Math.min(row.count, 8)) }, printed: null };
     default:
-      // The KG rules (D-#846): kg.ts, over the KG books' own words.
+      // The KG rules (D-#847): kg.ts, over the KG books' own words.
       if (isKgKind(row.kind)) {
         return buildKgRow(row, { rng: c.rng, subject: c.input.subject, scope: c.input.scope, usedWords: c.usedWords });
       }

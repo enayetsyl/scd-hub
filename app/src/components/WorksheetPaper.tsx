@@ -51,7 +51,7 @@ export interface WorksheetSection {
   choices?: Array<{ pictureId: string | null; options: string[]; answer: number }>;
   /** rows / pictures: the answer is a word — one wide box per item. */
   wide?: boolean;
-  /** KG prompt questions (D-#846): what is given, then the child's boxes. */
+  /** KG prompt questions (D-#847): what is given, then the child's boxes. */
   items?: PromptItem[];
   /** উপরে-নিচে যোগ/বিয়োগ. */
   sums?: Array<{ a: string; b: string; op: string; answer: string }>;
@@ -340,7 +340,7 @@ function Body({
         </View>
       );
     case "prompts":
-      // KG prompt questions (D-#846): one item a line — given, then the child's boxes.
+      // KG prompt questions (D-#847): one item a line — given, then the child's boxes.
       return (
         <View style={{ gap: 8 }}>
           {(s.items ?? []).map((it, k) => {

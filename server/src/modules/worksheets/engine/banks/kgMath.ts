@@ -1,5 +1,5 @@
 /**
- * KG Maths 2026 (D-#846) — read from the scans of the KG Math (Bangla) and Math (English)
+ * KG Maths 2026 (D-#847) — read from the scans of the KG Math (Bangla) and Math (English)
  * books and the 2025 KG final. The Bangla book prints number words only for 1–50 (pp. 5–9),
  * so no Bangla number word above 50 is generated. Its spellings: এগারো, বারো, ষোলো, উনিশ but
  * ঊনত্রিশ/ঊনচল্লিশ/ঊনপঞ্চাশ (long ঊ), বিয়াল্লিশ, ছেচল্লিশ.

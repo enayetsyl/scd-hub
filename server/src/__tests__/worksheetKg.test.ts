@@ -1,5 +1,5 @@
 /**
- * Worksheet KG round (D-#846) — DB-free. The syllabus rows below are the PUBLISHED prod KG rows,
+ * Worksheet KG round (D-#847–#849) — DB-free. The syllabus rows below are the PUBLISHED prod KG rows,
  * Annual 2026 (read 2026-10-25). Before this round 31 of these 37 rows printed as MANUAL blank
  * lines; now every one generates, over the KG books' own words (banks/*.ts).
  */

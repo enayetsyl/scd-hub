@@ -554,7 +554,7 @@ function drawBody(
     }
 
     case "prompts": {
-      // KG prompt questions (D-#846): what is given, then the child's boxes — one item a line.
+      // KG prompt questions (D-#847): what is given, then the child's boxes — one item a line.
       const h = ruled ? ruledHeight(ruling) : 30;
       const promptW = W * 0.26;
       const drawBoxes = (ln: PromptLine, x0: number, width: number, top: number): number => {

@@ -83,7 +83,7 @@ export interface PromptLine {
   wide?: boolean;
 }
 
-/** A KG prompt question (D-#846): what is given, then the child's boxes. */
+/** A KG prompt question (D-#847): what is given, then the child's boxes. */
 export interface PromptItem {
   /** What is given ("২২ =", "বিপরীত শব্দ: ভালো", a sentence with "____"); "" = none. */
   prompt: string;

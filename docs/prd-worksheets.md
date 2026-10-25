@@ -1,7 +1,7 @@
 # PRD — Worksheet generator (Nursery/KG papers in final-exam style)
 
-Decisions: D-#744 (engine), D-#745 (plan), D-#746 (picture bank), D-#747 (print + answer key), D-#802–#804 (Arabic).
-Status: WS-1 built (BAN/ENG/MATH, Nursery + KG). WS-2 live (আরবি, Nursery + KG, §2a): Nursery draws on রওযাতুল আতফাল ১, KG on রওযাতুল আতফাল ২ (D-#806, §5).
+Decisions: D-#744 (engine), D-#745 (plan), D-#746 (picture bank), D-#747 (print + answer key), D-#802–#806 (Arabic), D-#847–#849 (KG round).
+Status: WS-1 built (BAN/ENG/MATH, Nursery + KG; every KG row generates since D-#847, §2b). WS-2 live (আরবি, Nursery + KG, §2a): Nursery draws on রওযাতুল আতফাল ১, KG on রওযাতুল আতফাল ২ (D-#806, §5).
 
 ## 1. Why
 
@@ -84,6 +84,57 @@ subjects. The published 2026 rows (Nursery 6 rows = 50, KG 10 rows = 100) all au
   Arabic paper a picture may come back in a later question once the fresh ones run out — never
   twice in one question. Book 2 has 51 for the KG final's 40, so a KG paper does not repeat. Other
   subjects still never reuse a picture on a paper.
+
+## 2b. KG (D-#847–#849)
+
+Until 2026-10-25, 31 of the 37 published KG BAN/ENG/MATH rows fell back to MANUAL (blank lines).
+Teacher feedback (2026-10-25): KG maths needs boxes and real items — which numbers to write in
+words, the odd/even numbers, the sums. Every KG row now generates (`engine/kg.ts`), over the KG
+books' own words, read page by page from their scans into `engine/banks/` (KG Bangla, KG English,
+KG Math (B)/(E)), in the 2025 KG final's layouts:
+
+| Rows (2026 wording) | Kind | Printed as |
+|---|---|---|
+| বাংলা অঙ্কে লেখ (৬১–৮০) · Write in numbers (81–100) | WRITE_SEQUENCE | the range the wording names, a 2 × 10 grid |
+| কথায় লেখ (বাংলা) · Write in words (English) | NUMBER_WORDS | "২২ =" + a box; 21–50 (the Bangla book spells words only to ৫০); English "Twenty One" |
+| জোড় ও বিজোড় সংখ্যা আলাদা কর | ODD_EVEN | sets of six (three of each), a জোড় row and a বিজোড় row |
+| ছোট থেকে বড় ও বড় থেকে ছোট সাজাও | ORDER_NUMBERS | sets of eight in a climbing window, directions alternating |
+| উপরে-নিচে যোগ / বিয়োগ | VERTICAL_ADD / _SUB | a over b; no carrying (2-digit + 1-digit), no borrowing (1-digit) |
+| দাগ টেনে যোগ / বিয়োগ | LINE_ADD / _SUB | "৬ - ৩ = □" with room to draw sticks, within ১০ (the KG teacher should confirm the reading) |
+| দাগ টেনে যোগ/বিয়োগফল মিলকরণ | MATCH_SUMS | sums ↔ shuffled answers |
+| নামতা লেখ | TIMES_TABLE | one table of ২–৫, ten lines "□ × □ = □" |
+| ঘরে সংখ্যা লেখ — আগের, পরের ও মাঝের | NEIGHBOURS | three neighbours, one missing |
+| হারিয়ে যাওয়া স্বরবর্ণ ও ব্যঞ্জনবর্ণ · শূন্যস্থান পূরণ | FILL_MISSING | ক) স্বরবর্ণ / খ) ব্যঞ্জনবর্ণ |
+| বর্ণ দিয়ে ৩টি করে শব্দ · Write three words with the given letter | LETTER_WORDS | a letter + three boxes; the book's words are the key |
+| কার চিহ্ন দিয়ে ৩টি করে শব্দ | KAR_WORDS | "আ-কার" + three boxes |
+| এলোমেলো শব্দ সাজিয়ে লেখ · jumbled letters to make words | JUMBLED_WORD | the book's own jumbles first (Bangla letter units keep their কার) |
+| যুক্তবর্ণ ভেঙে লেখ ও ২টি করে শব্দ | CONJUNCT_BREAK | the book's six conjuncts: "ভেঙে লেখ" + two "শব্দ" |
+| বিপরীত শব্দ · Write the opposite | OPPOSITES | the book's pairs |
+| English / Bangla meaning | MEANING_TO_EN / _BN | the book's word pairs |
+| Fill in the blanks with a / an | ARTICLE_A_AN | "____ apple" |
+| বাক্য গঠন কর | MAKE_SENTENCE | a word + a line |
+| ৫টি করে নাম লেখ — ক (ফুল / ফল) ও খ (…) · Name five — set A (…) | NAME_FIVE | one category from each bracket, five boxes |
+| দিক / দিন / মাসের নাম · days, months | WRITE_LIST | the whole list, in the book's order (its week starts on Saturday) |
+| আমার পরিচয় · Myself | FRAMED_SENTENCES | the book's sentences with the personal part as a gap |
+
+- **Counts from the wording.** "— ০.৫ × ২০ = ১০" means twenty half-mark items (`labelItems`), used
+  only when it agrees with the row's published total.
+- **Numbers.** A KG paper's numbers run to ১০০ (the KG book's end); Nursery's to ৫০.
+- **Left out of the banks as unreadable or ambiguous:** a clipped ৌ word, the jumble "মজা", and
+  five English jumbles that unscramble two ways (era, roes, noes, stra, cra).
+- **Syllabus wording vs. numbers.** "Write three words with the given letter (6 letters)" is
+  published as 9 × 3, and "Myself — complete the six framed sentences" as 4 × 2; the paper follows
+  the published numbers (9 letters, 4 sentences).
+
+**Also from the same feedback:**
+- **Page breaks (D-#848).** A question taller than 180 pt no longer jumps whole to the next page
+  (which left half a page empty): it starts wherever its title and first line fit and runs on.
+- **স্বরবর্ণ and ব্যঞ্জনবর্ণ apart (D-#848).** Fill-the-gaps over the whole alphabet is two
+  sub-questions, ক) স্বরবর্ণ and খ) ব্যঞ্জনবর্ণ, each with its own range; the blanks are shared, the
+  consonants taking the odd one.
+- **Class worksheet and homework sheet (D-#849).** Two more paper kinds, `CLASSWORK` (ক্লাস
+  ওয়ার্কশিট) and `HOMEWORK` (বাড়ির কাজ): the assignment preset, their own title, and the matching
+  print purpose.
 
 ## 3. Roles (no new permission)
 

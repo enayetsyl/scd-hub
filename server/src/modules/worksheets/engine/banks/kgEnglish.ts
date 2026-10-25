@@ -1,5 +1,5 @@
 /**
- * KG English 2026 — the book's own words (D-#846), read page by page from the scan of
+ * KG English 2026 — the book's own words (D-#847), read page by page from the scan of
  * "KG - ENGLISH (2026)" (Bangla printed in SutonnyMJ, transcribed to Unicode). Book PDF pages:
  * letter words 9–21, meanings 30–53, jumbled words 58–60, opposites 61/64, a/an 27–29, categories
  * 67–92, months 105, days 106 (the book's week starts on Saturday), Myself 112.

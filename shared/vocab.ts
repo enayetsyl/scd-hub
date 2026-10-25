@@ -5456,7 +5456,7 @@ export function loadLevelFor(category: HrCategory | null | undefined, minutes: n
  *  ASSIGNMENT and CLASS_TEST take a preset subset of the same rows. */
 export const WORKSHEET_KINDS = ["ASSIGNMENT", "CLASSWORK", "HOMEWORK", "CLASS_TEST", "FINAL"] as const;
 export type WorksheetKind = (typeof WORKSHEET_KINDS)[number];
-/** CLASSWORK and HOMEWORK (D-#846, teacher ask 2026-10-25) take the assignment preset and
+/** CLASSWORK and HOMEWORK (D-#849, teacher ask 2026-10-25) take the assignment preset and
  *  differ only in their title and print purpose. */
 export const WORKSHEET_KIND_LABELS_BN: Record<WorksheetKind, string> = {
   ASSIGNMENT: "অ্যাসাইনমেন্ট",
@@ -5499,7 +5499,7 @@ export const WORKSHEET_ITEM_KINDS = [
   "MATCH_LETTER_WORD",
   "SPLIT_WORD",
   "JOIN_LETTERS",
-  // KG (D-#846, the 2026 KG BAN/ENG/MATH মানবন্টন)
+  // KG (D-#847, the 2026 KG BAN/ENG/MATH মানবন্টন)
   "NUMBER_WORDS",
   "ODD_EVEN",
   "ORDER_NUMBERS",

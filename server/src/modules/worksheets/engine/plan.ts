@@ -58,7 +58,7 @@ const ascii = (s: string): string => s.replace(/[০-৯]/g, (d) => String(BN_DI
 
 /**
  * "— ০.৫ × ২০ = ১০" in a row's wording (the 2026 KG মানবন্টন): twenty items of half a mark,
- * though the row's fields say 1 × 10 (D-#846). Used only when it agrees with the row's total.
+ * though the row's fields say 1 × 10 (D-#847). Used only when it agrees with the row's total.
  */
 export function labelItems(label: string, total: number): { count: number; marksEach: number } | null {
   const m = /([০-৯\d.]+)\s*[×x]\s*([০-৯\d]+)\s*=\s*([০-৯\d.]+)/.exec(label);
@@ -118,7 +118,7 @@ const PRINTABLE = (r: PlanRow): boolean =>
 /** The out-of-the-box presets until the Office saves its own (mockup defaults). */
 export function defaultPreset(kind: Exclude<WorksheetKind, "FINAL">, rows: PlanRow[]): PresetRow[] {
   const printable = rows.filter(PRINTABLE);
-  // A class worksheet and a homework sheet are assignment-sized (D-#846).
+  // A class worksheet and a homework sheet are assignment-sized (D-#849).
   if (kind === "ASSIGNMENT" || kind === "CLASSWORK" || kind === "HOMEWORK") {
     return printable.slice(0, 5).map((r) => ({ seq: r.seq, count: Math.min(r.count, 8) }));
   }

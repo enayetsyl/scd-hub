@@ -29,7 +29,7 @@ export function defaultAxis(subject: string, label = ""): WorksheetAxis | null {
 }
 
 /**
- * The 2026 KG BAN/ENG/MATH rows (D-#846). Each pattern is narrow enough that no Nursery or Arabic
+ * The 2026 KG BAN/ENG/MATH rows (D-#847). Each pattern is narrow enough that no Nursery or Arabic
  * row matches it (the published rows are pinned in the tests).
  */
 function kgRule(l: string, axis: WorksheetAxis | null): RowMapping | null {

@@ -1,5 +1,5 @@
 /**
- * KG Bangla 2026 — the book's own words (D-#846), read page by page from the scan of
+ * KG Bangla 2026 — the book's own words (D-#847), read page by page from the scan of
  * "KG (Bengali) 2026" (outlined text, so transcribed by eye). Book PDF pages: কার words 14–15,
  * letter words 17–34, jumbled words 36, যুক্তবর্ণ 38, opposites 39–40, categories 41–44, days 44,
  * months + directions 45, sentence words 46–47, আমার পরিচয় 52. Spellings are the book's

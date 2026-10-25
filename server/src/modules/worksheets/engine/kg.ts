@@ -1,5 +1,5 @@
 /**
- * KG rules (D-#846): the 2026 KG Bangla / English / Maths মানবন্টন rows that the Nursery-shaped
+ * KG rules (D-#847): the 2026 KG Bangla / English / Maths মানবন্টন rows that the Nursery-shaped
  * kinds cannot print. Each is one seeded rule over the book's own words (banks/*.ts, read from the
  * KG books) or over numbers, in the 2025 KG final's layouts. Pure, like generate.ts.
  */
