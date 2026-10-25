@@ -4896,6 +4896,11 @@ const STR_BN = {
   rsDeclined: "অনুরোধ নাকচ করা হয়েছে",
   rsMovedNote: "অন্য পরিবারটিকে নতুন সময়ের জন্য অ্যাপে আবার জিজ্ঞাসা করা হবে।",
   rsReasonPrefix: "কারণ",
+  rsOutcomeApproved: "আপনার সময় পরিবর্তনের অনুরোধ অনুমোদিত হয়েছে।",
+  rsOutcomeDeclined: "দুঃখিত, অনুরোধটি রাখা সম্ভব হয়নি। আপনার সময় আগের মতোই থাকছে।",
+  rsNewTime: "নতুন সময়",
+  rsNote: "বিদ্যালয়ের মন্তব্য",
+  rsSeen: "ঠিক আছে, দেখেছি",
   // Guardian rider
   gpComments: "শিক্ষকের মন্তব্য",
   gpNoComments: "এখনো কোনো মন্তব্য পাঠানো হয়নি।",
@@ -10444,6 +10449,11 @@ const STR_EN: StrTable = {
   rsDeclined: "Request declined",
   rsMovedNote: "The other family will be asked again in the app about its new time.",
   rsReasonPrefix: "Reason",
+  rsOutcomeApproved: "Your time-change request has been approved.",
+  rsOutcomeDeclined: "Sorry, the request could not be met. Your time stays the same.",
+  rsNewTime: "New time",
+  rsNote: "Note from the school",
+  rsSeen: "OK, I have seen it",
   // Guardian rider
   gpComments: "Teacher comments",
   gpNoComments: "No comments delivered yet.",

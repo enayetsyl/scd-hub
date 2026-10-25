@@ -28,10 +28,12 @@ export function GuardianMeetingCard(): React.ReactElement | null {
         const st = rsvpStatus(a.response);
         return (
           <Card key={a.slotId}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space(2) }}>
-              <Body style={{ fontWeight: "700", flexShrink: 1 }}>
-                {STR.rsTitle} — {a.instanceLabel}
-              </Body>
+            <Body style={{ fontWeight: "700" }}>
+              {STR.rsTitle} — {a.instanceLabel}
+            </Body>
+            {/* Its own line: the longer states ("not possible — the time stays") do not fit
+                beside the title at phone width. */}
+            <View style={{ flexDirection: "row", marginTop: space(1) }}>
               <Badge text={st.text} tone={st.tone} />
             </View>
             <Muted style={{ marginTop: space(1) }}>

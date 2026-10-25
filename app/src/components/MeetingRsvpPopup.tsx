@@ -15,6 +15,10 @@
  * meeting's other times — every slot is taken, so it is shown as "not confirmed, we
  * will try"); can't come (optional reason).
  *
+ * Once every slot is answered, the same popup tells the family the Principal's ruling on
+ * a change request (approved → new time / declined → time stays) and stays until "seen"
+ * (D-#844). Owner ruling: pop-ups, never notifications — most guardians do not read those.
+ *
  * Fail-silent: any query error renders nothing — a guardian who came to check homework
  * must never be locked out by a broken meeting read. Mounted beside AnnouncementPopup.
  */
@@ -22,7 +26,12 @@ import React, { useEffect, useState } from "react";
 import { Modal, Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useMutation, useQuery } from "urql";
-import { MY_MEETING_SLOTS_QUERY, RESPOND_TO_MEETING_SLOT, type GuardianMeetingAskT } from "../graphql/comments";
+import {
+  ACKNOWLEDGE_MEETING_CHANGE,
+  MY_MEETING_SLOTS_QUERY,
+  RESPOND_TO_MEETING_SLOT,
+  type GuardianMeetingAskT,
+} from "../graphql/comments";
 import { Button, Field, Notice } from "./ui";
 import { STR, bnNum, fullDateLabel, minutesToHHMM } from "../lib/labels";
 import { friendlyError } from "../lib/errors";
@@ -38,8 +47,15 @@ export function MeetingRsvpPopup(): React.ReactElement | null {
   const [result, refetch] = useQuery({ query: MY_MEETING_SLOTS_QUERY, pause: !isGuardian });
   const [respondState, respond] = useMutation(RESPOND_TO_MEETING_SLOT);
 
+  const [ackState, acknowledge] = useMutation(ACKNOWLEDGE_MEETING_CHANGE);
+
   const asks = result.data?.myMeetingSlots ?? [];
   const pending: GuardianMeetingAskT | null = asks.find((a) => a.response == null) ?? null;
+  // D-#844: the ruling on a change request is told by this same blocking popup (never a
+  // notification) — after every unanswered slot has been answered.
+  const outcome: GuardianMeetingAskT | null = pending
+    ? null
+    : (asks.find((a) => a.response?.reviewOutcome && !a.response.reviewSeenAt) ?? null);
 
   const [mode, setMode] = useState<Mode>("choose");
   const [picked, setPicked] = useState<string | null>(null);
@@ -60,8 +76,18 @@ export function MeetingRsvpPopup(): React.ReactElement | null {
   const styles = useStyles();
   const insets = useSafeAreaInsets();
 
-  const shown = sent ?? pending;
+  const shown = sent ?? pending ?? outcome;
   if (!isGuardian || result.error || !shown) return null;
+  const showingOutcome = !sent && !pending && !!outcome;
+  const approved = showingOutcome && outcome?.response?.reviewOutcome === "APPROVED";
+
+  async function markSeen(): Promise<void> {
+    if (!outcome) return;
+    setError(null);
+    const res = await acknowledge({ slotId: outcome.slotId });
+    if (res.error) setError(friendlyError(res.error));
+    refetch({ requestPolicy: "network-only" });
+  }
 
   async function send(choice: "CONFIRMED" | "CHANGE_REQUESTED" | "CANT_COME"): Promise<void> {
     if (!pending) return;
@@ -100,14 +126,27 @@ export function MeetingRsvpPopup(): React.ReactElement | null {
               {STR.rsDate}: {fullDateLabel(shown.meetingDate.slice(0, 10))}
             </Text>
             <Text style={styles.time}>
-              {STR.rsYourTime}: {timeText}
+              {approved ? STR.rsNewTime : STR.rsYourTime}: {timeText}
             </Text>
             {shown.childNames.length > 0 ? (
               <Text style={styles.line}>{shown.childNames.join(", ")}</Text>
             ) : null}
-            {shown.rescheduledAt && !sent ? <Notice tone="warn" message={STR.rsRescheduled} /> : null}
+            {shown.rescheduledAt && pending && !sent ? <Notice tone="warn" message={STR.rsRescheduled} /> : null}
 
-            {sent ? (
+            {showingOutcome && outcome ? (
+              <View style={styles.block}>
+                <Notice
+                  tone={approved ? "ok" : "warn"}
+                  message={approved ? STR.rsOutcomeApproved : STR.rsOutcomeDeclined}
+                />
+                {outcome.response?.reviewNote ? (
+                  <Text style={styles.line}>
+                    {STR.rsNote}: {outcome.response.reviewNote}
+                  </Text>
+                ) : null}
+                <Button title={STR.rsSeen} onPress={() => void markSeen()} loading={ackState.fetching} />
+              </View>
+            ) : sent ? (
               <View style={styles.block}>
                 <Notice tone="info" message={STR.rsNotConfirmed} />
                 <Text style={styles.line}>

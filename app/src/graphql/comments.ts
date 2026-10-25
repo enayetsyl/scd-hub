@@ -272,9 +272,11 @@ export interface MeetingSlotResponseT {
   reviewNote: string | null;
   reviewFromSlotTime: number | null;
   reviewedAt: string | null;
+  /** The family acknowledged the outcome pop-up (D-#844); null = still to show. */
+  reviewSeenAt: string | null;
 }
 
-const MEETING_SLOT_RESPONSE_FIELDS = `choice preferredSlotTime reason respondedAt reviewOutcome reviewNote reviewFromSlotTime reviewedAt`;
+const MEETING_SLOT_RESPONSE_FIELDS = `choice preferredSlotTime reason respondedAt reviewOutcome reviewNote reviewFromSlotTime reviewedAt reviewSeenAt`;
 
 const PARENT_MEETING_SLOT_FIELDS = `id meetingId familyKey studentIds classLabels studentNames order slotTime onCall dispatchedAt attended attendanceRemark response { ${MEETING_SLOT_RESPONSE_FIELDS} } rescheduledAt createdAt updatedAt`;
 
@@ -311,6 +313,15 @@ export const RESPOND_TO_MEETING_SLOT = gql<
     respondToMeetingSlot(slotId: $slotId, choice: $choice, preferredSlotId: $preferredSlotId, reason: $reason) {
       ${GUARDIAN_MEETING_ASK_FIELDS}
     }
+  }
+`;
+
+export const ACKNOWLEDGE_MEETING_CHANGE = gql<
+  { acknowledgeMeetingChange: GuardianMeetingAskT },
+  { slotId: string }
+>`
+  mutation AcknowledgeMeetingChange($slotId: String!) {
+    acknowledgeMeetingChange(slotId: $slotId) { ${GUARDIAN_MEETING_ASK_FIELDS} }
   }
 `;
 
