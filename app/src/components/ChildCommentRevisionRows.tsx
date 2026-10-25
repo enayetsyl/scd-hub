@@ -21,6 +21,7 @@ import {
   commentTypeLabel,
   commentSentimentLabel,
   revCategoryLabel,
+  revStatusLabel,
   isoDateLabel,
 } from "../lib/labels";
 import { space } from "../theme/tokens";
@@ -79,9 +80,9 @@ export function ChildRevisionRows({ rows }: { rows: GuardianRevisionEntryT[] }):
             <Badge text={e.present ? STR.revPresent : STR.revAbsent} tone={e.present ? "brand" : "muted"} />
           </View>
           {e.present
-            ? e.juzRecords.map((r, i) => (
+            ? e.portions.map((r, i) => (
                 <Muted key={i} style={{ marginTop: space(1) }}>
-                  {revCategoryLabel(r.category)} · {STR.revJuz} {bnNum(r.juz)} · {bnNum(r.amountJuz)} · {STR.revTanbih}{" "}
+                  {revCategoryLabel(r.category)} · {r.rangeBn ?? "—"} · {revStatusLabel(r.status)} · {STR.revTanbih}{" "}
                   {bnNum(r.tanbih)} · {STR.revFath} {bnNum(r.fath)} · {STR.revMistakes}{" "}
                   {bnNum(r.mistakes.harf + r.mistakes.ghunnah + r.mistakes.madd + r.mistakes.other)}
                 </Muted>

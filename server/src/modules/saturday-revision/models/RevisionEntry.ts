@@ -1,5 +1,6 @@
 import { Schema, model, Document, Types } from "mongoose";
-import type { RevisionCategory, RevisionMistakeCategory } from "@scd/shared";
+import { REVISION_CATEGORIES, REVISION_PORTION_STATUSES } from "@scd/shared";
+import type { RevisionCategory, RevisionPortionStatus } from "@scd/shared";
 
 /**
  * One Saturday Qur'an-Hifz revision entry per (student × Saturday) (SR-1, prd-sr1
@@ -8,33 +9,37 @@ import type { RevisionCategory, RevisionMistakeCategory } from "@scd/shared";
  * `QURAN_ONLY` Saturday (the D-#50 one-calendar truth); the student must be an active
  * `SubjectGroupMembership` of the group (validated in the service, never trusted here).
  *
- * The per-juz detail lives in the embedded `juzRecords` list — each carries the
- * category / amount / تنبিه/فتح / structured tajweed-mistake counts for ONE juz, so
- * every effort and mistake is attributed to a juz number (the per-juz attribution the
- * SR-3 weakness analytics aggregate). A 1.5-juz Manzil over juz 1–2 is TWO records
- * (juz 1 @ 0.5, juz 2 @ 1.0), each with its own counts.
+ * The detail lives in the embedded `portions` list (SR-5, D-#833): each is what the
+ * teacher heard — a category, a surah:ayah range in mushaf order, a status and the
+ * তানবীহ/ফাতহ + tajweed-mistake counts. No juz number or amount is stored; the SR-3
+ * analytics derive both from the range (`@scd/shared` quran helpers, D-#837). Several
+ * portions per category are allowed ("২৬ পারা + বাকারা ১–৭৬"); a NOT_DONE portion may
+ * omit the whole range.
  *
  * Lifecycle (D-#242): the recording teacher authors it; editable until delivered
  * (SR-2 stamps `deliveredAt`), then immutable — a correction is a pre-delivery edit
- * or the next Saturday's record (the CM-1 posture). Permanent — never deleted (the
- * per-juz history feeds SR-3). Identity-plane (names a studentId); no schoolId
- * (single-school, D-#145); no corpus path (ADR-005).
+ * or the next Saturday's record (the CM-1 posture). Identity-plane (names a
+ * studentId); no schoolId (single-school, D-#145); no corpus path (ADR-005).
  */
 
-export interface IJuzMistakes {
+export interface IPortionMistakes {
   harf: number;
   ghunnah: number;
   madd: number;
   other: number;
 }
 
-export interface IJuzRecord {
-  juz: number;
+export interface IRevisionPortion {
   category: RevisionCategory;
-  amountJuz: number;
+  status: RevisionPortionStatus;
+  /** The range — all four set, or (NOT_DONE only) all four absent. */
+  fromSurah?: number;
+  fromAyah?: number;
+  toSurah?: number;
+  toAyah?: number;
   tanbih: number;
   fath: number;
-  mistakes: IJuzMistakes;
+  mistakes: IPortionMistakes;
   note?: string;
 }
 
@@ -45,8 +50,8 @@ export interface IRevisionEntry extends Document {
   /** A `QURAN_ONLY` Saturday (validated server-side via the D-#50 resolver). */
   date: Date;
   present: boolean;
-  /** Empty when absent; one record per juz heard otherwise. */
-  juzRecords: IJuzRecord[];
+  /** Empty when absent. */
+  portions: IRevisionPortion[];
   teacherComment?: string;
   /** The recording teacher (the author — D-#242). */
   teacherUserId: Types.ObjectId;
@@ -56,7 +61,7 @@ export interface IRevisionEntry extends Document {
   updatedAt: Date;
 }
 
-const JuzMistakesSchema = new Schema<IJuzMistakes>(
+const PortionMistakesSchema = new Schema<IPortionMistakes>(
   {
     harf: { type: Number, required: true, min: 0, default: 0 },
     ghunnah: { type: Number, required: true, min: 0, default: 0 },
@@ -66,14 +71,17 @@ const JuzMistakesSchema = new Schema<IJuzMistakes>(
   { _id: false },
 );
 
-const JuzRecordSchema = new Schema<IJuzRecord>(
+const RevisionPortionSchema = new Schema<IRevisionPortion>(
   {
-    juz: { type: Number, required: true, min: 1, max: 30 },
-    category: { type: String, enum: ["SABAQ", "SABQI", "MANZIL"], required: true },
-    amountJuz: { type: Number, required: true, min: 0 },
+    category: { type: String, enum: REVISION_CATEGORIES as unknown as string[], required: true },
+    status: { type: String, enum: REVISION_PORTION_STATUSES as unknown as string[], required: true },
+    fromSurah: { type: Number, min: 1, max: 114 },
+    fromAyah: { type: Number, min: 1 },
+    toSurah: { type: Number, min: 1, max: 114 },
+    toAyah: { type: Number, min: 1 },
     tanbih: { type: Number, required: true, min: 0, default: 0 },
     fath: { type: Number, required: true, min: 0, default: 0 },
-    mistakes: { type: JuzMistakesSchema, required: true, default: () => ({ harf: 0, ghunnah: 0, madd: 0, other: 0 }) },
+    mistakes: { type: PortionMistakesSchema, required: true, default: () => ({ harf: 0, ghunnah: 0, madd: 0, other: 0 }) },
     note: { type: String, trim: true },
   },
   { _id: false },
@@ -85,7 +93,7 @@ const RevisionEntrySchema = new Schema<IRevisionEntry>(
     studentId: { type: Schema.Types.ObjectId, ref: "Student", required: true },
     date: { type: Date, required: true },
     present: { type: Boolean, required: true },
-    juzRecords: { type: [JuzRecordSchema], default: [] },
+    portions: { type: [RevisionPortionSchema], default: [] },
     teacherComment: { type: String, trim: true },
     teacherUserId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     deliveredAt: { type: Date },

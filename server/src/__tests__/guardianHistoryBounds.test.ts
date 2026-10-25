@@ -101,7 +101,7 @@ beforeAll(async () => {
       groupId: new Types.ObjectId(),
       date: new Date(Date.UTC(2026, 8, 5 + i * 7)),
       present: true,
-      juzRecords: [],
+      portions: [],
       teacherUserId: new Types.ObjectId(),
       deliveredAt: day("2026-10-02"),
     });

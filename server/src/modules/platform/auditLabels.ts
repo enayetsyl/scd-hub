@@ -295,6 +295,7 @@ export const AUDIT_KIND_LABELS: Record<AuditEventKind, AuditKindLabel> = {
 
   // --- Saturday revision ----------------------------------------------------
   SR_REVISION_RECORDED: { bn: "শনিবারের রিভিশন লিখেছেন", en: "Recorded a Saturday revision", group: "REVISION" },
+  SR_REVISION_RESET: { bn: "পুরনো রিভিশনের সব তথ্য মুছেছেন", en: "Reset all Saturday revision entries", group: "REVISION" },
   SR_ENTRY_DELIVERED: { bn: "রিভিশনের খবর পরিবারে পাঠিয়েছেন", en: "Delivered a revision entry", group: "REVISION" },
   SR_ABSENCE_ESCALATED: { bn: "টানা অনুপস্থিতি জানিয়েছেন", en: "Escalated a revision absence", group: "REVISION" },
   SR_ESCALATION_CONFIG_SET: { bn: "রিভিশনের অনুপস্থিতির সীমা বদলেছেন", en: "Set the revision escalation threshold", group: "REVISION" },
