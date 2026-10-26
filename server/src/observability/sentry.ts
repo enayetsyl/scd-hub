@@ -127,6 +127,9 @@ export const EXPECTED_ERROR_NAMES: ReadonlySet<string> = new Set([
   "ParentMeetingError",
   "PayrollError",
   "PerformanceError",
+  // Pop-up notices (D-#852): an audience that matches nobody, an auto-close combined with
+  // a lock, an answer that may not be changed — the sender's input, never a fault.
+  "PopupNoticeError",
   // Registered 2026-07-29 alongside the constructor.name fix: pure input validation
   // ("A SET request needs a setId", "One strength is required"), never a fault.
   "PrintRequestError",
