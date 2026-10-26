@@ -189,7 +189,8 @@ export function countOutstanding(
 
 const dayKey = (d: Date | undefined | null): string => (d ? new Date(d).toISOString().slice(0, 10) : "—");
 
-export async function monthlyPendingWork(periodKey: string): Promise<MonthlyPendingWork> {
+/** `now` decides awaiting vs not-submitted (due date passed); tests pin it, callers take the clock. */
+export async function monthlyPendingWork(periodKey: string, now: Date = new Date()): Promise<MonthlyPendingWork> {
   const { fromKey, toKey } = monthWindowOf(periodKey);
   const start = new Date(`${fromKey}T00:00:00.000Z`);
   const end = new Date(`${toKey}T23:59:59.999Z`);
@@ -224,7 +225,6 @@ export async function monthlyPendingWork(periodKey: string): Promise<MonthlyPend
     const list = items;
     if (list.length === 0) continue;
 
-    const now = new Date();
     const records = (await (RecordModel as typeof HomeworkStudentRecord)
       .find({ [fk]: { $in: list.map((i) => i._id) } })
       .select(`${fk} sectionId state dueDate`)

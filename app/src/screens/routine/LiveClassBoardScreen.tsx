@@ -36,6 +36,7 @@ import { useColors, type ThemeColors } from "../../theme";
 import { space } from "../../theme/tokens";
 import { usePullRefresh } from "../../lib/useRefresh";
 import { dateKey } from "../../lib/dates";
+import { hasRoute } from "../../lib/hasRoute";
 
 const GROUP_W = 150;
 const PERIOD_W = 132;
@@ -142,6 +143,7 @@ export default function LiveClassBoardScreen({ navigation }: Props): React.React
                       key={c.slotId}
                       accessibilityRole="button"
                       accessibilityLabel={`${STR.lcbAssignCover}: ${c.groupName ?? ""}`}
+                      disabled={!hasRoute(navigation, "CoverManage")}
                       onPress={() =>
                         navigation.navigate("CoverManage", {
                           groupType: c.groupType,

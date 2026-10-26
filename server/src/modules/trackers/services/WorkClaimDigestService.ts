@@ -101,6 +101,9 @@ export async function canWatchClaims(
   action: "work_claim:view_all" | "work_claim:remind" = "work_claim:view_all",
 ): Promise<boolean> {
   if (!ctx.auth) return false;
+  // D-#861: the Reports-hub switch reads the queue outright (no digest designation needed);
+  // reminding still takes work_claim:remind on the designation/waiver below.
+  if (action === "work_claim:view_all" && callerHasPermission(ctx.auth, "reports:guardian_claims")) return true;
   if (!callerHasPermission(ctx.auth, action)) return false;
   if (callerHasPermission(ctx.auth, "admin_dashboard:view")) return true;
   return isDigestRecipient(ctx.auth.userId);

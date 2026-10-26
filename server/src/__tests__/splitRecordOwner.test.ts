@@ -401,7 +401,9 @@ describe("work board HOMEWORK_CHECK — one card per (item, record section)", ()
 
 describe("monthly pending work — split by record section", () => {
   test("a pre-split item is two rows, each its half's teacher, labelled with that half", async () => {
-    const pw = await monthlyPendingWork("2026-10");
+    // Pinned before the 25 Oct due date: the "awaiting" count read the real clock and flipped to
+    // "not submitted" once the calendar passed it (failed from 2026-10-26).
+    const pw = await monthlyPendingWork("2026-10", day(23));
     const hw = pw.rows.filter((r) => r.kind === "HOMEWORK" && r.ref.startsWith("HW-C3"));
     expect(hw.map((r) => [r.sectionId, r.teacherId, r.toCheck]).sort()).toEqual(
       [

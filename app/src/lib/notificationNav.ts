@@ -252,16 +252,17 @@ export function notificationTarget(
     case "WORK_CLAIM_FILED":
       return { tab: "HomeTab", screen: "Today" };
     // The 10:30 digest (D-#710) — Office and Principal land on the queue it counts
-    // (which OFFICE reaches without any tracker permission). A TEACHER the Principal
-    // added to the digest has no Admin tab, so the same screen sits in their Home stack.
+    // (which OFFICE reaches without any tracker permission), in the Reports tab since
+    // D-#861. A TEACHER the Principal added to the digest may have no Reports tab, so
+    // the same screen sits in their Home stack.
     case "WORK_CLAIM_ESCALATED":
       return role === "PRINCIPAL" || role === "OFFICE"
-        ? { tab: "AdminTab", screen: "WorkClaimQueue" }
+        ? { tab: "ReportsTab", screen: "WorkClaimQueue" }
         : { tab: "HomeTab", screen: "WorkClaimQueue" };
     // Guardian-addressed: the answer to what they filed. The tracker decides the
     // list — without it a homework answer would open the assignment tab.
     case "WORK_CLAIM_RESOLVED":
-      if (!guardian) return { tab: "AdminTab", screen: "WorkClaimQueue" };
+      if (!guardian) return { tab: "ReportsTab", screen: "WorkClaimQueue" };
       return refs?.workClaimTracker === "ASSIGNMENT"
         ? { tab: "GuardianAssignmentsTab", screen: "ChildAssignments" }
         : { tab: "GuardianHomeworkTab", screen: "ChildHomework" };
