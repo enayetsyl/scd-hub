@@ -74,6 +74,10 @@ export interface PopupAudienceInput {
   guardian?: { classLevels?: number[] | null; sectionIds?: string[] | null } | null;
   userIds?: string[] | null;
   studentIds?: string[] | null;
+  /** The sender's ✕ on the name list: people to leave out whatever matched them. */
+  excludeUserIds?: string[] | null;
+  excludeGuardianIds?: string[] | null;
+  excludeStudentIds?: string[] | null;
 }
 
 function oid(id: string, what: string): Types.ObjectId {
@@ -121,7 +125,24 @@ export function normalizeAudience(input: PopupAudienceInput | null | undefined):
     guardian,
     userIds: uniq(a.userIds ?? []).map((u) => oid(u, "কর্মী")),
     studentIds: uniq(a.studentIds ?? []).map((s) => oid(s, "শিক্ষার্থী")),
+    excludeUserIds: uniq(a.excludeUserIds ?? []).map((u) => oid(u, "কর্মী")),
+    excludeGuardianIds: uniq(a.excludeGuardianIds ?? []).map((g) => oid(g, "অভিভাবক")),
+    excludeStudentIds: uniq(a.excludeStudentIds ?? []).map((s) => oid(s, "শিক্ষার্থী")),
   };
+}
+
+/** How many people the sender took out with ✕. */
+export function excludedCount(a: PopupAudience): number {
+  return (a.excludeUserIds?.length ?? 0) + (a.excludeGuardianIds?.length ?? 0) + (a.excludeStudentIds?.length ?? 0);
+}
+
+/** "USER:<id>"-style keys of everyone taken out — what resolveAudience drops. */
+function excludedKeys(a: PopupAudience): Set<string> {
+  return new Set([
+    ...(a.excludeUserIds ?? []).map((i) => `USER:${i.toString()}`),
+    ...(a.excludeGuardianIds ?? []).map((i) => `GUARDIAN:${i.toString()}`),
+    ...(a.excludeStudentIds ?? []).map((i) => `STUDENT:${i.toString()}`),
+  ]);
 }
 
 /** Does the audience name anyone at all (a filter or a picked person)? */
@@ -153,6 +174,8 @@ export interface ResolvedAudience {
   unreachableCount: number;
   /** Staff matched by every other row of a gender filter but with no gender on file. */
   staffMissingGender: number;
+  /** Matched, but taken out by the sender's ✕ — listed so the composer can undo it. */
+  excluded: ResolvedRecipient[];
 }
 
 interface StaffInfo {
@@ -389,15 +412,21 @@ async function resolveGuardians(a: PopupAudience): Promise<ResolvedRecipient[]> 
 
 /** Everyone the audience reaches at `now`, deduplicated per person. */
 export async function resolveAudience(a: PopupAudience, now = new Date()): Promise<ResolvedAudience> {
-  const [staff, guardians] = await Promise.all([resolveStaff(a, now), resolveGuardians(a)]);
-  const recipients = [...staff.rows, ...guardians];
+  const [staffAll, guardiansAll] = await Promise.all([resolveStaff(a, now), resolveGuardians(a)]);
+  // The sender's ✕ wins over every filter and pick.
+  const out = excludedKeys(a);
+  const keep = (r: ResolvedRecipient) => !out.has(`${r.kind}:${r.id.toString()}`);
+  const staff = staffAll.rows.filter(keep);
+  const guardians = guardiansAll.filter(keep);
+  const recipients = [...staff, ...guardians];
   return {
     recipients,
-    staffCount: staff.rows.length,
+    staffCount: staff.length,
     // Families: guardians, plus children with no guardian row (each one family).
     guardianCount: guardians.length,
     unreachableCount: recipients.filter((r) => !r.reachable).length,
-    staffMissingGender: staff.missingGender,
+    staffMissingGender: staffAll.missingGender,
+    excluded: [...staffAll.rows, ...guardiansAll].filter((r) => !keep(r)),
   };
 }
 
@@ -435,7 +464,9 @@ export async function describeAudience(a: PopupAudience): Promise<string> {
   }
   const picked = a.userIds.length + a.studentIds.length;
   if (picked) parts.push(`${bn(picked)} জন বাছাই করা`);
-  return parts.join(" + ") || "কেউ নেই";
+  const out = excludedCount(a);
+  const text = parts.join(" + ") || "কেউ নেই";
+  return out ? `${text} − ${bn(out)} জন বাদ` : text;
 }
 
 export interface AudiencePreviewPerson {
@@ -455,18 +486,22 @@ export interface AudiencePreview {
   staffMissingGender: number;
   summary: string;
   people: Page<AudiencePreviewPerson>;
+  /** Everyone the sender took out with ✕ (bounded by what they clicked), for undo. */
+  excluded: AudiencePreviewPerson[];
 }
+
+const previewPerson = (x: ResolvedRecipient): AudiencePreviewPerson => ({
+  kind: x.kind,
+  id: x.id.toString(),
+  name: x.vars.name,
+  detail: x.kind === "USER" ? x.vars.group : [x.vars.childNames.join(", "), x.vars.classLabels.join(", ")].filter(Boolean).join(" · "),
+  reachable: x.reachable,
+});
 
 /** The composer's live count + name list (paged). */
 export async function previewAudience(a: PopupAudience, args: PageArgs = {}, now = new Date()): Promise<AudiencePreview> {
   const r = await resolveAudience(a, now);
-  const people: AudiencePreviewPerson[] = r.recipients.map((x) => ({
-    kind: x.kind,
-    id: x.id.toString(),
-    name: x.vars.name,
-    detail: x.kind === "USER" ? x.vars.group : [x.vars.childNames.join(", "), x.vars.classLabels.join(", ")].filter(Boolean).join(" · "),
-    reachable: x.reachable,
-  }));
+  const people = r.recipients.map(previewPerson);
   return {
     total: r.recipients.length,
     staffCount: r.staffCount,
@@ -476,6 +511,7 @@ export async function previewAudience(a: PopupAudience, args: PageArgs = {}, now
     staffMissingGender: r.staffMissingGender,
     summary: await describeAudience(a),
     people: pageOf(people, args),
+    excluded: r.excluded.map(previewPerson),
   };
 }
 

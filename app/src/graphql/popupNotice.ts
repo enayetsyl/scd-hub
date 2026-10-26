@@ -120,6 +120,9 @@ export interface PopupAudienceT {
   guardian: { classLevels: number[]; sectionIds: string[] } | null;
   userIds: string[];
   studentIds: string[];
+  excludeUserIds: string[];
+  excludeGuardianIds: string[];
+  excludeStudentIds: string[];
 }
 
 export interface PopupNoticeT {
@@ -154,7 +157,7 @@ export interface PopupNoticeT {
   updatedAt: string;
 }
 
-const AUDIENCE = `audience { staff { roles employment genders classLevels subjects classTeachersOnly } guardian { classLevels sectionIds } userIds studentIds }`;
+const AUDIENCE = `audience { staff { roles employment genders classLevels subjects classTeachersOnly } guardian { classLevels sectionIds } userIds studentIds excludeUserIds excludeGuardianIds excludeStudentIds }`;
 const NOTICE = `id titleBn bodyBn titleEn bodyEn tone attachmentUrl ${AUDIENCE} audienceListId audienceSummary ${RULES} ${ACTIONS} startsAt endsOn repeat status displayStatus version recipientCount unreachableCount seenCount doneCount actedCount publishedAt createdByName publishedByName createdAt updatedAt`;
 
 export const POPUP_NOTICES_PAGE = gql<{ popupNoticesPage: PageT<PopupNoticeT> }, { page?: number; pageSize?: number; status?: string | null }>`
@@ -185,6 +188,10 @@ export interface PopupAudienceInputT {
   guardian?: { classLevels?: number[]; sectionIds?: string[] } | null;
   userIds?: string[];
   studentIds?: string[];
+  /** The sender's ✕ on the name list. */
+  excludeUserIds?: string[];
+  excludeGuardianIds?: string[];
+  excludeStudentIds?: string[];
 }
 
 export interface PopupNoticeInputT {
@@ -270,6 +277,8 @@ export interface PopupAudiencePreviewT {
   staffMissingGender: number;
   summary: string;
   people: PageT<{ kind: string; id: string; name: string; detail: string; reachable: boolean }>;
+  /** People taken out with ✕ — for undo. */
+  excluded: Array<{ kind: string; id: string; name: string; detail: string; reachable: boolean }>;
 }
 
 export const POPUP_AUDIENCE_PREVIEW = gql<
@@ -280,6 +289,7 @@ export const POPUP_AUDIENCE_PREVIEW = gql<
     popupAudiencePreview(audience: $audience, page: $page, pageSize: $pageSize) {
       total staffCount guardianCount reachableCount unreachableCount staffMissingGender summary
       people { rows { kind id name detail reachable } total page pageSize }
+      excluded { kind id name detail reachable }
     }
   }
 `;
