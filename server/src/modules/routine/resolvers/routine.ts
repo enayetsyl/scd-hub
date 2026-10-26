@@ -18,6 +18,7 @@ import {
 import { Room, type IRoom } from "../models/Room";
 import { SubjectGroup, type ISubjectGroup } from "../models/SubjectGroup";
 import { SubjectGroupMembership } from "../models/SubjectGroupMembership";
+import { copyRetiredGroupAttendance, recordGroupDeparture } from "../services/GroupRetireAttendanceService";
 import { Student } from "../../foundation/models/Student";
 import { PeriodGrid, type IPeriodGrid, type IGridPeriod } from "../models/PeriodGrid";
 import { ScheduleWindow, type IScheduleWindow } from "../models/ScheduleWindow";
@@ -389,7 +390,7 @@ builder.mutationField("setSubjectGroupActive", (t) =>
       groupId: t.arg.string({ required: true }),
       active: t.arg.boolean({ required: true }),
     },
-    resolve: async (_r, args) => {
+    resolve: async (_r, args, ctx) => {
       const group = await SubjectGroup.findById(args.groupId);
       if (!group) throw new Error("গ্রুপ পাওয়া যায়নি");
       if (!args.active) {
@@ -399,6 +400,10 @@ builder.mutationField("setSubjectGroupActive", (t) =>
             `এই গ্রুপে এখনও ${memberCount} জন শিক্ষার্থী আছে — আগে তাদের নতুন গ্রুপে সরান, তারপর বন্ধ করুন`,
           );
         }
+        // D-#865: before the group goes, carry its recorded days to the groups its
+        // children moved to — otherwise their attendance history loses those days.
+        // Runs first so a failure leaves the group active and the retire can be retried.
+        await copyRetiredGroupAttendance(args.groupId, ctx.auth?.userId ?? null);
       }
       group.active = args.active;
       await group.save();
@@ -458,6 +463,9 @@ builder.mutationField("removeGroupMember", (t) =>
       studentId: t.arg.string({ required: true }),
     },
     resolve: async (_r, args) => {
+      // D-#865: memberships keep no history — note where the child came from so a
+      // later retire of this group can carry its attendance days to the child's new group.
+      await recordGroupDeparture(args.groupId, args.studentId);
       await SubjectGroupMembership.deleteOne({ groupId: args.groupId, studentId: args.studentId });
       return true;
     },
