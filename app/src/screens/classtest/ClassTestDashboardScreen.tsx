@@ -55,6 +55,7 @@ import type { CtScriptStage } from "@scd/shared";
 import { friendlyError } from "../../lib/errors";
 import { useSectionNames } from "../../lib/useSectionNames";
 import { useAuth } from "../../auth/AuthContext";
+import { hasRoute } from "../../lib/hasRoute";
 import { space } from "../../theme/tokens";
 import type { ClassTestStackParamList } from "../../navigation/types";
 
@@ -120,6 +121,10 @@ export default function ClassTestDashboardScreen(): React.ReactElement {
   const canFile = can("archive:approve");
   // CS-2: the scan & tag screen is class_test_script:scan.
   const canScan = can("class_test_script:scan");
+  // D-#861: the Reports-hub copy may be opened on reports:class_test_dashboard alone.
+  const canChase = can("class_test:remind");
+  const canLocate = can("archive:view");
+  const canOpenResults = hasRoute(nav, "ClassTestResults");
   // D-#339: tap a tile → filter the per-test drill-down below (logged = all).
   const [stateFilter, setStateFilter] = useState<StateFilter>(null);
   // Owner ask 2026-07-28: the PUBLISH axis, independent of the entry state above — the
@@ -151,7 +156,7 @@ export default function ClassTestDashboardScreen(): React.ReactElement {
     setScope((s) => ({ ...s, ...patch }));
     setPageAt(0);
   };
-  const [chaseQ] = useQuery({ query: CLASS_TEST_OVERDUE_CHASE_QUERY, variables: {} });
+  const [chaseQ] = useQuery({ query: CLASS_TEST_OVERDUE_CHASE_QUERY, variables: {}, pause: !canChase });
   const [rowsQ] = useQuery({ query: CLASS_TEST_REPORTS_STATUS_QUERY, variables: {} });
   const chase = chaseQ.data?.classTestOverdueChase ?? null;
   const schoolRows = useMemo(() => rowsQ.data?.classTestReportsStatus ?? [], [rowsQ.data]);
@@ -210,7 +215,7 @@ export default function ClassTestDashboardScreen(): React.ReactElement {
   const [locsQ] = useQuery({
     query: ARCHIVE_LOCATIONS_QUERY,
     variables: { testIds: pageTestIds },
-    pause: pageTestIds.length === 0,
+    pause: pageTestIds.length === 0 || !canLocate,
   });
   const locOf = new Map((locsQ.data?.archiveLocationsForTests ?? []).map((l) => [l.testId, l]));
   // Chip counts are computed WITHIN the tile selection so they always add up to what the
@@ -386,6 +391,7 @@ export default function ClassTestDashboardScreen(): React.ReactElement {
                 pageRows.map((r) => (
                   <Pressable
                     key={r.testId}
+                    disabled={!canOpenResults}
                     onPress={() =>
                       nav.navigate("ClassTestResults", {
                         testId: r.testId,
@@ -437,7 +443,7 @@ export default function ClassTestDashboardScreen(): React.ReactElement {
                     {/* CS-2: straight to the scan & tag screen for a test in the script flow. */}
                     {/* Owner rule (2026-10-25): only for a viewer who can scan (the
                         stage itself still reads on the badge above). */}
-                    {r.scriptStage && canScan ? (
+                    {r.scriptStage && canScan && hasRoute(nav, "CtScriptUpload") ? (
                       <Pressable
                         onPress={() => nav.navigate("CtScriptUpload", { testId: r.testId, title: r.ctId })}
                         style={{ marginTop: space(1) }}
@@ -453,7 +459,7 @@ export default function ClassTestDashboardScreen(): React.ReactElement {
                         only file action was on the teacher's own "My tests" list. */}
                     {(() => {
                       const loc = locOf.get(r.testId);
-                      if (!loc && canFile) {
+                      if (!loc && canFile && hasRoute(nav, "ArchiveFileBundle")) {
                         return (
                           <Pressable
                             onPress={() => nav.navigate("ArchiveFileBundle", { testId: r.testId, ctId: r.ctId })}
@@ -530,6 +536,7 @@ export default function ClassTestDashboardScreen(): React.ReactElement {
         ) : null}
 
         {/* Office overdue-chase — a wa.me nudge per overdue teacher (message:dispatch) */}
+        {canChase ? (
         <Card>
           <Body style={{ fontWeight: "700" }}>{STR.ctChaseTitle}</Body>
           {chaseQ.error ? (
@@ -561,6 +568,7 @@ export default function ClassTestDashboardScreen(): React.ReactElement {
             ))
           )}
         </Card>
+        ) : null}
       </ScrollView>
     </Screen>
   );

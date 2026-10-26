@@ -216,8 +216,9 @@ describe("PM: class-test reads follow the catalogue actions", () => {
   afterEach(() => setRoleTemplateOverrides({}));
 
   test("OFFICE with class_test:view_all switched off loses the dashboard and the unscoped reports", async () => {
-    // D-#846: the Reports-hub switch reports:class_test also opens the unscoped report — both off.
-    setRoleTemplateOverrides({ OFFICE: { granted: [], revoked: ["class_test:view_all", "reports:class_test"] } });
+    // D-#846/#861: the Reports-hub switches reports:class_test and reports:class_test_dashboard also
+    // open the unscoped report — all three off.
+    setRoleTemplateOverrides({ OFFICE: { granted: [], revoked: ["class_test:view_all", "reports:class_test", "reports:class_test_dashboard"] } });
     expect(denied(await run(Q.dashboard, "OFFICE"))).toBe(true);
     expect(denied(await run(Q.reports(), "OFFICE"))).toBe(true);
     expect(denied(await run(Q.profile, "OFFICE"))).toBe(true);

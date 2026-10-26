@@ -18,6 +18,7 @@ import { Screen, Body, Muted, Card, Badge, EmptyState } from "../../components/u
 import { QueryGate } from "../../components/QueryGate";
 import { teachingNoteKindLabel } from "../../lib/teachingNotes";
 import { STR, bnNum, classLevelLabel, routineSubjectLabel, isoDateLabel } from "../../lib/labels";
+import { hasRoute } from "../../lib/hasRoute";
 import { usePullRefresh } from "../../lib/useRefresh";
 import { space } from "../../theme/tokens";
 
@@ -48,6 +49,7 @@ export default function TeachingNoteOpenCommentsScreen({
           {rows.map((c) => (
             <Card key={c.id}>
               <Pressable
+                disabled={!hasRoute(navigation, "TeachingNoteDoc")}
                 onPress={() =>
                   navigation.navigate("TeachingNoteDoc", { noteId: c.noteId, title: c.noteTitle })
                 }

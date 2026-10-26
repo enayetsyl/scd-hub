@@ -35,11 +35,10 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
   const canTemplates = can("message_templates:view");
   const canAccess = can("access_control:edit");
   // audit:read split four ways (PM): the log, one person's activity, system health,
-  // guardian app usage.
+  // guardian app usage (the last is a report — Reports hub since D-#861).
   const canAuditLog = can("audit_log:view");
   const canActivity = can("audit_log:view_activity");
   const canHealth = can("system_health:view");
-  const canEngagement = can("guardian_engagement:view");
   // GC-5: the guardian-claim queue is an Office/Principal screen and rides the
   // tracker:read they already hold — no new permission (D-#554).
   // BUG-WC-3: gated on ROLE, not tracker:read — OFFICE deliberately holds no
@@ -49,11 +48,8 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
   // (Akter, Tazkir) could already read the queue but never saw this card.
   // PM: `work_claim:view_all` without the digest designation — i.e. with its waiver
   // `admin_dashboard:view` (Principal + Office by default, template-aware like isRole was).
-  const canWorkClaims = can("work_claim:view_all") && can("admin_dashboard:view");
-  // AR-2: the ranking reads the two attendance registers, so it sits behind the
-  // actions that own them (PM): student ranking attendance:view_all, staff ranking
-  // staff_attendance:view_all — Principal + Office by default.
-  const canAttendance = can("attendance:view_all") || can("staff_attendance:view_all");
+  // D-#861: Attendance ranking and Guardian reports — unresolved moved to the Reports hub
+  // (one switch each); their Admin-stack routes remain for the digest's deep link.
 
   return (
     <Screen scroll>
@@ -101,21 +97,9 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
         </Card>
       ) : null}
 
-      {/* Owner ask 2026-07-20: the Reconciliation + HW-lifecycle report cards moved
-          to the drawer Reports group; their Admin-stack routes remain for deep links. */}
-      {canAttendance ? (
-        <Card onPress={() => navigation.navigate("AttendanceRanking")}>
-          <Body style={{ fontWeight: "700" }}>{STR.arTitle}</Body>
-          <Muted>{STR.arHint}</Muted>
-        </Card>
-      ) : null}
-
-      {canWorkClaims ? (
-        <Card onPress={() => navigation.navigate("WorkClaimQueue")}>
-          <Body style={{ fontWeight: "700" }}>{STR.wcQueueTitle}</Body>
-          <Muted>{STR.wcOfficeFooter}</Muted>
-        </Card>
-      ) : null}
+      {/* Owner asks 2026-07-20 + 2026-10-26 (D-#861): the report cards (Reconciliation,
+          HW lifecycle, Attendance ranking, Guardian reports) live in the Reports hub; their
+          Admin-stack routes remain for deep links. */}
 
       {canAuditLog ? (
         <Card onPress={() => navigation.navigate("AuditLog")}>
@@ -143,15 +127,8 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
         </Card>
       ) : null}
 
-      {/* GE-1/GE-3 (D-#464/#465): `guardian_engagement:view` (was audit:read) —
-          the report names families and their children, so it sits at the same
-          Principal-only bar as the audit log itself. */}
-      {canEngagement ? (
-        <Card onPress={() => navigation.navigate("GuardianEngagement")}>
-          <Body style={{ fontWeight: "700" }}>{STR.geTitle}</Body>
-          <Muted>{STR.geSubtitle}</Muted>
-        </Card>
-      ) : null}
+      {/* GE-1/GE-3 (D-#464/#465): guardian app usage moved to the Reports hub (D-#861) —
+          `reports:guardian_engagement`, Principal-only by default like the audit log. */}
 
       {/* SB-2..SB-4: the four support-book screens are NOT cards here — they live in
           their own 📕 drawer group, because the Admin tab's own gate (content:import /
@@ -216,7 +193,7 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
 
       {![
         canImport, canStaffLogins, canProxy, canAssignSubject, canAssignSupervisor, canStudents,
-        canAttendance, canWorkClaims, canAuditLog, canActivity, canHealth, canEngagement, canStaff,
+        canAuditLog, canActivity, canHealth, canStaff,
         canAssignClassTeacher, canRoutine, canSections, canYears, canGuardianCreds, canTemplates, canAccess,
       ].some(Boolean) ? (
         <Notice message={STR.noPermission} tone="warn" />

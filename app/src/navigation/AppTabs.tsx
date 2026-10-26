@@ -1455,6 +1455,23 @@ function ReportsNavigator(): React.ReactElement {
       <ReportsStack.Screen name="MonthlyPendingWork" component={MonthlyPendingWorkScreen} options={{ title: STR.mpTitle }} />
       {/* D-#453: the weekly unsubmitted-homework report (guardian-digest staff twin). */}
       <ReportsStack.Screen name="HwWeeklyUnsubmitted" component={HwWeeklyUnsubmittedScreen} options={{ title: STR.hwwdTitle }} />
+      {/* D-#861: every report that sat elsewhere (Admin hub, module homes) also opens here, each on
+          its own reports:* switch. Module drill-downs stay in their module (lib/hasRoute). */}
+      <ReportsStack.Screen name="AttendanceRanking" component={AttendanceRankingScreen} options={{ title: STR.arTitle }} />
+      <ReportsStack.Screen name="WorkClaimQueue" component={WorkClaimQueueScreen} options={{ title: STR.wcQueueTitle }} />
+      <ReportsStack.Screen name="LoadGrid" component={LoadGridScreen} options={{ title: STR.wbLoad }} />
+      <ReportsStack.Screen name="LiveClassBoard" component={LiveClassBoardScreen} options={{ title: STR.lcbBoardTitle }} />
+      <ReportsStack.Screen name="ClassTestDashboard" component={ClassTestDashboardScreen} options={{ title: STR.ctDashboardTitle }} />
+      <ReportsStack.Screen name="StudentProgress" component={StudentProgressScreen} options={{ title: STR.impNavTitle }} />
+      <ReportsStack.Screen name="StudentProgressStudent" component={StudentProgressStudentScreen} options={{ title: STR.impNavTitle }} />
+      <ReportsStack.Screen name="RevisionDashboard" component={RevisionDashboardScreen} options={{ title: STR.revDashTitle }} />
+      <ReportsStack.Screen name="LessonProgress" component={LessonProgressScreen} options={{ title: STR.lpNavTitle }} />
+      <ReportsStack.Screen name="QuestionReviewProgress" component={QuestionReviewProgressScreen} options={{ title: STR.qpTitle }} />
+      <ReportsStack.Screen name="ReviewerEffectiveness" component={ReviewerEffectivenessScreen} options={{ title: STR.obsReviewerEffTitle }} />
+      <ReportsStack.Screen name="TeachingNoteOpenComments" component={TeachingNoteOpenCommentsScreen} options={{ title: STR.tnOpenComments }} />
+      <ReportsStack.Screen name="FinanceDashboard" component={FinanceDashboardScreen} options={{ title: STR.finDashboardTitle }} />
+      <ReportsStack.Screen name="DailySnapshot" component={DailySnapshotScreen} options={{ title: STR.finSnapshotTitle }} />
+      <ReportsStack.Screen name="GuardianEngagement" component={GuardianEngagementScreen} options={{ title: STR.geTitle }} />
     </ReportsStack.Navigator>
   );
 }
@@ -1800,9 +1817,8 @@ export function AppTabs(): React.ReactElement {
     "teaching_assignments:assign_subject_teacher", "teaching_assignments:assign_supervisor",
     "cover:assign_proxy", "staff_records:view", "guardians:reset_password", "guardians:link",
     "message_templates:view", "access_control:edit", "audit_log:view", "audit_log:view_activity",
-    "system_health:view", "guardian_engagement:view", "routine:settings",
-    "attendance:view_all", "staff_attendance:view_all",
-  ) || (can("work_claim:view_all") && can("admin_dashboard:view"));
+    "system_health:view", "routine:settings",
+  ); // D-#861: the ranking, guardian-claims and guardian-usage cards moved to the Reports tab.
   // Support-book production: gated on the caller's EFFECTIVE permissions, never the
   // role template — `book:*` sits only on the PRINCIPAL template and every
   // illustrator/reviewer/assembler reaches it by AC-1 grant (D-#405), so

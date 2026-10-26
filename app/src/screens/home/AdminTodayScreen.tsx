@@ -53,19 +53,19 @@ const REGISTRY: Record<string, CardMeta> = {
   attendance: {
     icon: "🙋",
     titleKey: "dcAttendance",
-    target: { tab: "AttendanceTab", screen: "AttendanceReport" },
+    target: { tab: "ReportsTab", screen: "AttendanceReport" },
     anyOf: ["attendance:view_all", "reports:attendance"],
   },
   hwCycle: {
     icon: "📒",
     titleKey: "dcHwCycle",
-    target: { tab: "AdminTab", screen: "ReconciliationReport" },
+    target: { tab: "ReportsTab", screen: "ReconciliationReport" },
     anyOf: ["reports:reconciliation"],
   },
   hwLifecycle: {
     icon: "📘",
     titleKey: "dcHwLifecycle",
-    target: { tab: "AdminTab", screen: "HwLifecycleReport" },
+    target: { tab: "ReportsTab", screen: "HwLifecycleReport" },
     anyOf: ["reports:hw_lifecycle"],
   },
   assignments: {

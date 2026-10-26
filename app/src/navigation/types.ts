@@ -537,7 +537,7 @@ export type RevisionStackParamList = {
   GroupRevisionGrid: { groupId: string; code: string; nameBn: string; date: string };
   StudentRevisionHistory: { studentId: string; studentName: string };
   DeliverRevision: { groupId: string; code: string; nameBn: string; date: string };
-  RevisionDashboard: { groupId?: string; code?: string; nameBn?: string; date: string };
+  RevisionDashboard: { groupId?: string; code?: string; nameBn?: string; date?: string } | undefined;
 };
 
 /** Finance / Accounting (FIN-6B app surfaces over FIN-1..FIN-6A) — staff stack
@@ -653,6 +653,22 @@ export type ReportsStackParamList = {
   MonthlyPendingWork: { periodKey?: string } | undefined;
   /** D-#453: the weekly unsubmitted-homework report (the guardian digest's staff twin). */
   HwWeeklyUnsubmitted: { weekStart?: string } | undefined;
+  /** D-#861: the reports that sat elsewhere, also mounted here (same params as their module copy). */
+  AttendanceRanking: undefined;
+  WorkClaimQueue: undefined;
+  LoadGrid: undefined;
+  LiveClassBoard: undefined;
+  ClassTestDashboard: undefined;
+  StudentProgress: undefined;
+  StudentProgressStudent: { studentId: string; name: string };
+  RevisionDashboard: { groupId?: string; code?: string; nameBn?: string; date?: string } | undefined;
+  LessonProgress: undefined;
+  QuestionReviewProgress: undefined;
+  ReviewerEffectiveness: undefined;
+  TeachingNoteOpenComments: undefined;
+  FinanceDashboard: undefined;
+  DailySnapshot: undefined;
+  GuardianEngagement: undefined;
 };
 
 export type TabParamList = {
