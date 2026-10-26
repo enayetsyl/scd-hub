@@ -156,7 +156,7 @@ export function normalizeRules(input: PopupRulesInput, actionCount: number): Pop
   const closeButton = mustAct ? false : input.closeButton !== false;
 
   if (autoCloseSec !== 0 && (autoCloseSec < 3 || autoCloseSec > 60)) throw new PopupNoticeError("নিজে বন্ধ হওয়ার সময় ৩ থেকে ৬০ সেকেন্ড হতে হবে");
-  if (minReadSec !== 0 && (minReadSec < 5 || minReadSec > 300)) throw new PopupNoticeError("ন্যূনতম পড়ার সময় ৫ থেকে ৩০০ সেকেন্ড হতে হবে");
+  if (minReadSec !== 0 && (minReadSec < 2 || minReadSec > 300)) throw new PopupNoticeError("ন্যূনতম পড়ার সময় ২ থেকে ৩০০ সেকেন্ড হতে হবে");
   if (autoCloseSec > 0 && (mustScrollToEnd || minReadSec > 0 || mustAct)) {
     throw new PopupNoticeError("নিজে বন্ধ হওয়া আর পড়া/উত্তরের শর্ত একসাথে চলবে না");
   }
@@ -324,6 +324,9 @@ export interface PopupAudienceDTO {
   guardian: { classLevels: number[]; sectionIds: string[] } | null;
   userIds: string[];
   studentIds: string[];
+  excludeUserIds: string[];
+  excludeGuardianIds: string[];
+  excludeStudentIds: string[];
 }
 
 export function audienceDTO(a: PopupAudience | undefined | null): PopupAudienceDTO {
@@ -343,6 +346,9 @@ export function audienceDTO(a: PopupAudience | undefined | null): PopupAudienceD
       : null,
     userIds: (a?.userIds ?? []).map(String),
     studentIds: (a?.studentIds ?? []).map(String),
+    excludeUserIds: (a?.excludeUserIds ?? []).map(String),
+    excludeGuardianIds: (a?.excludeGuardianIds ?? []).map(String),
+    excludeStudentIds: (a?.excludeStudentIds ?? []).map(String),
   };
 }
 

@@ -94,6 +94,16 @@ export interface PopupAudience {
   userIds: Types.ObjectId[];
   /** Hand-picked families, by child: every active guardian linked to the child. */
   studentIds: Types.ObjectId[];
+  /**
+   * People taken OUT of the result by the sender's ✕ on the name list (owner, 2026-10-26):
+   * "all teachers except these two". Applied after the union, so they stay out even when a
+   * filter matches them. One list per recipient kind, because a guardian and a staff login
+   * can share an id space only by accident, never by meaning.
+   */
+  excludeUserIds?: Types.ObjectId[];
+  excludeGuardianIds?: Types.ObjectId[];
+  /** Families with no guardian row (STUDENT recipients). */
+  excludeStudentIds?: Types.ObjectId[];
 }
 
 export interface IPopupNotice extends Document {
@@ -165,6 +175,9 @@ const PopupNoticeSchema = new Schema<IPopupNotice>(
       },
       userIds: [{ type: Schema.Types.ObjectId, ref: "User" }],
       studentIds: [{ type: Schema.Types.ObjectId, ref: "Student" }],
+      excludeUserIds: [{ type: Schema.Types.ObjectId, ref: "User" }],
+      excludeGuardianIds: [{ type: Schema.Types.ObjectId, ref: "Guardian" }],
+      excludeStudentIds: [{ type: Schema.Types.ObjectId, ref: "Student" }],
     },
     audienceListId: { type: Schema.Types.ObjectId, ref: "PopupAudienceList" },
     audienceSummary: { type: String, default: "" },
