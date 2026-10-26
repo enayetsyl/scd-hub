@@ -70,7 +70,7 @@ builder.queryField("lessonProgressOverview", (t) =>
   t.field({
     type: [ProgressRowRef],
     description: "LP-2 (D-#824): every শাখা × subject with session plans — progress, pace, lag behind the parallel শাখা. Largest lag first.",
-    authScopes: { hasPermission: "lesson_progress:view_all" },
+    authScopes: { hasAnyPermission: ["lesson_progress:view_all", "reports:lesson_progress"] },
     args: { classLevel: t.arg.int({ required: false }), subject: t.arg.string({ required: false }) },
     resolve: (_r, args) => progressOverview({ classLevel: args.classLevel ?? null, subject: args.subject ?? null }),
   }),

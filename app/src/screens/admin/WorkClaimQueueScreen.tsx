@@ -17,7 +17,9 @@ import { useMutation, useQuery } from "urql";
 import { Screen, H1, Body, Muted, Card, Badge, Button, EmptyState, Notice, Divider } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
 import WorkClaimDigestRecipientsCard from "../../components/WorkClaimDigestRecipientsCard";
+import { useNavigation } from "@react-navigation/native";
 import { useAuth } from "../../auth/AuthContext";
+import { hasRoute } from "../../lib/hasRoute";
 import { space } from "../../theme/tokens";
 import { STR, bnNum } from "../../lib/labels";
 import { usePullRefresh } from "../../lib/useRefresh";
@@ -79,6 +81,8 @@ export default function WorkClaimQueueScreen(): React.ReactElement {
   const rows: WorkClaimRowT[] = q.data?.workClaimQueue ?? [];
   const byTeacher = summarize(rows);
   const { can } = useAuth();
+  const navigation = useNavigation();
+  const canNudge = can("work_claim:remind") && (can("admin_dashboard:view") || !hasRoute(navigation, "ReportsHome"));
 
   const onNudge = async (row: WorkClaimRowT) => {
     setBusyId(row.claimId);
@@ -165,7 +169,7 @@ export default function WorkClaimQueueScreen(): React.ReactElement {
                       {r.dueDateKey ? ` · ${bnNum(r.dueDateKey)}` : ""} · {r.teacherName}
                     </Muted>
                     {r.note ? <Body>{r.note}</Body> : null}
-                    {r.nudgedToday ? (
+                    {!canNudge ? null : r.nudgedToday ? (
                       <Badge text={STR.wcNudgedToday} tone="muted" />
                     ) : (
                       <Button

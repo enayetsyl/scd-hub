@@ -15,6 +15,7 @@ import { QueryGate } from "../../components/QueryGate";
 import { STR, bnNum, classSectionLabel, subjectShortLabel } from "../../lib/labels";
 import { isWholeClassSectionName } from "../../lib/sectionPicks";
 import { usePullRefresh } from "../../lib/useRefresh";
+import { hasRoute } from "../../lib/hasRoute";
 import {
   periodRange,
   periodLabel,
@@ -34,7 +35,7 @@ type Props = NativeStackScreenProps<ClassTestStackParamList, "StudentProgressStu
 const pct = (v: number | null | undefined): string => (v == null ? "—" : `${bnNum(Math.round(v))}%`);
 
 /** One action, as a card: what, who, how far along, and — once it has ended — before/after. */
-export function ActionCard({ a, onPress }: { a: ImprovementActionSummaryT; onPress: () => void }): React.ReactElement {
+export function ActionCard({ a, onPress }: { a: ImprovementActionSummaryT; onPress?: () => void }): React.ReactElement {
   const c = useColors();
   const who =
     a.scope === "CLASS"
@@ -79,6 +80,8 @@ export function ActionCard({ a, onPress }: { a: ImprovementActionSummaryT; onPre
 }
 
 export default function StudentProgressStudentScreen({ route, navigation }: Props): React.ReactElement {
+  // D-#861: also mounted in Reports, where the improvement-action forms are not — read-only there.
+  const canAct = hasRoute(navigation, "NewImprovementAction");
   const { studentId } = route.params;
   const c = useColors();
   const [period, setPeriod] = React.useState<PeriodKey>("YEAR");
@@ -148,6 +151,7 @@ export default function StudentProgressStudentScreen({ route, navigation }: Prop
                           {STR.impTeacherNote}: {s.latestWeakness}
                         </Muted>
                       ) : null}
+                      {canAct ? (
                       <Pressable
                         onPress={() => navigation.navigate("NewImprovementAction", { scope: "STUDENT", sectionId: p.sectionId, studentId: p.studentId, studentName: p.name, subject: s.subject })}
                         accessibilityRole="button"
@@ -155,6 +159,7 @@ export default function StudentProgressStudentScreen({ route, navigation }: Prop
                       >
                         <Text style={{ color: c.info, fontWeight: "600" }}>{STR.impNewStudentAction}</Text>
                       </Pressable>
+                      ) : null}
                     </View>
                   );
                 })}
@@ -162,14 +167,16 @@ export default function StudentProgressStudentScreen({ route, navigation }: Prop
 
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: space(2) }}>
                 <Body style={{ fontWeight: "700" }}>{STR.impActionLog}</Body>
-                <Button
-                  title={STR.impNewStudentAction}
-                  onPress={() => navigation.navigate("NewImprovementAction", { scope: "STUDENT", sectionId: p.sectionId, studentId: p.studentId, studentName: p.name })}
-                />
+                {canAct ? (
+                  <Button
+                    title={STR.impNewStudentAction}
+                    onPress={() => navigation.navigate("NewImprovementAction", { scope: "STUDENT", sectionId: p.sectionId, studentId: p.studentId, studentName: p.name })}
+                  />
+                ) : null}
               </View>
               {p.actions.length === 0 ? <Muted>{STR.impNoActions}</Muted> : null}
               {p.actions.map((a) => (
-                <ActionCard key={a.id} a={a} onPress={() => navigation.navigate("ImprovementAction", { id: a.id })} />
+                <ActionCard key={a.id} a={a} onPress={canAct ? () => navigation.navigate("ImprovementAction", { id: a.id }) : undefined} />
               ))}
             </View>
           ) : null}

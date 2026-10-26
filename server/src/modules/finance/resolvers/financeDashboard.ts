@@ -133,7 +133,7 @@ builder.queryField("financeYearOverview", (t) =>
   t.field({
     type: YearOverviewRef,
     description: "The Principal-dashboard KPI bundle for a year (derived, no cross-file stitching). Requires finance_reports:view.",
-    authScopes: { hasPermission: "finance_reports:view" },
+    authScopes: { hasAnyPermission: ["finance_reports:view", "reports:finance_dashboard"] },
     args: { academicYearId: t.arg.string({ required: true }), asOf: t.arg.string({ required: false }) },
     resolve: (_root, args) => yearOverview(args.academicYearId, args.asOf ? parseDate(args.asOf) : undefined),
   }),
@@ -143,7 +143,7 @@ builder.queryField("financeYtdIncomeStatement", (t) =>
   t.field({
     type: IncomeStatementRef,
     description: "The YTD income-statement view (income − expense = net; not a GL). Requires finance_reports:view.",
-    authScopes: { hasPermission: "finance_reports:view" },
+    authScopes: { hasAnyPermission: ["finance_reports:view", "reports:finance_dashboard"] },
     args: { academicYearId: t.arg.string({ required: true }), asOf: t.arg.string({ required: false }) },
     resolve: (_root, args) => ytdIncomeStatement(args.academicYearId, args.asOf ? parseDate(args.asOf) : undefined),
   }),
@@ -153,7 +153,7 @@ builder.queryField("financeTrends", (t) =>
   t.field({
     type: [TrendPointRef],
     description: "Monthly income/expense/net series for the year (charts). Requires finance_reports:view.",
-    authScopes: { hasPermission: "finance_reports:view" },
+    authScopes: { hasAnyPermission: ["finance_reports:view", "reports:finance_dashboard"] },
     args: { academicYearId: t.arg.string({ required: true }), asOf: t.arg.string({ required: false }) },
     resolve: (_root, args) => financeTrends(args.academicYearId, args.asOf ? parseDate(args.asOf) : undefined),
   }),
