@@ -48,6 +48,7 @@ import {
 import {
   meetingBrief,
   type MeetingBrief,
+  type BriefClassBest,
   type BriefNumbers,
   type BriefAttendance,
   type BriefAttendanceDay,
@@ -308,6 +309,20 @@ const BriefSubjectNoteRef = builder.objectRef<BriefSubjectNote>("MeetingBriefSub
   }),
 });
 
+const ClassBestRef = builder.objectRef<BriefClassBest>("MeetingBriefClassBest").implement({
+  description:
+    "The best figure in the child's section over the same window — bare numbers, nobody named; withheld " +
+    "(all null, withheld = true) in a section below the monthly report's minSectionSizeForClassBest (D-#396/#866).",
+  fields: (t) => ({
+    rosterSize: t.exposeInt("rosterSize"),
+    withheld: t.exposeBoolean("withheld"),
+    attendancePresentDays: t.int({ nullable: true, resolve: (c) => c.attendancePresentDays }),
+    classTestAvgPct: t.float({ nullable: true, resolve: (c) => c.classTestAvgPct }),
+    homeworkPct: t.int({ nullable: true, resolve: (c) => c.homeworkPct }),
+    assignmentPct: t.int({ nullable: true, resolve: (c) => c.assignmentPct }),
+  }),
+});
+
 const BriefRef = builder.objectRef<MeetingBrief>("MeetingBrief").implement({
   description:
     "Everything the person meeting a guardian reads about one child (MC-1, D-#754): the final word, the class " +
@@ -329,6 +344,7 @@ const BriefRef = builder.objectRef<MeetingBrief>("MeetingBrief").implement({
     summary: t.field({ type: SummaryRef, nullable: true, resolve: (b) => b.summary }),
     subjectNotes: t.field({ type: [BriefSubjectNoteRef], resolve: (b) => b.subjectNotes }),
     numbers: t.field({ type: NumbersRef, resolve: (b) => b.numbers }),
+    classBest: t.field({ type: ClassBestRef, nullable: true, resolve: (b) => b.classBest }),
   }),
 });
 

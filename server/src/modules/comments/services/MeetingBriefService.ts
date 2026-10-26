@@ -32,6 +32,8 @@ import { studentHomeworkPanel, studentAssignmentPanel, type StudentTrackerPanel 
 import { studentProfileAttendance, studentProfileComments } from "../../trackers/services/StudentProfileContextService";
 import { studentProfile as classTestProfile } from "../../trackers/services/ClassTestSummaryService";
 import { OWED_BY_STUDENT_STATES, inStates } from "../../trackers/lifecycleBuckets";
+import { cohortOf } from "../../reports/services/MonthlyMetricsService";
+import { readMonthlyReportConfig } from "../../reports/services/MonthlyReportConfigService";
 import { dhakaDayKey } from "../../../lib/dhakaDay";
 import { bnNum as bn } from "../../../lib/bnNum";
 import { personName } from "../../../lib/personName";
@@ -282,6 +284,75 @@ export async function childNumbers(
 }
 
 // ===========================================================================
+// Section best — the comparator beside each number (owner ask 2026-10-26, D-#866)
+// ===========================================================================
+
+/**
+ * The best figure in the child's SECTION over the same window, as bare numbers — the
+ * monthly report's class-best rule (D-#396): no child is named, and in a section smaller
+ * than `minSectionSizeForClassBest` nothing is shown, because there "the best" is a person.
+ * Always the full view (every subject), like the monthly cohort.
+ */
+export interface BriefClassBest {
+  rosterSize: number;
+  withheld: boolean;
+  attendancePresentDays: number | null;
+  classTestAvgPct: number | null;
+  homeworkPct: number | null;
+  assignmentPct: number | null;
+}
+
+/** Submitted ÷ received as a whole percent; null when nothing was received. */
+export const submittedPct = (t: Pick<BriefTracker, "submitted" | "received">): number | null =>
+  t.received > 0 ? Math.round((t.submitted / t.received) * 100) : null;
+
+/** PURE: the section's own numbers → the best of each, under the small-section rule. */
+export function classBestOf(rows: BriefNumbers[], rosterSize: number, minSize: number): BriefClassBest {
+  const pad = (xs: Array<number | null>): Array<number | null> => {
+    const out = [...xs];
+    while (out.length < rosterSize) out.push(null);
+    return out;
+  };
+  const best = (pick: (n: BriefNumbers) => number | null): number | null =>
+    cohortOf(pad(rows.map(pick)), minSize).best;
+  return {
+    rosterSize,
+    withheld: rosterSize < minSize,
+    attendancePresentDays: best((n) => (n.attendance.markedDays > 0 ? n.attendance.presentDays : null)),
+    classTestAvgPct: best((n) => n.classTests.avgPercent),
+    homeworkPct: best((n) => submittedPct(n.homework)),
+    assignmentPct: best((n) => submittedPct(n.assignment)),
+  };
+}
+
+// One section is computed once and shared by every brief of it — printing a whole
+// meeting would otherwise re-derive each section once per child (the N² the monthly
+// report's section pass exists to avoid). Short-lived: the numbers move during the day.
+const CLASS_BEST_TTL_MS = 10 * 60 * 1000;
+const classBestCache = new Map<string, { at: number; value: Promise<BriefClassBest> }>();
+
+export function sectionClassBest(sectionId: string, fromKey: string, toKey: string, now = new Date()): Promise<BriefClassBest> {
+  const key = `${sectionId}|${fromKey}|${toKey}`;
+  const hit = classBestCache.get(key);
+  if (hit && Date.now() - hit.at < CLASS_BEST_TTL_MS) return hit.value;
+  const value = (async () => {
+    const [classmates, cfg] = await Promise.all([
+      Student.find({ sectionId: new Types.ObjectId(sectionId), active: true }).select("_id").lean() as unknown as Promise<Array<{ _id: Types.ObjectId }>>,
+      readMonthlyReportConfig(),
+    ]);
+    const rows: BriefNumbers[] = [];
+    for (let i = 0; i < classmates.length; i += 5) {
+      const chunk = classmates.slice(i, i + 5);
+      rows.push(...(await Promise.all(chunk.map((s) => childNumbers(str(s._id), fromKey, toKey, null, now)))));
+    }
+    return classBestOf(rows, classmates.length, cfg.minSectionSizeForClassBest);
+  })();
+  classBestCache.set(key, { at: Date.now(), value });
+  value.catch(() => classBestCache.delete(key)); // never cache a failure
+  return value;
+}
+
+// ===========================================================================
 // The brief
 // ===========================================================================
 
@@ -325,6 +396,8 @@ export interface MeetingBrief {
   summary: BriefSummary | null;
   subjectNotes: BriefSubjectNote[];
   numbers: BriefNumbers;
+  /** The section's best beside each number (D-#866); null when it could not be computed. */
+  classBest: BriefClassBest | null;
 }
 
 async function namesOf(ids: Array<Types.ObjectId | string | null | undefined>): Promise<Map<string, string>> {
@@ -361,7 +434,11 @@ export async function meetingBrief(meetingId: string, studentId: string, now = n
     summary?.authorUserId,
     ...notes.map((n) => n.writtenBy ?? n.teacherId),
   ]);
-  const numbers = await childNumbers(studentId, window.fromKey, window.toKey, null, now);
+  const [numbers, classBest] = await Promise.all([
+    childNumbers(studentId, window.fromKey, window.toKey, null, now),
+    // A comparator must never sink the brief itself — no section best is better than no brief.
+    sectionClassBest(str(student.sectionId), window.fromKey, window.toKey, now).catch(() => null),
+  ]);
 
   return {
     meetingId,
@@ -394,6 +471,7 @@ export async function meetingBrief(meetingId: string, studentId: string, now = n
       }))
       .sort((a, b) => a.subject.localeCompare(b.subject)),
     numbers,
+    classBest,
   };
 }
 
@@ -434,10 +512,16 @@ function oneChild(b: MeetingBrief, opts: BriefPrintOptions): string[] {
     "",
     `সংখ্যাগুলো ${fmtKey(n.fromKey)} থেকে ${fmtKey(n.toKey)} পর্যন্ত${b.previousLabel ? ` (আগের সভা: ${b.previousLabel})` : ""}।`,
     "",
-    "| উপস্থিতি | ক্লাস টেস্ট | বাড়ির কাজ | অ্যাসাইনমেন্ট | শিক্ষকের মন্তব্য |",
-    "|---|---|---|---|---|",
-    `| ${bn(n.attendance.presentDays)}/${bn(n.attendance.markedDays)} দিন উপস্থিত; ছুটি ${bn(n.attendance.leaveDays)}, অনুপস্থিত ${bn(n.attendance.absentDays)} | ${bn(n.classTests.sat)}/${bn(n.classTests.held)} দিয়েছে; গড় ${pct(n.classTests.avgPercent)} | ${bn(n.homework.submitted)}/${bn(n.homework.received)} জমা; জমা দেয়নি ${bn(n.homework.notSubmitted)} | ${bn(n.assignment.submitted)}/${bn(n.assignment.received)} জমা; জমা দেয়নি ${bn(n.assignment.notSubmitted)} | চিন্তার ${bn(n.notes.concern)}, ভালো ${bn(n.notes.positive)} |`,
+    "| | উপস্থিতি | ক্লাস টেস্ট | বাড়ির কাজ | অ্যাসাইনমেন্ট | শিক্ষকের মন্তব্য |",
+    "|---|---|---|---|---|---|",
+    `| **এই শিক্ষার্থী** | ${bn(n.attendance.presentDays)}/${bn(n.attendance.markedDays)} দিন উপস্থিত; ছুটি ${bn(n.attendance.leaveDays)}, অনুপস্থিত ${bn(n.attendance.absentDays)} | ${bn(n.classTests.sat)}/${bn(n.classTests.held)} দিয়েছে; গড় ${pct(n.classTests.avgPercent)} | ${bn(n.homework.submitted)}/${bn(n.homework.received)} জমা (${pct(submittedPct(n.homework))}); জমা দেয়নি ${bn(n.homework.notSubmitted)} | ${bn(n.assignment.submitted)}/${bn(n.assignment.received)} জমা (${pct(submittedPct(n.assignment))}); জমা দেয়নি ${bn(n.assignment.notSubmitted)} | চিন্তার ${bn(n.notes.concern)}, ভালো ${bn(n.notes.positive)} |`,
+    ...(b.classBest && !b.classBest.withheld
+      ? [
+          `| **শাখার সর্বোচ্চ** | ${b.classBest.attendancePresentDays != null ? `${bn(b.classBest.attendancePresentDays)} দিন উপস্থিত` : "—"} | গড় ${pct(b.classBest.classTestAvgPct)} | ${pct(b.classBest.homeworkPct)} জমা | ${pct(b.classBest.assignmentPct)} জমা | — |`,
+        ]
+      : []),
     "",
+    ...(b.classBest?.withheld ? ["_শাখায় শিক্ষার্থী কম, তাই শাখার সর্বোচ্চ দেখানো হয়নি।_", ""] : []),
     "## প্রধান শিক্ষক / অফিসের মন্তব্য",
   ];
   if (b.final) {

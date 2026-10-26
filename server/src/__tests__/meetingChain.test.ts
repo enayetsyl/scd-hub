@@ -23,6 +23,7 @@ import {
   trackerBrief,
   buildBriefMarkdown,
   sectionSuffix,
+  classBestOf,
   type MeetingBrief,
 } from "../modules/comments/services/MeetingBriefService";
 
@@ -224,6 +225,36 @@ describe("trackerBrief", () => {
   });
 });
 
+describe("classBestOf — the section best (D-#866, the D-#396 rule)", () => {
+  const nums = (present: number, marked: number, ct: number | null, hw: [number, number], as: [number, number]) =>
+    ({
+      attendance: { markedDays: marked, presentDays: present },
+      classTests: { avgPercent: ct },
+      homework: { submitted: hw[0], received: hw[1] },
+      assignment: { submitted: as[0], received: as[1] },
+    }) as never;
+
+  it("takes the best of each column, as bare numbers", () => {
+    const b = classBestOf(
+      [nums(150, 159, 70, [60, 120], [30, 40]), nums(159, 159, 88.5, [118, 120], [40, 40]), nums(140, 159, null, [0, 0], [10, 40])],
+      6,
+      5,
+    );
+    expect(b).toEqual({ rosterSize: 6, withheld: false, attendancePresentDays: 159, classTestAvgPct: 88.5, homeworkPct: 98, assignmentPct: 100 });
+  });
+
+  it("withholds everything in a section below the minimum size", () => {
+    const b = classBestOf([nums(159, 159, 90, [10, 10], [5, 5])], 4, 5);
+    expect(b.withheld).toBe(true);
+    expect([b.attendancePresentDays, b.classTestAvgPct, b.homeworkPct, b.assignmentPct]).toEqual([null, null, null, null]);
+  });
+
+  it("ignores children with nothing to measure (no marked days, nothing received)", () => {
+    const b = classBestOf([nums(0, 0, null, [0, 0], [0, 0]), nums(100, 120, 60, [5, 10], [1, 2])], 5, 5);
+    expect([b.attendancePresentDays, b.homeworkPct, b.assignmentPct]).toEqual([100, 50, 50]);
+  });
+});
+
 describe("buildBriefMarkdown — the printed brief", () => {
   const brief = (over: Partial<MeetingBrief> = {}): MeetingBrief => ({
     meetingId: "m",
@@ -253,6 +284,7 @@ describe("buildBriefMarkdown — the printed brief", () => {
       assignment: { received: 20, submitted: 18, notSubmitted: 2, bySubject: [], missed: [] },
       notes: { concern: 2, positive: 3, items: [] },
     },
+    classBest: { rosterSize: 18, withheld: false, attendancePresentDays: 85, classTestAvgPct: 92.4, homeworkPct: 98, assignmentPct: 100 },
     ...over,
   });
   const opts = { subjects: true, details: false, printedByName: "অফিস", printedAt: new Date("2026-11-01T04:00:00Z") };
@@ -289,6 +321,23 @@ describe("buildBriefMarkdown — the printed brief", () => {
     const md = buildBriefMarkdown([brief(), brief({ studentName: "শিক্ষার্থী ম" })], opts);
     expect(md).toContain("# শিক্ষার্থী ক");
     expect(md).toContain("# শিক্ষার্থী ম");
+  });
+
+  it("prints the section best beside the child's numbers (D-#866)", () => {
+    const md = buildBriefMarkdown([brief()], opts);
+    expect(md).toContain("| **এই শিক্ষার্থী** |");
+    expect(md).toContain("৯৬/১১০ জমা (৮৭%)"); // the child's own rate, to read against the best
+    expect(md).toContain("| **শাখার সর্বোচ্চ** | ৮৫ দিন উপস্থিত | গড় ৯২% | ৯৮% জমা | ১০০% জমা | — |");
+  });
+
+  it("in a small section prints a note instead of the best (D-#396)", () => {
+    const md = buildBriefMarkdown(
+      [brief({ classBest: { rosterSize: 3, withheld: true, attendancePresentDays: null, classTestAvgPct: null, homeworkPct: null, assignmentPct: null } })],
+      opts,
+    );
+    expect(md).not.toContain("শাখার সর্বোচ্চ** |");
+    expect(md).toContain("শাখায় শিক্ষার্থী কম");
+    expect(buildBriefMarkdown([brief({ classBest: null })], opts)).not.toContain("শাখার সর্বোচ্চ");
   });
 
   it("sectionSuffix drops the whole-class section names", () => {
