@@ -25,7 +25,7 @@ import { STR, bnNum, classLevelLabel, getActiveLang, groupGenderLabel, relationL
 import { friendlyError } from "../../lib/errors";
 import { usePullRefresh } from "../../lib/useRefresh";
 import { space, useColors } from "../../theme";
-import { REPORT_PAPER as REPORT } from "../../theme/reportPaper";
+import { useTablePaper } from "../../theme/tablePaper";
 import { personName } from "../../lib/personName";
 
 type Nav = NativeStackNavigationProp<AdminStackParamList>;
@@ -38,7 +38,7 @@ const DEFAULT_PAGE_SIZE: PageSize = "100";
 /** Widths are the columns' minimums AND their share of any spare width, so the
  *  table fills a desktop frame and scrolls sideways on a phone. */
 const COLUMNS = [
-  { key: "sl", labelKey: "rosterColSl", width: 56 },
+  { key: "sl", labelKey: "rosterColSl", width: 64 },
   { key: "id", labelKey: "studentId", width: 80 },
   { key: "name", labelKey: "rosterColName", width: 230 },
   { key: "class", labelKey: "rosterColClass", width: 150 },
@@ -73,6 +73,8 @@ export default function RosterScreen(): React.ReactElement {
   const nav = useNavigation<Nav>();
   const lang = getActiveLang();
   const colors = useColors();
+  // Owner 2026-10-26: the directory table wears the app's green, not the blue report paper.
+  const REPORT = useTablePaper();
 
   const [{ data, fetching, error }, refetch] = useQuery({ query: STUDENT_DIRECTORY_QUERY });
   const rows = data?.studentDirectory ?? [];
