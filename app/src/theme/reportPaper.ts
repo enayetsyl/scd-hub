@@ -13,8 +13,8 @@
  * schemes: keep every colour in these tables on this one surface.
  *
  * Shared by ClassNoteReportScreen (the date roll-up), AllClassNotesScreen
- * (the note archive) and RosterScreen (the student table) so the tables cannot
- * drift apart.
+ * (the note archive) and the student profile parts so the tables cannot drift apart.
+ * The student and staff DIRECTORY tables use theme/tablePaper.ts instead (app colours).
  */
 export const REPORT_PAPER = {
   headerBg: "#4f9cf9",
