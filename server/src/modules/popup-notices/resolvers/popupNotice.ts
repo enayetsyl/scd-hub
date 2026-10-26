@@ -17,7 +17,15 @@
 import { builder } from "../../../schema";
 import { pageRef } from "../../../pageRef";
 import { ForbiddenError } from "../../../middleware/authz";
-import { normalizeAudience, previewAudience, searchPopupPeople, type AudiencePreview, type AudiencePreviewPerson, type PopupPersonHit } from "../services/PopupAudienceService";
+import {
+  normalizeAudience,
+  pickedPeople,
+  previewAudience,
+  searchPopupPeople,
+  type AudiencePreview,
+  type AudiencePreviewPerson,
+  type PopupPersonHit,
+} from "../services/PopupAudienceService";
 import {
   addPopupMatches,
   deletePopupAudienceList,
@@ -437,6 +445,16 @@ builder.queryField("searchPopupPeople", (t) =>
     authScopes: { hasPermission: "popup_notice:view" },
     args: { page: t.arg.int({ required: false }), pageSize: t.arg.int({ required: false }), query: t.arg.string({ required: true }) },
     resolve: (_r, args) => searchPopupPeople(args.query, { page: args.page, pageSize: args.pageSize }),
+  }),
+);
+
+builder.queryField("popupPickedPeople", (t) =>
+  t.field({
+    type: [PersonHitRef],
+    description: "Names for a custom list's hand-picked staff and families (bounded by the ids given).",
+    authScopes: { hasPermission: "popup_notice:view" },
+    args: { userIds: t.arg.stringList({ required: true }), studentIds: t.arg.stringList({ required: true }) },
+    resolve: (_r, args) => pickedPeople(args.userIds, args.studentIds),
   }),
 );
 

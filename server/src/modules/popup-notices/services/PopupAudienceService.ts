@@ -486,6 +486,35 @@ export interface PopupPersonHit {
   detail: string;
 }
 
+/** Names for a custom list's hand-picked ids — the composer reopening a draft or a saved
+ *  list shows people, not ids. Unknown or inactive ids simply drop out. */
+export async function pickedPeople(userIds: string[], studentIds: string[]): Promise<PopupPersonHit[]> {
+  const valid = (xs: string[]) => xs.filter((x) => Types.ObjectId.isValid(x)).map((x) => new Types.ObjectId(x));
+  const [users, kids, classes] = await Promise.all([
+    User.find({ _id: { $in: valid(userIds) }, active: true, role: { $in: STAFF_ROLES } }).select("name role").sort({ name: 1 }).lean(),
+    Student.find({ _id: { $in: valid(studentIds) }, active: true }).select("name nameBn schoolId classId sectionId").sort({ name: 1 }).lean(),
+    Class.find({}).select("level").lean(),
+  ]);
+  const levelOfClass = new Map((classes as unknown as Array<{ _id: Types.ObjectId; level: number }>).map((c) => [c._id.toString(), c.level]));
+  const students = kids as unknown as Array<{ _id: Types.ObjectId; name: string; nameBn?: string; schoolId: string; classId: Types.ObjectId; sectionId: Types.ObjectId }>;
+  const sections = (await Section.find({ _id: { $in: students.map((k) => k.sectionId) } }).select("code nameBn").lean()) as unknown as Array<{ _id: Types.ObjectId; code?: string; nameBn?: string }>;
+  const secById = new Map(sections.map((s) => [s._id.toString(), s]));
+  return [
+    ...(users as unknown as Array<{ _id: Types.ObjectId; name: string; role: string }>).map((u) => ({
+      kind: "USER" as const,
+      id: u._id.toString(),
+      name: personName(u),
+      detail: ROLE_BN[u.role] ?? u.role,
+    })),
+    ...students.map((k) => ({
+      kind: "STUDENT" as const,
+      id: k._id.toString(),
+      name: personName(k),
+      detail: [classLabel(levelOfClass.get(k.classId.toString()), secById.get(k.sectionId.toString())), k.schoolId].filter(Boolean).join(" · "),
+    })),
+  ];
+}
+
 /** The custom-list picker: staff by name, families by child's name or school id. */
 export async function searchPopupPeople(query: string, args: PageArgs = {}): Promise<Page<PopupPersonHit>> {
   const q = query.trim();

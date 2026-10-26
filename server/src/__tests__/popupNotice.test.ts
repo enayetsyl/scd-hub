@@ -36,7 +36,7 @@ import { SubjectGroupMembership } from "../modules/routine/models/SubjectGroupMe
 import { PopupNotice } from "../modules/popup-notices/models/PopupNotice";
 import { PopupNoticeRecipient } from "../modules/popup-notices/models/PopupNoticeRecipient";
 import { PopupAudienceList } from "../modules/popup-notices/models/PopupAudienceList";
-import { normalizeAudience, previewAudience, resolveAudience, searchPopupPeople } from "../modules/popup-notices/services/PopupAudienceService";
+import { normalizeAudience, pickedPeople, previewAudience, resolveAudience, searchPopupPeople } from "../modules/popup-notices/services/PopupAudienceService";
 import {
   PopupNoticeError,
   addPopupMatches,
@@ -330,6 +330,15 @@ describe("audience", () => {
     expect(hits.rows.map((h) => [h.kind, h.name])).toEqual([["STUDENT", "Zara"]]);
     const staff = await searchPopupPeople("KG");
     expect(staff.rows.filter((h) => h.kind === "USER")).toHaveLength(2);
+  });
+
+  test("picked ids come back as names for the composer", async () => {
+    const s = await school();
+    const hits = await pickedPeople([s.kgF, "nope"], [s.zara.toString()]);
+    expect(hits.map((h) => [h.kind, h.name, h.detail])).toEqual([
+      ["USER", "KG Female", "শিক্ষক"],
+      ["STUDENT", "Zara", expect.stringContaining("তৃতীয় শ্রেণি বালিকা")],
+    ]);
   });
 
   test("bad input is refused in Bangla", () => {
