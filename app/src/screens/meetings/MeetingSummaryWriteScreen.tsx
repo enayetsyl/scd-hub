@@ -71,7 +71,7 @@ export default function MeetingSummaryWriteScreen({ route }: Props): React.React
             {STR.mcSinceLast}: {dayLabel(b.numbers.fromKey)} – {dayLabel(b.numbers.toKey)}
           </Muted>
           <View style={{ marginTop: space(2) }}>
-            <NumbersTiles numbers={b.numbers} />
+            <NumbersTiles numbers={b.numbers} classBest={b.classBest} />
           </View>
         </Card>
 

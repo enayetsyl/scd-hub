@@ -11,7 +11,7 @@ import { STR, bnNum, classSectionLabel, fullDateLabel, routineSubjectLabel } fro
 import { isWholeClassSectionName } from "../lib/sectionPicks";
 import { useColors } from "../theme";
 import { space } from "../theme/tokens";
-import type { BriefNumbersT } from "../graphql/meetingChain";
+import type { BriefClassBestT, BriefNumbersT } from "../graphql/meetingChain";
 
 /** "শ্রেণি ৪ বালক" — the class, plus the section when it tells halves apart. */
 export const placeLabel = (p: { classLevel: number | null; classNameBn: string; sectionNameBn: string }): string =>
@@ -84,7 +84,21 @@ function Row({ a, b, tone }: { a: string; b: string; tone?: "bad" | "good" | "mu
   return (
     <View style={{ minHeight: 34, flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space(3), borderBottomWidth: 1, borderBottomColor: c.surfaceAlt }}>
       <Text style={{ color: c.textPrimary, flex: 1, minWidth: 0 }}>{a}</Text>
-      <Text style={{ color, fontWeight: "600", textAlign: "right" }}>{b}</Text>
+      {/* Capped and shrinkable: an unbounded right side (a long leave reason) used to
+          crush the left label to one letter per line. */}
+      <Text style={{ color, fontWeight: "600", textAlign: "right", flexShrink: 1, maxWidth: "60%" }}>{b}</Text>
+    </View>
+  );
+}
+
+/** A missed homework/assignment: when + subject on top, the task text below at full
+ *  width — the text is a teacher's sentence, so it never shares a line with the date. */
+function MissedRow({ head, text }: { head: string; text: string }): React.ReactElement {
+  const c = useColors();
+  return (
+    <View style={{ paddingVertical: space(2), gap: 2, borderBottomWidth: 1, borderBottomColor: c.surfaceAlt }}>
+      <Text style={{ color: c.textSecondary }}>{head}</Text>
+      <Text style={{ color: c.error, fontWeight: "600" }}>{text}</Text>
     </View>
   );
 }
@@ -94,10 +108,34 @@ function Row({ a, b, tone }: { a: string; b: string; tone?: "bad" | "good" | "mu
  * (absent days, tests per subject, missed homework…). `only` limits the tiles shown —
  * the subject teacher's write screen shows just the subject's three.
  */
-export function NumbersTiles({ numbers, only, initiallyOpen = null }: { numbers: BriefNumbersT; only?: TileKey[]; initiallyOpen?: TileKey | null }): React.ReactElement {
+export function NumbersTiles({
+  numbers,
+  only,
+  initiallyOpen = null,
+  classBest = null,
+}: {
+  numbers: BriefNumbersT;
+  only?: TileKey[];
+  initiallyOpen?: TileKey | null;
+  /** The section's best (D-#866) — the brief's full view only; a subject-narrowed screen omits it. */
+  classBest?: BriefClassBestT | null;
+}): React.ReactElement {
   const c = useColors();
   const [open, setOpen] = React.useState<TileKey | null>(initiallyOpen);
   const n = numbers;
+  const cb = classBest && !classBest.withheld ? classBest : null;
+  const bestLine = (key: TileKey): string | null => {
+    if (!cb) return null;
+    const v =
+      key === "att" ? (cb.attendancePresentDays != null ? `${bnNum(cb.attendancePresentDays)} ${STR.mcDaysPresent}` : null)
+      : key === "ct" ? (cb.classTestAvgPct != null ? `${STR.mcAvg} ${pctLabel(cb.classTestAvgPct)}` : null)
+      : key === "hw" ? (cb.homeworkPct != null ? `${pctLabel(cb.homeworkPct)} ${STR.mcSubmitted}` : null)
+      : key === "as" ? (cb.assignmentPct != null ? `${pctLabel(cb.assignmentPct)} ${STR.mcSubmitted}` : null)
+      : null;
+    return v ? `${STR.mcSectionBest}: ${v}` : null;
+  };
+  const rate = (t: { submitted: number; received: number }): string =>
+    t.received > 0 ? ` (${pctLabel((t.submitted / t.received) * 100)})` : "";
   const tiles: Array<{ key: TileKey; label: string; main: string; sub: string; bad: boolean; rows: React.ReactNode }> = [
     {
       key: "att",
@@ -130,7 +168,7 @@ export function NumbersTiles({ numbers, only, initiallyOpen = null }: { numbers:
       return {
         key: k as TileKey,
         label: k === "hw" ? STR.mcHomework : STR.mcAssignments,
-        main: `${bnNum(t.submitted)}/${bnNum(t.received)} ${STR.mcSubmitted}`,
+        main: `${bnNum(t.submitted)}/${bnNum(t.received)} ${STR.mcSubmitted}${rate(t)}`,
         sub: `${bnNum(t.notSubmitted)} ${STR.mcNotSubmitted}`,
         bad: t.notSubmitted > 0,
         rows: (
@@ -139,7 +177,9 @@ export function NumbersTiles({ numbers, only, initiallyOpen = null }: { numbers:
               <Row key={s.subject} a={routineSubjectLabel(s.subject)} b={`${bnNum(s.submitted)}/${bnNum(s.received)}${s.notSubmitted ? ` · ${bnNum(s.notSubmitted)} ${STR.mcNotSubmitted}` : ""}`} tone={s.notSubmitted ? "bad" : "good"} />
             ))}
             {t.missed.length ? (
-              t.missed.map((m, i) => <Row key={`${m.dateKey}-${i}`} a={`${dayLabel(m.dateKey)} · ${routineSubjectLabel(m.subject)}`} b={m.description ?? STR.mcNotSubmitted} tone="bad" />)
+              t.missed.map((m, i) => (
+                <MissedRow key={`${m.dateKey}-${i}`} head={`${dayLabel(m.dateKey)} · ${routineSubjectLabel(m.subject)}`} text={m.description ?? STR.mcNotSubmitted} />
+              ))
             ) : (
               <Muted>{STR.mcAllSubmitted}</Muted>
             )}
@@ -186,6 +226,7 @@ export function NumbersTiles({ numbers, only, initiallyOpen = null }: { numbers:
                   <Muted>{t.label}</Muted>
                   <Text style={{ color: c.textPrimary, fontWeight: "700", fontSize: 16 }}>{t.main}</Text>
                   {t.sub ? <Text style={{ color: t.bad ? c.warning : c.textSecondary }}>{t.sub}</Text> : null}
+                  {bestLine(t.key) ? <Text style={{ color: c.info, fontWeight: "600" }}>{bestLine(t.key)}</Text> : null}
                 </View>
                 <Text style={{ color: c.info, fontWeight: "600" }}>{isOpen ? STR.mcHide : STR.mcDetails}</Text>
               </Pressable>

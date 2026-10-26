@@ -73,6 +73,17 @@ export interface MeetingBriefT {
   summary: { strengths: string; concerns: string; authorName: string | null; updatedAt: string } | null;
   subjectNotes: BriefSubjectNoteT[];
   numbers: BriefNumbersT;
+  /** The section's best beside each number (D-#866); withheld in a small section. */
+  classBest: BriefClassBestT | null;
+}
+
+export interface BriefClassBestT {
+  rosterSize: number;
+  withheld: boolean;
+  attendancePresentDays: number | null;
+  classTestAvgPct: number | null;
+  homeworkPct: number | null;
+  assignmentPct: number | null;
 }
 
 const TRACKER = `received submitted notSubmitted bySubject { subject received submitted notSubmitted } missed { dateKey subject description }`;
@@ -94,6 +105,7 @@ export const MEETING_BRIEF = gql<{ meetingBrief: MeetingBriefT }, { meetingId: s
       summary { strengths concerns authorName updatedAt }
       subjectNotes { subject teacherName strengths concerns written skipped skipReason }
       numbers { ${NUMBERS} }
+      classBest { rosterSize withheld attendancePresentDays classTestAvgPct homeworkPct assignmentPct }
     }
   }
 `;

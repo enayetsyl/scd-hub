@@ -157,7 +157,8 @@ export default function MeetingBriefScreen({ route }: Props): React.ReactElement
                   {dayLabel(b.numbers.fromKey)} – {dayLabel(b.numbers.toKey)}
                 </Muted>
               </View>
-              <NumbersTiles numbers={b.numbers} />
+              <NumbersTiles numbers={b.numbers} classBest={b.classBest} />
+              {b.classBest?.withheld ? <Muted>{STR.mcSectionBestWithheld}</Muted> : null}
             </View>
           </View>
         )}
