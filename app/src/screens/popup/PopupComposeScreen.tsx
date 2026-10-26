@@ -16,7 +16,7 @@
  * The server re-checks every rule and permission; this screen only helps get it right.
  */
 import React, { useEffect, useMemo, useState } from "react";
-import { Linking, Switch, View } from "react-native";
+import { Linking, Pressable, Switch, View } from "react-native";
 import { useMutation, useQuery } from "urql";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import {
@@ -143,6 +143,8 @@ export default function PopupComposeScreen({ navigation, route }: Props): React.
   const [guardLevels, setGuardLevels] = useState<number[]>([]);
   const [sectionIds, setSectionIds] = useState<string[]>([]);
   const [picked, setPicked] = useState<PopupPersonHitT[]>([]);
+  /** "KIND:id" of everyone taken out with ✕ on the name list. */
+  const [excluded, setExcluded] = useState<string[]>([]);
   const [listId, setListId] = useState<string | null>(null);
   const [listName, setListName] = useState("");
   const [segment, setSegment] = useState<string | null>("teachers");
@@ -218,7 +220,22 @@ export default function PopupComposeScreen({ navigation, route }: Props): React.
     setGuardOn(!!a.guardian);
     setGuardLevels(a.guardian?.classLevels ?? []);
     setSectionIds(a.guardian?.sectionIds ?? []);
+    setExcluded([
+      ...(a.excludeUserIds ?? []).map((i) => `USER:${i}`),
+      ...(a.excludeGuardianIds ?? []).map((i) => `GUARDIAN:${i}`),
+      ...(a.excludeStudentIds ?? []).map((i) => `STUDENT:${i}`),
+    ]);
     setSegment(null);
+  }
+
+  /** ✕ on a name: a hand-picked staff member just leaves the picks; anyone a filter
+   *  matched is taken out ("all teachers except these"), and the server keeps them out. */
+  function removePerson(p: { kind: string; id: string }): void {
+    if (p.kind === "USER" && picked.some((x) => x.kind === "USER" && x.id === p.id)) {
+      setPicked(picked.filter((x) => !(x.kind === "USER" && x.id === p.id)));
+      return;
+    }
+    setExcluded((xs) => [...new Set([...xs, `${p.kind}:${p.id}`])]);
   }
 
   // ---- the audience the server sees ---------------------------------------------------
@@ -228,8 +245,11 @@ export default function PopupComposeScreen({ navigation, route }: Props): React.
       guardian: guardOn ? { classLevels: guardLevels, sectionIds } : null,
       userIds: picked.filter((p) => p.kind === "USER").map((p) => p.id),
       studentIds: picked.filter((p) => p.kind === "STUDENT").map((p) => p.id),
+      excludeUserIds: excluded.filter((k) => k.startsWith("USER:")).map((k) => k.slice(5)),
+      excludeGuardianIds: excluded.filter((k) => k.startsWith("GUARDIAN:")).map((k) => k.slice(9)),
+      excludeStudentIds: excluded.filter((k) => k.startsWith("STUDENT:")).map((k) => k.slice(8)),
     }),
-    [staffOn, staff, guardOn, guardLevels, sectionIds, picked],
+    [staffOn, staff, guardOn, guardLevels, sectionIds, picked, excluded],
   );
   const audienceEmpty = !staffOn && !guardOn && picked.length === 0;
   const [previewQ] = useQuery({
@@ -465,6 +485,7 @@ export default function PopupComposeScreen({ navigation, route }: Props): React.
                     setGuardLevels(s.guardian ?? []);
                     setSectionIds([]);
                     setPicked([]);
+                    setExcluded([]);
                     setListId(null);
                   }}
                 />
@@ -592,13 +613,43 @@ export default function PopupComposeScreen({ navigation, route }: Props): React.
                 {showNames ? (
                   <>
                     {pv.people.rows.map((p) => (
-                      <View key={`${p.kind}:${p.id}`} style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2) }}>
+                      <View key={`${p.kind}:${p.id}`} style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: space(2) }}>
                         <Body style={{ flexGrow: 1 }}>{p.name}</Body>
                         <Muted>{p.detail}</Muted>
                         {!p.reachable ? <Badge text={STR.ppNoLogin} tone="warn" /> : null}
+                        <Pressable
+                          onPress={() => removePerson(p)}
+                          hitSlop={8}
+                          accessibilityRole="button"
+                          accessibilityLabel={`${STR.ppRemovePerson}: ${p.name}`}
+                          style={({ pressed }) => ({
+                            width: 28,
+                            height: 28,
+                            borderRadius: 14,
+                            alignItems: "center",
+                            justifyContent: "center",
+                            backgroundColor: pressed ? colors.errorContainer : colors.surfaceAlt,
+                          })}
+                        >
+                          <Muted style={{ fontWeight: "700", color: colors.error }}>✕</Muted>
+                        </Pressable>
                       </View>
                     ))}
                     <Pager page={pv.people.page} pageSize={pv.people.pageSize} total={pv.people.total} onPage={setPeoplePage} />
+                  </>
+                ) : null}
+                {pv.excluded.length > 0 ? (
+                  <>
+                    <Muted style={{ marginTop: space(2) }}>{STR.ppExcludedTitle.replace("{n}", bnNum(pv.excluded.length))}</Muted>
+                    <ChipRow>
+                      {pv.excluded.map((p) => (
+                        <Chip
+                          key={`${p.kind}:${p.id}`}
+                          label={`↺ ${p.name}`}
+                          onPress={() => setExcluded((xs) => xs.filter((k) => k !== `${p.kind}:${p.id}`))}
+                        />
+                      ))}
+                    </ChipRow>
                   </>
                 ) : null}
                 <View style={{ gap: space(2), marginTop: space(2) }}>
