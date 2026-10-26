@@ -411,9 +411,12 @@ describe("monthly pending work — split by record section", () => {
     );
     expect(hw.find((r) => r.sectionId === GIRLS.toString())!.sectionLabel).toBe("শ্রেণি ৩ / বালিকা");
     const as = pw.rows.filter((r) => r.kind === "ASSIGNMENT" && r.ref.startsWith("AS-C3"));
-    expect(as.find((r) => r.sectionId === GIRLS.toString())).toEqual(
-      expect.objectContaining({ teacherId: G.toString(), toCheck: 2, awaiting: 1 }),
-    );
+    const girlsAs = as.find((r) => r.sectionId === GIRLS.toString())!;
+    expect(girlsAs).toEqual(expect.objectContaining({ teacherId: G.toString(), toCheck: 2 }));
+    // One copy is still owed. monthlyPendingWork reads the REAL clock and the copy was due
+    // on 25 Oct, so it is "awaiting" before that day and "notSubmitted" after — the split
+    // ownership is the point here, not which side of the due date the test runs on.
+    expect(girlsAs.awaiting + girlsAs.notSubmitted).toBe(1);
     expect(pw.rows.some((r) => r.sectionId === ALL.toString())).toBe(false);
     // same-section control
     expect(pw.rows.find((r) => r.kind === "HOMEWORK" && r.sectionId === S2.toString())!.teacherId).toBe(X.toString());
