@@ -31,6 +31,8 @@ export type HomeStackParamList = {
   /** D-#850: the comment-writing guideline (static). Opened from both write screens and
    *  the daily reminder popup; never first in the stack. */
   MeetingCommentGuide: undefined;
+  /** D-#855: আমার বার্তা — the pop-ups this person received (90 days). Never first. */
+  MyPopups: undefined;
 };
 
 /** Which panel the Student Profile opens on (SP-3, prd-student-profile §8.1). */
@@ -254,6 +256,8 @@ export type GuardianHomeStackParamList = {
   ChildRevision: undefined;
   /** M-6 (D-#812): the child's learning progress per subject, in plain words. */
   ChildMastery: undefined;
+  /** D-#855: আমার বার্তা — the pop-ups this guardian received (90 days). Never first. */
+  MyPopups: undefined;
 };
 export type GuardianHomeworkStackParamList = {
   // Optional deep-link params (D-#452 weekly digest): preselect the child and
@@ -655,6 +659,14 @@ export type ReportsStackParamList = {
   HwWeeklyUnsubmitted: { weekStart?: string } | undefined;
 };
 
+/** Pop-up notices (D-#852): the sender's list (first, no params), composer, report. */
+export type PopupStackParamList = {
+  PopupNoticeList: undefined;
+  /** No id = a new notice; a draft id edits it; a sent id opens live-edit. */
+  PopupCompose: { id?: string };
+  PopupReport: { id: string };
+};
+
 export type TabParamList = {
   HomeTab: NavigatorScreenParams<HomeStackParamList>;
   ContentTab: NavigatorScreenParams<ContentStackParamList>;
@@ -673,6 +685,8 @@ export type TabParamList = {
   ClassNotesTab: NavigatorScreenParams<ClassNotesStackParamList>;
   LibraryTab: NavigatorScreenParams<LibraryStackParamList>;
   ChatTab: NavigatorScreenParams<ChatStackParamList>;
+  /** D-#852 — pop-up notices (Office / Principal). */
+  PopupNoticesTab: NavigatorScreenParams<PopupStackParamList>;
   VocabTab: NavigatorScreenParams<VocabStackParamList>;
   ClassTestTab: NavigatorScreenParams<ClassTestStackParamList>;
   CommentsTab: NavigatorScreenParams<CommentsStackParamList>;

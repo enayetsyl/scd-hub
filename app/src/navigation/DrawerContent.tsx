@@ -201,6 +201,10 @@ const STAFF_NAV: NavSection[] = [
   { type: "item", route: "FreeMixingTab", labelKey: "tabFreeMixing", icon: "🎥", hidden: true },
   { type: "item", route: "LibraryTab", labelKey: "tabLibrary", icon: "📖" },
   { type: "item", route: "ChatTab", labelKey: "tabChat", icon: "💬" },
+  // Pop-up notices (D-#852): the sender's list for Office / Principal; আমার বার্তা for every
+  // staff login (the pop-ups they received, to read again).
+  { type: "item", route: "PopupNoticesTab", labelKey: "ppTitleNav", icon: "📣" },
+  { type: "item", route: "HomeTab", screen: "MyPopups", labelKey: "ppMineTitle", icon: "📬" },
   { type: "item", route: "FinanceTab", labelKey: "tabFinance", icon: "💰" },
   { type: "item", route: "HrTab", labelKey: "tabHr", icon: "🧑‍💼" },
   {
@@ -324,6 +328,8 @@ const GUARDIAN_NAV: NavSection[] = [
   { type: "item", route: "GuardianHomeTab", screen: "ChildComments", labelKey: "gpComments", icon: "💬" },
   { type: "item", route: "GuardianHomeTab", screen: "ChildRevision", labelKey: "gpRevision", icon: "📖" },
   { type: "item", route: "GuardianHomeTab", screen: "ChildMastery", labelKey: "gpMsProgress", icon: "🎯" },
+  // D-#855: every pop-up the school sent this family, to read again.
+  { type: "item", route: "GuardianHomeTab", screen: "MyPopups", labelKey: "ppMineTitle", icon: "📬" },
 ];
 
 const NAV: NavSection[] = [...STAFF_NAV, ...GUARDIAN_NAV];
