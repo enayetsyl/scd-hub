@@ -7042,7 +7042,7 @@ const STR_BN = {
   ppAutoWaits: "লেখা লম্বা — পুরোটা না পড়া পর্যন্ত নিজে বন্ধ হবে না",
   ppMoreBelow: "নিচে আরও আছে ↓",
   ppScrollDown: "নিচে স্ক্রল করুন ↓",
-  ppCloseIn: "বন্ধ করুন · {n} সে.",
+  ppCloseIn: "বন্ধ · {n} সে.",
   ppSnooze: "পরে মনে করিয়ে দিন",
   ppOpenAttachment: "📎 সংযুক্তি খুলুন",
   ppYourAnswer: "আপনার উত্তর: {a}",

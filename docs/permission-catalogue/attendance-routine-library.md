@@ -1,6 +1,6 @@
 # Attendance, routine & library — build checklist
 
-Features: `attendance`, `staff_attendance`, `routine`, `class_note`, `library`, `chat`, `saturday_revision`, `vocab_test`, plus the routine-slot half of `cover` (`cover:assign`; the rest of `cover` lives in hr-finance.md) (owner rows: see README). Source: inventory D, origin/dev 2026-10-20.
+Features: `attendance`, `staff_attendance`, `routine`, `class_note`, `library`, `chat`, `popup_notice`, `saturday_revision`, `vocab_test`, plus the routine-slot half of `cover` (`cover:assign`; the rest of `cover` lives in hr-finance.md) (owner rows: see README). Source: inventory D, origin/dev 2026-10-20.
 Counts: 76 mutations, 108 queries, 4 REST rows (5 routes).
 
 Designation names used below: `marker_of_the_day`, `class_teacher`, `slot_teacher_or_cover`, `librarian`, `group_lead`, `vocab_tester`. Each stays as the row gate under its action (README `DESIGNATION:`).
@@ -414,3 +414,15 @@ No other role-routed recipient is named for this area.
 - Library BN wording uses ধার, never ঋণ; one server error string (circulation.ts:435) still says "ঋণের অবস্থা" (F-33).
 
 Listed elsewhere: `server/src/modules/hr/resolvers/staffHub.ts:348` staffAttendance, `:362` staffAttendanceSummary, `:386` staffLatenessPreview → hr-finance.md (new gate `staff_attendance:view_all`). The other `cover` actions (`view_all`, `approve`, `assign_proxy`, `propose`) → hr-finance.md.
+
+## (f) `popup_notice` — pop-up notices (added 2026-10-26, D-#852–#858)
+
+| file | field | gate |
+|---|---|---|
+| server/src/modules/popup-notices/resolvers/popupNotice.ts | popupNoticesPage · popupNotice · popupNoticeReport · popupRecipientsPage · popupAudiencePreview · searchPopupPeople · popupPickedPeople · popupAudienceListsPage | `popup_notice:view` |
+| server/src/modules/popup-notices/resolvers/popupNotice.ts | savePopupDraft · deletePopupDraft · publishPopupNotice · editLivePopupNotice · withdrawPopupNotice · duplicatePopupNotice · sendPopupTestToMe · savePopupAudienceList · deletePopupAudienceList | hasAnyPermission(`popup_notice:send_staff`, `popup_notice:send_guardian`) + the service checks each half of the audience against its own action (`assertCanSendTo`) |
+| server/src/modules/popup-notices/resolvers/popupNotice.ts | remindPopupNotice · addPopupMatches | `popup_notice:follow_up` (addPopupMatches also re-checks the send actions) |
+| server/src/modules/popup-notices/resolvers/popupNotice.ts | myPopupQueue · recordPopupEvent · myPopupHistoryPage | authenticated only — the caller's OWN pop-ups (staff and guardians); on the gate test's OPEN_FIELDS |
+| app AppTabs / DrawerContent | পপ-আপ বার্তা tab | any of `popup_notice:view` / `send_staff` / `send_guardian` |
+| app DrawerContent | আমার বার্তা (HomeTab / GuardianHomeTab → MyPopups) | none — every login |
+| app PopupNoticeListScreen / PopupReportScreen | New, edit, withdraw, copy · remind, add matches | send actions · `popup_notice:follow_up` |
