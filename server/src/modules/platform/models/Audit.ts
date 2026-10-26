@@ -183,6 +183,12 @@ export type AuditEventKind =
   | "MEETING_CHANGE_APPROVED"   // Principal/VP approved a change request — the two families swapped (D-#842)
   | "MEETING_CHANGE_DECLINED"   // Principal/VP declined a change request — the time stays (D-#842)
   | "MEETING_CHANGE_OUTCOME_SEEN" // the family acknowledged the approved/declined pop-up (D-#844)
+  // Pop-up notices (docs/prd-popup-notice.md, D-#852..#858)
+  | "POPUP_NOTICE_PUBLISHED"    // a pop-up notice went out — audience frozen into recipient rows (counts in meta)
+  | "POPUP_NOTICE_EDITED"       // the words / end date of a sent notice fixed (before/after + reshow in meta)
+  | "POPUP_NOTICE_WITHDRAWN"    // a sent notice stopped — gone from every screen, report kept
+  | "POPUP_NOTICE_ANSWERED"     // a recipient tapped an answer button (meta.previous on a changed answer)
+  | "POPUP_NOTICE_FOLLOW_UP"    // the sender re-showed it to the rest, or added new matches (meta.action + count)
   | "MEETING_COMMENT_SAVED"     // a class teacher saved a (student × meeting) positive+concern note (CM-5, §3/§6/J-CM6, D-#124)
   // Parents'-meeting comment chain (MC-1..MC-4, docs/prd-meeting-comments.md, D-#752..#756)
   | "MEETING_COMMENTS_OPENED"          // collection opened (roster counts in meta) or its due dates changed (meta.datesOnly)

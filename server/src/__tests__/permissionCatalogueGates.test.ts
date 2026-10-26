@@ -64,6 +64,8 @@ const OPEN_FIELDS: Record<string, string> = {
   myNotifications: "own inbox", myNotificationsPage: "own inbox", myNotification: "own inbox",
   myUnreadNotificationCount: "own inbox", markNotificationRead: "own inbox", markNotificationsRead: "own inbox",
   markAllNotificationsRead: "own inbox", myAnnouncement: "own announcement", webPushPublicKey: "push key",
+  // Own pop-up notices (D-#855): the caller's own queue, events and আমার বার্তা — guardian included.
+  myPopupQueue: "own pop-ups", recordPopupEvent: "own pop-up progress", myPopupHistoryPage: "own pop-ups",
   registerWebPush: "own push", unregisterWebPush: "own push", registerPushDevice: "own push",
   unregisterPushDevice: "own push",
   // Shared reference data every screen needs (no person data).

@@ -717,6 +717,17 @@ export const FEATURE_CATALOGUE = {
       view_all: { en: "Oversee all conversations", bn: "সব কথোপকথনের তত্ত্বাবধান", desc: "Read any conversation incl. 1:1; audited open", teacher: false, office: false, flags: ["LOCKED"] },
     },
   },
+  popup_notice: {
+    group: "communication",
+    en: "Pop-up notices",
+    bn: "পপ-আপ বার্তা",
+    actions: {
+      view: { en: "See pop-up notices", bn: "পপ-আপ বার্তা ও রিপোর্ট দেখা", desc: "List, report, who saw / read / answered, audience preview, people search, saved lists", teacher: false, office: true, flags: [] },
+      send_staff: { en: "Send pop-ups to staff", bn: "কর্মীদের পপ-আপ পাঠানো", desc: "Compose, edit, send, withdraw, copy, test a notice whose audience includes staff; save staff lists", teacher: false, office: true, flags: [] },
+      send_guardian: { en: "Send pop-ups to guardians", bn: "অভিভাবকদের পপ-আপ পাঠানো", desc: "Compose, edit, send, withdraw, copy, test a notice whose audience includes guardians; save family lists", teacher: false, office: true, flags: [] },
+      follow_up: { en: "Follow up a pop-up", bn: "বাকিদের আবার দেখানো ও নতুন প্রাপক যোগ", desc: "Show again to everyone not done; add people who match the audience now", teacher: false, office: true, flags: [] },
+    },
+  },
   message_templates: {
     group: "communication",
     en: "Message templates",

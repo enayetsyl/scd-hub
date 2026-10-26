@@ -132,3 +132,4 @@ import "./modules/mastery/resolvers/masteryAssignment";
 import "./modules/mastery/resolvers/masteryGuardian";
 import "./modules/mastery/resolvers/masteryAction";
 import "./modules/worksheets/resolvers/worksheet";
+import "./modules/popup-notices/resolvers/popupNotice";
