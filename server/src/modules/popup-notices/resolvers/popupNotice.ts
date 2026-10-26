@@ -113,6 +113,9 @@ const PopupAudienceRef = builder.objectRef<PopupAudienceDTO>("PopupAudience").im
     guardian: t.field({ type: PopupGuardianFilterRef, nullable: true, resolve: (a) => a.guardian }),
     userIds: t.exposeStringList("userIds"),
     studentIds: t.exposeStringList("studentIds"),
+    excludeUserIds: t.exposeStringList("excludeUserIds"),
+    excludeGuardianIds: t.exposeStringList("excludeGuardianIds"),
+    excludeStudentIds: t.exposeStringList("excludeStudentIds"),
   }),
 });
 
@@ -259,6 +262,7 @@ const AudiencePreviewRef = builder.objectRef<AudiencePreview>("PopupAudiencePrev
     staffMissingGender: t.exposeInt("staffMissingGender"),
     summary: t.exposeString("summary"),
     people: t.field({ type: AudiencePersonPageRef, resolve: (p) => p.people }),
+    excluded: t.field({ type: [AudiencePersonRef], description: "People the sender took out with ✕ — for undo.", resolve: (p) => p.excluded }),
   }),
 });
 
@@ -313,6 +317,9 @@ const AudienceInput = builder.inputType("PopupAudienceInput", {
     guardian: t.field({ type: GuardianFilterInput, required: false }),
     userIds: t.stringList({ required: false }),
     studentIds: t.stringList({ required: false }),
+    excludeUserIds: t.stringList({ required: false, description: "Staff taken out with ✕, whatever matched them." }),
+    excludeGuardianIds: t.stringList({ required: false, description: "Guardians taken out with ✕." }),
+    excludeStudentIds: t.stringList({ required: false, description: "Families with no guardian row, taken out with ✕." }),
   }),
 });
 

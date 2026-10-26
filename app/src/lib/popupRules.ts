@@ -81,6 +81,6 @@ export function ruleProblems(
   if (rules.mustAct && actionCount === 0) out.push(msg.actNeedsButton);
   if (!rules.closeButton && !rules.mustAct && rules.autoCloseSec === 0 && actionCount === 0) out.push(msg.noWayOut);
   if (rules.autoCloseSec !== 0 && (rules.autoCloseSec < 3 || rules.autoCloseSec > 60)) out.push(msg.autoRange);
-  if (rules.minReadSec !== 0 && (rules.minReadSec < 5 || rules.minReadSec > 300)) out.push(msg.minRange);
+  if (rules.minReadSec !== 0 && (rules.minReadSec < 2 || rules.minReadSec > 300)) out.push(msg.minRange);
   return out;
 }
