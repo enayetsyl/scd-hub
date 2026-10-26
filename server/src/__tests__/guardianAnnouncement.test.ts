@@ -18,8 +18,12 @@
  *
  * The read is also fail-soft: it runs inside the authenticated shell on every
  * app open, so a failure must render nothing, never break the app.
+ *
+ * D-#852: the APP side is superseded by pop-up notices (PopupNoticeHost, server-side
+ * progress per person). The server query stays — older installed bundles still ask it —
+ * so its tests stay; the component tests now pin the replacement instead.
  */
-import { readFileSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import path from "path";
 import type { AppContext } from "../context";
 
@@ -27,7 +31,6 @@ import type { AppContext } from "../context";
 const read = (rel: string): string =>
   readFileSync(path.resolve(__dirname, rel), "utf8").split("\r\n").join("\n");
 
-const POPUP = read("../../../app/src/components/AnnouncementPopup.tsx");
 const APP = read("../../../app/App.tsx");
 const RESOLVER = read("../modules/notifications/resolvers/announcement.ts");
 
@@ -162,57 +165,29 @@ describe("validateAnnouncement", () => {
   });
 });
 
-describe("once a day, per announcement", () => {
-  test("the seen-key is keyed on the announcement id", () => {
-    // A single shared key would let an OLD announcement's "seen today" suppress a
-    // NEW one on the day it launches — the one day it most needs to be seen.
-    expect(POPUP).toMatch(/const seenKey = \(id: string\)[^\n]*announcement_seen_\$\{id\}/);
+describe("the app side is pop-up notices now (D-#852)", () => {
+  const HOST = read("../../../app/src/components/PopupNoticeHost.tsx");
+
+  test("the old AnnouncementPopup is gone and no longer mounted", () => {
+    expect(existsSync(path.resolve(__dirname, "../../../app/src/components/AnnouncementPopup.tsx"))).toBe(false);
+    expect(APP).not.toMatch(/<AnnouncementPopup \/>/);
   });
 
-  test("the stored key is compared against the SERVER'S day, not a local date", () => {
-    expect(POPUP).toMatch(/lastShown !== announcement\.todayKey/);
-    // No second implementation of "what day is it" in the client.
-    expect(POPUP).not.toMatch(/toLocaleDateString|new Date\(\)\.toISOString/);
-  });
-
-  test("the key is written on DISMISS, not on show", () => {
-    // Killed mid-render, the parent has read nothing and should see it again.
-    const dismiss = POPUP.slice(POPUP.indexOf("const dismiss ="));
-    expect(dismiss).toMatch(/setItem\(seenKey\(announcement\.id\), announcement\.todayKey\)/);
-    const effect = POPUP.slice(POPUP.indexOf("useEffect("), POPUP.indexOf("const dismiss ="));
-    expect(effect).not.toMatch(/setItem\(/);
-  });
-
-  test("unreadable storage shows the popup rather than hiding it", () => {
-    // Private windows and blocked site data throw. Seen twice beats never seen.
-    const effect = POPUP.slice(POPUP.indexOf("useEffect("), POPUP.indexOf("const dismiss ="));
-    expect(effect).toMatch(/catch \{[\s\S]{0,400}?lastShown = null;/);
-  });
-});
-
-describe("where it mounts and what it costs", () => {
-  test("it sits beside the navigator, not inside a screen", () => {
+  test("the host sits beside the navigator, before the meeting pop-up that must stay on top", () => {
     // A popup owned by one screen misses every other entry point: a push tap, a
     // deep link, a reload on a sub-screen.
-    expect(APP).toMatch(/<ThemedNavigation \/>[\s\S]{0,700}?<AnnouncementPopup \/>/);
+    expect(APP).toMatch(/<ThemedNavigation \/>[\s\S]{0,900}?<PopupNoticeHost \/>[\s\S]{0,400}?<MeetingRsvpPopup \/>/);
   });
 
-  test("staff never even issue the query", () => {
-    expect(POPUP).toMatch(/pause: !isGuardian/);
-  });
-
-  test("the query is authenticated, not permissioned", () => {
-    // A permission would log a refusal on every staff render for a question that
-    // has a perfectly good answer: nothing for you.
+  test("the server query stays authenticated, not permissioned, for older bundles", () => {
     expect(RESOLVER).toMatch(/authScopes: \{ authenticated: true \}/);
     expect(RESOLVER).toMatch(/nullable: true/);
   });
 
-  test("an unknown deep-link tab closes the popup instead of crashing", () => {
-    // Announcement rows outlive route renames; a stale tab name must not take the
-    // shell down.
-    const dismiss = POPUP.slice(POPUP.indexOf("const dismiss ="));
-    expect(dismiss).toMatch(/navigationRef\.isReady\(\)/);
-    expect(dismiss).toMatch(/try \{[\s\S]{0,400}?navigate\([\s\S]{0,200}?\} catch/);
+  test("an unknown screen target closes the pop-up instead of crashing", () => {
+    // Notice rows outlive route renames; a stale route name must not take the shell down.
+    const open = HOST.slice(HOST.indexOf("export function openPopupTarget"));
+    expect(open).toMatch(/navigationRef\.isReady\(\)/);
+    expect(open).toMatch(/try \{[\s\S]{0,300}?navigate\([\s\S]{0,200}?\} catch/);
   });
 });
