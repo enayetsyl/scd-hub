@@ -202,7 +202,7 @@ builder.queryField("financeDailySnapshot", (t) =>
   t.field({
     type: DailySnapshotRef,
     description: "The day's per-ledger opening/in/out/closing (Cash/Bank/Online), derived. Requires finance_ledger:view.",
-    authScopes: { hasPermission: "finance_ledger:view" },
+    authScopes: { hasAnyPermission: ["finance_ledger:view", "reports:daily_snapshot"] },
     args: { date: t.arg.string({ required: true }) },
     resolve: (_root, args) => dailySnapshot(args.date),
   }),

@@ -439,7 +439,7 @@ builder.queryField("workLoadGrid", (t) =>
   t.field({
     type: [LoadRowRef],
     description: "Open minutes per staff member per day over [fromKey, toKey] (≤ 14 days), per-category colouring (WB-3). work_board:view_all.",
-    authScopes: { hasPermission: "work_board:view_all" },
+    authScopes: { hasAnyPermission: ["work_board:view_all", "reports:workload"] },
     args: { fromKey: t.arg.string({ required: true }), toKey: t.arg.string({ required: true }) },
     resolve: async (_root, args) => {
       assertKeys(args.fromKey, args.toKey);

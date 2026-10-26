@@ -66,7 +66,7 @@ builder.queryField("studentAttendanceRanking", (t) =>
       "(\"quran\"/\"arabic\") or level name. `sortBy` ∈ rank (default) | class — class regroups " +
       "the SAME numbered rows by the student’s general class and never renumbers them. " +
       "Requires attendance:view_all.",
-    authScopes: { hasPermission: "attendance:view_all" },
+    authScopes: { hasAnyPermission: ["attendance:view_all", "reports:attendance_ranking"] },
     args: {
       window: t.arg.string({ required: true }),
       anchorKey: t.arg.string({ required: true }),
@@ -94,7 +94,7 @@ builder.queryField("staffAttendanceRanking", (t) =>
       "Rank staff by present % over a window, from the AT-1 biometric register. Approved " +
       "LEAVE is excluded from the denominator (leave is not absence); LATE counts as present, " +
       "is reported separately and breaks ties. Requires staff_attendance:view_all.",
-    authScopes: { hasPermission: "staff_attendance:view_all" },
+    authScopes: { hasAnyPermission: ["staff_attendance:view_all", "reports:attendance_ranking"] },
     args: {
       window: t.arg.string({ required: true }),
       anchorKey: t.arg.string({ required: true }),
@@ -151,7 +151,7 @@ builder.queryField("subjectGroupAttendanceBreakdown", (t) =>
       "`studentAttendanceRanking`. Unlike axis=track — which pools the whole track into one " +
       "list — this keeps each group's ranking separate, because a group that held 4 days and " +
       "one that held 28 are not comparable on a shared list. Requires attendance:view_all.",
-    authScopes: { hasPermission: "attendance:view_all" },
+    authScopes: { hasAnyPermission: ["attendance:view_all", "reports:attendance_ranking"] },
     args: {
       window: t.arg.string({ required: true }),
       anchorKey: t.arg.string({ required: true }),

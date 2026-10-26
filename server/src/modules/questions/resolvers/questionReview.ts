@@ -806,7 +806,7 @@ builder.queryField("questionReviewerProgress", (t) =>
     description:
       "Per-reviewer question-review progress, optionally narrowed to one class and/or subject " +
       "(Q5.1). Reviewers who still owe work come first. Requires question_review:view_all.",
-    authScopes: { hasPermission: "question_review:view_all" },
+    authScopes: { hasAnyPermission: ["question_review:view_all", "reports:review_progress"] },
     args: {
       classLevel: t.arg.int({ required: false }),
       subject: t.arg.string({ required: false }),
@@ -893,7 +893,7 @@ builder.queryField("questionCoverage", (t) =>
       "going and nothing about how much of the subject had been assigned, so a reviewer at 13% " +
       "looked the same whether she held the whole subject or a tenth of it. Requires " +
       "question_review:view_all.",
-    authScopes: { hasPermission: "question_review:view_all" },
+    authScopes: { hasAnyPermission: ["question_review:view_all", "reports:review_progress"] },
     args: {
       subject: t.arg.string({ required: false }),
       classLevel: t.arg.int({ required: false }),
@@ -932,7 +932,7 @@ builder.queryField("questionReviewerSlices", (t) =>
       "(QR-14, D-#568). The progress card gave only a total, so ‘which chapters did I give " +
       "her’ meant tapping through every subject × class combination. Requires " +
       "question_review:view_all.",
-    authScopes: { hasPermission: "question_review:view_all" },
+    authScopes: { hasAnyPermission: ["question_review:view_all", "reports:review_progress"] },
     args: {
       classLevel: t.arg.int({ required: false }),
       subject: t.arg.string({ required: false }),

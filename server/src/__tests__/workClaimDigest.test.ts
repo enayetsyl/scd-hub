@@ -144,8 +144,9 @@ describe("digestRecipientIds — Principal + Office + the Principal's extras", (
       auth: { userId, role, ...extra } as never,
     });
     try {
-      // Office with the queue switched off is refused, though it keeps the waiver.
-      setRoleTemplateOverrides({ OFFICE: { granted: [], revoked: ["work_claim:view_all"] } });
+      // Office with the queue switched off is refused, though it keeps the waiver. Since D-#861 the
+      // Reports-hub switch opens the queue too, so switching it off means both.
+      setRoleTemplateOverrides({ OFFICE: { granted: [], revoked: ["work_claim:view_all", "reports:guardian_claims"] } });
       expect(await canWatchClaims(ctx(oid().toString(), "OFFICE"))).toBe(false);
       expect(await canWatchClaims(ctx(oid().toString(), "OFFICE"), "work_claim:remind")).toBe(true);
       // A digest teacher with Teacher remind switched off may read but not nudge.

@@ -87,7 +87,7 @@ builder.queryField("liveClassBoard", (t) =>
     description:
       "Class-wise, period-wise teacher/cover board for a date, with the currently " +
       "running period marked — the Principal/Office live-class view (D-#674).",
-    authScopes: { hasPermission: "routine:view_all" },
+    authScopes: { hasAnyPermission: ["routine:view_all", "reports:live_classes"] },
     args: { date: t.arg.string({ required: true }) },
     resolve: (_root, args) => liveClassBoard(args.date),
   }),

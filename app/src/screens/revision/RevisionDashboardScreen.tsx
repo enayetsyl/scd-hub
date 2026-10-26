@@ -28,6 +28,8 @@ import { Screen, Card, Body, Muted, Button, Field, Badge, Notice } from "../../c
 import { QueryGate } from "../../components/QueryGate";
 import { STR, bnNum, classLevelLabel, revCategoryLabel, revMistakeLabel, revStatusLabel, revTrendGlyph } from "../../lib/labels";
 import { space } from "../../theme/tokens";
+import { useAuth } from "../../auth/AuthContext";
+import { mostRecentSaturday } from "./RevisionHomeScreen";
 import type { RevisionStackParamList } from "../../navigation/types";
 
 type Props = NativeStackScreenProps<RevisionStackParamList, "RevisionDashboard">;
@@ -111,7 +113,9 @@ function DashboardCard({ dash }: { dash: RevisionDashboardT }): React.ReactEleme
 }
 
 export default function RevisionDashboardScreen({ route }: Props): React.ReactElement {
-  const { groupId, nameBn, date } = route.params;
+  const { groupId, nameBn } = route.params ?? {};
+  // D-#861: the Reports drawer leaf opens it with no params — default like the module home.
+  const date = route.params?.date ?? mostRecentSaturday();
   const asOf = date;
   const [studentId, setStudentId] = useState("");
   const [activeStudent, setActiveStudent] = useState<string | null>(null);
@@ -147,7 +151,9 @@ export default function RevisionDashboardScreen({ route }: Props): React.ReactEl
     pause: !activeStudent,
   });
   const [completeQ, refetchComplete] = useQuery({ query: REVISION_COMPLETENESS_STATUS_QUERY, variables: { date } });
-  const [chaseQ, refetchChase] = useQuery({ query: REVISION_COMPLETENESS_CHASE_QUERY, variables: { date } });
+  // D-#861: the Reports-hub switch reads the dashboard; the chase list is saturday_revision:remind.
+  const { can } = useAuth();
+  const [chaseQ, refetchChase] = useQuery({ query: REVISION_COMPLETENESS_CHASE_QUERY, variables: { date }, pause: !can("saturday_revision:remind") });
 
   const coverage = coverageQ.data?.revisionGroupCoverage ?? [];
   const overdue = coverage.filter((c) => c.overdue);

@@ -69,7 +69,7 @@ builder.queryField("openTeachingNoteComments", (t) =>
     description:
       "Every OPEN comment across the whole library, newest first — the Principal's outstanding " +
       "list. Requires roster:manage.",
-    authScopes: { hasPermission: "teaching_notes:review" },
+    authScopes: { hasAnyPermission: ["teaching_notes:review", "reports:teaching_note_comments"] },
     resolve: async (_root, _args, ctx) => openTeachingNoteComments(ctx),
   }),
 );
