@@ -272,7 +272,7 @@ builder.queryField("myWorkClaims", (t) =>
 builder.queryField("workClaimQueue", (t) =>
   t.field({
     type: [WorkClaimRowRef],
-    authScopes: { hasPermission: "work_claim:view_all" },
+    authScopes: { hasAnyPermission: ["work_claim:view_all", "reports:guardian_claims"] },
     description:
       "Every unresolved guardian claim, longest-waiting first (school days pending, D-#710). " +
       "The Office/Principal queue, also open to the Principal's chosen digest recipients.",

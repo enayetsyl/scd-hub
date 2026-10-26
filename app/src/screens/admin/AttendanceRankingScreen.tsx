@@ -31,6 +31,7 @@ import {
 import { DateField } from "../../components/DateField";
 import { AcademicYearSelect } from "../../components/selects";
 import { STR } from "../../lib/labels";
+import { useAuth } from "../../auth/AuthContext";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
 
@@ -152,7 +153,10 @@ function GroupCard({
 }
 
 export default function AttendanceRankingScreen(_props: Props): React.ReactElement {
-  const [subject, setSubject] = useState<Subject>("students");
+  const { can } = useAuth();
+  // Staff-register-only readers (staff_attendance:view_all) start on staff, not on a refusal.
+  const readsStudents = can("attendance:view_all") || can("reports:attendance_ranking");
+  const [subject, setSubject] = useState<Subject>(readsStudents ? "students" : "staff");
   const [window, setWindow] = useState<Window>("month");
   const [anchorKey, setAnchorKey] = useState(todayKey());
   const [axis, setAxis] = useState<Axis>("school");

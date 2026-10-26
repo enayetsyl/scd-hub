@@ -228,6 +228,21 @@ const STAFF_NAV: NavSection[] = [
       { route: "ReportsTab", labelKey: "hlrTitle", icon: "📘", screen: "HwLifecycleReport", perms: REPORT_LEAF_ACTIONS.HwLifecycleReport },
       // D-#453: the weekly unsubmitted-homework report (guardian-digest staff twin).
       { route: "ReportsTab", labelKey: "hwwdTitle", icon: "📅", screen: "HwWeeklyUnsubmitted", perms: REPORT_LEAF_ACTIONS.HwWeeklyUnsubmitted },
+      // D-#861: the reports that sat elsewhere (Admin hub, module homes), one switch each.
+      { route: "ReportsTab", labelKey: "arTitle", icon: "🏅", screen: "AttendanceRanking", perms: REPORT_LEAF_ACTIONS.AttendanceRanking },
+      { route: "ReportsTab", labelKey: "wcQueueTitle", icon: "🏠", screen: "WorkClaimQueue", perms: REPORT_LEAF_ACTIONS.WorkClaimQueue },
+      { route: "ReportsTab", labelKey: "lcbBoardTitle", icon: "🟢", screen: "LiveClassBoard", perms: REPORT_LEAF_ACTIONS.LiveClassBoard },
+      { route: "ReportsTab", labelKey: "wbLoad", icon: "⚖️", screen: "LoadGrid", perms: REPORT_LEAF_ACTIONS.LoadGrid },
+      { route: "ReportsTab", labelKey: "ctDashboardTitle", icon: "🧮", screen: "ClassTestDashboard", perms: REPORT_LEAF_ACTIONS.ClassTestDashboard },
+      { route: "ReportsTab", labelKey: "impNavTitle", icon: "📈", screen: "StudentProgress", perms: REPORT_LEAF_ACTIONS.StudentProgress },
+      { route: "ReportsTab", labelKey: "lpNavTitle", icon: "📗", screen: "LessonProgress", perms: REPORT_LEAF_ACTIONS.LessonProgress },
+      { route: "ReportsTab", labelKey: "revDashTitle", icon: "🕌", screen: "RevisionDashboard", perms: REPORT_LEAF_ACTIONS.RevisionDashboard },
+      { route: "ReportsTab", labelKey: "qpTitle", icon: "🔍", screen: "QuestionReviewProgress", perms: REPORT_LEAF_ACTIONS.QuestionReviewProgress },
+      { route: "ReportsTab", labelKey: "obsReviewerEffTitle", icon: "👁️", screen: "ReviewerEffectiveness", perms: REPORT_LEAF_ACTIONS.ReviewerEffectiveness },
+      { route: "ReportsTab", labelKey: "tnOpenComments", icon: "💬", screen: "TeachingNoteOpenComments", perms: REPORT_LEAF_ACTIONS.TeachingNoteOpenComments },
+      { route: "ReportsTab", labelKey: "finDashboardTitle", icon: "💰", screen: "FinanceDashboard", perms: REPORT_LEAF_ACTIONS.FinanceDashboard },
+      { route: "ReportsTab", labelKey: "finSnapshotTitle", icon: "🧾", screen: "DailySnapshot", perms: REPORT_LEAF_ACTIONS.DailySnapshot },
+      { route: "ReportsTab", labelKey: "geTitle", icon: "👪", screen: "GuardianEngagement", perms: REPORT_LEAF_ACTIONS.GuardianEngagement },
     ],
   },
   /**

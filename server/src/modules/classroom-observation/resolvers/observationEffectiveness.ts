@@ -112,7 +112,7 @@ builder.queryField("reviewerEffectiveness", (t) =>
     description:
       "The private reviewer-effectiveness read across observers (CO-7, §CO-7). Requires observation:manage " +
       "(Principal/Office) — never exposed to wider staff.",
-    authScopes: { hasPermission: "classroom_observation:view_reports" },
+    authScopes: { hasAnyPermission: ["classroom_observation:view_reports", "reports:reviewer_effectiveness"] },
     resolve: async () => reviewerEffectiveness(),
   }),
 );

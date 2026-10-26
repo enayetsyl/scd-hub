@@ -19,6 +19,7 @@ import { QueryGate } from "../../components/QueryGate";
 import { STR, bnNum, classSectionLabel, subjectShortLabel } from "../../lib/labels";
 import { pickableSections, isWholeClassSectionName } from "../../lib/sectionPicks";
 import { usePullRefresh } from "../../lib/useRefresh";
+import { hasRoute } from "../../lib/hasRoute";
 import {
   periodRange,
   periodLabel,
@@ -171,7 +172,7 @@ export default function StudentProgressScreen(): React.ReactElement {
             <Body style={{ fontWeight: "700" }}>
               {sectionLabel} — {STR.impGridTitle}
             </Body>
-            {activeSection ? (
+            {activeSection && hasRoute(nav, "NewImprovementAction") ? (
               <Button
                 title={STR.impNewClassAction}
                 variant="secondary"

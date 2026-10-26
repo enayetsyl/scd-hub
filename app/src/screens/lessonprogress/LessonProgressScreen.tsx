@@ -18,6 +18,7 @@ import { Screen, Card, Body, Muted, Badge, Chip, ChipRow, Loader, EmptyState, Er
 import { Pager } from "../../components/Pager";
 import { useAuth } from "../../auth/AuthContext";
 import { STR, bnNum, routineSubjectLabel } from "../../lib/labels";
+import { hasRoute } from "../../lib/hasRoute";
 import { friendlyError } from "../../lib/errors";
 import { usePagedRows } from "../../lib/paging";
 import { space } from "../../theme/tokens";
@@ -26,10 +27,10 @@ import { lastLine, paceLine, progressLine, reasonsLine } from "./lessonProgressU
 
 type Nav = NativeStackNavigationProp<ClassNotesStackParamList, "LessonProgress">;
 
-function Row({ r, onOpen }: { r: LessonProgressRowT; onOpen: () => void }): React.ReactElement {
+function Row({ r, onOpen }: { r: LessonProgressRowT; onOpen?: () => void }): React.ReactElement {
   const reasons = reasonsLine(r);
   return (
-    <Pressable accessibilityRole="link" onPress={onOpen}>
+    <Pressable accessibilityRole="link" onPress={onOpen} disabled={!onOpen}>
       <Card>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space(2) }}>
           <Body style={{ fontWeight: "700", flex: 1 }}>
@@ -55,7 +56,9 @@ function Row({ r, onOpen }: { r: LessonProgressRowT; onOpen: () => void }): Reac
 export default function LessonProgressScreen(): React.ReactElement {
   const nav = useNavigation<Nav>();
   const { can } = useAuth();
-  const canAll = can("lesson_progress:view_all");
+  // D-#861: the Reports-hub switch reads the whole school too.
+  const canAll = can("lesson_progress:view_all") || can("reports:lesson_progress");
+  const canOpenTracker = hasRoute(nav, "LessonTracker");
   const [scope, setScope] = useState<"ALL" | "MINE">(canAll ? "ALL" : "MINE");
   const [level, setLevel] = useState<number | null>(null);
   const [subject, setSubject] = useState<string | null>(null);
@@ -125,7 +128,7 @@ export default function LessonProgressScreen(): React.ReactElement {
               <Row
                 key={`${r.sectionId}|${r.subject}`}
                 r={r}
-                onOpen={() =>
+                onOpen={!canOpenTracker ? undefined : () =>
                   nav.navigate("LessonTracker", {
                     sectionId: r.sectionId,
                     subject: r.subject,
