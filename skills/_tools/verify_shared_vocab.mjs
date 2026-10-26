@@ -912,7 +912,10 @@ const ROLE_CHECK_DEFAULTS = {
     "student_comments:view", "student_comments:view_all", "monthly_report:view", "monthly_report:review",
     "staff_records:view_sensitive", "lesson_plans:view_all", "question_bank:view_all", "teaching_notes:view",
     "teaching_notes:view_all", "teaching_notes:send", "english_drive:view", "english_drive:view_all",
-    "english_drive:send", "admin_dashboard:view"],
+    "english_drive:send", "admin_dashboard:view",
+    // Pop-up notices (D-#857): owner, 2026-10-26 — "office and principal send"; the Office sends
+    // with no approval step, so every action is on for the Office template from day one.
+    "popup_notice:view", "popup_notice:send_staff", "popup_notice:send_guardian", "popup_notice:follow_up"],
 };
 for (const role of ["TEACHER", "OFFICE"]) {
   const expanded = new Set();

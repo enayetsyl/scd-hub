@@ -165,6 +165,7 @@ Several of today's bypasses are template-aware (`isAdminStaff`, `actsAsRole`), w
 | Content & books | `english_drive` | English drive | ইংরেজি ড্রাইভ | 4 | observation-comments-reports |
 | Content & books | `worksheets` | Worksheet generator | প্রশ্ন ও অ্যাসাইনমেন্ট তৈরি | 5 | observation-comments-reports |
 | Communication | `chat` | Staff chat & notices | বার্তা | 8 | attendance-routine-library |
+| Communication | `popup_notice` | Pop-up notices | পপ-আপ বার্তা | 4 | attendance-routine-library |
 | Communication | `message_templates` | Message templates | বার্তার টেমপ্লেট | 2 | foundation-platform |
 | Communication | `notifications` | My notifications | আমার নোটিফিকেশন | 1 | foundation-platform |
 | School operations | `library` | Library | লাইব্রেরি | 8 | attendance-routine-library |
@@ -673,6 +674,14 @@ Learning-outcome mastery tracker (`docs/prd-mastery.md`, D-#775–#787). Registe
 | `chat:send_notice` | Notice to my শাখা's guardians | নিজের শাখার অভিভাবকদের নোটিশ পাঠানো | SECTION notice for a শাখা you class-teach | on | on | DESIGNATION:class_teacher (waived by `chat:send_notice_all`) | chat:write + assertIsClassTeacher |
 | `chat:send_notice_all` | School-wide notice | পুরো স্কুল বা যেকোনো শাখায় নোটিশ | SCHOOL scope; any শাখা | — | on | | chat:manage |
 | `chat:view_all` | Oversee all conversations | সব কথোপকথনের তত্ত্বাবধান | Read any conversation incl. 1:1; audited open | — | — | LOCKED | chat:oversee |
+
+#### `popup_notice` — পপ-আপ বার্তা (D-#852..#858, docs/prd-popup-notice.md)
+| permission | EN | BN | what it allows | T | O | flags | replaces |
+|---|---|---|---|---|---|---|---|
+| `popup_notice:view` | See pop-up notices | পপ-আপ বার্তা ও রিপোর্ট দেখা | List, report, who saw / read / answered, audience preview, people search, saved lists | — | on | | new (D-#857) |
+| `popup_notice:send_staff` | Send pop-ups to staff | কর্মীদের পপ-আপ পাঠানো | Compose, edit, send, withdraw, copy, test a notice whose audience includes staff; save staff lists | — | on | | new |
+| `popup_notice:send_guardian` | Send pop-ups to guardians | অভিভাবকদের পপ-আপ পাঠানো | Same, for a notice whose audience includes guardians; save family lists | — | on | | new |
+| `popup_notice:follow_up` | Follow up a pop-up | বাকিদের আবার দেখানো ও নতুন প্রাপক যোগ | Show again to everyone not done; add people who match the audience now | — | on | | new |
 
 #### `message_templates`, `notifications`
 | permission | EN | BN | what it allows | T | O | flags | replaces |
