@@ -29,6 +29,7 @@ import type {
   AttendanceStackParamList,
   LibraryStackParamList,
   ChatStackParamList,
+  PopupStackParamList,
   VocabStackParamList,
   ClassTestStackParamList,
   CommentsStackParamList,
@@ -354,6 +355,10 @@ import ChildLeaveScreen from "../screens/guardian/ChildLeaveScreen";
 import ChildCommentsScreen from "../screens/guardian/ChildCommentsScreen";
 import ChildRevisionScreen from "../screens/guardian/ChildRevisionScreen";
 import ChildMasteryScreen from "../screens/guardian/ChildMasteryScreen";
+import MyPopupsScreen from "../screens/popup/MyPopupsScreen";
+import PopupNoticeListScreen from "../screens/popup/PopupNoticeListScreen";
+import PopupComposeScreen from "../screens/popup/PopupComposeScreen";
+import PopupReportScreen from "../screens/popup/PopupReportScreen";
 import ChildHomeworkScreen from "../screens/guardian/ChildHomeworkScreen";
 import ChildRoutineScreen from "../screens/guardian/ChildRoutineScreen";
 import { GuardianChildProvider } from "../state/GuardianChildContext";
@@ -687,6 +692,7 @@ function HomeNavigator(): React.ReactElement {
       />
       {/* D-#850: the comment guideline — from the write screens and the daily reminder. */}
       <HomeStack.Screen name="MeetingCommentGuide" component={MeetingCommentGuideScreen} options={{ title: STR.mcGuideTitle }} />
+      <HomeStack.Screen name="MyPopups" component={MyPopupsScreen} options={{ title: STR.ppMineTitle }} />
     </HomeStack.Navigator>
   );
 }
@@ -953,6 +959,18 @@ function ChatNavigator(): React.ReactElement {
       />
       <ChatStack.Screen name="GuardianNotice" component={GuardianNoticeScreen} options={{ title: STR.chatNoticeTitle }} />
     </ChatStack.Navigator>
+  );
+}
+
+const PopupStack = createNativeStackNavigator<PopupStackParamList>();
+function PopupNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    <PopupStack.Navigator screenOptions={stackOptions}>
+      <PopupStack.Screen name="PopupNoticeList" component={PopupNoticeListScreen} options={{ title: STR.ppTitleNav }} />
+      <PopupStack.Screen name="PopupCompose" component={PopupComposeScreen} options={{ title: STR.ppComposeTitle }} />
+      <PopupStack.Screen name="PopupReport" component={PopupReportScreen} options={{ title: STR.ppReportTitle }} />
+    </PopupStack.Navigator>
   );
 }
 
@@ -1572,6 +1590,7 @@ function GuardianHomeNavigator(): React.ReactElement {
         <GuardianHomeStack.Screen name="ChildComments" component={ChildCommentsScreen} options={{ title: STR.gpComments }} />
         <GuardianHomeStack.Screen name="ChildRevision" component={ChildRevisionScreen} options={{ title: STR.gpRevision }} />
         <GuardianHomeStack.Screen name="ChildMastery" component={ChildMasteryScreen} options={{ title: STR.gpMsProgress }} />
+        <GuardianHomeStack.Screen name="MyPopups" component={MyPopupsScreen} options={{ title: STR.ppMineTitle }} />
       </GuardianHomeStack.Navigator>
     );
   }
@@ -1770,6 +1789,9 @@ export function AppTabs(): React.ReactElement {
   // PQ-4: teachers file print requests; Office/Principal work the queue.
   const canPrint = any("printing:create", "printing:view_all", "printing:process");
   const canChat = can("chat:view");
+  // Pop-up notices (D-#852): the sender's tab. Recipients need nothing — the pop-up itself
+  // and আমার বার্তা live in every login's Today stack.
+  const canPopup = any("popup_notice:view", "popup_notice:send_staff", "popup_notice:send_guardian");
   const canVocab = any("vocab_test:view", "vocab_test:assign");
   // Class Test: any class-test, paper, script or print-queue action (TodayScreen uses the same list).
   const canClassTest = any(
@@ -1852,7 +1874,7 @@ export function AppTabs(): React.ReactElement {
   const hasAnyTab =
     canHome || canContent || canQuestions || canSets || canTrackers || canHomework ||
     canAssignment || canReview || canRoutine || canClassNotes || canAttendance || canPrint || canLibrary ||
-    canChat || canVocab || canClassTest || canComments || canObservation || canFreeMixing ||
+    canChat || canPopup || canVocab || canClassTest || canComments || canObservation || canFreeMixing ||
     canEnglishDrive || canTeachingNotes || canRevision || canFinance || canHr || canReports ||
     canSupportBook || canAdmin || canGuardian || canSyllabus || canScholarship || canMastery;
   if (!hasAnyTab) {
@@ -1921,6 +1943,7 @@ export function AppTabs(): React.ReactElement {
         {canHome ? <Drawer.Screen name="WorkBoardTab" component={WorkBoardNavigator} /> : null}
         {canLibrary ? <Drawer.Screen name="LibraryTab" component={LibraryNavigator} /> : null}
         {canChat ? <Drawer.Screen name="ChatTab" component={ChatNavigator} /> : null}
+        {canPopup ? <Drawer.Screen name="PopupNoticesTab" component={PopupNavigator} /> : null}
         {canVocab ? <Drawer.Screen name="VocabTab" component={VocabNavigator} /> : null}
         {canClassTest ? <Drawer.Screen name="ClassTestTab" component={ClassTestNavigator} /> : null}
         {canComments ? <Drawer.Screen name="CommentsTab" component={CommentsNavigator} /> : null}

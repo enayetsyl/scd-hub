@@ -25,7 +25,7 @@ import { ConfirmProvider } from "./src/state/ConfirmContext";
 import { RootNavigator } from "./src/navigation/RootNavigator";
 import { WebPushGate } from "./src/components/WebPushGate";
 import { UpdateGate } from "./src/components/UpdateGate";
-import { AnnouncementPopup } from "./src/components/AnnouncementPopup";
+import { PopupNoticeHost } from "./src/components/PopupNoticeHost";
 import { MeetingRsvpPopup } from "./src/components/MeetingRsvpPopup";
 import { MeetingCommentReminderPopup } from "./src/components/MeetingCommentReminderPopup";
 import {
@@ -222,14 +222,14 @@ function App(): React.ReactElement | null {
                             <WebPushGate>
                               <ThemedNavigation />
                               {/* Mounted BESIDE the navigator, not inside a screen:
-                                  the announcement is for the first open of the day
-                                  whichever tab the guardian lands on, and a popup
-                                  owned by one screen would miss every other entry
-                                  point (a push tap, a deep link, a reload on a
-                                  sub-screen). Renders null for staff and whenever
-                                  nothing is live (D-#700). */}
-                              <AnnouncementPopup />
-                              {/* After the announcement so it renders on top: it cannot be
+                                  a pop-up notice is for the app open, whichever tab
+                                  the person lands on, and a popup owned by one screen
+                                  would miss every other entry point (a push tap, a deep
+                                  link, a reload on a sub-screen). Staff and guardians
+                                  alike; renders null when nothing is due. Replaces the
+                                  D-#700 AnnouncementPopup (D-#852). */}
+                              <PopupNoticeHost />
+                              {/* After the notices so it renders on top: it cannot be
                                   closed until the family answers its meeting slot (D-#841). */}
                               <MeetingRsvpPopup />
                               {/* Staff: once a day, how many meeting comments are still owed (D-#851). */}
