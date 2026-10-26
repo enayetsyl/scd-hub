@@ -46,6 +46,12 @@ jest.mock("../modules/routine/models/SubjectGroupMembership", () => ({
     findOne: () => ({ lean: async () => null }),
   },
 }));
+// D-#865: the retire-time attendance copy has its own DB test (groupRetireAttendance).
+const mockCopyRetired = jest.fn(async () => ({ copied: [], skipped: [] }));
+jest.mock("../modules/routine/services/GroupRetireAttendanceService", () => ({
+  copyRetiredGroupAttendance: (...a: unknown[]) => mockCopyRetired(...(a as [])),
+  recordGroupDeparture: async () => undefined,
+}));
 
 import { builder } from "../schema";
 import "../modules/routine/resolvers/routine";
@@ -137,6 +143,8 @@ describe("setSubjectGroupActive", () => {
     expect(errText(r)).toBe("");
     expect(doc.active).toBe(false);
     expect(doc.save).toHaveBeenCalled();
+    // …after carrying its attendance days to where its children went (D-#865).
+    expect(mockCopyRetired).toHaveBeenCalledWith(GROUP, expect.any(String));
   });
 
   it("REFUSES to retire a group that still has members, and names the count", async () => {

@@ -55,6 +55,7 @@ export type AuditEventKind =
   | "CREDENTIAL_PROVISIONED" // login generated/reset for a guardian or staff member (D-#59/#60)
   | "SECTIONS_MERGED"     // a class's gender sections combined into one (D-#62)
   | "SECTIONS_SPLIT"      // a merged class split back to its source sections (D-#62)
+  | "ATTENDANCE_DAYS_COPIED" // a retired Quran/Arabic group's attendance days copied to the groups its children moved to (D-#865)
   | "ACADEMIC_YEAR_CREATED"     // a new academic year added (Principal/Office)
   | "ACADEMIC_YEAR_SET_CURRENT" // the active academic year switched (operational screens default to it)
   | "ATTENDANCE_IMPORTED"        // teacher Excel snapshot committed for a date (AT1.5, D-#63)
