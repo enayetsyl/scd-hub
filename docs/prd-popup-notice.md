@@ -71,6 +71,8 @@ all staff; all, Nursery, and KG guardians; everyone. **Saved lists** keep the re
 and/or picks) under a name, shared by every sender. The composer shows a **live count**, a
 paged **name list** and a "no login" warning before sending.
 
+**Taking people out (D-#862).** Every name in the composer's list has a ✕. A hand-picked staff member just leaves the picks; anyone a filter matched is stored as an exclusion (`excludeUserIds` / `excludeGuardianIds` / `excludeStudentIds`) and stays out whatever matches them — "all teachers except these two". Removed people are listed with an undo chip and kept with drafts and saved lists.
+
 **Frozen at publish.** The recipients are written once, when the notice goes out, so "23 of
 184 have not seen it" stays true. **"নতুন যারা মেলে, যোগ করুন"** re-runs the audience and adds
 only the newcomers.
@@ -93,7 +95,7 @@ only the newcomers.
 | `autoCloseSec` 3–60 | Closes by itself; a bar counts down. |
 | `closeButton` | ✕ / "বন্ধ" shown (forced off by `mustAct`). |
 | `mustScrollToEnd` | Locked until the end of the message has been on screen. |
-| `minReadSec` 5–300 | Locked until open this long **in the foreground**. |
+| `minReadSec` 2–300 | Locked until open this long **in the foreground**. |
 | `mustAct` | Only a button closes it. |
 | `allowSnooze` (+ `maxSnooze` 1–5) | "পরে মনে করিয়ে দিন": back on the next app open. |
 | `allowAnswerChange` | A CHOICE answer may be changed from আমার বার্তা while the notice runs. |

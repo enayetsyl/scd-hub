@@ -225,6 +225,9 @@ describe("close rules", () => {
     expect(() => normalizeRules({ closeButton: false }, 0)).toThrow(/বন্ধ করার কোনো উপায় নেই/);
     expect(() => normalizeRules({ autoCloseSec: 2 }, 0)).toThrow(PopupNoticeError);
     expect(() => normalizeRules({ minReadSec: 400 }, 0)).toThrow(PopupNoticeError);
+    // Owner, 2026-10-26: the minimum reading time starts at 2 seconds.
+    expect(normalizeRules({ minReadSec: 2 }, 0).minReadSec).toBe(2);
+    expect(() => normalizeRules({ minReadSec: 1 }, 0)).toThrow(/২ থেকে ৩০০/);
     expect(normalizeRules({ mustScrollToEnd: true, minReadSec: 20 }, 0)).toMatchObject({ closeButton: true, mustScrollToEnd: true, minReadSec: 20 });
   });
   test("personalize fills Bangla and English merge fields", () => {
@@ -330,6 +333,36 @@ describe("audience", () => {
     expect(hits.rows.map((h) => [h.kind, h.name])).toEqual([["STUDENT", "Zara"]]);
     const staff = await searchPopupPeople("KG");
     expect(staff.rows.filter((h) => h.kind === "USER")).toHaveLength(2);
+  });
+
+  test("✕ takes people out whatever matched them: staff, a guardian, a no-guardian family", async () => {
+    const s = await school();
+    const a = normalizeAudience({
+      staff: { roles: ["TEACHER"], classLevels: [0] },
+      guardian: {},
+      userIds: [s.c3F],
+      excludeUserIds: [s.kgM, s.c3F],
+      excludeGuardianIds: [s.gZara],
+      excludeStudentIds: [s.orphan.toString()],
+    });
+    const r = await resolveAudience(a, NOW);
+    expect(ids(r.recipients)).toEqual([s.kgF, s.quran, s.gAyeshaRafi].sort());
+    expect(r.excluded.map((x) => x.id.toString()).sort()).toEqual([s.kgM, s.c3F, s.gZara, s.orphan.toString()].sort());
+    const p = await previewAudience(a, {}, NOW);
+    expect(p.total).toBe(3);
+    expect(p.excluded.map((x) => x.name).sort()).toEqual(["C3 Female", "KG Male", "Orphan", "Zara Mum"]);
+    expect(p.summary).toContain("৪ জন বাদ");
+  });
+
+  test("an excluded person is not written at publish", async () => {
+    const s = await school();
+    const office = ctxOf(s.office, "OFFICE");
+    const d = await savePopupDraft(office, null, input({ audience: { staff: { roles: ["TEACHER"] }, excludeUserIds: [s.kgF] } }));
+    expect(d.audience.excludeUserIds).toEqual([s.kgF]);
+    await publishPopupNotice(office, d.id, NOW);
+    expect(await PopupNoticeRecipient.countDocuments({ noticeId: d.id, recipientId: s.kgF })).toBe(0);
+    expect(await myPopupQueue(ctxOf(s.kgF, "TEACHER"), NOW)).toHaveLength(0);
+    expect(await myPopupQueue(ctxOf(s.kgM, "TEACHER"), NOW)).toHaveLength(1);
   });
 
   test("picked ids come back as names for the composer", async () => {
