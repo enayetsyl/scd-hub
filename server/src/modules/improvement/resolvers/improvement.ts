@@ -323,7 +323,7 @@ builder.queryField("progressSchoolOverview", (t) =>
   t.field({
     type: OverviewRef,
     description: "Whole-school tiles + the needs-attention list over [fromKey, toKey] (SP-1). roster:manage.",
-    authScopes: { hasPermission: "improvement_plan:view_all" },
+    authScopes: { hasAnyPermission: ["improvement_plan:view_all", "reports:student_progress"] },
     args: { fromKey: t.arg.string({ required: true }), toKey: t.arg.string({ required: true }) },
     resolve: async (_r, a) => schoolOverview(a.fromKey, a.toKey),
   }),
@@ -332,7 +332,7 @@ builder.queryField("progressSchoolOverview", (t) =>
 builder.queryField("progressSectionBoard", (t) =>
   t.field({
     type: SectionBoardRef,
-    authScopes: { hasPermission: "improvement_plan:view_all" },
+    authScopes: { hasAnyPermission: ["improvement_plan:view_all", "reports:student_progress"] },
     args: { sectionId: t.arg.string({ required: true }), fromKey: t.arg.string({ required: true }), toKey: t.arg.string({ required: true }) },
     resolve: async (_r, a) => sectionBoard(a.sectionId, a.fromKey, a.toKey),
   }),
@@ -341,7 +341,7 @@ builder.queryField("progressSectionBoard", (t) =>
 builder.queryField("progressStudent", (t) =>
   t.field({
     type: StudentProgressRef,
-    authScopes: { hasPermission: "improvement_plan:view_all" },
+    authScopes: { hasAnyPermission: ["improvement_plan:view_all", "reports:student_progress"] },
     args: { studentId: t.arg.string({ required: true }), fromKey: t.arg.string({ required: true }), toKey: t.arg.string({ required: true }) },
     resolve: async (_r, a) => studentProgress(a.studentId, a.fromKey, a.toKey),
   }),

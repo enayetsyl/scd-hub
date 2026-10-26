@@ -900,6 +900,11 @@ const ROLE_CHECK_DEFAULTS = {
     "reports:hw_declare_pending", "reports:hw_issue_pending", "reports:hw_lifecycle", "reports:hw_weekly_unsubmitted",
     "reports:as_declare_pending", "reports:as_deliver_pending", "reports:as_print_pending", "reports:reconciliation",
     "reports:class_note", "reports:class_test", "reports:attendance", "reports:class_load",
+    // D-#861: the reports that sat elsewhere — each mirrors the module read the Office already held.
+    "reports:attendance_ranking", "reports:guardian_claims", "reports:workload", "reports:live_classes",
+    "reports:class_test_dashboard", "reports:student_progress", "reports:revision_dashboard",
+    "reports:review_progress", "reports:reviewer_effectiveness", "reports:teaching_note_comments",
+    "reports:finance_dashboard", "reports:daily_snapshot",
     "assignment:view_all", "assignment:undo_any", "work_claim:view_all", "work_claim:remind", "set_tracker:view_all",
     "saturday_revision:view", "saturday_revision:view_all", "saturday_revision:enter_results", "saturday_revision:edit_all",
     "saturday_revision:send", "saturday_revision:settings", "class_test:view_all", "class_test:register",

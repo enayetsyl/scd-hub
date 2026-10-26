@@ -33,6 +33,21 @@ export const REPORT_LEAF_ACTIONS: Record<string, string[]> = {
   // a teacher's own monthly_report:view does not open them, so it must not show them either).
   MonthlyReportConsole: ["monthly_report:view_all"],
   MonthlyPendingWork: ["monthly_report:view_all"],
+  // D-#861: the reports that sat elsewhere. Each opens on its switch, or on the module read its
+  // screen already needed (that holder keeps the module's own door as well).
+  AttendanceRanking: ["reports:attendance_ranking", "attendance:view_all", "staff_attendance:view_all"],
+  WorkClaimQueue: ["reports:guardian_claims"],
+  LoadGrid: ["reports:workload", "work_board:view_all"],
+  LiveClassBoard: ["reports:live_classes", "routine:view_all"],
+  ClassTestDashboard: ["reports:class_test_dashboard", "class_test:view_all"],
+  StudentProgress: ["reports:student_progress", "improvement_plan:view_all"],
+  RevisionDashboard: ["reports:revision_dashboard", "saturday_revision:view_all"],
+  QuestionReviewProgress: ["reports:review_progress", "question_review:view_all"],
+  ReviewerEffectiveness: ["reports:reviewer_effectiveness", "classroom_observation:view_reports"],
+  TeachingNoteOpenComments: ["reports:teaching_note_comments", "teaching_notes:review"],
+  FinanceDashboard: ["reports:finance_dashboard", "finance_reports:view"],
+  DailySnapshot: ["reports:daily_snapshot", "finance_ledger:view"],
+  GuardianEngagement: ["reports:guardian_engagement", "guardian_engagement:view"],
 };
 
 /** Any of these opens the Reports tab. */

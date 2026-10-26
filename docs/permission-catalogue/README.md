@@ -175,7 +175,7 @@ Several of today's bypasses are template-aware (`isAdminStaff`, `actsAsRole`), w
 | School operations | `admin_dashboard` | Admin Today dashboard | অ্যাডমিন ড্যাশবোর্ড | 1 | foundation-platform |
 | School operations | `classes_sections` | Classes & sections | শ্রেণি ও শাখা | 3 | foundation-platform |
 | School operations | `teaching_assignments` | Teaching assignments | শিক্ষক বরাদ্দ | 4 | foundation-platform |
-| Reports | `reports` | Reports | রিপোর্ট | 13 | trackers-homework-assignment |
+| Reports | `reports` | Reports | রিপোর্ট | 26 | trackers-homework-assignment |
 | Admin & access | `access_control` | Access control | অনুমতি নিয়ন্ত্রণ | 2 | foundation-platform |
 | Admin & access | `view_as` | View as another account | অন্যের অ্যাকাউন্ট দেখা | 1 | foundation-platform |
 | Admin & access | `staff_logins` | Staff logins | কর্মীদের লগইন | 3 | foundation-platform |
@@ -184,7 +184,7 @@ Several of today's bypasses are template-aware (`isAdminStaff`, `actsAsRole`), w
 | Admin & access | `guardian_engagement` | Guardian app usage | অভিভাবকদের অ্যাপ ব্যবহার | 1 | foundation-platform |
 | Admin & access | `my_account` | My account | আমার অ্যাকাউন্ট | 1 | foundation-platform |
 
-**Totals: 70 features, 342 actions** (`reports` added 2026-10-25, D-#846: +13 report switches, −3 retired report-only actions) (`parents_meeting:approve_change` added with meeting RSVP, 2026-10-24: +1 action, PRINCIPAL-DEFAULT, D-#842) (`mastery` added with M-0, 2026-10-20: +6 actions, all unflagged, TEACHER on +3, OFFICE on +1; M-2, 2026-10-21: +`mastery:edit_all`, PRINCIPAL-DEFAULT). By flag: LOCKED 11 · PRINCIPAL-DEFAULT 15 · DESIGNATION 24 · ESCALATION 5 · SELF 12 · unflagged 265. Defaults: TEACHER on 101 · OFFICE on 238. A row may carry a `†`/`F-n`/`2H` note in addition to its flag. Those notes are not counted as flags. Not counted: `guardian:read_child` (GUARDIAN plane), and the future `scholarship_practice:release` (SC-5, not built) and `announcements:publish` (no staff surface yet).
+**Totals: 70 features, 355 actions** (`reports` +13 switches 2026-10-26, D-#861: the reports that sat in the Admin hub and module homes, unflagged, OFFICE on +12 — all but `guardian_engagement`; `reports:lesson_progress` arrives with lesson progress) (`reports` added 2026-10-25, D-#846: +13 report switches, −3 retired report-only actions) (`parents_meeting:approve_change` added with meeting RSVP, 2026-10-24: +1 action, PRINCIPAL-DEFAULT, D-#842) (`mastery` added with M-0, 2026-10-20: +6 actions, all unflagged, TEACHER on +3, OFFICE on +1; M-2, 2026-10-21: +`mastery:edit_all`, PRINCIPAL-DEFAULT). By flag: LOCKED 11 · PRINCIPAL-DEFAULT 15 · DESIGNATION 24 · ESCALATION 5 · SELF 12 · unflagged 278. Defaults: TEACHER on 101 · OFFICE on 250. A row may carry a `†`/`F-n`/`2H` note in addition to its flag. Those notes are not counted as flags. Not counted: `guardian:read_child` (GUARDIAN plane), and the future `scholarship_practice:release` (SC-5, not built) and `announcements:publish` (no staff surface yet).
 
 ---
 
@@ -761,6 +761,24 @@ One switch per Reports-hub report (owner 2026-10-25, D-#846). Each shows that ON
 | `reports:class_test` | Class-test report | ক্লাস টেস্ট রিপোর্ট | Class-test status, school-wide (no section needed) | — | on | | the report's old gate (P/O) |
 | `reports:attendance` | Absentee report | অনুপস্থিতির প্রতিবেদন | Absentees, unmarked sections, absent without application (staff attendance keeps `staff_attendance:view_all`) | — | on | | the report's old gate (P/O) |
 | `reports:class_load` | Teacher class load | শিক্ষকের ক্লাস লোড | Every teacher's periods for a month | — | on | | the report's old gate (P/O) |
+
+D-#861 (owner 2026-10-26: "all reports seen from one place, all report permissions given from one place"): the reports that sat in the Admin hub or on a module home joined the hub, one switch each. Admin-hub cards (ranking, guardian claims, guardian usage) left Admin; module reports stay on their module home too, opened there by the module read. In the Reports copy a drill-down into a module work screen (someone's board, cover form, test results, lesson tracker, reviewer rounds, a teaching note) stays read-only (`app/src/lib/hasRoute.ts`); Student progress → one student opens in Reports.
+
+| permission | EN | BN | what it allows | T | O | flags | replaces |
+|---|---|---|---|---|---|---|---|
+| `reports:attendance_ranking` | Attendance ranking | উপস্থিতির ক্রম | Student and staff rankings (both registers) | — | on | | attendance:view_all / staff_attendance:view_all (Admin card) |
+| `reports:guardian_claims` | Guardian reports — unresolved | অভিভাবকের জানানো — অনিষ্পন্ন | The open-claim queue, no digest designation needed; reminding stays `work_claim:remind` + designation/waiver | — | on | | work_claim:view_all + admin_dashboard:view (Admin card) |
+| `reports:workload` | Workload | কাজের চাপ | Every staff member's task load by day (cells open a board only from Work board) | — | on | | work_board:view_all |
+| `reports:live_classes` | Today's class board | আজকের ক্লাস বোর্ড | Which class runs where, today | — | on | | routine:view_all |
+| `reports:class_test_dashboard` | Class-test dashboard | ক্লাস টেস্ট ড্যাশবোর্ড | Every class test's stage; the chase card still needs `class_test:remind`, script locations `archive:view` | — | on | | class_test:view_all |
+| `reports:student_progress` | Student progress | শিক্ষার্থীর অগ্রগতি | School overview, section board, one student (improvement actions stay `improvement_plan:*`) | — | on | | improvement_plan:view_all |
+| `reports:revision_dashboard` | Revision dashboard | রিভিশন ড্যাশবোর্ড | Completeness + every revision read in revisionSummary; the chase list stays `saturday_revision:remind` | — | on | | saturday_revision:view_all |
+| `reports:review_progress` | Reviewer progress | পর্যালোচনার অগ্রগতি | Question reviewers' progress, coverage, slices | — | on | | question_review:view_all |
+| `reports:reviewer_effectiveness` | Reviewer effectiveness | রিভিউয়ার কার্যকারিতা | Classroom-observation reviewer effectiveness | — | on | | classroom_observation:view_reports |
+| `reports:teaching_note_comments` | Outstanding suggestions | বাকি পরামর্শ | Open teaching-note suggestions | — | on | | teaching_notes:review |
+| `reports:finance_dashboard` | Finance dashboard | অর্থ ড্যাশবোর্ড | Year overview, YTD statement, trends | — | on | | finance_reports:view |
+| `reports:daily_snapshot` | Daily snapshot | দৈনিক স্ন্যাপশট | One day's income/expense/cash | — | on | | finance_ledger:view |
+| `reports:guardian_engagement` | Guardian engagement | অভিভাবকদের ব্যবহার | Family app usage (names families — Principal by default) | — | — | | guardian_engagement:view (Admin card) |
 
 ### Admin & access
 

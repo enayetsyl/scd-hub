@@ -40,9 +40,13 @@ import {
 // Gates
 // ---------------------------------------------------------------------------
 
-/** Reads beyond the caller's own groups (was the isAdminStaff read bypass). */
+/** Reads beyond the caller's own groups (was the isAdminStaff read bypass). Every field in this
+ *  file is a read, so the Reports-hub switch (D-#861) reads the whole school too. */
 function canViewAll(ctx: AppContext): boolean {
-  return !!ctx.auth && callerHasPermission(ctx.auth, "saturday_revision:view_all");
+  return (
+    !!ctx.auth &&
+    (callerHasPermission(ctx.auth, "saturday_revision:view_all") || callerHasPermission(ctx.auth, "reports:revision_dashboard"))
+  );
 }
 
 async function assertReadStudent(ctx: AppContext, studentId: string): Promise<void> {
@@ -254,7 +258,7 @@ builder.queryField("studentJuzWeakness", (t) =>
   t.field({
     type: [JuzWeaknessRef],
     description: "Per-juz weakness heatmap for a child (SR-3, J-SR3-1). saturday_revision:view + the child's group scope.",
-    authScopes: { hasAnyPermission: ["saturday_revision:view", "saturday_revision:view_all"] },
+    authScopes: { hasAnyPermission: ["saturday_revision:view", "saturday_revision:view_all", "reports:revision_dashboard"] },
     args: { studentId: t.arg.string({ required: true }), asOf: t.arg.string({ required: false }) },
     resolve: async (_root, args, ctx) => {
       await assertReadStudent(ctx, args.studentId);
@@ -267,7 +271,7 @@ builder.queryField("studentSurahWeakness", (t) =>
   t.field({
     type: [SurahWeaknessRef],
     description: "Per-surah weakness for a child, weakest first (SR-5, D-#837). saturday_revision:view + the child's group scope.",
-    authScopes: { hasAnyPermission: ["saturday_revision:view", "saturday_revision:view_all"] },
+    authScopes: { hasAnyPermission: ["saturday_revision:view", "saturday_revision:view_all", "reports:revision_dashboard"] },
     args: { studentId: t.arg.string({ required: true }), asOf: t.arg.string({ required: false }) },
     resolve: async (_root, args, ctx) => {
       await assertReadStudent(ctx, args.studentId);
@@ -280,7 +284,7 @@ builder.queryField("revisionGroupCoverage", (t) =>
   t.field({
     type: [CoverageRowRef],
     description: "Per (student × juz) last-revised + overdue flag for a group (SR-3, J-SR3-2). saturday_revision:view + group scope.",
-    authScopes: { hasAnyPermission: ["saturday_revision:view", "saturday_revision:view_all"] },
+    authScopes: { hasAnyPermission: ["saturday_revision:view", "saturday_revision:view_all", "reports:revision_dashboard"] },
     args: {
       groupId: t.arg.string({ required: true }),
       asOf: t.arg.string({ required: false }),
@@ -297,7 +301,7 @@ builder.queryField("revisionWeeklyTrend", (t) =>
   t.field({
     type: WeeklyTrendRef,
     description: "Per-Saturday تنبیه/فتح/mistake trend (↑/↓/→) for a student or group (SR-3, J-SR3-3).",
-    authScopes: { hasAnyPermission: ["saturday_revision:view", "saturday_revision:view_all"] },
+    authScopes: { hasAnyPermission: ["saturday_revision:view", "saturday_revision:view_all", "reports:revision_dashboard"] },
     args: {
       studentId: t.arg.string({ required: false }),
       groupId: t.arg.string({ required: false }),
@@ -314,7 +318,7 @@ builder.queryField("revisionLevelDashboard", (t) =>
   t.field({
     type: RevisionDashboardRef,
     description: "The level (group) rollup (SR-3, J-SR3-4). saturday_revision:view + group scope (Principal/Office unscoped).",
-    authScopes: { hasAnyPermission: ["saturday_revision:view", "saturday_revision:view_all"] },
+    authScopes: { hasAnyPermission: ["saturday_revision:view", "saturday_revision:view_all", "reports:revision_dashboard"] },
     args: { groupId: t.arg.string({ required: true }), asOf: t.arg.string({ required: false }) },
     resolve: async (_root, args, ctx) => {
       await assertReadGroup(ctx, args.groupId);
@@ -327,7 +331,7 @@ builder.queryField("revisionStudentDashboard", (t) =>
   t.field({
     type: RevisionDashboardRef,
     description: "The student rollup (SR-3, J-SR3-4). saturday_revision:view + the child's group scope.",
-    authScopes: { hasAnyPermission: ["saturday_revision:view", "saturday_revision:view_all"] },
+    authScopes: { hasAnyPermission: ["saturday_revision:view", "saturday_revision:view_all", "reports:revision_dashboard"] },
     args: { studentId: t.arg.string({ required: true }), asOf: t.arg.string({ required: false }) },
     resolve: async (_root, args, ctx) => {
       await assertReadStudent(ctx, args.studentId);
@@ -340,7 +344,7 @@ builder.queryField("revisionMistakeBreakdown", (t) =>
   t.field({
     type: MistakesRef,
     description: "harf/ghunnah/madd/other distribution for a student or group (SR-3, J-SR3-4).",
-    authScopes: { hasAnyPermission: ["saturday_revision:view", "saturday_revision:view_all"] },
+    authScopes: { hasAnyPermission: ["saturday_revision:view", "saturday_revision:view_all", "reports:revision_dashboard"] },
     args: {
       studentId: t.arg.string({ required: false }),
       groupId: t.arg.string({ required: false }),
@@ -357,7 +361,7 @@ builder.queryField("revisionCompletenessStatus", (t) =>
   t.field({
     type: [CompletenessRowRef],
     description: "Hifz groups with no entry for a Saturday (SR-3, J-SR3-5). Principal/Office.",
-    authScopes: { hasPermission: "saturday_revision:view_all" },
+    authScopes: { hasAnyPermission: ["saturday_revision:view_all", "reports:revision_dashboard"] },
     args: { date: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       assertDashboardAdmin(ctx);

@@ -16,6 +16,7 @@ import { QueryGate } from "../../components/QueryGate";
 import { STR, bnNum, getActiveLang, weekdayShortLabel } from "../../lib/labels";
 import { addDaysKey, dateKey } from "../../lib/dates";
 import { hoursLabel } from "../../lib/workBoardNav";
+import { hasRoute } from "../../lib/hasRoute";
 import { makeStyles, radius, space, typeScale, useColors } from "../../theme";
 
 type Props = NativeStackScreenProps<WorkBoardStackParamList, "LoadGrid">;
@@ -34,6 +35,8 @@ function weekStart(key: string): string {
 }
 
 export default function LoadGridScreen({ navigation }: Props): React.ReactElement {
+  // D-#861: also mounted in Reports, where someone's board is not — the grid stays read-only there.
+  const canOpenBoard = hasRoute(navigation, "WorkBoard");
   const styles = useStyles();
   const colors = useColors();
   const today = dateKey();
@@ -100,7 +103,7 @@ export default function LoadGridScreen({ navigation }: Props): React.ReactElemen
                 </View>
                 {g.rows.map((r) => (
                   <View key={r.userId} style={styles.tr}>
-                    <Pressable style={[styles.td, styles.nameCol]} onPress={() => navigation.navigate("WorkBoard", { userId: r.userId, name: r.name })}>
+                    <Pressable style={[styles.td, styles.nameCol]} disabled={!canOpenBoard} onPress={() => navigation.navigate("WorkBoard", { userId: r.userId, name: r.name })}>
                       <Text style={styles.name} numberOfLines={1}>
                         {r.name}
                       </Text>
@@ -109,6 +112,7 @@ export default function LoadGridScreen({ navigation }: Props): React.ReactElemen
                       <Pressable
                         key={c.dateKey}
                         style={[styles.td, styles.dayCol, c.dateKey === today && styles.todayCol, cellBg(c.level) ? { backgroundColor: cellBg(c.level) } : null]}
+                        disabled={!canOpenBoard}
                         onPress={() => navigation.navigate("WorkBoard", { userId: r.userId, name: r.name, dateKey: c.dateKey })}
                       >
                         <Text style={[styles.cell, { color: cellFg(c.level) }, c.level !== "ok" && styles.cellStrong]}>{hoursLabel(c.minutes, bnNum)}</Text>

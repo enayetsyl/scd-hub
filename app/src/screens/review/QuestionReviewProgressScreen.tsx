@@ -36,6 +36,7 @@ import {
   ErrorBanner,
 } from "../../components/ui";
 import { STR, subjectLabel, classLevelLabel, bnNum } from "../../lib/labels";
+import { hasRoute } from "../../lib/hasRoute";
 import { friendlyError } from "../../lib/errors";
 import { useColors } from "../../theme";
 import { space, radius } from "../../theme/tokens";
@@ -166,6 +167,7 @@ export default function QuestionReviewProgressScreen({ navigation }: Props): Rea
             row={r}
             slices={slicesByReviewer.get(r.reviewerId) ?? []}
             onOpen={(bucket) =>
+              hasRoute(navigation, "QuestionReviewerRounds") &&
               navigation.navigate("QuestionReviewerRounds", {
                 reviewerId: r.reviewerId,
                 reviewerName: r.reviewerName,

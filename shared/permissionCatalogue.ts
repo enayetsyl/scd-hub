@@ -904,6 +904,21 @@ export const FEATURE_CATALOGUE = {
       class_test: { en: "Class-test report", bn: "ক্লাস টেস্ট রিপোর্ট", desc: "Class-test status: taken, results entered, published (whole school)", teacher: false, office: true, flags: [] },
       attendance: { en: "Absentee report", bn: "অনুপস্থিতির প্রতিবেদন", desc: "Absentees, unmarked sections, absent without application (whole school)", teacher: false, office: true, flags: [] },
       class_load: { en: "Teacher class load", bn: "শিক্ষকের ক্লাস লোড", desc: "Periods per teacher for a month (whole school)", teacher: false, office: true, flags: [] },
+      // Owner 2026-10-26 (D-#861): every report that sat elsewhere (Admin hub, module homes) joins
+      // the hub with its own switch; the module's own read keeps its old door too.
+      attendance_ranking: { en: "Attendance ranking", bn: "উপস্থিতির ক্রম", desc: "Students and staff ranked by present % of the marked days (whole school)", teacher: false, office: true, flags: [] },
+      guardian_claims: { en: "Guardian reports — unresolved", bn: "অভিভাবকের জানানো — অনিষ্পন্ন", desc: "Every open guardian \"done at home\" claim, longest waiting first (whole school; reminding stays work_claim:remind)", teacher: false, office: true, flags: [] },
+      workload: { en: "Workload", bn: "কাজের চাপ", desc: "Every staff member's open tasks by day (whole staff)", teacher: false, office: true, flags: [] },
+      live_classes: { en: "Today's class board", bn: "আজকের ক্লাস বোর্ড", desc: "Which class is running where, now (whole school)", teacher: false, office: true, flags: [] },
+      class_test_dashboard: { en: "Class-test dashboard", bn: "ক্লাস টেস্ট ড্যাশবোর্ড", desc: "Every class test's stage, scripts and late results (whole school)", teacher: false, office: true, flags: [] },
+      student_progress: { en: "Student progress", bn: "শিক্ষার্থীর অগ্রগতি", desc: "School overview, section boards and one student's progress (whole school)", teacher: false, office: true, flags: [] },
+      revision_dashboard: { en: "Revision dashboard", bn: "রিভিশন ড্যাশবোর্ড", desc: "Saturday revision completeness, levels and trends (whole school)", teacher: false, office: true, flags: [] },
+      review_progress: { en: "Reviewer progress", bn: "পর্যালোচনার অগ্রগতি", desc: "Question reviewers: what each was given and how they ruled (whole school)", teacher: false, office: true, flags: [] },
+      reviewer_effectiveness: { en: "Reviewer effectiveness", bn: "রিভিউয়ার কার্যকারিতা", desc: "Classroom-observation reviewers' effectiveness (whole school)", teacher: false, office: true, flags: [] },
+      teaching_note_comments: { en: "Outstanding suggestions", bn: "বাকি পরামর্শ", desc: "Teaching-note suggestions still open (whole library)", teacher: false, office: true, flags: [] },
+      finance_dashboard: { en: "Finance dashboard", bn: "অর্থ ড্যাশবোর্ড", desc: "Year KPIs, YTD income statement, trends (whole school)", teacher: false, office: true, flags: [] },
+      daily_snapshot: { en: "Daily snapshot", bn: "দৈনিক স্ন্যাপশট", desc: "One day's income, expense and cash position (whole school)", teacher: false, office: true, flags: [] },
+      guardian_engagement: { en: "Guardian engagement", bn: "অভিভাবকদের ব্যবহার", desc: "Which families use the app and which screens nobody opens (names families — Principal by default)", teacher: false, office: false, flags: [] },
     },
   },
 } as const satisfies Record<string, CatalogueFeature>;

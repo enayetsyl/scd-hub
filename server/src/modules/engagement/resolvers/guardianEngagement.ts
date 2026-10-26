@@ -131,7 +131,7 @@ builder.queryField("guardianEngagement", (t) =>
       "independent signals — logins (from the audit log), views (GE-2), inbox " +
       "delivered/read — kept separate so a broken one is visible instead of averaged " +
       "away. Requires guardian_engagement:view (Principal by default).",
-    authScopes: { hasPermission: "guardian_engagement:view" },
+    authScopes: { hasAnyPermission: ["guardian_engagement:view", "reports:guardian_engagement"] },
     args: {
       days: t.arg.int({ required: false }),
       sectionId: t.arg.string({ required: false }),

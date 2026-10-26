@@ -11,6 +11,7 @@ import type { ReportsStackParamList } from "../../navigation/types";
 import { Screen, H2, Body, Muted, Card, EmptyState } from "../../components/ui";
 import { useAuth } from "../../auth/AuthContext";
 import { REPORT_LEAF_ACTIONS } from "../../lib/navGates";
+import { mostRecentSaturday } from "../revision/RevisionHomeScreen";
 import { STR } from "../../lib/labels";
 import { space } from "../../theme/tokens";
 
@@ -35,6 +36,20 @@ export default function ReportsHomeScreen({ navigation }: Props): React.ReactEle
     { screen: "AsDeclarePending", icon: "📋", title: STR.rptAsDeclarePending, sub: STR.rptAsNdSub, onPress: () => navigation.navigate("AsDeclarePending") },
     { screen: "AsDeliverPending", icon: "📦", title: STR.rptAsDeliverPending, onPress: () => navigation.navigate("AsDeliverPending") },
     { screen: "AsPrintPending", icon: "🖨️", title: STR.rptAsPrintPending, sub: STR.rptAsPrintPendingSub, onPress: () => navigation.navigate("AsPrintPending") },
+    // D-#861: the reports that sat elsewhere (Admin hub, module homes), one switch each.
+    { screen: "AttendanceRanking", icon: "🏅", title: STR.arTitle, sub: STR.arHint, onPress: () => navigation.navigate("AttendanceRanking") },
+    { screen: "WorkClaimQueue", icon: "🏠", title: STR.wcQueueTitle, sub: STR.wcOfficeFooter, onPress: () => navigation.navigate("WorkClaimQueue") },
+    { screen: "LiveClassBoard", icon: "🟢", title: STR.lcbBoardTitle, onPress: () => navigation.navigate("LiveClassBoard") },
+    { screen: "LoadGrid", icon: "⚖️", title: STR.wbLoad, onPress: () => navigation.navigate("LoadGrid") },
+    { screen: "ClassTestDashboard", icon: "🧮", title: STR.ctDashboardTitle, onPress: () => navigation.navigate("ClassTestDashboard") },
+    { screen: "StudentProgress", icon: "📈", title: STR.impNavTitle, onPress: () => navigation.navigate("StudentProgress") },
+    { screen: "RevisionDashboard", icon: "🕌", title: STR.revDashTitle, onPress: () => navigation.navigate("RevisionDashboard", { date: mostRecentSaturday() }) },
+    { screen: "QuestionReviewProgress", icon: "🔍", title: STR.qpTitle, sub: STR.qpSubtitle, onPress: () => navigation.navigate("QuestionReviewProgress") },
+    { screen: "ReviewerEffectiveness", icon: "👁️", title: STR.obsReviewerEffTitle, onPress: () => navigation.navigate("ReviewerEffectiveness") },
+    { screen: "TeachingNoteOpenComments", icon: "💬", title: STR.tnOpenComments, onPress: () => navigation.navigate("TeachingNoteOpenComments") },
+    { screen: "FinanceDashboard", icon: "💰", title: STR.finDashboardTitle, onPress: () => navigation.navigate("FinanceDashboard") },
+    { screen: "DailySnapshot", icon: "🧾", title: STR.finSnapshotTitle, onPress: () => navigation.navigate("DailySnapshot") },
+    { screen: "GuardianEngagement", icon: "👪", title: STR.geTitle, sub: STR.geSubtitle, onPress: () => navigation.navigate("GuardianEngagement") },
   ];
   const cards = all.filter((c) => allowed(c.screen));
 
