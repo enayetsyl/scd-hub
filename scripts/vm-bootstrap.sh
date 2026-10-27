@@ -28,7 +28,7 @@ step(){ echo; echo "=== $*"; }
 
 step "1/8 base packages + Asia/Dhaka timezone"
 apt-get update -qq
-apt-get install -y -qq ca-certificates curl gnupg git openssl tzdata python3 python3-jsonschema rsync >/dev/null
+apt-get install -y -qq ca-certificates curl gnupg git openssl tzdata python3 python3-jsonschema rsync poppler-utils >/dev/null
 ln -sf /usr/share/zoneinfo/Asia/Dhaka /etc/localtime
 echo Asia/Dhaka > /etc/timezone
 

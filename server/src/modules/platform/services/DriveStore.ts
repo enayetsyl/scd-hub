@@ -287,8 +287,9 @@ export async function listDriveFolder(year: string, subfolder: string): Promise<
   }));
 }
 
-/** Permanently remove a Drive file. Only ever called by the backup retention sweep on a
- *  file the sweep itself created, in the backups folder — never on school content. */
+/** Permanently remove a Drive file. Called only on files the caller's own feature created:
+ *  the backup retention sweep (its backups) and a deleted class book (its page images,
+ *  D-#870) — never on content uploaded by people. */
 export async function deleteFromDrive(driveFileId: string): Promise<void> {
   await driveFetch(`${DRIVE_FILES_URL}/${encodeURIComponent(driveFileId)}`, { method: "DELETE" });
 }

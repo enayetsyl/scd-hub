@@ -1702,6 +1702,7 @@ export const GUARDIAN_VIEW_SURFACES = [
   "LEAVE",           // ChildLeaveScreen
   "NOTIFICATIONS",   // NotificationCenterScreen opened from the guardian header bell
   "CLASS_TEST",      // ChildClassTestsScreen (D-#732)
+  "BOOKS",           // ClassBooksScreen — the child's class books (D-#870)
 ] as const;
 export type GuardianViewSurface = (typeof GUARDIAN_VIEW_SURFACES)[number];
 
@@ -1716,6 +1717,7 @@ export const GUARDIAN_VIEW_SURFACE_LABELS_BN: Record<GuardianViewSurface, string
   LEAVE: "ছুটি",
   NOTIFICATIONS: "বিজ্ঞপ্তি",
   CLASS_TEST: "ক্লাস টেস্ট",
+  BOOKS: "বই",
 };
 
 /**
