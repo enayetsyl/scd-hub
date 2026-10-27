@@ -79,6 +79,9 @@ export interface SectionAbsentees {
   sectionCode: string;
   sectionNameBn: string;
   absentCount: number;
+  /** D-#872: covered-and-present in THIS section — a split class (বালক / বালিকা)
+   *  reads each half's present/absent pair, not only the class total. */
+  presentCount: number;
   absentees: AbsenteeEntry[];
 }
 
@@ -150,10 +153,13 @@ export async function absenteeReport(dateKey: string): Promise<ClassAbsentees[]>
 
   // D-#318: covered-and-present per class — the badge next to "Absent".
   const presentByClass = new Map<string, number>();
+  const presentBySection = new Map<string, number>(); // D-#872
   for (const s of covered) {
     if (absentIds.has(s._id.toString())) continue;
     const key = s.classId.toString();
     presentByClass.set(key, (presentByClass.get(key) ?? 0) + 1);
+    const sk = s.sectionId.toString();
+    presentBySection.set(sk, (presentBySection.get(sk) ?? 0) + 1);
   }
 
   const byClass = new Map<string, ClassAbsentees>();
@@ -183,6 +189,7 @@ export async function absenteeReport(dateKey: string): Promise<ClassAbsentees[]>
       sectionCode: section.code,
       sectionNameBn: section.nameBn,
       absentCount: absentees.length,
+      presentCount: presentBySection.get(sectionId) ?? 0,
       absentees,
     });
     entry.absentCount += absentees.length;
