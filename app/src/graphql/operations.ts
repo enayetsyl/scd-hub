@@ -5698,6 +5698,8 @@ export interface SectionAbsenteesT {
   sectionCode: string;
   sectionNameBn: string;
   absentCount: number;
+  /** D-#872: present in this section (a split class shows each half's pair). */
+  presentCount: number;
   absentees: AbsenteeEntryT[];
 }
 
@@ -5716,7 +5718,7 @@ export const ABSENTEE_REPORT = gql<{ absenteeReport: ClassAbsenteesT[] }, { date
     absenteeReport(dateKey: $dateKey) {
       classId classLevel classNameBn absentCount presentCount
       sections {
-        sectionId sectionCode sectionNameBn absentCount
+        sectionId sectionCode sectionNameBn absentCount presentCount
         absentees { studentId name nameBn rollNumber schoolId leaveCovered }
       }
     }
