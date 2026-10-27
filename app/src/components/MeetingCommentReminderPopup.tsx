@@ -24,7 +24,8 @@ import { Button } from "./ui";
 import { STR, bnNum, dhakaDateKey, fullDateLabel } from "../lib/labels";
 import { getItem, setItem } from "../lib/storage";
 import { useAuth } from "../auth/AuthContext";
-import { navigationRef } from "../navigation/navigationRef";
+import { navigateInTab } from "../navigation/navigationRef";
+import { useAnnounceSystemPopup } from "../lib/popupSlot";
 import { makeStyles, radius, space, typeScale } from "../theme";
 
 const SEEN_KEY = "scd_meeting_comment_reminder_day";
@@ -100,15 +101,12 @@ export function MeetingCommentReminderPopup(): React.ReactElement | null {
     } catch {
       /* non-fatal — at worst it shows again today */
     }
-    if (go && navigationRef.isReady()) {
-      try {
-        (navigationRef as unknown as { navigate: (n: string, p?: object) => void }).navigate("HomeTab", { screen: go });
-      } catch {
-        // No Home tab for this login (should not happen for a writer) — closing is enough.
-      }
-    }
+    // Two-step, so it also works when the app re-opened on another tab (navigateInTab).
+    if (go) navigateInTab("HomeTab", go);
   }
 
+  // Pop-up notices wait while this reminder is on screen (D-#871).
+  useAnnounceSystemPopup("meeting-reminder", !!(eligible && visible && counts && total > 0));
   if (!eligible || !visible || !counts || total === 0) return null;
   const overdue = !!counts.dueKey && counts.dueKey < today;
   const dueLine = counts.dueKey

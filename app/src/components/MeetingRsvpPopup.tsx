@@ -25,6 +25,7 @@
 import React, { useEffect, useState } from "react";
 import { Modal, Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useAnnounceSystemPopup } from "../lib/popupSlot";
 import { useMutation, useQuery } from "urql";
 import {
   ACKNOWLEDGE_MEETING_CHANGE,
@@ -77,6 +78,8 @@ export function MeetingRsvpPopup(): React.ReactElement | null {
   const insets = useSafeAreaInsets();
 
   const shown = sent ?? pending ?? outcome;
+  // Pop-up notices wait while this blocking pop-up is on screen (D-#871).
+  useAnnounceSystemPopup("meeting-rsvp", !!(isGuardian && !result.error && shown));
   if (!isGuardian || result.error || !shown) return null;
   const showingOutcome = !sent && !pending && !!outcome;
   const approved = showingOutcome && outcome?.response?.reviewOutcome === "APPROVED";

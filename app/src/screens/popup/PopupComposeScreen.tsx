@@ -117,6 +117,8 @@ const SCREEN_TARGETS: Array<{ value: string; label: () => string }> = [
   { value: "GuardianAssignmentsTab", label: () => `${STR.ppForGuardian}: ${STR.tabAssignment}` },
   { value: "GuardianClassNotesTab", label: () => `${STR.ppForGuardian}: ${STR.drawerItemClassNotes}` },
   { value: "HomeTab", label: () => `${STR.ppForStaff}: ${STR.drawerItemToday}` },
+  // D-#871: a screen inside a tab — the meeting-comment guideline (D-#850).
+  { value: "HomeTab/MeetingCommentGuide", label: () => `${STR.ppForStaff}: ${STR.mcGuideTitle}` },
   { value: "HomeworkTab", label: () => `${STR.ppForStaff}: ${STR.tabHomework}` },
   { value: "AttendanceTab", label: () => `${STR.ppForStaff}: ${STR.tabAttendance}` },
   { value: "ClassTestTab", label: () => `${STR.ppForStaff}: ${STR.tabClassTest}` },

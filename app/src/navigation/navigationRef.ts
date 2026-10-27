@@ -13,6 +13,36 @@ export function openNotificationCenter(): void {
   }
 }
 
+type Nav = { navigate: (name: string, params?: object) => void };
+
+/**
+ * Open `screen` inside drawer tab `tab` from OUTSIDE the navigator tree (a pop-up).
+ *
+ * Two steps, on purpose. The app restores the last navigation state, so it often opens on
+ * another tab with the target tab's inner state ALREADY saved (e.g. Home = [Today]). When
+ * that tab's stack mounts, the saved state wins over a `{ screen }` param, and the request
+ * is silently dropped — the meeting reminder's "নির্দেশিকা দেখুন" landed on Today (prod,
+ * 2026-10-27). So: switch to the tab first, and once its stack is mounted, navigate inside
+ * it — the already-mounted path honours `{ screen }`. `initial: false` keeps the tab's own
+ * first screen underneath, so Back returns there (D-#311). Never throws.
+ */
+export function navigateInTab(tab: string, screen: string): void {
+  if (!navigationRef.isReady()) return;
+  const nav = navigationRef as unknown as Nav;
+  try {
+    nav.navigate(tab);
+  } catch {
+    return; // no such tab for this login — closing the pop-up is enough
+  }
+  setTimeout(() => {
+    try {
+      if (navigationRef.isReady()) nav.navigate(tab, { screen, initial: false });
+    } catch {
+      /* the screen is not in this login's tab — staying on the tab is fine */
+    }
+  }, 0);
+}
+
 /** A notification a push tap asked for that the navigator cannot show yet: still
  *  booting, or signed out (the root stack has no NotificationDetail until login). */
 let pendingNotificationId: string | null = null;

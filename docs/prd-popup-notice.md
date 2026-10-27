@@ -122,7 +122,7 @@ lock is refused at save time.
 **Buttons** (≤ 3) come in four kinds:
 - **ACK**: records that the person has read it.
 - **CHOICE**: a one-question poll.
-- **OPEN_SCREEN**: opens an app tab picked from a list.
+- **OPEN_SCREEN**: opens an app tab picked from a list, or a screen inside one (`HomeTab/MeetingCommentGuide` — the comment guideline, D-#871).
 - **OPEN_LINK**: opens an https link.
 
 Each tap is recorded and audited.
@@ -150,7 +150,7 @@ resume, because a guardian flipping to WhatsApp is not opening the app.
 2. then read-required,
 3. then at most **3** quick-info notices; the rest wait for the next open.
 
-The meeting RSVP pop-up (D-#841) still renders on top.
+The meeting RSVP pop-up (D-#841) and the meeting-comment reminder (D-#851) go first: a notice waits until neither is on screen (D-#871).
 
 **Status** is stored as DRAFT, PUBLISHED or WITHDRAWN. Scheduled, live and ended are derived
 from the dates.
