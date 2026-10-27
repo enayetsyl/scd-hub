@@ -13,6 +13,25 @@ export function openNotificationCenter(): void {
   }
 }
 
+/**
+ * Open a signed-in screen from OUTSIDE the navigator tree (a pop-up, a listener), by its
+ * FULL path: root "App" → drawer tab → optional stack screen.
+ *
+ * WHY THE FULL PATH. The root is a stack whose routes are "App", the full-screen pages
+ * and "Auth"; the drawer tabs live inside "App". `navigationRef.navigate("HomeTab", …)`
+ * names a route the root does not have and relies on the action being passed down to
+ * the drawer — it opened the comment guideline on the web but left Android teachers on
+ * Today (owner report 2026-10-27). Naming every level never depends on that hand-off.
+ * `initial: false` keeps the tab's first screen (Today) underneath, so Back returns there.
+ */
+export function openAppScreen(tab: string, screen?: string): boolean {
+  if (!tab || !navigationRef.isReady()) return false;
+  if (!navigationRef.getRootState()?.routeNames.includes("App")) return false; // signed out
+  const nav = navigationRef as unknown as { navigate: (name: string, params?: object) => void };
+  nav.navigate("App", { screen: tab, params: screen ? { screen, initial: false } : undefined, initial: false });
+  return true;
+}
+
 /** A notification a push tap asked for that the navigator cannot show yet: still
  *  booting, or signed out (the root stack has no NotificationDetail until login). */
 let pendingNotificationId: string | null = null;

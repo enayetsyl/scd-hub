@@ -118,6 +118,8 @@ const SCREEN_TARGETS: Array<{ value: string; label: () => string }> = [
   { value: "GuardianClassNotesTab", label: () => `${STR.ppForGuardian}: ${STR.drawerItemClassNotes}` },
   { value: "GuardianBooksTab", label: () => `${STR.ppForGuardian}: ${STR.cbNav}` },
   { value: "HomeTab", label: () => `${STR.ppForStaff}: ${STR.drawerItemToday}` },
+  // "tab/screen" opens a screen inside a tab (openPopupTarget) — D-#850's guideline.
+  { value: "HomeTab/MeetingCommentGuide", label: () => `${STR.ppForStaff}: ${STR.mcGuideTitle}` },
   { value: "HomeworkTab", label: () => `${STR.ppForStaff}: ${STR.tabHomework}` },
   { value: "AttendanceTab", label: () => `${STR.ppForStaff}: ${STR.tabAttendance}` },
   { value: "ClassTestTab", label: () => `${STR.ppForStaff}: ${STR.tabClassTest}` },
