@@ -116,6 +116,7 @@ const SCREEN_TARGETS: Array<{ value: string; label: () => string }> = [
   { value: "GuardianClassTestTab", label: () => `${STR.ppForGuardian}: ${STR.tabClassTest}` },
   { value: "GuardianAssignmentsTab", label: () => `${STR.ppForGuardian}: ${STR.tabAssignment}` },
   { value: "GuardianClassNotesTab", label: () => `${STR.ppForGuardian}: ${STR.drawerItemClassNotes}` },
+  { value: "GuardianBooksTab", label: () => `${STR.ppForGuardian}: ${STR.cbNav}` },
   { value: "HomeTab", label: () => `${STR.ppForStaff}: ${STR.drawerItemToday}` },
   // "tab/screen" opens a screen inside a tab (openPopupTarget) — D-#850's guideline.
   { value: "HomeTab/MeetingCommentGuide", label: () => `${STR.ppForStaff}: ${STR.mcGuideTitle}` },
@@ -124,6 +125,7 @@ const SCREEN_TARGETS: Array<{ value: string; label: () => string }> = [
   { value: "ClassTestTab", label: () => `${STR.ppForStaff}: ${STR.tabClassTest}` },
   { value: "RoutineTab", label: () => `${STR.ppForStaff}: ${STR.tabRoutine}` },
   { value: "ChatTab", label: () => `${STR.ppForStaff}: ${STR.tabChat}` },
+  { value: "ClassBooksTab", label: () => `${STR.ppForStaff}: ${STR.cbTitle}` },
 ];
 
 export default function PopupComposeScreen({ navigation, route }: Props): React.ReactElement {

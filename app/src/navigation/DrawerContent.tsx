@@ -200,6 +200,8 @@ const STAFF_NAV: NavSection[] = [
   { type: "item", route: "ObservationTab", labelKey: "tabObservation", icon: "👁️" },
   { type: "item", route: "FreeMixingTab", labelKey: "tabFreeMixing", icon: "🎥", hidden: true },
   { type: "item", route: "LibraryTab", labelKey: "tabLibrary", icon: "📖" },
+  // D-#870: class books (staff read every class's; the Office uploads).
+  { type: "item", route: "ClassBooksTab", labelKey: "cbTitle", icon: "📚" },
   { type: "item", route: "ChatTab", labelKey: "tabChat", icon: "💬" },
   // Pop-up notices (D-#852): the sender's list for Office / Principal; আমার বার্তা for every
   // staff login (the pop-ups they received, to read again).
@@ -322,6 +324,8 @@ const STAFF_NAV: NavSection[] = [
 
 const GUARDIAN_NAV: NavSection[] = [
   { type: "item", route: "GuardianHomeTab", labelKey: "gpToday", icon: "🏠" },
+  // D-#870 (owner ask): the classroom books, right under Today so families find them.
+  { type: "item", route: "GuardianBooksTab", labelKey: "cbNav", icon: "📚" },
   {
     type: "group",
     titleKey: "drawerGroupAcademics",

@@ -275,6 +275,11 @@ export type GuardianAssignmentsStackParamList = {
 export type GuardianClassTestStackParamList = {
   ChildClassTests: undefined;
 };
+/** D-#870 — class books. ClassBooks stays first: the stack's initial route takes no params. */
+export type ClassBooksStackParamList = {
+  ClassBooks: undefined;
+  ClassBookReader: { bookId: string; title: string; pageCount: number; pageAspect: number };
+};
 /** D-#750 — the guardian's Class Notes tab (the lesson history, once a Home sub-screen). */
 export type GuardianClassNotesStackParamList = {
   ChildClassNotes: undefined;
@@ -726,4 +731,8 @@ export type TabParamList = {
   GuardianAssignmentsTab: NavigatorScreenParams<GuardianAssignmentsStackParamList>;
   GuardianClassTestTab: NavigatorScreenParams<GuardianClassTestStackParamList>;
   GuardianClassNotesTab: NavigatorScreenParams<GuardianClassNotesStackParamList>;
+  /** D-#870 — class books: the staff shelf and the guardian's (same stack, two routes so
+   *  each sidebar lists it once in its own place). */
+  ClassBooksTab: NavigatorScreenParams<ClassBooksStackParamList>;
+  GuardianBooksTab: NavigatorScreenParams<ClassBooksStackParamList>;
 };
