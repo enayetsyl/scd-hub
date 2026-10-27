@@ -161,13 +161,28 @@ export default function AttendanceReportScreen(_props: Props): React.ReactElemen
                 <Badge text={`${STR.attAbsentWord}: ${bnNum(cls.absentCount)}`} tone={cls.absentCount > 0 ? "warn" : "ok"} />
               </View>
             </View>
-            {open
+            {/* D-#872: a split class (বালক / বালিকা) shows each section's own present/absent
+                pair even while folded; a single-section class keeps the class pair only. */}
+            {open || cls.sections.length > 1
               ? cls.sections.map((sec) => (
                   <View key={sec.sectionId} style={{ marginTop: space(2) }}>
-                    <Muted style={{ fontWeight: "700" }}>
-                      {sec.sectionNameBn || sec.sectionCode} · {bnNum(sec.absentCount)}
-                    </Muted>
-                    {sec.absentees.map((a) => (
+                    {cls.sections.length > 1 ? (
+                      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                        <Muted style={{ fontWeight: "700" }}>{sec.sectionNameBn || sec.sectionCode}</Muted>
+                        <View style={{ flexDirection: "row", gap: space(1) }}>
+                          <Badge text={`${STR.presentWord}: ${bnNum(sec.presentCount ?? 0)}`} tone="ok" />
+                          <Badge
+                            text={`${STR.attAbsentWord}: ${bnNum(sec.absentCount)}`}
+                            tone={sec.absentCount > 0 ? "warn" : "ok"}
+                          />
+                        </View>
+                      </View>
+                    ) : (
+                      <Muted style={{ fontWeight: "700" }}>
+                        {sec.sectionNameBn || sec.sectionCode} · {bnNum(sec.absentCount)}
+                      </Muted>
+                    )}
+                    {(open ? sec.absentees : []).map((a) => (
                       <View
                         key={a.studentId}
                         style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 2 }}

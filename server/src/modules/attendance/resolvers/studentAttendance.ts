@@ -302,6 +302,9 @@ SectionAbsenteesRef.implement({
     sectionCode: t.exposeString("sectionCode"),
     sectionNameBn: t.exposeString("sectionNameBn"),
     absentCount: t.exposeInt("absentCount"),
+    presentCount: t.exposeInt("presentCount", {
+      description: "D-#872: covered-and-present students of THIS section on the date.",
+    }),
     absentees: t.field({ type: [AbsenteeEntryRef], resolve: (s) => s.absentees }),
   }),
 });

@@ -172,6 +172,41 @@ describe("absenteeReport — group capture rolls up to class/section", () => {
     mockDayFind.mockResolvedValue([]);
     expect(await absenteeReport(DATE)).toEqual([]);
   });
+
+  test("D-#872: a split class reports each section's own present/absent pair", async () => {
+    // Class 3 split into বালক / বালিকা: kid-a + kid-c Boys, kid-b + kid-d Girls.
+    const B = "sec-3b", G = "sec-3g";
+    mockStudentFind.mockResolvedValue([
+      student("kid-a", B, "cls-3"),
+      student("kid-c", B, "cls-3"),
+      student("kid-b", G, "cls-3"),
+      student("kid-d", G, "cls-3"),
+    ]);
+    mockResolveUnits.mockResolvedValue(
+      new Map([
+        ["kid-a", { unitType: "subjectgroup", unitId: QAIDA }],
+        ["kid-c", { unitType: "subjectgroup", unitId: QAIDA }],
+        ["kid-b", { unitType: "subjectgroup", unitId: NAJERA }],
+        ["kid-d", { unitType: "subjectgroup", unitId: NAJERA }],
+      ]),
+    );
+    mockSectionFind.mockResolvedValue([
+      { _id: B, code: "Boys", nameBn: "বালক", classId: "cls-3" },
+      { _id: G, code: "Girls", nameBn: "বালিকা", classId: "cls-3" },
+    ]);
+    mockDayFind.mockResolvedValue([
+      { dateKey: DATE, subjectGroupId: QAIDA, absentStudentIds: ["kid-a"] },
+      { dateKey: DATE, subjectGroupId: NAJERA, absentStudentIds: [] },
+    ]);
+
+    const [class3] = await absenteeReport(DATE);
+    expect(class3).toMatchObject({ presentCount: 3, absentCount: 1 });
+    const bySec = Object.fromEntries(class3.sections.map((s) => [s.sectionCode, s]));
+    expect(bySec.Boys).toMatchObject({ presentCount: 1, absentCount: 1 });
+    expect(bySec.Girls).toMatchObject({ presentCount: 2, absentCount: 0 });
+    // The halves add up to the class pair.
+    expect(class3.sections.reduce((n, s) => n + s.presentCount, 0)).toBe(class3.presentCount);
+  });
 });
 
 describe("unmarkedSections — pending while ANY covering unit is unmarked", () => {
