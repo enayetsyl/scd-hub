@@ -7196,8 +7196,8 @@ const STR_BN = {
   cbNext: "পরের ›",
   cbGoTo: "যান",
   cbGoToPh: "পৃষ্ঠা নং",
-  cbZoomIn: "বড় করুন",
-  cbZoomOut: "ছোট করুন",
+  cbZoomIn: "বড়",
+  cbZoomOut: "ছোট",
   cbViewOnly: "শুধু দেখার জন্য — ডাউনলোড করা যাবে না",
   cbOpen: "পড়ুন",
 } as const;
@@ -13055,8 +13055,8 @@ const STR_EN: StrTable = {
   cbNext: "Next ›",
   cbGoTo: "Go",
   cbGoToPh: "Page no.",
-  cbZoomIn: "Zoom in",
-  cbZoomOut: "Zoom out",
+  cbZoomIn: "Larger",
+  cbZoomOut: "Smaller",
   cbViewOnly: "View only — cannot be downloaded",
   cbOpen: "Read",
 };
