@@ -52,6 +52,7 @@ import type {
   GuardianRoutineStackParamList,
   GuardianAssignmentsStackParamList,
   GuardianClassTestStackParamList,
+  ClassBooksStackParamList,
   GuardianClassNotesStackParamList,
   TabParamList,
 } from "./types";
@@ -119,6 +120,8 @@ import AssignmentRollupsScreen from "../screens/assignment/AssignmentRollupsScre
 import AssignmentGiftScreen from "../screens/assignment/AssignmentGiftScreen";
 import ChildAssignmentsScreen from "../screens/guardian/ChildAssignmentsScreen";
 import ChildClassTestsScreen from "../screens/guardian/ChildClassTestsScreen";
+import ClassBooksScreen from "../screens/classbooks/ClassBooksScreen";
+import ClassBookReaderScreen from "../screens/classbooks/ClassBookReaderScreen";
 import ReviewHomeScreen from "../screens/review/ReviewHomeScreen";
 import ReviewSubmitScreen from "../screens/review/ReviewSubmitScreen";
 import ReviewThreadScreen from "../screens/review/ReviewThreadScreen";
@@ -1642,6 +1645,18 @@ function GuardianClassNotesNavigator(): React.ReactElement {
   );
 }
 
+// D-#870 — class books. One stack for both shelves; the screen reads the role.
+const ClassBooksStack = createNativeStackNavigator<ClassBooksStackParamList>();
+function ClassBooksNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    <ClassBooksStack.Navigator screenOptions={stackOptions}>
+      <ClassBooksStack.Screen name="ClassBooks" component={ClassBooksScreen} options={{ title: STR.cbTitle }} />
+      <ClassBooksStack.Screen name="ClassBookReader" component={ClassBookReaderScreen} options={{ title: STR.cbTitle }} />
+    </ClassBooksStack.Navigator>
+  );
+}
+
 // --- Drawer (D-#258) -------------------------------------------------------
 
 const Drawer = createDrawerNavigator<TabParamList>();
@@ -1860,6 +1875,8 @@ export function AppTabs(): React.ReactElement {
   // GP-2 (D-#68): the GUARDIAN role holds ONLY guardian:read_child, so every
   // staff gate above is false for guardians — the guardian tab set is all they see.
   const canGuardian = can("guardian:read_child");
+  // D-#870: class books — staff by action; guardians get their own tab (GuardianBooksTab).
+  const canClassBooks = any("class_books:view", "class_books:manage");
 
   // Defensive (D-#369): a role-less / unrecognised authed session makes EVERY tab
   // gate false, which would mount an empty Drawer.Navigator and hard-crash the app
@@ -1871,7 +1888,7 @@ export function AppTabs(): React.ReactElement {
     canAssignment || canReview || canRoutine || canClassNotes || canAttendance || canPrint || canLibrary ||
     canChat || canPopup || canVocab || canClassTest || canComments || canObservation || canFreeMixing ||
     canEnglishDrive || canTeachingNotes || canRevision || canFinance || canHr || canReports ||
-    canSupportBook || canAdmin || canGuardian || canSyllabus || canScholarship || canMastery;
+    canSupportBook || canAdmin || canGuardian || canSyllabus || canScholarship || canMastery || canClassBooks;
   if (!hasAnyTab) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: space(6), backgroundColor: colors.bg }}>
@@ -1937,6 +1954,7 @@ export function AppTabs(): React.ReactElement {
         {/* WB-1 (D-#701): every staff login has a board; GUARDIAN never. */}
         {canHome ? <Drawer.Screen name="WorkBoardTab" component={WorkBoardNavigator} /> : null}
         {canLibrary ? <Drawer.Screen name="LibraryTab" component={LibraryNavigator} /> : null}
+        {canClassBooks ? <Drawer.Screen name="ClassBooksTab" component={ClassBooksNavigator} /> : null}
         {canChat ? <Drawer.Screen name="ChatTab" component={ChatNavigator} /> : null}
         {canPopup ? <Drawer.Screen name="PopupNoticesTab" component={PopupNavigator} /> : null}
         {canVocab ? <Drawer.Screen name="VocabTab" component={VocabNavigator} /> : null}
@@ -1967,6 +1985,7 @@ export function AppTabs(): React.ReactElement {
         ) : null}
         {canGuardian ? <Drawer.Screen name="GuardianClassTestTab" component={GuardianClassTestNavigator} /> : null}
         {canGuardian ? <Drawer.Screen name="GuardianClassNotesTab" component={GuardianClassNotesNavigator} /> : null}
+        {canGuardian ? <Drawer.Screen name="GuardianBooksTab" component={ClassBooksNavigator} /> : null}
       </Drawer.Navigator>
     </GuardianChildProvider>
   );

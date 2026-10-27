@@ -76,6 +76,13 @@ import {
   MAX_BOOK_PDF_BYTES,
 } from "../modules/support-book/services/BookFileService";
 import { registerAsset } from "../modules/support-book/services/BookImageService";
+import {
+  CLASS_BOOK_ERRORS_BN,
+  CLASS_BOOK_MAX_PDF_BYTES,
+  assertClassBookFileReadAccess,
+  startClassBookUpload,
+  validateClassBookUpload,
+} from "../modules/class-books/services/ClassBookService";
 import { ARTIFACT_STAGES, type ArtifactStage } from "@scd/shared";
 import { Types as MongoTypes } from "mongoose";
 
@@ -1139,6 +1146,67 @@ filesRouter.post("/book", parseBookUpload, async (req: Request, res: Response) =
 });
 
 // ---------------------------------------------------------------------------
+// POST /files/class-book — the Office uploads a class book PDF (D-#870). Multipart
+// `file` + fields classLevel, title, sortOrder?. class_books:manage, PDF ≤ 60 MB.
+// Answers as soon as the row exists: the pages render in the background (a 78-page
+// book outlasts the proxy timeout) and the shelf shows PROCESSING → READY. The PDF is
+// never stored — only its page images are.
+// ---------------------------------------------------------------------------
+
+const uploadClassBook = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: CLASS_BOOK_MAX_PDF_BYTES + 1 },
+});
+
+const parseClassBookUpload: express.RequestHandler = (req, res, next) => {
+  uploadClassBook.single("file")(req, res, (err: unknown) => {
+    if (err) {
+      res.status(422).json({ error: CLASS_BOOK_ERRORS_BN.tooLarge });
+      return;
+    }
+    next();
+  });
+};
+
+filesRouter.post("/class-book", parseClassBookUpload, async (req: Request, res: Response) => {
+  const ctx = buildContext(req, res);
+  if (!ctx.auth || !callerHasPermission(ctx.auth, "class_books:manage")) {
+    res.status(403).json({ error: FILE_ERRORS_BN.forbidden });
+    return;
+  }
+  const file = req.file;
+  if (!file) {
+    res.status(400).json({ error: "file field missing" });
+    return;
+  }
+  const rejection = validateClassBookUpload(file.mimetype, file.size);
+  if (rejection) {
+    res.status(422).json({ error: rejection });
+    return;
+  }
+  const sortOrder = Number(req.body?.sortOrder ?? 0);
+  try {
+    const { book, done } = await startClassBookUpload({
+      actorId: ctx.auth.userId,
+      classLevel: Number(req.body?.classLevel),
+      title: String(req.body?.title ?? ""),
+      sortOrder: Number.isFinite(sortOrder) ? sortOrder : 0,
+      sourceName: decodeUploadName(file.originalname),
+      pdf: file.buffer,
+    });
+    done.catch((e) => console.warn("class book render crashed:", (e as Error)?.message));
+    res.json({ bookId: book.id, status: book.status });
+  } catch (e) {
+    // A bare Error is a validation message for the person (class / title).
+    if ((e as Error)?.constructor === Error) {
+      res.status(422).json({ error: (e as Error).message });
+      return;
+    }
+    throw e;
+  }
+});
+
+// ---------------------------------------------------------------------------
 // GET /files/:id — authz first, then stream from Drive (no redirect, ever)
 // ---------------------------------------------------------------------------
 
@@ -1200,6 +1268,10 @@ filesRouter.get("/:id", async (req: Request, res: Response) => {
       // Staff-only pedagogy material: the owning note's (class × subject) teaching
       // scope, resolved the same way the GraphQL read resolves it (TN-1, D-#521).
       await assertTeachingNoteFileReadAccess(ctx, file);
+    } else if (file.kind === "class_book_page") {
+      // A class book page (D-#870): the book's own read gate — staff by class_books:view,
+      // a guardian only for a READY, visible book of their child's class.
+      await assertClassBookFileReadAccess(ctx, file._id.toString());
     } else if (file.kind === "print_upload") {
       // A print upload is readable by the teacher who sent it and by the Office/Principal
       // who has to print it (PQ-2, D-#281) — nobody else.

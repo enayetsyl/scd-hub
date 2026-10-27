@@ -184,7 +184,7 @@ Several of today's bypasses are template-aware (`isAdminStaff`, `actsAsRole`), w
 | Admin & access | `guardian_engagement` | Guardian app usage | অভিভাবকদের অ্যাপ ব্যবহার | 1 | foundation-platform |
 | Admin & access | `my_account` | My account | আমার অ্যাকাউন্ট | 1 | foundation-platform |
 
-**Totals: 70 features, 355 actions** (`reports` +13 switches 2026-10-26, D-#861: the reports that sat in the Admin hub and module homes, unflagged, OFFICE on +12 — all but `guardian_engagement`; `reports:lesson_progress` arrives with lesson progress) (`reports` added 2026-10-25, D-#846: +13 report switches, −3 retired report-only actions) (`parents_meeting:approve_change` added with meeting RSVP, 2026-10-24: +1 action, PRINCIPAL-DEFAULT, D-#842) (`mastery` added with M-0, 2026-10-20: +6 actions, all unflagged, TEACHER on +3, OFFICE on +1; M-2, 2026-10-21: +`mastery:edit_all`, PRINCIPAL-DEFAULT). By flag: LOCKED 11 · PRINCIPAL-DEFAULT 15 · DESIGNATION 24 · ESCALATION 5 · SELF 12 · unflagged 278. Defaults: TEACHER on 101 · OFFICE on 250. A row may carry a `†`/`F-n`/`2H` note in addition to its flag. Those notes are not counted as flags. Not counted: `guardian:read_child` (GUARDIAN plane), and the future `scholarship_practice:release` (SC-5, not built) and `announcements:publish` (no staff surface yet).
+**Totals: 71 features, 357 actions** (`class_books` added 2026-10-26, D-#870: +2 actions, unflagged, TEACHER on +1, OFFICE on +2) (`reports` +13 switches 2026-10-26, D-#861: the reports that sat in the Admin hub and module homes, unflagged, OFFICE on +12 — all but `guardian_engagement`; `reports:lesson_progress` arrives with lesson progress) (`reports` added 2026-10-25, D-#846: +13 report switches, −3 retired report-only actions) (`parents_meeting:approve_change` added with meeting RSVP, 2026-10-24: +1 action, PRINCIPAL-DEFAULT, D-#842) (`mastery` added with M-0, 2026-10-20: +6 actions, all unflagged, TEACHER on +3, OFFICE on +1; M-2, 2026-10-21: +`mastery:edit_all`, PRINCIPAL-DEFAULT). By flag: LOCKED 11 · PRINCIPAL-DEFAULT 15 · DESIGNATION 24 · ESCALATION 5 · SELF 12 · unflagged 280. Defaults: TEACHER on 102 · OFFICE on 252. A row may carry a `†`/`F-n`/`2H` note in addition to its flag. Those notes are not counted as flags. Not counted: `guardian:read_child` (GUARDIAN plane), and the future `scholarship_practice:release` (SC-5, not built) and `announcements:publish` (no staff surface yet).
 
 ---
 
@@ -660,6 +660,14 @@ Learning-outcome mastery tracker (`docs/prd-mastery.md`, D-#775–#787). Registe
 | `worksheets:edit_all` | Make one for a teacher | শিক্ষকের পক্ষে তৈরি | Pick a routine teacher; open any stored paper | — | on | | roster:manage (isManager) |
 | `worksheets:edit` | Edit the picture bank | ছবির ভাণ্ডার সম্পাদনা | Tag, reserve, hide pictures; see hidden | — | on | | roster:manage |
 | `worksheets:settings` | Worksheet plan | প্রশ্ন-পরিকল্পনা | Save generation plan and presets | — | on | | roster:manage |
+
+#### `class_books` — শ্রেণির বই (D-#870, docs/prd-class-books.md)
+| permission | EN | BN | what it allows | T | O | flags | replaces |
+|---|---|---|---|---|---|---|---|
+| `class_books:view` | Read class books | শ্রেণির বই পড়া | Every class's books, page by page (view only, no download) | on | on | | new |
+| `class_books:manage` | Upload and manage class books | শ্রেণির বই আপলোড ও সম্পাদনা | Upload a book PDF (turned into page images), rename, move class, hide, delete | — | on | | new |
+
+Guardians read the books of their own children's classes through `guardian:read_child` (the GUARDIAN plane), not through these switches.
 
 ### Communication
 
