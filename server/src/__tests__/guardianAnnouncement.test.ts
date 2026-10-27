@@ -187,7 +187,13 @@ describe("the app side is pop-up notices now (D-#852)", () => {
   test("an unknown screen target closes the pop-up instead of crashing", () => {
     // Notice rows outlive route renames; a stale route name must not take the shell down.
     const open = HOST.slice(HOST.indexOf("export function openPopupTarget"));
-    expect(open).toMatch(/navigationRef\.isReady\(\)/);
-    expect(open).toMatch(/try \{[\s\S]{0,300}?navigate\([\s\S]{0,200}?\} catch/);
+    expect(open).toMatch(/try \{[\s\S]{0,300}?openAppScreen\([\s\S]{0,200}?\} catch/);
+    // The not-ready / signed-out guard lives in the shared full-path opener (2026-10-27:
+    // the bare tab name left Android on Today), which every pop-up link goes through.
+    const NAV = read("../../../app/src/navigation/navigationRef.ts");
+    const opener = NAV.slice(NAV.indexOf("export function openAppScreen"));
+    expect(opener).toMatch(/navigationRef\.isReady\(\)/);
+    expect(opener).toMatch(/routeNames\.includes\("App"\)/);
+    expect(opener).toMatch(/navigate\("App", \{ screen: tab/);
   });
 });
