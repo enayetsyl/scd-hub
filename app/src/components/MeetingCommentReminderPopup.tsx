@@ -24,7 +24,7 @@ import { Button } from "./ui";
 import { STR, bnNum, dhakaDateKey, fullDateLabel } from "../lib/labels";
 import { getItem, setItem } from "../lib/storage";
 import { useAuth } from "../auth/AuthContext";
-import { navigationRef } from "../navigation/navigationRef";
+import { openAppScreen } from "../navigation/navigationRef";
 import { makeStyles, radius, space, typeScale } from "../theme";
 
 const SEEN_KEY = "scd_meeting_comment_reminder_day";
@@ -100,9 +100,10 @@ export function MeetingCommentReminderPopup(): React.ReactElement | null {
     } catch {
       /* non-fatal — at worst it shows again today */
     }
-    if (go && navigationRef.isReady()) {
+    if (go) {
       try {
-        (navigationRef as unknown as { navigate: (n: string, p?: object) => void }).navigate("HomeTab", { screen: go });
+        // Full path (App → HomeTab → screen): the bare "HomeTab" form left Android on Today.
+        openAppScreen("HomeTab", go);
       } catch {
         // No Home tab for this login (should not happen for a writer) — closing is enough.
       }
