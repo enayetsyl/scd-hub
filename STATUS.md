@@ -1,5 +1,6 @@
 # STATUS
 
+- 2026-10-27: **FIXED — comment-guideline link from pop-ups (D-#850/#851 follow-up)** (branch `fix/guide-popup-nav`): `openAppScreen` navigates App → tab → screen; reminder + pop-up notice links use it; composer gains a "Staff: comment guideline" target. Verified web 5/5 as a teacher; Android confirmed only after the OTA.
 - 2026-10-26: **BUILT — meeting brief section best + detail-row layout (D-#866)** (branch `feat/brief-class-best`): শাখার সর্বোচ্চ beside each number (screen + PDF), withheld in sections under 5; missed items stacked. Verified: meetingChain 37 tests, server/app tsc, prod timing read (7 children 0.5 s), Playwright 6/6.
 - 2026-10-26: **BUILT — staff table + former staff hidden + green directory tables (D-#864)** (branch `feat/staff-table`). Verified locally (in-memory DB, Chrome, light + dark): 15/15. **LIVE 2026-10-26:** dev #1196, prod #1199 (`d001b6ee`), OTA 2c7c6a49.
 - 2026-10-26: **FIXED — attendance days lost after a Quran-group split (D-#865)** (branch `fix/group-split-attendance`): prod data repaired (142 rows, 28 children now 159–161/163); retiring a group now copies its days to the groups its children moved to. Verified: 6 new in-memory tests + subjectGroupAdmin; prod re-read via studentAttendanceHistory.
