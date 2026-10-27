@@ -18,6 +18,7 @@
 import React, { useEffect, useState } from "react";
 import { Modal, Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useAnnounceSystemPopup } from "../lib/popupSlot";
 import { useQuery } from "urql";
 import { MY_MEETING_NOTE_WORK, MY_MEETING_SUMMARY_WORK } from "../graphql/meetingChain";
 import { Button } from "./ui";
@@ -110,6 +111,8 @@ export function MeetingCommentReminderPopup(): React.ReactElement | null {
     }
   }
 
+  // Pop-up notices wait while this reminder is on screen (D-#871).
+  useAnnounceSystemPopup("meeting-reminder", !!(eligible && visible && counts && total > 0));
   if (!eligible || !visible || !counts || total === 0) return null;
   const overdue = !!counts.dueKey && counts.dueKey < today;
   const dueLine = counts.dueKey
