@@ -23,12 +23,30 @@ export function openNotificationCenter(): void {
  * the drawer — it opened the comment guideline on the web but left Android teachers on
  * Today (owner report 2026-10-27). Naming every level never depends on that hand-off.
  * `initial: false` keeps the tab's first screen (Today) underneath, so Back returns there.
+ *
+ * WHY TWO STEPS (D-#871). The app restores the last navigation state, so it often re-opens
+ * on ANOTHER tab with the target tab's inner state already saved (Home = [Today]). When that
+ * tab's stack mounts, the saved state wins over the nested `{ screen }` and the request is
+ * dropped — reproduced on the web with this full path too: re-open on ক্লাস নোট, tap
+ * "নির্দেশিকা দেখুন", land on Today. So the tab is opened first and the screen is opened
+ * on the next tick, when the stack is mounted and honours `{ screen }`.
  */
 export function openAppScreen(tab: string, screen?: string): boolean {
   if (!tab || !navigationRef.isReady()) return false;
   if (!navigationRef.getRootState()?.routeNames.includes("App")) return false; // signed out
   const nav = navigationRef as unknown as { navigate: (name: string, params?: object) => void };
-  nav.navigate("App", { screen: tab, params: screen ? { screen, initial: false } : undefined, initial: false });
+  nav.navigate("App", { screen: tab, initial: false });
+  if (screen) {
+    setTimeout(() => {
+      try {
+        if (navigationRef.isReady()) {
+          nav.navigate("App", { screen: tab, params: { screen, initial: false }, initial: false });
+        }
+      } catch {
+        /* the screen is not in this login's tab — staying on the tab is fine */
+      }
+    }, 0);
+  }
   return true;
 }
 

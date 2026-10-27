@@ -23,6 +23,7 @@ import { PopupSheet } from "./PopupSheet";
 import { useAuth } from "../auth/AuthContext";
 import { openAppScreen } from "../navigation/navigationRef";
 import { friendlyError } from "../lib/errors";
+import { useSystemPopupActive } from "../lib/popupSlot";
 
 const REFRESH_AFTER_MS = 10 * 60 * 1000;
 const keyOf = (s: PopupShowT): string => `${s.noticeId}:${s.test ? "t" : "r"}`;
@@ -57,12 +58,14 @@ export function PopupNoticeHost(): React.ReactElement | null {
   const lastFetch = useRef(Date.now());
   const [current, setCurrent] = useState<{ show: PopupShowT; index: number; total: number } | null>(null);
 
+  // The meeting RSVP / comment reminder go first; a notice never covers them (D-#871).
+  const systemBusy = useSystemPopupActive();
   const due = (q.data?.myPopupQueue ?? []).filter((s) => !handled.current.has(keyOf(s)));
   // A string, not the array: the array is new on every render and would restart the delay.
   const dueKey = due.map(keyOf).join("|");
 
   useEffect(() => {
-    if (current || due.length === 0) return;
+    if (current || systemBusy || due.length === 0) return;
     const next = due[0];
     const remaining = due.length;
     const t = setTimeout(() => {
@@ -71,7 +74,7 @@ export function PopupNoticeHost(): React.ReactElement | null {
     }, 400);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [current, dueKey]);
+  }, [current, dueKey, systemBusy]);
 
   // A sign-out / sign-in starts a fresh session of pop-ups.
   useEffect(() => {
