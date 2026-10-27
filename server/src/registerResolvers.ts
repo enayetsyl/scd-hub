@@ -136,3 +136,4 @@ import "./modules/lesson-progress/resolvers/lessonProgress";
 import "./modules/lesson-progress/resolvers/studentLessons";
 import "./modules/worksheets/resolvers/worksheet";
 import "./modules/popup-notices/resolvers/popupNotice";
+import "./modules/class-books/resolvers/classBooks";

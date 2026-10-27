@@ -60,7 +60,11 @@ export type StoredFileKind =
   /** One scanned page of a student's class-test script (CS-2, docs/prd-ct-scripts.md
    *  §6, D-#716). Staff-read via tracker:read / roster:manage; a guardian reads only
    *  their own child's page, only once the results AND the scripts are published. */
-  | "classtest_script";
+  | "classtest_script"
+  /** One page image of a class book (D-#870, docs/prd-class-books.md). The book PDF is
+   *  rendered to JPEG pages at upload and is never stored or served; readers get pages.
+   *  Staff read via class_books:view/manage; a guardian only for their own child's class. */
+  | "class_book_page";
 
 export const STORED_FILE_KINDS: readonly StoredFileKind[] = [
   "hw_question",
@@ -85,6 +89,7 @@ export const STORED_FILE_KINDS: readonly StoredFileKind[] = [
   "book_pdf",
   "archive_photo",
   "classtest_script",
+  "class_book_page",
 ];
 
 /** The chat-attachment subset (M-4) — the read gate routes these to chat. */

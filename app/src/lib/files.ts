@@ -1213,3 +1213,58 @@ export async function pickTextFile(): Promise<PickedJson | null> {
   if (!res.ok) throw new FileUploadError(`could not read ${asset.name}`);
   return { name: asset.name, text: await res.text() };
 }
+
+// ---------------------------------------------------------------------------
+// Class books (D-#870, server: POST /files/class-book). The Office picks ONE PDF
+// (≤ 60 MB); the server renders its pages in the background and answers at once
+// with the new book's id — the shelf then shows it PROCESSING until READY.
+// ---------------------------------------------------------------------------
+
+export const CLASS_BOOK_MAX_BYTES = 60 * 1024 * 1024;
+
+/** Pick a PDF and upload it as a class book; null when the picker is cancelled. */
+export async function pickAndUploadClassBook(input: {
+  classLevel: number;
+  title: string;
+  sortOrder: number;
+}): Promise<{ bookId: string } | null> {
+  const picked = await DocumentPicker.getDocumentAsync({
+    type: ["application/pdf"],
+    multiple: false,
+    copyToCacheDirectory: true,
+  });
+  if (picked.canceled || !picked.assets?.[0]) return null;
+  const asset = picked.assets[0];
+  const form = new FormData();
+  if (Platform.OS === "web") {
+    const blob = await fetch(asset.uri).then((r) => r.blob());
+    form.append("file", new File([blob], asset.name, { type: asset.mimeType ?? blob.type }));
+  } else {
+    form.append("file", {
+      uri: asset.uri,
+      name: rnUploadName(asset.name),
+      type: asset.mimeType ?? "application/pdf",
+    } as unknown as Blob);
+  }
+  form.append("classLevel", String(input.classLevel));
+  form.append("title", input.title);
+  form.append("sortOrder", String(input.sortOrder));
+  const token = getToken();
+  const res = await fetch(`${REST_BASE}/files/class-book`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: form,
+  });
+  if (!res.ok) {
+    let message = `upload failed (${res.status})`;
+    try {
+      const body = (await res.json()) as { error?: string };
+      if (body.error) message = body.error;
+    } catch {
+      // keep the generic message
+    }
+    throw new FileUploadError(message);
+  }
+  const body = (await res.json()) as { bookId: string };
+  return { bookId: body.bookId };
+}
