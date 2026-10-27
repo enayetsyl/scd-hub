@@ -329,6 +329,9 @@ export type AuditEventKind =
   | "WORKSHEET_SENT_TO_PRINT" // a generated Nursery/KG paper filed to the print queue (D-#747) — meta.kind/subject/seed
   | "WORKSHEET_PLAN_SAVED"    // how a class level × subject's মানবন্টন rows are generated, + presets (D-#745)
   | "WORKSHEET_PICTURE_EDITED" // a picture-bank row re-tagged / hidden / reserved for the final (D-#746)
+  | "CLASS_BOOK_UPLOADED"     // a class book PDF uploaded and queued for page rendering (D-#870) — meta.classLevel/title
+  | "CLASS_BOOK_EDITED"       // a class book renamed / moved class / reordered / hidden or shown (D-#870) — meta before/after
+  | "CLASS_BOOK_DELETED"      // a class book removed with its page images (D-#870)
   | "PERMISSION_DENIED";
 
 export interface IAudit extends Document {

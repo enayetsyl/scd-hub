@@ -894,7 +894,9 @@ const ROLE_CHECK_DEFAULTS = {
   TEACHER: ["assignment:confirm_week", "assignment_gift:issue", "work_claim:view_all", "work_claim:remind",
     "student_comments:view", "parents_meeting:view_brief", "monthly_report:review", "attendance:view",
     "teaching_notes:view", "teaching_notes:send", "english_drive:view", "english_drive:send",
-    "library:lend", "library:return", "library:remind"],
+    "library:lend", "library:return", "library:remind",
+    // Class books (D-#870): every teacher reads the class books families read.
+    "class_books:view"],
   OFFICE: ["homework:view_all", "homework:undo_any",
     // One switch per report (D-#846) — the Office read every report by role before the matrix.
     "reports:hw_declare_pending", "reports:hw_issue_pending", "reports:hw_lifecycle", "reports:hw_weekly_unsubmitted",
@@ -915,7 +917,9 @@ const ROLE_CHECK_DEFAULTS = {
     "english_drive:send", "admin_dashboard:view",
     // Pop-up notices (D-#857): owner, 2026-10-26 — "office and principal send"; the Office sends
     // with no approval step, so every action is on for the Office template from day one.
-    "popup_notice:view", "popup_notice:send_staff", "popup_notice:send_guardian", "popup_notice:follow_up"],
+    "popup_notice:view", "popup_notice:send_staff", "popup_notice:send_guardian", "popup_notice:follow_up",
+    // Class books (D-#870): the Office uploads and keeps the class book shelf.
+    "class_books:view", "class_books:manage"],
 };
 for (const role of ["TEACHER", "OFFICE"]) {
   const expanded = new Set();

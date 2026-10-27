@@ -424,6 +424,9 @@ export const AUDIT_KIND_LABELS: Record<AuditEventKind, AuditKindLabel> = {
   WORKSHEET_SENT_TO_PRINT: { bn: "তৈরি করা প্রশ্নপত্র প্রিন্টে পাঠিয়েছেন", en: "Sent a generated worksheet to print", group: "CONTENT" },
   WORKSHEET_PLAN_SAVED: { bn: "প্রশ্ন-পরিকল্পনা সংরক্ষণ করেছেন", en: "Saved a worksheet plan", group: "CONTENT" },
   WORKSHEET_PICTURE_EDITED: { bn: "ছবির ভাণ্ডারে ছবি বদলেছেন", en: "Edited a picture-bank picture", group: "CONTENT" },
+  CLASS_BOOK_UPLOADED: { bn: "শ্রেণির বই আপলোড করেছেন", en: "Uploaded a class book", group: "CONTENT" },
+  CLASS_BOOK_EDITED: { bn: "শ্রেণির বই সম্পাদনা করেছেন", en: "Edited a class book", group: "CONTENT" },
+  CLASS_BOOK_DELETED: { bn: "শ্রেণির বই মুছেছেন", en: "Deleted a class book", group: "CONTENT" },
 };
 
 const FALLBACK_GROUP: ActivityGroup = "OTHER";

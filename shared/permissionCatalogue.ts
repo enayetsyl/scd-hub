@@ -702,6 +702,15 @@ export const FEATURE_CATALOGUE = {
       settings: { en: "Worksheet plan", bn: "প্রশ্ন-পরিকল্পনা", desc: "Save generation plan and presets", teacher: false, office: true, flags: [] },
     },
   },
+  class_books: {
+    group: "content_and_books",
+    en: "Class books",
+    bn: "শ্রেণির বই",
+    actions: {
+      view: { en: "Read class books", bn: "শ্রেণির বই পড়া", desc: "Every class's books, page by page (view only, no download)", teacher: true, office: true, flags: [] },
+      manage: { en: "Upload and manage class books", bn: "শ্রেণির বই আপলোড ও সম্পাদনা", desc: "Upload a book PDF (turned into page images), rename, move class, hide, delete", teacher: false, office: true, flags: [] },
+    },
+  },
   chat: {
     group: "communication",
     en: "Staff chat & notices",
