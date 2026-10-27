@@ -21,7 +21,7 @@ import { useMutation, useQuery } from "urql";
 import { MY_POPUP_QUEUE, RECORD_POPUP_EVENT, type PopupActionT, type PopupEventVars, type PopupShowT } from "../graphql/popupNotice";
 import { PopupSheet } from "./PopupSheet";
 import { useAuth } from "../auth/AuthContext";
-import { navigationRef } from "../navigation/navigationRef";
+import { openAppScreen } from "../navigation/navigationRef";
 import { friendlyError } from "../lib/errors";
 
 const REFRESH_AFTER_MS = 10 * 60 * 1000;
@@ -33,11 +33,14 @@ export function refreshPopupQueue(): void {
   refreshListeners.forEach((fn) => fn());
 }
 
-/** Open an app screen by its route name; an unknown name just leaves the pop-up closed. */
+/** Open an app screen: a tab route ("HomeTab") or a tab + stack screen
+ *  ("HomeTab/MeetingCommentGuide"), always by the full path from the root (see
+ *  openAppScreen). An unknown name just leaves the pop-up closed. */
 export function openPopupTarget(target: string): void {
-  if (!target || !navigationRef.isReady()) return;
+  if (!target) return;
+  const [tab, screen] = target.split("/");
   try {
-    (navigationRef as unknown as { navigate: (n: string) => void }).navigate(target);
+    openAppScreen(tab, screen || undefined);
   } catch {
     /* a renamed route must not crash the shell */
   }
