@@ -114,7 +114,7 @@ function Office({ exam, navigation, refetch }: { exam: QxOverviewT; navigation: 
         {err ? <Notice tone="danger" message={err} /> : null}
       </Card>
 
-      <GuardianNoteCard key={exam.guardianNote ?? ""} exam={exam} refetch={refetch} />
+      <GuardianNoteCard exam={exam} refetch={refetch} />
 
       <H2>{STR.qxDays}</H2>
       {exam.days.map((d) => (
