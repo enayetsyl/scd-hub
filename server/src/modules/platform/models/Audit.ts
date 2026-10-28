@@ -332,6 +332,15 @@ export type AuditEventKind =
   | "CLASS_BOOK_UPLOADED"     // a class book PDF uploaded and queued for page rendering (D-#870) — meta.classLevel/title
   | "CLASS_BOOK_EDITED"       // a class book renamed / moved class / reordered / hidden or shown (D-#870) — meta before/after
   | "CLASS_BOOK_DELETED"      // a class book removed with its page images (D-#870)
+  | "QURAN_EXAM_PAPER_SAVED"      // a Quran exam paper created/edited (D-#874) — meta.level/scheme/fullMarks
+  | "QURAN_EXAM_SITTINGS_LOADED"  // sittings created in bulk for an exam (D-#875) — meta.count
+  | "QURAN_EXAM_SITTING_MOVED"    // a sitting moved to another examiner (D-#875) — meta.from/to + times
+  | "QURAN_EXAM_EXAMINER_ADDED"   // a teacher added as an examiner for a day (D-#875) — meta.dateKey
+  | "QURAN_EXAM_EXAMINER_REMOVED" // an examiner removed for a day; sittings shared out (D-#875) — meta.moved
+  | "QURAN_EXAM_RESULT_SAVED"     // marks / absence saved on a sitting (D-#876) — meta.status/total
+  | "QURAN_EXAM_MADE_UP"          // an absent sitting rescheduled (D-#876) — meta.dateKey/start/examiner
+  | "QURAN_EXAM_PUBLISHED"        // the schedule published or withdrawn (D-#877) — meta.status
+  | "QURAN_EXAM_LOCKED"           // marks locked or unlocked (D-#876) — meta.locked
   | "PERMISSION_DENIED";
 
 export interface IAudit extends Document {

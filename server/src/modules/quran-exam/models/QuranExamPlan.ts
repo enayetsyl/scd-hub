@@ -10,10 +10,17 @@ import { Schema, model, Document, Types } from "mongoose";
  */
 export type QuranExamPlanStatus = "DRAFT" | "PUBLISHED";
 
+export interface IQuranExamDayExaminer {
+  dateKey: string;
+  userId: Types.ObjectId;
+}
+
 export interface IQuranExamPlan extends Document {
   _id: Types.ObjectId;
   examId: Types.ObjectId;
   status: QuranExamPlanStatus;
+  /** Examiners Office added for a day before giving them students (D-#875). */
+  dayExaminers: IQuranExamDayExaminer[];
   /** Default make-up day offered for absent sittings, `YYYY-MM-DD`. */
   makeUpDateKey?: string | null;
   publishedAt?: Date | null;
@@ -29,6 +36,18 @@ const QuranExamPlanSchema = new Schema<IQuranExamPlan>(
   {
     examId: { type: Schema.Types.ObjectId, ref: "Exam", required: true },
     status: { type: String, enum: ["DRAFT", "PUBLISHED"], required: true, default: "DRAFT" },
+    dayExaminers: {
+      type: [
+        new Schema<IQuranExamDayExaminer>(
+          {
+            dateKey: { type: String, required: true },
+            userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+          },
+          { _id: false },
+        ),
+      ],
+      default: [],
+    },
     makeUpDateKey: { type: String, default: null },
     publishedAt: { type: Date, default: null },
     publishedBy: { type: Schema.Types.ObjectId, ref: "User", default: null },

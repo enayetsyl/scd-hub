@@ -88,7 +88,9 @@ const OPEN_FIELDS: Record<string, string> = {
 };
 
 /** Catalogue actions declared ahead of the slice that will gate them. */
-const DECLARED_AHEAD: Record<string, string> = {};
+const DECLARED_AHEAD: Record<string, string> = {
+  "quran_exam:remind": "QX-4 (D-#878): the pending-marks reminder pop-up lands in the next slice",
+};
 
 /** Role-based checks that remain on purpose (frozen; the count may only go DOWN):
  *  target-protection guards (whose login is touched), recipient routing splits, the book
