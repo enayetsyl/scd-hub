@@ -145,7 +145,12 @@ export async function createRoutineSlot(input: CreateSlotInput): Promise<CreateS
   // slot's teacher. Best-effort — never blocks the routine mutation.
   await onRoutineSlotChangedSync(slot);
   if (input.teacherId) {
-    await announceRoutineTeachersChanged({ teacherIds: [input.teacherId], from: input.effectiveFrom, actorId: input.createdBy });
+    await announceRoutineTeachersChanged({
+      teacherIds: [input.teacherId],
+      from: input.effectiveFrom,
+      actorId: input.createdBy,
+      cells: sectionCells(input.groupType, input.groupId, [input.subject]),
+    });
   }
 
   return { slot, warnings };
@@ -161,6 +166,18 @@ export interface RoutineTeachersChange {
   teacherIds: string[];
   from: Date;
   actorId: string;
+  /** D-#880: the SECTION × subject cells the edit touched (both subjects when an edit
+   *  changed it). Subject-group slots carry none — the assignment plan is section-keyed. */
+  cells?: Array<{ sectionId: string; subject: string }>;
+}
+
+function sectionCells(
+  groupType: string,
+  groupId: { toString(): string },
+  subjects: string[],
+): Array<{ sectionId: string; subject: string }> {
+  if (groupType !== "section") return [];
+  return [...new Set(subjects)].map((subject) => ({ sectionId: groupId.toString(), subject }));
 }
 type RoutineChangeListener = (change: RoutineTeachersChange) => Promise<void>;
 const routineChangeListeners: RoutineChangeListener[] = [];
@@ -348,6 +365,7 @@ export async function updateRoutineSlot(input: UpdateSlotInput): Promise<CreateS
     teacherIds: [oldTeacherId, newTeacherId].filter((t): t is string => !!t),
     from: changeFrom,
     actorId: input.actorId,
+    cells: sectionCells(existing.groupType, existing.groupId, [oldSubject, input.subject]),
   });
   return { slot: slot as unknown as IRoutineSlot, warnings };
 }
@@ -461,7 +479,12 @@ export async function deleteRoutineSlot(
   // may now have dropped out of one). Best-effort — never blocks the delete.
   await onRoutineSlotChangedSync(slot);
   if (slot.teacherId) {
-    await announceRoutineTeachersChanged({ teacherIds: [slot.teacherId.toString()], from: changeFrom, actorId });
+    await announceRoutineTeachersChanged({
+      teacherIds: [slot.teacherId.toString()],
+      from: changeFrom,
+      actorId,
+      cells: sectionCells(slot.groupType, slot.groupId, [slot.subject]),
+    });
   }
 }
 
