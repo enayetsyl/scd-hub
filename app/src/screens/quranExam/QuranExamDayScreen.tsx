@@ -192,6 +192,7 @@ export default function QuranExamDayScreen({ route, navigation }: Props): React.
                   <Select
                     label={STR.qxAddPick}
                     value={null}
+                    placeholder={STR.qxAddPick}
                     searchable
                     options={(cands.data?.quranExamExaminerCandidates ?? [])
                       .filter((c) => !day.examiners.some((e) => e.userId === c.userId))

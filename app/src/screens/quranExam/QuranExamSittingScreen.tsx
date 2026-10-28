@@ -28,7 +28,8 @@ const REASONS = ["UNKNOWN", "SICK", "GUARDIAN_INFORMED", "OTHER"] as const;
 const REASON_LABEL = (r: string) =>
   r === "SICK" ? STR.qxReasonSick : r === "GUARDIAN_INFORMED" ? STR.qxReasonInformed : r === "OTHER" ? STR.qxReasonOther : STR.qxReasonUnknown;
 
-function Stepper({ value, max, onChange, disabled, label }: { value: number; max: number; onChange: (v: number) => void; disabled: boolean; label: string }): React.ReactElement {
+/** A count (তানবীহ/ফাত্হ) has no meaningful ceiling, so it shows no "/ max". */
+function Stepper({ value, max, onChange, disabled, label, count = false }: { value: number; max: number; onChange: (v: number) => void; disabled: boolean; label: string; count?: boolean }): React.ReactElement {
   if (max <= 5) {
     return (
       <ChipRow>
@@ -53,7 +54,7 @@ function Stepper({ value, max, onChange, disabled, label }: { value: number; max
         />
       </View>
       <Chip label="+" onPress={() => !disabled && onChange(Math.min(max, value + 1))} />
-      <Muted>/ {bnNum(max)}</Muted>
+      {count ? null : <Muted>/ {bnNum(max)}</Muted>}
     </View>
   );
 }
@@ -166,10 +167,8 @@ function Editor({ d, onSaved }: { d: QxDetailT; onSaved: (next: QxDetailT) => vo
             <Card key={c.para}>
               <Body style={{ fontWeight: "700" }}>{STR.qxParaN.replace("{n}", bnNum(c.para))}</Body>
               <View style={{ gap: space(2), marginTop: space(2) }}>
-                <Muted>{STR.qxTanbih}</Muted>
-                <Stepper value={c.tanbih} max={99} disabled={ro} label={STR.qxTanbih} onChange={(v) => setCounts((cs) => cs.map((x, k) => (k === i ? { ...x, tanbih: v } : x)))} />
-                <Muted>{STR.qxFath}</Muted>
-                <Stepper value={c.fath} max={99} disabled={ro} label={STR.qxFath} onChange={(v) => setCounts((cs) => cs.map((x, k) => (k === i ? { ...x, fath: v } : x)))} />
+                <Stepper count value={c.tanbih} max={99} disabled={ro} label={STR.qxTanbih} onChange={(v) => setCounts((cs) => cs.map((x, k) => (k === i ? { ...x, tanbih: v } : x)))} />
+                <Stepper count value={c.fath} max={99} disabled={ro} label={STR.qxFath} onChange={(v) => setCounts((cs) => cs.map((x, k) => (k === i ? { ...x, fath: v } : x)))} />
               </View>
             </Card>
           ))}
