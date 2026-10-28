@@ -30,6 +30,7 @@ import { GuardianMeetingCard } from "../../components/GuardianMeetingCard";
 import { LoadOlder } from "../../components/LoadOlder";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
+import { GuardianQuranExamCard } from "../../components/GuardianQuranExamCard";
 import { WorkClaimBlock } from "../../components/WorkClaimBlock";
 import { HandBackBadges, handBackOnly } from "../../components/HandBackBadges";
 import { useRecordView } from "../../lib/useRecordView";
@@ -375,6 +376,8 @@ export default function GuardianHomeScreen(): React.ReactElement {
       >
         <ChildSwitcher />
         <GuardianMeetingCard />
+        {/* Quran oral exam (D-#877): the child's sittings from publish to the last day. */}
+        <GuardianQuranExamCard studentId={selected?.studentId ?? null} />
 
         <QueryGate
           results={[

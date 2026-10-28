@@ -66,6 +66,7 @@ import { MeetingSummaryTeacherCard } from "../../components/MeetingSummaryTeache
 import { ImprovementTasksOfficeCard } from "../../components/ImprovementTasksOfficeCard";
 import { GiftHandoverCard } from "../../components/GiftHandoverCard";
 import { LiveClassCard } from "../../components/LiveClassCard";
+import { QuranExamTodayCard } from "../../components/QuranExamTodayCard";
 import { UnissuedHomeworkCard } from "../../components/UnissuedHomeworkCard";
 import { Icon, type IconName } from "../../components/Icon";
 import {
@@ -545,6 +546,9 @@ export default function TodayScreen(): React.ReactElement {
           QueryGate on purpose: it carries its own query, and the school-wide board must
           not disappear because the CALLER's own day happens to be empty. */}
       {canLiveBoard ? <LiveClassCard /> : null}
+
+      {/* Quran oral exam (D-#876): today's sittings for an examiner. Own query → outside the gate. */}
+      {can("quran_exam:examine") ? <QuranExamTodayCard /> : null}
 
       {/* HW-VOID (D-#741) — 0-question homework confirm never issues, for a per-user
           homework:void grant. Outside the QueryGate for the same reason as above. */}
