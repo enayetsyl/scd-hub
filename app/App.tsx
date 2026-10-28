@@ -27,6 +27,8 @@ import { WebPushGate } from "./src/components/WebPushGate";
 import { UpdateGate } from "./src/components/UpdateGate";
 import { PopupNoticeHost } from "./src/components/PopupNoticeHost";
 import { MeetingRsvpPopup } from "./src/components/MeetingRsvpPopup";
+import { QuranExamGuardianPopup } from "./src/components/QuranExamGuardianPopup";
+import { QuranExamReminderPopup } from "./src/components/QuranExamReminderPopup";
 import { MeetingCommentReminderPopup } from "./src/components/MeetingCommentReminderPopup";
 import {
   navigationRef,
@@ -232,6 +234,10 @@ function App(): React.ReactElement | null {
                               {/* After the notices so it renders on top: it cannot be
                                   closed until the family answers its meeting slot (D-#841). */}
                               <MeetingRsvpPopup />
+                              {/* Guardians: the child's Quran exam schedule / time change, until seen (D-#877). */}
+                              <QuranExamGuardianPopup />
+                              {/* Examiners: the Office's pending-marks reminder (D-#878). */}
+                              <QuranExamReminderPopup />
                               {/* Staff: once a day, how many meeting comments are still owed (D-#851). */}
                               <MeetingCommentReminderPopup />
                             </WebPushGate>

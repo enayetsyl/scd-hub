@@ -53,6 +53,7 @@ import type {
   GuardianAssignmentsStackParamList,
   GuardianClassTestStackParamList,
   ClassBooksStackParamList,
+  QuranExamStackParamList,
   GuardianClassNotesStackParamList,
   TabParamList,
 } from "./types";
@@ -121,6 +122,13 @@ import AssignmentGiftScreen from "../screens/assignment/AssignmentGiftScreen";
 import ChildAssignmentsScreen from "../screens/guardian/ChildAssignmentsScreen";
 import ChildClassTestsScreen from "../screens/guardian/ChildClassTestsScreen";
 import ClassBooksScreen from "../screens/classbooks/ClassBooksScreen";
+import QuranExamHomeScreen from "../screens/quranExam/QuranExamHomeScreen";
+import MyQuranExamScreen from "../screens/quranExam/MyQuranExamScreen";
+import QuranExamDayScreen from "../screens/quranExam/QuranExamDayScreen";
+import QuranExamSittingScreen from "../screens/quranExam/QuranExamSittingScreen";
+import QuranExamResultsScreen from "../screens/quranExam/QuranExamResultsScreen";
+import QuranExamMonitorScreen from "../screens/quranExam/QuranExamMonitorScreen";
+import QuranExamPaperScreen from "../screens/quranExam/QuranExamPaperScreen";
 import ClassBookReaderScreen from "../screens/classbooks/ClassBookReaderScreen";
 import ReviewHomeScreen from "../screens/review/ReviewHomeScreen";
 import ReviewSubmitScreen from "../screens/review/ReviewSubmitScreen";
@@ -1646,6 +1654,23 @@ function GuardianClassNotesNavigator(): React.ReactElement {
 }
 
 // D-#870 — class books. One stack for both shelves; the screen reads the role.
+/** D-#873 — Quran oral exam. QuranExamHome is first (no params) — see the initial-route trap. */
+const QuranExamStack = createNativeStackNavigator<QuranExamStackParamList>();
+function QuranExamNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    <QuranExamStack.Navigator screenOptions={stackOptions}>
+      <QuranExamStack.Screen name="QuranExamHome" component={QuranExamHomeScreen} options={{ title: STR.qxTitle }} />
+      <QuranExamStack.Screen name="MyQuranExam" component={MyQuranExamScreen} options={{ title: STR.qxMyDuties }} />
+      <QuranExamStack.Screen name="QuranExamDay" component={QuranExamDayScreen} options={{ title: STR.qxTitle }} />
+      <QuranExamStack.Screen name="QuranExamSitting" component={QuranExamSittingScreen} options={{ title: STR.qxGiveMarks }} />
+      <QuranExamStack.Screen name="QuranExamResults" component={QuranExamResultsScreen} options={{ title: STR.qxResults }} />
+      <QuranExamStack.Screen name="QuranExamMonitor" component={QuranExamMonitorScreen} options={{ title: STR.qxMonitor }} />
+      <QuranExamStack.Screen name="QuranExamPaper" component={QuranExamPaperScreen} options={{ title: STR.qxEditPaper }} />
+    </QuranExamStack.Navigator>
+  );
+}
+
 const ClassBooksStack = createNativeStackNavigator<ClassBooksStackParamList>();
 function ClassBooksNavigator(): React.ReactElement {
   const stackOptions = useStackOptions();
@@ -1877,6 +1902,7 @@ export function AppTabs(): React.ReactElement {
   const canGuardian = can("guardian:read_child");
   // D-#870: class books — staff by action; guardians get their own tab (GuardianBooksTab).
   const canClassBooks = any("class_books:view", "class_books:manage");
+  const canQuranExam = any("quran_exam:view", "quran_exam:manage", "quran_exam:examine");
 
   // Defensive (D-#369): a role-less / unrecognised authed session makes EVERY tab
   // gate false, which would mount an empty Drawer.Navigator and hard-crash the app
@@ -1888,7 +1914,7 @@ export function AppTabs(): React.ReactElement {
     canAssignment || canReview || canRoutine || canClassNotes || canAttendance || canPrint || canLibrary ||
     canChat || canPopup || canVocab || canClassTest || canComments || canObservation || canFreeMixing ||
     canEnglishDrive || canTeachingNotes || canRevision || canFinance || canHr || canReports ||
-    canSupportBook || canAdmin || canGuardian || canSyllabus || canScholarship || canMastery || canClassBooks;
+    canSupportBook || canAdmin || canGuardian || canSyllabus || canScholarship || canMastery || canClassBooks || canQuranExam;
   if (!hasAnyTab) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: space(6), backgroundColor: colors.bg }}>
@@ -1955,6 +1981,7 @@ export function AppTabs(): React.ReactElement {
         {canHome ? <Drawer.Screen name="WorkBoardTab" component={WorkBoardNavigator} /> : null}
         {canLibrary ? <Drawer.Screen name="LibraryTab" component={LibraryNavigator} /> : null}
         {canClassBooks ? <Drawer.Screen name="ClassBooksTab" component={ClassBooksNavigator} /> : null}
+        {canQuranExam ? <Drawer.Screen name="QuranExamTab" component={QuranExamNavigator} /> : null}
         {canChat ? <Drawer.Screen name="ChatTab" component={ChatNavigator} /> : null}
         {canPopup ? <Drawer.Screen name="PopupNoticesTab" component={PopupNavigator} /> : null}
         {canVocab ? <Drawer.Screen name="VocabTab" component={VocabNavigator} /> : null}

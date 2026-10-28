@@ -134,3 +134,4 @@ import "./modules/mastery/resolvers/masteryAction";
 import "./modules/worksheets/resolvers/worksheet";
 import "./modules/popup-notices/resolvers/popupNotice";
 import "./modules/class-books/resolvers/classBooks";
+import "./modules/quran-exam/resolvers/quranExam";
