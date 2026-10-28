@@ -96,6 +96,8 @@ import { AssignmentSchedule } from "../models/AssignmentSchedule";
 import { AssignmentStudentRecord } from "../models/AssignmentStudentRecord";
 import { AssignmentItem } from "../models/AssignmentItem";
 import { passOnItemOrRecordSection } from "../recordOwner";
+// D-#880: registers the routine-change listener that keeps the assignment plan's teachers on the routine.
+import "../services/AssignmentPlanSyncService";
 import { Subject } from "../../foundation/models/Subject";
 import { Section } from "../../foundation/models/Section";
 import {

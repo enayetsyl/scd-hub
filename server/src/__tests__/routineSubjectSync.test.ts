@@ -64,6 +64,7 @@ jest.mock("../modules/chat/services/ChatGroupService", () => ({
 import {
   sectionSubjectRoutineTeachers,
   reassignRoutineSubjectTeacher,
+  onRoutineTeachersChanged,
 } from "../modules/routine/services/RoutineSlotService";
 
 const oid = () => new mongoose.Types.ObjectId();
@@ -171,6 +172,21 @@ describe("reassignRoutineSubjectTeacher (D-#291)", () => {
     expect(created.effectiveFrom).toEqual(new Date(2026, 8, 1));
     // The reused path re-syncs grants + chat like any master-grid edit.
     expect(mockChatSync).toHaveBeenCalledTimes(2);
+  });
+
+  test("D-#880: each change names its section x subject cell for the assignment-plan listener", async () => {
+    const seen: unknown[] = [];
+    onRoutineTeachersChanged(async (c) => {
+      seen.push({ teacherIds: c.teacherIds, cells: c.cells });
+    });
+    const s1 = liveSlot();
+    mockSlotFind.mockResolvedValueOnce([s1]).mockResolvedValueOnce([]).mockResolvedValue([]);
+    mockSlotFindById.mockResolvedValue(s1);
+
+    await reassignRoutineSubjectTeacher(SEC, "SCI", NEW_T, ACTOR, new Date(2026, 8, 1));
+    expect(seen).toEqual([
+      { teacherIds: [OLD_T.toString(), NEW_T], cells: [{ sectionId: SEC, subject: "SCI" }] },
+    ]);
   });
 
   test("the changeover date defaults to today when the caller gives none", async () => {
