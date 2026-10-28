@@ -56,6 +56,7 @@ export interface QxOverviewT {
   publishedAt: string | null;
   marksLockedAt: string | null;
   makeUpDateKey: string | null;
+  guardianNote: string | null;
   papers: QxPaperT[];
   days: QxDaySummaryT[];
 }
@@ -95,6 +96,7 @@ export interface QxGuardianChildT {
   studentName: string;
   level: string;
   notice: "NONE" | "SCHEDULE" | "CHANGED";
+  guardianNote: string | null;
   version: number;
   sittings: {
     dateKey: string;
@@ -112,7 +114,7 @@ export interface QxGuardianChildT {
 const PAPER = `id level scheme fullMarks durationMin sections { title items { label marks } } paras tanbihPerMark fathCost frozen`;
 const SITTING = `id studentId studentName classLabelBn level dateKey start end examinerId examinerName paras portionLabel status
   itemMarks hifzCounts { para tanbih fath } comment absenceReason total enteredAt madeUp`;
-const OVERVIEW = `examId examName status publishedAt marksLockedAt makeUpDateKey papers { ${PAPER} }
+const OVERVIEW = `examId examName status publishedAt marksLockedAt makeUpDateKey guardianNote papers { ${PAPER} }
   days { dateKey sittings done absent pending examiners }`;
 const DETAIL = `sitting { ${SITTING} } paper { ${PAPER} } otherSittings { ${SITTING} }
   hifzSoFar { tanbih fath tanbihCut fathCut mark } locked canEdit`;
@@ -148,7 +150,7 @@ export const QX_MY_SITTINGS = gql<{ myQuranExamSittings: QxSittingT[] }, { fromD
 export const QX_MY_SCHEDULE = gql<{ myQuranExamSchedule: QxGuardianChildT[] }>`
   query MyQuranExamSchedule {
     myQuranExamSchedule {
-      examId studentId studentName level notice version
+      examId studentId studentName level notice guardianNote version
       sittings { dateKey start end portionLabel status changed fromDateKey fromStart fromEnd }
     }
   }
@@ -218,5 +220,75 @@ export const QX_LOCK = gql<{ lockQuranExamMarks: QxOverviewT }, { examId: string
 export const QX_ACKNOWLEDGE = gql<{ acknowledgeQuranExamNotice: boolean }, { examId: string; studentId: string; version: number }>`
   mutation AcknowledgeQuranExamNotice($examId: String!, $studentId: String!, $version: Int!) {
     acknowledgeQuranExamNotice(examId: $examId, studentId: $studentId, version: $version)
+  }
+`;
+
+// ── QX-4: monitor, reminders, guardian note, paper editor (D-#878/#874/#877) ──
+
+export interface QxMonitorT {
+  examId: string;
+  asOfDateKey: string;
+  asOfTime: string;
+  total: number;
+  done: number;
+  absent: number;
+  overdue: number;
+  upcoming: number;
+  examiners: { userId: string; name: string; overdue: number; sittings: QxSittingT[]; remindedAt: string | null; reminderSeenAt: string | null }[];
+  absentSittings: QxSittingT[];
+}
+
+export const QX_MONITOR = gql<{ quranExamMonitor: QxMonitorT }, { examId: string }>`
+  query QuranExamMonitor($examId: String!) {
+    quranExamMonitor(examId: $examId) {
+      examId asOfDateKey asOfTime total done absent overdue upcoming
+      examiners { userId name overdue remindedAt reminderSeenAt sittings { ${SITTING} } }
+      absentSittings { ${SITTING} }
+    }
+  }
+`;
+
+export const QX_REMIND = gql<{ remindQuranExamExaminers: number }, { examId: string; userIds?: string[] | null }>`
+  mutation RemindQuranExamExaminers($examId: String!, $userIds: [String!]) {
+    remindQuranExamExaminers(examId: $examId, userIds: $userIds)
+  }
+`;
+
+export const QX_MY_REMINDER = gql<{ myQuranExamReminder: { id: string; examId: string; pending: number; sentAt: string } | null }>`
+  query MyQuranExamReminder { myQuranExamReminder { id examId pending sentAt } }
+`;
+
+export const QX_ACK_REMINDER = gql<{ acknowledgeQuranExamReminder: boolean }, { id: string }>`
+  mutation AcknowledgeQuranExamReminder($id: String!) { acknowledgeQuranExamReminder(id: $id) }
+`;
+
+export const QX_SET_NOTE = gql<{ setQuranExamGuardianNote: QxOverviewT }, { examId: string; note?: string | null }>`
+  mutation SetQuranExamGuardianNote($examId: String!, $note: String) {
+    setQuranExamGuardianNote(examId: $examId, note: $note) { ${OVERVIEW} }
+  }
+`;
+
+export const QX_SAVE_PAPER = gql<
+  { saveQuranExamPaper: QxPaperT },
+  {
+    examId: string;
+    level: string;
+    scheme: string;
+    fullMarks: number;
+    durationMin: number;
+    sections?: { title: string; labels: string[]; marks: number[] }[] | null;
+    paras?: number[] | null;
+    tanbihPerMark?: number | null;
+    fathCost?: number | null;
+  }
+>`
+  mutation SaveQuranExamPaper(
+    $examId: String!, $level: String!, $scheme: String!, $fullMarks: Int!, $durationMin: Int!,
+    $sections: [QuranExamSectionInput!], $paras: [Int!], $tanbihPerMark: Int, $fathCost: Int
+  ) {
+    saveQuranExamPaper(
+      examId: $examId, level: $level, scheme: $scheme, fullMarks: $fullMarks, durationMin: $durationMin,
+      sections: $sections, paras: $paras, tanbihPerMark: $tanbihPerMark, fathCost: $fathCost
+    ) { ${PAPER} }
   }
 `;

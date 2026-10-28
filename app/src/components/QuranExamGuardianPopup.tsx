@@ -73,6 +73,8 @@ export function QuranExamGuardianPopup(): React.ReactElement | null {
                 </View>
               ))}
             </View>
+            {/* The Office's note — shown only when one was written (owner, 2026-10-28). */}
+            {child.guardianNote ? <Body style={{ marginTop: space(3) }}>{child.guardianNote}</Body> : null}
           </ScrollView>
           <Button title={STR.qxGpAck} loading={ack.fetching} onPress={seen} style={{ marginTop: space(3) }} />
         </View>

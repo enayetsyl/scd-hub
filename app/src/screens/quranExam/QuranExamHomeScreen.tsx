@@ -9,8 +9,8 @@ import React from "react";
 import { RefreshControl, View } from "react-native";
 import { useMutation, useQuery } from "urql";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { QX_EXAMS, QX_LOCK, QX_PUBLISH, type QxOverviewT, type QxPaperT } from "../../graphql/quranExam";
-import { Badge, Body, Button, Card, EmptyState, H2, Muted, Notice, Screen } from "../../components/ui";
+import { QX_EXAMS, QX_LOCK, QX_PUBLISH, QX_SET_NOTE, type QxOverviewT, type QxPaperT } from "../../graphql/quranExam";
+import { Badge, Body, Button, Card, EmptyState, Field, H2, Muted, Notice, Screen } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
 import { useAuth } from "../../auth/AuthContext";
 import { useConfirm } from "../../state/ConfirmContext";
@@ -24,7 +24,36 @@ import { MyQuranExamList } from "./MyQuranExamScreen";
 
 type Props = NativeStackScreenProps<QuranExamStackParamList, "QuranExamHome">;
 
-function PaperCard({ p }: { p: QxPaperT }): React.ReactElement {
+/** The Office's note for families (D-#877): blank = guardians see nothing at all. */
+function GuardianNoteCard({ exam, refetch }: { exam: QxOverviewT; refetch: () => void }): React.ReactElement {
+  const { can } = useAuth();
+  const [note, setNote] = React.useState(exam.guardianNote ?? "");
+  const [st, save] = useMutation(QX_SET_NOTE);
+  const [msg, setMsg] = React.useState<{ tone: "ok" | "danger"; text: string } | null>(null);
+  const manage = can("quran_exam:manage");
+  return (
+    <Card>
+      <Field label={STR.qxGuardianNote} value={note} onChangeText={(t) => manage && setNote(t)} />
+      <Muted>{STR.qxGuardianNoteHelp}</Muted>
+      {msg ? <Notice tone={msg.tone} message={msg.text} /> : null}
+      {manage ? (
+        <Button
+          title={STR.qxSave}
+          variant="secondary"
+          loading={st.fetching}
+          disabled={note.trim() === (exam.guardianNote ?? "").trim()}
+          onPress={async () => {
+            const r = await save({ examId: exam.examId, note: note.trim() || null });
+            setMsg(r.error ? { tone: "danger", text: friendlyError(r.error) } : { tone: "ok", text: STR.qxNoteSaved });
+            if (!r.error) refetch();
+          }}
+        />
+      ) : null}
+    </Card>
+  );
+}
+
+function PaperCard({ p, onPress }: { p: QxPaperT; onPress: () => void }): React.ReactElement {
   const rule =
     p.scheme === "HIFZ_DEDUCTION"
       ? `${STR.qxParaN.replace("{n}", p.paras.map((x) => bnNum(x)).join(", "))} · ${STR.qxHifzRule
@@ -32,7 +61,7 @@ function PaperCard({ p }: { p: QxPaperT }): React.ReactElement {
           .replace("{f}", bnNum(p.fathCost ?? 2))}`
       : p.sections.map((s) => `${s.title} ${bnNum(s.items.reduce((a, i) => a + i.marks, 0))}`).join(" · ");
   return (
-    <Card>
+    <Card onPress={onPress}>
       <View style={{ flexDirection: "row", justifyContent: "space-between", gap: space(2) }}>
         <Body style={{ fontWeight: "700", flex: 1 }}>{qxLevelLabel(p.level)}</Body>
         <Badge text={STR.qxFullMarks.replace("{n}", bnNum(p.fullMarks))} tone="brand" />
@@ -79,10 +108,13 @@ function Office({ exam, navigation, refetch }: { exam: QxOverviewT; navigation: 
           {can("quran_exam:lock") ? (
             <Button title={locked ? STR.qxUnlock : STR.qxLock} variant="secondary" loading={lk.fetching} onPress={toggleLock} />
           ) : null}
+          <Button title={STR.qxMonitor} variant="secondary" onPress={() => navigation.navigate("QuranExamMonitor", { examId: exam.examId })} />
           <Button title={STR.qxResults} variant="ghost" onPress={() => navigation.navigate("QuranExamResults", { examId: exam.examId })} />
         </View>
         {err ? <Notice tone="danger" message={err} /> : null}
       </Card>
+
+      <GuardianNoteCard key={exam.guardianNote ?? ""} exam={exam} refetch={refetch} />
 
       <H2>{STR.qxDays}</H2>
       {exam.days.map((d) => (
@@ -99,7 +131,7 @@ function Office({ exam, navigation, refetch }: { exam: QxOverviewT; navigation: 
 
       <H2>{STR.qxPapers}</H2>
       {exam.papers.map((p) => (
-        <PaperCard key={p.id} p={p} />
+        <PaperCard key={p.id} p={p} onPress={() => navigation.navigate("QuranExamPaper", { examId: exam.examId, level: p.level })} />
       ))}
     </View>
   );

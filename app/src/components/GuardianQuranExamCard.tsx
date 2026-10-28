@@ -31,6 +31,7 @@ export function GuardianQuranExamCard({ studentId }: { studentId: string | null 
           </Muted>
         ))}
       </View>
+      {child.guardianNote ? <Body style={{ marginTop: space(2) }}>{child.guardianNote}</Body> : null}
     </Card>
   );
 }

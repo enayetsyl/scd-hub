@@ -129,6 +129,8 @@ import MyQuranExamScreen from "../screens/quranExam/MyQuranExamScreen";
 import QuranExamDayScreen from "../screens/quranExam/QuranExamDayScreen";
 import QuranExamSittingScreen from "../screens/quranExam/QuranExamSittingScreen";
 import QuranExamResultsScreen from "../screens/quranExam/QuranExamResultsScreen";
+import QuranExamMonitorScreen from "../screens/quranExam/QuranExamMonitorScreen";
+import QuranExamPaperScreen from "../screens/quranExam/QuranExamPaperScreen";
 import ClassBookReaderScreen from "../screens/classbooks/ClassBookReaderScreen";
 import ReviewHomeScreen from "../screens/review/ReviewHomeScreen";
 import ReviewSubmitScreen from "../screens/review/ReviewSubmitScreen";
@@ -1668,6 +1670,8 @@ function QuranExamNavigator(): React.ReactElement {
       <QuranExamStack.Screen name="QuranExamDay" component={QuranExamDayScreen} options={{ title: STR.qxTitle }} />
       <QuranExamStack.Screen name="QuranExamSitting" component={QuranExamSittingScreen} options={{ title: STR.qxGiveMarks }} />
       <QuranExamStack.Screen name="QuranExamResults" component={QuranExamResultsScreen} options={{ title: STR.qxResults }} />
+      <QuranExamStack.Screen name="QuranExamMonitor" component={QuranExamMonitorScreen} options={{ title: STR.qxMonitor }} />
+      <QuranExamStack.Screen name="QuranExamPaper" component={QuranExamPaperScreen} options={{ title: STR.qxEditPaper }} />
     </QuranExamStack.Navigator>
   );
 }

@@ -287,6 +287,8 @@ export type QuranExamStackParamList = {
   QuranExamDay: { examId: string; dateKey: string };
   QuranExamSitting: { id: string };
   QuranExamResults: { examId: string };
+  QuranExamMonitor: { examId: string };
+  QuranExamPaper: { examId: string; level: string };
 };
 /** D-#750 — the guardian's Class Notes tab (the lesson history, once a Home sub-screen). */
 export type GuardianClassNotesStackParamList = {
