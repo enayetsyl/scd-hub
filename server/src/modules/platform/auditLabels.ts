@@ -124,6 +124,7 @@ export const AUDIT_KIND_LABELS: Record<AuditEventKind, AuditKindLabel> = {
   AS_RECORD_REVERTED: { bn: "অ্যাসাইনমেন্টের সর্বশেষ ধাপ ফিরিয়ে নিয়েছেন", en: "Reverted an assignment record", group: "ASSIGNMENT" },
   ASSIGNMENT_ITEM_EDITED: { bn: "প্রদত্ত অ্যাসাইনমেন্ট সম্পাদনা করেছেন", en: "Edited a delivered assignment", group: "ASSIGNMENT" },
   ASSIGNMENT_ITEM_DELETED: { bn: "খসড়া অ্যাসাইনমেন্ট মুছেছেন", en: "Deleted a draft assignment", group: "ASSIGNMENT" },
+  ASSIGNMENT_PLAN_FOLLOWED_ROUTINE: { bn: "রুটিন অনুযায়ী অ্যাসাইনমেন্ট পরিকল্পনার শিক্ষক বদলেছেন", en: "Updated the assignment plan to follow the routine", group: "ASSIGNMENT" },
 
   // --- Attendance & leave ---------------------------------------------------
   ATTENDANCE_IMPORTED: { bn: "উপস্থিতি এক্সেল থেকে নিয়েছেন", en: "Imported attendance", group: "ATTENDANCE" },

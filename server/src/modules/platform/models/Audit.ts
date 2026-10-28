@@ -233,6 +233,7 @@ export type AuditEventKind =
   | "TEACHING_NOTE_COMMENT_DELETED"   // a comment soft-deleted by its author or P/O (TN-2)
   | "ASSIGNMENT_ITEM_EDITED"      // a delivered assignment was edited after the fact (D-#353)
   | "ASSIGNMENT_ITEM_DELETED"     // a still-DRAFT delivered assignment was deleted (D-#353)
+  | "ASSIGNMENT_PLAN_FOLLOWED_ROUTINE" // a routine teacher change re-pointed the matching assignment-plan cells (D-#880)
   | "MONTHLY_REPORT_CONFIG_SET"    // Principal edited the monthly-report thresholds / gate / calendar — prior + new retained (MR-2, D-#395)
   | "MONTHLY_REPORT_RELEASED"      // a monthly report revision released to the family, individually or in a batch (MR-3, D-#397)
   | "MONTHLY_REPORT_RERELEASED"    // a LATER revision released over one the family had already seen (MR-3, D-#393)
