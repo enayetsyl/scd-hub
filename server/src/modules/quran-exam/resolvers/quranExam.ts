@@ -32,6 +32,14 @@ import {
   saveQuranExamPaper,
   saveQuranExamResult,
   scheduleQuranExamMakeUp,
+  quranExamMonitor,
+  remindQuranExamExaminers,
+  myQuranExamReminder,
+  acknowledgeQuranExamReminder,
+  setQuranExamGuardianNote,
+  type QuranExamMonitorShape,
+  type QuranExamMonitorExaminerShape,
+  type QuranExamReminderShape,
   type GuardianExamChildShape,
   type GuardianExamSittingShape,
   type QuranExamDayExaminerShape,
@@ -128,6 +136,7 @@ OverviewRef.implement({
     publishedAt: t.string({ nullable: true, resolve: (o) => o.publishedAt }),
     marksLockedAt: t.string({ nullable: true, resolve: (o) => o.marksLockedAt }),
     makeUpDateKey: t.string({ nullable: true, resolve: (o) => o.makeUpDateKey }),
+    guardianNote: t.string({ nullable: true, resolve: (o) => o.guardianNote }),
     papers: t.field({ type: [PaperRef], resolve: (o) => o.papers }),
     days: t.field({ type: [DaySummaryRef], resolve: (o) => o.days }),
   }),
@@ -219,6 +228,7 @@ GuardianChildRef.implement({
     level: t.exposeString("level"),
     // NONE | SCHEDULE | CHANGED
     notice: t.exposeString("notice"),
+    guardianNote: t.string({ nullable: true, resolve: (c) => c.guardianNote }),
     version: t.exposeInt("version"),
     sittings: t.field({ type: [GuardianSittingRef], resolve: (c) => c.sittings }),
   }),
@@ -441,5 +451,91 @@ builder.mutationField("acknowledgeQuranExamNotice", (t) =>
       version: t.arg.int({ required: true }),
     },
     resolve: (_r, args, ctx) => acknowledgeQuranExamNotice(ctx.auth!.userId, args.examId, args.studentId, args.version),
+  }),
+);
+
+// ── QX-4: monitor, reminders, guardian note (D-#878) ───────────────────────────
+
+const MonitorExaminerRef = builder.objectRef<QuranExamMonitorExaminerShape>("QuranExamMonitorExaminer");
+MonitorExaminerRef.implement({
+  fields: (t) => ({
+    userId: t.exposeString("userId"),
+    name: t.exposeString("name"),
+    overdue: t.exposeInt("overdue"),
+    sittings: t.field({ type: [SittingRef], resolve: (e) => e.sittings }),
+    remindedAt: t.string({ nullable: true, resolve: (e) => e.remindedAt }),
+    reminderSeenAt: t.string({ nullable: true, resolve: (e) => e.reminderSeenAt }),
+  }),
+});
+
+const MonitorRef = builder.objectRef<QuranExamMonitorShape>("QuranExamMonitor");
+MonitorRef.implement({
+  fields: (t) => ({
+    examId: t.exposeString("examId"),
+    asOfDateKey: t.exposeString("asOfDateKey"),
+    asOfTime: t.exposeString("asOfTime"),
+    total: t.exposeInt("total"),
+    done: t.exposeInt("done"),
+    absent: t.exposeInt("absent"),
+    overdue: t.exposeInt("overdue"),
+    upcoming: t.exposeInt("upcoming"),
+    examiners: t.field({ type: [MonitorExaminerRef], resolve: (m) => m.examiners }),
+    absentSittings: t.field({ type: [SittingRef], resolve: (m) => m.absentSittings }),
+  }),
+});
+
+const ReminderRef = builder.objectRef<QuranExamReminderShape>("QuranExamReminder");
+ReminderRef.implement({
+  fields: (t) => ({
+    id: t.exposeString("id"),
+    examId: t.exposeString("examId"),
+    pending: t.exposeInt("pending"),
+    sentAt: t.exposeString("sentAt"),
+  }),
+});
+
+builder.queryField("quranExamMonitor", (t) =>
+  t.field({
+    type: MonitorRef,
+    authScopes: { hasAnyPermission: ["quran_exam:view", "quran_exam:manage", "quran_exam:remind"] },
+    args: { examId: t.arg.string({ required: true }) },
+    resolve: (_r, args) => quranExamMonitor(args.examId),
+  }),
+);
+
+builder.queryField("myQuranExamReminder", (t) =>
+  t.field({
+    type: ReminderRef,
+    nullable: true,
+    // SELF: only the caller's own reminder.
+    authScopes: { hasPermission: "quran_exam:examine" },
+    resolve: (_r, _a, ctx) => myQuranExamReminder(ctx),
+  }),
+);
+
+builder.mutationField("remindQuranExamExaminers", (t) =>
+  t.field({
+    type: "Int",
+    authScopes: { hasPermission: "quran_exam:remind" },
+    args: { examId: t.arg.string({ required: true }), userIds: t.arg.stringList({ required: false }) },
+    resolve: (_r, args, ctx) => remindQuranExamExaminers(ctx, args.examId, args.userIds ?? null),
+  }),
+);
+
+builder.mutationField("acknowledgeQuranExamReminder", (t) =>
+  t.field({
+    type: "Boolean",
+    authScopes: { hasPermission: "quran_exam:examine" },
+    args: { id: t.arg.string({ required: true }) },
+    resolve: (_r, args, ctx) => acknowledgeQuranExamReminder(ctx, args.id),
+  }),
+);
+
+builder.mutationField("setQuranExamGuardianNote", (t) =>
+  t.field({
+    type: OverviewRef,
+    authScopes: { hasPermission: "quran_exam:manage" },
+    args: { examId: t.arg.string({ required: true }), note: t.arg.string({ required: false }) },
+    resolve: (_r, args, ctx) => setQuranExamGuardianNote(ctx, args.examId, args.note ?? null),
   }),
 );

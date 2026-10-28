@@ -366,7 +366,7 @@ Several of today's bypasses are template-aware (`isAdminStaff`, `actsAsRole`), w
 | `quran_exam:examine` | Examine own students | নিজের শিক্ষার্থীর পরীক্ষা নেওয়া ও নম্বর দেওয়া | Own sittings only: present/absent and marks | on | — | SELF | new |
 | `quran_exam:edit_all` | Enter any mark | যেকোনো শিক্ষার্থীর নম্বর দেওয়া ও ঠিক করা | Enter or correct marks on any sitting | — | on | | new |
 | `quran_exam:lock` | Lock marks | কুরআন পরীক্ষার নম্বর লক করা | Lock or unlock all marks of the exam | — | on | | new |
-| `quran_exam:remind` | Remind examiners | পরীক্ষককে নম্বরের রিমাইন্ডার পাঠানো | Pending-marks reminder as a staff pop-up (QX-4; declared ahead) | — | on | | new |
+| `quran_exam:remind` | Remind examiners | পরীক্ষককে নম্বরের রিমাইন্ডার পাঠানো | Pending-marks reminder as a staff pop-up | — | on | | new |
 Guardians read their children's sittings (never the examiner or marks) through `guardian:read_child`: `myQuranExamSchedule`, `acknowledgeQuranExamNotice`.
 
 #### `mastery` — শিখন-দক্ষতা

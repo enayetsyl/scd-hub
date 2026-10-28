@@ -25,6 +25,7 @@ import {
   type QuranExamAbsenceReason,
 } from "../models/QuranExamSitting";
 import { QuranExamGuardianSeen } from "../models/QuranExamGuardianSeen";
+import { QuranExamReminder } from "../models/QuranExamReminder";
 import {
   checkHifzCounts,
   checkItemMarks,
@@ -110,6 +111,7 @@ export interface QuranExamOverviewShape {
   publishedAt: string | null;
   marksLockedAt: string | null;
   makeUpDateKey: string | null;
+  guardianNote: string | null;
   papers: QuranExamPaperShape[];
   days: QuranExamDaySummaryShape[];
 }
@@ -260,6 +262,7 @@ export async function quranExamOverviews(): Promise<QuranExamOverviewShape[]> {
       publishedAt: plan.publishedAt ? plan.publishedAt.toISOString() : null,
       marksLockedAt: plan.marksLockedAt ? plan.marksLockedAt.toISOString() : null,
       makeUpDateKey: plan.makeUpDateKey ?? null,
+      guardianNote: plan.guardianNote ?? null,
       papers: papers.map((p) => paperShape(p, markedLevels.has(p.level))),
       days: [...days.values()]
         .sort((a, b) => a.dateKey.localeCompare(b.dateKey))
@@ -747,6 +750,8 @@ export interface GuardianExamChildShape {
   level: string;
   /** NONE | SCHEDULE (never acknowledged) | CHANGED (a time changed since). */
   notice: string;
+  /** The Office's note for families; null when none was written (no placeholder). */
+  guardianNote: string | null;
   version: number;
   sittings: GuardianExamSittingShape[];
 }
@@ -762,7 +767,7 @@ async function activeGuardianChildIds(guardianId: string): Promise<string[]> {
 export async function myQuranExamSchedule(guardianId: string): Promise<GuardianExamChildShape[]> {
   const childIds = await activeGuardianChildIds(guardianId);
   if (!childIds.length) return [];
-  const plans = await QuranExamPlan.find({ status: "PUBLISHED" }, { examId: 1 }).lean();
+  const plans = await QuranExamPlan.find({ status: "PUBLISHED" }, { examId: 1, guardianNote: 1 }).lean();
   if (!plans.length) return [];
   const rows = await QuranExamSitting.find({ examId: { $in: plans.map((p) => p.examId) }, studentId: { $in: childIds.map(oid) } });
   const seen = await QuranExamGuardianSeen.find({ examId: { $in: plans.map((p) => p.examId) }, studentId: { $in: childIds.map(oid) } }).lean();
@@ -784,6 +789,7 @@ export async function myQuranExamSchedule(guardianId: string): Promise<GuardianE
       studentId,
       studentName: labels.get(studentId)?.name ?? "",
       level: list[0]!.level,
+      guardianNote: plans.find((p) => String(p.examId) === examId)?.guardianNote?.trim() || null,
       notice,
       version,
       sittings: list.map((x) => {
@@ -816,4 +822,143 @@ export async function acknowledgeQuranExamNotice(guardianId: string, examId: str
     { upsert: true },
   );
   return true;
+}
+
+// ── Office monitor + reminders (QX-4, D-#878) ─────────────────────────────────
+
+/** Dhaka "now" as a date key + "HH:mm" (UTC+6, no DST). */
+function dhakaNow(now: Date = new Date()): { dateKey: string; hhmm: string } {
+  const d = new Date(now.getTime() + 6 * 3600 * 1000).toISOString();
+  return { dateKey: d.slice(0, 10), hhmm: d.slice(11, 16) };
+}
+
+/** A sitting whose time has passed with no marks and no absence (D-#878). */
+function isOverdue(s: { status: string; dateKey: string; end: string }, now: { dateKey: string; hhmm: string }): boolean {
+  if (s.status !== "SCHEDULED") return false;
+  return s.dateKey < now.dateKey || (s.dateKey === now.dateKey && toMin(s.end) <= toMin(now.hhmm));
+}
+
+export interface QuranExamMonitorExaminerShape {
+  userId: string;
+  name: string;
+  overdue: number;
+  sittings: QuranExamSittingShape[];
+  remindedAt: string | null;
+  reminderSeenAt: string | null;
+}
+
+export interface QuranExamMonitorShape {
+  examId: string;
+  asOfDateKey: string;
+  asOfTime: string;
+  total: number;
+  done: number;
+  absent: number;
+  overdue: number;
+  upcoming: number;
+  examiners: QuranExamMonitorExaminerShape[];
+  absentSittings: QuranExamSittingShape[];
+}
+
+export async function quranExamMonitor(examId: string, at: Date = new Date()): Promise<QuranExamMonitorShape> {
+  const plan = await planOf(examId);
+  const now = dhakaNow(at);
+  const papers = await papersOf(examId);
+  const rows = await QuranExamSitting.find({ examId: plan.examId });
+  rows.sort(byTime);
+  const overdueRows = rows.filter((r) => isOverdue(r, now));
+  const shapedOverdue = await shapeSittings(overdueRows, papers);
+  const reminders = await QuranExamReminder.find({ examId: plan.examId }).lean();
+  const byExaminer = new Map<string, QuranExamSittingShape[]>();
+  for (const s of shapedOverdue) byExaminer.set(s.examinerId, [...(byExaminer.get(s.examinerId) ?? []), s]);
+  const names = await namesOf([...byExaminer.keys()]);
+  const examiners = [...byExaminer.entries()]
+    .map(([userId, sittings]) => {
+      const rem = reminders.find((r) => String(r.userId) === userId);
+      return {
+        userId,
+        name: names.get(userId) ?? "",
+        overdue: sittings.length,
+        sittings,
+        remindedAt: rem ? rem.sentAt.toISOString() : null,
+        reminderSeenAt: rem?.seenAt ? rem.seenAt.toISOString() : null,
+      };
+    })
+    .sort((a, b) => b.overdue - a.overdue || a.name.localeCompare(b.name));
+  const absentSittings = await shapeSittings(rows.filter((r) => r.status === "ABSENT"), papers);
+  return {
+    examId,
+    asOfDateKey: now.dateKey,
+    asOfTime: now.hhmm,
+    total: rows.length,
+    done: rows.filter((r) => r.status === "DONE").length,
+    absent: absentSittings.length,
+    overdue: overdueRows.length,
+    upcoming: rows.filter((r) => r.status === "SCHEDULED").length - overdueRows.length,
+    examiners,
+    absentSittings,
+  };
+}
+
+/** Re-arm a reminder pop-up for each examiner with overdue marks (all, or the ones named). */
+export async function remindQuranExamExaminers(ctx: AppContext, examId: string, userIds: string[] | null, at: Date = new Date()): Promise<number> {
+  const m = await quranExamMonitor(examId, at);
+  const targets = m.examiners.filter((e) => e.overdue > 0 && (!userIds || userIds.includes(e.userId)));
+  for (const e of targets) {
+    await QuranExamReminder.updateOne(
+      { examId: oid(examId), userId: oid(e.userId) },
+      { $set: { pendingAtSend: e.overdue, sentAt: at, sentBy: oid(ctx.auth!.userId), seenAt: null } },
+      { upsert: true },
+    );
+  }
+  await writeAudit({
+    eventKind: "QURAN_EXAM_REMINDED",
+    actorId: ctx.auth!.userId,
+    targetId: examId,
+    targetKind: "Exam",
+    meta: { examiners: targets.map((t) => ({ userId: t.userId, overdue: t.overdue })) },
+  });
+  return targets.length;
+}
+
+export interface QuranExamReminderShape {
+  id: string;
+  examId: string;
+  pending: number;
+  sentAt: string;
+}
+
+/** The caller's unseen reminder with the LIVE overdue count; a reminder whose marks are all in clears itself. */
+export async function myQuranExamReminder(ctx: AppContext, at: Date = new Date()): Promise<QuranExamReminderShape | null> {
+  const rem = await QuranExamReminder.findOne({ userId: oid(ctx.auth!.userId), seenAt: null }).sort({ sentAt: -1 });
+  if (!rem) return null;
+  const now = dhakaNow(at);
+  const mine = await QuranExamSitting.find({ examId: rem.examId, examinerId: rem.userId, status: "SCHEDULED" }, { status: 1, dateKey: 1, end: 1 }).lean();
+  const pending = mine.filter((s) => isOverdue(s, now)).length;
+  if (!pending) {
+    rem.seenAt = at;
+    await rem.save();
+    return null;
+  }
+  return { id: String(rem._id), examId: String(rem.examId), pending, sentAt: rem.sentAt.toISOString() };
+}
+
+export async function acknowledgeQuranExamReminder(ctx: AppContext, id: string): Promise<boolean> {
+  const rem = await QuranExamReminder.findById(oid(id));
+  if (!rem || String(rem.userId) !== ctx.auth!.userId) throw new QuranExamError("রিমাইন্ডারটি পাওয়া যায়নি।");
+  if (!rem.seenAt) {
+    rem.seenAt = new Date();
+    await rem.save();
+  }
+  return true;
+}
+
+/** The Office's note for families (arrive by, bring…); empty clears it — nothing is shown then. */
+export async function setQuranExamGuardianNote(ctx: AppContext, examId: string, note: string | null): Promise<QuranExamOverviewShape> {
+  const plan = await planOf(examId);
+  const text = (note ?? "").trim();
+  if (text.length > 500) throw new QuranExamError("নির্দেশনা ৫০০ অক্ষরের মধ্যে লিখুন।");
+  plan.guardianNote = text || null;
+  await plan.save();
+  return (await quranExamOverviews()).find((o) => o.examId === examId)!;
 }

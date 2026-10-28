@@ -341,6 +341,7 @@ export type AuditEventKind =
   | "QURAN_EXAM_MADE_UP"          // an absent sitting rescheduled (D-#876) — meta.dateKey/start/examiner
   | "QURAN_EXAM_PUBLISHED"        // the schedule published or withdrawn (D-#877) — meta.status
   | "QURAN_EXAM_LOCKED"           // marks locked or unlocked (D-#876) — meta.locked
+  | "QURAN_EXAM_REMINDED"         // pending-marks reminder pop-ups re-armed (D-#878) — meta.examiners
   | "PERMISSION_DENIED";
 
 export interface IAudit extends Document {

@@ -21,6 +21,9 @@ export interface IQuranExamPlan extends Document {
   status: QuranExamPlanStatus;
   /** Examiners Office added for a day before giving them students (D-#875). */
   dayExaminers: IQuranExamDayExaminer[];
+  /** What guardians should know (arrive by, bring…). Shown only when the Office wrote one
+   *  — no placeholder otherwise (owner, 2026-10-28). */
+  guardianNote?: string | null;
   /** Default make-up day offered for absent sittings, `YYYY-MM-DD`. */
   makeUpDateKey?: string | null;
   publishedAt?: Date | null;
@@ -48,6 +51,7 @@ const QuranExamPlanSchema = new Schema<IQuranExamPlan>(
       ],
       default: [],
     },
+    guardianNote: { type: String, default: null, maxlength: 500 },
     makeUpDateKey: { type: String, default: null },
     publishedAt: { type: Date, default: null },
     publishedBy: { type: Schema.Types.ObjectId, ref: "User", default: null },

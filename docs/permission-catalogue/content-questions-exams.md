@@ -366,5 +366,9 @@ All in `server/src/modules/quran-exam/resolvers/quranExam.ts`. Row scope lives i
 | publishQuranExam | `quran_exam:publish` |
 | lockQuranExamMarks | `quran_exam:lock` |
 | myQuranExamSchedule, acknowledgeQuranExamNotice | GUARDIAN plane: `guardian:read_child` + the guardian's active links (svc) |
+| quranExamMonitor | hasAnyPermission(`quran_exam:view`, `quran_exam:manage`, `quran_exam:remind`) |
+| remindQuranExamExaminers | `quran_exam:remind` |
+| myQuranExamReminder, acknowledgeQuranExamReminder | `quran_exam:examine` (SELF: the caller's own reminder; svc checks the owner) |
+| setQuranExamGuardianNote | `quran_exam:manage` |
 
-`quran_exam:remind` is declared ahead (QX-4, D-#878) in `permissionCatalogueGates.test.ts`. App gates arrive with the screens (QX-1 Office day screen, QX-2 teacher, QX-3 guardian).
+App gates: tab `QuranExamTab` = any of view / manage / examine; publish / lock / manage / remind buttons each check their own action; the Today card checks `examine`; the guardian card and pop-ups are GUARDIAN-only.

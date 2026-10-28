@@ -27,6 +27,7 @@ import { QuranExamPlan } from "../modules/quran-exam/models/QuranExamPlan";
 import { QuranExamPaper } from "../modules/quran-exam/models/QuranExamPaper";
 import { QuranExamSitting } from "../modules/quran-exam/models/QuranExamSitting";
 import { QuranExamGuardianSeen } from "../modules/quran-exam/models/QuranExamGuardianSeen";
+import { QuranExamReminder } from "../modules/quran-exam/models/QuranExamReminder";
 import {
   acknowledgeQuranExamNotice,
   addQuranExamExaminer,
@@ -43,6 +44,11 @@ import {
   saveQuranExamPaper,
   saveQuranExamResult,
   scheduleQuranExamMakeUp,
+  quranExamMonitor,
+  remindQuranExamExaminers,
+  myQuranExamReminder,
+  acknowledgeQuranExamReminder,
+  setQuranExamGuardianNote,
 } from "../modules/quran-exam/services/QuranExamService";
 
 jest.setTimeout(120_000);
@@ -63,7 +69,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await Promise.all(
-    [Exam, User, Class, Section, Student, Guardian, GuardianLink, QuranExamPlan, QuranExamPaper, QuranExamSitting, QuranExamGuardianSeen].map((m) =>
+    [Exam, User, Class, Section, Student, Guardian, GuardianLink, QuranExamPlan, QuranExamPaper, QuranExamSitting, QuranExamGuardianSeen, QuranExamReminder].map((m) =>
       (m as unknown as mongoose.Model<unknown>).deleteMany({}),
     ),
   );
@@ -281,5 +287,51 @@ describe("Quran exam: guardians (D-#877)", () => {
     const t = await setup();
     const g = await guardianOf(t.a);
     await expect(acknowledgeQuranExamNotice(g, t.examId, t.b, 0)).rejects.toThrow(/অনুমতি নেই/);
+  });
+});
+
+describe("Quran exam: monitor + reminders + guardian note (D-#878/#877)", () => {
+  // Mon 23 Nov 08:05 Dhaka = 02:05Z.
+  const AT = new Date("2026-11-23T02:05:00Z");
+
+  it("overdue = past its end with no marks and not absent, grouped by examiner", async () => {
+    const t = await setup();
+    const m = await quranExamMonitor(t.examId, AT);
+    expect(m).toMatchObject({ asOfDateKey: DAY, asOfTime: "08:05", total: 5, overdue: 4, upcoming: 1, done: 0, absent: 0 });
+    expect(m.examiners.map((e) => [e.name, e.overdue])).toEqual([["Kuddus", 2], ["Momin", 2]]);
+    await saveQuranExamResult(t.office, await t.sittingOf(t.c), { present: false });
+    const m2 = await quranExamMonitor(t.examId, AT);
+    expect(m2.absentSittings.map((s) => s.studentName)).toEqual(["Manha"]);
+    expect(m2.examiners.map((e) => [e.name, e.overdue])).toEqual([["Kuddus", 2], ["Momin", 1]]);
+  });
+
+  it("a reminder reaches the examiner with the live count and clears itself once the marks are in", async () => {
+    const t = await setup();
+    expect(await remindQuranExamExaminers(t.office, t.examId, [t.kuddus], AT)).toBe(1);
+    const k = ctxOf(t.kuddus, "TEACHER");
+    const m = ctxOf(t.momin, "TEACHER");
+    expect(await myQuranExamReminder(m, AT)).toBeNull();
+    const r = await myQuranExamReminder(k, AT);
+    expect(r).toMatchObject({ pending: 2 });
+    await expect(acknowledgeQuranExamReminder(m, r!.id)).rejects.toThrow(/পাওয়া যায়নি/);
+    await saveQuranExamResult(t.office, await t.sittingOf(t.b), { present: true, itemMarksFlat: FULL_OK });
+    expect((await myQuranExamReminder(k, AT))!.pending).toBe(1);
+    await saveQuranExamResult(t.office, await t.sittingOf(t.h, "2026-11-15"), { present: false });
+    expect(await myQuranExamReminder(k, AT)).toBeNull();
+    expect(await remindQuranExamExaminers(t.office, t.examId, null, AT)).toBe(1); // only Momin still owes
+    const rm = await myQuranExamReminder(m, AT);
+    expect(await acknowledgeQuranExamReminder(m, rm!.id)).toBe(true);
+    expect(await myQuranExamReminder(m, AT)).toBeNull();
+  });
+
+  it("the guardian sees the Office note only when one was written", async () => {
+    const t = await setup();
+    const g = await guardianOf(t.a);
+    await publishQuranExam(t.office, t.examId, true);
+    expect((await myQuranExamSchedule(g))[0]!.guardianNote).toBeNull();
+    await setQuranExamGuardianNote(t.office, t.examId, "  সকাল ৬:৫০-এর মধ্যে আসবে  ");
+    expect((await myQuranExamSchedule(g))[0]!.guardianNote).toBe("সকাল ৬:৫০-এর মধ্যে আসবে");
+    await setQuranExamGuardianNote(t.office, t.examId, "   ");
+    expect((await myQuranExamSchedule(g))[0]!.guardianNote).toBeNull();
   });
 });

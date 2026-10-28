@@ -436,6 +436,7 @@ export const AUDIT_KIND_LABELS: Record<AuditEventKind, AuditKindLabel> = {
   QURAN_EXAM_MADE_UP: { bn: "অনুপস্থিত শিক্ষার্থীর মেকআপ ঠিক করেছেন", en: "Scheduled a make-up sitting", group: "EXAM" },
   QURAN_EXAM_PUBLISHED: { bn: "কুরআন পরীক্ষার সূচি প্রকাশ/প্রত্যাহার করেছেন", en: "Published or withdrew the Quran exam schedule", group: "EXAM" },
   QURAN_EXAM_LOCKED: { bn: "কুরআন পরীক্ষার নম্বর লক/আনলক করেছেন", en: "Locked or unlocked Quran exam marks", group: "EXAM" },
+  QURAN_EXAM_REMINDED: { bn: "পরীক্ষকদের নম্বরের রিমাইন্ডার পাঠিয়েছেন", en: "Reminded examiners about pending marks", group: "EXAM" },
 };
 
 const FALLBACK_GROUP: ActivityGroup = "OTHER";
