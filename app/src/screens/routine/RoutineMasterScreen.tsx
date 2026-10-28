@@ -2,13 +2,14 @@
  * RoutineMasterScreen (R-3, admin) — the whole timetable in a single grid:
  * rows = every section + Quran/Arabic group, columns = periods (with clock times).
  * A teacher double-booked across two groups in the same period is highlighted red and
- * listed. The day selector adds an "All" option that stacks all five days.
+ * listed. The day selector adds an "All" option that stacks all five days. The period
+ * header row sticks to the top and the section-name column stays put sideways.
  *
  * EDIT-IN-PLACE: every non-break cell is tappable — it opens a dialog to change that
  * period's subject / teacher / room (or add a slot to an empty cell, or remove one),
  * conflict-checked on the server. `routine:manage`.
  */
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { View, ScrollView, Pressable, Modal } from "react-native";
 import { useQuery, useMutation } from "urql";
 import { ROUTINE_SUBJECTS } from "@scd/shared";
@@ -49,35 +50,22 @@ interface EditTarget {
   slot: RoutineMasterSlotT | null;
 }
 
-/** One day's master grid (conflict summary + the rows × periods table). Tapping a
- *  period cell calls onPick with that cell's edit target. */
-function DayGrid({
-  m,
-  c,
-  showDayHeader,
-  onPick,
-}: {
-  m: RoutineMasterT;
-  c: ThemeColors;
-  showDayHeader: boolean;
-  /** null = view-only (cells are not tappable). */
-  onPick: ((t: EditTarget) => void) | null;
-}): React.ReactElement {
-  const cellBy = useMemo(() => {
-    const map = new Map<string, RoutineMasterSlotT>();
-    for (const s of m.slots) map.set(`${s.groupId}|${s.periodNumber}`, s);
-    return map;
-  }, [m]);
-  const conflictTP = useMemo(() => {
-    const set = new Set<string>();
-    for (const cf of m.conflicts) set.add(`${cf.teacherId}|${cf.periodNumber}`);
-    return set;
-  }, [m]);
+const cellBase = (c: ThemeColors) => ({ borderWidth: 1, borderColor: c.border, padding: space(1), justifyContent: "center" as const });
 
-  const cellBase = { borderWidth: 1, borderColor: c.border, padding: space(1), justifyContent: "center" as const };
+/*
+ * FROZEN PANES: one day's grid is three sibling children of the page ScrollView —
+ * DayIntro, DayHeaderRow, DayBody — so the page can make the header row sticky
+ * (stickyHeaderIndices only pins direct children). The section-name column sits
+ * outside the body's horizontal scroller, and the header's period strip follows the
+ * body's horizontal offset (its own scrolling is disabled), so the corner cell stays
+ * fixed both ways.
+ */
 
+/** Day title (in the "All" view) + the conflict summary. */
+function DayIntro({ m, c, showDayHeader, first }: { m: RoutineMasterT; c: ThemeColors; showDayHeader: boolean; first: boolean }): React.ReactElement {
   return (
-    <View style={{ gap: space(2) }}>
+    <View style={{ gap: space(2), paddingTop: first ? 0 : space(4), paddingBottom: space(2) }}>
+      {first ? null : <Divider />}
       {showDayHeader ? <Body style={{ fontWeight: "700", fontSize: 16 }}>{dayOfWeekLabel(m.day)}</Body> : null}
 
       {m.conflicts.length === 0 ? (
@@ -94,26 +82,105 @@ function DayGrid({
           ))}
         </Card>
       )}
+    </View>
+  );
+}
 
-      <ScrollView horizontal showsHorizontalScrollIndicator>
-        <View>
-          <View style={{ flexDirection: "row" }}>
-            <View style={[cellBase, { width: GROUP_W, backgroundColor: c.surfaceAlt }]}>
-              <Muted style={{ fontWeight: "700" }}>{STR.rtSectionRoutine}</Muted>
-            </View>
-            {m.columns.map((col) => (
-              <View key={col.periodNumber} style={[cellBase, { width: PERIOD_W, backgroundColor: c.surfaceAlt }]}>
-                <Body style={{ fontSize: 12, fontWeight: "700" }}>P{col.periodNumber}</Body>
-                <Muted style={{ fontSize: 10 }}>{col.isBreak ? STR.rtBreak : `${col.startTime ?? ""}–${col.endTime ?? ""}`}</Muted>
-              </View>
-            ))}
+/** The sticky period header: fixed corner cell + a period strip driven by the body's scroll. */
+function DayHeaderRow({
+  m,
+  c,
+  stripRef,
+}: {
+  m: RoutineMasterT;
+  c: ThemeColors;
+  stripRef: (r: ScrollView | null) => void;
+}): React.ReactElement {
+  const base = cellBase(c);
+  return (
+    <View style={{ flexDirection: "row", backgroundColor: c.bg }}>
+      <View style={[base, { width: GROUP_W, backgroundColor: c.surfaceAlt }]}>
+        <Muted style={{ fontWeight: "700" }}>{STR.rtSectionRoutine}</Muted>
+      </View>
+      <ScrollView ref={stripRef} horizontal scrollEnabled={false} showsHorizontalScrollIndicator={false} style={{ flex: 1 }}>
+        {m.columns.map((col) => (
+          <View key={col.periodNumber} style={[base, { width: PERIOD_W, backgroundColor: c.surfaceAlt }]}>
+            <Body style={{ fontSize: 12, fontWeight: "700" }}>P{col.periodNumber}</Body>
+            <Muted style={{ fontSize: 10 }}>{col.isBreak ? STR.rtBreak : `${col.startTime ?? ""}–${col.endTime ?? ""}`}</Muted>
           </View>
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
+
+/** The rows: a fixed section-name column + the horizontally scrolling period cells.
+ *  The two halves are separate views, so each row's height is measured on both sides
+ *  and the taller one applied to both. Tapping a period cell calls onPick. */
+function DayBody({
+  m,
+  c,
+  onPick,
+  onScrollX,
+}: {
+  m: RoutineMasterT;
+  c: ThemeColors;
+  /** null = view-only (cells are not tappable). */
+  onPick: ((t: EditTarget) => void) | null;
+  onScrollX: (x: number) => void;
+}): React.ReactElement {
+  const cellBy = useMemo(() => {
+    const map = new Map<string, RoutineMasterSlotT>();
+    for (const s of m.slots) map.set(`${s.groupId}|${s.periodNumber}`, s);
+    return map;
+  }, [m]);
+  const conflictTP = useMemo(() => {
+    const set = new Set<string>();
+    for (const cf of m.conflicts) set.add(`${cf.teacherId}|${cf.periodNumber}`);
+    return set;
+  }, [m]);
+  // Row heights only grow (so the measure → minHeight loop settles); a refetch brings
+  // a new `m` and starts the measuring over.
+  const [heights, setHeights] = useState<{ m: RoutineMasterT; h: Record<string, number> }>({ m, h: {} });
+  const rowH = heights.m === m ? heights.h : {};
+  const noteHeight = (key: string, v: number): void =>
+    setHeights((prev) => {
+      const cur = prev.m === m ? prev.h : {};
+      const next = Math.ceil(v);
+      return (cur[key] ?? 0) >= next ? prev : { m, h: { ...cur, [key]: next } };
+    });
+
+  const base = cellBase(c);
+  const rowKey = (row: RoutineMasterRowT): string => `${row.groupType}:${row.groupId}`;
+
+  return (
+    <View style={{ flexDirection: "row" }}>
+      <View style={{ width: GROUP_W }}>
+        {m.rows.map((row) => (
+          <View
+            key={rowKey(row)}
+            onLayout={(e) => noteHeight(rowKey(row), e.nativeEvent.layout.height)}
+            style={[base, { width: GROUP_W, minHeight: rowH[rowKey(row)], backgroundColor: c.surface }]}
+          >
+            <Body style={{ fontSize: 12, fontWeight: "600" }}>{row.label}</Body>
+            {row.sublabel ? <Muted style={{ fontSize: 10 }}>{row.sublabel}</Muted> : null}
+          </View>
+        ))}
+      </View>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator
+        scrollEventThrottle={16}
+        onScroll={(e) => onScrollX(e.nativeEvent.contentOffset.x)}
+        style={{ flex: 1 }}
+      >
+        <View>
           {m.rows.map((row) => (
-            <View key={`${row.groupType}:${row.groupId}`} style={{ flexDirection: "row" }}>
-              <View style={[cellBase, { width: GROUP_W, backgroundColor: c.surface }]}>
-                <Body style={{ fontSize: 12, fontWeight: "600" }}>{row.label}</Body>
-                {row.sublabel ? <Muted style={{ fontSize: 10 }}>{row.sublabel}</Muted> : null}
-              </View>
+            <View
+              key={rowKey(row)}
+              onLayout={(e) => noteHeight(rowKey(row), e.nativeEvent.layout.height)}
+              style={{ flexDirection: "row", minHeight: rowH[rowKey(row)] }}
+            >
               {m.columns.map((col) => {
                 const slot = cellBy.get(`${row.groupId}|${col.periodNumber}`);
                 const conflict = !!slot?.teacherId && conflictTP.has(`${slot.teacherId}|${col.periodNumber}`);
@@ -127,7 +194,7 @@ function DayGrid({
                     }
                     style={({ pressed }) => (pressed && !col.isBreak && onPick ? { opacity: 0.6 } : undefined)}
                   >
-                    <View style={[cellBase, { width: PERIOD_W, backgroundColor: bg }]}>
+                    <View style={[base, { width: PERIOD_W, flexGrow: 1, backgroundColor: bg }]}>
                       {slot ? (
                         <>
                           <Body style={{ fontSize: 11, fontWeight: "600", color: conflict ? c.onErrorContainer : c.textPrimary }}>
@@ -292,6 +359,8 @@ export default function RoutineMasterScreen(): React.ReactElement {
   const [notice, setNotice] = useState<{ msg: string; tone: "ok" | "warn" } | null>(null);
   const week = data?.routineMasterWeek ?? [];
   const shown = day === "ALL" ? week : week.filter((m) => m.day === day);
+  // Each day's sticky period strip, scrolled in step with that day's body.
+  const headerStrips = useRef(new Map<string, ScrollView>());
 
   function handleDone(msg: string, warnings: string[]): void {
     setEdit(null);
@@ -321,13 +390,26 @@ export default function RoutineMasterScreen(): React.ReactElement {
       ) : null}
 
       {data ? (
-        <ScrollView contentContainerStyle={{ padding: space(4), gap: space(4) }}>
-          {shown.map((m, i) => (
-            <View key={m.day} style={{ gap: space(2) }}>
-              {i > 0 ? <Divider /> : null}
-              <DayGrid m={m} c={c} showDayHeader={day === "ALL"} onPick={viewOnly ? null : (t) => { setNotice(null); setEdit(t); }} />
-            </View>
-          ))}
+        <ScrollView contentContainerStyle={{ padding: space(4) }} stickyHeaderIndices={shown.map((_, i) => i * 3 + 1)}>
+          {shown.flatMap((m, i) => [
+            <DayIntro key={`${m.day}:intro`} m={m} c={c} showDayHeader={day === "ALL"} first={i === 0} />,
+            <DayHeaderRow
+              key={`${m.day}:head`}
+              m={m}
+              c={c}
+              stripRef={(r) => {
+                if (r) headerStrips.current.set(m.day, r);
+                else headerStrips.current.delete(m.day);
+              }}
+            />,
+            <DayBody
+              key={`${m.day}:body`}
+              m={m}
+              c={c}
+              onPick={viewOnly ? null : (t) => { setNotice(null); setEdit(t); }}
+              onScrollX={(x) => headerStrips.current.get(m.day)?.scrollTo({ x, animated: false })}
+            />,
+          ])}
         </ScrollView>
       ) : null}
 
