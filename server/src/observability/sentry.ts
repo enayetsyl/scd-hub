@@ -132,6 +132,9 @@ export const EXPECTED_ERROR_NAMES: ReadonlySet<string> = new Set([
   "PrintRequestError",
   "Ref11ValidationError",
   "PushDeviceError",
+  // Quran oral exam (D-#873): a mark out of range, an overlapping sitting, a locked exam —
+  // the Office's or examiner's input, never a fault.
+  "QuranExamError",
   "QuranValidationError",
   "ReviewError",
   "RevisionError",

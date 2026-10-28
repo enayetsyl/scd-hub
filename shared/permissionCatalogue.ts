@@ -269,6 +269,21 @@ export const FEATURE_CATALOGUE = {
       edit_all: { en: "Work on every section", bn: "যেকোনো শাখার অনুশীলন সামলানো", desc: "Skip the routine class × subject check", teacher: false, office: true, flags: [] },
     },
   },
+  // Quran oral exam (D-#873, docs/prd-quran-exam.md).
+  quran_exam: {
+    group: "assessment_and_exams",
+    en: "Quran exam",
+    bn: "কুরআন পরীক্ষা",
+    actions: {
+      view: { en: "Exam schedule & progress", bn: "কুরআন পরীক্ষার সূচি ও অগ্রগতি দেখা", desc: "Every sitting, examiner and mark; pending marks by examiner", teacher: false, office: true, flags: [] },
+      manage: { en: "Plan sittings & examiners", bn: "কুরআন পরীক্ষার সূচি ও পরীক্ষক ঠিক করা", desc: "Papers, sittings, move a student, add or remove an examiner, make-up", teacher: false, office: true, flags: [] },
+      publish: { en: "Publish the schedule", bn: "কুরআন পরীক্ষার সূচি প্রকাশ করা", desc: "Teachers and guardians see the sittings; guardian pop-ups start", teacher: false, office: true, flags: [] },
+      examine: { en: "Examine own students", bn: "নিজের শিক্ষার্থীর পরীক্ষা নেওয়া ও নম্বর দেওয়া", desc: "Own sittings only: present/absent and marks", teacher: true, office: false, flags: ["SELF"] },
+      edit_all: { en: "Enter any mark", bn: "যেকোনো শিক্ষার্থীর নম্বর দেওয়া ও ঠিক করা", desc: "Enter or correct marks on any sitting", teacher: false, office: true, flags: [] },
+      lock: { en: "Lock marks", bn: "কুরআন পরীক্ষার নম্বর লক করা", desc: "Lock or unlock all marks of the exam", teacher: false, office: true, flags: [] },
+      remind: { en: "Remind examiners", bn: "পরীক্ষককে নম্বরের রিমাইন্ডার পাঠানো", desc: "Pending-marks reminder as a staff pop-up", teacher: false, office: true, flags: [] },
+    },
+  },
   students: {
     group: "students_and_families",
     en: "Students",

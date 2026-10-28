@@ -919,7 +919,9 @@ const ROLE_CHECK_DEFAULTS = {
     // with no approval step, so every action is on for the Office template from day one.
     "popup_notice:view", "popup_notice:send_staff", "popup_notice:send_guardian", "popup_notice:follow_up",
     // Class books (D-#870): the Office uploads and keeps the class book shelf.
-    "class_books:view", "class_books:manage"],
+    "class_books:view", "class_books:manage",
+    // Quran oral exam (D-#873): the Office plans, publishes, watches and locks it; teachers only examine (SELF).
+    "quran_exam:view", "quran_exam:manage", "quran_exam:publish", "quran_exam:edit_all", "quran_exam:lock", "quran_exam:remind"],
 };
 for (const role of ["TEACHER", "OFFICE"]) {
   const expanded = new Set();
