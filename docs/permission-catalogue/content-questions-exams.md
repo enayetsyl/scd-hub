@@ -1,6 +1,6 @@
 # Content, questions, sets, exams, scholarship & books — build checklist
 
-Features: `lesson_plans`, `plan_review`, `question_bank`, `question_review`, `question_sets`, `exam_syllabus`, `scholarship_practice`, `mastery`, `book_production` (owner rows: see README). Source: inventory F, origin/dev 2026-10-20.
+Features: `lesson_plans`, `plan_review`, `question_bank`, `question_review`, `question_sets`, `exam_syllabus`, `scholarship_practice`, `quran_exam`, `mastery`, `book_production` (owner rows: see README). Source: inventory F, origin/dev 2026-10-20.
 Counts: 56 mutations, 73 queries, 7 REST/SSE.
 
 ## (a) Mutations
@@ -349,3 +349,26 @@ App: `ChildMasteryAssignments` on the guardian's Assignments tab (`ChildAssignme
 Notifications (no new catalogue action): MASTERY_PROPOSAL recipients = `holderIdsOf("mastery:approve")`; MASTERY_EXTRA_CLASS = the routine teacher + planned students' guardians; MASTERY_ASSIGNMENT_SENT = the students' guardians. App: guardian drawer item + Today shortcut শিখন-দক্ষতা (`ChildMastery`).
 
 Later slices add their rows here: M-2/M-4 entry and builder (`mastery:enter_results`, `mastery:create`, routine class × subject check in the service), M-5 approval (`mastery:approve`), M-6 guardian reads (`guardian:read_child` + assertGuardianOfStudent).
+
+## (i) `quran_exam` — Quran oral exam (added with QX-1, 2026-10-28, D-#873..#879)
+
+All in `server/src/modules/quran-exam/resolvers/quranExam.ts`. Row scope lives in `QuranExamService`: `examine` reads and marks only sittings whose examiner is the caller, and only once the plan is published; `edit_all` marks any sitting.
+
+| resolver | gate |
+|---|---|
+| quranExams, quranExamDay | hasAnyPermission(`quran_exam:view`, `quran_exam:manage`) |
+| quranExamExaminerCandidates | `quran_exam:manage` |
+| quranExamResults | hasAnyPermission(`quran_exam:view`, `quran_exam:manage`, `quran_exam:edit_all`) |
+| quranExamSitting | hasAnyPermission(view, manage, edit_all, examine); svc: examine = own published sitting only |
+| myQuranExamSittings | `quran_exam:examine` (SELF: the caller's sittings) |
+| saveQuranExamPaper, moveQuranExamSitting, addQuranExamExaminer, removeQuranExamExaminer, scheduleQuranExamMakeUp | `quran_exam:manage` |
+| saveQuranExamResult | hasAnyPermission(`quran_exam:examine`, `quran_exam:edit_all`); svc: examine = own published sitting only; refused when locked |
+| publishQuranExam | `quran_exam:publish` |
+| lockQuranExamMarks | `quran_exam:lock` |
+| myQuranExamSchedule, acknowledgeQuranExamNotice | GUARDIAN plane: `guardian:read_child` + the guardian's active links (svc) |
+| quranExamMonitor | hasAnyPermission(`quran_exam:view`, `quran_exam:manage`, `quran_exam:remind`) |
+| remindQuranExamExaminers | `quran_exam:remind` |
+| myQuranExamReminder, acknowledgeQuranExamReminder | `quran_exam:examine` (SELF: the caller's own reminder; svc checks the owner) |
+| setQuranExamGuardianNote | `quran_exam:manage` |
+
+App gates: tab `QuranExamTab` = any of view / manage / examine; publish / lock / manage / remind buttons each check their own action; the Today card checks `examine`; the guardian card and pop-ups are GUARDIAN-only.

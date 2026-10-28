@@ -18,7 +18,7 @@ This catalogue is the build checklist for the permission matrix. It names every 
 | [`hr-finance.md`](hr-finance.md) | staff_records, hr_policy, leave, cover, payroll, salary_advance, appraisal, conduct, grievance, staff_letters, offboarding, finance_*, budget, fee_support, qard, reconciliation, work_board, printing |
 | [`attendance-routine-library.md`](attendance-routine-library.md) | attendance, staff_attendance, routine, class_note, lesson_progress, library, chat, saturday_revision, vocab_test |
 | [`observation-comments-reports.md`](observation-comments-reports.md) | classroom_observation, free_mixing_review, student_comments, parents_meeting, monthly_report, improvement_plan, teaching_notes, english_drive, worksheets |
-| [`content-questions-exams.md`](content-questions-exams.md) | lesson_plans, plan_review, question_bank, question_review, question_sets, exam_syllabus, scholarship_practice, mastery, book_production |
+| [`content-questions-exams.md`](content-questions-exams.md) | lesson_plans, plan_review, question_bank, question_review, question_sets, exam_syllabus, scholarship_practice, quran_exam, mastery, book_production |
 
 ## Flag legend
 | flag | meaning |
@@ -127,6 +127,7 @@ Several of today's bypasses are template-aware (`isAdminStaff`, `actsAsRole`), w
 | Assessment & exams | `question_sets` | Question sets | প্রশ্ন সেট | 5 | content-questions-exams |
 | Assessment & exams | `exam_syllabus` | Exam syllabus | পরীক্ষার সিলেবাস | 5 | content-questions-exams |
 | Assessment & exams | `scholarship_practice` | Scholarship practice | বৃত্তি অনুশীলন | 7 | content-questions-exams |
+| Assessment & exams | `quran_exam` | Quran exam | কুরআন পরীক্ষা | 7 | content-questions-exams |
 | Assessment & exams | `mastery` | Learning mastery | শিখন-দক্ষতা | 7 | content-questions-exams |
 | Students & families | `students` | Students | শিক্ষার্থী | 3 | foundation-platform |
 | Students & families | `guardians` | Guardians | অভিভাবক | 4 | foundation-platform |
@@ -185,7 +186,7 @@ Several of today's bypasses are template-aware (`isAdminStaff`, `actsAsRole`), w
 | Admin & access | `guardian_engagement` | Guardian app usage | অভিভাবকদের অ্যাপ ব্যবহার | 1 | foundation-platform |
 | Admin & access | `my_account` | My account | আমার অ্যাকাউন্ট | 1 | foundation-platform |
 
-**Totals: 72 features, 360 actions** (`class_books` added 2026-10-26, D-#870: +2 actions, unflagged, TEACHER on +1, OFFICE on +2) (`reports` +14 switches 2026-10-26, D-#861: the reports that sat in the Admin hub and module homes, unflagged, OFFICE on +13 — all but `guardian_engagement`) (`reports` added 2026-10-25, D-#846: +13 report switches, −3 retired report-only actions) (`parents_meeting:approve_change` added with meeting RSVP, 2026-10-24: +1 action, PRINCIPAL-DEFAULT, D-#842) (`lesson_progress` added with LP-2, 2026-10-22: +2 actions, unflagged, TEACHER on +1, OFFICE on +2) (`mastery` added with M-0, 2026-10-20: +6 actions, all unflagged, TEACHER on +3, OFFICE on +1; M-2, 2026-10-21: +`mastery:edit_all`, PRINCIPAL-DEFAULT). By flag: LOCKED 11 · PRINCIPAL-DEFAULT 15 · DESIGNATION 24 · ESCALATION 5 · SELF 12 · unflagged 281. Defaults: TEACHER on 102 · OFFICE on 253. A row may carry a `†`/`F-n`/`2H` note in addition to its flag. Those notes are not counted as flags. Not counted: `guardian:read_child` (GUARDIAN plane), and the future `scholarship_practice:release` (SC-5, not built) and `announcements:publish` (no staff surface yet).
+**Totals: 74 features, 371 actions** (recounted from `shared/permissionCatalogue.ts` on 2026-10-28 when `quran_exam` was added, D-#873: +7 actions, `examine` SELF, 6 unflagged, TEACHER on +1, OFFICE on +6; the earlier line had fallen behind the code) (`class_books` added 2026-10-26, D-#870: +2 actions, unflagged, TEACHER on +1, OFFICE on +2) (`reports` +14 switches 2026-10-26, D-#861: the reports that sat in the Admin hub and module homes, unflagged, OFFICE on +13 — all but `guardian_engagement`) (`reports` added 2026-10-25, D-#846: +13 report switches, −3 retired report-only actions) (`parents_meeting:approve_change` added with meeting RSVP, 2026-10-24: +1 action, PRINCIPAL-DEFAULT, D-#842) (`lesson_progress` added with LP-2, 2026-10-22: +2 actions, unflagged, TEACHER on +1, OFFICE on +2) (`mastery` added with M-0, 2026-10-20: +6 actions, all unflagged, TEACHER on +3, OFFICE on +1; M-2, 2026-10-21: +`mastery:edit_all`, PRINCIPAL-DEFAULT). By flag: LOCKED 11 · PRINCIPAL-DEFAULT 15 · DESIGNATION 24 · ESCALATION 5 · SELF 13 · unflagged 303. Defaults: TEACHER on 104 · OFFICE on 275. A row may carry a `†`/`F-n`/`2H` note in addition to its flag. Those notes are not counted as flags. Not counted: `guardian:read_child` (GUARDIAN plane), and the future `scholarship_practice:release` (SC-5, not built) and `announcements:publish` (no staff surface yet).
 
 ---
 
@@ -355,6 +356,18 @@ Several of today's bypasses are template-aware (`isAdminStaff`, `actsAsRole`), w
 | `scholarship_practice:delete` | Retire a topic | টপিক বাদ দেওয়া | Retire a topic | — | on | | scholarship:manage + role ∈ {P,O} |
 | `scholarship_practice:select_candidates` | Choose exam candidates | বৃত্তি পরীক্ষার্থী বাছাই করা | Enter or withdraw a child | — | on | F-32 | scholarship:manage + role ∈ {P,O} |
 | `scholarship_practice:edit_all` | Work on every শাখা | যেকোনো শাখার অনুশীলন সামলানো | Skip the routine class × subject check | — | on | 2H | assertMayManage primary-role P/O bypass |
+
+#### `quran_exam` — কুরআন পরীক্ষা (D-#873..#879, docs/prd-quran-exam.md)
+| permission | EN | BN | what it allows | T | O | flags | replaces |
+|---|---|---|---|---|---|---|---|
+| `quran_exam:view` | Exam schedule & progress | কুরআন পরীক্ষার সূচি ও অগ্রগতি দেখা | Every sitting, examiner and mark; pending marks by examiner | — | on | | new (D-#873) |
+| `quran_exam:manage` | Plan sittings & examiners | কুরআন পরীক্ষার সূচি ও পরীক্ষক ঠিক করা | Papers, sittings, move a student, add or remove an examiner, make-up | — | on | | new |
+| `quran_exam:publish` | Publish the schedule | কুরআন পরীক্ষার সূচি প্রকাশ করা | Teachers and guardians see the sittings; guardian pop-ups start | — | on | | new |
+| `quran_exam:examine` | Examine own students | নিজের শিক্ষার্থীর পরীক্ষা নেওয়া ও নম্বর দেওয়া | Own sittings only: present/absent and marks | on | — | SELF | new |
+| `quran_exam:edit_all` | Enter any mark | যেকোনো শিক্ষার্থীর নম্বর দেওয়া ও ঠিক করা | Enter or correct marks on any sitting | — | on | | new |
+| `quran_exam:lock` | Lock marks | কুরআন পরীক্ষার নম্বর লক করা | Lock or unlock all marks of the exam | — | on | | new |
+| `quran_exam:remind` | Remind examiners | পরীক্ষককে নম্বরের রিমাইন্ডার পাঠানো | Pending-marks reminder as a staff pop-up | — | on | | new |
+Guardians read their children's sittings (never the examiner or marks) through `guardian:read_child`: `myQuranExamSchedule`, `acknowledgeQuranExamNotice`.
 
 #### `mastery` — শিখন-দক্ষতা
 Learning-outcome mastery tracker (`docs/prd-mastery.md`, D-#775–#787). Registered with M-0; `enter_results`, `create` and `approve` gate slices M-2..M-5 and are declared now so the role map is settled once. Today's permissions are already one-to-one (`mastery:read/enter/manage/approve`).

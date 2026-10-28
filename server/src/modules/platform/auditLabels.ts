@@ -427,6 +427,16 @@ export const AUDIT_KIND_LABELS: Record<AuditEventKind, AuditKindLabel> = {
   CLASS_BOOK_UPLOADED: { bn: "শ্রেণির বই আপলোড করেছেন", en: "Uploaded a class book", group: "CONTENT" },
   CLASS_BOOK_EDITED: { bn: "শ্রেণির বই সম্পাদনা করেছেন", en: "Edited a class book", group: "CONTENT" },
   CLASS_BOOK_DELETED: { bn: "শ্রেণির বই মুছেছেন", en: "Deleted a class book", group: "CONTENT" },
+  QURAN_EXAM_PAPER_SAVED: { bn: "কুরআন পরীক্ষার প্রশ্নপত্র সংরক্ষণ করেছেন", en: "Saved a Quran exam paper", group: "EXAM" },
+  QURAN_EXAM_SITTINGS_LOADED: { bn: "কুরআন পরীক্ষার সূচি তৈরি করেছেন", en: "Loaded Quran exam sittings", group: "EXAM" },
+  QURAN_EXAM_SITTING_MOVED: { bn: "শিক্ষার্থীকে অন্য পরীক্ষকের কাছে সরিয়েছেন", en: "Moved a student to another examiner", group: "EXAM" },
+  QURAN_EXAM_EXAMINER_ADDED: { bn: "পরীক্ষক যোগ করেছেন", en: "Added an examiner", group: "EXAM" },
+  QURAN_EXAM_EXAMINER_REMOVED: { bn: "পরীক্ষক বাদ দিয়েছেন", en: "Removed an examiner", group: "EXAM" },
+  QURAN_EXAM_RESULT_SAVED: { bn: "কুরআন পরীক্ষার নম্বর/অনুপস্থিতি সংরক্ষণ করেছেন", en: "Saved a Quran exam result", group: "EXAM" },
+  QURAN_EXAM_MADE_UP: { bn: "অনুপস্থিত শিক্ষার্থীর মেকআপ ঠিক করেছেন", en: "Scheduled a make-up sitting", group: "EXAM" },
+  QURAN_EXAM_PUBLISHED: { bn: "কুরআন পরীক্ষার সূচি প্রকাশ/প্রত্যাহার করেছেন", en: "Published or withdrew the Quran exam schedule", group: "EXAM" },
+  QURAN_EXAM_LOCKED: { bn: "কুরআন পরীক্ষার নম্বর লক/আনলক করেছেন", en: "Locked or unlocked Quran exam marks", group: "EXAM" },
+  QURAN_EXAM_REMINDED: { bn: "পরীক্ষকদের নম্বরের রিমাইন্ডার পাঠিয়েছেন", en: "Reminded examiners about pending marks", group: "EXAM" },
 };
 
 const FALLBACK_GROUP: ActivityGroup = "OTHER";

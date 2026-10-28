@@ -139,6 +139,8 @@ const STAFF_NAV: NavSection[] = [
       },
     ],
   },
+  // Quran oral exam (D-#873): the Office's plan/monitor and the examiner's own duties share one tab.
+  { type: "item", route: "QuranExamTab", labelKey: "qxNav", icon: "🕋", perms: ["quran_exam:view", "quran_exam:manage", "quran_exam:examine"] },
   // Mastery tracker (M-0, docs/prd-mastery.md): catalogue + marks, import, tags, policy & switch.
   {
     type: "group",

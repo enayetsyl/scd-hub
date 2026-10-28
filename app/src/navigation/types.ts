@@ -280,6 +280,16 @@ export type ClassBooksStackParamList = {
   ClassBooks: undefined;
   ClassBookReader: { bookId: string; title: string; pageCount: number; pageAspect: number };
 };
+/** D-#873 — Quran oral exam. QuranExamHome stays first: the initial route takes no params. */
+export type QuranExamStackParamList = {
+  QuranExamHome: undefined;
+  MyQuranExam: undefined;
+  QuranExamDay: { examId: string; dateKey: string };
+  QuranExamSitting: { id: string };
+  QuranExamResults: { examId: string };
+  QuranExamMonitor: { examId: string };
+  QuranExamPaper: { examId: string; level: string };
+};
 /** D-#750 — the guardian's Class Notes tab (the lesson history, once a Home sub-screen). */
 export type GuardianClassNotesStackParamList = {
   ChildClassNotes: undefined;
@@ -735,4 +745,6 @@ export type TabParamList = {
    *  each sidebar lists it once in its own place). */
   ClassBooksTab: NavigatorScreenParams<ClassBooksStackParamList>;
   GuardianBooksTab: NavigatorScreenParams<ClassBooksStackParamList>;
+  /** D-#873 — Quran oral exam (Office plan + examiners' marks). */
+  QuranExamTab: NavigatorScreenParams<QuranExamStackParamList>;
 };
