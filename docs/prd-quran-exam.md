@@ -37,10 +37,12 @@ total is the sum. Owner papers 2026 (tajweed removed from Ammapara and Nazera �
 2026-10-28; the totals stay 90, nothing is redistributed):
 | Level | Full | Sections (questions × marks) |
 |---|---|---|
-| Ammapara | 90 | হিফজ 20 (4 surahs × 5) · রিডিং 60 (4 × 15) · দোয়া 10 (5 × 2) |
-| Najera | 90 | নাযারা 60 (3 × 20) · হিফজ 20 (1 × 20) · দোয়া 10 (5 × 2) |
+| Ammapara | 100 | হিফজ 20 (4 surahs × 5) · রিডিং 60 (4 × 15) · দোয়া 20 (5 × 4) — revised 2026-10-30 (D-#881) |
+| Najera | 100 | নাযারা 70 (7 × 10) · হিফজ 30 (সুরা দ্বোহা–নাস, **marked by তানবীহ/ফাত্হ**) — revised 2026-10-30 (D-#881) |
 | Qaida | 100 | হিফজ 20 (4 × 5) · বানান 30 (2 × 15) · রিডিং 30 (2 × 15) · দোয়া 20 (4 × 5) |
 Questions within a section are equal shares unless Office sets otherwise.
+
+**A section of an ITEMS paper can be marked the Hifz way (D-#881)** — e.g. Nazera's সুরা দ্বোহা–নাস. Such a section holds one question; the examiner counts তানবীহ and ফাত্হ and the app sets its mark to `max(0, marks − floor(T / tanbihPerMark) − fathCost × F)` (Nazera: 30, 4, 2). The counts are kept on the sitting; the rest of the paper is marked per question as usual.
 
 **HIFZ_DEDUCTION** — Hifz 1 and Hifz 3, full marks **30**, no tajweed (owner, 2026-10-28).
 The examiner records, per para, the number of **তানবীহ** and **ফাত্হ**. Mark =

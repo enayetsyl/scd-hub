@@ -59,7 +59,7 @@ function PaperCard({ p, onPress }: { p: QxPaperT; onPress: () => void }): React.
       ? `${STR.qxParaN.replace("{n}", p.paras.map((x) => bnNum(x)).join(", "))} · ${STR.qxHifzRule
           .replace("{t}", bnNum(p.tanbihPerMark ?? 4))
           .replace("{f}", bnNum(p.fathCost ?? 2))}`
-      : p.sections.map((s) => `${s.title} ${bnNum(s.items.reduce((a, i) => a + i.marks, 0))}`).join(" · ");
+      : p.sections.map((s) => `${s.title} ${bnNum(s.items.reduce((a, i) => a + i.marks, 0))}${s.tanbihPerMark != null ? ` (${STR.qxTanbih}/${STR.qxFath})` : ""}`).join(" · ");
   return (
     <Card onPress={onPress}>
       <View style={{ flexDirection: "row", justifyContent: "space-between", gap: space(2) }}>

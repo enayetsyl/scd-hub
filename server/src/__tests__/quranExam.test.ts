@@ -335,3 +335,40 @@ describe("Quran exam: monitor + reminders + guardian note (D-#878/#877)", () => 
     expect((await myQuranExamSchedule(g))[0]!.guardianNote).toBeNull();
   });
 });
+
+describe("Quran exam: a section marked by তানবীহ/ফাত্হ (D-#881)", () => {
+  const najera = (deduct = true) => ({
+    level: "Najera", scheme: "ITEMS" as const, fullMarks: 100, durationMin: 30,
+    sections: [
+      { title: "নাযারা", items: Array.from({ length: 7 }, (_, i) => ({ label: `সুরা ${i}`, marks: 10 })) },
+      { title: "হিফজ", items: [{ label: "সুরা দ্বোহা থেকে নাস", marks: 30 }], ...(deduct ? { tanbihPerMark: 4, fathCost: 2 } : {}) },
+    ],
+  });
+
+  it("a deduction section must hold exactly one question", async () => {
+    const t = await setup();
+    const bad = najera();
+    bad.sections[1] = { ...bad.sections[1]!, items: [{ label: "a", marks: 15 }, { label: "b", marks: 15 }] };
+    await expect(saveQuranExamPaper(t.office, t.examId, bad)).rejects.toThrow(/একটিই প্রশ্ন/);
+    const p = await saveQuranExamPaper(t.office, t.examId, najera());
+    expect(p.sections[1]).toMatchObject({ tanbihPerMark: 4, fathCost: 2 });
+    expect(p.sections[0]).toMatchObject({ tanbihPerMark: null, fathCost: null });
+  });
+
+  it("the section mark is computed from the counts, whatever mark is sent for it", async () => {
+    const t = await setup();
+    await saveQuranExamPaper(t.office, t.examId, najera());
+    const x = await student("Najera kid");
+    await loadQuranExamSittings(t.officeId, t.examId, [
+      { studentId: x, groupId: GROUP, level: "Najera", dateKey: "2026-11-24", start: "07:00", end: "07:30", examinerId: t.kuddus, portionLabel: "নাজেরা" },
+    ]);
+    const id = await t.sittingOf(x, "2026-11-24");
+    const flat = [10, 9, 8, 10, 10, 7, 10, 30]; // 64 + a (wrong) 30 that the server replaces
+    await expect(saveQuranExamResult(t.office, id, { present: true, itemMarksFlat: flat })).rejects.toThrow(/তানবীহ ও ফাত্হ দিন/);
+    const d = await saveQuranExamResult(t.office, id, { present: true, itemMarksFlat: flat, sectionCounts: [{ section: 1, tanbih: 5, fath: 2 }] });
+    expect(d.sitting.itemMarks).toEqual([[10, 9, 8, 10, 10, 7, 10], [25]]);
+    expect(d.sitting).toMatchObject({ total: 89, sectionCounts: [{ section: 1, tanbih: 5, fath: 2 }] });
+    const r = (await quranExamResults(t.examId)).find((y) => y.studentId === x)!;
+    expect(r).toMatchObject({ mark: 89, fullMarks: 100 });
+  });
+});

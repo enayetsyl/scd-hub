@@ -7325,6 +7325,9 @@ const STR_BN = {
   qxTanbihPer: "কত তানবীহে −১",
   qxFathCostLabel: "প্রতি ফাত্হে কত নম্বর কাটা",
   qxPaperSaved: "প্রশ্নপত্র সংরক্ষণ হয়েছে",
+  qxSecDeduct: "তানবীহ/ফাত্হ পদ্ধতিতে নম্বর",
+  qxSecDeductNote: "এই অংশে একটিই প্রশ্ন থাকবে; তার পূর্ণ নম্বর থেকে তানবীহ/ফাত্হ অনুযায়ী কাটা যাবে।",
+  qxSecDeductRule: "প্রতি {t} তানবীহে −১, প্রতি ফাত্হে −{f}",
 } as const;
 
 type StrTable = Record<keyof typeof STR_BN, string>;
@@ -13309,6 +13312,9 @@ const STR_EN: StrTable = {
   qxTanbihPer: "−1 per how many tanbih",
   qxFathCostLabel: "Marks off per fath",
   qxPaperSaved: "Paper saved",
+  qxSecDeduct: "Marked by tanbih/fath",
+  qxSecDeductNote: "This section holds one question; marks come off its full marks by tanbih/fath.",
+  qxSecDeductRule: "−1 per {t} tanbih, −{f} per fath",
 };
 
 /** UI chrome strings — resolves to the active language at read time (Proxy). Use

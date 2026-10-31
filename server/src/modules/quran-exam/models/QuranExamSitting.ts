@@ -23,6 +23,13 @@ export interface IQuranExamHifzCount {
   fath: number;
 }
 
+/** তানবীহ/ফাত্হ counted on a deduction section of an ITEMS paper (D-#881). */
+export interface IQuranExamSectionCount {
+  section: number;
+  tanbih: number;
+  fath: number;
+}
+
 export interface IQuranExamSittingEvent {
   kind: "MOVED" | "ABSENT" | "MADE_UP" | "RESCHEDULED";
   at: Date;
@@ -55,6 +62,7 @@ export interface IQuranExamSitting extends Document {
   status: QuranExamSittingStatus;
   itemMarks?: number[][] | null;
   hifzCounts: IQuranExamHifzCount[];
+  sectionCounts: IQuranExamSectionCount[];
   comment?: string | null;
   absenceReason?: QuranExamAbsenceReason | null;
   enteredBy?: Types.ObjectId | null;
@@ -68,6 +76,15 @@ export interface IQuranExamSitting extends Document {
 const HifzCountSchema = new Schema<IQuranExamHifzCount>(
   {
     para: { type: Number, required: true, min: 1, max: 30 },
+    tanbih: { type: Number, required: true, min: 0, default: 0 },
+    fath: { type: Number, required: true, min: 0, default: 0 },
+  },
+  { _id: false },
+);
+
+const SectionCountSchema = new Schema<IQuranExamSectionCount>(
+  {
+    section: { type: Number, required: true, min: 0 },
     tanbih: { type: Number, required: true, min: 0, default: 0 },
     fath: { type: Number, required: true, min: 0, default: 0 },
   },
@@ -104,6 +121,7 @@ const QuranExamSittingSchema = new Schema<IQuranExamSitting>(
     status: { type: String, enum: ["SCHEDULED", "DONE", "ABSENT"], required: true, default: "SCHEDULED" },
     itemMarks: { type: [[Number]], default: null },
     hifzCounts: { type: [HifzCountSchema], default: [] },
+    sectionCounts: { type: [SectionCountSchema], default: [] },
     comment: { type: String, default: null, maxlength: 500 },
     absenceReason: { type: String, enum: ["UNKNOWN", "SICK", "GUARDIAN_INFORMED", "OTHER", null], default: null },
     enteredBy: { type: Schema.Types.ObjectId, ref: "User", default: null },

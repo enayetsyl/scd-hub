@@ -10,7 +10,8 @@ export interface QxPaperT {
   scheme: "ITEMS" | "HIFZ_DEDUCTION";
   fullMarks: number;
   durationMin: number;
-  sections: { title: string; items: { label: string; marks: number }[] }[];
+  /** tanbihPerMark set = the section is marked by তানবীহ/ফাত্হ (D-#881). */
+  sections: { title: string; items: { label: string; marks: number }[]; tanbihPerMark: number | null; fathCost: number | null }[];
   paras: number[];
   tanbihPerMark: number | null;
   fathCost: number | null;
@@ -33,6 +34,7 @@ export interface QxSittingT {
   status: "SCHEDULED" | "DONE" | "ABSENT";
   itemMarks: number[] | null;
   hifzCounts: { para: number; tanbih: number; fath: number }[];
+  sectionCounts: { section: number; tanbih: number; fath: number }[];
   comment: string | null;
   absenceReason: string | null;
   total: number | null;
@@ -111,9 +113,9 @@ export interface QxGuardianChildT {
   }[];
 }
 
-const PAPER = `id level scheme fullMarks durationMin sections { title items { label marks } } paras tanbihPerMark fathCost frozen`;
+const PAPER = `id level scheme fullMarks durationMin sections { title items { label marks } tanbihPerMark fathCost } paras tanbihPerMark fathCost frozen`;
 const SITTING = `id studentId studentName classLabelBn level dateKey start end examinerId examinerName paras portionLabel status
-  itemMarks hifzCounts { para tanbih fath } comment absenceReason total enteredAt madeUp`;
+  itemMarks hifzCounts { para tanbih fath } sectionCounts { section tanbih fath } comment absenceReason total enteredAt madeUp`;
 const OVERVIEW = `examId examName status publishedAt marksLockedAt makeUpDateKey guardianNote papers { ${PAPER} }
   days { dateKey sittings done absent pending examiners }`;
 const DETAIL = `sitting { ${SITTING} } paper { ${PAPER} } otherSittings { ${SITTING} }
@@ -190,16 +192,17 @@ export const QX_SAVE_RESULT = gql<
     present: boolean;
     itemMarks?: number[] | null;
     hifzCounts?: { para: number; tanbih: number; fath: number }[] | null;
+    sectionCounts?: { section: number; tanbih: number; fath: number }[] | null;
     absenceReason?: string | null;
     comment?: string | null;
   }
 >`
   mutation SaveQuranExamResult(
-    $id: String!, $present: Boolean!, $itemMarks: [Int!], $hifzCounts: [QuranExamHifzCountInput!],
+    $id: String!, $present: Boolean!, $itemMarks: [Int!], $hifzCounts: [QuranExamHifzCountInput!], $sectionCounts: [QuranExamSectionCountInput!],
     $absenceReason: String, $comment: String
   ) {
     saveQuranExamResult(
-      id: $id, present: $present, itemMarks: $itemMarks, hifzCounts: $hifzCounts,
+      id: $id, present: $present, itemMarks: $itemMarks, hifzCounts: $hifzCounts, sectionCounts: $sectionCounts,
       absenceReason: $absenceReason, comment: $comment
     ) { ${DETAIL} }
   }
@@ -276,7 +279,7 @@ export const QX_SAVE_PAPER = gql<
     scheme: string;
     fullMarks: number;
     durationMin: number;
-    sections?: { title: string; labels: string[]; marks: number[] }[] | null;
+    sections?: { title: string; labels: string[]; marks: number[]; tanbihPerMark?: number | null; fathCost?: number | null }[] | null;
     paras?: number[] | null;
     tanbihPerMark?: number | null;
     fathCost?: number | null;
