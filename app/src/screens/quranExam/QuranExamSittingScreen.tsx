@@ -71,13 +71,36 @@ function Editor({ d, onSaved }: { d: QxDetailT; onSaved: (next: QxDetailT) => vo
   const [counts, setCounts] = React.useState(() =>
     s.paras.map((para) => s.hifzCounts.find((c) => c.para === para) ?? { para, tanbih: 0, fath: 0 }),
   );
+  // তানবীহ/ফাত্হ for sections marked the Hifz way (D-#881), by section index.
+  const [secCounts, setSecCounts] = React.useState<Record<number, { tanbih: number; fath: number }>>(() => {
+    const m: Record<number, { tanbih: number; fath: number }> = {};
+    p.sections.forEach((sec, si) => {
+      if (sec.tanbihPerMark == null) return;
+      const c = s.sectionCounts.find((x) => x.section === si);
+      m[si] = { tanbih: c?.tanbih ?? 0, fath: c?.fath ?? 0 };
+    });
+    return m;
+  });
   const [reason, setReason] = React.useState<string>(s.absenceReason ?? "UNKNOWN");
   const [comment, setComment] = React.useState(s.comment ?? "");
   const [saveState, save] = useMutation(QX_SAVE_RESULT);
   const saving = saveState.fetching;
   const [msg, setMsg] = React.useState<{ tone: "ok" | "danger"; text: string } | null>(null);
 
-  const total = marks.reduce((a, v) => a + v, 0);
+  // A deduction section's one item takes its computed mark (the server computes it too).
+  const effMarks = (() => {
+    const out = marks.slice();
+    let k = 0;
+    p.sections.forEach((sec, si) => {
+      if (sec.tanbihPerMark != null && sec.items[0]) {
+        const c = secCounts[si] ?? { tanbih: 0, fath: 0 };
+        out[k] = qxHifzMark(sec.items[0].marks, sec.tanbihPerMark, sec.fathCost ?? 0, c.tanbih, c.fath).mark;
+      }
+      k += sec.items.length;
+    });
+    return out;
+  })();
+  const total = effMarks.reduce((a, v) => a + v, 0);
   const others = d.otherSittings.filter((x) => x.status === "DONE").flatMap((x) => x.hifzCounts);
   const T = [...others, ...counts].reduce((a, c) => a + c.tanbih, 0);
   const F = [...others, ...counts].reduce((a, c) => a + c.fath, 0);
@@ -87,7 +110,11 @@ function Editor({ d, onSaved }: { d: QxDetailT; onSaved: (next: QxDetailT) => vo
     const r = await save({
       id: s.id,
       present,
-      itemMarks: present && p.scheme === "ITEMS" ? marks : null,
+      itemMarks: present && p.scheme === "ITEMS" ? effMarks : null,
+      sectionCounts:
+        present && p.scheme === "ITEMS"
+          ? Object.entries(secCounts).map(([si, c]) => ({ section: Number(si), tanbih: c.tanbih, fath: c.fath }))
+          : null,
       hifzCounts: present && p.scheme === "HIFZ_DEDUCTION" ? counts : null,
       absenceReason: present ? null : reason,
       comment: comment.trim() || null,
@@ -110,10 +137,11 @@ function Editor({ d, onSaved }: { d: QxDetailT; onSaved: (next: QxDetailT) => vo
       </ChipRow>
 
       {present && p.scheme === "ITEMS"
-        ? p.sections.map((sec) => {
+        ? p.sections.map((sec, si) => {
             const from = at;
             at += sec.items.length;
-            const got = marks.slice(from, at).reduce((a, v) => a + v, 0);
+            const got = effMarks.slice(from, at).reduce((a, v) => a + v, 0);
+            const sc = sec.tanbihPerMark != null ? secCounts[si] ?? { tanbih: 0, fath: 0 } : null;
             const max = sec.items.reduce((a, i) => a + i.marks, 0);
             return (
               <Card key={sec.title}>
@@ -123,7 +151,15 @@ function Editor({ d, onSaved }: { d: QxDetailT; onSaved: (next: QxDetailT) => vo
                     {bnNum(got)} / {bnNum(max)}
                   </Body>
                 </View>
-                {sec.items.map((it, i) => (
+                {sc ? (
+                  <View style={{ gap: space(2), marginTop: space(2) }}>
+                    <Body>{sec.items[0]?.label}</Body>
+                    <Muted>{STR.qxSecDeductRule.replace("{t}", bnNum(sec.tanbihPerMark ?? 4)).replace("{f}", bnNum(sec.fathCost ?? 2))}</Muted>
+                    <Stepper count value={sc.tanbih} max={99} disabled={ro} label={STR.qxTanbih} onChange={(v) => setSecCounts((m) => ({ ...m, [si]: { ...sc, tanbih: v } }))} />
+                    <Stepper count value={sc.fath} max={99} disabled={ro} label={STR.qxFath} onChange={(v) => setSecCounts((m) => ({ ...m, [si]: { ...sc, fath: v } }))} />
+                  </View>
+                ) : null}
+                {sc ? null : sec.items.map((it, i) => (
                   <View key={i} style={{ gap: space(1), marginTop: space(2) }}>
                     <Body>{it.label}</Body>
                     <Stepper

@@ -4,6 +4,7 @@ import {
   checkHifzCounts,
   itemsFullMarks,
   placeForMove,
+  sectionDeductionMark,
   toMin,
   fromMin,
 } from "../modules/quran-exam/services/quranExamMath";
@@ -83,5 +84,15 @@ describe("Moving a sitting to another examiner (D-#875)", () => {
   it("a 2-hour Hifz sitting onto a busy examiner lands after their sitting", () => {
     const r = placeForMove({ start: "07:00", end: "09:00" }, [{ start: "07:00", end: "09:00" }]);
     expect(r).toEqual({ start: "09:00", end: "11:00", kept: false });
+  });
+});
+
+describe("Section marked the Hifz way (D-#881)", () => {
+  it("Nazera দ্বোহা–নাস: 30 − floor(T/4) − 2F, never below 0", () => {
+    const rule = { tanbihPerMark: 4, fathCost: 2 };
+    expect(sectionDeductionMark(30, rule, 0, 0)).toBe(30);
+    expect(sectionDeductionMark(30, rule, 5, 2)).toBe(25);
+    expect(sectionDeductionMark(30, rule, 3, 0)).toBe(30);
+    expect(sectionDeductionMark(30, rule, 40, 20)).toBe(0);
   });
 });

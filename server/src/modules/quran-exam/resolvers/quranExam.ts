@@ -55,14 +55,28 @@ import type { QuranExamScheme } from "../models/QuranExamPaper";
 import type { QuranExamAbsenceReason } from "../models/QuranExamSitting";
 
 type Item = { label: string; marks: number };
-type Section = { title: string; items: Item[] };
+type Section = { title: string; items: Item[]; tanbihPerMark: number | null; fathCost: number | null };
+type SectionCount = { section: number; tanbih: number; fath: number };
 type HifzCount = { para: number; tanbih: number; fath: number };
 
 const ItemRef = builder.objectRef<Item>("QuranExamPaperItem");
 ItemRef.implement({ fields: (t) => ({ label: t.exposeString("label"), marks: t.exposeInt("marks") }) });
 
 const SectionRef = builder.objectRef<Section>("QuranExamPaperSection");
-SectionRef.implement({ fields: (t) => ({ title: t.exposeString("title"), items: t.field({ type: [ItemRef], resolve: (s) => s.items }) }) });
+SectionRef.implement({
+  fields: (t) => ({
+    title: t.exposeString("title"),
+    items: t.field({ type: [ItemRef], resolve: (s) => s.items }),
+    // Set = this section is marked by তানবীহ/ফাত্হ (D-#881).
+    tanbihPerMark: t.int({ nullable: true, resolve: (s) => s.tanbihPerMark }),
+    fathCost: t.int({ nullable: true, resolve: (s) => s.fathCost }),
+  }),
+});
+
+const SectionCountRef = builder.objectRef<SectionCount>("QuranExamSectionCount");
+SectionCountRef.implement({
+  fields: (t) => ({ section: t.exposeInt("section"), tanbih: t.exposeInt("tanbih"), fath: t.exposeInt("fath") }),
+});
 
 const PaperRef = builder.objectRef<QuranExamPaperShape>("QuranExamPaper");
 PaperRef.implement({
@@ -106,6 +120,7 @@ SittingRef.implement({
     // Flat, in paper order (section by section).
     itemMarks: t.intList({ nullable: true, resolve: (s) => (s.itemMarks ? s.itemMarks.flat() : null) }),
     hifzCounts: t.field({ type: [HifzCountRef], resolve: (s) => s.hifzCounts }),
+    sectionCounts: t.field({ type: [SectionCountRef], resolve: (s) => s.sectionCounts }),
     comment: t.string({ nullable: true, resolve: (s) => s.comment }),
     absenceReason: t.string({ nullable: true, resolve: (s) => s.absenceReason }),
     total: t.int({ nullable: true, resolve: (s) => s.total }),
@@ -239,6 +254,16 @@ const SectionInput = builder.inputType("QuranExamSectionInput", {
     title: t.string({ required: true }),
     labels: t.stringList({ required: true }),
     marks: t.intList({ required: true }),
+    tanbihPerMark: t.int({ required: false }),
+    fathCost: t.int({ required: false }),
+  }),
+});
+
+const SectionCountInput = builder.inputType("QuranExamSectionCountInput", {
+  fields: (t) => ({
+    section: t.int({ required: true }),
+    tanbih: t.int({ required: true }),
+    fath: t.int({ required: true }),
   }),
 });
 
@@ -341,6 +366,8 @@ builder.mutationField("saveQuranExamPaper", (t) =>
         sections: (args.sections ?? []).map((s) => ({
           title: s.title,
           items: s.labels.map((label, i) => ({ label, marks: s.marks[i] ?? 0 })),
+          tanbihPerMark: s.tanbihPerMark ?? null,
+          fathCost: s.fathCost ?? null,
         })),
         paras: args.paras ?? undefined,
         tanbihPerMark: args.tanbihPerMark ?? undefined,
@@ -409,6 +436,7 @@ builder.mutationField("saveQuranExamResult", (t) =>
       // Flat, in paper order; the service reshapes it by the paper's sections.
       itemMarks: t.arg.intList({ required: false }),
       hifzCounts: t.arg({ type: [HifzCountInput], required: false }),
+      sectionCounts: t.arg({ type: [SectionCountInput], required: false }),
       absenceReason: t.arg.string({ required: false }),
       comment: t.arg.string({ required: false }),
     },
@@ -417,6 +445,7 @@ builder.mutationField("saveQuranExamResult", (t) =>
         present: args.present,
         itemMarksFlat: args.itemMarks ?? null,
         hifzCounts: args.hifzCounts ?? null,
+        sectionCounts: args.sectionCounts ?? null,
         absenceReason: (args.absenceReason as QuranExamAbsenceReason | null | undefined) ?? null,
         comment: args.comment ?? null,
       }),
