@@ -29,6 +29,7 @@ import { QuranExamReminder } from "../models/QuranExamReminder";
 import {
   checkHifzCounts,
   checkItemMarks,
+  sectionDeductionMark,
   hifzMark,
   itemsFullMarks,
   placeForMove,
@@ -52,7 +53,7 @@ export interface QuranExamPaperShape {
   scheme: QuranExamScheme;
   fullMarks: number;
   durationMin: number;
-  sections: { title: string; items: { label: string; marks: number }[] }[];
+  sections: { title: string; items: { label: string; marks: number }[]; tanbihPerMark: number | null; fathCost: number | null }[];
   paras: number[];
   tanbihPerMark: number | null;
   fathCost: number | null;
@@ -75,6 +76,7 @@ export interface QuranExamSittingShape {
   status: string;
   itemMarks: number[][] | null;
   hifzCounts: HifzCount[];
+  sectionCounts: { section: number; tanbih: number; fath: number }[];
   comment: string | null;
   absenceReason: string | null;
   /** This sitting's own score (ITEMS total, or null for Hifz / not done). */
@@ -172,7 +174,12 @@ function paperShape(p: IQuranExamPaper, frozen: boolean): QuranExamPaperShape {
     scheme: p.scheme,
     fullMarks: p.fullMarks,
     durationMin: p.durationMin,
-    sections: (p.sections ?? []).map((s) => ({ title: s.title, items: s.items.map((i) => ({ label: i.label, marks: i.marks })) })),
+    sections: (p.sections ?? []).map((s) => ({
+      title: s.title,
+      items: s.items.map((i) => ({ label: i.label, marks: i.marks })),
+      tanbihPerMark: s.deduction?.tanbihPerMark ?? null,
+      fathCost: s.deduction?.fathCost ?? null,
+    })),
     paras: p.hifz?.paras ?? [],
     tanbihPerMark: p.hifz?.tanbihPerMark ?? null,
     fathCost: p.hifz?.fathCost ?? null,
@@ -209,6 +216,7 @@ async function shapeSittings(
     status: r.status,
     itemMarks: r.itemMarks ?? null,
     hifzCounts: (r.hifzCounts ?? []).map((c) => ({ para: c.para, tanbih: c.tanbih, fath: c.fath })),
+    sectionCounts: (r.sectionCounts ?? []).map((c) => ({ section: c.section, tanbih: c.tanbih, fath: c.fath })),
     comment: r.comment ?? null,
     absenceReason: r.absenceReason ?? null,
     total: sittingTotal(r, papers?.get(r.level)),
@@ -306,7 +314,8 @@ export interface PaperInput {
   scheme: QuranExamScheme;
   fullMarks: number;
   durationMin: number;
-  sections?: { title: string; items: { label: string; marks: number }[] }[];
+  /** A section with tanbihPerMark + fathCost is marked the Hifz way (D-#881). */
+  sections?: { title: string; items: { label: string; marks: number }[]; tanbihPerMark?: number | null; fathCost?: number | null }[];
   paras?: number[];
   tanbihPerMark?: number;
   fathCost?: number;
@@ -321,6 +330,13 @@ function validatePaper(input: PaperInput): void {
     }
     if (sections.some((s) => s.items.some((i) => !i.label.trim() || !Number.isInteger(i.marks) || i.marks < 1))) {
       throw new QuranExamError("প্রতিটি প্রশ্নের নাম ও নম্বর (১ বা বেশি) দিন।");
+    }
+    for (const s of sections) {
+      if (s.tanbihPerMark == null && s.fathCost == null) continue;
+      if (s.items.length !== 1) throw new QuranExamError(`"${s.title}" তানবীহ/ফাত্হ পদ্ধতিতে নম্বর পাবে — এতে একটিই প্রশ্ন রাখুন।`);
+      if (!Number.isInteger(s.tanbihPerMark) || s.tanbihPerMark! < 1 || !Number.isInteger(s.fathCost) || s.fathCost! < 0) {
+        throw new QuranExamError(`"${s.title}"-এর তানবীহ ও ফাত্হের নিয়ম দিন।`);
+      }
     }
     const sum = itemsFullMarks({ scheme: "ITEMS", fullMarks: input.fullMarks, sections });
     if (sum !== input.fullMarks) {
@@ -347,7 +363,14 @@ export async function saveQuranExamPaper(ctx: AppContext, examId: string, input:
         scheme: input.scheme,
         fullMarks: input.fullMarks,
         durationMin: input.durationMin,
-        sections: input.scheme === "ITEMS" ? input.sections : [],
+        sections:
+          input.scheme === "ITEMS"
+            ? (input.sections ?? []).map((s) => ({
+                title: s.title,
+                items: s.items,
+                deduction: s.tanbihPerMark != null ? { tanbihPerMark: s.tanbihPerMark, fathCost: s.fathCost ?? 0 } : null,
+              }))
+            : [],
         hifz: input.scheme === "HIFZ_DEDUCTION"
           ? { paras: input.paras, tanbihPerMark: input.tanbihPerMark, fathCost: input.fathCost }
           : null,
@@ -611,6 +634,8 @@ export interface ResultInput {
   present: boolean;
   /** ITEMS: one mark per question, flat in paper order. */
   itemMarksFlat?: number[] | null;
+  /** তানবীহ/ফাত্হ for each deduction section of an ITEMS paper (D-#881); its item mark is computed. */
+  sectionCounts?: { section: number; tanbih: number; fath: number }[] | null;
   hifzCounts?: HifzCount[] | null;
   absenceReason?: QuranExamAbsenceReason | null;
   comment?: string | null;
@@ -630,12 +655,25 @@ export async function saveQuranExamResult(ctx: AppContext, sittingId: string, in
       if (flat.length !== want) throw new QuranExamError("নম্বরের তালিকা প্রশ্নপত্রের সাথে মেলেনি।");
       let at = 0;
       const nested = paper.sections.map((x) => x.items.map(() => flat[at++]!));
+      const counts: { section: number; tanbih: number; fath: number }[] = [];
+      paper.sections.forEach((sec, si) => {
+        if (!sec.deduction) return;
+        const c = (input.sectionCounts ?? []).find((x) => x.section === si);
+        if (!c) throw new QuranExamError(`"${sec.title}"-এর তানবীহ ও ফাত্হ দিন।`);
+        for (const v of [c.tanbih, c.fath]) {
+          if (!Number.isInteger(v) || v < 0 || v > 999) throw new QuranExamError("তানবীহ/ফাত্হ ০ বা তার বেশি পূর্ণসংখ্যা হতে হবে।");
+        }
+        nested[si]![0] = sectionDeductionMark(sec.items[0]!.marks, sec.deduction, c.tanbih, c.fath);
+        counts.push({ section: si, tanbih: c.tanbih, fath: c.fath });
+      });
       total = checkItemMarks(paper, nested);
       s.itemMarks = nested;
+      s.sectionCounts = counts as never;
       s.hifzCounts = [];
     } else {
       s.hifzCounts = checkHifzCounts(s.paras, input.hifzCounts ?? []) as never;
       s.itemMarks = null;
+      s.sectionCounts = [];
     }
     s.status = "DONE";
     s.absenceReason = null;
@@ -644,6 +682,7 @@ export async function saveQuranExamResult(ctx: AppContext, sittingId: string, in
     s.absenceReason = input.absenceReason ?? "UNKNOWN";
     s.itemMarks = null;
     s.hifzCounts = [];
+    s.sectionCounts = [];
     s.history.push({ kind: "ABSENT", at: new Date(), by: oid(ctx.auth!.userId), note: input.absenceReason ?? null });
   }
   s.comment = input.comment?.trim() ? input.comment.trim().slice(0, 500) : null;

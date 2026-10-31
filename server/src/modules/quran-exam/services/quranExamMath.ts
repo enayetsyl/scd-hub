@@ -6,7 +6,7 @@
 export interface PaperShape {
   scheme: "ITEMS" | "HIFZ_DEDUCTION";
   fullMarks: number;
-  sections: { title: string; items: { label: string; marks: number }[] }[];
+  sections: { title: string; items: { label: string; marks: number }[]; deduction?: { tanbihPerMark: number; fathCost: number } | null }[];
   hifz?: { paras: number[]; tanbihPerMark: number; fathCost: number } | null;
 }
 
@@ -48,6 +48,19 @@ export function hifzMark(paper: PaperShape, counts: HifzCount[]): {
   const tanbihCut = Math.floor(tanbih / rule.tanbihPerMark);
   const fathCut = fath * rule.fathCost;
   return { tanbih, fath, tanbihCut, fathCut, mark: Math.max(0, paper.fullMarks - tanbihCut - fathCut) };
+}
+
+/**
+ * A deduction section's mark (D-#881): its full marks minus floor(T / tanbihPerMark) and
+ * fathCost × F, never below 0 — the Hifz rule applied to one section of an ITEMS paper.
+ */
+export function sectionDeductionMark(
+  marks: number,
+  rule: { tanbihPerMark: number; fathCost: number },
+  tanbih: number,
+  fath: number,
+): number {
+  return Math.max(0, marks - Math.floor(tanbih / rule.tanbihPerMark) - fath * rule.fathCost);
 }
 
 /** Sum of an ITEMS paper's question marks (what `fullMarks` must equal). */
