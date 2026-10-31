@@ -19,9 +19,17 @@ export interface IQuranExamItem {
   marks: number;
 }
 
+/** A section marked the Hifz way (D-#881): its one item starts at full marks and loses
+ *  1 per `tanbihPerMark` তানবীহ and `fathCost` per ফাত্হ — e.g. Nazera's সুরা দ্বোহা–নাস. */
+export interface IQuranExamSectionDeduction {
+  tanbihPerMark: number;
+  fathCost: number;
+}
+
 export interface IQuranExamSection {
   title: string;
   items: IQuranExamItem[];
+  deduction?: IQuranExamSectionDeduction | null;
 }
 
 export interface IQuranExamHifzRule {
@@ -62,6 +70,13 @@ const SectionSchema = new Schema<IQuranExamSection>(
   {
     title: { type: String, required: true, trim: true },
     items: { type: [ItemSchema], default: [] },
+    deduction: {
+      type: new Schema<IQuranExamSectionDeduction>(
+        { tanbihPerMark: { type: Number, required: true, min: 1 }, fathCost: { type: Number, required: true, min: 0 } },
+        { _id: false },
+      ),
+      default: null,
+    },
   },
   { _id: false },
 );
