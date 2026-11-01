@@ -222,10 +222,13 @@ export default function AssignmentWorkspaceScreen({ route }: Props): React.React
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   // Both queries refetch together: a pass changes the rows AND the header counts.
+  // Guarded on hasSection: urql's re-execute ignores `pause`, so an unguarded focus
+  // refresh with a class but no section sent sectionId "" (GlitchTip #45 CastError).
   const refresh = useCallback(() => {
+    if (!hasSection) return;
     refetchRecs({ requestPolicy: "network-only" });
     refetchTallies({ requestPolicy: "network-only" });
-  }, [refetchRecs, refetchTallies]);
+  }, [hasSection, refetchRecs, refetchTallies]);
   const notify = useCallback((okMsg: string | null, errMsg: string | null) => {
     setOk(okMsg);
     setError(errMsg);
