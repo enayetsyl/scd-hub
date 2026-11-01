@@ -148,7 +148,7 @@ describe("exam routine: guardian (D-#883)", () => {
     expect(r.quranSittings).toEqual([{ dateKey: "2026-11-24", start: "07:00", end: "07:30", level: "Qaida", portionLabel: "কায়দা" }]);
     expect(JSON.stringify(r)).not.toMatch(/examiner/i);
 
-    // Class one up: the Arabic paper names the child's own book (D-#887), gender suffix dropped.
+    // Class one up: the Arabic paper names the child's own book (D-#888), gender suffix dropped.
     const pupil = await Student.collection.insertOne({ schoolId: "C1-1", name: "Rafi", classId: new Types.ObjectId(t.oneId), sectionId: new Types.ObjectId(), active: true });
     await GuardianLink.collection.insertOne({ guardianId: new Types.ObjectId(t.guardian.auth!.userId), studentId: pupil.insertedId, relation: "mother", active: true });
     const book = await SubjectGroup.collection.insertOne({ track: "arabic", level: "Book 2", gender: "boys", code: "AR_B2_BOYS", nameBn: "বুক ২ (বালক)", active: true });

@@ -9,7 +9,7 @@
  *   publishExamRoutine     — exam_routine:publish.
  *   guardianExamRoutine    — guardian plane: the child's class, published only, and the
  *                            child's own Quran exam sittings (never the examiner); the
- *                            Arabic paper names the child's own book (D-#887).
+ *                            Arabic paper names the child's own book (D-#888).
  */
 import { Types } from "mongoose";
 import { ROUTINE_SUBJECTS, callerHasPermission } from "@scd/shared";
