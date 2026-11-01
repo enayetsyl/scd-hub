@@ -6944,6 +6944,10 @@ const STR_BN = {
   ppStaffCount: "কর্মী: {n} জন",
   ppFamilyCount: "অভিভাবক (পরিবার): {n} — পপ-আপ দেখতে পাবেন {r}",
   ppNoLoginWarn: "{n} পরিবারের অ্যাপ লগইন নেই, তাই তারা পপ-আপ দেখবেন না। পাঠানোর পরে রিপোর্টে তাদের WhatsApp তালিকা পাবেন।",
+  // D-#887: a hand-pick next to a whole group
+  ppMixedPickWarn: "আপনি {n} জনকে আলাদা করে বাছাই করেছেন, কিন্তু উপরে \"{groups}\" দলও চালু আছে — বার্তাটি সেই দলের সবার কাছেও যাবে।",
+  ppOnlyPicked: "শুধু বাছাই করাদের পাঠান",
+  ppGroupsJoin: " ও ",
   ppMissingGender: "{n} জন কর্মীর লিঙ্গ লেখা নেই, তাই লিঙ্গ-ফিল্টারে তারা বাদ পড়েছেন। HR-এ লিঙ্গ যোগ করুন।",
   ppNoMatch: "এই ফিল্টারে কেউ মেলেনি।",
   ppShowNames: "নামগুলো দেখুন ▾",
@@ -12947,6 +12951,10 @@ const STR_EN: StrTable = {
   ppStaffCount: "Staff: {n}",
   ppFamilyCount: "Guardians (families): {n} — can see a pop-up: {r}",
   ppNoLoginWarn: "{n} families have no app login, so they will not see the pop-up. After sending, the report gives you their WhatsApp list.",
+  // D-#887: a hand-pick next to a whole group
+  ppMixedPickWarn: "You picked {n} people by name, but the \"{groups}\" group is also on above — the message goes to everyone in that group too.",
+  ppOnlyPicked: "Send only to the people I picked",
+  ppGroupsJoin: " and ",
   ppMissingGender: "{n} staff have no gender on file, so a gender filter leaves them out. Add it in HR.",
   ppNoMatch: "Nobody matches these filters.",
   ppShowNames: "Show names ▾",

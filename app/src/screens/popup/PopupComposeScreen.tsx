@@ -145,7 +145,9 @@ export default function PopupComposeScreen({ navigation, route }: Props): React.
   const live = !!loaded && loaded.status !== "DRAFT";
 
   const [step, setStep] = useState(0);
-  const [staffOn, setStaffOn] = useState(canStaff);
+  // D-#887: nothing is chosen until the sender chooses — a default "teachers" group
+  // silently rode along with a hand-picked family (owner, 2026-11-01).
+  const [staffOn, setStaffOn] = useState(false);
   const [guardOn, setGuardOn] = useState(false);
   const [staff, setStaff] = useState<StaffF>({ ...EMPTY_STAFF, roles: ["TEACHER"] });
   const [guardLevels, setGuardLevels] = useState<number[]>([]);
@@ -155,7 +157,7 @@ export default function PopupComposeScreen({ navigation, route }: Props): React.
   const [excluded, setExcluded] = useState<string[]>([]);
   const [listId, setListId] = useState<string | null>(null);
   const [listName, setListName] = useState("");
-  const [segment, setSegment] = useState<string | null>("teachers");
+  const [segment, setSegment] = useState<string | null>(null);
 
   const [titleBn, setTitleBn] = useState("");
   const [bodyBn, setBodyBn] = useState("");
@@ -260,6 +262,13 @@ export default function PopupComposeScreen({ navigation, route }: Props): React.
     [staffOn, staff, guardOn, guardLevels, sectionIds, picked, excluded],
   );
   const audienceEmpty = !staffOn && !guardOn && picked.length === 0;
+  /** D-#887: people picked by name while a whole group is also on — almost always a slip. */
+  const mixedPickWarn =
+    picked.length > 0 && (staffOn || guardOn)
+      ? STR.ppMixedPickWarn
+          .replace("{n}", bnNum(picked.length))
+          .replace("{groups}", [staffOn ? STR.ppWhoStaff : null, guardOn ? STR.ppWhoGuardians : null].filter(Boolean).join(STR.ppGroupsJoin))
+      : null;
   const [previewQ] = useQuery({
     query: POPUP_AUDIENCE_PREVIEW,
     variables: { audience, page: peoplePage, pageSize: 50 },
@@ -364,7 +373,7 @@ export default function PopupComposeScreen({ navigation, route }: Props): React.
       const count = pv ? pv.reachableCount : 0;
       const ok = await confirmAction({
         title: STR.ppConfirmSendTitle,
-        message: STR.ppConfirmSendBody.replace("{n}", bnNum(count)),
+        message: [mixedPickWarn, STR.ppConfirmSendBody.replace("{n}", bnNum(count))].filter(Boolean).join("\n\n"),
         confirmLabel: STR.ppSend,
         tone: "primary",
       });
@@ -604,6 +613,20 @@ export default function PopupComposeScreen({ navigation, route }: Props): React.
 
           <Card>
             <Body style={{ fontWeight: "600" }}>{STR.ppWhoGets}</Body>
+            {mixedPickWarn ? (
+              <>
+                <Notice tone="warn" message={mixedPickWarn} />
+                <Button
+                  title={STR.ppOnlyPicked}
+                  variant="secondary"
+                  onPress={() => {
+                    setStaffOn(false);
+                    setGuardOn(false);
+                    setSegment(null);
+                  }}
+                />
+              </>
+            ) : null}
             {audienceEmpty ? (
               <Muted>{STR.ppNobodyYet}</Muted>
             ) : previewQ.fetching && !pv ? (
