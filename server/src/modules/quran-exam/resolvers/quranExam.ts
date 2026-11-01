@@ -13,8 +13,10 @@
  *   saveQuranExamResult        — examine (own sitting) | edit_all.
  *   publishQuranExam           — publish.   lockQuranExamMarks — lock.
  *   myQuranExamSchedule / acknowledgeQuranExamNotice — guardian plane (guardian:read_child).
+ *   quranExamGuardianSeen      — view|manage: which families tapped "দেখেছি" (D-#882).
  */
 import { builder } from "../../../schema";
+import { pageRef } from "../../../pageRef";
 import {
   acknowledgeQuranExamNotice,
   addQuranExamExaminer,
@@ -37,6 +39,9 @@ import {
   myQuranExamReminder,
   acknowledgeQuranExamReminder,
   setQuranExamGuardianNote,
+  quranExamGuardianSeenPage,
+  type QuranExamGuardianSeenShape,
+  type QuranExamGuardianSeenRowShape,
   type QuranExamMonitorShape,
   type QuranExamMonitorExaminerShape,
   type QuranExamReminderShape,
@@ -233,6 +238,50 @@ GuardianSittingRef.implement({
     fromEnd: t.string({ nullable: true, resolve: (s) => s.fromEnd }),
   }),
 });
+
+const SeenRowRef = builder.objectRef<QuranExamGuardianSeenRowShape>("QuranExamGuardianSeenRow");
+SeenRowRef.implement({
+  fields: (t) => ({
+    studentId: t.exposeString("studentId"),
+    studentName: t.exposeString("studentName"),
+    classLabelBn: t.exposeString("classLabelBn"),
+    level: t.exposeString("level"),
+    // SEEN | NOT_SEEN | CHANGED
+    state: t.exposeString("state"),
+    seenAt: t.string({ nullable: true, resolve: (r) => r.seenAt }),
+    seenByName: t.string({ nullable: true, resolve: (r) => r.seenByName }),
+    guardians: t.exposeStringList("guardians"),
+  }),
+});
+const SeenRowPageRef = pageRef("QuranExamGuardianSeenRowPage", SeenRowRef);
+
+const SeenRef = builder.objectRef<QuranExamGuardianSeenShape>("QuranExamGuardianSeen");
+SeenRef.implement({
+  fields: (t) => ({
+    examId: t.exposeString("examId"),
+    published: t.exposeBoolean("published"),
+    total: t.exposeInt("total"),
+    seen: t.exposeInt("seen"),
+    notSeen: t.exposeInt("notSeen"),
+    changed: t.exposeInt("changed"),
+    rows: t.field({ type: SeenRowPageRef, resolve: (s) => s.rows }),
+  }),
+});
+
+builder.queryField("quranExamGuardianSeen", (t) =>
+  t.field({
+    type: SeenRef,
+    description: "Which families tapped \"দেখেছি\" on the schedule pop-up (D-#882). filter: all | seen | not_seen.",
+    authScopes: { hasAnyPermission: ["quran_exam:view", "quran_exam:manage"] },
+    args: {
+      examId: t.arg.string({ required: true }),
+      filter: t.arg.string({ required: false }),
+      page: t.arg.int({ required: false }),
+      pageSize: t.arg.int({ required: false }),
+    },
+    resolve: (_r, args) => quranExamGuardianSeenPage(args.examId, args.filter, { page: args.page, pageSize: args.pageSize }),
+  }),
+);
 
 const GuardianChildRef = builder.objectRef<GuardianExamChildShape>("QuranExamGuardianChild");
 GuardianChildRef.implement({

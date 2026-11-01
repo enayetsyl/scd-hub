@@ -255,6 +255,17 @@ export const FEATURE_CATALOGUE = {
       publish: { en: "Publish syllabus", bn: "সিলেবাস প্রকাশ করা", desc: "PRINCIPAL_REVIEW → PUBLISHED; approve when the routine names nobody", teacher: false, office: false, flags: ["PRINCIPAL_DEFAULT"] },
     },
   },
+  // Exam routine (D-#883): the date-by-date routine, read in the syllabus section.
+  exam_routine: {
+    group: "assessment_and_exams",
+    en: "Exam routine",
+    bn: "পরীক্ষার রুটিন",
+    actions: {
+      view: { en: "View the exam routine", bn: "পরীক্ষার রুটিন দেখা", desc: "Every class's published routine and the Quran exam days", teacher: true, office: true, flags: [] },
+      manage: { en: "Write the exam routine", bn: "পরীক্ষার রুটিন তৈরি ও সম্পাদনা", desc: "Dates, subjects, oral/written and times per class; drafts before publishing", teacher: false, office: true, flags: [] },
+      publish: { en: "Publish the exam routine", bn: "পরীক্ষার রুটিন প্রকাশ করা", desc: "Teachers and guardians see the routine", teacher: false, office: true, flags: [] },
+    },
+  },
   scholarship_practice: {
     group: "assessment_and_exams",
     en: "Scholarship practice",
