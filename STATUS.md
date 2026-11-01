@@ -1,5 +1,7 @@
 # STATUS
 
+- 2026-11-01: **BUILT — exam routine: the child's own Arabic book + C1–5 at 7:30 (D-#888)** (branch `fix/routine-arabic-book`, worktree `C:/w/exr2`). Owner, from the live screen: the Arabic row listed every book, and times should start at 7:30. Server only (`guardianExamRoutine`): ARABIC slots name the child's Arabic group ("বুক ২"); prod has all 58 C1–5 students in exactly one group.
+  - **Now / next:** PR → dev → promote (server only, no OTA). Prod data: C1–5 routine slots to 07:30–10:30 via saveExamRoutineClass; the 5 routine pop-ups with 8:00 (teachers + guardians C1+C2, C3, C4, C5) edited live with "show again".
 - 2026-11-01: **FIXED — pop-up to one guardian (D-#887)** (branch `fix/popup-compose-audience`). Owner could not send a pop-up to one guardian: the composer pre-selected the staff group, so the picked family rode along with every teacher (+ all guardians the owner had switched on). Now nothing is pre-selected; a pick + group warns with a one-tap fix, also in the send confirmation. App-only.
   - **Verified:** app tsc 0; permission-gate + graphqlDocuments suites green; local Chrome walk 8/8 product checks (fresh composer empty, pick → 1 জন, + কর্মী → warning, + অভিভাবক → names both, one tap → back to the family only) — the 9th check (chip aria state) could not read the chip and was confirmed by screenshot instead.
   - **Now / next:** PR → dev → promote → OTA (app-only). The owner's draft "অফিসে দেখা করুন" on prod still has both groups on — open it and tap the new button.
