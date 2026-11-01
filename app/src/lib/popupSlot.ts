@@ -35,7 +35,7 @@ export function useSystemPopupActive(): boolean {
 }
 
 /** True while a system pop-up OTHER than `id` is on screen — for a system pop-up that
- *  waits its turn instead of stacking (the comment read pop-up, D-#882). */
+ *  waits its turn instead of stacking (the comment read pop-up, D-#886). */
 export function useOtherSystemPopupActive(id: string): boolean {
   const [busy, setBusy] = useState(() => [...active].some((x) => x !== id));
   useEffect(() => {

@@ -1,5 +1,5 @@
 /**
- * D-#882 — the family confirms reading a delivered daily comment ("পড়েছি").
+ * D-#886 — the family confirms reading a delivered daily comment ("পড়েছি").
  *
  *   deliverComment       the FIRST delivery sets readConfirmRequired; a comment delivered
  *                        before the feature stays unflagged when it is re-sent
@@ -119,7 +119,7 @@ async function comment(
   return r.insertedId.toString();
 }
 
-describe("deliverComment sets the read flag (D-#882)", () => {
+describe("deliverComment sets the read flag (D-#886)", () => {
   it("flags a comment on its first delivery", async () => {
     const s = await student("Ayesha", "01711111111");
     await guardian([s]);

@@ -348,7 +348,7 @@ const CommentRef = builder.objectRef<ProfileComment>("StudentProfileComment").im
     authorName: t.string({ nullable: true, resolve: (c) => c.authorName }),
     attachmentIds: t.exposeStringList("attachmentIds"),
     deliveredAt: t.string({ nullable: true, resolve: (c) => c.deliveredAt }),
-    // D-#882: the family's "পড়েছি" — visible only with student_comments:read_status.
+    // D-#886: the family's "পড়েছি" — visible only with student_comments:read_status.
     readConfirmRequired: t.boolean({ resolve: (c, _a, ctx) => canSeeReadStatus(ctx) && c.readConfirmRequired }),
     guardianReadAt: t.string({ nullable: true, resolve: (c, _a, ctx) => (canSeeReadStatus(ctx) ? c.guardianReadAt : null) }),
     createdAt: t.exposeString("createdAt"),

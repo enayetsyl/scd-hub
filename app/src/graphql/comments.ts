@@ -28,9 +28,9 @@ export interface StudentCommentT {
   /** Set when a reviewer discarded the draft (D-#365) — greyed on the staff timeline. */
   discardedAt: string | null;
   discardReason: string | null;
-  /** D-#882: the family must tap "পড়েছি" (false without student_comments:read_status). */
+  /** D-#886: the family must tap "পড়েছি" (false without student_comments:read_status). */
   readConfirmRequired: boolean;
-  /** D-#882: when the family confirmed (null without the permission). */
+  /** D-#886: when the family confirmed (null without the permission). */
   guardianReadAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -657,7 +657,7 @@ export const CHILD_COMMENTS_QUERY = gql<
 `;
 
 // ---------------------------------------------------------------------------
-// D-#882 — the family confirms reading a sent comment ("পড়েছি")
+// D-#886 — the family confirms reading a sent comment ("পড়েছি")
 // ---------------------------------------------------------------------------
 
 export interface GuardianUnreadCommentT {

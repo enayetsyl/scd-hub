@@ -1,5 +1,5 @@
 /**
- * CommentReadService (D-#882) — the family confirms it has read a delivered daily comment.
+ * CommentReadService (D-#886) — the family confirms it has read a delivered daily comment.
  *
  * Owner ask 2026-11-01: a comment the Office sends must open on the guardian's app as a
  * pop-up that only "পড়েছি" closes, so the school knows the family actually read it — the

@@ -1,5 +1,5 @@
 /**
- * Comment read confirmation resolvers (D-#882).
+ * Comment read confirmation resolvers (D-#886).
  *
  *   myUnreadStudentComments   — GUARDIAN (guardian:read_child): the pop-up queue, the
  *                               caller's own active children only (resolved server-side).
@@ -31,7 +31,7 @@ export function canSeeReadStatus(ctx: AppContext): boolean {
 const GuardianUnreadCommentRef = builder.objectRef<GuardianUnreadComment>("GuardianUnreadComment");
 GuardianUnreadCommentRef.implement({
   description:
-    "A delivered daily comment about one of the guardian's children that still waits for \"পড়েছি\" (D-#882). " +
+    "A delivered daily comment about one of the guardian's children that still waits for \"পড়েছি\" (D-#886). " +
     "Guardian shape: no author, section or delivery channels.",
   fields: (t) => ({
     id: t.exposeString("id"),
@@ -48,7 +48,7 @@ GuardianUnreadCommentRef.implement({
 builder.queryField("myUnreadStudentComments", (t) =>
   t.field({
     type: [GuardianUnreadCommentRef],
-    description: "The guardian's comment pop-up queue, oldest first (D-#882). Own active children only.",
+    description: "The guardian's comment pop-up queue, oldest first (D-#886). Own active children only.",
     authScopes: { hasPermission: "guardian:read_child" },
     resolve: (_r, _a, ctx) => myUnreadComments(ctx.auth!.userId as string),
   }),
@@ -58,7 +58,7 @@ builder.mutationField("confirmStudentCommentRead", (t) =>
   t.field({
     type: "Boolean",
     description:
-      "The guardian tapped \"পড়েছি\" (D-#882). Stamps the first confirmation; true when this call recorded it, " +
+      "The guardian tapped \"পড়েছি\" (D-#886). Stamps the first confirmation; true when this call recorded it, " +
       "false when it was already recorded. Audited.",
     authScopes: { hasPermission: "guardian:read_child" },
     args: { commentId: t.arg.string({ required: true }) },
@@ -68,7 +68,7 @@ builder.mutationField("confirmStudentCommentRead", (t) =>
 
 const UnreadCommentRowRef = builder.objectRef<UnreadCommentRow>("UnreadStudentComment");
 UnreadCommentRowRef.implement({
-  description: "A sent comment the family has not confirmed reading yet — the Office's follow-up row (D-#882).",
+  description: "A sent comment the family has not confirmed reading yet — the Office's follow-up row (D-#886).",
   fields: (t) => ({
     id: t.exposeString("id"),
     studentId: t.exposeString("studentId"),
@@ -89,7 +89,7 @@ const UnreadCommentPageRef = pageRef("UnreadStudentCommentPage", UnreadCommentRo
 builder.queryField("unreadStudentCommentsPage", (t) =>
   t.field({
     type: UnreadCommentPageRef,
-    description: "Sent comments no one in the family has confirmed reading, oldest first (D-#882). Paged (D-#761).",
+    description: "Sent comments no one in the family has confirmed reading, oldest first (D-#886). Paged (D-#761).",
     authScopes: { hasPermission: "student_comments:read_status" },
     args: { page: t.arg.int({ required: false }), pageSize: t.arg.int({ required: false }) },
     resolve: (_r, args, ctx) => {

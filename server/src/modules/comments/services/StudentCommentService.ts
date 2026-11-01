@@ -49,9 +49,9 @@ export interface StudentCommentShape {
    *  timeline, never delivered, absent from the review inbox. */
   discardedAt: string | null;
   discardReason: string | null;
-  /** D-#882: the family must confirm reading it (delivered after the feature). */
+  /** D-#886: the family must confirm reading it (delivered after the feature). */
   readConfirmRequired: boolean;
-  /** D-#882: when the family tapped "পড়েছি" (null = not yet). */
+  /** D-#886: when the family tapped "পড়েছি" (null = not yet). */
   guardianReadAt: string | null;
   createdAt: string;
   updatedAt: string;

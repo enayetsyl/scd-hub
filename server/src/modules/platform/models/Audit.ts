@@ -155,7 +155,7 @@ export type AuditEventKind =
   | "MESSAGE_TEMPLATE_EDITED" // Principal edited/reset a generated-message template — prior body retained here (MT-1, D-#129; ADR-008)
   | "STUDENT_COMMENT_RECORDED" // a teacher recorded/edited a daily student comment — type/sentiment/text (CM-1, §3/§6/J-CM1, D-#115)
   | "STUDENT_COMMENT_DELIVERED" // a daily comment delivered to the family — wa.me + emit() inbox/push (CM-2, §6/J-CM1, D-#172)
-  | "STUDENT_COMMENT_READ_CONFIRMED" // the family tapped "পড়েছি" on the comment pop-up (D-#882)
+  | "STUDENT_COMMENT_READ_CONFIRMED" // the family tapped "পড়েছি" on the comment pop-up (D-#886)
   | "CLASSROOM_OBSERVATION_UPLOADED"   // Principal/Office uploaded a recorded session as an observation (CO-1, §5/J1, D-#194)
   | "CLASSROOM_OBSERVATION_ASSIGNED"   // a senior-teacher observer assigned to an observation (CO-1, §5/J1, D-#147)
   | "CLASSROOM_OBSERVATION_REVIEWED"   // the assigned observer scored the observation → REVIEWED (observer/Principal-only since CO-8, D-#271)

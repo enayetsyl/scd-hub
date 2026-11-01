@@ -237,7 +237,7 @@ function App(): React.ReactElement | null {
                               <MeetingRsvpPopup />
                               {/* Guardians: the child's Quran exam schedule / time change, until seen (D-#877). */}
                               <QuranExamGuardianPopup />
-                              {/* Guardians: each comment the Office sent, until "পড়েছি" (D-#882). */}
+                              {/* Guardians: each comment the Office sent, until "পড়েছি" (D-#886). */}
                               <CommentReadPopup />
                               {/* Examiners: the Office's pending-marks reminder (D-#878). */}
                               <QuranExamReminderPopup />

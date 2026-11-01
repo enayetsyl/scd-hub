@@ -922,7 +922,7 @@ const ROLE_CHECK_DEFAULTS = {
     "class_books:view", "class_books:manage",
     // Quran oral exam (D-#873): the Office plans, publishes, watches and locks it; teachers only examine (SELF).
     "quran_exam:view", "quran_exam:manage", "quran_exam:publish", "quran_exam:edit_all", "quran_exam:lock", "quran_exam:remind",
-    // Comment read confirmation (D-#882): the Office sends comments, so it follows up on the unread ones.
+    // Comment read confirmation (D-#886): the Office sends comments, so it follows up on the unread ones.
     "student_comments:read_status"],
 };
 for (const role of ["TEACHER", "OFFICE"]) {

@@ -1,5 +1,5 @@
 /**
- * CommentReadPopup (D-#882) — a teacher's comment the Office sent opens on the guardian's
+ * CommentReadPopup (D-#886) — a teacher's comment the Office sent opens on the guardian's
  * app by itself, and only "পড়েছি" closes it, so the school knows the family read it.
  *
  *  - Every delivered comment from this release on (positive and concern alike, owner);

@@ -334,7 +334,7 @@ export const FEATURE_CATALOGUE = {
       view_all: { en: "Every section's comments", bn: "সব শাখার মন্তব্য দেখা", desc: "Unscoped read", teacher: false, office: true, flags: [] },
       review: { en: "Review before sending", bn: "পাঠানোর আগে মন্তব্য পর্যালোচনা", desc: "Inbox + badge, edit any undelivered, remove files, discard", teacher: false, office: true, flags: [] },
       send: { en: "Send to the guardian", bn: "অভিভাবকের কাছে পাঠানো", desc: "Deliver (seal, wa.me, notification)", teacher: false, office: true, flags: [] },
-      read_status: { en: "See if the family read it", bn: "অভিভাবক পড়েছেন কি না দেখা", desc: "\"পড়েছি\" status on each sent comment; the not-read-yet list with the family phone (D-#882)", teacher: false, office: true, flags: [] },
+      read_status: { en: "See if the family read it", bn: "অভিভাবক পড়েছেন কি না দেখা", desc: "\"পড়েছি\" status on each sent comment; the not-read-yet list with the family phone (D-#886)", teacher: false, office: true, flags: [] },
     },
   },
   parents_meeting: {

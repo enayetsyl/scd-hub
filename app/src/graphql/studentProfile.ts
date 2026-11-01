@@ -216,7 +216,7 @@ export interface ProfileCommentsT {
     text: string;
     authorName: string | null;
     deliveredAt: string | null;
-    /** D-#882: false / null without student_comments:read_status. */
+    /** D-#886: false / null without student_comments:read_status. */
     readConfirmRequired: boolean;
     guardianReadAt: string | null;
     createdAt: string;

@@ -4761,7 +4761,7 @@ const STR_BN = {
   cmReviewSub: "অভিভাবককে পাঠানোর আগে শিক্ষকের মন্তব্যগুলো পর্যালোচনা করুন",
   cmNoPending: "পর্যালোচনার অপেক্ষায় কোনো মন্তব্য নেই।",
   cmDeliverByAdmin: "প্রধান শিক্ষক/অফিস এটি পর্যালোচনা করে অভিভাবককে পাঠাবেন।",
-  // D-#882 — the family confirms reading a sent comment
+  // D-#886 — the family confirms reading a sent comment
   cmrPopupKicker: "স্কুলের বার্তা",
   cmrPopupTitle: "{name} সম্পর্কে শিক্ষকের মন্তব্য",
   cmrPopupSent: "পাঠানো হয়েছে: {date}",
@@ -10784,7 +10784,7 @@ const STR_EN: StrTable = {
   cmReviewSub: "Review teachers' comments before they go to guardians",
   cmNoPending: "No comments awaiting review.",
   cmDeliverByAdmin: "The Principal/Office will review this and send it to the guardian.",
-  // D-#882 — the family confirms reading a sent comment
+  // D-#886 — the family confirms reading a sent comment
   cmrPopupKicker: "School message",
   cmrPopupTitle: "Teacher's comment about {name}",
   cmrPopupSent: "Sent: {date}",

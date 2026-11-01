@@ -36,7 +36,7 @@ export default function CommentsHomeScreen(): React.ReactElement {
   const canMeetings = can("parents_meeting:view");
   // Principal/Office review + release comments to guardians (D-#264).
   const canReview = can("student_comments:review");
-  // D-#882: who has not tapped "পড়েছি" yet — the count only (pageSize 1).
+  // D-#886: who has not tapped "পড়েছি" yet — the count only (pageSize 1).
   const canReadStatus = can("student_comments:read_status");
   const [unreadQ, refetchUnread] = useQuery({
     query: UNREAD_STUDENT_COMMENTS_PAGE_QUERY,

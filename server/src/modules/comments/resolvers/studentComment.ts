@@ -77,7 +77,7 @@ StudentCommentRef.implement({
     deliveryChannels: t.exposeStringList("deliveryChannels"),
     discardedAt: t.string({ nullable: true, resolve: (r) => r.discardedAt }),
     discardReason: t.string({ nullable: true, resolve: (r) => r.discardReason }),
-    // D-#882: the family's "পড়েছি" — visible only with student_comments:read_status.
+    // D-#886: the family's "পড়েছি" — visible only with student_comments:read_status.
     readConfirmRequired: t.boolean({ resolve: (r, _a, ctx) => canSeeReadStatus(ctx) && r.readConfirmRequired }),
     guardianReadAt: t.string({ nullable: true, resolve: (r, _a, ctx) => (canSeeReadStatus(ctx) ? r.guardianReadAt : null) }),
     createdAt: t.exposeString("createdAt"),
@@ -271,7 +271,7 @@ AuthoredCommentRef.implement({
     deliveryChannels: t.exposeStringList("deliveryChannels"),
     discardedAt: t.string({ nullable: true, resolve: (r) => r.discardedAt }),
     discardReason: t.string({ nullable: true, resolve: (r) => r.discardReason }),
-    // D-#882: same gate as StudentComment (the app shares one field list for both types).
+    // D-#886: same gate as StudentComment (the app shares one field list for both types).
     readConfirmRequired: t.boolean({ resolve: (r, _a, ctx) => canSeeReadStatus(ctx) && r.readConfirmRequired }),
     guardianReadAt: t.string({ nullable: true, resolve: (r, _a, ctx) => (canSeeReadStatus(ctx) ? r.guardianReadAt : null) }),
     createdAt: t.exposeString("createdAt"),
