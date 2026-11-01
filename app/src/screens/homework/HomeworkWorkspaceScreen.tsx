@@ -47,6 +47,7 @@ import {
 } from "../../lib/files";
 import { useFileOpen } from "../../lib/useFileOpen";
 import { useTaughtSubjects } from "../../lib/useTaughtSubjects";
+import { useWritableSubjects } from "../../lib/useWritableSubjects";
 import { SubjectFold, type SubjectFoldRenderOpts } from "../../components/SubjectFold";
 import { RosterChipPass } from "../../components/RosterChipPass";
 import { CardGrid } from "../../components/CardGrid";
@@ -192,6 +193,8 @@ export default function HomeworkWorkspaceScreen({ navigation }: Props): React.Re
       openItemIds.has(r.hwItemId),
   );
   const taught = useTaughtSubjects(selection.sectionId ?? null);
+  // Folded ≠ read-only: the server says which other subjects this login may still act on.
+  const canAct = useWritableSubjects(selection.sectionId ?? null, "HOMEWORK");
 
   // Subject filter (owner ask 2026-08-02). Anyone who sees several subjects on one
   // class — Principal/Office, a class teacher, a teacher carrying two subjects —
@@ -305,7 +308,7 @@ export default function HomeworkWorkspaceScreen({ navigation }: Props): React.Re
           // login actually carries. `taught === null` means "do not fold at all"
           // (Principal/Office, class-teacher-only) — the same posture the open deck
           // already takes for those logins, so the affordance stays consistent.
-          allowUndo={!!opts?.allowUndo && (taught === null || taught.has(g.subject))}
+          allowUndo={!!opts?.allowUndo && (taught === null || taught.has(g.subject) || canAct(g.subject))}
           viewOnlyNote={opts?.viewOnlyNote}
           base={base}
           open={openItemId === g.hwItemId}
@@ -381,7 +384,7 @@ export default function HomeworkWorkspaceScreen({ navigation }: Props): React.Re
             {shown.length === 0 ? (
               <EmptyState message={STR.hwPassNoOpenItems} />
             ) : (
-              <SubjectFold key={selection.sectionId ?? ""} records={shown} taught={taught} render={renderCards} />
+              <SubjectFold key={selection.sectionId ?? ""} records={shown} taught={taught} canAct={canAct} render={renderCards} />
             )}
             {/* Finished items — every student returned, so no stage is left to run.
                 Collapsed by default and read-only for the LIFECYCLE passes: there is

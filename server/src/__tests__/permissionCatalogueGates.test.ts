@@ -60,6 +60,8 @@ const OPEN_FIELDS: Record<string, string> = {
   // Sign-in and the caller's own session / profile / access (SELF; a guardian uses them too).
   staffLogin: "sign-in", guardianLogin: "sign-in", refreshSession: "own session", endImpersonation: "end own View-as",
   me: "own profile", myPermissions: "own access", myTemplates: "own templates", myScopes: "own scope grants",
+  // The workspace fold's write half: the mutations' own gate over the caller's own grants.
+  myWritableSubjects: "own write reach (a guardian gets an empty list)",
   // Own notifications, push registration and announcement (SELF, guardian included).
   myNotifications: "own inbox", myNotificationsPage: "own inbox", myNotification: "own inbox",
   myUnreadNotificationCount: "own inbox", markNotificationRead: "own inbox", markNotificationsRead: "own inbox",
