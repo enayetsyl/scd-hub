@@ -49,6 +49,7 @@ import {
   myQuranExamReminder,
   acknowledgeQuranExamReminder,
   setQuranExamGuardianNote,
+  quranExamGuardianSeenPage,
 } from "../modules/quran-exam/services/QuranExamService";
 
 jest.setTimeout(120_000);
@@ -281,6 +282,31 @@ describe("Quran exam: guardians (D-#877)", () => {
     expect(child!.sittings[0]).toMatchObject({ start: "09:00", changed: true, fromStart: "07:00", fromEnd: "07:30" });
     await acknowledgeQuranExamNotice(gb, t.examId, t.b, 1);
     expect((await myQuranExamSchedule(gb))[0]!.notice).toBe("NONE");
+  });
+
+  it("the Office's seen report (D-#882): not seen first, a moved time counts again, filters page", async () => {
+    const t = await setup();
+    const ga = await guardianOf(t.a);
+    await guardianOf(t.b);
+    await publishQuranExam(t.office, t.examId, true);
+    let r = await quranExamGuardianSeenPage(t.examId, "all");
+    expect(r).toMatchObject({ published: true, total: 4, seen: 0, notSeen: 4, changed: 0 });
+    await acknowledgeQuranExamNotice(ga, t.examId, t.a, 0);
+    r = await quranExamGuardianSeenPage(t.examId, "all");
+    expect(r).toMatchObject({ seen: 1, notSeen: 3 });
+    expect(r.rows.rows[r.rows.rows.length - 1]).toMatchObject({ studentName: "Ahsan Saeed", state: "SEEN", seenByName: expect.stringMatching(/^G/) });
+    const notSeen = await quranExamGuardianSeenPage(t.examId, "not_seen");
+    expect(notSeen.rows.rows.map((x) => x.state)).not.toContain("SEEN");
+    expect(notSeen.rows.rows.find((x) => x.studentName === "Abdullah Minhaz")!.guardians[0]).toMatch(/ · 880/);
+    // A time change after the tap (what a move does to guardianVersion) → CHANGED until they tap again.
+    await QuranExamSitting.updateOne({ _id: new Types.ObjectId(await t.sittingOf(t.a)) }, { $set: { guardianVersion: 1 } });
+    r = await quranExamGuardianSeenPage(t.examId, "not_seen");
+    expect(r).toMatchObject({ seen: 0, notSeen: 3, changed: 1 });
+    expect(r.rows.rows.find((x) => x.studentName === "Ahsan Saeed")).toMatchObject({ state: "CHANGED" });
+    await acknowledgeQuranExamNotice(ga, t.examId, t.a, 1);
+    r = await quranExamGuardianSeenPage(t.examId, "seen", { pageSize: 1 });
+    expect(r).toMatchObject({ seen: 1, changed: 0 });
+    expect(r.rows).toMatchObject({ total: 1, pageSize: 1 });
   });
 
   it("a guardian cannot acknowledge another family's child", async () => {

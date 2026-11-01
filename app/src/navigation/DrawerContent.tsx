@@ -118,6 +118,8 @@ const STAFF_NAV: NavSection[] = [
     icon: "📋",
     items: [
       { route: "SyllabusTab", labelKey: "syRead", icon: "📋", screen: "SyllabusHome" },
+      // D-#883: the exam routine (general + Quran exam days), beside the syllabus.
+      { route: "SyllabusTab", labelKey: "exrNav", icon: "🗓️", screen: "ExamRoutine", perms: ["exam_routine:view", "exam_routine:manage", "exam_routine:publish"] },
       { route: "SyllabusTab", labelKey: "syExamManage", icon: "🗓️", screen: "SyllabusExams", perms: ["exam_syllabus:settings"] },
       { route: "SyllabusTab", labelKey: "syEntry", icon: "✍️", screen: "SyllabusEntry", perms: ["exam_syllabus:edit"] },
       { route: "SyllabusTab", labelKey: "syApprovals", icon: "✅", screen: "SyllabusApprovals" },
@@ -336,6 +338,7 @@ const GUARDIAN_NAV: NavSection[] = [
       { route: "GuardianAssignmentsTab", labelKey: "tabAssignment", icon: "📋" },
       { route: "GuardianClassTestTab", labelKey: "tabClassTest", icon: "🧪" },
       { route: "GuardianSyllabusTab", labelKey: "syTitle", icon: "📋" },
+      { route: "GuardianSyllabusTab", labelKey: "exrNav", icon: "🗓️", screen: "ChildExamRoutine" },
     ],
   },
   // D-#769 (owner ask): sections that used to be reachable only by scrolling Today —

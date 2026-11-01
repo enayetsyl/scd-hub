@@ -113,6 +113,7 @@ const SCREEN_TARGETS: Array<{ value: string; label: () => string }> = [
   { value: "GuardianHomeworkTab", label: () => `${STR.ppForGuardian}: ${STR.tabHomework}` },
   { value: "GuardianRoutineTab", label: () => `${STR.ppForGuardian}: ${STR.tabRoutine}` },
   { value: "GuardianSyllabusTab", label: () => `${STR.ppForGuardian}: ${STR.syTitle}` },
+  { value: "GuardianSyllabusTab/ChildExamRoutine", label: () => `${STR.ppForGuardian}: ${STR.exrNav}` },
   { value: "GuardianClassTestTab", label: () => `${STR.ppForGuardian}: ${STR.tabClassTest}` },
   { value: "GuardianAssignmentsTab", label: () => `${STR.ppForGuardian}: ${STR.tabAssignment}` },
   { value: "GuardianClassNotesTab", label: () => `${STR.ppForGuardian}: ${STR.drawerItemClassNotes}` },
@@ -126,6 +127,9 @@ const SCREEN_TARGETS: Array<{ value: string; label: () => string }> = [
   { value: "RoutineTab", label: () => `${STR.ppForStaff}: ${STR.tabRoutine}` },
   { value: "ChatTab", label: () => `${STR.ppForStaff}: ${STR.tabChat}` },
   { value: "ClassBooksTab", label: () => `${STR.ppForStaff}: ${STR.cbTitle}` },
+  // D-#883/#882: the exam routine, and an examiner's own Quran exam duties.
+  { value: "SyllabusTab/ExamRoutine", label: () => `${STR.ppForStaff}: ${STR.exrNav}` },
+  { value: "QuranExamTab/MyQuranExam", label: () => `${STR.ppForStaff}: ${STR.qxMyDuties}` },
 ];
 
 export default function PopupComposeScreen({ navigation, route }: Props): React.ReactElement {
