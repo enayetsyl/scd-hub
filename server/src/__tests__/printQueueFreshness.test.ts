@@ -67,11 +67,12 @@ describe("undo on a finished card is opt-in", () => {
       expect(src).not.toMatch(/<SubjectFold[\s\S]{0,400}allowUndo/);
     });
 
-    test(`${name}: undo is limited to the subjects this login carries`, () => {
+    test(`${name}: undo is limited to the subjects this login carries or may act on`, () => {
       // `taught === null` = "do not fold at all" (Principal/Office, class-teacher-only),
-      // the same posture the open deck already takes for those logins.
+      // the same posture the open deck already takes for those logins. `canAct` (D-#885)
+      // adds the subjects the server's write gate accepts — a delegate's reach.
       expect(src).toMatch(
-        /allowUndo=\{!!opts\?\.allowUndo && \(taught === null \|\| taught\.has\(g\.subject\)\)\}/,
+        /allowUndo=\{!!opts\?\.allowUndo && \(taught === null \|\| taught\.has\(g\.subject\) \|\| canAct\(g\.subject\)\)\}/,
       );
     });
 

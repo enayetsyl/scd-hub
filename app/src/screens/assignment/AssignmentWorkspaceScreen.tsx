@@ -46,6 +46,7 @@ import { SubjectFold, type SubjectFoldRenderOpts } from "../../components/Subjec
 import { ClassSectionDashboard } from "../../components/ClassSectionDashboard";
 import { useSectionContext } from "../../state/SectionContext";
 import { useTaughtSubjects } from "../../lib/useTaughtSubjects";
+import { useWritableSubjects } from "../../lib/useWritableSubjects";
 import type { AssignmentStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Badge, Button, Field, Chip, ChipRow, Notice, Loader, EmptyState } from "../../components/ui";
 import { STR, bnNum, hwSubjectLabel, hwResultLabel, classLevelLabel, lifecycleStateLabel, dhakaDateKey } from "../../lib/labels";
@@ -250,6 +251,8 @@ export default function AssignmentWorkspaceScreen({ route }: Props): React.React
   // Subjects this caller actually teaches on the section — others fold away
   // rather than crowding the list (same posture as the homework workspace).
   const taught = useTaughtSubjects(hasSection ? sectionId : null);
+  // Folded ≠ read-only: the server says which other subjects this login may still act on.
+  const canAct = useWritableSubjects(hasSection ? sectionId : null, "ASSIGNMENT");
 
   const renderCards = (recs: AsOpenRecordT[], opts?: CardRenderOpts): React.ReactNode => (
     <CardGrid>
@@ -263,7 +266,7 @@ export default function AssignmentWorkspaceScreen({ route }: Props): React.React
           // login actually carries. `taught === null` means "do not fold at all"
           // (Principal/Office, class-teacher-only) — the same posture the open deck
           // already takes for those logins, so the affordance stays consistent.
-          allowUndo={!!opts?.allowUndo && (taught === null || taught.has(g.subject))}
+          allowUndo={!!opts?.allowUndo && (taught === null || taught.has(g.subject) || canAct(g.subject))}
           viewOnlyNote={opts?.viewOnlyNote}
           sectionId={sectionId}
           open={openItemId === g.asItemId}
@@ -343,7 +346,7 @@ export default function AssignmentWorkspaceScreen({ route }: Props): React.React
               <EmptyState message={STR.asPassNoOpenItems} />
             ) : (
               /* Keyed by section so the fold state resets when the class chip changes. */
-              <SubjectFold key={sectionId} records={shown} taught={taught} render={renderCards} />
+              <SubjectFold key={sectionId} records={shown} taught={taught} canAct={canAct} render={renderCards} />
             )}
             {/* Finished items — every student returned, so no stage is left to run.
                 Collapsed by default and read-only for the LIFECYCLE passes: there is

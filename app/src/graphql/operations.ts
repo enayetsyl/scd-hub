@@ -606,6 +606,17 @@ export const MY_SCOPES_QUERY = gql<{ myScopes: ScopeGrantT[] }, NoVars>`
   }
 `;
 
+/** Subject codes the caller may act on in a section's workspace (the mutations' own
+ *  gate); null = every subject. Drives the not-my-subject fold's read-only state. */
+export const MY_WRITABLE_SUBJECTS_QUERY = gql<
+  { myWritableSubjects: string[] | null },
+  { sectionId: string; tracker: "HOMEWORK" | "ASSIGNMENT" }
+>`
+  query MyWritableSubjects($sectionId: String!, $tracker: String!) {
+    myWritableSubjects(sectionId: $sectionId, tracker: $tracker)
+  }
+`;
+
 /** Admin proxy-grant list (user:manage) — extend/revoke without pasting ids. */
 export const PROXY_GRANTS_QUERY = gql<{ proxyGrants: ScopeGrantT[] }, { activeOnly?: boolean | null }>`
   query ProxyGrants($activeOnly: Boolean) {
