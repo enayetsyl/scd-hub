@@ -49,6 +49,10 @@ export interface StudentCommentShape {
    *  timeline, never delivered, absent from the review inbox. */
   discardedAt: string | null;
   discardReason: string | null;
+  /** D-#886: the family must confirm reading it (delivered after the feature). */
+  readConfirmRequired: boolean;
+  /** D-#886: when the family tapped "পড়েছি" (null = not yet). */
+  guardianReadAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -67,6 +71,8 @@ function shape(d: IStudentComment): StudentCommentShape {
     deliveryChannels: d.deliveryChannels ?? [],
     discardedAt: d.discardedAt ? new Date(d.discardedAt).toISOString() : null,
     discardReason: d.discardReason ?? null,
+    readConfirmRequired: !!d.readConfirmRequired,
+    guardianReadAt: d.guardianReadAt ? new Date(d.guardianReadAt).toISOString() : null,
     createdAt: new Date(d.createdAt).toISOString(),
     updatedAt: new Date(d.updatedAt).toISOString(),
   };

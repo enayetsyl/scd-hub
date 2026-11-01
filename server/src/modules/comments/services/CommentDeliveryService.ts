@@ -103,6 +103,9 @@ export async function deliverComment(commentId: string, actorId: string): Promis
   if (notifiedGuardianIds.length > 0) channels.push("inbox");
 
   // Stamp deliveredAt ONCE (seals immutability); refresh deliveryChannels each call.
+  // D-#886: the first delivery also asks the family's app for a "পড়েছি" — a re-send of
+  // a comment delivered before the feature stays as it was (owner: only new ones).
+  if (!comment.deliveredAt) comment.readConfirmRequired = true;
   const deliveredAt = comment.deliveredAt ?? new Date();
   comment.deliveredAt = deliveredAt;
   comment.deliveryChannels = channels;
