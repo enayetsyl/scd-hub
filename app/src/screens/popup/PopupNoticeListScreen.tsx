@@ -9,6 +9,7 @@ import { useQuery } from "urql";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
 import { POPUP_NOTICES_PAGE, type PopupNoticeT } from "../../graphql/popupNotice";
+import { QX_EXAMS, QX_GUARDIAN_SEEN } from "../../graphql/quranExam";
 import { Badge, Body, Button, Card, Chip, ChipRow, EmptyState, ErrorBanner, Loader, Muted, Screen } from "../../components/ui";
 import { Pager } from "../../components/Pager";
 import { useAuth } from "../../auth/AuthContext";
@@ -56,6 +57,7 @@ export default function PopupNoticeListScreen({ navigation }: Props): React.Reac
         ))}
       </ChipRow>
       {q.error ? <ErrorBanner message={friendlyError(q.error)} onRetry={() => refetch({ requestPolicy: "network-only" })} /> : null}
+      {status === null || status === "PUBLISHED" ? <QuranExamSeenCards onOpen={(examId) => navigation.navigate("QuranExamSeen", { examId })} /> : null}
       {q.fetching && !data ? <Loader label={STR.loading} /> : null}
       {data && data.rows.length === 0 ? <EmptyState message={STR.ppListEmpty} /> : null}
       {(data?.rows ?? []).map((n) => {
@@ -87,5 +89,45 @@ export default function PopupNoticeListScreen({ navigation }: Props): React.Reac
       })}
       {data ? <Pager page={data.page} pageSize={data.pageSize} total={data.total} onPage={setPage} /> : null}
     </Screen>
+  );
+}
+
+/**
+ * The built-in Quran exam schedule pop-up (D-#882) is not a notice, so it gets its own
+ * card here: one per published schedule, with how many families tapped "দেখেছি".
+ */
+function QuranExamSeenCards({ onOpen }: { onOpen: (examId: string) => void }): React.ReactElement | null {
+  const { can } = useAuth();
+  const allowed = can("quran_exam:view") || can("quran_exam:manage");
+  const [q] = useQuery({ query: QX_EXAMS, pause: !allowed });
+  const published = (q.data?.quranExams ?? []).filter((e) => e.status === "PUBLISHED");
+  if (!allowed || published.length === 0) return null;
+  return (
+    <>
+      {published.map((e) => (
+        <QuranExamSeenCard key={e.examId} examId={e.examId} examName={e.examName} onOpen={onOpen} />
+      ))}
+    </>
+  );
+}
+
+function QuranExamSeenCard({ examId, examName, onOpen }: { examId: string; examName: string; onOpen: (examId: string) => void }): React.ReactElement {
+  const [q, refetch] = useQuery({ query: QX_GUARDIAN_SEEN, variables: { examId, pageSize: 1 } });
+  useFocusEffect(React.useCallback(() => refetch({ requestPolicy: "network-only" }), [refetch]));
+  const d = q.data?.quranExamGuardianSeen;
+  return (
+    <Card onPress={() => onOpen(examId)}>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), alignItems: "center" }}>
+        <Body style={{ flexGrow: 1, flexShrink: 1, flexBasis: 180, fontWeight: "600" }}>{STR.qxSeenCardTitle}</Body>
+        <Badge text={STR.ppStatusLive} tone="ok" />
+      </View>
+      <Muted>{`${examName} · ${STR.qxSeenCardHint}`}</Muted>
+      {d ? (
+        <Muted>
+          {STR.qxSeenProgress.replace("{seen}", bnNum(d.seen)).replace("{total}", bnNum(d.total)).replace("{notSeen}", bnNum(d.notSeen))}
+          {d.changed > 0 ? ` · ${STR.qxSeenChangedCount.replace("{n}", bnNum(d.changed))}` : ""}
+        </Muted>
+      ) : null}
+    </Card>
   );
 }
