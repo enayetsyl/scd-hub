@@ -28,6 +28,7 @@ import { UpdateGate } from "./src/components/UpdateGate";
 import { PopupNoticeHost } from "./src/components/PopupNoticeHost";
 import { MeetingRsvpPopup } from "./src/components/MeetingRsvpPopup";
 import { QuranExamGuardianPopup } from "./src/components/QuranExamGuardianPopup";
+import { CommentReadPopup } from "./src/components/CommentReadPopup";
 import { QuranExamReminderPopup } from "./src/components/QuranExamReminderPopup";
 import { MeetingCommentReminderPopup } from "./src/components/MeetingCommentReminderPopup";
 import {
@@ -236,6 +237,8 @@ function App(): React.ReactElement | null {
                               <MeetingRsvpPopup />
                               {/* Guardians: the child's Quran exam schedule / time change, until seen (D-#877). */}
                               <QuranExamGuardianPopup />
+                              {/* Guardians: each comment the Office sent, until "পড়েছি" (D-#882). */}
+                              <CommentReadPopup />
                               {/* Examiners: the Office's pending-marks reminder (D-#878). */}
                               <QuranExamReminderPopup />
                               {/* Staff: once a day, how many meeting comments are still owed (D-#851). */}

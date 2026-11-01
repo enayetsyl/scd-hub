@@ -37,6 +37,7 @@ import {
 import { Section } from "../../foundation/models/Section";
 import { assertCanRead, ForbiddenError } from "../../../middleware/authz";
 import { callerHasPermission } from "@scd/shared";
+import { canSeeReadStatus } from "./commentRead";
 
 /** True when the caller holds `student_comments:review` (the comment-delivery desk,
  *  D-#264; PM — was the isAdminStaff role check) — they may edit any undelivered comment. */
@@ -76,6 +77,9 @@ StudentCommentRef.implement({
     deliveryChannels: t.exposeStringList("deliveryChannels"),
     discardedAt: t.string({ nullable: true, resolve: (r) => r.discardedAt }),
     discardReason: t.string({ nullable: true, resolve: (r) => r.discardReason }),
+    // D-#882: the family's "পড়েছি" — visible only with student_comments:read_status.
+    readConfirmRequired: t.boolean({ resolve: (r, _a, ctx) => canSeeReadStatus(ctx) && r.readConfirmRequired }),
+    guardianReadAt: t.string({ nullable: true, resolve: (r, _a, ctx) => (canSeeReadStatus(ctx) ? r.guardianReadAt : null) }),
     createdAt: t.exposeString("createdAt"),
     updatedAt: t.exposeString("updatedAt"),
   }),

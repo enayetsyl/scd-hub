@@ -140,6 +140,9 @@ Counts: 70 mutations, 76 queries, 7 REST/SSE.
 | studentComment.ts:330 | commentReviewInbox | roster:manage | `student_comments:review` |
 | studentComment.ts:347 | commentReviewInboxPage | roster:manage | `student_comments:review` |
 | studentComment.ts:363 | commentReviewCount | roster:manage | `student_comments:review` |
+| commentRead.ts | unreadStudentCommentsPage | new (D-#882) | `student_comments:read_status` |
+| commentRead.ts | `guardianReadAt` / `readConfirmRequired` fields on StudentComment + StudentProfileComment | new (D-#882) | null/false unless `student_comments:read_status` |
+| commentRead.ts | myUnreadStudentComments / confirmStudentCommentRead | new (D-#882), guardian | `guardian:read_child` + own active links only |
 | meetingResponse.ts | meetingResponseSummary | new (D-#843) | `parents_meeting:view` |
 | meetingResponse.ts | myMeetingSlots | new (D-#841) | `guardian:read_child`; own linked children only (GUARDIAN plane) |
 | meetingChain.ts:499 | meetingCommentProgress | roster:manage | `parents_meeting:view` |

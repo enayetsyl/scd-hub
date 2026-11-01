@@ -80,6 +80,7 @@ import "./modules/vocab/resolvers/vocabGuardian";
 import "./modules/templates/resolvers/messageTemplates";
 import "./modules/comments/resolvers/studentComment";
 import "./modules/comments/resolvers/commentDelivery";
+import "./modules/comments/resolvers/commentRead";
 import "./modules/classroom-observation/resolvers/classroomObservation";
 import "./modules/classroom-observation/resolvers/sessionRecording";
 import "./modules/classroom-observation/resolvers/observationTrend";

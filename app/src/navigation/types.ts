@@ -405,6 +405,8 @@ export type CommentsStackParamList = {
   CommentsHome: undefined;
   SectionComments: undefined;
   CommentReview: undefined;
+  /** D-#882: sent comments the family has not confirmed reading. */
+  CommentUnread: undefined;
   CommentEntry: { sectionId: string; studentId: string; studentName: string; commentId?: string };
   MeetingsList: undefined;
   MeetingAdmin: { meetingId: string; instanceLabel: string };

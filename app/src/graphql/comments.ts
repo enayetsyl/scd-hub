@@ -28,11 +28,15 @@ export interface StudentCommentT {
   /** Set when a reviewer discarded the draft (D-#365) — greyed on the staff timeline. */
   discardedAt: string | null;
   discardReason: string | null;
+  /** D-#882: the family must tap "পড়েছি" (false without student_comments:read_status). */
+  readConfirmRequired: boolean;
+  /** D-#882: when the family confirmed (null without the permission). */
+  guardianReadAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
 
-const STUDENT_COMMENT_FIELDS = `id studentId sectionId authorUserId type sentiment text attachmentIds deliveredAt deliveryChannels discardedAt discardReason createdAt updatedAt`;
+const STUDENT_COMMENT_FIELDS = `id studentId sectionId authorUserId type sentiment text attachmentIds deliveredAt deliveryChannels discardedAt discardReason readConfirmRequired guardianReadAt createdAt updatedAt`;
 
 export const SECTION_STUDENT_COMMENTS_QUERY = gql<
   { sectionStudentComments: StudentCommentT[] },
@@ -648,6 +652,63 @@ export const CHILD_COMMENTS_QUERY = gql<
   query ChildComments($studentId: String!, $limit: Int) {
     childComments(studentId: $studentId, limit: $limit) {
       id type sentiment text attachmentIds deliveredAt createdAt
+    }
+  }
+`;
+
+// ---------------------------------------------------------------------------
+// D-#882 — the family confirms reading a sent comment ("পড়েছি")
+// ---------------------------------------------------------------------------
+
+export interface GuardianUnreadCommentT {
+  id: string;
+  studentId: string;
+  studentName: string;
+  type: string;
+  sentiment: string;
+  text: string;
+  attachmentIds: string[];
+  deliveredAt: string;
+}
+
+/** Guardian: the pop-up queue, oldest first. */
+export const MY_UNREAD_STUDENT_COMMENTS_QUERY = gql<{ myUnreadStudentComments: GuardianUnreadCommentT[] }, NoVars>`
+  query MyUnreadStudentComments {
+    myUnreadStudentComments {
+      id studentId studentName type sentiment text attachmentIds deliveredAt
+    }
+  }
+`;
+
+export const CONFIRM_STUDENT_COMMENT_READ = gql<{ confirmStudentCommentRead: boolean }, { commentId: string }>`
+  mutation ConfirmStudentCommentRead($commentId: String!) {
+    confirmStudentCommentRead(commentId: $commentId)
+  }
+`;
+
+export interface UnreadStudentCommentT {
+  id: string;
+  studentId: string;
+  studentName: string;
+  classLabel: string;
+  authorName: string;
+  type: string;
+  sentiment: string;
+  text: string;
+  deliveredAt: string;
+  phone: string | null;
+  hasAppLogin: boolean;
+}
+
+/** Office: sent comments the family has not confirmed, oldest first (paged, D-#761). */
+export const UNREAD_STUDENT_COMMENTS_PAGE_QUERY = gql<
+  { unreadStudentCommentsPage: { rows: UnreadStudentCommentT[]; total: number; page: number; pageSize: number } },
+  { page?: number; pageSize?: number }
+>`
+  query UnreadStudentCommentsPage($page: Int, $pageSize: Int) {
+    unreadStudentCommentsPage(page: $page, pageSize: $pageSize) {
+      rows { id studentId studentName classLabel authorName type sentiment text deliveredAt phone hasAppLogin }
+      total page pageSize
     }
   }
 `;

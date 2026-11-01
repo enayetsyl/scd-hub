@@ -216,6 +216,9 @@ export interface ProfileCommentsT {
     text: string;
     authorName: string | null;
     deliveredAt: string | null;
+    /** D-#882: false / null without student_comments:read_status. */
+    readConfirmRequired: boolean;
+    guardianReadAt: string | null;
     createdAt: string;
   }>;
   meetingNotes: Array<{
@@ -235,7 +238,7 @@ export const STUDENT_PROFILE_COMMENTS_QUERY = gql<{ studentProfileComments: Prof
     studentProfileComments(studentId: $studentId, fromKey: $fromKey, toKey: $toKey) {
       studentId fromKey toKey
       tally { total concern positive undelivered }
-      comments { id type sentiment text authorName deliveredAt createdAt }
+      comments { id type sentiment text authorName deliveredAt readConfirmRequired guardianReadAt createdAt }
       meetingNotes { id meetingId instanceLabel meetingDate positiveText concernText createdAt }
       sinceMeetingDate
     }
