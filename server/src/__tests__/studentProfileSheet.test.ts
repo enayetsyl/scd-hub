@@ -125,6 +125,7 @@ const input = (over: Partial<SheetInput> = {}): SheetInput => ({
         type: "BEHAVIOUR", sentiment: "CONCERN", text: "ক্লাসে মনোযোগ কম",
         attachmentIds: [], deliveredAt: null, deliveryChannels: [],
         discardedAt: null, discardReason: null,
+        readConfirmRequired: false, guardianReadAt: null,
         createdAt: "2026-07-01T04:00:00.000Z", updatedAt: "2026-07-01T04:00:00.000Z",
         authorName: "Nuha Karim",
       },
