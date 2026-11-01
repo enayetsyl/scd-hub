@@ -207,6 +207,7 @@ import ImprovementDayTasksScreen from "../screens/progress/ImprovementDayTasksSc
 import CommentsHomeScreen from "../screens/comments/CommentsHomeScreen";
 import SectionCommentsScreen from "../screens/comments/SectionCommentsScreen";
 import CommentReviewScreen from "../screens/comments/CommentReviewScreen";
+import CommentUnreadScreen from "../screens/comments/CommentUnreadScreen";
 import CommentEntryScreen from "../screens/comments/CommentEntryScreen";
 import MeetingsListScreen from "../screens/comments/MeetingsListScreen";
 import MeetingAdminScreen from "../screens/comments/MeetingAdminScreen";
@@ -1093,6 +1094,7 @@ function CommentsNavigator(): React.ReactElement {
       <CommentsStack.Screen name="CommentsHome" component={CommentsHomeScreen} options={{ title: STR.cmHomeTitle }} />
       <CommentsStack.Screen name="SectionComments" component={SectionCommentsScreen} options={{ title: STR.cmDailyComments }} />
       <CommentsStack.Screen name="CommentReview" component={CommentReviewScreen} options={{ title: STR.cmReview }} />
+      <CommentsStack.Screen name="CommentUnread" component={CommentUnreadScreen} options={{ title: STR.cmrUnreadTitle }} />
       <CommentsStack.Screen
         name="CommentEntry"
         component={CommentEntryScreen}
@@ -1842,7 +1844,7 @@ export function AppTabs(): React.ReactElement {
     "class_test_question:create", "class_test_question:prepare", "class_test_script:view", "printing:view_all",
   );
   const canComments = any(
-    "student_comments:create", "student_comments:view", "student_comments:review",
+    "student_comments:create", "student_comments:view", "student_comments:review", "student_comments:read_status",
     "parents_meeting:view", "parents_meeting:write_notes",
   );
   const canObservation = any(...featureActions("classroom_observation"));
