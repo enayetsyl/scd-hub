@@ -288,6 +288,40 @@ export async function assertCanWriteAny(
 }
 
 /**
+ * Which of `subjectIds` would `assertCanWriteAny(ctx, sectionId, subject, actions, reach)`
+ * let through? `null` = all of them (the reach bypass), so the caller need not list.
+ *
+ * Answers the workspaces' not-my-subject fold (D-#388), which had been deciding "read-
+ * only" from teaching/proxy grants alone. That is right for a plain subject teacher and
+ * wrong for a teacher who ALSO holds a whole-school delegation: on a section where he
+ * teaches one subject, every other subject showed "the subject teacher handles this"
+ * while the server would have taken his submit (owner report 2026-11-01, Tazkir). The
+ * gate is the same function, so the fold and the mutation cannot disagree again.
+ */
+export async function writableSubjectIds(
+  ctx: AppContext,
+  sectionId: string,
+  subjectIds: readonly string[],
+  actions: readonly DelegatedAction[],
+  reach?: Reach,
+): Promise<Set<string> | null> {
+  const bypass = writeBypass(ctx, reach);
+  if (bypass === "pass") return null;
+  if (bypass === "refuse") return new Set();
+  const scopes = await resolveTeacherScopes(ctx);
+  let classId: string | undefined;
+  if (actions.some((a) => delegationNeedsClassId(scopes, a))) {
+    const section = await Section.findById(sectionId).select("classId").lean();
+    classId = section?.classId ? section.classId.toString() : undefined;
+  }
+  return new Set(
+    subjectIds.filter((subjectId) =>
+      actions.some((action) => canWrite(scopes, sectionId, subjectId, { action, classId })),
+    ),
+  );
+}
+
+/**
  * Assert the caller is the section's CLASS TEACHER — the section's **daily
  * coordinator** (D-#42). This is the GENERAL coordinator gate (CT-1/CT1.1), reused
  * by every coordinator-only action: homework reconciliation today, and the future

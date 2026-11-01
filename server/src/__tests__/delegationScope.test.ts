@@ -54,6 +54,7 @@ import {
   assertCanWrite,
   assertCanWriteAny,
   assertCanConfirmHomework,
+  writableSubjectIds,
   ForbiddenError,
 } from "../middleware/authz";
 import { DELEGATED_ACTIONS, DELEGATED_ACTION_BUILD_STATUS } from "@scd/shared";
@@ -546,5 +547,67 @@ describe("assertCanWriteAny — the revert gate", () => {
       { _id: "d1", kind: "delegation", active: true, extent: "whole_school", actions: ["check_homework"] },
     ]);
     await expect(assertCanWriteAny(ctx, SECTION_B, SUBJ_ENG, [])).rejects.toThrow(ForbiddenError);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 9. The workspace fold's write half (owner report 2026-11-01): which subjects
+//    would the gate above let through?
+// ---------------------------------------------------------------------------
+
+describe("writableSubjectIds — the fold asks the gate, not the teaching grants", () => {
+  const ctx = { auth: { userId: "tazkir", role: "TEACHER" } } as unknown as AppContext;
+  const AS_DUTIES = ["declare_assignment", "submit_assignment", "check_assignment"] as const;
+  const BOTH = [SUBJ_ENG, SUBJ_BAN];
+
+  beforeEach(() => {
+    mockGrantFind.mockReset();
+    mockSectionFindById.mockReset();
+  });
+
+  test("teaches ENG + holds a whole-school submit delegation → BAN is writable too (the prod case)", async () => {
+    mockGrantFind.mockResolvedValue([
+      { _id: "t1", kind: "teaching", active: true, classId: CLASS_1, sectionId: SECTION_A, subjectId: SUBJ_ENG },
+      { _id: "d1", kind: "delegation", active: true, extent: "whole_school", actions: ["submit_assignment"] },
+    ]);
+    const ids = await writableSubjectIds(ctx, SECTION_A, BOTH, AS_DUTIES);
+    expect(ids && [...ids].sort()).toEqual([...BOTH].sort());
+  });
+
+  test("teaching grant alone → only the taught subject (the D-#388 fold is unchanged)", async () => {
+    mockGrantFind.mockResolvedValue([
+      { _id: "t1", kind: "teaching", active: true, classId: CLASS_1, sectionId: SECTION_A, subjectId: SUBJ_ENG },
+    ]);
+    expect(await writableSubjectIds(ctx, SECTION_A, BOTH, AS_DUTIES)).toEqual(new Set([SUBJ_ENG]));
+  });
+
+  test("a HOMEWORK delegation does not open the assignment fold", async () => {
+    mockGrantFind.mockResolvedValue([
+      { _id: "d1", kind: "delegation", active: true, extent: "whole_school", actions: ["submit_homework"] },
+    ]);
+    expect(await writableSubjectIds(ctx, SECTION_A, BOTH, AS_DUTIES)).toEqual(new Set());
+  });
+
+  test("agrees with assertCanWriteAny subject by subject", async () => {
+    mockGrantFind.mockResolvedValue([
+      { _id: "t1", kind: "teaching", active: true, classId: CLASS_1, sectionId: SECTION_A, subjectId: SUBJ_ENG },
+      { _id: "d1", kind: "delegation", active: true, extent: "subject_dept", subjectId: SUBJ_BAN, actions: ["check_assignment"] },
+    ]);
+    const ids = await writableSubjectIds(ctx, SECTION_B, BOTH, AS_DUTIES);
+    for (const s of BOTH) {
+      const gate = assertCanWriteAny(ctx, SECTION_B, s, AS_DUTIES);
+      if (ids?.has(s)) await expect(gate).resolves.toBeUndefined();
+      else await expect(gate).rejects.toThrow(ForbiddenError);
+    }
+  });
+
+  test("PRINCIPAL → null (every subject); OFFICE-only and GUARDIAN → none", async () => {
+    mockGrantFind.mockResolvedValue([]);
+    const office = { auth: { userId: "o", role: "OFFICE" } } as unknown as AppContext;
+    const guardian = { auth: { userId: "g", role: "GUARDIAN" } } as unknown as AppContext;
+    const principal = { auth: { userId: "p", role: "PRINCIPAL" } } as unknown as AppContext;
+    expect(await writableSubjectIds(principal, SECTION_A, BOTH, AS_DUTIES)).toBeNull();
+    expect(await writableSubjectIds(office, SECTION_A, BOTH, AS_DUTIES)).toEqual(new Set());
+    expect(await writableSubjectIds(guardian, SECTION_A, BOTH, AS_DUTIES)).toEqual(new Set());
   });
 });

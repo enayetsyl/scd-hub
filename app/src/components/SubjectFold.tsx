@@ -25,10 +25,9 @@ import { hwSubjectLabel, bnNum, STR } from "../lib/labels";
 import { space } from "../theme/tokens";
 
 export interface SubjectFoldRenderOpts {
-  /** True for a FOLDED (not-my-subject) group — D-#388: oversight is read-only.
-   *  The server already refuses the writes (canWrite honours only teaching/proxy
-   *  grants matching section AND subject), so this hides controls that would
-   *  simply 403 rather than being the gate itself. */
+  /** True for a FOLDED (not-my-subject) group the caller may not write — D-#388:
+   *  oversight is read-only. Hides controls that would simply 403 rather than being
+   *  the gate itself; a folded subject the server WOULD accept (`canAct`) stays live. */
   readOnly?: boolean;
   /** Override for the read-only banner. The workspaces' completed-work fold reuses
    *  the same read-only card but is view-only for a different reason (the work is
@@ -40,12 +39,18 @@ interface Props<T extends { subject: string }> {
   records: readonly T[];
   taught: Set<string> | null;
   render: (records: T[], opts?: SubjectFoldRenderOpts) => React.ReactNode;
+  /** The server's write answer for a FOLDED subject (useWritableSubjects). "Not taught
+   *  here" is not "may not write here": a teacher with a whole-school delegation teaches
+   *  one subject on the section yet may act on all of them (owner report 2026-11-01).
+   *  Absent = every folded group stays read-only, the D-#388 behaviour. */
+  canAct?: (subject: string) => boolean;
 }
 
 export function SubjectFold<T extends { subject: string }>({
   records,
   taught,
   render,
+  canAct,
 }: Props<T>): React.ReactElement {
   const [open, setOpen] = useState<Record<string, boolean>>({});
   // null = the caller has not touched the control yet (see othersOpen below).
@@ -98,7 +103,7 @@ export function SubjectFold<T extends { subject: string }>({
                   variant="secondary"
                   onPress={() => setOpen((m) => ({ ...m, [subject]: !isOpen }))}
                 />
-                {isOpen ? <View style={{ marginTop: space(2) }}>{render(rows, { readOnly: true })}</View> : null}
+                {isOpen ? <View style={{ marginTop: space(2) }}>{render(rows, { readOnly: !canAct?.(subject) })}</View> : null}
               </View>
             );
           })
