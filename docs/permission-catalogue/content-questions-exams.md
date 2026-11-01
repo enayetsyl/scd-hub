@@ -1,6 +1,6 @@
 # Content, questions, sets, exams, scholarship & books — build checklist
 
-Features: `lesson_plans`, `plan_review`, `question_bank`, `question_review`, `question_sets`, `exam_syllabus`, `scholarship_practice`, `quran_exam`, `mastery`, `book_production` (owner rows: see README). Source: inventory F, origin/dev 2026-10-20.
+Features: `lesson_plans`, `plan_review`, `question_bank`, `question_review`, `question_sets`, `exam_syllabus`, `scholarship_practice`, `quran_exam`, `exam_routine`, `mastery`, `book_production` (owner rows: see README). Source: inventory F, origin/dev 2026-10-20.
 Counts: 56 mutations, 73 queries, 7 REST/SSE.
 
 ## (a) Mutations
@@ -370,5 +370,17 @@ All in `server/src/modules/quran-exam/resolvers/quranExam.ts`. Row scope lives i
 | remindQuranExamExaminers | `quran_exam:remind` |
 | myQuranExamReminder, acknowledgeQuranExamReminder | `quran_exam:examine` (SELF: the caller's own reminder; svc checks the owner) |
 | setQuranExamGuardianNote | `quran_exam:manage` |
+| quranExamGuardianSeen | hasAnyPermission(`quran_exam:view`, `quran_exam:manage`) — who tapped "দেখেছি" (D-#882) |
+
+## (j) `exam_routine` — exam routine (added 2026-11-01, D-#883)
+
+| resolver | gate |
+|---|---|
+| examRoutine | hasAnyPermission(`exam_routine:view`, `exam_routine:manage`, `exam_routine:publish`); svc: non-managers see slots only once published |
+| saveExamRoutineClass | `exam_routine:manage` (also writes the class's `ExamSyllabus.examDateKey`) |
+| publishExamRoutine | `exam_routine:publish` |
+| guardianExamRoutine | `guardian:read_child` + assertGuardianOfStudent; published slots only |
+
+App gates: drawer leaf + syllabus-home button on any of the three actions; Edit on `manage`; Publish on `publish`.
 
 App gates: tab `QuranExamTab` = any of view / manage / examine; publish / lock / manage / remind buttons each check their own action; the Today card checks `examine`; the guardian card and pop-ups are GUARDIAN-only.

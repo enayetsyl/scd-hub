@@ -125,6 +125,7 @@ import "./modules/teaching-notes/resolvers/teachingNoteComments";
 import "./modules/archive/resolvers/archive";
 import "./modules/exams/resolvers/exams";
 import "./modules/exams/resolvers/examSyllabus";
+import "./modules/exams/resolvers/examRoutine";
 import "./modules/scholarship/resolvers/scholarship";
 import "./modules/mastery/resolvers/masteryCatalogue";
 import "./modules/mastery/resolvers/masteryWork";
