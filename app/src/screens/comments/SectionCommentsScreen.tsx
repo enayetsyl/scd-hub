@@ -17,6 +17,7 @@ import { useQuery } from "urql";
 import { STUDENTS_QUERY } from "../../graphql/operations";
 import { SECTION_STUDENT_COMMENTS_PAGE_QUERY } from "../../graphql/comments";
 import { Screen, Card, Body, Muted, Button, Badge } from "../../components/ui";
+import { CommentReadBadge } from "../../components/CommentReadBadge";
 import { QueryGate } from "../../components/QueryGate";
 import { Pager } from "../../components/Pager";
 import { usePageState, PAGE_SIZE } from "../../lib/paging";
@@ -165,6 +166,9 @@ export default function SectionCommentsScreen(): React.ReactElement {
                           {STR.cmDiscardedTag}: {c.discardReason}
                         </Muted>
                       ) : null}
+                      <View style={{ marginTop: space(1), alignItems: "flex-start" }}>
+                        <CommentReadBadge c={c} />
+                      </View>
                     </Card>
                   );
                 })

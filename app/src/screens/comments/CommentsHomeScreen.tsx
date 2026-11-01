@@ -15,13 +15,13 @@ import { useNavigation } from "@react-navigation/native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
-import { MY_STUDENT_COMMENTS_PAGE_QUERY } from "../../graphql/comments";
+import { MY_STUDENT_COMMENTS_PAGE_QUERY, UNREAD_STUDENT_COMMENTS_PAGE_QUERY } from "../../graphql/comments";
 import { Screen, Card, Body, Muted, Button, Badge } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
 import { Pager } from "../../components/Pager";
 import { usePageState, PAGE_SIZE } from "../../lib/paging";
 import { useAuth } from "../../auth/AuthContext";
-import { STR, commentTypeLabel, commentSentimentLabel, isoDateLabel } from "../../lib/labels";
+import { STR, bnNum, commentTypeLabel, commentSentimentLabel, isoDateLabel } from "../../lib/labels";
 import { space } from "../../theme/tokens";
 import type { CommentsStackParamList } from "../../navigation/types";
 
@@ -36,6 +36,14 @@ export default function CommentsHomeScreen(): React.ReactElement {
   const canMeetings = can("parents_meeting:view");
   // Principal/Office review + release comments to guardians (D-#264).
   const canReview = can("student_comments:review");
+  // D-#886: who has not tapped "পড়েছি" yet — the count only (pageSize 1).
+  const canReadStatus = can("student_comments:read_status");
+  const [unreadQ, refetchUnread] = useQuery({
+    query: UNREAD_STUDENT_COMMENTS_PAGE_QUERY,
+    variables: { page: 1, pageSize: 1 },
+    pause: !canReadStatus,
+  });
+  const unreadTotal = unreadQ.data?.unreadStudentCommentsPage?.total ?? 0;
 
   const [page, setPage] = usePageState();
   const [mineQ, refetchMine] = useQuery({
@@ -51,7 +59,8 @@ export default function CommentsHomeScreen(): React.ReactElement {
   useFocusEffect(
     React.useCallback(() => {
       if (canComments) refetchMine({ requestPolicy: "network-only" });
-    }, [canComments, refetchMine]),
+      if (canReadStatus) refetchUnread({ requestPolicy: "network-only" });
+    }, [canComments, refetchMine, canReadStatus, refetchUnread]),
   );
 
   return (
@@ -79,6 +88,19 @@ export default function CommentsHomeScreen(): React.ReactElement {
             <Muted style={{ marginTop: space(1) }}>{STR.cmReviewSub}</Muted>
             <View style={{ marginTop: space(2) }}>
               <Button title={STR.cmReview} variant="secondary" onPress={() => nav.navigate("CommentReview")} />
+            </View>
+          </Card>
+        ) : null}
+
+        {canReadStatus ? (
+          <Card onPress={() => nav.navigate("CommentUnread")}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space(2) }}>
+              <Body style={{ fontWeight: "700", flexShrink: 1 }}>{STR.cmrUnreadTitle}</Body>
+              {unreadTotal > 0 ? <Badge text={bnNum(unreadTotal)} tone="warn" /> : null}
+            </View>
+            <Muted style={{ marginTop: space(1) }}>{STR.cmrUnreadSub}</Muted>
+            <View style={{ marginTop: space(2) }}>
+              <Button title={STR.cmrUnreadTitle} variant="secondary" onPress={() => nav.navigate("CommentUnread")} />
             </View>
           </Card>
         ) : null}

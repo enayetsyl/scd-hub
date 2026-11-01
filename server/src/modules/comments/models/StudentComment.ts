@@ -54,6 +54,14 @@ export interface IStudentComment extends Document {
   discardReason?: string;
   /** The reviewer (Principal/Office) who discarded it. */
   discardedBy?: Types.ObjectId;
+  /** D-#886: set at the FIRST delivery — the family's app shows the comment as a pop-up
+   *  that only "পড়েছি" closes. Absent on comments delivered before the feature (owner:
+   *  only new ones), so the old history never pops up. */
+  readConfirmRequired?: boolean;
+  /** D-#886: when a guardian tapped "পড়েছি" — the first one wins (one login per family). */
+  guardianReadAt?: Date;
+  /** D-#886: the Guardian who confirmed. */
+  guardianReadBy?: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -72,6 +80,9 @@ const StudentCommentSchema = new Schema<IStudentComment>(
     discardedAt: { type: Date },
     discardReason: { type: String, trim: true },
     discardedBy: { type: Schema.Types.ObjectId, ref: "User" },
+    readConfirmRequired: { type: Boolean },
+    guardianReadAt: { type: Date },
+    guardianReadBy: { type: Schema.Types.ObjectId, ref: "Guardian" },
   },
   { timestamps: true },
 );
@@ -83,5 +94,7 @@ StudentCommentSchema.index({ sectionId: 1, createdAt: -1 });
 StudentCommentSchema.index({ authorUserId: 1, createdAt: -1 });
 // D-#751: the review queue (badge count + dashboard rows) — undelivered, undiscarded, newest first.
 StudentCommentSchema.index({ deliveredAt: 1, discardedAt: 1, createdAt: -1 });
+// D-#886: the Office's "not read yet" list — still-unconfirmed deliveries, oldest first.
+StudentCommentSchema.index({ readConfirmRequired: 1, guardianReadAt: 1, deliveredAt: 1 });
 
 export const StudentComment = model<IStudentComment>("StudentComment", StudentCommentSchema);

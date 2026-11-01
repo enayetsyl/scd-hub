@@ -11,6 +11,7 @@ import { Badge, Body, Card, Chip, ChipRow, Loader, Muted, Notice } from "../../.
 import { STR, bnNum, commentTypeLabel, isoDateLabel } from "../../../lib/labels";
 import { radius, space, useColors } from "../../../theme";
 import { SectionTitle, StatTile, TileRow } from "./parts";
+import { CommentReadBadge } from "../../../components/CommentReadBadge";
 
 type Filter = "all" | "CONCERN" | "POSITIVE";
 
@@ -83,6 +84,9 @@ export function ComplainTab({
                 {c.authorName ?? ""}
                 {c.deliveredAt ? "" : `${c.authorName ? " · " : ""}${STR.spCommentsUndelivered}`}
               </Muted>
+              <View style={{ alignItems: "flex-start" }}>
+                <CommentReadBadge c={c} />
+              </View>
             </Card>
           );
         })}

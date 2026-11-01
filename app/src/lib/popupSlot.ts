@@ -34,6 +34,21 @@ export function useSystemPopupActive(): boolean {
   return busy;
 }
 
+/** True while a system pop-up OTHER than `id` is on screen — for a system pop-up that
+ *  waits its turn instead of stacking (the comment read pop-up, D-#886). */
+export function useOtherSystemPopupActive(id: string): boolean {
+  const [busy, setBusy] = useState(() => [...active].some((x) => x !== id));
+  useEffect(() => {
+    const fn = () => setBusy([...active].some((x) => x !== id));
+    listeners.add(fn);
+    fn();
+    return () => {
+      listeners.delete(fn);
+    };
+  }, [id]);
+  return busy;
+}
+
 /** A system pop-up component calls this with its own "am I on screen" answer. */
 export function useAnnounceSystemPopup(id: string, showing: boolean): void {
   useEffect(() => {

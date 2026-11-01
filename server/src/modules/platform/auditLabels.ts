@@ -226,6 +226,7 @@ export const AUDIT_KIND_LABELS: Record<AuditEventKind, AuditKindLabel> = {
   MESSAGE_TEMPLATE_EDITED: { bn: "বার্তার টেমপ্লেট সম্পাদনা করেছেন", en: "Edited a message template", group: "MESSAGING" },
   STUDENT_COMMENT_RECORDED: { bn: "শিক্ষার্থীর মন্তব্য লিখেছেন", en: "Recorded a student comment", group: "MESSAGING" },
   STUDENT_COMMENT_DELIVERED: { bn: "শিক্ষার্থীর মন্তব্য পরিবারে পাঠিয়েছেন", en: "Delivered a student comment", group: "MESSAGING" },
+  STUDENT_COMMENT_READ_CONFIRMED: { bn: "শিক্ষকের মন্তব্য পড়েছেন বলে নিশ্চিত করেছেন", en: "Confirmed reading a teacher's comment", group: "MESSAGING" },
   PARENT_MEETING_CREATED: { bn: "অভিভাবক সভা তৈরি করেছেন", en: "Created a parents' meeting", group: "MESSAGING" },
   PARENT_MEETING_SLOTS_GENERATED: { bn: "সভার সময়সূচি তৈরি করেছেন", en: "Generated meeting slots", group: "MESSAGING" },
   PARENT_MEETING_SLOTS_REORDERED: { bn: "সভার সময়সূচি সাজিয়েছেন", en: "Reordered meeting slots", group: "MESSAGING" },
