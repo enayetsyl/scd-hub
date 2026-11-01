@@ -489,10 +489,14 @@ export type SyllabusStackParamList = {
   };
   SyllabusApprovals: undefined;
   SyllabusClassNote: { examId: string; classId: string; title?: string };
+  /** D-#883: the exam routine, read beside the syllabus. */
+  ExamRoutine: undefined;
+  ExamRoutineEdit: { examId: string };
 };
 
 export type GuardianSyllabusStackParamList = {
   ChildSyllabus: undefined;
+  ChildExamRoutine: undefined;
 };
 
 /** Scholarship practice papers (SC-0..SC-4, docs/prd-scholarship-practice.md).
@@ -698,6 +702,8 @@ export type PopupStackParamList = {
   /** No id = a new notice; a draft id edits it; a sent id opens live-edit. */
   PopupCompose: { id?: string };
   PopupReport: { id: string };
+  /** D-#882: who tapped "দেখেছি" on the built-in Quran exam pop-up. */
+  QuranExamSeen: { examId: string };
 };
 
 export type TabParamList = {

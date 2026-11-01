@@ -344,6 +344,8 @@ export type AuditEventKind =
   | "QURAN_EXAM_PUBLISHED"        // the schedule published or withdrawn (D-#877) — meta.status
   | "QURAN_EXAM_LOCKED"           // marks locked or unlocked (D-#876) — meta.locked
   | "QURAN_EXAM_REMINDED"         // pending-marks reminder pop-ups re-armed (D-#878) — meta.examiners
+  | "EXAM_ROUTINE_SAVED"          // one class's exam routine saved (D-#883) — meta.classId/slots
+  | "EXAM_ROUTINE_PUBLISHED"      // the exam routine published or withdrawn (D-#883) — meta.published
   | "PERMISSION_DENIED";
 
 export interface IAudit extends Document {

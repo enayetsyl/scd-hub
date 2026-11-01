@@ -236,8 +236,11 @@ import SyllabusEntryScreen from "../screens/syllabus/SyllabusEntryScreen";
 import SyllabusEditorScreen from "../screens/syllabus/SyllabusEditorScreen";
 import SyllabusApprovalsScreen from "../screens/syllabus/SyllabusApprovalsScreen";
 import SyllabusClassNoteScreen from "../screens/syllabus/SyllabusClassNoteScreen";
+import ExamRoutineScreen from "../screens/syllabus/ExamRoutineScreen";
+import ExamRoutineEditScreen from "../screens/syllabus/ExamRoutineEditScreen";
 import SyllabusExamsScreen from "../screens/syllabus/SyllabusExamsScreen";
 import ChildSyllabusScreen from "../screens/guardian/ChildSyllabusScreen";
+import ChildExamRoutineScreen from "../screens/guardian/ChildExamRoutineScreen";
 import ScholarshipHomeScreen from "../screens/scholarship/ScholarshipHomeScreen";
 import ScholarshipDeclareScreen from "../screens/scholarship/ScholarshipDeclareScreen";
 import ScholarshipMarksScreen from "../screens/scholarship/ScholarshipMarksScreen";
@@ -371,6 +374,7 @@ import MyPopupsScreen from "../screens/popup/MyPopupsScreen";
 import PopupNoticeListScreen from "../screens/popup/PopupNoticeListScreen";
 import PopupComposeScreen from "../screens/popup/PopupComposeScreen";
 import PopupReportScreen from "../screens/popup/PopupReportScreen";
+import QuranExamSeenScreen from "../screens/popup/QuranExamSeenScreen";
 import ChildHomeworkScreen from "../screens/guardian/ChildHomeworkScreen";
 import ChildRoutineScreen from "../screens/guardian/ChildRoutineScreen";
 import { GuardianChildProvider } from "../state/GuardianChildContext";
@@ -982,6 +986,7 @@ function PopupNavigator(): React.ReactElement {
       <PopupStack.Screen name="PopupNoticeList" component={PopupNoticeListScreen} options={{ title: STR.ppTitleNav }} />
       <PopupStack.Screen name="PopupCompose" component={PopupComposeScreen} options={{ title: STR.ppComposeTitle }} />
       <PopupStack.Screen name="PopupReport" component={PopupReportScreen} options={{ title: STR.ppReportTitle }} />
+      <PopupStack.Screen name="QuranExamSeen" component={QuranExamSeenScreen} options={{ title: STR.qxSeenTitle }} />
     </PopupStack.Navigator>
   );
 }
@@ -1239,6 +1244,8 @@ function SyllabusNavigator(): React.ReactElement {
         component={SyllabusExamsScreen}
         options={{ title: STR.syExamManage }}
       />
+      <SyllabusStack.Screen name="ExamRoutine" component={ExamRoutineScreen} options={{ title: STR.exrNav }} />
+      <SyllabusStack.Screen name="ExamRoutineEdit" component={ExamRoutineEditScreen} options={{ title: STR.exrEdit }} />
     </SyllabusStack.Navigator>
   );
 }
@@ -1329,6 +1336,7 @@ function GuardianSyllabusNavigator(): React.ReactElement {
         component={ChildSyllabusScreen}
         options={{ title: STR.syTitle }}
       />
+      <GuardianSyllabusStack.Screen name="ChildExamRoutine" component={ChildExamRoutineScreen} options={{ title: STR.exrNav }} />
     </GuardianSyllabusStack.Navigator>
   );
 }

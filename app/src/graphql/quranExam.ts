@@ -295,3 +295,37 @@ export const QX_SAVE_PAPER = gql<
     ) { ${PAPER} }
   }
 `;
+
+/** Who tapped "দেখেছি" on the guardian schedule pop-up (D-#882). */
+export interface QxSeenRowT {
+  studentId: string;
+  studentName: string;
+  classLabelBn: string;
+  level: string;
+  state: "SEEN" | "NOT_SEEN" | "CHANGED";
+  seenAt: string | null;
+  seenByName: string | null;
+  guardians: string[];
+}
+
+export interface QxSeenT {
+  examId: string;
+  published: boolean;
+  total: number;
+  seen: number;
+  notSeen: number;
+  changed: number;
+  rows: { rows: QxSeenRowT[]; total: number; page: number; pageSize: number };
+}
+
+export const QX_GUARDIAN_SEEN = gql<
+  { quranExamGuardianSeen: QxSeenT },
+  { examId: string; filter?: string | null; page?: number | null; pageSize?: number | null }
+>`
+  query QuranExamGuardianSeen($examId: String!, $filter: String, $page: Int, $pageSize: Int) {
+    quranExamGuardianSeen(examId: $examId, filter: $filter, page: $page, pageSize: $pageSize) {
+      examId published total seen notSeen changed
+      rows { total page pageSize rows { studentId studentName classLabelBn level state seenAt seenByName guardians } }
+    }
+  }
+`;

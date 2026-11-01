@@ -896,7 +896,9 @@ const ROLE_CHECK_DEFAULTS = {
     "teaching_notes:view", "teaching_notes:send", "english_drive:view", "english_drive:send",
     "library:lend", "library:return", "library:remind",
     // Class books (D-#870): every teacher reads the class books families read.
-    "class_books:view"],
+    "class_books:view",
+    // Exam routine (D-#883): every teacher reads the published routine.
+    "exam_routine:view"],
   OFFICE: ["homework:view_all", "homework:undo_any",
     // One switch per report (D-#846) — the Office read every report by role before the matrix.
     "reports:hw_declare_pending", "reports:hw_issue_pending", "reports:hw_lifecycle", "reports:hw_weekly_unsubmitted",
@@ -922,6 +924,8 @@ const ROLE_CHECK_DEFAULTS = {
     "class_books:view", "class_books:manage",
     // Quran oral exam (D-#873): the Office plans, publishes, watches and locks it; teachers only examine (SELF).
     "quran_exam:view", "quran_exam:manage", "quran_exam:publish", "quran_exam:edit_all", "quran_exam:lock", "quran_exam:remind",
+    // Exam routine (D-#883): the Office writes and publishes it; everyone reads it.
+    "exam_routine:view", "exam_routine:manage", "exam_routine:publish",
     // Comment read confirmation (D-#886): the Office sends comments, so it follows up on the unread ones.
     "student_comments:read_status"],
 };
