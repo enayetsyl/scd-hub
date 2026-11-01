@@ -8,7 +8,8 @@
  *                            subject's date onto that class's syllabus rows.
  *   publishExamRoutine     — exam_routine:publish.
  *   guardianExamRoutine    — guardian plane: the child's class, published only, and the
- *                            child's own Quran exam sittings (never the examiner).
+ *                            child's own Quran exam sittings (never the examiner); the
+ *                            Arabic paper names the child's own book (D-#887).
  */
 import { Types } from "mongoose";
 import { ROUTINE_SUBJECTS, callerHasPermission } from "@scd/shared";
@@ -19,6 +20,8 @@ import { ExamSyllabus } from "../models/ExamSyllabus";
 import { ExamRoutine, EXAM_ROUTINE_KINDS, type IExamRoutineSlot, type ExamRoutineKind } from "../models/ExamRoutine";
 import { Class } from "../../foundation/models/Class";
 import { Student } from "../../foundation/models/Student";
+import { SubjectGroup } from "../../routine/models/SubjectGroup";
+import { SubjectGroupMembership } from "../../routine/models/SubjectGroupMembership";
 import { QuranExamPlan } from "../../quran-exam/models/QuranExamPlan";
 import { QuranExamSitting } from "../../quran-exam/models/QuranExamSitting";
 import { writeAudit } from "../../platform/services/AuditService";
@@ -242,6 +245,19 @@ export async function publishExamRoutine(ctx: AppContext, examId: string, publis
   return examRoutine(ctx, examId);
 }
 
+/**
+ * The child's Arabic book, from their Arabic group: "বুক ২ (বালিকা)" → "বুক ২" (the
+ * gender split is a teaching arrangement; both groups sit the same paper). Null when the
+ * child has no Arabic group (Nursery/KG are taught Arabic by class).
+ */
+export async function arabicBookOf(studentId: Types.ObjectId): Promise<string | null> {
+  const m = await SubjectGroupMembership.findOne({ studentId, track: "arabic" }, { groupId: 1 }).lean();
+  if (!m) return null;
+  const g = await SubjectGroup.findById(m.groupId, { nameBn: 1, level: 1 }).lean();
+  if (!g) return null;
+  return (g.nameBn || g.level).replace(/\s*\([^)]*\)\s*$/, "").trim() || null;
+}
+
 export async function guardianExamRoutine(ctx: AppContext, examId: string, studentId: string): Promise<GuardianExamRoutineShape> {
   await assertGuardianOfStudent(ctx, studentId);
   const exam = await mustExam(examId);
@@ -256,6 +272,9 @@ export async function guardianExamRoutine(ctx: AppContext, examId: string, stude
         .sort({ dateKey: 1, start: 1 })
         .lean()
     : [];
+  // Arabic from class one up is sat by Arabic group, not class (owner, 2026-11-01): the
+  // family sees their child's own book ("বুক ২") in place of the class-wide note.
+  const book = await arabicBookOf(student._id);
   return {
     examId: String(exam._id),
     examName: exam.name,
@@ -263,7 +282,11 @@ export async function guardianExamRoutine(ctx: AppContext, examId: string, stude
     noteBn: published ? row?.noteBn ?? "" : "",
     classLabelBn: cls?.nameBn ?? "",
     slots: published
-      ? (row?.slots ?? []).filter((s) => String(s.classId) === String(student.classId)).map(shapeSlot).sort(slotOrder)
+      ? (row?.slots ?? [])
+          .filter((s) => String(s.classId) === String(student.classId))
+          .map(shapeSlot)
+          .map((s) => (s.subject === "ARABIC" && book ? { ...s, note: book } : s))
+          .sort(slotOrder)
       : [],
     quranSittings: sittings.map((s) => ({
       dateKey: s.dateKey,

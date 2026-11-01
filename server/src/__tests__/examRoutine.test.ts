@@ -19,6 +19,8 @@ import { Guardian } from "../modules/foundation/models/Guardian";
 import { GuardianLink } from "../modules/foundation/models/GuardianLink";
 import { QuranExamPlan } from "../modules/quran-exam/models/QuranExamPlan";
 import { QuranExamSitting } from "../modules/quran-exam/models/QuranExamSitting";
+import { SubjectGroup } from "../modules/routine/models/SubjectGroup";
+import { SubjectGroupMembership } from "../modules/routine/models/SubjectGroupMembership";
 import {
   examRoutine,
   guardianExamRoutine,
@@ -44,7 +46,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await Promise.all(
-    [Exam, ExamSyllabus, ExamRoutine, Class, Student, Guardian, GuardianLink, QuranExamPlan, QuranExamSitting].map((m) =>
+    [Exam, ExamSyllabus, ExamRoutine, Class, Student, Guardian, GuardianLink, QuranExamPlan, QuranExamSitting, SubjectGroup, SubjectGroupMembership].map((m) =>
       (m as unknown as mongoose.Model<unknown>).deleteMany({}),
     ),
   );
@@ -145,6 +147,14 @@ describe("exam routine: guardian (D-#883)", () => {
     expect(r.slots.map((s) => s.subject)).toEqual(["BAN", "ENG", "BAN"]);
     expect(r.quranSittings).toEqual([{ dateKey: "2026-11-24", start: "07:00", end: "07:30", level: "Qaida", portionLabel: "কায়দা" }]);
     expect(JSON.stringify(r)).not.toMatch(/examiner/i);
+
+    // Class one up: the Arabic paper names the child's own book (D-#887), gender suffix dropped.
+    const pupil = await Student.collection.insertOne({ schoolId: "C1-1", name: "Rafi", classId: new Types.ObjectId(t.oneId), sectionId: new Types.ObjectId(), active: true });
+    await GuardianLink.collection.insertOne({ guardianId: new Types.ObjectId(t.guardian.auth!.userId), studentId: pupil.insertedId, relation: "mother", active: true });
+    const book = await SubjectGroup.collection.insertOne({ track: "arabic", level: "Book 2", gender: "boys", code: "AR_B2_BOYS", nameBn: "বুক ২ (বালক)", active: true });
+    expect((await guardianExamRoutine(t.guardian, t.examId, pupil.insertedId.toString())).slots[0]).toMatchObject({ subject: "ARABIC", note: "" });
+    await SubjectGroupMembership.collection.insertOne({ groupId: book.insertedId, studentId: pupil.insertedId, track: "arabic" });
+    expect((await guardianExamRoutine(t.guardian, t.examId, pupil.insertedId.toString())).slots[0]).toMatchObject({ subject: "ARABIC", note: "বুক ২" });
 
     const other = await Student.collection.insertOne({ schoolId: "N-2", name: "Other", classId: new Types.ObjectId(t.oneId), sectionId: new Types.ObjectId(), active: true });
     await expect(guardianExamRoutine(t.guardian, t.examId, other.insertedId.toString())).rejects.toThrow(/অনুমতি নেই/);
