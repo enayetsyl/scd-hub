@@ -10,7 +10,7 @@ import { Linking, ScrollView, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { useQuery } from "urql";
 import { UNREAD_STUDENT_COMMENTS_PAGE_QUERY } from "../../graphql/comments";
-import { Screen, Card, Body, Muted, Badge, Button, EmptyState } from "../../components/ui";
+import { Screen, Card, Body, Muted, Badge, Button, EmptyState, Notice } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
 import { Pager } from "../../components/Pager";
 import { usePageState, PAGE_SIZE } from "../../lib/paging";
@@ -56,8 +56,8 @@ export default function CommentUnreadScreen(): React.ReactElement {
                   {c.text}
                 </Body>
                 {!c.hasAppLogin ? (
-                  <View style={{ marginTop: space(2), alignItems: "flex-start" }}>
-                    <Badge text={STR.cmrNoLogin} tone="warn" />
+                  <View style={{ marginTop: space(2) }}>
+                    <Notice message={STR.cmrNoLogin} tone="warn" />
                   </View>
                 ) : null}
                 <View style={{ marginTop: space(2), alignItems: "flex-start" }}>

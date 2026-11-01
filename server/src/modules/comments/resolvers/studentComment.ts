@@ -271,6 +271,9 @@ AuthoredCommentRef.implement({
     deliveryChannels: t.exposeStringList("deliveryChannels"),
     discardedAt: t.string({ nullable: true, resolve: (r) => r.discardedAt }),
     discardReason: t.string({ nullable: true, resolve: (r) => r.discardReason }),
+    // D-#882: same gate as StudentComment (the app shares one field list for both types).
+    readConfirmRequired: t.boolean({ resolve: (r, _a, ctx) => canSeeReadStatus(ctx) && r.readConfirmRequired }),
+    guardianReadAt: t.string({ nullable: true, resolve: (r, _a, ctx) => (canSeeReadStatus(ctx) ? r.guardianReadAt : null) }),
     createdAt: t.exposeString("createdAt"),
     updatedAt: t.exposeString("updatedAt"),
   }),
