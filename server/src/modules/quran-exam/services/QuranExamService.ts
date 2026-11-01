@@ -17,6 +17,7 @@ import { User } from "../../foundation/models/User";
 import { Guardian } from "../../foundation/models/Guardian";
 import { GuardianLink } from "../../foundation/models/GuardianLink";
 import { writeAudit } from "../../platform/services/AuditService";
+import { pageOf, type Page, type PageArgs } from "../../../lib/paging";
 import { QuranExamPlan, type IQuranExamPlan } from "../models/QuranExamPlan";
 import { QuranExamPaper, type IQuranExamPaper, type QuranExamScheme } from "../models/QuranExamPaper";
 import {
@@ -861,6 +862,99 @@ export async function acknowledgeQuranExamNotice(guardianId: string, examId: str
     { upsert: true },
   );
   return true;
+}
+
+export const QX_SEEN_FILTERS = ["all", "seen", "not_seen"] as const;
+
+export interface QuranExamGuardianSeenRowShape {
+  studentId: string;
+  studentName: string;
+  classLabelBn: string;
+  level: string;
+  /** SEEN | NOT_SEEN | CHANGED (saw an older version; a moved time is still unseen). */
+  state: string;
+  seenAt: string | null;
+  seenByName: string | null;
+  /** Every active linked guardian, "name · phone", so the Office can call a family. */
+  guardians: string[];
+}
+
+export interface QuranExamGuardianSeenShape {
+  examId: string;
+  published: boolean;
+  total: number;
+  seen: number;
+  notSeen: number;
+  changed: number;
+  rows: Page<QuranExamGuardianSeenRowShape>;
+}
+
+/**
+ * Who has tapped "ঠিক আছে, দেখেছি" on the schedule pop-up (D-#882) — the Office's view
+ * of the built-in guardian pop-up, shown beside the pop-up notices it is not one of.
+ * One row per child with a sitting; a child whose time changed after the family's tap
+ * counts as CHANGED until they tap again.
+ */
+export async function quranExamGuardianSeenPage(
+  examId: string,
+  filter: string | null | undefined,
+  args: PageArgs = {},
+): Promise<QuranExamGuardianSeenShape> {
+  const plan = await QuranExamPlan.findOne({ examId: oid(examId) }, { status: 1 }).lean();
+  if (!plan) throw new QuranExamError("এই পরীক্ষার কুরআন পরীক্ষার সূচি নেই।");
+  const sittings = await QuranExamSitting.find({ examId: oid(examId) }, { studentId: 1, level: 1, guardianVersion: 1 }).lean();
+  const version = new Map<string, number>();
+  const level = new Map<string, string>();
+  for (const s of sittings) {
+    const k = String(s.studentId);
+    version.set(k, Math.max(version.get(k) ?? 0, s.guardianVersion ?? 0));
+    if (!level.has(k)) level.set(k, s.level);
+  }
+  const ids = [...version.keys()];
+  const [labels, seen, links] = await Promise.all([
+    studentLabels(ids),
+    QuranExamGuardianSeen.find({ examId: oid(examId), studentId: { $in: ids.map(oid) } }).lean(),
+    GuardianLink.find({ studentId: { $in: ids.map(oid) }, active: { $ne: false } }, { studentId: 1, guardianId: 1 }).lean(),
+  ]);
+  const guardians = await Guardian.find(
+    { _id: { $in: [...links.map((l) => l.guardianId), ...seen.map((s) => s.seenByGuardianId).filter(Boolean)] } },
+    { name: 1, phone: 1, active: 1 },
+  ).lean();
+  const gById = new Map(guardians.map((g) => [String(g._id), g]));
+  const seenBy = new Map(seen.map((s) => [String(s.studentId), s]));
+  const all: QuranExamGuardianSeenRowShape[] = ids.map((id) => {
+    const ack = seenBy.get(id);
+    const state = !ack ? "NOT_SEEN" : (version.get(id) ?? 0) > ack.seenVersion ? "CHANGED" : "SEEN";
+    const by = ack?.seenByGuardianId ? gById.get(String(ack.seenByGuardianId)) : undefined;
+    return {
+      studentId: id,
+      studentName: labels.get(id)?.name ?? "",
+      classLabelBn: labels.get(id)?.classLabelBn ?? "",
+      level: level.get(id) ?? "",
+      state,
+      seenAt: ack?.seenAt ? ack.seenAt.toISOString() : null,
+      seenByName: by?.name ?? null,
+      guardians: links
+        .filter((l) => String(l.studentId) === id)
+        .map((l) => gById.get(String(l.guardianId)))
+        .filter((g): g is NonNullable<typeof g> => !!g && g.active !== false)
+        .map((g) => (g.phone ? `${g.name} · ${g.phone}` : g.name)),
+    };
+  });
+  // Not seen first (the ones to chase), then by class and name.
+  const rank: Record<string, number> = { NOT_SEEN: 0, CHANGED: 1, SEEN: 2 };
+  all.sort((a, b) => rank[a.state]! - rank[b.state]! || a.classLabelBn.localeCompare(b.classLabelBn) || a.studentName.localeCompare(b.studentName));
+  const f = filter ?? "all";
+  const picked = f === "seen" ? all.filter((r) => r.state === "SEEN") : f === "not_seen" ? all.filter((r) => r.state !== "SEEN") : all;
+  return {
+    examId,
+    published: plan.status === "PUBLISHED",
+    total: all.length,
+    seen: all.filter((r) => r.state === "SEEN").length,
+    notSeen: all.filter((r) => r.state === "NOT_SEEN").length,
+    changed: all.filter((r) => r.state === "CHANGED").length,
+    rows: pageOf(picked, args),
+  };
 }
 
 // ── Office monitor + reminders (QX-4, D-#878) ─────────────────────────────────

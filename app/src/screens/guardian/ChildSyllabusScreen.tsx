@@ -14,7 +14,10 @@ import React, { useState } from "react";
 import { RefreshControl, Pressable, View } from "react-native";
 import { useQuery } from "urql";
 import { GUARDIAN_CHILD_SYLLABUS, type SyllabusT } from "../../graphql/examSyllabus";
-import { Screen, Body, Muted, Card, Select, EmptyState } from "../../components/ui";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { GuardianSyllabusStackParamList } from "../../navigation/types";
+import { Screen, Body, Muted, Card, Select, EmptyState, Button } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import SyllabusView from "../../components/SyllabusView";
@@ -27,6 +30,7 @@ import { space, typeScale, radius } from "../../theme/tokens";
 
 export default function ChildSyllabusScreen(): React.ReactElement {
   const colors = useColors();
+  const nav = useNavigation<NativeStackNavigationProp<GuardianSyllabusStackParamList>>();
   const { selected } = useGuardianChild();
   const pick = useSyllabusPickers();
   const [openSubject, setOpenSubject] = useState<string | null>(null);
@@ -51,6 +55,8 @@ export default function ChildSyllabusScreen(): React.ReactElement {
   return (
     <Screen scroll refreshControl={<RefreshControl refreshing={refresh.refreshing} onRefresh={refresh.onRefresh} />}>
       <ChildSwitcher />
+      {/* D-#883: the child's exam routine, beside the syllabus. */}
+      <Button title={`🗓️ ${STR.exrOpen}`} variant="secondary" onPress={() => nav.navigate("ChildExamRoutine")} style={{ marginBottom: space(3) }} />
 
       {pick.exams.length === 0 && !pick.loading ? (
         <EmptyState message={STR.syNoExam} />

@@ -20,7 +20,8 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
 import { EXAM_SYLLABUS_CLASS, EXAM_SYLLABUS_LEVELS } from "../../graphql/examSyllabus";
 import type { SyllabusStackParamList } from "../../navigation/types";
-import { Screen, Body, Muted, Card, Select, EmptyState, Badge } from "../../components/ui";
+import { Screen, Body, Muted, Card, Select, EmptyState, Badge, Button } from "../../components/ui";
+import { useAuth } from "../../auth/AuthContext";
 import { QueryGate } from "../../components/QueryGate";
 import { STR, bnNum, routineSubjectLabel, examTermLabel } from "../../lib/labels";
 import { useSyllabusPickers } from "../../lib/useSyllabusPickers";
@@ -33,6 +34,8 @@ type Props = NativeStackScreenProps<SyllabusStackParamList, "SyllabusHome">;
 export default function SyllabusHomeScreen({ navigation }: Props): React.ReactElement {
   const colors = useColors();
   const pick = useSyllabusPickers();
+  const { can } = useAuth();
+  const canRoutine = can("exam_routine:view") || can("exam_routine:manage") || can("exam_routine:publish");
 
   const [syllabusQ, refetchSyllabus] = useQuery({
     query: EXAM_SYLLABUS_CLASS,
@@ -69,6 +72,8 @@ export default function SyllabusHomeScreen({ navigation }: Props): React.ReactEl
 
   return (
     <Screen scroll refreshControl={<RefreshControl refreshing={refresh.refreshing} onRefresh={refresh.onRefresh} />}>
+      {/* D-#883: the routine sits beside the syllabus — one place for the whole exam. */}
+      {canRoutine ? <Button title={`🗓️ ${STR.exrOpen}`} variant="secondary" onPress={() => navigation.navigate("ExamRoutine")} style={{ marginBottom: space(3) }} /> : null}
       <Select
         label={STR.syPickExam}
         value={pick.examId}
