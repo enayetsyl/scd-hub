@@ -59,6 +59,17 @@ jest.mock("../modules/hr/models/LeaveBalanceRecovery", () => ({
     deleteMany: (q: unknown) => mockRecoveryDeleteMany(q),
   },
 }));
+// D-#898 — held probation leave charged by choice. Default: nothing charged.
+const mockProbChargeUpsert = jest.fn().mockResolvedValue({});
+const mockProbChargeDeleteMany = jest.fn().mockResolvedValue({});
+jest.mock("../modules/hr/models/ProbationDebtRecovery", () => ({
+  ProbationDebtRecovery: {
+    find: () => ({ select: () => ({ lean: async () => [] }) }),
+    findOneAndUpdate: (q: unknown, u: unknown, o: unknown) => mockProbChargeUpsert(q, u, o),
+    deleteMany: (q: unknown) => mockProbChargeDeleteMany(q),
+    updateMany: jest.fn().mockResolvedValue({}),
+  },
+}));
 // D-#711 — leavers. Default: nobody has an exit case, which is every staff member in
 // every pre-existing test below, so their figures must be unchanged to the taka.
 const mockExitsUpTo = jest.fn(async (_m: string) => new Map<string, unknown>());
