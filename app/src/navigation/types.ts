@@ -318,6 +318,8 @@ export type HrStackParamList = {
   HrHome: undefined;
   MyLeave: undefined;
   MyRecord: undefined;
+  /** D-#903 — own issued letters; the letter notification and pop-up open it. */
+  MyLetters: undefined;
   LeaveCover: { leaveApplicationId: string; title: string; manage: boolean };
   LeaveAdmin: undefined;
   /** Cross-leave needs-cover inbox (PXG-2, D-#268). */

@@ -52,6 +52,7 @@ import {
   type TeacherDayRecord,
 } from "../../attendance/services/TeacherAttendanceService";
 import { resolveStaffProfileForUser } from "../services/staffMatch";
+import { sendLetter } from "../services/StaffLetterSendService";
 import { StaffLetter, type IStaffLetter } from "../models/StaffLetter";
 import { Types } from "mongoose";
 
@@ -106,7 +107,9 @@ HrPolicyRef.implement({
   }),
 });
 
-const StaffLetterRef = builder.objectRef<IStaffLetter>("StaffLetter");
+/** An issued letter, plus — only on the issue mutation's answer — why sending it failed. */
+type StaffLetterOut = IStaffLetter & { sendError?: string | null };
+const StaffLetterRef = builder.objectRef<StaffLetterOut>("StaffLetter");
 StaffLetterRef.implement({
   description:
     "An issued staff letter (SH-1, D-#542). Every printable field comes from the " +
@@ -128,6 +131,14 @@ StaffLetterRef.implement({
     effectiveFrom: t.string({ resolve: (l) => l.snapshot.effectiveFrom }),
     letterDate: t.string({ resolve: (l) => l.snapshot.letterDate }),
     annualLeaveDays: t.int({ resolve: (l) => l.snapshot.annualLeaveDays }),
+    // Increment letters (D-#901): the figure the raise replaced.
+    previousSalary: t.float({ nullable: true, resolve: (l) => l.snapshot.previousSalary ?? null }),
+    // Sending to the staff member's app (D-#902).
+    sendCount: t.int({ resolve: (l) => l.sends?.length ?? 0 }),
+    lastSentAt: t.string({ nullable: true, resolve: (l) => l.sends?.at(-1)?.at.toISOString() ?? null }),
+    lastSentChannels: t.stringList({ resolve: (l) => l.sends?.at(-1)?.channels ?? [] }),
+    // D-#574 shape: the letter WAS issued; non-null means sending it did not happen.
+    sendError: t.string({ nullable: true, resolve: (l) => l.sendError ?? null }),
   }),
 });
 
@@ -588,8 +599,18 @@ builder.mutationField("issueStaffLetter", (t) =>
       weeklyHours: t.arg.string({ required: false }),
       extraText: t.arg.string({ required: false }),
       contract: t.arg({ type: SupportContractInputRef, required: false }),
+      // D-#902 — send it to the staff member's app straight away: "notification", "popup".
+      sendChannels: t.arg.stringList({ required: false }),
     },
     resolve: async (_r, args, ctx) => {
+      // An increment letter also records the raise (D-#901), so it needs the salary switch too.
+      if (args.kind === "increment" && !callerHasPermission(ctx.auth!, "payroll:edit")) {
+        throw new ForbiddenError("বেতন বৃদ্ধির পত্র দিতে বেতন ঠিক করার অনুমতিও লাগে");
+      }
+      const channels = args.sendChannels ?? [];
+      if (channels.length > 0 && !callerHasPermission(ctx.auth!, "staff_letters:send")) {
+        throw new ForbiddenError("চিঠি পাঠানোর অনুমতি আপনার নেই");
+      }
       const input: IssueLetterInput = {
         staffProfileId: args.staffProfileId,
         kind: args.kind as StaffLetterKind,
@@ -614,7 +635,50 @@ builder.mutationField("issueStaffLetter", (t) =>
           : null,
         actorId: ctx.auth!.userId,
       };
-      return issueLetter(input);
+      const letter = await issueLetter(input);
+      if (channels.length === 0) return letter;
+      // Sending is NON-FATAL (the D-#574 rule): the letter is issued either way, and a
+      // send that fails is reported beside it so it can be sent again from the list.
+      try {
+        return await sendLetter(ctx, letter._id.toString(), channels);
+      } catch (err) {
+        const out: StaffLetterOut = letter;
+        out.sendError = err instanceof Error ? err.message : String(err);
+        return out;
+      }
+    },
+  }),
+);
+
+builder.mutationField("sendStaffLetter", (t) =>
+  t.field({
+    type: StaffLetterRef,
+    description:
+      "Send an issued letter to the staff member's app — notification, pop-up or both " +
+      "(D-#902). Each send is recorded on the letter. Requires staff_letters:send; the " +
+      "pop-up channel also needs popup_notice:send_staff.",
+    authScopes: { hasPermission: "staff_letters:send" },
+    args: {
+      letterId: t.arg.string({ required: true }),
+      channels: t.arg.stringList({ required: true }),
+    },
+    resolve: async (_r, args, ctx) => sendLetter(ctx, args.letterId, args.channels),
+  }),
+);
+
+builder.queryField("myStaffLetters", (t) =>
+  t.field({
+    type: [StaffLetterRef],
+    description:
+      "The caller's OWN issued letters, newest first — void letters left out (D-#903). The " +
+      "caller's StaffProfile is the phone/email link (staffMatch, fail-closed); a login with " +
+      "no linked profile gets an empty list, never anyone else's.",
+    authScopes: { hasPermission: "staff_letters:view_own" },
+    resolve: async (_r, _args, ctx) => {
+      if (!ctx.auth) return [];
+      const staff = await resolveStaffProfileForUser(ctx.auth.userId);
+      if (!staff) return [];
+      return (await lettersForStaff(staff._id.toString())).filter((l) => l.status === "issued");
     },
   }),
 );
