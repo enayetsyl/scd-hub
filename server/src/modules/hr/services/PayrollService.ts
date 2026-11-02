@@ -26,6 +26,9 @@ import { Payslip, type IPayslip } from "../models/Payslip";
 import { AdvanceLoan } from "../models/AdvanceLoan";
 import { LeaveBalanceRecovery } from "../models/LeaveBalanceRecovery";
 import { ProbationDebtRecovery } from "../models/ProbationDebtRecovery";
+import { ProbationLeaveDebt } from "../models/ProbationLeaveDebt";
+import { LatenessCharge } from "../models/LatenessCharge";
+import { OffboardingCase } from "../models/OffboardingCase";
 import { overdrawnDays, staffWithOpenExit } from "./LeaveChargeService";
 import { roundLeaveDays } from "./dates";
 import { bnNum } from "../../../lib/bnNum";
@@ -470,6 +473,140 @@ export async function cancelPayrollRun(runId: string, actorId: string): Promise<
   run.status = "cancelled";
   await run.save();
   await writeAudit({ eventKind: "PAYROLL_CANCELLED", actorId, targetId: run._id, targetKind: "PayrollRun", meta: { monthKey: run.monthKey } });
+  return run;
+}
+
+/**
+ * How long the lock's own writes can precede `approvedAt`. `approvePayrollRun` saves the
+ * advances, freezes lateness and settles the leavers FIRST and stamps the run last, so
+ * everything the lock wrote is dated at or shortly before `approvedAt`.
+ */
+const LOCK_WRITE_WINDOW_MS = 10 * 60_000;
+
+/**
+ * Reopen a LOCKED run so a mistake can be corrected (D-#904, overriding D-#110's "a
+ * locked run is never retro-edited"). The owner: *"option to cancel the payroll if later
+ * find any mistake."*
+ *
+ * Reopening must leave the books exactly as if the run had never been locked, because
+ * the next lock will do all of it again. So everything `approvePayrollRun` did is undone:
+ *   - advance recovery: each payslip's `advanceRepaid` goes back onto its loan, and a loan
+ *     the lock settled becomes active again;
+ *   - lateness: the month's charges this run froze are unfrozen;
+ *   - leavers (D-#711): the settlement written onto the exit case is taken back, with the
+ *     held probation debt and any probation charge the lock settled.
+ * The run returns to `prepared` — staff stop seeing its payslips (they read locked runs
+ * only) and the bank files cannot be produced — and can be re-prepared, cancelled or
+ * locked again. Every reopen is kept on the run with its reason, and audited.
+ *
+ * REFUSED, before anything is written (D-#574), when undoing is not safe:
+ *   - a LATER month is already locked (it was computed from this month's balances);
+ *   - an advance this run recovered has changed since (another run, an early payoff or
+ *     a write-off) — putting the money back would double it;
+ *   - a probation charge in this run has since been settled by a confirmation (D-#898).
+ */
+export async function reopenPayrollRun(runId: string, reason: string, actorId: string): Promise<IPayrollRun> {
+  const run = await PayrollRun.findById(runId);
+  if (!run) throw new PayrollError("Payroll run not found");
+  if (run.status !== "approved_locked") throw new PayrollError("শুধু লক করা বেতনের হিসাব আবার খোলা যায়");
+  const why = reason.trim();
+  if (!why) throw new PayrollError("কেন আবার খুলছেন তা লিখুন");
+  const lockedAt = run.approvedAt ?? run.updatedAt;
+
+  const later = await PayrollRun.findOne({ monthKey: { $gt: run.monthKey }, status: "approved_locked" })
+    .sort({ monthKey: 1 })
+    .select("monthKey")
+    .lean();
+  if (later) {
+    throw new PayrollError(`${later.monthKey} মাসের বেতন লক করা আছে — আগে সেই মাসটি আবার খুলুন, তারপর এটি`);
+  }
+
+  const slips = await Payslip.find({ payrollRunId: run._id }).lean();
+  const advanceSlips = slips.filter((p) => p.advanceId && p.advanceRepaid > 0);
+  const advances = await AdvanceLoan.find({ _id: { $in: advanceSlips.map((p) => p.advanceId!) } });
+  const byId = new Map(advances.map((a) => [a._id.toString(), a]));
+  for (const p of advanceSlips) {
+    const a = byId.get(p.advanceId!.toString());
+    if (a && a.updatedAt.getTime() > lockedAt.getTime()) {
+      throw new PayrollError(
+        `${p.snapshotName}-এর অগ্রিম এই রান লক হওয়ার পর বদলেছে — অগ্রিম ঠিক না করে এই রান আবার খোলা যাবে না`,
+      );
+    }
+  }
+  if (await ProbationDebtRecovery.exists({ payrollRunId: run._id, applied: true })) {
+    throw new PayrollError("এই রানের প্রবেশনকালীন ছুটির কর্তন স্থায়ীকরণে সমন্বয় হয়ে গেছে — রানটি আবার খোলা যাবে না");
+  }
+
+  // 1. Advance recovery back onto the loans.
+  for (const p of advanceSlips) {
+    const a = byId.get(p.advanceId!.toString());
+    if (!a) continue;
+    a.balance += p.advanceRepaid;
+    if (a.status === "settled") {
+      a.status = "active";
+      a.settledAt = undefined;
+    }
+    await a.save();
+  }
+
+  // 2. Lateness charges unfrozen — the next lock freezes them again.
+  const unfrozen = await LatenessCharge.updateMany(
+    { payrollRunId: run._id, frozen: true },
+    { $set: { frozen: false } },
+  );
+
+  // 3. Leavers: the settlement this run wrote onto the exit case is taken back.
+  const windowStart = new Date(lockedAt.getTime() - LOCK_WRITE_WINDOW_MS);
+  let exitsReopened = 0;
+  for (const p of slips.filter((s) => s.exitCaseId)) {
+    const c = await OffboardingCase.findById(p.exitCaseId);
+    if (!c || c.settlement?.paidInMonthKey !== run.monthKey) continue;
+    c.set("settlement", undefined);
+    if (c.status === "completed") c.status = c.accessRevoked ? "access_revoked" : "initiated";
+    await c.save();
+    const lockWindow = { $gte: windowStart, $lte: lockedAt };
+    await ProbationLeaveDebt.updateMany(
+      { staffProfileId: p.staffProfileId, settled: true, settledVia: "exit", settledAt: lockWindow },
+      { $set: { settled: false, settledAt: null, settledVia: null, settledFromPool: null, settledToSalary: null } },
+    );
+    await ProbationDebtRecovery.updateMany(
+      { staffProfileId: p.staffProfileId, applied: true, appliedVia: "exit", appliedAt: lockWindow },
+      { $set: { applied: false, appliedAt: null, appliedVia: null } },
+    );
+    await writeAudit({
+      eventKind: "FINAL_SETTLEMENT_REOPENED",
+      actorId,
+      targetId: c._id,
+      targetKind: "OffboardingCase",
+      meta: { monthKey: run.monthKey, payrollRunId: run._id.toString(), reason: why },
+    });
+    exitsReopened += 1;
+  }
+
+  // 4. The run itself, back to prepared — with the reopen kept on it.
+  const previousApprovedAt = run.approvedAt ?? null;
+  run.status = "prepared";
+  run.approvedBy = undefined;
+  run.approvedAt = undefined;
+  run.reopenings = [
+    ...(run.reopenings ?? []),
+    { at: new Date(), by: new Types.ObjectId(actorId), reason: why, previousApprovedAt },
+  ];
+  await run.save();
+
+  await writeAudit({
+    eventKind: "PAYROLL_REOPENED",
+    actorId,
+    targetId: run._id,
+    targetKind: "PayrollRun",
+    meta: {
+      monthKey: run.monthKey,
+      reason: why,
+      advancesRestored: advanceSlips.length,
+      latenessUnfrozen: unfrozen.modifiedCount ?? 0,
+      exitsReopened,
+    },
+  });
   return run;
 }
 

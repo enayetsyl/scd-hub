@@ -147,7 +147,7 @@ Several of today's bypasses are template-aware (`isAdminStaff`, `actsAsRole`), w
 | Staff & HR | `appraisal` | Appraisal & CPD | কাজের মূল্যায়ন ও প্রশিক্ষণ | 6 | hr-finance |
 | Staff & HR | `conduct` | Conduct | শৃঙ্খলা | 5 | hr-finance |
 | Staff & HR | `grievance` | Grievances | অভিযোগ | 3 | hr-finance |
-| Staff & HR | `staff_letters` | Letters & contracts | চিঠি ও চুক্তিপত্র | 3 | hr-finance |
+| Staff & HR | `staff_letters` | Letters & contracts | চিঠি ও চুক্তিপত্র | 5 | hr-finance |
 | Staff & HR | `offboarding` | Leaving the school | চাকরি ছাড়া | 8 | hr-finance |
 | Staff & HR | `classroom_observation` | Classroom observation | ক্লাসরুম পর্যবেক্ষণ | 11 | observation-comments-reports |
 | Staff & HR | `free_mixing_review` | Free-mixing video review | ফ্রি মিক্সিং পর্যবেক্ষণ | 3 | observation-comments-reports |
@@ -187,7 +187,7 @@ Several of today's bypasses are template-aware (`isAdminStaff`, `actsAsRole`), w
 | Admin & access | `guardian_engagement` | Guardian app usage | অভিভাবকদের অ্যাপ ব্যবহার | 1 | foundation-platform |
 | Admin & access | `my_account` | My account | আমার অ্যাকাউন্ট | 1 | foundation-platform |
 
-**Totals: 75 features, 375 actions** (`mark_submission` added 2026-11-02, D-#889–#893: +3 actions, `view_own` SELF, 2 unflagged, TEACHER on +1, OFFICE on +3) (`student_comments:read_status` added 2026-11-01, D-#886: +1 action, unflagged, OFFICE on +1) (`exam_routine` added 2026-11-01, D-#883: +3 actions, unflagged, TEACHER on +1, OFFICE on +3) (recounted from `shared/permissionCatalogue.ts` on 2026-10-28 when `quran_exam` was added, D-#873: +7 actions, `examine` SELF, 6 unflagged, TEACHER on +1, OFFICE on +6; the earlier line had fallen behind the code) (`class_books` added 2026-10-26, D-#870: +2 actions, unflagged, TEACHER on +1, OFFICE on +2) (`reports` +14 switches 2026-10-26, D-#861: the reports that sat in the Admin hub and module homes, unflagged, OFFICE on +13 — all but `guardian_engagement`) (`reports` added 2026-10-25, D-#846: +13 report switches, −3 retired report-only actions) (`parents_meeting:approve_change` added with meeting RSVP, 2026-10-24: +1 action, PRINCIPAL-DEFAULT, D-#842) (`lesson_progress` added with LP-2, 2026-10-22: +2 actions, unflagged, TEACHER on +1, OFFICE on +2) (`mastery` added with M-0, 2026-10-20: +6 actions, all unflagged, TEACHER on +3, OFFICE on +1; M-2, 2026-10-21: +`mastery:edit_all`, PRINCIPAL-DEFAULT). By flag: LOCKED 11 · PRINCIPAL-DEFAULT 15 · DESIGNATION 24 · ESCALATION 5 · SELF 14 · unflagged 306. Defaults: TEACHER on 105 · OFFICE on 279. A row may carry a `†`/`F-n`/`2H` note in addition to its flag. Those notes are not counted as flags. Not counted: `guardian:read_child` (GUARDIAN plane), and the future `scholarship_practice:release` (SC-5, not built) and `announcements:publish` (no staff surface yet).
+**Totals: 75 features, 378 actions** (`staff_letters:send` + `staff_letters:view_own` + `payroll:reopen` added 2026-11-02, D-#902–#904: +3 actions, `view_own` SELF, `reopen` LOCKED, 1 unflagged, TEACHER on +1, OFFICE on +2) (`mark_submission` added 2026-11-02, D-#889–#893: +3 actions, `view_own` SELF, 2 unflagged, TEACHER on +1, OFFICE on +3) (`student_comments:read_status` added 2026-11-01, D-#886: +1 action, unflagged, OFFICE on +1) (`exam_routine` added 2026-11-01, D-#883: +3 actions, unflagged, TEACHER on +1, OFFICE on +3) (recounted from `shared/permissionCatalogue.ts` on 2026-10-28 when `quran_exam` was added, D-#873: +7 actions, `examine` SELF, 6 unflagged, TEACHER on +1, OFFICE on +6; the earlier line had fallen behind the code) (`class_books` added 2026-10-26, D-#870: +2 actions, unflagged, TEACHER on +1, OFFICE on +2) (`reports` +14 switches 2026-10-26, D-#861: the reports that sat in the Admin hub and module homes, unflagged, OFFICE on +13 — all but `guardian_engagement`) (`reports` added 2026-10-25, D-#846: +13 report switches, −3 retired report-only actions) (`parents_meeting:approve_change` added with meeting RSVP, 2026-10-24: +1 action, PRINCIPAL-DEFAULT, D-#842) (`lesson_progress` added with LP-2, 2026-10-22: +2 actions, unflagged, TEACHER on +1, OFFICE on +2) (`mastery` added with M-0, 2026-10-20: +6 actions, all unflagged, TEACHER on +3, OFFICE on +1; M-2, 2026-10-21: +`mastery:edit_all`, PRINCIPAL-DEFAULT). By flag: LOCKED 11 · PRINCIPAL-DEFAULT 15 · DESIGNATION 24 · ESCALATION 5 · SELF 14 · unflagged 306. Defaults: TEACHER on 105 · OFFICE on 279. A row may carry a `†`/`F-n`/`2H` note in addition to its flag. Those notes are not counted as flags. Not counted: `guardian:read_child` (GUARDIAN plane), and the future `scholarship_practice:release` (SC-5, not built) and `announcements:publish` (no staff surface yet).
 
 ---
 
@@ -555,8 +555,10 @@ Learning-outcome mastery tracker (`docs/prd-mastery.md`, D-#775–#787). Registe
 | permission | EN | BN | what it allows | T | O | flags | replaces |
 |---|---|---|---|---|---|---|---|
 | `staff_letters:view` | View / print letters | চিঠি দেখা ও ছাপানো | Letter list, count, PDF | — | on | | staff:manage |
-| `staff_letters:issue` | Issue a letter | চিঠি দেওয়া | Appointment, confirmation, certificate, support contract | — | on | | staff:manage |
+| `staff_letters:issue` | Issue a letter | চিঠি দেওয়া | Appointment, confirmation, certificate, support contract, increment (also needs payroll:edit); preview before issuing | — | on | | staff:manage |
 | `staff_letters:void` | Void a letter | চিঠি বাতিল করা | Mark VOID (kept) | — | on | | staff:manage |
+| `staff_letters:send` | Send a letter | চিঠি পাঠানো | Send an issued letter to the staff member’s app as a notification and/or pop-up (D-#902) | — | on | | — (new) |
+| `staff_letters:view_own` | My letters | আমার চিঠি | Own issued letters, as PDF (D-#903) | on | on | SELF | — (new) |
 
 #### `offboarding` — চাকরি ছাড়া
 | permission | EN | BN | what it allows | T | O | flags | replaces |
@@ -601,6 +603,7 @@ Learning-outcome mastery tracker (`docs/prd-mastery.md`, D-#775–#787). Registe
 | `payroll:edit` | Set salary | বেতন ঠিক করা | Monthly salary and payment method | — | on | | payroll:manage |
 | `payroll:prepare` | Prepare payroll | মাসের বেতন তৈরি করা | Compute/recompute, cancel a prepared run | — | on | | payroll:manage |
 | `payroll:approve` | Approve & lock payroll | বেতন অনুমোদন ও লক করা | Lock a run; commit advance recovery | — | — | LOCKED | payroll:approve |
+| `payroll:reopen` | Reopen a locked run | লক করা বেতন আবার খোলা | Unlock a run to correct it: reverses advance recovery, lateness freeze and leaver settlements (D-#904) | — | — | LOCKED | — (new) |
 | `payroll:export` | Payment files | ব্যাংক অ্যাডভাইস ও ফাইল নামানো | Advice pack, CSV, register XLSX | — | on | | payroll:manage |
 | `payroll:view_own` | My payslips | আমার বেতনের স্লিপ | Own payslips (locked runs) | on | on | SELF | authenticated, own |
 
