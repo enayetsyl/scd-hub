@@ -582,7 +582,7 @@ builder.mutationField("cancelTask", (t) =>
 builder.mutationField("pullWorkCard", (t) =>
   t.boolean({
     description:
-      "WB-5 (D-#702): take an office-queue card (PRINT_JOB / LEAVE_APPROVAL) onto MY board while the desk is on leave. " +
+      "WB-5 (D-#702): take an office-queue card (PRINT_JOB / LEAVE_APPROVAL / CT_SCRIPT_UPLOAD) onto MY board while the desk is on leave. " +
       "A desk login, an OFFICE/PRINCIPAL-template backup, or work_board:cover_desk. The card leaves every other board until its source closes. Audited.",
     authScopes: { hasPermission: "work_board:cover_desk" },
     args: { kind: t.arg.string({ required: true }), sourceId: t.arg.string({ required: true }) },

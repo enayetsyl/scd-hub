@@ -2,7 +2,8 @@
  * OfficeCoverService (WB-5, D-#702) — who the OFFICE-queue cards belong to today.
  *
  *   normally      → the desk: every active login that HOLDS the card's action
- *                   (PRINT_JOB → printing:process, LEAVE_APPROVAL → leave:approve) and
+ *                   (PRINT_JOB → printing:process, LEAVE_APPROVAL → leave:approve,
+ *                   CT_SCRIPT_UPLOAD → class_test_script:scan) and
  *                   is not a backup by role (Akmol)
  *   desk on leave → the desk (still) + the BACKUPS: holders of the card's action who act
  *                   as OFFICE by template or as PRINCIPAL and hold work_board:cover_desk
@@ -29,11 +30,12 @@ import { StaffProfile } from "../../foundation/models/StaffProfile";
 import { normalizePhone } from "../../foundation/services/credentials";
 import { StaffLeaveApplication } from "../../hr/models/StaffLeaveApplication";
 import { PrintRequest } from "../../printing/models/PrintRequest";
+import { ClassTest } from "../../trackers/models/ClassTest";
 import { writeAudit } from "../../platform/services/AuditService";
 import { WorkCardPull } from "../models/WorkCardPull";
 
 /** The card kinds a backup may pull. */
-export const PULLABLE_KINDS = ["PRINT_JOB", "LEAVE_APPROVAL"] as const;
+export const PULLABLE_KINDS = ["PRINT_JOB", "LEAVE_APPROVAL", "CT_SCRIPT_UPLOAD"] as const;
 export type PullableKind = (typeof PULLABLE_KINDS)[number];
 
 export interface CoverUser {
@@ -48,6 +50,7 @@ export interface CoverUser {
 export const CARD_ACTION: Record<PullableKind, Permission> = {
   PRINT_JOB: "printing:process",
   LEAVE_APPROVAL: "leave:approve",
+  CT_SCRIPT_UPLOAD: "class_test_script:scan",
 };
 
 const holds = (u: CoverUser, perm: Permission): boolean =>
@@ -146,6 +149,16 @@ async function assertSourceOpen(kind: PullableKind, sourceId: string): Promise<v
   if (kind === "PRINT_JOB") {
     const job = await PrintRequest.findById(sourceId).select("status").lean();
     if (!job || job.status !== "REQUESTED") throw new Error("এই প্রিন্ট কাজটি আর খোলা নেই");
+    return;
+  }
+  if (kind === "CT_SCRIPT_UPLOAD") {
+    const open = await ClassTest.exists({
+      _id: new Types.ObjectId(sourceId),
+      "scripts.receivedAt": { $ne: null },
+      "scripts.publishedAt": null,
+      "scripts.waivedAt": null,
+    });
+    if (!open) throw new Error("এই টেস্টের খাতা আপলোড আর বাকি নেই");
     return;
   }
   const app = await StaffLeaveApplication.findById(sourceId).select("status").lean();

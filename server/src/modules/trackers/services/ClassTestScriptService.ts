@@ -333,6 +333,33 @@ export async function officeScriptQueue(now: Date = new Date()): Promise<ScriptT
   return buildRows(tests, now);
 }
 
+/** Stages the Office still owes a scan on — the upload queue's members. */
+export const UPLOAD_QUEUE_STAGES: readonly CtScriptStage[] = ["UPLOAD_PENDING", "UPLOAD_IN_PROGRESS"];
+
+export type RankedScriptRow = ScriptTestRow & { rank: number };
+
+/**
+ * Pure: the upload queue LAST-IN-FIRST-OUT (owner 2026-11-02) — the bundle received
+ * most recently is #1, so a newly received test takes the top and every other one
+ * moves down. Deliberately the reverse of the Office card's oldest-due-first order.
+ */
+export function rankUploadQueue(rows: ScriptTestRow[]): RankedScriptRow[] {
+  return rows
+    .filter((r) => UPLOAD_QUEUE_STAGES.includes(r.stage) && r.receivedAt)
+    .sort((a, b) => b.receivedAt!.localeCompare(a.receivedAt!) || a.ctId.localeCompare(b.ctId))
+    .map((r, i) => ({ ...r, rank: i + 1 }));
+}
+
+/** Received, not yet fully scanned tests, ranked newest-received first (the work-board card). */
+export async function scriptUploadQueue(now: Date = new Date()): Promise<RankedScriptRow[]> {
+  const tests = (await ClassTest.find({
+    ...OPEN_FLOW,
+    "scripts.receivedAt": { $ne: null },
+    "scripts.publishedAt": null,
+  }).lean()) as unknown as IClassTest[];
+  return rankUploadQueue(await buildRows(tests, now));
+}
+
 /** One test's row (any stage, including finished) — the upload screen's header. */
 export async function scriptTestRow(testId: string, now: Date = new Date()): Promise<ScriptTestRow | null> {
   const test = (await ClassTest.findById(testId).lean()) as unknown as IClassTest | null;
