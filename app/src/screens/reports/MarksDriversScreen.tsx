@@ -64,9 +64,18 @@ function findings(d: MarksDriversT): string[] {
 
   const b = d.below85;
   if (b.nBelow >= 4 && b.below != null && b.above != null) {
+    // The DIRECTION is the finding: "a gap of 3" with the sign dropped read as "they lose 3"
+    // even when the group below 85% scored higher (owner screenshot, 2026-11-02).
+    const behind = b.above - b.below;
     let s = fill(STR.mdFBelow85, { n: bnNum(b.nBelow), below: one(b.below), above: one(b.above) });
-    if (b.controlledGap != null) s += " " + fill(STR.mdFBelow85Controlled, { gap: bnNum(Math.round(Math.abs(b.controlledGap))) });
-    if (b.p == null || b.p >= 0.05) s += " " + STR.mdFNotCertain;
+    s += " " + (behind >= 1 ? fill(STR.mdFBelow85Behind, { gap: bnNum(Math.round(behind)) }) : STR.mdFBelow85NotBehind);
+    // controlledGap is the below-85 indicator's coefficient: negative = they score lower.
+    const c = b.controlledGap;
+    if (c != null) {
+      const gap = bnNum(Math.round(Math.abs(c)));
+      s += " " + (c <= -1 ? fill(STR.mdFBelow85Controlled, { gap }) : c >= 1 ? fill(STR.mdFBelow85ControlledAhead, { gap }) : STR.mdFBelow85ControlledNone);
+    }
+    if (behind >= 1 && (b.p == null || b.p >= 0.05)) s += " " + STR.mdFNotCertain;
     out.push(s);
   }
 
@@ -85,6 +94,85 @@ function Section({ title, sub, children }: { title: string; sub?: string; childr
       {sub ? <Muted style={{ marginTop: 2, marginBottom: space(3) }}>{sub}</Muted> : <View style={{ height: space(3) }} />}
       {children}
     </Card>
+  );
+}
+
+/**
+ * D-#910: the headline figures twice — everyone, and without outliers (long-absent children
+ * plus extreme values) — so the owner can see whether a handful of children carry a finding.
+ * The verdict line compares CONCLUSIONS (significance, direction), not decimals.
+ */
+function OutlierCompare({ d }: { d: MarksDriversT }): React.ReactElement {
+  const colors = useColors();
+  const o = d.withoutOutliers;
+  if (o.longAbsent + o.extreme === 0) return <Muted>{STR.mdOutNone}</Muted>;
+
+  const corr = (list: MarksDriversT["correlations"], k: MeasureKeyT) => list.find((c) => c.key === k);
+  const gap3 = (list: MarksDriversT["tertiles"], k: "hwDone" | "att") => {
+    const t = list.find((x) => x.key === k);
+    return t && t.top != null && t.bottom != null ? t.top - t.bottom : null;
+  };
+  const signed = (v: number | null) => (v == null ? "—" : `${v < 0 ? "−" : "+"}${bnNum(Math.abs(v).toFixed(1))}`);
+  const below = (b: MarksDriversT["below85"]) => (b.below != null && b.above != null ? b.below - b.above : null);
+
+  type Cell = { text: string; strong?: boolean };
+  const rCell = (c?: { r: number | null; significant: boolean }): Cell => ({ text: rTxt(c?.r), strong: c?.significant });
+  const rows: Array<{ label: string; all: Cell; kept: Cell }> = [
+    { label: STR.mdOutRowN, all: { text: bnNum(d.withResult) }, kept: { text: bnNum(o.withResult) } },
+    ...(["hwQual", "asQual", "hwDone", "asDone", "att"] as const).map((k) => ({
+      label: measureLabel(k),
+      all: rCell(corr(d.correlations, k)),
+      kept: rCell(corr(o.correlations, k)),
+    })),
+    { label: STR.mdOutRowHwGap, all: { text: signed(gap3(d.tertiles, "hwDone")) }, kept: { text: signed(gap3(o.tertiles, "hwDone")) } },
+    { label: STR.mdOutRowAttGap, all: { text: signed(gap3(d.tertiles, "att")) }, kept: { text: signed(gap3(o.tertiles, "att")) } },
+    { label: STR.mdOutRowBelow85, all: { text: signed(below(d.below85)) }, kept: { text: signed(below(o.below85)) } },
+    { label: STR.mdOutRowSenior, all: rCell({ r: d.senior.r, significant: (d.senior.p ?? 1) < 0.05 }), kept: rCell({ r: o.senior.r, significant: (o.senior.p ?? 1) < 0.05 }) },
+  ];
+
+  // Same conclusion = every measure keeps its significance, and the below-85 gap keeps its side.
+  const flips = (["hwQual", "asQual", "hwDone", "asDone", "att"] as const).filter(
+    (k) => (corr(d.correlations, k)?.significant ?? false) !== (corr(o.correlations, k)?.significant ?? false),
+  );
+  const bAll = below(d.below85);
+  const bKept = below(o.below85);
+  const belowFlip = bAll != null && bKept != null && (bAll <= -1) !== (bKept <= -1);
+  const changed = flips.length > 0 || belowFlip;
+
+  const cell = (c: Cell, w: number, head = false) => (
+    <Text
+      style={{
+        width: w,
+        paddingVertical: 6,
+        paddingHorizontal: 4,
+        fontSize: 13,
+        textAlign: "right",
+        color: head ? colors.textSecondary : c.strong === false ? colors.textSecondary : colors.textPrimary,
+        fontWeight: head || c.strong ? "700" : "400",
+      }}
+    >
+      {c.text}
+    </Text>
+  );
+  return (
+    <View style={{ gap: space(3) }}>
+      <Notice tone={changed ? "warn" : "ok"} message={changed ? STR.mdOutChanged : STR.mdOutSame} />
+      <View>
+        <View style={{ flexDirection: "row", borderBottomWidth: 1, borderColor: colors.border }}>
+          <Text style={{ flex: 1, paddingVertical: 6, fontSize: 13, fontWeight: "700", color: colors.textSecondary }}>{STR.mdOutColMeasure}</Text>
+          {cell({ text: STR.mdOutColAll }, 76, true)}
+          {cell({ text: STR.mdOutColKept }, 92, true)}
+        </View>
+        {rows.map((r) => (
+          <View key={r.label} style={{ flexDirection: "row", alignItems: "center", borderBottomWidth: 1, borderColor: colors.border }}>
+            <Text style={{ flex: 1, paddingVertical: 6, fontSize: 13, color: colors.textPrimary }}>{r.label}</Text>
+            {cell(r.all, 76)}
+            {cell(r.kept, 92)}
+          </View>
+        ))}
+      </View>
+      <Muted style={{ fontSize: 12 }}>{STR.mdOutLegend}</Muted>
+    </View>
   );
 }
 
@@ -208,6 +296,17 @@ export default function MarksDriversScreen(): React.ReactElement {
                   <Body key={i} style={{ marginBottom: space(2) }}>• {s}</Body>
                 ))}
               </Card>
+
+              <Section
+                title={STR.mdOutTitle}
+                sub={fill(STR.mdOutSub, {
+                  n: bnNum(d.withoutOutliers.longAbsent + d.withoutOutliers.extreme),
+                  a: bnNum(d.withoutOutliers.longAbsent),
+                  b: bnNum(d.withoutOutliers.extreme),
+                })}
+              >
+                <OutlierCompare d={d} />
+              </Section>
 
               <Section title={STR.mdStrengthTitle} sub={fill(STR.mdStrengthSub, { n: bnNum(d.withResult) })}>
                 <HBarChart

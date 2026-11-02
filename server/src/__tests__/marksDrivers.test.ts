@@ -22,6 +22,8 @@ import "../modules/reports/resolvers/marksDrivers";
 import {
   childRow,
   computeFigures,
+  computeWithoutOutliers,
+  splitOutliers,
   pearson,
   pval,
   type ChildRow,
@@ -93,6 +95,39 @@ describe("marks drivers — reproduces the 23-Sep published page", () => {
   });
   it("no id or name rides on a scatter point", () => {
     expect(Object.keys(f.points[0]).sort()).toEqual(["att", "hwDone", "level", "result"]);
+  });
+});
+
+describe("marks drivers — without outliers (D-#910)", () => {
+  const row = (pct: number | null, hw: number, att: number, heldDays = 60): ChildRow => ({
+    level: 3,
+    heldDays,
+    absentDays: Math.round(heldDays * (1 - att)),
+    att,
+    pct,
+    hwDone: hw,
+    hwQual: null,
+    hwAbsent: null,
+    asDone: hw,
+    asQual: null,
+  });
+  const normal = Array.from({ length: 30 }, (_, i) => row(50 + i, 0.5 + i / 100, 0.85 + (i % 10) / 100));
+
+  it("leaves out a long-absent child and a child with an extreme result, and counts each once", () => {
+    const s = splitOutliers([...normal, row(60, 0.6, 0.33), row(5, 0.7, 0.9), row(5, 0.7, 0.3)]);
+    expect(s.longAbsent).toBe(2); // the plain ghost + the ghost who also scored 5
+    expect(s.extreme).toBe(1);
+    expect(s.kept).toHaveLength(30);
+  });
+  it("leaves nobody out of an ordinary class", () => {
+    const s = splitOutliers(normal);
+    expect([s.longAbsent, s.extreme, s.kept.length]).toEqual([0, 0, 30]);
+  });
+  it("on the published page: every child is accounted for and homework still predicts", () => {
+    const o = computeWithoutOutliers(publishedRows);
+    expect(o.withResult + o.longAbsent + o.extreme).toBe(66);
+    expect(o.extreme).toBeGreaterThan(0); // C3's 16% homework and C5's 33% attendance are > 3 SD out
+    expect(o.correlations.find((c) => c.key === "hwDone")!.significant).toBe(true);
   });
 });
 
