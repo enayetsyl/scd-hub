@@ -2,9 +2,11 @@ import { Schema, model, Document, Types } from "mongoose";
 import {
   STAFF_LETTER_KINDS,
   STAFF_LETTER_STATUSES,
+  STAFF_LETTER_SEND_CHANNELS,
   SALARY_MODES,
   type StaffLetterKind,
   type StaffLetterStatus,
+  type StaffLetterSendChannel,
   type SalaryMode,
 } from "@scd/shared";
 
@@ -70,6 +72,13 @@ export interface ILetterSnapshot {
    * already signed still promises what it promised. 0 omits the clause.
    */
   probationMonths?: number | null;
+  /**
+   * Increment letters only (D-#899): the salary the raise replaces (null when no earlier
+   * figure is on record) and the month it takes effect (YYYY-MM). `monthlySalary` is the
+   * NEW figure. Frozen like the rest, so later raises never rewrite this letter.
+   */
+  previousSalary?: number | null;
+  incrementMonth?: string | null;
 
   // --- the Bangla support-staff contract only (D-#586) ---------------------
   //
@@ -117,9 +126,29 @@ export interface IStaffLetter extends Document {
   voidedBy?: Types.ObjectId | null;
   voidedAt?: Date | null;
   voidReason?: string | null;
+  /** Each time the letter was sent to the staff member's app (D-#900), oldest first. */
+  sends?: ILetterSend[];
   createdAt: Date;
   updatedAt: Date;
 }
+
+export interface ILetterSend {
+  at: Date;
+  by: Types.ObjectId;
+  /** Subset of STAFF_LETTER_SEND_CHANNELS that actually went out. */
+  channels: StaffLetterSendChannel[];
+  popupNoticeId?: Types.ObjectId | null;
+}
+
+const LetterSendSchema = new Schema<ILetterSend>(
+  {
+    at: { type: Date, required: true },
+    by: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    channels: { type: [String], enum: STAFF_LETTER_SEND_CHANNELS, default: [] },
+    popupNoticeId: { type: Schema.Types.ObjectId, ref: "PopupNotice", default: null },
+  },
+  { _id: false },
+);
 
 const LetterSnapshotSchema = new Schema<ILetterSnapshot>(
   {
@@ -137,6 +166,8 @@ const LetterSnapshotSchema = new Schema<ILetterSnapshot>(
     serviceFrom: { type: String, default: null },
     serviceTo: { type: String, default: null },
     probationMonths: { type: Number, default: null, min: 0 },
+    previousSalary: { type: Number, default: null, min: 0 },
+    incrementMonth: { type: String, default: null },
     contractTitleBn: { type: String, default: null },
     employerNameBn: { type: String, default: null },
     employerAddressBn: { type: String, default: null },
@@ -170,6 +201,7 @@ const StaffLetterSchema = new Schema<IStaffLetter>(
     voidedBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
     voidedAt: { type: Date, default: null },
     voidReason: { type: String, default: null, trim: true },
+    sends: { type: [LetterSendSchema], default: [] },
   },
   { timestamps: true },
 );

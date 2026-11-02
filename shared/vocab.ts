@@ -763,18 +763,24 @@ export const PAYMENT_CHANNEL_LABELS_EN: Record<PaymentChannel, string> = {
   internal: "Own bank (internal)", beftn: "Other bank (BEFTN)", bkash: "bKash", cash: "Cash",
 };
 
-export const STAFF_LETTER_KINDS = ["appointment", "confirmation", "service_certificate", "support_contract"] as const;
+/** `increment` (D-#899): a salary-increment letter — issuing it also records the dated raise. */
+export const STAFF_LETTER_KINDS = ["appointment", "confirmation", "service_certificate", "support_contract", "increment"] as const;
 export type StaffLetterKind = (typeof STAFF_LETTER_KINDS)[number];
 
 export const STAFF_LETTER_KIND_LABELS_BN: Record<StaffLetterKind, string> = {
   appointment: "নিয়োগপত্র", confirmation: "স্থায়ীকরণ পত্র", service_certificate: "প্রত্যয়নপত্র",
-  support_contract: "নিয়োগ চুক্তিপত্র",
+  support_contract: "নিয়োগ চুক্তিপত্র", increment: "বেতন বৃদ্ধির পত্র",
 };
 export const STAFF_LETTER_KIND_LABELS_EN: Record<StaffLetterKind, string> = {
   appointment: "Appointment letter", confirmation: "Confirmation letter",
   service_certificate: "Service certificate",
   support_contract: "Support-staff contract",
+  increment: "Salary increment letter",
 };
+
+/** How an issued letter reaches the staff member's app (D-#900). */
+export const STAFF_LETTER_SEND_CHANNELS = ["notification", "popup"] as const;
+export type StaffLetterSendChannel = (typeof STAFF_LETTER_SEND_CHANNELS)[number];
 
 /** A letter is NEVER edited (D-#542): its snapshot is what was handed over and signed.
  *  A wrong letter is `void`ed — kept, marked, still renderable so the paper copy in
@@ -1487,6 +1493,9 @@ export const NOTIFICATION_KINDS = [
   "MARK_SUBMISSION_ESCALATION",
   "MARK_CORRECTION",
   "WORK_MARK_CORRECTED",
+  // Staff letters (D-#900; app-native, NO wire twin): an issued letter sent to the staff
+  // member it is addressed to, opening their আমার চিঠি screen.
+  "STAFF_LETTER_SENT",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
@@ -1557,6 +1566,7 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   MARK_SUBMISSION_ESCALATION: "অ্যাসাইনমেন্টের জমার হিসাব বাকি",
   MARK_CORRECTION: "জমার হিসাবে ভুল",
   WORK_MARK_CORRECTED: "জমার বার্তা সংশোধন",
+  STAFF_LETTER_SENT: "আপনার নতুন চিঠি",
 };
 export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   BELL_REMINDER: "Bell reminder",
@@ -1625,6 +1635,7 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   MARK_SUBMISSION_ESCALATION: "Assignments not marked",
   MARK_CORRECTION: "Submission marks corrected",
   WORK_MARK_CORRECTED: "Correction: work was submitted",
+  STAFF_LETTER_SENT: "A letter for you",
 };
 
 /**

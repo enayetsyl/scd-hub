@@ -23,6 +23,8 @@ import {
   type SupportRole,
 } from "./supportContract";
 import { getHrPolicy } from "./HrPolicyService";
+import { recordPayChange, salariesEffectiveIn } from "./PayHistoryService";
+import { StaffPayChange } from "../models/StaffPayChange";
 import { writeAudit } from "../../platform/services/AuditService";
 import { personName } from "../../../lib/personName";
 
@@ -93,15 +95,72 @@ function todayKey(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+async function loadStaff(staffProfileId: string) {
+  return StaffProfile.findById(staffProfileId).lean();
+}
+type LeanStaff = NonNullable<Awaited<ReturnType<typeof loadStaff>>>;
+
+/** What an increment letter states and records (D-#899). */
+export interface IncrementBasis {
+  /** YYYY-MM — the month the new figure takes effect. */
+  month: string;
+  newSalary: number;
+  /** The figure it replaces; null when nothing earlier is on record. */
+  previousSalary: number | null;
+  /** The pay-change row already recording this exact raise, reused rather than doubled. */
+  existingPayChangeId: Types.ObjectId | null;
+}
+
+function monthBefore(month: string): string {
+  const [y, m] = month.split("-").map(Number);
+  return m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, "0")}`;
+}
+
 /**
- * Issue a letter. Builds the snapshot from the live profile + policy ONCE, here; every
- * later read (screen, PDF, WhatsApp share) goes through the stored copy.
+ * The raise an increment letter states (D-#899). If Set pay already recorded this exact
+ * raise (same month, same figure), the letter reuses that row and its previous figure —
+ * issuing the letter must never record the same raise twice. Otherwise the previous
+ * figure is the profile's current salary, as Set pay itself takes it; when the profile
+ * already holds the new figure with no row behind it, it is the salary in force the
+ * month before.
  */
-export async function issueLetter(input: IssueLetterInput): Promise<IStaffLetter> {
+async function incrementBasis(staff: LeanStaff, month: string, newSalary: number): Promise<IncrementBasis> {
+  const existing = await StaffPayChange.findOne({ staffProfileId: staff._id, effectiveFrom: month, monthlySalary: newSalary })
+    .sort({ createdAt: -1 })
+    .lean();
+  let previousSalary: number | null;
+  if (existing) previousSalary = existing.previousSalary ?? null;
+  else if (staff.monthlySalary != null && staff.monthlySalary !== newSalary) previousSalary = staff.monthlySalary;
+  else previousSalary = (await salariesEffectiveIn(monthBefore(month))).get(staff._id.toString()) ?? null;
+  if (previousSalary !== null && newSalary <= previousSalary) {
+    throw new LetterError(
+      `বেতন বৃদ্ধির পত্রে নতুন বেতন আগের বেতনের (${previousSalary}) চেয়ে বেশি হতে হবে`,
+    );
+  }
+  return { month, newSalary, previousSalary, existingPayChangeId: existing?._id ?? null };
+}
+
+/** Everything an issue would freeze, computed WITHOUT writing anything (D-#901). */
+export interface BuiltLetter {
+  staff: LeanStaff;
+  snapshot: ILetterSnapshot;
+  monthlySalary: number | null;
+  designation: string;
+  extraText: string | null;
+  refPrefix: string;
+  increment: IncrementBasis | null;
+}
+
+/**
+ * Build the snapshot a letter would freeze — every validation, no writes. The preview
+ * renders from this, and `issueLetter` issues from it, so what the issuer previews is
+ * exactly what gets issued.
+ */
+export async function buildLetter(input: IssueLetterInput): Promise<BuiltLetter> {
   if (!STAFF_LETTER_KINDS.includes(input.kind)) throw new LetterError(`Unknown letter kind: ${input.kind}`);
   if (!SALARY_MODES.includes(input.salaryMode)) throw new LetterError(`Unknown salary mode: ${input.salaryMode}`);
 
-  const staff = await StaffProfile.findById(input.staffProfileId).lean();
+  const staff = await loadStaff(input.staffProfileId);
   if (!staff) throw new LetterError("কর্মীর প্রোফাইল পাওয়া যায়নি");
 
   const policy = await getHrPolicy();
@@ -123,6 +182,16 @@ export async function issueLetter(input: IssueLetterInput): Promise<IStaffLetter
     throw new LetterError(
       "বেতনসহ নিয়োগপত্রে বেতনের অঙ্ক ছাপা হয় — আগে মাসিক বেতন নির্ধারণ করুন, অথবা সম্মানী (অবৈতনিক) হিসেবে ইস্যু করুন",
     );
+  }
+
+  // An increment letter states a raise, so it is always paid and names the new figure;
+  // its effective DATE is read as a month, because payroll runs by month (D-#587).
+  let increment: IncrementBasis | null = null;
+  if (input.kind === "increment") {
+    if (input.salaryMode !== "paid" || monthlySalary === null) {
+      throw new LetterError("বেতন বৃদ্ধির পত্রে নতুন মাসিক বেতন দিন");
+    }
+    increment = await incrementBasis(staff, input.effectiveFrom.slice(0, 7), monthlySalary);
   }
 
   // The end of service, for someone who has actually left. It comes from the
@@ -210,6 +279,8 @@ export async function issueLetter(input: IssueLetterInput): Promise<IStaffLetter
       input.kind === "appointment" || input.kind === "support_contract"
         ? policy.probationMonths
         : null,
+    previousSalary: increment?.previousSalary ?? null,
+    incrementMonth: increment?.month ?? null,
     signatoryName: policy.signatoryName,
     signatoryTitle: policy.signatoryTitle,
     letterDate,
@@ -217,7 +288,25 @@ export async function issueLetter(input: IssueLetterInput): Promise<IStaffLetter
     ...contractFields,
   };
 
-  const year = Number(letterDate.slice(0, 4));
+  return {
+    staff,
+    snapshot,
+    monthlySalary,
+    designation,
+    extraText: input.extraText?.trim() || null,
+    refPrefix: policy.letterRefPrefix,
+    increment,
+  };
+}
+
+/**
+ * Issue a letter. Builds the snapshot from the live profile + policy ONCE, here; every
+ * later read (screen, PDF, WhatsApp share) goes through the stored copy.
+ */
+export async function issueLetter(input: IssueLetterInput): Promise<IStaffLetter> {
+  const { staff, snapshot, monthlySalary, designation, extraText, refPrefix, increment } = await buildLetter(input);
+
+  const year = Number(snapshot.letterDate.slice(0, 4));
   const doc = await createWithRefNo(
     {
       staffProfileId: new Types.ObjectId(input.staffProfileId),
@@ -225,10 +314,10 @@ export async function issueLetter(input: IssueLetterInput): Promise<IStaffLetter
       issuedOn: new Date(),
       status: "issued",
       snapshot,
-      extraText: input.extraText?.trim() || null,
+      extraText,
       issuedBy: new Types.ObjectId(input.actorId),
     },
-    policy.letterRefPrefix,
+    refPrefix,
     year,
   );
 
@@ -258,7 +347,40 @@ export async function issueLetter(input: IssueLetterInput): Promise<IStaffLetter
    * through the letter). The snapshot is untouched either way — it stays frozen.
    * An honorary letter writes nothing: it promises no figure to honour.
    */
-  if (input.salaryMode === "paid" && monthlySalary !== null && staff.monthlySalary !== monthlySalary) {
+  if (increment) {
+    /**
+     * An increment letter RECORDS the raise it announces (D-#899) — the same two writes
+     * Set pay makes: the profile's current figure, and a dated history row so payroll pays
+     * the new figure from its month (D-#587). A raise Set pay already recorded is reused.
+     */
+    if (!increment.existingPayChangeId) {
+      await recordPayChange({
+        staffProfileId: input.staffProfileId,
+        monthlySalary: increment.newSalary,
+        effectiveFrom: increment.month,
+        previousSalary: increment.previousSalary,
+        joiningMonth: staff.joiningDate ? staff.joiningDate.toISOString().slice(0, 7) : null,
+        note: `বেতন বৃদ্ধির পত্র ${doc.refNo}`,
+        actorId: input.actorId,
+      });
+    }
+    if (staff.monthlySalary !== increment.newSalary) {
+      await StaffProfile.updateOne({ _id: staff._id }, { $set: { monthlySalary: increment.newSalary } });
+      await writeAudit({
+        eventKind: "STAFF_PAY_SET",
+        actorId: input.actorId,
+        targetId: staff._id,
+        targetKind: "StaffProfile",
+        meta: {
+          monthlySalary: increment.newSalary,
+          previous: staff.monthlySalary ?? null,
+          effectiveFrom: increment.month,
+          via: "increment_letter",
+          letterRefNo: doc.refNo,
+        },
+      });
+    }
+  } else if (input.salaryMode === "paid" && monthlySalary !== null && staff.monthlySalary !== monthlySalary) {
     const previous = staff.monthlySalary ?? null;
     await StaffProfile.updateOne({ _id: staff._id }, { $set: { monthlySalary } });
     await writeAudit({

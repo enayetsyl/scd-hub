@@ -194,6 +194,9 @@ const dedupeKeys = {
     `WMCR:${tracker}:${recordId}:${dateKey}:${guardianId}`,
   /** Per day + recipient (D-#890): one 09:30 list per Office/Principal login per day. */
   markSubmissionEscalation: (dateKey: string, recipientId: string) => `MKSE:${dateKey}:${recipientId}`,
+  /** Per letter + recipient + send (D-#900): "send again" is a new notice, not a no-op. */
+  staffLetterSent: (letterId: string, recipientId: string, sendIndex: number) =>
+    `SLS:${letterId}:${recipientId}:${sendIndex}`,
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -2283,6 +2286,32 @@ export async function emitMarkSubmissionEscalation(ev: {
       });
       if (res.created) created += 1;
     }
+  });
+  return created;
+}
+
+/**
+ * D-#900 — an issued letter sent to the staff member it is addressed to. Opens their
+ * আমার চিঠি screen. Returns whether a notice was written; the caller reports it.
+ */
+export async function emitStaffLetterSent(ev: {
+  letterId: string;
+  recipientUserId: string;
+  sendIndex: number;
+  kindLabelBn: string;
+  refNo: string;
+}): Promise<boolean> {
+  let created = false;
+  await bestEffort("staff letter sent", async () => {
+    const res = await emit({
+      recipientUserId: ev.recipientUserId,
+      kind: "STAFF_LETTER_SENT",
+      titleBn: `আপনার নতুন চিঠি: ${ev.kindLabelBn}`,
+      bodyBn: `স্কুল আপনাকে একটি চিঠি পাঠিয়েছে (${ev.refNo})। কর্মী → আমার চিঠি থেকে খুলে দেখুন।`,
+      refs: {},
+      dedupeKey: dedupeKeys.staffLetterSent(ev.letterId, ev.recipientUserId, ev.sendIndex),
+    });
+    created = res.created;
   });
   return created;
 }
