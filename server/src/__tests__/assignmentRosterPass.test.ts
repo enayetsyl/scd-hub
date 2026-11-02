@@ -26,7 +26,13 @@ jest.mock("../modules/trackers/models/AssignmentStudentRecord", () => ({
   },
 }));
 jest.mock("../modules/trackers/models/AssignmentItem", () => ({
-  AssignmentItem: { findById: (id: unknown) => ({ lean: () => mockItemFindById(id) }) },
+  AssignmentItem: {
+    findById: (id: unknown) => ({
+      lean: () => mockItemFindById(id),
+      // D-#891: the first-chase guardian notice reads asId + subject; no item = no notice.
+      select: () => ({ lean: () => Promise.resolve(null) }),
+    }),
+  },
 }));
 
 import {
@@ -89,7 +95,7 @@ describe("submitPass — first-cross-only + chase-before-due (G7)", () => {
     const res = await submitPass(ITEM_ID, [{ recordId: r.recordId, submitted: false }], ACTOR);
     expect(r.state).toBe("CHASE");
     expect(r.chaseCount).toBe(1);
-    expect(res).toEqual({ submittedCount: 0, chasedCount: 1, unchangedCount: 0 });
+    expect(res).toEqual({ submittedCount: 0, chasedCount: 1, unchangedCount: 0, correctedCount: 0 });
   });
 
   test("already-CHASE crossed again → NO-OP", async () => {
@@ -99,7 +105,7 @@ describe("submitPass — first-cross-only + chase-before-due (G7)", () => {
     expect(r.chaseCount).toBe(1);
     expect(r.stateDates).toEqual([]);
     expect(r.save).not.toHaveBeenCalled();
-    expect(res).toEqual({ submittedCount: 0, chasedCount: 0, unchangedCount: 1 });
+    expect(res).toEqual({ submittedCount: 0, chasedCount: 0, unchangedCount: 1, correctedCount: 0 });
   });
 
   test("GIVEN submit → DUE→SUBMITTED with one timestamp", async () => {
@@ -157,7 +163,7 @@ describe("submitPass — the owner's worked example (20 delivered)", () => {
       ],
       ACTOR,
     );
-    expect(res).toEqual({ submittedCount: 15, chasedCount: 5, unchangedCount: 0 });
+    expect(res).toEqual({ submittedCount: 15, chasedCount: 5, unchangedCount: 0, correctedCount: 0 });
     expect([...notSubmitted, ...absentToday].every((r) => r.state === "CHASE" && r.chaseCount === 1)).toBe(true);
   });
 
@@ -173,7 +179,7 @@ describe("submitPass — the owner's worked example (20 delivered)", () => {
       ],
       ACTOR,
     );
-    expect(res).toEqual({ submittedCount: 4, chasedCount: 0, unchangedCount: 1 });
+    expect(res).toEqual({ submittedCount: 4, chasedCount: 0, unchangedCount: 1, correctedCount: 0 });
     expect(submitLater.every((r) => r.state === "SUBMITTED" && r.chaseCount === 1)).toBe(true);
     expect(stillMissing.chaseCount).toBe(1); // untouched — manual তাগাদা escalates
   });

@@ -111,6 +111,17 @@ export const FEATURE_CATALOGUE = {
       issue: { en: "Mark gift given", bn: "উপহার দেওয়া হয়েছে চিহ্নিত করা", desc: "Tick a handover, undo a mis-tick", teacher: true, office: true, flags: [], designation: "class_teacher" },
     },
   },
+  // Mark-submission guard (D-#889–#893, docs/prd-mark-submission-guard.md).
+  mark_submission: {
+    group: "teaching_and_trackers",
+    en: "Mark submission",
+    bn: "জমার হিসাব",
+    actions: {
+      alerts: { en: "Unmarked & correction alerts", bn: "জমার হিসাব বাকি ও ভুলের খবর পাওয়া", desc: "09:30 list of unmarked assignments; a same-day correction by a teacher", teacher: false, office: true, flags: [] },
+      view_notes: { en: "Everyone's correction notes", bn: "সবার জমার হিসাবের ভুল দেখা", desc: "The নম্বর জমায় ভুল notes in any staff file", teacher: false, office: true, flags: [] },
+      view_own: { en: "My reminders & notes", bn: "আমার জমার রিমাইন্ডার ও ভুল", desc: "Own Sunday reminders and own correction notes", teacher: true, office: true, flags: ["SELF"] },
+    },
+  },
   work_claim: {
     group: "teaching_and_trackers",
     en: "Guardian \"done at home\" claims",

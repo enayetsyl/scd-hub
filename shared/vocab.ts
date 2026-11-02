@@ -1480,6 +1480,13 @@ export const NOTIFICATION_KINDS = [
   "MASTERY_PROPOSAL",
   "MASTERY_EXTRA_CLASS",
   "MASTERY_ASSIGNMENT_SENT",
+  // Mark-submission guard (D-#889–#893, docs/prd-mark-submission-guard.md; app-native, NO wire twin):
+  //   SUBMISSION_ESCALATION → holders of mark_submission:alerts at 09:30 (unmarked assignments)
+  //   CORRECTION            → the same holders when a teacher flips a same-day chase
+  //   WORK_MARK_CORRECTED   → the child's guardians: the earlier "not brought" notice was wrong
+  "MARK_SUBMISSION_ESCALATION",
+  "MARK_CORRECTION",
+  "WORK_MARK_CORRECTED",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
@@ -1547,6 +1554,9 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   MASTERY_PROPOSAL: "অতিরিক্ত ক্লাসের প্রস্তাব",
   MASTERY_EXTRA_CLASS: "অতিরিক্ত ক্লাস",
   MASTERY_ASSIGNMENT_SENT: "সাপ্তাহিক অ্যাসাইনমেন্ট",
+  MARK_SUBMISSION_ESCALATION: "অ্যাসাইনমেন্টের জমার হিসাব বাকি",
+  MARK_CORRECTION: "জমার হিসাবে ভুল",
+  WORK_MARK_CORRECTED: "জমার বার্তা সংশোধন",
 };
 export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   BELL_REMINDER: "Bell reminder",
@@ -1612,6 +1622,9 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   MASTERY_PROPOSAL: "Extra-class proposal",
   MASTERY_EXTRA_CLASS: "Extra class",
   MASTERY_ASSIGNMENT_SENT: "Weekly assignment",
+  MARK_SUBMISSION_ESCALATION: "Assignments not marked",
+  MARK_CORRECTION: "Submission marks corrected",
+  WORK_MARK_CORRECTED: "Correction: work was submitted",
 };
 
 /**
