@@ -31,6 +31,7 @@ import { QuranExamGuardianPopup } from "./src/components/QuranExamGuardianPopup"
 import { CommentReadPopup } from "./src/components/CommentReadPopup";
 import { QuranExamReminderPopup } from "./src/components/QuranExamReminderPopup";
 import { MeetingCommentReminderPopup } from "./src/components/MeetingCommentReminderPopup";
+import { MarkReminderPopup, MarkEscalationPopup } from "./src/components/MarkSubmissionPopup";
 import {
   navigationRef,
   openNotificationCenter,
@@ -243,6 +244,9 @@ function App(): React.ReactElement | null {
                               <QuranExamReminderPopup />
                               {/* Staff: once a day, how many meeting comments are still owed (D-#851). */}
                               <MeetingCommentReminderPopup />
+                              {/* Teachers on an assignment due day; Office + Principal at 09:30 (D-#889/#890). */}
+                              <MarkReminderPopup />
+                              <MarkEscalationPopup />
                             </WebPushGate>
                           </UpdateGate>
                         </ConfirmProvider>

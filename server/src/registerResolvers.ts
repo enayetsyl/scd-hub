@@ -97,6 +97,7 @@ import "./modules/platform/resolvers/systemHealth";
 import "./modules/engagement/resolvers/guardianView";
 import "./modules/engagement/resolvers/guardianEngagement";
 import "./modules/trackers/resolvers/classTestQuestion";
+import "./modules/trackers/resolvers/markSubmission";
 import "./modules/comments/resolvers/parentMeeting";
 import "./modules/comments/resolvers/meetingDispatch";
 import "./modules/comments/resolvers/meetingResponse";

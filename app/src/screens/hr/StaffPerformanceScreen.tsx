@@ -14,7 +14,7 @@ type Props = NativeStackScreenProps<HrStackParamList, "StaffPerformance">;
 
 export default function StaffPerformanceScreen({ route, navigation }: Props): React.ReactElement {
   const { staffProfileId, name } = route.params;
-  const go = (screen: "StaffObservations" | "StaffAppraisals" | "StaffConduct" | "StaffCpd") =>
+  const go = (screen: "StaffObservations" | "StaffAppraisals" | "StaffConduct" | "StaffCpd" | "MarkCorrections") =>
     navigation.navigate(screen, { staffProfileId, name });
   // PM: appraisal:view_all (observations, appraisals, CPD) and conduct:view_all are
   // separate actions now (both were performance:manage).
@@ -43,6 +43,12 @@ export default function StaffPerformanceScreen({ route, navigation }: Props): Re
       {canAppraisal ? (
         <Card onPress={() => go("StaffCpd")}>
           <Body style={{ fontWeight: "700" }}>{STR.hrCpd}</Body>
+        </Card>
+      ) : null}
+      {can("mark_submission:view_notes") ? (
+        <Card onPress={() => go("MarkCorrections")}>
+          <Body style={{ fontWeight: "700" }}>{STR.msgNotesTitle}</Body>
+          <Muted>{STR.msgNotesHelp}</Muted>
         </Card>
       ) : null}
     </Screen>

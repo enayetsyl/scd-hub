@@ -21,8 +21,9 @@
  * Write-scope (assertCanWrite) is enforced by the resolver, not here.
  */
 import type { LifecycleState, HwSubject } from "@scd/shared";
-import { acceptClaimsForRecords } from "./WorkClaimService";
-import { emitWorkClaimResolved } from "../../notifications/services/emitters";
+import { acceptClaimsForRecords, hasOpenClaim } from "./WorkClaimService";
+import { emitAssignmentFirstChase, emitWorkClaimResolved } from "../../notifications/services/emitters";
+import { recordMarkCorrection, sameDayPersonChase } from "./MarkCorrectionService";
 import { AS_WEEKLY_CEILING_MIN } from "@scd/shared";
 import { Types } from "mongoose";
 import { StoredFile } from "../../platform/models/StoredFile";
@@ -708,6 +709,8 @@ export interface TransitionResult {
   state: LifecycleState;
   chaseCount: number;
   dueDate: string | null;
+  /** D-#892: this move corrected a chase a person made the same day (a recorded mistake). */
+  markCorrected?: boolean;
 }
 
 function transitionShape(rec: IAssignmentStudentRecord): TransitionResult {
@@ -778,7 +781,10 @@ export async function transitionAssignmentRecord(
   const rec = await AssignmentStudentRecord.findById(recordId);
   if (!rec) throw new Error("AssignmentStudentRecord not found");
   const to = toState as LifecycleState;
-  assertTransition(rec.state, to);
+  const from = rec.state;
+  assertTransition(from, to);
+  // D-#892: read BEFORE the new stamp lands — the chase being corrected is the latest one.
+  const correctedChase = from === "CHASE" && to === "SUBMITTED" ? sameDayPersonChase(rec.stateDates, at) : null;
   if (to === "CHASE") rec.chaseCount += 1;
   rec.state = to;
   rec.stateDates.push({ state: to, at, by: new Types.ObjectId(actorId) });
@@ -792,7 +798,45 @@ export async function transitionAssignmentRecord(
     for (const claim of accepted) await emitWorkClaimResolved(claim);
   }
 
-  return transitionShape(rec);
+  // D-#891: the FIRST chase tells the family, with the gift warning (re-chases stay
+  // silent; the teacher-sent follow-up ladder is separate). Held while the family has an
+  // open claim on this very record (the D-#554 §6.4 posture). Best-effort inside.
+  if (to === "CHASE" && rec.chaseCount === 1) {
+    try {
+      if (!(await hasOpenClaim(rec._id))) {
+        const item = await AssignmentItem.findById(rec.asItemId).select("asId subject").lean();
+        if (item) {
+          await emitAssignmentFirstChase({
+            recordId: rec._id,
+            asId: item.asId,
+            studentId: rec.studentId,
+            sectionId: rec.sectionId,
+            subject: item.subject,
+            at,
+          });
+        }
+      }
+    } catch (err) {
+      console.error("[AssignmentService] first-chase guardian notice failed (never blocks the chase):", err);
+    }
+  }
+
+  // D-#892/#893: a same-day flip of a person-made chase is the chaser's recorded mistake.
+  if (correctedChase) {
+    await recordMarkCorrection({
+      tracker: "ASSIGNMENT",
+      recordId: rec._id,
+      itemId: rec.asItemId,
+      studentId: rec.studentId,
+      sectionId: rec.sectionId,
+      chase: correctedChase,
+      correctedBy: actorId,
+      at,
+      via: "FLIP",
+    });
+  }
+
+  return { ...transitionShape(rec), markCorrected: !!correctedChase };
 }
 
 // ---------------------------------------------------------------------------

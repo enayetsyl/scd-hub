@@ -1611,6 +1611,7 @@ interface SubmitPassResultShape {
   chasedCount: number;
   unchangedCount: number;
   autoChasedCount: number;
+  correctedCount: number;
 }
 const HwSubmitPassResultRef = builder.objectRef<SubmitPassResultShape>("HwSubmitPassResult");
 HwSubmitPassResultRef.implement({
@@ -1619,6 +1620,8 @@ HwSubmitPassResultRef.implement({
     chasedCount: t.exposeInt("chasedCount"),
     unchangedCount: t.exposeInt("unchangedCount"),
     autoChasedCount: t.exposeInt("autoChasedCount"),
+    // D-#892: children flipped from a same-day person-made chase (recorded mistakes).
+    correctedCount: t.exposeInt("correctedCount"),
   }),
 });
 
