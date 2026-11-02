@@ -92,6 +92,8 @@ export default function AssignmentScheduleScreen(_props: Props): React.ReactElem
   // D-#328: per-entry teacher edit — the entry being edited + its picked teacher.
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTeacherId, setEditTeacherId] = useState<string | null>(null);
+  // D-#894: change this cycle week only, or every week the same teacher holds.
+  const [editAllWeeks, setEditAllWeeks] = useState(false);
 
   const [termStart, setTermStart] = useState<string | null>(null);
   const [deliveryDow, setDeliveryDow] = useState<number | null>(null);
@@ -176,6 +178,7 @@ export default function AssignmentScheduleScreen(_props: Props): React.ReactElem
     setOk(null);
     setEditingId(entryId);
     setEditTeacherId(currentTeacherId);
+    setEditAllWeeks(false);
   }
 
   async function onEditSave(entryId: string): Promise<void> {
@@ -183,7 +186,7 @@ export default function AssignmentScheduleScreen(_props: Props): React.ReactElem
     setError(null);
     setOk(null);
     setBusy(true);
-    const res = await updateEntryTeacher({ academicYearId: yearId, entryId, teacherId: editTeacherId });
+    const res = await updateEntryTeacher({ academicYearId: yearId, entryId, teacherId: editTeacherId, allWeeks: editAllWeeks });
     setBusy(false);
     if (res.error) return setError(friendlyError(res.error));
     setOk(STR.asTeacherChanged);
@@ -209,6 +212,22 @@ export default function AssignmentScheduleScreen(_props: Props): React.ReactElem
     subjects: allEntries.map((e) => e.subject),
   });
   const visibleEntries = allEntries.filter((e) => match(e.classLevel, teacherName(e.teacherId), e.subject));
+  /** D-#894: the cycle weeks an all-weeks edit of `e` changes — its section x subject
+   *  cells held by the same teacher that have not ended (mirrors the server's pick). */
+  const sameTeacherWeeks = (e: (typeof allEntries)[number]): number[] => {
+    const today = dhakaDateKey();
+    return allEntries
+      .filter(
+        (o) =>
+          o.id === e.id ||
+          (o.sectionId === e.sectionId &&
+            o.subject === e.subject &&
+            o.teacherId === e.teacherId &&
+            (!o.effectiveTo || o.effectiveTo >= today)),
+      )
+      .map((o) => o.cycleWeek)
+      .sort((a, b) => a - b);
+  };
 
   return (
     <Screen padded={false}>
@@ -352,6 +371,24 @@ export default function AssignmentScheduleScreen(_props: Props): React.ReactElem
                                   placeholder={STR.asTeacher}
                                   searchable
                                 />
+                                {(() => {
+                                  const weeks = sameTeacherWeeks(e);
+                                  if (weeks.length < 2) return null;
+                                  return (
+                                    <>
+                                      <Muted style={{ marginTop: 4 }}>{STR.asChangeScope}</Muted>
+                                      <ChipRow>
+                                        <Chip label={STR.asThisWeekOnly} selected={!editAllWeeks} onPress={() => setEditAllWeeks(false)} />
+                                        <Chip
+                                          label={`${STR.asAllWeeks} (${weeks.map((w) => bnNum(w)).join(", ")})`}
+                                          selected={editAllWeeks}
+                                          onPress={() => setEditAllWeeks(true)}
+                                        />
+                                      </ChipRow>
+                                      {editAllWeeks ? <Muted>{STR.asAllWeeksHint}</Muted> : null}
+                                    </>
+                                  );
+                                })()}
                                 <ChipRow>
                                   <Chip label={STR.save} onPress={() => void onEditSave(e.id)} />
                                   <Chip label={STR.cancel} onPress={() => { setEditingId(null); setEditTeacherId(null); }} />

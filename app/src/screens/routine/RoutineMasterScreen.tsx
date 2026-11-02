@@ -8,6 +8,10 @@
  * EDIT-IN-PLACE: every non-break cell is tappable — it opens a dialog to change that
  * period's subject / teacher / room (or add a slot to an empty cell, or remove one),
  * conflict-checked on the server. `routine:manage`.
+ *
+ * D-#895: changing an existing period's teacher offers "all this teacher's periods" —
+ * every period of the same subject in the same row held by the same teacher, changed in
+ * one whole-or-nothing call (reassignRoutineSubjectTeacher, narrowed to that teacher).
  */
 import React, { useMemo, useRef, useState } from "react";
 import { View, ScrollView, Pressable, Modal } from "react-native";
@@ -18,6 +22,7 @@ import {
   CREATE_ROUTINE_SLOT,
   UPDATE_ROUTINE_SLOT,
   DELETE_ROUTINE_SLOT,
+  REASSIGN_ROUTINE_SUBJECT_TEACHER,
   type RoutineMasterT,
   type RoutineMasterSlotT,
   type RoutineMasterRowT,
@@ -224,11 +229,14 @@ function DayBody({
  *  the track follows the subject. Conflicts come back from the server as an error. */
 function EditSlotModal({
   target,
+  week,
   c,
   onClose,
   onDone,
 }: {
   target: EditTarget;
+  /** Every day's grid — where the same teacher's other periods of this subject sit. */
+  week: RoutineMasterT[];
   c: ThemeColors;
   onClose: () => void;
   onDone: (msg: string, warnings: string[]) => void;
@@ -251,12 +259,44 @@ function EditSlotModal({
   const [, createSlot] = useMutation(CREATE_ROUTINE_SLOT);
   const [, updateSlot] = useMutation(UPDATE_ROUTINE_SLOT);
   const [, deleteSlot] = useMutation(DELETE_ROUTINE_SLOT);
+  const [, reassign] = useMutation(REASSIGN_ROUTINE_SUBJECT_TEACHER);
+
+  // D-#895: the same teacher's periods of this subject in this row, across the week.
+  const fromTeacherId = target.slot?.teacherId ?? null;
+  const samePeriods = useMemo(() => {
+    const slot = target.slot;
+    if (!slot || !fromTeacherId) return [];
+    return week.flatMap((m) =>
+      m.slots
+        .filter((s) => s.groupId === target.groupId && s.subject === slot.subject && s.teacherId === fromTeacherId && !s.isBreak)
+        .map((s) => `${dayOfWeekLabel(m.day)} P${bnNum(s.periodNumber)}`),
+    );
+  }, [week, target, fromTeacherId]);
+  const [allPeriods, setAllPeriods] = useState(false);
+  const showScope = samePeriods.length > 1 && subject === target.slot?.subject;
+  const bulk = showScope && allPeriods;
+  const teacherChanged = !!teacherId.trim() && teacherId !== fromTeacherId;
 
   async function save(): Promise<void> {
     setBusy(true);
     setError(null);
     const track = trackForSubject(subject);
-    if (isNew) {
+    if (bulk) {
+      const res = await reassign({
+        sectionId: target.groupId,
+        subject,
+        teacherId: teacherId.trim(),
+        groupType: target.groupType,
+        fromTeacherId,
+      });
+      setBusy(false);
+      if (res.error || !res.data?.reassignRoutineSubjectTeacher) {
+        setError(friendlyError(res.error));
+        return;
+      }
+      const r = res.data.reassignRoutineSubjectTeacher;
+      onDone(`${STR.rtPeriodsChanged} ${bnNum(r.updatedSlots)}`, r.warnings);
+    } else if (isNew) {
       const res = await createSlot({
         groupType: target.groupType,
         groupId: target.groupId,
@@ -333,10 +373,41 @@ function EditSlotModal({
             </ChipRow>
 
             <TeacherSelect label={STR.rtTeacherId} value={teacherId} onChange={setTeacherId} />
-            <RoomSelect label={STR.rtRoomId} value={roomId} onChange={setRoomId} />
+
+            {showScope ? (
+              <>
+                <Muted style={{ marginTop: space(1) }}>{STR.rtChangeScope}</Muted>
+                <ChipRow>
+                  <Chip label={STR.rtThisPeriodOnly} selected={!allPeriods} onPress={() => setAllPeriods(false)} />
+                  <Chip
+                    label={`${STR.rtAllPeriods} (${bnNum(samePeriods.length)})`}
+                    selected={allPeriods}
+                    onPress={() => {
+                      setAllPeriods(true);
+                      // Each period keeps its own room on the all-periods path.
+                      setRoomId(target.slot?.roomId ?? "");
+                    }}
+                  />
+                </ChipRow>
+                {bulk ? (
+                  <>
+                    <Muted>{samePeriods.join(", ")}</Muted>
+                    <Muted>{STR.rtAllPeriodsHint}</Muted>
+                  </>
+                ) : null}
+              </>
+            ) : null}
+
+            {bulk ? null : <RoomSelect label={STR.rtRoomId} value={roomId} onChange={setRoomId} />}
 
             <View style={{ flexDirection: "row", gap: space(2), marginTop: space(2) }}>
-              <Button title={isNew ? STR.rtCreate : STR.save} onPress={save} loading={busy} disabled={busy} style={{ flex: 1 }} />
+              <Button
+                title={isNew ? STR.rtCreate : STR.save}
+                onPress={save}
+                loading={busy}
+                disabled={busy || (bulk && !teacherChanged)}
+                style={{ flex: 1 }}
+              />
               {!isNew ? <Button title={STR.remove} variant="danger" onPress={remove} disabled={busy} /> : null}
             </View>
             <Button title={STR.cancel} variant="secondary" onPress={onClose} disabled={busy} />
@@ -417,6 +488,7 @@ export default function RoutineMasterScreen(): React.ReactElement {
         <EditSlotModal
           key={`${edit.groupType}:${edit.groupId}:${edit.day}:${edit.period}`}
           target={edit}
+          week={week}
           c={c}
           onClose={() => setEdit(null)}
           onDone={handleDone}
