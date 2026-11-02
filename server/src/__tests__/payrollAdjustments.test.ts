@@ -9,7 +9,15 @@
  * The helper lives in /shared: it is the shape of the contract between the form and the
  * mutation, and a server test cannot import across the app workspace's rootDir.
  */
-import { buildAdjustments, rowComplete, rowStarted, type AdjRow } from "@scd/shared";
+import {
+  buildAdjustments,
+  rowComplete,
+  rowStarted,
+  applyLeaveCharges,
+  pickValid,
+  type AdjRow,
+  type LeaveChargePick,
+} from "@scd/shared";
 
 const STAFF_A = "aaaaaaaaaaaaaaaaaaaaaaaa";
 const STAFF_B = "bbbbbbbbbbbbbbbbbbbbbbbb";
@@ -93,5 +101,41 @@ describe("buildAdjustments", () => {
 
   test("an empty list produces no adjustments at all — the run computes as before", () => {
     expect(buildAdjustments([])).toEqual([]);
+  });
+});
+
+describe("applyLeaveCharges — the optional leave-to-salary switches (D-#898)", () => {
+  function pick(over: Partial<LeaveChargePick> = {}): LeaveChargePick {
+    return { staffProfileId: STAFF_A, kind: "probation", maxDays: 5, on: true, days: "5", ...over };
+  }
+
+  test("a row left OFF charges nothing — off is the default and the run is unchanged", () => {
+    expect(applyLeaveCharges([], [pick({ on: false })])).toEqual([]);
+  });
+
+  test("probation charges go to probationChargeDays, an overdrawn balance to leaveRecoveryDays", () => {
+    expect(
+      applyLeaveCharges([], [pick({ days: "3" }), pick({ staffProfileId: STAFF_B, kind: "overdrawn", days: "2" })]),
+    ).toEqual([
+      { staffProfileId: STAFF_A, probationChargeDays: 3 },
+      { staffProfileId: STAFF_B, leaveRecoveryDays: 2 },
+    ]);
+  });
+
+  test("merges into the person's existing adjustment instead of adding one the server would drop", () => {
+    const manual = buildAdjustments([row({ sign: "deduction", type: "other", amount: "500" })]);
+    const out = applyLeaveCharges(manual, [pick({ days: "2" })]);
+    expect(out).toHaveLength(1);
+    expect(out[0]).toMatchObject({ staffProfileId: STAFF_A, probationChargeDays: 2 });
+    expect(out[0].manualDeductions).toHaveLength(1);
+  });
+
+  test("days must be above zero and within the most that may be charged; a partial day is fine", () => {
+    expect(pickValid(pick({ days: "0" }))).toBe(false);
+    expect(pickValid(pick({ days: "6" }))).toBe(false);
+    expect(pickValid(pick({ days: "abc" }))).toBe(false);
+    expect(pickValid(pick({ days: "2.5" }))).toBe(true);
+    expect(pickValid(pick({ on: false, days: "abc" }))).toBe(true);
+    expect(applyLeaveCharges([], [pick({ days: "9" })])).toEqual([]);
   });
 });

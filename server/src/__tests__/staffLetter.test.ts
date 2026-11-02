@@ -57,6 +57,13 @@ jest.mock("../modules/hr/models/ProbationLeaveDebt", () => ({
     updateOne: jest.fn().mockResolvedValue({}),
   },
 }));
+// D-#898 — no held days charged to salary in these cases.
+jest.mock("../modules/hr/models/ProbationDebtRecovery", () => ({
+  ProbationDebtRecovery: {
+    find: () => ({ select: () => ({ lean: async () => [] }) }),
+    updateMany: jest.fn().mockResolvedValue({}),
+  },
+}));
 jest.mock("../modules/hr/services/LeaveEntitlementService", () => ({
   pooledBalanceForStaff: (...a: unknown[]) => mockPooledBalance(...a),
 }));

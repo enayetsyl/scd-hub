@@ -7848,9 +7848,34 @@ export interface StaffPayrollAdjustmentInputT {
   /** Days of a negative leave balance settled by agreement this month (D-#617). */
   leaveRecoveryDays?: number | null;
   leaveRecoveryNote?: string | null;
+  /** Days of held probation leave charged to this month's pay, by choice (D-#898). */
+  probationChargeDays?: number | null;
+  probationChargeNote?: string | null;
   /** Recover the outstanding advance in this run (D-#622) — a one-off only when true. */
   recoverAdvance?: boolean | null;
 }
+
+/** Someone a run could charge for leave (D-#898); `days` is the most that may be charged. */
+export interface LeaveChargeCandidateT {
+  staffProfileId: string;
+  name: string;
+  kind: "probation" | "overdrawn";
+  days: number;
+}
+
+export const LEAVE_CHARGE_CANDIDATES = gql<
+  { leaveChargeCandidates: LeaveChargeCandidateT[] },
+  { monthKey: string }
+>`
+  query LeaveChargeCandidates($monthKey: String!) {
+    leaveChargeCandidates(monthKey: $monthKey) {
+      staffProfileId
+      name
+      kind
+      days
+    }
+  }
+`;
 
 export const PREPARE_PAYROLL_RUN = gql<
   { preparePayrollRun: PayrollRunT },
