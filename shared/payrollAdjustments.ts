@@ -29,6 +29,9 @@ export interface StaffPayrollAdjustment {
   /** Days of HELD probation leave charged to this month's pay, by choice (D-#898). */
   probationChargeDays?: number | null;
   probationChargeNote?: string | null;
+  /** Days of lateness charged this month, by choice, and where they land (D-#908). */
+  latenessChargeDays?: number | null;
+  latenessChargeTo?: "salary" | "leave" | null;
   /**
    * Recover the outstanding advance in THIS run (D-#622). A one-off recovers only
    * when this is true — it takes the whole balance, so it is chosen, not assumed;
@@ -139,6 +142,44 @@ export function applyLeaveCharges(
     }
     if (p.kind === "probation") adj.probationChargeDays = days;
     else adj.leaveRecoveryDays = days;
+  }
+  return out;
+}
+
+/**
+ * One row of the prepare screen's per-person lateness card (D-#908). The list comes from
+ * `latenessChargeCandidates`; the operator turns a row on, may lower the days, and picks
+ * where they land — salary (a বিলম্ব কর্তন line) or the leave balance. Off by default.
+ */
+export interface LatenessPick {
+  staffProfileId: string;
+  /** floor(late marks / lateDaysPerCharge), from the server. */
+  maxDays: number;
+  on: boolean;
+  days: string;
+  to: "salary" | "leave";
+}
+
+/** A switched-on row needs days in (0, maxDays]; an off row is always fine. */
+export function latenessPickValid(p: LatenessPick): boolean {
+  return pickValid({ staffProfileId: p.staffProfileId, kind: "overdrawn", maxDays: p.maxDays, on: p.on, days: p.days });
+}
+
+/** Fold the switched-on lateness rows into the adjustments, one entry per person. */
+export function applyLatenessCharges(
+  adjustments: StaffPayrollAdjustment[],
+  picks: LatenessPick[],
+): StaffPayrollAdjustment[] {
+  const out = adjustments.map((a) => ({ ...a }));
+  for (const p of picks) {
+    if (!p.on || !latenessPickValid(p)) continue;
+    let adj = out.find((a) => a.staffProfileId === p.staffProfileId);
+    if (!adj) {
+      adj = { staffProfileId: p.staffProfileId };
+      out.push(adj);
+    }
+    adj.latenessChargeDays = Number(p.days.trim());
+    adj.latenessChargeTo = p.to;
   }
   return out;
 }

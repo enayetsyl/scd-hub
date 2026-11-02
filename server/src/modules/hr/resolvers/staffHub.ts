@@ -31,6 +31,7 @@ import type { StaffLetterKind, SalaryMode } from "@scd/shared";
 import { getHrPolicy, setHrPolicy, type HrPolicyView } from "../services/HrPolicyService";
 import {
   issueLetter,
+  buildLetter,
   voidLetter,
   lettersForStaff,
   type IssueLetterInput,
@@ -53,6 +54,7 @@ import {
 } from "../../attendance/services/TeacherAttendanceService";
 import { resolveStaffProfileForUser } from "../services/staffMatch";
 import { sendLetter } from "../services/StaffLetterSendService";
+import { incrementBody, confirmationBody } from "../routes/staffLetterPdf";
 import { StaffLetter, type IStaffLetter } from "../models/StaffLetter";
 import { Types } from "mongoose";
 
@@ -646,6 +648,40 @@ builder.mutationField("issueStaffLetter", (t) =>
         out.sendError = err instanceof Error ? err.message : String(err);
         return out;
       }
+    },
+  }),
+);
+
+builder.queryField("staffLetterDraft", (t) =>
+  t.field({
+    type: "String",
+    description:
+      "The standard body for a confirmation or increment letter, from the SAME snapshot " +
+      "issuing would freeze (D-#909) — so an increment's 'from' figure is the recorded raise's " +
+      "previous salary, not the profile's current one. Writes nothing. Requires staff_letters:issue.",
+    authScopes: { hasPermission: "staff_letters:issue" },
+    args: {
+      staffProfileId: t.arg.string({ required: true }),
+      kind: t.arg.string({ required: true }),
+      effectiveFrom: t.arg.string({ required: true }),
+      salaryMode: t.arg.string({ required: true }),
+      monthlySalary: t.arg.float({ required: false }),
+      designation: t.arg.string({ required: false }),
+    },
+    resolve: async (_r, args, ctx) => {
+      if (args.kind !== "confirmation" && args.kind !== "increment") {
+        throw new ForbiddenError("এই পত্রের প্রচলিত বয়ান নেই");
+      }
+      const built = await buildLetter({
+        staffProfileId: args.staffProfileId,
+        kind: args.kind as StaffLetterKind,
+        effectiveFrom: args.effectiveFrom,
+        salaryMode: args.salaryMode as SalaryMode,
+        monthlySalary: args.monthlySalary ?? undefined,
+        designation: args.designation ?? undefined,
+        actorId: ctx.auth!.userId,
+      });
+      return args.kind === "increment" ? incrementBody(built.snapshot) : confirmationBody(built.snapshot);
     },
   }),
 );

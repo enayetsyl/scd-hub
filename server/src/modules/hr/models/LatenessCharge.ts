@@ -40,6 +40,9 @@ export interface ILatenessCharge extends Document {
   amount: number;
   /** Set when the payroll run locks — the row is then immutable. */
   frozen: boolean;
+  /** Written by a per-person choice on the prepare screen (D-#908), not by the rule. Only
+   *  these are withdrawn when a re-prepare or cancel drops the choice. */
+  byChoice?: boolean;
   payrollRunId?: Types.ObjectId | null;
   createdAt: Date;
   updatedAt: Date;
@@ -57,6 +60,7 @@ const LatenessChargeSchema = new Schema<ILatenessCharge>(
     dayRate: { type: Number, required: true, default: 0, min: 0 },
     amount: { type: Number, required: true, default: 0, min: 0 },
     frozen: { type: Boolean, required: true, default: false },
+    byChoice: { type: Boolean, default: false },
     payrollRunId: { type: Schema.Types.ObjectId, ref: "PayrollRun", default: null },
   },
   { timestamps: true },

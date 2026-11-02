@@ -102,6 +102,9 @@ jest.mock("../modules/hr/models/LatenessCharge", () => ({
     findOne: () => ({ lean: async () => null }),
     findOneAndUpdate: jest.fn().mockResolvedValue({ _id: "x", amount: 0 }),
     updateMany: jest.fn().mockResolvedValue({ modifiedCount: 0 }),
+    // D-#908 — a re-prepare withdraws an earlier per-person lateness choice.
+    deleteOne: jest.fn().mockResolvedValue({}),
+    deleteMany: jest.fn().mockResolvedValue({}),
   },
 }));
 // D-#587 — payroll now resolves the salary EFFECTIVE in the month being run. Mocked
