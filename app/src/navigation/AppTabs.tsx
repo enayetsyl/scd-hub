@@ -294,6 +294,7 @@ import FinanceDashboardScreen from "../screens/finance/FinanceDashboardScreen";
 import HrHomeScreen from "../screens/hr/HrHomeScreen";
 import MyLeaveScreen from "../screens/hr/MyLeaveScreen";
 import MyRecordScreen from "../screens/hr/MyRecordScreen";
+import MyLettersScreen from "../screens/hr/MyLettersScreen";
 import LeaveCoverScreen from "../screens/hr/LeaveCoverScreen";
 import LeaveAdminScreen from "../screens/hr/LeaveAdminScreen";
 import NeedsCoverInboxScreen from "../screens/hr/NeedsCoverInboxScreen";
@@ -1425,6 +1426,7 @@ function HrNavigator(): React.ReactElement {
       <HrStack.Screen name="HrHome" component={HrHomeScreen} options={{ title: STR.tabHr }} />
       <HrStack.Screen name="MyLeave" component={MyLeaveScreen} options={{ title: STR.hrMyLeave }} />
       <HrStack.Screen name="MyRecord" component={MyRecordScreen} options={{ title: STR.hrMyRecord }} />
+      <HrStack.Screen name="MyLetters" component={MyLettersScreen} options={{ title: STR.hrMyLetters }} />
       <HrStack.Screen
         name="LeaveCover"
         component={LeaveCoverScreen}

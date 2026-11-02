@@ -20,7 +20,10 @@
 import PDFDocument from "pdfkit";
 import * as path from "path";
 import type { Router, Request, Response } from "express";
-import { Router as createRouter } from "express";
+import express, { Router as createRouter } from "express";
+import type { StaffLetterKind, SalaryMode } from "@scd/shared";
+import { buildLetter, LetterError, type SupportContractInput } from "../services/StaffLetterService";
+import { resolveStaffProfileForUser } from "../services/staffMatch";
 import { callerHasPermission } from "@scd/shared";
 import { mixedText } from "../../../routes/pdfRenderer";
 import { buildContext } from "../../../context";
@@ -49,9 +52,56 @@ export function taka(n: number): string {
   return n.toLocaleString("en-US");
 }
 
+/**
+ * PREVIEW — the letter exactly as issuing it would freeze it, before anything is written
+ * (D-#903). Same input as `issueStaffLetter`, same `buildLetter`, so the preview and the
+ * issued letter cannot drift; only the ref no is missing, and the page says PREVIEW.
+ */
+staffLetterPdfRouter.post("/preview", express.json({ limit: "200kb" }), async (req: Request, res: Response) => {
+  const ctx = buildContext(req, res);
+  if (!ctx.auth || !callerHasPermission(ctx.auth, "staff_letters:issue")) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+  const b = (req.body ?? {}) as Record<string, unknown>;
+  const str = (v: unknown) => (typeof v === "string" ? v : undefined);
+  try {
+    const built = await buildLetter({
+      staffProfileId: String(b.staffProfileId ?? ""),
+      kind: str(b.kind) as StaffLetterKind,
+      letterDate: str(b.letterDate),
+      effectiveFrom: String(b.effectiveFrom ?? ""),
+      salaryMode: str(b.salaryMode) as SalaryMode,
+      monthlySalary: typeof b.monthlySalary === "number" ? b.monthlySalary : null,
+      designation: str(b.designation) ?? null,
+      weeklyHours: str(b.weeklyHours) ?? null,
+      extraText: str(b.extraText) ?? null,
+      contract: (b.contract as SupportContractInput | undefined) ?? null,
+      actorId: ctx.auth.userId,
+    });
+    const pdfBuffer = await renderLetterToPdf(
+      { kind: str(b.kind) as StaffLetterKind, refNo: "—", status: "issued", snapshot: built.snapshot, extraText: built.extraText, voidReason: null },
+      { preview: true },
+    );
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename="preview.pdf"`);
+    res.setHeader("Content-Length", pdfBuffer.byteLength);
+    res.send(pdfBuffer);
+  } catch (err) {
+    // A refusal the issue would also give (no designation, a lower "increment") is the
+    // operator's to fix — say it, the same words the issue button would show.
+    if (err instanceof LetterError) {
+      res.status(400).json({ error: err.message });
+      return;
+    }
+    console.error("Letter preview failed:", err);
+    res.status(500).json({ error: "Could not generate the preview" });
+  }
+});
+
 staffLetterPdfRouter.get("/:id", async (req: Request, res: Response) => {
   const ctx = buildContext(req, res);
-  if (!ctx.auth || !callerHasPermission(ctx.auth, "staff_letters:view")) {
+  if (!ctx.auth) {
     res.status(403).json({ error: "Forbidden" });
     return;
   }
@@ -60,6 +110,18 @@ staffLetterPdfRouter.get("/:id", async (req: Request, res: Response) => {
   if (!letter) {
     res.status(404).json({ error: "Letter not found" });
     return;
+  }
+  // The Office reads any letter; a staff member reads their OWN issued letters (D-#903).
+  // Not found and not yours look the same, so the route never confirms someone else's.
+  if (!callerHasPermission(ctx.auth, "staff_letters:view")) {
+    const own =
+      callerHasPermission(ctx.auth, "staff_letters:view_own") &&
+      letter.status === "issued" &&
+      (await resolveStaffProfileForUser(ctx.auth.userId))?._id.toString() === letter.staffProfileId.toString();
+    if (!own) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
   }
 
   // Isolate the render: a renderer/font failure returns 500 rather than rejecting out
@@ -305,6 +367,20 @@ export function certificateBody(s: ILetterSnapshot): string {
  * one click; it is text the issuer can accept, edit or replace entirely, rather than a
  * fixed string in a renderer they cannot reach.
  */
+/**
+ * The increment letter's DRAFT body (D-#901). Like the confirmation letter, the issuer's
+ * own text replaces it entirely when supplied; this is the starting point the form offers.
+ */
+export function incrementBody(s: ILetterSnapshot): string {
+  const from = s.previousSalary ? ` from Tk. ${taka(s.previousSalary)}` : "";
+  return (
+    `In recognition of your service as ${s.designation} at the School for Community Development (SCD), ` +
+    `the management is pleased to revise your monthly remuneration${from} to Tk. ${taka(s.monthlySalary ?? 0)} ` +
+    `with effect from ${s.effectiveFrom}, insha'Allah. All other terms and conditions of your appointment ` +
+    `remain unchanged.`
+  );
+}
+
 export function confirmationBody(s: ILetterSnapshot): string {
   const salaryLine =
     s.salaryMode === "paid" && s.monthlySalary
@@ -401,7 +477,7 @@ export function buildContractSections(s: ILetterSnapshot): ContractSection[] {
 /** The Bangla contract page. A different document from the English letters — two
  *  parties, a duties schedule, and BOTH signatures — so it gets its own renderer
  *  rather than a flag inside the other one. */
-function renderContract(doc: PDFKit.PDFDocument, letter: IStaffLetter, width: number): void {
+function renderContract(doc: PDFKit.PDFDocument, letter: RenderableLetter, width: number): void {
   const s = letter.snapshot;
 
   doc.fontSize(13);
@@ -487,7 +563,13 @@ function renderContract(doc: PDFKit.PDFDocument, letter: IStaffLetter, width: nu
   mixedText(doc, "স্বাক্ষর ও সীল: ...........................................", { width });
 }
 
-async function renderLetterToPdf(letter: IStaffLetter): Promise<Buffer> {
+/** A letter as the renderer needs it — an issued one, or a preview that has no id yet. */
+export type RenderableLetter = Pick<IStaffLetter, "kind" | "refNo" | "status" | "snapshot" | "extraText" | "voidReason">;
+
+/** Kinds whose `extraText` IS the body (the issuer owns the words, D-#590 / D-#901). */
+const BODY_IS_AUTHORED = (kind: string) => kind === "confirmation" || kind === "increment";
+
+export async function renderLetterToPdf(letter: RenderableLetter, opts: { preview?: boolean } = {}): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
     const s = letter.snapshot;
@@ -516,6 +598,14 @@ async function renderLetterToPdf(letter: IStaffLetter): Promise<Buffer> {
       mixedText(doc, `VOID — superseded${letter.voidReason ? `: ${letter.voidReason}` : ""}`, {
         align: "right",
       });
+      doc.fillColor("#000000");
+      doc.moveDown(0.3);
+    }
+    // A preview must never pass for the real thing (D-#903): no ref no is allocated until
+    // the letter is issued, and the page says so on its face.
+    if (opts.preview) {
+      doc.fontSize(9).fillColor("#B3261E");
+      mixedText(doc, "PREVIEW — not issued. The reference number is assigned on issue.", { align: "right" });
       doc.fillColor("#000000");
       doc.moveDown(0.3);
     }
@@ -551,7 +641,9 @@ async function renderLetterToPdf(letter: IStaffLetter): Promise<Buffer> {
         ? "TO WHOM IT MAY CONCERN"
         : letter.kind === "confirmation"
           ? "CONFIRMATION OF EMPLOYMENT"
-          : "APPOINTMENT LETTER",
+          : letter.kind === "increment"
+            ? "SALARY INCREMENT"
+            : "APPOINTMENT LETTER",
     );
     doc.moveDown(1);
 
@@ -568,10 +660,11 @@ async function renderLetterToPdf(letter: IStaffLetter): Promise<Buffer> {
       doc.moveDown(0.8);
     }
 
-    if (letter.kind === "confirmation") {
-      // The issuer's own text IS the body when they supplied one (D-#590); the
+    if (BODY_IS_AUTHORED(letter.kind)) {
+      // The issuer's own text IS the body when they supplied one (D-#590, D-#901); the
       // generated paragraph is only the draft they started from.
-      mixedText(doc, letter.extraText?.trim() || confirmationBody(s), {
+      const draft = letter.kind === "increment" ? incrementBody(s) : confirmationBody(s);
+      mixedText(doc, letter.extraText?.trim() || draft, {
         width,
         align: "justify",
         lineGap: 1.5,
@@ -612,7 +705,7 @@ async function renderLetterToPdf(letter: IStaffLetter): Promise<Buffer> {
     // The owner's optional extra paragraph — part of the snapshot, printed as written.
     // NOT for a confirmation letter: there the same text is the body itself (D-#590),
     // and printing it twice was the first thing this change had to avoid.
-    if (letter.extraText && letter.kind !== "confirmation") {
+    if (letter.extraText && !BODY_IS_AUTHORED(letter.kind)) {
       doc.moveDown(0.4);
       mixedText(doc, letter.extraText, { width, align: "justify", lineGap: 1.5 });
       doc.moveDown(0.6);

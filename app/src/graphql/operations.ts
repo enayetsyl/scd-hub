@@ -7821,9 +7821,13 @@ export interface PayrollRunT {
   preparedAt: string;
   approvedAt: string | null;
   note: string | null;
+  /** D-#904 — reopened after locking: how often, and the last reason. */
+  reopenCount: number;
+  lastReopenedAt: string | null;
+  lastReopenReason: string | null;
 }
 
-const PAYROLL_RUN_FIELDS = `id monthKey status workingDays preparedAt approvedAt note`;
+const PAYROLL_RUN_FIELDS = `id monthKey status workingDays preparedAt approvedAt note reopenCount lastReopenedAt lastReopenReason`;
 
 export const PAYROLL_RUNS_QUERY = gql<{ payrollRuns: PayrollRunT[] }, NoVars>`
   query PayrollRuns {
@@ -7904,6 +7908,13 @@ export const PREPARE_PAYROLL_RUN = gql<
 export const APPROVE_PAYROLL_RUN = gql<{ approvePayrollRun: PayrollRunT }, { runId: string }>`
   mutation ApprovePayrollRun($runId: String!) {
     approvePayrollRun(runId: $runId) { ${PAYROLL_RUN_FIELDS} }
+  }
+`;
+
+/** D-#904 — reopen a LOCKED run to correct it (Principal; a reason is required). */
+export const REOPEN_PAYROLL_RUN = gql<{ reopenPayrollRun: PayrollRunT }, { runId: string; reason: string }>`
+  mutation ReopenPayrollRun($runId: String!, $reason: String!) {
+    reopenPayrollRun(runId: $runId, reason: $reason) { ${PAYROLL_RUN_FIELDS} }
   }
 `;
 
@@ -9078,17 +9089,43 @@ export interface StaffLetterT {
   effectiveFrom: string;
   letterDate: string;
   annualLeaveDays: number;
+  /** Increment letters (D-#901): the figure the raise replaced. */
+  previousSalary: number | null;
+  /** Sending to the staff app (D-#902). */
+  sendCount: number;
+  lastSentAt: string | null;
+  lastSentChannels: string[];
+  /** Only on issueStaffLetter's answer: the letter was issued, sending it failed. */
+  sendError?: string | null;
 }
+
+/** Every StaffLetter field the screens read, in one place. */
+const STAFF_LETTER_FIELDS = `
+  id staffProfileId kind refNo issuedOn status extraText voidReason
+  salaryMode monthlySalary designation effectiveFrom letterDate annualLeaveDays
+  previousSalary sendCount lastSentAt lastSentChannels
+`;
 
 export const STAFF_LETTERS_QUERY = gql<
   { staffLetters: StaffLetterT[] },
   { staffProfileId: string }
 >`
   query StaffLetters($staffProfileId: String!) {
-    staffLetters(staffProfileId: $staffProfileId) {
-      id staffProfileId kind refNo issuedOn status extraText voidReason
-      salaryMode monthlySalary designation effectiveFrom letterDate annualLeaveDays
-    }
+    staffLetters(staffProfileId: $staffProfileId) { ${STAFF_LETTER_FIELDS} }
+  }
+`;
+
+/** D-#903 — the caller's OWN issued letters (void left out). */
+export const MY_STAFF_LETTERS_QUERY = gql<{ myStaffLetters: StaffLetterT[] }, Record<string, never>>`
+  query MyStaffLetters {
+    myStaffLetters { ${STAFF_LETTER_FIELDS} }
+  }
+`;
+
+/** D-#902 — send an issued letter to the staff member's app: "notification", "popup". */
+export const SEND_STAFF_LETTER = gql<{ sendStaffLetter: StaffLetterT }, { letterId: string; channels: string[] }>`
+  mutation SendStaffLetter($letterId: String!, $channels: [String!]!) {
+    sendStaffLetter(letterId: $letterId, channels: $channels) { ${STAFF_LETTER_FIELDS} }
   }
 `;
 
@@ -9134,6 +9171,8 @@ export const ISSUE_STAFF_LETTER = gql<
     extraText?: string | null;
     /** Required when kind is `support_contract` (D-#586). */
     contract?: SupportContractInputT | null;
+    /** D-#902 — send straight to the staff app: "notification", "popup". */
+    sendChannels?: string[] | null;
   }
 >`
   mutation IssueStaffLetter(
@@ -9147,6 +9186,7 @@ export const ISSUE_STAFF_LETTER = gql<
     $weeklyHours: String
     $extraText: String
     $contract: SupportContractInput
+    $sendChannels: [String!]
   ) {
     issueStaffLetter(
       staffProfileId: $staffProfileId
@@ -9159,10 +9199,8 @@ export const ISSUE_STAFF_LETTER = gql<
       weeklyHours: $weeklyHours
       extraText: $extraText
       contract: $contract
-    ) {
-      id staffProfileId kind refNo issuedOn status extraText voidReason
-      salaryMode monthlySalary designation effectiveFrom letterDate annualLeaveDays
-    }
+      sendChannels: $sendChannels
+    ) { ${STAFF_LETTER_FIELDS} sendError }
   }
 `;
 
