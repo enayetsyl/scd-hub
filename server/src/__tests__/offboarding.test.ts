@@ -75,6 +75,14 @@ jest.mock("../modules/hr/models/ProbationLeaveDebt", () => ({
     findOneAndUpdate: jest.fn().mockResolvedValue({}),
   },
 }));
+// D-#898 — held days charged to salary by a payroll run. Default: none.
+const mockProbChargeFind = jest.fn(() => [] as unknown[]);
+jest.mock("../modules/hr/models/ProbationDebtRecovery", () => ({
+  ProbationDebtRecovery: {
+    find: () => ({ select: () => ({ lean: async () => mockProbChargeFind() }) }),
+    updateMany: jest.fn().mockResolvedValue({}),
+  },
+}));
 jest.mock("../modules/hr/models/AdvanceLoan", () => ({
   AdvanceLoan: { findById: (id: unknown) => mockAdvanceFindById(id) },
 }));

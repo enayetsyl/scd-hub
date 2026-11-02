@@ -12,6 +12,10 @@
  *                          pool falls through to salary as a returned figure
  *   settleOnExit         — everything still held becomes a salary charge at day-rate
  *
+ * — unless the Office charges some of it to a monthly payroll run first, per person and
+ * only when it chooses to (D-#898). Those days leave the held total and neither event
+ * sees them again.
+ *
  * THE PIVOT IS A DATE, NOT A STATUS. `isProbationLeave` compares the leave's own
  * `fromKey` against `StaffProfile.confirmationDate`. Reading the live
  * `employmentStatus` instead would make a confirmation retroactively pay for leave
@@ -22,10 +26,12 @@
  */
 import { Types } from "mongoose";
 import { ProbationLeaveDebt, type IProbationLeaveDebt } from "../models/ProbationLeaveDebt";
+import { ProbationDebtRecovery } from "../models/ProbationDebtRecovery";
+import { PayrollRun } from "../models/PayrollRun";
 import { StaffProfile } from "../../foundation/models/StaffProfile";
 import { StaffLeaveApplication } from "../models/StaffLeaveApplication";
 import { writeAudit } from "../../platform/services/AuditService";
-import { roundLeaveDays } from "./dates";
+import { LeaveError, roundLeaveDays } from "./dates";
 
 /**
  * `YYYY-MM-DD` for a stored profile date.
@@ -97,6 +103,91 @@ export async function clearProbationDebt(leaveApplicationId: Types.ObjectId | st
   });
 }
 
+/**
+ * The unsettled held rows, oldest first, with any salary charge already taken against
+ * them (D-#898) allocated row by row.
+ *
+ * Charges are kept as their own rows (`ProbationDebtRecovery`, one per payroll run) so
+ * re-preparing or cancelling a run can drop them without touching the ledger. That
+ * makes THIS the one place they are subtracted: every reader — the hub, the
+ * confirmation preview and settlement, the exit dues and settlement — goes through it,
+ * so no path can count a charged day a second time.
+ *
+ * `excludeRunId` leaves out one run's own charge — the run being re-prepared, which is
+ * about to replace it.
+ */
+async function openHeldRows(
+  staffProfileId: string,
+  excludeRunId?: Types.ObjectId | string | null,
+): Promise<{
+  rows: Array<{ row: IProbationLeaveDebt; open: number; charged: number }>;
+  chargedDays: number;
+}> {
+  const sid = new Types.ObjectId(staffProfileId);
+  const recQ: Record<string, unknown> = { staffProfileId: sid, applied: false };
+  if (excludeRunId) recQ.payrollRunId = { $ne: new Types.ObjectId(excludeRunId.toString()) };
+  const [rows, recoveries] = await Promise.all([
+    ProbationLeaveDebt.find({ staffProfileId: sid, settled: false }).sort({ fromKey: 1 }).lean() as unknown as Promise<
+      IProbationLeaveDebt[]
+    >,
+    ProbationDebtRecovery.find(recQ).select("days").lean(),
+  ]);
+  let left = recoveries.reduce((s, r) => s + (r.days ?? 0), 0);
+  const chargedDays = left;
+  return {
+    chargedDays,
+    rows: rows.map((row) => {
+      const charged = Math.min(row.days, left);
+      left -= charged;
+      return { row, open: row.days - charged, charged };
+    }),
+  };
+}
+
+/** Held days still open — what a payroll run may charge to salary now (D-#898). */
+export async function openHeldDays(
+  staffProfileId: string,
+  excludeRunId?: Types.ObjectId | string | null,
+): Promise<number> {
+  const { rows } = await openHeldRows(staffProfileId, excludeRunId);
+  return rows.reduce((s, r) => s + r.open, 0);
+}
+
+/**
+ * Refuse to settle the held ledger while a run that is NOT yet locked carries a charge
+ * against it (D-#898). Confirmation or exit would fold that charge into the ledger, and
+ * re-preparing or cancelling the run afterwards would then drop the deduction while the
+ * days stayed consumed — paid by nobody, the D-#590 shape again.
+ */
+export async function assertNoUnlockedProbationCharge(staffProfileId: string): Promise<void> {
+  const recs = await ProbationDebtRecovery.find({
+    staffProfileId: new Types.ObjectId(staffProfileId),
+    applied: false,
+  })
+    .select("payrollRunId monthKey")
+    .lean();
+  if (recs.length === 0) return;
+  const open = await PayrollRun.findOne({
+    _id: { $in: recs.map((r) => r.payrollRunId) },
+    status: "prepared",
+  })
+    .select("monthKey")
+    .lean();
+  if (open) {
+    throw new LeaveError(
+      `${open.monthKey} মাসের বেতন রানে এই কর্মীর প্রবেশনকালীন ছুটির বেতন কর্তন আছে, রানটি এখনো লক হয়নি — আগে রানটি অনুমোদন ও লক করুন, অথবা কর্তন বাদ দিয়ে আবার প্রস্তুত করুন`,
+    );
+  }
+}
+
+/** Mark every unapplied charge as consumed by the settlement that just ran. */
+async function applyCharges(staffProfileId: string, via: "confirmation" | "exit", at: Date): Promise<void> {
+  await ProbationDebtRecovery.updateMany(
+    { staffProfileId: new Types.ObjectId(staffProfileId), applied: false },
+    { $set: { applied: true, appliedAt: at, appliedVia: via } },
+  );
+}
+
 export interface HeldDebtView {
   totalDays: number;
   rows: Array<{
@@ -107,23 +198,22 @@ export interface HeldDebtView {
   }>;
 }
 
-/** Everything still held for a staff member — the hub's ছুটি tab reads this. */
+/**
+ * Everything still held for a staff member — the hub's ছুটি tab reads this. Days
+ * already charged to salary (D-#898) are no longer held, so a row shows only what is
+ * left of it, and a fully charged leave drops off the list.
+ */
 export async function heldDebtForStaff(staffProfileId: string): Promise<HeldDebtView> {
-  const rows = (await ProbationLeaveDebt.find({
-    staffProfileId: new Types.ObjectId(staffProfileId),
-    settled: false,
-  })
-    .sort({ fromKey: 1 })
-    .lean()) as unknown as IProbationLeaveDebt[];
-
-  const totalDays = rows.reduce((s, r) => s + r.days, 0);
+  const { rows } = await openHeldRows(staffProfileId);
+  const open = rows.filter((r) => r.open > 0);
+  const totalDays = open.reduce((s, r) => s + r.open, 0);
   return {
     totalDays: roundLeaveDays(totalDays),
-    rows: rows.map((r) => ({
+    rows: open.map(({ row: r, open: days }) => ({
       id: r._id.toString(),
       fromKey: r.fromKey,
       leaveType: r.leaveType,
-      days: roundLeaveDays(r.days),
+      days: roundLeaveDays(days),
     })),
   };
 }
@@ -149,14 +239,11 @@ export async function settleOnConfirmation(
   poolRemaining: number,
   actorId: string,
 ): Promise<SettlementResult> {
-  const rows = (await ProbationLeaveDebt.find({
-    staffProfileId: new Types.ObjectId(staffProfileId),
-    settled: false,
-  })
-    .sort({ fromKey: 1 })
-    .lean()) as unknown as IProbationLeaveDebt[];
+  const { rows: allocated } = await openHeldRows(staffProfileId);
+  const rows = allocated.map((a) => a.row);
 
-  const heldDays = rows.reduce((s, r) => s + r.days, 0);
+  // Days a payroll run already charged to salary (D-#898) are not debited from the pool.
+  const heldDays = allocated.reduce((s, a) => s + a.open, 0);
   /**
    * THE POOL ABSORBS ALL OF IT, EVEN PAST ZERO (D-#621).
    *
@@ -180,8 +267,11 @@ export async function settleOnConfirmation(
 
   // Oldest debt first, so the ledger reads in the order the days were incurred.
   const now = new Date();
-  for (const r of rows) {
-    const pooled = r.days;
+  for (const { row: r, open, charged } of allocated) {
+    // Only what is still held is pooled. A charged part stays off the application's
+    // `unpaidDays` too: payroll reads that field by the leave's month, and a re-prepared
+    // run for that month would dock the same days a second time.
+    const pooled = open;
 
     /**
      * THE LEAVE ITSELF IS RE-STAMPED, not just the ledger row (D-#590).
@@ -212,11 +302,12 @@ export async function settleOnConfirmation(
           settledAt: now,
           settledVia: "confirmation",
           settledFromPool: pooled,
-          settledToSalary: r.days - pooled,
+          settledToSalary: charged,
         },
       },
     );
   }
+  await applyCharges(staffProfileId, "confirmation", now);
 
   const result: SettlementResult = {
     heldDays: roundLeaveDays(heldDays),
@@ -246,12 +337,11 @@ export async function settleOnExit(
   staffProfileId: string,
   actorId: string,
 ): Promise<SettlementResult> {
-  const rows = (await ProbationLeaveDebt.find({
-    staffProfileId: new Types.ObjectId(staffProfileId),
-    settled: false,
-  }).lean()) as unknown as IProbationLeaveDebt[];
+  const { rows: allocated } = await openHeldRows(staffProfileId);
+  const rows = allocated.map((a) => a.row);
 
-  const heldDays = rows.reduce((s, r) => s + r.days, 0);
+  // What a payroll run already charged (D-#898) was paid then; exit charges the rest.
+  const heldDays = allocated.reduce((s, a) => s + a.open, 0);
   const now = new Date();
   for (const r of rows) {
     await ProbationLeaveDebt.updateOne(
@@ -267,6 +357,7 @@ export async function settleOnExit(
       },
     );
   }
+  await applyCharges(staffProfileId, "exit", now);
 
   const result: SettlementResult = {
     heldDays: roundLeaveDays(heldDays),
@@ -290,11 +381,5 @@ export async function settleOnExit(
 /** Read-only preview of what `settleOnExit` would charge — the offboarding screen
  *  shows this before the case is finalised, so nothing is settled by looking at it. */
 export async function pendingExitDebt(staffProfileId: string): Promise<number> {
-  const rows = await ProbationLeaveDebt.find({
-    staffProfileId: new Types.ObjectId(staffProfileId),
-    settled: false,
-  })
-    .select("days")
-    .lean();
-  return roundLeaveDays(rows.reduce((s, r) => s + r.days, 0));
+  return roundLeaveDays(await openHeldDays(staffProfileId));
 }

@@ -29,7 +29,7 @@ import { writeAudit } from "../../platform/services/AuditService";
 import { dateKeyOf } from "../../attendance/dates";
 import { parseDateKey } from "./dates";
 import { dayRate, computePayslip, type PayLineInput } from "./payrollMath";
-import { settleOnExit } from "./ProbationDebtService";
+import { settleOnExit, assertNoUnlockedProbationCharge } from "./ProbationDebtService";
 import { exitDues } from "./ExitPayService";
 import { activeAdvanceByStaff } from "./AdvanceService";
 import { resolveUserIdForStaff } from "./staffMatch";
@@ -243,6 +243,8 @@ export async function computeFinalSettlement(input: ComputeSettlementInput): Pro
   if (!staff.monthlySalary || staff.monthlySalary <= 0) {
     throw new OffboardingError("Staff member has no monthly salary set — cannot compute a settlement");
   }
+  // The held probation days this reads must not move under it (D-#898).
+  await assertNoUnlockedProbationCharge(c.staffProfileId.toString());
 
   // D-#711 — an exit whose last month went through a payroll run was paid THERE, dues
   // and all. Computing a settlement on top would pay the same money twice.
@@ -323,6 +325,8 @@ export async function releaseFinalSettlement(caseId: string, actorId: string): P
       "The final settlement is hard-held until clearance is complete — every item must be done or waived (H6.4/D-#29)",
     );
   }
+  // The held probation days the settlement was computed from must not move (D-#898).
+  await assertNoUnlockedProbationCharge(c.staffProfileId.toString());
 
   // Commit the advance recovery (mirrors the payroll lock, HR-3) — at exit the
   // outstanding is netted against the settlement (H6.4).
