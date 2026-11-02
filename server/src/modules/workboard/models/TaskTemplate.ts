@@ -18,6 +18,9 @@ import { DAY_SLOTS, TASK_PRIORITIES, TASK_RECURRENCES } from "@scd/shared";
  *                 is a holiday the instance is simply not created that month.
  *
  * A template is deactivated, never deleted — its past tasks keep pointing at it.
+ *
+ * D-#897 `endKey` (YYYY-MM-DD, inclusive): the last day the template may produce a
+ * task. Absent = no end date — it runs until someone switches it off.
  */
 export interface ITaskTemplate extends Document {
   _id: Types.ObjectId;
@@ -34,6 +37,8 @@ export interface ITaskTemplate extends Document {
   monthDay?: number;
   /** MONTHLY_WEEKDAY only: 1..4, or 5 = the last such weekday of the month. */
   weekOfMonth?: number;
+  /** D-#897: last day (inclusive) a task is created; absent = no end date. */
+  endKey?: string;
   active: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -53,6 +58,7 @@ const TaskTemplateSchema = new Schema<ITaskTemplate>(
     weekdays: { type: [Number], default: [] },
     monthDay: { type: Number, min: 1, max: 31 },
     weekOfMonth: { type: Number, min: 1, max: 5 },
+    endKey: { type: String, match: /^\d{4}-\d{2}-\d{2}$/ },
     active: { type: Boolean, required: true, default: true },
   },
   { timestamps: true },
