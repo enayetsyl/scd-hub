@@ -53,7 +53,8 @@ jest.mock("../modules/scholarship/models/ScholarshipTopic", () => ({
 jest.mock("../modules/scholarship/models/ScholarshipSequence", () => ({
   ScholarshipSequence: { findOneAndUpdate: jest.fn() },
 }));
-jest.mock("../modules/foundation/models/Section", () => ({ Section: { findById: () => leanChain(null) } }));
+const mockSectionFindById = jest.fn((_id?: unknown) => leanChain(null));
+jest.mock("../modules/foundation/models/Section", () => ({ Section: { findById: (id: unknown) => mockSectionFindById(id) } }));
 jest.mock("../modules/foundation/models/Class", () => ({ Class: { findById: () => leanChain(null) } }));
 jest.mock("../modules/trackers/subjectTeacher", () => ({ resolveSubjectTeacher: jest.fn() }));
 
@@ -104,6 +105,14 @@ describe("listCandidates", () => {
       expect(rows[0]).toMatchObject({ nameBn: "Zulqarnain Chowdhury", sitting: true, rollNumber: "7" });
       expect(rows[1]).toMatchObject({ nameBn: "Khadija Binte Kader", sitting: false });
     });
+  });
+
+  it("D-#896: lists the section's whole CLASS (বালক + বালিকা), active children only", async () => {
+    const classId = oid();
+    mockSectionFindById.mockReturnValueOnce(leanChain({ classId }));
+    mockStudentFind.mockReturnValue(leanChain([]));
+    await listCandidates(String(SECTION));
+    expect(mockStudentFind.mock.calls[0][0]).toEqual({ classId, active: true });
   });
 
   it("falls back to `name` when the Bangla name is missing, as every other roster does", () => {

@@ -28,7 +28,7 @@ import { Section } from "../../foundation/models/Section";
 import { Class } from "../../foundation/models/Class";
 import { Student } from "../../foundation/models/Student";
 import { resolveSubjectTeacher } from "../../trackers/subjectTeacher";
-import { sittingRosterFilter } from "./ScholarshipAnalysisService";
+import { sittingRosterFilter, classIdOfSection, paperScopeFilter } from "./ScholarshipAnalysisService";
 import { writeAudit } from "../../platform/services/AuditService";
 import { queryPage, type Page, type PageArgs } from "../../../lib/paging";
 import { personName } from "../../../lib/personName";
@@ -90,6 +90,8 @@ export function actorCan(actor: Actor, perm: CataloguePermission): boolean {
  * teacher for the cell (PM, D-#790; was a primary-role check).
  * A paper that spans subjects passes if she holds ANY of them — she marked the half she
  * teaches, and refusing her the sitting she invigilated helps nobody.
+ * D-#896: the cell is the CLASS — the routine teacher of any of its sections qualifies
+ * (after the বালক/বালিকা split each half may have its own teacher of the subject).
  */
 export async function assertMayManage(
   actor: Actor,
@@ -102,9 +104,15 @@ export async function assertMayManage(
   if (!actorCan(actor, action)) {
     throw new Error("এই কাজটি করার অনুমতি নেই।");
   }
+  const classId = await classIdOfSection(sectionId);
+  const sectionIds = classId
+    ? ((await Section.find({ classId }).select("_id").lean()) as { _id: Types.ObjectId }[]).map((s) => String(s._id))
+    : [String(sectionId)];
   for (const subject of subjects) {
-    const teacherId = await resolveSubjectTeacher(String(sectionId), subject, on);
-    if (teacherId && String(teacherId) === String(actor.userId)) return;
+    for (const sid of sectionIds) {
+      const teacherId = await resolveSubjectTeacher(sid, subject, on);
+      if (teacherId && String(teacherId) === String(actor.userId)) return;
+    }
   }
   throw new Error("রুটিন অনুযায়ী এই শ্রেণি ও বিষয়ের দায়িত্ব আপনার নয়।");
 }
@@ -364,7 +372,7 @@ export async function enterScores(
 
   for (const r of rows) {
     if (!rosterSet.has(r.studentId)) {
-      throw new Error("এই শিক্ষার্থী এই শাখার তালিকায় নেই।");
+      throw new Error("এই শিক্ষার্থী এই শ্রেণির তালিকায় নেই।");
     }
     if (r.status === "ABSENT") continue;
     const marks = r.itemMarks ?? [];
@@ -509,10 +517,13 @@ export interface CandidateView {
   scoredPapers: number;
 }
 
-/** The WHOLE section, sitting and excluded alike — this is the screen where the
+/** The WHOLE class (D-#896), sitting and excluded alike — this is the screen where the
  *  distinction is made, so it is the one read that must not apply it. */
 export async function listCandidates(sectionId: string): Promise<CandidateView[]> {
-  const students = (await Student.find({ sectionId: new Types.ObjectId(sectionId) })
+  const classId = await classIdOfSection(sectionId);
+  const students = (await Student.find(
+    classId ? { classId, active: true } : { sectionId: new Types.ObjectId(sectionId) },
+  )
     .select("name nameBn rollNumber scholarshipExcluded")
     .sort({ name: 1 })
     .lean()) as {
@@ -635,7 +646,7 @@ export interface PaperListRow {
  *  null until somebody has been scored — never 0, which would read as a disastrous
  *  paper rather than an unscored one. */
 export async function listPapers(sectionId: string, subject?: HwSubject): Promise<PaperListRow[]> {
-  const q: Record<string, unknown> = { sectionId: new Types.ObjectId(sectionId) };
+  const q: Record<string, unknown> = await paperScopeFilter(sectionId); // D-#896: the class's papers
   if (subject) q.subjects = subject;
   const papers = (await ScholarshipPaper.find(q)
     .sort({ paperDate: -1, createdAt: -1 })
@@ -644,8 +655,8 @@ export async function listPapers(sectionId: string, subject?: HwSubject): Promis
 }
 
 /** D-#761: listPapers, one page at a time; scores are read for THIS page's papers only. */
-export function listPapersPage(sectionId: string, subject: HwSubject | undefined, args: PageArgs): Promise<Page<PaperListRow>> {
-  const q: Record<string, unknown> = { sectionId: new Types.ObjectId(sectionId) };
+export async function listPapersPage(sectionId: string, subject: HwSubject | undefined, args: PageArgs): Promise<Page<PaperListRow>> {
+  const q: Record<string, unknown> = await paperScopeFilter(sectionId); // D-#896: the class's papers
   if (subject) q.subjects = subject;
   return queryPage(ScholarshipPaper, q, { paperDate: -1, createdAt: -1, _id: -1 }, args, (docs) =>
     paperRows(docs as unknown as IScholarshipPaper[]),

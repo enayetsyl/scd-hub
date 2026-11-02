@@ -46,7 +46,6 @@ import { ScholarshipScore, type IScholarshipScore } from "../models/ScholarshipS
 import { ScholarshipTopic } from "../models/ScholarshipTopic";
 import { Student } from "../../foundation/models/Student";
 import { Section } from "../../foundation/models/Section";
-import { emptiedSectionRoster } from "../../trackers/classTestAnchor";
 import { personName } from "../../../lib/personName";
 
 export type Band = "weak" | "fair" | "good" | "insufficient";
@@ -462,34 +461,41 @@ export function sittingFilter(sectionId: string | Types.ObjectId): Record<string
   };
 }
 
-/**
- * `sittingFilter`, but for a section that may since have been EMPTIED by a split or
- * merge (owner report 2026-10-11). Every C5 paper sits on the combined সম্মিলিত
- * section, which the 2026-10-01 বালক/বালিকা split left with nobody in it — so
- * SP-C5-BAN-0004 (dated 10-07) opened a mark grid with no names, and the analysis of
- * the scored papers lost its roster the same way. A populated section is unchanged;
- * an emptied one reads who was in it (the class tests' `emptiedSectionRoster`: a
- * merge snapshot, else the class's active students), still minus excluded children.
- */
-export async function sittingRosterFilter(sectionId: string | Types.ObjectId): Promise<Record<string, unknown>> {
-  const base = sittingFilter(sectionId);
-  if (await Student.exists({ sectionId: base.sectionId, active: true })) return base;
-  const section = (await Section.findById(base.sectionId).select("classId").lean()) as {
+/** D-#896: scholarship practice is CLASS-wide — Class 5 sits as one group whatever its
+ *  বালক/বালিকা split (a gender split keeps the one Class document). The class a paper's
+ *  or a screen's anchor section belongs to; null for an unknown section. */
+export async function classIdOfSection(sectionId: string | Types.ObjectId): Promise<Types.ObjectId | null> {
+  const section = (await Section.findById(sectionId).select("classId").lean()) as {
     classId?: Types.ObjectId;
   } | null;
-  if (!section?.classId) return base;
-  const ids = await emptiedSectionRoster(String(base.sectionId), String(section.classId));
-  return {
-    _id: { $in: ids.map((id) => new Types.ObjectId(id)) },
-    scholarshipExcluded: { $ne: true },
-  };
+  return section?.classId ?? null;
+}
+
+/**
+ * The SITTING roster behind a paper or a screen (D-#697, D-#896): every active child of
+ * the anchor section's CLASS, minus the excluded. Was the section alone (plus an
+ * emptied-section fallback, owner report 2026-10-11) — after the split that showed a
+ * বালক-anchored paper only the boys (owner report 2026-11-02).
+ */
+export async function sittingRosterFilter(sectionId: string | Types.ObjectId): Promise<Record<string, unknown>> {
+  const classId = await classIdOfSection(sectionId);
+  if (!classId) return sittingFilter(sectionId);
+  return { classId, active: true, scholarshipExcluded: { $ne: true } };
+}
+
+/** D-#896: the papers a section's screens see — its whole class's (older papers sit on
+ *  the emptied সম্মিলিত section, newer ones on বালক or বালিকা). */
+export async function paperScopeFilter(sectionId: string | Types.ObjectId): Promise<Record<string, unknown>> {
+  const classId = await classIdOfSection(sectionId);
+  return classId ? { classId } : { sectionId: new Types.ObjectId(String(sectionId)) };
 }
 
 /** Every SCORED/PUBLISHED paper in scope, with its scores. DRAFT and DECLARED papers
  *  carry no marks yet and would only add empty denominators. */
 export async function loadScope(scope: AnalysisScope): Promise<PaperWithScores[]> {
+  // D-#896: every paper of the class, whichever section it was declared on.
   const q: Record<string, unknown> = {
-    sectionId: new Types.ObjectId(scope.sectionId),
+    ...(await paperScopeFilter(scope.sectionId)),
     status: { $in: ["SCORED", "PUBLISHED"] },
   };
   if (scope.subject) q.subjects = scope.subject;
