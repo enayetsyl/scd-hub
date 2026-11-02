@@ -5400,6 +5400,9 @@ export const WORK_CARD_KINDS = [
   "QUESTION_REVIEW",
   "PRINT_JOB",
   "LEAVE_APPROVAL",
+  // Owner 2026-11-02 ("script upload is Akmal's responsibility… LIFO, with a ranking"):
+  // one card per class test whose scripts the Office received but has not finished scanning.
+  "CT_SCRIPT_UPLOAD",
 ] as const;
 export type WorkCardKind = (typeof WORK_CARD_KINDS)[number];
 export const WORK_CARD_KIND_LABELS_BN: Record<WorkCardKind, string> = {
@@ -5414,6 +5417,7 @@ export const WORK_CARD_KIND_LABELS_BN: Record<WorkCardKind, string> = {
   QUESTION_REVIEW: "প্রশ্ন রিভিউ",
   PRINT_JOB: "প্রিন্ট",
   LEAVE_APPROVAL: "ছুটির অনুমোদন",
+  CT_SCRIPT_UPLOAD: "খাতা আপলোড",
 };
 export const WORK_CARD_KIND_LABELS_EN: Record<WorkCardKind, string> = {
   TASK: "Task",
@@ -5427,6 +5431,7 @@ export const WORK_CARD_KIND_LABELS_EN: Record<WorkCardKind, string> = {
   QUESTION_REVIEW: "Question review",
   PRINT_JOB: "Print job",
   LEAVE_APPROVAL: "Leave approval",
+  CT_SCRIPT_UPLOAD: "Script upload",
 };
 
 /** Derived effort for auto cards (owner ruling 2026-09-30: derived, never typed).
@@ -5442,6 +5447,8 @@ export const WORK_EFFORT_MIN = {
   questionPerItem: 2,
   printJob: 10,
   leaveApproval: 5,
+  /** Per student script still to scan and tag on a received class test. */
+  ctScriptPerStudent: 1,
   /** A period whose grid times cannot be resolved. */
   periodFallback: 40,
 } as const;

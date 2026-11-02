@@ -10,6 +10,7 @@ const SCREEN_TAB: Record<string, string> = {
   MyRoutine: "RoutineTab",
   HomeworkWorkspace: "HomeworkTab",
   ClassTestResults: "ClassTestTab",
+  CtScriptUpload: "ClassTestTab",
   FreeMixingHome: "FreeMixingTab",
   ReviewSubmit: "ReviewTab",
   QuestionReviewQueue: "ReviewTab",
