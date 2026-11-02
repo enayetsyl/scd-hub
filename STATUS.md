@@ -1,5 +1,8 @@
 # STATUS
 
+- 2026-11-02: **BUILT — one-go subject-teacher change in the assignment schedule + full routine (D-#894/#895)** (branch `feat/bulk-teacher-change`, worktree `C:/w/bulkteach`). Assignment Edit chip: "শুধু এই সপ্তাহ / সব সপ্তাহ (১, ২, ৩)"; routine Edit period: "শুধু এই পিরিয়ড / এই শিক্ষকের সব পিরিয়ড (N)" with the day list. Both only touch the same old teacher's cells.
+  - **Verified:** server tsc 0 + app tsc 0; assignmentSchedule + routineSubjectSync suites 42/42 (+4 new); local walk on in-memory Mongo + Expo web + Chrome: API (weeks 1–3 changed, co-teacher week 4 + BAN kept; routine 3 periods changed, co-teacher WED + BAN THU kept) and UI (both chips render, Save → GQL ok, list shows new teacher).
+  - **Now / next:** PR → dev → promote (server + app) → **OTA** (the chips are app code; old bundles keep the one-cell edit and still work).
 - 2026-11-01: **FIXED — pop-up to one guardian (D-#887)** (branch `fix/popup-compose-audience`). Owner could not send a pop-up to one guardian: the composer pre-selected the staff group, so the picked family rode along with every teacher (+ all guardians the owner had switched on). Now nothing is pre-selected; a pick + group warns with a one-tap fix, also in the send confirmation. App-only.
   - **Verified:** app tsc 0; permission-gate + graphqlDocuments suites green; local Chrome walk 8/8 product checks (fresh composer empty, pick → 1 জন, + কর্মী → warning, + অভিভাবক → names both, one tap → back to the family only) — the 9th check (chip aria state) could not read the chip and was confirmed by screenshot instead.
   - **Now / next:** PR → dev → promote → OTA (app-only). The owner's draft "অফিসে দেখা করুন" on prod still has both groups on — open it and tap the new button.
