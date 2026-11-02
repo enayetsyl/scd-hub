@@ -4232,6 +4232,15 @@ const STR_BN = {
   stfLeaveChargeAsk: "বেতন থেকে কাটবেন?",
   stfLeaveChargeDays: "কত দিন কাটবেন",
   stfLeaveChargeInvalid: "কর্তনের দিন শূন্যের বেশি এবং তালিকার সীমার মধ্যে হতে হবে।",
+  // D-#908 — per-person lateness on the prepare screen.
+  stfLateChargeTitle: "বিলম্বের কর্তন (একজন একজন করে)",
+  stfLateChargeNote: "এই মাসে যাঁদের দেরির দিন কাটার মতো হয়েছে, তাঁদের তালিকা। হ্যাঁ দিলে বেতন বা ছুটির জমা থেকে কাটা হবে — না দিলে কিছুই না।",
+  stfLateChargeRuleOn: "বিলম্বের নিয়ম চালু আছে — নিয়ম অনুযায়ী সবার হিসাব হবে, এখানে আলাদা করে কাটার দরকার নেই।",
+  stfLateChargeNone: "এই মাসে কারও দেরি কাটার মতো হয়নি।",
+  stfLateChargeLine: "দেরি {late} দিন → কাটা যায় {days} দিন ({per}টি দেরি = ১ দিন)",
+  stfLateChargeTo: "কোথা থেকে কাটবেন",
+  stfLateChargeSalary: "বেতন থেকে",
+  stfLateChargeLeave: "ছুটির জমা থেকে",
   // D-#901–#904 — increment letter, letter preview, sending letters, my letters, payroll reopen.
   stfLetterIncrement: "বেতন বৃদ্ধির পত্র",
   stfIncrementNewSalary: "নতুন মাসিক বেতন",
@@ -10409,6 +10418,15 @@ const STR_EN: StrTable = {
   stfLeaveChargeAsk: "Charge to salary?",
   stfLeaveChargeDays: "Days to charge",
   stfLeaveChargeInvalid: "Days to charge must be above zero and within the listed limit.",
+  // D-#908 — per-person lateness on the prepare screen.
+  stfLateChargeTitle: "Lateness, person by person",
+  stfLateChargeNote: "Staff whose late days this month add up to a chargeable day. Choose Yes to charge them — from salary or the leave balance; otherwise nothing is charged.",
+  stfLateChargeRuleOn: "The lateness rule is on — everyone is charged by the rule, so there is nothing to choose here.",
+  stfLateChargeNone: "Nobody has enough late days to charge this month.",
+  stfLateChargeLine: "Late {late} days → up to {days} days ({per} lates = 1 day)",
+  stfLateChargeTo: "Charge to",
+  stfLateChargeSalary: "Salary",
+  stfLateChargeLeave: "Leave balance",
   // D-#901–#904 — increment letter, letter preview, sending letters, my letters, payroll reopen.
   stfLetterIncrement: "Salary increment letter",
   stfIncrementNewSalary: "New monthly salary",

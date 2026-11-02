@@ -21,11 +21,12 @@
  */
 import React from "react";
 import { View } from "react-native";
-import { useMutation, useQuery } from "urql";
+import { useClient, useMutation, useQuery } from "urql";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { AdminStackParamList } from "../../navigation/types";
 import {
   ISSUE_STAFF_LETTER,
+  STAFF_LETTER_DRAFT_QUERY,
   HR_POLICY_QUERY,
   SUPPORT_CONTRACT_DEFAULTS_QUERY,
 } from "../../graphql/operations";
@@ -50,24 +51,6 @@ import { openLetterPdf, LETTER_PDF_SUPPORTED } from "../../lib/pdf";
 import { space } from "../../theme/tokens";
 import { personName } from "../../lib/personName";
 import { useAuth } from "../../auth/AuthContext";
-import { defaultConfirmationBody } from "./ConfirmEmploymentScreen";
-
-const MONTHS_EN = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
-];
-
-/** The increment letter's standard draft — the server's `incrementBody`, word for word. */
-function defaultIncrementBody(designation: string, previous: number | null, next: number | null, monthKey: string): string {
-  const [y, m] = monthKey.split("-");
-  const month = /^\d{4}-\d{2}$/.test(monthKey) ? `${MONTHS_EN[Number(m) - 1]}, ${y}` : monthKey;
-  const from = previous ? ` from Tk. ${previous.toLocaleString("en-US")}` : "";
-  return (
-    `In recognition of your service as ${designation} at the School for Community Development (SCD), ` +
-    `the management is pleased to revise your monthly remuneration${from} to Tk. ${(next ?? 0).toLocaleString("en-US")} ` +
-    `with effect from ${month}, insha'Allah. All other terms and conditions of your appointment remain unchanged.`
-  );
-}
 
 type SendChoice = "none" | "notification" | "popup" | "both";
 const channelsOf = (c: SendChoice): string[] =>
@@ -117,6 +100,8 @@ export default function IssueLetterScreen({ route, navigation }: Props): React.R
   const [incrementMonth, setIncrementMonth] = React.useState(thisMonth());
   const [send, setSend] = React.useState<SendChoice>("none");
   const [previewing, setPreviewing] = React.useState(false);
+  const [drafting, setDrafting] = React.useState(false);
+  const client = useClient();
   const [issuedNote, setIssuedNote] = React.useState<string | null>(null);
 
   // Honorary is the honest default when no salary is on record: offering "paid" first
@@ -203,13 +188,31 @@ export default function IssueLetterScreen({ route, navigation }: Props): React.R
     };
   }
 
-  function insertDraft(): void {
-    const next = parseAmount(salary);
-    setExtraText(
-      isIncrement
-        ? defaultIncrementBody(designation.trim(), staff.monthlySalary ?? null, next, incrementMonth)
-        : defaultConfirmationBody({ ...staff, designation: designation.trim(), monthlySalary: next }, effectiveKey),
-    );
+  /**
+   * The standard text comes from the SERVER's snapshot (D-#909) — the same one issuing
+   * freezes. Composing it here took the "from" figure from the profile's current salary,
+   * which after a recorded raise is already the new one: "from Tk. 25,000 to Tk. 25,000".
+   */
+  async function insertDraft(): Promise<void> {
+    const i = letterInput();
+    setDrafting(true);
+    setFailure(null);
+    const res = await client
+      .query(STAFF_LETTER_DRAFT_QUERY, {
+        staffProfileId: i.staffProfileId,
+        kind: i.kind,
+        effectiveFrom: i.effectiveFrom,
+        salaryMode: i.salaryMode,
+        monthlySalary: i.monthlySalary,
+        designation: i.designation,
+      }, { requestPolicy: "network-only" })
+      .toPromise();
+    setDrafting(false);
+    if (res.error || res.data?.staffLetterDraft == null) {
+      setFailure(friendlyError(res.error));
+      return;
+    }
+    setExtraText(res.data.staffLetterDraft);
   }
 
   async function onPreview(): Promise<void> {
@@ -371,7 +374,13 @@ export default function IssueLetterScreen({ route, navigation }: Props): React.R
           multiline
         />
         {bodyIsAuthored ? (
-          <Button title={STR.stfConfirmBodyDraft} variant="secondary" onPress={insertDraft} />
+          <Button
+            title={STR.stfConfirmBodyDraft}
+            variant="secondary"
+            loading={drafting}
+            disabled={!canSubmit || drafting}
+            onPress={() => void insertDraft()}
+          />
         ) : null}
       </Card>
 

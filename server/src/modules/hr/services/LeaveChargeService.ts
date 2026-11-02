@@ -23,6 +23,8 @@ import { OffboardingCase } from "../models/OffboardingCase";
 import { LeaveBalanceRecovery } from "../models/LeaveBalanceRecovery";
 import { PayrollRun } from "../models/PayrollRun";
 import { pooledBalanceForStaff } from "./LeaveEntitlementService";
+import { lateDateKeysForMonth } from "./LatenessService";
+import { getHrPolicy } from "./HrPolicyService";
 import { openHeldDays } from "./ProbationDebtService";
 import { roundLeaveDays } from "./dates";
 
@@ -69,6 +71,64 @@ export async function overdrawnDays(
 export async function staffWithOpenExit(): Promise<Set<string>> {
   const ids = await OffboardingCase.distinct("staffProfileId", { status: { $ne: "cancelled" } });
   return new Set(ids.map((id: Types.ObjectId) => id.toString()));
+}
+
+// --- lateness, per person (D-#908) ------------------------------------------
+
+/** Someone with chargeable late days in a month — the lateness card's row. */
+export interface LatenessChargeCandidate {
+  staffProfileId: string;
+  name: string;
+  /** Every LATE mark that month (late-entry leave days included, owner 2026-11-02). */
+  lateCount: number;
+  lateDateKeys: string[];
+  /** floor(lateCount / lateDaysPerCharge) — the most that may be charged. */
+  days: number;
+}
+
+export interface LatenessCandidatesView {
+  /** The school-wide rule is on: it charges everyone at prepare, so the card stands down. */
+  ruleOn: boolean;
+  lateDaysPerCharge: number;
+  rows: LatenessChargeCandidate[];
+}
+
+/** A month's late marks and what they may cost, by the policy's own ratio (D-#541). */
+export async function chargeableLateDays(
+  staffProfileId: string,
+  monthKey: string,
+  lateDaysPerCharge: number,
+): Promise<{ lateDateKeys: string[]; days: number }> {
+  const lateDateKeys = await lateDateKeysForMonth(staffProfileId, monthKey);
+  return { lateDateKeys, days: Math.floor(lateDateKeys.length / Math.max(1, lateDaysPerCharge)) };
+}
+
+/**
+ * Everyone whose late marks in `monthKey` add up to at least one chargeable day
+ * (D-#908). Nothing here charges anyone — the run does, for the rows the Office turns
+ * on. While the school-wide rule is ON this returns no rows: the rule already charges
+ * every one of them at prepare, and a second, per-person charge would count the same
+ * late days twice.
+ */
+export async function latenessChargeCandidates(monthKey: string): Promise<LatenessCandidatesView> {
+  const policy = await getHrPolicy();
+  if (policy.latenessRuleEnabled) return { ruleOn: true, lateDaysPerCharge: policy.lateDaysPerCharge, rows: [] };
+  const [staff, exiting] = await Promise.all([
+    StaffProfile.find({ active: true, monthlySalary: { $gt: 0 } }).select("name").lean(),
+    staffWithOpenExit(),
+  ]);
+  const rows: LatenessChargeCandidate[] = [];
+  for (const s of staff) {
+    const sid = s._id.toString();
+    if (exiting.has(sid)) continue;
+    const { lateDateKeys, days } = await chargeableLateDays(sid, monthKey, policy.lateDaysPerCharge);
+    if (days > 0) rows.push({ staffProfileId: sid, name: s.name, lateCount: lateDateKeys.length, lateDateKeys, days });
+  }
+  return {
+    ruleOn: false,
+    lateDaysPerCharge: policy.lateDaysPerCharge,
+    rows: rows.sort((a, b) => b.days - a.days || a.name.localeCompare(b.name)),
+  };
 }
 
 /** Everyone a run for `monthKey` could charge, probation first, then by name. */

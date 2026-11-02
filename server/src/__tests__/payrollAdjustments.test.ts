@@ -14,9 +14,11 @@ import {
   rowComplete,
   rowStarted,
   applyLeaveCharges,
+  applyLatenessCharges,
   pickValid,
   type AdjRow,
   type LeaveChargePick,
+  type LatenessPick,
 } from "@scd/shared";
 
 const STAFF_A = "aaaaaaaaaaaaaaaaaaaaaaaa";
@@ -137,5 +139,29 @@ describe("applyLeaveCharges — the optional leave-to-salary switches (D-#898)",
     expect(pickValid(pick({ days: "2.5" }))).toBe(true);
     expect(pickValid(pick({ on: false, days: "abc" }))).toBe(true);
     expect(applyLeaveCharges([], [pick({ days: "9" })])).toEqual([]);
+  });
+});
+
+describe("applyLatenessCharges — the per-person lateness switches (D-#908)", () => {
+  const late = (over: Partial<LatenessPick> = {}): LatenessPick => ({
+    staffProfileId: STAFF_A, maxDays: 3, on: true, days: "3", to: "salary", ...over,
+  });
+
+  test("off charges nothing; on carries the days and where they land", () => {
+    expect(applyLatenessCharges([], [late({ on: false })])).toEqual([]);
+    expect(applyLatenessCharges([], [late({ days: "2", to: "leave" })])).toEqual([
+      { staffProfileId: STAFF_A, latenessChargeDays: 2, latenessChargeTo: "leave" },
+    ]);
+  });
+
+  test("merges into the same person's leave charge rather than adding a second entry", () => {
+    const withLeave = applyLeaveCharges([], [{ staffProfileId: STAFF_A, kind: "overdrawn", maxDays: 5, on: true, days: "5" }]);
+    expect(applyLatenessCharges(withLeave, [late()])).toEqual([
+      { staffProfileId: STAFF_A, leaveRecoveryDays: 5, latenessChargeDays: 3, latenessChargeTo: "salary" },
+    ]);
+  });
+
+  test("more days than the late marks allow are dropped", () => {
+    expect(applyLatenessCharges([], [late({ days: "4" })])).toEqual([]);
   });
 });
