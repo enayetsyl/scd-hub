@@ -19,7 +19,12 @@
 import { StaffProfile } from "../../foundation/models/StaffProfile";
 import { StaffLetter } from "../models/StaffLetter";
 import { pooledBalanceForStaff } from "./LeaveEntitlementService";
-import { settleOnConfirmation, heldDebtForStaff, type SettlementResult } from "./ProbationDebtService";
+import {
+  settleOnConfirmation,
+  heldDebtForStaff,
+  assertNoUnlockedProbationCharge,
+  type SettlementResult,
+} from "./ProbationDebtService";
 import { issueLetter } from "./StaffLetterService";
 import { writeAudit } from "../../platform/services/AuditService";
 import { LeaveError } from "./dates";
@@ -99,6 +104,7 @@ export async function confirmEmployment(
       "পদবি ছাড়া স্থায়ীকরণ পত্র তৈরি করা যায় না — আগে পদবি দিন, অথবা পত্র ছাড়া স্থায়ী করুন",
     );
   }
+  await assertNoUnlockedProbationCharge(input.staffProfileId);
 
   // 1. Stamp the date first — the pool's pro-ration and every paid/unpaid test read it.
   //

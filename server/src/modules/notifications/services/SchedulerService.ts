@@ -78,6 +78,7 @@ import {
   HW_AUTO_ISSUE_END_HOUR,
 } from "../../trackers/services/HomeworkAutoIssueService";
 import { sweepAssignmentAutoIssue } from "../../trackers/services/AssignmentAutoIssueService";
+import { MARK_ESCALATION_MINUTES, runMarkEscalation } from "../../trackers/services/MarkReminderService";
 import { captureNetSnapshot, captureDailyHealth } from "../../platform/services/SystemHealthService";
 import { materializeTaskTemplates } from "../../workboard/services/TaskTemplateService";
 import {
@@ -262,6 +263,8 @@ export interface TickSummary {
   /** 08:00 parents'-meeting comment reminders (MC-2, D-#756). */
   meetingNoteRemindersEmitted: number;
   meetingSummaryRemindersEmitted: number;
+  /** 09:30 unmarked-assignment pushes to Office/Principal (D-#890). */
+  markEscalationEmitted: number;
 }
 
 const subjectBn = (subject: string): string =>
@@ -307,6 +310,7 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
     improvementMissedEmitted: 0,
     meetingNoteRemindersEmitted: 0,
     meetingSummaryRemindersEmitted: 0,
+    markEscalationEmitted: 0,
   };
 
   // --- Classroom-observation response escalation (CO-3) — the teacher-response ladder
@@ -393,6 +397,17 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
     if (res.issued > 0) {
       console.log(`[scheduler] assignment auto-issue: ${res.issued} section-week(s) confirmed+issued`);
     }
+  });
+
+  // --- Mark-submission escalation (D-#890) — 09:30 on an assignment due day: snapshot
+  // what is still unmarked and push Office + Principal (`mark_submission:alerts`). runOnce
+  // guards the reads; the snapshot's unique dateKey and the per-recipient dedupe key guard
+  // the rows. Nothing due or nothing unmarked = nothing sent.
+  await family("mark submission escalation", async () => {
+    if (!windowOpen(nowMin, MARK_ESCALATION_MINUTES)) return;
+    await runOnce(dateKey, "MKSE", async () => {
+      summary.markEscalationEmitted = await runMarkEscalation(now);
+    });
   });
 
   // --- Homework auto-CHASE (owner ruling 2026-08-04) — 17:30, once per school

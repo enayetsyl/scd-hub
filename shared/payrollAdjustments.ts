@@ -26,6 +26,9 @@ export interface StaffPayrollAdjustment {
   /** Days of a negative leave balance settled by agreement this month (D-#617). */
   leaveRecoveryDays?: number | null;
   leaveRecoveryNote?: string | null;
+  /** Days of HELD probation leave charged to this month's pay, by choice (D-#898). */
+  probationChargeDays?: number | null;
+  probationChargeNote?: string | null;
   /**
    * Recover the outstanding advance in THIS run (D-#622). A one-off recovers only
    * when this is true — it takes the whole balance, so it is chosen, not assumed;
@@ -89,4 +92,53 @@ export function buildAdjustments(rows: AdjRow[]): StaffPayrollAdjustment[] {
     else adj.manualDeductions!.push(line);
   }
   return [...byStaff.values()];
+}
+
+/**
+ * One row of the prepare screen's "charge leave to salary" list (D-#898).
+ *
+ * The list comes from the server (`leaveChargeCandidates`): who is over, which kind, and
+ * the most that may be charged. The operator turns a row ON and may lower the days.
+ * Off is the default — nothing is charged that nobody chose.
+ */
+export interface LeaveChargePick {
+  staffProfileId: string;
+  kind: "probation" | "overdrawn";
+  /** The most that may be charged (from the server). */
+  maxDays: number;
+  on: boolean;
+  /** As typed; starts at `maxDays`. */
+  days: string;
+}
+
+/** A switched-on row whose days are a number in (0, maxDays]. */
+export function pickValid(p: LeaveChargePick): boolean {
+  if (!p.on) return true;
+  if (!AMOUNT.test(p.days.trim())) return false;
+  const d = Number(p.days.trim());
+  return d > 0 && d <= p.maxDays + 0.01;
+}
+
+/**
+ * Fold the switched-on rows into the adjustments, one per person — merged into a
+ * person's existing adjustment rather than added beside it, because the server keys
+ * adjustments by staff and a second entry would silently replace the first.
+ */
+export function applyLeaveCharges(
+  adjustments: StaffPayrollAdjustment[],
+  picks: LeaveChargePick[],
+): StaffPayrollAdjustment[] {
+  const out = adjustments.map((a) => ({ ...a }));
+  for (const p of picks) {
+    if (!p.on || !pickValid(p)) continue;
+    const days = Number(p.days.trim());
+    let adj = out.find((a) => a.staffProfileId === p.staffProfileId);
+    if (!adj) {
+      adj = { staffProfileId: p.staffProfileId };
+      out.push(adj);
+    }
+    if (p.kind === "probation") adj.probationChargeDays = days;
+    else adj.leaveRecoveryDays = days;
+  }
+  return out;
 }

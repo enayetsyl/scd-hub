@@ -3538,12 +3538,12 @@ export interface HwSubmitPassEntry {
   submitted: boolean;
 }
 export const HOMEWORK_SUBMIT_PASS = gql<
-  { homeworkSubmitPass: { submittedCount: number; chasedCount: number; unchangedCount: number } },
+  { homeworkSubmitPass: { submittedCount: number; chasedCount: number; unchangedCount: number; correctedCount: number } },
   { sectionId: string; itemId: string; entries: HwSubmitPassEntry[] }
 >`
   mutation HomeworkSubmitPass($sectionId: String!, $itemId: String!, $entries: [HwSubmitPassEntryInput!]!) {
     homeworkSubmitPass(sectionId: $sectionId, itemId: $itemId, entries: $entries) {
-      submittedCount chasedCount unchangedCount
+      submittedCount chasedCount unchangedCount correctedCount
     }
   }
 `;
@@ -4215,10 +4215,10 @@ export const SECTION_SUBJECT_ROUTINE_TEACHERS = gql<
 `;
 export const REASSIGN_ROUTINE_SUBJECT_TEACHER = gql<
   { reassignRoutineSubjectTeacher: { updatedSlots: number; warnings: string[] } },
-  { sectionId: string; subject: string; teacherId: string }
+  { sectionId: string; subject: string; teacherId: string; groupType?: string | null; fromTeacherId?: string | null }
 >`
-  mutation ReassignRoutineSubjectTeacher($sectionId: String!, $subject: String!, $teacherId: String!) {
-    reassignRoutineSubjectTeacher(sectionId: $sectionId, subject: $subject, teacherId: $teacherId) {
+  mutation ReassignRoutineSubjectTeacher($sectionId: String!, $subject: String!, $teacherId: String!, $groupType: String, $fromTeacherId: String) {
+    reassignRoutineSubjectTeacher(sectionId: $sectionId, subject: $subject, teacherId: $teacherId, groupType: $groupType, fromTeacherId: $fromTeacherId) {
       updatedSlots
       warnings
     }
@@ -5757,10 +5757,10 @@ export const RETIRE_AS_SCHEDULE_ENTRY = gql<
 
 export const UPDATE_AS_SCHEDULE_ENTRY_TEACHER = gql<
   { updateAssignmentScheduleEntryTeacher: AsScheduleT },
-  { academicYearId: string; entryId: string; teacherId: string }
+  { academicYearId: string; entryId: string; teacherId: string; allWeeks?: boolean | null }
 >`
-  mutation UpdateAssignmentScheduleEntryTeacher($academicYearId: String!, $entryId: String!, $teacherId: String!) {
-    updateAssignmentScheduleEntryTeacher(academicYearId: $academicYearId, entryId: $entryId, teacherId: $teacherId) { ${AS_SCHEDULE_FIELDS} }
+  mutation UpdateAssignmentScheduleEntryTeacher($academicYearId: String!, $entryId: String!, $teacherId: String!, $allWeeks: Boolean) {
+    updateAssignmentScheduleEntryTeacher(academicYearId: $academicYearId, entryId: $entryId, teacherId: $teacherId, allWeeks: $allWeeks) { ${AS_SCHEDULE_FIELDS} }
   }
 `;
 
@@ -6103,12 +6103,12 @@ export interface AsSubmitPassEntry {
   submitted: boolean;
 }
 export const ASSIGNMENT_SUBMIT_PASS = gql<
-  { assignmentSubmitPass: { submittedCount: number; chasedCount: number; unchangedCount: number } },
+  { assignmentSubmitPass: { submittedCount: number; chasedCount: number; unchangedCount: number; correctedCount: number } },
   { sectionId: string; itemId: string; entries: AsSubmitPassEntry[] }
 >`
   mutation AssignmentSubmitPass($sectionId: String!, $itemId: String!, $entries: [AsSubmitPassEntryInput!]!) {
     assignmentSubmitPass(sectionId: $sectionId, itemId: $itemId, entries: $entries) {
-      submittedCount chasedCount unchangedCount
+      submittedCount chasedCount unchangedCount correctedCount
     }
   }
 `;
@@ -7699,9 +7699,34 @@ export interface StaffPayrollAdjustmentInputT {
   /** Days of a negative leave balance settled by agreement this month (D-#617). */
   leaveRecoveryDays?: number | null;
   leaveRecoveryNote?: string | null;
+  /** Days of held probation leave charged to this month's pay, by choice (D-#898). */
+  probationChargeDays?: number | null;
+  probationChargeNote?: string | null;
   /** Recover the outstanding advance in this run (D-#622) — a one-off only when true. */
   recoverAdvance?: boolean | null;
 }
+
+/** Someone a run could charge for leave (D-#898); `days` is the most that may be charged. */
+export interface LeaveChargeCandidateT {
+  staffProfileId: string;
+  name: string;
+  kind: "probation" | "overdrawn";
+  days: number;
+}
+
+export const LEAVE_CHARGE_CANDIDATES = gql<
+  { leaveChargeCandidates: LeaveChargeCandidateT[] },
+  { monthKey: string }
+>`
+  query LeaveChargeCandidates($monthKey: String!) {
+    leaveChargeCandidates(monthKey: $monthKey) {
+      staffProfileId
+      name
+      kind
+      days
+    }
+  }
+`;
 
 export const PREPARE_PAYROLL_RUN = gql<
   { preparePayrollRun: PayrollRunT },

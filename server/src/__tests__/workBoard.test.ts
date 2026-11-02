@@ -107,6 +107,13 @@ describe("templateDueOn", () => {
     expect(templateDueOn({ recurrence: "MONTHLY", weekdays: [], monthDay: 15 }, wed)).toBe(false);
     expect(templateDueOn({ recurrence: "MONTHLY", weekdays: [] }, wed)).toBe(false);
   });
+  test("D-#897: an end date stops it after that day; the end day itself still fires; none = no end", () => {
+    const weekly = { recurrence: "WEEKLY" as const, weekdays: [3] };
+    expect(templateDueOn({ ...weekly, endKey: "2026-09-30" }, wed)).toBe(true);
+    expect(templateDueOn({ ...weekly, endKey: "2026-09-29" }, wed)).toBe(false);
+    expect(templateDueOn({ ...weekly, endKey: null }, wed)).toBe(true);
+    expect(templateDueOn({ recurrence: "MONTHLY", weekdays: [], monthDay: 30, endKey: "2026-09-01" }, wed)).toBe(false);
+  });
 });
 
 // ---------------------------------------------------------------------------

@@ -29,6 +29,8 @@ export interface TaskTemplateInput {
   weekdays?: number[] | null;
   monthDay?: number | null;
   weekOfMonth?: number | null;
+  /** D-#897: last day (inclusive, YYYY-MM-DD); null/absent = no end date. */
+  endKey?: string | null;
 }
 
 function daysInMonth(d: Date): number {
@@ -37,9 +39,11 @@ function daysInMonth(d: Date): number {
 
 /** Does this template produce a task on `date` (already known to be a SCHOOL day)? */
 export function templateDueOn(
-  t: Pick<ITaskTemplate, "recurrence" | "weekdays" | "monthDay"> & { weekOfMonth?: number | null },
+  t: Pick<ITaskTemplate, "recurrence" | "weekdays" | "monthDay"> & { weekOfMonth?: number | null; endKey?: string | null },
   date: Date,
 ): boolean {
+  // D-#897: past its end date a template creates nothing (the end day itself still counts).
+  if (t.endKey && dateKeyOf(date) > t.endKey) return false;
   switch (t.recurrence) {
     case "SCHOOL_DAYS":
       return true;
@@ -88,6 +92,11 @@ export async function createTaskTemplate(authIn: AuthPayload | null, input: Task
       throw new Error("মাসের কততম সপ্তাহ, তা বাছুন");
     }
   }
+  const endKey = input.endKey?.trim() || null;
+  if (endKey) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(endKey) || Number.isNaN(Date.parse(endKey))) throw new Error("শেষ তারিখ সঠিক নয়");
+    if (endKey < dateKeyOf(new Date())) throw new Error("শেষ তারিখ আজ বা পরের কোনো দিন হতে হবে");
+  }
   if (!Types.ObjectId.isValid(input.assigneeUserId)) throw new Error("কাকে দেবেন তা বাছুন");
   const u = await User.findById(input.assigneeUserId).select("role active").lean();
   if (!u || !u.active || u.role === "GUARDIAN") throw new Error("এই ব্যক্তিকে কাজ দেওয়া যায় না");
@@ -105,6 +114,7 @@ export async function createTaskTemplate(authIn: AuthPayload | null, input: Task
     weekdays,
     monthDay: input.recurrence === "MONTHLY" ? input.monthDay ?? undefined : undefined,
     weekOfMonth: input.recurrence === "MONTHLY_WEEKDAY" ? input.weekOfMonth ?? undefined : undefined,
+    endKey: endKey ?? undefined,
     active: true,
   });
   await writeAudit({
@@ -113,7 +123,7 @@ export async function createTaskTemplate(authIn: AuthPayload | null, input: Task
     actorRole: auth.role,
     targetId: doc._id.toString(),
     targetKind: "TaskTemplate",
-    meta: { action: "template_create", recurrence: input.recurrence, assigneeUserId: input.assigneeUserId },
+    meta: { action: "template_create", recurrence: input.recurrence, assigneeUserId: input.assigneeUserId, endKey },
   });
   return doc;
 }

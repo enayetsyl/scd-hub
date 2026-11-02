@@ -25,6 +25,7 @@ import { HomeworkStudentRecord } from "../models/HomeworkStudentRecord";
 import { popActionGroup } from "../lifecycle";
 import { isSameDhakaDay } from "../../../lib/dhakaDay";
 import { writeAudit } from "../../platform/services/AuditService";
+import { recordMarkCorrection, sameDayPersonChase } from "./MarkCorrectionService";
 
 export interface HwRevertInput {
   recordId: string;
@@ -97,10 +98,29 @@ export async function revertHomeworkRecord(input: HwRevertInput): Promise<HwReve
     }
   }
 
+  // D-#892: undoing a chase a person made today is the same mistake as flipping it — the
+  // guardian was already told. Read from the popped stamps before they are gone.
+  const now = input.now ?? new Date();
+  const undoneChase = sameDayPersonChase(popped, now);
+
   const revertedFrom = rec.state;
   rec.state = restored.state as LifecycleState;
   rec.stateDates.splice(rec.stateDates.length - popped.length, popped.length);
   await rec.save();
+
+  if (undoneChase) {
+    await recordMarkCorrection({
+      tracker: "HOMEWORK",
+      recordId: rec._id,
+      itemId: rec.hwItemId,
+      studentId: rec.studentId,
+      sectionId: rec.sectionId,
+      chase: undoneChase,
+      correctedBy: input.actorId,
+      at: now,
+      via: "UNDO",
+    });
+  }
 
   // The ONLY trace this revert ever happened: the popped stamps are now gone from
   // the record, so without this row a submitted+checked record silently reads as

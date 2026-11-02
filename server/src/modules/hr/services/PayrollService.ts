@@ -25,6 +25,10 @@ import { PayrollRun, type IPayrollRun } from "../models/PayrollRun";
 import { Payslip, type IPayslip } from "../models/Payslip";
 import { AdvanceLoan } from "../models/AdvanceLoan";
 import { LeaveBalanceRecovery } from "../models/LeaveBalanceRecovery";
+import { ProbationDebtRecovery } from "../models/ProbationDebtRecovery";
+import { overdrawnDays, staffWithOpenExit } from "./LeaveChargeService";
+import { roundLeaveDays } from "./dates";
+import { bnNum } from "../../../lib/bnNum";
 import { salariesEffectiveIn } from "./PayHistoryService";
 import { writeAudit } from "../../platform/services/AuditService";
 import {
@@ -38,7 +42,7 @@ import {
 import { activeAdvanceByStaff } from "./AdvanceService";
 import { computeLatenessCharge, freezeLatenessCharges } from "./LatenessService";
 import { exitsUpTo, exitDues, commitExitPayslips, OVERDRAWN_LEAVE_NOTE } from "./ExitPayService";
-import { toDateKey } from "./ProbationDebtService";
+import { toDateKey, openHeldDays } from "./ProbationDebtService";
 
 export interface StaffAdjustment {
   staffProfileId: string;
@@ -65,6 +69,59 @@ export interface StaffAdjustment {
   leaveRecoveryDays?: number;
   /** The office's note on that agreement — it was made verbally, so this is the record. */
   leaveRecoveryNote?: string;
+  /**
+   * Days of HELD probation leave to charge to this month's pay (D-#898). Optional and
+   * off by default, like the recovery above: probation leave otherwise waits for
+   * confirmation or exit (D-#540). Up to the whole held debt; partial is allowed.
+   */
+  probationChargeDays?: number;
+  probationChargeNote?: string;
+}
+
+/** The payslip note when held probation leave is charged by choice (D-#898). */
+export const PROBATION_CHARGE_NOTE = "প্রবেশনকালীন ছুটির বেতন কর্তন";
+
+/** A day count may carry a partial day (1/3, D-#361); compare with a little slack. */
+const DAY_EPSILON = 0.01;
+
+/**
+ * Refuse a charge above what the person actually owes — BEFORE the first write (D-#574).
+ *
+ * Both kinds were taken on trust until D-#898: the screen typed a number and the server
+ * charged it, so "3" against a balance of −1 took two days nobody owed, and pushed the
+ * balance positive with days that were never taken. `existingRunId` is the run being
+ * re-prepared, whose own charges are about to be replaced and must not count against
+ * the figure.
+ */
+async function assertChargesWithinOwed(
+  adjustments: StaffAdjustment[],
+  existingRunId: Types.ObjectId | null,
+): Promise<void> {
+  const charges = adjustments.filter((a) => (a.probationChargeDays ?? 0) !== 0 || (a.leaveRecoveryDays ?? 0) !== 0);
+  if (charges.length === 0) return;
+  const exiting = await staffWithOpenExit();
+  for (const a of charges) {
+    const probation = a.probationChargeDays ?? 0;
+    const overdrawn = a.leaveRecoveryDays ?? 0;
+    if (probation < 0 || overdrawn < 0) throw new PayrollError("কর্তনের দিন ঋণাত্মক হতে পারে না");
+    const staff = await StaffProfile.findById(a.staffProfileId).select("name").lean();
+    const who = staff?.name ?? a.staffProfileId;
+    if (exiting.has(a.staffProfileId)) {
+      throw new PayrollError(`${who}: প্রস্থান প্রক্রিয়া চলছে — ছুটির পাওনা চূড়ান্ত নিষ্পত্তিতে পুরোটাই কাটা হবে`);
+    }
+    if (probation > 0) {
+      const held = await openHeldDays(a.staffProfileId, existingRunId);
+      if (probation > held + DAY_EPSILON) {
+        throw new PayrollError(`${who}: প্রবেশনকালীন জমা ছুটি ${bnNum(roundLeaveDays(held))} দিন — এর বেশি কাটা যায় না`);
+      }
+    }
+    if (overdrawn > 0) {
+      const over = await overdrawnDays(a.staffProfileId, existingRunId);
+      if (overdrawn > over + DAY_EPSILON) {
+        throw new PayrollError(`${who}: ছুটির জমা ঋণাত্মক ${bnNum(roundLeaveDays(over))} দিন — এর বেশি কাটা যায় না`);
+      }
+    }
+  }
 }
 
 /**
@@ -130,15 +187,19 @@ export async function preparePayrollRun(input: PreparePayrollInput): Promise<{ r
 
   // One non-cancelled run per month: recompute a prepared one, refuse a locked one.
   const existing = await PayrollRun.findOne({ monthKey: input.monthKey, status: { $ne: "cancelled" } });
+  if (existing?.status === "approved_locked") {
+    throw new PayrollError(`${input.monthKey} is locked — corrections ride arrears on a later run (D-#110)`);
+  }
+  await assertChargesWithinOwed(input.adjustments ?? [], existing?._id ?? null);
   if (existing) {
-    if (existing.status === "approved_locked") {
-      throw new PayrollError(`${input.monthKey} is locked — corrections ride arrears on a later run (D-#110)`);
-    }
     await Payslip.deleteMany({ payrollRunId: existing._id });
     // The old run's leave-balance credits go with it. They are keyed to ITS id, so the
     // new run's per-staff cleanup below never reaches them — left behind, a re-prepare
     // would credit the same agreed (or exit) recovery to the balance twice.
     await LeaveBalanceRecovery.deleteMany({ payrollRunId: existing._id });
+    // Same for its probation charges (D-#898): left behind, they would keep the days
+    // off the held debt with no payslip collecting them.
+    await ProbationDebtRecovery.deleteMany({ payrollRunId: existing._id });
     await PayrollRun.deleteOne({ _id: existing._id });
   }
 
@@ -266,6 +327,35 @@ export async function preparePayrollRun(input: PreparePayrollInput): Promise<{ r
       await LeaveBalanceRecovery.deleteOne({ staffProfileId: new Types.ObjectId(sid), payrollRunId: run._id });
     }
 
+    /**
+     * HELD PROBATION LEAVE CHARGED BY CHOICE (D-#898).
+     *
+     * The same two halves as the recovery above: a payslip deduction AND a row that
+     * takes the days off the held debt, so confirmation does not debit them from the
+     * pool and exit does not charge them again. A leaver never reaches here with a
+     * charge (`assertChargesWithinOwed` refused it): their exit dues take the whole debt.
+     */
+    const probationDays = dues ? 0 : Math.max(0, adj?.probationChargeDays ?? 0);
+    if (probationDays > 0) {
+      const amount = Math.round(rate * probationDays);
+      const note = adj?.probationChargeNote?.trim();
+      recoveryDeductions.push({ type: "unpaid_leave", amount, days: probationDays, note: note || PROBATION_CHARGE_NOTE });
+      await ProbationDebtRecovery.findOneAndUpdate(
+        { staffProfileId: new Types.ObjectId(sid), payrollRunId: run._id },
+        {
+          $set: {
+            monthKey: input.monthKey,
+            days: probationDays,
+            amount,
+            note,
+            chargedBy: new Types.ObjectId(input.actorId),
+          },
+          $setOnInsert: { applied: false },
+        },
+        { upsert: true, setDefaultsOnInsert: true },
+      );
+    }
+
     const additions: PayLineInput[] = [...(adj?.manualAdditions ?? [])];
     if (dues?.encashment) additions.push(dues.encashment);
     // At exit the outstanding advance is netted in FULL (H6.4), still under the net-pay
@@ -375,6 +465,8 @@ export async function cancelPayrollRun(runId: string, actorId: string): Promise<
   await Payslip.deleteMany({ payrollRunId: run._id });
   // The run's leave-balance credits were never paid — they must not keep raising a balance.
   await LeaveBalanceRecovery.deleteMany({ payrollRunId: run._id });
+  // Nor may its probation charges keep days off the held debt (D-#898).
+  await ProbationDebtRecovery.deleteMany({ payrollRunId: run._id });
   run.status = "cancelled";
   await run.save();
   await writeAudit({ eventKind: "PAYROLL_CANCELLED", actorId, targetId: run._id, targetKind: "PayrollRun", meta: { monthKey: run.monthKey } });

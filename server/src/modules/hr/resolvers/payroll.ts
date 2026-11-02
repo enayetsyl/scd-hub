@@ -32,6 +32,7 @@ import {
 } from "../services/PayrollService";
 import { issueAdvance, settleAdvance, advancesForStaff } from "../services/AdvanceService";
 import { resolveStaffProfileForUser } from "../services/staffMatch";
+import { leaveChargeCandidates, type LeaveChargeCandidate } from "../services/LeaveChargeService";
 import type { IPayrollRun } from "../models/PayrollRun";
 import type { IPayslip, IPayLine } from "../models/Payslip";
 import type { IAdvanceLoan, AdvanceRecoveryMode } from "../models/AdvanceLoan";
@@ -237,6 +238,10 @@ const StaffAdjustmentInputRef = builder.inputType("StaffPayrollAdjustmentInput",
     // only at exit, so this only ever appears because someone asked and was told yes.
     leaveRecoveryDays: t.float({ required: false }),
     leaveRecoveryNote: t.string({ required: false }),
+    // D-#898 — days of HELD probation leave charged to this month's pay, by choice.
+    // Refused above the held debt; otherwise it waits for confirmation or exit.
+    probationChargeDays: t.float({ required: false }),
+    probationChargeNote: t.string({ required: false }),
     // D-#622 — a ONE-OFF advance recovers only when this says so; an installment
     // keeps running unless it turns it off for the month.
     recoverAdvance: t.boolean({ required: false }),
@@ -390,6 +395,8 @@ builder.mutationField("preparePayrollRun", (t) =>
           manualAdditions: (a.manualAdditions ?? []).map((l) => ({ type: l.type as IPayLine["type"], amount: l.amount, note: l.note ?? undefined })),
           leaveRecoveryDays: a.leaveRecoveryDays ?? undefined,
           leaveRecoveryNote: a.leaveRecoveryNote ?? undefined,
+          probationChargeDays: a.probationChargeDays ?? undefined,
+          probationChargeNote: a.probationChargeNote ?? undefined,
           recoverAdvance: a.recoverAdvance ?? undefined,
         })),
       });
@@ -471,6 +478,32 @@ builder.queryField("payrollRuns", (t) =>
     description: "Recent payroll runs (newest first; cancelled excluded). Requires payroll:view.",
     authScopes: { hasPermission: "payroll:view" },
     resolve: async () => payrollRuns(),
+  }),
+);
+
+const LeaveChargeCandidateRef = builder.objectRef<LeaveChargeCandidate>("LeaveChargeCandidate");
+LeaveChargeCandidateRef.implement({
+  description:
+    "A staff member a run could charge for leave (D-#898): `probation` = held probation " +
+    "days, `overdrawn` = a confirmed member's negative balance. `days` is the most that " +
+    "may be charged. Nothing is charged unless the run's adjustments say so.",
+  fields: (t) => ({
+    staffProfileId: t.exposeString("staffProfileId"),
+    name: t.exposeString("name"),
+    kind: t.exposeString("kind"),
+    days: t.exposeFloat("days"),
+  }),
+});
+
+builder.queryField("leaveChargeCandidates", (t) =>
+  t.field({
+    type: [LeaveChargeCandidateRef],
+    description:
+      "Who is over their leave and by how much, for the prepare screen's optional " +
+      "charge-to-salary switches (D-#898). Requires payroll:prepare.",
+    authScopes: { hasPermission: "payroll:prepare" },
+    args: { monthKey: t.arg.string({ required: true }) },
+    resolve: async (_root, args) => leaveChargeCandidates(args.monthKey),
   }),
 );
 

@@ -39,6 +39,7 @@ import { isSchoolDay } from "../calendar";
 import { resolveHomeworkDueDate, resolveHomeworkDueDateByItem } from "../homeworkDueDate";
 import { acceptClaimsForRecords, hasOpenClaim, recordsWithOpenClaims } from "./WorkClaimService";
 import { emitHwParentComms, emitHwGuardianChase, emitWorkClaimResolved } from "../../notifications/services/emitters";
+import { recordMarkCorrection, sameDayPersonChase } from "./MarkCorrectionService";
 
 const GENERIC_TOPIC_LABEL_BN = "সাধারণ (নির্দিষ্ট অধ্যায় নয়)";
 
@@ -790,6 +791,8 @@ export interface TransitionRecordResult {
   chaseCount: number;
   result: HwResult | null;
   dueDate: string | null;
+  /** D-#892: this move corrected a chase a person made the same day (a recorded mistake). */
+  markCorrected?: boolean;
 }
 
 export async function transitionRecord(
@@ -821,6 +824,10 @@ export async function transitionRecord(
   if (from === "ABSENT_REDELIVER" && to === "GIVEN") {
     record.dueDate = await resolveHomeworkDueDateByItem(record.hwItemId, record.sectionId, at);
   }
+
+  // D-#892: read BEFORE the new stamp lands — the chase being corrected is the latest one.
+  const correctedChase =
+    from === "CHASE" && to === "SUBMITTED" && input.actorId ? sameDayPersonChase(record.stateDates, at) : null;
 
   record.state = to;
   record.stateDates.push(
@@ -869,6 +876,22 @@ export async function transitionRecord(
     for (const claim of accepted) await emitWorkClaimResolved(claim);
   }
 
+  // D-#892/#893: a same-day flip of a person-made chase is the chaser's recorded mistake;
+  // the guardian gets a correction. Best-effort inside — never blocks the flip.
+  if (correctedChase) {
+    await recordMarkCorrection({
+      tracker: "HOMEWORK",
+      recordId: record._id,
+      itemId: record.hwItemId,
+      studentId: record.studentId,
+      sectionId: record.sectionId,
+      chase: correctedChase,
+      correctedBy: input.actorId!,
+      at,
+      via: "FLIP",
+    });
+  }
+
   return {
     recordId: record._id.toString(),
     hwId: record.hwId,
@@ -876,6 +899,7 @@ export async function transitionRecord(
     chaseCount: record.chaseCount,
     result: record.result ?? null,
     dueDate: record.dueDate ? record.dueDate.toISOString() : null,
+    markCorrected: !!correctedChase,
   };
 }
 

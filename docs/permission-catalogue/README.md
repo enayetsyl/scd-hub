@@ -12,7 +12,7 @@ This catalogue is the build checklist for the permission matrix. It names every 
 
 | area file | covers |
 |---|---|
-| [`trackers-homework-assignment.md`](trackers-homework-assignment.md) | homework, assignment, assignment_gift, work_claim (+ reconciliation report) |
+| [`trackers-homework-assignment.md`](trackers-homework-assignment.md) | homework, assignment, assignment_gift, mark_submission, work_claim (+ reconciliation report) |
 | [`trackers-classtest.md`](trackers-classtest.md) | class_test, class_test_question, class_test_script, set_tracker, student_profile (+ cross-refs to work_claim, question_sets, printing) |
 | [`foundation-platform.md`](foundation-platform.md) | students, guardians, classes_sections, teaching_assignments, staff_logins, view_as, access_control, audit_log, system_health, guardian_engagement, message_templates, admin_dashboard, archive, notifications, my_account |
 | [`hr-finance.md`](hr-finance.md) | staff_records, hr_policy, leave, cover, payroll, salary_advance, appraisal, conduct, grievance, staff_letters, offboarding, finance_*, budget, fee_support, qard, reconciliation, work_board, printing |
@@ -115,6 +115,7 @@ Several of today's bypasses are template-aware (`isAdminStaff`, `actsAsRole`), w
 | Teaching & trackers | `homework` | Homework | বাড়ির কাজ | 14 | trackers-homework-assignment |
 | Teaching & trackers | `assignment` | Weekly assignment | সাপ্তাহিক অ্যাসাইনমেন্ট | 15 | trackers-homework-assignment |
 | Teaching & trackers | `assignment_gift` | Weekly gift | সাপ্তাহিক উপহার | 3 | trackers-homework-assignment |
+| Teaching & trackers | `mark_submission` | Mark submission | জমার হিসাব | 3 | trackers-homework-assignment |
 | Teaching & trackers | `work_claim` | Guardian "done at home" claims | অভিভাবকের জানানো | 5 | trackers-homework-assignment |
 | Teaching & trackers | `set_tracker` | Set tracker (legacy) | সেট ট্র্যাকার | 5 | trackers-classtest |
 | Teaching & trackers | `class_note` | Class notes | ক্লাস নোট | 6 | attendance-routine-library |
@@ -186,7 +187,7 @@ Several of today's bypasses are template-aware (`isAdminStaff`, `actsAsRole`), w
 | Admin & access | `guardian_engagement` | Guardian app usage | অভিভাবকদের অ্যাপ ব্যবহার | 1 | foundation-platform |
 | Admin & access | `my_account` | My account | আমার অ্যাকাউন্ট | 1 | foundation-platform |
 
-**Totals: 74 features, 372 actions** (`student_comments:read_status` added 2026-11-01, D-#886: +1 action, unflagged, OFFICE on +1) (`exam_routine` added 2026-11-01, D-#883: +3 actions, unflagged, TEACHER on +1, OFFICE on +3) (recounted from `shared/permissionCatalogue.ts` on 2026-10-28 when `quran_exam` was added, D-#873: +7 actions, `examine` SELF, 6 unflagged, TEACHER on +1, OFFICE on +6; the earlier line had fallen behind the code) (`class_books` added 2026-10-26, D-#870: +2 actions, unflagged, TEACHER on +1, OFFICE on +2) (`reports` +14 switches 2026-10-26, D-#861: the reports that sat in the Admin hub and module homes, unflagged, OFFICE on +13 — all but `guardian_engagement`) (`reports` added 2026-10-25, D-#846: +13 report switches, −3 retired report-only actions) (`parents_meeting:approve_change` added with meeting RSVP, 2026-10-24: +1 action, PRINCIPAL-DEFAULT, D-#842) (`lesson_progress` added with LP-2, 2026-10-22: +2 actions, unflagged, TEACHER on +1, OFFICE on +2) (`mastery` added with M-0, 2026-10-20: +6 actions, all unflagged, TEACHER on +3, OFFICE on +1; M-2, 2026-10-21: +`mastery:edit_all`, PRINCIPAL-DEFAULT). By flag: LOCKED 11 · PRINCIPAL-DEFAULT 15 · DESIGNATION 24 · ESCALATION 5 · SELF 13 · unflagged 304. Defaults: TEACHER on 104 · OFFICE on 276. A row may carry a `†`/`F-n`/`2H` note in addition to its flag. Those notes are not counted as flags. Not counted: `guardian:read_child` (GUARDIAN plane), and the future `scholarship_practice:release` (SC-5, not built) and `announcements:publish` (no staff surface yet).
+**Totals: 75 features, 375 actions** (`mark_submission` added 2026-11-02, D-#889–#893: +3 actions, `view_own` SELF, 2 unflagged, TEACHER on +1, OFFICE on +3) (`student_comments:read_status` added 2026-11-01, D-#886: +1 action, unflagged, OFFICE on +1) (`exam_routine` added 2026-11-01, D-#883: +3 actions, unflagged, TEACHER on +1, OFFICE on +3) (recounted from `shared/permissionCatalogue.ts` on 2026-10-28 when `quran_exam` was added, D-#873: +7 actions, `examine` SELF, 6 unflagged, TEACHER on +1, OFFICE on +6; the earlier line had fallen behind the code) (`class_books` added 2026-10-26, D-#870: +2 actions, unflagged, TEACHER on +1, OFFICE on +2) (`reports` +14 switches 2026-10-26, D-#861: the reports that sat in the Admin hub and module homes, unflagged, OFFICE on +13 — all but `guardian_engagement`) (`reports` added 2026-10-25, D-#846: +13 report switches, −3 retired report-only actions) (`parents_meeting:approve_change` added with meeting RSVP, 2026-10-24: +1 action, PRINCIPAL-DEFAULT, D-#842) (`lesson_progress` added with LP-2, 2026-10-22: +2 actions, unflagged, TEACHER on +1, OFFICE on +2) (`mastery` added with M-0, 2026-10-20: +6 actions, all unflagged, TEACHER on +3, OFFICE on +1; M-2, 2026-10-21: +`mastery:edit_all`, PRINCIPAL-DEFAULT). By flag: LOCKED 11 · PRINCIPAL-DEFAULT 15 · DESIGNATION 24 · ESCALATION 5 · SELF 14 · unflagged 306. Defaults: TEACHER on 105 · OFFICE on 279. A row may carry a `†`/`F-n`/`2H` note in addition to its flag. Those notes are not counted as flags. Not counted: `guardian:read_child` (GUARDIAN plane), and the future `scholarship_practice:release` (SC-5, not built) and `announcements:publish` (no staff surface yet).
 
 ---
 
@@ -237,6 +238,13 @@ Several of today's bypasses are template-aware (`isAdminStaff`, `actsAsRole`), w
 | `assignment_gift:view` | View gift report | উপহারের তালিকা দেখা | Weekly winners and streaks for a শাখা in scope | on | on | | tracker:read OR gift:manage |
 | `assignment_gift:view_all` | Whole-school gift report | সব শাখার উপহারের তালিকা দেখা | Report with no শাখা | — | on | | gift:manage; isAdminStaff |
 | `assignment_gift:issue` | Mark gift given | উপহার দেওয়া হয়েছে চিহ্নিত করা | Tick a handover, undo a mis-tick | on | on | DESIGNATION:class_teacher | gift:manage; assertCanHandOverGift |
+
+#### `mark_submission` — জমার হিসাব (D-#889..#893, docs/prd-mark-submission-guard.md)
+| permission | EN | BN | what it allows | T | O | flags | replaces |
+|---|---|---|---|---|---|---|---|
+| `mark_submission:alerts` | Unmarked & correction alerts | জমার হিসাব বাকি ও ভুলের খবর পাওয়া | 09:30 push + pop-up of unmarked assignments; a same-day correction by a teacher | — | on | | new (D-#890) |
+| `mark_submission:view_notes` | Everyone's correction notes | সবার জমার হিসাবের ভুল দেখা | The নম্বর জমায় ভুল notes in any staff file | — | on | | new (D-#893) |
+| `mark_submission:view_own` | My reminders & notes | আমার জমার রিমাইন্ডার ও ভুল | Own Sunday reminders and own correction notes | on | on | SELF | new |
 
 #### `work_claim` — অভিভাবকের জানানো
 | permission | EN | BN | what it allows | T | O | flags | replaces |
