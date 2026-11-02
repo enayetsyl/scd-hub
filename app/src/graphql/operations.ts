@@ -3538,12 +3538,12 @@ export interface HwSubmitPassEntry {
   submitted: boolean;
 }
 export const HOMEWORK_SUBMIT_PASS = gql<
-  { homeworkSubmitPass: { submittedCount: number; chasedCount: number; unchangedCount: number } },
+  { homeworkSubmitPass: { submittedCount: number; chasedCount: number; unchangedCount: number; correctedCount: number } },
   { sectionId: string; itemId: string; entries: HwSubmitPassEntry[] }
 >`
   mutation HomeworkSubmitPass($sectionId: String!, $itemId: String!, $entries: [HwSubmitPassEntryInput!]!) {
     homeworkSubmitPass(sectionId: $sectionId, itemId: $itemId, entries: $entries) {
-      submittedCount chasedCount unchangedCount
+      submittedCount chasedCount unchangedCount correctedCount
     }
   }
 `;
@@ -6103,12 +6103,12 @@ export interface AsSubmitPassEntry {
   submitted: boolean;
 }
 export const ASSIGNMENT_SUBMIT_PASS = gql<
-  { assignmentSubmitPass: { submittedCount: number; chasedCount: number; unchangedCount: number } },
+  { assignmentSubmitPass: { submittedCount: number; chasedCount: number; unchangedCount: number; correctedCount: number } },
   { sectionId: string; itemId: string; entries: AsSubmitPassEntry[] }
 >`
   mutation AssignmentSubmitPass($sectionId: String!, $itemId: String!, $entries: [AsSubmitPassEntryInput!]!) {
     assignmentSubmitPass(sectionId: $sectionId, itemId: $itemId, entries: $entries) {
-      submittedCount chasedCount unchangedCount
+      submittedCount chasedCount unchangedCount correctedCount
     }
   }
 `;

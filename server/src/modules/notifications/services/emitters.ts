@@ -14,8 +14,9 @@
  * Identity-plane only (reads roster/guardian linkage to resolve recipients);
  * no corpus path (N5.1).
  */
-import { ROUTINE_SUBJECT_LABELS_BN, NOTIFICATION_KINDS, WORK_CLAIM_REJECT_REASON_LABELS_BN } from "@scd/shared";
-import type { WorkClaimRejectReason } from "@scd/shared";
+import { ROUTINE_SUBJECT_LABELS_BN, NOTIFICATION_KINDS, WORK_CLAIM_REJECT_REASON_LABELS_BN, HW_SUBJECT_LABELS_BN } from "@scd/shared";
+import type { WorkClaimRejectReason, HwSubject } from "@scd/shared";
+import { dhakaDayKey } from "../../../lib/dhakaDay";
 import { emit } from "./NotificationService";
 import { renderTemplate } from "../../templates/services/MessageTemplateService";
 import { Student } from "../../foundation/models/Student";
@@ -181,6 +182,18 @@ const dedupeKeys = {
    *  send-back is a new stamp → a new key → the Principal is told again. */
   syllabusAwaitingPublish: (syllabusId: string, approvedAtKey: string, userId: string) =>
     `SYLAWP:${syllabusId}:${approvedAtKey}:${userId}`,
+  /** Per record+day+guardian (D-#891): the first chase of an assignment record tells the
+   *  family once; a same-day re-chase after a correction is a no-op for the inbox. */
+  asFirstChase: (recordId: string, dateKey: string, guardianId: string) =>
+    `ASFC:${recordId}:${dateKey}:${guardianId}`,
+  /** Per correction note + recipient (D-#893): one notice per wrong pass, not per child —
+   *  the note itself lists the children. Recipient in the key (the entity-only trap). */
+  markCorrection: (noteId: string, recipientId: string) => `MKCR:${noteId}:${recipientId}`,
+  /** Per tracker+record+day+guardian (D-#893): the family hears "it was wrong" once. */
+  workMarkCorrected: (tracker: string, recordId: string, dateKey: string, guardianId: string) =>
+    `WMCR:${tracker}:${recordId}:${dateKey}:${guardianId}`,
+  /** Per day + recipient (D-#890): one 09:30 list per Office/Principal login per day. */
+  markSubmissionEscalation: (dateKey: string, recipientId: string) => `MKSE:${dateKey}:${recipientId}`,
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -2107,4 +2120,169 @@ export async function emitSyllabusAwaitingPublish(ev: SyllabusAwaitingPublishEve
       });
     }
   });
+}
+
+// ---------------------------------------------------------------------------
+// Mark-submission guard (D-#889–#893, docs/prd-mark-submission-guard.md)
+// ---------------------------------------------------------------------------
+
+/** Login-enabled, active guardians of one child (contact-only guardians have no inbox,
+ *  D-#31/#72; a link with no `active` field counts as active, pre-GP-1 rows). */
+async function inboxGuardianIdsOf(studentId: IdLike): Promise<string[]> {
+  const links = (await GuardianLink.find({ studentId, active: { $ne: false } })
+    .select("guardianId")
+    .lean()) as unknown as Array<{ guardianId: IdLike }>;
+  const ids = [...new Set(links.map((l) => l.guardianId.toString()))];
+  if (ids.length === 0) return [];
+  const guardians = (await Guardian.find({ _id: { $in: ids }, loginEnabled: true, active: true })
+    .select("_id")
+    .lean()) as unknown as Array<{ _id: IdLike }>;
+  return guardians.map((g) => g._id.toString());
+}
+
+async function studentNameOf(studentId: IdLike): Promise<string> {
+  const st = await Student.findById(studentId).select("name nameBn").lean();
+  return personName(st, "আপনার সন্তান");
+}
+
+const workLabelBn = (tracker: "HOMEWORK" | "ASSIGNMENT") => (tracker === "HOMEWORK" ? "বাড়ির কাজ" : "অ্যাসাইনমেন্ট");
+
+export interface AssignmentFirstChaseEvent {
+  recordId: IdLike;
+  asId: string;
+  studentId: IdLike;
+  sectionId: IdLike;
+  subject: HwSubject;
+  at: Date;
+}
+
+/** D-#891 — the first chase of an assignment record tells the family, with the gift
+ *  warning (owner: "give notification to guardian as well with warning"). */
+export async function emitAssignmentFirstChase(ev: AssignmentFirstChaseEvent): Promise<void> {
+  return bestEffort("assignment first chase", async () => {
+    const guardianIds = await inboxGuardianIdsOf(ev.studentId);
+    if (guardianIds.length === 0) return;
+    const child = await studentNameOf(ev.studentId);
+    const dateKey = dhakaDayKey(ev.at);
+    const titleBn = "অ্যাসাইনমেন্ট জমা হয়নি";
+    const bodyBn = `${child} আজ ${HW_SUBJECT_LABELS_BN[ev.subject] ?? ev.subject} অ্যাসাইনমেন্ট (${ev.asId}) জমা দেয়নি। জমা না দিলে এই সপ্তাহের উপহার পাবে না।`;
+    await Promise.all(
+      guardianIds.map((gid) =>
+        emit({
+          recipientGuardianId: gid,
+          kind: ASSIGNMENT_CHASE_KIND,
+          titleBn,
+          bodyBn,
+          refs: { studentId: ev.studentId.toString(), sectionId: ev.sectionId.toString() },
+          dedupeKey: dedupeKeys.asFirstChase(ev.recordId.toString(), dateKey, gid),
+        }),
+      ),
+    );
+  });
+}
+
+export interface WorkMarkCorrectedEvent {
+  tracker: "HOMEWORK" | "ASSIGNMENT";
+  recordId: IdLike;
+  itemId: IdLike;
+  itemCode: string;
+  studentId: IdLike;
+  sectionId: IdLike;
+  subject: HwSubject;
+  at: Date;
+}
+
+/** D-#893 — the family was told the work was not brought; tell them it was wrong. */
+export async function emitWorkMarkCorrected(ev: WorkMarkCorrectedEvent): Promise<void> {
+  return bestEffort("work mark corrected", async () => {
+    const guardianIds = await inboxGuardianIdsOf(ev.studentId);
+    if (guardianIds.length === 0) return;
+    const child = await studentNameOf(ev.studentId);
+    const dateKey = dhakaDayKey(ev.at);
+    const titleBn = "দুঃখিত — আগের বার্তাটি ভুল ছিল";
+    const bodyBn = `দুঃখিত, আজ ${child}-এর ${HW_SUBJECT_LABELS_BN[ev.subject] ?? ev.subject} ${workLabelBn(ev.tracker)} (${ev.itemCode}) জমা দেয়নি বলে যে বার্তা গিয়েছিল তা ভুল ছিল। সে জমা দিয়েছে।`;
+    await Promise.all(
+      guardianIds.map((gid) =>
+        emit({
+          recipientGuardianId: gid,
+          kind: "WORK_MARK_CORRECTED",
+          titleBn,
+          bodyBn,
+          refs: {
+            studentId: ev.studentId.toString(),
+            sectionId: ev.sectionId.toString(),
+            // The tracker says which list to open (the WC-6 ref, already on the wire).
+            workClaimTracker: ev.tracker,
+            ...(ev.tracker === "HOMEWORK" ? { hwItemId: ev.itemId.toString() } : {}),
+          },
+          dedupeKey: dedupeKeys.workMarkCorrected(ev.tracker, ev.recordId.toString(), dateKey, gid),
+        }),
+      ),
+    );
+  });
+}
+
+export interface MarkCorrectionEvent {
+  noteId: IdLike;
+  tracker: "HOMEWORK" | "ASSIGNMENT";
+  teacherId: IdLike;
+  itemCode: string;
+  sectionId: IdLike;
+  subject: HwSubject;
+  dateKey: string;
+}
+
+/** D-#893 — Office + Principal (`mark_submission:alerts`) hear of a same-day correction,
+ *  once per note. The teacher is never told about their own note this way (they see the
+ *  alert on screen). */
+export async function emitMarkCorrection(ev: MarkCorrectionEvent): Promise<void> {
+  return bestEffort("mark correction", async () => {
+    const teacherId = ev.teacherId.toString();
+    const recipients = (await holderIdsOf("mark_submission:alerts")).filter((id) => id !== teacherId);
+    if (recipients.length === 0) return;
+    const teacher = await User.findById(teacherId).select("name nameBn").lean();
+    const sec = await Section.findById(ev.sectionId).select("nameBn classId").lean();
+    const cls = sec ? await Class.findById(sec.classId).select("nameBn").lean() : null;
+    const where = [cls?.nameBn, sec?.nameBn].filter(Boolean).join(" · ");
+    const titleBn = "জমার হিসাবে ভুল";
+    const bodyBn = `${personName(teacher, "একজন শিক্ষক")} আজ ${where} — ${HW_SUBJECT_LABELS_BN[ev.subject] ?? ev.subject} ${workLabelBn(ev.tracker)} (${ev.itemCode})-এ "জমা দেয়নি" চিহ্নিত করার পর একই দিনে বদলেছেন। ওই শিক্ষার্থীদের অভিভাবক ভুল বার্তা পেয়েছিলেন; তাঁদের সংশোধনী পাঠানো হয়েছে।`;
+    await Promise.all(
+      recipients.map((rid) =>
+        emit({
+          recipientUserId: rid,
+          kind: "MARK_CORRECTION",
+          titleBn,
+          bodyBn,
+          refs: { teacherId, date: ev.dateKey, sectionId: ev.sectionId.toString() },
+          dedupeKey: dedupeKeys.markCorrection(ev.noteId.toString(), rid),
+        }),
+      ),
+    );
+  });
+}
+
+/** D-#890 — the 09:30 push to Office + Principal. Returns how many rows were written. */
+export async function emitMarkSubmissionEscalation(ev: {
+  dateKey: string;
+  teacherCount: number;
+  itemCount: number;
+}): Promise<number> {
+  let created = 0;
+  await bestEffort("mark submission escalation", async () => {
+    const recipients = await holderIdsOf("mark_submission:alerts");
+    const titleBn = "অ্যাসাইনমেন্টের জমার হিসাব বাকি";
+    const bodyBn = `${bnNum(ev.teacherCount)} জন শিক্ষক ${bnNum(ev.itemCount)}টি অ্যাসাইনমেন্টের জমার হিসাব এখনো দেননি। তালিকা দেখতে অ্যাপ খুলুন।`;
+    for (const rid of recipients) {
+      const res = await emit({
+        recipientUserId: rid,
+        kind: "MARK_SUBMISSION_ESCALATION",
+        titleBn,
+        bodyBn,
+        refs: { date: ev.dateKey },
+        dedupeKey: dedupeKeys.markSubmissionEscalation(ev.dateKey, rid),
+      });
+      if (res.created) created += 1;
+    }
+  });
+  return created;
 }
