@@ -696,6 +696,7 @@ export type ReportsStackParamList = {
   FinanceDashboard: undefined;
   DailySnapshot: undefined;
   GuardianEngagement: undefined;
+  MarksDrivers: undefined;
 };
 
 /** Pop-up notices (D-#852): the sender's list (first, no params), composer, report. */

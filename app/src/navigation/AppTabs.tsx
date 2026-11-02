@@ -352,6 +352,7 @@ import AuditLogScreen from "../screens/admin/AuditLogScreen";
 import PersonActivityScreen from "../screens/admin/PersonActivityScreen";
 import WorkClaimQueueScreen from "../screens/admin/WorkClaimQueueScreen";
 import GuardianEngagementScreen from "../screens/admin/GuardianEngagementScreen";
+import MarksDriversScreen from "../screens/reports/MarksDriversScreen";
 import SystemHealthScreen from "../screens/admin/SystemHealthScreen";
 import ReportsHomeScreen from "../screens/reports/ReportsHomeScreen";
 import PendingReportScreen from "../screens/reports/PendingReportScreen";
@@ -1513,6 +1514,7 @@ function ReportsNavigator(): React.ReactElement {
       <ReportsStack.Screen name="FinanceDashboard" component={FinanceDashboardScreen} options={{ title: STR.finDashboardTitle }} />
       <ReportsStack.Screen name="DailySnapshot" component={DailySnapshotScreen} options={{ title: STR.finSnapshotTitle }} />
       <ReportsStack.Screen name="GuardianEngagement" component={GuardianEngagementScreen} options={{ title: STR.geTitle }} />
+      <ReportsStack.Screen name="MarksDrivers" component={MarksDriversScreen} options={{ title: STR.mdTitle }} />
     </ReportsStack.Navigator>
   );
 }
