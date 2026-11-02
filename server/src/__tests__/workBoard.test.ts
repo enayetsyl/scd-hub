@@ -52,6 +52,7 @@ import {
   isMonthKey,
   nextMonthKey,
   observationCards,
+  scriptUploadCardsFrom,
   slotForMinute,
   sortCards,
   summarizeCheckMonths,
@@ -59,6 +60,7 @@ import {
   type WorkCard,
 } from "../modules/workboard/services/WorkBoardService";
 import { deskUncovered, officeRecipients } from "../modules/workboard/services/OfficeCoverService";
+import { rankUploadQueue, type ScriptTestRow } from "../modules/trackers/services/ClassTestScriptService";
 import { aggregateLoad } from "../modules/workboard/services/LoadService";
 import { digestLines, overdueLines } from "../modules/workboard/services/TaskSweepService";
 import {
@@ -277,6 +279,103 @@ describe("office cover: desk, backups, pulls", () => {
     expect(pulled.map((c) => c.key)).toEqual(["PRINT_JOB:j1:tazkir", "PERIOD:s:d:akmol"]);
     expect(pulled[0].pulledByName).toBe("Tazkir");
     expect(pulled[0].canPull).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 3b'. Class-test script upload queue (owner 2026-11-02: Akmol's list, LIFO + rank)
+// ---------------------------------------------------------------------------
+
+describe("script upload cards", () => {
+  const row = (over: Partial<ScriptTestRow>): ScriptTestRow => ({
+    testId: "t",
+    ctId: "CT-1",
+    subject: "MATH",
+    subjectBn: "গণিত",
+    testNumber: 1,
+    examDate: "2026-10-20T00:00:00.000Z",
+    classLevel: 3,
+    sectionId: null,
+    subjectGroupId: null,
+    unitLabelBn: "৩য় শ্রেণি",
+    teacherId: "tch",
+    teacherName: "Rumana",
+    stage: "UPLOAD_PENDING",
+    dueDateKey: "2026-10-21",
+    returnDueDateKey: null,
+    presentCount: 20,
+    resolvedCount: 0,
+    pageCount: 0,
+    receivedCount: 20,
+    receivedAt: "2026-10-22T04:00:00.000Z",
+    publishedAt: null,
+    handedBackAt: null,
+    returnedAt: null,
+    waivedAt: null,
+    waiveReason: null,
+    backfilled: false,
+    ...over,
+  });
+
+  test("rankUploadQueue: newest received is #1; only pending / in-progress uploads count", () => {
+    const ranked = rankUploadQueue([
+      row({ testId: "old", receivedAt: "2026-10-20T04:00:00.000Z" }),
+      row({ testId: "new", receivedAt: "2026-10-28T04:00:00.000Z", stage: "UPLOAD_IN_PROGRESS", resolvedCount: 5 }),
+      row({ testId: "mid", receivedAt: "2026-10-24T04:00:00.000Z" }),
+      row({ testId: "done", receivedAt: "2026-10-30T04:00:00.000Z", stage: "UPLOAD_DONE", resolvedCount: 20 }),
+      row({ testId: "waiting", receivedAt: null, stage: "OVERDUE" }),
+    ]);
+    expect(ranked.map((r) => [r.testId, r.rank])).toEqual([["new", 1], ["mid", 2], ["old", 3]]);
+  });
+
+  test("a newly received test takes #1 and the others move down", () => {
+    const before = rankUploadQueue([row({ testId: "a", receivedAt: "2026-10-20T04:00:00.000Z" })]);
+    expect(before.map((r) => r.rank)).toEqual([1]);
+    const after = rankUploadQueue([
+      row({ testId: "a", receivedAt: "2026-10-20T04:00:00.000Z" }),
+      row({ testId: "b", receivedAt: "2026-10-21T04:00:00.000Z" }),
+    ]);
+    expect(after.map((r) => [r.testId, r.rank])).toEqual([["b", 1], ["a", 2]]);
+  });
+
+  test("the card: rank leads the title, opens the upload screen, effort = scripts left", () => {
+    const [c] = scriptUploadCardsFrom(
+      rankUploadQueue([row({ testId: "t1", ctId: "CT-9", stage: "UPLOAD_IN_PROGRESS", resolvedCount: 8 })]),
+      [{ _id: new Types.ObjectId("64b000000000000000000001"), name: "Akmol", role: "OFFICE" }],
+      "2026-11-02",
+    );
+    expect(c.kind).toBe("CT_SCRIPT_UPLOAD");
+    expect(c.titleBn.startsWith("#১ · খাতা আপলোড · ৩য় শ্রেণি · গণিত · CT-9")).toBe(true);
+    expect(c.detailBn).toContain("৮/২০");
+    expect(c.effortMin).toBe(12);
+    expect(c.sourceId).toBe("t1");
+    expect(c.link).toEqual({ screen: "CtScriptUpload", params: { testId: "t1", title: "CT-9" } });
+  });
+
+  test("the desk is the Office login; the OFFICE-template teacher and the Principal only while uncovered", () => {
+    const akmol = { _id: "akmol", role: "OFFICE", additionalTemplates: [] as string[] };
+    const tazkir = { _id: "tazkir", role: "TEACHER", additionalTemplates: ["OFFICE"] };
+    const principal = { _id: "principal", role: "PRINCIPAL", additionalTemplates: [] as string[] };
+    const teacher = { _id: "kainat", role: "TEACHER", additionalTemplates: [] as string[] };
+    const all = [akmol, tazkir, principal, teacher];
+    expect(officeRecipients(all, false, "class_test_script:scan").map((u) => u._id)).toEqual(["akmol"]);
+    expect(officeRecipients(all, true, "class_test_script:scan").map((u) => u._id)).toEqual(["akmol", "tazkir", "principal"]);
+  });
+
+  test("sortCards keeps the ranked block in rank order (#১০ after #২), beside other same-slot cards", () => {
+    const ranked = (rank: number) =>
+      card({ key: `r${rank}`, kind: "CT_SCRIPT_UPLOAD", rank, titleBn: `#${"০১২৩৪৫৬৭৮৯"[rank % 10]} · খাতা আপলোড`, dateKey: "2026-11-02" });
+    const sorted = sortCards([
+      ranked(10),
+      card({ key: "print", kind: "PRINT_JOB", titleBn: "প্রিন্ট · x", dateKey: "2026-11-02" }),
+      ranked(2),
+      ranked(1),
+    ]).map((c) => c.key);
+    const block = sorted.filter((k) => k.startsWith("r"));
+    expect(block).toEqual(["r1", "r2", "r10"]);
+    // contiguous: nothing else sits inside the ranked block
+    const first = sorted.indexOf("r1");
+    expect(sorted.slice(first, first + 3)).toEqual(["r1", "r2", "r10"]);
   });
 });
 

@@ -20,6 +20,9 @@
  *   PRINT_JOB           a REQUESTED PrintRequest — on every OFFICE actor's board
  *   LEAVE_APPROVAL      an `applied` StaffLeaveApplication — on every leave:manage
  *                       Principal/Office actor's board
+ *   CT_SCRIPT_UPLOAD    a class test whose scripts the Office received but has not
+ *                       finished scanning — on every class_test_script:scan desk board,
+ *                       RANKED newest-received first (owner 2026-11-02, LIFO)
  *
  * The "now" adapters (everything but PERIOD/COVER and manual tasks) only produce
  * cards when the window contains TODAY: pending work is owed now, not on a date.
@@ -29,6 +32,7 @@ import {
   DAYS_OF_WEEK,
   DAY_SLOT_BOUNDARIES_MIN,
   ROUTINE_SUBJECT_LABELS_BN,
+  WORK_CARD_KIND_LABELS_BN,
   WORK_EFFORT_MIN,
   type DaySlot,
   type PeriodTrack,
@@ -51,6 +55,8 @@ import { HomeworkStudentRecord } from "../../trackers/models/HomeworkStudentReco
 import { ClassTest } from "../../trackers/models/ClassTest";
 import { ClassTestResult } from "../../trackers/models/ClassTestResult";
 import { classTestSettled } from "../../reports/services/MonthlyPendingWorkService";
+import { scriptUploadQueue, type RankedScriptRow } from "../../trackers/services/ClassTestScriptService";
+import { dhakaDayKey } from "../../../lib/dhakaDay";
 import { VideoReviewAssignment } from "../../classroom-observation/models/VideoReviewAssignment";
 import { ClassroomObservation } from "../../classroom-observation/models/ClassroomObservation";
 import { ReviewAssignment } from "../../content/models/ReviewAssignment";
@@ -106,6 +112,8 @@ export interface WorkCard {
   canPull?: boolean;
   pulledById?: string | null;
   pulledByName?: string | null;
+  /** A ranked queue's position (1 = do first) — orders those cards among themselves. */
+  rank?: number;
 }
 
 /** What one staff user looks like to the board (role + templates + grants, for gates). */
@@ -870,6 +878,45 @@ async function leaveCards(approvers: BoardUser[], todayKey: string): Promise<Wor
   return out;
 }
 
+/** Pure: one CT_SCRIPT_UPLOAD card per (ranked test, desk user). The rank leads the
+ *  title so it reads the same on every surface that shows the card. */
+export function scriptUploadCardsFrom(rows: RankedScriptRow[], users: BoardUser[], todayKey: string): WorkCard[] {
+  const out: WorkCard[] = [];
+  for (const u of users) {
+    for (const r of rows) {
+      const left = Math.max(0, r.presentCount - r.resolvedCount);
+      out.push({
+        key: `CT_SCRIPT_UPLOAD:${r.testId}:${u._id.toString()}`,
+        kind: "CT_SCRIPT_UPLOAD",
+        userId: u._id.toString(),
+        titleBn: `#${bn(r.rank)} · খাতা আপলোড · ${[r.unitLabelBn, r.subjectBn, r.ctId].filter(Boolean).join(" · ")}`,
+        detailBn: `${r.teacherName} · ${bn(r.resolvedCount)}/${bn(r.presentCount)} সম্পন্ন · খাতা গৃহীত ${bn(dhakaDayKey(new Date(r.receivedAt!)))}`,
+        dateKey: todayKey,
+        slot: "ANY",
+        startMin: null,
+        effortMin: Math.max(1, left) * WORK_EFFORT_MIN.ctScriptPerStudent,
+        status: "TODO",
+        overdue: false,
+        priority: null,
+        blockedReason: null,
+        assignedById: null,
+        assignedByName: null,
+        forLabel: null,
+        taskId: null,
+        sourceId: r.testId,
+        link: { screen: "CtScriptUpload", params: { testId: r.testId, title: r.ctId } },
+        rank: r.rank,
+      });
+    }
+  }
+  return out;
+}
+
+async function scriptUploadCards(deskUsers: BoardUser[], todayKey: string): Promise<WorkCard[]> {
+  if (deskUsers.length === 0) return [];
+  return scriptUploadCardsFrom(await scriptUploadQueue(), deskUsers, todayKey);
+}
+
 // ---------------------------------------------------------------------------
 // The board
 // ---------------------------------------------------------------------------
@@ -892,6 +939,12 @@ export function sortCards(cards: WorkCard[]): WorkCard[] {
     const pa = a.priority ? PRIORITY_RANK[a.priority] : 1;
     const pb = b.priority ? PRIORITY_RANK[b.priority] : 1;
     if (pa !== pb) return pa - pb;
+    // A ranked queue sorts as ONE block under its kind label, by rank inside it — a
+    // title compare would put "#১০" before "#২".
+    const ta = a.rank != null ? WORK_CARD_KIND_LABELS_BN[a.kind] : a.titleBn;
+    const tb = b.rank != null ? WORK_CARD_KIND_LABELS_BN[b.kind] : b.titleBn;
+    if (ta !== tb) return ta.localeCompare(tb);
+    if ((a.rank ?? 0) !== (b.rank ?? 0)) return (a.rank ?? 0) - (b.rank ?? 0);
     return a.titleBn.localeCompare(b.titleBn);
   });
 }
@@ -960,12 +1013,13 @@ export async function boardFor(users: BoardUser[], fromKey: string, toKey: strin
   // see them too and may pull one; a pulled card sits on the puller's board alone.
   // PM (§5.5): each queue follows its ACTION — print cards the printing:process holders,
   // leave cards the leave:approve holders (was: role OFFICE, ∩ leave:manage for leave).
-  const [uncoveredPrint, uncoveredLeave] = nowInRange
+  const [uncoveredPrint, uncoveredLeave, uncoveredScripts] = nowInRange
     ? await Promise.all([
         officeUncoveredToday(todayKey, CARD_ACTION.PRINT_JOB),
         officeUncoveredToday(todayKey, CARD_ACTION.LEAVE_APPROVAL),
+        officeUncoveredToday(todayKey, CARD_ACTION.CT_SCRIPT_UPLOAD),
       ])
-    : [false, false];
+    : [false, false, false];
   const pulls = nowInRange ? await pullsFor(PULLABLE_KINDS) : [];
   const pullerIds = new Set(pulls.map((p) => p.userId));
   const withPullers = (base: BoardUser[]): BoardUser[] => {
@@ -974,6 +1028,7 @@ export async function boardFor(users: BoardUser[], fromKey: string, toKey: strin
   };
   const officeUsers = withPullers(officeRecipients(users, uncoveredPrint, CARD_ACTION.PRINT_JOB));
   const approvers = withPullers(officeRecipients(users, uncoveredLeave, CARD_ACTION.LEAVE_APPROVAL));
+  const scanners = withPullers(officeRecipients(users, uncoveredScripts, CARD_ACTION.CT_SCRIPT_UPLOAD));
 
   const auto = await Promise.all([
     safe("period", () => periodCards(userIds, fromKey, toKey, keys)),
@@ -987,6 +1042,7 @@ export async function boardFor(users: BoardUser[], fromKey: string, toKey: strin
     nowInRange ? safe("observation", () => observationCards(userIds, todayKey)) : Promise.resolve([]),
     nowInRange ? safe("print", () => printCards(officeUsers, todayKey)) : Promise.resolve([]),
     nowInRange ? safe("leave", () => leaveCards(approvers, todayKey)) : Promise.resolve([]),
+    nowInRange ? safe("ctScriptUpload", () => scriptUploadCards(scanners, todayKey)) : Promise.resolve([]),
   ]);
   const pullerNames = new Map<string, string>();
   if (pulls.length) {
