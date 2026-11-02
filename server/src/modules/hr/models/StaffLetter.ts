@@ -73,7 +73,7 @@ export interface ILetterSnapshot {
    */
   probationMonths?: number | null;
   /**
-   * Increment letters only (D-#900): the salary the raise replaces (null when no earlier
+   * Increment letters only (D-#901): the salary the raise replaces (null when no earlier
    * figure is on record) and the month it takes effect (YYYY-MM). `monthlySalary` is the
    * NEW figure. Frozen like the rest, so later raises never rewrite this letter.
    */
@@ -126,7 +126,7 @@ export interface IStaffLetter extends Document {
   voidedBy?: Types.ObjectId | null;
   voidedAt?: Date | null;
   voidReason?: string | null;
-  /** Each time the letter was sent to the staff member's app (D-#901), oldest first. */
+  /** Each time the letter was sent to the staff member's app (D-#902), oldest first. */
   sends?: ILetterSend[];
   createdAt: Date;
   updatedAt: Date;

@@ -1,7 +1,7 @@
 /**
- * MyLettersScreen (D-#902) — a staff member's OWN issued letters, newest first.
+ * MyLettersScreen (D-#903) — a staff member's OWN issued letters, newest first.
  *
- * Every letter the school issues to someone lands here, sent or not; sending it (D-#901)
+ * Every letter the school issues to someone lands here, sent or not; sending it (D-#902)
  * is how they learn it is there — the notification and the pop-up both open this screen.
  * Void letters are left out: they were superseded, and the paper copy is matched from the
  * Office's side. The PDF opens on the web and in the phone's PDF viewer on Android.

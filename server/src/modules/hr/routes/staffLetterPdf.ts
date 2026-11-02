@@ -54,7 +54,7 @@ export function taka(n: number): string {
 
 /**
  * PREVIEW — the letter exactly as issuing it would freeze it, before anything is written
- * (D-#902). Same input as `issueStaffLetter`, same `buildLetter`, so the preview and the
+ * (D-#903). Same input as `issueStaffLetter`, same `buildLetter`, so the preview and the
  * issued letter cannot drift; only the ref no is missing, and the page says PREVIEW.
  */
 staffLetterPdfRouter.post("/preview", express.json({ limit: "200kb" }), async (req: Request, res: Response) => {
@@ -111,7 +111,7 @@ staffLetterPdfRouter.get("/:id", async (req: Request, res: Response) => {
     res.status(404).json({ error: "Letter not found" });
     return;
   }
-  // The Office reads any letter; a staff member reads their OWN issued letters (D-#902).
+  // The Office reads any letter; a staff member reads their OWN issued letters (D-#903).
   // Not found and not yours look the same, so the route never confirms someone else's.
   if (!callerHasPermission(ctx.auth, "staff_letters:view")) {
     const own =
@@ -368,7 +368,7 @@ export function certificateBody(s: ILetterSnapshot): string {
  * fixed string in a renderer they cannot reach.
  */
 /**
- * The increment letter's DRAFT body (D-#900). Like the confirmation letter, the issuer's
+ * The increment letter's DRAFT body (D-#901). Like the confirmation letter, the issuer's
  * own text replaces it entirely when supplied; this is the starting point the form offers.
  */
 export function incrementBody(s: ILetterSnapshot): string {
@@ -566,7 +566,7 @@ function renderContract(doc: PDFKit.PDFDocument, letter: RenderableLetter, width
 /** A letter as the renderer needs it — an issued one, or a preview that has no id yet. */
 export type RenderableLetter = Pick<IStaffLetter, "kind" | "refNo" | "status" | "snapshot" | "extraText" | "voidReason">;
 
-/** Kinds whose `extraText` IS the body (the issuer owns the words, D-#590 / D-#900). */
+/** Kinds whose `extraText` IS the body (the issuer owns the words, D-#590 / D-#901). */
 const BODY_IS_AUTHORED = (kind: string) => kind === "confirmation" || kind === "increment";
 
 export async function renderLetterToPdf(letter: RenderableLetter, opts: { preview?: boolean } = {}): Promise<Buffer> {
@@ -601,7 +601,7 @@ export async function renderLetterToPdf(letter: RenderableLetter, opts: { previe
       doc.fillColor("#000000");
       doc.moveDown(0.3);
     }
-    // A preview must never pass for the real thing (D-#902): no ref no is allocated until
+    // A preview must never pass for the real thing (D-#903): no ref no is allocated until
     // the letter is issued, and the page says so on its face.
     if (opts.preview) {
       doc.fontSize(9).fillColor("#B3261E");
@@ -661,7 +661,7 @@ export async function renderLetterToPdf(letter: RenderableLetter, opts: { previe
     }
 
     if (BODY_IS_AUTHORED(letter.kind)) {
-      // The issuer's own text IS the body when they supplied one (D-#590, D-#900); the
+      // The issuer's own text IS the body when they supplied one (D-#590, D-#901); the
       // generated paragraph is only the draft they started from.
       const draft = letter.kind === "increment" ? incrementBody(s) : confirmationBody(s);
       mixedText(doc, letter.extraText?.trim() || draft, {

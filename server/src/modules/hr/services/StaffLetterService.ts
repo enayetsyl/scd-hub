@@ -100,7 +100,7 @@ async function loadStaff(staffProfileId: string) {
 }
 type LeanStaff = NonNullable<Awaited<ReturnType<typeof loadStaff>>>;
 
-/** What an increment letter states and records (D-#900). */
+/** What an increment letter states and records (D-#901). */
 export interface IncrementBasis {
   /** YYYY-MM — the month the new figure takes effect. */
   month: string;
@@ -117,7 +117,7 @@ function monthBefore(month: string): string {
 }
 
 /**
- * The raise an increment letter states (D-#900). If Set pay already recorded this exact
+ * The raise an increment letter states (D-#901). If Set pay already recorded this exact
  * raise (same month, same figure), the letter reuses that row and its previous figure —
  * issuing the letter must never record the same raise twice. Otherwise the previous
  * figure is the profile's current salary, as Set pay itself takes it; when the profile
@@ -140,7 +140,7 @@ async function incrementBasis(staff: LeanStaff, month: string, newSalary: number
   return { month, newSalary, previousSalary, existingPayChangeId: existing?._id ?? null };
 }
 
-/** Everything an issue would freeze, computed WITHOUT writing anything (D-#902). */
+/** Everything an issue would freeze, computed WITHOUT writing anything (D-#903). */
 export interface BuiltLetter {
   staff: LeanStaff;
   snapshot: ILetterSnapshot;
@@ -349,7 +349,7 @@ export async function issueLetter(input: IssueLetterInput): Promise<IStaffLetter
    */
   if (increment) {
     /**
-     * An increment letter RECORDS the raise it announces (D-#900) — the same two writes
+     * An increment letter RECORDS the raise it announces (D-#901) — the same two writes
      * Set pay makes: the profile's current figure, and a dated history row so payroll pays
      * the new figure from its month (D-#587). A raise Set pay already recorded is reused.
      */

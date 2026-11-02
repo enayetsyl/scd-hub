@@ -484,7 +484,7 @@ export async function cancelPayrollRun(runId: string, actorId: string): Promise<
 const LOCK_WRITE_WINDOW_MS = 10 * 60_000;
 
 /**
- * Reopen a LOCKED run so a mistake can be corrected (D-#903, overriding D-#110's "a
+ * Reopen a LOCKED run so a mistake can be corrected (D-#904, overriding D-#110's "a
  * locked run is never retro-edited"). The owner: *"option to cancel the payroll if later
  * find any mistake."*
  *

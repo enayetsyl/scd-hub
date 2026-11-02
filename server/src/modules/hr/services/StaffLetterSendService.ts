@@ -1,8 +1,8 @@
 /**
- * StaffLetterSendService (D-#901) — send an issued letter to the staff member's own app.
+ * StaffLetterSendService (D-#902) — send an issued letter to the staff member's own app.
  *
  * The owner: *"option to send it with notification or popup or both."* A letter lives in
- * the staff member's আমার চিঠি screen whether or not it is sent (D-#902); sending is how
+ * the staff member's আমার চিঠি screen whether or not it is sent (D-#903); sending is how
  * they learn it is there. Two channels, either or both:
  *
  *   notification — an inbox notice + push (`STAFF_LETTER_SENT`), tap → আমার চিঠি

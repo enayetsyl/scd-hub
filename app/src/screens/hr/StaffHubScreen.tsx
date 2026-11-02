@@ -574,9 +574,9 @@ function DocumentsTab({
   canIssue: boolean;
   canAppointment: boolean;
   canVoid: boolean;
-  /** D-#900 — the increment letter also records the raise, so it needs payroll:edit too. */
+  /** D-#901 — the increment letter also records the raise, so it needs payroll:edit too. */
   canIncrement: boolean;
-  /** D-#901 — send an issued letter to the staff member’s app. */
+  /** D-#902 — send an issued letter to the staff member’s app. */
   canSend: boolean;
   onIssue: (kind: string) => void;
   onConfirm: (() => void) | null;

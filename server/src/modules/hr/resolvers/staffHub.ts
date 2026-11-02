@@ -131,9 +131,9 @@ StaffLetterRef.implement({
     effectiveFrom: t.string({ resolve: (l) => l.snapshot.effectiveFrom }),
     letterDate: t.string({ resolve: (l) => l.snapshot.letterDate }),
     annualLeaveDays: t.int({ resolve: (l) => l.snapshot.annualLeaveDays }),
-    // Increment letters (D-#900): the figure the raise replaced.
+    // Increment letters (D-#901): the figure the raise replaced.
     previousSalary: t.float({ nullable: true, resolve: (l) => l.snapshot.previousSalary ?? null }),
-    // Sending to the staff member's app (D-#901).
+    // Sending to the staff member's app (D-#902).
     sendCount: t.int({ resolve: (l) => l.sends?.length ?? 0 }),
     lastSentAt: t.string({ nullable: true, resolve: (l) => l.sends?.at(-1)?.at.toISOString() ?? null }),
     lastSentChannels: t.stringList({ resolve: (l) => l.sends?.at(-1)?.channels ?? [] }),
@@ -599,11 +599,11 @@ builder.mutationField("issueStaffLetter", (t) =>
       weeklyHours: t.arg.string({ required: false }),
       extraText: t.arg.string({ required: false }),
       contract: t.arg({ type: SupportContractInputRef, required: false }),
-      // D-#901 — send it to the staff member's app straight away: "notification", "popup".
+      // D-#902 — send it to the staff member's app straight away: "notification", "popup".
       sendChannels: t.arg.stringList({ required: false }),
     },
     resolve: async (_r, args, ctx) => {
-      // An increment letter also records the raise (D-#900), so it needs the salary switch too.
+      // An increment letter also records the raise (D-#901), so it needs the salary switch too.
       if (args.kind === "increment" && !callerHasPermission(ctx.auth!, "payroll:edit")) {
         throw new ForbiddenError("বেতন বৃদ্ধির পত্র দিতে বেতন ঠিক করার অনুমতিও লাগে");
       }
@@ -655,7 +655,7 @@ builder.mutationField("sendStaffLetter", (t) =>
     type: StaffLetterRef,
     description:
       "Send an issued letter to the staff member's app — notification, pop-up or both " +
-      "(D-#901). Each send is recorded on the letter. Requires staff_letters:send; the " +
+      "(D-#902). Each send is recorded on the letter. Requires staff_letters:send; the " +
       "pop-up channel also needs popup_notice:send_staff.",
     authScopes: { hasPermission: "staff_letters:send" },
     args: {
@@ -670,7 +670,7 @@ builder.queryField("myStaffLetters", (t) =>
   t.field({
     type: [StaffLetterRef],
     description:
-      "The caller's OWN issued letters, newest first — void letters left out (D-#902). The " +
+      "The caller's OWN issued letters, newest first — void letters left out (D-#903). The " +
       "caller's StaffProfile is the phone/email link (staffMatch, fail-closed); a login with " +
       "no linked profile gets an empty list, never anyone else's.",
     authScopes: { hasPermission: "staff_letters:view_own" },

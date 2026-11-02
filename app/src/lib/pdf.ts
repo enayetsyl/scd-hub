@@ -75,7 +75,7 @@ export async function downloadFile(path: string, filename: string): Promise<void
 }
 
 /**
- * Staff letters open on the web AND on Android (D-#902): the staff member reading their
+ * Staff letters open on the web AND on Android (D-#903): the staff member reading their
  * own letter is on the phone app, where the blob/window.open path above does not exist.
  * iOS stays off for the same reason as files.ts — it would need expo-sharing in the binary.
  */
