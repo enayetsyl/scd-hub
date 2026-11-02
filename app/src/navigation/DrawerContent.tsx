@@ -387,7 +387,10 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
   // every group open buried the items below it. The group holding the current screen's
   // tab starts open, so its highlighted item stays visible. A tap collapses/expands, and
   // a tapped group keeps the choice for the session.
+  // D-#900 (owner 2026-11-02): a guardian's groups start OPEN — their list is short, so
+  // nothing gets buried. Staff keep D-#760.
   const [collapsed, setCollapsed] = React.useState<Record<string, boolean>>({});
+  const groupsStartOpen = role === "GUARDIAN";
 
   // D-#294: the print operator's queue counters — red = awaiting printing, yellow =
   // awaiting delivery. `additionalTypenames: ["PrintRequest"]` makes urql's document
@@ -706,7 +709,7 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
     const visible = section.items.filter(visibleLeaf);
     if (visible.length === 0) return null;
     const key = `${section.titleKey}-${idx}`;
-    const isCollapsed = collapsed[key] ?? !visible.some((it) => it.route === activeRoute);
+    const isCollapsed = collapsed[key] ?? (!groupsStartOpen && !visible.some((it) => it.route === activeRoute));
     return (
       <View key={key} style={{ marginTop: space(1) }}>
         <Pressable
