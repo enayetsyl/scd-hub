@@ -234,7 +234,7 @@ export function notificationTarget(
     case "MARK_CORRECTION":
       return { tab: "HrTab", screen: "MarkCorrections", params: { all: true } };
     case "STAFF_LETTER_SENT":
-      // D-#900 — the letter waits in the staff member's own আমার চিঠি list.
+      // D-#901 — the letter waits in the staff member's own আমার চিঠি list.
       return { tab: "HrTab", screen: "MyLetters" };
     case "WORK_MARK_CORRECTED":
       // Guardian-only; `workClaimTracker` says which list (the WC-6 ref, on the wire).

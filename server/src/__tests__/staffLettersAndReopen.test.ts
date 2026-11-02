@@ -1,5 +1,5 @@
 /**
- * D-#899–#902 — increment letters, letter preview, sending a letter to the staff app,
+ * D-#900–#902 — increment letters, letter preview, sending a letter to the staff app,
  * and reopening a locked payroll run.
  *
  * Asserts what people see, not the mechanism (the D-#590 lesson): the salary payroll
@@ -96,7 +96,7 @@ const incrementInput = (staffProfileId: string, over: Record<string, unknown> = 
   ...over,
 });
 
-describe("increment letter (D-#899)", () => {
+describe("increment letter (D-#900)", () => {
   it("issuing it records the raise: payroll pays the new figure from its month, the old one before", async () => {
     const s = await staff();
     const letter = await issueLetter(incrementInput(s));
@@ -127,7 +127,7 @@ describe("increment letter (D-#899)", () => {
   });
 });
 
-describe("preview (D-#901)", () => {
+describe("preview (D-#902)", () => {
   it("builds the letter and renders a PDF without writing a letter, a pay change or the profile", async () => {
     const s = await staff();
 
@@ -144,7 +144,7 @@ describe("preview (D-#901)", () => {
   });
 });
 
-describe("sending a letter to the staff app (D-#900)", () => {
+describe("sending a letter to the staff app (D-#901)", () => {
   it("notification + pop-up both reach that one login, and the send is recorded", async () => {
     const s = await staff();
     const userId = await loginFor(s);
@@ -186,7 +186,7 @@ describe("sending a letter to the staff app (D-#900)", () => {
   });
 });
 
-describe("reopening a locked payroll run (D-#902)", () => {
+describe("reopening a locked payroll run (D-#903)", () => {
   const MONTH = "2026-10";
   const prepare = () => preparePayrollRun({ monthKey: MONTH, workingDays: 26, actorId: principalId });
 

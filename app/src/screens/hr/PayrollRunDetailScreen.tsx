@@ -92,7 +92,7 @@ export default function PayrollRunDetailScreen({ route, navigation }: Props): Re
   const [, reopen] = useMutation(REOPEN_PAYROLL_RUN);
   const [reopening, setReopening] = React.useState(false);
   const [reopenReason, setReopenReason] = React.useState("");
-  // The run list carries the reopen history (D-#902); this screen only gets the id.
+  // The run list carries the reopen history (D-#903); this screen only gets the id.
   const [{ data: runsData }, refetchRuns] = useQuery({ query: PAYROLL_RUNS_QUERY, requestPolicy: "cache-and-network" });
   const thisRun = runsData?.payrollRuns.find((r) => r.id === runId);
 
@@ -131,7 +131,7 @@ export default function PayrollRunDetailScreen({ route, navigation }: Props): Re
     refetch({ requestPolicy: "network-only" });
   }
 
-  /** D-#902 — unlock a locked run to correct it; the server undoes what the lock did. */
+  /** D-#903 — unlock a locked run to correct it; the server undoes what the lock did. */
   async function runReopen(): Promise<void> {
     if (!reopenReason.trim()) return;
     if (!(await confirmAction({ confirmLabel: STR.hrReopenConfirm, message: STR.hrReopenNote }))) return;

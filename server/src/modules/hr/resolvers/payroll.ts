@@ -57,7 +57,7 @@ const PayrollRunRef = builder.objectRef<IPayrollRun>("PayrollRun");
 PayrollRunRef.implement({
   description:
     "A monthly payroll run (prepared → approved_locked). A locked run changes only by an explicit " +
-    "reopen with a reason (D-#902), which undoes the lock.",
+    "reopen with a reason (D-#903), which undoes the lock.",
   fields: (t) => ({
     id: t.string({ resolve: (r) => r._id.toString() }),
     monthKey: t.exposeString("monthKey"),
@@ -66,7 +66,7 @@ PayrollRunRef.implement({
     preparedAt: t.string({ resolve: (r) => new Date(r.preparedAt).toISOString() }),
     approvedAt: t.string({ nullable: true, resolve: (r) => (r.approvedAt ? new Date(r.approvedAt).toISOString() : null) }),
     note: t.string({ nullable: true, resolve: (r) => r.note ?? null }),
-    // D-#902 — the most recent reopen, so the run screen can say it was corrected and why.
+    // D-#903 — the most recent reopen, so the run screen can say it was corrected and why.
     reopenCount: t.int({ resolve: (r) => r.reopenings?.length ?? 0 }),
     lastReopenedAt: t.string({ nullable: true, resolve: (r) => r.reopenings?.at(-1)?.at.toISOString() ?? null }),
     lastReopenReason: t.string({ nullable: true, resolve: (r) => r.reopenings?.at(-1)?.reason ?? null }),
@@ -426,7 +426,7 @@ builder.mutationField("reopenPayrollRun", (t) =>
   t.field({
     type: PayrollRunRef,
     description:
-      "Reopen a LOCKED run to correct it (D-#902): advance recovery, lateness freeze and leaver " +
+      "Reopen a LOCKED run to correct it (D-#903): advance recovery, lateness freeze and leaver " +
       "settlements are undone and the run returns to prepared. Refused when a later month is " +
       "locked or a recovered advance has changed since. PRINCIPAL only (payroll:reopen, LOCKED). Audited.",
     authScopes: { hasPermission: "payroll:reopen" },

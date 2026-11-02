@@ -13,7 +13,7 @@
  * Issuing FREEZES every merge field into the letter's snapshot, so this form is the
  * last moment any of it can be changed. That is said on the screen, not just in a doc.
  *
- * D-#899–#901: the increment letter (issuing it records the raise), a PREVIEW that
+ * D-#900–#901: the increment letter (issuing it records the raise), a PREVIEW that
  * renders exactly what issuing would freeze without saving anything, and an optional
  * send to the staff member's app (notification / pop-up / both). For a confirmation or
  * an increment the text box IS the body (D-#590) — labelled so, with the standard draft
@@ -112,7 +112,7 @@ export default function IssueLetterScreen({ route, navigation }: Props): React.R
   const [{ data: policy }] = useQuery({ query: HR_POLICY_QUERY });
   const [, issue] = useMutation(ISSUE_STAFF_LETTER);
   const isIncrement = kind === "increment";
-  // Confirmation and increment: the text box is the WHOLE body (D-#590 / D-#899).
+  // Confirmation and increment: the text box is the WHOLE body (D-#590 / D-#900).
   const bodyIsAuthored = kind === "confirmation" || isIncrement;
   const [incrementMonth, setIncrementMonth] = React.useState(thisMonth());
   const [send, setSend] = React.useState<SendChoice>("none");
@@ -176,7 +176,7 @@ export default function IssueLetterScreen({ route, navigation }: Props): React.R
     // button refuses first rather than sending a request that can only fail.
     (!isContract || duties.split("\n").some((d) => d.trim() !== ""));
 
-  /** What issuing would send — and exactly what the preview renders (D-#901). */
+  /** What issuing would send — and exactly what the preview renders (D-#902). */
   function letterInput() {
     return {
       staffProfileId: staff.id,

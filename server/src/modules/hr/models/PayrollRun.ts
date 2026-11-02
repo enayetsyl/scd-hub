@@ -25,7 +25,7 @@ export interface IPayrollRun extends Document {
   approvedBy?: Types.ObjectId;
   approvedAt?: Date;
   note?: string;
-  /** Each time the locked run was reopened to correct it (D-#902), oldest first. */
+  /** Each time the locked run was reopened to correct it (D-#903), oldest first. */
   reopenings?: Array<{ at: Date; by: Types.ObjectId; reason: string; previousApprovedAt?: Date | null }>;
   createdAt: Date;
   updatedAt: Date;

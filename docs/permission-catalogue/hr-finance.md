@@ -23,6 +23,7 @@ Today's holders (from `shared/vocab.ts` ROLE_PERMISSIONS): `staff:manage`, `leav
 | payroll.ts:366 | preparePayrollRun | payroll:manage | `payroll:prepare` |
 | payroll.ts:401 | approvePayrollRun | payroll:approve (RESERVED) | `payroll:approve` (LOCKED) |
 | payroll.ts:411 | cancelPayrollRun | payroll:manage; service: prepared runs only | `payroll:prepare` + prepared-runs-only rule (stays) |
+| payroll.ts | reopenPayrollRun (D-#903) | — (new) | `payroll:reopen` (LOCKED); refused when a later month is locked or a recovered advance changed since |
 | payroll.ts:425 | issueStaffAdvance | payroll:approve (RESERVED) | `salary_advance:issue` (LOCKED) |
 | payroll.ts:451 | settleStaffAdvance | payroll:approve (RESERVED) | `salary_advance:settle` (LOCKED) |
 
@@ -58,6 +59,8 @@ Today's holders (from `shared/vocab.ts` ROLE_PERMISSIONS): `staff:manage`, `leav
 | staffHub.ts:477 | setHrPolicy | payroll:manage; redundant inline `require_(payroll:manage)` (:507) | `hr_policy:settings` (drop the inline duplicate) |
 | staffHub.ts:576 | issueStaffLetter | staff:manage; redundant inline `require_(staff:manage)` (:595) | `staff_letters:issue` (drop the inline duplicate) |
 | staffHub.ts:625 | voidStaffLetter | staff:manage; inline require_ (:637) | `staff_letters:void` (drop the inline duplicate) |
+| staffHub.ts | sendStaffLetter (D-#901) | — (new) | `staff_letters:send`; the pop-up channel also checks `popup_notice:send_staff`. `issueStaffLetter` with `sendChannels` checks `staff_letters:send`, and kind=increment checks `payroll:edit` (D-#900) |
+| staffHub.ts | myStaffLetters (D-#902) | — (new) | `staff_letters:view_own` (SELF; own profile via staffMatch, void left out) |
 | staffHub.ts:643 | confirmStaffEmployment | staff:manage; inline require_ (:658); settles probation debt (pool → salary); `issueLetter` defaults true | `staff_records:confirm` (+ `staff_letters:issue` when `issueLetter=true`: open, see (h)) |
 
 ### `server/src/modules/foundation/resolvers/staff.ts` (deduped here)
@@ -243,7 +246,8 @@ All are `authenticated` today. The real gate sits in the services under `server/
 | server/src/modules/hr/routes/paymentAdvicePdf.ts:72 | GET /export/payment-advice/:runId (server/src/index.ts:185) | `callerHasPermission(payroll:manage)` (:78) | `payroll:export` |
 | server/src/modules/hr/routes/paymentExportCsv.ts:45 | GET /export/payment/:runId (server/src/index.ts:184) | `callerHasPermission(payroll:manage)` (:51) | `payroll:export` |
 | server/src/modules/hr/routes/payrollRegisterXlsx.ts:35 | GET /export/payroll-register/:runId (server/src/index.ts:186) | `callerHasPermission(payroll:manage)` (:41) | `payroll:export` |
-| server/src/modules/hr/routes/staffLetterPdf.ts:52 | GET /pdf/staff-letter/:id (server/src/index.ts:190) | `callerHasPermission(staff:manage)` (:54) | `staff_letters:view` |
+| server/src/modules/hr/routes/staffLetterPdf.ts:52 | GET /pdf/staff-letter/:id (server/src/index.ts:190) | `callerHasPermission(staff:manage)` (:54) | `staff_letters:view`, or `staff_letters:view_own` for the caller’s own ISSUED letter (D-#902) |
+| server/src/modules/hr/routes/staffLetterPdf.ts | POST /pdf/staff-letter/preview (D-#902) | — (new) | `staff_letters:issue`; renders without writing |
 | server/src/realtime/bus.ts:19 + server/src/routes/events.ts:44 | SSE topic `print_queue` | roster:manage | `printing:view_all` |
 
 ## (d) Hidden role / designation gates

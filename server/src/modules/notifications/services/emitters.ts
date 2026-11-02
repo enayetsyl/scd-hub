@@ -194,7 +194,7 @@ const dedupeKeys = {
     `WMCR:${tracker}:${recordId}:${dateKey}:${guardianId}`,
   /** Per day + recipient (D-#890): one 09:30 list per Office/Principal login per day. */
   markSubmissionEscalation: (dateKey: string, recipientId: string) => `MKSE:${dateKey}:${recipientId}`,
-  /** Per letter + recipient + send (D-#900): "send again" is a new notice, not a no-op. */
+  /** Per letter + recipient + send (D-#901): "send again" is a new notice, not a no-op. */
   staffLetterSent: (letterId: string, recipientId: string, sendIndex: number) =>
     `SLS:${letterId}:${recipientId}:${sendIndex}`,
 } as const;
@@ -2291,7 +2291,7 @@ export async function emitMarkSubmissionEscalation(ev: {
 }
 
 /**
- * D-#900 — an issued letter sent to the staff member it is addressed to. Opens their
+ * D-#901 — an issued letter sent to the staff member it is addressed to. Opens their
  * আমার চিঠি screen. Returns whether a notice was written; the caller reports it.
  */
 export async function emitStaffLetterSent(ev: {

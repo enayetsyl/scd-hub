@@ -1203,7 +1203,7 @@ export const payrollRunStatusLabel = (v?: string | null): string =>
 export const payDeductionTypeLabel = (v?: string | null): string =>
   (v && pick(PAY_DEDUCTION_TYPE_LABELS_BN, PAY_DEDUCTION_TYPE_LABELS_EN)[v as PayDeductionType]) || v || DASH;
 
-/** A staff letter's kind, from the shared vocab (D-#901: the staff member's own list). */
+/** A staff letter's kind, from the shared vocab (D-#902: the staff member's own list). */
 export const staffLetterKindLabel = (v?: string | null): string =>
   (v && pick(STAFF_LETTER_KIND_LABELS_BN, STAFF_LETTER_KIND_LABELS_EN)[v as StaffLetterKind]) || v || DASH;
 
@@ -4242,7 +4242,7 @@ const STR_BN = {
   stfLeaveChargeAsk: "বেতন থেকে কাটবেন?",
   stfLeaveChargeDays: "কত দিন কাটবেন",
   stfLeaveChargeInvalid: "কর্তনের দিন শূন্যের বেশি এবং তালিকার সীমার মধ্যে হতে হবে।",
-  // D-#899–#902 — increment letter, letter preview, sending letters, my letters, payroll reopen.
+  // D-#900–#902 — increment letter, letter preview, sending letters, my letters, payroll reopen.
   stfLetterIncrement: "বেতন বৃদ্ধির পত্র",
   stfIncrementNewSalary: "নতুন মাসিক বেতন",
   stfIncrementCurrent: "বর্তমান বেতন",
@@ -10406,7 +10406,7 @@ const STR_EN: StrTable = {
   stfLeaveChargeAsk: "Charge to salary?",
   stfLeaveChargeDays: "Days to charge",
   stfLeaveChargeInvalid: "Days to charge must be above zero and within the listed limit.",
-  // D-#899–#902 — increment letter, letter preview, sending letters, my letters, payroll reopen.
+  // D-#900–#902 — increment letter, letter preview, sending letters, my letters, payroll reopen.
   stfLetterIncrement: "Salary increment letter",
   stfIncrementNewSalary: "New monthly salary",
   stfIncrementCurrent: "Current salary",

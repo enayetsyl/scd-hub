@@ -7821,7 +7821,7 @@ export interface PayrollRunT {
   preparedAt: string;
   approvedAt: string | null;
   note: string | null;
-  /** D-#902 — reopened after locking: how often, and the last reason. */
+  /** D-#903 — reopened after locking: how often, and the last reason. */
   reopenCount: number;
   lastReopenedAt: string | null;
   lastReopenReason: string | null;
@@ -7911,7 +7911,7 @@ export const APPROVE_PAYROLL_RUN = gql<{ approvePayrollRun: PayrollRunT }, { run
   }
 `;
 
-/** D-#902 — reopen a LOCKED run to correct it (Principal; a reason is required). */
+/** D-#903 — reopen a LOCKED run to correct it (Principal; a reason is required). */
 export const REOPEN_PAYROLL_RUN = gql<{ reopenPayrollRun: PayrollRunT }, { runId: string; reason: string }>`
   mutation ReopenPayrollRun($runId: String!, $reason: String!) {
     reopenPayrollRun(runId: $runId, reason: $reason) { ${PAYROLL_RUN_FIELDS} }
@@ -9089,9 +9089,9 @@ export interface StaffLetterT {
   effectiveFrom: string;
   letterDate: string;
   annualLeaveDays: number;
-  /** Increment letters (D-#899): the figure the raise replaced. */
+  /** Increment letters (D-#900): the figure the raise replaced. */
   previousSalary: number | null;
-  /** Sending to the staff app (D-#900). */
+  /** Sending to the staff app (D-#901). */
   sendCount: number;
   lastSentAt: string | null;
   lastSentChannels: string[];
@@ -9115,14 +9115,14 @@ export const STAFF_LETTERS_QUERY = gql<
   }
 `;
 
-/** D-#901 — the caller's OWN issued letters (void left out). */
+/** D-#902 — the caller's OWN issued letters (void left out). */
 export const MY_STAFF_LETTERS_QUERY = gql<{ myStaffLetters: StaffLetterT[] }, Record<string, never>>`
   query MyStaffLetters {
     myStaffLetters { ${STAFF_LETTER_FIELDS} }
   }
 `;
 
-/** D-#900 — send an issued letter to the staff member's app: "notification", "popup". */
+/** D-#901 — send an issued letter to the staff member's app: "notification", "popup". */
 export const SEND_STAFF_LETTER = gql<{ sendStaffLetter: StaffLetterT }, { letterId: string; channels: string[] }>`
   mutation SendStaffLetter($letterId: String!, $channels: [String!]!) {
     sendStaffLetter(letterId: $letterId, channels: $channels) { ${STAFF_LETTER_FIELDS} }
@@ -9171,7 +9171,7 @@ export const ISSUE_STAFF_LETTER = gql<
     extraText?: string | null;
     /** Required when kind is `support_contract` (D-#586). */
     contract?: SupportContractInputT | null;
-    /** D-#900 — send straight to the staff app: "notification", "popup". */
+    /** D-#901 — send straight to the staff app: "notification", "popup". */
     sendChannels?: string[] | null;
   }
 >`

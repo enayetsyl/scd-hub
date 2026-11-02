@@ -763,7 +763,7 @@ export const PAYMENT_CHANNEL_LABELS_EN: Record<PaymentChannel, string> = {
   internal: "Own bank (internal)", beftn: "Other bank (BEFTN)", bkash: "bKash", cash: "Cash",
 };
 
-/** `increment` (D-#899): a salary-increment letter — issuing it also records the dated raise. */
+/** `increment` (D-#900): a salary-increment letter — issuing it also records the dated raise. */
 export const STAFF_LETTER_KINDS = ["appointment", "confirmation", "service_certificate", "support_contract", "increment"] as const;
 export type StaffLetterKind = (typeof STAFF_LETTER_KINDS)[number];
 
@@ -778,7 +778,7 @@ export const STAFF_LETTER_KIND_LABELS_EN: Record<StaffLetterKind, string> = {
   increment: "Salary increment letter",
 };
 
-/** How an issued letter reaches the staff member's app (D-#900). */
+/** How an issued letter reaches the staff member's app (D-#901). */
 export const STAFF_LETTER_SEND_CHANNELS = ["notification", "popup"] as const;
 export type StaffLetterSendChannel = (typeof STAFF_LETTER_SEND_CHANNELS)[number];
 
@@ -1493,7 +1493,7 @@ export const NOTIFICATION_KINDS = [
   "MARK_SUBMISSION_ESCALATION",
   "MARK_CORRECTION",
   "WORK_MARK_CORRECTED",
-  // Staff letters (D-#900; app-native, NO wire twin): an issued letter sent to the staff
+  // Staff letters (D-#901; app-native, NO wire twin): an issued letter sent to the staff
   // member it is addressed to, opening their আমার চিঠি screen.
   "STAFF_LETTER_SENT",
 ] as const;
