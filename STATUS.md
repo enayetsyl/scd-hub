@@ -1,5 +1,7 @@
 # STATUS
 
+- 2026-11-02: **LIVE + OTA — mark-submission guard (D-#889–#893).** #1249 → dev (`ea162beb`, Deploy dev success); partial promotion #1251 (cherry-pick, lesson progress + #1247 held back) → prod `58657a7a`, Deploy prod success, `/healthz` 200, new fields live. OTA group `46e2e7a9` (production/android, runtime 1.1.0, commit 58657a7a; prior OTA d80bd5a6 = 470e0981, ancestor of main); bundle prod URL 1 / localhost 0, new operations present; sourcemaps uploaded (debug id bc6b9f3b).
+  - **Now / next:** owner tries it on the dev site / prod with real logins; the first real run is the next assignment due day (Sunday 8 Nov) — check the 09:30 list reached Office + Principal. Owner-unconfirmed defaults: undo counts as a mistake; the note goes to the chaser; Bangla wording (PRD §2–§4).
 - 2026-11-02: **BUILT — recurring task end date (D-#897)** (branch `feat/task-repeat-end`, worktree `C:/w/bulkteach`). New task → Repeat (any kind) → "Runs: No end date / Until a date" + end-date field; server stops creating tasks after `endKey`; Recurring tasks list shows the end date.
   - **Verified:** server tsc 0 + app tsc 0; workBoard + graphqlDocuments + permission-gate suites 53/53 (+1 new); local walk on in-memory Mongo + Expo web + Chrome: past end date refused, future stored, none = null; chips + date field render for Weekly; list shows the end date.
   - **Now / next:** PR → dev → promote → OTA (form is app code).
