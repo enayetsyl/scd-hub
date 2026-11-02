@@ -137,7 +137,7 @@ ItemMarkRef.implement({
 const RosterRowRef = builder.objectRef<PaperDetailView["roster"][number]>("ScholarshipRosterRow");
 RosterRowRef.implement({
   description:
-    "A student on this paper's section roster, with whatever score exists. `status: null` means " +
+    "A student on this paper's CLASS roster (D-#896), with whatever score exists. `status: null` means " +
     "not yet touched; ABSENT carries no marks at all rather than zeros (D-#660).",
   fields: (t) => ({
     studentId: t.exposeString("studentId"),
@@ -365,7 +365,7 @@ builder.queryFields((t) => ({
   scholarshipCandidates: t.field({
     type: [CandidateRef],
     description:
-      "The WHOLE section roster with each child's sitting flag — the one read that does not " +
+      "The WHOLE class roster (D-#896; any section of the class anchors it) with each child's sitting flag — the one read that does not " +
       "apply the exclusion, because this is the screen where it is decided.",
     authScopes: { hasPermission: "scholarship_practice:view" },
     args: { sectionId: t.arg.string({ required: true }) },
@@ -374,7 +374,7 @@ builder.queryFields((t) => ({
 
   scholarshipPapers: t.field({
     type: [PaperRowRef],
-    description: "One section's practice papers, newest first.",
+    description: "The practice papers of the section's whole CLASS (D-#896), newest first.",
     authScopes: { hasPermission: "scholarship_practice:view" },
     args: {
       sectionId: t.arg.string({ required: true }),

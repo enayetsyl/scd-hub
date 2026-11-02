@@ -65,17 +65,18 @@ export default function ScholarshipHomeScreen(): React.ReactElement {
   // module is FOR (D-#696). The scholarship exam is sat in class five; offering নার্সারি
   // through class four gave seven chips of which six led to an empty screen, and made
   // the one that works something you had to tap on every visit (it sorted first).
+  // D-#896: ONE chip per class, no section — Class 5 sits scholarship practice as one group
+  // whatever its বালক/বালিকা split. Any of the class's sections anchors the reads (the
+  // server widens every one to the whole class), so the first reachable one stands in.
   const sections = useMemo(
     () =>
       myClasses
-        .flatMap((c: MyClass) =>
-          c.sections.map((s) => ({
-            id: s.id,
-            classLevel: c.cls.level,
-            label: `${classLevelLabel(c.cls.level)} · ${s.nameBn ?? s.code}`,
-          })),
-        )
-        .filter((s) => SCHOLARSHIP_CLASS_LEVELS.includes(s.classLevel)),
+        .filter((c: MyClass) => SCHOLARSHIP_CLASS_LEVELS.includes(c.cls.level) && c.sections.length > 0)
+        .map((c: MyClass) => ({
+          id: c.sections[0].id,
+          classLevel: c.cls.level,
+          label: classLevelLabel(c.cls.level),
+        })),
     [myClasses],
   );
 
