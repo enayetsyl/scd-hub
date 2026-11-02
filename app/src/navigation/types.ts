@@ -340,6 +340,8 @@ export type HrStackParamList = {
   StaffAppraisals: { staffProfileId: string; name: string };
   StaffConduct: { staffProfileId: string; name: string };
   StaffCpd: { staffProfileId: string; name: string };
+  /** D-#893 "নম্বর জমায় ভুল": none = own notes; staffProfileId = one file; all = the school. */
+  MarkCorrections: { staffProfileId?: string; name?: string; all?: boolean } | undefined;
   GrievanceInbox: undefined;
   // SH-8: the school-wide HR numbers (payroll:manage). Param-free, so its
   // position in this stack is safe either way.

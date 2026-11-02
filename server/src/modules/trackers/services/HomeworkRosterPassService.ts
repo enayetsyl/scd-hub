@@ -42,6 +42,8 @@ export interface SubmitPassResult {
   /** Siblings the pass's payload MISSED that the due-day sweep auto-chased
    *  (owner ruling 2026-08-04 — normally 0: the app sends every open row). */
   autoChasedCount: number;
+  /** D-#892: children flipped from a chase a person made today — a recorded mistake. */
+  correctedCount: number;
 }
 
 export interface ReturnPassEntry {
@@ -96,6 +98,7 @@ export async function submitPass(
     chasedCount: 0,
     unchangedCount: 0,
     autoChasedCount: 0,
+    correctedCount: 0,
   };
 
   for (const entry of entries) {
@@ -109,8 +112,9 @@ export async function submitPass(
       if (state === "GIVEN") {
         await transitionRecord({ recordId: entry.recordId, toState: "DUE", actorId, at });
       }
-      await transitionRecord({ recordId: entry.recordId, toState: "SUBMITTED", actorId, at });
+      const moved = await transitionRecord({ recordId: entry.recordId, toState: "SUBMITTED", actorId, at });
       result.submittedCount += 1;
+      if (moved.markCorrected) result.correctedCount += 1;
     } else if (state === "CHASE") {
       // Already chased — crossing again is a no-op (PRD §3.1).
       result.unchangedCount += 1;

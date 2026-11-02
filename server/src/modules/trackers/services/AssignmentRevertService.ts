@@ -17,6 +17,7 @@ import { AssignmentStudentRecord } from "../models/AssignmentStudentRecord";
 import { popActionGroup } from "../lifecycle";
 import { isSameDhakaDay } from "../../../lib/dhakaDay";
 import { writeAudit } from "../../platform/services/AuditService";
+import { recordMarkCorrection, sameDayPersonChase } from "./MarkCorrectionService";
 
 export interface AsRevertInput {
   recordId: string;
@@ -82,10 +83,28 @@ export async function revertAssignmentRecord(input: AsRevertInput): Promise<AsRe
     }
   }
 
+  // D-#892: undoing a chase a person made today is the same mistake as flipping it.
+  const now = input.now ?? new Date();
+  const undoneChase = sameDayPersonChase(popped, now);
+
   const revertedFrom = rec.state;
   rec.state = restored.state as LifecycleState;
   rec.stateDates.splice(rec.stateDates.length - popped.length, popped.length);
   await rec.save();
+
+  if (undoneChase) {
+    await recordMarkCorrection({
+      tracker: "ASSIGNMENT",
+      recordId: rec._id,
+      itemId: rec.asItemId,
+      studentId: rec.studentId,
+      sectionId: rec.sectionId,
+      chase: undoneChase,
+      correctedBy: input.actorId,
+      at: now,
+      via: "UNDO",
+    });
+  }
 
   // The ONLY trace this revert happened — the popped stamps are gone from the
   // record (D-#354; mirrors HomeworkRevertService).
