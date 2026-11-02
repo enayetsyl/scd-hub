@@ -34,6 +34,11 @@ let paperDocs: unknown[] = [];
 jest.mock("../modules/scholarship/models/ScholarshipPaper", () => ({
   ScholarshipPaper: pagedModel(paperCalls, () => paperDocs, () => 120),
 }));
+// D-#896: a section's paper list is its whole class's — the section resolves to its class.
+const SCH_CLASS = new mongoose.Types.ObjectId();
+jest.mock("../modules/foundation/models/Section", () => ({
+  Section: { findById: () => ({ select: () => ({ lean: async () => ({ classId: SCH_CLASS }) }) }) },
+}));
 const mockScoreFind = jest.fn();
 jest.mock("../modules/scholarship/models/ScholarshipScore", () => ({
   ScholarshipScore: {
@@ -113,7 +118,7 @@ describe("scholarshipPapersPage", () => {
 
     const page = await listPapersPage(sectionId, "ENG", { page: 3, pageSize: 50 });
 
-    expect(paperCalls.find).toEqual({ sectionId: new mongoose.Types.ObjectId(sectionId), subjects: "ENG" });
+    expect(paperCalls.find).toEqual({ classId: SCH_CLASS, subjects: "ENG" });
     expect(paperCalls).toMatchObject({ sort: { paperDate: -1, createdAt: -1, _id: -1 }, skip: 100, limit: 50 });
     expect(page.total).toBe(120);
     expect(page.rows[0]).toMatchObject({ paperId: "SP-0001", scoredCount: 2, presentCount: 1, classPercent: 80, itemCount: 2 });

@@ -189,6 +189,33 @@ describe("reassignRoutineSubjectTeacher (D-#291)", () => {
     ]);
   });
 
+  test("D-#895: fromTeacherId changes only that teacher's periods, leaving a co-teacher's alone", async () => {
+    const coTeacher = oid();
+    const mine = liveSlot();
+    const theirs = liveSlot({ dayOfWeek: "MON", teacherId: coTeacher });
+    mockSlotFind
+      .mockResolvedValueOnce([mine, theirs]) // target slots (both teachers)
+      .mockResolvedValueOnce([]) // clash pre-check
+      .mockResolvedValue([]);
+    mockSlotFindById.mockResolvedValue(mine);
+
+    const res = await reassignRoutineSubjectTeacher(SEC, "SCI", NEW_T, ACTOR, new Date(2026, 8, 1), {
+      fromTeacherId: OLD_T.toString(),
+    });
+    expect(res.updatedSlots).toBe(1);
+    // The clash pre-check only looked at the narrowed slot's cell.
+    const pre = mockSlotFind.mock.calls[1][0] as { _id: { $nin: unknown[] }; $and: [unknown, { $or: unknown[] }] };
+    expect(pre._id.$nin).toEqual([mine._id]);
+    expect(pre.$and[1].$or).toEqual([{ dayOfWeek: "SUN", periodNumber: 5 }]);
+  });
+
+  test("D-#895: groupType reaches a Quran/Arabic subject group", async () => {
+    await expect(
+      reassignRoutineSubjectTeacher(SEC, "QURAN", NEW_T, ACTOR, null, { groupType: "subjectgroup" }),
+    ).rejects.toThrow("No live routine slots");
+    expect((mockSlotFind.mock.calls[0][0] as { groupType: string }).groupType).toBe("subjectgroup");
+  });
+
   test("the changeover date defaults to today when the caller gives none", async () => {
     const s1 = liveSlot();
     mockSlotFind.mockResolvedValueOnce([s1]).mockResolvedValueOnce([]).mockResolvedValue([]);

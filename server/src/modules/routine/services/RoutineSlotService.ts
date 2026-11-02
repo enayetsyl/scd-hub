@@ -601,9 +601,14 @@ export async function slotsForTeacherOnDate(teacherId: string, date: Date): Prom
 // ---------------------------------------------------------------------------
 
 /** LIVE (effective-now) section slots for a section, optionally one subject. */
-async function liveSectionSlots(sectionId: string, subject?: string, now = new Date()) {
+async function liveSectionSlots(
+  sectionId: string,
+  subject?: string,
+  now = new Date(),
+  groupType: "section" | "subjectgroup" = "section",
+) {
   const filter: Record<string, unknown> = {
-    groupType: "section",
+    groupType,
     groupId: sectionId,
     active: true,
     isBreak: false,
@@ -662,6 +667,10 @@ export interface ReassignSubjectTeacherResult {
  * (day, period) cells so the change applies whole-or-not-at-all, then reuses
  * `updateRoutineSlot` per slot (same conflict engine, grant re-binding and chat
  * re-sync as a master-grid cell edit — no new edge logic).
+ *
+ * D-#895 `scope` — the master grid's "all this teacher's periods" edit: `groupType`
+ * reaches a Quran/Arabic subject group too, and `fromTeacherId` narrows the change to
+ * the periods that teacher holds (a co-teacher's periods of the subject stay put).
  */
 export async function reassignRoutineSubjectTeacher(
   sectionId: string,
@@ -669,11 +678,14 @@ export async function reassignRoutineSubjectTeacher(
   teacherId: string,
   actorId: string,
   effectiveFrom?: Date | null,
+  scope: { groupType?: "section" | "subjectgroup"; fromTeacherId?: string | null } = {},
 ): Promise<ReassignSubjectTeacherResult> {
   // Everything below is evaluated as of the changeover date: which slots are in force,
   // whether the new teacher is free, and the effective date each replacement carries.
   const now = startOfDay(effectiveFrom ?? new Date());
-  const slots = await liveSectionSlots(sectionId, subject, now);
+  const slots = (await liveSectionSlots(sectionId, subject, now, scope.groupType)).filter(
+    (s) => !scope.fromTeacherId || String(s.teacherId ?? "") === scope.fromTeacherId,
+  );
   if (slots.length === 0) {
     throw new Error(`No live routine slots for ${subject} in this section — nothing to update`);
   }
