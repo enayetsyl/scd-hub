@@ -50,6 +50,7 @@ export default function ReportsHomeScreen({ navigation }: Props): React.ReactEle
     { screen: "FinanceDashboard", icon: "💰", title: STR.finDashboardTitle, onPress: () => navigation.navigate("FinanceDashboard") },
     { screen: "DailySnapshot", icon: "🧾", title: STR.finSnapshotTitle, onPress: () => navigation.navigate("DailySnapshot") },
     { screen: "GuardianEngagement", icon: "👪", title: STR.geTitle, sub: STR.geSubtitle, onPress: () => navigation.navigate("GuardianEngagement") },
+    { screen: "MarksDrivers", icon: "🎯", title: STR.mdTitle, sub: STR.mdHubSub, onPress: () => navigation.navigate("MarksDrivers") },
   ];
   const cards = all.filter((c) => allowed(c.screen));
 

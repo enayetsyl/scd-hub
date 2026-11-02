@@ -48,6 +48,7 @@ export const REPORT_LEAF_ACTIONS: Record<string, string[]> = {
   FinanceDashboard: ["reports:finance_dashboard", "finance_reports:view"],
   DailySnapshot: ["reports:daily_snapshot", "finance_ledger:view"],
   GuardianEngagement: ["reports:guardian_engagement", "guardian_engagement:view"],
+  MarksDrivers: ["reports:marks_drivers"],
 };
 
 /** Any of these opens the Reports tab. */
