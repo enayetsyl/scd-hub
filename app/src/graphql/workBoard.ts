@@ -73,6 +73,8 @@ export interface TaskTemplateT {
   weekdays: number[];
   monthDay: number | null;
   weekOfMonth: number | null;
+  /** D-#897: last day (inclusive, YYYY-MM-DD); null = no end date. */
+  endKey: string | null;
   active: boolean;
 }
 
@@ -125,7 +127,7 @@ const TASK_FIELDS = `
 `;
 
 const TEMPLATE_FIELDS = `
-  id titleBn notes assigneeUserId assigneeName forLabel priority slot effortMin recurrence weekdays monthDay weekOfMonth active
+  id titleBn notes assigneeUserId assigneeName forLabel priority slot effortMin recurrence weekdays monthDay weekOfMonth endKey active
 `;
 
 export const MY_WORK_BOARD_QUERY = gql<{ myWorkBoard: WorkCardT[] }, { fromKey: string; toKey: string }>`
@@ -250,6 +252,7 @@ export interface TaskTemplateInputT {
   weekdays?: number[] | null;
   monthDay?: number | null;
   weekOfMonth?: number | null;
+  endKey?: string | null;
 }
 
 export const CREATE_TASK = gql<{ createTask: TaskT }, { input: TaskInputT }>`

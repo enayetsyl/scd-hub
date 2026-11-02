@@ -11,7 +11,7 @@ import { SET_TASK_TEMPLATE_ACTIVE, TASK_TEMPLATES_QUERY, type TaskTemplateT } fr
 import type { WorkBoardStackParamList } from "../../navigation/types";
 import { Screen, Card, Body, Muted, Button, Badge, EmptyState, Notice } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
-import { STR, bnNum, daySlotLabel, taskRecurrenceLabel, weekOfMonthLabel, weekdayShortLabel } from "../../lib/labels";
+import { STR, bnNum, daySlotLabel, getActiveLang, taskRecurrenceLabel, weekOfMonthLabel, weekdayShortLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { minutesLabel } from "../../lib/workBoardNav";
 import { space } from "../../theme/tokens";
@@ -19,6 +19,13 @@ import { space } from "../../theme/tokens";
 type Props = NativeStackScreenProps<WorkBoardStackParamList, "TaskTemplates">;
 
 function scheduleLabel(t: TaskTemplateT): string {
+  // D-#897: a template with an end date says so ("… · 2026-12-31 পর্যন্ত").
+  const base = recurrenceLabel(t);
+  if (!t.endKey) return base;
+  return getActiveLang() === "en" ? `${base} · ${STR.wbUntilSuffix} ${t.endKey}` : `${base} · ${bnNum(t.endKey)} ${STR.wbUntilSuffix}`;
+}
+
+function recurrenceLabel(t: TaskTemplateT): string {
   if (t.recurrence === "WEEKLY") return `${taskRecurrenceLabel(t.recurrence)} · ${t.weekdays.map(weekdayShortLabel).join(", ")}`;
   if (t.recurrence === "MONTHLY") return `${taskRecurrenceLabel(t.recurrence)} · ${bnNum(t.monthDay ?? 0)}`;
   if (t.recurrence === "MONTHLY_WEEKDAY") {

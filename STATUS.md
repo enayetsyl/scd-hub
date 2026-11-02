@@ -1,5 +1,8 @@
 # STATUS
 
+- 2026-11-02: **BUILT — recurring task end date (D-#897)** (branch `feat/task-repeat-end`, worktree `C:/w/bulkteach`). New task → Repeat (any kind) → "Runs: No end date / Until a date" + end-date field; server stops creating tasks after `endKey`; Recurring tasks list shows the end date.
+  - **Verified:** server tsc 0 + app tsc 0; workBoard + graphqlDocuments + permission-gate suites 53/53 (+1 new); local walk on in-memory Mongo + Expo web + Chrome: past end date refused, future stored, none = null; chips + date field render for Weekly; list shows the end date.
+  - **Now / next:** PR → dev → promote → OTA (form is app code).
 - 2026-11-02: **FIXED — scholarship practice is one Class 5 group (D-#896)** (branch `feat/scholarship-whole-class`, worktree `C:/w/bulkteach`). Owner: English Unit 6 showed only boys; scholarship must be class 5 with no section, now and for future papers. Server keys rosters / paper lists / candidates / analysis / routine-teacher check / export on the class; home screen shows no section chips.
   - **Verified:** server tsc 0 + app tsc 0; scholarship suites + pagingSweepLists + permission-gate suite 115/115 (+3 new); local walk on in-memory Mongo + Expo web + Chrome: a বালক-anchored ENG paper lists all 4 children (2 boys + 2 girls, marks screen "1 / 4"), a girl's mark saves, both sections list both papers incl. the সম্মিলিত one, home has no section chips.
   - **Now / next:** PR → dev → promote (server fixes the live paper on its own — no data change) → OTA for the chip removal. Prod checked read-only 2026-11-02: NO duplicate — the Unit 6 paper is SP-C5-ENG-0005 "Unit 06 — Model Question" on বালক, DECLARED, 0 scores; all 9 C5 papers share one classId; the class has 4 boys + 4 girls (1 excluded) → 7 will sit.
