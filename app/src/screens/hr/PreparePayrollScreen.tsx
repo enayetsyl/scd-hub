@@ -14,14 +14,28 @@
  *
  * Lines are entered per staff member and grouped into one adjustment each, because
  * that is the shape the server takes and the shape a payslip prints.
+ *
+ * LEAVE OVER THE BALANCE (D-#898). Once the month is typed, the server lists everyone
+ * whose leave is over: held probation days, or a confirmed member's negative balance.
+ * Each row is OFF until the operator says হ্যাঁ, and the days start at the full figure
+ * and may be lowered. This replaced the manual "ঋণাত্মক ছুটি সমন্বয়" row, which made
+ * the operator type a day count without seeing the balance it was meant to settle.
  */
 import React from "react";
 import { View } from "react-native";
-import { useMutation } from "urql";
+import { useMutation, useQuery } from "urql";
 import { PAY_ADDITION_TYPES, PAY_DEDUCTION_TYPES } from "@scd/shared";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { PREPARE_PAYROLL_RUN } from "../../graphql/operations";
-import { buildAdjustments, rowComplete, rowStarted, type AdjRow } from "@scd/shared";
+import { PREPARE_PAYROLL_RUN, LEAVE_CHARGE_CANDIDATES } from "../../graphql/operations";
+import {
+  buildAdjustments,
+  rowComplete,
+  rowStarted,
+  applyLeaveCharges,
+  pickValid,
+  type AdjRow,
+  type LeaveChargePick,
+} from "@scd/shared";
 import type { HrStackParamList } from "../../navigation/types";
 import {
   Screen,
@@ -34,9 +48,12 @@ import {
   Button,
   Divider,
   Notice,
+  Chip,
+  ChipRow,
+  Loader,
 } from "../../components/ui";
 import { StaffSelect } from "../../components/selects";
-import { STR, payAdditionTypeLabel, payDeductionTypeLabel } from "../../lib/labels";
+import { STR, bnNum, payAdditionTypeLabel, payDeductionTypeLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
 
@@ -67,7 +84,36 @@ export default function PreparePayrollScreen({ navigation }: Props): React.React
 
   const [, prepare] = useMutation(PREPARE_PAYROLL_RUN);
 
-  const valid = MONTH_KEY.test(monthKey) && /^\d+$/.test(workingDays) && parseInt(workingDays, 10) > 0;
+  const monthOk = MONTH_KEY.test(monthKey);
+  const [{ data: overData, fetching: overFetching }] = useQuery({
+    query: LEAVE_CHARGE_CANDIDATES,
+    variables: { monthKey },
+    pause: !monthOk,
+    requestPolicy: "network-only",
+  });
+  // The operator's choices, keyed by person. Rebuilt from the server's list each time it
+  // arrives so a person who is no longer over drops out, but a choice already made for
+  // someone still listed is kept.
+  const [picks, setPicks] = React.useState<LeaveChargePick[]>([]);
+  React.useEffect(() => {
+    const list = overData?.leaveChargeCandidates ?? [];
+    setPicks((prev) =>
+      list.map((c) => {
+        const had = prev.find((p) => p.staffProfileId === c.staffProfileId && p.kind === c.kind);
+        return had
+          ? { ...had, maxDays: c.days }
+          : { staffProfileId: c.staffProfileId, kind: c.kind, maxDays: c.days, on: false, days: String(c.days) };
+      }),
+    );
+  }, [overData]);
+  const names = new Map((overData?.leaveChargeCandidates ?? []).map((c) => [c.staffProfileId, c.name]));
+  const invalidPicks = picks.filter((p) => !pickValid(p));
+
+  function patchPick(staffProfileId: string, part: Partial<LeaveChargePick>): void {
+    setPicks((ps) => ps.map((p) => (p.staffProfileId === staffProfileId ? { ...p, ...part } : p)));
+  }
+
+  const valid = monthOk && /^\d+$/.test(workingDays) && parseInt(workingDays, 10) > 0;
   // A half-filled row is a mistake, not an empty one: silently dropping it would mean
   // the operator watches themselves type an amount that then never reaches a payslip.
   const incompleteRows = rows.filter((r) => !rowComplete(r) && rowStarted(r));
@@ -77,10 +123,10 @@ export default function PreparePayrollScreen({ navigation }: Props): React.React
   }
 
   async function submit(): Promise<void> {
-    if (!valid || incompleteRows.length > 0) return;
+    if (!valid || incompleteRows.length > 0 || invalidPicks.length > 0) return;
     setBusy(true);
     setError(null);
-    const adjustments = buildAdjustments(rows);
+    const adjustments = applyLeaveCharges(buildAdjustments(rows), picks);
     const res = await prepare({
       monthKey,
       workingDays: parseInt(workingDays, 10),
@@ -107,6 +153,44 @@ export default function PreparePayrollScreen({ navigation }: Props): React.React
       </Card>
 
       <Body style={{ fontWeight: "700", marginTop: space(4), marginBottom: space(2) }}>
+        {STR.stfLeaveChargeTitle}
+      </Body>
+      <Card>
+        <Muted>{STR.stfLeaveChargeNote}</Muted>
+        {!monthOk ? (
+          <Muted style={{ marginTop: space(2) }}>{STR.stfLeaveChargeMonthFirst}</Muted>
+        ) : overFetching && !overData ? (
+          <Loader label={STR.loading} />
+        ) : picks.length === 0 ? (
+          <Muted style={{ marginTop: space(2) }}>{STR.stfLeaveChargeNone}</Muted>
+        ) : (
+          picks.map((p) => (
+            <View key={p.staffProfileId} style={{ marginTop: space(3) }}>
+              <Divider />
+              <Body style={{ fontWeight: "700" }}>{names.get(p.staffProfileId) ?? ""}</Body>
+              <Muted>
+                {`${p.kind === "probation" ? STR.stfLeaveChargeProbation : STR.stfLeaveChargeOverdrawn}: ${bnNum(String(p.maxDays))} ${STR.stfDays}`}
+              </Muted>
+              <Body style={{ marginTop: space(1) }}>{STR.stfLeaveChargeAsk}</Body>
+              <ChipRow>
+                <Chip label={STR.stfYes} selected={p.on} onPress={() => patchPick(p.staffProfileId, { on: true })} />
+                <Chip label={STR.stfNo} selected={!p.on} onPress={() => patchPick(p.staffProfileId, { on: false })} />
+              </ChipRow>
+              {p.on ? (
+                <Field
+                  label={STR.stfLeaveChargeDays}
+                  value={p.days}
+                  onChangeText={(v) => patchPick(p.staffProfileId, { days: v })}
+                  keyboardType="numeric"
+                />
+              ) : null}
+            </View>
+          ))
+        )}
+      </Card>
+      {invalidPicks.length > 0 ? <Notice tone="warn" message={STR.stfLeaveChargeInvalid} /> : null}
+
+      <Body style={{ fontWeight: "700", marginTop: space(4), marginBottom: space(2) }}>
         {STR.stfAdjustmentsTitle}
       </Body>
       <Card>
@@ -125,7 +209,8 @@ export default function PreparePayrollScreen({ navigation }: Props): React.React
               options={[
                 { label: STR.stfAdjustmentAddition, value: "addition" },
                 { label: STR.stfAdjustmentDeduction, value: "deduction" },
-                { label: STR.stfAdjustmentLeaveRecovery, value: "leave_recovery" },
+                // ঋণাত্মক ছুটি সমন্বয় moved to the leave list above (D-#898), where the
+                // balance is shown and the days are capped at it.
                 { label: STR.stfAdjustmentAdvanceRecovery, value: "advance_recovery" },
               ]}
               // Switching side must clear the type: an addition type is not a valid
@@ -192,7 +277,7 @@ export default function PreparePayrollScreen({ navigation }: Props): React.React
         title={STR.hrPrepare}
         onPress={submit}
         loading={busy}
-        disabled={busy || !valid || incompleteRows.length > 0}
+        disabled={busy || !valid || incompleteRows.length > 0 || invalidPicks.length > 0}
         style={{ marginTop: space(3) }}
       />
     </Screen>
