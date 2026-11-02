@@ -13,6 +13,8 @@ import {
   PAYSLIPS_FOR_RUN_QUERY,
   APPROVE_PAYROLL_RUN,
   CANCEL_PAYROLL_RUN,
+  REOPEN_PAYROLL_RUN,
+  PAYROLL_RUNS_QUERY,
   type PayLineT,
 } from "../../graphql/operations";
 import type { HrStackParamList } from "../../navigation/types";
@@ -30,6 +32,7 @@ import {
   EmptyState,
   ErrorBanner,
   Notice,
+  Field,
 } from "../../components/ui";
 import { useAuth } from "../../auth/AuthContext";
 import {
@@ -86,6 +89,12 @@ export default function PayrollRunDetailScreen({ route, navigation }: Props): Re
   });
   const [, approve] = useMutation(APPROVE_PAYROLL_RUN);
   const [, cancel] = useMutation(CANCEL_PAYROLL_RUN);
+  const [, reopen] = useMutation(REOPEN_PAYROLL_RUN);
+  const [reopening, setReopening] = React.useState(false);
+  const [reopenReason, setReopenReason] = React.useState("");
+  // The run list carries the reopen history (D-#904); this screen only gets the id.
+  const [{ data: runsData }, refetchRuns] = useQuery({ query: PAYROLL_RUNS_QUERY, requestPolicy: "cache-and-network" });
+  const thisRun = runsData?.payrollRuns.find((r) => r.id === runId);
 
   const payslips = data?.payslipsForRun ?? [];
 
@@ -122,6 +131,27 @@ export default function PayrollRunDetailScreen({ route, navigation }: Props): Re
     refetch({ requestPolicy: "network-only" });
   }
 
+  /** D-#904 — unlock a locked run to correct it; the server undoes what the lock did. */
+  async function runReopen(): Promise<void> {
+    if (!reopenReason.trim()) return;
+    if (!(await confirmAction({ confirmLabel: STR.hrReopenConfirm, message: STR.hrReopenNote }))) return;
+    setBusy(true);
+    setError(null);
+    setOk(null);
+    const res = await reopen({ runId, reason: reopenReason.trim() });
+    setBusy(false);
+    if (res.error || !res.data?.reopenPayrollRun) {
+      setError(friendlyError(res.error));
+      return;
+    }
+    setStatus(res.data.reopenPayrollRun.status);
+    setReopening(false);
+    setReopenReason("");
+    setOk(STR.hrRunReopened);
+    refetch({ requestPolicy: "network-only" });
+    refetchRuns({ requestPolicy: "network-only" });
+  }
+
   return (
     <Screen scroll>
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: space(2) }}>
@@ -131,6 +161,26 @@ export default function PayrollRunDetailScreen({ route, navigation }: Props): Re
 
       {ok ? <Notice message={ok} tone="ok" /> : null}
       {error ? <Notice message={error} tone="danger" /> : null}
+      {thisRun?.lastReopenReason ? (
+        <Notice tone="info" message={`${STR.hrReopenedBanner} ${thisRun.lastReopenReason}`} />
+      ) : null}
+
+      {status === "approved_locked" && can("payroll:reopen") ? (
+        <Card>
+          {reopening ? (
+            <>
+              <Muted style={{ marginBottom: space(2) }}>{STR.hrReopenNote}</Muted>
+              <Field label={STR.hrReopenReason} value={reopenReason} onChangeText={setReopenReason} autoCapitalize="sentences" />
+              <View style={{ flexDirection: "row", gap: space(2) }}>
+                <Button title={STR.cancel} variant="secondary" onPress={() => setReopening(false)} disabled={busy} />
+                <Button title={STR.hrReopenConfirm} variant="danger" onPress={runReopen} loading={busy} disabled={busy || !reopenReason.trim()} />
+              </View>
+            </>
+          ) : (
+            <Button title={STR.hrReopenRun} variant="secondary" onPress={() => setReopening(true)} />
+          )}
+        </Card>
+      ) : null}
 
       {/* Actions */}
       {status === "prepared" ? (
