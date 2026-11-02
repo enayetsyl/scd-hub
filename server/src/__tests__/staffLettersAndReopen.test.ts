@@ -1,5 +1,5 @@
 /**
- * D-#901–#902 — increment letters, letter preview, sending a letter to the staff app,
+ * D-#901–#904 — increment letters, letter preview, sending a letter to the staff app,
  * and reopening a locked payroll run.
  *
  * Asserts what people see, not the mechanism (the D-#590 lesson): the salary payroll

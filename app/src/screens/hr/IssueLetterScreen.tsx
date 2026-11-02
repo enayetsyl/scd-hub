@@ -13,7 +13,7 @@
  * Issuing FREEZES every merge field into the letter's snapshot, so this form is the
  * last moment any of it can be changed. That is said on the screen, not just in a doc.
  *
- * D-#901–#901: the increment letter (issuing it records the raise), a PREVIEW that
+ * D-#901–#903: the increment letter (issuing it records the raise), a PREVIEW that
  * renders exactly what issuing would freeze without saving anything, and an optional
  * send to the staff member's app (notification / pop-up / both). For a confirmation or
  * an increment the text box IS the body (D-#590) — labelled so, with the standard draft
