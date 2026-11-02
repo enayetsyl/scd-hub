@@ -979,6 +979,9 @@ export const FEATURE_CATALOGUE = {
       finance_dashboard: { en: "Finance dashboard", bn: "অর্থ ড্যাশবোর্ড", desc: "Year KPIs, YTD income statement, trends (whole school)", teacher: false, office: true, flags: [] },
       daily_snapshot: { en: "Daily snapshot", bn: "দৈনিক স্ন্যাপশট", desc: "One day's income, expense and cash position (whole school)", teacher: false, office: true, flags: [] },
       guardian_engagement: { en: "Guardian engagement", bn: "অভিভাবকদের ব্যবহার", desc: "Which families use the app and which screens nobody opens (names families — Principal by default)", teacher: false, office: false, flags: [] },
+      // D-#905: the 23-Sep "What moves the marks" study, live. Principal by default — the
+      // scatter carries one (unnamed) dot per child.
+      marks_drivers: { en: "What moves the marks", bn: "নম্বর কীসে বাড়ে", desc: "Homework, assignments and attendance against class-test results, live over a rolling window (whole school)", teacher: false, office: false, flags: [] },
     },
   },
 } as const satisfies Record<string, CatalogueFeature>;
