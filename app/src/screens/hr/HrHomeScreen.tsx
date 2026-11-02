@@ -25,7 +25,8 @@ export default function HrHomeScreen({ navigation }: Props): React.ReactElement 
   const canPerformance =
     (can("appraisal:view_all") || can("conduct:view_all") || can("grievance:view_all")) && can("staff_records:view");
   const canOffboarding = can("offboarding:view");
-  const showAdmin = canLeaveManage || canPayroll || canHrPolicy || canPerformance || canOffboarding;
+  const canMarkNotes = can("mark_submission:view_notes"); // D-#893: everyone's correction notes
+  const showAdmin = canLeaveManage || canPayroll || canHrPolicy || canPerformance || canOffboarding || canMarkNotes;
 
   return (
     <Screen scroll>
@@ -40,6 +41,12 @@ export default function HrHomeScreen({ navigation }: Props): React.ReactElement 
         <Body style={{ fontWeight: "700" }}>{STR.hrMyRecord}</Body>
         <Muted>{STR.hrMyRecordSub}</Muted>
       </Card>
+      {can("mark_submission:view_own") ? (
+        <Card onPress={() => navigation.navigate("MarkCorrections")}>
+          <Body style={{ fontWeight: "700" }}>{STR.msgNotesTitle}</Body>
+          <Muted>{STR.msgNotesHelp}</Muted>
+        </Card>
+      ) : null}
 
       {showAdmin ? <Muted style={{ marginTop: space(4), marginBottom: space(2) }}>{STR.hrAdmin}</Muted> : null}
       {canLeaveManage ? (
@@ -70,6 +77,12 @@ export default function HrHomeScreen({ navigation }: Props): React.ReactElement 
         <Card onPress={() => navigation.navigate("OffboardingHome")}>
           <Body style={{ fontWeight: "700" }}>{STR.hrOffboarding}</Body>
           <Muted>{STR.hrOffboardingSub}</Muted>
+        </Card>
+      ) : null}
+      {canMarkNotes ? (
+        <Card onPress={() => navigation.navigate("MarkCorrections", { all: true })}>
+          <Body style={{ fontWeight: "700" }}>{`${STR.msgNotesTitle} — ${STR.msgNotesAll}`}</Body>
+          <Muted>{STR.msgNotesHelp}</Muted>
         </Card>
       ) : null}
     </Screen>

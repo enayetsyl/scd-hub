@@ -71,6 +71,7 @@ import {
   expectedItemsForWeek,
   myAssignmentPrepPrompts,
   upsertAssignmentSchedule,
+  updateScheduleEntryTeacher,
 } from "../modules/trackers/services/AssignmentScheduleService";
 
 const oid = () => new mongoose.Types.ObjectId();
@@ -292,6 +293,42 @@ describe("schedule CRUD validation", () => {
     mockItemExists.mockResolvedValueOnce({ _id: oid() });
     await expect(removeScheduleEntry(YEAR, e._id.toString())).rejects.toThrow(/শেষ করুন/);
     await expect(removeScheduleEntry(YEAR, e._id.toString())).resolves.toBeDefined();
+  });
+});
+
+// D-#894: the edit-teacher chip can change one cycle week or every week of the cell's
+// section x subject that the same teacher holds (ended cells and co-teachers untouched).
+describe("updateScheduleEntryTeacher — all weeks (D-#894)", () => {
+  const SEC = oid();
+  const OLD = oid();
+  const NEW = oid().toString();
+  function rotation() {
+    const list = [
+      entry({ cycleWeek: 1, sectionId: SEC, subject: "ENG", teacherId: OLD }),
+      entry({ cycleWeek: 2, sectionId: SEC, subject: "ENG", teacherId: OLD }),
+      entry({ cycleWeek: 3, sectionId: SEC, subject: "ENG", teacherId: oid() }), // co-teacher
+      entry({ cycleWeek: 4, sectionId: SEC, subject: "ENG", teacherId: OLD, effectiveTo: "2020-01-01" }), // ended
+      entry({ cycleWeek: 4, sectionId: SEC, subject: "BAN", teacherId: OLD }), // other subject
+      entry({ cycleWeek: 4, sectionId: oid(), subject: "ENG", teacherId: OLD }), // other section
+    ];
+    const entries = Object.assign(list, { id: (id: string) => list.find((e) => e._id.toString() === id) ?? null });
+    mockScheduleFindOne.mockResolvedValue({ ...schedule(), entries, save: jest.fn() });
+    return list;
+  }
+  const teachers = (list: Array<{ teacherId: unknown }>) => list.map((e) => String(e.teacherId));
+
+  test("without allWeeks only the picked cell changes", async () => {
+    const list = rotation();
+    const before = teachers(list);
+    await updateScheduleEntryTeacher(YEAR, list[0]._id.toString(), NEW);
+    expect(teachers(list)).toEqual([NEW, ...before.slice(1)]);
+  });
+
+  test("allWeeks changes the same teacher's live cells of that section x subject only", async () => {
+    const list = rotation();
+    const before = teachers(list);
+    await updateScheduleEntryTeacher(YEAR, list[1]._id.toString(), NEW, true);
+    expect(teachers(list)).toEqual([NEW, NEW, before[2], before[3], before[4], before[5]]);
   });
 });
 

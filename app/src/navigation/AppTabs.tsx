@@ -310,6 +310,7 @@ import StaffObservationsScreen from "../screens/hr/StaffObservationsScreen";
 import StaffAppraisalsScreen from "../screens/hr/StaffAppraisalsScreen";
 import StaffConductScreen from "../screens/hr/StaffConductScreen";
 import StaffCpdScreen from "../screens/hr/StaffCpdScreen";
+import MarkCorrectionsScreen from "../screens/hr/MarkCorrectionsScreen";
 import GrievanceInboxScreen from "../screens/hr/GrievanceInboxScreen";
 import OffboardingHomeScreen from "../screens/hr/OffboardingHomeScreen";
 import OffboardingCaseScreen from "../screens/hr/OffboardingCaseScreen";
@@ -1451,6 +1452,7 @@ function HrNavigator(): React.ReactElement {
       <HrStack.Screen name="StaffAppraisals" component={StaffAppraisalsScreen} options={{ title: STR.hrAppraisals }} />
       <HrStack.Screen name="StaffConduct" component={StaffConductScreen} options={{ title: STR.hrConduct }} />
       <HrStack.Screen name="StaffCpd" component={StaffCpdScreen} options={{ title: STR.hrCpd }} />
+      <HrStack.Screen name="MarkCorrections" component={MarkCorrectionsScreen} options={{ title: STR.msgNotesTitle }} />
       <HrStack.Screen name="GrievanceInbox" component={GrievanceInboxScreen} options={{ title: STR.hrGrievances }} />
       <HrStack.Screen name="OffboardingHome" component={OffboardingHomeScreen} options={{ title: STR.hrOffboarding }} />
       <HrStack.Screen

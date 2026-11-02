@@ -946,16 +946,19 @@ builder.mutationField("retireAssignmentScheduleEntry", (t) =>
 builder.mutationField("updateAssignmentScheduleEntryTeacher", (t) =>
   t.field({
     type: ScheduleRef,
-    description: "Reassign the teacher on one rotation cell (D-#328) — only the teacher changes.",
+    description:
+      "Reassign the teacher on one rotation cell (D-#328) — only the teacher changes. allWeeks (D-#894): " +
+      "also every other not-ended cycle-week cell of the same section x subject held by the same teacher.",
     authScopes: { hasPermission: "assignment:settings" },
     args: {
       academicYearId: t.arg.string({ required: true }),
       entryId: t.arg.string({ required: true }),
       teacherId: t.arg.string({ required: true }),
+      allWeeks: t.arg.boolean({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
-      const doc = await updateEntryTeacherSvc(args.academicYearId, args.entryId, args.teacherId);
+      const doc = await updateEntryTeacherSvc(args.academicYearId, args.entryId, args.teacherId, args.allWeeks ?? false);
       return scheduleShape(doc as never);
     },
   }),
@@ -1892,12 +1895,14 @@ const AsReturnPassEntryInput = builder.inputType("AsReturnPassEntryInput", {
 });
 
 const AsSubmitPassResultRef = builder
-  .objectRef<{ submittedCount: number; chasedCount: number; unchangedCount: number }>("AsSubmitPassResult")
+  .objectRef<{ submittedCount: number; chasedCount: number; unchangedCount: number; correctedCount: number }>("AsSubmitPassResult")
   .implement({
     fields: (t) => ({
       submittedCount: t.exposeInt("submittedCount"),
       chasedCount: t.exposeInt("chasedCount"),
       unchangedCount: t.exposeInt("unchangedCount"),
+      // D-#892: children flipped from a same-day person-made chase (recorded mistakes).
+      correctedCount: t.exposeInt("correctedCount"),
     }),
   });
 const AsReturnPassResultRef = builder

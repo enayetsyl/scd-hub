@@ -283,24 +283,31 @@ builder.mutationField("reassignRoutineSubjectTeacher", (t) =>
       "Point every live routine slot of (section, subject) at a new teacher (D-#291) — the optional " +
       "'also update the routine' step after a subject-teacher assignment. Whole-or-nothing: pre-checks " +
       "the teacher's availability across all affected periods, then reuses the master-grid cell-edit " +
-      "path per slot (conflict engine + grant re-binding + chat re-sync).",
+      "path per slot (conflict engine + grant re-binding + chat re-sync). D-#895: groupType " +
+      "'subjectgroup' makes sectionId a Quran/Arabic group id; fromTeacherId limits the change to " +
+      "that teacher's periods (the master grid's 'all periods' edit).",
     authScopes: { hasPermission: "routine:edit" },
     args: {
       sectionId: t.arg.string({ required: true }),
       subject: t.arg.string({ required: true }),
       teacherId: t.arg.string({ required: true }),
       effectiveFrom: t.arg.string({ required: false }),
+      groupType: t.arg.string({ required: false }),
+      fromTeacherId: t.arg.string({ required: false }),
     },
     resolve: async (_r, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       if (!(ROUTINE_SUBJECTS as readonly string[]).includes(args.subject))
         throw new Error("Invalid subject");
+      const groupType = args.groupType ?? "section";
+      if (groupType !== "section" && groupType !== "subjectgroup") throw new Error("Invalid groupType");
       return reassignRoutineSubjectTeacher(
         args.sectionId,
         args.subject,
         args.teacherId,
         ctx.auth.userId,
         parseEffectiveFrom(args.effectiveFrom),
+        { groupType, fromTeacherId: args.fromTeacherId ?? null },
       );
     },
   }),

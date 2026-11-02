@@ -3539,12 +3539,12 @@ export interface HwSubmitPassEntry {
   submitted: boolean;
 }
 export const HOMEWORK_SUBMIT_PASS = gql<
-  { homeworkSubmitPass: { submittedCount: number; chasedCount: number; unchangedCount: number } },
+  { homeworkSubmitPass: { submittedCount: number; chasedCount: number; unchangedCount: number; correctedCount: number } },
   { sectionId: string; itemId: string; entries: HwSubmitPassEntry[] }
 >`
   mutation HomeworkSubmitPass($sectionId: String!, $itemId: String!, $entries: [HwSubmitPassEntryInput!]!) {
     homeworkSubmitPass(sectionId: $sectionId, itemId: $itemId, entries: $entries) {
-      submittedCount chasedCount unchangedCount
+      submittedCount chasedCount unchangedCount correctedCount
     }
   }
 `;
@@ -4216,10 +4216,10 @@ export const SECTION_SUBJECT_ROUTINE_TEACHERS = gql<
 `;
 export const REASSIGN_ROUTINE_SUBJECT_TEACHER = gql<
   { reassignRoutineSubjectTeacher: { updatedSlots: number; warnings: string[] } },
-  { sectionId: string; subject: string; teacherId: string }
+  { sectionId: string; subject: string; teacherId: string; groupType?: string | null; fromTeacherId?: string | null }
 >`
-  mutation ReassignRoutineSubjectTeacher($sectionId: String!, $subject: String!, $teacherId: String!) {
-    reassignRoutineSubjectTeacher(sectionId: $sectionId, subject: $subject, teacherId: $teacherId) {
+  mutation ReassignRoutineSubjectTeacher($sectionId: String!, $subject: String!, $teacherId: String!, $groupType: String, $fromTeacherId: String) {
+    reassignRoutineSubjectTeacher(sectionId: $sectionId, subject: $subject, teacherId: $teacherId, groupType: $groupType, fromTeacherId: $fromTeacherId) {
       updatedSlots
       warnings
     }
@@ -5906,10 +5906,10 @@ export const RETIRE_AS_SCHEDULE_ENTRY = gql<
 
 export const UPDATE_AS_SCHEDULE_ENTRY_TEACHER = gql<
   { updateAssignmentScheduleEntryTeacher: AsScheduleT },
-  { academicYearId: string; entryId: string; teacherId: string }
+  { academicYearId: string; entryId: string; teacherId: string; allWeeks?: boolean | null }
 >`
-  mutation UpdateAssignmentScheduleEntryTeacher($academicYearId: String!, $entryId: String!, $teacherId: String!) {
-    updateAssignmentScheduleEntryTeacher(academicYearId: $academicYearId, entryId: $entryId, teacherId: $teacherId) { ${AS_SCHEDULE_FIELDS} }
+  mutation UpdateAssignmentScheduleEntryTeacher($academicYearId: String!, $entryId: String!, $teacherId: String!, $allWeeks: Boolean) {
+    updateAssignmentScheduleEntryTeacher(academicYearId: $academicYearId, entryId: $entryId, teacherId: $teacherId, allWeeks: $allWeeks) { ${AS_SCHEDULE_FIELDS} }
   }
 `;
 
@@ -6252,12 +6252,12 @@ export interface AsSubmitPassEntry {
   submitted: boolean;
 }
 export const ASSIGNMENT_SUBMIT_PASS = gql<
-  { assignmentSubmitPass: { submittedCount: number; chasedCount: number; unchangedCount: number } },
+  { assignmentSubmitPass: { submittedCount: number; chasedCount: number; unchangedCount: number; correctedCount: number } },
   { sectionId: string; itemId: string; entries: AsSubmitPassEntry[] }
 >`
   mutation AssignmentSubmitPass($sectionId: String!, $itemId: String!, $entries: [AsSubmitPassEntryInput!]!) {
     assignmentSubmitPass(sectionId: $sectionId, itemId: $itemId, entries: $entries) {
-      submittedCount chasedCount unchangedCount
+      submittedCount chasedCount unchangedCount correctedCount
     }
   }
 `;

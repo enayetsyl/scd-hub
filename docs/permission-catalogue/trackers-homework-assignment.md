@@ -1,6 +1,6 @@
 # Homework, assignment, gift and work claims — build checklist
 
-Features: `homework`, `assignment`, `assignment_gift`, `work_claim`, plus `reconciliationReport` (gate = any-of `homework:view_reports`, `assignment:view_reports`; no feature of its own). Owner rows: see README. Source: inventory A1 (with the work-claim and reconciliation rows of A2 merged in), origin/dev 2026-10-20.
+Features: `homework`, `assignment`, `assignment_gift`, `mark_submission` (D-#889–#893: `myMarkReminder`/`acknowledgeMarkReminder` + `markCorrectionNotes` own = `view_own`; `myMarkEscalation`/`acknowledgeMarkEscalation` = `alerts`; anyone's notes = `view_notes`), `work_claim`, plus `reconciliationReport` (gate = any-of `homework:view_reports`, `assignment:view_reports`; no feature of its own). Owner rows: see README. Source: inventory A1 (with the work-claim and reconciliation rows of A2 merged in), origin/dev 2026-10-20.
 Counts: 46 mutations, 45 queries, 4 REST/SSE.
 
 Scope helpers used below (applies to every row that names them): in `assertCanWrite` / `assertCanWriteAny` (and the wrappers `assertItemWriteScope`, `assertCanWriteOnItem`), the primary-role PRINCIPAL bypass becomes `homework:edit_all` / `assignment:edit_all`, and the OFFICE hard refusal is replaced: OFFICE passes only with scope or `<feature>:edit_all`. In `assertCanRead` / `allowedSubjectCodesForSection`, the `isAdminStaff` bypass becomes `homework:view_all` / `assignment:view_all`. See (d).
