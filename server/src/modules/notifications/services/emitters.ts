@@ -2211,8 +2211,8 @@ export async function emitWorkMarkCorrected(ev: WorkMarkCorrectedEvent): Promise
           refs: {
             studentId: ev.studentId.toString(),
             sectionId: ev.sectionId.toString(),
-            // `stage` carries the tracker so the app opens the right list.
-            stage: ev.tracker,
+            // The tracker says which list to open (the WC-6 ref, already on the wire).
+            workClaimTracker: ev.tracker,
             ...(ev.tracker === "HOMEWORK" ? { hwItemId: ev.itemId.toString() } : {}),
           },
           dedupeKey: dedupeKeys.workMarkCorrected(ev.tracker, ev.recordId.toString(), dateKey, gid),

@@ -227,6 +227,18 @@ export function notificationTarget(
       return guardian
         ? { tab: "GuardianAssignmentsTab", screen: "ChildAssignments" }
         : { tab: "MasteryTab", screen: "MasteryWork" };
+    // Mark-submission guard (D-#889–#893). The 09:30 list itself is a pop-up on app open;
+    // the row lands where the unmarked work is.
+    case "MARK_SUBMISSION_ESCALATION":
+      return { tab: "AssignmentTab", screen: "AssignmentHome" };
+    case "MARK_CORRECTION":
+      return { tab: "HrTab", screen: "MarkCorrections", params: { all: true } };
+    case "WORK_MARK_CORRECTED":
+      // Guardian-only; `workClaimTracker` says which list (the WC-6 ref, on the wire).
+      if (!guardian) return { tab: "HomeTab", screen: "Today" };
+      return refs?.workClaimTracker === "HOMEWORK"
+        ? { tab: "GuardianHomeworkTab", screen: "ChildHomework" }
+        : { tab: "GuardianAssignmentsTab", screen: "ChildAssignments" };
     case "VOCAB_RESULT":
       return guardian
         ? { tab: "GuardianHomeTab", screen: "GuardianHome" }
