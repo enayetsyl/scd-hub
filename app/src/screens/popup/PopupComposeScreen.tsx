@@ -207,7 +207,7 @@ export default function PopupComposeScreen({ navigation, route }: Props): React.
     setShowEn(!!(loaded.titleEn || loaded.bodyEn));
     setTone(loaded.tone);
     setAttachmentUrl(loaded.attachmentUrl);
-    setRules(loaded.rules);
+    setRules(noTypename(loaded.rules));
     setActions(loaded.actions.map((a) => ({ kind: a.kind, labelBn: a.labelBn, labelEn: a.labelEn, target: a.target })));
     if (loaded.startsAt && loaded.status === "DRAFT") {
       setStartLater(true);
@@ -224,9 +224,17 @@ export default function PopupComposeScreen({ navigation, route }: Props): React.
     if (pickedQ.data) setPicked(pickedQ.data.popupPickedPeople);
   }, [pickedQ.data]);
 
+  /** Query results carry urql's `__typename`; an input type rejects it ("Field
+   *  __typename is not defined by type PopupStaffFilterInput"), so drop it before an
+   *  object read from the server goes back as an input. */
+  function noTypename<T extends object>(o: T): T {
+    const { __typename: _drop, ...rest } = o as T & { __typename?: string };
+    return rest as T;
+  }
+
   function applyAudience(a: PopupAudienceT): void {
     setStaffOn(!!a.staff);
-    setStaff(a.staff ? { ...a.staff } : { ...EMPTY_STAFF });
+    setStaff(a.staff ? noTypename(a.staff) : { ...EMPTY_STAFF });
     setGuardOn(!!a.guardian);
     setGuardLevels(a.guardian?.classLevels ?? []);
     setSectionIds(a.guardian?.sectionIds ?? []);
