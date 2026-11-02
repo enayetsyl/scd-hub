@@ -220,20 +220,40 @@ export async function removeScheduleEntry(
 }
 
 /** Reassign the teacher on one rotation entry (D-#328) — the per-entry edit the
- *  admin does inline; only the teacherId changes, subject/section/week are fixed. */
+ *  admin does inline; only the teacherId changes, subject/section/week are fixed.
+ *  D-#894 `allWeeks`: also every OTHER cycle week's cell of the same section x subject
+ *  that the same (old) teacher holds and that has not already ended — the one-go change
+ *  when a subject teacher is replaced. Cells of a different teacher are left alone. */
 export async function updateScheduleEntryTeacher(
   academicYearId: string,
   entryId: string,
   teacherId: string,
+  allWeeks = false,
 ): Promise<IAssignmentSchedule> {
   if (!teacherId) throw new Error("teacherId is required");
   const schedule = await AssignmentSchedule.findOne({ academicYearId });
   if (!schedule) throw new Error("No AssignmentSchedule for this academic year");
   const entry = schedule.entries.id(entryId);
   if (!entry) throw new Error("Schedule entry not found");
-  entry.teacherId = teacherId as never;
+  const targets = allWeeks ? sameTeacherCells(schedule.entries, entry) : [entry];
+  for (const e of targets) e.teacherId = teacherId as never;
   await schedule.save();
   return schedule;
+}
+
+/** The cells a D-#894 all-weeks change touches: `entry` itself plus every not-yet-ended
+ *  cell of its section x subject held by its current teacher. */
+function sameTeacherCells<E extends IAssignmentSchedule["entries"][number]>(entries: E[], entry: E): E[] {
+  const todayKey = dateOnlyISO(new Date()).slice(0, 10);
+  const teacher = String(entry.teacherId);
+  return entries.filter(
+    (e) =>
+      e === entry ||
+      (String(e.sectionId) === String(entry.sectionId) &&
+        e.subject === entry.subject &&
+        String(e.teacherId) === teacher &&
+        (!e.effectiveTo || e.effectiveTo >= todayKey)),
+  );
 }
 
 export async function getAssignmentSchedule(
