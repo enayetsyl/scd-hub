@@ -37,6 +37,7 @@ import {
   type HwItemTallyT,
 } from "../../graphql/operations";
 import { useConfirm } from "../../state/ConfirmContext";
+import { confirmMarkPass } from "../../lib/markGuard";
 import {
   pickAndUploadHomeworkFile,
   uploadHomeworkWebFile,
@@ -481,6 +482,7 @@ function ItemCard({
   // that always refuses — the same dishonest rendering the D-#388 read-out avoids.
   const { can } = useAuth();
   const canRevertPrior = can("homework:undo_any"); // PM: was role P/O (the server's admin flag)
+  const { confirmAction } = useConfirm();
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const submitRows = group.rows.filter((r) => SUBMIT_STATES.has(r.state));
@@ -510,6 +512,8 @@ function ItemCard({
   const chaseRows = submitRows.filter((r) => r.state === "CHASE");
 
   async function onSubmitCommit(entries: { id: string; on: boolean }[]): Promise<void> {
+    // D-#892: warn before the first marking, and harder before a same-day correction.
+    if (!(await confirmMarkPass(confirmAction, group.rows, entries))) return;
     setSubmitBusy(true);
     const res = await submitPass({
       sectionId: base.sectionId,
@@ -519,7 +523,8 @@ function ItemCard({
     setSubmitBusy(false);
     const r = res.data?.homeworkSubmitPass;
     if (res.error || !r) return onNotify(null, friendlyError(res.error));
-    onNotify(`${STR.hwPassSubmitDone} · ${STR.hwPassSubmitted} ${bnNum(r.submittedCount)} · ${STR.hwPassNotSubmitted} ${bnNum(r.chasedCount)}`, null);
+    const done = `${STR.hwPassSubmitDone} · ${STR.hwPassSubmitted} ${bnNum(r.submittedCount)} · ${STR.hwPassNotSubmitted} ${bnNum(r.chasedCount)}`;
+    onNotify(r.correctedCount > 0 ? `${done}\n${STR.msgFixDone}` : done, null);
     onDone();
   }
 

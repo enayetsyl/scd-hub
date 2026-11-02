@@ -40,6 +40,7 @@ import {
   type AsItemTallyT,
 } from "../../graphql/operations";
 import { useConfirm } from "../../state/ConfirmContext";
+import { confirmMarkPass } from "../../lib/markGuard";
 import { RosterChipPass } from "../../components/RosterChipPass";
 import { CardGrid } from "../../components/CardGrid";
 import { SubjectFold, type SubjectFoldRenderOpts } from "../../components/SubjectFold";
@@ -430,6 +431,7 @@ function ItemCard({
   // that always refuses — the same dishonest rendering the D-#388 read-out avoids.
   const { can } = useAuth();
   const canRevertPrior = can("assignment:undo_any"); // PM: was role P/O (the server's admin flag)
+  const { confirmAction } = useConfirm();
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const submitRows = group.rows.filter((r) => SUBMIT_STATES.has(r.state));
@@ -460,6 +462,8 @@ function ItemCard({
     (canRevertPrior || dhakaDayOf(r.lastStateAt) === cardToday);
 
   async function onSubmitCommit(entries: { id: string; on: boolean }[]): Promise<void> {
+    // D-#892: warn before the first marking, and harder before a same-day correction.
+    if (!(await confirmMarkPass(confirmAction, group.rows, entries))) return;
     setSubmitBusy(true);
     const res = await submitPass({
       sectionId,
@@ -469,7 +473,8 @@ function ItemCard({
     setSubmitBusy(false);
     const r = res.data?.assignmentSubmitPass;
     if (res.error || !r) return onNotify(null, friendlyError(res.error));
-    onNotify(`${STR.asCollectDone} · ${STR.asSubmitted} ${bnNum(r.submittedCount)} · ${STR.asNotSubmitted} ${bnNum(r.chasedCount)}`, null);
+    const done = `${STR.asCollectDone} · ${STR.asSubmitted} ${bnNum(r.submittedCount)} · ${STR.asNotSubmitted} ${bnNum(r.chasedCount)}`;
+    onNotify(r.correctedCount > 0 ? `${done}\n${STR.msgFixDone}` : done, null);
     onDone();
   }
 

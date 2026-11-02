@@ -1892,12 +1892,14 @@ const AsReturnPassEntryInput = builder.inputType("AsReturnPassEntryInput", {
 });
 
 const AsSubmitPassResultRef = builder
-  .objectRef<{ submittedCount: number; chasedCount: number; unchangedCount: number }>("AsSubmitPassResult")
+  .objectRef<{ submittedCount: number; chasedCount: number; unchangedCount: number; correctedCount: number }>("AsSubmitPassResult")
   .implement({
     fields: (t) => ({
       submittedCount: t.exposeInt("submittedCount"),
       chasedCount: t.exposeInt("chasedCount"),
       unchangedCount: t.exposeInt("unchangedCount"),
+      // D-#892: children flipped from a same-day person-made chase (recorded mistakes).
+      correctedCount: t.exposeInt("correctedCount"),
     }),
   });
 const AsReturnPassResultRef = builder

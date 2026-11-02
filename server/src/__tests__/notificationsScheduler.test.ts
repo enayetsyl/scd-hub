@@ -123,6 +123,13 @@ const mockAsAutoIssue = jest.fn().mockResolvedValue({ issued: 0, deferred: 0 });
 jest.mock("../modules/trackers/services/AssignmentAutoIssueService", () => ({
   sweepAssignmentAutoIssue: (now: unknown) => mockAsAutoIssue(now),
 }));
+// D-#890: the 09:30 unmarked-assignment escalation (covered in markSubmissionGuard.test.ts)
+// is DB-backed — stubbed so this suite stays DB-free.
+const mockMarkEscalation = jest.fn().mockResolvedValue(0);
+jest.mock("../modules/trackers/services/MarkReminderService", () => ({
+  MARK_ESCALATION_MINUTES: 9 * 60 + 30,
+  runMarkEscalation: (now: unknown) => mockMarkEscalation(now),
+}));
 jest.mock("../modules/notifications/services/NotificationService", () => ({
   emit: (input: unknown) => mockEmit(input),
 }));
