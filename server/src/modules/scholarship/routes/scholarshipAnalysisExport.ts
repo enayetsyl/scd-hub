@@ -22,7 +22,7 @@ import { Types } from "mongoose";
 import { callerHasPermission, HW_SUBJECTS, type HwSubject } from "@scd/shared";
 import { buildContext } from "../../../context";
 import { Student } from "../../foundation/models/Student";
-import { studentAnalysis } from "../services/ScholarshipAnalysisService";
+import { classIdOfSection, studentAnalysis } from "../services/ScholarshipAnalysisService";
 import { listTopics } from "../services/ScholarshipService";
 import { buildAnalysisMarkdown } from "../services/ScholarshipExportService";
 import { writeAudit } from "../../platform/services/AuditService";
@@ -69,17 +69,19 @@ scholarshipAnalysisExportRouter.get("/", async (req: Request, res: Response) => 
   }
 
   const student = (await Student.findById(studentId)
-    .select("_id name nameBn sectionId")
-    .lean()) as { _id: Types.ObjectId; name?: string; nameBn?: string; sectionId?: Types.ObjectId } | null;
+    .select("_id name nameBn sectionId classId")
+    .lean()) as { _id: Types.ObjectId; name?: string; nameBn?: string; sectionId?: Types.ObjectId; classId?: Types.ObjectId } | null;
   if (!student) {
     res.status(404).json({ error: "শিক্ষার্থী পাওয়া যায়নি।" });
     return;
   }
-  // The section is not decoration — it is what scopes the class comparison. A student
-  // exported against someone else's section would be ranked against children she never
-  // sat with, and every "position" in the file would be a fiction.
-  if (String(student.sectionId ?? "") !== sectionId) {
-    res.status(400).json({ error: "এই শিক্ষার্থী এই শাখার নয়।" });
+  // The anchor is not decoration — it scopes the class comparison. A student exported
+  // against another class would be ranked against children she never sat with, and every
+  // "position" in the file would be a fiction. D-#896: the comparison is the whole CLASS
+  // (বালক + বালিকা sit together), so any section of her class is a valid anchor.
+  const anchorClassId = await classIdOfSection(sectionId);
+  if (!anchorClassId || String(student.classId ?? "") !== String(anchorClassId)) {
+    res.status(400).json({ error: "এই শিক্ষার্থী এই শ্রেণির নয়।" });
     return;
   }
 

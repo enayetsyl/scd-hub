@@ -136,6 +136,8 @@ const ScholarshipPaperSchema = new Schema<IScholarshipPaper>(
 
 // The list screen: this section's papers, newest first.
 ScholarshipPaperSchema.index({ sectionId: 1, paperDate: -1 });
+// D-#896: the list screen now reads the whole CLASS's papers, newest first.
+ScholarshipPaperSchema.index({ classId: 1, paperDate: -1 });
 // The analysis reads every paper for a class + subject, across papers (SC-3/SC-4).
 ScholarshipPaperSchema.index({ classLevel: 1, subjects: 1, academicYearId: 1 });
 // paperId auto-suggest scan (max + 1 for this class + subject key).
