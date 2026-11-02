@@ -4216,10 +4216,10 @@ export const SECTION_SUBJECT_ROUTINE_TEACHERS = gql<
 `;
 export const REASSIGN_ROUTINE_SUBJECT_TEACHER = gql<
   { reassignRoutineSubjectTeacher: { updatedSlots: number; warnings: string[] } },
-  { sectionId: string; subject: string; teacherId: string }
+  { sectionId: string; subject: string; teacherId: string; groupType?: string | null; fromTeacherId?: string | null }
 >`
-  mutation ReassignRoutineSubjectTeacher($sectionId: String!, $subject: String!, $teacherId: String!) {
-    reassignRoutineSubjectTeacher(sectionId: $sectionId, subject: $subject, teacherId: $teacherId) {
+  mutation ReassignRoutineSubjectTeacher($sectionId: String!, $subject: String!, $teacherId: String!, $groupType: String, $fromTeacherId: String) {
+    reassignRoutineSubjectTeacher(sectionId: $sectionId, subject: $subject, teacherId: $teacherId, groupType: $groupType, fromTeacherId: $fromTeacherId) {
       updatedSlots
       warnings
     }
@@ -5906,10 +5906,10 @@ export const RETIRE_AS_SCHEDULE_ENTRY = gql<
 
 export const UPDATE_AS_SCHEDULE_ENTRY_TEACHER = gql<
   { updateAssignmentScheduleEntryTeacher: AsScheduleT },
-  { academicYearId: string; entryId: string; teacherId: string }
+  { academicYearId: string; entryId: string; teacherId: string; allWeeks?: boolean | null }
 >`
-  mutation UpdateAssignmentScheduleEntryTeacher($academicYearId: String!, $entryId: String!, $teacherId: String!) {
-    updateAssignmentScheduleEntryTeacher(academicYearId: $academicYearId, entryId: $entryId, teacherId: $teacherId) { ${AS_SCHEDULE_FIELDS} }
+  mutation UpdateAssignmentScheduleEntryTeacher($academicYearId: String!, $entryId: String!, $teacherId: String!, $allWeeks: Boolean) {
+    updateAssignmentScheduleEntryTeacher(academicYearId: $academicYearId, entryId: $entryId, teacherId: $teacherId, allWeeks: $allWeeks) { ${AS_SCHEDULE_FIELDS} }
   }
 `;
 
