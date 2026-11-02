@@ -43,6 +43,9 @@ export default function TaskFormScreen({ route, navigation }: Props): React.Reac
   // MONTHLY_WEEKDAY ("first Saturday of every month"): one weekday + which week.
   const [monthWeekday, setMonthWeekday] = React.useState<number | null>(6);
   const [weekOfMonth, setWeekOfMonth] = React.useState<number | null>(1);
+  // D-#897: a recurring task runs with no end date, or until a chosen day (inclusive).
+  const [hasEnd, setHasEnd] = React.useState(false);
+  const [endKey, setEndKey] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
 
@@ -83,7 +86,8 @@ export default function TaskFormScreen({ route, navigation }: Props): React.Reac
     effortMin <= 480 &&
     (recurrence !== "WEEKLY" || weekdays.length > 0) &&
     (recurrence !== "MONTHLY" || (Number(monthDay) >= 1 && Number(monthDay) <= 31)) &&
-    (recurrence !== "MONTHLY_WEEKDAY" || (monthWeekday !== null && weekOfMonth !== null));
+    (recurrence !== "MONTHLY_WEEKDAY" || (monthWeekday !== null && weekOfMonth !== null)) &&
+    (recurrence === "ONCE" || !hasEnd || endKey >= dateKey());
 
   async function submit(): Promise<void> {
     if (!valid || !assignee) return;
@@ -113,6 +117,7 @@ export default function TaskFormScreen({ route, navigation }: Props): React.Reac
           weekdays: recurrence === "WEEKLY" ? weekdays : recurrence === "MONTHLY_WEEKDAY" && monthWeekday !== null ? [monthWeekday] : null,
           monthDay: recurrence === "MONTHLY" ? Number(monthDay) : null,
           weekOfMonth: recurrence === "MONTHLY_WEEKDAY" ? weekOfMonth : null,
+          endKey: hasEnd ? endKey : null,
         },
       });
     }
@@ -191,6 +196,24 @@ export default function TaskFormScreen({ route, navigation }: Props): React.Reac
                 <Chip key={d} label={weekdayShortLabel(d)} selected={monthWeekday === d} onPress={() => setMonthWeekday(d)} />
               ))}
             </ChipRow>
+          </>
+        ) : null}
+
+        {recurrence !== "ONCE" && !editId ? (
+          <>
+            <Muted>{STR.wbEnds}</Muted>
+            <ChipRow>
+              <Chip label={STR.wbNoEnd} selected={!hasEnd} onPress={() => setHasEnd(false)} />
+              <Chip
+                label={STR.wbUntilDate}
+                selected={hasEnd}
+                onPress={() => {
+                  setHasEnd(true);
+                  if (!endKey) setEndKey(dateKey());
+                }}
+              />
+            </ChipRow>
+            {hasEnd ? <DateField label={STR.wbEndDate} value={endKey} onChange={setEndKey} /> : null}
           </>
         ) : null}
 

@@ -255,6 +255,8 @@ const TaskTemplateRef = builder.objectRef<TemplateView>("TaskTemplate").implemen
     monthDay: t.int({ nullable: true, resolve: (v) => v.doc.monthDay ?? null }),
     /** MONTHLY_WEEKDAY: 1..4, 5 = last. */
     weekOfMonth: t.int({ nullable: true, resolve: (v) => v.doc.weekOfMonth ?? null }),
+    /** D-#897: last day (inclusive, YYYY-MM-DD) a task is created; null = no end date. */
+    endKey: t.string({ nullable: true, resolve: (v) => v.doc.endKey ?? null }),
     active: t.boolean({ resolve: (v) => v.doc.active }),
   }),
 });
@@ -310,6 +312,8 @@ const TaskTemplateInputType = builder.inputType("TaskTemplateInput", {
     weekdays: t.intList({ required: false }),
     monthDay: t.int({ required: false }),
     weekOfMonth: t.int({ required: false }),
+    /** D-#897: last day (inclusive, YYYY-MM-DD); omit for no end date. */
+    endKey: t.string({ required: false }),
   }),
 });
 
