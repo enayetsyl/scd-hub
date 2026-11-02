@@ -125,6 +125,8 @@ export interface AsSubmitPassResult {
   submittedCount: number;
   chasedCount: number;
   unchangedCount: number;
+  /** D-#892: children flipped from a chase a person made today — a recorded mistake. */
+  correctedCount: number;
 }
 export interface AsReturnPassEntry {
   recordId: string;
@@ -163,7 +165,7 @@ export async function submitPass(
   at: Date = new Date(),
   scope: AsPassScope = {},
 ): Promise<AsSubmitPassResult> {
-  const result: AsSubmitPassResult = { submittedCount: 0, chasedCount: 0, unchangedCount: 0 };
+  const result: AsSubmitPassResult = { submittedCount: 0, chasedCount: 0, unchangedCount: 0, correctedCount: 0 };
   for (const entry of entries) {
     const state = await loadState(entry.recordId, itemId, scope);
     if (!SUBMIT_ACTIONABLE.includes(state)) {
@@ -171,8 +173,9 @@ export async function submitPass(
     }
     if (entry.submitted) {
       if (state === "GIVEN") await transitionAssignmentRecord(entry.recordId, "DUE", actorId, at);
-      await transitionAssignmentRecord(entry.recordId, "SUBMITTED", actorId, at);
+      const moved = await transitionAssignmentRecord(entry.recordId, "SUBMITTED", actorId, at);
       result.submittedCount += 1;
+      if (moved.markCorrected) result.correctedCount += 1;
     } else if (state === "CHASE") {
       result.unchangedCount += 1; // already chased — no-op (§3.1)
     } else {

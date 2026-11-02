@@ -116,7 +116,7 @@ describe("submitPass — submitted:true fast-forward", () => {
     expect(r.stateDates.map((s) => s.state)).toEqual(["DUE", "SUBMITTED"]);
     const stamps = r.stateDates.map((s) => new Date(s.at).getTime());
     expect(new Set(stamps).size).toBe(1); // one action for popActionGroup
-    expect(res).toEqual({ submittedCount: 1, chasedCount: 0, unchangedCount: 0, autoChasedCount: 0 });
+    expect(res).toEqual({ submittedCount: 1, chasedCount: 0, unchangedCount: 0, autoChasedCount: 0, correctedCount: 0 });
   });
 
   test("CHASE → SUBMITTED keeps chaseCount, sends no reminder", async () => {
@@ -139,7 +139,7 @@ describe("submitPass — the first-cross-only chase rule (§3.1)", () => {
     expect(r.chaseCount).toBe(1);
     expect(r.stateDates.map((s) => s.state)).toEqual(["DUE", "CHASE"]);
     expect(mockEmitChase).toHaveBeenCalledTimes(1);
-    expect(res).toEqual({ submittedCount: 0, chasedCount: 1, unchangedCount: 0, autoChasedCount: 0 });
+    expect(res).toEqual({ submittedCount: 0, chasedCount: 1, unchangedCount: 0, autoChasedCount: 0, correctedCount: 0 });
   });
 
   test("already-CHASE crossed again → NO-OP (no stamp, no increment, no reminder)", async () => {
@@ -151,7 +151,7 @@ describe("submitPass — the first-cross-only chase rule (§3.1)", () => {
     expect(r.stateDates).toEqual([]);
     expect(r.save).not.toHaveBeenCalled();
     expect(mockEmitChase).not.toHaveBeenCalled();
-    expect(res).toEqual({ submittedCount: 0, chasedCount: 0, unchangedCount: 1, autoChasedCount: 0 });
+    expect(res).toEqual({ submittedCount: 0, chasedCount: 0, unchangedCount: 1, autoChasedCount: 0, correctedCount: 0 });
   });
 });
 
@@ -172,7 +172,7 @@ describe("submitPass — the owner's worked example (mixed roster)", () => {
       ],
       ACTOR,
     );
-    expect(res).toEqual({ submittedCount: 2, chasedCount: 1, unchangedCount: 1, autoChasedCount: 0 });
+    expect(res).toEqual({ submittedCount: 2, chasedCount: 1, unchangedCount: 1, autoChasedCount: 0, correctedCount: 0 });
     expect(a.state).toBe("SUBMITTED");
     expect(b.state).toBe("SUBMITTED");
     expect(c.state).toBe("CHASE");
@@ -199,7 +199,7 @@ describe("submitPass — due-day sibling sweep (owner ruling 2026-08-04)", () =>
     const missed = rec({ state: "DUE", dueDate: yesterday() });
     stubDocs([inPayload, missed]);
     const res = await submitPass(ITEM_ID, [{ recordId: inPayload.recordId, submitted: true }], ACTOR);
-    expect(res).toEqual({ submittedCount: 1, chasedCount: 0, unchangedCount: 0, autoChasedCount: 1 });
+    expect(res).toEqual({ submittedCount: 1, chasedCount: 0, unchangedCount: 0, autoChasedCount: 1, correctedCount: 0 });
     expect(missed.state).toBe("CHASE");
     expect(missed.chaseCount).toBe(1);
     expect(missed.stateDates.map((s) => s.state)).toEqual(["CHASE"]);
