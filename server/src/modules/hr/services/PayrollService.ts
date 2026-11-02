@@ -29,7 +29,8 @@ import { ProbationDebtRecovery } from "../models/ProbationDebtRecovery";
 import { ProbationLeaveDebt } from "../models/ProbationLeaveDebt";
 import { LatenessCharge } from "../models/LatenessCharge";
 import { OffboardingCase } from "../models/OffboardingCase";
-import { overdrawnDays, staffWithOpenExit } from "./LeaveChargeService";
+import { overdrawnDays, staffWithOpenExit, chargeableLateDays } from "./LeaveChargeService";
+import { getHrPolicy } from "./HrPolicyService";
 import { roundLeaveDays } from "./dates";
 import { bnNum } from "../../../lib/bnNum";
 import { salariesEffectiveIn } from "./PayHistoryService";
@@ -79,6 +80,82 @@ export interface StaffAdjustment {
    */
   probationChargeDays?: number;
   probationChargeNote?: string;
+  /**
+   * Days of LATENESS to charge this person this month, by choice (D-#908) — only while
+   * the school-wide rule is off (it would charge everyone itself). Up to
+   * floor(late marks / lateDaysPerCharge); `latenessChargeTo` says where it lands:
+   * "salary" (a বিলম্ব কর্তন line) or "leave" (off the leave balance, D-#616).
+   */
+  latenessChargeDays?: number;
+  latenessChargeTo?: "salary" | "leave";
+}
+
+/**
+ * LATENESS CHARGED BY CHOICE, PER PERSON (D-#908) — the rule-off counterpart of
+ * `computeLatenessCharge`. The owner: *"one to one lateness deduction"*.
+ *
+ * Writes the same `LatenessCharge` row the school-wide rule writes, so everything that
+ * already reads it keeps working: the hub's lateness line, the leave balance (which
+ * counts `paidFromLeave`, D-#616), the freeze at lock and the reopen. `to` decides which
+ * half carries the days — "salary" makes a বিলম্ব কর্তন line of days × day-rate; "leave"
+ * takes them off the balance and leaves the payslip alone.
+ *
+ * Called only while the rule is OFF (the caller passes the rule's row first). A person
+ * with no choice this run has an earlier CHOICE row for the month removed (`byChoice`) —
+ * a choice not repeated is withdrawn; rows the rule or an import wrote are not touched.
+ * `adj` is 0 for a leaver: their exit settlement collects what is owed.
+ */
+async function chargeLatenessByChoice(
+  sid: string,
+  input: PreparePayrollInput,
+  runId: Types.ObjectId,
+  rate: number,
+  adj: StaffAdjustment | 0 | undefined,
+): Promise<{ amount: number } | null> {
+  const key = { staffProfileId: new Types.ObjectId(sid), monthKey: input.monthKey };
+  const days = adj ? Math.max(0, adj.latenessChargeDays ?? 0) : 0;
+  if (days === 0) {
+    await LatenessCharge.deleteOne({ ...key, frozen: false, byChoice: true });
+    return null;
+  }
+  const toSalary = adj && adj.latenessChargeTo === "salary";
+  const policy = await getHrPolicy();
+  const { lateDateKeys } = await chargeableLateDays(sid, input.monthKey, policy.lateDaysPerCharge);
+  const amount = toSalary ? Math.round(rate * days) : 0;
+  const row = await LatenessCharge.findOneAndUpdate(
+    key,
+    {
+      $set: {
+        lateDateKeys,
+        lateDaysPerCharge: policy.lateDaysPerCharge,
+        chargedDays: days,
+        paidFromLeave: toSalary ? 0 : days,
+        chargedToSalary: toSalary ? days : 0,
+        dayRate: rate,
+        amount,
+        payrollRunId: runId,
+        frozen: false,
+        byChoice: true,
+      },
+    },
+    { upsert: true, new: true, setDefaultsOnInsert: true },
+  );
+  await writeAudit({
+    eventKind: "STAFF_LATENESS_CHARGED",
+    actorId: input.actorId,
+    targetId: row._id,
+    targetKind: "LatenessCharge",
+    meta: {
+      staffProfileId: sid,
+      monthKey: input.monthKey,
+      lateCount: lateDateKeys.length,
+      chargedDays: days,
+      to: toSalary ? "salary" : "leave",
+      amount,
+      byChoice: true,
+    },
+  });
+  return { amount };
 }
 
 /** The payslip note when held probation leave is charged by choice (D-#898). */
@@ -99,18 +176,37 @@ const DAY_EPSILON = 0.01;
 async function assertChargesWithinOwed(
   adjustments: StaffAdjustment[],
   existingRunId: Types.ObjectId | null,
+  monthKey: string,
 ): Promise<void> {
-  const charges = adjustments.filter((a) => (a.probationChargeDays ?? 0) !== 0 || (a.leaveRecoveryDays ?? 0) !== 0);
+  const charges = adjustments.filter(
+    (a) => (a.probationChargeDays ?? 0) !== 0 || (a.leaveRecoveryDays ?? 0) !== 0 || (a.latenessChargeDays ?? 0) !== 0,
+  );
   if (charges.length === 0) return;
   const exiting = await staffWithOpenExit();
+  const policy = await getHrPolicy();
   for (const a of charges) {
     const probation = a.probationChargeDays ?? 0;
     const overdrawn = a.leaveRecoveryDays ?? 0;
-    if (probation < 0 || overdrawn < 0) throw new PayrollError("কর্তনের দিন ঋণাত্মক হতে পারে না");
+    const late = a.latenessChargeDays ?? 0;
+    if (probation < 0 || overdrawn < 0 || late < 0) throw new PayrollError("কর্তনের দিন ঋণাত্মক হতে পারে না");
     const staff = await StaffProfile.findById(a.staffProfileId).select("name").lean();
     const who = staff?.name ?? a.staffProfileId;
     if (exiting.has(a.staffProfileId)) {
       throw new PayrollError(`${who}: প্রস্থান প্রক্রিয়া চলছে — ছুটির পাওনা চূড়ান্ত নিষ্পত্তিতে পুরোটাই কাটা হবে`);
+    }
+    if (late > 0) {
+      // The school-wide rule already charges everyone; a per-person charge on top would
+      // count the same late days twice (D-#908).
+      if (policy.latenessRuleEnabled) {
+        throw new PayrollError("বিলম্বের নিয়ম চালু আছে — নিয়ম অনুযায়ী সবার হিসাব হবে, আলাদা করে কাটা যাবে না");
+      }
+      if (a.latenessChargeTo !== "salary" && a.latenessChargeTo !== "leave") {
+        throw new PayrollError(`${who}: বিলম্বের কর্তন বেতন না ছুটির জমা থেকে — তা বাছাই করুন`);
+      }
+      const { days } = await chargeableLateDays(a.staffProfileId, monthKey, policy.lateDaysPerCharge);
+      if (late > days + DAY_EPSILON) {
+        throw new PayrollError(`${who}: এই মাসে বিলম্বে কাটার মতো ${bnNum(days)} দিন — এর বেশি কাটা যায় না`);
+      }
     }
     if (probation > 0) {
       const held = await openHeldDays(a.staffProfileId, existingRunId);
@@ -193,7 +289,7 @@ export async function preparePayrollRun(input: PreparePayrollInput): Promise<{ r
   if (existing?.status === "approved_locked") {
     throw new PayrollError(`${input.monthKey} is locked — corrections ride arrears on a later run (D-#110)`);
   }
-  await assertChargesWithinOwed(input.adjustments ?? [], existing?._id ?? null);
+  await assertChargesWithinOwed(input.adjustments ?? [], existing?._id ?? null, input.monthKey);
   if (existing) {
     await Payslip.deleteMany({ payrollRunId: existing._id });
     // The old run's leave-balance credits go with it. They are keyed to ITS id, so the
@@ -285,7 +381,8 @@ export async function preparePayrollRun(input: PreparePayrollInput): Promise<{ r
       actorId: input.actorId,
       payrollRunId: run._id,
     });
-    const latenessDeduction = adj?.latenessDeduction ?? (latenessRow?.amount || undefined);
+    const manualLate = latenessRow ? null : await chargeLatenessByChoice(sid, input, run._id, rate, dues ? 0 : adj);
+    const latenessDeduction = adj?.latenessDeduction ?? (latenessRow?.amount || manualLate?.amount || undefined);
 
     /**
      * An AGREED recovery of a negative leave balance (D-#617). It becomes an ordinary
@@ -470,6 +567,10 @@ export async function cancelPayrollRun(runId: string, actorId: string): Promise<
   await LeaveBalanceRecovery.deleteMany({ payrollRunId: run._id });
   // Nor may its probation charges keep days off the held debt (D-#898).
   await ProbationDebtRecovery.deleteMany({ payrollRunId: run._id });
+  // Nor its per-person lateness choices (D-#908). Rule-mode rows are left exactly as before.
+  if (!(await getHrPolicy()).latenessRuleEnabled) {
+    await LatenessCharge.deleteMany({ payrollRunId: run._id, frozen: false, byChoice: true });
+  }
   run.status = "cancelled";
   await run.save();
   await writeAudit({ eventKind: "PAYROLL_CANCELLED", actorId, targetId: run._id, targetKind: "PayrollRun", meta: { monthKey: run.monthKey } });

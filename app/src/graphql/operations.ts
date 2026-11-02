@@ -7706,6 +7706,9 @@ export interface StaffPayrollAdjustmentInputT {
   /** Days of held probation leave charged to this month's pay, by choice (D-#898). */
   probationChargeDays?: number | null;
   probationChargeNote?: string | null;
+  /** D-#908 — per-person lateness: days, and "salary" | "leave". */
+  latenessChargeDays?: number | null;
+  latenessChargeTo?: string | null;
   /** Recover the outstanding advance in this run (D-#622) — a one-off only when true. */
   recoverAdvance?: boolean | null;
 }
@@ -7717,6 +7720,28 @@ export interface LeaveChargeCandidateT {
   kind: "probation" | "overdrawn";
   days: number;
 }
+
+/** Someone with chargeable late days this month (D-#908). */
+export interface LatenessChargeCandidateT {
+  staffProfileId: string;
+  name: string;
+  lateCount: number;
+  lateDateKeys: string[];
+  days: number;
+}
+
+export const LATENESS_CHARGE_CANDIDATES = gql<
+  { latenessChargeCandidates: { ruleOn: boolean; lateDaysPerCharge: number; rows: LatenessChargeCandidateT[] } },
+  { monthKey: string }
+>`
+  query LatenessChargeCandidates($monthKey: String!) {
+    latenessChargeCandidates(monthKey: $monthKey) {
+      ruleOn
+      lateDaysPerCharge
+      rows { staffProfileId name lateCount lateDateKeys days }
+    }
+  }
+`;
 
 export const LEAVE_CHARGE_CANDIDATES = gql<
   { leaveChargeCandidates: LeaveChargeCandidateT[] },
@@ -8963,6 +8988,30 @@ export const STAFF_LETTERS_QUERY = gql<
 >`
   query StaffLetters($staffProfileId: String!) {
     staffLetters(staffProfileId: $staffProfileId) { ${STAFF_LETTER_FIELDS} }
+  }
+`;
+
+/** D-#909 — the standard body from the server's own snapshot (the recorded raise's figures). */
+export const STAFF_LETTER_DRAFT_QUERY = gql<
+  { staffLetterDraft: string },
+  { staffProfileId: string; kind: string; effectiveFrom: string; salaryMode: string; monthlySalary?: number | null; designation?: string | null }
+>`
+  query StaffLetterDraft(
+    $staffProfileId: String!
+    $kind: String!
+    $effectiveFrom: String!
+    $salaryMode: String!
+    $monthlySalary: Float
+    $designation: String
+  ) {
+    staffLetterDraft(
+      staffProfileId: $staffProfileId
+      kind: $kind
+      effectiveFrom: $effectiveFrom
+      salaryMode: $salaryMode
+      monthlySalary: $monthlySalary
+      designation: $designation
+    )
   }
 `;
 

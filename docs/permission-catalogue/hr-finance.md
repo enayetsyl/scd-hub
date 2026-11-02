@@ -24,6 +24,8 @@ Today's holders (from `shared/vocab.ts` ROLE_PERMISSIONS): `staff:manage`, `leav
 | payroll.ts:401 | approvePayrollRun | payroll:approve (RESERVED) | `payroll:approve` (LOCKED) |
 | payroll.ts:411 | cancelPayrollRun | payroll:manage; service: prepared runs only | `payroll:prepare` + prepared-runs-only rule (stays) |
 | payroll.ts | reopenPayrollRun (D-#904) | — (new) | `payroll:reopen` (LOCKED); refused when a later month is locked or a recovered advance changed since |
+| payroll.ts | latenessChargeCandidates (D-#908) | — (new) | `payroll:prepare`; per-person lateness in `preparePayrollRun` refused while the rule is on |
+| staffHub.ts | staffLetterDraft (D-#909) | — (new) | `staff_letters:issue`; builds the snapshot, writes nothing |
 | payroll.ts:425 | issueStaffAdvance | payroll:approve (RESERVED) | `salary_advance:issue` (LOCKED) |
 | payroll.ts:451 | settleStaffAdvance | payroll:approve (RESERVED) | `salary_advance:settle` (LOCKED) |
 
