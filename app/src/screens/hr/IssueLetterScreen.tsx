@@ -12,6 +12,12 @@
  *
  * Issuing FREEZES every merge field into the letter's snapshot, so this form is the
  * last moment any of it can be changed. That is said on the screen, not just in a doc.
+ *
+ * D-#899–#901: the increment letter (issuing it records the raise), a PREVIEW that
+ * renders exactly what issuing would freeze without saving anything, and an optional
+ * send to the staff member's app (notification / pop-up / both). For a confirmation or
+ * an increment the text box IS the body (D-#590) — labelled so, with the standard draft
+ * one tap away, because "extra paragraph" made Akmol's letter print only one sentence.
  */
 import React from "react";
 import { View } from "react-native";
@@ -40,9 +46,32 @@ import {
 } from "../../components/ui";
 import { STR, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
-import { openPdf, PDF_SUPPORTED } from "../../lib/pdf";
+import { openLetterPdf, LETTER_PDF_SUPPORTED } from "../../lib/pdf";
 import { space } from "../../theme/tokens";
 import { personName } from "../../lib/personName";
+import { useAuth } from "../../auth/AuthContext";
+import { defaultConfirmationBody } from "./ConfirmEmploymentScreen";
+
+const MONTHS_EN = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+/** The increment letter's standard draft — the server's `incrementBody`, word for word. */
+function defaultIncrementBody(designation: string, previous: number | null, next: number | null, monthKey: string): string {
+  const [y, m] = monthKey.split("-");
+  const month = /^\d{4}-\d{2}$/.test(monthKey) ? `${MONTHS_EN[Number(m) - 1]}, ${y}` : monthKey;
+  const from = previous ? ` from Tk. ${previous.toLocaleString("en-US")}` : "";
+  return (
+    `In recognition of your service as ${designation} at the School for Community Development (SCD), ` +
+    `the management is pleased to revise your monthly remuneration${from} to Tk. ${(next ?? 0).toLocaleString("en-US")} ` +
+    `with effect from ${month}, insha'Allah. All other terms and conditions of your appointment remain unchanged.`
+  );
+}
+
+type SendChoice = "none" | "notification" | "popup" | "both";
+const channelsOf = (c: SendChoice): string[] =>
+  c === "both" ? ["notification", "popup"] : c === "none" ? [] : [c];
 
 type Props = NativeStackScreenProps<AdminStackParamList, "IssueLetter">;
 
@@ -68,13 +97,27 @@ function kindLabel(kind: string): string {
   if (kind === "appointment") return STR.stfLetterAppointment;
   if (kind === "confirmation") return STR.stfLetterConfirmation;
   if (kind === "support_contract") return STR.stfLetterContract;
+  if (kind === "increment") return STR.stfLetterIncrement;
   return STR.stfLetterCertificate;
+}
+
+function thisMonth(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
 export default function IssueLetterScreen({ route, navigation }: Props): React.ReactElement {
   const { staff, kind } = route.params;
+  const { can } = useAuth();
   const [{ data: policy }] = useQuery({ query: HR_POLICY_QUERY });
   const [, issue] = useMutation(ISSUE_STAFF_LETTER);
+  const isIncrement = kind === "increment";
+  // Confirmation and increment: the text box is the WHOLE body (D-#590 / D-#899).
+  const bodyIsAuthored = kind === "confirmation" || isIncrement;
+  const [incrementMonth, setIncrementMonth] = React.useState(thisMonth());
+  const [send, setSend] = React.useState<SendChoice>("none");
+  const [previewing, setPreviewing] = React.useState(false);
+  const [issuedNote, setIssuedNote] = React.useState<string | null>(null);
 
   // Honorary is the honest default when no salary is on record: offering "paid" first
   // to a staff member with no figure would only produce a refusal at submit.
@@ -83,7 +126,10 @@ export default function IssueLetterScreen({ route, navigation }: Props): React.R
   const [letterDate, setLetterDate] = React.useState(todayKey());
   const [effectiveFrom, setEffectiveFrom] = React.useState(staff.joiningDate?.slice(0, 10) ?? todayKey());
   const [designation, setDesignation] = React.useState(staff.designation ?? "");
-  const [salary, setSalary] = React.useState(staff.monthlySalary != null ? String(staff.monthlySalary) : "");
+  // An increment starts EMPTY: the field is the NEW figure, and the current one is shown beside it.
+  const [salary, setSalary] = React.useState(
+    kind !== "increment" && staff.monthlySalary != null ? String(staff.monthlySalary) : "",
+  );
   const [weeklyHours, setWeeklyHours] = React.useState("");
   const [extraText, setExtraText] = React.useState("");
   // The Bangla contract (D-#586). `role` picks which default duties schedule loads;
@@ -119,25 +165,26 @@ export default function IssueLetterScreen({ route, navigation }: Props): React.R
   }, [defaults]);
 
   const p = policy?.hrPolicy;
+  // An increment is dated by MONTH (payroll runs by month, D-#587): its first day.
+  const effectiveKey = isIncrement ? `${incrementMonth}-01` : effectiveFrom;
   const canSubmit =
     designation.trim() !== "" &&
-    /^\d{4}-\d{2}-\d{2}$/.test(effectiveFrom) &&
+    /^\d{4}-\d{2}-\d{2}$/.test(effectiveKey) &&
     /^\d{4}-\d{2}-\d{2}$/.test(letterDate) &&
     (salaryMode === "honorary" || parseAmount(salary) !== null) &&
     // A contract with no duties is not a contract; the server refuses it, so the
     // button refuses first rather than sending a request that can only fail.
     (!isContract || duties.split("\n").some((d) => d.trim() !== ""));
 
-  async function onSubmit(): Promise<void> {
-    setBusy(true);
-    setFailure(null);
-    const res = await issue({
+  /** What issuing would send — and exactly what the preview renders (D-#901). */
+  function letterInput() {
+    return {
       staffProfileId: staff.id,
       kind,
-      effectiveFrom,
-      salaryMode,
+      effectiveFrom: effectiveKey,
+      salaryMode: isIncrement ? ("paid" as const) : salaryMode,
       letterDate,
-      monthlySalary: salaryMode === "paid" ? parseAmount(salary) : null,
+      monthlySalary: isIncrement || salaryMode === "paid" ? parseAmount(salary) : null,
       designation: designation.trim(),
       weeklyHours: weeklyHours.trim() || null,
       extraText: extraText.trim() || null,
@@ -153,14 +200,45 @@ export default function IssueLetterScreen({ route, navigation }: Props): React.R
             contactBn: contactBn.trim() || null,
           }
         : null,
-    });
+    };
+  }
+
+  function insertDraft(): void {
+    const next = parseAmount(salary);
+    setExtraText(
+      isIncrement
+        ? defaultIncrementBody(designation.trim(), staff.monthlySalary ?? null, next, incrementMonth)
+        : defaultConfirmationBody({ ...staff, designation: designation.trim(), monthlySalary: next }, effectiveKey),
+    );
+  }
+
+  async function onPreview(): Promise<void> {
+    setPreviewing(true);
+    setFailure(null);
+    try {
+      await openLetterPdf("/pdf/staff-letter/preview", letterInput());
+    } catch (err) {
+      setFailure(err instanceof Error ? err.message : String(err));
+    }
+    setPreviewing(false);
+  }
+
+  async function onSubmit(): Promise<void> {
+    setBusy(true);
+    setFailure(null);
+    const res = await issue({ ...letterInput(), sendChannels: channelsOf(send) });
     setBusy(false);
     if (res.error || !res.data) {
       setFailure(friendlyError(res.error));
       return;
     }
-    const letterId = res.data.issueStaffLetter.id;
-    if (PDF_SUPPORTED) await openPdf(`/pdf/staff-letter/${letterId}`);
+    const letter = res.data.issueStaffLetter;
+    if (LETTER_PDF_SUPPORTED) await openLetterPdf(`/pdf/staff-letter/${letter.id}`).catch(() => undefined);
+    // Issued but not sent (D-#574 shape): stay, say so — it can be sent from the list.
+    if (letter.sendError) {
+      setIssuedNote(`${STR.stfLetterSendFailed} ${letter.sendError}`);
+      return;
+    }
     navigation.goBack();
   }
 
@@ -198,12 +276,23 @@ export default function IssueLetterScreen({ route, navigation }: Props): React.R
         {/* A service certificate has no "effective from": it certifies a period the
             record already knows (joining date → the offboarding case's last working
             day, D-#583). The field was collected, ignored, and printed nowhere. */}
-        {isCertificate ? null : (
+        {isCertificate ? null : isIncrement ? (
+          <>
+            <Field label={STR.stfPayEffectiveFrom} value={incrementMonth} onChangeText={setIncrementMonth} placeholder="YYYY-MM" />
+            <Muted style={{ marginTop: -space(2), marginBottom: space(3) }}>{STR.stfPayEffectiveHint}</Muted>
+          </>
+        ) : (
           <Field label={STR.stfEffectiveFrom} value={effectiveFrom} onChangeText={setEffectiveFrom} placeholder="YYYY-MM-DD" />
         )}
         <Field label={STR.stfLetterDate} value={letterDate} onChangeText={setLetterDate} placeholder="YYYY-MM-DD" />
 
-        {salaryMode === "paid" && kind !== "service_certificate" ? (
+        {isIncrement ? (
+          <>
+            <Row label={STR.stfIncrementCurrent} value={staff.monthlySalary != null ? `৳ ${bnNum(String(staff.monthlySalary))}` : "—"} />
+            <Field label={STR.stfIncrementNewSalary} value={salary} onChangeText={setSalary} keyboardType="numeric" />
+            <Muted style={{ marginTop: -space(2), marginBottom: space(1) }}>{STR.stfIncrementRecordsPay}</Muted>
+          </>
+        ) : salaryMode === "paid" && kind !== "service_certificate" ? (
           <Field label={STR.stfMonthlySalary} value={salary} onChangeText={setSalary} keyboardType="numeric" />
         ) : null}
 
@@ -275,19 +364,51 @@ export default function IssueLetterScreen({ route, navigation }: Props): React.R
 
       <Card>
         <Field
-          label={STR.stfExtraText}
+          label={bodyIsAuthored ? STR.stfConfirmBody : STR.stfExtraText}
           value={extraText}
           onChangeText={setExtraText}
-          placeholder={STR.stfExtraTextPlaceholder}
+          placeholder={bodyIsAuthored ? STR.stfConfirmBodyPlaceholder : STR.stfExtraTextPlaceholder}
           multiline
         />
+        {bodyIsAuthored ? (
+          <Button title={STR.stfConfirmBodyDraft} variant="secondary" onPress={insertDraft} />
+        ) : null}
       </Card>
 
+      {can("staff_letters:send") ? (
+        <Card>
+          <Body style={{ fontWeight: "700", marginBottom: space(1) }}>{STR.stfLetterSendTitle}</Body>
+          <ChipRow>
+            <Chip label={STR.stfNo} selected={send === "none"} onPress={() => setSend("none")} />
+            <Chip label={STR.stfLetterSendNotification} selected={send === "notification"} onPress={() => setSend("notification")} />
+            <Chip label={STR.stfLetterSendPopup} selected={send === "popup"} onPress={() => setSend("popup")} />
+            <Chip label={STR.stfLetterSendBoth} selected={send === "both"} onPress={() => setSend("both")} />
+          </ChipRow>
+        </Card>
+      ) : null}
+
+      {issuedNote ? <Notice tone="warn" message={issuedNote} /> : null}
       <Notice tone="warn" message={STR.stfIssueWarning} />
+      {LETTER_PDF_SUPPORTED ? (
+        <Card>
+          <Muted style={{ marginBottom: space(2) }}>{STR.stfLetterPreviewNote}</Muted>
+          <Button
+            title={STR.stfLetterPreview}
+            variant="secondary"
+            loading={previewing}
+            disabled={!canSubmit || previewing}
+            onPress={() => void onPreview()}
+          />
+        </Card>
+      ) : null}
       <Divider />
       <View style={{ flexDirection: "row", gap: space(2), marginTop: space(2) }}>
-        <Button title={STR.cancel} variant="secondary" onPress={() => navigation.goBack()} />
-        <Button title={STR.stfIssueAndPdf} loading={busy} disabled={!canSubmit} onPress={() => void onSubmit()} />
+        <Button title={issuedNote ? STR.close : STR.cancel} variant="secondary" onPress={() => navigation.goBack()} />
+        {/* Once issued (even if sending failed) the button is gone — a second tap would
+            issue a second letter with a new ref no. */}
+        {issuedNote ? null : (
+          <Button title={STR.stfIssueAndPdf} loading={busy} disabled={!canSubmit} onPress={() => void onSubmit()} />
+        )}
       </View>
     </Screen>
   );

@@ -41,6 +41,7 @@ import {
   OFFBOARDING_CASES_QUERY,
   HR_POLICY_QUERY,
   VOID_STAFF_LETTER,
+  SEND_STAFF_LETTER,
   STAFF_CREDENTIAL_CANDIDATES,
   PROVISION_STAFF_LOGIN,
   type ProvisionedCredentialT,
@@ -83,7 +84,7 @@ import { personName, personNameAlt } from "../../lib/personName";
 import { Pager } from "../../components/Pager";
 import { usePagedRows } from "../../lib/paging";
 import { useAuth } from "../../auth/AuthContext";
-import { openPdf, PDF_SUPPORTED } from "../../lib/pdf";
+import { openLetterPdf, LETTER_PDF_SUPPORTED } from "../../lib/pdf";
 import { space } from "../../theme/tokens";
 
 type Props = NativeStackScreenProps<AdminStackParamList, "StaffHub">;
@@ -567,12 +568,16 @@ function PayrollTab({
 }
 
 function DocumentsTab({
-  staff, canIssue, canAppointment, canVoid, onIssue, onConfirm,
+  staff, canIssue, canAppointment, canVoid, canIncrement, canSend, onIssue, onConfirm,
 }: {
   staff: StaffT;
   canIssue: boolean;
   canAppointment: boolean;
   canVoid: boolean;
+  /** D-#899 — the increment letter also records the raise, so it needs payroll:edit too. */
+  canIncrement: boolean;
+  /** D-#900 — send an issued letter to the staff member’s app. */
+  canSend: boolean;
   onIssue: (kind: string) => void;
   onConfirm: (() => void) | null;
 }): React.ReactElement {
@@ -580,6 +585,9 @@ function DocumentsTab({
     query: STAFF_LETTERS_QUERY, variables: { staffProfileId: staff.id }, requestPolicy: "cache-and-network",
   });
   const [, voidLetter] = useMutation(VOID_STAFF_LETTER);
+  const [, sendLetter] = useMutation(SEND_STAFF_LETTER);
+  const [sendingId, setSendingId] = React.useState<string | null>(null);
+  const [sendChoice, setSendChoice] = React.useState<"notification" | "popup" | "both">("both");
   const [voidingId, setVoidingId] = React.useState<string | null>(null);
   const [reason, setReason] = React.useState("");
   const [busy, setBusy] = React.useState(false);
@@ -597,6 +605,25 @@ function DocumentsTab({
     if (res.error) { setFailure(friendlyError(res.error)); return; }
     setVoidingId(null); setReason(""); setNotice(STR.stfLetterVoided);
     refetch({ requestPolicy: "network-only" });
+  }
+
+  async function onSend(letterId: string): Promise<void> {
+    setBusy(true); setFailure(null); setNotice(null);
+    const channels = sendChoice === "both" ? ["notification", "popup"] : [sendChoice];
+    const res = await sendLetter({ letterId, channels });
+    setBusy(false);
+    if (res.error) { setFailure(friendlyError(res.error)); return; }
+    setSendingId(null); setNotice(STR.stfLetterSentOk);
+    refetch({ requestPolicy: "network-only" });
+  }
+
+  async function onOpen(letterId: string): Promise<void> {
+    setFailure(null);
+    try {
+      await openLetterPdf(`/pdf/staff-letter/${letterId}`);
+    } catch (err) {
+      setFailure(err instanceof Error ? err.message : String(err));
+    }
   }
 
   return (
@@ -631,6 +658,12 @@ function DocumentsTab({
             ) : null}
           </>
         )}
+        {canIncrement ? (
+          <>
+            <View style={{ height: space(2) }} />
+            <Button title={STR.stfLetterIncrement} variant="secondary" onPress={() => onIssue("increment")} />
+          </>
+        ) : null}
         <View style={{ height: space(2) }} />
         <Button title={STR.stfLetterCertificate} variant="secondary" onPress={() => onIssue("service_certificate")} />
         {/* The Bangla চুক্তিপত্র, for staff who sign a contract rather than receive an
@@ -660,14 +693,32 @@ function DocumentsTab({
                 <Muted>{`${l.refNo} · ${fmtDate(l.letterDate)}`}</Muted>
                 <Muted>{`${l.designation} · ${l.salaryMode === "paid" ? STR.stfSalaryModePaid : STR.stfSalaryModeHonorary}`}</Muted>
                 {l.voidReason ? <Muted>{l.voidReason}</Muted> : null}
+                {l.lastSentAt ? (
+                  <Muted>{`${STR.stfLetterLastSent}: ${fmtDate(l.lastSentAt.slice(0, 10))} · ${l.lastSentChannels
+                    .map((c) => (c === "popup" ? STR.stfLetterSendPopup : STR.stfLetterSendNotification))
+                    .join(" + ")}`}</Muted>
+                ) : null}
                 <View style={{ flexDirection: "row", gap: space(2), marginTop: space(1), flexWrap: "wrap" }}>
-                  {PDF_SUPPORTED ? (
-                    <Button title={STR.stfViewPdf} variant="secondary" onPress={() => void openPdf(`/pdf/staff-letter/${l.id}`)} />
+                  {LETTER_PDF_SUPPORTED ? (
+                    <Button title={STR.stfViewPdf} variant="secondary" onPress={() => void onOpen(l.id)} />
+                  ) : null}
+                  {canSend && l.status === "issued" ? (
+                    <Button title={STR.stfLetterSend} variant="secondary" onPress={() => setSendingId(sendingId === l.id ? null : l.id)} />
                   ) : null}
                   {canVoid && l.status === "issued" ? (
                     <Button title={STR.stfVoidLetter} variant="ghost" onPress={() => setVoidingId(l.id)} />
                   ) : null}
                 </View>
+                {sendingId === l.id ? (
+                  <View style={{ marginTop: space(2) }}>
+                    <ChipRow>
+                      <Chip label={STR.stfLetterSendNotification} selected={sendChoice === "notification"} onPress={() => setSendChoice("notification")} />
+                      <Chip label={STR.stfLetterSendPopup} selected={sendChoice === "popup"} onPress={() => setSendChoice("popup")} />
+                      <Chip label={STR.stfLetterSendBoth} selected={sendChoice === "both"} onPress={() => setSendChoice("both")} />
+                    </ChipRow>
+                    <Button title={STR.stfLetterSendNow} loading={busy} onPress={() => void onSend(l.id)} />
+                  </View>
+                ) : null}
                 {voidingId === l.id ? (
                   <View style={{ marginTop: space(2) }}>
                     <Field label={STR.stfVoidReasonPrompt} value={reason} onChangeText={setReason} />
@@ -773,6 +824,7 @@ function letterKindLabel(kind: string): string {
   if (kind === "appointment") return STR.stfLetterAppointment;
   if (kind === "confirmation") return STR.stfLetterConfirmation;
   if (kind === "support_contract") return STR.stfLetterContract;
+  if (kind === "increment") return STR.stfLetterIncrement;
   return STR.stfLetterCertificate;
 }
 
@@ -892,6 +944,8 @@ export default function StaffHubScreen({ route, navigation }: Props): React.Reac
           canIssue={can("staff_letters:issue")}
           canAppointment={can("hr_policy:view")}
           canVoid={can("staff_letters:void")}
+          canIncrement={can("payroll:edit")}
+          canSend={can("staff_letters:send")}
           onIssue={(kind) => navigation.navigate("IssueLetter", { staff, kind })}
           onConfirm={canConfirm ? () => navigation.navigate("ConfirmEmployment", { staff }) : null}
         />

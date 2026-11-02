@@ -41,6 +41,10 @@ export default function HrHomeScreen({ navigation }: Props): React.ReactElement 
         <Body style={{ fontWeight: "700" }}>{STR.hrMyRecord}</Body>
         <Muted>{STR.hrMyRecordSub}</Muted>
       </Card>
+      <Card onPress={() => navigation.navigate("MyLetters")}>
+        <Body style={{ fontWeight: "700" }}>{STR.hrMyLetters}</Body>
+        <Muted>{STR.hrMyLettersSub}</Muted>
+      </Card>
       {can("mark_submission:view_own") ? (
         <Card onPress={() => navigation.navigate("MarkCorrections")}>
           <Body style={{ fontWeight: "700" }}>{STR.msgNotesTitle}</Body>
