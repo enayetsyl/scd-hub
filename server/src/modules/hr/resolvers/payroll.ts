@@ -33,7 +33,13 @@ import {
 } from "../services/PayrollService";
 import { issueAdvance, settleAdvance, advancesForStaff } from "../services/AdvanceService";
 import { resolveStaffProfileForUser } from "../services/staffMatch";
-import { leaveChargeCandidates, type LeaveChargeCandidate } from "../services/LeaveChargeService";
+import {
+  leaveChargeCandidates,
+  latenessChargeCandidates,
+  type LeaveChargeCandidate,
+  type LatenessChargeCandidate,
+  type LatenessCandidatesView,
+} from "../services/LeaveChargeService";
 import type { IPayrollRun } from "../models/PayrollRun";
 import type { IPayslip, IPayLine } from "../models/Payslip";
 import type { IAdvanceLoan, AdvanceRecoveryMode } from "../models/AdvanceLoan";
@@ -249,6 +255,9 @@ const StaffAdjustmentInputRef = builder.inputType("StaffPayrollAdjustmentInput",
     // Refused above the held debt; otherwise it waits for confirmation or exit.
     probationChargeDays: t.float({ required: false }),
     probationChargeNote: t.string({ required: false }),
+    // D-#908 — per-person lateness, while the school-wide rule is off: days + "salary" | "leave".
+    latenessChargeDays: t.float({ required: false }),
+    latenessChargeTo: t.string({ required: false }),
     // D-#622 — a ONE-OFF advance recovers only when this says so; an installment
     // keeps running unless it turns it off for the month.
     recoverAdvance: t.boolean({ required: false }),
@@ -404,6 +413,8 @@ builder.mutationField("preparePayrollRun", (t) =>
           leaveRecoveryNote: a.leaveRecoveryNote ?? undefined,
           probationChargeDays: a.probationChargeDays ?? undefined,
           probationChargeNote: a.probationChargeNote ?? undefined,
+          latenessChargeDays: a.latenessChargeDays ?? undefined,
+          latenessChargeTo: (a.latenessChargeTo ?? undefined) as "salary" | "leave" | undefined,
           recoverAdvance: a.recoverAdvance ?? undefined,
         })),
       });
@@ -527,6 +538,37 @@ builder.queryField("leaveChargeCandidates", (t) =>
     authScopes: { hasPermission: "payroll:prepare" },
     args: { monthKey: t.arg.string({ required: true }) },
     resolve: async (_root, args) => leaveChargeCandidates(args.monthKey),
+  }),
+);
+
+const LatenessChargeCandidateRef = builder.objectRef<LatenessChargeCandidate>("LatenessChargeCandidate");
+LatenessChargeCandidateRef.implement({
+  description: "Someone with chargeable late days in a month (D-#908): every LATE mark, and the most days a charge may take.",
+  fields: (t) => ({
+    staffProfileId: t.exposeString("staffProfileId"),
+    name: t.exposeString("name"),
+    lateCount: t.exposeInt("lateCount"),
+    lateDateKeys: t.exposeStringList("lateDateKeys"),
+    days: t.exposeFloat("days"),
+  }),
+});
+const LatenessCandidatesRef = builder.objectRef<LatenessCandidatesView>("LatenessCandidates");
+LatenessCandidatesRef.implement({
+  description: "The prepare screen’s per-person lateness card (D-#908). `ruleOn` = the school-wide rule charges everyone, so there are no rows.",
+  fields: (t) => ({
+    ruleOn: t.exposeBoolean("ruleOn"),
+    lateDaysPerCharge: t.exposeInt("lateDaysPerCharge"),
+    rows: t.field({ type: [LatenessChargeCandidateRef], resolve: (v) => v.rows }),
+  }),
+});
+
+builder.queryField("latenessChargeCandidates", (t) =>
+  t.field({
+    type: LatenessCandidatesRef,
+    description: "Who has chargeable late days this month, for the per-person lateness switches (D-#908). Requires payroll:prepare.",
+    authScopes: { hasPermission: "payroll:prepare" },
+    args: { monthKey: t.arg.string({ required: true }) },
+    resolve: async (_root, args) => latenessChargeCandidates(args.monthKey),
   }),
 );
 
