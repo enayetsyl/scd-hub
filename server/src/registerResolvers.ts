@@ -38,6 +38,7 @@ import "./modules/trackers/resolvers/wholePicture";
 import "./modules/trackers/resolvers/studentProfile";
 import "./modules/trackers/resolvers/workClaim";
 import "./modules/reports/resolvers/monthlyReport";
+import "./modules/reports/resolvers/marksDrivers";
 import "./modules/trackers/resolvers/reconReport";
 import "./modules/trackers/resolvers/hwLifecycleReport";
 import "./modules/trackers/resolvers/hwWeeklyDigest";
