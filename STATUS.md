@@ -1,5 +1,8 @@
 # STATUS
 
+- 2026-11-03: **BUILT — approved late entry counts as a late (D-#912)** (branch `feat/late-entry-counts-as-late`, worktree `C:/w/leave-charge`). Approving a late-entry leave now draws nothing from the leave balance and is never held; `lateDateKeysForMonth` = sheet LATE ∪ approved late entries (once per day).
+  - **Verified:** server tsc 0; full server jest 348 suites / 6,074 tests; leaveChargeOption 18/18 (+2: no balance draw for confirmed + probationer; counted once with the sheet).
+  - **Now / next:** PR → dev → promote → prod one-off: re-stamp the 5 approved October late-entry leaves to paidDays 0 (dry run listed them: Nuha 11, Tazkir 15, Akmol 19, Maruf 20 + 28 Oct; none earlier, none held). Server-only, no OTA.
 - 2026-11-03: **BUILT — cancel a recurring task for this day only, or this and all future (D-#911)** (branch `feat/recurring-task-cancel-scope`, worktree `C:/w/rtc`). Task screen on a recurring copy: শুধু এই দিনের কাজ বাতিল / এটি ও পরের সব বাতিল; the second = `cancelTask(stopRecurring: true)` → pauses the template + withdraws its open copies due on/after this one.
   - **Verified:** server + app tsc 0; full server jest 348 suites / 6,075 tests (workBoard +3); local walk on in-memory Mongo + Expo web + Chrome 14/14 (one-off task keeps the single বাতিল করুন; a recurring copy shows both buttons + hint; this-day-only hid that copy and left its template on; all-future paused the template and hid the 11-03 + 11-05 copies, the overdue 11-02 copy untouched; নিয়মিত কাজ shows it বন্ধ with চালু করুন; no page errors).
   - **Now / next:** PR → dev → try it on the dev site → promote (server + app) → **OTA** (the buttons are app code; old bundles keep the single বাতিল করুন and still work).
