@@ -32,6 +32,16 @@ export type PopupTone = (typeof POPUP_TONES)[number];
 export const POPUP_REPEATS = ["once", "daily", "every_open", "window"] as const;
 export type PopupRepeat = (typeof POPUP_REPEATS)[number];
 
+/**
+ * A notice tied to a task (D-#913): it ends for a person when the work it asks for is
+ * finished — not when they close it — checked on every app open. Staff audiences only.
+ *   MEETING_SUMMARIES  no child of theirs is left without a class-teacher summary in any
+ *                      open parents' meeting (mySummaryWork: nothing READY or WAITING). A
+ *                      teacher who is no longer anyone's class teacher is done too.
+ */
+export const POPUP_DONE_WHENS = ["MEETING_SUMMARIES"] as const;
+export type PopupDoneWhen = (typeof POPUP_DONE_WHENS)[number];
+
 export const POPUP_ACTION_KINDS = ["ACK", "CHOICE", "OPEN_SCREEN", "OPEN_LINK"] as const;
 export type PopupActionKind = (typeof POPUP_ACTION_KINDS)[number];
 
@@ -126,6 +136,8 @@ export interface IPopupNotice extends Document {
   /** Dhaka date key, inclusive. */
   endsOn: string;
   repeat: PopupRepeat;
+  /** Set = closing does not finish it; the task does (D-#913). */
+  doneWhen?: PopupDoneWhen | null;
   status: PopupStatus;
   /** Bumped on every content edit after publish. */
   version: number;
@@ -195,6 +207,7 @@ const PopupNoticeSchema = new Schema<IPopupNotice>(
     startsAt: { type: Date, default: null },
     endsOn: { type: String, required: true },
     repeat: { type: String, enum: POPUP_REPEATS, default: "daily" },
+    doneWhen: { type: String, enum: [...POPUP_DONE_WHENS, null], default: null },
     status: { type: String, enum: POPUP_STATUSES, default: "DRAFT" },
     version: { type: Number, default: 1 },
     recipientCount: { type: Number, default: 0 },

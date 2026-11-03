@@ -32,11 +32,13 @@ import { writeAudit } from "../../platform/services/AuditService";
 import {
   PopupNotice,
   POPUP_ACTION_KINDS,
+  POPUP_DONE_WHENS,
   POPUP_REPEATS,
   POPUP_TONES,
   type IPopupNotice,
   type PopupAction,
   type PopupAudience,
+  type PopupDoneWhen,
   type PopupRepeat,
   type PopupRules,
   type PopupStaffFilter,
@@ -61,6 +63,7 @@ import {
   resolveAudience,
   type PopupAudienceInput,
 } from "./PopupAudienceService";
+import { isTaskDone } from "./popupDoneWhen";
 
 export { PopupNoticeError } from "./PopupAudienceService";
 
@@ -140,6 +143,8 @@ export interface PopupNoticeInput {
   startsAt?: string | null;
   endsOn: string;
   repeat?: string | null;
+  /** D-#913: "MEETING_SUMMARIES" ends it per person when their work is done. Absent on a re-save keeps the stored value. */
+  doneWhen?: string | null;
 }
 
 const isHttps = (u: string) => /^https:\/\/\S+$/i.test(u);
@@ -252,6 +257,14 @@ function normalizeSchedule(input: { startsAt?: string | null; endsOn: string; re
   return { startsAt, endsOn: input.endsOn, repeat };
 }
 
+/** D-#913: a task-tied notice is for staff only — the task is a staff member's own work. */
+function normalizeDoneWhen(value: string | null | undefined, audience: PopupAudience): PopupDoneWhen | null {
+  if (!value) return null;
+  if (!(POPUP_DONE_WHENS as readonly string[]).includes(value)) throw new PopupNoticeError("কাজ শেষ হওয়ার শর্তটি সঠিক নয়");
+  if (audienceTouches(audience).guardian) throw new PopupNoticeError("কাজ শেষ হলে বন্ধ হওয়ার বার্তা শুধু কর্মীদের পাঠানো যায়");
+  return value as PopupDoneWhen;
+}
+
 // ---------------------------------------------------------------------------
 // Personalisation (D-#854: a tailored message)
 // ---------------------------------------------------------------------------
@@ -304,6 +317,7 @@ export interface PopupNoticeDTO {
   startsAt: string | null;
   endsOn: string;
   repeat: string;
+  doneWhen: string | null;
   status: string;
   displayStatus: PopupDisplayStatus;
   version: number;
@@ -398,6 +412,7 @@ function toDTO(
     startsAt: n.startsAt ? n.startsAt.toISOString() : null,
     endsOn: n.endsOn,
     repeat: n.repeat,
+    doneWhen: n.doneWhen ?? null,
     status: n.status,
     displayStatus: displayStatus(n, now),
     version: n.version ?? 1,
@@ -457,13 +472,15 @@ export async function savePopupDraft(ctx: AppContext, id: string | null | undefi
   const fields = { ...content, audience, audienceListId, audienceSummary, rules, actions, ...schedule, updatedBy: userId };
 
   if (!id) {
-    const created = await PopupNotice.create({ ...fields, status: "DRAFT", createdBy: userId });
+    const created = await PopupNotice.create({ ...fields, doneWhen: normalizeDoneWhen(input.doneWhen, audience), status: "DRAFT", createdBy: userId });
     return loadDTO(created);
   }
   const n = await mustFind(id);
   if (n.status !== "DRAFT") throw new PopupNoticeError("পাঠানো বার্তার প্রাপক বা আচরণ বদলানো যায় না — লেখা ঠিক করুন, অথবা বন্ধ করে কপি করুন");
   assertCanSendTo(ctx, n.audience);
-  n.set(fields);
+  // The composer does not send doneWhen yet, so its re-save must not drop a stored one.
+  const doneWhen = normalizeDoneWhen(input.doneWhen === undefined ? n.doneWhen : input.doneWhen, audience);
+  n.set({ ...fields, doneWhen });
   await n.save();
   return loadDTO(n);
 }
@@ -630,6 +647,7 @@ export async function duplicatePopupNotice(ctx: AppContext, id: string, now = ne
     startsAt: null,
     endsOn: addDays(today, 7),
     repeat: n.repeat,
+    doneWhen: n.doneWhen ?? null,
     status: "DRAFT",
     createdBy: userId,
     updatedBy: userId,
@@ -731,6 +749,38 @@ function showOf(n: IPopupNotice, r: IPopupNoticeRecipient, fromLabel: string, to
 }
 
 /**
+ * D-#913: a task-tied notice ends for this person when the task is finished, so check the
+ * open ones (one read per kind of task) and stamp them done — `doneAt` then means "did the
+ * work", which is what the sender's report counts. Test rows are left to the close button:
+ * the sender testing it is rarely the one with the work. A failed check keeps it showing.
+ * Mutates the lean `rows` so the caller filters them out on this same open.
+ */
+async function endFinishedTasks(
+  me: { kind: PopupRecipientKind; id: Types.ObjectId },
+  rows: IPopupNoticeRecipient[],
+  byId: Map<string, IPopupNotice>,
+  now: Date,
+): Promise<void> {
+  if (me.kind !== "USER") return;
+  const open = rows.filter((r) => !r.test && !r.doneAt && byId.get(r.noticeId.toString())?.doneWhen);
+  for (const kind of new Set(open.map((r) => byId.get(r.noticeId.toString())!.doneWhen!))) {
+    let done = false;
+    try {
+      done = await isTaskDone(kind, me.id.toString(), now);
+    } catch (err) {
+      console.error(`popup task check ${kind} failed — still showing:`, err);
+    }
+    if (!done) continue;
+    const mine = open.filter((r) => byId.get(r.noticeId.toString())!.doneWhen === kind);
+    await PopupNoticeRecipient.updateMany(
+      { _id: { $in: mine.map((r) => r._id) }, doneAt: null },
+      { $set: { doneAt: now, closeMethod: "task", pending: false } },
+    );
+    for (const r of mine) r.doneAt = now;
+  }
+}
+
+/**
  * What to show on this app open, in order (D-#855). Never throws — it is read inside the
  * authenticated shell on every open, so a failure must render nothing (the 791e5fe rule).
  */
@@ -755,10 +805,11 @@ export async function myPopupQueue(ctx: AppContext, now = new Date()): Promise<P
       for (const n of extra) byId.set(n._id.toString(), n);
     }
     const senders = await namesOf([...byId.values()].map((n) => n.publishedBy ?? n.createdBy));
+    await endFinishedTasks(me, rows, byId, now);
 
     const due = rows
       .map((r) => ({ r, n: byId.get(r.noticeId.toString()) }))
-      .filter((x): x is { r: IPopupNoticeRecipient; n: IPopupNotice } => !!x.n && isDue(x.n.repeat, x.r, todayKey))
+      .filter((x): x is { r: IPopupNoticeRecipient; n: IPopupNotice } => !!x.n && !(x.n.doneWhen && !x.r.test && x.r.doneAt) && isDue(x.n.repeat, x.r, todayKey))
       .sort(
         (a, b) =>
           priorityOf(a.n.rules) - priorityOf(b.n.rules) ||
@@ -840,7 +891,8 @@ export async function recordPopupEvent(ctx: AppContext, input: PopupEventInput, 
       if (method === "button" && !n.rules.closeButton) throw new PopupNoticeError("এই বার্তা বন্ধ করার বোতাম নেই");
       state = maxState(state, method === "button" ? "READ" : "SEEN");
       if (method === "button" && !r.readAt) set.readAt = now;
-      if (!r.doneAt) set.doneAt = now;
+      // A task-tied notice is done by the work, not the ✕ (D-#913) — it returns tomorrow.
+      if (!r.doneAt && (!n.doneWhen || r.test)) set.doneAt = now;
       set.closeMethod = method as PopupCloseMethod;
       set.pending = false;
       break;
@@ -856,7 +908,7 @@ export async function recordPopupEvent(ctx: AppContext, input: PopupEventInput, 
       set.choiceId = action.id;
       set.actedAt = now;
       if (!r.readAt) set.readAt = now;
-      if (!r.doneAt) set.doneAt = now;
+      if (!r.doneAt && (!n.doneWhen || r.test)) set.doneAt = now;
       set.closeMethod = "action";
       set.pending = false;
       break;
