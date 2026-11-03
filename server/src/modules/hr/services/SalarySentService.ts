@@ -42,8 +42,12 @@ import { bnNum } from "../../../lib/bnNum";
 
 /** The app screen the pop-up's button opens: the staff member's own record, payslips included. */
 export const MY_RECORD_TARGET = "HrTab/MyRecord";
-/** How long the pop-up keeps coming back (daily) until they open it. */
-const POPUP_DAYS = 7;
+/**
+ * The pop-up shows ONCE, on the next app open (owner, D-#916: "only the next time when the
+ * app is open") — closing it or pressing its button ends it. This is only how long it waits
+ * for that next open, so someone away from the app for a while still sees it.
+ */
+const POPUP_DAYS = 30;
 
 const BN_MONTHS = [
   "জানুয়ারি", "ফেব্রুয়ারি", "মার্চ", "এপ্রিল", "মে", "জুন",
@@ -167,7 +171,7 @@ export async function announceSalarySent(
       rules: { closeButton: true },
       actions: [{ kind: "OPEN_SCREEN", labelBn: "বেতনের হিসাব দেখুন", labelEn: "Open my payslip", target: MY_RECORD_TARGET }],
       endsOn: dhakaDayKey(new Date(now.getTime() + POPUP_DAYS * 86_400_000)),
-      repeat: "daily",
+      repeat: "once",
     });
     const published = await publishPopupNotice(ctx, draft.id, now);
     popupNoticeId = new Types.ObjectId(published.id);
