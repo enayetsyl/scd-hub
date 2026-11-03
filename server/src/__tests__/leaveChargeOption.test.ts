@@ -32,7 +32,10 @@ import {
 } from "../modules/hr/services/ProbationDebtService";
 import { confirmEmployment } from "../modules/hr/services/ConfirmationService";
 import { pooledBalanceForStaff } from "../modules/hr/services/LeaveEntitlementService";
-import { leaveChargeCandidates } from "../modules/hr/services/LeaveChargeService";
+import { leaveChargeCandidates, latenessChargeCandidates } from "../modules/hr/services/LeaveChargeService";
+import { setHrPolicy } from "../modules/hr/services/HrPolicyService";
+import { TeacherAttendanceDay } from "../modules/attendance/models/TeacherAttendanceDay";
+import { LatenessCharge } from "../modules/hr/models/LatenessCharge";
 
 jest.setTimeout(120_000);
 
@@ -274,5 +277,81 @@ describe("permanent staff — the agreed recovery is capped at the deficit (D-#6
 
     expect(await leaveChargeCandidates(MONTH)).toEqual([]);
     await expect(prepare([{ staffProfileId: s, leaveRecoveryDays: 1 }])).rejects.toThrow(/০ দিন/);
+  });
+});
+
+describe("lateness, person by person (D-#908)", () => {
+  async function lates(staffProfileId: string, n: number): Promise<void> {
+    for (let d = 1; d <= n; d++) {
+      await TeacherAttendanceDay.create({
+        staffProfileId, dateKey: `${MONTH}-${String(d).padStart(2, "0")}`, status: "LATE", importedBy: ACTOR,
+      });
+    }
+  }
+
+  it("lists late marks → chargeable days (3 lates = 1 day, remainder forgiven); 2 lates is not listed", async () => {
+    const a = await staff("Late Nine", "2026-03-01");
+    const b = await staff("Late Two", "2026-03-01");
+    await lates(a, 9);
+    await lates(b, 2);
+
+    const view = await latenessChargeCandidates(MONTH);
+    expect(view.ruleOn).toBe(false);
+    expect(view.rows.map((r) => [r.name, r.lateCount, r.days])).toEqual([["Late Nine", 9, 3]]);
+  });
+
+  it("nothing is charged unless chosen; SALARY puts days × day-rate on the payslip and leaves the balance alone", async () => {
+    const s = await staff("Late Nine", "2026-03-01");
+    await lates(s, 9);
+    const before = (await pooledBalanceForStaff(s)).remainingDays;
+
+    await prepare();
+    expect((await slipFor(s))!.netPay).toBe(SALARY);
+
+    await prepare([{ staffProfileId: s, latenessChargeDays: 2, latenessChargeTo: "salary" }]);
+    const slip = await slipFor(s);
+    const line = slip!.deductions.find((d) => d.type === "lateness");
+    expect(line?.amount).toBe(2 * slip!.dayRate);
+    expect(slip!.netPay).toBe(SALARY - 2 * slip!.dayRate);
+    expect((await pooledBalanceForStaff(s)).remainingDays).toBe(before);
+  });
+
+  it("LEAVE BALANCE takes the days off the balance and leaves the payslip whole", async () => {
+    const s = await staff("Late Nine", "2026-03-01");
+    await lates(s, 9);
+    const before = (await pooledBalanceForStaff(s)).remainingDays;
+
+    await prepare([{ staffProfileId: s, latenessChargeDays: 3, latenessChargeTo: "leave" }]);
+
+    expect((await slipFor(s))!.netPay).toBe(SALARY);
+    expect((await pooledBalanceForStaff(s)).remainingDays).toBe(before - 3);
+  });
+
+  it("re-preparing without the choice, or cancelling, withdraws the charge", async () => {
+    const s = await staff("Late Nine", "2026-03-01");
+    await lates(s, 9);
+    const before = (await pooledBalanceForStaff(s)).remainingDays;
+
+    await prepare([{ staffProfileId: s, latenessChargeDays: 3, latenessChargeTo: "leave" }]);
+    await prepare();
+    expect((await pooledBalanceForStaff(s)).remainingDays).toBe(before);
+    expect(await LatenessCharge.countDocuments()).toBe(0);
+
+    const { run } = await prepare([{ staffProfileId: s, latenessChargeDays: 3, latenessChargeTo: "leave" }]);
+    await cancelPayrollRun(run._id.toString(), ACTOR);
+    expect((await pooledBalanceForStaff(s)).remainingDays).toBe(before);
+  });
+
+  it("refuses more days than the late marks allow, a missing destination, and any choice while the rule is on", async () => {
+    const s = await staff("Late Nine", "2026-03-01");
+    await lates(s, 9);
+
+    await expect(prepare([{ staffProfileId: s, latenessChargeDays: 4, latenessChargeTo: "salary" }])).rejects.toThrow(/৩ দিন/);
+    await expect(prepare([{ staffProfileId: s, latenessChargeDays: 1 }])).rejects.toThrow(/বাছাই/);
+    expect(await PayrollRun.countDocuments()).toBe(0);
+
+    await setHrPolicy({ latenessRuleEnabled: true, actorId: ACTOR });
+    expect((await latenessChargeCandidates(MONTH)).ruleOn).toBe(true);
+    await expect(prepare([{ staffProfileId: s, latenessChargeDays: 1, latenessChargeTo: "salary" }])).rejects.toThrow(/নিয়ম চালু/);
   });
 });

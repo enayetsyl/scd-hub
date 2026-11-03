@@ -27,7 +27,7 @@ import { PopupNotice } from "../modules/popup-notices/models/PopupNotice";
 import { PopupNoticeRecipient } from "../modules/popup-notices/models/PopupNoticeRecipient";
 import { buildLetter, issueLetter } from "../modules/hr/services/StaffLetterService";
 import { sendLetter, MY_LETTERS_TARGET } from "../modules/hr/services/StaffLetterSendService";
-import { renderLetterToPdf } from "../modules/hr/routes/staffLetterPdf";
+import { renderLetterToPdf, incrementBody } from "../modules/hr/routes/staffLetterPdf";
 import { salariesEffectiveIn } from "../modules/hr/services/PayHistoryService";
 import { recordProbationDebt } from "../modules/hr/services/ProbationDebtService";
 import {
@@ -124,6 +124,19 @@ describe("increment letter (D-#901)", () => {
     const s = await staff();
     await expect(issueLetter(incrementInput(s, { monthlySalary: 18_000 }))).rejects.toThrow(/বেশি হতে হবে/);
     expect(await StaffLetter.countDocuments()).toBe(0);
+  });
+});
+
+describe("the standard increment text (D-#909)", () => {
+  it("after Set pay already recorded the raise, the draft reads FROM the old figure, not the profile’s current one", async () => {
+    const s = await staff({ monthlySalary: 25_000 });
+    await StaffPayChange.create({
+      staffProfileId: s, effectiveFrom: "2026-10", monthlySalary: 25_000, previousSalary: 15_000, actorId: principalId,
+    });
+
+    const built = await buildLetter(incrementInput(s));
+
+    expect(incrementBody(built.snapshot)).toContain("from Tk. 15,000 to Tk. 25,000 with effect from October, 2026");
   });
 });
 
