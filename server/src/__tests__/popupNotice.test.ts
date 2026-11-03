@@ -60,6 +60,11 @@ import {
   withdrawPopupNotice,
   type PopupNoticeInput,
 } from "../modules/popup-notices/services/PopupNoticeService";
+import { isTaskDone } from "../modules/popup-notices/services/popupDoneWhen";
+
+// D-#913: the task check is the class teacher's meeting work list; stubbed per test here.
+jest.mock("../modules/popup-notices/services/popupDoneWhen", () => ({ isTaskDone: jest.fn(async () => false) }));
+const taskDone = isTaskDone as jest.MockedFunction<typeof isTaskDone>;
 
 jest.setTimeout(120_000);
 
@@ -509,6 +514,88 @@ describe("queue", () => {
     const n = await sent(office, {});
     expect(await myPopupQueue(ctxOf(s.gZara, "GUARDIAN"), NOW)).toHaveLength(0);
     await expect(recordPopupEvent(ctxOf(s.kgF, "TEACHER"), { noticeId: n.id, kind: "SEEN" }, NOW)).rejects.toThrow(/আপনার জন্য নয়/);
+  });
+});
+
+describe("task-tied notices (D-#913)", () => {
+  const ctNotice = {
+    audience: { staff: { classTeachersOnly: true } },
+    doneWhen: "MEETING_SUMMARIES",
+    repeat: "daily",
+    rules: { closeButton: true },
+    actions: [{ kind: "OPEN_SCREEN", labelBn: "নির্দেশিকা পড়ুন", target: "MeetingCommentGuide" }],
+  } as Partial<PopupNoticeInput>;
+
+  afterEach(() => taskDone.mockReset().mockResolvedValue(false));
+
+  test("closing does not finish it: back every morning until the summaries are written, then gone and counted done", async () => {
+    const s = await school();
+    const office = ctxOf(s.office, "OFFICE");
+    const n = await sent(office, ctNotice);
+    expect(n.doneWhen).toBe("MEETING_SUMMARIES");
+    const t = ctxOf(s.c3F, "TEACHER");
+
+    expect(await myPopupQueue(t, NOW)).toHaveLength(1);
+    await recordPopupEvent(t, { noticeId: n.id, kind: "SEEN" }, NOW);
+    await recordPopupEvent(t, { noticeId: n.id, kind: "CLOSED", method: "button" }, NOW);
+    expect(await myPopupQueue(t, LATER_SAME_DAY)).toHaveLength(0);
+    let row = await PopupNoticeRecipient.findOne({ noticeId: n.id, recipientId: s.c3F }).lean();
+    expect(row).toMatchObject({ doneAt: null, closeMethod: "button" });
+
+    // Next morning: still owes summaries → shown again.
+    expect(await myPopupQueue(t, NEXT_DAY)).toHaveLength(1);
+    expect(taskDone).toHaveBeenCalledWith("MEETING_SUMMARIES", s.c3F, NEXT_DAY);
+
+    // Summaries written → gone on the next open, even later the same day, and done in the report.
+    taskDone.mockResolvedValue(true);
+    expect(await myPopupQueue(t, NEXT_DAY)).toHaveLength(0);
+    row = await PopupNoticeRecipient.findOne({ noticeId: n.id, recipientId: s.c3F }).lean();
+    expect(row).toMatchObject({ closeMethod: "task" });
+    expect(row!.doneAt).toEqual(NEXT_DAY);
+    expect((await popupNoticeReport(n.id)).done).toBe(1);
+    // The other class teacher has not opened the app since — still not done.
+    expect(await PopupNoticeRecipient.countDocuments({ noticeId: n.id, doneAt: null })).toBe(1);
+  });
+
+  test("a window notice that is task-tied also stops once the work is done", async () => {
+    const s = await school();
+    const n = await sent(ctxOf(s.office, "OFFICE"), { ...ctNotice, repeat: "window" });
+    const t = ctxOf(s.kgF, "TEACHER");
+    taskDone.mockResolvedValue(true);
+    expect(await myPopupQueue(t, NOW)).toHaveLength(0);
+    expect(await myPopupQueue(t, NEXT_DAY)).toHaveLength(0);
+    expect(taskDone).toHaveBeenCalledTimes(1); // stamped once, never re-checked
+    expect(n.recipientCount).toBe(2);
+  });
+
+  test("a failed task check keeps it showing; the sender's test copy closes by ✕", async () => {
+    const s = await school();
+    const office = ctxOf(s.office, "OFFICE");
+    const n = await sent(office, ctNotice);
+    taskDone.mockRejectedValue(new Error("boom"));
+    const err = jest.spyOn(console, "error").mockImplementation(() => undefined);
+    expect(await myPopupQueue(ctxOf(s.kgF, "TEACHER"), NOW)).toHaveLength(1);
+    err.mockRestore();
+
+    taskDone.mockResolvedValue(true);
+    await sendPopupTestToMe(office, n.id);
+    const me = ctxOf(s.office, "OFFICE");
+    expect(await myPopupQueue(me, NOW)).toHaveLength(1);
+    await recordPopupEvent(me, { noticeId: n.id, kind: "CLOSED", method: "button", test: true }, NOW);
+    expect(await myPopupQueue(me, NOW)).toHaveLength(0);
+  });
+
+  test("refused for guardians and for an unknown task; a composer re-save keeps it; a copy keeps it", async () => {
+    const s = await school();
+    const office = ctxOf(s.office, "OFFICE");
+    await expect(savePopupDraft(office, null, input({ doneWhen: "MEETING_SUMMARIES" }))).rejects.toThrow(/শুধু কর্মীদের/);
+    await expect(savePopupDraft(office, null, input({ ...ctNotice, doneWhen: "NOPE" }))).rejects.toThrow(/শর্তটি সঠিক নয়/);
+    const d = await savePopupDraft(office, null, input(ctNotice));
+    const withoutTask = { ...input(ctNotice), doneWhen: undefined };
+    expect((await savePopupDraft(office, d.id, withoutTask)).doneWhen).toBe("MEETING_SUMMARIES");
+    expect((await savePopupDraft(office, d.id, { ...withoutTask, doneWhen: null })).doneWhen).toBeNull();
+    const again = await savePopupDraft(office, d.id, input(ctNotice));
+    expect((await duplicatePopupNotice(office, again.id, NOW)).doneWhen).toBe("MEETING_SUMMARIES");
   });
 });
 
