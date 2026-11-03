@@ -1,5 +1,7 @@
 # STATUS
 
+- 2026-11-03: **CHANGED — salary-sent pop-up shows once (D-#916)** (branch `fix/salary-popup-once`). Owner: only the next app open, not daily for 7 days; no-amount default confirmed. Server only (`repeat: "once"`, 30-day wait) → no OTA.
+  - **Verified:** server tsc 0; salarySheetAndSent 7/7 (asserts repeat once).
 - 2026-11-03: **BUILT — salary sheet PDF + salary-sent notice (D-#914, D-#915)** (branch `feat/salary-sheet-sent-notice`, worktree `C:/w/leave-charge`). Run screen: বেতন শিট (PDF) beside the register (grouped by own bank / BEFTN / cash, a column per deduction kind, subtotals, grand total, signature lines); on a locked run, বেতন দেওয়া হয়েছে — কর্মীদের জানান: per payment group, notification (own amount) / pop-up / both → আমার রেকর্ড payslip. New `payroll:announce_paid` (Office on), `SALARY_SENT` kind, `SALARY_SENT_ANNOUNCED` audit, `PayrollRun.salarySentNotices`.
   - **Verified:** vocab verifier PASS; shared/server/app tsc 0; full server jest 350 suites / 6,094 tests (salarySheetAndSent +7); local walk on in-memory Mongo + Expo web + Chrome: API 4/4 (sheet PDF 200, teacher 403 on sheet and groups) + UI 12 checks (sheet card + PDF tab; 3 group buttons; tell own-bank → শেষ জানানো হয়েছে + আবার জানান; teacher pop-up → বেতনের হিসাব দেখুন opens the payslip; SALARY_SENT carries their own amount; BEFTN group untouched).
   - **Now / next:** PR → dev → promote (server + app) → **OTA**. Owner-unconfirmed defaults: pop-up carries no amount; shows daily for 7 days.
