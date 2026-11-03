@@ -59,7 +59,9 @@ export default function TaskDetailScreen({ route, navigation }: Props): React.Re
   const [showMove, setShowMove] = React.useState(false);
   const [newAssignee, setNewAssignee] = React.useState<string | null>(null);
   const [showReassign, setShowReassign] = React.useState(false);
-  const [confirmCancel, setConfirmCancel] = React.useState(false);
+  /** Which cancel the sheet confirms: "one" = this task (this day only, for a recurring
+   *  copy), "future" = this and all future (D-#911, recurring copies only). */
+  const [confirmCancel, setConfirmCancel] = React.useState<"one" | "future" | null>(null);
 
   const [staffQ] = useQuery({ query: ASSIGNABLE_STAFF_QUERY, pause: !can("work_board:assign") || !showReassign });
   const staff = staffQ.data?.assignableStaff ?? [];
@@ -213,16 +215,30 @@ export default function TaskDetailScreen({ route, navigation }: Props): React.Re
                 <View style={{ height: space(2) }} />
                 <Button title={STR.wbEdit} variant="secondary" onPress={() => navigation.navigate("TaskForm", { taskId: task.id })} />
                 <View style={{ height: space(2) }} />
-                <Button title={STR.wbCancel} variant="danger" onPress={() => setConfirmCancel(true)} />
+                {task.templateId ? (
+                  <>
+                    <Muted>{STR.wbRecurringCopy}</Muted>
+                    <Button title={STR.wbCancelThisDay} variant="danger" onPress={() => setConfirmCancel("one")} />
+                    <View style={{ height: space(2) }} />
+                    <Button title={STR.wbCancelAllFuture} variant="danger" onPress={() => setConfirmCancel("future")} />
+                  </>
+                ) : (
+                  <Button title={STR.wbCancel} variant="danger" onPress={() => setConfirmCancel("one")} />
+                )}
                 <ConfirmSheet
-                  visible={confirmCancel}
-                  title={STR.wbCancelConfirm}
-                  message={task.titleBn}
-                  confirmLabel={STR.wbCancel}
-                  onCancel={() => setConfirmCancel(false)}
+                  visible={confirmCancel !== null}
+                  title={confirmCancel === "future" ? STR.wbCancelAllFutureConfirm : STR.wbCancelConfirm}
+                  message={
+                    task.templateId
+                      ? `${task.titleBn}\n\n${confirmCancel === "future" ? STR.wbCancelAllFutureHint : STR.wbCancelThisDayHint}`
+                      : task.titleBn
+                  }
+                  confirmLabel={confirmCancel === "future" ? STR.wbCancelAllFuture : task.templateId ? STR.wbCancelThisDay : STR.wbCancel}
+                  onCancel={() => setConfirmCancel(null)}
                   onConfirm={() => {
-                    setConfirmCancel(false);
-                    void run(STR.wbCancel, () => cancel({ id: task.id })).then(() => navigation.goBack());
+                    const stopRecurring = confirmCancel === "future";
+                    setConfirmCancel(null);
+                    void run(STR.wbCancel, () => cancel({ id: task.id, stopRecurring })).then(() => navigation.goBack());
                   }}
                 />
               </Card>
