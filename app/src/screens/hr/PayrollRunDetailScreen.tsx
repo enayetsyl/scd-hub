@@ -15,7 +15,10 @@ import {
   CANCEL_PAYROLL_RUN,
   REOPEN_PAYROLL_RUN,
   PAYROLL_RUNS_QUERY,
+  SALARY_SENT_GROUPS,
+  ANNOUNCE_SALARY_SENT,
   type PayLineT,
+  type SalarySentGroupT,
 } from "../../graphql/operations";
 import type { HrStackParamList } from "../../navigation/types";
 import {
@@ -33,6 +36,8 @@ import {
   ErrorBanner,
   Notice,
   Field,
+  Chip,
+  ChipRow,
 } from "../../components/ui";
 import { useAuth } from "../../auth/AuthContext";
 import {
@@ -43,8 +48,9 @@ import {
   payDeductionTypeLabel,
   payAdditionTypeLabel,
   payLineNote,
+  paymentChannelLabel,
 } from "../../lib/labels";
-import { downloadFile, PDF_SUPPORTED } from "../../lib/pdf";
+import { downloadFile, openLetterPdf, PDF_SUPPORTED, LETTER_PDF_SUPPORTED } from "../../lib/pdf";
 import { friendlyError } from "../../lib/errors";
 import { useConfirm } from "../../state/ConfirmContext";
 import { space } from "../../theme/tokens";
@@ -57,6 +63,94 @@ function PayLineRow({ label, line }: { label: string; line: PayLineT }): React.R
       label={`${label}${line.days != null ? ` · ${bnNum(line.days)}` : ""}${payLineNote(line.note) ? ` · ${payLineNote(line.note)}` : ""}`}
       value={money(line.amount)}
     />
+  );
+}
+
+/** An ISO instant as Dhaka date + time, "০৩/১১/২০২৬ ১৪:০৫". */
+function dhakaStamp(iso: string): string {
+  const d = new Date(new Date(iso).getTime() + 6 * 3_600_000).toISOString();
+  return bnNum(`${d.slice(8, 10)}/${d.slice(5, 7)}/${d.slice(0, 4)} ${d.slice(11, 16)}`);
+}
+
+/**
+ * D-#915 — tell each payment group its salary went out, one group at a time: the bank
+ * transfer and the cash envelopes are paid on different days.
+ */
+function SalarySentCard({ runId }: { runId: string }): React.ReactElement | null {
+  const { confirmAction } = useConfirm();
+  const [{ data, error: qErr }] = useQuery({ query: SALARY_SENT_GROUPS, variables: { runId }, requestPolicy: "network-only" });
+  const [, announce] = useMutation(ANNOUNCE_SALARY_SENT);
+  const [groups, setGroups] = React.useState<SalarySentGroupT[] | null>(null);
+  const [choice, setChoice] = React.useState<Record<string, "notification" | "popup" | "both">>({});
+  const [busy, setBusy] = React.useState<string | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
+  const [ok, setOk] = React.useState<string | null>(null);
+
+  const shown = groups ?? data?.salarySentGroups ?? [];
+  if (qErr) return <Card><ErrorBanner message={friendlyError(qErr)} /></Card>;
+  if (shown.length === 0) return null;
+
+  async function tell(g: SalarySentGroupT): Promise<void> {
+    const pick = choice[g.channel] ?? "both";
+    const label = paymentChannelLabel(g.channel);
+    if (!(await confirmAction({
+      confirmLabel: STR.stfSalarySentConfirm,
+      message: `${label} · ${bnNum(g.staffCount)} ${STR.stfSalarySentPeople} · ${money(g.total)}`,
+    }))) return;
+    setBusy(g.channel);
+    setError(null);
+    setOk(null);
+    const res = await announce({
+      runId,
+      channel: g.channel,
+      sendChannels: pick === "both" ? ["notification", "popup"] : [pick],
+    });
+    setBusy(null);
+    if (res.error || !res.data?.announceSalarySent) {
+      setError(friendlyError(res.error));
+      return;
+    }
+    setGroups(res.data.announceSalarySent);
+    setOk(`${label}: ${STR.stfSalarySentDone}`);
+  }
+
+  return (
+    <Card>
+      <Body style={{ fontWeight: "700" }}>{STR.stfSalarySentTitle}</Body>
+      <Muted>{STR.stfSalarySentNote}</Muted>
+      {ok ? <Notice message={ok} tone="ok" /> : null}
+      {error ? <Notice message={error} tone="danger" /> : null}
+      {shown.map((g) => {
+        const last = g.sends[g.sends.length - 1];
+        const pick = choice[g.channel] ?? "both";
+        return (
+          <View key={g.channel} style={{ marginTop: space(3) }}>
+            <Divider />
+            <Row label={paymentChannelLabel(g.channel)} value={`${bnNum(g.staffCount)} ${STR.stfSalarySentPeople} · ${money(g.total)}`} />
+            {last ? (
+              <Muted>{`${STR.stfSalarySentLast} ${dhakaStamp(last.at)} · ${last.sendChannels
+                .map((c) => (c === "popup" ? STR.stfLetterSendPopup : STR.stfLetterSendNotification))
+                .join(" + ")}`}</Muted>
+            ) : null}
+            {g.withoutLogin.length > 0 ? (
+              <Muted>{`${STR.stfSalarySentNoLogin} ${g.withoutLogin.join(", ")}`}</Muted>
+            ) : null}
+            <ChipRow>
+              <Chip label={STR.stfLetterSendNotification} selected={pick === "notification"} onPress={() => setChoice({ ...choice, [g.channel]: "notification" })} />
+              <Chip label={STR.stfLetterSendPopup} selected={pick === "popup"} onPress={() => setChoice({ ...choice, [g.channel]: "popup" })} />
+              <Chip label={STR.stfLetterSendBoth} selected={pick === "both"} onPress={() => setChoice({ ...choice, [g.channel]: "both" })} />
+            </ChipRow>
+            <Button
+              title={last ? STR.stfSalarySentAgain : STR.stfSalarySentButton}
+              variant={last ? "secondary" : "primary"}
+              onPress={() => void tell(g)}
+              loading={busy === g.channel}
+              disabled={busy !== null || g.staffCount === g.withoutLogin.length}
+            />
+          </View>
+        );
+      })}
+    </Card>
   );
 }
 
@@ -76,6 +170,17 @@ export default function PayrollRunDetailScreen({ route, navigation }: Props): Re
     setError(null);
     try {
       await downloadFile(`/export/payroll-register/${runId}`, `payroll-register-${monthKey}.xlsx`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+    setBusy(false);
+  }
+
+  async function openSheet(): Promise<void> {
+    setBusy(true);
+    setError(null);
+    try {
+      await openLetterPdf(`/export/salary-sheet/${runId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
@@ -221,6 +326,24 @@ export default function PayrollRunDetailScreen({ route, navigation }: Props): Re
           />
         </Card>
       ) : null}
+
+      {/* D-#914 — the sheet behind the salary vouchers; a draft run's copy says DRAFT. */}
+      {status !== "cancelled" && LETTER_PDF_SUPPORTED && can("payroll:export") ? (
+        <Card>
+          <Body style={{ fontWeight: "700" }}>{STR.stfSalarySheet}</Body>
+          <Muted>{STR.stfSalarySheetNote}</Muted>
+          <Button
+            title={STR.stfSalarySheet}
+            variant="secondary"
+            style={{ marginTop: space(2) }}
+            onPress={() => void openSheet()}
+            loading={busy}
+            disabled={busy}
+          />
+        </Card>
+      ) : null}
+
+      {status === "approved_locked" && can("payroll:announce_paid") ? <SalarySentCard runId={runId} /> : null}
 
       {/* Payslips */}
       <Body style={{ fontWeight: "700", marginTop: space(4), marginBottom: space(2) }}>{STR.hrPayslips}</Body>

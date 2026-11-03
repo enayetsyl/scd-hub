@@ -337,6 +337,7 @@ export const AUDIT_KIND_LABELS: Record<AuditEventKind, AuditKindLabel> = {
   STAFF_LETTER_ISSUED: { bn: "কর্মীর চিঠি ইস্যু করেছেন", en: "Issued a staff letter", group: "HR" },
   STAFF_LETTER_VOIDED: { bn: "কর্মীর চিঠি বাতিল করেছেন", en: "Voided a staff letter", group: "HR" },
   STAFF_LETTER_SENT: { bn: "কর্মীকে চিঠি পাঠিয়েছেন", en: "Sent a letter to a staff member", group: "HR" },
+  SALARY_SENT_ANNOUNCED: { bn: "বেতন পাঠানোর খবর দিয়েছেন", en: "Announced salaries sent", group: "HR" },
   STAFF_EMPLOYMENT_CONFIRMED: { bn: "চাকরি স্থায়ী করেছেন", en: "Confirmed an employment", group: "HR" },
   PROBATION_DEBT_SETTLED: { bn: "শিক্ষানবিশকালের ছুটির হিসাব নিষ্পত্তি করেছেন", en: "Settled probation leave debt", group: "HR" },
   STAFF_LATENESS_CHARGED: { bn: "দেরির হিসাব কেটেছেন", en: "Charged lateness", group: "HR" },

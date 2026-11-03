@@ -32,6 +32,12 @@ import {
   type PaymentExportRow,
 } from "../services/PayrollService";
 import { issueAdvance, settleAdvance, advancesForStaff } from "../services/AdvanceService";
+import {
+  announceSalarySent,
+  salarySentGroups,
+  type SalarySentGroup,
+  type SalarySentSend,
+} from "../services/SalarySentService";
 import { resolveStaffProfileForUser } from "../services/staffMatch";
 import {
   leaveChargeCandidates,
@@ -226,6 +232,61 @@ builder.queryField("paymentAdvice", (t) =>
         groups: a.groups,
       };
     },
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Salary sent (D-#915) — tell a payment group its salary went out
+// ---------------------------------------------------------------------------
+
+const SalarySentSendRef = builder.objectRef<SalarySentSend>("SalarySentSend");
+SalarySentSendRef.implement({
+  fields: (t) => ({
+    at: t.string({ resolve: (s) => s.at.toISOString() }),
+    sendChannels: t.exposeStringList("sendChannels"),
+    recipientCount: t.exposeInt("recipientCount"),
+    total: t.exposeFloat("total"),
+  }),
+});
+
+const SalarySentGroupRef = builder.objectRef<SalarySentGroup>("SalarySentGroup");
+SalarySentGroupRef.implement({
+  description:
+    "One payment group of a locked run (own bank / BEFTN / bKash / cash — the advice pack's), " +
+    "how many it pays and for how much, who has no app login, and each 'salary sent' notice so far.",
+  fields: (t) => ({
+    channel: t.exposeString("channel"),
+    staffCount: t.exposeInt("staffCount"),
+    total: t.exposeFloat("total"),
+    withoutLogin: t.exposeStringList("withoutLogin"),
+    sends: t.field({ type: [SalarySentSendRef], resolve: (g) => g.sends }),
+  }),
+});
+
+builder.queryField("salarySentGroups", (t) =>
+  t.field({
+    type: [SalarySentGroupRef],
+    description: "The payment groups of a LOCKED run and the 'salary sent' notices so far (D-#915). Requires payroll:announce_paid.",
+    authScopes: { hasPermission: "payroll:announce_paid" },
+    args: { runId: t.arg.string({ required: true }) },
+    resolve: async (_root, args) => salarySentGroups(args.runId),
+  }),
+);
+
+builder.mutationField("announceSalarySent", (t) =>
+  t.field({
+    type: [SalarySentGroupRef],
+    description:
+      "Tell everyone in one payment group of a LOCKED run that their salary went out (D-#915): a " +
+      "notification each (amount + how), and/or one pop-up to the group; both open the payslip. " +
+      "Requires payroll:announce_paid (the pop-up also needs popup_notice:send_staff). Audited.",
+    authScopes: { hasPermission: "payroll:announce_paid" },
+    args: {
+      runId: t.arg.string({ required: true }),
+      channel: t.arg.string({ required: true }),
+      sendChannels: t.arg.stringList({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => announceSalarySent(ctx, args.runId, args.channel, args.sendChannels),
   }),
 );
 
