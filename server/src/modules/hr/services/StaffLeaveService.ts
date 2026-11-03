@@ -252,7 +252,24 @@ export async function decideLeave(
       rules.balanceTracked &&
       (await isProbationLeaveForStaff(app.staffProfileId, app.fromKey));
 
-    if (onProbation) {
+    if (app.dayPart === "late_entry") {
+      /**
+       * AN APPROVED LATE ENTRY IS A LATE, NOT A THIRD OF A DAY'S LEAVE (D-#912).
+       *
+       * The owner: *"approved late entry should also count toward 3 late entry = 1 day
+       * pay or leave deduction"* — and, asked whether it should ALSO keep its ⅓ day off
+       * the balance, "count it as a late only". So it draws nothing from the pool, is
+       * never held as probation leave, and docks nothing; `lateDateKeysForMonth` counts
+       * its day as late, so the morning is charged exactly once, by the lateness rule
+       * or the per-person lateness choice (D-#908).
+       */
+      app.status = "approved";
+      app.paidDays = 0;
+      app.unpaidDays = 0;
+      app.exceedWarning = null;
+      app.probationHeld = false;
+      await clearProbationDebt(app._id);
+    } else if (onProbation) {
       app.status = "approved";
       app.paidDays = 0;
       app.unpaidDays = app.days;

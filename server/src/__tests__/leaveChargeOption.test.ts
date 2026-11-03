@@ -34,6 +34,8 @@ import { confirmEmployment } from "../modules/hr/services/ConfirmationService";
 import { pooledBalanceForStaff } from "../modules/hr/services/LeaveEntitlementService";
 import { leaveChargeCandidates, latenessChargeCandidates } from "../modules/hr/services/LeaveChargeService";
 import { setHrPolicy } from "../modules/hr/services/HrPolicyService";
+import { decideLeave } from "../modules/hr/services/StaffLeaveService";
+import { lateDateKeysForMonth } from "../modules/hr/services/LatenessService";
 import { TeacherAttendanceDay } from "../modules/attendance/models/TeacherAttendanceDay";
 import { LatenessCharge } from "../modules/hr/models/LatenessCharge";
 
@@ -353,5 +355,40 @@ describe("lateness, person by person (D-#908)", () => {
     await setHrPolicy({ latenessRuleEnabled: true, actorId: ACTOR });
     expect((await latenessChargeCandidates(MONTH)).ruleOn).toBe(true);
     await expect(prepare([{ staffProfileId: s, latenessChargeDays: 1, latenessChargeTo: "salary" }])).rejects.toThrow(/নিয়ম চালু/);
+  });
+});
+
+describe("an approved late entry is a late, not a third of a day's leave (D-#912)", () => {
+  async function lateEntry(staffProfileId: string, dateKey: string): Promise<string> {
+    const app = await StaffLeaveApplication.create({
+      staffProfileId, leaveType: "sick", fromKey: dateKey, toKey: dateKey, dayPart: "late_entry",
+      partialPeriodCount: 1, days: 1 / 3, reason: "late entry", status: "applied", appliedBy: ACTOR,
+    });
+    await decideLeave(app._id.toString(), "approve", ACTOR);
+    return app._id.toString();
+  }
+
+  it("approving it takes nothing from the leave balance — confirmed or on probation", async () => {
+    const confirmed = await staff("Confirmed", "2026-03-01");
+    const probationer = await staff("Probationer");
+    const before = (await pooledBalanceForStaff(confirmed)).remainingDays;
+
+    const a = await lateEntry(confirmed, `${MONTH}-20`);
+    await lateEntry(probationer, `${MONTH}-20`);
+
+    expect(await StaffLeaveApplication.findById(a).lean()).toMatchObject({ status: "approved", paidDays: 0, unpaidDays: 0, probationHeld: false });
+    expect((await pooledBalanceForStaff(confirmed)).remainingDays).toBe(before);
+    expect((await heldDebtForStaff(probationer)).totalDays).toBe(0);
+  });
+
+  it("its day counts as late — once, even when the attendance sheet also marks it LATE", async () => {
+    const s = await staff("Late Entries", "2026-03-01");
+    await TeacherAttendanceDay.create({ staffProfileId: s, dateKey: `${MONTH}-28`, status: "LATE", importedBy: ACTOR });
+    await TeacherAttendanceDay.create({ staffProfileId: s, dateKey: `${MONTH}-29`, status: "LATE", importedBy: ACTOR });
+    await lateEntry(s, `${MONTH}-20`); // no attendance row that day (Maruf's 20 Oct)
+    await lateEntry(s, `${MONTH}-28`); // the same morning the sheet marks LATE
+
+    expect(await lateDateKeysForMonth(s, MONTH)).toEqual([`${MONTH}-20`, `${MONTH}-28`, `${MONTH}-29`]);
+    expect((await latenessChargeCandidates(MONTH)).rows.map((r) => [r.lateCount, r.days])).toEqual([[3, 1]]);
   });
 });
