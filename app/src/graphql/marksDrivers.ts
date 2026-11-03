@@ -53,6 +53,16 @@ export interface MarksDriversT {
   senior: { n: number; r: number | null; p: number | null };
   effects: Array<{ key: MeasureKeyT; marks: number }>;
   points: Array<{ level: number; att: number | null; hwDone: number | null; result: number }>;
+  /** D-#910: the headline figures again without long-absent children and extreme values. */
+  withoutOutliers: {
+    longAbsent: number;
+    extreme: number;
+    withResult: number;
+    correlations: MarksDriversT["correlations"];
+    tertiles: MarksDriversT["tertiles"];
+    below85: MarksDriversT["below85"];
+    senior: MarksDriversT["senior"];
+  };
 }
 
 export const MARKS_DRIVERS_QUERY = gql<
@@ -72,6 +82,13 @@ export const MARKS_DRIVERS_QUERY = gql<
       senior { n r p }
       effects { key marks }
       points { level att hwDone result }
+      withoutOutliers {
+        longAbsent extreme withResult
+        correlations { key n r p significant }
+        tertiles { key bottom middle top n }
+        below85 { nBelow nAbove below above p hwBelow hwAbove controlledGap }
+        senior { n r p }
+      }
     }
   }
 `;
