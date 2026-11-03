@@ -729,6 +729,32 @@ describe("sender", () => {
     expect(again.titleBn).toBe("Important");
   });
 
+  test("re-show clears the old answer, so the other button works and the report counts it again (D-#917)", async () => {
+    const s = await school();
+    const office = ctxOf(s.office, "OFFICE");
+    const n = await sent(office, {
+      rules: { mustAct: true },
+      actions: [
+        { kind: "OPEN_SCREEN", labelBn: "রুটিন দেখুন", target: "SyllabusTab/ExamRoutine" },
+        { kind: "ACK", labelBn: "ঠিক আছে, দেখেছি" },
+      ],
+    });
+    const me = ctxOf(s.gAyeshaRafi, "GUARDIAN");
+    await recordPopupEvent(me, { noticeId: n.id, kind: "ACTED", choiceId: "a2" }, NOW);
+    await expect(recordPopupEvent(me, { noticeId: n.id, kind: "ACTED", choiceId: "a1" }, NOW)).rejects.toThrow(/বদলানো যাবে না/);
+    const answered = await PopupNoticeRecipient.findOne({ noticeId: n.id, choiceId: "a2" }).lean();
+
+    await editLiveNotice(office, n.id, { titleBn: "Changed", bodyBn: "New time", endsOn: "2026-11-05", reshow: true }, NOW);
+    const row = await PopupNoticeRecipient.findById(answered!._id).lean();
+    expect(row).toMatchObject({ state: "READ", choiceId: null, actedAt: null, doneAt: null, pending: true });
+    expect(row?.readAt).toBeTruthy();
+
+    const [again] = await myPopupQueue(me, LATER_SAME_DAY);
+    expect(again.choiceId ?? null).toBeNull();
+    const acted = await recordPopupEvent(me, { noticeId: n.id, kind: "ACTED", choiceId: "a1" }, LATER_SAME_DAY);
+    expect(acted?.choiceId).toBe("a1");
+  });
+
   test("duplicate starts a fresh draft with the same audience and rules", async () => {
     const s = await school();
     const office = ctxOf(s.office, "OFFICE");
