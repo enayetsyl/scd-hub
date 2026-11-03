@@ -1,5 +1,8 @@
 # STATUS
 
+- 2026-11-03: **BUILT — approved late entry counts as a late (D-#910)** (branch `feat/late-entry-counts-as-late`, worktree `C:/w/leave-charge`). Approving a late-entry leave now draws nothing from the leave balance and is never held; `lateDateKeysForMonth` = sheet LATE ∪ approved late entries (once per day).
+  - **Verified:** server tsc 0; full server jest 348 suites / 6,074 tests; leaveChargeOption 18/18 (+2: no balance draw for confirmed + probationer; counted once with the sheet).
+  - **Now / next:** PR → dev → promote → prod one-off: re-stamp the 5 approved October late-entry leaves to paidDays 0 (dry run listed them: Nuha 11, Tazkir 15, Akmol 19, Maruf 20 + 28 Oct; none earlier, none held). Server-only, no OTA.
 - 2026-11-02: **BUILT — per-person lateness charge + server-built letter draft (D-#908, D-#909)** (branch `feat/lateness-charge-option`, worktree `C:/w/leave-charge`). Prepare Payroll → বিলম্বের কর্তন card (rule off only): late marks → chargeable days (3 = 1), হ্যাঁ/না, days, বেতন থেকে / ছুটির জমা থেকে; writes the rule’s own LatenessCharge row (`byChoice`). Increment/confirmation draft button now asks the server (`staffLetterDraft`).
   - **Verified:** server + app tsc 0; full server jest 348 suites / 6,072 tests (leaveChargeOption 16/16 with +5 lateness, staffLettersAndReopen 11/11 with +1 draft, payrollAdjustments +3); local walk on in-memory Mongo + Expo web + Chrome 9/9 (draft disabled until salary typed; draft reads from Tk. 15,000 to Tk. 25,000 on Tazkir’s recorded raise; lateness card lists only the late person, 9 lates → 3 days; salary/leave choice; 2 days → payslip বিলম্ব কর্তন ৳728 at 22 days; Tazkir paid ৳25,000; no page errors).
   - **Now / next:** PR → dev → promote → OTA (the card is app code).
