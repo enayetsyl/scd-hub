@@ -71,6 +71,10 @@ export function PopupSheet({ show, position, reread = false, onSeen, onRead, onC
   const [readMs, setReadMs] = useState(0);
   const [autoLeftMs, setAutoLeftMs] = useState(rules.autoCloseSec * 1000);
   const [hint, setHint] = useState<string[] | null>(null);
+  // The server's reason a button was refused. Kept apart from `hint`, which re-derives
+  // itself from the rules every second and used to overwrite this with "choose a button"
+  // before anyone could read it (D-#917).
+  const [actError, setActError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const layoutH = useRef(0);
@@ -147,6 +151,7 @@ export function PopupSheet({ show, position, reread = false, onSeen, onRead, onC
 
   const refuse = useCallback(
     (reasons: Unmet[]) => {
+      setActError(null);
       setHint(reasons.map(hintText));
       Animated.sequence([
         Animated.timing(shake, { toValue: -8, duration: 60, useNativeDriver: true }),
@@ -174,10 +179,13 @@ export function PopupSheet({ show, position, reread = false, onSeen, onRead, onC
       }
       if (!onAct || busy) return;
       setBusy(true);
+      setActError(null);
       const err = await onAct(a, readMs);
       setBusy(false);
-      if (err) setHint([err]);
-      else closed.current = true;
+      if (err) {
+        setHint(null);
+        setActError(err);
+      } else closed.current = true;
     },
     [readUnmet, refuse, onAct, busy, readMs],
   );
@@ -292,9 +300,9 @@ export function PopupSheet({ show, position, reread = false, onSeen, onRead, onC
             </Pressable>
           ) : null}
 
-          {hint ? (
+          {hint || actError ? (
             <View style={styles.hint} accessibilityLiveRegion="polite">
-              {hint.map((h) => (
+              {(actError ? [actError] : hint ?? []).map((h) => (
                 <Text key={h} style={styles.hintText}>
                   {h}
                 </Text>
