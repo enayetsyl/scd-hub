@@ -593,10 +593,13 @@ export async function editLiveNotice(ctx: AppContext, id: string, input: EditLiv
   n.set({ ...content, endsOn: input.endsOn, actions, version: (n.version ?? 1) + 1, updatedBy: new Types.ObjectId(ctx.auth!.userId) });
   await n.save();
   if (input.reshow) {
-    await PopupNoticeRecipient.updateMany(
-      { noticeId: n._id, test: false, reachable: true },
-      { $set: { doneAt: null, pending: true, closeMethod: null } },
-    );
+    // The old answer goes too (D-#917): kept, it made recordPopupEvent refuse every OTHER
+    // button ("উত্তর আর বদলানো যাবে না") and the report kept counting the person as done.
+    // The first answer stays in its POPUP_NOTICE_ANSWERED audit.
+    const rows = { noticeId: n._id, test: false, reachable: true };
+    await PopupNoticeRecipient.updateMany(rows, { $set: { doneAt: null, pending: true, closeMethod: null, choiceId: null, actedAt: null } });
+    // An answer always set readAt, so an answered row falls back to READ.
+    await PopupNoticeRecipient.updateMany({ ...rows, state: "ACTED" }, { $set: { state: "READ" } });
   }
   await writeAudit({
     eventKind: "POPUP_NOTICE_EDITED",

@@ -1,5 +1,7 @@
 # STATUS
 
+- 2026-11-03: **FIXED — re-shown pop-ups take any button (D-#917)** (branch `fix/popup-reshow-clears-answer`, worktree `C:/w/rsfix`). Tazkir could not press "See the exam routine" on the re-shown routine pop-up (only "OK, seen" worked). `editLiveNotice` reshow now clears `choiceId`/`actedAt` (ACTED → READ); `PopupSheet` keeps a refused button's server message. Server + app → OTA after promotion.
+  - **Verified:** server tsc + app tsc + popupNotice suite (see the PR).
 - 2026-11-03: **CHANGED — salary-sent pop-up shows once (D-#916)** (branch `fix/salary-popup-once`). Owner: only the next app open, not daily for 7 days; no-amount default confirmed. Server only (`repeat: "once"`, 30-day wait) → no OTA.
   - **Verified:** server tsc 0; salarySheetAndSent 7/7 (asserts repeat once).
 - 2026-11-03: **BUILT — salary sheet PDF + salary-sent notice (D-#914, D-#915)** (branch `feat/salary-sheet-sent-notice`, worktree `C:/w/leave-charge`). Run screen: বেতন শিট (PDF) beside the register (grouped by own bank / BEFTN / cash, a column per deduction kind, subtotals, grand total, signature lines); on a locked run, বেতন দেওয়া হয়েছে — কর্মীদের জানান: per payment group, notification (own amount) / pop-up / both → আমার রেকর্ড payslip. New `payroll:announce_paid` (Office on), `SALARY_SENT` kind, `SALARY_SENT_ANNOUNCED` audit, `PayrollRun.salarySentNotices`.
