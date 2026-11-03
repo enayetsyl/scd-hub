@@ -137,6 +137,7 @@ const PopupNoticeRef = builder.objectRef<PopupNoticeDTO>("PopupNotice").implemen
     startsAt: t.string({ nullable: true, resolve: (n) => n.startsAt }),
     endsOn: t.exposeString("endsOn"),
     repeat: t.exposeString("repeat"),
+    doneWhen: t.string({ nullable: true, description: "MEETING_SUMMARIES = ends per person when the task is done (D-#913).", resolve: (n) => n.doneWhen }),
     status: t.exposeString("status"),
     displayStatus: t.exposeString("displayStatus", { description: "DRAFT | SCHEDULED | LIVE | ENDED | WITHDRAWN — derived from the dates." }),
     version: t.exposeInt("version"),
@@ -360,6 +361,10 @@ const NoticeInput = builder.inputType("PopupNoticeInput", {
     startsAt: t.string({ required: false, description: "ISO instant; empty = when sent." }),
     endsOn: t.string({ required: true, description: "YYYY-MM-DD (Asia/Dhaka), inclusive." }),
     repeat: t.string({ required: false, description: "once | daily (default) | every_open | window" }),
+    doneWhen: t.string({
+      required: false,
+      description: "MEETING_SUMMARIES = closing does not finish it; it ends per person when their class-teacher summaries are written (D-#913). Staff only. Omitted on a re-save = keep.",
+    }),
   }),
 });
 
