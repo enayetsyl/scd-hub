@@ -52,6 +52,15 @@ describe("rowComplete / rowStarted", () => {
     expect(rowComplete(row({ amount: "1234.50" }))).toBe(true);
   });
 
+  test("an advance-recovery row needs only a person (the screen has no type or amount for it)", () => {
+    const adv = row({ sign: "advance_recovery", type: null, amount: "" });
+    expect(rowComplete(adv)).toBe(true);
+    expect(rowComplete({ ...adv, staffProfileId: "" })).toBe(false);
+    expect(buildAdjustments([adv])).toEqual([
+      { staffProfileId: STAFF_A, manualAdditions: [], manualDeductions: [], recoverAdvance: true },
+    ]);
+  });
+
   test("a STARTED but unfinished row is distinguishable from an untouched one", () => {
     const blank: AdjRow = { key: "k", staffProfileId: "", sign: "addition", type: "arrears", amount: "", note: "" };
     expect(rowStarted(blank)).toBe(false);
