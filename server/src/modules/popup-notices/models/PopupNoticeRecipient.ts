@@ -25,7 +25,8 @@ export const POPUP_STATES = ["NOT_SEEN", "SEEN", "READ", "ACTED"] as const;
 export type PopupState = (typeof POPUP_STATES)[number];
 export const POPUP_STATE_RANK: Record<PopupState, number> = { NOT_SEEN: 0, SEEN: 1, READ: 2, ACTED: 3 };
 
-export const POPUP_CLOSE_METHODS = ["auto", "button", "action"] as const;
+/** "task" = a task-tied notice ended because the work was finished (D-#913). */
+export const POPUP_CLOSE_METHODS = ["auto", "button", "action", "task"] as const;
 export type PopupCloseMethod = (typeof POPUP_CLOSE_METHODS)[number];
 
 export interface PopupRecipientVars {

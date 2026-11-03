@@ -142,6 +142,15 @@ A snooze or a sender's reminder brings a notice back on the next open whatever t
 **Done** means closed with the rules met, or a button tapped. An auto-close counts as SEEN,
 not READ.
 
+**Task-tied notices (D-#913).** `doneWhen` set = closing does not finish the notice; the task
+does. Checked on each app open, per person; once the task is finished the row is stamped
+done (`closeMethod: "task"`) and the notice never shows again, whatever the repeat mode.
+Staff audiences only. Server field for now (not in the composer; a re-save keeps it).
+
+| `doneWhen` | Finished when |
+|---|---|
+| `MEETING_SUMMARIES` | No child of the teacher is left without a class-teacher summary (READY or WAITING) in any open parents' meeting. Not a class teacher = finished. |
+
 The app asks on open, and again on return after ≥ 10 minutes away. It never re-asks on every
 resume, because a guardian flipping to WhatsApp is not opening the app.
 
