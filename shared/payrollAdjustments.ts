@@ -62,6 +62,9 @@ const AMOUNT = /^\d+(\.\d+)?$/;
 export function rowComplete(r: AdjRow): boolean {
   // A recovery row carries days in `amount` and needs no money type.
   if (r.sign === "leave_recovery") return r.staffProfileId !== "" && AMOUNT.test(r.amount.trim());
+  // An advance row is only "take this person's advance" — the loan's balance is the
+  // amount and the screen shows no amount box, so a person is all it needs.
+  if (r.sign === "advance_recovery") return r.staffProfileId !== "";
   return r.staffProfileId !== "" && r.type !== null && AMOUNT.test(r.amount.trim());
 }
 
