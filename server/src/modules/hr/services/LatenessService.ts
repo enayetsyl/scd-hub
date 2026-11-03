@@ -80,10 +80,10 @@ export function splitLatenessCharge(
 
 /**
  * Every late dateKey for a staff member inside a month, ascending — a day the biometric
- * sheet marks LATE, OR a day covered by an APPROVED late-entry leave (D-#910). Each day
+ * sheet marks LATE, OR a day covered by an APPROVED late-entry leave (D-#911). Each day
  * counts once: a late-entry leave on a day already marked LATE is the same morning.
  *
- * The late entry was a ⅓-day leave until D-#910; the owner ruled it is a late instead
+ * The late entry was a ⅓-day leave until D-#911; the owner ruled it is a late instead
  * ("count it as a late only"), and its day can be missing from the sheet entirely (Maruf,
  * 20 Oct 2026), so the application is the evidence, not the attendance row.
  */
