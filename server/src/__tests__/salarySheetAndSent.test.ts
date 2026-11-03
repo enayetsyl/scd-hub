@@ -150,6 +150,8 @@ describe("salary sent notice (D-#915)", () => {
     expect(popups).toHaveLength(1);
     expect(popups[0].audience.userIds).toHaveLength(2);
     expect(popups[0].actions[0].target).toBe(MY_RECORD_TARGET);
+    // Shown once, on the next app open (D-#916) — not every day.
+    expect(popups[0].repeat).toBe("once");
 
     const internal = groups.find((g) => g.channel === "internal")!;
     expect(internal.sends).toHaveLength(1);
