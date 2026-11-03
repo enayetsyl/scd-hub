@@ -332,7 +332,76 @@ export interface MarksDriversFigures {
   points: ScatterPoint[];
 }
 
-const BANDS: Array<[number, number]> = [[0, 0.7], [0.7, 0.8], [0.8, 0.85], [0.85, 0.9], [0.9, 0.95], [0.95, 1.001]];
+// ---------------------------------------------------------------------------
+// Outliers (D-#910, owner 2026-11-02: "long-absent + extreme values")
+// ---------------------------------------------------------------------------
+
+/** Absent on more than half of at least this many marked days = long-absent. */
+const LONG_ABSENT_MIN_DAYS = 30;
+/** A value further than this many standard deviations from the school mean is extreme. */
+const EXTREME_Z = 3;
+/** The measures the extreme-value rule looks at: result, homework, attendance. */
+const EXTREME_KEYS = ["pct", "hwDone", "att"] as const;
+
+export const isLongAbsent = (r: ChildRow): boolean =>
+  r.heldDays >= LONG_ABSENT_MIN_DAYS && r.absentDays / r.heldDays > 0.5;
+
+/**
+ * Split the children into kept / left out. A child is left out when long-absent, or when
+ * their result, homework submission or attendance sits more than 3 SD from the mean of
+ * everyone's (long-absent children excluded from that mean, so one ghost cannot widen the
+ * band that would otherwise catch another). Counted once even when both rules match.
+ */
+export function splitOutliers(rows: ChildRow[]): { kept: ChildRow[]; longAbsent: number; extreme: number } {
+  const base = rows.filter((r) => !isLongAbsent(r));
+  const bounds = EXTREME_KEYS.map((k) => {
+    const v = base.map((r) => r[k]).filter((x): x is number => x != null);
+    if (v.length < 3) return null;
+    const m = mean(v);
+    const s = sd(v);
+    return s > 0 ? { k, lo: m - EXTREME_Z * s, hi: m + EXTREME_Z * s } : null;
+  });
+  let longAbsent = 0;
+  let extreme = 0;
+  const kept: ChildRow[] = [];
+  for (const r of rows) {
+    if (isLongAbsent(r)) {
+      longAbsent++;
+      continue;
+    }
+    const out = bounds.some((b) => b && r[b.k] != null && ((r[b.k] as number) < b.lo || (r[b.k] as number) > b.hi));
+    if (out) extreme++;
+    else kept.push(r);
+  }
+  return { kept, longAbsent, extreme };
+}
+
+/** The side-by-side card: the same headline figures over the children who are kept. */
+export interface OutlierComparison {
+  longAbsent: number;
+  extreme: number;
+  withResult: number;
+  correlations: Correlation[];
+  tertiles: Tertile[];
+  below85: Below85;
+  senior: { n: number; r: number | null; p: number | null };
+}
+
+export function computeWithoutOutliers(rows: ChildRow[]): OutlierComparison {
+  const { kept, longAbsent, extreme } = splitOutliers(rows);
+  const f = computeFigures(kept);
+  return {
+    longAbsent,
+    extreme,
+    withResult: f.withResult,
+    correlations: f.correlations,
+    tertiles: f.tertiles,
+    below85: f.below85,
+    senior: f.senior,
+  };
+}
+
+const BANDS: Array<[number, number]> =[[0, 0.7], [0.7, 0.8], [0.8, 0.85], [0.85, 0.9], [0.9, 0.95], [0.95, 1.001]];
 
 const avgOf = (rows: ChildRow[], k: keyof ChildRow): number | null => {
   const v = rows.map((r) => r[k]).filter((x): x is number => typeof x === "number");
@@ -427,7 +496,7 @@ export function computeFigures(rows: ChildRow[]): MarksDriversFigures {
     senior: seniorC,
     effects,
     sanityR: corr(rows, "att", "hwAbsent").r,
-    longAbsent: rows.filter((r) => r.heldDays >= 30 && r.absentDays / r.heldDays > 0.5).length,
+    longAbsent: rows.filter(isLongAbsent).length,
     absenceDays: rows.reduce((s, r) => s + r.absentDays, 0),
     points: withRes.map((r) => ({ level: r.level, att: r.att, hwDone: r.hwDone, result: r.pct as number })),
   };
