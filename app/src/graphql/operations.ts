@@ -9178,6 +9178,31 @@ export const SEND_STAFF_LETTER = gql<{ sendStaffLetter: StaffLetterT }, { letter
   }
 `;
 
+/** One payment group of a locked run and its "salary sent" notices (D-#915). */
+export interface SalarySentGroupT {
+  channel: string;
+  staffCount: number;
+  total: number;
+  withoutLogin: string[];
+  sends: Array<{ at: string; sendChannels: string[]; recipientCount: number; total: number }>;
+}
+const SALARY_SENT_GROUP_FIELDS = `channel staffCount total withoutLogin sends { at sendChannels recipientCount total }`;
+
+export const SALARY_SENT_GROUPS = gql<{ salarySentGroups: SalarySentGroupT[] }, { runId: string }>`
+  query SalarySentGroups($runId: String!) {
+    salarySentGroups(runId: $runId) { ${SALARY_SENT_GROUP_FIELDS} }
+  }
+`;
+
+export const ANNOUNCE_SALARY_SENT = gql<
+  { announceSalarySent: SalarySentGroupT[] },
+  { runId: string; channel: string; sendChannels: string[] }
+>`
+  mutation AnnounceSalarySent($runId: String!, $channel: String!, $sendChannels: [String!]!) {
+    announceSalarySent(runId: $runId, channel: $channel, sendChannels: $sendChannels) { ${SALARY_SENT_GROUP_FIELDS} }
+  }
+`;
+
 /** The Bangla নিয়োগ চুক্তিপত্র's own fields (D-#586). */
 export interface SupportContractInputT {
   role: string;

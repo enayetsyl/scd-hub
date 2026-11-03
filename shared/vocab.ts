@@ -1496,6 +1496,9 @@ export const NOTIFICATION_KINDS = [
   // Staff letters (D-#902; app-native, NO wire twin): an issued letter sent to the staff
   // member it is addressed to, opening their আমার চিঠি screen.
   "STAFF_LETTER_SENT",
+  // Salary sent (D-#915; app-native, NO wire twin): a payment group of a locked run was
+  // paid; tells each person in it, opening their own payslip (আমার রেকর্ড).
+  "SALARY_SENT",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
@@ -1567,6 +1570,7 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   MARK_CORRECTION: "জমার হিসাবে ভুল",
   WORK_MARK_CORRECTED: "জমার বার্তা সংশোধন",
   STAFF_LETTER_SENT: "আপনার নতুন চিঠি",
+  SALARY_SENT: "বেতন দেওয়া হয়েছে",
 };
 export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   BELL_REMINDER: "Bell reminder",
@@ -1636,6 +1640,7 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   MARK_CORRECTION: "Submission marks corrected",
   WORK_MARK_CORRECTED: "Correction: work was submitted",
   STAFF_LETTER_SENT: "A letter for you",
+  SALARY_SENT: "Salary sent",
 };
 
 /**
