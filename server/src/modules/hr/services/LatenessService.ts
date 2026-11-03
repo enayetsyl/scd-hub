@@ -23,6 +23,7 @@
  */
 import { Types } from "mongoose";
 import { TeacherAttendanceDay } from "../../attendance/models/TeacherAttendanceDay";
+import { StaffLeaveApplication } from "../models/StaffLeaveApplication";
 import { LatenessCharge, type ILatenessCharge } from "../models/LatenessCharge";
 import { getHrPolicy } from "./HrPolicyService";
 import { pooledBalanceForStaff } from "./LeaveEntitlementService";
@@ -77,20 +78,28 @@ export function splitLatenessCharge(
 
 // --- persisted side ---------------------------------------------------------
 
-/** Every LATE dateKey for a staff member inside a month, ascending. */
+/**
+ * Every late dateKey for a staff member inside a month, ascending — a day the biometric
+ * sheet marks LATE, OR a day covered by an APPROVED late-entry leave (D-#910). Each day
+ * counts once: a late-entry leave on a day already marked LATE is the same morning.
+ *
+ * The late entry was a ⅓-day leave until D-#910; the owner ruled it is a late instead
+ * ("count it as a late only"), and its day can be missing from the sheet entirely (Maruf,
+ * 20 Oct 2026), so the application is the evidence, not the attendance row.
+ */
 export async function lateDateKeysForMonth(
   staffProfileId: string,
   monthKey: string,
 ): Promise<string[]> {
-  const rows = await TeacherAttendanceDay.find({
-    staffProfileId: new Types.ObjectId(staffProfileId),
-    status: "LATE",
-    dateKey: { $gte: `${monthKey}-01`, $lte: `${monthKey}-31` },
-  })
-    .select("dateKey")
-    .sort({ dateKey: 1 })
-    .lean();
-  return rows.map((r) => r.dateKey);
+  const sid = new Types.ObjectId(staffProfileId);
+  const inMonth = { $gte: `${monthKey}-01`, $lte: `${monthKey}-31` };
+  const [rows, lateEntries] = await Promise.all([
+    TeacherAttendanceDay.find({ staffProfileId: sid, status: "LATE", dateKey: inMonth }).select("dateKey").lean(),
+    StaffLeaveApplication.find({ staffProfileId: sid, status: "approved", dayPart: "late_entry", fromKey: inMonth })
+      .select("fromKey")
+      .lean(),
+  ]);
+  return [...new Set([...rows.map((r) => r.dateKey), ...lateEntries.map((a) => a.fromKey)])].sort();
 }
 
 export interface ComputeLatenessInput {
