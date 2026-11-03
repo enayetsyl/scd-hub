@@ -27,6 +27,16 @@ export interface IPayrollRun extends Document {
   note?: string;
   /** Each time the locked run was reopened to correct it (D-#904), oldest first. */
   reopenings?: Array<{ at: Date; by: Types.ObjectId; reason: string; previousApprovedAt?: Date | null }>;
+  /** Each "salary sent" notice, per payment group (D-#915), oldest first. */
+  salarySentNotices?: Array<{
+    channel: string;
+    at: Date;
+    by: Types.ObjectId;
+    sendChannels: string[];
+    recipientCount: number;
+    total: number;
+    popupNoticeId?: Types.ObjectId | null;
+  }>;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -49,6 +59,23 @@ const PayrollRunSchema = new Schema<IPayrollRun>(
             by: { type: Schema.Types.ObjectId, required: true },
             reason: { type: String, required: true, trim: true },
             previousApprovedAt: { type: Date, default: null },
+          },
+          { _id: false },
+        ),
+      ],
+      default: [],
+    },
+    salarySentNotices: {
+      type: [
+        new Schema(
+          {
+            channel: { type: String, required: true },
+            at: { type: Date, required: true },
+            by: { type: Schema.Types.ObjectId, required: true },
+            sendChannels: { type: [String], default: [] },
+            recipientCount: { type: Number, required: true, min: 0 },
+            total: { type: Number, required: true, min: 0 },
+            popupNoticeId: { type: Schema.Types.ObjectId, default: null },
           },
           { _id: false },
         ),

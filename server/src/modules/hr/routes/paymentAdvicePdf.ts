@@ -222,8 +222,9 @@ export async function renderAdvicePack(advice: PaymentAdvice): Promise<Buffer> {
   });
 }
 
-/** The school's letterhead, repeated on every page as the Word template has it. */
-function letterhead(doc: PDFKit.PDFDocument, advice: PaymentAdvice): void {
+/** The school's letterhead, repeated on every page as the Word template has it. Also
+ *  heads the salary sheet (D-#914), which is why it needs only the policy. */
+export function letterhead(doc: PDFKit.PDFDocument, advice: Pick<PaymentAdvice, "policy">): void {
   const p = advice.policy;
   const width = doc.page.width - doc.page.margins.left - doc.page.margins.right;
   doc.fontSize(18);
@@ -240,7 +241,7 @@ function letterhead(doc: PDFKit.PDFDocument, advice: PaymentAdvice): void {
 }
 
 /** The footer address block, as on the school's own letters. */
-function footer(doc: PDFKit.PDFDocument, advice: PaymentAdvice): void {
+export function footer(doc: PDFKit.PDFDocument, advice: Pick<PaymentAdvice, "policy">): void {
   const p = advice.policy;
   const width = doc.page.width - doc.page.margins.left - doc.page.margins.right;
   const y = doc.page.height - doc.page.margins.bottom - 26;

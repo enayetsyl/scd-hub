@@ -236,6 +236,9 @@ export function notificationTarget(
     case "STAFF_LETTER_SENT":
       // D-#902 — the letter waits in the staff member's own আমার চিঠি list.
       return { tab: "HrTab", screen: "MyLetters" };
+    case "SALARY_SENT":
+      // D-#915 — the full breakdown is the staff member's own payslip under আমার রেকর্ড.
+      return { tab: "HrTab", screen: "MyRecord" };
     case "WORK_MARK_CORRECTED":
       // Guardian-only; `workClaimTracker` says which list (the WC-6 ref, on the wire).
       if (!guardian) return { tab: "HomeTab", screen: "Today" };
