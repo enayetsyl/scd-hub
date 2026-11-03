@@ -197,6 +197,9 @@ const dedupeKeys = {
   /** Per letter + recipient + send (D-#902): "send again" is a new notice, not a no-op. */
   staffLetterSent: (letterId: string, recipientId: string, sendIndex: number) =>
     `SLS:${letterId}:${recipientId}:${sendIndex}`,
+  /** Per run + payment group + recipient + send (D-#915): a re-send is a new notice. */
+  salarySent: (runId: string, channel: string, recipientId: string, sendIndex: number) =>
+    `SALS:${runId}:${channel}:${recipientId}:${sendIndex}`,
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -2310,6 +2313,35 @@ export async function emitStaffLetterSent(ev: {
       bodyBn: `স্কুল আপনাকে একটি চিঠি পাঠিয়েছে (${ev.refNo})। কর্মী → আমার চিঠি থেকে খুলে দেখুন।`,
       refs: {},
       dedupeKey: dedupeKeys.staffLetterSent(ev.letterId, ev.recipientUserId, ev.sendIndex),
+    });
+    created = res.created;
+  });
+  return created;
+}
+
+/**
+ * Salary sent (D-#915): one notice per person in a payment group the office has marked
+ * paid. Short by the owner's choice — the amount and how it went; the breakdown is on the
+ * payslip the tap opens (আমার রেকর্ড).
+ */
+export async function emitSalarySent(ev: {
+  runId: string;
+  channel: string;
+  recipientUserId: string;
+  sendIndex: number;
+  monthBn: string;
+  netPayBn: string;
+  howBn: string;
+}): Promise<boolean> {
+  let created = false;
+  await bestEffort("salary sent", async () => {
+    const res = await emit({
+      recipientUserId: ev.recipientUserId,
+      kind: "SALARY_SENT",
+      titleBn: `${ev.monthBn}-এর বেতন দেওয়া হয়েছে`,
+      bodyBn: `আপনার বেতন ৳${ev.netPayBn} ${ev.howBn} দেওয়া হয়েছে। কর্তন ও পুরো হিসাব দেখতে চাপুন।`,
+      refs: {},
+      dedupeKey: dedupeKeys.salarySent(ev.runId, ev.channel, ev.recipientUserId, ev.sendIndex),
     });
     created = res.created;
   });

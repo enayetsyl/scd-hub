@@ -71,6 +71,7 @@ export type AuditEventKind =
   | "STAFF_LETTER_ISSUED"         // an appointment/confirmation/service letter issued (SH-1, D-#542)
   | "STAFF_LETTER_VOIDED"         // a letter voided — kept + renderable, superseded by a new ref no (SH-1, D-#542)
   | "STAFF_LETTER_SENT"           // an issued letter sent to the staff member's app by notification and/or pop-up (D-#902)
+  | "SALARY_SENT_ANNOUNCED"       // a payment group of a locked run told its salary went out, by notification and/or pop-up (D-#915)
   | "STAFF_EMPLOYMENT_CONFIRMED"  // probation → confirmed, with the date the pool starts from (SH-2, D-#540)
   | "PROBATION_DEBT_SETTLED"      // held probation leave settled against the pool or the final salary (SH-3, D-#540)
   | "STAFF_LATENESS_CHARGED"      // a month's 3-lates-to-a-day reckoning written at payroll prepare (SH-4, D-#541)

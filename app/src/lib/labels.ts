@@ -4159,6 +4159,20 @@ const STR_BN = {
   stfRegisterDownload: "হিসাবের রেজিস্টার (Excel)",
   stfRegisterNote:
     "প্রত্যেকের মোট বেতন, কর্তন, সংযোজন ও নিট বেতন — হিসাবরক্ষণের জন্য। অনুমোদনের আগেই যাচাই করা যায়।",
+  // Salary sheet PDF (D-#914) + salary-sent notice (D-#915).
+  stfSalarySheet: "বেতন শিট (PDF)",
+  stfSalarySheetNote:
+    "ভাউচারের সঙ্গে রাখার শিট: প্রত্যেকের মোট বেতন, প্রতিটি কর্তন ও সংযোজন আলাদা কলামে, নিট বেতন — ব্যাংক, BEFTN ও নগদ আলাদা ভাগে, প্রতিটির উপমোট ও সর্বমোট।",
+  stfSalarySentTitle: "বেতন দেওয়া হয়েছে — কর্মীদের জানান",
+  stfSalarySentNote:
+    "টাকা ব্যাংক থেকে ছাড় হলে বা নগদ দেওয়া হলে সেই দলকে জানান। নোটিফিকেশনে প্রত্যেকের নিজের টাকার পরিমাণ যায়; চাপলে তার বেতনের পুরো হিসাব খোলে।",
+  stfSalarySentPeople: "জন",
+  stfSalarySentButton: "এই দলকে জানান",
+  stfSalarySentAgain: "আবার জানান",
+  stfSalarySentLast: "শেষ জানানো হয়েছে:",
+  stfSalarySentNoLogin: "অ্যাপ লগইন নেই (সরাসরি জানান):",
+  stfSalarySentDone: "জানানো হয়েছে",
+  stfSalarySentConfirm: "জানান",
   // A badge names a STATE. `stfVoidLetter` is a button ("বাতিল করুন") and
   // `stfLetterIssued` is a toast sentence; both were being shown as badges.
   stfLetterStatusVoid: "বাতিল",
@@ -10371,6 +10385,20 @@ const STR_EN: StrTable = {
   stfRegisterDownload: "Accounting register (Excel)",
   stfRegisterNote:
     "Every person's gross, deductions, additions and net pay — for accounts. Can be checked before the run is approved.",
+  // Salary sheet PDF (D-#914) + salary-sent notice (D-#915).
+  stfSalarySheet: "Salary sheet (PDF)",
+  stfSalarySheetNote:
+    "The sheet for the voucher file: each person's gross, each deduction and addition in its own column, and net pay — split into own bank, BEFTN and cash, with subtotals and a grand total.",
+  stfSalarySentTitle: "Salary paid — tell staff",
+  stfSalarySentNote:
+    "Once a group's money has cleared from the bank, or the cash has been handed over, tell that group. The notification carries each person's own amount; tapping it opens their full payslip.",
+  stfSalarySentPeople: "people",
+  stfSalarySentButton: "Tell this group",
+  stfSalarySentAgain: "Tell again",
+  stfSalarySentLast: "Last told:",
+  stfSalarySentNoLogin: "No app login (tell them directly):",
+  stfSalarySentDone: "Sent",
+  stfSalarySentConfirm: "Send",
   stfLetterStatusVoid: "Void",
   stfLetterStatusIssued: "Issued",
   stfNoCredentialRow: "No login record for this staff member (they may be inactive).",
