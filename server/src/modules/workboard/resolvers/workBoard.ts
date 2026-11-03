@@ -572,10 +572,12 @@ builder.mutationField("moveTask", (t) =>
 builder.mutationField("cancelTask", (t) =>
   t.field({
     type: TaskRef,
-    description: "Withdraw an open task — the assigner or work_board:assign. The row is hidden, never deleted. Audited.",
+    description:
+      "Withdraw an open task — the assigner or work_board:assign. The row is hidden, never deleted. Audited. " +
+      "stopRecurring (D-#911, recurring copies only): also pause its recurring task and withdraw its open copies due on or after this one.",
     authScopes: { hasAnyPermission: ["work_board:use", "work_board:assign"] },
-    args: { id: t.arg.string({ required: true }) },
-    resolve: async (_root, args, ctx) => decorateOne(await cancelTask(ctx.auth, args.id)),
+    args: { id: t.arg.string({ required: true }), stopRecurring: t.arg.boolean({ required: false }) },
+    resolve: async (_root, args, ctx) => decorateOne(await cancelTask(ctx.auth, args.id, { stopRecurring: args.stopRecurring ?? false })),
   }),
 );
 

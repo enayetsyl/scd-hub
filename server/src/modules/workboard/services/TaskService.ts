@@ -17,6 +17,7 @@ import { isValidDateKey } from "../../attendance/dates";
 import { User } from "../../foundation/models/User";
 import { writeAudit } from "../../platform/services/AuditService";
 import { Task, type ITask } from "../models/Task";
+import { TaskTemplate } from "../models/TaskTemplate";
 import { queryPage, type Page, type PageArgs } from "../../../lib/paging";
 import { emitTaskAssigned, emitTaskBlocked, emitTaskDone } from "./workBoardNotifications";
 
@@ -273,13 +274,19 @@ export async function moveTask(
   return doc;
 }
 
-export async function cancelTask(authIn: AuthPayload | null, id: string): Promise<ITask> {
+/** Withdraw one task. With `stopRecurring` (D-#911) on a recurring task's copy, also
+ *  pause the recurring task it came from and withdraw its other open copies due on or
+ *  after this one — "this and all future"; earlier overdue copies are left as they are. */
+export async function cancelTask(authIn: AuthPayload | null, id: string, opts: { stopRecurring?: boolean } = {}): Promise<ITask> {
   const auth = requireAuth(authIn);
   const doc = await taskById(id);
   assertCanManage(auth, doc);
   if (doc.status === "DONE") throw new Error("শেষ হওয়া কাজ বাতিল করা যায় না");
-  doc.cancelledAt = new Date();
-  doc.cancelledBy = new Types.ObjectId(auth.userId);
+  if (opts.stopRecurring && !doc.templateId) throw new Error("এটি নিয়মিত কাজ নয়");
+  const now = new Date();
+  const by = new Types.ObjectId(auth.userId);
+  doc.cancelledAt = now;
+  doc.cancelledBy = by;
   await doc.save();
   await writeAudit({
     eventKind: "TASK_WRITE",
@@ -287,8 +294,23 @@ export async function cancelTask(authIn: AuthPayload | null, id: string): Promis
     actorRole: auth.role,
     targetId: doc._id.toString(),
     targetKind: "Task",
-    meta: { action: "cancel" },
+    meta: { action: "cancel", stopRecurring: !!opts.stopRecurring },
   });
+  if (opts.stopRecurring && doc.templateId) {
+    await TaskTemplate.updateOne({ _id: doc.templateId }, { $set: { active: false } });
+    const later = await Task.updateMany(
+      { templateId: doc.templateId, _id: { $ne: doc._id }, dueKey: { $gte: doc.dueKey }, status: { $ne: "DONE" }, cancelledAt: null },
+      { $set: { cancelledAt: now, cancelledBy: by } },
+    );
+    await writeAudit({
+      eventKind: "TASK_WRITE",
+      actorId: auth.userId,
+      actorRole: auth.role,
+      targetId: doc.templateId.toString(),
+      targetKind: "TaskTemplate",
+      meta: { action: "template_deactivate", via: "cancel_task", taskId: doc._id.toString(), laterCancelled: later.modifiedCount },
+    });
+  }
   return doc;
 }
 

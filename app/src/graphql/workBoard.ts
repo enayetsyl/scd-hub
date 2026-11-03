@@ -291,9 +291,9 @@ export const MOVE_TASK = gql<{ moveTask: TaskT }, { id: string; dueKey?: string 
   }
 `;
 
-export const CANCEL_TASK = gql<{ cancelTask: TaskT }, { id: string }>`
-  mutation CancelTask($id: String!) {
-    cancelTask(id: $id) { ${TASK_FIELDS} }
+export const CANCEL_TASK = gql<{ cancelTask: TaskT }, { id: string; stopRecurring?: boolean }>`
+  mutation CancelTask($id: String!, $stopRecurring: Boolean) {
+    cancelTask(id: $id, stopRecurring: $stopRecurring) { ${TASK_FIELDS} }
   }
 `;
 
