@@ -20,6 +20,7 @@ import type {
   LevelRow,
   EffectRow,
   ScatterPoint,
+  OutlierComparison,
 } from "../services/marksDriversStats";
 
 const CorrelationRef = builder.objectRef<Correlation>("MarksDriverCorrelation");
@@ -111,6 +112,23 @@ PointRef.implement({
   }),
 });
 
+const OutlierRef = builder.objectRef<OutlierComparison>("MarksDriverOutlierComparison");
+OutlierRef.implement({
+  description:
+    "The headline figures again without outliers (D-#910): long-absent children (absent on " +
+    "more than half of 30+ marked days) and any child whose result, homework submission or " +
+    "attendance is more than 3 SD from the school mean.",
+  fields: (t) => ({
+    longAbsent: t.exposeInt("longAbsent"),
+    extreme: t.exposeInt("extreme"),
+    withResult: t.exposeInt("withResult"),
+    correlations: t.field({ type: [CorrelationRef], resolve: (o) => o.correlations }),
+    tertiles: t.field({ type: [TertileRef], resolve: (o) => o.tertiles }),
+    below85: t.field({ type: Below85Ref, resolve: (o) => o.below85 }),
+    senior: t.field({ type: SeniorRef, resolve: (o) => o.senior }),
+  }),
+});
+
 const ReportRef = builder.objectRef<MarksDriversReport>("MarksDriversReport");
 ReportRef.implement({
   description:
@@ -140,6 +158,7 @@ ReportRef.implement({
     senior: t.field({ type: SeniorRef, resolve: (r) => r.senior }),
     effects: t.field({ type: [EffectRef], resolve: (r) => r.effects }),
     points: t.field({ type: [PointRef], resolve: (r) => r.points }),
+    withoutOutliers: t.field({ type: OutlierRef, resolve: (r) => r.withoutOutliers }),
   }),
 });
 

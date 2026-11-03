@@ -40,7 +40,14 @@ import {
 } from "../../attendance/attendanceUnit";
 import { resolveWindow } from "../../attendance/services/AttendanceRankingService";
 import { dhakaDayKey } from "../../../lib/dhakaDay";
-import { childRow, computeFigures, type ChildInput, type MarksDriversFigures } from "./marksDriversStats";
+import {
+  childRow,
+  computeFigures,
+  computeWithoutOutliers,
+  type ChildInput,
+  type MarksDriversFigures,
+  type OutlierComparison,
+} from "./marksDriversStats";
 
 export const MARKS_DRIVERS_WINDOWS = ["d30", "d90", "year"] as const;
 export type MarksDriversWindow = (typeof MARKS_DRIVERS_WINDOWS)[number];
@@ -57,6 +64,8 @@ export interface MarksDriversReport extends MarksDriversFigures {
   assignmentRecords: number;
   /** Median attendance days marked per child in the window. */
   medianMarkedDays: number;
+  /** The headline figures again without long-absent children and extreme values (D-#910). */
+  withoutOutliers: OutlierComparison;
 }
 
 const CACHE_TTL_MS = 10 * 60 * 1000;
@@ -206,6 +215,7 @@ async function compute(window: MarksDriversWindow, now: Date): Promise<MarksDriv
 
   return {
     ...computeFigures(rows),
+    withoutOutliers: computeWithoutOutliers(rows),
     window,
     fromKey,
     toKey,
