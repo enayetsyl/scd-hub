@@ -254,7 +254,7 @@ export async function decideLeave(
 
     if (app.dayPart === "late_entry") {
       /**
-       * AN APPROVED LATE ENTRY IS A LATE, NOT A THIRD OF A DAY'S LEAVE (D-#911).
+       * AN APPROVED LATE ENTRY IS A LATE, NOT A THIRD OF A DAY'S LEAVE (D-#912).
        *
        * The owner: *"approved late entry should also count toward 3 late entry = 1 day
        * pay or leave deduction"* — and, asked whether it should ALSO keep its ⅓ day off

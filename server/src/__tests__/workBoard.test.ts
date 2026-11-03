@@ -23,7 +23,13 @@ jest.mock("../modules/workboard/models/Task", () => ({
     create: (d: unknown) => mockCreate(d),
     findById: (id: unknown) => mockFindById(id),
     find: () => ({ sort: () => ({ lean: () => Promise.resolve([]), limit: () => ({ lean: () => Promise.resolve([]) }) }) }),
+    updateMany: (q: unknown, u: unknown) => mockTaskUpdateMany(q, u),
   },
+}));
+const mockTaskUpdateMany = jest.fn();
+const mockTemplateUpdateOne = jest.fn();
+jest.mock("../modules/workboard/models/TaskTemplate", () => ({
+  TaskTemplate: { updateOne: (q: unknown, u: unknown) => mockTemplateUpdateOne(q, u) },
 }));
 jest.mock("../modules/foundation/models/User", () => ({
   User: {
@@ -624,6 +630,42 @@ describe("TaskService", () => {
     expect(out.cancelledAt).toBeInstanceOf(Date);
     mockFindById.mockResolvedValue(fakeDoc({ assignedBy: boss, status: "DONE" }));
     await expect(cancelTask(teacher(boss.toString()), ID)).rejects.toThrow();
+  });
+
+  test("cancel a recurring copy (D-#911): this day only leaves the recurring task running", async () => {
+    const boss = new Types.ObjectId();
+    mockFindById.mockResolvedValue(fakeDoc({ assignedBy: boss, templateId: new Types.ObjectId() }));
+    const out = await cancelTask(teacher(boss.toString()), ID);
+    expect(out.cancelledAt).toBeInstanceOf(Date);
+    expect(mockTemplateUpdateOne).not.toHaveBeenCalled();
+    expect(mockTaskUpdateMany).not.toHaveBeenCalled();
+  });
+
+  test("cancel with stopRecurring (D-#911): pauses the template and withdraws its open copies from this day on", async () => {
+    const boss = new Types.ObjectId();
+    const templateId = new Types.ObjectId();
+    const doc = fakeDoc({ assignedBy: boss, templateId, dueKey: "2026-11-03" });
+    mockFindById.mockResolvedValue(doc);
+    mockTemplateUpdateOne.mockResolvedValue({ modifiedCount: 1 });
+    mockTaskUpdateMany.mockResolvedValue({ modifiedCount: 2 });
+    const out = await cancelTask(teacher(boss.toString()), ID, { stopRecurring: true });
+    expect(out.cancelledAt).toBeInstanceOf(Date);
+    expect(mockTemplateUpdateOne).toHaveBeenCalledWith({ _id: templateId }, { $set: { active: false } });
+    const [q] = mockTaskUpdateMany.mock.calls[0] as [Record<string, unknown>];
+    expect(q).toMatchObject({ templateId, dueKey: { $gte: "2026-11-03" }, status: { $ne: "DONE" }, cancelledAt: null });
+    expect(q._id).toEqual({ $ne: doc._id });
+    const actions = mockWriteAudit.mock.calls.map((c) => (c[0] as { meta: { action: string } }).meta.action);
+    expect(actions).toEqual(["cancel", "template_deactivate"]);
+  });
+
+  test("cancel with stopRecurring: refused on a one-off task, and the assignee alone may not", async () => {
+    const boss = new Types.ObjectId();
+    const assignee = new Types.ObjectId();
+    mockFindById.mockResolvedValue(fakeDoc({ assignedBy: boss }));
+    await expect(cancelTask(teacher(boss.toString()), ID, { stopRecurring: true })).rejects.toThrow("নিয়মিত কাজ নয়");
+    mockFindById.mockResolvedValue(fakeDoc({ assignedBy: boss, assigneeUserId: assignee, templateId: new Types.ObjectId() }));
+    await expect(cancelTask(teacher(assignee.toString()), ID, { stopRecurring: true })).rejects.toThrow();
+    expect(mockTemplateUpdateOne).not.toHaveBeenCalled();
   });
 });
 

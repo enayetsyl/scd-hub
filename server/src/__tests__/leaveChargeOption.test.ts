@@ -358,7 +358,7 @@ describe("lateness, person by person (D-#908)", () => {
   });
 });
 
-describe("an approved late entry is a late, not a third of a day's leave (D-#911)", () => {
+describe("an approved late entry is a late, not a third of a day's leave (D-#912)", () => {
   async function lateEntry(staffProfileId: string, dateKey: string): Promise<string> {
     const app = await StaffLeaveApplication.create({
       staffProfileId, leaveType: "sick", fromKey: dateKey, toKey: dateKey, dayPart: "late_entry",
