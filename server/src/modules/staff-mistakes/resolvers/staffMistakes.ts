@@ -57,7 +57,7 @@ type Row = StaffMistakeShape & {
   genericNote: StaffMistakeNoteShape | null;
 };
 
-/** Kinds with a source model of their own; every other kind is a generic StaffMistakeNote (D-#952). */
+/** Kinds with a source model of their own; every other kind is a generic StaffMistakeNote (D-#954). */
 const SPECIFIC_KINDS = new Set(["MARK_CORRECTION", "ATTENDANCE_CORRECTION", "CLASS_TEST_MARKS", "CLASS_TEST_SCRIPTS", "WORK_CLAIM_ACCEPTED", "WORK_REVERT"]);
 const isGeneric = (kind: string): boolean => !SPECIFIC_KINDS.has(kind);
 

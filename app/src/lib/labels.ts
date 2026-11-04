@@ -7780,6 +7780,7 @@ const STR_BN = {
   smrKindTitle_LEAVE_REDECIDED: "ছুটির সিদ্ধান্ত বদলানো হয়েছে",
   smrKindLabel_PRINT_CANCELLED: "প্রিন্টের অনুরোধ",
   smrKindTitle_PRINT_CANCELLED: "অফিস প্রিন্টের অনুরোধ বাতিল করেছে",
+  // Tier 3: missed or late duties (D-#955)
   smrKindLabel_ATTENDANCE_NOT_MARKED: "উপস্থিতি",
   smrKindTitle_ATTENDANCE_NOT_MARKED: "সময়মতো উপস্থিতি নেওয়া হয়নি",
   smrKindLabel_HW_PASS_SKIPPED: "বাড়ির কাজ",
@@ -7792,7 +7793,7 @@ const STR_BN = {
   smrKindTitle_TASK_OVERDUE: "নির্ধারিত দিনে কাজ শেষ হয়নি",
   smrKindLabel_WORK_CLAIM_UNANSWERED: "অভিভাবকের দাবি",
   smrKindTitle_WORK_CLAIM_UNANSWERED: "অভিভাবকের কাজ জমার দাবির উত্তর দেওয়া হয়নি",
-  // The remaining tier-1 places (D-#952)
+  // The remaining tier-1 places (D-#954)
   smrKindLabel_POPUP_NOTICE_CHANGE: "পপ-আপ বার্তা",
   smrKindTitle_POPUP_NOTICE_CHANGE: "দেখার পর পপ-আপ বার্তা বদলানো / বন্ধ করা হয়েছে",
   smrKindLabel_MONTHLY_REPORT_REVOKE: "মাসিক রিপোর্ট",
@@ -14267,6 +14268,7 @@ const STR_EN: StrTable = {
   smrKindTitle_LEAVE_REDECIDED: "A leave decision was changed",
   smrKindLabel_PRINT_CANCELLED: "Print request",
   smrKindTitle_PRINT_CANCELLED: "The Office cancelled a print request",
+  // Tier 3: missed or late duties (D-#955)
   smrKindLabel_ATTENDANCE_NOT_MARKED: "Attendance",
   smrKindTitle_ATTENDANCE_NOT_MARKED: "Attendance was not taken on time",
   smrKindLabel_HW_PASS_SKIPPED: "Homework",
@@ -14279,7 +14281,7 @@ const STR_EN: StrTable = {
   smrKindTitle_TASK_OVERDUE: "A task was not finished by its day",
   smrKindLabel_WORK_CLAIM_UNANSWERED: "Guardian claim",
   smrKindTitle_WORK_CLAIM_UNANSWERED: "A guardian's work claim was not answered",
-  // The remaining tier-1 places (D-#952)
+  // The remaining tier-1 places (D-#954)
   smrKindLabel_POPUP_NOTICE_CHANGE: "Pop-up notice",
   smrKindTitle_POPUP_NOTICE_CHANGE: "A pop-up was changed or stopped after people saw it",
   smrKindLabel_MONTHLY_REPORT_REVOKE: "Monthly report",

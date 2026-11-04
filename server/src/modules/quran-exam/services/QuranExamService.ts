@@ -650,7 +650,7 @@ export async function saveQuranExamResult(ctx: AppContext, sittingId: string, in
   const paper = await QuranExamPaper.findOne({ examId: s.examId, level: s.level });
   if (!paper) throw new QuranExamError("এই স্তরের প্রশ্নপত্র নেই।");
   let total: number | null = null;
-  // D-#952: a child marked absent and now marked present with no make-up in between was
+  // D-#954: a child marked absent and now marked present with no make-up in between was
   // never absent — the examiner who marked it owns the correction.
   let wrongAbsentBy: Types.ObjectId | null = null;
   if (input.present && s.status === "ABSENT") {

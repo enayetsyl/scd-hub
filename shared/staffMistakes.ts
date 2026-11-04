@@ -15,7 +15,7 @@ export const STAFF_MISTAKE_KINDS = [
   "CLASS_TEST_SCRIPTS",
   "WORK_CLAIM_ACCEPTED",
   "WORK_REVERT",
-  // MR-6 (D-#952): the remaining tier-1 places — recorded on a generic StaffMistakeNote.
+  // MR-6 (D-#954): the remaining tier-1 places — recorded on a generic StaffMistakeNote.
   "POPUP_NOTICE_CHANGE",
   "MONTHLY_REPORT_REVOKE",
   "SYLLABUS_REOPEN",

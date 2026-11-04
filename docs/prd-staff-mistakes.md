@@ -162,7 +162,7 @@ Single-step in MR-1; the mockup's Office-then-Principal step is MR-2 if the owne
   (accepted at once) · অন্য কারণ. Revert: ভুল শিক্ষার্থীর ঘরে চাপ পড়েছে (counts) · খাতা আবার
   দেখে বদলেছি · অন্য কারণ. Both explained later.
 
-## 13. MR-6 — the remaining tier-1 places (D-#952)
+## 13. MR-6 — the remaining tier-1 places (D-#954)
 
 One generic source, `StaffMistakeNote` (kind × refKey × owner × episode, lines of Bangla written
 when the correction happened), and `recordPlaceMistake()` called from each place. All tier 1,
