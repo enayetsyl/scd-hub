@@ -1,6 +1,6 @@
 # STATUS
 
-- 2026-11-04: **LIVE — D-#918 / D-#919 / D-#920** (dev #1290/#1291/#1292 → promoted #1294, prod `77f25116`, deploy green; **OTA `e72841cc-e3db-42a7-ae85-f604d699ebbb`** android runtime 1.1.0, bundle has the prod URL and no localhost, source maps uploaded). D-#920 defaults owner-approved (D-#921).
+- 2026-11-04: **LIVE — D-#918 / D-#919 / D-#920** (dev #1290/#1291/#1292 → promoted #1294, prod `77f25116`, deploy green; **OTA `e72841cc-e3db-42a7-ae85-f604d699ebbb`** android runtime 1.1.0, bundle has the prod URL and no localhost, source maps uploaded). D-#920 defaults owner-approved (D-#935).
 - 2026-11-04: **BUILT — arrange your own sidebar (D-#920)** (branch `feat/sidebar-arrange`, worktree `C:/w/ghome`). New `NavPreference` model + 4 SELF fields (platform module); drawer gets ⇅ সাজান (manual ↑↓, ☆ favourites, "most used on top" auto mode, reset). Server + app → deploy + **OTA** after promotion.
   - **Verified:** server tsc 0; navPreference 9/9 + permissionCatalogueGates + expectedErrorRegistry green; full server jest 351 suites / 6,104 tests; app tsc 0; expo web export 0; local walk (in-memory Mongo + Expo web + Chrome) 18/18: manual order, favourites + their order, persisted across reload, auto mode puts the most-tapped item first, reset, guardian login.
   - **Owner-unconfirmed defaults:** favourites also stay in their own place; new/unplaced sections go to the END of a manual order; auto counts halve past 500.
