@@ -1,5 +1,8 @@
 # STATUS
 
+- 2026-11-04: **BUILT — staff mistake record MR-8: tier 3, missed or late duties (D-#955)** (branch `feat/staff-mistakes-mr8`, stacked on MR-7, worktree `C:/w/smr`). Six sweeps record once per thing at tier 3; approved leave on the duty day is accepted automatically. MR-6 renumbered D-#952 → D-#955 (D-#952 went to the lesson-plan switch, #1313).
+  - **Verified:** see the PR.
+  - **Now / next:** merge MR-1 → MR-8 in order → promote → **OTA**. All eight slices built; owner to confirm the owners/moments listed in the PRD §§11–15.
 - 2026-11-04: **BUILT — staff mistake record MR-7: tier 2 (D-#953)** (branch `feat/staff-mistakes-mr7`, stacked on MR-6, worktree `C:/w/smr`). Fifteen hooks on the generic note at tier 2; the entry resolver now treats every kind without its own source model as generic. Deferred: staff attendance re-import, salary double entry, guardian link/unlink, question retire/restore, absent-at-delivery cross-check.
   - **Verified:** shared/server/app tsc 0; placeMistakes 4/4 (incl. a task reopened by someone else = tier-2 entry for who marked it done, own undo not recorded); the six DB-free suites the hooks touch (studentComment, classTestQuestion, classroomObservation, classTest, printRequest, classTestPublish) green with the recorder stubbed — 404 tests; full server jest 357 suites / 6,141 tests, 0 recorder waits. No new UI walk: the app change is labels only, on the generic card walked in MR-6.
   - **Now / next:** merge in order (MR-1 → … → this) → promote → **OTA**. Next MR-8 (tier 3: missed or late duties).

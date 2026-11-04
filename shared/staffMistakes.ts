@@ -42,6 +42,13 @@ export const STAFF_MISTAKE_KINDS = [
   "ROUTINE_CELL_REVISED",
   "LEAVE_REDECIDED",
   "PRINT_CANCELLED",
+  // MR-8 (D-#955): tier 3 — a duty missed or late, caught by the sweeps that already chase it.
+  "ATTENDANCE_NOT_MARKED",
+  "HW_PASS_SKIPPED",
+  "ASSIGNMENT_UNMARKED",
+  "OBSERVATION_NO_RESPONSE",
+  "TASK_OVERDUE",
+  "WORK_CLAIM_UNANSWERED",
 ] as const;
 export type StaffMistakeKind = (typeof STAFF_MISTAKE_KINDS)[number];
 
@@ -67,6 +74,17 @@ export interface StaffMistakeReason {
 
 const MINE_REASON: StaffMistakeReason = { code: "MINE", bn: "আমার ভুল ছিল", en: "It was my mistake", hintBn: "ভুলটা আমার", selfCounts: true };
 const OTHER_REASON: StaffMistakeReason = { code: "OTHER", bn: "অন্য কারণ", en: "Another reason", hintBn: "নিচে নিজের ভাষায় লিখুন", needsText: true };
+/** The missed-duty frame (D-#955): an approved leave is accepted at once (the sweep checks it
+ *  itself first); "I forgot" counts; the rest go to review. */
+const DUTY_REASONS: readonly StaffMistakeReason[] = [
+  { code: "ON_LEAVE", bn: "ছুটিতে ছিলাম", en: "I was on leave", hintBn: "অনুমোদিত ছুটি থাকলে নিজে থেকেই গ্রহণযোগ্য", autoExcuses: true },
+  { code: "PROXY_HAD_IT", bn: "প্রক্সি দায়িত্বে ছিল", en: "A cover teacher had it", hintBn: "দায় প্রক্সির — যাচাইকারী সরাতে পারবেন" },
+  { code: "APP_PROBLEM", bn: "অ্যাপ / ইন্টারনেট সমস্যা", en: "App or internet problem", hintBn: "" },
+  { code: "OTHER_DUTY", bn: "অন্য দায়িত্বে ছিলাম", en: "I was on another duty", hintBn: "" },
+  { code: "FORGOT", bn: "ভুলে গিয়েছিলাম", en: "I forgot", hintBn: "", selfCounts: true },
+  { code: "OTHER", bn: "অন্য কারণ", en: "Another reason", hintBn: "নিচে নিজের ভাষায় লিখুন", needsText: true },
+];
+
 /** MINE + the place's own buttons + OTHER (MR-6 places share the frame). */
 const withFrame = (...own: StaffMistakeReason[]): readonly StaffMistakeReason[] => [MINE_REASON, ...own, OTHER_REASON];
 
@@ -228,6 +246,12 @@ export const STAFF_MISTAKE_REASONS: Record<StaffMistakeKind, readonly StaffMista
     { code: "WITHDRAWN", bn: "কর্মী নিজে ছুটি তুলে নিয়েছেন", en: "The staff member withdrew it", hintBn: "", autoExcuses: true },
     OTHER_REASON,
   ],
+  ATTENDANCE_NOT_MARKED: DUTY_REASONS,
+  HW_PASS_SKIPPED: DUTY_REASONS,
+  ASSIGNMENT_UNMARKED: DUTY_REASONS,
+  OBSERVATION_NO_RESPONSE: DUTY_REASONS,
+  TASK_OVERDUE: DUTY_REASONS,
+  WORK_CLAIM_UNANSWERED: DUTY_REASONS,
   PRINT_CANCELLED: [
     MINE_REASON,
     { code: "WRONG_REQUEST", bn: "ভুল অনুরোধ দিয়েছিলাম", en: "Filed the wrong request", hintBn: "", selfCounts: true },

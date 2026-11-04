@@ -14,6 +14,8 @@ import { StaffMistake } from "../models/StaffMistake";
 import { StaffMistakeNote } from "../models/StaffMistakeNote";
 import { User } from "../../foundation/models/User";
 import { recordMistakeFromSource } from "./StaffMistakeService";
+import { resolveStaffProfileForUser } from "../../hr/services/staffMatch";
+import { StaffLeaveApplication } from "../../hr/models/StaffLeaveApplication";
 
 export interface PlaceMistakeInput {
   kind: StaffMistakeKind;
@@ -26,6 +28,11 @@ export interface PlaceMistakeInput {
   /** One Bangla line for the card. */
   line: string;
   tier?: number;
+  /** Record at most once per (kind × refKey × owner), ever — a daily sweep must not add a new
+   *  mistake every day for the same overdue thing (D-#955). */
+  oncePerRef?: boolean;
+  /** The duty's day: an approved leave covering it is accepted at once (D-#955). */
+  leaveDateKey?: string | null;
 }
 
 export async function recordPlaceMistake(ev: PlaceMistakeInput): Promise<boolean> {
@@ -33,6 +40,7 @@ export async function recordPlaceMistake(ev: PlaceMistakeInput): Promise<boolean
     if (!ev.ownerId || !Types.ObjectId.isValid(ev.ownerId.toString())) return false;
     const owner = new Types.ObjectId(ev.ownerId.toString());
     const base = { kind: ev.kind, refKey: ev.refKey, staffUserId: owner };
+    if (ev.oncePerRef && (await StaffMistakeNote.exists(base))) return false;
     const last = await StaffMistakeNote.findOne(base).sort({ episode: -1 }).select("_id episode").lean();
     let episode = last?.episode ?? 1;
     if (last) {
@@ -49,10 +57,35 @@ export async function recordPlaceMistake(ev: PlaceMistakeInput): Promise<boolean
       note = await StaffMistakeNote.findOneAndUpdate(key, { $push: { lines: line } }, { new: true });
     }
     if (!note) return false;
-    await recordMistakeFromSource({ kind: ev.kind, tier: ev.tier ?? 1, sourceId: note._id, staffUserId: owner, correctedBy: ev.correctedBy, at: ev.at });
+    const onLeave = ev.leaveDateKey ? await onApprovedLeave(owner.toString(), ev.leaveDateKey) : false;
+    await recordMistakeFromSource({
+      kind: ev.kind,
+      tier: ev.tier ?? 1,
+      sourceId: note._id,
+      staffUserId: owner,
+      correctedBy: ev.correctedBy,
+      at: ev.at,
+      autoReason: onLeave ? { code: "ON_LEAVE", text: "অনুমোদিত ছুটি (অ্যাপ মিলিয়েছে)" } : null,
+    });
     return true;
   } catch (err) {
     console.error(`[StaffMistakeNoteService] recording ${ev.kind} failed (the action went ahead):`, err);
+    return false;
+  }
+}
+
+/** An approved staff leave covering the day (D-#955). Never throws. */
+async function onApprovedLeave(userId: string, dateKey: string): Promise<boolean> {
+  try {
+    const profile = await resolveStaffProfileForUser(userId);
+    if (!profile) return false;
+    return !!(await StaffLeaveApplication.exists({
+      staffProfileId: profile._id,
+      status: "approved",
+      fromKey: { $lte: dateKey },
+      toKey: { $gte: dateKey },
+    }));
+  } catch {
     return false;
   }
 }

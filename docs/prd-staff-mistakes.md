@@ -209,3 +209,25 @@ Same generic note as §13 with `tier: 2` (half weight on the ladder by default).
 Deferred (need new comparison logic, not just a hook): staff attendance sheet re-imported,
 salary entered twice for one month, guardian linked then unlinked, question retired then
 restored, absent-at-delivery vs the attendance register.
+
+## 15. MR-8 — tier 3: missed or late duties (D-#955)
+
+Same generic note with `tier: 3`, `correctedBy: "system"` and `oncePerRef` — the existing sweep that
+already reminds or escalates records the miss **once per thing**, however many days it keeps running.
+Explained later with the duty reasons (ছুটিতে ছিলাম, প্রক্সির দায়িত্বে ছিল, অ্যাপের সমস্যা, অন্য দায়িত্ব,
+ভুলে গেছি = counts, অন্য কারণ + text).
+
+| kind | recorded when | owner | leave day checked |
+|---|---|---|---|
+| ATTENDANCE_NOT_MARKED | the 14:00 reminder finds a section still unmarked | the section's marker | that day |
+| HW_PASS_SKIPPED | the 17:30 chase sweep marks children "not submitted" itself | the item's `declaredBy` | that day |
+| ASSIGNMENT_UNMARKED | an item is on the 09:30 late-marks list | each teacher of the item | that day |
+| OBSERVATION_NO_RESPONSE | an unanswered observation reaches the Principal flag (default 7 days) | the observed teacher | — |
+| TASK_OVERDUE | the morning task sweep finds a task past its due day and still open | the assignee | the due day |
+| WORK_CLAIM_UNANSWERED | a guardian's "done at home" claim expires unanswered | the claim's teacher | — |
+
+**Approved leave:** where a duty day is known, an approved staff leave covering it (matched through the
+staff profile) accepts the entry at once as ছুটিতে ছিলাম — no explain notice is sent.
+
+Deferred: the class-test marks overdue digest only carries counts, not who; Saturday revision and
+Quran marks after unlock have no correction path yet.

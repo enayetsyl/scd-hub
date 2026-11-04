@@ -32,6 +32,7 @@ import { writeAudit } from "../../platform/services/AuditService";
 import { renderTemplate } from "../../templates/services/MessageTemplateService";
 import type { MessageTemplateKey } from "@scd/shared";
 import { ATTENDANCE_REMINDER_TIERS, type AttendanceReminderTier } from "@scd/shared";
+import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
 
 export class AttendanceReminderError extends Error {}
 
@@ -212,6 +213,14 @@ export async function dispatchAttendanceReminders(
       targetKind: "Section",
       meta: { tier, dateKey: key, recipientCount: recipientIds.length },
     });
+    // D-#955: still unmarked at the last reminder — the marker's missed duty.
+    if (tier === "T1400" && section.markerTeacherId) {
+      await recordPlaceMistake({
+        kind: "ATTENDANCE_NOT_MARKED", tier: 3, refKey: `${key}:${section.sectionId}`, ownerId: section.markerTeacherId,
+        correctedBy: "system", at: new Date(), oncePerRef: true, leaveDateKey: key,
+        line: `${section.sectionNameBn} — ১৪:০০-এর মধ্যেও উপস্থিতি দেওয়া হয়নি`,
+      });
+    }
 
     base.dispatchedSections += 1;
     base.recipientCount += recipientIds.length;

@@ -14,6 +14,10 @@ const mockRecFind = jest.fn();
 const mockEmitChase = jest.fn().mockResolvedValue(undefined);
 const mockEmitParentComms = jest.fn().mockResolvedValue(undefined);
 
+// D-#955: the mistake recorder reaches real models; this suite is DB-free.
+jest.mock("../modules/staff-mistakes/services/StaffMistakeNoteService", () => ({
+  recordPlaceMistake: jest.fn().mockResolvedValue(false),
+}));
 jest.mock("../modules/trackers/models/HomeworkStudentRecord", () => ({
   HomeworkStudentRecord: {
     findById: (id: unknown) => mockRecFindById(id),
@@ -30,6 +34,12 @@ import {
   HW_AUTO_CHASE_MINUTES,
   HW_AUTO_CHASE_LOOKBACK_DAYS,
 } from "../modules/trackers/services/HomeworkChaseSweepService";
+import { HomeworkItem } from "../modules/trackers/models/HomeworkItem";
+
+// D-#955: the owner read for the missed-duty record.
+beforeEach(() => {
+  jest.spyOn(HomeworkItem, "find").mockReturnValue({ select: () => ({ lean: async () => [] }) } as never);
+});
 
 const NOW = new Date(2026, 7, 4, 17, 30); // Tue 04 Aug 2026 17:30 local
 

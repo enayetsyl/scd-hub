@@ -25,6 +25,8 @@
 import { HomeworkStudentRecord } from "../models/HomeworkStudentRecord";
 import { transitionRecord } from "./HomeworkService";
 import { dateKeyOf } from "../../attendance/dates";
+import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
+import { HomeworkItem } from "../models/HomeworkItem";
 
 /** Local-clock rung: 17:30 — after the auto-issue window closes at 17:00 and
  *  the 16:00 escalations are done; early enough that the guardian push is
@@ -52,10 +54,11 @@ export async function sweepHomeworkAutoChase(now = new Date()): Promise<number> 
     chaseCount: 0,
     dueDate: { $gte: floor, $lt: endOfToday },
   })
-    .select("state dueDate")
+    .select("state dueDate hwItemId hwId")
     .lean();
 
   let chased = 0;
+  const perItem = new Map<string, { hwId: string; n: number }>();
   for (const rec of records) {
     // Day-granular guard (dueDate carries the issue-time clock): due day must
     // have arrived. The $lt bound already ensures it; this is belt-and-braces.
@@ -67,6 +70,24 @@ export async function sweepHomeworkAutoChase(now = new Date()): Promise<number> 
     }
     await transitionRecord({ recordId: rec._id.toString(), toState: "CHASE", at: now });
     chased += 1;
+    const k = String(rec.hwItemId);
+    perItem.set(k, { hwId: rec.hwId, n: (perItem.get(k)?.n ?? 0) + 1 });
+  }
+  // D-#955: the app had to chase because the teacher never ran the submit pass.
+  if (perItem.size > 0) {
+    try {
+      const items = await HomeworkItem.find({ _id: { $in: [...perItem.keys()] } }).select("declaredBy").lean();
+      for (const it of items) {
+        const p = perItem.get(String(it._id))!;
+        await recordPlaceMistake({
+          kind: "HW_PASS_SKIPPED", tier: 3, refKey: String(it._id), ownerId: it.declaredBy, correctedBy: "system", at: now,
+          oncePerRef: true, leaveDateKey: todayKey,
+          line: `${p.hwId}: জমার হিসাব দেওয়া হয়নি — ১৭:৩০-এ অ্যাপ নিজে ${p.n} জনকে "জমা দেয়নি" দিয়েছে`,
+        });
+      }
+    } catch (err) {
+      console.error("[HomeworkChaseSweep] mistake record failed (the chase went ahead):", err);
+    }
   }
   return chased;
 }

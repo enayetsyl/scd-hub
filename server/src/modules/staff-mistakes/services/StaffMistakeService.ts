@@ -111,6 +111,9 @@ export interface RecordMistakeInput {
   correctedBy: string;
   at: Date;
   reason?: CorrectionReason | null;
+  /** A reason the system itself established (D-#955: an approved leave that day) — applied
+   *  whoever corrected it, and no "please explain" notice goes out. */
+  autoReason?: CorrectionReason | null;
 }
 
 /**
@@ -125,10 +128,12 @@ export async function recordMistakeFromSource(input: RecordMistakeInput): Promis
   const staffUserId = new Types.ObjectId(input.staffUserId.toString());
   const sourceId = new Types.ObjectId(input.sourceId.toString());
   const self = input.correctedBy === staffUserId.toString();
-  const reason =
+  const given =
     self && input.reason && !staffMistakeReasonError(input.kind, input.reason.code, input.reason.text)
       ? input.reason
       : null;
+  const auto = input.autoReason && staffMistakeReason(input.kind, input.autoReason.code) ? input.autoReason : null;
+  const reason = auto ?? given;
 
   const existing = await StaffMistake.findOne({ kind: input.kind, sourceId, staffUserId });
   if (existing) {
