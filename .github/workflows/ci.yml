@@ -38,6 +38,8 @@ jobs:
         run: node skills/_tools/verify_descriptive_carriers.mjs server/import/cases/lo-codes
       - name: Mastery catalogue files valid (D-#776)
         run: npx tsx skills/_tools/mastery_catalogue_to_json.mjs --check docs/mastery/lo-catalogue
+      - name: Objective-tree files pass the structural verifier (prd-objective-tree §10.1)
+        run: node skills/_tools/verify_objective_tree.mjs docs/mastery/objective-tree/C1_MATH.tree.json docs/mastery/objective-tree/domains/MATH.json
       - name: Server tests (jest)
         run: npm run test --workspace=server
       - name: Typecheck app

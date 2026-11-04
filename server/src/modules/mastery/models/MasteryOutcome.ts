@@ -17,8 +17,22 @@
  * Curriculum plane: no identity, sits on neither side of the ADR-005 firewall.
  */
 import { Schema, model, Document, Types } from "mongoose";
-import { MASTERY_ASSESS, MASTERY_CLASS_TOKENS, MASTERY_OUTCOME_STATUSES, MASTERY_SUBJECTS } from "@scd/shared";
-import type { MasteryAssess, MasteryClassToken, MasteryOutcomeStatus, MasterySubject } from "@scd/shared";
+import {
+  MASTERY_ASSESS,
+  MASTERY_CLASS_TOKENS,
+  MASTERY_OUTCOME_LEVELS,
+  MASTERY_OUTCOME_STATUSES,
+  MASTERY_REVIEW_STATES,
+  MASTERY_SUBJECTS,
+} from "@scd/shared";
+import type {
+  MasteryAssess,
+  MasteryClassToken,
+  MasteryOutcomeLevel,
+  MasteryOutcomeStatus,
+  MasteryReviewState,
+  MasterySubject,
+} from "@scd/shared";
 
 export interface IMasteryOutcome extends Document {
   _id: Types.ObjectId;
@@ -44,10 +58,69 @@ export interface IMasteryOutcome extends Document {
   lockedBy?: Types.ObjectId;
   retiredAt?: Date;
   retiredBy?: Types.ObjectId;
-  /** Which book file the row came from (e.g. "Class 3 Math/C3_MATH_Book_v2.1_Writer-Reviewer.docx"). */
-  bookRef?: string;
+  /**
+   * Where in the book. Objective-tree rows store the structured form `{version, chapter,
+   * lesson?, exercises[]}`; flat M-0 rows hold the old string (the book file). Read it through
+   * `outcomeBookRef()`, which accepts both.
+   */
+  bookRef?: string | MasteryBookRef;
+
+  // --- Objective tree (prd-objective-tree §5, D-#921/#922). Absent on flat M-0 rows, which read as
+  // a tagged OBJECTIVE with no parent (`treeShapeOf`). ---
+  level?: MasteryOutcomeLevel;
+  /** SUB ⇒ its OBJECTIVE's code; null for an objective. */
+  parentCode?: string | null;
+  domainCode?: string | null;
+  /** true = questions / rubric grades / evidence name this row; false = a grouping parent. */
+  tagged?: boolean;
+  /** The earlier step(s): same subject, same or earlier class. */
+  prereqCodes?: string[];
+  claudeNote?: string;
+  /** Flat draft codes this row replaces. */
+  legacyCodes?: string[];
+  /** The review decision while DRAFT. */
+  reviewState?: MasteryReviewState;
+  rejectReason?: string;
+  /** MERGE target (OT-2). */
+  mergedInto?: string;
+  /** Hash of the node content as last IMPORTED: a redraft re-import compares against it, so an
+   *  unchanged file row keeps the reviewer's decision (and edits). Null for reviewer-ADDED rows. */
+  draftHash?: string | null;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface MasteryBookRef {
+  version: string | null;
+  chapter: number | null;
+  lesson?: string | null;
+  exercises: string[];
+}
+
+/** Either stored form → the structured book reference (old string = the version/book file). */
+export function outcomeBookRef(o: Pick<IMasteryOutcome, "bookRef" | "chapterNumber">): MasteryBookRef {
+  const b = o.bookRef;
+  if (b && typeof b === "object") {
+    return { version: b.version ?? null, chapter: b.chapter ?? null, lesson: b.lesson ?? null, exercises: b.exercises ?? [] };
+  }
+  return { version: typeof b === "string" && b ? b : null, chapter: o.chapterNumber ?? null, lesson: null, exercises: [] };
+}
+
+/** The tree shape of any row — a flat M-0 row is a tagged objective with no parent. */
+export function treeShapeOf(o: Pick<IMasteryOutcome, "level" | "parentCode" | "tagged" | "domainCode" | "prereqCodes">): {
+  level: MasteryOutcomeLevel;
+  parentCode: string | null;
+  tagged: boolean;
+  domainCode: string | null;
+  prereqCodes: string[];
+} {
+  return {
+    level: o.level ?? "OBJECTIVE",
+    parentCode: o.parentCode ?? null,
+    tagged: o.tagged ?? true,
+    domainCode: o.domainCode ?? null,
+    prereqCodes: o.prereqCodes ?? [],
+  };
 }
 
 const MasteryOutcomeSchema = new Schema<IMasteryOutcome>(
@@ -70,7 +143,19 @@ const MasteryOutcomeSchema = new Schema<IMasteryOutcome>(
     lockedBy: { type: Schema.Types.ObjectId },
     retiredAt: { type: Date },
     retiredBy: { type: Schema.Types.ObjectId },
-    bookRef: { type: String, trim: true },
+    // String (flat M-0) or {version, chapter, lesson, exercises} (objective tree).
+    bookRef: { type: Schema.Types.Mixed },
+    level: { type: String, enum: MASTERY_OUTCOME_LEVELS },
+    parentCode: { type: String, default: undefined },
+    domainCode: { type: String, default: undefined },
+    tagged: { type: Boolean, default: undefined },
+    prereqCodes: { type: [String], default: undefined },
+    claudeNote: { type: String, trim: true },
+    legacyCodes: { type: [String], default: undefined },
+    reviewState: { type: String, enum: MASTERY_REVIEW_STATES },
+    rejectReason: { type: String, trim: true },
+    mergedInto: { type: String },
+    draftHash: { type: String, default: undefined },
   },
   { timestamps: true },
 );
