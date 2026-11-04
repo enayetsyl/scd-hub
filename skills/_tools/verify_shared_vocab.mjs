@@ -825,6 +825,16 @@ check("LO code pattern: chapter outcome + skill strand accepted, malformed refus
   V.MASTERY_LO_CODE_RE.test("LO-C3-MATH-07-03") && V.MASTERY_LO_CODE_RE.test("LO-C1-BAN-SK-HW-01") &&
   V.MASTERY_LO_CODE_RE.test("LO-NUR-ENG-01-01") && !V.MASTERY_LO_CODE_RE.test("LO-C7-MATH-01-01") &&
   !V.MASTERY_LO_CODE_RE.test("LO-C3-QURAN-01-01") && !V.MASTERY_LO_CODE_RE.test("TOP-MATH-C3-01"));
+check("LO code pattern: sub-objective `.N` suffix accepted on objective + strand, malformed suffix refused (D-#921)",
+  V.MASTERY_LO_CODE_RE.test("LO-C1-MATH-07-03.2") && V.MASTERY_LO_CODE_RE.test("LO-C1-MATH-07-03.12") &&
+  V.MASTERY_LO_CODE_RE.test("LO-C1-MATH-SK-COL-01.1") && !V.MASTERY_LO_CODE_RE.test("LO-C1-MATH-07-03.") &&
+  !V.MASTERY_LO_CODE_RE.test("LO-C1-MATH-07-03.123") && !V.MASTERY_LO_CODE_RE.test("LO-C1-MATH-07-03.2.1") &&
+  V.parseMasteryLoCode("LO-C1-MATH-07-03.2")?.sub === 2 && V.parseMasteryLoCode("LO-C1-MATH-07-03.2")?.seq === 3 &&
+  V.parseMasteryLoCode("LO-C1-MATH-07-03.2")?.objectiveCode === "LO-C1-MATH-07-03" && V.parseMasteryLoCode("LO-C1-MATH-07-03")?.sub === null);
+check("domain code pattern DOM-<SUBJ>-<SLUG> (D-#921); level labels default ক্ষেত্র / শিখনফল / উপ-শিখনফল (D-#923)",
+  V.MASTERY_DOMAIN_CODE_RE.test("DOM-MATH-ADD") && !V.MASTERY_DOMAIN_CODE_RE.test("DOM-QURAN-ADD") && !V.MASTERY_DOMAIN_CODE_RE.test("DOM-MATH-") &&
+  V.MASTERY_LEVEL_LABEL_DEFAULTS.domainBn === "ক্ষেত্র" && V.MASTERY_LEVEL_LABEL_DEFAULTS.objectiveBn === "শিখনফল" &&
+  V.MASTERY_LEVEL_LABEL_DEFAULTS.subBn === "উপ-শিখনফল");
 check("mastery policy defaults: thresholds ordered and inside 0..100 (D-#779/#781)",
   V.MASTERY_POLICY_DEFAULTS.weakBelowPct < V.MASTERY_POLICY_DEFAULTS.improvingAtPct &&
   V.MASTERY_POLICY_DEFAULTS.improvingAtPct <= 100 && V.MASTERY_POLICY_DEFAULTS.sectionTriggerPct === 50 &&
@@ -841,9 +851,16 @@ check("mastery policy defaults: thresholds ordered and inside 0..100 (D-#779/#78
     PAYLOAD.properties.lo_codes?.items?.pattern === loSrc);
   check("envelope tags.lo_codes item pattern === vocab MASTERY_LO_CODE_RE",
     SCHEMA.properties.tags.properties.lo_codes?.items?.pattern === loSrc);
-  check("payload topic_tag accepts BOTH a legacy TOP- code and an LO code (chapter + strand), refuses malformed",
+  check("payload topic_tag accepts BOTH a legacy TOP- code and an LO code (chapter + strand + `.N` sub), refuses malformed",
     topicPat.test("TOP-MATH-C3-05") && topicPat.test("LO-C3-MATH-07-03") && topicPat.test("LO-C1-BAN-SK-HW-01") &&
+    topicPat.test("LO-C1-MATH-07-03.2") && !topicPat.test("LO-C1-MATH-07-03.") &&
     !topicPat.test("LO-C3-MATH-7-3") && !topicPat.test("LO-C3-QURAN-01-01"));
+  check("one code per question (D-#926): payload lo_codes maxItems 1 AND the envelope question branch caps tags.lo_codes at 1",
+    PAYLOAD.properties.lo_codes?.maxItems === 1 &&
+    SCHEMA.allOf.some((b) => b.if?.properties?.doc_type?.const === "question" && b.then?.properties?.tags?.properties?.lo_codes?.maxItems === 1));
+  check("session plans may carry many codes (prd-objective-tree §8.3): the shared envelope tags.lo_codes has NO maxItems",
+    SCHEMA.properties.tags.properties.lo_codes?.maxItems === undefined &&
+    !SCHEMA.allOf.some((b) => b.if?.properties?.doc_type?.const === "session_plan" && b.then?.properties?.tags?.properties?.lo_codes?.maxItems !== undefined));
   check("lo_codes stays OPTIONAL in the payload (a legacy question needs none)",
     !PAYLOAD.required.includes("lo_codes"));
 }
@@ -909,6 +926,8 @@ const ROLE_CHECK_DEFAULTS = {
     "reports:class_test_dashboard", "reports:student_progress", "reports:revision_dashboard", "reports:lesson_progress",
     "reports:review_progress", "reports:reviewer_effectiveness", "reports:teaching_note_comments",
     "reports:finance_dashboard", "reports:daily_snapshot",
+    // Question-bank coverage (OT-4, D-#947): owner 2026-11-04 — the Office reads it too.
+    "reports:bank_coverage",
     "assignment:view_all", "assignment:undo_any", "work_claim:view_all", "work_claim:remind", "set_tracker:view_all",
     "saturday_revision:view", "saturday_revision:view_all", "saturday_revision:enter_results", "saturday_revision:edit_all",
     "saturday_revision:send", "saturday_revision:settings", "class_test:view_all", "class_test:register",

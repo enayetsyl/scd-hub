@@ -207,7 +207,33 @@ def lo_code_semantics(env, p):
             fail("LO", f"{code}: unknown subject {csubj}")
 
 
+def plan_lo_semantics(env):
+    """Session-plan objective codes (prd-objective-tree §8.3): a plan may carry many
+    `tags.lo_codes` (a lesson teaches several steps). The envelope schema already checks
+    each against MASTERY_LO_CODE_RE; here each must carry the plan's own class and
+    subject. Whether a code exists in the catalogue is the APP's check (a warning)."""
+    if env.get("doc_type") not in PLAN_DOC_TYPES:
+        return
+    codes = (env.get("tags") or {}).get("lo_codes")
+    if not isinstance(codes, list):
+        return
+    cls = env.get("class_level")
+    subj = env.get("subject")
+    for code in codes:
+        if not isinstance(code, str):
+            continue
+        parts = code.split("-")
+        if len(parts) < 4:
+            continue
+        token, csubj = parts[1], parts[2]
+        if isinstance(cls, int) and token != f"C{cls}":
+            fail("LO", f"{code}: class {token} does not match plan class_level {cls}")
+        if isinstance(subj, str) and csubj != subj:
+            fail("LO", f"{code}: subject {csubj} does not match plan subject {subj}")
+
+
 def question_semantics(env, ref19_slugs):
+    plan_lo_semantics(env)
     if env.get("doc_type") != "question":
         return
     p = env.get("payload", {})

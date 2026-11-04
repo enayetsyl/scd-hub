@@ -22,6 +22,31 @@ import { MasteryEnablement } from "../models/MasteryEnablement";
 import { AcademicYear } from "../../foundation/models/AcademicYear";
 import { writeAudit } from "../../platform/services/AuditService";
 import {
+  MASTERY_CLASS_TOKENS,
+  MASTERY_SUBJECTS,
+  checkTreeInvariants,
+  formatTreeViolation,
+  isObjectiveTreeFile,
+  readDomainsFile,
+  readTreeFile,
+  type DomainsFile,
+  type MasteryLevelLabels,
+  type TreeFile,
+} from "@scd/shared";
+import { MasteryDomain } from "../models/MasteryDomain";
+import { MasteryCatalogueReview } from "../models/MasteryCatalogueReview";
+import { outcomeBookRef, treeShapeOf } from "../models/MasteryOutcome";
+import {
+  appendReviewEvents,
+  latestReviewRound,
+  openReviewRound,
+  resolveLevelLabels,
+  switchBlockedByReview,
+  LEVEL_LABEL_KEYS,
+  type ReviewEventInput,
+} from "./MasteryReviewService";
+import { mergedTreeViolations, planTreeImport, REMOVED_IN_REDRAFT, type ExistingTreeRow } from "../tree";
+import {
   cleanPolicyValues,
   diffCatalogue,
   parseCatalogueImport,
@@ -68,6 +93,18 @@ export interface OutcomeView {
   homeTipBn: string | null;
   order: number;
   status: string;
+  // Objective tree (prd-objective-tree §5). A flat M-0 row reads as a tagged OBJECTIVE, no parent.
+  level: string;
+  parentCode: string | null;
+  domainCode: string | null;
+  tagged: boolean;
+  prereqCodes: string[];
+  legacyCodes: string[];
+  claudeNote: string | null;
+  reviewState: string | null;
+  rejectReason: string | null;
+  mergedInto: string | null;
+  bookRef: { version: string | null; chapter: number | null; lesson: string | null; exercises: string[] };
 }
 
 export interface ChapterView {
@@ -122,6 +159,16 @@ const outcomeView = (o: IMasteryOutcome): OutcomeView => ({
   homeTipBn: o.homeTipBn ?? null,
   order: o.order,
   status: o.status,
+  ...treeShapeOf(o),
+  legacyCodes: o.legacyCodes ?? [],
+  claudeNote: o.claudeNote ?? null,
+  reviewState: o.reviewState ?? null,
+  rejectReason: o.rejectReason ?? null,
+  mergedInto: o.mergedInto ?? null,
+  bookRef: (() => {
+    const b = outcomeBookRef(o);
+    return { version: b.version, chapter: b.chapter, lesson: b.lesson ?? null, exercises: b.exercises };
+  })(),
 });
 
 export async function getCatalogue(
@@ -205,7 +252,34 @@ export interface ImportReport {
   status: string | null;
   errors: string[];
   diff: CatalogueDiff | null;
+  /** Set for a `scd-objective-tree/1` import (prd-objective-tree §6); null for a flat file. */
+  tree: TreeImportPreview | null;
 }
+
+export interface TreeImportPreview {
+  format: string;
+  counts: { domains: number; objectives: number; subs: number; strands: number; tagged: number; grouping: number };
+  coverage: { exercisesTotal: number; mapped: number; unmapped: { ref: string; text: string; reason: string }[]; note: string | null };
+  flags: { code: string | null; kind: string; text: string; ownerRuling: string | null }[];
+  domains: { added: string[]; changed: string[]; unchanged: number };
+  round: { action: string; round: number | null };
+  review: { kept: number; backToProposed: string[]; removedInRedraft: string[]; lockedChanged: string[] };
+  /** Every broken §5 / §10.1 rule, "[RULE] CODE: detail" (also in `errors`). */
+  violations: string[];
+  /** True when the apply would write nothing (an unchanged re-import). */
+  noop: boolean;
+}
+
+const failReport = (errors: string[], tree: TreeImportPreview | null = null): ImportReport => ({
+  ok: false,
+  applied: false,
+  classToken: null,
+  subject: null,
+  status: null,
+  errors,
+  diff: null,
+  tree,
+});
 
 async function loadForDiff(c: CatalogueImport) {
   const [existing, existingQts] = await Promise.all([
@@ -220,18 +294,26 @@ async function loadForDiff(c: CatalogueImport) {
  * The dry run is the SAME computation the apply uses, so what the Principal reviews is what
  * gets written.
  */
-export async function importCatalogue(json: string, apply: boolean, actor: Actor): Promise<ImportReport> {
+export async function importCatalogue(
+  json: string,
+  apply: boolean,
+  actor: Actor,
+  domainsJson?: string | null,
+): Promise<ImportReport> {
   let raw: unknown;
   try {
     raw = JSON.parse(json);
   } catch {
-    return { ok: false, applied: false, classToken: null, subject: null, status: null, errors: ["JSON পড়া যায়নি।"], diff: null };
+    return failReport(["JSON পড়া যায়নি।"]);
   }
+  if (isObjectiveTreeFile(raw)) return importTree(raw, domainsJson ?? null, apply, actor);
   const parsed = parseCatalogueImport(raw);
-  if (!parsed.ok) {
-    return { ok: false, applied: false, classToken: null, subject: null, status: null, errors: parsed.errors, diff: null };
-  }
+  if (!parsed.ok) return failReport(parsed.errors);
   const c = parsed.catalogue;
+  // A pair imported as a tree is reviewed in the app; a flat file would delete its draft rows.
+  if (await MasteryCatalogueReview.exists({ classToken: c.classToken, subject: c.subject })) {
+    return failReport([`${c.classToken} ${c.subject}-এর তালিকা এখন শিখনফল-বৃক্ষ (scd-objective-tree/1) — পুরোনো ধরনের ফাইল ইমপোর্ট করা যাবে না।`]);
+  }
   const { existing, existingQts } = await loadForDiff(c);
   const diff = diffCatalogue(
     c,
@@ -249,52 +331,13 @@ export async function importCatalogue(json: string, apply: boolean, actor: Actor
     })),
     existingQts.map((q) => ({ code: q.code, labelBn: q.labelBn, marks: q.marks ?? null })),
   );
-  const base = { classToken: c.classToken, subject: c.subject, status: c.status, diff };
+  const base = { classToken: c.classToken, subject: c.subject, status: c.status, diff, tree: null };
   if (diff.errors.length > 0) return { ...base, ok: false, applied: false, errors: diff.errors };
   if (!apply) return { ...base, ok: true, applied: false, errors: [] };
 
   const now = new Date();
   const by = actorOid(actor);
-
-  // Chapters — upsert by number; a chapter the file drops is marked inactive, never deleted.
-  const fileChapters = new Set(c.chapters.map((ch) => ch.number));
-  for (const ch of c.chapters) {
-    await MasteryChapter.updateOne(
-      { classToken: c.classToken, subject: c.subject, number: ch.number },
-      { $set: { titleBn: ch.titleBn, termNote: ch.termNote, order: ch.number, active: true } },
-      { upsert: true },
-    );
-  }
-  await MasteryChapter.updateMany(
-    { classToken: c.classToken, subject: c.subject, number: { $nin: [...fileChapters] } },
-    { $set: { active: false } },
-  );
-
-  // Question types — upsert; a marks change appends history (the snapshot rule, D-#777).
-  const qtByCode = new Map(existingQts.map((q) => [q.code, q]));
-  for (const q of c.questionTypes) {
-    const e = qtByCode.get(q.code);
-    if (!e) {
-      await MasteryQuestionType.create({
-        classToken: c.classToken,
-        subject: c.subject,
-        code: q.code,
-        labelBn: q.labelBn,
-        marks: q.marks,
-        answerForm: q.answerForm,
-        notes: q.notes,
-        active: true,
-        history: q.marks === null ? [] : [{ marks: q.marks, from: now, by }],
-      });
-      continue;
-    }
-    const update: Record<string, unknown> = { $set: { labelBn: q.labelBn, answerForm: q.answerForm, notes: q.notes } };
-    if ((e.marks ?? null) !== (q.marks ?? null)) {
-      (update.$set as Record<string, unknown>).marks = q.marks;
-      if (q.marks !== null) update.$push = { history: { marks: q.marks, from: now, by } };
-    }
-    await MasteryQuestionType.updateOne({ _id: e._id }, update);
-  }
+  await applyChaptersAndQts(c, existingQts, now, by);
 
   // Outcomes.
   const existingByCode = new Map(existing.map((e) => [e.code, e]));
@@ -360,12 +403,371 @@ export async function importCatalogue(json: string, apply: boolean, actor: Actor
   return { ...base, ok: true, applied: true, errors: [] };
 }
 
+type LeanQt = { _id: Types.ObjectId; code: string; labelBn: string; marks?: number | null; answerForm?: string; notes?: string };
+
+/**
+ * Chapters + question types of one import (flat or tree). Chapters upsert by number (a dropped
+ * chapter turns inactive, never deleted); a marks change appends history (D-#777). Rows that
+ * would not change are not written, so an unchanged re-import writes nothing.
+ */
+async function applyChaptersAndQts(
+  c: Pick<CatalogueImport, "classToken" | "subject" | "chapters" | "questionTypes">,
+  existingQts: LeanQt[],
+  now: Date,
+  by: Types.ObjectId | undefined,
+): Promise<void> {
+  const fileChapters = new Set(c.chapters.map((ch) => ch.number));
+  const current = new Map(
+    (await MasteryChapter.find({ classToken: c.classToken, subject: c.subject }).lean()).map((ch) => [ch.number, ch]),
+  );
+  for (const ch of c.chapters) {
+    const e = current.get(ch.number);
+    if (e && e.titleBn === ch.titleBn && (e.termNote ?? undefined) === ch.termNote && e.active && e.order === ch.number) continue;
+    await MasteryChapter.updateOne(
+      { classToken: c.classToken, subject: c.subject, number: ch.number },
+      { $set: { titleBn: ch.titleBn, termNote: ch.termNote, order: ch.number, active: true } },
+      { upsert: true },
+    );
+  }
+  if ([...current.values()].some((ch) => ch.active && !fileChapters.has(ch.number))) {
+    await MasteryChapter.updateMany(
+      { classToken: c.classToken, subject: c.subject, number: { $nin: [...fileChapters] } },
+      { $set: { active: false } },
+    );
+  }
+
+  const qtByCode = new Map(existingQts.map((q) => [q.code, q]));
+  for (const q of c.questionTypes) {
+    const e = qtByCode.get(q.code);
+    if (!e) {
+      await MasteryQuestionType.create({
+        classToken: c.classToken,
+        subject: c.subject,
+        code: q.code,
+        labelBn: q.labelBn,
+        marks: q.marks,
+        answerForm: q.answerForm,
+        notes: q.notes,
+        active: true,
+        history: q.marks === null ? [] : [{ marks: q.marks, from: now, by }],
+      });
+      continue;
+    }
+    const marksChanged = (e.marks ?? null) !== (q.marks ?? null);
+    if (!marksChanged && e.labelBn === q.labelBn && (e.answerForm ?? undefined) === q.answerForm && (e.notes ?? undefined) === q.notes) continue;
+    const update: Record<string, unknown> = { $set: { labelBn: q.labelBn, answerForm: q.answerForm, notes: q.notes } };
+    if (marksChanged) {
+      (update.$set as Record<string, unknown>).marks = q.marks;
+      if (q.marks !== null) update.$push = { history: { marks: q.marks, from: now, by } };
+    }
+    await MasteryQuestionType.updateOne({ _id: e._id }, update);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Tree import (prd-objective-tree §6, OT-1)
+// ---------------------------------------------------------------------------
+
+const treePreviewBase = (tree: TreeFile, domainCount: number): TreeImportPreview => ({
+  format: tree.format,
+  counts: {
+    domains: domainCount,
+    objectives: tree.nodes.filter((n) => n.level === "OBJECTIVE" && !n.strand).length,
+    subs: tree.nodes.filter((n) => n.level === "SUB").length,
+    strands: tree.nodes.filter((n) => n.level === "OBJECTIVE" && n.strand).length,
+    tagged: tree.nodes.filter((n) => n.tagged).length,
+    grouping: tree.nodes.filter((n) => !n.tagged).length,
+  },
+  coverage: tree.coverage,
+  flags: tree.flags.map((f) => ({ code: f.code, kind: f.kind, text: f.text, ownerRuling: f.ownerRuling })),
+  domains: { added: [], changed: [], unchanged: 0 },
+  round: { action: "NONE", round: null },
+  review: { kept: 0, backToProposed: [], removedInRedraft: [], lockedChanged: [] },
+  violations: [],
+  noop: false,
+});
+
+/**
+ * Dry-run or apply a `scd-objective-tree/1` file (+ its subject's domains file, or the domains
+ * already imported for that subject). The file must pass `checkTreeInvariants` (FILE mode — the
+ * same function as skills/_tools/verify_objective_tree.mjs) and the catalogue as it would stand
+ * afterwards must pass it in REVIEW mode. Apply writes DRAFT rows (`reviewState: PROPOSED`) and
+ * opens one OPEN `MasteryCatalogueReview` round — or redrafts the open one in place.
+ */
+async function importTree(raw: unknown, domainsJson: string | null, apply: boolean, actor: Actor): Promise<ImportReport> {
+  const read = readTreeFile(raw);
+  if (!read.ok) return failReport(read.errors);
+  const tree = read.tree;
+  const errors: string[] = [];
+  if (!(MASTERY_CLASS_TOKENS as readonly string[]).includes(tree.classToken)) errors.push(`অজানা শ্রেণি: "${tree.classToken}"`);
+  if (!(MASTERY_SUBJECTS as readonly string[]).includes(tree.subject)) errors.push(`অজানা বিষয়: "${tree.subject}"`);
+  const chapterNos = new Set(tree.chapters.map((c) => c.number));
+  for (const n of tree.nodes) {
+    if (n.chapterNumber !== null && !chapterNos.has(n.chapterNumber)) errors.push(`${n.code}: অধ্যায় ${n.chapterNumber} অধ্যায়-তালিকায় নেই`);
+  }
+  if (errors.length > 0) return failReport(errors);
+  const classToken = tree.classToken as MasteryClassToken;
+  const subject = tree.subject as MasterySubject;
+
+  // Domains: the file given now, else what this subject already holds.
+  let domainsFile: DomainsFile | null = null;
+  if (domainsJson && domainsJson.trim()) {
+    let rawDomains: unknown;
+    try {
+      rawDomains = JSON.parse(domainsJson);
+    } catch {
+      return failReport(["ক্ষেত্রের (ডোমেইন) JSON পড়া যায়নি।"]);
+    }
+    const d = readDomainsFile(rawDomains);
+    if (!d.ok) return failReport(d.errors);
+    if (d.domains.subject !== subject) return failReport([`ক্ষেত্রের ফাইল ${d.domains.subject}-এর, তালিকা ${subject}-এর।`]);
+    domainsFile = d.domains;
+  }
+  const existingDomains = await MasteryDomain.find({ subject }).lean();
+  if (!domainsFile && existingDomains.length === 0) {
+    return failReport([`${subject}-এর ক্ষেত্রের তালিকা (domains/${subject}.json) এখনো আসেনি — ফাইলটিও দিন।`]);
+  }
+  const domainCodes = new Set([...existingDomains.filter((d) => d.active).map((d) => d.code), ...(domainsFile?.domains ?? []).map((d) => d.code)]);
+  const preview = treePreviewBase(tree, domainsFile ? domainsFile.domains.length : existingDomains.length);
+  if (domainsFile) {
+    const byCode = new Map(existingDomains.map((d) => [d.code, d]));
+    for (const d of domainsFile.domains) {
+      const e = byCode.get(d.code);
+      if (!e) preview.domains.added.push(d.code);
+      else if (e.labelBn !== d.labelBn || (e.labelEn ?? null) !== d.labelEn || e.order !== d.order || (e.note ?? null) !== d.note || !e.active) {
+        preview.domains.changed.push(d.code);
+      } else preview.domains.unchanged += 1;
+    }
+  }
+
+  // Prerequisites may name live codes of the same subject in an EARLIER class.
+  const myIdx = (MASTERY_CLASS_TOKENS as readonly string[]).indexOf(classToken);
+  const earlier = (MASTERY_CLASS_TOKENS as readonly string[]).slice(0, Math.max(0, myIdx));
+  const externalCodes = earlier.length
+    ? (await MasteryOutcome.find({ subject, classToken: { $in: earlier }, status: { $ne: "RETIRED" } }).select("code").lean()).map((o) => o.code)
+    : [];
+
+  const fileViolations = checkTreeInvariants({
+    classToken,
+    subject,
+    nodes: tree.nodes,
+    domainCodes,
+    mode: "FILE",
+    questionTypeCodes: tree.questionTypes.map((q) => q.code),
+    coverage: tree.coverage,
+    externalCodes,
+  }).map(formatTreeViolation);
+  if (fileViolations.length > 0) {
+    preview.violations = fileViolations;
+    return { ...failReport(fileViolations, preview), classToken, subject, status: "DRAFT" };
+  }
+
+  const [existing, existingQts, latest] = await Promise.all([
+    MasteryOutcome.find({ classToken, subject }).lean<IMasteryOutcome[]>(),
+    MasteryQuestionType.find({ classToken, subject }).lean(),
+    latestReviewRound(classToken, subject),
+  ]);
+  const existingRows: ExistingTreeRow[] = existing.map((e) => ({
+    code: e.code,
+    status: e.status,
+    assess: e.assess,
+    chapterNumber: e.chapterNumber ?? null,
+    strand: e.strand ?? null,
+    labelBn: e.labelBn,
+    labelEn: e.labelEn,
+    sourceText: e.sourceText,
+    questionTypeCodes: e.questionTypeCodes,
+    homeTipBn: e.homeTipBn,
+    level: e.level,
+    parentCode: e.parentCode,
+    domainCode: e.domainCode,
+    tagged: e.tagged,
+    prereqCodes: e.prereqCodes,
+    reviewState: e.reviewState,
+    rejectReason: e.rejectReason,
+    mergedInto: e.mergedInto,
+    draftHash: e.draftHash,
+    bookRef: e.bookRef,
+    order: e.order,
+  }));
+  const plan = planTreeImport(tree, existingRows, latest ? { round: latest.round, state: latest.state } : null);
+  const merged = plan.errors.length === 0 ? mergedTreeViolations(tree, existingRows, plan, domainCodes, externalCodes) : [];
+
+  // The question-type table + chapters, as a flat catalogue would carry them (marks parsed from marksBn).
+  const asCatalogue: CatalogueImport = {
+    classToken,
+    subject,
+    status: "DRAFT",
+    bookRef: tree.source.book ?? undefined,
+    chapters: tree.chapters.map((c) => ({ number: c.number, titleBn: c.titleBn })),
+    outcomes: [],
+    questionTypes: tree.questionTypes.map((q) => ({
+      code: q.code,
+      labelBn: q.labelBn || q.code,
+      marks: q.marks,
+      notes: [q.marksBn, q.examUse].filter(Boolean).join(" · ") || undefined,
+    })),
+  };
+  const qtDiff = diffCatalogue(asCatalogue, [], existingQts.map((q) => ({ code: q.code, labelBn: q.labelBn, marks: q.marks ?? null })));
+  const diff: CatalogueDiff = {
+    ...qtDiff,
+    added: plan.create.map((r) => r.code),
+    changed: [
+      ...plan.backToProposed.map((r) => ({ code: r.code, fields: ["content"] })),
+      ...plan.lockedUpdates.map((r) => ({ code: r.code, fields: Object.keys(r.fields).filter((k) => k !== "draftHash") })),
+    ],
+    unchanged: plan.kept,
+    removedDrafts: plan.deleteFlatDrafts,
+    retired: plan.retire,
+    errors: [...plan.errors, ...merged],
+  };
+  preview.round = { action: plan.roundAction, round: plan.roundNumber };
+  preview.review = {
+    kept: plan.kept,
+    backToProposed: plan.backToProposed.map((r) => r.code),
+    removedInRedraft: plan.removedInRedraft,
+    lockedChanged: plan.lockedUpdates.map((r) => r.code),
+  };
+  preview.violations = merged;
+  const coverageSame =
+    !!latest &&
+    latest.coverage?.exercisesTotal === tree.coverage.exercisesTotal &&
+    latest.coverage?.mapped === tree.coverage.mapped &&
+    JSON.stringify((latest.coverage?.unmapped ?? []).map((u) => [u.ref, u.text, u.reason])) ===
+      JSON.stringify(tree.coverage.unmapped.map((u) => [u.ref, u.text, u.reason])) &&
+    JSON.stringify((latest.flags ?? []).map((f) => [f.code ?? null, f.kind, f.text, f.ownerRuling ?? null])) ===
+      JSON.stringify(tree.flags.map((f) => [f.code, f.kind, f.text, f.ownerRuling]));
+  preview.noop =
+    plan.noop &&
+    preview.domains.added.length === 0 &&
+    preview.domains.changed.length === 0 &&
+    qtDiff.qtAdded.length === 0 &&
+    qtDiff.qtMarksChanged.length === 0 &&
+    qtDiff.qtLabelChanged.length === 0 &&
+    (plan.roundAction === "NONE" || (plan.roundAction === "REDRAFT" && coverageSame && latest?.state === "OPEN"));
+
+  const base = { classToken, subject, status: "DRAFT", diff, tree: preview };
+  if (diff.errors.length > 0) return { ...base, ok: false, applied: false, errors: diff.errors };
+  if (!apply) return { ...base, ok: true, applied: false, errors: [] };
+  if (preview.noop) return { ...base, ok: true, applied: true, errors: [] };
+
+  const now = new Date();
+  const by = actorOid(actor);
+
+  // Domains — upsert; a LOCKED domain keeps its code and only takes label / note / order.
+  if (domainsFile) {
+    for (const d of domainsFile.domains) {
+      if (!preview.domains.added.includes(d.code) && !preview.domains.changed.includes(d.code)) continue;
+      await MasteryDomain.updateOne(
+        { code: d.code },
+        {
+          $set: { labelBn: d.labelBn, labelEn: d.labelEn ?? undefined, order: d.order, note: d.note ?? undefined, active: true },
+          $setOnInsert: { subject, status: "DRAFT" },
+        },
+        { upsert: true },
+      );
+    }
+  }
+  await applyChaptersAndQts(asCatalogue, existingQts, now, by);
+
+  // The round: redraft the open one in place, or open the next.
+  let reviewId: Types.ObjectId | null = null;
+  const roundFields = {
+    coverage: tree.coverage,
+    flags: tree.flags.map((f) => ({ code: f.code, kind: f.kind, text: f.text, ownerRuling: f.ownerRuling, ruledOn: f.ruledOn })),
+    source: tree.source,
+    importedAt: now,
+    importedBy: by,
+  };
+  if (plan.roundAction === "REDRAFT" && latest) {
+    reviewId = latest._id;
+    await MasteryCatalogueReview.updateOne({ _id: latest._id }, { $set: { ...roundFields, state: "OPEN" }, $unset: { submittedAt: 1 } });
+  } else if (plan.roundAction === "OPEN_NEW") {
+    const created = await MasteryCatalogueReview.create({ classToken, subject, round: plan.roundNumber, state: "OPEN", ...roundFields });
+    reviewId = created._id;
+  }
+
+  const existingByCode = new Map(existing.map((e) => [e.code, e]));
+  const events: ReviewEventInput[] = [];
+  const snapshot = (e: IMasteryOutcome | undefined) =>
+    e ? { labelBn: e.labelBn, reviewState: e.reviewState ?? null, ...treeShapeOf(e) } : null;
+  for (const r of plan.create) {
+    await MasteryOutcome.create({ code: r.code, classToken, subject, ...r.fields, status: "DRAFT", reviewState: "PROPOSED" });
+    if (reviewId && plan.roundAction === "REDRAFT") events.push({ reviewId, code: r.code, action: "IMPORT", before: null, after: { reviewState: "PROPOSED", labelBn: r.fields.labelBn } });
+  }
+  for (const r of plan.backToProposed) {
+    const before = existingByCode.get(r.code);
+    await MasteryOutcome.updateOne(
+      { code: r.code, status: "DRAFT" },
+      { $set: { ...r.fields, reviewState: "PROPOSED" }, $unset: { rejectReason: 1, mergedInto: 1 } },
+    );
+    if (reviewId) events.push({ reviewId, code: r.code, action: "IMPORT", before: snapshot(before), after: { reviewState: "PROPOSED", labelBn: r.fields.labelBn } });
+  }
+  for (const r of plan.lockedUpdates) await MasteryOutcome.updateOne({ code: r.code, status: "LOCKED" }, { $set: r.fields });
+  for (const r of plan.reorder) await MasteryOutcome.updateOne({ code: r.code }, { $set: { order: r.order } });
+  if (plan.removedInRedraft.length > 0) {
+    await MasteryOutcome.updateMany(
+      { code: { $in: plan.removedInRedraft }, status: "DRAFT" },
+      { $set: { reviewState: "REJECTED", rejectReason: REMOVED_IN_REDRAFT } },
+    );
+    for (const code of plan.removedInRedraft) {
+      if (reviewId) events.push({ reviewId, code, action: "IMPORT", before: snapshot(existingByCode.get(code)), after: { reviewState: "REJECTED", rejectReason: REMOVED_IN_REDRAFT } });
+    }
+  }
+  if (plan.deleteFlatDrafts.length > 0) await MasteryOutcome.deleteMany({ code: { $in: plan.deleteFlatDrafts }, status: "DRAFT", reviewState: { $exists: false } });
+  if (plan.retire.length > 0) {
+    await MasteryOutcome.updateMany({ code: { $in: plan.retire }, status: "LOCKED" }, { $set: { status: "RETIRED", retiredAt: now, retiredBy: by } });
+  }
+  if (reviewId) {
+    events.unshift({
+      reviewId,
+      code: null,
+      action: "IMPORT",
+      after: {
+        roundAction: plan.roundAction,
+        added: plan.create.length,
+        backToProposed: plan.backToProposed.length,
+        removedInRedraft: plan.removedInRedraft.length,
+        kept: plan.kept,
+        book: tree.source.book,
+      },
+    });
+    await appendReviewEvents(events, actor, now);
+  }
+
+  void writeAudit({
+    eventKind: "MASTERY_CATALOGUE_IMPORTED",
+    actorId: actor.userId,
+    actorRole: actor.role,
+    targetKind: "MasteryCatalogue",
+    meta: {
+      classToken,
+      subject,
+      format: tree.format,
+      round: plan.roundNumber,
+      roundAction: plan.roundAction,
+      added: plan.create.length,
+      backToProposed: plan.backToProposed.length,
+      removedInRedraft: plan.removedInRedraft.length,
+      lockedChanged: plan.lockedUpdates.length,
+      retired: plan.retire.length,
+      domainsAdded: preview.domains.added.length,
+    },
+  });
+  return { ...base, ok: true, applied: true, errors: [] };
+}
+
 // ---------------------------------------------------------------------------
 // Lock / edit / retire
 // ---------------------------------------------------------------------------
 
 /** DRAFT → LOCKED for one class × subject. Codes become permanent (D-#776). */
 export async function lockCatalogue(classToken: MasteryClassToken, subject: MasterySubject, actor: Actor): Promise<number> {
+  // A tree under review is locked by the Principal behind the review gate (OT-2), never by this
+  // one-tap lock — it would also lock rows the reviewer rejected.
+  if (await openReviewRound(classToken, subject)) {
+    throw new MasteryCatalogueError("এই তালিকা পর্যালোচনায় আছে — পর্যালোচনা শেষে “চূড়ান্ত করুন” থেকে লক হবে।");
+  }
   const res = await MasteryOutcome.updateMany(
     { classToken, subject, status: "DRAFT" },
     { $set: { status: "LOCKED", lockedAt: new Date(), lockedBy: actorOid(actor) } },
@@ -427,6 +829,9 @@ export async function retireOutcome(code: string, actor: Actor): Promise<string>
   const o = await MasteryOutcome.findOne({ code });
   if (!o) throw new MasteryCatalogueError("এই শিখনফল পাওয়া যায়নি।");
   if (o.status === "RETIRED") throw new MasteryCatalogueError("এটি আগেই অবসরে গেছে।");
+  if (o.status === "DRAFT" && o.reviewState) {
+    throw new MasteryCatalogueError("খসড়া বৃক্ষের সারি পর্যালোচনায় বাদ দিন — মুছে ফেললে পর্যালোচনার রেকর্ড ভাঙে।");
+  }
   if (o.status === "DRAFT") {
     await MasteryOutcome.deleteOne({ _id: o._id, status: "DRAFT" });
   } else {
@@ -691,6 +1096,85 @@ export async function savePolicy(
 }
 
 // ---------------------------------------------------------------------------
+// Domains (D-#921)
+// ---------------------------------------------------------------------------
+
+export interface DomainView {
+  code: string;
+  subject: string;
+  labelBn: string;
+  labelEn: string | null;
+  order: number;
+  active: boolean;
+  status: string;
+  note: string | null;
+}
+
+export async function listDomains(subject: MasterySubject): Promise<DomainView[]> {
+  const rows = await MasteryDomain.find({ subject }).sort({ order: 1, code: 1 }).lean();
+  return rows.map((d) => ({
+    code: d.code,
+    subject: d.subject,
+    labelBn: d.labelBn,
+    labelEn: d.labelEn ?? null,
+    order: d.order,
+    active: d.active,
+    status: d.status,
+    note: d.note ?? null,
+  }));
+}
+
+// ---------------------------------------------------------------------------
+// Level names (D-#923) — on the SCHOOL policy row
+// ---------------------------------------------------------------------------
+
+export interface LevelLabelsView {
+  resolved: MasteryLevelLabels;
+  /** Keys the school changed from the defaults. */
+  ownKeys: string[];
+}
+
+export async function getLevelLabels(): Promise<LevelLabelsView> {
+  const school = await MasteryPolicy.findOne({ scopeKey: "SCHOOL" }).select("levelLabels").lean();
+  const stored = (school?.levelLabels ?? {}) as Partial<MasteryLevelLabels>;
+  return { resolved: resolveLevelLabels(stored), ownKeys: LEVEL_LABEL_KEYS.filter((k) => typeof stored[k] === "string") };
+}
+
+/**
+ * Save the level names. Keys sent replace the stored ones; a blank value (or the default word)
+ * returns that key to the default. Every surface reads the result live — no deploy.
+ */
+export async function saveLevelLabels(input: Partial<Record<keyof MasteryLevelLabels, string | null>>, actor: Actor): Promise<LevelLabelsView> {
+  const school = await MasteryPolicy.findOne({ scopeKey: "SCHOOL" }).select("levelLabels").lean();
+  const next: Partial<MasteryLevelLabels> = { ...((school?.levelLabels ?? {}) as Partial<MasteryLevelLabels>) };
+  const defaults = resolveLevelLabels(null);
+  for (const k of LEVEL_LABEL_KEYS) {
+    if (!(k in input) || input[k] === undefined) continue;
+    const v = (input[k] ?? "").trim();
+    if (v.length > 40) throw new MasteryCatalogueError("স্তরের নাম ৪০ অক্ষরের মধ্যে রাখুন।");
+    if (!v || v === defaults[k]) delete next[k];
+    else next[k] = v;
+  }
+  const r = resolveLevelLabels(next);
+  if (new Set([r.domainBn, r.objectiveBn, r.subBn]).size < 3 || new Set([r.domainEn, r.objectiveEn, r.subEn]).size < 3) {
+    throw new MasteryCatalogueError("তিনটি স্তরের নাম আলাদা হতে হবে।");
+  }
+  await MasteryPolicy.updateOne(
+    { scopeKey: "SCHOOL" },
+    { $set: { levelLabels: next, updatedBy: actorOid(actor) }, $setOnInsert: { values: {} } },
+    { upsert: true },
+  );
+  void writeAudit({
+    eventKind: "MASTERY_LEVEL_LABELS_SAVED",
+    actorId: actor.userId,
+    actorRole: actor.role,
+    targetKind: "MasteryPolicy",
+    meta: { levelLabels: next },
+  });
+  return getLevelLabels();
+}
+
+// ---------------------------------------------------------------------------
 // The switch (D-#775)
 // ---------------------------------------------------------------------------
 
@@ -729,6 +1213,9 @@ export async function setEnablement(
   if (enabled) {
     const locked = await MasteryOutcome.countDocuments({ classToken, subject, status: "LOCKED" });
     if (locked === 0) throw new MasteryCatalogueError("আগে এই শ্রেণি-বিষয়ের শিখনফল তালিকা লক করুন — তারপর চালু করা যাবে।");
+    // Objective tree (prd-objective-tree §7 "Switch"): a pair with review rounds needs one LOCKED.
+    const blocked = await switchBlockedByReview(classToken, subject);
+    if (blocked) throw new MasteryCatalogueError(blocked);
   }
   const now = new Date();
   await MasteryEnablement.updateOne(
