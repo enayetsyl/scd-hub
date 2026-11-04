@@ -22,7 +22,7 @@ import type { Types } from "mongoose";
 import { BATCH_DOC_TYPE, BATCH_MAX_ITEMS, PLAN_DOC_TYPES } from "@scd/shared";
 import { ContentArtifact } from "../models/ContentArtifact";
 import { ImportBatch, envelopeSha256 } from "../../platform/models/ImportBatch";
-import { masteryImportWarnings } from "../../mastery/bank";
+import { masteryImportCheck } from "../../mastery/bank";
 import { CorpusEvent } from "../../corpus/models/CorpusEvent";
 import {
   isPlanDocType,
@@ -116,8 +116,28 @@ export interface BatchItemVerdict {
   superseded?: boolean;
 }
 
-/** Run the Python import harness against an envelope JSON object. */
+/**
+ * The import gate: the Python harness, then the app-side mastery check the harness cannot make
+ * (it has no catalogue). Before a class × subject's objective list is locked an LO problem is a
+ * WARNING (D-#785); once locked, a question without one valid tagged code FAILS here (D-#928) —
+ * at the gate, so the atomic bank path refuses the whole collection before persisting any of it
+ * and a question_batch marks just that element failed.
+ */
 export async function runImportGate(envelope: Record<string, unknown>): Promise<GateOutput> {
+  const gate = await runHarness(envelope);
+  if (gate.verdict !== "PASS") return gate;
+  const lo = await masteryImportCheck(envelope);
+  if (lo.warnings.length === 0 && lo.refusals.length === 0) return gate;
+  return {
+    ...gate,
+    verdict: lo.refusals.length > 0 ? "FAIL" : gate.verdict,
+    failChecks: [...gate.failChecks, ...lo.refusals],
+    warnings: [...gate.warnings, ...lo.warnings],
+  };
+}
+
+/** Run the Python import harness against an envelope JSON object. */
+async function runHarness(envelope: Record<string, unknown>): Promise<GateOutput> {
   const tmpFile = path.join(os.tmpdir(), `scd_import_${Date.now()}_${Math.random().toString(36).slice(2)}.json`);
   try {
     await fs.writeFile(tmpFile, JSON.stringify(envelope), "utf-8");
@@ -175,13 +195,6 @@ async function persistEnvelope(
 ): Promise<ImportResult & { superseded?: boolean }> {
   const prov = (envelope.provenance ?? {}) as Record<string, unknown>;
   const addr = (envelope.address ?? {}) as Record<string, unknown>;
-
-  // Mastery M-1 (D-#785): a question tagged with a learning-outcome code the catalogue does
-  // not hold LOCKED imports with a WARNING, never a refusal — the harness has no catalogue.
-  if (gate.verdict === "PASS") {
-    const loWarnings = await masteryImportWarnings(envelope);
-    if (loWarnings.length > 0) gate = { ...gate, warnings: [...gate.warnings, ...loWarnings] };
-  }
 
   const batchDoc = await ImportBatch.create({
     parentBatchId,

@@ -16,6 +16,7 @@ import {
 } from "../../graphql/operations";
 import { Screen, Card, Body, Muted, Badge, Chip, ChipRow, Loader, EmptyState, ErrorBanner } from "../../components/ui";
 import { Pager } from "../../components/Pager";
+import LessonPlanQuestionSwitchCard from "../../components/LessonPlanQuestionSwitchCard";
 import { useAuth } from "../../auth/AuthContext";
 import { STR, bnNum, routineSubjectLabel } from "../../lib/labels";
 import { hasRoute } from "../../lib/hasRoute";
@@ -58,6 +59,7 @@ export default function LessonProgressScreen(): React.ReactElement {
   const { can } = useAuth();
   // D-#861: the Reports-hub switch reads the whole school too.
   const canAll = can("lesson_progress:view_all") || can("reports:lesson_progress");
+  const canSwitch = can("routine:settings");
   const canOpenTracker = hasRoute(nav, "LessonTracker");
   const [scope, setScope] = useState<"ALL" | "MINE">(canAll ? "ALL" : "MINE");
   const [level, setLevel] = useState<number | null>(null);
@@ -92,6 +94,8 @@ export default function LessonProgressScreen(): React.ReactElement {
   return (
     <Screen padded={false}>
       <ScrollView contentContainerStyle={{ padding: space(4), gap: space(2) }}>
+        {/* D-#952: the class note's lesson-plan question is off until switched on here. */}
+        {canSwitch ? <LessonPlanQuestionSwitchCard /> : null}
         <Muted>{STR.lpOverviewHint}</Muted>
         {canAll ? (
           <ChipRow>

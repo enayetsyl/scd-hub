@@ -30,6 +30,7 @@ import {
   HOMEWORK_DAY_TALLY,
   HOMEWORK_TOPICS_QUERY,
   HW_NIL_DECLARATIONS,
+  LESSON_PLAN_QUESTION_SETTING_QUERY,
   type ClassNoteHomeworkIn,
   type LessonPlanIn,
   type RoutineSlotT,
@@ -110,6 +111,10 @@ function PeriodNoteCard({ slot, date }: { slot: RoutineSlotT; date: string }): R
   const [lpError, setLpError] = useState<string | undefined>(undefined);
   const [lpEdit, setLpEdit] = useState(false);
   const [, updateNote] = useMutation(UPDATE_CLASS_NOTE);
+  // D-#952: the school switch (default off) — off, the published card offers no session correction.
+  // One cached query shared by every period card.
+  const [lpSwitchQ] = useQuery({ query: LESSON_PLAN_QUESTION_SETTING_QUERY, variables: {} });
+  const lpQuestionOn = lpSwitchQ.data?.lessonPlanQuestionSetting.on === true;
 
   const [notesQ, refetchNotes] = useQuery({
     query: CLASS_NOTES_FOR_DATE_QUERY,
@@ -371,7 +376,7 @@ function PeriodNoteCard({ slot, date }: { slot: RoutineSlotT; date: string }): R
             style={{ marginTop: space(2) }}
           />
           {/* LP-1: correct the session marks alone — guardians are not re-notified. */}
-          {mayHavePlan(slot) ? (
+          {lpQuestionOn && mayHavePlan(slot) ? (
             <Button title={STR.lpEditMarks} variant="ghost" onPress={() => setLpEdit(true)} style={{ marginTop: space(1) }} />
           ) : null}
         </>

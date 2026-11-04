@@ -261,6 +261,9 @@ export const FEATURE_CATALOGUE = {
       create: { en: "Build homework sheets & assignments", bn: "বাড়ির কাজ ও অ্যাসাইনমেন্ট তৈরি", desc: "Work sheets, the weekly tailored assignment and its layout (M-2/M-4), routine-held class × subject", teacher: true, office: false, flags: [] },
       approve: { en: "Approve extra classes", bn: "অতিরিক্ত ক্লাস অনুমোদন", desc: "Approve a section-trigger proposal, pick slot/teacher, close the action (M-5). Selected Office staff by per-person grant (D-#786)", teacher: false, office: false, flags: [] },
       edit_all: { en: "Work in any শাখা", bn: "যেকোনো শাখার শিখন-দক্ষতার কাজ", desc: "Build sheets, enter and read results for a class × subject the routine does not give you (M-2)", teacher: false, office: false, flags: ["PRINCIPAL_DEFAULT"] },
+      // Objective tree (prd-objective-tree §9, D-#924): the assigned reviewer of a drafted list.
+      // Per-person grant (Mahzabin); assigning a round and locking stay on `settings`.
+      review: { en: "Review the objective list", bn: "শিখনফল তালিকা পর্যালোচনা", desc: "Review an assigned draft: accept, edit, split, merge, reject, add, comment, submit", teacher: false, office: false, flags: [] },
     },
   },
   exam_syllabus: {
@@ -437,7 +440,7 @@ export const FEATURE_CATALOGUE = {
       view_all: { en: "Board, master grid, all loads", bn: "আজকের ক্লাস বোর্ড, সম্পূর্ণ গ্রিড ও সব শিক্ষকের লোড দেখা", desc: "Live board, master grid, every teacher's load", teacher: false, office: true, flags: [] },
       edit: { en: "Build the routine", bn: "রুটিন তৈরি ও পরিবর্তন", desc: "Create/update/retire slots; reassign a subject's routine teacher", teacher: false, office: true, flags: [] },
       edit_calendar: { en: "Holidays & windows", bn: "ছুটির দিন ও সময়সূচি ঠিক করা", desc: "Holiday exceptions; schedule windows", teacher: false, office: true, flags: [] },
-      settings: { en: "Rooms, periods, groups, bell", bn: "রুম, পিরিয়ড, গ্রুপ ও ঘণ্টার দায়িত্ব ঠিক করা", desc: "Rooms, period grids, subject groups and members, bell duty", teacher: false, office: true, flags: [] },
+      settings: { en: "Rooms, periods, groups, bell", bn: "রুম, পিরিয়ড, গ্রুপ ও ঘণ্টার দায়িত্ব ঠিক করা", desc: "Rooms, period grids, subject groups and members, bell duty; the class note lesson-plan question switch (D-#952)", teacher: false, office: true, flags: [] },
     },
   },
   cover: {
@@ -996,6 +999,10 @@ export const FEATURE_CATALOGUE = {
       // D-#905: the 23-Sep "What moves the marks" study, live. Principal by default — the
       // scatter carries one (unnamed) dot per child.
       marks_drivers: { en: "What moves the marks", bn: "নম্বর কীসে বাড়ে", desc: "Homework, assignments and attendance against class-test results, live over a rolling window (whole school)", teacher: false, office: false, flags: [] },
+      // Objective tree OT-4 (prd-objective-tree §8.2, mock 5): gold questions per tagged row; the
+      // gaps become the brief for the next question batch. Principal + Office by default (owner
+      // 2026-11-04); the module doors mastery:settings / mastery:review open it too.
+      bank_coverage: { en: "Question-bank coverage", bn: "প্রশ্ন-ব্যাংক কভারেজ", desc: "Gold questions per tagged objective row of a class × subject, the empty rows, and the gaps as a brief for the next question batch (whole school)", teacher: false, office: true, flags: [] },
     },
   },
 } as const satisfies Record<string, CatalogueFeature>;

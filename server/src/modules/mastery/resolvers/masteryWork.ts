@@ -54,6 +54,8 @@ PaperItemRef.implement({
     chapterNumber: t.int({ nullable: true, resolve: (i) => i.chapterNumber }),
     questionTypeCode: t.exposeString("questionTypeCode"),
     marks: t.exposeFloat("marks"),
+    stimulusRef: t.string({ nullable: true, description: "ক/খ parts (D-#926): the shared stem this item hangs under.", resolve: (i) => i.stimulusRef }),
+    partLabel: t.string({ nullable: true, description: "\"ক\", \"খ\" … when two or more parts of one stem are on this paper.", resolve: (i) => i.partLabel }),
   }),
 });
 

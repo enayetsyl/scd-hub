@@ -124,6 +124,11 @@ is required, never *what* a rubric must contain.
   its LO is locked.
 - Conformance cases: `server/import/cases/lo-codes/` (`node skills/_tools/verify_descriptive_carriers.mjs server/import/cases/lo-codes`).
 
+### Objective-tree codes (v1.3, D-#921/#926 — prd-objective-tree §8.2/§8.3)
+- Every LO code may take a sub-objective suffix `.N` (N = 1..99): `LO-C1-MATH-07-03.2`. Same pattern in `topic_tag`, `lo_codes` (payload + tags) and `shared/vocab.ts` `MASTERY_LO_CODE_RE`.
+- **One code per question (D-#926):** `lo_codes` has `maxItems: 1` in the payload schema and in the envelope question branch. A question that tests two skills is a `stimulus` plus one `question` per part (ক/খ), each with one code. A v1.2 envelope with two codes is now REJECTED (case `fail_lo_codes_two.json`, formerly `pass_`).
+- **Session plans** may carry `tags.lo_codes` (the codes the session teaches, many allowed). Harness: pattern (L1) + class/subject (L4 `LO`); the app adds the same `[MASTERY-LO]` warning for a code not LOCKED in the catalogue.
+
 ## Mirrored enums (two-/three-place rule)
 The schema and `shared/vocab.ts` MIRROR each other for: Subject, DocType, CurationTag, BloomLevel,
 Difficulty, QuestionType, **PaperRole**, ReviewStatus, SourceProject, AnchorWord. Fields surfaced in a
@@ -146,3 +151,4 @@ Changing one place without the others is a bug — follow `/skills/contract-sync
 | v1.1 | 2026-08-15 | Additive: `doc_type: "question_batch"` — one upload wrapping N standard question envelopes. Principal ruling, 2026-08-15. v1.0 shapes unchanged and still accepted. |
 | v1.1 | 2026-08-16 | Clarification (no wire change): a batch may carry `stimulus` elements alongside questions (D-#498), and `build_question_envelopes.py --batch` emits the wrapper. |
 | v1.2 | 2026-10-20 | Additive (D-#785, mastery M-1): `topic_tag` also accepts learning-outcome codes; optional `lo_codes` (payload + tags mirror); harness L3 mirror + L4 `LO` class/subject/primary checks; app-side `[MASTERY-LO]` warning for an LO not LOCKED in the catalogue. `envelope_version` stays `"1.0"`; every v1.1 envelope validates unchanged. |
+| v1.3 | 2026-11-04 | Objective tree (D-#921/#926, OT-1): LO pattern gains the optional `.N` sub-objective suffix; question `lo_codes` capped at ONE (tightening — a two-code question is refused); `session_plan` may carry `tags.lo_codes` (many; harness checks pattern + class/subject, app warns on unknown). `envelope_version` stays `"1.0"`. |
