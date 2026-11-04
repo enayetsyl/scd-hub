@@ -354,6 +354,7 @@ import PersonActivityScreen from "../screens/admin/PersonActivityScreen";
 import WorkClaimQueueScreen from "../screens/admin/WorkClaimQueueScreen";
 import GuardianEngagementScreen from "../screens/admin/GuardianEngagementScreen";
 import MarksDriversScreen from "../screens/reports/MarksDriversScreen";
+import MasteryBankCoverageScreen from "../screens/mastery/MasteryBankCoverageScreen";
 import SystemHealthScreen from "../screens/admin/SystemHealthScreen";
 import ReportsHomeScreen from "../screens/reports/ReportsHomeScreen";
 import PendingReportScreen from "../screens/reports/PendingReportScreen";
@@ -1325,6 +1326,7 @@ function MasteryNavigator(): React.ReactElement {
       <MasteryStack.Screen name="MasteryLeader" component={MasteryActionsScreen} options={{ title: STR.msLeader }} />
       <MasteryStack.Screen name="MasteryActions" component={MasteryActionsScreen} options={{ title: STR.msActions }} />
       <MasteryStack.Screen name="MasteryAction" component={MasteryActionScreen} options={{ title: STR.msAction }} />
+      <MasteryStack.Screen name="MasteryBankCoverage" component={MasteryBankCoverageScreen} options={{ title: STR.bcTitle }} />
     </MasteryStack.Navigator>
   );
 }
@@ -1517,6 +1519,7 @@ function ReportsNavigator(): React.ReactElement {
       <ReportsStack.Screen name="DailySnapshot" component={DailySnapshotScreen} options={{ title: STR.finSnapshotTitle }} />
       <ReportsStack.Screen name="GuardianEngagement" component={GuardianEngagementScreen} options={{ title: STR.geTitle }} />
       <ReportsStack.Screen name="MarksDrivers" component={MarksDriversScreen} options={{ title: STR.mdTitle }} />
+      <ReportsStack.Screen name="MasteryBankCoverage" component={MasteryBankCoverageScreen} options={{ title: STR.bcTitle }} />
     </ReportsStack.Navigator>
   );
 }
