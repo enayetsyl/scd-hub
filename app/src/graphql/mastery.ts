@@ -626,6 +626,17 @@ export const MASTERY_SECTION_HEATMAP_QUERY = gql`
   }
 `;
 
+/** OT-5 (D-#950): was the outcome taught in the child's শাখা, and was the child there? */
+export type ObjectiveLessonT = {
+  loCode: string;
+  /** TAUGHT | MISSED | UNKNOWN | NOT_TAUGHT */
+  status: string;
+  taughtOn: string[];
+  absentOn: string[];
+  onLeave: boolean;
+};
+const OBJECTIVE_LESSON_FIELDS = `loCode status taughtOn absentOn onLeave`;
+
 export const MASTERY_STUDENT_DIAGNOSIS_QUERY = gql`
   query MasteryStudentDiagnosis($studentId: String!, $subject: String!) {
     masteryStudentDiagnosis(studentId: $studentId, subject: $subject) {
@@ -641,6 +652,7 @@ export const MASTERY_STUDENT_DIAGNOSIS_QUERY = gql`
       sectionSize
       moreWeakThan
       outcomes { ${STATE_FIELDS} }
+      objectiveLessons { ${OBJECTIVE_LESSON_FIELDS} }
     }
   }
 `;
@@ -654,6 +666,7 @@ export const MASTERY_OUTCOME_TRAIL_QUERY = gql`
       bankGold
       bankSeen
       chapterLessons { ${STUDENT_LESSON_SESSION_FIELDS} }
+      objectiveLesson { ${OBJECTIVE_LESSON_FIELDS} }
       outcome { ${STATE_FIELDS} }
       history {
         state
@@ -804,6 +817,8 @@ export type MasteryStudentDiagnosisData = {
   sectionSize: number;
   moreWeakThan: number;
   outcomes: MasteryOutcomeStateRow[];
+  /** OT-5: per outcome, taught / missed / not taught in class. */
+  objectiveLessons: ObjectiveLessonT[];
 };
 
 /** LP-3 (D-#823/#825): one session plan as taught to one child, with presence from day attendance. */
@@ -831,6 +846,8 @@ export type MasteryTrailData = {
   bankSeen: number;
   /** LP-3: the outcome's chapter as taught in class (empty = not marked yet). */
   chapterLessons: StudentLessonSessionT[];
+  /** OT-5: the outcome's own code as taught in class. */
+  objectiveLesson: ObjectiveLessonT | null;
   outcome: MasteryOutcomeStateRow;
   history: { state: string; at: string; paperId: string | null }[];
   rows: {

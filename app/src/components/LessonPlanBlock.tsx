@@ -13,6 +13,7 @@ import { useQuery } from "urql";
 import { LESSON_NONE_REASONS } from "@scd/shared";
 import { LESSON_PLAN_FOR_SLOT_QUERY, type LessonPlanIn, type LessonPlanSessionT, type LessonDeliveryT } from "../graphql/operations";
 import { Body, Muted, Chip, ChipRow, Field, Button } from "./ui";
+import { ObjectiveChips, ObjectiveStatusRows } from "./ObjectiveStatusRows";
 import { STR, bnNum, lessonNoneReasonLabel as noneReasonLabel } from "../lib/labels";
 import { friendlyError } from "../lib/errors";
 import { space } from "../theme/tokens";
@@ -87,6 +88,11 @@ export function LessonPlanBlock({
   const byKey = useMemo(() => new Map((plan?.sessions ?? []).map((s) => [s.key, s])), [plan?.sessions]);
   const picked = value?.sessions ?? [];
   const pickedKeys = new Set(picked.map((p) => p.key));
+  // OT-5 (mock 6): the codes each session teaches, and this শাখা's state for the picked sessions' codes.
+  const objRows = useMemo(() => new Map((plan?.objectives ?? []).map((r) => [r.code, r])), [plan?.objectives]);
+  const pickedRows = [...new Set(picked.flatMap((p) => byKey.get(p.key)?.loCodes ?? []))]
+    .map((c) => objRows.get(c))
+    .filter((r): r is NonNullable<typeof r> => !!r);
 
   const titlesKey = picked.map((p) => `${p.key}:${p.finished}`).join("|");
   useEffect(() => {
@@ -136,6 +142,7 @@ export function LessonPlanBlock({
         return (
           <View key={p.key} style={{ gap: 4 }}>
             <Body>{sessionLabel(s)}</Body>
+            <ObjectiveChips codes={s.loCodes ?? []} rows={objRows} />
             <ChipRow>
               <Chip label={STR.lpFinished} selected={p.finished} onPress={() => setFinished(p.key, true)} />
               <Chip label={STR.lpStarted} selected={!p.finished} onPress={() => setFinished(p.key, false)} />
@@ -144,6 +151,13 @@ export function LessonPlanBlock({
           </View>
         );
       })}
+
+      {pickedRows.length > 0 ? (
+        <View style={{ gap: 4 }}>
+          <Body style={{ fontWeight: "700" }}>{STR.otSectionState}</Body>
+          <ObjectiveStatusRows rows={pickedRows} />
+        </View>
+      ) : null}
 
       <Muted>{showAll ? STR.lpShowAll : STR.lpNext}</Muted>
       <ChipRow>

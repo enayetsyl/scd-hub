@@ -101,9 +101,9 @@ export function presenceOf(
  * The child's day record on each teaching day. First from the units the delivery snapshotted
  * (D-#823 — survives a split/move): listed absent on any of them → absent; every unit recorded and
  * not listed → present. Otherwise the child's CURRENT unit history (`studentAttendanceHistory`).
- * A day with neither is left out — `presenceOf` reads it as unknown.
+ * A day with neither is left out — `presenceOf` reads it as unknown. Exported for OT-5's objective view.
  */
-async function dayRecords(
+export async function dayRecords(
   studentId: string,
   dayKeys: string[],
   deliveries: Array<{ dateKey: string; attendanceUnits?: string[] }>,
