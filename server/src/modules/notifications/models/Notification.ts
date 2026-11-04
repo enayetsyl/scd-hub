@@ -106,6 +106,8 @@ export interface NotificationRefs {
   improvementActionId?: string;
   /** Mastery action (M-6, D-#812) — deep-link: MasteryAction for staff. */
   masteryActionId?: string;
+  /** Objective-list review round (OT-2, prd-objective-tree §7) — deep-link: MasteryReview. */
+  masteryReviewId?: string;
 }
 
 export interface INotification extends Document {
@@ -177,6 +179,8 @@ const RefsSchema = new Schema<NotificationRefs>(
     improvementActionId: { type: String },
     // M-6 (D-#812) — same lockstep rule: model, resolver, app query.
     masteryActionId: { type: String },
+    // OT-2 — same lockstep rule: model, resolver, app query.
+    masteryReviewId: { type: String },
   },
   { _id: false },
 );

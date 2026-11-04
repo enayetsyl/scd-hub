@@ -53,6 +53,8 @@ export function notificationTarget(
     case "HW_PARENT_COMMS":
       return { tab: "HomeworkTab", screen: "HomeworkHome" };
     case "REVIEW_ASSIGNED":
+      // OT-2: the objective-list review shares this review-duty kind; its rows carry masteryReviewId.
+      if (refs?.masteryReviewId) return { tab: "MasteryTab", screen: "MasteryReview", params: { reviewId: refs.masteryReviewId } };
       return refs?.reviewAssignmentId && refs?.artifactId
         ? {
             tab: "ReviewTab",
