@@ -1,5 +1,6 @@
 # STATUS
 
+- 2026-11-04: **LIVE — voice tasks + Gemini key screen (D-#960–#967)** (dev #1316 → promoted #1319, prod `f9174cc1`, deploy green; **OTA `cb646726-8ccf-4389-a3b5-0eb214d4f82a`** android runtime 1.1.0, bundle has the prod URL and no localhost). Prod probe: `parseVoiceTasks` present and refuses an anonymous caller. **Owner to do:** Admin → এআই (Gemini) কী ও মডেল — if the model shows `gemini-2.5-flash` (retired, 404) set `gemini-flash-latest`; switch on `work_board:voice` (+ `work_board:assign`) for Tazkir / Akhtar. Android mic still needs APK 1.1.7 (VT-5).
 - 2026-11-04: **SHIPPED — objective tree OT-1..OT-5 + lesson-plan progress LP-1..3 (question switch OFF) on prod and phones.** Promotion #1315 (`5705c75b`, Deploy prod success, /healthz 200, new schema live). OTA update group `923221fc` (channel production, runtime 1.1.0, android; bundle prod URL 1 / localhost 0; sourcemaps 1 of 2 as usual).
   - **No change to daily work:** mastery add-on off everywhere, no tree imported; the class note's lesson-plan question is OFF (D-#952, no setting row).
   - **Now / next:** pilot — import C1 MATH (`docs/mastery/objective-tree/C1_MATH.tree.json` + `domains/MATH.json`) in তালিকা ইমপোর্ট, grant Mahzabin `mastery:review`, assign the round; then draft the 15 final-print books one subject at a time.
