@@ -16,6 +16,8 @@ import {
   type LessonPlanForSlot,
   type LessonPlanSessionView,
 } from "../services/LessonDeliveryService";
+import { sectionObjectiveRows } from "../services/ObjectiveLessonService";
+import { SectionObjectiveRowRef } from "./lessonObjectives";
 
 const LessonPlanSessionRef = builder.objectRef<LessonPlanSessionView>("LessonPlanSession").implement({
   fields: (t) => ({
@@ -27,6 +29,8 @@ const LessonPlanSessionRef = builder.objectRef<LessonPlanSessionView>("LessonPla
     sessionOf: t.exposeInt("sessionOf"),
     titleBn: t.exposeString("titleBn"),
     artifactId: t.exposeString("artifactId"),
+    /** OT-5: the objective codes this session teaches ([] = none). */
+    loCodes: t.exposeStringList("loCodes"),
     finishedOn: t.exposeStringList("finishedOn"),
     startedOn: t.exposeStringList("startedOn"),
   }),
@@ -42,6 +46,8 @@ const LessonDeliverySessionRef = builder.objectRef<DeliverySessionView>("LessonD
     sessionOf: t.exposeInt("sessionOf"),
     titleBn: t.exposeString("titleBn"),
     finished: t.exposeBoolean("finished"),
+    /** OT-5 (D-#949): the codes snapshotted at marking ([] = the plan carried none then). */
+    loCodes: t.exposeStringList("loCodes"),
   }),
 });
 
@@ -61,6 +67,15 @@ const LessonPlanForSlotRef = builder.objectRef<LessonPlanForSlot>("LessonPlanFor
     sessions: t.field({ type: [LessonPlanSessionRef], resolve: (p) => p.sessions }),
     suggestedKey: t.string({ nullable: true, resolve: (p) => p.suggestedKey }),
     delivery: t.field({ type: LessonDeliveryRef, nullable: true, resolve: (p) => p.delivery }),
+    /** OT-5 (mock 6): this শাখা's state per code the plan carries — taught on / not yet, absent that day.
+     *  Lazy (only a caller that asks pays for it); [] when the plan carries no codes. Rides the card's gate. */
+    objectives: t.field({
+      type: [SectionObjectiveRowRef],
+      resolve: (p) =>
+        p.applies && p.sectionId && p.subject && p.sessions.some((s) => s.loCodes.length > 0)
+          ? sectionObjectiveRows(p.sectionId, p.subject, { classLevel: p.classLevel ?? null, planOnly: true })
+          : [],
+    }),
   }),
 });
 
