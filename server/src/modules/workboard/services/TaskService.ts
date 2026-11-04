@@ -20,6 +20,7 @@ import { Task, type ITask } from "../models/Task";
 import { TaskTemplate } from "../models/TaskTemplate";
 import { queryPage, type Page, type PageArgs } from "../../../lib/paging";
 import { emitTaskAssigned, emitTaskBlocked, emitTaskDone } from "./workBoardNotifications";
+import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
 
 export interface TaskInput {
   titleBn: string;
@@ -167,6 +168,7 @@ export async function setTaskStatus(authIn: AuthPayload | null, id: string, stat
   assertCanWork(auth, doc);
   const from = doc.status;
   if (from === status) return doc;
+  const priorDoneBy = doc.doneBy ?? null;
   doc.status = status;
   if (status === "DONE") {
     doc.doneAt = new Date();
@@ -188,6 +190,10 @@ export async function setTaskStatus(authIn: AuthPayload | null, id: string, stat
     meta: { action: "status", from, to: status },
   });
   if (status === "DONE") await emitTaskDone(doc, await nameOf(auth.userId));
+  // D-#953: "done" was not done — reopened by someone else.
+  if (from === "DONE" && priorDoneBy && String(priorDoneBy) !== auth.userId) {
+    await recordPlaceMistake({ kind: "TASK_REOPENED", tier: 2, refKey: doc._id.toString(), ownerId: priorDoneBy, correctedBy: auth.userId, at: new Date(), line: `"${doc.titleBn}" সম্পন্ন দেওয়ার পর আবার খোলা হয়েছে` });
+  }
   return doc;
 }
 

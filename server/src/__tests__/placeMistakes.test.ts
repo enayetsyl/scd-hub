@@ -13,6 +13,8 @@ import { FinancePosting } from "../modules/finance/models/FinancePosting";
 import { recordPlaceMistake, staffMistakeNotesByIds } from "../modules/staff-mistakes/services/StaffMistakeNoteService";
 import { explainMistake } from "../modules/staff-mistakes/services/StaffMistakeService";
 import { reversePosting } from "../modules/finance/services/FinanceSnapshotService";
+import { Task } from "../modules/workboard/models/Task";
+import { setTaskStatus } from "../modules/workboard/services/TaskService";
 
 jest.setTimeout(120_000);
 
@@ -32,7 +34,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await Promise.all(
-    [User, Notification, StaffMistake, StaffMistakeNote, FinancePosting].map((m) => (m as unknown as mongoose.Model<unknown>).deleteMany({})),
+    [User, Notification, StaffMistake, StaffMistakeNote, FinancePosting, Task].map((m) => (m as unknown as mongoose.Model<unknown>).deleteMany({})),
   );
 });
 
@@ -85,5 +87,23 @@ describe("D-#952 — a reversed finance posting is the entrant's entry", () => {
     expect([entry!.kind, String(entry!.staffUserId)]).toEqual(["FINANCE_REVERSAL", clerk]);
     const note = await StaffMistakeNote.findOne({}).lean();
     expect(note!.lines[0]!.text).toContain("1500");
+  });
+});
+
+describe("D-#953 — tier 2: a task reopened by someone else", () => {
+  it("is a half-weight entry for whoever marked it done; reopening your own is not", async () => {
+    const assignee = await user("Rahima", "TEACHER");
+    const assigner = await user("Principal", "PRINCIPAL");
+    const t = await Task.create({ titleBn: "তালিকা তৈরি", assigneeUserId: new Types.ObjectId(assignee), assignedBy: new Types.ObjectId(assigner), dueKey: "2026-11-10", effortMin: 30 });
+    const asAssignee = { userId: assignee, role: "TEACHER" } as never;
+    const asAssigner = { userId: assigner, role: "PRINCIPAL" } as never;
+    await setTaskStatus(asAssignee, String(t._id), "DONE");
+    await setTaskStatus(asAssignee, String(t._id), "TODO"); // own undo: nothing
+    expect(await StaffMistake.countDocuments()).toBe(0);
+    await setTaskStatus(asAssignee, String(t._id), "DONE");
+    await setTaskStatus(asAssigner, String(t._id), "TODO");
+    const entry = await StaffMistake.findOne({}).lean();
+    expect([entry!.kind, entry!.tier, String(entry!.staffUserId)]).toEqual(["TASK_REOPENED", 2, assignee]);
+    expect((await StaffMistakeNote.findOne({}).lean())!.lines[0]!.text).toContain("তালিকা তৈরি");
   });
 });

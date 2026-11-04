@@ -18,6 +18,7 @@ import { detectConflicts, type SlotLite } from "../conflicts";
 import { liveWindow, startOfDay, endOfDayBefore } from "../liveWindow";
 import { routineGrantPlan, ROUTINE_GRANT_SUBJECTS } from "../binding";
 import { onRoutineSlotChangedSync } from "../../chat/services/ChatGroupService";
+import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
 
 export interface CreateSlotInput {
   groupType: "section" | "subjectgroup";
@@ -338,6 +339,10 @@ export async function updateRoutineSlot(input: UpdateSlotInput): Promise<CreateS
       to: { subject: input.subject, teacherId: newTeacherId },
     },
   });
+  // D-#953: a cell changed before it ever applied was set up wrong.
+  if (inPlace) {
+    await recordPlaceMistake({ kind: "ROUTINE_CELL_REVISED", tier: 2, refKey: existing._id.toString(), ownerId: existing.createdBy, correctedBy: input.actorId, at: new Date(), line: `${existing.dayOfWeek} · পিরিয়ড ${existing.periodNumber}: কার্যকর হওয়ার আগেই বদলানো হয়েছে` });
+  }
 
   // Re-sync the routine teaching grant: unbind the old (teacher, subject) if it is
   // orphaned AS OF the changeover date, then bind the new one. unbind runs AFTER the

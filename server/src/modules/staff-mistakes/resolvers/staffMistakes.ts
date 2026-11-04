@@ -57,19 +57,9 @@ type Row = StaffMistakeShape & {
   genericNote: StaffMistakeNoteShape | null;
 };
 
-/** Kinds whose detail is a generic StaffMistakeNote (MR-6+, D-#952). */
-const GENERIC_KINDS = new Set([
-  "POPUP_NOTICE_CHANGE",
-  "MONTHLY_REPORT_REVOKE",
-  "SYLLABUS_REOPEN",
-  "EXAM_ROUTINE_CHANGE",
-  "STAFF_LETTER_VOID",
-  "PAYROLL_REOPEN",
-  "FINANCE_REVERSAL",
-  "MASTERY_CORRECTION",
-  "QURAN_EXAM_CORRECTION",
-  "CLASS_NOTE_CHANGE",
-]);
+/** Kinds with a source model of their own; every other kind is a generic StaffMistakeNote (D-#952). */
+const SPECIFIC_KINDS = new Set(["MARK_CORRECTION", "ATTENDANCE_CORRECTION", "CLASS_TEST_MARKS", "CLASS_TEST_SCRIPTS", "WORK_CLAIM_ACCEPTED", "WORK_REVERT"]);
+const isGeneric = (kind: string): boolean => !SPECIFIC_KINDS.has(kind);
 
 const idsOf = (rows: StaffMistakeShape[], kind: string) => rows.filter((r) => r.kind === kind).map((r) => r.sourceId);
 
@@ -81,7 +71,7 @@ async function withDetail(rows: StaffMistakeShape[]): Promise<Row[]> {
     classTestCorrectionNotesByIds([...idsOf(rows, "CLASS_TEST_MARKS"), ...idsOf(rows, "CLASS_TEST_SCRIPTS")]),
     claimDetailsByIds(idsOf(rows, "WORK_CLAIM_ACCEPTED")),
     revertDetailsByIds(idsOf(rows, "WORK_REVERT")),
-    staffMistakeNotesByIds(rows.filter((r) => GENERIC_KINDS.has(r.kind)).map((r) => r.sourceId)),
+    staffMistakeNotesByIds(rows.filter((r) => isGeneric(r.kind)).map((r) => r.sourceId)),
   ]);
   return rows.map((r) => ({
     ...r,
@@ -90,7 +80,7 @@ async function withDetail(rows: StaffMistakeShape[]): Promise<Row[]> {
     classTestNote: r.kind === "CLASS_TEST_MARKS" || r.kind === "CLASS_TEST_SCRIPTS" ? (classTests.get(r.sourceId) ?? null) : null,
     workNote:
       r.kind === "WORK_CLAIM_ACCEPTED" ? (claims.get(r.sourceId) ?? null) : r.kind === "WORK_REVERT" ? (reverts.get(r.sourceId) ?? null) : null,
-    genericNote: GENERIC_KINDS.has(r.kind) ? (generic.get(r.sourceId) ?? null) : null,
+    genericNote: isGeneric(r.kind) ? (generic.get(r.sourceId) ?? null) : null,
   }));
 }
 

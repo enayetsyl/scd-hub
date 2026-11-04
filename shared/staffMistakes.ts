@@ -26,6 +26,22 @@ export const STAFF_MISTAKE_KINDS = [
   "MASTERY_CORRECTION",
   "QURAN_EXAM_CORRECTION",
   "CLASS_NOTE_CHANGE",
+  // MR-7 (D-#953): tier 2 — someone else caught it before it reached anyone.
+  "CT_RESULT_SENT_BACK",
+  "CT_DETAILS_FIXED",
+  "CT_REQUEST_CHANGED",
+  "CT_PAPER_SENT_BACK",
+  "HW_ITEM_VOIDED",
+  "ASSIGNMENT_ITEM_CHANGED",
+  "COMMENT_REVISED",
+  "OBSERVATION_REJECTED",
+  "OBSERVATION_RESTORED",
+  "TASK_REOPENED",
+  "SCRIPTS_RECEIVE_UNDONE",
+  "COVER_CANCELLED",
+  "ROUTINE_CELL_REVISED",
+  "LEAVE_REDECIDED",
+  "PRINT_CANCELLED",
 ] as const;
 export type StaffMistakeKind = (typeof STAFF_MISTAKE_KINDS)[number];
 
@@ -129,6 +145,95 @@ export const STAFF_MISTAKE_REASONS: Record<StaffMistakeKind, readonly StaffMista
     { code: "WRONG_LESSON", bn: "ভুল পাঠ / ফাইল দিয়েছিলাম", en: "Wrong lesson or file", hintBn: "অন্য ক্লাসের নোট / ভুল সংযুক্তি", selfCounts: true },
     { code: "HW_ADDED", bn: "পরে বাড়ির কাজ যোগ করেছি", en: "Added the homework later", hintBn: "নোট ঠিক ছিল, শুধু যোগ করা", autoExcuses: true },
   ),
+  CT_RESULT_SENT_BACK: [
+    MINE_REASON,
+    { code: "ADDITION", bn: "যোগে / নম্বরে ভুল ছিল", en: "A marks mistake", hintBn: "অফিস ধরেছে", selfCounts: true },
+    { code: "OFFICE_MISREAD", bn: "অফিস ভুল বুঝেছে", en: "The Office misread it", hintBn: "নম্বর ঠিকই ছিল" },
+    OTHER_REASON,
+  ],
+  CT_DETAILS_FIXED: [
+    MINE_REASON,
+    { code: "TYPO", bn: "টাইপে ভুল", en: "A typing mistake", hintBn: "মোট / পাস নম্বর ভুল লিখেছিলাম", selfCounts: true },
+    { code: "POSTPONED", bn: "পরীক্ষা বদলেছে", en: "The exam changed", hintBn: "প্রশ্নের মান বদলাতে হয়েছে", autoExcuses: true },
+    OTHER_REASON,
+  ],
+  CT_REQUEST_CHANGED: [
+    MINE_REASON,
+    { code: "WRONG_CHAPTER", bn: "ভুল অধ্যায় / নম্বর দিয়েছিলাম", en: "Wrong chapter or marks", hintBn: "অফিস টাইপ শুরু করার পরে বদলাতে হয়েছে", selfCounts: true },
+    { code: "EXAM_CHANGED", bn: "পরীক্ষা বাতিল / বদলেছে", en: "The exam was cancelled or changed", hintBn: "স্কুলের সিদ্ধান্ত", autoExcuses: true },
+    OTHER_REASON,
+  ],
+  CT_PAPER_SENT_BACK: [
+    MINE_REASON,
+    { code: "TYPO", bn: "টাইপে ভুল", en: "A typing mistake", hintBn: "প্রশ্ন / নম্বর ভুল টাইপ হয়েছে", selfCounts: true },
+    { code: "TEACHER_CHANGED", bn: "শিক্ষক পরে প্রশ্ন বদলেছেন", en: "The teacher changed the questions", hintBn: "আমার টাইপ ঠিক ছিল", autoExcuses: true },
+    OTHER_REASON,
+  ],
+  HW_ITEM_VOIDED: [
+    MINE_REASON,
+    { code: "NOTE_AS_HW", bn: "ক্লাস নোটকে বাড়ির কাজ দিয়েছি", en: "Filed a class note as homework", hintBn: "", selfCounts: true },
+    { code: "WRONG_CLASS", bn: "ভুল শ্রেণিতে দিয়েছি", en: "Filed it for the wrong class", hintBn: "", selfCounts: true },
+    OTHER_REASON,
+  ],
+  ASSIGNMENT_ITEM_CHANGED: [
+    MINE_REASON,
+    { code: "WRONG_QUESTION", bn: "ভুল প্রশ্ন দিয়েছিলাম", en: "Gave the wrong questions", hintBn: "", selfCounts: true },
+    { code: "NOT_TAUGHT", bn: "অধ্যায় এখনো পড়ানো হয়নি", en: "The chapter was not taught yet", hintBn: "পরে বুঝেছি" },
+    OTHER_REASON,
+  ],
+  COMMENT_REVISED: [
+    MINE_REASON,
+    { code: "TONE", bn: "ভাষা ঠিক ছিল না", en: "The wording was not right", hintBn: "", selfCounts: true },
+    { code: "WRONG_STUDENT", bn: "ভুল শিক্ষার্থীর মন্তব্য", en: "Wrong student", hintBn: "", selfCounts: true },
+    OTHER_REASON,
+  ],
+  OBSERVATION_REJECTED: [
+    MINE_REASON,
+    { code: "WRONG_VIDEO", bn: "ভুল দিনের ভিডিও দিয়েছি", en: "Uploaded the wrong day's video", hintBn: "", selfCounts: true },
+    { code: "CAMERA", bn: "ক্যামেরা / রেকর্ডিং সমস্যা", en: "A camera or recording problem", hintBn: "", autoExcuses: true },
+    OTHER_REASON,
+  ],
+  OBSERVATION_RESTORED: [
+    MINE_REASON,
+    { code: "WRONG_CANCEL", bn: "ভুল ভিডিও বাতিল করেছিলাম", en: "Cancelled the wrong video", hintBn: "", selfCounts: true },
+    OTHER_REASON,
+  ],
+  TASK_REOPENED: [
+    MINE_REASON,
+    { code: "EARLY_DONE", bn: "ভুলে সম্পন্ন চেপেছি", en: "Marked done by mistake", hintBn: "", selfCounts: true },
+    { code: "SCOPE_GREW", bn: "কাজের পরিধি বেড়েছে", en: "The task grew", hintBn: "", autoExcuses: true },
+    OTHER_REASON,
+  ],
+  SCRIPTS_RECEIVE_UNDONE: [
+    MINE_REASON,
+    { code: "MISCOUNT", bn: "গুনতে ভুল", en: "Miscounted", hintBn: "", selfCounts: true },
+    { code: "WRONG_TEST", bn: "ভুল পরীক্ষায় গ্রহণ করেছি", en: "Received under the wrong test", hintBn: "", selfCounts: true },
+    OTHER_REASON,
+  ],
+  COVER_CANCELLED: [
+    MINE_REASON,
+    { code: "WRONG_TEACHER", bn: "ভুল শিক্ষককে দিয়েছিলাম", en: "Gave it to the wrong teacher", hintBn: "", selfCounts: true },
+    { code: "CAME_IN", bn: "শিক্ষক পরে এসেছেন", en: "The teacher came in after all", hintBn: "", autoExcuses: true },
+    OTHER_REASON,
+  ],
+  ROUTINE_CELL_REVISED: [
+    MINE_REASON,
+    { code: "WRONG_CELL", bn: "ভুল শিক্ষক / বিষয় দিয়েছিলাম", en: "Wrong teacher or subject", hintBn: "", selfCounts: true },
+    { code: "POLICY", bn: "রুটিনের নীতি বদলেছে", en: "The routine plan changed", hintBn: "", autoExcuses: true },
+    OTHER_REASON,
+  ],
+  LEAVE_REDECIDED: [
+    MINE_REASON,
+    { code: "WRONG_DATES", bn: "ভুল তারিখ / ধরনে অনুমোদন", en: "Approved the wrong dates or type", hintBn: "", selfCounts: true },
+    { code: "WITHDRAWN", bn: "কর্মী নিজে ছুটি তুলে নিয়েছেন", en: "The staff member withdrew it", hintBn: "", autoExcuses: true },
+    OTHER_REASON,
+  ],
+  PRINT_CANCELLED: [
+    MINE_REASON,
+    { code: "WRONG_REQUEST", bn: "ভুল অনুরোধ দিয়েছিলাম", en: "Filed the wrong request", hintBn: "", selfCounts: true },
+    { code: "NOT_NEEDED", bn: "আর দরকার নেই", en: "No longer needed", hintBn: "পরীক্ষা / কাজ বাতিল", autoExcuses: true },
+    OTHER_REASON,
+  ],
 };
 
 export const STAFF_MISTAKE_TEXT_MAX = 500;

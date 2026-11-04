@@ -56,6 +56,7 @@ import { User } from "../../foundation/models/User";
 import { SubjectGroup } from "../../routine/models/SubjectGroup";
 import { actingAsFilter } from "../../foundation/services/RoleScope";
 import { holderIdsOf } from "../../access-control/services/holders";
+import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
 
 export class ClassroomObservationError extends Error {}
 
@@ -964,6 +965,8 @@ export async function cancelObservation(input: CancelObservationInput): Promise<
       meta: { teacherId: doc.teacherId.toString(), observerId: input.actorId, reason },
     });
     await emitRejected(doc, reason);
+    // D-#953: the uploader's video could not be reviewed.
+    await recordPlaceMistake({ kind: "OBSERVATION_REJECTED", tier: 2, refKey: doc._id.toString(), ownerId: doc.createdBy, correctedBy: input.actorId, at: new Date(), line: `ভিডিও বাতিল: "${reason}"` });
     return shape(doc);
   }
 
@@ -1012,6 +1015,7 @@ export async function restoreCancelledObservation(
   }
 
   const priorReason = doc.cancelledReason ?? null;
+  const priorCanceller = doc.cancelledBy ?? null;
   doc.cancelledAt = null;
   doc.cancelledBy = null;
   doc.cancelledReason = null;
@@ -1024,6 +1028,8 @@ export async function restoreCancelledObservation(
     targetKind: "ClassroomObservation",
     meta: { teacherId: doc.teacherId.toString(), restoredToState: doc.state, priorReason },
   });
+  // D-#953: the cancel itself was the mistake.
+  await recordPlaceMistake({ kind: "OBSERVATION_RESTORED", tier: 2, refKey: doc._id.toString(), ownerId: priorCanceller, correctedBy: input.actorId, at: new Date(), line: `বাতিল করা পর্যবেক্ষণ আবার ফেরানো হয়েছে${priorReason ? ` (কারণ ছিল: "${priorReason}")` : ""}` });
 
   return shape(doc);
 }

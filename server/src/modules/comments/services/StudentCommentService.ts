@@ -30,6 +30,7 @@ import { User } from "../../foundation/models/User";
 import { StoredFile } from "../../platform/models/StoredFile";
 import { writeAudit } from "../../platform/services/AuditService";
 import { queryPage, type Page, type PageArgs } from "../../../lib/paging";
+import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
 
 /** A surfaced service error (Bangla-friendly message), mirroring the tracker pattern. */
 export class StudentCommentError extends Error {}
@@ -221,6 +222,10 @@ export async function editComment(input: EditCommentInput): Promise<StudentComme
     targetKind: "StudentComment",
     meta: { studentId: doc.studentId.toString(), sectionId: doc.sectionId.toString(), edited: true },
   });
+  // D-#953: someone else had to rewrite it before release.
+  if (doc.authorUserId.toString() !== input.actorId) {
+    await recordPlaceMistake({ kind: "COMMENT_REVISED", tier: 2, refKey: doc._id.toString(), ownerId: doc.authorUserId, correctedBy: input.actorId, at: new Date(), line: "মন্তব্য পর্যালোচক নতুন করে লিখেছেন" });
+  }
 
   return shape(doc);
 }
@@ -314,6 +319,9 @@ export async function discardComment(input: DiscardCommentInput): Promise<Studen
     targetKind: "StudentComment",
     meta: { studentId: doc.studentId.toString(), sectionId: doc.sectionId.toString(), discarded: true, reason },
   });
+  if (doc.authorUserId.toString() !== input.actorId) {
+    await recordPlaceMistake({ kind: "COMMENT_REVISED", tier: 2, refKey: doc._id.toString(), ownerId: doc.authorUserId, correctedBy: input.actorId, at: new Date(), line: `মন্তব্য বাতিল: "${reason}"` });
+  }
 
   return shape(doc);
 }

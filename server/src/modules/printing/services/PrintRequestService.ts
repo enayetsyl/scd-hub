@@ -34,6 +34,7 @@ import {
 import { dateKeyOf, isValidDateKey, parseDateKey } from "../../attendance/dates";
 import { publishRealtime } from "../../realtime/bus";
 import { pageOf, queryPage, type Page, type PageArgs } from "../../../lib/paging";
+import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
 
 export class PrintRequestError extends Error {
   constructor(msg: string) {
@@ -499,6 +500,10 @@ export async function cancelPrintRequest(
     targetKind: "PrintRequest",
     meta: { byOffice: opts.isOffice, reason: opts.reason ?? null },
   });
+  // D-#953: the Office cancelling someone's job means the request was wrong.
+  if (opts.isOffice && doc.requestedBy.toString() !== actorId) {
+    await recordPlaceMistake({ kind: "PRINT_CANCELLED", tier: 2, refKey: doc._id.toString(), ownerId: doc.requestedBy, correctedBy: actorId, at: new Date(), line: `প্রিন্টের অনুরোধ অফিস বাতিল করেছে${opts.reason ? `: "${opts.reason}"` : ""}` });
+  }
   await mirrorToClassTest(doc, "CANCELLED", actorId);
   publishRealtime("print_queue", { op: "cancelled", id: doc._id.toString() });
   return doc;

@@ -37,6 +37,10 @@ const mockClassExists = jest.fn().mockResolvedValue({ _id: "x" });
 
 /** D-#461: what the last `find()` chain was asked to sort/skip/limit by. */
 const mockQueryPlan: { sort?: unknown; skip?: unknown; limit?: unknown } = {};
+// D-#953: the mistake recorder reaches real models; this suite is DB-free.
+jest.mock("../modules/staff-mistakes/services/StaffMistakeNoteService", () => ({
+  recordPlaceMistake: jest.fn().mockResolvedValue(false),
+}));
 jest.mock("../modules/printing/models/PrintRequest", () => ({
   PrintRequest: {
     create: (d: unknown) => mockCreate(d),
