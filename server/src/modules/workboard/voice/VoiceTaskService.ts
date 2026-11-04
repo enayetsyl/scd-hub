@@ -42,6 +42,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 /** The fallback: fast, and its name slips are caught by the D-#962 guard. */
 export const GEMINI_LITE_MODEL = "gemini-flash-lite-latest";
 const FIRST_MODEL_DEADLINE_MS = 25_000;
+/** Cloudflare (in front of prod) cuts a request at 100 s. */
+const TOTAL_BUDGET_MS = 85_000;
 
 export class GeminiVoiceModel implements VoiceModel {
   constructor(
@@ -66,34 +68,33 @@ export class GeminiVoiceModel implements VoiceModel {
     // 2026-11-04: Flash answered "high demand" 503s and, when it did answer, took 75 s
     // (Cloudflare cuts at 100 s); Lite read the same note correctly in ~5 s. So the
     // first model gets a deadline, and an overload / retired model (404, lesson 6.1) /
-    // timeout moves on rather than making the speaker wait.
+    // timeout moves on rather than making the speaker wait. The whole chain fits inside
+    // TOTAL_BUDGET_MS so the reply always beats Cloudflare's 100 s cut-off.
+    const started = Date.now();
+    const left = () => TOTAL_BUDGET_MS - (Date.now() - started);
+    const attempt = (model: string, ms: number) =>
+      fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": this.apiKey },
+        body,
+        signal: AbortSignal.timeout(Math.max(1000, ms)),
+      }).catch(() => {
+        console.error(`[voice-tasks] ${model} timed out`);
+        return null;
+      });
     const chain = [...new Set([this.model, GEMINI_LITE_MODEL])];
     let res: Response | null = null;
     for (let i = 0; i < chain.length; i++) {
       const last = i === chain.length - 1;
-      try {
-        res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${chain[i]}:generateContent`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "x-goog-api-key": this.apiKey },
-          body,
-          signal: AbortSignal.timeout(last ? 60_000 : FIRST_MODEL_DEADLINE_MS),
-        });
-      } catch {
-        console.error(`[voice-tasks] ${chain[i]} timed out`);
-        res = null;
-        continue;
-      }
+      res = await attempt(chain[i], last ? left() : Math.min(FIRST_MODEL_DEADLINE_MS, left()));
+      if (!res) continue;
       if (res.ok) break;
       console.error(`[voice-tasks] ${chain[i]} returned ${res.status} ${(await res.text().catch(() => "")).slice(0, 200)}`);
       if (![404, 429, 500, 503].includes(res.status)) break;
-      if (last && res.status !== 404) {
+      // One more try on the last model, only when there is time for it.
+      if (last && res.status !== 404 && left() > 15_000) {
         await sleep(1500);
-        res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${chain[i]}:generateContent`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "x-goog-api-key": this.apiKey },
-          body,
-          signal: AbortSignal.timeout(60_000),
-        }).catch(() => null);
+        res = await attempt(chain[i], left());
       }
     }
     if (!res || !res.ok) {
