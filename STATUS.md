@@ -1,5 +1,8 @@
 # STATUS
 
+- 2026-11-04: **SHIPPED — objective tree OT-1..OT-5 + lesson-plan progress LP-1..3 (question switch OFF) on prod and phones.** Promotion #1315 (`5705c75b`, Deploy prod success, /healthz 200, new schema live). OTA update group `923221fc` (channel production, runtime 1.1.0, android; bundle prod URL 1 / localhost 0; sourcemaps 1 of 2 as usual).
+  - **No change to daily work:** mastery add-on off everywhere, no tree imported; the class note's lesson-plan question is OFF (D-#952, no setting row).
+  - **Now / next:** pilot — import C1 MATH (`docs/mastery/objective-tree/C1_MATH.tree.json` + `domains/MATH.json`) in তালিকা ইমপোর্ট, grant Mahzabin `mastery:review`, assign the round; then draft the 15 final-print books one subject at a time.
 - 2026-11-04: **BUILT — school switch for the class note's lesson-plan question, default OFF (D-#952)** (branch `feat/lesson-plan-question-switch`, worktree `C:/w/lpswitch`, PR to dev, NOT merged). Owner: promote everything incl. lesson-plan progress, but no change to daily operations this year. No setting row (prod) = off → the class note looks and behaves exactly as on main today (old bundles too: they read `applies`). Principal/Office turn it on from ক্লাস নোট → পাঠ পরিকল্পনার অগ্রগতি (`routine:settings`).
   - **Verified:** see the PR (shared build + tsc ×3, vocab verifier, LP suites + lessonPlanQuestionSwitch + permissionCatalogueGates, full server jest).
   - **Now / next:** review + merge → rides the dev→main promotion (server + app; the toggle card needs the OTA, the OFF behaviour does not). Switch it on in 2027.
