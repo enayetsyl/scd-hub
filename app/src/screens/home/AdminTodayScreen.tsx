@@ -19,6 +19,7 @@ import { Screen, H2, Body, Muted, Card, Badge, Loader, ErrorBanner } from "../..
 import { FoldCard } from "../../components/FoldCard";
 import { GiftHandoverCard } from "../../components/GiftHandoverCard";
 import { LiveClassCard } from "../../components/LiveClassCard";
+import { MyPeriodsSelfCard } from "../../components/MyPeriodsStrip";
 import { TodayWorkCard } from "../../components/TodayWorkCard";
 import { UnissuedHomeworkCard } from "../../components/UnissuedHomeworkCard";
 import { CtScriptOfficeCard } from "../../components/CtScriptOfficeCard";
@@ -251,6 +252,10 @@ export default function AdminTodayScreen(): React.ReactElement {
             answer changes every period, and an uncovered class is the one thing here
             that needs a decision within the hour. */}
         {canLiveBoard ? <LiveClassCard /> : null}
+
+        {/* D-#918 — আমার পিরিয়ড for an admin who also teaches (TodayScreen's strip).
+            Renders nothing unless the caller has a period today. */}
+        <MyPeriodsSelfCard />
 
         {/* WB-4 (D-#701) — আজকের কাজ: the caller's own board for today (a Principal's
             leave approvals and tasks; the Office's print jobs), linking to the board. */}
