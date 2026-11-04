@@ -144,6 +144,8 @@ export const EXPECTED_ERROR_NAMES: ReadonlySet<string> = new Set([
   "ExamRoutineError",
   // Staff mistake record (D-#936–#939): not your entry, decided already, bad reason.
   "StaffMistakeError",
+  // Warning ladder (D-#940–#942): not your warning, bad meeting time/place.
+  "StaffWarningError",
   "QuranValidationError",
   "ReviewError",
   "RevisionError",

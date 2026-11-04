@@ -74,6 +74,10 @@ export type AuditEventKind =
   | "SALARY_SENT_ANNOUNCED"       // a payment group of a locked run told its salary went out, by notification and/or pop-up (D-#915)
   | "STAFF_MISTAKE_EXPLAINED"     // a staff member gave the reason for a caught mistake (D-#937) — meta.kind/reasonCode/status
   | "STAFF_MISTAKE_DECIDED"       // a reviewer excused, counted or moved a caught mistake (D-#939) — meta.decision/movedToUserId
+  | "STAFF_MISTAKE_SETTINGS_SET"  // the Principal changed the mistake rules (D-#943) — meta.before/after
+  | "STAFF_WARNING_REACHED"       // a person reached a warning-ladder rung (D-#940) — meta.staffUserId/step/weightedCount
+  | "STAFF_WARNING_MEETING_SET"   // the face-to-face talk after a warning was booked (D-#941) — meta.at/place
+  | "STAFF_WARNING_MEETING_RECORDED" // what was said and agreed at that talk (D-#941) — meta.followUpDateKey/sentSummary
   | "STAFF_EMPLOYMENT_CONFIRMED"  // probation → confirmed, with the date the pool starts from (SH-2, D-#540)
   | "PROBATION_DEBT_SETTLED"      // held probation leave settled against the pool or the final salary (SH-3, D-#540)
   | "STAFF_LATENESS_CHARGED"      // a month's 3-lates-to-a-day reckoning written at payroll prepare (SH-4, D-#541)

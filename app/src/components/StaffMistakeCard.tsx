@@ -8,20 +8,9 @@ import { View } from "react-native";
 import type { StaffMistakeT, StaffMistakeStatusT } from "../graphql/staffMistakes";
 import { Badge, Body, Card, Muted } from "./ui";
 import { reasonLabel } from "./MistakeReasonSheet";
-import { STR, bnNum, fullDateLabel, hwSubjectLabel } from "../lib/labels";
+import { STR, fullDateLabel, hwSubjectLabel } from "../lib/labels";
+import { dhakaClock, dhakaWhen } from "../lib/staffMistakeLabels";
 import { space } from "../theme/tokens";
-
-/** HH:mm in Asia/Dhaka (Bangla digits via bnNum). */
-function dhakaClock(iso: string): string {
-  const d = new Date(new Date(iso).getTime() + 6 * 3600 * 1000);
-  return bnNum(`${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}`);
-}
-
-/** "সোমবার, ৯ নভেম্বর ২০২৬ · ১৭:০০" for a deadline. */
-export function dhakaWhen(iso: string): string {
-  const key = new Date(new Date(iso).getTime() + 6 * 3600 * 1000).toISOString().slice(0, 10);
-  return `${fullDateLabel(key)} · ${dhakaClock(iso)}`;
-}
 
 const STATUS: Record<StaffMistakeStatusT, { label: () => string; tone: "warn" | "danger" | "info" | "muted" }> = {
   EXPLANATION_DUE: { label: () => STR.smrStExplain, tone: "warn" },

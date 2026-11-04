@@ -314,6 +314,9 @@ import StaffCpdScreen from "../screens/hr/StaffCpdScreen";
 import MarkCorrectionsScreen from "../screens/hr/MarkCorrectionsScreen";
 import MyMistakesScreen from "../screens/hr/MyMistakesScreen";
 import MistakeReviewScreen from "../screens/hr/MistakeReviewScreen";
+import StaffMistakeSummaryScreen from "../screens/hr/StaffMistakeSummaryScreen";
+import PersonMistakesScreen from "../screens/hr/PersonMistakesScreen";
+import StaffMistakeSettingsScreen from "../screens/hr/StaffMistakeSettingsScreen";
 import GrievanceInboxScreen from "../screens/hr/GrievanceInboxScreen";
 import OffboardingHomeScreen from "../screens/hr/OffboardingHomeScreen";
 import OffboardingCaseScreen from "../screens/hr/OffboardingCaseScreen";
@@ -1460,6 +1463,9 @@ function HrNavigator(): React.ReactElement {
       <HrStack.Screen name="MarkCorrections" component={MarkCorrectionsScreen} options={{ title: STR.msgNotesTitle }} />
       <HrStack.Screen name="MyMistakes" component={MyMistakesScreen} options={{ title: STR.smrMyTitle }} />
       <HrStack.Screen name="MistakeReview" component={MistakeReviewScreen} options={{ title: STR.smrReviewTitle }} />
+      <HrStack.Screen name="StaffMistakeSummary" component={StaffMistakeSummaryScreen} options={{ title: STR.smsTitle }} />
+      <HrStack.Screen name="PersonMistakes" component={PersonMistakesScreen} options={{ title: STR.smpTitle }} />
+      <HrStack.Screen name="StaffMistakeSettings" component={StaffMistakeSettingsScreen} options={{ title: STR.smxTitle }} />
       <HrStack.Screen name="GrievanceInbox" component={GrievanceInboxScreen} options={{ title: STR.hrGrievances }} />
       <HrStack.Screen name="OffboardingHome" component={OffboardingHomeScreen} options={{ title: STR.hrOffboarding }} />
       <HrStack.Screen

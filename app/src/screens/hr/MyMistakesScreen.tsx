@@ -6,12 +6,13 @@
 import React from "react";
 import { View } from "react-native";
 import { useMutation, useQuery } from "urql";
-import { EXPLAIN_STAFF_MISTAKE, MY_STAFF_MISTAKES, type StaffMistakeT } from "../../graphql/staffMistakes";
-import { Screen, H2, Muted, Button, Loader, EmptyState, ErrorBanner, Badge } from "../../components/ui";
+import { EXPLAIN_STAFF_MISTAKE, MY_STAFF_MISTAKES, MY_STAFF_WARNINGS, type StaffMistakeT } from "../../graphql/staffMistakes";
+import { Screen, H2, Body, Card, Muted, Button, Loader, EmptyState, ErrorBanner, Badge } from "../../components/ui";
+import { dhakaWhen, staffWarningStepLabel } from "../../lib/staffMistakeLabels";
 import { StaffMistakeCard } from "../../components/StaffMistakeCard";
 import { useMistakeReason } from "../../state/MistakeReasonContext";
 import { useToast } from "../../state/ToastContext";
-import { STR, bnNum } from "../../lib/labels";
+import { STR, bnNum, fullDateLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
 
@@ -21,6 +22,9 @@ export default function MyMistakesScreen(): React.ReactElement {
   const { askMistakeReason } = useMistakeReason();
   const toast = useToast();
   const rows = q.data?.myStaffMistakes ?? [];
+  // D-#940/#941: my warnings and their meetings, newest first.
+  const [wq] = useQuery({ query: MY_STAFF_WARNINGS, requestPolicy: "cache-and-network" });
+  const warnings = wq.data?.myStaffWarnings ?? [];
 
   const counted = rows.filter((r) => r.status === "COUNTED").length;
   const open = rows.filter((r) => r.status === "EXPLANATION_DUE" || r.status === "PENDING_REVIEW").length;
@@ -49,6 +53,16 @@ export default function MyMistakesScreen(): React.ReactElement {
           <Badge text={`${STR.smrStExcused} · ${bnNum(excused)}`} tone="info" />
         </View>
       ) : null}
+      {warnings.map((w) => (
+        <Card key={w.id}>
+          <Body style={{ fontWeight: "700" }}>
+            {staffWarningStepLabel(w.step)} — {fullDateLabel(w.createdAt.slice(0, 10))}
+          </Body>
+          <Muted>{STR.smwCountLine.replace("{days}", bnNum(w.windowDays)).replace("{n}", bnNum(Math.round(w.weightedCount * 10) / 10))}</Muted>
+          {w.meetingAt ? <Body>{STR.smwMeetingLine.replace("{when}", dhakaWhen(w.meetingAt)).replace("{place}", w.meetingPlace ?? "")}</Body> : null}
+          {w.meetingActions ? <Body>{STR.smpActions}: {w.meetingActions}</Body> : null}
+        </Card>
+      ))}
       {q.fetching && rows.length === 0 ? (
         <Loader label={STR.loading} />
       ) : q.error ? (
