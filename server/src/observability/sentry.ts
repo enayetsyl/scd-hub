@@ -120,6 +120,8 @@ export const EXPECTED_ERROR_NAMES: ReadonlySet<string> = new Set([
   "MonthlyCommentError",
   "MonthlyReportConfigError",
   "MonthlyReportError",
+  // Own sidebar arrangement (D-#920): an unknown item key or a save while viewing as someone.
+  "NavPreferenceError",
   "OffboardingError",
   "ParentMeetingError",
   "PayrollError",
