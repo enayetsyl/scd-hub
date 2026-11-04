@@ -11,6 +11,11 @@ const mockFindById = jest.fn();
 const mockFindOne = jest.fn();
 const mockDeleteOne = jest.fn();
 
+// D-#946: the mistake recorder reaches real models; this suite is DB-free.
+jest.mock("../modules/trackers/services/WorkMistakeService", () => ({
+  recordClaimsAccepted: jest.fn().mockResolvedValue(0),
+  recordWorkRevert: jest.fn().mockResolvedValue(0),
+}));
 jest.mock("../modules/trackers/models/HomeworkStudentRecord", () => ({
   HomeworkStudentRecord: {
     findById: (id: unknown) => mockFindById(id),

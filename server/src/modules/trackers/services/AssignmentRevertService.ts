@@ -18,6 +18,7 @@ import { popActionGroup } from "../lifecycle";
 import { isSameDhakaDay } from "../../../lib/dhakaDay";
 import { writeAudit } from "../../platform/services/AuditService";
 import { recordMarkCorrection, sameDayPersonChase } from "./MarkCorrectionService";
+import { recordWorkRevert } from "./WorkMistakeService";
 
 export interface AsRevertInput {
   recordId: string;
@@ -105,6 +106,8 @@ export async function revertAssignmentRecord(input: AsRevertInput): Promise<AsRe
       via: "UNDO",
     });
   }
+  // D-#946: an undone RESUBMIT (the family was told) or someone else's / an older CHECKED.
+  await recordWorkRevert({ tracker: "ASSIGNMENT", recordId: rec._id, itemCode: rec.asId, studentId: rec.studentId, popped, actorId: input.actorId, at: now });
 
   // The ONLY trace this revert happened — the popped stamps are gone from the
   // record (D-#354; mirrors HomeworkRevertService).

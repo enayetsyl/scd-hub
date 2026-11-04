@@ -25,6 +25,7 @@ import {
   classTestCorrectionNotesByIds,
   type ClassTestCorrectionNoteShape,
 } from "../../trackers/services/ClassTestCorrectionService";
+import { claimDetailsByIds, revertDetailsByIds, type WorkMistakeDetailShape } from "../../trackers/services/WorkMistakeService";
 import {
   decideMistake,
   explainMistake,
@@ -51,22 +52,27 @@ type Row = StaffMistakeShape & {
   markNote: MarkCorrectionNoteShape | null;
   attendanceNote: AttendanceCorrectionNoteShape | null;
   classTestNote: ClassTestCorrectionNoteShape | null;
+  workNote: WorkMistakeDetailShape | null;
 };
 
 const idsOf = (rows: StaffMistakeShape[], kind: string) => rows.filter((r) => r.kind === kind).map((r) => r.sourceId);
 
 /** Attach each entry's source detail in one batch per kind. */
 async function withDetail(rows: StaffMistakeShape[]): Promise<Row[]> {
-  const [marks, attendance, classTests] = await Promise.all([
+  const [marks, attendance, classTests, claims, reverts] = await Promise.all([
     markCorrectionNotesByIds(idsOf(rows, "MARK_CORRECTION")),
     attendanceCorrectionNotesByIds(idsOf(rows, "ATTENDANCE_CORRECTION")),
     classTestCorrectionNotesByIds([...idsOf(rows, "CLASS_TEST_MARKS"), ...idsOf(rows, "CLASS_TEST_SCRIPTS")]),
+    claimDetailsByIds(idsOf(rows, "WORK_CLAIM_ACCEPTED")),
+    revertDetailsByIds(idsOf(rows, "WORK_REVERT")),
   ]);
   return rows.map((r) => ({
     ...r,
     markNote: r.kind === "MARK_CORRECTION" ? (marks.get(r.sourceId) ?? null) : null,
     attendanceNote: r.kind === "ATTENDANCE_CORRECTION" ? (attendance.get(r.sourceId) ?? null) : null,
     classTestNote: r.kind === "CLASS_TEST_MARKS" || r.kind === "CLASS_TEST_SCRIPTS" ? (classTests.get(r.sourceId) ?? null) : null,
+    workNote:
+      r.kind === "WORK_CLAIM_ACCEPTED" ? (claims.get(r.sourceId) ?? null) : r.kind === "WORK_REVERT" ? (reverts.get(r.sourceId) ?? null) : null,
   }));
 }
 
@@ -109,6 +115,27 @@ const ClassTestNoteRef = builder.objectRef<ClassTestCorrectionNoteShape>("ClassT
   }),
 });
 
+const WorkStateRef = builder.objectRef<{ state: string; at: Date }>("WorkMistakeState").implement({
+  fields: (t) => ({
+    state: t.exposeString("state"),
+    at: t.string({ resolve: (s) => new Date(s.at).toISOString() }),
+  }),
+});
+
+const WorkNoteRef = builder.objectRef<WorkMistakeDetailShape>("WorkMistakeDetail").implement({
+  fields: (t) => ({
+    id: t.exposeString("id"),
+    tracker: t.exposeString("tracker"),
+    itemCode: t.exposeString("itemCode"),
+    subject: t.string({ nullable: true, resolve: (n) => n.subject }),
+    studentName: t.exposeString("studentName"),
+    claimedAt: t.string({ nullable: true, resolve: (n) => iso(n.claimedAt) }),
+    claimNote: t.string({ nullable: true, resolve: (n) => n.claimNote }),
+    states: t.field({ type: [WorkStateRef], resolve: (n) => n.states }),
+    byName: t.exposeString("byName"),
+  }),
+});
+
 const AttendanceNoteRef = builder.objectRef<AttendanceCorrectionNoteShape>("AttendanceCorrectionNote").implement({
   fields: (t) => ({
     id: t.exposeString("id"),
@@ -143,6 +170,7 @@ const StaffMistakeRef = builder.objectRef<Row>("StaffMistake").implement({
     markNote: t.field({ type: NoteRef, nullable: true, resolve: (r) => r.markNote }),
     attendanceNote: t.field({ type: AttendanceNoteRef, nullable: true, resolve: (r) => r.attendanceNote }),
     classTestNote: t.field({ type: ClassTestNoteRef, nullable: true, resolve: (r) => r.classTestNote }),
+    workNote: t.field({ type: WorkNoteRef, nullable: true, resolve: (r) => r.workNote }),
   }),
 });
 
