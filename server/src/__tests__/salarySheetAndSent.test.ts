@@ -14,8 +14,8 @@ import { Notification } from "../modules/notifications/models/Notification";
 import { PopupNotice } from "../modules/popup-notices/models/PopupNotice";
 import { setHrPolicy } from "../modules/hr/services/HrPolicyService";
 import { preparePayrollRun, approvePayrollRun } from "../modules/hr/services/PayrollService";
-import { salarySheet } from "../modules/hr/services/SalarySheetService";
-import { renderSalarySheet } from "../modules/hr/routes/salarySheetPdf";
+import { salarySheet, salaryExpense } from "../modules/hr/services/SalarySheetService";
+import { renderSalarySheet, sheetColumns } from "../modules/hr/routes/salarySheetPdf";
 import {
   announceSalarySent,
   salarySentGroups,
@@ -99,10 +99,44 @@ describe("salary sheet (D-#914)", () => {
     expect(sheet.groups.map((g) => g.subtotal.netPay)).toEqual([12_000, 25_000, 6_000]);
     expect(sheet.total.grossSalary).toBe(46_000);
     expect(sheet.total.netPay).toBe(43_000);
-    // Only the kinds that moved money get a column.
-    expect(sheet.deductionColumns).toEqual(["other"]);
+    // Only the kinds that moved money get a column; a manual "other" is an adjustment.
+    expect(sheet.notPaidColumns).toEqual([]);
     expect(sheet.additionColumns).toEqual([]);
+    expect(sheet.adjustmentColumns).toEqual(["other"]);
     expect(sheet.groups.flatMap((g) => g.rows).every((r) => r.check === 0)).toBe(true);
+  });
+
+  it("splits the deductions around Salary expense, so expense − adjustments = net (D-#929)", async () => {
+    const u = await staff("Uesuf", 8_000, cash);
+    await staff("Raian", 5_000, cash);
+    const runId = await lockedRun([
+      {
+        staffProfileId: u,
+        latenessDeduction: 1_143,
+        manualDeductions: [
+          { type: "unpaid_leave", amount: 1_524 },
+          { type: "other", amount: 5_000, note: "loan" },
+        ],
+        manualAdditions: [{ type: "bonus", amount: 200 }],
+      },
+    ]);
+
+    const sheet = await salarySheet(runId);
+    const uesuf = sheet.groups[0].rows.find((r) => r.name === "Uesuf")!;
+
+    expect(sheet.notPaidColumns).toEqual(["unpaid_leave", "lateness"]);
+    expect(sheet.additionColumns).toEqual(["bonus"]);
+    expect(sheet.adjustmentColumns).toEqual(["other"]);
+    // 8,000 − 1,524 − 1,143 + 200: what the voucher books. No cash moved for the leave or lateness.
+    expect(salaryExpense(uesuf)).toBe(5_533);
+    expect(salaryExpense(uesuf) - 5_000).toBe(uesuf.netPay);
+    // Linear, so the subtotal row's expense is the sum of its rows'.
+    expect(salaryExpense(sheet.groups[0].subtotal)).toBe(5_533 + 5_000);
+
+    const cols = sheetColumns(sheet).map((c) => c.key);
+    expect(cols).toEqual([
+      "sl", "name", "gross", "d:unpaid_leave", "d:lateness", "a:bonus", "expense", "d:other", "net",
+    ]);
   });
 
   it("is available on a prepared (draft) run and renders a real PDF", async () => {

@@ -6,7 +6,8 @@
  * BEFTN, bKash, cash) with a subtotal per group and a grand total. The owner: *"prepare
  * spreadsheet … gross salary, deduction and net pay … in the voucher we will add only the
  * expenses."* See SalarySheetService for why the numbers are the register's, never a
- * second computation.
+ * second computation, and why the deductions are split around the Salary expense column
+ * (D-#929: the voucher books that column and the adjustments, so the cash balance matches).
  *
  * GATE — `payroll:export`, the same switch as the register XLSX and the advice pack: it is
  * the same information, laid out for the voucher file. Audited (it names everyone's pay).
@@ -23,7 +24,7 @@ import {
 } from "@scd/shared";
 import { mixedText, mixedTextInBox } from "../../../routes/pdfRenderer";
 import { buildContext } from "../../../context";
-import { salarySheet, type SalarySheet } from "../services/SalarySheetService";
+import { salarySheet, salaryExpense, type SalarySheet } from "../services/SalarySheetService";
 import type { RegisterRow } from "../services/PayrollRegisterService";
 import { takaFigure } from "../services/takaWords";
 import { PayrollError } from "../services/payrollMath";
@@ -85,6 +86,8 @@ salarySheetPdfRouter.get("/:runId", async (req: Request, res: Response) => {
 const GREEN = "#3F6C45";
 const GROUP_FILL = "#E8F0E9";
 const TOTAL_FILL = "#D5E3D7";
+/** The Salary expense column — the figure the voucher books — stands out on every row. */
+const EXPENSE_FILL = "#FFF4D6";
 
 /** The heading over each group: the school's own bank by name, so it matches the letter. */
 export function groupTitle(channel: PaymentChannel, schoolBankName: string): string {
@@ -105,23 +108,30 @@ interface Col {
   label: string;
   w: number;
   numeric: boolean;
+  emphasis?: boolean;
   value: (r: RegisterRow, i: number) => string;
 }
 
-/** The columns for this month: the deduction and addition kinds that moved money, only. */
-export function sheetColumns(sheet: Pick<SalarySheet, "deductionColumns" | "additionColumns">): Col[] {
+/**
+ * The columns for this month, in voucher order (D-#929): gross, the not-paid deductions,
+ * the additions, SALARY EXPENSE, the adjustments, net pay. Only kinds that moved money.
+ */
+export function sheetColumns(
+  sheet: Pick<SalarySheet, "notPaidColumns" | "additionColumns" | "adjustmentColumns">,
+): Col[] {
   const money = (n: number): string => (n === 0 ? "" : takaFigure(n));
+  const deduction = (t: SalarySheet["notPaidColumns"][number]): Col => ({
+    key: `d:${t}`,
+    label: `(-) ${PAY_DEDUCTION_TYPE_LABELS_EN[t]}`,
+    w: 66,
+    numeric: true,
+    value: (r) => money(r.deductions[t]),
+  });
   return [
     { key: "sl", label: "SL", w: 26, numeric: false, value: (_r, i) => (i >= 0 ? String(i + 1) : "") },
     { key: "name", label: "Name", w: 170, numeric: false, value: (r) => r.name },
     { key: "gross", label: "Gross salary", w: 70, numeric: true, value: (r) => takaFigure(r.grossSalary) },
-    ...sheet.deductionColumns.map<Col>((t) => ({
-      key: `d:${t}`,
-      label: `(-) ${PAY_DEDUCTION_TYPE_LABELS_EN[t]}`,
-      w: 66,
-      numeric: true,
-      value: (r) => money(r.deductions[t]),
-    })),
+    ...sheet.notPaidColumns.map(deduction),
     ...sheet.additionColumns.map<Col>((t) => ({
       key: `a:${t}`,
       label: `(+) ${PAY_ADDITION_TYPE_LABELS_EN[t]}`,
@@ -129,6 +139,15 @@ export function sheetColumns(sheet: Pick<SalarySheet, "deductionColumns" | "addi
       numeric: true,
       value: (r) => money(r.additions[t]),
     })),
+    {
+      key: "expense",
+      label: "Salary expense",
+      w: 74,
+      numeric: true,
+      emphasis: true,
+      value: (r) => takaFigure(salaryExpense(r)),
+    },
+    ...sheet.adjustmentColumns.map(deduction),
     { key: "net", label: "Net pay", w: 74, numeric: true, value: (r) => takaFigure(r.netPay) },
   ];
 }
@@ -180,7 +199,8 @@ export async function renderSalarySheet(sheet: SalarySheet): Promise<Buffer> {
       let x = startX;
       cells.forEach((text, i) => {
         const w = cols[i].w;
-        if (opts.fill) doc.save().rect(x, y, w, height).fill(opts.fill).restore();
+        const fill = opts.fill ?? (cols[i].emphasis ? EXPENSE_FILL : undefined);
+        if (fill) doc.save().rect(x, y, w, height).fill(fill).restore();
         doc.save().rect(x, y, w, height).lineWidth(0.5).stroke("#999999").restore();
         doc.fillColor(opts.header ? "#FFFFFF" : "#000000");
         mixedTextInBox(doc, text, x + 3, y + CELL_PAD, w - 6, {
@@ -236,6 +256,20 @@ export async function renderSalarySheet(sheet: SalarySheet): Promise<Buffer> {
       doc.moveDown(0.8);
       doc.fontSize(8).fillColor("#B3261E");
       mixedText(doc, `Check: ${off.map((r) => r.name).join(", ")} — the lines do not add up to the net pay. Open the register before using this sheet.`, { width });
+      doc.fillColor("#000000");
+    }
+
+    // How to read the columns into the voucher — the reason the sheet is laid out this way.
+    if (sheet.groups.length > 0) {
+      doc.moveDown(0.8);
+      doc.fontSize(8).fillColor("#444444");
+      mixedText(
+        doc,
+        "Salary expense = Gross - deductions not paid (unpaid leave, lateness) + additions: book it as the salary expense. " +
+          "The columns after it are adjustments (advance, loan, statutory, other): book them as recoveries. " +
+          "Salary expense - adjustments = Net pay, the amount on the bank letter / cash voucher.",
+        { width },
+      );
       doc.fillColor("#000000");
     }
 
