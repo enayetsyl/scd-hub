@@ -398,17 +398,19 @@ describe("coverage (mock 5)", () => {
 
   it("is gated on reports:bank_coverage or the module doors", async () => {
     const schema = builder.toSchema();
-    const run = (role: string, grantedPermissions: string[] = []): Promise<ExecutionResult> =>
+    const run = (role: string, grantedPermissions: string[] = [], revokedPermissions: string[] = []): Promise<ExecutionResult> =>
       graphql({
         schema,
         source: `query { masteryBankCoverage(classToken: "C1", subject: "MATH") { totals { rows } brief } }`,
-        contextValue: { auth: { role, userId: new Types.ObjectId().toString(), grantedPermissions } },
+        contextValue: { auth: { role, userId: new Types.ObjectId().toString(), grantedPermissions, revokedPermissions } },
       }) as Promise<ExecutionResult>;
     const refused = (r: ExecutionResult) => (r.errors?.length ?? 0) > 0;
     const ok = await run("PRINCIPAL");
     expect(ok.errors).toBeUndefined();
     expect(refused(await run("TEACHER"))).toBe(true);
-    expect(refused(await run("OFFICE"))).toBe(true);
+    // Owner 2026-11-04: the Office holds the switch by default, like every other report.
+    expect(refused(await run("OFFICE"))).toBe(false);
+    expect(refused(await run("OFFICE", [], ["reports:bank_coverage"]))).toBe(true);
     expect(refused(await run("TEACHER", ["reports:bank_coverage"]))).toBe(false);
     expect(refused(await run("TEACHER", ["mastery:review"]))).toBe(false);
     expect(refused(await run("PRINCIPAL"))).toBe(false);

@@ -6,7 +6,7 @@
  *     brief for the next question batch.
  *
  * Gate: the Reports-hub switch `reports:bank_coverage` (every report is a switch, D-#846; Principal
- * by default, handed to one person by grant) or the module doors `mastery:settings` (the Principal
+ * and Office by default, handed to anyone else by grant) or the module doors `mastery:settings` (the Principal
  * who locks the list) and `mastery:review` (the reviewer). Whole school, curriculum plane only.
  */
 import { builder } from "../../../schema";
