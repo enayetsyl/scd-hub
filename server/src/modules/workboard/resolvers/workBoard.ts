@@ -50,6 +50,8 @@ import { loadGrid, type LoadCell, type LoadRow } from "../services/LoadService";
 import { pullWorkCard, releaseWorkCard } from "../services/OfficeCoverService";
 import { pageRef } from "../../../pageRef";
 import { loadLevelFor, type HrCategory } from "@scd/shared";
+import { parseVoiceTasks } from "../voice/VoiceTaskService";
+import type { VoiceTaskCard, VoiceTaskDraft } from "../voice/voiceTaskDraft";
 
 // ---------------------------------------------------------------------------
 // Gates + helpers
@@ -284,6 +286,8 @@ const TaskInputType = builder.inputType("TaskInput", {
     dueKey: t.string({ required: true }),
     slot: t.field({ type: DaySlotEnum, required: false }),
     effortMin: t.int({ required: true }),
+    /** D-#960: saved from a voice draft (audit meta.via = "voice"). */
+    viaVoice: t.boolean({ required: false }),
   }),
 });
 
@@ -314,6 +318,8 @@ const TaskTemplateInputType = builder.inputType("TaskTemplateInput", {
     weekOfMonth: t.int({ required: false }),
     /** D-#897: last day (inclusive, YYYY-MM-DD); omit for no end date. */
     endKey: t.string({ required: false }),
+    /** D-#960: saved from a voice draft (audit meta.via = "voice"). */
+    viaVoice: t.boolean({ required: false }),
   }),
 });
 
@@ -628,5 +634,55 @@ builder.mutationField("setTaskTemplateActive", (t) =>
     authScopes: { hasAnyPermission: ["work_board:use", "work_board:assign"] },
     args: { id: t.arg.string({ required: true }), active: t.arg.boolean({ required: true }) },
     resolve: async (_root, args, ctx) => (await decorateTemplates([await setTaskTemplateActive(ctx.auth, args.id, args.active)]))[0],
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Voice tasks (VT-1, D-#960–#965) — a spoken note → draft cards. Writes nothing;
+// the app saves the reviewed cards through createTask / createTaskTemplate above.
+// ---------------------------------------------------------------------------
+
+const VoiceTaskCardRef = builder.objectRef<VoiceTaskCard>("VoiceTaskCard").implement({
+  fields: (t) => ({
+    assigneeUserId: t.string({ nullable: true, resolve: (c) => c.assigneeUserId }),
+    assigneeSaid: t.string({ nullable: true, resolve: (c) => c.assigneeSaid }),
+    titleBn: t.string({ resolve: (c) => c.titleBn }),
+    notes: t.string({ nullable: true, resolve: (c) => c.notes }),
+    dueKey: t.string({ nullable: true, resolve: (c) => c.dueKey }),
+    slot: t.field({ type: DaySlotEnum, resolve: (c) => c.slot }),
+    priority: t.field({ type: TaskPriorityEnum, resolve: (c) => c.priority }),
+    effortMin: t.int({ resolve: (c) => c.effortMin }),
+    recurrence: t.string({ description: "ONCE, or a TaskRecurrence value.", resolve: (c) => c.recurrence }),
+    weekdays: t.intList({ resolve: (c) => c.weekdays }),
+    monthDay: t.int({ nullable: true, resolve: (c) => c.monthDay }),
+    weekOfMonth: t.int({ nullable: true, resolve: (c) => c.weekOfMonth }),
+    endKey: t.string({ nullable: true, resolve: (c) => c.endKey }),
+    defaulted: t.stringList({ description: "Fields the server filled because they were not said.", resolve: (c) => c.defaulted }),
+    warnings: t.stringList({ resolve: (c) => c.warnings }),
+  }),
+});
+
+const VoiceTaskDraftRef = builder.objectRef<VoiceTaskDraft>("VoiceTaskDraft").implement({
+  fields: (t) => ({
+    transcript: t.string({ resolve: (d) => d.transcript }),
+    tasks: t.field({ type: [VoiceTaskCardRef], resolve: (d) => d.tasks }),
+    warnings: t.stringList({ resolve: (d) => d.warnings }),
+  }),
+});
+
+builder.mutationField("parseVoiceTasks", (t) =>
+  t.field({
+    type: VoiceTaskDraftRef,
+    description:
+      "VT-1: a voice note (base64 audio) and/or typed text → draft task cards for review. work_board:voice. " +
+      "Pass the current draft as priorDraftJson to correct it. Writes nothing (D-#960).",
+    authScopes: { hasPermission: "work_board:voice" },
+    args: {
+      audioBase64: t.arg.string({ required: false }),
+      mimeType: t.arg.string({ required: false }),
+      text: t.arg.string({ required: false }),
+      priorDraftJson: t.arg.string({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => parseVoiceTasks(ctx.auth, args),
   }),
 );
