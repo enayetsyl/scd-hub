@@ -14,6 +14,8 @@ import { MASTERY_SUBJECTS } from "@scd/shared";
 import { MASTERY_PAPERS_PAGE_QUERY, type MasteryPaperRow } from "../../graphql/mastery";
 import { Screen, Card, Body, Muted, Badge, Button, Chip, ChipRow, Loader, EmptyState, Notice } from "../../components/ui";
 import { useAccessibleClasses } from "../../components/ClassSectionDashboard";
+import { useMasteryLevelLabels } from "../../lib/useMasteryLevelLabels";
+import { levelFill } from "./masteryStateUi";
 import { STR, bnNum, classLevelLabel, hwSubjectLabel, masterySourceLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useAuth } from "../../auth/AuthContext";
@@ -25,6 +27,7 @@ type Props = NativeStackScreenProps<MasteryStackParamList, "MasteryWork">;
 const sourceLabel = masterySourceLabel;
 
 export default function MasteryWorkHomeScreen({ navigation }: Props): React.ReactElement {
+  const lv = useMasteryLevelLabels();
   const { can } = useAuth();
   const canCreate = can("mastery:create");
   const { myClasses, fetching: classesFetching } = useAccessibleClasses({ viewAll: "mastery:edit_all" });
@@ -117,7 +120,7 @@ export default function MasteryWorkHomeScreen({ navigation }: Props): React.Reac
             <Badge text={p.entryState === "CONFIRMED" ? STR.msConfirmed : STR.msOpen} tone={p.entryState === "CONFIRMED" ? "ok" : "gold"} />
           </View>
           <Muted>
-            {p.paperId} · {p.source === "RUBRIC" ? `${STR.msRubricLos}: ${bnNum(p.rubricLoCodes.length)}` : `${STR.msItems}: ${bnNum(p.items.length)} · ${bnNum(p.totalMarks)}`}
+            {p.paperId} · {p.source === "RUBRIC" ? `${levelFill(STR.msRubricLos, lv)}: ${bnNum(p.rubricLoCodes.length)}` : `${STR.msItems}: ${bnNum(p.items.length)} · ${bnNum(p.totalMarks)}`}
           </Muted>
           <Button title={STR.msEntry} variant="secondary" onPress={() => navigation.navigate("MasteryEntry", { paperId: p.paperId })} />
         </Card>

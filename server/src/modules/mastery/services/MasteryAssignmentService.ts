@@ -107,7 +107,7 @@ function validateLayout(l: LayoutInput, marks: Map<string, number>, questionLos:
   if (badType) throw new MasteryWorkError(`${badType} এই শ্রেণি-বিষয়ের নম্বর-তালিকায় নেই।`);
   const los = [...new Set(l.partALoCodes ?? [])];
   const badLo = los.find((c) => !questionLos.has(c));
-  if (badLo) throw new MasteryWorkError(`${badLo} এই শ্রেণি-বিষয়ের প্রশ্নভিত্তিক শিখনফল নয়।`);
+  if (badLo) throw new MasteryWorkError(`${badLo} এই শ্রেণি-বিষয়ের প্রশ্নভিত্তিক তালিকায় নেই।`);
   return { ...l, partAMarks, questionTypeCodes: types, partALoCodes: l.partAOn ? los : [] };
 }
 
@@ -478,7 +478,7 @@ export async function editSheet(assignmentId: string, studentId: string, edit: S
       const exposure = new Map<string, number>();
       for (const r of rows) if (r.qid) exposure.set(r.qid, (exposure.get(r.qid) ?? 0) + 1);
       const next = pickQuestion(cur.loCode, seen, { bank: await goldBank([cur.loCode]), exposure });
-      if (!next) throw new MasteryWorkError("এই শিখনফলে এই শিক্ষার্থীর জন্য আর নতুন গোল্ড প্রশ্ন নেই — নিজে লিখুন।");
+      if (!next) throw new MasteryWorkError("এই কোডে এই শিক্ষার্থীর জন্য আর নতুন গোল্ড প্রশ্ন নেই — নিজে লিখুন।");
       const bank = (await goldBank([cur.loCode])).find((q) => q.qid === next.qid);
       sheet.items.splice(i, 1, {
         origin: "BANK", artifactId: oid(next.artifactId), qid: next.qid, textBn: bank?.textBn ?? undefined, loCode: cur.loCode,
@@ -488,9 +488,9 @@ export async function editSheet(assignmentId: string, studentId: string, edit: S
       const text = (edit.textBn ?? "").trim();
       if (!text) throw new MasteryWorkError("নিজের প্রশ্নের লেখা দিন।");
       const o = (await lockedOutcomes(a.classToken, a.subject)).find((x) => x.code === edit.loCode && x.assess === "QUESTION" && isTaggedRow(x));
-      if (!o) throw new MasteryWorkError("শিখনফলটি এই শ্রেণি-বিষয়ের প্রশ্নভিত্তিক তালিকায় নেই।");
+      if (!o) throw new MasteryWorkError("কোডটি এই শ্রেণি-বিষয়ের প্রশ্নভিত্তিক তালিকায় নেই।");
       const qt = edit.questionTypeCode ?? "";
-      if (!(o.questionTypeCodes ?? []).includes(qt)) throw new MasteryWorkError(`${qt || "ধরন"} এই শিখনফলের প্রশ্নের ধরন নয়।`);
+      if (!(o.questionTypeCodes ?? []).includes(qt)) throw new MasteryWorkError(`${qt || "ধরন"} এই কোডের প্রশ্নের ধরন নয়।`);
       const m = (await marksTable(a.classToken, a.subject)).get(qt);
       if (!m) throw new MasteryWorkError(`${qt}-এর নম্বর ঠিক করা নেই।`);
       sheet.items.push({ origin: "TEACHER", textBn: text, loCode: o.code, chapterNumber: o.chapterNumber ?? null, questionTypeCode: qt, marks: m, band: "TEACHER" });
