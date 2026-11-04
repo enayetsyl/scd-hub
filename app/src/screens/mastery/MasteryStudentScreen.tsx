@@ -27,6 +27,7 @@ import { space, useColors } from "../../theme";
 import type { MasteryStackParamList } from "../../navigation/types";
 import { STATE_ORDER, levelFill, stateCell, stateTone } from "./masteryStateUi";
 import { EarlierSteps, StateDot, SummaryBar, summaryLine } from "./MasteryTreeParts";
+import { ObjectiveLessonNote } from "../../components/ObjectiveLessonNote";
 
 type Props = NativeStackScreenProps<MasteryStackParamList, "MasteryStudent">;
 
@@ -252,6 +253,8 @@ export default function MasteryStudentScreen({ navigation, route }: Props): Reac
               <Body style={{ fontWeight: "600" }}>{o.labelBn}</Body>
               <Muted>{whyLine(o)}</Muted>
               <EarlierSteps steps={o.earlierSteps ?? []} />
+              {/* OT-5 (D-#950): a WEAK row says whether it was taught and whether the child was there. */}
+              {o.state === "WEAK" ? <ObjectiveLessonNote lesson={d.objectiveLessons?.find((l) => l.loCode === o.loCode)} state={o.state} /> : null}
             </View>
             <Badge text={masteryStateLabel(o.state)} tone={stateTone(o.state)} />
           </Pressable>

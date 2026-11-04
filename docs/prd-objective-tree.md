@@ -212,6 +212,7 @@ States are computed on tagged rows only (engine unchanged, D-#808). Views add:
   list exports as a brief for the next Claude question batch (imported through the normal QR loop).
 
 ### 8.3 Lesson plans (OT-5)
+**BUILT 2026-11-04** (branch `feat/objective-tree-ot5`, D-#949/#950): snapshot on `LessonDelivery` (fallback to the current plan), `lessonObjectiveStatus` + `LessonPlanForSlot.objectives`, `objectiveLesson(s)` on the mastery trail / student view.
 - `session_plan` envelopes carry `tags.lo_codes` (tagged codes the session teaches; many allowed here — a lesson
   teaches several steps). Harness L3 checks each against the pattern; unknown codes warn.
 - LP-1 marking (`LessonDelivery`) snapshots the plan's codes. Views gain per tagged row: taught on / not yet
