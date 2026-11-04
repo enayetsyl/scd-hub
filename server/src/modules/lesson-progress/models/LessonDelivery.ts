@@ -24,6 +24,10 @@ export interface ILessonDeliverySession {
   titleBn: string;
   /** false = started, continues next class (চলমান). */
   finished: boolean;
+  /** OT-5 (D-#949): the objective codes the plan carried at marking (`tags.lo_codes`). Absent when the
+   *  plan had none — a reader then falls back to the CURRENT plan, so a later re-import with codes
+   *  (OT-6) still counts the classes marked before it. */
+  loCodes?: string[];
 }
 
 export interface ILessonDelivery extends Document {
@@ -58,6 +62,7 @@ const SessionSchema = new Schema<ILessonDeliverySession>(
     artifactId: { type: Schema.Types.ObjectId, ref: "ContentArtifact" },
     titleBn: { type: String, required: true },
     finished: { type: Boolean, required: true },
+    loCodes: { type: [String], default: undefined },
   },
   { _id: false },
 );

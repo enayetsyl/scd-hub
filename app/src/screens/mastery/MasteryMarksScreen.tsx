@@ -10,6 +10,8 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useMutation, useQuery } from "urql";
 import { MASTERY_CATALOGUE_QUERY, SAVE_MASTERY_QUESTION_TYPE, type MasteryQuestionTypeRow } from "../../graphql/mastery";
 import { Screen, Card, Body, Muted, Badge, Button, Field, Loader, EmptyState, Notice, H2 } from "../../components/ui";
+import { useMasteryLevelLabels } from "../../lib/useMasteryLevelLabels";
+import { levelFill } from "./masteryStateUi";
 import { STR, bnNum, hwSubjectLabel, masteryClassLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useToast } from "../../state/ToastContext";
@@ -27,6 +29,7 @@ const parseMarks = (s: string): number | null | undefined => {
 };
 
 export default function MasteryMarksScreen({ route }: Props): React.ReactElement {
+  const lv = useMasteryLevelLabels();
   const { classToken, subject } = route.params;
   const toast = useToast();
   const { can } = useAuth();
@@ -72,7 +75,7 @@ export default function MasteryMarksScreen({ route }: Props): React.ReactElement
       {qErr ? <Notice message={friendlyError(qErr)} tone="danger" /> : null}
       {error ? <Notice message={error} tone="danger" /> : null}
       {fetching && qts.length === 0 ? <Loader /> : null}
-      {!fetching && qts.length === 0 ? <EmptyState message={STR.msNoCoverage} /> : null}
+      {!fetching && qts.length === 0 ? <EmptyState message={levelFill(STR.msNoCoverage, lv)} /> : null}
 
       {qts.map((q) => {
         const draft = drafts[q.code];

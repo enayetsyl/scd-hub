@@ -5263,9 +5263,50 @@ export const MASTERY_RUBRIC_LABELS_BN: Record<1 | 2 | 3 | 4, string> = {
 };
 
 /** An LO code (D-#776): `LO-<class>-<subject>-<CC>-<NN>` for a chapter outcome, or
- *  `LO-<class>-<subject>-SK-<STRAND>-<NN>` for a skill that spans chapters. */
+ *  `LO-<class>-<subject>-SK-<STRAND>-<NN>` for a skill that spans chapters. Either may take a
+ *  sub-objective suffix `.N` (N = 1..99): `LO-C1-MATH-07-03.2` (objective tree, D-#921). */
 export const MASTERY_LO_CODE_RE =
-  /^LO-(NUR|KG|C[1-6])-(BAN|ENG|MATH|SCI|BGS|ARABIC|ISLAM)-(\d{2}|SK-[A-Z]{2,8})-\d{2}$/;
+  /^LO-(NUR|KG|C[1-6])-(BAN|ENG|MATH|SCI|BGS|ARABIC|ISLAM)-(\d{2}|SK-[A-Z]{2,8})-\d{2}(\.\d{1,2})?$/;
+
+/** A school-wide domain code of the objective tree (D-#921): `DOM-<SUBJ>-<SLUG>`. */
+export const MASTERY_DOMAIN_CODE_RE = /^DOM-(BAN|ENG|MATH|SCI|BGS|ARABIC|ISLAM)-[A-Z0-9]{2,12}$/;
+
+/** Objective-tree levels (D-#921). A domain is not a MasteryOutcome row (MasteryDomain). */
+export const MASTERY_OUTCOME_LEVELS = ["OBJECTIVE", "SUB"] as const;
+export type MasteryOutcomeLevel = (typeof MASTERY_OUTCOME_LEVELS)[number];
+
+/** A draft row's review decision (PRD-objective-tree §5); meaningful while the row is DRAFT. */
+export const MASTERY_REVIEW_STATES = ["PROPOSED", "ACCEPTED", "EDITED", "REJECTED", "ADDED"] as const;
+export type MasteryReviewState = (typeof MASTERY_REVIEW_STATES)[number];
+
+/** One review round of a class × subject draft tree (PRD-objective-tree §5). */
+export const MASTERY_REVIEW_ROUND_STATES = ["OPEN", "SUBMITTED", "LOCKED", "SUPERSEDED"] as const;
+export type MasteryReviewRoundState = (typeof MASTERY_REVIEW_ROUND_STATES)[number];
+
+/** Append-only review log actions (PRD-objective-tree §5). */
+export const MASTERY_REVIEW_EVENT_ACTIONS = [
+  "ACCEPT", "EDIT", "SPLIT", "MERGE", "REJECT", "ADD", "MOVE", "COMMENT", "REPLY", "RESOLVE", "REOPEN", "BULK_ACCEPT",
+  // Written by the tree import itself (round opened / redraft re-import), so the log is complete.
+  "IMPORT",
+] as const;
+export type MasteryReviewEventAction = (typeof MASTERY_REVIEW_EVENT_ACTIONS)[number];
+
+/** Flags a drafted tree carries for the reviewer (tree file README). */
+export const MASTERY_TREE_FLAG_KINDS = ["VERSION_DIFF", "WORDING_RULE_CONFLICT", "TOO_BROAD", "DUPLICATE", "OTHER"] as const;
+export type MasteryTreeFlagKind = (typeof MASTERY_TREE_FLAG_KINDS)[number];
+
+/** Level names (D-#923): ONE setting on the SCHOOL MasteryPolicy row. These defaults are the
+ *  only place the words live; app screens read them through `useMasteryLevelLabels`, the
+ *  server through `masteryLevelLabels()` — never hard-code a level word elsewhere. */
+export const MASTERY_LEVEL_LABEL_DEFAULTS = {
+  domainBn: "ক্ষেত্র",
+  objectiveBn: "শিখনফল",
+  subBn: "উপ-শিখনফল",
+  domainEn: "Domain",
+  objectiveEn: "Objective",
+  subEn: "Sub-objective",
+} as const;
+export type MasteryLevelLabels = { -readonly [K in keyof typeof MASTERY_LEVEL_LABEL_DEFAULTS]: string };
 
 /** A question-type code (D-#777): `QT-<SLUG>`, uppercase, hyphenated. */
 export const MASTERY_QT_CODE_RE = /^QT-[A-Z0-9]+(?:-[A-Z0-9]+)*$/;
@@ -5311,15 +5352,22 @@ export function parseMasteryLoCode(code: string): {
   chapterNumber: number | null;
   strand: string | null;
   seq: number;
+  /** The `.N` sub-objective number, or null for an objective / strand code (D-#921). */
+  sub: number | null;
+  /** The code without its `.N` suffix (the parent objective of a sub-objective). */
+  objectiveCode: string;
 } | null {
   const m = MASTERY_LO_CODE_RE.exec(code);
   if (!m) return null;
   const mid = m[3];
-  const seq = Number(code.slice(-2));
+  const suffix = m[4] ?? "";
+  const objectiveCode = suffix ? code.slice(0, -suffix.length) : code;
+  const seq = Number(objectiveCode.slice(-2));
+  const sub = suffix ? Number(suffix.slice(1)) : null;
   if (mid.startsWith("SK-")) {
-    return { classToken: m[1] as MasteryClassToken, subject: m[2] as MasterySubject, chapterNumber: null, strand: mid.slice(3), seq };
+    return { classToken: m[1] as MasteryClassToken, subject: m[2] as MasterySubject, chapterNumber: null, strand: mid.slice(3), seq, sub, objectiveCode };
   }
-  return { classToken: m[1] as MasteryClassToken, subject: m[2] as MasterySubject, chapterNumber: Number(mid), strand: null, seq };
+  return { classToken: m[1] as MasteryClassToken, subject: m[2] as MasterySubject, chapterNumber: Number(mid), strand: null, seq, sub, objectiveCode };
 }
 
 /** The class token for a class level (0 = KG is not a level here; Nursery/KG come by token). */

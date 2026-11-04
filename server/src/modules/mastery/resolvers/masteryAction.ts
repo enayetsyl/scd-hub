@@ -102,6 +102,19 @@ const LessonGapRef = builder.objectRef<{ taught: boolean; weakCount: number; mis
   }),
 });
 
+const WeakChildRef = builder.objectRef<ActionDetail["weakChildren"][number]>("MasteryActionWeakChild");
+WeakChildRef.implement({
+  description: "OT-3 (§8.1): a tagged child of the action's objective with WEAK students in the section now.",
+  fields: (t) => ({
+    code: t.exposeString("code"),
+    labelBn: t.exposeString("labelBn"),
+    weak: t.exposeInt("weak"),
+    verdicts: t.exposeInt("verdicts"),
+    weakPct: t.int({ nullable: true, resolve: (c) => c.weakPct }),
+    triggered: t.exposeBoolean("triggered"),
+  }),
+});
+
 const DetailRef = builder.objectRef<ActionDetail>("MasteryAction");
 DetailRef.implement({
   description: "Issue → action → result for one section × subject × outcome (D-#781 / #811).",
@@ -113,6 +126,10 @@ DetailRef.implement({
     subject: t.exposeString("subject"),
     loCode: t.exposeString("loCode"),
     labelBn: t.exposeString("labelBn"),
+    objectiveCode: t.exposeString("objectiveCode"),
+    objectiveLabelBn: t.exposeString("objectiveLabelBn"),
+    isSub: t.exposeBoolean("isSub"),
+    weakChildren: t.field({ type: [WeakChildRef], resolve: (a) => a.weakChildren }),
     kind: t.exposeString("kind"),
     status: t.exposeString("status"),
     trigger: t.field({ type: TriggerRef, resolve: (a) => a.trigger }),
@@ -154,6 +171,7 @@ SummaryRef.implement({
     subject: t.exposeString("subject"),
     loCode: t.exposeString("loCode"),
     labelBn: t.exposeString("labelBn"),
+    objectiveLabelBn: t.string({ nullable: true, resolve: (s) => s.objectiveLabelBn }),
     kind: t.exposeString("kind"),
     status: t.exposeString("status"),
     weakPct: t.exposeInt("weakPct"),

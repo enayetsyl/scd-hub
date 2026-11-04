@@ -50,7 +50,15 @@ import {
   type PolicyView,
   type QuestionTypeView,
   type TagView,
+  type TreeImportPreview,
+  type LevelLabelsView,
+  type DomainView,
+  getLevelLabels,
+  saveLevelLabels,
+  listDomains,
 } from "../services/MasteryCatalogueService";
+import { getReviewRound, type ReviewRoundView } from "../services/MasteryReviewService";
+import type { MasteryLevelLabels } from "@scd/shared";
 import { POLICY_KEYS } from "../catalogue";
 
 function actorOf(ctx: { auth: { userId: string; role: string } | null }): { userId: string; role: string } {
@@ -75,6 +83,17 @@ CoverageRef.implement({
   }),
 });
 
+const BookRefRef = builder.objectRef<OutcomeView["bookRef"]>("MasteryBookRef");
+BookRefRef.implement({
+  description: "Where in the book: version (book file), chapter, lesson, exercise refs. A flat M-0 row carries only the version.",
+  fields: (t) => ({
+    version: t.string({ nullable: true, resolve: (b) => b.version }),
+    chapter: t.int({ nullable: true, resolve: (b) => b.chapter }),
+    lesson: t.string({ nullable: true, resolve: (b) => b.lesson }),
+    exercises: t.exposeStringList("exercises"),
+  }),
+});
+
 const OutcomeRef = builder.objectRef<OutcomeView>("MasteryOutcome");
 OutcomeRef.implement({
   description:
@@ -95,6 +114,17 @@ OutcomeRef.implement({
     homeTipBn: t.string({ nullable: true, resolve: (o) => o.homeTipBn }),
     order: t.exposeInt("order"),
     status: t.exposeString("status"),
+    level: t.exposeString("level", { description: "OBJECTIVE | SUB (prd-objective-tree §5); a flat M-0 row reads OBJECTIVE." }),
+    parentCode: t.string({ nullable: true, resolve: (o) => o.parentCode }),
+    domainCode: t.string({ nullable: true, resolve: (o) => o.domainCode }),
+    tagged: t.exposeBoolean("tagged", { description: "true = questions / evidence name this row; false = a grouping parent." }),
+    prereqCodes: t.exposeStringList("prereqCodes"),
+    legacyCodes: t.exposeStringList("legacyCodes"),
+    claudeNote: t.string({ nullable: true, resolve: (o) => o.claudeNote }),
+    reviewState: t.string({ nullable: true, resolve: (o) => o.reviewState }),
+    rejectReason: t.string({ nullable: true, resolve: (o) => o.rejectReason }),
+    mergedInto: t.string({ nullable: true, resolve: (o) => o.mergedInto }),
+    bookRef: t.field({ type: BookRefRef, resolve: (o) => o.bookRef }),
   }),
 });
 
@@ -177,6 +207,129 @@ DiffRef.implement({
   }),
 });
 
+const UnmappedRef = builder.objectRef<{ ref: string; text: string; reason: string; resolution?: string | null }>("MasteryUnmappedExercise");
+UnmappedRef.implement({
+  fields: (t) => ({
+    ref: t.exposeString("ref"),
+    text: t.exposeString("text"),
+    reason: t.exposeString("reason"),
+    resolution: t.string({ nullable: true, resolve: (u) => u.resolution ?? null }),
+  }),
+});
+
+type Coverage = TreeImportPreview["coverage"] | ReviewRoundView["coverage"];
+const CoverageInfoRef = builder.objectRef<Coverage>("MasteryTreeCoverage");
+CoverageInfoRef.implement({
+  description: "Exercise coverage of a drafted tree: mapped + unmapped = exercisesTotal (prd-objective-tree §10.1).",
+  fields: (t) => ({
+    exercisesTotal: t.exposeInt("exercisesTotal"),
+    mapped: t.exposeInt("mapped"),
+    unmapped: t.field({ type: [UnmappedRef], resolve: (c) => c.unmapped }),
+    note: t.string({ nullable: true, resolve: (c) => ("note" in c ? c.note : null) }),
+  }),
+});
+
+const TreeFlagRef = builder.objectRef<{ code: string | null; kind: string; text: string; ownerRuling: string | null }>("MasteryTreeFlag");
+TreeFlagRef.implement({
+  fields: (t) => ({
+    code: t.string({ nullable: true, resolve: (f) => f.code }),
+    kind: t.exposeString("kind"),
+    text: t.exposeString("text"),
+    ownerRuling: t.string({ nullable: true, resolve: (f) => f.ownerRuling }),
+  }),
+});
+
+const TreeCountsRef = builder.objectRef<TreeImportPreview["counts"]>("MasteryTreeCounts");
+TreeCountsRef.implement({
+  fields: (t) => ({
+    domains: t.exposeInt("domains"),
+    objectives: t.exposeInt("objectives"),
+    subs: t.exposeInt("subs"),
+    strands: t.exposeInt("strands"),
+    tagged: t.exposeInt("tagged"),
+    grouping: t.exposeInt("grouping"),
+  }),
+});
+
+const TreePreviewRef = builder.objectRef<TreeImportPreview>("MasteryTreeImportPreview");
+TreePreviewRef.implement({
+  description: "What a tree import shows before apply (mock 1): counts per level, coverage, flags, domain diff, the review effect.",
+  fields: (t) => ({
+    format: t.exposeString("format"),
+    counts: t.field({ type: TreeCountsRef, resolve: (p) => p.counts }),
+    coverage: t.field({ type: CoverageInfoRef, resolve: (p) => p.coverage }),
+    flags: t.field({ type: [TreeFlagRef], resolve: (p) => p.flags }),
+    domainsAdded: t.stringList({ resolve: (p) => p.domains.added }),
+    domainsChanged: t.stringList({ resolve: (p) => p.domains.changed }),
+    domainsUnchanged: t.int({ resolve: (p) => p.domains.unchanged }),
+    roundAction: t.string({ description: "OPEN_NEW | REDRAFT | NONE", resolve: (p) => p.round.action }),
+    round: t.int({ nullable: true, resolve: (p) => p.round.round }),
+    kept: t.int({ description: "Rows whose decision is kept (unchanged in the file).", resolve: (p) => p.review.kept }),
+    backToProposed: t.stringList({ resolve: (p) => p.review.backToProposed }),
+    removedInRedraft: t.stringList({ resolve: (p) => p.review.removedInRedraft }),
+    lockedChanged: t.stringList({ resolve: (p) => p.review.lockedChanged }),
+    violations: t.exposeStringList("violations"),
+    noop: t.exposeBoolean("noop"),
+  }),
+});
+
+const StateCountRef = builder.objectRef<{ state: string; count: number }>("MasteryReviewStateCount");
+StateCountRef.implement({ fields: (t) => ({ state: t.exposeString("state"), count: t.exposeInt("count") }) });
+
+const ReviewRoundRef = builder.objectRef<ReviewRoundView>("MasteryCatalogueReview");
+ReviewRoundRef.implement({
+  description: "One review round of a class × subject draft tree (prd-objective-tree §5/§7).",
+  fields: (t) => ({
+    id: t.exposeString("id"),
+    classToken: t.exposeString("classToken"),
+    subject: t.exposeString("subject"),
+    round: t.exposeInt("round"),
+    state: t.exposeString("state"),
+    reviewerIds: t.exposeStringList("reviewerIds"),
+    importedAt: t.exposeString("importedAt"),
+    coverage: t.field({ type: CoverageInfoRef, resolve: (r) => r.coverage }),
+    flags: t.field({ type: [TreeFlagRef], resolve: (r) => r.flags }),
+    stateCounts: t.field({ type: [StateCountRef], resolve: (r) => r.stateCounts }),
+    eventCount: t.exposeInt("eventCount"),
+  }),
+});
+
+const LevelLabelsRef = builder.objectRef<MasteryLevelLabels>("MasteryLevelLabels");
+LevelLabelsRef.implement({
+  description: "The level names (D-#923): domain → objective → sub-objective, Bangla and English.",
+  fields: (t) => ({
+    domainBn: t.exposeString("domainBn"),
+    objectiveBn: t.exposeString("objectiveBn"),
+    subBn: t.exposeString("subBn"),
+    domainEn: t.exposeString("domainEn"),
+    objectiveEn: t.exposeString("objectiveEn"),
+    subEn: t.exposeString("subEn"),
+  }),
+});
+
+const LevelLabelsViewRef = builder.objectRef<LevelLabelsView>("MasteryLevelLabelsView");
+LevelLabelsViewRef.implement({
+  fields: (t) => ({
+    resolved: t.field({ type: LevelLabelsRef, resolve: (v) => v.resolved }),
+    ownKeys: t.exposeStringList("ownKeys"),
+  }),
+});
+
+const DomainRef = builder.objectRef<DomainView>("MasteryDomain");
+DomainRef.implement({
+  description: "A school-wide skill area of a subject (DOM-<SUBJ>-<SLUG>, D-#921).",
+  fields: (t) => ({
+    code: t.exposeString("code"),
+    subject: t.exposeString("subject"),
+    labelBn: t.exposeString("labelBn"),
+    labelEn: t.string({ nullable: true, resolve: (d) => d.labelEn }),
+    order: t.exposeInt("order"),
+    active: t.exposeBoolean("active"),
+    status: t.exposeString("status"),
+    note: t.string({ nullable: true, resolve: (d) => d.note }),
+  }),
+});
+
 const ImportReportRef = builder.objectRef<ImportReport>("MasteryImportReport");
 ImportReportRef.implement({
   fields: (t) => ({
@@ -187,6 +340,7 @@ ImportReportRef.implement({
     status: t.string({ nullable: true, resolve: (r) => r.status }),
     errors: t.exposeStringList("errors"),
     diff: t.field({ type: DiffRef, nullable: true, resolve: (r) => r.diff }),
+    tree: t.field({ type: TreePreviewRef, nullable: true, resolve: (r) => r.tree }),
   }),
 });
 
@@ -346,6 +500,36 @@ builder.queryFields((t) => ({
     args: { academicYearId: t.arg.string({ required: true }) },
     resolve: async (_r, args) => listEnablements(args.academicYearId),
   }),
+
+  masteryDomains: t.field({
+    type: [DomainRef],
+    description: "The school-wide domain ladder of one subject (D-#921).",
+    authScopes: { hasAnyPermission: ["mastery:view", "mastery:review"] },
+    args: { subject: t.arg.string({ required: true }) },
+    resolve: async (_r, args) => listDomains(args.subject as MasterySubject),
+  }),
+
+  masteryLevelLabels: t.field({
+    type: LevelLabelsViewRef,
+    description: "The level names (D-#923). Every app screen reads them through useMasteryLevelLabels — never a hard-coded word.",
+    authScopes: { hasAnyPermission: ["mastery:view", "mastery:review"] },
+    resolve: async () => getLevelLabels(),
+  }),
+
+  masteryCatalogueReview: t.field({
+    type: ReviewRoundRef,
+    nullable: true,
+    description:
+      "A review round of a class × subject tree (latest when `round` is omitted): state, coverage, flags, rows per " +
+      "review state. The reviewer (mastery:review) and the Principal (mastery:settings) read it.",
+    authScopes: { hasAnyPermission: ["mastery:review", "mastery:settings"] },
+    args: {
+      classToken: t.arg.string({ required: true }),
+      subject: t.arg.string({ required: true }),
+      round: t.arg.int({ required: false }),
+    },
+    resolve: async (_r, args) => getReviewRound(args.classToken as MasteryClassToken, args.subject as MasterySubject, args.round ?? null),
+  }),
 }));
 
 // ---------------------------------------------------------------------------
@@ -362,8 +546,27 @@ builder.mutationFields((t) => ({
     args: {
       catalogueJson: t.arg.string({ required: true }),
       apply: t.arg.boolean({ required: true }),
+      domainsJson: t.arg.string({
+        required: false,
+        description: "scd-objective-domains/1 for the tree's subject; omit to use the domains already imported.",
+      }),
     },
-    resolve: async (_r, args, ctx) => importCatalogue(args.catalogueJson, args.apply, actorOf(ctx)),
+    resolve: async (_r, args, ctx) => importCatalogue(args.catalogueJson, args.apply, actorOf(ctx), args.domainsJson ?? null),
+  }),
+
+  saveMasteryLevelLabels: t.field({
+    type: LevelLabelsViewRef,
+    description: "Rename the levels (D-#923). A blank value returns that key to the default; every surface reads it live.",
+    authScopes: { hasPermission: "mastery:settings" },
+    args: {
+      domainBn: t.arg.string({ required: false }),
+      objectiveBn: t.arg.string({ required: false }),
+      subBn: t.arg.string({ required: false }),
+      domainEn: t.arg.string({ required: false }),
+      objectiveEn: t.arg.string({ required: false }),
+      subEn: t.arg.string({ required: false }),
+    },
+    resolve: async (_r, args, ctx) => saveLevelLabels(args as Partial<Record<keyof MasteryLevelLabels, string | null>>, actorOf(ctx)),
   }),
 
   lockMasteryCatalogue: t.field({

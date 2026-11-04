@@ -11,9 +11,10 @@
  * And the add-on must be switched on for the year × class × subject (D-#775).
  */
 import { Types } from "mongoose";
+import { untaggedRefusal } from "../taggedGuard";
 import { callerHasPermission, MASTERY_RUBRIC_STEPS } from "@scd/shared";
 import type { AccessProfile, MasteryClassToken, MasterySubject } from "@scd/shared";
-import { MasteryPaper, type IMasteryPaper, type MasteryPaperSource } from "../models/MasteryPaper";
+import { MasteryPaper, type IMasteryPaper, type IMasteryPaperItem, type MasteryPaperSource } from "../models/MasteryPaper";
 import { MasteryResult, type MasteryResultStatus } from "../models/MasteryResult";
 import { MasteryEvidence } from "../models/MasteryEvidence";
 import { MasterySequence } from "../models/MasterySequence";
@@ -33,6 +34,7 @@ import { queryPage, type Page, type PageArgs } from "../../../lib/paging";
 import { personName } from "../../../lib/personName";
 import { getPolicy, isMasteryEnabled, ensureDefaultTags } from "./MasteryCatalogueService";
 import { loCodesOf } from "../bank";
+import { groupStimulusParts, printPlan, stimulusRefOf } from "../parts";
 import { computeEvidence, isoWeekKey, type ResultLike, type TagLike } from "../evidence";
 import { reapplyExclusions } from "../exclusions";
 
@@ -149,6 +151,9 @@ export async function createPaper(input: CreatePaperInput, auth: Auth): Promise<
   if (isRubric && input.items.length > 0) throw new MasteryWorkError("রুব্রিকের কাজে প্রশ্ন থাকে না।");
 
   const codes = [...new Set([...input.items.map((i) => i.loCode), ...rubricCodes])];
+  // D-#943: a tree's grouping row takes no item or grade — name the tagged children instead.
+  const grouping = await untaggedRefusal(codes);
+  if (grouping) throw new MasteryWorkError(grouping);
   const outcomes = await MasteryOutcome.find({ code: { $in: codes } }).lean();
   const byCode = new Map(outcomes.map((o) => [o.code, o]));
   for (const c of codes) {
@@ -165,8 +170,7 @@ export async function createPaper(input: CreatePaperInput, auth: Auth): Promise<
   const qts = new Map(
     (await MasteryQuestionType.find({ classToken: ctx.classToken, subject: input.subject, active: true }).lean()).map((q) => [q.code, q]),
   );
-  const items = [];
-  let itemNo = 0;
+  const built: Omit<IMasteryPaperItem, "itemNo">[] = [];
   for (const it of input.items) {
     const o = byCode.get(it.loCode)!;
     if (o.assess !== "QUESTION") throw new MasteryWorkError(`${it.loCode} প্রশ্নে যাচাইয়ের শিখনফল নয় — রুব্রিক কাজ তৈরি করুন।`);
@@ -176,6 +180,7 @@ export async function createPaper(input: CreatePaperInput, auth: Auth): Promise<
     let artifactId: Types.ObjectId | undefined;
     let qid: string | undefined;
     let textBn: string | undefined;
+    let stimulusRef: string | null = null;
     if (it.origin === "BANK") {
       if (!it.artifactId || !Types.ObjectId.isValid(it.artifactId)) throw new MasteryWorkError("ব্যাংকের প্রশ্ন বাছুন।");
       const art = await ContentArtifact.findOne({
@@ -187,16 +192,22 @@ export async function createPaper(input: CreatePaperInput, auth: Auth): Promise<
       if (!los.includes(it.loCode)) throw new MasteryWorkError(`প্রশ্নটি ${it.loCode}-এর সাথে ট্যাগ করা নয়।`);
       artifactId = art._id as Types.ObjectId;
       qid = (env.payload as Record<string, unknown>)?.qid as string | undefined;
+      stimulusRef = stimulusRefOf(env.payload as Record<string, unknown>);
     } else {
       textBn = (it.textBn ?? "").trim();
       if (!textBn) throw new MasteryWorkError("নিজের প্রশ্নের লেখা দিন।");
     }
-    itemNo += 1;
-    items.push({
-      itemNo, origin: it.origin, artifactId, qid, textBn, loCodes: [it.loCode],
+    built.push({
+      origin: it.origin, artifactId, qid, textBn, loCodes: [it.loCode],
       chapterNumber: o.chapterNumber ?? null, questionTypeCode: it.questionTypeCode, marks: qt.marks,
+      ...(stimulusRef ? { stimulusRef } : {}),
     });
   }
+  // ক/খ parts (D-#926): the parts of one stem sit together, numbered as separate items (each its
+  // own result and code) but labelled ক, খ … so the sheet prints them 4(ক), 4(খ) under the stem.
+  const grouped = groupStimulusParts(built);
+  const labels = printPlan(grouped).map((l) => l.partLabel);
+  const items: IMasteryPaperItem[] = grouped.map((x, i) => ({ ...x, itemNo: i + 1, ...(labels[i] ? { partLabel: labels[i]! } : {}) }));
 
   let hwItemId: Types.ObjectId | undefined;
   if (input.hwItemId) {
@@ -276,6 +287,9 @@ export interface PaperView {
     chapterNumber: number | null;
     questionTypeCode: string;
     marks: number;
+    /** ক/খ parts (D-#926): the stem this item hangs under, and its part label on this paper. */
+    stimulusRef: string | null;
+    partLabel: string | null;
   }[];
   rubricLoCodes: string[];
 }
@@ -295,6 +309,7 @@ export function paperView(p: IMasteryPaper): PaperView {
     items: p.items.map((i) => ({
       itemNo: i.itemNo, origin: i.origin, qid: i.qid ?? null, textBn: i.textBn ?? null, loCodes: i.loCodes,
       chapterNumber: i.chapterNumber ?? null, questionTypeCode: i.questionTypeCode, marks: i.marks,
+      stimulusRef: i.stimulusRef ?? null, partLabel: i.partLabel ?? null,
     })),
     rubricLoCodes: p.rubricLoCodes ?? [],
   };

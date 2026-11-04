@@ -8,7 +8,7 @@
  * artifact       — J1.5/J1.7 open one plan (returns rendered_markdown; app never re-renders)
  */
 import { builder } from "../../../schema";
-import { PLAN_DOC_TYPES, callerHasPermission } from "@scd/shared";
+import { MASTERY_LO_CODE_RE, PLAN_DOC_TYPES, callerHasPermission } from "@scd/shared";
 import {
   importEnvelope as importEnvelopeSvc,
   importContentFiles,
@@ -148,6 +148,8 @@ interface ArtifactShape {
   approvalNote?: string | null;
   approvalOverride?: boolean | null;
   sessionIndex: number | null;
+  /** OT-5: `tags.lo_codes` — on a session plan, the objective codes it teaches (prd-objective-tree §8.3). */
+  loCodes: string[];
 }
 
 const ArtifactRef = builder.objectRef<ArtifactShape>("ContentArtifact");
@@ -169,6 +171,8 @@ ArtifactRef.implement({
     approvalNote: t.string({ nullable: true, resolve: (a) => a.approvalNote ?? null }),
     approvalOverride: t.boolean({ nullable: true, resolve: (a) => a.approvalOverride ?? null }),
     sessionIndex: t.int({ nullable: true, resolve: (a) => a.sessionIndex }),
+    /** OT-5: the objective codes the artifact carries in `tags.lo_codes` ([] = none). */
+    loCodes: t.exposeStringList("loCodes"),
   }),
 });
 
@@ -383,6 +387,7 @@ const TREE_PROJECTION = [
   "approvalNote",
   "approvalOverride",
   "envelopeJson.payload.session_plan.period_index",
+  "tags.lo_codes",
 ].join(" ");
 
 /** Chapter numbers are Mixed (`"3"`, `3`, `"3ক"`), so compare numerically when both sides
@@ -637,5 +642,12 @@ function docToShape(doc: LeanArtifact): ArtifactShape {
     approvalNote: doc.approvalNote ?? null,
     approvalOverride: doc.approvalOverride ?? null,
     sessionIndex,
+    loCodes: loCodesOfTags(doc.tags),
   };
+}
+
+/** `tags.lo_codes`, pattern-checked; [] for a row without them (every plan imported before OT-6). */
+function loCodesOfTags(tags: unknown): string[] {
+  const list = (tags as { lo_codes?: unknown } | null | undefined)?.lo_codes;
+  return Array.isArray(list) ? list.filter((c): c is string => typeof c === "string" && MASTERY_LO_CODE_RE.test(c)) : [];
 }

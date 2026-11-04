@@ -9,12 +9,51 @@
  * Every dedupe key carries the RECIPIENT (and the student for guardians): an entity-only key would
  * silently swallow the second person's notice (the WC-7 lesson). Callers never let a failure here
  * fail their own write.
+ *
+ * OT-3 (prd-objective-tree §8.1, D-#923 / #925): a notice names an outcome through `outcomeNaming` —
+ * staff read "<objective word>: <objective> › <sub word>: <sub-objective>", guardians ONLY
+ * "<objective word>: <objective>" (never a sub-objective). The level words come from পলিসি.
  */
 import { Types } from "mongoose";
 import { HW_SUBJECT_LABELS_BN } from "@scd/shared";
 import { emit } from "../notifications/services/NotificationService";
 import { holderIdsOf } from "../access-control/services/holders";
 import { GuardianLink } from "../foundation/models/GuardianLink";
+import { MasteryOutcome } from "./models/MasteryOutcome";
+import { masteryLevelLabels } from "./services/MasteryReviewService";
+
+export interface OutcomeNaming {
+  /** The row's own label (a sub-objective's label is staff-only). */
+  labelBn: string;
+  /** The objective it belongs to (itself unless it is a sub-objective). */
+  objectiveCode: string;
+  objectiveLabelBn: string;
+  isSub: boolean;
+  /** For staff: the objective, then the sub-objective — with the level words. */
+  staffBn: string;
+  /** For guardians: the objective only (D-#925). */
+  guardianBn: string;
+}
+
+/** How notices and the proposal screens name a tagged outcome (parent objective first, §8.1). */
+export async function outcomeNaming(loCode: string): Promise<OutcomeNaming> {
+  const [o, words] = await Promise.all([
+    MasteryOutcome.findOne({ code: loCode }).select("code labelBn level parentCode").lean(),
+    masteryLevelLabels(),
+  ]);
+  const labelBn = o?.labelBn ?? loCode;
+  const parent = o?.level === "SUB" && o.parentCode ? await MasteryOutcome.findOne({ code: o.parentCode }).select("code labelBn").lean() : null;
+  const objectiveLabelBn = parent?.labelBn ?? labelBn;
+  return {
+    labelBn,
+    objectiveCode: parent?.code ?? loCode,
+    objectiveLabelBn,
+    isSub: Boolean(parent),
+    staffBn: parent ? `${words.objectiveBn}: ${parent.labelBn} › ${words.subBn}: ${labelBn}` : `${words.objectiveBn}: ${labelBn}`,
+    // A sub whose objective is gone is never named to a guardian by its own label.
+    guardianBn: o?.level === "SUB" && !parent ? words.objectiveBn : `${words.objectiveBn}: ${objectiveLabelBn}`,
+  };
+}
 
 const bn = (n: number | string) => String(n).replace(/[0-9]/g, (d) => "০১২৩৪৫৬৭৮৯"[Number(d)]);
 const subjectBn = (s: string) => (HW_SUBJECT_LABELS_BN as Record<string, string>)[s] ?? s;
@@ -42,6 +81,7 @@ export interface ProposalNotice {
   sectionId: string;
   where: string; // "তৃতীয় শ্রেণি বালক"
   subject: string;
+  /** Staff naming (`outcomeNaming().staffBn`). */
   outcomeBn: string;
   weakPct: number;
 }
@@ -54,7 +94,7 @@ export async function notifyProposal(p: ProposalNotice): Promise<number> {
       recipientUserId: userId,
       kind: "MASTERY_PROPOSAL",
       titleBn: "অতিরিক্ত ক্লাসের প্রস্তাব",
-      bodyBn: `${p.where} · ${subjectBn(p.subject)} · ${p.outcomeBn}: শাখার ${bn(p.weakPct)}% দুর্বল`,
+      bodyBn: `${p.where} · ${subjectBn(p.subject)} · ${p.outcomeBn} — শাখার ${bn(p.weakPct)}% দুর্বল`,
       refs: { masteryActionId: p.actionId, sectionId: p.sectionId, subject: p.subject },
       dedupeKey: masteryDedupe.proposal(p.actionId, userId),
     });
@@ -67,7 +107,10 @@ export interface ExtraClassNotice {
   actionId: string;
   sectionId: string;
   subject: string;
+  /** Staff naming (the teacher's notice). */
   outcomeBn: string;
+  /** Guardian naming — the objective only (D-#925). */
+  guardianOutcomeBn: string;
   kind: "EXTRA_CLASS" | "RETEACH";
   teacherId: string | null;
   dateYmd: string | null;
@@ -102,7 +145,7 @@ export async function notifyExtraClass(n: ExtraClassNotice): Promise<number> {
         recipientGuardianId: guardianId,
         kind: "MASTERY_EXTRA_CLASS",
         titleBn: "অতিরিক্ত ক্লাস",
-        bodyBn: `${s.name}-এর জন্য ${subjectBn(n.subject)}-এ অতিরিক্ত ক্লাস: ${n.outcomeBn}${when ? ` · ${when}` : ""}`,
+        bodyBn: `${s.name}-এর জন্য ${subjectBn(n.subject)}-এ অতিরিক্ত ক্লাস — ${n.guardianOutcomeBn}${when ? ` · ${when}` : ""}`,
         refs: { studentId: s.studentId, subject: n.subject },
         dedupeKey: masteryDedupe.extraClassGuardian(n.actionId, s.studentId, guardianId),
       });
