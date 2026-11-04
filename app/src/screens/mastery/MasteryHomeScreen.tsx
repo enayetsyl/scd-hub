@@ -25,7 +25,7 @@ export default function MasteryHomeScreen({ navigation }: Props): React.ReactEle
   const lv = useMasteryLevelLabels();
   const { can } = useAuth();
   const canManage = can("mastery:settings");
-  useLayoutEffect(() => navigation.setOptions({ title: levelFill(STR.msCatalogueHome, lv) }), [navigation, lv.objective]);
+  useLayoutEffect(() => navigation.setOptions({ title: levelFill(STR.msCatalogueTitle, lv) }), [navigation, lv.objective]);
   const [{ data, fetching, error }] = useQuery({ query: MASTERY_COVERAGE_QUERY, requestPolicy: "cache-and-network" });
   const rows = (data?.masteryCoverage ?? []) as MasteryCoverageRow[];
 

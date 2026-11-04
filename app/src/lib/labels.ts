@@ -6795,7 +6795,8 @@ const STR_BN = {
   // --- Learning-outcome mastery tracker, M-0 (docs/prd-mastery.md, D-#775–#787) ---
   msTitle: "শিখন-দক্ষতা",
   msDrawerGroup: "শিখন-দক্ষতা",
-  msCatalogueHome: "{objective} তালিকা",
+  msCatalogueHome: "তালিকা",
+  msCatalogueTitle: "{objective} তালিকা",
   msTags: "নির্ণয়ের ট্যাগ",
   msPolicy: "পলিসি ও চালু/বন্ধ",
   msImport: "তালিকা ইমপোর্ট",
@@ -13122,7 +13123,8 @@ const STR_EN: StrTable = {
   // --- Learning-outcome mastery tracker, M-0 (docs/prd-mastery.md, D-#775–#787) ---
   msTitle: "Learning mastery",
   msDrawerGroup: "Learning mastery",
-  msCatalogueHome: "{objective} list",
+  msCatalogueHome: "Catalogue",
+  msCatalogueTitle: "{objective} list",
   msTags: "Diagnosis tags",
   msPolicy: "Policy & switch",
   msImport: "Import catalogue",
