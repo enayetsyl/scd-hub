@@ -31,6 +31,11 @@ export interface IMasteryPaperItem {
   questionTypeCode: string;
   /** Copied from the question-type table when the item was added (D-#777). */
   marks: number;
+  /** ক/খ parts (prd-objective-tree §8.2, D-#926): the stimulus (shared stem) this bank question
+   *  hangs under, copied from its payload.stimulus_ref. */
+  stimulusRef?: string;
+  /** "ক", "খ" … when two or more parts of one stem are on this paper — printed 4(ক), 4(খ). */
+  partLabel?: string;
 }
 
 export interface IMasteryPaper extends Document {
@@ -74,6 +79,8 @@ const ItemSchema = new Schema<IMasteryPaperItem>(
     chapterNumber: { type: Number, default: null },
     questionTypeCode: { type: String, required: true, trim: true },
     marks: { type: Number, required: true, min: 0 },
+    stimulusRef: { type: String, trim: true },
+    partLabel: { type: String, trim: true },
   },
   { _id: false },
 );
