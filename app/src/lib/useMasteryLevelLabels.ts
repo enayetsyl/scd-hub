@@ -1,7 +1,7 @@
 /**
  * useMasteryLevelLabels — THE app hook for the objective-tree level names (D-#923).
  *
- * The words (default ক্ষেত্র / শিখনফল / উপ-শিখনফল) live in ONE setting on the SCHOOL MasteryPolicy
+ * The words (defaults: shared MASTERY_LEVEL_LABEL_DEFAULTS) live in ONE setting on the SCHOOL MasteryPolicy
  * row, edited on the পলিসি screen. Every screen that names a level reads it here — never a
  * hard-coded word — so a rename in পলিসি changes every surface without a deploy. Until the query
  * answers (or for a viewer who cannot read it) the shared defaults are used.
