@@ -117,6 +117,14 @@ VT-1..VT-4 build in one branch (`feat/voice-tasks`); VT-5 waits for the next APK
   idempotent across ticks; the scheduler test stubs them.
 - **AC-10** No key ⇒ a clear Bangla error; the rest of the work board is unaffected.
 
+## 8a. The Gemini key and model (D-#967)
+The Principal sets the key + model in the app: Admin → **এআই (Gemini) কী ও মডেল**
+(`system_health:ai_key`, LOCKED). Saved key → `GEMINI_API_KEY`; saved model → `GEMINI_MODEL` →
+`gemini-flash-latest`. Encrypted at rest, write-only, tested before saving, audited without the
+key. All Gemini features use it. Voice tasks try the chosen model for 25 s, then fall back to
+`gemini-flash-lite-latest` (404 / 429 / 5xx / timeout). Measured 2026-11-04: Flash 503 under
+load and 75 s once; Lite ~5 s with a correct draft for a two-task English note.
+
 ## 9. Risks / notes
 - **Privacy:** audio + staff names go to Google. No student data is sent. If the key is on the
   free tier Google may use inputs; a paid key does not.

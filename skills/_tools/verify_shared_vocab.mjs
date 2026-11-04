@@ -884,10 +884,10 @@ check("PERMISSIONS = legacy ∪ catalogue, no duplicates",
   new Set(V.PERMISSIONS).size === V.PERMISSIONS.length && V.PERMISSIONS.length === new Set([...V.LEGACY_PERMISSIONS, ...CAT]).size);
 check("PERMISSION_LABELS_BN / _EN and PERMISSION_BUILD_STATUS are total over PERMISSIONS",
   V.PERMISSIONS.every((p) => V.PERMISSION_LABELS_BN[p]?.name && V.PERMISSION_LABELS_EN[p]?.name && V.PERMISSION_BUILD_STATUS[p] === "build"));
-check("LOCKED actions are exactly the twelve reserved catalogue actions (D-#797; +payroll:reopen D-#904)",
+check("LOCKED actions are exactly the thirteen reserved catalogue actions (D-#797; +payroll:reopen D-#904; +system_health:ai_key D-#967)",
   eq(flagged("LOCKED"), ["payroll:approve", "payroll:reopen", "salary_advance:issue", "salary_advance:settle", "offboarding:settle",
     "appraisal:sign_off", "conduct:sign_off", "chat:view_all", "message_templates:view", "message_templates:edit",
-    "access_control:edit", "access_control:delegate"]));
+    "access_control:edit", "access_control:delegate", "system_health:ai_key"]));
 check("RESERVED_PERMISSIONS = the legacy five ∪ every LOCKED action",
   eq(V.RESERVED_PERMISSIONS, [...new Set([...V.LEGACY_RESERVED_PERMISSIONS, ...flagged("LOCKED")])]));
 check("no LOCKED / PRINCIPAL_DEFAULT / ESCALATION action is on by default for TEACHER or OFFICE",

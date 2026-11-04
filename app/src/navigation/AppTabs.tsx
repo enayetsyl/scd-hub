@@ -361,6 +361,7 @@ import GuardianEngagementScreen from "../screens/admin/GuardianEngagementScreen"
 import MarksDriversScreen from "../screens/reports/MarksDriversScreen";
 import MasteryBankCoverageScreen from "../screens/mastery/MasteryBankCoverageScreen";
 import SystemHealthScreen from "../screens/admin/SystemHealthScreen";
+import AiSettingsScreen from "../screens/admin/AiSettingsScreen";
 import ReportsHomeScreen from "../screens/reports/ReportsHomeScreen";
 import PendingReportScreen from "../screens/reports/PendingReportScreen";
 import TeacherClassLoadScreen from "../screens/reports/TeacherClassLoadScreen";
@@ -1583,6 +1584,7 @@ function AdminNavigator(): React.ReactElement {
         options={{ title: STR.geTitle }}
       />
       <AdminStack.Screen name="SystemHealth" component={SystemHealthScreen} options={{ title: STR.shTitle }} />
+      <AdminStack.Screen name="AiSettings" component={AiSettingsScreen} options={{ title: STR.aiTitle }} />
       <AdminStack.Screen name="ReconciliationReport" component={ReconciliationReportScreen} options={{ title: STR.rrTitle }} />
       <AdminStack.Screen name="HwLifecycleReport" component={HwLifecycleReportScreen} options={{ title: STR.hlrTitle }} />
       <AdminStack.Screen name="AttendanceRanking" component={AttendanceRankingScreen} options={{ title: STR.arTitle }} />

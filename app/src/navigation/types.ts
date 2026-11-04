@@ -631,6 +631,8 @@ export type AdminStackParamList = {
   // GE-1/GE-3 (D-#464/#465): the guardian-engagement report, same audit:read gate.
   GuardianEngagement: undefined;
   SystemHealth: undefined;
+  // D-#967: the Gemini key + model (system_health:ai_key, LOCKED).
+  AiSettings: undefined;
   // D-#290: who didn't submit reconciliation (Principal/Office).
   ReconciliationReport: undefined;
   // D-#300: per subject × class homework lifecycle report (Principal/Office).

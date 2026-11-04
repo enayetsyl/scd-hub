@@ -15,6 +15,7 @@ import { dateKeyOf } from "../../attendance/dates";
 import { StaffProfile } from "../../foundation/models/StaffProfile";
 import { User } from "../../foundation/models/User";
 import { normalizePhone } from "../../foundation/services/credentials";
+import { GEMINI_DEFAULT_MODEL, geminiKey, geminiModel, refreshAiConfig } from "../../platform/services/AiSettingService";
 import { allStaffUsers, type BoardUser } from "../services/WorkBoardService";
 import { buildDraft, buildVoicePrompt, VOICE_TASK_SCHEMA, type RawVoiceReply, type VoiceStaff, type VoiceTaskDraft } from "./voiceTaskDraft";
 
@@ -38,10 +39,14 @@ export interface VoiceModel {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/** The fallback: fast, and its name slips are caught by the D-#962 guard. */
+export const GEMINI_LITE_MODEL = "gemini-flash-lite-latest";
+const FIRST_MODEL_DEADLINE_MS = 25_000;
+
 export class GeminiVoiceModel implements VoiceModel {
   constructor(
     private readonly apiKey: string,
-    private readonly model = "gemini-flash-latest",
+    private readonly model = GEMINI_DEFAULT_MODEL,
   ) {}
 
   async run(prompt: string, audio: { mimeType: string; data: string } | null): Promise<RawVoiceReply> {
@@ -57,18 +62,41 @@ export class GeminiVoiceModel implements VoiceModel {
         responseSchema: VOICE_TASK_SCHEMA,
       },
     });
+    // The chain (blueprint §4): the chosen model first, then Flash-Lite. Measured
+    // 2026-11-04: Flash answered "high demand" 503s and, when it did answer, took 75 s
+    // (Cloudflare cuts at 100 s); Lite read the same note correctly in ~5 s. So the
+    // first model gets a deadline, and an overload / retired model (404, lesson 6.1) /
+    // timeout moves on rather than making the speaker wait.
+    const chain = [...new Set([this.model, GEMINI_LITE_MODEL])];
     let res: Response | null = null;
-    for (let attempt = 0; attempt < 2; attempt++) {
-      res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-goog-api-key": this.apiKey },
-        body,
-      });
-      if (![429, 500, 503].includes(res.status)) break;
-      await sleep(1500);
+    for (let i = 0; i < chain.length; i++) {
+      const last = i === chain.length - 1;
+      try {
+        res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${chain[i]}:generateContent`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-goog-api-key": this.apiKey },
+          body,
+          signal: AbortSignal.timeout(last ? 60_000 : FIRST_MODEL_DEADLINE_MS),
+        });
+      } catch {
+        console.error(`[voice-tasks] ${chain[i]} timed out`);
+        res = null;
+        continue;
+      }
+      if (res.ok) break;
+      console.error(`[voice-tasks] ${chain[i]} returned ${res.status} ${(await res.text().catch(() => "")).slice(0, 200)}`);
+      if (![404, 429, 500, 503].includes(res.status)) break;
+      if (last && res.status !== 404) {
+        await sleep(1500);
+        res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${chain[i]}:generateContent`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-goog-api-key": this.apiKey },
+          body,
+          signal: AbortSignal.timeout(60_000),
+        }).catch(() => null);
+      }
     }
     if (!res || !res.ok) {
-      console.error(`[voice-tasks] Gemini returned ${res?.status}`);
       throw new Error("কণ্ঠ বোঝার সেবা এখন সাড়া দিচ্ছে না — একটু পরে আবার চেষ্টা করুন");
     }
     const json = (await res.json()) as { candidates?: Array<{ finishReason?: string; content?: { parts?: Array<{ text?: string; thought?: boolean }> } }> };
@@ -91,9 +119,10 @@ export class GeminiVoiceModel implements VoiceModel {
 
 /** Null when no key is configured — the resolver then refuses with a clear message. */
 export function voiceModelFromEnv(): VoiceModel | null {
-  const key = process.env.GEMINI_API_KEY;
+  // D-#967: the key/model the Principal saved in the app, else .env.
+  const key = geminiKey();
   if (!key) return null;
-  return new GeminiVoiceModel(key, process.env.GEMINI_MODEL || undefined);
+  return new GeminiVoiceModel(key, geminiModel());
 }
 
 /** Bangla name + designation per user, joined by the staffMatch rule (D-#788): phone
@@ -163,10 +192,12 @@ function validate(input: VoiceTaskInput): { audio: { mimeType: string; data: str
 }
 
 /** Voice note (or typed text) → a draft. Gate: work_board:voice. Writes nothing. */
-export async function parseVoiceTasks(authIn: AuthPayload | null, input: VoiceTaskInput, model: VoiceModel | null = voiceModelFromEnv(), now = new Date()): Promise<VoiceTaskDraft> {
+export async function parseVoiceTasks(authIn: AuthPayload | null, input: VoiceTaskInput, modelIn?: VoiceModel | null, now = new Date()): Promise<VoiceTaskDraft> {
   if (!authIn) throw new ForbiddenError("Unauthenticated");
   if (!callerHasPermission(authIn, "work_board:voice")) throw new ForbiddenError("কণ্ঠে কাজ দেওয়ার অনুমতি নেই");
   const { audio, text, prior } = validate(input);
+  if (modelIn === undefined) await refreshAiConfig();
+  const model = modelIn === undefined ? voiceModelFromEnv() : modelIn;
   if (!model) throw new Error("কণ্ঠ বোঝার সেবা চালু করা হয়নি (GEMINI_API_KEY) — অফিসকে জানান");
   const todayKey = dateKeyOf(now);
   const { staff, selfOnly } = await voiceStaffFor(authIn);
