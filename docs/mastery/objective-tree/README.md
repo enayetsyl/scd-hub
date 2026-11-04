@@ -66,7 +66,7 @@ structure; those stay as the history and as a source Claude reuses (question typ
 |---|---|---|---|---|---|---|---|
 | C1 | — | — | draft (pilot) | | | book pending | book pending |
 | C2 | — | — | draft | | | book pending | book pending |
-| C3 | — | — | pilot next | — | — | book pending | book pending |
+| C3 | — | — | draft (pilot) | — | — | book pending | book pending |
 
 Cross-class prerequisites (C2 → C1 codes, …) resolve at import against the earlier class's live rows, so a class
 is imported after the class below it. The repo CLI `skills/_tools/verify_objective_tree.mjs` has no flag for
