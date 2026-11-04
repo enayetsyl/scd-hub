@@ -7,7 +7,7 @@
  */
 import { Schema, model, Document, Types } from "mongoose";
 import { MASTERY_CLASS_TOKENS, MASTERY_SUBJECTS } from "@scd/shared";
-import type { MasteryClassToken, MasterySubject, MasteryPolicyValues } from "@scd/shared";
+import type { MasteryClassToken, MasterySubject, MasteryPolicyValues, MasteryLevelLabels } from "@scd/shared";
 
 export interface IMasteryPolicy extends Document {
   _id: Types.ObjectId;
@@ -16,6 +16,9 @@ export interface IMasteryPolicy extends Document {
   classToken?: MasteryClassToken;
   subject?: MasterySubject;
   values: Partial<MasteryPolicyValues>;
+  /** Level names (D-#923) — SCHOOL row only; only the keys changed from
+   *  MASTERY_LEVEL_LABEL_DEFAULTS are stored. Read through `masteryLevelLabels()`. */
+  levelLabels?: Partial<MasteryLevelLabels>;
   updatedBy?: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -27,6 +30,7 @@ const MasteryPolicySchema = new Schema<IMasteryPolicy>(
     classToken: { type: String, enum: MASTERY_CLASS_TOKENS },
     subject: { type: String, enum: MASTERY_SUBJECTS },
     values: { type: Schema.Types.Mixed, default: {} },
+    levelLabels: { type: Schema.Types.Mixed },
     updatedBy: { type: Schema.Types.ObjectId },
   },
   { timestamps: true, minimize: false },
