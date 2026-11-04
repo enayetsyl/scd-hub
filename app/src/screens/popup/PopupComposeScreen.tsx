@@ -277,9 +277,9 @@ export default function PopupComposeScreen({ navigation, route }: Props): React.
   const pv = previewQ.data?.popupAudiencePreview;
 
   const [listsQ, refetchLists] = useQuery({ query: POPUP_AUDIENCE_LISTS_PAGE, variables: { page: 1, pageSize: 100 }, pause: live });
-  const lists = listsQ.data?.popupAudienceListsPage.rows ?? [];
+  const lists = listsQ.data?.popupAudienceListsPage?.rows ?? [];
   const [searchQ] = useQuery({ query: SEARCH_POPUP_PEOPLE, variables: { query: search, page: 1, pageSize: 20 }, pause: search.trim().length < 2 });
-  const hits = (searchQ.data?.searchPopupPeople.rows ?? []).filter(
+  const hits = (searchQ.data?.searchPopupPeople?.rows ?? []).filter(
     (h) => (h.kind === "USER" ? canStaff : canGuardian) && !picked.some((p) => p.id === h.id),
   );
   const [classesQ] = useQuery({ query: CLASSES_QUERY, variables: { academicYearId: ayId }, pause: !guardOn || !ayId });
