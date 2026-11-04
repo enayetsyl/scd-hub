@@ -2,7 +2,7 @@ import { Schema, model, Document, Types } from "mongoose";
 import { STAFF_MISTAKE_KINDS, type StaffMistakeKind } from "@scd/shared";
 
 /**
- * StaffMistakeNote (D-#952, docs/prd-staff-mistakes.md §13) — the generic source detail for
+ * StaffMistakeNote (D-#954, docs/prd-staff-mistakes.md §13) — the generic source detail for
  * places that need no model of their own: a line of Bangla written at the moment the
  * correction happened ("\"পরীক্ষার নোটিশ\" — লেখা বদলানো হয়েছে, ৬২ জন আগেই দেখেছিলেন"),
  * who made it and when.

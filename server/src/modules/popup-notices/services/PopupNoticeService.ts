@@ -611,7 +611,7 @@ export async function editLiveNotice(ctx: AppContext, id: string, input: EditLiv
     targetKind: "PopupNotice",
     meta: { before, after: { titleBn: n.titleBn, bodyBn: n.bodyBn, endsOn: n.endsOn }, version: n.version, reshow: !!input.reshow },
   });
-  // D-#952: people had already seen it — new wording / buttons or a re-show is the sender's
+  // D-#954: people had already seen it — new wording / buttons or a re-show is the sender's
   // correction (only moving the end date is not).
   const changed =
     before.titleBn !== n.titleBn || before.bodyBn !== n.bodyBn || labelsBefore !== n.actions.map((a) => a.labelBn).join("|") || !!input.reshow;
@@ -637,7 +637,7 @@ export async function withdrawPopupNotice(ctx: AppContext, id: string, now = new
   return loadDTO(n, now);
 }
 
-/** D-#952: the sender's entry, only when someone had already read the notice. */
+/** D-#954: the sender's entry, only when someone had already read the notice. */
 async function recordPopupMistake(
   n: { _id: Types.ObjectId; titleBn: string; publishedBy?: Types.ObjectId | null; createdBy: Types.ObjectId },
   actorId: string,

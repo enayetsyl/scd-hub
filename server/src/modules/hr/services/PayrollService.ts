@@ -709,7 +709,7 @@ export async function reopenPayrollRun(runId: string, reason: string, actorId: s
       exitsReopened,
     },
   });
-  // D-#952: staff had seen the payslips — the preparer's correction to explain.
+  // D-#954: staff had seen the payslips — the preparer's correction to explain.
   await recordPlaceMistake({
     kind: "PAYROLL_REOPEN",
     refKey: String(run._id),

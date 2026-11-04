@@ -209,7 +209,7 @@ export async function reversePosting(
     targetKind: "FinancePosting",
     meta: { reversesPostingId: original._id.toString(), kind: original.kind, amount: original.amount },
   });
-  // D-#952: whoever entered it explains why it had to be reversed.
+  // D-#954: whoever entered it explains why it had to be reversed.
   await recordPlaceMistake({
     kind: "FINANCE_REVERSAL",
     refKey: String(original._id),

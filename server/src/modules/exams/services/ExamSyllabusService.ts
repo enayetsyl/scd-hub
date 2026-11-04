@@ -379,7 +379,7 @@ export async function saveSyllabus(
     (existing.fullMarks ?? SYLLABUS_FULL_MARKS) !== fullMarks ||
     JSON.stringify(existing.marks) !== JSON.stringify(input.marks);
   const hadApproval = existing.status !== "DRAFT";
-  // D-#952: families had read it — whoever wrote the published text owns the correction.
+  // D-#954: families had read it — whoever wrote the published text owns the correction.
   const wasPublished = !!existing.publishedAt;
   const priorAuthor = existing.updatedBy;
 

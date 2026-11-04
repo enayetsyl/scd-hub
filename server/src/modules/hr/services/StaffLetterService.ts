@@ -485,7 +485,7 @@ export async function voidLetter(
     targetKind: "StaffLetter",
     meta: { refNo: letter.refNo, kind: letter.kind, reason: letter.voidReason },
   });
-  // D-#952: the staff member already had it — the issuer's correction to explain.
+  // D-#954: the staff member already had it — the issuer's correction to explain.
   if ((letter.sends ?? []).length > 0) {
     await recordPlaceMistake({
       kind: "STAFF_LETTER_VOID",

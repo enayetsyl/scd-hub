@@ -7780,7 +7780,7 @@ const STR_BN = {
   smrKindTitle_LEAVE_REDECIDED: "ছুটির সিদ্ধান্ত বদলানো হয়েছে",
   smrKindLabel_PRINT_CANCELLED: "প্রিন্টের অনুরোধ",
   smrKindTitle_PRINT_CANCELLED: "অফিস প্রিন্টের অনুরোধ বাতিল করেছে",
-  // The remaining tier-1 places (D-#952)
+  // The remaining tier-1 places (D-#954)
   smrKindLabel_POPUP_NOTICE_CHANGE: "পপ-আপ বার্তা",
   smrKindTitle_POPUP_NOTICE_CHANGE: "দেখার পর পপ-আপ বার্তা বদলানো / বন্ধ করা হয়েছে",
   smrKindLabel_MONTHLY_REPORT_REVOKE: "মাসিক রিপোর্ট",
@@ -14255,7 +14255,7 @@ const STR_EN: StrTable = {
   smrKindTitle_LEAVE_REDECIDED: "A leave decision was changed",
   smrKindLabel_PRINT_CANCELLED: "Print request",
   smrKindTitle_PRINT_CANCELLED: "The Office cancelled a print request",
-  // The remaining tier-1 places (D-#952)
+  // The remaining tier-1 places (D-#954)
   smrKindLabel_POPUP_NOTICE_CHANGE: "Pop-up notice",
   smrKindTitle_POPUP_NOTICE_CHANGE: "A pop-up was changed or stopped after people saw it",
   smrKindLabel_MONTHLY_REPORT_REVOKE: "Monthly report",

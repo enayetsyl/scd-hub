@@ -715,7 +715,7 @@ export async function revokeMonthlyReport(
     targetId: report._id.toString(),
     meta: { studentId: report.studentId.toString(), periodKey: report.periodKey, revision: report.revision, reason: why, batchId: report.releaseBatchId },
   });
-  // D-#952: the family had the report — the releaser's correction to explain.
+  // D-#954: the family had the report — the releaser's correction to explain.
   const child = await Student.findById(report.studentId).select("name nameBn").lean();
   await recordPlaceMistake({
     kind: "MONTHLY_REPORT_REVOKE",

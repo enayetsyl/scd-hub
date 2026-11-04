@@ -17,7 +17,7 @@ const mockNoteCount = jest.fn();
 const mockNoteById = jest.fn();
 const mockNoteUpdate = jest.fn();
 const mockNoteDistinct = jest.fn();
-// D-#952: the mistake recorder reaches real models; this suite is DB-free.
+// D-#954: the mistake recorder reaches real models; this suite is DB-free.
 jest.mock("../modules/staff-mistakes/services/StaffMistakeNoteService", () => ({
   recordPlaceMistake: jest.fn().mockResolvedValue(false),
 }));
