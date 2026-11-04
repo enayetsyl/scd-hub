@@ -44,6 +44,7 @@ import { computeSection, liveSectionRows, lockedOutcomes, sectionLabel } from ".
 import { buildPartA, buildPartB, pickQuestion, type BankQuestion, type BuilderContext, type OutcomeInfo } from "../assignmentBuilder";
 import { sectionOutcomeSummary } from "../diagnosis";
 import { loCodeMongoFilter, loCodesOf } from "../bank";
+import { groupStimulusParts, partLabelsByItem, printLabel, printPlan, stimulusRefOf } from "../parts";
 import { isoWeekKey } from "../evidence";
 import { notifyAssignmentSent } from "../notify";
 import { isTaggedRow } from "../rollup";
@@ -86,6 +87,7 @@ export async function goldBank(codes: string[]): Promise<(BankQuestion & { textB
       qid,
       loCodes: loCodesOf(env.tags as Record<string, unknown>, payload),
       textBn: typeof text === "string" ? text : null,
+      stimulusRef: stimulusRefOf(payload),
     }];
   });
 }
@@ -340,6 +342,7 @@ export async function buildAssignment(input: BuildInput, auth: Auth): Promise<As
   const toDoc = (q: (typeof partA)[number]): MasteryAssignmentQuestion => ({
     origin: q.origin, artifactId: oid(q.artifactId), qid: q.qid, textBn: q.textBn ?? undefined, loCode: q.loCode,
     chapterNumber: q.chapterNumber, questionTypeCode: q.questionTypeCode, marks: q.marks, band: q.band,
+    ...(q.stimulusRef ? { stimulusRef: q.stimulusRef } : {}),
   });
   if (!a) {
     a = new MasteryAssignment({
@@ -486,7 +489,16 @@ export async function editSheet(assignmentId: string, studentId: string, edit: S
       sheet.items.splice(i, 1, {
         origin: "BANK", artifactId: oid(next.artifactId), qid: next.qid, textBn: bank?.textBn ?? undefined, loCode: cur.loCode,
         chapterNumber: cur.chapterNumber ?? null, questionTypeCode: cur.questionTypeCode, marks: cur.marks, band: cur.band,
+        ...(next.stimulusRef ? { stimulusRef: next.stimulusRef } : {}),
       });
+      // A swapped-in part joins its stem's other parts (D-#926).
+      if (next.stimulusRef) {
+        const plain = sheet.items.map((x) => {
+          const d = x as unknown as { toObject?: () => MasteryAssignmentQuestion };
+          return d.toObject ? d.toObject() : x;
+        });
+        sheet.set("items", groupStimulusParts(plain));
+      }
     } else if (edit.op === "ADD_OWN") {
       const text = (edit.textBn ?? "").trim();
       if (!text) throw new MasteryWorkError("নিজের প্রশ্নের লেখা দিন।");
@@ -547,7 +559,10 @@ export async function sendAssignment(assignmentId: string, auth: Auth): Promise<
   const ordered = roster.flatMap((st) => (bySid.has(String(st._id)) ? [bySid.get(String(st._id))!] : []));
   if (ordered.length === 0) throw new MasteryWorkError("পাঠানোর মতো কোনো শিট নেই।");
 
-  type Item = { itemNo: number; origin: "BANK" | "TEACHER"; artifactId?: Types.ObjectId; qid?: string; textBn?: string; loCodes: string[]; chapterNumber: number | null; questionTypeCode: string; marks: number };
+  type Item = {
+    itemNo: number; origin: "BANK" | "TEACHER"; artifactId?: Types.ObjectId; qid?: string; textBn?: string; loCodes: string[];
+    chapterNumber: number | null; questionTypeCode: string; marks: number; stimulusRef?: string; partLabel?: string;
+  };
   const items: Item[] = [];
   const keyNo = new Map<string, number>();
   const add = (q: MasteryAssignmentQuestion): number => {
@@ -558,12 +573,17 @@ export async function sendAssignment(assignmentId: string, auth: Auth): Promise<
     items.push({
       itemNo, origin: q.origin, artifactId: q.artifactId, qid: q.qid, textBn: q.origin === "TEACHER" ? q.textBn : undefined,
       loCodes: [q.loCode], chapterNumber: q.chapterNumber ?? null, questionTypeCode: q.questionTypeCode, marks: q.marks,
+      ...(q.stimulusRef ? { stimulusRef: q.stimulusRef } : {}),
     });
     keyNo.set(key, itemNo);
     return itemNo;
   };
   const partANos = (a.partA ?? []).map(add);
   const perStudentItems = ordered.map((s) => ({ studentId: s.studentId, itemNos: [...partANos, ...s.items.map(add)] }));
+  // ক/খ (D-#926): the paper records each part's label among its stem's parts on this paper.
+  partLabelsByItem(items).forEach((label, i) => {
+    if (label) items[i].partLabel = label;
+  });
 
   const paper = await MasteryPaper.create({
     paperId: await nextPaperId(a.classToken, a.subject),
@@ -680,6 +700,25 @@ export async function renderAssignmentPdfForChild(assignmentId: string, studentI
   return renderPdfOf(a, studentId, "GUARDIAN");
 }
 
+/** The current stimulus (shared stem) of every part on the sheets: ref → title + body (D-#926). */
+async function stemsFor(items: { stimulusRef?: string | null }[]): Promise<Map<string, { title: string | null; content: string }>> {
+  const refs = [...new Set(items.map((q) => q.stimulusRef).filter((r): r is string => Boolean(r)))];
+  if (refs.length === 0) return new Map();
+  const arts = await ContentArtifact.find({ docType: "stimulus", current: true, "envelopeJson.payload.stimulus_id": { $in: refs } })
+    .select("envelopeJson.payload")
+    .lean(); // bounded: the stems on one assignment
+  const out = new Map<string, { title: string | null; content: string }>();
+  for (const a of arts) {
+    const p = ((a.envelopeJson ?? {}) as Record<string, unknown>).payload as Record<string, unknown> | undefined;
+    if (typeof p?.stimulus_id !== "string") continue;
+    out.set(p.stimulus_id, {
+      title: typeof p.title === "string" ? p.title : null,
+      content: typeof p.content === "string" ? p.content : "",
+    });
+  }
+  return out;
+}
+
 async function renderPdfOf(a: IMasteryAssignment, studentId: string | null, copy: "STAFF" | "GUARDIAN"): Promise<{ pdf: Buffer; filename: string }> {
   const allCodes = [...(a.partA ?? []).map((q) => q.loCode)];
   const [sheets, roster, label, paper, words] = await Promise.all([
@@ -698,6 +737,7 @@ async function renderPdfOf(a: IMasteryAssignment, studentId: string | null, copy
   const subjectBn = (HW_SUBJECT_LABELS_BN as Record<string, string>)[a.subject] ?? a.subject;
   const code = paper?.paperId ?? `খসড়া · ${a.week}`;
   const partA = a.partA ?? [];
+  const stems = await stemsFor([...partA, ...sheets.flatMap((s) => s.items)]);
 
   const pdf = await new Promise<Buffer>((resolve, reject) => {
     const M = 44;
@@ -709,20 +749,47 @@ async function renderPdfOf(a: IMasteryAssignment, studentId: string | null, copy
     doc.registerFont(BENGALI_FONT, FONT_PATH);
     const W = 595.28 - 2 * M;
 
-    const question = (n: number, q: MasteryAssignmentQuestion) => {
+    // `label` is the printed number: "৪." for a question, "৪(ক)" for a part (D-#926), "" for a
+    // lone part under its stem (the stem line carries the number).
+    const question = (label: string, q: MasteryAssignmentQuestion, indent = 24) => {
+      const y0 = doc.y;
+      doc.fontSize(12).fillColor("#111111");
+      if (label) doc.font(BENGALI_FONT).text(label, M, y0, { width: indent });
+      doc.x = M + indent;
+      doc.y = y0;
+      mixedText(doc, q.textBn ?? q.qid ?? "", { width: W - indent - 60 } as PDFKit.Mixins.TextOptions);
+      const after = Math.max(doc.y, y0 + 16);
+      doc.rect(M + W - 52, y0, 52, 22).strokeColor("#9AA59F").lineWidth(0.8).stroke();
+      doc.fontSize(9).fillColor("#46554E").font(BENGALI_FONT).text(`/${bn(q.marks)}`, M + W - 52, y0 + 6, { width: 52, align: "center" });
+      const boxH = q.marks <= 1 ? 26 : 48;
+      doc.rect(M + indent, after + 4, W - indent - 60, boxH).strokeColor("#9AA59F").lineWidth(0.8).stroke();
+      doc.x = M;
+      doc.y = after + boxH + 12;
+    };
+    // The shared stem of a part group, printed once above its parts.
+    const stem = (n: number, ref: string) => {
+      const s = stems.get(ref);
       const y0 = doc.y;
       doc.fontSize(12).fillColor("#111111");
       doc.font(BENGALI_FONT).text(`${bn(n)}.`, M, y0, { width: 24 });
       doc.x = M + 24;
       doc.y = y0;
-      mixedText(doc, q.textBn ?? q.qid ?? "", { width: W - 24 - 60 } as PDFKit.Mixins.TextOptions);
-      const after = Math.max(doc.y, y0 + 16);
-      doc.rect(M + W - 52, y0, 52, 22).strokeColor("#9AA59F").lineWidth(0.8).stroke();
-      doc.fontSize(9).fillColor("#46554E").font(BENGALI_FONT).text(`/${bn(q.marks)}`, M + W - 52, y0 + 6, { width: 52, align: "center" });
-      const boxH = q.marks <= 1 ? 26 : 48;
-      doc.rect(M + 24, after + 4, W - 24 - 60, boxH).strokeColor("#9AA59F").lineWidth(0.8).stroke();
+      const body = s ? [s.title, s.content].filter(Boolean).join("\n") : ref;
+      mixedText(doc, body, { width: W - 24 - 60 } as PDFKit.Mixins.TextOptions);
       doc.x = M;
-      doc.y = after + boxH + 12;
+      doc.y = Math.max(doc.y, y0 + 16) + 6;
+    };
+    /** One part of the sheet, numbered from `startAt`; returns the last number used. */
+    const questions = (items: MasteryAssignmentQuestion[], startAt: number): number => {
+      let last = startAt;
+      for (const line of printPlan(items, startAt)) {
+        if (line.stimulusRef && line.startsGroup) stem(line.no, line.stimulusRef);
+        if (line.partLabel) question(printLabel(bn(line.no), line.partLabel), line.item, 44);
+        else if (line.stimulusRef) question("", line.item);
+        else question(`${bn(line.no)}.`, line.item);
+        last = line.no;
+      }
+      return last;
     };
     const head = (t: string, marks: number) => {
       const y = doc.y;
@@ -755,11 +822,11 @@ async function renderPdfOf(a: IMasteryAssignment, studentId: string | null, copy
       let n = 0;
       if (partA.length > 0) {
         head("অংশ ক · সবার জন্য", sum(partA));
-        for (const q of partA) question(++n, q);
+        n = questions(partA, n);
       }
       if (sheet.items.length > 0) {
         head(partA.length > 0 ? "অংশ খ · তোমার জন্য" : "তোমার জন্য", sum(sheet.items));
-        for (const q of sheet.items) question(++n, q);
+        n = questions(sheet.items, n);
       }
       const footY = 841.89 - M - 30;
       doc.moveTo(M, footY).lineTo(M + W, footY).strokeColor("#9AA59F").lineWidth(0.6).stroke();

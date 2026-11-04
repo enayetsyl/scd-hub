@@ -81,8 +81,10 @@ export interface IMasteryOutcome extends Document {
   /** The review decision while DRAFT. */
   reviewState?: MasteryReviewState;
   rejectReason?: string;
-  /** MERGE target (OT-2). */
+  /** MERGE target (OT-2). A MOVE that re-codes a row also points the old code here. */
   mergedInto?: string;
+  /** OT-2: why a reviewer ADDED a row with no numbered exercise (it then cites "<chapter>/—"). */
+  addReason?: string;
   /** Hash of the node content as last IMPORTED: a redraft re-import compares against it, so an
    *  unchanged file row keeps the reviewer's decision (and edits). Null for reviewer-ADDED rows. */
   draftHash?: string | null;
@@ -155,6 +157,7 @@ const MasteryOutcomeSchema = new Schema<IMasteryOutcome>(
     reviewState: { type: String, enum: MASTERY_REVIEW_STATES },
     rejectReason: { type: String, trim: true },
     mergedInto: { type: String },
+    addReason: { type: String, trim: true },
     draftHash: { type: String, default: undefined },
   },
   { timestamps: true },

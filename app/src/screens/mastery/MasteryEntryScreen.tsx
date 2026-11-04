@@ -30,6 +30,25 @@ import type { MasteryStackParamList } from "../../navigation/types";
 
 type Props = NativeStackScreenProps<MasteryStackParamList, "MasteryEntry">;
 
+const PART_LETTERS = ["ক", "খ", "গ", "ঘ", "ঙ", "চ", "ছ", "জ", "ঝ", "ঞ"];
+
+/** ক/খ parts (prd-objective-tree §8.2, D-#926): the numbers as printed — consecutive parts of one
+ *  stem share a number and are lettered (৪(ক), ৪(খ)); a lone part is a plain number. */
+function printedLabels(items: { stimulusRef?: string | null }[]): string[] {
+  const nos: number[] = [];
+  let no = 0;
+  items.forEach((it, i) => {
+    const ref = it.stimulusRef ?? null;
+    if (!(ref !== null && ref === (items[i - 1]?.stimulusRef ?? null))) no += 1;
+    nos.push(no);
+  });
+  return nos.map((n, i) => {
+    const first = nos.indexOf(n);
+    const size = nos.lastIndexOf(n) - first + 1;
+    return size >= 2 ? `${bnNum(n)}(${PART_LETTERS[i - first] ?? bnNum(i - first + 1)})` : bnNum(n);
+  });
+}
+
 type ItemX = { itemNo: number; marks: number | null; rework: boolean; tags: string[] };
 type Draft = {
   status: string | null;
@@ -180,6 +199,8 @@ export default function MasteryEntryScreen({ route }: Props): React.ReactElement
         const off = status !== "PRESENT";
         // AS sheets (M-4): only the items this student was given.
         const items = s.itemNos ? paper.items.filter((it) => s.itemNos!.includes(it.itemNo)) : paper.items;
+        // AS sheets: number as printed on this student's own page; parts of one stem as ৪(ক), ৪(খ).
+        const printed = printedLabels(items);
         const outOf = items.reduce((sum, it) => sum + it.marks, 0);
         const earned = items.reduce((sum, it) => {
           const x = d.items.find((i) => i.itemNo === it.itemNo);
@@ -229,12 +250,10 @@ export default function MasteryEntryScreen({ route }: Props): React.ReactElement
                     const x = d.items.find((i) => i.itemNo === it.itemNo);
                     const changed = Boolean(x && (x.marks !== null || x.rework || x.tags.length > 0));
                     const shown = x?.marks ?? it.marks;
-                    // AS sheets: number as printed on this student's own page (1…n), not the paper's item no.
-                    const printedNo = s.itemNos ? idx + 1 : it.itemNo;
                     return (
                       <Chip
                         key={it.itemNo}
-                        label={`${bnNum(printedNo)}${changed ? ` · ${bnNum(shown)}${x?.rework ? " ↺" : ""}` : ""}`}
+                        label={`${printed[idx]}${changed ? ` · ${bnNum(shown)}${x?.rework ? " ↺" : ""}` : ""}`}
                         selected={open?.studentId === s.studentId && open.itemNo === it.itemNo}
                         onPress={() => setOpen(open?.studentId === s.studentId && open.itemNo === it.itemNo ? null : { studentId: s.studentId, itemNo: it.itemNo })}
                       />

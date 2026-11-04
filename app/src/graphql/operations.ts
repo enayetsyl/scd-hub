@@ -6989,6 +6989,8 @@ export interface NotificationRefsT {
   improvementActionId: string | null;
   /** M-6 (D-#812) — deep-links staff to the mastery action. */
   masteryActionId: string | null;
+  /** OT-2 — deep-links the reviewer / Principal to the objective-list review round. */
+  masteryReviewId: string | null;
 }
 
 export interface NotificationT {
@@ -7010,7 +7012,7 @@ const NOTIFICATION_FIELDS = `
     workClaimId workClaimTracker
     classTestId ctId taskId
     syllabusId examId classId subject
-    improvementActionId masteryActionId
+    improvementActionId masteryActionId masteryReviewId
   }
 `;
 

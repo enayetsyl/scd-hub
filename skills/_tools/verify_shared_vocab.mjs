@@ -926,6 +926,8 @@ const ROLE_CHECK_DEFAULTS = {
     "reports:class_test_dashboard", "reports:student_progress", "reports:revision_dashboard", "reports:lesson_progress",
     "reports:review_progress", "reports:reviewer_effectiveness", "reports:teaching_note_comments",
     "reports:finance_dashboard", "reports:daily_snapshot",
+    // Question-bank coverage (OT-4, D-#947): owner 2026-11-04 — the Office reads it too.
+    "reports:bank_coverage",
     "assignment:view_all", "assignment:undo_any", "work_claim:view_all", "work_claim:remind", "set_tracker:view_all",
     "saturday_revision:view", "saturday_revision:view_all", "saturday_revision:enter_results", "saturday_revision:edit_all",
     "saturday_revision:send", "saturday_revision:settings", "class_test:view_all", "class_test:register",
