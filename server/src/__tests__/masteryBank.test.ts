@@ -85,7 +85,7 @@ describe("loCodeMongoFilter", () => {
 
 describe("import warnings (D-#785)", () => {
   it("unknown → DRAFT → LOCKED → RETIRED says what is wrong, and never blocks", async () => {
-    const env = caseEnv("pass_lo_codes_two");
+    const env = caseEnv("fail_lo_codes_two");
     expect((await masteryImportWarnings(env)).join("\n")).toMatch(/not in the mastery catalogue/);
     await importCatalogue(catalogue(), true, actor);
     expect((await masteryImportWarnings(env)).join("\n")).toMatch(/still DRAFT/);

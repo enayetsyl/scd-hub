@@ -8,6 +8,11 @@
  *
  * Plain by rule (D-#783): no LO codes, no verdict words (দুর্বল), no section ranks, no other
  * child. Only class × subjects whose add-on switch is on (§10 journey 9).
+ *
+ * Objective grain only (OT-3, D-#925): a guardian sees objectives — label, home tip, the rolled-up
+ * plain wording. A sub-objective's code or label NEVER enters a payload here; evidence on a
+ * sub-objective is folded into its objective (`objectiveGrain`). The level word itself comes from
+ * the one server helper (`masteryLevelLabels`, D-#923) so a rename in পলিসি reaches guardians.
  * The caller (resolver) checks `guardian:read_child` and the guardian link first.
  */
 import { Types } from "mongoose";
@@ -21,10 +26,35 @@ import { Student } from "../../foundation/models/Student";
 import { isMasteryEnabled } from "./MasteryCatalogueService";
 import { MasteryAction } from "../models/MasteryAction";
 import { sectionContext } from "./MasteryWorkService";
-import { computeSection, diagnosisPolicy, liveSectionRows, lockedOutcomes } from "./MasteryDiagnosisService";
-import type { MasterySubject } from "@scd/shared";
+import { computeSection, diagnosisPolicy, liveSectionRows, loadTree } from "./MasteryDiagnosisService";
+import { masteryLevelLabels } from "./MasteryReviewService";
+import { objectiveState } from "../rollup";
+import type { MasteryState, MasterySubject } from "@scd/shared";
 
 const oid = (s: string) => new Types.ObjectId(s);
+
+/**
+ * Any outcome codes → the OBJECTIVE each belongs to (a sub-objective → its parent; anything else →
+ * itself), with the objective's own label and home tip. The one place guardian payloads get labels.
+ */
+export async function objectiveGrain(codes: string[]): Promise<Map<string, { code: string; labelBn: string; homeTipBn: string | null }>> {
+  const list = [...new Set(codes)];
+  const out = new Map<string, { code: string; labelBn: string; homeTipBn: string | null }>();
+  if (list.length === 0) return out;
+  const rows = await MasteryOutcome.find({ code: { $in: list } }).select("code labelBn homeTipBn level parentCode").lean();
+  const parentCodes = [...new Set(rows.filter((r) => r.level === "SUB" && r.parentCode).map((r) => r.parentCode as string))];
+  const parents = parentCodes.length
+    ? new Map((await MasteryOutcome.find({ code: { $in: parentCodes } }).select("code labelBn homeTipBn").lean()).map((p) => [p.code, p]))
+    : new Map();
+  for (const r of rows) {
+    const p = r.level === "SUB" && r.parentCode ? parents.get(r.parentCode) : null;
+    // A sub whose parent is missing is never shown by its own label.
+    if (r.level === "SUB" && !p) continue;
+    const o = p ?? r;
+    out.set(r.code, { code: o.code, labelBn: o.labelBn, homeTipBn: o.homeTipBn ?? null });
+  }
+  return out;
+}
 /** The newest N weeks; the app asks for more with LoadOlder (D-#761 — paged, never silently capped). */
 export const CHILD_ASSIGNMENTS_MAX = 200; // = MAX_PAGE_SIZE (lib/paging)
 
@@ -46,7 +76,9 @@ export interface ChildAssignmentView {
   result: {
     earned: number;
     available: number;
-    /** Per outcome, plain label; `again` = the teacher asked for it to be redone. */
+    /** The level word the rows are named at (the objective word, D-#923). */
+    levelWordBn: string;
+    /** Per OBJECTIVE (D-#925), plain label; `again` = the teacher asked for it to be redone. */
     rows: { labelBn: string; earned: number; available: number; again: boolean }[];
     /** The teacher's note on the child's work, if any. */
     note: string | null;
@@ -69,6 +101,7 @@ export async function childMasteryAssignments(studentId: string, limit: number |
     .lean();
 
   const out: ChildAssignmentView[] = [];
+  const words = await masteryLevelLabels();
   for (const a of assignments) {
     if (!(await isMasteryEnabled(a.academicYearId, a.classToken, a.subject))) continue;
     const sheet = bySheet.get(String(a._id))!;
@@ -85,21 +118,22 @@ export async function childMasteryAssignments(studentId: string, limit: number |
           .lean(),
         MasteryResult.findOne({ paperId: a.paperId, studentId: oid(studentId) }).select("note status").lean(),
       ]);
-      const labels = new Map(
-        (await MasteryOutcome.find({ code: { $in: [...new Set(rows.map((r) => r.loCode))] } }).select("code labelBn").lean()).map((o) => [o.code, o.labelBn]),
-      );
+      const grain = await objectiveGrain(rows.map((r) => r.loCode));
       const per = new Map<string, { labelBn: string; earned: number; available: number; again: boolean }>();
       for (const r of rows) {
-        const x = per.get(r.loCode) ?? { labelBn: labels.get(r.loCode) ?? "", earned: 0, available: 0, again: false };
+        const obj = grain.get(r.loCode);
+        const key = obj?.code ?? `?${r.loCode}`;
+        const x = per.get(key) ?? { labelBn: obj?.labelBn ?? "", earned: 0, available: 0, again: false };
         x.earned += r.earned;
         x.available += r.available;
         x.again = x.again || Boolean(r.rework);
-        per.set(r.loCode, x);
+        per.set(key, x);
       }
       const list = [...per.values()];
       result = {
         earned: list.reduce((s, x) => s + x.earned, 0),
         available: list.reduce((s, x) => s + x.available, 0),
+        levelWordBn: words.objectiveBn,
         rows: list,
         note: res?.note ?? null,
         notMarked: rows.length === 0,
@@ -125,6 +159,8 @@ export async function childMasteryAssignments(studentId: string, limit: number |
 
 export interface ChildProgressSubject {
   subject: string;
+  /** The level the counts and lists are at — the objective word from পলিসি (D-#923 / #925). */
+  levelWordBn: string;
   /** Plain buckets (D-#783): মনোযোগ দরকার / উন্নতি হচ্ছে / ভালো পারে / এখনো জানা যায়নি. */
   counts: { attention: number; improving: number; good: number; unknown: number };
   attention: { labelBn: string; homeTipBn: string | null }[];
@@ -142,10 +178,11 @@ export async function childMasteryProgress(studentId: string): Promise<ChildProg
   const subjects = ((await MasteryOutcome.distinct("subject", { classToken: ctx.classToken, status: "LOCKED" })) as MasterySubject[]).sort();
   const sid = oid(studentId);
   const out: ChildProgressSubject[] = [];
+  const words = await masteryLevelLabels();
   for (const subject of subjects) {
     if (!(await isMasteryEnabled(ctx.academicYearId, ctx.classToken, subject))) continue;
-    const [outcomes, rows, policy, actions, sheets] = await Promise.all([
-      lockedOutcomes(ctx.classToken, subject),
+    const [t, rows, policy, actions, sheets] = await Promise.all([
+      loadTree(ctx.classToken, subject),
       liveSectionRows(ctx.sectionId, subject),
       diagnosisPolicy(ctx.classToken, subject),
       MasteryAction.find({ sectionId: ctx.sectionId, subject, "plan.studentIds": sid, status: { $nin: ["PROPOSED", "REJECTED"] } })
@@ -157,8 +194,11 @@ export async function childMasteryProgress(studentId: string): Promise<ChildProg
     const counts = { attention: 0, improving: 0, good: 0, unknown: 0 };
     const attention: ChildProgressSubject["attention"] = [];
     const improving: ChildProgressSubject["improving"] = [];
-    for (const o of outcomes) {
-      const s = sec.states.get(o.code)?.get(studentId)?.state;
+    // Objective grain (D-#925): a tagged objective reads its own state, an untagged one rolls up
+    // from its sub-objectives. A flat catalogue: every row is a tagged objective (unchanged).
+    const stateOf = (code: string): MasteryState => sec.states.get(code)?.get(studentId)?.state ?? "NOT_ASSESSED";
+    for (const o of t.tree.objectives) {
+      const s = objectiveState(o, stateOf);
       if (s === "WEAK") {
         counts.attention++;
         attention.push({ labelBn: o.labelBn, homeTipBn: o.homeTipBn ?? null });
@@ -168,7 +208,7 @@ export async function childMasteryProgress(studentId: string): Promise<ChildProg
       } else if (s === "MASTERED" || s === "REVISION_DUE") counts.good++;
       else if (s === "INSUFFICIENT") counts.unknown++;
     }
-    const labels = new Map(outcomes.map((o) => [o.code, o.labelBn]));
+    const grain = await objectiveGrain(actions.map((a) => a.loCode));
     const schoolDid: ChildProgressSubject["schoolDid"] = [];
     for (const a of actions) {
       let retestPct: number | null = null;
@@ -181,7 +221,7 @@ export async function childMasteryProgress(studentId: string): Promise<ChildProg
       schoolDid.push({
         date: (a.plan?.date ?? a.createdAt).toISOString().slice(0, 10),
         kind: a.kind,
-        labelBn: labels.get(a.loCode) ?? "",
+        labelBn: grain.get(a.loCode)?.labelBn ?? "",
         status: a.status,
         present: att ? att.present : null,
         retestPct,
@@ -190,7 +230,7 @@ export async function childMasteryProgress(studentId: string): Promise<ChildProg
     const assignmentsSent = sheets.length
       ? await MasteryAssignment.countDocuments({ _id: { $in: sheets.map((s) => s.assignmentId) }, subject, status: "SENT" })
       : 0;
-    out.push({ subject, counts, attention, improving, schoolDid, assignmentsSent });
+    out.push({ subject, levelWordBn: words.objectiveBn, counts, attention, improving, schoolDid, assignmentsSent });
   }
   return out;
 }
