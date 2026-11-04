@@ -110,6 +110,7 @@ auto-deploys (`.github/workflows`, `scripts/deploy.sh`). So:
   prd-ct-scripts.md   ← Class-test scripts: teacher hand-in → office receive → scan/tag per student → guardian view → return, slices CS-1..3 (D-#715–#719)
   prd-student-progress.md ← Office/Principal progress board (student × subject) + two-part improvement actions ticked daily by teacher/guardian, leave hand-over, 11:00 check, SP-1..4 (D-#734–#738)
   prd-mastery.md      ← learning-outcome mastery tracker (add-on): LO catalogue → exceptions-only per-question entry → diagnosis → teacher-laid-out tailored assignment → 50% trigger extra class + re-test → guardian, M-0..M-6 (D-#775–#785); draft catalogues in docs/mastery/lo-catalogue/
+  prd-objective-tree.md ← mastery catalogue v2: Claude-drafted domain → objective → sub-objective tree, in-app review (Mahzabin) + lock, OT-0..OT-6 (D-#921–#928); content in docs/mastery/objective-tree/
   prd-permission-matrix.md ← every feature × every action as `feature:action`, editable per role (Teacher/Office) + per person; reach (view_all/edit_all), legacy expansion, the new-feature rule (D-#790–#801)
   permission-catalogue/    ← THE registry: every feature + action + defaults (README), per-area resolver/route/app-gate checklists, legacy-expansion, findings
   prd-meeting-comments.md ← parents'-meeting comment chain (subject → class teacher → Principal/Office, Strengths + Concerns) + meeting-day brief & print, MC-1..4 (D-#752–#756)
