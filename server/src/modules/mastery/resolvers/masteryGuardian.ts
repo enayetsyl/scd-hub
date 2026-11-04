@@ -36,6 +36,7 @@ ResultRef.implement({
   fields: (t) => ({
     earned: t.exposeFloat("earned"),
     available: t.exposeFloat("available"),
+    levelWordBn: t.exposeString("levelWordBn"),
     rows: t.field({ type: [ResultRowRef], resolve: (r) => r.rows }),
     note: t.string({ nullable: true, resolve: (r) => r.note }),
     notMarked: t.exposeBoolean("notMarked"),
@@ -114,6 +115,7 @@ ProgressRef.implement({
   description: "One subject of the child's mastery in plain words (D-#783): counts, topics needing attention with home tips, and what the school did.",
   fields: (t) => ({
     subject: t.exposeString("subject"),
+    levelWordBn: t.exposeString("levelWordBn"),
     counts: t.field({ type: CountsRef, resolve: (p) => p.counts }),
     attention: t.field({ type: [AttentionRef], resolve: (p) => p.attention }),
     improving: t.field({ type: [ImprovingRef], resolve: (p) => p.improving }),
