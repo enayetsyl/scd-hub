@@ -35,8 +35,13 @@ export function loCodeMongoFilter(codes: string[]): Record<string, unknown> {
  * simply waits until its LO is locked.
  */
 export async function masteryImportWarnings(envelope: Record<string, unknown>): Promise<string[]> {
-  if (envelope.doc_type !== "question") return [];
-  const codes = loCodesOf(envelope.tags as Record<string, unknown>, envelope.payload as Record<string, unknown>);
+  // A session plan carries the codes it teaches in tags.lo_codes (prd-objective-tree §8.3,
+  // many allowed); the same warning applies — never a refusal.
+  const isPlan = envelope.doc_type === "session_plan";
+  if (envelope.doc_type !== "question" && !isPlan) return [];
+  const codes = isPlan
+    ? loCodesOf(envelope.tags as Record<string, unknown>, null)
+    : loCodesOf(envelope.tags as Record<string, unknown>, envelope.payload as Record<string, unknown>);
   if (codes.length === 0) return [];
   const rows = await MasteryOutcome.find({ code: { $in: codes } }).select("code status").lean();
   const status = new Map(rows.map((r) => [r.code, r.status]));
