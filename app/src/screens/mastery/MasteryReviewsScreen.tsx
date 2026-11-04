@@ -14,7 +14,6 @@ import { MASTERY_REVIEW_ROUNDS_QUERY, type ReviewRoundItem } from "../../graphql
 import { Screen, Card, Body, Muted, Badge, Loader, EmptyState, Notice } from "../../components/ui";
 import { STR, bnNum, hwSubjectLabel, masteryClassLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
-import { useMasteryLevelLabels } from "../../lib/useMasteryLevelLabels";
 import { space } from "../../theme";
 import { fill } from "./masteryStateUi";
 import { roundStateLabel, roundStateTone } from "./masteryReviewUi";
@@ -23,10 +22,6 @@ import type { MasteryStackParamList } from "../../navigation/types";
 type Props = NativeStackScreenProps<MasteryStackParamList, "MasteryReviews">;
 
 export default function MasteryReviewsScreen({ navigation }: Props): React.ReactElement {
-  const levels = useMasteryLevelLabels();
-  React.useLayoutEffect(() => {
-    navigation.setOptions({ title: fill(STR.msRvTitleTpl, { objective: levels.objective }) });
-  }, [navigation, levels.objective]);
   const [{ data, fetching, error }] = useQuery({ query: MASTERY_REVIEW_ROUNDS_QUERY, requestPolicy: "cache-and-network" });
   const rounds = ((data?.masteryReviewRounds ?? []) as ReviewRoundItem[])
     .slice()
