@@ -30,6 +30,8 @@ export const taskDedupeKeys = {
   /** One digest row per recipient per day — never one per task (D-#554's lesson). */
   dueDigest: (dateKey: string, recipientId: string) => `TASKDG:${dateKey}:${recipientId}`,
   overdue: (dateKey: string, recipientId: string) => `TASKO:${dateKey}:${recipientId}`,
+  /** D-#966: one "tasks you gave" row per assigner per run (08:00 = AM, 17:00 = PM). */
+  givenSummary: (dateKey: string, part: "AM" | "PM", recipientId: string) => `TASKGS:${dateKey}:${part}:${recipientId}`,
 } as const;
 
 const trimTitle = (t: string): string => (t.length > 60 ? `${t.slice(0, 57)}…` : t);
@@ -124,6 +126,47 @@ export async function emitTaskOverdue(dateKey: string, lines: OverdueLine[]): Pr
         bodyBn: `${line.titles.length}টি কাজ এখনও শেষ হয়নি: ${shown}${more}`,
         refs: { date: dateKey },
         dedupeKey: taskDedupeKeys.overdue(dateKey, line.recipientId),
+      });
+      if (res.created) n += 1;
+    });
+  }
+  return n;
+}
+
+export interface GivenSummaryLine {
+  /** The assigner. */
+  recipientId: string;
+  dueToday: number;
+  overdue: number;
+  doneToday: number;
+  open: number;
+  blocked: number;
+}
+
+/** D-#966: the body of one "tasks you gave" summary. Pure — tested directly. */
+export function givenSummaryBody(line: GivenSummaryLine, part: "AM" | "PM"): string {
+  if (part === "AM") {
+    const parts = [`আজকের ${line.dueToday}টি বাকি`];
+    if (line.overdue > 0) parts.push(`${line.overdue}টি বকেয়া`);
+    return `আপনার দেওয়া কাজ: ${parts.join(", ")}।`;
+  }
+  const parts = [`${line.doneToday}টি শেষ`, `${line.open}টি বাকি`];
+  if (line.blocked > 0) parts.push(`${line.blocked}টি আটকে`);
+  return `আজ আপনার দেওয়া কাজ: ${parts.join(", ")}।`;
+}
+
+/** 08:00 / 17:00 on a school day: one summary per assigner (D-#966). */
+export async function emitTaskGivenSummary(dateKey: string, part: "AM" | "PM", lines: GivenSummaryLine[]): Promise<number> {
+  let n = 0;
+  for (const line of lines) {
+    await bestEffort("task given summary", async () => {
+      const res = await emit({
+        recipientUserId: line.recipientId,
+        kind: "TASK_GIVEN_SUMMARY",
+        titleBn: "দেওয়া কাজের হিসাব",
+        bodyBn: givenSummaryBody(line, part),
+        refs: { date: dateKey },
+        dedupeKey: taskDedupeKeys.givenSummary(dateKey, part, line.recipientId),
       });
       if (res.created) n += 1;
     });
