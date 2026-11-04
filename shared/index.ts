@@ -4,3 +4,4 @@ export * from "./bankDetails";
 export * from "./adviceLetter";
 export * from "./quran";
 export * from "./staffMistakes";
+export * from "./objectiveTree";

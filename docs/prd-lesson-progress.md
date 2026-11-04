@@ -11,6 +11,10 @@ Quran-group membership is not dated, then falls back to the child's current unit
 view remain for the owner.
 **Decision block:** D-#820–#826, reserved against `origin/dev@009ec1fa` (2026-10-22, max D-#813; open PR #1138
 holds D-#815/#816, so D-#814–#819 are left free).
+**School switch (D-#952, 2026-11-04):** the class note asks the LP-1 question only while "ক্লাস নোটে পাঠ পরিকল্পনার প্রশ্ন"
+is on (`LessonProgressConfig` SINGLETON, default OFF — a missing row is off). Off: `lessonPlanForSlot.applies` is false and any
+answer sent is ignored (no `LessonDelivery`); existing marks stay readable and LP-2/LP-3 views simply get no new ones.
+Switched by `routine:settings` from a card on the পাঠ পরিকল্পনার অগ্রগতি screen. Owner: no daily change this year; on in 2027.
 
 **Owner ask (2026-10-22):** "after finishing each class teacher should mark which class he/she take so that we
 the office can monitor progress with plan take corrective action also it should connected to student account so if

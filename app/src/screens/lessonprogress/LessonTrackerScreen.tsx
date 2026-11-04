@@ -11,6 +11,7 @@ import { useQuery } from "urql";
 import { LESSON_SECTION_TRACKER_QUERY, type LessonTrackerSessionT } from "../../graphql/operations";
 import { Screen, Card, Body, Muted, Badge, Loader, ErrorBanner, EmptyState } from "../../components/ui";
 import { Pager } from "../../components/Pager";
+import { SectionObjectivesCard } from "../../components/SectionObjectivesCard";
 import { STR, bnNum } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { usePagedRows } from "../../lib/paging";
@@ -119,6 +120,8 @@ export default function LessonTrackerScreen({ route, navigation }: Props): React
           </Card>
         ))}
         <Pager {...pager} />
+        {/* OT-5 (prd-objective-tree §8.3): per objective row — taught on / not yet, absent that day. */}
+        <SectionObjectivesCard sectionId={sectionId} subject={subject} />
       </ScrollView>
     </Screen>
   );

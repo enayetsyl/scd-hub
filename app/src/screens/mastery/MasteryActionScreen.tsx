@@ -7,6 +7,8 @@
  *    enter its marks on the usual entry screen;
  *  - CHECKING: before / now per student, the app's suggested outcome → close;
  *  - always: the path of the action (events) and each student's state now.
+ * OT-3 (docs/prd-objective-tree.md §8.1): a sub-objective's action names its parent objective and
+ * lists the objective's weak children, so the extra class is planned at objective size.
  */
 import React, { useEffect, useState } from "react";
 import { View } from "react-native";
@@ -23,9 +25,10 @@ import {
 import { Screen, Card, Body, Muted, Badge, Button, Chip, ChipRow, Field, Loader, Notice, H2 } from "../../components/ui";
 import { STR, bnNum, hwSubjectLabel, isoDateLabel, masteryActionLabel, masterySourceLabel, masteryStateLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { useMasteryLevelLabels } from "../../lib/useMasteryLevelLabels";
 import { space } from "../../theme";
 import type { MasteryStackParamList } from "../../navigation/types";
-import { fill, stateTone } from "./masteryStateUi";
+import { fill, levelFill, stateTone } from "./masteryStateUi";
 
 type Props = NativeStackScreenProps<MasteryStackParamList, "MasteryAction">;
 
@@ -34,6 +37,7 @@ const ascii = (s: string) => s.replace(/[০-৯]/g, (c) => String("০১২৩
 
 export default function MasteryActionScreen({ navigation, route }: Props): React.ReactElement {
   const { actionId } = route.params;
+  const lv = useMasteryLevelLabels();
   const [{ data, fetching, error }, refetch] = useQuery({ query: MASTERY_ACTION_QUERY, variables: { actionId }, requestPolicy: "cache-and-network" });
   const a = data?.masteryAction as MasteryActionData | undefined;
   const [msg, setMsg] = useState<string | null>(null);
@@ -114,10 +118,16 @@ export default function MasteryActionScreen({ navigation, route }: Props): React
   };
 
   const inPlan = a.students.filter((s) => s.inPlan);
+  const weakChildren = a.weakChildren ?? [];
   const showClose = a.canWork || a.canApprove;
 
   return (
     <Screen scroll>
+      {a.isSub ? (
+        <Muted>
+          {lv.objective}: {a.objectiveLabelBn}
+        </Muted>
+      ) : null}
       <H2>{a.labelBn}</H2>
       <Muted>
         {a.className} {a.sectionName} · {hwSubjectLabel(a.subject)} · {a.loCode}
@@ -128,6 +138,22 @@ export default function MasteryActionScreen({ navigation, route }: Props): React
         {a.status !== "PROPOSED" ? <Badge text={masteryActionLabel(a.kind)} tone="muted" /> : null}
       </View>
       {msg ? <Notice message={msg} tone="danger" /> : null}
+
+      {a.isSub ? (
+        <Card>
+          <Body style={{ fontWeight: "700" }}>
+            {lv.objective}: {a.objectiveLabelBn}
+          </Body>
+          <Muted>{levelFill(STR.msWeakChildren, lv)}</Muted>
+          {weakChildren.map((c) => (
+            <Body key={c.code}>
+              • {c.labelBn} — {fill(STR.msChildWeak, { weak: bnNum(c.weak), of: bnNum(c.verdicts), pct: bnNum(c.weakPct ?? 0) })}
+              {c.triggered ? " ⚑" : ""}
+            </Body>
+          ))}
+          <Muted>{levelFill(STR.msPlanAtObjective, lv)}</Muted>
+        </Card>
+      ) : null}
 
       {/* LP-3 (D-#825): did the weak students miss the class where this chapter was taught?
           Missed-the-lesson points to catch-up rather than re-teach — information, not a rule. */}

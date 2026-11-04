@@ -113,6 +113,7 @@ export const AUDIT_KIND_LABELS: Record<AuditEventKind, AuditKindLabel> = {
   // --- Routine --------------------------------------------------------------
   ROUTINE_SLOT_REVISED: { bn: "রুটিনের পিরিয়ড সংশোধন করেছেন", en: "Revised a routine slot", group: "ROUTINE" },
   ROUTINE_SLOT_RETIRED: { bn: "রুটিনের পিরিয়ড বাদ দিয়েছেন", en: "Retired a routine slot", group: "ROUTINE" },
+  LESSON_PLAN_QUESTION_SET: { bn: "ক্লাস নোটে পাঠ পরিকল্পনার প্রশ্ন চালু/বন্ধ করেছেন", en: "Switched the class note's lesson-plan question", group: "ROUTINE" },
 
   // --- Homework -------------------------------------------------------------
   TRACKER_WRITE: { bn: "ট্র্যাকারে লিখেছেন", en: "Tracker write", group: "HOMEWORK" },
@@ -425,6 +426,10 @@ export const AUDIT_KIND_LABELS: Record<AuditEventKind, AuditKindLabel> = {
   MASTERY_EXTRA_CLASS_HELD: { bn: "অতিরিক্ত ক্লাস নিয়েছেন", en: "Held an extra class", group: "MASTERY" },
   MASTERY_RETEST_BUILT: { bn: "রি-টেস্ট তৈরি করেছেন", en: "Built a re-test", group: "MASTERY" },
   MASTERY_ACTION_CLOSED: { bn: "পদক্ষেপ বন্ধ করেছেন", en: "Closed an action", group: "MASTERY" },
+  MASTERY_REVIEW_EVENT: { bn: "তালিকা পর্যালোচনায় কাজ করেছেন", en: "Acted on an objective-list review", group: "MASTERY" },
+  MASTERY_REVIEW_ASSIGNED: { bn: "তালিকা পর্যালোচনা বরাদ্দ করেছেন", en: "Assigned an objective-list review", group: "MASTERY" },
+  MASTERY_REVIEW_SUBMITTED: { bn: "তালিকা পর্যালোচনা জমা দিয়েছেন", en: "Submitted an objective-list review", group: "MASTERY" },
+  MASTERY_LEVEL_LABELS_SAVED: { bn: "স্তরের নাম বদলেছেন", en: "Changed the level names", group: "MASTERY" },
   SCHOLARSHIP_PAPER_DECLARED: { bn: "অনুশীলন প্রশ্ন ঘোষণা করেছেন", en: "Declared a practice paper", group: "SCHOLARSHIP" },
   SCHOLARSHIP_PAPER_UPDATED: { bn: "অনুশীলন প্রশ্ন সম্পাদনা করেছেন", en: "Edited a practice paper", group: "SCHOLARSHIP" },
   SCHOLARSHIP_SCORES_ENTERED: { bn: "অনুশীলনের নম্বর লিখেছেন", en: "Entered practice marks", group: "SCHOLARSHIP" },

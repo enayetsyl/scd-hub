@@ -549,6 +549,13 @@ export type MasteryStackParamList = {
   MasteryLeader: undefined;
   MasteryActions: { sectionId: string; subject: string };
   MasteryAction: { actionId: string };
+  // Objective-tree review (OT-2, prd-objective-tree §7). Never first: MasteryHome stays the initial route.
+  MasteryReviews: undefined;
+  MasteryReview: { reviewId: string };
+  MasteryReviewRow: { reviewId: string; code: string };
+  MasteryReviewLock: { reviewId: string };
+  /** OT-4: question-bank coverage of one class × subject (params optional — the screen offers the pairs). */
+  MasteryBankCoverage: { classToken?: string; subject?: string } | undefined;
 };
 export type TeachingNotesStackParamList = {
   TeachingNotesHome: undefined;
@@ -705,6 +712,8 @@ export type ReportsStackParamList = {
   DailySnapshot: undefined;
   GuardianEngagement: undefined;
   MarksDrivers: undefined;
+  /** OT-4 (prd-objective-tree §8.2): question-bank coverage — the screen picks the class × subject. */
+  MasteryBankCoverage: { classToken?: string; subject?: string } | undefined;
 };
 
 /** Pop-up notices (D-#852): the sender's list (first, no params), composer, report. */

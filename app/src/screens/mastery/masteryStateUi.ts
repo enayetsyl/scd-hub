@@ -40,3 +40,16 @@ export const shortLo = (code: string): string => code.replace(/^LO-[A-Z0-9]+-[A-
 
 export const fill = (tpl: string, vars: Record<string, string | number>): string =>
   Object.entries(vars).reduce((s, [k, v]) => s.split(`{${k}}`).join(String(v)), tpl);
+
+/**
+ * OT-3 (D-#923): fill a string's {domain} / {objective} / {sub} with the configured level words
+ * (from useMasteryLevelLabels) plus any other vars. No mastery string hard-codes a level word.
+ */
+export const levelFill = (
+  tpl: string,
+  words: { domain: string; objective: string; sub: string },
+  vars: Record<string, string | number> = {},
+): string => fill(tpl, { domain: words.domain, objective: words.objective, sub: words.sub, ...vars });
+
+/** A state badge's tick for the earlier-step line ("আয়ত্তে ✓"). */
+export const isGoodState = (state: string | null | undefined): boolean => state === "MASTERED" || state === "REVISION_DUE";
