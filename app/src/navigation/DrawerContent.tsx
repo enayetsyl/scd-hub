@@ -179,6 +179,8 @@ const STAFF_NAV: NavSection[] = [
       },
       { route: "MasteryTab", labelKey: "msCatalogueHome", icon: "📚", screen: "MasteryHome", perms: ["mastery:view"] },
       { route: "MasteryTab", labelKey: "msImport", icon: "📥", screen: "MasteryImport", perms: ["mastery:settings"] },
+      // OT-2: the objective-list review — the assigned reviewer (per-person grant) and the Principal.
+      { route: "MasteryTab", labelKey: "msRvNav", icon: "📝", screen: "MasteryReviews", perms: ["mastery:review", "mastery:settings"] },
       { route: "MasteryTab", labelKey: "msTags", icon: "🏷️", screen: "MasteryTags", perms: ["mastery:view"] },
       { route: "MasteryTab", labelKey: "msPolicy", icon: "⚙️", screen: "MasteryPolicy", perms: ["mastery:view"] },
     ],
