@@ -1,5 +1,6 @@
 # STATUS
 
+- 2026-11-04: **LIVE — D-#918 / D-#919 / D-#920** (dev #1290/#1291/#1292 → promoted #1294, prod `77f25116`, deploy green; **OTA `e72841cc-e3db-42a7-ae85-f604d699ebbb`** android runtime 1.1.0, bundle has the prod URL and no localhost, source maps uploaded). D-#920 defaults owner-approved (D-#935).
 - 2026-11-04: **CHANGED — salary sheet laid out for the voucher (D-#929)** (branch `feat/salary-sheet-expense-cols`, worktree `C:/w/salexp`). Owner: the accounting app's cash balance did not match because unpaid leave + lateness were booked as cash paid. Sheet columns now: Gross | (−) unpaid leave, lateness | (+) additions | **Salary expense** | (−) advance, statutory, other | Net pay. Server only (PDF route), no OTA.
   - **Verified:** server tsc 0; salarySheetAndSent 8/8 (+1: column order, expense = 8,000 − 1,524 − 1,143 + 200, expense − adjustments = net, subtotal linear); sample PDF rendered and checked by eye.
   - **Now / next:** PR → dev → promote → then download October's sheet from the run screen (the sheet is built live from the locked payslips). Owner-unconfirmed default: a manual "other" deduction counts as an adjustment (a recovery), not as a not-paid deduction.
