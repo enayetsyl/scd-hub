@@ -1,7 +1,7 @@
 /**
  * Lesson-plan progress LP-1 resolvers (D-#820–#822). Marking rides the class-note mutations
  * (`publishClassNote` / `updateClassNote` take `lessonPlan`, see routineTriggers.ts); this file
- * holds the card's read and the shared types.
+ * holds the card's read, the shared types and the D-#952 school switch (default OFF).
  */
 import { callerHasPermission } from "@scd/shared";
 import { builder } from "../../../schema";
@@ -16,7 +16,13 @@ import {
   type LessonPlanForSlot,
   type LessonPlanSessionView,
 } from "../services/LessonDeliveryService";
+import {
+  lessonPlanQuestionSetting,
+  setLessonPlanQuestionOn,
+  type LessonPlanQuestionSetting,
+} from "../services/LessonPlanQuestionSwitch";
 import { sectionObjectiveRows } from "../services/ObjectiveLessonService";
+import { writeAudit } from "../../platform/services/AuditService";
 import { SectionObjectiveRowRef } from "./lessonObjectives";
 
 const LessonPlanSessionRef = builder.objectRef<LessonPlanSessionView>("LessonPlanSession").implement({
@@ -115,6 +121,57 @@ async function assertMayMarkSlot(ctx: AppContext, slotId: string, date: Date): P
     return (await RoutineSlot.findById(slotId).lean()) as unknown as IRoutineSlot;
   }
 }
+
+// --- D-#952: the school switch "ক্লাস নোটে পাঠ পরিকল্পনার প্রশ্ন" (default OFF) ----------------
+
+const LessonPlanQuestionSettingRef = builder.objectRef<LessonPlanQuestionSetting>("LessonPlanQuestionSetting").implement({
+  fields: (t) => ({
+    on: t.exposeBoolean("on"),
+    updatedAt: t.string({ nullable: true, resolve: (s) => (s.updatedAt ? new Date(s.updatedAt).toISOString() : null) }),
+  }),
+});
+
+builder.queryField("lessonPlanQuestionSetting", (t) =>
+  t.field({
+    type: LessonPlanQuestionSettingRef,
+    description:
+      "D-#952: whether the class note asks which session plan was taught. OFF by default (a missing row is OFF). " +
+      "Readable by class-note writers (the archive hides the session correction while off), lesson-progress viewers " +
+      "and whoever may switch it.",
+    authScopes: {
+      hasAnyPermission: [
+        "class_note:create", "class_note:edit", "class_note:edit_all",
+        "lesson_progress:view", "lesson_progress:view_all", "reports:lesson_progress", "routine:settings",
+      ],
+    },
+    resolve: () => lessonPlanQuestionSetting(),
+  }),
+);
+
+builder.mutationField("setLessonPlanQuestionOn", (t) =>
+  t.field({
+    type: LessonPlanQuestionSettingRef,
+    description:
+      "D-#952: switch the class note's lesson-plan question on or off for the whole school (routine:settings — " +
+      "Principal and Office by default). Off: no class note asks or records a session; existing marks stay readable.",
+    authScopes: { hasPermission: "routine:settings" },
+    args: { on: t.arg.boolean({ required: true }) },
+    resolve: async (_r, args, ctx) => {
+      if (!ctx.auth || !callerHasPermission(ctx.auth, "routine:settings")) throw new ForbiddenError();
+      const before = await lessonPlanQuestionSetting();
+      const after = await setLessonPlanQuestionOn(args.on, ctx.auth.userId);
+      if (before.on !== after.on) {
+        await writeAudit({
+          eventKind: "LESSON_PLAN_QUESTION_SET",
+          actorId: ctx.auth.userId,
+          targetKind: "LessonProgressConfig",
+          meta: { on: after.on },
+        });
+      }
+      return after;
+    },
+  }),
+);
 
 builder.queryField("lessonPlanForSlot", (t) =>
   t.field({

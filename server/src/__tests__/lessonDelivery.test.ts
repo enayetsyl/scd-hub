@@ -12,6 +12,7 @@
  */
 import mongoose, { Types } from "mongoose";
 import { MongoMemoryServer } from "mongodb-memory-server";
+import { LessonProgressConfig } from "../modules/lesson-progress/models/LessonProgressConfig";
 
 jest.mock("../modules/notifications/services/emitters", () => ({
   emitClassNotePublished: jest.fn(async () => undefined),
@@ -80,6 +81,8 @@ beforeAll(async () => {
   mongo = await MongoMemoryServer.create();
   await mongoose.connect(mongo.getUri());
   await Promise.all(Object.values(mongoose.models).map((m) => m.init()));
+  // D-#952: the class note's lesson-plan question is OFF by default — these suites test it ON.
+  await LessonProgressConfig.create({ classNoteQuestionOn: true });
   const [year] = await AcademicYear.create([{ label: "2027", startDate: new Date("2027-01-01"), endDate: new Date("2027-12-31") }]);
   const [cls] = await Class.create([{ level: 3, nameBn: "তৃতীয়", academicYearId: year._id }]);
   classId = cls._id as Types.ObjectId;

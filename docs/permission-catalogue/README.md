@@ -496,7 +496,7 @@ Learning-outcome mastery tracker (`docs/prd-mastery.md`, D-#775–#787). Registe
 | `routine:view_all` | Board, master grid, all loads | আজকের ক্লাস বোর্ড, সম্পূর্ণ গ্রিড ও সব শিক্ষকের লোড দেখা | Live board, master grid, every teacher's load | — | on | | routine:manage; isAdminStaff (load) |
 | `routine:edit` | Build the routine | রুটিন তৈরি ও পরিবর্তন | Create/update/retire slots; reassign a subject's routine teacher | — | on | | routine:manage |
 | `routine:edit_calendar` | Holidays & windows | ছুটির দিন ও সময়সূচি ঠিক করা | Holiday exceptions; schedule windows | — | on | | routine:manage |
-| `routine:settings` | Rooms, periods, groups, bell | রুম, পিরিয়ড, গ্রুপ ও ঘণ্টার দায়িত্ব ঠিক করা | Rooms, period grids, subject groups and members, bell duty | — | on | | routine:manage |
+| `routine:settings` | Rooms, periods, groups, bell | রুম, পিরিয়ড, গ্রুপ ও ঘণ্টার দায়িত্ব ঠিক করা | Rooms, period grids, subject groups and members, bell duty; the class note lesson-plan question switch (D-#952) | — | on | | routine:manage |
 
 #### `cover` — বদলি ক্লাস
 | permission | EN | BN | what it allows | T | O | flags | replaces |
