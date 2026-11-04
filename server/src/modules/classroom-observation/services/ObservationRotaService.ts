@@ -34,6 +34,7 @@ import { resolveDayType } from "../../routine/calendar";
 import { dateKeyOf } from "../../attendance/dates";
 import { writeAudit } from "../../platform/services/AuditService";
 import { ObservationRota, type IObservationRota } from "../models/ObservationRota";
+import { geminiKey, geminiModel } from "../../platform/services/AiSettingService";
 import {
   candidatesForDate,
   datesInRange,
@@ -257,9 +258,10 @@ export class GeminiRotaProvider implements RotaProvider {
 
 /** Null when no key is configured — the caller refuses politely rather than crashing. */
 export function rotaProviderFromEnv(): RotaProvider | null {
-  const key = process.env.GEMINI_API_KEY;
+  // D-#967: the key/model the Principal saved in the app, else .env.
+  const key = geminiKey();
   if (!key) return null;
-  return new GeminiRotaProvider(key, process.env.GEMINI_MODEL || undefined);
+  return new GeminiRotaProvider(key, geminiModel());
 }
 
 /** The response shape the model is CONSTRAINED to — ids only, plus its restatement. */

@@ -105,6 +105,7 @@ All are `authenticated` today. The real gate sits in the services under `server/
 | workBoard.ts:591 | releaseWorkCard | authenticated; the puller OR tasks:assign (OfficeCoverService.ts:147) | `work_board:use` (puller own-row, stays) OR `work_board:assign` |
 | workBoard.ts:600 | createTaskTemplate | authenticated; self OK; another person needs tasks:assign (TaskTemplateService.ts:74) | `work_board:use` (SELF) + in-service `work_board:assign` for another person |
 | workBoard.ts:620 | setTaskTemplateActive | authenticated; creator/assignee OR tasks:assign (TaskTemplateService.ts:127) | `work_board:use` (creator/assignee own-row, stays) OR `work_board:assign` |
+| workBoard.ts (end) | parseVoiceTasks | (new, D-#960) — writes nothing; returns draft cards | `work_board:voice`; assignee list narrowed to the caller without `work_board:assign` |
 
 ### `server/src/modules/printing/resolvers/printRequest.ts`
 | file:line | resolver | today's gate (authScopes + extra) | → new gate (permission, plus extra gates that stay) |
