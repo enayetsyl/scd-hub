@@ -420,6 +420,8 @@ export const AUDIT_KIND_LABELS: Record<AuditEventKind, AuditKindLabel> = {
   MASTERY_RETEST_BUILT: { bn: "রি-টেস্ট তৈরি করেছেন", en: "Built a re-test", group: "MASTERY" },
   MASTERY_ACTION_CLOSED: { bn: "পদক্ষেপ বন্ধ করেছেন", en: "Closed an action", group: "MASTERY" },
   MASTERY_REVIEW_EVENT: { bn: "তালিকা পর্যালোচনায় কাজ করেছেন", en: "Acted on an objective-list review", group: "MASTERY" },
+  MASTERY_REVIEW_ASSIGNED: { bn: "তালিকা পর্যালোচনা বরাদ্দ করেছেন", en: "Assigned an objective-list review", group: "MASTERY" },
+  MASTERY_REVIEW_SUBMITTED: { bn: "তালিকা পর্যালোচনা জমা দিয়েছেন", en: "Submitted an objective-list review", group: "MASTERY" },
   MASTERY_LEVEL_LABELS_SAVED: { bn: "স্তরের নাম বদলেছেন", en: "Changed the level names", group: "MASTERY" },
   SCHOLARSHIP_PAPER_DECLARED: { bn: "অনুশীলন প্রশ্ন ঘোষণা করেছেন", en: "Declared a practice paper", group: "SCHOLARSHIP" },
   SCHOLARSHIP_PAPER_UPDATED: { bn: "অনুশীলন প্রশ্ন সম্পাদনা করেছেন", en: "Edited a practice paper", group: "SCHOLARSHIP" },

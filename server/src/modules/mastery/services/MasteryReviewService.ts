@@ -39,11 +39,11 @@ export interface ReviewEventInput {
  * Append review events (one per input, in order) and mirror them to the audit log. The ONLY
  * writer of MasteryReviewEvent — OT-2's review writes go through here too.
  */
-export async function appendReviewEvents(events: ReviewEventInput[], actor: ReviewActor, at = new Date()): Promise<void> {
-  if (events.length === 0) return;
+export async function appendReviewEvents(events: ReviewEventInput[], actor: ReviewActor, at = new Date()): Promise<Types.ObjectId[]> {
+  if (events.length === 0) return [];
   const by = oid(actor.userId);
   // Strictly increasing `at` keeps the export order stable even within one millisecond.
-  const rows = events.map((e, i) => ({ ...e, by, at: new Date(at.getTime() + i) }));
+  const rows = events.map((e, i) => ({ ...e, _id: new Types.ObjectId(), by, at: new Date(at.getTime() + i) }));
   await MasteryReviewEvent.insertMany(rows, { ordered: true });
   void writeAuditMany(
     rows.map((r) => ({
@@ -55,6 +55,7 @@ export async function appendReviewEvents(events: ReviewEventInput[], actor: Revi
       meta: { action: r.action, code: r.code, comment: r.comment },
     })),
   );
+  return rows.map((r) => r._id);
 }
 
 export async function latestReviewRound(

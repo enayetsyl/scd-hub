@@ -327,6 +327,8 @@ export type AuditEventKind =
   | "MASTERY_RETEST_BUILT"       // the re-test sheet was built (unseen questions per student)
   | "MASTERY_ACTION_CLOSED"      // closed with before / after and an outcome
   | "MASTERY_REVIEW_EVENT"       // objective-tree review log (prd-objective-tree §5): every MasteryReviewEvent row is mirrored here; meta = action/code/round
+  | "MASTERY_REVIEW_ASSIGNED"    // OT-2: the Principal assigned (বরাদ্দ) reviewers to a tree review round; meta = round + reviewer ids
+  | "MASTERY_REVIEW_SUBMITTED"   // OT-2: the reviewer submitted the round for the Principal's lock
   | "MASTERY_LEVEL_LABELS_SAVED" // the level names (ক্ষেত্র / শিখনফল / …) on the SCHOOL policy row changed (D-#923)
   | "SCHOLARSHIP_PAPER_DECLARED" // a practice paper and its item structure declared; meta carries the item count + total
   | "SCHOLARSHIP_PAPER_UPDATED"  // the item list or header edited after declaration; meta names WHICH fields moved
