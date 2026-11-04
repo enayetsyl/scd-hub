@@ -510,6 +510,17 @@ export const FEATURE_CATALOGUE = {
       view_own: { en: "My conduct records", bn: "আমার শৃঙ্খলার রেকর্ড", desc: "Own records", teacher: true, office: true, flags: ["SELF"] },
     },
   },
+  // Staff mistake record (D-#936–#939, docs/prd-staff-mistakes.md) — lighter than conduct.
+  staff_mistakes: {
+    group: "staff_and_hr",
+    en: "Mistake record",
+    bn: "ভুলের রেকর্ড",
+    actions: {
+      view_all: { en: "Everyone's mistakes", bn: "সবার ভুলের রেকর্ড দেখা", desc: "Any staff member's caught mistakes and their explanations", teacher: false, office: true, flags: [] },
+      review: { en: "Review explanations", bn: "ব্যাখ্যা যাচাই করা", desc: "Accept a reason, count it as a mistake, or move it to the person at fault", teacher: false, office: true, flags: [] },
+      view_own: { en: "My mistakes", bn: "আমার ভুল ও ব্যাখ্যা", desc: "Own caught mistakes; give a reason for each", teacher: true, office: true, flags: ["SELF"] },
+    },
+  },
   grievance: {
     group: "staff_and_hr",
     en: "Grievances",

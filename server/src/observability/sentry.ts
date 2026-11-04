@@ -142,6 +142,8 @@ export const EXPECTED_ERROR_NAMES: ReadonlySet<string> = new Set([
   "QuranExamError",
   // Exam routine (D-#883): a bad date/time or a duplicate slot — the Office's input.
   "ExamRoutineError",
+  // Staff mistake record (D-#936–#939): not your entry, decided already, bad reason.
+  "StaffMistakeError",
   "QuranValidationError",
   "ReviewError",
   "RevisionError",

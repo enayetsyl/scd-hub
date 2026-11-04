@@ -3538,12 +3538,17 @@ export interface HwSubmitPassEntry {
   recordId: string;
   submitted: boolean;
 }
+/** The reason picked when a pass corrects a same-day chase (D-#937). */
+export interface CorrectionReasonVar {
+  code: string;
+  text?: string | null;
+}
 export const HOMEWORK_SUBMIT_PASS = gql<
   { homeworkSubmitPass: { submittedCount: number; chasedCount: number; unchangedCount: number; correctedCount: number } },
-  { sectionId: string; itemId: string; entries: HwSubmitPassEntry[] }
+  { sectionId: string; itemId: string; entries: HwSubmitPassEntry[]; correctionReason?: CorrectionReasonVar | null }
 >`
-  mutation HomeworkSubmitPass($sectionId: String!, $itemId: String!, $entries: [HwSubmitPassEntryInput!]!) {
-    homeworkSubmitPass(sectionId: $sectionId, itemId: $itemId, entries: $entries) {
+  mutation HomeworkSubmitPass($sectionId: String!, $itemId: String!, $entries: [HwSubmitPassEntryInput!]!, $correctionReason: CorrectionReasonInput) {
+    homeworkSubmitPass(sectionId: $sectionId, itemId: $itemId, entries: $entries, correctionReason: $correctionReason) {
       submittedCount chasedCount unchangedCount correctedCount
     }
   }
@@ -6267,10 +6272,10 @@ export interface AsSubmitPassEntry {
 }
 export const ASSIGNMENT_SUBMIT_PASS = gql<
   { assignmentSubmitPass: { submittedCount: number; chasedCount: number; unchangedCount: number; correctedCount: number } },
-  { sectionId: string; itemId: string; entries: AsSubmitPassEntry[] }
+  { sectionId: string; itemId: string; entries: AsSubmitPassEntry[]; correctionReason?: CorrectionReasonVar | null }
 >`
-  mutation AssignmentSubmitPass($sectionId: String!, $itemId: String!, $entries: [AsSubmitPassEntryInput!]!) {
-    assignmentSubmitPass(sectionId: $sectionId, itemId: $itemId, entries: $entries) {
+  mutation AssignmentSubmitPass($sectionId: String!, $itemId: String!, $entries: [AsSubmitPassEntryInput!]!, $correctionReason: CorrectionReasonInput) {
+    assignmentSubmitPass(sectionId: $sectionId, itemId: $itemId, entries: $entries, correctionReason: $correctionReason) {
       submittedCount chasedCount unchangedCount correctedCount
     }
   }

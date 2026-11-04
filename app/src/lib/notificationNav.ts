@@ -233,6 +233,10 @@ export function notificationTarget(
       return { tab: "AssignmentTab", screen: "AssignmentHome" };
     case "MARK_CORRECTION":
       return { tab: "HrTab", screen: "MarkCorrections", params: { all: true } };
+    case "STAFF_MISTAKE_EXPLAIN":
+    case "STAFF_MISTAKE_DECIDED":
+      // D-#937/#939 — both open the person's own আমার ভুল ও ব্যাখ্যা list.
+      return { tab: "HrTab", screen: "MyMistakes" };
     case "STAFF_LETTER_SENT":
       // D-#902 — the letter waits in the staff member's own আমার চিঠি list.
       return { tab: "HrTab", screen: "MyLetters" };

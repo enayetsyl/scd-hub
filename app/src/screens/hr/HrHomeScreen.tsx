@@ -26,7 +26,9 @@ export default function HrHomeScreen({ navigation }: Props): React.ReactElement 
     (can("appraisal:view_all") || can("conduct:view_all") || can("grievance:view_all")) && can("staff_records:view");
   const canOffboarding = can("offboarding:view");
   const canMarkNotes = can("mark_submission:view_notes"); // D-#893: everyone's correction notes
-  const showAdmin = canLeaveManage || canPayroll || canHrPolicy || canPerformance || canOffboarding || canMarkNotes;
+  const canReviewMistakes = can("staff_mistakes:review") || can("staff_mistakes:view_all"); // D-#939
+  const showAdmin =
+    canLeaveManage || canPayroll || canHrPolicy || canPerformance || canOffboarding || canMarkNotes || canReviewMistakes;
 
   return (
     <Screen scroll>
@@ -45,6 +47,12 @@ export default function HrHomeScreen({ navigation }: Props): React.ReactElement 
         <Body style={{ fontWeight: "700" }}>{STR.hrMyLetters}</Body>
         <Muted>{STR.hrMyLettersSub}</Muted>
       </Card>
+      {can("staff_mistakes:view_own") ? (
+        <Card onPress={() => navigation.navigate("MyMistakes")}>
+          <Body style={{ fontWeight: "700" }}>{STR.smrMyTitle}</Body>
+          <Muted>{STR.smrCardMineHelp}</Muted>
+        </Card>
+      ) : null}
       {can("mark_submission:view_own") ? (
         <Card onPress={() => navigation.navigate("MarkCorrections")}>
           <Body style={{ fontWeight: "700" }}>{STR.msgNotesTitle}</Body>
@@ -81,6 +89,12 @@ export default function HrHomeScreen({ navigation }: Props): React.ReactElement 
         <Card onPress={() => navigation.navigate("OffboardingHome")}>
           <Body style={{ fontWeight: "700" }}>{STR.hrOffboarding}</Body>
           <Muted>{STR.hrOffboardingSub}</Muted>
+        </Card>
+      ) : null}
+      {canReviewMistakes ? (
+        <Card onPress={() => navigation.navigate("MistakeReview")}>
+          <Body style={{ fontWeight: "700" }}>{STR.smrReviewTitle}</Body>
+          <Muted>{STR.smrCardReviewHelp}</Muted>
         </Card>
       ) : null}
       {canMarkNotes ? (
