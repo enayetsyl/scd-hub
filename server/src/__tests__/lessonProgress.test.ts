@@ -35,7 +35,7 @@ jest.setTimeout(180_000);
 const P = (keys: string[]): PlanSession[] =>
   keys.map((k) => {
     const [chapter, i] = k.split(":");
-    return { key: k, chapter, anchorWord: "অধ্যায়", chapterTitle: null, sessionIndex: Number(i), sessionOf: 2, titleBn: k, artifactId: "x" };
+    return { key: k, chapter, anchorWord: "অধ্যায়", chapterTitle: null, sessionIndex: Number(i), sessionOf: 2, titleBn: k, artifactId: "x", loCodes: [] };
   });
 const D = (dateKey: string, sessions: Array<[string, boolean]>, noneReason?: "REVISION" | "TEST" | "OTHER", noteId = new Types.ObjectId()) => ({
   noteId,

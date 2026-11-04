@@ -16,6 +16,7 @@ import { space, useColors } from "../../theme";
 import type { MasteryStackParamList } from "../../navigation/types";
 import { fill, stateTone } from "./masteryStateUi";
 import { LessonPresenceList } from "../../components/LessonPresenceList";
+import { ObjectiveLessonNote } from "../../components/ObjectiveLessonNote";
 
 type Props = NativeStackScreenProps<MasteryStackParamList, "MasteryOutcomeTrail">;
 
@@ -171,6 +172,8 @@ export default function MasteryOutcomeTrailScreen({ route }: Props): React.React
       {/* LP-3 (D-#825): was the child in class when this chapter was taught? */}
       <Card>
         <Body style={{ fontWeight: "700" }}>{STR.lpChapterInClass}</Body>
+        {/* OT-5 (D-#950): this code itself — taught, not yet learnt / missed that class / not taught yet. */}
+        <ObjectiveLessonNote lesson={t.objectiveLesson} state={t.outcome.state} showDates />
         {t.chapterLessons.length === 0 ? (
           <Muted>{STR.lpChapterNotYet}</Muted>
         ) : (
