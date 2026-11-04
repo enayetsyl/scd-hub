@@ -61,7 +61,11 @@ describe("roll-up truth table (§8.1, §10 item 8)", () => {
     [["WEAK", "NOT_ASSESSED"], "WEAK"],
     [["WEAK", "IMPROVING", "INSUFFICIENT"], "WEAK"],
     [["MASTERED", "MASTERED"], "MASTERED"],
-    [["MASTERED", "NOT_ASSESSED"], "MASTERED"],
+    // D-#943: never mastered on a half-checked objective — a child not yet assessed ⇒ তথ্য কম.
+    [["MASTERED", "NOT_ASSESSED"], "INSUFFICIENT"],
+    [["REVISION_DUE", "NOT_ASSESSED"], "INSUFFICIENT"],
+    [["IMPROVING", "NOT_ASSESSED"], "INSUFFICIENT"],
+    [["MASTERED", "MASTERED", "NOT_ASSESSED"], "INSUFFICIENT"],
     [["MASTERED", "REVISION_DUE"], "REVISION_DUE"],
     [["REVISION_DUE"], "REVISION_DUE"],
     [["IMPROVING", "INSUFFICIENT"], "IMPROVING"],
@@ -264,10 +268,10 @@ describe("student view (DB)", () => {
     expect(state("LO-C2-MATH-07-03.2")).toBe("WEAK");
     expect(state("LO-C2-MATH-07-03.1")).toBe("MASTERED");
     const obj = (c: string) => d.objectives.find((o) => o.code === c)!;
-    // Children WEAK + MASTERED ⇒ WEAK; MASTERED + not assessed ⇒ MASTERED (§10 item 8).
+    // Children WEAK + MASTERED ⇒ WEAK (§10 item 8); MASTERED + not assessed ⇒ INSUFFICIENT (D-#943).
     expect(obj("LO-C2-MATH-07-03").state).toBe("WEAK");
     expect(obj("LO-C2-MATH-07-03").weakChildCodes).toEqual(["LO-C2-MATH-07-03.2"]);
-    expect(obj("LO-C2-MATH-07-02").state).toBe("MASTERED");
+    expect(obj("LO-C2-MATH-07-02").state).toBe("INSUFFICIENT");
     expect(obj("LO-C2-MATH-07-05")).toMatchObject({ tagged: true, state: "MASTERED", childCodes: [] });
     expect(d.domains).toHaveLength(1);
     expect(d.domains[0]).toMatchObject({ code: "DOM-MATH-ADD", labelBn: "যোগ", state: "WEAK" });
@@ -314,10 +318,11 @@ describe("section heat-map and the proposal (DB)", () => {
     const obj = h.objectiveColumns.find((o) => o.loCode === "LO-C2-MATH-07-03")!;
     expect(obj.cells.map((c) => c.state)).toEqual(["WEAK", "MASTERED"]);
     expect(obj).toMatchObject({ level: "OBJECTIVE", weak: 1, verdicts: 2, triggered: true, weakChildCodes: ["LO-C2-MATH-07-03.2"] });
-    expect(h.objectiveColumns.find((o) => o.loCode === "LO-C2-MATH-07-02")!.cells.map((c) => c.state)).toEqual(["MASTERED", "NOT_ASSESSED"]);
+    expect(h.objectiveColumns.find((o) => o.loCode === "LO-C2-MATH-07-02")!.cells.map((c) => c.state)).toEqual(["INSUFFICIENT", "NOT_ASSESSED"]);
     expect(h.domainColumns).toHaveLength(1);
     expect(h.domainColumns[0]).toMatchObject({ level: "DOMAIN", loCode: "DOM-MATH-ADD", labelBn: "যোগ" });
-    expect(h.domainColumns[0].cells.map((c) => c.state)).toEqual(["WEAK", "MASTERED"]);
+    // Student 2 has rows of the domain not yet assessed ⇒ তথ্য কম, not mastered (D-#943).
+    expect(h.domainColumns[0].cells.map((c) => c.state)).toEqual(["WEAK", "INSUFFICIENT"]);
   });
 
   it("the trigger stays on the tagged row; the proposal names the parent objective and lists the weak children", async () => {
@@ -343,8 +348,8 @@ describe("guardians see the objective grain only (D-#925, §10 item 8)", () => {
     const [math] = await childMasteryProgress(sids[0]);
     expect(math.subject).toBe("MATH");
     expect(math.attention).toEqual([{ labelBn: "হাতে রেখে যোগ", homeTipBn: "খেজুর দশটি করে বেঁধে হাতে রাখা দেখান।" }]);
-    // 07-02 (rolled up MASTERED) and 07-05 count as "good"; 07-03 as attention.
-    expect(math.counts).toEqual({ attention: 1, improving: 0, good: 2, unknown: 0 });
+    // 07-03 attention; 07-05 good; 07-02 half-checked ⇒ not known yet (D-#943), never "good".
+    expect(math.counts).toEqual({ attention: 1, improving: 0, good: 1, unknown: 1 });
     expect(math.levelWordBn).toBe("শিখনফল");
     assertNoSub(math);
   });

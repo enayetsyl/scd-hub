@@ -47,6 +47,7 @@ import { loCodeMongoFilter, loCodesOf } from "../bank";
 import { isoWeekKey } from "../evidence";
 import { notifyAssignmentSent } from "../notify";
 import { isTaggedRow } from "../rollup";
+import { untaggedRefusal } from "../taggedGuard";
 import { masteryLevelLabels } from "./MasteryReviewService";
 import { objectiveGrain } from "./MasteryGuardianService";
 import type { MasteryLevelLabels } from "@scd/shared";
@@ -293,6 +294,8 @@ export async function buildAssignment(input: BuildInput, auth: Auth): Promise<As
     rosterOf(ctx.sectionId),
   ]);
   // Tagged rows only (OT-3): an untagged objective groups its children and takes no question.
+  const grouping = await untaggedRefusal(input.layout?.partALoCodes ?? []);
+  if (grouping) throw new MasteryWorkError(grouping);
   const questionOutcomes = outcomes.filter((o) => o.assess === "QUESTION" && isTaggedRow(o));
   const layout = validateLayout(input.layout, marks, new Set(questionOutcomes.map((o) => o.code)));
 
@@ -487,6 +490,8 @@ export async function editSheet(assignmentId: string, studentId: string, edit: S
     } else if (edit.op === "ADD_OWN") {
       const text = (edit.textBn ?? "").trim();
       if (!text) throw new MasteryWorkError("নিজের প্রশ্নের লেখা দিন।");
+      const grouping = await untaggedRefusal([edit.loCode ?? ""]);
+      if (grouping) throw new MasteryWorkError(grouping);
       const o = (await lockedOutcomes(a.classToken, a.subject)).find((x) => x.code === edit.loCode && x.assess === "QUESTION" && isTaggedRow(x));
       if (!o) throw new MasteryWorkError("কোডটি এই শ্রেণি-বিষয়ের প্রশ্নভিত্তিক তালিকায় নেই।");
       const qt = edit.questionTypeCode ?? "";

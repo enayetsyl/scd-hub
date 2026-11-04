@@ -11,6 +11,7 @@
  * And the add-on must be switched on for the year × class × subject (D-#775).
  */
 import { Types } from "mongoose";
+import { untaggedRefusal } from "../taggedGuard";
 import { callerHasPermission, MASTERY_RUBRIC_STEPS } from "@scd/shared";
 import type { AccessProfile, MasteryClassToken, MasterySubject } from "@scd/shared";
 import { MasteryPaper, type IMasteryPaper, type MasteryPaperSource } from "../models/MasteryPaper";
@@ -149,6 +150,9 @@ export async function createPaper(input: CreatePaperInput, auth: Auth): Promise<
   if (isRubric && input.items.length > 0) throw new MasteryWorkError("রুব্রিকের কাজে প্রশ্ন থাকে না।");
 
   const codes = [...new Set([...input.items.map((i) => i.loCode), ...rubricCodes])];
+  // D-#943: a tree's grouping row takes no item or grade — name the tagged children instead.
+  const grouping = await untaggedRefusal(codes);
+  if (grouping) throw new MasteryWorkError(grouping);
   const outcomes = await MasteryOutcome.find({ code: { $in: codes } }).lean();
   const byCode = new Map(outcomes.map((o) => [o.code, o]));
   for (const c of codes) {

@@ -6,9 +6,11 @@
  *   rollUpObjective   — an untagged objective's state from its tagged children:
  *                         no child assessed                          ⇒ NOT_ASSESSED
  *                         any child WEAK                             ⇒ WEAK
- *                         every ASSESSED child MASTERED/REVISION_DUE ⇒ MASTERED (REVISION_DUE if one is due)
+ *                         EVERY child assessed and MASTERED/due      ⇒ MASTERED (REVISION_DUE if one is due)
+ *                         any child still NOT_ASSESSED               ⇒ INSUFFICIENT (D-#943: never mastered
+ *                                                                      on a half-checked objective)
  *                         any child IMPROVING / MASTERED / due       ⇒ IMPROVING
- *                         otherwise (all assessed are INSUFFICIENT)   ⇒ INSUFFICIENT
+ *                         otherwise (all are INSUFFICIENT)           ⇒ INSUFFICIENT
  *   summarise         — counts per state + share mastered + share weak (a domain, a column)
  *   buildCatalogueTree — the tagged rows, the objectives (each with its tagged children) and the
  *                        domain buckets of one class × subject. A flat M-0 catalogue reads as
@@ -24,7 +26,9 @@ export function rollUpObjective(children: readonly MasteryState[]): MasteryState
   const assessed = children.filter((s) => s !== "NOT_ASSESSED");
   if (assessed.length === 0) return "NOT_ASSESSED";
   if (assessed.includes("WEAK")) return "WEAK";
-  if (assessed.every((s) => GOOD.has(s))) return assessed.includes("REVISION_DUE") ? "REVISION_DUE" : "MASTERED";
+  // D-#943: mastered only when EVERY child was checked and is mastered — never on a half-checked objective.
+  if (children.every((s) => GOOD.has(s))) return children.includes("REVISION_DUE") ? "REVISION_DUE" : "MASTERED";
+  if (children.includes("NOT_ASSESSED")) return "INSUFFICIENT";
   if (assessed.some((s) => s === "IMPROVING" || GOOD.has(s))) return "IMPROVING";
   return "INSUFFICIENT";
 }
