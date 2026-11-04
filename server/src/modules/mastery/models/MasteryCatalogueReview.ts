@@ -22,6 +22,10 @@ export interface ReviewUnmapped {
   reason: string;
   /** OT-2: how the reviewer resolved it ("mapped to …" / "not assessed this year: …"). */
   resolution?: string;
+  /** OT-2: the row it was mapped to (absent = "not assessed this year"). */
+  resolvedCode?: string;
+  resolvedBy?: Types.ObjectId;
+  resolvedAt?: Date;
 }
 
 export interface ReviewFlag {
@@ -55,7 +59,7 @@ export interface IMasteryCatalogueReview extends Document {
 }
 
 const UnmappedSchema = new Schema<ReviewUnmapped>(
-  { ref: { type: String, required: true }, text: { type: String, default: "" }, reason: { type: String, default: "" }, resolution: { type: String } },
+  { ref: { type: String, required: true }, text: { type: String, default: "" }, reason: { type: String, default: "" }, resolution: { type: String }, resolvedCode: { type: String }, resolvedBy: { type: Schema.Types.ObjectId }, resolvedAt: { type: Date } },
   { _id: false },
 );
 
