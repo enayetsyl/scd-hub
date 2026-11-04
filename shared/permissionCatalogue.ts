@@ -856,6 +856,9 @@ export const FEATURE_CATALOGUE = {
       assign: { en: "Assign work to others", bn: "অন্যকে কাজ দেওয়া", desc: "Tasks/recurring tasks for others; edit/move/cancel/reassign any", teacher: false, office: true, flags: [] },
       cover_desk: { en: "Cover the office desk", bn: "অফিসের কাজ নিজের বোর্ডে নেওয়া", desc: "Pull print or leave-approval cards onto own board", teacher: false, office: true, flags: [] },
       use: { en: "My board & tasks", bn: "নিজের কাজ", desc: "Own board, self-tasks, tasks I assigned", teacher: true, office: true, flags: ["SELF"] },
+      // D-#961: the 🎤 on the work board. It opens the voice parser only; giving the task to
+      // someone else still needs `assign`. Off by default, switched on per person.
+      voice: { en: "Assign by voice", bn: "কণ্ঠে কাজ দেওয়া", desc: "Speak one or more tasks, review the draft cards, then save (another person still needs `assign`)", teacher: false, office: false, flags: [] },
     },
   },
   admin_dashboard: {
