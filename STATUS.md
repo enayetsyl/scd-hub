@@ -1,5 +1,7 @@
 # STATUS
 
+- 2026-11-04: **CHANGED — guardian home summary (D-#919)** (branch `feat/guardian-home-summary`, worktree `C:/w/ghome`). Class notes moved up after the routine; করতে হবে is one line per tracker (opens the page); open homework is one line per date (newest 3). Done-at-home button now only on the homework/assignment pages. App only → **OTA** after promotion.
+  - **Verified:** app tsc 0; local walk (in-memory Mongo + Expo web + Chrome, canned child data) 10/10: order, counts/badges, no descriptions or claim button on home, "+2 more days", both lines open their screens.
 - 2026-11-04: **FIXED — আমার পিরিয়ড on the admin dashboard (D-#918)** (branch `fix/admin-my-periods`, worktree `C:/w/ghome`). Teaching admins (Tazkir) land on AdminTodayScreen, which never had the period strip. Strip extracted to `components/MyPeriodsStrip.tsx`; the admin dashboard mounts the self-fetching copy (hidden when no periods). App only → needs **OTA** after promotion.
   - **Verified:** app tsc 0; expo web export (see the PR).
 - 2026-11-03: **FIXED — re-shown pop-ups take any button (D-#917)** (branch `fix/popup-reshow-clears-answer`, worktree `C:/w/rsfix`). Tazkir could not press "See the exam routine" on the re-shown routine pop-up (only "OK, seen" worked). `editLiveNotice` reshow now clears `choiceId`/`actedAt` (ACTED → READ); `PopupSheet` keeps a refused button's server message. Server + app → OTA after promotion.

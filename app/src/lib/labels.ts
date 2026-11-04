@@ -2466,6 +2466,12 @@ const STR_BN = {
   cnWeekAssignment: "এই সপ্তাহের অ্যাসাইনমেন্ট",
   // DE-6 (D-#477): the guardian action card.
   gpTodo: "করতে হবে",
+  // D-#919: the home card is a summary now; each line opens its screen.
+  gpTodoPending: "টি বাকি",
+  gpTodoChased: "টি রিমাইন্ডারে",
+  gpTodoLate: "টি দেরিতে",
+  gpTodoClaimHint: "কাজ শেষ হলে খুলে চাপুন", // + wcButton
+  gpHwMoreDates: "আরও দিনের কাজ",
   // Notification detail (owner report 2026-08-15).
   notifDetailTitle: "বিজ্ঞপ্তির বিস্তারিত",
   notifOpenRelated: "সংশ্লিষ্ট পাতা খুলুন",
@@ -8699,6 +8705,12 @@ const STR_EN: StrTable = {
     "Your text mentions homework, but this card is not declaring any. Undeclared homework never reaches the guardian's homework list.",
   cnWeekAssignment: "This week's assignment",
   gpTodo: "To do",
+  // D-#919
+  gpTodoPending: " pending",
+  gpTodoChased: " being chased",
+  gpTodoLate: " late",
+  gpTodoClaimHint: "When it is finished, open it and tap", // + wcButton
+  gpHwMoreDates: "more days",
   notifDetailTitle: "Notification",
   notifOpenRelated: "Open related page",
   asDescRequired: "Write what the assignment is",
