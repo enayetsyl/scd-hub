@@ -32,8 +32,8 @@ import { MasteryWorkError, assertMayWork, dayOf, nextPaperId, rosterOf, sectionC
 import { computeSection, liveSectionRows, sectionLabel } from "./MasteryDiagnosisService";
 import { goldBank, marksTable } from "./MasteryAssignmentService";
 import { pickQuestion, typeFor } from "../assignmentBuilder";
-import { sectionOutcomeSummary } from "../diagnosis";
-import { notifyExtraClass, notifyProposal } from "../notify";
+import { sectionOutcomeSummary, type DiagnosisPolicy } from "../diagnosis";
+import { notifyExtraClass, notifyProposal, outcomeNaming } from "../notify";
 
 const oid = (s: string) => new Types.ObjectId(s);
 const DAY = 86_400_000;
@@ -116,13 +116,10 @@ export async function evaluateSectionTriggers(sectionId: Types.ObjectId, subject
       });
       opened++;
       try {
-        const [label, outcome] = await Promise.all([
-          sectionLabel(ctx.sectionId),
-          MasteryOutcome.findOne({ code: loCode }).select("labelBn").lean(),
-        ]);
+        const [label, naming] = await Promise.all([sectionLabel(ctx.sectionId), outcomeNaming(loCode)]);
         await notifyProposal({
           actionId: String(a._id), sectionId: String(ctx.sectionId), where: `${label.className} ${label.sectionName}`,
-          subject, outcomeBn: outcome?.labelBn ?? loCode, weakPct: s.weakPct ?? 0,
+          subject, outcomeBn: naming.staffBn, weakPct: s.weakPct ?? 0,
         });
       } catch (err) {
         console.error("[mastery] proposal notice failed:", err);
@@ -204,13 +201,14 @@ export async function decideAction(id: string, input: DecideInput, auth: Auth): 
   await a.save();
   if (a.status === "APPROVED" && a.plan) {
     try {
-      const [outcome, roster] = await Promise.all([MasteryOutcome.findOne({ code: a.loCode }).select("labelBn").lean(), rosterOf(a.sectionId)]);
+      const [naming, roster] = await Promise.all([outcomeNaming(a.loCode), rosterOf(a.sectionId)]);
       const planned = new Set((a.plan.studentIds ?? []).map(String));
       await notifyExtraClass({
         actionId: String(a._id),
         sectionId: String(a.sectionId),
         subject: a.subject,
-        outcomeBn: outcome?.labelBn ?? a.loCode,
+        outcomeBn: naming.staffBn,
+        guardianOutcomeBn: naming.guardianBn,
         kind: a.kind === "EXTRA_CLASS" ? "EXTRA_CLASS" : "RETEACH",
         teacherId: a.plan.teacherId ? String(a.plan.teacherId) : null,
         dateYmd: ymd(a.plan.date),
@@ -424,6 +422,13 @@ export interface ActionDetail {
   subject: string;
   loCode: string;
   labelBn: string;
+  /** OT-3 (§8.1): the objective the outcome belongs to (itself unless it is a sub-objective). */
+  objectiveCode: string;
+  objectiveLabelBn: string;
+  isSub: boolean;
+  /** The objective's tagged children with WEAK students in the section now, worst first — so an
+   *  extra class is planned at objective size. Empty for a tagged objective / flat row. */
+  weakChildren: { code: string; labelBn: string; weak: number; verdicts: number; weakPct: number | null; triggered: boolean }[];
   kind: string;
   status: string;
   trigger: { at: string; weakPct: number; weak: number; verdicts: number; assessments: number };
@@ -460,9 +465,9 @@ async function namesOf(ids: (Types.ObjectId | undefined)[]): Promise<Map<string,
 export async function actionDetail(id: string, auth: Auth): Promise<ActionDetail> {
   const a = await loadAction(id);
   await assertCanSee(auth, a);
-  const [label, outcome, roster, { per, summary, policy }, paper, names, work] = await Promise.all([
+  const [label, naming, roster, { per, summary, policy }, paper, names, work] = await Promise.all([
     sectionLabel(a.sectionId),
-    MasteryOutcome.findOne({ code: a.loCode }).select("labelBn").lean(),
+    outcomeNaming(a.loCode),
     rosterOf(a.sectionId),
     outcomeNow(a),
     a.retestPaperId ? MasteryPaper.findById(a.retestPaperId).select("paperId").lean() : null,
@@ -475,13 +480,18 @@ export async function actionDetail(id: string, auth: Auth): Promise<ActionDetail
   const weakAt = new Set(a.trigger.weakStudentIds.map(String));
   const present = new Map(a.attendance.map((x) => [String(x.studentId), x.present]));
   const nowNumbers = { weakPct: summary.weakPct, meanPct: after.meanPct };
+  const weakChildren = naming.isSub ? await weakChildrenOf(a, naming.objectiveCode, policy) : [];
   return {
     id: String(a._id),
     sectionId: String(a.sectionId),
     ...label,
     subject: a.subject,
     loCode: a.loCode,
-    labelBn: outcome?.labelBn ?? a.loCode,
+    labelBn: naming.labelBn,
+    objectiveCode: naming.objectiveCode,
+    objectiveLabelBn: naming.objectiveLabelBn,
+    isSub: naming.isSub,
+    weakChildren,
     kind: a.kind,
     status: a.status,
     trigger: { at: a.trigger.at.toISOString(), weakPct: a.trigger.weakPct, weak: a.trigger.weak, verdicts: a.trigger.verdicts, assessments: a.trigger.assessments },
@@ -524,6 +534,30 @@ export async function actionDetail(id: string, auth: Auth): Promise<ActionDetail
   };
 }
 
+/** The objective's tagged children with WEAK students in the action's section now (§8.1). */
+async function weakChildrenOf(
+  a: Pick<IMasteryAction, "sectionId" | "subject">,
+  objectiveCode: string,
+  policy: DiagnosisPolicy,
+): Promise<ActionDetail["weakChildren"]> {
+  const kids = await MasteryOutcome.find({ parentCode: objectiveCode, status: "LOCKED", tagged: { $ne: false } })
+    .select("code labelBn order")
+    .sort({ order: 1, code: 1 })
+    .lean();
+  if (kids.length === 0) return [];
+  const codes = new Set(kids.map((k) => k.code));
+  const rows = (await liveSectionRows(a.sectionId, a.subject)).filter((r) => codes.has(r.loCode));
+  const sec = computeSection(rows, policy, new Date());
+  return kids
+    .map((k) => {
+      const per = sec.states.get(k.code);
+      const s = sectionOutcomeSummary(per ? [...per.values()].map((x) => x.state) : [], sec.assessments.get(k.code) ?? 0, policy);
+      return { code: k.code, labelBn: k.labelBn, weak: s.weak, verdicts: s.verdicts, weakPct: s.weakPct, triggered: s.triggered };
+    })
+    .filter((k) => k.weak > 0)
+    .sort((x, y) => (y.weakPct ?? 0) - (x.weakPct ?? 0));
+}
+
 export interface ActionSummary {
   id: string;
   sectionId: string;
@@ -532,6 +566,8 @@ export interface ActionSummary {
   subject: string;
   loCode: string;
   labelBn: string;
+  /** OT-3: a sub-objective's objective label (null for an objective / flat row). */
+  objectiveLabelBn: string | null;
   kind: string;
   status: string;
   weakPct: number;
@@ -570,10 +606,16 @@ export async function actionsPage(
   else if (filter === "CLOSED") q.status = { $in: ["CLOSED", "REJECTED"] };
   return queryPage(MasteryAction, q, { createdAt: -1, _id: -1 }, args, async (docs) => {
     const list = docs as unknown as IMasteryAction[];
-    const [labels, outcomes] = await Promise.all([
+    const [labels, outcomeRows] = await Promise.all([
       Promise.all([...new Set(list.map((d) => String(d.sectionId)))].map(async (sid) => [sid, await sectionLabel(oid(sid))] as const)).then((x) => new Map(x)),
-      MasteryOutcome.find({ code: { $in: [...new Set(list.map((d) => d.loCode))] } }).select("code labelBn").lean().then((x) => new Map(x.map((o) => [o.code, o.labelBn]))),
+      MasteryOutcome.find({ code: { $in: [...new Set(list.map((d) => d.loCode))] } }).select("code labelBn level parentCode").lean(),
     ]);
+    const outcomes = new Map(outcomeRows.map((o) => [o.code, o.labelBn]));
+    const parentCodes = outcomeRows.filter((r) => r.level === "SUB" && r.parentCode).map((r) => r.parentCode as string);
+    const parentLabel = new Map(
+      parentCodes.length ? (await MasteryOutcome.find({ code: { $in: parentCodes } }).select("code labelBn").lean()).map((p) => [p.code, p.labelBn]) : [],
+    );
+    const objectiveLabels = new Map(outcomeRows.map((o) => [o.code, o.level === "SUB" ? parentLabel.get(o.parentCode ?? "") ?? null : null]));
     return list.map((d) => ({
       id: String(d._id),
       sectionId: String(d.sectionId),
@@ -582,6 +624,7 @@ export async function actionsPage(
       subject: d.subject,
       loCode: d.loCode,
       labelBn: outcomes.get(d.loCode) ?? d.loCode,
+      objectiveLabelBn: objectiveLabels.get(d.loCode) ?? null,
       kind: d.kind,
       status: d.status,
       weakPct: d.trigger.weakPct,

@@ -45,6 +45,7 @@ export default function ChildMasteryScreen(): React.ReactElement {
               <Badge text={`${STR.gpMsGood} ${bnNum(s.counts.good)}`} tone="ok" />
               <Badge text={`${STR.gpMsUnknown} ${bnNum(s.counts.unknown)}`} tone="muted" />
             </View>
+            {s.levelWordBn ? <Muted>{STR.gpMsCountsAt.replace("{objective}", s.levelWordBn)}</Muted> : null}
 
             {s.attention.length > 0 ? (
               <View style={{ gap: space(1) }}>

@@ -11,6 +11,10 @@ on:
 jobs:
   gate:
     runs-on: ubuntu-latest
+    # The server typecheck needs ~2.9 GB and Node's default heap on the runner is ~2 GB: OT-3
+    # (#1304) died there with "JavaScript heap out of memory". Same 4 GB pin as deploy.sh (D-#819).
+    env:
+      NODE_OPTIONS: --max-old-space-size=4096
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -38,6 +42,8 @@ jobs:
         run: node skills/_tools/verify_descriptive_carriers.mjs server/import/cases/lo-codes
       - name: Mastery catalogue files valid (D-#776)
         run: npx tsx skills/_tools/mastery_catalogue_to_json.mjs --check docs/mastery/lo-catalogue
+      - name: Objective-tree files pass the structural verifier (prd-objective-tree §10.1)
+        run: node skills/_tools/verify_objective_tree.mjs docs/mastery/objective-tree/C1_MATH.tree.json docs/mastery/objective-tree/domains/MATH.json
       - name: Server tests (jest)
         run: npm run test --workspace=server
       - name: Typecheck app

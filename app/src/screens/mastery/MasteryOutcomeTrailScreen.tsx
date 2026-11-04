@@ -3,28 +3,37 @@
  * numbers behind it, the state path, % per attempt, every evidence row (excluded ones marked,
  * never hidden), bank coverage (a re-check always comes from an unseen question) and the
  * guardian home tip.
+ *
+ * OT-3 (docs/prd-objective-tree.md §8.1): the path domain › objective names where a sub-objective
+ * sits, and a WEAK row lists its earlier steps with this student's state (D-#927). Level words
+ * from পলিসি (D-#923).
  */
-import React from "react";
+import React, { useLayoutEffect } from "react";
 import { View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
 import { MASTERY_OUTCOME_TRAIL_QUERY, type MasteryTrailData } from "../../graphql/mastery";
 import { Screen, Card, Body, Muted, Badge, Loader, Notice, H2 } from "../../components/ui";
 import { STR, bnNum, masteryReasonLabel, masteryStateLabel, masterySourceLabel } from "../../lib/labels";
+import { useMasteryLevelLabels } from "../../lib/useMasteryLevelLabels";
 import { friendlyError } from "../../lib/errors";
 import { space, useColors } from "../../theme";
 import type { MasteryStackParamList } from "../../navigation/types";
-import { fill, stateTone } from "./masteryStateUi";
+import { fill, levelFill, stateTone } from "./masteryStateUi";
+import { EarlierSteps } from "./MasteryTreeParts";
 import { LessonPresenceList } from "../../components/LessonPresenceList";
+import { ObjectiveLessonNote } from "../../components/ObjectiveLessonNote";
 
 type Props = NativeStackScreenProps<MasteryStackParamList, "MasteryOutcomeTrail">;
 
 const sourceLabel = masterySourceLabel;
 const day = (iso: string | null) => (iso ? bnNum(iso.slice(0, 10)) : "");
 
-export default function MasteryOutcomeTrailScreen({ route }: Props): React.ReactElement {
+export default function MasteryOutcomeTrailScreen({ route, navigation }: Props): React.ReactElement {
   const { studentId, loCode } = route.params;
   const colors = useColors();
+  const lv = useMasteryLevelLabels();
+  useLayoutEffect(() => navigation.setOptions({ title: levelFill(STR.msTrail, lv) }), [navigation, lv.objective]);
   const [{ data, fetching, error }] = useQuery({
     query: MASTERY_OUTCOME_TRAIL_QUERY,
     variables: { studentId, loCode },
@@ -65,6 +74,13 @@ export default function MasteryOutcomeTrailScreen({ route }: Props): React.React
       <Muted>
         {t.name} · {o.loCode}
       </Muted>
+      {t.domainLabelBn || t.parentLabelBn ? (
+        <Muted>
+          {[t.domainLabelBn ? `${lv.domain}: ${t.domainLabelBn}` : null, t.parentLabelBn ? `${lv.objective}: ${t.parentLabelBn}` : null]
+            .filter(Boolean)
+            .join(" › ")}
+        </Muted>
+      ) : null}
 
       <Card>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space(2), flexWrap: "wrap" }}>
@@ -91,6 +107,7 @@ export default function MasteryOutcomeTrailScreen({ route }: Props): React.React
           </Muted>
         ) : null}
         {o.nextRevisionAt ? <Muted>{fill(STR.msNextRevision, { d: day(o.nextRevisionAt) })}</Muted> : null}
+        <EarlierSteps steps={o.earlierSteps ?? []} />
       </Card>
 
       {bars.length > 0 ? (
@@ -171,6 +188,8 @@ export default function MasteryOutcomeTrailScreen({ route }: Props): React.React
       {/* LP-3 (D-#825): was the child in class when this chapter was taught? */}
       <Card>
         <Body style={{ fontWeight: "700" }}>{STR.lpChapterInClass}</Body>
+        {/* OT-5 (D-#950): this code itself — taught, not yet learnt / missed that class / not taught yet. */}
+        <ObjectiveLessonNote lesson={t.objectiveLesson} state={t.outcome.state} showDates />
         {t.chapterLessons.length === 0 ? (
           <Muted>{STR.lpChapterNotYet}</Muted>
         ) : (
