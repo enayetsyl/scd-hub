@@ -43,7 +43,8 @@ import { childMasteryProgress, objectiveGrain } from "../modules/mastery/service
 import { actionDetail, evaluateSectionTriggers } from "../modules/mastery/services/MasteryActionService";
 import { schoolRollup } from "../modules/mastery/services/MasteryRollupService";
 import { masteryLevelLabels } from "../modules/mastery/services/MasteryReviewService";
-import { pdfCodeLine } from "../modules/mastery/services/MasteryAssignmentService";
+import { buildAssignment, pdfCodeLine } from "../modules/mastery/services/MasteryAssignmentService";
+import { createPaper } from "../modules/mastery/services/MasteryWorkService";
 import { outcomeNaming } from "../modules/mastery/notify";
 import { buildCatalogueTree, rollUpObjective, summarise } from "../modules/mastery/rollup";
 
@@ -377,6 +378,31 @@ describe("guardians see the objective grain only (D-#925, §10 item 8)", () => {
     } finally {
       await saveLevelLabels({ objectiveBn: "", subBn: "" }, PRINCIPAL);
     }
+  });
+});
+
+describe("a grouping row takes no work-sheet item (D-#943)", () => {
+  it("paper entry refuses an untagged objective and names its tagged children; a tagged code passes the guard", async () => {
+    await expect(
+      createPaper({ sectionId, subject: "MATH", source: "HW", date: "2035-03-20",
+        items: [{ origin: "TEACHER", textBn: "৩৮ + ৪৫", loCode: "LO-C2-MATH-07-03", questionTypeCode: "QT-SOLVE" }] }, TEACHER),
+    ).rejects.toThrow(/LO-C2-MATH-07-03 একটি দলবদ্ধ সারি.*LO-C2-MATH-07-03\.1, LO-C2-MATH-07-03\.2/);
+    // A tagged sub-objective gets past the guard (it then stops on the missing question type here).
+    await expect(
+      createPaper({ sectionId, subject: "MATH", source: "HW", date: "2035-03-20",
+        items: [{ origin: "TEACHER", textBn: "৩৮ + ৪৫", loCode: "LO-C2-MATH-07-03.2", questionTypeCode: "QT-SOLVE" }] }, TEACHER),
+    ).rejects.not.toThrow(/দলবদ্ধ/);
+    // A rubric sheet on a grouping row is refused too.
+    await expect(
+      createPaper({ sectionId, subject: "MATH", source: "RUBRIC", date: "2035-03-20", items: [], rubricLoCodes: ["LO-C2-MATH-07-02"] }, TEACHER),
+    ).rejects.toThrow(/LO-C2-MATH-07-02 একটি দলবদ্ধ সারি/);
+  });
+
+  it("the weekly assignment refuses a grouping row in Part A", async () => {
+    const layout = { totalMarks: 6, minutes: 30, partAOn: true, partAMarks: 2, partALoCodes: ["LO-C2-MATH-07-03"], partBMarks: 4,
+      mixWeak: 100, mixImproving: 0, mixRevision: 0, questionTypeCodes: [] as string[] };
+    await expect(buildAssignment({ sectionId, subject: "MATH", dueDate: "2035-03-22", layout, rememberLayout: false }, TEACHER))
+      .rejects.toThrow(/দলবদ্ধ সারি.*LO-C2-MATH-07-03\.1/);
   });
 });
 
