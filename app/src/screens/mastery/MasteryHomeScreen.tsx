@@ -14,6 +14,7 @@ import { Screen, Card, Body, Muted, Badge, Button, Loader, EmptyState, Notice } 
 import { STR, bnNum, hwSubjectLabel, masteryClassLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useAuth } from "../../auth/AuthContext";
+import { REPORT_LEAF_ACTIONS } from "../../lib/navGates";
 import { space } from "../../theme";
 import type { MasteryStackParamList } from "../../navigation/types";
 
@@ -22,6 +23,8 @@ type Props = NativeStackScreenProps<MasteryStackParamList, "MasteryHome">;
 export default function MasteryHomeScreen({ navigation }: Props): React.ReactElement {
   const { can } = useAuth();
   const canManage = can("mastery:settings");
+  // OT-4: question-bank coverage — the same actions as its Reports-hub leaf (and its server read).
+  const canCoverage = (REPORT_LEAF_ACTIONS.MasteryBankCoverage ?? []).some((p) => can(p));
   const [{ data, fetching, error }] = useQuery({ query: MASTERY_COVERAGE_QUERY, requestPolicy: "cache-and-network" });
   const rows = (data?.masteryCoverage ?? []) as MasteryCoverageRow[];
 
@@ -63,6 +66,13 @@ export default function MasteryHomeScreen({ navigation }: Props): React.ReactEle
               variant="secondary"
               onPress={() => navigation.navigate("MasteryMarks", { classToken: r.classToken, subject: r.subject })}
             />
+            {canCoverage ? (
+              <Button
+                title={STR.bcTitle}
+                variant="secondary"
+                onPress={() => navigation.navigate("MasteryBankCoverage", { classToken: r.classToken, subject: r.subject })}
+              />
+            ) : null}
           </View>
         </Card>
       ))}

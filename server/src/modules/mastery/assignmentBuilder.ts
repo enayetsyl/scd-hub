@@ -21,13 +21,20 @@
  * A bank question carries no school question-type code (the bank's `question_type` is an answer
  * form, not QT-…), so a bank pick takes the outcome's first allowed type within the layout; the
  * teacher can change it on review (D-#809).
+ *
+ * ক/খ parts (D-#926): a part question carries its stem's `stimulusRef`; selection is unchanged
+ * (each part is picked for its own code), and the parts of one stem that land on a sheet are
+ * placed together so the sheet prints them 4(ক), 4(খ) under the stem.
  */
+import { groupStimulusParts } from "./parts";
 
 export interface BankQuestion {
   artifactId: string;
   qid: string;
   loCodes: string[];
   textBn?: string | null;
+  /** ক/খ parts (D-#926): the stimulus (shared stem) this question hangs under. */
+  stimulusRef?: string | null;
 }
 
 export interface OutcomeInfo {
@@ -63,6 +70,7 @@ export interface BuiltQuestion {
   questionTypeCode: string;
   marks: number;
   band: "WEAK" | "IMPROVING" | "REVISION" | "INSUFFICIENT" | "SECTION";
+  stimulusRef: string | null;
 }
 
 export interface BuilderContext {
@@ -174,7 +182,7 @@ export function buildPartB(
         used.add(q.qid);
         items.push({
           origin: "BANK", artifactId: q.artifactId, qid: q.qid, textBn: q.textBn ?? null, loCode: lo,
-          chapterNumber: info.chapterNumber, questionTypeCode: qt, marks, band,
+          chapterNumber: info.chapterNumber, questionTypeCode: qt, marks, band, stimulusRef: q.stimulusRef ?? null,
         });
         spent += marks;
       }
@@ -194,7 +202,8 @@ export function buildPartB(
   if (total() < target) fillBand("WEAK", target - total(), false);
 
   if (items.length === 0 && !warnings.some((w) => w.code === "NO_UNSEEN_QUESTION")) warnings.push({ code: "NOTHING_TO_PRACTISE" });
-  return { items, warnings };
+  // Parts of one stem sit together so the sheet prints them 4(ক), 4(খ) under it (D-#926).
+  return { items: groupStimulusParts(items), warnings };
 }
 
 /**
@@ -231,9 +240,10 @@ export function buildPartA(
       items.push({
         origin: "BANK", artifactId: q.artifactId, qid: q.qid, textBn: q.textBn ?? null, loCode: lo,
         chapterNumber: info.chapterNumber, questionTypeCode: qt, marks: ctx.marksOf.get(qt)!, band: "SECTION",
+        stimulusRef: q.stimulusRef ?? null,
       });
       progressed = true;
     }
   }
-  return items;
+  return groupStimulusParts(items);
 }
