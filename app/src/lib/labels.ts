@@ -7749,7 +7749,7 @@ const STR_BN = {
   smrWorkState_CHECKED: "যাচাই হয়েছে",
   smrWorkState_RESUBMIT: "আবার জমা দাও",
   smrWorkUndone: "ফেরানো হয়েছে",
-  // The remaining tier-1 places (D-#952)
+  // The remaining tier-1 places (D-#954)
   smrKindLabel_POPUP_NOTICE_CHANGE: "পপ-আপ বার্তা",
   smrKindTitle_POPUP_NOTICE_CHANGE: "দেখার পর পপ-আপ বার্তা বদলানো / বন্ধ করা হয়েছে",
   smrKindLabel_MONTHLY_REPORT_REVOKE: "মাসিক রিপোর্ট",
@@ -14193,7 +14193,7 @@ const STR_EN: StrTable = {
   smrWorkState_CHECKED: "Checked",
   smrWorkState_RESUBMIT: "Resubmit",
   smrWorkUndone: "undone",
-  // The remaining tier-1 places (D-#952)
+  // The remaining tier-1 places (D-#954)
   smrKindLabel_POPUP_NOTICE_CHANGE: "Pop-up notice",
   smrKindTitle_POPUP_NOTICE_CHANGE: "A pop-up was changed or stopped after people saw it",
   smrKindLabel_MONTHLY_REPORT_REVOKE: "Monthly report",

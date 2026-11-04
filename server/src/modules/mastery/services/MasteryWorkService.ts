@@ -574,7 +574,7 @@ export async function saveResults(paperId: string, rows: ResultInput[], auth: Au
     if (bad) throw new MasteryWorkError(bad);
   }
   const by = Types.ObjectId.isValid(auth.userId) ? oid(auth.userId) : undefined;
-  // D-#952: after confirmation, whoever entered each changed result owns the correction.
+  // D-#954: after confirmation, whoever entered each changed result owns the correction.
   const priorEntrants =
     paper.entryState === "CONFIRMED"
       ? await MasteryResult.find({ paperId: paper._id, studentId: { $in: rows.map((r) => oid(r.studentId)) } }).select("enteredBy").lean()

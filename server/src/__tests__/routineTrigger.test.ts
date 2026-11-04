@@ -15,7 +15,7 @@ import { ForbiddenError } from "../middleware/authz";
 const oid = () => new mongoose.Types.ObjectId();
 
 const mockWindowFind = jest.fn();
-// D-#952: the mistake recorder reaches real models; this suite is DB-free.
+// D-#954: the mistake recorder reaches real models; this suite is DB-free.
 jest.mock("../modules/staff-mistakes/services/StaffMistakeNoteService", () => ({
   recordPlaceMistake: jest.fn().mockResolvedValue(false),
 }));

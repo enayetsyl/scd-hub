@@ -1,5 +1,5 @@
 /**
- * StaffMistakeNoteService (D-#952) — the one call the MR-6+ places make:
+ * StaffMistakeNoteService (D-#954) — the one call the MR-6+ places make:
  *
  *   recordPlaceMistake({ kind, refKey, ownerId, correctedBy, at, line })
  *

@@ -206,7 +206,7 @@ export async function saveExamRoutineClass(
   if (!cls) throw new ExamRoutineError("শ্রেণিটি এই পরীক্ষার বছরের নয়।");
   const slots = checkSlots(input).map((s) => ({ ...s, classId: cls._id }));
   const row = (await ExamRoutine.findOne({ examId: exam._id })) ?? new ExamRoutine({ examId: exam._id, slots: [], updatedBy: oid(ctx.auth!.userId) });
-  // D-#952: what families saw for this class before the save.
+  // D-#954: what families saw for this class before the save.
   const shown = (arr: unknown[]): string =>
     JSON.stringify(
       arr.map((x) => {

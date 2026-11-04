@@ -1,5 +1,5 @@
 /**
- * Staff mistake record MR-6 (D-#952) on a real in-memory Mongo: the generic place note
+ * Staff mistake record MR-6 (D-#954) on a real in-memory Mongo: the generic place note
  * (lines, episodes, owner) and one of its hooks end to end (a finance posting reversed).
  */
 import mongoose, { Types } from "mongoose";
@@ -45,7 +45,7 @@ async function user(name: string, role = "OFFICE"): Promise<string> {
   return r.insertedId.toString();
 }
 
-describe("D-#952 — the generic place note", () => {
+describe("D-#954 — the generic place note", () => {
   it("gathers lines while the entry waits; after an explanation the next change is a new entry", async () => {
     const sender = await user("Shirin");
     const principal = await user("Principal", "PRINCIPAL");
@@ -75,7 +75,7 @@ describe("D-#952 — the generic place note", () => {
   });
 });
 
-describe("D-#952 — a reversed finance posting is the entrant's entry", () => {
+describe("D-#954 — a reversed finance posting is the entrant's entry", () => {
   it("reversePosting records the original entrant", async () => {
     const clerk = await user("Kamrul");
     const principal = await user("Principal", "PRINCIPAL");

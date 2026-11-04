@@ -57,7 +57,7 @@ type Row = StaffMistakeShape & {
   genericNote: StaffMistakeNoteShape | null;
 };
 
-/** Kinds whose detail is a generic StaffMistakeNote (MR-6+, D-#952). */
+/** Kinds whose detail is a generic StaffMistakeNote (MR-6+, D-#954). */
 const GENERIC_KINDS = new Set([
   "POPUP_NOTICE_CHANGE",
   "MONTHLY_REPORT_REVOKE",

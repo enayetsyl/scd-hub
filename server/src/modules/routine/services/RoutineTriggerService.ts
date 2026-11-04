@@ -147,7 +147,7 @@ export async function publishClassNote(input: {
   const homeworkItemId = hwId ? new Types.ObjectId(hwId) : undefined;
 
   const publishedAt = new Date();
-  // D-#952: the note families already have, if this is a re-publish.
+  // D-#954: the note families already have, if this is a re-publish.
   const priorNote = await priorClassNote({ slotId: input.slotId, date: input.date });
   await ClassNote.updateOne(
     { slotId: input.slotId, date: input.date },
@@ -166,7 +166,7 @@ export async function publishClassNote(input: {
     { upsert: true },
   );
   const note = (await ClassNote.findOne({ slotId: input.slotId, date: input.date }).lean()) as unknown as IClassNote;
-  // D-#952: a re-publish that changes what families were told is the first author's correction.
+  // D-#954: a re-publish that changes what families were told is the first author's correction.
   if (priorNote && priorNote.taughtSummaryBn !== note.taughtSummaryBn) {
     await recordPlaceMistake({
       kind: "CLASS_NOTE_CHANGE",
@@ -256,7 +256,7 @@ export async function classNotesForRange(
  * `actorId` omitted = an internal call, unchecked.
  */
 /**
- * D-#952: the note as families saw it before a re-publish / edit — for the mistake record
+ * D-#954: the note as families saw it before a re-publish / edit — for the mistake record
  * only, so a failed read returns null and never blocks the save (not an authorization lookup).
  */
 async function priorClassNote(filter: Record<string, unknown>): Promise<Pick<IClassNote, "publishedBy" | "taughtSummaryBn" | "attachmentIds"> | null> {
@@ -300,7 +300,7 @@ export async function updateClassNote(input: {
   const prior = await priorClassNote({ _id: input.id });
   const updated = (await ClassNote.findByIdAndUpdate(input.id, { $set: set }, { new: true }).lean()) as unknown as IClassNote | null;
   if (!updated) throw new Error("Class note not found");
-  // D-#952: the published note changed under the families who were told about it.
+  // D-#954: the published note changed under the families who were told about it.
   const summaryChanged = prior && prior.taughtSummaryBn !== updated.taughtSummaryBn;
   const filesChanged = prior && JSON.stringify((prior.attachmentIds ?? []).map(String)) !== JSON.stringify((updated.attachmentIds ?? []).map(String));
   if (prior && (summaryChanged || filesChanged)) {
@@ -320,7 +320,7 @@ export async function updateClassNote(input: {
 export async function deleteClassNote(id: string, actorId?: string): Promise<{ id: string }> {
   const res = (await ClassNote.findByIdAndDelete(id).lean()) as unknown as Pick<IClassNote, "publishedBy"> | null;
   if (!res) throw new Error("Class note not found");
-  // D-#952: families had the note — its author explains why it had to go.
+  // D-#954: families had the note — its author explains why it had to go.
   await recordPlaceMistake({
     kind: "CLASS_NOTE_CHANGE",
     refKey: id,
