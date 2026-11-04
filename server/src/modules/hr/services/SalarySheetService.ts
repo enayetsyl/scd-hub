@@ -19,6 +19,14 @@
  * account number) still drew a salary, and an expense sheet that drops them under-reports
  * the month. They sit on the channel their payment method points to.
  *
+ * The columns follow the voucher, not the payslip (D-#929). The accounting app books the
+ * month as a salary EXPENSE paid out, then each recovery (advance, loan) as money back in.
+ * Unpaid leave and lateness are neither: no cash ever moved for them, so booking the gross
+ * as the expense sent cash out that never left. So the sheet reads left to right:
+ *   gross − NOT-PAID deductions (unpaid leave, lateness) + additions = SALARY EXPENSE
+ *   salary expense − ADJUSTMENTS (advance, statutory, other) = NET PAY
+ * The breakdown of the not-paid lines stays in SCD Hub; the voucher takes the expense.
+ *
  * Identity/operational plane, behind the ADR-005 firewall (NO corpus path).
  */
 import { Types } from "mongoose";
@@ -51,21 +59,40 @@ export interface SalarySheet {
   groups: SheetGroup[];
   total: RegisterRow;
   /** Only the kinds that moved money this month get a column — a sheet of empty columns is noise. */
-  deductionColumns: PayDeductionType[];
+  notPaidColumns: PayDeductionType[];
   additionColumns: PayAdditionType[];
+  adjustmentColumns: PayDeductionType[];
 }
 
 /** The bank letters first (they go out first), then bKash, then the cash voucher. */
 const CHANNEL_ORDER: PaymentChannel[] = ["internal", "beftn", "bkash", "cash"];
 
+/**
+ * Deductions the school never pays and never gets back — they come off the expense itself.
+ * Every other kind is an ADJUSTMENT: the salary was earned (an expense) and part of it went
+ * to settle something else — an advance, tax held for the government, a manual "other"
+ * (in practice a loan recovered by hand).
+ */
+export const NOT_PAID_DEDUCTIONS: readonly PayDeductionType[] = ["unpaid_leave", "lateness"];
+
+/** PURE — what the voucher books as salary expense: gross − not-paid lines + every addition. */
+export function salaryExpense(r: RegisterRow): number {
+  const notPaid = NOT_PAID_DEDUCTIONS.reduce((sum, t) => sum + r.deductions[t], 0);
+  const added = PAY_ADDITION_TYPES.reduce((sum, t) => sum + r.additions[t], 0);
+  return r.grossSalary - notPaid + added;
+}
+
 /** The deduction and addition kinds with a non-zero total, in the vocabulary's order. */
 export function usedColumns(total: RegisterRow): {
-  deductionColumns: PayDeductionType[];
+  notPaidColumns: PayDeductionType[];
   additionColumns: PayAdditionType[];
+  adjustmentColumns: PayDeductionType[];
 } {
+  const used = PAY_DEDUCTION_TYPES.filter((t) => total.deductions[t] !== 0);
   return {
-    deductionColumns: PAY_DEDUCTION_TYPES.filter((t) => total.deductions[t] !== 0),
+    notPaidColumns: used.filter((t) => NOT_PAID_DEDUCTIONS.includes(t)),
     additionColumns: PAY_ADDITION_TYPES.filter((t) => total.additions[t] !== 0),
+    adjustmentColumns: used.filter((t) => !NOT_PAID_DEDUCTIONS.includes(t)),
   };
 }
 
