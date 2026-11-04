@@ -25,7 +25,7 @@ structure; those stay as the history and as a source Claude reuses (question typ
   "classToken": "C1", "subject": "MATH", "status": "DRAFT",
   "source": { "book": "C1_MATH_Student_Print_v1_5", "files": ["…"], "readOn": "2026-11-04" },
   "chapters": [{ "number": 7, "titleBn": "যোগ" }],
-  "questionTypes": [{ "code": "QT-…", "labelBn": "…", "marks": 1 }],   // the book's mark distribution, carried to the importer as-is
+  "questionTypes": [{ "code": "QT-MCQ", "labelBn": "…", "marksBn": "১", "examUse": "অর্ধবার্ষিক প্র. ১ (১০×১) …" }],   // the book's mark distribution, carried to the importer as-is
   "nodes": [{
     "code": "LO-C1-MATH-07-03.2",        // objective LO-<C>-<S>-<CC>-<NN>; sub = objective + ".N"; strand LO-<C>-<S>-SK-<X>-<NN>
     "level": "SUB",                       // OBJECTIVE | SUB
