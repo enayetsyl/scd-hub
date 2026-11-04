@@ -97,6 +97,12 @@ jest.mock("../modules/content/models/ReviewAssignment", () => ({
   },
 }));
 
+// The import gate asks whether the class × subject's objective list is locked (D-#928, OT-4).
+// No list is locked here, so the D-#785 warning path runs — stub the read off the driver.
+jest.mock("../modules/mastery/models/MasteryCatalogueReview", () => ({
+  MasteryCatalogueReview: { exists: jest.fn().mockResolvedValue(null) },
+}));
+
 (globalThis as any).__artifactStore = makeStore(artifacts);
 (globalThis as any).__batchStore = makeStore(batches);
 (globalThis as any).__eventStore = makeStore(events);

@@ -75,6 +75,7 @@ auto-deploys (`.github/workflows`, `scripts/deploy.sh`). So:
 |---|---|
 | Shared vocab/RBAC verifier | `npx tsx skills/_tools/verify_shared_vocab.mjs docs/import-contract.schema.json` |
 | Mastery LO-code import conformance | `node skills/_tools/verify_descriptive_carriers.mjs server/import/cases/lo-codes` — same pass_/fail_ convention; run after any edit to `topic_tag`/`lo_codes` in the payload or envelope schema |
+| Objective-tree structural verifier | `node skills/_tools/verify_objective_tree.mjs <tree.json> <domains.json> [--inventory <inv.json>]` — e.g. `docs/mastery/objective-tree/C1_MATH.tree.json docs/mastery/objective-tree/domains/MATH.json`; needs `npm run build --workspace=shared` first. Same `checkTreeInvariants` (shared/objectiveTree.ts) the app import runs; green before a tree file is offered for upload |
 | Mastery catalogue check (md → import JSON) | `npx tsx skills/_tools/mastery_catalogue_to_json.mjs --check docs/mastery/lo-catalogue` (one file: `… <file.md> --out <file.json>`) — validates with the server's own import rules |
 | Descriptive answer-carrier conformance | `node skills/_tools/verify_descriptive_carriers.mjs` — runs the harness over `server/import/cases/descriptive/` (`pass_*` must import, `fail_*` must be rejected). Run after any edit to the question payload schema. |
 | Import-envelope conformance | `python server/import/validate_import.py <envelope.json> --envelope-schema docs/import-contract.schema.json [--plan-schema <plan-schema.json>]` |
@@ -105,10 +106,12 @@ auto-deploys (`.github/workflows`, `scripts/deploy.sh`). So:
   prd-routine.md      ← Routine/Timetable module build contract: rooms+period-defs+slots+conflict-engine, slices R-1..3 (D-#46/#47)
   prd-class-teacher.md ← Class-teacher → section daily-coordinator gate (attendance/leave/report-card/comms), slice CT-1 now (D-#45)
   prd-class-books.md  ← Class books: guardians read the classroom books page by page, view only (PDF → page images) (D-#870)
+  prd-lesson-progress.md ← Lesson-plan progress: session marked on the class note → শাখা tracker, Office overview, student presence + mastery link, LP-1..3 (D-#820–#826)
   prd-worksheets.md   ← Nursery/KG worksheet generator: engine, plan, book picture bank, print + answer key (D-#744–#747)
   prd-ct-scripts.md   ← Class-test scripts: teacher hand-in → office receive → scan/tag per student → guardian view → return, slices CS-1..3 (D-#715–#719)
   prd-student-progress.md ← Office/Principal progress board (student × subject) + two-part improvement actions ticked daily by teacher/guardian, leave hand-over, 11:00 check, SP-1..4 (D-#734–#738)
   prd-mastery.md      ← learning-outcome mastery tracker (add-on): LO catalogue → exceptions-only per-question entry → diagnosis → teacher-laid-out tailored assignment → 50% trigger extra class + re-test → guardian, M-0..M-6 (D-#775–#785); draft catalogues in docs/mastery/lo-catalogue/
+  prd-objective-tree.md ← mastery catalogue v2: Claude-drafted domain → objective → sub-objective tree, in-app review (Mahzabin) + lock, OT-0..OT-6 (D-#921–#928); content in docs/mastery/objective-tree/
   prd-permission-matrix.md ← every feature × every action as `feature:action`, editable per role (Teacher/Office) + per person; reach (view_all/edit_all), legacy expansion, the new-feature rule (D-#790–#801)
   permission-catalogue/    ← THE registry: every feature + action + defaults (README), per-area resolver/route/app-gate checklists, legacy-expansion, findings
   prd-meeting-comments.md ← parents'-meeting comment chain (subject → class teacher → Principal/Office, Strengths + Concerns) + meeting-day brief & print, MC-1..4 (D-#752–#756)

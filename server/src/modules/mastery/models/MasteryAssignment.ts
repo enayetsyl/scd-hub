@@ -39,6 +39,8 @@ export interface MasteryAssignmentQuestion {
   marks: number;
   /** Why the builder picked it: the student's state on the outcome when built (Part B), or SECTION (Part A). */
   band: "WEAK" | "IMPROVING" | "REVISION" | "INSUFFICIENT" | "SECTION" | "TEACHER";
+  /** ক/খ parts (D-#926): the bank question's stimulus (shared stem); its parts print 4(ক), 4(খ). */
+  stimulusRef?: string;
 }
 
 export interface IMasteryAssignment extends Document {
@@ -78,6 +80,7 @@ export const QuestionSchema = new Schema<MasteryAssignmentQuestion>(
     questionTypeCode: { type: String, required: true },
     marks: { type: Number, required: true, min: 0 },
     band: { type: String, enum: ["WEAK", "IMPROVING", "REVISION", "INSUFFICIENT", "SECTION", "TEACHER"], required: true },
+    stimulusRef: { type: String, trim: true },
   },
   { _id: false },
 );

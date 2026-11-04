@@ -3,6 +3,10 @@
 One file per class × subject, named `<CLASS>_<SUBJ>.md` (`C3_MATH.md`, later `NUR_BAN.md`, `KG_ENG.md`,
 `C6_SCI.md`). Contract: `docs/prd-mastery.md` §5.1 and D-#776/#777.
 
+> **Superseded for structure (2026-11-04, D-#921–#928):** new catalogues are three-level trees in
+> `../objective-tree/` (contract `docs/prd-objective-tree.md`). These flat files stay as history and as a source
+> Claude reuses (question types, marks, home tips). Do not lock or import them.
+
 ## Status of a file
 1. **DRAFT** — generated from the 2027 book's teacher notes (`শিখনফল`) and mark distribution in
    `C:\Users\HP\Downloads\Book Review Material`. Every file ends with **Reviewer notes**: read those first.

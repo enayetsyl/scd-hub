@@ -13,6 +13,8 @@ import { ROUTINE_FOR_DATE_QUERY, CLASS_NOTES_FOR_DATE_QUERY, PUBLISH_CLASS_NOTE 
 import type { RoutineStackParamList } from "../../navigation/types";
 import { Screen, Body, Muted, Card, Field, Button, Badge, Notice, Loader } from "../../components/ui";
 import { ClassNoteAttachments, type AttachmentRef } from "../../components/ClassNoteAttachments";
+import { LessonPlanBlock, deliverySummary, lessonPlanError } from "../../components/LessonPlanBlock";
+import type { LessonPlanIn } from "../../graphql/operations";
 import { DateField } from "../../components/DateField";
 import { STR, routineSubjectLabel, bnNum } from "../../lib/labels";
 import { isLikelyObjectId } from "../../lib/validate";
@@ -35,6 +37,10 @@ export default function DailyNoteScreen({ route }: Props): React.ReactElement {
   const [busy, setBusy] = useState(false);
   const [ok, setOk] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // LP-1 (D-#820/#821): the open slot's lesson-plan answer (one slot is open at a time).
+  const [lessonPlan, setLessonPlan] = useState<LessonPlanIn | null>(null);
+  const [lpApplies, setLpApplies] = useState(false);
+  const [lpError, setLpError] = useState<string | undefined>(undefined);
 
   const [slotsQ, refetchSlots] = useQuery({ query: ROUTINE_FOR_DATE_QUERY, variables: { groupType, groupId, date } });
   const [notesQ, refetchNotes] = useQuery({ query: CLASS_NOTES_FOR_DATE_QUERY, variables: { groupType, groupId, date } });
@@ -64,6 +70,9 @@ export default function DailyNoteScreen({ route }: Props): React.ReactElement {
       setHwIdError(STR.invalidIdField);
       return;
     }
+    const lpErr = lpApplies ? lessonPlanError(lessonPlan) : null;
+    setLpError(lpErr ?? undefined);
+    if (lpErr) return;
     setBusy(true);
     const res = await publish({
       slotId,
@@ -71,6 +80,7 @@ export default function DailyNoteScreen({ route }: Props): React.ReactElement {
       taughtSummaryBn: taught.trim(),
       homeworkItemId: hwId.trim() || null,
       attachmentIds: files.map((f) => f.fileId),
+      lessonPlan: lpApplies ? lessonPlan : null,
     });
     setBusy(false);
     if (res.error || !res.data?.publishClassNote) {
@@ -82,6 +92,8 @@ export default function DailyNoteScreen({ route }: Props): React.ReactElement {
     setTaught("");
     setHwId("");
     setFiles([]);
+    setLessonPlan(null);
+    setLpApplies(false);
     refetchSlots({ requestPolicy: "network-only" });
     refetchNotes({ requestPolicy: "network-only" });
   }
@@ -131,16 +143,32 @@ export default function DailyNoteScreen({ route }: Props): React.ReactElement {
                   <Muted style={{ marginTop: space(1) }}>{STR.foldViewOnly}</Muted>
                 )
               ) : note ? (
-                <Muted style={{ marginTop: space(1) }}>{note.taughtSummaryBn}</Muted>
+                <>
+                  <Muted style={{ marginTop: space(1) }}>{note.taughtSummaryBn}</Muted>
+                  {note.lessonDelivery ? <Muted style={{ marginTop: 2 }}>📘 {deliverySummary(note.lessonDelivery)}</Muted> : null}
+                </>
               ) : sel === s.id ? (
                 <View style={{ marginTop: space(2), gap: space(1) }}>
+                  <LessonPlanBlock
+                    slotId={s.id}
+                    date={date}
+                    value={lessonPlan}
+                    onChange={setLessonPlan}
+                    onApplies={setLpApplies}
+                    error={lpError}
+                  />
                   <Field label={STR.rtTaughtSummary} value={taught} onChangeText={setTaught} multiline />
                   <Field label={STR.rtHomeworkId} value={hwId} onChangeText={setHwId} helper={STR.rtHomeworkIdHint} error={hwIdError} />
                   <ClassNoteAttachments value={files} onChange={setFiles} />
                   <Button title={STR.rtPublish} onPress={() => submit(s.id)} loading={busy} disabled={busy || taught.trim() === ""} />
                 </View>
               ) : (
-                <Button title={STR.rtClassNote} variant="secondary" onPress={() => setSel(s.id)} style={{ marginTop: space(2) }} />
+                <Button title={STR.rtClassNote} variant="secondary" onPress={() => {
+                    setSel(s.id);
+                    setLessonPlan(null);
+                    setLpApplies(false);
+                    setLpError(undefined);
+                  }} style={{ marginTop: space(2) }} />
               )}
             </Card>
           );

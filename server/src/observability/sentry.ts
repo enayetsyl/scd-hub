@@ -98,6 +98,9 @@ export const EXPECTED_ERROR_NAMES: ReadonlySet<string> = new Set([
   // letter with no salary set, an unknown kind, a void with no reason. Each is a
   // sentence the Office is meant to read and fix before a document goes out — the
   // refusal is the feature, since the alternative is a wrong letter someone signs.
+  // Lesson-plan progress (LP-1, D-#821): a session not in the plan, a duplicate pick, a
+  // period answered with neither a session nor a reason — sentences for the teacher.
+  "LessonProgressError",
   "LetterError",
   "LibraryError",
   // Mastery tracker catalogue (M-0, D-#775–#787): an import that would re-code a locked

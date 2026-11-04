@@ -47,6 +47,7 @@ import { DashboardTab } from "./profile/DashboardTab";
 import { AttendanceTab } from "./profile/AttendanceTab";
 import { TrackerTab } from "./profile/TrackerTab";
 import { ClassTestTab } from "./profile/ClassTestTab";
+import { LessonsTab } from "./profile/LessonsTab";
 import { ComplainTab } from "./profile/ComplainTab";
 
 const keyDaysAgo = (days: number): string => {
@@ -70,7 +71,11 @@ export default function StudentProfileScreen(): React.ReactElement {
   // no params) — see the fix alongside this guard.
   const params = (useRoute().params ?? {}) as Partial<StudentProfileParams>;
   // PM: the sheet is its own action (server: student_profile:export).
-  const canExport = useAuth().can("student_profile:export");
+  const { can } = useAuth();
+  const canExport = can("student_profile:export");
+  // LP-3 (D-#826): the পাঠ tab only for a caller who may read lesson progress.
+  const canLessons = can("lesson_progress:view") || can("lesson_progress:view_all");
+  const tabs = PROFILE_TABS.filter((k) => k !== "lessons" || canLessons);
   const studentId = params.studentId ?? "";
   const studentName = params.studentName;
   const colors = useColors();
@@ -227,7 +232,7 @@ export default function StudentProfileScreen(): React.ReactElement {
   const tabBar = (
     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
       <View style={{ flexDirection: "row", borderBottomWidth: 1, borderBottomColor: colors.border }}>
-        {PROFILE_TABS.map((k) => {
+        {tabs.map((k) => {
           const active = k === tab;
           return (
             <Pressable
@@ -316,6 +321,8 @@ export default function StudentProfileScreen(): React.ReactElement {
             rangeControl={rangeControl}
           />
         );
+      case "lessons":
+        return canLessons ? <LessonsTab studentId={studentId} /> : null;
       case "complain":
         return (
           <ComplainTab

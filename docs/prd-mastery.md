@@ -18,6 +18,9 @@ https://claude.ai/artifact/41PHE293FUroM64pWFH6u1 (owner-private; open it before
 (2026-10-20, max D-#774; open PRs hold only D-#650/#651/#761). D-#786 (approvers) amends D-#781.
 **Content:** draft learning-outcome catalogues for Classes 1–3 in `docs/mastery/lo-catalogue/`
 (owner reviews and locks; see that folder's README).
+**Amended 2026-11-04 by `docs/prd-objective-tree.md` (D-#921–#928):** the catalogue becomes a three-level tree
+(domain → objective → sub-objective) drafted by Claude from the whole book, reviewed in the app and locked by the
+Principal; one code per question; guardians at objective grain. Read it before touching the catalogue.
 
 **Owner ask (2026-10-19):** "I want a similar feature [to scholarship] for all subjects all classes.
 The primary purpose is to identify in which topic and which chapter a student has weakness then

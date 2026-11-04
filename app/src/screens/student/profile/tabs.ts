@@ -9,6 +9,7 @@ export type ProfileTabKey =
   | "classTest"
   | "homework"
   | "assignment"
+  | "lessons"
   | "complain";
 
 export const PROFILE_TABS: ProfileTabKey[] = [
@@ -18,6 +19,7 @@ export const PROFILE_TABS: ProfileTabKey[] = [
   "classTest",
   "homework",
   "assignment",
+  "lessons",
   "complain",
 ];
 
@@ -35,6 +37,8 @@ export function tabLabel(k: ProfileTabKey): string {
       return STR.spPanelHomework;
     case "assignment":
       return STR.spPanelAssignment;
+    case "lessons":
+      return STR.lpTabLessons;
     case "complain":
       return STR.spTabComplain;
   }

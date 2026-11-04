@@ -10,19 +10,21 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useMutation, useQuery } from "urql";
 import { EDIT_MASTERY_ASSIGNMENT_SHEET, MASTERY_ASSIGNMENT_SHEET_QUERY, type MasteryAssignmentSheetData } from "../../graphql/mastery";
 import { Screen, Card, Body, Muted, Badge, Button, Chip, ChipRow, Field, Loader, Notice, Select, H2 } from "../../components/ui";
+import { useMasteryLevelLabels } from "../../lib/useMasteryLevelLabels";
 import { STR, bnNum, masteryBandLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { openPdf } from "../../lib/pdf";
 import { useAuth } from "../../auth/AuthContext";
 import { space } from "../../theme";
 import type { MasteryStackParamList } from "../../navigation/types";
-import { fill } from "./masteryStateUi";
+import { levelFill, fill } from "./masteryStateUi";
 
 type Props = NativeStackScreenProps<MasteryStackParamList, "MasteryAssignmentSheet">;
 
 const bandTone = (b: string) => (b === "WEAK" ? "danger" : b === "IMPROVING" ? "warn" : b === "REVISION" ? "info" : b === "TEACHER" ? "gold" : "muted");
 
 export default function MasteryAssignmentSheetScreen({ navigation, route }: Props): React.ReactElement {
+  const lv = useMasteryLevelLabels();
   const { assignmentId, studentId, subject } = route.params;
   const { can } = useAuth();
   const canEdit = can("mastery:create");
@@ -112,7 +114,7 @@ export default function MasteryAssignmentSheetScreen({ navigation, route }: Prop
       {editable && adding ? (
         <Card>
           <Select
-            label={STR.msAsOutcome}
+            label={levelFill(STR.msAsOutcome, lv)}
             value={lo}
             searchable
             options={s.outcomeChoices.map((o) => ({ label: `${o.labelBn} · ${o.loCode}`, value: o.loCode }))}

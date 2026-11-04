@@ -100,7 +100,7 @@ KG Math (B)/(E)), in the 2025 KG final's layouts:
 | জোড় ও বিজোড় সংখ্যা আলাদা কর | ODD_EVEN | sets of six (three of each), a জোড় row and a বিজোড় row |
 | ছোট থেকে বড় ও বড় থেকে ছোট সাজাও | ORDER_NUMBERS | sets of eight in a climbing window, directions alternating |
 | উপরে-নিচে যোগ / বিয়োগ | VERTICAL_ADD / _SUB | a over b; no carrying (2-digit + 1-digit), no borrowing (1-digit) |
-| দাগ টেনে যোগ / বিয়োগ | LINE_ADD / _SUB | "৬ - ৩ = □" with room to draw sticks, within ১০ (the KG teacher should confirm the reading) |
+| দাগ টেনে যোগ / বিয়োগ | LINE_ADD / _SUB | "৬ - ৩ = □" with room to draw sticks, within ১০ (confirmed by the owner 2026-10-25) |
 | দাগ টেনে যোগ/বিয়োগফল মিলকরণ | MATCH_SUMS | sums ↔ shuffled answers |
 | নামতা লেখ | TIMES_TABLE | one table of ২–৫, ten lines "□ × □ = □" |
 | ঘরে সংখ্যা লেখ — আগের, পরের ও মাঝের | NEIGHBOURS | three neighbours, one missing |

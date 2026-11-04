@@ -18,11 +18,13 @@ import { graphql, type ExecutionResult } from "graphql";
 jest.mock("../modules/attendance/services/AttendanceRankingService");
 jest.mock("../modules/routine/services/LiveClassBoardService");
 jest.mock("../modules/engagement/services/GuardianEngagementService");
+jest.mock("../modules/lesson-progress/services/LessonProgressService");
 
 import { builder } from "../schema";
 import "../modules/attendance/resolvers/attendanceRanking";
 import "../modules/routine/resolvers/liveClassBoard";
 import "../modules/engagement/resolvers/guardianEngagement";
+import "../modules/lesson-progress/resolvers/lessonProgress";
 import { canWatchClaims } from "../modules/trackers/services/WorkClaimDigestService";
 
 builder.mutationField("zzMovedReportsNoop", (t) => t.boolean({ resolve: () => true }));
@@ -60,6 +62,12 @@ const FIELDS: Array<{ name: string; query: string; switch: string; moduleRead: s
     query: `query { guardianEngagement { __typename } }`,
     switch: "reports:guardian_engagement",
     moduleRead: "guardian_engagement:view",
+  },
+  {
+    name: "lesson-plan progress (whole school)",
+    query: `query { lessonProgressOverview { __typename } }`,
+    switch: "reports:lesson_progress",
+    moduleRead: "lesson_progress:view_all",
   },
 ];
 

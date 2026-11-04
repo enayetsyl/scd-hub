@@ -43,6 +43,7 @@ export default function ReportsHomeScreen({ navigation }: Props): React.ReactEle
     { screen: "LoadGrid", icon: "⚖️", title: STR.wbLoad, onPress: () => navigation.navigate("LoadGrid") },
     { screen: "ClassTestDashboard", icon: "🧮", title: STR.ctDashboardTitle, onPress: () => navigation.navigate("ClassTestDashboard") },
     { screen: "StudentProgress", icon: "📈", title: STR.impNavTitle, onPress: () => navigation.navigate("StudentProgress") },
+    { screen: "LessonProgress", icon: "📗", title: STR.lpNavTitle, onPress: () => navigation.navigate("LessonProgress") },
     { screen: "RevisionDashboard", icon: "🕌", title: STR.revDashTitle, onPress: () => navigation.navigate("RevisionDashboard", { date: mostRecentSaturday() }) },
     { screen: "QuestionReviewProgress", icon: "🔍", title: STR.qpTitle, sub: STR.qpSubtitle, onPress: () => navigation.navigate("QuestionReviewProgress") },
     { screen: "ReviewerEffectiveness", icon: "👁️", title: STR.obsReviewerEffTitle, onPress: () => navigation.navigate("ReviewerEffectiveness") },
@@ -51,6 +52,7 @@ export default function ReportsHomeScreen({ navigation }: Props): React.ReactEle
     { screen: "DailySnapshot", icon: "🧾", title: STR.finSnapshotTitle, onPress: () => navigation.navigate("DailySnapshot") },
     { screen: "GuardianEngagement", icon: "👪", title: STR.geTitle, sub: STR.geSubtitle, onPress: () => navigation.navigate("GuardianEngagement") },
     { screen: "MarksDrivers", icon: "🎯", title: STR.mdTitle, sub: STR.mdHubSub, onPress: () => navigation.navigate("MarksDrivers") },
+    { screen: "MasteryBankCoverage", icon: "🧩", title: STR.bcTitle, sub: STR.bcHubSub, onPress: () => navigation.navigate("MasteryBankCoverage") },
   ];
   const cards = all.filter((c) => allowed(c.screen));
 

@@ -23,7 +23,10 @@ import {
   revokeExclusion,
   sectionHeatmap,
   studentDiagnosis,
+  type DomainRollupView,
+  type EarlierStep,
   type ExclusionView,
+  type RollupObjectiveView,
   type HeatOutcome,
   type OutcomeStateView,
   type OutcomeTrail,
@@ -35,7 +38,14 @@ import {
 } from "../services/MasteryDiagnosisService";
 import type { Auth } from "../services/MasteryWorkService";
 import type { MasteryExclusionScope } from "../models/MasteryExclusion";
+import type { StateSummary } from "../rollup";
+import { schoolRollup, type SchoolRollup, type SchoolRollupClass } from "../services/MasteryRollupService";
 import { PaperRef } from "./masteryWork";
+import { parseMasteryLoCode } from "@scd/shared";
+import { StudentSessionRef } from "../../lesson-progress/resolvers/studentLessons";
+import { chapterLessons } from "../../lesson-progress/services/StudentLessonService";
+import { StudentObjectiveLessonRef } from "../../lesson-progress/resolvers/lessonObjectives";
+import { studentObjectiveLessons } from "../../lesson-progress/services/ObjectiveLessonService";
 
 function authOf(ctx: { auth: Auth | null }): Auth {
   if (!ctx.auth) throw new Error("লগইন প্রয়োজন।");
@@ -45,6 +55,66 @@ function authOf(ctx: { auth: Auth | null }): Auth {
 // ---------------------------------------------------------------------------
 // Output types
 // ---------------------------------------------------------------------------
+
+// OT-3 (prd-objective-tree §8.1) — roll-up and the earlier step.
+const StateCountRef = builder.objectRef<StateSummary["counts"][number]>("MasteryStateCount");
+StateCountRef.implement({ fields: (t) => ({ state: t.exposeString("state"), count: t.exposeInt("count") }) });
+
+const SummaryRef = builder.objectRef<StateSummary>("MasteryStateSummary");
+SummaryRef.implement({
+  description: "Counts per state over a set of tagged rows (a domain, an objective's children) + share mastered / weak.",
+  fields: (t) => ({
+    counts: t.field({ type: [StateCountRef], resolve: (s) => s.counts }),
+    total: t.exposeInt("total"),
+    assessed: t.exposeInt("assessed"),
+    weak: t.exposeInt("weak"),
+    mastered: t.exposeInt("mastered"),
+    masteredPct: t.int({ nullable: true, resolve: (s) => s.masteredPct }),
+    weakPct: t.int({ nullable: true, resolve: (s) => s.weakPct }),
+  }),
+});
+
+const EarlierStepRef = builder.objectRef<EarlierStep>("MasteryEarlierStep");
+EarlierStepRef.implement({
+  description: "A prerequisite of a WEAK row with this student's state (D-#927). noData = earlier class, no evidence.",
+  fields: (t) => ({
+    code: t.exposeString("code"),
+    labelBn: t.exposeString("labelBn"),
+    classToken: t.exposeString("classToken"),
+    crossClass: t.exposeBoolean("crossClass"),
+    state: t.string({ nullable: true, resolve: (s) => s.state }),
+    noData: t.exposeBoolean("noData"),
+  }),
+});
+
+const RollupObjectiveRef = builder.objectRef<RollupObjectiveView>("MasteryRollupObjective");
+RollupObjectiveRef.implement({
+  description: "An objective for one student: its own state (tagged) or rolled up from its tagged children.",
+  fields: (t) => ({
+    code: t.exposeString("code"),
+    labelBn: t.exposeString("labelBn"),
+    chapterNumber: t.int({ nullable: true, resolve: (o) => o.chapterNumber }),
+    strand: t.string({ nullable: true, resolve: (o) => o.strand }),
+    domainCode: t.string({ nullable: true, resolve: (o) => o.domainCode }),
+    tagged: t.exposeBoolean("tagged"),
+    state: t.exposeString("state"),
+    childCodes: t.exposeStringList("childCodes"),
+    weakChildCodes: t.exposeStringList("weakChildCodes"),
+    summary: t.field({ type: SummaryRef, resolve: (o) => o.summary }),
+  }),
+});
+
+const DomainRollupRef = builder.objectRef<DomainRollupView>("MasteryDomainRollup");
+DomainRollupRef.implement({
+  description: "A domain for one student: counts per state over its tagged rows. code null = rows with no domain.",
+  fields: (t) => ({
+    code: t.string({ nullable: true, resolve: (d) => d.code }),
+    labelBn: t.string({ nullable: true, resolve: (d) => d.labelBn }),
+    objectiveCodes: t.exposeStringList("objectiveCodes"),
+    summary: t.field({ type: SummaryRef, resolve: (d) => d.summary }),
+    state: t.exposeString("state"),
+  }),
+});
 
 const StateRef = builder.objectRef<OutcomeStateView>("MasteryOutcomeState");
 StateRef.implement({
@@ -65,6 +135,10 @@ StateRef.implement({
     reworkCount: t.exposeInt("reworkCount"),
     reasons: t.exposeStringList("reasons"),
     nextRevisionAt: t.string({ nullable: true, resolve: (s) => s.nextRevisionAt }),
+    level: t.exposeString("level"),
+    parentCode: t.string({ nullable: true, resolve: (s) => s.parentCode }),
+    domainCode: t.string({ nullable: true, resolve: (s) => s.domainCode }),
+    earlierSteps: t.field({ type: [EarlierStepRef], resolve: (s) => s.earlierSteps }),
   }),
 });
 
@@ -83,6 +157,15 @@ StudentDiagnosisRef.implement({
     outcomes: t.field({ type: [StateRef], resolve: (s) => s.outcomes }),
     sectionSize: t.exposeInt("sectionSize"),
     moreWeakThan: t.exposeInt("moreWeakThan"),
+    isTree: t.exposeBoolean("isTree"),
+    objectives: t.field({ type: [RollupObjectiveRef], resolve: (s) => s.objectives }),
+    domains: t.field({ type: [DomainRollupRef], resolve: (s) => s.domains }),
+    /** OT-5 (D-#950): per outcome, was it taught in the child's শাখা and was the child there — splits a
+     *  WEAK row into "taught, not yet learnt" / "missed that class" / "not taught yet". Lazy; rides this gate. */
+    objectiveLessons: t.field({
+      type: [StudentObjectiveLessonRef],
+      resolve: (d) => studentObjectiveLessons(d.studentId, d.subject, d.outcomes.map((o) => o.loCode)),
+    }),
   }),
 });
 
@@ -128,10 +211,32 @@ TrailRef.implement({
     name: t.exposeString("name"),
     outcome: t.field({ type: StateRef, resolve: (x) => x.outcome }),
     homeTipBn: t.string({ nullable: true, resolve: (x) => x.outcome.homeTipBn }),
+    parentLabelBn: t.string({ nullable: true, resolve: (x) => x.parentLabelBn }),
+    domainLabelBn: t.string({ nullable: true, resolve: (x) => x.domainLabelBn }),
     history: t.field({ type: [HistoryRef], resolve: (x) => x.history }),
     rows: t.field({ type: [TrailRowRef], resolve: (x) => x.rows }),
     bankGold: t.exposeInt("bankGold"),
     bankSeen: t.exposeInt("bankSeen"),
+    /** LP-3 (D-#825): the outcome's chapter as taught in class — each session with the child's presence.
+     *  Empty = not taught (or not marked) yet. Rides the trail's own gate. */
+    chapterLessons: t.field({
+      type: [StudentSessionRef],
+      resolve: async (x) => {
+        const subject = parseMasteryLoCode(x.outcome.loCode)?.subject;
+        if (!subject || x.outcome.chapterNumber == null) return [];
+        return chapterLessons(x.studentId, subject, String(x.outcome.chapterNumber));
+      },
+    }),
+    /** OT-5 (D-#950): the outcome's own code as taught in class (TAUGHT / MISSED / UNKNOWN / NOT_TAUGHT). */
+    objectiveLesson: t.field({
+      type: StudentObjectiveLessonRef,
+      nullable: true,
+      resolve: async (x) => {
+        const subject = parseMasteryLoCode(x.outcome.loCode)?.subject;
+        if (!subject) return null;
+        return (await studentObjectiveLessons(x.studentId, subject, [x.outcome.loCode]))[0] ?? null;
+      },
+    }),
   }),
 });
 
@@ -156,6 +261,13 @@ HeatOutcomeRef.implement({
     actionId: t.string({ nullable: true, resolve: (o) => o.actionId }),
     actionStatus: t.string({ nullable: true, resolve: (o) => o.actionStatus }),
     cells: t.field({ type: [HeatCellRef], resolve: (o) => o.cells }),
+    level: t.exposeString("level"),
+    parentCode: t.string({ nullable: true, resolve: (o) => o.parentCode }),
+    parentLabelBn: t.string({ nullable: true, resolve: (o) => o.parentLabelBn }),
+    domainCode: t.string({ nullable: true, resolve: (o) => o.domainCode }),
+    childCodes: t.exposeStringList("childCodes"),
+    weakChildCodes: t.exposeStringList("weakChildCodes"),
+    masteredPct: t.int({ nullable: true, resolve: (o) => o.masteredPct }),
   }),
 });
 
@@ -180,6 +292,60 @@ HeatmapRef.implement({
     students: t.field({ type: [HeatStudentRef], resolve: (h) => h.students }),
     outcomes: t.field({ type: [HeatOutcomeRef], resolve: (h) => h.outcomes }),
     notYetAssessed: t.exposeInt("notYetAssessed"),
+    isTree: t.exposeBoolean("isTree"),
+    objectiveColumns: t.field({ type: [HeatOutcomeRef], resolve: (h) => h.objectiveColumns }),
+    domainColumns: t.field({ type: [HeatOutcomeRef], resolve: (h) => h.domainColumns }),
+  }),
+});
+
+// OT-3 — the leader dashboard's school-wide roll-up (MasteryRollupService).
+const SchoolDomainRef = builder.objectRef<SchoolRollupClass["domains"][number]>("MasterySchoolDomain");
+SchoolDomainRef.implement({
+  fields: (t) => ({
+    code: t.string({ nullable: true, resolve: (d) => d.code }),
+    labelBn: t.string({ nullable: true, resolve: (d) => d.labelBn }),
+    objectiveCodes: t.exposeStringList("objectiveCodes"),
+    summary: t.field({ type: SummaryRef, resolve: (d) => d.summary }),
+  }),
+});
+const SchoolObjectiveRef = builder.objectRef<SchoolRollupClass["objectives"][number]>("MasterySchoolObjective");
+SchoolObjectiveRef.implement({
+  fields: (t) => ({
+    code: t.exposeString("code"),
+    labelBn: t.exposeString("labelBn"),
+    domainCode: t.string({ nullable: true, resolve: (o) => o.domainCode }),
+    chapterNumber: t.int({ nullable: true, resolve: (o) => o.chapterNumber }),
+    tagged: t.exposeBoolean("tagged"),
+    childCodes: t.exposeStringList("childCodes"),
+    summary: t.field({ type: SummaryRef, resolve: (o) => o.summary }),
+  }),
+});
+const SchoolRowRef = builder.objectRef<SchoolRollupClass["rows"][number]>("MasterySchoolRow");
+SchoolRowRef.implement({
+  fields: (t) => ({
+    code: t.exposeString("code"),
+    labelBn: t.exposeString("labelBn"),
+    parentCode: t.string({ nullable: true, resolve: (r) => r.parentCode }),
+    summary: t.field({ type: SummaryRef, resolve: (r) => r.summary }),
+  }),
+});
+const SchoolClassRef = builder.objectRef<SchoolRollupClass>("MasterySchoolClass");
+SchoolClassRef.implement({
+  fields: (t) => ({
+    classToken: t.exposeString("classToken"),
+    sections: t.exposeInt("sections"),
+    students: t.exposeInt("students"),
+    domains: t.field({ type: [SchoolDomainRef], resolve: (c) => c.domains }),
+    objectives: t.field({ type: [SchoolObjectiveRef], resolve: (c) => c.objectives }),
+    rows: t.field({ type: [SchoolRowRef], resolve: (c) => c.rows }),
+  }),
+});
+const SchoolRollupRef = builder.objectRef<SchoolRollup>("MasterySchoolRollup");
+SchoolRollupRef.implement({
+  fields: (t) => ({
+    subject: t.exposeString("subject"),
+    subjects: t.exposeStringList("subjects"),
+    classes: t.field({ type: [SchoolClassRef], resolve: (r) => r.classes }),
   }),
 });
 
@@ -263,6 +429,16 @@ builder.queryFields((t) => ({
     authScopes: { hasPermission: "mastery:view" },
     args: { sectionId: t.arg.string({ required: true }), subject: t.arg.string({ required: true }) },
     resolve: async (_r, args, ctx) => sectionHeatmap(args.sectionId, args.subject as MasterySubject, authOf(ctx)),
+  }),
+
+  masterySchoolRollup: t.field({
+    type: SchoolRollupRef,
+    description:
+      "OT-3: the whole school for an approver — per switched-on class (tree catalogues only), domain → objective → " +
+      "tagged row counts per state over the class's students (§8.1). subject omitted ⇒ the first switched-on one.",
+    authScopes: { hasPermission: "mastery:view" },
+    args: { subject: t.arg.string({ required: false }) },
+    resolve: async (_r, args, ctx) => schoolRollup(args.subject ?? null, authOf(ctx)),
   }),
 
   masteryQualityPapersPage: t.field({

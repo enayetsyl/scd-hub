@@ -42,6 +42,7 @@ export const REPORT_LEAF_ACTIONS: Record<string, string[]> = {
   ClassTestDashboard: ["reports:class_test_dashboard", "class_test:view_all"],
   StudentProgress: ["reports:student_progress", "improvement_plan:view_all"],
   RevisionDashboard: ["reports:revision_dashboard", "saturday_revision:view_all"],
+  LessonProgress: ["reports:lesson_progress", "lesson_progress:view_all"],
   QuestionReviewProgress: ["reports:review_progress", "question_review:view_all"],
   ReviewerEffectiveness: ["reports:reviewer_effectiveness", "classroom_observation:view_reports"],
   TeachingNoteOpenComments: ["reports:teaching_note_comments", "teaching_notes:review"],
@@ -49,6 +50,8 @@ export const REPORT_LEAF_ACTIONS: Record<string, string[]> = {
   DailySnapshot: ["reports:daily_snapshot", "finance_ledger:view"],
   GuardianEngagement: ["reports:guardian_engagement", "guardian_engagement:view"],
   MarksDrivers: ["reports:marks_drivers"],
+  // OT-4: its own switch, or the objective-list doors (the Principal who locks, the reviewer).
+  MasteryBankCoverage: ["reports:bank_coverage", "mastery:settings", "mastery:review"],
 };
 
 /** Any of these opens the Reports tab. */

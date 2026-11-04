@@ -28,6 +28,8 @@ import {
   type ActionSummary,
 } from "../services/MasteryActionService";
 import type { Auth } from "../services/MasteryWorkService";
+import { MasteryOutcome } from "../models/MasteryOutcome";
+import { missedChapter } from "../../lesson-progress/services/StudentLessonService";
 
 function authOf(ctx: { auth: Auth | null }): Auth {
   if (!ctx.auth) throw new Error("লগইন প্রয়োজন।");
@@ -91,6 +93,28 @@ EventRef.implement({
   }),
 });
 
+const LessonGapRef = builder.objectRef<{ taught: boolean; weakCount: number; missedNames: string[] }>("MasteryLessonGap").implement({
+  fields: (t) => ({
+    /** False = no class of this chapter has been marked in the শাখা yet. */
+    taught: t.exposeBoolean("taught"),
+    weakCount: t.exposeInt("weakCount"),
+    missedNames: t.exposeStringList("missedNames"),
+  }),
+});
+
+const WeakChildRef = builder.objectRef<ActionDetail["weakChildren"][number]>("MasteryActionWeakChild");
+WeakChildRef.implement({
+  description: "OT-3 (§8.1): a tagged child of the action's objective with WEAK students in the section now.",
+  fields: (t) => ({
+    code: t.exposeString("code"),
+    labelBn: t.exposeString("labelBn"),
+    weak: t.exposeInt("weak"),
+    verdicts: t.exposeInt("verdicts"),
+    weakPct: t.int({ nullable: true, resolve: (c) => c.weakPct }),
+    triggered: t.exposeBoolean("triggered"),
+  }),
+});
+
 const DetailRef = builder.objectRef<ActionDetail>("MasteryAction");
 DetailRef.implement({
   description: "Issue → action → result for one section × subject × outcome (D-#781 / #811).",
@@ -102,6 +126,10 @@ DetailRef.implement({
     subject: t.exposeString("subject"),
     loCode: t.exposeString("loCode"),
     labelBn: t.exposeString("labelBn"),
+    objectiveCode: t.exposeString("objectiveCode"),
+    objectiveLabelBn: t.exposeString("objectiveLabelBn"),
+    isSub: t.exposeBoolean("isSub"),
+    weakChildren: t.field({ type: [WeakChildRef], resolve: (a) => a.weakChildren }),
     kind: t.exposeString("kind"),
     status: t.exposeString("status"),
     trigger: t.field({ type: TriggerRef, resolve: (a) => a.trigger }),
@@ -117,6 +145,19 @@ DetailRef.implement({
     events: t.field({ type: [EventRef], resolve: (a) => a.events }),
     canApprove: t.exposeBoolean("canApprove"),
     canWork: t.exposeBoolean("canWork"),
+    /** LP-3 (D-#825): of the students weak at the trigger, who missed a class where this outcome's chapter
+     *  was taught — "missed the lesson" points to catch-up rather than re-teach. Information only. */
+    lessonGap: t.field({
+      type: LessonGapRef,
+      resolve: async (a) => {
+        const weak = a.students.filter((s) => s.weakAtTrigger);
+        const outcome = await MasteryOutcome.findOne({ code: a.loCode }).select("chapterNumber").lean();
+        if (outcome?.chapterNumber == null || weak.length === 0) return { taught: false, weakCount: weak.length, missedNames: [] };
+        const r = await missedChapter(weak.map((s) => s.studentId), a.subject, String(outcome.chapterNumber));
+        const missed = new Set(r.missed);
+        return { taught: r.taught, weakCount: weak.length, missedNames: weak.filter((s) => missed.has(s.studentId)).map((s) => s.name) };
+      },
+    }),
   }),
 });
 
@@ -130,6 +171,7 @@ SummaryRef.implement({
     subject: t.exposeString("subject"),
     loCode: t.exposeString("loCode"),
     labelBn: t.exposeString("labelBn"),
+    objectiveLabelBn: t.string({ nullable: true, resolve: (s) => s.objectiveLabelBn }),
     kind: t.exposeString("kind"),
     status: t.exposeString("status"),
     weakPct: t.exposeInt("weakPct"),

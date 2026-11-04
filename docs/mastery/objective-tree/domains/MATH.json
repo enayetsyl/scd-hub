@@ -1,0 +1,119 @@
+{
+ "format": "scd-objective-domains/1",
+ "subject": "MATH",
+ "status": "DRAFT",
+ "domains": [
+  {
+   "code": "DOM-MATH-NUM",
+   "labelBn": "সংখ্যা ও গণনা",
+   "labelEn": "Numbers and counting",
+   "order": 1,
+   "note": "C1 গোনা, পড়া, লেখা, ক্রম, তুলনা (১–১০০) → C3 লক্ষ → C4 কোটি → C6 পূর্ণসংখ্যা।"
+  },
+  {
+   "code": "DOM-MATH-PLACE",
+   "labelBn": "স্থানীয় মান",
+   "labelEn": "Place value",
+   "order": 2,
+   "note": "আলাদা রাখা হলো কারণ হাতে রাখা ও ধার নেওয়ার ভিত্তি এটাই (C1 দশক-একক → C4 কমা ও দুই রীতি)। মই-এ যোগ/বিয়োগের আগের ধাপ।"
+  },
+  {
+   "code": "DOM-MATH-ADD",
+   "labelBn": "যোগ",
+   "labelEn": "Addition",
+   "order": 3,
+   "note": "এক অপারেশনের গল্পের যোগও এখানে (মালিকের অনুমোদিত উদাহরণ)। C1 ৯৯ পর্যন্ত → C2 ১০০০ → C3 চার-পাঁচ অঙ্ক → C4 লক্ষ।"
+  },
+  {
+   "code": "DOM-MATH-SUB",
+   "labelBn": "বিয়োগ",
+   "labelEn": "Subtraction",
+   "order": 4,
+   "note": "C1 ধার ছাড়া → C2 ধারসহ → C3 শূন্যের ঘর পেরিয়ে ধার → C4 লক্ষ পর্যন্ত।"
+  },
+  {
+   "code": "DOM-MATH-MUL",
+   "labelBn": "গুণ ও নামতা",
+   "labelEn": "Multiplication and times tables",
+   "order": 5,
+   "note": "নামতা (C1 ১–১০, C3 ১৬–২০) ও গুণ এক মই-এ; নামতা গুণের আগের ধাপ।"
+  },
+  {
+   "code": "DOM-MATH-DIV",
+   "labelBn": "ভাগ",
+   "labelEn": "Division",
+   "order": 6,
+   "note": "C3 থেকে শুরু; C1-এ নেই।"
+  },
+  {
+   "code": "DOM-MATH-MIXED",
+   "labelBn": "যোগ-বিয়োগ বেছে নেওয়া ও মিশ্র হিসাব",
+   "labelEn": "Choosing the operation and mixed calculation",
+   "order": 7,
+   "note": "কোন কাজ করতে হবে তা বোঝা, একাধিক ধাপ, অজানা সংখ্যা, হিসাবের ক্রম ও বন্ধনী (C4–C5)। এক অপারেশনের গল্প নিজ ক্ষেত্রে থাকে; মিশ্র ও বেছে নেওয়ার দক্ষতা এখানে।"
+  },
+  {
+   "code": "DOM-MATH-NPROP",
+   "labelBn": "সংখ্যার বৈশিষ্ট্য",
+   "labelEn": "Number properties",
+   "order": 8,
+   "note": "জোড়-বিজোড় (C1) → গুণিতক, গুণনীয়ক, মৌলিক, ল.সা.গু, গ.সা.গু, বিভাজ্যতা (C4–C5)।"
+  },
+  {
+   "code": "DOM-MATH-FRAC",
+   "labelBn": "ভগ্নাংশ ও দশমিক",
+   "labelEn": "Fractions and decimals",
+   "order": 9,
+   "note": "C3 সমহর ভগ্নাংশ → C4 বিভিন্ন হর ও দশমিক → C5।"
+  },
+  {
+   "code": "DOM-MATH-RATIO",
+   "labelBn": "শতকরা ও অনুপাত",
+   "labelEn": "Percent and ratio",
+   "order": 10,
+   "note": "C5 শতকরা, C6 অনুপাত-সমানুপাত। C1–C4-এ নেই।"
+  },
+  {
+   "code": "DOM-MATH-MONEY",
+   "labelBn": "টাকা-পয়সা",
+   "labelEn": "Money",
+   "order": 11,
+   "note": "C1–C3-এ আলাদা অধ্যায়; শিক্ষকেরা আলাদা বিষয় হিসেবে ভাবেন, তাই পরিমাপে মেশানো হয়নি।"
+  },
+  {
+   "code": "DOM-MATH-MEAS",
+   "labelBn": "পরিমাপ ও একক",
+   "labelEn": "Measurement and units",
+   "order": 12,
+   "note": "C1-এর তুলনার শব্দ (লম্বা-খাটো, হালকা-ভারি) ও জোড়া-হালি-ডজন এর প্রথম ধাপ → দৈর্ঘ্য, ওজন, তরল, পরিসীমা, ক্ষেত্রফল।"
+  },
+  {
+   "code": "DOM-MATH-TIME",
+   "labelBn": "সময় ও ক্যালেন্ডার",
+   "labelEn": "Time and calendar",
+   "order": 13,
+   "note": "C1 সপ্তাহ-মাস-ক্যালেন্ডার → C3 ঘড়ি → C4 সময়ের একক ও হিসাব।"
+  },
+  {
+   "code": "DOM-MATH-GEOM",
+   "labelBn": "জ্যামিতি",
+   "labelEn": "Geometry",
+   "order": 14,
+   "note": "C1 আকৃতি → C3 বিন্দু-রেখা-তল, কোণ → C4 ত্রিভুজ, আয়ত, বর্গ।"
+  },
+  {
+   "code": "DOM-MATH-DATA",
+   "labelBn": "গড় ও তথ্য",
+   "labelEn": "Averages and data",
+   "order": 15,
+   "note": "C5 গড়, C6 তথ্য ও উপাত্ত। C4-এ উপাত্ত অধ্যায় বাদ।"
+  },
+  {
+   "code": "DOM-MATH-ALG",
+   "labelBn": "প্যাটার্ন ও বীজগণিত",
+   "labelEn": "Patterns and algebra",
+   "order": 16,
+   "note": "C6 বীজগণিত ও সমীকরণ; C4 কাঠির প্যাটার্ন শুধু শ্রেণিতে। C1-এ প্যাটার্ন নিষিদ্ধ (সিদ্ধান্ত ১৮)।"
+  }
+ ]
+}
