@@ -265,6 +265,10 @@ import MasteryAssignmentScreen from "../screens/mastery/MasteryAssignmentScreen"
 import MasteryAssignmentSheetScreen from "../screens/mastery/MasteryAssignmentSheetScreen";
 import MasteryActionsScreen from "../screens/mastery/MasteryActionsScreen";
 import MasteryActionScreen from "../screens/mastery/MasteryActionScreen";
+import MasteryReviewsScreen from "../screens/mastery/MasteryReviewsScreen";
+import MasteryReviewScreen from "../screens/mastery/MasteryReviewScreen";
+import MasteryReviewRowScreen from "../screens/mastery/MasteryReviewRowScreen";
+import MasteryReviewLockScreen from "../screens/mastery/MasteryReviewLockScreen";
 import TeachingNoteDocScreen from "../screens/teachingnotes/TeachingNoteDocScreen";
 import TeachingNoteUploadScreen from "../screens/teachingnotes/TeachingNoteUploadScreen";
 import TeachingNoteOpenCommentsScreen from "../screens/teachingnotes/TeachingNoteOpenCommentsScreen";
@@ -359,6 +363,7 @@ import PersonActivityScreen from "../screens/admin/PersonActivityScreen";
 import WorkClaimQueueScreen from "../screens/admin/WorkClaimQueueScreen";
 import GuardianEngagementScreen from "../screens/admin/GuardianEngagementScreen";
 import MarksDriversScreen from "../screens/reports/MarksDriversScreen";
+import MasteryBankCoverageScreen from "../screens/mastery/MasteryBankCoverageScreen";
 import SystemHealthScreen from "../screens/admin/SystemHealthScreen";
 import ReportsHomeScreen from "../screens/reports/ReportsHomeScreen";
 import PendingReportScreen from "../screens/reports/PendingReportScreen";
@@ -1330,6 +1335,11 @@ function MasteryNavigator(): React.ReactElement {
       <MasteryStack.Screen name="MasteryLeader" component={MasteryActionsScreen} options={{ title: STR.msLeader }} />
       <MasteryStack.Screen name="MasteryActions" component={MasteryActionsScreen} options={{ title: STR.msActions }} />
       <MasteryStack.Screen name="MasteryAction" component={MasteryActionScreen} options={{ title: STR.msAction }} />
+      <MasteryStack.Screen name="MasteryReviews" component={MasteryReviewsScreen} options={{ title: STR.msRvNav }} />
+      <MasteryStack.Screen name="MasteryReview" component={MasteryReviewScreen} options={{ title: STR.msRvNav }} />
+      <MasteryStack.Screen name="MasteryReviewRow" component={MasteryReviewRowScreen} options={{ title: STR.msRvDetails }} />
+      <MasteryStack.Screen name="MasteryReviewLock" component={MasteryReviewLockScreen} options={{ title: STR.msRvLock }} />
+      <MasteryStack.Screen name="MasteryBankCoverage" component={MasteryBankCoverageScreen} options={{ title: STR.bcTitle }} />
     </MasteryStack.Navigator>
   );
 }
@@ -1527,6 +1537,7 @@ function ReportsNavigator(): React.ReactElement {
       <ReportsStack.Screen name="DailySnapshot" component={DailySnapshotScreen} options={{ title: STR.finSnapshotTitle }} />
       <ReportsStack.Screen name="GuardianEngagement" component={GuardianEngagementScreen} options={{ title: STR.geTitle }} />
       <ReportsStack.Screen name="MarksDrivers" component={MarksDriversScreen} options={{ title: STR.mdTitle }} />
+      <ReportsStack.Screen name="MasteryBankCoverage" component={MasteryBankCoverageScreen} options={{ title: STR.bcTitle }} />
     </ReportsStack.Navigator>
   );
 }
@@ -1927,7 +1938,7 @@ export function AppTabs(): React.ReactElement {
   const canReports = any(...REPORT_ACTIONS);
   // Mastery tracker (M-0): the catalogue/policy admin. Every staff role holds mastery:read;
   // writes are shown per screen to mastery:manage and re-gated server-side.
-  const canMastery = any("mastery:view", "mastery:settings", "mastery:enter_results", "mastery:approve");
+  const canMastery = any("mastery:view", "mastery:settings", "mastery:enter_results", "mastery:approve", "mastery:review");
   // GP-2 (D-#68): the GUARDIAN role holds ONLY guardian:read_child, so every
   // staff gate above is false for guardians — the guardian tab set is all they see.
   const canGuardian = can("guardian:read_child");

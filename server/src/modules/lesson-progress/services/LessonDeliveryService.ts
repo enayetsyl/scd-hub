@@ -9,10 +9,13 @@
  *
  * The answer is required by the app (D-#821) but NOT by the server: an older app build publishes
  * without it, and that note simply has no delivery row (LP-2 counts it as unanswered).
+ *
+ * D-#952: all of it runs only while the school switch "ক্লাস নোটে পাঠ পরিকল্পনার প্রশ্ন" is on
+ * (LessonPlanQuestionSwitch.ts; default OFF, a missing row is OFF).
  */
 import { Types } from "mongoose";
 import type { LessonNoneReason } from "@scd/shared";
-import { LESSON_NONE_REASONS } from "@scd/shared";
+import { LESSON_NONE_REASONS, MASTERY_LO_CODE_RE } from "@scd/shared";
 import { ContentArtifact } from "../../content/models/ContentArtifact";
 import { Class } from "../../foundation/models/Class";
 import { Student } from "../../foundation/models/Student";
@@ -21,6 +24,7 @@ import { RoutineSlot, type IRoutineSlot } from "../../routine/models/RoutineSlot
 import { dateKeyOf } from "../../attendance/dates";
 import { resolveUnitsForIds } from "../../attendance/attendanceUnit";
 import { LessonDelivery, type ILessonDelivery } from "../models/LessonDelivery";
+import { isLessonPlanQuestionOn } from "./LessonPlanQuestionSwitch";
 
 export class LessonProgressError extends Error {
   constructor(message: string) {
@@ -39,6 +43,15 @@ export interface PlanSession {
   sessionOf: number;
   titleBn: string;
   artifactId: string;
+  /** OT-5 (prd-objective-tree §8.3): the objective codes the session teaches (`tags.lo_codes`); [] = none. */
+  loCodes: string[];
+}
+
+/** A plan's `tags.lo_codes`, pattern-checked (the harness already refused a bad one; old rows have none). */
+export function planLoCodes(tags: { lo_codes?: unknown } | null | undefined): string[] {
+  const list = tags?.lo_codes;
+  if (!Array.isArray(list)) return [];
+  return [...new Set(list.filter((c): c is string => typeof c === "string" && MASTERY_LO_CODE_RE.test(c)))];
 }
 
 export const sessionKey = (chapter: string, sessionIndex: number): string => `${chapter}:${sessionIndex}`;
@@ -58,6 +71,7 @@ interface PlanRow {
   _id: Types.ObjectId;
   address?: { anchorWord?: string; number?: unknown; title?: string };
   importedAt?: Date;
+  tags?: { lo_codes?: unknown };
   envelopeJson?: { payload?: { session_plan?: { period_index?: number; period_of?: number; session_title?: string } } };
 }
 
@@ -73,6 +87,7 @@ export async function sessionPlansFor(classLevel: number, subject: string): Prom
     .select({
       address: 1,
       importedAt: 1,
+      "tags.lo_codes": 1,
       "envelopeJson.payload.session_plan.period_index": 1,
       "envelopeJson.payload.session_plan.period_of": 1,
       "envelopeJson.payload.session_plan.session_title": 1,
@@ -101,6 +116,7 @@ export async function sessionPlansFor(classLevel: number, subject: string): Prom
       sessionOf,
       titleBn: sp.session_title?.trim() || chapterTitle || `${chapter}`,
       artifactId: String(r._id),
+      loCodes: planLoCodes(r.tags),
       importedAt,
     });
   }
@@ -163,7 +179,17 @@ export interface LessonPlanSessionView extends PlanSession {
 export interface LessonDeliveryView {
   noteId: string;
   dateKey: string;
-  sessions: Array<{ key: string; chapter: string; anchorWord: string; sessionIndex: number; sessionOf: number; titleBn: string; finished: boolean }>;
+  sessions: Array<{
+    key: string;
+    chapter: string;
+    anchorWord: string;
+    sessionIndex: number;
+    sessionOf: number;
+    titleBn: string;
+    finished: boolean;
+    /** OT-5: the codes snapshotted at marking ([] = the plan carried none then). */
+    loCodes: string[];
+  }>;
   noneReason: LessonNoneReason | null;
   noneNote: string | null;
 }
@@ -175,6 +201,10 @@ export interface LessonPlanForSlot {
   suggestedKey: string | null;
   /** This slot × date's own marks, when the note already has them. */
   delivery: LessonDeliveryView | null;
+  /** OT-5: the শাখা this card is for (internal — the lazy `objectives` field reads it). */
+  sectionId?: string;
+  classLevel?: number;
+  subject?: string;
 }
 
 export function deliveryView(d: Pick<ILessonDelivery, "noteId" | "dateKey" | "sessions" | "noneReason" | "noneNote">): LessonDeliveryView {
@@ -189,6 +219,7 @@ export function deliveryView(d: Pick<ILessonDelivery, "noteId" | "dateKey" | "se
       sessionOf: s.sessionOf,
       titleBn: s.titleBn,
       finished: s.finished,
+      loCodes: s.loCodes ?? [],
     })),
     noneReason: d.noneReason ?? null,
     noneNote: d.noneNote ?? null,
@@ -201,6 +232,8 @@ export function deliveryView(d: Pick<ILessonDelivery, "noteId" | "dateKey" | "se
  */
 export async function lessonPlanForSlot(slot: IRoutineSlot, date: Date): Promise<LessonPlanForSlot> {
   const none: LessonPlanForSlot = { applies: false, sessions: [], suggestedKey: null, delivery: null };
+  // D-#952: the school switch is off (the default, and a missing row) → no question on any note.
+  if (!(await isLessonPlanQuestionOn())) return none;
   const level = await classLevelOf(slot);
   if (level == null) return none;
   const plan = await sessionPlansFor(level, slot.subject);
@@ -226,6 +259,9 @@ export async function lessonPlanForSlot(slot: IRoutineSlot, date: Date): Promise
     })),
     suggestedKey: nextSessionKey(plan, states),
     delivery: own ? deliveryView(own) : null,
+    sectionId: String(slot.groupId),
+    classLevel: level,
+    subject: slot.subject,
   };
 }
 
@@ -249,6 +285,8 @@ interface PreparedDelivery {
  * resolver calls this BEFORE writing the note, so a bad answer never leaves a half-written period.
  */
 export async function prepareDelivery(slotId: Types.ObjectId | string, input: LessonPlanInput): Promise<PreparedDelivery | null> {
+  // D-#952: switch off → the answer is ignored (never an error, never written).
+  if (!(await isLessonPlanQuestionOn())) return null;
   const slot = (await RoutineSlot.findById(slotId).select("groupType classId subject").lean()) as unknown as IRoutineSlot | null;
   if (!slot || slot.groupType !== "section") return null;
   const level = await classLevelOf(slot);
@@ -272,6 +310,8 @@ export async function prepareDelivery(slotId: Types.ObjectId | string, input: Le
       artifactId: new Types.ObjectId(p.artifactId),
       titleBn: p.titleBn,
       finished: !!s.finished,
+      // OT-5 (D-#949): snapshot the plan's codes; left out when it has none (readers fall back to the current plan).
+      ...(p.loCodes.length ? { loCodes: [...p.loCodes] } : {}),
     };
   });
 

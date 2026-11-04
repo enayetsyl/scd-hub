@@ -87,6 +87,7 @@ export function ChildMasteryAssignments({ studentId, childName }: { studentId: s
           {a.result && !a.result.notMarked ? (
             <View style={{ gap: 2 }}>
               <Body style={{ fontWeight: "600" }}>{STR.gpMsHowItWent}</Body>
+              {a.result.levelWordBn ? <Muted>{STR.gpMsCountsAt.replace("{objective}", a.result.levelWordBn)}</Muted> : null}
               {a.result.rows.map((r) => (
                 <View key={r.labelBn} style={{ flexDirection: "row", justifyContent: "space-between", gap: space(2), flexWrap: "wrap" }}>
                   <Body style={{ flexShrink: 1 }}>{r.labelBn}</Body>

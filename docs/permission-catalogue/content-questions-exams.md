@@ -279,6 +279,17 @@ Already one-to-one with today's permissions; no hidden role gate, no REST route 
 | app/src/screens/mastery/*.tsx (Home :24, Catalogue :40, Marks :33, Policy :38, Tags :81) | `can("mastery:manage")` shows write controls | `can("mastery:settings")` (retire on Catalogue → `mastery:delete`) |
 
 
+### Objective tree OT-1 (2026-11-04, prd-objective-tree §9, D-#921–#928)
+| file | resolver | gate |
+|---|---|---|
+| server/src/modules/mastery/resolvers/masteryCatalogue.ts | importMasteryCatalogue (+`domainsJson`, tree preview/apply) | `mastery:settings` (unchanged) |
+| server/src/modules/mastery/resolvers/masteryCatalogue.ts | saveMasteryLevelLabels | `mastery:settings` |
+| server/src/modules/mastery/resolvers/masteryCatalogue.ts | masteryLevelLabels | `mastery:view` OR `mastery:review` |
+| server/src/modules/mastery/resolvers/masteryCatalogue.ts | masteryDomains | `mastery:view` OR `mastery:review` |
+| server/src/modules/mastery/resolvers/masteryCatalogue.ts | masteryCatalogueReview | `mastery:review` OR `mastery:settings` |
+| server/src/modules/mastery/services/MasteryCatalogueService.ts | setEnablement (svc) | ON also needs a LOCKED review round when the pair has rounds |
+Review writes (accept/edit/split/merge/reject/add/comment/submit) arrive with OT-2 on `mastery:review` (assigned rows only); assign + lock on `mastery:settings`.
+
 ### M-2 (2026-10-21, D-#807) — work sheets & exceptions-only entry
 | file | resolver | gate (already catalogue-native) |
 |---|---|---|

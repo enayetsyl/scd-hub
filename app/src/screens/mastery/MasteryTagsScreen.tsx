@@ -16,6 +16,8 @@ import {
   type MasteryTagRow,
 } from "../../graphql/mastery";
 import { Screen, Card, Body, Muted, Badge, Button, Chip, ChipRow, Field, Loader, Notice } from "../../components/ui";
+import { useMasteryLevelLabels } from "../../lib/useMasteryLevelLabels";
+import { levelFill } from "./masteryStateUi";
 import { STR, bnNum, hwSubjectLabel, masteryClassLabel, masteryTagEffectLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useToast } from "../../state/ToastContext";
@@ -76,6 +78,7 @@ const blank: Draft = {
 };
 
 export default function MasteryTagsScreen(_props: Props): React.ReactElement {
+  const lv = useMasteryLevelLabels();
   const toast = useToast();
   const { can } = useAuth();
   const canManage = can("mastery:settings");
@@ -123,7 +126,7 @@ export default function MasteryTagsScreen(_props: Props): React.ReactElement {
 
   return (
     <Screen scroll>
-      <Notice message={STR.msRouteNote} tone="info" />
+      <Notice message={levelFill(STR.msRouteNote, lv)} tone="info" />
       {qErr ? <Notice message={friendlyError(qErr)} tone="danger" /> : null}
       {fetching && tags.length === 0 ? <Loader /> : null}
 
