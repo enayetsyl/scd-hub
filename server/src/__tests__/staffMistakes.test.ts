@@ -26,8 +26,10 @@ import {
   decideMistake,
   explainDeadline,
   explainMistake,
+  listMoveTargets,
   listStaffMistakes,
 } from "../modules/staff-mistakes/services/StaffMistakeService";
+import { hiddenOwnersFor, warningAudience } from "../modules/staff-mistakes/services/principalPrivacy";
 
 jest.setTimeout(120_000);
 
@@ -267,5 +269,45 @@ describe("shared reason list", () => {
     expect(staffMistakeReasonError("MARK_CORRECTION", "NOPE", "")).toBe("অজানা কারণ");
     expect(staffMistakeReasonError("MARK_CORRECTION", "MINE", "x".repeat(501))).toContain("500");
     expect(staffMistakeReasonError("MARK_CORRECTION", "LATE_DIRECT", "")).toBeNull();
+  });
+});
+
+describe("D-#968 — the Principal's entries are the Principal's alone", () => {
+  const entry = (owner: string) =>
+    StaffMistake.create({ staffUserId: new Types.ObjectId(owner), kind: "TASK_OVERDUE", tier: 3, sourceId: new Types.ObjectId(), dateKey: "2026-11-08", status: "PENDING_REVIEW", explainDueAt: at("17:00", "2026-11-09") });
+
+  it("Office cannot decide, see or move onto the Principal; the Principal decides their own", async () => {
+    const principal = await user("Principal", "PRINCIPAL");
+    const office = await user("Office", "OFFICE");
+    const teacher = await user("Rahima");
+    const mine = await entry(principal);
+    const theirs = await entry(teacher);
+
+    await expect(decideMistake({ mistakeId: String(mine._id), actorId: office, mayHandlePrincipal: false, decision: "EXCUSE" })).rejects.toThrow("শুধু প্রধান শিক্ষক");
+    await expect(
+      decideMistake({ mistakeId: String(theirs._id), actorId: office, mayHandlePrincipal: false, decision: "MOVE", moveToUserId: principal }),
+    ).rejects.toThrow("প্রধান শিক্ষকের নামে");
+    expect((await listMoveTargets(false)).map((t) => t.userId)).not.toContain(principal);
+    expect((await listMoveTargets(true)).map((t) => t.userId)).toContain(principal);
+
+    const officeView = await listStaffMistakes({ hideStaffUserIds: await hiddenOwnersFor(false) });
+    expect(officeView.map((r) => r.staffUserId)).toEqual([teacher]);
+    expect(await listStaffMistakes({ staffUserId: principal, hideStaffUserIds: await hiddenOwnersFor(false) })).toEqual([]);
+    expect((await listStaffMistakes({ hideStaffUserIds: await hiddenOwnersFor(true) })).length).toBe(2);
+
+    // The Principal decides their own entry; nobody else is still refused their own.
+    const own = await decideMistake({ mistakeId: String(mine._id), actorId: principal, mayHandlePrincipal: true, decision: "EXCUSE" });
+    expect(own.status).toBe("EXCUSED");
+    expect(await Notification.countDocuments({ recipientUserId: new Types.ObjectId(principal), kind: "STAFF_MISTAKE_DECIDED" })).toBe(0);
+    await expect(decideMistake({ mistakeId: String(theirs._id), actorId: teacher, mayHandlePrincipal: true, decision: "EXCUSE" })).rejects.toThrow("নিজের");
+  });
+
+  it("a Principal's warning is told only to other holders of review_principal", async () => {
+    const p1 = await user("Principal", "PRINCIPAL");
+    const p2 = await user("Vice", "PRINCIPAL");
+    const office = await user("Office", "OFFICE");
+    const teacher = await user("Rahima");
+    expect(await warningAudience([p1, p2, office], p1)).toEqual([p2]);
+    expect(await warningAudience([p1, office], teacher)).toEqual([p1, office]);
   });
 });

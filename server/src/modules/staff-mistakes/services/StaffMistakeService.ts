@@ -30,6 +30,7 @@ import type { CorrectionReason } from "./correctionReasonContext";
 import type { StaffMistakeDeadline } from "@scd/shared";
 import { getStaffMistakeSettings } from "./StaffMistakeSettingsService";
 import { evaluateLadder } from "./StaffWarningService";
+import { ownedByPrincipal } from "./principalPrivacy";
 
 import { StaffMistakeError } from "./errors";
 export { StaffMistakeError };
@@ -214,12 +215,14 @@ const DECIDED_STATUS: Record<Exclude<StaffMistakeDecision, "MOVE">, StaffMistake
 
 /**
  * A reviewer decides (§5). Any row but a MOVED one may be (re)decided — a reviewer can undo
- * their own wrong call. Nobody decides their own entry.
+ * their own wrong call. Nobody decides their own entry, except a Principal (D-#968).
  */
 export async function decideMistake(input: {
   mistakeId: string;
   actorId: string;
   actorRole?: string;
+  /** Holds staff_mistakes:review_principal (D-#968). */
+  mayHandlePrincipal?: boolean;
   decision: string;
   note?: string | null;
   moveToUserId?: string | null;
@@ -234,7 +237,14 @@ export async function decideMistake(input: {
   await settleOverdueMistakes(now);
   const row = await StaffMistake.findById(oid(input.mistakeId));
   if (!row) throw new StaffMistakeError("এন্ট্রিটি পাওয়া যায়নি।");
-  if (row.staffUserId.toString() === input.actorId) throw new StaffMistakeError("নিজের ভুলের সিদ্ধান্ত নিজে দেওয়া যায় না।");
+  // D-#968: a Principal's entries are decided only under review_principal — their own included.
+  const principal = !!input.mayHandlePrincipal;
+  const own = row.staffUserId.toString() === input.actorId;
+  const ownerIsPrincipal = await ownedByPrincipal(row.staffUserId.toString());
+  if (own && !(principal && ownerIsPrincipal)) throw new StaffMistakeError("নিজের ভুলের সিদ্ধান্ত নিজে দেওয়া যায় না।");
+  if (!principal && ownerIsPrincipal) {
+    throw new StaffMistakeError("প্রধান শিক্ষকের এন্ট্রির সিদ্ধান্ত শুধু প্রধান শিক্ষক দিতে পারেন।");
+  }
   if (row.status === "MOVED") throw new StaffMistakeError("এই এন্ট্রি অন্যের কাছে সরানো হয়েছে — সেখানে সিদ্ধান্ত দিন।");
 
   let moved: IStaffMistake | null = null;
@@ -244,6 +254,9 @@ export async function decideMistake(input: {
     if (target.equals(row.staffUserId)) throw new StaffMistakeError("একই ব্যক্তির কাছে সরানো যায় না।");
     const user = await User.findOne({ _id: target, active: true, role: { $ne: "GUARDIAN" } }).select("_id").lean();
     if (!user) throw new StaffMistakeError("এই কর্মীকে পাওয়া যায়নি।");
+    if (!principal && (await ownedByPrincipal(target.toString()))) {
+      throw new StaffMistakeError("প্রধান শিক্ষকের নামে সরানো যায় না।");
+    }
     try {
       moved = await StaffMistake.create({
         staffUserId: target,
@@ -281,12 +294,14 @@ export async function decideMistake(input: {
     targetKind: "StaffMistake",
     meta: { kind: row.kind, decision: input.decision, movedToUserId: moved ? moved.staffUserId.toString() : undefined },
   });
-  await emitStaffMistakeDecided({
-    mistakeId: row._id,
-    recipientUserId: row.staffUserId,
-    decision: input.decision,
-    note: row.decisionNote ?? "",
-  });
+  if (!own) {
+    await emitStaffMistakeDecided({
+      mistakeId: row._id,
+      recipientUserId: row.staffUserId,
+      decision: input.decision,
+      note: row.decisionNote ?? "",
+    });
+  }
   if (nowCounted) await afterCounted(row.staffUserId.toString(), now);
   if (moved) {
     await emitStaffMistakeExplain({
@@ -330,13 +345,18 @@ export async function listStaffMistakes(opts: {
   staffUserId?: string | null;
   statuses?: readonly StaffMistakeStatus[];
   excludeStaffUserId?: string | null;
+  /** People the caller may not see (D-#968: the Principal, for Office). */
+  hideStaffUserIds?: readonly string[];
   limit?: number;
   now?: Date;
 }): Promise<StaffMistakeShape[]> {
   await settleOverdueMistakes(opts.now ?? new Date());
+  const hidden = [...(opts.hideStaffUserIds ?? []), ...(opts.excludeStaffUserId ? [opts.excludeStaffUserId] : [])];
   const filter: Record<string, unknown> = {};
-  if (opts.staffUserId) filter.staffUserId = oid(opts.staffUserId);
-  else if (opts.excludeStaffUserId) filter.staffUserId = { $ne: oid(opts.excludeStaffUserId) };
+  if (opts.staffUserId) {
+    if (opts.hideStaffUserIds?.includes(opts.staffUserId)) return [];
+    filter.staffUserId = oid(opts.staffUserId);
+  } else if (hidden.length) filter.staffUserId = { $nin: hidden.map(oid) };
   if (opts.statuses?.length) filter.status = { $in: opts.statuses };
   const rows = await StaffMistake.find(filter)
     .sort({ createdAt: -1 })
@@ -388,9 +408,10 @@ export async function listStaffMistakes(opts: {
   }));
 }
 
-/** Active staff a mistake may be moved to (the reviewer's picker). */
-export async function listMoveTargets(): Promise<{ userId: string; name: string }[]> {
-  const users = await User.find({ active: true, role: { $ne: "GUARDIAN" } }).select("name nameBn").lean();
+/** Active staff a mistake may be moved to (the reviewer's picker); only review_principal may pick a Principal (D-#968). */
+export async function listMoveTargets(mayHandlePrincipal = false): Promise<{ userId: string; name: string }[]> {
+  const roles = mayHandlePrincipal ? ["GUARDIAN"] : ["GUARDIAN", "PRINCIPAL"];
+  const users = await User.find({ active: true, role: { $nin: roles } }).select("name nameBn").lean();
   return users
     .map((u) => ({ userId: String(u._id), name: personName(u) }))
     .filter((u) => u.name)

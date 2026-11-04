@@ -36,6 +36,12 @@ import {
 } from "../services/StaffMistakeService";
 import type { StaffMistakeRung, StaffMistakeSettingsShape } from "@scd/shared";
 import { getStaffMistakeSettings, setStaffMistakeSettings } from "../services/StaffMistakeSettingsService";
+import { callerHasPermission } from "@scd/shared";
+import { hiddenOwnersFor, ownedByPrincipal, PRINCIPAL_REVIEW } from "../services/principalPrivacy";
+
+/** D-#968: may this caller see / decide the Principal's own entries? */
+const mayHandlePrincipal = (ctx: { auth?: Parameters<typeof callerHasPermission>[0] | null }): boolean =>
+  !!ctx.auth && callerHasPermission(ctx.auth, PRINCIPAL_REVIEW);
 import {
   acknowledgeWarning,
   listWarnings,
@@ -239,14 +245,15 @@ builder.queryField("staffMistakes", (t) =>
     // One staff file (staffProfileId) or the whole school.
     authScopes: { hasPermission: "staff_mistakes:view_all" },
     args: { staffProfileId: t.arg.string({ required: false }), staffUserId: t.arg.string({ required: false }) },
-    resolve: async (_r, args) => {
-      if (args.staffUserId) return withDetail(await listStaffMistakes({ staffUserId: args.staffUserId }));
+    resolve: async (_r, args, ctx) => {
+      const hideStaffUserIds = await hiddenOwnersFor(mayHandlePrincipal(ctx));
+      if (args.staffUserId) return withDetail(await listStaffMistakes({ staffUserId: args.staffUserId, hideStaffUserIds }));
       if (args.staffProfileId) {
         const target = await resolveUserIdForStaff(args.staffProfileId);
         if (!target) return [];
-        return withDetail(await listStaffMistakes({ staffUserId: target }));
+        return withDetail(await listStaffMistakes({ staffUserId: target, hideStaffUserIds }));
       }
-      return withDetail(await listStaffMistakes({}));
+      return withDetail(await listStaffMistakes({ hideStaffUserIds }));
     },
   }),
 );
@@ -259,7 +266,9 @@ builder.queryField("staffMistakeQueue", (t) =>
       withDetail(
         await listStaffMistakes({
           statuses: ["PENDING_REVIEW", "EXPLANATION_DUE"],
-          excludeStaffUserId: ctx.auth!.userId,
+          // A Principal reviews their own entries too (D-#968); Office never sees a Principal's.
+          excludeStaffUserId: mayHandlePrincipal(ctx) && (await ownedByPrincipal(ctx.auth!.userId)) ? null : ctx.auth!.userId,
+          hideStaffUserIds: await hiddenOwnersFor(mayHandlePrincipal(ctx)),
         }),
       ),
   }),
@@ -280,6 +289,7 @@ builder.mutationField("decideStaffMistake", (t) =>
         mistakeId: args.id,
         actorId: ctx.auth!.userId,
         actorRole: ctx.auth!.role,
+        mayHandlePrincipal: mayHandlePrincipal(ctx),
         decision: args.decision,
         note: args.note,
         moveToUserId: args.moveToUserId,
@@ -296,7 +306,7 @@ builder.queryField("staffMistakeMoveTargets", (t) =>
   t.field({
     type: [MoveTargetRef],
     authScopes: { hasPermission: "staff_mistakes:review" },
-    resolve: () => listMoveTargets(),
+    resolve: (_r, _a, ctx) => listMoveTargets(mayHandlePrincipal(ctx)),
   }),
 );
 
@@ -432,7 +442,8 @@ builder.queryField("staffWarnings", (t) =>
     type: [StaffWarningRef],
     authScopes: { hasPermission: "staff_mistakes:view_all" },
     args: { staffUserId: t.arg.string({ required: true }) },
-    resolve: (_r, args) => listWarnings(args.staffUserId),
+    resolve: async (_r, args, ctx) =>
+      (await hiddenOwnersFor(mayHandlePrincipal(ctx))).includes(args.staffUserId) ? [] : listWarnings(args.staffUserId),
   }),
 );
 
@@ -445,7 +456,7 @@ builder.mutationField("scheduleStaffWarningMeeting", (t) =>
       at: t.arg.string({ required: true }),
       place: t.arg.string({ required: true }),
     },
-    resolve: (_r, args, ctx) => scheduleMeeting({ warningId: args.id, actorId: ctx.auth!.userId, at: args.at, place: args.place }),
+    resolve: (_r, args, ctx) => scheduleMeeting({ warningId: args.id, actorId: ctx.auth!.userId, mayHandlePrincipal: mayHandlePrincipal(ctx), at: args.at, place: args.place }),
   }),
 );
 
@@ -465,6 +476,7 @@ builder.mutationField("recordStaffWarningMeeting", (t) =>
       recordMeeting({
         warningId: args.id,
         actorId: ctx.auth!.userId,
+        mayHandlePrincipal: mayHandlePrincipal(ctx),
         who: args.who ?? "",
         discussion: args.discussion,
         actions: args.actions ?? "",
@@ -479,7 +491,7 @@ builder.queryField("staffMistakeSummary", (t) =>
     type: SummaryRef,
     authScopes: { hasPermission: "staff_mistakes:view_all" },
     args: { days: t.arg.int({ required: false }) },
-    resolve: (_r, args) => staffMistakeSummary(args.days ?? 30),
+    resolve: async (_r, args, ctx) => staffMistakeSummary(args.days ?? 30, new Date(), await hiddenOwnersFor(mayHandlePrincipal(ctx))),
   }),
 );
 

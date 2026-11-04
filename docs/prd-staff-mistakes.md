@@ -231,3 +231,29 @@ staff profile) accepts the entry at once as ছুটিতে ছিলাম �
 
 Deferred: the class-test marks overdue digest only carries counts, not who; Saturday revision and
 Quran marks after unlock have no correction path yet.
+
+## 16. The Principal's own entries; owner confirmations (D-#968)
+
+- **Private to Principals.** An entry or warning that belongs to a Principal-role account is hidden
+  from everyone without the new catalogue action `staff_mistakes:review_principal` (PRINCIPAL-DEFAULT,
+  switchable in the permission matrix). Office's lists, queue, summary and the staff
+  file leave it out, and Office cannot decide it, book or record its meeting, or move any entry onto a
+  Principal (the move picker leaves Principals out). A Principal's warning is told only to other
+  holders of that action (`warningAudience`).
+- **The Principal decides their own.** A Principal sees their own entries in the review queue and may
+  excuse, count or move them. This is the one exception to "nobody decides their own". No decision
+  notice is sent to yourself.
+- Whose entries are protected is a target guard on the stored primary role (PRINCIPAL is never an
+  additional template); who may handle them is the catalogue action, never a role check (D-#799)
+  (`principalPrivacy.ts`).
+- Not covered: the source notices themselves (e.g. the নম্বর জমায় ভুল notice to Office) are
+  unchanged.
+
+Owner confirmed as built (2026-11-04):
+- the deadline is 17:00 on the next school day;
+- আমার ভুল ছিল counts at once;
+- "not a mistake" buttons are accepted at once and kept on file;
+- review is single-step;
+- no backfill of notes made before MR-1;
+- the ladder is 3/5/8 with weights 1/½/½;
+- approved leave clears a missed duty automatically.

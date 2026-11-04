@@ -20,6 +20,7 @@ import { StaffWarning, type IStaffWarning } from "../models/StaffWarning";
 import { User } from "../../foundation/models/User";
 import { writeAudit } from "../../platform/services/AuditService";
 import { holderIdsOf } from "../../access-control/services/holders";
+import { ownedByPrincipal, warningAudience } from "./principalPrivacy";
 import {
   emitStaffWarningMeeting,
   emitStaffWarningReached,
@@ -78,7 +79,7 @@ export async function evaluateLadder(staffUserId: string, now: Date = new Date()
       targetKind: "StaffWarning",
       meta: { staffUserId, step: w.step, weightedCount: w.weightedCount, windowDays: w.windowDays },
     });
-    const recipients = (await holderIdsOf(w.step === "CONDUCT" ? "conduct:create" : "staff_mistakes:meetings")).filter((id) => id !== staffUserId);
+    const recipients = await warningAudience(await holderIdsOf(w.step === "CONDUCT" ? "conduct:create" : "staff_mistakes:meetings"), staffUserId);
     await emitStaffWarningStep({ warningId: w._id, recipientUserIds: recipients, staffName: name, step: w.step, count: w.weightedCount, windowDays: w.windowDays, variant: "REACHED" });
   }
   return created;
@@ -174,7 +175,7 @@ export async function acknowledgeWarning(input: { warningId: string; userId: str
     w.otherTimeAskedAt = now;
     await StaffWarning.updateOne({ _id: w._id }, { $set: { otherTimeAskedAt: now } });
     const user = await User.findById(w.staffUserId).select("name nameBn").lean();
-    const recipients = (await holderIdsOf("staff_mistakes:meetings")).filter((id) => id !== input.userId);
+    const recipients = await warningAudience(await holderIdsOf("staff_mistakes:meetings"), input.userId);
     await emitStaffWarningStep({
       warningId: w._id, recipientUserIds: recipients, staffName: personName(user, "একজন কর্মী"),
       step: w.step, count: w.weightedCount, windowDays: w.windowDays, variant: "OTHER_TIME",
@@ -183,9 +184,10 @@ export async function acknowledgeWarning(input: { warningId: string; userId: str
   return true;
 }
 
-export async function scheduleMeeting(input: { warningId: string; actorId: string; at: string; place: string; now?: Date }): Promise<StaffWarningShape> {
+export async function scheduleMeeting(input: { warningId: string; actorId: string; mayHandlePrincipal?: boolean; at: string; place: string; now?: Date }): Promise<StaffWarningShape> {
   const w = await StaffWarning.findById(oid(input.warningId));
   if (!w) throw new StaffWarningError("সতর্কবার্তাটি পাওয়া যায়নি।");
+  await assertMayHandle(String(w.staffUserId), !!input.mayHandlePrincipal);
   if (String(w.staffUserId) === input.actorId) throw new StaffWarningError("নিজের আলোচনা নিজে ঠিক করা যায় না।");
   const at = new Date(input.at);
   if (Number.isNaN(at.getTime())) throw new StaffWarningError("ভুল সময়।");
@@ -205,6 +207,7 @@ export async function scheduleMeeting(input: { warningId: string; actorId: strin
 export async function recordMeeting(input: {
   warningId: string;
   actorId: string;
+  mayHandlePrincipal?: boolean;
   who: string;
   discussion: string;
   actions: string;
@@ -215,6 +218,7 @@ export async function recordMeeting(input: {
   const now = input.now ?? new Date();
   const w = await StaffWarning.findById(oid(input.warningId));
   if (!w) throw new StaffWarningError("সতর্কবার্তাটি পাওয়া যায়নি।");
+  await assertMayHandle(String(w.staffUserId), !!input.mayHandlePrincipal);
   if (String(w.staffUserId) === input.actorId) throw new StaffWarningError("নিজের আলোচনা নিজে লেখা যায় না।");
   const who = input.who.trim();
   const discussion = input.discussion.trim();
@@ -235,6 +239,13 @@ export async function recordMeeting(input: {
     await emitStaffWarningMeeting({ warningId: w._id, recipientUserId: w.staffUserId, summary: actions || discussion, stamp: Date.now() });
   }
   return (await shape([w]))[0]!;
+}
+
+/** D-#968: only review_principal handles a Principal's warning. */
+async function assertMayHandle(ownerId: string, mayHandlePrincipal: boolean): Promise<void> {
+  if (!mayHandlePrincipal && (await ownedByPrincipal(ownerId))) {
+    throw new StaffWarningError("প্রধান শিক্ষকের আলোচনা শুধু প্রধান শিক্ষক ঠিক করতে পারেন।");
+  }
 }
 
 export async function listWarnings(staffUserId: string): Promise<StaffWarningShape[]> {
@@ -268,14 +279,15 @@ export interface MistakeSummary {
   totals: { counted: number; pending: number; excused: number; warnings: number };
 }
 
-export async function staffMistakeSummary(days: number, now: Date = new Date()): Promise<MistakeSummary> {
+export async function staffMistakeSummary(days: number, now: Date = new Date(), hideStaffUserIds: readonly string[] = []): Promise<MistakeSummary> {
   const period = Math.min(Math.max(Math.round(days), 1), 365);
   const since = new Date(now.getTime() - period * DAY_MS);
   const settings = await getStaffMistakeSettings();
-  const mistakes = await StaffMistake.find({ createdAt: { $gte: since }, status: { $ne: "MOVED" } })
+  const hidden = { $nin: hideStaffUserIds.map(oid) };
+  const mistakes = await StaffMistake.find({ createdAt: { $gte: since }, status: { $ne: "MOVED" }, staffUserId: hidden })
     .select("staffUserId status kind tier")
     .lean();
-  const warnings = await StaffWarning.find({ createdAt: { $gte: since } }).select("staffUserId step meetingAt").lean();
+  const warnings = await StaffWarning.find({ createdAt: { $gte: since }, staffUserId: hidden }).select("staffUserId step meetingAt").lean();
 
   const per = new Map<string, MistakeSummaryRow & { kinds: Map<string, number> }>();
   const row = (id: string) => {
