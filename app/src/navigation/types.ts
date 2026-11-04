@@ -212,6 +212,8 @@ export type WorkBoardStackParamList = {
   WorkBoard: { userId?: string; name?: string; dateKey?: string } | undefined;
   TaskDetail: { taskId: string };
   TaskForm: { taskId?: string; assigneeUserId?: string; template?: boolean; dueKey?: string } | undefined;
+  /** VT-2 (D-#960): speak tasks → review the draft cards → save. work_board:voice. */
+  VoiceTask: undefined;
   AssignedByMe: undefined;
   LoadGrid: undefined;
   TaskTemplates: undefined;

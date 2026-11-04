@@ -228,6 +228,8 @@ export interface TaskInputT {
   dueKey: string;
   slot?: DaySlot | null;
   effortMin: number;
+  /** D-#960: saved from a voice draft (audit only). */
+  viaVoice?: boolean | null;
 }
 
 export interface TaskPatchT {
@@ -253,6 +255,8 @@ export interface TaskTemplateInputT {
   monthDay?: number | null;
   weekOfMonth?: number | null;
   endKey?: string | null;
+  /** D-#960: saved from a voice draft (audit only). */
+  viaVoice?: boolean | null;
 }
 
 export const CREATE_TASK = gql<{ createTask: TaskT }, { input: TaskInputT }>`
@@ -306,5 +310,52 @@ export const CREATE_TASK_TEMPLATE = gql<{ createTaskTemplate: TaskTemplateT }, {
 export const SET_TASK_TEMPLATE_ACTIVE = gql<{ setTaskTemplateActive: TaskTemplateT }, { id: string; active: boolean }>`
   mutation SetTaskTemplateActive($id: String!, $active: Boolean!) {
     setTaskTemplateActive(id: $id, active: $active) { ${TEMPLATE_FIELDS} }
+  }
+`;
+
+// ---------------------------------------------------------------------------
+// Voice tasks (VT-2, D-#960–#965) — a spoken note → draft cards; writes nothing.
+// ---------------------------------------------------------------------------
+
+export type VoiceRecurrence = "ONCE" | TaskRecurrence;
+
+export interface VoiceTaskCardT {
+  assigneeUserId: string | null;
+  assigneeSaid: string | null;
+  titleBn: string;
+  notes: string | null;
+  dueKey: string | null;
+  slot: DaySlot;
+  priority: TaskPriority;
+  effortMin: number;
+  recurrence: VoiceRecurrence;
+  weekdays: number[];
+  monthDay: number | null;
+  weekOfMonth: number | null;
+  endKey: string | null;
+  /** Fields the server filled because they were not said: assignee | slot | priority | effortMin. */
+  defaulted: string[];
+  warnings: string[];
+}
+
+export interface VoiceTaskDraftT {
+  transcript: string;
+  tasks: VoiceTaskCardT[];
+  warnings: string[];
+}
+
+export const PARSE_VOICE_TASKS = gql<
+  { parseVoiceTasks: VoiceTaskDraftT },
+  { audioBase64?: string | null; mimeType?: string | null; text?: string | null; priorDraftJson?: string | null }
+>`
+  mutation ParseVoiceTasks($audioBase64: String, $mimeType: String, $text: String, $priorDraftJson: String) {
+    parseVoiceTasks(audioBase64: $audioBase64, mimeType: $mimeType, text: $text, priorDraftJson: $priorDraftJson) {
+      transcript
+      warnings
+      tasks {
+        assigneeUserId assigneeSaid titleBn notes dueKey slot priority effortMin
+        recurrence weekdays monthDay weekOfMonth endKey defaulted warnings
+      }
+    }
   }
 `;
