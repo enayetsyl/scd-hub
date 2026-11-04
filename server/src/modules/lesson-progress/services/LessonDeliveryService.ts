@@ -9,6 +9,9 @@
  *
  * The answer is required by the app (D-#821) but NOT by the server: an older app build publishes
  * without it, and that note simply has no delivery row (LP-2 counts it as unanswered).
+ *
+ * D-#952: all of it runs only while the school switch "ক্লাস নোটে পাঠ পরিকল্পনার প্রশ্ন" is on
+ * (LessonPlanQuestionSwitch.ts; default OFF, a missing row is OFF).
  */
 import { Types } from "mongoose";
 import type { LessonNoneReason } from "@scd/shared";
@@ -21,6 +24,7 @@ import { RoutineSlot, type IRoutineSlot } from "../../routine/models/RoutineSlot
 import { dateKeyOf } from "../../attendance/dates";
 import { resolveUnitsForIds } from "../../attendance/attendanceUnit";
 import { LessonDelivery, type ILessonDelivery } from "../models/LessonDelivery";
+import { isLessonPlanQuestionOn } from "./LessonPlanQuestionSwitch";
 
 export class LessonProgressError extends Error {
   constructor(message: string) {
@@ -228,6 +232,8 @@ export function deliveryView(d: Pick<ILessonDelivery, "noteId" | "dateKey" | "se
  */
 export async function lessonPlanForSlot(slot: IRoutineSlot, date: Date): Promise<LessonPlanForSlot> {
   const none: LessonPlanForSlot = { applies: false, sessions: [], suggestedKey: null, delivery: null };
+  // D-#952: the school switch is off (the default, and a missing row) → no question on any note.
+  if (!(await isLessonPlanQuestionOn())) return none;
   const level = await classLevelOf(slot);
   if (level == null) return none;
   const plan = await sessionPlansFor(level, slot.subject);
@@ -279,6 +285,8 @@ interface PreparedDelivery {
  * resolver calls this BEFORE writing the note, so a bad answer never leaves a half-written period.
  */
 export async function prepareDelivery(slotId: Types.ObjectId | string, input: LessonPlanInput): Promise<PreparedDelivery | null> {
+  // D-#952: switch off → the answer is ignored (never an error, never written).
+  if (!(await isLessonPlanQuestionOn())) return null;
   const slot = (await RoutineSlot.findById(slotId).select("groupType classId subject").lean()) as unknown as IRoutineSlot | null;
   if (!slot || slot.groupType !== "section") return null;
   const level = await classLevelOf(slot);

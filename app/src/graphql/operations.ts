@@ -4863,6 +4863,24 @@ export const LESSON_PLAN_FOR_SLOT_QUERY = gql<
   }
 `;
 
+/** D-#952: the school switch "ক্লাস নোটে পাঠ পরিকল্পনার প্রশ্ন" (default off; a missing row is off). */
+export interface LessonPlanQuestionSettingT {
+  on: boolean;
+  updatedAt: string | null;
+}
+
+export const LESSON_PLAN_QUESTION_SETTING_QUERY = gql<{ lessonPlanQuestionSetting: LessonPlanQuestionSettingT }, Record<string, never>>`
+  query LessonPlanQuestionSetting {
+    lessonPlanQuestionSetting { on updatedAt }
+  }
+`;
+
+export const SET_LESSON_PLAN_QUESTION_ON = gql<{ setLessonPlanQuestionOn: LessonPlanQuestionSettingT }, { on: boolean }>`
+  mutation SetLessonPlanQuestionOn($on: Boolean!) {
+    setLessonPlanQuestionOn(on: $on) { on updatedAt }
+  }
+`;
+
 // --- Lesson-plan progress LP-2 (D-#824/#826) --------------------------------
 
 export interface LessonProgressRowT {

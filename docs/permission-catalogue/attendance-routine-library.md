@@ -431,6 +431,10 @@ Listed elsewhere: `server/src/modules/hr/resolvers/staffHub.ts:348` staffAttenda
 | app StudentProfileScreen | পাঠ tab | `lesson_progress:view` / `view_all` |
 | server/src/modules/lesson-progress/resolvers/lessonObjectives.ts | lessonObjectiveStatus (OT-5) | hasAnyPermission(`lesson_progress:view`, `lesson_progress:view_all`) + the tracker's row rule (routine holder / class teacher; `view_all` lifts it) |
 | server/src/modules/lesson-progress/resolvers/lessonDelivery.ts | LessonPlanForSlot.objectives · LessonPlanSession.loCodes · LessonDeliverySession.loCodes (OT-5) | ride `lessonPlanForSlot`'s gate |
+| server/src/modules/lesson-progress/resolvers/lessonDelivery.ts | lessonPlanQuestionSetting (D-#952) | hasAnyPermission(`class_note:create`, `class_note:edit`, `class_note:edit_all`, `lesson_progress:view`, `lesson_progress:view_all`, `reports:lesson_progress`, `routine:settings`) |
+| server/src/modules/lesson-progress/resolvers/lessonDelivery.ts | setLessonPlanQuestionOn (D-#952) | `routine:settings` (no new action — the class note's question is a routine/class-note setting) |
+| app LessonProgressScreen | ক্লাস নোটে পাঠ পরিকল্পনার প্রশ্ন card (D-#952) | `routine:settings` |
+| app MyClassNotesScreen | সেশন সংশোধন button on a published note (D-#952) | shown only while the switch is on (reads `lessonPlanQuestionSetting`) |
 | server/src/modules/mastery/resolvers/masteryDiagnosis.ts | MasteryOutcomeTrail.objectiveLesson · MasteryStudentDiagnosis.objectiveLessons (OT-5) | ride `masteryOutcomeTrail` / `masteryStudentDiagnosis`'s gate (routine holder / `mastery:edit_all`) |
 | server/src/modules/content/resolvers/content.ts | ContentArtifact.loCodes (OT-5) | rides the content read gates (`lesson_plans:view` + scope) |
 
