@@ -39,6 +39,8 @@ import { PaperRef } from "./masteryWork";
 import { parseMasteryLoCode } from "@scd/shared";
 import { StudentSessionRef } from "../../lesson-progress/resolvers/studentLessons";
 import { chapterLessons } from "../../lesson-progress/services/StudentLessonService";
+import { StudentObjectiveLessonRef } from "../../lesson-progress/resolvers/lessonObjectives";
+import { studentObjectiveLessons } from "../../lesson-progress/services/ObjectiveLessonService";
 
 function authOf(ctx: { auth: Auth | null }): Auth {
   if (!ctx.auth) throw new Error("লগইন প্রয়োজন।");
@@ -86,6 +88,12 @@ StudentDiagnosisRef.implement({
     outcomes: t.field({ type: [StateRef], resolve: (s) => s.outcomes }),
     sectionSize: t.exposeInt("sectionSize"),
     moreWeakThan: t.exposeInt("moreWeakThan"),
+    /** OT-5 (D-#950): per outcome, was it taught in the child's শাখা and was the child there — splits a
+     *  WEAK row into "taught, not yet learnt" / "missed that class" / "not taught yet". Lazy; rides this gate. */
+    objectiveLessons: t.field({
+      type: [StudentObjectiveLessonRef],
+      resolve: (d) => studentObjectiveLessons(d.studentId, d.subject, d.outcomes.map((o) => o.loCode)),
+    }),
   }),
 });
 
@@ -143,6 +151,16 @@ TrailRef.implement({
         const subject = parseMasteryLoCode(x.outcome.loCode)?.subject;
         if (!subject || x.outcome.chapterNumber == null) return [];
         return chapterLessons(x.studentId, subject, String(x.outcome.chapterNumber));
+      },
+    }),
+    /** OT-5 (D-#950): the outcome's own code as taught in class (TAUGHT / MISSED / UNKNOWN / NOT_TAUGHT). */
+    objectiveLesson: t.field({
+      type: StudentObjectiveLessonRef,
+      nullable: true,
+      resolve: async (x) => {
+        const subject = parseMasteryLoCode(x.outcome.loCode)?.subject;
+        if (!subject) return null;
+        return (await studentObjectiveLessons(x.studentId, subject, [x.outcome.loCode]))[0] ?? null;
       },
     }),
   }),

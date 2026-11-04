@@ -4810,7 +4810,27 @@ export interface LessonPlanSessionT {
   artifactId: string;
   finishedOn: string[];
   startedOn: string[];
+  /** OT-5: the objective codes this session teaches ([] = none). */
+  loCodes: string[];
 }
+
+/** OT-5 (prd-objective-tree §8.3): one objective row of a শাখা × subject — taught on / not yet, absent that day. */
+export interface LessonObjectiveRowT {
+  code: string;
+  labelBn: string | null;
+  chapterNumber: number | null;
+  inCatalogue: boolean;
+  sessions: Array<{ key: string; chapter: string; anchorWord: string; sessionIndex: number; sessionOf: number; titleBn: string }>;
+  /** [] = not taught yet in this শাখা. */
+  taught: Array<{ dateKey: string; attendanceTaken: boolean; absent: Array<{ studentId: string; name: string }> }>;
+  absentCount: number;
+}
+
+export const LESSON_OBJECTIVE_ROW_FIELDS = `
+  code labelBn chapterNumber inCatalogue absentCount
+  sessions { key chapter anchorWord sessionIndex sessionOf titleBn }
+  taught { dateKey attendanceTaken absent { studentId name } }
+`;
 
 /** The class note's lesson-plan answer: sessions, OR a reason (D-#821). */
 export interface LessonPlanIn {
@@ -4828,6 +4848,7 @@ export const LESSON_PLAN_FOR_SLOT_QUERY = gql<
       sessions: LessonPlanSessionT[];
       suggestedKey: string | null;
       delivery: LessonDeliveryT | null;
+      objectives: LessonObjectiveRowT[];
     };
   },
   { slotId: string; date: string }
@@ -4835,8 +4856,9 @@ export const LESSON_PLAN_FOR_SLOT_QUERY = gql<
   query LessonPlanForSlot($slotId: String!, $date: String!) {
     lessonPlanForSlot(slotId: $slotId, date: $date) {
       applies suggestedKey
-      sessions { key chapter anchorWord chapterTitle sessionIndex sessionOf titleBn artifactId finishedOn startedOn }
+      sessions { key chapter anchorWord chapterTitle sessionIndex sessionOf titleBn artifactId finishedOn startedOn loCodes }
       delivery { ${LESSON_DELIVERY_FIELDS} }
+      objectives { ${LESSON_OBJECTIVE_ROW_FIELDS} }
     }
   }
 `;
@@ -4908,6 +4930,16 @@ export const LESSON_SECTION_TRACKER_QUERY = gql<
       row { ${LESSON_PROGRESS_ROW_FIELDS} }
       sessions { key chapter anchorWord chapterTitle sessionIndex sessionOf titleBn artifactId status finishedOn startedOn teacherNames }
     }
+  }
+`;
+
+/** OT-5: one শাখা × subject per objective row (the tracker's row rule). */
+export const LESSON_OBJECTIVE_STATUS_QUERY = gql<
+  { lessonObjectiveStatus: LessonObjectiveRowT[] },
+  { sectionId: string; subject: string }
+>`
+  query LessonObjectiveStatus($sectionId: String!, $subject: String!) {
+    lessonObjectiveStatus(sectionId: $sectionId, subject: $subject) { ${LESSON_OBJECTIVE_ROW_FIELDS} }
   }
 `;
 
