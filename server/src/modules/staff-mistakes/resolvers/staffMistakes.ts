@@ -18,6 +18,10 @@ import { resolveUserIdForStaff } from "../../hr/services/staffMatch";
 import { NoteRef } from "../../trackers/resolvers/markSubmission";
 import { markCorrectionNotesByIds, type MarkCorrectionNoteShape } from "../../trackers/services/MarkCorrectionService";
 import {
+  attendanceCorrectionNotesByIds,
+  type AttendanceCorrectionNoteShape,
+} from "../../attendance/services/AttendanceCorrectionService";
+import {
   decideMistake,
   explainMistake,
   listMoveTargets,
@@ -39,15 +43,47 @@ import {
   type WarningMistakeLine,
 } from "../services/StaffWarningService";
 
-type Row = StaffMistakeShape & { markNote: MarkCorrectionNoteShape | null };
+type Row = StaffMistakeShape & {
+  markNote: MarkCorrectionNoteShape | null;
+  attendanceNote: AttendanceCorrectionNoteShape | null;
+};
+
+const idsOf = (rows: StaffMistakeShape[], kind: string) => rows.filter((r) => r.kind === kind).map((r) => r.sourceId);
 
 /** Attach each entry's source detail in one batch per kind. */
 async function withDetail(rows: StaffMistakeShape[]): Promise<Row[]> {
-  const notes = await markCorrectionNotesByIds(
-    rows.filter((r) => r.kind === "MARK_CORRECTION").map((r) => r.sourceId),
-  );
-  return rows.map((r) => ({ ...r, markNote: r.kind === "MARK_CORRECTION" ? (notes.get(r.sourceId) ?? null) : null }));
+  const [marks, attendance] = await Promise.all([
+    markCorrectionNotesByIds(idsOf(rows, "MARK_CORRECTION")),
+    attendanceCorrectionNotesByIds(idsOf(rows, "ATTENDANCE_CORRECTION")),
+  ]);
+  return rows.map((r) => ({
+    ...r,
+    markNote: r.kind === "MARK_CORRECTION" ? (marks.get(r.sourceId) ?? null) : null,
+    attendanceNote: r.kind === "ATTENDANCE_CORRECTION" ? (attendance.get(r.sourceId) ?? null) : null,
+  }));
 }
+
+const AttendanceChangeRef = builder
+  .objectRef<AttendanceCorrectionNoteShape["changes"][number]>("AttendanceCorrectionChange")
+  .implement({
+    fields: (t) => ({
+      studentId: t.exposeString("studentId"),
+      studentName: t.exposeString("studentName"),
+      from: t.exposeString("from"),
+      to: t.exposeString("to"),
+      at: t.string({ resolve: (c) => new Date(c.at).toISOString() }),
+      byName: t.exposeString("byName"),
+    }),
+  });
+
+const AttendanceNoteRef = builder.objectRef<AttendanceCorrectionNoteShape>("AttendanceCorrectionNote").implement({
+  fields: (t) => ({
+    id: t.exposeString("id"),
+    unitLabel: t.exposeString("unitLabel"),
+    dateKey: t.exposeString("dateKey"),
+    changes: t.field({ type: [AttendanceChangeRef], resolve: (n) => n.changes }),
+  }),
+});
 
 const iso = (d: Date | null): string | null => (d ? new Date(d).toISOString() : null);
 
@@ -72,6 +108,7 @@ const StaffMistakeRef = builder.objectRef<Row>("StaffMistake").implement({
     movedToName: t.string({ nullable: true, resolve: (r) => r.movedToName }),
     createdAt: t.string({ resolve: (r) => new Date(r.createdAt).toISOString() }),
     markNote: t.field({ type: NoteRef, nullable: true, resolve: (r) => r.markNote }),
+    attendanceNote: t.field({ type: AttendanceNoteRef, nullable: true, resolve: (r) => r.attendanceNote }),
   }),
 });
 

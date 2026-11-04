@@ -11,6 +11,12 @@ export function staffMistakeKindLabel(kind: string | null | undefined): string {
   return str(`smrKindLabel_${kind}`) ?? kind;
 }
 
+/** The card's headline for a kind ("একই দিনে \"জমা দেয়নি\" বদলানো"). */
+export function staffMistakeKindTitle(kind: string | null | undefined): string {
+  if (!kind) return "";
+  return str(`smrKindTitle_${kind}`) ?? staffMistakeKindLabel(kind);
+}
+
 export function staffWarningStepLabel(step: string | null | undefined): string {
   if (!step) return "";
   return str(`smwStep_${step}`) ?? step;

@@ -11,7 +11,7 @@ export interface StaffMistakeT {
   id: string;
   staffUserId: string;
   staffName: string;
-  kind: "MARK_CORRECTION";
+  kind: "MARK_CORRECTION" | "ATTENDANCE_CORRECTION";
   tier: number;
   dateKey: string;
   status: StaffMistakeStatusT;
@@ -27,6 +27,12 @@ export interface StaffMistakeT {
   movedToName: string | null;
   createdAt: string;
   markNote: MarkCorrectionNoteT | null;
+  attendanceNote: {
+    id: string;
+    unitLabel: string;
+    dateKey: string;
+    changes: { studentId: string; studentName: string; from: "ABSENT" | "PRESENT"; to: "ABSENT" | "PRESENT"; at: string; byName: string }[];
+  } | null;
 }
 
 const FIELDS = `
@@ -36,6 +42,7 @@ const FIELDS = `
     id tracker itemCode subject dateKey sectionLabel staffUserId staffName createdAt
     students { studentId studentName chasedAt correctedAt correctedByName via }
   }
+  attendanceNote { id unitLabel dateKey changes { studentId studentName from to at byName } }
 `;
 
 export const MY_STAFF_MISTAKES = gql<{ myStaffMistakes: StaffMistakeT[] }>`

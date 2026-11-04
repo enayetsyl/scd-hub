@@ -51,6 +51,7 @@ import { RoutineSubstitution } from "../../routine/models/RoutineSubstitution";
 import { StaffCoverSlot } from "../../hr/models/StaffCoverSlot";
 import { slotsForTeacherOnDate } from "../../routine/services/RoutineSlotService";
 import { writeAudit } from "../../platform/services/AuditService";
+import { recordAttendanceCorrection } from "./AttendanceCorrectionService";
 import {
   isNurseryKg,
   isLegacyAttendanceDate,
@@ -306,6 +307,9 @@ async function upsertDay(
   const now = new Date();
   const existing = await StudentAttendanceDay.findOne({ ...unitFilter(unit), dateKey });
   let day: IStudentAttendanceDay;
+  // D-#944: what the list said before, and whose list it was — the correction note's owner.
+  const before = existing ? existing.absentStudentIds.map((id) => id.toString()) : null;
+  const owner = existing?.markedBy ?? null;
   if (existing) {
     existing.absentStudentIds = absentIds;
     if (amend) {
@@ -342,6 +346,18 @@ async function upsertDay(
       replaced: !!existing,
     },
   });
+  if (before && owner) {
+    await recordAttendanceCorrection({
+      unitType: unit.unitType === "section" ? "section" : "subjectGroup",
+      unitId: unit.unitId,
+      dateKey,
+      ownerId: owner,
+      correctedBy: actorId,
+      before,
+      after: absentIds,
+      at: now,
+    });
+  }
   return day;
 }
 

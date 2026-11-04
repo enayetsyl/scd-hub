@@ -91,6 +91,13 @@ function applyReason(row: IStaffMistake, reason: CorrectionReason, now: Date): b
     row.decidedBy = null;
     return true;
   }
+  if (r.autoExcuses) {
+    // Not a mistake at all (D-#944) — kept on file, accepted at once.
+    row.status = "EXCUSED";
+    row.decidedAt = now;
+    row.decidedBy = null;
+    return false;
+  }
   row.status = "PENDING_REVIEW";
   return false;
 }
