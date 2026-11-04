@@ -131,8 +131,9 @@ The draft Claude writes is `docs/mastery/objective-tree/<CLASS>_<SUBJ>.tree.json
 for reading on GitHub. The JSON is the only source; the sheet is regenerated, never hand-edited.
 
 **How Claude drafts (D-#924)** — in a Claude Code session, offline; the app needs no AI key:
-1. Read the **final print** (`Book Review Material/Print File`, IDML) — where the Word writer-reviewer copy is
-   older (C1 Math v1.5 print vs v1.4 Word), the print wins and differences are flagged `VERSION_DIFF`.
+1. Read the **final version**: the writer-reviewer Word copy matching the print (e.g. `Final Book/
+   C1_MATH_Book_v1_5_Writer-Reviewer.docx`), checked against the print IDML in `Print File`; if they differ, the
+   print wins and the difference is flagged `VERSION_DIFF`.
 2. Also read the teacher notes (শিখনফল), the marks appendix (question types, deduction rules) and the book memo.
 3. Inventory **every numbered exercise** and map each to ≥ 1 tagged row; every tagged row cites ≥ 1 exercise.
 4. Apply the five tests; fill prerequisites; flag `WORDING_RULE_CONFLICT` / `TOO_BROAD` / `DUPLICATE`.

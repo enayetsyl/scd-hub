@@ -25,6 +25,7 @@ structure; those stay as the history and as a source Claude reuses (question typ
   "classToken": "C1", "subject": "MATH", "status": "DRAFT",
   "source": { "book": "C1_MATH_Student_Print_v1_5", "files": ["…"], "readOn": "2026-11-04" },
   "chapters": [{ "number": 7, "titleBn": "যোগ" }],
+  "questionTypes": [{ "code": "QT-…", "labelBn": "…", "marks": 1 }],   // the book's mark distribution, carried to the importer as-is
   "nodes": [{
     "code": "LO-C1-MATH-07-03.2",        // objective LO-<C>-<S>-<CC>-<NN>; sub = objective + ".N"; strand LO-<C>-<S>-SK-<X>-<NN>
     "level": "SUB",                       // OBJECTIVE | SUB
@@ -43,7 +44,7 @@ structure; those stay as the history and as a source Claude reuses (question typ
     "legacyCodes": ["LO-C1-MATH-07-02"],  // flat draft codes it replaces
     "claudeNote": "why the line is drawn here / which test it barely passed"
   }],
-  "coverage": { "exercisesTotal": 271, "mapped": 271, "unmapped": [{ "ref": "…", "text": "…", "reason": "…" }] },
+  "coverage": { "exercisesTotal": 164, "mapped": 164, "unmapped": [{ "ref": "…", "text": "…", "reason": "…" }] },
   "flags": [{ "code": null, "kind": "VERSION_DIFF", "text": "…" }]   // WORDING_RULE_CONFLICT | TOO_BROAD | DUPLICATE | VERSION_DIFF | OTHER
 }
 ```
