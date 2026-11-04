@@ -106,7 +106,7 @@ export async function revertAssignmentRecord(input: AsRevertInput): Promise<AsRe
       via: "UNDO",
     });
   }
-  // D-#946: an undone RESUBMIT (the family was told) or someone else's / an older CHECKED.
+  // D-#951: an undone RESUBMIT (the family was told) or someone else's / an older CHECKED.
   await recordWorkRevert({ tracker: "ASSIGNMENT", recordId: rec._id, itemCode: rec.asId, studentId: rec.studentId, popped, actorId: input.actorId, at: now });
 
   // The ONLY trace this revert happened — the popped stamps are gone from the

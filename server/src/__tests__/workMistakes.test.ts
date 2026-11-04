@@ -1,5 +1,5 @@
 /**
- * Staff mistake record MR-5 (D-#946) on a real in-memory Mongo: an accepted "done at home"
+ * Staff mistake record MR-5 (D-#951) on a real in-memory Mongo: an accepted "done at home"
  * claim against an earlier day's chase, and an undone RESUBMIT / CHECKED mark.
  */
 import mongoose, { Types } from "mongoose";
@@ -83,7 +83,7 @@ async function claimOn(r: Awaited<ReturnType<typeof record>>, teacher: string, a
   });
 }
 
-describe("D-#946 — an accepted claim against an earlier day's chase", () => {
+describe("D-#951 — an accepted claim against an earlier day's chase", () => {
   it("is the chaser's entry; the same-day case stays a mark correction only", async () => {
     const teacher = await user("Rahima");
     const r = await record(teacher);
@@ -111,7 +111,7 @@ describe("D-#946 — an accepted claim against an earlier day's chase", () => {
   });
 });
 
-describe("D-#946 — an undone RESUBMIT / CHECKED mark", () => {
+describe("D-#951 — an undone RESUBMIT / CHECKED mark", () => {
   async function checkedThenResubmit(teacher: string): Promise<string> {
     const r = await record(teacher);
     await transitionAssignmentRecord(r.rec, "DUE", teacher, at("07:00"));

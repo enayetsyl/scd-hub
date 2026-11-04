@@ -364,7 +364,7 @@ export async function acceptClaimsForRecords(
         meta: { tracker: claim.tracker, workId: claim.workId, resolution: "AUTO" },
       });
     }
-    // D-#946: an accepted claim means an earlier day's "not submitted" was wrong.
+    // D-#951: an accepted claim means an earlier day's "not submitted" was wrong.
     await recordClaimsAccepted(accepted, actorId, at);
     return accepted;
   } catch (err) {

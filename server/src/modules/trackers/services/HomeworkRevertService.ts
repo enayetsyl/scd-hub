@@ -122,7 +122,7 @@ export async function revertHomeworkRecord(input: HwRevertInput): Promise<HwReve
       via: "UNDO",
     });
   }
-  // D-#946: an undone RESUBMIT (the family was told) or someone else's / an older CHECKED.
+  // D-#951: an undone RESUBMIT (the family was told) or someone else's / an older CHECKED.
   await recordWorkRevert({ tracker: "HOMEWORK", recordId: rec._id, itemCode: rec.hwId, studentId: rec.studentId, popped, actorId: input.actorId, at: now });
 
   // The ONLY trace this revert ever happened: the popped stamps are now gone from

@@ -148,7 +148,7 @@ Single-step in MR-1; the mockup's Office-then-Principal step is MR-2 if the owne
 - Episodes as in §10. The guardian's re-publish message is unchanged (it already re-notifies the
   new result); a "নম্বর সংশোধন" wording is a follow-up.
 
-## 12. MR-5 — accepted claims and undone marks (D-#946)
+## 12. MR-5 — accepted claims and undone marks (D-#951)
 
 - **Accepted claim.** When a guardian's "done at home" claim is accepted (the teacher marks the
   work submitted), the record's last CHASE stamp is read: made by a person on an EARLIER day →

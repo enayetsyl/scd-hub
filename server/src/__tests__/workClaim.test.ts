@@ -34,7 +34,7 @@ const mockResolveDayType = jest.fn();
 const mockWriteAudit = jest.fn();
 const mockRecipient = jest.fn();
 
-// D-#946: the mistake recorder reaches real models; this suite is DB-free.
+// D-#951: the mistake recorder reaches real models; this suite is DB-free.
 jest.mock("../modules/trackers/services/WorkMistakeService", () => ({
   recordClaimsAccepted: jest.fn().mockResolvedValue(0),
   recordWorkRevert: jest.fn().mockResolvedValue(0),

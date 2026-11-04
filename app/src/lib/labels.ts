@@ -7740,7 +7740,7 @@ const STR_BN = {
   smrKindTitle_CLASS_TEST_SCRIPTS: "প্রকাশিত খাতা ফেরত নেওয়া হয়েছে",
   smrCtTotal: "মোট {n}",
   smrCtPulled: "খাতার প্রকাশ বাতিল",
-  // Work claims + reverts as a source (D-#946)
+  // Work claims + reverts as a source (D-#951)
   smrKindLabel_WORK_CLAIM_ACCEPTED: "অভিভাবকের \"বাসায় করেছে\" মানা",
   smrKindLabel_WORK_REVERT: "যাচাই / আবার জমা ফেরানো",
   smrKindTitle_WORK_CLAIM_ACCEPTED: "অভিভাবকের দাবি মানা হয়েছে — \"জমা দেয়নি\" ভুল ছিল",
@@ -14163,7 +14163,7 @@ const STR_EN: StrTable = {
   smrKindTitle_CLASS_TEST_SCRIPTS: "Published scripts were pulled back",
   smrCtTotal: "out of {n}",
   smrCtPulled: "Scripts unpublished",
-  // Work claims + reverts as a source (D-#946)
+  // Work claims + reverts as a source (D-#951)
   smrKindLabel_WORK_CLAIM_ACCEPTED: "Guardian's \"done at home\" accepted",
   smrKindLabel_WORK_REVERT: "Checked / resubmit undone",
   smrKindTitle_WORK_CLAIM_ACCEPTED: "A guardian's claim was accepted — \"not submitted\" was wrong",

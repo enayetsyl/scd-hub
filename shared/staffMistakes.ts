@@ -7,7 +7,7 @@
 /** Where a mistake was caught. MR-1: the homework/assignment same-day correction;
  *  MR-3: an attendance list changed after it was submitted (D-#944);
  *  MR-4: class-test marks re-published with changes, published scripts pulled back (D-#945);
- *  MR-5: a guardian's "done at home" claim accepted, a checked / resubmit mark undone (D-#946). */
+ *  MR-5: a guardian's "done at home" claim accepted, a checked / resubmit mark undone (D-#951). */
 export const STAFF_MISTAKE_KINDS = [
   "MARK_CORRECTION",
   "ATTENDANCE_CORRECTION",

@@ -1,7 +1,7 @@
 import { Schema, model, Document, Types } from "mongoose";
 
 /**
- * WorkRevertNote (D-#946, docs/prd-staff-mistakes.md §12) — a homework / assignment mark
+ * WorkRevertNote (D-#951, docs/prd-staff-mistakes.md §12) — a homework / assignment mark
  * undone after it was given: a RESUBMIT (the guardian had already been told to resubmit) or a
  * CHECKED result. The revert pops the stamps off the record, so this note keeps who made the
  * undone mark, which marks, and who undid them. ONE note per revert per owner; the

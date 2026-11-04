@@ -1,5 +1,5 @@
 /**
- * WorkMistakeService (D-#946) — two homework / assignment mistakes the same-day rule
+ * WorkMistakeService (D-#951) — two homework / assignment mistakes the same-day rule
  * (D-#892) does not catch:
  *
  *   recordClaimsAccepted  a guardian's "done at home" claim accepted: the "not submitted" mark
