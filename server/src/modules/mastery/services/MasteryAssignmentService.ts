@@ -47,6 +47,11 @@ import { loCodeMongoFilter, loCodesOf } from "../bank";
 import { groupStimulusParts, partLabelsByItem, printLabel, printPlan, stimulusRefOf } from "../parts";
 import { isoWeekKey } from "../evidence";
 import { notifyAssignmentSent } from "../notify";
+import { isTaggedRow } from "../rollup";
+import { untaggedRefusal } from "../taggedGuard";
+import { masteryLevelLabels } from "./MasteryReviewService";
+import { objectiveGrain } from "./MasteryGuardianService";
+import type { MasteryLevelLabels } from "@scd/shared";
 
 const oid = (s: string) => new Types.ObjectId(s);
 const bn = (n: number | string) => String(n).replace(/[0-9]/g, (d) => "০১২৩৪৫৬৭৮৯"[Number(d)]);
@@ -105,7 +110,7 @@ function validateLayout(l: LayoutInput, marks: Map<string, number>, questionLos:
   if (badType) throw new MasteryWorkError(`${badType} এই শ্রেণি-বিষয়ের নম্বর-তালিকায় নেই।`);
   const los = [...new Set(l.partALoCodes ?? [])];
   const badLo = los.find((c) => !questionLos.has(c));
-  if (badLo) throw new MasteryWorkError(`${badLo} এই শ্রেণি-বিষয়ের প্রশ্নভিত্তিক শিখনফল নয়।`);
+  if (badLo) throw new MasteryWorkError(`${badLo} এই শ্রেণি-বিষয়ের প্রশ্নভিত্তিক তালিকায় নেই।`);
   return { ...l, partAMarks, questionTypeCodes: types, partALoCodes: l.partAOn ? los : [] };
 }
 
@@ -290,7 +295,10 @@ export async function buildAssignment(input: BuildInput, auth: Auth): Promise<As
     getPolicy(ctx.classToken, input.subject),
     rosterOf(ctx.sectionId),
   ]);
-  const questionOutcomes = outcomes.filter((o) => o.assess === "QUESTION");
+  // Tagged rows only (OT-3): an untagged objective groups its children and takes no question.
+  const grouping = await untaggedRefusal(input.layout?.partALoCodes ?? []);
+  if (grouping) throw new MasteryWorkError(grouping);
+  const questionOutcomes = outcomes.filter((o) => o.assess === "QUESTION" && isTaggedRow(o));
   const layout = validateLayout(input.layout, marks, new Set(questionOutcomes.map((o) => o.code)));
 
   let asItemId: Types.ObjectId | undefined;
@@ -424,7 +432,7 @@ async function sheetDetailOf(a: IMasteryAssignment, sheet: IMasteryAssignmentShe
     items: sheet.items.map((q) => questionView(q, labels)),
     warnings: sheet.warnings.map((w) => ({ code: w.code, loCode: w.loCode ?? null, labelBn: w.loCode ? labels.get(w.loCode) ?? w.loCode : null })),
     outcomeChoices: outcomes
-      .filter((o) => o.assess === "QUESTION")
+      .filter((o) => o.assess === "QUESTION" && isTaggedRow(o))
       .map((o) => ({ loCode: o.code, labelBn: o.labelBn, questionTypeCodes: o.questionTypeCodes ?? [] })),
   };
 }
@@ -476,7 +484,7 @@ export async function editSheet(assignmentId: string, studentId: string, edit: S
       const exposure = new Map<string, number>();
       for (const r of rows) if (r.qid) exposure.set(r.qid, (exposure.get(r.qid) ?? 0) + 1);
       const next = pickQuestion(cur.loCode, seen, { bank: await goldBank([cur.loCode]), exposure });
-      if (!next) throw new MasteryWorkError("এই শিখনফলে এই শিক্ষার্থীর জন্য আর নতুন গোল্ড প্রশ্ন নেই — নিজে লিখুন।");
+      if (!next) throw new MasteryWorkError("এই কোডে এই শিক্ষার্থীর জন্য আর নতুন গোল্ড প্রশ্ন নেই — নিজে লিখুন।");
       const bank = (await goldBank([cur.loCode])).find((q) => q.qid === next.qid);
       sheet.items.splice(i, 1, {
         origin: "BANK", artifactId: oid(next.artifactId), qid: next.qid, textBn: bank?.textBn ?? undefined, loCode: cur.loCode,
@@ -494,10 +502,12 @@ export async function editSheet(assignmentId: string, studentId: string, edit: S
     } else if (edit.op === "ADD_OWN") {
       const text = (edit.textBn ?? "").trim();
       if (!text) throw new MasteryWorkError("নিজের প্রশ্নের লেখা দিন।");
-      const o = (await lockedOutcomes(a.classToken, a.subject)).find((x) => x.code === edit.loCode && x.assess === "QUESTION");
-      if (!o) throw new MasteryWorkError("শিখনফলটি এই শ্রেণি-বিষয়ের প্রশ্নভিত্তিক তালিকায় নেই।");
+      const grouping = await untaggedRefusal([edit.loCode ?? ""]);
+      if (grouping) throw new MasteryWorkError(grouping);
+      const o = (await lockedOutcomes(a.classToken, a.subject)).find((x) => x.code === edit.loCode && x.assess === "QUESTION" && isTaggedRow(x));
+      if (!o) throw new MasteryWorkError("কোডটি এই শ্রেণি-বিষয়ের প্রশ্নভিত্তিক তালিকায় নেই।");
       const qt = edit.questionTypeCode ?? "";
-      if (!(o.questionTypeCodes ?? []).includes(qt)) throw new MasteryWorkError(`${qt || "ধরন"} এই শিখনফলের প্রশ্নের ধরন নয়।`);
+      if (!(o.questionTypeCodes ?? []).includes(qt)) throw new MasteryWorkError(`${qt || "ধরন"} এই কোডের প্রশ্নের ধরন নয়।`);
       const m = (await marksTable(a.classToken, a.subject)).get(qt);
       if (!m) throw new MasteryWorkError(`${qt}-এর নম্বর ঠিক করা নেই।`);
       sheet.items.push({ origin: "TEACHER", textBn: text, loCode: o.code, chapterNumber: o.chapterNumber ?? null, questionTypeCode: qt, marks: m, band: "TEACHER" });
@@ -650,7 +660,28 @@ export async function trackerOptions(sectionId: string, subject: MasterySubject,
 const FONT_PATH = path.resolve(__dirname, "../../../../assets/fonts/NotoSansBengali-Regular.ttf");
 
 export async function renderAssignmentPdf(assignmentId: string, studentId: string | null, auth: Auth): Promise<{ pdf: Buffer; filename: string }> {
-  return renderPdfOf(await loadAssignment(assignmentId, auth), studentId);
+  return renderPdfOf(await loadAssignment(assignmentId, auth), studentId, "STAFF");
+}
+
+/**
+ * The code line in the PDF footer (OT-3, D-#923 / #925), named with the level word from পলিসি.
+ * STAFF copy: the tagged codes as printed on the questions ("<objective word> / <sub word>: …" when
+ * a sub-objective is among them). GUARDIAN copy: each code folded to its objective — never a
+ * sub-objective code — under the objective word. `objectiveOf` maps a code to its objective code.
+ */
+export function pdfCodeLine(
+  codes: string[],
+  words: Pick<MasteryLevelLabels, "objectiveBn" | "subBn">,
+  copy: "STAFF" | "GUARDIAN",
+  objectiveOf: (code: string) => string | null,
+): string {
+  const short = (c: string) => c.replace(/^LO-[A-Z0-9]+-[A-Z]+-/, "");
+  const list = copy === "GUARDIAN" ? codes.map((c) => objectiveOf(c)).filter((c): c is string => Boolean(c)) : codes;
+  const uniq = [...new Set(list)];
+  if (uniq.length === 0) return "";
+  const hasSub = copy === "STAFF" && uniq.some((c) => /\.\d{1,2}$/.test(c));
+  const word = hasSub ? `${words.objectiveBn} / ${words.subBn}` : words.objectiveBn;
+  return `${word}: ${uniq.map(short).join(" · ")}`;
 }
 
 /**
@@ -666,7 +697,7 @@ export async function renderAssignmentPdfForChild(assignmentId: string, studentI
     (await MasteryAssignmentSheet.exists({ assignmentId: a._id, studentId: oid(studentId) })) &&
     (await isMasteryEnabled(a.academicYearId, a.classToken, a.subject));
   if (!a || !ok) throw new MasteryWorkError("অ্যাসাইনমেন্ট পাওয়া যায়নি।");
-  return renderPdfOf(a, studentId);
+  return renderPdfOf(a, studentId, "GUARDIAN");
 }
 
 /** The current stimulus (shared stem) of every part on the sheets: ref → title + body (D-#926). */
@@ -688,14 +719,19 @@ async function stemsFor(items: { stimulusRef?: string | null }[]): Promise<Map<s
   return out;
 }
 
-async function renderPdfOf(a: IMasteryAssignment, studentId: string | null): Promise<{ pdf: Buffer; filename: string }> {
-  const [sheets, roster, label, paper] = await Promise.all([
+async function renderPdfOf(a: IMasteryAssignment, studentId: string | null, copy: "STAFF" | "GUARDIAN"): Promise<{ pdf: Buffer; filename: string }> {
+  const allCodes = [...(a.partA ?? []).map((q) => q.loCode)];
+  const [sheets, roster, label, paper, words] = await Promise.all([
     MasteryAssignmentSheet.find({ assignmentId: a._id, ...(studentId && Types.ObjectId.isValid(studentId) ? { studentId: oid(studentId) } : {}) }).lean(),
     rosterOf(a.sectionId),
     sectionLabel(a.sectionId),
     a.paperId ? MasteryPaper.findById(a.paperId).select("paperId").lean() : null,
+    masteryLevelLabels(),
   ]);
   if (studentId && sheets.length === 0) throw new MasteryWorkError("এই শিক্ষার্থীর শিট পাওয়া যায়নি।");
+  for (const sh of sheets) allCodes.push(...sh.items.map((q) => q.loCode));
+  const grain = copy === "GUARDIAN" ? await objectiveGrain(allCodes) : new Map<string, { code: string }>();
+  const objectiveOf = (c: string) => grain.get(c)?.code ?? null;
   const bySid = new Map(sheets.map((s) => [String(s.studentId), s]));
   const pages = roster.flatMap((st) => (bySid.has(String(st._id)) ? [{ st, sheet: bySid.get(String(st._id))! }] : []));
   const subjectBn = (HW_SUBJECT_LABELS_BN as Record<string, string>)[a.subject] ?? a.subject;
@@ -796,8 +832,13 @@ async function renderPdfOf(a: IMasteryAssignment, studentId: string | null): Pro
       doc.moveTo(M, footY).lineTo(M + W, footY).strokeColor("#9AA59F").lineWidth(0.6).stroke();
       doc.fontSize(9).fillColor("#46554E").font(BENGALI_FONT).text("অভিভাবকের স্বাক্ষর: ____________________", M, footY + 6, { width: W / 2 });
       doc.font("Helvetica").fontSize(8).text(code, M + W / 2, footY + 6, { width: W / 2, align: "right" });
-      const los = [...partA, ...sheet.items].map((q) => q.loCode.replace(/^LO-[A-Z0-9]+-[A-Z]+-/, "")).join(" · ");
-      doc.text(los, M + W / 2, footY + 16, { width: W / 2, align: "right" });
+      const los = pdfCodeLine([...partA, ...sheet.items].map((q) => q.loCode), words, copy, objectiveOf);
+      if (los) {
+        doc.x = M + W / 2;
+        doc.y = footY + 16;
+        doc.fontSize(8);
+        mixedText(doc, los, { width: W / 2, align: "right" } as PDFKit.Mixins.TextOptions);
+      }
     }
     if (pages.length === 0) {
       doc.addPage();

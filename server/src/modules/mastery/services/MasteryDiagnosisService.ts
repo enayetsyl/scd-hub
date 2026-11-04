@@ -51,6 +51,16 @@ import {
 } from "../diagnosis";
 import { loCodeMongoFilter } from "../bank";
 import { clearExclusion, reapplyExclusions } from "../exclusions";
+import { MasteryDomain } from "../models/MasteryDomain";
+import {
+  buildCatalogueTree,
+  objectiveState,
+  rollUpObjective,
+  summarise,
+  type CatalogueTree,
+  type StateSummary,
+  type TreeRowLike,
+} from "../rollup";
 
 const oid = (s: string) => new Types.ObjectId(s);
 const bn = (n: number | string) => String(n).replace(/[0-9]/g, (d) => "০১২৩৪৫৬৭৮৯"[Number(d)]);
@@ -121,9 +131,176 @@ export function computeSection(rows: LiveRow[], policy: DiagnosisPolicy, now: Da
 
 export async function lockedOutcomes(classToken: MasteryClassToken, subject: MasterySubject) {
   return MasteryOutcome.find({ classToken, subject, status: "LOCKED" })
-    .select("code labelBn chapterNumber strand order homeTipBn assess questionTypeCodes")
+    .select("code labelBn chapterNumber strand order homeTipBn assess questionTypeCodes level parentCode tagged domainCode prereqCodes")
     .sort({ chapterNumber: 1, order: 1, code: 1 })
     .lean();
+}
+
+// ---------------------------------------------------------------------------
+// OT-3 — the tree of a class × subject, roll-up and the earlier step (prd-objective-tree §8.1)
+// ---------------------------------------------------------------------------
+
+export interface LoadedTree {
+  rows: Awaited<ReturnType<typeof lockedOutcomes>>;
+  tree: CatalogueTree;
+  /** Domain code → its label (school-wide ladder, D-#921). */
+  domainLabel: Map<string, string>;
+}
+
+/** The LOCKED rows of a class × subject as a tree. A flat catalogue reads `isTree: false`. */
+export async function loadTree(classToken: MasteryClassToken, subject: MasterySubject): Promise<LoadedTree> {
+  const [rows, domains] = await Promise.all([
+    lockedOutcomes(classToken, subject),
+    MasteryDomain.find({ subject }).select("code labelBn order").sort({ order: 1, code: 1 }).lean(),
+  ]);
+  const tree = buildCatalogueTree(rows as TreeRowLike[], domains.map((d) => d.code));
+  return { rows, tree, domainLabel: new Map(domains.map((d) => [d.code, d.labelBn])) };
+}
+
+export interface EarlierStep {
+  code: string;
+  labelBn: string;
+  classToken: string;
+  /** The prerequisite belongs to an earlier class (the D-#927 ladder). */
+  crossClass: boolean;
+  /** The student's state on it; null when `noData`. */
+  state: MasteryState | null;
+  /** Cross-class and the student has no evidence from that class ("আগের শ্রেণির তথ্য নেই"). */
+  noData: boolean;
+}
+
+/**
+ * Each prerequisite with THIS student's state (D-#927). Same class: read from the section's live
+ * states (an untagged prerequisite rolls up from its children). Earlier class: the student's own
+ * evidence from that class (any section, any year), replayed by the engine with that class's
+ * policy and that section's mean; none at all ⇒ noData.
+ */
+export async function resolveEarlierSteps(
+  studentId: string,
+  classToken: MasteryClassToken,
+  subject: MasterySubject,
+  prereqCodes: string[],
+  stateHere: (code: string) => MasteryState,
+): Promise<Map<string, EarlierStep>> {
+  const codes = [...new Set(prereqCodes)];
+  const out = new Map<string, EarlierStep>();
+  if (codes.length === 0) return out;
+  const [rows, kids] = await Promise.all([
+    MasteryOutcome.find({ code: { $in: codes } }).select("code labelBn level tagged").lean(),
+    MasteryOutcome.find({ parentCode: { $in: codes }, status: { $ne: "RETIRED" } }).select("code parentCode tagged").lean(),
+  ]);
+  const rowBy = new Map(rows.map((r) => [r.code, r]));
+  const childrenOf = new Map<string, string[]>();
+  for (const k of kids) if (k.parentCode && (k.tagged ?? true)) childrenOf.set(k.parentCode, [...(childrenOf.get(k.parentCode) ?? []), k.code]);
+  const leavesOf = (code: string): string[] => {
+    const r = rowBy.get(code);
+    const untagged = r ? r.tagged === false : (childrenOf.get(code) ?? []).length > 0;
+    return untagged ? childrenOf.get(code) ?? [] : [code];
+  };
+
+  // Earlier-class prerequisites: the student's own live evidence on their tagged rows.
+  const cross = codes.filter((c) => (parseMasteryLoCode(c)?.classToken ?? classToken) !== classToken);
+  const crossLeaves = [...new Set(cross.flatMap(leavesOf))];
+  const crossState = new Map<string, MasteryState>();
+  if (crossLeaves.length > 0 && Types.ObjectId.isValid(studentId)) {
+    const own = await MasteryEvidence.find({ studentId: oid(studentId), loCode: { $in: crossLeaves }, supersededAt: null, excludedAt: null })
+      .select("sectionId loCode")
+      .lean(); // bounded: one student × a handful of earlier codes
+    const sectionOf = new Map<string, Types.ObjectId>();
+    for (const r of own) if (!sectionOf.has(r.loCode)) sectionOf.set(r.loCode, r.sectionId);
+    for (const [lo, sectionId] of sectionOf) {
+      const parsed = parseMasteryLoCode(lo);
+      if (!parsed) continue;
+      const [secRows, policy] = await Promise.all([liveSectionRows(sectionId, parsed.subject, lo), diagnosisPolicy(parsed.classToken, parsed.subject)]);
+      const st = computeSection(secRows, policy, new Date()).states.get(lo)?.get(studentId)?.state;
+      if (st) crossState.set(lo, st);
+    }
+  }
+
+  for (const code of codes) {
+    const parsed = parseMasteryLoCode(code);
+    const isCross = (parsed?.classToken ?? classToken) !== classToken;
+    const leaves = leavesOf(code);
+    let state: MasteryState | null;
+    let noData = false;
+    if (isCross) {
+      const known = leaves.filter((l) => crossState.has(l));
+      if (known.length === 0) {
+        state = null;
+        noData = true;
+      } else state = rollUpObjective(leaves.map((l) => crossState.get(l) ?? "NOT_ASSESSED"));
+    } else {
+      state = leaves.length === 1 && leaves[0] === code ? stateHere(code) : rollUpObjective(leaves.map(stateHere));
+    }
+    out.set(code, {
+      code,
+      labelBn: rowBy.get(code)?.labelBn ?? code,
+      classToken: parsed?.classToken ?? classToken,
+      crossClass: isCross,
+      state,
+      noData,
+    });
+  }
+  return out;
+}
+
+export interface RollupObjectiveView {
+  code: string;
+  labelBn: string;
+  chapterNumber: number | null;
+  strand: string | null;
+  domainCode: string | null;
+  tagged: boolean;
+  /** Own state (tagged) or rolled up from the children (untagged). */
+  state: MasteryState;
+  childCodes: string[];
+  weakChildCodes: string[];
+  /** The children's states (a tagged objective: its own one state). */
+  summary: StateSummary;
+}
+
+export interface DomainRollupView {
+  code: string | null;
+  labelBn: string | null;
+  objectiveCodes: string[];
+  /** Counts per state over the domain's tagged rows. */
+  summary: StateSummary;
+  /** The same roll-up rule applied to all of the domain's tagged rows. */
+  state: MasteryState;
+}
+
+/** One student's objective and domain roll-up over a tree. */
+export function studentRollup(
+  t: LoadedTree,
+  stateOf: (code: string) => MasteryState,
+): { objectives: RollupObjectiveView[]; domains: DomainRollupView[] } {
+  const objectives = t.tree.objectives.map((o) => {
+    const leaves = o.tagged ? [o.code] : o.childCodes;
+    const states = leaves.map(stateOf);
+    return {
+      code: o.code,
+      labelBn: o.labelBn,
+      chapterNumber: o.chapterNumber,
+      strand: o.strand,
+      domainCode: o.domainCode,
+      tagged: o.tagged,
+      state: objectiveState(o, stateOf),
+      childCodes: o.childCodes,
+      weakChildCodes: o.childCodes.filter((c) => stateOf(c) === "WEAK"),
+      summary: summarise(states),
+    };
+  });
+  const domains = t.tree.domains.map((d) => {
+    const states = d.taggedCodes.map(stateOf);
+    return {
+      code: d.code,
+      labelBn: d.code ? t.domainLabel.get(d.code) ?? d.code : null,
+      objectiveCodes: d.objectiveCodes,
+      summary: summarise(states),
+      state: rollUpObjective(states),
+    };
+  });
+  return { objectives, domains };
 }
 
 export async function sectionLabel(sectionId: Types.ObjectId): Promise<{ sectionName: string; className: string }> {
@@ -160,12 +337,18 @@ export interface OutcomeStateView {
   reworkCount: number;
   reasons: string[];
   nextRevisionAt: string | null;
+  // OT-3: where the row sits in the tree (a flat row: OBJECTIVE, no parent, no domain).
+  level: string;
+  parentCode: string | null;
+  domainCode: string | null;
+  /** WEAK rows only: each prerequisite with this student's state (D-#927). */
+  earlierSteps: EarlierStep[];
 }
 
 const round = (n: number | null | undefined) => (n === null || n === undefined ? null : Math.round(n));
 
 function stateView(
-  o: { code: string; labelBn: string; chapterNumber?: number | null; strand?: string | null },
+  o: TreeRowLike,
   s: OutcomeState | undefined,
   mean: number | undefined,
 ): OutcomeStateView {
@@ -174,6 +357,10 @@ function stateView(
     labelBn: o.labelBn,
     chapterNumber: o.chapterNumber ?? null,
     strand: o.strand ?? null,
+    level: o.level ?? "OBJECTIVE",
+    parentCode: o.parentCode ?? null,
+    domainCode: o.domainCode ?? null,
+    earlierSteps: [],
     state: s?.state ?? "NOT_ASSESSED",
     since: iso(s?.since),
     lastEvidenceAt: iso(s?.lastEvidenceAt),
@@ -199,10 +386,15 @@ export interface StudentDiagnosis {
   subject: string;
   /** Subjects of this class with a locked catalogue that the caller may open. */
   subjects: string[];
+  /** The TAGGED rows (a flat catalogue: every row, as before). */
   outcomes: OutcomeStateView[];
   /** Where the student stands: how many in the section have more WEAK outcomes in this subject. */
   sectionSize: number;
   moreWeakThan: number;
+  /** OT-3: false for a flat catalogue (the screen renders as before). */
+  isTree: boolean;
+  objectives: RollupObjectiveView[];
+  domains: DomainRollupView[];
 }
 
 async function subjectsFor(auth: Auth, sectionId: Types.ObjectId, classToken: MasteryClassToken): Promise<string[]> {
@@ -222,8 +414,8 @@ async function subjectsFor(auth: Auth, sectionId: Types.ObjectId, classToken: Ma
 export async function studentDiagnosis(studentId: string, subject: MasterySubject, auth: Auth): Promise<StudentDiagnosis> {
   const { st, ctx } = await studentContext(studentId);
   await assertMayWork(auth, ctx.sectionId, subject, new Date());
-  const [outcomes, rows, policy, label, roster, subjects] = await Promise.all([
-    lockedOutcomes(ctx.classToken, subject),
+  const [t, rows, policy, label, roster, subjects] = await Promise.all([
+    loadTree(ctx.classToken, subject),
     liveSectionRows(ctx.sectionId, subject),
     diagnosisPolicy(ctx.classToken, subject),
     sectionLabel(ctx.sectionId),
@@ -236,6 +428,18 @@ export async function studentDiagnosis(studentId: string, subject: MasterySubjec
     for (const [sid, s] of per) if (s.state === "WEAK") weakCount.set(sid, (weakCount.get(sid) ?? 0) + 1);
   }
   const mine = weakCount.get(studentId) ?? 0;
+  const stateOf = (code: string): MasteryState => sec.states.get(code)?.get(studentId)?.state ?? "NOT_ASSESSED";
+  const outcomes = t.tree.tagged.map((o) => stateView(o, sec.states.get(o.code)?.get(studentId), sec.means.get(o.code)));
+  // The earlier step (D-#927) on every WEAK tagged row that names prerequisites.
+  const weakRows = t.tree.tagged.filter((o) => stateOf(o.code) === "WEAK" && (o.prereqCodes ?? []).length > 0);
+  if (weakRows.length > 0) {
+    const steps = await resolveEarlierSteps(studentId, ctx.classToken, subject, weakRows.flatMap((o) => o.prereqCodes ?? []), stateOf);
+    for (const v of outcomes) {
+      const row = t.tree.byCode.get(v.loCode);
+      if (v.state === "WEAK") v.earlierSteps = (row?.prereqCodes ?? []).map((c) => steps.get(c)).filter((x): x is EarlierStep => Boolean(x));
+    }
+  }
+  const roll = t.tree.isTree ? studentRollup(t, stateOf) : { objectives: [], domains: [] };
   return {
     studentId,
     name: personName(st),
@@ -245,9 +449,12 @@ export async function studentDiagnosis(studentId: string, subject: MasterySubjec
     classToken: ctx.classToken,
     subject,
     subjects,
-    outcomes: outcomes.map((o) => stateView(o, sec.states.get(o.code)?.get(studentId), sec.means.get(o.code))),
+    outcomes,
     sectionSize: roster.length,
     moreWeakThan: roster.filter((s) => (weakCount.get(String(s._id)) ?? 0) < mine).length,
+    isTree: t.tree.isTree,
+    objectives: roll.objectives,
+    domains: roll.domains,
   };
 }
 
@@ -279,6 +486,9 @@ export interface OutcomeTrail {
   studentId: string;
   name: string;
   outcome: OutcomeStateView & { homeTipBn: string | null };
+  /** OT-3: the objective a sub-objective belongs to, and the domain (null on a flat row). */
+  parentLabelBn: string | null;
+  domainLabelBn: string | null;
   history: { state: string; at: string; paperId: string | null }[];
   rows: TrailRow[];
   bankGold: number;
@@ -292,8 +502,14 @@ export async function outcomeTrail(studentId: string, loCode: string, auth: Auth
   if (parsed.classToken !== ctx.classToken) throw new MasteryWorkError("এই শিখনফল শিক্ষার্থীর শ্রেণির নয়।");
   const subject = parsed.subject;
   await assertMayWork(auth, ctx.sectionId, subject, new Date());
-  const outcome = await MasteryOutcome.findOne({ code: loCode }).select("code labelBn chapterNumber strand homeTipBn").lean();
+  const outcome = await MasteryOutcome.findOne({ code: loCode })
+    .select("code labelBn chapterNumber strand homeTipBn level parentCode tagged domainCode prereqCodes")
+    .lean();
   if (!outcome) throw new MasteryWorkError("শিখনফল পাওয়া যায়নি।");
+  const [parent, domain] = await Promise.all([
+    outcome.parentCode ? MasteryOutcome.findOne({ code: outcome.parentCode }).select("labelBn homeTipBn").lean() : null,
+    outcome.domainCode ? MasteryDomain.findOne({ code: outcome.domainCode }).select("labelBn").lean() : null,
+  ]);
 
   const [sectionRows, policy, own, tags, bank] = await Promise.all([
     liveSectionRows(ctx.sectionId, subject, loCode),
@@ -316,10 +532,23 @@ export async function outcomeTrail(studentId: string, loCode: string, auth: Auth
     bank.map((a) => ((a.envelopeJson as Record<string, unknown>)?.payload as Record<string, unknown> | undefined)?.qid).filter(Boolean) as string[],
   );
   const seen = new Set(own.map((r) => r.qid).filter((q): q is string => Boolean(q)));
+  const view = stateView(outcome as TreeRowLike, s, sec.means.get(loCode));
+  const prereqs = outcome.prereqCodes ?? [];
+  if (view.state === "WEAK" && prereqs.length > 0) {
+    // The same-class prerequisites read the section's live states (the whole subject's rows).
+    const subjectRows = await liveSectionRows(ctx.sectionId, subject);
+    const all = computeSection(subjectRows, policy, new Date());
+    const stateOf = (code: string): MasteryState => all.states.get(code)?.get(studentId)?.state ?? "NOT_ASSESSED";
+    const steps = await resolveEarlierSteps(studentId, ctx.classToken, subject, prereqs, stateOf);
+    view.earlierSteps = prereqs.map((c) => steps.get(c)).filter((x): x is EarlierStep => Boolean(x));
+  }
   return {
     studentId,
     name: personName(st),
-    outcome: { ...stateView(outcome, s, sec.means.get(loCode)), homeTipBn: outcome.homeTipBn ?? null },
+    // A sub-objective's home tip is its objective's (guardians see the objective grain, D-#925).
+    outcome: { ...view, homeTipBn: outcome.homeTipBn ?? parent?.homeTipBn ?? null },
+    parentLabelBn: parent?.labelBn ?? null,
+    domainLabelBn: domain?.labelBn ?? null,
     history: (s?.history ?? []).map((h) => ({ state: h.state, at: h.at.toISOString(), paperId: h.paperId ? paperCode.get(h.paperId) ?? null : null })),
     rows: own.map((r) => {
       const p = paperBy.get(String(r.paperId));
@@ -369,6 +598,18 @@ export interface HeatOutcome {
   actionStatus: string | null;
   /** One cell per student, in `students` order. */
   cells: { state: MasteryState; pct: number | null }[];
+  // OT-3 — a column is a tagged row (TAGGED), an objective (OBJECTIVE, rolled up) or a domain (DOMAIN).
+  level: "TAGGED" | "OBJECTIVE" | "DOMAIN";
+  parentCode: string | null;
+  /** A tagged sub-objective's objective — the trigger banner names it (§8.1). */
+  parentLabelBn: string | null;
+  domainCode: string | null;
+  /** OBJECTIVE: its tagged children; DOMAIN: its objectives. */
+  childCodes: string[];
+  /** OBJECTIVE: children with at least one WEAK student, the worst first. */
+  weakChildCodes: string[];
+  /** Share of cells MASTERED / REVISION_DUE (DOMAIN, OBJECTIVE). */
+  masteredPct: number | null;
 }
 
 export interface SectionHeatmap {
@@ -378,17 +619,23 @@ export interface SectionHeatmap {
   subject: string;
   triggerPct: number;
   students: { studentId: string; name: string; rollNumber: string | null; weakCount: number }[];
-  /** Outcomes the section has evidence on ("taught"), in book order. */
+  /** Tagged rows the section has evidence on ("taught"), in book order. */
   outcomes: HeatOutcome[];
-  /** Locked outcomes with no evidence yet. */
+  /** Tagged rows with no evidence yet. */
   notYetAssessed: number;
+  /** OT-3: false for a flat catalogue — then the two lists below are empty. */
+  isTree: boolean;
+  /** Objectives with at least one taught tagged row, rolled up per student. */
+  objectiveColumns: HeatOutcome[];
+  /** Domains with at least one taught tagged row: per student the roll-up, the section's share weak. */
+  domainColumns: HeatOutcome[];
 }
 
 export async function sectionHeatmap(sectionId: string, subject: MasterySubject, auth: Auth): Promise<SectionHeatmap> {
   const ctx = await sectionContext(sectionId);
   await assertMayWork(auth, ctx.sectionId, subject, new Date());
-  const [outcomes, rows, policy, label, roster, actions] = await Promise.all([
-    lockedOutcomes(ctx.classToken, subject),
+  const [t, rows, policy, label, roster, actions] = await Promise.all([
+    loadTree(ctx.classToken, subject),
     liveSectionRows(ctx.sectionId, subject),
     diagnosisPolicy(ctx.classToken, subject),
     sectionLabel(ctx.sectionId),
@@ -401,7 +648,8 @@ export async function sectionHeatmap(sectionId: string, subject: MasterySubject,
   const sec = computeSection(rows, policy, new Date());
   const students = roster.map((s) => String(s._id));
   const heat: HeatOutcome[] = [];
-  for (const o of outcomes) {
+  const parentLabel = (code: string | null | undefined) => (code ? t.tree.byCode.get(code)?.labelBn ?? null : null);
+  for (const o of t.tree.tagged) {
     const per = sec.states.get(o.code);
     if (!per) continue;
     const cells = students.map((sid) => {
@@ -414,7 +662,58 @@ export async function sectionHeatmap(sectionId: string, subject: MasterySubject,
       loCode: o.code, labelBn: o.labelBn, chapterNumber: o.chapterNumber ?? null, strand: o.strand ?? null,
       assessments, ...sum, sectionMeanPct: round(sec.means.get(o.code)),
       actionId: actionOf.get(o.code)?.id ?? null, actionStatus: actionOf.get(o.code)?.status ?? null, cells,
+      level: "TAGGED", parentCode: o.parentCode ?? null, parentLabelBn: parentLabel(o.parentCode),
+      domainCode: o.domainCode ?? null, childCodes: [], weakChildCodes: [], masteredPct: null,
     });
+  }
+
+  // OT-3 roll-up columns (tree catalogues only). The trigger stays on tagged rows (D-#813).
+  const objectiveColumns: HeatOutcome[] = [];
+  const domainColumns: HeatOutcome[] = [];
+  if (t.tree.isTree) {
+    const heatBy = new Map(heat.map((h) => [h.loCode, h]));
+    const stateAt = (code: string, si: number): MasteryState => heatBy.get(code)?.cells[si].state ?? "NOT_ASSESSED";
+    const rollColumn = (
+      code: string, labelBn: string, level: "OBJECTIVE" | "DOMAIN", leaves: string[], extra: Partial<HeatOutcome>,
+    ): HeatOutcome | null => {
+      const taught = leaves.filter((c) => heatBy.has(c));
+      if (taught.length === 0) return null;
+      const cells = students.map((_sid, si) => {
+        const states = leaves.map((c) => stateAt(c, si));
+        return { state: rollUpObjective(states), pct: summarise(states).masteredPct };
+      });
+      const all = summarise(students.flatMap((_sid, si) => leaves.map((c) => stateAt(c, si))));
+      const perStudent = summarise(cells.map((c) => c.state));
+      const isDomain = level === "DOMAIN";
+      return {
+        loCode: code, labelBn, chapterNumber: null, strand: null,
+        assessments: Math.max(...taught.map((c) => heatBy.get(c)!.assessments)),
+        // An objective column counts students (its rolled-up state); a domain counts its cells.
+        weak: isDomain ? all.weak : perStudent.weak,
+        verdicts: isDomain ? all.assessed : perStudent.assessed,
+        weakPct: isDomain ? all.weakPct : perStudent.weakPct,
+        triggered: taught.some((c) => heatBy.get(c)!.triggered),
+        sectionMeanPct: null, actionId: null, actionStatus: null, cells,
+        level, parentCode: null, parentLabelBn: null, domainCode: null, childCodes: [], weakChildCodes: [],
+        masteredPct: all.masteredPct,
+        ...extra,
+      };
+    };
+    for (const o of t.tree.objectives) {
+      const leaves = o.tagged ? [o.code] : o.childCodes;
+      const weakChildCodes = o.childCodes
+        .filter((c) => (heatBy.get(c)?.weak ?? 0) > 0)
+        .sort((a, b) => (heatBy.get(b)!.weakPct ?? 0) - (heatBy.get(a)!.weakPct ?? 0));
+      const col = rollColumn(o.code, o.labelBn, "OBJECTIVE", leaves, {
+        chapterNumber: o.chapterNumber, strand: o.strand, domainCode: o.domainCode, childCodes: o.childCodes, weakChildCodes,
+      });
+      if (col) objectiveColumns.push(col);
+    }
+    for (const d of t.tree.domains) {
+      const label = d.code ? t.domainLabel.get(d.code) ?? d.code : "";
+      const col = rollColumn(d.code ?? "", label, "DOMAIN", d.taggedCodes, { domainCode: d.code, childCodes: d.objectiveCodes });
+      if (col) domainColumns.push(col);
+    }
   }
   return {
     sectionId: String(ctx.sectionId),
@@ -428,7 +727,10 @@ export async function sectionHeatmap(sectionId: string, subject: MasterySubject,
       weakCount: heat.filter((h) => h.cells[i].state === "WEAK").length,
     })),
     outcomes: heat,
-    notYetAssessed: outcomes.length - heat.length,
+    notYetAssessed: t.tree.tagged.length - heat.length,
+    isTree: t.tree.isTree,
+    objectiveColumns,
+    domainColumns,
   };
 }
 

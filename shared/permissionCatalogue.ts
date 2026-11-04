@@ -440,7 +440,7 @@ export const FEATURE_CATALOGUE = {
       view_all: { en: "Board, master grid, all loads", bn: "আজকের ক্লাস বোর্ড, সম্পূর্ণ গ্রিড ও সব শিক্ষকের লোড দেখা", desc: "Live board, master grid, every teacher's load", teacher: false, office: true, flags: [] },
       edit: { en: "Build the routine", bn: "রুটিন তৈরি ও পরিবর্তন", desc: "Create/update/retire slots; reassign a subject's routine teacher", teacher: false, office: true, flags: [] },
       edit_calendar: { en: "Holidays & windows", bn: "ছুটির দিন ও সময়সূচি ঠিক করা", desc: "Holiday exceptions; schedule windows", teacher: false, office: true, flags: [] },
-      settings: { en: "Rooms, periods, groups, bell", bn: "রুম, পিরিয়ড, গ্রুপ ও ঘণ্টার দায়িত্ব ঠিক করা", desc: "Rooms, period grids, subject groups and members, bell duty", teacher: false, office: true, flags: [] },
+      settings: { en: "Rooms, periods, groups, bell", bn: "রুম, পিরিয়ড, গ্রুপ ও ঘণ্টার দায়িত্ব ঠিক করা", desc: "Rooms, period grids, subject groups and members, bell duty; the class note lesson-plan question switch (D-#952)", teacher: false, office: true, flags: [] },
     },
   },
   cover: {

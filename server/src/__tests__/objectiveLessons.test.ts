@@ -13,6 +13,7 @@
  */
 import mongoose, { Types } from "mongoose";
 import { MongoMemoryServer } from "mongodb-memory-server";
+import { LessonProgressConfig } from "../modules/lesson-progress/models/LessonProgressConfig";
 import { graphql, type ExecutionResult } from "graphql";
 
 jest.mock("../modules/notifications/services/emitters", () => ({
@@ -120,6 +121,8 @@ beforeAll(async () => {
   await mongoose.connect(mongo.getUri());
   // registerResolvers loads every model; one partial index is not supported by the in-memory server — irrelevant here.
   await Promise.allSettled(Object.values(mongoose.models).map((m) => m.init()));
+  // D-#952: the class note's lesson-plan question is OFF by default — these suites test it ON.
+  await LessonProgressConfig.create({ classNoteQuestionOn: true });
   mockTeacher.mockResolvedValue(TEACHER_ID);
   const [year] = await AcademicYear.create([{ label: "2027", startDate: new Date("2027-01-01"), endDate: new Date("2027-12-31"), current: true }]);
   const [cls] = await Class.create([{ level: 3, nameBn: "তৃতীয়", academicYearId: year._id }]);

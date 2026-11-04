@@ -5,12 +5,14 @@
  *
  * The FIRST screen of the stack and the only one without params (the RN initial-route trap).
  */
-import React from "react";
+import React, { useLayoutEffect } from "react";
 import { View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery } from "urql";
 import { MASTERY_COVERAGE_QUERY, type MasteryCoverageRow } from "../../graphql/mastery";
 import { Screen, Card, Body, Muted, Badge, Button, Loader, EmptyState, Notice } from "../../components/ui";
+import { useMasteryLevelLabels } from "../../lib/useMasteryLevelLabels";
+import { levelFill } from "./masteryStateUi";
 import { STR, bnNum, hwSubjectLabel, masteryClassLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useAuth } from "../../auth/AuthContext";
@@ -21,8 +23,10 @@ import type { MasteryStackParamList } from "../../navigation/types";
 type Props = NativeStackScreenProps<MasteryStackParamList, "MasteryHome">;
 
 export default function MasteryHomeScreen({ navigation }: Props): React.ReactElement {
+  const lv = useMasteryLevelLabels();
   const { can } = useAuth();
   const canManage = can("mastery:settings");
+  useLayoutEffect(() => navigation.setOptions({ title: levelFill(STR.msCatalogueTitle, lv) }), [navigation, lv.objective]);
   // OT-4: question-bank coverage — the same actions as its Reports-hub leaf (and its server read).
   const canCoverage = (REPORT_LEAF_ACTIONS.MasteryBankCoverage ?? []).some((p) => can(p));
   const [{ data, fetching, error }] = useQuery({ query: MASTERY_COVERAGE_QUERY, requestPolicy: "cache-and-network" });
@@ -38,7 +42,7 @@ export default function MasteryHomeScreen({ navigation }: Props): React.ReactEle
 
       {error ? <Notice message={friendlyError(error)} tone="danger" /> : null}
       {fetching && rows.length === 0 ? <Loader /> : null}
-      {!fetching && !error && rows.length === 0 ? <EmptyState message={STR.msNoCoverage} /> : null}
+      {!fetching && !error && rows.length === 0 ? <EmptyState message={levelFill(STR.msNoCoverage, lv)} /> : null}
 
       {rows.map((r) => (
         <Card key={`${r.classToken}:${r.subject}`}>
@@ -57,7 +61,7 @@ export default function MasteryHomeScreen({ navigation }: Props): React.ReactEle
           </Muted>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2) }}>
             <Button
-              title={STR.msOutcomes}
+              title={levelFill(STR.msOutcomes, lv)}
               variant="secondary"
               onPress={() => navigation.navigate("MasteryCatalogue", { classToken: r.classToken, subject: r.subject })}
             />
