@@ -429,6 +429,10 @@ Listed elsewhere: `server/src/modules/hr/resolvers/staffHub.ts:348` staffAttenda
 | server/src/modules/mastery/resolvers/masteryDiagnosis.ts | MasteryOutcomeTrail.chapterLessons (LP-3) | rides `masteryOutcomeTrail`'s gate (routine holder / `mastery:edit_all`) |
 | server/src/modules/mastery/resolvers/masteryAction.ts | MasteryAction.lessonGap (LP-3) | rides `masteryAction`'s gate |
 | app StudentProfileScreen | পাঠ tab | `lesson_progress:view` / `view_all` |
+| server/src/modules/lesson-progress/resolvers/lessonObjectives.ts | lessonObjectiveStatus (OT-5) | hasAnyPermission(`lesson_progress:view`, `lesson_progress:view_all`) + the tracker's row rule (routine holder / class teacher; `view_all` lifts it) |
+| server/src/modules/lesson-progress/resolvers/lessonDelivery.ts | LessonPlanForSlot.objectives · LessonPlanSession.loCodes · LessonDeliverySession.loCodes (OT-5) | ride `lessonPlanForSlot`'s gate |
+| server/src/modules/mastery/resolvers/masteryDiagnosis.ts | MasteryOutcomeTrail.objectiveLesson · MasteryStudentDiagnosis.objectiveLessons (OT-5) | ride `masteryOutcomeTrail` / `masteryStudentDiagnosis`'s gate (routine holder / `mastery:edit_all`) |
+| server/src/modules/content/resolvers/content.ts | ContentArtifact.loCodes (OT-5) | rides the content read gates (`lesson_plans:view` + scope) |
 
 ## (f) `popup_notice` — pop-up notices (added 2026-10-26, D-#852–#858)
 
