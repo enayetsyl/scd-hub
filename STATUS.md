@@ -1,5 +1,8 @@
 # STATUS
 
+- 2026-11-04: **CHANGED — salary sheet laid out for the voucher (D-#929)** (branch `feat/salary-sheet-expense-cols`, worktree `C:/w/salexp`). Owner: the accounting app's cash balance did not match because unpaid leave + lateness were booked as cash paid. Sheet columns now: Gross | (−) unpaid leave, lateness | (+) additions | **Salary expense** | (−) advance, statutory, other | Net pay. Server only (PDF route), no OTA.
+  - **Verified:** server tsc 0; salarySheetAndSent 8/8 (+1: column order, expense = 8,000 − 1,524 − 1,143 + 200, expense − adjustments = net, subtotal linear); sample PDF rendered and checked by eye.
+  - **Now / next:** PR → dev → promote → then download October's sheet from the run screen (the sheet is built live from the locked payslips). Owner-unconfirmed default: a manual "other" deduction counts as an adjustment (a recovery), not as a not-paid deduction.
 - 2026-11-04: **BUILT — arrange your own sidebar (D-#920)** (branch `feat/sidebar-arrange`, worktree `C:/w/ghome`). New `NavPreference` model + 4 SELF fields (platform module); drawer gets ⇅ সাজান (manual ↑↓, ☆ favourites, "most used on top" auto mode, reset). Server + app → deploy + **OTA** after promotion.
   - **Verified:** server tsc 0; navPreference 9/9 + permissionCatalogueGates + expectedErrorRegistry green; full server jest 351 suites / 6,104 tests; app tsc 0; expo web export 0; local walk (in-memory Mongo + Expo web + Chrome) 18/18: manual order, favourites + their order, persisted across reload, auto mode puts the most-tapped item first, reset, guardian login.
   - **Owner-unconfirmed defaults:** favourites also stay in their own place; new/unplaced sections go to the END of a manual order; auto counts halve past 500.
