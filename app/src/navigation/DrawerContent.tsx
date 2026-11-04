@@ -17,7 +17,7 @@ import React from "react";
 import { Pressable, Text, View } from "react-native";
 import { DrawerContentScrollView, type DrawerContentComponentProps } from "@react-navigation/drawer";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useQuery } from "urql";
+import { useMutation, useQuery } from "urql";
 import type { Role } from "@scd/shared";
 
 import { STR } from "../lib/labels";
@@ -33,6 +33,18 @@ import { useBasket } from "../state/BasketContext";
 import { fonts, radius, space, typeScale, useColors } from "../theme";
 import type { TabParamList } from "./types";
 import { REPORT_LEAF_ACTIONS } from "../lib/navGates";
+import { MY_NAV_PREFERENCE, RECORD_NAV_USE, RESET_NAV_PREFERENCE, SAVE_NAV_PREFERENCE } from "../graphql/navPreference";
+import {
+  DEFAULT_NAV_PREFS,
+  moveKey,
+  orderByKeys,
+  orderByUse,
+  togglePinned,
+  type NavMode,
+  type NavPrefs,
+} from "../lib/navArrange";
+import { friendlyError } from "../lib/errors";
+import { Button } from "../components/ui";
 
 type RouteName = keyof TabParamList;
 type LabelKey = keyof typeof STR;
@@ -365,6 +377,11 @@ const DEEP_LINKED = new Set(
   NAV.flatMap((s) => (s.type === "group" ? s.items : [s])).filter((l) => l.screen).map((l) => `${l.route}:${l.screen}`),
 );
 
+/** D-#920: the keys a person's saved arrangement uses (see NavPreference on the server). */
+const leafKey = (l: NavLeaf): string => `${l.route}:${l.screen ?? ""}`;
+const sectionKey = (s: NavSection): string => (s.type === "group" ? `g:${String(s.titleKey)}` : leafKey(s));
+const LEAF_BY_KEY = new Map(NAV.flatMap((s) => (s.type === "group" ? s.items : [s])).map((l) => [leafKey(l), l]));
+
 export default function DrawerContent(props: DrawerContentComponentProps): React.ReactElement {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -395,6 +412,63 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
   // nothing gets buried. Staff keep D-#760.
   const [collapsed, setCollapsed] = React.useState<Record<string, boolean>>({});
   const groupsStartOpen = role === "GUARDIAN";
+
+  // D-#920 (owner 2026-11-04): each person arranges their own sidebar — by hand, or "most
+  // used on top" — and pins favourites (আমার পছন্দ). Saved on the server against the login,
+  // so it follows them to every device. Only the ORDER is theirs: what shows is still the
+  // gates above. Use counts are read once per mount, so auto mode never reshuffles the
+  // list under a finger mid-session.
+  const [navPrefQ] = useQuery({ query: MY_NAV_PREFERENCE, pause: !role, requestPolicy: "cache-and-network" });
+  const [, saveNavPref] = useMutation(SAVE_NAV_PREFERENCE);
+  const [, resetNavPref] = useMutation(RESET_NAV_PREFERENCE);
+  const [, recordNavUse] = useMutation(RECORD_NAV_USE);
+  const prefs: NavPrefs = React.useMemo(() => {
+    const p = navPrefQ.data?.myNavPreference;
+    if (!p) return DEFAULT_NAV_PREFS;
+    return {
+      mode: p.mode === "auto" ? "auto" : "manual",
+      order: p.order,
+      pinned: p.pinned,
+      usage: Object.fromEntries(p.usage.map((u) => [u.key, u.count])),
+    };
+  }, [navPrefQ.data]);
+  const visibleSections = React.useMemo(
+    () => NAV.filter((s) => (s.type === "item" ? visibleLeaf(s) : !s.hidden && s.items.some(visibleLeaf))),
+    [visibleLeaf],
+  );
+  const useOfLeaf = (l: NavLeaf): number => prefs.usage[leafKey(l)] ?? 0;
+  const useOfSection = (s: NavSection): number =>
+    s.type === "item" ? useOfLeaf(s) : s.items.reduce((n, l) => n + useOfLeaf(l), 0);
+  const arrangeSections = (mode: NavMode, order: string[]): NavSection[] =>
+    mode === "auto" ? orderByUse(visibleSections, useOfSection) : orderByKeys(visibleSections, sectionKey, order);
+  const pinnedLeaves = (keys: string[]): NavLeaf[] =>
+    keys.map((k) => LEAF_BY_KEY.get(k)).filter((l): l is NavLeaf => !!l && visibleLeaf(l));
+  const sections = arrangeSections(prefs.mode, prefs.order);
+  const favourites = pinnedLeaves(prefs.pinned);
+
+  // The arrange panel edits a draft; nothing changes until সংরক্ষণ করুন.
+  const [draft, setDraft] = React.useState<{ mode: NavMode; order: string[]; pinned: string[] } | null>(null);
+  const [navBusy, setNavBusy] = React.useState(false);
+  const [navError, setNavError] = React.useState<string | null>(null);
+  const startArrange = (): void => {
+    // Starting from what is on screen, so switching auto → manual keeps today's order.
+    setDraft({ mode: prefs.mode, order: sections.map(sectionKey), pinned: favourites.map(leafKey) });
+    setNavError(null);
+  };
+  const finishArrange = async (kind: "save" | "reset"): Promise<void> => {
+    if (!draft) return;
+    setNavBusy(true);
+    const r =
+      kind === "save"
+        ? await saveNavPref({ mode: draft.mode, order: draft.order, pinned: draft.pinned })
+        : await resetNavPref({});
+    setNavBusy(false);
+    if (r.error) {
+      setNavError(friendlyError(r.error));
+      return;
+    }
+    setDraft(null);
+  };
 
   // D-#294: the print operator's queue counters — red = awaiting printing, yellow =
   // awaiting delivery. `additionalTypenames: ["PrintRequest"]` makes urql's document
@@ -621,6 +695,8 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
     // The route name is dynamic, so it can't satisfy the per-literal tuple
     // overloads of the drawer helpers' navigate — hence the unknown-cast.
     const navigate = props.navigation.navigate as unknown as (name: string, params?: object) => void;
+    // D-#920: one tap counted for "most used on top" — fire and forget, never blocks the nav.
+    void recordNavUse({ key: leafKey(leaf) });
     if (leaf.screen) navigate(leaf.route, { screen: leaf.screen, initial: false });
     else navigate(leaf.route);
   };
@@ -703,16 +779,19 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
     );
   };
 
-  const renderSection = (section: NavSection, idx: number): React.ReactElement | null => {
+  const renderSection = (section: NavSection): React.ReactElement | null => {
     if (section.type === "item") {
       // Route ALONE is not unique: the guardian's Today and its four deep-linked
       // sections (D-#769) share GuardianHomeTab, and duplicate keys made React clone rows.
       return <Leaf key={`${section.route}:${section.screen ?? ""}`} leaf={section} />;
     }
     if (section.hidden) return null;
-    const visible = section.items.filter(visibleLeaf);
+    // D-#920: in auto mode a group's own items are most-used first too.
+    const items = prefs.mode === "auto" ? orderByUse(section.items, useOfLeaf) : section.items;
+    const visible = items.filter(visibleLeaf);
     if (visible.length === 0) return null;
-    const key = `${section.titleKey}-${idx}`;
+    // By title, not position: the person's own order moves groups around (D-#920).
+    const key = sectionKey(section);
     const isCollapsed = collapsed[key] ?? (!groupsStartOpen && !visible.some((it) => it.route === activeRoute));
     return (
       <View key={key} style={{ marginTop: space(1) }}>
@@ -756,12 +835,293 @@ export default function DrawerContent(props: DrawerContentComponentProps): React
           marginBottom: space(2),
         }}
       >
-        <Text style={{ ...typeScale.sectionTitle, color: colors.primary }}>{STR.appName}</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
+          <Text style={{ ...typeScale.sectionTitle, color: colors.primary, flex: 1 }}>{STR.appName}</Text>
+          {/* D-#920: opens the person's own arrange panel. */}
+          {role && !draft ? (
+            <Pressable
+              onPress={startArrange}
+              accessibilityRole="button"
+              hitSlop={8}
+              style={{
+                paddingVertical: space(1),
+                paddingHorizontal: space(3),
+                borderRadius: radius.pill,
+                borderWidth: 1,
+                borderColor: colors.border,
+              }}
+            >
+              <Text style={{ ...typeScale.caption, color: colors.textPrimary }}>{STR.navArrange}</Text>
+            </Pressable>
+          ) : null}
+        </View>
         <Text style={{ ...typeScale.caption, color: colors.textSecondary }} numberOfLines={2}>
           {STR.appSub}
         </Text>
       </View>
-      {NAV.map(renderSection)}
+      {draft ? (
+        <ArrangePanel
+          draft={draft}
+          setDraft={setDraft}
+          sections={arrangeSections(draft.mode, draft.order)}
+          favourites={pinnedLeaves(draft.pinned)}
+          visibleLeaf={visibleLeaf}
+          busy={navBusy}
+          error={navError}
+          onSave={() => void finishArrange("save")}
+          onReset={() => void finishArrange("reset")}
+          onCancel={() => setDraft(null)}
+        />
+      ) : (
+        <>
+          {favourites.length > 0 ? (
+            <View style={{ marginTop: space(1) }}>
+              <Text
+                style={{
+                  ...typeScale.bodyStrong,
+                  color: colors.textSecondary,
+                  paddingHorizontal: space(4),
+                  paddingVertical: space(2),
+                }}
+              >
+                ★ {STR.navFavourites}
+              </Text>
+              {favourites.map((l) => (
+                <Leaf key={`fav:${leafKey(l)}`} leaf={l} />
+              ))}
+            </View>
+          ) : null}
+          {sections.map(renderSection)}
+        </>
+      )}
     </DrawerContentScrollView>
+  );
+}
+
+type ArrangeDraft = { mode: NavMode; order: string[]; pinned: string[] };
+
+/**
+ * The arrange panel (D-#920): mode, favourites (↑ ↓ ★) and the section order (↑ ↓, manual
+ * only). Arrows rather than drag — drag is unreliable on web and on older phones.
+ */
+function ArrangePanel({
+  draft,
+  setDraft,
+  sections,
+  favourites,
+  visibleLeaf,
+  busy,
+  error,
+  onSave,
+  onReset,
+  onCancel,
+}: {
+  draft: ArrangeDraft;
+  setDraft: (d: ArrangeDraft) => void;
+  sections: NavSection[];
+  favourites: NavLeaf[];
+  visibleLeaf: (l: NavLeaf) => boolean;
+  busy: boolean;
+  error: string | null;
+  onSave: () => void;
+  onReset: () => void;
+  onCancel: () => void;
+}): React.ReactElement {
+  const colors = useColors();
+  const manual = draft.mode === "manual";
+  const favKeys = favourites.map(leafKey);
+
+  const IconBtn = ({
+    glyph,
+    label,
+    onPress,
+    disabled,
+    tint,
+  }: {
+    glyph: string;
+    label: string;
+    onPress: () => void;
+    disabled?: boolean;
+    tint?: string;
+  }): React.ReactElement => (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      hitSlop={4}
+      style={{
+        minWidth: 36,
+        minHeight: 36,
+        alignItems: "center",
+        justifyContent: "center",
+        borderRadius: radius.md,
+        opacity: disabled ? 0.25 : 1,
+      }}
+    >
+      <Text style={{ fontSize: 18, color: tint ?? colors.textPrimary }}>{glyph}</Text>
+    </Pressable>
+  );
+  const Star = ({ leaf }: { leaf: NavLeaf }): React.ReactElement => {
+    const on = draft.pinned.includes(leafKey(leaf));
+    return (
+      <IconBtn
+        glyph={on ? "★" : "☆"}
+        label={on ? STR.navUnpin : STR.navPin}
+        tint={on ? colors.warning : undefined}
+        onPress={() => setDraft({ ...draft, pinned: togglePinned(draft.pinned, leafKey(leaf)) })}
+      />
+    );
+  };
+  const Row = ({
+    icon,
+    title,
+    indent,
+    strong,
+    children,
+  }: {
+    icon: string;
+    title: string;
+    indent?: boolean;
+    strong?: boolean;
+    children?: React.ReactNode;
+  }): React.ReactElement => (
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        gap: space(2),
+        minHeight: 40,
+        paddingLeft: indent ? space(6) : 0,
+      }}
+    >
+      <Text style={{ fontSize: 16 }}>{icon}</Text>
+      <Text
+        style={{ ...(strong ? typeScale.bodyStrong : typeScale.button), color: colors.textPrimary, flex: 1 }}
+        numberOfLines={1}
+      >
+        {title}
+      </Text>
+      {children}
+    </View>
+  );
+  const Heading = ({ text }: { text: string }): React.ReactElement => (
+    <Text style={{ ...typeScale.bodyStrong, color: colors.textSecondary, marginTop: space(4), marginBottom: space(1) }}>
+      {text}
+    </Text>
+  );
+  const Chip = ({ mode, label }: { mode: NavMode; label: string }): React.ReactElement => {
+    const on = draft.mode === mode;
+    return (
+      <Pressable
+        onPress={() => setDraft({ ...draft, mode })}
+        accessibilityRole="button"
+        accessibilityState={{ selected: on }}
+        style={{
+          flex: 1,
+          paddingVertical: space(2),
+          paddingHorizontal: space(2),
+          borderRadius: radius.md,
+          borderWidth: 1,
+          borderColor: on ? colors.primary : colors.border,
+          backgroundColor: on ? colors.primaryContainer : "transparent",
+          alignItems: "center",
+        }}
+      >
+        <Text
+          style={{ ...typeScale.caption, color: on ? colors.onPrimaryContainer : colors.textPrimary, textAlign: "center" }}
+        >
+          {label}
+        </Text>
+      </Pressable>
+    );
+  };
+
+  return (
+    <View style={{ paddingHorizontal: space(4), paddingBottom: space(6) }}>
+      <View style={{ flexDirection: "row", gap: space(2) }}>
+        <Chip mode="manual" label={STR.navModeManual} />
+        <Chip mode="auto" label={STR.navModeAuto} />
+      </View>
+      <Text style={{ ...typeScale.caption, color: colors.textSecondary, marginTop: space(2) }}>
+        {manual ? STR.navManualHint : STR.navAutoHint}
+      </Text>
+
+      <Heading text={`★ ${STR.navFavourites}`} />
+      {favourites.length === 0 ? (
+        <Text style={{ ...typeScale.caption, color: colors.textSecondary }}>{STR.navNoFavourites}</Text>
+      ) : (
+        favourites.map((l, i) => (
+          <Row key={`fav:${leafKey(l)}`} icon={l.icon} title={STR[l.labelKey]}>
+            <IconBtn
+              glyph="↑"
+              label={STR.navMoveUp}
+              disabled={i === 0}
+              onPress={() => setDraft({ ...draft, pinned: moveKey(favKeys, i, -1) })}
+            />
+            <IconBtn
+              glyph="↓"
+              label={STR.navMoveDown}
+              disabled={i === favourites.length - 1}
+              onPress={() => setDraft({ ...draft, pinned: moveKey(favKeys, i, 1) })}
+            />
+            <Star leaf={l} />
+          </Row>
+        ))
+      )}
+
+      <Heading text={STR.navSections} />
+      {sections.map((s, i) => {
+        const arrows = manual ? (
+          <>
+            <IconBtn
+              glyph="↑"
+              label={STR.navMoveUp}
+              disabled={i === 0}
+              onPress={() => setDraft({ ...draft, order: moveKey(sections.map(sectionKey), i, -1) })}
+            />
+            <IconBtn
+              glyph="↓"
+              label={STR.navMoveDown}
+              disabled={i === sections.length - 1}
+              onPress={() => setDraft({ ...draft, order: moveKey(sections.map(sectionKey), i, 1) })}
+            />
+          </>
+        ) : null;
+        if (s.type === "item") {
+          return (
+            <Row key={sectionKey(s)} icon={s.icon} title={STR[s.labelKey]}>
+              {arrows}
+              <Star leaf={s} />
+            </Row>
+          );
+        }
+        return (
+          <View key={sectionKey(s)}>
+            <Row icon={s.icon} title={STR[s.titleKey]} strong>
+              {arrows}
+            </Row>
+            {s.items.filter(visibleLeaf).map((l) => (
+              <Row key={leafKey(l)} icon={l.icon} title={STR[l.labelKey]} indent>
+                <Star leaf={l} />
+              </Row>
+            ))}
+          </View>
+        );
+      })}
+
+      {error ? <Text style={{ ...typeScale.caption, color: colors.error, marginTop: space(3) }}>{error}</Text> : null}
+      <View style={{ flexDirection: "row", gap: space(2), marginTop: space(4) }}>
+        <View style={{ flex: 1 }}>
+          <Button title={STR.navSave} onPress={onSave} loading={busy} disabled={busy} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Button title={STR.navCancel} variant="secondary" onPress={onCancel} disabled={busy} />
+        </View>
+      </View>
+      <View style={{ marginTop: space(2) }}>
+        <Button title={STR.navReset} variant="ghost" onPress={onReset} disabled={busy} />
+      </View>
+    </View>
   );
 }
