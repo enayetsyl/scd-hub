@@ -35,6 +35,7 @@ import {
   emitCtResultPublished,
 } from "../../notifications/services/emitters";
 import { writeAudit } from "../../platform/services/AuditService";
+import { marksSnapshotDiff, recordMarksCorrection, snapshotOf } from "./ClassTestCorrectionService";
 import { ClassTestResultError } from "./ClassTestResultService";
 import { startScriptClock } from "./ClassTestScriptService";
 import { personName } from "../../../lib/personName";
@@ -200,10 +201,17 @@ async function loadStudents(studentIds: Types.ObjectId[]): Promise<Map<string, S
 export async function publishResult(testId: string, studentId: string, actorId: string): Promise<PublishResultOutcome> {
   const test = await loadPrintedTest(testId);
 
+  // D-#945: what guardians were last shown, before this publish replaces it.
+  const prior = (await ClassTestResult.findOne({ testId: new Types.ObjectId(testId), studentId: new Types.ObjectId(studentId) })
+    .select("marks status enteredBy publishedSnapshot")
+    .lean()) as unknown as (Parameters<typeof marksSnapshotDiff>[0] & { _id: Types.ObjectId }) | null;
+  if (!prior) throw new ClassTestResultError("No result entered for this student — nothing to publish");
+  const changed = marksSnapshotDiff(prior);
+
   // Stamp + bump atomically; a non-existent result can't be published.
   const doc = (await ClassTestResult.findOneAndUpdate(
     { testId: new Types.ObjectId(testId), studentId: new Types.ObjectId(studentId) },
-    { $set: { publishedAt: new Date() }, $inc: { publishedVersion: 1 } },
+    { $set: { publishedAt: new Date(), publishedSnapshot: snapshotOf(prior) }, $inc: { publishedVersion: 1 } },
     { new: true },
   )) as IClassTestResult | null;
   if (!doc) throw new ClassTestResultError("No result entered for this student — nothing to publish");
@@ -219,6 +227,7 @@ export async function publishResult(testId: string, studentId: string, actorId: 
     targetKind: "ClassTestResult",
     meta: { mode: "student", ctId: test.ctId, testId, studentId, publishedVersion: doc.publishedVersion },
   });
+  if (changed) await recordMarksCorrection({ testId, rows: [{ studentId, diff: changed }], actorId, at: new Date() });
 
   // CS-1 (D-#715): the first release starts the script clock — the teacher now owes
   // the paper to the Office. A no-op once the test is already in the flow.
@@ -235,8 +244,8 @@ export async function publishExam(testId: string, actorId: string): Promise<Publ
   const test = await loadPrintedTest(testId);
 
   const existing = (await ClassTestResult.find({ testId: new Types.ObjectId(testId) })
-    .select("_id studentId")
-    .lean()) as unknown as Array<{ _id: Types.ObjectId; studentId: Types.ObjectId }>;
+    .select("_id studentId marks status enteredBy publishedSnapshot")
+    .lean()) as unknown as Array<{ _id: Types.ObjectId; studentId: Types.ObjectId } & Parameters<typeof marksSnapshotDiff>[0]>;
   if (existing.length === 0) {
     throw new ClassTestResultError("No results entered for this exam — nothing to publish");
   }
@@ -246,11 +255,14 @@ export async function publishExam(testId: string, actorId: string): Promise<Publ
 
   const recipients: ClassTestMessageRecipient[] = [];
   let unreachableCount = 0;
+  const corrections: { studentId: Types.ObjectId; diff: NonNullable<ReturnType<typeof marksSnapshotDiff>> }[] = [];
   for (const row of existing) {
+    const changed = marksSnapshotDiff(row);
+    if (changed) corrections.push({ studentId: row.studentId, diff: changed });
     // Stamp + bump each row, then deliver (body rendered once per student inside deliverResult).
     const doc = (await ClassTestResult.findByIdAndUpdate(
       row._id,
-      { $set: { publishedAt: new Date() }, $inc: { publishedVersion: 1 } },
+      { $set: { publishedAt: new Date(), publishedSnapshot: snapshotOf(row) }, $inc: { publishedVersion: 1 } },
       { new: true },
     )) as IClassTestResult | null;
     if (!doc) continue;
@@ -272,6 +284,8 @@ export async function publishExam(testId: string, actorId: string): Promise<Publ
       unreachableCount,
     },
   });
+  // D-#945: children whose shown marks changed are the entrant's correction to explain.
+  await recordMarksCorrection({ testId, rows: corrections, actorId, at: new Date() });
 
   // CS-1 (D-#715): the first release starts the script clock (no-op on a re-publish).
   if (recipients.length > 0) await startScriptClock(testId);

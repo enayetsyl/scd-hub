@@ -5,8 +5,9 @@
 // teacher taps and the code the server stores never drift apart.
 
 /** Where a mistake was caught. MR-1: the homework/assignment same-day correction;
- *  MR-3: an attendance list changed after it was submitted (D-#944). */
-export const STAFF_MISTAKE_KINDS = ["MARK_CORRECTION", "ATTENDANCE_CORRECTION"] as const;
+ *  MR-3: an attendance list changed after it was submitted (D-#944);
+ *  MR-4: class-test marks re-published with changes, published scripts pulled back (D-#945). */
+export const STAFF_MISTAKE_KINDS = ["MARK_CORRECTION", "ATTENDANCE_CORRECTION", "CLASS_TEST_MARKS", "CLASS_TEST_SCRIPTS"] as const;
 export type StaffMistakeKind = (typeof STAFF_MISTAKE_KINDS)[number];
 
 export const STAFF_MISTAKE_STATUSES = ["EXPLANATION_DUE", "PENDING_REVIEW", "COUNTED", "EXCUSED", "MOVED"] as const;
@@ -40,6 +41,18 @@ export const STAFF_MISTAKE_REASONS: Record<StaffMistakeKind, readonly StaffMista
     { code: "MINE", bn: "আমার ভুল ছিল", en: "It was my mistake", hintBn: "ভুল শিক্ষার্থীকে অনুপস্থিত / উপস্থিত দিয়েছিলাম", selfCounts: true },
     { code: "LATE_ARRIVAL", bn: "শিক্ষার্থী দেরিতে এসেছে", en: "The student came late", hintBn: "উপস্থিতি নেওয়ার পরে ক্লাসে এসেছে", autoExcuses: true },
     { code: "AWAY", bn: "শিক্ষার্থী অন্য কাজে বাইরে ছিল", en: "The student was away on other work", hintBn: "অফিস / অনুষ্ঠান / অন্য শিক্ষকের কাছে", autoExcuses: true },
+    { code: "OTHER", bn: "অন্য কারণ", en: "Another reason", hintBn: "নিচে নিজের ভাষায় লিখুন", needsText: true },
+  ],
+  CLASS_TEST_MARKS: [
+    { code: "ADDITION", bn: "যোগে ভুল", en: "An addition mistake", hintBn: "নম্বর যোগ করতে ভুল হয়েছিল", selfCounts: true },
+    { code: "WRONG_STUDENT", bn: "ভুল শিক্ষার্থীর ঘরে নম্বর", en: "Marks in the wrong student's row", hintBn: "একজনের নম্বর আরেকজনের ঘরে দিয়েছিলাম", selfCounts: true },
+    { code: "LATE_SCRIPT", bn: "খাতা পরে পাওয়া গেছে", en: "The script turned up later", hintBn: "অনুপস্থিত / না পাওয়া খাতা পরে পাওয়া গেছে", autoExcuses: true },
+    { code: "OTHER", bn: "অন্য কারণ", en: "Another reason", hintBn: "নিচে নিজের ভাষায় লিখুন", needsText: true },
+  ],
+  CLASS_TEST_SCRIPTS: [
+    { code: "MINE", bn: "আমার ভুল ছিল", en: "It was my mistake", hintBn: "ভুল পাতা যুক্ত / ভুলে প্রকাশ করেছিলাম", selfCounts: true },
+    { code: "WRONG_PAGE", bn: "পাতা ভুল শিক্ষার্থীর সাথে যুক্ত ছিল", en: "A page was on the wrong student", hintBn: "পাতা যিনি যুক্ত করেছেন, তাঁর ভুল হতে পারে" },
+    { code: "UNCLEAR_SCAN", bn: "স্ক্যান অস্পষ্ট ছিল", en: "The scan was unclear", hintBn: "আবার স্ক্যান করতে হয়েছে" },
     { code: "OTHER", bn: "অন্য কারণ", en: "Another reason", hintBn: "নিচে নিজের ভাষায় লিখুন", needsText: true },
   ],
 };

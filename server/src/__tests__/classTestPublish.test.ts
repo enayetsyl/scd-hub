@@ -45,8 +45,14 @@ const mockResFindByIdUpdate = jest.fn();
 const mockResFind = jest.fn();
 const mockResUpdateMany = jest.fn();
 const mockResCount = jest.fn();
+// D-#945: publishResult first reads what guardians were last shown (no snapshot here = first release).
+const mockResFindOne = jest.fn();
 jest.mock("../modules/trackers/models/ClassTestResult", () => ({
   ClassTestResult: {
+    findOne: (...a: unknown[]) => {
+      const val = mockResFindOne(...a) ?? { marks: 0, status: "PRESENT", publishedSnapshot: null };
+      return { select: () => ({ lean: async () => val }) };
+    },
     findOneAndUpdate: (...a: unknown[]) => mockResFindOneUpdate(...a),
     findByIdAndUpdate: (...a: unknown[]) => mockResFindByIdUpdate(...a),
     find: (q: unknown) => mockResFind(q),
