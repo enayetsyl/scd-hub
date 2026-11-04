@@ -31,8 +31,6 @@ import { LoadOlder } from "../../components/LoadOlder";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
 import { useGuardianChild } from "../../state/GuardianChildContext";
 import { GuardianQuranExamCard } from "../../components/GuardianQuranExamCard";
-import { WorkClaimBlock } from "../../components/WorkClaimBlock";
-import { HandBackBadges, handBackOnly } from "../../components/HandBackBadges";
 import { useRecordView } from "../../lib/useRecordView";
 import { countNewResults } from "../../lib/childClassTests";
 import { UpcomingClassTestsCard, ClassTestResultRow } from "../../components/ChildClassTestCards";
@@ -55,7 +53,6 @@ import {
   revCategoryLabel,
   subjectLabel,
   lifecycleStateLabel,
-  hwGuardianStatusLabel,
   dayTypeLabel,
   getActiveLang,
   isoDateLabel,
@@ -81,6 +78,8 @@ const OPEN_STATES = new Set(["GIVEN", "ABSENT_REDELIVER", "DUE", "SUBMITTED", "C
 /** D-#761: Today is a summary. Each history card shows the newest few rows; a card
  *  with a tab of its own links there ("see all"), the others page back with LoadOlder. */
 const HOME_RECENT = RECENT_ROWS;
+/** D-#919: given-dates the home homework card summarises; the rest are on its screen. */
+const HW_HOME_DATES = 3;
 
 export default function GuardianHomeScreen(): React.ReactElement {
   const nav = useNavigation<Nav>();
@@ -177,13 +176,6 @@ export default function GuardianHomeScreen(): React.ReactElement {
     pause: !selected,
   });
 
-  // GC-3: filing a claim changes canClaim/claim on the row AND mutes its chase,
-  // so both reads behind করতে হবে are re-run.
-  const refetchTodo = React.useCallback(() => {
-    refetchHw({ requestPolicy: "network-only" });
-    refetchAsgn({ requestPolicy: "network-only" });
-    refetchAsgnTodo({ requestPolicy: "network-only" });
-  }, [refetchHw, refetchAsgn, refetchAsgnTodo]);
   const [feeQ, refetchFee] = useQuery({
     query: CHILD_FEE_DUE_QUERY,
     variables: { studentId: sid },
@@ -247,13 +239,11 @@ export default function GuardianHomeScreen(): React.ReactElement {
   // else open (submitted, checked, awaiting return) is progress, not a to-do.
   const TODO_STATES = new Set(["DUE", "CHASE"]);
   const todoHomework = openHomework.filter((r) => TODO_STATES.has(r.state));
-  const todoIds = new Set(todoHomework.map((r) => r.recordId));
 
-  // ...and the homework card below lists what is NOT already in it, so a row never
-  // appears twice on one screen (the duplication DE-6 exists to remove). The card
-  // still renders for its day-load line even when every open row moved up.
+  // D-#919: করতে হবে is counts only now, so the dated summary below covers EVERY open
+  // row again (DE-6 had to drop the to-do rows from it to avoid listing one twice).
   const hwByDate = new Map<string, typeof openHomework>();
-  for (const r of openHomework.filter((x) => !todoIds.has(x.recordId))) {
+  for (const r of openHomework) {
     const k = r.dateGiven.slice(0, 10);
     const list = hwByDate.get(k);
     if (list) list.push(r);
@@ -300,6 +290,7 @@ export default function GuardianHomeScreen(): React.ReactElement {
     !!iso && Date.now() - new Date(iso).getTime() <= RECENT_MS;
   const hwChaseCount = openHomework.filter((r) => r.state === "CHASE").length;
   const asgnChaseCount = todoAssignments.length;
+  const asgnLateCount = todoAssignments.filter((a) => a.daysLate > 0).length;
   const feeDue = feeQ.data?.childFeeDue?.guardianDue ?? 0;
   const commentRows = commentsQ.data?.childComments ?? [];
   const recentComments = commentRows.filter((c) => isRecent(c.deliveredAt ?? c.createdAt)).length;
@@ -528,84 +519,8 @@ export default function GuardianHomeScreen(): React.ReactElement {
           )}
         </Card>
 
-        {/* DE-6 (D-#477): "করতে হবে" — the one card that answers the question a
-            parent opens the app with. Only what is still ACTIONABLE: homework due
-            or being chased, and assignments pending or late. Each row is
-            self-sufficient (D-#478 description + dates), so nothing here needs a
-            trip to another screen. Hidden entirely on a clear day. */}
-        {todoHomework.length > 0 || todoAssignments.length > 0 ? (
-          <Card>
-            <Body style={{ fontWeight: "700" }}>{STR.gpTodo}</Body>
-            {todoHomework.map((r) => (
-              <View key={r.recordId}>
-              <Pressable accessibilityRole="button" onPress={goHomework} style={{ marginTop: space(2) }}>
-                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space(2) }}>
-                  <Body style={{ fontWeight: "700", flexShrink: 1 }}>{subjectLabel(r.subject)}</Body>
-                  {/* D-#687: handed back => that is the whole message. */}
-                  {handBackOnly(!!r.resubOf, r.redelivered) ? null : (
-                    <Badge text={hwGuardianStatusLabel(r.state)} tone={r.state === "CHASE" ? "danger" : "warn"} />
-                  )}
-                </View>
-                {/* D-#685: on its own line — "বাড়ির কাজ আনেনি" beside nothing else
-                    reads as an accusation about NEW work, when this is a script the
-                    school handed back. */}
-                <HandBackBadges handedBack={!!r.resubOf} redelivered={r.redelivered} spaced />
-                {r.description ? <Body>{r.description}</Body> : null}
-                <Muted>
-                  {isoDateLabel(r.dateGiven.slice(0, 10))}
-                  {r.timeDecl != null ? ` · ${bnNum(r.timeDecl)} ${STR.gpMinutes}` : ""}
-                  {r.questionFileId || r.attachmentIds.length > 0 ? ` · 📎 ${STR.gpQuestionFile}` : ""}
-                </Muted>
-              </Pressable>
-              {/* GC-3: করতে হবে is the FIRST card a parent sees, so the control
-                  belongs here too. Outside the Pressable, which navigates away. */}
-              <WorkClaimBlock
-                studentId={selected!.studentId}
-                tracker="HOMEWORK"
-                recordId={r.recordId}
-                canClaim={r.canClaim}
-                claimHoldBn={r.claimHoldBn}
-                claim={r.claim}
-                subjectLabel={subjectLabel(r.subject)}
-                workId={r.hwId}
-                onChanged={refetchTodo}
-              />
-              </View>
-            ))}
-            {todoAssignments.map((a) => (
-              <View key={a.recordId}>
-              <Pressable accessibilityRole="button" onPress={goAssignments} style={{ marginTop: space(2) }}>
-                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space(2) }}>
-                  <Body style={{ fontWeight: "700", flexShrink: 1 }}>
-                    {hwSubjectLabel(a.subject)} · {STR.gpAssignments}
-                  </Body>
-                  <Badge
-                    text={a.daysLate > 0 ? `${bnNum(a.daysLate)} ${STR.asDaysOverdue}` : lifecycleStateLabel(a.state)}
-                    tone={a.daysLate > 0 || a.state === "CHASE" ? "danger" : "warn"}
-                  />
-                </View>
-                {a.description ? <Body>{a.description}</Body> : null}
-                <Muted>
-                  {a.dueDate ? `${STR.asDueBy} ${isoDateLabel(a.dueDate.slice(0, 10))}` : a.asId}
-                </Muted>
-              </Pressable>
-              <WorkClaimBlock
-                studentId={selected!.studentId}
-                tracker="ASSIGNMENT"
-                recordId={a.recordId}
-                canClaim={a.canClaim}
-                claimHoldBn={a.claimHoldBn}
-                claim={a.claim}
-                subjectLabel={hwSubjectLabel(a.subject)}
-                workId={a.asId}
-                onChanged={refetchTodo}
-              />
-              </View>
-            ))}
-          </Card>
-        ) : null}
-
-        {/* Class notes — what was taught today */}
+        {/* Class notes — what was taught today. D-#919: straight after the routine, above
+            করতে হবে — the lesson and its homework are what the family reads each day. */}
         <Card>
           <Body style={{ fontWeight: "700" }}>{STR.gpClassNotes}</Body>
           {notes.length === 0 ? (
@@ -642,8 +557,74 @@ export default function GuardianHomeScreen(): React.ReactElement {
           </View>
         </Card>
 
-        {/* Open homework + day-load vs 120, grouped per given-date; the whole
-            card taps through to the homework screen. */}
+        {/* DE-6 (D-#477) → D-#919 (owner 2026-11-04): "করতে হবে" is a SUMMARY now, one
+            line per tracker, each opening its screen. The full rows (description, dates,
+            the GC-3 "বাড়িতে সম্পন্ন হয়েছে" control) made it the longest card here and
+            pushed today's lesson out of sight; the homework and assignment screens carry
+            the same rows and the same control. Sits BELOW the class notes for the same
+            reason. Hidden entirely on a clear day. */}
+        {todoHomework.length > 0 || todoAssignments.length > 0 ? (
+          <Card>
+            <Body style={{ fontWeight: "700" }}>{STR.gpTodo}</Body>
+            {todoHomework.length > 0 ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={goHomework}
+                style={{ marginTop: space(2), flexDirection: "row", alignItems: "center", gap: space(2) }}
+              >
+                <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: space(2) }}>
+                    <Body style={{ fontWeight: "700" }}>
+                      {STR.gpHomeworkOpen} — {bnNum(todoHomework.length)}
+                      {STR.gpTodoPending}
+                    </Body>
+                    {hwChaseCount > 0 ? (
+                      <Badge text={`${bnNum(hwChaseCount)}${STR.gpTodoChased}`} tone="danger" />
+                    ) : null}
+                  </View>
+                  <Muted>{[...new Set(todoHomework.map((r) => subjectLabel(r.subject)))].join(", ")}</Muted>
+                  {todoHomework.some((r) => r.canClaim) ? (
+                    <Muted>
+                      {STR.gpTodoClaimHint}: “{STR.wcButton}”
+                    </Muted>
+                  ) : null}
+                </View>
+                <Body style={{ fontWeight: "700" }}>›</Body>
+              </Pressable>
+            ) : null}
+            {todoAssignments.length > 0 ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={goAssignments}
+                style={{ marginTop: space(2), flexDirection: "row", alignItems: "center", gap: space(2) }}
+              >
+                <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: space(2) }}>
+                    <Body style={{ fontWeight: "700" }}>
+                      {STR.gpAssignments} — {bnNum(todoAssignments.length)}
+                      {STR.gpTodoPending}
+                    </Body>
+                    {asgnLateCount > 0 ? (
+                      <Badge text={`${bnNum(asgnLateCount)}${STR.gpTodoLate}`} tone="danger" />
+                    ) : null}
+                  </View>
+                  <Muted>{[...new Set(todoAssignments.map((a) => hwSubjectLabel(a.subject)))].join(", ")}</Muted>
+                  {todoAssignments.some((a) => a.canClaim) ? (
+                    <Muted>
+                      {STR.gpTodoClaimHint}: “{STR.wcButton}”
+                    </Muted>
+                  ) : null}
+                </View>
+                <Body style={{ fontWeight: "700" }}>›</Body>
+              </Pressable>
+            ) : null}
+          </Card>
+        ) : null}
+
+        {/* Open homework + day-load vs 120. D-#919: one line per given-date — the
+            subjects and that day's load — for the newest few dates; each row's
+            description and file live on the homework screen, which the whole card
+            opens. */}
         <Card>
           <Pressable accessibilityRole="button" onPress={goHomework}>
             <Body style={{ fontWeight: "700" }}>{STR.gpHomeworkOpen}</Body>
@@ -666,63 +647,37 @@ export default function GuardianHomeScreen(): React.ReactElement {
             {openHomework.length === 0 ? (
               <Muted style={{ marginTop: space(2) }}>{STR.gpNoHomework}</Muted>
             ) : (
-              [...hwByDate.entries()].map(([k, rows]) => (
-                <View key={k} style={{ marginTop: space(2) }}>
-                  {/* Owner report 2026-08-15: on a phone these two ran together
-                      ("২০২৬-০৮-০৬পড়ার চাপ: ...") — space-between gives no gap once the
-                      row is full, so they touched. A gap plus flexWrap lets the load
-                      figure drop to its own line instead of colliding. */}
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      flexWrap: "wrap",
-                      gap: space(2),
-                    }}
-                  >
-                    <Body style={{ fontWeight: "700" }}>{isoDateLabel(k)}</Body>
-                    <Muted>
-                      {STR.gpDateLoad}: {bnNum(dateMinutes(rows))}/{bnNum(load?.ceiling ?? 120)} {STR.gpMinutes}
-                    </Muted>
-                  </View>
-                  {/* Same shape as ChildHomeworkScreen: the parent-facing status is a
-                      sentence, so it goes UNDER the subject rather than beside it. Inline,
-                      it left the title column a few pixels wide (RN defaults flexShrink to
-                      0, so the badge never yielded) and `ইংরেজি` / `HW-C1-ENG-0013` wrapped
-                      one character per line. */}
-                  {rows.map((r) => (
-                    <View key={r.recordId} style={{ marginTop: space(2) }}>
-                      <View style={{ flexShrink: 1 }}>
-                        <Body>{subjectLabel(r.subject)}</Body>
-                        {/* D-#478: what the work actually was — mandatory since D-#317,
-                            fetched by this very query, rendered nowhere until now. The 📎
-                            is a MARKER, not a button: this whole card is a Pressable that
-                            opens the homework screen, and a nested pressable double-fires
-                            (the D-#371 header lesson). The real viewer lives there. */}
-                        {r.description ? <Body>{r.description}</Body> : null}
-                        <Muted>
-                          {r.hwId}
-                          {r.questionFileId || r.attachmentIds.length > 0 ? ` · 📎 ${STR.gpQuestionFile}` : ""}
-                        </Muted>
-                      </View>
-                      <View style={{ marginTop: space(1) }}>
-                        {/* D-#687: handed back => that is the whole message. */}
-                        {handBackOnly(!!r.resubOf, r.redelivered) ? null : (
-                          <Badge
-                            text={hwGuardianStatusLabel(r.state)}
-                            /* Three steps, not two: amber "due today" → red "did not bring it" → green for
-                               everything already handed in. DUE used to render GREEN while saying the
-                               child had not done the work, which read as both wrong and alarming. */
-                            tone={r.state === "CHASE" ? "danger" : r.state === "DUE" ? "warn" : "brand"}
-                          />
-                        )}
-                        <HandBackBadges handedBack={!!r.resubOf} redelivered={r.redelivered} spaced />
-                      </View>
+              <>
+                {[...hwByDate.entries()].slice(0, HW_HOME_DATES).map(([k, rows]) => (
+                  <View key={k} style={{ marginTop: space(2) }}>
+                    {/* Owner report 2026-08-15: a gap plus flexWrap, so the load figure
+                        drops to its own line on a phone instead of touching the date. */}
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        flexWrap: "wrap",
+                        gap: space(2),
+                      }}
+                    >
+                      <Body style={{ fontWeight: "700" }}>{isoDateLabel(k)}</Body>
+                      <Muted>
+                        {STR.gpDateLoad}: {bnNum(dateMinutes(rows))}/{bnNum(load?.ceiling ?? 120)} {STR.gpMinutes}
+                      </Muted>
                     </View>
-                  ))}
-                </View>
-              ))
+                    <Muted>{rows.map((r) => subjectLabel(r.subject)).join(", ")}</Muted>
+                  </View>
+                ))}
+                {hwByDate.size > HW_HOME_DATES ? (
+                  <Muted style={{ marginTop: space(2) }}>
+                    +{bnNum(hwByDate.size - HW_HOME_DATES)} {STR.gpHwMoreDates}
+                  </Muted>
+                ) : null}
+                {/* The whole card is the button (a nested pressable double-fires, the
+                    D-#371 lesson), so this is a marker, not a second button. */}
+                <Muted style={{ marginTop: space(2), textDecorationLine: "underline" }}>{STR.gpSeeAll}</Muted>
+              </>
             )}
           </Pressable>
         </Card>
