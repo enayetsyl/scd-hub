@@ -68,8 +68,8 @@ export const MASTERY_CATALOGUE_QUERY = gql`
 `;
 
 export const IMPORT_MASTERY_CATALOGUE = gql`
-  mutation ImportMasteryCatalogue($catalogueJson: String!, $apply: Boolean!) {
-    importMasteryCatalogue(catalogueJson: $catalogueJson, apply: $apply) {
+  mutation ImportMasteryCatalogue($catalogueJson: String!, $apply: Boolean!, $domainsJson: String) {
+    importMasteryCatalogue(catalogueJson: $catalogueJson, apply: $apply, domainsJson: $domainsJson) {
       ok
       applied
       classToken
@@ -94,6 +94,91 @@ export const IMPORT_MASTERY_CATALOGUE = gql`
         qtLabelChanged
         errors
       }
+      tree {
+        format
+        counts {
+          domains
+          objectives
+          subs
+          strands
+          tagged
+          grouping
+        }
+        coverage {
+          exercisesTotal
+          mapped
+          unmapped {
+            ref
+            text
+            reason
+          }
+          note
+        }
+        flags {
+          code
+          kind
+          text
+          ownerRuling
+        }
+        domainsAdded
+        domainsChanged
+        domainsUnchanged
+        roundAction
+        round
+        kept
+        backToProposed
+        removedInRedraft
+        lockedChanged
+        violations
+        noop
+      }
+    }
+  }
+`;
+
+/** Level names (D-#923) — read ONLY through useMasteryLevelLabels (app/src/lib). */
+export const MASTERY_LEVEL_LABELS_QUERY = gql`
+  query MasteryLevelLabels {
+    masteryLevelLabels {
+      resolved {
+        domainBn
+        objectiveBn
+        subBn
+        domainEn
+        objectiveEn
+        subEn
+      }
+      ownKeys
+    }
+  }
+`;
+
+export const SAVE_MASTERY_LEVEL_LABELS = gql`
+  mutation SaveMasteryLevelLabels(
+    $domainBn: String
+    $objectiveBn: String
+    $subBn: String
+    $domainEn: String
+    $objectiveEn: String
+    $subEn: String
+  ) {
+    saveMasteryLevelLabels(
+      domainBn: $domainBn
+      objectiveBn: $objectiveBn
+      subBn: $subBn
+      domainEn: $domainEn
+      objectiveEn: $objectiveEn
+      subEn: $subEn
+    ) {
+      resolved {
+        domainBn
+        objectiveBn
+        subBn
+        domainEn
+        objectiveEn
+        subEn
+      }
+      ownKeys
     }
   }
 `;

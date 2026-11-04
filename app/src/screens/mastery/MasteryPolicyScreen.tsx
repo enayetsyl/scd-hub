@@ -16,9 +16,12 @@ import {
   MASTERY_ENABLEMENTS_QUERY,
   MASTERY_POLICY_QUERY,
   SAVE_MASTERY_POLICY,
+  SAVE_MASTERY_LEVEL_LABELS,
   SET_MASTERY_ENABLEMENT,
   type MasteryCoverageRow,
 } from "../../graphql/mastery";
+import type { MasteryLevelLabels } from "@scd/shared";
+import { useMasteryLevelLabels } from "../../lib/useMasteryLevelLabels";
 import { ACADEMIC_YEARS_QUERY } from "../../graphql/operations";
 import { Screen, Card, Body, Muted, Badge, Button, Chip, ChipRow, Field, Loader, Notice, H2 } from "../../components/ui";
 import { STR, hwSubjectLabel, masteryClassLabel, masteryPolicyLabel } from "../../lib/labels";
@@ -31,6 +34,65 @@ import type { MasteryStackParamList } from "../../navigation/types";
 type Props = NativeStackScreenProps<MasteryStackParamList, "MasteryPolicy">;
 
 type PolicyValues = Record<string, number | boolean>;
+
+const LEVEL_ROWS = [
+  { hint: () => STR.msLevelTop, bn: "domainBn", en: "domainEn" },
+  { hint: () => STR.msLevelMiddle, bn: "objectiveBn", en: "objectiveEn" },
+  { hint: () => STR.msLevelSmall, bn: "subBn", en: "subEn" },
+] as const;
+
+/**
+ * Level names (D-#923) — ONE school setting; every screen, PDF and guardian message reads it
+ * (app: useMasteryLevelLabels, server: masteryLevelLabels). Blank returns a name to its default.
+ */
+function LevelNamesCard({ canManage }: { canManage: boolean }): React.ReactElement {
+  const toast = useToast();
+  const levels = useMasteryLevelLabels();
+  const [draft, setDraft] = useState<Record<string, string>>({});
+  const [err, setErr] = useState<string | null>(null);
+  const [save, saveLabels] = useMutation(SAVE_MASTERY_LEVEL_LABELS);
+  const value = (k: keyof MasteryLevelLabels): string => draft[k] ?? levels.raw[k];
+
+  async function onSave(): Promise<void> {
+    setErr(null);
+    const res = await saveLabels(draft);
+    if (res.error) {
+      setErr(friendlyError(res.error));
+      return;
+    }
+    setDraft({});
+    levels.refetch();
+    toast.show(STR.msLevelSaved);
+  }
+
+  return (
+    <Card>
+      <H2>{STR.msLevelNames}</H2>
+      <Muted>{STR.msLevelNamesHint}</Muted>
+      {err ? <Notice message={err} tone="danger" /> : null}
+      {LEVEL_ROWS.map((r) => (
+        <View key={r.bn} style={{ gap: space(1), paddingVertical: space(1) }}>
+          <Body style={{ fontWeight: "700" }}>{r.hint()}</Body>
+          <Field
+            label={STR.msLevelBangla}
+            value={value(r.bn)}
+            onChangeText={(t) => setDraft((d) => ({ ...d, [r.bn]: t }))}
+            editable={canManage}
+          />
+          <Field
+            label={STR.msLevelEnglish}
+            value={value(r.en)}
+            onChangeText={(t) => setDraft((d) => ({ ...d, [r.en]: t }))}
+            editable={canManage}
+          />
+        </View>
+      ))}
+      {canManage ? (
+        <Button title={STR.msSave} onPress={() => void onSave()} loading={save.fetching} disabled={Object.keys(draft).length === 0} />
+      ) : null}
+    </Card>
+  );
+}
 
 export default function MasteryPolicyScreen(_props: Props): React.ReactElement {
   const toast = useToast();
@@ -194,6 +256,8 @@ export default function MasteryPolicyScreen(_props: Props): React.ReactElement {
           ) : null}
         </Card>
       ) : null}
+
+      {scope === "SCHOOL" ? <LevelNamesCard canManage={canManage} /> : null}
 
       <H2>{STR.msSwitch}</H2>
       <Muted>{STR.msAcademicYear}</Muted>
