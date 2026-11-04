@@ -11,6 +11,10 @@ on:
 jobs:
   gate:
     runs-on: ubuntu-latest
+    # The server typecheck needs ~2.9 GB and Node's default heap on the runner is ~2 GB: OT-3
+    # (#1304) died there with "JavaScript heap out of memory". Same 4 GB pin as deploy.sh (D-#819).
+    env:
+      NODE_OPTIONS: --max-old-space-size=4096
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
