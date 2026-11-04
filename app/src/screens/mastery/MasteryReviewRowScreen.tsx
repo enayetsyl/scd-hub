@@ -16,7 +16,7 @@ import { STR, bnNum } from "../../lib/labels";
 import { useMasteryLevelLabels } from "../../lib/useMasteryLevelLabels";
 import { space } from "../../theme";
 import { fill } from "./masteryStateUi";
-import { ReviewThreads, TapText, codeTail, reviewStateLabel, reviewStateTone, useReviewAction, useReviewQueue } from "./masteryReviewUi";
+import { ReviewThreads, TapText, codeTail, formatExerciseRef, reviewStateLabel, reviewStateTone, useReviewAction, useReviewQueue } from "./masteryReviewUi";
 import type { MasteryStackParamList } from "../../navigation/types";
 
 type Props = NativeStackScreenProps<MasteryStackParamList, "MasteryReviewRow">;
@@ -98,7 +98,7 @@ function SplitForm({ r, run, busy }: { r: ReviewRow; run: (i: ReviewDecisionInpu
           <Field label={fill(STR.msRvPartTpl, { n: bnNum(i + 1) })} value={p.label} onChangeText={(t) => setPart(i, { ...p, label: t })} />
           <ChipRow>
             {r.bookRef.exercises.map((x) => (
-              <Chip key={x} label={x} selected={p.ex.includes(x)} onPress={() => setPart(i, { ...p, ex: p.ex.includes(x) ? p.ex.filter((y) => y !== x) : [...p.ex, x] })} />
+              <Chip key={x} label={formatExerciseRef(x)} selected={p.ex.includes(x)} onPress={() => setPart(i, { ...p, ex: p.ex.includes(x) ? p.ex.filter((y) => y !== x) : [...p.ex, x] })} />
             ))}
           </ChipRow>
         </View>
@@ -177,7 +177,7 @@ export default function MasteryReviewRowScreen({ navigation, route }: Props): Re
           value={[
             r.bookRef.chapter !== null ? fill(STR.msRvChapter, { n: bnNum(r.bookRef.chapter) }) : null,
             r.bookRef.lesson,
-            r.bookRef.exercises.join(", "),
+            r.bookRef.exercises.map(formatExerciseRef).join("; "),
           ]
             .filter(Boolean)
             .join(" · ")}
