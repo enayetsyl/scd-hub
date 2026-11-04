@@ -22,7 +22,7 @@ import { friendlyError } from "../../lib/errors";
 import { useMasteryLevelLabels } from "../../lib/useMasteryLevelLabels";
 import { useToast } from "../../state/ToastContext";
 import { space } from "../../theme";
-import { fill } from "./masteryStateUi";
+import { levelFill, fill } from "./masteryStateUi";
 import type { MasteryStackParamList } from "../../navigation/types";
 
 type Props = NativeStackScreenProps<MasteryStackParamList, "MasteryImport">;
@@ -146,6 +146,7 @@ function TreeCard({ t }: { t: TreePreview }): React.ReactElement {
 }
 
 export default function MasteryImportScreen({ navigation }: Props): React.ReactElement {
+  const lv = useMasteryLevelLabels();
   const toast = useToast();
   const [text, setText] = useState("");
   const [domainsText, setDomainsText] = useState("");
@@ -224,7 +225,7 @@ export default function MasteryImportScreen({ navigation }: Props): React.ReactE
           {report.tree ? <TreeCard t={report.tree} /> : null}
           {d ? (
             <View style={{ gap: space(2) }}>
-              <Line label={STR.msDiffAdded} items={d.added} />
+              <Line label={levelFill(STR.msDiffAdded, lv)} items={d.added} />
               <Line label={STR.msDiffChanged} items={d.changed.map((c) => `${c.code} (${c.fields.join(", ")})`)} />
               <Line label={STR.msDiffRemoved} items={d.removedDrafts} />
               <Line label={STR.msDiffRetired} items={d.retired} />

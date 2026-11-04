@@ -17,6 +17,8 @@ import {
   type MasteryQuestionTypeRow,
 } from "../../graphql/mastery";
 import { Screen, Card, Body, Muted, Badge, Button, Chip, ChipRow, Field, Loader, Notice, H2 } from "../../components/ui";
+import { useMasteryLevelLabels } from "../../lib/useMasteryLevelLabels";
+import { levelFill } from "./masteryStateUi";
 import { STR, bnNum, classLevelLabel, hwSubjectLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useToast } from "../../state/ToastContext";
@@ -39,6 +41,7 @@ function questionText(payloadJson: string): string {
 }
 
 export default function MasteryNewPaperScreen({ route, navigation }: Props): React.ReactElement {
+  const lv = useMasteryLevelLabels();
   const { sectionId, subject, classLevel } = route.params;
   const classToken = tokenFor(classLevel);
   const toast = useToast();
@@ -150,7 +153,7 @@ export default function MasteryNewPaperScreen({ route, navigation }: Props): Rea
 
       {source === "RUBRIC" ? (
         <Card>
-          <Body style={{ fontWeight: "700" }}>{STR.msRubricLos}</Body>
+          <Body style={{ fontWeight: "700" }}>{levelFill(STR.msRubricLos, lv)}</Body>
           <ChipRow>
             {rubricLos.map((o) => {
               const on = rubric.includes(o.code);
@@ -162,7 +165,7 @@ export default function MasteryNewPaperScreen({ route, navigation }: Props): Rea
         </Card>
       ) : (
         <Card>
-          <Body style={{ fontWeight: "700" }}>{STR.msPickLo}</Body>
+          <Body style={{ fontWeight: "700" }}>{levelFill(STR.msPickLo, lv)}</Body>
           <ChipRow>
             {questionLos.map((o) => (
               <Chip
@@ -188,7 +191,7 @@ export default function MasteryNewPaperScreen({ route, navigation }: Props): Rea
                 bankFetching ? (
                   <Loader />
                 ) : bank.length === 0 ? (
-                  <Muted>{STR.msNoBankQuestion}</Muted>
+                  <Muted>{levelFill(STR.msNoBankQuestion, lv)}</Muted>
                 ) : (
                   <View style={{ gap: space(1) }}>
                     {bank.map((b) => (

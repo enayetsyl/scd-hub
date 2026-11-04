@@ -176,10 +176,16 @@ new rows enter a new round as PROPOSED; nothing locked moves.
 
 ## §8 — Downstream
 
-### 8.1 Roll-up and ladder (OT-3; D-#925, D-#927)
+### 8.1 Roll-up and ladder (OT-3; D-#925, D-#927, D-#943)
 States are computed on tagged rows only (engine unchanged, D-#808). Views add:
 - **Untagged objective** = NOT_ASSESSED if no child assessed; WEAK if any child WEAK; MASTERED (or
-  REVISION_DUE) when every assessed child is; IMPROVING if any child is IMPROVING/MASTERED; else INSUFFICIENT.
+  REVISION_DUE) only when EVERY non-rejected tagged child has been assessed and is MASTERED/REVISION_DUE;
+  INSUFFICIENT (তথ্য কম) if any child is still NOT_ASSESSED — never mastered on a half-checked objective
+  (D-#943); else IMPROVING if any child is IMPROVING/MASTERED; else INSUFFICIENT. Guardians' rolled-up wording
+  follows the same rule.
+- **Grouping rows take no work** (D-#943): paper entry, rubric sheets and the weekly assignment refuse an untagged
+  objective's code and name its tagged children. The heat-map opens at the domain level on a tree; an
+  earlier-class step is judged by that class's own policy (it can show রিভিশন বাকি).
 - **Domain** = counts per state of its tagged rows for that class + share mastered; the heat-map colours by share
   weak. All thresholds stay in পলিসি.
 - **Section trigger** stays on tagged rows (D-#813); the proposal names the parent objective and lists the weak

@@ -587,6 +587,39 @@ const STATE_FIELDS = `
   reworkCount
   reasons
   nextRevisionAt
+  level
+  parentCode
+  domainCode
+  earlierSteps { code labelBn classToken crossClass state noData }
+`;
+
+/** OT-3: counts per state over a set of tagged rows (+ share mastered / weak). */
+const SUMMARY_FIELDS = `counts { state count } total assessed weak mastered masteredPct weakPct`;
+
+const HEAT_COLUMN_FIELDS = `
+  loCode
+  labelBn
+  chapterNumber
+  strand
+  assessments
+  weak
+  verdicts
+  weakPct
+  triggered
+  sectionMeanPct
+  actionId
+  actionStatus
+  cells {
+    state
+    pct
+  }
+  level
+  parentCode
+  parentLabelBn
+  domainCode
+  childCodes
+  weakChildCodes
+  masteredPct
 `;
 
 export const MASTERY_SECTION_HEATMAP_QUERY = gql`
@@ -604,24 +637,10 @@ export const MASTERY_SECTION_HEATMAP_QUERY = gql`
         rollNumber
         weakCount
       }
-      outcomes {
-        loCode
-        labelBn
-        chapterNumber
-        strand
-        assessments
-        weak
-        verdicts
-        weakPct
-        triggered
-        sectionMeanPct
-        actionId
-        actionStatus
-        cells {
-          state
-          pct
-        }
-      }
+      outcomes { ${HEAT_COLUMN_FIELDS} }
+      isTree
+      objectiveColumns { ${HEAT_COLUMN_FIELDS} }
+      domainColumns { ${HEAT_COLUMN_FIELDS} }
     }
   }
 `;
@@ -653,6 +672,27 @@ export const MASTERY_STUDENT_DIAGNOSIS_QUERY = gql`
       moreWeakThan
       outcomes { ${STATE_FIELDS} }
       objectiveLessons { ${OBJECTIVE_LESSON_FIELDS} }
+      isTree
+      objectives { code labelBn chapterNumber strand domainCode tagged state childCodes weakChildCodes summary { ${SUMMARY_FIELDS} } }
+      domains { code labelBn objectiveCodes state summary { ${SUMMARY_FIELDS} } }
+    }
+  }
+`;
+
+/** OT-3 — the leader dashboard's school-wide roll-up (approvers). */
+export const MASTERY_SCHOOL_ROLLUP_QUERY = gql`
+  query MasterySchoolRollup($subject: String) {
+    masterySchoolRollup(subject: $subject) {
+      subject
+      subjects
+      classes {
+        classToken
+        sections
+        students
+        domains { code labelBn objectiveCodes summary { ${SUMMARY_FIELDS} } }
+        objectives { code labelBn domainCode chapterNumber tagged childCodes summary { ${SUMMARY_FIELDS} } }
+        rows { code labelBn parentCode summary { ${SUMMARY_FIELDS} } }
+      }
     }
   }
 `;
@@ -663,6 +703,8 @@ export const MASTERY_OUTCOME_TRAIL_QUERY = gql`
       studentId
       name
       homeTipBn
+      parentLabelBn
+      domainLabelBn
       bankGold
       bankSeen
       chapterLessons { ${STUDENT_LESSON_SESSION_FIELDS} }
@@ -777,6 +819,90 @@ export type MasteryOutcomeStateRow = {
   reworkCount: number;
   reasons: string[];
   nextRevisionAt: string | null;
+  /** OT-3: OBJECTIVE | SUB (a flat row: OBJECTIVE, no parent, no domain). */
+  level: string;
+  parentCode: string | null;
+  domainCode: string | null;
+  /** WEAK rows only: each prerequisite with this student's state (D-#927). */
+  earlierSteps: MasteryEarlierStep[];
+};
+
+export type MasteryEarlierStep = {
+  code: string;
+  labelBn: string;
+  classToken: string;
+  crossClass: boolean;
+  state: string | null;
+  /** Earlier class, no evidence ⇒ "আগের শ্রেণির তথ্য নেই". */
+  noData: boolean;
+};
+
+export type MasteryStateSummary = {
+  counts: { state: string; count: number }[];
+  total: number;
+  assessed: number;
+  weak: number;
+  mastered: number;
+  masteredPct: number | null;
+  weakPct: number | null;
+};
+
+export type MasteryRollupObjective = {
+  code: string;
+  labelBn: string;
+  chapterNumber: number | null;
+  strand: string | null;
+  domainCode: string | null;
+  tagged: boolean;
+  state: string;
+  childCodes: string[];
+  weakChildCodes: string[];
+  summary: MasteryStateSummary;
+};
+
+export type MasteryDomainRollup = {
+  code: string | null;
+  labelBn: string | null;
+  objectiveCodes: string[];
+  state: string;
+  summary: MasteryStateSummary;
+};
+
+export type MasteryHeatColumn = {
+  loCode: string;
+  labelBn: string;
+  chapterNumber: number | null;
+  strand: string | null;
+  assessments: number;
+  weak: number;
+  verdicts: number;
+  weakPct: number | null;
+  triggered: boolean;
+  sectionMeanPct: number | null;
+  actionId: string | null;
+  actionStatus: string | null;
+  cells: { state: string; pct: number | null }[];
+  /** OT-3: TAGGED | OBJECTIVE | DOMAIN */
+  level: string;
+  parentCode: string | null;
+  parentLabelBn: string | null;
+  domainCode: string | null;
+  childCodes: string[];
+  weakChildCodes: string[];
+  masteredPct: number | null;
+};
+
+export type MasterySchoolRollupData = {
+  subject: string;
+  subjects: string[];
+  classes: {
+    classToken: string;
+    sections: number;
+    students: number;
+    domains: { code: string | null; labelBn: string | null; objectiveCodes: string[]; summary: MasteryStateSummary }[];
+    objectives: { code: string; labelBn: string; domainCode: string | null; chapterNumber: number | null; tagged: boolean; childCodes: string[]; summary: MasteryStateSummary }[];
+    rows: { code: string; labelBn: string; parentCode: string | null; summary: MasteryStateSummary }[];
+  }[];
 };
 
 export type MasteryHeatmap = {
@@ -787,21 +913,10 @@ export type MasteryHeatmap = {
   triggerPct: number;
   notYetAssessed: number;
   students: { studentId: string; name: string; rollNumber: string | null; weakCount: number }[];
-  outcomes: {
-    loCode: string;
-    labelBn: string;
-    chapterNumber: number | null;
-    strand: string | null;
-    assessments: number;
-    weak: number;
-    verdicts: number;
-    weakPct: number | null;
-    triggered: boolean;
-    sectionMeanPct: number | null;
-    actionId: string | null;
-    actionStatus: string | null;
-    cells: { state: string; pct: number | null }[];
-  }[];
+  outcomes: MasteryHeatColumn[];
+  isTree: boolean;
+  objectiveColumns: MasteryHeatColumn[];
+  domainColumns: MasteryHeatColumn[];
 };
 
 export type MasteryStudentDiagnosisData = {
@@ -817,6 +932,9 @@ export type MasteryStudentDiagnosisData = {
   sectionSize: number;
   moreWeakThan: number;
   outcomes: MasteryOutcomeStateRow[];
+  isTree: boolean;
+  objectives: MasteryRollupObjective[];
+  domains: MasteryDomainRollup[];
   /** OT-5: per outcome, taught / missed / not taught in class. */
   objectiveLessons: ObjectiveLessonT[];
 };
@@ -842,6 +960,9 @@ export type MasteryTrailData = {
   studentId: string;
   name: string;
   homeTipBn: string | null;
+  /** OT-3: the objective a sub-objective belongs to, and the domain. */
+  parentLabelBn: string | null;
+  domainLabelBn: string | null;
   bankGold: number;
   bankSeen: number;
   /** LP-3: the outcome's chapter as taught in class (empty = not marked yet). */
@@ -1165,6 +1286,7 @@ export const CHILD_MASTERY_ASSIGNMENTS = gql`
       result {
         earned
         available
+        levelWordBn
         note
         notMarked
         rows {
@@ -1190,6 +1312,8 @@ export type ChildMasteryAssignment = {
   result: {
     earned: number;
     available: number;
+    /** OT-3: the level the rows are named at (the objective word, D-#923). */
+    levelWordBn: string;
     note: string | null;
     notMarked: boolean;
     rows: { labelBn: string; earned: number; available: number; again: boolean }[];
@@ -1221,6 +1345,10 @@ const ACTION_FIELDS = `
   outcome
   canApprove
   canWork
+  objectiveCode
+  objectiveLabelBn
+  isSub
+  weakChildren { code labelBn weak verdicts weakPct triggered }
   lessonGap {
     taught
     weakCount
@@ -1284,6 +1412,7 @@ export const MASTERY_ACTIONS_PAGE_QUERY = gql`
         subject
         loCode
         labelBn
+        objectiveLabelBn
         kind
         status
         weakPct
@@ -1370,6 +1499,11 @@ export type MasteryActionData = {
   outcome: string | null;
   canApprove: boolean;
   canWork: boolean;
+  /** OT-3 (§8.1): the objective the outcome belongs to, and its weak children in the শাখা now. */
+  objectiveCode: string;
+  objectiveLabelBn: string;
+  isSub: boolean;
+  weakChildren: { code: string; labelBn: string; weak: number; verdicts: number; weakPct: number | null; triggered: boolean }[];
   /** LP-3 (D-#825): the weak students who missed a class of this outcome's chapter. */
   lessonGap: { taught: boolean; weakCount: number; missedNames: string[] };
   trigger: { at: string; weakPct: number; weak: number; verdicts: number; assessments: number };
@@ -1407,6 +1541,8 @@ export type MasteryActionRow = {
   subject: string;
   loCode: string;
   labelBn: string;
+  /** OT-3: a sub-objective's objective label. */
+  objectiveLabelBn: string | null;
   kind: string;
   status: string;
   weakPct: number;
@@ -1427,6 +1563,7 @@ export const CHILD_MASTERY_PROGRESS = gql`
   query ChildMasteryProgress($studentId: String!) {
     childMasteryProgress(studentId: $studentId) {
       subject
+      levelWordBn
       assignmentsSent
       counts {
         attention
@@ -1455,6 +1592,8 @@ export const CHILD_MASTERY_PROGRESS = gql`
 
 export type ChildMasteryProgressRow = {
   subject: string;
+  /** The level the counts are at (the objective word from পলিসি, D-#923 / #925). */
+  levelWordBn: string;
   assignmentsSent: number;
   counts: { attention: number; improving: number; good: number; unknown: number };
   attention: { labelBn: string; homeTipBn: string | null }[];

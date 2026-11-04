@@ -3,6 +3,8 @@
  *  - MasteryLeader (param-free, drawer): the whole school for an approver — four numbers, the
  *    proposals waiting for a decision, the running actions;
  *  - MasteryActions {sectionId, subject}: one section × subject's record (issue → action → result).
+ * OT-3 (docs/prd-objective-tree.md §8.1): the school view adds the domain → objective → sub-objective
+ * roll-up per switched-on tree class (SchoolRollupCard); a sub-objective's row names its objective.
  * Lists page from day one (D-#761). Every row opens the action.
  */
 import React, { useState } from "react";
@@ -16,6 +18,7 @@ import { friendlyError } from "../../lib/errors";
 import { space, useColors } from "../../theme";
 import type { MasteryStackParamList } from "../../navigation/types";
 import { fill } from "./masteryStateUi";
+import { SchoolRollupCard } from "./MasteryTreeParts";
 
 type Props = NativeStackScreenProps<MasteryStackParamList, "MasteryLeader" | "MasteryActions">;
 
@@ -62,7 +65,8 @@ function ActionList({
         >
           <View style={{ flexDirection: "row", justifyContent: "space-between", gap: space(2), flexWrap: "wrap" }}>
             <Body style={{ fontWeight: "700", flexShrink: 1 }}>
-              {r.className} {r.sectionName} · {hwSubjectLabel(r.subject)} · {r.labelBn}
+              {r.className} {r.sectionName} · {hwSubjectLabel(r.subject)} · {r.objectiveLabelBn ? `${r.objectiveLabelBn} › ` : ""}
+              {r.labelBn}
             </Body>
             <Badge text={r.outcome ? masteryActionLabel(r.outcome) : masteryActionLabel(r.status)} tone={statusTone(r.status)} />
           </View>
@@ -116,6 +120,7 @@ export default function MasteryActionsScreen({ navigation, route }: Props): Reac
               ))}
             </View>
           ) : null}
+          <SchoolRollupCard />
           <ActionList filter="PROPOSED" title={STR.msPendingTitle} empty={STR.msNoPending} onOpen={open} />
           <ActionList filter="RUNNING" title={STR.msRunningTitle} empty={STR.msNoActions} onOpen={open} />
         </>

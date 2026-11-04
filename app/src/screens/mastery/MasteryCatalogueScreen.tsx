@@ -6,7 +6,7 @@
  * Grouped by chapter in book order; strands (no chapter) come last under their own head.
  * Writes are shown only to mastery:manage — the server re-gates every one.
  */
-import React, { useMemo, useState } from "react";
+import React, { useLayoutEffect, useMemo, useState } from "react";
 import { View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useMutation, useQuery } from "urql";
@@ -19,6 +19,8 @@ import {
 } from "../../graphql/mastery";
 import { Screen, Card, Body, Muted, Badge, Button, Field, Loader, EmptyState, Notice, H2 } from "../../components/ui";
 import { ConfirmSheet } from "../../components/ConfirmSheet";
+import { useMasteryLevelLabels } from "../../lib/useMasteryLevelLabels";
+import { levelFill } from "./masteryStateUi";
 import { STR, bnNum, hwSubjectLabel, masteryClassLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { useToast } from "../../state/ToastContext";
@@ -33,7 +35,9 @@ type Chapter = { number: number; titleBn: string; termNote: string | null; outco
 const statusTone = (s: string) => (s === "LOCKED" ? "ok" : s === "DRAFT" ? "gold" : "muted") as "ok" | "gold" | "muted";
 const statusText = (s: string) => (s === "LOCKED" ? STR.msLocked : s === "DRAFT" ? STR.msDraft : STR.msRetired);
 
-export default function MasteryCatalogueScreen({ route }: Props): React.ReactElement {
+export default function MasteryCatalogueScreen({ route, navigation }: Props): React.ReactElement {
+  const lv = useMasteryLevelLabels();
+  useLayoutEffect(() => navigation.setOptions({ title: levelFill(STR.msOutcomes, lv) }), [navigation, lv.objective]);
   const { classToken, subject } = route.params;
   const toast = useToast();
   const { can } = useAuth();
@@ -79,7 +83,7 @@ export default function MasteryCatalogueScreen({ route }: Props): React.ReactEle
       setError(friendlyError(res.error));
       return;
     }
-    toast.show(c.kind === "lock" ? `${STR.msLockedToast} (${bnNum(Number(res.data?.lockMasteryCatalogue ?? 0))})` : STR.msSaved);
+    toast.show(c.kind === "lock" ? `${levelFill(STR.msLockedToast, lv)} (${bnNum(Number(res.data?.lockMasteryCatalogue ?? 0))})` : STR.msSaved);
     reload();
   }
 
@@ -169,7 +173,7 @@ export default function MasteryCatalogueScreen({ route }: Props): React.ReactEle
       {qErr ? <Notice message={friendlyError(qErr)} tone="danger" /> : null}
       {error ? <Notice message={error} tone="danger" /> : null}
       {fetching && !cat ? <Loader /> : null}
-      {!fetching && cat && cat.outcomes.length === 0 ? <EmptyState message={STR.msNoCoverage} /> : null}
+      {!fetching && cat && cat.outcomes.length === 0 ? <EmptyState message={levelFill(STR.msNoCoverage, lv)} /> : null}
 
       {(cat?.chapters ?? []).map((c) => {
         const list = byChapter.get(c.number) ?? [];
@@ -194,7 +198,7 @@ export default function MasteryCatalogueScreen({ route }: Props): React.ReactEle
 
       <ConfirmSheet
         visible={confirm !== null}
-        message={confirm?.kind === "lock" ? STR.msLockConfirm : STR.msRetireConfirm}
+        message={confirm?.kind === "lock" ? STR.msLockConfirm : levelFill(STR.msRetireConfirm, lv)}
         confirmLabel={confirm?.kind === "lock" ? STR.msLockAll : STR.msRetire}
         tone={confirm?.kind === "lock" ? "primary" : "danger"}
         onCancel={() => setConfirm(null)}
