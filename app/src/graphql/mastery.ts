@@ -395,6 +395,8 @@ const PAPER_FIELDS = `
     chapterNumber
     questionTypeCode
     marks
+    stimulusRef
+    partLabel
   }
 `;
 
@@ -526,6 +528,9 @@ export type MasteryPaperItemRow = {
   chapterNumber: number | null;
   questionTypeCode: string;
   marks: number;
+  /** ক/খ parts (D-#926): the stem this item hangs under, and its letter on this paper. */
+  stimulusRef: string | null;
+  partLabel: string | null;
 };
 
 export type MasteryPaperRow = {

@@ -986,6 +986,10 @@ export const FEATURE_CATALOGUE = {
       // D-#905: the 23-Sep "What moves the marks" study, live. Principal by default — the
       // scatter carries one (unnamed) dot per child.
       marks_drivers: { en: "What moves the marks", bn: "নম্বর কীসে বাড়ে", desc: "Homework, assignments and attendance against class-test results, live over a rolling window (whole school)", teacher: false, office: false, flags: [] },
+      // Objective tree OT-4 (prd-objective-tree §8.2, mock 5): gold questions per tagged row; the
+      // gaps become the brief for the next question batch. Principal + Office by default (owner
+      // 2026-11-04); the module doors mastery:settings / mastery:review open it too.
+      bank_coverage: { en: "Question-bank coverage", bn: "প্রশ্ন-ব্যাংক কভারেজ", desc: "Gold questions per tagged objective row of a class × subject, the empty rows, and the gaps as a brief for the next question batch (whole school)", teacher: false, office: true, flags: [] },
     },
   },
 } as const satisfies Record<string, CatalogueFeature>;
