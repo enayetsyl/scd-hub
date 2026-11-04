@@ -12,6 +12,8 @@ import {
   FINANCE_INCOME_HEADS,
   FINANCE_EXPENSE_HEADS,
   LEDGER_KINDS,
+  FINANCE_POSTING_KIND_LABELS_BN,
+  type FinancePostingKind,
 } from "@scd/shared";
 import { FinancePosting, type IFinancePosting } from "../models/FinancePosting";
 import {
@@ -25,6 +27,7 @@ import {
 import { sumLedgerDelta, dayInOut, type PostingLike } from "../postingMath";
 import { sumQardDelta, qardDayInOut } from "../qardIouMath";
 import { writeAudit } from "../../platform/services/AuditService";
+import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
 
 const MODE_SET = new Set<string>(FINANCE_PAYMENT_MODES);
 const FEE_HEAD_SET = new Set<string>(FINANCE_STUDENT_FEE_HEADS);
@@ -205,6 +208,15 @@ export async function reversePosting(
     targetId: reversal._id,
     targetKind: "FinancePosting",
     meta: { reversesPostingId: original._id.toString(), kind: original.kind, amount: original.amount },
+  });
+  // D-#952: whoever entered it explains why it had to be reversed.
+  await recordPlaceMistake({
+    kind: "FINANCE_REVERSAL",
+    refKey: String(original._id),
+    ownerId: original.enteredByUserId,
+    correctedBy: actor.userId,
+    at: new Date(),
+    line: `${FINANCE_POSTING_KIND_LABELS_BN[original.kind as FinancePostingKind] ?? original.kind} ৳${original.amount} — এন্ট্রি উল্টানো হয়েছে`,
   });
   return reversal;
 }

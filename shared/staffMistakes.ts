@@ -15,6 +15,17 @@ export const STAFF_MISTAKE_KINDS = [
   "CLASS_TEST_SCRIPTS",
   "WORK_CLAIM_ACCEPTED",
   "WORK_REVERT",
+  // MR-6 (D-#952): the remaining tier-1 places — recorded on a generic StaffMistakeNote.
+  "POPUP_NOTICE_CHANGE",
+  "MONTHLY_REPORT_REVOKE",
+  "SYLLABUS_REOPEN",
+  "EXAM_ROUTINE_CHANGE",
+  "STAFF_LETTER_VOID",
+  "PAYROLL_REOPEN",
+  "FINANCE_REVERSAL",
+  "MASTERY_CORRECTION",
+  "QURAN_EXAM_CORRECTION",
+  "CLASS_NOTE_CHANGE",
 ] as const;
 export type StaffMistakeKind = (typeof STAFF_MISTAKE_KINDS)[number];
 
@@ -37,6 +48,11 @@ export interface StaffMistakeReason {
   /** Not a mistake at all — accepted at once, no review (D-#944, the mockup's dashed buttons). */
   autoExcuses?: boolean;
 }
+
+const MINE_REASON: StaffMistakeReason = { code: "MINE", bn: "আমার ভুল ছিল", en: "It was my mistake", hintBn: "ভুলটা আমার", selfCounts: true };
+const OTHER_REASON: StaffMistakeReason = { code: "OTHER", bn: "অন্য কারণ", en: "Another reason", hintBn: "নিচে নিজের ভাষায় লিখুন", needsText: true };
+/** MINE + the place's own buttons + OTHER (MR-6 places share the frame). */
+const withFrame = (...own: StaffMistakeReason[]): readonly StaffMistakeReason[] => [MINE_REASON, ...own, OTHER_REASON];
 
 export const STAFF_MISTAKE_REASONS: Record<StaffMistakeKind, readonly StaffMistakeReason[]> = {
   MARK_CORRECTION: [
@@ -74,6 +90,45 @@ export const STAFF_MISTAKE_REASONS: Record<StaffMistakeKind, readonly StaffMista
     { code: "RECHECKED", bn: "খাতা আবার দেখে বদলেছি", en: "Changed it after checking again", hintBn: "দ্বিতীয়বার দেখে ফল বদলাতে হয়েছে" },
     { code: "OTHER", bn: "অন্য কারণ", en: "Another reason", hintBn: "নিচে নিজের ভাষায় লিখুন", needsText: true },
   ],
+  POPUP_NOTICE_CHANGE: withFrame(
+    { code: "WRONG_AUDIENCE", bn: "ভুল জনদের পাঠানো হয়েছিল", en: "Sent to the wrong people", hintBn: "প্রাপক বাছাইয়ে ভুল" },
+    { code: "PLAN_CHANGED", bn: "পরিকল্পনা বদলেছে", en: "The plan changed", hintBn: "তারিখ / সময় / অনুষ্ঠান বদলেছে — বার্তা ঠিক ছিল", autoExcuses: true },
+  ),
+  MONTHLY_REPORT_REVOKE: withFrame(
+    { code: "LATE_DATA", bn: "শিক্ষকের তথ্য দেরিতে এসেছে", en: "A teacher's data came late", hintBn: "রিপোর্টের পরে নম্বর / উপস্থিতি যোগ হয়েছে" },
+    { code: "LEAVE_LATE", bn: "ছুটি পরে অনুমোদিত হয়েছে", en: "A leave was approved later", hintBn: "অনুপস্থিতি পরে ছুটি হিসেবে গণ্য", autoExcuses: true },
+  ),
+  SYLLABUS_REOPEN: withFrame(
+    { code: "WRONG_CHAPTER", bn: "অধ্যায় / নম্বর ভুল ছিল", en: "A chapter or the marks were wrong", hintBn: "প্রকাশের আগে মেলানো হয়নি", selfCounts: true },
+    { code: "POLICY", bn: "নীতিগত পরিবর্তন", en: "A policy change", hintBn: "স্কুল সিলেবাস বদলেছে", autoExcuses: true },
+  ),
+  EXAM_ROUTINE_CHANGE: withFrame(
+    { code: "WRONG_TIME", bn: "তারিখ / সময় ভুল ছিল", en: "A date or time was wrong", hintBn: "প্রকাশের আগে মেলানো হয়নি", selfCounts: true },
+    { code: "POLICY", bn: "পরীক্ষার তারিখ বদলেছে", en: "The exam was rescheduled", hintBn: "ছুটি / অনুষ্ঠানের জন্য স্কুল বদলেছে", autoExcuses: true },
+  ),
+  STAFF_LETTER_VOID: withFrame(
+    { code: "WRONG_DETAIL", bn: "নাম / তারিখ / অঙ্ক ভুল ছিল", en: "A name, date or amount was wrong", hintBn: "ইস্যুর আগে মেলানো হয়নি", selfCounts: true },
+    { code: "TERMS_CHANGED", bn: "শর্ত বদলেছে", en: "The terms changed", hintBn: "পত্র ঠিক ছিল, পরে সিদ্ধান্ত বদলেছে", autoExcuses: true },
+  ),
+  PAYROLL_REOPEN: withFrame(
+    { code: "LATE_SHEET", bn: "উপস্থিতির শিট দেরিতে এসেছে", en: "The attendance sheet came late", hintBn: "লকের পরে শিট এসেছে" },
+    { code: "RAISE_LATER", bn: "পরে বেতন বাড়ানো হয়েছে", en: "A raise was backdated", hintBn: "লকের পরে আগের মাস থেকে বেতন বাড়ানো", autoExcuses: true },
+  ),
+  FINANCE_REVERSAL: withFrame(
+    { code: "WRONG_AMOUNT", bn: "অঙ্ক / শিক্ষার্থী ভুল ছিল", en: "The amount or student was wrong", hintBn: "এন্ট্রির সময় ভুল", selfCounts: true },
+    { code: "REFUND", bn: "টাকা ফেরত / চেক ফেরত", en: "A refund or a bounced cheque", hintBn: "এন্ট্রি ঠিক ছিল", autoExcuses: true },
+  ),
+  MASTERY_CORRECTION: withFrame(
+    { code: "WRONG_ROW", bn: "ভুল ঘরে নম্বর দিয়েছিলাম", en: "Marks in the wrong box", hintBn: "অন্য প্রশ্ন / শিক্ষার্থীর ঘরে", selfCounts: true },
+    { code: "LATE_SCRIPT", bn: "খাতা পরে পাওয়া গেছে", en: "The script turned up later", hintBn: "নিশ্চিত করার পরে খাতা পাওয়া গেছে", autoExcuses: true },
+  ),
+  QURAN_EXAM_CORRECTION: withFrame(
+    { code: "EXAMINER_CHANGED", bn: "পরীক্ষক বদল হয়েছে", en: "The examiner changed", hintBn: "অন্য পরীক্ষক পরে পরীক্ষা নিয়েছেন", autoExcuses: true },
+  ),
+  CLASS_NOTE_CHANGE: withFrame(
+    { code: "WRONG_LESSON", bn: "ভুল পাঠ / ফাইল দিয়েছিলাম", en: "Wrong lesson or file", hintBn: "অন্য ক্লাসের নোট / ভুল সংযুক্তি", selfCounts: true },
+    { code: "HW_ADDED", bn: "পরে বাড়ির কাজ যোগ করেছি", en: "Added the homework later", hintBn: "নোট ঠিক ছিল, শুধু যোগ করা", autoExcuses: true },
+  ),
 };
 
 export const STAFF_MISTAKE_TEXT_MAX = 500;

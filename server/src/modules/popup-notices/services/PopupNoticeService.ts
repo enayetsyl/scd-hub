@@ -64,6 +64,7 @@ import {
   type PopupAudienceInput,
 } from "./PopupAudienceService";
 import { isTaskDone } from "./popupDoneWhen";
+import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
 
 export { PopupNoticeError } from "./PopupAudienceService";
 
@@ -590,6 +591,7 @@ export async function editLiveNotice(ctx: AppContext, id: string, input: EditLiv
     return { id: a.id, kind: a.kind, labelBn, labelEn: a.labelEn, target: a.target };
   });
   const before = { titleBn: n.titleBn, bodyBn: n.bodyBn, endsOn: n.endsOn };
+  const labelsBefore = n.actions.map((a) => a.labelBn).join("|");
   n.set({ ...content, endsOn: input.endsOn, actions, version: (n.version ?? 1) + 1, updatedBy: new Types.ObjectId(ctx.auth!.userId) });
   await n.save();
   if (input.reshow) {
@@ -609,6 +611,11 @@ export async function editLiveNotice(ctx: AppContext, id: string, input: EditLiv
     targetKind: "PopupNotice",
     meta: { before, after: { titleBn: n.titleBn, bodyBn: n.bodyBn, endsOn: n.endsOn }, version: n.version, reshow: !!input.reshow },
   });
+  // D-#952: people had already seen it — new wording / buttons or a re-show is the sender's
+  // correction (only moving the end date is not).
+  const changed =
+    before.titleBn !== n.titleBn || before.bodyBn !== n.bodyBn || labelsBefore !== n.actions.map((a) => a.labelBn).join("|") || !!input.reshow;
+  if (changed) await recordPopupMistake(n, ctx.auth!.userId, now, input.reshow ? "লেখা বদলে আবার দেখানো হয়েছে" : "লেখা বদলানো হয়েছে");
   return loadDTO(n, now);
 }
 
@@ -626,7 +633,27 @@ export async function withdrawPopupNotice(ctx: AppContext, id: string, now = new
     targetKind: "PopupNotice",
     meta: { titleBn: n.titleBn },
   });
+  await recordPopupMistake(n, ctx.auth!.userId, now, "বন্ধ করে দেওয়া হয়েছে");
   return loadDTO(n, now);
+}
+
+/** D-#952: the sender's entry, only when someone had already read the notice. */
+async function recordPopupMistake(
+  n: { _id: Types.ObjectId; titleBn: string; publishedBy?: Types.ObjectId | null; createdBy: Types.ObjectId },
+  actorId: string,
+  at: Date,
+  what: string,
+): Promise<void> {
+  const seen = await PopupNoticeRecipient.countDocuments({ noticeId: n._id, test: false, readAt: { $ne: null } });
+  if (seen === 0) return;
+  await recordPlaceMistake({
+    kind: "POPUP_NOTICE_CHANGE",
+    refKey: String(n._id),
+    ownerId: n.publishedBy ?? n.createdBy,
+    correctedBy: actorId,
+    at,
+    line: `"${n.titleBn}" — ${what}; ${seen} জন আগেই দেখেছিলেন`,
+  });
 }
 
 /** A new DRAFT carrying everything but the schedule (PRD §9 — "same notice to KG next week"). */

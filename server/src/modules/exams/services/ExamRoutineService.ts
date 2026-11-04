@@ -25,6 +25,7 @@ import { SubjectGroupMembership } from "../../routine/models/SubjectGroupMembers
 import { QuranExamPlan } from "../../quran-exam/models/QuranExamPlan";
 import { QuranExamSitting } from "../../quran-exam/models/QuranExamSitting";
 import { writeAudit } from "../../platform/services/AuditService";
+import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
 
 export class ExamRoutineError extends Error {}
 
@@ -205,10 +206,34 @@ export async function saveExamRoutineClass(
   if (!cls) throw new ExamRoutineError("শ্রেণিটি এই পরীক্ষার বছরের নয়।");
   const slots = checkSlots(input).map((s) => ({ ...s, classId: cls._id }));
   const row = (await ExamRoutine.findOne({ examId: exam._id })) ?? new ExamRoutine({ examId: exam._id, slots: [], updatedBy: oid(ctx.auth!.userId) });
+  // D-#952: what families saw for this class before the save.
+  const shown = (arr: unknown[]): string =>
+    JSON.stringify(
+      arr.map((x) => {
+        const o = (typeof (x as { toObject?: () => object }).toObject === "function" ? (x as { toObject: () => object }).toObject() : x) as Record<string, unknown>;
+        const { _id, classId, ...rest } = o;
+        void _id;
+        void classId;
+        return rest;
+      }),
+    );
+  const beforeShown = shown(row.slots.filter((s) => String(s.classId) === classId));
+  const wasPublished = !!row.publishedAt;
+  const priorAuthor = row.updatedBy;
   row.slots = [...row.slots.filter((s) => String(s.classId) !== classId), ...slots] as typeof row.slots;
   if (noteBn !== undefined && noteBn !== null) row.noteBn = noteBn.trim();
   row.updatedBy = oid(ctx.auth!.userId);
   await row.save();
+  if (wasPublished && beforeShown !== "[]" && beforeShown !== shown(slots)) {
+    await recordPlaceMistake({
+      kind: "EXAM_ROUTINE_CHANGE",
+      refKey: `${examId}:${classId}`,
+      ownerId: priorAuthor,
+      correctedBy: ctx.auth!.userId,
+      at: new Date(),
+      line: "প্রকাশিত পরীক্ষার রুটিন বদলানো হয়েছে",
+    });
+  }
 
   // The syllabus button shows the date from here (one source, never typed twice).
   const dates = syllabusDates(slots);

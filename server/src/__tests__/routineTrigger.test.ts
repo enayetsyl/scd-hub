@@ -15,6 +15,10 @@ import { ForbiddenError } from "../middleware/authz";
 const oid = () => new mongoose.Types.ObjectId();
 
 const mockWindowFind = jest.fn();
+// D-#952: the mistake recorder reaches real models; this suite is DB-free.
+jest.mock("../modules/staff-mistakes/services/StaffMistakeNoteService", () => ({
+  recordPlaceMistake: jest.fn().mockResolvedValue(false),
+}));
 jest.mock("../modules/routine/models/ScheduleWindow", () => ({
   ScheduleWindow: { find: () => ({ lean: () => mockWindowFind() }) },
 }));

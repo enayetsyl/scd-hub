@@ -47,6 +47,7 @@ import { activeAdvanceByStaff } from "./AdvanceService";
 import { computeLatenessCharge, freezeLatenessCharges } from "./LatenessService";
 import { exitsUpTo, exitDues, commitExitPayslips, OVERDRAWN_LEAVE_NOTE } from "./ExitPayService";
 import { toDateKey, openHeldDays } from "./ProbationDebtService";
+import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
 
 export interface StaffAdjustment {
   staffProfileId: string;
@@ -707,6 +708,15 @@ export async function reopenPayrollRun(runId: string, reason: string, actorId: s
       latenessUnfrozen: unfrozen.modifiedCount ?? 0,
       exitsReopened,
     },
+  });
+  // D-#952: staff had seen the payslips — the preparer's correction to explain.
+  await recordPlaceMistake({
+    kind: "PAYROLL_REOPEN",
+    refKey: String(run._id),
+    ownerId: run.preparedBy,
+    correctedBy: actorId,
+    at: new Date(),
+    line: `${run.monthKey} মাসের বেতন লক করার পর আবার খোলা হয়েছে: "${why}"`,
   });
   return run;
 }

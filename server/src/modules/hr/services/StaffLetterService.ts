@@ -27,6 +27,7 @@ import { recordPayChange, salariesEffectiveIn } from "./PayHistoryService";
 import { StaffPayChange } from "../models/StaffPayChange";
 import { writeAudit } from "../../platform/services/AuditService";
 import { personName } from "../../../lib/personName";
+import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
 
 export class LetterError extends Error {
   constructor(msg: string) {
@@ -484,6 +485,17 @@ export async function voidLetter(
     targetKind: "StaffLetter",
     meta: { refNo: letter.refNo, kind: letter.kind, reason: letter.voidReason },
   });
+  // D-#952: the staff member already had it — the issuer's correction to explain.
+  if ((letter.sends ?? []).length > 0) {
+    await recordPlaceMistake({
+      kind: "STAFF_LETTER_VOID",
+      refKey: String(letter._id),
+      ownerId: letter.issuedBy,
+      correctedBy: actorId,
+      at: letter.voidedAt ?? new Date(),
+      line: `পত্র ${letter.refNo} পাঠানোর পর বাতিল: "${letter.voidReason}"`,
+    });
+  }
   return letter;
 }
 

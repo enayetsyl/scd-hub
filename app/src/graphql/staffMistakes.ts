@@ -3,6 +3,7 @@
  * own entries and explanations, the reviewer's queue and decisions.
  */
 import { gql } from "urql";
+import type { StaffMistakeKind } from "@scd/shared";
 import type { MarkCorrectionNoteT } from "./markSubmission";
 
 export type StaffMistakeStatusT = "EXPLANATION_DUE" | "PENDING_REVIEW" | "COUNTED" | "EXCUSED" | "MOVED";
@@ -11,7 +12,7 @@ export interface StaffMistakeT {
   id: string;
   staffUserId: string;
   staffName: string;
-  kind: "MARK_CORRECTION" | "ATTENDANCE_CORRECTION" | "CLASS_TEST_MARKS" | "CLASS_TEST_SCRIPTS" | "WORK_CLAIM_ACCEPTED" | "WORK_REVERT";
+  kind: StaffMistakeKind;
   tier: number;
   dateKey: string;
   status: StaffMistakeStatusT;
@@ -53,6 +54,7 @@ export interface StaffMistakeT {
     states: { state: string; at: string }[];
     byName: string;
   } | null;
+  genericNote: { id: string; lines: { text: string; at: string; byName: string }[] } | null;
 }
 
 const FIELDS = `
@@ -65,6 +67,7 @@ const FIELDS = `
   attendanceNote { id unitLabel dateKey changes { studentId studentName from to at byName } }
   classTestNote { id kind ctId subject testNumber totalMarks changes { studentName fromMarks toMarks fromStatus toStatus at byName } }
   workNote { id tracker itemCode subject studentName claimedAt claimNote states { state at } byName }
+  genericNote { id lines { text at byName } }
 `;
 
 export const MY_STAFF_MISTAKES = gql<{ myStaffMistakes: StaffMistakeT[] }>`
