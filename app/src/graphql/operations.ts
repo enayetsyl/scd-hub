@@ -3967,6 +3967,20 @@ export const MY_DAY_QUERY = gql<{ myDay: MyDayT }, { date: string }>`
   }
 `;
 
+/** D-#918 — only the caller's own periods, for the admin dashboard's আমার পিরিয়ড strip. */
+export const MY_DAY_SLOTS_QUERY = gql<
+  { myDay: Pick<MyDayT, "date" | "dayType" | "slots"> },
+  { date: string }
+>`
+  query MyDaySlots($date: String!) {
+    myDay(date: $date) {
+      date
+      dayType
+      slots { ${ROUTINE_SLOT_FIELDS} }
+    }
+  }
+`;
+
 /** D-#290 — the Principal/Office "who didn't reconcile?" report. */
 export interface HwReconMissT {
   dateKey: string;

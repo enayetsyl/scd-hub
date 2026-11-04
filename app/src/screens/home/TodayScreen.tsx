@@ -29,7 +29,7 @@
  * No emoji — Icon (lucide) only (F19 seed).
  */
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Pressable, RefreshControl, ScrollView, View } from "react-native";
+import { Pressable, RefreshControl, View } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { useMutation, useQuery } from "urql";
 import type { Role } from "@scd/shared";
@@ -42,7 +42,6 @@ import {
   MY_AS_LIFECYCLE_QUERY,
   OPEN_TRACKER,
   type RecentSetT,
-  type RoutineSlotT,
   type AssignmentPrepT,
   type HwPendingStage,
   type AsLifecycleSectionT,
@@ -66,6 +65,7 @@ import { MeetingSummaryTeacherCard } from "../../components/MeetingSummaryTeache
 import { ImprovementTasksOfficeCard } from "../../components/ImprovementTasksOfficeCard";
 import { GiftHandoverCard } from "../../components/GiftHandoverCard";
 import { LiveClassCard } from "../../components/LiveClassCard";
+import { MyPeriodsStrip } from "../../components/MyPeriodsStrip";
 import { QuranExamTodayCard } from "../../components/QuranExamTodayCard";
 import { UnissuedHomeworkCard } from "../../components/UnissuedHomeworkCard";
 import { Icon, type IconName } from "../../components/Icon";
@@ -77,7 +77,6 @@ import {
   dayTypeLabel,
   fullDateLabel,
   hwSubjectLabel,
-  routineSubjectLabel,
   selectionSummaryLabel,
   setTypeLabel,
 } from "../../lib/labels";
@@ -101,20 +100,6 @@ const AS_PILL_FIELD: Record<string, Exclude<keyof AsLifecycleSectionT, "sectionI
 
 /** Cross-tab navigation (the Basket→Sets convention): navigate bubbles up to the drawer. */
 type CrossNav = { navigate: (name: string, params?: object) => void };
-
-/** "HH:MM" for the local clock — comparable against the slots' zero-padded times. */
-const hhmm = (ms: number): string => {
-  const d = new Date(ms);
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-};
-
-type SlotPhase = "past" | "current" | "upcoming";
-const slotPhase = (s: RoutineSlotT, nowHM: string): SlotPhase => {
-  if (!s.startTime || !s.endTime) return "upcoming";
-  if (s.endTime <= nowHM) return "past";
-  if (s.startTime <= nowHM) return "current";
-  return "upcoming";
-};
 
 export default function TodayScreen(): React.ReactElement {
   const nav = useNavigation() as unknown as CrossNav;
@@ -271,7 +256,6 @@ export default function TodayScreen(): React.ReactElement {
     const id = setInterval(() => setNow(Date.now()), 60_000);
     return () => clearInterval(id);
   }, []);
-  const nowHM = hhmm(now);
 
   /** "3d 4h" / "4h 20m" / "20m" — coarsest two units, minute precision at the end. */
   const timeLeft = (dueAt: string): string => {
@@ -710,84 +694,8 @@ export default function TodayScreen(): React.ReactElement {
           </FoldCard>
         ) : null}
 
-        {/* আমার পিরিয়ড — horizontal timeline; current slot highlighted */}
-        <H2>{STR.myPeriods}</H2>
-        {day && slots.length === 0 ? (
-          <Muted style={{ marginBottom: space(3) }}>
-            {day.dayType !== "FULL" && day.dayType !== "QURAN_ONLY" ? dayTypeLabel(day.dayType) : STR.rtNoSlots}
-          </Muted>
-        ) : (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={{ marginHorizontal: -space(4), marginBottom: space(3) }}
-            contentContainerStyle={{ gap: space(2), paddingHorizontal: space(4), paddingVertical: space(1) }}
-          >
-            {slots.map((s) => {
-              const phase = slotPhase(s, nowHM);
-              const current = phase === "current";
-              const fg = current ? colors.onPrimaryContainer : colors.textPrimary;
-              const fgMuted = current ? colors.onPrimaryContainer : colors.textSecondary;
-              return (
-                <Pressable
-                  key={s.id}
-                  // Owner rule (2026-10-25): the slot opens MyClassNotes only for a
-                  // viewer who can read class notes; otherwise it is a plain card.
-                  disabled={!canClassNotesView}
-                  onPress={canClassNotesView ? () => nav.navigate("ClassNotesTab", { screen: "MyClassNotes" }) : undefined}
-                  accessibilityRole={canClassNotesView ? "button" : undefined}
-                  accessibilityLabel={`${STR.rtPeriodN} ${bnNum(s.periodNumber)} — ${routineSubjectLabel(s.subject)}${current ? ` — ${STR.tdNow}` : ""}`}
-                  style={({ pressed }) => [
-                    {
-                      width: 136,
-                      padding: space(3),
-                      borderRadius: radius.md,
-                      borderWidth: 1,
-                      borderColor: current ? colors.primary : colors.border,
-                      backgroundColor: current ? colors.primaryContainer : colors.surface,
-                    },
-                    phase === "past" && { opacity: 0.6 },
-                    pressed && { opacity: 0.7 },
-                  ]}
-                >
-                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space(1) }}>
-                    <Body style={{ ...typeScale.caption, fontWeight: current ? "700" : "400", color: fgMuted }}>
-                      {STR.rtPeriodN} {bnNum(s.periodNumber)}
-                      {s.startTime ? ` · ${bnNum(s.startTime)}` : ""}
-                    </Body>
-                    {current ? (
-                      <View
-                        style={{
-                          backgroundColor: colors.primary,
-                          borderRadius: radius.pill,
-                          paddingHorizontal: space(2),
-                        }}
-                      >
-                        {/* 12sp minimum — the caption floor (the prototype's 11px is below it) */}
-                        <Body style={{ ...typeScale.caption, fontWeight: "700", color: colors.onPrimary }}>
-                          {STR.tdNow}
-                        </Body>
-                      </View>
-                    ) : null}
-                  </View>
-                  <Body style={{ fontWeight: "700", color: fg }} numberOfLines={1}>
-                    {routineSubjectLabel(s.subject)}
-                  </Body>
-                  <Body style={{ ...typeScale.caption, color: fgMuted }} numberOfLines={1}>
-                    {s.groupName ?? "—"}
-                    {s.isCovering && s.teacherName ? ` · ${STR.rtCoveringFor} ${s.teacherName}` : ""}
-                    {!s.isCovering && s.coverTeacherName ? ` · ${STR.rtCovered}: ${s.coverTeacherName}` : ""}
-                  </Body>
-                  {s.isCovering ? (
-                    <View style={{ alignSelf: "flex-start", marginTop: space(1) }}>
-                      <Badge text={STR.rtCoveringFor} tone="warn" />
-                    </View>
-                  ) : null}
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-        )}
+        {/* আমার পিরিয়ড — D-#918: shared with the admin dashboard (MyPeriodsStrip). */}
+        <MyPeriodsStrip dayType={day?.dayType ?? null} slots={slots} nowMs={now} />
 
         {/* GC-4 — অভিভাবকের জানানো: claims waiting on THIS teacher. Renders nothing
             when there are none, and myWorkClaims returns [] rather than refusing for
