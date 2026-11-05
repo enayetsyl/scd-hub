@@ -2069,6 +2069,11 @@ export const BOOK_LANGUAGE_LABELS_EN: Record<BookLanguage, string> = {
   BANGLA: "Bangla", ARABIC: "Arabic", ENGLISH: "English", OTHER: "Other",
 };
 
+/** Storybook series lifecycle (SB-1, D-#980/#986): a DRAFT series is staff-only;
+ *  PUBLISHED shows to guardians of its age band; HIDDEN is withdrawn but kept. */
+export const STORY_SERIES_STATUSES = ["DRAFT", "PUBLISHED", "HIDDEN"] as const;
+export type StorySeriesStatus = (typeof STORY_SERIES_STATUSES)[number];
+
 
 // --- A.12 CHAT / MESSAGING ENUMS (app-native; Messaging module — ------------
 // prd-messaging, D-#76–#79). NO wire-contract twin: a chat is a feature, not

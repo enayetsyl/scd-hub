@@ -83,6 +83,15 @@ import {
   startClassBookUpload,
   validateClassBookUpload,
 } from "../modules/class-books/services/ClassBookService";
+import {
+  STORYBOOK_ERRORS_BN,
+  STORYBOOK_MAX_PDF_BYTES,
+  assertStorybookFileReadAccess,
+  replaceStorybookPdf,
+  uploadStorybook,
+  validateStorybookUpload,
+} from "../modules/library/services/StorybookService";
+import { LibraryError } from "../modules/library/errors";
 import { ARTIFACT_STAGES, type ArtifactStage } from "@scd/shared";
 import { Types as MongoTypes } from "mongoose";
 
@@ -1207,6 +1216,82 @@ filesRouter.post("/class-book", parseClassBookUpload, async (req: Request, res: 
 });
 
 // ---------------------------------------------------------------------------
+// POST /files/storybook — a storybook PDF (SB-1, D-#986). library:edit, PDF ≤ 60 MB.
+// Fields: seriesId + optional seriesNo, titleBn, titleEn, previewPages ("3,4,16") → a new
+// DRAFT book; or titleId (+ previewPages) → replace that book's cover / previews. Only the
+// cover and up to 3 preview pages are rendered and kept — never the whole book. A 16-page
+// storybook renders in seconds, so this answers when done (unlike class books).
+// ---------------------------------------------------------------------------
+
+const uploadStorybookPdf = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: STORYBOOK_MAX_PDF_BYTES + 1 },
+});
+
+const parseStorybookUpload: express.RequestHandler = (req, res, next) => {
+  uploadStorybookPdf.single("file")(req, res, (err: unknown) => {
+    if (err) {
+      res.status(422).json({ error: STORYBOOK_ERRORS_BN.tooLarge });
+      return;
+    }
+    next();
+  });
+};
+
+function parsePageList(raw: unknown): number[] | null {
+  if (raw === undefined || raw === null || String(raw).trim() === "") return null;
+  return String(raw)
+    .split(/[\s,]+/)
+    .map(Number)
+    .filter((n) => Number.isInteger(n));
+}
+
+filesRouter.post("/storybook", parseStorybookUpload, async (req: Request, res: Response) => {
+  const ctx = buildContext(req, res);
+  if (!ctx.auth || !callerHasPermission(ctx.auth, "library:edit")) {
+    res.status(403).json({ error: FILE_ERRORS_BN.forbidden });
+    return;
+  }
+  const file = req.file;
+  if (!file) {
+    res.status(400).json({ error: "file field missing" });
+    return;
+  }
+  const rejection = validateStorybookUpload(file.mimetype, file.size);
+  if (rejection) {
+    res.status(422).json({ error: rejection });
+    return;
+  }
+  const previewPages = parsePageList(req.body?.previewPages);
+  const sourceName = decodeUploadName(file.originalname);
+  try {
+    if (req.body?.titleId) {
+      const title = await replaceStorybookPdf(String(req.body.titleId), file.buffer, previewPages, sourceName, ctx.auth.userId);
+      res.json({ titleId: title._id.toString(), replaced: true });
+      return;
+    }
+    const seriesNo = req.body?.seriesNo ? Number(req.body.seriesNo) : null;
+    const title = await uploadStorybook({
+      actorId: ctx.auth.userId,
+      seriesId: String(req.body?.seriesId ?? ""),
+      seriesNo: seriesNo !== null && Number.isFinite(seriesNo) ? seriesNo : null,
+      titleBn: req.body?.titleBn ? String(req.body.titleBn) : null,
+      titleEn: req.body?.titleEn ? String(req.body.titleEn) : null,
+      sourceName,
+      pdf: file.buffer,
+      previewPages,
+    });
+    res.json({ titleId: title._id.toString(), seriesNo: title.seriesNo ?? null, titleEn: title.titleEn ?? null });
+  } catch (e) {
+    if (e instanceof LibraryError) {
+      res.status(422).json({ error: e.message });
+      return;
+    }
+    throw e;
+  }
+});
+
+// ---------------------------------------------------------------------------
 // GET /files/:id — authz first, then stream from Drive (no redirect, ever)
 // ---------------------------------------------------------------------------
 
@@ -1272,6 +1357,10 @@ filesRouter.get("/:id", async (req: Request, res: Response) => {
       // A class book page (D-#870): the book's own read gate — staff by class_books:view,
       // a guardian only for a READY, visible book of their child's class.
       await assertClassBookFileReadAccess(ctx, file._id.toString());
+    } else if (file.kind === "storybook_page") {
+      // A storybook cover / preview (SB-1, D-#986): staff by library:view, a guardian only
+      // for a published book of their child's age band.
+      await assertStorybookFileReadAccess(ctx, file._id.toString());
     } else if (file.kind === "print_upload") {
       // A print upload is readable by the teacher who sent it and by the Office/Principal
       // who has to print it (PQ-2, D-#281) — nobody else.
