@@ -57,6 +57,7 @@ export default function StoryShelfScreen({ navigation }: Props): React.ReactElem
   const { role, can } = useAuth();
   const isGuardian = role === "GUARDIAN";
   const manage = !isGuardian && can("library:edit");
+  const desk = !isGuardian && can("library:lend");
   const { selected } = useGuardianChild();
   const studentId = isGuardian ? selected?.studentId ?? null : null;
 
@@ -90,6 +91,7 @@ export default function StoryShelfScreen({ navigation }: Props): React.ReactElem
           <Notice tone="info" message={STR.stbBandBanner.replace("{name}", selected.nameBn || selected.name).replace("{band}", bandLabel)} />
         ) : null}
         {!isGuardian ? <Notice tone="info" message={STR.stbStaffHint} /> : null}
+        {desk ? <Button title={STR.stbDeskNav} onPress={() => navigation.navigate("StoryDesk")} style={{ marginBottom: space(2) }} /> : null}
         {manage ? <Button title={STR.stbManage} variant="secondary" onPress={() => navigation.navigate("StoryManage")} style={{ marginBottom: space(3) }} /> : null}
         {cards.length > 0 ? (
           <ChipRow>

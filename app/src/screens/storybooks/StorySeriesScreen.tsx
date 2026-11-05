@@ -12,6 +12,7 @@ import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native"
 import { useMutation, useQuery } from "urql";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import {
+  ADD_STORY_COPIES,
   BULK_TAG_STORY_BOOKS,
   SET_STORY_BOOK_PUBLISHED,
   STORY_AGE_BANDS_QUERY,
@@ -27,6 +28,7 @@ import { useAuth } from "../../auth/AuthContext";
 import { useGuardianChild } from "../../state/GuardianChildContext";
 import { usePullRefresh } from "../../lib/useRefresh";
 import { pickAndUploadStorybooks } from "../../lib/files";
+import { openPdf } from "../../lib/pdf";
 import { friendlyError } from "../../lib/errors";
 import { STR, bnNum, isoDateLabel } from "../../lib/labels";
 import type { StorybooksStackParamList } from "../../navigation/types";
@@ -141,6 +143,38 @@ function UploadCard({ seriesId, onDone }: { seriesId: string; onDone: (m: Msg) =
       <Field label={STR.stbUploadPreview} value={preview} onChangeText={setPreview} placeholder="3, 4, 16" />
       <Button title={busy ? STR.stbUploading : STR.stbUploadPick} loading={busy} onPress={() => void upload()} />
       <Muted style={{ marginTop: space(2) }}>{STR.stbUploadHint}</Muted>
+    </Card>
+  );
+}
+
+/** SB-2 (W9): give every book N copies (codes SERIES-BOOK-COPY) and print their QR stickers. */
+function CopiesCard({ seriesId, onDone }: { seriesId: string; onDone: (m: Msg) => void }): React.ReactElement {
+  const [each, setEach] = useState(1);
+  const [{ fetching }, add] = useMutation(ADD_STORY_COPIES);
+  const make = async (): Promise<void> => {
+    const res = await add({ seriesId, copiesEach: each });
+    if (res.error) return onDone({ tone: "danger", text: friendlyError(res.error) });
+    const n = res.data?.addStoryCopies.length ?? 0;
+    onDone({ tone: "ok", text: n > 0 ? STR.stbCopiesMade.replace("{n}", bnNum(n)) : STR.stbCopiesNone });
+  };
+  return (
+    <Card style={{ marginBottom: space(3) }}>
+      <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.stbCopiesTitle}</Body>
+      <Muted>{STR.stbCopiesEach}</Muted>
+      <ChipRow>
+        {[1, 2].map((n) => (
+          <Chip key={n} label={bnNum(n)} selected={each === n} onPress={() => setEach(n)} />
+        ))}
+      </ChipRow>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2) }}>
+        <Button title={STR.stbCopiesAdd} loading={fetching} onPress={() => void make()} />
+        <Button
+          title={STR.stbStickers}
+          variant="secondary"
+          onPress={() => void openPdf(`/files/storybook-stickers?seriesId=${encodeURIComponent(seriesId)}`).catch((e) => onDone({ tone: "danger", text: String(e) }))}
+        />
+      </View>
+      <Muted style={{ marginTop: space(2) }}>{STR.stbCopiesHint}</Muted>
     </Card>
   );
 }
@@ -313,6 +347,7 @@ export default function StorySeriesScreen({ route, navigation }: Props): React.R
               ) : null}
               {manage && editing ? <SeriesEditor series={series} onSaved={(m) => changed(m)} /> : null}
               {manage ? <UploadCard seriesId={seriesId} onDone={changed} /> : null}
+              {manage ? <CopiesCard seriesId={seriesId} onDone={changed} /> : null}
               {manage && selecting && picked.length > 0 ? <BulkTagBar titleIds={picked} onDone={changed} /> : null}
 
               <Body style={{ fontWeight: "700" }}>{STR.stbSeriesBooks}</Body>

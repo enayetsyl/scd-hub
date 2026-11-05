@@ -209,3 +209,107 @@ export const SET_STORY_BOOK_PUBLISHED = gql<{ setStoryBookPublished: StoryBookCa
     setStoryBookPublished(titleId: $titleId, published: $published) { ${BOOK_FIELDS} }
   }
 `;
+
+// ---------------------------------------------------------------------------
+// SB-2 — the desk (D-#982/#983/#985): codes, children, issue / return, copies, holiday rules.
+// The sticker PDF is REST (lib/pdf.ts openPdf → /files/storybook-stickers).
+// ---------------------------------------------------------------------------
+
+export interface StoryDeskStudentT {
+  id: string;
+  name: string;
+  schoolId: string;
+  rollNumber: string | null;
+  classLabelBn: string;
+  sectionNameBn: string | null;
+  activeLoans: number;
+  maxLoans: number;
+  overdue: boolean;
+}
+
+export interface StoryCopyLookupT {
+  copyId: string;
+  code: string;
+  /** AVAILABLE | ON_LOAN | ON_HOLD | LOST | DAMAGED | WITHDRAWN */
+  status: string;
+  titleId: string;
+  titleBn: string;
+  titleEn: string | null;
+  seriesNo: number | null;
+  coverFileId: string | null;
+  seriesNameBn: string | null;
+  loanId: string | null;
+  issuedAt: string | null;
+  dueDate: string | null;
+  borrower: StoryDeskStudentT | null;
+  heldFor: StoryDeskStudentT | null;
+  waitingCount: number;
+}
+
+export interface LibraryHolidayRuleT {
+  id: string;
+  nameBn: string;
+  fromDay: string;
+  toDay: string;
+  dueDay: string;
+  maxConcurrent: number;
+  active: boolean;
+}
+
+const DESK_STUDENT_FIELDS = `id name schoolId rollNumber classLabelBn sectionNameBn activeLoans maxLoans overdue`;
+const HOLIDAY_FIELDS = `id nameBn fromDay toDay dueDay maxConcurrent active`;
+
+export const STORY_COPY_BY_CODE = gql<{ storyCopyByCode: StoryCopyLookupT }, { code: string }>`
+  query StoryCopyByCode($code: String!) {
+    storyCopyByCode(code: $code) {
+      copyId code status titleId titleBn titleEn seriesNo coverFileId seriesNameBn loanId issuedAt dueDate waitingCount
+      borrower { ${DESK_STUDENT_FIELDS} }
+      heldFor { ${DESK_STUDENT_FIELDS} }
+    }
+  }
+`;
+
+export const STORY_DESK_STUDENTS = gql<{ storyDeskStudents: StoryDeskStudentT[] }, { search: string }>`
+  query StoryDeskStudents($search: String!) {
+    storyDeskStudents(search: $search) { ${DESK_STUDENT_FIELDS} }
+  }
+`;
+
+export const STORY_DESK_TODAY = gql<{ storyDeskToday: StoryDeskStudentT[] }>`
+  query StoryDeskToday {
+    storyDeskToday { ${DESK_STUDENT_FIELDS} }
+  }
+`;
+
+export const STORY_ISSUE = gql<{ issueBook: { id: string; dueDate: string } }, { accessionNo: string; borrowerId: string }>`
+  mutation StoryIssue($accessionNo: String!, $borrowerId: String!) {
+    issueBook(accessionNo: $accessionNo, borrowerType: "STUDENT", borrowerId: $borrowerId) { id dueDate }
+  }
+`;
+
+export const STORY_RETURN = gql<{ returnBook: { id: string } }, { loanId: string; read: boolean; sticker: boolean }>`
+  mutation StoryReturn($loanId: String!, $read: Boolean, $sticker: Boolean) {
+    returnBook(loanId: $loanId, read: $read, sticker: $sticker) { id }
+  }
+`;
+
+export const ADD_STORY_COPIES = gql<{ addStoryCopies: string[] }, { seriesId: string; copiesEach: number; seriesNos?: number[] | null }>`
+  mutation AddStoryCopies($seriesId: String!, $copiesEach: Int!, $seriesNos: [Int!]) {
+    addStoryCopies(seriesId: $seriesId, copiesEach: $copiesEach, seriesNos: $seriesNos)
+  }
+`;
+
+export const LIBRARY_HOLIDAY_RULES = gql<{ libraryHolidayRules: LibraryHolidayRuleT[] }, { includeInactive?: boolean | null }>`
+  query LibraryHolidayRules($includeInactive: Boolean) {
+    libraryHolidayRules(includeInactive: $includeInactive) { ${HOLIDAY_FIELDS} }
+  }
+`;
+
+export const SAVE_LIBRARY_HOLIDAY_RULE = gql<
+  { saveLibraryHolidayRule: LibraryHolidayRuleT },
+  { ruleId?: string | null; nameBn: string; fromDay: string; toDay: string; dueDay: string; maxConcurrent: number; active?: boolean | null }
+>`
+  mutation SaveLibraryHolidayRule($ruleId: String, $nameBn: String!, $fromDay: String!, $toDay: String!, $dueDay: String!, $maxConcurrent: Int!, $active: Boolean) {
+    saveLibraryHolidayRule(ruleId: $ruleId, nameBn: $nameBn, fromDay: $fromDay, toDay: $toDay, dueDay: $dueDay, maxConcurrent: $maxConcurrent, active: $active) { ${HOLIDAY_FIELDS} }
+  }
+`;

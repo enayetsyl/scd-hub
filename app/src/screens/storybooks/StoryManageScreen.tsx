@@ -21,6 +21,9 @@ import {
   STORY_SHELF_QUERY,
   STORY_TAGS_QUERY,
   UPDATE_STORY_TAG,
+  LIBRARY_HOLIDAY_RULES,
+  SAVE_LIBRARY_HOLIDAY_RULE,
+  type LibraryHolidayRuleT,
   type StoryAgeBandT,
   type StoryTagT,
 } from "../../graphql/storybooks";
@@ -28,12 +31,13 @@ import { Badge, Body, Button, Card, Chip, ChipRow, Field, Muted, Notice, Screen 
 import { QueryGate } from "../../components/QueryGate";
 import { friendlyError } from "../../lib/errors";
 import { STR, bnNum, classLevelLabel } from "../../lib/labels";
+import { LIBRARY_POLICIES_QUERY, UPSERT_LIBRARY_POLICY } from "../../graphql/operations";
 import type { StorybooksStackParamList } from "../../navigation/types";
 import { space, typeScale, useColors } from "../../theme";
 
 type Props = NativeStackScreenProps<StorybooksStackParamList, "StoryManage">;
 type Msg = { tone: "ok" | "danger"; text: string } | null;
-type Tab = "series" | "tags" | "bands";
+type Tab = "series" | "tags" | "bands" | "rules";
 
 function SeriesTab({ onOpen, setMsg }: { onOpen: (id: string, name: string) => void; setMsg: (m: Msg) => void }): React.ReactElement {
   const colors = useColors();
@@ -256,6 +260,96 @@ function BandsTab({ setMsg }: { setMsg: (m: Msg) => void }): React.ReactElement 
   );
 }
 
+/** SB-2 (W8): the usual student rule (LibraryPolicy STUDENT) and dated holiday rules. */
+function StudentPolicyCard({ setMsg }: { setMsg: (m: Msg) => void }): React.ReactElement {
+  const [q] = useQuery({ query: LIBRARY_POLICIES_QUERY });
+  const p = q.data?.libraryPolicies.find((x) => x.borrowerType === "STUDENT");
+  const [{ fetching }, upsert] = useMutation(UPSERT_LIBRARY_POLICY);
+  const [vals, setVals] = useState<Record<string, string> | null>(null);
+  const v = vals ?? (p ? { max: String(p.maxConcurrent), days: String(p.loanDays), renew: String(p.maxRenewals), hold: String(p.holdDays) } : null);
+  if (!v) return <Muted>{STR.loading}</Muted>;
+  const set = (k: string) => (t: string) => setVals({ ...v, [k]: t });
+  const save = async (): Promise<void> => {
+    const res = await upsert({ borrowerType: "STUDENT", maxConcurrent: Number(v.max), loanDays: Number(v.days), maxRenewals: Number(v.renew), holdDays: Number(v.hold) });
+    setMsg(res.error ? { tone: "danger", text: friendlyError(res.error) } : { tone: "ok", text: STR.stbSaved });
+  };
+  return (
+    <Card style={{ marginBottom: space(3) }}>
+      <Body style={{ fontWeight: "700", marginBottom: space(2) }}>{STR.stbRulesStudent}</Body>
+      <Field label={STR.stbRuleMax} value={v.max} onChangeText={set("max")} keyboardType="number-pad" />
+      <Field label={STR.stbRuleDays} value={v.days} onChangeText={set("days")} keyboardType="number-pad" />
+      <Field label={STR.stbRuleRenew} value={v.renew} onChangeText={set("renew")} keyboardType="number-pad" />
+      <Field label={STR.stbRuleHold} value={v.hold} onChangeText={set("hold")} keyboardType="number-pad" />
+      <Button title={STR.stbSave} loading={fetching} onPress={() => void save()} />
+    </Card>
+  );
+}
+
+function HolidayForm({ rule, onSaved }: { rule: LibraryHolidayRuleT | null; onSaved: (m: Msg) => void }): React.ReactElement {
+  const [{ fetching }, save] = useMutation(SAVE_LIBRARY_HOLIDAY_RULE);
+  const [nameBn, setName] = useState(rule?.nameBn ?? "");
+  const [fromDay, setFrom] = useState(rule?.fromDay ?? "");
+  const [toDay, setTo] = useState(rule?.toDay ?? "");
+  const [dueDay, setDue] = useState(rule?.dueDay ?? "");
+  const [max, setMax] = useState(rule ? String(rule.maxConcurrent) : "4");
+  const submit = async (active?: boolean): Promise<void> => {
+    const res = await save({ ruleId: rule?.id ?? null, nameBn, fromDay: fromDay.trim(), toDay: toDay.trim(), dueDay: dueDay.trim(), maxConcurrent: Number(max), active: active ?? null });
+    onSaved(res.error ? { tone: "danger", text: friendlyError(res.error) } : { tone: "ok", text: STR.stbSaved });
+  };
+  return (
+    <Card style={{ marginBottom: space(3) }}>
+      <Field label={STR.stbRuleName} value={nameBn} onChangeText={setName} autoCapitalize="sentences" />
+      <Field label={STR.stbRuleFrom} value={fromDay} onChangeText={setFrom} placeholder="2026-12-20" />
+      <Field label={STR.stbRuleTo} value={toDay} onChangeText={setTo} placeholder="2026-12-31" />
+      <Field label={STR.stbRuleDue} value={dueDay} onChangeText={setDue} placeholder="2027-01-01" />
+      <Field label={STR.stbRuleMax} value={max} onChangeText={setMax} keyboardType="number-pad" />
+      <View style={{ flexDirection: "row", gap: space(2) }}>
+        <Button title={STR.stbSave} loading={fetching} onPress={() => void submit()} />
+        {rule?.active ? <Button title={STR.stbRetire} variant="ghost" onPress={() => void submit(false)} /> : null}
+      </View>
+    </Card>
+  );
+}
+
+function RulesTab({ setMsg }: { setMsg: (m: Msg) => void }): React.ReactElement {
+  const colors = useColors();
+  const [q, refetch] = useQuery({ query: LIBRARY_HOLIDAY_RULES, variables: { includeInactive: true } });
+  const [editing, setEditing] = useState<string | "new" | null>(null);
+  const saved = (m: Msg): void => {
+    setMsg(m);
+    if (m?.tone === "ok") setEditing(null);
+    refetch({ requestPolicy: "network-only" });
+  };
+  return (
+    <View>
+      <StudentPolicyCard setMsg={setMsg} />
+      <Body style={{ fontWeight: "700", marginBottom: space(1) }}>{STR.stbRulesHoliday}</Body>
+      <Muted style={{ marginBottom: space(2) }}>{STR.stbRulesHint}</Muted>
+      {(q.data?.libraryHolidayRules ?? []).map((r) =>
+        editing === r.id ? (
+          <HolidayForm key={r.id} rule={r} onSaved={saved} />
+        ) : (
+          <Pressable
+            key={r.id}
+            onPress={() => setEditing(r.id)}
+            accessibilityRole="button"
+            style={{ paddingVertical: space(2), borderBottomWidth: 1, borderBottomColor: colors.border, flexDirection: "row", gap: space(2), alignItems: "center" }}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={{ ...typeScale.bodyStrong, color: colors.textPrimary }}>{r.nameBn}</Text>
+              <Muted style={{ fontSize: 12 }}>
+                {STR.stbRuleLine.replace("{from}", r.fromDay).replace("{to}", r.toDay).replace("{n}", bnNum(r.maxConcurrent)).replace("{due}", r.dueDay)}
+              </Muted>
+            </View>
+            {!r.active ? <Badge text={STR.stbRetired} tone="muted" /> : null}
+          </Pressable>
+        ),
+      )}
+      {editing === "new" ? <HolidayForm rule={null} onSaved={saved} /> : <Button title={STR.stbRuleAdd} variant="secondary" onPress={() => setEditing("new")} style={{ marginTop: space(3) }} />}
+    </View>
+  );
+}
+
 export default function StoryManageScreen({ navigation }: Props): React.ReactElement {
   const [tab, setTab] = useState<Tab>("series");
   const [msg, setMsg] = useState<Msg>(null);
@@ -266,11 +360,13 @@ export default function StoryManageScreen({ navigation }: Props): React.ReactEle
           <Chip label={STR.stbTabSeries} selected={tab === "series"} onPress={() => setTab("series")} />
           <Chip label={STR.stbTabTags} selected={tab === "tags"} onPress={() => setTab("tags")} />
           <Chip label={STR.stbTabBands} selected={tab === "bands"} onPress={() => setTab("bands")} />
+          <Chip label={STR.stbTabRules} selected={tab === "rules"} onPress={() => setTab("rules")} />
         </ChipRow>
         {msg ? <Notice tone={msg.tone} message={msg.text} /> : null}
         {tab === "series" ? <SeriesTab setMsg={setMsg} onOpen={(seriesId, title) => navigation.navigate("StorySeries", { seriesId, title })} /> : null}
         {tab === "tags" ? <TagsTab setMsg={setMsg} /> : null}
         {tab === "bands" ? <BandsTab setMsg={setMsg} /> : null}
+        {tab === "rules" ? <RulesTab setMsg={setMsg} /> : null}
       </ScrollView>
     </Screen>
   );
