@@ -43,6 +43,7 @@ import { openStoredFile } from "../../lib/files";
 import { subscribeLiveEvents } from "../../lib/liveEvents";
 import { useFileOpen } from "../../lib/useFileOpen";
 import { openPrintSource } from "../../lib/printSource";
+import { getItem, setItem } from "../../lib/storage";
 import { useAuth } from "../../auth/AuthContext";
 import { useToast } from "../../state/ToastContext";
 import { useConfirm } from "../../state/ConfirmContext";
@@ -52,6 +53,22 @@ type Props = NativeStackScreenProps<PrintStackParamList, "PrintHome">;
 
 /** The Office's three buckets, in the order a job moves through them. */
 const BUCKETS = ["REQUESTED", "PRINTED", "DELIVERED"] as const;
+
+/** D-#1010: the buckets the Office may view in class order — the two work tabs. The
+ *  delivered history stays newest-first. */
+const CLASS_SORTABLE: readonly string[] = ["REQUESTED", "PRINTED"];
+type QueueSort = "ARRIVAL" | "CLASS";
+/** The device remembers the Office's last choice (a per-device convenience). */
+const SORT_PREF_KEY = "scd.printQueueSort";
+
+/** D-#1010: the class + section a row files under in the by-class view — the job's own
+ *  class, else the class a CLASS_PRESENT count is for (the server groups the same way). */
+const classGroupOf = (r: PrintRequestT): { key: string; label: string } => {
+  const level = r.classLevel ?? r.copiesClassLevel;
+  if (level === null) return { key: "none", label: STR.prNoClass };
+  const section = isWholeClassSectionName(r.sectionNameBn) ? "" : ` ${r.sectionNameBn}`;
+  return { key: `${level}|${section}`, label: `${classLevelLabel(level)}${section}` };
+};
 
 /** D-#461: the queue pages — DELIVERED runs to hundreds of rows over a term. */
 const PAGE_SIZE = 25;
@@ -104,6 +121,26 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
   // D-#461: 0-based page within the current bucket; reset whenever the bucket changes
   // (page 3 of DELIVERED is meaningless the moment you switch to REQUESTED).
   const [page, setPage] = useState(0);
+  // D-#1010: arrival order stays the default; "By class" is opt-in, shared by both work tabs.
+  const [sortBy, setSortBy] = useState<QueueSort>("ARRIVAL");
+  useEffect(() => {
+    let live = true;
+    getItem(SORT_PREF_KEY)
+      .then((v) => {
+        if (live && v === "CLASS") setSortBy("CLASS");
+      })
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, []);
+  const chooseSort = (s: QueueSort): void => {
+    setSortBy(s);
+    setPage(0); // page 2 of one order is meaningless in the other
+    void setItem(SORT_PREF_KEY, s).catch(() => undefined);
+  };
+  const sortApplies = CLASS_SORTABLE.includes(bucket);
+  const byClass = sortApplies && sortBy === "CLASS";
   // D-#459: a same-day glance at rotation-expected assignments with no matching print
   // request — a separate view from the three status buckets, not a PrintRequest status.
   const [view, setView] = useState<"QUEUE" | "GAPS">("QUEUE");
@@ -122,7 +159,7 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
   // Printing-done tab empty until a manual refresh (live-testing find).
   const [queueQ, refetchQueue] = useQuery({
     query: PRINT_QUEUE_QUERY,
-    variables: { status: bucket, limit: PAGE_SIZE, offset: page * PAGE_SIZE },
+    variables: { status: bucket, limit: PAGE_SIZE, offset: page * PAGE_SIZE, sort: byClass ? "CLASS" : "ARRIVAL" },
     pause: !isOffice || view !== "QUEUE",
     requestPolicy: "cache-and-network",
   });
@@ -458,6 +495,21 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
             ))}
             <Chip label={STR.prsNotSubmitted} selected={view === "GAPS"} onPress={() => setView("GAPS")} />
           </ChipRow>
+          {/* D-#1010: the work tabs can be viewed Nursery → KG → Class 1…5 instead. */}
+          {view === "QUEUE" && sortApplies ? (
+            <ChipRow>
+              <Chip
+                label={`↓ ${STR.prSortArrival}`}
+                selected={sortBy === "ARRIVAL"}
+                onPress={() => chooseSort("ARRIVAL")}
+              />
+              <Chip
+                label={`↓ ${STR.prSortClass}`}
+                selected={sortBy === "CLASS"}
+                onPress={() => chooseSort("CLASS")}
+              />
+            </ChipRow>
+          ) : null}
           {view === "QUEUE" ? (
             queueQ.error ? (
               <ErrorBanner message={friendlyError(queueQ.error)} onRetry={() => refetchQueue({ requestPolicy: "network-only" })} />
@@ -467,7 +519,20 @@ export default function PrintHomeScreen({ navigation }: Props): React.ReactEleme
               <EmptyState message={STR.prNoJobs} />
             ) : (
               <>
-                {queue.map((r) => <Row key={r.id} r={r} office />)}
+                {queue.map((r, i) => {
+                  // D-#1010: in class order, each class/section group gets a heading so
+                  // the Office can find a class at a glance.
+                  const g = byClass ? classGroupOf(r) : null;
+                  const showHead = g !== null && (i === 0 || classGroupOf(queue[i - 1]).key !== g.key);
+                  return (
+                    <React.Fragment key={r.id}>
+                      {showHead ? (
+                        <Body style={{ fontWeight: "700", marginTop: i === 0 ? 0 : space(2) }}>{g!.label}</Body>
+                      ) : null}
+                      <Row r={r} office />
+                    </React.Fragment>
+                  );
+                })}
                 {/* D-#461: the pager — shown once the bucket outgrows a single page. */}
                 {queueTotal > PAGE_SIZE ? (
                   <View
