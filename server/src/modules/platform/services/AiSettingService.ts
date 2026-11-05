@@ -144,7 +144,10 @@ export async function setAiSettings(
   const auth = assertCanEdit(authIn);
   await refreshAiConfig(true);
   const newKey = input.apiKey?.trim() || null;
-  if (newKey && !/^[A-Za-z0-9_\-]{20,200}$/.test(newKey)) throw new Error("কী (key) দেখতে সঠিক নয়");
+  // Shape only — Google's own test below is the real check. Keys are not one format:
+  // classic "AIza…" (39 chars) and the newer AI Studio "AQ.…" keys, which carry dots.
+  if (newKey && /\s/.test(newKey)) throw new Error("কী-র মাঝে ফাঁকা জায়গা আছে — আবার কপি করে বসান");
+  if (newKey && !/^[\x21-\x7E]{20,300}$/.test(newKey)) throw new Error("কী (key) দেখতে সঠিক নয়");
   const modelChanged = input.model !== undefined && input.model !== null;
   const newModel = modelChanged ? input.model!.trim() || null : cache?.model ?? null;
   if (newModel && !/^[a-z0-9.\-]{3,80}$/.test(newModel)) throw new Error("মডেলের নাম সঠিক নয়");
