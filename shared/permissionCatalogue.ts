@@ -780,6 +780,21 @@ export const FEATURE_CATALOGUE = {
       manage: { en: "Upload and manage class books", bn: "শ্রেণির বই আপলোড ও সম্পাদনা", desc: "Upload a book PDF (turned into page images), rename, move class, hide, delete", teacher: false, office: true, flags: [] },
     },
   },
+  // Activity sheets (AS-1..AS-6, D-#988/#989, docs/prd-activity-sheets.md): the 3,597-sheet bank —
+  // trays of pre-printed sheets at the office, guardian-chosen sheets printed with the child's name.
+  activity_sheets: {
+    group: "content_and_books",
+    en: "Activity sheets",
+    bn: "অ্যাক্টিভিটি শিট",
+    actions: {
+      view: { en: "Browse activity sheets", bn: "অ্যাক্টিভিটি শিট দেখা", desc: "Banks, levels, sample sheets, a child's sheets", teacher: true, office: true, flags: [] },
+      issue: { en: "Give sheets at the desk", bn: "ডেস্কে শিট দেওয়া", desc: "Register a tray sheet to a child (scan + school ID), print a sheet on the spot, print tray stock, the guardian batch", teacher: false, office: true, flags: [] },
+      check: { en: "Hand out and check sheets", bn: "শিট বিতরণ ও জমা নেওয়া", desc: "Hand printed sheets to a section, take returns (result + sticker), stickers owed", teacher: true, office: true, flags: [] },
+      manage: { en: "Manage activity banks", bn: "অ্যাক্টিভিটি ব্যাংক যোগ ও সম্পাদনা", desc: "Add a bank (sheet PDF + answer PDF + index CSV), add / replace / retire sheets, levels and skill area", teacher: false, office: true, flags: [] },
+      settings: { en: "Activity sheet rules", bn: "অ্যাক্টিভিটি শিটের নিয়ম", desc: "Weekly requests, open sheets, monthly target, restock size, busy-time switch", teacher: false, office: true, flags: [] },
+      guardian_access: { en: "Activity sheets for guardians", bn: "অভিভাবকদের জন্য অ্যাক্টিভিটি শিট চালু করা", desc: "Switch activity sheets on for every guardian or for chosen guardians (D-#1011); off = families see nothing", teacher: false, office: false, flags: ["PRINCIPAL_DEFAULT"] },
+    },
+  },
   chat: {
     group: "communication",
     en: "Staff chat & notices",
@@ -836,6 +851,7 @@ export const FEATURE_CATALOGUE = {
       edit: { en: "Manage the catalog", bn: "ক্যাটালগে বই যোগ ও সংশোধন", desc: "Titles, copies, copy status", teacher: false, office: true, flags: [] },
       settings: { en: "Loan rules", bn: "ধারের নিয়ম ঠিক করা", desc: "Loan days, limits, renewals, hold days", teacher: false, office: true, flags: [] },
       assign: { en: "Assign librarian duty", bn: "লাইব্রেরিয়ানের দায়িত্ব বরাদ্দ", desc: "Give or revoke desk duty", teacher: false, office: true, flags: [] },
+      guardian_access: { en: "Storybooks for guardians", bn: "অভিভাবকদের জন্য গল্পের বই চালু করা", desc: "Switch the storybook shelf on for every guardian or for chosen guardians (D-#1011); off = families see nothing", teacher: false, office: false, flags: ["PRINCIPAL_DEFAULT"] },
     },
   },
   printing: {
@@ -1011,6 +1027,15 @@ export const FEATURE_CATALOGUE = {
       // gaps become the brief for the next question batch. Principal + Office by default (owner
       // 2026-11-04); the module doors mastery:settings / mastery:review open it too.
       bank_coverage: { en: "Question-bank coverage", bn: "প্রশ্ন-ব্যাংক কভারেজ", desc: "Gold questions per tagged objective row of a class × subject, the empty rows, and the gaps as a brief for the next question batch (whole school)", teacher: false, office: true, flags: [] },
+      // Storybook shelf SB-6 (D-#980, docs/prd-storybook-reading.md): one switch per tab of the
+      // গল্পের বই রিপোর্ট screen. Office on by default — it runs the shelf.
+      storybook_series: { en: "Storybooks by series", bn: "সিরিজ অনুযায়ী গল্পের বই", desc: "Reads, readers, read rate and waiting children per storybook series over a window", teacher: false, office: true, flags: [] },
+      storybook_books: { en: "Storybooks by book", bn: "বই অনুযায়ী গল্পের বই", desc: "Reads and waiting per book, books to print a second copy of, books never borrowed", teacher: false, office: true, flags: [] },
+      storybook_readers: { en: "Storybook readers", bn: "গল্পের বইয়ের পাঠক", desc: "Each child's reading and favourite type, children who stopped, preference by class and section (names children)", teacher: false, office: true, flags: [] },
+      // Activity sheets AS-5: one switch per tab of the অ্যাক্টিভিটি শিট রিপোর্ট.
+      activity_skills: { en: "Activity sheets by skill", bn: "দক্ষতা অনুযায়ী অ্যাক্টিভিটি শিট", desc: "Sheets done per skill area and level over a window", teacher: false, office: true, flags: [] },
+      activity_sheets: { en: "Activity sheets by bank and sheet", bn: "ব্যাংক ও শিট অনুযায়ী", desc: "Popularity and completion per bank / level; sheets often returned incomplete", teacher: false, office: true, flags: [] },
+      activity_students: { en: "Activity sheet students", bn: "শিক্ষার্থী অনুযায়ী অ্যাক্টিভিটি শিট", desc: "Each child's sheets, skill spread and level; sheets not returned (names children)", teacher: false, office: true, flags: [] },
     },
   },
 } as const satisfies Record<string, CatalogueFeature>;

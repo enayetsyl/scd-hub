@@ -11,6 +11,7 @@ import { useQuery } from "urql";
 import { CLASS_TEST_STUDENT_PROFILE_QUERY } from "../../graphql/classTest";
 import { STUDENT_WHOLE_PICTURE_QUERY } from "../../graphql/wholePicture";
 import { WholePictureCard } from "../../components/WholePictureCard";
+import { AllRounderCard } from "../../components/AllRounderCard";
 import { Screen, Card, Body, Muted, Badge, Loader, Notice } from "../../components/ui";
 import { MiniBarChart, type BarDatum } from "../../components/MiniBarChart";
 import { Pager } from "../../components/Pager";
@@ -60,6 +61,8 @@ export default function ClassTestStudentProfileScreen({ route }: Props): React.R
         {/* Cross-tracker roll-up sits ABOVE the class-test detail: it is the answer to
             "how is this child doing", of which marks are only one quarter. */}
         {wp ? <WholePictureCard wp={wp} /> : null}
+        {/* SB-7 (D-#987): the all-rounder card the family sees, with the raw figures. */}
+        <AllRounderCard studentId={studentId} staff />
 
         {q.error ? (
           <Notice message={friendlyError(q.error)} tone="danger" />

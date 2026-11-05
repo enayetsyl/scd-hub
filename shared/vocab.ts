@@ -1338,6 +1338,13 @@ export const NOTIFICATION_KINDS = [
   "COVER_ASSIGNED",
   "LIBRARY_DUE_SOON",
   "LIBRARY_OVERDUE",
+  /** SB-3 (D-#982): a waitlisted storybook is held for the child at the office. */
+  "LIBRARY_HOLD_READY",
+  /** SB-4 (D-#984): a child borrowed a storybook / earned a sticker for reading one. */
+  "STORYBOOK_ISSUED",
+  "STORYBOOK_STICKER",
+  /** AS-4 (D-#988/#991): a child's activity sheet came back and was checked. */
+  "ACTIVITY_SHEET_CHECKED",
   "CLASS_TEST_RESULT",
   // D-#472: the class test is CONFIRMED and gone to print — tell the family what is
   // coming (subject, chapter, date, marks, minutes) while there is still time to revise.
@@ -1528,6 +1535,10 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   COVER_ASSIGNED: "কাভার ক্লাসের দায়িত্ব",
   LIBRARY_DUE_SOON: "বই ফেরতের স্মরণিকা",
   LIBRARY_OVERDUE: "বই ফেরত বকেয়া",
+  LIBRARY_HOLD_READY: "বই রাখা আছে",
+  STORYBOOK_ISSUED: "নতুন গল্পের বই",
+  STORYBOOK_STICKER: "বই পড়ার স্টিকার",
+  ACTIVITY_SHEET_CHECKED: "অ্যাক্টিভিটি শিট দেখা হয়েছে",
   CLASS_TEST_RESULT: "ক্লাস টেস্টের ফলাফল",
   CLASS_TEST_UPCOMING: "আসন্ন ক্লাস টেস্ট",
   CLASS_TEST_OVERDUE_DIGEST: "বিলম্বিত ক্লাস টেস্ট রিপোর্ট",
@@ -1604,6 +1615,10 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   COVER_ASSIGNED: "Cover assigned",
   LIBRARY_DUE_SOON: "Book due soon",
   LIBRARY_OVERDUE: "Book overdue",
+  LIBRARY_HOLD_READY: "Book held for you",
+  STORYBOOK_ISSUED: "New storybook",
+  STORYBOOK_STICKER: "Reading sticker",
+  ACTIVITY_SHEET_CHECKED: "Activity sheet checked",
   CLASS_TEST_RESULT: "Class-test result",
   CLASS_TEST_UPCOMING: "Upcoming class test",
   CLASS_TEST_OVERDUE_DIGEST: "Overdue class-test reports",
@@ -2087,6 +2102,69 @@ export const BOOK_LANGUAGE_LABELS_BN: Record<BookLanguage, string> = {
 };
 export const BOOK_LANGUAGE_LABELS_EN: Record<BookLanguage, string> = {
   BANGLA: "Bangla", ARABIC: "Arabic", ENGLISH: "English", OTHER: "Other",
+};
+
+/** Storybook series lifecycle (SB-1, D-#980/#986): a DRAFT series is staff-only;
+ *  PUBLISHED shows to guardians of its age band; HIDDEN is withdrawn but kept. */
+export const STORY_SERIES_STATUSES = ["DRAFT", "PUBLISHED", "HIDDEN"] as const;
+export type StorySeriesStatus = (typeof STORY_SERIES_STATUSES)[number];
+
+// ---------------------------------------------------------------------------
+// Activity sheets (AS-1..AS-6, D-#988/#989, docs/prd-activity-sheets.md)
+// ---------------------------------------------------------------------------
+
+/** One skill area per bank (owner-editable). */
+export const ACTIVITY_SKILL_AREAS = ["HAND", "LANGUAGE", "MATHS", "THINKING"] as const;
+export type ActivitySkillArea = (typeof ACTIVITY_SKILL_AREAS)[number];
+export const ACTIVITY_SKILL_LABELS_BN: Record<ActivitySkillArea, string> = {
+  HAND: "হাতের কাজ", LANGUAGE: "ভাষা", MATHS: "গণিত", THINKING: "চিন্তা",
+};
+export const ACTIVITY_SKILL_LABELS_EN: Record<ActivitySkillArea, string> = {
+  HAND: "Hand skills", LANGUAGE: "Language", MATHS: "Maths", THINKING: "Thinking",
+};
+
+/** Easy / Medium / Hard — the letter inside every sheet id (SD-E-001). */
+export const ACTIVITY_LEVELS = ["E", "M", "H"] as const;
+export type ActivityLevel = (typeof ACTIVITY_LEVELS)[number];
+export const ACTIVITY_LEVEL_LABELS_BN: Record<ActivityLevel, string> = { E: "সহজ", M: "মাঝারি", H: "কঠিন" };
+export const ACTIVITY_LEVEL_LABELS_EN: Record<ActivityLevel, string> = { E: "Easy", M: "Medium", H: "Hard" };
+
+export const ACTIVITY_BANK_STATUSES = ["DRAFT", "PUBLISHED", "RETIRED"] as const;
+export type ActivityBankStatus = (typeof ACTIVITY_BANK_STATUSES)[number];
+
+/** How a sheet reached the child: a tray pick at the office, a guardian request, a one-off desk print. */
+export const ACTIVITY_ISSUE_PATHS = ["TRAY", "GUARDIAN", "DESK_PRINT"] as const;
+export type ActivityIssuePath = (typeof ACTIVITY_ISSUE_PATHS)[number];
+export const ACTIVITY_ISSUE_STATUSES = ["REQUESTED", "PRINTED", "HANDED", "RETURNED", "NOT_RETURNED", "CANCELLED"] as const;
+export type ActivityIssueStatus = (typeof ACTIVITY_ISSUE_STATUSES)[number];
+export const ACTIVITY_RESULTS = ["ALL_CORRECT", "SOME_MISTAKES", "INCOMPLETE"] as const;
+export type ActivityResult = (typeof ACTIVITY_RESULTS)[number];
+export const ACTIVITY_RESULT_LABELS_BN: Record<ActivityResult, string> = {
+  ALL_CORRECT: "সব ঠিক", SOME_MISTAKES: "কিছু ভুল", INCOMPLETE: "অসম্পূর্ণ",
+};
+export const ACTIVITY_RESULT_LABELS_EN: Record<ActivityResult, string> = {
+  ALL_CORRECT: "All correct", SOME_MISTAKES: "Some mistakes", INCOMPLETE: "Not finished",
+};
+
+/** One printed page: tray stock (no child on it) or a page printed for one child. */
+export const ACTIVITY_COPY_KINDS = ["STOCK", "PERSONAL"] as const;
+export type ActivityCopyKind = (typeof ACTIVITY_COPY_KINDS)[number];
+export const ACTIVITY_COPY_STATUSES = ["IN_TRAY", "TAKEN", "RETURNED", "LOST"] as const;
+export type ActivityCopyStatus = (typeof ACTIVITY_COPY_STATUSES)[number];
+
+/** Guardian release switch (D-#1011): a guardian-facing feature stays hidden from every family
+ *  until it is switched on — for all guardians, or for chosen guardians only. No row = OFF.
+ *  The staff side (desk, banks, reports) never depends on it. */
+export const GUARDIAN_FEATURES = ["STORYBOOKS", "ACTIVITY_SHEETS"] as const;
+export type GuardianFeature = (typeof GUARDIAN_FEATURES)[number];
+/** Who may switch each one (PRINCIPAL_DEFAULT catalogue actions). */
+export const GUARDIAN_FEATURE_PERMISSION: Record<GuardianFeature, "library:guardian_access" | "activity_sheets:guardian_access"> = {
+  STORYBOOKS: "library:guardian_access",
+  ACTIVITY_SHEETS: "activity_sheets:guardian_access",
+};
+export const GUARDIAN_FEATURE_LABELS_BN: Record<GuardianFeature, string> = {
+  STORYBOOKS: "গল্পের বই",
+  ACTIVITY_SHEETS: "অ্যাক্টিভিটি শিট",
 };
 
 

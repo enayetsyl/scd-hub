@@ -103,6 +103,10 @@ export const EXPECTED_ERROR_NAMES: ReadonlySet<string> = new Set([
   "LessonProgressError",
   "LetterError",
   "LibraryError",
+  // Activity sheets (AS-1..AS-4, D-#988): a CSV with no sheets, a level the bank lacks, a
+  // child over the weekly limit, a copy already in another child's hands — sentences for
+  // the Office or the guardian.
+  "ActivityError",
   // Mastery tracker catalogue (M-0, D-#775–#787): an import that would re-code a locked
   // outcome, a routing tag whose strand is missing, an inconsistent policy — sentences for
   // the Principal, never faults.
