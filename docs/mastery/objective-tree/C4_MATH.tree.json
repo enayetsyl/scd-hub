@@ -1,0 +1,3631 @@
+{
+ "format": "scd-objective-tree/1",
+ "classToken": "C4",
+ "subject": "MATH",
+ "status": "DRAFT",
+ "source": {
+  "book": "C4_MATH_Print_v2.2 (= C4_MATH_Book_v2.2 content)",
+  "files": [
+   "Book Review Material/Print File/C4_MATH_Print_v2.2.zip (IDML — the final print; exercise headings checked against Word v2.2)",
+   "Book Review Material/Class 4 Math/C4_MATH_Book_v2.2_Writer-Reviewer.docx (শিক্ষক-নোট ও শিখনফল, পরিশিষ্ট — নম্বর বণ্টন, নম্বর দেওয়ার নিয়ম, প্রশ্ন প্রণয়ন নীতি, সিদ্ধান্ত-লগ)",
+   "Book Review Material/Class 4 Math/C4_MATH_Book_v2.2_Student.docx (exercise inventory text)",
+   "Book Review Material/Class 4 Math/C4_MATH_Memo_v2.docx (সংস্করণ ২-এর বদল)"
+  ],
+  "readOn": "2026-11-04"
+ },
+ "chapters": [
+  {
+   "number": 1,
+   "titleBn": "সংখ্যা ও স্থানীয় মান"
+  },
+  {
+   "number": 2,
+   "titleBn": "যোগ ও বিয়োগ"
+  },
+  {
+   "number": 3,
+   "titleBn": "গুণ"
+  },
+  {
+   "number": 4,
+   "titleBn": "ভাগ"
+  },
+  {
+   "number": 5,
+   "titleBn": "গাণিতিক বাক্য"
+  },
+  {
+   "number": 6,
+   "titleBn": "জ্যামিতি ১ — কোণ ও রেখা"
+  },
+  {
+   "number": 7,
+   "titleBn": "গুণিতক ও গুণনীয়ক"
+  },
+  {
+   "number": 8,
+   "titleBn": "সাধারণ ভগ্নাংশ"
+  },
+  {
+   "number": 9,
+   "titleBn": "দশমিক ভগ্নাংশ"
+  },
+  {
+   "number": 10,
+   "titleBn": "পরিমাপ"
+  },
+  {
+   "number": 11,
+   "titleBn": "সময়"
+  },
+  {
+   "number": 12,
+   "titleBn": "জ্যামিতি ২ — ত্রিভুজ, আয়ত ও বর্গ"
+  }
+ ],
+ "questionTypes": [
+  {
+   "code": "QT-SHORT",
+   "labelBn": "সংক্ষিপ্ত প্রশ্ন (\"এক লাইনে সংজ্ঞা\" বাক্সের সংজ্ঞাসহ)",
+   "marksBn": "১",
+   "examUse": "অর্ধবার্ষিক প্র. ১ (১০×১; অধ্যায় ১–৬); বার্ষিক প্র. ১ (১০×১, দশমিকসহ; অধ্যায় ৭–১২)"
+  },
+  {
+   "code": "QT-CARD",
+   "labelBn": "সংখ্যা কার্ড দিয়ে সংখ্যা তৈরি (০ দিয়ে শুরু সংখ্যা ভুল)",
+   "marksBn": "২.৫",
+   "examUse": "অর্ধবার্ষিক প্র. ২ (৪×২.৫; অধ্যায় ১)"
+  },
+  {
+   "code": "QT-SOLVE",
+   "labelBn": "মান নির্ণয় — যোগ, বিয়োগ, গুণ, ভাগ, যাচাই (বইয়ের যেকোনো পদ্ধতি)",
+   "marksBn": "২",
+   "examUse": "অর্ধবার্ষিক প্র. ৩ (৬×২; অধ্যায় ২–৪)"
+  },
+  {
+   "code": "QT-AGE",
+   "labelBn": "বয়সের সমস্যা (ক, খ, গ)",
+   "marksBn": "১০ (তিন অংশ মিলে)",
+   "examUse": "অর্ধবার্ষিক প্র. ৪ (১০; অধ্যায় ২) — অংশভিত্তিক নম্বর বইয়ে নেই"
+  },
+  {
+   "code": "QT-WORD",
+   "labelBn": "কথার অঙ্ক — খাতা-ছক রীতিতে, শেষে আলাদা \"উত্তর:\" লাইন",
+   "marksBn": "অর্ধবার্ষিক ৮; বার্ষিক ৫",
+   "examUse": "অর্ধবার্ষিক প্র. ৫ (৫×৮; অধ্যায় ২–৫); বার্ষিক প্র. ৫ (৪×৫; অধ্যায় ৮–১১)"
+  },
+  {
+   "code": "QT-GEOM",
+   "labelBn": "জ্যামিতি — মাপা, আঁকা ও নাম (±২ মিমি, ±২°; বৃত্তচাপ রাখা)",
+   "marksBn": "৬",
+   "examUse": "অর্ধবার্ষিক প্র. ৬ (৩×৬; অধ্যায় ৬); বার্ষিক প্র. ৬ (৩×৬; অধ্যায় ১২)"
+  },
+  {
+   "code": "QT-FRAC",
+   "labelBn": "ভগ্নাংশ — যোগ, বিয়োগ, যোগ-বিয়োগ একসাথে (সমহর ও বিভিন্ন হর)",
+   "marksBn": "২.৫",
+   "examUse": "বার্ষিক প্র. ২ (৬×২.৫; অধ্যায় ৮) — লঘিষ্ঠ আকারে না হলে ½ কাটা"
+  },
+  {
+   "code": "QT-UNIT",
+   "labelBn": "একক রূপান্তর — সময়, দৈর্ঘ্য, ওজন",
+   "marksBn": "৩",
+   "examUse": "বার্ষিক প্র. ৩ (৭×৩; অধ্যায় ১০–১১)"
+  },
+  {
+   "code": "QT-CREATIVE",
+   "labelBn": "সৃজনশীল — গুণিতক, গুণনীয়ক, ল.সা.গু, গ.সা.গু",
+   "marksBn": "৪",
+   "examUse": "বার্ষিক প্র. ৪ (৪×৪; অধ্যায় ৭)"
+  },
+  {
+   "code": "QT-CLASS",
+   "labelBn": "শ্রেণির লিখিত কাজ — লিখিত পরীক্ষায় নয়",
+   "marksBn": "১ (বাড়ির কাজে)",
+   "examUse": "প্রশ্ন প্রণয়ন নীতি: \"যা শুধু শ্রেণি-মূল্যায়নে\" — কাঠির প্যাটার্ন, ঘড়ি ও ক্যালেন্ডারের কাজ (Claude-এর যোগ — বইয়ের ছকে নেই)"
+  },
+  {
+   "code": "QT-ORAL",
+   "labelBn": "মৌখিক / হাতে-কলমে (রুব্রিক)",
+   "marksBn": "— (লিখিত নম্বর নেই)",
+   "examUse": "শ্রেণি-মূল্যায়ন: নামতা ২–২০ (মৌখিক), নিজের জিনিস মেপে লেখা (পরিশিষ্ট চ)"
+  }
+ ],
+ "nodes": [
+  {
+   "code": "LO-C4-MATH-01-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-NUM",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "কোটি পর্যন্ত সংখ্যা কথা থেকে অঙ্কে লেখা",
+   "sourceText": "কোটি পর্যন্ত সংখ্যা পড়া ও লেখা (দুই রীতিতে) [ভাগ: অঙ্কে লেখা]",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/অনুশীলনী/2"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT"
+   ],
+   "homeTipBn": "\"পঁচিশ লক্ষ তিন হাজার সাত\" — মুখে বলে খাতায় অঙ্কে লিখতে দিন; মাঝের শূন্যগুলো ঠিক বসছে কি না দেখুন।",
+   "prereqCodes": [
+    "LO-C3-MATH-01-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "অর্ধবার্ষিক সংক্ষিপ্ত প্রশ্নে। মাঝের ফাঁকা ঘরে শূন্য বাদ পড়া (১২০৩৮৮৪ বনাম ১২৩৮৮৪) আসল ভুল।"
+  },
+  {
+   "code": "LO-C4-MATH-01-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-NUM",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "কোটি পর্যন্ত সংখ্যা দেশীয় রীতিতে পড়া ও কথায় লেখা",
+   "sourceText": "কোটি পর্যন্ত সংখ্যা পড়া ও লেখা (দুই রীতিতে) [ভাগ: দেশীয় রীতিতে কথায়] · সংখ্যা পড়ার চার-ধাপ নিয়ম (পর্যালোচনা-নোট)",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/অনুশীলনী/1",
+     "1/অনুশীলনী/5"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT"
+   ],
+   "homeTipBn": "পত্রিকার জনসংখ্যা বা দামের বড় সংখ্যা ডান থেকে ৩, তারপর ২-২ অঙ্কে দল করে পড়তে দিন।",
+   "prereqCodes": [
+    "LO-C4-MATH-01-01",
+    "LO-C3-MATH-01-02"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "পড়ার দল: ডান থেকে ৩, তারপর ২-২-২ (শিক্ষক-নোট)। ১/অনুশীলনী/৫ দুই রীতিরই — দেশীয় অংশ এখানে, আন্তর্জাতিক অংশ ০১-০৩.২-এ।"
+  },
+  {
+   "code": "LO-C4-MATH-01-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-NUM",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "দেশীয় ও আন্তর্জাতিক রীতিতে কমা বসানো ও পড়া",
+   "sourceText": "কোটি পর্যন্ত সংখ্যা পড়া ও লেখা (দুই রীতিতে) · কমা",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT"
+   ],
+   "homeTipBn": "একটি বড় সংখ্যা লিখে দুই রীতিতে কমা বসাতে দিন — দেশীয় রীতিতে লক্ষ-কোটি, আন্তর্জাতিক রীতিতে হাজার-মিলিয়ন।",
+   "prereqCodes": [],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": "শিক্ষক-নোট: দেশীয় রীতি প্রধান; আন্তর্জাতিক রীতি শুধু পড়া ও কমা পর্যন্ত।"
+  },
+  {
+   "code": "LO-C4-MATH-01-03.1",
+   "level": "SUB",
+   "parentCode": "LO-C4-MATH-01-03",
+   "domainCode": "DOM-MATH-NUM",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "দুই রীতিতে কমা বসানো (৫২,১৫,৭২৩ ও ৫,২১৫,৭২৩)",
+   "sourceText": "দেশীয় ও আন্তর্জাতিক রীতিতে কমা বসাই",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/অনুশীলনী/6"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C4-MATH-01-02"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-MATH-01-03.2",
+   "level": "SUB",
+   "parentCode": "LO-C4-MATH-01-03",
+   "domainCode": "DOM-MATH-NUM",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "আন্তর্জাতিক রীতিতে কথায় লেখা (মিলিয়ন, হাজার)",
+   "sourceText": "দেশীয় ও আন্তর্জাতিক রীতিতে কথায় লিখি",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/অনুশীলনী/5"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C4-MATH-01-03.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "কমা বসাতে পারে কিন্তু মিলিয়নের নাম গুলিয়ে ফেলে — আলাদা।"
+  },
+  {
+   "code": "LO-C4-MATH-01-04",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-PLACE",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "কোটি পর্যন্ত স্থানীয় মান — ছকে বসানো ও মান লেখা",
+   "sourceText": "স্থানীয় মান",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/অনুশীলনী/3",
+     "1/অনুশীলনী/4",
+     "1/অনুশীলনী/10"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT"
+   ],
+   "homeTipBn": "একটি আট অঙ্কের সংখ্যা লিখে জিজ্ঞেস করুন — নিযুত স্থানে কোন অঙ্ক, ৬ এর স্থানীয় মান কত?",
+   "prereqCodes": [
+    "LO-C3-MATH-01-04"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "স্থান: একক, দশক, শতক, হাজার, অযুত, লক্ষ, নিযুত, কোটি। ১/অনুশীলনী/১০-এর বহুনির্বাচনি ১–২ এখানে।"
+  },
+  {
+   "code": "LO-C4-MATH-01-05",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-NUM",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "বড় সংখ্যা তুলনা করে <, > বা = বসানো",
+   "sourceText": "তুলনা ও সাজানো [ভাগ: তুলনা]",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/অনুশীলনী/7"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT"
+   ],
+   "homeTipBn": "দুটি জেলার জনসংখ্যা লিখে কোনটি বেশি জিজ্ঞেস করুন — আগে অঙ্কের সংখ্যা, তারপর বাম থেকে ঘর মিলিয়ে।",
+   "prereqCodes": [
+    "LO-C4-MATH-01-04",
+    "LO-C3-MATH-01-06"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-MATH-01-06",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-NUM",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "বড় সংখ্যা ছোট থেকে বড় ও বড় থেকে ছোট সাজানো",
+   "sourceText": "তুলনা ও সাজানো [ভাগ: সাজানো]",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/অনুশীলনী/8"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT"
+   ],
+   "homeTipBn": "পাঁচটি বড় সংখ্যা লিখে ছোট থেকে বড়, তারপর উল্টো ক্রমে সাজাতে দিন।",
+   "prereqCodes": [
+    "LO-C4-MATH-01-05",
+    "LO-C3-MATH-01-07"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "ভিন্ন অঙ্কসংখ্যার সংখ্যা একসাথে (৯৯৯ … ৬৪৭১২৯৩৫) — আগে অঙ্ক গোনা।"
+  },
+  {
+   "code": "LO-C4-MATH-01-07",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-PLACE",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "সংখ্যা কার্ড দিয়ে বৃহত্তম ও ক্ষুদ্রতম সংখ্যা তৈরি",
+   "sourceText": "কার্ড দিয়ে বৃহত্তম-ক্ষুদ্রতম ও জোড়-বিজোড় সংখ্যা তৈরি",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CARD"
+   ],
+   "homeTipBn": "৫-৬টি অঙ্ক কাগজে লিখে কেটে দিন; সবচেয়ে বড় ও সবচেয়ে ছোট সংখ্যা বানাতে বলুন — ০ প্রথমে বসানো যাবে না।",
+   "prereqCodes": [],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": "অর্ধবার্ষিক প্রশ্ন ২ (৪ × ২.৫ = ১০) — মোহাম্মদপুরেও ১০ নম্বর, তাই বইয়ে বেশি অনুশীলন।"
+  },
+  {
+   "code": "LO-C4-MATH-01-07.1",
+   "level": "SUB",
+   "parentCode": "LO-C4-MATH-01-07",
+   "domainCode": "DOM-MATH-PLACE",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "সব কার্ড একবার করে নিয়ে বৃহত্তম ও ক্ষুদ্রতম সংখ্যা (০ প্রথমে নয়)",
+   "sourceText": "কার্ড দিয়ে বৃহত্তম-ক্ষুদ্রতম … সংখ্যা তৈরি",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/অনুশীলনী/9",
+     "1/অনুশীলনী/10"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CARD"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C4-MATH-01-04",
+    "LO-C3-MATH-01-04"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "০ দিয়ে শুরু সংখ্যা ভুল (D-১৫); ক্ষুদ্রতমে ০-কে দ্বিতীয় স্থানে বসানো আসল ভুল।"
+  },
+  {
+   "code": "LO-C4-MATH-01-07.2",
+   "level": "SUB",
+   "parentCode": "LO-C4-MATH-01-07",
+   "domainCode": "DOM-MATH-PLACE",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "কার্ড দিয়ে বৃহত্তম-ক্ষুদ্রতম জোড় ও বিজোড় সংখ্যা",
+   "sourceText": "কার্ড দিয়ে … জোড়-বিজোড় সংখ্যা তৈরি · বিজোড়-জোড় সংখ্যা তৈরির নিয়ম (পর্যালোচনা-নোট)",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/অনুশীলনী/9"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CARD"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C4-MATH-01-07.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "একক স্থানে জোড়/বিজোড় অঙ্ক রেখে বাকিগুলো সাজানো — বাড়তি শর্ত; .১ পারে কিন্তু এটা পারে না এমন শিশু থাকে। তৃতীয় শ্রেণিতে জোড়-বিজোড়ের সারি নেই (দ্বিতীয় শ্রেণির ০৪-০১-এ ছিল)।"
+  },
+  {
+   "code": "LO-C4-MATH-02-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-ADD",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "কয়েকটি বড় সংখ্যা একসাথে যোগ (লক্ষ পর্যন্ত, উপর-নিচে)",
+   "sourceText": "লক্ষ পর্যন্ত কয়েকটি সংখ্যার যোগ",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/অনুশীলনী/1",
+     "2/অনুশীলনী/2",
+     "2/অনুশীলনী/3"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SOLVE",
+    "QT-SHORT"
+   ],
+   "homeTipBn": "বাজারের তিন-চারটি বড় দাম উপর-নিচে ঘর মিলিয়ে যোগ করতে দিন; হাতের সংখ্যা উপরের সারিতে লিখছে কি না দেখুন।",
+   "prereqCodes": [
+    "LO-C3-MATH-02-03",
+    "LO-C3-MATH-02-02.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "অর্ধবার্ষিক প্রশ্ন ৩। এক ঘরের যোগফল ২০ পেরোলে হাতে ২ — তৃতীয় শ্রেণিতে শেখা; এখানে শুধু ঘর বেশি, তাই ভাগ নেই। ২/অনুশীলনী/১ (ঝালাই) যোগ ও বিয়োগ দুটোই — প্রতিটি আইটেম নিজের কোডে।"
+  },
+  {
+   "code": "LO-C4-MATH-02-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-SUB",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "ধার নিয়ে বড় সংখ্যার বিয়োগ (লক্ষ পর্যন্ত)",
+   "sourceText": "শূন্য পেরিয়ে ধারসহ বিয়োগ",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SOLVE"
+   ],
+   "homeTipBn": "ধার নেওয়ার পরের অঙ্ক উপরের সারিতে লিখছে কি না দেখুন; ১০০০০০ − ১৮৭-এর মতো অঙ্কে মাঝের সব ০ হয় ৯।",
+   "prereqCodes": [],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-MATH-02-02.1",
+   "level": "SUB",
+   "parentCode": "LO-C4-MATH-02-02",
+   "domainCode": "DOM-MATH-SUB",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "উপর-নিচে ধার নিয়ে বিয়োগ",
+   "sourceText": "ধার নিয়ে বিয়োগ (পর্যালোচনা-নোট: রাখা হয়েছে)",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/অনুশীলনী/1",
+     "2/অনুশীলনী/4"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SOLVE"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C3-MATH-03-02.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-MATH-02-02.2",
+   "level": "SUB",
+   "parentCode": "LO-C4-MATH-02-02",
+   "domainCode": "DOM-MATH-SUB",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "শূন্য পেরিয়ে ধার (১০০০০০ − ১৮৭)",
+   "sourceText": "শূন্য পেরিয়ে ধারসহ বিয়োগ · (শিক্ষক-নোট) \"মাঝের সব ০ হয় ৯\" কথাটি কোরাসে বলান",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/অনুশীলনী/5"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SOLVE"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C4-MATH-02-02.1",
+    "LO-C3-MATH-03-02.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "বইয়ের নিজস্ব শিখনফল; এখানে ১২টি SCD অঙ্ক যোগ করা হয়েছে। তৃতীয় শ্রেণিতে ১০০০ − ২৬; এখন ১ লক্ষ থেকে।"
+  },
+  {
+   "code": "LO-C4-MATH-02-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-MIXED",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "যোগ-বিয়োগের সম্পর্ক দিয়ে যাচাই ও খালি ঘরের সংখ্যা বের করা",
+   "sourceText": "যোগ-বিয়োগের সম্পর্ক দিয়ে যাচাই ও খালি ঘর",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/অনুশীলনী/6",
+     "2/অনুশীলনী/9"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SOLVE",
+    "QT-SHORT"
+   ],
+   "homeTipBn": "\"▭ + ২২২২ = ৫৬৭৮\" — খালি ঘরের সংখ্যা কীভাবে বের করবে, জিজ্ঞেস করুন; বিয়োগের পর যোগ করে মিলিয়ে দেখতে বলুন।",
+   "prereqCodes": [
+    "LO-C4-MATH-02-02.1",
+    "LO-C3-MATH-03-03"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "সম্পর্ক-বাক্সের সূত্র মুখস্থ নয় (সি ২৮) — অথচ ২/অনুশীলনী/৯-এর বহুনির্বাচনি ১ পরিভাষায় সূত্র জিজ্ঞেস করে; ফ্ল্যাগ দেখুন।"
+  },
+  {
+   "code": "LO-C4-MATH-02-04",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-MIXED",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "বয়সের হিসাব (আগে — এখন — পরে)",
+   "sourceText": "দুই ধাপের কথার অঙ্ক ও বয়সের হিসাব [ভাগ: বয়সের হিসাব]",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/অনুশীলনী/7"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-AGE"
+   ],
+   "homeTipBn": "\"তোমার বয়স এখন ৯, আব্বার ৩৮ — ৫ বছর পরে দুজনের বয়সের যোগফল কত?\" — আগে সময়-রেখা আঁকতে দিন।",
+   "prereqCodes": [
+    "LO-C4-MATH-02-01",
+    "LO-C4-MATH-02-02.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "অর্ধবার্ষিক প্রশ্ন ৪ (১০ নম্বর, মোহাম্মদপুরের ধরন)। দুজনের যোগফলে প্রত্যেকের বয়স বাড়ে — \"দুইবার যোগ\" ভুলে যাওয়াই আসল ভুল।"
+  },
+  {
+   "code": "LO-C4-MATH-02-05",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-MIXED",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "যোগ-বিয়োগের দুই ধাপের কথার অঙ্ক",
+   "sourceText": "দুই ধাপের কথার অঙ্ক ও বয়সের হিসাব [ভাগ: দুই ধাপের কথার অঙ্ক]",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/অনুশীলনী/8",
+     "2/অনুশীলনী/9"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-WORD"
+   ],
+   "homeTipBn": "\"মেট্রো ট্রেনে ১০৪৮ জন ছিলেন, এক স্টেশনে কেউ নামলেন, কেউ উঠলেন\" — আগে কী বাড়ল, কী কমল মুখে বলতে দিন।",
+   "prereqCodes": [
+    "LO-C4-MATH-02-01",
+    "LO-C4-MATH-02-02.2",
+    "LO-C3-MATH-09-02.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "অর্ধবার্ষিক প্রশ্ন ৫ (৮ নম্বর)। খাতা-ছক রীতিতে; শেষে \"উত্তর:\" লাইন (SK-ANS-01), একক (SK-UNIT-01)।"
+  },
+  {
+   "code": "LO-C4-MATH-03-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-MUL",
+   "chapterNumber": 3,
+   "strand": null,
+   "labelBn": "পাশাপাশি ভেঙে গুণ (৩৫৪ × ২৯ = ৩৫৪ × ২০ + ৩৫৪ × ৯)",
+   "sourceText": "পাশাপাশি (ভেঙে) গুণ",
+   "bookRef": {
+    "chapter": 3,
+    "lesson": null,
+    "exercises": [
+     "3/অনুশীলনী/1"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SOLVE"
+   ],
+   "homeTipBn": "গুণককে দশক ও একক ভাগে ভেঙে দুই ভাগে গুণ করে যোগ করতে দিন — যেমন ৪৫ × ১২ = ৪৫ × ১০ + ৪৫ × ২।",
+   "prereqCodes": [
+    "LO-C3-MATH-04-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "মান নির্ণয়ে বইয়ের যেকোনো পদ্ধতিতে সঠিক হলে পূর্ণ নম্বর (D-১৯)।"
+  },
+  {
+   "code": "LO-C4-MATH-03-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-MUL",
+   "chapterNumber": 3,
+   "strand": null,
+   "labelBn": "উপর-নিচে গুণ — দুই ও তিন অঙ্কের গুণক",
+   "sourceText": "চার অঙ্ক পর্যন্ত সংখ্যাকে দুই ও তিন অঙ্কের সংখ্যা দিয়ে উপর-নিচে গুণ",
+   "bookRef": {
+    "chapter": 3,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SOLVE"
+   ],
+   "homeTipBn": "দ্বিতীয় সারিতে এককের ঘরে ০, তৃতীয় সারিতে একক ও দশকে ০ বসাচ্ছে কি না দেখুন — এখানেই ভুল বেশি।",
+   "prereqCodes": [],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-MATH-03-02.1",
+   "level": "SUB",
+   "parentCode": "LO-C4-MATH-03-02",
+   "domainCode": "DOM-MATH-MUL",
+   "chapterNumber": 3,
+   "strand": null,
+   "labelBn": "দুই অঙ্কের গুণক দিয়ে উপর-নিচে গুণ",
+   "sourceText": "চার অঙ্ক পর্যন্ত সংখ্যাকে দুই … অঙ্কের সংখ্যা দিয়ে উপর-নিচে গুণ",
+   "bookRef": {
+    "chapter": 3,
+    "lesson": null,
+    "exercises": [
+     "3/অনুশীলনী/2",
+     "3/অনুশীলনী/7"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SOLVE"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C4-MATH-03-01",
+    "LO-C3-MATH-04-03.3"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "তৃতীয় শ্রেণিতে তিন অঙ্ক × দুই অঙ্ক; এখন চার অঙ্ক × দুই অঙ্ক।"
+  },
+  {
+   "code": "LO-C4-MATH-03-02.2",
+   "level": "SUB",
+   "parentCode": "LO-C4-MATH-03-02",
+   "domainCode": "DOM-MATH-MUL",
+   "chapterNumber": 3,
+   "strand": null,
+   "labelBn": "তিন অঙ্কের গুণক দিয়ে উপর-নিচে গুণ (তৃতীয় সারিতে দুটি ০)",
+   "sourceText": "চার অঙ্ক পর্যন্ত সংখ্যাকে … তিন অঙ্কের সংখ্যা দিয়ে উপর-নিচে গুণ",
+   "bookRef": {
+    "chapter": 3,
+    "lesson": null,
+    "exercises": [
+     "3/অনুশীলনী/3"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SOLVE"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C4-MATH-03-02.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "নতুন: তিন সারির গুণ — শতকের সারিতে দুটি ০ বসানো ও তিন সারির যোগ।"
+  },
+  {
+   "code": "LO-C4-MATH-03-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-MUL",
+   "chapterNumber": 3,
+   "strand": null,
+   "labelBn": "শেষে ০ থাকলে সহজ নিয়মে গুণ (২১০ × ৩৪০, ৯৭০০ × ১০০)",
+   "sourceText": "শেষে ০ থাকলে … সহজে গুণ",
+   "bookRef": {
+    "chapter": 3,
+    "lesson": null,
+    "exercises": [
+     "3/অনুশীলনী/4",
+     "3/অনুশীলনী/7",
+     "3/অনুশীলনী/8"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SOLVE",
+    "QT-SHORT"
+   ],
+   "homeTipBn": "২১০ × ৩৪০ — আগে ২১ × ৩৪, তারপর দুটি ০ বসানো; ০ কয়টি হলো গুনে দেখতে বলুন।",
+   "prereqCodes": [
+    "LO-C3-MATH-04-02"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "তৃতীয় শ্রেণির দশকের গুণের পরের ধাপ (দুই দিকেই ০)। ৩/অনুশীলনী/৮-এর (৩) ৪৮ × ▭ = ২৪০ অজানা গুণক — ০৪-০৪-এর সম্পর্কের সাথে।"
+  },
+  {
+   "code": "LO-C4-MATH-03-04",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-MUL",
+   "chapterNumber": 3,
+   "strand": null,
+   "labelBn": "৯৯ ও ৯৯৯ দিয়ে সহজ পদ্ধতিতে গুণ (২৪৫ × ৯৯ = ২৪৫০০ − ২৪৫)",
+   "sourceText": "… ৯৯/৯৯৯ দিয়ে সহজে গুণ",
+   "bookRef": {
+    "chapter": 3,
+    "lesson": null,
+    "exercises": [
+     "3/অনুশীলনী/5"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SOLVE"
+   ],
+   "homeTipBn": "২৪৫ × ৯৯ = ২৪৫ × ১০০ − ২৪৫ — এভাবে মুখে ভাবতে দিন, তারপর উপর-নিচে গুণ করে মিলিয়ে দেখতে বলুন।",
+   "prereqCodes": [
+    "LO-C4-MATH-03-03",
+    "LO-C4-MATH-02-02.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "নতুন কৌশল; উপর-নিচে গুণে একই উত্তর পেলেও পূর্ণ নম্বর (D-১৯), তাই প্রশ্ন-ব্যাংকে \"৯৯ দিয়ে সহজ পদ্ধতিতে\" কথাটি থাকলেই এই কোড।"
+  },
+  {
+   "code": "LO-C4-MATH-03-05",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-MUL",
+   "chapterNumber": 3,
+   "strand": null,
+   "labelBn": "গুণের কথার অঙ্ক",
+   "sourceText": "গুণের কথার অঙ্ক",
+   "bookRef": {
+    "chapter": 3,
+    "lesson": null,
+    "exercises": [
+     "3/অনুশীলনী/6"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-WORD"
+   ],
+   "homeTipBn": "\"একটি হাঁসের দাম ৩৫৪ টাকা, ২৯টির দাম কত?\" — দল × প্রতি দলে লিখে হিসাব করতে দিন; শেষে উত্তর-বাক্য।",
+   "prereqCodes": [
+    "LO-C4-MATH-03-02.1",
+    "LO-C3-MATH-04-04"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "অর্ধবার্ষিক প্রশ্ন ৫। কিছু গল্পে একক বদল লাগে (৩ মাস ১৮ দিন = ১০৮ দিন)।"
+  },
+  {
+   "code": "LO-C4-MATH-03-06",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-MUL",
+   "chapterNumber": 3,
+   "strand": null,
+   "labelBn": "নামতা ২ থেকে ২০ মুখে বলা (এলোমেলো প্রশ্নে)",
+   "sourceText": "নামতা ২–২০ মৌখিক, প্রতিদিন কোরাসে (সি ১৫) · নামতা লিখিত প্রশ্নপত্রে নেই — মৌখিক মূল্যায়নে (পরিশিষ্ট ক)",
+   "bookRef": {
+    "chapter": 3,
+    "lesson": null,
+    "exercises": [
+     "3/নামতা ঝালাই — ১১ থেকে ২০ এর ঘর (মুখে বলি)/—"
+    ]
+   },
+   "assess": "RUBRIC",
+   "questionTypeCodes": [
+    "QT-ORAL"
+   ],
+   "homeTipBn": "প্রতিদিন এলোমেলোভাবে দুই-তিনটি নামতার লাইন জিজ্ঞেস করুন (\"সতেরো আটে কত?\")।",
+   "prereqCodes": [
+    "LO-C3-MATH-06-01.1",
+    "LO-C3-MATH-01-10.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "চতুর্থ শ্রেণিতে নামতার লিখিত প্রশ্ন নেই — শুধু মৌখিক; তাই একটি রুব্রিক সারি। কোরাস পদ্ধতি, যাচাই একা একা এলোমেলো লাইনে।"
+  },
+  {
+   "code": "LO-C4-MATH-04-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-DIV",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "এক অঙ্কের ভাজক দিয়ে খাতায় ভাগ — ভাগফল ভাজ্যের উপরে",
+   "sourceText": "এক … অঙ্কের ভাজক দিয়ে চার অঙ্ক পর্যন্ত ভাজ্যের ভাগ · ভাগ NCTB-র রীতিতে — ভাগফল ভাজ্যের উপরে (সি ৩৮)",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SOLVE"
+   ],
+   "homeTipBn": "ভাগফলের প্রতিটি অঙ্ক নেওয়া অংশের শেষ অঙ্কের ঠিক উপরে বসছে কি না দেখুন; ভাগফলের মাঝে ০ বাদ পড়ছে কি না দেখুন।",
+   "prereqCodes": [],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": "তৃতীয় শ্রেণিতে রীতি ছিল ভাজক ) ভাজ্য ( ভাগফল; এখন ভাগফল উপরে — বইয়ে সেতু-উদাহরণ ৪৮ ÷ ৩ (সি ৫৬)।"
+  },
+  {
+   "code": "LO-C4-MATH-04-01.1",
+   "level": "SUB",
+   "parentCode": "LO-C4-MATH-04-01",
+   "domainCode": "DOM-MATH-DIV",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "দুই-তিন অঙ্কের ভাজ্য — নতুন রীতিতে ভাগফল উপরে লেখা",
+   "sourceText": "খাতায় ভাগ করি — দুই অঙ্কের ভাজ্য · তিন অঙ্কের ভাজ্য",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": [
+     "4/অনুশীলনী/1",
+     "4/অনুশীলনী/2",
+     "4/অনুশীলনী/10"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SOLVE"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C3-MATH-07-04.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "হিসাবের ধাপ তৃতীয় শ্রেণির মতোই, শুধু ভাগফলের জায়গা বদল — জায়গা ভুল (ভাগফলের অঙ্ক ভুল ঘরের উপরে) আসল ভুল। ৪/অনুশীলনী/১০ (বাড়তি ভাগ) এক ও দুই অঙ্কের ভাজক মেশানো — দ্বিতীয় পাঠে এখানেও যোগ; প্রতিটি আইটেম নিজের কোডে।"
+  },
+  {
+   "code": "LO-C4-MATH-04-01.2",
+   "level": "SUB",
+   "parentCode": "LO-C4-MATH-04-01",
+   "domainCode": "DOM-MATH-DIV",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "চার অঙ্কের ভাজ্য — ভাগফলের মাঝে ০ (৪২১৪ ÷ ৭ = ৬০২)",
+   "sourceText": "খাতায় ভাগ করি — চার অঙ্কের ভাজ্য · (শিক্ষক-নোট) ভাগফলের মাঝে ০ বাদ পড়ার ভুল সবচেয়ে বেশি",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": [
+     "4/অনুশীলনী/3"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SOLVE"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C4-MATH-04-01.1",
+    "LO-C3-MATH-07-04.3"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "শিক্ষক-নোট নিজেই বলে এটা সবচেয়ে বেশি হয় — তাই আলাদা।"
+  },
+  {
+   "code": "LO-C4-MATH-04-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-DIV",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "শেষে ০ থাকা ভাজক দিয়ে ভাগ (৩৯০ ÷ ৬০ = ৬, ভাগশেষ ৩০)",
+   "sourceText": "(পর্যালোচনা-নোট) রাখা হয়েছে: … শেষে ০ থাকা ভাজক",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": [
+     "4/অনুশীলনী/4",
+     "4/অনুশীলনী/9"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SOLVE",
+    "QT-SHORT"
+   ],
+   "homeTipBn": "২৪০ ÷ ৬০ — দুই দিক থেকে একটি করে ০ বাদ দিয়ে ২৪ ÷ ৬ ভাবতে দিন; ভাগশেষে ০ ফিরিয়ে দিতে ভুলছে কি না দেখুন।",
+   "prereqCodes": [
+    "LO-C4-MATH-04-01.1",
+    "LO-C3-MATH-07-05"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "ভাগশেষে ০ ফেরত বসাতে ভুলে যাওয়া (৩০-এর জায়গায় ৩) আসল ভুল। ৪/অনুশীলনী/৯-এর বহুনির্বাচনি ১–২-এ ১০০ দিয়ে ভাগ ও পাঁচ অঙ্কের ভাজ্য — ফ্ল্যাগ দেখুন।"
+  },
+  {
+   "code": "LO-C4-MATH-04-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-DIV",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "দুই অঙ্কের ভাজক দিয়ে ভাগ — ভাগফল অনুমান করে",
+   "sourceText": "এক ও দুই অঙ্কের ভাজক দিয়ে চার অঙ্ক পর্যন্ত ভাজ্যের ভাগ; ভাগফল অনুমান [ভাগ: দুই অঙ্কের ভাজক]",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": [
+     "4/অনুশীলনী/5",
+     "4/অনুশীলনী/10"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SOLVE"
+   ],
+   "homeTipBn": "৮৫ ÷ ২১ — আগে ৮ ÷ ২ ভেবে ভাগফল অনুমান করতে বলুন, তারপর গুণ করে মিলিয়ে দেখতে দিন।",
+   "prereqCodes": [
+    "LO-C4-MATH-04-01.1",
+    "LO-C4-MATH-04-02",
+    "LO-C3-MATH-07-04.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "চতুর্থ শ্রেণিতে নতুন (তৃতীয় শ্রেণি থেকে সরানো, তৃতীয় শ্রেণির সি ৪১)। অনুমান বেশি হলে এক কমিয়ে আবার — এই শিকলটাই দক্ষতা।"
+  },
+  {
+   "code": "LO-C4-MATH-04-04",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-DIV",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "ভাগ যাচাই — ভাজ্য = ভাজক × ভাগফল + ভাগশেষ",
+   "sourceText": "ভাগশেষ; যাচাই; গুণ-ভাগের সম্পর্ক",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": [
+     "4/অনুশীলনী/6",
+     "3/অনুশীলনী/8"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SOLVE",
+    "QT-SHORT"
+   ],
+   "homeTipBn": "প্রতিটি ভাগের পর ভাজক × ভাগফল + ভাগশেষ করে ভাজ্য মেলে কি না দেখতে বলুন।",
+   "prereqCodes": [
+    "LO-C4-MATH-04-03",
+    "LO-C3-MATH-07-03"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "অর্ধবার্ষিক প্রশ্ন ৩-এ যাচাই; যাচাই চাইলে যাচাই ছাড়া অর্ধেক নম্বর (D-২০)। ৩/অনুশীলনী/৮-এর (৩) ৪৮ × ▭ = ২৪০ একই সম্পর্ক।"
+  },
+  {
+   "code": "LO-C4-MATH-04-05",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-MIXED",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "গুণ ও ভাগ একসাথে — বাম থেকে ডানে হিসাব (১৫৯৬ ÷ ১২ × ২৬)",
+   "sourceText": "গুণ-ভাগ একসাথে (পর্যালোচনা-নোট)",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": [
+     "4/অনুশীলনী/7"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SOLVE"
+   ],
+   "homeTipBn": "\"২১২ × ৫ ÷ ২০\" — বাম থেকে ডানে কোন কাজ আগে, মুখে বলতে দিন।",
+   "prereqCodes": [
+    "LO-C4-MATH-04-03",
+    "LO-C3-MATH-08-02"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-MATH-04-06",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-DIV",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "ভাগের কথার অঙ্ক (ভাগশেষের মানেসহ)",
+   "sourceText": "কথার অঙ্ক (অধ্যায় ৪ শিখনফল)",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": [
+     "4/অনুশীলনী/8",
+     "7/অনুশীলনী/15"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-WORD"
+   ],
+   "homeTipBn": "\"৫০০টি পেনসিল ১২টি করে বক্সে — কয়টি বক্স, কয়টি বাকি?\" — ভাগশেষ কী বোঝায় তা মুখে বলতে দিন।",
+   "prereqCodes": [
+    "LO-C4-MATH-04-03",
+    "LO-C3-MATH-07-06"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "অর্ধবার্ষিক প্রশ্ন ৫। \"এক ডজনের দাম থেকে ২৫টির দাম\" (ঐকিক) এখানে — ভাগ তারপর গুণ। ৭/অনুশীলনী/১৫-এর (১) (৩২৪টি আম ৫টি করে ব্যাগে — কয়টি ব্যাগ, কয়টি বাকি) আসলে ভাগশেষের গল্প — দ্বিতীয় পাঠে এখানে যোগ।"
+  },
+  {
+   "code": "LO-C4-MATH-05-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-MIXED",
+   "chapterNumber": 5,
+   "strand": null,
+   "labelBn": "প্রতীক দিয়ে হিসাব লেখা ও হিসাব কথায় পড়া",
+   "sourceText": "প্রতীক চেনা ও ব্যবহার; সংখ্যারাশি ও গাণিতিক বাক্য লেখা",
+   "bookRef": {
+    "chapter": 5,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT"
+   ],
+   "homeTipBn": "\"পঁয়ত্রিশ থেকে পাঁচ বিয়োগ করে ছয় দিয়ে ভাগ\" — মুখে বলে চিহ্ন দিয়ে লিখতে দিন; উল্টো করে একটি হিসাব কথায় বলতে দিন।",
+   "prereqCodes": [],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": "বইয়ের অধ্যায়ের নাম \"গাণিতিক বাক্য\" (চতুর্থ শ্রেণিতে শব্দটি অনুমোদিত, সি ১০, ৩৯) — কিন্তু রিপোর ভেরিফায়ার লেবেলে শব্দটি নিষেধ করে; তাই লেবেলে \"হিসাব\", বইয়ের শব্দ sourceText-এ। ফ্ল্যাগ দেখুন।"
+  },
+  {
+   "code": "LO-C4-MATH-05-01.1",
+   "level": "SUB",
+   "parentCode": "LO-C4-MATH-05-01",
+   "domainCode": "DOM-MATH-MIXED",
+   "chapterNumber": 5,
+   "strand": null,
+   "labelBn": "কথায় বলা হিসাব প্রতীক দিয়ে লেখা (ঊনপঞ্চাশ ভাগ সাত → ৪৯ ÷ ৭)",
+   "sourceText": "গাণিতিক প্রতীক দিয়ে প্রকাশ করি · সংখ্যারাশি … লেখা",
+   "bookRef": {
+    "chapter": 5,
+    "lesson": null,
+    "exercises": [
+     "5/অনুশীলনী/1"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C3-MATH-09-02.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "\"বিয়োগ করে বিয়োগফলকে ভাগ\" — বন্ধনী লাগে কি না বোঝা এখানেই শুরু।"
+  },
+  {
+   "code": "LO-C4-MATH-05-01.2",
+   "level": "SUB",
+   "parentCode": "LO-C4-MATH-05-01",
+   "domainCode": "DOM-MATH-MIXED",
+   "chapterNumber": 5,
+   "strand": null,
+   "labelBn": "প্রতীকের হিসাব কথায় বর্ণনা করা (৬ + ২ = ৮ → ৬ ও ২ এর যোগফল ৮ এর সমান)",
+   "sourceText": "গাণিতিক বাক্যের বর্ণনা লিখি",
+   "bookRef": {
+    "chapter": 5,
+    "lesson": null,
+    "exercises": [
+     "5/অনুশীলনী/4"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C4-MATH-05-01.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "উল্টো দিক — চিহ্ন পড়ে বাক্যে বলা; ≯, ≮-এর বর্ণনায় আটকায়।"
+  },
+  {
+   "code": "LO-C4-MATH-05-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-MIXED",
+   "chapterNumber": 5,
+   "strand": null,
+   "labelBn": "সম্পর্ক প্রতীক (=, ≠, <, >, ≮, ≯) বসানো ও হিসাব সঠিক না ভুল যাচাই",
+   "sourceText": "প্রতীক চেনা ও ব্যবহার · সঠিক-ভুল যাচাই",
+   "bookRef": {
+    "chapter": 5,
+    "lesson": null,
+    "exercises": [
+     "5/অনুশীলনী/2",
+     "5/অনুশীলনী/6"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT"
+   ],
+   "homeTipBn": "\"৭২ ÷ ৯, ১০-এর চেয়ে বড়ো নয়\" — ঠিক না ভুল? ≯ মানে ছোট অথবা সমান — মুখে বলতে দিন।",
+   "prereqCodes": [
+    "LO-C4-MATH-05-01.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "শিক্ষক-নোট: ≯ ও ≮ গুলিয়ে যায় — \"বড়ো নয়\" মানে ছোট অথবা সমান। দুই অনুশীলনী একই জ্ঞান (দুই পাশ হিসাব করে চিহ্ন মেলানো) — তাই এক সারি।"
+  },
+  {
+   "code": "LO-C4-MATH-05-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-MIXED",
+   "chapterNumber": 5,
+   "strand": null,
+   "labelBn": "বন্ধনীসহ হিসাবের ক্রম (বন্ধনী → গুণ-ভাগ → যোগ-বিয়োগ)",
+   "sourceText": "বন্ধনীসহ হিসাবের ক্রম",
+   "bookRef": {
+    "chapter": 5,
+    "lesson": null,
+    "exercises": [
+     "5/অনুশীলনী/5",
+     "5/অনুশীলনী/7"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT",
+    "QT-SOLVE"
+   ],
+   "homeTipBn": "\"৭ + ৩ × ৬\" আর \"(৭ + ৩) × ৬\" — দুটোর উত্তর আলাদা কেন, মুখে বলতে দিন।",
+   "prereqCodes": [
+    "LO-C4-MATH-05-02",
+    "LO-C4-MATH-04-05",
+    "LO-C3-MATH-09-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "হিসাবের ক্রম কোরাসে বলানো হয় (শিক্ষক-নোট); তৃতীয় শ্রেণিতে বন্ধনীর নিয়ম ছিল, অনুশীলনী ছিল না — এখানে প্রথম অনুশীলন। ৫/অনুশীলনী/৭-এ ক্রম ও অজানা সংখ্যা মেশানো — প্রতিটি আইটেম নিজের কোডে।"
+  },
+  {
+   "code": "LO-C4-MATH-05-04",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-MIXED",
+   "chapterNumber": 5,
+   "strand": null,
+   "labelBn": "অজানা সংখ্যা ▭ ধরে হিসাব লিখে মান বের করা",
+   "sourceText": "অজানা সংখ্যা বের করা",
+   "bookRef": {
+    "chapter": 5,
+    "lesson": null,
+    "exercises": [
+     "5/অনুশীলনী/3",
+     "5/অনুশীলনী/7"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT"
+   ],
+   "homeTipBn": "\"একটি সংখ্যার সঙ্গে ১২ যোগ করলে ১৮০ হয়\" — ▭ + ১২ = ১৮০ লিখে ▭ বের করতে দিন।",
+   "prereqCodes": [
+    "LO-C4-MATH-05-01.1",
+    "LO-C4-MATH-02-03",
+    "LO-C3-MATH-08-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "লুকানো অঙ্কের ধাঁধা বাদ (D-০৩); এখানে শুধু গল্প থেকে ▭-এর হিসাব।"
+  },
+  {
+   "code": "LO-C4-MATH-05-05",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-MIXED",
+   "chapterNumber": 5,
+   "strand": null,
+   "labelBn": "কথার অঙ্ক এক লাইনে হিসাব লিখে সমাধান",
+   "sourceText": "কথার অঙ্ক এক বাক্যে · গাণিতিক বাক্য লিখে সমাধান করি",
+   "bookRef": {
+    "chapter": 5,
+    "lesson": null,
+    "exercises": [
+     "5/অনুশীলনী/8"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-WORD"
+   ],
+   "homeTipBn": "দুই-তিন ধাপের গল্প বলে পুরো হিসাবটি এক লাইনে (বন্ধনীসহ) লিখতে দিন, তারপর সমাধান।",
+   "prereqCodes": [
+    "LO-C4-MATH-05-03",
+    "LO-C3-MATH-09-02.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "অর্ধবার্ষিক প্রশ্ন ৫। খাতা-ছক রীতি ও এক লাইনের রূপ — দুটিই গ্রহণযোগ্য; শেষে \"উত্তর:\" লাইন (শিক্ষক-নোট)।"
+  },
+  {
+   "code": "LO-C4-MATH-06-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-GEOM",
+   "chapterNumber": 6,
+   "strand": null,
+   "labelBn": "চাঁদা দিয়ে কোণ মাপা ও আঁকা",
+   "sourceText": "কোণ চেনা, চাঁদা দিয়ে মাপা ও আঁকা, কোণের নাম · শ্রেণিকক্ষের জিনিসের কোণ মাপা",
+   "bookRef": {
+    "chapter": 6,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-GEOM",
+    "QT-SHORT",
+    "QT-ORAL"
+   ],
+   "homeTipBn": "চাঁদার কোন দিকের ০° থেকে গুনছে — খাতায় একটি কোণ এঁকে মেপে দেখতে দিন।",
+   "prereqCodes": [],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": "অর্ধবার্ষিক প্রশ্ন ৬ (জ্যামিতি ১৮)। ছাপা ছবিতে ±২° ছাড় (D-১৬)।"
+  },
+  {
+   "code": "LO-C4-MATH-06-01.1",
+   "level": "SUB",
+   "parentCode": "LO-C4-MATH-06-01",
+   "domainCode": "DOM-MATH-GEOM",
+   "chapterNumber": 6,
+   "strand": null,
+   "labelBn": "চাঁদা দিয়ে কোণ মেপে নাম লেখা (সূক্ষ্ম, সম, স্থূল, সরল)",
+   "sourceText": "কোণ চেনা, চাঁদা দিয়ে মাপা … কোণের নাম",
+   "bookRef": {
+    "chapter": 6,
+    "lesson": null,
+    "exercises": [
+     "6/অনুশীলনী/1",
+     "6/অনুশীলনী/12"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-GEOM",
+    "QT-SHORT"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C3-MATH-13-01.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "ভুল দিকের ০° থেকে গোনা সবচেয়ে বেশি (শিক্ষক-নোট)।"
+  },
+  {
+   "code": "LO-C4-MATH-06-01.2",
+   "level": "SUB",
+   "parentCode": "LO-C4-MATH-06-01",
+   "domainCode": "DOM-MATH-GEOM",
+   "chapterNumber": 6,
+   "strand": null,
+   "labelBn": "চাঁদা দিয়ে নির্দিষ্ট মাপের কোণ আঁকা",
+   "sourceText": "চাঁদা দিয়ে কোণ আঁকি ও নাম লিখি",
+   "bookRef": {
+    "chapter": 6,
+    "lesson": null,
+    "exercises": [
+     "6/অনুশীলনী/3",
+     "6/অনুশীলনী/11"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-GEOM"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C4-MATH-06-01.1",
+    "LO-C3-MATH-13-01.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "আঁকায় দাগ রাখা বাধ্যতামূলক, নাম না লিখলে ১ নম্বর কাটা (D-১৭, D-১৮)।"
+  },
+  {
+   "code": "LO-C4-MATH-06-01.3",
+   "level": "SUB",
+   "parentCode": "LO-C4-MATH-06-01",
+   "domainCode": "DOM-MATH-GEOM",
+   "chapterNumber": 6,
+   "strand": null,
+   "labelBn": "শ্রেণিকক্ষের জিনিসের কোণ মাপা (দলগত, দরজার কোণ)",
+   "sourceText": "শ্রেণিকক্ষের জিনিসের কোণ মাপা (দলগত মাপজোখ — সি ৪-এর ব্যতিক্রম)",
+   "bookRef": {
+    "chapter": 6,
+    "lesson": null,
+    "exercises": [
+     "6/অনুশীলনী/2"
+    ]
+   },
+   "assess": "RUBRIC",
+   "questionTypeCodes": [
+    "QT-ORAL"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C4-MATH-06-01.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "হাতে-কলমে, দলগত — রুব্রিক; লিখিত পরীক্ষায় নয়।"
+  },
+  {
+   "code": "LO-C4-MATH-06-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-GEOM",
+   "chapterNumber": 6,
+   "strand": null,
+   "labelBn": "ঘড়ির কাঁটার মাঝের কোণ বের করা (পাশাপাশি দুই সংখ্যার মাঝে ৩০°)",
+   "sourceText": "ঘড়ির কাঁটার কোণ",
+   "bookRef": {
+    "chapter": 6,
+    "lesson": null,
+    "exercises": [
+     "6/অনুশীলনী/4",
+     "6/অনুশীলনী/12"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-GEOM",
+    "QT-SHORT"
+   ],
+   "homeTipBn": "ঘড়িতে ৩টা, ৪টা বাজলে কাঁটা দুটির মাঝে কয়টি ঘর — প্রতি ঘর ৩০° ধরে কোণ বলতে দিন।",
+   "prereqCodes": [
+    "LO-C4-MATH-06-01.1",
+    "LO-C3-MATH-12-03.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-MATH-06-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-GEOM",
+   "chapterNumber": 6,
+   "strand": null,
+   "labelBn": "না মেপে কোণ বের করা (সমকোণ ও সরলকোণের অংশ)",
+   "sourceText": "না মেপে কোণ বের করা",
+   "bookRef": {
+    "chapter": 6,
+    "lesson": null,
+    "exercises": [
+     "6/অনুশীলনী/5"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-GEOM",
+    "QT-SHORT"
+   ],
+   "homeTipBn": "\"সমকোণের এক অংশ ৪০° হলে অন্য অংশ কত?\" — ৯০ থেকে বিয়োগ করতে দিন।",
+   "prereqCodes": [
+    "LO-C4-MATH-06-01.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-MATH-06-04",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-GEOM",
+   "chapterNumber": 6,
+   "strand": null,
+   "labelBn": "লম্ব ও সমান্তরাল রেখা চেনা ও আঁকা",
+   "sourceText": "লম্ব ও সমান্তরাল রেখা চেনা (মানচিত্রেও) ও আঁকা",
+   "bookRef": {
+    "chapter": 6,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-GEOM",
+    "QT-SHORT"
+   ],
+   "homeTipBn": "ঘরের জানালা, রেললাইন, খাতার লাইন দেখিয়ে জিজ্ঞেস করুন — কোনগুলো লম্ব, কোনগুলো সমান্তরাল?",
+   "prereqCodes": [],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": "রেললাইনের লাইন বক্র হলেও সমান্তরাল (সি ৫৯)।"
+  },
+  {
+   "code": "LO-C4-MATH-06-04.1",
+   "level": "SUB",
+   "parentCode": "LO-C4-MATH-06-04",
+   "domainCode": "DOM-MATH-GEOM",
+   "chapterNumber": 6,
+   "strand": null,
+   "labelBn": "চিত্রে ও মানচিত্রে লম্ব ও সমান্তরাল রেখা চেনা",
+   "sourceText": "লম্ব ও সমান্তরাল রেখা চেনা (মানচিত্রেও)",
+   "bookRef": {
+    "chapter": 6,
+    "lesson": null,
+    "exercises": [
+     "6/অনুশীলনী/6",
+     "6/অনুশীলনী/7",
+     "6/অনুশীলনী/8",
+     "6/অনুশীলনী/9",
+     "6/অনুশীলনী/10",
+     "6/অনুশীলনী/12"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-GEOM",
+    "QT-SHORT"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C4-MATH-06-01.1",
+    "LO-C3-MATH-05-01.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "৬/অনুশীলনী/৮ (সমান্তরাল রেখার মাঝে দূরত্ব মেপে দেখা) মাপার কাজ, কিন্তু উদ্দেশ্য চেনা — তাই এখানে।"
+  },
+  {
+   "code": "LO-C4-MATH-06-04.2",
+   "level": "SUB",
+   "parentCode": "LO-C4-MATH-06-04",
+   "domainCode": "DOM-MATH-GEOM",
+   "chapterNumber": 6,
+   "strand": null,
+   "labelBn": "চাঁদা বা ত্রিকোণী সেট দিয়ে লম্ব ও সমান্তরাল রেখা আঁকা",
+   "sourceText": "লম্ব ও সমান্তরাল রেখা … আঁকা",
+   "bookRef": {
+    "chapter": 6,
+    "lesson": null,
+    "exercises": [
+     "6/অনুশীলনী/11"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-GEOM"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C4-MATH-06-04.1",
+    "LO-C4-MATH-06-01.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "চেনে কিন্তু ত্রিকোণী সেট সরিয়ে সমান্তরাল আঁকতে পারে না — আলাদা।"
+  },
+  {
+   "code": "LO-C4-MATH-07-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-NPROP",
+   "chapterNumber": 7,
+   "strand": null,
+   "labelBn": "গুণিতক চেনা ও লেখা",
+   "sourceText": "গুণিতক ও গুণনীয়ক চেনা ও লেখা [ভাগ: গুণিতক]",
+   "bookRef": {
+    "chapter": 7,
+    "lesson": null,
+    "exercises": [
+     "7/অনুশীলনী/1",
+     "7/অনুশীলনী/2",
+     "7/অনুশীলনী/3",
+     "7/অনুশীলনী/4",
+     "7/অনুশীলনী/5",
+     "7/অনুশীলনী/16"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CREATIVE",
+    "QT-SHORT"
+   ],
+   "homeTipBn": "\"৬-এর প্রথম পাঁচটি গুণিতক বলো\" — নামতা থেকে বলতে দিন।",
+   "prereqCodes": [
+    "LO-C3-MATH-01-10.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "বার্ষিক প্রশ্ন ৪ (সৃজনশীল)। গুণিতক = নামতার সংখ্যা (শিক্ষক-নোট)।"
+  },
+  {
+   "code": "LO-C4-MATH-07-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-NPROP",
+   "chapterNumber": 7,
+   "strand": null,
+   "labelBn": "গুণনীয়ক জোড়ায় খুঁজে লেখা",
+   "sourceText": "গুণিতক ও গুণনীয়ক চেনা ও লেখা [ভাগ: গুণনীয়ক] · গুণনীয়ক খোঁজার নিয়ম (জোড়ায়)",
+   "bookRef": {
+    "chapter": 7,
+    "lesson": null,
+    "exercises": [
+     "7/অনুশীলনী/6",
+     "7/অনুশীলনী/7",
+     "7/অনুশীলনী/15",
+     "7/অনুশীলনী/16"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CREATIVE",
+    "QT-SHORT"
+   ],
+   "homeTipBn": "\"২৪-কে কোন কোন সংখ্যা দিয়ে নিঃশেষে ভাগ করা যায়?\" — জোড়ায় খুঁজতে দিন (১ ও ২৪, ২ ও ১২ …)।",
+   "prereqCodes": [
+    "LO-C4-MATH-07-01",
+    "LO-C3-MATH-08-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "গুণিতক আর গুণনীয়ক গুলিয়ে ফেলা আসল ভুল — তাই আলাদা সারি। ৭/অনুশীলনী/১৫ (সমান সারিতে দাঁড়ানো, খেজুর সমান ভাগ) গুণনীয়কের প্রয়োগ।"
+  },
+  {
+   "code": "LO-C4-MATH-07-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-NPROP",
+   "chapterNumber": 7,
+   "strand": null,
+   "labelBn": "মৌলিক ও যৌগিক সংখ্যা আলাদা করা (১০০ পর্যন্ত)",
+   "sourceText": "মৌলিক-যৌগিক আলাদা করা; ১০০ পর্যন্ত মৌলিক সংখ্যা",
+   "bookRef": {
+    "chapter": 7,
+    "lesson": null,
+    "exercises": [
+     "7/অনুশীলনী/8"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT",
+    "QT-CREATIVE"
+   ],
+   "homeTipBn": "১ থেকে ৩০-এর মধ্যে মৌলিক সংখ্যাগুলো বলতে দিন; ১ মৌলিক কি না জিজ্ঞেস করুন।",
+   "prereqCodes": [
+    "LO-C4-MATH-07-02"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "চালনি পদ্ধতি নিজের ১–১০০ ছকে (শিক্ষক-নোট)।"
+  },
+  {
+   "code": "LO-C4-MATH-07-04",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-NPROP",
+   "chapterNumber": 7,
+   "strand": null,
+   "labelBn": "মৌলিক গুণনীয়কে ভাঙা (৬০ = ২ × ২ × ৩ × ৫)",
+   "sourceText": "মৌলিক গুণনীয়কে ভাঙা",
+   "bookRef": {
+    "chapter": 7,
+    "lesson": null,
+    "exercises": [
+     "7/অনুশীলনী/9"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT",
+    "QT-CREATIVE"
+   ],
+   "homeTipBn": "৩৬ বা ৪২-কে গাছ-চিত্রে ভাঙতে দিন — শেষ সারির সব সংখ্যা মৌলিক কি না দেখুন।",
+   "prereqCodes": [
+    "LO-C4-MATH-07-03"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "বার্ষিক সংক্ষিপ্ত প্রশ্নে মৌলিক গুণনীয়ক (শিক্ষক-নোট)।"
+  },
+  {
+   "code": "LO-C4-MATH-07-05",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-NPROP",
+   "chapterNumber": 7,
+   "strand": null,
+   "labelBn": "২, ৫ ও ১০ দিয়ে নিঃশেষে বিভাজ্য সংখ্যা চেনা",
+   "sourceText": "২, ৫, ১০ দিয়ে বিভাজ্যতা",
+   "bookRef": {
+    "chapter": 7,
+    "lesson": null,
+    "exercises": [
+     "7/অনুশীলনী/10"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT"
+   ],
+   "homeTipBn": "গাড়ির নম্বরের শেষ অঙ্ক দেখে বলতে দিন — ২ দিয়ে, ৫ দিয়ে, ১০ দিয়ে নিঃশেষে ভাগ যায় কি না।",
+   "prereqCodes": [
+    "LO-C4-MATH-07-01",
+    "LO-C3-MATH-07-03"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "শেষ অঙ্ক দেখে নিয়ম। তৃতীয় শ্রেণিতে জোড়-বিজোড় বা বিভাজ্যতার সারি নেই — ভাগশেষের সারিটিই আগের ধাপ।"
+  },
+  {
+   "code": "LO-C4-MATH-07-06",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-NPROP",
+   "chapterNumber": 7,
+   "strand": null,
+   "labelBn": "ল.সা.গু (লঘিষ্ঠ সাধারণ গুণিতক)",
+   "sourceText": "সাধারণ গুণিতক ও ল.সা.গু",
+   "bookRef": {
+    "chapter": 7,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CREATIVE",
+    "QT-WORD"
+   ],
+   "homeTipBn": "৪ ও ৬-এর গুণিতক পাশাপাশি লিখে প্রথম সাধারণটি খুঁজতে দিন — সেটাই ল.সা.গু।",
+   "prereqCodes": [],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": "গুণিতকের তালিকা থেকে; অধ্যায় ৮-এ হর মেলাতে লাগে।"
+  },
+  {
+   "code": "LO-C4-MATH-07-06.1",
+   "level": "SUB",
+   "parentCode": "LO-C4-MATH-07-06",
+   "domainCode": "DOM-MATH-NPROP",
+   "chapterNumber": 7,
+   "strand": null,
+   "labelBn": "গুণিতকের তালিকা থেকে ল.সা.গু নির্ণয়",
+   "sourceText": "সাধারণ গুণিতক ও ল.সা.গু",
+   "bookRef": {
+    "chapter": 7,
+    "lesson": null,
+    "exercises": [
+     "7/অনুশীলনী/11"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CREATIVE"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C4-MATH-07-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "বার্ষিক প্রশ্ন ৪-এর ল.সা.গু অংশ।"
+  },
+  {
+   "code": "LO-C4-MATH-07-06.2",
+   "level": "SUB",
+   "parentCode": "LO-C4-MATH-07-06",
+   "domainCode": "DOM-MATH-NPROP",
+   "chapterNumber": 7,
+   "strand": null,
+   "labelBn": "কোন গল্পে ল.সা.গু লাগে বুঝে সমাধান (দুই ঘণ্টা একসাথে কখন বাজবে)",
+   "sourceText": "কথার অঙ্ক — ল.সা.গু",
+   "bookRef": {
+    "chapter": 7,
+    "lesson": null,
+    "exercises": [
+     "7/অনুশীলনী/12",
+     "7/অনুশীলনী/15"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-WORD",
+    "QT-CREATIVE"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C4-MATH-07-06.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "ল.সা.গু বের করতে পারে কিন্তু গল্পে ল.সা.গু না গ.সা.গু চিনতে পারে না — আলাদা ভুল।"
+  },
+  {
+   "code": "LO-C4-MATH-07-07",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-NPROP",
+   "chapterNumber": 7,
+   "strand": null,
+   "labelBn": "গ.সা.গু (গরিষ্ঠ সাধারণ গুণনীয়ক)",
+   "sourceText": "সাধারণ গুণনীয়ক ও গ.সা.গু",
+   "bookRef": {
+    "chapter": 7,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CREATIVE",
+    "QT-WORD"
+   ],
+   "homeTipBn": "১২ ও ১৮-এর গুণনীয়ক পাশাপাশি লিখে সবচেয়ে বড় সাধারণটি খুঁজতে দিন — সেটাই গ.সা.গু।",
+   "prereqCodes": [],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": "D-০১-এ যোগ — গুণনীয়কের তালিকা থেকে, ল.সা.গু-র মতো একই ধাঁচে।"
+  },
+  {
+   "code": "LO-C4-MATH-07-07.1",
+   "level": "SUB",
+   "parentCode": "LO-C4-MATH-07-07",
+   "domainCode": "DOM-MATH-NPROP",
+   "chapterNumber": 7,
+   "strand": null,
+   "labelBn": "গুণনীয়কের তালিকা থেকে গ.সা.গু নির্ণয়",
+   "sourceText": "সাধারণ গুণনীয়ক ও গ.সা.গু",
+   "bookRef": {
+    "chapter": 7,
+    "lesson": null,
+    "exercises": [
+     "7/অনুশীলনী/13"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CREATIVE"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C4-MATH-07-02"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "বার্ষিক প্রশ্ন ৪-এর গ.সা.গু অংশ।"
+  },
+  {
+   "code": "LO-C4-MATH-07-07.2",
+   "level": "SUB",
+   "parentCode": "LO-C4-MATH-07-07",
+   "domainCode": "DOM-MATH-NPROP",
+   "chapterNumber": 7,
+   "strand": null,
+   "labelBn": "কোন গল্পে গ.সা.গু লাগে বুঝে সমাধান (সমান টুকরো, সমান ভাগ)",
+   "sourceText": "কথার অঙ্ক — গ.সা.গু",
+   "bookRef": {
+    "chapter": 7,
+    "lesson": null,
+    "exercises": [
+     "7/অনুশীলনী/14",
+     "7/অনুশীলনী/15"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-WORD",
+    "QT-CREATIVE"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C4-MATH-07-07.1",
+    "LO-C4-MATH-07-06.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "শিক্ষক-নোট: দুটি গুলিয়ে যায় — ল.সা.গু সবচেয়ে ছোট সাধারণ গুণিতক, গ.সা.গু সবচেয়ে বড় সাধারণ গুণনীয়ক।"
+  },
+  {
+   "code": "LO-C4-MATH-08-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-FRAC",
+   "chapterNumber": 8,
+   "strand": null,
+   "labelBn": "ছবি থেকে ভগ্নাংশ লেখা ও ভগ্নাংশ অনুযায়ী রং করা",
+   "sourceText": "(পর্যালোচনা-নোট) রাখা হয়েছে: লব-হর … — তৃতীয় শ্রেণির ঝালাই",
+   "bookRef": {
+    "chapter": 8,
+    "lesson": null,
+    "exercises": [
+     "8/অনুশীলনী/1",
+     "8/অনুশীলনী/2"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT"
+   ],
+   "homeTipBn": "একটি রুটি বা কাগজ সমান ভাগ করে কয়েক ভাগ রং করুন; ভগ্নাংশটি লিখতে দিন।",
+   "prereqCodes": [
+    "LO-C3-MATH-10-01.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "তৃতীয় শ্রেণির দক্ষতা (C3·১০-০১.২) — অধ্যায়ের শুরু।"
+  },
+  {
+   "code": "LO-C4-MATH-08-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-FRAC",
+   "chapterNumber": 8,
+   "strand": null,
+   "labelBn": "প্রকৃত, অপ্রকৃত ও মিশ্র ভগ্নাংশ",
+   "sourceText": "প্রকৃত, অপ্রকৃত ও মিশ্র ভগ্নাংশ চেনা ও রূপান্তর",
+   "bookRef": {
+    "chapter": 8,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT",
+    "QT-FRAC"
+   ],
+   "homeTipBn": "৭/৪ কে মিশ্র ভগ্নাংশে, আবার ১ ৩/৪ কে অপ্রকৃতে লিখতে দিন — রুটির টুকরো দিয়ে দেখান।",
+   "prereqCodes": [],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-MATH-08-02.1",
+   "level": "SUB",
+   "parentCode": "LO-C4-MATH-08-02",
+   "domainCode": "DOM-MATH-FRAC",
+   "chapterNumber": 8,
+   "strand": null,
+   "labelBn": "প্রকৃত, অপ্রকৃত ও মিশ্র ভগ্নাংশ চেনা ও আলাদা করা",
+   "sourceText": "প্রকৃত, অপ্রকৃত ও মিশ্র ভগ্নাংশ চেনা",
+   "bookRef": {
+    "chapter": 8,
+    "lesson": null,
+    "exercises": [
+     "8/অনুশীলনী/4",
+     "8/অনুশীলনী/19"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C4-MATH-08-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "৪/৪, ৮/৮ (মান ১) কোন দলে — আসল দ্বিধা।"
+  },
+  {
+   "code": "LO-C4-MATH-08-02.2",
+   "level": "SUB",
+   "parentCode": "LO-C4-MATH-08-02",
+   "domainCode": "DOM-MATH-FRAC",
+   "chapterNumber": 8,
+   "strand": null,
+   "labelBn": "অপ্রকৃত ↔ মিশ্র ভগ্নাংশে রূপান্তর (সংখ্যারেখাসহ)",
+   "sourceText": "… ও রূপান্তর · সংখ্যারেখার খালি ঘর (উপরে অপ্রকৃত, নিচে মিশ্র)",
+   "bookRef": {
+    "chapter": 8,
+    "lesson": null,
+    "exercises": [
+     "8/অনুশীলনী/3",
+     "8/অনুশীলনী/5"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT",
+    "QT-FRAC"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C4-MATH-08-02.1",
+    "LO-C4-MATH-04-01.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "ভাগ দিয়ে রূপান্তর (৭ ÷ ৪ = ১, ভাগশেষ ৩) — ভাগের দক্ষতা লাগে। অপ্রকৃত উত্তর মিশ্রে না লিখলে নম্বর কাটা নয় (D-১৪)।"
+  },
+  {
+   "code": "LO-C4-MATH-08-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-FRAC",
+   "chapterNumber": 8,
+   "strand": null,
+   "labelBn": "সমতুল ভগ্নাংশ ও লঘিষ্ঠ আকার",
+   "sourceText": "সমতুল ও লঘিষ্ঠ আকার",
+   "bookRef": {
+    "chapter": 8,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT",
+    "QT-FRAC"
+   ],
+   "homeTipBn": "কাগজের ফিতা ভাঁজ করে ১/২, ২/৪, ৪/৮ মিলিয়ে দেখান; ৬/১২ কে সবচেয়ে ছোট আকারে লিখতে দিন।",
+   "prereqCodes": [],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": "ভগ্নাংশের উত্তর লঘিষ্ঠ আকারে না হলে ½ নম্বর কাটা (D-১৩) — তাই লঘিষ্ঠ আকার আলাদা ধাপ।"
+  },
+  {
+   "code": "LO-C4-MATH-08-03.1",
+   "level": "SUB",
+   "parentCode": "LO-C4-MATH-08-03",
+   "domainCode": "DOM-MATH-FRAC",
+   "chapterNumber": 8,
+   "strand": null,
+   "labelBn": "সমতুল ভগ্নাংশের খালি ঘর পূরণ (১/৪ = ২/▭, ৫ = ১৫/▭)",
+   "sourceText": "সমতুল ভগ্নাংশ",
+   "bookRef": {
+    "chapter": 8,
+    "lesson": null,
+    "exercises": [
+     "8/অনুশীলনী/6"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C4-MATH-08-01",
+    "LO-C3-MATH-10-02"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "পূর্ণসংখ্যাকে ভগ্নাংশে (৫ = ১৫/৩) — নতুন ধাপ।"
+  },
+  {
+   "code": "LO-C4-MATH-08-03.2",
+   "level": "SUB",
+   "parentCode": "LO-C4-MATH-08-03",
+   "domainCode": "DOM-MATH-FRAC",
+   "chapterNumber": 8,
+   "strand": null,
+   "labelBn": "ভগ্নাংশকে লঘিষ্ঠ আকারে প্রকাশ (সাধারণ গুণনীয়ক দিয়ে ভাগ)",
+   "sourceText": "লঘিষ্ঠ আকার",
+   "bookRef": {
+    "chapter": 8,
+    "lesson": null,
+    "exercises": [
+     "8/অনুশীলনী/7"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT",
+    "QT-FRAC"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C4-MATH-08-03.1",
+    "LO-C4-MATH-07-07.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "গুণনীয়ক (অধ্যায় ৭) কাজে লাগে; একবারে সবচেয়ে বড় গুণনীয়ক দিয়ে না কেটে মাঝপথে থেমে যাওয়া আসল ভুল।"
+  },
+  {
+   "code": "LO-C4-MATH-08-04",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-FRAC",
+   "chapterNumber": 8,
+   "strand": null,
+   "labelBn": "ভগ্নাংশ তুলনা ও সাজানো (সমান হর বা সমান লব)",
+   "sourceText": "তুলনা",
+   "bookRef": {
+    "chapter": 8,
+    "lesson": null,
+    "exercises": [
+     "8/অনুশীলনী/8",
+     "8/অনুশীলনী/19"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT"
+   ],
+   "homeTipBn": "২/৫ আর ২/৯ — কোনটি বড়? লব সমান হলে ছোট হরের ভাগ বড় — রুটির টুকরো দিয়ে দেখান।",
+   "prereqCodes": [
+    "LO-C4-MATH-08-03.1",
+    "LO-C3-MATH-10-03"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "তৃতীয় শ্রেণিতে শুধু সমান হর; এখন সমান লবও — \"বড় হর মানে বড় ভগ্নাংশ\" ভুল।"
+  },
+  {
+   "code": "LO-C4-MATH-08-05",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-FRAC",
+   "chapterNumber": 8,
+   "strand": null,
+   "labelBn": "সমান হরের ভগ্নাংশ যোগ-বিয়োগ করে লঘিষ্ঠ আকারে লেখা",
+   "sourceText": "সমহর … ভগ্নাংশের যোগ, বিয়োগ ও একসাথে",
+   "bookRef": {
+    "chapter": 8,
+    "lesson": null,
+    "exercises": [
+     "8/অনুশীলনী/9",
+     "8/অনুশীলনী/10",
+     "8/অনুশীলনী/11"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-FRAC"
+   ],
+   "homeTipBn": "৩/৭ + ২/৭ — হর একই থাকে, শুধু লব যোগ — মনে করিয়ে দিন; উত্তর ছোট আকারে লিখছে কি না দেখুন।",
+   "prereqCodes": [
+    "LO-C4-MATH-08-03.2",
+    "LO-C3-MATH-10-04.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "বার্ষিক প্রশ্ন ২। হর যোগ করার ভুল (৩/৭ + ২/৭ = ৫/১৪) সবচেয়ে বেশি (শিক্ষক-নোট)। পূর্ণসংখ্যা থেকে ভগ্নাংশ বিয়োগ (১ + ২/৫ − ১/৫) এখানে।"
+  },
+  {
+   "code": "LO-C4-MATH-08-06",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-FRAC",
+   "chapterNumber": 8,
+   "strand": null,
+   "labelBn": "বিভিন্ন হরের ভগ্নাংশের যোগ-বিয়োগ",
+   "sourceText": "বিভিন্ন হরের ভগ্নাংশের যোগ, বিয়োগ ও একসাথে · দুই পদ্ধতি (সমতুল ভগ্নাংশ লিখে; ল.সা.গু দিয়ে) — যেকোনোটিতে পূর্ণ নম্বর (সি ২৩)",
+   "bookRef": {
+    "chapter": 8,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-FRAC"
+   ],
+   "homeTipBn": "১/২ + ১/৩ — আগে দুটোকে ছয় ভাগে (৩/৬ + ২/৬) লিখতে দিন, তারপর যোগ।",
+   "prereqCodes": [],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": "গত বছরের বই থেকে, পর্যালোচকের নির্দেশনায় (সি ২৩)।"
+  },
+  {
+   "code": "LO-C4-MATH-08-06.1",
+   "level": "SUB",
+   "parentCode": "LO-C4-MATH-08-06",
+   "domainCode": "DOM-MATH-FRAC",
+   "chapterNumber": 8,
+   "strand": null,
+   "labelBn": "বিভিন্ন হরের ভগ্নাংশকে সমহরে রূপান্তর (ল.সা.গু বা সমতুল দিয়ে)",
+   "sourceText": "বিভিন্ন হরের ভগ্নাংশকে সমহরে রূপান্তর",
+   "bookRef": {
+    "chapter": 8,
+    "lesson": null,
+    "exercises": [
+     "8/অনুশীলনী/12"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-FRAC"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C4-MATH-08-03.1",
+    "LO-C4-MATH-07-06.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-MATH-08-06.2",
+   "level": "SUB",
+   "parentCode": "LO-C4-MATH-08-06",
+   "domainCode": "DOM-MATH-FRAC",
+   "chapterNumber": 8,
+   "strand": null,
+   "labelBn": "বিভিন্ন হরের ভগ্নাংশ যোগ, বিয়োগ ও একসাথে",
+   "sourceText": "বিভিন্ন হরের যোগ-বিয়োগ",
+   "bookRef": {
+    "chapter": 8,
+    "lesson": null,
+    "exercises": [
+     "8/অনুশীলনী/13",
+     "8/অনুশীলনী/14",
+     "8/অনুশীলনী/15"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-FRAC"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C4-MATH-08-06.1",
+    "LO-C4-MATH-08-05"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "বার্ষিক প্রশ্ন ২ (যোগ ২, বিয়োগ ২, একসাথে ২)। সমহরে নিতে পারে কিন্তু তিনটির একসাথে হিসাবে আটকায় — আলাদা।"
+  },
+  {
+   "code": "LO-C4-MATH-08-07",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-FRAC",
+   "chapterNumber": 8,
+   "strand": null,
+   "labelBn": "ভগ্নাংশের কথার অঙ্ক (মোট কত অংশ, কত বাকি)",
+   "sourceText": "কথার অঙ্ক",
+   "bookRef": {
+    "chapter": 8,
+    "lesson": null,
+    "exercises": [
+     "8/অনুশীলনী/16",
+     "8/অনুশীলনী/17",
+     "8/অনুশীলনী/18"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-WORD"
+   ],
+   "homeTipBn": "\"রুটির ১/২ সকালে, ১/৪ বিকালে খাওয়া হলো — মোট কত, কত বাকি?\" — জিজ্ঞেস করুন।",
+   "prereqCodes": [
+    "LO-C4-MATH-08-06.2",
+    "LO-C3-MATH-10-04.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "বার্ষিক প্রশ্ন ৫। ৮/অনুশীলনী/১৮ (দিনের কাজের ছক) ছক পড়ে ভগ্নাংশ — একই দক্ষতা।"
+  },
+  {
+   "code": "LO-C4-MATH-09-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-FRAC",
+   "chapterNumber": 9,
+   "strand": null,
+   "labelBn": "দশমিক ভগ্নাংশ পড়া, লেখা ও স্থানীয় মান",
+   "sourceText": "দশমিক ভগ্নাংশ পড়া-লেখা — দশমাংশ, শতাংশ ও সহস্রাংশ · দৈর্ঘ্য ও ওজনে দশমিক",
+   "bookRef": {
+    "chapter": 9,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT"
+   ],
+   "homeTipBn": "স্কেলে ৭ সেমি ৪ মিমি দেখিয়ে ৭.৪ সেমি লিখতে দিন; ০.২৩ কথায় পড়তে দিন (শূন্য দশমিক দুই তিন)।",
+   "prereqCodes": [],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": "\"০.১-এর কয়টি\" ভাবনাই ভিত্তি (শিক্ষক-নোট)। সহস্রাংশের চেয়ে ছোট দশমিক আসবে না (পরিশিষ্ট চ)।"
+  },
+  {
+   "code": "LO-C4-MATH-09-01.1",
+   "level": "SUB",
+   "parentCode": "LO-C4-MATH-09-01",
+   "domainCode": "DOM-MATH-FRAC",
+   "chapterNumber": 9,
+   "strand": null,
+   "labelBn": "দশমাংশ — ছবি ও পরিমাপ থেকে দশমিকে লেখা (৯ সেমি ৩ মিমি = ৯.৩ সেমি)",
+   "sourceText": "দশমিক ভগ্নাংশ পড়া-লেখা — দশমাংশ · দৈর্ঘ্য ও ওজনে দশমিক",
+   "bookRef": {
+    "chapter": 9,
+    "lesson": null,
+    "exercises": [
+     "9/অনুশীলনী/1",
+     "9/অনুশীলনী/2",
+     "9/অনুশীলনী/3",
+     "9/অনুশীলনী/19"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C4-MATH-08-01",
+    "LO-C3-MATH-12-01.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "৯/অনুশীলনী/৩-এর ৭–৯ (৩/১০ = ▭) সাধারণ → দশমিক রূপান্তরের শুরু।"
+  },
+  {
+   "code": "LO-C4-MATH-09-01.2",
+   "level": "SUB",
+   "parentCode": "LO-C4-MATH-09-01",
+   "domainCode": "DOM-MATH-FRAC",
+   "chapterNumber": 9,
+   "strand": null,
+   "labelBn": "শতাংশ ও সহস্রাংশ পড়া, কথায় লেখা ও স্থানীয় মান",
+   "sourceText": "শতাংশ ও সহস্রাংশ · প্রতিটি অঙ্কের স্থান ও স্থানীয় মান",
+   "bookRef": {
+    "chapter": 9,
+    "lesson": null,
+    "exercises": [
+     "9/অনুশীলনী/5",
+     "9/অনুশীলনী/6"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C4-MATH-09-01.1",
+    "LO-C4-MATH-01-04"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "৮.০৭ (শূন্য দশমাংশ) পড়া ও লেখায় ভুল বেশি।"
+  },
+  {
+   "code": "LO-C4-MATH-09-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-FRAC",
+   "chapterNumber": 9,
+   "strand": null,
+   "labelBn": "সংখ্যারেখায় দশমিক বসানো ও পড়া",
+   "sourceText": "সংখ্যারেখা",
+   "bookRef": {
+    "chapter": 9,
+    "lesson": null,
+    "exercises": [
+     "9/অনুশীলনী/4"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT"
+   ],
+   "homeTipBn": "০ থেকে ১ পর্যন্ত একটি দাগকে ১০ ভাগ করে ০.৩, ০.৭ কোথায় — দেখাতে বলুন।",
+   "prereqCodes": [
+    "LO-C4-MATH-09-01.1",
+    "LO-C3-MATH-01-05"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-MATH-09-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-FRAC",
+   "chapterNumber": 9,
+   "strand": null,
+   "labelBn": "সাধারণ ভগ্নাংশ ও দশমিকের রূপান্তর",
+   "sourceText": "সাধারণ ভগ্নাংশ–দশমিক",
+   "bookRef": {
+    "chapter": 9,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT"
+   ],
+   "homeTipBn": "৩/৪ কে দশমিকে (০.৭৫) আর ০.২৫ কে সাধারণ ভগ্নাংশে (১/৪) লিখতে দিন।",
+   "prereqCodes": [],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-MATH-09-03.1",
+   "level": "SUB",
+   "parentCode": "LO-C4-MATH-09-03",
+   "domainCode": "DOM-MATH-FRAC",
+   "chapterNumber": 9,
+   "strand": null,
+   "labelBn": "সাধারণ ভগ্নাংশকে দশমিকে প্রকাশ (৩৭/১০০ = ০.৩৭, ৩/৪ = ০.৭৫)",
+   "sourceText": "সাধারণ → দশমিক (হর ১০, ১০০ বা ১০০০)",
+   "bookRef": {
+    "chapter": 9,
+    "lesson": null,
+    "exercises": [
+     "9/অনুশীলনী/7"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C4-MATH-09-01.2",
+    "LO-C4-MATH-08-03.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "হর ১০/১০০/১০০০ না হলে আগে সমতুল করে (৩/৪ = ৭৫/১০০) — নতুন ধাপ।"
+  },
+  {
+   "code": "LO-C4-MATH-09-03.2",
+   "level": "SUB",
+   "parentCode": "LO-C4-MATH-09-03",
+   "domainCode": "DOM-MATH-FRAC",
+   "chapterNumber": 9,
+   "strand": null,
+   "labelBn": "দশমিককে সাধারণ ভগ্নাংশে লঘিষ্ঠ আকারে প্রকাশ (০.১২৫ = ১/৮)",
+   "sourceText": "দশমিক → সাধারণ — লঘিষ্ঠ আকারে",
+   "bookRef": {
+    "chapter": 9,
+    "lesson": null,
+    "exercises": [
+     "9/অনুশীলনী/8"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C4-MATH-09-03.1",
+    "LO-C4-MATH-08-03.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "লঘিষ্ঠ আকারে কাটা — অধ্যায় ৮-এর দক্ষতা লাগে।"
+  },
+  {
+   "code": "LO-C4-MATH-09-04",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-FRAC",
+   "chapterNumber": 9,
+   "strand": null,
+   "labelBn": "দশমিক তুলনা ও সাজানো",
+   "sourceText": "প্রতীক দিয়ে তুলনা",
+   "bookRef": {
+    "chapter": 9,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT"
+   ],
+   "homeTipBn": "০.৫ আর ০.৪৫ — কোনটি বড়? অঙ্ক বেশি মানেই বড় নয় — ০.৫০ লিখে মিলিয়ে দেখান।",
+   "prereqCodes": [],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-MATH-09-04.1",
+   "level": "SUB",
+   "parentCode": "LO-C4-MATH-09-04",
+   "domainCode": "DOM-MATH-FRAC",
+   "chapterNumber": 9,
+   "strand": null,
+   "labelBn": "দশমাংশ ও সাধারণ ভগ্নাংশের সাথে তুলনা (০.৭ ▭ ৩/১০)",
+   "sourceText": "প্রতীক দিয়ে তুলনা (সাধারণ ভগ্নাংশসহ)",
+   "bookRef": {
+    "chapter": 9,
+    "lesson": null,
+    "exercises": [
+     "9/অনুশীলনী/9"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C4-MATH-09-01.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-MATH-09-04.2",
+   "level": "SUB",
+   "parentCode": "LO-C4-MATH-09-04",
+   "domainCode": "DOM-MATH-FRAC",
+   "chapterNumber": 9,
+   "strand": null,
+   "labelBn": "শতাংশ-সহস্রাংশ তুলনা ও সাজানো (০.৫ > ০.৪৫, ০.৩০৫ < ০.৩৫)",
+   "sourceText": "শতাংশ-সহস্রাংশের তুলনা ও সাজানো",
+   "bookRef": {
+    "chapter": 9,
+    "lesson": null,
+    "exercises": [
+     "9/অনুশীলনী/10",
+     "9/অনুশীলনী/11"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C4-MATH-09-04.1",
+    "LO-C4-MATH-09-01.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "\"বেশি অঙ্ক মানে বড়\" ভুল ধারণা — দশমাংশ পারা শিশুও এখানে আটকায়; তাই আলাদা।"
+  },
+  {
+   "code": "LO-C4-MATH-09-05",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-FRAC",
+   "chapterNumber": 9,
+   "strand": null,
+   "labelBn": "দশমিক যোগ ও বিয়োগ (দশমিক বিন্দু বরাবর সাজিয়ে)",
+   "sourceText": "যোগ ও বিয়োগ",
+   "bookRef": {
+    "chapter": 9,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT",
+    "QT-SOLVE"
+   ],
+   "homeTipBn": "দশমিক বিন্দুর নিচে দশমিক বিন্দু রেখে লিখছে কি না দেখুন — ৮ + ৪.৫ = ১২.৫, ৫.৩ নয়।",
+   "prereqCodes": [],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-MATH-09-05.1",
+   "level": "SUB",
+   "parentCode": "LO-C4-MATH-09-05",
+   "domainCode": "DOM-MATH-FRAC",
+   "chapterNumber": 9,
+   "strand": null,
+   "labelBn": "দশমাংশের যোগ-বিয়োগ (৭.৬ + ২.৮, ২ − ০.৬)",
+   "sourceText": "যোগ ও বিয়োগ (দশমাংশ)",
+   "bookRef": {
+    "chapter": 9,
+    "lesson": null,
+    "exercises": [
+     "9/অনুশীলনী/12",
+     "9/অনুশীলনী/13"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT",
+    "QT-SOLVE"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C4-MATH-09-01.1",
+    "LO-C4-MATH-02-01",
+    "LO-C4-MATH-02-02.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-MATH-09-05.2",
+   "level": "SUB",
+   "parentCode": "LO-C4-MATH-09-05",
+   "domainCode": "DOM-MATH-FRAC",
+   "chapterNumber": 9,
+   "strand": null,
+   "labelBn": "শতাংশ-সহস্রাংশের যোগ-বিয়োগ — ঘর সমান না হলে ০ বসিয়ে (৫ − ২.৩৭৫)",
+   "sourceText": "যোগ ও বিয়োগ (শতাংশ ও সহস্রাংশ)",
+   "bookRef": {
+    "chapter": 9,
+    "lesson": null,
+    "exercises": [
+     "9/অনুশীলনী/14",
+     "9/অনুশীলনী/15"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT",
+    "QT-SOLVE"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C4-MATH-09-05.1",
+    "LO-C4-MATH-09-01.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "দুই সংখ্যার দশমিক ঘর আলাদা হলে (১১.৪৬ − ১১.৪) সাজানোয় ভুল — আলাদা ধাপ।"
+  },
+  {
+   "code": "LO-C4-MATH-09-06",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-FRAC",
+   "chapterNumber": 9,
+   "strand": null,
+   "labelBn": "১০ দিয়ে দশমিক গুণ ও ভাগ (দশমিক বিন্দু এক ঘর সরানো)",
+   "sourceText": "১০ দিয়ে গুণ ও ভাগ",
+   "bookRef": {
+    "chapter": 9,
+    "lesson": null,
+    "exercises": [
+     "9/অনুশীলনী/16"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT"
+   ],
+   "homeTipBn": "২.৩৫ × ১০ আর ২৩.৫ ÷ ১০ — দশমিক বিন্দু কোন দিকে সরে, জিজ্ঞেস করুন।",
+   "prereqCodes": [
+    "LO-C4-MATH-09-01.2",
+    "LO-C4-MATH-03-03"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "শিক্ষক-নোট: শুধু \"বিন্দু সরাও\" মুখস্থ নয় — ১০ ভাগের ১ ভাগ সম্পর্ক দিয়ে।"
+  },
+  {
+   "code": "LO-C4-MATH-09-07",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-FRAC",
+   "chapterNumber": 9,
+   "strand": null,
+   "labelBn": "দশমিকের কথার অঙ্ক (দূরত্ব, ওজন)",
+   "sourceText": "(অধ্যায় ৯) কথার অঙ্ক — শতাংশ ও সহস্রাংশ",
+   "bookRef": {
+    "chapter": 9,
+    "lesson": null,
+    "exercises": [
+     "9/অনুশীলনী/17",
+     "9/অনুশীলনী/18"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-WORD",
+    "QT-SHORT"
+   ],
+   "homeTipBn": "\"৩.৫ কেজি চাল থেকে ১.২৫০ কেজি রান্না হলো — কত রইল?\" — জিজ্ঞেস করুন।",
+   "prereqCodes": [
+    "LO-C4-MATH-09-05.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "বার্ষিক কথার অঙ্কে আসতে পারে (অধ্যায় ৮–১১)।"
+  },
+  {
+   "code": "LO-C4-MATH-10-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-MEAS",
+   "chapterNumber": 10,
+   "strand": null,
+   "labelBn": "দৈর্ঘ্য, ওজন ও তরলের একক রূপান্তর",
+   "sourceText": "দৈর্ঘ্য, ওজন ও তরলের একক রূপান্তর",
+   "bookRef": {
+    "chapter": 10,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-UNIT",
+    "QT-SHORT"
+   ],
+   "homeTipBn": "৩ কিমি ২৫০ মি = কত মিটার, ২ কেজি ৫০০ গ্রাম = কত গ্রাম — মুখে জিজ্ঞেস করুন।",
+   "prereqCodes": [],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": "বার্ষিক প্রশ্ন ৩ (একক রূপান্তর ৭ × ৩)। \"বড়ো থেকে ছোটো — গুণ; ছোটো থেকে বড়ো — ভাগ\" (শিক্ষক-নোট)।"
+  },
+  {
+   "code": "LO-C4-MATH-10-01.1",
+   "level": "SUB",
+   "parentCode": "LO-C4-MATH-10-01",
+   "domainCode": "DOM-MATH-MEAS",
+   "chapterNumber": 10,
+   "strand": null,
+   "labelBn": "দৈর্ঘ্যের একক রূপান্তর (কিমি, মি, সেমি, মিমি)",
+   "sourceText": "দৈর্ঘ্য … একক রূপান্তর",
+   "bookRef": {
+    "chapter": 10,
+    "lesson": null,
+    "exercises": [
+     "10/অনুশীলনী/1",
+     "10/অনুশীলনী/9"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-UNIT",
+    "QT-SHORT"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C3-MATH-12-02.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "৪ মি ৭ সেমি = ৪০৭ সেমি (৪৭ নয়) — শূন্য বাদ পড়া আসল ভুল।"
+  },
+  {
+   "code": "LO-C4-MATH-10-01.2",
+   "level": "SUB",
+   "parentCode": "LO-C4-MATH-10-01",
+   "domainCode": "DOM-MATH-MEAS",
+   "chapterNumber": 10,
+   "strand": null,
+   "labelBn": "ওজনের একক রূপান্তর ও বাটখারা বাছাই (কেজি-গ্রাম)",
+   "sourceText": "ওজন … একক রূপান্তর · বাটখারা",
+   "bookRef": {
+    "chapter": 10,
+    "lesson": null,
+    "exercises": [
+     "10/অনুশীলনী/4"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-UNIT"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C3-MATH-12-02.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-MATH-10-01.3",
+   "level": "SUB",
+   "parentCode": "LO-C4-MATH-10-01",
+   "domainCode": "DOM-MATH-MEAS",
+   "chapterNumber": 10,
+   "strand": null,
+   "labelBn": "তরলের একক রূপান্তর (লিটার, ডেসিলিটার, মিলিলিটার)",
+   "sourceText": "তরল … একক রূপান্তর",
+   "bookRef": {
+    "chapter": 10,
+    "lesson": null,
+    "exercises": [
+     "10/অনুশীলনী/6"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-UNIT",
+    "QT-SHORT"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C4-MATH-10-01.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "ডেসিলিটার নতুন। ১০/অনুশীলনী/৬-এর ৫–৬ (লিটারের যোগ-বিয়োগ) ১০-০২-এর।"
+  },
+  {
+   "code": "LO-C4-MATH-10-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-MEAS",
+   "chapterNumber": 10,
+   "strand": null,
+   "labelBn": "এককসহ যোগ-বিয়োগ (কিমি-মি, কেজি-গ্রাম, লি-মিলি)",
+   "sourceText": "এককসহ যোগ-বিয়োগ",
+   "bookRef": {
+    "chapter": 10,
+    "lesson": null,
+    "exercises": [
+     "10/অনুশীলনী/2",
+     "10/অনুশীলনী/5",
+     "10/অনুশীলনী/6"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-WORD",
+    "QT-SHORT"
+   ],
+   "homeTipBn": "দুটি দূরত্ব (কিমি ও মি) যোগ করতে দিন — মিটারের ঘর ১০০০ পেরোলে ১ কিমি হাতে রাখছে কি না দেখুন।",
+   "prereqCodes": [
+    "LO-C4-MATH-10-01.1",
+    "LO-C4-MATH-02-02.1",
+    "LO-C3-MATH-11-02.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "মিটারের ঘরে ১০০০-এ হাতে রাখা/ধার (১০ নয়) — আসল ভুল। কিমি-মি দুই ঘরের ছক (শিক্ষক-নোট)।"
+  },
+  {
+   "code": "LO-C4-MATH-10-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-MEAS",
+   "chapterNumber": 10,
+   "strand": null,
+   "labelBn": "আয়ত ও বর্গের পরিসীমা",
+   "sourceText": "পরিসীমা · পরিসীমার সূত্র (২ × (দৈর্ঘ্য + প্রস্থ), ৪ × বাহু)",
+   "bookRef": {
+    "chapter": 10,
+    "lesson": null,
+    "exercises": [
+     "10/অনুশীলনী/3"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT",
+    "QT-WORD"
+   ],
+   "homeTipBn": "ঘরের মেঝে বা টেবিলের চারপাশ মেপে চারদিকের দৈর্ঘ্য যোগ করতে দিন — সেটাই পরিসীমা।",
+   "prereqCodes": [
+    "LO-C4-MATH-10-01.1",
+    "LO-C3-MATH-13-02.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "পরিসীমা আর ক্ষেত্রফল গুলিয়ে যায় — শিক্ষক-নোট।"
+  },
+  {
+   "code": "LO-C4-MATH-10-04",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-MEAS",
+   "chapterNumber": 10,
+   "strand": null,
+   "labelBn": "ক্ষেত্রফল (বর্গ সেমি, বর্গ মি)",
+   "sourceText": "ক্ষেত্রফলের ধারণা ও সূত্র",
+   "bookRef": {
+    "chapter": 10,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT",
+    "QT-WORD"
+   ],
+   "homeTipBn": "ছক কাগজে একটি আয়ত এঁকে ভেতরের ঘর গুনতে দিন, তারপর দৈর্ঘ্য × প্রস্থ করে মিলিয়ে দেখতে বলুন।",
+   "prereqCodes": [],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-MATH-10-04.1",
+   "level": "SUB",
+   "parentCode": "LO-C4-MATH-10-04",
+   "domainCode": "DOM-MATH-MEAS",
+   "chapterNumber": 10,
+   "strand": null,
+   "labelBn": "ঘর গুনে ক্ষেত্রফল (বর্গ সেমি)",
+   "sourceText": "ক্ষেত্রফলের ধারণা · প্রতিটি ঘর ১ বর্গ সেমি",
+   "bookRef": {
+    "chapter": 10,
+    "lesson": null,
+    "exercises": [
+     "10/অনুশীলনী/7"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C4-MATH-10-03"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-MATH-10-04.2",
+   "level": "SUB",
+   "parentCode": "LO-C4-MATH-10-04",
+   "domainCode": "DOM-MATH-MEAS",
+   "chapterNumber": 10,
+   "strand": null,
+   "labelBn": "সূত্রে আয়ত ও বর্গের ক্ষেত্রফল (দৈর্ঘ্য × প্রস্থ, বাহু × বাহু)",
+   "sourceText": "ক্ষেত্রফলের … সূত্র",
+   "bookRef": {
+    "chapter": 10,
+    "lesson": null,
+    "exercises": [
+     "10/অনুশীলনী/8"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT",
+    "QT-WORD"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C4-MATH-10-04.1",
+    "LO-C4-MATH-03-02.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "উত্তরে একক \"বর্গ সেমি\" — না লিখলে ½ কাটা (SK-UNIT-01)।"
+  },
+  {
+   "code": "LO-C4-MATH-11-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-TIME",
+   "chapterNumber": 11,
+   "strand": null,
+   "labelBn": "সময়ের একক রূপান্তর (দিন, ঘণ্টা, মিনিট, সেকেন্ড)",
+   "sourceText": "সময়ের একক রূপান্তর",
+   "bookRef": {
+    "chapter": 11,
+    "lesson": null,
+    "exercises": [
+     "11/অনুশীলনী/1",
+     "11/অনুশীলনী/9"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-UNIT",
+    "QT-SHORT"
+   ],
+   "homeTipBn": "১ ঘণ্টায় কত সেকেন্ড, ৩ দিনে কত ঘণ্টা — মুখে জিজ্ঞেস করুন।",
+   "prereqCodes": [
+    "LO-C3-MATH-12-04"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "বার্ষিক প্রশ্ন ৩ (একক রূপান্তর — সময়)।"
+  },
+  {
+   "code": "LO-C4-MATH-11-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-TIME",
+   "chapterNumber": 11,
+   "strand": null,
+   "labelBn": "ঘণ্টা-মিনিট-সেকেন্ডের যোগ-বিয়োগ (৬০-এ হাতে রাখা ও ধার)",
+   "sourceText": "ঘণ্টা-মিনিট-সেকেন্ডের যোগ-বিয়োগ",
+   "bookRef": {
+    "chapter": 11,
+    "lesson": null,
+    "exercises": [
+     "11/অনুশীলনী/2"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SOLVE",
+    "QT-UNIT"
+   ],
+   "homeTipBn": "দুটি সময় (ঘণ্টা ও মিনিট) যোগ করতে দিন — মিনিট ৬০ পেরোলে ১ ঘণ্টা হাতে রাখছে কি না দেখুন।",
+   "prereqCodes": [
+    "LO-C4-MATH-11-01",
+    "LO-C3-MATH-12-05"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "শিক্ষক-নোট: সবচেয়ে বড় ভুল ১০ ধরে হাতে রাখা বা ধার — \"৬০, ১০ নয়\"।"
+  },
+  {
+   "code": "LO-C4-MATH-11-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-TIME",
+   "chapterNumber": 11,
+   "strand": null,
+   "labelBn": "ঘড়ি পড়া, কাঁটা বসানো ও সময়ের পার্থক্য",
+   "sourceText": "ঘড়ি পড়া ও পার্থক্য",
+   "bookRef": {
+    "chapter": 11,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CLASS",
+    "QT-WORD"
+   ],
+   "homeTipBn": "বাড়ির ঘড়ি দেখে সময় লিখতে দিন; বিকালের দুই সময়ের মাঝে কত সময় গেল জিজ্ঞেস করুন।",
+   "prereqCodes": [],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": "প্রশ্ন প্রণয়ন নীতি: \"ঘড়ি ও ক্যালেন্ডারের কাজ\" শুধু শ্রেণি-মূল্যায়নে — অথচ কাজগুলো নম্বর দেওয়া অনুশীলনী; ফ্ল্যাগ দেখুন।"
+  },
+  {
+   "code": "LO-C4-MATH-11-03.1",
+   "level": "SUB",
+   "parentCode": "LO-C4-MATH-11-03",
+   "domainCode": "DOM-MATH-TIME",
+   "chapterNumber": 11,
+   "strand": null,
+   "labelBn": "ঘড়িতে কয়টা বাজে লেখা",
+   "sourceText": "ঘড়ি পড়া",
+   "bookRef": {
+    "chapter": 11,
+    "lesson": null,
+    "exercises": [
+     "11/অনুশীলনী/3"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CLASS"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C3-MATH-12-03.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-MATH-11-03.2",
+   "level": "SUB",
+   "parentCode": "LO-C4-MATH-11-03",
+   "domainCode": "DOM-MATH-TIME",
+   "chapterNumber": 11,
+   "strand": null,
+   "labelBn": "বলা সময় অনুযায়ী ঘড়িতে কাঁটা বসানো",
+   "sourceText": "খালি ঘড়িগুলোতে কাঁটা বসাই ও সময় লিখি",
+   "bookRef": {
+    "chapter": 11,
+    "lesson": null,
+    "exercises": [
+     "11/অনুশীলনী/5"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CLASS"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C4-MATH-11-03.1",
+    "LO-C3-MATH-12-03.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-MATH-11-03.3",
+   "level": "SUB",
+   "parentCode": "LO-C4-MATH-11-03",
+   "domainCode": "DOM-MATH-TIME",
+   "chapterNumber": 11,
+   "strand": null,
+   "labelBn": "দুই ঘড়ির সময়ের পার্থক্য বের করা",
+   "sourceText": "ঘড়ি পড়া ও পার্থক্য",
+   "bookRef": {
+    "chapter": 11,
+    "lesson": null,
+    "exercises": [
+     "11/অনুশীলনী/4"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CLASS",
+    "QT-WORD"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C4-MATH-11-03.1",
+    "LO-C4-MATH-11-02"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "পড়তে পারে কিন্তু পার্থক্যে ঘণ্টা পেরোনো হিসাবে আটকায় — আলাদা।"
+  },
+  {
+   "code": "LO-C4-MATH-11-04",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-TIME",
+   "chapterNumber": 11,
+   "strand": null,
+   "labelBn": "বছর-মাসের যোগ-বিয়োগ (১২ মাসে ১ বছর)",
+   "sourceText": "বছর-মাসের হিসাব",
+   "bookRef": {
+    "chapter": 11,
+    "lesson": null,
+    "exercises": [
+     "11/অনুশীলনী/6"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SOLVE",
+    "QT-SHORT"
+   ],
+   "homeTipBn": "\"৮ বছর ৫ মাস + ৩ বছর ৯ মাস\" — মাস ১২ পেরোলে ১ বছর হাতে রাখছে কি না দেখুন।",
+   "prereqCodes": [
+    "LO-C4-MATH-11-01",
+    "LO-C4-MATH-02-04"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "বয়সের হিসাবের (০২-০৪) সাথে মিল আছে, কিন্তু এখানে ১২-এ বদল — আলাদা ভুল।"
+  },
+  {
+   "code": "LO-C4-MATH-11-05",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-TIME",
+   "chapterNumber": 11,
+   "strand": null,
+   "labelBn": "সময়ের কথার অঙ্ক",
+   "sourceText": "(অধ্যায় ১১) কথার অঙ্ক · রোজার সময়ের অঙ্কে দুপুর ১২টা পার হয় (শিক্ষক-নোট)",
+   "bookRef": {
+    "chapter": 11,
+    "lesson": null,
+    "exercises": [
+     "11/অনুশীলনী/7"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-WORD"
+   ],
+   "homeTipBn": "\"সকালে ২ ঘণ্টা ১০ মিনিট, রাতে ১ ঘণ্টা ৫৫ মিনিট পড়লে মোট কত?\" — জিজ্ঞেস করুন।",
+   "prereqCodes": [
+    "LO-C4-MATH-11-02",
+    "LO-C3-MATH-12-05"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "বার্ষিক প্রশ্ন ৫।"
+  },
+  {
+   "code": "LO-C4-MATH-11-06",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-TIME",
+   "chapterNumber": 11,
+   "strand": null,
+   "labelBn": "প্রচলিত রীতিতে তারিখ লেখা (০৮/০৯/২০২৫)",
+   "sourceText": "তারিখ লেখা",
+   "bookRef": {
+    "chapter": 11,
+    "lesson": null,
+    "exercises": [
+     "11/অনুশীলনী/8"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CLASS",
+    "QT-SHORT"
+   ],
+   "homeTipBn": "ক্যালেন্ডার দেখে আজকের তারিখ দিন/মাস/বছর রীতিতে লিখতে দিন।",
+   "prereqCodes": [
+    "LO-C4-MATH-11-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "ক্যালেন্ডারের কাজ শ্রেণি-মূল্যায়নে (পরিশিষ্ট চ)।"
+  },
+  {
+   "code": "LO-C4-MATH-12-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-GEOM",
+   "chapterNumber": 12,
+   "strand": null,
+   "labelBn": "ত্রিভুজ চেনা ও আঁকা",
+   "sourceText": "বাহুভেদে ও কোণভেদে ত্রিভুজ চেনা; তিন বাহু বা কোণ দিয়ে ত্রিভুজ আঁকা",
+   "bookRef": {
+    "chapter": 12,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-GEOM",
+    "QT-SHORT"
+   ],
+   "homeTipBn": "খাতায় তিনটি ত্রিভুজ এঁকে বাহু মেপে নাম বলতে দিন — সমবাহু, সমদ্বিবাহু না বিষমবাহু?",
+   "prereqCodes": [],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": "বার্ষিক প্রশ্ন ৬ (জ্যামিতি ১৮)।"
+  },
+  {
+   "code": "LO-C4-MATH-12-01.1",
+   "level": "SUB",
+   "parentCode": "LO-C4-MATH-12-01",
+   "domainCode": "DOM-MATH-GEOM",
+   "chapterNumber": 12,
+   "strand": null,
+   "labelBn": "বাহুভেদে ও কোণভেদে ত্রিভুজের নাম ও বৈশিষ্ট্য",
+   "sourceText": "বাহুভেদে ও কোণভেদে ত্রিভুজ চেনা",
+   "bookRef": {
+    "chapter": 12,
+    "lesson": null,
+    "exercises": [
+     "12/অনুশীলনী/1",
+     "12/অনুশীলনী/6"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-GEOM",
+    "QT-SHORT"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C4-MATH-06-01.1",
+    "LO-C3-MATH-13-01.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "দুই ভিত্তিতে নাম (বাহু ও কোণ) গুলিয়ে ফেলা আসল ভুল।"
+  },
+  {
+   "code": "LO-C4-MATH-12-01.2",
+   "level": "SUB",
+   "parentCode": "LO-C4-MATH-12-01",
+   "domainCode": "DOM-MATH-GEOM",
+   "chapterNumber": 12,
+   "strand": null,
+   "labelBn": "তিন বাহু বা দুই কোণ দিয়ে ত্রিভুজ আঁকা (কম্পাস ও চাঁদা)",
+   "sourceText": "তিন বাহু বা কোণ দিয়ে ত্রিভুজ আঁকা",
+   "bookRef": {
+    "chapter": 12,
+    "lesson": null,
+    "exercises": [
+     "12/অনুশীলনী/2"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-GEOM"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C4-MATH-12-01.1",
+    "LO-C4-MATH-06-01.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "বৃত্তচাপ মুছে ফেলা যাবে না — আঁকার প্রমাণ (D-১৭)।"
+  },
+  {
+   "code": "LO-C4-MATH-12-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-GEOM",
+   "chapterNumber": 12,
+   "strand": null,
+   "labelBn": "আয়ত ও বর্গ চেনা ও আঁকা",
+   "sourceText": "আয়ত ও বর্গ চেনা ও আঁকা",
+   "bookRef": {
+    "chapter": 12,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-GEOM",
+    "QT-SHORT"
+   ],
+   "homeTipBn": "ঘরের জিনিসের মধ্যে কোনটি আয়ত, কোনটি বর্গ — খুঁজে বলতে দিন; খাতায় একটি আয়ত আঁকতে দিন।",
+   "prereqCodes": [],
+   "tagged": false,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-MATH-12-02.1",
+   "level": "SUB",
+   "parentCode": "LO-C4-MATH-12-02",
+   "domainCode": "DOM-MATH-GEOM",
+   "chapterNumber": 12,
+   "strand": null,
+   "labelBn": "আয়ত, বর্গ ও অন্য চতুর্ভুজ আলাদা করে চেনা",
+   "sourceText": "আয়ত ও বর্গ চেনা",
+   "bookRef": {
+    "chapter": 12,
+    "lesson": null,
+    "exercises": [
+     "12/অনুশীলনী/3"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-GEOM",
+    "QT-SHORT"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C4-MATH-06-04.1",
+    "LO-C3-MATH-13-02.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C4-MATH-12-02.2",
+   "level": "SUB",
+   "parentCode": "LO-C4-MATH-12-02",
+   "domainCode": "DOM-MATH-GEOM",
+   "chapterNumber": 12,
+   "strand": null,
+   "labelBn": "নির্দিষ্ট মাপের আয়ত ও বর্গ আঁকা (পরিসীমা দেওয়া থাকলেও)",
+   "sourceText": "আয়ত ও বর্গ … আঁকা",
+   "bookRef": {
+    "chapter": 12,
+    "lesson": null,
+    "exercises": [
+     "12/অনুশীলনী/4"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-GEOM"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C4-MATH-12-02.1",
+    "LO-C4-MATH-06-04.2",
+    "LO-C3-MATH-13-02.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "১২/অনুশীলনী/৪-এর (৩) পরিসীমা ১২ সেমির দুটি আয়ত — পরিসীমার (১০-০৩) সাথে।"
+  },
+  {
+   "code": "LO-C4-MATH-12-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-ALG",
+   "chapterNumber": 12,
+   "strand": null,
+   "labelBn": "কাঠির প্যাটার্ন দেখে পরের ধাপের কাঠি গোনা",
+   "sourceText": "কাঠির প্যাটার্ন · লিখিত পরীক্ষায় নয় (সি ৩৭, D-০৯)",
+   "bookRef": {
+    "chapter": 12,
+    "lesson": null,
+    "exercises": [
+     "12/অনুশীলনী/5"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CLASS"
+   ],
+   "homeTipBn": "দিয়াশলাইয়ের কাঠি দিয়ে পাশাপাশি বর্গ বানিয়ে জিজ্ঞেস করুন — আরেকটি বর্গে আর কয়টি কাঠি লাগবে?",
+   "prereqCodes": [
+    "LO-C4-MATH-12-02.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "শুধু শ্রেণি-মূল্যায়নে (পরিশিষ্ট চ)। সংখ্যার প্যাটার্ন বাদ (D-০২), কাঠির প্যাটার্ন রাখা (D-০৯)।"
+  },
+  {
+   "code": "LO-C4-MATH-SK-ANS-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-MIXED",
+   "chapterNumber": null,
+   "strand": "ANS",
+   "labelBn": "কথার অঙ্কের শেষে আলাদা লাইনে বাক্যে উত্তর লেখা (\"উত্তর: …\")",
+   "sourceText": "কথার অঙ্কের শেষে আলাদা \"উত্তর:\" লাইন না থাকলে ½ নম্বর কাটা (পরিশিষ্ট ঘ; সি ৫৮, ৬২)",
+   "bookRef": {
+    "chapter": null,
+    "lesson": null,
+    "exercises": [
+     "2/অনুশীলনী/8",
+     "3/অনুশীলনী/6",
+     "4/অনুশীলনী/8",
+     "8/অনুশীলনী/17",
+     "11/অনুশীলনী/7"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-WORD"
+   ],
+   "homeTipBn": "কথার অঙ্কের শেষে \"উত্তর: ফেরত পাবে ১৮৩ টাকা।\" — এভাবে আলাদা লাইনে একটি বাক্য লিখছে কি না দেখুন।",
+   "prereqCodes": [
+    "LO-C3-MATH-SK-ANS-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "প্রমাণ নির্ণয়ের ট্যাগ \"উত্তর-বাক্য নেই\" থেকে — চতুর্থ শ্রেণি গণিতে ট্যাগটি চালু।"
+  },
+  {
+   "code": "LO-C4-MATH-SK-WORK-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-MIXED",
+   "chapterNumber": null,
+   "strand": "WORK",
+   "labelBn": "কথার অঙ্ক খাতা-ছক রীতিতে ধাপে ধাপে লেখা",
+   "sourceText": "কথার অঙ্ক: খাতা-ছক রীতির প্রতিটি সঠিক ধাপে নম্বর; শুধু উত্তর থাকলে, ধাপ নেই — অর্ধেক নম্বর (D-১০) · খাতা-ছক রীতি: বামে কী হিসাব, ডানে সংখ্যা ও একক (সি ১৪)",
+   "bookRef": {
+    "chapter": null,
+    "lesson": null,
+    "exercises": [
+     "2/অনুশীলনী/8",
+     "4/অনুশীলনী/8",
+     "5/অনুশীলনী/8",
+     "9/অনুশীলনী/18"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-WORD"
+   ],
+   "homeTipBn": "বাড়িতে কথার অঙ্কে বামে কী হিসাব, ডানে সংখ্যা ও একক — খাতা-ছক রীতিতে লিখছে কি না দেখুন।",
+   "prereqCodes": [
+    "LO-C3-MATH-SK-WORK-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "ধাপে ধাপে নম্বর; আগের ধাপের ভুল যত ধাপে গেছে প্রতিটিতে কাটা (D-১১)।"
+  },
+  {
+   "code": "LO-C4-MATH-SK-UNIT-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-MEAS",
+   "chapterNumber": null,
+   "strand": "UNIT",
+   "labelBn": "উত্তরে একক লেখা (টাকা, মিটার, বছর, বর্গ সেমি)",
+   "sourceText": "উত্তরে একক (টাকা, মিটার, বছর …) না থাকলে ½ নম্বর কাটা (D-১২)",
+   "bookRef": {
+    "chapter": null,
+    "lesson": null,
+    "exercises": [
+     "2/অনুশীলনী/7",
+     "10/অনুশীলনী/2",
+     "10/অনুশীলনী/8",
+     "11/অনুশীলনী/7"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-WORD",
+    "QT-UNIT"
+   ],
+   "homeTipBn": "প্রতিটি উত্তরের পাশে একক (টাকা, মিটার, বছর) লিখছে কি না দেখুন — না লিখলে পরীক্ষায় নম্বর কাটে।",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "চতুর্থ শ্রেণিতে নতুন নম্বর-কাটার নিয়ম — তাই আলাদা দক্ষতা-ধারা; প্রমাণ নির্ণয়ের ট্যাগ \"একক নেই\" (প্রস্তাবিত) থেকে।"
+  },
+  {
+   "code": "LO-C4-MATH-SK-COL-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-PLACE",
+   "chapterNumber": null,
+   "strand": "COL",
+   "labelBn": "উপর-নিচে ঘর মিলিয়ে লেখা, হাতের ও ধারের অঙ্ক উপরের সারিতে",
+   "sourceText": "হাতের সংখ্যা ও ধারের পরের অঙ্ক উপরের লাল সারিতে (সি ১১) · যোগ, বিয়োগ ও গুণ উপর-নিচে (সাধারণ পাঠদানের নিয়ম)",
+   "bookRef": {
+    "chapter": null,
+    "lesson": null,
+    "exercises": [
+     "2/অনুশীলনী/2",
+     "2/অনুশীলনী/4",
+     "3/অনুশীলনী/2",
+     "9/অনুশীলনী/14"
+    ]
+   },
+   "assess": "RUBRIC",
+   "questionTypeCodes": [
+    "QT-ORAL"
+   ],
+   "homeTipBn": "খাতায় বড় সংখ্যা যোগ-বিয়োগ-গুণ করার সময় ঘর মিলিয়ে লিখছে কি না, হাতের সংখ্যা উপরে ছোট করে লিখছে কি না দেখুন।",
+   "prereqCodes": [
+    "LO-C3-MATH-SK-COL-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "দশমিকে বিন্দু বরাবর সাজানো (৯/অনুশীলনী/১৪) এই দক্ষতারই অংশ।"
+  },
+  {
+   "code": "LO-C4-MATH-SK-DEF-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-MATH-GEOM",
+   "chapterNumber": null,
+   "strand": "DEF",
+   "labelBn": "\"এক লাইনে সংজ্ঞা\" বাক্সের সংজ্ঞা বলা ও লেখা",
+   "sourceText": "সংক্ষিপ্ত প্রশ্নে এক লাইনের সংজ্ঞা আসতে পারে — শুধু অধ্যায় ৫, ৬, ৭, ৮ ও ১২-এর শেষের বাক্স থেকে (সি ৪০, ৫৭; D-০৪)",
+   "bookRef": {
+    "chapter": null,
+    "lesson": null,
+    "exercises": [
+     "5/এক লাইনে সংজ্ঞা/—",
+     "6/এক লাইনে সংজ্ঞা/—",
+     "7/এক লাইনে সংজ্ঞা/—",
+     "8/এক লাইনে সংজ্ঞা/—",
+     "12/এক লাইনে সংজ্ঞা/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT"
+   ],
+   "homeTipBn": "অধ্যায়ের শেষের \"এক লাইনে সংজ্ঞা\" বাক্স থেকে প্রতিদিন একটি সংজ্ঞা মুখে বলতে দিন।",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "চতুর্থ শ্রেণিতে \"মুখস্থ নয়\" নিয়মের একমাত্র ব্যতিক্রম (সি ৫৭)। চেনা-আঁকা পারে কিন্তু সংজ্ঞা লিখতে পারে না — আলাদা স্মৃতির দক্ষতা, তাই প্রতি অধ্যায়ে আলাদা সারি না করে এক দক্ষতা-ধারা (৫ অধ্যায় জুড়ে)। নম্বর দেওয়া অনুশীলনী নেই — বাক্সগুলো নম্বরহীন।"
+  }
+ ],
+ "coverage": {
+  "exercisesTotal": 135,
+  "mapped": 135,
+  "unmapped": [],
+  "note": "exercisesTotal = the print's numbered exercises (135): every \"অনুশীলনী N — …\" heading of chapters 1–12 (C4 numbers exercises by these headings; the items inside, (১) … (২০), are covered by their exercise). Refs ending '/—' are unnumbered blocks: the oral নামতা ১১–২০ table (ch. 3) and the \"এক লাইনে সংজ্ঞা\" boxes (ch. 5–8, 12)."
+ },
+ "flags": [
+  {
+   "code": null,
+   "kind": "VERSION_DIFF",
+   "text": "ছাপা ফাইল C4_MATH_Print_v2.2 (README: উৎস C4_MATH_Book_v2.2_Student.docx) আর Word v2.2 মিলিয়ে দেখা হয়েছে: ১৩৫টি \"অনুশীলনী N —\" শিরোনাম হুবহু এক; Word-এর প্রতিটি হিসাব-আইটেম ছাপায় আছে (ছাপার IDML-এ কিছু গল্প দুবার আসে, তাই ছাপার গণনা বেশি দেখায়)। চতুর্থ শ্রেণির কোনো আগের ফ্ল্যাট খসড়া নেই, তাই legacyCodes ফাঁকা। শিক্ষক-নোট ও নম্বর বণ্টন Class 4 Math/C4_MATH_Book_v2.2_Writer-Reviewer.docx থেকে।"
+  },
+  {
+   "code": "LO-C4-MATH-05-01",
+   "kind": "WORDING_RULE_CONFLICT",
+   "text": "\"গাণিতিক বাক্য\": চতুর্থ শ্রেণির বই শব্দটি রাখে — অধ্যায় ৫-এর নামই \"গাণিতিক বাক্য\" (সি ১০, ৩৯; পর্যালোচক D-২২-এ অনুমোদন করেছেন, দ্বিতীয় শ্রেণির নিষেধ শুধু দ্বিতীয় শ্রেণির জন্য)। কিন্তু রিপোর ভেরিফায়ার (OBJECTIVE_TREE_BANNED_TERMS) সব শ্রেণির লেবেলে শব্দটি নিষেধ করে। নির্দেশনা অনুযায়ী ভেরিফায়ার বদলানো হয়নি: লেবেলে \"হিসাব\"/\"প্রতীক দিয়ে হিসাব\", বইয়ের শব্দ sourceText-এ হুবহু। সিদ্ধান্ত দরকার: নিষেধটি কি শ্রেণিভেদে (C1–C3) হবে? তাহলে অধ্যায় ৫-এর লেবেলগুলো বইয়ের শব্দে ফেরানো যাবে।"
+  },
+  {
+   "code": "LO-C4-MATH-04-02",
+   "kind": "OTHER",
+   "text": "৪/অনুশীলনী/৯-এর বহুনির্বাচনি ১ (\"পাঁচ অঙ্কের ক্ষুদ্রতম সংখ্যাকে ১০০ দিয়ে ভাগ\") ও ২ (৬৫৭৩ ÷ ১০০ — ভাগশেষ) ১০০ দিয়ে ভাগ চায়, আর ১-এ ভাজ্য পাঁচ অঙ্কের — অথচ শিখনফল \"এক ও দুই অঙ্কের ভাজক দিয়ে চার অঙ্ক পর্যন্ত ভাজ্যের ভাগ\", আর অধ্যায়ে ১০০ দিয়ে ভাগের কোনো নিয়ম নেই (শুধু শেষে ০ থাকা দুই অঙ্কের ভাজক, যেমন ৬০)। বই-দলকে জানানো দরকার।"
+  },
+  {
+   "code": "LO-C4-MATH-02-03",
+   "kind": "WORDING_RULE_CONFLICT",
+   "text": "পরিভাষায় সূত্র: সি ২৮ বলে অধ্যায় ২-এর \"সম্পর্ক\" বাক্সের সূত্র মুখস্থ করাতে হবে না, আর পরীক্ষায় সংজ্ঞা আসবে শুধু অধ্যায় ৫–৮ ও ১২-এর \"এক লাইনে সংজ্ঞা\" বাক্স থেকে — কিন্তু ২/অনুশীলনী/৯-এর বহুনির্বাচনি ১ (\"কোন সম্পর্কটি সঠিক? বিয়োজন + বিয়োজ্য = বিয়োগফল …\") আর ৩/অনুশীলনী/৮-এর (১) (\"গুণফল নির্ণয়ের সূত্র কী?\") পরিভাষায় সূত্র জিজ্ঞেস করে। প্রশ্ন-ব্যাংকে এই ধরন যাবে না; তৃতীয় শ্রেণিতেও একই ফ্ল্যাগ আছে।"
+  },
+  {
+   "code": "LO-C4-MATH-11-03",
+   "kind": "OTHER",
+   "text": "প্রশ্ন প্রণয়ন নীতি: \"ঘড়ি ও ক্যালেন্ডারের কাজ\" শুধু শ্রেণি-মূল্যায়নে — অথচ ১১/অনুশীলনী/৩, ৪, ৫ (ঘড়ি) ও ৮ (তারিখ) নম্বর দেওয়া লিখিত অনুশীলনী, আর ঘড়ির পার্থক্য (১১/৪) কথার অঙ্কের মতোই। খসড়া এগুলোকে QT-CLASS (লিখিত পরীক্ষায় নয়) ধরেছে; বার্ষিক প্রশ্নে ঘড়ির ছবির প্রশ্ন আসবে কি না — নিশ্চিত করা দরকার।"
+  },
+  {
+   "code": null,
+   "kind": "OTHER",
+   "text": "নতুন নম্বর-কাটার নিয়ম থেকে দুটি নতুন দক্ষতা-ধারা: SK-UNIT-01 (উত্তরে একক না থাকলে ½, D-১২) ও SK-DEF-01 (এক লাইনের সংজ্ঞা, D-০৪) — আগের শ্রেণিতে এগুলো নেই। নির্ণয়ের ট্যাগে \"একক নেই\" নামে একটি ট্যাগ লাগবে (এখন নেই)। SK-DEF-01 ক্ষেত্র হিসেবে জ্যামিতিতে রাখা হলো (সংজ্ঞার বেশিরভাগ জ্যামিতির), যদিও অধ্যায় ৫, ৭, ৮-এর সংজ্ঞাও এতে।"
+  },
+  {
+   "code": "LO-C4-MATH-03-04",
+   "kind": "OTHER",
+   "text": "Claude দ্বিতীয় পাঠ (প্রস্তাব): ০৩-০৪ (৯৯/৯৯৯ দিয়ে সহজ পদ্ধতি) রাখা হোক, তবে প্রশ্ন-ব্যাংকে এই কোডের প্রশ্নে পদ্ধতিটিই চাইতে হবে (\"৯৯ = ১০০ − ১ ধরে গুণ করো\")। কারণ D-১৯: বইয়ের যেকোনো পদ্ধতিতে সঠিক হলে পূর্ণ নম্বর — শিশু সাধারণ উপর-নিচে গুণে ঠিক উত্তর দিলে এই সারিতে \"আয়ত্তে\" দেখাবে, অথচ কৌশলটি জানে না। পদ্ধতি চাওয়া সম্ভব না হলে সারিটি ০৩-০২.২-এ মেশানো ভালো।"
+  },
+  {
+   "code": "LO-C4-MATH-09-02",
+   "kind": "DUPLICATE",
+   "text": "Claude দ্বিতীয় পাঠ (প্রস্তাব): ০৯-০২ (সংখ্যারেখায় দশমিক) মেশানো হোক ০৯-০১.১-এ — অনুশীলনী একটিই (৯/৪), আর দশমাংশ চেনা পারলে রেখায় বসানোও পারে; বার্ষিক পরীক্ষায় দশমিকের আলাদা প্রশ্ন নেই, শুধু সংক্ষিপ্ত প্রশ্ন। দশমিক অধ্যায়ে ১২টি যাচাইযোগ্য সারি — অধ্যায়ের ওজনের তুলনায় বেশি; তুলনা ও যোগ-বিয়োগের দশমাংশ বনাম শতাংশ ভাগ (০৯-০৪, ০৯-০৫) রাখা উচিত, কারণ সেখানে আলাদা ভুল ধারণা আছে।"
+  },
+  {
+   "code": "LO-C4-MATH-01-03",
+   "kind": "OTHER",
+   "text": "Claude দ্বিতীয় পাঠ (প্রস্তাব): আন্তর্জাতিক রীতি (০১-০৩) দুই ধাপেই থাকুক (কমা বসানো; মিলিয়নে কথায় লেখা) — শিক্ষক-নোট বলে আন্তর্জাতিক রীতি \"শুধু পড়া ও কমা পর্যন্ত\", আর ১/অনুশীলনী/৫ সরাসরি আন্তর্জাতিক রীতিতে কথায় লেখায়। পর্যালোচক চাইলে .২ বাদ দিয়ে শিখনফলটি একটি সারি (কমা) করতে পারেন।"
+  },
+  {
+   "code": null,
+   "kind": "OTHER",
+   "text": "QT-CLASS (\"শ্রেণির লিখিত কাজ — লিখিত পরীক্ষায় নয়\") বইয়ের নম্বর-ছকে নেই — Claude যোগ করেছে, কাঠির প্যাটার্ন ও ঘড়ি-ক্যালেন্ডারের কাজের জন্য (পরিশিষ্ট চ: \"যা শুধু শ্রেণি-মূল্যায়নে\")।"
+  },
+  {
+   "code": null,
+   "kind": "OTHER",
+   "text": "আগের শ্রেণির ধাপ তৃতীয় শ্রেণির কোডে (যেমন C3·০৭-০৪.৩)। অ্যাপের ইমপোর্টে প্রথম থেকে তৃতীয় শ্রেণি গণিত আগে ইমপোর্ট হতে হবে। জোড়-বিজোড় (০১-০৭.২) আর বিভাজ্যতা (০৭-০৫)-এর জন্য তৃতীয় শ্রেণিতে কোনো সারি নেই — জোড়-বিজোড়ের শেষ সারি দ্বিতীয় শ্রেণির ০৪-০১; নির্দেশনা অনুযায়ী আগের-ধাপ শুধু ঠিক নিচের শ্রেণির কোডে দেওয়া হয়েছে। তৃতীয় শ্রেণির দ্বিতীয় পাঠে মেশানোর প্রস্তাবে থাকা ১০-০১.৩-এর দিকে আগের-ধাপ দেখানো হয়নি।"
+  }
+ ],
+ "reviewerNotes": "## পর্যালোচকের নোট (মাহজাবিন — আগে পড়ুন)\n\n**কীভাবে পড়বেন।** ✓ চিহ্নের প্রতিটি সারি একটি দক্ষতা — প্রশ্ন, বাড়ির কাজ ও নম্বর এই সারি ধরেই ট্যাগ হবে। ✓ ছাড়া শিখনফল শুধু দল; অভিভাবকেরা শিখনফলের নাম ও টিপ দেখবেন। আগের শ্রেণির ধাপ তৃতীয় শ্রেণির কোডে। চতুর্থ শ্রেণির আগের কোনো ফ্ল্যাট খসড়া নেই — সব কোড নতুন।\n\n**আগে এগুলো দেখুন (Claude-এর বিচার):**\n1. **অধ্যায় ৫-এর লেবেলে \"গাণিতিক বাক্য\" নেই** — বই শব্দটি অনুমোদন করেছে, কিন্তু অ্যাপের ভেরিফায়ার সব শ্রেণিতে নিষেধ করে; লেবেলে \"হিসাব\", বইয়ের শব্দ sourceText-এ (ফ্ল্যাগ)। অধ্যায় ৫ এখন ৫ শিখনফল, ৬টি যাচাইযোগ্য সারি।\n2. **দুটি নতুন দক্ষতা-ধারা:** SK-UNIT-01 (উত্তরে একক — ½ কাটা) ও SK-DEF-01 (এক লাইনের সংজ্ঞা — চতুর্থ শ্রেণির একমাত্র মুখস্থ)। সংজ্ঞাকে প্রতি অধ্যায়ে আলাদা সারি না করে একটি ধারা করা হলো।\n3. **নামতা ২–২০ একটি মৌখিক রুব্রিক সারি (০৩-০৬)** — চতুর্থ শ্রেণিতে নামতার লিখিত প্রশ্ন নেই।\n4. **ভাগ:** এক অঙ্কের ভাজকে নতুন রীতি (ভাগফল উপরে) আর ভাগফলের মাঝে ০ আলাদা ধাপ; শেষে ০ থাকা ভাজক, দুই অঙ্কের ভাজক ও যাচাই আলাদা শিখনফল।\n5. **ভগ্নাংশ ও দশমিক একই ক্ষেত্রে (DOM-MATH-FRAC):** লঘিষ্ঠ আকার আলাদা ধাপ (½ কাটার নিয়ম আছে); দশমিকের তুলনা ও যোগ-বিয়োগে দশমাংশ বনাম শতাংশ-সহস্রাংশ আলাদা (০.৫ বনাম ০.৪৫ ভুল)।\n6. **ল.সা.গু ও গ.সা.গু-তে \"নির্ণয়\" আর \"গল্পে চেনা\" আলাদা** — দুটি গুলিয়ে যাওয়াই শিক্ষক-নোটের প্রধান সতর্কতা।\n7. **ঘড়ি ও তারিখের কাজ QT-CLASS** — বইয়ের নীতি বলে শুধু শ্রেণি-মূল্যায়নে; নিশ্চিত করুন (ফ্ল্যাগ)।\n8. **বইয়ের সমস্যা বই-দলের জন্য:** ১০০ দিয়ে ভাগ ও পাঁচ অঙ্কের ভাজ্য (৪/৯), পরিভাষায় সূত্রের প্রশ্ন (২/৯, ৩/৮) — ফ্ল্যাগ দেখুন।\n\n**পুরোনো খসড়া থেকে বদলায়নি:** চতুর্থ শ্রেণির আগের খসড়া নেই; প্রশ্নের ধরন ও নম্বর বইয়ের পরিশিষ্ট থেকে হুবহু।\n"
+}

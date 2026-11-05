@@ -31,6 +31,15 @@ description: Use when adding a new feature or changing an existing one in the sc
    Reusing another feature's permission ("composes existing perms", D-#94) is no longer allowed: the
    Principal must be able to switch the new feature's actions on and off by themselves.
    See `docs/prd-permission-matrix.md` §9.
+5a. **Add or update the help guide in the same PR (D-#973).** Every new task a person can do gets a
+   guide in `server/assets/help/guides/` (Bangla steps, the `perms` that unlock it, which `screens` show it;
+   docs/prd-help-centre.md §4). A changed screen updates the guides that show it: wording, steps,
+   and a re-shot screenshot when a step's button moved, was renamed, or was removed. A removed
+   action removes or rewrites its guide. Run `node skills/_tools/verify_help_guides.mjs`. It fails on
+   a guide whose permission no longer exists and lists actions that still have no guide. If the
+   screenshot can't be taken in this session (it needs prod), mark the guide `"draft": true`
+   (drafts are hidden from people) and say so in STATUS "Now / next". Never leave a guide that
+   describes the old screen.
 6. If it touches the import contract or shared vocab/RBAC, run `/skills/contract-sync`.
 7. Run `/skills/verify-before-commit`. Green output is the gate.
 8. Update `STATUS.md`; append a `CHANGELOG.md` line. Commit (one change per commit); tag if a milestone.
