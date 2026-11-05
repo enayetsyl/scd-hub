@@ -62,13 +62,14 @@ const PRINT_REQUEST_FIELDS = `
 `;
 
 /** One PAGE of a queue bucket (D-#461). The active buckets stay oldest-first (the order
- *  the Office works them); DELIVERED/CANCELLED are newest-first. Requires roster:manage. */
+ *  the Office works them); DELIVERED/CANCELLED are newest-first. Requires roster:manage.
+ *  D-#1010: `sort: "CLASS"` orders the two work buckets Nursery → KG → Class 1…5. */
 export const PRINT_QUEUE_QUERY = gql<
   { printQueue: { items: PrintRequestT[]; total: number; hasMore: boolean } },
-  { status: string; limit?: number | null; offset?: number | null }
+  { status: string; limit?: number | null; offset?: number | null; sort?: "ARRIVAL" | "CLASS" | null }
 >`
-  query PrintQueue($status: String!, $limit: Int, $offset: Int) {
-    printQueue(status: $status, limit: $limit, offset: $offset) {
+  query PrintQueue($status: String!, $limit: Int, $offset: Int, $sort: String) {
+    printQueue(status: $status, limit: $limit, offset: $offset, sort: $sort) {
       items { ${PRINT_REQUEST_FIELDS} }
       total
       hasMore

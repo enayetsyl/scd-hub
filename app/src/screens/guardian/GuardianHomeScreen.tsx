@@ -61,6 +61,10 @@ import { space } from "../../theme/tokens";
 import { dateKey } from "../../lib/dates";
 import { useRecentLimit, RECENT_ROWS } from "../../lib/useRecentLimit";
 import { ChildCommentRows, ChildRevisionRows } from "../../components/ChildCommentRevisionRows";
+import { StorybookTodayCard } from "../storybooks/StorybookTodayCard";
+import { ActivityTodayCard } from "../activity/ActivityTodayCard";
+import { AllRounderCard } from "../../components/AllRounderCard";
+import { useGuardianFeatures } from "../../lib/guardianFeatures";
 
 type Nav = NativeStackNavigationProp<GuardianHomeStackParamList>;
 
@@ -82,6 +86,8 @@ const HOME_RECENT = RECENT_ROWS;
 const HW_HOME_DATES = 3;
 
 export default function GuardianHomeScreen(): React.ReactElement {
+  // D-#1011: storybook / activity cards (and the all-rounder that came with them) only when switched on.
+  const guardianFeatures = useGuardianFeatures();
   const nav = useNavigation<Nav>();
   const { selected, fetching } = useGuardianChild();
   useRecordView("HOME", selected?.studentId);
@@ -466,6 +472,9 @@ export default function GuardianHomeScreen(): React.ReactElement {
           </Card>
         ) : null}
 
+        {/* SB-7 (D-#987): the all-rounder — how balanced, beside which way they are going. */}
+        {selected && guardianFeatures.any ? <AllRounderCard studentId={selected.studentId} /> : null}
+
         {/* Child info — section + Quran/Arabic group memberships (myChildren,
             already loaded by the provider; cross-grade groups per D-#48/#56). */}
         <Card>
@@ -748,6 +757,27 @@ export default function GuardianHomeScreen(): React.ReactElement {
             ) : null}
           </Pressable>
         </Card>
+
+        {/* SB-4 (D-#984): storybooks — a book lent today, one held at the office, books at home. */}
+        {selected && guardianFeatures.has("STORYBOOKS") ? (
+          <StorybookTodayCard
+            studentId={selected.studentId}
+            childName={selected.nameBn || selected.name}
+            onOpen={() =>
+              (nav.getParent() as unknown as { navigate: (r: string, p: unknown) => void } | undefined)?.navigate("GuardianStoriesTab", { screen: "StoryChildBooks" })
+            }
+          />
+        ) : null}
+
+        {/* AS-4 (D-#991): activity sheets — with the child, the latest checked, a hint, an owed sticker. */}
+        {selected && guardianFeatures.has("ACTIVITY_SHEETS") ? (
+          <ActivityTodayCard
+            studentId={selected.studentId}
+            onOpen={() =>
+              (nav.getParent() as unknown as { navigate: (r: string, p: unknown) => void } | undefined)?.navigate("GuardianActivityTab", { screen: "ActivityChildSheets" })
+            }
+          />
+        ) : null}
 
         {/* Library loans — read-only child-loans card (LB-5 rider, J-L9; D-#68:
             no reserve/renew control exists for guardians) */}

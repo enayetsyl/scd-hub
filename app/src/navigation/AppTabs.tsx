@@ -54,6 +54,8 @@ import type {
   GuardianAssignmentsStackParamList,
   GuardianClassTestStackParamList,
   ClassBooksStackParamList,
+  StorybooksStackParamList,
+  ActivityStackParamList,
   QuranExamStackParamList,
   GuardianClassNotesStackParamList,
   TabParamList,
@@ -126,6 +128,23 @@ import AssignmentGiftScreen from "../screens/assignment/AssignmentGiftScreen";
 import ChildAssignmentsScreen from "../screens/guardian/ChildAssignmentsScreen";
 import ChildClassTestsScreen from "../screens/guardian/ChildClassTestsScreen";
 import ClassBooksScreen from "../screens/classbooks/ClassBooksScreen";
+import StoryShelfScreen from "../screens/storybooks/StoryShelfScreen";
+import StorySeriesScreen from "../screens/storybooks/StorySeriesScreen";
+import StoryBookScreen from "../screens/storybooks/StoryBookScreen";
+import StoryManageScreen from "../screens/storybooks/StoryManageScreen";
+import StoryDeskScreen from "../screens/storybooks/StoryDeskScreen";
+import StoryChildBooksScreen from "../screens/storybooks/StoryChildBooksScreen";
+import ActivityBanksScreen from "../screens/activity/ActivityBanksScreen";
+import { ActivityGuardianAccessScreen, StoryGuardianAccessScreen } from "../screens/guardian-access/GuardianFeatureAccessScreen";
+import { useGuardianFeatures } from "../lib/guardianFeatures";
+import ActivityBankScreen from "../screens/activity/ActivityBankScreen";
+import ActivityCornerScreen from "../screens/activity/ActivityCornerScreen";
+import ActivityDeskScreen from "../screens/activity/ActivityDeskScreen";
+import ActivityChooseScreen from "../screens/activity/ActivityChooseScreen";
+import ActivityChildSheetsScreen from "../screens/activity/ActivityChildSheetsScreen";
+import ActivityBatchScreen from "../screens/activity/ActivityBatchScreen";
+import ActivityHandOutScreen from "../screens/activity/ActivityHandOutScreen";
+import ActivityStickersScreen from "../screens/activity/ActivityStickersScreen";
 import QuranExamHomeScreen from "../screens/quranExam/QuranExamHomeScreen";
 import MyQuranExamScreen from "../screens/quranExam/MyQuranExamScreen";
 import QuranExamDayScreen from "../screens/quranExam/QuranExamDayScreen";
@@ -365,6 +384,8 @@ import PersonActivityScreen from "../screens/admin/PersonActivityScreen";
 import WorkClaimQueueScreen from "../screens/admin/WorkClaimQueueScreen";
 import GuardianEngagementScreen from "../screens/admin/GuardianEngagementScreen";
 import MarksDriversScreen from "../screens/reports/MarksDriversScreen";
+import StorybookReportScreen from "../screens/reports/StorybookReportScreen";
+import ActivityReportScreen from "../screens/reports/ActivityReportScreen";
 import MasteryBankCoverageScreen from "../screens/mastery/MasteryBankCoverageScreen";
 import SystemHealthScreen from "../screens/admin/SystemHealthScreen";
 import AiSettingsScreen from "../screens/admin/AiSettingsScreen";
@@ -1572,6 +1593,8 @@ function ReportsNavigator(): React.ReactElement {
       <ReportsStack.Screen name="DailySnapshot" component={DailySnapshotScreen} options={{ title: STR.finSnapshotTitle }} />
       <ReportsStack.Screen name="GuardianEngagement" component={GuardianEngagementScreen} options={{ title: STR.geTitle }} />
       <ReportsStack.Screen name="MarksDrivers" component={MarksDriversScreen} options={{ title: STR.mdTitle }} />
+      <ReportsStack.Screen name="StorybookReport" component={StorybookReportScreen} options={{ title: STR.stbRepTitle }} />
+      <ReportsStack.Screen name="ActivityReport" component={ActivityReportScreen} options={{ title: STR.actRepTitle }} />
       <ReportsStack.Screen name="MasteryBankCoverage" component={MasteryBankCoverageScreen} options={{ title: STR.bcTitle }} />
     </ReportsStack.Navigator>
   );
@@ -1760,6 +1783,55 @@ function ClassBooksNavigator(): React.ReactElement {
   );
 }
 
+// SB-1 (D-#980): the storybook shelf — one stack for staff (StorybooksTab) and guardians
+// (GuardianStoriesTab). StoryShelf is first: the initial route takes no params.
+const StorybooksStack = createNativeStackNavigator<StorybooksStackParamList>();
+function StorybooksNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    <StorybooksStack.Navigator screenOptions={stackOptions}>
+      <StorybooksStack.Screen name="StoryShelf" component={StoryShelfScreen} options={{ title: STR.stbTitle }} />
+      <StorybooksStack.Screen name="StorySeries" component={StorySeriesScreen} options={({ route }) => ({ title: route.params.title })} />
+      <StorybooksStack.Screen name="StoryBook" component={StoryBookScreen} options={({ route }) => ({ title: route.params.title })} />
+      <StorybooksStack.Screen name="StoryManage" component={StoryManageScreen} options={{ title: STR.stbManage }} />
+      <StorybooksStack.Screen name="StoryDesk" component={StoryDeskScreen} options={{ title: STR.stbDeskNav }} />
+      <StorybooksStack.Screen name="StoryChildBooks" component={StoryChildBooksScreen} options={{ title: STR.stbMyBooks }} />
+      <StorybooksStack.Screen name="StoryGuardianAccess" component={StoryGuardianAccessScreen} options={{ title: STR.gfaTitleStory }} />
+    </StorybooksStack.Navigator>
+  );
+}
+
+// AS-1 (D-#988): activity sheets — banks, and (AS-2..) the activity corner. ActivityBanks is
+// first: the initial route takes no params.
+const ActivityStack = createNativeStackNavigator<ActivityStackParamList>();
+function ActivityNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    <ActivityStack.Navigator screenOptions={stackOptions}>
+      <ActivityStack.Screen name="ActivityBanks" component={ActivityBanksScreen} options={{ title: STR.actNav }} />
+      <ActivityStack.Screen name="ActivityGuardianAccess" component={ActivityGuardianAccessScreen} options={{ title: STR.gfaTitleActivity }} />
+      <ActivityStack.Screen name="ActivityBank" component={ActivityBankScreen} options={({ route }) => ({ title: route.params.title })} />
+      <ActivityStack.Screen name="ActivityCorner" component={ActivityCornerScreen} options={{ title: STR.actCorner }} />
+      <ActivityStack.Screen name="ActivityDesk" component={ActivityDeskScreen} options={{ title: STR.actDesk }} />
+      <ActivityStack.Screen name="ActivityBatch" component={ActivityBatchScreen} options={{ title: STR.actBatchTitle }} />
+      <ActivityStack.Screen name="ActivityHandOut" component={ActivityHandOutScreen} options={{ title: STR.actHandOut }} />
+      <ActivityStack.Screen name="ActivityStickers" component={ActivityStickersScreen} options={{ title: STR.actStickers }} />
+      <ActivityStack.Screen name="ActivityChildSheets" component={ActivityChildSheetsScreen} options={{ title: STR.actMySheets }} />
+    </ActivityStack.Navigator>
+  );
+}
+
+// AS-3 (D-#988): the guardian side — choose first (the initial route takes no params).
+function GuardianActivityNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    <ActivityStack.Navigator screenOptions={stackOptions}>
+      <ActivityStack.Screen name="ActivityChoose" component={ActivityChooseScreen} options={{ title: STR.actNav }} />
+      <ActivityStack.Screen name="ActivityChildSheets" component={ActivityChildSheetsScreen} options={{ title: STR.actMySheets }} />
+    </ActivityStack.Navigator>
+  );
+}
+
 // সাহায্য ও নির্দেশিকা (prd-help-centre, D-#968): every login, staff and guardian. The home
 // is registered first; the guide screen needs a param (never an initial route).
 const HelpStack = createNativeStackNavigator<HelpStackParamList>();
@@ -1912,6 +1984,7 @@ export function AppTabs(): React.ReactElement {
     "staff_attendance:upload",
   );
   const canLibrary = can("library:view");
+  const canActivity = can("activity_sheets:view");
   // PQ-4: teachers file print requests; Office/Principal work the queue.
   const canPrint = any("printing:create", "printing:view_all", "printing:process");
   const canChat = can("chat:view");
@@ -1991,6 +2064,8 @@ export function AppTabs(): React.ReactElement {
   // GP-2 (D-#68): the GUARDIAN role holds ONLY guardian:read_child, so every
   // staff gate above is false for guardians — the guardian tab set is all they see.
   const canGuardian = can("guardian:read_child");
+  // D-#1011: the storybook shelf / activity sheets reach a family only when switched on for them.
+  const guardianFeatures = useGuardianFeatures();
   // D-#870: class books — staff by action; guardians get their own tab (GuardianBooksTab).
   const canClassBooks = any("class_books:view", "class_books:manage");
   const canQuranExam = any("quran_exam:view", "quran_exam:manage", "quran_exam:examine");
@@ -2071,6 +2146,8 @@ export function AppTabs(): React.ReactElement {
         {/* WB-1 (D-#701): every staff login has a board; GUARDIAN never. */}
         {canHome ? <Drawer.Screen name="WorkBoardTab" component={WorkBoardNavigator} /> : null}
         {canLibrary ? <Drawer.Screen name="LibraryTab" component={LibraryNavigator} /> : null}
+        {canLibrary ? <Drawer.Screen name="StorybooksTab" component={StorybooksNavigator} /> : null}
+        {canActivity ? <Drawer.Screen name="ActivityTab" component={ActivityNavigator} /> : null}
         {canClassBooks ? <Drawer.Screen name="ClassBooksTab" component={ClassBooksNavigator} /> : null}
         {canQuranExam ? <Drawer.Screen name="QuranExamTab" component={QuranExamNavigator} /> : null}
         {canChat ? <Drawer.Screen name="ChatTab" component={ChatNavigator} /> : null}
@@ -2104,6 +2181,9 @@ export function AppTabs(): React.ReactElement {
         {canGuardian ? <Drawer.Screen name="GuardianClassTestTab" component={GuardianClassTestNavigator} /> : null}
         {canGuardian ? <Drawer.Screen name="GuardianClassNotesTab" component={GuardianClassNotesNavigator} /> : null}
         {canGuardian ? <Drawer.Screen name="GuardianBooksTab" component={ClassBooksNavigator} /> : null}
+        {canGuardian && guardianFeatures.has("STORYBOOKS") ? <Drawer.Screen name="GuardianStoriesTab" component={StorybooksNavigator} /> : null}
+        {canGuardian && guardianFeatures.has("ACTIVITY_SHEETS") ? <Drawer.Screen name="GuardianActivityTab" component={GuardianActivityNavigator} /> : null}
+
         {/* Help is for every login; the server decides which guides each person gets. */}
         <Drawer.Screen name="HelpTab" component={HelpNavigator} />
       </Drawer.Navigator>
