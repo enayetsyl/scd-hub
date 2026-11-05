@@ -28,6 +28,7 @@ import { ActivityError } from "./ActivityBankService";
 import { activityRules } from "./ActivitySettingsService";
 import { makeCopies, printRunPdf } from "./ActivityCornerService";
 import type { CoverPage } from "./pdfTools";
+import { sweepNotReturned } from "./ActivityFollowUpService";
 
 export const GUARDIAN_ERRORS_BN = {
   notSuited: "এই ব্যাংক / স্তরটি আপনার সন্তানের শ্রেণির জন্য নয়",
@@ -171,6 +172,7 @@ export interface ChildSheetRow {
 }
 
 export async function childSheets(studentId: string, limit = 40): Promise<ChildSheetRow[]> {
+  await sweepNotReturned();
   const issues = (await ActivityIssue.find({ studentId, status: { $ne: "CANCELLED" } }).sort({ requestedAt: -1 }).limit(limit).lean()) as unknown as IActivityIssue[];
   const [sheets, banks] = await Promise.all([
     ActivitySheet.find({ _id: { $in: issues.map((i) => i.sheetId) } }).lean(),

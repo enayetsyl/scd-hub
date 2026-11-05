@@ -166,6 +166,7 @@ export default function ActivityBanksScreen({ navigation }: Props): React.ReactE
           {corner ? <Button title={STR.actCorner} variant="secondary" onPress={() => navigation.navigate("ActivityCorner")} /> : null}
           {manage ? <Button title={STR.actBatch.replace("{n}", bnNum(reqQ.data?.activityRequests.length ?? 0))} variant="secondary" onPress={() => navigation.navigate("ActivityBatch")} /> : null}
           {desk ? <Button title={STR.actHandOut} variant="secondary" onPress={() => navigation.navigate("ActivityHandOut")} /> : null}
+          {desk ? <Button title={STR.actStickers} variant="secondary" onPress={() => navigation.navigate("ActivityStickers")} /> : null}
         </View>
       ) : null}
       {manage || settings ? (

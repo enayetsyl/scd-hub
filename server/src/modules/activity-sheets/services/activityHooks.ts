@@ -1,9 +1,10 @@
 /**
- * Follow-ups after a sheet is checked (AS-4 fills these in: the guardian's "checked" alert and
- * the level-up hint). Kept apart so the corner service stays free of notification wiring.
+ * Follow-ups after a sheet is checked (AS-4): the family's "checked" notification (with the
+ * level-up hint when earned). Kept apart so the corner service stays free of notification wiring.
  */
 import type { IActivityIssue } from "../models/ActivityIssue";
+import { alertChecked } from "./ActivityFollowUpService";
 
-export async function afterReturn(_issue: IActivityIssue): Promise<void> {
-  // AS-4.
+export async function afterReturn(issue: IActivityIssue): Promise<void> {
+  await alertChecked(issue);
 }

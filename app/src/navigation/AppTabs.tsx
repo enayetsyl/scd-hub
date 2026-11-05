@@ -141,6 +141,7 @@ import ActivityChooseScreen from "../screens/activity/ActivityChooseScreen";
 import ActivityChildSheetsScreen from "../screens/activity/ActivityChildSheetsScreen";
 import ActivityBatchScreen from "../screens/activity/ActivityBatchScreen";
 import ActivityHandOutScreen from "../screens/activity/ActivityHandOutScreen";
+import ActivityStickersScreen from "../screens/activity/ActivityStickersScreen";
 import QuranExamHomeScreen from "../screens/quranExam/QuranExamHomeScreen";
 import MyQuranExamScreen from "../screens/quranExam/MyQuranExamScreen";
 import QuranExamDayScreen from "../screens/quranExam/QuranExamDayScreen";
@@ -1766,6 +1767,7 @@ function ActivityNavigator(): React.ReactElement {
       <ActivityStack.Screen name="ActivityDesk" component={ActivityDeskScreen} options={{ title: STR.actDesk }} />
       <ActivityStack.Screen name="ActivityBatch" component={ActivityBatchScreen} options={{ title: STR.actBatchTitle }} />
       <ActivityStack.Screen name="ActivityHandOut" component={ActivityHandOutScreen} options={{ title: STR.actHandOut }} />
+      <ActivityStack.Screen name="ActivityStickers" component={ActivityStickersScreen} options={{ title: STR.actStickers }} />
       <ActivityStack.Screen name="ActivityChildSheets" component={ActivityChildSheetsScreen} options={{ title: STR.actMySheets }} />
     </ActivityStack.Navigator>
   );

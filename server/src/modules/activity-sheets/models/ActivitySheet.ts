@@ -19,6 +19,8 @@ export interface IActivitySheet extends Document {
   sourceFileId?: Types.ObjectId;
   page?: number;
   answerPage?: number;
+  /** The answer page rendered once (StoredFile activity_page), shared by the sheets on that page (AS-4). */
+  answerImageId?: Types.ObjectId;
   active: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -35,6 +37,7 @@ const ActivitySheetSchema = new Schema<IActivitySheet>(
     sourceFileId: { type: Schema.Types.ObjectId, ref: "StoredFile" },
     page: { type: Number, min: 1 },
     answerPage: { type: Number, min: 1 },
+    answerImageId: { type: Schema.Types.ObjectId, ref: "StoredFile" },
     active: { type: Boolean, default: true },
   },
   { timestamps: true },

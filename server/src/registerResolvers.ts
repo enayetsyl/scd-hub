@@ -82,6 +82,7 @@ import "./modules/library/resolvers/storyReports";
 import "./modules/activity-sheets/resolvers/activityBanks";
 import "./modules/activity-sheets/resolvers/activityCorner";
 import "./modules/activity-sheets/resolvers/activityGuardian";
+import "./modules/activity-sheets/resolvers/activityFollowUp";
 import "./modules/chat/resolvers/chat";
 import "./modules/vocab/resolvers/vocabWord";
 import "./modules/vocab/resolvers/vocabTest";

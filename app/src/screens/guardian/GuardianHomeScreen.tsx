@@ -62,6 +62,7 @@ import { dateKey } from "../../lib/dates";
 import { useRecentLimit, RECENT_ROWS } from "../../lib/useRecentLimit";
 import { ChildCommentRows, ChildRevisionRows } from "../../components/ChildCommentRevisionRows";
 import { StorybookTodayCard } from "../storybooks/StorybookTodayCard";
+import { ActivityTodayCard } from "../activity/ActivityTodayCard";
 import { AllRounderCard } from "../../components/AllRounderCard";
 
 type Nav = NativeStackNavigationProp<GuardianHomeStackParamList>;
@@ -761,6 +762,16 @@ export default function GuardianHomeScreen(): React.ReactElement {
             childName={selected.nameBn || selected.name}
             onOpen={() =>
               (nav.getParent() as unknown as { navigate: (r: string, p: unknown) => void } | undefined)?.navigate("GuardianStoriesTab", { screen: "StoryChildBooks" })
+            }
+          />
+        ) : null}
+
+        {/* AS-4 (D-#991): activity sheets — with the child, the latest checked, a hint, an owed sticker. */}
+        {selected ? (
+          <ActivityTodayCard
+            studentId={selected.studentId}
+            onOpen={() =>
+              (nav.getParent() as unknown as { navigate: (r: string, p: unknown) => void } | undefined)?.navigate("GuardianActivityTab", { screen: "ActivityChildSheets" })
             }
           />
         ) : null}

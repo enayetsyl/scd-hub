@@ -488,7 +488,9 @@ export async function assertActivityFileReadAccess(ctx: AppContext, file: { _id:
     if (!all.some((l) => levels.includes(l))) throw new ForbiddenError(ACTIVITY_ERRORS_BN.forbidden);
     return;
   }
-  throw new ForbiddenError(ACTIVITY_ERRORS_BN.forbidden);
+  // An answer page (AS-4): a guardian whose child returned a sheet on that page.
+  const { assertAnswerImageAccess } = await import("./ActivityFollowUpService");
+  await assertAnswerImageAccess(ctx, id);
 }
 
 /** A sample page as a JPEG data URI (the storybookImage pattern), behind the file gate. */

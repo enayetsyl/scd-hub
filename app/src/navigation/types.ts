@@ -294,6 +294,7 @@ export type ActivityStackParamList = {
   ActivityChildSheets: undefined;
   ActivityBatch: undefined;
   ActivityHandOut: undefined;
+  ActivityStickers: undefined;
 };
 
 export type StorybooksStackParamList = {

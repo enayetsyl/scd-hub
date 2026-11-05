@@ -6,13 +6,29 @@
 import React from "react";
 import { RefreshControl, ScrollView, Text, View } from "react-native";
 import { useMutation, useQuery } from "urql";
-import { CANCEL_ACTIVITY_REQUEST, CHILD_ACTIVITY_SHEETS_QUERY, type ActivityChildSheetT } from "../../graphql/activitySheets";
+import { ACTIVITY_ANSWER_IMAGE, ACTIVITY_LEVEL_UP_HINTS, CANCEL_ACTIVITY_REQUEST, CHILD_ACTIVITY_SHEETS_QUERY, type ActivityChildSheetT } from "../../graphql/activitySheets";
+import { Image } from "react-native";
 import { Badge, Button, Card, Muted, Notice, Screen } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
 import { useGuardianChild } from "../../state/GuardianChildContext";
 import { friendlyError } from "../../lib/errors";
 import { STR, activityLevelLabel, activityResultLabel, isoDateLabel } from "../../lib/labels";
 import { space, typeScale, useColors } from "../../theme";
+
+/** The answer page — only once the sheet is back (AS-4, D-#991). */
+function AnswerToggle({ issueId }: { issueId: string }): React.ReactElement {
+  const [open, setOpen] = React.useState(false);
+  const [q] = useQuery({ query: ACTIVITY_ANSWER_IMAGE, variables: { issueId }, pause: !open });
+  return (
+    <View style={{ marginTop: space(2) }}>
+      <Button title={open ? STR.actHideAnswer : STR.actShowAnswer} variant="ghost" onPress={() => setOpen((v) => !v)} />
+      {open && q.error ? <Notice tone="danger" message={friendlyError(q.error)} /> : null}
+      {open && q.data?.activityAnswerImage ? (
+        <Image source={{ uri: q.data.activityAnswerImage }} style={{ width: "100%", aspectRatio: 595 / 842 }} resizeMode="contain" />
+      ) : null}
+    </View>
+  );
+}
 
 const statusText = (s: string): string => (STR as unknown as Record<string, string>)[`actStatus${s}`] ?? s;
 const pathText = (p: string): string => (STR as unknown as Record<string, string>)[`actPath${p}`] ?? p;
@@ -46,6 +62,7 @@ export default function ActivityChildSheetsScreen(): React.ReactElement {
   const studentId = child?.studentId ?? null;
   const [q, refetch] = useQuery({ query: CHILD_ACTIVITY_SHEETS_QUERY, variables: { studentId: studentId ?? "" }, pause: !studentId, requestPolicy: "cache-and-network" });
   const [, cancel] = useMutation(CANCEL_ACTIVITY_REQUEST);
+  const [hintsQ] = useQuery({ query: ACTIVITY_LEVEL_UP_HINTS, variables: { studentId: studentId ?? "" }, pause: !studentId });
   const [msg, setMsg] = React.useState<string | null>(null);
   const reload = (): void => refetch({ requestPolicy: "network-only" });
   const rows = q.data?.childActivitySheets ?? [];
@@ -53,12 +70,16 @@ export default function ActivityChildSheetsScreen(): React.ReactElement {
     <Screen padded={false}>
       <ScrollView contentContainerStyle={{ padding: space(4) }} refreshControl={<RefreshControl refreshing={q.fetching} onRefresh={reload} />}>
         {msg ? <Notice tone="danger" message={msg} /> : null}
+        {(hintsQ.data?.activityLevelUpHints ?? []).map((h) => (
+          <Notice key={h.bankId} tone="ok" message={STR.actLevelHint.replace("{bank}", h.bankNameBn).replace("{from}", activityLevelLabel(h.from)).replace("{to}", activityLevelLabel(h.to))} />
+        ))}
         <QueryGate results={[q]} onRetry={reload} loaderLabel={STR.loading}>
           {rows.length === 0 ? <Muted>{STR.actMySheetsEmpty}</Muted> : null}
           {rows.map((r) => (
             <ActivitySheetRow
               key={r.issue.id}
               row={r}
+              extra={r.issue.status === "RETURNED" && r.hasAnswer ? <AnswerToggle issueId={r.issue.id} /> : null}
               onCancel={() =>
                 void cancel({ issueId: r.issue.id }).then((res) => {
                   if (res.error) setMsg(friendlyError(res.error));

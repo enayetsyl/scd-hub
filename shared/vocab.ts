@@ -1343,6 +1343,8 @@ export const NOTIFICATION_KINDS = [
   /** SB-4 (D-#984): a child borrowed a storybook / earned a sticker for reading one. */
   "STORYBOOK_ISSUED",
   "STORYBOOK_STICKER",
+  /** AS-4 (D-#988/#991): a child's activity sheet came back and was checked. */
+  "ACTIVITY_SHEET_CHECKED",
   "CLASS_TEST_RESULT",
   // D-#472: the class test is CONFIRMED and gone to print — tell the family what is
   // coming (subject, chapter, date, marks, minutes) while there is still time to revise.
@@ -1526,6 +1528,7 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   LIBRARY_HOLD_READY: "বই রাখা আছে",
   STORYBOOK_ISSUED: "নতুন গল্পের বই",
   STORYBOOK_STICKER: "বই পড়ার স্টিকার",
+  ACTIVITY_SHEET_CHECKED: "অ্যাক্টিভিটি শিট দেখা হয়েছে",
   CLASS_TEST_RESULT: "ক্লাস টেস্টের ফলাফল",
   CLASS_TEST_UPCOMING: "আসন্ন ক্লাস টেস্ট",
   CLASS_TEST_OVERDUE_DIGEST: "বিলম্বিত ক্লাস টেস্ট রিপোর্ট",
@@ -1600,6 +1603,7 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   LIBRARY_HOLD_READY: "Book held for you",
   STORYBOOK_ISSUED: "New storybook",
   STORYBOOK_STICKER: "Reading sticker",
+  ACTIVITY_SHEET_CHECKED: "Activity sheet checked",
   CLASS_TEST_RESULT: "Class-test result",
   CLASS_TEST_UPCOMING: "Upcoming class test",
   CLASS_TEST_OVERDUE_DIGEST: "Overdue class-test reports",

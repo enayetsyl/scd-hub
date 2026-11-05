@@ -36,6 +36,7 @@ import { ActivityIssue, type IActivityIssue } from "../models/ActivityIssue";
 import { ActivityError, loadActivityFile } from "./ActivityBankService";
 import { activityRules } from "./ActivitySettingsService";
 import { afterReturn } from "./activityHooks";
+import { sweepNotReturned } from "./ActivityFollowUpService";
 import { buildSheetsPdf, type CoverPage, type StampedPage } from "./pdfTools";
 
 export const CORNER_ERRORS_BN = {
@@ -142,6 +143,7 @@ export interface TrayView {
 }
 
 export async function trayView(): Promise<{ trays: TrayView[]; lowTray: number; busyMode: boolean }> {
+  await sweepNotReturned();
   const rules = await activityRules();
   const banks = (await ActivityBank.find({ status: "PUBLISHED" }).sort({ sortOrder: 1, code: 1 }).lean()) as unknown as IActivityBank[];
   const ids = banks.map((b) => b._id);

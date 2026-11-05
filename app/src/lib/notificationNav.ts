@@ -75,6 +75,9 @@ export function notificationTarget(
     case "STORYBOOK_ISSUED":
     case "STORYBOOK_STICKER":
       return guardian ? { tab: "GuardianStoriesTab", screen: "StoryChildBooks" } : { tab: "StorybooksTab", screen: "StoryDesk" };
+    // AS-4 (D-#988): an activity sheet came back checked — the child's sheets (answer page there).
+    case "ACTIVITY_SHEET_CHECKED":
+      return guardian ? { tab: "GuardianActivityTab", screen: "ActivityChildSheets" } : { tab: "ActivityTab", screen: "ActivityDesk" };
     // D-#296: a filed/finished print job lands the operator/teacher on the queue.
     case "PRINT_REQUESTED":
     case "PRINT_DELIVERED":

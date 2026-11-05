@@ -319,3 +319,46 @@ export const ACTIVITY_HANDOUT_ROSTER = gql<{ activityHandOutRoster: ActivityBatc
 export const ACTIVITY_HANDOUT = gql`
   mutation ActivityHandOut($issueIds: [String!]!) { activityHandOut(issueIds: $issueIds) }
 `;
+
+// --- AS-4 check & follow-up --------------------------------------------------
+
+export interface ActivityHintT {
+  bankId: string;
+  bankNameBn: string;
+  from: string;
+  to: string;
+}
+
+export interface ActivityTodayT {
+  open: number;
+  owed: number;
+  doneThisMonth: number;
+  latest: { issue: ActivityIssueT; bankNameBn: string; itemId: string } | null;
+  hint: ActivityHintT | null;
+}
+
+export const ACTIVITY_ANSWER_IMAGE = gql<{ activityAnswerImage: string }, { issueId: string }>`
+  query ActivityAnswerImage($issueId: String!) { activityAnswerImage(issueId: $issueId) }
+`;
+
+export const ACTIVITY_LEVEL_UP_HINTS = gql<{ activityLevelUpHints: ActivityHintT[] }, { studentId: string }>`
+  query ActivityLevelUpHints($studentId: String!) { activityLevelUpHints(studentId: $studentId) { bankId bankNameBn from to } }
+`;
+
+export const ACTIVITY_TODAY = gql<{ activityToday: ActivityTodayT }, { studentId: string }>`
+  query ActivityToday($studentId: String!) {
+    activityToday(studentId: $studentId) {
+      open owed doneThisMonth
+      latest { issue { ${ISSUE_FIELDS} } bankNameBn itemId }
+      hint { bankId bankNameBn from to }
+    }
+  }
+`;
+
+export const ACTIVITY_STICKERS_OWED = gql<{ activityStickersOwed: Array<{ issue: ActivityIssueT; studentName: string; classLevel: number | null; sectionNameBn: string | null; bankNameBn: string }> }>`
+  query ActivityStickersOwed { activityStickersOwed { issue { ${ISSUE_FIELDS} } studentName classLevel sectionNameBn bankNameBn } }
+`;
+
+export const GIVE_ACTIVITY_STICKERS = gql`
+  mutation GiveActivityStickers($issueIds: [String!]!) { giveActivityStickers(issueIds: $issueIds) }
+`;
