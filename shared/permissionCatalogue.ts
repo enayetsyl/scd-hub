@@ -867,6 +867,9 @@ export const FEATURE_CATALOGUE = {
       assign: { en: "Assign work to others", bn: "অন্যকে কাজ দেওয়া", desc: "Tasks/recurring tasks for others; edit/move/cancel/reassign any", teacher: false, office: true, flags: [] },
       cover_desk: { en: "Cover the office desk", bn: "অফিসের কাজ নিজের বোর্ডে নেওয়া", desc: "Pull print or leave-approval cards onto own board", teacher: false, office: true, flags: [] },
       use: { en: "My board & tasks", bn: "নিজের কাজ", desc: "Own board, self-tasks, tasks I assigned", teacher: true, office: true, flags: ["SELF"] },
+      // D-#961: the 🎤 on the work board. It opens the voice parser only; giving the task to
+      // someone else still needs `assign`. Off by default, switched on per person.
+      voice: { en: "Assign by voice", bn: "কণ্ঠে কাজ দেওয়া", desc: "Speak one or more tasks, review the draft cards, then save (another person still needs `assign`)", teacher: false, office: false, flags: [] },
     },
   },
   admin_dashboard: {
@@ -940,6 +943,9 @@ export const FEATURE_CATALOGUE = {
     bn: "সিস্টেমের অবস্থা",
     actions: {
       view: { en: "System health", bn: "সার্ভার ও স্টোরেজের অবস্থা দেখা", desc: "Storage, disk, egress, ticker, backups", teacher: false, office: false, flags: [] },
+      // D-#967: the Gemini key + model every AI feature uses, set in the app instead of .env.
+      // LOCKED: a key is a paid credential — Principal only, never delegable.
+      ai_key: { en: "AI key & model", bn: "এআই (Gemini) কী ও মডেল বদলানো", desc: "Save or clear the Gemini key and model used by voice tasks, monthly comments, the observation rota and the book author", teacher: false, office: false, flags: ["LOCKED"] },
     },
   },
   guardian_engagement: {

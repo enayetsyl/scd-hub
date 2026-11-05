@@ -82,6 +82,7 @@ import PrintHomeScreen from "../screens/printing/PrintHomeScreen";
 import WorkBoardScreen from "../screens/workboard/WorkBoardScreen";
 import TaskDetailScreen from "../screens/workboard/TaskDetailScreen";
 import TaskFormScreen from "../screens/workboard/TaskFormScreen";
+import VoiceTaskScreen from "../screens/workboard/VoiceTaskScreen";
 import AssignedByMeScreen from "../screens/workboard/AssignedByMeScreen";
 import LoadGridScreen from "../screens/workboard/LoadGridScreen";
 import TaskTemplatesScreen from "../screens/workboard/TaskTemplatesScreen";
@@ -362,6 +363,7 @@ import GuardianEngagementScreen from "../screens/admin/GuardianEngagementScreen"
 import MarksDriversScreen from "../screens/reports/MarksDriversScreen";
 import MasteryBankCoverageScreen from "../screens/mastery/MasteryBankCoverageScreen";
 import SystemHealthScreen from "../screens/admin/SystemHealthScreen";
+import AiSettingsScreen from "../screens/admin/AiSettingsScreen";
 import ReportsHomeScreen from "../screens/reports/ReportsHomeScreen";
 import PendingReportScreen from "../screens/reports/PendingReportScreen";
 import TeacherClassLoadScreen from "../screens/reports/TeacherClassLoadScreen";
@@ -765,6 +767,7 @@ function WorkBoardNavigator(): React.ReactElement {
       <WorkBoardStack.Screen name="WorkBoard" component={WorkBoardScreen} options={{ title: STR.wbMyBoard }} />
       <WorkBoardStack.Screen name="TaskDetail" component={TaskDetailScreen} options={{ title: STR.wbTaskDetail }} />
       <WorkBoardStack.Screen name="TaskForm" component={TaskFormScreen} options={{ title: STR.wbNewTask }} />
+      <WorkBoardStack.Screen name="VoiceTask" component={VoiceTaskScreen} options={{ title: STR.vtOpen }} />
       <WorkBoardStack.Screen name="AssignedByMe" component={AssignedByMeScreen} options={{ title: STR.wbAssignedByMe }} />
       <WorkBoardStack.Screen name="LoadGrid" component={LoadGridScreen} options={{ title: STR.wbLoad }} />
       <WorkBoardStack.Screen name="TaskTemplates" component={TaskTemplatesScreen} options={{ title: STR.wbTemplates }} />
@@ -1585,6 +1588,7 @@ function AdminNavigator(): React.ReactElement {
         options={{ title: STR.geTitle }}
       />
       <AdminStack.Screen name="SystemHealth" component={SystemHealthScreen} options={{ title: STR.shTitle }} />
+      <AdminStack.Screen name="AiSettings" component={AiSettingsScreen} options={{ title: STR.aiTitle }} />
       <AdminStack.Screen name="ReconciliationReport" component={ReconciliationReportScreen} options={{ title: STR.rrTitle }} />
       <AdminStack.Screen name="HwLifecycleReport" component={HwLifecycleReportScreen} options={{ title: STR.hlrTitle }} />
       <AdminStack.Screen name="AttendanceRanking" component={AttendanceRankingScreen} options={{ title: STR.arTitle }} />

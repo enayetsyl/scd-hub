@@ -186,6 +186,11 @@ export default function WorkBoardScreen({ route, navigation }: Props): React.Rea
       {mine ? (
         <View style={{ marginBottom: space(3) }}>
           <Button title={`+ ${STR.wbNewTask}`} variant="secondary" onPress={() => navigation.navigate("TaskForm", { assigneeUserId: user?.id })} />
+          {can("work_board:voice") ? (
+            <View style={{ marginTop: space(2) }}>
+              <Button title={STR.vtOpen} variant="secondary" onPress={() => navigation.navigate("VoiceTask")} />
+            </View>
+          ) : null}
         </View>
       ) : can("work_board:assign") ? (
         <View style={{ marginBottom: space(3) }}>
