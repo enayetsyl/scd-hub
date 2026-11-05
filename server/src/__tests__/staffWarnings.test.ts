@@ -1,5 +1,5 @@
 /**
- * Staff mistake record MR-2 (D-#940–#943) on a real in-memory Mongo: the warning ladder,
+ * Staff mistake record MR-2 (D-#940–#942, #1005) on a real in-memory Mongo: the warning ladder,
  * the face-to-face meeting, the per-person summary and the Principal's rules.
  *
  * Mistakes are inserted directly (the MR-1 suite covers how they are caught); the ladder
@@ -220,7 +220,7 @@ describe("D-#942 — the summary", () => {
   });
 });
 
-describe("D-#943 — the Principal's rules", () => {
+describe("D-#1005 — the Principal's rules", () => {
   it("validates, saves, and drives the ladder, the deadline and the switches", async () => {
     const principal = await user("Principal", "PRINCIPAL");
     const t = await user("Rashed");

@@ -63,7 +63,7 @@ export function staffMistakeReasonError(kind: StaffMistakeKind, code: string, te
 }
 
 // -----------------------------------------------------------------------------
-// MR-2 (D-#940–#943): the warning ladder, the deadline choice and per-place switches
+// MR-2 (D-#940–#942, #1005): the warning ladder, the deadline choice and per-place switches
 // -----------------------------------------------------------------------------
 
 /** WARNING = a pop-up to the person; MEETING = a face-to-face talk is booked; CONDUCT = the

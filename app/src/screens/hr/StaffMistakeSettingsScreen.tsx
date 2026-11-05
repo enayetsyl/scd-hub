@@ -1,5 +1,5 @@
 /**
- * StaffMistakeSettingsScreen — ভুলের রেকর্ড: নিয়ম (D-#943): the warning steps (how many
+ * StaffMistakeSettingsScreen — ভুলের রেকর্ড: নিয়ম (D-#1005): the warning steps (how many
  * counted mistakes in how many days), what one mistake of each tier weighs, the time to
  * explain, and which places record mistakes at all. Reviewers read it; only
  * `staff_mistakes:settings` (the Principal by default) saves it.
