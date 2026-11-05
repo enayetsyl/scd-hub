@@ -7872,7 +7872,7 @@ const STR_BN = {
   stbRepBySection: "শাখা অনুযায়ী পছন্দ",
   stbRepEmpty: "এই সময়ে কোনো তথ্য নেই",
   allrTitle: "সব দিকে কেমন চলছে",
-  allrWindow: "গত ৯০ দিন · বই পড়া ৩০ দিন",
+  allrWindow: "গত ৯০ দিন · বই ও শিট ৩০ দিন",
   allrStrongOf: "{n}টির মধ্যে {s}টি দিকে ভালো চলছে",
   allrNoData: "এখনো যথেষ্ট তথ্য নেই",
   allrBandStrong: "ভালো চলছে",
@@ -7887,8 +7887,9 @@ const STR_BN = {
   allrAreaReading: "বই পড়া",
   allrAreaActivity: "অ্যাক্টিভিটি শিট",
   allrReadingValue: "{n}টি বই",
+  allrActivityValue: "{n}টি শিট",
   allrHow: "কীভাবে হিসাব হয় ›",
-  allrHowBody: "প্রতিটি দিকের ০–১০০ নম্বর: উপস্থিতি ও বাড়ির কাজ — শতকরা হার; ক্লাস টেস্ট — গড় নম্বর; অ্যাসাইনমেন্ট — সময়মতো জমা ও নম্বরের গড়; বই পড়া — গত ৩০ দিনে পড়া বই, মাসে ৪টি হলে ১০০। যে দিকের তথ্য নেই তা গোনা হয় না। কারও সাথে তুলনা নয়।",
+  allrHowBody: "প্রতিটি দিকের ০–১০০ নম্বর: উপস্থিতি ও বাড়ির কাজ — শতকরা হার; ক্লাস টেস্ট — গড় নম্বর; অ্যাসাইনমেন্ট — সময়মতো জমা ও নম্বরের গড়; বই পড়া — গত ৩০ দিনে পড়া বই, মাসে ৪টি হলে ১০০; অ্যাক্টিভিটি শিট — গত ৩০ দিনে শেষ করা শিট, মাসে ৮টি হলে ১০০। যে দিকের তথ্য নেই তা গোনা হয় না। কারও সাথে তুলনা নয়।",
   // Quran oral exam (D-#873..#877)
   // Activity sheets (AS-1.., D-#988)
   actNav: "অ্যাক্টিভিটি শিট",
@@ -14758,7 +14759,7 @@ const STR_EN: StrTable = {
   stbRepBySection: "Preference by section",
   stbRepEmpty: "Nothing in this period",
   allrTitle: "How balanced",
-  allrWindow: "Last 90 days · reading 30 days",
+  allrWindow: "Last 90 days · books and sheets 30 days",
   allrStrongOf: "Going well in {s} of {n} areas",
   allrNoData: "Not enough information yet",
   allrBandStrong: "Going well",
@@ -14773,8 +14774,9 @@ const STR_EN: StrTable = {
   allrAreaReading: "Reading",
   allrAreaActivity: "Activity sheets",
   allrReadingValue: "{n} books",
+  allrActivityValue: "{n} sheets",
   allrHow: "How is this worked out ›",
-  allrHowBody: "Each area scores 0–100: attendance and homework as a percentage; class tests by the average mark; assignments by on-time hand-in and marks; reading by books read in the last 30 days, 4 a month = 100. Areas with no data are not counted. No comparison with classmates.",
+  allrHowBody: "Each area scores 0–100: attendance and homework as a percentage; class tests by the average mark; assignments by on-time hand-in and marks; reading by books read in the last 30 days, 4 a month = 100; activity sheets by sheets finished in the last 30 days, 8 a month = 100. Areas with no data are not counted. No comparison with classmates.",
   // Quran oral exam (D-#873..#877)
   // Activity sheets (AS-1.., D-#988)
   actNav: "Activity sheets",

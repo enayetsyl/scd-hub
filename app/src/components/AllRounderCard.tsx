@@ -77,6 +77,8 @@ function Body_({ r }: { r: AllRounderT }): React.ReactElement {
           const value =
             a.area === "READING" && a.value !== null
               ? ` · ${STR.allrReadingValue.replace("{n}", bnNum(a.value))}`
+              : a.area === "ACTIVITY" && a.value !== null
+              ? ` · ${STR.allrActivityValue.replace("{n}", bnNum(a.value))}`
               : a.score !== null
                 ? ` · ${bnNum(a.score)}`
                 : "";

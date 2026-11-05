@@ -1,9 +1,10 @@
 /**
- * SB-7 — the all-rounder card (D-#987).
+ * SB-7 / AS-6 — the all-rounder card (D-#987).
  *
  *   areas    each area's score + band by the D-#987 thresholds; class tests: at risk → মনোযোগ,
  *            rising from ≥ 60 → ভালো; assignments ½ on-time + ½ marks; reading from desk ticks
- *            in 30 days ÷ 4, capped at 100, only once the child has borrowed; activity = SOON
+ *            in 30 days ÷ 4, capped at 100, only once the child has borrowed; activity sheets
+ *            finished in 30 days ÷ the monthly target, only once the child has had a sheet
  *   overall  plain average of the areas WITH data (a missing one never pulls it down);
  *            ≥ 80 / 60–79 / < 60; strong count
  */
@@ -28,7 +29,7 @@ describe("all-rounder", () => {
       HOMEWORK: [55, "ATTENTION"],
       ASSIGNMENT: [77, "OK"], // on-time 5/6 = 83.3, marks 70 → 76.7
       READING: [100, "STRONG"], // 5 ÷ 4, capped
-      ACTIVITY: [null, "SOON"],
+      ACTIVITY: [null, "NONE"], // no sheet yet
     });
     expect(overallOf(areas)).toEqual({ score: 82, band: "STRONG", strongCount: 3, countedAreas: 5 });
   });
@@ -51,6 +52,18 @@ describe("all-rounder", () => {
     const reading = areasOf(wp(), { read: 1, everBorrowed: true }).find((a) => a.area === "READING")!;
     expect([reading.score, reading.band]).toEqual([25, "ATTENTION"]);
     expect(areasOf(wp(), { read: 2, everBorrowed: true }).find((a) => a.area === "READING")!.band).toBe("OK");
+  });
+
+  it("activity sheets: finished ÷ the monthly target, capped; counted once the child had a sheet", () => {
+    const act = (done: number, ever = true) => areasOf(wp(), { read: 5, everBorrowed: true }, { done, target: 8, ever }).find((a) => a.area === "ACTIVITY")!;
+    expect([act(8).score, act(8).band, act(8).value]).toEqual([100, "STRONG", 8]);
+    expect([act(12).score, act(12).band]).toEqual([100, "STRONG"]);
+    expect([act(5).score, act(5).band]).toEqual([63, "OK"]);
+    expect([act(2).score, act(2).band]).toEqual([25, "ATTENTION"]);
+    expect([act(0).score, act(0).band]).toEqual([0, "ATTENTION"]);
+    expect([act(0, false).score, act(0, false).band]).toEqual([null, "NONE"]);
+    // Counted in the overall: (94 + 86 + 55 + 77 + 100 + 63) ÷ 6 = 79.
+    expect(overallOf(areasOf(wp(), { read: 5, everBorrowed: true }, { done: 5, target: 8, ever: true }))).toMatchObject({ score: 79, band: "OK", countedAreas: 6 });
   });
 
   it("assignments fall back to on-time only when there are no marks; pending ones are not judged", () => {

@@ -12,12 +12,16 @@
  *   ASSIGNMENT   ½ on-time % + ½ marks %              ≥ 80 / 60–79 / < 60
  *   READING      storybooks read in 30 days ÷ target  ≥ 80 / 50–79 / < 50 — counts once the
  *                (the desk's tick at return), ≤ 100   child has borrowed a storybook at all
- *   ACTIVITY     activity sheets — not built yet (AS-6); shown, never counted
+ *   ACTIVITY     activity sheets finished (back, not অসম্পূর্ণ) in 30 days ÷ the monthly target
+ *                (rule, default 8), ≤ 100; ≥ 80 / 50–79 / < 50 — counts once the child has had
+ *                a sheet (AS-6, D-#987/#991)
  * Quran is left out for now (owner, D-#987).
  */
 import { BookLoan } from "../../library/models/BookLoan";
 import { BookTitle } from "../../library/models/BookTitle";
 import { wholePicture, type WholePicture } from "./WholePictureService";
+import { ActivityIssue } from "../../activity-sheets/models/ActivityIssue";
+import { activityRules } from "../../activity-sheets/services/ActivitySettingsService";
 
 export const ALL_ROUNDER_AREAS = ["ATTENDANCE", "CLASS_TEST", "HOMEWORK", "ASSIGNMENT", "READING", "ACTIVITY"] as const;
 export type AllRounderArea = (typeof ALL_ROUNDER_AREAS)[number];
@@ -32,7 +36,7 @@ export interface AreaScore {
   area: AllRounderArea;
   score: number | null;
   band: AllRounderBand;
-  /** The raw figure behind the score (a percentage, or books read for READING). */
+  /** The raw figure behind the score (a percentage; books read for READING; sheets finished for ACTIVITY). */
   value: number | null;
 }
 
@@ -48,8 +52,20 @@ export interface AllRounder {
 const clamp = (n: number) => Math.max(0, Math.min(100, Math.round(n)));
 const band3 = (score: number, strong: number, ok: number): AllRounderBand => (score >= strong ? "STRONG" : score >= ok ? "OK" : "ATTENTION");
 
-/** Pure: the five school + reading areas from the whole picture and the reading count. */
-export function areasOf(wp: Pick<WholePicture, "attendance" | "classTest" | "homework" | "assignment">, reading: { read: number; everBorrowed: boolean }): AreaScore[] {
+/** Activity sheets for the card: finished in 30 days, the monthly target, whether the child ever had one. */
+export interface ActivityCount {
+  done: number;
+  target: number;
+  ever: boolean;
+}
+const NO_ACTIVITY: ActivityCount = { done: 0, target: 8, ever: false };
+
+/** Pure: the school areas, reading and activity sheets from their counts. */
+export function areasOf(
+  wp: Pick<WholePicture, "attendance" | "classTest" | "homework" | "assignment">,
+  reading: { read: number; everBorrowed: boolean },
+  activity: ActivityCount = NO_ACTIVITY,
+): AreaScore[] {
   const out: AreaScore[] = [];
   // Attendance
   if (wp.attendance.markedDays > 0) {
@@ -87,8 +103,11 @@ export function areasOf(wp: Pick<WholePicture, "attendance" | "classTest" | "hom
     const s = clamp((reading.read / READING_MONTHLY_TARGET) * 100);
     out.push({ area: "READING", score: s, band: band3(s, 80, 50), value: reading.read });
   } else out.push({ area: "READING", score: null, band: "NONE", value: null });
-  // Activity sheets — AS-6.
-  out.push({ area: "ACTIVITY", score: null, band: "SOON", value: null });
+  // Activity sheets (AS-6): finished in 30 days against the monthly target.
+  if (activity.ever) {
+    const s = clamp((activity.done / Math.max(1, activity.target)) * 100);
+    out.push({ area: "ACTIVITY", score: s, band: band3(s, 80, 50), value: activity.done });
+  } else out.push({ area: "ACTIVITY", score: null, band: "NONE", value: null });
   return out;
 }
 
@@ -118,8 +137,18 @@ async function readingOf(studentId: string, now: Date): Promise<{ read: number; 
   };
 }
 
+async function activityOf(studentId: string, now: Date): Promise<ActivityCount> {
+  const from = new Date(now.getTime() - READING_DAYS * DAY_MS);
+  const [ever, done, rules] = await Promise.all([
+    ActivityIssue.exists({ studentId, status: { $ne: "CANCELLED" } }),
+    ActivityIssue.countDocuments({ studentId, status: "RETURNED", result: { $ne: "INCOMPLETE" }, returnedAt: { $gte: from } }),
+    activityRules(),
+  ]);
+  return { done, target: rules.monthlyTarget, ever: !!ever };
+}
+
 export async function allRounder(studentId: string, now: Date = new Date()): Promise<AllRounder> {
-  const [wp, reading] = await Promise.all([wholePicture(studentId, now), readingOf(studentId, now)]);
-  const areas = areasOf(wp, reading);
+  const [wp, reading, activity] = await Promise.all([wholePicture(studentId, now), readingOf(studentId, now), activityOf(studentId, now)]);
+  const areas = areasOf(wp, reading, activity);
   return { studentId, areas, ...overallOf(areas) };
 }
