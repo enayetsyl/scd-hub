@@ -20,8 +20,10 @@ import {
 export const OBJECTIVE_TREE_FORMAT = "scd-objective-tree/1";
 export const OBJECTIVE_DOMAINS_FORMAT = "scd-objective-domains/1";
 
-/** Never in a label or home tip (owner rule, tree README): use "হিসাবটি". */
+/** Never in a label or home tip up to Class 3 (those books ban it; use "হিসাবটি"). From Class 4 the
+ *  books use it as a chapter title, so it is allowed there (owner, D-#974). */
 export const OBJECTIVE_TREE_BANNED_TERMS = ["গাণিতিক বাক্য"] as const;
+export const OBJECTIVE_TREE_BANNED_TERM_CLASSES = ["NUR", "KG", "C1", "C2", "C3"] as const;
 
 export interface TreeNodeInput {
   code: string;
@@ -227,11 +229,12 @@ export function checkTreeInvariants(input: TreeCheckInput): TreeViolation[] {
   }
 
   if (file) {
+    const termsBanned = (OBJECTIVE_TREE_BANNED_TERM_CLASSES as readonly string[]).includes(classToken);
     for (const n of nodes) {
       const tip = (n.homeTipBn ?? "").trim();
       if (n.level === "OBJECTIVE" && !tip) bad("HOME_TIP", n.code, "objective without a home tip");
       if (n.level === "SUB" && tip) bad("HOME_TIP", n.code, "a sub-objective has a home tip (guardians see objectives only)");
-      for (const term of OBJECTIVE_TREE_BANNED_TERMS) {
+      for (const term of termsBanned ? OBJECTIVE_TREE_BANNED_TERMS : []) {
         if (`${n.labelBn} ${tip}`.includes(term)) bad("BANNED_TERM", n.code, `uses "${term}"`);
       }
     }
