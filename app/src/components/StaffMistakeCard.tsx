@@ -9,7 +9,7 @@ import type { StaffMistakeT, StaffMistakeStatusT } from "../graphql/staffMistake
 import { Badge, Body, Card, Muted } from "./ui";
 import { reasonLabel } from "./MistakeReasonSheet";
 import { STR, fullDateLabel, hwSubjectLabel } from "../lib/labels";
-import { dhakaClock, dhakaWhen } from "../lib/staffMistakeLabels";
+import { dhakaClock, dhakaWhen, staffMistakeKindTitle } from "../lib/staffMistakeLabels";
 import { space } from "../theme/tokens";
 
 const STATUS: Record<StaffMistakeStatusT, { label: () => string; tone: "warn" | "danger" | "info" | "muted" }> = {
@@ -40,7 +40,7 @@ export function StaffMistakeCard({
         </Body>
         <Badge text={st.label()} tone={st.tone} />
       </View>
-      <Body>{STR.smrKindMark}</Body>
+      <Body>{staffMistakeKindTitle(m.kind)}</Body>
       {n ? (
         <>
           <Muted>
@@ -50,6 +50,17 @@ export function StaffMistakeCard({
             <Muted key={s.studentId}>
               • {s.studentName} — {s.via === "UNDO" ? STR.msgViaUndo : STR.msgViaFlip} ({dhakaClock(s.chasedAt)} → {dhakaClock(s.correctedAt)})
               {s.correctedByName && s.correctedByName !== m.staffName ? ` · ${STR.msgCorrectedBy}: ${s.correctedByName}` : ""}
+            </Muted>
+          ))}
+        </>
+      ) : null}
+      {m.attendanceNote ? (
+        <>
+          <Muted>{m.attendanceNote.unitLabel}</Muted>
+          {m.attendanceNote.changes.map((c, i) => (
+            <Muted key={`${c.studentId}-${i}`}>
+              • {c.studentName} — {c.from === "ABSENT" ? STR.smrAttAbsent : STR.smrAttPresent} → {c.to === "ABSENT" ? STR.smrAttAbsent : STR.smrAttPresent} ({dhakaClock(c.at)}
+              {c.byName && c.byName !== m.staffName ? ` · ${c.byName}` : ""})
             </Muted>
           ))}
         </>

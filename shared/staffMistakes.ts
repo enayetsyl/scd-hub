@@ -4,8 +4,9 @@
 // docs/prd-staff-mistakes.md. Server and app read the same reason list, so the button a
 // teacher taps and the code the server stores never drift apart.
 
-/** Where a mistake was caught. MR-1 ships the homework/assignment same-day correction. */
-export const STAFF_MISTAKE_KINDS = ["MARK_CORRECTION"] as const;
+/** Where a mistake was caught. MR-1: the homework/assignment same-day correction;
+ *  MR-3: an attendance list changed after it was submitted (D-#944). */
+export const STAFF_MISTAKE_KINDS = ["MARK_CORRECTION", "ATTENDANCE_CORRECTION"] as const;
 export type StaffMistakeKind = (typeof STAFF_MISTAKE_KINDS)[number];
 
 export const STAFF_MISTAKE_STATUSES = ["EXPLANATION_DUE", "PENDING_REVIEW", "COUNTED", "EXCUSED", "MOVED"] as const;
@@ -24,6 +25,8 @@ export interface StaffMistakeReason {
   selfCounts?: boolean;
   /** Free text is required with this reason. */
   needsText?: boolean;
+  /** Not a mistake at all — accepted at once, no review (D-#944, the mockup's dashed buttons). */
+  autoExcuses?: boolean;
 }
 
 export const STAFF_MISTAKE_REASONS: Record<StaffMistakeKind, readonly StaffMistakeReason[]> = {
@@ -31,6 +34,12 @@ export const STAFF_MISTAKE_REASONS: Record<StaffMistakeKind, readonly StaffMista
     { code: "MINE", bn: "আমার ভুল ছিল", en: "It was my mistake", hintBn: "ভুল করে \"জমা দেয়নি\" চিহ্নিত করেছিলাম", selfCounts: true },
     { code: "LATE_DIRECT", bn: "পরে সরাসরি আমার কাছে জমা দিয়েছে", en: "Handed to me directly later", hintBn: "ক্লাস ক্যাপ্টেন / অফিসে জমা দেয়নি; ক্লাসে যাওয়ার পর আমার হাতে দিয়েছে" },
     { code: "OFFICE_LATE", bn: "অফিস থেকে খাতা দেরিতে বা কম পেয়েছি", en: "Office handed the scripts over late or short", hintBn: "অফিসে জমা ছিল, কিন্তু আমার কাছে পৌঁছায়নি" },
+    { code: "OTHER", bn: "অন্য কারণ", en: "Another reason", hintBn: "নিচে নিজের ভাষায় লিখুন", needsText: true },
+  ],
+  ATTENDANCE_CORRECTION: [
+    { code: "MINE", bn: "আমার ভুল ছিল", en: "It was my mistake", hintBn: "ভুল শিক্ষার্থীকে অনুপস্থিত / উপস্থিত দিয়েছিলাম", selfCounts: true },
+    { code: "LATE_ARRIVAL", bn: "শিক্ষার্থী দেরিতে এসেছে", en: "The student came late", hintBn: "উপস্থিতি নেওয়ার পরে ক্লাসে এসেছে", autoExcuses: true },
+    { code: "AWAY", bn: "শিক্ষার্থী অন্য কাজে বাইরে ছিল", en: "The student was away on other work", hintBn: "অফিস / অনুষ্ঠান / অন্য শিক্ষকের কাছে", autoExcuses: true },
     { code: "OTHER", bn: "অন্য কারণ", en: "Another reason", hintBn: "নিচে নিজের ভাষায় লিখুন", needsText: true },
   ],
 };

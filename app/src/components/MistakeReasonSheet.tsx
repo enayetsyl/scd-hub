@@ -30,6 +30,9 @@ export interface MistakeReasonRequest {
   initial?: MistakeReasonPick | null;
 }
 
+/** A per-kind string when one exists (placeholder, hint), else undefined. */
+const kindStr = (key: string): string | undefined => (STR as unknown as Record<string, string | undefined>)[key];
+
 export function reasonLabel(kind: StaffMistakeKind, code: string | null | undefined): string {
   if (!code) return "";
   const r = staffMistakeReason(kind, code);
@@ -95,7 +98,7 @@ export function MistakeReasonSheet({
               label={needsText ? STR.smrTextRequired : STR.smrTextOptional}
               value={text}
               onChangeText={setText}
-              placeholder={STR.smrTextPlaceholder}
+              placeholder={kindStr(`smrTextPlaceholder_${kind}`) ?? STR.smrTextPlaceholder}
               multiline
               autoCapitalize="sentences"
             />
@@ -105,7 +108,7 @@ export function MistakeReasonSheet({
                 <Text style={styles.message}>{picked.code === "LATE_DIRECT" ? STR.smrGuardianLate : STR.smrGuardianApology}</Text>
               </View>
             ) : null}
-            <Text style={styles.hint}>{STR.smrSelfCountsHint}</Text>
+            <Text style={styles.hint}>{kindStr(`smrHint_${kind}`) ?? STR.smrSelfCountsHint}</Text>
             <View style={styles.buttons}>
               <Button title={STR.cancel} variant="secondary" onPress={onCancel} style={styles.button} />
               <Button

@@ -5672,10 +5672,10 @@ export const ATTENDANCE_UNIT_DAY = gql<
 
 export const MARK_ATTENDANCE_UNIT = gql<
   { markAttendanceUnit: StudentAttendanceDayT },
-  { unitType: string; unitId: string; dateKey: string; absentStudentIds: string[] }
+  { unitType: string; unitId: string; dateKey: string; absentStudentIds: string[]; correctionReason?: CorrectionReasonVar | null }
 >`
-  mutation MarkAttendanceUnit($unitType: String!, $unitId: String!, $dateKey: String!, $absentStudentIds: [String!]!) {
-    markAttendanceUnit(unitType: $unitType, unitId: $unitId, dateKey: $dateKey, absentStudentIds: $absentStudentIds) {
+  mutation MarkAttendanceUnit($unitType: String!, $unitId: String!, $dateKey: String!, $absentStudentIds: [String!]!, $correctionReason: CorrectionReasonInput) {
+    markAttendanceUnit(unitType: $unitType, unitId: $unitId, dateKey: $dateKey, absentStudentIds: $absentStudentIds, correctionReason: $correctionReason) {
       id sectionId dateKey absentStudentIds markedBy markedAt amendedBy amendedAt
     }
   }
@@ -5684,10 +5684,10 @@ export const MARK_ATTENDANCE_UNIT = gql<
 /** D-#292: Principal/Office unlock-amend of any unit's day (past or today) — audited. */
 export const AMEND_ATTENDANCE_UNIT = gql<
   { amendAttendanceUnit: StudentAttendanceDayT },
-  { unitType: string; unitId: string; dateKey: string; absentStudentIds: string[] }
+  { unitType: string; unitId: string; dateKey: string; absentStudentIds: string[]; correctionReason?: CorrectionReasonVar | null }
 >`
-  mutation AmendAttendanceUnit($unitType: String!, $unitId: String!, $dateKey: String!, $absentStudentIds: [String!]!) {
-    amendAttendanceUnit(unitType: $unitType, unitId: $unitId, dateKey: $dateKey, absentStudentIds: $absentStudentIds) {
+  mutation AmendAttendanceUnit($unitType: String!, $unitId: String!, $dateKey: String!, $absentStudentIds: [String!]!, $correctionReason: CorrectionReasonInput) {
+    amendAttendanceUnit(unitType: $unitType, unitId: $unitId, dateKey: $dateKey, absentStudentIds: $absentStudentIds, correctionReason: $correctionReason) {
       id sectionId dateKey absentStudentIds markedBy markedAt amendedBy amendedAt
     }
   }

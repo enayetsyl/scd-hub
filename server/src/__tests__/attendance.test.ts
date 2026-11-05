@@ -48,6 +48,10 @@ jest.mock("../modules/attendance/models/StudentAttendanceDay", () => ({
 jest.mock("../modules/attendance/models/StudentLeaveApplication", () => ({
   StudentLeaveApplication: { create: (d: unknown) => mockLeaveCreate(d) },
 }));
+// D-#944: the correction recorder reaches real models; this suite is DB-free.
+jest.mock("../modules/attendance/services/AttendanceCorrectionService", () => ({
+  recordAttendanceCorrection: jest.fn().mockResolvedValue(false),
+}));
 jest.mock("../modules/platform/services/AuditService", () => ({
   writeAudit: (p: unknown) => mockWriteAudit(p),
 }));

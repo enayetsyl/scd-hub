@@ -8,7 +8,7 @@ import { View } from "react-native";
 import { useMutation, useQuery } from "urql";
 import { EXPLAIN_STAFF_MISTAKE, MY_STAFF_MISTAKES, MY_STAFF_WARNINGS, type StaffMistakeT } from "../../graphql/staffMistakes";
 import { Screen, H2, Body, Card, Muted, Button, Loader, EmptyState, ErrorBanner, Badge } from "../../components/ui";
-import { dhakaWhen, staffWarningStepLabel } from "../../lib/staffMistakeLabels";
+import { dhakaWhen, staffMistakeKindTitle, staffWarningStepLabel } from "../../lib/staffMistakeLabels";
 import { StaffMistakeCard } from "../../components/StaffMistakeCard";
 import { useMistakeReason } from "../../state/MistakeReasonContext";
 import { useToast } from "../../state/ToastContext";
@@ -33,7 +33,7 @@ export default function MyMistakesScreen(): React.ReactElement {
   async function onExplain(m: StaffMistakeT): Promise<void> {
     const pick = await askMistakeReason({
       kind: m.kind,
-      message: STR.smrKindMark,
+      message: staffMistakeKindTitle(m.kind),
       initial: m.reasonCode ? { code: m.reasonCode, text: m.reasonText ?? "" } : null,
     });
     if (!pick) return;

@@ -114,3 +114,20 @@ Single-step in MR-1; the mockup's Office-then-Principal step is MR-2 if the owne
 - **Rules.** `staff_mistakes:settings` (PRINCIPAL-DEFAULT) edits the three rungs, the tier
   weights, the explanation deadline (next school day 17:00 / 24 hours / third school day
   17:00) and which places record mistakes at all.
+
+## 10. MR-3 — attendance (D-#944)
+
+- **What is recorded.** When a day's absent list that was already submitted is saved again with
+  a different set (the marker's same-day re-submit, or a Principal/Office amendment), the server
+  diffs old vs new and appends each flipped child (from → to, when, by whom) to an
+  `AttendanceCorrectionNote` for (unit × day × the day's marker). Before this only the count of
+  absentees reached the audit log. The first save of a day is never a correction; an unchanged
+  re-submit records nothing.
+- **Whose mistake.** The day's marker (`markedBy` before the save), even when Office corrects it.
+- **Episodes.** While the entry still waits for a reason, further changes that day join the same
+  note; once it has been explained or decided, the next change opens episode 2 (its own entry).
+- **Reasons** (`ATTENDANCE_CORRECTION`): আমার ভুল ছিল (counts) · শিক্ষার্থী দেরিতে এসেছে and
+  শিক্ষার্থী অন্য কাজে বাইরে ছিল (`autoExcuses`: accepted at once, kept on file) · অন্য কারণ (text).
+- **App.** The attendance screen asks before saving when the caller is the day's marker and the
+  list changed; a correction by someone else asks the marker to explain later (STAFF_MISTAKE_EXPLAIN).
+- **Tier 1** (a wrong absent decides who gets homework that day).
