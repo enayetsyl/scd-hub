@@ -184,6 +184,18 @@ describe("checkTreeInvariants (pure, shared)", () => {
     expect(run("LO-KG-MATH-01-01", [])).toEqual(["PREREQ_RESOLVES"]);
   });
 
+  it("'গাণিতিক বাক্য' is banned in labels up to Class 3 and allowed from Class 4 (D-#974)", () => {
+    const withTerm = (file: string) => {
+      const t = JSON.parse(fs.readFileSync(path.join(DOCS, file), "utf8"));
+      const n = t.nodes.find((x: any) => x.level === "OBJECTIVE");
+      n.labelBn = `${n.labelBn} — গাণিতিক বাক্য`;
+      return rules(fileCheck(t));
+    };
+    expect(withTerm("C1_MATH.tree.json")).toContain("BANNED_TERM");
+    expect(withTerm("C3_MATH.tree.json")).toContain("BANNED_TERM");
+    expect(withTerm("C4_MATH.tree.json")).not.toContain("BANNED_TERM");
+  });
+
   it("marksFromBn reads the book's mark column", () => {
     expect(marksFromBn("১")).toBe(1);
     expect(marksFromBn("২ (প্রতি সারি)")).toBe(2);

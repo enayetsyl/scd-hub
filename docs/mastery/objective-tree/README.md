@@ -56,8 +56,8 @@ structure; those stay as the history and as a source Claude reuses (question typ
 - **Five tests per tagged row:** ≤ 2-minute question can test it · the book practises it (≥ 1 exercise) · it can be
   retaught alone in one extra class · once per class · split only when it can fail apart.
 - **One code per question.** A two-skill exercise becomes ক/খ parts in the bank; never double-tag.
-- **Labels:** plain Bangla in the owner's vocabulary; objective labels must read well to a guardian; never
-  "গাণিতিক বাক্য" (use "হিসাবটি").
+- **Labels:** plain Bangla in the owner's vocabulary; objective labels must read well to a guardian; up to
+  Class 3 never "গাণিতিক বাক্য" (use "হিসাবটি"); from Class 4 it is allowed, as the books use it (D-#974).
 - **Prerequisites** point to the earlier step — inside the class first; cross-class when the class below is drafted.
 - **Coverage:** every numbered exercise maps to ≥ 1 tagged row; every tagged row cites ≥ 1 exercise.
 
