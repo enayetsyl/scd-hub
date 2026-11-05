@@ -368,3 +368,44 @@ export const STORY_TITLE_QUEUE = gql<{ storyTitleQueue: StoryQueueRowT[] }, { ti
     storyTitleQueue(titleId: $titleId) { studentId name classLabelBn status position holdUntil }
   }
 `;
+
+// ---------------------------------------------------------------------------
+// SB-4 — "my child's books" (D-#983/#984).
+// ---------------------------------------------------------------------------
+
+export interface StoryLoanT {
+  loanId: string;
+  titleId: string;
+  titleBn: string;
+  seriesNo: number | null;
+  seriesNameBn: string | null;
+  coverFileId: string | null;
+  issuedAt: string;
+  dueDate: string;
+  returnedAt: string | null;
+  overdue: boolean;
+  read: boolean | null;
+  sticker: boolean;
+}
+
+export interface ChildStoryReadingT {
+  current: StoryLoanT[];
+  history: StoryLoanT[];
+  readLast7Days: number;
+  readThisMonth: number;
+  readThisYear: number;
+  stickersThisYear: number;
+  stickersTotal: number;
+}
+
+const STORY_LOAN_FIELDS = `loanId titleId titleBn seriesNo seriesNameBn coverFileId issuedAt dueDate returnedAt overdue read sticker`;
+
+export const CHILD_STORY_READING = gql<{ childStoryReading: ChildStoryReadingT }, { studentId: string }>`
+  query ChildStoryReading($studentId: String!) {
+    childStoryReading(studentId: $studentId) {
+      current { ${STORY_LOAN_FIELDS} }
+      history { ${STORY_LOAN_FIELDS} }
+      readLast7Days readThisMonth readThisYear stickersThisYear stickersTotal
+    }
+  }
+`;

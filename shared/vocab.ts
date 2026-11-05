@@ -1340,6 +1340,9 @@ export const NOTIFICATION_KINDS = [
   "LIBRARY_OVERDUE",
   /** SB-3 (D-#982): a waitlisted storybook is held for the child at the office. */
   "LIBRARY_HOLD_READY",
+  /** SB-4 (D-#984): a child borrowed a storybook / earned a sticker for reading one. */
+  "STORYBOOK_ISSUED",
+  "STORYBOOK_STICKER",
   "CLASS_TEST_RESULT",
   // D-#472: the class test is CONFIRMED and gone to print — tell the family what is
   // coming (subject, chapter, date, marks, minutes) while there is still time to revise.
@@ -1521,6 +1524,8 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   LIBRARY_DUE_SOON: "বই ফেরতের স্মরণিকা",
   LIBRARY_OVERDUE: "বই ফেরত বকেয়া",
   LIBRARY_HOLD_READY: "বই রাখা আছে",
+  STORYBOOK_ISSUED: "নতুন গল্পের বই",
+  STORYBOOK_STICKER: "বই পড়ার স্টিকার",
   CLASS_TEST_RESULT: "ক্লাস টেস্টের ফলাফল",
   CLASS_TEST_UPCOMING: "আসন্ন ক্লাস টেস্ট",
   CLASS_TEST_OVERDUE_DIGEST: "বিলম্বিত ক্লাস টেস্ট রিপোর্ট",
@@ -1593,6 +1598,8 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   LIBRARY_DUE_SOON: "Book due soon",
   LIBRARY_OVERDUE: "Book overdue",
   LIBRARY_HOLD_READY: "Book held for you",
+  STORYBOOK_ISSUED: "New storybook",
+  STORYBOOK_STICKER: "Reading sticker",
   CLASS_TEST_RESULT: "Class-test result",
   CLASS_TEST_UPCOMING: "Upcoming class test",
   CLASS_TEST_OVERDUE_DIGEST: "Overdue class-test reports",

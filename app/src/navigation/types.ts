@@ -290,6 +290,8 @@ export type StorybooksStackParamList = {
   StoryManage: undefined;
   /** SB-2: the desk — lend / take back by copy code. */
   StoryDesk: undefined;
+  /** SB-4: a guardian's "my child's books" (the selected child). */
+  StoryChildBooks: undefined;
 };
 /** D-#873 — Quran oral exam. QuranExamHome stays first: the initial route takes no params. */
 export type QuranExamStackParamList = {

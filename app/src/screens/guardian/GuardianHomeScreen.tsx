@@ -61,6 +61,7 @@ import { space } from "../../theme/tokens";
 import { dateKey } from "../../lib/dates";
 import { useRecentLimit, RECENT_ROWS } from "../../lib/useRecentLimit";
 import { ChildCommentRows, ChildRevisionRows } from "../../components/ChildCommentRevisionRows";
+import { StorybookTodayCard } from "../storybooks/StorybookTodayCard";
 
 type Nav = NativeStackNavigationProp<GuardianHomeStackParamList>;
 
@@ -748,6 +749,17 @@ export default function GuardianHomeScreen(): React.ReactElement {
             ) : null}
           </Pressable>
         </Card>
+
+        {/* SB-4 (D-#984): storybooks — a book lent today, one held at the office, books at home. */}
+        {selected ? (
+          <StorybookTodayCard
+            studentId={selected.studentId}
+            childName={selected.nameBn || selected.name}
+            onOpen={() =>
+              (nav.getParent() as unknown as { navigate: (r: string, p: unknown) => void } | undefined)?.navigate("GuardianStoriesTab", { screen: "StoryChildBooks" })
+            }
+          />
+        ) : null}
 
         {/* Library loans — read-only child-loans card (LB-5 rider, J-L9; D-#68:
             no reserve/renew control exists for guardians) */}

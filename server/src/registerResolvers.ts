@@ -76,6 +76,7 @@ import "./modules/library/resolvers/libraryGuardian";
 import "./modules/library/resolvers/storybook";
 import "./modules/library/resolvers/storyDesk";
 import "./modules/library/resolvers/storyWaitlist";
+import "./modules/library/resolvers/storyReading";
 import "./modules/chat/resolvers/chat";
 import "./modules/vocab/resolvers/vocabWord";
 import "./modules/vocab/resolvers/vocabTest";

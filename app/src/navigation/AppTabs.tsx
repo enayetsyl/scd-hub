@@ -131,6 +131,7 @@ import StorySeriesScreen from "../screens/storybooks/StorySeriesScreen";
 import StoryBookScreen from "../screens/storybooks/StoryBookScreen";
 import StoryManageScreen from "../screens/storybooks/StoryManageScreen";
 import StoryDeskScreen from "../screens/storybooks/StoryDeskScreen";
+import StoryChildBooksScreen from "../screens/storybooks/StoryChildBooksScreen";
 import QuranExamHomeScreen from "../screens/quranExam/QuranExamHomeScreen";
 import MyQuranExamScreen from "../screens/quranExam/MyQuranExamScreen";
 import QuranExamDayScreen from "../screens/quranExam/QuranExamDayScreen";
@@ -1736,6 +1737,7 @@ function StorybooksNavigator(): React.ReactElement {
       <StorybooksStack.Screen name="StoryBook" component={StoryBookScreen} options={({ route }) => ({ title: route.params.title })} />
       <StorybooksStack.Screen name="StoryManage" component={StoryManageScreen} options={{ title: STR.stbManage }} />
       <StorybooksStack.Screen name="StoryDesk" component={StoryDeskScreen} options={{ title: STR.stbDeskNav }} />
+      <StorybooksStack.Screen name="StoryChildBooks" component={StoryChildBooksScreen} options={{ title: STR.stbMyBooks }} />
     </StorybooksStack.Navigator>
   );
 }

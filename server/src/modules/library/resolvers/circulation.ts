@@ -17,6 +17,7 @@ import { LibraryError } from "../errors";
 import { type Borrower, borrowerField } from "../borrowers";
 import { parseBorrowerType } from "./library";
 import { assertIsLibrarian } from "../services/LibrarianService";
+import { alertStoryIssued, alertStorySticker } from "../services/StoryReadingService";
 import {
   issueBook,
   returnBook,
@@ -282,6 +283,8 @@ builder.mutationField("issueBook", (t) =>
         parseBorrowerArgs(args.borrowerType, args.borrowerId),
         ctx.auth!.userId,
       );
+      // SB-4 (D-#984): a child's storybook → tell the family (best effort; never fails the issue).
+      await alertStoryIssued(ctx, loan).catch((e) => console.warn("storybook issue alert failed:", (e as Error)?.message));
       const [view] = await decorateLoans([loan as unknown as LoanShape]);
       return view;
     },
@@ -304,6 +307,8 @@ builder.mutationField("returnBook", (t) =>
     resolve: async (_root, args, ctx) => {
       await assertIsLibrarian(ctx, "library:return");
       const loan = await returnBook(args.loanId, ctx.auth!.userId, new Date(), { read: args.read, sticker: args.sticker });
+      // SB-4 (D-#984): a sticker for a read storybook → tell the family (best effort).
+      await alertStorySticker(ctx, loan).catch((e) => console.warn("storybook sticker alert failed:", (e as Error)?.message));
       const [view] = await decorateLoans([loan as unknown as LoanShape]);
       return view;
     },
