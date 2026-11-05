@@ -276,7 +276,7 @@ export default function StorySeriesScreen({ route, navigation }: Props): React.R
         <QueryGate results={[q]} onRetry={reload} loaderLabel={STR.loading}>
           {series ? (
             <View style={{ gap: space(3) }}>
-              <StoryImage fileId={series.coverFileId} />
+              <StoryImage fileId={series.coverFileId} style={{ maxWidth: 560, alignSelf: "center" }} />
               <View>
                 <Text style={{ ...typeScale.pageTitle, color: colors.textPrimary }}>{series.nameBn}</Text>
                 {series.nameEn ? <Muted>{series.nameEn}</Muted> : null}

@@ -122,7 +122,7 @@ export default function StoryBookScreen({ route }: Props): React.ReactElement {
         <QueryGate results={[q]} onRetry={reload} loaderLabel={STR.loading}>
           {book && d ? (
             <View style={{ gap: space(3) }}>
-              <StoryImage fileId={book.coverFileId} />
+              <StoryImage fileId={book.coverFileId} style={{ maxWidth: 560, alignSelf: "center" }} />
               <View>
                 <Text style={{ ...typeScale.pageTitle, color: colors.textPrimary }}>{book.titleBn}</Text>
                 {book.titleEn && book.titleEn !== book.titleBn ? <Muted>{book.titleEn}</Muted> : null}
@@ -150,7 +150,7 @@ export default function StoryBookScreen({ route }: Props): React.ReactElement {
                       <Muted>{STR.stbChildRead.replace("{name}", childName).replace("{n}", bnNum(book.childReadCount))}</Muted>
                     ) : null}
                   </View>
-                  <Badge text={availabilityPill(book).text} tone={availabilityPill(book).tone} />
+                  {book.totalCopies > 0 ? <Badge text={availabilityPill(book).text} tone={availabilityPill(book).tone} /> : null}
                 </View>
               </Card>
 
@@ -173,7 +173,7 @@ export default function StoryBookScreen({ route }: Props): React.ReactElement {
                 <View style={{ gap: space(2) }}>
                   <Body style={{ fontWeight: "700" }}>{STR.stbPreview}</Body>
                   {book.previewFileIds.map((id) => (
-                    <StoryImage key={id} fileId={id} />
+                    <StoryImage key={id} fileId={id} style={{ maxWidth: 560, alignSelf: "center" }} />
                   ))}
                 </View>
               ) : null}
