@@ -459,7 +459,7 @@ Exercise refs read `ইউনিট/পাঠ/অনুশীলনীর অক
 | QT-ORDER | Put the steps in order | ১ | শ্রেণির কাজ |
 | QT-SOUND | Middle sound: say it; same or different | ১ | শুধু শ্রেণি-পরীক্ষা — শুনে যাচাই |
 | QT-FREEWRITE | Write a few sentences on a topic |  | শ্রেণির কাজ |
-| QT-CLASS | Class-test item (am / is / are, pronouns, gender, plurals, prepositions, and / but, opposites, sentence parts, requests, numbers in figures) | ১ | শুধু শ্রেণি-পরীক্ষা (লক করা মই Part F: CT) |
+| QT-CLASS | Class-test item (not in the paper) | ১ | শুধু শ্রেণি-পরীক্ষা (লক করা মই Part F: CT) — am / is / are, pronouns, gender, plurals, prepositions, and / but, opposites, sentence parts, requests, numbers in figures |
 | QT-ORAL | Oral / observed in class (4-step rubric) |  | লিখিত পরীক্ষায় নেই — ধারাবাহিক মূল্যায়ন; পড়া শ্রেণি-পরীক্ষা; রুব্রিক: ১ পারে না · ২ সাহায্যে পারে · ৩ প্রায় পারে · ৪ ভালো পারে |
 
 ## Coverage
