@@ -1,0 +1,2654 @@
+{
+ "format": "scd-objective-tree/1",
+ "classToken": "C3",
+ "subject": "SCI",
+ "status": "DRAFT",
+ "source": {
+  "book": "C3_SCI_Print_v3.1 (= C3_SCI_Book_v3.1 content)",
+  "files": [
+   "Book Review Material/Print File/C3_SCI_Print_v3.1.zip (IDML — the final print; every numbered item checked against Word v3.1)",
+   "Book Review Material/Class 3 Sci/C3_SCI_Book_v3.1_Writer-Reviewer.docx (শিক্ষক-নোট: শিখনফল, পরীক্ষায় যা আসবে, অনুশীলনীর উত্তর; পরিশিষ্ট — নম্বর বণ্টন ছক ২ ও ৩, প্রশ্ন তৈরির নিয়ম; সিদ্ধান্ত-লগ)",
+   "Book Review Material/Class 3 Sci/C3_SCI_Memo_v3.docx (সংস্করণ ৩-এর বদল; D-০৪, D-০৭, D-১২, D-১৪)",
+   "docs/mastery/lo-catalogue/C3_SCI.md (পুরোনো ফ্ল্যাট খসড়া — লেবেল, টিপস, legacyCodes)"
+  ],
+  "readOn": "2026-11-05"
+ },
+ "chapters": [
+  {
+   "number": 1,
+   "titleBn": "উদ্ভিদ পরিচিতি",
+   "parts": [
+    [
+     1,
+     "উদ্ভিদের বিভিন্ন অংশ"
+    ],
+    [
+     2,
+     "উদ্ভিদের বিভিন্ন অংশের কাজ"
+    ],
+    [
+     3,
+     "কাণ্ডের উপর ভিত্তি করে উদ্ভিদের শ্রেণিবিভাগ"
+    ],
+    [
+     4,
+     "ফুলের উপস্থিতির উপর ভিত্তি করে উদ্ভিদের শ্রেণিবিন্যাস"
+    ]
+   ]
+  },
+  {
+   "number": 2,
+   "titleBn": "প্রাণী পরিচিতি",
+   "parts": [
+    [
+     1,
+     "প্রাণীদেহের বিভিন্ন অংশ"
+    ],
+    [
+     2,
+     "প্রাণীদেহের বিভিন্ন অঙ্গের কাজ"
+    ],
+    [
+     3,
+     "প্রাণীর শ্রেণিবিন্যাস"
+    ],
+    [
+     4,
+     "মেরুদণ্ডী প্রাণীর শ্রেণিবিভাগ"
+    ],
+    [
+     5,
+     "অমেরুদণ্ডী প্রাণী (কীটপতঙ্গ) পর্যবেক্ষণ"
+    ],
+    [
+     6,
+     "পরিচিত উদ্ভিদ ও প্রাণীর যত্ন"
+    ]
+   ]
+  },
+  {
+   "number": 3,
+   "titleBn": "সুস্বাস্থ্যের জন্য খাদ্য",
+   "parts": [
+    [
+     1,
+     "খাদ্যের উৎস"
+    ],
+    [
+     2,
+     "মৌসুমি ফল"
+    ],
+    [
+     3,
+     "মৌসুমি সবজি"
+    ],
+    [
+     4,
+     "পুষ্টি উপাদান"
+    ],
+    [
+     5,
+     "পুষ্টি উপাদানের উৎস"
+    ],
+    [
+     6,
+     "পুষ্টি উপাদানের প্রয়োজনীয়তা"
+    ],
+    [
+     7,
+     "স্বাস্থ্যকর খাদ্য"
+    ],
+    [
+     8,
+     "নিরাপদ পানীয়"
+    ]
+   ]
+  },
+  {
+   "number": 4,
+   "titleBn": "পদার্থ",
+   "parts": [
+    [
+     1,
+     "পদার্থের বৈশিষ্ট্য"
+    ],
+    [
+     2,
+     "পদার্থের আয়তন"
+    ],
+    [
+     3,
+     "বায়ু এক ধরনের পদার্থ"
+    ],
+    [
+     4,
+     "পদার্থের আকৃতি"
+    ],
+    [
+     5,
+     "বিভিন্ন ধরনের পদার্থের আকৃতির ভিন্নতা"
+    ],
+    [
+     6,
+     "পদার্থের অবস্থা"
+    ],
+    [
+     7,
+     "পরিবেশে পানির বিভিন্ন অবস্থা"
+    ],
+    [
+     8,
+     "নানা রকমের কঠিন পদার্থ"
+    ],
+    [
+     9,
+     "চুম্বকের ধারণা"
+    ],
+    [
+     10,
+     "দৈনন্দিন জীবনে বস্তুর সাবধানী ও দায়িত্বশীল ব্যবহার"
+    ]
+   ]
+  },
+  {
+   "number": 5,
+   "titleBn": "শক্তি",
+   "parts": [
+    [
+     1,
+     "শক্তির বিভিন্ন ধরন"
+    ],
+    [
+     2,
+     "শক্তির ব্যবহার"
+    ],
+    [
+     3,
+     "শক্তির অপচয় রোধ"
+    ]
+   ]
+  },
+  {
+   "number": 6,
+   "titleBn": "বস্তুর উপর বলের প্রভাব",
+   "parts": [
+    [
+     1,
+     "গতি অবস্থার পরিবর্তনে বল"
+    ],
+    [
+     2,
+     "আকৃতি পরিবর্তনে বল"
+    ],
+    [
+     3,
+     "আয়তন পরিবর্তনে বল"
+    ],
+    [
+     4,
+     "দৈনন্দিন জীবনে বল"
+    ]
+   ]
+  },
+  {
+   "number": 7,
+   "titleBn": "পানি",
+   "parts": [
+    [
+     1,
+     "পানির উৎস"
+    ],
+    [
+     2,
+     "পানির ধরন"
+    ],
+    [
+     3,
+     "পানির ব্যবহার"
+    ],
+    [
+     4,
+     "আমাদের জীবনে পানির গুরুত্ব"
+    ],
+    [
+     5,
+     "পানির যথাযথ ব্যবহার"
+    ]
+   ]
+  },
+  {
+   "number": 8,
+   "titleBn": "মাটি",
+   "parts": [
+    [
+     1,
+     "মাটির উপাদান"
+    ],
+    [
+     2,
+     "মাটি ও ফসল"
+    ],
+    [
+     3,
+     "আমাদের জীবনে মাটির গুরুত্ব"
+    ]
+   ]
+  },
+  {
+   "number": 9,
+   "titleBn": "জীবনের জন্য সূর্য",
+   "parts": [
+    [
+     1,
+     "তাপ ও আলোর উৎস হিসেবে সূর্য"
+    ],
+    [
+     2,
+     "জীবের জন্য সূর্যের গুরুত্ব"
+    ],
+    [
+     3,
+     "সূর্যের অবস্থান এবং ছায়ার দিকের মধ্যে সম্পর্ক"
+    ]
+   ]
+  },
+  {
+   "number": 10,
+   "titleBn": "প্রযুক্তির সঙ্গে পরিচয়",
+   "parts": [
+    [
+     1,
+     "আমাদের জীবনে প্রযুক্তি"
+    ],
+    [
+     2,
+     "আধুনিক প্রযুক্তির উদ্ভাবন ও আমাদের জীবনে এর ব্যবহার"
+    ],
+    [
+     1,
+     "পরিবহণ প্রযুক্তির উন্নয়ন কীভাবে আমাদের জীবনে প্রভাব বিস্তার করে?"
+    ],
+    [
+     3,
+     "প্রযুক্তির নিরাপদ ব্যবহার"
+    ]
+   ]
+  }
+ ],
+ "questionTypes": [
+  {
+   "code": "QT-MCQ",
+   "labelBn": "সঠিক উত্তরে টিক (√) চিহ্ন",
+   "marksBn": "১",
+   "examUse": "প্রশ্ন ১ — ১০×১ = ১০ (অর্ধ-বার্ষিক ও বার্ষিক)"
+  },
+  {
+   "code": "QT-FILL",
+   "labelBn": "শব্দ থেকে শূন্যস্থান পূরণ",
+   "marksBn": "১",
+   "examUse": "প্রশ্ন ২ — ১০×১ = ১০ (দুই পরীক্ষাতেই)"
+  },
+  {
+   "code": "QT-MATCH",
+   "labelBn": "বাম পাশের সঙ্গে ডান পাশের মিল",
+   "marksBn": "১",
+   "examUse": "অর্ধ-বার্ষিক প্রশ্ন ৩ — ১০×১ = ১০ (অধ্যায় ১–৫)"
+  },
+  {
+   "code": "QT-MATCH-SENT",
+   "labelBn": "বাম-ডান মিল করে পূর্ণ বাক্য লেখা",
+   "marksBn": "১",
+   "examUse": "বার্ষিক প্রশ্ন ৩ — ১০×১ = ১০ (অধ্যায় ৬–১০)"
+  },
+  {
+   "code": "QT-ONE",
+   "labelBn": "এক বাক্যে উত্তর (শব্দকোষের সংজ্ঞাও আসতে পারে — সিদ্ধান্ত ৫৬)",
+   "marksBn": "১",
+   "examUse": "প্রশ্ন ৪ — ১০×১ = ১০ (দুই পরীক্ষাতেই)"
+  },
+  {
+   "code": "QT-SHORT",
+   "labelBn": "সংক্ষিপ্ত উত্তর প্রশ্ন (প্রতিটি সঠিক পয়েন্টে ১, সর্বোচ্চ ৪)",
+   "marksBn": "৪",
+   "examUse": "প্রশ্ন ৫ — ৫×৪ = ২০ (দুই পরীক্ষাতেই)"
+  },
+  {
+   "code": "QT-LONG",
+   "labelBn": "বর্ণনামূলক উত্তর প্রশ্ন (প্রতিটি সঠিক পয়েন্টে ১, সর্বোচ্চ ৮; ছাপা উদ্ভিদের ছবিতে চিহ্নিত করা — D-১২)",
+   "marksBn": "৮",
+   "examUse": "প্রশ্ন ৬ — ৫×৮ = ৪০ (দুই পরীক্ষাতেই)"
+  },
+  {
+   "code": "QT-OBS",
+   "labelBn": "শ্রেণির কাজে পর্যবেক্ষণ — ৪ ধাপের রুব্রিক (১ পারে না · ২ সাহায্যে পারে · ৩ প্রায় পারে · ৪ ভালো পারে)",
+   "marksBn": "—",
+   "examUse": "লিখিত পরীক্ষায় নয় — পরীক্ষণ, আঁকা (শ্রেণির কাজ ও শ্রেণি পরীক্ষা)"
+  }
+ ],
+ "nodes": [
+  {
+   "code": "LO-C3-SCI-01-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-PLANT",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "উদ্ভিদের প্রধান অংশ চেনা ও ছবিতে চিহ্নিত করা",
+   "sourceText": "একটি পরিচিত উদ্ভিদের ছবি এঁকে মূল, কাণ্ড, পাতা, ফুল ও ফল চিহ্নিত করতে পারবে (১.১.১, ১.১.২)। [ভাগ: চিহ্নিত করা — লিখিত পরীক্ষায় ছাপা ছবিতে, D-১২]",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/টিক/3",
+     "1/শূন্যস্থান/2",
+     "1/এক বাক্যে/1",
+     "1/সংক্ষিপ্ত/1",
+     "1/বর্ণনামূলক/3",
+     "1/কাজ ১/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-ONE",
+    "QT-SHORT",
+    "QT-LONG"
+   ],
+   "homeTipBn": "টবের গাছে মূল, কাণ্ড, পাতা, ফুল কোনটি — সন্তানকে আঙুল দিয়ে দেখাতে বলুন।",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-SCI-01-01",
+    "LO-C3-SCI-01-02"
+   ],
+   "claudeNote": "D-১২: লিখিত পরীক্ষায় আঁকা নয় — প্রশ্নপত্রে ছাপা উদ্ভিদের ছবিতে মূল, কাণ্ড, পাতা চিহ্নিত করা। তাই অনুশীলনী ৬(গ) (বর্ণনামূলক ৩) এখানে: শ্রেণিতে আঁকা, পরীক্ষায় চিহ্নিত। আঁকার দক্ষতা SK-DRAW-01-এ।"
+  },
+  {
+   "code": "LO-C3-SCI-01-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-PLANT",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "উদ্ভিদের প্রতিটি অংশের কাজ বলা",
+   "sourceText": "উদ্ভিদের প্রতিটি অংশের কাজ বলতে পারবে (১.১.৩, ১.১.৪)।",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/টিক/2",
+     "1/শূন্যস্থান/1",
+     "1/মিল/1",
+     "1/মিল/2",
+     "1/মিল/3",
+     "1/এক বাক্যে/2",
+     "1/সংক্ষিপ্ত/2",
+     "1/বর্ণনামূলক/1",
+     "1/বর্ণনামূলক/2",
+     "1/চলো/1",
+     "1/কাজ ২/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-MATCH",
+    "QT-ONE",
+    "QT-SHORT",
+    "QT-LONG"
+   ],
+   "homeTipBn": "গাছে পানি দেওয়ার সময় জিজ্ঞেস করুন — মূল কী কাজ করে, পাতা কী করে?",
+   "prereqCodes": [
+    "LO-C3-SCI-01-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-SCI-01-03"
+   ],
+   "claudeNote": "কাজের ফলাফল (লাল পানি কাণ্ড দিয়ে পাতায় যায়) লিখিত পরীক্ষায় আসতে পারে, ধাপ নয় (D-০৪) — ফলাফলের প্রশ্ন এখানে।"
+  },
+  {
+   "code": "LO-C3-SCI-01-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-PLANT",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "ফুলের ভিত্তিতে সপুষ্পক ও অপুষ্পক উদ্ভিদ চেনা",
+   "sourceText": "ফুলের ভিত্তিতে সপুষ্পক ও অপুষ্পক উদ্ভিদ চিনতে পারবে … (১.৩.১) [ভাগ: সপুষ্পক/অপুষ্পক]",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/টিক/1",
+     "1/শূন্যস্থান/3",
+     "1/মিল/4",
+     "1/এক বাক্যে/3",
+     "1/নিজে করি/1",
+     "1/নিজে করি/2",
+     "1/নিজে করি/3",
+     "1/কাজ ৪/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-MATCH",
+    "QT-ONE"
+   ],
+   "homeTipBn": "আশপাশের গাছে ফুল হয় কি না দেখে জিজ্ঞেস করুন — সপুষ্পক না অপুষ্পক?",
+   "prereqCodes": [
+    "LO-C3-SCI-01-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-SCI-01-04",
+    "LO-C3-SCI-01-05"
+   ],
+   "claudeNote": "একই শিখনফলের \"কাণ্ড দেখে দুটি উদ্ভিদের মিল-অমিল\" অংশ শুধু কাজ ৩-এ (নম্বরহীন), কোনো অনুশীলনীতে নেই — সারি নয়; SK-OBS-01-এ দেখা হবে (ফ্ল্যাগ)।"
+  },
+  {
+   "code": "LO-C3-SCI-02-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-ANIMAL",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "প্রাণীদেহের অঙ্গ ও তাদের কাজ",
+   "sourceText": "পরিচিত প্রাণীর দেহের সাধারণ অঙ্গগুলোর (চোখ, কান, নাক, মুখ, পা, ডানা, পাখনা) নাম বলতে ও তালিকা করতে পারবে (১.২.১, ১.২.২)। · প্রাণীদেহের প্রতিটি অঙ্গের কাজ বলতে পারবে — দেখা, শোনা, শ্বাস নেওয়া ও ঘ্রাণ, খাদ্য গ্রহণ, চলাচল (১.২.৩, ১.২.৪)।",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/সংক্ষিপ্ত/2",
+     "2/কাজ ১/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT"
+   ],
+   "homeTipBn": "মাছ পাখনা দিয়ে, পাখি ডানা দিয়ে কী করে — সন্তানকে জিজ্ঞেস করুন।",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-SCI-02-01",
+    "LO-C3-SCI-02-02"
+   ],
+   "claudeNote": "দুই শিখনফল এক সারি: অনুশীলনীতে অঙ্গের নাম জিজ্ঞেস করে এমন প্রশ্ন নেই, অঙ্গের কাজের প্রশ্ন একটি (সংক্ষিপ্ত ২) — দুটি আলাদা সারি করলে নাম-এর সারি কোনো অনুশীলনী পেত না (ফ্ল্যাগ)।"
+  },
+  {
+   "code": "LO-C3-SCI-02-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-ANIMAL",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "মেরুদণ্ডী ও অমেরুদণ্ডী প্রাণী আলাদা করা ও উদাহরণ",
+   "sourceText": "মেরুদণ্ডের উপস্থিতির ভিত্তিতে প্রাণীকে মেরুদণ্ডী ও অমেরুদণ্ডী দলে ভাগ করতে পারবে এবং উদাহরণ দিতে পারবে (১.৩.২, ১.৩.৩)। · কয়েকটি অমেরুদণ্ডী প্রাণীর নাম বলতে ও লিখতে পারবে (১.৩.৩ সংশ্লিষ্ট)।",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/টিক/2",
+     "2/শূন্যস্থান/2",
+     "2/এক বাক্যে/1",
+     "2/বর্ণনামূলক/2",
+     "2/কাজ ২/—",
+     "2/কাজ ৪/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-ONE",
+    "QT-LONG"
+   ],
+   "homeTipBn": "পাঁচটি প্রাণীর নাম বলে জিজ্ঞেস করুন — কোনটির মেরুদণ্ড আছে, কোনটির নেই?",
+   "prereqCodes": [
+    "LO-C3-SCI-02-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-SCI-02-03",
+    "LO-C3-SCI-02-05"
+   ],
+   "claudeNote": "\"অমেরুদণ্ডী প্রাণীর নাম\" (অংশ ৫) শুধু কাজ ৪-এ, অনুশীলনী নেই — \"উদাহরণ দিতে পারবে\"-র অংশ হিসেবে এখানে।"
+  },
+  {
+   "code": "LO-C3-SCI-02-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-ANIMAL",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "মেরুদণ্ডী প্রাণীর পাঁচ দল — মাছ, উভচর, সরীসৃপ, পাখি, স্তন্যপায়ী",
+   "sourceText": "বৈশিষ্ট্যের ভিত্তিতে মেরুদণ্ডী প্রাণীকে মাছ, উভচর, সরীসৃপ, পাখি ও স্তন্যপায়ী — এই পাঁচ দলে চিনতে পারবে (১.৩.৪)।",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-ONE",
+    "QT-MATCH",
+    "QT-SHORT",
+    "QT-LONG"
+   ],
+   "homeTipBn": "তিমি, ব্যাঙ, সাপ, শালিক, গরু — কোনটি কোন দলের আর কেন, খেলার ছলে জিজ্ঞেস করুন।",
+   "prereqCodes": [
+    "LO-C3-SCI-02-02"
+   ],
+   "tagged": false,
+   "legacyCodes": [
+    "LO-C3-SCI-02-04"
+   ],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-SCI-02-03.1",
+   "level": "SUB",
+   "parentCode": "LO-C3-SCI-02-03",
+   "domainCode": "DOM-SCI-ANIMAL",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "কোন প্রাণী কোন দলের — চেনা",
+   "sourceText": "মেরুদণ্ডী প্রাণীকে … পাঁচ দলে চিনতে পারবে [ভাগ: দল চেনা]",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/টিক/1",
+     "2/টিক/3",
+     "2/শূন্যস্থান/1",
+     "2/এক বাক্যে/3",
+     "2/এক বাক্যে/4",
+     "2/চলো/1",
+     "2/চলো/3",
+     "2/কাজ ৩/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-ONE"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-SCI-02-03.2",
+   "level": "SUB",
+   "parentCode": "LO-C3-SCI-02-03",
+   "domainCode": "DOM-SCI-ANIMAL",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "প্রতিটি দলের বৈশিষ্ট্য (দেহের আবরণ, বাচ্চা জন্ম, চলাচল)",
+   "sourceText": "বৈশিষ্ট্যের ভিত্তিতে … [ভাগ: বৈশিষ্ট্য]",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/টিক/4",
+     "2/শূন্যস্থান/3",
+     "2/মিল/1",
+     "2/মিল/2",
+     "2/মিল/3",
+     "2/এক বাক্যে/2",
+     "2/সংক্ষিপ্ত/1",
+     "2/সংক্ষিপ্ত/3",
+     "2/বর্ণনামূলক/1",
+     "2/বর্ণনামূলক/3",
+     "2/চলো/2"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-MATCH",
+    "QT-ONE",
+    "QT-SHORT",
+    "QT-LONG"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C3-SCI-02-03.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "নাম জানে কিন্তু \"তিমি কেন স্তন্যপায়ী\" বলতে পারে না — আলাদা ভুল। বর্ণনামূলক ৩ দল-নাম + উদাহরণ + বৈশিষ্ট্য চায়; বৈশিষ্ট্যই কঠিন অংশ বলে এখানে।"
+  },
+  {
+   "code": "LO-C3-SCI-02-04",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-LIFE",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "উদ্ভিদ ও প্রাণীর বেঁচে থাকার প্রয়োজন ও যত্নের উপায়",
+   "sourceText": "পরিচিত উদ্ভিদ ও প্রাণীর বেঁচে থাকার জন্য কী কী প্রয়োজন তা বলতে পারবে এবং এদের যত্নের উপায় বলতে ও মেনে চলতে পারবে (১.৩.৫ — TG-র পাঠ ১১; অংশ ৬)। [ভাগ: বলা]",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/টিক/5",
+     "2/সংক্ষিপ্ত/4",
+     "2/বর্ণনামূলক/4",
+     "2/কাজ ৫/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-SHORT",
+    "QT-LONG"
+   ],
+   "homeTipBn": "গাছ ও পোষা প্রাণীর বেঁচে থাকতে কী কী লাগে, সন্তানকে তালিকা করতে বলুন; একটি গাছের যত্নের দায়িত্ব দিন।",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-SCI-02-06",
+    "LO-C3-SCI-02-07"
+   ],
+   "claudeNote": "অংশ ৬ এস.সি.ডি.-র লেখা (TG পাঠ ১১), অর্ধ-বার্ষিকে আসবে (সিদ্ধান্ত ৪৮) — অনুশীলনী ১(৫), ৫(ঘ), ৬(ঘ)।"
+  },
+  {
+   "code": "LO-C3-SCI-03-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-HEALTH",
+   "chapterNumber": 3,
+   "strand": null,
+   "labelBn": "খাবার কোথা থেকে আসে — উদ্ভিদ না প্রাণী",
+   "sourceText": "প্রতিদিনের খাবার উদ্ভিদ না প্রাণী — কোন উৎস থেকে আসে, তা বলতে ও ছকে ভাগ করতে পারবে (২.১.১)।",
+   "bookRef": {
+    "chapter": 3,
+    "lesson": null,
+    "exercises": [
+     "3/টিক/1",
+     "3/এক বাক্যে/3",
+     "3/সংক্ষিপ্ত/1",
+     "3/কাজ ১/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-ONE",
+    "QT-SHORT"
+   ],
+   "homeTipBn": "খাবার টেবিলে প্রতিটি খাবার উদ্ভিদ না প্রাণী থেকে এসেছে, সন্তানকে জিজ্ঞেস করুন।",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-SCI-03-01"
+   ],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-SCI-03-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-HEALTH",
+   "chapterNumber": 3,
+   "strand": null,
+   "labelBn": "ফল ও সবজিকে গ্রীষ্মকালীন, শীতকালীন ও বারোমাসি — তিন দলে ভাগ করা",
+   "sourceText": "আমাদের দেশের ফল ও সবজিকে গ্রীষ্মকালীন, শীতকালীন ও বারোমাসি — এই তিন দলে ভাগ করতে পারবে (২.১.২)।",
+   "bookRef": {
+    "chapter": 3,
+    "lesson": null,
+    "exercises": [
+     "3/টিক/2",
+     "3/টিক/4",
+     "3/এক বাক্যে/5",
+     "3/চলো/3",
+     "3/চলো/6",
+     "3/কাজ ২/—",
+     "3/কাজ ৩/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-ONE"
+   ],
+   "homeTipBn": "বাজারে ফল-সবজি দেখিয়ে জিজ্ঞেস করুন — গ্রীষ্মকালীন, শীতকালীন না বারোমাসি?",
+   "prereqCodes": [
+    "LO-C3-SCI-03-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-SCI-03-02"
+   ],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-SCI-03-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-HEALTH",
+   "chapterNumber": 3,
+   "strand": null,
+   "labelBn": "প্রধান পুষ্টি উপাদানের নাম ও কোন খাবারে কোনটি",
+   "sourceText": "খাদ্যের প্রধান পুষ্টি উপাদান (শর্করা, আমিষ, চর্বি, ভিটামিন ও খনিজ লবণ) ও পানির নাম বলতে পারবে এবং প্রতিটির উৎস-খাবার চিনতে পারবে (২.১.৩, ২.১.৪)।",
+   "bookRef": {
+    "chapter": 3,
+    "lesson": null,
+    "exercises": [
+     "3/শূন্যস্থান/2",
+     "3/শূন্যস্থান/3",
+     "3/মিল/3",
+     "3/মিল/4",
+     "3/এক বাক্যে/1",
+     "3/চলো/1",
+     "3/কাজ ৪/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-FILL",
+    "QT-MATCH",
+    "QT-ONE"
+   ],
+   "homeTipBn": "ভাত, মাছ, তেল, ফল — কোনটিতে কোন পুষ্টি উপাদান, সন্তানকে বলতে বলুন।",
+   "prereqCodes": [
+    "LO-C3-SCI-03-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-SCI-03-03"
+   ],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-SCI-03-04",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-HEALTH",
+   "chapterNumber": 3,
+   "strand": null,
+   "labelBn": "পুষ্টি উপাদানের কাজ, অভাবে সমস্যা ও নানা উৎসের খাবার",
+   "sourceText": "প্রতিটি পুষ্টি উপাদান শরীরে কী কাজ করে এবং তার অভাবে কী সমস্যা হয়, তা বলতে পারবে; ভিন্ন ভিন্ন উৎস থেকে খাবার খাওয়ার প্রয়োজন বুঝতে পারবে (২.১.৫, ২.১.৬)।",
+   "bookRef": {
+    "chapter": 3,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-SHORT",
+    "QT-LONG",
+    "QT-ONE"
+   ],
+   "homeTipBn": "ডিম বা মাছ খাওয়ার সময় জিজ্ঞেস করুন — আমিষ শরীরে কী কাজ করে? রোজ একই খাবার না খেয়ে নানা রকম খাবার কেন খাই, আলোচনা করুন।",
+   "prereqCodes": [
+    "LO-C3-SCI-03-03"
+   ],
+   "tagged": false,
+   "legacyCodes": [
+    "LO-C3-SCI-03-04",
+    "LO-C3-SCI-03-05"
+   ],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-SCI-03-04.1",
+   "level": "SUB",
+   "parentCode": "LO-C3-SCI-03-04",
+   "domainCode": "DOM-SCI-HEALTH",
+   "chapterNumber": 3,
+   "strand": null,
+   "labelBn": "কোন পুষ্টি উপাদান শরীরে কী কাজ করে",
+   "sourceText": "প্রতিটি পুষ্টি উপাদান শরীরে কী কাজ করে … বলতে পারবে [ভাগ: কাজ]",
+   "bookRef": {
+    "chapter": 3,
+    "lesson": null,
+    "exercises": [
+     "3/টিক/3",
+     "3/টিক/5",
+     "3/শূন্যস্থান/1",
+     "3/সংক্ষিপ্ত/2",
+     "3/বর্ণনামূলক/1",
+     "3/কাজ ৫/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-SHORT",
+    "QT-LONG"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-SCI-03-04.2",
+   "level": "SUB",
+   "parentCode": "LO-C3-SCI-03-04",
+   "domainCode": "DOM-SCI-HEALTH",
+   "chapterNumber": 3,
+   "strand": null,
+   "labelBn": "পুষ্টি উপাদানের অভাব বা বেশি খেলে কী সমস্যা হয়",
+   "sourceText": "… তার অভাবে কী সমস্যা হয়, তা বলতে পারবে [ভাগ: অভাবে সমস্যা]",
+   "bookRef": {
+    "chapter": 3,
+    "lesson": null,
+    "exercises": [
+     "3/টিক/6",
+     "3/এক বাক্যে/2"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-ONE"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "কাজ জানে কিন্তু রোগের নাম (রাতকানা) জানে না — আলাদা ভুল। মাত্র দুটি অনুশীলনী।"
+  },
+  {
+   "code": "LO-C3-SCI-03-04.3",
+   "level": "SUB",
+   "parentCode": "LO-C3-SCI-03-04",
+   "domainCode": "DOM-SCI-HEALTH",
+   "chapterNumber": 3,
+   "strand": null,
+   "labelBn": "ভিন্ন ভিন্ন উৎস থেকে খাবার খাওয়া কেন দরকার",
+   "sourceText": "… ভিন্ন ভিন্ন উৎস থেকে খাবার খাওয়ার প্রয়োজন বুঝতে পারবে [ভাগ: নানা উৎস]",
+   "bookRef": {
+    "chapter": 3,
+    "lesson": null,
+    "exercises": [
+     "3/শূন্যস্থান/5",
+     "3/বর্ণনামূলক/4",
+     "3/চলো/2"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-FILL",
+    "QT-LONG"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C3-SCI-03-04.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-SCI-03-05",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-HEALTH",
+   "chapterNumber": 3,
+   "strand": null,
+   "labelBn": "স্বাস্থ্যকর ও অস্বাস্থ্যকর খাবার চেনা",
+   "sourceText": "স্বাস্থ্যকর-নিরাপদ খাদ্য ও অস্বাস্থ্যকর খাদ্য চিনতে পারবে … (২.২.১–২.২.৩) [ভাগ: খাদ্য]",
+   "bookRef": {
+    "chapter": 3,
+    "lesson": null,
+    "exercises": [
+     "3/শূন্যস্থান/4",
+     "3/মিল/5",
+     "3/সংক্ষিপ্ত/3",
+     "3/বর্ণনামূলক/2",
+     "3/চলো/5",
+     "3/কাজ ৬/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-FILL",
+    "QT-MATCH",
+    "QT-SHORT",
+    "QT-LONG"
+   ],
+   "homeTipBn": "বাড়ির টিফিন আর দোকানের চিপস — কোনটি স্বাস্থ্যকর, কেন, সন্তানকে জিজ্ঞেস করুন।",
+   "prereqCodes": [
+    "LO-C3-SCI-03-04.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-SCI-03-06"
+   ],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-SCI-03-06",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-HEALTH",
+   "chapterNumber": 3,
+   "strand": null,
+   "labelBn": "নিরাপদ ও অনিরাপদ পানীয় আলাদা করা",
+   "sourceText": "… নিরাপদ ও অনিরাপদ পানীয় আলাদা করতে পারবে এবং অস্বাস্থ্যকর খাবার-পানীয় এড়িয়ে চলতে আগ্রহী হবে (২.২.১–২.২.৩) [ভাগ: পানীয়]",
+   "bookRef": {
+    "chapter": 3,
+    "lesson": null,
+    "exercises": [
+     "3/মিল/1",
+     "3/মিল/2",
+     "3/এক বাক্যে/4",
+     "3/সংক্ষিপ্ত/4",
+     "3/বর্ণনামূলক/3",
+     "3/চলো/4",
+     "3/কাজ ৭/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MATCH",
+    "QT-ONE",
+    "QT-SHORT",
+    "QT-LONG"
+   ],
+   "homeTipBn": "রাস্তার ধারের খোলা শরবত কেন অনিরাপদ আর ডাবের পানি কেন নিরাপদ, সন্তানকে বুঝিয়ে বলতে বলুন।",
+   "prereqCodes": [
+    "LO-C3-SCI-03-05"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-SCI-03-07"
+   ],
+   "claudeNote": "পানি অধ্যায়ের নিরাপদ/অনিরাপদ পানি (০৭-০২.২) এর পরের ধাপ নয়, পাশের ধাপ — এখানে পানীয় (শরবত, কোমল পানীয়, ডাবের পানি), সেখানে পানির উৎস।"
+  },
+  {
+   "code": "LO-C3-SCI-04-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-MATTER",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "পদার্থ কী — ওজন ও আয়তন; কোনটি পদার্থ চেনা",
+   "sourceText": "পদার্থের দুটি প্রধান বৈশিষ্ট্য (ওজন ও আয়তন) বলতে পারবে এবং কোনটি পদার্থ, কোনটি নয় তা শনাক্ত করতে পারবে (৩.১.১)।",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": [
+     "4/শূন্যস্থান/1",
+     "4/এক বাক্যে/1",
+     "4/চলো/1",
+     "4/চলো/2"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-FILL",
+    "QT-ONE"
+   ],
+   "homeTipBn": "ঘরের জিনিস দেখিয়ে জিজ্ঞেস করুন — এর ওজন ও আয়তন আছে কি? তাহলে এটি পদার্থ কি না?",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-SCI-04-01"
+   ],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-SCI-04-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-MATTER",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "কঠিন, তরল ও বায়বীয় পদার্থ",
+   "sourceText": "কঠিন, তরল ও বায়বীয় পদার্থ আকৃতি ও আয়তনের ভিত্তিতে চিনতে ও উদাহরণ দিতে পারবে; বাতাস যে একটি পদার্থ তা পরীক্ষা করে বলতে পারবে (৩.১.২)।",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-ONE",
+    "QT-SHORT",
+    "QT-LONG",
+    "QT-MATCH"
+   ],
+   "homeTipBn": "বই, পানি, বাতাস — কোনটি কঠিন, তরল, বায়বীয়, সন্তানকে বলতে বলুন; বেলুন ফুলিয়ে জিজ্ঞেস করুন, বেলুন ফুলল কেন?",
+   "prereqCodes": [
+    "LO-C3-SCI-04-01"
+   ],
+   "tagged": false,
+   "legacyCodes": [
+    "LO-C3-SCI-04-02",
+    "LO-C3-SCI-04-03"
+   ],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-SCI-04-02.1",
+   "level": "SUB",
+   "parentCode": "LO-C3-SCI-04-02",
+   "domainCode": "DOM-SCI-MATTER",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "তিন অবস্থার বৈশিষ্ট্য — আকৃতি ও আয়তন",
+   "sourceText": "কঠিন, তরল ও বায়বীয় পদার্থ আকৃতি ও আয়তনের ভিত্তিতে চিনতে … পারবে [ভাগ: বৈশিষ্ট্য]",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": [
+     "4/টিক/1",
+     "4/টিক/2",
+     "4/টিক/3",
+     "4/শূন্যস্থান/2",
+     "4/শূন্যস্থান/5",
+     "4/এক বাক্যে/2",
+     "4/সংক্ষিপ্ত/4",
+     "4/বর্ণনামূলক/3",
+     "4/চলো/4"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-ONE",
+    "QT-SHORT",
+    "QT-LONG"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-SCI-04-02.2",
+   "level": "SUB",
+   "parentCode": "LO-C3-SCI-04-02",
+   "domainCode": "DOM-SCI-MATTER",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "বস্তুটি কঠিন, তরল না বায়বীয় — শনাক্ত করা ও উদাহরণ",
+   "sourceText": "… চিনতে ও উদাহরণ দিতে পারবে [ভাগ: শনাক্ত ও উদাহরণ]",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": [
+     "4/টিক/5",
+     "4/মিল/2",
+     "4/এক বাক্যে/3",
+     "4/বর্ণনামূলক/2",
+     "4/চলো/3",
+     "4/কাজ ২/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-MATCH",
+    "QT-ONE",
+    "QT-LONG"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C3-SCI-04-02.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "বৈশিষ্ট্য মুখস্থ বলতে পারে কিন্তু জলীয় বাষ্প বা বরফ কোন অবস্থা তা গুলিয়ে ফেলে — আলাদা ভুল।"
+  },
+  {
+   "code": "LO-C3-SCI-04-02.3",
+   "level": "SUB",
+   "parentCode": "LO-C3-SCI-04-02",
+   "domainCode": "DOM-SCI-MATTER",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "বাতাস যে পদার্থ — পরীক্ষার ফলাফল",
+   "sourceText": "… বাতাস যে একটি পদার্থ তা পরীক্ষা করে বলতে পারবে [ভাগ: পরীক্ষার ফলাফল]",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": [
+     "4/সংক্ষিপ্ত/3",
+     "4/কাজ ১/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "কাজের ফলাফল লিখিত পরীক্ষায়, ধাপ নয় (D-০৪)। একটিমাত্র অনুশীলনী (সংক্ষিপ্ত ৩ — বেলুন)।"
+  },
+  {
+   "code": "LO-C3-SCI-04-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-MATTER",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "পানির তিন অবস্থা ও তাপ-ঠান্ডায় অবস্থার পরিবর্তন",
+   "sourceText": "পানির তিন অবস্থা ও তাপ-ঠান্ডায় অবস্থার পরিবর্তন ব্যাখ্যা করতে পারবে … (৩.১.৩) [ভাগ: পানির অবস্থা]",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": [
+     "4/শূন্যস্থান/3",
+     "4/বর্ণনামূলক/4"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-FILL",
+    "QT-LONG"
+   ],
+   "homeTipBn": "বরফ গলে পানি আর পানি ফুটে বাষ্প হতে দেখিয়ে পানির তিন অবস্থা নিয়ে সন্তানের সঙ্গে কথা বলুন।",
+   "prereqCodes": [
+    "LO-C3-SCI-04-02.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-SCI-04-04"
+   ],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-SCI-04-04",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-MATTER",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "নানা রকম কঠিন পদার্থের আকৃতি, বৈশিষ্ট্য ও ব্যবহার",
+   "sourceText": "… নানা রকম কঠিন পদার্থের বৈশিষ্ট্য ও ব্যবহার বলতে পারবে (৩.১.৩) [ভাগ: কঠিন পদার্থ] · (অংশ ৪–৫ \"পদার্থের আকৃতি\", \"আকৃতির ভিন্নতা\")",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": [
+     "4/মিল/1",
+     "4/মিল/4",
+     "4/এক বাক্যে/5"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MATCH",
+    "QT-ONE"
+   ],
+   "homeTipBn": "চামচ, গ্লাস, তুলা, ফুটবল — কোনটি কেমন (শক্ত, নরম, হালকা, গোল) আর কী কাজে লাগে, সন্তানকে বলতে বলুন।",
+   "prereqCodes": [
+    "LO-C3-SCI-04-02.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-SCI-04-05"
+   ],
+   "claudeNote": "মাত্র তিনটি অনুশীলনী (মিল ১ তুলা — ওজন কম, মিল ৪ ফুটবল — গোলাকার, এক বাক্যে ৫)। আকৃতির অংশ (৪–৫) এখানে।"
+  },
+  {
+   "code": "LO-C3-SCI-04-05",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-MATTER",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "চুম্বক — কী টানে, কী টানে না; মেরু, আকর্ষণ ও বিকর্ষণ",
+   "sourceText": "চুম্বক কী, কোন পদার্থকে টানে ও কোনটিকে টানে না তা পরীক্ষা করে বলতে পারবে; চুম্বকের মেরু, আকর্ষণ ও বিকর্ষণ বর্ণনা করতে পারবে (৩.২.২, ৩.২.৩)।",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-MATCH",
+    "QT-SHORT",
+    "QT-ONE"
+   ],
+   "homeTipBn": "চুম্বক থাকলে পিন, কাগজ, চামচ — কোনটি টানে, সন্তানকে আগে অনুমান করে তারপর পরীক্ষা করতে দিন।",
+   "prereqCodes": [
+    "LO-C3-SCI-04-01"
+   ],
+   "tagged": false,
+   "legacyCodes": [
+    "LO-C3-SCI-04-06",
+    "LO-C3-SCI-04-07"
+   ],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-SCI-04-05.1",
+   "level": "SUB",
+   "parentCode": "LO-C3-SCI-04-05",
+   "domainCode": "DOM-SCI-MATTER",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "চৌম্বক ও অচৌম্বক পদার্থ চেনা",
+   "sourceText": "চুম্বক কী, কোন পদার্থকে টানে ও কোনটিকে টানে না তা পরীক্ষা করে বলতে পারবে [ভাগ: চৌম্বক/অচৌম্বক]",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": [
+     "4/টিক/4",
+     "4/শূন্যস্থান/4",
+     "4/মিল/5",
+     "4/সংক্ষিপ্ত/1",
+     "4/চলো/5",
+     "4/কাজ ৩/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-MATCH",
+    "QT-SHORT"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-SCI-04-05.2",
+   "level": "SUB",
+   "parentCode": "LO-C3-SCI-04-05",
+   "domainCode": "DOM-SCI-MATTER",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "চুম্বকের মেরু, আকর্ষণ ও বিকর্ষণ",
+   "sourceText": "… চুম্বকের মেরু, আকর্ষণ ও বিকর্ষণ বর্ণনা করতে পারবে [ভাগ: মেরু]",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": [
+     "4/মিল/3",
+     "4/এক বাক্যে/4",
+     "4/সংক্ষিপ্ত/2"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MATCH",
+    "QT-ONE",
+    "QT-SHORT"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C3-SCI-04-05.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-SCI-04-06",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-MATTER",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "গরম, ভঙ্গুর ও ধারালো বস্তু ব্যবহারে সতর্কতা",
+   "sourceText": "গরম, ভঙ্গুর ও ধারালো বস্তু ব্যবহারে সতর্কতা ও দায়িত্বশীলতা বলতে ও মেনে চলতে পারবে (৩.২.৪)। [ভাগ: বলা]",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": [
+     "4/বর্ণনামূলক/1",
+     "4/চলো/6",
+     "4/কাজ ৪/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-LONG"
+   ],
+   "homeTipBn": "ছুরি, কাচের গ্লাস, গরম পাত্র ব্যবহারের সাবধানতা সন্তানকে বলতে বলুন; ঘরের কাজে খেয়াল রাখুন।",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-SCI-04-08"
+   ],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-SCI-05-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-ENERGY",
+   "chapterNumber": 5,
+   "strand": null,
+   "labelBn": "শক্তি কী এবং আলো, বিদ্যুৎ, তাপ ও শব্দ শক্তির উৎস চেনা",
+   "sourceText": "চারপাশ থেকে শক্তির বিভিন্ন রূপ — আলো, বিদ্যুৎ, তাপ ও শব্দ — চিহ্নিত করতে পারবে এবং শক্তি কী তা বলতে পারবে (৩.৩.১)।",
+   "bookRef": {
+    "chapter": 5,
+    "lesson": null,
+    "exercises": [
+     "5/টিক/2",
+     "5/টিক/3",
+     "5/শূন্যস্থান/1",
+     "5/শূন্যস্থান/3",
+     "5/শূন্যস্থান/4",
+     "5/মিল/4",
+     "5/এক বাক্যে/1",
+     "5/এক বাক্যে/2",
+     "5/এক বাক্যে/3",
+     "5/এক বাক্যে/4",
+     "5/এক বাক্যে/5",
+     "5/সংক্ষিপ্ত/1"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-MATCH",
+    "QT-ONE",
+    "QT-SHORT"
+   ],
+   "homeTipBn": "বাতি, চুলা, ঘণ্টা দেখিয়ে জিজ্ঞেস করুন — এখানে কোন শক্তি, কোথা থেকে আসে?",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-SCI-05-01"
+   ],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-SCI-05-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-ENERGY",
+   "chapterNumber": 5,
+   "strand": null,
+   "labelBn": "কোন কাজে কোন শক্তি ব্যবহৃত হয়",
+   "sourceText": "দৈনন্দিন জীবনে কোন কাজে কোন শক্তি ব্যবহৃত হয় তা খুঁজে বের করে ছকে লিখতে পারবে (৩.৩.২)।",
+   "bookRef": {
+    "chapter": 5,
+    "lesson": null,
+    "exercises": [
+     "5/টিক/4",
+     "5/শূন্যস্থান/2",
+     "5/মিল/1",
+     "5/মিল/2",
+     "5/মিল/3",
+     "5/সংক্ষিপ্ত/2",
+     "5/সংক্ষিপ্ত/3",
+     "5/বর্ণনামূলক/1",
+     "5/বর্ণনামূলক/3",
+     "5/চলো/1",
+     "5/কাজ ১/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-MATCH",
+    "QT-SHORT",
+    "QT-LONG"
+   ],
+   "homeTipBn": "রান্না, পাখা চালানো, পড়া — কোন কাজে কোন শক্তি লাগে, সন্তানকে জিজ্ঞেস করুন।",
+   "prereqCodes": [
+    "LO-C3-SCI-05-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-SCI-05-02"
+   ],
+   "claudeNote": "বর্ণনামূলক ৩ \"বিদ্যুৎ শক্তি কী? দৈনন্দিন জীবনে ব্যবহার\" — দ্বিতীয় অংশই প্রধান (ব্যবহার), তাই এখানে।"
+  },
+  {
+   "code": "LO-C3-SCI-05-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-ENERGY",
+   "chapterNumber": 5,
+   "strand": null,
+   "labelBn": "শক্তির অপচয় — চেনা, রোধের উপায় ও কেন রোধ করব",
+   "sourceText": "কীভাবে শক্তির অপচয় হয় তা চিহ্নিত করতে পারবে এবং অপচয় রোধের উপায় বলতে ও নিজের জীবনে মানতে পারবে (৩.৩.৩)।",
+   "bookRef": {
+    "chapter": 5,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-MATCH",
+    "QT-LONG",
+    "QT-FILL",
+    "QT-SHORT"
+   ],
+   "homeTipBn": "ঘর থেকে বের হওয়ার সময় বাতি-পাখা বন্ধ করার দায়িত্ব সন্তানকে দিন; তেল-গ্যাস কেন বাঁচাতে হয়, বুঝিয়ে বলুন।",
+   "prereqCodes": [
+    "LO-C3-SCI-05-02"
+   ],
+   "tagged": false,
+   "legacyCodes": [
+    "LO-C3-SCI-05-03",
+    "LO-C3-SCI-05-04"
+   ],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-SCI-05-03.1",
+   "level": "SUB",
+   "parentCode": "LO-C3-SCI-05-03",
+   "domainCode": "DOM-SCI-ENERGY",
+   "chapterNumber": 5,
+   "strand": null,
+   "labelBn": "শক্তির অপচয় চেনা ও রোধের উপায়",
+   "sourceText": "কীভাবে শক্তির অপচয় হয় তা চিহ্নিত করতে পারবে এবং অপচয় রোধের উপায় বলতে … পারবে [ভাগ: চেনা ও উপায়]",
+   "bookRef": {
+    "chapter": 5,
+    "lesson": null,
+    "exercises": [
+     "5/টিক/1",
+     "5/মিল/5",
+     "5/বর্ণনামূলক/2",
+     "5/বর্ণনামূলক/4",
+     "5/চলো/2",
+     "5/নিজে করি/1",
+     "5/কাজ ২/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-MATCH",
+    "QT-LONG"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-SCI-05-03.2",
+   "level": "SUB",
+   "parentCode": "LO-C3-SCI-05-03",
+   "domainCode": "DOM-SCI-ENERGY",
+   "chapterNumber": 5,
+   "strand": null,
+   "labelBn": "শক্তির অপচয় কেন রোধ করব — তেল, গ্যাস, কয়লা সীমিত",
+   "sourceText": "অপচয় রোধ [ভাগ: কেন — \"আরো কিছু জানি\": প্রাকৃতিক জ্বালানি সীমিত]",
+   "bookRef": {
+    "chapter": 5,
+    "lesson": null,
+    "exercises": [
+     "5/টিক/5",
+     "5/শূন্যস্থান/5",
+     "5/সংক্ষিপ্ত/4"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-SHORT"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "উপায় জানে কিন্তু কেন বাঁচাতে হয় (সীমিত জ্বালানি) বলতে পারে না — আলাদা ভুল।"
+  },
+  {
+   "code": "LO-C3-SCI-06-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-FORCE",
+   "chapterNumber": 6,
+   "strand": null,
+   "labelBn": "বল প্রয়োগে বস্তুর গতি, আকৃতি ও আয়তনের পরিবর্তন",
+   "sourceText": "বল প্রয়োগ করে থেমে থাকা বস্তুকে গতিশীল করা, গতিশীল বস্তুকে থামানো ও গতির দিক বদলানো যায় — তা পর্যবেক্ষণ করে বলতে পারবে (যোগ্যতা ৪.১)। · টান, ধাক্কা, চাপ বা বাঁকানোর মাধ্যমে বস্তুর আকৃতি পরিবর্তন হয় … (৪.১.১) · বল প্রয়োগে বায়ুর (গ্যাসের) আয়তন কমে ও বল সরালে বাড়ে … (৪.১.২)",
+   "bookRef": {
+    "chapter": 6,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-MATCH-SENT",
+    "QT-FILL",
+    "QT-ONE",
+    "QT-SHORT",
+    "QT-LONG"
+   ],
+   "homeTipBn": "খেলনা গাড়ি ঠেলে চালিয়ে ও থামিয়ে, রাবার ব্যান্ড টেনে, বেলুন চেপে — প্রতিবার কী বদলাল (গতি, আকৃতি না আয়তন), সন্তানকে বলতে বলুন।",
+   "prereqCodes": [],
+   "tagged": false,
+   "legacyCodes": [
+    "LO-C3-SCI-06-01",
+    "LO-C3-SCI-06-02",
+    "LO-C3-SCI-06-03"
+   ],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-SCI-06-01.1",
+   "level": "SUB",
+   "parentCode": "LO-C3-SCI-06-01",
+   "domainCode": "DOM-SCI-FORCE",
+   "chapterNumber": 6,
+   "strand": null,
+   "labelBn": "বল প্রয়োগে বস্তু চলে, থামে বা দিক বদলায়",
+   "sourceText": "বল প্রয়োগ করে থেমে থাকা বস্তুকে গতিশীল করা, গতিশীল বস্তুকে থামানো ও গতির দিক বদলানো যায় — তা পর্যবেক্ষণ করে বলতে পারবে (যোগ্যতা ৪.১)",
+   "bookRef": {
+    "chapter": 6,
+    "lesson": null,
+    "exercises": [
+     "6/টিক/3",
+     "6/মিল/2",
+     "6/কাজ ১/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-MATCH-SENT"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-SCI-06-01.2",
+   "level": "SUB",
+   "parentCode": "LO-C3-SCI-06-01",
+   "domainCode": "DOM-SCI-FORCE",
+   "chapterNumber": 6,
+   "strand": null,
+   "labelBn": "বল প্রয়োগে আকৃতির পরিবর্তন ও আগের আকৃতিতে ফেরা",
+   "sourceText": "টান, ধাক্কা, চাপ বা বাঁকানোর মাধ্যমে বস্তুর আকৃতি পরিবর্তন হয় এবং কোন বস্তু বল সরালে আসল আকৃতিতে ফেরে, কোনটি ফেরে না — তা উদাহরণসহ বলতে পারবে (৪.১.১)",
+   "bookRef": {
+    "chapter": 6,
+    "lesson": null,
+    "exercises": [
+     "6/টিক/1",
+     "6/টিক/2",
+     "6/শূন্যস্থান/1",
+     "6/শূন্যস্থান/2",
+     "6/মিল/1",
+     "6/মিল/4",
+     "6/মিল/5",
+     "6/এক বাক্যে/1",
+     "6/কাজ ২/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-MATCH-SENT",
+    "QT-ONE"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-SCI-06-01.3",
+   "level": "SUB",
+   "parentCode": "LO-C3-SCI-06-01",
+   "domainCode": "DOM-SCI-FORCE",
+   "chapterNumber": 6,
+   "strand": null,
+   "labelBn": "বল প্রয়োগে বায়ুর আয়তন কমা ও বাড়া",
+   "sourceText": "বল প্রয়োগে বায়ুর (গ্যাসের) আয়তন কমে ও বল সরালে বাড়ে — বেলুনের উদাহরণ দিয়ে ব্যাখ্যা করতে পারবে (৪.১.২)",
+   "bookRef": {
+    "chapter": 6,
+    "lesson": null,
+    "exercises": [
+     "6/শূন্যস্থান/3",
+     "6/মিল/3",
+     "6/সংক্ষিপ্ত/3",
+     "6/বর্ণনামূলক/2",
+     "6/কাজ ৩/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-FILL",
+    "QT-MATCH-SENT",
+    "QT-SHORT",
+    "QT-LONG"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-SCI-06-01.4",
+   "level": "SUB",
+   "parentCode": "LO-C3-SCI-06-01",
+   "domainCode": "DOM-SCI-FORCE",
+   "chapterNumber": 6,
+   "strand": null,
+   "labelBn": "কোন ঘটনায় কী ধরনের পরিবর্তন (গতি, আকৃতি, আয়তন) — চেনা",
+   "sourceText": "(তিন শিখনফল একসাথে — অনুশীলনী ও \"চলো\"-র শ্রেণিকরণ প্রশ্ন)",
+   "bookRef": {
+    "chapter": 6,
+    "lesson": null,
+    "exercises": [
+     "6/সংক্ষিপ্ত/1",
+     "6/বর্ণনামূলক/1",
+     "6/চলো/1"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT",
+    "QT-LONG"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C3-SCI-06-01.1",
+    "LO-C3-SCI-06-01.2",
+    "LO-C3-SCI-06-01.3"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "প্রতিটি পরিবর্তন আলাদা জানে কিন্তু নতুন ঘটনায় কোনটি গতি, কোনটি আকৃতি, কোনটি আয়তন — তা বাছাইয়ে ভুল করে; বর্ণনামূলক ১ (\"কয় ধরনের পরিবর্তন\") তিনটিকে একসাথে চায়। সংক্ষিপ্ত ১-এর \"আকার\" শব্দ (ফ্ল্যাগ)।"
+  },
+  {
+   "code": "LO-C3-SCI-06-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-FORCE",
+   "chapterNumber": 6,
+   "strand": null,
+   "labelBn": "দৈনন্দিন জীবনে বল প্রয়োগের উদাহরণ",
+   "sourceText": "দৈনন্দিন জীবনে বল প্রয়োগের উদাহরণ দিতে পারবে (৪.১.৩)।",
+   "bookRef": {
+    "chapter": 6,
+    "lesson": null,
+    "exercises": [
+     "6/শূন্যস্থান/4",
+     "6/সংক্ষিপ্ত/2",
+     "6/কাজ ৪/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-FILL",
+    "QT-SHORT"
+   ],
+   "homeTipBn": "দরজা খোলা, বালতি তোলা, ব্যাগ টানা — দিনের কোন কাজে টান আর কোনটিতে ধাক্কা লাগে, সন্তানকে বলতে বলুন।",
+   "prereqCodes": [
+    "LO-C3-SCI-06-01.4"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-SCI-06-04"
+   ],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-SCI-07-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-ENV",
+   "chapterNumber": 7,
+   "strand": null,
+   "labelBn": "পানির উৎস",
+   "sourceText": "পানির উৎসগুলোর নাম বলতে পারবে এবং প্রাকৃতিক ও মানুষের তৈরি উৎসে ভাগ করতে পারবে; বৃষ্টির পানি, ভূপৃষ্ঠের পানি ও ভূগর্ভস্থ পানি কী তা বলতে পারবে (৫.১.১)।",
+   "bookRef": {
+    "chapter": 7,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-MATCH-SENT",
+    "QT-SHORT",
+    "QT-ONE"
+   ],
+   "homeTipBn": "নলকূপ, পুকুর, বৃষ্টি, নদী — কোনটি প্রাকৃতিক, কোনটি মানুষের তৈরি উৎস, সন্তানকে জিজ্ঞেস করুন।",
+   "prereqCodes": [],
+   "tagged": false,
+   "legacyCodes": [
+    "LO-C3-SCI-07-01",
+    "LO-C3-SCI-07-02"
+   ],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-SCI-07-01.1",
+   "level": "SUB",
+   "parentCode": "LO-C3-SCI-07-01",
+   "domainCode": "DOM-SCI-ENV",
+   "chapterNumber": 7,
+   "strand": null,
+   "labelBn": "প্রাকৃতিক ও মানুষের তৈরি পানির উৎস",
+   "sourceText": "পানির উৎসগুলোর নাম বলতে পারবে এবং প্রাকৃতিক ও মানুষের তৈরি উৎসে ভাগ করতে পারবে [ভাগ: উৎস]",
+   "bookRef": {
+    "chapter": 7,
+    "lesson": null,
+    "exercises": [
+     "7/টিক/1",
+     "7/শূন্যস্থান/1",
+     "7/শূন্যস্থান/3",
+     "7/মিল/1",
+     "7/মিল/2",
+     "7/সংক্ষিপ্ত/1",
+     "7/চলো/1",
+     "7/কাজ ১/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-MATCH-SENT",
+    "QT-SHORT"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-SCI-07-01.2",
+   "level": "SUB",
+   "parentCode": "LO-C3-SCI-07-01",
+   "domainCode": "DOM-SCI-ENV",
+   "chapterNumber": 7,
+   "strand": null,
+   "labelBn": "বৃষ্টির পানি, ভূপৃষ্ঠের পানি ও ভূগর্ভস্থ পানি কী",
+   "sourceText": "… বৃষ্টির পানি, ভূপৃষ্ঠের পানি ও ভূগর্ভস্থ পানি কী তা বলতে পারবে [ভাগ: তিন ধরনের পানি]",
+   "bookRef": {
+    "chapter": 7,
+    "lesson": null,
+    "exercises": [
+     "7/টিক/4",
+     "7/শূন্যস্থান/5",
+     "7/এক বাক্যে/2",
+     "7/এক বাক্যে/3",
+     "7/এক বাক্যে/4"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-ONE"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-SCI-07-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-ENV",
+   "chapterNumber": 7,
+   "strand": null,
+   "labelBn": "পানির ধরন — মিঠা ও লবণাক্ত, নিরাপদ ও অনিরাপদ",
+   "sourceText": "মিঠা (স্বাদু) পানি ও লবণাক্ত পানির পার্থক্য বলতে পারবে, উৎস অনুযায়ী ভাগ করতে পারবে এবং নিরাপদ ও অনিরাপদ পানি চিনতে পারবে (৫.১.২)।",
+   "bookRef": {
+    "chapter": 7,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-FILL",
+    "QT-MATCH-SENT",
+    "QT-LONG",
+    "QT-MCQ"
+   ],
+   "homeTipBn": "ফোটানো পানি আর পুকুরের পানির মধ্যে কোনটি পান করা নিরাপদ, আর সমুদ্রের পানি কেন খাওয়া যায় না — সন্তানকে জিজ্ঞেস করুন।",
+   "prereqCodes": [
+    "LO-C3-SCI-07-01.1"
+   ],
+   "tagged": false,
+   "legacyCodes": [
+    "LO-C3-SCI-07-03",
+    "LO-C3-SCI-07-04"
+   ],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-SCI-07-02.1",
+   "level": "SUB",
+   "parentCode": "LO-C3-SCI-07-02",
+   "domainCode": "DOM-SCI-ENV",
+   "chapterNumber": 7,
+   "strand": null,
+   "labelBn": "মিঠা ও লবণাক্ত পানির পার্থক্য ও উৎস",
+   "sourceText": "মিঠা (স্বাদু) পানি ও লবণাক্ত পানির পার্থক্য বলতে পারবে, উৎস অনুযায়ী ভাগ করতে পারবে [ভাগ: মিঠা/লবণাক্ত]",
+   "bookRef": {
+    "chapter": 7,
+    "lesson": null,
+    "exercises": [
+     "7/শূন্যস্থান/2",
+     "7/মিল/4",
+     "7/বর্ণনামূলক/3",
+     "7/চলো/3",
+     "7/কাজ ২/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-FILL",
+    "QT-MATCH-SENT",
+    "QT-LONG"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-SCI-07-02.2",
+   "level": "SUB",
+   "parentCode": "LO-C3-SCI-07-02",
+   "domainCode": "DOM-SCI-ENV",
+   "chapterNumber": 7,
+   "strand": null,
+   "labelBn": "নিরাপদ ও অনিরাপদ পানি চেনা",
+   "sourceText": "… নিরাপদ ও অনিরাপদ পানি চিনতে পারবে [ভাগ: নিরাপদ/অনিরাপদ]",
+   "bookRef": {
+    "chapter": 7,
+    "lesson": null,
+    "exercises": [
+     "7/টিক/2",
+     "7/মিল/3",
+     "7/মিল/5",
+     "7/চলো/2"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-MATCH-SENT"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C3-SCI-03-06"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-SCI-07-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-ENV",
+   "chapterNumber": 7,
+   "strand": null,
+   "labelBn": "দৈনন্দিন জীবনে পানির ব্যবহার",
+   "sourceText": "দৈনন্দিন জীবনে পানির ব্যবহার বলতে পারবে (৫.১.৩)।",
+   "bookRef": {
+    "chapter": 7,
+    "lesson": null,
+    "exercises": [
+     "7/সংক্ষিপ্ত/3",
+     "7/চলো/4",
+     "7/কাজ ৩/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT"
+   ],
+   "homeTipBn": "সকাল থেকে কোন কোন কাজে পানি লাগল, সন্তানকে গুনে বলতে বলুন।",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-SCI-07-05"
+   ],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-SCI-07-04",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-ENV",
+   "chapterNumber": 7,
+   "strand": null,
+   "labelBn": "আমাদের জীবনে পানির গুরুত্ব ও খরা",
+   "sourceText": "আমাদের জীবনে পানির গুরুত্ব ব্যাখ্যা করতে পারবে; \"খরা\" শব্দটি বুঝবে (৫.১.৪)।",
+   "bookRef": {
+    "chapter": 7,
+    "lesson": null,
+    "exercises": [
+     "7/টিক/5",
+     "7/টিক/6",
+     "7/এক বাক্যে/1",
+     "7/এক বাক্যে/5",
+     "7/সংক্ষিপ্ত/2",
+     "7/সংক্ষিপ্ত/4",
+     "7/কাজ ৪/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-ONE",
+    "QT-SHORT"
+   ],
+   "homeTipBn": "পানি না থাকলে কী কী সমস্যা হতো, সন্তানের সঙ্গে আলোচনা করুন।",
+   "prereqCodes": [
+    "LO-C3-SCI-07-03"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-SCI-07-06"
+   ],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-SCI-07-05",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-ENV",
+   "chapterNumber": 7,
+   "strand": null,
+   "labelBn": "পানির অপচয় — কারণ ও রোধের উপায়",
+   "sourceText": "পানির অপচয়ের কারণ ও অপচয় রোধের উপায় বলতে পারবে এবং নিজের জীবনে প্রয়োগে আগ্রহী হবে (৫.১.৫)।",
+   "bookRef": {
+    "chapter": 7,
+    "lesson": null,
+    "exercises": [
+     "7/টিক/3",
+     "7/শূন্যস্থান/4",
+     "7/সংক্ষিপ্ত/5",
+     "7/বর্ণনামূলক/1",
+     "7/বর্ণনামূলক/2",
+     "7/বর্ণনামূলক/4",
+     "7/নিজে করি/1",
+     "7/নিজে করি/2",
+     "7/নিজে করি/3",
+     "7/কাজ ৫/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-SHORT",
+    "QT-LONG"
+   ],
+   "homeTipBn": "দাঁত ব্রাশের সময় কল বন্ধ রাখার অভ্যাস সন্তানকে করান; বাড়িতে আর কোথায় পানি নষ্ট হয়, খুঁজতে দিন।",
+   "prereqCodes": [
+    "LO-C3-SCI-07-04"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-SCI-07-07",
+    "LO-C3-SCI-07-08"
+   ],
+   "claudeNote": "শক্তির অধ্যায়ের মতো \"কেন রোধ করব\" আলাদা করা হয়নি — এখানে তার অনুশীলনী একটিই (বর্ণনামূলক ৪)।"
+  },
+  {
+   "code": "LO-C3-SCI-08-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-ENV",
+   "chapterNumber": 8,
+   "strand": null,
+   "labelBn": "মাটি কী ও মাটির উপাদান (হিউমাস)",
+   "sourceText": "পরীক্ষণের মাধ্যমে মাটির উপাদানগুলো (নুড়িপাথর, বালু, পলি, কাদা, পানি, বায়ু ও হিউমাস) শনাক্ত করতে ও হিউমাস কী তা বলতে পারবে (৫.২.১)।",
+   "bookRef": {
+    "chapter": 8,
+    "lesson": null,
+    "exercises": [
+     "8/টিক/1",
+     "8/শূন্যস্থান/1",
+     "8/শূন্যস্থান/2",
+     "8/মিল/1",
+     "8/এক বাক্যে/1",
+     "8/সংক্ষিপ্ত/1",
+     "8/চলো/1",
+     "8/চলো/2",
+     "8/কাজ ১/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-MATCH-SENT",
+    "QT-ONE",
+    "QT-SHORT"
+   ],
+   "homeTipBn": "গ্লাসে পানি ও মাটি মিশিয়ে রেখে কী কী স্তর পড়ে, সন্তানের সঙ্গে দেখুন।",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-SCI-08-01"
+   ],
+   "claudeNote": "বোতলে মাটির মিশ্রণের পরীক্ষার ফলাফল (চলো ১–২) এখানে; পরীক্ষা করা SK-OBS-01-এ।"
+  },
+  {
+   "code": "LO-C3-SCI-08-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-ENV",
+   "chapterNumber": 8,
+   "strand": null,
+   "labelBn": "দৈনন্দিন জীবনে মাটির ব্যবহার ও গুরুত্ব",
+   "sourceText": "দৈনন্দিন জীবনে মাটির ব্যবহার ও গুরুত্ব বর্ণনা করতে পারবে (৫.২.৪)।",
+   "bookRef": {
+    "chapter": 8,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-MATCH-SENT",
+    "QT-ONE",
+    "QT-SHORT",
+    "QT-LONG"
+   ],
+   "homeTipBn": "মাটি না থাকলে আমরা কী কী পেতাম না (খাবার, ইট, হাঁড়ি…), সন্তানের সঙ্গে আলোচনা করুন।",
+   "prereqCodes": [
+    "LO-C3-SCI-08-01"
+   ],
+   "tagged": false,
+   "legacyCodes": [
+    "LO-C3-SCI-08-02",
+    "LO-C3-SCI-08-03"
+   ],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-SCI-08-02.1",
+   "level": "SUB",
+   "parentCode": "LO-C3-SCI-08-02",
+   "domainCode": "DOM-SCI-ENV",
+   "chapterNumber": 8,
+   "strand": null,
+   "labelBn": "মাটির ব্যবহার — মাটি দিয়ে কী তৈরি হয়",
+   "sourceText": "দৈনন্দিন জীবনে মাটির ব্যবহার … বর্ণনা করতে পারবে [ভাগ: ব্যবহার]",
+   "bookRef": {
+    "chapter": 8,
+    "lesson": null,
+    "exercises": [
+     "8/টিক/3",
+     "8/শূন্যস্থান/4",
+     "8/মিল/3",
+     "8/এক বাক্যে/2",
+     "8/সংক্ষিপ্ত/2",
+     "8/কাজ ৩/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-MATCH-SENT",
+    "QT-ONE",
+    "QT-SHORT"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-SCI-08-02.2",
+   "level": "SUB",
+   "parentCode": "LO-C3-SCI-08-02",
+   "domainCode": "DOM-SCI-ENV",
+   "chapterNumber": 8,
+   "strand": null,
+   "labelBn": "উদ্ভিদ, খাবার ও পরিবেশের জন্য মাটির গুরুত্ব",
+   "sourceText": "… মাটির … গুরুত্ব বর্ণনা করতে পারবে [ভাগ: গুরুত্ব]",
+   "bookRef": {
+    "chapter": 8,
+    "lesson": null,
+    "exercises": [
+     "8/টিক/2",
+     "8/টিক/4",
+     "8/শূন্যস্থান/3",
+     "8/শূন্যস্থান/5",
+     "8/মিল/2",
+     "8/মিল/4",
+     "8/বর্ণনামূলক/1",
+     "8/চলো/3",
+     "8/কাজ ৪/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-MATCH-SENT",
+    "QT-LONG"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "\"এলাকায় জন্মে এমন ফসলের নাম\" (৫.২.৩ সংশ্লিষ্ট) শুধু কাজ ২-এ — অনুশীলনী নেই, তাই আলাদা সারি নয় (ফ্ল্যাগ); টিক ২ (খাবারের অধিকাংশ মাটি থেকে) এখানে।"
+  },
+  {
+   "code": "LO-C3-SCI-09-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-EARTH",
+   "chapterNumber": 9,
+   "strand": null,
+   "labelBn": "সূর্য — তাপ ও আলোর প্রধান উৎস",
+   "sourceText": "সূর্যকে তাপ ও আলোর প্রধান উৎস হিসেবে শনাক্ত করতে পারবে (৬.১.১)।",
+   "bookRef": {
+    "chapter": 9,
+    "lesson": null,
+    "exercises": [
+     "9/টিক/1",
+     "9/এক বাক্যে/1",
+     "9/এক বাক্যে/5",
+     "9/সংক্ষিপ্ত/1",
+     "9/কাজ ১/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-ONE",
+    "QT-SHORT"
+   ],
+   "homeTipBn": "রাতে কেন দেখতে পাই না, সন্তানকে সূর্যের কথা দিয়ে বুঝিয়ে বলতে বলুন।",
+   "prereqCodes": [
+    "LO-C3-SCI-05-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-SCI-09-01"
+   ],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-SCI-09-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-EARTH",
+   "chapterNumber": 9,
+   "strand": null,
+   "labelBn": "উদ্ভিদ ও প্রাণীর জন্য সূর্যের গুরুত্ব",
+   "sourceText": "উদ্ভিদ ও প্রাণীর জন্য সূর্যের গুরুত্ব (খাদ্য তৈরি, অক্সিজেন, তাপমাত্রা, আলো) বলতে পারবে (৬.১.২)।",
+   "bookRef": {
+    "chapter": 9,
+    "lesson": null,
+    "exercises": [
+     "9/টিক/2",
+     "9/টিক/3",
+     "9/টিক/6",
+     "9/শূন্যস্থান/1",
+     "9/শূন্যস্থান/3",
+     "9/মিল/3",
+     "9/মিল/4",
+     "9/এক বাক্যে/3",
+     "9/বর্ণনামূলক/1",
+     "9/বর্ণনামূলক/2",
+     "9/চলো/1",
+     "9/চলো/2",
+     "9/কাজ ২/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-MATCH-SENT",
+    "QT-ONE",
+    "QT-LONG"
+   ],
+   "homeTipBn": "রোদে কাপড় শুকাতে দেওয়ার সময় জিজ্ঞেস করুন — সূর্য না থাকলে গাছ, মানুষ ও আমাদের কী কী সমস্যা হতো?",
+   "prereqCodes": [
+    "LO-C3-SCI-09-01",
+    "LO-C3-SCI-01-02"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-SCI-09-02"
+   ],
+   "claudeNote": "বর্ণনামূলক ২ (বদ্ধ ঘরে গাছের পাতা হলুদ কেন) নিজে করি ১–৩-এর পরীক্ষার ফলাফল — ফলাফল এখানে, পরীক্ষা করা SK-OBS-01-এ।"
+  },
+  {
+   "code": "LO-C3-SCI-09-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-EARTH",
+   "chapterNumber": 9,
+   "strand": null,
+   "labelBn": "সূর্যের অবস্থান ও ছায়ার দিক",
+   "sourceText": "সূর্যের অবস্থান ও ছায়ার দিকের সম্পর্ক (সূর্য ও ছায়া বিপরীত দিকে) ব্যাখ্যা করতে পারবে (৬.১.৩)।",
+   "bookRef": {
+    "chapter": 9,
+    "lesson": null,
+    "exercises": [
+     "9/টিক/4",
+     "9/শূন্যস্থান/4",
+     "9/মিল/1",
+     "9/এক বাক্যে/2",
+     "9/বর্ণনামূলক/4"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-MATCH-SENT",
+    "QT-ONE",
+    "QT-LONG"
+   ],
+   "homeTipBn": "সকালে রোদে দাঁড়িয়ে দেখান — সূর্য কোন দিকে, ছায়া কোন দিকে পড়ে।",
+   "prereqCodes": [
+    "LO-C3-SCI-09-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-SCI-09-03"
+   ],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-SCI-09-04",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-EARTH",
+   "chapterNumber": 9,
+   "strand": null,
+   "labelBn": "ছায়ার দৈর্ঘ্যের পরিবর্তন ও সূর্যঘড়ি",
+   "sourceText": "সূর্যের অবস্থান পরিবর্তনের সঙ্গে ছায়ার দৈর্ঘ্যের পরিবর্তন (সকাল-বিকালে দীর্ঘ, দুপুরে সবচেয়ে ছোটো) ব্যাখ্যা করতে পারবে এবং সূর্যঘড়ির ধারণা বলতে পারবে (৬.১.৪)।",
+   "bookRef": {
+    "chapter": 9,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-MATCH-SENT",
+    "QT-SHORT",
+    "QT-LONG",
+    "QT-ONE"
+   ],
+   "homeTipBn": "সকাল, দুপুর ও বিকালে নিজের ছায়া লম্বা না ছোটো, সন্তানকে তুলনা করতে বলুন।",
+   "prereqCodes": [
+    "LO-C3-SCI-09-03"
+   ],
+   "tagged": false,
+   "legacyCodes": [
+    "LO-C3-SCI-09-04",
+    "LO-C3-SCI-09-05"
+   ],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-SCI-09-04.1",
+   "level": "SUB",
+   "parentCode": "LO-C3-SCI-09-04",
+   "domainCode": "DOM-SCI-EARTH",
+   "chapterNumber": 9,
+   "strand": null,
+   "labelBn": "সকাল-দুপুর-বিকালে ছায়ার দৈর্ঘ্য কেন বদলায়",
+   "sourceText": "সূর্যের অবস্থান পরিবর্তনের সঙ্গে ছায়ার দৈর্ঘ্যের পরিবর্তন … ব্যাখ্যা করতে পারবে [ভাগ: ছায়ার দৈর্ঘ্য]",
+   "bookRef": {
+    "chapter": 9,
+    "lesson": null,
+    "exercises": [
+     "9/টিক/5",
+     "9/শূন্যস্থান/5",
+     "9/মিল/2",
+     "9/সংক্ষিপ্ত/2",
+     "9/বর্ণনামূলক/3",
+     "9/কাজ ৩/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-MATCH-SENT",
+    "QT-SHORT",
+    "QT-LONG"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-SCI-09-04.2",
+   "level": "SUB",
+   "parentCode": "LO-C3-SCI-09-04",
+   "domainCode": "DOM-SCI-EARTH",
+   "chapterNumber": 9,
+   "strand": null,
+   "labelBn": "সূর্যঘড়ি — ছায়া দিয়ে সময় বোঝা",
+   "sourceText": "… সূর্যঘড়ির ধারণা বলতে পারবে [ভাগ: সূর্যঘড়ি]",
+   "bookRef": {
+    "chapter": 9,
+    "lesson": null,
+    "exercises": [
+     "9/শূন্যস্থান/2",
+     "9/মিল/5",
+     "9/এক বাক্যে/4"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-FILL",
+    "QT-MATCH-SENT",
+    "QT-ONE"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C3-SCI-09-04.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "সূর্যঘড়ি বানানো (চলো ৩) SK-OBS-01-এ; এখানে শুধু ধারণা।"
+  },
+  {
+   "code": "LO-C3-SCI-10-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-TECH",
+   "chapterNumber": 10,
+   "strand": null,
+   "labelBn": "প্রযুক্তি কী ও কোন ক্ষেত্রে কোন প্রযুক্তি",
+   "sourceText": "দৈনন্দিন জীবনে ব্যবহৃত প্রযুক্তি শনাক্ত করতে এবং কোন ক্ষেত্রে কী প্রযুক্তি ব্যবহার হয় তা বলতে পারবে (৭.১.১)।",
+   "bookRef": {
+    "chapter": 10,
+    "lesson": null,
+    "exercises": [
+     "10/টিক/1",
+     "10/টিক/2",
+     "10/টিক/3",
+     "10/টিক/4",
+     "10/টিক/6",
+     "10/শূন্যস্থান/1",
+     "10/শূন্যস্থান/3",
+     "10/শূন্যস্থান/4",
+     "10/মিল/1",
+     "10/মিল/2",
+     "10/মিল/3",
+     "10/মিল/4",
+     "10/মিল/5",
+     "10/এক বাক্যে/1",
+     "10/এক বাক্যে/2",
+     "10/এক বাক্যে/3",
+     "10/সংক্ষিপ্ত/1",
+     "10/সংক্ষিপ্ত/3",
+     "10/চলো/1",
+     "10/কাজ ১/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-MATCH-SENT",
+    "QT-ONE",
+    "QT-SHORT"
+   ],
+   "homeTipBn": "ঘরে ব্যবহার হওয়া প্রযুক্তিগুলোর নাম সন্তানকে গুনে বলতে বলুন; ডাক্তারের থার্মোমিটার কোন ক্ষেত্রের প্রযুক্তি, জিজ্ঞেস করুন।",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-SCI-10-01"
+   ],
+   "claudeNote": "বাড়ি, শিক্ষা, চিকিৎসা, কৃষি ও যাতায়াত — পাঁচ ক্ষেত্রের ছক (D-সংস্করণ ৩) একটি সারি; ক্ষেত্র ধরে ভাগ করলে প্রতিটি দু-তিন প্রশ্নের সারি হতো।"
+  },
+  {
+   "code": "LO-C3-SCI-10-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-TECH",
+   "chapterNumber": 10,
+   "strand": null,
+   "labelBn": "আধুনিক প্রযুক্তির উদ্ভাবন ও আমাদের জীবনে তার প্রভাব",
+   "sourceText": "আধুনিক প্রযুক্তির উদ্ভাবন ও বাড়ি, শিক্ষা, চিকিৎসা, কৃষি ও যাতায়াতে এর ব্যবহার বর্ণনা করতে পারবে … (৭.১.২) [ভাগ: উদ্ভাবন ও প্রভাব]",
+   "bookRef": {
+    "chapter": 10,
+    "lesson": null,
+    "exercises": [
+     "10/টিক/5",
+     "10/শূন্যস্থান/2",
+     "10/শূন্যস্থান/5",
+     "10/সংক্ষিপ্ত/4",
+     "10/বর্ণনামূলক/2",
+     "10/বর্ণনামূলক/3",
+     "10/কাজ ২/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MCQ",
+    "QT-FILL",
+    "QT-SHORT",
+    "QT-LONG"
+   ],
+   "homeTipBn": "দাদা-দাদির সময়ে জমি চাষ বা যাতায়াত কেমন ছিল আর এখন কেমন — সন্তানকে বড়োদের কাছে জেনে বলতে দিন।",
+   "prereqCodes": [
+    "LO-C3-SCI-10-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-SCI-10-02",
+    "LO-C3-SCI-10-03"
+   ],
+   "claudeNote": "\"যাতায়াত প্রযুক্তিকে পুরোনো থেকে নতুন ক্রমে সাজানো\" শ্রেণির কাজ (কাজ ২), লিখিত পরীক্ষায় নয় — আলাদা সারি নয়।"
+  },
+  {
+   "code": "LO-C3-SCI-10-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-TECH",
+   "chapterNumber": 10,
+   "strand": null,
+   "labelBn": "প্রযুক্তির নিরাপদ ব্যবহার",
+   "sourceText": "প্রযুক্তির নিরাপদ ব্যবহারের উপায় বলতে পারবে ও নিজে মেনে চলবে (৭.১.৩)। [ভাগ: বলা]",
+   "bookRef": {
+    "chapter": 10,
+    "lesson": null,
+    "exercises": [
+     "10/সংক্ষিপ্ত/2",
+     "10/বর্ণনামূলক/1",
+     "10/চলো/2",
+     "10/নিজে করি/1",
+     "10/নিজে করি/2",
+     "10/নিজে করি/3",
+     "10/কাজ ৩/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT",
+    "QT-LONG"
+   ],
+   "homeTipBn": "মোবাইল ফোন কতক্ষণ ও কত দূর থেকে দেখবে, সন্তানের সঙ্গে নিয়ম ঠিক করে মানতে সাহায্য করুন।",
+   "prereqCodes": [
+    "LO-C3-SCI-10-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-SCI-10-04",
+    "LO-C3-SCI-10-05"
+   ],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-SCI-SK-OBS-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-INQ",
+   "chapterNumber": null,
+   "strand": "OBS",
+   "labelBn": "অনুমান করে, পর্যবেক্ষণ ও পরীক্ষণ করে ফলাফল বলা",
+   "sourceText": "প্রতিটি অধ্যায়ের \"কাজ\" (পরীক্ষণ) — কাজ করানো শ্রেণির কাজ ও শ্রেণি পরীক্ষায়; ফলাফল লিখিত পরীক্ষায় আসতে পারে, ধাপ নয় (D-০৪, সিদ্ধান্ত ৫৩) · TG মূল্যায়ন নির্দেশক: দলে মিলে পরীক্ষা করবে ও ফল সঠিকভাবে লিখবে",
+   "bookRef": {
+    "chapter": null,
+    "lesson": null,
+    "exercises": [
+     "4/নিজে করি/1",
+     "4/নিজে করি/2",
+     "4/নিজে করি/3",
+     "9/নিজে করি/1",
+     "9/নিজে করি/2",
+     "9/নিজে করি/3",
+     "9/চলো/3",
+     "1/কাজ ২/—",
+     "1/কাজ ৩/—",
+     "4/কাজ ১/—",
+     "4/কাজ ৩/—",
+     "6/কাজ ১/—",
+     "6/কাজ ২/—",
+     "6/কাজ ৩/—",
+     "8/কাজ ১/—",
+     "9/কাজ ৩/—"
+    ]
+   },
+   "assess": "RUBRIC",
+   "questionTypeCodes": [
+    "QT-OBS"
+   ],
+   "homeTipBn": "চুম্বক বা গাছ নিয়ে ছোটো একটি পরীক্ষার আগে সন্তানকে অনুমান করতে বলুন, পরে ফলের সাথে মিলিয়ে কী শিখল জিজ্ঞেস করুন।",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-SCI-SK-OBS-01",
+    "LO-C3-SCI-SK-CLS-01"
+   ],
+   "claudeNote": "নম্বরযুক্ত অনুশীলনী: অধ্যায় ৪-এর নিজে করি ১–৩ (চুম্বক — অনুমান, পরীক্ষা, মিলানো), অধ্যায় ৯-এর নিজে করি ১–৩ (রোদ-অন্ধকারে গাছ) ও চলো ৩ (সূর্যঘড়ি বানানো); বাকি নম্বরহীন \"কাজ\"। ফলাফলের প্রশ্ন বিষয়ের সারিতে (০১-০২, ০৪-০২.৩, ০৬-০১, ০৮-০১, ০৯-০২)।"
+  },
+  {
+   "code": "LO-C3-SCI-SK-DRAW-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-SCI-INQ",
+   "chapterNumber": null,
+   "strand": "DRAW",
+   "labelBn": "উদ্ভিদের ছবি এঁকে মূল, কাণ্ড ও পাতা চিহ্নিত করা",
+   "sourceText": "একটি পরিচিত উদ্ভিদের ছবি এঁকে মূল, কাণ্ড, পাতা, ফুল ও ফল চিহ্নিত করতে পারবে (১.১.১, ১.১.২) [ভাগ: আঁকা — শ্রেণির কাজ; লিখিত পরীক্ষায় আঁকা নয়, D-১২]",
+   "bookRef": {
+    "chapter": null,
+    "lesson": null,
+    "exercises": [
+     "1/চলো/2",
+     "1/কাজ ১/—"
+    ]
+   },
+   "assess": "RUBRIC",
+   "questionTypeCodes": [
+    "QT-OBS"
+   ],
+   "homeTipBn": "বাড়ির একটি গাছ দেখে সন্তানকে খাতায় এঁকে মূল, কাণ্ড, পাতা লিখতে দিন।",
+   "prereqCodes": [
+    "LO-C3-SCI-01-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-SCI-SK-DRAW-01"
+   ],
+   "claudeNote": "বইয়ে আঁকার নম্বরযুক্ত কাজ শুধু অধ্যায় ১-এ (চলো ২, বর্ণনামূলক ৩ — শেষটি পরীক্ষায় ছাপা ছবিতে চিহ্নিত, তাই ০১-০১-এ)। অন্য অধ্যায়ের ধারণাচিত্র ও ছক শ্রেণির কাজ।"
+  }
+ ],
+ "coverage": {
+  "exercisesTotal": 293,
+  "mapped": 293,
+  "unmapped": [],
+  "note": "exercisesTotal = every numbered item of the print (293): the items of each chapter's অনুশীলনী parts — টিক (১)…), শূন্যস্থান, এক বাক্যে, সংক্ষিপ্ত, বর্ণনামূলক (ক)… — the letter is the item number: ক=1, খ=2 …) and মিল (the table rows are unnumbered in the print; counted by row order, left cell = item) — plus the numbered \"নিজে করি\" items (home tasks) and \"চলো, পারি কি না দেখি\" items (class work; not examined: ছক পূরণ, আঁকা). Numbered steps inside a \"কাজ\" (যা করতে হবে ১., ২. …) and the আলোচনা prompts are procedure, not exercises; each কাজ is one unnumbered block ('<ch>/কাজ N/—', N = order in the chapter), cited by the rows whose result it gives and by SK-OBS-01."
+ },
+ "flags": [
+  {
+   "code": null,
+   "kind": "VERSION_DIFF",
+   "text": "ছাপা ফাইল C3_SCI_Print_v3.1 (README: উৎস C3_SCI_Book_v3.1_Student.docx) আর Word C3_SCI_Book_v3.1_Writer-Reviewer মিলিয়ে দেখা হয়েছে: ছাপার ২৯৩টি নম্বরযুক্ত প্রশ্ন (অনুশীলনীর ছয় অংশ, নিজে করি, চলো পারি কি না দেখি) সবই Word v3.1-এ আছে। একমাত্র পার্থক্য ছাপার রীতি: শূন্যস্থানের ফাঁকা Word-এ \"----------\", ছাপায় \"__________\" — লেখা এক। স্মারক v৩-এর পরে কোনো নতুন সিদ্ধান্ত নেই (সব D-০১…D-১৬ মীমাংসিত)। পুরোনো ফ্ল্যাট খসড়া (lo-catalogue/C3_SCI.md) সংস্করণ ৩ থেকে; v3.1-এ শিখনফল একই।"
+  },
+  {
+   "code": "LO-C3-SCI-06-01.4",
+   "kind": "WORDING_RULE_CONFLICT",
+   "text": "অধ্যায় ৬-এর শূন্যস্থানের শব্দ-বাক্সে (আকৃতি, বল, আয়তন, টান, ধাক্কা) পাঁচটি শব্দ পাঁচটি ফাঁকার জন্য — অতিরিক্ত শব্দ নেই, অথচ বইয়ের নিয়ম (পরিশিষ্ট): \"বাক্সে উত্তরের শব্দগুলো এলোমেলোভাবে ও একটি অতিরিক্ত শব্দ\"; শিক্ষক-নোটেও লেখা \"অতিরিক্ত শব্দ নেই\"। আর (ঘ)-তে এক প্রশ্নে দুটি ফাঁকা (\"টান ও ধাক্কা\"), অথচ প্রতিটি শূন্যস্থানে ১ নম্বর। একটি অতিরিক্ত শব্দ যোগ ও (ঘ)-কে এক ফাঁকায় আনা দরকার। সংক্ষিপ্ত ১-এ \"আকার পরিবর্তন\" লেখা, অথচ পাঠ ও উত্তর \"আকৃতি\" — শব্দটি মেলানো দরকার। বই-দলকে জানানো দরকার।"
+  },
+  {
+   "code": "LO-C3-SCI-02-01",
+   "kind": "OTHER",
+   "text": "অধ্যায় ২-এর শিখনফল \"অঙ্গগুলোর নাম বলতে ও তালিকা করতে পারবে\" (১.২.১, ১.২.২) কোনো অনুশীলনীতে নেই; \"অঙ্গের কাজ\" (১.২.৩, ১.২.৪) আছে একটিমাত্র প্রশ্নে (সংক্ষিপ্ত ২)। তাই দুটি শিখনফল এক সারি (০২-০১) — আলাদা করলে নামের সারি কোনো অনুশীলনী পেত না। একইভাবে \"কয়েকটি অমেরুদণ্ডী প্রাণীর নাম\" (১.৩.৩ সংশ্লিষ্ট) শুধু কাজ ৪-এ — ০২-০২-এ রাখা হলো। বই-দল অনুশীলনীতে অঙ্গের নাম ও অমেরুদণ্ডীর নামের প্রশ্ন যোগ করতে পারে।"
+  },
+  {
+   "code": "LO-C3-SCI-01-03",
+   "kind": "OTHER",
+   "text": "অধ্যায় ১-এর শিখনফলের \"কাণ্ড দেখে দুটি উদ্ভিদের মিল-অমিল বলতে পারবে\" অংশ শুধু কাজ ৩-এ (নম্বরহীন), কোনো অনুশীলনীতে নেই — তাই সারি নয়, SK-OBS-01 (পর্যবেক্ষণ)-এ দেখা হবে। পুরোনো খসড়ার LO-০১-০৫ এভাবে ০১-০৩-এর legacyCodes-এ। একইভাবে অধ্যায় ৮-এর \"নিজের এলাকায় জন্মে এমন কয়েকটি ফসলের নাম\" (৫.২.৩ সংশ্লিষ্ট) শুধু কাজ ২-এ — সারি নয়।"
+  },
+  {
+   "code": null,
+   "kind": "OTHER",
+   "text": "বাদ পড়া পুরোনো কোড: প্রতিটি অধ্যায়ের মূল্যবোধ-রুব্রিক (০১-০৬, ০২-০৮, ০৩-০৮, ০৪-০৯, ০৫-০৪, ০৬-০৫, ০৭-০৮, ০৮-০৪, ০৯-০৬, ১০-০৫) আর SK-VOC-01, SK-CLS-01। লিখিত প্রশ্নে যাচাই হয় না, বইয়ে নম্বরযুক্ত কাজও নেই; বেশির ভাগ ঘনিষ্ঠ সারির legacyCodes-এ আছে। শ্রেণির ছক-পূরণ (\"চলো, পারি কি না দেখি\") আলাদা ধারা নয় — প্রতিটি চলো-প্রশ্ন যে বিষয়ের, সেই সারিতে। শব্দকোষের সংজ্ঞা (সিদ্ধান্ত ৫৬) শব্দটির অধ্যায়ের সারিতে ট্যাগ হবে।"
+  },
+  {
+   "code": "LO-C3-SCI-04-04",
+   "kind": "OTHER",
+   "text": "Claude দ্বিতীয় পাঠ (প্রস্তাব): ০৪-০৪ (নানা রকম কঠিন পদার্থের আকৃতি, বৈশিষ্ট্য ও ব্যবহার) মাত্র তিনটি অনুশীলনী (মিল ১, ৪; এক বাক্যে ৫) — শিখনফলের অংশ বলে রাখা হলো, অংশ ৪, ৫ ও ৮ এখানে। মেশাতে চাইলে ০৪-০২.২-এর সাথে।"
+  },
+  {
+   "code": "LO-C3-SCI-03-04",
+   "kind": "OTHER",
+   "text": "Claude দ্বিতীয় পাঠ (প্রস্তাব): শিক্ষক-নোটের উত্তর মিলিয়ে চারটি শূন্যস্থান সরানো হলো — ৩/শূন্যস্থান/২ (খনিজ লবণ) ০৩-০৬ থেকে ০৩-০৩-এ (পুষ্টি উপাদান), ৩/শূন্যস্থান/৪ (ফাস্টফুড) ০৩-০৪.২ থেকে ০৩-০৫-এ (অস্বাস্থ্যকর খাবার), ৩/শূন্যস্থান/৫ (সব ধরনের পুষ্টি) ০৩-০৪.৩-এ; ৬/শূন্যস্থান/১ (আকৃতি) ০৬-০১.২-এ। ফলে ০৩-০৪.২ (অভাবে রোগ) এখন মাত্র দুটি অনুশীলনী।"
+  },
+  {
+   "code": "LO-C3-SCI-06-01.4",
+   "kind": "OTHER",
+   "text": "Claude দ্বিতীয় পাঠ (প্রস্তাব): ০৬-০১.৪ (\"কোন ঘটনায় কী ধরনের পরিবর্তন\") বইয়ের কোনো একক শিখনফল নয় — তিনটি শিখনফলের প্রশ্ন একসাথে (বর্ণনামূলক ১, চলো ১, সংক্ষিপ্ত ১)। এক প্রশ্নে এক কোডের নিয়মে এগুলোর জায়গা দরকার ছিল। পর্যালোচক চাইলে এগুলো ক/খ ভাগে ০৬-০১.১/.২/.৩-এ ভাগ করে এই সারি তুলে দেওয়া যায়।"
+  },
+  {
+   "code": "LO-C3-SCI-02-03.2",
+   "kind": "OTHER",
+   "text": "Claude দ্বিতীয় পাঠ (প্রস্তাব): মেরুদণ্ডী প্রাণীর পাঁচ দলে \"দল চেনা\" (.১) আর \"দলের বৈশিষ্ট্য\" (.২) আলাদা — শিশু ব্যাঙকে উভচর বলে, কিন্তু উভচরের বৈশিষ্ট্য বলতে পারে না। বর্ণনামূলক ৩ (দল + উদাহরণ + বৈশিষ্ট্য) .২-এ, কারণ বৈশিষ্ট্যই কঠিন অংশ।"
+  }
+ ],
+ "reviewerNotes": "## পর্যালোচকের নোট (মাহজাবিন — আগে পড়ুন)\n\n**কীভাবে পড়বেন।** ✓ চিহ্নের প্রতিটি সারি একটি যাচাইযোগ্য বিষয় — প্রশ্ন, বাড়ির কাজ ও নম্বর এই সারি ধরেই ট্যাগ হবে। ✓ ছাড়া শিখনফল শুধু দল; অভিভাবকেরা শিখনফলের নাম ও বাড়ির টিপস দেখবেন। বিজ্ঞান তৃতীয় শ্রেণিতে শুরু — আগের শ্রেণির কোনো কোড নেই। বইয়ের প্রতিটি নম্বরযুক্ত প্রশ্ন (অনুশীলনী, নিজে করি, চলো) একটি করে সারিতে।\n\n**আগে এগুলো দেখুন (Claude-এর বিচার):**\n1. **নতুন ক্ষেত্র-মই (domains/SCI.json), তৃতীয় থেকে ষষ্ঠ শ্রেণির জন্য — ১১টি ক্ষেত্র:** জীব ও জীবের বৈশিষ্ট্য, উদ্ভিদ, প্রাণী, মানবদেহ-খাদ্য-স্বাস্থ্য, পদার্থ, শক্তি, বল ও গতি, পৃথিবী ও মহাকাশ, পরিবেশ ও প্রাকৃতিক সম্পদ, প্রযুক্তি, অনুসন্ধানী দক্ষতা। চতুর্থ–ষষ্ঠ শ্রেণির বইয়ের অধ্যায়-তালিকা দেখে বানানো। পানি ও মাটি \"পরিবেশ ও প্রাকৃতিক সম্পদ\"-এ, সূর্য ও ছায়া \"পৃথিবী ও মহাকাশ\"-এ। প্রথম লকের সাথে স্থায়ী — বদলাতে চাইলে এখনই।\n2. **কাজ (পরীক্ষণ) আর ফলাফল আলাদা (D-০৪):** ফলাফলের প্রশ্ন বিষয়ের সারিতে (যেমন ০১-০২ লাল পানি, ০৪-০২.৩ বেলুন, ০৯-০২ অন্ধকারে গাছ); পরীক্ষা করা, অনুমান মেলানো ও সূর্যঘড়ি বানানো একটি রুব্রিক ধারা SK-OBS-01। আঁকা আলাদা ধারা SK-DRAW-01।\n3. **উদ্ভিদের ছবি (D-১২):** অনুশীলনী ৬(গ) — শ্রেণিতে আঁকা, পরীক্ষায় ছাপা ছবিতে চিহ্নিত করা। তাই বর্ণনামূলক ৩ বিষয়ের সারিতে (০১-০১, QT-LONG), আর চলো ২ (আঁকা) SK-DRAW-01-এ।\n4. **শিখনফল আছে, অনুশীলনী নেই — চারটি জায়গা (ফ্ল্যাগ):** প্রাণীদেহের অঙ্গের নাম, অমেরুদণ্ডী প্রাণীর নাম, কাণ্ড দেখে মিল-অমিল, এলাকার ফসলের নাম। এগুলোর আলাদা সারি নেই (পাঁচ পরীক্ষার ২); নিকটতম সারিতে বা SK-OBS-এ।\n5. **ভাগ যেখানে অনুশীলনী দুই রকম জ্ঞান চায়:** দল চেনা বনাম বৈশিষ্ট্য (০২-০৩), কাজ বনাম অভাবে রোগ বনাম নানা উৎস (০৩-০৪), অবস্থার বৈশিষ্ট্য বনাম শনাক্ত বনাম বাতাসের পরীক্ষা (০৪-০২), চৌম্বক/অচৌম্বক বনাম মেরু (০৪-০৫), অপচয়ের উপায় বনাম কেন (০৫-০৩), উৎস বনাম তিন ধরনের পানি (০৭-০১), ছায়ার দৈর্ঘ্য বনাম সূর্যঘড়ি (০৯-০৪)।\n6. **অধ্যায় ৬ (বল) এক দলে চার ভাগ:** গতি, আকৃতি, আয়তন — আর চতুর্থটি \"কোন ঘটনায় কী পরিবর্তন\", কারণ বর্ণনামূলক ১ ও চলো ১ তিনটিকে একসাথে চায় (এক প্রশ্নে এক কোড)। পর্যালোচক চাইলে প্রশ্নগুলো ক/খ ভাগে ভেঙে চতুর্থ সারি তুলে দেওয়া যায়।\n7. **মূল্যবোধের ১০টি রুব্রিক-সারি নেই** (BGS-এর মতো) — লিখিত প্রশ্নে যাচাই হয় না; \"বলতে ও মেনে চলতে\" শিখনফলের \"বলা\" অংশই সারি (০২-০৪, ০৪-০৬, ১০-০৩)।\n8. **বইয়ের সমস্যা বই-দলের জন্য:** অধ্যায় ৬-এর শব্দ-বাক্সে অতিরিক্ত শব্দ নেই ও (ঘ)-তে দুটি ফাঁকা; সংক্ষিপ্ত ১-এ \"আকার\" বনাম \"আকৃতি\"; অনুশীলনী ছাড়া চারটি শিখনফল-অংশ।\n\n**পুরোনো খসড়া থেকে বদলায়নি:** প্রশ্নের ধরন ও নম্বর (পরিশিষ্ট ছক ২ ও ৩: সংক্ষিপ্ত ৪, বর্ণনামূলক ৮; অর্ধ-বার্ষিকে মিল, বার্ষিকে মিল করে বাক্য), আর বেশির ভাগ বাড়ির টিপস। প্রতিটি সারির \"আগের খসড়ার কোড\" পুরোনো কোড দেখায়।\n"
+}

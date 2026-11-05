@@ -1,0 +1,3122 @@
+{
+ "format": "scd-objective-tree/1",
+ "classToken": "C1",
+ "subject": "BAN",
+ "status": "DRAFT",
+ "source": {
+  "book": "C1_BAN_Print_v7_4 (= C1_BAN_Book_v7_4 content; text identical to v7.3, v7.4 adds 23 pictures)",
+  "files": [
+   "Book Review Material/Print File/C1_BAN_Print_v7_4.zip (IDML — the final print; every exercise block read from it)",
+   "Book Review Material/Class 1 Ban/C1_BAN_Book_v7_4_Writer-Reviewer.docx (শিক্ষক-নোট ও শিখনফল, সিদ্ধান্ত-লগ, পরিশিষ্ট — পরীক্ষা ও নম্বর বণ্টন, শিক্ষক-নির্দেশিকা)",
+   "Book Review Material/Class 1 Ban/C1_BAN_Memo_v10.md (সংস্করণ ৭.১-এর বদল; সুযোগ বদলায়নি)",
+   "docs/mastery/lo-catalogue/C1_BAN.md (previous flat draft — QT table, strands, home tips, legacy codes)"
+  ],
+  "readOn": "2026-11-05"
+ },
+ "chapters": [
+  {
+   "number": 1,
+   "titleBn": "আমার পরিচয়"
+  },
+  {
+   "number": 2,
+   "titleBn": "আমি ও আমার বিদ্যালয়"
+  },
+  {
+   "number": 3,
+   "titleBn": "আমি ও আমার সহপাঠীরা"
+  },
+  {
+   "number": 4,
+   "titleBn": "আমরা কী কী করি"
+  },
+  {
+   "number": 5,
+   "titleBn": "স্বরবর্ণ"
+  },
+  {
+   "number": 6,
+   "titleBn": "ব্যঞ্জনবর্ণ (ক–ন)"
+  },
+  {
+   "number": 7,
+   "titleBn": "ব্যঞ্জনবর্ণ (প– )"
+  },
+  {
+   "number": 8,
+   "titleBn": "বর্ণ চেনা ও সাজিয়ে লেখা"
+  },
+  {
+   "number": 9,
+   "titleBn": "ছড়া: মামার বাড়ি"
+  },
+  {
+   "number": 10,
+   "titleBn": "কারচিহ্ন পরিচয়"
+  },
+  {
+   "number": 11,
+   "titleBn": "কারচিহ্ন মিলিয়ে বর্ণ গড়ি (ক–ন)"
+  },
+  {
+   "number": 12,
+   "titleBn": "কারচিহ্ন মিলিয়ে বর্ণ গড়ি (প–য়)"
+  },
+  {
+   "number": 13,
+   "titleBn": "বাঘ ও রাখাল"
+  },
+  {
+   "number": 14,
+   "titleBn": "অ আ"
+  },
+  {
+   "number": 15,
+   "titleBn": "ই ঈ"
+  },
+  {
+   "number": 16,
+   "titleBn": "উ ঊ"
+  },
+  {
+   "number": 17,
+   "titleBn": "ঋ এ ঐ"
+  },
+  {
+   "number": 18,
+   "titleBn": "ও ঔ"
+  },
+  {
+   "number": 19,
+   "titleBn": "ছড়া: ট্রেন"
+  },
+  {
+   "number": 20,
+   "titleBn": "ক খ গ ঘ ঙ"
+  },
+  {
+   "number": 21,
+   "titleBn": "চ ছ জ ঝ ঞ"
+  },
+  {
+   "number": 22,
+   "titleBn": "রাস্তার কাঁটা"
+  },
+  {
+   "number": 23,
+   "titleBn": "ট ঠ ড ঢ ণ"
+  },
+  {
+   "number": 24,
+   "titleBn": "ত থ দ ধ ন"
+  },
+  {
+   "number": 25,
+   "titleBn": "প ফ ব ভ ম"
+  },
+  {
+   "number": 26,
+   "titleBn": "চর্চা-পাঠ ১"
+  },
+  {
+   "number": 27,
+   "titleBn": "কবিতা: ভোর হলো"
+  },
+  {
+   "number": 28,
+   "titleBn": "য র ল শ"
+  },
+  {
+   "number": 29,
+   "titleBn": "ষ স হ ড়"
+  },
+  {
+   "number": 30,
+   "titleBn": "পিঁপড়া ও পায়রার গল্প"
+  },
+  {
+   "number": 31,
+   "titleBn": "ঢ় য় ৎ"
+  },
+  {
+   "number": 32,
+   "titleBn": "চর্চা-পাঠ ২"
+  },
+  {
+   "number": 33,
+   "titleBn": "মাছের রাজা"
+  },
+  {
+   "number": 34,
+   "titleBn": "চর্চা-পাঠ ৩"
+  },
+  {
+   "number": 35,
+   "titleBn": "এসো পড়ি ও লিখি (সেতু-পাঠ)"
+  },
+  {
+   "number": 36,
+   "titleBn": "ফল ও ফুল"
+  },
+  {
+   "number": 37,
+   "titleBn": "পাখি, পশু, মাছ ও সবজি"
+  },
+  {
+   "number": 38,
+   "titleBn": "আমার পরিবার"
+  },
+  {
+   "number": 39,
+   "titleBn": "সাত দিন ও বারো মাস"
+  },
+  {
+   "number": 40,
+   "titleBn": "ছড়া: ইতল বিতল"
+  },
+  {
+   "number": 41,
+   "titleBn": "তুলির ঘর"
+  },
+  {
+   "number": 42,
+   "titleBn": "আমার প্রিয় জিনিস (তিন বাক্য লিখি)"
+  },
+  {
+   "number": 43,
+   "titleBn": "আজকের দিন"
+  },
+  {
+   "number": 44,
+   "titleBn": "যেতে যেতে পড়ি"
+  },
+  {
+   "number": 45,
+   "titleBn": "আমার শরীর ও পরিষ্কার থাকা"
+  },
+  {
+   "number": 46,
+   "titleBn": "কবিতা: ছুটি"
+  },
+  {
+   "number": 47,
+   "titleBn": "আমাদের দেশ"
+  },
+  {
+   "number": 48,
+   "titleBn": "ছোট পাখির গল্প"
+  },
+  {
+   "number": 49,
+   "titleBn": "ছোট আনাস (রা.)"
+  },
+  {
+   "number": 50,
+   "titleBn": "শব্দ নিয়ে খেলা"
+  },
+  {
+   "number": 51,
+   "titleBn": "রং ও দিক"
+  },
+  {
+   "number": 52,
+   "titleBn": "আমার এক দিন (অনুচ্ছেদ লিখি)"
+  },
+  {
+   "number": 53,
+   "titleBn": "বার্ষিক পুনরালোচনা"
+  },
+  {
+   "number": 54,
+   "titleBn": "আমার ঠিকানা"
+  }
+ ],
+ "questionTypes": [
+  {
+   "code": "QT-PASSAGE",
+   "labelBn": "পঠিত অংশ পড়ে উত্তর — এক কথায় ৪টি ও পূর্ণ বাক্যে ৩টি",
+   "marksBn": "৪×১ + ৩×২ = ১০",
+   "examUse": "অর্ধ-বার্ষিক প্র. ১ · বার্ষিক প্র. ১ (বইয়ের গল্প/কবিতার অংশ প্রশ্নপত্রে ছাপা)"
+  },
+  {
+   "code": "QT-SHORT",
+   "labelBn": "প্রশ্নোত্তর — পূর্ণ বাক্যে",
+   "marksBn": "৫×২ = ১০",
+   "examUse": "অর্ধ-বার্ষিক প্র. ২ · বার্ষিক প্র. ২ (পঠিত অংশের পাঠ বাদে)"
+  },
+  {
+   "code": "QT-PARA",
+   "labelBn": "অনুচ্ছেদ লেখ (৫ বাক্য, সাহায্য-শব্দসহ)",
+   "marksBn": "৫×২ = ১০",
+   "examUse": "অর্ধ-বার্ষিক প্র. ৩ · বার্ষিক প্র. ৩ (বার্ষিকে পাঠ ৫২-এর ছাঁচে)"
+  },
+  {
+   "code": "QT-SENTENCE",
+   "labelBn": "বাক্য রচনা কর",
+   "marksBn": "৫×২ = ১০",
+   "examUse": "অর্ধ-বার্ষিক প্র. ৪ · বার্ষিক প্র. ৪"
+  },
+  {
+   "code": "QT-WORDMEANING",
+   "labelBn": "শব্দার্থ লেখ",
+   "marksBn": "১০×১ = ১০",
+   "examUse": "অর্ধ-বার্ষিক প্র. ৫ · বার্ষিক প্র. ৫"
+  },
+  {
+   "code": "QT-LETTERWORD",
+   "labelBn": "বর্ণ দিয়ে ২টি করে শব্দ লেখ",
+   "marksBn": "৫×২ = ১০",
+   "examUse": "অর্ধ-বার্ষিক প্র. ৬ · বার্ষিকে নেই (যুক্তবর্ণ কম পড়ানো হলে প্রতিটির বদলে একটি বর্ণ বাড়ে)"
+  },
+  {
+   "code": "QT-KARWORD",
+   "labelBn": "কারচিহ্ন দিয়ে ২টি করে শব্দ লেখ (বার্ষিকে কার/ফলাচিহ্ন, কমপক্ষে ২টি ফলা)",
+   "marksBn": "অর্ধ-বার্ষিক ৫×২ = ১০ · বার্ষিক ৪×২ = ৮",
+   "examUse": "অর্ধ-বার্ষিক প্র. ৭ · বার্ষিক প্র. ৬"
+  },
+  {
+   "code": "QT-CONJUNCT",
+   "labelBn": "যুক্তবর্ণ ভেঙে লেখ ও শব্দ গঠন কর",
+   "marksBn": "অর্ধ-বার্ষিক ৫×(১+১) = ১০ · বার্ষিক ৪×(১+২) = ১২",
+   "examUse": "অর্ধ-বার্ষিক প্র. ৮ · বার্ষিক প্র. ৭ (কমপক্ষে ৩টি পরের অংশ থেকে)"
+  },
+  {
+   "code": "QT-ANTONYM",
+   "labelBn": "বিপরীত শব্দ লেখ",
+   "marksBn": "১০×১ = ১০",
+   "examUse": "অর্ধ-বার্ষিক প্র. ৯ · বার্ষিক প্র. ৮"
+  },
+  {
+   "code": "QT-FILL",
+   "labelBn": "শূন্যস্থান পূরণ কর (উত্তরের শব্দ বাক্সে এলোমেলো; কবিতার লাইন নয়)",
+   "marksBn": "১০×১ = ১০",
+   "examUse": "অর্ধ-বার্ষিক প্র. ১০ · বার্ষিক প্র. ৯"
+  },
+  {
+   "code": "QT-ONEWORD",
+   "labelBn": "এক কথায় উত্তর দাও (সপ্তাহ, মাস, ঋতু, দিক, রং)",
+   "marksBn": "১০×১ = ১০",
+   "examUse": "বার্ষিক প্র. ১০ (অর্ধ-বার্ষিকে নেই)"
+  },
+  {
+   "code": "QT-TF",
+   "labelBn": "সত্য/মিথ্যা",
+   "marksBn": "— (প্রশ্নপত্রে নেই)",
+   "examUse": "শ্রেণি পরীক্ষা ও অনুশীলনী (সিদ্ধান্ত ২৮)"
+  },
+  {
+   "code": "QT-MATCH",
+   "labelBn": "মিলকরণ",
+   "marksBn": "— (প্রশ্নপত্রে নেই)",
+   "examUse": "শ্রেণি পরীক্ষা ও অনুশীলনী (সিদ্ধান্ত ২৮)"
+  },
+  {
+   "code": "QT-TICK",
+   "labelBn": "সঠিক উত্তরে ✓",
+   "marksBn": "— (প্রশ্নপত্রে নেই)",
+   "examUse": "শ্রেণি পরীক্ষা ও অনুশীলনী (সিদ্ধান্ত ২৮)"
+  },
+  {
+   "code": "QT-ORDER",
+   "labelBn": "এলোমেলো সাজানো / ক্রমে সাজানো",
+   "marksBn": "— (প্রশ্নপত্রে নেই)",
+   "examUse": "শ্রেণি পরীক্ষা ও অনুশীলনী (সিদ্ধান্ত ২৮)"
+  },
+  {
+   "code": "QT-TABLE",
+   "labelBn": "ছক পূরণ",
+   "marksBn": "— (প্রশ্নপত্রে নেই)",
+   "examUse": "শ্রেণি পরীক্ষা ও অনুশীলনী (সিদ্ধান্ত ২৮)"
+  },
+  {
+   "code": "QT-RHYME",
+   "labelBn": "মিলের শব্দ",
+   "marksBn": "— (প্রশ্নপত্রে নেই)",
+   "examUse": "বইয়ের অনুশীলনী (নিয়মে উল্লেখ নেই; অনুশীলনী-ধরন হিসেবে রাখা)"
+  },
+  {
+   "code": "QT-PICTURE",
+   "labelBn": "ছবি দেখে নাম লেখা",
+   "marksBn": "— (প্রশ্নপত্রে নেই)",
+   "examUse": "বইয়ের অনুশীলনী (পাঠ ৪১)"
+  },
+  {
+   "code": "QT-RUBRIC",
+   "labelBn": "মৌখিক / শ্রেণি-রেকর্ড — ৪ ধাপের রুব্রিক (পঠন, শ্রুতলিপি, বানান, বলা, হাতের লেখা)",
+   "marksBn": "— (লিখিত নম্বর নেই)",
+   "examUse": "প্রশ্নপত্রের বাইরে, শ্রেণি-রেকর্ডে (সিদ্ধান্ত ২১)"
+  }
+ ],
+ "nodes": [
+  {
+   "code": "LO-C1-BAN-05-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BAN-LETTER",
+   "chapterNumber": 5,
+   "strand": null,
+   "labelBn": "স্বরবর্ণ চেনা ও ক্রমে লেখা",
+   "sourceText": "পাঠ ৫: ১১টি স্বরবর্ণ চেনা ও ক্রমে লেখা।",
+   "bookRef": {
+    "chapter": 5,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-TICK",
+    "QT-ORDER"
+   ],
+   "homeTipBn": "অ থেকে ঔ পর্যন্ত স্বরবর্ণগুলো এলোমেলো করে কাগজে লিখে দিন; শিক্ষার্থী আঙুল রেখে নাম বলুক, তারপর খাতায় ক্রমে লিখুক।",
+   "prereqCodes": [],
+   "tagged": false,
+   "legacyCodes": [
+    "LO-C1-BAN-05-01"
+   ],
+   "claudeNote": "কেজিতে শেখা বর্ণের ঝালাই (সিদ্ধান্ত ১)। চেনা আর ক্রমে লেখা আলাদা: চিনতে পারে কিন্তু ক্রম ভুল করে — এমন শিশু থাকে।"
+  },
+  {
+   "code": "LO-C1-BAN-05-01.1",
+   "level": "SUB",
+   "parentCode": "LO-C1-BAN-05-01",
+   "domainCode": "DOM-BAN-LETTER",
+   "chapterNumber": 5,
+   "strand": null,
+   "labelBn": "এলোমেলো স্বরবর্ণ চিনে নাম বলা",
+   "sourceText": "পাঠ ৫: ১১টি স্বরবর্ণ চেনা ও ক্রমে লেখা। [ভাগ: চেনা]",
+   "bookRef": {
+    "chapter": 5,
+    "lesson": null,
+    "exercises": [
+     "5/চিনি ও বলি/1",
+     "5/এলোমেলো বর্ণ চিনি/2",
+     "8/এলোমেলো বর্ণ দেখে বলি/1",
+     "26/সঠিক উত্তরে ✓ দিই/8",
+     "53/বর্ণ ঝালাই/1"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-TICK"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-05-01",
+    "LO-C1-BAN-08-01"
+   ],
+   "claudeNote": "২৬/✓-এর প্রথম প্রশ্ন (\"কোনটি স্বরবর্ণ?\") এই সারির; একই অনুশীলনীর বাকি প্রশ্ন বিপরীত শব্দ ও যুক্তবর্ণের — প্রশ্ন-ব্যাংকে আলাদা প্রশ্ন।"
+  },
+  {
+   "code": "LO-C1-BAN-05-01.2",
+   "level": "SUB",
+   "parentCode": "LO-C1-BAN-05-01",
+   "domainCode": "DOM-BAN-LETTER",
+   "chapterNumber": 5,
+   "strand": null,
+   "labelBn": "১১টি স্বরবর্ণ ক্রমে লেখা",
+   "sourceText": "পাঠ ৫: ১১টি স্বরবর্ণ চেনা ও ক্রমে লেখা। [ভাগ: ক্রমে লেখা]",
+   "bookRef": {
+    "chapter": 5,
+    "lesson": null,
+    "exercises": [
+     "5/সাজিয়ে লিখি/4",
+     "8/স্বরবর্ণ সাজিয়ে লিখি/3"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-ORDER"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C1-BAN-05-01.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-05-01"
+   ],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C1-BAN-06-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BAN-LETTER",
+   "chapterNumber": 6,
+   "strand": null,
+   "labelBn": "ব্যঞ্জনবর্ণ চেনা ও ক্রমে লেখা",
+   "sourceText": "পাঠ ৬: ক থেকে ন পর্যন্ত ২০টি ব্যঞ্জনবর্ণ চেনা। · পাঠ ৭: প থেকে ঁ পর্যন্ত ১৯টি ব্যঞ্জনবর্ণ চেনা ও ৩৯ ব্যঞ্জন ক্রমে লেখা।",
+   "bookRef": {
+    "chapter": 6,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-TICK",
+    "QT-ORDER"
+   ],
+   "homeTipBn": "ক থেকে ঁ পর্যন্ত বর্ণের কার্ড বানিয়ে এলোমেলো করুন; শিক্ষার্থী নাম বলে ক্রমে সাজাক, তারপর খাতায় লিখুক।",
+   "prereqCodes": [],
+   "tagged": false,
+   "legacyCodes": [
+    "LO-C1-BAN-06-01",
+    "LO-C1-BAN-07-01"
+   ],
+   "claudeNote": "পাঠ ৬ (ক–ন) ও পাঠ ৭ (প–ঁ) একই দক্ষতার দুই অর্ধেক — আলাদা সারি করলে \"একবার এক শ্রেণিতে\" নিয়ম ভাঙে; তাই এক শিখনফল।"
+  },
+  {
+   "code": "LO-C1-BAN-06-01.1",
+   "level": "SUB",
+   "parentCode": "LO-C1-BAN-06-01",
+   "domainCode": "DOM-BAN-LETTER",
+   "chapterNumber": 6,
+   "strand": null,
+   "labelBn": "এলোমেলো ব্যঞ্জনবর্ণ চিনে নাম বলা",
+   "sourceText": "পাঠ ৬: ক থেকে ন পর্যন্ত ২০টি ব্যঞ্জনবর্ণ চেনা। · পাঠ ৭: প থেকে ঁ পর্যন্ত ১৯টি ব্যঞ্জনবর্ণ চেনা ও ৩৯ ব্যঞ্জন ক্রমে লেখা। [ভাগ: চেনা]",
+   "bookRef": {
+    "chapter": 6,
+    "lesson": null,
+    "exercises": [
+     "6/চিনি ও বলি/1",
+     "6/এলোমেলো বর্ণ চিনি/3",
+     "7/চিনি ও বলি/1",
+     "7/এলোমেলো বর্ণ চিনি/3",
+     "8/এলোমেলো বর্ণ দেখে বলি/1",
+     "34/সঠিক উত্তরে ✓ দিই/6",
+     "53/বর্ণ ঝালাই/1"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-TICK"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-06-01",
+    "LO-C1-BAN-07-01",
+    "LO-C1-BAN-08-01"
+   ],
+   "claudeNote": "৩৪/✓-এর \"কোন বর্ণটি ব্যঞ্জনবর্ণ?\" এই সারির; একই অনুশীলনীর অন্য প্রশ্ন বিপরীত শব্দের।"
+  },
+  {
+   "code": "LO-C1-BAN-06-01.2",
+   "level": "SUB",
+   "parentCode": "LO-C1-BAN-06-01",
+   "domainCode": "DOM-BAN-LETTER",
+   "chapterNumber": 6,
+   "strand": null,
+   "labelBn": "৩৯টি ব্যঞ্জনবর্ণ ক্রমে লেখা",
+   "sourceText": "পাঠ ৭: প থেকে ঁ পর্যন্ত ১৯টি ব্যঞ্জনবর্ণ চেনা ও ৩৯ ব্যঞ্জন ক্রমে লেখা। [ভাগ: ৩৯ ব্যঞ্জন ক্রমে লেখা]",
+   "bookRef": {
+    "chapter": 6,
+    "lesson": null,
+    "exercises": [
+     "7/সাজিয়ে লিখি/4",
+     "8/ব্যঞ্জনবর্ণ সাজিয়ে লিখি/4"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-ORDER"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C1-BAN-06-01.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-07-01"
+   ],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C1-BAN-08-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BAN-LETTER",
+   "chapterNumber": 8,
+   "strand": null,
+   "labelBn": "কাছাকাছি-দেখতে বর্ণ আলাদা করে চেনা (ড–ড়, য–য়, শ–ষ–স…)",
+   "sourceText": "পাঠ ৮: ৫০টি বর্ণ এলোমেলো থেকে চেনা; কাছাকাছি-দেখতে বর্ণ আলাদা করা। [ভাগ: কাছাকাছি-দেখতে বর্ণ]",
+   "bookRef": {
+    "chapter": 8,
+    "lesson": null,
+    "exercises": [
+     "8/কাছাকাছি-দেখতে বর্ণ আলাদা করি/2"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-TICK"
+   ],
+   "homeTipBn": "ড–ড়, ঢ–ঢ়, য–য়, ণ–ন জোড়া কাগজে লিখে দেখান; কোনটি কোন বর্ণ জিজ্ঞেস করুন ও প্রতিটি দিয়ে একটি শব্দ বলতে দিন।",
+   "prereqCodes": [
+    "LO-C1-BAN-05-01.1",
+    "LO-C1-BAN-06-01.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-08-01"
+   ],
+   "claudeNote": "পাঠ ৮-এর \"এলোমেলো ৫০ বর্ণ\" অংশ ০৫-০১.১ ও ০৬-০১.১-এ গেছে; এখানে শুধু কাছাকাছি-দেখতে জোড়া — এটাই আলাদা ভুল।"
+  },
+  {
+   "code": "LO-C1-BAN-14-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BAN-LETTER",
+   "chapterNumber": 14,
+   "strand": null,
+   "labelBn": "বর্ণ দিয়ে শুরু হওয়া শব্দ বলা ও লেখা",
+   "sourceText": "পাঠ ১৪: অ ও আ দিয়ে শুরু শব্দ পড়া, অর্থ বলা, প্রথম ধ্বনি চেনা। · পাঠ ১৭: ঋ, এ ও ঐ দিয়ে শুরু শব্দ পড়া ও অর্থ বলা। · পাঠ ৫০: শব্দ-শিকল খেলা; খালি ঘরে বর্ণ; এলোমেলো বর্ণ সাজিয়ে শব্দ। [ভাগ: শব্দ পড়া / শব্দ-শিকল]",
+   "bookRef": {
+    "chapter": 14,
+    "lesson": null,
+    "exercises": [
+     "5/প্রতিটি স্বরের একটি শব্দ বলি/3",
+     "6/প্রতিটি বর্ণের একটি শব্দ বলি/2",
+     "7/প্রতিটি বর্ণের একটি শব্দ বলি/2",
+     "14/অ — শব্দ শিখি/1",
+     "14/আ — শব্দ শিখি/2",
+     "15/ই — শব্দ শিখি/1",
+     "15/ঈ — শব্দ শিখি/2",
+     "16/উ — শব্দ শিখি/1",
+     "16/ঊ — শব্দ শিখি/2",
+     "17/ঋ — শব্দ শিখি/1",
+     "17/এ — শব্দ শিখি/2",
+     "17/ঐ — শব্দ শিখি/3",
+     "18/ও — শব্দ শিখি/1",
+     "18/ঔ — শব্দ শিখি/2",
+     "31/শব্দ শিখি/1",
+     "50/শব্দ নিয়ে খেলা/1",
+     "50/খেলি ও লিখি/2",
+     "50/উল্টো খেলা/4"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-LETTERWORD"
+   ],
+   "homeTipBn": "একটি বর্ণ বলুন (যেমন প); শিক্ষার্থী সেই বর্ণ দিয়ে শুরু দুটি শব্দ বলুক ও খাতায় লিখুক। শব্দ-শিকল খেলাও করতে পারেন: কলম → ময়ূর → রাত।",
+   "prereqCodes": [
+    "LO-C1-BAN-05-01.1",
+    "LO-C1-BAN-06-01.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-14-01",
+    "LO-C1-BAN-15-01",
+    "LO-C1-BAN-16-01",
+    "LO-C1-BAN-17-01",
+    "LO-C1-BAN-18-01",
+    "LO-C1-BAN-SK-LET-01",
+    "LO-C1-BAN-50-01"
+   ],
+   "claudeNote": "অর্ধ-বার্ষিক প্র. ৬ \"বর্ণ দিয়ে ২টি করে শব্দ লেখ\"। স্বর ও ব্যঞ্জন আলাদা করা হয়নি — একই দক্ষতা, আর প্রশ্নে দুটিই আসে। শব্দ-শিকল (পাঠ ৫০) \"শেষ বর্ণ দিয়ে শব্দ\" — একই কাজ।"
+  },
+  {
+   "code": "LO-C1-BAN-15-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BAN-LETTER",
+   "chapterNumber": 15,
+   "strand": null,
+   "labelBn": "শব্দ শুনে প্রথম ধ্বনি চেনা — অ/আ, ই/ঈ, উ/ঊ",
+   "sourceText": "পাঠ ১৪: অ ও আ দিয়ে শুরু শব্দ পড়া, অর্থ বলা, প্রথম ধ্বনি চেনা। · পাঠ ১৫: ই ও ঈ দিয়ে শুরু শব্দ; হ্রস্ব-দীর্ঘ কানে চেনা। [ভাগ: প্রথম ধ্বনি চেনা / হ্রস্ব-দীর্ঘ কানে চেনা]",
+   "bookRef": {
+    "chapter": 15,
+    "lesson": null,
+    "exercises": [
+     "14/প্রথম ধ্বনি চিনি/6",
+     "15/প্রথম ধ্বনি চিনি/6",
+     "16/প্রথম ধ্বনি চিনি/6",
+     "17/প্রথম ধ্বনি চিনি/7",
+     "18/প্রথম ধ্বনি চিনি/6"
+    ]
+   },
+   "assess": "RUBRIC",
+   "questionTypeCodes": [
+    "QT-RUBRIC"
+   ],
+   "homeTipBn": "একটি শব্দ বলুন (ইট, ঈদ, উট, ঊষা); শিক্ষার্থী শুনে বলুক শব্দটি কোন বর্ণ দিয়ে শুরু। ই আর ঈ গুলিয়ে ফেললে বানান দেখিয়ে দিন।",
+   "prereqCodes": [
+    "LO-C1-BAN-05-01.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-14-03",
+    "LO-C1-BAN-15-02"
+   ],
+   "claudeNote": "শিক্ষক-নোট: \"শিক্ষক শব্দ বলবেন, শিশু বর্ণ বলবে\" — মুখের কাজ, তাই রুব্রিক। লিখিত রূপও সম্ভব (✓ দিয়ে প্রথম বর্ণ বাছাই) — পর্যালোচক চাইলে প্রশ্ন করা যায়।"
+  },
+  {
+   "code": "LO-C1-BAN-31-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BAN-LETTER",
+   "chapterNumber": 31,
+   "strand": null,
+   "labelBn": "ঢ় য় ৎ ং ঃ ঁ — শব্দের কোথায় বসে চেনা",
+   "sourceText": "পাঠ ৩১: ঢ় য় ৎ ং ঃ ঁ শব্দের কোথায় বসে তা চেনা; চন্দ্রবিন্দুতে অর্থ বদল।",
+   "bookRef": {
+    "chapter": 31,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-TICK"
+   ],
+   "homeTipBn": "আষাঢ়, পেয়ারা, হঠাৎ, বাংলা, চাঁদ লিখে দিন; বর্ণটি খুঁজে আঙুল রাখুক — শুরুতে, ভেতরে না শেষে? কাদা–কাঁদা জোড়া পড়ে অর্থের তফাত বলুক।",
+   "prereqCodes": [
+    "LO-C1-BAN-06-01.1"
+   ],
+   "tagged": false,
+   "legacyCodes": [
+    "LO-C1-BAN-31-01"
+   ],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C1-BAN-31-01.1",
+   "level": "SUB",
+   "parentCode": "LO-C1-BAN-31-01",
+   "domainCode": "DOM-BAN-LETTER",
+   "chapterNumber": 31,
+   "strand": null,
+   "labelBn": "যে বর্ণ শব্দের শুরুতে বসে না, তা চেনা",
+   "sourceText": "পাঠ ৩১: ঢ় য় ৎ ং ঃ ঁ শব্দের কোথায় বসে তা চেনা; চন্দ্রবিন্দুতে অর্থ বদল। [ভাগ: কোথায় বসে]",
+   "bookRef": {
+    "chapter": 31,
+    "lesson": null,
+    "exercises": [
+     "31/কোথায় বসে, খুঁজে বলি/2",
+     "7/প্রতিটি বর্ণের একটি শব্দ বলি/2",
+     "32/সঠিক উত্তরে ✓ দিই/8"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-TICK"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C1-BAN-06-01.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-31-01"
+   ],
+   "claudeNote": "পাঠ ৭-এর নোট \"এই সাতটি বর্ণ শব্দের ভেতরে বা শেষে বসে\" একই নিয়ম। ৩২/✓-এর প্রথম প্রশ্ন (\"কোন বর্ণটি শব্দের শুরুতে বসে না?\") এই সারির।"
+  },
+  {
+   "code": "LO-C1-BAN-31-01.2",
+   "level": "SUB",
+   "parentCode": "LO-C1-BAN-31-01",
+   "domainCode": "DOM-BAN-LETTER",
+   "chapterNumber": 31,
+   "strand": null,
+   "labelBn": "চন্দ্রবিন্দু দিলে অর্থ বদলায় (কাদা–কাঁদা)",
+   "sourceText": "পাঠ ৩১: ঢ় য় ৎ ং ঃ ঁ শব্দের কোথায় বসে তা চেনা; চন্দ্রবিন্দুতে অর্থ বদল। [ভাগ: চন্দ্রবিন্দুতে অর্থ বদল]",
+   "bookRef": {
+    "chapter": 31,
+    "lesson": null,
+    "exercises": [
+     "31/চন্দ্রবিন্দুর কাজ শুনি/3"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-TICK"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-31-01"
+   ],
+   "claudeNote": "একটিই মৌখিক অনুশীলনী (\"শুনি\")। চন্দ্রবিন্দু ভুলে যাওয়া আলাদা বানান-ভুল, তাই আলাদা সারি; পর্যালোচক মনে করলে ৩১-০১.১-এ মেশানো যায়।"
+  },
+  {
+   "code": "LO-C1-BAN-10-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BAN-LETTER",
+   "chapterNumber": 10,
+   "strand": null,
+   "labelBn": "কারচিহ্ন চেনা ও কার দিয়ে শব্দ লেখা",
+   "sourceText": "পাঠ ১০: ১০টি কারচিহ্নের নাম ও বসার জায়গা জানা। · পাঠ ১১: ক–ন বর্ণের সাথে দশ কার মিলিয়ে রূপ গড়া; গড়া রূপ থেকে অর্থপূর্ণ শব্দ চেনা। · পাঠ ১২: প–য় বর্ণের সাথে কার মিলিয়ে রূপ গড়া; কোন চারটি বর্ণ কার নেয় না তা জানা।",
+   "bookRef": {
+    "chapter": 10,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-TICK",
+    "QT-KARWORD"
+   ],
+   "homeTipBn": "ক-এর সাথে দশটি কার বসিয়ে লিখতে দিন (কা কি কী …); তারপর একটি কার বেছে (যেমন ি) সেই কার আছে এমন দুটি শব্দ লিখুক।",
+   "prereqCodes": [],
+   "tagged": false,
+   "legacyCodes": [
+    "LO-C1-BAN-10-01",
+    "LO-C1-BAN-11-01",
+    "LO-C1-BAN-12-01",
+    "LO-C1-BAN-SK-KAR-01"
+   ],
+   "claudeNote": "অর্ধ-বার্ষিক প্র. ৭ \"কারচিহ্ন দিয়ে ২টি করে শব্দ লেখ\"; বার্ষিকে কার/ফলা একসাথে (প্র. ৬)।"
+  },
+  {
+   "code": "LO-C1-BAN-10-01.1",
+   "level": "SUB",
+   "parentCode": "LO-C1-BAN-10-01",
+   "domainCode": "DOM-BAN-LETTER",
+   "chapterNumber": 10,
+   "strand": null,
+   "labelBn": "দশটি কারচিহ্নের নাম ও বসার জায়গা বলা (আগে, পরে, নিচে, দুই পাশে)",
+   "sourceText": "পাঠ ১০: ১০টি কারচিহ্নের নাম ও বসার জায়গা জানা।",
+   "bookRef": {
+    "chapter": 10,
+    "lesson": null,
+    "exercises": [
+     "10/স্বর ও তার কারচিহ্ন মিলিয়ে চিনি/1",
+     "10/কারচিহ্নের নাম ও জায়গা বলি/2"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-TICK"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-10-01"
+   ],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C1-BAN-10-01.2",
+   "level": "SUB",
+   "parentCode": "LO-C1-BAN-10-01",
+   "domainCode": "DOM-BAN-LETTER",
+   "chapterNumber": 10,
+   "strand": null,
+   "labelBn": "বর্ণের সাথে কার মিলিয়ে রূপ গড়া (কা কি কী …)",
+   "sourceText": "পাঠ ১১: ক–ন বর্ণের সাথে দশ কার মিলিয়ে রূপ গড়া; গড়া রূপ থেকে অর্থপূর্ণ শব্দ চেনা। · পাঠ ১২: প–য় বর্ণের সাথে কার মিলিয়ে রূপ গড়া; কোন চারটি বর্ণ কার নেয় না তা জানা। [ভাগ: রূপ গড়া / কার না-নেওয়া বর্ণ]",
+   "bookRef": {
+    "chapter": 10,
+    "lesson": null,
+    "exercises": [
+     "10/হাত ঘুরাই ও নিজে লিখি/3",
+     "10/পড়ি/5",
+     "11/নমুনা সারি/1",
+     "11/নিজে গড়ি/2",
+     "12/নিজে গড়ি/1",
+     "12/যে চারটি বর্ণ কার নেয় না/2",
+     "53/কার-সারি একটানে/2"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-KARWORD"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C1-BAN-10-01.1",
+    "LO-C1-BAN-06-01.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-11-01",
+    "LO-C1-BAN-12-01"
+   ],
+   "claudeNote": "\"যে চারটি বর্ণ কার নেয় না\" (ৎ ং ঃ ঁ) আলাদা সারি করা হয়নি — রূপ গড়ার সময়ই ধরা পড়ে।"
+  },
+  {
+   "code": "LO-C1-BAN-10-01.3",
+   "level": "SUB",
+   "parentCode": "LO-C1-BAN-10-01",
+   "domainCode": "DOM-BAN-LETTER",
+   "chapterNumber": 10,
+   "strand": null,
+   "labelBn": "কারচিহ্ন দিয়ে অর্থপূর্ণ শব্দ লেখা",
+   "sourceText": "পাঠ ১১: ক–ন বর্ণের সাথে দশ কার মিলিয়ে রূপ গড়া; গড়া রূপ থেকে অর্থপূর্ণ শব্দ চেনা। [ভাগ: গড়া রূপ থেকে অর্থপূর্ণ শব্দ চেনা]",
+   "bookRef": {
+    "chapter": 10,
+    "lesson": null,
+    "exercises": [
+     "10/প্রতিটি কারের একটি শব্দ বলি/4",
+     "11/গড়া রূপ থেকে সত্যি শব্দ খুঁজি/3",
+     "12/গড়া রূপ থেকে সত্যি শব্দ খুঁজি/3",
+     "20/কার-শব্দ সারি/1",
+     "21/কার-শব্দ সারি/1",
+     "23/কার-শব্দ সারি/1",
+     "24/কার-শব্দ সারি/1",
+     "25/কার-শব্দ সারি/1",
+     "28/কার-শব্দ সারি/1",
+     "29/কার-শব্দ সারি/1"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-KARWORD"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C1-BAN-10-01.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-SK-KAR-01",
+    "LO-C1-BAN-11-01",
+    "LO-C1-BAN-20-01",
+    "LO-C1-BAN-21-01",
+    "LO-C1-BAN-23-01",
+    "LO-C1-BAN-24-01",
+    "LO-C1-BAN-25-01",
+    "LO-C1-BAN-28-01",
+    "LO-C1-BAN-29-01"
+   ],
+   "claudeNote": "রূপ গড়তে পারা (কি) আর অর্থপূর্ণ শব্দ বের করা (কিল, কিশোর) আলাদা ধাপ — প্রশ্নপত্রে চাওয়া হয় শব্দ।"
+  },
+  {
+   "code": "LO-C1-BAN-20-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BAN-LETTER",
+   "chapterNumber": 20,
+   "strand": null,
+   "labelBn": "কার বদলালে শব্দ ও অর্থ বদলে যায় — বুঝে বলা (কল → কাল → কিল)",
+   "sourceText": "পাঠ ২০: ক খ গ ঘ ঙ-এর কার-শব্দ পড়া; কার বদলে অর্থ বদল বোঝা। · পাঠ ২১: চ ছ জ ঝ ঞ-এর কার-শব্দ পড়া; কার-পরিবার।",
+   "bookRef": {
+    "chapter": 20,
+    "lesson": null,
+    "exercises": [
+     "20/কার-পরিবার/3",
+     "21/কার-পরিবার/3",
+     "23/কার-পরিবার/3",
+     "24/কার-পরিবার/3",
+     "25/কার-পরিবার/3",
+     "28/কার-পরিবার/3",
+     "29/কার-পরিবার/3"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SENTENCE"
+   ],
+   "homeTipBn": "একটি শব্দ লিখুন (কল); কার বদলে নতুন শব্দ বানাতে বলুন (কাল, কিল, কুল, কোল) ও প্রতিটির অর্থ মুখে বলুক।",
+   "prereqCodes": [
+    "LO-C1-BAN-10-01.3"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-20-01",
+    "LO-C1-BAN-21-01",
+    "LO-C1-BAN-23-01",
+    "LO-C1-BAN-24-01",
+    "LO-C1-BAN-25-01",
+    "LO-C1-BAN-28-01",
+    "LO-C1-BAN-29-01"
+   ],
+   "claudeNote": "সাত পাঠের \"কার-পরিবার\" একই কাজ — এক সারি। শিক্ষক-নির্দেশিকা কার-পরিবারের বাক্যকে বাক্য রচনার প্রস্তুতি বলে; তাই QT-SENTENCE (শব্দ দিয়ে বাক্য)।"
+  },
+  {
+   "code": "LO-C1-BAN-26-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BAN-CONJ",
+   "chapterNumber": 26,
+   "strand": null,
+   "labelBn": "যুক্তবর্ণ ভেঙে লেখা ও যুক্তবর্ণ দিয়ে শব্দ লেখা",
+   "sourceText": "পাঠ ২৬: বিপরীত শব্দ (১–৫), যুক্তবর্ণ ল্ল ও ব্ব, পূর্ণ বাক্যে উত্তর, পাঁচ বাক্যে লেখা। · পাঠ ৩২: বিপরীত শব্দ (৬–১০), যুক্তবর্ণ ঙ্গ স্প ন্ন, পূর্ণ বাক্যে উত্তর। · পাঠ ৩৯: সাত দিন ও বারো মাসের নাম; ছয় ঋতু; যুক্তবর্ণ প্ত ট্র ক্র। · পাঠ ৪০: ছড়া বই দেখে পড়া; যুক্তবর্ণ ব্য; কবির রূপ \"বিষ্টি\" বনাম শুদ্ধ \"বৃষ্টি\"। · পাঠ ৪৪: চারপাশের লেখা ও সাইনবোর্ড পড়া; যুক্তবর্ণ স্ত। · পাঠ ৪৭: দেশ নিয়ে তথ্য পড়া; রঙের শব্দ; যুক্তবর্ণ ন্দ; দেশ নিয়ে পাঁচ বাক্য। · পাঠ ৪৮: কুরআনের ঘটনা (সূরা আল-ফীল) পড়ে বুঝে উত্তর; যুক্তবর্ণ ক্ত দ্ধ ম্ব ষ্ট। · পাঠ ৪৯: সাহাবির ঘটনা পড়ে বুঝে উত্তর; বড়দের কাজে সাহায্য; যুক্তবর্ণ দ্দ।",
+   "bookRef": {
+    "chapter": 26,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CONJUNCT"
+   ],
+   "homeTipBn": "বইয়ের যুক্তবর্ণ (ল্ল, ব্ব, ঙ্গ, স্ত, ন্দ …) একটি করে দেখান; শিক্ষার্থী ভেঙে বলুক (ল্ল = ল + ল) আর সেই যুক্তবর্ণ দিয়ে একটি শব্দ লিখুক।",
+   "prereqCodes": [],
+   "tagged": false,
+   "legacyCodes": [
+    "LO-C1-BAN-26-02",
+    "LO-C1-BAN-32-02",
+    "LO-C1-BAN-39-02",
+    "LO-C1-BAN-40-02",
+    "LO-C1-BAN-44-02",
+    "LO-C1-BAN-47-03",
+    "LO-C1-BAN-48-02",
+    "LO-C1-BAN-49-03",
+    "LO-C1-BAN-SK-CONJ-01"
+   ],
+   "claudeNote": "বছরে ১৬টি যুক্তবর্ণ (সিদ্ধান্ত ৭), পাঁচ ধাপে (চিনি ও ভাঙি → হাত ঘুরাই → নিজে লিখি → শব্দ লিখি → বাক্য)। পাঠভিত্তিক আলাদা সারি করা হয়নি: কোন যুক্তবর্ণে দুর্বল তা প্রশ্নের আইটেম থেকেই দেখা যায়; দক্ষতা দুটি — ভাঙা ও শব্দ গড়া।"
+  },
+  {
+   "code": "LO-C1-BAN-26-01.1",
+   "level": "SUB",
+   "parentCode": "LO-C1-BAN-26-01",
+   "domainCode": "DOM-BAN-CONJ",
+   "chapterNumber": 26,
+   "strand": null,
+   "labelBn": "যুক্তবর্ণ ভেঙে লেখা (ল্ল = ল + ল)",
+   "sourceText": "পাঠ ২৬: বিপরীত শব্দ (১–৫), যুক্তবর্ণ ল্ল ও ব্ব, পূর্ণ বাক্যে উত্তর, পাঁচ বাক্যে লেখা। · পাঠ ৩২: বিপরীত শব্দ (৬–১০), যুক্তবর্ণ ঙ্গ স্প ন্ন, পূর্ণ বাক্যে উত্তর। [ভাগ: যুক্তবর্ণ — ভেঙে লেখা]",
+   "bookRef": {
+    "chapter": 26,
+    "lesson": null,
+    "exercises": [
+     "26/যুক্তবর্ণ শিখি ও লিখি/3",
+     "32/যুক্তবর্ণ শিখি ও লিখি/3",
+     "39/যুক্তবর্ণ শিখি/2",
+     "39/যুক্তবর্ণ শিখি ও লিখি/4",
+     "40/যুক্তবর্ণ শিখি ও লিখি/6",
+     "44/যুক্তবর্ণ শিখি ও লিখি/6",
+     "47/যুক্তবর্ণ শিখি/3",
+     "47/যুক্তবর্ণ শিখি ও লিখি/6",
+     "48/যুক্তবর্ণ শিখি ও লিখি/5",
+     "49/যুক্তবর্ণ শিখি ও লিখি/10",
+     "53/যুক্তবর্ণ ফিরে দেখি/3",
+     "26/সঠিক উত্তরে ✓ দিই/8"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CONJUNCT"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C1-BAN-06-01.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-26-02",
+    "LO-C1-BAN-32-02",
+    "LO-C1-BAN-39-02",
+    "LO-C1-BAN-SK-CONJ-01"
+   ],
+   "claudeNote": "প্রশ্নপত্রের \"যুক্তবর্ণ ভেঙে লেখ ও শব্দ গঠন কর\" একটি প্রশ্নে দুই দক্ষতা — প্রশ্ন-ব্যাংকে ক (ভাঙা) / খ (শব্দ) অংশ, একই আইটেমে দুই কোড নয়।"
+  },
+  {
+   "code": "LO-C1-BAN-26-01.2",
+   "level": "SUB",
+   "parentCode": "LO-C1-BAN-26-01",
+   "domainCode": "DOM-BAN-CONJ",
+   "chapterNumber": 26,
+   "strand": null,
+   "labelBn": "যুক্তবর্ণ দিয়ে শব্দ লেখা",
+   "sourceText": "পাঠ ৪০: ছড়া বই দেখে পড়া; যুক্তবর্ণ ব্য; কবির রূপ \"বিষ্টি\" বনাম শুদ্ধ \"বৃষ্টি\"। · পাঠ ৪৪: চারপাশের লেখা ও সাইনবোর্ড পড়া; যুক্তবর্ণ স্ত। · পাঠ ৪৭: দেশ নিয়ে তথ্য পড়া; রঙের শব্দ; যুক্তবর্ণ ন্দ; দেশ নিয়ে পাঁচ বাক্য। [ভাগ: যুক্তবর্ণ দিয়ে শব্দ]",
+   "bookRef": {
+    "chapter": 26,
+    "lesson": null,
+    "exercises": [
+     "26/যুক্তবর্ণ শিখি ও লিখি/3",
+     "32/যুক্তবর্ণ শিখি ও লিখি/3",
+     "39/যুক্তবর্ণ শিখি/2",
+     "39/যুক্তবর্ণ শিখি ও লিখি/4",
+     "40/যুক্তবর্ণ শিখি ও লিখি/6",
+     "44/যুক্তবর্ণ শিখি ও লিখি/6",
+     "47/যুক্তবর্ণ শিখি/3",
+     "47/যুক্তবর্ণ শিখি ও লিখি/6",
+     "48/যুক্তবর্ণ শিখি ও লিখি/5",
+     "49/যুক্তবর্ণ শিখি ও লিখি/10",
+     "53/যুক্তবর্ণ ফিরে দেখি/3"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CONJUNCT"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C1-BAN-26-01.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-40-02",
+    "LO-C1-BAN-44-02",
+    "LO-C1-BAN-47-03",
+    "LO-C1-BAN-48-02",
+    "LO-C1-BAN-49-03",
+    "LO-C1-BAN-SK-CONJ-01"
+   ],
+   "claudeNote": "অর্ধ-বার্ষিকে ১টি শব্দ, বার্ষিকে ২টি শব্দ (৪×(১+২))।"
+  },
+  {
+   "code": "LO-C1-BAN-34-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BAN-CONJ",
+   "chapterNumber": 34,
+   "strand": null,
+   "labelBn": "ফলাচিহ্ন (য-ফলা, রেফ, র-ফলা) চিনে শব্দ লেখা",
+   "sourceText": "পাঠ ৩৪: বিপরীত শব্দ (১১–১৫), ফলাচিহ্ন (্য, র্, ্র), শ–ষ–স আলাদা করা। [ভাগ: ফলাচিহ্ন]",
+   "bookRef": {
+    "chapter": 34,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-KARWORD"
+   ],
+   "homeTipBn": "বাক্য, সূর্য, প্রথম — তিনটি শব্দ লিখে দেখান কোন চিহ্ন কোথায় বসে; প্রতিটি ফলা দিয়ে আরেকটি শব্দ খুঁজে লিখুক।",
+   "prereqCodes": [],
+   "tagged": false,
+   "legacyCodes": [
+    "LO-C1-BAN-34-02"
+   ],
+   "claudeNote": "বার্ষিক প্র. ৬ \"কার/ফলাচিহ্ন দিয়ে ২টি করে শব্দ (কমপক্ষে ২টি ফলা)\"। ফলা শেখানো হয় শুধু পাঠ ৩৪-এ (সিদ্ধান্ত ৯)।"
+  },
+  {
+   "code": "LO-C1-BAN-34-01.1",
+   "level": "SUB",
+   "parentCode": "LO-C1-BAN-34-01",
+   "domainCode": "DOM-BAN-CONJ",
+   "chapterNumber": 34,
+   "strand": null,
+   "labelBn": "য-ফলা দিয়ে শব্দ লেখা (বাক্য, ব্যাগ)",
+   "sourceText": "পাঠ ৩৪: বিপরীত শব্দ (১১–১৫), ফলাচিহ্ন (্য, র্, ্র), শ–ষ–স আলাদা করা। [ভাগ: ্য]",
+   "bookRef": {
+    "chapter": 34,
+    "lesson": null,
+    "exercises": [
+     "34/ফলাচিহ্ন চিনি ও লিখি/2"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-KARWORD"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C1-BAN-10-01.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-34-02"
+   ],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C1-BAN-34-01.2",
+   "level": "SUB",
+   "parentCode": "LO-C1-BAN-34-01",
+   "domainCode": "DOM-BAN-CONJ",
+   "chapterNumber": 34,
+   "strand": null,
+   "labelBn": "রেফ দিয়ে শব্দ লেখা (সূর্য, ধর্ম)",
+   "sourceText": "পাঠ ৩৪: বিপরীত শব্দ (১১–১৫), ফলাচিহ্ন (্য, র্, ্র), শ–ষ–স আলাদা করা। [ভাগ: র্]",
+   "bookRef": {
+    "chapter": 34,
+    "lesson": null,
+    "exercises": [
+     "34/ফলাচিহ্ন চিনি ও লিখি/2"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-KARWORD"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C1-BAN-10-01.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-34-02"
+   ],
+   "claudeNote": "রেফ বসে পরের বর্ণের মাথায় — শিশুরা আগের বর্ণে বসায়; র-ফলার সাথে গুলিয়ে ফেলে। তাই তিন ফলা আলাদা ধাপ (একটিই অনুশীলনী, তিনটি অংশ)।"
+  },
+  {
+   "code": "LO-C1-BAN-34-01.3",
+   "level": "SUB",
+   "parentCode": "LO-C1-BAN-34-01",
+   "domainCode": "DOM-BAN-CONJ",
+   "chapterNumber": 34,
+   "strand": null,
+   "labelBn": "র-ফলা দিয়ে শব্দ লেখা (প্রথম, গ্রাম)",
+   "sourceText": "পাঠ ৩৪: বিপরীত শব্দ (১১–১৫), ফলাচিহ্ন (্য, র্, ্র), শ–ষ–স আলাদা করা। [ভাগ: ্র]",
+   "bookRef": {
+    "chapter": 34,
+    "lesson": null,
+    "exercises": [
+     "34/ফলাচিহ্ন চিনি ও লিখি/2"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-KARWORD"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C1-BAN-10-01.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-34-02"
+   ],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C1-BAN-26-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BAN-VOCAB",
+   "chapterNumber": 26,
+   "strand": null,
+   "labelBn": "বিপরীত শব্দ জানা (দিন–রাত, উপর–নিচ …)",
+   "sourceText": "পাঠ ২৬: বিপরীত শব্দ (১–৫), যুক্তবর্ণ ল্ল ও ব্ব, পূর্ণ বাক্যে উত্তর, পাঁচ বাক্যে লেখা। · পাঠ ৩২: বিপরীত শব্দ (৬–১০), যুক্তবর্ণ ঙ্গ স্প ন্ন, পূর্ণ বাক্যে উত্তর। · পাঠ ৩৪: বিপরীত শব্দ (১১–১৫), ফলাচিহ্ন (্য, র্, ্র), শ–ষ–স আলাদা করা। [ভাগ: বিপরীত শব্দ]",
+   "bookRef": {
+    "chapter": 26,
+    "lesson": null,
+    "exercises": [
+     "26/বিপরীত শব্দ শিখি ও বাক্যে বলি/1",
+     "26/মিল করি/2",
+     "26/সঠিক উত্তরে ✓ দিই/8",
+     "32/বিপরীত শব্দ শিখি ও বাক্যে বলি/1",
+     "32/মিল করি/2",
+     "32/সঠিক উত্তরে ✓ দিই/8",
+     "34/বিপরীত শব্দ শিখি ও বাক্যে বলি/1",
+     "34/সঠিক উত্তরে ✓ দিই/6",
+     "53/বিপরীত মিলাই/4"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-ANTONYM",
+    "QT-MATCH"
+   ],
+   "homeTipBn": "খেলার মতো একটি শব্দ বলুন (দিন, কাঁচা, উপর); শিক্ষার্থী বিপরীত শব্দ বলুক, তারপর দুটি দিয়ে একটি বাক্য বলুক — \"দিনে পড়ি, রাতে ঘুমাই।\"",
+   "prereqCodes": [
+    "LO-C1-BAN-SK-VOC-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-26-01",
+    "LO-C1-BAN-32-01",
+    "LO-C1-BAN-34-01",
+    "LO-C1-BAN-SK-VOC-02"
+   ],
+   "claudeNote": "বছরে ১৫ জোড়া, তিন চর্চা-পাঠে পাঁচটি করে — এক সারি (তিন সারি করলে একই দক্ষতা তিনবার)।"
+  },
+  {
+   "code": "LO-C1-BAN-36-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BAN-VOCAB",
+   "chapterNumber": 36,
+   "strand": null,
+   "labelBn": "ফল, ফুল, পাখি, পশু, মাছ ও সবজির নাম চিনে দলে সাজানো",
+   "sourceText": "পাঠ ৩৬: ফল ও ফুলের নাম পড়া-লেখা; দলে সাজানো; জাতীয় ফল ও ফুল জানা। · পাঠ ৩৭: পাখি, পশু, মাছ ও সবজির নাম; দলে সাজানো; বেমানান খোঁজা। [ভাগ: নাম ও দলে সাজানো]",
+   "bookRef": {
+    "chapter": 36,
+    "lesson": null,
+    "exercises": [
+     "36/ফলের নাম পড়ি ও লিখি/1",
+     "36/ফুলের নাম পড়ি ও লিখি/2",
+     "36/দলে সাজিয়ে লিখি/4",
+     "37/নাম পড়ি ও লিখি/1",
+     "37/দলে সাজিয়ে লিখি/2",
+     "37/কোনটি বেমানান?/3",
+     "53/দলে সাজিয়ে লিখি/6"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-TABLE"
+   ],
+   "homeTipBn": "বাজারে বা ছবির বইয়ে দেখে জিজ্ঞেস করুন — এটি ফল না সবজি? পাখি না পশু? পাঁচটি নাম মিশিয়ে বলে কোনটি দলের বাইরে, খুঁজতে দিন।",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-36-01",
+    "LO-C1-BAN-36-02",
+    "LO-C1-BAN-37-01",
+    "LO-C1-BAN-37-02"
+   ],
+   "claudeNote": "দলে সাজানো ও বেমানান খোঁজা একই শ্রেণিকরণ দক্ষতা — আলাদা করা হয়নি। প্রশ্নপত্রে ছক পূরণ আসে না (সিদ্ধান্ত ২৮) — শ্রেণি পরীক্ষায়।"
+  },
+  {
+   "code": "LO-C1-BAN-36-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BAN-VOCAB",
+   "chapterNumber": 36,
+   "strand": null,
+   "labelBn": "জাতীয় ফল, ফুল, পাখি ও মাছের নাম জানা",
+   "sourceText": "পাঠ ৩৬: ফল ও ফুলের নাম পড়া-লেখা; দলে সাজানো; জাতীয় ফল ও ফুল জানা। [ভাগ: জাতীয় ফল ও ফুল জানা]",
+   "bookRef": {
+    "chapter": 36,
+    "lesson": null,
+    "exercises": [
+     "36/জেনে রাখি/3",
+     "33/মাছের রাজা/1",
+     "53/সঠিক উত্তরে ✓ দিই/7",
+     "53/সত্য না মিথ্যা লিখি/8"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-ONEWORD",
+    "QT-TICK"
+   ],
+   "homeTipBn": "জিজ্ঞেস করুন — আমাদের জাতীয় ফল কী? ফুল? পাখি? মাছ? ভুল হলে বইয়ের \"জেনে রাখি\" অংশ একসাথে পড়ুন।",
+   "prereqCodes": [
+    "LO-C1-BAN-36-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-36-03"
+   ],
+   "claudeNote": "বার্ষিক প্র. ১০ \"এক কথায় উত্তর\"-এর ঘোষিত পরিধি \"সপ্তাহ, মাস, ঋতু, দিক, রং\" — জাতীয় প্রতীক তালিকায় নেই, অথচ পাঠ ৩৩, ৩৬, ৩৭-এর নোটে \"এক কথায় উত্তর\" লেখা (ফ্ল্যাগ)। ৫৩/✓ ও ৫৩/সত্য-মিথ্যার জাতীয় ফুল-পাখির প্রশ্ন এই সারির।"
+  },
+  {
+   "code": "LO-C1-BAN-38-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BAN-VOCAB",
+   "chapterNumber": 38,
+   "strand": null,
+   "labelBn": "আত্মীয়দের সম্পর্কের নাম জানা (দাদা, নানা, চাচা, মামা …)",
+   "sourceText": "পাঠ ৩৮: আত্মীয়দের সম্পর্কের নাম জানা; পরিবার নিয়ে পাঁচ বাক্য লেখা। [ভাগ: সম্পর্কের নাম]",
+   "bookRef": {
+    "chapter": 38,
+    "lesson": null,
+    "exercises": [
+     "38/সম্পর্কের নাম পড়ি ও লিখি/1",
+     "38/কে কার, মিলাই/2",
+     "38/বুঝে লিখি/6"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT",
+    "QT-FILL"
+   ],
+   "homeTipBn": "জিজ্ঞেস করুন — বাবার ভাইকে কী ডাকি? মায়ের বোনকে? পরিবারের ছবি দেখে কে কার কী হন, বলতে দিন।",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-38-01"
+   ],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C1-BAN-39-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BAN-VOCAB",
+   "chapterNumber": 39,
+   "strand": null,
+   "labelBn": "সাত দিন, বারো মাস ও ছয় ঋতুর নাম জানা",
+   "sourceText": "পাঠ ৩৯: সাত দিন ও বারো মাসের নাম; ছয় ঋতু; যুক্তবর্ণ প্ত ট্র ক্র। [ভাগ: সাত দিন, বারো মাস, ছয় ঋতু]",
+   "bookRef": {
+    "chapter": 39,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-ONEWORD"
+   ],
+   "homeTipBn": "ক্যালেন্ডার দেখিয়ে আজ কী বার, এটা কোন মাস জিজ্ঞেস করুন; বারের নাম ও মাসের নাম ক্রমে মুখে বলতে দিন।",
+   "prereqCodes": [],
+   "tagged": false,
+   "legacyCodes": [
+    "LO-C1-BAN-39-01"
+   ],
+   "claudeNote": "বার্ষিক প্র. ১০ \"এক কথায় উত্তর\"-এর মূল উৎস। দিন, মাস ও ঋতু আলাদা মুখস্থ তালিকা — একটি জানে, অন্যটি জানে না এমন হয়।"
+  },
+  {
+   "code": "LO-C1-BAN-39-01.1",
+   "level": "SUB",
+   "parentCode": "LO-C1-BAN-39-01",
+   "domainCode": "DOM-BAN-VOCAB",
+   "chapterNumber": 39,
+   "strand": null,
+   "labelBn": "সাত দিনের নাম ক্রমে বলা ও লেখা",
+   "sourceText": "পাঠ ৩৯: সাত দিন ও বারো মাসের নাম; ছয় ঋতু; যুক্তবর্ণ প্ত ট্র ক্র। [ভাগ: সাত দিন]",
+   "bookRef": {
+    "chapter": 39,
+    "lesson": null,
+    "exercises": [
+     "39/সাত দিনের কথা/1",
+     "39/বারের নাম বলি ও লিখি। কোন দিনে কী কাজ করি তা লিখি/3"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-ONEWORD"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-39-01"
+   ],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C1-BAN-39-01.2",
+   "level": "SUB",
+   "parentCode": "LO-C1-BAN-39-01",
+   "domainCode": "DOM-BAN-VOCAB",
+   "chapterNumber": 39,
+   "strand": null,
+   "labelBn": "বারো মাসের নাম ক্রমে বলা ও লেখা",
+   "sourceText": "পাঠ ৩৯: সাত দিন ও বারো মাসের নাম; ছয় ঋতু; যুক্তবর্ণ প্ত ট্র ক্র। [ভাগ: বারো মাস]",
+   "bookRef": {
+    "chapter": 39,
+    "lesson": null,
+    "exercises": [
+     "39/বারো মাসের নাম পড়ি ও লিখি/5",
+     "53/সঠিক উত্তরে ✓ দিই/7"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-ONEWORD"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-39-01"
+   ],
+   "claudeNote": "৫৩/✓-এর \"বারো মাসে কত হয়?\" এই সারির।"
+  },
+  {
+   "code": "LO-C1-BAN-39-01.3",
+   "level": "SUB",
+   "parentCode": "LO-C1-BAN-39-01",
+   "domainCode": "DOM-BAN-VOCAB",
+   "chapterNumber": 39,
+   "strand": null,
+   "labelBn": "ছয় ঋতুর নাম ও কোন ঋতু কোন মাসে",
+   "sourceText": "পাঠ ৩৯: সাত দিন ও বারো মাসের নাম; ছয় ঋতু; যুক্তবর্ণ প্ত ট্র ক্র। · পাঠ ৪৩: আবহাওয়া ও ঋতু নিয়ে বলা-লেখা; শব্দ মেলানো। [ভাগ: ছয় ঋতু / ঋতু নিয়ে বলা-লেখা]",
+   "bookRef": {
+    "chapter": 39,
+    "lesson": null,
+    "exercises": [
+     "39/বুঝে লিখি/7",
+     "43/ঋতুর সাথে মিলাই/6"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-ONEWORD"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C1-BAN-39-01.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-39-01",
+    "LO-C1-BAN-43-01"
+   ],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C1-BAN-41-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BAN-VOCAB",
+   "chapterNumber": 41,
+   "strand": null,
+   "labelBn": "ছবি দেখে জিনিসের নাম লেখা",
+   "sourceText": "পাঠ ৪১: ছবি দেখে জিনিসের নাম লেখা; শব্দ থেকে বাক্য। [ভাগ: ছবি দেখে নাম লেখা]",
+   "bookRef": {
+    "chapter": 41,
+    "lesson": null,
+    "exercises": [
+     "41/তুলির ঘর/1",
+     "41/ছবি দেখি। দেখে শব্দ লিখি/2"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-PICTURE"
+   ],
+   "homeTipBn": "ঘরের পাঁচটি জিনিস দেখিয়ে নাম বলুন ও খাতায় লিখতে দিন (টেবিল, চেয়ার, জানালা …); বানান মিলিয়ে দিন।",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-41-01"
+   ],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C1-BAN-43-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BAN-VOCAB",
+   "chapterNumber": 43,
+   "strand": null,
+   "labelBn": "যে শব্দ একসাথে আসে, তা মেলানো (নদী–নৌকা, রোদ–গরম)",
+   "sourceText": "পাঠ ৪৩: আবহাওয়া ও ঋতু নিয়ে বলা-লেখা; শব্দ মেলানো। [ভাগ: শব্দ মেলানো]",
+   "bookRef": {
+    "chapter": 43,
+    "lesson": null,
+    "exercises": [
+     "43/নিচের বামপাশের শব্দগুলোর সাথে ডানপাশের শব্দগুলোর মিল করো/4",
+     "43/শব্দ-জোড়া লিখি/7",
+     "27/দাগ টেনে শব্দের সাথে শব্দ মেলাই/6"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MATCH"
+   ],
+   "homeTipBn": "একটি শব্দ বলুন (মেঘ); শিক্ষার্থী এর সাথে যায় এমন শব্দ বলুক (বৃষ্টি), তারপর দুটি দিয়ে একটি বাক্য বলুক।",
+   "prereqCodes": [
+    "LO-C1-BAN-SK-VOC-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-43-02"
+   ],
+   "claudeNote": "মিলকরণ প্রশ্নপত্রে আসে না (সিদ্ধান্ত ২৮) — শ্রেণি পরীক্ষা ও অনুশীলনী। ২৭/দাগ টেনে (চাঁদ–মামা) কবিতার শব্দজোড় — একই কাজ।"
+  },
+  {
+   "code": "LO-C1-BAN-45-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BAN-VOCAB",
+   "chapterNumber": 45,
+   "strand": null,
+   "labelBn": "শরীরের অঙ্গের নাম ও কাজ জানা",
+   "sourceText": "পাঠ ৪৫: শরীরের অঙ্গের নাম; পরিষ্কার থাকার অভ্যাস; অজুর সংযোগ। [ভাগ: শরীরের অঙ্গের নাম]",
+   "bookRef": {
+    "chapter": 45,
+    "lesson": null,
+    "exercises": [
+     "45/অঙ্গের নাম পড়ি ও লিখি/1",
+     "45/দেখাই ও বলি/2",
+     "45/অজুতে কী কী ধুই/3",
+     "45/বুঝে লিখি/7"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT",
+    "QT-FILL"
+   ],
+   "homeTipBn": "অঙ্গের নাম বলুন, শিক্ষার্থী সেই অঙ্গে হাত রাখুক; তারপর জিজ্ঞেস করুন চোখ দিয়ে কী করি, কান দিয়ে কী করি।",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-45-01",
+    "LO-C1-BAN-45-02"
+   ],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C1-BAN-51-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BAN-VOCAB",
+   "chapterNumber": 51,
+   "strand": null,
+   "labelBn": "রঙের নাম ও চার দিকের নাম জানা",
+   "sourceText": "পাঠ ৫১: রং ও চার দিকের নাম; কিবলার দিক জানা।",
+   "bookRef": {
+    "chapter": 51,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-ONEWORD"
+   ],
+   "homeTipBn": "চারপাশের জিনিসের রং জিজ্ঞেস করুন (পতাকা, কাক, দুধ); সকালে সূর্য কোন দিকে ওঠে আর নামাজে কোন দিকে ফিরি, দেখিয়ে দিন।",
+   "prereqCodes": [],
+   "tagged": false,
+   "legacyCodes": [
+    "LO-C1-BAN-51-01",
+    "LO-C1-BAN-51-02",
+    "LO-C1-BAN-47-02"
+   ],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C1-BAN-51-01.1",
+   "level": "SUB",
+   "parentCode": "LO-C1-BAN-51-01",
+   "domainCode": "DOM-BAN-VOCAB",
+   "chapterNumber": 51,
+   "strand": null,
+   "labelBn": "রঙের নাম পড়া, লেখা ও জিনিসের রং বলা",
+   "sourceText": "পাঠ ৫১: রং ও চার দিকের নাম; কিবলার দিক জানা। · পাঠ ৪৭: দেশ নিয়ে তথ্য পড়া; রঙের শব্দ; যুক্তবর্ণ ন্দ; দেশ নিয়ে পাঁচ বাক্য। [ভাগ: রং / রঙের শব্দ]",
+   "bookRef": {
+    "chapter": 51,
+    "lesson": null,
+    "exercises": [
+     "51/রঙের নাম পড়ি ও লিখি/1",
+     "51/রং খুঁজি/2",
+     "47/আরও লিখি/5"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-ONEWORD"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-51-01",
+    "LO-C1-BAN-47-02"
+   ],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C1-BAN-51-01.2",
+   "level": "SUB",
+   "parentCode": "LO-C1-BAN-51-01",
+   "domainCode": "DOM-BAN-VOCAB",
+   "chapterNumber": 51,
+   "strand": null,
+   "labelBn": "চার দিকের নাম ও কিবলার দিক জানা",
+   "sourceText": "পাঠ ৫১: রং ও চার দিকের নাম; কিবলার দিক জানা। [ভাগ: চার দিক / কিবলার দিক]",
+   "bookRef": {
+    "chapter": 51,
+    "lesson": null,
+    "exercises": [
+     "51/চার দিকের নাম পড়ি ও লিখি/3",
+     "51/দিক চিনি/4"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-ONEWORD"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-51-01",
+    "LO-C1-BAN-51-02"
+   ],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C1-BAN-46-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BAN-VOCAB",
+   "chapterNumber": 46,
+   "strand": null,
+   "labelBn": "বাক্যের খালি ঘরে ঠিক শব্দ বসানো (শূন্যস্থান)",
+   "sourceText": "পাঠ ৪৬: কবিতা বই দেখে পড়া; পড়ে বুঝে উত্তর; মিলের শব্দ; শব্দ দিয়ে বাক্য। · পাঠ ৪৭: দেশ নিয়ে তথ্য পড়া; রঙের শব্দ; যুক্তবর্ণ ন্দ; দেশ নিয়ে পাঁচ বাক্য। [ভাগ: খালি জায়গায় শব্দ]",
+   "bookRef": {
+    "chapter": 46,
+    "lesson": null,
+    "exercises": [
+     "46/খালি জায়গায় শব্দ লিখি/7",
+     "47/খালি ঘরে লিখি/4",
+     "33/বলি ও লিখি/2"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-FILL"
+   ],
+   "homeTipBn": "বইয়ের একটি বাক্য থেকে একটি শব্দ মুছে লিখুন, পাশে তিনটি শব্দ দিন; শিক্ষার্থী ঠিক শব্দটি বসিয়ে পুরো বাক্য পড়ুক।",
+   "prereqCodes": [
+    "LO-C1-BAN-SK-VOC-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "প্রশ্নপত্রের প্র. ১০ (অর্ধ-বার্ষিক) / প্র. ৯ (বার্ষিক) — উত্তরের শব্দ বাক্সে। আগের খসড়ায় আলাদা সারি ছিল না (পাঠের সারিতে QT-FILL)। ৪৬/খালি জায়গায় কবিতার চরণ দেয় — বইয়ের নিয়ম \"শূন্যস্থানে কবিতার লাইন দেওয়া যাবে না\"-র সাথে বিরোধ (ফ্ল্যাগ)।"
+  },
+  {
+   "code": "LO-C1-BAN-13-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BAN-READ",
+   "chapterNumber": 13,
+   "strand": null,
+   "labelBn": "গল্প ও ছড়া-কবিতা পড়ে বুঝে প্রশ্নের উত্তর দেওয়া",
+   "sourceText": "পাঠ ১৩: গল্প পড়ে বুঝে উত্তর দেওয়া; ঘটনা ক্রমে সাজানো; সত্যবাদিতার শিক্ষা। · পাঠ ৯: ছড়া বই দেখে পড়া, পড়ে বুঝে পূর্ণ বাক্যে উত্তর লেখা, মিলের শব্দ চেনা। · পাঠ ৩০: গল্প পড়ে বুঝে উত্তর; ঘটনা সাজানো; উপকারের বদলে উপকার।",
+   "bookRef": {
+    "chapter": 13,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-PASSAGE",
+    "QT-TICK",
+    "QT-SHORT",
+    "QT-ORDER",
+    "QT-TF"
+   ],
+   "homeTipBn": "বইয়ের গল্প একসাথে পড়ুন; তারপর তিনটি প্রশ্ন করুন — একটি \"কী/কোথায়\", একটি \"কেন\", একটি \"এরপর কী হলো\"। উত্তর প্রশ্নের শব্দ দিয়ে শুরু করে পুরো বাক্যে বলুক।",
+   "prereqCodes": [],
+   "tagged": false,
+   "legacyCodes": [
+    "LO-C1-BAN-09-02",
+    "LO-C1-BAN-13-01",
+    "LO-C1-BAN-19-03",
+    "LO-C1-BAN-22-01",
+    "LO-C1-BAN-27-02",
+    "LO-C1-BAN-30-01",
+    "LO-C1-BAN-46-02",
+    "LO-C1-BAN-48-01",
+    "LO-C1-BAN-49-01"
+   ],
+   "claudeNote": "প্রতিটি গল্প/কবিতার জন্য আলাদা সারি করা হয়নি (একই দক্ষতা পাঠে পাঠে) — পাঁচ গল্প ও পাঁচ কবিতা এক শিখনফলে; ছয়টি ধাপ, যেগুলো আলাদা ভাবে ভুল হয়। প্রশ্নপত্রের প্র. ১ (পঠিত অংশ) ও প্র. ২ (প্রশ্নোত্তর)।"
+  },
+  {
+   "code": "LO-C1-BAN-13-01.1",
+   "level": "SUB",
+   "parentCode": "LO-C1-BAN-13-01",
+   "domainCode": "DOM-BAN-READ",
+   "chapterNumber": 13,
+   "strand": null,
+   "labelBn": "এক কথায় বা ঠিক উত্তর বেছে (✓) উত্তর দেওয়া",
+   "sourceText": "পাঠ ১৩: গল্প পড়ে বুঝে উত্তর দেওয়া; ঘটনা ক্রমে সাজানো; সত্যবাদিতার শিক্ষা। [ভাগ: পড়ে বুঝে উত্তর — এক কথায়]",
+   "bookRef": {
+    "chapter": 13,
+    "lesson": null,
+    "exercises": [
+     "13/সঠিক উত্তরে ✓ দিই/12",
+     "22/সঠিক উত্তরে ✓ দিই/9",
+     "30/সঠিক উত্তরে ✓ দিই/6",
+     "49/সঠিক উত্তরে ✓ দিই/11"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-PASSAGE",
+    "QT-TICK"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-13-01",
+    "LO-C1-BAN-22-01",
+    "LO-C1-BAN-30-01",
+    "LO-C1-BAN-49-01"
+   ],
+   "claudeNote": "পঠিত অংশের ৪টি এক-কথার প্রশ্ন (৪×১) এই ধাপ; ✓-প্রশ্ন প্রশ্নপত্রে আসে না (সিদ্ধান্ত ২৮) কিন্তু একই দক্ষতা।"
+  },
+  {
+   "code": "LO-C1-BAN-13-01.2",
+   "level": "SUB",
+   "parentCode": "LO-C1-BAN-13-01",
+   "domainCode": "DOM-BAN-READ",
+   "chapterNumber": 13,
+   "strand": null,
+   "labelBn": "পড়া অংশ থেকে পূর্ণ বাক্যে উত্তর লেখা",
+   "sourceText": "পাঠ ৯: ছড়া বই দেখে পড়া, পড়ে বুঝে পূর্ণ বাক্যে উত্তর লেখা, মিলের শব্দ চেনা। · পাঠ ১৩: গল্প পড়ে বুঝে উত্তর দেওয়া; ঘটনা ক্রমে সাজানো; সত্যবাদিতার শিক্ষা। [ভাগ: পড়ে বুঝে পূর্ণ বাক্যে উত্তর লেখা]",
+   "bookRef": {
+    "chapter": 13,
+    "lesson": null,
+    "exercises": [
+     "9/ছড়াংশ পড়ে লিখি/4",
+     "19/ছড়াংশ পড়ে লিখি/4",
+     "27/ছড়াংশ পড়ে লিখি/4",
+     "40/ছড়াংশ পড়ে লিখি/4",
+     "46/ছড়াংশ পড়ে লিখি/4",
+     "13/বুঝে লিখি/4",
+     "22/বুঝে লিখি/4",
+     "30/বুঝে লিখি/4",
+     "48/বুঝে লিখি/3",
+     "49/বুঝে লিখি/4"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-PASSAGE",
+    "QT-SHORT"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C1-BAN-13-01.1",
+    "LO-C1-BAN-SK-ANS-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-09-02",
+    "LO-C1-BAN-13-01",
+    "LO-C1-BAN-19-03",
+    "LO-C1-BAN-22-01",
+    "LO-C1-BAN-27-02",
+    "LO-C1-BAN-30-01",
+    "LO-C1-BAN-46-02",
+    "LO-C1-BAN-48-01",
+    "LO-C1-BAN-49-01"
+   ],
+   "claudeNote": "প্রশ্নের শব্দ দিয়ে শুরু ও দাঁড়ি — সেই অংশের ভুল নির্ণয়ের ট্যাগে SK-ANS-01-এ যায়; এখানে মাপা হয় উত্তরটা পড়া অংশ থেকে ঠিক এল কি না।"
+  },
+  {
+   "code": "LO-C1-BAN-13-01.3",
+   "level": "SUB",
+   "parentCode": "LO-C1-BAN-13-01",
+   "domainCode": "DOM-BAN-READ",
+   "chapterNumber": 13,
+   "strand": null,
+   "labelBn": "\"কেন\" ও \"কী হতো\" — ভেবে উত্তর দেওয়া",
+   "sourceText": "পাঠ ১৩: গল্প পড়ে বুঝে উত্তর দেওয়া; ঘটনা ক্রমে সাজানো; সত্যবাদিতার শিক্ষা। [ভাগ: পড়ে বুঝে উত্তর — কারণ]",
+   "bookRef": {
+    "chapter": 13,
+    "lesson": null,
+    "exercises": [
+     "13/ভেবে বলি/8",
+     "9/ছড়াংশ পড়ে লিখি/4",
+     "13/বুঝে লিখি/4",
+     "19/ছড়াংশ পড়ে লিখি/4",
+     "27/ছড়াংশ পড়ে লিখি/4"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C1-BAN-13-01.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "নতুন সারি। \"বুঝে লিখি\"-র ঙ) প্রশ্নগুলো (\"শেষে কেউ এল না কেন?\", \"মামার বাড়ি যেতে ভালো লাগে কেন?\") উত্তর সরাসরি লেখায় নেই — যে শিশু ক–ঘ পারে সে-ও এখানে আটকায়। একই অনুশীলনীর ক–ঘ ১৩-০১.২-এর: প্রশ্ন-ব্যাংকে আলাদা প্রশ্ন।"
+  },
+  {
+   "code": "LO-C1-BAN-13-01.4",
+   "level": "SUB",
+   "parentCode": "LO-C1-BAN-13-01",
+   "domainCode": "DOM-BAN-READ",
+   "chapterNumber": 13,
+   "strand": null,
+   "labelBn": "গল্পের ঘটনা ক্রমে সাজানো",
+   "sourceText": "পাঠ ১৩: গল্প পড়ে বুঝে উত্তর দেওয়া; ঘটনা ক্রমে সাজানো; সত্যবাদিতার শিক্ষা। · পাঠ ৩০: গল্প পড়ে বুঝে উত্তর; ঘটনা সাজানো; উপকারের বদলে উপকার। [ভাগ: ঘটনা ক্রমে সাজানো]",
+   "bookRef": {
+    "chapter": 13,
+    "lesson": null,
+    "exercises": [
+     "13/ঘটনা সাজাই/5",
+     "22/ঘটনা সাজাই/5",
+     "30/ঘটনা সাজাই/5",
+     "48/ঘটনা সাজাই/4",
+     "49/ঘটনা সাজাই/5"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-ORDER"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C1-BAN-13-01.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-13-02",
+    "LO-C1-BAN-30-02"
+   ],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C1-BAN-13-01.5",
+   "level": "SUB",
+   "parentCode": "LO-C1-BAN-13-01",
+   "domainCode": "DOM-BAN-READ",
+   "chapterNumber": 13,
+   "strand": null,
+   "labelBn": "পড়া অংশ থেকে সত্য না মিথ্যা বলা",
+   "sourceText": "পাঠ ১৩: গল্প পড়ে বুঝে উত্তর দেওয়া; ঘটনা ক্রমে সাজানো; সত্যবাদিতার শিক্ষা। [ভাগ: পড়ে বুঝে উত্তর — সত্য/মিথ্যা]",
+   "bookRef": {
+    "chapter": 13,
+    "lesson": null,
+    "exercises": [
+     "13/সত্য না মিথ্যা লিখি/6",
+     "30/সত্য না মিথ্যা লিখি/7",
+     "48/সত্য না মিথ্যা লিখি/6"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-TF"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C1-BAN-13-01.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "প্রশ্নপত্রে আসে না (সিদ্ধান্ত ২৮), শ্রেণি পরীক্ষায় আসে। মিথ্যা বাক্যে একটি শব্দ বদলানো থাকে (ছাগল/গরু) — খুঁটিয়ে পড়ার আলাদা দক্ষতা।"
+  },
+  {
+   "code": "LO-C1-BAN-13-01.6",
+   "level": "SUB",
+   "parentCode": "LO-C1-BAN-13-01",
+   "domainCode": "DOM-BAN-READ",
+   "chapterNumber": 13,
+   "strand": null,
+   "labelBn": "গল্পের শিক্ষা নিজের ভাষায় বলা ও লেখা",
+   "sourceText": "পাঠ ১৩: গল্প পড়ে বুঝে উত্তর দেওয়া; ঘটনা ক্রমে সাজানো; সত্যবাদিতার শিক্ষা। · পাঠ ২২: হাদিসের গল্প পড়ে বুঝে উত্তর; মানুষের কষ্ট দূর করা যে সাদাকা, তা জানা। · পাঠ ৩০: গল্প পড়ে বুঝে উত্তর; ঘটনা সাজানো; উপকারের বদলে উপকার। · পাঠ ৪৯: সাহাবির ঘটনা পড়ে বুঝে উত্তর; বড়দের কাজে সাহায্য; যুক্তবর্ণ দ্দ। [ভাগ: গল্পের শিক্ষা — সত্যবাদিতা, সাদাকা, উপকার, সাহায্য]",
+   "bookRef": {
+    "chapter": 13,
+    "lesson": null,
+    "exercises": [
+     "13/শিক্ষা বুঝি/7",
+     "13/গল্প থেকে কী শিখলাম — ৫ বাক্যে লিখি/11",
+     "22/শিক্ষা বুঝি/6",
+     "22/গল্প থেকে কী শিখলাম — ৫ বাক্যে লিখি/8",
+     "30/শিক্ষা বুঝি/8",
+     "30/গল্প থেকে কী শিখলাম — ৫ বাক্যে লিখি/11",
+     "48/শিক্ষা বুঝি/7",
+     "48/গল্প থেকে কী শিখলাম — ৫ বাক্যে লিখি/10",
+     "49/শিক্ষা বুঝি/6",
+     "49/গল্প থেকে কী শিখলাম — ৫ বাক্যে লিখি/8"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C1-BAN-13-01.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-13-03",
+    "LO-C1-BAN-22-02",
+    "LO-C1-BAN-30-03",
+    "LO-C1-BAN-49-02"
+   ],
+   "claudeNote": "প্রতিটি গল্পের মূল্যবোধ (সত্যবাদিতা, সাদাকা, উপকার, সাহায্য) আলাদা শিখনফল করা হয়নি — দক্ষতা একটাই: গল্প থেকে শিক্ষা বের করা। \"গল্প থেকে কী শিখলাম — ৫ বাক্যে লিখি\" এই সারির; বানান-বাক্যের ভুল নির্ণয়ের ট্যাগে যায়।"
+  },
+  {
+   "code": "LO-C1-BAN-33-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BAN-READ",
+   "chapterNumber": 33,
+   "strand": null,
+   "labelBn": "তথ্যের লেখা পড়ে প্রশ্নের উত্তর দেওয়া ও ছক পূরণ করা",
+   "sourceText": "পাঠ ৩৩: তথ্যমূলক লেখা পড়ে উত্তর; তথ্য-ছক পূরণ।",
+   "bookRef": {
+    "chapter": 33,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-PASSAGE",
+    "QT-SHORT",
+    "QT-TICK",
+    "QT-TABLE"
+   ],
+   "homeTipBn": "খবরের কাগজের ছোট শিরোনাম বা বইয়ের তথ্যের অনুচ্ছেদ পড়তে দিন; \"কী\", \"কোথায়\", \"কেমন\" প্রশ্ন করুন। দুই-তিনটি তথ্য নিয়ে খাতায় ছোট ছক বানাতে দিন।",
+   "prereqCodes": [],
+   "tagged": false,
+   "legacyCodes": [
+    "LO-C1-BAN-33-01",
+    "LO-C1-BAN-33-02",
+    "LO-C1-BAN-47-01"
+   ],
+   "claudeNote": "গল্প (১৩-০১) আর তথ্যের লেখা আলাদা: তথ্যের লেখায় খুঁজে বের করার প্রশ্ন, গল্পে ঘটনা ও কারণ। পাঠ ৩৬–৪৭-এর \"বুঝে লিখি\" এখানে।"
+  },
+  {
+   "code": "LO-C1-BAN-33-01.1",
+   "level": "SUB",
+   "parentCode": "LO-C1-BAN-33-01",
+   "domainCode": "DOM-BAN-READ",
+   "chapterNumber": 33,
+   "strand": null,
+   "labelBn": "তথ্যের লেখা পড়ে পূর্ণ বাক্যে উত্তর লেখা",
+   "sourceText": "পাঠ ৩৩: তথ্যমূলক লেখা পড়ে উত্তর; তথ্য-ছক পূরণ। [ভাগ: তথ্যমূলক লেখা পড়ে উত্তর]",
+   "bookRef": {
+    "chapter": 33,
+    "lesson": null,
+    "exercises": [
+     "33/বুঝে লিখি/3",
+     "33/সঠিক উত্তরে ✓ দিই/4",
+     "36/বুঝে লিখি/7",
+     "37/বুঝে লিখি/6",
+     "41/বুঝে লিখি/5",
+     "43/বুঝে লিখি/5",
+     "47/বুঝে লিখি/7",
+     "53/পড়ি ও উত্তর দিই/5"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-PASSAGE",
+    "QT-SHORT",
+    "QT-TICK"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C1-BAN-13-01.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-33-01",
+    "LO-C1-BAN-47-01",
+    "LO-C1-BAN-43-01"
+   ],
+   "claudeNote": "৩৬–৪৭-এর \"বুঝে লিখি\"-র কয়েকটি প্রশ্ন নিজের কথা জানতে চায় (\"তোমার ঘরে কী কী আছে?\") — সেগুলোও পূর্ণ বাক্যের উত্তর; পর্যালোচক চাইলে SK-ANS-01-এ নিতে পারেন।"
+  },
+  {
+   "code": "LO-C1-BAN-33-01.2",
+   "level": "SUB",
+   "parentCode": "LO-C1-BAN-33-01",
+   "domainCode": "DOM-BAN-READ",
+   "chapterNumber": 33,
+   "strand": null,
+   "labelBn": "পড়া তথ্য দিয়ে ছক পূরণ করা",
+   "sourceText": "পাঠ ৩৩: তথ্যমূলক লেখা পড়ে উত্তর; তথ্য-ছক পূরণ। [ভাগ: তথ্য-ছক পূরণ]",
+   "bookRef": {
+    "chapter": 33,
+    "lesson": null,
+    "exercises": [
+     "33/তথ্য-ছক পূরণ করি/5"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-TABLE"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C1-BAN-33-01.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-33-02"
+   ],
+   "claudeNote": "ছক পূরণ প্রশ্নপত্রে আসে না (সিদ্ধান্ত ২৮) — শ্রেণি পরীক্ষায়।"
+  },
+  {
+   "code": "LO-C1-BAN-09-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BAN-POEM",
+   "chapterNumber": 9,
+   "strand": null,
+   "labelBn": "ছড়া-কবিতার মিলের শব্দ খুঁজে বলা",
+   "sourceText": "পাঠ ৯: ছড়া বই দেখে পড়া, পড়ে বুঝে পূর্ণ বাক্যে উত্তর লেখা, মিলের শব্দ চেনা। · পাঠ ২৭: কবিতা বই দেখে পড়া; পড়ে বুঝে পূর্ণ বাক্যে লেখা; মিলের শব্দ। [ভাগ: মিলের শব্দ]",
+   "bookRef": {
+    "chapter": 9,
+    "lesson": null,
+    "exercises": [
+     "9/মিলের শব্দ খুঁজি/5",
+     "19/মিলের শব্দ খুঁজি/6",
+     "27/মিলের শব্দ খুঁজি/5",
+     "40/মিলের শব্দ খুঁজি/5",
+     "46/মিলের শব্দ খুঁজি/5"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-RHYME"
+   ],
+   "homeTipBn": "ছড়াটি একসাথে বই দেখে পড়ুন; চরণের শেষ শব্দে আঙুল রেখে কোন দুটি শব্দের শেষে মিল আছে (যাই–যাই, সুখ–মুখ), খুঁজতে দিন।",
+   "prereqCodes": [
+    "LO-C1-BAN-SK-READ-01.3"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-09-03",
+    "LO-C1-BAN-27-03",
+    "LO-C1-BAN-46-03"
+   ],
+   "claudeNote": "মিলের শব্দ প্রশ্নপত্রের ধরনে নেই — অনুশীলনী ও শ্রেণি পরীক্ষা।"
+  },
+  {
+   "code": "LO-C1-BAN-19-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BAN-POEM",
+   "chapterNumber": 19,
+   "strand": null,
+   "labelBn": "ধ্বনি-শব্দ চেনা (ঝক ঝকাঝক, টুপটাপ, কলকল)",
+   "sourceText": "পাঠ ১৯: ছড়া বই দেখে পড়া; ধ্বনি-শব্দ চেনা; পড়ে বুঝে পূর্ণ বাক্যে লেখা। [ভাগ: ধ্বনি-শব্দ চেনা]",
+   "bookRef": {
+    "chapter": 19,
+    "lesson": null,
+    "exercises": [
+     "19/ধ্বনি-শব্দ চিনি/5"
+    ]
+   },
+   "assess": "RUBRIC",
+   "questionTypeCodes": [
+    "QT-RUBRIC"
+   ],
+   "homeTipBn": "বৃষ্টি, নদী, ট্রেনের শব্দ মুখে করে দেখান (টুপটাপ, কলকল, ঝক ঝকাঝক); শিক্ষার্থী বলুক কোন শব্দ কীসের।",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-19-02"
+   ],
+   "claudeNote": "একটিই মৌখিক অনুশীলনী (\"মুখে বলি\") — রুব্রিক। পাঠ ১৯-এর শিখনফলে আছে বলে রাখা হলো; পর্যালোচক চাইলে শব্দার্থের (SK-VOC-01) সাথে মেশাতে পারেন।"
+  },
+  {
+   "code": "LO-C1-BAN-35-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BAN-SENT",
+   "chapterNumber": 35,
+   "strand": null,
+   "labelBn": "শব্দ দিয়ে নিজে বাক্য বানানো (বাক্য রচনা)",
+   "sourceText": "পাঠ ৩৫: শব্দ থেকে বাক্য বানানো; প্রশ্নের শব্দ দিয়ে পূর্ণ বাক্যে উত্তর। · পাঠ ৪১: ছবি দেখে জিনিসের নাম লেখা; শব্দ থেকে বাক্য। · পাঠ ৪৬: কবিতা বই দেখে পড়া; পড়ে বুঝে উত্তর; মিলের শব্দ; শব্দ দিয়ে বাক্য। [ভাগ: শব্দ থেকে বাক্য / শব্দ দিয়ে বাক্য]",
+   "bookRef": {
+    "chapter": 35,
+    "lesson": null,
+    "exercises": [
+     "35/শব্দ থেকে বাক্যে/1",
+     "35/নিজে বাক্য বানাই/3",
+     "41/শব্দ থেকে বাক্যে/3",
+     "46/শব্দগুলো দিয়ে বাক্য বলি ও লিখি/6"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SENTENCE"
+   ],
+   "homeTipBn": "একটি চেনা শব্দ দিন (বই, নদী, মা); শিক্ষার্থী শব্দটি দিয়ে একটি পুরো বাক্য মুখে বলুক, তারপর খাতায় লিখুক — শেষে দাঁড়ি।",
+   "prereqCodes": [
+    "LO-C1-BAN-SK-VOC-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-35-01",
+    "LO-C1-BAN-41-02",
+    "LO-C1-BAN-46-04"
+   ],
+   "claudeNote": "প্রশ্নপত্রের প্র. ৪ \"বাক্য রচনা কর\" (৫×২)। শব্দের মাঝে ফাঁক ও দাঁড়ির ভুল SK-HW-01 / SK-ANS-01-এ যায়।"
+  },
+  {
+   "code": "LO-C1-BAN-49-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BAN-GRAM",
+   "chapterNumber": 49,
+   "strand": null,
+   "labelBn": "এক থেকে অনেক বোঝাতে শব্দের শেষে \"-রা\" বসানো (ছেলে → ছেলেরা)",
+   "sourceText": "পাঠ ৪৯-এর শিখনফলে নেই; অনুশীলনী \"একবচন-বহুবচন খেয়াল করি\" (ছেলে → ছেলেরা · বন্ধু → বন্ধুরা · সাহাবি → সাহাবিরা)।",
+   "bookRef": {
+    "chapter": 49,
+    "lesson": null,
+    "exercises": [
+     "49/একবচন-বহুবচন খেয়াল করি/9"
+    ]
+   },
+   "assess": "RUBRIC",
+   "questionTypeCodes": [
+    "QT-RUBRIC"
+   ],
+   "homeTipBn": "একটি শব্দ বলুন (পাখি, বন্ধু); অনেক হলে কী বলি জিজ্ঞেস করুন — পাখিরা, বন্ধুরা।",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "\"খেয়াল করি\" — শুধু পরিচয়, শিখনফলে নেই, প্রশ্নপত্রেও নেই (ফ্ল্যাগ)। পরের শ্রেণির বচন-পাঠের আগের ধাপ হিসেবে রাখা হলো; পর্যালোচক বাদ দিতে পারেন।"
+  },
+  {
+   "code": "LO-C1-BAN-52-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BAN-COMP",
+   "chapterNumber": 52,
+   "strand": null,
+   "labelBn": "পাঁচ বাক্যে অনুচ্ছেদ লেখা",
+   "sourceText": "পাঠ ৫২: পাঁচ বাক্যে অনুচ্ছেদ লেখা। · পাঠ ১: সালাম দিয়ে নিজের পরিচয় বলা এবং পাঁচ বাক্যে লেখা। · পাঠ ২৬: বিপরীত শব্দ (১–৫), যুক্তবর্ণ ল্ল ও ব্ব, পূর্ণ বাক্যে উত্তর, পাঁচ বাক্যে লেখা।",
+   "bookRef": {
+    "chapter": 52,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-PARA"
+   ],
+   "homeTipBn": "রাতে জিজ্ঞেস করুন আজ কী কী করল; আগে মুখে পাঁচটি কথা গুছিয়ে বলুক, তারপর খাতায় পাঁচটি বাক্য লিখুক — প্রতিটির শেষে দাঁড়ি।",
+   "prereqCodes": [],
+   "tagged": false,
+   "legacyCodes": [
+    "LO-C1-BAN-01-02",
+    "LO-C1-BAN-02-01",
+    "LO-C1-BAN-04-01",
+    "LO-C1-BAN-26-04",
+    "LO-C1-BAN-38-02",
+    "LO-C1-BAN-42-01",
+    "LO-C1-BAN-47-04",
+    "LO-C1-BAN-52-01",
+    "LO-C1-BAN-SK-WRITE-02"
+   ],
+   "claudeNote": "প্রশ্নপত্রের প্র. ৩ \"অনুচ্ছেদ লেখ (৫ বাক্য, সাহায্য-শব্দসহ)\"। বিষয় (পরিচয়, বিদ্যালয়, পরিবার, দেশ) আলাদা সারি নয় — দক্ষতা একই; ধাপ তিনটি: খালি ঘর পূরণ → সাহায্য-শব্দ দেখে নিজে লেখা → গল্প পাঁচ বাক্যে।"
+  },
+  {
+   "code": "LO-C1-BAN-52-01.1",
+   "level": "SUB",
+   "parentCode": "LO-C1-BAN-52-01",
+   "domainCode": "DOM-BAN-COMP",
+   "chapterNumber": 52,
+   "strand": null,
+   "labelBn": "খালি ঘর পূরণ করে নিজের কথা পাঁচ বাক্যে লেখা",
+   "sourceText": "পাঠ ১: সালাম দিয়ে নিজের পরিচয় বলা এবং পাঁচ বাক্যে লেখা। · পাঠ ২: বিদ্যালয় ও শ্রেণিকক্ষ সম্পর্কে বলা ও লেখা; বিদ্যালয়ের আদব জানা। · পাঠ ৪: দৈনন্দিন কাজ নিয়ে বাক্য বলা ও লেখা। [ভাগ: পাঁচ বাক্যে লেখা — খালি ঘরসহ]",
+   "bookRef": {
+    "chapter": 52,
+    "lesson": null,
+    "exercises": [
+     "1/বলি ও লিখি/3",
+     "2/নিজে লিখি/5",
+     "4/বাক্য লিখি/3",
+     "26/আমার পরিচয় — ৫ বাক্যে লিখি/9",
+     "26/আমার শ্রেণিকক্ষ — ৫ বাক্যে লিখি/10",
+     "32/আমার পরিচয় — ৫ বাক্যে লিখি/9",
+     "32/আমার শ্রেণিকক্ষ — ৫ বাক্যে লিখি/10",
+     "54/ছক থেকে বাক্যে/3"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-PARA"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-01-02",
+    "LO-C1-BAN-02-01",
+    "LO-C1-BAN-04-01",
+    "LO-C1-BAN-26-04"
+   ],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C1-BAN-52-01.2",
+   "level": "SUB",
+   "parentCode": "LO-C1-BAN-52-01",
+   "domainCode": "DOM-BAN-COMP",
+   "chapterNumber": 52,
+   "strand": null,
+   "labelBn": "সাহায্য-শব্দ দেখে নিজে বাক্য লিখে অনুচ্ছেদ বানানো",
+   "sourceText": "পাঠ ৫২: পাঁচ বাক্যে অনুচ্ছেদ লেখা। · পাঠ ৪২: তিন বাক্যে নিজের প্রিয় জিনিস নিয়ে লেখা — অনুচ্ছেদের আগের ধাপ। · পাঠ ৩৮: আত্মীয়দের সম্পর্কের নাম জানা; পরিবার নিয়ে পাঁচ বাক্য লেখা। [ভাগ: তিন বাক্য / পাঁচ বাক্যে অনুচ্ছেদ]",
+   "bookRef": {
+    "chapter": 52,
+    "lesson": null,
+    "exercises": [
+     "52/এবার নিজে লিখি/3",
+     "42/এবার নিজে লিখি/3",
+     "34/নিচের দুটি বিষয়েই ৫টি করে বাক্য লিখি/7",
+     "37/পাঁচ বাক্য লিখি/4",
+     "38/পাঁচ বাক্য লিখি/4",
+     "45/পাঁচ বাক্য লিখি/5",
+     "46/ছুটির দিনে আমি কী কী করি — পাঁচটি বাক্য লিখি/8",
+     "53/শেষ লেখা/9",
+     "27/ভোরে আমি কী করি/7",
+     "33/আমার প্রিয় মাছ/6",
+     "35/লিখি/5",
+     "36/দুই বাক্য লিখি/5",
+     "51/দুই বাক্য লিখি/5",
+     "47/আরও লিখি/5"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-PARA"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C1-BAN-52-01.1",
+    "LO-C1-BAN-35-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-38-02",
+    "LO-C1-BAN-42-01",
+    "LO-C1-BAN-45-02",
+    "LO-C1-BAN-47-04",
+    "LO-C1-BAN-52-01",
+    "LO-C1-BAN-SK-WRITE-02"
+   ],
+   "claudeNote": "বার্ষিকের অনুচ্ছেদ \"পাঠ ৫২-এর ছাঁচে\"। দুই ও তিন বাক্যের কাজ (৩৫, ৩৬, ৪২, ৫১) একই পথের ছোট ধাপ — আলাদা সারি করা হয়নি।"
+  },
+  {
+   "code": "LO-C1-BAN-52-01.3",
+   "level": "SUB",
+   "parentCode": "LO-C1-BAN-52-01",
+   "domainCode": "DOM-BAN-COMP",
+   "chapterNumber": 52,
+   "strand": null,
+   "labelBn": "পড়া গল্প পাঁচ বাক্যে নিজের ভাষায় লেখা",
+   "sourceText": "পাঠ ১৩, ২২, ৩০, ৪৮, ৪৯-এর অনুশীলনী \"গল্পটি ৫ বাক্যে লিখি\"; শিখনফলে আলাদা করে লেখা নেই (পাঠ ১৩: \"ঘটনা ক্রমে সাজানো\")।",
+   "bookRef": {
+    "chapter": 52,
+    "lesson": null,
+    "exercises": [
+     "13/গল্পটি ৫ বাক্যে লিখি/10",
+     "22/গল্পটি ৫ বাক্যে লিখি/7",
+     "30/গল্পটি ৫ বাক্যে লিখি/10",
+     "48/গল্পটি ৫ বাক্যে লিখি/9",
+     "49/গল্পটি ৫ বাক্যে লিখি/7"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-PARA"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C1-BAN-13-01.4"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "নতুন সারি। গল্প মনে থাকা আর ক্রমে বাক্য বানিয়ে লেখা — খালি ঘরের অনুচ্ছেদ (১) থেকে আলাদা কাজ। প্রশ্নপত্রের ধরনে সরাসরি নেই; অনুচ্ছেদের প্রস্তুতি।"
+  },
+  {
+   "code": "LO-C1-BAN-54-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BAN-FUNC",
+   "chapterNumber": 54,
+   "strand": null,
+   "labelBn": "নিজের নাম, বাবা-মায়ের নাম ও ঠিকানা ছকে লেখা",
+   "sourceText": "পাঠ ৫৪: নিজের ঠিকানা জানা ও ছকে লেখা। · পাঠ ১: সালাম দিয়ে নিজের পরিচয় বলা এবং পাঁচ বাক্যে লেখা। [ভাগ: নিজের নাম ও শ্রেণি লেখা / ঠিকানা ছকে লেখা]",
+   "bookRef": {
+    "chapter": 54,
+    "lesson": null,
+    "exercises": [
+     "54/আমার ঠিকানা/1",
+     "54/ছক পূরণের আগে বলি/2",
+     "1/নিজে লিখি/4"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-TABLE"
+   ],
+   "homeTipBn": "শিক্ষার্থীকে নিজের পুরো ঠিকানা (গ্রাম/বাসা, ডাকঘর, থানা, জেলা) মুখে বলতে শেখান; একটি কাগজে ছক এঁকে নিজে লিখুক।",
+   "prereqCodes": [
+    "LO-C1-BAN-SK-HW-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-54-01"
+   ],
+   "claudeNote": "পাঠ ৫৪-এর \"সরাসরি প্রশ্ন নেই\" — শ্রেণি পরীক্ষা ও বাড়ির কাজে; ছক পূরণ প্রশ্নপত্রে আসে না (সিদ্ধান্ত ২৮)।"
+  },
+  {
+   "code": "LO-C1-BAN-44-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BAN-FUNC",
+   "chapterNumber": 44,
+   "strand": null,
+   "labelBn": "চারপাশের লেখা (সাইনবোর্ড, নির্দেশ) পড়ে বোঝা ও নিজে লেখা",
+   "sourceText": "পাঠ ৪৪: চারপাশের লেখা ও সাইনবোর্ড পড়া; যুক্তবর্ণ স্ত। [ভাগ: চারপাশের লেখা ও সাইনবোর্ড পড়া]",
+   "bookRef": {
+    "chapter": 44,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT",
+    "QT-SENTENCE"
+   ],
+   "homeTipBn": "পথে যেতে দোকানের সাইনবোর্ড, দেয়ালের নির্দেশ পড়তে দিন (\"ফুল ছেঁড়া নিষেধ\") ও জিজ্ঞেস করুন — এখানে কী করা যাবে না?",
+   "prereqCodes": [],
+   "tagged": false,
+   "legacyCodes": [
+    "LO-C1-BAN-44-01"
+   ],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C1-BAN-44-01.1",
+   "level": "SUB",
+   "parentCode": "LO-C1-BAN-44-01",
+   "domainCode": "DOM-BAN-FUNC",
+   "chapterNumber": 44,
+   "strand": null,
+   "labelBn": "সাইনবোর্ড ও নির্দেশ-লেখা পড়ে কী বলা হয়েছে বোঝা",
+   "sourceText": "পাঠ ৪৪: চারপাশের লেখা ও সাইনবোর্ড পড়া; যুক্তবর্ণ স্ত। [ভাগ: সাইনবোর্ড পড়া]",
+   "bookRef": {
+    "chapter": 44,
+    "lesson": null,
+    "exercises": [
+     "44/যেতে যেতে পড়ি/1",
+     "44/বুঝে বলি/3",
+     "44/বুঝে লিখি/4",
+     "44/পড়ি/2"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C1-BAN-SK-READ-01.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-44-01"
+   ],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C1-BAN-44-01.2",
+   "level": "SUB",
+   "parentCode": "LO-C1-BAN-44-01",
+   "domainCode": "DOM-BAN-FUNC",
+   "chapterNumber": 44,
+   "strand": null,
+   "labelBn": "শ্রেণিকক্ষের জন্য ছোট নির্দেশ-লেখা বানানো",
+   "sourceText": "পাঠ ৪৪-এর অনুশীলনী \"আমিও লিখি — নিজের সাইনবোর্ড\"; শিখনফলে লেখার কথা নেই।",
+   "bookRef": {
+    "chapter": 44,
+    "lesson": null,
+    "exercises": [
+     "44/আমিও লিখি — নিজের সাইনবোর্ড/5"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SENTENCE"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C1-BAN-44-01.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "একটিই অনুশীলনী; পড়া পারে কিন্তু নিজে ছোট নির্দেশ-বাক্য বানাতে পারে না — আলাদা ধাপ। পর্যালোচক চাইলে ৩৫-০১-এ মেশাতে পারেন।"
+  },
+  {
+   "code": "LO-C1-BAN-SK-READ-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BAN-READ",
+   "chapterNumber": null,
+   "strand": "READ",
+   "labelBn": "বই দেখে শুদ্ধ উচ্চারণে সাবলীলভাবে পড়া",
+   "sourceText": "শিক্ষক-নির্দেশিকা ৯: \"শ্রুতলিপি, বানান ও পঠন নিয়মিত যাচাই করে শ্রেণি-রেকর্ডে লিখবেন\"; ৩: \"ছড়া ও কবিতা বই দেখে পড়া হবে; মুখস্থ করানো হবে না\"। পাঠ ৯: ছড়া বই দেখে পড়া।",
+   "bookRef": {
+    "chapter": null,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-RUBRIC"
+   ],
+   "homeTipBn": "প্রতিদিন পাঁচ মিনিট বইয়ের একটি অংশ জোরে পড়ে শোনাতে দিন; আঙুল রেখে পড়ুক। কোনো শব্দে আটকালে বর্ণ ভেঙে পড়তে সাহায্য করুন।",
+   "prereqCodes": [],
+   "tagged": false,
+   "legacyCodes": [
+    "LO-C1-BAN-SK-READ-01",
+    "LO-C1-BAN-09-01",
+    "LO-C1-BAN-19-01",
+    "LO-C1-BAN-27-01",
+    "LO-C1-BAN-40-01",
+    "LO-C1-BAN-46-01"
+   ],
+   "claudeNote": "পঠন প্রশ্নপত্রের বাইরে, শ্রেণি-রেকর্ডে (সিদ্ধান্ত ২১)। কোরাসে পড়া পদ্ধতি — রুব্রিক প্রতিটি শিশুর একক পড়ায়। তিন ধাপ: শব্দ পড়া, বাক্য-গল্প সাবলীল পড়া, ছড়া-কবিতা চরণ মেনে পড়া।"
+  },
+  {
+   "code": "LO-C1-BAN-SK-READ-01.1",
+   "level": "SUB",
+   "parentCode": "LO-C1-BAN-SK-READ-01",
+   "domainCode": "DOM-BAN-READ",
+   "chapterNumber": null,
+   "strand": "READ",
+   "labelBn": "শব্দ ভেঙে পড়া — কার ও যুক্তবর্ণের শব্দ",
+   "sourceText": "শিক্ষক-নির্দেশিকা ৯ (পঠন) [ভাগ: শব্দ পড়া]; পাঠ ২০: কার-শব্দ পড়া।",
+   "bookRef": {
+    "chapter": null,
+    "lesson": null,
+    "exercises": [
+     "20/কার-শব্দ সারি/1",
+     "20/আরও শব্দ পড়ি/2",
+     "21/কার-শব্দ সারি/1",
+     "21/আরও শব্দ পড়ি/2",
+     "23/কার-শব্দ সারি/1",
+     "23/আরও শব্দ পড়ি/2",
+     "24/কার-শব্দ সারি/1",
+     "24/আরও শব্দ পড়ি/2",
+     "25/কার-শব্দ সারি/1",
+     "25/আরও শব্দ পড়ি/2",
+     "28/কার-শব্দ সারি/1",
+     "28/আরও শব্দ পড়ি/2",
+     "29/কার-শব্দ সারি/1",
+     "29/আরও শব্দ পড়ি/2",
+     "10/পড়ি/5"
+    ]
+   },
+   "assess": "RUBRIC",
+   "questionTypeCodes": [
+    "QT-RUBRIC"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C1-BAN-10-01.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-SK-READ-01"
+   ],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C1-BAN-SK-READ-01.2",
+   "level": "SUB",
+   "parentCode": "LO-C1-BAN-SK-READ-01",
+   "domainCode": "DOM-BAN-READ",
+   "chapterNumber": null,
+   "strand": "READ",
+   "labelBn": "বাক্য ও গল্প থেমে থেমে শুদ্ধ উচ্চারণে পড়া",
+   "sourceText": "শিক্ষক-নির্দেশিকা ৯ (পঠন) [ভাগ: বাক্য ও গল্প]; বইয়ের উদ্দেশ্য: \"রিডিং পড়া ও লেখায় সাবলীলতা\"।",
+   "bookRef": {
+    "chapter": null,
+    "lesson": null,
+    "exercises": [
+     "5/পড়ি/5",
+     "6/পড়ি/4",
+     "7/পড়ি/5",
+     "8/পড়ি/5",
+     "11/পড়ি/4",
+     "12/পড়ি/4",
+     "14/পড়ি/4",
+     "15/পড়ি/4",
+     "16/পড়ি/4",
+     "17/পড়ি/5",
+     "18/পড়ি/4",
+     "20/পড়ি/5",
+     "21/পড়ি/5",
+     "23/পড়ি/5",
+     "24/পড়ি/5",
+     "25/পড়ি/5",
+     "28/পড়ি/5",
+     "29/পড়ি/5",
+     "26/পড়ি/6",
+     "31/পড়ি/4",
+     "32/পড়ি/6",
+     "34/পড়ি/4",
+     "13/শুনি ও পড়ি/1",
+     "30/শুনি ও পড়ি/1",
+     "48/শুনি ও পড়ি/1",
+     "22/শুনি ও বলি — গল্প/1",
+     "49/শুনি ও বলি — গল্প/1",
+     "33/পড়ার খেলা/7",
+     "41/তুলির ঘর/1",
+     "43/আজকের দিন/1",
+     "43/শুনি ও পড়ি/2",
+     "47/আমাদের দেশ/1",
+     "42/আগে পড়ি/1",
+     "52/আগে পড়ি/1",
+     "35/পড়ি ও লিখি/2"
+    ]
+   },
+   "assess": "RUBRIC",
+   "questionTypeCodes": [
+    "QT-RUBRIC"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C1-BAN-SK-READ-01.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-SK-READ-01"
+   ],
+   "claudeNote": "৩৩/পড়ার খেলা \"কে-কার বদলে ক্রিয়া বদলায়, খেয়াল করি\" — ব্যাকরণের পরিচয়, তবে কাজটা দ্রুত-শুদ্ধ পড়া।"
+  },
+  {
+   "code": "LO-C1-BAN-SK-READ-01.3",
+   "level": "SUB",
+   "parentCode": "LO-C1-BAN-SK-READ-01",
+   "domainCode": "DOM-BAN-READ",
+   "chapterNumber": null,
+   "strand": "READ",
+   "labelBn": "ছড়া-কবিতা বই দেখে চরণ মেনে পড়া",
+   "sourceText": "পাঠ ৯, ১৯, ২৭, ৪০, ৪৬: ছড়া/কবিতা বই দেখে পড়া (মুখস্থ নয় — সিদ্ধান্ত ১৭)।",
+   "bookRef": {
+    "chapter": null,
+    "lesson": null,
+    "exercises": [
+     "9/শুনি ও বলি — ছড়া/1",
+     "19/শুনি ও বলি — ছড়া/1",
+     "27/শুনি ও বলি — কবিতা/1",
+     "40/শুনি ও বলি — ছড়া/1",
+     "46/শুনি ও পড়ি — কবিতা/1",
+     "9/ছড়াটি দেখে পরের চরণটি বলি/6",
+     "27/কবিতাটি বলি/2",
+     "46/কবিতাটি পড়ি/2"
+    ]
+   },
+   "assess": "RUBRIC",
+   "questionTypeCodes": [
+    "QT-RUBRIC"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C1-BAN-SK-READ-01.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-09-01",
+    "LO-C1-BAN-19-01",
+    "LO-C1-BAN-27-01",
+    "LO-C1-BAN-40-01",
+    "LO-C1-BAN-46-01"
+   ],
+   "claudeNote": "পাঁচটি \"বই দেখে পড়ে\" সারি এক ধাপে। ছড়া-কবিতা মুখস্থ নয়, আবৃত্তি রুব্রিক তাই এখানে \"বই দেখে চরণ মেনে পড়া\"।"
+  },
+  {
+   "code": "LO-C1-BAN-SK-ORAL-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BAN-ORAL",
+   "chapterNumber": null,
+   "strand": "ORAL",
+   "labelBn": "গুছিয়ে মুখে বলা — নিজের কথা, গল্প ও প্রশ্নের উত্তর",
+   "sourceText": "শিক্ষক-নির্দেশিকা ১: \"আগে মুখে, তারপর লেখা — প্রতিটি লেখার কাজের আগে শিশু মুখে বলবে।\" পাঠ ১: সালাম দিয়ে নিজের পরিচয় বলা; পাঠ ৩: সহপাঠীর সাথে নাম-জিজ্ঞাসার সংলাপ বলা।",
+   "bookRef": {
+    "chapter": null,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-RUBRIC"
+   ],
+   "homeTipBn": "খাবার টেবিলে শিক্ষার্থীকে দিনের একটি ঘটনা বা বইয়ের গল্প নিজের ভাষায় বলতে দিন; মাঝখানে না থামিয়ে শেষে একটি প্রশ্ন করুন।",
+   "prereqCodes": [],
+   "tagged": false,
+   "legacyCodes": [
+    "LO-C1-BAN-SK-ORAL-01",
+    "LO-C1-BAN-01-01",
+    "LO-C1-BAN-03-01"
+   ],
+   "claudeNote": "মৌখিক কাজের সব অনুশীলনী তিন ধাপে: নিজের কথা, গল্প নিজের ভাষায়, শুনে-পড়ে মুখে উত্তর। আদব-ধরনের \"বলি\" (পাঠ ২, ৩৮, ৪৪, ৪৫, ৪৭) এখানে বলার কাজ হিসেবে; আদব নিজে বাংলার শিখনফল নয় (প্রশ্নপত্রের বাইরে আলাদা রেকর্ড)।"
+  },
+  {
+   "code": "LO-C1-BAN-SK-ORAL-01.1",
+   "level": "SUB",
+   "parentCode": "LO-C1-BAN-SK-ORAL-01",
+   "domainCode": "DOM-BAN-ORAL",
+   "chapterNumber": null,
+   "strand": "ORAL",
+   "labelBn": "সালাম, পরিচয় ও নিজের কথা গুছিয়ে বলা",
+   "sourceText": "পাঠ ১: সালাম দিয়ে নিজের পরিচয় বলা এবং পাঁচ বাক্যে লেখা। · পাঠ ৩: সহপাঠীর সাথে নাম-জিজ্ঞাসার সংলাপ বলা; শুনে নাম লেখা। [ভাগ: পরিচয় বলা / সংলাপ বলা]",
+   "bookRef": {
+    "chapter": null,
+    "lesson": null,
+    "exercises": [
+     "1/সালাম দিয়ে শুরু করি/1",
+     "1/গুছিয়ে পরিচয় বলি/2",
+     "2/শুনি ও বলি/1",
+     "2/আমার বিদ্যালয়ের কথা বলি/2",
+     "2/আমার শ্রেণিকক্ষে কী কী আছে/3",
+     "2/বিদ্যালয়ের আদব বলি/4",
+     "3/শুনি ও বলি/1",
+     "3/জোড়ায় করি/2",
+     "4/শুনি ও বলি/1",
+     "4/নিজের মতো বলি/2",
+     "9/নিজের জানা আরেকটি ছড়া বলি/8",
+     "38/আদব বলি/3",
+     "41/মুখে বলি/4",
+     "42/ভেবে বলি/2",
+     "42/বন্ধুর লেখা শুনি/4",
+     "52/ভেবে বলি/2",
+     "52/বন্ধুর লেখা শুনি/4",
+     "44/ভালো অভ্যাস বলি/7",
+     "45/পরিষ্কার থাকার অভ্যাস বলি/4",
+     "47/আমাদের দেশ সম্পর্কে বলি/2",
+     "47/শুকরিয়া বলি/8"
+    ]
+   },
+   "assess": "RUBRIC",
+   "questionTypeCodes": [
+    "QT-RUBRIC"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-01-01",
+    "LO-C1-BAN-03-01",
+    "LO-C1-BAN-SK-ORAL-01",
+    "LO-C1-BAN-02-02"
+   ],
+   "claudeNote": "\"বন্ধুর লেখা শুনি\" (৪২, ৫২) মন দিয়ে শোনা ও মন্তব্য — বলার রুব্রিকেই ধরা হলো; আলাদা শোনার সারি করা হয়নি।"
+  },
+  {
+   "code": "LO-C1-BAN-SK-ORAL-01.2",
+   "level": "SUB",
+   "parentCode": "LO-C1-BAN-SK-ORAL-01",
+   "domainCode": "DOM-BAN-ORAL",
+   "chapterNumber": null,
+   "strand": "ORAL",
+   "labelBn": "পড়া গল্প নিজের ভাষায় বলা",
+   "sourceText": "পাঠ ১৩, ৩০, ৪৮-এর অনুশীলনী \"গল্পটি নিজের ভাষায় বলি\"; শিক্ষক-নির্দেশিকা ১ (আগে মুখে)।",
+   "bookRef": {
+    "chapter": null,
+    "lesson": null,
+    "exercises": [
+     "13/গল্পটি নিজের ভাষায় বলি/9",
+     "30/গল্পটি নিজের ভাষায় বলি/9",
+     "48/গল্পটি নিজের ভাষায় বলি/8"
+    ]
+   },
+   "assess": "RUBRIC",
+   "questionTypeCodes": [
+    "QT-RUBRIC"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C1-BAN-13-01.4"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C1-BAN-SK-ORAL-01.3",
+   "level": "SUB",
+   "parentCode": "LO-C1-BAN-SK-ORAL-01",
+   "domainCode": "DOM-BAN-ORAL",
+   "chapterNumber": null,
+   "strand": "ORAL",
+   "labelBn": "শোনা বা পড়া অংশ নিয়ে প্রশ্নের উত্তর মুখে বলা",
+   "sourceText": "পাঠ ৯ ও ১৯-এর অনুশীলনী \"মুখে মুখে উত্তর বলি\"; শিক্ষক-নির্দেশিকা ১।",
+   "bookRef": {
+    "chapter": null,
+    "lesson": null,
+    "exercises": [
+     "9/মুখে মুখে উত্তর বলি/2",
+     "19/মুখে মুখে উত্তর বলি/3",
+     "9/বুঝে বলি/3",
+     "13/বুঝে বলি/3",
+     "22/বুঝে বলি/3",
+     "27/বুঝে বলি/3",
+     "30/বুঝে বলি/3",
+     "36/বুঝে বলি/6",
+     "37/বুঝে বলি/5",
+     "38/বুঝে বলি/5",
+     "39/বুঝে বলি/6",
+     "40/বুঝে বলি/3",
+     "45/বুঝে বলি/6",
+     "46/বুঝে বলি/3",
+     "48/বুঝে বলি/2",
+     "49/বুঝে বলি/3",
+     "43/বলি/3"
+    ]
+   },
+   "assess": "RUBRIC",
+   "questionTypeCodes": [
+    "QT-RUBRIC"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C1-BAN-SK-ORAL-01.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "মুখের উত্তর লেখার আগের ধাপ; লিখিত রূপ ১৩-০১ ও ৩৩-০১-এ।"
+  },
+  {
+   "code": "LO-C1-BAN-SK-HW-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BAN-HAND",
+   "chapterNumber": null,
+   "strand": "HW",
+   "labelBn": "দেখে সুন্দর করে লেখা — মাত্রা, শব্দের মাঝে ফাঁক, দাঁড়ি",
+   "sourceText": "শিক্ষক-নোট: \"লিখি\" অংশ অনুলিখন — যাচাই; বইয়ের \"মনে রাখি\": \"প্রতি বাক্যের শেষে দাঁড়ি; শব্দের মাঝে ফাঁক।\"",
+   "bookRef": {
+    "chapter": null,
+    "lesson": null,
+    "exercises": [
+     "14/লিখি/5",
+     "15/লিখি/5",
+     "16/লিখি/5",
+     "17/লিখি/6",
+     "18/লিখি/5",
+     "20/লিখি/6",
+     "21/লিখি/6",
+     "23/লিখি/6",
+     "24/লিখি/6",
+     "25/লিখি/6",
+     "28/লিখি/6",
+     "29/লিখি/6",
+     "31/লিখি/5",
+     "9/ছড়াটি দেখে দুই চরণ লিখি/7",
+     "19/ছড়াটি দেখে দুই চরণ লিখি/7",
+     "40/ছড়াটি দেখে দুই চরণ লিখি/7",
+     "27/কবিতাটি বলি/2",
+     "46/কবিতাটি পড়ি/2",
+     "36/ফলের নাম পড়ি ও লিখি/1",
+     "36/ফুলের নাম পড়ি ও লিখি/2",
+     "37/নাম পড়ি ও লিখি/1",
+     "38/সম্পর্কের নাম পড়ি ও লিখি/1",
+     "45/অঙ্গের নাম পড়ি ও লিখি/1",
+     "51/রঙের নাম পড়ি ও লিখি/1",
+     "51/চার দিকের নাম পড়ি ও লিখি/3",
+     "35/পড়ি ও লিখি/2",
+     "10/হাত ঘুরাই ও নিজে লিখি/3"
+    ]
+   },
+   "assess": "RUBRIC",
+   "questionTypeCodes": [
+    "QT-RUBRIC"
+   ],
+   "homeTipBn": "খাতায় প্রতিদিন বইয়ের একটি বাক্য দেখে লিখতে দিন; মাত্রা টানা, শব্দের মাঝে আঙুল-সমান ফাঁক আর শেষে দাঁড়ি আছে কি না একসাথে দেখুন।",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-SK-HW-01"
+   ],
+   "claudeNote": "পরিশিষ্টে আলাদা রেকর্ড-ঘর নেই, শিক্ষক-নোটে যাচাইয়ের নির্দেশ। \"নাম পড়ি ও লিখি\" (ডটেড + খালি সারি) এখানে — শব্দভান্ডারের সারিগুলোতেও উদ্ধৃত।"
+  },
+  {
+   "code": "LO-C1-BAN-SK-DICT-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BAN-HAND",
+   "chapterNumber": null,
+   "strand": "DICT",
+   "labelBn": "শুনে লেখা (শ্রুতলিপি)",
+   "sourceText": "পাঠ ৩: শুনে নাম লেখা; শিক্ষক-নির্দেশিকা ৯ — শ্রুতলিপি নিয়মিত যাচাই করে শ্রেণি-রেকর্ডে।",
+   "bookRef": {
+    "chapter": null,
+    "lesson": null,
+    "exercises": [
+     "3/শুনে লিখি/3"
+    ]
+   },
+   "assess": "RUBRIC",
+   "questionTypeCodes": [
+    "QT-RUBRIC"
+   ],
+   "homeTipBn": "সপ্তাহে দুই দিন বইয়ের পাঁচটি শব্দ বা একটি ছোট বাক্য ধীরে বলুন; শিক্ষার্থী শুনে লিখুক, পরে বই মিলিয়ে নিজে ভুল খুঁজুক।",
+   "prereqCodes": [
+    "LO-C1-BAN-SK-HW-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-SK-DICT-01",
+    "LO-C1-BAN-03-02"
+   ],
+   "claudeNote": "বইয়ে লিখিত অনুশীলনী একটিই (পাঠ ৩); শ্রুতলিপি সারা বছর শ্রেণি-রেকর্ডে (সিদ্ধান্ত ২১)।"
+  },
+  {
+   "code": "LO-C1-BAN-SK-SPELL-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BAN-SPELL",
+   "chapterNumber": null,
+   "strand": "SPELL",
+   "labelBn": "নিজের লেখায় শুদ্ধ বানান",
+   "sourceText": "শিক্ষক-নির্দেশিকা ৯: বানান নিয়মিত যাচাই করে শ্রেণি-রেকর্ডে; পাঠ ৪০: কবির রূপ \"বিষ্টি\" বনাম শুদ্ধ \"বৃষ্টি\"; পাঠ ১৮: ওষুধ-ঔষধ দুই রূপ জানা।",
+   "bookRef": {
+    "chapter": null,
+    "lesson": null,
+    "exercises": [
+     "40/শব্দ বলি/2",
+     "18/ঔ — শব্দ শিখি/2"
+    ]
+   },
+   "assess": "RUBRIC",
+   "questionTypeCodes": [
+    "QT-RUBRIC"
+   ],
+   "homeTipBn": "শ্রুতলিপি বা খাতার লেখায় যে বানান ভুল হলো, সেগুলো একটি তালিকায় রাখুন; পরের দিন সেই শব্দগুলো আবার লিখতে দিন।",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-SK-SPELL-01",
+    "LO-C1-BAN-18-02",
+    "LO-C1-BAN-40-03"
+   ],
+   "claudeNote": "বানান প্রশ্নপত্রের বাইরে, শ্রেণি-রেকর্ডে (সিদ্ধান্ত ২১)। লিখিত বানান-খেলা (খালি ঘরে বর্ণ, এলোমেলো সাজানো) আলাদা শিখনফল ৫০-০১।"
+  },
+  {
+   "code": "LO-C1-BAN-SK-VOC-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BAN-VOCAB",
+   "chapterNumber": null,
+   "strand": "VOC",
+   "labelBn": "পাঠের নতুন শব্দের অর্থ বলা ও লেখা (শব্দার্থ)",
+   "sourceText": "পাঠ ১৪, ১৬, ১৭: শব্দ পড়া ও অর্থ বলা; শিক্ষক-নির্দেশিকা — শব্দার্থ (১০ | ১০): \"শব্দার্থ\", \"অর্থ বুঝে বলি\" — পাঠ ১৩–২৫, ২৮–৩০, ৪৯।",
+   "bookRef": {
+    "chapter": null,
+    "lesson": null,
+    "exercises": [
+     "13/শব্দার্থ/2",
+     "22/শব্দার্থ/2",
+     "30/শব্দার্থ/2",
+     "49/শব্দার্থ/2",
+     "14/অর্থ বুঝে বলি/3",
+     "15/অর্থ বুঝে বলি/3",
+     "16/অর্থ বুঝে বলি/3",
+     "17/অর্থ বুঝে বলি/4",
+     "18/অর্থ বুঝে বলি/3",
+     "20/অর্থ বুঝে বলি/4",
+     "21/অর্থ বুঝে বলি/4",
+     "23/অর্থ বুঝে বলি/4",
+     "24/অর্থ বুঝে বলি/4",
+     "25/অর্থ বুঝে বলি/4",
+     "28/অর্থ বুঝে বলি/4",
+     "29/অর্থ বুঝে বলি/4",
+     "19/শব্দ বলি/2",
+     "40/শব্দ বলি/2"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-WORDMEANING"
+   ],
+   "homeTipBn": "পাঠের \"অর্থ বুঝে বলি\" শব্দগুলো খাতায় লিখে রাখুন; রোজ দুটি শব্দের অর্থ জিজ্ঞেস করুন ও শব্দটি দিয়ে একটি বাক্য বলতে দিন।",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-SK-VOC-01",
+    "LO-C1-BAN-14-02",
+    "LO-C1-BAN-16-02",
+    "LO-C1-BAN-17-02"
+   ],
+   "claudeNote": "প্রশ্নপত্রের প্র. ৫ \"শব্দার্থ লেখ\" (১০×১)। পাঠে পাঠে একই দক্ষতা, তাই দক্ষতা-ধারা।"
+  },
+  {
+   "code": "LO-C1-BAN-SK-ANS-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BAN-SENT",
+   "chapterNumber": null,
+   "strand": "ANS",
+   "labelBn": "প্রশ্নের শব্দ দিয়ে শুরু করে পূর্ণ বাক্যে উত্তর লেখা, শেষে দাঁড়ি",
+   "sourceText": "শিক্ষক-নির্দেশিকা ২: \"প্রশ্নের উত্তর প্রশ্নের শব্দ দিয়ে শুরু হবে, পূর্ণ বাক্য লিখবে ও শেষে দাঁড়ি থাকবে।\" পাঠ ৩৫: প্রশ্নের শব্দ দিয়ে পূর্ণ বাক্যে উত্তর।",
+   "bookRef": {
+    "chapter": null,
+    "lesson": null,
+    "exercises": [
+     "26/পূর্ণ বাক্যে উত্তর লিখি/7",
+     "32/পূর্ণ বাক্যে উত্তর লিখি/7",
+     "34/পূর্ণ বাক্যে উত্তর লিখি/5",
+     "35/প্রশ্ন থেকে উত্তর/4",
+     "38/বুঝে লিখি/6",
+     "39/বুঝে লিখি/7",
+     "45/বুঝে লিখি/7"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SHORT"
+   ],
+   "homeTipBn": "যেকোনো প্রশ্নের উত্তর এক শব্দে দিলে থামিয়ে বলুন — \"পুরো বাক্যে বলো\": \"কাক কী করে?\" → \"কাক ডাকে।\"",
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-SK-WRITE-01",
+    "LO-C1-BAN-26-03",
+    "LO-C1-BAN-32-03",
+    "LO-C1-BAN-35-02"
+   ],
+   "claudeNote": "প্রশ্নপত্রের প্র. ২ \"প্রশ্নোত্তর — পূর্ণ বাক্যে\"-এর বাক্য-অংশ। ২৬/৩২/৩৪ ও ৩৫-এর প্রশ্ন সাধারণ জ্ঞানের — যা মাপা হয় তা পূর্ণ বাক্য বানানো। পাঠ ৩৮, ৩৯, ৪৫-এর \"বুঝে লিখি\" নিজের ও পরিবারের কথা জানতে চায় — একই কাজ।"
+  },
+  {
+   "code": "LO-C1-BAN-50-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-BAN-SPELL",
+   "chapterNumber": 50,
+   "strand": null,
+   "labelBn": "শব্দের হারানো বর্ণ বসানো ও এলোমেলো বর্ণ সাজিয়ে শব্দ লেখা",
+   "sourceText": "পাঠ ৫০: শব্দ-শিকল খেলা; খালি ঘরে বর্ণ; এলোমেলো বর্ণ সাজিয়ে শব্দ। · পাঠ ৩৪: বিপরীত শব্দ (১১–১৫), ফলাচিহ্ন (্য, র্, ্র), শ–ষ–স আলাদা করা। [ভাগ: খালি ঘরে বর্ণ; এলোমেলো বর্ণ সাজিয়ে শব্দ; শ–ষ–স আলাদা করা]",
+   "bookRef": {
+    "chapter": 50,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-FILL",
+    "QT-ORDER"
+   ],
+   "homeTipBn": "চেনা শব্দ থেকে একটি বর্ণ মুছে লিখুন (কল__ → কলম); শিক্ষার্থী হারানো বর্ণ বসাক। বর্ণ এলোমেলো করে (লাতা) ঠিক শব্দ (তালা) বানাতে দিন।",
+   "prereqCodes": [],
+   "tagged": false,
+   "legacyCodes": [
+    "LO-C1-BAN-50-02",
+    "LO-C1-BAN-50-03",
+    "LO-C1-BAN-34-03"
+   ],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C1-BAN-50-01.1",
+   "level": "SUB",
+   "parentCode": "LO-C1-BAN-50-01",
+   "domainCode": "DOM-BAN-SPELL",
+   "chapterNumber": 50,
+   "strand": null,
+   "labelBn": "শব্দের খালি ঘরে ঠিক বর্ণ বসানো (শ, ষ, স সহ)",
+   "sourceText": "পাঠ ৫০: শব্দ-শিকল খেলা; খালি ঘরে বর্ণ; এলোমেলো বর্ণ সাজিয়ে শব্দ। · পাঠ ৩৪: বিপরীত শব্দ (১১–১৫), ফলাচিহ্ন (্য, র্, ্র), শ–ষ–স আলাদা করা। [ভাগ: খালি ঘরে বর্ণ / শ–ষ–স]",
+   "bookRef": {
+    "chapter": 50,
+    "lesson": null,
+    "exercises": [
+     "26/খালি ঘরে বর্ণ বসাই/4",
+     "32/খালি ঘরে বর্ণ বসাই/4",
+     "34/তিন বর্ণ, এক পরীক্ষা/3",
+     "50/আরও শব্দ-খেলা/3"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-FILL"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C1-BAN-14-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-50-02",
+    "LO-C1-BAN-34-03"
+   ],
+   "claudeNote": "৩৪/তিন বর্ণ (শ–ষ–স) একই কাজ — খালি ঘরে কোন বর্ণ; তাই আলাদা সারি নয়। প্রশ্নপত্রের \"শূন্যস্থান\" নয় (সেটি বাক্যে শব্দ — ৪৬-০১)।"
+  },
+  {
+   "code": "LO-C1-BAN-50-01.2",
+   "level": "SUB",
+   "parentCode": "LO-C1-BAN-50-01",
+   "domainCode": "DOM-BAN-SPELL",
+   "chapterNumber": 50,
+   "strand": null,
+   "labelBn": "এলোমেলো বর্ণ সাজিয়ে শব্দ লেখা",
+   "sourceText": "পাঠ ৫০: শব্দ-শিকল খেলা; খালি ঘরে বর্ণ; এলোমেলো বর্ণ সাজিয়ে শব্দ। [ভাগ: এলোমেলো বর্ণ সাজিয়ে শব্দ]",
+   "bookRef": {
+    "chapter": 50,
+    "lesson": null,
+    "exercises": [
+     "26/এলোমেলো সাজাই/5",
+     "32/এলোমেলো সাজাই/5"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-ORDER"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C1-BAN-14-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C1-BAN-50-03"
+   ],
+   "claudeNote": "এলোমেলো সাজানো প্রশ্নপত্রে আসে না (সিদ্ধান্ত ২৮) — শ্রেণি পরীক্ষায়।"
+  }
+ ],
+ "coverage": {
+  "exercisesTotal": 343,
+  "mapped": 343,
+  "unmapped": [],
+  "note": "exercisesTotal = the print's exercise blocks (343): প্রথম শ্রেণির বই অনুশীলনীতে নম্বর দেয় না, তাই প্রতিটি পাঠের প্রতিটি শিরোনাম-যুক্ত অংশ (SectionHead — \"বুঝে লিখি\", \"পড়ি\", \"অর্থ বুঝে বলি\" …) একটি অনুশীলনী ধরা হয়েছে; ref = পাঠ/শিরোনাম/পাঠের ভেতরে ক্রম। মুখের কাজের অংশগুলো (বলি, পড়ি, শুনি) রুব্রিকের দক্ষতা-ধারায় গেছে। \"লেখার পাতা\" (খালি খাতার পাতা) গোনা হয়নি।"
+ },
+ "flags": [
+  {
+   "code": null,
+   "kind": "VERSION_DIFF",
+   "text": "ছাপা ফাইল v7.4 (IDML) আর Word v7.4 লেখক-পর্যালোচক কপির পাঠ, অনুশীলনী ও প্রশ্ন হুবহু এক (README: লেখা v7.3-এর সমান, v7.4-এ শুধু ২৩টি ছবি)। পার্থক্য শুধু শিরোনামের স্তরে: পাঠ ৮, ১০, ৩৩, ৪৩ ও ৪৭-এ ছাপায় কয়েকটি অংশ আলাদা শিরোনাম (\"প্রতিটি কারের একটি শব্দ বলি\", \"বলি ও লিখি\", \"শুনি ও পড়ি\", \"বলি\", \"আমাদের দেশ সম্পর্কে বলি\" …), Word-এ সাধারণ লাইন; পাঠ ৮-এ Word-এর শিক্ষক-নির্দেশনার লাইনটি শিরোনাম-স্টাইলে, ছাপায় নেই। অনুশীলনীর তালিকা ছাপা ধরে (৩৪৩টি অংশ)।"
+  },
+  {
+   "code": null,
+   "kind": "OTHER",
+   "text": "বইয়ের অনুশীলনীতে কোনো নম্বর নেই — প্রতিটি পাঠে শিরোনাম-যুক্ত অংশ। তাই কভারেজ গোনা হয়েছে অংশ ধরে (পাঠ/শিরোনাম/ক্রম)। বই-দল চাইলে পরের সংস্করণে অনুশীলনী নম্বর দিলে প্রশ্ন-ব্যাংক ও শিখনফলের রেফারেন্স সহজ হবে।"
+  },
+  {
+   "code": "LO-C1-BAN-36-02",
+   "kind": "OTHER",
+   "text": "বার্ষিক প্র. ১০ \"এক কথায় উত্তর\"-এর ঘোষিত পরিধি \"সপ্তাহ, মাস, ঋতু, দিক, রং\" (সিদ্ধান্ত ২৭, পরিশিষ্ট ৩), কিন্তু শিক্ষক-নির্দেশিকার প্রস্তুতি-তালিকা ও পাঠ ৩৩, ৩৬, ৩৭-এর \"পরীক্ষায় যা আসবে\"-তে জাতীয় মাছ, জাতীয় ফল-ফুল, পাখি-পশুর নামও \"এক কথায় উত্তর\"। কোনটি ঠিক — পরিধি বাড়বে, না নোট বদলাবে? (আগের খসড়ার নোটেও একই প্রশ্ন ছিল।)"
+  },
+  {
+   "code": "LO-C1-BAN-46-01",
+   "kind": "WORDING_RULE_CONFLICT",
+   "text": "পাঠ ৪৬ \"খালি জায়গায় শব্দ লিখি\" কবিতার চরণ দিয়ে শূন্যস্থান (\"মেঘের কোলে ______ হেসেছে\")। পরিশিষ্ট ৮-এর নিয়ম: \"শূন্যস্থানে কবিতার লাইন দেওয়া যাবে না\"। অনুশীলনী হিসেবে রাখা যায়, তবে এটি প্রশ্নপত্রের শূন্যস্থানের প্রস্তুতি নয় — প্রশ্ন-ব্যাংকে এই ধরনের প্রশ্ন ৪৬-০১-এ নেওয়া যাবে না। বই-দল চাইলে অনুশীলনীটি গদ্য বাক্যে বদলাতে পারে।"
+  },
+  {
+   "code": "LO-C1-BAN-46-01",
+   "kind": "OTHER",
+   "text": "শিক্ষক-নির্দেশিকার প্রস্তুতি-তালিকা বলে শূন্যস্থানের অনুশীলনী আছে পাঠ ১৩, ৩৩, ৩৯, ৪৬, ৪৭-এ। পাঠ ১৩ ও ৩৯-এ কোনো শূন্যস্থান-অনুশীলনী নেই (১৩-এর \"বুঝে লিখি\"-তে শুধু উত্তরের খালি ঘর)। বছরে শূন্যস্থানের লিখিত অনুশীলনী মাত্র তিনটি (৩৩, ৪৬, ৪৭), অথচ প্রশ্নপত্রে ১০ নম্বর — বই-দলকে জানানো দরকার।"
+  },
+  {
+   "code": "LO-C1-BAN-52-01.2",
+   "kind": "OTHER",
+   "text": "পাঠ ৪৭-এ \"আমাদের দেশ নিয়ে পাঁচটি বাক্য লিখি\" (শিখনফল: \"দেশ নিয়ে পাঁচ বাক্য\") ছাপায় আলাদা অনুশীলনী নয় — \"আরও লিখি\" (রঙের শব্দ) অংশের ভেতরে \"বলি\" ও \"লিখি\" উপ-শিরোনাম হয়ে আছে, লেখার লাইনও নেই। বই-দল এটিকে আলাদা অংশ করলে ভালো।"
+  },
+  {
+   "code": "LO-C1-BAN-10-01.2",
+   "kind": "OTHER",
+   "text": "পাঠ ১২-এর শিরোনাম ও শিখনফল \"প–য় বর্ণের সাথে কার মিলিয়ে রূপ গড়া\", কিন্তু ছাপার README অনুযায়ী ছকে শুধু প–হ সারি; ড় ঢ় য়-এর সারি নেই। হয় ছকে সারি যোগ হবে, নয়তো শিখনফল/শিরোনাম \"প–হ\" হবে।"
+  },
+  {
+   "code": "LO-C1-BAN-SK-VOC-01",
+   "kind": "OTHER",
+   "text": "শব্দার্থের উৎস-শব্দে অপঠিত যুক্তবর্ণ: পাঠ ১৪–১৮-এর \"শব্দ শিখি\" ও \"অর্থ বুঝে বলি\"-তে ঐশ্বর্য, ঐকমত্য, ঐতিহ্য, ঐচ্ছিক, ঊর্ধ্ব, ঊর্মি, উর্বর, উর্দি, ঈর্ষা, উত্তর, ইসলাম; পাঠ ৫-এ ঐক্য, পাঠ ৬-এ অঞ্চল — অথচ বছরের ১৬টি যুক্তবর্ণ শুরু হয় পাঠ ২৬ থেকে (সিদ্ধান্ত ৭) আর ফলা পাঠ ৩৪-এ। শব্দার্থ প্রশ্নপত্রে ১০ নম্বর; এই শব্দগুলো লিখতে হলে শিশু যুক্তবর্ণ জানে না। \"ঔরস — নিজের সন্তান বোঝাতে ব্যবহৃত শব্দ\" প্রথম শ্রেণির জন্য কঠিন ও অপ্রয়োজনীয় মনে হয়। বই-দল দেখুক: শব্দগুলো শুধু পড়ার জন্য (প্রশ্নে নয়), না বদলাবে?"
+  },
+  {
+   "code": "LO-C1-BAN-49-01",
+   "kind": "OTHER",
+   "text": "\"একবচন-বহুবচন খেয়াল করি\" (পাঠ ৪৯) পাঠের শিখনফলে নেই, প্রশ্নপত্রে নেই, অনুশীলনী শুধু \"খেয়াল করি\"। সারিটি রাখা হয়েছে দ্বিতীয় শ্রেণির বচনের আগের ধাপ হিসেবে, রুব্রিকে। Claude দ্বিতীয় পাঠ (প্রস্তাব): পর্যালোচক চাইলে বাদ দিন — তখন অনুশীলনীটি \"এ বছর মূল্যায়ন নয়\" কারণে অমিলিত থাকবে।"
+  },
+  {
+   "code": "LO-C1-BAN-SK-ORAL-01.1",
+   "kind": "OTHER",
+   "text": "আদব-ধরনের অংশ (\"বিদ্যালয়ের আদব বলি\" ২, \"আদব বলি\" ৩৮, \"ভালো অভ্যাস বলি\" ৪৪, \"পরিষ্কার থাকার অভ্যাস বলি\" ৪৫, \"শুকরিয়া বলি\" ৪৭) মুখে বলার কাজ হিসেবে এই সারিতে। পাঠ ২-এর শিখনফল \"বিদ্যালয়ের আদব জানা\" আলাদা সারি করা হয়নি: আদব-আখলাক প্রশ্নপত্রের বাইরে আলাদা শ্রেণি-রেকর্ডে (সিদ্ধান্ত ২১), বাংলার দক্ষতা নয়। আগের খসড়ার LO-C1-BAN-02-02 তাই অবসরে।"
+  },
+  {
+   "code": "LO-C1-BAN-34-01",
+   "kind": "OTHER",
+   "text": "Claude দ্বিতীয় পাঠ (প্রস্তাব): তিন ফলা তিনটি উপ-শিখনফল, কিন্তু অনুশীলনী একটিই (৩৪/ফলাচিহ্ন চিনি ও লিখি)। রাখার কারণ — রেফ বনাম র-ফলা গুলিয়ে ফেলা আলাদা ভুল, আর বার্ষিকে \"কমপক্ষে ২টি ফলা\" চাওয়া হয়। পর্যালোচক ভারী মনে করলে ৩৪-০১-কে একটি যাচাইযোগ্য শিখনফল করুন।"
+  },
+  {
+   "code": "LO-C1-BAN-31-01.2",
+   "kind": "DUPLICATE",
+   "text": "Claude দ্বিতীয় পাঠ (প্রস্তাব): চন্দ্রবিন্দুর সারির অনুশীলনী একটিই, মৌখিক (\"চন্দ্রবিন্দুর কাজ শুনি\")। প্রশ্নপত্রে এর নিজস্ব প্রশ্ন নেই। ৩১-০১.১-এ মিশিয়ে ৩১-০১-কে একটি যাচাইযোগ্য শিখনফল করা যায়; আলাদা রাখলে ভালো — চন্দ্রবিন্দু বাদ দেওয়া খুব সাধারণ বানান-ভুল।"
+  },
+  {
+   "code": "LO-C1-BAN-19-01",
+   "kind": "DUPLICATE",
+   "text": "Claude দ্বিতীয় পাঠ (প্রস্তাব): ধ্বনি-শব্দ (ঝক ঝকাঝক) একটিই মৌখিক অনুশীলনী; পাঠ ১৯-এর শিখনফলে আছে বলে রাখা হলো। শব্দার্থের দক্ষতা-ধারায় (SK-VOC-01) মেশানো যায়।"
+  },
+  {
+   "code": "LO-C1-BAN-15-01",
+   "kind": "OTHER",
+   "text": "Claude দ্বিতীয় পাঠ (প্রস্তাব): প্রথম ধ্বনি চেনা রুব্রিক রাখা হয়েছে (শিক্ষক-নোট: শিক্ষক বলবেন, শিশু বর্ণ বলবে)। কিন্তু ই/ঈ, উ/ঊ গুলিয়ে ফেলা পরে বানানে আসে — লিখিত ✓-প্রশ্ন (\"ঈদ শব্দটি কোন বর্ণ দিয়ে শুরু?\") দিয়েও মাপা যায়। পর্যালোচক প্রশ্ন চাইলে assess = প্রশ্ন, QT-TICK।"
+  },
+  {
+   "code": "LO-C1-BAN-13-01.6",
+   "kind": "OTHER",
+   "text": "Claude দ্বিতীয় পাঠ (প্রস্তাব): পাঁচ গল্পের মূল্যবোধ (সত্যবাদিতা ১৩, সাদাকা ২২, উপকার ৩০, অহংকার নয় ৪৮, বড়দের সাহায্য ৪৯) একটি দক্ষতা-সারিতে — \"গল্প থেকে শিক্ষা বের করা\"। মালিক যদি প্রতিটি মূল্যবোধ আলাদা করে দেখতে চান (অভিভাবককে \"সত্য বলার শিক্ষা\" দেখানো), তবে পাঁচটি আলাদা উপ-শিখনফল হবে — কিন্তু তখন একই দক্ষতা পাঁচবার, যা \"একবার এক শ্রেণিতে\" নিয়মের বাইরে।"
+  },
+  {
+   "code": "LO-C1-BAN-SK-ANS-01",
+   "kind": "OTHER",
+   "text": "Claude দ্বিতীয় পাঠ (প্রস্তাব): পাঠ ৩৮, ৩৯, ৪৫-এর \"বুঝে লিখি\" পাঠের লেখা নয়, শিশুর নিজের ও পরিবারের কথা জানতে চায় (\"দাদা কে হন?\", \"বড়দের সালাম দিই কেন?\") — তাই এগুলো পড়ে-বোঝার সারিতে না দিয়ে পূর্ণ বাক্যের দক্ষতা-ধারায় দেওয়া হলো। পাঠ ৩৬, ৩৭, ৪১, ৪৩, ৪৭-এর \"বুঝে লিখি\" পাঠের তথ্য থেকে — সেগুলো ৩৩-০১.১-এ।"
+  }
+ ],
+ "reviewerNotes": "## পর্যালোচকের নোট (মাহজাবিন — আগে পড়ুন)\n\n**কীভাবে পড়বেন।** ✓ চিহ্নের প্রতিটি সারি একটি দক্ষতা — প্রশ্ন, রুব্রিক ও বাড়ির কাজ এই সারি ধরেই ট্যাগ হবে। ✓ ছাড়া শিখনফল শুধু দল (তার উপ-শিখনফল যোগ হয়ে তার অবস্থা); অভিভাবকেরা শুধু শিখনফলের নাম ও বাড়ির টিপস দেখবেন। বাংলার এটিই প্রথম বৃক্ষ — `domains/BAN.json`-এর ১২টি ক্ষেত্র এখান থেকেই শুরু।\n\n**আগে এগুলো দেখুন (Claude-এর বিচার):**\n1. **অনুশীলনী গোনা হয়েছে অংশ ধরে।** বইয়ে অনুশীলনী নম্বর নেই; প্রতিটি পাঠের প্রতিটি শিরোনাম-যুক্ত অংশ (\"বুঝে লিখি\", \"পড়ি\", \"অর্থ বুঝে বলি\" …) একটি অনুশীলনী — মোট ৩৪৩টি, সবগুলো কোনো না কোনো সারিতে। মুখের অংশগুলো (বলি, পড়ি, শুনি) রুব্রিকের দক্ষতা-ধারায়।\n2. **পাঠে পাঠে একই দক্ষতা এক সারিতে।** আগের খসড়ার ১০৮টি পাঠভিত্তিক LO-র জায়গায় ৬২টি যাচাইযোগ্য সারি: পাঁচ গল্প + পাঁচ কবিতার \"বুঝে লিখি\" → ১৩-০১ (ছয় ধাপ); আট পাঠের যুক্তবর্ণ → ২৬-০১ (ভাঙা / শব্দ); তিন চর্চা-পাঠের বিপরীত শব্দ → ২৬-০২; সাত পাঠের কার-পরিবার → ২০-০১; সব পাঁচ-বাক্যের লেখা → ৫২-০১ (খালি ঘর → নিজে লেখা → গল্প)। কোন গল্প বা কোন যুক্তবর্ণে দুর্বল, তা প্রশ্নের আইটেম থেকেই দেখা যাবে।\n3. **ক্ষেত্রের মই (১২টি) — কেন এভাবে।** শোনা-বলা · বর্ণ-কার · যুক্তবর্ণ-ফলা · শব্দভান্ডার · পড়া ও বোঝা · ছড়া-কবিতা · হাতের লেখা-শ্রুতলিপি · বানান · বাক্য গঠন · ব্যাকরণ · অনুচ্ছেদ-রচনা · চিঠি-ফরম। যুক্তবর্ণ কার থেকে আলাদা (শিশুরা আলাদা ভাবে দুর্বল হয়, প্রশ্নপত্রে আলাদা প্রশ্ন); কবিতা আলাদা কারণ তৃতীয় শ্রেণি থেকে আবৃত্তি, মূলভাব, কবি-পরিচিতি আসে; চিঠি-ফরম আলাদা কারণ চতুর্থ-পঞ্চম শ্রেণিতে পত্র, আবেদনপত্র, ফরম পূরণ বড় অংশ। কবিতা পড়ে প্রশ্নের উত্তর \"পড়া ও বোঝা\"-তে।\n4. **দক্ষতা-ধারা:** পঠন (SK-READ-01, তিন ধাপ: শব্দ ভেঙে পড়া → বাক্য-গল্প সাবলীল → ছড়া-কবিতা চরণ মেনে), মুখে বলা (SK-ORAL-01, তিন ধাপ), হাতের লেখা, শ্রুতলিপি ও বানান — সব রুব্রিক, শ্রেণি-রেকর্ডে (সিদ্ধান্ত ২১); শব্দার্থ (SK-VOC-01) ও পূর্ণ বাক্যে উত্তর (SK-ANS-01) — প্রশ্ন। কোরাসে পড়া পদ্ধতি, সারি নয় — রুব্রিক প্রতিটি শিশুর একক পড়ায়।\n5. **নতুন সারি যা আগের খসড়ায় ছিল না:** ১৩-০১.৩ \"কেন/কী হতো\" (ঙ-প্রশ্নে শিশুরা আলাদা আটকায়), ১৩-০১.৫ সত্য/মিথ্যা, ৪৬-০১ শূন্যস্থান (প্রশ্নপত্রে ১০ নম্বর, অথচ আগে আলাদা সারি ছিল না), ৫২-০১.৩ গল্প পাঁচ বাক্যে লেখা, ৪৪-০১.২ নিজের নির্দেশ-লেখা। গল্প (১৩-০১) আর তথ্যের লেখা (৩৩-০১) আলাদা।\n6. **আদব বাংলার সারি নয়।** \"আদব বলি\" ধরনের অংশ মুখে বলার রুব্রিকে; আগের ০২-০২ (বিদ্যালয়ের আদব) ও ৫৩-০১ (বছরের ঝালাই) অবসরে — পাঠ ৫৩-এর অনুশীলনী যে দক্ষতা ঝালাই করে, সেই সারিতে গেছে।\n7. **মেশানো যায় এমন সারি (ফ্ল্যাগে \"Claude দ্বিতীয় পাঠ\"):** ৩১-০১.২ চন্দ্রবিন্দু, ১৯-০১ ধ্বনি-শব্দ, ৪৯-০১ একবচন-বহুবচন (শুধু \"খেয়াল করি\"), ৩৪-০১-এর তিন ফলা; ১৫-০১ রুব্রিক না প্রশ্ন।\n8. **বইয়ের সমস্যা বই-দলের জন্য (ফ্ল্যাগ দেখুন):** \"এক কথায় উত্তর\"-এর পরিধি বনাম পাঠের নোট; ৪৬-এর কবিতার চরণে শূন্যস্থান (নিয়মবিরোধী); প্রস্তুতি-তালিকায় পাঠ ১৩ ও ৩৯-এ শূন্যস্থান নেই; পাঠ ৪৭-এর পাঁচ বাক্য আলাদা অংশ নয়; পাঠ ১২-এর ছকে ড় ঢ় য় সারি নেই; পাঠ ৫, ৬, ১৪–১৮-এর শব্দে অপঠিত যুক্তবর্ণ (ঐশ্বর্য, ঊর্ধ্ব …) আর \"ঔরস\"।\n\n**আগের খসড়া থেকে বদলায়নি:** প্রশ্নের ধরন ও নম্বর (পরিশিষ্ট — পরীক্ষা ও নম্বর বণ্টন, v7.4-এ অপরিবর্তিত), বাড়ির টিপসের ধরন, দক্ষতা-ধারার নাম (VOC, HW, DICT, SPELL, READ, ORAL; WRITE-01 → ANS-01, KAR/LET/CONJ শিখনফলে মিশেছে)।\n"
+}

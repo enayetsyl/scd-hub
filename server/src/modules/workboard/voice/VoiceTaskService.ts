@@ -15,7 +15,7 @@ import { dateKeyOf } from "../../attendance/dates";
 import { StaffProfile } from "../../foundation/models/StaffProfile";
 import { User } from "../../foundation/models/User";
 import { normalizePhone } from "../../foundation/services/credentials";
-import { GEMINI_DEFAULT_MODEL, geminiKey, geminiModel, refreshAiConfig } from "../../platform/services/AiSettingService";
+import { GEMINI_DEFAULT_MODEL, GEMINI_LITE_MODEL, geminiKey, geminiModel, refreshAiConfig } from "../../platform/services/AiSettingService";
 import { allStaffUsers, type BoardUser } from "../services/WorkBoardService";
 import { buildDraft, buildVoicePrompt, VOICE_TASK_SCHEMA, type RawVoiceReply, type VoiceStaff, type VoiceTaskDraft } from "./voiceTaskDraft";
 
@@ -39,8 +39,8 @@ export interface VoiceModel {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-/** The fallback: fast, and its name slips are caught by the D-#962 guard. */
-export const GEMINI_LITE_MODEL = "gemini-flash-lite-latest";
+/** The fallback (gemini-flash-lite-latest): fast, and its name slips are caught by the D-#962 guard. */
+export { GEMINI_LITE_MODEL };
 const FIRST_MODEL_DEADLINE_MS = 25_000;
 /** Cloudflare (in front of prod) cuts a request at 100 s. */
 const TOTAL_BUDGET_MS = 85_000;
