@@ -61,6 +61,59 @@ export const STAFF_MISTAKE_KINDS = [
 ] as const;
 export type StaffMistakeKind = (typeof STAFF_MISTAKE_KINDS)[number];
 
+/**
+ * What happened, in one Bangla line per place — the server's copy of the app's
+ * `smrKindTitle_*` labels, for the "please explain" notice (D-#1012): a notice that says only
+ * "a mistake was caught" gives the person nothing to go on.
+ */
+export const STAFF_MISTAKE_KIND_TITLE_BN: Record<StaffMistakeKind, string> = {
+  MARK_CORRECTION: "একই দিনে \"জমা দেয়নি\" বদলানো",
+  ATTENDANCE_CORRECTION: "জমা দেওয়া উপস্থিতি বদলানো হয়েছে",
+  CLASS_TEST_MARKS: "প্রকাশের পর ক্লাস টেস্টের নম্বর বদলানো হয়েছে",
+  CLASS_TEST_SCRIPTS: "প্রকাশিত খাতা ফেরত নেওয়া হয়েছে",
+  WORK_CLAIM_ACCEPTED: "অভিভাবকের দাবি মানা হয়েছে — \"জমা দেয়নি\" ভুল ছিল",
+  WORK_REVERT: "দেওয়া চিহ্ন ফেরানো হয়েছে",
+  POPUP_NOTICE_CHANGE: "দেখার পর পপ-আপ বার্তা বদলানো / বন্ধ করা হয়েছে",
+  MONTHLY_REPORT_REVOKE: "পাঠানো মাসিক রিপোর্ট ফেরত নেওয়া হয়েছে",
+  SYLLABUS_REOPEN: "প্রকাশিত সিলেবাস বদলানো হয়েছে",
+  EXAM_ROUTINE_CHANGE: "প্রকাশিত পরীক্ষার রুটিন বদলানো হয়েছে",
+  STAFF_LETTER_VOID: "পাঠানো পত্র বাতিল করা হয়েছে",
+  PAYROLL_REOPEN: "লক করা বেতন আবার খোলা হয়েছে",
+  FINANCE_REVERSAL: "হিসাবের এন্ট্রি উল্টানো হয়েছে",
+  MASTERY_CORRECTION: "নিশ্চিত করার পর ফল বদলানো হয়েছে",
+  QURAN_EXAM_CORRECTION: "কুরআন পরীক্ষায় অনুপস্থিত চিহ্ন বদলানো হয়েছে",
+  CLASS_NOTE_CHANGE: "প্রকাশিত ক্লাস নোট বদলানো / মুছে ফেলা হয়েছে",
+  CT_RESULT_SENT_BACK: "অফিস ক্লাস টেস্টের ফল ফেরত পাঠিয়েছে",
+  CT_DETAILS_FIXED: "ক্লাস টেস্টের মোট / পাস নম্বর সংশোধন করা হয়েছে",
+  CT_REQUEST_CHANGED: "অফিস টাইপ করার পরে প্রশ্নের অনুরোধ বদলানো / বাতিল হয়েছে",
+  CT_PAPER_SENT_BACK: "শিক্ষক প্রশ্নপত্র সংশোধনের জন্য ফেরত পাঠিয়েছেন",
+  HW_ITEM_VOIDED: "অফিস বাড়ির কাজ বাতিল করেছে",
+  ASSIGNMENT_ITEM_CHANGED: "দেওয়ার পর অ্যাসাইনমেন্ট বদলানো হয়েছে",
+  COMMENT_REVISED: "পর্যালোচক মন্তব্য বদলেছেন / বাতিল করেছেন",
+  OBSERVATION_REJECTED: "পর্যবেক্ষক ভিডিও দেখার মতো নয় বলে বাতিল করেছেন",
+  OBSERVATION_RESTORED: "বাতিল করা পর্যবেক্ষণ আবার ফেরানো হয়েছে",
+  TASK_REOPENED: "সম্পন্ন দেওয়া কাজ আবার খোলা হয়েছে",
+  SCRIPTS_RECEIVE_UNDONE: "খাতা গ্রহণ ফেরানো হয়েছে",
+  COVER_CANCELLED: "দেওয়া প্রক্সি বাতিল করা হয়েছে",
+  ROUTINE_CELL_REVISED: "কার্যকর হওয়ার আগেই রুটিনের ঘর বদলানো হয়েছে",
+  LEAVE_REDECIDED: "ছুটির সিদ্ধান্ত বদলানো হয়েছে",
+  PRINT_CANCELLED: "অফিস প্রিন্টের অনুরোধ বাতিল করেছে",
+  ATTENDANCE_NOT_MARKED: "সময়মতো উপস্থিতি নেওয়া হয়নি",
+  HW_PASS_SKIPPED: "বাড়ির কাজ যাচাই করা হয়নি — অ্যাপ নিজে \"জমা দেয়নি\" দিয়েছে",
+  ASSIGNMENT_UNMARKED: "অ্যাসাইনমেন্টের নম্বর সময়মতো দেওয়া হয়নি",
+  OBSERVATION_NO_RESPONSE: "পর্যবেক্ষণের ভিডিওর উত্তর দেওয়া হয়নি",
+  TASK_OVERDUE: "নির্ধারিত দিনে কাজ শেষ হয়নি",
+  WORK_CLAIM_UNANSWERED: "অভিভাবকের কাজ জমার দাবির উত্তর দেওয়া হয়নি",
+  QURAN_EXAM_UNLOCK_CHANGE: "লক হওয়া নম্বর আনলকের পরে বদলানো হয়েছে",
+  REVISION_ENTRY_CORRECTED: "পাঠানো রিভিশনের এন্ট্রি সংশোধন করতে হয়েছে",
+  CT_MARKS_OVERDUE: "শেষ দিনের মধ্যে ক্লাস টেস্টের নম্বর জমা হয়নি",
+  QUESTION_RESTORED: "বাতিল করা প্রশ্ন অন্যজন আবার ফিরিয়েছেন",
+  STAFF_ATTENDANCE_REIMPORTED: "অন্যজন নতুন শিট দেওয়ায় উপস্থিতি বদলেছে",
+  SALARY_ENTERED_TWICE: "একই মাসের বেতন আবার এন্ট্রি হয়েছে",
+  GUARDIAN_LINK_UNDONE: "অভিভাবকের সংযোগ অল্প দিনেই খুলে ফেলা হয়েছে",
+  ABSENT_AT_DELIVERY: "খাতায় উপস্থিত শিক্ষার্থীকে কাজ দেওয়ার সময় অনুপস্থিত দেখানো হয়েছে",
+};
+
 export const STAFF_MISTAKE_STATUSES = ["EXPLANATION_DUE", "PENDING_REVIEW", "COUNTED", "EXCUSED", "MOVED"] as const;
 export type StaffMistakeStatus = (typeof STAFF_MISTAKE_STATUSES)[number];
 
