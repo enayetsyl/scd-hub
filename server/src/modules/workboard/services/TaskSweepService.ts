@@ -3,12 +3,20 @@
  *   07:30  due digest  — one row per person with open work (today + overdue)
  *   16:00  overdue     — one row per recipient: assignee AND assigner, for every
  *                        task still open at end of day
- * Both are called from the notification ticker behind its school-day gate and are
+ *   08:00 / 17:00  "tasks you gave" — one row per assigner (D-#966)
+ * All are called from the notification ticker behind its school-day gate and are
  * idempotent per (date, recipient) through the dedupe keys.
  */
-import { dateKeyOf } from "../../attendance/dates";
+import { dateKeyOf, parseDateKey } from "../../attendance/dates";
 import { Task, type ITask } from "../models/Task";
-import { emitTaskDueDigest, emitTaskOverdue, type DigestLine, type OverdueLine } from "./workBoardNotifications";
+import {
+  emitTaskDueDigest,
+  emitTaskGivenSummary,
+  emitTaskOverdue,
+  type DigestLine,
+  type GivenSummaryLine,
+  type OverdueLine,
+} from "./workBoardNotifications";
 
 export const TASK_DIGEST_MINUTES = 7 * 60 + 30;
 export const TASK_OVERDUE_MINUTES = 16 * 60;
@@ -61,4 +69,47 @@ export async function dispatchTaskOverdue(now: Date): Promise<number> {
   const todayKey = dateKeyOf(now);
   const tasks = await openTasksDueBy(todayKey);
   return emitTaskOverdue(todayKey, overdueLines(tasks, todayKey));
+}
+
+// ---------------------------------------------------------------------------
+// D-#966: "tasks you gave" — 08:00 and 17:00 to every assigner, others' tasks only.
+// ---------------------------------------------------------------------------
+
+export const TASK_GIVEN_AM_MINUTES = 8 * 60;
+export const TASK_GIVEN_PM_MINUTES = 17 * 60;
+export type GivenPart = "AM" | "PM";
+
+type GivenTask = Pick<ITask, "assigneeUserId" | "assignedBy" | "dueKey" | "status" | "blockedReason" | "doneAt">;
+
+/** Pure: per assigner, counts over the tasks they gave SOMEONE ELSE. A line with
+ *  nothing to say is dropped. AM = open due today / overdue; PM = done today, still
+ *  open (due ≤ today), and blocked among those open. */
+export function givenSummaryLines(tasks: GivenTask[], todayKey: string, part: GivenPart): GivenSummaryLine[] {
+  const by = new Map<string, GivenSummaryLine>();
+  for (const t of tasks) {
+    const giver = t.assignedBy.toString();
+    if (giver === t.assigneeUserId.toString()) continue;
+    const line = by.get(giver) ?? { recipientId: giver, dueToday: 0, overdue: 0, doneToday: 0, open: 0, blocked: 0 };
+    if (t.status === "DONE") {
+      if (part === "PM" && t.doneAt && dateKeyOf(new Date(t.doneAt)) === todayKey) line.doneToday += 1;
+    } else if (t.dueKey <= todayKey) {
+      if (t.dueKey === todayKey) line.dueToday += 1;
+      else line.overdue += 1;
+      line.open += 1;
+      if (t.blockedReason) line.blocked += 1;
+    }
+    by.set(giver, line);
+  }
+  return [...by.values()].filter((l) => (part === "AM" ? l.open > 0 : l.open + l.doneToday > 0));
+}
+
+export async function dispatchTaskGivenSummary(now: Date, part: GivenPart): Promise<number> {
+  const todayKey = dateKeyOf(now);
+  const tasks = (await Task.find({
+    cancelledAt: null,
+    $or: [{ status: { $ne: "DONE" }, dueKey: { $lte: todayKey } }, { status: "DONE", doneAt: { $gte: parseDateKey(todayKey) } }],
+  })
+    .select("assigneeUserId assignedBy dueKey status blockedReason doneAt")
+    .lean()) as unknown as GivenTask[];
+  return emitTaskGivenSummary(todayKey, part, givenSummaryLines(tasks, todayKey, part));
 }

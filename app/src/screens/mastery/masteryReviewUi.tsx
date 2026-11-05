@@ -16,7 +16,8 @@ import {
   type ReviewThread,
 } from "../../graphql/masteryReview";
 import { Body, Muted, Badge, Button, Field, Notice } from "../../components/ui";
-import { STR } from "../../lib/labels";
+import { STR, bnNum } from "../../lib/labels";
+import { fill } from "./masteryStateUi";
 import { friendlyError } from "../../lib/errors";
 import { useToast } from "../../state/ToastContext";
 import { space } from "../../theme";
@@ -63,6 +64,22 @@ export function roundStateTone(s: string): Tone {
 
 /** "LO-C1-MATH-07-03.2" → "07-03.2"; "LO-C1-MATH-SK-COL-01" → "COL-01". */
 export const codeTail = (code: string): string => code.replace(/^LO-[A-Z0-9]+-[A-Z]+-(SK-)?/, "");
+
+/**
+ * A stored exercise ref "<chapter>/<lesson>/<no>" as the reviewer reads it (same wording as the
+ * Word review copy): "7/হাতে রাখি/2" → "অ.৭ · হাতে রাখি · অনুশীলনী ২"; "1/কম – বেশি/—" (a class
+ * activity, no numbered exercise) → "অ.১ · কম – বেশি (শ্রেণির কাজ)". Anything else is shown as stored.
+ */
+export function formatExerciseRef(ref: string): string {
+  const parts = ref.split("/");
+  if (parts.length < 3) return ref;
+  const ch = parts[0].trim();
+  const no = parts[parts.length - 1].trim();
+  const lesson = parts.slice(1, -1).join("/").trim();
+  const chapter = /^\d+$/.test(ch) ? fill(STR.msRvRefChapterShort, { n: bnNum(ch) }) : ch;
+  const tail = !no || no === "—" ? ` (${STR.msRvRefActivity})` : ` · ${fill(STR.msRvRefExercise, { n: /^\d+$/.test(no) ? bnNum(no) : no })}`;
+  return `${chapter} · ${lesson}${tail}`;
+}
 
 /** Tappable body text (opens a row). */
 export function TapText({ onPress, children, style }: { onPress: () => void; children: React.ReactNode; style?: StyleProp<TextStyle> }): React.ReactElement {
