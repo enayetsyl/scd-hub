@@ -17,6 +17,7 @@ import {
   type GivenSummaryLine,
   type OverdueLine,
 } from "./workBoardNotifications";
+import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
 
 export const TASK_DIGEST_MINUTES = 7 * 60 + 30;
 export const TASK_OVERDUE_MINUTES = 16 * 60;
@@ -68,6 +69,14 @@ export async function dispatchTaskDigest(now: Date): Promise<number> {
 export async function dispatchTaskOverdue(now: Date): Promise<number> {
   const todayKey = dateKeyOf(now);
   const tasks = await openTasksDueBy(todayKey);
+  // D-#955: past its day and still open — the assignee's missed duty, once per task.
+  for (const t of tasks) {
+    if (t.dueKey >= todayKey) continue;
+    await recordPlaceMistake({
+      kind: "TASK_OVERDUE", tier: 3, refKey: String(t._id), ownerId: t.assigneeUserId, correctedBy: "system", at: now,
+      oncePerRef: true, leaveDateKey: t.dueKey, line: `"${t.titleBn}" — শেষ তারিখ ${t.dueKey} পেরিয়ে গেছে`,
+    });
+  }
   return emitTaskOverdue(todayKey, overdueLines(tasks, todayKey));
 }
 

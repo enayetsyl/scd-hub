@@ -15,6 +15,9 @@ import { explainMistake } from "../modules/staff-mistakes/services/StaffMistakeS
 import { reversePosting } from "../modules/finance/services/FinanceSnapshotService";
 import { Task } from "../modules/workboard/models/Task";
 import { setTaskStatus } from "../modules/workboard/services/TaskService";
+import { dispatchTaskOverdue } from "../modules/workboard/services/TaskSweepService";
+import { StaffProfile } from "../modules/foundation/models/StaffProfile";
+import { StaffLeaveApplication } from "../modules/hr/models/StaffLeaveApplication";
 
 jest.setTimeout(120_000);
 
@@ -34,7 +37,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await Promise.all(
-    [User, Notification, StaffMistake, StaffMistakeNote, FinancePosting, Task].map((m) => (m as unknown as mongoose.Model<unknown>).deleteMany({})),
+    [User, Notification, StaffMistake, StaffMistakeNote, FinancePosting, Task, StaffProfile, StaffLeaveApplication].map((m) => (m as unknown as mongoose.Model<unknown>).deleteMany({})),
   );
 });
 
@@ -105,5 +108,33 @@ describe("D-#953 — tier 2: a task reopened by someone else", () => {
     const entry = await StaffMistake.findOne({}).lean();
     expect([entry!.kind, entry!.tier, String(entry!.staffUserId)]).toEqual(["TASK_REOPENED", 2, assignee]);
     expect((await StaffMistakeNote.findOne({}).lean())!.lines[0]!.text).toContain("তালিকা তৈরি");
+  });
+});
+
+describe("D-#955 — tier 3: missed duties", () => {
+  it("an overdue task is recorded once, however many days the sweep runs", async () => {
+    const assignee = await user("Rahima", "TEACHER");
+    const assigner = await user("Principal", "PRINCIPAL");
+    await Task.create({ titleBn: "রিপোর্ট জমা", assigneeUserId: new Types.ObjectId(assignee), assignedBy: new Types.ObjectId(assigner), dueKey: "2026-11-05", effortMin: 30 });
+    await Task.create({ titleBn: "আজকের কাজ", assigneeUserId: new Types.ObjectId(assignee), assignedBy: new Types.ObjectId(assigner), dueKey: "2026-11-10", effortMin: 30 });
+    await dispatchTaskOverdue(new Date("2026-11-08T08:00:00+06:00"));
+    await dispatchTaskOverdue(new Date("2026-11-09T08:00:00+06:00"));
+    const rows = await StaffMistake.find({}).lean();
+    expect(rows.map((r) => [r.kind, r.tier, String(r.staffUserId), r.status])).toEqual([["TASK_OVERDUE", 3, assignee, "EXPLANATION_DUE"]]);
+    expect((await StaffMistakeNote.findOne({}).lean())!.lines[0]!.text).toContain("রিপোর্ট জমা");
+  });
+
+  it("a duty missed on an approved leave day is accepted at once, with no explain notice", async () => {
+    const teacher = await user("Nasrin", "TEACHER");
+    const u = await User.findById(teacher).lean();
+    const sp = await StaffProfile.collection.insertOne({ schoolId: "T-9", name: "Nasrin", category: "teacher", employmentType: "full_time", employmentStatus: "confirmed", phone: u!.phone, active: true });
+    await StaffLeaveApplication.collection.insertOne({ staffProfileId: sp.insertedId, leaveType: "sick", fromKey: "2026-11-08", toKey: "2026-11-09", dayPart: "full", days: 2, reason: "জ্বর", status: "approved" });
+    await recordPlaceMistake({ kind: "ATTENDANCE_NOT_MARKED", tier: 3, refKey: "2026-11-08:s1", ownerId: teacher, correctedBy: "system", at: new Date(), oncePerRef: true, leaveDateKey: "2026-11-08", line: "-" });
+    const m = await StaffMistake.findOne({}).lean();
+    expect([m!.status, m!.reasonCode]).toEqual(["EXCUSED", "ON_LEAVE"]);
+    expect(await Notification.countDocuments({ kind: "STAFF_MISTAKE_EXPLAIN" })).toBe(0);
+    // Not on leave the next week: explanation due as usual.
+    await recordPlaceMistake({ kind: "ATTENDANCE_NOT_MARKED", tier: 3, refKey: "2026-11-15:s1", ownerId: teacher, correctedBy: "system", at: new Date(), oncePerRef: true, leaveDateKey: "2026-11-15", line: "-" });
+    expect(await StaffMistake.countDocuments({ status: "EXPLANATION_DUE" })).toBe(1);
   });
 });

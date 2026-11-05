@@ -25,6 +25,7 @@ import { writeAudit } from "../../platform/services/AuditService";
 import { SYSTEM_ACTOR_ID } from "./ClaimReassignService";
 import { dateKeyOf } from "../../attendance/dates";
 import { digestRecipientIds, pendingByTeacher } from "./WorkClaimDigestService";
+import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
 
 export interface WorkClaimRungResult {
   /** Claims that were open and due at the digest. */
@@ -103,6 +104,11 @@ export async function expireStaleWorkClaims(at: Date = new Date()): Promise<numb
         teacherId: claim.teacherId.toString(),
         actionDateKey: claim.actionDateKey,
       },
+    });
+    // D-#955: nobody answered the family in time.
+    await recordPlaceMistake({
+      kind: "WORK_CLAIM_UNANSWERED", tier: 3, refKey: claim._id.toString(), ownerId: claim.teacherId, correctedBy: "system", at,
+      oncePerRef: true, line: `${claim.workId}: অভিভাবকের "বাসায় করেছে" দাবির উত্তর দেওয়া হয়নি`,
     });
   }
   return stale.length;
