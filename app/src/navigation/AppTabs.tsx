@@ -54,6 +54,7 @@ import type {
   GuardianClassTestStackParamList,
   ClassBooksStackParamList,
   StorybooksStackParamList,
+  ActivityStackParamList,
   QuranExamStackParamList,
   GuardianClassNotesStackParamList,
   TabParamList,
@@ -132,6 +133,8 @@ import StoryBookScreen from "../screens/storybooks/StoryBookScreen";
 import StoryManageScreen from "../screens/storybooks/StoryManageScreen";
 import StoryDeskScreen from "../screens/storybooks/StoryDeskScreen";
 import StoryChildBooksScreen from "../screens/storybooks/StoryChildBooksScreen";
+import ActivityBanksScreen from "../screens/activity/ActivityBanksScreen";
+import ActivityBankScreen from "../screens/activity/ActivityBankScreen";
 import QuranExamHomeScreen from "../screens/quranExam/QuranExamHomeScreen";
 import MyQuranExamScreen from "../screens/quranExam/MyQuranExamScreen";
 import QuranExamDayScreen from "../screens/quranExam/QuranExamDayScreen";
@@ -1744,6 +1747,19 @@ function StorybooksNavigator(): React.ReactElement {
   );
 }
 
+// AS-1 (D-#988): activity sheets — banks, and (AS-2..) the activity corner. ActivityBanks is
+// first: the initial route takes no params.
+const ActivityStack = createNativeStackNavigator<ActivityStackParamList>();
+function ActivityNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    <ActivityStack.Navigator screenOptions={stackOptions}>
+      <ActivityStack.Screen name="ActivityBanks" component={ActivityBanksScreen} options={{ title: STR.actNav }} />
+      <ActivityStack.Screen name="ActivityBank" component={ActivityBankScreen} options={({ route }) => ({ title: route.params.title })} />
+    </ActivityStack.Navigator>
+  );
+}
+
 // --- Drawer (D-#258) -------------------------------------------------------
 
 const Drawer = createDrawerNavigator<TabParamList>();
@@ -1883,6 +1899,7 @@ export function AppTabs(): React.ReactElement {
     "staff_attendance:upload",
   );
   const canLibrary = can("library:view");
+  const canActivity = can("activity_sheets:view");
   // PQ-4: teachers file print requests; Office/Principal work the queue.
   const canPrint = any("printing:create", "printing:view_all", "printing:process");
   const canChat = can("chat:view");
@@ -2043,6 +2060,7 @@ export function AppTabs(): React.ReactElement {
         {canHome ? <Drawer.Screen name="WorkBoardTab" component={WorkBoardNavigator} /> : null}
         {canLibrary ? <Drawer.Screen name="LibraryTab" component={LibraryNavigator} /> : null}
         {canLibrary ? <Drawer.Screen name="StorybooksTab" component={StorybooksNavigator} /> : null}
+        {canActivity ? <Drawer.Screen name="ActivityTab" component={ActivityNavigator} /> : null}
         {canClassBooks ? <Drawer.Screen name="ClassBooksTab" component={ClassBooksNavigator} /> : null}
         {canQuranExam ? <Drawer.Screen name="QuranExamTab" component={QuranExamNavigator} /> : null}
         {canChat ? <Drawer.Screen name="ChatTab" component={ChatNavigator} /> : null}

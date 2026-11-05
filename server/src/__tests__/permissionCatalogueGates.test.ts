@@ -93,7 +93,15 @@ const OPEN_FIELDS: Record<string, string> = {
 };
 
 /** Catalogue actions declared ahead of the slice that will gate them. */
-const DECLARED_AHEAD: Record<string, string> = {};
+const DECLARED_AHEAD: Record<string, string> = {
+  // Activity sheets ship as a stacked PR series (D-#988): AS-1 declares the feature; each
+  // later slice gates its own actions and removes its line here.
+  "activity_sheets:issue": "AS-2 desk pick-up / AS-3 hand-out",
+  "activity_sheets:check": "AS-2 return check",
+  "reports:activity_skills": "AS-5 reports",
+  "reports:activity_sheets": "AS-5 reports",
+  "reports:activity_students": "AS-5 reports",
+};
 
 /** Role-based checks that remain on purpose (frozen; the count may only go DOWN):
  *  target-protection guards (whose login is touched), recipient routing splits, the book

@@ -93,6 +93,8 @@ import {
 } from "../modules/library/services/StorybookService";
 import { LibraryError } from "../modules/library/errors";
 import { storyStickerCodes, storyStickerPdf } from "../modules/library/services/StoryDeskService";
+import { registerActivityFileRoutes } from "./activityFiles";
+import { assertActivityFileReadAccess } from "../modules/activity-sheets/services/ActivityBankService";
 import { ARTIFACT_STAGES, type ArtifactStage } from "@scd/shared";
 import { Types as MongoTypes } from "mongoose";
 
@@ -1321,6 +1323,9 @@ filesRouter.get("/storybook-stickers", async (req: Request, res: Response) => {
   }
 });
 
+// Activity sheets (AS-1..): bank import, sheet add/replace, print runs — see activityFiles.ts.
+registerActivityFileRoutes(filesRouter);
+
 // ---------------------------------------------------------------------------
 // GET /files/:id — authz first, then stream from Drive (no redirect, ever)
 // ---------------------------------------------------------------------------
@@ -1391,6 +1396,10 @@ filesRouter.get("/:id", async (req: Request, res: Response) => {
       // A storybook cover / preview (SB-1, D-#986): staff by library:view, a guardian only
       // for a published book of their child's age band.
       await assertStorybookFileReadAccess(ctx, file._id.toString());
+    } else if (file.kind.startsWith("activity_")) {
+      // Activity sheets (AS-1): bank PDFs to the bank manager only; sample pages to staff
+      // and to a guardian whose child's class the published bank suits.
+      await assertActivityFileReadAccess(ctx, file);
     } else if (file.kind === "print_upload") {
       // A print upload is readable by the teacher who sent it and by the Office/Principal
       // who has to print it (PQ-2, D-#281) — nobody else.

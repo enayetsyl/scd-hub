@@ -2085,6 +2085,49 @@ export const BOOK_LANGUAGE_LABELS_EN: Record<BookLanguage, string> = {
 export const STORY_SERIES_STATUSES = ["DRAFT", "PUBLISHED", "HIDDEN"] as const;
 export type StorySeriesStatus = (typeof STORY_SERIES_STATUSES)[number];
 
+// ---------------------------------------------------------------------------
+// Activity sheets (AS-1..AS-6, D-#988/#989, docs/prd-activity-sheets.md)
+// ---------------------------------------------------------------------------
+
+/** One skill area per bank (owner-editable). */
+export const ACTIVITY_SKILL_AREAS = ["HAND", "LANGUAGE", "MATHS", "THINKING"] as const;
+export type ActivitySkillArea = (typeof ACTIVITY_SKILL_AREAS)[number];
+export const ACTIVITY_SKILL_LABELS_BN: Record<ActivitySkillArea, string> = {
+  HAND: "হাতের কাজ", LANGUAGE: "ভাষা", MATHS: "গণিত", THINKING: "চিন্তা",
+};
+export const ACTIVITY_SKILL_LABELS_EN: Record<ActivitySkillArea, string> = {
+  HAND: "Hand skills", LANGUAGE: "Language", MATHS: "Maths", THINKING: "Thinking",
+};
+
+/** Easy / Medium / Hard — the letter inside every sheet id (SD-E-001). */
+export const ACTIVITY_LEVELS = ["E", "M", "H"] as const;
+export type ActivityLevel = (typeof ACTIVITY_LEVELS)[number];
+export const ACTIVITY_LEVEL_LABELS_BN: Record<ActivityLevel, string> = { E: "সহজ", M: "মাঝারি", H: "কঠিন" };
+export const ACTIVITY_LEVEL_LABELS_EN: Record<ActivityLevel, string> = { E: "Easy", M: "Medium", H: "Hard" };
+
+export const ACTIVITY_BANK_STATUSES = ["DRAFT", "PUBLISHED", "RETIRED"] as const;
+export type ActivityBankStatus = (typeof ACTIVITY_BANK_STATUSES)[number];
+
+/** How a sheet reached the child: a tray pick at the office, a guardian request, a one-off desk print. */
+export const ACTIVITY_ISSUE_PATHS = ["TRAY", "GUARDIAN", "DESK_PRINT"] as const;
+export type ActivityIssuePath = (typeof ACTIVITY_ISSUE_PATHS)[number];
+export const ACTIVITY_ISSUE_STATUSES = ["REQUESTED", "PRINTED", "HANDED", "RETURNED", "NOT_RETURNED", "CANCELLED"] as const;
+export type ActivityIssueStatus = (typeof ACTIVITY_ISSUE_STATUSES)[number];
+export const ACTIVITY_RESULTS = ["ALL_CORRECT", "SOME_MISTAKES", "INCOMPLETE"] as const;
+export type ActivityResult = (typeof ACTIVITY_RESULTS)[number];
+export const ACTIVITY_RESULT_LABELS_BN: Record<ActivityResult, string> = {
+  ALL_CORRECT: "সব ঠিক", SOME_MISTAKES: "কিছু ভুল", INCOMPLETE: "অসম্পূর্ণ",
+};
+export const ACTIVITY_RESULT_LABELS_EN: Record<ActivityResult, string> = {
+  ALL_CORRECT: "All correct", SOME_MISTAKES: "Some mistakes", INCOMPLETE: "Not finished",
+};
+
+/** One printed page: tray stock (no child on it) or a page printed for one child. */
+export const ACTIVITY_COPY_KINDS = ["STOCK", "PERSONAL"] as const;
+export type ActivityCopyKind = (typeof ACTIVITY_COPY_KINDS)[number];
+export const ACTIVITY_COPY_STATUSES = ["IN_TRAY", "TAKEN", "RETURNED", "LOST"] as const;
+export type ActivityCopyStatus = (typeof ACTIVITY_COPY_STATUSES)[number];
+
 
 // --- A.12 CHAT / MESSAGING ENUMS (app-native; Messaging module — ------------
 // prd-messaging, D-#76–#79). NO wire-contract twin: a chat is a feature, not

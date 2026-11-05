@@ -283,6 +283,12 @@ export type ClassBooksStackParamList = {
   ClassBookReader: { bookId: string; title: string; pageCount: number; pageAspect: number };
 };
 /** SB-1 (D-#980) — the storybook shelf. StoryShelf stays first: the initial route takes no params. */
+/** AS-1 (D-#988) — activity sheets. ActivityBanks stays first: the initial route takes no params. */
+export type ActivityStackParamList = {
+  ActivityBanks: undefined;
+  ActivityBank: { bankId: string; title: string };
+};
+
 export type StorybooksStackParamList = {
   StoryShelf: undefined;
   StorySeries: { seriesId: string; title: string };
@@ -787,6 +793,7 @@ export type TabParamList = {
   /** SB-1 — storybooks: staff (library:view) and guardians share one stack. */
   StorybooksTab: NavigatorScreenParams<StorybooksStackParamList>;
   GuardianStoriesTab: NavigatorScreenParams<StorybooksStackParamList>;
+  ActivityTab: NavigatorScreenParams<ActivityStackParamList>;
   /** D-#873 — Quran oral exam (Office plan + examiners' marks). */
   QuranExamTab: NavigatorScreenParams<QuranExamStackParamList>;
 };

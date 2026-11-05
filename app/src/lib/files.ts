@@ -1323,3 +1323,51 @@ export async function pickAndUploadClassBook(input: {
   const body = (await res.json()) as { bookId: string };
   return { bookId: body.bookId };
 }
+
+// ---------------------------------------------------------------------------
+// Activity sheets (AS-1, server: POST /files/activity-bank and /files/activity-sheets).
+// The Office picks the files first (index CSV, sheets PDF, answers PDF), then sends one form.
+// ---------------------------------------------------------------------------
+
+export type PickedAsset = DocumentPicker.DocumentPickerAsset;
+
+/** Pick one CSV or one PDF; null when cancelled. */
+export async function pickActivityFile(kind: "csv" | "pdf"): Promise<PickedAsset | null> {
+  const picked = await DocumentPicker.getDocumentAsync({
+    // A CSV's reported type differs across platforms (text/csv, application/vnd.ms-excel…).
+    type: kind === "pdf" ? ["application/pdf"] : "*/*",
+    multiple: false,
+    copyToCacheDirectory: true,
+  });
+  if (picked.canceled || !picked.assets?.[0]) return null;
+  return picked.assets[0];
+}
+
+/** Send the picked files + fields to an activity route; resolves with the JSON answer, throws its error text. */
+export async function uploadActivityForm<T>(
+  route: "activity-bank" | "activity-sheets",
+  fields: Record<string, string | null | undefined>,
+  files: Record<string, PickedAsset | null | undefined>,
+): Promise<T> {
+  const form = new FormData();
+  for (const [k, v] of Object.entries(fields)) if (v !== null && v !== undefined && v !== "") form.append(k, v);
+  for (const [k, asset] of Object.entries(files)) {
+    if (!asset) continue;
+    const type = asset.mimeType ?? (asset.name.toLowerCase().endsWith(".csv") ? "text/csv" : "application/pdf");
+    if (Platform.OS === "web") {
+      const blob = await fetch(asset.uri).then((r) => r.blob());
+      form.append(k, new File([blob], asset.name, { type }));
+    } else {
+      form.append(k, { uri: asset.uri, name: rnUploadName(asset.name), type } as unknown as Blob);
+    }
+  }
+  const token = getToken();
+  const res = await fetch(`${REST_BASE}/files/${route}`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: form,
+  });
+  const body = (await res.json().catch(() => ({}))) as { error?: string };
+  if (!res.ok) throw new FileUploadError(body.error ?? `upload failed (${res.status})`);
+  return body as T;
+}

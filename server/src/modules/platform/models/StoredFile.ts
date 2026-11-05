@@ -68,7 +68,12 @@ export type StoredFileKind =
   /** A storybook cover / preview page (SB-1, D-#986, docs/prd-storybook-reading.md). Only
    *  the cover and up to 3 preview pages of a book are kept — never the whole book. Staff
    *  read via library:view; a guardian only for a published book of their child's age band. */
-  | "storybook_page";
+  | "storybook_page"
+  /** Activity sheets (AS-1, D-#988): a bank's sheet PDF / answer PDF (server-only — pages are copied
+   *  out at print time, never served whole) and a rendered sample / answer page. */
+  | "activity_bank_pdf"
+  | "activity_answer_pdf"
+  | "activity_page";
 
 export const STORED_FILE_KINDS: readonly StoredFileKind[] = [
   "hw_question",
@@ -95,6 +100,9 @@ export const STORED_FILE_KINDS: readonly StoredFileKind[] = [
   "classtest_script",
   "class_book_page",
   "storybook_page",
+  "activity_bank_pdf",
+  "activity_answer_pdf",
+  "activity_page",
 ];
 
 /** The chat-attachment subset (M-4) — the read gate routes these to chat. */

@@ -914,6 +914,8 @@ const ROLE_CHECK_DEFAULTS = {
     "library:lend", "library:return", "library:remind",
     // Class books (D-#870): every teacher reads the class books families read.
     "class_books:view",
+    // Activity sheets (D-#988): teachers browse and, as class teachers, hand out / take back.
+    "activity_sheets:view", "activity_sheets:check",
     // Exam routine (D-#883): every teacher reads the published routine.
     "exam_routine:view"],
   OFFICE: ["homework:view_all", "homework:undo_any",
@@ -929,7 +931,7 @@ const ROLE_CHECK_DEFAULTS = {
     // Question-bank coverage (OT-4, D-#947): owner 2026-11-04 — the Office reads it too.
     "reports:bank_coverage",
     // Storybook shelf SB-6 (D-#980): the Office runs the shelf, so it reads its three reports.
-    "reports:storybook_series", "reports:storybook_books", "reports:storybook_readers",
+    "reports:storybook_series", "reports:storybook_books", "reports:storybook_readers", "reports:activity_skills", "reports:activity_sheets", "reports:activity_students",
     "assignment:view_all", "assignment:undo_any", "work_claim:view_all", "work_claim:remind", "set_tracker:view_all",
     "saturday_revision:view", "saturday_revision:view_all", "saturday_revision:enter_results", "saturday_revision:edit_all",
     "saturday_revision:send", "saturday_revision:settings", "class_test:view_all", "class_test:register",
@@ -942,7 +944,7 @@ const ROLE_CHECK_DEFAULTS = {
     // with no approval step, so every action is on for the Office template from day one.
     "popup_notice:view", "popup_notice:send_staff", "popup_notice:send_guardian", "popup_notice:follow_up",
     // Class books (D-#870): the Office uploads and keeps the class book shelf.
-    "class_books:view", "class_books:manage",
+    "class_books:view", "class_books:manage", "activity_sheets:view", "activity_sheets:issue", "activity_sheets:check", "activity_sheets:manage", "activity_sheets:settings",
     // Quran oral exam (D-#873): the Office plans, publishes, watches and locks it; teachers only examine (SELF).
     "quran_exam:view", "quran_exam:manage", "quran_exam:publish", "quran_exam:edit_all", "quran_exam:lock", "quran_exam:remind",
     // Exam routine (D-#883): the Office writes and publishes it; everyone reads it.

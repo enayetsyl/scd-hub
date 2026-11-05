@@ -220,6 +220,8 @@ const STAFF_NAV: NavSection[] = [
   { type: "item", route: "LibraryTab", labelKey: "tabLibrary", icon: "📖" },
   // SB-1 (D-#980): the storybook series catalogue (library:view; Office manages it).
   { type: "item", route: "StorybooksTab", labelKey: "stbNav", icon: "🧸" },
+  // AS-1 (D-#988): activity sheets (activity_sheets:view; Office manages banks and the corner).
+  { type: "item", route: "ActivityTab", labelKey: "actNav", icon: "🧩" },
   // D-#870: class books (staff read every class's; the Office uploads).
   { type: "item", route: "ClassBooksTab", labelKey: "cbTitle", icon: "📚" },
   { type: "item", route: "ChatTab", labelKey: "tabChat", icon: "💬" },
