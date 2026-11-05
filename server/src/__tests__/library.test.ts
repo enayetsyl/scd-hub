@@ -377,7 +377,7 @@ describe("library policy — DB row wins, defaults otherwise (no seed write)", (
   test("missing row → the PRD working values, isDefault=true", async () => {
     mockPolicyFindOne.mockResolvedValue(null);
     const student = await getEffectivePolicy("STUDENT");
-    expect(student).toMatchObject({ loanDays: 7, maxConcurrent: 2, maxRenewals: 1, holdDays: 3, isDefault: true });
+    expect(student).toMatchObject({ loanDays: 7, maxConcurrent: 2, maxRenewals: 1, holdDays: 2, isDefault: true });
     const staff = await getEffectivePolicy("STAFF");
     expect(staff).toMatchObject({ loanDays: 14, maxConcurrent: 4, maxRenewals: 2, holdDays: 3, isDefault: true });
     const guardian = await getEffectivePolicy("GUARDIAN");
@@ -425,7 +425,8 @@ describe("library policy — DB row wins, defaults otherwise (no seed write)", (
 
   test("the exported defaults match the PRD working values verbatim", () => {
     expect(DEFAULT_LIBRARY_POLICIES).toEqual({
-      STUDENT: { loanDays: 7, maxConcurrent: 2, maxRenewals: 1, holdDays: 3 },
+      // D-#982 (storybook shelf): a child's hold is 2 WORKING days (was 3 calendar days).
+      STUDENT: { loanDays: 7, maxConcurrent: 2, maxRenewals: 1, holdDays: 2 },
       STAFF: { loanDays: 14, maxConcurrent: 4, maxRenewals: 2, holdDays: 3 },
       GUARDIAN: { loanDays: 7, maxConcurrent: 2, maxRenewals: 1, holdDays: 3 },
     });

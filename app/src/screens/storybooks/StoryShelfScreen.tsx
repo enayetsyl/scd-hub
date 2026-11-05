@@ -10,7 +10,7 @@ import React, { useMemo, useState } from "react";
 import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import { useQuery } from "urql";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { STORY_SHELF_QUERY, type StorySeriesCardT } from "../../graphql/storybooks";
+import { CHILD_STORY_WAITS, STORY_SHELF_QUERY, type StorySeriesCardT } from "../../graphql/storybooks";
 import { Badge, Button, Chip, ChipRow, EmptyState, Loader, Muted, Notice, Screen } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
 import { ChildSwitcher } from "../../components/ChildSwitcher";
@@ -66,7 +66,13 @@ export default function StoryShelfScreen({ navigation }: Props): React.ReactElem
     variables: { studentId },
     pause: isGuardian && !studentId,
   });
-  const reload = (): void => refetch({ requestPolicy: "network-only" });
+  // SB-3: books held at the office for this child (a waitlisted book came back).
+  const [waitsQ, refetchWaits] = useQuery({ query: CHILD_STORY_WAITS, variables: { studentId: studentId ?? "" }, pause: !studentId });
+  const held = (waitsQ.data?.childStoryWaits ?? []).filter((w) => w.position === 0);
+  const reload = (): void => {
+    refetch({ requestPolicy: "network-only" });
+    if (studentId) refetchWaits({ requestPolicy: "network-only" });
+  };
   const { refreshing, onRefresh } = usePullRefresh(q.fetching, reload);
   const [tag, setTag] = useState<string | "all" | "in">("all");
 
@@ -87,6 +93,7 @@ export default function StoryShelfScreen({ navigation }: Props): React.ReactElem
         </View>
       ) : null}
       <ScrollView contentContainerStyle={{ flexGrow: 1, padding: space(4) }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
+        {held.length > 0 ? <Notice tone="ok" message={STR.stbHeldBanner.replace("{books}", held.map((w) => w.titleBn).join(", "))} /> : null}
         {isGuardian && selected && bandLabel ? (
           <Notice tone="info" message={STR.stbBandBanner.replace("{name}", selected.nameBn || selected.name).replace("{band}", bandLabel)} />
         ) : null}

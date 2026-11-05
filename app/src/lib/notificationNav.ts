@@ -68,6 +68,9 @@ export function notificationTarget(
       return guardian
         ? { tab: "GuardianHomeTab", screen: "GuardianHome" }
         : { tab: "LibraryTab", screen: "LibraryHome" };
+    // SB-3 (D-#982): a waitlisted storybook is held at the office — the family's storybook shelf.
+    case "LIBRARY_HOLD_READY":
+      return guardian ? { tab: "GuardianStoriesTab", screen: "StoryShelf" } : { tab: "StorybooksTab", screen: "StoryDesk" };
     // D-#296: a filed/finished print job lands the operator/teacher on the queue.
     case "PRINT_REQUESTED":
     case "PRINT_DELIVERED":

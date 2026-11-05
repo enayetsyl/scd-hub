@@ -220,7 +220,11 @@ function BookRow({
         <Muted style={{ fontSize: 12 }}>
           {childName && book.childHasNow
             ? STR.stbChildHasNow.replace("{name}", childName)
-            : childName && book.childReadCount
+            : childName && book.childWaitStatus === "READY"
+              ? STR.stbQueueHeld.replace("{date}", isoDateLabel(book.childHoldUntil))
+              : childName && book.childWaitStatus === "QUEUED"
+                ? STR.stbWaitPos.replace("{n}", bnNum(book.childWaitPosition ?? 1))
+                : childName && book.childReadCount
               ? STR.stbChildRead.replace("{name}", childName).replace("{n}", bnNum(book.childReadCount))
               : availabilityLine(book)}
         </Muted>

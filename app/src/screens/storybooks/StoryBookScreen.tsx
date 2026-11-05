@@ -10,7 +10,17 @@ import React, { useState } from "react";
 import { RefreshControl, ScrollView, Text, View } from "react-native";
 import { useMutation, useQuery } from "urql";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { SET_STORY_BOOK_PUBLISHED, STORY_BOOK_QUERY, STORY_TAGS_QUERY, UPDATE_STORY_BOOK, type StoryBookCardT } from "../../graphql/storybooks";
+import {
+  JOIN_STORY_WAITLIST,
+  LEAVE_STORY_WAITLIST,
+  SET_STORY_BOOK_PUBLISHED,
+  STORY_BOOK_QUERY,
+  STORY_DESK_STUDENTS,
+  STORY_TAGS_QUERY,
+  STORY_TITLE_QUEUE,
+  UPDATE_STORY_BOOK,
+  type StoryBookCardT,
+} from "../../graphql/storybooks";
 import { UPDATE_BOOK_TITLE } from "../../graphql/operations";
 import { Badge, Body, Button, Card, Chip, ChipRow, Field, Muted, Notice, Screen } from "../../components/ui";
 import { QueryGate } from "../../components/QueryGate";
@@ -19,7 +29,7 @@ import { useGuardianChild } from "../../state/GuardianChildContext";
 import { usePullRefresh } from "../../lib/useRefresh";
 import { pickAndUploadStorybooks } from "../../lib/files";
 import { friendlyError } from "../../lib/errors";
-import { STR, bnNum } from "../../lib/labels";
+import { STR, bnNum, isoDateLabel } from "../../lib/labels";
 import type { StorybooksStackParamList } from "../../navigation/types";
 import { space, typeScale, useColors } from "../../theme";
 import { StoryImage } from "./StoryImage";
@@ -78,12 +88,91 @@ function BookEditor({ book, onSaved }: { book: StoryBookCardT; onSaved: (m: Msg)
   );
 }
 
+/** SB-3 (W3): the guardian's waitlist — join while every copy is out, see the place in line,
+ *  or that the book is held at the office; leave at any time. */
+function WaitCard({ book, studentId, childName, onDone }: { book: StoryBookCardT; studentId: string; childName: string; onDone: (m: Msg) => void }): React.ReactElement | null {
+  const colors = useColors();
+  const [{ fetching: joining }, join] = useMutation(JOIN_STORY_WAITLIST);
+  const [{ fetching: leaving }, leave] = useMutation(LEAVE_STORY_WAITLIST);
+  if (book.childHasNow) return null;
+  if (book.childWaitStatus === "READY") {
+    return (
+      <Card style={{ borderColor: colors.success, borderWidth: 1.5 }}>
+        <Body style={{ fontWeight: "700" }}>{STR.stbWaitHeld.replace("{name}", childName).replace("{date}", isoDateLabel(book.childHoldUntil))}</Body>
+        <Button title={STR.stbWaitLeave} variant="ghost" loading={leaving} onPress={() => void leave({ studentId, titleId: book.id }).then((r) => onDone(r.error ? { tone: "danger", text: friendlyError(r.error) } : null))} />
+      </Card>
+    );
+  }
+  if (book.childWaitStatus === "QUEUED") {
+    return (
+      <Card>
+        <Body style={{ fontWeight: "700" }}>{STR.stbWaitPos.replace("{n}", bnNum(book.childWaitPosition ?? 1))}</Body>
+        <Muted>{STR.stbWaitHint}</Muted>
+        <Button title={STR.stbWaitLeave} variant="ghost" loading={leaving} onPress={() => void leave({ studentId, titleId: book.id }).then((r) => onDone(r.error ? { tone: "danger", text: friendlyError(r.error) } : null))} />
+      </Card>
+    );
+  }
+  if (book.totalCopies === 0 || book.availableCopies > 0) return null;
+  return (
+    <Card>
+      <Button
+        title={STR.stbWaitJoin}
+        loading={joining}
+        onPress={() => void join({ studentId, titleId: book.id }).then((r) => onDone(r.error ? { tone: "danger", text: friendlyError(r.error) } : { tone: "ok", text: STR.stbWaitJoined }))}
+      />
+      <Muted style={{ marginTop: space(2) }}>{STR.stbWaitHint}</Muted>
+    </Card>
+  );
+}
+
+/** SB-3: the desk's view of a book's queue, and adding a child who asks in person. */
+function QueueCard({ titleId, onDone }: { titleId: string; onDone: (m: Msg) => void }): React.ReactElement {
+  const colors = useColors();
+  const [q, refetch] = useQuery({ query: STORY_TITLE_QUEUE, variables: { titleId }, requestPolicy: "network-only" });
+  const [search, setSearch] = useState("");
+  const [term, setTerm] = useState("");
+  const [hitsQ] = useQuery({ query: STORY_DESK_STUDENTS, variables: { search: term }, pause: !term });
+  const [, join] = useMutation(JOIN_STORY_WAITLIST);
+  const rows = q.data?.storyTitleQueue ?? [];
+  const add = async (studentId: string): Promise<void> => {
+    const r = await join({ studentId, titleId });
+    onDone(r.error ? { tone: "danger", text: friendlyError(r.error) } : { tone: "ok", text: STR.stbWaitJoined });
+    setTerm("");
+    setSearch("");
+    refetch({ requestPolicy: "network-only" });
+  };
+  return (
+    <Card>
+      <Body style={{ fontWeight: "700", marginBottom: space(1) }}>{STR.stbQueueTitle}</Body>
+      {rows.length === 0 ? <Muted>{STR.stbQueueEmpty}</Muted> : null}
+      {rows.map((r) => (
+        <View key={r.studentId} style={{ flexDirection: "row", gap: space(2), paddingVertical: space(1), borderBottomWidth: 1, borderBottomColor: colors.border }}>
+          <Text style={{ ...typeScale.bodyStrong, color: colors.textPrimary, width: 28 }}>{r.position === 0 ? "★" : bnNum(r.position)}</Text>
+          <View style={{ flex: 1 }}>
+            <Body>
+              {r.name} · {r.classLabelBn}
+            </Body>
+            {r.position === 0 ? <Muted style={{ fontSize: 12 }}>{STR.stbQueueHeld.replace("{date}", isoDateLabel(r.holdUntil))}</Muted> : null}
+          </View>
+        </View>
+      ))}
+      <View style={{ marginTop: space(2) }}>
+        <Field label={STR.stbQueueAdd} value={search} onChangeText={setSearch} onSubmitEditing={() => setTerm(search.trim())} placeholder={STR.stbDeskWho} />
+        {(hitsQ.data?.storyDeskStudents ?? []).map((s) => (
+          <Button key={s.id} title={`${s.name} · ${s.classLabelBn} · ${s.schoolId}`} variant="ghost" onPress={() => void add(s.id)} />
+        ))}
+      </View>
+    </Card>
+  );
+}
+
 export default function StoryBookScreen({ route }: Props): React.ReactElement {
   const { titleId } = route.params;
   const colors = useColors();
   const { role, can } = useAuth();
   const isGuardian = role === "GUARDIAN";
   const manage = !isGuardian && can("library:edit");
+  const desk = !isGuardian && can("library:lend");
   const { selected: child } = useGuardianChild();
   const studentId = isGuardian ? child?.studentId ?? null : null;
   const childName = isGuardian && child ? child.nameBn || child.name : null;
@@ -153,6 +242,8 @@ export default function StoryBookScreen({ route }: Props): React.ReactElement {
                   {book.totalCopies > 0 ? <Badge text={availabilityPill(book).text} tone={availabilityPill(book).tone} /> : null}
                 </View>
               </Card>
+              {isGuardian && studentId && childName ? <WaitCard book={book} studentId={studentId} childName={childName} onDone={(m) => changed(m)} /> : null}
+              {desk ? <QueueCard titleId={titleId} onDone={(m) => changed(m)} /> : null}
 
               {book.learnedPointsBn.length > 0 ? (
                 <Card>

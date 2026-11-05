@@ -18,7 +18,7 @@ export interface PolicyValues {
 }
 
 export const DEFAULT_LIBRARY_POLICIES: Record<BorrowerType, PolicyValues> = {
-  STUDENT: { loanDays: 7, maxConcurrent: 2, maxRenewals: 1, holdDays: 3 },
+  STUDENT: { loanDays: 7, maxConcurrent: 2, maxRenewals: 1, holdDays: 2 }, // holdDays = WORKING days for a child (D-#982)
   STAFF: { loanDays: 14, maxConcurrent: 4, maxRenewals: 2, holdDays: 3 },
   GUARDIAN: { loanDays: 7, maxConcurrent: 2, maxRenewals: 1, holdDays: 3 },
 };

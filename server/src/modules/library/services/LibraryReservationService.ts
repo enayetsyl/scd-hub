@@ -11,6 +11,7 @@ import {
   assertBorrowerExists,
 } from "../borrowers";
 import { getEffectivePolicy } from "./LibraryPolicyService";
+import { notifyHoldReady, workingDaysHoldEnd } from "./StoryHoldService";
 
 /**
  * Title-level FIFO reservations (LB-3, D-#83).
@@ -46,10 +47,13 @@ export async function releaseCopyToQueue(copy: IBookCopy, now = new Date()): Pro
   head.status = "READY";
   head.readyAt = now;
   head.heldCopyId = copy._id;
-  head.expiresAt = addDays(now, policy.holdDays);
+  // SB-3 (D-#982): a child's hold runs N WORKING days and the guardians are told.
+  head.expiresAt =
+    head.borrowerType === "STUDENT" ? await workingDaysHoldEnd(now, policy.holdDays) : addDays(now, policy.holdDays);
   await head.save();
   copy.status = "ON_HOLD";
   await copy.save();
+  if (head.borrowerType === "STUDENT") await notifyHoldReady(head);
   return true;
 }
 

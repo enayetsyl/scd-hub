@@ -706,6 +706,11 @@ export interface BookCard {
   /** The viewing child's own history with this book (null for staff without a child). */
   childReadCount: number | null;
   childHasNow: boolean;
+  /** SB-3: the viewing child's wait on this book — QUEUED (place in line) or READY (held). */
+  childWaitStatus: "QUEUED" | "READY" | null;
+  /** 0 when held for the child now; else the place in the queue. */
+  childWaitPosition: number | null;
+  childHoldUntil: Date | null;
 }
 
 async function bookCards(viewer: ShelfViewer, titles: IBookTitle[]): Promise<BookCard[]> {
@@ -714,7 +719,10 @@ async function bookCards(viewer: ShelfViewer, titles: IBookTitle[]): Promise<Boo
   const [copies, activeLoans, waits, childLoans, names] = await Promise.all([
     copiesByTitle(ids),
     BookLoan.find({ titleId: { $in: ids }, status: "ACTIVE" }).select("titleId dueDate").lean(),
-    BookReservation.find({ titleId: { $in: ids }, status: { $in: ["QUEUED", "READY"] } }).select("titleId").lean(),
+    BookReservation.find({ titleId: { $in: ids }, status: { $in: ["QUEUED", "READY"] } })
+      .select("titleId studentId status createdAt expiresAt")
+      .sort({ createdAt: 1, _id: 1 })
+      .lean(),
     viewer.studentId
       ? BookLoan.find({ titleId: { $in: ids }, studentId: viewer.studentId }).select("titleId status").lean()
       : Promise.resolve([] as Array<{ titleId: Types.ObjectId; status: string }>),
@@ -725,6 +733,9 @@ async function bookCards(viewer: ShelfViewer, titles: IBookTitle[]): Promise<Boo
     const c = copies.get(k) ?? { total: 0, available: 0 };
     const dues = activeLoans.filter((l) => l.titleId.toString() === k).map((l) => new Date(l.dueDate).getTime());
     const mine = childLoans.filter((l) => l.titleId.toString() === k);
+    const queue = waits.filter((w) => w.titleId.toString() === k);
+    const myWait = viewer.studentId ? queue.find((w) => w.studentId?.toString() === viewer.studentId) : undefined;
+    const queued = queue.filter((w) => w.status === "QUEUED");
     return {
       title: t,
       tagNamesBn: (t.tagIds ?? []).map((id) => names.get(id.toString())).filter((x): x is string => !!x),
@@ -734,6 +745,9 @@ async function bookCards(viewer: ShelfViewer, titles: IBookTitle[]): Promise<Boo
       waitingCount: waits.filter((w) => w.titleId.toString() === k).length,
       childReadCount: viewer.studentId ? mine.filter((l) => l.status === "RETURNED").length : null,
       childHasNow: mine.some((l) => l.status === "ACTIVE"),
+      childWaitStatus: (myWait?.status as "QUEUED" | "READY" | undefined) ?? null,
+      childWaitPosition: myWait ? (myWait.status === "READY" ? 0 : queued.indexOf(myWait) + 1) : null,
+      childHoldUntil: myWait?.status === "READY" && myWait.expiresAt ? new Date(myWait.expiresAt) : null,
     };
   });
 }

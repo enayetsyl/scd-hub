@@ -108,6 +108,9 @@ StoryBookCardRef.implement({
     waitingCount: t.exposeInt("waitingCount"),
     childReadCount: t.int({ nullable: true, resolve: (v) => v.childReadCount }),
     childHasNow: t.exposeBoolean("childHasNow"),
+    childWaitStatus: t.string({ nullable: true, resolve: (v) => v.childWaitStatus }),
+    childWaitPosition: t.int({ nullable: true, resolve: (v) => v.childWaitPosition }),
+    childHoldUntil: t.string({ nullable: true, resolve: (v) => (v.childHoldUntil ? v.childHoldUntil.toISOString() : null) }),
   }),
 });
 
