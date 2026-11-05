@@ -282,6 +282,13 @@ export type ClassBooksStackParamList = {
   ClassBooks: undefined;
   ClassBookReader: { bookId: string; title: string; pageCount: number; pageAspect: number };
 };
+/** SB-1 (D-#980) — the storybook shelf. StoryShelf stays first: the initial route takes no params. */
+export type StorybooksStackParamList = {
+  StoryShelf: undefined;
+  StorySeries: { seriesId: string; title: string };
+  StoryBook: { titleId: string; title: string };
+  StoryManage: undefined;
+};
 /** D-#873 — Quran oral exam. QuranExamHome stays first: the initial route takes no params. */
 export type QuranExamStackParamList = {
   QuranExamHome: undefined;
@@ -771,6 +778,9 @@ export type TabParamList = {
    *  each sidebar lists it once in its own place). */
   ClassBooksTab: NavigatorScreenParams<ClassBooksStackParamList>;
   GuardianBooksTab: NavigatorScreenParams<ClassBooksStackParamList>;
+  /** SB-1 — storybooks: staff (library:view) and guardians share one stack. */
+  StorybooksTab: NavigatorScreenParams<StorybooksStackParamList>;
+  GuardianStoriesTab: NavigatorScreenParams<StorybooksStackParamList>;
   /** D-#873 — Quran oral exam (Office plan + examiners' marks). */
   QuranExamTab: NavigatorScreenParams<QuranExamStackParamList>;
 };

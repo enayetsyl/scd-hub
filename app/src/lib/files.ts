@@ -1223,6 +1223,61 @@ export async function pickTextFile(): Promise<PickedJson | null> {
 export const CLASS_BOOK_MAX_BYTES = 60 * 1024 * 1024;
 
 /** Pick a PDF and upload it as a class book; null when the picker is cancelled. */
+/**
+ * SB-1 (D-#986): pick one or more storybook PDFs and upload each to POST /files/storybook.
+ * New books: `seriesId` (numbers follow on from the series' last book unless the file
+ * name says otherwise). Replace: `titleId` with exactly one file. Returns one result per
+ * file — a failure on one file does not stop the others.
+ */
+export async function pickAndUploadStorybooks(input: {
+  seriesId?: string;
+  titleId?: string;
+  previewPages?: string;
+}): Promise<Array<{ name: string; ok: boolean; message?: string }> | null> {
+  const picked = await DocumentPicker.getDocumentAsync({
+    type: ["application/pdf"],
+    multiple: !input.titleId,
+    copyToCacheDirectory: true,
+  });
+  if (picked.canceled || !picked.assets?.length) return null;
+  const token = getToken();
+  const results: Array<{ name: string; ok: boolean; message?: string }> = [];
+  for (const asset of picked.assets) {
+    const form = new FormData();
+    if (Platform.OS === "web") {
+      const blob = await fetch(asset.uri).then((r) => r.blob());
+      form.append("file", new File([blob], asset.name, { type: asset.mimeType ?? blob.type }));
+    } else {
+      form.append("file", {
+        uri: asset.uri,
+        name: rnUploadName(asset.name),
+        type: asset.mimeType ?? "application/pdf",
+      } as unknown as Blob);
+    }
+    if (input.titleId) form.append("titleId", input.titleId);
+    if (input.seriesId) form.append("seriesId", input.seriesId);
+    if (input.previewPages) form.append("previewPages", input.previewPages);
+    const res = await fetch(`${REST_BASE}/files/storybook`, {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: form,
+    });
+    if (res.ok) {
+      results.push({ name: asset.name, ok: true });
+      continue;
+    }
+    let message = `upload failed (${res.status})`;
+    try {
+      const body = (await res.json()) as { error?: string };
+      if (body.error) message = body.error;
+    } catch {
+      // keep the generic message
+    }
+    results.push({ name: asset.name, ok: false, message });
+  }
+  return results;
+}
+
 export async function pickAndUploadClassBook(input: {
   classLevel: number;
   title: string;

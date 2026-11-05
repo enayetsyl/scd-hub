@@ -218,6 +218,8 @@ const STAFF_NAV: NavSection[] = [
   { type: "item", route: "ObservationTab", labelKey: "tabObservation", icon: "👁️" },
   { type: "item", route: "FreeMixingTab", labelKey: "tabFreeMixing", icon: "🎥", hidden: true },
   { type: "item", route: "LibraryTab", labelKey: "tabLibrary", icon: "📖" },
+  // SB-1 (D-#980): the storybook series catalogue (library:view; Office manages it).
+  { type: "item", route: "StorybooksTab", labelKey: "stbNav", icon: "🧸" },
   // D-#870: class books (staff read every class's; the Office uploads).
   { type: "item", route: "ClassBooksTab", labelKey: "cbTitle", icon: "📚" },
   { type: "item", route: "ChatTab", labelKey: "tabChat", icon: "💬" },
@@ -346,6 +348,8 @@ const GUARDIAN_NAV: NavSection[] = [
   { type: "item", route: "GuardianHomeTab", labelKey: "gpToday", icon: "🏠" },
   // D-#870 (owner ask): the classroom books, right under Today so families find them.
   { type: "item", route: "GuardianBooksTab", labelKey: "cbNav", icon: "📚" },
+  // SB-1 (D-#980): the school's storybooks for the child's age band.
+  { type: "item", route: "GuardianStoriesTab", labelKey: "stbNav", icon: "🧸" },
   {
     type: "group",
     titleKey: "drawerGroupAcademics",

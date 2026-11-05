@@ -53,6 +53,7 @@ import type {
   GuardianAssignmentsStackParamList,
   GuardianClassTestStackParamList,
   ClassBooksStackParamList,
+  StorybooksStackParamList,
   QuranExamStackParamList,
   GuardianClassNotesStackParamList,
   TabParamList,
@@ -125,6 +126,10 @@ import AssignmentGiftScreen from "../screens/assignment/AssignmentGiftScreen";
 import ChildAssignmentsScreen from "../screens/guardian/ChildAssignmentsScreen";
 import ChildClassTestsScreen from "../screens/guardian/ChildClassTestsScreen";
 import ClassBooksScreen from "../screens/classbooks/ClassBooksScreen";
+import StoryShelfScreen from "../screens/storybooks/StoryShelfScreen";
+import StorySeriesScreen from "../screens/storybooks/StorySeriesScreen";
+import StoryBookScreen from "../screens/storybooks/StoryBookScreen";
+import StoryManageScreen from "../screens/storybooks/StoryManageScreen";
 import QuranExamHomeScreen from "../screens/quranExam/QuranExamHomeScreen";
 import MyQuranExamScreen from "../screens/quranExam/MyQuranExamScreen";
 import QuranExamDayScreen from "../screens/quranExam/QuranExamDayScreen";
@@ -1718,6 +1723,21 @@ function ClassBooksNavigator(): React.ReactElement {
   );
 }
 
+// SB-1 (D-#980): the storybook shelf — one stack for staff (StorybooksTab) and guardians
+// (GuardianStoriesTab). StoryShelf is first: the initial route takes no params.
+const StorybooksStack = createNativeStackNavigator<StorybooksStackParamList>();
+function StorybooksNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    <StorybooksStack.Navigator screenOptions={stackOptions}>
+      <StorybooksStack.Screen name="StoryShelf" component={StoryShelfScreen} options={{ title: STR.stbTitle }} />
+      <StorybooksStack.Screen name="StorySeries" component={StorySeriesScreen} options={({ route }) => ({ title: route.params.title })} />
+      <StorybooksStack.Screen name="StoryBook" component={StoryBookScreen} options={({ route }) => ({ title: route.params.title })} />
+      <StorybooksStack.Screen name="StoryManage" component={StoryManageScreen} options={{ title: STR.stbManage }} />
+    </StorybooksStack.Navigator>
+  );
+}
+
 // --- Drawer (D-#258) -------------------------------------------------------
 
 const Drawer = createDrawerNavigator<TabParamList>();
@@ -2016,6 +2036,7 @@ export function AppTabs(): React.ReactElement {
         {/* WB-1 (D-#701): every staff login has a board; GUARDIAN never. */}
         {canHome ? <Drawer.Screen name="WorkBoardTab" component={WorkBoardNavigator} /> : null}
         {canLibrary ? <Drawer.Screen name="LibraryTab" component={LibraryNavigator} /> : null}
+        {canLibrary ? <Drawer.Screen name="StorybooksTab" component={StorybooksNavigator} /> : null}
         {canClassBooks ? <Drawer.Screen name="ClassBooksTab" component={ClassBooksNavigator} /> : null}
         {canQuranExam ? <Drawer.Screen name="QuranExamTab" component={QuranExamNavigator} /> : null}
         {canChat ? <Drawer.Screen name="ChatTab" component={ChatNavigator} /> : null}
@@ -2049,6 +2070,7 @@ export function AppTabs(): React.ReactElement {
         {canGuardian ? <Drawer.Screen name="GuardianClassTestTab" component={GuardianClassTestNavigator} /> : null}
         {canGuardian ? <Drawer.Screen name="GuardianClassNotesTab" component={GuardianClassNotesNavigator} /> : null}
         {canGuardian ? <Drawer.Screen name="GuardianBooksTab" component={ClassBooksNavigator} /> : null}
+        {canGuardian ? <Drawer.Screen name="GuardianStoriesTab" component={StorybooksNavigator} /> : null}
       </Drawer.Navigator>
     </GuardianChildProvider>
   );
