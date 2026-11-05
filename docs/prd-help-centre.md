@@ -78,7 +78,14 @@ matcher needs no change. Login is required, and a picture is served only when it
 
 ## 5. Capture script (HC-3) — prod screens, nobody's data
 
-`server/scripts/help/capture.ts` (Playwright, run on the owner's machine, never in CI):
+`server/scripts/help/capture.cjs --spec <name>` (Playwright, run on a laptop, never in CI). A spec in
+`server/scripts/help/specs/` walks the screens and names the element behind each step.
+
+**Two modes (D-#992).** LOCAL (default) drives a local stack on example data from
+`server/scripts/help/fixture.ts`. That script refuses any database that is not a local in-memory
+one, and every name in it is "উদাহরণ …". A local spec may save, because a walk like the
+শিখনফল review has to import, assign and submit before the later screens exist. PROD (`--prod`) is
+required for any non-localhost address and applies rules 1–7 below:
 
 1. **Login:** the Principal's credentials come from env vars typed by the owner at run time. Never
    in `.env`, never committed, never logged.
@@ -111,22 +118,26 @@ matcher needs no change. Login is required, and a picture is served only when it
 
 ## 7. Batch 1 — শিখনফল guides (HC-4)
 
-Draft list (one guide each; permission in brackets):
+Built 2026-11-05: 8 guides in `server/assets/help/guides/mastery-*.json`, shown in this order
+(`order`), with permissions in brackets:
 
 1. শিখনফল তালিকা ইমপোর্ট করা (`mastery:settings`)
-2. পর্যালোচনার জন্য তালিকা বরাদ্দ করা (`mastery:settings`)
-3. তালিকা পর্যালোচনা — একটি শিখনফল গ্রহণ / সংশোধন / বাদ দেওয়া (`mastery:review`)
-4. একটি শিখনফল ভাগ করা বা দুটি মেলানো (`mastery:review`)
-5. মন্তব্য লেখা ও উত্তর দেওয়া (`mastery:review`)
+2. পর্যালোচক বরাদ্দ করা (`mastery:settings`)
+3. শিখনফল গ্রহণ বা বাদ দেওয়া (`mastery:review`)
+4. শিখনফল সম্পাদনা, ভাগ বা মেলানো (`mastery:review`)
+5. পর্যালোচনায় মন্তব্য লেখা ও মীমাংসা (`mastery:review` | `mastery:settings`)
 6. পর্যালোচনা জমা দেওয়া (`mastery:review`)
-7. তালিকা লক করা (`mastery:settings`)
-8. শিখনফল তালিকা ও পলিসি দেখা (`mastery:view`)
-9. প্রশ্নভিত্তিক নম্বর তোলা (`mastery:enter_results`)
+7. শিখনফল তালিকা চূড়ান্ত করা (`mastery:settings`)
+8. শিখনফল তালিকা দেখা (`mastery:view`)
 
-**Blocker for real screenshots:** on prod the mastery add-on is off and no tree is imported yet
-(STATUS 2026-11-04). Guides 1–2 can be shot during the C1 Math pilot import itself. Guides 3–7 need
-an assigned round, so they wait until Mahzabin's round is assigned. Guides 8–9 need the add-on
-switched on for one pair.
+The pictures come from a LOCAL run (spec `mastery`) that imports the real C1 Math tree
+(`docs/mastery/objective-tree/C1_MATH.tree.json`) and walks import → assign → review → comment →
+submit → lock as `principal@help.test` / `reviewer@help.test`. On prod there was no tree or round
+yet, and the Principal's password is the owner's (D-#992). `mastery-catalogue.cjs` is read-only and
+can be re-run with `--prod` once the pilot list is locked there.
+
+Moved to the next batch: প্রশ্নভিত্তিক নম্বর তোলা (`mastery:enter_results`). It needs a paper,
+a শাখা and students; the fixture would have to grow for it.
 
 ## 8. Out of scope (v1)
 

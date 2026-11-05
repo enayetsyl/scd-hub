@@ -88,7 +88,12 @@ function loadRegistry(): Registry {
   for (const s of skipped) console.warn(`[help] guide ${s.file} skipped: ${s.problems.join("; ")}`);
 
   const catOrder = new Map(categories.map((c, i) => [c.id, i] as const));
-  guides.sort((a, b) => (catOrder.get(a.category)! - catOrder.get(b.category)!) || a.title.localeCompare(b.title, "bn"));
+  guides.sort(
+    (a, b) =>
+      catOrder.get(a.category)! - catOrder.get(b.category)! ||
+      (a.order ?? 999) - (b.order ?? 999) ||
+      a.title.localeCompare(b.title, "bn"),
+  );
   registry = { dir, categories, guides, skipped };
   return registry;
 }

@@ -52,6 +52,8 @@ export interface HelpGuideFile {
   screens?: string[];
   /** Where এই পাতায় যান goes. */
   goTo?: { route: string; screen?: string };
+  /** Position inside its category (work order: import before review before lock); default last. */
+  order?: number;
   draft?: boolean;
   rows: HelpRowFile[];
 }
@@ -108,6 +110,7 @@ export function checkHelpGuide(raw: unknown, env: HelpCheckEnv): string[] {
   if (!isStr(g.intro)) p.push("intro is required");
   if (!Array.isArray(g.keywords) || !g.keywords.every(isStr)) p.push("keywords must be a list of words");
   if (g.draft !== undefined && typeof g.draft !== "boolean") p.push("draft must be true or false");
+  if (g.order !== undefined && !(Number.isInteger(g.order) && g.order >= 0 && g.order <= 999)) p.push("order must be a whole number 0–999");
 
   const hasPerms = g.perms !== undefined;
   const hasAudience = g.audience !== undefined;

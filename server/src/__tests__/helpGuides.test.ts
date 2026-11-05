@@ -72,7 +72,7 @@ function writeFixture(): string {
   );
   const guides: HelpGuideFile[] = [
     guide("t-declare", { perms: ["homework:declare"] }, { screens: ["HomeworkTab/HomeworkHome"], goTo: { route: "HomeworkTab" } }),
-    guide("o-approve", { perms: ["leave:approve"] }, { category: "attendance_leave" }),
+    guide("o-approve", { perms: ["leave:approve"] }, { category: "attendance_leave", order: 1 }),
     guide("all-leave", { audience: "ALL_STAFF" }, { category: "attendance_leave" }),
     guide("g-hw", { audience: "GUARDIAN" }, { category: "child" }),
     { ...guide("d-draft", { perms: ["homework:declare"] }), draft: true, rows: [{ heading: "ধাপ", shot: null, size: null, steps: [{ text: "খসড়া", box: null }] }] },
@@ -174,6 +174,13 @@ describe("who sees which guide (D-#969)", () => {
     expect(await ids(auth("OFFICE"))).toContain("o-approve");
     expect(await ids(auth("GUARDIAN"))).toEqual(["g-hw"]);
     expect(await ids(auth("PRINCIPAL"))).toEqual(["all-leave", "o-approve", "t-declare"]);
+  });
+
+  it("orders guides by category, then the guide's own order, then title", async () => {
+    // o-approve has order 1; all-leave has none (last), so it follows despite sorting first by title.
+    expect(await ids(auth("PRINCIPAL"))).toEqual(["all-leave", "o-approve", "t-declare"]);
+    expect((await myHelpGuides(ctxOf(auth("PRINCIPAL")))).guides.map((g) => g.id)).toEqual(["o-approve", "all-leave", "t-declare"]);
+    expect(checkHelpGuide({ ...guide("t-1", { perms: ["homework:declare"] }), order: 1.5 }, { fileId: "t-1", categoryIds: new Set(["homework_assignment"]), permissionKeys: helpPermissionKeys(), shotExists: () => true }).join()).toMatch(/order must be a whole number/);
   });
 
   it("returns only the categories in use, in file order, and the why-line", async () => {
