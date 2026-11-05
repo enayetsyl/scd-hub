@@ -37,6 +37,7 @@ import {
   type HwItemTallyT,
 } from "../../graphql/operations";
 import { useConfirm } from "../../state/ConfirmContext";
+import { useMistakeReason } from "../../state/MistakeReasonContext";
 import { confirmMarkPass } from "../../lib/markGuard";
 import {
   pickAndUploadHomeworkFile,
@@ -483,6 +484,7 @@ function ItemCard({
   const { can } = useAuth();
   const canRevertPrior = can("homework:undo_any"); // PM: was role P/O (the server's admin flag)
   const { confirmAction } = useConfirm();
+  const { askMistakeReason } = useMistakeReason();
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const submitRows = group.rows.filter((r) => SUBMIT_STATES.has(r.state));
@@ -513,9 +515,11 @@ function ItemCard({
 
   async function onSubmitCommit(entries: { id: string; on: boolean }[]): Promise<void> {
     // D-#892: warn before the first marking, and harder before a same-day correction.
-    if (!(await confirmMarkPass(confirmAction, group.rows, entries))) return;
+    const go = await confirmMarkPass(confirmAction, askMistakeReason, group.rows, entries);
+    if (!go.ok) return;
     setSubmitBusy(true);
     const res = await submitPass({
+      correctionReason: go.reason,
       sectionId: base.sectionId,
       itemId: group.hwItemId,
       entries: entries.map((e) => ({ recordId: e.id, submitted: e.on })),
@@ -524,7 +528,9 @@ function ItemCard({
     const r = res.data?.homeworkSubmitPass;
     if (res.error || !r) return onNotify(null, friendlyError(res.error));
     const done = `${STR.hwPassSubmitDone} · ${STR.hwPassSubmitted} ${bnNum(r.submittedCount)} · ${STR.hwPassNotSubmitted} ${bnNum(r.chasedCount)}`;
-    onNotify(r.correctedCount > 0 ? `${done}\n${STR.msgFixDone}` : done, null);
+    // D-#937: "MINE" is counted at once; any other reason waits for review.
+    const fixLine = go.reason?.code === "MINE" ? STR.msgFixDone : STR.smrFixPending;
+    onNotify(r.correctedCount > 0 ? `${done}\n${fixLine}` : done, null);
     onDone();
   }
 

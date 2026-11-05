@@ -22,6 +22,7 @@ import { LanguageProvider, useLanguage } from "./src/state/LanguageContext";
 import { SidebarProvider } from "./src/state/SidebarContext";
 import { ToastProvider } from "./src/state/ToastContext";
 import { ConfirmProvider } from "./src/state/ConfirmContext";
+import { MistakeReasonProvider } from "./src/state/MistakeReasonContext";
 import { RootNavigator } from "./src/navigation/RootNavigator";
 import { WebPushGate } from "./src/components/WebPushGate";
 import { UpdateGate } from "./src/components/UpdateGate";
@@ -217,6 +218,8 @@ function App(): React.ReactElement | null {
                           gate destructive actions behind one confirm sheet. */}
                       <ToastProvider>
                         <ConfirmProvider>
+                        {/* D-#937: the "কী হয়েছিল?" reason sheet, asked like a confirm. */}
+                        <MistakeReasonProvider>
                           {/* Self-hosted Android updates: a newer APK on the server
                               walls the app until installed; otherwise pending EAS
                               (OTA) updates apply immediately. Web/iOS pass through. */}
@@ -249,6 +252,7 @@ function App(): React.ReactElement | null {
                               <MarkEscalationPopup />
                             </WebPushGate>
                           </UpdateGate>
+                        </MistakeReasonProvider>
                         </ConfirmProvider>
                       </ToastProvider>
                     </SidebarProvider>

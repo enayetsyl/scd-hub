@@ -200,6 +200,10 @@ const dedupeKeys = {
   /** Per run + payment group + recipient + send (D-#915): a re-send is a new notice. */
   salarySent: (runId: string, channel: string, recipientId: string, sendIndex: number) =>
     `SALS:${runId}:${channel}:${recipientId}:${sendIndex}`,
+  /** Per mistake + recipient (D-#937): one "please explain" per entry; a move is a new entry. */
+  staffMistakeExplain: (mistakeId: string, recipientId: string) => `SMEX:${mistakeId}:${recipientId}`,
+  /** Per mistake + recipient + decision time (D-#939): a re-decision is a new notice. */
+  staffMistakeDecided: (mistakeId: string, recipientId: string, at: number) => `SMDC:${mistakeId}:${recipientId}:${at}`,
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -2196,6 +2200,8 @@ export interface WorkMarkCorrectedEvent {
   sectionId: IdLike;
   subject: HwSubject;
   at: Date;
+  /** The reason picked on the submit pass (D-#938); none = the D-#893 apology. */
+  reasonCode?: string | null;
 }
 
 /** D-#893 — the family was told the work was not brought; tell them it was wrong. */
@@ -2205,8 +2211,14 @@ export async function emitWorkMarkCorrected(ev: WorkMarkCorrectedEvent): Promise
     if (guardianIds.length === 0) return;
     const child = await studentNameOf(ev.studentId);
     const dateKey = dhakaDayKey(ev.at);
-    const titleBn = "দুঃখিত — আগের বার্তাটি ভুল ছিল";
-    const bodyBn = `দুঃখিত, আজ ${child}-এর ${HW_SUBJECT_LABELS_BN[ev.subject] ?? ev.subject} ${workLabelBn(ev.tracker)} (${ev.itemCode}) জমা দেয়নি বলে যে বার্তা গিয়েছিল তা ভুল ছিল। সে জমা দিয়েছে।`;
+    const work = `${HW_SUBJECT_LABELS_BN[ev.subject] ?? ev.subject} ${workLabelBn(ev.tracker)} (${ev.itemCode})`;
+    // D-#938: the child brought it late, straight to the teacher — the morning notice was
+    // right at the time, so no apology; ask the family to use the office route next time.
+    const lateDirect = ev.reasonCode === "LATE_DIRECT";
+    const titleBn = lateDirect ? "কাজ পরে জমা হয়েছে" : "দুঃখিত — আগের বার্তাটি ভুল ছিল";
+    const bodyBn = lateDirect
+      ? `${child} আজকের ${work} অফিসে জমা দেয়নি, পরে সরাসরি শিক্ষকের হাতে দিয়েছে। কাজটি এখন জমা হিসেবে ধরা হয়েছে। অনুগ্রহ করে নিয়মমতো অফিসে জমা দিতে বলুন।`
+      : `দুঃখিত, আজ ${child}-এর ${work} জমা দেয়নি বলে যে বার্তা গিয়েছিল তা ভুল ছিল। সে জমা দিয়েছে।`;
     await Promise.all(
       guardianIds.map((gid) =>
         emit({
@@ -2346,4 +2358,62 @@ export async function emitSalarySent(ev: {
     created = res.created;
   });
   return created;
+}
+
+// ---------------------------------------------------------------------------
+// Staff mistake record (D-#936–#939, docs/prd-staff-mistakes.md) — both open the person's
+// own আমার ভুল ও ব্যাখ্যা list.
+// ---------------------------------------------------------------------------
+
+/** D-#937 — a caught mistake waits for the person's reason until the deadline. */
+export async function emitStaffMistakeExplain(ev: {
+  mistakeId: IdLike;
+  recipientUserId: IdLike;
+  kind: string;
+  explainDueAt: Date;
+}): Promise<void> {
+  return bestEffort("staff mistake explain", async () => {
+    const due = new Intl.DateTimeFormat("bn-BD", {
+      timeZone: "Asia/Dhaka",
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      hour: "numeric",
+      minute: "2-digit",
+    }).format(ev.explainDueAt);
+    await emit({
+      recipientUserId: ev.recipientUserId.toString(),
+      kind: "STAFF_MISTAKE_EXPLAIN",
+      titleBn: "ভুলের ব্যাখ্যা দিন",
+      bodyBn: `আপনার একটি কাজে ভুল ধরা পড়েছে। ${due}-এর মধ্যে কী হয়েছিল জানান — না জানালে এটি ভুল হিসেবে গণ্য হবে।`,
+      refs: {},
+      dedupeKey: dedupeKeys.staffMistakeExplain(ev.mistakeId.toString(), ev.recipientUserId.toString()),
+    });
+  });
+}
+
+const STAFF_MISTAKE_DECISION_BN: Record<string, string> = {
+  EXCUSE: "আপনার কারণ গ্রহণ করা হয়েছে — এটি ভুল হিসেবে গণ্য হবে না।",
+  COUNT: "এটি ভুল হিসেবে গণ্য করা হয়েছে।",
+  MOVE: "দায় অন্য একজনের কাছে সরানো হয়েছে — আপনার ফাইলে গণ্য হবে না।",
+};
+
+/** D-#939 — the reviewer's decision on the person's entry. */
+export async function emitStaffMistakeDecided(ev: {
+  mistakeId: IdLike;
+  recipientUserId: IdLike;
+  decision: string;
+  note: string;
+}): Promise<void> {
+  return bestEffort("staff mistake decided", async () => {
+    const line = STAFF_MISTAKE_DECISION_BN[ev.decision] ?? "";
+    await emit({
+      recipientUserId: ev.recipientUserId.toString(),
+      kind: "STAFF_MISTAKE_DECIDED",
+      titleBn: "ব্যাখ্যার সিদ্ধান্ত",
+      bodyBn: ev.note ? `${line} মন্তব্য: "${ev.note}"` : line,
+      refs: {},
+      dedupeKey: dedupeKeys.staffMistakeDecided(ev.mistakeId.toString(), ev.recipientUserId.toString(), Date.now()),
+    });
+  });
 }
