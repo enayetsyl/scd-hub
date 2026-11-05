@@ -1,5 +1,5 @@
 /**
- * The Principal's mistake rules (D-#943): read with defaults, write with validation.
+ * The Principal's mistake rules (D-#1005): read with defaults, write with validation.
  */
 import {
   STAFF_MISTAKE_DEFAULT_SETTINGS,
