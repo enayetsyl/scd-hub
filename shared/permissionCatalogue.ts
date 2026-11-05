@@ -523,7 +523,7 @@ export const FEATURE_CATALOGUE = {
       view_all: { en: "Everyone's mistakes", bn: "সবার ভুলের রেকর্ড দেখা", desc: "Any staff member's caught mistakes and their explanations", teacher: false, office: true, flags: [] },
       review: { en: "Review explanations", bn: "ব্যাখ্যা যাচাই করা", desc: "Accept a reason, count it as a mistake, or move it to the person at fault", teacher: false, office: true, flags: [] },
       meetings: { en: "Warning meetings", bn: "সতর্কবার্তার আলোচনা", desc: "Book the face-to-face talk after a warning and record what was agreed (D-#941)", teacher: false, office: true, flags: [] },
-      settings: { en: "Mistake rules", bn: "ভুলের নিয়ম ঠিক করা", desc: "Warning steps, weights, explanation deadline, places on/off (D-#943)", teacher: false, office: false, flags: ["PRINCIPAL_DEFAULT"] },
+      settings: { en: "Mistake rules", bn: "ভুলের নিয়ম ঠিক করা", desc: "Warning steps, weights, explanation deadline, places on/off (D-#1005)", teacher: false, office: false, flags: ["PRINCIPAL_DEFAULT"] },
       review_principal: { en: "The Principal's mistakes", bn: "প্রধান শিক্ষকের ভুলের রেকর্ড", desc: "See and decide the Principal's own entries and warnings — the Principal decides their own (D-#1000)", teacher: false, office: false, flags: ["PRINCIPAL_DEFAULT"] },
       view_own: { en: "My mistakes", bn: "আমার ভুল ও ব্যাখ্যা", desc: "Own caught mistakes; give a reason for each", teacher: true, office: true, flags: ["SELF"] },
     },

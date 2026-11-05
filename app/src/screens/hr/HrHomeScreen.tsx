@@ -27,7 +27,7 @@ export default function HrHomeScreen({ navigation }: Props): React.ReactElement 
   const canOffboarding = can("offboarding:view");
   const canMarkNotes = can("mark_submission:view_notes"); // D-#893: everyone's correction notes
   const canReviewMistakes = can("staff_mistakes:review") || can("staff_mistakes:view_all"); // D-#939
-  const canMistakeSummary = can("staff_mistakes:view_all"); // D-#942/#943
+  const canMistakeSummary = can("staff_mistakes:view_all"); // D-#942/#1005
   const showAdmin =
     canLeaveManage || canPayroll || canHrPolicy || canPerformance || canOffboarding || canMarkNotes || canReviewMistakes;
 
