@@ -54,6 +54,7 @@ export default function ReportsHomeScreen({ navigation }: Props): React.ReactEle
     { screen: "MarksDrivers", icon: "🎯", title: STR.mdTitle, sub: STR.mdHubSub, onPress: () => navigation.navigate("MarksDrivers") },
     { screen: "MasteryBankCoverage", icon: "🧩", title: STR.bcTitle, sub: STR.bcHubSub, onPress: () => navigation.navigate("MasteryBankCoverage") },
     { screen: "StorybookReport", icon: "🧸", title: STR.stbRepTitle, sub: STR.stbRepHubSub, onPress: () => navigation.navigate("StorybookReport") },
+    { screen: "ActivityReport", icon: "🧩", title: STR.actRepTitle, sub: STR.actRepHubSub, onPress: () => navigation.navigate("ActivityReport") },
   ];
   const cards = all.filter((c) => allowed(c.screen));
 

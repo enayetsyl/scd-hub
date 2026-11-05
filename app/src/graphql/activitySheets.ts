@@ -362,3 +362,57 @@ export const ACTIVITY_STICKERS_OWED = gql<{ activityStickersOwed: Array<{ issue:
 export const GIVE_ACTIVITY_STICKERS = gql`
   mutation GiveActivityStickers($issueIds: [String!]!) { giveActivityStickers(issueIds: $issueIds) }
 `;
+
+// --- AS-5 reports ------------------------------------------------------------
+
+export type ActivityReportWindowT = "d30" | "d90" | "year";
+
+export const ACTIVITY_SKILL_REPORT = gql<{
+  activitySkillReport: {
+    rows: Array<{ skill: string; labelBn: string; finished: number; allCorrectPct: number; children: number }>;
+    grid: Array<{ classLabelBn: string; skill: string; finished: number }>;
+  };
+}>`
+  query ActivitySkillReport($window: String!) {
+    activitySkillReport(window: $window) { rows { skill labelBn finished allCorrectPct children } grid { classLabelBn skill finished } }
+  }
+`;
+
+export interface ActivityBankRowT {
+  bankId: string;
+  code: string;
+  nameBn: string;
+  skill: string;
+  given: number;
+  back: number;
+  allCorrectPct: number;
+  notReturned: number;
+  repeats: number;
+  viaTray: number;
+  viaGuardian: number;
+  neverTaken: boolean;
+  levels: Array<{ level: string; given: number; back: number; allCorrectPct: number; tooHard: boolean }>;
+}
+
+export const ACTIVITY_BANK_REPORT = gql<{ activityBankReport: ActivityBankRowT[] }>`
+  query ActivityBankReport($window: String!) {
+    activityBankReport(window: $window) {
+      bankId code nameBn skill given back allCorrectPct notReturned repeats viaTray viaGuardian neverTaken
+      levels { level given back allCorrectPct tooHard }
+    }
+  }
+`;
+
+export const ACTIVITY_CHILDREN_REPORT = gql<{
+  activityChildrenReport: {
+    children: Array<{ studentId: string; name: string; classLabelBn: string; sectionNameBn: string; finished: number; allCorrect: number; open: number; notReturned: number; favouriteSkillBn: string | null; last: string | null }>;
+    sections: Array<{ classLabelBn: string; sectionNameBn: string; children: number; finished: number }>;
+  };
+}>`
+  query ActivityChildrenReport($window: String!) {
+    activityChildrenReport(window: $window) {
+      children { studentId name classLabelBn sectionNameBn finished allCorrect open notReturned favouriteSkillBn last }
+      sections { classLabelBn sectionNameBn children finished }
+    }
+  }
+`;

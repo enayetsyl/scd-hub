@@ -54,6 +54,8 @@ export const REPORT_LEAF_ACTIONS: Record<string, string[]> = {
   MasteryBankCoverage: ["reports:bank_coverage", "mastery:settings", "mastery:review"],
   // SB-6: one switch per tab of the storybook report.
   StorybookReport: ["reports:storybook_series", "reports:storybook_books", "reports:storybook_readers"],
+  // AS-5: one switch per tab of the activity-sheet report.
+  ActivityReport: ["reports:activity_skills", "reports:activity_sheets", "reports:activity_students"],
 };
 
 /** Any of these opens the Reports tab. */
