@@ -23,10 +23,11 @@ import {
   replaceSheet,
 } from "../modules/activity-sheets/services/ActivityBankService";
 import { printRunPdf } from "../modules/activity-sheets/services/ActivityCornerService";
+import { batchPdf } from "../modules/activity-sheets/services/ActivityGuardianService";
 
 /** A stock run prints plain; a morning batch (AS-3) adds names + cover slips. */
 async function printRunPdfFor(runId: string): Promise<Buffer> {
-  return printRunPdf(runId);
+  return runId.startsWith("batch-") ? batchPdf(runId) : printRunPdf(runId);
 }
 
 export const ACTIVITY_MAX_PDF_BYTES = 60 * 1024 * 1024;

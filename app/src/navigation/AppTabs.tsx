@@ -137,6 +137,10 @@ import ActivityBanksScreen from "../screens/activity/ActivityBanksScreen";
 import ActivityBankScreen from "../screens/activity/ActivityBankScreen";
 import ActivityCornerScreen from "../screens/activity/ActivityCornerScreen";
 import ActivityDeskScreen from "../screens/activity/ActivityDeskScreen";
+import ActivityChooseScreen from "../screens/activity/ActivityChooseScreen";
+import ActivityChildSheetsScreen from "../screens/activity/ActivityChildSheetsScreen";
+import ActivityBatchScreen from "../screens/activity/ActivityBatchScreen";
+import ActivityHandOutScreen from "../screens/activity/ActivityHandOutScreen";
 import QuranExamHomeScreen from "../screens/quranExam/QuranExamHomeScreen";
 import MyQuranExamScreen from "../screens/quranExam/MyQuranExamScreen";
 import QuranExamDayScreen from "../screens/quranExam/QuranExamDayScreen";
@@ -1760,6 +1764,20 @@ function ActivityNavigator(): React.ReactElement {
       <ActivityStack.Screen name="ActivityBank" component={ActivityBankScreen} options={({ route }) => ({ title: route.params.title })} />
       <ActivityStack.Screen name="ActivityCorner" component={ActivityCornerScreen} options={{ title: STR.actCorner }} />
       <ActivityStack.Screen name="ActivityDesk" component={ActivityDeskScreen} options={{ title: STR.actDesk }} />
+      <ActivityStack.Screen name="ActivityBatch" component={ActivityBatchScreen} options={{ title: STR.actBatchTitle }} />
+      <ActivityStack.Screen name="ActivityHandOut" component={ActivityHandOutScreen} options={{ title: STR.actHandOut }} />
+      <ActivityStack.Screen name="ActivityChildSheets" component={ActivityChildSheetsScreen} options={{ title: STR.actMySheets }} />
+    </ActivityStack.Navigator>
+  );
+}
+
+// AS-3 (D-#988): the guardian side — choose first (the initial route takes no params).
+function GuardianActivityNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    <ActivityStack.Navigator screenOptions={stackOptions}>
+      <ActivityStack.Screen name="ActivityChoose" component={ActivityChooseScreen} options={{ title: STR.actNav }} />
+      <ActivityStack.Screen name="ActivityChildSheets" component={ActivityChildSheetsScreen} options={{ title: STR.actMySheets }} />
     </ActivityStack.Navigator>
   );
 }
@@ -2099,6 +2117,7 @@ export function AppTabs(): React.ReactElement {
         {canGuardian ? <Drawer.Screen name="GuardianClassNotesTab" component={GuardianClassNotesNavigator} /> : null}
         {canGuardian ? <Drawer.Screen name="GuardianBooksTab" component={ClassBooksNavigator} /> : null}
         {canGuardian ? <Drawer.Screen name="GuardianStoriesTab" component={StorybooksNavigator} /> : null}
+        {canGuardian ? <Drawer.Screen name="GuardianActivityTab" component={GuardianActivityNavigator} /> : null}
       </Drawer.Navigator>
     </GuardianChildProvider>
   );

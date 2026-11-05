@@ -289,6 +289,11 @@ export type ActivityStackParamList = {
   ActivityBank: { bankId: string; title: string };
   ActivityCorner: undefined;
   ActivityDesk: undefined;
+  /** AS-3: the guardian stack starts here (no params). */
+  ActivityChoose: undefined;
+  ActivityChildSheets: undefined;
+  ActivityBatch: undefined;
+  ActivityHandOut: undefined;
 };
 
 export type StorybooksStackParamList = {
@@ -796,6 +801,7 @@ export type TabParamList = {
   StorybooksTab: NavigatorScreenParams<StorybooksStackParamList>;
   GuardianStoriesTab: NavigatorScreenParams<StorybooksStackParamList>;
   ActivityTab: NavigatorScreenParams<ActivityStackParamList>;
+  GuardianActivityTab: NavigatorScreenParams<ActivityStackParamList>;
   /** D-#873 — Quran oral exam (Office plan + examiners' marks). */
   QuranExamTab: NavigatorScreenParams<QuranExamStackParamList>;
 };

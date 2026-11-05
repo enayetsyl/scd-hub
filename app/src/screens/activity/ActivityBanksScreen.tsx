@@ -13,6 +13,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { ACTIVITY_SKILL_AREAS } from "@scd/shared";
 import {
   ACTIVITY_BANKS_QUERY,
+  ACTIVITY_REQUESTS_QUERY,
   ACTIVITY_RULES_QUERY,
   SAVE_ACTIVITY_RULES,
   type ActivityBankT,
@@ -147,6 +148,7 @@ export default function ActivityBanksScreen({ navigation }: Props): React.ReactE
   const settings = can("activity_sheets:settings");
   const corner = can("activity_sheets:issue") || manage;
   const desk = can("activity_sheets:issue") || can("activity_sheets:check");
+  const [reqQ] = useQuery({ query: ACTIVITY_REQUESTS_QUERY, pause: !manage, requestPolicy: "cache-and-network" });
   const [q, refetch] = useQuery({ query: ACTIVITY_BANKS_QUERY });
   const [rulesQ, refetchRules] = useQuery({ query: ACTIVITY_RULES_QUERY, pause: !settings });
   const [panel, setPanel] = useState<"none" | "add" | "rules">("none");
@@ -162,6 +164,8 @@ export default function ActivityBanksScreen({ navigation }: Props): React.ReactE
         <View style={{ flexDirection: "row", gap: space(2), marginBottom: space(3), flexWrap: "wrap" }}>
           {desk ? <Button title={STR.actDesk} onPress={() => navigation.navigate("ActivityDesk")} /> : null}
           {corner ? <Button title={STR.actCorner} variant="secondary" onPress={() => navigation.navigate("ActivityCorner")} /> : null}
+          {manage ? <Button title={STR.actBatch.replace("{n}", bnNum(reqQ.data?.activityRequests.length ?? 0))} variant="secondary" onPress={() => navigation.navigate("ActivityBatch")} /> : null}
+          {desk ? <Button title={STR.actHandOut} variant="secondary" onPress={() => navigation.navigate("ActivityHandOut")} /> : null}
         </View>
       ) : null}
       {manage || settings ? (

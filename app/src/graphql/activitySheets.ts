@@ -240,3 +240,82 @@ export const ACTIVITY_RETURN = gql<{ activityReturn: ActivityIssueT }>`
 export const ACTIVITY_COPY_LOST = gql`
   mutation ActivityCopyLost($code: String!) { activityCopyLost(code: $code) }
 `;
+
+// --- AS-3 guardian choose, morning batch, hand-out ----------------------------
+
+export interface ActivityChoicesT {
+  weeklyLimit: number;
+  usedThisWeek: number;
+  maxOpen: number;
+  open: number;
+  banks: Array<{
+    bankId: string;
+    code: string;
+    nameBn: string;
+    nameEn: string | null;
+    skillArea: string;
+    levels: Array<{ level: string; sheetCount: number; doneByChild: number; sampleFileIds: string[] }>;
+  }>;
+}
+
+export interface ActivityChildSheetT {
+  issue: ActivityIssueT;
+  itemId: string;
+  level: string;
+  bankId: string;
+  bankNameBn: string;
+  skillArea: string;
+  hasAnswer: boolean;
+}
+
+export interface ActivityBatchRowT {
+  issue: ActivityIssueT;
+  studentName: string;
+  classLevel: number | null;
+  sectionNameBn: string | null;
+  itemId: string;
+  bankNameBn: string;
+}
+
+const BATCH_ROW = `issue { ${ISSUE_FIELDS} } studentName classLevel sectionNameBn itemId bankNameBn`;
+
+export const ACTIVITY_CHOICES_QUERY = gql<{ activityChoices: ActivityChoicesT }, { studentId: string }>`
+  query ActivityChoices($studentId: String!) {
+    activityChoices(studentId: $studentId) {
+      weeklyLimit usedThisWeek maxOpen open
+      banks { bankId code nameBn nameEn skillArea levels { level sheetCount doneByChild sampleFileIds } }
+    }
+  }
+`;
+
+export const CHILD_ACTIVITY_SHEETS_QUERY = gql<{ childActivitySheets: ActivityChildSheetT[] }, { studentId: string }>`
+  query ChildActivitySheets($studentId: String!) {
+    childActivitySheets(studentId: $studentId) { issue { ${ISSUE_FIELDS} } itemId level bankId bankNameBn skillArea hasAnswer }
+  }
+`;
+
+export const REQUEST_ACTIVITY_SHEET = gql<{ requestActivitySheet: ActivityIssueT }>`
+  mutation RequestActivitySheet($studentId: String!, $bankId: String!, $level: String!) {
+    requestActivitySheet(studentId: $studentId, bankId: $bankId, level: $level) { ${ISSUE_FIELDS} }
+  }
+`;
+
+export const CANCEL_ACTIVITY_REQUEST = gql`
+  mutation CancelActivityRequest($issueId: String!) { cancelActivityRequest(issueId: $issueId) { id status } }
+`;
+
+export const ACTIVITY_REQUESTS_QUERY = gql<{ activityRequests: ActivityBatchRowT[] }>`
+  query ActivityRequests { activityRequests { ${BATCH_ROW} } }
+`;
+
+export const PRINT_ACTIVITY_BATCH = gql<{ printActivityBatch: { runId: string; sheets: number } }>`
+  mutation PrintActivityBatch($issueIds: [String!]) { printActivityBatch(issueIds: $issueIds) { runId sheets } }
+`;
+
+export const ACTIVITY_HANDOUT_ROSTER = gql<{ activityHandOutRoster: ActivityBatchRowT[] }>`
+  query ActivityHandOutRoster { activityHandOutRoster { ${BATCH_ROW} } }
+`;
+
+export const ACTIVITY_HANDOUT = gql`
+  mutation ActivityHandOut($issueIds: [String!]!) { activityHandOut(issueIds: $issueIds) }
+`;

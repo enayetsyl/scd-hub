@@ -353,6 +353,8 @@ const GUARDIAN_NAV: NavSection[] = [
   { type: "item", route: "GuardianBooksTab", labelKey: "cbNav", icon: "📚" },
   // SB-1 (D-#980): the school's storybooks for the child's age band.
   { type: "item", route: "GuardianStoriesTab", labelKey: "stbNav", icon: "🧸" },
+  // AS-3 (D-#988): activity sheets for the child's class — choose one, see how it went.
+  { type: "item", route: "GuardianActivityTab", labelKey: "actNav", icon: "🧩" },
   {
     type: "group",
     titleKey: "drawerGroupAcademics",
