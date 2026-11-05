@@ -1599,6 +1599,9 @@ const STR_BN = {
   wbTapToOpen: "বিস্তারিত দেখতে চাপুন",
   prTitle: "প্রিন্ট অনুরোধ",
   prQueueTitle: "প্রিন্ট কিউ",
+  // D-#1010: optional by-class order of the two work tabs.
+  prSortArrival: "আসার ক্রমে",
+  prSortClass: "শ্রেণি অনুযায়ী",
   prMyRequests: "আমার অনুরোধ",
   prNew: "নতুন অনুরোধ",
   prSend: "প্রিন্টে পাঠান",
@@ -8461,6 +8464,9 @@ const STR_EN: StrTable = {
   wbTapToOpen: "Tap for details",
   prTitle: "Print request",
   prQueueTitle: "Print queue",
+  // D-#1010: optional by-class order of the two work tabs.
+  prSortArrival: "As they came",
+  prSortClass: "By class",
   prMyRequests: "My requests",
   prNew: "New request",
   prSend: "Send to print",

@@ -1,5 +1,8 @@
 # STATUS
 
+- 2026-11-05: **BUILT — print queue class order (D-#1010)** (branch `feat/print-queue-class-sort`, worktree `C:/w/prsort`). Toggle on the two work tabs; server-side order so paging follows it. Draft help guide `print-queue-class-order` (new category প্রিন্ট).
+  - **Verified:** see the PR.
+  - **Now / next:** merge → promote → **OTA**. Capture the help-guide screenshot, then drop `draft`.
 - 2026-11-05: **BUILT — staff mistake record MR-9: the deferred places (D-#1001–#1004)** (branch `feat/staff-mistakes-mr9`, stacked on the Principal branch, worktree `C:/w/smr`). Quran marks after an unlock; Saturday revision gets a correction path for sent entries (new switch `saturday_revision:correct`, supersedes D-#242's "next Saturday"); CT marks overdue per teacher; five tier-2 comparisons (staff sheet re-upload, salary twice, guardian link undone, question restored, absent at delivery). Principal decision renumbered D-#974 → D-#1000 (#1327 claims D-#974). Five help guides added as drafts (D-#973).
   - **Verified:** see the PR.
   - **Now / next:** merge MR-1 → … → Principal → MR-9 in order → promote → **OTA**. Help-guide screenshots still to capture (local capture script, D-#992), then drop `draft`. Owner to confirm the MR-9 defaults in PRD §17.
