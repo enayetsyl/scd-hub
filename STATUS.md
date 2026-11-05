@@ -1,5 +1,9 @@
 # STATUS
 
+- 2026-11-05: **BUILT — storybook shelf SB-4, my child's books + alerts (D-#983/#984)** (branch `feat/storybook-sb4`, stacked on SB-3 #1335 → SB-2 #1333 → SB-1 #1330, NOT merged).
+  - **Verified:** server/app tsc 0; vocab verifier PASS (kinds += STORYBOOK_ISSUED/STORYBOOK_STICKER); storyReading 3 tests; full server jest 6,266/6,273 with 2 suites failing under load (marksDriversService, questionBatch — 17/17 re-run alone); Chrome walk 12/12 (issue + sticker notifications, family pop-ups shown on opening the app, Today card, my child's books with counts / stickers / held book / history).
+  - **Owner to note:** every lending makes one pop-up row in Office's pop-up list (D-#984 asked for pop-ups) — say if that list gets too busy and it can become notification + Today card only.
+  - **Now / next:** SB-5 phone-camera QR scanning (needs the next APK), SB-6 reports, SB-7 all-rounder; then activity sheets AS-1..AS-6.
 - 2026-11-05: **BUILT — storybook shelf SB-3, the waitlist (D-#982/#990)** (branch `feat/storybook-sb3`, stacked on SB-2 #1333 → SB-1 #1330, NOT merged). Guardian join/leave in the app, desk adds in person, 2-working-day hold, LIBRARY_HOLD_READY notice to every linked guardian, held banner on the shelf.
   - **Verified:** server/app tsc 0; vocab verifier PASS (kind list += LIBRARY_HOLD_READY); storyWaitlist 3 + library suites + nav-coverage + gate scan; full server jest (see PR); Chrome walk 8/8 (guardian joins → number 1 → return → held for Aisha, notice body "…৯ নভেম্বর-এর মধ্যে নিয়ে নিন" → shelf banner → book card → Office queue card).
   - **Now / next:** SB-4 guardian view & alerts (my child's books + counts + stickers; issued / sticker alerts as notification + pop-up + Today card).
