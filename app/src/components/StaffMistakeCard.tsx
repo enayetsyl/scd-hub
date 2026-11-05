@@ -106,6 +106,13 @@ export function StaffMistakeCard({
           ))}
         </>
       ) : null}
+      {m.genericNote
+        ? m.genericNote.lines.map((l, i) => (
+            <Muted key={i}>
+              • {l.text} ({dhakaClock(l.at)}{l.byName && l.byName !== m.staffName ? ` · ${l.byName}` : ""})
+            </Muted>
+          ))
+        : null}
       {m.movedFromName ? <Muted>{STR.smrMovedFrom.replace("{name}", m.movedFromName)}</Muted> : null}
       <View style={{ marginTop: space(2), gap: space(1) }}>
         {m.reasonCode ? (

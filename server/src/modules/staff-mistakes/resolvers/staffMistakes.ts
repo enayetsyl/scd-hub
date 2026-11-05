@@ -26,6 +26,7 @@ import {
   type ClassTestCorrectionNoteShape,
 } from "../../trackers/services/ClassTestCorrectionService";
 import { claimDetailsByIds, revertDetailsByIds, type WorkMistakeDetailShape } from "../../trackers/services/WorkMistakeService";
+import { staffMistakeNotesByIds, type StaffMistakeNoteShape } from "../services/StaffMistakeNoteService";
 import {
   decideMistake,
   explainMistake,
@@ -53,18 +54,34 @@ type Row = StaffMistakeShape & {
   attendanceNote: AttendanceCorrectionNoteShape | null;
   classTestNote: ClassTestCorrectionNoteShape | null;
   workNote: WorkMistakeDetailShape | null;
+  genericNote: StaffMistakeNoteShape | null;
 };
+
+/** Kinds whose detail is a generic StaffMistakeNote (MR-6+, D-#954). */
+const GENERIC_KINDS = new Set([
+  "POPUP_NOTICE_CHANGE",
+  "MONTHLY_REPORT_REVOKE",
+  "SYLLABUS_REOPEN",
+  "EXAM_ROUTINE_CHANGE",
+  "STAFF_LETTER_VOID",
+  "PAYROLL_REOPEN",
+  "FINANCE_REVERSAL",
+  "MASTERY_CORRECTION",
+  "QURAN_EXAM_CORRECTION",
+  "CLASS_NOTE_CHANGE",
+]);
 
 const idsOf = (rows: StaffMistakeShape[], kind: string) => rows.filter((r) => r.kind === kind).map((r) => r.sourceId);
 
 /** Attach each entry's source detail in one batch per kind. */
 async function withDetail(rows: StaffMistakeShape[]): Promise<Row[]> {
-  const [marks, attendance, classTests, claims, reverts] = await Promise.all([
+  const [marks, attendance, classTests, claims, reverts, generic] = await Promise.all([
     markCorrectionNotesByIds(idsOf(rows, "MARK_CORRECTION")),
     attendanceCorrectionNotesByIds(idsOf(rows, "ATTENDANCE_CORRECTION")),
     classTestCorrectionNotesByIds([...idsOf(rows, "CLASS_TEST_MARKS"), ...idsOf(rows, "CLASS_TEST_SCRIPTS")]),
     claimDetailsByIds(idsOf(rows, "WORK_CLAIM_ACCEPTED")),
     revertDetailsByIds(idsOf(rows, "WORK_REVERT")),
+    staffMistakeNotesByIds(rows.filter((r) => GENERIC_KINDS.has(r.kind)).map((r) => r.sourceId)),
   ]);
   return rows.map((r) => ({
     ...r,
@@ -73,6 +90,7 @@ async function withDetail(rows: StaffMistakeShape[]): Promise<Row[]> {
     classTestNote: r.kind === "CLASS_TEST_MARKS" || r.kind === "CLASS_TEST_SCRIPTS" ? (classTests.get(r.sourceId) ?? null) : null,
     workNote:
       r.kind === "WORK_CLAIM_ACCEPTED" ? (claims.get(r.sourceId) ?? null) : r.kind === "WORK_REVERT" ? (reverts.get(r.sourceId) ?? null) : null,
+    genericNote: GENERIC_KINDS.has(r.kind) ? (generic.get(r.sourceId) ?? null) : null,
   }));
 }
 
@@ -112,6 +130,21 @@ const ClassTestNoteRef = builder.objectRef<ClassTestCorrectionNoteShape>("ClassT
     testNumber: t.exposeInt("testNumber"),
     totalMarks: t.exposeFloat("totalMarks"),
     changes: t.field({ type: [ClassTestChangeRef], resolve: (n) => n.changes }),
+  }),
+});
+
+const GenericLineRef = builder.objectRef<StaffMistakeNoteShape["lines"][number]>("StaffMistakeNoteLine").implement({
+  fields: (t) => ({
+    text: t.exposeString("text"),
+    at: t.string({ resolve: (l) => new Date(l.at).toISOString() }),
+    byName: t.exposeString("byName"),
+  }),
+});
+
+const GenericNoteRef = builder.objectRef<StaffMistakeNoteShape>("StaffMistakeNote").implement({
+  fields: (t) => ({
+    id: t.exposeString("id"),
+    lines: t.field({ type: [GenericLineRef], resolve: (n) => n.lines }),
   }),
 });
 
@@ -171,6 +204,7 @@ const StaffMistakeRef = builder.objectRef<Row>("StaffMistake").implement({
     attendanceNote: t.field({ type: AttendanceNoteRef, nullable: true, resolve: (r) => r.attendanceNote }),
     classTestNote: t.field({ type: ClassTestNoteRef, nullable: true, resolve: (r) => r.classTestNote }),
     workNote: t.field({ type: WorkNoteRef, nullable: true, resolve: (r) => r.workNote }),
+    genericNote: t.field({ type: GenericNoteRef, nullable: true, resolve: (r) => r.genericNote }),
   }),
 });
 

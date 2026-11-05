@@ -38,6 +38,7 @@ import {
   windowsOverlap,
   type HifzCount,
 } from "./quranExamMath";
+import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
 
 export class QuranExamError extends Error {}
 
@@ -649,6 +650,16 @@ export async function saveQuranExamResult(ctx: AppContext, sittingId: string, in
   const paper = await QuranExamPaper.findOne({ examId: s.examId, level: s.level });
   if (!paper) throw new QuranExamError("এই স্তরের প্রশ্নপত্র নেই।");
   let total: number | null = null;
+  // D-#954: a child marked absent and now marked present with no make-up in between was
+  // never absent — the examiner who marked it owns the correction.
+  let wrongAbsentBy: Types.ObjectId | null = null;
+  if (input.present && s.status === "ABSENT") {
+    const hist = s.history ?? [];
+    let lastAbsent = -1;
+    for (let i = hist.length - 1; i >= 0; i--) if (hist[i]!.kind === "ABSENT") { lastAbsent = i; break; }
+    const madeUp = lastAbsent >= 0 && hist.slice(lastAbsent + 1).some((h) => h.kind === "MADE_UP");
+    if (lastAbsent >= 0 && !madeUp && hist[lastAbsent]!.by) wrongAbsentBy = hist[lastAbsent]!.by as Types.ObjectId;
+  }
   if (input.present) {
     if (paper.scheme === "ITEMS") {
       const flat = input.itemMarksFlat ?? [];
@@ -697,6 +708,16 @@ export async function saveQuranExamResult(ctx: AppContext, sittingId: string, in
     targetKind: "QuranExamSitting",
     meta: { status: s.status, total, absenceReason: s.absenceReason },
   });
+  if (wrongAbsentBy) {
+    await recordPlaceMistake({
+      kind: "QURAN_EXAM_CORRECTION",
+      refKey: sittingId,
+      ownerId: wrongAbsentBy,
+      correctedBy: ctx.auth!.userId,
+      at: new Date(),
+      line: "অনুপস্থিত দেওয়া শিক্ষার্থীকে মেকআপ ছাড়াই উপস্থিত দেখানো হয়েছে",
+    });
+  }
   return quranExamSittingDetail(ctx, sittingId);
 }
 

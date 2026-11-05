@@ -161,3 +161,25 @@ Single-step in MR-1; the mockup's Office-then-Principal step is MR-2 if the owne
 - **Reasons.** Claim: আমার ভুল ছিল (counts) · খাতা অন্যের কাছে ছিল · শিক্ষার্থী পরে দেখিয়েছে
   (accepted at once) · অন্য কারণ. Revert: ভুল শিক্ষার্থীর ঘরে চাপ পড়েছে (counts) · খাতা আবার
   দেখে বদলেছি · অন্য কারণ. Both explained later.
+
+## 13. MR-6 — the remaining tier-1 places (D-#954)
+
+One generic source, `StaffMistakeNote` (kind × refKey × owner × episode, lines of Bangla written
+when the correction happened), and `recordPlaceMistake()` called from each place. All tier 1,
+explained later by the owner. Reasons = আমার ভুল ছিল + the place's own + অন্য কারণ.
+
+| kind | caught when | owner |
+|---|---|---|
+| POPUP_NOTICE_CHANGE | a published pop-up's text/buttons change or it is re-shown or withdrawn AND someone had read it (moving only the end date is not) | `publishedBy` ?? `createdBy` |
+| MONTHLY_REPORT_REVOKE | a released report is revoked (a batch gathers on one note) | `releasedByUserId` |
+| SYLLABUS_REOPEN | a PUBLISHED syllabus's content changes | the previous `updatedBy` |
+| EXAM_ROUTINE_CHANGE | a published routine's slots for a class change | the previous `updatedBy` |
+| STAFF_LETTER_VOID | a letter that was sent to the person's app is voided | `issuedBy` |
+| PAYROLL_REOPEN | a locked payroll run is reopened | `preparedBy` |
+| FINANCE_REVERSAL | a posting is reversed | the original `enteredByUserId` |
+| MASTERY_CORRECTION | results change after the paper was confirmed (per prior entrant) | each changed row's previous `enteredBy` |
+| QURAN_EXAM_CORRECTION | an ABSENT sitting is saved present with no MADE_UP after the absence | the ABSENT history entry's `by` |
+| CLASS_NOTE_CHANGE | a published note is re-published with a different summary, edited (text/files) or deleted | `publishedBy` |
+
+Not in this slice: Saturday revision (a delivered entry cannot be corrected at all yet — needs a
+correction path first) and Quran-exam marks changed after an unlock.

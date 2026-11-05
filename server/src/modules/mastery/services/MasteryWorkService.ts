@@ -37,6 +37,7 @@ import { loCodesOf } from "../bank";
 import { groupStimulusParts, printPlan, stimulusRefOf } from "../parts";
 import { computeEvidence, isoWeekKey, type ResultLike, type TagLike } from "../evidence";
 import { reapplyExclusions } from "../exclusions";
+import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
 
 export type Auth = AccessProfile & { userId: string; role: string };
 
@@ -588,6 +589,11 @@ export async function saveResults(paperId: string, rows: ResultInput[], auth: Au
     if (bad) throw new MasteryWorkError(bad);
   }
   const by = Types.ObjectId.isValid(auth.userId) ? oid(auth.userId) : undefined;
+  // D-#954: after confirmation, whoever entered each changed result owns the correction.
+  const priorEntrants =
+    paper.entryState === "CONFIRMED"
+      ? await MasteryResult.find({ paperId: paper._id, studentId: { $in: rows.map((r) => oid(r.studentId)) } }).select("enteredBy").lean()
+      : [];
   for (const r of rows) {
     const key = { paperId: paper._id, studentId: oid(r.studentId) };
     if (isEmptyResult(r)) {
@@ -625,6 +631,18 @@ export async function saveResults(paperId: string, rows: ResultInput[], auth: Au
     targetId: paper._id,
     meta: { paperId, students: rows.length, correction: paper.entryState === "CONFIRMED" },
   });
+  const perEntrant = new Map<string, number>();
+  for (const p of priorEntrants) if (p.enteredBy) perEntrant.set(String(p.enteredBy), (perEntrant.get(String(p.enteredBy)) ?? 0) + 1);
+  for (const [owner, n] of perEntrant) {
+    await recordPlaceMistake({
+      kind: "MASTERY_CORRECTION",
+      refKey: String(paper._id),
+      ownerId: owner,
+      correctedBy: auth.userId,
+      at: new Date(),
+      line: `নিশ্চিত করার পর ${n} জন শিক্ষার্থীর ফল বদলানো হয়েছে`,
+    });
+  }
   return { saved: rows.length, evidenceRows };
 }
 
