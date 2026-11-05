@@ -7,7 +7,7 @@
  *   staffMistakeQueue      entries waiting for a decision, minus the caller's own (review)
  *   decideStaffMistake     excuse / count / move (review)
  *   staffMistakeMoveTargets  the move picker (review)
- *   MR-2 (D-#940–#943): myStaffWarning / acknowledgeStaffWarning / myStaffWarnings (SELF),
+ *   MR-2 (D-#940–#942, #1005): myStaffWarning / acknowledgeStaffWarning / myStaffWarnings (SELF),
  *   staffWarnings + staffMistakeSummary + staffMistakeSettings (view_all), schedule/record a
  *   warning meeting (meetings), setStaffMistakeSettings (settings)
  *
@@ -311,7 +311,7 @@ builder.queryField("staffMistakeMoveTargets", (t) =>
 );
 
 // ---------------------------------------------------------------------------
-// MR-2 (D-#940–#943): the warning ladder, meetings, the summary and the rules
+// MR-2 (D-#940–#942, #1005): the warning ladder, meetings, the summary and the rules
 // ---------------------------------------------------------------------------
 
 const WarningMistakeRef = builder.objectRef<WarningMistakeLine>("StaffWarningMistake").implement({

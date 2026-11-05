@@ -7926,7 +7926,7 @@ const STR_BN = {
   smrNoReasonYet: "এখনো কারণ দেননি",
   smrChangeDecision: "সিদ্ধান্ত বদলান",
   smrDecide: "সিদ্ধান্ত দিন",
-  // Warning ladder, meetings, summary, rules (D-#940–#943)
+  // Warning ladder, meetings, summary, rules (D-#940–#942, #1005)
   smrCardSummaryHelp: "কার কতটি ভুল গণ্য, কে সীমার কাছে, কোন কাজে বেশি ভুল",
   smrCardSettingsHelp: "সতর্কবার্তার ধাপ, ওজন, ব্যাখ্যার সময়, কোন জায়গায় চালু",
   smrKindLabel_MARK_CORRECTION: "বাড়ির কাজ / অ্যাসাইনমেন্টের জমা",
@@ -14645,7 +14645,7 @@ const STR_EN: StrTable = {
   smrNoReasonYet: "No reason given yet",
   smrChangeDecision: "Change decision",
   smrDecide: "Decide",
-  // Warning ladder, meetings, summary, rules (D-#940–#943)
+  // Warning ladder, meetings, summary, rules (D-#940–#942, #1005)
   smrCardSummaryHelp: "Who has how many counted, who is near the limit, which jobs go wrong most",
   smrCardSettingsHelp: "Warning steps, weights, explanation deadline, places switched on",
   smrKindLabel_MARK_CORRECTION: "Homework / assignment submission",
