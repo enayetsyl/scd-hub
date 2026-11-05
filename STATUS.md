@@ -1,5 +1,8 @@
 # STATUS
 
+- 2026-11-04: **BUILT — staff mistake record: the Principal's own entries (D-#1000)** (branch `feat/staff-mistakes-principal`, stacked on MR-8, worktree `C:/w/smr`). Private to Principals; the Principal decides their own. Owner confirmed the other MR defaults as built.
+  - **Verified:** see the PR.
+  - **Now / next:** re-sync the stack with dev (it conflicts again after #1316), merge MR-1 → MR-8 → this in order → promote → **OTA**. Still open with the owner: who is responsible per place, whether the task check starts off, and which deferred items to build.
 - 2026-11-04: **BUILT — staff mistake record MR-8: tier 3, missed or late duties (D-#955)** (branch `feat/staff-mistakes-mr8`, stacked on MR-7, worktree `C:/w/smr`). Six sweeps record once per thing at tier 3; approved leave on the duty day is accepted automatically. MR-6 renumbered D-#952 → D-#955 (D-#952 went to the lesson-plan switch, #1313).
   - **Verified:** see the PR.
   - **Now / next:** merge MR-1 → MR-8 in order → promote → **OTA**. All eight slices built; owner to confirm the owners/moments listed in the PRD §§11–15.

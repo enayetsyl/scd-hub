@@ -91,8 +91,8 @@ export default function MistakeReviewScreen(): React.ReactElement {
         <EmptyState message={tab === "queue" ? STR.smrReviewEmpty : STR.smrEmpty} />
       ) : (
         rows.map((m) => {
-          // Nobody decides their own entry (the server refuses it too).
-          const decidable = m.status !== "MOVED" && m.staffUserId !== user?.id;
+          // Nobody decides their own entry except the Principal (D-#1000; the server enforces it too).
+          const decidable = m.status !== "MOVED" && (m.staffUserId !== user?.id || can("staff_mistakes:review_principal"));
           const decided = m.status === "COUNTED" || m.status === "EXCUSED";
           return (
             <StaffMistakeCard key={m.id} m={m} showName>
