@@ -337,6 +337,9 @@ export function notificationTarget(
     case "TASK_DUE_DIGEST":
     case "TASK_OVERDUE":
       return { tab: "WorkBoardTab", screen: "WorkBoard" };
+    // D-#966: "tasks you gave" opens আমার দেওয়া কাজ.
+    case "TASK_GIVEN_SUMMARY":
+      return { tab: "WorkBoardTab", screen: "AssignedByMe" };
 
     default:
       return null;

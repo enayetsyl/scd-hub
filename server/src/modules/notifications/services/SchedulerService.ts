@@ -92,8 +92,11 @@ import {
 } from "../../comments/services/MeetingChainService";
 import {
   dispatchTaskDigest,
+  dispatchTaskGivenSummary,
   dispatchTaskOverdue,
   TASK_DIGEST_MINUTES,
+  TASK_GIVEN_AM_MINUTES,
+  TASK_GIVEN_PM_MINUTES,
   TASK_OVERDUE_MINUTES,
 } from "../../workboard/services/TaskSweepService";
 // (No backup import: the school's own nightly cron owns backups — ADR-011. The health
@@ -258,6 +261,8 @@ export interface TickSummary {
   taskTemplatesCreated: number;
   taskDigestsEmitted: number;
   taskOverdueEmitted: number;
+  /** D-#966: 08:00 / 17:00 "tasks you gave" summaries emitted. */
+  taskGivenSummaryEmitted: number;
   /** 11:00 improvement sweep (SP-4, D-#738): Office/Principal digests + class-teacher guardian alerts. */
   improvementPendingEmitted: number;
   improvementMissedEmitted: number;
@@ -307,6 +312,7 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
     taskTemplatesCreated: 0,
     taskDigestsEmitted: 0,
     taskOverdueEmitted: 0,
+    taskGivenSummaryEmitted: 0,
     improvementPendingEmitted: 0,
     improvementMissedEmitted: 0,
     meetingNoteRemindersEmitted: 0,
@@ -754,6 +760,15 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
       summary.taskOverdueEmitted = await dispatchTaskOverdue(now);
     });
   });
+  // D-#966: "tasks you gave" to each assigner, 08:00 and 17:00.
+  for (const [part, at] of [["AM", TASK_GIVEN_AM_MINUTES], ["PM", TASK_GIVEN_PM_MINUTES]] as const) {
+    await family(`task given summary ${part}`, async () => {
+      if (!windowOpen(nowMin, at)) return;
+      await runOnce(dateKey, `TASKGS:${part}`, async () => {
+        summary.taskGivenSummaryEmitted += await dispatchTaskGivenSummary(now, part);
+      });
+    });
+  }
 
   // --- Attendance tiers (D-#96/#99) — CALL the AT-4 engine, one truth.
   // FULL days only (the dispatcher gates again itself — belt and braces).
