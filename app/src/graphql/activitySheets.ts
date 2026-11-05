@@ -141,3 +141,102 @@ export const SAVE_ACTIVITY_RULES = gql`
     ) { weeklyRequests maxOpen monthlyTarget levelUpAfter notReturnedDays restockSheets restockCopies lowTray busyMode isDefault }
   }
 `;
+
+// --- AS-2 the activity corner -------------------------------------------------
+
+export interface ActivityStudentT {
+  id: string;
+  name: string;
+  schoolId: string;
+  rollNumber: string | null;
+  classLevel: number | null;
+  classLabelBn: string;
+  sectionNameBn: string | null;
+  openSheets: number;
+}
+
+export interface ActivityIssueT {
+  id: string;
+  studentId: string;
+  /** TRAY | GUARDIAN | DESK_PRINT */
+  path: string;
+  status: string;
+  result: string | null;
+  repeat: boolean;
+  unscannedTake: boolean;
+  stickerGiven: boolean;
+  stickerOwed: boolean;
+  requestedAt: string;
+  handedAt: string | null;
+  returnedAt: string | null;
+}
+
+export interface ActivityTrayT {
+  bankId: string;
+  code: string;
+  nameBn: string;
+  skillArea: string;
+  levels: Array<{ level: string; inTray: number; out: number; low: boolean; printable: number }>;
+}
+
+export interface ActivityDeskCopyT {
+  code: string;
+  kind: string;
+  /** IN_TRAY | TAKEN | RETURNED | LOST */
+  status: string;
+  itemId: string;
+  level: string;
+  details: string | null;
+  bankCode: string;
+  bankNameBn: string;
+  issue: ActivityIssueT | null;
+  holder: ActivityStudentT | null;
+  busyMode: boolean;
+}
+
+const ISSUE_FIELDS = "id studentId path status result repeat unscannedTake stickerGiven stickerOwed requestedAt handedAt returnedAt";
+const STUDENT_FIELDS = "id name schoolId rollNumber classLevel classLabelBn sectionNameBn openSheets";
+
+export const ACTIVITY_TRAYS_QUERY = gql<{ activityTrays: { trays: ActivityTrayT[]; lowTray: number; busyMode: boolean } }>`
+  query ActivityTrays {
+    activityTrays { lowTray busyMode trays { bankId code nameBn skillArea levels { level inTray out low printable } } }
+  }
+`;
+
+export const ACTIVITY_DESK_COPY_QUERY = gql<{ activityDeskCopy: ActivityDeskCopyT }, { code: string }>`
+  query ActivityDeskCopy($code: String!) {
+    activityDeskCopy(code: $code) {
+      code kind status itemId level details bankCode bankNameBn busyMode
+      issue { ${ISSUE_FIELDS} }
+      holder { ${STUDENT_FIELDS} }
+    }
+  }
+`;
+
+export const ACTIVITY_STUDENTS_QUERY = gql<{ activityStudents: ActivityStudentT[] }, { search: string }>`
+  query ActivityStudents($search: String!) { activityStudents(search: $search) { ${STUDENT_FIELDS} } }
+`;
+
+export const PRINT_ACTIVITY_STOCK = gql<{ printActivityStock: { runId: string; copies: number; sheets: number } }>`
+  mutation PrintActivityStock($picks: [String!], $sheets: Int, $copies: Int) {
+    printActivityStock(picks: $picks, sheets: $sheets, copies: $copies) { runId copies sheets }
+  }
+`;
+
+export const ACTIVITY_TAKE = gql<{ activityTake: ActivityIssueT }>`
+  mutation ActivityTake($code: String!, $studentId: String!) { activityTake(code: $code, studentId: $studentId) { ${ISSUE_FIELDS} } }
+`;
+
+export const ACTIVITY_CANCEL_TAKE = gql`
+  mutation ActivityCancelTake($code: String!) { activityCancelTake(code: $code) }
+`;
+
+export const ACTIVITY_RETURN = gql<{ activityReturn: ActivityIssueT }>`
+  mutation ActivityReturn($code: String!, $result: String!, $viaBox: Boolean, $studentId: String) {
+    activityReturn(code: $code, result: $result, viaBox: $viaBox, studentId: $studentId) { ${ISSUE_FIELDS} }
+  }
+`;
+
+export const ACTIVITY_COPY_LOST = gql`
+  mutation ActivityCopyLost($code: String!) { activityCopyLost(code: $code) }
+`;

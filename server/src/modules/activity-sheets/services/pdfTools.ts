@@ -94,18 +94,20 @@ export async function buildSheetsPdf(sources: Buffer[], items: Array<StampedPage
     const { width } = page.getSize();
     const qr = QRCode.create(item.code, { errorCorrectionLevel: "M" });
     const n = qr.modules.size;
-    const size = 46;
+    // Every bank page has its footer line ~34 pt from the bottom and free space above it on
+    // the right (checked across the banks), so the QR sits there, clear of the footer text.
+    const size = 42;
     const cell = size / n;
-    const x0 = width - size - 14;
-    const y0 = 14;
+    const x0 = width - size - 50;
+    const y0 = 40;
     page.drawRectangle({ x: x0 - 3, y: y0 - 3, width: size + 6, height: size + 6, color: rgb(1, 1, 1) });
     for (let r = 0; r < n; r++) {
       for (let c = 0; c < n; c++) {
         if (qr.modules.get(r, c)) page.drawRectangle({ x: x0 + c * cell, y: y0 + (n - 1 - r) * cell, width: cell + 0.05, height: cell + 0.05, color: rgb(0, 0, 0) });
       }
     }
-    page.drawText(item.code, { x: x0 - 70, y: y0 + 2, size: 8, font: bold });
-    if (item.line) page.drawText(item.line.slice(0, 80), { x: 18, y: y0 + 2, size: 9, font });
+    page.drawText(item.code, { x: x0 - 52, y: y0 + 2, size: 8, font: bold });
+    if (item.line) page.drawText(item.line.slice(0, 70), { x: 50, y: y0 + 2, size: 10, font: bold });
   }
   return Buffer.from(await out.save());
 }

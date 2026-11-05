@@ -80,6 +80,7 @@ import "./modules/library/resolvers/storyWaitlist";
 import "./modules/library/resolvers/storyReading";
 import "./modules/library/resolvers/storyReports";
 import "./modules/activity-sheets/resolvers/activityBanks";
+import "./modules/activity-sheets/resolvers/activityCorner";
 import "./modules/chat/resolvers/chat";
 import "./modules/vocab/resolvers/vocabWord";
 import "./modules/vocab/resolvers/vocabTest";

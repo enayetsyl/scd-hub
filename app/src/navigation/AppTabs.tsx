@@ -135,6 +135,8 @@ import StoryDeskScreen from "../screens/storybooks/StoryDeskScreen";
 import StoryChildBooksScreen from "../screens/storybooks/StoryChildBooksScreen";
 import ActivityBanksScreen from "../screens/activity/ActivityBanksScreen";
 import ActivityBankScreen from "../screens/activity/ActivityBankScreen";
+import ActivityCornerScreen from "../screens/activity/ActivityCornerScreen";
+import ActivityDeskScreen from "../screens/activity/ActivityDeskScreen";
 import QuranExamHomeScreen from "../screens/quranExam/QuranExamHomeScreen";
 import MyQuranExamScreen from "../screens/quranExam/MyQuranExamScreen";
 import QuranExamDayScreen from "../screens/quranExam/QuranExamDayScreen";
@@ -1756,6 +1758,8 @@ function ActivityNavigator(): React.ReactElement {
     <ActivityStack.Navigator screenOptions={stackOptions}>
       <ActivityStack.Screen name="ActivityBanks" component={ActivityBanksScreen} options={{ title: STR.actNav }} />
       <ActivityStack.Screen name="ActivityBank" component={ActivityBankScreen} options={({ route }) => ({ title: route.params.title })} />
+      <ActivityStack.Screen name="ActivityCorner" component={ActivityCornerScreen} options={{ title: STR.actCorner }} />
+      <ActivityStack.Screen name="ActivityDesk" component={ActivityDeskScreen} options={{ title: STR.actDesk }} />
     </ActivityStack.Navigator>
   );
 }

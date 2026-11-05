@@ -145,6 +145,8 @@ export default function ActivityBanksScreen({ navigation }: Props): React.ReactE
   const { can } = useAuth();
   const manage = can("activity_sheets:manage");
   const settings = can("activity_sheets:settings");
+  const corner = can("activity_sheets:issue") || manage;
+  const desk = can("activity_sheets:issue") || can("activity_sheets:check");
   const [q, refetch] = useQuery({ query: ACTIVITY_BANKS_QUERY });
   const [rulesQ, refetchRules] = useQuery({ query: ACTIVITY_RULES_QUERY, pause: !settings });
   const [panel, setPanel] = useState<"none" | "add" | "rules">("none");
@@ -156,6 +158,12 @@ export default function ActivityBanksScreen({ navigation }: Props): React.ReactE
   return (
     <Screen>
       {msg ? <Notice message={msg.text} tone={msg.tone} /> : null}
+      {corner || desk ? (
+        <View style={{ flexDirection: "row", gap: space(2), marginBottom: space(3), flexWrap: "wrap" }}>
+          {desk ? <Button title={STR.actDesk} onPress={() => navigation.navigate("ActivityDesk")} /> : null}
+          {corner ? <Button title={STR.actCorner} variant="secondary" onPress={() => navigation.navigate("ActivityCorner")} /> : null}
+        </View>
+      ) : null}
       {manage || settings ? (
         <ChipRow>
           {manage ? <Chip label={STR.actAddBank} selected={panel === "add"} onPress={() => setPanel(panel === "add" ? "none" : "add")} /> : null}

@@ -287,6 +287,8 @@ export type ClassBooksStackParamList = {
 export type ActivityStackParamList = {
   ActivityBanks: undefined;
   ActivityBank: { bankId: string; title: string };
+  ActivityCorner: undefined;
+  ActivityDesk: undefined;
 };
 
 export type StorybooksStackParamList = {

@@ -22,6 +22,12 @@ import {
   importBank,
   replaceSheet,
 } from "../modules/activity-sheets/services/ActivityBankService";
+import { printRunPdf } from "../modules/activity-sheets/services/ActivityCornerService";
+
+/** A stock run prints plain; a morning batch (AS-3) adds names + cover slips. */
+async function printRunPdfFor(runId: string): Promise<Buffer> {
+  return printRunPdf(runId);
+}
 
 export const ACTIVITY_MAX_PDF_BYTES = 60 * 1024 * 1024;
 
@@ -89,6 +95,26 @@ const num = (v: unknown): number | null => {
 };
 
 export function registerActivityFileRoutes(router: Router): void {
+  // GET /files/activity-print?runId=… — one print run as a PDF (tray stock: AS-2; a morning
+  // batch with names: AS-3). activity_sheets:manage. Built on demand from the run's copies.
+  router.get("/activity-print", async (req: Request, res: Response) => {
+    const actorId = canManage(req, res);
+    if (!actorId) return;
+    const runId = typeof req.query.runId === "string" ? req.query.runId : "";
+    try {
+      const pdf = await printRunPdfFor(runId);
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `inline; filename="activity-${runId.slice(0, 20)}.pdf"`);
+      res.send(pdf);
+    } catch (e) {
+      if (e instanceof ActivityError) {
+        res.status(422).json({ error: e.message });
+        return;
+      }
+      throw e;
+    }
+  });
+
   router.post("/activity-bank", parseBankUpload, async (req: Request, res: Response) => {
     const actorId = canManage(req, res);
     if (!actorId) return;
