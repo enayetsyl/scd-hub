@@ -58,7 +58,7 @@ import { runDueOffboardingRevocations } from "../../hr/services/OffboardingServi
 import { runObservationEscalation } from "../../classroom-observation/services/ObservationEscalationService";
 import { pendingHomeworkSections } from "../../trackers/services/HomeworkReconciliationService";
 import { sweepHomeworkDue } from "../../trackers/services/HomeworkDueSweepService";
-import { overdueCounts } from "../../trackers/services/ClassTestSummaryService";
+import { overdueCounts, recordLateClassTestMarks } from "../../trackers/services/ClassTestSummaryService";
 import {
   runWorkClaimDigest,
   expireStaleWorkClaims,
@@ -687,6 +687,8 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
       await runOnce(dateKey, "CTOD", async () => {
         const counts = await overdueCounts({ asOf: now });
         if (counts.overdue === 0) return; // nothing late ⇒ say nothing
+        // D-#1003: the digest names nobody; the staff mistake record does, once per test.
+        if (counts.awaitingSubmit > 0) await recordLateClassTestMarks(now);
 
         const titleBn = await renderTemplate("class_test.overdue_digest.title");
         const bodyBn = await renderTemplate("class_test.overdue_digest.body", {
