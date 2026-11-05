@@ -92,6 +92,7 @@ import {
   validateStorybookUpload,
 } from "../modules/library/services/StorybookService";
 import { LibraryError } from "../modules/library/errors";
+import { storyStickerCodes, storyStickerPdf } from "../modules/library/services/StoryDeskService";
 import { ARTIFACT_STAGES, type ArtifactStage } from "@scd/shared";
 import { Types as MongoTypes } from "mongoose";
 
@@ -1282,6 +1283,35 @@ filesRouter.post("/storybook", parseStorybookUpload, async (req: Request, res: R
       previewPages,
     });
     res.json({ titleId: title._id.toString(), seriesNo: title.seriesNo ?? null, titleEn: title.titleEn ?? null });
+  } catch (e) {
+    if (e instanceof LibraryError) {
+      res.status(422).json({ error: e.message });
+      return;
+    }
+    throw e;
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /files/storybook-stickers?seriesId=… | ?codes=TRE-01-1,TRE-01-2 — the copy-code QR
+// sticker sheet (SB-2, D-#985), A4, 24 a page, printed from the office PC. library:edit.
+// Registered before /:id so the id route never sees "storybook-stickers".
+// ---------------------------------------------------------------------------
+
+filesRouter.get("/storybook-stickers", async (req: Request, res: Response) => {
+  const ctx = buildContext(req, res);
+  if (!ctx.auth || !callerHasPermission(ctx.auth, "library:edit")) {
+    res.status(403).json({ error: FILE_ERRORS_BN.forbidden });
+    return;
+  }
+  const codes = typeof req.query.codes === "string" && req.query.codes.trim() ? req.query.codes.split(",") : null;
+  const seriesId = typeof req.query.seriesId === "string" ? req.query.seriesId : null;
+  try {
+    const labels = await storyStickerCodes(seriesId, codes);
+    const pdf = await storyStickerPdf(labels);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename="storybook-stickers.pdf"`);
+    res.send(pdf);
   } catch (e) {
     if (e instanceof LibraryError) {
       res.status(422).json({ error: e.message });

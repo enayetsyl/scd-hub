@@ -12,6 +12,8 @@ import {
   assertBorrowerExists,
 } from "../borrowers";
 import { getEffectivePolicy } from "./LibraryPolicyService";
+import { LibraryHolidayRule, type ILibraryHolidayRule } from "../models/LibraryHolidayRule";
+import { dhakaDayKey } from "../../../lib/dhakaDay";
 import {
   addDays,
   expireLapsedHolds,
@@ -28,6 +30,19 @@ import {
  * overdue draws reminders + the chase list (LB-5); lost = replacement note
  * (D-#27). OVERDUE is computed from dueDate, never stored.
  */
+
+/** The end of a Dhaka calendar day (YYYY-MM-DD) — a holiday due date covers the whole day. */
+export function dhakaDayEnd(day: string): Date {
+  return new Date(`${day}T23:59:59+06:00`);
+}
+
+/** The active holiday rule whose window contains today (Dhaka), if any — the latest-starting wins. */
+export async function holidayRuleOn(now: Date): Promise<ILibraryHolidayRule | null> {
+  const today = dhakaDayKey(now);
+  return (await LibraryHolidayRule.findOne({ active: true, fromDay: { $lte: today }, toDay: { $gte: today } })
+    .sort({ fromDay: -1 })
+    .lean()) as unknown as ILibraryHolidayRule | null;
+}
 
 /** Pure: is an ACTIVE loan overdue at `now`? */
 export function isOverdue(loan: Pick<IBookLoan, "status" | "dueDate">, now = new Date()): boolean {
@@ -66,25 +81,35 @@ export async function issueBook(
   }
 
   const policy = await getEffectivePolicy(borrower.type);
-  const activeCount = await BookLoan.countDocuments({
-    ...borrowerFilter(borrower),
-    status: "ACTIVE",
-  });
-  if (activeCount >= policy.maxConcurrent) {
+  // SB-2 (D-#982): a holiday rule in force today lifts a child's limit and moves the due date.
+  const holiday = borrower.type === "STUDENT" ? await holidayRuleOn(now) : null;
+  const maxConcurrent = Math.max(policy.maxConcurrent, holiday?.maxConcurrent ?? 0);
+  const active = (await BookLoan.find({ ...borrowerFilter(borrower), status: "ACTIVE" })
+    .select("dueDate")
+    .lean()) as unknown as Array<Pick<IBookLoan, "dueDate">>;
+  // D-#990: with 1–2 copies a title, an overdue book keeps another child waiting — a child
+  // with one gets no new book until it is back (no fines, ever).
+  if (borrower.type === "STUDENT" && active.some((l) => new Date(l.dueDate).getTime() < now.getTime())) {
+    throw new LibraryError("আগের একটি বই ফেরতের সময় পেরিয়ে গেছে — আগে সেটি ফেরত দিন");
+  }
+  if (active.length >= maxConcurrent) {
     throw new LibraryError(
-      `এই পাঠক একসাথে সর্বোচ্চ ${policy.maxConcurrent}টি বই নিতে পারেন — আগে একটি ফেরত দিন`,
+      `এই পাঠক একসাথে সর্বোচ্চ ${maxConcurrent}টি বই নিতে পারেন — আগে একটি ফেরত দিন`,
     );
   }
+  const normalDue = addDays(now, policy.loanDays);
+  const holidayDue = holiday ? dhakaDayEnd(holiday.dueDay) : null;
 
   const loan = (await BookLoan.create({
     copyId: copy._id,
     titleId: copy.titleId,
     ...borrowerFields(borrower),
     issuedAt: now,
-    dueDate: addDays(now, policy.loanDays),
+    dueDate: holidayDue && holidayDue > normalDue ? holidayDue : normalDue,
     renewCount: 0,
     status: "ACTIVE" satisfies LoanStatus,
     issuedBy: actorId,
+    ...(holiday ? { holidayRuleId: holiday._id } : {}),
   })) as IBookLoan;
 
   // Fulfill the hold AFTER the loan exists (the failure path above leaves it READY).
@@ -105,8 +130,15 @@ export async function issueBook(
 }
 
 /** Return an ACTIVE loan (J-L4): copy → AVAILABLE, unless a queue exists —
- *  then the copy goes ON_HOLD for the head reservation (J-L6). */
-export async function returnBook(loanId: string, actorId: string, now = new Date()): Promise<IBookLoan> {
+ *  then the copy goes ON_HOLD for the head reservation (J-L6). The storybook desk
+ *  (SB-2, D-#983) also records whether the child read it and whether a sticker was
+ *  given (default: a sticker for a read book). */
+export async function returnBook(
+  loanId: string,
+  actorId: string,
+  now = new Date(),
+  opts: { read?: boolean | null; sticker?: boolean | null } = {},
+): Promise<IBookLoan> {
   const loan = (await BookLoan.findById(loanId)) as IBookLoan | null;
   if (!loan) throw new LibraryError("ঋণটি পাওয়া যায়নি");
   if (loan.status !== "ACTIVE") throw new LibraryError("ঋণটি চলমান নয়");
@@ -114,6 +146,10 @@ export async function returnBook(loanId: string, actorId: string, now = new Date
   loan.status = "RETURNED";
   loan.returnedAt = now;
   loan.returnedBy = actorId as never;
+  if (opts.read !== undefined && opts.read !== null) {
+    loan.readAtReturn = opts.read;
+    loan.stickerGiven = opts.sticker ?? opts.read;
+  }
   await loan.save();
 
   await expireLapsedHolds(loan.titleId.toString(), now);

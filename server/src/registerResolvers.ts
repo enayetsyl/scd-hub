@@ -74,6 +74,7 @@ import "./modules/library/resolvers/circulation";
 import "./modules/library/resolvers/chase";
 import "./modules/library/resolvers/libraryGuardian";
 import "./modules/library/resolvers/storybook";
+import "./modules/library/resolvers/storyDesk";
 import "./modules/chat/resolvers/chat";
 import "./modules/vocab/resolvers/vocabWord";
 import "./modules/vocab/resolvers/vocabTest";

@@ -295,10 +295,15 @@ builder.mutationField("returnBook", (t) =>
       "Desk: return an ACTIVE loan (J-L4). With a queue the copy goes ON_HOLD for the head " +
       "reservation (J-L6). Librarian gate. Audited BOOK_RETURNED.",
     authScopes: { hasPermission: "library:return" },
-    args: { loanId: t.arg.string({ required: true }) },
+    args: {
+      loanId: t.arg.string({ required: true }),
+      // Storybook desk (SB-2, D-#983): did the child read it; a sticker (default: when read).
+      read: t.arg.boolean({ required: false }),
+      sticker: t.arg.boolean({ required: false }),
+    },
     resolve: async (_root, args, ctx) => {
       await assertIsLibrarian(ctx, "library:return");
-      const loan = await returnBook(args.loanId, ctx.auth!.userId);
+      const loan = await returnBook(args.loanId, ctx.auth!.userId, new Date(), { read: args.read, sticker: args.sticker });
       const [view] = await decorateLoans([loan as unknown as LoanShape]);
       return view;
     },
