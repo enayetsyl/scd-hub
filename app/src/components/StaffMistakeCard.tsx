@@ -8,9 +8,15 @@ import { View } from "react-native";
 import type { StaffMistakeT, StaffMistakeStatusT } from "../graphql/staffMistakes";
 import { Badge, Body, Card, Muted } from "./ui";
 import { reasonLabel } from "./MistakeReasonSheet";
-import { STR, fullDateLabel, hwSubjectLabel } from "../lib/labels";
+import { STR, bnNum, fullDateLabel, hwSubjectLabel } from "../lib/labels";
 import { dhakaClock, dhakaWhen, staffMistakeKindTitle } from "../lib/staffMistakeLabels";
 import { space } from "../theme/tokens";
+
+/** "১৪", or "অনুপস্থিত" for an absent row. */
+function markText(marks: number | null, status: string | null): string {
+  if (status === "ABSENT") return STR.smrAttAbsent;
+  return marks === null ? "—" : bnNum(marks);
+}
 
 const STATUS: Record<StaffMistakeStatusT, { label: () => string; tone: "warn" | "danger" | "info" | "muted" }> = {
   EXPLANATION_DUE: { label: () => STR.smrStExplain, tone: "warn" },
@@ -63,6 +69,25 @@ export function StaffMistakeCard({
               {c.byName && c.byName !== m.staffName ? ` · ${c.byName}` : ""})
             </Muted>
           ))}
+        </>
+      ) : null}
+      {m.classTestNote ? (
+        <>
+          <Muted>
+            {m.classTestNote.ctId} · {hwSubjectLabel(m.classTestNote.subject)} · {STR.smrCtTotal.replace("{n}", bnNum(m.classTestNote.totalMarks))}
+          </Muted>
+          {m.classTestNote.kind === "SCRIPTS"
+            ? m.classTestNote.changes.map((c, i) => (
+                <Muted key={i}>
+                  • {STR.smrCtPulled} ({dhakaClock(c.at)}{c.byName && c.byName !== m.staffName ? ` · ${c.byName}` : ""})
+                </Muted>
+              ))
+            : m.classTestNote.changes.map((c, i) => (
+                <Muted key={i}>
+                  • {c.studentName} — {markText(c.fromMarks, c.fromStatus)} → {markText(c.toMarks, c.toStatus)} ({dhakaClock(c.at)}
+                  {c.byName && c.byName !== m.staffName ? ` · ${c.byName}` : ""})
+                </Muted>
+              ))}
         </>
       ) : null}
       {m.movedFromName ? <Muted>{STR.smrMovedFrom.replace("{name}", m.movedFromName)}</Muted> : null}

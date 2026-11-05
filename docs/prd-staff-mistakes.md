@@ -131,3 +131,19 @@ Single-step in MR-1; the mockup's Office-then-Principal step is MR-2 if the owne
 - **App.** The attendance screen asks before saving when the caller is the day's marker and the
   list changed; a correction by someone else asks the marker to explain later (STAFF_MISTAKE_EXPLAIN).
 - **Tier 1** (a wrong absent decides who gets homework that day).
+
+## 11. MR-4 — class tests (D-#945)
+
+- **Marks.** Every publish stores `publishedSnapshot` (marks, present/absent, entrant) on the
+  result. A later publish (one child or the whole exam) whose values differ from the snapshot
+  appends the child (from → to, when, who published) to a `ClassTestCorrectionNote` (MARKS)
+  owned by the snapshot's entrant → tier-1 `CLASS_TEST_MARKS` entry, explained later (Office
+  usually re-publishes). First release and an unchanged re-publish record nothing.
+- **Scripts.** Unpublishing published scripts (guardians had the pages) records a SCRIPTS note
+  for `scripts.publishedBy` → `CLASS_TEST_SCRIPTS` entry; a reviewer can move it to whoever
+  attached the wrong page.
+- **Reasons.** Marks: যোগে ভুল / ভুল শিক্ষার্থীর ঘরে নম্বর (both count) · খাতা পরে পাওয়া গেছে
+  (accepted at once) · অন্য কারণ. Scripts: আমার ভুল ছিল (counts) · পাতা ভুল শিক্ষার্থীর সাথে ·
+  স্ক্যান অস্পষ্ট · অন্য কারণ.
+- Episodes as in §10. The guardian's re-publish message is unchanged (it already re-notifies the
+  new result); a "নম্বর সংশোধন" wording is a follow-up.

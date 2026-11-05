@@ -22,6 +22,10 @@ import {
   type AttendanceCorrectionNoteShape,
 } from "../../attendance/services/AttendanceCorrectionService";
 import {
+  classTestCorrectionNotesByIds,
+  type ClassTestCorrectionNoteShape,
+} from "../../trackers/services/ClassTestCorrectionService";
+import {
   decideMistake,
   explainMistake,
   listMoveTargets,
@@ -46,20 +50,23 @@ import {
 type Row = StaffMistakeShape & {
   markNote: MarkCorrectionNoteShape | null;
   attendanceNote: AttendanceCorrectionNoteShape | null;
+  classTestNote: ClassTestCorrectionNoteShape | null;
 };
 
 const idsOf = (rows: StaffMistakeShape[], kind: string) => rows.filter((r) => r.kind === kind).map((r) => r.sourceId);
 
 /** Attach each entry's source detail in one batch per kind. */
 async function withDetail(rows: StaffMistakeShape[]): Promise<Row[]> {
-  const [marks, attendance] = await Promise.all([
+  const [marks, attendance, classTests] = await Promise.all([
     markCorrectionNotesByIds(idsOf(rows, "MARK_CORRECTION")),
     attendanceCorrectionNotesByIds(idsOf(rows, "ATTENDANCE_CORRECTION")),
+    classTestCorrectionNotesByIds([...idsOf(rows, "CLASS_TEST_MARKS"), ...idsOf(rows, "CLASS_TEST_SCRIPTS")]),
   ]);
   return rows.map((r) => ({
     ...r,
     markNote: r.kind === "MARK_CORRECTION" ? (marks.get(r.sourceId) ?? null) : null,
     attendanceNote: r.kind === "ATTENDANCE_CORRECTION" ? (attendance.get(r.sourceId) ?? null) : null,
+    classTestNote: r.kind === "CLASS_TEST_MARKS" || r.kind === "CLASS_TEST_SCRIPTS" ? (classTests.get(r.sourceId) ?? null) : null,
   }));
 }
 
@@ -75,6 +82,32 @@ const AttendanceChangeRef = builder
       byName: t.exposeString("byName"),
     }),
   });
+
+const ClassTestChangeRef = builder
+  .objectRef<ClassTestCorrectionNoteShape["changes"][number]>("ClassTestCorrectionChange")
+  .implement({
+    fields: (t) => ({
+      studentName: t.exposeString("studentName"),
+      fromMarks: t.float({ nullable: true, resolve: (c) => c.fromMarks }),
+      toMarks: t.float({ nullable: true, resolve: (c) => c.toMarks }),
+      fromStatus: t.string({ nullable: true, resolve: (c) => c.fromStatus }),
+      toStatus: t.string({ nullable: true, resolve: (c) => c.toStatus }),
+      at: t.string({ resolve: (c) => new Date(c.at).toISOString() }),
+      byName: t.exposeString("byName"),
+    }),
+  });
+
+const ClassTestNoteRef = builder.objectRef<ClassTestCorrectionNoteShape>("ClassTestCorrectionNote").implement({
+  fields: (t) => ({
+    id: t.exposeString("id"),
+    kind: t.exposeString("kind"),
+    ctId: t.exposeString("ctId"),
+    subject: t.exposeString("subject"),
+    testNumber: t.exposeInt("testNumber"),
+    totalMarks: t.exposeFloat("totalMarks"),
+    changes: t.field({ type: [ClassTestChangeRef], resolve: (n) => n.changes }),
+  }),
+});
 
 const AttendanceNoteRef = builder.objectRef<AttendanceCorrectionNoteShape>("AttendanceCorrectionNote").implement({
   fields: (t) => ({
@@ -109,6 +142,7 @@ const StaffMistakeRef = builder.objectRef<Row>("StaffMistake").implement({
     createdAt: t.string({ resolve: (r) => new Date(r.createdAt).toISOString() }),
     markNote: t.field({ type: NoteRef, nullable: true, resolve: (r) => r.markNote }),
     attendanceNote: t.field({ type: AttendanceNoteRef, nullable: true, resolve: (r) => r.attendanceNote }),
+    classTestNote: t.field({ type: ClassTestNoteRef, nullable: true, resolve: (r) => r.classTestNote }),
   }),
 });
 
