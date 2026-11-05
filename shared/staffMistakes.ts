@@ -6,8 +6,16 @@
 
 /** Where a mistake was caught. MR-1: the homework/assignment same-day correction;
  *  MR-3: an attendance list changed after it was submitted (D-#944);
- *  MR-4: class-test marks re-published with changes, published scripts pulled back (D-#945). */
-export const STAFF_MISTAKE_KINDS = ["MARK_CORRECTION", "ATTENDANCE_CORRECTION", "CLASS_TEST_MARKS", "CLASS_TEST_SCRIPTS"] as const;
+ *  MR-4: class-test marks re-published with changes, published scripts pulled back (D-#945);
+ *  MR-5: a guardian's "done at home" claim accepted, a checked / resubmit mark undone (D-#951). */
+export const STAFF_MISTAKE_KINDS = [
+  "MARK_CORRECTION",
+  "ATTENDANCE_CORRECTION",
+  "CLASS_TEST_MARKS",
+  "CLASS_TEST_SCRIPTS",
+  "WORK_CLAIM_ACCEPTED",
+  "WORK_REVERT",
+] as const;
 export type StaffMistakeKind = (typeof STAFF_MISTAKE_KINDS)[number];
 
 export const STAFF_MISTAKE_STATUSES = ["EXPLANATION_DUE", "PENDING_REVIEW", "COUNTED", "EXCUSED", "MOVED"] as const;
@@ -53,6 +61,17 @@ export const STAFF_MISTAKE_REASONS: Record<StaffMistakeKind, readonly StaffMista
     { code: "MINE", bn: "আমার ভুল ছিল", en: "It was my mistake", hintBn: "ভুল পাতা যুক্ত / ভুলে প্রকাশ করেছিলাম", selfCounts: true },
     { code: "WRONG_PAGE", bn: "পাতা ভুল শিক্ষার্থীর সাথে যুক্ত ছিল", en: "A page was on the wrong student", hintBn: "পাতা যিনি যুক্ত করেছেন, তাঁর ভুল হতে পারে" },
     { code: "UNCLEAR_SCAN", bn: "স্ক্যান অস্পষ্ট ছিল", en: "The scan was unclear", hintBn: "আবার স্ক্যান করতে হয়েছে" },
+    { code: "OTHER", bn: "অন্য কারণ", en: "Another reason", hintBn: "নিচে নিজের ভাষায় লিখুন", needsText: true },
+  ],
+  WORK_CLAIM_ACCEPTED: [
+    { code: "MINE", bn: "আমার ভুল ছিল", en: "It was my mistake", hintBn: "ভুল করে \"জমা দেয়নি\" দিয়েছিলাম", selfCounts: true },
+    { code: "WITH_OTHER", bn: "খাতা অন্যের কাছে ছিল", en: "The script was with someone else", hintBn: "অফিস / ক্যাপ্টেন / অন্য শিক্ষকের কাছে ছিল" },
+    { code: "SHOWN_LATER", bn: "শিক্ষার্থী পরে দেখিয়েছে", en: "The student showed it later", hintBn: "জমার দিনে দেখায়নি, পরে দেখিয়েছে", autoExcuses: true },
+    { code: "OTHER", bn: "অন্য কারণ", en: "Another reason", hintBn: "নিচে নিজের ভাষায় লিখুন", needsText: true },
+  ],
+  WORK_REVERT: [
+    { code: "WRONG_ROW", bn: "ভুল শিক্ষার্থীর ঘরে চাপ পড়েছে", en: "Tapped the wrong student's row", hintBn: "অন্য শিক্ষার্থীর ঘরে চিহ্ন দিয়েছিলাম", selfCounts: true },
+    { code: "RECHECKED", bn: "খাতা আবার দেখে বদলেছি", en: "Changed it after checking again", hintBn: "দ্বিতীয়বার দেখে ফল বদলাতে হয়েছে" },
     { code: "OTHER", bn: "অন্য কারণ", en: "Another reason", hintBn: "নিচে নিজের ভাষায় লিখুন", needsText: true },
   ],
 };

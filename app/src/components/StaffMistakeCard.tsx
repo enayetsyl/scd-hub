@@ -90,6 +90,22 @@ export function StaffMistakeCard({
               ))}
         </>
       ) : null}
+      {m.workNote ? (
+        <>
+          <Muted>
+            {m.workNote.studentName} · {m.workNote.subject ? `${hwSubjectLabel(m.workNote.subject)} ` : ""}
+            {m.workNote.tracker === "HOMEWORK" ? STR.msgHomework : STR.msgAssignment} ({m.workNote.itemCode})
+          </Muted>
+          {m.workNote.claimedAt ? <Muted>{STR.smrWorkClaimLine.replace("{when}", dhakaWhen(m.workNote.claimedAt))}</Muted> : null}
+          {m.workNote.claimNote ? <Muted>"{m.workNote.claimNote}"</Muted> : null}
+          {m.workNote.states.map((s, i) => (
+            <Muted key={i}>
+              • {(STR as unknown as Record<string, string>)[`smrWorkState_${s.state}`] ?? s.state} ({dhakaClock(s.at)}) — {STR.smrWorkUndone}
+              {m.workNote!.byName && m.workNote!.byName !== m.staffName ? ` · ${m.workNote!.byName}` : ""}
+            </Muted>
+          ))}
+        </>
+      ) : null}
       {m.movedFromName ? <Muted>{STR.smrMovedFrom.replace("{name}", m.movedFromName)}</Muted> : null}
       <View style={{ marginTop: space(2), gap: space(1) }}>
         {m.reasonCode ? (

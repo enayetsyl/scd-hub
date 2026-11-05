@@ -147,3 +147,17 @@ Single-step in MR-1; the mockup's Office-then-Principal step is MR-2 if the owne
   স্ক্যান অস্পষ্ট · অন্য কারণ.
 - Episodes as in §10. The guardian's re-publish message is unchanged (it already re-notifies the
   new result); a "নম্বর সংশোধন" wording is a follow-up.
+
+## 12. MR-5 — accepted claims and undone marks (D-#951)
+
+- **Accepted claim.** When a guardian's "done at home" claim is accepted (the teacher marks the
+  work submitted), the record's last CHASE stamp is read: made by a person on an EARLIER day →
+  tier-1 `WORK_CLAIM_ACCEPTED` entry for that person (source = the claim). A same-day chase is
+  already a MarkCorrectionNote (D-#892); a system chase (no `by`) is nobody's mistake.
+- **Undone mark.** A homework/assignment revert that pops a RESUBMIT (the family was told to
+  resubmit) always counts; a popped CHECKED counts when someone else undoes it or it was given
+  on an earlier day (a teacher fixing their own tap the same day told nobody). One
+  `WorkRevertNote` per revert per owner → tier-1 `WORK_REVERT` entry.
+- **Reasons.** Claim: আমার ভুল ছিল (counts) · খাতা অন্যের কাছে ছিল · শিক্ষার্থী পরে দেখিয়েছে
+  (accepted at once) · অন্য কারণ. Revert: ভুল শিক্ষার্থীর ঘরে চাপ পড়েছে (counts) · খাতা আবার
+  দেখে বদলেছি · অন্য কারণ. Both explained later.
