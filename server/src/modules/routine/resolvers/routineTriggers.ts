@@ -582,8 +582,8 @@ builder.mutationField("deleteClassNote", (t) =>
     type: DeleteResultRef,
     authScopes: { hasPermission: "class_note:delete" },
     args: { id: t.arg.string({ required: true }) },
-    resolve: async (_r, args) => {
-      const res = await deleteClassNote(args.id);
+    resolve: async (_r, args, ctx) => {
+      const res = await deleteClassNote(args.id, ctx.auth?.userId);
       await deleteDeliveryForNote(args.id);
       return res;
     },

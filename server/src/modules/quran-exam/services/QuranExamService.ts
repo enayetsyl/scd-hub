@@ -38,6 +38,7 @@ import {
   windowsOverlap,
   type HifzCount,
 } from "./quranExamMath";
+import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
 
 export class QuranExamError extends Error {}
 
@@ -649,6 +650,22 @@ export async function saveQuranExamResult(ctx: AppContext, sittingId: string, in
   const paper = await QuranExamPaper.findOne({ examId: s.examId, level: s.level });
   if (!paper) throw new QuranExamError("এই স্তরের প্রশ্নপত্র নেই।");
   let total: number | null = null;
+  // D-#954: a child marked absent and now marked present with no make-up in between was
+  // never absent — the examiner who marked it owns the correction.
+  let wrongAbsentBy: Types.ObjectId | null = null;
+  if (input.present && s.status === "ABSENT") {
+    const hist = s.history ?? [];
+    let lastAbsent = -1;
+    for (let i = hist.length - 1; i >= 0; i--) if (hist[i]!.kind === "ABSENT") { lastAbsent = i; break; }
+    const madeUp = lastAbsent >= 0 && hist.slice(lastAbsent + 1).some((h) => h.kind === "MADE_UP");
+    if (lastAbsent >= 0 && !madeUp && hist[lastAbsent]!.by) wrongAbsentBy = hist[lastAbsent]!.by as Types.ObjectId;
+  }
+  // D-#1001: a result that stood when the marks were locked, changed after an unlock, is the
+  // earlier entrant's mistake. Snapshot it before the input overwrites it.
+  const lockedResult =
+    plan.marksUnlockedAt && s.enteredAt && s.enteredBy && s.status !== "SCHEDULED" && s.enteredAt <= plan.marksUnlockedAt
+      ? { by: s.enteredBy as Types.ObjectId, snap: resultSnapshot(s) }
+      : null;
   if (input.present) {
     if (paper.scheme === "ITEMS") {
       const flat = input.itemMarksFlat ?? [];
@@ -697,7 +714,39 @@ export async function saveQuranExamResult(ctx: AppContext, sittingId: string, in
     targetKind: "QuranExamSitting",
     meta: { status: s.status, total, absenceReason: s.absenceReason },
   });
+  if (wrongAbsentBy) {
+    await recordPlaceMistake({
+      kind: "QURAN_EXAM_CORRECTION",
+      refKey: sittingId,
+      ownerId: wrongAbsentBy,
+      correctedBy: ctx.auth!.userId,
+      at: new Date(),
+      line: "অনুপস্থিত দেওয়া শিক্ষার্থীকে মেকআপ ছাড়াই উপস্থিত দেখানো হয়েছে",
+    });
+  }
+  // One change, one entry: the absent→present case above already names the same person.
+  if (lockedResult && resultSnapshot(s) !== lockedResult.snap && !(wrongAbsentBy && wrongAbsentBy.equals(lockedResult.by))) {
+    await recordPlaceMistake({
+      kind: "QURAN_EXAM_UNLOCK_CHANGE",
+      refKey: sittingId,
+      ownerId: lockedResult.by,
+      correctedBy: ctx.auth!.userId,
+      at: new Date(),
+      line: `লক হওয়া নম্বর আনলকের পরে বদলানো হয়েছে${total !== null ? ` — নতুন মোট ${total}` : s.status === "ABSENT" ? " — এখন অনুপস্থিত" : ""}`,
+    });
+  }
   return quranExamSittingDetail(ctx, sittingId);
+}
+
+/** The marks part of a sitting (status + marks, not the comment), comparable as a string. */
+function resultSnapshot(s: { status: string; itemMarks?: unknown; hifzCounts?: unknown; sectionCounts?: unknown }): string {
+  const plain = (arr: unknown): unknown[] =>
+    ((arr as unknown[] | null | undefined) ?? []).map((x) => {
+      const o = JSON.parse(JSON.stringify(x)) as Record<string, unknown>;
+      delete o._id;
+      return o;
+    });
+  return JSON.stringify([s.status, s.itemMarks ?? null, plain(s.hifzCounts), plain(s.sectionCounts)]);
 }
 
 // ── Results (computed on read, D-#85) ─────────────────────────────────────────
@@ -762,6 +811,7 @@ export async function lockQuranExamMarks(ctx: AppContext, examId: string, lock: 
     const open = await QuranExamSitting.countDocuments({ examId: plan.examId, status: "SCHEDULED" });
     if (open) throw new QuranExamError(`এখনো ${open}টি পরীক্ষার নম্বর বাকি — লক করা যাবে না।`);
   }
+  if (!lock && plan.marksLockedAt) plan.marksUnlockedAt = new Date(); // D-#1001
   plan.marksLockedAt = lock ? new Date() : null;
   plan.marksLockedBy = lock ? oid(ctx.auth!.userId) : null;
   await plan.save();

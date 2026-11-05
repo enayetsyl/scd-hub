@@ -73,7 +73,8 @@ const NoteStudentRef = builder.objectRef<MarkCorrectionStudentShape>("MarkCorrec
   }),
 });
 
-const NoteRef = builder.objectRef<MarkCorrectionNoteShape>("MarkCorrectionNote").implement({
+/** Exported for the staff mistake list (D-#936), which shows the note behind each entry. */
+export const NoteRef = builder.objectRef<MarkCorrectionNoteShape>("MarkCorrectionNote").implement({
   fields: (t) => ({
     id: t.exposeString("id"),
     tracker: t.exposeString("tracker"),

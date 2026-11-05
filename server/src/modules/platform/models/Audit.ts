@@ -73,6 +73,12 @@ export type AuditEventKind =
   | "STAFF_LETTER_VOIDED"         // a letter voided — kept + renderable, superseded by a new ref no (SH-1, D-#542)
   | "STAFF_LETTER_SENT"           // an issued letter sent to the staff member's app by notification and/or pop-up (D-#902)
   | "SALARY_SENT_ANNOUNCED"       // a payment group of a locked run told its salary went out, by notification and/or pop-up (D-#915)
+  | "STAFF_MISTAKE_EXPLAINED"     // a staff member gave the reason for a caught mistake (D-#937) — meta.kind/reasonCode/status
+  | "STAFF_MISTAKE_DECIDED"       // a reviewer excused, counted or moved a caught mistake (D-#939) — meta.decision/movedToUserId
+  | "STAFF_MISTAKE_SETTINGS_SET"  // the Principal changed the mistake rules (D-#1005) — meta.before/after
+  | "STAFF_WARNING_REACHED"       // a person reached a warning-ladder rung (D-#940) — meta.staffUserId/step/weightedCount
+  | "STAFF_WARNING_MEETING_SET"   // the face-to-face talk after a warning was booked (D-#941) — meta.at/place
+  | "STAFF_WARNING_MEETING_RECORDED" // what was said and agreed at that talk (D-#941) — meta.followUpDateKey/sentSummary
   | "STAFF_EMPLOYMENT_CONFIRMED"  // probation → confirmed, with the date the pool starts from (SH-2, D-#540)
   | "PROBATION_DEBT_SETTLED"      // held probation leave settled against the pool or the final salary (SH-3, D-#540)
   | "STAFF_LATENESS_CHARGED"      // a month's 3-lates-to-a-day reckoning written at payroll prepare (SH-4, D-#541)
@@ -218,6 +224,7 @@ export type AuditEventKind =
   | "BUDGET_LINE_SET"             // a per-(year × head) budget/target line set or edited — prior + new retained (Finance FIN-5, §3/J-FIN5-1, D-#237)
   | "SR_REVISION_RECORDED"        // a Saturday Hifz revision entry recorded/edited — surah:ayah portions (Saturday-Revision SR-1/SR-5, §3/J-SR1-1, D-#241/#242/#833)
   | "SR_REVISION_RESET"           // every revision entry deleted once, at the move to surah:ayah ranges; meta carries the counts (Saturday-Revision SR-5, D-#838)
+  | "SR_ENTRY_CORRECTED"          // a delivered revision entry corrected (D-#1002) — meta.correction/note/previousAuthor
   | "SR_ENTRY_DELIVERED"          // a revision entry delivered to the family — absent alert / weekly digest, sealed (Saturday-Revision SR-2, §3/J-SR2-1/2/3, D-#244)
   | "SR_ABSENCE_ESCALATED"        // a consecutive-absence streak escalated to guardian + Principal (Saturday-Revision SR-2, §3/J-SR2-4, D-#245)
   | "SR_ESCALATION_CONFIG_SET"    // the consecutive-absence threshold edited (Saturday-Revision SR-2, message:dispatch)

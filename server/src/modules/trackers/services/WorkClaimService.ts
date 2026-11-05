@@ -39,6 +39,7 @@ import { resolveClaimRecipient } from "./ClaimRecipient";
 import { earliestClaimableDueDate, workClaimHoldNoteBn } from "./WorkClaimView";
 import { GuardianLink } from "../../foundation/models/GuardianLink";
 import { writeAudit } from "../../platform/services/AuditService";
+import { recordClaimsAccepted } from "./WorkMistakeService";
 
 /** Days the app treats as closed — the same gate the notification ticker uses. */
 // QURAN_ONLY (Saturday, D-#50) is CLOSED for the claim ladder: only Quran runs,
@@ -363,6 +364,8 @@ export async function acceptClaimsForRecords(
         meta: { tracker: claim.tracker, workId: claim.workId, resolution: "AUTO" },
       });
     }
+    // D-#951: an accepted claim means an earlier day's "not submitted" was wrong.
+    await recordClaimsAccepted(accepted, actorId, at);
     return accepted;
   } catch (err) {
     console.error("[WorkClaimService] auto-accept failed (submit unaffected):", err);

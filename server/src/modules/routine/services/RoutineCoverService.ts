@@ -17,6 +17,7 @@ import { emitCoverAssigned } from "../../notifications/services/emitters";
 import { StaffCoverSlot } from "../../hr/models/StaffCoverSlot";
 import { userIdsOnLeave } from "../../hr/services/CoverService";
 import { liveWindow } from "../liveWindow";
+import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
 
 /** Local-day bounds for date-range queries. */
 function dayBounds(date: Date): { start: Date; end: Date } {
@@ -164,6 +165,8 @@ export async function cancelCover(subId: string, actorId: string): Promise<void>
   if (!sub) throw new Error("Substitution not found");
   await RoutineSubstitution.updateOne({ _id: subId }, { $set: { active: false } });
   if (sub.proxyGrantId) await revokeProxy(sub.proxyGrantId.toString(), actorId);
+  // D-#953: the covering teacher had already been told.
+  await recordPlaceMistake({ kind: "COVER_CANCELLED", tier: 2, refKey: String(sub._id), ownerId: sub.createdBy, correctedBy: actorId, at: new Date(), line: "দেওয়া প্রক্সি বাতিল করা হয়েছে" });
 }
 
 /** A cover row enriched with human-readable names + the covered slot's context

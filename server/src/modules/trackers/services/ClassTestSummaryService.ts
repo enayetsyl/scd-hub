@@ -41,6 +41,8 @@ import {
 import { atMidnight, buildIsOpenDayForRange, deriveOverdue, type IsOpenDay } from "../classTestCalendar";
 import { getEffectiveTemplate, interpolate, type EffectiveTemplate } from "../../templates/services/MessageTemplateService";
 import { personName } from "../../../lib/personName";
+import { dhakaDayKey } from "../../../lib/dhakaDay";
+import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
 
 // ---------------------------------------------------------------------------
 // Scope filter → the PRINTED-exam query (an official exam is the unit of reporting)
@@ -493,6 +495,37 @@ export async function overdueCounts(filter: SummaryFilter): Promise<OverdueCount
     else awaitingPublish++;
   }
   return { open, overdue, awaitingSubmit, awaitingPublish };
+}
+
+/**
+ * D-#1003: each class test whose marks are past the deadline and still with the teacher is a
+ * missed duty for the accountable teacher — recorded ONCE per test (oncePerRef), however many
+ * mornings the 08:00 digest keeps counting it. An approved leave on the deadline day accepts it.
+ * Waiting on Office/Principal approval is not the teacher's (and names nobody). Returns the
+ * number newly recorded. Called once a day under the digest's runOnce.
+ */
+export async function recordLateClassTestMarks(
+  now: Date = new Date(),
+  given?: Array<Pick<ReportStatusRow, "testId" | "ctId" | "deadline" | "overdue" | "teacherOverdue" | "teacherId">>,
+): Promise<number> {
+  const rows = given ?? (await reportsStatus({ asOf: now }, { withTeacherNames: false }));
+  let n = 0;
+  for (const r of rows) {
+    if (!r.overdue || !r.teacherOverdue || !r.teacherId) continue;
+    const recorded = await recordPlaceMistake({
+      kind: "CT_MARKS_OVERDUE",
+      tier: 3,
+      refKey: r.testId,
+      ownerId: r.teacherId,
+      correctedBy: "system",
+      at: now,
+      oncePerRef: true,
+      leaveDateKey: dhakaDayKey(new Date(r.deadline)),
+      line: `${r.ctId}: নম্বর জমার শেষ দিন ${dhakaDayKey(new Date(r.deadline))} পেরিয়ে গেছে`,
+    });
+    if (recorded) n++;
+  }
+  return n;
 }
 
 async function loadUserNames(ids: string[]): Promise<Map<string, string>> {

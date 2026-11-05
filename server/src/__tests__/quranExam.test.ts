@@ -28,6 +28,8 @@ import { QuranExamPaper } from "../modules/quran-exam/models/QuranExamPaper";
 import { QuranExamSitting } from "../modules/quran-exam/models/QuranExamSitting";
 import { QuranExamGuardianSeen } from "../modules/quran-exam/models/QuranExamGuardianSeen";
 import { QuranExamReminder } from "../modules/quran-exam/models/QuranExamReminder";
+import { StaffMistake } from "../modules/staff-mistakes/models/StaffMistake";
+import { StaffMistakeNote } from "../modules/staff-mistakes/models/StaffMistakeNote";
 import {
   acknowledgeQuranExamNotice,
   addQuranExamExaminer,
@@ -251,6 +253,25 @@ describe("Quran exam: marks + absence (D-#874/#876)", () => {
     expect(o.marksLockedAt).not.toBeNull();
     await expect(saveQuranExamResult(t.office, await t.sittingOf(t.a), { present: false })).rejects.toThrow(/লক/);
     await expect(moveQuranExamSitting(t.office, await t.sittingOf(t.a), t.momin)).rejects.toThrow(/লক/);
+  });
+
+  it("D-#1001: a locked result changed after an unlock is the earlier entrant's mistake; an unchanged re-save is not", async () => {
+    const t = await setup();
+    await StaffMistake.deleteMany({});
+    await StaffMistakeNote.deleteMany({});
+    for (const s of [t.a, t.b, t.c]) await saveQuranExamResult(t.office, await t.sittingOf(s), { present: true, itemMarksFlat: FULL_OK });
+    for (const dk of ["2026-11-15", "2026-11-16"]) await saveQuranExamResult(t.office, await t.sittingOf(t.h, dk), { present: false });
+    // Saved before any lock and changed again: an ordinary edit, nobody's mistake.
+    await saveQuranExamResult(t.office, await t.sittingOf(t.c), { present: true, itemMarksFlat: [4, ...FULL_OK.slice(1)] });
+    await lockQuranExamMarks(t.office, t.examId, true);
+    await lockQuranExamMarks(t.office, t.examId, false);
+    const fixer = ctxOf(await user("Office Two", "OFFICE"), "OFFICE");
+    await saveQuranExamResult(fixer, await t.sittingOf(t.b), { present: true, itemMarksFlat: FULL_OK, comment: "শুধু মন্তব্য" });
+    await saveQuranExamResult(fixer, await t.sittingOf(t.a), { present: true, itemMarksFlat: [3, ...FULL_OK.slice(1)] });
+    const rows = await StaffMistake.find({}).lean();
+    expect(rows.map((r) => [r.kind, String(r.staffUserId), r.tier])).toEqual([["QURAN_EXAM_UNLOCK_CHANGE", t.officeId, 1]]);
+    const note = await StaffMistakeNote.findOne({ kind: "QURAN_EXAM_UNLOCK_CHANGE" }).lean();
+    expect(note!.lines[0]!.text).toMatch(/নতুন মোট 80/);
   });
 });
 

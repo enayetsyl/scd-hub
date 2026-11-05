@@ -14,6 +14,11 @@
  *
  * Best-effort like the emitters: a failure here is logged and NEVER blocks the teacher's
  * correction — the guardian getting the right state matters more than the note.
+ *
+ * D-#936/#937: each note is also one StaffMistake for the chaser. The reason the teacher
+ * picked on the submit pass rides the request (correctionReasonContext): it decides the
+ * entry's status and, for LATE_DIRECT, the guardian's message (D-#938). No reason → the
+ * chaser is asked to explain by the next school day.
  */
 import { Types } from "mongoose";
 import type { HwSubject } from "@scd/shared";
@@ -32,6 +37,8 @@ import { User } from "../../foundation/models/User";
 import { Section } from "../../foundation/models/Section";
 import { Class } from "../../foundation/models/Class";
 import { emitMarkCorrection, emitWorkMarkCorrected } from "../../notifications/services/emitters";
+import { currentCorrectionReason } from "../../staff-mistakes/services/correctionReasonContext";
+import { recordMistakeFromSource } from "../../staff-mistakes/services/StaffMistakeService";
 
 export interface StampLike {
   state: string;
@@ -134,6 +141,16 @@ export async function recordMarkCorrection(ev: MarkCorrectionInput): Promise<boo
     );
     if (pushed.modifiedCount === 0) return false; // this child is already on the note
 
+    const reason = currentCorrectionReason();
+    await recordMistakeFromSource({
+      kind: "MARK_CORRECTION",
+      tier: 1,
+      sourceId: note._id,
+      staffUserId: key.staffUserId,
+      correctedBy: ev.correctedBy,
+      at: ev.at,
+      reason,
+    });
     await emitMarkCorrection({
       noteId: note._id,
       tracker: ev.tracker,
@@ -152,6 +169,7 @@ export async function recordMarkCorrection(ev: MarkCorrectionInput): Promise<boo
       sectionId: ev.sectionId,
       subject: facts.subject,
       at: ev.at,
+      reasonCode: reason?.code ?? null,
     });
     return true;
   } catch (err) {
@@ -196,6 +214,23 @@ export async function listMarkCorrectionNotes(opts: {
     .sort({ createdAt: -1 })
     .limit(Math.min(Math.max(opts.limit ?? 100, 1), 300))
     .lean();
+  return hydrateNotes(notes);
+}
+
+/** The notes behind a list of staff mistakes (D-#936), keyed by note id. */
+export async function markCorrectionNotesByIds(ids: readonly string[]): Promise<Map<string, MarkCorrectionNoteShape>> {
+  const valid = ids.filter((id) => Types.ObjectId.isValid(id));
+  if (valid.length === 0) return new Map();
+  const notes = await MarkCorrectionNote.find({ _id: { $in: valid } }).lean();
+  return new Map((await hydrateNotes(notes)).map((n) => [n.id, n]));
+}
+
+type LeanNote = Pick<
+  IMarkCorrectionNote,
+  "_id" | "staffUserId" | "tracker" | "itemCode" | "subject" | "dateKey" | "sectionId" | "students" | "createdAt"
+>;
+
+async function hydrateNotes(notes: LeanNote[]): Promise<MarkCorrectionNoteShape[]> {
   if (notes.length === 0) return [];
 
   const userIds = new Set<string>();

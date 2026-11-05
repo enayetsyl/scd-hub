@@ -38,6 +38,7 @@ import { ReviewAssignment } from "../../content/models/ReviewAssignment";
 import { writeAudit } from "../../platform/services/AuditService";
 import { ReviewError, supersedeOpenRounds } from "../../content/services/ReviewService";
 import { QUESTION_DOC_TYPE } from "./QuestionReviewService";
+import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
 
 // ---------------------------------------------------------------------------
 // Shapes
@@ -81,6 +82,7 @@ interface LeanArtifact {
   classLevel: number;
   reviewStatus: string;
   retiredAt?: Date | null;
+  retiredBy?: Types.ObjectId | null;
   importantAt?: Date | null;
   envelopeJson?: Record<string, unknown>;
 }
@@ -365,6 +367,19 @@ export async function restoreQuestion(input: {
     targetKind: "ContentArtifact",
     meta: { qid, subject: lean.subject, classLevel: lean.classLevel },
   });
+  // D-#1004: someone else bringing a retired question back means it should not have been
+  // retired — tier 2 for whoever retired it. Undoing your own retire is nobody's mistake.
+  if (lean.retiredBy && lean.retiredBy.toString() !== input.actorId) {
+    await recordPlaceMistake({
+      kind: "QUESTION_RESTORED",
+      tier: 2,
+      refKey: doc._id.toString(),
+      ownerId: lean.retiredBy,
+      correctedBy: input.actorId,
+      at: new Date(),
+      line: `বাতিল করা প্রশ্ন${qid ? ` ${qid}` : ""} আবার ফেরানো হয়েছে`,
+    });
+  }
 
   return {
     artifactId: doc._id.toString(),

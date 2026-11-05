@@ -157,6 +157,29 @@ export const RECORD_REVISION_ENTRY = gql<
   }
 `;
 
+/** D-#1002: change an entry the family already received (they get a সংশোধনী). */
+export const CORRECT_REVISION_ENTRY = gql<
+  { correctRevisionEntry: RevisionEntryT },
+  {
+    entryId: string;
+    groupId: string;
+    present: boolean;
+    portions?: RevisionPortionInput[] | null;
+    teacherComment?: string | null;
+    note: string;
+  }
+>`
+  mutation CorrectRevisionEntry(
+    $entryId: String!, $groupId: String!, $present: Boolean!,
+    $portions: [RevisionPortionInput!], $teacherComment: String, $note: String!
+  ) {
+    correctRevisionEntry(
+      entryId: $entryId, groupId: $groupId, present: $present,
+      portions: $portions, teacherComment: $teacherComment, note: $note
+    ) { ${REVISION_ENTRY_FIELDS} }
+  }
+`;
+
 export const EDIT_REVISION_ENTRY = gql<
   { editRevisionEntry: RevisionEntryT },
   {

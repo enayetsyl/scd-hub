@@ -58,7 +58,7 @@ import { runDueOffboardingRevocations } from "../../hr/services/OffboardingServi
 import { runObservationEscalation } from "../../classroom-observation/services/ObservationEscalationService";
 import { pendingHomeworkSections } from "../../trackers/services/HomeworkReconciliationService";
 import { sweepHomeworkDue } from "../../trackers/services/HomeworkDueSweepService";
-import { overdueCounts } from "../../trackers/services/ClassTestSummaryService";
+import { overdueCounts, recordLateClassTestMarks } from "../../trackers/services/ClassTestSummaryService";
 import {
   runWorkClaimDigest,
   expireStaleWorkClaims,
@@ -107,6 +107,7 @@ import { emit } from "./NotificationService";
 import { renderTemplate } from "../../templates/services/MessageTemplateService";
 import { actingAsFilter } from "../../foundation/services/RoleScope";
 import { holderIdsOf } from "../../access-control/services/holders";
+import { settleOverdueMistakes } from "../../staff-mistakes/services/StaffMistakeService";
 
 type IdLike = { toString(): string };
 
@@ -327,6 +328,13 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
     summary.observationEscalationRan = await runOnce(dateKey, "OBSESC", async () => {
       await runObservationEscalation(now);
     });
+  });
+
+  // --- Staff mistake record (D-#940): explanations past their deadline become counted
+  // mistakes and the person is checked against the warning ladder. Every tick, every
+  // calendar day (a deadline can pass over a weekend); one cheap query when nothing is due.
+  await family("staff mistake settle", async () => {
+    await settleOverdueMistakes(now);
   });
 
   // --- VM network snapshot (SH-2, D-#414) — one row a day holding the cumulative
@@ -679,6 +687,8 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
       await runOnce(dateKey, "CTOD", async () => {
         const counts = await overdueCounts({ asOf: now });
         if (counts.overdue === 0) return; // nothing late ⇒ say nothing
+        // D-#1003: the digest names nobody; the staff mistake record does, once per test.
+        if (counts.awaitingSubmit > 0) await recordLateClassTestMarks(now);
 
         const titleBn = await renderTemplate("class_test.overdue_digest.title");
         const bodyBn = await renderTemplate("class_test.overdue_digest.body", {

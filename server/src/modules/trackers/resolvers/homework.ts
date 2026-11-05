@@ -86,6 +86,8 @@ import { HomeworkItem } from "../models/HomeworkItem";
 import { HomeworkStudentRecord } from "../models/HomeworkStudentRecord";
 import { pageRef } from "../../../pageRef";
 import { dhakaDayStart } from "../../../lib/dhakaDay";
+import { CorrectionReasonInput, parseCorrectionReason } from "../../staff-mistakes/resolvers/correctionReasonInput";
+import { runWithCorrectionReason } from "../../staff-mistakes/services/correctionReasonContext";
 
 /** PM reach (D-#793): the homework actions that replace the role bypasses in the scope
  *  helpers — `homework:view_all` for isAdminStaff on reads, `homework:edit_all` for the
@@ -1666,16 +1668,22 @@ builder.mutationField("homeworkSubmitPass", (t) =>
       sectionId: t.arg.string({ required: true }),
       itemId: t.arg.string({ required: true }),
       entries: t.arg({ type: [HwSubmitPassEntryInput], required: true }),
+      // D-#937: the reason picked when the pass corrects a same-day chase.
+      correctionReason: t.arg({ type: CorrectionReasonInput, required: false }),
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
       await assertItemWriteScope(ctx, args.sectionId, args.itemId, "submit_homework");
-      return submitPassSvc(
-        args.itemId,
-        args.entries.map((e) => ({ recordId: e.recordId, submitted: e.submitted })),
-        ctx.auth.userId as string,
-        new Date(),
-        { sectionId: args.sectionId },
+      const reason = parseCorrectionReason(args.correctionReason);
+      const actorId = ctx.auth.userId as string;
+      return runWithCorrectionReason(reason, () =>
+        submitPassSvc(
+          args.itemId,
+          args.entries.map((e) => ({ recordId: e.recordId, submitted: e.submitted })),
+          actorId,
+          new Date(),
+          { sectionId: args.sectionId },
+        ),
       );
     },
   }),

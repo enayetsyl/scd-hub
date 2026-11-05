@@ -51,6 +51,7 @@ import { POOLED_LEAVE_TYPES } from "@scd/shared";
 import { bnNum } from "../../../lib/bnNum";
 import { queryPage, type Page, type PageArgs } from "../../../lib/paging";
 import { personName } from "../../../lib/personName";
+import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
 
 // --- pure split math -------------------------------------------------------
 
@@ -239,6 +240,9 @@ export async function decideLeave(
 ): Promise<IStaffLeaveApplication> {
   const app = await StaffLeaveApplication.findById(applicationId);
   if (!app) throw new LeaveError("Leave application not found");
+  // D-#953: a decided leave decided again — the first decision was the mistake.
+  const priorStatus = app.status;
+  const priorDecider = app.decidedBy ?? null;
 
   if (decision === "approve") {
     const rules = LEAVE_TYPE_RULES[app.leaveType];
@@ -339,6 +343,9 @@ export async function decideLeave(
       unpaidDays: app.unpaidDays ?? null,
     },
   });
+  if ((priorStatus === "approved" || priorStatus === "rejected") && priorStatus !== app.status) {
+    await recordPlaceMistake({ kind: "LEAVE_REDECIDED", tier: 2, refKey: app._id.toString(), ownerId: priorDecider, correctedBy: actorId, at: new Date(), line: `ছুটির সিদ্ধান্ত বদলানো হয়েছে: ${priorStatus} → ${app.status}` });
+  }
   return app;
 }
 

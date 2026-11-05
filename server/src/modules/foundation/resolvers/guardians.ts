@@ -3,6 +3,7 @@ import { Guardian, type IGuardian } from "../models/Guardian";
 import { GuardianLink } from "../models/GuardianLink";
 import { hashPassword } from "../services/AuthService";
 import { writeAudit } from "../../platform/services/AuditService";
+import { recordGuardianUnlink } from "../services/guardianLinkMistake";
 
 type GuardianShape = Pick<IGuardian, "name" | "identifierKind" | "active" | "phone" | "loginEnabled"> & {
   _id: { toString(): string };
@@ -110,6 +111,7 @@ builder.mutationField("unlinkGuardianFromStudent", (t) =>
           actorRole: ctx.auth?.role,
           meta: { guardianId: args.guardianId, studentId: args.studentId, active: false },
         });
+        if (res.modifiedCount > 0) await recordGuardianUnlink(args.guardianId, args.studentId, ctx.auth?.userId); // D-#1004
       }
       return res.matchedCount > 0;
     },

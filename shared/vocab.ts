@@ -1501,6 +1501,16 @@ export const NOTIFICATION_KINDS = [
   // Salary sent (D-#915; app-native, NO wire twin): a payment group of a locked run was
   // paid; tells each person in it, opening their own payslip (আমার রেকর্ড).
   "SALARY_SENT",
+  // Staff mistake record (D-#936–#939, docs/prd-staff-mistakes.md; app-native, NO wire twin):
+  //   STAFF_MISTAKE_EXPLAIN → the person: a caught mistake waits for their reason
+  //   STAFF_MISTAKE_DECIDED → the person: a reviewer accepted, counted or moved it
+  "STAFF_MISTAKE_EXPLAIN",
+  "STAFF_MISTAKE_DECIDED",
+  // Warning ladder (D-#940–#942): WARNING → the person reached a step (pop-up too);
+  //   STEP → reviewers / the Principal: someone reached a step; MEETING → the person: a talk is booked
+  "STAFF_MISTAKE_WARNING",
+  "STAFF_MISTAKE_STEP",
+  "STAFF_MISTAKE_MEETING",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
@@ -1574,6 +1584,11 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   WORK_MARK_CORRECTED: "জমার বার্তা সংশোধন",
   STAFF_LETTER_SENT: "আপনার নতুন চিঠি",
   SALARY_SENT: "বেতন দেওয়া হয়েছে",
+  STAFF_MISTAKE_EXPLAIN: "ভুলের ব্যাখ্যা দিন",
+  STAFF_MISTAKE_DECIDED: "ব্যাখ্যার সিদ্ধান্ত",
+  STAFF_MISTAKE_WARNING: "সতর্কবার্তা",
+  STAFF_MISTAKE_STEP: "কর্মীর ভুলের সীমা",
+  STAFF_MISTAKE_MEETING: "আলোচনার সময়",
 };
 export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   BELL_REMINDER: "Bell reminder",
@@ -1645,6 +1660,11 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   WORK_MARK_CORRECTED: "Correction: work was submitted",
   STAFF_LETTER_SENT: "A letter for you",
   SALARY_SENT: "Salary sent",
+  STAFF_MISTAKE_EXPLAIN: "Explain a caught mistake",
+  STAFF_MISTAKE_DECIDED: "Decision on your explanation",
+  STAFF_MISTAKE_WARNING: "Warning",
+  STAFF_MISTAKE_STEP: "A staff member reached a warning step",
+  STAFF_MISTAKE_MEETING: "Meeting booked",
 };
 
 /**

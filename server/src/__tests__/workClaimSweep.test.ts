@@ -21,6 +21,10 @@ const mockAudit = jest.fn();
 const mockRecipients = jest.fn();
 const mockByTeacher = jest.fn();
 
+// D-#955: the mistake recorder reaches real models; this suite is DB-free.
+jest.mock("../modules/staff-mistakes/services/StaffMistakeNoteService", () => ({
+  recordPlaceMistake: jest.fn().mockResolvedValue(false),
+}));
 jest.mock("../modules/trackers/models/GuardianWorkClaim", () => ({
   GuardianWorkClaim: { find: (q: unknown) => mockFind(q) },
 }));
