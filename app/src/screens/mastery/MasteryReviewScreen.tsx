@@ -33,6 +33,7 @@ import {
   ReviewThreads,
   TapText,
   codeTail,
+  formatExerciseRef,
   reviewStateLabel,
   reviewStateTone,
   roundStateLabel,
@@ -108,12 +109,15 @@ function RowLine({
   onOpen,
   rejecting,
   setRejecting,
+  hideLabel = false,
 }: {
   q: ReviewQueue;
   r: ReviewRow;
   onOpen: () => void;
   rejecting: string | null;
   setRejecting: (code: string | null) => void;
+  /** The objective's own row: its label is already the card heading, so don't print it twice. */
+  hideLabel?: boolean;
 }): React.ReactElement {
   const colors = useColors();
   const act = useReviewAction(MASTERY_REVIEW_DECIDE);
@@ -124,12 +128,14 @@ function RowLine({
     <View style={{ borderTopWidth: 1, borderTopColor: colors.border, paddingTop: space(1), gap: space(1) }}>
       <View style={{ flexDirection: "row", gap: space(2), alignItems: "center", flexWrap: "wrap" }}>
         <View style={{ flexGrow: 1, flexShrink: 1, flexBasis: 180, gap: space(0.5) }}>
-          <TapText onPress={onOpen} style={out ? { textDecorationLine: "line-through", color: colors.textSecondary } : undefined}>
-            {r.labelBn}
-          </TapText>
+          {hideLabel ? null : (
+            <TapText onPress={onOpen} style={out ? { textDecorationLine: "line-through", color: colors.textSecondary } : undefined}>
+              {r.labelBn}
+            </TapText>
+          )}
           <Muted>
             {codeTail(r.code)}
-            {r.bookRef.exercises.length ? ` · ${r.bookRef.exercises.slice(0, 3).join(", ")}${r.bookRef.exercises.length > 3 ? " …" : ""}` : ""}
+            {r.bookRef.exercises.length ? ` · ${r.bookRef.exercises.slice(0, 3).map(formatExerciseRef).join("; ")}${r.bookRef.exercises.length > 3 ? " …" : ""}` : ""}
           </Muted>
         </View>
         <View style={{ flexDirection: "row", gap: space(1), flexWrap: "wrap", alignItems: "center" }}>
@@ -184,7 +190,10 @@ function GroupCard({ q, g, onOpen, pendingOnly }: { q: ReviewQueue; g: Group; on
   return (
     <Card>
       <View style={{ flexDirection: "row", justifyContent: "space-between", gap: space(2), flexWrap: "wrap" }}>
-        <TapText style={{ fontWeight: "700", flexShrink: 1 }} onPress={() => onOpen(g.objective.code)}>
+        <TapText
+          style={[{ fontWeight: "700", flexShrink: 1 }, isOut(g.objective) ? { textDecorationLine: "line-through" } : null]}
+          onPress={() => onOpen(g.objective.code)}
+        >
           {g.heading}
         </TapText>
         <View style={{ flexDirection: "row", gap: space(1), flexWrap: "wrap" }}>
@@ -193,7 +202,15 @@ function GroupCard({ q, g, onOpen, pendingOnly }: { q: ReviewQueue; g: Group; on
         </View>
       </View>
       {shown.map((r) => (
-        <RowLine key={r.code} q={q} r={r} onOpen={() => onOpen(r.code)} rejecting={rejecting} setRejecting={setRejecting} />
+        <RowLine
+          key={r.code}
+          q={q}
+          r={r}
+          onOpen={() => onOpen(r.code)}
+          rejecting={rejecting}
+          setRejecting={setRejecting}
+          hideLabel={r.code === g.objective.code}
+        />
       ))}
       {q.canWrite && proposed.length > 1 ? (
         <Button
