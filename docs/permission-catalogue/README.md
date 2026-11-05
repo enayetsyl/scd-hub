@@ -561,7 +561,7 @@ Caught mistakes per person with their reason and the reviewer's decision (`docs/
 | `staff_mistakes:review` | Review explanations | ব্যাখ্যা যাচাই করা | Accept a reason, count it as a mistake, or move it to the person at fault | — | on | | new (D-#939) |
 | `staff_mistakes:view_own` | My mistakes | আমার ভুল ও ব্যাখ্যা | Own caught mistakes; give a reason for each | on | on | SELF | new (D-#937) |
 | `staff_mistakes:meetings` | Warning meetings | সতর্কবার্তার আলোচনা | Book the face-to-face talk after a warning and record what was agreed | — | on | | new (D-#941) |
-| `staff_mistakes:settings` | Mistake rules | ভুলের নিয়ম ঠিক করা | Warning steps, weights, explanation deadline, places on/off | — | — | PRINCIPAL-DEFAULT | new (D-#943) |
+| `staff_mistakes:settings` | Mistake rules | ভুলের নিয়ম ঠিক করা | Warning steps, weights, explanation deadline, places on/off | — | — | PRINCIPAL-DEFAULT | new (D-#1005) |
 | `staff_mistakes:review_principal` | The Principal's mistakes | প্রধান শিক্ষকের ভুলের রেকর্ড | See and decide the Principal's own entries and warnings — the Principal decides their own | — | — | PRINCIPAL-DEFAULT | new (D-#1000) |
 
 #### `grievance` — অভিযোগ

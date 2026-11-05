@@ -2,7 +2,7 @@ import { Schema, model, Document, Types } from "mongoose";
 import { STAFF_MISTAKE_DEADLINES, STAFF_WARNING_STEPS, type StaffMistakeDeadline, type StaffMistakeRung } from "@scd/shared";
 
 /**
- * StaffMistakeSettings (D-#943) — the one settings row (`key: "default"`) the Principal edits:
+ * StaffMistakeSettings (D-#1005) — the one settings row (`key: "default"`) the Principal edits:
  * the warning ladder, the tier weights, the explanation deadline and the places switched off.
  * No row = STAFF_MISTAKE_DEFAULT_SETTINGS.
  */

@@ -44,7 +44,7 @@ const oid = (id: string): Types.ObjectId => {
 const SCHOOL_WEEKDAYS = new Set([0, 1, 2, 3, 4]);
 
 /**
- * The explanation deadline (§2; the Principal picks the rule, D-#943): 17:00 Dhaka on the
+ * The explanation deadline (§2; the Principal picks the rule, D-#1005): 17:00 Dhaka on the
  * next school day (default), 24 hours, or 17:00 on the third school day.
  */
 export function explainDeadline(now: Date, rule: StaffMistakeDeadline = "NEXT_SCHOOL_DAY"): Date {
@@ -124,7 +124,7 @@ export interface RecordMistakeInput {
  */
 export async function recordMistakeFromSource(input: RecordMistakeInput): Promise<IStaffMistake | null> {
   const settings = await getStaffMistakeSettings();
-  // A place the Principal switched off records nothing (D-#943).
+  // A place the Principal switched off records nothing (D-#1005).
   if (settings.disabledKinds.includes(input.kind)) return null;
   const staffUserId = new Types.ObjectId(input.staffUserId.toString());
   const sourceId = new Types.ObjectId(input.sourceId.toString());
