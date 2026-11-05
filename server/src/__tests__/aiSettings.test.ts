@@ -31,6 +31,7 @@ import {
   geminiModel,
   refreshAiConfig,
   setAiSettings,
+  testGemini,
 } from "../modules/platform/services/AiSettingService";
 import { GeminiVoiceModel } from "../modules/workboard/voice/VoiceTaskService";
 import type { AuthPayload } from "../context";
@@ -126,6 +127,42 @@ describe("setAiSettings", () => {
     const v = await clearAiKey(principal);
     expect(v).toMatchObject({ source: "ENV", keyLast4: "xyz9" });
     expect(geminiKey()).toBe("env-key-xyz9");
+  });
+});
+
+describe("testGemini — the save-time check", () => {
+  const pinger = (answers: Record<string, number>) => {
+    const asked: string[] = [];
+    const ping = async (_k: string, m: string) => {
+      asked.push(m);
+      return answers[m] ?? 200;
+    };
+    return { asked, ping };
+  };
+
+  test("Flash busy (503) but Lite answers → the key is proved, nothing thrown", async () => {
+    const { asked, ping } = pinger({ "gemini-flash-latest": 503 });
+    await expect(testGemini("k", "gemini-flash-latest", ping)).resolves.toBeUndefined();
+    expect(asked).toEqual(["gemini-flash-latest", "gemini-flash-lite-latest"]);
+  });
+
+  test("Flash busy and Lite refuses the key → the key error, not the busy one", async () => {
+    const { ping } = pinger({ "gemini-flash-latest": 503, "gemini-flash-lite-latest": 403 });
+    await expect(testGemini("k", "gemini-flash-latest", ping)).rejects.toThrow("কী (key) সঠিক নয়");
+  });
+
+  test("both busy → the original busy message; a retired model (404) never falls back", async () => {
+    const both = pinger({ "gemini-flash-latest": 503, "gemini-flash-lite-latest": 503 });
+    await expect(testGemini("k", "gemini-flash-latest", both.ping)).rejects.toThrow("(503)");
+    const gone = pinger({ "gemini-2.5-flash": 404 });
+    await expect(testGemini("k", "gemini-2.5-flash", gone.ping)).rejects.toThrow("আর পাওয়া যায় না");
+    expect(gone.asked).toEqual(["gemini-2.5-flash"]);
+  });
+
+  test("a bad key on the chosen model stops at once", async () => {
+    const { asked, ping } = pinger({ "gemini-flash-latest": 400 });
+    await expect(testGemini("k", "gemini-flash-latest", ping)).rejects.toThrow("কী (key) সঠিক নয়");
+    expect(asked).toHaveLength(1);
   });
 });
 
