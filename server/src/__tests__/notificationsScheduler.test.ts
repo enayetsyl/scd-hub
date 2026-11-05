@@ -145,8 +145,11 @@ jest.mock("../modules/workboard/services/TaskTemplateService", () => ({
 jest.mock("../modules/workboard/services/TaskSweepService", () => ({
   dispatchTaskDigest: () => Promise.resolve(0),
   dispatchTaskOverdue: () => Promise.resolve(0),
+  dispatchTaskGivenSummary: () => Promise.resolve(0),
   TASK_DIGEST_MINUTES: 7 * 60 + 30,
   TASK_OVERDUE_MINUTES: 16 * 60,
+  TASK_GIVEN_AM_MINUTES: 8 * 60,
+  TASK_GIVEN_PM_MINUTES: 17 * 60,
 }));
 // SP-4 (D-#738) — the 11:00 improvement sweep reads real models; stubbed like the work board.
 const mockImprovementPending = jest.fn((_now: Date) => Promise.resolve(0));

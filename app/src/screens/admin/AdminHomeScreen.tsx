@@ -39,6 +39,7 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
   const canAuditLog = can("audit_log:view");
   const canActivity = can("audit_log:view_activity");
   const canHealth = can("system_health:view");
+  const canAiKey = can("system_health:ai_key");
   // GC-5: the guardian-claim queue is an Office/Principal screen and rides the
   // tracker:read they already hold — no new permission (D-#554).
   // BUG-WC-3: gated on ROLE, not tracker:read — OFFICE deliberately holds no
@@ -127,6 +128,14 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
         </Card>
       ) : null}
 
+      {/* D-#967: the Gemini key + model, set here instead of the server's .env (LOCKED). */}
+      {canAiKey ? (
+        <Card onPress={() => navigation.navigate("AiSettings")}>
+          <Body style={{ fontWeight: "700" }}>{STR.aiTitle}</Body>
+          <Muted>{STR.aiSubtitle}</Muted>
+        </Card>
+      ) : null}
+
       {/* GE-1/GE-3 (D-#464/#465): guardian app usage moved to the Reports hub (D-#861) —
           `reports:guardian_engagement`, Principal-only by default like the audit log. */}
 
@@ -193,7 +202,7 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
 
       {![
         canImport, canStaffLogins, canProxy, canAssignSubject, canAssignSupervisor, canStudents,
-        canAuditLog, canActivity, canHealth, canStaff,
+        canAuditLog, canActivity, canHealth, canAiKey, canStaff,
         canAssignClassTeacher, canRoutine, canSections, canYears, canGuardianCreds, canTemplates, canAccess,
       ].some(Boolean) ? (
         <Notice message={STR.noPermission} tone="warn" />
