@@ -62,6 +62,7 @@ import { dateKey } from "../../lib/dates";
 import { useRecentLimit, RECENT_ROWS } from "../../lib/useRecentLimit";
 import { ChildCommentRows, ChildRevisionRows } from "../../components/ChildCommentRevisionRows";
 import { StorybookTodayCard } from "../storybooks/StorybookTodayCard";
+import { AllRounderCard } from "../../components/AllRounderCard";
 
 type Nav = NativeStackNavigationProp<GuardianHomeStackParamList>;
 
@@ -466,6 +467,9 @@ export default function GuardianHomeScreen(): React.ReactElement {
             {showTrajHow ? <Muted style={{ marginTop: space(1) }}>{STR.gpTrajHowBody}</Muted> : null}
           </Card>
         ) : null}
+
+        {/* SB-7 (D-#987): the all-rounder — how balanced, beside which way they are going. */}
+        {selected ? <AllRounderCard studentId={selected.studentId} /> : null}
 
         {/* Child info — section + Quran/Arabic group memberships (myChildren,
             already loaded by the provider; cross-grade groups per D-#48/#56). */}

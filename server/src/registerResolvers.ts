@@ -35,6 +35,7 @@ import "./modules/trackers/resolvers/writableSubjects";
 import "./modules/printing/resolvers/printRequest";
 import "./modules/workboard/resolvers/workBoard";
 import "./modules/trackers/resolvers/wholePicture";
+import "./modules/trackers/resolvers/allRounder";
 import "./modules/trackers/resolvers/studentProfile";
 import "./modules/trackers/resolvers/workClaim";
 import "./modules/reports/resolvers/monthlyReport";
