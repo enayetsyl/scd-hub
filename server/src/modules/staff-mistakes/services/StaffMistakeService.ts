@@ -26,6 +26,7 @@ import { StaffMistake, type IStaffMistake } from "../models/StaffMistake";
 import { User } from "../../foundation/models/User";
 import { writeAudit } from "../../platform/services/AuditService";
 import { emitStaffMistakeDecided, emitStaffMistakeExplain } from "../../notifications/services/emitters";
+import { describeMistakeSource } from "./mistakeNoticeDetail";
 import type { CorrectionReason } from "./correctionReasonContext";
 import type { StaffMistakeDeadline } from "@scd/shared";
 import { getStaffMistakeSettings } from "./StaffMistakeSettingsService";
@@ -165,7 +166,14 @@ export async function recordMistakeFromSource(input: RecordMistakeInput): Promis
     return StaffMistake.findOne({ kind: input.kind, sourceId, staffUserId });
   }
   if (reason) await auditExplained(row, staffUserId.toString());
-  else await emitStaffMistakeExplain({ mistakeId: row._id, recipientUserId: staffUserId, kind: row.kind, explainDueAt: row.explainDueAt });
+  else
+    await emitStaffMistakeExplain({
+      mistakeId: row._id,
+      recipientUserId: staffUserId,
+      kind: row.kind,
+      explainDueAt: row.explainDueAt,
+      detail: await describeMistakeSource(row.kind, String(row.sourceId)),
+    });
   if (row.status === "COUNTED") await afterCounted(staffUserId.toString(), input.at);
   return row;
 }
@@ -309,6 +317,7 @@ export async function decideMistake(input: {
       recipientUserId: moved.staffUserId,
       kind: moved.kind,
       explainDueAt: moved.explainDueAt,
+      detail: await describeMistakeSource(moved.kind, String(moved.sourceId)),
     });
   }
   return row;

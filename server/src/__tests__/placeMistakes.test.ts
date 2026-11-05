@@ -18,6 +18,7 @@ import { setTaskStatus } from "../modules/workboard/services/TaskService";
 import { dispatchTaskOverdue } from "../modules/workboard/services/TaskSweepService";
 import { StaffProfile } from "../modules/foundation/models/StaffProfile";
 import { StaffLeaveApplication } from "../modules/hr/models/StaffLeaveApplication";
+import { bnDeadline } from "../modules/notifications/services/emitters";
 
 jest.setTimeout(120_000);
 
@@ -136,5 +137,21 @@ describe("D-#955 — tier 3: missed duties", () => {
     // Not on leave the next week: explanation due as usual.
     await recordPlaceMistake({ kind: "ATTENDANCE_NOT_MARKED", tier: 3, refKey: "2026-11-15:s1", ownerId: teacher, correctedBy: "system", at: new Date(), oncePerRef: true, leaveDateKey: "2026-11-15", line: "-" });
     expect(await StaffMistake.countDocuments({ status: "EXPLANATION_DUE" })).toBe(1);
+  });
+
+  it("the explain notice carries the place title and the card line (D-#1012)", async () => {
+    const teacher = await user("Tazkir", "TEACHER");
+    await recordPlaceMistake({ kind: "TASK_REOPENED", tier: 2, refKey: "task-1", ownerId: teacher, correctedBy: "system", at: new Date(), line: "নোটিশ বোর্ড হালনাগাদ — আবার খোলা হয়েছে" });
+    const n = await Notification.findOne({ kind: "STAFF_MISTAKE_EXPLAIN" }).lean();
+    expect(n!.titleBn).toBe("ব্যাখ্যা দিন: সম্পন্ন দেওয়া কাজ আবার খোলা হয়েছে");
+    expect(n!.bodyBn.startsWith("নোটিশ বোর্ড হালনাগাদ — আবার খোলা হয়েছে\n")).toBe(true);
+  });
+});
+
+describe("bnDeadline (D-#1012)", () => {
+  it("reads the Dhaka time in words", () => {
+    expect(bnDeadline(new Date("2026-11-08T11:00:00Z"))).toMatch(/৮ নভেম্বর বিকেল ৫টা$/);
+    expect(bnDeadline(new Date("2026-11-08T03:30:00Z"))).toMatch(/সকাল ৯:৩০$/);
+    expect(bnDeadline(new Date("2026-11-08T06:00:00Z"))).toMatch(/দুপুর ১২টা$/);
   });
 });
