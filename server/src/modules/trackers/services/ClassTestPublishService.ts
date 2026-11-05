@@ -39,6 +39,7 @@ import { marksSnapshotDiff, recordMarksCorrection, snapshotOf } from "./ClassTes
 import { ClassTestResultError } from "./ClassTestResultService";
 import { startScriptClock } from "./ClassTestScriptService";
 import { personName } from "../../../lib/personName";
+import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
 
 // ---------------------------------------------------------------------------
 // Message build (rendered from the MT registry; §8 Regular / Excellent / Absent)
@@ -456,6 +457,13 @@ export async function sendBackExam(testId: string, actorId: string, reason: stri
   const trimmed = reason.trim();
   if (!trimmed) throw new ClassTestResultError("A send-back reason is required");
   const oid = new Types.ObjectId(testId);
+  // D-#953: who submitted the rows going back (the stamp is cleared below).
+  let submitters: string[] = [];
+  try {
+    submitters = (await ClassTestResult.distinct("submittedBy", { testId: oid, submittedAt: { $ne: null }, publishedAt: null })).map(String);
+  } catch {
+    submitters = []; // the record is best-effort; the send-back goes ahead
+  }
   const res = await ClassTestResult.updateMany(
     { testId: oid, submittedAt: { $ne: null }, publishedAt: null },
     {
@@ -472,6 +480,9 @@ export async function sendBackExam(testId: string, actorId: string, reason: stri
     targetKind: "ClassTest",
     meta: { testId, count, reason: trimmed },
   });
+  for (const owner of submitters) {
+    await recordPlaceMistake({ kind: "CT_RESULT_SENT_BACK", tier: 2, refKey: testId, ownerId: owner, correctedBy: actorId, at: new Date(), line: `ফল ফেরত পাঠানো হয়েছে: "${trimmed}"` });
+  }
   return { testId, count };
 }
 

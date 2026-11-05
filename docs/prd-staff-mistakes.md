@@ -183,3 +183,29 @@ explained later by the owner. Reasons = আমার ভুল ছিল + the p
 
 Not in this slice: Saturday revision (a delivered entry cannot be corrected at all yet — needs a
 correction path first) and Quran-exam marks changed after an unlock.
+
+## 14. MR-7 — tier 2: someone else caught it (D-#953)
+
+Same generic note as §13 with `tier: 2` (half weight on the ladder by default). Explained later.
+
+| kind | caught when | owner |
+|---|---|---|
+| CT_RESULT_SENT_BACK | Office sends submitted class-test results back | each submitter |
+| CT_DETAILS_FIXED | a class test's total or pass marks are corrected (a date-only move is not) | `requestedBy` |
+| CT_REQUEST_CHANGED | a question request is edited / cancelled after the Office typed a version | `requestedBy` |
+| CT_PAPER_SENT_BACK | the teacher sends the Office's typed paper back for changes | the round's `sentBy` |
+| HW_ITEM_VOIDED | the Office voids a declared homework item | `declaredBy` |
+| ASSIGNMENT_ITEM_CHANGED | a delivered assignment's set or text changes (supplying missing total marks is not) | `deliveredBy` |
+| COMMENT_REVISED | a reviewer rewrites or discards someone's comment | `authorUserId` |
+| OBSERVATION_REJECTED | the observer rejects an unreviewable video | `createdBy` (uploader) |
+| OBSERVATION_RESTORED | a cancelled observation is restored | who cancelled it |
+| TASK_REOPENED | a task marked done is reopened by someone else | `doneBy` |
+| SCRIPTS_RECEIVE_UNDONE | a scripts receipt is undone | `receivedBy` |
+| COVER_CANCELLED | a cover is cancelled (the covering teacher had been told) | `createdBy` |
+| ROUTINE_CELL_REVISED | a routine cell is revised before it ever took effect | `createdBy` |
+| LEAVE_REDECIDED | an approved / rejected leave is decided again | the first decider |
+| PRINT_CANCELLED | the Office cancels someone else's print request | `requestedBy` |
+
+Deferred (need new comparison logic, not just a hook): staff attendance sheet re-imported,
+salary entered twice for one month, guardian linked then unlinked, question retired then
+restored, absent-at-delivery vs the attendance register.

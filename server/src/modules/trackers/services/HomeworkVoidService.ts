@@ -26,6 +26,7 @@ import { Section } from "../../foundation/models/Section";
 import { User } from "../../foundation/models/User";
 import { writeAudit } from "../../platform/services/AuditService";
 import { dateKeyOf } from "../../attendance/dates";
+import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
 
 /** How far back the clean-up list looks. Older stragglers are still removable by id. */
 export const UNISSUED_LOOKBACK_DAYS = 30;
@@ -121,5 +122,7 @@ export async function voidHomeworkItem(
       declaredBy: item.declaredBy ? item.declaredBy.toString() : null,
     },
   });
+  // D-#953: a bad declaration the Office had to clear.
+  await recordPlaceMistake({ kind: "HW_ITEM_VOIDED", tier: 2, refKey: item._id.toString(), ownerId: item.declaredBy, correctedBy: actorId, at: new Date(), line: `${item.hwId} বাতিল করা হয়েছে` });
   return { itemId: item._id.toString(), hwId: item.hwId };
 }

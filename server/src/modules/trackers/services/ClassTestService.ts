@@ -44,6 +44,7 @@ import { PrintRequest } from "../../printing/models/PrintRequest";
 import { ScriptBundle } from "../../archive/models/ScriptBundle";
 import { resolveSubjectTeacher } from "../subjectTeacher";
 import { queryPage, type Page, type PageArgs } from "../../../lib/paging";
+import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
 
 // ---------------------------------------------------------------------------
 // CT_ID generation (D-#34 numbering pattern) + Test# auto-suggest
@@ -810,6 +811,13 @@ export async function updateClassTestDetails(input: UpdateClassTestDetailsInput)
       to: { totalMarks: doc.totalMarks, passMark: doc.passMark, examDate: new Date(doc.examDate).toISOString() },
     },
   });
+  // D-#953: the filer's numbers were wrong (a moved date alone is a postponement).
+  if (before.totalMarks !== doc.totalMarks || before.passMark !== doc.passMark) {
+    await recordPlaceMistake({
+      kind: "CT_DETAILS_FIXED", tier: 2, refKey: String(doc._id), ownerId: doc.requestedBy, correctedBy: input.actorId, at: new Date(),
+      line: `${doc.ctId}: মোট ${before.totalMarks} → ${doc.totalMarks}, পাস ${before.passMark} → ${doc.passMark}`,
+    });
+  }
   return classTestShape(doc as unknown as IClassTest);
 }
 
