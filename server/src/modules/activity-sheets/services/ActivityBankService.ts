@@ -13,6 +13,7 @@
  * PDFs live in Drive (StoredFile `activity_bank_pdf` / `activity_answer_pdf`) and are never
  * served whole. Identity-free module data; the child records are ActivityIssue (identity plane).
  */
+import { assertGuardianFeature } from "../../guardian-access/services/GuardianFeatureService";
 import { Types } from "mongoose";
 import {
   ACTIVITY_LEVELS,
@@ -479,6 +480,7 @@ export async function assertActivityFileReadAccess(ctx: AppContext, file: { _id:
     return;
   }
   if (callerHasPermission(ctx.auth, "activity_sheets:view")) return;
+  await assertGuardianFeature(ctx, "ACTIVITY_SHEETS");
   const id = file._id;
   const bank = await ActivityBank.findOne({ $or: [{ "sampleFileIds.E": id }, { "sampleFileIds.M": id }, { "sampleFileIds.H": id }] }).lean();
   if (bank) {

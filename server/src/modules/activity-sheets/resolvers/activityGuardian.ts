@@ -8,6 +8,7 @@
  *     or `activity_sheets:check` (a class teacher: their own sections only).
  * The batch PDF is REST: GET /files/activity-print?runId=batch-… (names + cover slips).
  */
+import { assertGuardianFeature } from "../../guardian-access/services/GuardianFeatureService";
 import { callerHasPermission } from "@scd/shared";
 import { builder } from "../../../schema";
 import { ForbiddenError, assertGuardianOfStudent } from "../../../middleware/authz";
@@ -101,6 +102,7 @@ builder.queryField("activityChoices", (t) =>
     args: { studentId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       await assertGuardianOfStudent(ctx, args.studentId);
+      await assertGuardianFeature(ctx, "ACTIVITY_SHEETS");
       return activityChoices(args.studentId);
     },
   }),
@@ -114,6 +116,7 @@ builder.queryField("childActivitySheets", (t) =>
     args: { studentId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       if (!callerHasPermission(ctx.auth!, "activity_sheets:view")) await assertGuardianOfStudent(ctx, args.studentId);
+      await assertGuardianFeature(ctx, "ACTIVITY_SHEETS");
       return childSheets(args.studentId);
     },
   }),
@@ -125,7 +128,10 @@ builder.mutationField("requestActivitySheet", (t) =>
     description: "A guardian asks for the next sheet of a bank + level for their child (printed with the name next morning).",
     authScopes: { hasPermission: "guardian:read_child" },
     args: { studentId: t.arg.string({ required: true }), bankId: t.arg.string({ required: true }), level: t.arg.string({ required: true }) },
-    resolve: async (_root, args, ctx) => requestSheet(ctx, args.studentId, args.bankId, args.level),
+    resolve: async (_root, args, ctx) => {
+      await assertGuardianFeature(ctx, "ACTIVITY_SHEETS");
+      return requestSheet(ctx, args.studentId, args.bankId, args.level);
+    },
   }),
 );
 
@@ -135,7 +141,10 @@ builder.mutationField("cancelActivityRequest", (t) =>
     description: "Withdraw a request before it is printed.",
     authScopes: { hasPermission: "guardian:read_child" },
     args: { issueId: t.arg.string({ required: true }) },
-    resolve: async (_root, args, ctx) => cancelRequest(ctx, args.issueId),
+    resolve: async (_root, args, ctx) => {
+      await assertGuardianFeature(ctx, "ACTIVITY_SHEETS");
+      return cancelRequest(ctx, args.issueId);
+    },
   }),
 );
 

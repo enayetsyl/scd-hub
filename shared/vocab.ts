@@ -2152,6 +2152,21 @@ export type ActivityCopyKind = (typeof ACTIVITY_COPY_KINDS)[number];
 export const ACTIVITY_COPY_STATUSES = ["IN_TRAY", "TAKEN", "RETURNED", "LOST"] as const;
 export type ActivityCopyStatus = (typeof ACTIVITY_COPY_STATUSES)[number];
 
+/** Guardian release switch (D-#1011): a guardian-facing feature stays hidden from every family
+ *  until it is switched on — for all guardians, or for chosen guardians only. No row = OFF.
+ *  The staff side (desk, banks, reports) never depends on it. */
+export const GUARDIAN_FEATURES = ["STORYBOOKS", "ACTIVITY_SHEETS"] as const;
+export type GuardianFeature = (typeof GUARDIAN_FEATURES)[number];
+/** Who may switch each one (PRINCIPAL_DEFAULT catalogue actions). */
+export const GUARDIAN_FEATURE_PERMISSION: Record<GuardianFeature, "library:guardian_access" | "activity_sheets:guardian_access"> = {
+  STORYBOOKS: "library:guardian_access",
+  ACTIVITY_SHEETS: "activity_sheets:guardian_access",
+};
+export const GUARDIAN_FEATURE_LABELS_BN: Record<GuardianFeature, string> = {
+  STORYBOOKS: "গল্পের বই",
+  ACTIVITY_SHEETS: "অ্যাক্টিভিটি শিট",
+};
+
 
 // --- A.12 CHAT / MESSAGING ENUMS (app-native; Messaging module — ------------
 // prd-messaging, D-#76–#79). NO wire-contract twin: a chat is a feature, not

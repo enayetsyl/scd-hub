@@ -101,6 +101,9 @@ export default function StoryShelfScreen({ navigation }: Props): React.ReactElem
         {isGuardian ? <Button title={STR.stbMyBooks} variant="secondary" onPress={() => navigation.navigate("StoryChildBooks")} style={{ marginBottom: space(3) }} /> : null}
         {desk ? <Button title={STR.stbDeskNav} onPress={() => navigation.navigate("StoryDesk")} style={{ marginBottom: space(2) }} /> : null}
         {manage ? <Button title={STR.stbManage} variant="secondary" onPress={() => navigation.navigate("StoryManage")} style={{ marginBottom: space(3) }} /> : null}
+        {!isGuardian && can("library:guardian_access") ? (
+          <Button title={STR.gfaButton} variant="secondary" onPress={() => navigation.navigate("StoryGuardianAccess")} style={{ marginBottom: space(3) }} />
+        ) : null}
         {cards.length > 0 ? (
           <ChipRow>
             <Chip label={STR.all} selected={tag === "all"} onPress={() => setTag("all")} />

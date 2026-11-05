@@ -11,6 +11,7 @@
  *
  * In-memory MongoDB, real services.
  */
+import { GuardianFeatureAccess } from "../modules/guardian-access/models/GuardianFeatureAccess";
 import mongoose, { Types } from "mongoose";
 import { MongoMemoryServer } from "mongodb-memory-server";
 import type { AppContext } from "../context";
@@ -36,6 +37,8 @@ let mongo: MongoMemoryServer;
 beforeAll(async () => {
   mongo = await MongoMemoryServer.create();
   await mongoose.connect(mongo.getUri());
+  // D-#1011: the guardian paths are tested with both features switched on for everyone.
+  await GuardianFeatureAccess.create([{ feature: "STORYBOOKS", onForAll: true }, { feature: "ACTIVITY_SHEETS", onForAll: true }]);
   await Promise.all(Object.values(mongoose.models).map((model) => model.init()));
 });
 afterAll(async () => {

@@ -9,6 +9,7 @@
  * Rules: only while no copy is in (a book on the shelf is simply borrowed), not for a book the
  * child already has, and at most STORY_WAIT_CAP waits per child (D-#990 default).
  */
+import { assertGuardianFeature } from "../../guardian-access/services/GuardianFeatureService";
 import { Types } from "mongoose";
 import { callerHasPermission } from "@scd/shared";
 import type { AppContext } from "../../../context";
@@ -35,6 +36,7 @@ export const STORY_WAIT_ERRORS_BN = {
 async function viewerFor(ctx: AppContext, studentId: string) {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
   if (!studentId) throw new LibraryError(STORY_WAIT_ERRORS_BN.pickStudent);
+  await assertGuardianFeature(ctx, "STORYBOOKS");
   if (ctx.auth.role !== "GUARDIAN") {
     if (!callerHasPermission(ctx.auth, "library:lend")) throw new ForbiddenError("অনুমতি নেই");
     await assertIsLibrarian(ctx, "library:lend");

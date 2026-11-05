@@ -5,6 +5,7 @@
  *   - activityStickersOwed / giveActivityStickers: a class teacher's own sections
  *     (activity_sheets:check) or every section (activity_sheets:issue).
  */
+import { assertGuardianFeature } from "../../guardian-access/services/GuardianFeatureService";
 import { callerHasPermission } from "@scd/shared";
 import { builder } from "../../../schema";
 import { assertGuardianOfStudent } from "../../../middleware/authz";
@@ -23,6 +24,7 @@ import { ActivityIssueRef } from "./activityCorner";
 
 async function childGate(ctx: AppContext, studentId: string): Promise<void> {
   if (!callerHasPermission(ctx.auth!, "activity_sheets:view")) await assertGuardianOfStudent(ctx, studentId);
+  await assertGuardianFeature(ctx, "ACTIVITY_SHEETS");
 }
 
 const HintRef = builder.objectRef<LevelUpHint>("ActivityLevelUpHint");
@@ -73,7 +75,10 @@ builder.queryField("activityAnswerImage", (t) =>
     description: "A returned sheet's answer page as a JPEG data URI (guardian: only after it came back).",
     authScopes: { hasAnyPermission: ["guardian:read_child", "activity_sheets:view"] },
     args: { issueId: t.arg.string({ required: true }) },
-    resolve: async (_root, args, ctx) => answerImage(ctx, args.issueId),
+    resolve: async (_root, args, ctx) => {
+      await assertGuardianFeature(ctx, "ACTIVITY_SHEETS");
+      return answerImage(ctx, args.issueId);
+    },
   }),
 );
 

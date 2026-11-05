@@ -292,6 +292,8 @@ export type ClassBooksStackParamList = {
 /** AS-1 (D-#988) — activity sheets. ActivityBanks stays first: the initial route takes no params. */
 export type ActivityStackParamList = {
   ActivityBanks: undefined;
+  /** D-#1011: which guardians see activity sheets. */
+  ActivityGuardianAccess: undefined;
   ActivityBank: { bankId: string; title: string };
   ActivityCorner: undefined;
   ActivityDesk: undefined;
@@ -312,6 +314,8 @@ export type StorybooksStackParamList = {
   StoryDesk: undefined;
   /** SB-4: a guardian's "my child's books" (the selected child). */
   StoryChildBooks: undefined;
+  /** D-#1011: which guardians see the shelf. */
+  StoryGuardianAccess: undefined;
 };
 /** D-#873 — Quran oral exam. QuranExamHome stays first: the initial route takes no params. */
 export type QuranExamStackParamList = {

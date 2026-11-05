@@ -15,6 +15,7 @@
  *
  * In-memory MongoDB, real services, real pdf-lib; Drive, pdftotext and the renderer stubbed.
  */
+import { GuardianFeatureAccess } from "../modules/guardian-access/models/GuardianFeatureAccess";
 import mongoose, { Types } from "mongoose";
 import { MongoMemoryServer } from "mongodb-memory-server";
 import { PDFDocument } from "pdf-lib";
@@ -86,6 +87,8 @@ let seq = 0;
 beforeAll(async () => {
   mongo = await MongoMemoryServer.create();
   await mongoose.connect(mongo.getUri());
+  // D-#1011: the guardian paths are tested with both features switched on for everyone.
+  await GuardianFeatureAccess.create([{ feature: "STORYBOOKS", onForAll: true }, { feature: "ACTIVITY_SHEETS", onForAll: true }]);
   await Promise.all(Object.values(mongoose.models).map((model) => model.init()));
 });
 

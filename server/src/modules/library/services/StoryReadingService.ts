@@ -25,6 +25,7 @@ import { BookTitle, type IBookTitle } from "../models/BookTitle";
 import { StorySeries } from "../models/StorySeries";
 import { resolveShelfViewer } from "./StorybookService";
 import { bnDayLabel } from "./StoryHoldService";
+import { guardiansWithFeature } from "../../guardian-access/services/GuardianFeatureService";
 
 const DAY_MS = 86_400_000;
 const HISTORY = 20;
@@ -93,9 +94,13 @@ async function storyLoanContext(loan: Pick<IBookLoan, "titleId" | "studentId" | 
   if (!title?.seriesId) return null;
   const student = await Student.findById(loan.studentId).select("name nameBn").lean();
   const links = await GuardianLink.find({ studentId: loan.studentId }).select("guardianId active").lean();
-  const guardians = await Guardian.find({ _id: { $in: links.filter((l) => l.active !== false).map((l) => l.guardianId) }, active: true })
-    .select("_id")
-    .lean();
+  // D-#1011: only families who can see the shelf are told (no notification → no pop-up either).
+  const guardians = await guardiansWithFeature(
+    "STORYBOOKS",
+    await Guardian.find({ _id: { $in: links.filter((l) => l.active !== false).map((l) => l.guardianId) }, active: true })
+      .select("_id")
+      .lean(),
+  );
   return { titleBn: title.titleBn as string, child: (student?.nameBn || student?.name || "") as string, guardians };
 }
 

@@ -15,6 +15,7 @@
  *
  * Identity plane (a child's reading record is identity data, ADR-005) — no corpus path.
  */
+import { assertGuardianFeature } from "../../guardian-access/services/GuardianFeatureService";
 import { Types } from "mongoose";
 import { callerHasPermission, ROSTER_CLASS_LEVEL_MAX, ROSTER_CLASS_LEVEL_MIN, STORY_SERIES_STATUSES, type StorySeriesStatus } from "@scd/shared";
 import type { AppContext } from "../../../context";
@@ -624,7 +625,10 @@ export async function resolveShelfViewer(ctx: AppContext, studentId?: string | n
     if (!staff) throw new ForbiddenError(STORYBOOK_ERRORS_BN.pickStudent);
     return { bandCodes: null, includeUnpublished: true, studentId: null };
   }
-  if (!staff) await assertGuardianOfStudent(ctx, studentId);
+  if (!staff) {
+    await assertGuardianOfStudent(ctx, studentId);
+    await assertGuardianFeature(ctx, "STORYBOOKS");
+  }
   const level = await studentClassLevel(studentId);
   const bandCodes = level === null ? [] : await bandCodesForLevels([level]);
   return { bandCodes, includeUnpublished: false, studentId };
@@ -814,6 +818,7 @@ export async function assertStorybookFileReadAccess(ctx: AppContext, fileId: str
   if (!callerHasPermission(ctx.auth, "guardian:read_child") || !Types.ObjectId.isValid(fileId)) {
     throw new ForbiddenError(STORYBOOK_ERRORS_BN.forbidden);
   }
+  await assertGuardianFeature(ctx, "STORYBOOKS");
   const id = new Types.ObjectId(fileId);
   const levels = await guardianClassLevels(ctx.auth.userId);
   const bands = levels.length > 0 ? await bandCodesForLevels(levels) : [];

@@ -147,6 +147,14 @@ async function activityOf(studentId: string, now: Date): Promise<ActivityCount> 
   return { done, target: rules.monthlyTarget, ever: !!ever };
 }
 
+/** Pure: the card without some areas (a guardian whose READING / ACTIVITY feature is off, D-#1011),
+ *  the overall re-worked from what is left. */
+export function withoutAreas(r: AllRounder, drop: readonly AreaScore["area"][]): AllRounder {
+  if (drop.length === 0) return r;
+  const areas = r.areas.filter((a) => !drop.includes(a.area));
+  return { studentId: r.studentId, areas, ...overallOf(areas) };
+}
+
 export async function allRounder(studentId: string, now: Date = new Date()): Promise<AllRounder> {
   const [wp, reading, activity] = await Promise.all([wholePicture(studentId, now), readingOf(studentId, now), activityOf(studentId, now)]);
   const areas = areasOf(wp, reading, activity);

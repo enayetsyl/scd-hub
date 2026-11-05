@@ -8,7 +8,8 @@ import type { Types } from "mongoose";
 import { builder } from "../../../schema";
 import { ForbiddenError, assertGuardianOfStudent } from "../../../middleware/authz";
 import { Student } from "../../foundation/models/Student";
-import { allRounder, type AllRounder, type AreaScore } from "../services/AllRounderService";
+import { allRounder, withoutAreas, type AllRounder, type AreaScore } from "../services/AllRounderService";
+import { guardianFeaturesFor } from "../../guardian-access/services/GuardianFeatureService";
 import { assertReportRead, holdsViewAll, STUDENT_PROFILE_REPORT_GATE } from "./classTestSummary";
 
 const AreaRef = builder.objectRef<AreaScore>("AllRounderArea").implement({
@@ -36,12 +37,21 @@ const AllRounderRef = builder.objectRef<AllRounder>("AllRounder").implement({
 builder.queryField("childAllRounder", (t) =>
   t.field({
     type: AllRounderRef,
-    description: "A guardian's all-rounder card for their own child (Today).",
+    nullable: true,
+    description:
+      "A guardian's all-rounder card for their own child (Today). It came with the storybook shelf and activity " +
+      "sheets, so it follows their guardian switch (D-#1011): null while both are off for this guardian; an off " +
+      "feature's area is left out.",
     authScopes: { hasPermission: "guardian:read_child" },
     args: { studentId: t.arg.string({ required: true }) },
     resolve: async (_root, args, ctx) => {
       await assertGuardianOfStudent(ctx, args.studentId);
-      return allRounder(args.studentId);
+      const on = await guardianFeaturesFor(ctx.auth!.userId);
+      if (on.length === 0) return null;
+      const drop: AreaScore["area"][] = [];
+      if (!on.includes("STORYBOOKS")) drop.push("READING");
+      if (!on.includes("ACTIVITY_SHEETS")) drop.push("ACTIVITY");
+      return withoutAreas(await allRounder(args.studentId), drop);
     },
   }),
 );

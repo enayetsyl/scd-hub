@@ -15,6 +15,7 @@
  *  - Today card: open sheets, the latest checked one, a hint, an owed sticker.
  * Identity plane; no corpus path (ADR-005).
  */
+import { guardiansWithFeature } from "../../guardian-access/services/GuardianFeatureService";
 import { Types } from "mongoose";
 import { ACTIVITY_LEVELS, ACTIVITY_LEVEL_LABELS_BN, ACTIVITY_RESULT_LABELS_BN, callerHasPermission, type ActivityLevel } from "@scd/shared";
 import type { AppContext } from "../../../context";
@@ -127,7 +128,7 @@ export async function alertChecked(issue: IActivityIssue): Promise<number> {
     GuardianLink.find({ studentId: issue.studentId }).select("guardianId active").lean(),
   ]);
   if (!student || !sheet || !bank) return 0;
-  const guardians = await Guardian.find({ _id: { $in: links.filter((l) => l.active !== false).map((l) => l.guardianId) }, active: true }).select("_id").lean();
+  const guardians = await guardiansWithFeature("ACTIVITY_SHEETS", await Guardian.find({ _id: { $in: links.filter((l) => l.active !== false).map((l) => l.guardianId) }, active: true }).select("_id").lean());
   const child = (student.nameBn || student.name) as string;
   const titleBn = issue.stickerGiven || issue.stickerOwed ? `${child} একটি অ্যাক্টিভিটি শিট শেষ করেছে ★` : `${child}-এর অ্যাক্টিভিটি শিট দেখা হয়েছে`;
   const parts = [`${bank.nameBn} (${ACTIVITY_LEVEL_LABELS_BN[sheet.level as ActivityLevel]}) — ${ACTIVITY_RESULT_LABELS_BN[issue.result]}।`];

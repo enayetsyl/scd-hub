@@ -148,6 +148,7 @@ export default function ActivityBanksScreen({ navigation }: Props): React.ReactE
   const settings = can("activity_sheets:settings");
   const corner = can("activity_sheets:issue") || manage;
   const desk = can("activity_sheets:issue") || can("activity_sheets:check");
+  const release = can("activity_sheets:guardian_access");
   const [reqQ] = useQuery({ query: ACTIVITY_REQUESTS_QUERY, pause: !manage, requestPolicy: "cache-and-network" });
   const [q, refetch] = useQuery({ query: ACTIVITY_BANKS_QUERY });
   const [rulesQ, refetchRules] = useQuery({ query: ACTIVITY_RULES_QUERY, pause: !settings });
@@ -160,13 +161,14 @@ export default function ActivityBanksScreen({ navigation }: Props): React.ReactE
   return (
     <Screen>
       {msg ? <Notice message={msg.text} tone={msg.tone} /> : null}
-      {corner || desk ? (
+      {corner || desk || release ? (
         <View style={{ flexDirection: "row", gap: space(2), marginBottom: space(3), flexWrap: "wrap" }}>
           {desk ? <Button title={STR.actDesk} onPress={() => navigation.navigate("ActivityDesk")} /> : null}
           {corner ? <Button title={STR.actCorner} variant="secondary" onPress={() => navigation.navigate("ActivityCorner")} /> : null}
           {manage ? <Button title={STR.actBatch.replace("{n}", bnNum(reqQ.data?.activityRequests.length ?? 0))} variant="secondary" onPress={() => navigation.navigate("ActivityBatch")} /> : null}
           {desk ? <Button title={STR.actHandOut} variant="secondary" onPress={() => navigation.navigate("ActivityHandOut")} /> : null}
           {desk ? <Button title={STR.actStickers} variant="secondary" onPress={() => navigation.navigate("ActivityStickers")} /> : null}
+          {release ? <Button title={STR.gfaButton} variant="secondary" onPress={() => navigation.navigate("ActivityGuardianAccess")} /> : null}
         </View>
       ) : null}
       {manage || settings ? (

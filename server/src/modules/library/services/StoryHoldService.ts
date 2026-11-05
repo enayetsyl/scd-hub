@@ -7,6 +7,7 @@
  * Kept apart from LibraryReservationService so the queue mechanics stay one small file and
  * the DB-free reservation tests (staff holds, calendar days) are untouched.
  */
+import { guardiansWithFeature } from "../../guardian-access/services/GuardianFeatureService";
 import { buildDayTypeResolver } from "../../routine/calendar";
 import { GuardianLink } from "../../foundation/models/GuardianLink";
 import { Guardian } from "../../foundation/models/Guardian";
@@ -54,7 +55,7 @@ export async function notifyHoldReady(resv: Pick<IBookReservation, "_id" | "titl
   ]);
   const guardianIds = links.filter((l) => l.active !== false).map((l) => l.guardianId);
   if (guardianIds.length === 0) return 0;
-  const guardians = await Guardian.find({ _id: { $in: guardianIds }, active: true }).select("_id").lean();
+  const guardians = await guardiansWithFeature("STORYBOOKS", await Guardian.find({ _id: { $in: guardianIds }, active: true }).select("_id").lean());
   const child = student?.nameBn || student?.name || "";
   const until = resv.expiresAt ? bnDayLabel(dhakaDayKey(new Date(resv.expiresAt))) : "";
   let sent = 0;

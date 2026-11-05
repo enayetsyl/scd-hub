@@ -792,6 +792,7 @@ export const FEATURE_CATALOGUE = {
       check: { en: "Hand out and check sheets", bn: "শিট বিতরণ ও জমা নেওয়া", desc: "Hand printed sheets to a section, take returns (result + sticker), stickers owed", teacher: true, office: true, flags: [] },
       manage: { en: "Manage activity banks", bn: "অ্যাক্টিভিটি ব্যাংক যোগ ও সম্পাদনা", desc: "Add a bank (sheet PDF + answer PDF + index CSV), add / replace / retire sheets, levels and skill area", teacher: false, office: true, flags: [] },
       settings: { en: "Activity sheet rules", bn: "অ্যাক্টিভিটি শিটের নিয়ম", desc: "Weekly requests, open sheets, monthly target, restock size, busy-time switch", teacher: false, office: true, flags: [] },
+      guardian_access: { en: "Activity sheets for guardians", bn: "অভিভাবকদের জন্য অ্যাক্টিভিটি শিট চালু করা", desc: "Switch activity sheets on for every guardian or for chosen guardians (D-#1011); off = families see nothing", teacher: false, office: false, flags: ["PRINCIPAL_DEFAULT"] },
     },
   },
   chat: {
@@ -850,6 +851,7 @@ export const FEATURE_CATALOGUE = {
       edit: { en: "Manage the catalog", bn: "ক্যাটালগে বই যোগ ও সংশোধন", desc: "Titles, copies, copy status", teacher: false, office: true, flags: [] },
       settings: { en: "Loan rules", bn: "ধারের নিয়ম ঠিক করা", desc: "Loan days, limits, renewals, hold days", teacher: false, office: true, flags: [] },
       assign: { en: "Assign librarian duty", bn: "লাইব্রেরিয়ানের দায়িত্ব বরাদ্দ", desc: "Give or revoke desk duty", teacher: false, office: true, flags: [] },
+      guardian_access: { en: "Storybooks for guardians", bn: "অভিভাবকদের জন্য গল্পের বই চালু করা", desc: "Switch the storybook shelf on for every guardian or for chosen guardians (D-#1011); off = families see nothing", teacher: false, office: false, flags: ["PRINCIPAL_DEFAULT"] },
     },
   },
   printing: {
