@@ -144,7 +144,8 @@ const dedupeKeys = {
     `FFEE:${studentId}:${guardianId}:${asOfKey}`,
   /** Per entry+guardian (SR-2): a revision entry is delivered once + then sealed, so a
    *  re-delivery is correctly a no-op for the inbox (the wa.me link is re-built each call). */
-  revisionDelivery: (entryId: string, guardianId: string) => `SRDEL:${entryId}:${guardianId}`,
+  revisionDelivery: (entryId: string, guardianId: string, correction = 0) =>
+    correction > 0 ? `SRDEL:${entryId}:${guardianId}:c${correction}` : `SRDEL:${entryId}:${guardianId}`,
   /** Per student+streak-length+recipient (SR-2): the consecutive-absence escalation fires
    *  once per threshold crossing (the dispatch ledger guards re-fire; this guards re-emit). */
   revisionEscalation: (studentId: string, streakLength: number, recipientId: string) =>
@@ -1148,6 +1149,8 @@ export interface RevisionDeliveryEvent {
   titleBn: string;
   /** Pre-rendered (sr.{absent,digest}.body). */
   messageBn: string;
+  /** The correction number after delivery (D-#1002) — each correction reaches the family once. */
+  correction?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -1226,7 +1229,7 @@ export async function emitRevisionDelivery(ev: RevisionDeliveryEvent): Promise<s
           titleBn: ev.titleBn,
           bodyBn: ev.messageBn,
           refs: { revisionEntryId: ev.entryId.toString(), studentId: ev.studentId.toString() },
-          dedupeKey: dedupeKeys.revisionDelivery(ev.entryId.toString(), g._id.toString()),
+          dedupeKey: dedupeKeys.revisionDelivery(ev.entryId.toString(), g._id.toString(), ev.correction ?? 0),
         });
         notified.push(g._id.toString());
       }),
