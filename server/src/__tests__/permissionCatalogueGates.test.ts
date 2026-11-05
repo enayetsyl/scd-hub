@@ -83,6 +83,9 @@ const OPEN_FIELDS: Record<string, string> = {
   // Own sidebar arrangement (D-#920): keyed on the caller, guardian included; View-as cannot write.
   myNavPreference: "own sidebar", saveNavPreference: "own sidebar", resetNavPreference: "own sidebar",
   recordNavUse: "own sidebar tap count",
+  // In-app help (D-#969): guides filtered by the caller's own permissions; View-as cannot write.
+  myHelpGuides: "own guides, filtered by own permissions", markHelpOpened: "own নতুন baseline",
+  markHelpGuideRead: "own নতুন badge", helpGuideFeedback: "own answer on a guide the caller can see",
   homeworkLifecyclePending: "self, or homework:view_reports checked in the body",
   ctQuestionCounts: "counts scoped to the caller's actions in the body",
   classTestOverdueCounts: "counts scoped to the caller's actions in the body",
