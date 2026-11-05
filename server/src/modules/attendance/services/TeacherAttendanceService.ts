@@ -32,6 +32,7 @@ import { StaffProfile } from "../../foundation/models/StaffProfile";
 import { writeAudit } from "../../platform/services/AuditService";
 import { loadApprovedLeaves, staffLeaveCovers } from "../../hr/services/StaffLeaveService";
 import { normalizePage, type Page, type PageArgs } from "../../../lib/paging";
+import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
 
 export class AttendanceImportError extends Error {
   constructor(msg: string) {
@@ -195,7 +196,7 @@ export async function commitImport(
 
   const { byName, aliases } = await loadMatchIndexes();
   const ignored = new Set(ignoreNames.map(normalizeName));
-  return commitOneSheet(parsed, byName, aliases, ignored, actorId);
+  return commitOneSheet(parsed, byName, aliases, ignored, actorId, { recordReimport: true });
 }
 
 /**
@@ -209,6 +210,7 @@ async function commitOneSheet(
   aliases: Map<string, string>,
   ignored: Set<string>,
   actorId: string,
+  opts: { recordReimport?: boolean } = {},
 ): Promise<ImportCommit> {
   const docs: Array<Partial<ITeacherAttendanceDay>> = [];
   const unresolved: string[] = [];
@@ -260,8 +262,13 @@ async function commitOneSheet(
 
   // Snapshot semantics (AT1.5): replace the date wholesale.
   const existing = await TeacherAttendanceDay.countDocuments({ dateKey: parsed.dateKey });
+  const before: DayRow[] =
+    opts.recordReimport && existing > 0
+      ? await TeacherAttendanceDay.find({ dateKey: parsed.dateKey }).select("staffProfileId status punchIn punchOut halfDay importedBy").lean()
+      : [];
   await TeacherAttendanceDay.deleteMany({ dateKey: parsed.dateKey });
   await TeacherAttendanceDay.insertMany(deduped);
+  if (opts.recordReimport && existing > 0) await recordReimportChanges(parsed.dateKey, before, deduped, actorId);
 
   await writeAudit({
     eventKind: "ATTENDANCE_IMPORTED",
@@ -283,6 +290,45 @@ async function commitOneSheet(
     ignored: ignoredCount,
     replaced: existing > 0,
   };
+}
+
+type DayRow = Pick<ITeacherAttendanceDay, "staffProfileId" | "status" | "punchIn" | "punchOut" | "halfDay"> & {
+  importedBy?: Types.ObjectId | null;
+};
+
+/**
+ * D-#1004: a daily sheet uploaded again by SOMEONE ELSE that changes rows already imported
+ * means the first upload was wrong — tier 2 for whoever uploaded it (one note per date).
+ * Re-uploading your own sheet is nobody's mistake, and an ABSENT later shown as LEAVE is the
+ * leave being recorded, not a wrong sheet (the range re-run, D-#610). Never throws.
+ */
+export async function recordReimportChanges(dateKey: string, before: DayRow[], after: Array<Partial<ITeacherAttendanceDay>>, actorId: string): Promise<void> {
+  const next = new Map(after.map((d) => [d.staffProfileId!.toString(), d]));
+  const changedBy = new Map<string, number>();
+  for (const old of before) {
+    const owner = old.importedBy?.toString();
+    if (!owner || owner === actorId) continue;
+    const now = next.get(old.staffProfileId.toString());
+    if (now && old.status === "ABSENT" && now.status === "LEAVE") continue;
+    const same =
+      !!now &&
+      now.status === old.status &&
+      (now.punchIn ?? null) === (old.punchIn ?? null) &&
+      (now.punchOut ?? null) === (old.punchOut ?? null) &&
+      !!now.halfDay === !!old.halfDay;
+    if (!same) changedBy.set(owner, (changedBy.get(owner) ?? 0) + 1);
+  }
+  for (const [owner, n] of changedBy) {
+    await recordPlaceMistake({
+      kind: "STAFF_ATTENDANCE_REIMPORTED",
+      tier: 2,
+      refKey: `staff-attendance:${dateKey}`,
+      ownerId: owner,
+      correctedBy: actorId,
+      at: new Date(),
+      line: `${dateKey}: নতুন শিটে ${n} জনের উপস্থিতি বদলেছে`,
+    });
+  }
 }
 
 export interface RangePreview {

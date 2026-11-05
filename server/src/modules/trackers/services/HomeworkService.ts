@@ -11,6 +11,7 @@
  * gate `issueHomeworkItem` behind the daily 120-min reconciliation/confirm; the
  * spawn mechanism itself lives here.
  */
+import { recordAbsentAtDelivery } from "./deliveryAttendanceCheck";
 import {
   HW_SUBJECTS,
   HW_RESULTS,
@@ -699,6 +700,9 @@ export function joinTopicLabels(topTags: string[], labelByCode: Map<string, stri
 // issueHomeworkItem (spawn Layer-B per-student records)
 // ---------------------------------------------------------------------------
 
+/** HW_AUTO_ISSUE_ACTOR_ID (HomeworkAutoIssueService imports this module, so it is restated here). */
+const SYSTEM_ISSUE_ACTOR_ID = "000000000000000000000000";
+
 export interface IssueRosterEntry {
   studentId: string;
   /** Present at issue → GIVEN; absent → ABSENT_REDELIVER (handoff §3 step 1/2). */
@@ -759,6 +763,19 @@ export async function issueHomeworkItem(
   item.status = "issued";
   item.issuedAt = now;
   await item.save();
+
+  // D-#1004: the auto-issue roster IS the register; only a person's roster can disagree with it.
+  if (actorId !== SYSTEM_ISSUE_ACTOR_ID) {
+    await recordAbsentAtDelivery({
+      tracker: "hw",
+      itemId: item._id.toString(),
+      label: item.hwId,
+      absentStudentIds: roster.filter((r) => !r.present).map((r) => r.studentId),
+      dateKey: dateKeyOf(item.dateGiven),
+      ownerId: actorId,
+      at: now,
+    });
+  }
 
   return {
     itemId: item._id.toString(),

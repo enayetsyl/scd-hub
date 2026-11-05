@@ -42,6 +42,8 @@ import { atMidnight, dateOnlyISO } from "../assignmentCalendar";
 import { writeAudit } from "../../platform/services/AuditService";
 import { isRehomed, resolveRecordOwners } from "../recordOwner";
 import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
+import { recordAbsentAtDelivery } from "./deliveryAttendanceCheck";
+import { dateKeyOf } from "../../attendance/dates";
 
 // ---------------------------------------------------------------------------
 // AS_ID generation (D-#34 numbering pattern)
@@ -692,6 +694,16 @@ export async function confirmAssignmentWeek(input: {
       }
       recordsIssued += records.length;
     }
+    // D-#1004: the teacher who delivered it captured the roster (no attendance gate).
+    await recordAbsentAtDelivery({
+      tracker: "as",
+      itemId: item._id.toString(),
+      label: item.asId,
+      absentStudentIds: roster.filter((r) => !r.present).map((r) => String(r.studentId)),
+      dateKey: item.deliveryDate ? dateKeyOf(item.deliveryDate) : "",
+      ownerId: item.deliveredBy,
+      at,
+    });
   }
 
   return {

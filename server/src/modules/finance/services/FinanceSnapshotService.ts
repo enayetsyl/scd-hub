@@ -27,7 +27,8 @@ import {
 import { sumLedgerDelta, dayInOut, type PostingLike } from "../postingMath";
 import { sumQardDelta, qardDayInOut } from "../qardIouMath";
 import { writeAudit } from "../../platform/services/AuditService";
-import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
+import { hasPlaceNote, recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
+import { dhakaDayKey } from "../../../lib/dhakaDay";
 
 const MODE_SET = new Set<string>(FINANCE_PAYMENT_MODES);
 const FEE_HEAD_SET = new Set<string>(FINANCE_STUDENT_FEE_HEADS);
@@ -162,7 +163,48 @@ export async function recordPosting(
     targetKind: "FinancePosting",
     meta: { kind: row.kind, mode: row.mode, amount: row.amount, date: row.date.toISOString() },
   });
+  if (row.kind === "EXPENSE" && row.expenseHead === "SALARY") await flagSecondSalary(row, actor.userId);
   return row;
+}
+
+/**
+ * D-#1004: a second live SALARY posting in the same month is very likely the same salary
+ * entered twice — the entrant explains it (tier 2, caught by the app). Paying in two instalments
+ * is a button that is accepted at once. The posting itself is never blocked. Never throws.
+ */
+async function flagSecondSalary(row: IFinancePosting, actorId: string): Promise<void> {
+  try {
+    const ym = dhakaDayKey(row.date).slice(0, 7);
+    const from = new Date(`${ym}-01T00:00:00+06:00`);
+    const to = new Date(from);
+    to.setUTCMonth(to.getUTCMonth() + 1);
+    const others = await FinancePosting.find({
+      _id: { $ne: row._id },
+      kind: "EXPENSE",
+      expenseHead: "SALARY",
+      reversesPostingId: null,
+      date: { $gte: from, $lt: to },
+    }).lean();
+    if (others.length === 0) return;
+    const reversed = new Set(
+      (await FinancePosting.find({ reversesPostingId: { $in: others.map((o) => o._id) } }).lean()).map((r) =>
+        String(r.reversesPostingId),
+      ),
+    );
+    const live = others.filter((o) => !reversed.has(String(o._id)));
+    if (live.length === 0) return;
+    await recordPlaceMistake({
+      kind: "SALARY_ENTERED_TWICE",
+      tier: 2,
+      refKey: String(row._id),
+      ownerId: actorId,
+      correctedBy: "system",
+      at: new Date(),
+      line: `${ym}-এর বেতন আবার এন্ট্রি হয়েছে — ৳${row.amount} (এই মাসে আগের এন্ট্রি: ${live.map((o) => `৳${o.amount}`).join(", ")})`,
+    });
+  } catch (err) {
+    console.error("[FinanceSnapshotService] the second-salary check failed (the posting stands):", err);
+  }
 }
 
 /**
@@ -209,8 +251,10 @@ export async function reversePosting(
     targetKind: "FinancePosting",
     meta: { reversesPostingId: original._id.toString(), kind: original.kind, amount: original.amount },
   });
-  // D-#954: whoever entered it explains why it had to be reversed.
-  await recordPlaceMistake({
+  // D-#954: whoever entered it explains why it had to be reversed — unless the app already
+  // asked them about this very posting as a second salary (D-#1004): one mistake, one entry.
+  const askedAsSecondSalary = await hasPlaceNote("SALARY_ENTERED_TWICE", String(original._id));
+  if (!askedAsSecondSalary) await recordPlaceMistake({
     kind: "FINANCE_REVERSAL",
     refKey: String(original._id),
     ownerId: original.enteredByUserId,
