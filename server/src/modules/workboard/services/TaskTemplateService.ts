@@ -31,6 +31,8 @@ export interface TaskTemplateInput {
   weekOfMonth?: number | null;
   /** D-#897: last day (inclusive, YYYY-MM-DD); null/absent = no end date. */
   endKey?: string | null;
+  /** D-#960: saved from a voice draft — recorded on the audit row only. */
+  viaVoice?: boolean | null;
 }
 
 function daysInMonth(d: Date): number {
@@ -123,7 +125,7 @@ export async function createTaskTemplate(authIn: AuthPayload | null, input: Task
     actorRole: auth.role,
     targetId: doc._id.toString(),
     targetKind: "TaskTemplate",
-    meta: { action: "template_create", recurrence: input.recurrence, assigneeUserId: input.assigneeUserId, endKey },
+    meta: { action: "template_create", recurrence: input.recurrence, assigneeUserId: input.assigneeUserId, endKey, ...(input.viaVoice ? { via: "voice" } : {}) },
   });
   return doc;
 }

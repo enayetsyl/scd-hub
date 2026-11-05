@@ -1464,6 +1464,8 @@ export const NOTIFICATION_KINDS = [
   "TASK_OVERDUE",
   "TASK_DONE",
   "TASK_BLOCKED",
+  // Voice tasks (D-#966): the 08:00 / 17:00 "tasks you gave" summary to an assigner.
+  "TASK_GIVEN_SUMMARY",
   // Improvement actions (SP-4, D-#738; app-native, NO wire twin):
   //   ACTION_ASSIGNED → the assigned teacher + each guardian (guardian part), on create
   //   TASKS_PENDING   → every Office/Principal at 11:00 when a teacher task of today is unticked
@@ -1568,6 +1570,7 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   TASK_OVERDUE: "কাজ বকেয়া",
   TASK_DONE: "কাজ শেষ",
   TASK_BLOCKED: "কাজ আটকে আছে",
+  TASK_GIVEN_SUMMARY: "দেওয়া কাজের হিসাব",
   IMPROVEMENT_ACTION_ASSIGNED: "নতুন উন্নতির কাজ",
   IMPROVEMENT_TASKS_PENDING: "উন্নতির কাজ এখনো বাকি",
   IMPROVEMENT_GUARDIAN_MISSED: "অভিভাবক কাজ চিহ্নিত করেননি",
@@ -1643,6 +1646,7 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   TASK_OVERDUE: "Task overdue",
   TASK_DONE: "Task done",
   TASK_BLOCKED: "Task blocked",
+  TASK_GIVEN_SUMMARY: "Tasks you gave",
   IMPROVEMENT_ACTION_ASSIGNED: "New improvement task",
   IMPROVEMENT_TASKS_PENDING: "Improvement tasks not ticked",
   IMPROVEMENT_GUARDIAN_MISSED: "Guardian missed improvement days",

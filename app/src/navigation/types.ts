@@ -212,6 +212,8 @@ export type WorkBoardStackParamList = {
   WorkBoard: { userId?: string; name?: string; dateKey?: string } | undefined;
   TaskDetail: { taskId: string };
   TaskForm: { taskId?: string; assigneeUserId?: string; template?: boolean; dueKey?: string } | undefined;
+  /** VT-2 (D-#960): speak tasks → review the draft cards → save. work_board:voice. */
+  VoiceTask: undefined;
   AssignedByMe: undefined;
   LoadGrid: undefined;
   TaskTemplates: undefined;
@@ -635,6 +637,8 @@ export type AdminStackParamList = {
   // GE-1/GE-3 (D-#464/#465): the guardian-engagement report, same audit:read gate.
   GuardianEngagement: undefined;
   SystemHealth: undefined;
+  // D-#967: the Gemini key + model (system_health:ai_key, LOCKED).
+  AiSettings: undefined;
   // D-#290: who didn't submit reconciliation (Principal/Office).
   ReconciliationReport: undefined;
   // D-#300: per subject × class homework lifecycle report (Principal/Office).

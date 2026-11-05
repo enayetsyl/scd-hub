@@ -29,6 +29,7 @@ import { assemblePrompt, PATCH_RESPONSE_SCHEMA, PROMPT_VERSION } from "./BookAut
 import { submitPatch, type PatchEnvelope } from "./MergeService";
 import { writeBookEvent } from "../models/BookEvent";
 import type { ValidatorReport } from "./validator/index";
+import { geminiKey } from "../../platform/services/AiSettingService";
 
 export class AuthorChatError extends Error {
   constructor(message: string) {
@@ -73,7 +74,8 @@ export interface AuthorProvider {
 export function authorProviderFromEnv(): AuthorProvider | null {
   // Deliberately reads the SAME key the monthly report uses. Which provider suits
   // this task is unsettled (see the header); making it a config value is the point.
-  const key = process.env.GEMINI_API_KEY;
+  // D-#967: the key the Principal saved in the app, else .env (the model stays its own).
+  const key = geminiKey();
   if (!key) return null;
   // eslint-disable-next-line @typescript-eslint/no-use-before-define
   return new GeminiAuthorProvider(key, process.env.BOOK_AUTHOR_MODEL || undefined);
