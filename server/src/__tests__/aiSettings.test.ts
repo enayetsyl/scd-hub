@@ -92,6 +92,15 @@ describe("setAiSettings", () => {
     expect(mockAudit.mock.calls[0][0]).toMatchObject({ eventKind: "AI_SETTINGS_CHANGED", meta: { keyChanged: true, keyLast4: "1234" } });
   });
 
+  test("the newer AI Studio key format (AQ.…, with dots) is accepted; a key with a space inside is refused", async () => {
+    const dotted = "AQ.Ab8RN6KxTestOnlyNotARealKey_abc-DEF.ghijklmnopqrstu123";
+    const test = jest.fn().mockResolvedValue(undefined);
+    const v = await setAiSettings(principal, { apiKey: dotted }, test);
+    expect(test).toHaveBeenCalledWith(dotted, "gemini-flash-latest");
+    expect(v).toMatchObject({ source: "SETTING", keyLast4: dotted.slice(-4) });
+    await expect(setAiSettings(principal, { apiKey: "AQ.Ab8RN6Kx Test OnlyNotARealKey" }, test)).rejects.toThrow("ফাঁকা জায়গা");
+  });
+
   test("a key or model Google refuses is never saved", async () => {
     await expect(
       setAiSettings(principal, { model: "gemini-2.5-flash" }, async () => {
