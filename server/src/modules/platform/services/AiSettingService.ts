@@ -23,6 +23,8 @@ import { writeAudit } from "./AuditService";
 
 /** The alias Google keeps pointed at the current Flash — never retired. */
 export const GEMINI_DEFAULT_MODEL = "gemini-flash-latest";
+/** The fast fallback — used when Flash is overloaded (503 "high demand"). */
+export const GEMINI_LITE_MODEL = "gemini-flash-lite-latest";
 
 interface Cached {
   key: string | null;
@@ -113,23 +115,42 @@ export async function aiSettingsView(authIn: AuthPayload | null): Promise<AiSett
   };
 }
 
-/** One tiny request — proves the key works and the model still exists. */
-export async function testGemini(key: string, modelName: string): Promise<void> {
-  let res: Response;
+async function pingGemini(key: string, modelName: string): Promise<number> {
   try {
-    res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelName)}:generateContent`, {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelName)}:generateContent`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-goog-api-key": key },
       body: JSON.stringify({ contents: [{ parts: [{ text: "Reply with the single word OK." }] }], generationConfig: { maxOutputTokens: 512 } }),
     });
+    return res.status;
   } catch {
     throw new Error("Gemini-তে পৌঁছানো যায়নি — ইন্টারনেট সংযোগ দেখুন");
   }
-  if (res.ok) return;
-  if (res.status === 404) throw new Error(`"${modelName}" মডেলটি আর পাওয়া যায় না — ${GEMINI_DEFAULT_MODEL} দিন`);
-  if (res.status === 400 || res.status === 401 || res.status === 403) throw new Error("কী (key) সঠিক নয় বা এর অনুমতি নেই — Google AI Studio থেকে আবার কপি করুন");
-  if (res.status === 429) throw new Error("এই কী-র সীমা শেষ (429) — পরে আবার চেষ্টা করুন বা অন্য কী দিন");
-  throw new Error(`Gemini সাড়া দেয়নি (${res.status}) — একটু পরে আবার চেষ্টা করুন`);
+}
+
+const KEY_REFUSED = "কী (key) সঠিক নয় বা এর অনুমতি নেই — Google AI Studio থেকে আবার কপি করুন";
+const isKeyRefusal = (s: number) => s === 400 || s === 401 || s === 403;
+/** Google's "try later" answers — they say nothing about the key or whether the model exists. */
+const isBusy = (s: number) => s === 429 || s >= 500;
+
+/**
+ * One tiny request — proves the key works and the model still exists.
+ * When the chosen model is merely BUSY (Flash's 503 "high demand"), the key is proved on
+ * Flash-Lite instead: a busy model is not a retired one (that is a 404), and every caller
+ * already falls back to Lite, so a busy minute must not block saving a good key.
+ */
+export async function testGemini(key: string, modelName: string, ping: (k: string, m: string) => Promise<number> = pingGemini): Promise<void> {
+  const status = await ping(key, modelName);
+  if (status >= 200 && status < 300) return;
+  if (status === 404) throw new Error(`"${modelName}" মডেলটি আর পাওয়া যায় না — ${GEMINI_DEFAULT_MODEL} দিন`);
+  if (isKeyRefusal(status)) throw new Error(KEY_REFUSED);
+  if (isBusy(status) && modelName !== GEMINI_LITE_MODEL) {
+    const lite = await ping(key, GEMINI_LITE_MODEL);
+    if (lite >= 200 && lite < 300) return;
+    if (isKeyRefusal(lite)) throw new Error(KEY_REFUSED);
+  }
+  if (status === 429) throw new Error("এই কী-র সীমা শেষ (429) — পরে আবার চেষ্টা করুন বা অন্য কী দিন");
+  throw new Error(`Gemini সাড়া দেয়নি (${status}) — একটু পরে আবার চেষ্টা করুন`);
 }
 
 /**
