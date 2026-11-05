@@ -91,6 +91,11 @@ jest.mock("../modules/foundation/models/Guardian", () => ({
 }));
 
 const mockWriteAudit = jest.fn().mockResolvedValue(undefined);
+// SB-3: a child's hold counts working days and notifies guardians — stubbed here (its own suite).
+jest.mock("../modules/library/services/StoryHoldService", () => ({
+  workingDaysHoldEnd: async (from: Date, days: number) => new Date(from.getTime() + days * 86_400_000),
+  notifyHoldReady: async () => 0,
+}));
 jest.mock("../modules/platform/services/AuditService", () => ({
   writeAudit: (p: unknown) => mockWriteAudit(p),
 }));

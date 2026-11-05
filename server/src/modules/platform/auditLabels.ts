@@ -458,6 +458,7 @@ export const AUDIT_KIND_LABELS: Record<AuditEventKind, AuditKindLabel> = {
   QURAN_EXAM_REMINDED: { bn: "পরীক্ষকদের নম্বরের রিমাইন্ডার পাঠিয়েছেন", en: "Reminded examiners about pending marks", group: "EXAM" },
   EXAM_ROUTINE_SAVED: { bn: "পরীক্ষার রুটিন সংরক্ষণ করেছেন", en: "Saved an exam routine", group: "EXAM" },
   EXAM_ROUTINE_PUBLISHED: { bn: "পরীক্ষার রুটিন প্রকাশ/প্রত্যাহার করেছেন", en: "Published or withdrew the exam routine", group: "EXAM" },
+  GUARDIAN_FEATURE_SET: { bn: "অভিভাবকদের জন্য সুবিধা চালু/বন্ধ করেছেন", en: "Switched a feature on/off for guardians", group: "ACCESS" },
 };
 
 const FALLBACK_GROUP: ActivityGroup = "OTHER";

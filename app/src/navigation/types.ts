@@ -288,6 +288,35 @@ export type ClassBooksStackParamList = {
   ClassBooks: undefined;
   ClassBookReader: { bookId: string; title: string; pageCount: number; pageAspect: number };
 };
+/** SB-1 (D-#980) — the storybook shelf. StoryShelf stays first: the initial route takes no params. */
+/** AS-1 (D-#988) — activity sheets. ActivityBanks stays first: the initial route takes no params. */
+export type ActivityStackParamList = {
+  ActivityBanks: undefined;
+  /** D-#1011: which guardians see activity sheets. */
+  ActivityGuardianAccess: undefined;
+  ActivityBank: { bankId: string; title: string };
+  ActivityCorner: undefined;
+  ActivityDesk: undefined;
+  /** AS-3: the guardian stack starts here (no params). */
+  ActivityChoose: undefined;
+  ActivityChildSheets: undefined;
+  ActivityBatch: undefined;
+  ActivityHandOut: undefined;
+  ActivityStickers: undefined;
+};
+
+export type StorybooksStackParamList = {
+  StoryShelf: undefined;
+  StorySeries: { seriesId: string; title: string };
+  StoryBook: { titleId: string; title: string };
+  StoryManage: undefined;
+  /** SB-2: the desk — lend / take back by copy code. */
+  StoryDesk: undefined;
+  /** SB-4: a guardian's "my child's books" (the selected child). */
+  StoryChildBooks: undefined;
+  /** D-#1011: which guardians see the shelf. */
+  StoryGuardianAccess: undefined;
+};
 /** D-#873 — Quran oral exam. QuranExamHome stays first: the initial route takes no params. */
 export type QuranExamStackParamList = {
   QuranExamHome: undefined;
@@ -722,6 +751,10 @@ export type ReportsStackParamList = {
   DailySnapshot: undefined;
   GuardianEngagement: undefined;
   MarksDrivers: undefined;
+  /** SB-6 — storybook reports (series / books / readers). */
+  StorybookReport: undefined;
+  /** AS-5 — activity-sheet reports (skills / banks / children). */
+  ActivityReport: undefined;
   /** OT-4 (prd-objective-tree §8.2): question-bank coverage — the screen picks the class × subject. */
   MasteryBankCoverage: { classToken?: string; subject?: string } | undefined;
 };
@@ -783,6 +816,11 @@ export type TabParamList = {
    *  each sidebar lists it once in its own place). */
   ClassBooksTab: NavigatorScreenParams<ClassBooksStackParamList>;
   GuardianBooksTab: NavigatorScreenParams<ClassBooksStackParamList>;
+  /** SB-1 — storybooks: staff (library:view) and guardians share one stack. */
+  StorybooksTab: NavigatorScreenParams<StorybooksStackParamList>;
+  GuardianStoriesTab: NavigatorScreenParams<StorybooksStackParamList>;
+  ActivityTab: NavigatorScreenParams<ActivityStackParamList>;
+  GuardianActivityTab: NavigatorScreenParams<ActivityStackParamList>;
   HelpTab: NavigatorScreenParams<HelpStackParamList>;
   /** D-#873 — Quran oral exam (Office plan + examiners' marks). */
   QuranExamTab: NavigatorScreenParams<QuranExamStackParamList>;

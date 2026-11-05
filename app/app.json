@@ -48,6 +48,13 @@
           "organization": "scd",
           "project": "scdhub-app"
         }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "SCD Hub uses the camera to scan the QR code on a storybook or activity sheet at the office desk.",
+          "recordAudioAndroid": false
+        }
       ]
     ],
     "extra": {

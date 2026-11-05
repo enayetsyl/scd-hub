@@ -44,8 +44,21 @@ jest.mock("../modules/library/models/BookLoan", () => ({
     create: (d: unknown) => mockLoanCreate(d),
     findById: (id: unknown) => mockLoanFindById(id),
     countDocuments: (f: unknown) => mockLoanCount(f),
-    find: (f: unknown) => ({ sort: () => ({ lean: () => mockLoanFind(f) }) }),
+    find: (f: unknown) => ({
+      sort: () => ({ lean: () => mockLoanFind(f) }),
+      // SB-2: issueBook reads the borrower's active loans (limit + overdue check);
+      // mockLoanCount still says how many there are, none of them overdue.
+      select: () => ({
+        lean: async () =>
+          Array.from({ length: (await mockLoanCount(f)) ?? 0 }, () => ({ dueDate: new Date(Date.now() + 30 * 86_400_000) })),
+      }),
+    }),
   },
+}));
+
+// SB-2 (D-#982): no holiday rule in force in these tests.
+jest.mock("../modules/library/models/LibraryHolidayRule", () => ({
+  LibraryHolidayRule: { findOne: () => ({ sort: () => ({ lean: async () => null }) }) },
 }));
 
 // Policy stays REAL — the model returns no row, so the PRD working values apply.
