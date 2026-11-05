@@ -54,6 +54,7 @@ import {
   type MonthlyReportConfigShape,
 } from "./MonthlyReportConfigService";
 import { defaultProfileWindow } from "../../trackers/services/StudentProfileContextService";
+import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
 
 export class MonthlyReportError extends Error {
   constructor(message: string) {
@@ -713,6 +714,16 @@ export async function revokeMonthlyReport(
     targetKind: "MonthlyReport",
     targetId: report._id.toString(),
     meta: { studentId: report.studentId.toString(), periodKey: report.periodKey, revision: report.revision, reason: why, batchId: report.releaseBatchId },
+  });
+  // D-#954: the family had the report — the releaser's correction to explain.
+  const child = await Student.findById(report.studentId).select("name nameBn").lean();
+  await recordPlaceMistake({
+    kind: "MONTHLY_REPORT_REVOKE",
+    refKey: String(report.releaseBatchId ?? report._id),
+    ownerId: report.releasedByUserId,
+    correctedBy: actorId,
+    at: report.revokedAt,
+    line: `${child?.name ?? child?.nameBn ?? ""} — ${report.periodKey} মাসের রিপোর্ট ফেরত নেওয়া হয়েছে: "${why}"`,
   });
 
   return report;

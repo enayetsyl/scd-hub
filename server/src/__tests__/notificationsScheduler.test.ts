@@ -84,6 +84,10 @@ jest.mock("../modules/trackers/services/HomeworkReconciliationService", () => ({
 // GC-5 / D-#710: the ticker runs the 10:30 work-claim digest and the expiry
 // sweep. Stubbed here like every other sweep this suite drives — the digest has
 // its own tests in workClaimSweep.test.ts.
+// D-#940: the staff mistake settle family (a real model call would hang this DB-free suite).
+jest.mock("../modules/staff-mistakes/services/StaffMistakeService", () => ({
+  settleOverdueMistakes: jest.fn().mockResolvedValue(0),
+}));
 jest.mock("../modules/trackers/services/WorkClaimSweepService", () => ({
   runWorkClaimDigest: jest.fn().mockResolvedValue({ openCount: 0, notified: 0 }),
   expireStaleWorkClaims: jest.fn().mockResolvedValue(0),
@@ -96,6 +100,7 @@ jest.mock("../modules/trackers/services/HomeworkDueSweepService", () => ({
 // this suite is DB-free. Its own maths is covered in classTestSummary.test.ts.
 jest.mock("../modules/trackers/services/ClassTestSummaryService", () => ({
   overdueCounts: (f: unknown) => mockOverdueCounts(f),
+  recordLateClassTestMarks: jest.fn().mockResolvedValue(0),
 }));
 // The 17:30 end-of-due-day system chase (owner ruling 2026-08-04) — mocked so the
 // scheduler test stays DB-free (the sweep is covered in homeworkChaseSweep.test.ts).

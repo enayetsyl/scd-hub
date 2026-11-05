@@ -40,6 +40,7 @@ import type {
   SyllabusStackParamList,
   ScholarshipStackParamList,
   MasteryStackParamList,
+  HelpStackParamList,
   GuardianSyllabusStackParamList,
   RevisionStackParamList,
   FinanceStackParamList,
@@ -334,6 +335,11 @@ import StaffAppraisalsScreen from "../screens/hr/StaffAppraisalsScreen";
 import StaffConductScreen from "../screens/hr/StaffConductScreen";
 import StaffCpdScreen from "../screens/hr/StaffCpdScreen";
 import MarkCorrectionsScreen from "../screens/hr/MarkCorrectionsScreen";
+import MyMistakesScreen from "../screens/hr/MyMistakesScreen";
+import MistakeReviewScreen from "../screens/hr/MistakeReviewScreen";
+import StaffMistakeSummaryScreen from "../screens/hr/StaffMistakeSummaryScreen";
+import PersonMistakesScreen from "../screens/hr/PersonMistakesScreen";
+import StaffMistakeSettingsScreen from "../screens/hr/StaffMistakeSettingsScreen";
 import GrievanceInboxScreen from "../screens/hr/GrievanceInboxScreen";
 import OffboardingHomeScreen from "../screens/hr/OffboardingHomeScreen";
 import OffboardingCaseScreen from "../screens/hr/OffboardingCaseScreen";
@@ -408,6 +414,10 @@ import ChildHomeworkScreen from "../screens/guardian/ChildHomeworkScreen";
 import ChildRoutineScreen from "../screens/guardian/ChildRoutineScreen";
 import { GuardianChildProvider } from "../state/GuardianChildContext";
 import DrawerContent from "./DrawerContent";
+import { HELP_BUTTON_WIDTH, HelpHeaderButton, useScreenGuides } from "../components/HelpHeaderButton";
+import { screenKey } from "../lib/helpGuides";
+import HelpHomeScreen from "../screens/help/HelpHomeScreen";
+import HelpGuideScreen from "../screens/help/HelpGuideScreen";
 import { featureActions, REPORT_ACTIONS } from "../lib/navGates";
 
 export { LoginScreen };
@@ -622,9 +632,12 @@ function AvatarMenu(): React.ReactElement {
   );
 }
 
-function HeaderRight(): React.ReactElement {
+function HeaderRight({ screenKey }: { screenKey: string }): React.ReactElement {
+  const colors = useColors();
   return (
     <View style={{ flexDirection: "row", alignItems: "center" }}>
+      {/* prd-help-centre §2.5: only on screens that have a guide for this person. */}
+      <HelpHeaderButton screenKey={screenKey} tintColor={colors.onPrimary} />
       <HeaderBell />
       <AvatarMenu />
     </View>
@@ -662,8 +675,18 @@ const HEADER_TITLE_MIN = 72;
  * fit on a default device ellipsised after three words on the owner's. Chrome caps its
  * scaling (body text does not) — the title stays legible AND stays inside its lane.
  */
-function HeaderTitle({ children, tintColor }: { children?: string; tintColor?: string }): React.ReactElement {
+function HeaderTitle({
+  children,
+  tintColor,
+  screenKey,
+}: {
+  children?: string;
+  tintColor?: string;
+  screenKey: string;
+}): React.ReactElement {
   const { width } = useWindowDimensions();
+  // The header ? (when this screen has a guide) takes room from the title's lane.
+  const helpReserve = useScreenGuides(screenKey).length > 0 ? HELP_BUTTON_WIDTH : 0;
   return (
     <Text
       numberOfLines={1}
@@ -673,7 +696,7 @@ function HeaderTitle({ children, tintColor }: { children?: string; tintColor?: s
         color: tintColor,
         fontFamily: fonts.bold,
         fontSize: 18,
-        maxWidth: Math.max(HEADER_TITLE_MIN, width - HEADER_LEFT_RESERVED - HEADER_RIGHT_RESERVED),
+        maxWidth: Math.max(HEADER_TITLE_MIN, width - HEADER_LEFT_RESERVED - HEADER_RIGHT_RESERVED - helpReserve),
       }}
     >
       {children}
@@ -686,6 +709,18 @@ function HeaderTitle({ children, tintColor }: { children?: string; tintColor?: s
  *  screen the native back button (see HeaderLeft) — one place, no per-screen edit. */
 function useStackOptions() {
   const colors = useColors();
+  // A function of the screen (not a plain object) so the header ? knows which screen it
+  // is on: `<Tab>/<Screen>`, the address a help guide's `screens` list uses (D-#968).
+  // The tab is the drawer route whose stack this is; it never changes for a stack.
+  return ({ route, navigation }: { route: { name: string }; navigation: { getParent: () => unknown } }) => {
+    const parent = navigation.getParent() as { getState: () => { index: number; routes: Array<{ name: string }> } } | undefined;
+    const state = parent?.getState();
+    const key = screenKey(state?.routes[state.index]?.name, route.name);
+    return stackOptionsFor(colors, key);
+  };
+}
+
+function stackOptionsFor(colors: ReturnType<typeof useColors>, key: string) {
   return {
     headerStyle: { backgroundColor: colors.primary },
     headerTintColor: colors.onPrimary,
@@ -700,9 +735,11 @@ function useStackOptions() {
       <HeaderLeft canGoBack={props.canGoBack} tintColor={props.tintColor} />
     ),
     headerTitle: (props: { children?: string; tintColor?: string }) => (
-      <HeaderTitle tintColor={props.tintColor ?? colors.onPrimary}>{props.children}</HeaderTitle>
+      <HeaderTitle tintColor={props.tintColor ?? colors.onPrimary} screenKey={key}>
+        {props.children}
+      </HeaderTitle>
     ),
-    headerRight: () => <HeaderRight />,
+    headerRight: () => <HeaderRight screenKey={key} />,
   } as const;
 }
 
@@ -1488,6 +1525,11 @@ function HrNavigator(): React.ReactElement {
       <HrStack.Screen name="StaffConduct" component={StaffConductScreen} options={{ title: STR.hrConduct }} />
       <HrStack.Screen name="StaffCpd" component={StaffCpdScreen} options={{ title: STR.hrCpd }} />
       <HrStack.Screen name="MarkCorrections" component={MarkCorrectionsScreen} options={{ title: STR.msgNotesTitle }} />
+      <HrStack.Screen name="MyMistakes" component={MyMistakesScreen} options={{ title: STR.smrMyTitle }} />
+      <HrStack.Screen name="MistakeReview" component={MistakeReviewScreen} options={{ title: STR.smrReviewTitle }} />
+      <HrStack.Screen name="StaffMistakeSummary" component={StaffMistakeSummaryScreen} options={{ title: STR.smsTitle }} />
+      <HrStack.Screen name="PersonMistakes" component={PersonMistakesScreen} options={{ title: STR.smpTitle }} />
+      <HrStack.Screen name="StaffMistakeSettings" component={StaffMistakeSettingsScreen} options={{ title: STR.smxTitle }} />
       <HrStack.Screen name="GrievanceInbox" component={GrievanceInboxScreen} options={{ title: STR.hrGrievances }} />
       <HrStack.Screen name="OffboardingHome" component={OffboardingHomeScreen} options={{ title: STR.hrOffboarding }} />
       <HrStack.Screen
@@ -1783,6 +1825,19 @@ function GuardianActivityNavigator(): React.ReactElement {
       <ActivityStack.Screen name="ActivityChoose" component={ActivityChooseScreen} options={{ title: STR.actNav }} />
       <ActivityStack.Screen name="ActivityChildSheets" component={ActivityChildSheetsScreen} options={{ title: STR.actMySheets }} />
     </ActivityStack.Navigator>
+  );
+}
+
+// সাহায্য ও নির্দেশিকা (prd-help-centre, D-#968): every login, staff and guardian. The home
+// is registered first; the guide screen needs a param (never an initial route).
+const HelpStack = createNativeStackNavigator<HelpStackParamList>();
+function HelpNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    <HelpStack.Navigator screenOptions={stackOptions}>
+      <HelpStack.Screen name="HelpHome" component={HelpHomeScreen} options={{ title: STR.hcNav }} />
+      <HelpStack.Screen name="HelpGuide" component={HelpGuideScreen} options={{ title: STR.hcGuideTitle }} />
+    </HelpStack.Navigator>
   );
 }
 
@@ -2122,6 +2177,9 @@ export function AppTabs(): React.ReactElement {
         {canGuardian ? <Drawer.Screen name="GuardianBooksTab" component={ClassBooksNavigator} /> : null}
         {canGuardian ? <Drawer.Screen name="GuardianStoriesTab" component={StorybooksNavigator} /> : null}
         {canGuardian ? <Drawer.Screen name="GuardianActivityTab" component={GuardianActivityNavigator} /> : null}
+
+        {/* Help is for every login; the server decides which guides each person gets. */}
+        <Drawer.Screen name="HelpTab" component={HelpNavigator} />
       </Drawer.Navigator>
     </GuardianChildProvider>
   );

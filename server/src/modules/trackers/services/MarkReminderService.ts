@@ -33,6 +33,7 @@ import { Section } from "../../foundation/models/Section";
 import { Class } from "../../foundation/models/Class";
 import { User } from "../../foundation/models/User";
 import { emitMarkSubmissionEscalation } from "../../notifications/services/emitters";
+import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
 
 /** 09:00 Asia/Dhaka — the "বুঝেছি" pop-up opens for teachers still unmarked. */
 export const MARK_NINE_MINUTES = 9 * 60;
@@ -207,6 +208,15 @@ export async function runMarkEscalation(now: Date = new Date()): Promise<number>
     throw err;
   }
   const teacherCount = new Set(late.flatMap((i) => i.teacherIds)).size;
+  // D-#955: on the 09:30 list — a missed duty for each teacher of the item.
+  for (const i of late) {
+    for (const t of i.teacherIds) {
+      await recordPlaceMistake({
+        kind: "ASSIGNMENT_UNMARKED", tier: 3, refKey: i.asItemId, ownerId: t, correctedBy: "system", at: now,
+        oncePerRef: true, leaveDateKey: dateKey, line: `${i.asId}: ০৯:৩০-এর মধ্যেও জমার হিসাব দেওয়া হয়নি`,
+      });
+    }
+  }
   return emitMarkSubmissionEscalation({ dateKey, teacherCount, itemCount: late.length });
 }
 

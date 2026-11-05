@@ -57,6 +57,8 @@ export interface IClassTestResult extends Document {
   scriptMissingReason?: string | null;
   scriptTaggedBy?: Types.ObjectId | null;
   scriptTaggedAt?: Date | null;
+  /** What guardians were last shown (D-#945): a re-publish that differs is a recorded correction. */
+  publishedSnapshot?: { marks: number | null; status: string; enteredBy: Types.ObjectId } | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -83,6 +85,13 @@ const ClassTestResultSchema = new Schema<IClassTestResult>(
     scriptMissingReason: { type: String, trim: true, default: null },
     scriptTaggedBy: { type: Schema.Types.ObjectId, default: null },
     scriptTaggedAt: { type: Date, default: null },
+    publishedSnapshot: {
+      type: new Schema(
+        { marks: { type: Number, default: null }, status: { type: String, required: true }, enteredBy: { type: Schema.Types.ObjectId, required: true } },
+        { _id: false },
+      ),
+      default: null,
+    },
   },
   { timestamps: true },
 );

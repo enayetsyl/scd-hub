@@ -63,6 +63,8 @@ import {
 import type { IStudentAttendanceDay } from "../models/StudentAttendanceDay";
 import type { ISectionAttendanceAssignment } from "../models/SectionAttendanceAssignment";
 import type { IStudentLeaveApplication } from "../models/StudentLeaveApplication";
+import { CorrectionReasonInput, parseCorrectionReason } from "../../staff-mistakes/resolvers/correctionReasonInput";
+import { runWithCorrectionReason } from "../../staff-mistakes/services/correctionReasonContext";
 
 // ---------------------------------------------------------------------------
 // Local gates
@@ -600,13 +602,17 @@ builder.mutationField("markAttendanceUnit", (t) =>
       unitId: t.arg.string({ required: true }),
       dateKey: t.arg.string({ required: true }),
       absentStudentIds: t.arg.stringList({ required: true }),
+      // D-#944: the reason when a re-submit changes the day's list.
+      correctionReason: t.arg({ type: CorrectionReasonInput, required: false }),
     },
     resolve: async (_root, args, ctx) =>
-      markAttendanceUnit(
-        ctx,
-        parseUnit(args.unitType, args.unitId),
-        args.dateKey,
-        args.absentStudentIds,
+      runWithCorrectionReason(parseCorrectionReason(args.correctionReason, "ATTENDANCE_CORRECTION"), () =>
+        markAttendanceUnit(
+          ctx,
+          parseUnit(args.unitType, args.unitId),
+          args.dateKey,
+          args.absentStudentIds,
+        ),
       ) as unknown as Promise<DayShape>,
   }),
 );
@@ -623,13 +629,17 @@ builder.mutationField("amendAttendanceUnit", (t) =>
       unitId: t.arg.string({ required: true }),
       dateKey: t.arg.string({ required: true }),
       absentStudentIds: t.arg.stringList({ required: true }),
+      // D-#944: the amender's own reason, used only when they are the day's marker.
+      correctionReason: t.arg({ type: CorrectionReasonInput, required: false }),
     },
     resolve: async (_root, args, ctx) =>
-      amendAttendanceUnit(
-        parseUnit(args.unitType, args.unitId),
-        args.dateKey,
-        args.absentStudentIds,
-        ctx.auth!.userId,
+      runWithCorrectionReason(parseCorrectionReason(args.correctionReason, "ATTENDANCE_CORRECTION"), () =>
+        amendAttendanceUnit(
+          parseUnit(args.unitType, args.unitId),
+          args.dateKey,
+          args.absentStudentIds,
+          ctx.auth!.userId,
+        ),
       ) as unknown as Promise<DayShape>,
   }),
 );

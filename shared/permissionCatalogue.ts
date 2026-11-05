@@ -177,6 +177,7 @@ export const FEATURE_CATALOGUE = {
       view_all: { en: "See all groups", bn: "সব গ্রুপের রিভিশন দেখা", desc: "Unscoped reads; Saturday completeness status", teacher: false, office: true, flags: [] },
       enter_results: { en: "Record revision results", bn: "রিভিশনের ফল লেখা", desc: "Record or edit a Saturday entry", teacher: true, office: true, flags: [], designation: "group_lead" },
       edit_all: { en: "Any group", bn: "যেকোনো গ্রুপের রিভিশন লেখা ও পাঠানো", desc: "Write/send outside own groups", teacher: false, office: true, flags: [] },
+      correct: { en: "Correct a sent entry", bn: "পাঠানো রিভিশন সংশোধন", desc: "Change an entry the family already received; they get a correction and the old author a mistake entry (D-#1002)", teacher: true, office: true, flags: [], designation: "group_lead" },
       send: { en: "Send to guardians", bn: "অভিভাবককে রিভিশন পাঠানো", desc: "Send one entry or a group's Saturday (seals it, runs escalation)", teacher: true, office: true, flags: [], designation: "group_lead" },
       remind: { en: "Remind teachers", bn: "বাকি থাকা শিক্ষককে রিমাইন্ডার", desc: "wa.me nudge per teacher of an un-entered group", teacher: false, office: true, flags: [] },
       settings: { en: "Absence escalation limit", bn: "টানা অনুপস্থিতির সীমা ঠিক করা", desc: "Read/set the threshold", teacher: false, office: true, flags: [] },
@@ -511,6 +512,20 @@ export const FEATURE_CATALOGUE = {
       record_hearing: { en: "Record hearing", bn: "শুনানির কথা লেখা", desc: "The person's response before finalising", teacher: false, office: true, flags: [] },
       sign_off: { en: "Finalise a step", bn: "শৃঙ্খলার সিদ্ধান্ত চূড়ান্ত করা", desc: "Finalise; termination sets employmentStatus", teacher: false, office: false, flags: ["LOCKED"] },
       view_own: { en: "My conduct records", bn: "আমার শৃঙ্খলার রেকর্ড", desc: "Own records", teacher: true, office: true, flags: ["SELF"] },
+    },
+  },
+  // Staff mistake record (D-#936–#939, docs/prd-staff-mistakes.md) — lighter than conduct.
+  staff_mistakes: {
+    group: "staff_and_hr",
+    en: "Mistake record",
+    bn: "ভুলের রেকর্ড",
+    actions: {
+      view_all: { en: "Everyone's mistakes", bn: "সবার ভুলের রেকর্ড দেখা", desc: "Any staff member's caught mistakes and their explanations", teacher: false, office: true, flags: [] },
+      review: { en: "Review explanations", bn: "ব্যাখ্যা যাচাই করা", desc: "Accept a reason, count it as a mistake, or move it to the person at fault", teacher: false, office: true, flags: [] },
+      meetings: { en: "Warning meetings", bn: "সতর্কবার্তার আলোচনা", desc: "Book the face-to-face talk after a warning and record what was agreed (D-#941)", teacher: false, office: true, flags: [] },
+      settings: { en: "Mistake rules", bn: "ভুলের নিয়ম ঠিক করা", desc: "Warning steps, weights, explanation deadline, places on/off (D-#1005)", teacher: false, office: false, flags: ["PRINCIPAL_DEFAULT"] },
+      review_principal: { en: "The Principal's mistakes", bn: "প্রধান শিক্ষকের ভুলের রেকর্ড", desc: "See and decide the Principal's own entries and warnings — the Principal decides their own (D-#1000)", teacher: false, office: false, flags: ["PRINCIPAL_DEFAULT"] },
+      view_own: { en: "My mistakes", bn: "আমার ভুল ও ব্যাখ্যা", desc: "Own caught mistakes; give a reason for each", teacher: true, office: true, flags: ["SELF"] },
     },
   },
   grievance: {
@@ -1009,7 +1024,7 @@ export const FEATURE_CATALOGUE = {
       // Objective tree OT-4 (prd-objective-tree §8.2, mock 5): gold questions per tagged row; the
       // gaps become the brief for the next question batch. Principal + Office by default (owner
       // 2026-11-04); the module doors mastery:settings / mastery:review open it too.
-      bank_coverage: { en: "Question-bank coverage", bn: "প্রশ্ন-ব্যাংক কভারেজ", desc: "Gold questions per tagged objective row of a class × subject, the empty rows, and the gaps as a brief for the next question batch (whole school)", teacher: false, office: true, flags: [] },
+      bank_coverage: { en: "Question-bank coverage", bn: "প্রশ্ন-ব্যাংক কভারেজ", desc: "Gold questions per tagged objective row of a class × subject, the empty rows, and the gaps as a brief for the next question batch (whole school)", teacher: false, office: true, flags: [] },
       // Storybook shelf SB-6 (D-#980, docs/prd-storybook-reading.md): one switch per tab of the
       // গল্পের বই রিপোর্ট screen. Office on by default — it runs the shelf.
       storybook_series: { en: "Storybooks by series", bn: "সিরিজ অনুযায়ী গল্পের বই", desc: "Reads, readers, read rate and waiting children per storybook series over a window", teacher: false, office: true, flags: [] },
@@ -1068,7 +1083,7 @@ export const LEGACY_PERMISSION_EXPANSION: Record<string, { any: readonly Catalog
   "set:assemble": { any: ["question_sets:create"] },
   "set:export": { any: [] },
   "tracker:read": { any: ["homework:view","assignment:view","assignment_gift:view","class_test:view","class_test_script:view","set_tracker:view","student_profile:view","student_profile:export","saturday_revision:view","vocab_test:view","monthly_report:view","archive:view"] },
-  "tracker:write": { any: ["homework:declare","homework:issue","homework:mark_submitted","homework:check","homework:return","homework:confirm_day","homework:undo","assignment:declare","assignment:issue","assignment:mark_submitted","assignment:check","assignment:resubmit","assignment:return","assignment:undo","work_claim:reject","class_test:view","class_test:create","class_test:register","class_test:edit","class_test:enter_results","class_test_question:create","class_test_script:return","set_tracker:enter_results","saturday_revision:enter_results","saturday_revision:send","vocab_test:edit","vocab_test:create","vocab_test:enter_results","student_comments:create","parents_meeting:write_notes","printing:create","archive:create","worksheets:create","worksheets:send"] },
+  "tracker:write": { any: ["homework:declare","homework:issue","homework:mark_submitted","homework:check","homework:return","homework:confirm_day","homework:undo","assignment:declare","assignment:issue","assignment:mark_submitted","assignment:check","assignment:resubmit","assignment:return","assignment:undo","work_claim:reject","class_test:view","class_test:create","class_test:register","class_test:edit","class_test:enter_results","class_test_question:create","class_test_script:return","set_tracker:enter_results","saturday_revision:enter_results","saturday_revision:correct","saturday_revision:send","vocab_test:edit","vocab_test:create","vocab_test:enter_results","student_comments:create","parents_meeting:write_notes","printing:create","archive:create","worksheets:create","worksheets:send"] },
   "tracker:export": { any: [] },
   "gift:manage": { any: ["assignment_gift:view","assignment_gift:view_all","assignment_gift:issue"] },
   "homework:void": { any: ["homework:delete"] },

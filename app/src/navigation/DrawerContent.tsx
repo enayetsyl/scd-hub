@@ -382,7 +382,10 @@ const GUARDIAN_NAV: NavSection[] = [
   { type: "item", route: "GuardianHomeTab", screen: "MyPopups", labelKey: "ppMineTitle", icon: "📬" },
 ];
 
-const NAV: NavSection[] = [...STAFF_NAV, ...GUARDIAN_NAV];
+// prd-help-centre (D-#968): one entry for every login, last in the default order.
+const HELP_NAV: NavSection[] = [{ type: "item", route: "HelpTab", labelKey: "hcNav", icon: "❓" }];
+
+const NAV: NavSection[] = [...STAFF_NAV, ...GUARDIAN_NAV, ...HELP_NAV];
 
 /** "route:screen" of every deep-linked leaf. A plain leaf of the same route (ক্লাস টেস্ট)
  *  must not light up too while one of these screens is open (শিক্ষার্থীর অগ্রগতি, SP-1). */

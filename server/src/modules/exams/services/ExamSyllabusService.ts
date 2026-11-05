@@ -23,7 +23,7 @@
  *     also handing them the release to 91 families.
  */
 import { Types } from "mongoose";
-import { callerHasPermission, SYLLABUS_FULL_MARKS } from "@scd/shared";
+import { callerHasPermission, SYLLABUS_FULL_MARKS, HW_SUBJECT_LABELS_BN } from "@scd/shared";
 import type { RoutineSubject, SyllabusItemType } from "@scd/shared";
 import type { AppContext } from "../../../context";
 import { ForbiddenError } from "../../../middleware/authz";
@@ -47,6 +47,7 @@ import {
   type IExamSyllabus,
   type ISyllabusMarkRow,
 } from "../models/ExamSyllabus";
+import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
 
 // ---------------------------------------------------------------------------
 // Gates
@@ -378,6 +379,9 @@ export async function saveSyllabus(
     (existing.fullMarks ?? SYLLABUS_FULL_MARKS) !== fullMarks ||
     JSON.stringify(existing.marks) !== JSON.stringify(input.marks);
   const hadApproval = existing.status !== "DRAFT";
+  // D-#954: families had read it — whoever wrote the published text owns the correction.
+  const wasPublished = !!existing.publishedAt;
+  const priorAuthor = existing.updatedBy;
 
   existing.bodyMd = input.bodyMd;
   existing.fullMarks = fullMarks;
@@ -412,6 +416,16 @@ export async function saveSyllabus(
       clearedApproval: contentChanged && hadApproval,
     },
   });
+  if (contentChanged && wasPublished) {
+    await recordPlaceMistake({
+      kind: "SYLLABUS_REOPEN",
+      refKey: String(existing._id),
+      ownerId: priorAuthor,
+      correctedBy: auth.userId,
+      at: new Date(),
+      line: `${(HW_SUBJECT_LABELS_BN as Record<string, string>)[input.subject] ?? input.subject} — প্রকাশিত সিলেবাস বদলানো হয়েছে`,
+    });
+  }
 
   return existing;
 }

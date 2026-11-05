@@ -1,0 +1,38 @@
+[
+  {
+    "id": "getting_started",
+    "title": "অ্যাপ ব্যবহার শুরু"
+  },
+  {
+    "id": "mastery",
+    "title": "শিখনফল ও শিখন-দক্ষতা"
+  },
+  {
+    "id": "attendance_leave",
+    "title": "উপস্থিতি ও ছুটি"
+  },
+  {
+    "id": "homework_assignment",
+    "title": "বাড়ির কাজ ও অ্যাসাইনমেন্ট"
+  },
+  {
+    "id": "class_tests_exams",
+    "title": "ক্লাস টেস্ট ও পরীক্ষা"
+  },
+  {
+    "id": "messages_popups",
+    "title": "বার্তা ও পপ-আপ"
+  },
+  {
+    "id": "printing",
+    "title": "প্রিন্ট"
+  },
+  {
+    "id": "staff_hr",
+    "title": "কর্মী ও বেতন"
+  },
+  {
+    "id": "child",
+    "title": "সন্তানের খোঁজখবর"
+  }
+]

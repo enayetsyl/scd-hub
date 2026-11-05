@@ -41,6 +41,9 @@ import { assertTransition } from "../lifecycle";
 import { atMidnight, dateOnlyISO } from "../assignmentCalendar";
 import { writeAudit } from "../../platform/services/AuditService";
 import { isRehomed, resolveRecordOwners } from "../recordOwner";
+import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
+import { recordAbsentAtDelivery } from "./deliveryAttendanceCheck";
+import { dateKeyOf } from "../../attendance/dates";
 
 // ---------------------------------------------------------------------------
 // AS_ID generation (D-#34 numbering pattern)
@@ -472,6 +475,11 @@ export async function updateAssignmentItem(
       ...(scope === "RECORD_HALF" ? { viaRecordSection: true } : {}),
     },
   });
+  // D-#953: the students already had it — a changed set or text is the deliverer's correction
+  // (supplying the missing total marks is not).
+  if (item.status !== "DRAFT" && (input.setId !== undefined || input.description !== undefined)) {
+    await recordPlaceMistake({ kind: "ASSIGNMENT_ITEM_CHANGED", tier: 2, refKey: item._id.toString(), ownerId: item.deliveredBy, correctedBy: input.actorId, at: new Date(), line: `${item.asId}: দেওয়ার পর প্রশ্ন / লেখা বদলানো হয়েছে` });
+  }
 
   return {
     itemId: item._id.toString(),
@@ -686,6 +694,16 @@ export async function confirmAssignmentWeek(input: {
       }
       recordsIssued += records.length;
     }
+    // D-#1004: the teacher who delivered it captured the roster (no attendance gate).
+    await recordAbsentAtDelivery({
+      tracker: "as",
+      itemId: item._id.toString(),
+      label: item.asId,
+      absentStudentIds: roster.filter((r) => !r.present).map((r) => String(r.studentId)),
+      dateKey: item.deliveryDate ? dateKeyOf(item.deliveryDate) : "",
+      ownerId: item.deliveredBy,
+      at,
+    });
   }
 
   return {

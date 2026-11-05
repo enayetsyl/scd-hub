@@ -115,6 +115,8 @@ import {
   ForbiddenError,
   type Reach,
 } from "../../../middleware/authz";
+import { CorrectionReasonInput, parseCorrectionReason } from "../../staff-mistakes/resolvers/correctionReasonInput";
+import { runWithCorrectionReason } from "../../staff-mistakes/services/correctionReasonContext";
 
 /** PM reach (D-#793): `assignment:view_all` replaces isAdminStaff on reads,
  *  `assignment:edit_all` the PRINCIPAL-pass / OFFICE-refuse on writes. */
@@ -1925,6 +1927,8 @@ builder.mutationField("assignmentSubmitPass", (t) =>
       sectionId: t.arg.string({ required: true }),
       itemId: t.arg.string({ required: true }),
       entries: t.arg({ type: [AsSubmitPassEntryInput], required: true }),
+      // D-#937: the reason picked when the pass corrects a same-day chase.
+      correctionReason: t.arg({ type: CorrectionReasonInput, required: false }),
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
@@ -1935,12 +1939,16 @@ builder.mutationField("assignmentSubmitPass", (t) =>
         "submit_assignment",
         AS_WRITE,
       );
-      return asSubmitPassSvc(
-        args.itemId,
-        args.entries.map((e) => ({ recordId: e.recordId, submitted: e.submitted })),
-        ctx.auth.userId as string,
-        new Date(),
-        { sectionId: args.sectionId },
+      const reason = parseCorrectionReason(args.correctionReason);
+      const actorId = ctx.auth.userId as string;
+      return runWithCorrectionReason(reason, () =>
+        asSubmitPassSvc(
+          args.itemId,
+          args.entries.map((e) => ({ recordId: e.recordId, submitted: e.submitted })),
+          actorId,
+          new Date(),
+          { sectionId: args.sectionId },
+        ),
       );
     },
   }),
