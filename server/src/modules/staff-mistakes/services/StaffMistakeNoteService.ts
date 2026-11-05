@@ -74,6 +74,15 @@ export async function recordPlaceMistake(ev: PlaceMistakeInput): Promise<boolean
   }
 }
 
+/** Has this place already been recorded for this thing (any owner)? Never throws (false). */
+export async function hasPlaceNote(kind: StaffMistakeKind, refKey: string): Promise<boolean> {
+  try {
+    return !!(await StaffMistakeNote.exists({ kind, refKey }));
+  } catch {
+    return false;
+  }
+}
+
 /** An approved staff leave covering the day (D-#955). Never throws. */
 async function onApprovedLeave(userId: string, dateKey: string): Promise<boolean> {
   try {
