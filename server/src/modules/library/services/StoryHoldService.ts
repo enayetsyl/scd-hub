@@ -31,6 +31,16 @@ export async function workingDaysHoldEnd(from: Date, days: number): Promise<Date
   return new Date(`${dhakaDayKey(d)}T23:59:59+06:00`);
 }
 
+const MONTHS_BN = ["জানুয়ারি", "ফেব্রুয়ারি", "মার্চ", "এপ্রিল", "মে", "জুন", "জুলাই", "আগস্ট", "সেপ্টেম্বর", "অক্টোবর", "নভেম্বর", "ডিসেম্বর"];
+const BN_DIGITS = "০১২৩৪৫৬৭৮৯";
+
+/** "2026-11-09" → "৯ নভেম্বর" for a guardian-facing line. */
+export function bnDayLabel(dayKey: string): string {
+  const [, m, d] = dayKey.split("-").map(Number);
+  const day = String(d).replace(/\d/g, (x) => BN_DIGITS[Number(x)]);
+  return `${day} ${MONTHS_BN[m - 1] ?? ""}`.trim();
+}
+
 /** Dedupe per hold AND per guardian — an entity-only key would swallow the second parent. */
 export const holdReadyKey = (reservationId: string, guardianId: string): string => `LIBHR:${reservationId}:${guardianId}`;
 
@@ -46,7 +56,7 @@ export async function notifyHoldReady(resv: Pick<IBookReservation, "_id" | "titl
   if (guardianIds.length === 0) return 0;
   const guardians = await Guardian.find({ _id: { $in: guardianIds }, active: true }).select("_id").lean();
   const child = student?.nameBn || student?.name || "";
-  const until = resv.expiresAt ? dhakaDayKey(new Date(resv.expiresAt)) : "";
+  const until = resv.expiresAt ? bnDayLabel(dhakaDayKey(new Date(resv.expiresAt))) : "";
   let sent = 0;
   for (const g of guardians) {
     const res = await emit({

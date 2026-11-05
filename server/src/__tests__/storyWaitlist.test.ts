@@ -116,6 +116,7 @@ describe("join, hold, leave", () => {
     const notes = await Notification.find({ kind: "LIBRARY_HOLD_READY" }).lean();
     expect(notes.map((n) => n.recipientGuardianId?.toString()).sort()).toEqual([gA1.auth!.userId, gA2.auth!.userId].sort());
     expect(notes[0].bodyBn).toContain("আয়েশা");
+    expect(notes[0].bodyBn).toContain("৯ নভেম্বর-এর মধ্যে");
 
     const waits = await childStoryWaits(gA2, aisha);
     expect(waits.map((w) => [w.title.titleBn, w.position])).toEqual([["বই 1", 0]]);

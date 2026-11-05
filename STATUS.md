@@ -1,5 +1,8 @@
 # STATUS
 
+- 2026-11-05: **BUILT — storybook shelf SB-3, the waitlist (D-#982/#990)** (branch `feat/storybook-sb3`, stacked on SB-2 #1333 → SB-1 #1330, NOT merged). Guardian join/leave in the app, desk adds in person, 2-working-day hold, LIBRARY_HOLD_READY notice to every linked guardian, held banner on the shelf.
+  - **Verified:** server/app tsc 0; vocab verifier PASS (kind list += LIBRARY_HOLD_READY); storyWaitlist 3 + library suites + nav-coverage + gate scan; full server jest (see PR); Chrome walk 8/8 (guardian joins → number 1 → return → held for Aisha, notice body "…৯ নভেম্বর-এর মধ্যে নিয়ে নিন" → shelf banner → book card → Office queue card).
+  - **Now / next:** SB-4 guardian view & alerts (my child's books + counts + stickers; issued / sticker alerts as notification + pop-up + Today card).
 - 2026-11-05: **BUILT — storybook shelf SB-2, the desk (D-#982/#983/#985/#990)** (branch `feat/storybook-sb2`, worktree `C:/w/sbook2`, stacked on SB-1 PR #1330, NOT merged). Desk: code → take back with read tick + sticker / lend by school ID; copies + QR sticker PDF; student rule + holiday rules. The phone camera scan is SB-5 (needs the next APK); a USB scanner or typing works now.
   - **Verified:** server/app tsc 0; storyDesk 8 tests + library suites + gate scan; full server jest (see PR); local API walk 18/18 (72 FRU codes, 3-page sticker PDF, ID 103→0103, 2-book limit, read+sticker, guardian history) + Chrome desk walk 10/10; all 272 storybooks imported locally by the script, 0 problems.
   - **Now / next:** merge #1330 then this → promote → OTA; on prod: run `server/scripts/import-storybooks.mjs` (drafts first), Office spot-checks the Bangla, publishes, makes copies + prints stickers. Next slice SB-3 waitlist.
