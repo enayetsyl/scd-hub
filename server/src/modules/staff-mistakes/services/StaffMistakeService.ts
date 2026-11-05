@@ -27,9 +27,12 @@ import { User } from "../../foundation/models/User";
 import { writeAudit } from "../../platform/services/AuditService";
 import { emitStaffMistakeDecided, emitStaffMistakeExplain } from "../../notifications/services/emitters";
 import type { CorrectionReason } from "./correctionReasonContext";
+import type { StaffMistakeDeadline } from "@scd/shared";
+import { getStaffMistakeSettings } from "./StaffMistakeSettingsService";
+import { evaluateLadder } from "./StaffWarningService";
 
-/** A refusal the person can act on (wrong state, not theirs, bad reason). */
-export class StaffMistakeError extends Error {}
+import { StaffMistakeError } from "./errors";
+export { StaffMistakeError };
 
 const oid = (id: string): Types.ObjectId => {
   if (!Types.ObjectId.isValid(id)) throw new StaffMistakeError("ভুল আইডি।");
@@ -39,26 +42,45 @@ const oid = (id: string): Types.ObjectId => {
 /** Sun–Thu are school days (trackers/calendar.ts), counted on the Dhaka calendar. */
 const SCHOOL_WEEKDAYS = new Set([0, 1, 2, 3, 4]);
 
-/** 17:00 Dhaka on the next school day after `now` (§2). */
-export function explainDeadline(now: Date): Date {
+/**
+ * The explanation deadline (§2; the Principal picks the rule, D-#1005): 17:00 Dhaka on the
+ * next school day (default), 24 hours, or 17:00 on the third school day.
+ */
+export function explainDeadline(now: Date, rule: StaffMistakeDeadline = "NEXT_SCHOOL_DAY"): Date {
+  if (rule === "HOURS_24") return new Date(now.getTime() + 24 * 3600 * 1000);
   const d = new Date(`${dhakaDayKey(now)}T00:00:00Z`);
-  do {
+  let left = rule === "SCHOOL_DAYS_3" ? 3 : 1;
+  while (left > 0) {
     d.setUTCDate(d.getUTCDate() + 1);
-  } while (!SCHOOL_WEEKDAYS.has(d.getUTCDay()));
+    if (SCHOOL_WEEKDAYS.has(d.getUTCDay())) left -= 1;
+  }
   return new Date(`${d.toISOString().slice(0, 10)}T17:00:00+06:00`);
 }
 
-/** Overdue explanations become counted mistakes. Returns how many were settled. */
+/** A mistake just became COUNTED: check the warning ladder (D-#940). Never throws. */
+async function afterCounted(staffUserId: string, now: Date): Promise<void> {
+  try {
+    await evaluateLadder(staffUserId, now);
+  } catch (err) {
+    console.error("[StaffMistakeService] warning ladder failed (the mistake is still recorded):", err);
+  }
+}
+
+/**
+ * Overdue explanations become counted mistakes, and each person affected is checked against
+ * the ladder. Runs on every read and from the scheduler tick (D-#940). Returns how many.
+ */
 export async function settleOverdueMistakes(now: Date = new Date()): Promise<number> {
-  const res = await StaffMistake.updateMany(
-    { status: "EXPLANATION_DUE", explainDueAt: { $lte: now } },
-    { $set: { status: "COUNTED", autoCounted: true, decidedAt: now } },
-  );
+  const due = { status: "EXPLANATION_DUE", explainDueAt: { $lte: now } };
+  const people = (await StaffMistake.distinct("staffUserId", due)).map(String);
+  if (people.length === 0) return 0;
+  const res = await StaffMistake.updateMany(due, { $set: { status: "COUNTED", autoCounted: true, decidedAt: now } });
+  for (const id of people) await afterCounted(id, now);
   return res.modifiedCount ?? 0;
 }
 
-/** Apply a reason to a row in memory — the status follows the reason (§2). */
-function applyReason(row: IStaffMistake, reason: CorrectionReason, now: Date): void {
+/** Apply a reason to a row in memory — the status follows the reason (§2). True = counted. */
+function applyReason(row: IStaffMistake, reason: CorrectionReason, now: Date): boolean {
   const r = staffMistakeReason(row.kind, reason.code)!;
   row.reasonCode = r.code;
   row.reasonText = reason.text || null;
@@ -67,9 +89,10 @@ function applyReason(row: IStaffMistake, reason: CorrectionReason, now: Date): v
     row.status = "COUNTED";
     row.decidedAt = now;
     row.decidedBy = null;
-  } else {
-    row.status = "PENDING_REVIEW";
+    return true;
   }
+  row.status = "PENDING_REVIEW";
+  return false;
 }
 
 export interface RecordMistakeInput {
@@ -89,6 +112,9 @@ export interface RecordMistakeInput {
  * may still bring the first reason. Best-effort callers wrap this.
  */
 export async function recordMistakeFromSource(input: RecordMistakeInput): Promise<IStaffMistake | null> {
+  const settings = await getStaffMistakeSettings();
+  // A place the Principal switched off records nothing (D-#1005).
+  if (settings.disabledKinds.includes(input.kind)) return null;
   const staffUserId = new Types.ObjectId(input.staffUserId.toString());
   const sourceId = new Types.ObjectId(input.sourceId.toString());
   const self = input.correctedBy === staffUserId.toString();
@@ -100,9 +126,10 @@ export async function recordMistakeFromSource(input: RecordMistakeInput): Promis
   const existing = await StaffMistake.findOne({ kind: input.kind, sourceId, staffUserId });
   if (existing) {
     if (reason && existing.status === "EXPLANATION_DUE") {
-      applyReason(existing, reason, input.at);
+      const nowCounted = applyReason(existing, reason, input.at);
       await existing.save();
       await auditExplained(existing, staffUserId.toString());
+      if (nowCounted) await afterCounted(staffUserId.toString(), input.at);
     }
     return existing;
   }
@@ -114,7 +141,7 @@ export async function recordMistakeFromSource(input: RecordMistakeInput): Promis
     sourceId,
     dateKey: dhakaDayKey(input.at),
     status: "EXPLANATION_DUE",
-    explainDueAt: explainDeadline(input.at),
+    explainDueAt: explainDeadline(input.at, settings.deadline),
   });
   if (reason) applyReason(row, reason, input.at);
   try {
@@ -126,6 +153,7 @@ export async function recordMistakeFromSource(input: RecordMistakeInput): Promis
   }
   if (reason) await auditExplained(row, staffUserId.toString());
   else await emitStaffMistakeExplain({ mistakeId: row._id, recipientUserId: staffUserId, kind: row.kind, explainDueAt: row.explainDueAt });
+  if (row.status === "COUNTED") await afterCounted(staffUserId.toString(), input.at);
   return row;
 }
 
@@ -160,9 +188,10 @@ export async function explainMistake(input: {
   const text = input.reasonText.trim();
   const bad = staffMistakeReasonError(row.kind, input.reasonCode, text);
   if (bad) throw new StaffMistakeError(bad);
-  applyReason(row, { code: input.reasonCode, text }, now);
+  const nowCounted = applyReason(row, { code: input.reasonCode, text }, now);
   await row.save();
   await auditExplained(row, input.actorId);
+  if (nowCounted) await afterCounted(input.actorId, now);
   return row;
 }
 
@@ -211,7 +240,7 @@ export async function decideMistake(input: {
         sourceId: row.sourceId,
         dateKey: row.dateKey,
         status: "EXPLANATION_DUE",
-        explainDueAt: explainDeadline(now),
+        explainDueAt: explainDeadline(now, (await getStaffMistakeSettings()).deadline),
         movedFromId: row._id,
       });
     } catch (err) {
@@ -225,6 +254,7 @@ export async function decideMistake(input: {
   } else {
     row.status = DECIDED_STATUS[input.decision];
   }
+  const nowCounted = row.status === "COUNTED";
   row.autoCounted = false;
   row.decidedBy = new Types.ObjectId(input.actorId);
   row.decidedAt = now;
@@ -245,6 +275,7 @@ export async function decideMistake(input: {
     decision: input.decision,
     note: row.decisionNote ?? "",
   });
+  if (nowCounted) await afterCounted(row.staffUserId.toString(), now);
   if (moved) {
     await emitStaffMistakeExplain({
       mistakeId: moved._id,

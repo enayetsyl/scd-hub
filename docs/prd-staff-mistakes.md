@@ -94,3 +94,23 @@ Single-step in MR-1; the mockup's Office-then-Principal step is MR-2 if the owne
 5. No explanation by the deadline → counted automatically.
 6. A reviewer can excuse, count or move; the person is told; nobody reviews their own.
 7. Teachers see only their own entries.
+
+## 9. MR-2 — the warning ladder (D-#940–#942, #1005)
+
+- **Ladder.** After any mistake becomes COUNTED (self-admitted, reviewer, or an explanation
+  that ran out — the scheduler settles those every tick), the person's weighted count of
+  COUNTED mistakes decided inside each rung's window is compared with the rung. Defaults:
+  3 in 30 days → WARNING (pop-up), 5 in 30 → MEETING (face-to-face), 8 in 90 → CONDUCT
+  (the Principal is told to consider a conduct step; nothing opens on its own). Weights:
+  tier 1 = 1, tier 2 = ½, tier 3 = ½. Each rung fires once per window per person.
+- **Who hears.** The person once (the highest new step) + the pop-up on their next app open
+  (closed only by বুঝেছি). WARNING/MEETING → holders of `staff_mistakes:meetings`;
+  CONDUCT → holders of `conduct:create`.
+- **Meeting.** `staff_mistakes:meetings` (Office on) books date/time/place (the pop-up
+  returns with the time; "অন্য সময় চাই" tells them) and records who talked, what was
+  discussed, the agreed action and a follow-up date, optionally sending the summary.
+- **Summary.** কর্মীর ভুলের হিসাব: per person over 30/90 days — counted (+ weighted),
+  waiting, accepted, most frequent place, highest step reached; plus a count by place.
+- **Rules.** `staff_mistakes:settings` (PRINCIPAL-DEFAULT) edits the three rungs, the tier
+  weights, the explanation deadline (next school day 17:00 / 24 hours / third school day
+  17:00) and which places record mistakes at all.

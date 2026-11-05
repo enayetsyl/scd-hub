@@ -204,6 +204,12 @@ const dedupeKeys = {
   staffMistakeExplain: (mistakeId: string, recipientId: string) => `SMEX:${mistakeId}:${recipientId}`,
   /** Per mistake + recipient + decision time (D-#939): a re-decision is a new notice. */
   staffMistakeDecided: (mistakeId: string, recipientId: string, at: number) => `SMDC:${mistakeId}:${recipientId}:${at}`,
+  /** Per warning + recipient (D-#940): a rung reached is heard once. */
+  staffWarningReached: (warningId: string, recipientId: string) => `SMWR:${warningId}:${recipientId}`,
+  /** Per warning + recipient + why (D-#941): reached, or a request to move the meeting. */
+  staffWarningStep: (warningId: string, recipientId: string, variant: string) => `SMST:${warningId}:${recipientId}:${variant}`,
+  /** Per warning + recipient + write (D-#941): a re-booked time or the summary is a new notice. */
+  staffWarningMeeting: (warningId: string, recipientId: string, at: number) => `SMMT:${warningId}:${recipientId}:${at}`,
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -2414,6 +2420,96 @@ export async function emitStaffMistakeDecided(ev: {
       bodyBn: ev.note ? `${line} মন্তব্য: "${ev.note}"` : line,
       refs: {},
       dedupeKey: dedupeKeys.staffMistakeDecided(ev.mistakeId.toString(), ev.recipientUserId.toString(), Date.now()),
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Warning ladder (D-#940–#942): the person, the reviewers, and the booked meeting.
+// ---------------------------------------------------------------------------
+
+const WARNING_STEP_PERSON_BN: Record<string, string> = {
+  WARNING: "এটি আপনার কর্মী ফাইলে লেখা থাকবে। এটি শাস্তিমূলক ধাপ নয় — শুধরে নেওয়ার সুযোগ।",
+  MEETING: "প্রধান শিক্ষক / অফিস আপনার সাথে সামনাসামনি কথা বলবেন — সময় জানানো হবে।",
+  CONDUCT: "প্রধান শিক্ষককে বিষয়টি জানানো হয়েছে।",
+};
+
+/** D-#940 — the person reached a rung; the pop-up shows on their next app open too. */
+export async function emitStaffWarningReached(ev: {
+  warningId: IdLike;
+  recipientUserId: IdLike;
+  step: string;
+  count: number;
+  windowDays: number;
+}): Promise<void> {
+  return bestEffort("staff warning reached", async () => {
+    await emit({
+      recipientUserId: ev.recipientUserId.toString(),
+      kind: "STAFF_MISTAKE_WARNING",
+      titleBn: "সতর্কবার্তা",
+      bodyBn: `গত ${bnNum(ev.windowDays)} দিনে আপনার ${bnNum(ev.count)}টি ভুল গণ্য হয়েছে। ${WARNING_STEP_PERSON_BN[ev.step] ?? ""}`,
+      refs: {},
+      dedupeKey: dedupeKeys.staffWarningReached(ev.warningId.toString(), ev.recipientUserId.toString()),
+    });
+  });
+}
+
+const WARNING_STEP_REVIEWER_BN: Record<string, string> = {
+  WARNING: "তাঁকে স্বয়ংক্রিয় সতর্কবার্তা পাঠানো হয়েছে।",
+  MEETING: "সামনাসামনি আলোচনার সময় ঠিক করুন।",
+  CONDUCT: "শৃঙ্খলার ধাপ খোলার কথা বিবেচনা করুন (নিজে থেকে খোলা হয়নি)।",
+};
+
+/** D-#941 — reviewers / the Principal: someone reached a rung, or asked to move the meeting. */
+export async function emitStaffWarningStep(ev: {
+  warningId: IdLike;
+  recipientUserIds: string[];
+  staffName: string;
+  step: string;
+  count: number;
+  windowDays: number;
+  variant: "REACHED" | "OTHER_TIME";
+}): Promise<void> {
+  return bestEffort("staff warning step", async () => {
+    const bodyBn =
+      ev.variant === "OTHER_TIME"
+        ? `${ev.staffName} সতর্কবার্তার আলোচনার জন্য অন্য সময় চেয়েছেন।`
+        : `${ev.staffName} — গত ${bnNum(ev.windowDays)} দিনে ${bnNum(ev.count)}টি ভুল গণ্য হয়েছে। ${WARNING_STEP_REVIEWER_BN[ev.step] ?? ""}`;
+    await Promise.all(
+      ev.recipientUserIds.map((rid) =>
+        emit({
+          recipientUserId: rid,
+          kind: "STAFF_MISTAKE_STEP",
+          titleBn: ev.variant === "OTHER_TIME" ? "আলোচনার সময় বদলাতে চান" : "কর্মীর ভুলের সীমা",
+          bodyBn,
+          refs: {},
+          dedupeKey: dedupeKeys.staffWarningStep(ev.warningId.toString(), rid, ev.variant),
+        }),
+      ),
+    );
+  });
+}
+
+/** D-#941 — the person: the face-to-face talk is booked (or its summary is ready). */
+export async function emitStaffWarningMeeting(ev: {
+  warningId: IdLike;
+  recipientUserId: IdLike;
+  at?: Date;
+  place?: string;
+  summary?: string;
+  stamp: number;
+}): Promise<void> {
+  return bestEffort("staff warning meeting", async () => {
+    const when = ev.at
+      ? new Intl.DateTimeFormat("bn-BD", { timeZone: "Asia/Dhaka", weekday: "long", day: "numeric", month: "long", hour: "numeric", minute: "2-digit" }).format(ev.at)
+      : "";
+    await emit({
+      recipientUserId: ev.recipientUserId.toString(),
+      kind: "STAFF_MISTAKE_MEETING",
+      titleBn: ev.summary ? "আলোচনার সারাংশ" : "আলোচনার সময়",
+      bodyBn: ev.summary ? `সংশোধনের পদক্ষেপ: ${ev.summary}` : `সতর্কবার্তা নিয়ে আলোচনা: ${when}, ${ev.place ?? ""}`,
+      refs: {},
+      dedupeKey: dedupeKeys.staffWarningMeeting(ev.warningId.toString(), ev.recipientUserId.toString(), ev.stamp),
     });
   });
 }

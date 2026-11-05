@@ -107,6 +107,7 @@ import { emit } from "./NotificationService";
 import { renderTemplate } from "../../templates/services/MessageTemplateService";
 import { actingAsFilter } from "../../foundation/services/RoleScope";
 import { holderIdsOf } from "../../access-control/services/holders";
+import { settleOverdueMistakes } from "../../staff-mistakes/services/StaffMistakeService";
 
 type IdLike = { toString(): string };
 
@@ -327,6 +328,13 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
     summary.observationEscalationRan = await runOnce(dateKey, "OBSESC", async () => {
       await runObservationEscalation(now);
     });
+  });
+
+  // --- Staff mistake record (D-#940): explanations past their deadline become counted
+  // mistakes and the person is checked against the warning ladder. Every tick, every
+  // calendar day (a deadline can pass over a weekend); one cheap query when nothing is due.
+  await family("staff mistake settle", async () => {
+    await settleOverdueMistakes(now);
   });
 
   // --- VM network snapshot (SH-2, D-#414) — one row a day holding the cumulative

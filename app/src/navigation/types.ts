@@ -355,6 +355,9 @@ export type HrStackParamList = {
   // Staff mistake record (D-#936–#939).
   MyMistakes: undefined;
   MistakeReview: undefined;
+  StaffMistakeSummary: undefined;
+  PersonMistakes: { staffUserId: string; name?: string };
+  StaffMistakeSettings: undefined;
   GrievanceInbox: undefined;
   // SH-8: the school-wide HR numbers (payroll:manage). Param-free, so its
   // position in this stack is safe either way.

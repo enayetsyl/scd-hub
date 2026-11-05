@@ -52,3 +52,60 @@ export function staffMistakeReasonError(kind: StaffMistakeKind, code: string, te
   if (text.length > STAFF_MISTAKE_TEXT_MAX) return `বিস্তারিত ${STAFF_MISTAKE_TEXT_MAX} অক্ষরের মধ্যে লিখুন`;
   return null;
 }
+
+// -----------------------------------------------------------------------------
+// MR-2 (D-#940–#942, #1005): the warning ladder, the deadline choice and per-place switches
+// -----------------------------------------------------------------------------
+
+/** WARNING = a pop-up to the person; MEETING = a face-to-face talk is booked; CONDUCT = the
+ *  Principal is told to consider a conduct step (never opened automatically). */
+export const STAFF_WARNING_STEPS = ["WARNING", "MEETING", "CONDUCT"] as const;
+export type StaffWarningStep = (typeof STAFF_WARNING_STEPS)[number];
+
+export const STAFF_MISTAKE_DEADLINES = ["NEXT_SCHOOL_DAY", "HOURS_24", "SCHOOL_DAYS_3"] as const;
+export type StaffMistakeDeadline = (typeof STAFF_MISTAKE_DEADLINES)[number];
+
+export interface StaffMistakeRung {
+  step: StaffWarningStep;
+  /** Weighted counted mistakes that reach this step… */
+  count: number;
+  /** …within this many days. */
+  windowDays: number;
+}
+
+export interface StaffMistakeSettingsShape {
+  rungs: StaffMistakeRung[];
+  /** What one counted mistake of each tier adds to the ladder. */
+  tierWeights: { 1: number; 2: number; 3: number };
+  deadline: StaffMistakeDeadline;
+  /** Places switched off: nothing is recorded for them. */
+  disabledKinds: string[];
+}
+
+export const STAFF_MISTAKE_DEFAULT_SETTINGS: StaffMistakeSettingsShape = {
+  rungs: [
+    { step: "WARNING", count: 3, windowDays: 30 },
+    { step: "MEETING", count: 5, windowDays: 30 },
+    { step: "CONDUCT", count: 8, windowDays: 90 },
+  ],
+  tierWeights: { 1: 1, 2: 0.5, 3: 0.5 },
+  deadline: "NEXT_SCHOOL_DAY",
+  disabledKinds: [],
+};
+
+/** Bangla error for a bad settings write, or null. */
+export function staffMistakeSettingsError(s: StaffMistakeSettingsShape): string | null {
+  if (s.rungs.length !== STAFF_WARNING_STEPS.length) return "তিনটি ধাপই দিতে হবে";
+  for (const step of STAFF_WARNING_STEPS) {
+    const r = s.rungs.find((x) => x.step === step);
+    if (!r) return "তিনটি ধাপই দিতে হবে";
+    if (!Number.isInteger(r.count) || r.count < 1 || r.count > 50) return "ভুলের সংখ্যা ১ থেকে ৫০ এর মধ্যে দিন";
+    if (!Number.isInteger(r.windowDays) || r.windowDays < 1 || r.windowDays > 365) return "দিনের সংখ্যা ১ থেকে ৩৬৫ এর মধ্যে দিন";
+  }
+  for (const t of [1, 2, 3] as const) {
+    const w = s.tierWeights[t];
+    if (typeof w !== "number" || !(w >= 0) || w > 5) return "ওজন ০ থেকে ৫ এর মধ্যে দিন";
+  }
+  if (!(STAFF_MISTAKE_DEADLINES as readonly string[]).includes(s.deadline)) return "অজানা সময়সীমা";
+  return null;
+}

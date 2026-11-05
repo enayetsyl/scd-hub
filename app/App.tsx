@@ -33,6 +33,7 @@ import { CommentReadPopup } from "./src/components/CommentReadPopup";
 import { QuranExamReminderPopup } from "./src/components/QuranExamReminderPopup";
 import { MeetingCommentReminderPopup } from "./src/components/MeetingCommentReminderPopup";
 import { MarkReminderPopup, MarkEscalationPopup } from "./src/components/MarkSubmissionPopup";
+import { StaffWarningPopup } from "./src/components/StaffWarningPopup";
 import {
   navigationRef,
   openNotificationCenter,
@@ -250,6 +251,8 @@ function App(): React.ReactElement | null {
                               {/* Teachers on an assignment due day; Office + Principal at 09:30 (D-#889/#890). */}
                               <MarkReminderPopup />
                               <MarkEscalationPopup />
+                              {/* Staff who reached a warning step (D-#940/#941). */}
+                              <StaffWarningPopup />
                             </WebPushGate>
                           </UpdateGate>
                         </MistakeReasonProvider>
