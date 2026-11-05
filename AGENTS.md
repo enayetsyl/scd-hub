@@ -54,7 +54,7 @@ auto-deploys (`.github/workflows`, `scripts/deploy.sh`). So:
 - **One change at a time.** Don't blend unrelated edits into one batch/commit; each meaningful change
   gets its own `CHANGELOG.md` line.
 - **Help guides move with the feature (D-#973).** A new feature, or a change to an existing screen
-  or flow, adds or updates its in-app help guide (`server/help/guides/`, docs/prd-help-centre.md) in
+  or flow, adds or updates its in-app help guide (`server/assets/help/guides/`, docs/prd-help-centre.md) in
   the **same PR**. A guide that describes an old screen is a bug. See `/skills/feature-lifecycle` step 5a.
 - **Lists that grow are paged from the start (D-#761).** Any list that accumulates over time
   (history, records, results, comments, requests, logs) ships with paging in its first version.

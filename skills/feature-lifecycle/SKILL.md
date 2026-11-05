@@ -32,7 +32,7 @@ description: Use when adding a new feature or changing an existing one in the sc
    Principal must be able to switch the new feature's actions on and off by themselves.
    See `docs/prd-permission-matrix.md` §9.
 5a. **Add or update the help guide in the same PR (D-#973).** Every new task a person can do gets a
-   guide in `server/help/guides/` (Bangla steps, the `perms` that unlock it, which `screens` show it;
+   guide in `server/assets/help/guides/` (Bangla steps, the `perms` that unlock it, which `screens` show it;
    docs/prd-help-centre.md §4). A changed screen updates the guides that show it: wording, steps,
    and a re-shot screenshot when a step's button moved, was renamed, or was removed. A removed
    action removes or rewrites its guide. Run `node skills/_tools/verify_help_guides.mjs`. It fails on

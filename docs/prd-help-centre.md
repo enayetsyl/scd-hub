@@ -39,7 +39,7 @@ follows their permissions as they change.
   - `audience: "GUARDIAN"`: every guardian login.
   The **server** filters. The app never receives a guide the person may not see. Grant → the guide
   appears on the next Help open. Revoke → it is gone. View-as sees the borrowed person's guides.
-- **R3 — content is code.** Guides live in the repo (`server/help/guides/<id>.json`) and are reviewed in a PR.
+- **R3 — content is code.** Guides live in the repo (`server/assets/help/guides/<id>.json`) and are reviewed in a PR.
   Bangla for everything the person reads (glossary + the owner's BN vocabulary). English only for codes.
 - **R4 — screenshots are real prod screens with personal data replaced (D-#970).** See §5.
 - **R5 — owner approves every batch** before it merges (D-#971). Claude drafts.
@@ -47,10 +47,10 @@ follows their permissions as they change.
 ## 4. Data shape
 
 ```jsonc
-// server/help/guides/leave-approve.json
+// server/assets/help/guides/leave-approve.json
 {
   "id": "leave-approve",
-  "category": "attendance_leave",          // fixed list in server/help/categories.json (bn titles)
+  "category": "attendance_leave",          // fixed list in server/assets/help/categories.json (bn titles)
   "title": "ছুটি মঞ্জুর বা নামঞ্জুর করা",
   "intro": "শিক্ষক ও কর্মীদের ছুটির আবেদনের সিদ্ধান্ত দিতে এই ধাপগুলো অনুসরণ করুন।",
   "keywords": ["ছুটি", "মঞ্জুর", "নামঞ্জুর"],
@@ -72,8 +72,9 @@ Boxes are stored as coordinates and the **app draws the red boxes**. The screens
 numbers stay sharp at any size, and a tapped step can light up its own box. Step text is a tiny
 markup subset (`<b>` only). The app appends the step number to the first bold word: "মঞ্জুর (২)".
 
-Images are served by the server from `server/help/shots/` (not bundled, so the OTA stays small) under
-an existing `/api/...` prefix. A new top-level prefix would need the VM Caddyfile `@api` matcher.
+Images are served by the server from `server/assets/help/shots/` (not bundled, so the OTA stays small) at
+`GET /files/help/<guide>/<file>`. That sits under the existing `/files` prefix, so the VM Caddyfile `@api`
+matcher needs no change. Login is required, and a picture is served only when it belongs to a guide the caller may see.
 
 ## 5. Capture script (HC-3) — prod screens, nobody's data
 
@@ -96,7 +97,7 @@ an existing `/api/...` prefix. A new top-level prefix would need the VM Caddyfil
 6. **Boxes:** each step names a selector (`testID` / text). The script records that element's box
    into the guide JSON.
 7. **Output** goes to a local folder. The owner looks at each batch (D-#971) before it is copied into
-   `server/help/shots/` and committed. No prod image is committed without that look.
+   `server/assets/help/shots/` and committed. No prod image is committed without that look.
 
 ## 6. Slices
 
