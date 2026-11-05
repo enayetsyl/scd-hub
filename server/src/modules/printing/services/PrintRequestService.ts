@@ -545,17 +545,118 @@ function queueSortFor(status: string): Record<string, 1 | -1> {
   }
 }
 
-/** One bucket of the Office queue, paginated. Ordering per `queueSortFor`. */
+/**
+ * D-#1010: how the Office asked to see a bucket. ARRIVAL is the `queueSortFor` order
+ * (the default, unchanged); CLASS groups the two WORK buckets Nursery → KG → Class 1 … 5,
+ * so a stack printed class by class can be found and handed over in the same order
+ * (owner/Office ask, 2026-11-05).
+ */
+export const PRINT_QUEUE_SORTS = ["ARRIVAL", "CLASS"] as const;
+export type PrintQueueSort = (typeof PRINT_QUEUE_SORTS)[number];
+
+/** The buckets the CLASS order applies to. DELIVERED/CANCELLED are newest-first history
+ *  that can run to thousands of rows; they keep their own order whatever is asked. */
+const CLASS_SORTABLE = ["REQUESTED", "PRINTED"];
+
+/** Section labels that mean "the whole class" (the app's `isWholeClassSectionName`): a
+ *  job on one of these files with the class's untagged jobs, not as a section of its own. */
+const WHOLE_CLASS_SECTION_NAMES = new Set(["মূল", "সম্মিলিত"]);
+
+/** One job's place in the by-class order (D-#1010). */
+export interface ClassOrderKey {
+  id: string;
+  /** Roster level of the job's class (-1 Nursery, 0 KG, 1..5); null = names no class. */
+  level: number | null;
+  /** The job's section label (বালক / বালিকা …); null = the whole class or none. */
+  section: string | null;
+  requestedAt: Date;
+}
+
+/**
+ * D-#1010 by-class order: class level ascending (Nursery first) with jobs that name no
+ * class LAST; inside a class the whole-class jobs first, then each section together
+ * (a fixed code-point order, so বালক precedes বালিকা on every device); inside a section
+ * the FIFO work order — the job that has waited longest still leads its group. `id`
+ * makes the order total, so a page boundary never shuffles a row onto two pages.
+ */
+export function compareClassOrder(a: ClassOrderKey, b: ClassOrderKey): number {
+  if (a.level !== b.level) {
+    if (a.level === null) return 1;
+    if (b.level === null) return -1;
+    return a.level - b.level;
+  }
+  if (a.section !== b.section) {
+    if (a.section === null) return -1;
+    if (b.section === null) return 1;
+    return a.section < b.section ? -1 : 1;
+  }
+  const t = new Date(a.requestedAt).getTime() - new Date(b.requestedAt).getTime();
+  if (t !== 0) return t;
+  return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+}
+
+/**
+ * D-#1010: one page of a work bucket in class order. The level and section live on other
+ * collections, so the bucket's slim keys are read whole, ordered here, and only the
+ * requested page is loaded in full. The work buckets hold tens of jobs, not thousands.
+ */
+async function printQueueByClass(status: string, take: number, skip: number): Promise<PrintQueuePage> {
+  const keyDocs = (await PrintRequest.find({ status })
+    .select("_id classId copiesClassId sectionId requestedAt")
+    .lean()) as unknown as Array<
+    Pick<IPrintRequest, "_id" | "classId" | "copiesClassId" | "sectionId" | "requestedAt">
+  >;
+  // A CLASS_PRESENT job may name only the class it counts — group it under that class.
+  const classOf = (d: (typeof keyDocs)[number]): string | null =>
+    (d.classId ?? d.copiesClassId)?.toString() ?? null;
+  const classIds = [...new Set(keyDocs.map(classOf).filter(Boolean))] as string[];
+  const sectionIds = [...new Set(keyDocs.map((d) => d.sectionId?.toString()).filter(Boolean))] as string[];
+  const [classes, sections] = await Promise.all([
+    classIds.length ? Class.find({ _id: { $in: classIds } }).select("level").lean() : [],
+    sectionIds.length ? Section.find({ _id: { $in: sectionIds } }).select("nameBn").lean() : [],
+  ]);
+  const levelOf = new Map(classes.map((c) => [c._id.toString(), c.level as number]));
+  const sectionOf = new Map(sections.map((s) => [s._id.toString(), s.nameBn]));
+  const keys: ClassOrderKey[] = keyDocs.map((d) => {
+    const cid = classOf(d);
+    const sectionName = d.sectionId ? (sectionOf.get(d.sectionId.toString()) ?? null) : null;
+    return {
+      id: d._id.toString(),
+      level: cid ? (levelOf.get(cid) ?? null) : null,
+      section: sectionName && !WHOLE_CLASS_SECTION_NAMES.has(sectionName) ? sectionName : null,
+      requestedAt: d.requestedAt,
+    };
+  });
+  keys.sort(compareClassOrder);
+  const pageIds = keys.slice(skip, skip + take).map((k) => k.id);
+  const docs = pageIds.length
+    ? ((await PrintRequest.find({ _id: { $in: pageIds } }).lean()) as unknown as IPrintRequest[])
+    : [];
+  const byId = new Map(docs.map((d) => [d._id.toString(), d]));
+  // A job that left the bucket between the two reads simply drops off this page.
+  const items = pageIds.map((id) => byId.get(id)).filter((d): d is IPrintRequest => !!d);
+  return { items, total: keys.length, hasMore: skip + pageIds.length < keys.length };
+}
+
+/** One bucket of the Office queue, paginated. Ordering per `queueSortFor`, or the
+ *  D-#1010 class order when `sort` is CLASS on a work bucket. */
 export async function printQueue(
   status: string,
   limit = PRINT_QUEUE_PAGE_DEFAULT,
   offset = 0,
+  sort: string = "ARRIVAL",
 ): Promise<PrintQueuePage> {
   if (!(["REQUESTED", "PRINTED", "DELIVERED", "CANCELLED"] as string[]).includes(status)) {
     throw new PrintRequestError("Invalid status");
   }
+  if (!(PRINT_QUEUE_SORTS as readonly string[]).includes(sort)) {
+    throw new PrintRequestError("Invalid sort");
+  }
   const take = Math.min(Math.max(limit, 1), PRINT_QUEUE_PAGE_MAX);
   const skip = Math.max(offset, 0);
+  if (sort === "CLASS" && CLASS_SORTABLE.includes(status)) {
+    return printQueueByClass(status, take, skip);
+  }
   const [items, total] = await Promise.all([
     PrintRequest.find({ status })
       .sort(queueSortFor(status))

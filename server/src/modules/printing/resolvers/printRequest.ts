@@ -374,15 +374,23 @@ builder.queryField("printQueue", (t) =>
       "One paginated bucket of the Office print queue: REQUESTED (yet to print), PRINTED " +
       "(printing done), DELIVERED, CANCELLED. The two ACTIVE buckets stay oldest-first (the " +
       "order the Office works them); the two TERMINAL buckets are newest-first history " +
-      "(D-#461). Requires printing:view_all.",
+      "(D-#461). `sort: CLASS` orders REQUESTED/PRINTED Nursery → KG → Class 1…5, section " +
+      "by section, oldest-first inside each (D-#1010); ARRIVAL (default) is the order above. " +
+      "Requires printing:view_all.",
     authScopes: { hasPermission: "printing:view_all" },
     args: {
       status: t.arg.string({ required: true }),
       limit: t.arg.int({ required: false }),
       offset: t.arg.int({ required: false }),
+      sort: t.arg.string({ required: false }),
     },
     resolve: async (_root, args) => {
-      const page = await printQueue(args.status, args.limit ?? undefined, args.offset ?? undefined);
+      const page = await printQueue(
+        args.status,
+        args.limit ?? undefined,
+        args.offset ?? undefined,
+        args.sort ?? undefined,
+      );
       return { items: await decorate(page.items), total: page.total, hasMore: page.hasMore };
     },
   }),
