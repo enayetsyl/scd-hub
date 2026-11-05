@@ -80,6 +80,7 @@ auto-deploys (`.github/workflows`, `scripts/deploy.sh`). So:
 | Descriptive answer-carrier conformance | `node skills/_tools/verify_descriptive_carriers.mjs` — runs the harness over `server/import/cases/descriptive/` (`pass_*` must import, `fail_*` must be rejected). Run after any edit to the question payload schema. |
 | Import-envelope conformance | `python server/import/validate_import.py <envelope.json> --envelope-schema docs/import-contract.schema.json [--plan-schema <plan-schema.json>]` |
 | Auto-wrap a plan → envelope | `python server/import/build_envelope.py --json <plan.json> --md <plan.md> --envelope-schema docs/import-contract.schema.json --out <envelope.json>` (then run the conformance check above) |
+| Help-guide check | `node skills/_tools/verify_help_guides.mjs [--list-missing]` — every guide in `server/assets/help/` is well-formed, names real catalogue permissions, has its screenshots; reports actions with no guide yet (needs the shared build). |
 | Typecheck (server) | `npm run typecheck --workspace=server` |
 | Typecheck (shared) | `npm run typecheck --workspace=shared` |
 | Build shared | `npm run build --workspace=shared` (required before server typecheck if dist/ is stale) |
