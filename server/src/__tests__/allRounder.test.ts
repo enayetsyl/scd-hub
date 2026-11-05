@@ -39,6 +39,11 @@ describe("all-rounder", () => {
     expect(byArea(areasOf(wp({ avg: 64 }), { read: 0, everBorrowed: false })).CLASS_TEST).toEqual([64, "OK"]);
   });
 
+  it("one area alone shows its row but no overall headline", () => {
+    const areas = areasOf(wp({ marked: 0, avg: null, hw: null, total: 0, pending: 0, late: 0 }), { read: 5, everBorrowed: true });
+    expect(overallOf(areas)).toEqual({ score: null, band: "NONE", strongCount: 1, countedAreas: 1 });
+  });
+
   it("missing data is not counted, and reading starts only after a first storybook", () => {
     const areas = areasOf(wp({ marked: 0, avg: null, hw: null, total: 0, pending: 0, late: 0 }), { read: 0, everBorrowed: false });
     expect(areas.every((a) => a.score === null)).toBe(true);

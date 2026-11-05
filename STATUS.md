@@ -1,5 +1,8 @@
 # STATUS
 
+- 2026-11-05: **BUILT — all-rounder card SB-7 (D-#987); the storybook shelf SB-1..SB-7 is complete** (branch `feat/storybook-sb7`, stacked: #1330 SB-1 → #1333 SB-2 → #1335 SB-3 → #1339 SB-4 → #1341 SB-5 → #1343 SB-6 → this; NONE merged).
+  - **Verified:** server/app tsc 0; allRounder 5 tests; full server jest 365 suites / 6,279 tests green; API probe + Chrome walk 6/6 (reading counted from desk ticks, activity শীঘ্রই, another family refused, the card on আজ).
+  - **Now / next:** owner reviews + merges the stack in order → promote → OTA; on prod run `node server/scripts/import-storybooks.mjs --api <prod>` with an Office login (drafts), Office spot-checks the Bangla (Little Muslim set 1, Little Helpers, Seas of the World learned points are written, not printed), publishes, makes copies + prints stickers; APK 1.1.7 for the camera. Then activity sheets AS-1..AS-6.
 - 2026-11-05: **BUILT — storybook shelf SB-6, reports (D-#980)** (branch `feat/storybook-sb6`, stacked on SB-5 #1341, NOT merged). 3 new report switches (catalogue 387 → 390 actions, Office on +3; verifier + README updated).
   - **Verified:** shared/server/app tsc 0; vocab verifier PASS; storyReports test + gate scan; full server jest 364 suites / 6,274 tests green; Chrome walk 5/5 (series rows with numbers, never-borrowed flags, readers + section preference, window switch).
   - **Now / next:** SB-7 all-rounder card; then activity sheets AS-1..AS-6.

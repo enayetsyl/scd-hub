@@ -92,10 +92,15 @@ export function areasOf(wp: Pick<WholePicture, "attendance" | "classTest" | "hom
   return out;
 }
 
+/** An overall from one area alone ("১০০/১০০" off a single book count) would overstate — the
+ *  areas still show, the headline waits for a second. */
+export const MIN_AREAS_FOR_OVERALL = 2;
+
 /** Pure: the overall from the areas that have data. */
 export function overallOf(areas: AreaScore[]): Pick<AllRounder, "score" | "band" | "strongCount" | "countedAreas"> {
   const counted = areas.filter((a) => a.score !== null);
-  if (counted.length === 0) return { score: null, band: "NONE", strongCount: 0, countedAreas: 0 };
+  const strongCount = counted.filter((a) => a.band === "STRONG").length;
+  if (counted.length < MIN_AREAS_FOR_OVERALL) return { score: null, band: "NONE", strongCount, countedAreas: counted.length };
   const score = clamp(counted.reduce((n, a) => n + (a.score as number), 0) / counted.length);
   return { score, band: band3(score, 80, 60), strongCount: counted.filter((a) => a.band === "STRONG").length, countedAreas: counted.length };
 }
