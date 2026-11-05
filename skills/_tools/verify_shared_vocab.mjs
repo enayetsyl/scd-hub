@@ -930,7 +930,7 @@ const ROLE_CHECK_DEFAULTS = {
     "reports:bank_coverage",
     "assignment:view_all", "assignment:undo_any", "work_claim:view_all", "work_claim:remind", "set_tracker:view_all",
     "saturday_revision:view", "saturday_revision:view_all", "saturday_revision:enter_results", "saturday_revision:edit_all",
-    "saturday_revision:send", "saturday_revision:settings", "class_test:view_all", "class_test:register",
+    "saturday_revision:send", "saturday_revision:correct", "saturday_revision:settings", "class_test:view_all", "class_test:register",
     "question_sets:view_all", "student_profile:view", "student_profile:view_all", "student_profile:export",
     "student_comments:view", "student_comments:view_all", "monthly_report:view", "monthly_report:review",
     "staff_records:view_sensitive", "lesson_plans:view_all", "question_bank:view_all", "teaching_notes:view",

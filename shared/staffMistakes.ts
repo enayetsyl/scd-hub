@@ -49,6 +49,15 @@ export const STAFF_MISTAKE_KINDS = [
   "OBSERVATION_NO_RESPONSE",
   "TASK_OVERDUE",
   "WORK_CLAIM_UNANSWERED",
+  // MR-9: the places deferred from MR-6..8 — tier 1 (D-#1001, D-#1002), tier 3 (D-#1003), tier 2 (D-#1004).
+  "QURAN_EXAM_UNLOCK_CHANGE",
+  "REVISION_ENTRY_CORRECTED",
+  "CT_MARKS_OVERDUE",
+  "QUESTION_RESTORED",
+  "STAFF_ATTENDANCE_REIMPORTED",
+  "SALARY_ENTERED_TWICE",
+  "GUARDIAN_LINK_UNDONE",
+  "ABSENT_AT_DELIVERY",
 ] as const;
 export type StaffMistakeKind = (typeof STAFF_MISTAKE_KINDS)[number];
 
@@ -256,6 +265,49 @@ export const STAFF_MISTAKE_REASONS: Record<StaffMistakeKind, readonly StaffMista
     MINE_REASON,
     { code: "WRONG_REQUEST", bn: "ভুল অনুরোধ দিয়েছিলাম", en: "Filed the wrong request", hintBn: "", selfCounts: true },
     { code: "NOT_NEEDED", bn: "আর দরকার নেই", en: "No longer needed", hintBn: "পরীক্ষা / কাজ বাতিল", autoExcuses: true },
+    OTHER_REASON,
+  ],
+  QURAN_EXAM_UNLOCK_CHANGE: [
+    MINE_REASON,
+    { code: "WRONG_ENTRY", bn: "ভুল নম্বর / ভুল শিক্ষার্থীর ঘরে দিয়েছিলাম", en: "Entered the wrong marks or student", hintBn: "", selfCounts: true },
+    { code: "RECHECKED", bn: "পুনর্মূল্যায়নে নম্বর বদলেছে", en: "The marks changed on a recheck", hintBn: "পরীক্ষক / প্রধান শিক্ষকের সিদ্ধান্ত", autoExcuses: true },
+    OTHER_REASON,
+  ],
+  REVISION_ENTRY_CORRECTED: [
+    MINE_REASON,
+    { code: "WRONG_STUDENT", bn: "ভুল শিক্ষার্থীর ঘরে লিখেছিলাম", en: "Wrote it under the wrong student", hintBn: "", selfCounts: true },
+    { code: "WRONG_PORTION", bn: "ভুল পারা / সূরা / নম্বর লিখেছিলাম", en: "Wrote the wrong portion or marks", hintBn: "", selfCounts: true },
+    OTHER_REASON,
+  ],
+  CT_MARKS_OVERDUE: DUTY_REASONS,
+  QUESTION_RESTORED: [
+    MINE_REASON,
+    { code: "WRONG_QUESTION", bn: "ভুল প্রশ্ন বাতিল করেছিলাম", en: "Retired the wrong question", hintBn: "", selfCounts: true },
+    { code: "POLICY", bn: "প্রশ্ন রাখার সিদ্ধান্ত পরে বদলেছে", en: "The decision to keep it changed later", hintBn: "প্রধান শিক্ষক / বিষয় প্রধানের সিদ্ধান্ত", autoExcuses: true },
+    OTHER_REASON,
+  ],
+  STAFF_ATTENDANCE_REIMPORTED: [
+    MINE_REASON,
+    { code: "WRONG_FILE", bn: "ভুল দিনের / অসম্পূর্ণ শিট দিয়েছিলাম", en: "Uploaded the wrong or an incomplete sheet", hintBn: "", selfCounts: true },
+    { code: "MACHINE", bn: "মেশিনের শিট পরে ঠিক হয়েছে", en: "The machine sheet was corrected later", hintBn: "মেশিন / সফটওয়্যারের সমস্যা", autoExcuses: true },
+    OTHER_REASON,
+  ],
+  SALARY_ENTERED_TWICE: [
+    MINE_REASON,
+    { code: "DUPLICATE", bn: "একই বেতন দুবার লিখেছি", en: "Entered the same salary twice", hintBn: "", selfCounts: true },
+    { code: "INSTALMENT", bn: "বেতন দুই কিস্তিতে দেওয়া হয়েছে", en: "Salary was paid in two instalments", hintBn: "দুটি এন্ট্রিই ঠিক", autoExcuses: true },
+    OTHER_REASON,
+  ],
+  GUARDIAN_LINK_UNDONE: [
+    MINE_REASON,
+    { code: "WRONG_CHILD", bn: "ভুল শিক্ষার্থীর সাথে যুক্ত করেছিলাম", en: "Linked to the wrong child", hintBn: "", selfCounts: true },
+    { code: "FAMILY_ASKED", bn: "পরিবার পরে বদলাতে বলেছে", en: "The family asked to change it", hintBn: "", autoExcuses: true },
+    OTHER_REASON,
+  ],
+  ABSENT_AT_DELIVERY: [
+    MINE_REASON,
+    { code: "LEFT_EARLY", bn: "শিক্ষার্থী তখন ক্লাসে ছিল না", en: "The child was not in class then", hintBn: "আগে চলে গেছে / অন্য কাজে ছিল", autoExcuses: true },
+    { code: "REGISTER_WRONG", bn: "উপস্থিতির খাতাই ভুল ছিল", en: "The attendance register was wrong", hintBn: "খাতায় যিনি উপস্থিতি দিয়েছেন — যাচাইকারী সরাতে পারবেন" },
     OTHER_REASON,
   ],
 };

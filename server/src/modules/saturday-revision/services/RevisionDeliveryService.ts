@@ -39,7 +39,8 @@ import { renderTemplate } from "../../templates/services/MessageTemplateService"
 import { emitRevisionDelivery, emitRevisionEscalation } from "../../notifications/services/emitters";
 import { dateKeyOf } from "../../attendance/dates";
 import { writeAudit } from "../../platform/services/AuditService";
-import { RevisionError, portionRange } from "./RevisionService";
+import { RevisionError, portionRange, shape, validatePortion, type PortionInput, type RevisionEntryShape } from "./RevisionService";
+import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
 import { actingAsFilter } from "../../foundation/services/RoleScope";
 import { personName } from "../../../lib/personName";
 
@@ -182,6 +183,91 @@ export async function deliverEntry(entryId: string, actorId: string): Promise<Re
     deliveredAt: new Date(deliveredAt).toISOString(),
     escalatedStreak,
   };
+}
+
+// ---------------------------------------------------------------------------
+// correctDeliveredEntry (D-#1002) — the one way to change an entry the family already has.
+// ---------------------------------------------------------------------------
+
+export interface CorrectEntryInput {
+  entryId: string;
+  /** The group the caller was checked against — the entry must be in it. */
+  groupId: string;
+  present: boolean;
+  portions?: PortionInput[];
+  teacherComment?: string;
+  /** Why — required; kept with the old version and shown on the mistake entry. */
+  note: string;
+  actorId: string;
+}
+
+export const REVISION_CORRECTION_NOTE_MAX = 500;
+
+/**
+ * Correct a DELIVERED entry (D-#1002, superseding D-#242's "next Saturday" rule): the old
+ * version is kept in corrections[], the family gets the corrected digest marked সংশোধনী (once
+ * per correction), and whoever wrote the old version gets a tier-1 staff-mistake entry.
+ * deliveredAt is not moved. No absence escalation is re-run.
+ */
+export async function correctDeliveredEntry(input: CorrectEntryInput): Promise<RevisionEntryShape> {
+  if (!Types.ObjectId.isValid(input.entryId)) throw new RevisionError("Invalid entry id");
+  const note = input.note.trim();
+  if (!note) throw new RevisionError("কেন সংশোধন করছেন, তা লিখুন");
+  if (note.length > REVISION_CORRECTION_NOTE_MAX) throw new RevisionError(`কারণ ${REVISION_CORRECTION_NOTE_MAX} অক্ষরের মধ্যে লিখুন`);
+  const entry = (await RevisionEntry.findById(input.entryId)) as IRevisionEntry | null;
+  if (!entry) throw new RevisionError("Entry not found");
+  if (entry.groupId.toString() !== input.groupId) throw new RevisionError("Entry is not in this group");
+  if (!entry.deliveredAt) throw new RevisionError("এন্ট্রিটি এখনো পাঠানো হয়নি — সাধারণভাবে বদলান");
+  const raw = input.portions ?? [];
+  if (!input.present && raw.length > 0) throw new RevisionError("An absent student carries no portions");
+  const portions = input.present ? raw.map(validatePortion) : [];
+  const comment = input.teacherComment?.trim() || undefined;
+  const plain = (p: IRevisionPortion[]): string => JSON.stringify(p.map((x) => JSON.parse(JSON.stringify(x)) as unknown));
+  if (entry.present === input.present && plain(entry.portions ?? []) === plain(portions) && (entry.teacherComment || undefined) === comment) {
+    throw new RevisionError("কিছুই বদলায়নি");
+  }
+
+  const previousAuthor = entry.teacherUserId;
+  const corrections = entry.corrections ?? [];
+  corrections.push({
+    at: new Date(),
+    by: new Types.ObjectId(input.actorId),
+    note,
+    before: { present: entry.present, portions: entry.portions ?? [], teacherComment: entry.teacherComment, teacherUserId: previousAuthor },
+  });
+  entry.corrections = corrections;
+  entry.present = input.present;
+  entry.portions = portions;
+  entry.teacherComment = comment;
+  entry.teacherUserId = new Types.ObjectId(input.actorId);
+  await entry.save();
+
+  const student = (await Student.findById(entry.studentId).select("name nameBn phone").lean()) as unknown as StudentLite | null;
+  const studentName = personName(student, "শিক্ষার্থী");
+  const dateKey = dateKeyOf(new Date(entry.date));
+  const kind: "SR_ABSENT" | "SR_DIGEST" = entry.present ? "SR_DIGEST" : "SR_ABSENT";
+  const titleBn = `সংশোধনী: ${await renderTemplate(entry.present ? "sr.digest.title" : "sr.absent.title")}`;
+  const messageBn = entry.present
+    ? await renderTemplate("sr.digest.body", { StudentName: studentName, Date: dateKey, Summary: buildDigestSummary(entry.portions ?? [], entry.teacherComment) })
+    : await renderTemplate("sr.absent.body", { StudentName: studentName, Date: dateKey });
+  const notified = await emitRevisionDelivery({ entryId: entry._id, studentId: entry.studentId, kind, titleBn, messageBn, correction: corrections.length });
+
+  await writeAudit({
+    eventKind: "SR_ENTRY_CORRECTED",
+    actorId: input.actorId,
+    targetId: entry._id,
+    targetKind: "RevisionEntry",
+    meta: { correction: corrections.length, note, previousAuthor: previousAuthor.toString(), present: entry.present, notifiedCount: notified.length },
+  });
+  await recordPlaceMistake({
+    kind: "REVISION_ENTRY_CORRECTED",
+    refKey: entry._id.toString(),
+    ownerId: previousAuthor,
+    correctedBy: input.actorId,
+    at: new Date(),
+    line: `${dateKey} — ${studentName}: পাঠানো রিভিশন সংশোধন করা হয়েছে (${note})`,
+  });
+  return shape(entry);
 }
 
 /** Batch-deliver every entry for a (group × Saturday). Returns each entry's outcome. */

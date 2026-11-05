@@ -43,6 +43,13 @@ export interface IRevisionPortion {
   note?: string;
 }
 
+export interface IRevisionCorrection {
+  at: Date;
+  by: Types.ObjectId;
+  note: string;
+  before: { present: boolean; portions: IRevisionPortion[]; teacherComment?: string; teacherUserId: Types.ObjectId };
+}
+
 export interface IRevisionEntry extends Document {
   _id: Types.ObjectId;
   groupId: Types.ObjectId;
@@ -57,6 +64,9 @@ export interface IRevisionEntry extends Document {
   teacherUserId: Types.ObjectId;
   deliveredAt?: Date;
   deliveryChannels: string[];
+  /** Corrections made after delivery (D-#1002), oldest first — each keeps what the family had
+   *  been sent before it, who corrected it and why. Empty on every uncorrected entry. */
+  corrections?: IRevisionCorrection[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -87,6 +97,21 @@ const RevisionPortionSchema = new Schema<IRevisionPortion>(
   { _id: false },
 );
 
+const RevisionCorrectionSchema = new Schema<IRevisionCorrection>(
+  {
+    at: { type: Date, required: true },
+    by: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    note: { type: String, required: true, trim: true },
+    before: {
+      present: { type: Boolean, required: true },
+      portions: { type: [RevisionPortionSchema], default: [] },
+      teacherComment: { type: String },
+      teacherUserId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    },
+  },
+  { _id: false },
+);
+
 const RevisionEntrySchema = new Schema<IRevisionEntry>(
   {
     groupId: { type: Schema.Types.ObjectId, ref: "SubjectGroup", required: true },
@@ -98,6 +123,7 @@ const RevisionEntrySchema = new Schema<IRevisionEntry>(
     teacherUserId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     deliveredAt: { type: Date },
     deliveryChannels: { type: [String], default: [] },
+    corrections: { type: [RevisionCorrectionSchema], default: undefined },
   },
   { timestamps: true },
 );

@@ -224,6 +224,7 @@ export type AuditEventKind =
   | "BUDGET_LINE_SET"             // a per-(year × head) budget/target line set or edited — prior + new retained (Finance FIN-5, §3/J-FIN5-1, D-#237)
   | "SR_REVISION_RECORDED"        // a Saturday Hifz revision entry recorded/edited — surah:ayah portions (Saturday-Revision SR-1/SR-5, §3/J-SR1-1, D-#241/#242/#833)
   | "SR_REVISION_RESET"           // every revision entry deleted once, at the move to surah:ayah ranges; meta carries the counts (Saturday-Revision SR-5, D-#838)
+  | "SR_ENTRY_CORRECTED"          // a delivered revision entry corrected (D-#1002) — meta.correction/note/previousAuthor
   | "SR_ENTRY_DELIVERED"          // a revision entry delivered to the family — absent alert / weekly digest, sealed (Saturday-Revision SR-2, §3/J-SR2-1/2/3, D-#244)
   | "SR_ABSENCE_ESCALATED"        // a consecutive-absence streak escalated to guardian + Principal (Saturday-Revision SR-2, §3/J-SR2-4, D-#245)
   | "SR_ESCALATION_CONFIG_SET"    // the consecutive-absence threshold edited (Saturday-Revision SR-2, message:dispatch)

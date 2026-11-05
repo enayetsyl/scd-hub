@@ -257,3 +257,31 @@ Owner confirmed as built (2026-11-04):
 - no backfill of notes made before MR-1;
 - the ladder is 3/5/8 with weights 1/½/½;
 - approved leave clears a missed duty automatically.
+
+## 17. MR-9 — the deferred places (D-#1001–#1004)
+
+Everything §§13–15 left out, on the same generic note.
+
+| kind | tier | caught when | owner |
+|---|---|---|---|
+| QURAN_EXAM_UNLOCK_CHANGE | 1 | after an unlock, a result entered before it changes (marks or present/absent; not the comment) | the previous `enteredBy` |
+| REVISION_ENTRY_CORRECTED | 1 | a delivered Saturday-revision entry is corrected (new path below) | the old version's `teacherUserId` |
+| CT_MARKS_OVERDUE | 3 | the 08:00 digest finds a test past its deadline with the teacher (once per test) | the accountable teacher |
+| STAFF_ATTENDANCE_REIMPORTED | 2 | someone else re-uploads a daily staff sheet that changes imported rows (ABSENT→LEAVE excluded) | the earlier `importedBy` |
+| SALARY_ENTERED_TWICE | 2 | a second live SALARY posting lands in the same month | its entrant |
+| GUARDIAN_LINK_UNDONE | 2 | someone else switches a link off within 30 days of making it | the linker (audit) |
+| QUESTION_RESTORED | 2 | someone else restores a retired question | `retiredBy` |
+| ABSENT_AT_DELIVERY | 2 | a child marked absent when work was given is present on that day's marked register | homework: the confirming teacher; assignment: `deliveredBy` |
+
+**Correcting a sent revision entry (D-#1002, supersedes D-#242's "next Saturday").** On the group grid a
+delivered row shows **সংশোধন করুন** to holders of `saturday_revision:correct`. The same form opens with a
+required reason; **সংশোধন পাঠান** keeps the old version in `corrections[]`, sends the family the corrected
+digest titled সংশোধনী (once per correction) and records the entry above. A plain edit stays refused.
+
+Reasons: each place has আমার ভুল ছিল + its own + অন্য কারণ; the duty frame for CT_MARKS_OVERDUE. Accepted at
+once: পুনর্মূল্যায়নে নম্বর বদলেছে, প্রশ্ন রাখার সিদ্ধান্ত পরে বদলেছে, মেশিনের শিট পরে ঠিক হয়েছে, বেতন দুই কিস্তিতে,
+পরিবার পরে বদলাতে বলেছে, শিক্ষার্থী তখন ক্লাসে ছিল না. "উপস্থিতির খাতাই ভুল ছিল" goes to review, and the
+reviewer can move it to the register's marker.
+
+Owner-unconfirmed defaults: the owners above, the 30-day link window, the instalment button, that own
+re-uploads / own restores are not mistakes, and that only "register present, given absent" counts.

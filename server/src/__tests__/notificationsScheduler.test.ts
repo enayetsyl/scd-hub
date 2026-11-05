@@ -100,6 +100,7 @@ jest.mock("../modules/trackers/services/HomeworkDueSweepService", () => ({
 // this suite is DB-free. Its own maths is covered in classTestSummary.test.ts.
 jest.mock("../modules/trackers/services/ClassTestSummaryService", () => ({
   overdueCounts: (f: unknown) => mockOverdueCounts(f),
+  recordLateClassTestMarks: jest.fn().mockResolvedValue(0),
 }));
 // The 17:30 end-of-due-day system chase (owner ruling 2026-08-04) — mocked so the
 // scheduler test stays DB-free (the sweep is covered in homeworkChaseSweep.test.ts).

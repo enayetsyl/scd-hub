@@ -15,6 +15,7 @@
  * (SR-2) / analytics (SR-3) here. Identity plane (names studentIds); no corpus path.
  */
 import { builder } from "../../../schema";
+import { correctDeliveredEntry } from "../services/RevisionDeliveryService";
 import { pageRef } from "../../../pageRef";
 import type { AppContext } from "../../../context";
 import { callerHasPermission } from "@scd/shared";
@@ -290,6 +291,37 @@ builder.mutationField("editRevisionEntry", (t) =>
         present: args.present,
         portions: toPortionInputs(args.portions),
         teacherComment: args.teacherComment ?? undefined,
+        actorId: ctx.auth!.userId as string,
+      });
+    },
+  }),
+);
+
+builder.mutationField("correctRevisionEntry", (t) =>
+  t.field({
+    type: RevisionEntryRef,
+    description:
+      "Correct an entry the family already received (D-#1002): keeps the old version, sends the " +
+      "family a সংশোধনী, and records a staff-mistake entry for the old version's author. " +
+      "Requires saturday_revision:correct + write reach over the entry's Qur'an group. Audited.",
+    authScopes: { hasPermission: "saturday_revision:correct" },
+    args: {
+      entryId: t.arg.string({ required: true }),
+      groupId: t.arg.string({ required: true }),
+      present: t.arg.boolean({ required: true }),
+      portions: t.arg({ type: [PortionInputType], required: false }),
+      teacherComment: t.arg.string({ required: false }),
+      note: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      await assertCanWriteGroup(ctx, args.groupId);
+      return correctDeliveredEntry({
+        entryId: args.entryId,
+        groupId: args.groupId,
+        present: args.present,
+        portions: toPortionInputs(args.portions),
+        teacherComment: args.teacherComment ?? undefined,
+        note: args.note,
         actorId: ctx.auth!.userId as string,
       });
     },
