@@ -95,7 +95,7 @@ Single-step in MR-1; the mockup's Office-then-Principal step is MR-2 if the owne
 6. A reviewer can excuse, count or move; the person is told; nobody reviews their own.
 7. Teachers see only their own entries.
 
-## 9. MR-2 — the warning ladder (D-#940–#943)
+## 9. MR-2 — the warning ladder (D-#940–#942, #1005)
 
 - **Ladder.** After any mistake becomes COUNTED (self-admitted, reviewer, or an explanation
   that ran out — the scheduler settles those every tick), the person's weighted count of
