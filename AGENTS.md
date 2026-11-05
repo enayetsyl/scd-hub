@@ -53,6 +53,9 @@ auto-deploys (`.github/workflows`, `scripts/deploy.sh`). So:
   with English codes on trackers/forms (see `/docs/glossary.md`).
 - **One change at a time.** Don't blend unrelated edits into one batch/commit; each meaningful change
   gets its own `CHANGELOG.md` line.
+- **Help guides move with the feature (D-#973).** A new feature, or a change to an existing screen
+  or flow, adds or updates its in-app help guide (`server/assets/help/guides/`, docs/prd-help-centre.md) in
+  the **same PR**. A guide that describes an old screen is a bug. See `/skills/feature-lifecycle` step 5a.
 - **Lists that grow are paged from the start (D-#761).** Any list that accumulates over time
   (history, records, results, comments, requests, logs) ships with paging in its first version.
   Use a `<name>Page` query returning `{ rows, total, page, pageSize }` (`server/src/lib/paging.ts`,
@@ -113,6 +116,7 @@ auto-deploys (`.github/workflows`, `scripts/deploy.sh`). So:
   prd-student-progress.md ← Office/Principal progress board (student × subject) + two-part improvement actions ticked daily by teacher/guardian, leave hand-over, 11:00 check, SP-1..4 (D-#734–#738)
   prd-mastery.md      ← learning-outcome mastery tracker (add-on): LO catalogue → exceptions-only per-question entry → diagnosis → teacher-laid-out tailored assignment → 50% trigger extra class + re-test → guardian, M-0..M-6 (D-#775–#785); draft catalogues in docs/mastery/lo-catalogue/
   prd-objective-tree.md ← mastery catalogue v2: Claude-drafted domain → objective → sub-objective tree, in-app review (Mahzabin) + lock, OT-0..OT-6 (D-#921–#928); content in docs/mastery/objective-tree/
+  prd-help-centre.md  ← in-app help: permission-filtered Bangla per-task guides with numbered-box screenshots, HC-1..HC-5 (D-#968–#972)
   prd-permission-matrix.md ← every feature × every action as `feature:action`, editable per role (Teacher/Office) + per person; reach (view_all/edit_all), legacy expansion, the new-feature rule (D-#790–#801)
   permission-catalogue/    ← THE registry: every feature + action + defaults (README), per-area resolver/route/app-gate checklists, legacy-expansion, findings
   prd-meeting-comments.md ← parents'-meeting comment chain (subject → class teacher → Principal/Office, Strengths + Concerns) + meeting-day brief & print, MC-1..4 (D-#752–#756)

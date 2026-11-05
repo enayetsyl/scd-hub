@@ -45,7 +45,8 @@ structure; those stay as the history and as a source Claude reuses (question typ
     "claudeNote": "why the line is drawn here / which test it barely passed"
   }],
   "coverage": { "exercisesTotal": 164, "mapped": 164, "unmapped": [{ "ref": "…", "text": "…", "reason": "…" }] },
-  "flags": [{ "code": null, "kind": "VERSION_DIFF", "text": "…" }]   // WORDING_RULE_CONFLICT | TOO_BROAD | DUPLICATE | VERSION_DIFF | OTHER
+  "flags": [{ "code": null, "kind": "VERSION_DIFF", "text": "…" }],  // WORDING_RULE_CONFLICT | TOO_BROAD | DUPLICATE | VERSION_DIFF | OTHER
+  "reviewerNotes": "## পর্যালোচকের নোট …"   // optional (C2 onward): the review sheet's "read first" block; the importer ignores it
 }
 ```
 
@@ -64,4 +65,10 @@ structure; those stay as the history and as a source Claude reuses (question typ
 | Class | BAN | ENG | MATH | BGS | SCI | ISLAM | ARABIC |
 |---|---|---|---|---|---|---|---|
 | C1 | — | — | draft (pilot) | | | book pending | book pending |
-| C3 | — | — | pilot next | — | — | book pending | book pending |
+| C2 | — | — | draft | | | book pending | book pending |
+| C3 | — | — | draft (pilot) | — | — | book pending | book pending |
+| C4 | — | — | draft | — | — | book pending | book pending |
+
+Cross-class prerequisites (C2 → C1 codes, …) resolve at import against the earlier class's live rows, so a class
+is imported after the class below it. The repo CLI `skills/_tools/verify_objective_tree.mjs` has no flag for
+earlier-class codes yet, so it reports those prerequisites as "not found"; every other rule must be green.
