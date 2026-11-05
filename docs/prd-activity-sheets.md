@@ -39,3 +39,12 @@ alert = notification + Today card (no pop-up); corner hours before assembly, tif
 ## Data gaps (owner)
 Mazes and Sudoku sheet PDFs are missing (indexed, no pages); `SCD_Bank_6_Tracing (1).pdf` is a byte-identical
 duplicate.
+
+## As built (AS-1..AS-6, 2026-11-05)
+- **Files:** banks import from the school's own index CSV + sheet PDF + answer PDF; a combined CSV needs the bank code. Page 1 of a bank PDF is its guide; sheets start at page 2. Answer pages are found from the sheet ids printed on the answer PDF.
+- **Copy QR:** 42 pt, bottom-right above the footer line (free on every bank page), code text beside it; a child's own sheet also carries `Name · Class Section · 05 Nov` in Latin (pdf-lib cannot shape Bangla, so names use the roster's English spelling).
+- **Limits:** weekly requests = a rolling 7 days; open sheets counted across tray, guardian and desk paths (REQUESTED / PRINTED / HANDED).
+- **Not returned:** worked out when read (trays, the child's list, reports, Today) — no scheduled job.
+- **Answers:** visible to the guardian only after return; one answer page holds 4–6 sheets' answers.
+- **Reports:** too hard = 5+ back and under 40% all correct at a level.
+- **All-rounder:** activity area counts once the child has had any sheet (like reading after a first storybook).
