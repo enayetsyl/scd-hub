@@ -22,6 +22,7 @@
 import { createHash } from "crypto";
 import { renderTemplate } from "../../templates/services/MessageTemplateService";
 import type { MonthlySnapshot } from "./MonthlyReportService";
+import { geminiKey, geminiModel } from "../../platform/services/AiSettingService";
 
 /** Bumped whenever the prompt's wording or the facts' shape changes — stored on every
  *  draft so a bad batch is traceable to the prompt that produced it. Bumped to mr4-3
@@ -523,9 +524,10 @@ export class GeminiCommentProvider implements CommentProvider {
 
 /** Null when no key is configured — the caller falls back, it does not fail. */
 export function providerFromEnv(): CommentProvider | null {
-  const key = process.env.GEMINI_API_KEY;
+  // D-#967: the key/model the Principal saved in the app, else .env.
+  const key = geminiKey();
   if (!key) return null;
-  return new GeminiCommentProvider(key, process.env.GEMINI_MODEL || undefined);
+  return new GeminiCommentProvider(key, geminiModel());
 }
 
 // ---------------------------------------------------------------------------

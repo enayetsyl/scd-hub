@@ -31,6 +31,8 @@ export interface TaskInput {
   dueKey: string;
   slot?: DaySlot | null;
   effortMin: number;
+  /** D-#960: saved from a voice draft — recorded on the audit row only. */
+  viaVoice?: boolean | null;
 }
 
 export interface TaskPatch {
@@ -129,7 +131,7 @@ export async function createTask(authIn: AuthPayload | null, input: TaskInput): 
     actorRole: auth.role,
     targetId: doc._id.toString(),
     targetKind: "Task",
-    meta: { action: "create", assigneeUserId: input.assigneeUserId, dueKey: input.dueKey },
+    meta: { action: "create", assigneeUserId: input.assigneeUserId, dueKey: input.dueKey, ...(input.viaVoice ? { via: "voice" } : {}) },
   });
   if (!self) await emitTaskAssigned(doc, await nameOf(auth.userId));
   return doc;
