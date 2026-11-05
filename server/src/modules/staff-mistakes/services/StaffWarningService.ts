@@ -241,7 +241,7 @@ export async function recordMeeting(input: {
   return (await shape([w]))[0]!;
 }
 
-/** D-#968: only review_principal handles a Principal's warning. */
+/** D-#974: only review_principal handles a Principal's warning. */
 async function assertMayHandle(ownerId: string, mayHandlePrincipal: boolean): Promise<void> {
   if (!mayHandlePrincipal && (await ownedByPrincipal(ownerId))) {
     throw new StaffWarningError("প্রধান শিক্ষকের আলোচনা শুধু প্রধান শিক্ষক ঠিক করতে পারেন।");

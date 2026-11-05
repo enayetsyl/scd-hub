@@ -215,13 +215,13 @@ const DECIDED_STATUS: Record<Exclude<StaffMistakeDecision, "MOVE">, StaffMistake
 
 /**
  * A reviewer decides (§5). Any row but a MOVED one may be (re)decided — a reviewer can undo
- * their own wrong call. Nobody decides their own entry, except a Principal (D-#968).
+ * their own wrong call. Nobody decides their own entry, except a Principal (D-#974).
  */
 export async function decideMistake(input: {
   mistakeId: string;
   actorId: string;
   actorRole?: string;
-  /** Holds staff_mistakes:review_principal (D-#968). */
+  /** Holds staff_mistakes:review_principal (D-#974). */
   mayHandlePrincipal?: boolean;
   decision: string;
   note?: string | null;
@@ -237,7 +237,7 @@ export async function decideMistake(input: {
   await settleOverdueMistakes(now);
   const row = await StaffMistake.findById(oid(input.mistakeId));
   if (!row) throw new StaffMistakeError("এন্ট্রিটি পাওয়া যায়নি।");
-  // D-#968: a Principal's entries are decided only under review_principal — their own included.
+  // D-#974: a Principal's entries are decided only under review_principal — their own included.
   const principal = !!input.mayHandlePrincipal;
   const own = row.staffUserId.toString() === input.actorId;
   const ownerIsPrincipal = await ownedByPrincipal(row.staffUserId.toString());
@@ -345,7 +345,7 @@ export async function listStaffMistakes(opts: {
   staffUserId?: string | null;
   statuses?: readonly StaffMistakeStatus[];
   excludeStaffUserId?: string | null;
-  /** People the caller may not see (D-#968: the Principal, for Office). */
+  /** People the caller may not see (D-#974: the Principal, for Office). */
   hideStaffUserIds?: readonly string[];
   limit?: number;
   now?: Date;
@@ -408,7 +408,7 @@ export async function listStaffMistakes(opts: {
   }));
 }
 
-/** Active staff a mistake may be moved to (the reviewer's picker); only review_principal may pick a Principal (D-#968). */
+/** Active staff a mistake may be moved to (the reviewer's picker); only review_principal may pick a Principal (D-#974). */
 export async function listMoveTargets(mayHandlePrincipal = false): Promise<{ userId: string; name: string }[]> {
   const roles = mayHandlePrincipal ? ["GUARDIAN"] : ["GUARDIAN", "PRINCIPAL"];
   const users = await User.find({ active: true, role: { $nin: roles } }).select("name nameBn").lean();

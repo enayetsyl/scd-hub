@@ -232,7 +232,7 @@ staff profile) accepts the entry at once as ছুটিতে ছিলাম �
 Deferred: the class-test marks overdue digest only carries counts, not who; Saturday revision and
 Quran marks after unlock have no correction path yet.
 
-## 16. The Principal's own entries; owner confirmations (D-#968)
+## 16. The Principal's own entries; owner confirmations (D-#974)
 
 - **Private to Principals.** An entry or warning that belongs to a Principal-role account is hidden
   from everyone without the new catalogue action `staff_mistakes:review_principal` (PRINCIPAL-DEFAULT,

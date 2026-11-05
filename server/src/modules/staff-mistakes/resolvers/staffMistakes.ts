@@ -39,7 +39,7 @@ import { getStaffMistakeSettings, setStaffMistakeSettings } from "../services/St
 import { callerHasPermission } from "@scd/shared";
 import { hiddenOwnersFor, ownedByPrincipal, PRINCIPAL_REVIEW } from "../services/principalPrivacy";
 
-/** D-#968: may this caller see / decide the Principal's own entries? */
+/** D-#974: may this caller see / decide the Principal's own entries? */
 const mayHandlePrincipal = (ctx: { auth?: Parameters<typeof callerHasPermission>[0] | null }): boolean =>
   !!ctx.auth && callerHasPermission(ctx.auth, PRINCIPAL_REVIEW);
 import {
@@ -266,7 +266,7 @@ builder.queryField("staffMistakeQueue", (t) =>
       withDetail(
         await listStaffMistakes({
           statuses: ["PENDING_REVIEW", "EXPLANATION_DUE"],
-          // A Principal reviews their own entries too (D-#968); Office never sees a Principal's.
+          // A Principal reviews their own entries too (D-#974); Office never sees a Principal's.
           excludeStaffUserId: mayHandlePrincipal(ctx) && (await ownedByPrincipal(ctx.auth!.userId)) ? null : ctx.auth!.userId,
           hideStaffUserIds: await hiddenOwnersFor(mayHandlePrincipal(ctx)),
         }),
