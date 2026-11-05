@@ -333,7 +333,7 @@ export async function storyStickerPdf(labels: Array<{ code: string; seriesNo: nu
     doc.fillColor("#000000");
     for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (qr.modules.get(r, c)) doc.rect(qx + c * cell, qy + r * cell, cell + 0.05, cell + 0.05).fill();
     // The big book number for the shelf, the code underneath, the series name small on top.
-    doc.fillColor("#000000").font("Helvetica").fontSize(7).text(l.seriesName.slice(0, 26), x + 9, y + 9, { width: W - qSize - 22, lineBreak: false });
+    doc.fillColor("#000000").font("Helvetica").fontSize(6).text(l.seriesName.slice(0, 36), x + 9, y + 9, { width: W - qSize - 22, lineBreak: false });
     doc.font("Helvetica-Bold").fontSize(34).text(l.seriesNo != null ? String(l.seriesNo) : "", x + 9, y + 21, { width: W - qSize - 22, lineBreak: false });
     doc.font("Helvetica-Bold").fontSize(10).text(l.code, x + 9, y + H - 24, { width: W - qSize - 18, lineBreak: false });
   });
