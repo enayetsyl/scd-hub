@@ -1,0 +1,133 @@
+{
+ "format": "scd-objective-domains/1",
+ "subject": "ENG",
+ "status": "DRAFT",
+ "domains": [
+  {
+   "code": "DOM-ENG-PHON",
+   "labelBn": "বর্ণ ও ধ্বনি",
+   "labelEn": "Letters and sounds",
+   "order": 1,
+   "note": "C1 বর্ণমালা (বড় ও ছোট হাতের), পাঁচটি vowel, Reading Chart (CV, CVC, vowel team) → C2 Sounds; Reading Chart 2 → C3 middle sounds, Reading Chart 3 → C4 two-syllable words → C5–C6 stress ও intonation। শব্দ পড়তে পারার ভিত্তি, তাই সবার আগে।"
+  },
+  {
+   "code": "DOM-ENG-HAND",
+   "labelBn": "হাতের লেখা ও দেখে লেখা",
+   "labelEn": "Handwriting and copying",
+   "order": 2,
+   "note": "চার লাইনের খাতায় অক্ষর ও শব্দ দেখে লেখা, পরিষ্কার হাতের লেখা (C3–C4 অনুচ্ছেদে ১ নম্বর 'neat writing')। বইয়ে আলাদা শিখনফল না থাকলে এই ক্ষেত্রে সারি থাকে না — ক্ষেত্রটি C1–C6 মই-এর জন্য রাখা।"
+  },
+  {
+   "code": "DOM-ENG-VOCAB",
+   "labelBn": "শব্দ ও অর্থ",
+   "labelEn": "Words and meanings",
+   "order": 3,
+   "note": "শব্দভান্ডার: বর্ণ ধরে শব্দ, বিষয়ভিত্তিক শব্দ (শরীর, পরিবার, ঘর-গ্রাম-শহর), Words to Know-এর ইংরেজি → বাংলা ও বাংলা → ইংরেজি অর্থ, opposite → C2–C4 শব্দ দিয়ে বাক্য নয় (সেটি SENT) → C5 prefix ও suffix (প্রশ্ন ৭)। অর্থের পরীক্ষা ও বানানের পরীক্ষা একই শব্দে, কিন্তু দক্ষতা আলাদা — বানান নিজ ক্ষেত্রে।"
+  },
+  {
+   "code": "DOM-ENG-SPELL",
+   "labelBn": "বানান ও শ্রুতলিখন",
+   "labelEn": "Spelling and dictation",
+   "order": 4,
+   "note": "প্রতি ইউনিটের spelling test, হারানো অক্ষর বসানো, এলোমেলো অক্ষর সাজিয়ে শব্দ → C3–C5 dictation। C1–C2-এ বানান পরীক্ষার প্রশ্ন; C3 থেকে লক করা মই অনুযায়ী বানান ও শ্রুতলিখন শুধু শ্রেণি-পরীক্ষা।"
+  },
+  {
+   "code": "DOM-ENG-SPEAK",
+   "labelBn": "শোনা ও বলা",
+   "labelEn": "Listening and speaking",
+   "order": 5,
+   "note": "সালাম ও অভিবাদন, শ্রেণিকক্ষের নির্দেশ মানা ও দেওয়া, নিজের সম্পর্কে মুখে উত্তর, জোড়ায় কথোপকথন, অনুরোধ (C3–C5)। মৌখিক সারি রুব্রিক (৪ ধাপ); সমবেত পাঠ বা drill শেখানোর পদ্ধতি, আলাদা সারি নয়।"
+  },
+  {
+   "code": "DOM-ENG-READ",
+   "labelBn": "পড়া ও বোঝা",
+   "labelEn": "Reading and comprehension",
+   "order": 6,
+   "note": "কবিতা ও গল্প জোরে পড়া, পড়া লেখা থেকে প্রশ্নের উত্তর → C3–C5 পাঠ্য অংশ (প্রশ্ন ১, ৩: match / true–false, প্রশ্নোত্তর) ও unseen passage (প্রশ্ন ৪, ৫: বক্স থেকে শূন্যস্থান, প্রশ্নোত্তর)। জোরে পড়া (decoding) ও বোঝা আলাদা সারি।"
+  },
+  {
+   "code": "DOM-ENG-NUM",
+   "labelBn": "সংখ্যা, বার, মাস ও সময়",
+   "labelEn": "Numbers, days, months and time",
+   "order": 7,
+   "note": "C1 one–ten কথায়, সাত বার, বারো মাস → C2 ১১–৩০ → C3 ১–১০০ কথায়, ordinal ১ম–১২তম, মাস → C4 ১০০০ পর্যন্ত, ordinal ১১–৩০তম, সময়, a.m./p.m., ফর্ম → C5 প্রশ্ন ১১ (ফর্ম, সময়, cardinal ও ordinal)। লক করা মই-এর 'Numbers, time, forms' সারি।"
+  },
+  {
+   "code": "DOM-ENG-NOUN",
+   "labelBn": "নাম-শব্দ: ধরন, বচন ও লিঙ্গ",
+   "labelEn": "Nouns: kinds, number and gender",
+   "order": 8,
+   "note": "C1 naming word চেনা ও ভাগ (person, animal, bird, place, thing), এক থেকে অনেক (শুধু s), masculine–feminine → C2 proper ও common, s/es/ies → C3 proper ও common, -s ও -es, লিঙ্গের চার ধরন (শ্রেণি-পরীক্ষা) → C4 collective, -ies, -ves, irregular, countable ও uncountable। মই-এর Nouns, Plurals ও Gender এক ক্ষেত্রে।"
+  },
+  {
+   "code": "DOM-ENG-DET",
+   "labelBn": "a, an, the ও this, that",
+   "labelEn": "Articles and pointing words",
+   "order": 9,
+   "note": "C1 a / an, this / that / these / those → C2 a, an, the → C3 a / an / the (প্রশ্ন ৭) → C4 পুনরালোচনা, some / many / much → C5 article-এর সব নিয়ম। নাম-শব্দের আগে বসা শব্দ বেছে নেওয়ার দক্ষতা।"
+  },
+  {
+   "code": "DOM-ENG-PRON",
+   "labelBn": "সর্বনাম (pronoun)",
+   "labelEn": "Pronouns",
+   "order": 10,
+   "note": "C1 he, she, it, they (কর্তা হিসেবে) → C2 পুনরালোচনা → C3 person ও number, my / our / his / her → C4 subject ও object (him, her, them) → C5 পুনরালোচনা।"
+  },
+  {
+   "code": "DOM-ENG-VERB",
+   "labelBn": "ক্রিয়া ও কাল (tense)",
+   "labelEn": "Verbs and tenses",
+   "order": 11,
+   "note": "C1 doing word, runs / run, am / is / are → C2 have / has, doing word -s → C3 present forms, simple present (he / she + s; প্রশ্ন ১২) → C4 helping verb, past form, simple past, present continuous, will → C5 নয়টি tense (প্রশ্ন ৬, ১২)। 'Right form of verbs' এই ক্ষেত্রে।"
+  },
+  {
+   "code": "DOM-ENG-ADJ",
+   "labelBn": "বর্ণনার শব্দ ও adverb",
+   "labelEn": "Describing words and adverbs",
+   "order": 12,
+   "note": "C1 describing word ('The ___ is ___') → C2 describing word → C4 adjective খোঁজা ও ব্যবহার, adverb (how, when, where) → C5 comparison (শ্রেণি-পরীক্ষা)। লক করা মই অনুযায়ী C3-এ adjective নেই।"
+  },
+  {
+   "code": "DOM-ENG-PREP",
+   "labelBn": "অবস্থান ও সংযোগের শব্দ",
+   "labelEn": "Prepositions, conjunctions and interjections",
+   "order": 13,
+   "note": "C1 in, on, under; and, but → C2 position words → C3 in, on, under, above, behind (and / but সেখানেই পুনরালোচনা) → C4 at / in (সময় ও স্থান), or, so, because, interjection → C5 place ও direction। 'preposition' শব্দটি C1-এ ব্যবহার হয় না (সিদ্ধান্ত ১৫)।"
+  },
+  {
+   "code": "DOM-ENG-POS",
+   "labelBn": "শব্দের শ্রেণি চেনা (parts of speech)",
+   "labelEn": "Parts of speech",
+   "order": 14,
+   "note": "দাগ দেওয়া শব্দটি কোন শ্রেণির তা বলা (প্রশ্ন ৬): C3 noun, pronoun, verb → C4 আটটি parts of speech (বছরের শেষে) → C5 আটটিই। একটি শ্রেণির শব্দ ব্যবহার নিজ ক্ষেত্রে (NOUN, VERB…); এখানে শুধু চেনা ও নাম বলা।"
+  },
+  {
+   "code": "DOM-ENG-SENT",
+   "labelBn": "বাক্য গঠন ও অনুবাদ",
+   "labelEn": "Sentences, word order and translation",
+   "order": 15,
+   "note": "C1 শব্দ দিয়ে বাক্য, এলোমেলো শব্দ সাজানো, ছোট বাক্যের অনুবাদ → C3 naming part ও telling part, positive ↔ negative (প্রশ্ন ৮), শব্দ থেকে বাক্য (প্রশ্ন ২, ৯) → C4 do / does / did দিয়ে negative ও প্রশ্ন, kinds of sentence, first / then / finally → C5 underlined শব্দ থেকে WH প্রশ্ন, বাক্য সাজিয়ে গল্প।"
+  },
+  {
+   "code": "DOM-ENG-PUNC",
+   "labelBn": "বড় হাতের অক্ষর ও যতিচিহ্ন",
+   "labelEn": "Capital letters and punctuation",
+   "order": 16,
+   "note": "C1 বড় হাতের অক্ষর, full stop, comma, question mark → C3 capitals, . ? → C4 comma ও apostrophe → C5 উদ্ধৃতিচিহ্ন ও পুরো লেখা (প্রশ্ন ১০)। বাক্য গঠন থেকে আলাদা, কারণ প্রশ্ন ১০ প্রতি শ্রেণিতে নিজস্ব প্রশ্ন।"
+  },
+  {
+   "code": "DOM-ENG-COMP",
+   "labelBn": "অনুচ্ছেদ ও রচনা লেখা",
+   "labelEn": "Paragraph and composition writing",
+   "order": 17,
+   "note": "C1 প্রশ্নের শিকল থেকে ৩–৫ বাক্যের অনুচ্ছেদ → C3 প্রশ্ন থেকে আট বাক্যের অনুচ্ছেদ (প্রশ্ন ১৪) → C4 cue থেকে অনুচ্ছেদ → C5 রচনা, গল্প লেখা। মুখস্থ নয়, নিজের বাক্য।"
+  },
+  {
+   "code": "DOM-ENG-LTR",
+   "labelBn": "সংলাপ, চিঠি, দরখাস্ত ও ইমেইল লেখা",
+   "labelEn": "Dialogue, letter, application and email writing",
+   "order": 18,
+   "note": "C1–C2 সংলাপের শূন্যস্থান (শ্রেণি-পরীক্ষা) → C3 সংলাপ লেখা (প্রশ্ন ১৩) → C4 অর্ধবার্ষিকে সংলাপ, বার্ষিকে ব্যক্তিগত চিঠি → C5 চিঠি, দরখাস্ত, ইমেইল। প্রশ্ন ১৩ প্রতি শ্রেণিতে অনুচ্ছেদ (প্রশ্ন ১৪) থেকে আলাদা, তাই আলাদা ক্ষেত্র।"
+  }
+ ]
+}
