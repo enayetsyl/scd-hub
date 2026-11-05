@@ -1,0 +1,2536 @@
+{
+ "format": "scd-objective-tree/1",
+ "classToken": "C3",
+ "subject": "ENG",
+ "status": "DRAFT",
+ "source": {
+  "book": "C3_ENG_Student_Print_v1 (= C3_ENG_Book_v4.1 content)",
+  "files": [
+   "Book Review Material/Print File/C3_ENG_Student_Print_v1.zip (IDML — the final print, built from C3_ENG_Book_v4.1_Student.docx)",
+   "Book Review Material/Class 3 Eng/C3_ENG_Book_v4.1_Writer-Reviewer.docx (Teacher Note — Learning outcomes (শিখনফল), Appendix — Examinations and Mark Distribution, Decision Log)",
+   "Book Review Material/LOCKED_ENG_Grammar_Ladder_C3-5_v1.md (grammar scope, exam frame, unit placement)",
+   "docs/mastery/lo-catalogue/C3_ENG.md (previous flat draft, book v4 — labels, strands, legacy codes)"
+  ],
+  "readOn": "2026-11-05"
+ },
+ "chapters": [
+  {
+   "number": 1,
+   "titleBn": "Greetings and Introductions"
+  },
+  {
+   "number": 2,
+   "titleBn": "Friends and Family"
+  },
+  {
+   "number": 3,
+   "titleBn": "Commands, Instructions and Requests"
+  },
+  {
+   "number": 4,
+   "titleBn": "Sounds, Months and My Home Library"
+  },
+  {
+   "number": 5,
+   "titleBn": "Their Days"
+  },
+  {
+   "number": 6,
+   "titleBn": "Cleanliness"
+  },
+  {
+   "number": 7,
+   "titleBn": "Save Our Water"
+  },
+  {
+   "number": 8,
+   "titleBn": "Facts and Fables"
+  }
+ ],
+ "questionTypes": [
+  {
+   "code": "QT-TF",
+   "labelBn": "True / false — seen text",
+   "marksBn": "১",
+   "examUse": "প্র. ১ (৫×১ = ৫) — অর্ধবার্ষিকে ইউনিট ১–২-এর পাঠ, বার্ষিকে ইউনিট ৫–৮-এর একটি পাঠ; মিথ্যা বাক্য সংশোধন লাগে না"
+  },
+  {
+   "code": "QT-MATCHMEAN",
+   "labelBn": "Match words with meanings — seen text",
+   "marksBn": "১",
+   "examUse": "প্র. ১-এর বিকল্প রূপ (৫×১ = ৫)"
+  },
+  {
+   "code": "QT-MAKESENT",
+   "labelBn": "Make sentences with the given words",
+   "marksBn": "২",
+   "examUse": "প্র. ২ (৫×২ = ১০) — Words to Know থেকে"
+  },
+  {
+   "code": "QT-PASSANS",
+   "labelBn": "Answer the questions — seen text",
+   "marksBn": "২",
+   "examUse": "প্র. ৩ (৭×২ = ১৪); পূর্ণ বাক্যে ২, শব্দ বা বাক্যাংশে ১"
+  },
+  {
+   "code": "QT-UNSEENFILL",
+   "labelBn": "Unseen passage: fill the gaps with words from the box",
+   "marksBn": "১",
+   "examUse": "প্র. ৪ (৭×১ = ৭) — সবসময় নতুন অনুচ্ছেদ"
+  },
+  {
+   "code": "QT-UNSEENANS",
+   "labelBn": "Unseen passage: answer the questions",
+   "marksBn": "২",
+   "examUse": "প্র. ৫ (৩×২ = ৬)"
+  },
+  {
+   "code": "QT-POS",
+   "labelBn": "Noun, pronoun, verb; proper and common nouns",
+   "marksBn": "১",
+   "examUse": "প্র. ৬ (৫×১ = ৫); proper / common-এ ½ + ½"
+  },
+  {
+   "code": "QT-ARTICLE",
+   "labelBn": "a, an, the",
+   "marksBn": "১",
+   "examUse": "প্র. ৭ (৬×১ = ৬)"
+  },
+  {
+   "code": "QT-NEGATIVE",
+   "labelBn": "Make the sentences negative",
+   "marksBn": "১",
+   "examUse": "প্র. ৮ (৫×১ = ৫) — পুরো বাক্য; একটি ভুলে ½"
+  },
+  {
+   "code": "QT-REARRANGE",
+   "labelBn": "Rearrange the words to make sentences",
+   "marksBn": "১",
+   "examUse": "প্র. ৯ (৭×১ = ৭)"
+  },
+  {
+   "code": "QT-PUNCTUATE",
+   "labelBn": "Capital letters, full stop and question mark",
+   "marksBn": "১",
+   "examUse": "প্র. ১০ (৫×১ = ৫) — পুরো বাক্য; একটি ভুলে ½"
+  },
+  {
+   "code": "QT-NUMBERS",
+   "labelBn": "Numbers in words, ordinals, months",
+   "marksBn": "১",
+   "examUse": "প্র. ১১ (৫×১ = ৫)"
+  },
+  {
+   "code": "QT-VERBFORM",
+   "labelBn": "Right form of the verb (simple present)",
+   "marksBn": "১",
+   "examUse": "প্র. ১২ (৫×১ = ৫)"
+  },
+  {
+   "code": "QT-DIALOGUE",
+   "labelBn": "Dialogue — prompt chart or printed dialogue",
+   "marksBn": "১০",
+   "examUse": "প্র. ১৩ (১০): prompt chart-এ দশ লাইনের প্রতিটিতে ১, ছাপা সংলাপে দশ শূন্যস্থানের প্রতিটিতে ১; একটি ভুলে ½"
+  },
+  {
+   "code": "QT-PARA",
+   "labelBn": "Paragraph — eight sentences, heading, neat writing",
+   "marksBn": "১০",
+   "examUse": "প্র. ১৪ (১০ = ৮ + ১ + ১); প্রশ্নপত্রে শুধু বিষয়"
+  },
+  {
+   "code": "QT-PASSFILL",
+   "labelBn": "Fill in the blanks / complete the sentences from the text",
+   "marksBn": "১",
+   "examUse": "শ্রেণির কাজ (পরীক্ষায় শূন্যস্থান শুধু অদেখা অনুচ্ছেদে)"
+  },
+  {
+   "code": "QT-MCQ",
+   "labelBn": "Tick the correct answer",
+   "marksBn": "১",
+   "examUse": "শ্রেণির কাজ"
+  },
+  {
+   "code": "QT-MEANING",
+   "labelBn": "Meaning test (English → Bengali)",
+   "marksBn": "১",
+   "examUse": "শুধু শ্রেণি-পরীক্ষা"
+  },
+  {
+   "code": "QT-SPELL",
+   "labelBn": "Spelling test and dictation",
+   "marksBn": "১",
+   "examUse": "শুধু শ্রেণি-পরীক্ষা — একটি অক্ষর ভুলে শূন্য"
+  },
+  {
+   "code": "QT-SORT",
+   "labelBn": "Write each word / sentence in the right column",
+   "marksBn": "১",
+   "examUse": "শ্রেণির কাজ"
+  },
+  {
+   "code": "QT-ORDER",
+   "labelBn": "Put the steps in order",
+   "marksBn": "১",
+   "examUse": "শ্রেণির কাজ"
+  },
+  {
+   "code": "QT-SOUND",
+   "labelBn": "Middle sound: say it; same or different",
+   "marksBn": "১",
+   "examUse": "শুধু শ্রেণি-পরীক্ষা — শুনে যাচাই"
+  },
+  {
+   "code": "QT-FREEWRITE",
+   "labelBn": "Write a few sentences on a topic",
+   "marksBn": null,
+   "examUse": "শ্রেণির কাজ"
+  },
+  {
+   "code": "QT-CLASS",
+   "labelBn": "Class-test item (am / is / are, pronouns, gender, plurals, prepositions, and / but, opposites, sentence parts, requests, numbers in figures)",
+   "marksBn": "১",
+   "examUse": "শুধু শ্রেণি-পরীক্ষা (লক করা মই Part F: CT)"
+  },
+  {
+   "code": "QT-ORAL",
+   "labelBn": "Oral / observed in class (4-step rubric)",
+   "marksBn": null,
+   "examUse": "লিখিত পরীক্ষায় নেই — ধারাবাহিক মূল্যায়ন; পড়া শ্রেণি-পরীক্ষা; রুব্রিক: ১ পারে না · ২ সাহায্যে পারে · ৩ প্রায় পারে · ৪ ভালো পারে"
+  }
+ ],
+ "nodes": [
+  {
+   "code": "LO-C3-ENG-01-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-SPEAK",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "Greet and reply with Salam; answer \"How are you?\" with Alhamdulillah",
+   "sourceText": "Greet and reply with Salam, and answer \"How are you?\" with Alhamdulillah.",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/L1/A",
+     "1/L1/B",
+     "1/L1/C"
+    ]
+   },
+   "assess": "RUBRIC",
+   "questionTypeCodes": [
+    "QT-ORAL"
+   ],
+   "homeTipBn": "দেখা হলে আগে সালাম, তারপর \"How are you?\" — উত্তরে \"I'm good, Alhamdulillah.\"; বাড়িতে প্রতিদিন অভ্যাস করান।",
+   "prereqCodes": [
+    "LO-C2-ENG-01-01.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-ENG-01-01"
+   ],
+   "claudeNote": "মৌখিক (ধারাবাহিক মূল্যায়ন)। সংলাপের শূন্যস্থান (1/L1/D) সংলাপ-লেখার সারি ০১-০৬.২-এ।"
+  },
+  {
+   "code": "LO-C3-ENG-01-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-SPEAK",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "Say my favourite game, subject and colour",
+   "sourceText": "Say and write his or her favourite game, subject and colour.",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/L1/E",
+     "1/L1/F"
+    ]
+   },
+   "assess": "RUBRIC",
+   "questionTypeCodes": [
+    "QT-ORAL"
+   ],
+   "homeTipBn": "\"What's your favourite game?\" জিজ্ঞেস করুন; শিশু \"Football is my favourite game.\" ধরনের পূর্ণ বাক্যে বলবে, পরে খাতায় লিখবে।",
+   "prereqCodes": [
+    "LO-C3-ENG-01-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-ENG-01-02"
+   ],
+   "claudeNote": "চেইন ড্রিল ও জোড়ায় বলা। লিখিত অংশ (1/L1/H প্রশ্ন ৪–৫: \"What is your favourite game?\") পড়া বোঝার প্রশ্নের সঙ্গে ছাপা, তাই ০১-০৫.৩-এ।"
+  },
+  {
+   "code": "LO-C3-ENG-01-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-SPEAK",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "Introduce myself and a friend",
+   "sourceText": "Introduce himself or herself and a friend; say I am …, He is …, She is … . [ভাগ: পরিচয় করানো]",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/L2/A",
+     "1/L2/H",
+     "1/L2/I",
+     "1/L3/A",
+     "2/L2/A",
+     "2/L3/A"
+    ]
+   },
+   "assess": "RUBRIC",
+   "questionTypeCodes": [
+    "QT-ORAL"
+   ],
+   "homeTipBn": "বাড়িতে অতিথি এলে শিশুকে ইংরেজিতে নিজের ও ভাই-বোনের পরিচয় দিতে বলুন: \"I am … . He is my brother, … .\"",
+   "prereqCodes": [
+    "LO-C3-ENG-01-01",
+    "LO-C2-ENG-01-02.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-ENG-01-03"
+   ],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-ENG-01-04",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-VERB",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "Am, is, are with I, he, she",
+   "sourceText": "say I am …, He is …, She is … . [ভাগ: am / is / are]",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/L2/G"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CLASS"
+   ],
+   "homeTipBn": "I-এর পরে am, he / she-র পরে is, we / they-এর পরে are — পরিবারের মানুষদের নিয়ে মুখে বাক্য বানান।",
+   "prereqCodes": [
+    "LO-C2-ENG-14-03.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-ENG-SK-GRAM-14"
+   ],
+   "claudeNote": "লক করা মই: am / is / are শুধু শ্রেণি-পরীক্ষা। দ্বিতীয় শ্রেণির ১৪-০৩.১-এর পুনরালোচনা।"
+  },
+  {
+   "code": "LO-C3-ENG-01-05",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-READ",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "Understand a text read in class",
+   "sourceText": "Answer questions on the text Introducing myself in full sentences. (ইউনিট ১) · Read the texts My family and My friend and answer questions on them in full sentences. (ইউনিট ২) · Fill in blanks from a box, match words with meanings, mark true / false and choose the right answer. (ইউনিট ৫)",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-TF",
+    "QT-MATCHMEAN",
+    "QT-PASSANS",
+    "QT-PASSFILL",
+    "QT-MCQ"
+   ],
+   "homeTipBn": "বইয়ের পাঠটি শিশুর সঙ্গে পড়ুন; একটি ভুল বাক্য বলে True না False জিজ্ঞেস করুন, কঠিন শব্দের অর্থ বলান, তারপর Who / What / Why প্রশ্নের উত্তর পূর্ণ বাক্যে লিখতে দিন।",
+   "prereqCodes": [
+    "LO-C2-ENG-05-02.2"
+   ],
+   "tagged": false,
+   "legacyCodes": [
+    "LO-C3-ENG-01-04",
+    "LO-C3-ENG-02-02",
+    "LO-C3-ENG-05-01",
+    "LO-C3-ENG-05-02",
+    "LO-C3-ENG-05-03",
+    "LO-C3-ENG-06-01",
+    "LO-C3-ENG-07-01",
+    "LO-C3-ENG-07-02",
+    "LO-C3-ENG-08-01"
+   ],
+   "claudeNote": "পরীক্ষার প্র. ১ (True / False বা শব্দ-অর্থ মেলানো, ৫×১) ও প্র. ৩ (প্রশ্নের উত্তর, ২ নম্বর করে) — অর্ধবার্ষিকে ইউনিট ১–২-এর তিনটি পাঠ, বার্ষিকে ইউনিট ৫–৮-এর আটটি। আটটি ইউনিট জুড়ে একই দক্ষতা — এক শিখনফল, চার ধাপ: True / False; শব্দের অর্থ; পূর্ণ বাক্যে উত্তর; পাঠ থেকে শূন্যস্থান বা ঠিক উত্তরে টিক (শ্রেণির কাজ)।"
+  },
+  {
+   "code": "LO-C3-ENG-01-05.1",
+   "level": "SUB",
+   "parentCode": "LO-C3-ENG-01-05",
+   "domainCode": "DOM-ENG-READ",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "True or false — from the text",
+   "sourceText": "mark true / false [ভাগ: সত্য / মিথ্যা]",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "2/L2/C",
+     "5/L1/E",
+     "5/L4/F",
+     "6/L1/C",
+     "6/L2/D",
+     "7/L1/C",
+     "7/L2/E",
+     "8/L1/E",
+     "8/L3/C"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-TF"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-ENG-05-02"
+   ],
+   "claudeNote": "প্র. ১ (৫×১): ঠিক True / False-এ ১; মিথ্যা বাক্য সংশোধন নম্বরের জন্য লাগে না (সিদ্ধান্ত ১২০), যদিও বইয়ের কয়েকটি অনুশীলনী সংশোধন চায়।"
+  },
+  {
+   "code": "LO-C3-ENG-01-05.2",
+   "level": "SUB",
+   "parentCode": "LO-C3-ENG-01-05",
+   "domainCode": "DOM-ENG-READ",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "Match words from the text with their meanings",
+   "sourceText": "match words with meanings [ভাগ: শব্দের অর্থ]",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/L1/G",
+     "5/L3/C",
+     "5/L4/D",
+     "6/L1/G",
+     "7/L1/E",
+     "8/L2/F"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MATCHMEAN"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-ENG-05-02"
+   ],
+   "claudeNote": "প্র. ১-এর বিকল্প রূপ (৫×১)। Words to Know-এর বাংলা অর্থ-পরীক্ষা (SK-VOC-01) থেকে আলাদা: এখানে ইংরেজি শব্দের ইংরেজি সমার্থক / অর্থ, পাঠের প্রসঙ্গে।"
+  },
+  {
+   "code": "LO-C3-ENG-01-05.3",
+   "level": "SUB",
+   "parentCode": "LO-C3-ENG-01-05",
+   "domainCode": "DOM-ENG-READ",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "Answer questions on the text in full sentences",
+   "sourceText": "answer questions on them in full sentences. [ভাগ: প্রশ্নের উত্তর]",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/L1/H",
+     "1/L2/D",
+     "2/L2/D",
+     "2/L3/C",
+     "5/L1/C",
+     "5/L2/A",
+     "5/L2/C",
+     "5/L3/D",
+     "5/L4/C",
+     "6/L1/E",
+     "6/L3/D",
+     "7/L1/D",
+     "7/L2/C",
+     "7/L3/C",
+     "8/L1/C",
+     "8/L3/D"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-PASSANS"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C3-ENG-01-05.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-ENG-01-04",
+    "LO-C3-ENG-02-02",
+    "LO-C3-ENG-05-01",
+    "LO-C3-ENG-06-01",
+    "LO-C3-ENG-07-01",
+    "LO-C3-ENG-07-02",
+    "LO-C3-ENG-08-01"
+   ],
+   "claudeNote": "প্র. ৩ (৭×২ = ১৪): পূর্ণ সঠিক বাক্যে ২, শুধু শব্দ বা বাক্যাংশে ১ (সিদ্ধান্ত ৮৯, ৪০)। ইউনিট ৭-এর বুলেট \"Say where water comes from and how we use it\" এই প্রশ্নগুলোর বিষয় (7/L2/C) — আলাদা সারি নয়।"
+  },
+  {
+   "code": "LO-C3-ENG-01-05.4",
+   "level": "SUB",
+   "parentCode": "LO-C3-ENG-01-05",
+   "domainCode": "DOM-ENG-READ",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "Fill in a blank or tick the right answer from the text",
+   "sourceText": "Fill in blanks from a box … and choose the right answer. [ভাগ: শূন্যস্থান ও টিক]",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/L2/E",
+     "1/L2/F",
+     "2/L1/D",
+     "2/L2/E",
+     "2/L3/D",
+     "5/L1/D",
+     "5/L3/B",
+     "5/L4/B",
+     "6/L2/C",
+     "6/L3/C",
+     "7/L1/F",
+     "7/L2/B",
+     "7/L3/B",
+     "8/L1/B",
+     "8/L2/G"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-PASSFILL",
+    "QT-MCQ"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-ENG-05-03"
+   ],
+   "claudeNote": "শ্রেণির কাজ — পরীক্ষায় শূন্যস্থান শুধু অদেখা অনুচ্ছেদে (প্র. ৪, সারি ০৬-০১.১)। পর্যালোচক চাইলে .১-এ মেশাতে পারেন (ফ্ল্যাগ)।"
+  },
+  {
+   "code": "LO-C3-ENG-01-06",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-LTR",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "Write a dialogue (Q13)",
+   "sourceText": "Write a dialogue with a new classmate, from a prompt chart and by completing a printed dialogue. (ইউনিট ১) · Write a dialogue inviting a friend home … (ইউনিট ২) · Write a ten-turn dialogue with a shopkeeper from prompts, and complete a printed shop dialogue. (ইউনিট ৫) · Write a ten-turn dialogue about washing hands from prompts, and complete a printed dialogue. (ইউনিট ৬)",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-DIALOGUE"
+   ],
+   "homeTipBn": "বইয়ের সংলাপটি শিশুর সঙ্গে দুই চরিত্রে পড়ুন; তারপর একই বিষয়ে সালাম দিয়ে শুরু করে দশ লাইনের সংলাপ নিজে লিখতে দিন।",
+   "prereqCodes": [
+    "LO-C2-ENG-01-01.2"
+   ],
+   "tagged": false,
+   "legacyCodes": [
+    "LO-C3-ENG-01-05",
+    "LO-C3-ENG-02-04",
+    "LO-C3-ENG-05-04",
+    "LO-C3-ENG-06-04",
+    "LO-C3-ENG-SK-WRITE-02"
+   ],
+   "claudeNote": "প্র. ১৩ (১০), দুই রূপের যেকোনো একটি: prompt chart থেকে দশ লাইন (প্রতি লাইনে ১, ইসলামি অভিবাদন ঠিক থাকতে হবে) বা ছাপা সংলাপের দশটি শূন্যস্থান। চারটি বিষয়, একই দক্ষতা — এক শিখনফল; নিজে লেখা আর শূন্যস্থান পূরণ আলাদা ব্যর্থ হয়, তাই দুই ধাপ।"
+  },
+  {
+   "code": "LO-C3-ENG-01-06.1",
+   "level": "SUB",
+   "parentCode": "LO-C3-ENG-01-06",
+   "domainCode": "DOM-ENG-LTR",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "Write a ten-turn dialogue from a prompt chart",
+   "sourceText": "Write a dialogue … from a prompt chart [ভাগ: prompt chart থেকে]",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/L3/B",
+     "1/L3/D",
+     "1/L3/E",
+     "2/L1/E",
+     "2/L1/F",
+     "5/L5/A",
+     "5/L5/B",
+     "6/L2/F",
+     "6/L2/G"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-DIALOGUE"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C3-ENG-01-06.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "মডেল সংলাপ পড়া (1/L3/B, D; 2/L1/E; 5/L5/A; 6/L2/F) শেখানোর ধাপ।"
+  },
+  {
+   "code": "LO-C3-ENG-01-06.2",
+   "level": "SUB",
+   "parentCode": "LO-C3-ENG-01-06",
+   "domainCode": "DOM-ENG-LTR",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "Complete a printed dialogue",
+   "sourceText": "and by completing a printed dialogue. [ভাগ: ছাপা সংলাপ]",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/L1/D",
+     "1/L2/J",
+     "1/L3/C",
+     "1/L3/F",
+     "2/L1/G",
+     "5/L5/C",
+     "6/L2/H"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-DIALOGUE"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-ENG-01-07",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-NUM",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "Numbers to 100, ordinal numbers and the months (Q11)",
+   "sourceText": "Read and write the numbers 1–30 in figures and in words. (ইউনিট ১; ৩১–৭০ ইউনিট ২, ৭১–৯০ ইউনিট ৩, ৯১–১০০ ইউনিট ৪) · Say and write the months in order with their ordinal numbers (1st–12th) … (ইউনিট ৪)",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-NUMBERS",
+    "QT-CLASS"
+   ],
+   "homeTipBn": "ক্যালেন্ডার ও বাজারের দাম দেখিয়ে সংখ্যা ইংরেজি কথায় লিখতে দিন (forty-five); মাসের নাম ক্রমে বলান: \"January is the first month.\"",
+   "prereqCodes": [
+    "LO-C2-ENG-02-02",
+    "LO-C1-ENG-01-04.2"
+   ],
+   "tagged": false,
+   "legacyCodes": [
+    "LO-C3-ENG-SK-GRAM-13"
+   ],
+   "claudeNote": "প্র. ১১ (৫×১) \"numbers in words, ordinals, months\"। চার ইউনিটে চারটি সংখ্যা-পরিসর — একই দক্ষতা, তাই এক শিখনফল। কথায় লেখা (প্রশ্নের রূপ), অঙ্কে লেখা ও আগে-পরে (শ্রেণির কাজ), আর ordinal ও মাস — তিনটি আলাদা ব্যর্থতা।"
+  },
+  {
+   "code": "LO-C3-ENG-01-07.1",
+   "level": "SUB",
+   "parentCode": "LO-C3-ENG-01-07",
+   "domainCode": "DOM-ENG-NUM",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "Write numbers up to 100 in words",
+   "sourceText": "Read and write the numbers … in words. [ভাগ: কথায়]",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/L3/G",
+     "1/L3/H",
+     "2/L3/J",
+     "2/L3/K",
+     "3/L3/F",
+     "3/L3/G",
+     "4/L2/B",
+     "4/L2/C",
+     "1/EP/A",
+     "2/EP/B",
+     "3/EP/C"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-NUMBERS"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C2-ENG-02-02"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "forty, ninety, hundred-এর বানানই সাধারণ ভুল।"
+  },
+  {
+   "code": "LO-C3-ENG-01-07.2",
+   "level": "SUB",
+   "parentCode": "LO-C3-ENG-01-07",
+   "domainCode": "DOM-ENG-NUM",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "Write numbers in figures; the number before and after; odd and even",
+   "sourceText": "Read and write the numbers … in figures [ভাগ: অঙ্কে, আগে-পরে]",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/L3/I",
+     "1/L3/J",
+     "2/L3/L",
+     "2/L3/M",
+     "2/L3/N",
+     "3/L3/H",
+     "3/L3/I",
+     "4/L2/D",
+     "4/L2/E"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CLASS"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "শ্রেণির কাজ। পর্যালোচক চাইলে .১-এ মেশাতে পারেন।"
+  },
+  {
+   "code": "LO-C3-ENG-01-07.3",
+   "level": "SUB",
+   "parentCode": "LO-C3-ENG-01-07",
+   "domainCode": "DOM-ENG-NUM",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "Ordinal numbers (1st–12th) and the months in order",
+   "sourceText": "Say and write the months in order with their ordinal numbers (1st–12th) [ভাগ: ordinal ও মাস]",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "4/L3/A",
+     "4/L3/B",
+     "4/L3/C",
+     "4/L3/D",
+     "4/L3/E",
+     "4/L3/F",
+     "4/EP/C",
+     "6/EP/C"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-NUMBERS"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C3-ENG-01-07.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "মাসের বড় হাতের অক্ষর ০১-০৮-এ (প্র. ১০)।"
+  },
+  {
+   "code": "LO-C3-ENG-01-08",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-PUNC",
+   "chapterNumber": 1,
+   "strand": null,
+   "labelBn": "Capital letters, full stop and question mark",
+   "sourceText": "Begin a sentence and a name with a capital letter; end a sentence with a full stop or a question mark. (ইউনিট ১, ৪) · … each month with a capital letter (ইউনিট ৪) · Use capital letters for names of people, places, rivers and days (revision). (ইউনিট ৫) · Rewrite sentences and a short passage with capital letters, full stops and question marks. (ইউনিট ৮)",
+   "bookRef": {
+    "chapter": 1,
+    "lesson": null,
+    "exercises": [
+     "1/L4/A",
+     "1/L4/B",
+     "1/L4/C",
+     "1/EP/B",
+     "2/EP/C",
+     "4/EP/D",
+     "5/L1/F",
+     "5/L2/F",
+     "6/EP/A",
+     "8/L2/A",
+     "8/L2/C",
+     "8/L2/D",
+     "8/L2/E",
+     "8/EP/A"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-PUNCTUATE"
+   ],
+   "homeTipBn": "ছোট হাতে লেখা দুই-তিনটি বাক্য দিন; বাক্যের শুরু, নাম, জায়গা, নদী, বার ও মাসে বড় হাতের অক্ষর আর শেষে দাঁড়ি বা প্রশ্নবোধক চিহ্ন বসিয়ে আবার লিখতে দিন।",
+   "prereqCodes": [
+    "LO-C2-ENG-15-03.1",
+    "LO-C2-ENG-15-03.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-ENG-SK-PUNC-01"
+   ],
+   "claudeNote": "প্র. ১০ (৫×১): পুরো বাক্য আবার লেখা, বড় হাতের অক্ষর ও শেষ চিহ্নসহ ১; একটি ভুলে ½ (সিদ্ধান্ত ৯৪, ৯৮)। দ্বিতীয় শ্রেণিতে তিন ধাপ ছিল; তৃতীয় শ্রেণির প্রশ্ন পুরো বাক্যে এক নম্বর আর অনুশীলনীগুলো মেশানো, তাই ভাগ করা হয়নি। কমা ও apostrophe চতুর্থ শ্রেণিতে (লক করা মই)। চারটি ইউনিটের বুলেট এক সারিতে।"
+  },
+  {
+   "code": "LO-C3-ENG-02-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-SPEAK",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "Talk with a friend: invite, accept, say where I am from",
+   "sourceText": "Talk with a friend: give Salam, invite, accept, say where he or she is from.",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/L1/A",
+     "2/L1/B",
+     "2/L1/C"
+    ]
+   },
+   "assess": "RUBRIC",
+   "questionTypeCodes": [
+    "QT-ORAL"
+   ],
+   "homeTipBn": "বন্ধুকে বাড়িতে দাওয়াত দেওয়ার ছোট সংলাপ বাড়িতে দুই চরিত্রে বলান: \"Can you come to my house?\" — \"Sure, In sha Allah.\"",
+   "prereqCodes": [
+    "LO-C3-ENG-01-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-ENG-02-01"
+   ],
+   "claudeNote": "মৌখিক। লিখিত দাওয়াতের সংলাপ ০১-০৬-এ।"
+  },
+  {
+   "code": "LO-C3-ENG-02-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-VERB",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "Simple present: I play — he plays (Q12)",
+   "sourceText": "Use the simple present: I, we, you, they play; he, she plays. (ইউনিট ২) · Say and write the present form of a verb for I / we / you / they and for he / she (go — goes). (ইউনিট ৫)",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-VERBFORM"
+   ],
+   "homeTipBn": "\"I go to school. He goes to school.\" — পরিবারের সবার রোজকার কাজ নিয়ে বাক্য বানান; he / she হলে ক্রিয়ার শেষে s / es।",
+   "prereqCodes": [
+    "LO-C2-ENG-08-01.3"
+   ],
+   "tagged": false,
+   "legacyCodes": [
+    "LO-C3-ENG-SK-GRAM-11"
+   ],
+   "claudeNote": "প্র. ১২ \"right form of the verb\" (৫×১) — দুই শ্রেণির পরীক্ষাতেই। রূপটি জানা (go — goes, watch — watches) আর বাক্যে কর্তা দেখে ঠিক রূপ বসানো আলাদা ব্যর্থ হয়।"
+  },
+  {
+   "code": "LO-C3-ENG-02-02.1",
+   "level": "SUB",
+   "parentCode": "LO-C3-ENG-02-02",
+   "domainCode": "DOM-ENG-VERB",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "Say and write the present form for he / she and for I / we (go — goes)",
+   "sourceText": "Say and write the present form of a verb for I / we / you / they and for he / she (go — goes).",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/L3/G",
+     "2/L3/H",
+     "5/L1/A",
+     "5/L3/A",
+     "5/L3/H",
+     "5/L3/I",
+     "5/L3/J"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-VERBFORM"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-ENG-02-02.2",
+   "level": "SUB",
+   "parentCode": "LO-C3-ENG-02-02",
+   "domainCode": "DOM-ENG-VERB",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "Write the right form of the verb in a sentence",
+   "sourceText": "Use the simple present: I, we, you, they play; he, she plays.",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/L3/I",
+     "2/EP/A",
+     "3/EP/D",
+     "4/EP/E",
+     "5/EP/A",
+     "7/EP/A",
+     "8/EP/C",
+     "8/L3/E"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-VERBFORM"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C3-ENG-02-02.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "প্র. ১২-এর রূপ: বন্ধনীর ক্রিয়া কর্তা দেখে বসানো — আলাদা বাক্যে ও ছোট লেখায় (মই Part B নিয়ম ৮)।"
+  },
+  {
+   "code": "LO-C3-ENG-02-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-PRON",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "Pronouns for one and for more than one",
+   "sourceText": "Say and write I, we, you, he, she, it, they for one and for more than one.",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/L4/A",
+     "2/L4/B",
+     "2/L4/C",
+     "2/L4/D",
+     "2/L4/E",
+     "2/L4/F",
+     "2/L4/G"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CLASS"
+   ],
+   "homeTipBn": "\"Ali and I\" বললে we, \"Amina and Hafsa\" বললে they — নাম বলে শিশুকে ঠিক pronoun বলতে দিন।",
+   "prereqCodes": [
+    "LO-C2-ENG-14-01.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-ENG-SK-GRAM-07"
+   ],
+   "claudeNote": "লক করা মই: person ও number শুধু শ্রেণি-পরীক্ষা। 2/L4/G (ভুল pronoun খুঁজে আবার লেখা) সবচেয়ে কঠিন অংশ, কিন্তু একই দক্ষতা — ভাগ নয়।"
+  },
+  {
+   "code": "LO-C3-ENG-02-04",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-NOUN",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "Gender: four kinds; change the gender in a sentence",
+   "sourceText": "Sort words into masculine, feminine, common and neuter, and change the gender in a sentence.",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CLASS"
+   ],
+   "homeTipBn": "father → mother, uncle → aunt; একটি বাক্য বলুন (\"My uncle is a teacher.\") — শিশু লিঙ্গ বদলে বলবে (\"My aunt is a teacher.\")।",
+   "prereqCodes": [
+    "LO-C2-ENG-07-03.1",
+    "LO-C2-ENG-07-02"
+   ],
+   "tagged": false,
+   "legacyCodes": [
+    "LO-C3-ENG-SK-GRAM-08"
+   ],
+   "claudeNote": "লক করা মই: লিঙ্গ শুধু শ্রেণি-পরীক্ষা (G-07)। চার ভাগে সাজানো দ্বিতীয় শ্রেণিতে শেখা; নতুন হলো বাক্যে লিঙ্গ বদলানো (he → she, his → her সহ) — আলাদা ব্যর্থতা।"
+  },
+  {
+   "code": "LO-C3-ENG-02-04.1",
+   "level": "SUB",
+   "parentCode": "LO-C3-ENG-02-04",
+   "domainCode": "DOM-ENG-NOUN",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "Sort words: masculine, feminine, common, neuter",
+   "sourceText": "Sort words into masculine, feminine, common and neuter",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/L5/A",
+     "2/L5/B",
+     "2/L5/C",
+     "2/L5/D"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CLASS"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-ENG-02-04.2",
+   "level": "SUB",
+   "parentCode": "LO-C3-ENG-02-04",
+   "domainCode": "DOM-ENG-NOUN",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "Change the gender in a sentence",
+   "sourceText": "and change the gender in a sentence.",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/L5/E",
+     "2/L5/F",
+     "2/L5/G"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CLASS"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C3-ENG-02-04.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-ENG-02-05",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-SENT",
+   "chapterNumber": 2,
+   "strand": null,
+   "labelBn": "Make a sentence with a given word (Q2)",
+   "sourceText": "Make sentences with the given words — Words to Know (পরিশিষ্ট, প্র. ২; শিক্ষক-নোটের শিখনফল-তালিকায় নেই)",
+   "bookRef": {
+    "chapter": 2,
+    "lesson": null,
+    "exercises": [
+     "2/L5/I",
+     "6/L2/E",
+     "7/L3/E"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MAKESENT"
+   ],
+   "homeTipBn": "Words to Know থেকে একটি শব্দ বলুন (clean, river); শিশু তা দিয়ে নিজের একটি পূর্ণ বাক্য বলবে ও লিখবে।",
+   "prereqCodes": [
+    "LO-C1-ENG-10-03",
+    "LO-C3-ENG-SK-VOC-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-ENG-SK-VOC-02"
+   ],
+   "claudeNote": "প্র. ২ (৫×২ = ১০) — প্রতিটি সঠিক বাক্যে ২। কোনো ইউনিটের শিখনফল-তালিকায় এই দক্ষতা নেই, তাই sourceText পরিশিষ্ট থেকে (ফ্ল্যাগ)।"
+  },
+  {
+   "code": "LO-C3-ENG-03-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-SPEAK",
+   "chapterNumber": 3,
+   "strand": null,
+   "labelBn": "Follow and give drill commands",
+   "sourceText": "Follow and give drill commands.",
+   "bookRef": {
+    "chapter": 3,
+    "lesson": null,
+    "exercises": [
+     "3/L1/A",
+     "3/L1/B",
+     "3/L1/C",
+     "3/L1/D"
+    ]
+   },
+   "assess": "RUBRIC",
+   "questionTypeCodes": [
+    "QT-ORAL"
+   ],
+   "homeTipBn": "\"Stand straight. Look in front. Put your hands down.\" — পালা করে নির্দেশ দিন ও শিশুকেও দিতে দিন।",
+   "prereqCodes": [
+    "LO-C2-ENG-03-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-ENG-03-01"
+   ],
+   "claudeNote": "মৌখিক (লক করা মই: commands O)। 3/L1/D (নির্দেশের শব্দ বসানো) শ্রেণির লিখিত কাজ — রুব্রিকের প্রমাণ হিসেবে উদ্ধৃত।"
+  },
+  {
+   "code": "LO-C3-ENG-03-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-READ",
+   "chapterNumber": 3,
+   "strand": null,
+   "labelBn": "Read and follow a list of instructions; dos and don'ts",
+   "sourceText": "Read and follow a list of instructions (a kite, a thermometer, a library card); sort instructions into dos and don'ts.",
+   "bookRef": {
+    "chapter": 3,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-ORAL",
+    "QT-SORT"
+   ],
+   "homeTipBn": "রান্না বা খেলনা বানানোর ছোট নির্দেশনা ইংরেজিতে পড়ে ধাপে ধাপে করতে দিন; কোনটি করা উচিত (do) আর কোনটি নয় (don't) জিজ্ঞেস করুন।",
+   "prereqCodes": [
+    "LO-C2-ENG-03-02"
+   ],
+   "tagged": false,
+   "legacyCodes": [
+    "LO-C3-ENG-03-02"
+   ],
+   "claudeNote": "নির্দেশনা পড়ে মানা / বলা (রুব্রিক) আর Dos / Don'ts-এ সাজানো (লিখিত শ্রেণির কাজ) — আলাদা ব্যর্থতা।"
+  },
+  {
+   "code": "LO-C3-ENG-03-02.1",
+   "level": "SUB",
+   "parentCode": "LO-C3-ENG-03-02",
+   "domainCode": "DOM-ENG-READ",
+   "chapterNumber": 3,
+   "strand": null,
+   "labelBn": "Read a list of instructions and follow or tell the steps",
+   "sourceText": "Read and follow a list of instructions (a kite, a thermometer, a library card) [ভাগ: পড়ে মানা]",
+   "bookRef": {
+    "chapter": 3,
+    "lesson": null,
+    "exercises": [
+     "3/L2/A",
+     "3/L2/B",
+     "3/L2/C",
+     "3/L2/E"
+    ]
+   },
+   "assess": "RUBRIC",
+   "questionTypeCodes": [
+    "QT-ORAL"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-ENG-03-02.2",
+   "level": "SUB",
+   "parentCode": "LO-C3-ENG-03-02",
+   "domainCode": "DOM-ENG-READ",
+   "chapterNumber": 3,
+   "strand": null,
+   "labelBn": "Sort instructions into dos and don'ts",
+   "sourceText": "sort instructions into dos and don'ts. [ভাগ: Dos / Don'ts]",
+   "bookRef": {
+    "chapter": 3,
+    "lesson": null,
+    "exercises": [
+     "3/L2/D"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SORT"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C3-ENG-03-02.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-ENG-03-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-SPEAK",
+   "chapterNumber": 3,
+   "strand": null,
+   "labelBn": "Make a polite request and give a polite answer",
+   "sourceText": "Make a polite request and give a polite answer.",
+   "bookRef": {
+    "chapter": 3,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-ORAL",
+    "QT-CLASS"
+   ],
+   "homeTipBn": "কিছু চাওয়ার সময় \"Can you pass the salt, please?\" বলতে উৎসাহ দিন; উত্তরে \"Sure, here you are.\" বলান।",
+   "prereqCodes": [
+    "LO-C2-ENG-03-03"
+   ],
+   "tagged": false,
+   "legacyCodes": [
+    "LO-C3-ENG-03-03"
+   ],
+   "claudeNote": "মুখে অনুরোধ করা (রুব্রিক; লক করা মই: requests O) আর অনুরোধ লেখা / ঠিক উত্তরের সঙ্গে মেলানো (লিখিত) — আলাদা ব্যর্থতা।"
+  },
+  {
+   "code": "LO-C3-ENG-03-03.1",
+   "level": "SUB",
+   "parentCode": "LO-C3-ENG-03-03",
+   "domainCode": "DOM-ENG-SPEAK",
+   "chapterNumber": 3,
+   "strand": null,
+   "labelBn": "Say a polite request and answer",
+   "sourceText": "Make a polite request and give a polite answer. [ভাগ: মুখে]",
+   "bookRef": {
+    "chapter": 3,
+    "lesson": null,
+    "exercises": [
+     "3/L3/A",
+     "3/L3/B",
+     "3/L3/C"
+    ]
+   },
+   "assess": "RUBRIC",
+   "questionTypeCodes": [
+    "QT-ORAL"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-ENG-03-03.2",
+   "level": "SUB",
+   "parentCode": "LO-C3-ENG-03-03",
+   "domainCode": "DOM-ENG-SPEAK",
+   "chapterNumber": 3,
+   "strand": null,
+   "labelBn": "Write a request; match a request with its answer",
+   "sourceText": "[ভাগ: লিখে]",
+   "bookRef": {
+    "chapter": 3,
+    "lesson": null,
+    "exercises": [
+     "3/L3/D",
+     "3/L3/E"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CLASS"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C3-ENG-03-03.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-ENG-03-04",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-SENT",
+   "chapterNumber": 3,
+   "strand": null,
+   "labelBn": "What is a sentence? Naming part and telling part",
+   "sourceText": "Tell a sentence from a group of words that is not a sentence; find the naming part and the telling part.",
+   "bookRef": {
+    "chapter": 3,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CLASS"
+   ],
+   "homeTipBn": "একটি বাক্য বলুন (\"My mother cooks rice.\"); \"Who?\" জিজ্ঞেস করে naming part (My mother) আর বাকিটা telling part — শিশুকে আলাদা করতে দিন।",
+   "prereqCodes": [
+    "LO-C1-ENG-10-03"
+   ],
+   "tagged": false,
+   "legacyCodes": [
+    "LO-C3-ENG-SK-GRAM-01"
+   ],
+   "claudeNote": "লক করা মই: sentence, naming part ও telling part শুধু শ্রেণি-পরীক্ষা। বাক্য চেনা আর বাক্যের দুই অংশ ভাগ করা — দুই বুলেট-অংশ, দুই ধাপ।"
+  },
+  {
+   "code": "LO-C3-ENG-03-04.1",
+   "level": "SUB",
+   "parentCode": "LO-C3-ENG-03-04",
+   "domainCode": "DOM-ENG-SENT",
+   "chapterNumber": 3,
+   "strand": null,
+   "labelBn": "Tell a sentence from a group of words",
+   "sourceText": "Tell a sentence from a group of words that is not a sentence",
+   "bookRef": {
+    "chapter": 3,
+    "lesson": null,
+    "exercises": [
+     "3/L4/A",
+     "3/L4/B",
+     "3/L4/C"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CLASS"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-ENG-03-04.2",
+   "level": "SUB",
+   "parentCode": "LO-C3-ENG-03-04",
+   "domainCode": "DOM-ENG-SENT",
+   "chapterNumber": 3,
+   "strand": null,
+   "labelBn": "Find or add the naming part and the telling part",
+   "sourceText": "find the naming part and the telling part.",
+   "bookRef": {
+    "chapter": 3,
+    "lesson": null,
+    "exercises": [
+     "3/L4/E",
+     "3/L4/F",
+     "3/L4/G",
+     "3/L4/H"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CLASS"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C3-ENG-03-04.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-ENG-03-05",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-SENT",
+   "chapterNumber": 3,
+   "strand": null,
+   "labelBn": "Negative and positive sentences (Q8)",
+   "sourceText": "Make sentences negative with not, do not and does not, and make negative sentences positive. (ইউনিট ৩) · … with the simple present (he / she + s) and do not / does not. (ইউনিট ৮)",
+   "bookRef": {
+    "chapter": 3,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-NEGATIVE"
+   ],
+   "homeTipBn": "\"I like milk.\" বললে শিশু বলবে \"I do not like milk.\"; \"He plays.\" → \"He does not play.\" — does not-এর পরে s থাকে না, মনে করিয়ে দিন।",
+   "prereqCodes": [
+    "LO-C3-ENG-02-02.2"
+   ],
+   "tagged": false,
+   "legacyCodes": [
+    "LO-C3-ENG-SK-GRAM-02"
+   ],
+   "claudeNote": "প্র. ৮ \"make the sentences negative\" (৫×১) — পুরো বাক্য আবার লেখা। negative → positive শুধু শ্রেণির কাজ। does not-এর পরে ক্রিয়ার s বাদ দেওয়াই প্রধান ভুল।"
+  },
+  {
+   "code": "LO-C3-ENG-03-05.1",
+   "level": "SUB",
+   "parentCode": "LO-C3-ENG-03-05",
+   "domainCode": "DOM-ENG-SENT",
+   "chapterNumber": 3,
+   "strand": null,
+   "labelBn": "Make a sentence negative with not, do not, does not",
+   "sourceText": "Make sentences negative with not, do not and does not",
+   "bookRef": {
+    "chapter": 3,
+    "lesson": null,
+    "exercises": [
+     "3/L5/A",
+     "3/L5/B",
+     "3/L5/C",
+     "3/EP/A",
+     "6/EP/B",
+     "8/L3/F",
+     "8/EP/B"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-NEGATIVE"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-ENG-03-05.2",
+   "level": "SUB",
+   "parentCode": "LO-C3-ENG-03-05",
+   "domainCode": "DOM-ENG-SENT",
+   "chapterNumber": 3,
+   "strand": null,
+   "labelBn": "Make a negative sentence positive",
+   "sourceText": "and make negative sentences positive.",
+   "bookRef": {
+    "chapter": 3,
+    "lesson": null,
+    "exercises": [
+     "3/L5/D"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-NEGATIVE"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C3-ENG-03-05.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-ENG-03-06",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-SENT",
+   "chapterNumber": 3,
+   "strand": null,
+   "labelBn": "Put words in order to make a sentence (Q9)",
+   "sourceText": "Put words in order to make a sentence, with a capital letter and a full stop.",
+   "bookRef": {
+    "chapter": 3,
+    "lesson": null,
+    "exercises": [
+     "3/L4/D",
+     "3/L6/A",
+     "3/L6/B",
+     "3/EP/B",
+     "5/L2/G",
+     "5/L4/E",
+     "5/EP/B",
+     "7/EP/C"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-REARRANGE"
+   ],
+   "homeTipBn": "শব্দকার্ড এলোমেলো করে দিন (\"a / is / Friday / holiday\"); শিশু সাজিয়ে বাক্য লিখবে — প্রথমে বড় হাতের অক্ষর, শেষে দাঁড়ি।",
+   "prereqCodes": [
+    "LO-C1-ENG-10-04",
+    "LO-C3-ENG-03-04.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-ENG-SK-GRAM-12"
+   ],
+   "claudeNote": "প্র. ৯ (৭×১)। 3/L4/D (sentence-এর পাঠে শব্দ সাজানো) একই দক্ষতা — এখানে।"
+  },
+  {
+   "code": "LO-C3-ENG-04-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-PHON",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "Hear and say the middle sound of a word",
+   "sourceText": "Hear and say the middle sounds /æ/, /e/, /ɪ/, /iː/, /ɑː/, /ʌ/.",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": [
+     "4/L1/A",
+     "4/L1/B",
+     "4/L1/C",
+     "4/L1/D",
+     "4/L1/E"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SOUND"
+   ],
+   "homeTipBn": "cat, pen, sit, seat বলুন; শিশু মাঝের ধ্বনিটি আলাদা করে বলবে; দুটি শব্দের মাঝের ধ্বনি একই কি না জিজ্ঞেস করুন।",
+   "prereqCodes": [
+    "LO-C2-ENG-09-01.2"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-ENG-04-01"
+   ],
+   "claudeNote": "শ্রেণিতে শুনে যাচাই (পরীক্ষায় নেই)। দ্বিতীয় শ্রেণির শুরু ও শেষের ধ্বনির পরের ধাপ।"
+  },
+  {
+   "code": "LO-C3-ENG-04-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-PHON",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "Read words from Reading Charts 3 and 4 (blends, silent letters, magic e, vowel teams)",
+   "sourceText": "Read blends, silent letters, magic-e words and r-sound words from Reading Chart 3. (ইউনিট ৪) · Read vowel-team words from Reading Chart 4. (ইউনিট ৮)",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": [
+     "4/L2/A",
+     "8/L4/D"
+    ]
+   },
+   "assess": "RUBRIC",
+   "questionTypeCodes": [
+    "QT-ORAL"
+   ],
+   "homeTipBn": "চার্ট থেকে প্রতিদিন এক সারি শিশুর সঙ্গে পড়ুন (cake, knife, rain, boat); আঙুল রেখে ধ্বনি মিলিয়ে পড়তে দিন।",
+   "prereqCodes": [
+    "LO-C2-ENG-02-03"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-ENG-SK-READ-01"
+   ],
+   "claudeNote": "দুটি Reading Chart একই দক্ষতা — এক রুব্রিক সারি (দ্বিতীয় শ্রেণির ০২-০৩-এর মতো)। পড়া শ্রেণি-পরীক্ষা (মই Part B নিয়ম ৭)।"
+  },
+  {
+   "code": "LO-C3-ENG-04-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-POS",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "Noun, pronoun or verb? (Q6)",
+   "sourceText": "Sort nouns, pronouns and verbs [ভাগ: noun, pronoun, verb] (ইউনিট ৪) · Sort nouns, pronouns and verbs (revision). (ইউনিট ৫)",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": [
+     "4/L4/B",
+     "4/L4/C",
+     "5/L2/D",
+     "5/L2/E",
+     "5/L2/H",
+     "5/L3/G",
+     "4/EP/A",
+     "5/EP/C",
+     "7/EP/B"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-POS"
+   ],
+   "homeTipBn": "বই থেকে একটি বাক্য পড়ে একেকটি শব্দ দেখিয়ে জিজ্ঞেস করুন — এটি noun (নাম), pronoun (নামের বদলে) না verb (কাজ)?",
+   "prereqCodes": [
+    "LO-C2-ENG-06-01.1",
+    "LO-C2-ENG-14-01.1",
+    "LO-C2-ENG-08-01.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-ENG-SK-GRAM-03"
+   ],
+   "claudeNote": "প্র. ৬ (৫×১) দাগ দেওয়া শব্দের শ্রেণি। লক করা মই: তৃতীয় শ্রেণিতে শুধু noun, pronoun, verb; সংজ্ঞা নয়, শুধু উদাহরণ। EP-এর (a) অংশ এখানে, (b) অংশ ০৪-০৪-এ — ক/খ অংশ।"
+  },
+  {
+   "code": "LO-C3-ENG-04-04",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-NOUN",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "Proper nouns and common nouns",
+   "sourceText": "tell proper nouns from common nouns and write proper nouns with a capital letter. [ভাগ: proper ও common]",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": [
+     "4/L4/A",
+     "4/L4/D",
+     "4/L4/E",
+     "4/L4/F",
+     "4/L4/G",
+     "4/EP/A",
+     "5/EP/C",
+     "7/EP/B"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-POS"
+   ],
+   "homeTipBn": "Dhaka আর city, Padma আর river — কোনটি একটি নির্দিষ্ট নাম (proper) আর কোনটি সাধারণ নাম (common), শিশুকে বলতে দিন।",
+   "prereqCodes": [
+    "LO-C2-ENG-06-01.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-ENG-SK-GRAM-04"
+   ],
+   "claudeNote": "প্র. ৬-এর দ্বিতীয় রূপ: proper-এ ½, common-এ ½; বড় হাতের অক্ষরে নম্বর বাড়ে-কমে না (সিদ্ধান্ত ১১১) — তাই বড় হাতের অক্ষর ০১-০৮-এ, এখানে শুধু চেনা।"
+  },
+  {
+   "code": "LO-C3-ENG-04-05",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-DET",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "A, an and the (Q7)",
+   "sourceText": "Use a, an and the.",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-ARTICLE"
+   ],
+   "homeTipBn": "\"___ hour, ___ umbrella, ___ book\" — শব্দের প্রথম অক্ষর নয়, প্রথম ধ্বনি শুনে a না an; একবার বলা জিনিস আবার বললে the।",
+   "prereqCodes": [
+    "LO-C2-ENG-07-01.2"
+   ],
+   "tagged": false,
+   "legacyCodes": [
+    "LO-C3-ENG-SK-GRAM-06"
+   ],
+   "claudeNote": "প্র. ৭ (৬×১)। নতুন: a / an প্রথম ধ্বনি শুনে (an hour, a university)। a / an আর the আলাদা ব্যর্থ হয় (দ্বিতীয় শ্রেণির মতো দুই ধাপ)।"
+  },
+  {
+   "code": "LO-C3-ENG-04-05.1",
+   "level": "SUB",
+   "parentCode": "LO-C3-ENG-04-05",
+   "domainCode": "DOM-ENG-DET",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "A or an: listen to the first sound",
+   "sourceText": "Use a, an [ভাগ: a / an]",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": [
+     "4/L5/A",
+     "4/L5/B",
+     "4/L5/C"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-ARTICLE"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C2-ENG-07-01.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-ENG-04-05.2",
+   "level": "SUB",
+   "parentCode": "LO-C3-ENG-04-05",
+   "domainCode": "DOM-ENG-DET",
+   "chapterNumber": 4,
+   "strand": null,
+   "labelBn": "A, an or the",
+   "sourceText": "and the. [ভাগ: the]",
+   "bookRef": {
+    "chapter": 4,
+    "lesson": null,
+    "exercises": [
+     "4/L5/D",
+     "4/L5/E",
+     "4/L5/F",
+     "4/EP/B",
+     "5/EP/D",
+     "8/EP/D"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-ARTICLE"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C3-ENG-04-05.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-ENG-05-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-PRON",
+   "chapterNumber": 5,
+   "strand": null,
+   "labelBn": "My, our, his, her",
+   "sourceText": "Use my, our, his and her.",
+   "bookRef": {
+    "chapter": 5,
+    "lesson": null,
+    "exercises": [
+     "5/L4/I",
+     "5/L4/J"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CLASS"
+   ],
+   "homeTipBn": "\"This is ___ bag (আমার).\" — জিনিস দেখিয়ে my, our, his, her বসিয়ে বাক্য বলান।",
+   "prereqCodes": [
+    "LO-C3-ENG-02-03"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-ENG-SK-GRAM-07"
+   ],
+   "claudeNote": "লক করা মই: শুধু শ্রেণি-পরীক্ষা।"
+  },
+  {
+   "code": "LO-C3-ENG-06-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-READ",
+   "chapterNumber": 6,
+   "strand": null,
+   "labelBn": "Read an unseen passage (Q4, Q5)",
+   "sourceText": "Read an unseen passage, fill gaps from a box and answer questions on it.",
+   "bookRef": {
+    "chapter": 6,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-UNSEENFILL",
+    "QT-UNSEENANS"
+   ],
+   "homeTipBn": "নতুন একটি ছোট লেখা (খবরের কাগজ বা গল্পের বই থেকে) শিশুকে পড়তে দিন; কয়েকটি শব্দ ঢেকে বক্স থেকে বসাতে দিন, তারপর দুই-তিনটি প্রশ্নের উত্তর লিখতে দিন।",
+   "prereqCodes": [
+    "LO-C3-ENG-01-05.3"
+   ],
+   "tagged": false,
+   "legacyCodes": [
+    "LO-C3-ENG-SK-COMP-01",
+    "LO-C3-ENG-SK-COMP-02"
+   ],
+   "claudeNote": "প্র. ৪ (বক্স থেকে ৭টি শূন্যস্থান, ৭×১) ও প্র. ৫ (৩×২) — পরীক্ষায় সবসময় নতুন অনুচ্ছেদ; বইয়ের Unseen Passage 1 (ইউনিট ২) ও 2 (ইউনিট ৬) শুধু অনুশীলন। শূন্যস্থান পারে কিন্তু প্রশ্নের উত্তর লিখতে পারে না — দুই ধাপ।"
+  },
+  {
+   "code": "LO-C3-ENG-06-01.1",
+   "level": "SUB",
+   "parentCode": "LO-C3-ENG-06-01",
+   "domainCode": "DOM-ENG-READ",
+   "chapterNumber": 6,
+   "strand": null,
+   "labelBn": "Fill gaps in an unseen passage with words from a box",
+   "sourceText": "fill gaps from a box [ভাগ: শূন্যস্থান]",
+   "bookRef": {
+    "chapter": 6,
+    "lesson": null,
+    "exercises": [
+     "2/UP1/A",
+     "6/UP2/A"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-UNSEENFILL"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-ENG-SK-COMP-01"
+   ],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-ENG-06-01.2",
+   "level": "SUB",
+   "parentCode": "LO-C3-ENG-06-01",
+   "domainCode": "DOM-ENG-READ",
+   "chapterNumber": 6,
+   "strand": null,
+   "labelBn": "Answer questions on an unseen passage",
+   "sourceText": "and answer questions on it. [ভাগ: প্রশ্নের উত্তর]",
+   "bookRef": {
+    "chapter": 6,
+    "lesson": null,
+    "exercises": [
+     "2/UP1/B",
+     "6/UP2/B"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-UNSEENANS"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C3-ENG-06-01.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-ENG-SK-COMP-02"
+   ],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-ENG-06-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-READ",
+   "chapterNumber": 6,
+   "strand": null,
+   "labelBn": "Washing hands: put the steps in order and say when",
+   "sourceText": "Put the steps of washing hands in order and say when to wash hands.",
+   "bookRef": {
+    "chapter": 6,
+    "lesson": null,
+    "exercises": [
+     "6/L2/A",
+     "6/L2/B",
+     "6/L3/A",
+     "6/L3/B",
+     "6/L3/E"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-ORDER"
+   ],
+   "homeTipBn": "হাত ধোয়ার সময় ধাপগুলো ইংরেজিতে বলতে দিন (\"First, wet your hands. Then …\"); খাওয়ার আগে ও টয়লেটের পরে হাত ধুতে হয় — জিজ্ঞেস করুন।",
+   "prereqCodes": [
+    "LO-C3-ENG-01-05.3"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-ENG-06-02"
+   ],
+   "claudeNote": "শ্রেণির কাজ। 6/L3/E (পোস্টার) এখানে।"
+  },
+  {
+   "code": "LO-C3-ENG-06-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-READ",
+   "chapterNumber": 6,
+   "strand": null,
+   "labelBn": "Good habits and bad habits",
+   "sourceText": "Sort good habits and bad habits.",
+   "bookRef": {
+    "chapter": 6,
+    "lesson": null,
+    "exercises": [
+     "6/L1/H"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SORT"
+   ],
+   "homeTipBn": "দিনের একটি কাজ বলুন; শিশু ইংরেজিতে বলবে good habit না bad habit, আর কেন।",
+   "prereqCodes": [
+    "LO-C2-ENG-04-02"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-ENG-06-03"
+   ],
+   "claudeNote": "শ্রেণির কাজ। দ্বিতীয় শ্রেণির ০৪-০২-এর পরের ধাপ।"
+  },
+  {
+   "code": "LO-C3-ENG-06-04",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-NOUN",
+   "chapterNumber": 6,
+   "strand": null,
+   "labelBn": "One and many: add -s or -es",
+   "sourceText": "Make plurals with -s and -es.",
+   "bookRef": {
+    "chapter": 6,
+    "lesson": null,
+    "exercises": [
+     "6/L1/D",
+     "6/L4/A",
+     "6/L4/B",
+     "6/L4/C",
+     "6/L4/D"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CLASS"
+   ],
+   "homeTipBn": "box, bus, book, dish-এর বহুবচন মুখে বলান; s, x, ch, sh-এর পরে es।",
+   "prereqCodes": [
+    "LO-C2-ENG-06-02.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-ENG-SK-GRAM-05"
+   ],
+   "claudeNote": "লক করা মই: তৃতীয় শ্রেণিতে শুধু -s ও -es, শ্রেণি-পরীক্ষা; -ies পড়ার জন্য থাকে, অনুশীলন বা পরীক্ষায় নয় (Part A4 নিয়ম ১)।"
+  },
+  {
+   "code": "LO-C3-ENG-07-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-COMP",
+   "chapterNumber": 7,
+   "strand": null,
+   "labelBn": "Say and write how to save water",
+   "sourceText": "Give six tips to save water.",
+   "bookRef": {
+    "chapter": 7,
+    "lesson": null,
+    "exercises": [
+     "7/L3/A",
+     "7/L3/D"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-FREEWRITE"
+   ],
+   "homeTipBn": "বাড়িতে পানি বাঁচানোর উপায় ইংরেজিতে বলতে দিন (\"Turn off the tap.\"); তারপর চারটি বাক্যে লিখতে দিন।",
+   "prereqCodes": [
+    "LO-C3-ENG-SK-WRITE-01.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-ENG-07-03"
+   ],
+   "claudeNote": "শ্রেণির কাজ। 7/L3/D (চারটি প্রশ্নের উত্তরে চার বাক্য) এখানে।"
+  },
+  {
+   "code": "LO-C3-ENG-07-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-PREP",
+   "chapterNumber": 7,
+   "strand": null,
+   "labelBn": "Where is it? In, on, under, above, behind",
+   "sourceText": "Say and write where things are with in, on, under, above and behind.",
+   "bookRef": {
+    "chapter": 7,
+    "lesson": null,
+    "exercises": [
+     "7/L4/A",
+     "7/L4/B",
+     "7/L4/C"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CLASS"
+   ],
+   "homeTipBn": "একটি জিনিস টেবিলের ওপরে, নিচে, পেছনে রেখে \"Where is the bag?\" জিজ্ঞেস করুন; শিশু পূর্ণ বাক্যে বলবে।",
+   "prereqCodes": [
+    "LO-C2-ENG-15-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-ENG-SK-GRAM-09"
+   ],
+   "claudeNote": "লক করা মই: শুধু in, on, under, above, behind, শ্রেণি-পরীক্ষা। above নতুন; বাকিগুলো দ্বিতীয় শ্রেণিতে শেখা।"
+  },
+  {
+   "code": "LO-C3-ENG-07-03",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-PREP",
+   "chapterNumber": 7,
+   "strand": null,
+   "labelBn": "Join with and or but",
+   "sourceText": "Join two words or two sentences with and or but.",
+   "bookRef": {
+    "chapter": 7,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CLASS"
+   ],
+   "homeTipBn": "দুটি ছোট বাক্য বলুন (\"I like apples. I don't like lemons.\"); শিশু and বা but দিয়ে জুড়ে একটি বাক্য বলবে।",
+   "prereqCodes": [
+    "LO-C2-ENG-15-02.2"
+   ],
+   "tagged": false,
+   "legacyCodes": [
+    "LO-C3-ENG-SK-GRAM-10"
+   ],
+   "claudeNote": "লক করা মই: conjunction-এর আলাদা পাঠ নেই; and / but preposition-এর পাঠেই পুনরালোচনা, শ্রেণি-পরীক্ষা। শূন্যস্থান আর দুই বাক্য জোড়া — দ্বিতীয় শ্রেণির মতো দুই ধাপ।"
+  },
+  {
+   "code": "LO-C3-ENG-07-03.1",
+   "level": "SUB",
+   "parentCode": "LO-C3-ENG-07-03",
+   "domainCode": "DOM-ENG-PREP",
+   "chapterNumber": 7,
+   "strand": null,
+   "labelBn": "Fill in and or but",
+   "sourceText": "Join two words … with and or but. [ভাগ: শূন্যস্থান]",
+   "bookRef": {
+    "chapter": 7,
+    "lesson": null,
+    "exercises": [
+     "7/L4/D",
+     "7/L4/E"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CLASS"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-ENG-07-03.2",
+   "level": "SUB",
+   "parentCode": "LO-C3-ENG-07-03",
+   "domainCode": "DOM-ENG-PREP",
+   "chapterNumber": 7,
+   "strand": null,
+   "labelBn": "Join two sentences with and or but",
+   "sourceText": "or two sentences with and or but. [ভাগ: বাক্য জোড়া]",
+   "bookRef": {
+    "chapter": 7,
+    "lesson": null,
+    "exercises": [
+     "7/L4/F"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CLASS"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C3-ENG-07-03.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-ENG-07-04",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-VOCAB",
+   "chapterNumber": 7,
+   "strand": null,
+   "labelBn": "Opposites (the opposites table)",
+   "sourceText": "Say and write the opposites of the words in the opposites table.",
+   "bookRef": {
+    "chapter": 7,
+    "lesson": null,
+    "exercises": [
+     "7/L5/A",
+     "7/L5/B"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-CLASS"
+   ],
+   "homeTipBn": "big বললে small, clean বললে dirty — জোড়া শব্দের খেলা খেলুন।",
+   "prereqCodes": [
+    "LO-C2-ENG-10-03"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-ENG-07-05"
+   ],
+   "claudeNote": "লক করা মই: opposites শ্রেণি-পরীক্ষা। তৃতীয় শ্রেণিতে adjective শেখানো হয় না, তাই ক্ষেত্র \"শব্দ ও অর্থ\" (দ্বিতীয় শ্রেণিতে describing word হিসেবে ADJ-এ ছিল)।"
+  },
+  {
+   "code": "LO-C3-ENG-08-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-VOCAB",
+   "chapterNumber": 8,
+   "strand": null,
+   "labelBn": "Topic words: sort and name (summer and winter, vegetables, parts of a tree or house)",
+   "sourceText": "Sort summer and winter words. (ইউনিট ৮ — একই ধরনের কাজ ইউনিট ২ ও ৫-এ, বুলেট ছাড়া)",
+   "bookRef": {
+    "chapter": 8,
+    "lesson": null,
+    "exercises": [
+     "8/L1/D",
+     "5/L3/E",
+     "5/L4/G",
+     "5/L4/H",
+     "2/L3/F"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SORT"
+   ],
+   "homeTipBn": "বাজারে সবজির ইংরেজি নাম জিজ্ঞেস করুন; শীত আর গরমের জিনিস (sweater, fan) আলাদা করে বলতে দিন।",
+   "prereqCodes": [
+    "LO-C2-ENG-10-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-ENG-08-02"
+   ],
+   "claudeNote": "বিষয়ভিত্তিক শব্দ লেখা ও সাজানো: শীত-গরম (8/L1/D), গাছের অংশ (5/L3/E), সবজি (5/L4/G, H), ঘরের অংশ (2/L3/F — ছড়ার পড়া SK-READ-01-এ, শব্দ লেখা এখানে)। শুধু ইউনিট ৮-এ বুলেট আছে; বাকিগুলো একই দক্ষতা।"
+  },
+  {
+   "code": "LO-C3-ENG-08-02",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-SPEAK",
+   "chapterNumber": 8,
+   "strand": null,
+   "labelBn": "Say what my family does on Eid day",
+   "sourceText": "Read Eid in Our Village and say what a family does on Eid day, with the simple present (he / she + s) and do not / does not. [ভাগ: বলা]",
+   "bookRef": {
+    "chapter": 8,
+    "lesson": null,
+    "exercises": [
+     "8/L3/A",
+     "8/L3/G"
+    ]
+   },
+   "assess": "RUBRIC",
+   "questionTypeCodes": [
+    "QT-ORAL"
+   ],
+   "homeTipBn": "ঈদের দিন পরিবার কী করে, শিশুকে ইংরেজিতে বলতে দিন: \"On Eid day, we go to the Eidgah. My father wears a new panjabi.\"",
+   "prereqCodes": [
+    "LO-C3-ENG-02-02.2",
+    "LO-C3-ENG-03-05.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-ENG-08-03"
+   ],
+   "claudeNote": "মৌখিক। পাঠের প্রশ্ন (8/L3/C, D) ০১-০৫-এ, ক্রিয়ার রূপ (8/L3/E) ০২-০২.২-এ, negative (8/L3/F) ০৩-০৫.১-এ।"
+  },
+  {
+   "code": "LO-C3-ENG-SK-READ-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-READ",
+   "chapterNumber": null,
+   "strand": "READ",
+   "labelBn": "Read a text or poem aloud",
+   "sourceText": "Read the four passages aloud … (ইউনিট ৫) · Read The Ant and the Grasshopper aloud … (ইউনিট ৮) · Spelling, dictation and reading are class tests (লক করা মই, Part B নিয়ম ৭)",
+   "bookRef": {
+    "chapter": null,
+    "lesson": null,
+    "exercises": [
+     "1/L2/B",
+     "1/L2/C",
+     "2/L2/B",
+     "2/L3/B",
+     "2/L3/F",
+     "5/L1/B",
+     "5/L2/B",
+     "5/L4/A",
+     "6/L1/B",
+     "7/L1/B",
+     "7/L2/A",
+     "8/L1/A",
+     "8/L2/B",
+     "8/L3/B"
+    ]
+   },
+   "assess": "RUBRIC",
+   "questionTypeCodes": [
+    "QT-ORAL"
+   ],
+   "homeTipBn": "প্রতিদিন বইয়ের একটি পাঠ শিশুকে জোরে পড়তে দিন; দাঁড়ি ও কমায় থামছে কি না, নতুন শব্দ ঠিক পড়ছে কি না দেখুন।",
+   "prereqCodes": [
+    "LO-C2-ENG-13-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-ENG-SK-READ-02"
+   ],
+   "claudeNote": "পড়া শ্রেণি-পরীক্ষা, ১০০ নম্বরের বাইরে। প্রতিটি ইউনিটের পাঠ পড়া একই দক্ষতা — এক দক্ষতা-ধারা; সমবেত পাঠ (8/L1/A \"read it in groups\") শেখানোর পদ্ধতি, রুব্রিকে শিশুর নিজের পড়া।"
+  },
+  {
+   "code": "LO-C3-ENG-SK-VOC-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-VOCAB",
+   "chapterNumber": null,
+   "strand": "VOC",
+   "labelBn": "Give the Bengali meaning of an English word (Words to Know)",
+   "sourceText": "the meaning test (শ্রেণি-পরীক্ষা; লক করা মই Part B নিয়ম ৭ ও পরিশিষ্ট §১)",
+   "bookRef": {
+    "chapter": null,
+    "lesson": null,
+    "exercises": [
+     "1/L4/D",
+     "2/L5/H",
+     "3/L6/C",
+     "4/L5/G",
+     "5/L3/K",
+     "5/L5/D",
+     "6/L1/A",
+     "6/L4/E",
+     "7/L1/A",
+     "7/L5/C",
+     "7/L5/D",
+     "8/L4/E",
+     "8/L4/F",
+     "1/L4 Words to Know/—",
+     "2/L5 Words to Know/—",
+     "3/L6 Words to Know/—",
+     "4/L5 Words to Know/—",
+     "5/L3 Words to Know/—",
+     "5/L5 Words to Know/—",
+     "6/L4 Words to Know/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-MEANING"
+   ],
+   "homeTipBn": "প্রতি ইউনিটের Words to Know থেকে পাঁচটি শব্দ বলুন; শিশু বাংলা অর্থ বলবে ও লিখবে।",
+   "prereqCodes": [
+    "LO-C2-ENG-SK-VOC-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-ENG-SK-VOC-01"
+   ],
+   "claudeNote": "শুধু শ্রেণি-পরীক্ষা (তৃতীয় শ্রেণির পরীক্ষায় অর্থের আলাদা প্রশ্ন নেই; প্র. ১-এর শব্দ-অর্থ মেলানো পাঠের প্রসঙ্গে, ০১-০৫.২)। Words to Know প্র. ২-এর শব্দও (০২-০৫)।"
+  },
+  {
+   "code": "LO-C3-ENG-SK-SPELL-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-SPELL",
+   "chapterNumber": null,
+   "strand": "SPELL",
+   "labelBn": "Spelling test and dictation (Words to Know)",
+   "sourceText": "spelling and dictation … class tests (লক করা মই Part B নিয়ম ৭; পরিশিষ্ট §১)",
+   "bookRef": {
+    "chapter": null,
+    "lesson": null,
+    "exercises": [
+     "3/L6/D",
+     "4/L5/H",
+     "5/L3/L",
+     "5/L5/E",
+     "6/L4/F",
+     "7/L5/E",
+     "8/L4/G",
+     "6/L1/F",
+     "7/L2/D",
+     "1/L4 Spelling test/—",
+     "2/L5 Spelling test/—"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-SPELL"
+   ],
+   "homeTipBn": "ইউনিটের Words to Know থেকে পাঁচটি শব্দ বলুন; শিশু না দেখে লিখবে। একটি ছোট বাক্য বলে শ্রুতলিখনও করান।",
+   "prereqCodes": [
+    "LO-C2-ENG-SK-SPELL-01",
+    "LO-C2-ENG-02-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-ENG-SK-SPELL-01"
+   ],
+   "claudeNote": "শুধু শ্রেণি-পরীক্ষা; একটি অক্ষর ভুল হলে শূন্য। এলোমেলো অক্ষরে শব্দ (6/L1/F, 7/L2/D) এখানে। ইউনিট ১–২-এর spelling test অক্ষরহীন, ইউনিট ৩ থেকে অক্ষরযুক্ত (ফ্ল্যাগ)।"
+  },
+  {
+   "code": "LO-C3-ENG-SK-WRITE-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-COMP",
+   "chapterNumber": null,
+   "strand": "WRITE",
+   "labelBn": "Write a paragraph of eight sentences with its heading (Q14)",
+   "sourceText": "Write the paragraph My Family in eight sentences, with its heading. (ইউনিট ২) · Write the paragraph My Home Library, with its heading, in eight sentences. (ইউনিট ৪) · Write the paragraph The Importance of Water, with its heading, from eight questions, and then from the heading alone. (ইউনিট ৭) · Write the paragraph Our Prophet Muhammad ﷺ … (ইউনিট ৮)",
+   "bookRef": {
+    "chapter": null,
+    "lesson": null,
+    "exercises": []
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-PARA"
+   ],
+   "homeTipBn": "শিরোনাম আগে লিখে আটটি প্রশ্নের উত্তর পরপর লিখতে দিন; পরের দিন শুধু শিরোনাম দেখে নিজে আট বাক্য লিখতে দিন। মুখস্থ নয়, নিজের বাক্য।",
+   "prereqCodes": [
+    "LO-C2-ENG-SK-WRITE-01"
+   ],
+   "tagged": false,
+   "legacyCodes": [
+    "LO-C3-ENG-SK-WRITE-01",
+    "LO-C3-ENG-02-03",
+    "LO-C3-ENG-04-02",
+    "LO-C3-ENG-07-04",
+    "LO-C3-ENG-08-04"
+   ],
+   "claudeNote": "প্র. ১৪ (১০): আট বাক্যে ৮, শিরোনামে ১, পরিষ্কার লেখায় ১; বড় হাতের অক্ষর বা দাঁড়ি ছাড়া বাক্যে ½ (সিদ্ধান্ত ৮১, ১১২, ১১৩)। প্রশ্নপত্রে শুধু বিষয় ছাপা হয়। চারটি বিষয়ের একই দক্ষতা — এক দক্ষতা-ধারা; বই নিজেই দুই ধাপে শেখায় (প্রশ্ন থেকে, পরে শুধু শিরোনাম থেকে) — দ্বিতীয়টিই পরীক্ষার রূপ।"
+  },
+  {
+   "code": "LO-C3-ENG-SK-WRITE-01.1",
+   "level": "SUB",
+   "parentCode": "LO-C3-ENG-SK-WRITE-01",
+   "domainCode": "DOM-ENG-COMP",
+   "chapterNumber": null,
+   "strand": "WRITE",
+   "labelBn": "Answer the eight questions and write them as a paragraph",
+   "sourceText": "from eight questions [ভাগ: প্রশ্ন থেকে]",
+   "bookRef": {
+    "chapter": null,
+    "lesson": null,
+    "exercises": [
+     "2/L2/F",
+     "2/L2/G",
+     "4/L3/G",
+     "4/L3/H",
+     "7/L2/F",
+     "8/L4/A",
+     "8/L4/B",
+     "2/L3/E",
+     "5/L3/F"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-PARA"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": "2/L3/E (বন্ধু সম্পর্কে পাঁচ প্রশ্নের পূর্ণ-বাক্য উত্তর) ও 5/L3/F (নিজের গ্রাম বা এলাকা নিয়ে উত্তর) একই প্রথম ধাপ — এখানে।"
+  },
+  {
+   "code": "LO-C3-ENG-SK-WRITE-01.2",
+   "level": "SUB",
+   "parentCode": "LO-C3-ENG-SK-WRITE-01",
+   "domainCode": "DOM-ENG-COMP",
+   "chapterNumber": null,
+   "strand": "WRITE",
+   "labelBn": "Write the paragraph from the heading alone",
+   "sourceText": "and then from the heading alone. [ভাগ: শুধু শিরোনাম থেকে]",
+   "bookRef": {
+    "chapter": null,
+    "lesson": null,
+    "exercises": [
+     "2/L2/H",
+     "4/L3/I",
+     "7/L2/G",
+     "8/L4/C"
+    ]
+   },
+   "assess": "QUESTION",
+   "questionTypeCodes": [
+    "QT-PARA"
+   ],
+   "homeTipBn": null,
+   "prereqCodes": [
+    "LO-C3-ENG-SK-WRITE-01.1"
+   ],
+   "tagged": true,
+   "legacyCodes": [],
+   "claudeNote": null
+  },
+  {
+   "code": "LO-C3-ENG-SK-HW-01",
+   "level": "OBJECTIVE",
+   "parentCode": null,
+   "domainCode": "DOM-ENG-HAND",
+   "chapterNumber": null,
+   "strand": "HW",
+   "labelBn": "Neat handwriting in written work",
+   "sourceText": "Q14 paragraph (10): 8 marks for eight correct sentences …, 1 for the heading, 1 for neat writing. (পরিশিষ্ট §১, সিদ্ধান্ত ৮১, ১১২)",
+   "bookRef": {
+    "chapter": null,
+    "lesson": null,
+    "exercises": [
+     "2/L2/H",
+     "4/L3/I",
+     "7/L2/G",
+     "8/L4/C"
+    ]
+   },
+   "assess": "RUBRIC",
+   "questionTypeCodes": [
+    "QT-ORAL"
+   ],
+   "homeTipBn": "খাতায় অক্ষর সমান মাপে, লাইনের ওপর ও শব্দের মাঝে ফাঁক রেখে লিখছে কি না দেখুন; অগোছালো লেখা আবার পরিষ্কার করে লিখতে দিন।",
+   "prereqCodes": [
+    "LO-C2-ENG-SK-HW-01"
+   ],
+   "tagged": true,
+   "legacyCodes": [
+    "LO-C3-ENG-SK-HW-01"
+   ],
+   "claudeNote": "অনুচ্ছেদের \"neat writing\" ১ নম্বর — প্রশ্ন-ব্যাংকে অনুচ্ছেদ প্রশ্নের খ-অংশ এই কোডে, বাকি ৯ নম্বর SK-WRITE-01.২-এ।"
+  }
+ ],
+ "coverage": {
+  "exercisesTotal": 300,
+  "mapped": 300,
+  "unmapped": [],
+  "note": "exercisesTotal = the print's lettered exercises (300): every \"A … N\" exercise of the lessons, the Exam Practice page (EP) and the two Unseen Passages (UP1 in Unit 2, UP2 in Unit 6) of Units 1–8. Refs ending '/—' are unlettered blocks: the Unit 1–2 spelling tests and the Words to Know tables."
+ },
+ "flags": [
+  {
+   "code": null,
+   "kind": "VERSION_DIFF",
+   "text": "ছাপা ফাইল C3_ENG_Student_Print_v1 (IDML) তৈরি হয়েছে C3_ENG_Book_v4.1_Student.docx থেকে (README); মিলিয়ে দেখা হয়েছে C3_ENG_Book_v4.1_Writer-Reviewer.docx-এর সঙ্গে — ৩০০টি অক্ষরযুক্ত অনুশীলনী একই ক্রমে ও একই নির্দেশনায়। ছাপার নাম \"v1\" মানে ছাপা-ফাইলের প্রথম সংস্করণ, বইয়ের সংস্করণ v4.1 (= v4 + ১২১টি ছবি, লেখা বদলায়নি)। শিক্ষক-নোট, পরিশিষ্ট ও সিদ্ধান্ত-লগ v4.1 Writer-Reviewer থেকে; ব্যাকরণের সীমা LOCKED_ENG_Grammar_Ladder_C3-5_v1.md থেকে।"
+  },
+  {
+   "code": "02-05",
+   "kind": "OTHER",
+   "text": "প্র. ২ \"make sentences with the given words\" (৫×২ = ১০ নম্বর, দুই পরীক্ষাতেই) কোনো ইউনিটের শিক্ষক-নোটের শিখনফল-তালিকায় নেই — অনুশীলনী আছে (2/L5/I, 6/L2/E, 7/L3/E)। বই-দলের জন্য: ইউনিট ২ (বা ৬) -এর শিখনফলে \"Make a sentence with each Words to Know word\" যোগ করা দরকার। sourceText এখন পরিশিষ্ট থেকে।"
+  },
+  {
+   "code": "06-01",
+   "kind": "WORDING_RULE_CONFLICT",
+   "text": "লক করা মই Part B নিয়ম ৫: তৃতীয়–চতুর্থ শ্রেণিতে \"an unseen passage in every second unit\" (G-04) — আট ইউনিটের বইয়ে ৪টি হওয়ার কথা (ইউনিট ২, ৪, ৬, ৮), কিন্তু বইয়ে মাত্র ২টি (Unseen Passage 1 ইউনিট ২-এ, 2 ইউনিট ৬-এ)। প্র. ৪–৫ (১৩ নম্বর) দুই পরীক্ষাতেই, অনুশীলন কম। বই-দলের জন্য: ইউনিট ৪ ও ৮-এ দুটি অদেখা অনুচ্ছেদ যোগ।"
+  },
+  {
+   "code": "SK-SPELL-01",
+   "kind": "OTHER",
+   "text": "বইয়ের অক্ষর-বিন্যাসে অমিল: ইউনিট ১–২-এর spelling test অক্ষরহীন ব্লক, ইউনিট ৩ থেকে অক্ষরযুক্ত অনুশীলনী (\"D Spelling test\", \"H Spelling test\" …); Words to Know-ও কোথাও ব্লক, কোথাও অক্ষরযুক্ত (7/L5/C, 8/L4/E)। বই-দল একরূপ করতে পারে; গাছে দুটোই SK-SPELL-01 / SK-VOC-01-এ।"
+  },
+  {
+   "code": "01-05",
+   "kind": "OTHER",
+   "text": "পাঠ বোঝার সারি আট ইউনিট জুড়ে এক শিখনফল ০১-০৫ (তিনটি ইউনিটের বুলেট একসঙ্গে), চার ধাপে: True / False (প্র. ১), শব্দ-অর্থ মেলানো (প্র. ১-এর বিকল্প), পূর্ণ বাক্যে উত্তর (প্র. ৩), শূন্যস্থান / টিক (শ্রেণির কাজ)। ইউনিট ৬, ৭, ৮-এর \"Read … and answer questions on it\" বুলেটগুলোও এখানে।"
+  },
+  {
+   "code": "SK-WRITE-01.1",
+   "kind": "WORDING_RULE_CONFLICT",
+   "text": "Claude দ্বিতীয় পাঠ (প্রস্তাব): বার্ষিক অনুচ্ছেদ \"Our Prophet Muhammad ﷺ\" (8/L4/B, প্র. ১৪-এর দুই বিষয়ের একটি)-এর প্রশ্নের শিকল অতীত কালে (\"Where and when was he born?\", \"What did people call him …?\", \"When did Allah send him …?\") — উত্তর লিখতে simple past লাগে। লক করা মই (A1: past forms, simple past → চতুর্থ শ্রেণি) অনুযায়ী তৃতীয় শ্রেণিতে অতীত কাল শেখানো হয় না। একই সমস্যা Unseen Passage 1-এর প্রশ্নে (2/UP1/B: \"Why did the people trust Muhammad ﷺ?\", \"How did … stop the fight?\"); বই শুধু একটি শব্দ-বক্স দেয় (is → was, call → called)। বই-দলের জন্য: প্রশ্ন ও মডেল বর্তমান কালে (\"He is the last Prophet. People call him Al-Ameen …\") বা was / did-এর উত্তর-কাঠামো ছাপা; নয়তো প্রশ্নকর্তা অতীত কালের উত্তর চাইবেন না।"
+  },
+  {
+   "code": "08-01",
+   "kind": "OTHER",
+   "text": "Claude দ্বিতীয় পাঠ (প্রস্তাব): বিষয়ভিত্তিক শব্দের সারি ০৮-০১ ইউনিট ৮-এর কোডে, যদিও একই কাজ ইউনিট ২ ও ৫-এ আগে আসে — কারণ শুধু ইউনিট ৮-এর বুলেটে (\"Sort summer and winter words\") এই দক্ষতা লেখা। শ্রেণির কাজ; পর্যালোচক চাইলে সারিটি SK-VOC-01-এ মেশাতে পারেন।"
+  },
+  {
+   "code": "01-04",
+   "kind": "OTHER",
+   "text": "Claude দ্বিতীয় পাঠ (প্রস্তাব): ০১-০৪ (am / is / are) একটিমাত্র অনুশীলনী (1/L2/G), শ্রেণি-পরীক্ষা, দ্বিতীয় শ্রেণির পুনরালোচনা। লক করা মই-এর Part F-এ আছে বলে রাখা হলো; বাদ দিলে 1/L2/G ০১-০৩-এ যেতে পারে (তবে সেটি মৌখিক রুব্রিক)।"
+  },
+  {
+   "code": "06-01",
+   "kind": "OTHER",
+   "text": "Unseen Passage 2 (ইউনিট ৬, \"The Kind Man and the Thirsty Dog\") বইয়ে এখনো উৎস-যাচাইয়ের জন্য চিহ্নিত (আগের খসড়ার নোট) — শুধু অনুশীলন, পরীক্ষায় আসে না; তথ্য হিসেবে।"
+  },
+  {
+   "code": "04-03",
+   "kind": "OTHER",
+   "text": "ইউনিট ৪-এর বুলেট \"Sort nouns, pronouns and verbs; tell proper nouns from common nouns and write proper nouns with a capital letter\" তিন ভাগে গেছে: noun / pronoun / verb → ০৪-০৩ (ক্ষেত্র: parts of speech), proper / common → ০৪-০৪ (ক্ষেত্র: নাম-শব্দ), বড় হাতের অক্ষর → ০১-০৮ (প্র. ১০)। কারণ প্র. ৬-এ বড় হাতের অক্ষরে নম্বর নেই (সিদ্ধান্ত ১১১), আর দুই ক্ষেত্রের সারি একই শিখনফলের ধাপ হতে পারে না।"
+  }
+ ],
+ "reviewerNotes": "## পর্যালোচকের নোট (মাহজাবিন — আগে পড়ুন)\n\n**কীভাবে পড়বেন।** ✓ চিহ্নের প্রতিটি সারি একটি দক্ষতা — প্রশ্ন, বাড়ির কাজ ও রুব্রিক এই সারি ধরেই ট্যাগ হবে। ✓ ছাড়া শিখনফল শুধু দল; অভিভাবকেরা শিখনফলের নাম (ইংরেজিতে) ও বাংলা টিপ দেখবেন। আগের ধাপ দ্বিতীয় (C2·…) ও প্রথম (C1·…) শ্রেণির কোডে। ব্যাকরণের সীমা লক করা C3–5 মই (প্রতিটি সারি মিলিয়ে দেখা হয়েছে; শ্রেণি-পরীক্ষার বিষয়ে প্রশ্নের ধরন QT-CLASS)। আগের ফ্ল্যাট খসড়া (বই v4 = v4.1-এর লেখা) ছিল ৩১টি ইউনিট-শিখনফল + ২৪টি দক্ষতা-ধারা; তার SK-GRAM-০১…১৪ ও অন্য ধারাগুলো এখন ইউনিট-শিখনফল (প্রথম দেখা ইউনিটের কোডে), প্রতিটি সারির legacyCodes-এ পুরোনো কোড।\n\n**আগে এগুলো দেখুন (Claude-এর বিচার):**\n1. **বৃত্তির ১৪ প্রশ্নের প্রতিটি এক জায়গায়:** প্র. ১–৩ → ০১-০৫ (চার ধাপ), প্র. ২ → ০২-০৫, প্র. ৪–৫ → ০৬-০১, প্র. ৬ → ০৪-০৩ + ০৪-০৪, প্র. ৭ → ০৪-০৫, প্র. ৮ → ০৩-০৫, প্র. ৯ → ০৩-০৬, প্র. ১০ → ০১-০৮, প্র. ১১ → ০১-০৭, প্র. ১২ → ০২-০২, প্র. ১৩ → ০১-০৬, প্র. ১৪ → SK-WRITE-01 (+ SK-HW-01)। একই দক্ষতা কয়েক ইউনিটে থাকলে প্রথম ইউনিটের কোডে এক সারি।\n2. **সংলাপ (০১-০৬) ও অনুচ্ছেদ (SK-WRITE-01) দুই ধাপে** — বই নিজেই দুই রূপে শেখায়: সংলাপে prompt chart / ছাপা শূন্যস্থান, অনুচ্ছেদে প্রশ্ন থেকে / শুধু শিরোনাম থেকে।\n3. **যতিচিহ্ন (০১-০৮) ভাগ করা হয়নি**, প্রথম-দ্বিতীয় শ্রেণির উল্টো: প্র. ১০ পুরো বাক্যে এক নম্বর আর বইয়ের সব অনুশীলনী মেশানো।\n4. **ইউনিট ৪-এর একটি বুলেট তিন সারিতে** (noun-pronoun-verb / proper-common / বড় হাতের অক্ষর) — ফ্ল্যাগ দেখুন।\n5. **নতুন দক্ষতা-ধারা SK-READ-01 (জোরে পড়া, শ্রেণি-পরীক্ষা):** প্রতিটি পাঠের \"Read.\" এখানে; প্রশ্নগুলো ০১-০৫-এ।\n6. **মৌখিক রুব্রিক সারি:** ০১-০১, ০১-০২, ০১-০৩, ০২-০১, ০৩-০১, ০৩-০২.১, ০৩-০৩.১, ০৪-০২, ০৮-০২, SK-READ-01, SK-HW-01।\n7. **সম্ভাব্য মেশানো:** ০১-০৫.৪ (পাঠ থেকে শূন্যস্থান / টিক — শ্রেণির কাজ) → ০১-০৫.১; ০১-০৭.২ (অঙ্কে লেখা) → ০১-০৭.১; ০৬-০২ ও ০৬-০৩ (শ্রেণির কাজ) একসঙ্গে।\n8. **বইয়ের সমস্যা বই-দলের জন্য:** প্র. ২-এর শিখনফল নেই; অদেখা অনুচ্ছেদ ৪টির জায়গায় ২টি (মই-এর নিয়ম ৫); spelling test-এর অক্ষর-বিন্যাস অসমান।\n\n**পুরোনো খসড়া থেকে বদলায়নি:** প্রশ্নের ধরন ও নম্বর পরিশিষ্ট থেকে হুবহু (বৃত্তির ১৪-প্রশ্ন কাঠামো, সিদ্ধান্ত ৮৮); শ্রেণি-পরীক্ষার বিষয় লক করা মই-এর Part F অনুযায়ী।\n"
+}
