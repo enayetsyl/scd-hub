@@ -90,7 +90,7 @@ export const DECIDE_STAFF_MISTAKE = gql<
 `;
 
 // ---------------------------------------------------------------------------
-// MR-2 (D-#940–#943): warnings, meetings, the summary and the rules
+// MR-2 (D-#940–#942, #1005): warnings, meetings, the summary and the rules
 // ---------------------------------------------------------------------------
 
 export type StaffWarningStepT = "WARNING" | "MEETING" | "CONDUCT";
