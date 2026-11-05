@@ -1,5 +1,5 @@
 /**
- * A Principal's own mistake entries are private (D-#974, owner 2026-11-04): only a holder of
+ * A Principal's own mistake entries are private (D-#1000, owner 2026-11-04): only a holder of
  * `staff_mistakes:review_principal` (PRINCIPAL_DEFAULT — the Principal) sees, decides or moves
  * them, handles the Principal's warning meetings, or moves an entry onto a Principal; the
  * Principal's warnings are told only to those holders. A Principal holding it may decide their

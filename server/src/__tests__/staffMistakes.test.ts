@@ -272,7 +272,7 @@ describe("shared reason list", () => {
   });
 });
 
-describe("D-#974 — the Principal's entries are the Principal's alone", () => {
+describe("D-#1000 — the Principal's entries are the Principal's alone", () => {
   const entry = (owner: string) =>
     StaffMistake.create({ staffUserId: new Types.ObjectId(owner), kind: "TASK_OVERDUE", tier: 3, sourceId: new Types.ObjectId(), dateKey: "2026-11-08", status: "PENDING_REVIEW", explainDueAt: at("17:00", "2026-11-09") });
 
