@@ -7831,6 +7831,10 @@ const STR_BN = {
   stbTodayLine: "এই মাসে {n}টি বই পড়েছে · ★ {s}",
   stbTodayNew: "আজ নতুন বই নিয়েছে: {book}",
   stbTodayOpen: "সব দেখুন ›",
+  qrScan: "📷 QR স্ক্যান করুন",
+  qrNeedCamera: "QR স্ক্যান করতে ক্যামেরার অনুমতি দিন",
+  qrAllow: "অনুমতি দিন",
+  qrClose: "ক্যামেরা বন্ধ করুন",
   // Quran oral exam (D-#873..#877)
   qxNav: "কুরআন পরীক্ষা",
   qxTitle: "কুরআন পরীক্ষা",
@@ -14515,6 +14519,10 @@ const STR_EN: StrTable = {
   stbTodayLine: "{n} books read this month · ★ {s}",
   stbTodayNew: "New book today: {book}",
   stbTodayOpen: "See all ›",
+  qrScan: "📷 Scan QR",
+  qrNeedCamera: "Allow the camera to scan QR codes",
+  qrAllow: "Allow",
+  qrClose: "Close camera",
   // Quran oral exam (D-#873..#877)
   qxNav: "Quran exam",
   qxTitle: "Quran exam",

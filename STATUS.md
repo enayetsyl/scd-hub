@@ -1,5 +1,8 @@
 # STATUS
 
+- 2026-11-05: **BUILT — storybook shelf SB-5, phone-camera QR scanning (D-#985)** (branch `feat/storybook-sb5`, stacked on SB-4 #1339, NOT merged). New native dependency `expo-camera` ~15.0.16 — the scan button appears only on an APK built with it (guarded require; old APKs + web unaffected).
+  - **Verified:** app tsc 0; `expo export --platform android` exit 0 (4,371 modules, ExpoCamera + the optional-module guard in the bundle); desk walk on web 9/10 (the 1 is leftover test data: Aisha still held a book from the SB-4 walk, so 1/2 not 0/2). The camera itself is NOT tested — it needs a real phone on the next APK.
+  - **Owner to do:** build APK 1.1.7 (all ABIs, see memory) with this branch merged; decide whether to bump runtimeVersion (not required — the JS is guarded both ways).
 - 2026-11-05: **BUILT — storybook shelf SB-4, my child's books + alerts (D-#983/#984)** (branch `feat/storybook-sb4`, stacked on SB-3 #1335 → SB-2 #1333 → SB-1 #1330, NOT merged).
   - **Verified:** server/app tsc 0; vocab verifier PASS (kinds += STORYBOOK_ISSUED/STORYBOOK_STICKER); storyReading 3 tests; full server jest 6,266/6,273 with 2 suites failing under load (marksDriversService, questionBatch — 17/17 re-run alone); Chrome walk 12/12 (issue + sticker notifications, family pop-ups shown on opening the app, Today card, my child's books with counts / stickers / held book / history).
   - **Owner to note:** every lending makes one pop-up row in Office's pop-up list (D-#984 asked for pop-ups) — say if that list gets too busy and it can become notification + Today card only.

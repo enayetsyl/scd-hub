@@ -27,6 +27,7 @@ import { friendlyError } from "../../lib/errors";
 import { STR, bnNum, isoDateLabel } from "../../lib/labels";
 import { space, typeScale, useColors } from "../../theme";
 import { StoryImage } from "./StoryImage";
+import { QrScanner, canScanQr } from "../../components/QrScanner";
 
 type Msg = { tone: "ok" | "danger" | "info"; text: string } | null;
 
@@ -163,6 +164,7 @@ export default function StoryDeskScreen(): React.ReactElement {
   const [copy, setCopy] = useState<StoryCopyLookupT | null>(null);
   const [msg, setMsg] = useState<Msg>(null);
   const [busy, setBusy] = useState(false);
+  const [scanning, setScanning] = useState(false);
 
   const find = async (raw = code): Promise<void> => {
     if (!raw.trim()) return;
@@ -211,6 +213,20 @@ export default function StoryDeskScreen(): React.ReactElement {
             returnKeyType="search"
           />
           <Button title={STR.stbDeskFind} loading={busy} onPress={() => void find()} />
+          {/* SB-5: the office phone's camera, once the APK carries it (old APKs / web: hidden). */}
+          {canScanQr && !scanning ? <Button title={STR.qrScan} variant="secondary" onPress={() => setScanning(true)} style={{ marginTop: space(2) }} /> : null}
+          {scanning ? (
+            <View style={{ marginTop: space(2) }}>
+              <QrScanner
+                onCode={(scanned) => {
+                  setScanning(false);
+                  setCode(scanned);
+                  void find(scanned);
+                }}
+                onClose={() => setScanning(false)}
+              />
+            </View>
+          ) : null}
         </Card>
         {copy ? (
           <Card>
