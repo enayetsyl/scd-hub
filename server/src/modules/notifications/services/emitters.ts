@@ -15,7 +15,8 @@
  * no corpus path (N5.1).
  */
 import { ROUTINE_SUBJECT_LABELS_BN, NOTIFICATION_KINDS, WORK_CLAIM_REJECT_REASON_LABELS_BN, HW_SUBJECT_LABELS_BN } from "@scd/shared";
-import type { WorkClaimRejectReason, HwSubject } from "@scd/shared";
+import type { WorkClaimRejectReason, HwSubject, StaffMistakeKind } from "@scd/shared";
+import { STAFF_MISTAKE_KIND_TITLE_BN } from "@scd/shared";
 import { dhakaDayKey } from "../../../lib/dhakaDay";
 import { emit } from "./NotificationService";
 import { renderTemplate } from "../../templates/services/MessageTemplateService";
@@ -2374,27 +2375,40 @@ export async function emitSalarySent(ev: {
 // own আমার ভুল ও ব্যাখ্যা list.
 // ---------------------------------------------------------------------------
 
-/** D-#937 — a caught mistake waits for the person's reason until the deadline. */
+/** "রবিবার, ৮ নভেম্বর বিকেল ৫টা" — Dhaka time in words, never Intl's "এ ৫:০০ PM" (D-#1012). */
+export function bnDeadline(at: Date): string {
+  const day = new Intl.DateTimeFormat("bn-BD", { timeZone: "Asia/Dhaka", weekday: "long", day: "numeric", month: "long" }).format(at);
+  const [h, m] = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Dhaka", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })
+    .format(at)
+    .split(":")
+    .map(Number) as [number, number];
+  const part = h < 4 ? "রাত" : h < 6 ? "ভোর" : h < 12 ? "সকাল" : h < 15 ? "দুপুর" : h < 18 ? "বিকেল" : h < 20 ? "সন্ধ্যা" : "রাত";
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  const clock = m === 0 ? `${bnNum(h12)}টা` : `${bnNum(h12)}:${bnNum(String(m).padStart(2, "0"))}`;
+  return `${day} ${part} ${clock}`;
+}
+
+/**
+ * D-#937 — a caught mistake waits for the person's reason until the deadline. D-#1012: the
+ * notice names the place (title) and the thing itself (`detail`, e.g. the item and children),
+ * so the person knows which mistake it is before opening the app.
+ */
 export async function emitStaffMistakeExplain(ev: {
   mistakeId: IdLike;
   recipientUserId: IdLike;
   kind: string;
   explainDueAt: Date;
+  detail?: string | null;
 }): Promise<void> {
   return bestEffort("staff mistake explain", async () => {
-    const due = new Intl.DateTimeFormat("bn-BD", {
-      timeZone: "Asia/Dhaka",
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-      hour: "numeric",
-      minute: "2-digit",
-    }).format(ev.explainDueAt);
+    const due = bnDeadline(ev.explainDueAt);
+    const place = STAFF_MISTAKE_KIND_TITLE_BN[ev.kind as StaffMistakeKind];
+    const detail = ev.detail?.trim() ? `${ev.detail.trim()}\n` : "";
     await emit({
       recipientUserId: ev.recipientUserId.toString(),
       kind: "STAFF_MISTAKE_EXPLAIN",
-      titleBn: "ভুলের ব্যাখ্যা দিন",
-      bodyBn: `আপনার একটি কাজে ভুল ধরা পড়েছে। ${due}-এর মধ্যে কী হয়েছিল জানান — না জানালে এটি ভুল হিসেবে গণ্য হবে।`,
+      titleBn: place ? `ব্যাখ্যা দিন: ${place}` : "ভুলের ব্যাখ্যা দিন",
+      bodyBn: `${detail}${due}-এর মধ্যে কী হয়েছিল জানান — না জানালে এটি ভুল হিসেবে গণ্য হবে।`,
       refs: {},
       dedupeKey: dedupeKeys.staffMistakeExplain(ev.mistakeId.toString(), ev.recipientUserId.toString()),
     });

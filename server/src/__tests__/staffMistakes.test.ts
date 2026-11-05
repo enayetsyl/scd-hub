@@ -163,6 +163,12 @@ describe("D-#937 — the reason picked on the submit pass", () => {
     const sent = await kinds("STAFF_MISTAKE_EXPLAIN");
     expect(sent).toHaveLength(1);
     expect(String(sent[0]!.recipientUserId)).toBe(teacher);
+    // D-#1012: the notice names the place and the thing, and the deadline in words.
+    expect(sent[0]!.titleBn).toBe('ব্যাখ্যা দিন: একই দিনে "জমা দেয়নি" বদলানো');
+    expect(sent[0]!.bodyBn).toContain("AS-C4-ENG-");
+    expect(sent[0]!.bodyBn).toContain("Ayaan Rahman");
+    expect(sent[0]!.bodyBn).toContain("৯ নভেম্বর বিকেল ৫টা");
+    expect(sent[0]!.bodyBn).not.toMatch(/PM|AM| এ /);
     expect((await kinds("WORK_MARK_CORRECTED"))[0]!.titleBn).toContain("দুঃখিত");
   });
 
