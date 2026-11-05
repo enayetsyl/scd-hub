@@ -928,6 +928,8 @@ const ROLE_CHECK_DEFAULTS = {
     "reports:finance_dashboard", "reports:daily_snapshot",
     // Question-bank coverage (OT-4, D-#947): owner 2026-11-04 — the Office reads it too.
     "reports:bank_coverage",
+    // Storybook shelf SB-6 (D-#980): the Office runs the shelf, so it reads its three reports.
+    "reports:storybook_series", "reports:storybook_books", "reports:storybook_readers",
     "assignment:view_all", "assignment:undo_any", "work_claim:view_all", "work_claim:remind", "set_tracker:view_all",
     "saturday_revision:view", "saturday_revision:view_all", "saturday_revision:enter_results", "saturday_revision:edit_all",
     "saturday_revision:send", "saturday_revision:settings", "class_test:view_all", "class_test:register",

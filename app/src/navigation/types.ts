@@ -721,6 +721,8 @@ export type ReportsStackParamList = {
   DailySnapshot: undefined;
   GuardianEngagement: undefined;
   MarksDrivers: undefined;
+  /** SB-6 — storybook reports (series / books / readers). */
+  StorybookReport: undefined;
   /** OT-4 (prd-objective-tree §8.2): question-bank coverage — the screen picks the class × subject. */
   MasteryBankCoverage: { classToken?: string; subject?: string } | undefined;
 };

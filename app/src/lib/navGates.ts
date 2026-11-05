@@ -52,6 +52,8 @@ export const REPORT_LEAF_ACTIONS: Record<string, string[]> = {
   MarksDrivers: ["reports:marks_drivers"],
   // OT-4: its own switch, or the objective-list doors (the Principal who locks, the reviewer).
   MasteryBankCoverage: ["reports:bank_coverage", "mastery:settings", "mastery:review"],
+  // SB-6: one switch per tab of the storybook report.
+  StorybookReport: ["reports:storybook_series", "reports:storybook_books", "reports:storybook_readers"],
 };
 
 /** Any of these opens the Reports tab. */

@@ -409,3 +409,64 @@ export const CHILD_STORY_READING = gql<{ childStoryReading: ChildStoryReadingT }
     }
   }
 `;
+
+// ---------------------------------------------------------------------------
+// SB-6 — storybook reports (one Reports-hub switch per tab).
+// ---------------------------------------------------------------------------
+
+export type StoryReportWindowT = "d30" | "d90" | "year";
+
+export interface StoryStatRowT {
+  id: string;
+  nameBn: string;
+  seriesNo: number | null;
+  lent: number;
+  read: number;
+  returned: number;
+  readers: number;
+  waiting: number;
+  copies: number;
+  neverBorrowed: boolean;
+  secondCopy: boolean;
+}
+
+export interface StoryReaderRowT {
+  studentId: string;
+  name: string;
+  classLabelBn: string;
+  sectionNameBn: string;
+  read: number;
+  favouriteTagBn: string | null;
+  lastVisit: string | null;
+  overdue: boolean;
+  stopped: boolean;
+}
+
+export interface StoryPreferenceCellT {
+  seriesNameBn: string;
+  groupLabelBn: string;
+  read: number;
+}
+
+const STAT_FIELDS = `id nameBn seriesNo lent read returned readers waiting copies neverBorrowed secondCopy`;
+
+export const STORY_SERIES_REPORT = gql<{ storySeriesReport: StoryStatRowT[] }, { window: StoryReportWindowT }>`
+  query StorySeriesReport($window: String!) { storySeriesReport(window: $window) { ${STAT_FIELDS} } }
+`;
+
+export const STORY_BOOKS_REPORT = gql<{ storyBooksReport: StoryStatRowT[] }, { window: StoryReportWindowT; seriesId?: string | null }>`
+  query StoryBooksReport($window: String!, $seriesId: String) { storyBooksReport(window: $window, seriesId: $seriesId) { ${STAT_FIELDS} } }
+`;
+
+export const STORY_READERS_REPORT = gql<
+  { storyReadersReport: { readers: StoryReaderRowT[]; byClass: StoryPreferenceCellT[]; bySection: StoryPreferenceCellT[] } },
+  { window: StoryReportWindowT }
+>`
+  query StoryReadersReport($window: String!) {
+    storyReadersReport(window: $window) {
+      readers { studentId name classLabelBn sectionNameBn read favouriteTagBn lastVisit overdue stopped }
+      byClass { seriesNameBn groupLabelBn read }
+      bySection { seriesNameBn groupLabelBn read }
+    }
+  }
+`;

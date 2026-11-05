@@ -995,7 +995,12 @@ export const FEATURE_CATALOGUE = {
       // Objective tree OT-4 (prd-objective-tree §8.2, mock 5): gold questions per tagged row; the
       // gaps become the brief for the next question batch. Principal + Office by default (owner
       // 2026-11-04); the module doors mastery:settings / mastery:review open it too.
-      bank_coverage: { en: "Question-bank coverage", bn: "প্রশ্ন-ব্যাংক কভারেজ", desc: "Gold questions per tagged objective row of a class × subject, the empty rows, and the gaps as a brief for the next question batch (whole school)", teacher: false, office: true, flags: [] },
+      bank_coverage: { en: "Question-bank coverage", bn: "প্রশ্ন-ব্যাংক কভারেজ", desc: "Gold questions per tagged objective row of a class × subject, the empty rows, and the gaps as a brief for the next question batch (whole school)", teacher: false, office: true, flags: [] },
+      // Storybook shelf SB-6 (D-#980, docs/prd-storybook-reading.md): one switch per tab of the
+      // গল্পের বই রিপোর্ট screen. Office on by default — it runs the shelf.
+      storybook_series: { en: "Storybooks by series", bn: "সিরিজ অনুযায়ী গল্পের বই", desc: "Reads, readers, read rate and waiting children per storybook series over a window", teacher: false, office: true, flags: [] },
+      storybook_books: { en: "Storybooks by book", bn: "বই অনুযায়ী গল্পের বই", desc: "Reads and waiting per book, books to print a second copy of, books never borrowed", teacher: false, office: true, flags: [] },
+      storybook_readers: { en: "Storybook readers", bn: "গল্পের বইয়ের পাঠক", desc: "Each child's reading and favourite type, children who stopped, preference by class and section (names children)", teacher: false, office: true, flags: [] },
     },
   },
 } as const satisfies Record<string, CatalogueFeature>;
