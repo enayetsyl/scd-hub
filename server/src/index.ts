@@ -43,6 +43,7 @@ import { monthlyReportPdfRouter } from "./modules/reports/routes/monthlyReportPd
 import { monthlyCommentExportRouter } from "./modules/reports/routes/monthlyCommentExport";
 import { scholarshipAnalysisExportRouter } from "./modules/scholarship/routes/scholarshipAnalysisExport";
 import { filesRouter } from "./routes/files";
+import { helpShotsRouter } from "./modules/help/routes/helpShots";
 import { triggersRouter } from "./routes/triggers";
 import { eventsRouter } from "./routes/events";
 import { bookBuildStreamRouter } from "./routes/bookBuildStream";
@@ -198,6 +199,8 @@ app.use("/pdf/staff-letter", staffLetterPdfRouter);
 
 // Thin HTTP surface — homework files (GP-A, D-#70): server-in-the-middle
 // upload/download; Drive is never exposed to a client.
+// Help-guide screenshots (prd-help-centre HC-1) sit under /files so Caddy already routes them.
+app.use("/files/help", helpShotsRouter);
 app.use("/files", filesRouter);
 app.use("/book-builds", bookBuildStreamRouter);
 

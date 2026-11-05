@@ -278,6 +278,12 @@ export type GuardianClassTestStackParamList = {
   ChildClassTests: undefined;
 };
 /** D-#870 — class books. ClassBooks stays first: the stack's initial route takes no params. */
+/** prd-help-centre (D-#968). HelpHome stays first: the initial route takes no required params. */
+export type HelpStackParamList = {
+  /** `screenKey` = opened from a screen's header ? with several guides for it. */
+  HelpHome: { screenKey?: string } | undefined;
+  HelpGuide: { guideId: string };
+};
 export type ClassBooksStackParamList = {
   ClassBooks: undefined;
   ClassBookReader: { bookId: string; title: string; pageCount: number; pageAspect: number };
@@ -777,6 +783,7 @@ export type TabParamList = {
    *  each sidebar lists it once in its own place). */
   ClassBooksTab: NavigatorScreenParams<ClassBooksStackParamList>;
   GuardianBooksTab: NavigatorScreenParams<ClassBooksStackParamList>;
+  HelpTab: NavigatorScreenParams<HelpStackParamList>;
   /** D-#873 — Quran oral exam (Office plan + examiners' marks). */
   QuranExamTab: NavigatorScreenParams<QuranExamStackParamList>;
 };
