@@ -26,7 +26,8 @@ type Tab = "series" | "books" | "readers";
 
 function Bar({ value, max }: { value: number; max: number }): React.ReactElement {
   const colors = useColors();
-  const pct = max > 0 ? Math.max(2, Math.round((value / max) * 100)) : 0;
+  // A zero draws nothing; any non-zero value stays visible (at least 2%).
+  const pct = max > 0 && value > 0 ? Math.max(2, Math.round((value / max) * 100)) : 0;
   return (
     <View style={{ height: 8, borderRadius: radius.sm, backgroundColor: colors.border, overflow: "hidden", marginTop: space(1) }}>
       <View style={{ width: `${pct}%`, height: "100%", backgroundColor: colors.primary }} />

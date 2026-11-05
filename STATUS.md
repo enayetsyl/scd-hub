@@ -1,5 +1,8 @@
 # STATUS
 
+- 2026-11-05: **BUILT — storybook shelf SB-6, reports (D-#980)** (branch `feat/storybook-sb6`, stacked on SB-5 #1341, NOT merged). 3 new report switches (catalogue 387 → 390 actions, Office on +3; verifier + README updated).
+  - **Verified:** shared/server/app tsc 0; vocab verifier PASS; storyReports test + gate scan; full server jest 364 suites / 6,274 tests green; Chrome walk 5/5 (series rows with numbers, never-borrowed flags, readers + section preference, window switch).
+  - **Now / next:** SB-7 all-rounder card; then activity sheets AS-1..AS-6.
 - 2026-11-05: **BUILT — storybook shelf SB-5, phone-camera QR scanning (D-#985)** (branch `feat/storybook-sb5`, stacked on SB-4 #1339, NOT merged). New native dependency `expo-camera` ~15.0.16 — the scan button appears only on an APK built with it (guarded require; old APKs + web unaffected).
   - **Verified:** app tsc 0; `expo export --platform android` exit 0 (4,371 modules, ExpoCamera + the optional-module guard in the bundle); desk walk on web 9/10 (the 1 is leftover test data: Aisha still held a book from the SB-4 walk, so 1/2 not 0/2). The camera itself is NOT tested — it needs a real phone on the next APK.
   - **Owner to do:** build APK 1.1.7 (all ABIs, see memory) with this branch merged; decide whether to bump runtimeVersion (not required — the JS is guarded both ways).
