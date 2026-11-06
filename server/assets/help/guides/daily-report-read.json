@@ -1,0 +1,94 @@
+{
+  "id": "daily-report-read",
+  "category": "reports",
+  "order": 91,
+  "draft": true,
+  "title": "দৈনিক প্রতিবেদন দেখা",
+  "intro": "প্রতিদিন সন্ধ্যা ৬টায় স্কুলের দিনের সারাংশ: কত কাজ সময়মতো হয়েছে, কত সমস্যা রয়ে গেছে আর কত ভুল ধরা পড়েছে। এখান থেকে যেকোনো সমস্যার ঠিক জায়গায় যাওয়া যায়।",
+  "keywords": [
+    "দৈনিক প্রতিবেদন",
+    "সারাংশ",
+    "সমস্যা",
+    "সময়মতো",
+    "মাসিক"
+  ],
+  "perms": [
+    "reports:daily_attendance",
+    "reports:daily_staff",
+    "reports:daily_teaching",
+    "reports:daily_homework",
+    "reports:daily_assignment",
+    "reports:daily_class_test",
+    "reports:daily_mistakes",
+    "reports:daily_work_board",
+    "reports:daily_office",
+    "reports:daily_guardians",
+    "reports:daily_finance",
+    "reports:daily_system"
+  ],
+  "screens": [
+    "ReportsTab/DailyReport"
+  ],
+  "goTo": {
+    "route": "ReportsTab",
+    "screen": "DailyReport"
+  },
+  "rows": [
+    {
+      "heading": "প্রতিবেদন খোলা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "সন্ধ্যা ৬টার নোটিফিকেশন চাপুন, অথবা আজ পাতার <b>আজকের দৈনিক প্রতিবেদন</b> কার্ডে <b>দেখুন</b> চাপুন।",
+          "box": null
+        },
+        {
+          "text": "অন্য দিনের জন্য ☰ মেনু থেকে <b>রিপোর্ট</b> → <b>দৈনিক প্রতিবেদন</b> খুলে তারিখ বদলান।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "সংখ্যাগুলো পড়া",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "<b>সময়মতো</b> = দিনের যে কাজ সময়ে হয়েছে; <b>সমস্যা</b> = যা দেরিতে হয়েছে বা সন্ধ্যা পর্যন্ত হয়নি; <b>ভুল</b> = কর্মীর ভুলের রেকর্ডে আজকের নতুন এন্ট্রি।",
+          "box": null
+        },
+        {
+          "text": "<b>সময়মতো কাজ</b> শতাংশের পাশে আগের ৫ দিনের হার লেখা থাকে।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "ঠিক জায়গায় যাওয়া",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "কোনো অংশে চাপ দিলে তার সমস্যার তালিকা খোলে — কোন শাখা, কোন বিষয়, কে।",
+          "box": null
+        },
+        {
+          "text": "তালিকার একটি সারি চাপলে সেই কাজটি খোলে; <b>পুরো রিপোর্ট খুলুন</b> চাপলে ঐ দিনের পুরো রিপোর্ট খোলে।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "সপ্তাহ, মাস ও বছর",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "ওপরে <b>সপ্তাহ</b>, <b>মাস</b> বা <b>বছর</b> চাপুন — মোট সংখ্যা, প্রতিদিনের সমস্যা, আগের সমান সময়ের তুলনা আর <b>বারবার হওয়া সমস্যা</b> দেখাবে।",
+          "box": null
+        }
+      ]
+    }
+  ]
+}

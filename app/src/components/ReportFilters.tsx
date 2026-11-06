@@ -13,7 +13,7 @@
  *                     options are derived from the rows themselves so the
  *                     selects never offer a value with zero matches.
  */
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { View } from "react-native";
 import { Chip, ChipRow, Select } from "./ui";
 import { DateField } from "./DateField";
@@ -36,15 +36,30 @@ const keyDaysAgo = (days: number): string => {
 /** days === ALL_DAYS ⇒ the "All time" chip: sentinel bounds, no date restriction. */
 const ALL_DAYS = 0;
 
-export function useReportRange(defaultDays = 7, opts?: { withAll?: boolean }): {
+export function useReportRange(
+  defaultDays = 7,
+  opts?: {
+    withAll?: boolean;
+    /** D-#1055: open on exactly this day (a jump from the daily report) — a custom range of one day.
+     *  Unset = the usual default; a new value (another jump) moves the range again. */
+    initialDay?: string;
+  },
+): {
   fromKey: string;
   toKey: string;
   node: React.ReactElement;
 } {
+  const initialDay = opts?.initialDay;
   const [days, setDays] = useState<number>(defaultDays);
-  const [custom, setCustom] = useState(false);
-  const [customFrom, setCustomFrom] = useState(keyDaysAgo(7));
-  const [customTo, setCustomTo] = useState(dateKey());
+  const [custom, setCustom] = useState(!!initialDay);
+  const [customFrom, setCustomFrom] = useState(initialDay ?? keyDaysAgo(7));
+  const [customTo, setCustomTo] = useState(initialDay ?? dateKey());
+  useEffect(() => {
+    if (!initialDay) return;
+    setCustom(true);
+    setCustomFrom(initialDay);
+    setCustomTo(initialDay);
+  }, [initialDay]);
 
   const fromKey = custom ? customFrom : days === ALL_DAYS ? "0000-01-01" : keyDaysAgo(days);
   const toKey = custom ? customTo : days === ALL_DAYS ? "9999-12-31" : dateKey();
