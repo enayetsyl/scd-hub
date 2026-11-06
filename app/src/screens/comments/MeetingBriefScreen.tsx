@@ -13,9 +13,10 @@
 import React from "react";
 import { ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useQuery } from "urql";
-import { MEETING_BRIEF } from "../../graphql/meetingChain";
-import { Body, Button, Card, Chip, ChipRow, Loader, Muted, Notice, Screen } from "../../components/ui";
+import { useMutation, useQuery } from "urql";
+import { MEETING_BRIEF, SAVE_MEETING_FINAL_COMMENT } from "../../graphql/meetingChain";
+import { Body, Button, Card, Chip, ChipRow, Field, Loader, Muted, Notice, Screen } from "../../components/ui";
+import { useAuth } from "../../auth/AuthContext";
 import { Expander, NumbersTiles, TwoBoxes, dayLabel, finalSourceLabel, placeLabel } from "../../components/MeetingChainParts";
 import { STR, minutesToHHMM, routineSubjectLabel } from "../../lib/labels";
 import { openPdf } from "../../lib/pdf";
@@ -37,7 +38,17 @@ export default function MeetingBriefScreen({ route }: Props): React.ReactElement
   const { meetingId, studentIds } = route.params;
   const c = useColors();
   const [kid, setKid] = React.useState(route.params.studentId ?? studentIds[0]);
-  const [q] = useQuery({ query: MEETING_BRIEF, variables: { meetingId, studentId: kid }, requestPolicy: "cache-and-network" });
+  const [q, refetch] = useQuery({ query: MEETING_BRIEF, variables: { meetingId, studentId: kid }, requestPolicy: "cache-and-network" });
+  const { can } = useAuth();
+  // Owner ask 2026-11-06: the Principal / Office fix the final comment right here, while
+  // reading the brief, instead of going back to the final-comment queue. Same mutation and
+  // the same permission as MeetingFinalScreen; a class teacher (view_brief only) sees no button.
+  const canEditFinal = can("parents_meeting:review");
+  const [m, saveFinal] = useMutation(SAVE_MEETING_FINAL_COMMENT);
+  const [editing, setEditing] = React.useState(false);
+  const [strengths, setStrengths] = React.useState("");
+  const [concerns, setConcerns] = React.useState("");
+  const [editErr, setEditErr] = React.useState<string | null>(null);
   const [ctOpen, setCtOpen] = React.useState(false);
   const [subjOpen, setSubjOpen] = React.useState(false);
   const [rowOpen, setRowOpen] = React.useState<string | null>(null);
@@ -48,6 +59,29 @@ export default function MeetingBriefScreen({ route }: Props): React.ReactElement
   const [printing, setPrinting] = React.useState(false);
   const [err, setErr] = React.useState<string | null>(null);
   const b = q.data?.meetingBrief && q.data.meetingBrief.studentId === kid ? q.data.meetingBrief : null;
+
+  function startEdit(): void {
+    if (!b) return;
+    setEditErr(null);
+    // Start from the final when there is one, else from the class teacher's summary.
+    setStrengths(b.final?.strengths ?? b.summary?.strengths ?? "");
+    setConcerns(b.final?.concerns ?? b.summary?.concerns ?? "");
+    setEditing(true);
+  }
+
+  async function onSaveFinal(): Promise<void> {
+    if (!b) return;
+    setEditErr(null);
+    // A separate comment stays OWN; anything that began as the summary becomes EDITED.
+    const source = b.final?.source === "OWN" ? "OWN" : "EDITED";
+    const res = await saveFinal({ meetingId, studentId: kid, source, strengths: strengths.trim() || null, concerns: concerns.trim() || null });
+    if (res.error) {
+      setEditErr(friendlyError(res.error));
+      return;
+    }
+    setEditing(false);
+    refetch({ requestPolicy: "network-only" });
+  }
 
   async function onPrint(): Promise<void> {
     setErr(null);
@@ -77,7 +111,7 @@ export default function MeetingBriefScreen({ route }: Props): React.ReactElement
             <View style={{ marginTop: space(2) }}>
               <ChipRow>
                 {studentIds.map((id) => (
-                  <KidTab key={id} meetingId={meetingId} studentId={id} selected={id === kid} onPress={() => { setKid(id); setCtOpen(false); setSubjOpen(false); setRowOpen(null); }} />
+                  <KidTab key={id} meetingId={meetingId} studentId={id} selected={id === kid} onPress={() => { setKid(id); setCtOpen(false); setSubjOpen(false); setRowOpen(null); setEditing(false); }} />
                 ))}
               </ChipRow>
             </View>
@@ -117,13 +151,32 @@ export default function MeetingBriefScreen({ route }: Props): React.ReactElement
               </View>
 
               <Card style={{ borderWidth: 2, borderColor: c.gold }}>
-                <Muted>
-                  {STR.mcPrincipalComment}
-                  {b.final ? ` · ${finalSourceLabel(b.final.source)}` : ""}
-                </Muted>
-                <View style={{ marginTop: space(2) }}>
-                  {b.final ? <TwoBoxes strengths={b.final.strengths} concerns={b.final.concerns} big /> : <Muted>{STR.mcNotWrittenYet}</Muted>}
+                <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: space(2) }}>
+                  <Muted style={{ flexShrink: 1 }}>
+                    {STR.mcPrincipalComment}
+                    {b.final ? ` · ${finalSourceLabel(b.final.source)}` : ""}
+                  </Muted>
+                  {/* The server refuses a final before the class teacher's summary exists. */}
+                  {canEditFinal && !editing && b.summary ? (
+                    <Button title={STR.mcEditIt} variant="secondary" onPress={startEdit} />
+                  ) : null}
                 </View>
+                {editing ? (
+                  <View style={{ gap: space(2), marginTop: space(2) }}>
+                    <Muted>{b.final?.source === "OWN" ? STR.mcOwnHint : STR.mcEditHint}</Muted>
+                    <Field label={STR.mcStrengths} value={strengths} onChangeText={setStrengths} placeholder={STR.mcStrengthsPh} multiline autoCapitalize="sentences" />
+                    <Field label={STR.mcConcerns} value={concerns} onChangeText={setConcerns} placeholder={STR.mcConcernsPh} multiline autoCapitalize="sentences" />
+                    {editErr ? <Notice message={editErr} tone="danger" /> : null}
+                    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2) }}>
+                      <Button title={STR.mcSaveFinal} onPress={() => void onSaveFinal()} loading={m.fetching} disabled={m.fetching} />
+                      <Button title={STR.mcCancel} variant="ghost" onPress={() => setEditing(false)} />
+                    </View>
+                  </View>
+                ) : (
+                  <View style={{ marginTop: space(2) }}>
+                    {b.final ? <TwoBoxes strengths={b.final.strengths} concerns={b.final.concerns} big /> : <Muted>{STR.mcNotWrittenYet}</Muted>}
+                  </View>
+                )}
               </Card>
 
               <Card>
