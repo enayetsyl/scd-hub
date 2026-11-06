@@ -188,6 +188,7 @@ import {
   STALE_MINUTES,
   getTickerHealth,
 } from "../modules/notifications/services/SchedulerService";
+import { dispatchStaffMistakeDaily } from "../modules/staff-mistakes/services/StaffMistakeDailyService";
 
 const oid = (s: string) => ({ toString: () => s });
 // 2026-06-15 is a Monday (FULL when mocked so).
@@ -866,5 +867,34 @@ describe("library sweep — the ticker CALLS the LB-5 dispatcher (D-#96)", () =>
     mockResolveDayType.mockResolvedValue("QURAN_ONLY");
     const s = await runSchedulerTick(at(9, 0));
     expect(s.librarySweepRan).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Staff mistake daily report (18:00 every day, D-#1020)
+// ---------------------------------------------------------------------------
+
+describe("staff mistake daily report (D-#1020)", () => {
+  const dispatch = dispatchStaffMistakeDaily as unknown as jest.Mock;
+
+  it("18:00 — dispatches once and counts the reports", async () => {
+    dispatch.mockResolvedValueOnce(2);
+    const s = await runSchedulerTick(at(18, 0));
+    expect(dispatch).toHaveBeenCalledTimes(1);
+    expect(s.staffMistakeDailySent).toBe(2);
+  });
+
+  it("not before 18:00, and once a day however many ticks", async () => {
+    await runSchedulerTick(at(17, 59));
+    expect(dispatch).not.toHaveBeenCalled();
+    await runSchedulerTick(at(18, 0));
+    await runSchedulerTick(at(18, 10));
+    expect(dispatch).toHaveBeenCalledTimes(1);
+  });
+
+  it("runs on a holiday too (it sits before the school-day gate)", async () => {
+    mockResolveDayType.mockResolvedValue("HOLIDAY");
+    await runSchedulerTick(at(18, 0));
+    expect(dispatch).toHaveBeenCalledTimes(1);
   });
 });
