@@ -37,6 +37,12 @@ allprojects {
             url(new File(['node', '--print', "require.resolve('jsc-android/package.json', { paths: [require.resolve('react-native/package.json')] })"].execute(null, rootDir).text.trim(), '../dist'))
         }
 
+        maven {
+            // expo-camera (SB-5, D-#985) ships com.google.android:cameraview inside its own npm
+            // package. Prebuild would add this repo; this android/ folder is committed and
+            // prebuild never runs, so it is added by hand (D-#1037).
+            url(new File(['node', '--print', "require.resolve('expo-camera/package.json')"].execute(null, rootDir).text.trim(), '../android/maven'))
+        }
         google()
         mavenCentral()
         maven { url 'https://www.jitpack.io' }
