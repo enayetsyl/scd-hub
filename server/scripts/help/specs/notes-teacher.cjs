@@ -32,7 +32,6 @@ exports.run = async (h, x) => {
   });
   await h.tap(T, "প্রকাশ করুন", 3500);
   await x.peek(T, "t-p6-published");
-  await h.shot(T, "notes-write", 3, [{ text: "✓ প্রকাশিত হয়েছে।" }]);
 
   // ── নোট সংশোধন (P6) ─────────────────────────────────────────────────────────
   await h.shot(T, "notes-edit", 0, [{ text: "2026-11-05" }, { text: "নোট সম্পাদনা" }]);
