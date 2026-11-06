@@ -37,7 +37,7 @@ export default function MarkAttendanceScreen({ route, navigation }: Props): Reac
   const [busy, setBusy] = useState(false);
   const toast = useToast();
   const { askMistakeReason } = useMistakeReason();
-  const { user } = useAuth();
+  const { user, can } = useAuth();
 
   // A screen opened for TODAY and left open overnight (a restored browser tab, a
   // resumed app) must move to the new day by itself — its first submit of the morning
@@ -96,7 +96,9 @@ export default function MarkAttendanceScreen({ route, navigation }: Props): Reac
         correctionReason = await askMistakeReason({
           kind: "ATTENDANCE_CORRECTION",
           title: STR.smrAttFixTitle,
-          message: STR.smrAttFixBody.replace("{n}", bnNum(changed)),
+          // D-#1016: someone who is not told reads no "counted as a mistake" line.
+          message: (can("staff_mistakes:view_own") ? STR.smrAttFixBody : STR.smrAttFixBodyQuiet).replace("{n}", bnNum(changed)),
+          hideHint: !can("staff_mistakes:view_own"),
           submitLabel: STR.smrSendAndChange,
         });
         if (!correctionReason) return;

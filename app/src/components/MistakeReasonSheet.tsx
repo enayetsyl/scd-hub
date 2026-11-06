@@ -26,6 +26,8 @@ export interface MistakeReasonRequest {
   /** Show what the guardian will receive for the picked reason (the submit pass). */
   guardianPreview?: boolean;
   submitLabel?: string;
+  /** D-#1016: the person is not told about mistakes — no "counts / who reviews" hint. */
+  hideHint?: boolean;
   /** Pre-select (re-explaining an entry). */
   initial?: MistakeReasonPick | null;
 }
@@ -108,7 +110,7 @@ export function MistakeReasonSheet({
                 <Text style={styles.message}>{picked.code === "LATE_DIRECT" ? STR.smrGuardianLate : STR.smrGuardianApology}</Text>
               </View>
             ) : null}
-            <Text style={styles.hint}>{kindStr(`smrHint_${kind}`) ?? STR.smrSelfCountsHint}</Text>
+            {request?.hideHint ? null : <Text style={styles.hint}>{kindStr(`smrHint_${kind}`) ?? STR.smrSelfCountsHint}</Text>}
             <View style={styles.buttons}>
               <Button title={STR.cancel} variant="secondary" onPress={onCancel} style={styles.button} />
               <Button

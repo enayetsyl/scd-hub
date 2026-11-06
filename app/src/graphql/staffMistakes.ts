@@ -78,8 +78,8 @@ export const STAFF_MISTAKE_QUEUE = gql<{ staffMistakeQueue: StaffMistakeT[] }>`
   query StaffMistakeQueue { staffMistakeQueue { ${FIELDS} } }
 `;
 
-export const STAFF_MISTAKES = gql<{ staffMistakes: StaffMistakeT[] }, { staffProfileId?: string | null }>`
-  query StaffMistakes($staffProfileId: String) { staffMistakes(staffProfileId: $staffProfileId) { ${FIELDS} } }
+export const STAFF_MISTAKES = gql<{ staffMistakes: StaffMistakeT[] }, { staffProfileId?: string | null; dateKey?: string | null }>`
+  query StaffMistakes($staffProfileId: String, $dateKey: String) { staffMistakes(staffProfileId: $staffProfileId, dateKey: $dateKey) { ${FIELDS} } }
 `;
 
 export const STAFF_MISTAKE_MOVE_TARGETS = gql<{ staffMistakeMoveTargets: { userId: string; name: string }[] }>`

@@ -34,6 +34,9 @@ export async function confirmMarkPass(
   askMistakeReason: (r: MistakeReasonRequest) => Promise<MistakeReasonPick | null>,
   rows: readonly PassRow[],
   entries: readonly { id: string; on: boolean }[],
+  /** D-#1016: the teacher holds staff_mistakes:view_own. If not, the sheet says nothing about
+   *  mistakes or who is told — it only asks what happened, for the guardian's correction. */
+  told = false,
 ): Promise<MarkPassGo> {
   const byId = new Map(rows.map((r) => [r.id, r]));
   const today = dhakaDateKey();
@@ -44,9 +47,10 @@ export async function confirmMarkPass(
   if (correcting > 0) {
     const reason = await askMistakeReason({
       kind: "MARK_CORRECTION",
-      title: STR.msgFixTitle,
-      message: STR.msgFixBody.replace("{n}", bnNum(correcting)),
+      title: told ? STR.msgFixTitle : STR.smrSheetTitle,
+      message: (told ? STR.msgFixBody : STR.msgFixBodyQuiet).replace("{n}", bnNum(correcting)),
       guardianPreview: true,
+      hideHint: !told,
       submitLabel: STR.smrSendAndChange,
     });
     return { ok: reason !== null, reason };

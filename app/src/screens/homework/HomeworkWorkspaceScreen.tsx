@@ -515,7 +515,7 @@ function ItemCard({
 
   async function onSubmitCommit(entries: { id: string; on: boolean }[]): Promise<void> {
     // D-#892: warn before the first marking, and harder before a same-day correction.
-    const go = await confirmMarkPass(confirmAction, askMistakeReason, group.rows, entries);
+    const go = await confirmMarkPass(confirmAction, askMistakeReason, group.rows, entries, can("staff_mistakes:view_own"));
     if (!go.ok) return;
     setSubmitBusy(true);
     const res = await submitPass({
@@ -529,7 +529,8 @@ function ItemCard({
     if (res.error || !r) return onNotify(null, friendlyError(res.error));
     const done = `${STR.hwPassSubmitDone} · ${STR.hwPassSubmitted} ${bnNum(r.submittedCount)} · ${STR.hwPassNotSubmitted} ${bnNum(r.chasedCount)}`;
     // D-#937: "MINE" is counted at once; any other reason waits for review.
-    const fixLine = go.reason?.code === "MINE" ? STR.msgFixDone : STR.smrFixPending;
+    // D-#1016: someone who is not told reads only that the guardians got a correction.
+    const fixLine = !can("staff_mistakes:view_own") ? STR.msgFixDoneQuiet : go.reason?.code === "MINE" ? STR.msgFixDone : STR.smrFixPending;
     onNotify(r.correctedCount > 0 ? `${done}\n${fixLine}` : done, null);
     onDone();
   }

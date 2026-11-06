@@ -383,7 +383,8 @@ export type HrStackParamList = {
   MarkCorrections: { staffProfileId?: string; name?: string; all?: boolean } | undefined;
   // Staff mistake record (D-#936–#939).
   MyMistakes: undefined;
-  MistakeReview: undefined;
+  /** D-#1016: dateKey (YYYY-MM-DD) opens that day's list — the daily report's tap. */
+  MistakeReview: { dateKey?: string } | undefined;
   StaffMistakeSummary: undefined;
   PersonMistakes: { staffUserId: string; name?: string };
   StaffMistakeSettings: undefined;
