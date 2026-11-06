@@ -6,7 +6,7 @@
   "subject": "ENG",
   "titleBn": "বার্ষিক পরীক্ষা ২০২৬ · কেজি · ইংরেজি",
   "fullMarks": 100,
-  "durationBn": "২ ঘণ্টা",
+  "durationBn": "৩ ঘণ্টা",
   "syllabusRows": [
     { "seq": 1, "label": "Write three words with the given letter (6 letters)", "itemType": "short_answer", "component": null, "count": 9, "marksEach": 3, "total": 27 },
     { "seq": 2, "label": "Fill in the missing letters — 0.5 × 10 = 5", "itemType": "fill_blank", "component": null, "count": 1, "marksEach": 5, "total": 5 },
