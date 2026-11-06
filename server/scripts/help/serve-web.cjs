@@ -32,9 +32,12 @@ http
     if (PROXY.test(req.url)) {
       const up = http.request({ host: "127.0.0.1", port: API, path: req.url, method: req.method, headers: req.headers }, (r) => {
         res.writeHead(r.statusCode || 502, r.headers);
+        r.on("error", () => res.destroy());
         r.pipe(res);
       });
       up.on("error", (e) => {
+        // The API restarted mid-response: the headers are already out, so just drop this one.
+        if (res.headersSent) return void res.destroy();
         res.writeHead(502, { "content-type": "text/plain" });
         res.end(`api ${API} unreachable: ${e.message}`);
       });

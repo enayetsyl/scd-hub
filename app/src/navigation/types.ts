@@ -284,6 +284,13 @@ export type HelpStackParamList = {
   HelpHome: { screenKey?: string } | undefined;
   HelpGuide: { guideId: string };
 };
+/** D-#1030–#1033 — exam paper bank. ExamPapersHome stays first: the initial route takes no params. */
+export type ExamPapersStackParamList = {
+  ExamPapersHome: undefined;
+  ExamPaperDraft: { paperId: string };
+  ReferencePapers: undefined;
+  ReferencePaperReader: { paperId: string; title: string; pageCount: number; pageAspect: number; sourceFileId: string | null };
+};
 export type ClassBooksStackParamList = {
   ClassBooks: undefined;
   ClassBookReader: { bookId: string; title: string; pageCount: number; pageAspect: number };
@@ -820,6 +827,8 @@ export type TabParamList = {
   /** D-#870 — class books: the staff shelf and the guardian's (same stack, two routes so
    *  each sidebar lists it once in its own place). */
   ClassBooksTab: NavigatorScreenParams<ClassBooksStackParamList>;
+  /** D-#1030–#1033 — exam paper bank: draft papers + item review, and Mohammadpur's papers. */
+  ExamPapersTab: NavigatorScreenParams<ExamPapersStackParamList>;
   GuardianBooksTab: NavigatorScreenParams<ClassBooksStackParamList>;
   /** SB-1 — storybooks: staff (library:view) and guardians share one stack. */
   StorybooksTab: NavigatorScreenParams<StorybooksStackParamList>;

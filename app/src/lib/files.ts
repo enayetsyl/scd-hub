@@ -1371,3 +1371,60 @@ export async function uploadActivityForm<T>(
   if (!res.ok) throw new FileUploadError(body.error ?? `upload failed (${res.status})`);
   return body as T;
 }
+
+// ---------------------------------------------------------------------------
+// Mohammadpur reference papers (D-#1030, server: POST /files/reference-paper). The Office
+// picks ONE PDF; the server renders its pages in the background and keeps the PDF as the
+// original. (The import script can also send the .docx original alongside.)
+// ---------------------------------------------------------------------------
+
+/** Pick a PDF and upload it as a reference paper; null when the picker is cancelled. */
+export async function pickAndUploadReferencePaper(input: {
+  term: string;
+  year: number;
+  classLevel: number | null;
+  subject: string;
+  title: string;
+}): Promise<{ paperId: string } | null> {
+  const picked = await DocumentPicker.getDocumentAsync({
+    type: ["application/pdf"],
+    multiple: false,
+    copyToCacheDirectory: true,
+  });
+  if (picked.canceled || !picked.assets?.[0]) return null;
+  const asset = picked.assets[0];
+  const form = new FormData();
+  if (Platform.OS === "web") {
+    const blob = await fetch(asset.uri).then((r) => r.blob());
+    form.append("file", new File([blob], asset.name, { type: asset.mimeType ?? blob.type }));
+  } else {
+    form.append("file", {
+      uri: asset.uri,
+      name: rnUploadName(asset.name),
+      type: asset.mimeType ?? "application/pdf",
+    } as unknown as Blob);
+  }
+  form.append("term", input.term);
+  form.append("year", String(input.year));
+  form.append("classLevel", input.classLevel === null ? "" : String(input.classLevel));
+  form.append("subject", input.subject);
+  form.append("title", input.title);
+  const token = getToken();
+  const res = await fetch(`${REST_BASE}/files/reference-paper`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: form,
+  });
+  if (!res.ok) {
+    let message = `upload failed (${res.status})`;
+    try {
+      const body = (await res.json()) as { error?: string };
+      if (body.error) message = body.error;
+    } catch {
+      // keep the generic message
+    }
+    throw new FileUploadError(message);
+  }
+  const body = (await res.json()) as { paperId: string };
+  return { paperId: body.paperId };
+}

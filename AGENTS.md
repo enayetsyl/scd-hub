@@ -109,6 +109,8 @@ auto-deploys (`.github/workflows`, `scripts/deploy.sh`). So:
   prd-plan-review.md  ← Plan review/approval loop: assign→review→re-import→sign-off, slices PR-1..3 (D-#38–#40)
   prd-routine.md      ← Routine/Timetable module build contract: rooms+period-defs+slots+conflict-engine, slices R-1..3 (D-#46/#47)
   prd-class-teacher.md ← Class-teacher → section daily-coordinator gate (attendance/leave/report-card/comms), slice CT-1 now (D-#45)
+  prd-exam-paper-bank.md ← Mohammadpur reference papers + Sylhet draft papers reviewed item by item (D-#1030–#1034)
+  exam-paper-generation-brief.md ← how the draft papers (server/assets/exam-papers/) are generated + validated
   prd-daily-report.md ← Daily school report: 18:00 saved day, 12 parts, notification, history, sharing w/ end date, exact jumps (D-#1050–#1055)
   prd-staff-mistakes.md ← Staff mistake record: reason per caught mistake → review → per-person record, slices MR-1..8 (D-#936–#943+)
   prd-class-books.md  ← Class books: guardians read the classroom books page by page, view only (PDF → page images) (D-#870)
@@ -119,6 +121,7 @@ auto-deploys (`.github/workflows`, `scripts/deploy.sh`). So:
   prd-mastery.md      ← learning-outcome mastery tracker (add-on): LO catalogue → exceptions-only per-question entry → diagnosis → teacher-laid-out tailored assignment → 50% trigger extra class + re-test → guardian, M-0..M-6 (D-#775–#785); draft catalogues in docs/mastery/lo-catalogue/
   prd-objective-tree.md ← mastery catalogue v2: Claude-drafted domain → objective → sub-objective tree, in-app review (Mahzabin) + lock, OT-0..OT-6 (D-#921–#928); content in docs/mastery/objective-tree/
   prd-help-centre.md  ← in-app help: permission-filtered Bangla per-task guides with numbered-box screenshots, HC-1..HC-5 (D-#968–#972)
+  help-guides-app-findings.md ← what the whole-app guide walk saw wrong in the app (fix it and update its guide together)
   prd-permission-matrix.md ← every feature × every action as `feature:action`, editable per role (Teacher/Office) + per person; reach (view_all/edit_all), legacy expansion, the new-feature rule (D-#790–#801)
   permission-catalogue/    ← THE registry: every feature + action + defaults (README), per-area resolver/route/app-gate checklists, legacy-expansion, findings
   prd-meeting-comments.md ← parents'-meeting comment chain (subject → class teacher → Principal/Office, Strengths + Concerns) + meeting-day brief & print, MC-1..4 (D-#752–#756)

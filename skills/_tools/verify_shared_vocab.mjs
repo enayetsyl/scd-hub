@@ -949,6 +949,9 @@ const ROLE_CHECK_DEFAULTS = {
     "quran_exam:view", "quran_exam:manage", "quran_exam:publish", "quran_exam:edit_all", "quran_exam:lock", "quran_exam:remind",
     // Exam routine (D-#883): the Office writes and publishes it; everyone reads it.
     "exam_routine:view", "exam_routine:manage", "exam_routine:publish",
+    // Exam paper bank (D-#1030): owner 2026-11-06 — "office can see" the Mohammadpur papers; the
+    // Office keeps that shelf and reads the draft papers (managing drafts is Principal-default).
+    "exam_papers:view_reference", "exam_papers:manage_reference", "exam_papers:view",
     // Comment read confirmation (D-#886): the Office sends comments, so it follows up on the unread ones.
     "student_comments:read_status",
     // Mark-submission guard (D-#889–#893): the Office gets the 09:30 list and reads correction notes.

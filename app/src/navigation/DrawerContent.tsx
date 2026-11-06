@@ -135,6 +135,10 @@ const STAFF_NAV: NavSection[] = [
       { route: "SyllabusTab", labelKey: "syExamManage", icon: "🗓️", screen: "SyllabusExams", perms: ["exam_syllabus:settings"] },
       { route: "SyllabusTab", labelKey: "syEntry", icon: "✍️", screen: "SyllabusEntry", perms: ["exam_syllabus:edit"] },
       { route: "SyllabusTab", labelKey: "syApprovals", icon: "✅", screen: "SyllabusApprovals" },
+      // D-#1031: draft papers — every staff member may be a reviewer (their list is just their own).
+      { route: "ExamPapersTab", labelKey: "epNav", icon: "📝", screen: "ExamPapersHome", perms: ["exam_papers:review", "exam_papers:view", "exam_papers:manage"] },
+      // D-#1030: Mohammadpur's past papers (Office by default).
+      { route: "ExamPapersTab", labelKey: "epRefNav", icon: "📂", screen: "ReferencePapers", perms: ["exam_papers:view_reference", "exam_papers:manage_reference"] },
     ],
   },
   {

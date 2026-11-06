@@ -395,3 +395,17 @@ All in `server/src/modules/quran-exam/resolvers/quranExam.ts`. Row scope lives i
 App gates: drawer leaf + syllabus-home button on any of the three actions; Edit on `manage`; Publish on `publish`.
 
 App gates: tab `QuranExamTab` = any of view / manage / examine; publish / lock / manage / remind buttons each check their own action; the Today card checks `examine`; the guardian card and pop-ups are GUARDIAN-only.
+
+## (k) `exam_papers` — exam paper bank (added 2026-11-06, D-#1030–#1034)
+
+| resolver / route | gate |
+|---|---|
+| referencePapers, referencePaperPage | hasAnyPermission(`exam_papers:view_reference`, `exam_papers:manage_reference`) |
+| referencePaperByHash, updateReferencePaper, deleteReferencePaper, POST /files/reference-paper | `exam_papers:manage_reference` |
+| GET /files/:id (`reference_paper_page` / `reference_paper_source`) | view_reference or manage_reference + the file belongs to a paper |
+| examPaperDrafts, examPaperDraft | hasAnyPermission(`exam_papers:view`, `exam_papers:manage`, `exam_papers:review`); svc: without view/manage only papers whose reviewer is the caller |
+| importExamPaperDraft, assignExamPaperReviewer, resolveExamPaperSuggestion, finalizeExamPaper, examPaperReviewerOptions | `exam_papers:manage` |
+| setExamItemSyllabusMatch, confirmExamSectionSyllabus, suggestExamPaperChange, withdrawExamPaperSuggestion | hasAnyPermission(`exam_papers:review`, `exam_papers:manage`); svc: the paper's reviewer or a manager, never on a FINAL paper |
+| submitExamPaperReview | `exam_papers:review`; svc: the paper's reviewer only |
+
+App gates: stack `ExamPapersTab` on any of the five; drawer leaf প্রশ্নপত্র রিভিউ on review/view/manage, মোহাম্মদপুরের প্রশ্নপত্র on view_reference/manage_reference; assign/accept/finalize controls only when the paper says `viewerCanManage`; review buttons only for `viewerIsReviewer` or a manager.

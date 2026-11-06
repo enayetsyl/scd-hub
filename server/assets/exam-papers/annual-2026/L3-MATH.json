@@ -1,0 +1,1055 @@
+{
+  "schema": "scd.exam-paper-draft/v1",
+  "key": "annual-2026-L3-MATH",
+  "exam": {
+    "term": "ANNUAL",
+    "year": 2026,
+    "nameBn": "বার্ষিক পরীক্ষা ২০২৬"
+  },
+  "classLevel": 3,
+  "subject": "MATH",
+  "titleBn": "বার্ষিক পরীক্ষা ২০২৬ · তৃতীয় শ্রেণি · গণিত",
+  "fullMarks": 100,
+  "durationBn": "৩ ঘণ্টা",
+  "syllabusRows": [
+    {
+      "seq": 1,
+      "label": "বহুনির্বাচনি প্রশ্ন",
+      "itemType": "mcq",
+      "component": null,
+      "count": 18,
+      "marksEach": 1,
+      "total": 18
+    },
+    {
+      "seq": 2,
+      "label": "শূন্যস্থান পূরণ / সঠিক চিহ্ন বসাও",
+      "itemType": "fill_blank",
+      "component": null,
+      "count": 10,
+      "marksEach": 1,
+      "total": 10
+    },
+    {
+      "seq": 3,
+      "label": "সংক্ষিপ্ত উত্তর প্রশ্ন",
+      "itemType": "short_answer",
+      "component": null,
+      "count": 10,
+      "marksEach": 1,
+      "total": 10
+    },
+    {
+      "seq": 4,
+      "label": "যোগ, বিয়োগ, গুণ ও ভাগ কর (ভাগশেষসহ)",
+      "itemType": "other",
+      "component": null,
+      "count": 6,
+      "marksEach": 2,
+      "total": 12
+    },
+    {
+      "seq": 5,
+      "label": "নামতা লেখ",
+      "itemType": "other",
+      "component": null,
+      "count": 10,
+      "marksEach": 1,
+      "total": 10
+    },
+    {
+      "seq": 6,
+      "label": "চার প্রক্রিয়া সম্পর্কিত সমস্যা",
+      "itemType": "creative",
+      "component": null,
+      "count": 1,
+      "marksEach": 8,
+      "total": 8
+    },
+    {
+      "seq": 7,
+      "label": "ভগ্নাংশ সম্পর্কিত সমস্যা",
+      "itemType": "creative",
+      "component": null,
+      "count": 1,
+      "marksEach": 8,
+      "total": 8
+    },
+    {
+      "seq": 8,
+      "label": "পরিমাপ ও সময় সম্পর্কিত সমস্যা",
+      "itemType": "creative",
+      "component": null,
+      "count": 1,
+      "marksEach": 8,
+      "total": 8
+    },
+    {
+      "seq": 9,
+      "label": "জ্যামিতি: কোণ চেনা, চাঁদার ব্যবহার ও বৈশিষ্ট্য লিখন",
+      "itemType": "creative",
+      "component": null,
+      "count": 1,
+      "marksEach": 8,
+      "total": 8
+    },
+    {
+      "seq": 10,
+      "label": "উপাত্ত বিন্যস্তকরণ: সারণি ও চিত্রলেখ",
+      "itemType": "creative",
+      "component": null,
+      "count": 1,
+      "marksEach": 8,
+      "total": 8
+    }
+  ],
+  "sections": [
+    {
+      "seq": 1,
+      "syllabusRowSeq": 1,
+      "kind": "WRITTEN",
+      "instructionBn": "সঠিক উত্তরটি বেছে নিয়ে লেখ",
+      "count": 18,
+      "marksEach": 1,
+      "total": 18,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        {
+          "key": "s1-1",
+          "text": "২৬ ÷ ৫ এর ক্ষেত্রে ভাগশেষ কত?",
+          "options": [
+            "২৫",
+            "১",
+            "২৬",
+            "৫"
+          ],
+          "answer": "১",
+          "marks": 1,
+          "source": "NEW",
+          "bookRef": "অধ্যায় ৬, পৃষ্ঠা ৭৬",
+          "needsPicture": false
+        },
+        {
+          "key": "s1-2",
+          "text": "নিচের কোনটি সঠিক?",
+          "options": [
+            "ভাজক < ভাগশেষ",
+            "ভাগশেষ > ভাজক",
+            "ভাগশেষ = ভাজক",
+            "ভাগশেষ < ভাজক"
+          ],
+          "answer": "ভাগশেষ < ভাজক",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৫ · প্রশ্ন ১(৩)",
+          "bookRef": "অধ্যায় ৬, পৃষ্ঠা ৭৪",
+          "needsPicture": false
+        },
+        {
+          "key": "s1-3",
+          "text": "৪৩ ÷ ৭ = ৬, ভাগশেষ ১ — এই ভাগটিতে ভাজ্য কোনটি?",
+          "options": [
+            "১",
+            "৬",
+            "৭",
+            "৪৩"
+          ],
+          "answer": "৪৩",
+          "marks": 1,
+          "source": "NEW",
+          "bookRef": "অধ্যায় ৬, পৃষ্ঠা ৭৬",
+          "needsPicture": false
+        },
+        {
+          "key": "s1-4",
+          "text": "গুণ ও ভাগের কাজ পাশাপাশি থাকলে কোন দিক থেকে হিসাব করতে হয়?",
+          "options": [
+            "ডান থেকে বাম দিকে",
+            "বাম থেকে ডান দিকে",
+            "সবসময় আগে গুণ",
+            "সবসময় আগে ভাগ"
+          ],
+          "answer": "বাম থেকে ডান দিকে",
+          "marks": 1,
+          "source": "NEW",
+          "bookRef": "অধ্যায় ৭, পৃষ্ঠা ৭৯",
+          "needsPicture": false
+        },
+        {
+          "key": "s1-5",
+          "text": "৭ + ৭ + ৭ + ৭ + ৭ + ৭ + ৭ + ৭ কে প্রকাশ করার ক্ষেত্রে নিচের কোনটি সঠিক?",
+          "options": [
+            "৭ × ৭",
+            "৭ × ৮",
+            "৮ + ৭",
+            "৭ ÷ ৮"
+          ],
+          "answer": "৭ × ৮",
+          "marks": 1,
+          "source": "NEW",
+          "bookRef": "অধ্যায় ৭, পৃষ্ঠা ৮২",
+          "needsPicture": false
+        },
+        {
+          "key": "s1-6",
+          "text": "১টি পেনসিলের দাম ২০ টাকা ও ১টি ছবি আঁকার খাতার দাম ১৫০ টাকা। ৫টি পেনসিল ও ১টি খাতা কিনতে কত টাকা লাগবে?",
+          "options": [
+            "১৭০ টাকা",
+            "২৫০ টাকা",
+            "৭৫০ টাকা",
+            "৮৫০ টাকা"
+          ],
+          "answer": "২৫০ টাকা",
+          "marks": 1,
+          "source": "NEW",
+          "bookRef": "অধ্যায় ৮, পৃষ্ঠা ৮৪",
+          "needsPicture": false
+        },
+        {
+          "key": "s1-7",
+          "text": "‘এক চতুর্থাংশ’-কে ভগ্নাংশে প্রকাশ করলে কোনটি হবে?",
+          "options": [
+            "১/২",
+            "১/৩",
+            "১/৪",
+            "৪/১"
+          ],
+          "answer": "১/৪",
+          "marks": 1,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১(চ)",
+          "bookRef": "অধ্যায় ৯, পৃষ্ঠা ৯৩",
+          "needsPicture": false,
+          "note": "সংক্ষিপ্ত প্রশ্ন থেকে বহুনির্বাচনি করা হয়েছে"
+        },
+        {
+          "key": "s1-8",
+          "text": "৪/৫ − ২/৫ = কত?",
+          "options": [
+            "১/৫",
+            "২/৫",
+            "৬/৫",
+            "২/১০"
+          ],
+          "answer": "২/৫",
+          "marks": 1,
+          "source": "NEW",
+          "bookRef": "অধ্যায় ৯, পৃষ্ঠা ১০২",
+          "needsPicture": false
+        },
+        {
+          "key": "s1-9",
+          "text": "২/৩ এর সমতুল ভগ্নাংশ কোনটি?",
+          "options": [
+            "৩/৪",
+            "৪/৬",
+            "২/৬",
+            "৩/৬"
+          ],
+          "answer": "৪/৬",
+          "marks": 1,
+          "source": "NEW",
+          "bookRef": "অধ্যায় ৯, পৃষ্ঠা ৯৯",
+          "needsPicture": false
+        },
+        {
+          "key": "s1-10",
+          "text": "১০ টাকার ২টি নোট ও ৫০০ টাকার ২টি নোট মিলে মোট কত টাকা?",
+          "options": [
+            "৫২০ টাকা",
+            "৫১০ টাকা",
+            "১০২০ টাকা",
+            "১২০০ টাকা"
+          ],
+          "answer": "১০২০ টাকা",
+          "marks": 1,
+          "source": "NEW",
+          "bookRef": "অধ্যায় ১০, পৃষ্ঠা ১১০",
+          "needsPicture": false
+        },
+        {
+          "key": "s1-11",
+          "text": "১২৫ পয়সা = কত?",
+          "options": [
+            "১২ টাকা ৫ পয়সা",
+            "১ টাকা ২৫ পয়সা",
+            "১২৫ টাকা",
+            "২৫ টাকা ১ পয়সা"
+          ],
+          "answer": "১ টাকা ২৫ পয়সা",
+          "marks": 1,
+          "source": "NEW",
+          "bookRef": "অধ্যায় ১০, পৃষ্ঠা ১০৯",
+          "needsPicture": false
+        },
+        {
+          "key": "s1-12",
+          "text": "বড়ো দৈর্ঘ্য (যেমন: ঢাকা থেকে খুলনার দূরত্ব) পরিমাপের জন্য কোন একক ব্যবহার করা হয়?",
+          "options": [
+            "মিলিমিটার",
+            "সেন্টিমিটার",
+            "মিটার",
+            "কিলোমিটার"
+          ],
+          "answer": "কিলোমিটার",
+          "marks": 1,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১(খ)",
+          "bookRef": "অধ্যায় ১১, পৃষ্ঠা ১১৯",
+          "needsPicture": false,
+          "note": "সংক্ষিপ্ত প্রশ্ন থেকে বহুনির্বাচনি করা হয়েছে; উদাহরণ যোগ করা হয়েছে"
+        },
+        {
+          "key": "s1-13",
+          "text": "২০০০ গ্রাম = কত কিলোগ্রাম?",
+          "options": [
+            "২ কিলোগ্রাম",
+            "২০ কিলোগ্রাম",
+            "২০০ কিলোগ্রাম",
+            "২০০০ কিলোগ্রাম"
+          ],
+          "answer": "২ কিলোগ্রাম",
+          "marks": 1,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৩(খ)",
+          "bookRef": "অধ্যায় ১১, পৃষ্ঠা ১২৫",
+          "needsPicture": false,
+          "note": "‘১ কিলোগ্রাম = ? গ্রাম’ উল্টো করে বহুনির্বাচনি করা হয়েছে"
+        },
+        {
+          "key": "s1-14",
+          "text": "একটি কলমের নিপ পরিমাপ করতে কোন এককটি ব্যবহার সুবিধাজনক?",
+          "options": [
+            "কিলোমিটার",
+            "মিটার",
+            "সেন্টিমিটার",
+            "মিলিমিটার"
+          ],
+          "answer": "মিলিমিটার",
+          "marks": 1,
+          "source": "NEW",
+          "bookRef": "অধ্যায় ১১, পৃষ্ঠা ১৩০",
+          "needsPicture": false
+        },
+        {
+          "key": "s1-15",
+          "text": "দুপুর ১২:৩০টায় বৃষ্টি শুরু হয়ে ২ ঘণ্টা ৪৫ মিনিট বৃষ্টি হয়েছিল। কখন বৃষ্টি থেমেছিল?",
+          "options": [
+            "৩:১৫ টায়",
+            "৩:৩০ টায়",
+            "৪:৪৫ টায়",
+            "৫:১৫ টায়"
+          ],
+          "answer": "৩:১৫ টায়",
+          "marks": 1,
+          "source": "NEW",
+          "bookRef": "অধ্যায় ১১, পৃষ্ঠা ১৩১",
+          "needsPicture": false
+        },
+        {
+          "key": "s1-16",
+          "text": "একটি সরল কোণ গঠিত হয়—",
+          "options": [
+            "দুটি সমকোণ দিয়ে",
+            "দুটি সূক্ষ্মকোণ দিয়ে",
+            "দুটি স্থূলকোণ দিয়ে",
+            "একটি সমকোণ ও একটি স্থূলকোণ দিয়ে"
+          ],
+          "answer": "দুটি সমকোণ দিয়ে",
+          "marks": 1,
+          "source": "NEW",
+          "bookRef": "অধ্যায় ১২, পৃষ্ঠা ১৪৬",
+          "needsPicture": false
+        },
+        {
+          "key": "s1-17",
+          "text": "একটি কাগজ মাঝ বরাবর ভাঁজ করে আবার আড়াআড়িভাবে ভাঁজ করলে কোনায় কোন কোণ পাওয়া যায়?",
+          "options": [
+            "এক সমকোণ",
+            "সরল কোণ",
+            "স্থূলকোণ",
+            "দুটি সূক্ষ্মকোণ"
+          ],
+          "answer": "এক সমকোণ",
+          "marks": 1,
+          "source": "NEW",
+          "bookRef": "অধ্যায় ১২, পৃষ্ঠা ১৩৭",
+          "needsPicture": false
+        },
+        {
+          "key": "s1-18",
+          "text": "একটি চিত্রলেখে প্রতিটি ⬤ = ১০ জন শিক্ষার্থী। তাহলে অর্ধেক প্রতীক ◖ কতজন শিক্ষার্থী নির্দেশ করে?",
+          "options": [
+            "২ জন",
+            "৫ জন",
+            "১০ জন",
+            "২০ জন"
+          ],
+          "answer": "৫ জন",
+          "marks": 1,
+          "source": "NEW",
+          "bookRef": "অধ্যায় ১৩, পৃষ্ঠা ১৫২–১৫৩",
+          "needsPicture": false
+        }
+      ]
+    },
+    {
+      "seq": 2,
+      "syllabusRowSeq": 2,
+      "kind": "WRITTEN",
+      "instructionBn": "শূন্যস্থান পূরণ কর",
+      "count": 10,
+      "marksEach": 1,
+      "total": 10,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        {
+          "key": "s2-1",
+          "text": "৭ মিটার = ______ সেন্টিমিটার",
+          "answer": "৭০০",
+          "marks": 1,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৩(ক)",
+          "bookRef": "অধ্যায় ১১, পৃষ্ঠা ১২০–১২১",
+          "needsPicture": false,
+          "note": "মূল প্রশ্নে ৪ নম্বর ছিল; এখানে ১ নম্বরের শূন্যস্থান"
+        },
+        {
+          "key": "s2-2",
+          "text": "৫ কিলোমিটার = ______ মিটার",
+          "answer": "৫০০০",
+          "marks": 1,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৩(গ)",
+          "bookRef": "অধ্যায় ১১, পৃষ্ঠা ১২০",
+          "needsPicture": false,
+          "note": "মূল প্রশ্নে ৪ নম্বর ছিল; এখানে ১ নম্বরের শূন্যস্থান"
+        },
+        {
+          "key": "s2-3",
+          "text": "২৪ সেন্টিমিটার ২ মিলিমিটার = ______ মিলিমিটার",
+          "answer": "২৪২",
+          "marks": 1,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৩(ঘ)",
+          "bookRef": "অধ্যায় ১১, পৃষ্ঠা ১২১",
+          "needsPicture": false,
+          "note": "মূল প্রশ্নে ‘১২ মিলিমিটার’ (১ সেমির বেশি) ছিল; ২ মিলিমিটার করা হয়েছে"
+        },
+        {
+          "key": "s2-4",
+          "text": "৭ কিলোগ্রাম ৩৩ গ্রাম = ______ গ্রাম",
+          "answer": "৭০৩৩",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৮(খ)",
+          "bookRef": "অধ্যায় ১১, পৃষ্ঠা ১২৫",
+          "needsPicture": false
+        },
+        {
+          "key": "s2-5",
+          "text": "২ মিনিট = ______ সেকেন্ড",
+          "answer": "১২০",
+          "marks": 1,
+          "source": "MP_OTHER_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১(ছ)",
+          "bookRef": "অধ্যায় ১১, পৃষ্ঠা ১২৬",
+          "needsPicture": false,
+          "note": "সংক্ষিপ্ত প্রশ্ন থেকে শূন্যস্থান করা হয়েছে"
+        },
+        {
+          "key": "s2-6",
+          "text": "৩ টাকা = ______ পয়সা",
+          "answer": "৩০০",
+          "marks": 1,
+          "source": "MP_OTHER_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১(চ)",
+          "bookRef": "অধ্যায় ১০, পৃষ্ঠা ১০৮",
+          "needsPicture": false,
+          "note": "সংক্ষিপ্ত প্রশ্ন থেকে শূন্যস্থান করা হয়েছে"
+        },
+        {
+          "key": "s2-7",
+          "text": "চারটি ১/৪ একত্রে রাখলে ______ তৈরি হয়।",
+          "answer": "১ (একটি পূর্ণ বস্তু)",
+          "marks": 1,
+          "source": "NEW",
+          "bookRef": "অধ্যায় ৯, পৃষ্ঠা ৯৩",
+          "needsPicture": false
+        },
+        {
+          "key": "s2-8",
+          "text": "৭ × ৪ = ১৪ × ______",
+          "answer": "২",
+          "marks": 1,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১(ঙ)",
+          "bookRef": "অধ্যায় ৭",
+          "needsPicture": false,
+          "note": "সংক্ষিপ্ত প্রশ্ন থেকে শূন্যস্থান করা হয়েছে"
+        },
+        {
+          "key": "s2-9",
+          "text": "যে ভগ্নাংশগুলোর মান সমান, সেগুলোকে ______ ভগ্নাংশ বলে।",
+          "answer": "সমতুল",
+          "marks": 1,
+          "source": "NEW",
+          "bookRef": "অধ্যায় ৯, পৃষ্ঠা ৯৮",
+          "needsPicture": false
+        },
+        {
+          "key": "s2-10",
+          "text": "বিন্দুর দৈর্ঘ্য, প্রস্থ বা উচ্চতা নেই, কেবল ______ রয়েছে।",
+          "answer": "অবস্থান",
+          "marks": 1,
+          "source": "NEW",
+          "bookRef": "অধ্যায় ১২, পৃষ্ঠা ১৩৩",
+          "needsPicture": false
+        }
+      ]
+    },
+    {
+      "seq": 3,
+      "syllabusRowSeq": 3,
+      "kind": "WRITTEN",
+      "instructionBn": "সংক্ষিপ্ত প্রশ্নের উত্তর দাও",
+      "count": 10,
+      "marksEach": 1,
+      "total": 10,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        {
+          "key": "s3-1",
+          "text": "৪টি ডিমে ১ হালি হয়, ৫ হালিতে কতগুলো ডিম হয়?",
+          "answer": "২০টি (৪ × ৫ = ২০)",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১(ক)",
+          "bookRef": "অধ্যায় ৮",
+          "needsPicture": false
+        },
+        {
+          "key": "s3-2",
+          "text": "১৪ ÷ ৩ এর ভাগফল ও ভাগশেষ কত?",
+          "answer": "ভাগফল ৪, ভাগশেষ ২ (৩ × ৪ = ১২, ১৪ − ১২ = ২)",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১(গ)",
+          "bookRef": "অধ্যায় ৬, পৃষ্ঠা ৭৪",
+          "needsPicture": false
+        },
+        {
+          "key": "s3-3",
+          "text": "৩/৬ এর ২টি সমতুল ভগ্নাংশ লেখ।",
+          "answer": "যেমন: ৬/১২, ৯/১৮ (অথবা ১/২, ২/৪ — যেকোনো সঠিক ২টি)",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১(ছ)",
+          "bookRef": "অধ্যায় ৯, পৃষ্ঠা ৯৮",
+          "needsPicture": false
+        },
+        {
+          "key": "s3-4",
+          "text": "ভগ্নাংশ জোড়াটি তুলনা করে খালিঘরে প্রতীক (>, <, =) বসাও: ৭/৮ ☐ ৬/৮",
+          "answer": "৭/৮ > ৬/৮",
+          "marks": 1,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১(জ)",
+          "bookRef": "অধ্যায় ৯, পৃষ্ঠা ৯৯",
+          "needsPicture": false,
+          "note": "দুই অংশের মধ্যে শুধু (i) অংশ রাখা হয়েছে"
+        },
+        {
+          "key": "s3-5",
+          "text": "১০০ টাকার কয়টি নোট ১০০০ টাকার সমান?",
+          "answer": "১০টি",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১(ঝ)",
+          "bookRef": "অধ্যায় ১০, পৃষ্ঠা ১১০",
+          "needsPicture": false
+        },
+        {
+          "key": "s3-6",
+          "text": "৮টি আম দুইজনকে সমানভাবে ভাগ করে দেওয়া হলে, প্রত্যেকে কয়টি করে আম পাবে?",
+          "answer": "৪টি (৮ ÷ ২ = ৪)",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১(ঞ)",
+          "bookRef": "অধ্যায় ৬, পৃষ্ঠা ৭৬",
+          "needsPicture": false
+        },
+        {
+          "key": "s3-7",
+          "text": "৬৩ ÷ ৯ = কত?",
+          "answer": "৭",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১(ঙ)",
+          "bookRef": "অধ্যায় ৬, পৃষ্ঠা ৬৯",
+          "needsPicture": false
+        },
+        {
+          "key": "s3-8",
+          "text": "দুইটি ভগ্নাংশের হর একই হলে তাদেরকে কী ভগ্নাংশ বলে?",
+          "answer": "সমহরবিশিষ্ট ভগ্নাংশ",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১(ট)",
+          "bookRef": "অধ্যায় ৯, পৃষ্ঠা ১০০",
+          "needsPicture": false
+        },
+        {
+          "key": "s3-9",
+          "text": "একটি চিত্রলেখে প্রতিটি ★ = ৪ জন শিক্ষার্থী। ৩টি ★ কতজন শিক্ষার্থী নির্দেশ করে?",
+          "answer": "১২ জন (৪ × ৩ = ১২)",
+          "marks": 1,
+          "source": "NEW",
+          "bookRef": "অধ্যায় ১৩, পৃষ্ঠা ১৫৪",
+          "needsPicture": false
+        },
+        {
+          "key": "s3-10",
+          "text": "রফিক ১০:২০ এ বন্ধুর বাসায় গিয়েছিল এবং ১২:৫০ এ ফিরে এসেছিল। সে কতক্ষণ বাড়ির বাইরে ছিল?",
+          "answer": "২ ঘণ্টা ৩০ মিনিট",
+          "marks": 1,
+          "source": "NEW",
+          "bookRef": "অধ্যায় ১১, পৃষ্ঠা ১৩২",
+          "needsPicture": false
+        }
+      ]
+    },
+    {
+      "seq": 4,
+      "syllabusRowSeq": 4,
+      "kind": "WRITTEN",
+      "instructionBn": "যোগ, বিয়োগ, গুণ ও ভাগ কর (ভাগশেষসহ)",
+      "count": 6,
+      "marksEach": 2,
+      "total": 12,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        {
+          "key": "s4-1",
+          "text": "১২৫ ÷ ৫",
+          "answer": "২৫",
+          "marks": 2,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ২(ঘ)",
+          "bookRef": "অধ্যায় ৬, পৃষ্ঠা ৭৬",
+          "needsPicture": false
+        },
+        {
+          "key": "s4-2",
+          "text": "৫৬ ÷ ৯",
+          "answer": "ভাগফল ৬, ভাগশেষ ২ (৯ × ৬ = ৫৪, ৫৬ − ৫৪ = ২)",
+          "marks": 2,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৫ · প্রশ্ন ৭(গ)",
+          "bookRef": "অধ্যায় ৬, পৃষ্ঠা ৭৪",
+          "needsPicture": false
+        },
+        {
+          "key": "s4-3",
+          "text": "১৮ ÷ ৬ × ৭",
+          "answer": "২১ (১৮ ÷ ৬ = ৩, ৩ × ৭ = ২১)",
+          "marks": 2,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ২(ঙ)",
+          "bookRef": "অধ্যায় ৭, পৃষ্ঠা ৭৯",
+          "needsPicture": false
+        },
+        {
+          "key": "s4-4",
+          "text": "১৫ × ৫ ÷ ৩",
+          "answer": "২৫ (১৫ × ৫ = ৭৫, ৭৫ ÷ ৩ = ২৫)",
+          "marks": 2,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ২(চ)",
+          "bookRef": "অধ্যায় ৭, পৃষ্ঠা ৮০",
+          "needsPicture": false
+        },
+        {
+          "key": "s4-5",
+          "text": "৩৮ টাকা ৫৫ পয়সা + ২৮ টাকা ৭৫ পয়সা",
+          "answer": "৬৭ টাকা ৩০ পয়সা (৫৫ + ৭৫ = ১৩০ পয়সা = ১ টাকা ৩০ পয়সা; ৩৮ + ২৮ + ১ = ৬৭ টাকা)",
+          "marks": 2,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ২(ঝ)",
+          "bookRef": "অধ্যায় ১০, পৃষ্ঠা ১১৩",
+          "needsPicture": false
+        },
+        {
+          "key": "s4-6",
+          "text": "৯৮ টাকা ৬০ পয়সা − ৮২ টাকা ২০ পয়সা",
+          "answer": "১৬ টাকা ৪০ পয়সা",
+          "marks": 2,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ২(ঞ)",
+          "bookRef": "অধ্যায় ১০, পৃষ্ঠা ১১৪",
+          "needsPicture": false
+        }
+      ]
+    },
+    {
+      "seq": 5,
+      "syllabusRowSeq": 5,
+      "kind": "WRITTEN",
+      "instructionBn": "নামতা লেখ",
+      "count": 10,
+      "marksEach": 1,
+      "total": 10,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        {
+          "key": "s5-1",
+          "text": "৭ × ৩ = ?",
+          "answer": "২১",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৪",
+          "needsPicture": false
+        },
+        {
+          "key": "s5-2",
+          "text": "৯ × ৯ = ?",
+          "answer": "৮১",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৪",
+          "needsPicture": false
+        },
+        {
+          "key": "s5-3",
+          "text": "৬ × ৮ = ?",
+          "answer": "৪৮",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৪",
+          "needsPicture": false
+        },
+        {
+          "key": "s5-4",
+          "text": "৮ × ৫ = ?",
+          "answer": "৪০",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৪",
+          "needsPicture": false
+        },
+        {
+          "key": "s5-5",
+          "text": "৯ × ৭ = ?",
+          "answer": "৬৩",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৪",
+          "needsPicture": false
+        },
+        {
+          "key": "s5-6",
+          "text": "১৫ × ২ = ?",
+          "answer": "৩০",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৪",
+          "needsPicture": false
+        },
+        {
+          "key": "s5-7",
+          "text": "১২ × ৬ = ?",
+          "answer": "৭২",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৪",
+          "needsPicture": false
+        },
+        {
+          "key": "s5-8",
+          "text": "১৬ × ২ = ?",
+          "answer": "৩২",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৪",
+          "needsPicture": false
+        },
+        {
+          "key": "s5-9",
+          "text": "১৩ × ৩ = ?",
+          "answer": "৩৯",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৪",
+          "needsPicture": false
+        },
+        {
+          "key": "s5-10",
+          "text": "১৪ × ৫ = ?",
+          "answer": "৭০",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৪",
+          "needsPicture": false
+        }
+      ]
+    },
+    {
+      "seq": 6,
+      "syllabusRowSeq": 6,
+      "kind": "WRITTEN",
+      "instructionBn": "চার প্রক্রিয়া সম্পর্কিত সমস্যা — সমাধান করে দেখাও",
+      "count": 1,
+      "marksEach": 8,
+      "total": 8,
+      "choiceNoteBn": null,
+      "splitMarks": true,
+      "stimulusMd": "৬টি ঝুড়ির প্রতিটিতে ১২টি করে আম আছে এবং অন্য আরেকটি ঝুড়িতে ২৪টি আম আছে।",
+      "matchRight": null,
+      "items": [
+        {
+          "key": "s6-1",
+          "text": "ক) ঝুড়িগুলোতে মোট কতটি আম আছে?",
+          "answer": "৬ × ১২ = ৭২টি; ৭২ + ২৪ = ৯৬টি আম",
+          "marks": 3,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৬(ঘ)(১)",
+          "bookRef": "অধ্যায় ৮, পৃষ্ঠা ৮৫",
+          "needsPicture": false
+        },
+        {
+          "key": "s6-2",
+          "text": "খ) ওই আমগুলো থেকে ৯টি আম নষ্ট হয়ে গেলে, এখন মোট কয়টি আম ভালো আছে?",
+          "answer": "৯৬ − ৯ = ৮৭টি আম",
+          "marks": 2,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৬(ঘ)(২)",
+          "bookRef": "অধ্যায় ৮, পৃষ্ঠা ৮৮",
+          "needsPicture": false,
+          "note": "‘একটি ঝুড়ির ৯টি আম’ কথাটি সহজ করা হয়েছে"
+        },
+        {
+          "key": "s6-3",
+          "text": "গ) ভালো আমগুলো ৩ জনের মধ্যে সমানভাবে ভাগ করে দিলে প্রত্যেকে কয়টি করে আম পাবে?",
+          "answer": "৮৭ ÷ ৩ = ২৯টি করে আম (৩ × ২৯ = ৮৭)",
+          "marks": 3,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৬(ঘ)",
+          "bookRef": "অধ্যায় ৮, পৃষ্ঠা ৮৮",
+          "needsPicture": false,
+          "note": "৮ নম্বর পূরণে ভাগের নতুন অংশ যোগ করা হয়েছে"
+        }
+      ]
+    },
+    {
+      "seq": 7,
+      "syllabusRowSeq": 7,
+      "kind": "WRITTEN",
+      "instructionBn": "ভগ্নাংশ সম্পর্কিত সমস্যা — সমাধান করে দেখাও",
+      "count": 1,
+      "marksEach": 8,
+      "total": 8,
+      "choiceNoteBn": null,
+      "splitMarks": true,
+      "stimulusMd": "[ছবি: (i) একটি চতুর্ভুজ সমান ৮ ঘরে ভাগ করা (২ কলাম × ৪ সারি), এর মধ্যে ৪টি ঘর রঙিন (দাবার ছকের মতো একটি পর একটি); (ii) একটি বৃত্ত সমান ৪ অংশে ভাগ করা, এর মধ্যে ২টি অংশ রঙিন (মুখোমুখি দুই অংশ)]",
+      "matchRight": null,
+      "items": [
+        {
+          "key": "s7-1",
+          "text": "ক) ছবির চতুর্ভুজটির রঙিন অংশকে ভগ্নাংশে প্রকাশ কর।",
+          "answer": "৪/৮",
+          "marks": 2,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৫(১)(ক)",
+          "bookRef": "অধ্যায় ৯, পৃষ্ঠা ৯৭",
+          "needsPicture": true,
+          "note": "নম্বর ৩ থেকে ২ করা হয়েছে"
+        },
+        {
+          "key": "s7-2",
+          "text": "খ) ছবির বৃত্তটির রঙিন অংশকে ভগ্নাংশে প্রকাশ কর।",
+          "answer": "২/৪",
+          "marks": 2,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৫(১)(খ)",
+          "bookRef": "অধ্যায় ৯, পৃষ্ঠা ৯৭",
+          "needsPicture": true,
+          "note": "নম্বর ৩ থেকে ২ করা হয়েছে"
+        },
+        {
+          "key": "s7-3",
+          "text": "গ) স্কুল থেকে আয়েশার বাড়ির দূরত্ব ৪/৯ কিলোমিটার এবং মারিয়ামের বাড়ির দূরত্ব ৬/৯ কিলোমিটার। স্কুল থেকে কার বাড়ির দূরত্ব বেশি এবং কত কিলোমিটার বেশি?",
+          "answer": "হর একই, লব ৬ > ৪, তাই মারিয়ামের বাড়ির দূরত্ব বেশি; ৬/৯ − ৪/৯ = ২/৯ কিলোমিটার বেশি",
+          "marks": 4,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৬(গ)",
+          "bookRef": "অধ্যায় ৯, পৃষ্ঠা ১০৬",
+          "needsPicture": false,
+          "note": "নম্বর ৫ থেকে ৪ করা হয়েছে"
+        }
+      ]
+    },
+    {
+      "seq": 8,
+      "syllabusRowSeq": 8,
+      "kind": "WRITTEN",
+      "instructionBn": "পরিমাপ ও সময় সম্পর্কিত সমস্যা — সমাধান করে দেখাও",
+      "count": 1,
+      "marksEach": 8,
+      "total": 8,
+      "choiceNoteBn": null,
+      "splitMarks": true,
+      "stimulusMd": "রিমা সকাল ৭:৪০ এ বাড়ি থেকে রওনা দিয়ে ৩৫ মিনিট পর নানাবাড়ি পৌঁছাল। তার বাড়ি থেকে নানাবাড়ির দূরত্ব ২ কিলোমিটার ৩৫০ মিটার। সে নানির জন্য ২ কিলোগ্রাম ৫০০ গ্রাম চাল এবং ১ কিলোগ্রাম ২৫০ গ্রাম ডাল নিয়ে গেল।",
+      "matchRight": null,
+      "items": [
+        {
+          "key": "s8-1",
+          "text": "ক) রিমা কয়টায় নানাবাড়ি পৌঁছাল?",
+          "answer": "৭:৪০ + ৩৫ মিনিট = সকাল ৮:১৫ (৮টা বেজে ১৫ মিনিট / সোয়া ৮টা)",
+          "marks": 2,
+          "source": "NEW",
+          "bookRef": "অধ্যায় ১১, পৃষ্ঠা ১২৮",
+          "needsPicture": false
+        },
+        {
+          "key": "s8-2",
+          "text": "খ) নানাবাড়ির দূরত্ব মিটারে প্রকাশ কর।",
+          "answer": "২ কিমি = ২০০০ মিটার; ২০০০ + ৩৫০ = ২৩৫০ মিটার",
+          "marks": 2,
+          "source": "NEW",
+          "bookRef": "অধ্যায় ১১, পৃষ্ঠা ১২০–১২১",
+          "needsPicture": false
+        },
+        {
+          "key": "s8-3",
+          "text": "গ) চাল ও ডালের মোট ওজন কত গ্রাম?",
+          "answer": "চাল ২৫০০ গ্রাম, ডাল ১২৫০ গ্রাম; ২৫০০ + ১২৫০ = ৩৭৫০ গ্রাম",
+          "marks": 2,
+          "source": "NEW",
+          "bookRef": "অধ্যায় ১১, পৃষ্ঠা ১২৫",
+          "needsPicture": false
+        },
+        {
+          "key": "s8-4",
+          "text": "ঘ) রিমা নানাবাড়িতে ২ ঘণ্টা ৩০ মিনিট ছিল। সে কয়টায় নানাবাড়ি থেকে রওনা দিল?",
+          "answer": "৮:১৫ + ২ ঘণ্টা ৩০ মিনিট = সকাল ১০:৪৫ (পৌনে ১১টা)",
+          "marks": 2,
+          "source": "NEW",
+          "bookRef": "অধ্যায় ১১, পৃষ্ঠা ১২৯",
+          "needsPicture": false
+        }
+      ]
+    },
+    {
+      "seq": 9,
+      "syllabusRowSeq": 9,
+      "kind": "WRITTEN",
+      "instructionBn": "জ্যামিতি: কোণ চেনা ও বৈশিষ্ট্য লিখন",
+      "count": 1,
+      "marksEach": 8,
+      "total": 8,
+      "choiceNoteBn": null,
+      "splitMarks": true,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        {
+          "key": "s9-1",
+          "text": "ক) কোণ কাকে বলে?",
+          "answer": "দুইটি রেখার মিলিত বিন্দুতে (শীর্ষ বিন্দু) যে আকৃতি তৈরি হয়, তাকে কোণ বলে।",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৭(১)(ক)",
+          "bookRef": "অধ্যায় ১২, পৃষ্ঠা ১৩৬",
+          "needsPicture": false
+        },
+        {
+          "key": "s9-2",
+          "text": "খ) সূক্ষ্মকোণ, স্থূলকোণ ও এক সমকোণের চিত্র আঁক।",
+          "answer": "তিনটি চিত্র: এক সমকোণ (সমকোণ-চিহ্নসহ); সূক্ষ্মকোণ — এক সমকোণের চেয়ে ছোটো; স্থূলকোণ — এক সমকোণের চেয়ে বড়ো (প্রতিটি সঠিক চিত্র ও নাম ১ নম্বর)",
+          "marks": 3,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৭(১)(খ)",
+          "bookRef": "অধ্যায় ১২, পৃষ্ঠা ১৩৭–১৩৮",
+          "needsPicture": false
+        },
+        {
+          "key": "s9-3",
+          "text": "গ) চিত্রসহ সংজ্ঞা দাও: আয়ত ও বর্গ।",
+          "answer": "আয়ত: যে চতুর্ভুজের ৪টি কোণই সমকোণ, তাকে আয়ত বলে (বিপরীত বাহুগুলোর দৈর্ঘ্য সমান)। বর্গ: যে আয়তের ৪ বাহুর দৈর্ঘ্য একই, তাকে বর্গ বলে। প্রতিটি সংজ্ঞা ১ + চিত্র ১",
+          "marks": 4,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৭(২)",
+          "bookRef": "অধ্যায় ১২, পৃষ্ঠা ১৩৯–১৪০",
+          "needsPicture": false
+        }
+      ]
+    },
+    {
+      "seq": 10,
+      "syllabusRowSeq": 10,
+      "kind": "WRITTEN",
+      "instructionBn": "উপাত্ত বিন্যস্তকরণ: সারণি ও চিত্রলেখ",
+      "count": 1,
+      "marksEach": 8,
+      "total": 8,
+      "choiceNoteBn": null,
+      "splitMarks": true,
+      "stimulusMd": "**(১)** শিক্ষক ২০ জন শিক্ষার্থীর কাছে তাদের পছন্দের রং জানতে চাইলেন। শিক্ষার্থীরা এভাবে উত্তর দিল:\n\nলাল, নীল, লাল, সবুজ, হলুদ, লাল, নীল, সবুজ, লাল, হলুদ, নীল, লাল, সবুজ, নীল, লাল, হলুদ, নীল, লাল, সবুজ, লাল\n\n**(২)** একটি লাইব্রেরির বিভিন্ন ধরনের বইয়ের চিত্রলেখ (প্রতিটি ■ = ১০টি বই):\n\n| বইয়ের ধরন | বই |\n|---|---|\n| বাংলা | ■ ■ ■ |\n| গণিত | ■ ■ ■ ■ |\n| ইংরেজি | ■ ■ ■ ■ ■ |\n| বিজ্ঞান | ■ ■ |",
+      "matchRight": null,
+      "items": [
+        {
+          "key": "s10-1",
+          "text": "ক) (১) নম্বরের উপাত্ত থেকে ট্যালি চিহ্ন ব্যবহার করে একটি সারণি তৈরি কর (রঙের নাম, ট্যালি চিহ্ন, শিক্ষার্থীর সংখ্যা)।",
+          "answer": "লাল — ৮ জন, নীল — ৫ জন, সবুজ — ৪ জন, হলুদ — ৩ জন; মোট ২০ জন (ট্যালি চিহ্ন সঠিকভাবে ৫-এর দলে)",
+          "marks": 3,
+          "source": "NEW",
+          "bookRef": "অধ্যায় ১৩, পৃষ্ঠা ১৫০",
+          "needsPicture": false
+        },
+        {
+          "key": "s10-2",
+          "text": "খ) কোন রংটি সবচেয়ে বেশি এবং কোন রংটি সবচেয়ে কম শিক্ষার্থী পছন্দ করে?",
+          "answer": "সবচেয়ে বেশি: লাল (৮ জন); সবচেয়ে কম: হলুদ (৩ জন)",
+          "marks": 1,
+          "source": "NEW",
+          "bookRef": "অধ্যায় ১৩, পৃষ্ঠা ১৫০",
+          "needsPicture": false
+        },
+        {
+          "key": "s10-3",
+          "text": "গ) (২) নম্বরের চিত্রলেখ দেখে বইয়ের সংখ্যার একটি সারণি তৈরি কর।",
+          "answer": "বাংলা ৩০, গণিত ৪০, ইংরেজি ৫০, বিজ্ঞান ২০",
+          "marks": 2,
+          "source": "NEW",
+          "bookRef": "অধ্যায় ১৩, শেষ পৃষ্ঠা (নিজে করি ৩)",
+          "needsPicture": false
+        },
+        {
+          "key": "s10-4",
+          "text": "ঘ) লাইব্রেরিতে মোট কতটি বই আছে? কোন ধরনের বই সবচেয়ে বেশি?",
+          "answer": "৩০ + ৪০ + ৫০ + ২০ = ১৪০টি বই; ইংরেজি বই সবচেয়ে বেশি",
+          "marks": 2,
+          "source": "NEW",
+          "bookRef": "অধ্যায় ১৩, শেষ পৃষ্ঠা (নিজে করি ৩)",
+          "needsPicture": false
+        }
+      ]
+    }
+  ],
+  "authorNotes": "Scope: book chapters 6-13 only. The Mohammadpur 2026 Class 3 Maths final is a genuine Class 3 annual paper (/100) but its layout differs from the Sylhet syllabus (no MCQ, no data/pictograph question, no time problem), so its items were spread across the matching Sylhet rows: short answers 1(k,g,chh,jh,nyo) kept in row 3, 1(kh,chh)/3(kh) turned into MCQs, unit conversions 3(k,g,gh) used as row-2 blanks, Q2 computations (125÷5, 18÷6×7, 15×5÷3, money + and −) used in row 4, the Q4 multiplication facts used as row 5 unchanged, Q6(gh) mangoes extended to an 8-mark row 6, Q5(1) fraction picture + Q6(g) distance used for row 7, and Q7 (angle definition, draw angles, rectangle/square definitions — exactly 8 marks) used for row 9. Dropped MP items: 80×30 and 251×26 and 121×4 (chapter 5 multiplication, outside the Sylhet scope), the house-picture question (row 9 is already full with Q7), and the Q6(kha) 4 taka × 365 days problem. Rows 8 (measurement & time creative) and 10 (table & pictograph) had no Mohammadpur match and are new from the book. Row 2 uses only the fill-in-the-blank format (digest: pick one format). Doubts for the owner: (1) Row 9's label says 'চাঁদার ব্যবহার' (using a protractor), but the Class 3 book never teaches the protractor or degrees (it only appears once as an MCQ option, p.147); I left protractor use out and removed it from the printed instruction — please confirm. (2) Row 5 'নামতা লেখ' is set as 10 single multiplication facts (as Mohammadpur did), not as one full table; switch to 'এর নামতা লেখ' with splitMarks if the owner prefers a full table. (3) Duration '৩ ঘণ্টা' copied from Mohammadpur's /100 paper — Sylhet's duration not stated in the syllabus. (4) Row 7 picture: the Office must redraw Mohammadpur's picture (rectangle in 8 equal parts with 4 shaded; circle in 4 equal parts with 2 shaded). All answers were computed and checked twice."
+}
