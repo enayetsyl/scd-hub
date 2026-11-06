@@ -150,6 +150,8 @@ export const EXPECTED_ERROR_NAMES: ReadonlySet<string> = new Set([
   "StaffMistakeError",
   // Warning ladder (D-#940–#942): not your warning, bad meeting time/place.
   "StaffWarningError",
+  // Daily school report (D-#1013–#1018): no part visible, bad date range, bad share/settings input.
+  "DailyReportError",
   "QuranValidationError",
   "ReviewError",
   "RevisionError",

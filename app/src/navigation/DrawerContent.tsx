@@ -271,6 +271,7 @@ const STAFF_NAV: NavSection[] = [
       { route: "ReportsTab", labelKey: "bcTitle", icon: "🧩", screen: "MasteryBankCoverage", perms: REPORT_LEAF_ACTIONS.MasteryBankCoverage },
       { route: "ReportsTab", labelKey: "stbRepTitle", icon: "🧸", screen: "StorybookReport", perms: REPORT_LEAF_ACTIONS.StorybookReport },
       { route: "ReportsTab", labelKey: "actRepTitle", icon: "🧩", screen: "ActivityReport", perms: REPORT_LEAF_ACTIONS.ActivityReport },
+      { route: "ReportsTab", labelKey: "drpTitle", icon: "🗓️", screen: "DailyReport", perms: REPORT_LEAF_ACTIONS.DailyReport },
     ],
   },
   /**

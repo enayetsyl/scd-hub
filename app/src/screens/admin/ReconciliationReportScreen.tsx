@@ -8,6 +8,7 @@
 import React, { useMemo } from "react";
 import { View } from "react-native";
 import { useQuery } from "urql";
+import { useRoute } from "@react-navigation/native";
 import { RECON_REPORT_QUERY, type HwReconMissT, type HwNotDeclaredT } from "../../graphql/operations";
 import { Screen, H2, Body, Muted, Card, Badge, Loader, ErrorBanner } from "../../components/ui";
 import { useReportRange, useReportFilterState } from "../../components/ReportFilters";
@@ -20,8 +21,12 @@ import { space } from "../../theme/tokens";
 
 export default function ReconciliationReportScreen(): React.ReactElement {
   const colors = useColors();
+  // D-#1017: a jump from the daily report opens on that one day (optional param; it is
+  // registered in two stacks, so the route is read loosely).
+  const route = useRoute();
+  const jumpDay = (route.params as { date?: string } | undefined)?.date;
   // D-#309: range chips + custom from–to, shared with the Reports hub screens.
-  const { fromKey: from, toKey: to, node: rangeNode } = useReportRange(7);
+  const { fromKey: from, toKey: to, node: rangeNode } = useReportRange(7, { initialDay: jumpDay });
 
   const [q, refetch] = useQuery({
     query: RECON_REPORT_QUERY,

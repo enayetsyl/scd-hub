@@ -12,13 +12,14 @@ import React from "react";
 import { Pressable, ScrollView, Text, View, RefreshControl } from "react-native";
 import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import { useQuery } from "urql";
-import { DAYS_OF_WEEK } from "@scd/shared";
+import { DAYS_OF_WEEK, DAILY_REPORT_SECTION_PERMISSION } from "@scd/shared";
 import { ADMIN_TODAY_QUERY, type AdminTodayCardT } from "../../graphql/operations";
 import type { TabParamList } from "../../navigation/types";
 import { Screen, H2, Body, Muted, Card, Badge, Loader, ErrorBanner } from "../../components/ui";
 import { FoldCard } from "../../components/FoldCard";
 import { GiftHandoverCard } from "../../components/GiftHandoverCard";
 import { LiveClassCard } from "../../components/LiveClassCard";
+import { DailyReportTodayCard } from "../../components/DailyReportTodayCard";
 import { MyPeriodsSelfCard } from "../../components/MyPeriodsStrip";
 import { TodayWorkCard } from "../../components/TodayWorkCard";
 import { UnissuedHomeworkCard } from "../../components/UnissuedHomeworkCard";
@@ -252,6 +253,9 @@ export default function AdminTodayScreen(): React.ReactElement {
             answer changes every period, and an uncovered class is the one thing here
             that needs a decision within the hour. */}
         {canLiveBoard ? <LiveClassCard /> : null}
+
+        {/* D-#1015 — the last evening's school report, until it is opened. Own query. */}
+        {Object.values(DAILY_REPORT_SECTION_PERMISSION).some((p) => can(p)) ? <DailyReportTodayCard /> : null}
 
         {/* D-#918 — আমার পিরিয়ড for an admin who also teaches (TodayScreen's strip).
             Renders nothing unless the caller has a period today. */}

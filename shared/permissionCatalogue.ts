@@ -1036,6 +1036,23 @@ export const FEATURE_CATALOGUE = {
       activity_skills: { en: "Activity sheets by skill", bn: "দক্ষতা অনুযায়ী অ্যাক্টিভিটি শিট", desc: "Sheets done per skill area and level over a window", teacher: false, office: true, flags: [] },
       activity_sheets: { en: "Activity sheets by bank and sheet", bn: "ব্যাংক ও শিট অনুযায়ী", desc: "Popularity and completion per bank / level; sheets often returned incomplete", teacher: false, office: true, flags: [] },
       activity_students: { en: "Activity sheet students", bn: "শিক্ষার্থী অনুযায়ী অ্যাক্টিভিটি শিট", desc: "Each child's sheets, skill spread and level; sheets not returned (names children)", teacher: false, office: true, flags: [] },
+      // Daily school report (D-#1013–#1018, docs/prd-daily-report.md): one switch per PART of
+      // the 18:00 report, so the Principal can hand someone the whole report or only some parts.
+      // Principal only by default (owner 2026-11-06); the share sheet grants them per person.
+      daily_attendance: { en: "Daily report — attendance", bn: "দৈনিক প্রতিবেদন — উপস্থিতি", desc: "The attendance part of the daily report: present/absent, unmarked units (whole school)", teacher: false, office: false, flags: [] },
+      daily_staff: { en: "Daily report — staff", bn: "দৈনিক প্রতিবেদন — কর্মী", desc: "Staff present/late/absent/on leave and unfilled cover (whole staff)", teacher: false, office: false, flags: [] },
+      daily_teaching: { en: "Daily report — class notes", bn: "দৈনিক প্রতিবেদন — ক্লাস নোট", desc: "Class notes written and missing, observations (whole school)", teacher: false, office: false, flags: [] },
+      daily_homework: { en: "Daily report — homework", bn: "দৈনিক প্রতিবেদন — বাড়ির কাজ", desc: "Homework declared, issued and missed per class (whole school)", teacher: false, office: false, flags: [] },
+      daily_assignment: { en: "Daily report — assignments", bn: "দৈনিক প্রতিবেদন — অ্যাসাইনমেন্ট", desc: "Assignments declared, printed and handed out (whole school)", teacher: false, office: false, flags: [] },
+      daily_class_test: { en: "Daily report — class tests", bn: "দৈনিক প্রতিবেদন — ক্লাস টেস্ট", desc: "Class tests taken, published and late (whole school)", teacher: false, office: false, flags: [] },
+      daily_mistakes: { en: "Daily report — staff mistakes", bn: "দৈনিক প্রতিবেদন — কর্মীর ভুল", desc: "New staff-mistake entries by tier; the Principal's own entries are never shown to others (D-#1000)", teacher: false, office: false, flags: [] },
+      daily_work_board: { en: "Daily report — work board", bn: "দৈনিক প্রতিবেদন — কাজের বোর্ড", desc: "Tasks due today done or still open, older overdue tasks (whole staff)", teacher: false, office: false, flags: [] },
+      daily_office: { en: "Daily report — office desk", bn: "দৈনিক প্রতিবেদন — অফিস ডেস্ক", desc: "Print queue, comments waiting for review (whole school)", teacher: false, office: false, flags: [] },
+      daily_guardians: { en: "Daily report — guardians", bn: "দৈনিক প্রতিবেদন — অভিভাবক", desc: "Families active today and guardian claims left waiting", teacher: false, office: false, flags: [] },
+      daily_finance: { en: "Daily report — finance", bn: "দৈনিক প্রতিবেদন — অর্থ", desc: "Today's income, expense and closing balance (whole school)", teacher: false, office: false, flags: [] },
+      daily_system: { en: "Daily report — system", bn: "দৈনিক প্রতিবেদন — সিস্টেম", desc: "Backups and the reminder clock", teacher: false, office: false, flags: [] },
+      daily_share: { en: "Share the daily report", bn: "দৈনিক প্রতিবেদন শেয়ার করা", desc: "Give or remove parts of the daily report for one person, with an optional end date", teacher: false, office: false, flags: ["PRINCIPAL_DEFAULT"] },
+      daily_settings: { en: "Daily report settings", bn: "দৈনিক প্রতিবেদনের সেটিংস", desc: "Send time and which parts count in the headline", teacher: false, office: false, flags: ["PRINCIPAL_DEFAULT"] },
     },
   },
 } as const satisfies Record<string, CatalogueFeature>;

@@ -241,7 +241,7 @@ export type AttendanceStackParamList = {
   /** D-#292: Principal/Office mark/amend any class for any (past) day. */
   AttendanceAdmin: undefined;
   TeacherAttendanceImport: undefined;
-  AttendanceReport: undefined;
+  AttendanceReport: { date?: string; sectionId?: string } | undefined;
   /** D-#318: the teacher's own sections' attendance detail (counts + absentees). */
   SectionAttendance: undefined;
   AssignMarker: undefined;
@@ -624,7 +624,7 @@ export type RevisionStackParamList = {
 export type FinanceStackParamList = {
   FinanceHome: undefined;
   DailyEntry: undefined;
-  DailySnapshot: undefined;
+  DailySnapshot: { date?: string } | undefined;
   FeesZakat: undefined;
   QardIou: undefined;
   Reconciliation: undefined;
@@ -675,7 +675,7 @@ export type AdminStackParamList = {
   // D-#967: the Gemini key + model (system_health:ai_key, LOCKED).
   AiSettings: undefined;
   // D-#290: who didn't submit reconciliation (Principal/Office).
-  ReconciliationReport: undefined;
+  ReconciliationReport: { date?: string } | undefined;
   // D-#300: per subject × class homework lifecycle report (Principal/Office).
   HwLifecycleReport: undefined;
   // AR-2: attendance ranking, students + staff (attendance:manage).
@@ -710,7 +710,7 @@ export type ReportsStackParamList = {
   AsDeclarePending: undefined;
   AsDeliverPending: undefined;
   AsPrintPending: undefined;
-  AttendanceReport: undefined;
+  AttendanceReport: { date?: string; sectionId?: string } | undefined;
   ClassNoteReport: { date?: string } | undefined;
   /** ClassNoteReport's drill-down target — must exist wherever it is mounted. */
   DailyNote: { groupType: string; groupId: string; title: string; date?: string };
@@ -721,7 +721,7 @@ export type ReportsStackParamList = {
   AssignmentLoadReport: undefined;
   /** Owner ask 2026-07-20: the two admin-hub reports join the Reports hub
    *  (ALSO registered on the Admin stack — deep links target that copy). */
-  ReconciliationReport: undefined;
+  ReconciliationReport: { date?: string } | undefined;
   HwLifecycleReport: undefined;
   /** D-#340: the Principal/Office class-test report (range + filters + state chips). */
   ClassTestReport: undefined;
@@ -748,13 +748,17 @@ export type ReportsStackParamList = {
   ReviewerEffectiveness: undefined;
   TeachingNoteOpenComments: undefined;
   FinanceDashboard: undefined;
-  DailySnapshot: undefined;
+  DailySnapshot: { date?: string } | undefined;
   GuardianEngagement: undefined;
   MarksDrivers: undefined;
   /** SB-6 — storybook reports (series / books / readers). */
   StorybookReport: undefined;
   /** AS-5 — activity-sheet reports (skills / banks / children). */
   ActivityReport: undefined;
+  /** D-#1013–#1018 — the daily school report; `date` opens that day (the 18:00 notification, the Today card). */
+  DailyReport: { date?: string } | undefined;
+  DailyReportShare: undefined;
+  DailyReportSettings: undefined;
   /** OT-4 (prd-objective-tree §8.2): question-bank coverage — the screen picks the class × subject. */
   MasteryBankCoverage: { classToken?: string; subject?: string } | undefined;
 };

@@ -8,7 +8,7 @@
  *   • staff attendance summary over the same range (O4)
  * attendance:manage (Principal/Office).
  */
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { View, Linking } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation, useClient } from "urql";
@@ -40,8 +40,15 @@ const daysAgoKey = (n: number): string => {
   return keyOf(d);
 };
 
-export default function AttendanceReportScreen(_props: Props): React.ReactElement {
-  const [dateKey, setDateKey] = useState(todayKey());
+export default function AttendanceReportScreen({ route }: Props): React.ReactElement {
+  // D-#1017: a jump from the daily report opens on that day with that section first
+  // (optional params — opened from the menu it behaves exactly as before).
+  const jumpDay = route.params?.date;
+  const jumpSection = route.params?.sectionId;
+  const [dateKey, setDateKey] = useState(jumpDay ?? todayKey());
+  useEffect(() => {
+    if (jumpDay) setDateKey(jumpDay);
+  }, [jumpDay]);
   // D-#312: class cards start folded (name + count); a tap expands the names.
   const [openClasses, setOpenClasses] = useState<Record<string, boolean>>({});
   const [fromKey, setFromKey] = useState(daysAgoKey(14));
@@ -205,11 +212,16 @@ export default function AttendanceReportScreen(_props: Props): React.ReactElemen
       <Divider />
       <H2>{STR.attUnmarkedSections}</H2>
       {unmarked.length === 0 && !unmarkedQ.fetching ? <Notice message={STR.attAllMarked} tone="ok" /> : null}
-      {unmarked.map((u) => (
+      {[...unmarked]
+        .sort((a, b) => Number(b.sectionId === jumpSection) - Number(a.sectionId === jumpSection))
+        .map((u) => (
         <Card key={u.sectionId}>
-          <Body style={{ fontWeight: "700" }}>
-            {classLevelLabel(u.classLevel)} — {u.sectionNameBn || u.sectionCode}
-          </Body>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: space(2), flexWrap: "wrap" }}>
+            <Body style={{ fontWeight: "700" }}>
+              {classLevelLabel(u.classLevel)} — {u.sectionNameBn || u.sectionCode}
+            </Body>
+            {u.sectionId === jumpSection ? <Badge text="●" tone="warn" /> : null}
+          </View>
           {/* WHICH unit is missing — for Class 1–5 these are the Quran GROUPS, so the
               Office can see exactly which Quran teacher to chase. */}
           {u.pendingUnits.map((p) => (

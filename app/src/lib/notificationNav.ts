@@ -350,6 +350,9 @@ export function notificationTarget(
     // D-#966: "tasks you gave" opens আমার দেওয়া কাজ.
     case "TASK_GIVEN_SUMMARY":
       return { tab: "WorkBoardTab", screen: "AssignedByMe" };
+    // D-#1015: the 18:00 daily school report opens THAT day's report.
+    case "DAILY_REPORT":
+      return { tab: "ReportsTab", screen: "DailyReport", params: refs?.date ? { date: refs.date } : undefined };
 
     default:
       return null;
