@@ -33,7 +33,10 @@ import { issueLetter } from "../../../src/modules/hr/services/StaffLetterService
 import { raiseGrievance } from "../../../src/modules/hr/services/GrievanceService";
 import { recordConductStep } from "../../../src/modules/hr/services/ConductService";
 import { initiateOffboarding } from "../../../src/modules/hr/services/OffboardingService";
+import { upsertAppraisal, signOffAppraisal } from "../../../src/modules/hr/services/PerformanceService";
 import { recordMistakeFromSource, explainMistake } from "../../../src/modules/staff-mistakes/services/StaffMistakeService";
+import { scheduleMeeting } from "../../../src/modules/staff-mistakes/services/StaffWarningService";
+import { StaffWarning } from "../../../src/modules/staff-mistakes/models/StaffWarning";
 import {
   uploadObservation,
   reviewObservation,
@@ -167,6 +170,14 @@ async function seedHr() {
     actorId: P,
   });
 
+  // The teacher's signed-off appraisal for the year (its development need also lands in the CPD log).
+  const appraisal = await upsertAppraisal({
+    staffProfileId: sp.teacher._id.toString(), academicYearId: yearId.toString(),
+    goals: ["প্রতি সপ্তাহে পাঠ পরিকল্পনা জমা দেওয়া", "দুর্বল শিক্ষার্থীদের জন্য আলাদা অনুশীলন"],
+    developmentNeeds: ["দলগত কাজ পরিচালনা"], actorId: P,
+  });
+  await signOffAppraisal({ appraisalId: appraisal._id.toString(), outcome: "meets", outcomeNote: "ভালো অগ্রগতি", actorId: P });
+
   // ── Biometric attendance (Oct 1 – Nov 5, school days) ──
   const rows: Array<Record<string, unknown>> = [];
   const allStaff = [sp.principal, sp.office, sp.teacher, sp.teacher2, sp.reviewer, support, guard];
@@ -214,6 +225,11 @@ async function seedHr() {
       kind: "STAFF_LETTER_VOID", tier: 1, sourceId: new Types.ObjectId(), staffUserId: users.teacher2, correctedBy: P, at: at(day),
     });
     if (m) await explainMistake({ mistakeId: m._id.toString(), actorId: users.teacher2.toString(), reasonCode: "WRONG_DETAIL", reasonText: "", now: at(day) });
+  }
+  // The face-to-face step is booked, so teacher2 sees the warning pop-up with the time.
+  const meetingStep = await StaffWarning.findOne({ staffUserId: users.teacher2, step: "MEETING" });
+  if (meetingStep) {
+    await scheduleMeeting({ warningId: meetingStep._id.toString(), actorId: P, at: "2026-11-10T12:30:00+06:00", place: "প্রধান শিক্ষকের কক্ষ" });
   }
 
   // ── Classroom observations ──

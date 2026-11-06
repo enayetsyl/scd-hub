@@ -1,0 +1,75 @@
+{
+  "id": "hr-obs-publish",
+  "category": "staff_hr",
+  "order": 73,
+  "draft": true,
+  "title": "পর্যবেক্ষণ শিক্ষকের কাছে প্রকাশ করা",
+  "intro": "পর্যবেক্ষক রিভিউ দেওয়ার পর তা শিক্ষকের কাছে পাঠানোর আগে দেখে প্রকাশ করুন, অথবা কারণ লিখে স্থগিত রাখুন।",
+  "keywords": [
+    "প্রকাশ",
+    "স্থগিত",
+    "সকল পর্যবেক্ষণ",
+    "পর্যবেক্ষণ"
+  ],
+  "perms": [
+    "classroom_observation:publish"
+  ],
+  "screens": [
+    "ObservationTab/AllObservations",
+    "ObservationTab/ObservationDetail"
+  ],
+  "goTo": {
+    "route": "ObservationTab",
+    "screen": "AllObservations"
+  },
+  "rows": [
+    {
+      "heading": "তালিকা খোলা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "☰ → পর্যবেক্ষণ খুলে <b>সকল পর্যবেক্ষণ</b> চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "ফিল্টার",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "<b>প্রকাশের অপেক্ষায়</b> চাপুন — রিভিউ হয়ে গেছে কিন্তু শিক্ষক এখনো দেখেননি এমন পর্যবেক্ষণ দেখাবে।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "বিবরণ খোলা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "“পর্যালোচিত” লেখা পর্যবেক্ষণটির <b>পর্যবেক্ষণ বিবরণ</b> চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "প্রকাশ",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "রিভিউ ঠিক থাকলে <b>শিক্ষকের কাছে প্রকাশ করুন</b> চাপুন।",
+          "box": null
+        },
+        {
+          "text": "পাঠাতে না চাইলে <b>প্রকাশ স্থগিত করুন</b> চেপে কারণ লিখুন।",
+          "box": null
+        }
+      ]
+    }
+  ]
+}
