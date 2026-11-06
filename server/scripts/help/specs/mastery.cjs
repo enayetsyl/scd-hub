@@ -82,6 +82,22 @@ exports.run = async (h) => {
   await h.shot(R, "mastery-review-comment", 1, [{ text: "মীমাংসা হয়েছে" }]);
   await h.tap(R, "মীমাংসা হয়েছে", 3000);
 
+  // Add a step from the objective's own page (D-#1016). Not saved: the later pictures count the rows.
+  await openMastery(h, R, "তালিকা পর্যালোচনা");
+  await h.tap(R, "তালিকা পর্যালোচনা", 3000);
+  await openRound(h, R, null);
+  await h.tap(R, "১০০ পর্যন্ত সংখ্যা কথায় লেখা", 3000);
+  await h.shot(R, "mastery-review-add-sub", 0, [{ text: "এখানে নতুন উপ-শিখনফল যোগ করুন" }], { anchor: { re: "টি উপ-শিখনফল$" } });
+  await h.tap(R, "এখানে নতুন উপ-শিখনফল যোগ করুন", 1500);
+  const inputUnder = (label) => R.getByText(label, { exact: typeof label === "string" }).locator("visible=true").first().locator("xpath=ancestor::div[.//input or .//textarea][1]").locator("input, textarea").first();
+  await inputUnder("লেবেল").fill("৪১ থেকে ৬০ কথায় লেখা");
+  await h.tap(R, "কথায় লেখ (১–১০০)", 600);
+  await inputUnder(/^অনুশীলনী \(/).fill("3/কথায় লিখি: ৪১ থেকে ৬০/1");
+  await h.topmost(R, { text: "এখানে নতুন উপ-শিখনফল যোগ করুন" }, { scroll: true });
+  await h.shot(R, "mastery-review-add-sub", 1, [{ text: "লেবেল" }, { text: "প্রশ্নের ধরন" }, { re: "^অনুশীলনী \\(" }], {
+    anchor: { text: "এখানে নতুন উপ-শিখনফল যোগ করুন" },
+  });
+
   await openMastery(h, R, "তালিকা পর্যালোচনা");
   await h.tap(R, "তালিকা পর্যালোচনা", 3000);
   await openRound(h, R, null);
