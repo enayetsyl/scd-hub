@@ -1,0 +1,74 @@
+{
+  "id": "teach-att-assign-marker",
+  "category": "attendance_leave",
+  "order": 5,
+  "draft": true,
+  "title": "কয়েক দিনের জন্য উপস্থিতির দায়িত্ব দেওয়া",
+  "intro": "নিয়মিত শিক্ষক ছুটিতে থাকলে বা অন্য কারণে কয়েক দিন অন্য কেউ উপস্থিতি নেবেন — এভাবে তাঁকে দায়িত্ব দিন। সময় শেষ হলে নিজে থেকেই আগের নিয়মে ফিরে যায়।",
+  "keywords": [
+    "উপস্থিতির দায়িত্ব",
+    "বরাদ্দ",
+    "শিক্ষক"
+  ],
+  "perms": [
+    "attendance:assign"
+  ],
+  "screens": [
+    "AttendanceTab/AssignMarker"
+  ],
+  "goTo": {
+    "route": "AttendanceTab",
+    "screen": "AssignMarker"
+  },
+  "rows": [
+    {
+      "heading": "পাতাটি খোলা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "☰ চেপে মেনু খুলুন, তারপর <b>উপস্থিতি</b> চাপুন।",
+          "box": null
+        },
+        {
+          "text": "<b>👤 উপস্থিতির দায়িত্ব</b> চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "শ্রেণি ও শাখা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "শ্রেণি বেছে নিন, যেমন <b>৩</b>।",
+          "box": null
+        },
+        {
+          "text": "শাখা বেছে নিন, যেমন <b>বালক</b>।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "শিক্ষক ও তারিখ",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "<b>শিক্ষক</b> বেছে নিন।",
+          "box": null
+        },
+        {
+          "text": "<b>শুরুর তারিখ</b> ও শেষ তারিখ দিন।",
+          "box": null
+        },
+        {
+          "text": "<b>দায়িত্ব দিন</b> চাপুন।",
+          "box": null
+        }
+      ]
+    }
+  ]
+}

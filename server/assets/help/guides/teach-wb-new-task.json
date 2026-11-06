@@ -1,0 +1,81 @@
+{
+  "id": "teach-wb-new-task",
+  "category": "school_operations",
+  "order": 1,
+  "draft": true,
+  "title": "নিজের জন্য একটি কাজ লিখে রাখা",
+  "intro": "কাজের বোর্ডে নিজের করণীয় কাজ লিখে রাখলে সেটি “আজ” পাতায় ও আমার কাজে দেখা যায়, আর শেষ তারিখ পার হলে বকেয়া হিসেবে ওপরে ওঠে।",
+  "keywords": [
+    "কাজের বোর্ড",
+    "নতুন কাজ",
+    "আমার কাজ",
+    "করণীয়"
+  ],
+  "audience": "ALL_STAFF",
+  "screens": [
+    "WorkBoardTab/WorkBoard",
+    "WorkBoardTab/TaskForm"
+  ],
+  "goTo": {
+    "route": "WorkBoardTab",
+    "screen": "WorkBoard"
+  },
+  "rows": [
+    {
+      "heading": "পাতাটি খোলা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "☰ চেপে মেনু খুলুন, তারপর <b>কাজের বোর্ড</b> চাপুন।",
+          "box": null
+        },
+        {
+          "text": "<b>আমার কাজ</b> চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "নতুন কাজ",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "<b>+ নতুন কাজ</b> চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "কাজটি লেখা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "<b>কাজ</b> ঘরে কাজটি লিখুন, যেমন অভিভাবক সভার তালিকা বানানো।",
+          "box": null
+        },
+        {
+          "text": "<b>শেষ তারিখ</b> দিন।",
+          "box": null
+        },
+        {
+          "text": "দিনের কোন সময়ে করবেন তা বেছে নিন, যেমন <b>বিকাল</b>।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "সংরক্ষণ",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "<b>কাজ দিন</b> চাপুন।",
+          "box": null
+        }
+      ]
+    }
+  ]
+}

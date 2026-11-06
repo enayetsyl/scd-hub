@@ -1,0 +1,75 @@
+{
+  "id": "teach-wb-assign",
+  "category": "school_operations",
+  "order": 3,
+  "draft": true,
+  "title": "অন্য কাউকে কাজ দেওয়া",
+  "intro": "শিক্ষক বা কর্মীকে কাজ দিলে সেটি তাঁর কাজের বোর্ডে চলে যায় এবং তিনি নোটিফিকেশন পান। দেওয়া কাজগুলো পরে “আমার দেওয়া কাজ” পাতায় দেখা যায়।",
+  "keywords": [
+    "কাজ দেওয়া",
+    "বরাদ্দ",
+    "কাজের বোর্ড",
+    "আমার দেওয়া কাজ"
+  ],
+  "perms": [
+    "work_board:assign"
+  ],
+  "screens": [
+    "WorkBoardTab/TaskForm",
+    "WorkBoardTab/AssignedByMe"
+  ],
+  "goTo": {
+    "route": "WorkBoardTab",
+    "screen": "WorkBoard"
+  },
+  "rows": [
+    {
+      "heading": "নতুন কাজ খোলা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "কাজের বোর্ডের আমার কাজ পাতায় <b>+ নতুন কাজ</b> চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "কাজ ও কাকে",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "<b>কাজ</b> ঘরে কাজটি লিখুন।",
+          "box": null
+        },
+        {
+          "text": "<b>কাকে</b> ঘরে চেপে যাঁকে কাজ দেবেন তাঁর নাম বেছে নিন — নামের পাশে তাঁর আজকের কাজের চাপও দেখা যায়।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "সংরক্ষণ",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "শেষ তারিখ ও সময় দেখে নিয়ে <b>কাজ দিন</b> চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "দেওয়া কাজ দেখা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "মেনুর কাজের বোর্ডে <b>আমার দেওয়া কাজ</b> চাপলে কোন কাজ কতদূর এগোল দেখা যায়।",
+          "box": null
+        }
+      ]
+    }
+  ]
+}

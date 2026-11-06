@@ -1,0 +1,80 @@
+{
+  "id": "teach-wb-recurring",
+  "category": "school_operations",
+  "order": 4,
+  "draft": true,
+  "title": "নিয়মিত (প্রতি সপ্তাহের) কাজ ঠিক করা",
+  "intro": "যে কাজ প্রতি সপ্তাহে বা প্রতি মাসে করতে হয়, তা একবার নিয়মিত কাজ হিসেবে লিখে দিলে অ্যাপ নিজে থেকে প্রতিবার বোর্ডে কাজটি তুলে দেয়।",
+  "keywords": [
+    "নিয়মিত কাজ",
+    "প্রতি সপ্তাহে",
+    "পুনরাবৃত্তি",
+    "কাজের বোর্ড"
+  ],
+  "audience": "ALL_STAFF",
+  "screens": [
+    "WorkBoardTab/TaskTemplates"
+  ],
+  "goTo": {
+    "route": "WorkBoardTab",
+    "screen": "TaskTemplates"
+  },
+  "rows": [
+    {
+      "heading": "পাতাটি খোলা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "☰ চেপে মেনু খুলুন, তারপর <b>কাজের বোর্ড</b> চাপুন।",
+          "box": null
+        },
+        {
+          "text": "<b>নিয়মিত কাজ</b> চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "নতুন নিয়মিত কাজ",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "<b>নতুন নিয়মিত কাজ</b> চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "কতদিন পরপর",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "<b>কাজ</b> ঘরে কাজটি লিখুন।",
+          "box": null
+        },
+        {
+          "text": "<b>প্রতি সপ্তাহে</b> চাপুন।",
+          "box": null
+        },
+        {
+          "text": "কোন দিন করবেন তা চাপুন, যেমন <b>বৃহস্পতি</b>।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "সংরক্ষণ",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "<b>কাজ দিন</b> চাপুন। পরে তালিকা থেকে কাজটি বন্ধ বা আবার চালু করা যায়।",
+          "box": null
+        }
+      ]
+    }
+  ]
+}

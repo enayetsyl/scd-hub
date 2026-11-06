@@ -1,0 +1,54 @@
+{
+  "id": "teach-wb-task-status",
+  "category": "school_operations",
+  "order": 2,
+  "draft": true,
+  "title": "কাজ চলছে বা শেষ — চিহ্নিত করা",
+  "intro": "আমার কাজের যেকোনো কার্ড খুলে অবস্থা বদলান। ক্লাস নোট বা বাড়ির কাজ দেখার মতো স্বয়ংক্রিয় কাজগুলো সেই কাজ করলেই নিজে থেকে শেষ হয়।",
+  "keywords": [
+    "কাজের বোর্ড",
+    "শেষ",
+    "চলছে",
+    "আটকে আছে"
+  ],
+  "audience": "ALL_STAFF",
+  "screens": [
+    "WorkBoardTab/TaskDetail"
+  ],
+  "goTo": {
+    "route": "WorkBoardTab",
+    "screen": "WorkBoard"
+  },
+  "rows": [
+    {
+      "heading": "কাজটি খোলা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "আমার কাজ পাতায় কাজের কার্ডে <b>খুলুন ›</b> চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "অবস্থা বদলানো",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "কাজ শুরু করলে <b>চলছে</b> চাপুন।",
+          "box": null
+        },
+        {
+          "text": "শেষ হলে <b>শেষ</b> চাপুন।",
+          "box": null
+        },
+        {
+          "text": "কোনো কারণে আটকে গেলে <b>আটকে আছে</b> চেপে কারণ লিখুন — যিনি কাজ দিয়েছেন তিনি দেখবেন।",
+          "box": null
+        }
+      ]
+    }
+  ]
+}
