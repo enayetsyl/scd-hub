@@ -30,6 +30,9 @@ export interface IQuranExamPlan extends Document {
   publishedBy?: Types.ObjectId | null;
   marksLockedAt?: Date | null;
   marksLockedBy?: Types.ObjectId | null;
+  /** The last time locked marks were opened again — a result saved before it and changed after
+   *  it is a staff-mistake entry for whoever entered it (D-#1001). Kept when re-locked. */
+  marksUnlockedAt?: Date | null;
   createdBy: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -57,6 +60,7 @@ const QuranExamPlanSchema = new Schema<IQuranExamPlan>(
     publishedBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
     marksLockedAt: { type: Date, default: null },
     marksLockedBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
+    marksUnlockedAt: { type: Date, default: null },
     createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
   },
   { timestamps: true },

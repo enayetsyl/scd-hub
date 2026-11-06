@@ -24,6 +24,8 @@ import { STR, bnNum, classLevelLabel } from "../../lib/labels";
 import { useTodayKey } from "../../lib/useTodayKey";
 import { friendlyError } from "../../lib/errors";
 import { useToast } from "../../state/ToastContext";
+import { useMistakeReason } from "../../state/MistakeReasonContext";
+import { useAuth } from "../../auth/AuthContext";
 import { space } from "../../theme/tokens";
 import { personName } from "../../lib/personName";
 
@@ -34,6 +36,8 @@ export default function MarkAttendanceScreen({ route, navigation }: Props): Reac
   const [absent, setAbsent] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const toast = useToast();
+  const { askMistakeReason } = useMistakeReason();
+  const { user, can } = useAuth();
 
   // A screen opened for TODAY and left open overnight (a restored browser tab, a
   // resumed app) must move to the new day by itself — its first submit of the morning
@@ -82,8 +86,26 @@ export default function MarkAttendanceScreen({ route, navigation }: Props): Reac
   }
 
   async function onSubmit(): Promise<void> {
+    // D-#944: changing a list you already submitted asks what happened. Someone else's
+    // list (Office amending a marker's day) is the marker's to explain later.
+    let correctionReason: { code: string; text: string } | null = null;
+    if (existing && existing.markedBy === user?.id) {
+      const before = new Set(existing.absentStudentIds);
+      const changed = [...before].filter((id) => !absent.has(id)).length + [...absent].filter((id) => !before.has(id)).length;
+      if (changed > 0) {
+        correctionReason = await askMistakeReason({
+          kind: "ATTENDANCE_CORRECTION",
+          title: STR.smrAttFixTitle,
+          // D-#1020: someone who is not told reads no "counted as a mistake" line.
+          message: (can("staff_mistakes:view_own") ? STR.smrAttFixBody : STR.smrAttFixBodyQuiet).replace("{n}", bnNum(changed)),
+          hideHint: !can("staff_mistakes:view_own"),
+          submitLabel: STR.smrSendAndChange,
+        });
+        if (!correctionReason) return;
+      }
+    }
     setBusy(true);
-    const vars = { unitType, unitId, dateKey, absentStudentIds: [...absent] };
+    const vars = { unitType, unitId, dateKey, absentStudentIds: [...absent], correctionReason };
     const res = amend ? await amendMark(vars) : await mark(vars);
     setBusy(false);
     const day = amend

@@ -24,6 +24,10 @@ const oid = () => new mongoose.Types.ObjectId();
 // ---------------------------------------------------------------------------
 
 const mockFindById = jest.fn();
+// D-#955: the mistake recorder reaches real models; this suite is DB-free.
+jest.mock("../modules/staff-mistakes/services/StaffMistakeNoteService", () => ({
+  recordPlaceMistake: jest.fn().mockResolvedValue(false),
+}));
 jest.mock("../modules/classroom-observation/models/ClassroomObservation", () => ({
   ClassroomObservation: {
     findById: (id: unknown) => mockFindById(id),

@@ -37,6 +37,10 @@ const mockClassExists = jest.fn().mockResolvedValue({ _id: "x" });
 
 /** D-#461: what the last `find()` chain was asked to sort/skip/limit by. */
 const mockQueryPlan: { sort?: unknown; skip?: unknown; limit?: unknown } = {};
+// D-#953: the mistake recorder reaches real models; this suite is DB-free.
+jest.mock("../modules/staff-mistakes/services/StaffMistakeNoteService", () => ({
+  recordPlaceMistake: jest.fn().mockResolvedValue(false),
+}));
 jest.mock("../modules/printing/models/PrintRequest", () => ({
   PrintRequest: {
     create: (d: unknown) => mockCreate(d),
@@ -52,6 +56,8 @@ jest.mock("../modules/printing/models/PrintRequest", () => ({
       chain.sort = (s: unknown) => { mockQueryPlan.sort = s; return chain; };
       chain.skip = (n: unknown) => { mockQueryPlan.skip = n; return chain; };
       chain.limit = (n: unknown) => { mockQueryPlan.limit = n; return chain; };
+      // D-#1010: the by-class page reads the bucket's slim keys first.
+      chain.select = () => chain;
       chain.lean = () => mockFind(q);
       chain.then = (res: (v: unknown) => unknown, rej: (e: unknown) => unknown) =>
         Promise.resolve(mockFindMany(q)).then(res, rej);
@@ -105,9 +111,12 @@ const mockSectionFindOne = jest.fn().mockResolvedValue({ _id: "sec-1" });
 // D-#459: tagPrintRequests checks section-belongs-to-class via Section.exists, distinct
 // from assertAssignmentTagging's Section.findOne — both need mocking.
 const mockSectionExists = jest.fn().mockResolvedValue({ _id: "sec-1" });
+// D-#1010: the by-class queue order reads section labels in one batch.
+const mockSectionFind = jest.fn().mockResolvedValue([]);
 jest.mock("../modules/foundation/models/Section", () => ({
   Section: {
     findOne: (f: unknown) => ({ select: () => ({ lean: () => mockSectionFindOne(f) }) }),
+    find: (f: unknown) => ({ select: () => ({ lean: () => mockSectionFind(f) }) }),
     exists: (f: unknown) => mockSectionExists(f),
   },
 }));
@@ -777,6 +786,99 @@ describe("printQueue — ordering + pagination (D-#461)", () => {
 
   test("an unknown status still rejects", async () => {
     await expect(printQueue("SHREDDED")).rejects.toThrow(/Invalid status/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// D-#1010 — the optional by-class order of the two work buckets
+// ---------------------------------------------------------------------------
+
+describe("printQueue — by-class order (D-#1010)", () => {
+  const oid = (): string => new mongoose.Types.ObjectId().toString();
+  const cls = { nursery: oid(), kg: oid(), one: oid(), three: oid() };
+  const sec = { boys: oid(), girls: oid(), combined: oid() };
+  const at = (min: number): Date => new Date(Date.UTC(2026, 10, 5, 8, min));
+
+  // The bucket, deliberately filed out of class order. `t` = minutes after 08:00.
+  const bucket = [
+    { _id: "j-c3-girls", classId: cls.three, sectionId: sec.girls, requestedAt: at(1) },
+    { _id: "j-untagged", requestedAt: at(0) },
+    { _id: "j-kg", classId: cls.kg, requestedAt: at(5) },
+    { _id: "j-c3-boys-late", classId: cls.three, sectionId: sec.boys, requestedAt: at(9) },
+    { _id: "j-nursery", classId: cls.nursery, requestedAt: at(8) },
+    { _id: "j-c3-boys-early", classId: cls.three, sectionId: sec.boys, requestedAt: at(2) },
+    { _id: "j-c3-whole", classId: cls.three, requestedAt: at(7) },
+    // A whole-class section label (সম্মিলিত) files with the class, not after বালিকা.
+    { _id: "j-c3-combined", classId: cls.three, sectionId: sec.combined, requestedAt: at(4) },
+    // A CLASS_PRESENT job naming only the class it counts still files under that class.
+    { _id: "j-c1-counted", copiesClassId: cls.one, requestedAt: at(3) },
+  ];
+  const ORDER = [
+    "j-nursery",
+    "j-kg",
+    "j-c1-counted",
+    "j-c3-combined",
+    "j-c3-whole",
+    "j-c3-boys-early",
+    "j-c3-boys-late",
+    "j-c3-girls",
+    "j-untagged",
+  ];
+
+  beforeEach(() => {
+    mockFind.mockReset();
+    mockFind.mockImplementation((q: { status?: string; _id?: { $in: string[] } }) =>
+      Promise.resolve(
+        q.status ? bucket : bucket.filter((d) => q._id!.$in.includes(d._id)).reverse(), // DB order is not page order
+      ),
+    );
+    mockClassFind.mockResolvedValue([
+      { _id: cls.nursery, level: -1 },
+      { _id: cls.kg, level: 0 },
+      { _id: cls.one, level: 1 },
+      { _id: cls.three, level: 3 },
+    ]);
+    mockSectionFind.mockResolvedValue([
+      { _id: sec.girls, nameBn: "বালিকা" },
+      { _id: sec.boys, nameBn: "বালক" },
+      { _id: sec.combined, nameBn: "সম্মিলিত" },
+    ]);
+  });
+  afterEach(() => {
+    mockClassFind.mockResolvedValue([]);
+    mockSectionFind.mockResolvedValue([]);
+  });
+
+  test("Nursery → KG → Class 1 … 5; whole class, then বালক, then বালিকা; FIFO inside; no class last", async () => {
+    for (const status of ["REQUESTED", "PRINTED"]) {
+      const page = await printQueue(status, 25, 0, "CLASS");
+      expect(page.items.map((d) => d._id)).toEqual(ORDER);
+      expect(page).toMatchObject({ total: 9, hasMore: false });
+    }
+  });
+
+  test("pages slice the class order itself, so every page continues where the last stopped", async () => {
+    const p1 = await printQueue("REQUESTED", 3, 0, "CLASS");
+    const p2 = await printQueue("REQUESTED", 3, 3, "CLASS");
+    const p3 = await printQueue("REQUESTED", 3, 6, "CLASS");
+    expect([...p1.items, ...p2.items, ...p3.items].map((d) => d._id)).toEqual(ORDER);
+    expect([p1.hasMore, p2.hasMore, p3.hasMore]).toEqual([true, true, false]);
+    expect(p3.total).toBe(9);
+  });
+
+  test("ARRIVAL (the default) is untouched — the FIFO find, not the class order", async () => {
+    await printQueue("REQUESTED", 25, 0, "ARRIVAL");
+    expect(mockQueryPlan.sort).toEqual({ requestedAt: 1 });
+  });
+
+  test("history buckets keep their newest-first order even when CLASS is asked", async () => {
+    mockQueryPlan.sort = undefined;
+    await printQueue("DELIVERED", 25, 0, "CLASS");
+    expect(mockQueryPlan.sort).toEqual({ deliveredAt: -1, requestedAt: -1 });
+  });
+
+  test("an unknown sort rejects", async () => {
+    await expect(printQueue("REQUESTED", 25, 0, "BY_COLOUR")).rejects.toThrow(/Invalid sort/);
   });
 });
 

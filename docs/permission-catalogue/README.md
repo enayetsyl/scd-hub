@@ -15,7 +15,7 @@ This catalogue is the build checklist for the permission matrix. It names every 
 | [`trackers-homework-assignment.md`](trackers-homework-assignment.md) | homework, assignment, assignment_gift, mark_submission, work_claim (+ reconciliation report) |
 | [`trackers-classtest.md`](trackers-classtest.md) | class_test, class_test_question, class_test_script, set_tracker, student_profile (+ cross-refs to work_claim, question_sets, printing) |
 | [`foundation-platform.md`](foundation-platform.md) | students, guardians, classes_sections, teaching_assignments, staff_logins, view_as, access_control, audit_log, system_health, guardian_engagement, message_templates, admin_dashboard, archive, notifications, my_account |
-| [`hr-finance.md`](hr-finance.md) | staff_records, hr_policy, leave, cover, payroll, salary_advance, appraisal, conduct, grievance, staff_letters, offboarding, finance_*, budget, fee_support, qard, reconciliation, work_board, printing |
+| [`hr-finance.md`](hr-finance.md) | staff_records, hr_policy, leave, cover, payroll, salary_advance, appraisal, conduct, grievance, staff_letters, staff_mistakes, offboarding, finance_*, budget, fee_support, qard, reconciliation, work_board, printing |
 | [`attendance-routine-library.md`](attendance-routine-library.md) | attendance, staff_attendance, routine, class_note, lesson_progress, library, chat, saturday_revision, vocab_test |
 | [`observation-comments-reports.md`](observation-comments-reports.md) | classroom_observation, free_mixing_review, student_comments, parents_meeting, monthly_report, improvement_plan, teaching_notes, english_drive, worksheets |
 | [`content-questions-exams.md`](content-questions-exams.md) | lesson_plans, plan_review, question_bank, question_review, question_sets, exam_syllabus, scholarship_practice, quran_exam, mastery, book_production |
@@ -147,6 +147,7 @@ Several of today's bypasses are template-aware (`isAdminStaff`, `actsAsRole`), w
 | Staff & HR | `leave` | Staff leave | কর্মীর ছুটি | 5 | hr-finance |
 | Staff & HR | `appraisal` | Appraisal & CPD | কাজের মূল্যায়ন ও প্রশিক্ষণ | 6 | hr-finance |
 | Staff & HR | `conduct` | Conduct | শৃঙ্খলা | 5 | hr-finance |
+| Staff & HR | `staff_mistakes` | Mistake record | ভুলের রেকর্ড | 5 | hr-finance |
 | Staff & HR | `grievance` | Grievances | অভিযোগ | 3 | hr-finance |
 | Staff & HR | `staff_letters` | Letters & contracts | চিঠি ও চুক্তিপত্র | 5 | hr-finance |
 | Staff & HR | `offboarding` | Leaving the school | চাকরি ছাড়া | 8 | hr-finance |
@@ -188,7 +189,7 @@ Several of today's bypasses are template-aware (`isAdminStaff`, `actsAsRole`), w
 | Admin & access | `guardian_engagement` | Guardian app usage | অভিভাবকদের অ্যাপ ব্যবহার | 1 | foundation-platform |
 | Admin & access | `my_account` | My account | আমার অ্যাকাউন্ট | 1 | foundation-platform |
 
-**Totals: 76 features, 387 actions** (`system_health:ai_key` added 2026-11-04, D-#967: +1 action, LOCKED — the Gemini key + model set in the app) (`work_board:voice` added 2026-11-04, voice tasks D-#961: +1 action, unflagged, off for TEACHER and OFFICE — per-person grant) (`reports:bank_coverage` added 2026-11-04, objective tree OT-4: +1 action, unflagged, OFFICE on +1) (`mastery:review` added 2026-11-04, objective tree OT-1, D-#924: +1 action, unflagged, Principal only — per-person grant) (`payroll:announce_paid` added 2026-11-03, D-#915: +1 action, unflagged, OFFICE on +1) (`reports:marks_drivers` added 2026-11-02, D-#905: +1 action, unflagged, Principal only) (`staff_letters:send` + `staff_letters:view_own` + `payroll:reopen` added 2026-11-02, D-#902–#904: +3 actions, `view_own` SELF, `reopen` LOCKED, 1 unflagged, TEACHER on +1, OFFICE on +2) (`mark_submission` added 2026-11-02, D-#889–#893: +3 actions, `view_own` SELF, 2 unflagged, TEACHER on +1, OFFICE on +3) (`student_comments:read_status` added 2026-11-01, D-#886: +1 action, unflagged, OFFICE on +1) (`exam_routine` added 2026-11-01, D-#883: +3 actions, unflagged, TEACHER on +1, OFFICE on +3) (recounted from `shared/permissionCatalogue.ts` on 2026-10-28 when `quran_exam` was added, D-#873: +7 actions, `examine` SELF, 6 unflagged, TEACHER on +1, OFFICE on +6; the earlier line had fallen behind the code) (`class_books` added 2026-10-26, D-#870: +2 actions, unflagged, TEACHER on +1, OFFICE on +2) (`reports` +14 switches 2026-10-26, D-#861: the reports that sat in the Admin hub and module homes, unflagged, OFFICE on +13 — all but `guardian_engagement`) (`reports` added 2026-10-25, D-#846: +13 report switches, −3 retired report-only actions) (`parents_meeting:approve_change` added with meeting RSVP, 2026-10-24: +1 action, PRINCIPAL-DEFAULT, D-#842) (`lesson_progress` added with LP-2, 2026-10-22: +2 actions, unflagged, TEACHER on +1, OFFICE on +2) (`mastery` added with M-0, 2026-10-20: +6 actions, all unflagged, TEACHER on +3, OFFICE on +1; M-2, 2026-10-21: +`mastery:edit_all`, PRINCIPAL-DEFAULT). By flag: LOCKED 13 · PRINCIPAL-DEFAULT 15 · DESIGNATION 24 · ESCALATION 5 · SELF 14 · unflagged 313. Defaults: TEACHER on 106 · OFFICE on 283. A row may carry a `†`/`F-n`/`2H` note in addition to its flag. Those notes are not counted as flags. Not counted: `guardian:read_child` (GUARDIAN plane), and the future `scholarship_practice:release` (SC-5, not built) and `announcements:publish` (no staff surface yet).
+**Totals: 79 features, 412 actions** (`exam_papers` added 2026-11-06, D-#1030–#1034: +5 actions — 3 unflagged with OFFICE on +3, `manage` PRINCIPAL-DEFAULT, `review` SELF) (`library:guardian_access` + `activity_sheets:guardian_access` added 2026-11-05, D-#1011: +2 actions, PRINCIPAL_DEFAULT — switch the storybook shelf / activity sheets on for all or chosen guardians) (`activity_sheets` + `reports:activity_skills` / `activity_sheets` / `activity_students` added 2026-11-05, activity sheets AS-1..AS-6, D-#988/#989: +8 actions, unflagged, TEACHER on +2, OFFICE on +8) (`reports:storybook_series` + `reports:storybook_books` + `reports:storybook_readers` added 2026-11-05, storybook shelf SB-6, D-#980: +3 actions, unflagged, OFFICE on +3) (`saturday_revision:correct` added 2026-11-05, D-#1002: +1 action, DESIGNATION:group_lead — correct a revision entry the family already received) (`system_health:ai_key` added 2026-11-04, D-#967: +1 action, LOCKED — the Gemini key + model set in the app) (`work_board:voice` added 2026-11-04, voice tasks D-#961: +1 action, unflagged, off for TEACHER and OFFICE — per-person grant) (`staff_mistakes:review_principal` added 2026-11-04, D-#1000: +1 action, PRINCIPAL-DEFAULT) (`reports:bank_coverage` added 2026-11-04, objective tree OT-4: +1 action, unflagged, OFFICE on +1) (`mastery:review` added 2026-11-04, objective tree OT-1, D-#924: +1 action, unflagged, Principal only — per-person grant) (`staff_mistakes:meetings` + `staff_mistakes:settings` added 2026-11-04, D-#941/#943: +2 actions, `settings` PRINCIPAL-DEFAULT, 1 unflagged, OFFICE on +1) (`staff_mistakes` added 2026-11-04, D-#936: +3 actions, `view_own` SELF, 2 unflagged, TEACHER on +1, OFFICE on +3) (`payroll:announce_paid` added 2026-11-03, D-#915: +1 action, unflagged, OFFICE on +1) (`reports:marks_drivers` added 2026-11-02, D-#905: +1 action, unflagged, Principal only) (`staff_letters:send` + `staff_letters:view_own` + `payroll:reopen` added 2026-11-02, D-#902–#904: +3 actions, `view_own` SELF, `reopen` LOCKED, 1 unflagged, TEACHER on +1, OFFICE on +2) (`mark_submission` added 2026-11-02, D-#889–#893: +3 actions, `view_own` SELF, 2 unflagged, TEACHER on +1, OFFICE on +3) (`student_comments:read_status` added 2026-11-01, D-#886: +1 action, unflagged, OFFICE on +1) (`exam_routine` added 2026-11-01, D-#883: +3 actions, unflagged, TEACHER on +1, OFFICE on +3) (recounted from `shared/permissionCatalogue.ts` on 2026-10-28 when `quran_exam` was added, D-#873: +7 actions, `examine` SELF, 6 unflagged, TEACHER on +1, OFFICE on +6; the earlier line had fallen behind the code) (`class_books` added 2026-10-26, D-#870: +2 actions, unflagged, TEACHER on +1, OFFICE on +2) (`reports` +14 switches 2026-10-26, D-#861: the reports that sat in the Admin hub and module homes, unflagged, OFFICE on +13 — all but `guardian_engagement`) (`reports` added 2026-10-25, D-#846: +13 report switches, −3 retired report-only actions) (`parents_meeting:approve_change` added with meeting RSVP, 2026-10-24: +1 action, PRINCIPAL-DEFAULT, D-#842) (`lesson_progress` added with LP-2, 2026-10-22: +2 actions, unflagged, TEACHER on +1, OFFICE on +2) (`mastery` added with M-0, 2026-10-20: +6 actions, all unflagged, TEACHER on +3, OFFICE on +1; M-2, 2026-10-21: +`mastery:edit_all`, PRINCIPAL-DEFAULT). By flag: LOCKED 13 · PRINCIPAL-DEFAULT 18 · DESIGNATION 25 · ESCALATION 5 · SELF 16 · unflagged 319. Defaults: TEACHER on 109 · OFFICE on 292. A row may carry a `†`/`F-n`/`2H` note in addition to its flag. Those notes are not counted as flags. Not counted: `guardian:read_child` (GUARDIAN plane), and the future `scholarship_practice:release` (SC-5, not built) and `announcements:publish` (no staff surface yet).
 
 ---
 
@@ -288,6 +289,7 @@ Several of today's bypasses are template-aware (`isAdminStaff`, `actsAsRole`), w
 | `saturday_revision:view_all` | See all groups | সব গ্রুপের রিভিশন দেখা | Unscoped reads; Saturday completeness status | — | on | | isAdminStaff |
 | `saturday_revision:enter_results` | Record revision results | রিভিশনের ফল লেখা | Record or edit a Saturday entry | on | on | DESIGNATION:group_lead | tracker:write + group lead; isAdminStaff |
 | `saturday_revision:edit_all` | Any group | যেকোনো গ্রুপের রিভিশন লেখা ও পাঠানো | Write/send outside own groups | — | on | | isAdminStaff |
+| `saturday_revision:correct` | Correct a sent entry | পাঠানো রিভিশন সংশোধন | Change an entry the family already received; they get a correction and the old author a mistake entry (D-#1002) | on | on | DESIGNATION:group_lead | tracker:write + group lead; isAdminStaff |
 | `saturday_revision:send` | Send to guardians | অভিভাবককে রিভিশন পাঠানো | Send one entry or a group's Saturday (seals it, runs escalation) | on | on | DESIGNATION:group_lead | tracker:write + group lead; isAdminStaff |
 | `saturday_revision:remind` | Remind teachers | বাকি থাকা শিক্ষককে রিমাইন্ডার | wa.me nudge per teacher of an un-entered group | — | on | | isAdminStaff ∧ message:dispatch |
 | `saturday_revision:settings` | Absence escalation limit | টানা অনুপস্থিতির সীমা ঠিক করা | Read/set the threshold | — | on | | isAdminStaff |
@@ -385,6 +387,16 @@ Guardians read their children's sittings (never the examiner or marks) through `
 | `exam_routine:manage` | Write the exam routine | পরীক্ষার রুটিন তৈরি ও সম্পাদনা | Dates, subjects, oral/written and times per class; drafts before publishing | — | on | | new |
 | `exam_routine:publish` | Publish the exam routine | পরীক্ষার রুটিন প্রকাশ করা | Teachers and guardians see the routine | — | on | | new |
 Guardians read their child's class routine (published only) and their own Quran sittings through `guardian:read_child`: `guardianExamRoutine`.
+
+#### `exam_papers` — প্রশ্নপত্র ভান্ডার (D-#1030–#1034, docs/prd-exam-paper-bank.md)
+| permission | EN | BN | what it allows | T | O | flags | replaces |
+|---|---|---|---|---|---|---|---|
+| `exam_papers:view_reference` | Read other branches' papers | মোহাম্মদপুরের প্রশ্নপত্র দেখা | Mohammadpur half-yearly and annual papers, page by page, and the original file | — | on | | new |
+| `exam_papers:manage_reference` | Upload other branches' papers | মোহাম্মদপুরের প্রশ্নপত্র আপলোড ও সম্পাদনা | Upload a paper (PDF + original file), fix its class/subject/term, delete | — | on | | new |
+| `exam_papers:view` | See draft papers | খসড়া প্রশ্নপত্র দেখা | Every draft paper, its review progress and every suggestion (read only) | — | on | | new |
+| `exam_papers:manage` | Manage draft papers | খসড়া প্রশ্নপত্র পরিচালনা | Import drafts, assign the reviewer, accept or reject suggestions, mark a paper final | — | — | PRINCIPAL-DEFAULT | new |
+| `exam_papers:review` | Review a paper given to me | আমাকে দেওয়া প্রশ্নপত্র রিভিউ করা | Confirm each item matches the syllabus; suggest an edit, a deletion or a new question | on | on | SELF | new |
+`review` is SELF because the reviewer is chosen per paper: the service lets only that paper's reviewer (or a manager) act, and a reviewer lists only their own papers.
 
 #### `mastery` — শিখন-দক্ষতা
 Learning-outcome mastery tracker (`docs/prd-mastery.md`, D-#775–#787). Registered with M-0; `enter_results`, `create` and `approve` gate slices M-2..M-5 and are declared now so the role map is settled once. Today's permissions are already one-to-one (`mastery:read/enter/manage/approve`).
@@ -552,6 +564,17 @@ Learning-outcome mastery tracker (`docs/prd-mastery.md`, D-#775–#787). Registe
 | `conduct:sign_off` | Finalise a step | শৃঙ্খলার সিদ্ধান্ত চূড়ান্ত করা | Finalise; termination sets employmentStatus | — | — | LOCKED | performance:signoff |
 | `conduct:view_own` | My conduct records | আমার শৃঙ্খলার রেকর্ড | Own records | on | on | SELF | authenticated, own |
 
+#### `staff_mistakes` — ভুলের রেকর্ড (D-#936–#939)
+Caught mistakes per person with their reason and the reviewer's decision (`docs/prd-staff-mistakes.md`). Lighter than `conduct`; never feeds it on its own.
+| permission | EN | BN | what it allows | T | O | flags | replaces |
+|---|---|---|---|---|---|---|---|
+| `staff_mistakes:view_all` | Everyone's mistakes | সবার ভুলের রেকর্ড দেখা | Any staff member's caught mistakes, the day's list and the running total; gets the 18:00 daily report | — | — | PRINCIPAL-DEFAULT | new (D-#936); Principal-only D-#1020 |
+| `staff_mistakes:review` | Review explanations | ব্যাখ্যা যাচাই করা | Accept a reason, count it as a mistake, or move it to the person at fault | — | — | PRINCIPAL-DEFAULT | new (D-#939); Principal-only D-#1020 |
+| `staff_mistakes:view_own` | My mistakes (the person is told) | আমার ভুল ও ব্যাখ্যা (কর্মীকে জানানো হয়) | See own caught mistakes and give a reason; ON = the person gets the explain notice, decisions and warning steps. OFF = quiet record | — | — | | new (D-#937); was SELF, off by default D-#1020 |
+| `staff_mistakes:meetings` | Warning meetings | সতর্কবার্তার আলোচনা | Book the face-to-face talk after a warning and record what was agreed | — | on | | new (D-#941) |
+| `staff_mistakes:settings` | Mistake rules | ভুলের নিয়ম ঠিক করা | Warning steps, weights, explanation deadline, places on/off | — | — | PRINCIPAL-DEFAULT | new (D-#1005) |
+| `staff_mistakes:review_principal` | The Principal's mistakes | প্রধান শিক্ষকের ভুলের রেকর্ড | See and decide the Principal's own entries and warnings — the Principal decides their own | — | — | PRINCIPAL-DEFAULT | new (D-#1000) |
+
 #### `grievance` — অভিযোগ
 | permission | EN | BN | what it allows | T | O | flags | replaces |
 |---|---|---|---|---|---|---|---|
@@ -710,6 +733,18 @@ Learning-outcome mastery tracker (`docs/prd-mastery.md`, D-#775–#787). Registe
 | `class_books:view` | Read class books | শ্রেণির বই পড়া | Every class's books, page by page (view only, no download) | on | on | | new |
 | `class_books:manage` | Upload and manage class books | শ্রেণির বই আপলোড ও সম্পাদনা | Upload a book PDF (turned into page images), rename, move class, hide, delete | — | on | | new |
 
+#### `activity_sheets` — অ্যাক্টিভিটি শিট (D-#988/#989, docs/prd-activity-sheets.md)
+| permission | EN | BN | what it allows | T | O | flags | replaces |
+|---|---|---|---|---|---|---|---|
+| `activity_sheets:view` | Browse activity sheets | অ্যাক্টিভিটি শিট দেখা | Banks, levels, sample sheets, a child's sheets | on | on | | new |
+| `activity_sheets:issue` | Give sheets at the desk | ডেস্কে শিট দেওয়া | Register a tray sheet to a child, print on the spot, tray stock, the guardian batch | — | on | | new |
+| `activity_sheets:check` | Hand out and check sheets | শিট বিতরণ ও জমা নেওয়া | Hand printed sheets to a section, take returns (result + sticker), stickers owed | on | on | | new |
+| `activity_sheets:manage` | Manage activity banks | অ্যাক্টিভিটি ব্যাংক যোগ ও সম্পাদনা | Add a bank (sheet PDF + answer PDF + index CSV), add / replace / retire sheets | — | on | | new |
+| `activity_sheets:settings` | Activity sheet rules | অ্যাক্টিভিটি শিটের নিয়ম | Weekly requests, open sheets, monthly target, restock, busy-time switch | — | on | | new |
+| `activity_sheets:guardian_access` | Activity sheets for guardians | অভিভাবকদের জন্য অ্যাক্টিভিটি শিট চালু করা | Switch activity sheets on for every guardian or chosen guardians (D-#1011); off = families see nothing | — | — | PRINCIPAL-DEFAULT | new |
+
+Guardians choose sheets for their own children through `guardian:read_child` (the GUARDIAN plane). A teacher's `check` reaches only the sections where they are class teacher.
+
 Guardians read the books of their own children's classes through `guardian:read_child` (the GUARDIAN plane), not through these switches.
 
 ### Communication
@@ -754,6 +789,7 @@ Guardians read the books of their own children's classes through `guardian:read_
 | `library:edit` | Manage the catalog | ক্যাটালগে বই যোগ ও সংশোধন | Titles, copies, copy status | — | on | | library:manage |
 | `library:settings` | Loan rules | ধারের নিয়ম ঠিক করা | Loan days, limits, renewals, hold days | — | on | | library:manage |
 | `library:assign` | Assign librarian duty | লাইব্রেরিয়ানের দায়িত্ব বরাদ্দ | Give or revoke desk duty | — | on | | library:manage |
+| `library:guardian_access` | Storybooks for guardians | অভিভাবকদের জন্য গল্পের বই চালু করা | Switch the storybook shelf on for every guardian or chosen guardians (D-#1011); off = families see nothing | — | — | PRINCIPAL-DEFAULT | new |
 
 #### `printing` — প্রিন্ট
 | permission | EN | BN | what it allows | T | O | flags | replaces |
@@ -834,6 +870,12 @@ D-#861 (owner 2026-10-26: "all reports seen from one place, all report permissio
 | `reports:guardian_engagement` | Guardian engagement | অভিভাবকদের ব্যবহার | Family app usage (names families — Principal by default) | — | — | | guardian_engagement:view (Admin card) |
 | `reports:marks_drivers` | What moves the marks | নম্বর কীসে বাড়ে | Homework, assignments and attendance against class-test results, live (D-#905; Principal by default) | — | — | | (new) |
 | `reports:bank_coverage` | Question-bank coverage | প্রশ্ন-ব্যাংক কভারেজ | Gold questions per tagged objective row of a class × subject, the empty rows, and the gaps as a brief for the next question batch (prd-objective-tree §8.2, OT-4; Principal + Office by default) | — | on | | mastery:settings, mastery:review |
+| `reports:storybook_series` | Storybooks by series | সিরিজ অনুযায়ী গল্পের বই | Reads, readers, read rate and waiting children per storybook series (SB-6, D-#980; Office on) | — | on | | |
+| `reports:storybook_books` | Storybooks by book | বই অনুযায়ী গল্পের বই | Reads and waiting per book, second-copy suggestions, never-borrowed books (SB-6; Office on) | — | on | | |
+| `reports:storybook_readers` | Storybook readers | গল্পের বইয়ের পাঠক | Each child's reading + favourite type, children who stopped, preference by class / section — names children (SB-6; Office on) | — | on | | |
+| `reports:activity_skills` | Activity sheets by skill | দক্ষতা অনুযায়ী অ্যাক্টিভিটি শিট | Sheets done per skill area and level (AS-5; Office on) | — | on | | |
+| `reports:activity_sheets` | Activity sheets by bank and sheet | ব্যাংক ও শিট অনুযায়ী | Popularity and completion per bank / level; sheets often returned incomplete (AS-5; Office on) | — | on | | |
+| `reports:activity_students` | Activity sheet students | শিক্ষার্থী অনুযায়ী অ্যাক্টিভিটি শিট | Each child's sheets, skill spread, level; sheets not returned — names children (AS-5; Office on) | — | on | | |
 
 ### Admin & access
 

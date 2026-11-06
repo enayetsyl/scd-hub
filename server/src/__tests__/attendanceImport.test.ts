@@ -48,6 +48,8 @@ jest.mock("../modules/attendance/models/StaffNameAlias", () => ({
 jest.mock("../modules/attendance/models/TeacherAttendanceDay", () => ({
   TeacherAttendanceDay: {
     countDocuments: (f: unknown) => mockDayCount(f),
+    // The re-upload comparison (D-#1004) reads the old rows; covered in deferredPlaceMistakes.test.ts.
+    find: () => ({ select: () => ({ lean: () => Promise.resolve([]) }) }),
     deleteMany: (f: unknown) => mockDayDeleteMany(f),
     insertMany: (d: unknown) => mockDayInsertMany(d),
   },

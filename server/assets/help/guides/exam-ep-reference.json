@@ -1,0 +1,63 @@
+{
+  "id": "exam-ep-reference",
+  "category": "class_tests_exams",
+  "order": 56,
+  "draft": true,
+  "title": "মোহাম্মদপুরের প্রশ্নপত্র দেখা",
+  "intro": "মোহাম্মদপুরের ২০২৫ ও ২০২৬ সালের অর্ধ-বার্ষিক ও বার্ষিক প্রশ্নপত্র (নার্সারি–পঞ্চম শ্রেণি) পাতা ধরে দেখা এবং মূল ফাইল খোলার নিয়ম।",
+  "keywords": [
+    "মোহাম্মদপুর",
+    "পুরনো প্রশ্ন",
+    "প্রশ্নপত্র",
+    "অর্ধ-বার্ষিক",
+    "বার্ষিক"
+  ],
+  "perms": [
+    "exam_papers:view_reference",
+    "exam_papers:manage_reference"
+  ],
+  "screens": [
+    "ExamPapersTab/ReferencePapers",
+    "ExamPapersTab/ReferencePaperReader"
+  ],
+  "goTo": {
+    "route": "ExamPapersTab",
+    "screen": "ReferencePapers"
+  },
+  "rows": [
+    {
+      "heading": "তালিকা খোলা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "ওপরে বাম কোণের <b>☰</b> চেপে মেনু খুলুন, তারপর <b>পরীক্ষার সিলেবাস</b> অংশে <b>মোহাম্মদপুরের প্রশ্নপত্র</b> চাপুন।",
+          "box": null
+        },
+        {
+          "text": "ওপরের ঘর থেকে <b>সাল</b>, <b>পরীক্ষা</b> ও <b>শ্রেণি</b> বাছাই করে তালিকা ছোট করুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "প্রশ্নপত্র পড়া",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "যে প্রশ্নপত্রটি দেখতে চান সেটি চাপুন — সব পাতা একটার নিচে আরেকটা দেখাবে।",
+          "box": null
+        },
+        {
+          "text": "লেখা ছোট লাগলে <b>＋</b> চেপে বড় করুন।",
+          "box": null
+        },
+        {
+          "text": "Word বা PDF ফাইলটি লাগলে <b>মূল ফাইল খুলুন</b> চাপুন।",
+          "box": null
+        }
+      ]
+    }
+  ]
+}

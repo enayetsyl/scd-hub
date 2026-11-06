@@ -22,6 +22,7 @@ import { LanguageProvider, useLanguage } from "./src/state/LanguageContext";
 import { SidebarProvider } from "./src/state/SidebarContext";
 import { ToastProvider } from "./src/state/ToastContext";
 import { ConfirmProvider } from "./src/state/ConfirmContext";
+import { MistakeReasonProvider } from "./src/state/MistakeReasonContext";
 import { RootNavigator } from "./src/navigation/RootNavigator";
 import { WebPushGate } from "./src/components/WebPushGate";
 import { UpdateGate } from "./src/components/UpdateGate";
@@ -32,6 +33,7 @@ import { CommentReadPopup } from "./src/components/CommentReadPopup";
 import { QuranExamReminderPopup } from "./src/components/QuranExamReminderPopup";
 import { MeetingCommentReminderPopup } from "./src/components/MeetingCommentReminderPopup";
 import { MarkReminderPopup, MarkEscalationPopup } from "./src/components/MarkSubmissionPopup";
+import { StaffWarningPopup } from "./src/components/StaffWarningPopup";
 import {
   navigationRef,
   openNotificationCenter,
@@ -217,6 +219,8 @@ function App(): React.ReactElement | null {
                           gate destructive actions behind one confirm sheet. */}
                       <ToastProvider>
                         <ConfirmProvider>
+                        {/* D-#937: the "কী হয়েছিল?" reason sheet, asked like a confirm. */}
+                        <MistakeReasonProvider>
                           {/* Self-hosted Android updates: a newer APK on the server
                               walls the app until installed; otherwise pending EAS
                               (OTA) updates apply immediately. Web/iOS pass through. */}
@@ -247,8 +251,11 @@ function App(): React.ReactElement | null {
                               {/* Teachers on an assignment due day; Office + Principal at 09:30 (D-#889/#890). */}
                               <MarkReminderPopup />
                               <MarkEscalationPopup />
+                              {/* Staff who reached a warning step (D-#940/#941). */}
+                              <StaffWarningPopup />
                             </WebPushGate>
                           </UpdateGate>
+                        </MistakeReasonProvider>
                         </ConfirmProvider>
                       </ToastProvider>
                     </SidebarProvider>

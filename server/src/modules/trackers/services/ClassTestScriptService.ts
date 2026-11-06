@@ -41,6 +41,8 @@ import { dateKeyOf, parseDateKey } from "../../attendance/dates";
 import { dhakaDayKey } from "../../../lib/dhakaDay";
 import { bnNum } from "../../../lib/bnNum";
 import { ClassTestResultError } from "./ClassTestResultService";
+import { recordScriptsPulledBack } from "./ClassTestCorrectionService";
+import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
 
 const DAY_MS = 86_400_000;
 /** A student's script is a handful of pages; the cap only stops a runaway tag. */
@@ -511,6 +513,8 @@ export async function undoReceiveScripts(testId: string, actorId: string, now = 
     { $set: { "scripts.receivedAt": null, "scripts.receivedBy": null, "scripts.receivedCount": null } },
   );
   await audit("CT_SCRIPTS_RECEIVE_UNDONE", actorId, test, { count: test.scripts?.receivedCount ?? null });
+  // D-#953: the receipt itself was wrong.
+  await recordPlaceMistake({ kind: "SCRIPTS_RECEIVE_UNDONE", tier: 2, refKey: String(test._id), ownerId: test.scripts?.receivedBy ?? null, correctedBy: actorId, at: now, line: `${test.ctId}: ${test.scripts?.receivedCount ?? "?"}টি খাতা গ্রহণ ফেরানো হয়েছে` });
   return (await scriptTestRow(testId, now))!;
 }
 
@@ -716,11 +720,14 @@ export async function publishScripts(testId: string, actorId: string, now = new 
 export async function unpublishScripts(testId: string, actorId: string, now = new Date()): Promise<ScriptTestRow> {
   const { test, stage } = await loadFlow(testId, now);
   requireStage(stage, ["PUBLISHED"], "শুধু প্রকাশিত (এখনও শিক্ষককে না দেওয়া) খাতার প্রকাশ বাতিল করা যায়");
+  const publishedBy = test.scripts?.publishedBy ?? null;
   await ClassTest.updateOne(
     { _id: test._id },
     { $set: { "scripts.publishedAt": null, "scripts.publishedBy": null } },
   );
   await audit("CT_SCRIPTS_UNPUBLISHED", actorId, test, { version: test.scripts?.publishedVersion ?? 0 });
+  // D-#945: guardians had the pages — the publisher explains why they were pulled back.
+  if (publishedBy) await recordScriptsPulledBack({ testId, publishedBy, actorId, at: now });
   return (await scriptTestRow(testId, now))!;
 }
 

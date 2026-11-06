@@ -72,6 +72,11 @@ function makeModel(store: Row[], prefix: string) {
   };
 }
 
+// The staff-mistake hooks (D-#954/#1004) are covered on a real Mongo in placeMistakes.test.ts.
+jest.mock("../modules/staff-mistakes/services/StaffMistakeNoteService", () => ({
+  recordPlaceMistake: jest.fn().mockResolvedValue(false),
+  hasPlaceNote: jest.fn().mockResolvedValue(false),
+}));
 jest.mock("../modules/finance/models/FinancePosting", () => ({
   FinancePosting: makeModel(mockPostings, "fp"),
 }));

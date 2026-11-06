@@ -1,0 +1,295 @@
+{
+  "schema": "scd.exam-paper-draft/v1",
+  "key": "annual-2026-L1-MATH",
+  "exam": { "term": "ANNUAL", "year": 2026, "nameBn": "বার্ষিক পরীক্ষা ২০২৬" },
+  "classLevel": 1,
+  "subject": "MATH",
+  "titleBn": "বার্ষিক পরীক্ষা ২০২৬ · প্রথম শ্রেণি · গণিত",
+  "fullMarks": 100,
+  "durationBn": "২ ঘণ্টা",
+  "syllabusRows": [
+    { "seq": 1, "label": "সঠিক উত্তর নির্বাচন কর", "itemType": "mcq", "component": null, "count": 6, "marksEach": 1, "total": 6 },
+    { "seq": 2, "label": "অঙ্কে লেখ", "itemType": "other", "component": null, "count": 6, "marksEach": 1, "total": 6 },
+    { "seq": 3, "label": "সংখ্যাগুলো কথায় লেখ", "itemType": "other", "component": null, "count": 6, "marksEach": 1, "total": 6 },
+    { "seq": 4, "label": "তুলনা কর — `<` `>` `=` বসাও", "itemType": "fill_blank", "component": null, "count": 6, "marksEach": 1, "total": 6 },
+    { "seq": 5, "label": "ছোট থেকে বড় ও বড় থেকে ছোট সাজাও", "itemType": "other", "component": null, "count": 3, "marksEach": 2, "total": 6 },
+    { "seq": 6, "label": "এক ঘর বাদ দিয়ে খালিঘর পূরণ কর", "itemType": "fill_blank", "component": null, "count": 5, "marksEach": 1, "total": 5 },
+    { "seq": 7, "label": "স্থানীয় মান নির্ণয় কর — একক ও দশক", "itemType": "short_answer", "component": null, "count": 5, "marksEach": 2, "total": 10 },
+    { "seq": 8, "label": "যোগ কর (হাতে না রেখে)", "itemType": "other", "component": null, "count": 8, "marksEach": 1, "total": 8 },
+    { "seq": 9, "label": "বিয়োগ কর (ধার না করে)", "itemType": "other", "component": null, "count": 8, "marksEach": 1, "total": 8 },
+    { "seq": 10, "label": "প্যাটার্ন — পরের সংখ্যা বা আকৃতি কী?", "itemType": "creative", "component": null, "count": 6, "marksEach": 1, "total": 6 },
+    { "seq": 11, "label": "জ্যামিতিক আকৃতি চেনা ও আঁকা", "itemType": "short_answer", "component": null, "count": 6, "marksEach": 1, "total": 6 },
+    { "seq": 12, "label": "টাকা চেনা", "itemType": "short_answer", "component": null, "count": 5, "marksEach": 1, "total": 5 },
+    { "seq": 13, "label": "নিজে করি — সমস্যার সমাধান কর", "itemType": "creative", "component": null, "count": 4, "marksEach": 3, "total": 12 },
+    { "seq": 14, "label": "নামতা লেখ", "itemType": "other", "component": null, "count": 10, "marksEach": 1, "total": 10 }
+  ],
+  "sections": [
+    {
+      "seq": 1,
+      "syllabusRowSeq": 1,
+      "kind": "WRITTEN",
+      "instructionBn": "সঠিক উত্তর নির্বাচন কর",
+      "count": 6, "marksEach": 1, "total": 6,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s1-1", "text": "৫৬ সংখ্যাটির দশকের ঘরে কোন অঙ্ক আছে?", "options": ["৫", "৬", "১১"], "answer": "৫", "marks": 1, "source": "NEW", "bookRef": "অধ্যায় ১০ স্থানীয় মান, পৃষ্ঠা ৭৫–৭৬", "needsPicture": false },
+        { "key": "s1-2", "text": "‘সাতাত্তর’ অঙ্কে লিখলে কোনটি হয়?", "options": ["৬৭", "৭৭", "৭৮"], "answer": "৭৭", "marks": 1, "source": "NEW", "bookRef": "অধ্যায় ১৪ সংখ্যা (৪১–১০০), পৃষ্ঠা ৯২", "needsPicture": false },
+        { "key": "s1-3", "text": "কোন আকৃতির তিনটি কোনা আছে?", "options": ["গোল", "তিনকোনা", "চারকোনা"], "answer": "তিনকোনা", "marks": 1, "source": "NEW", "bookRef": "অধ্যায় ১২ জ্যামিতি, পৃষ্ঠা ৮৪", "needsPicture": false },
+        { "key": "s1-4", "text": "১০ টাকার ২টি নোট মিলে কত টাকা?", "options": ["১২ টাকা", "২০ টাকা", "১০০ টাকা"], "answer": "২০ টাকা", "marks": 1, "source": "NEW", "bookRef": "অধ্যায় ১৭ বাংলাদেশি মুদ্রা, পৃষ্ঠা ১০৬–১০৮", "needsPicture": false },
+        { "key": "s1-5", "text": "৯৯ এর পরের সংখ্যা কোনটি?", "options": ["৯৮", "৯০", "১০০"], "answer": "১০০", "marks": 1, "source": "NEW", "bookRef": "অধ্যায় ১৪ সংখ্যা (৪১–১০০), পৃষ্ঠা ৯৩", "needsPicture": false },
+        { "key": "s1-6", "text": "কোন সংখ্যাটি সবচেয়ে বড়?", "options": ["৮৯", "৯৮", "৮৮"], "answer": "৯৮", "marks": 1, "source": "NEW", "bookRef": "অধ্যায় ১৮ নিজে করি, পৃষ্ঠা ১১০", "needsPicture": false }
+      ]
+    },
+    {
+      "seq": 2,
+      "syllabusRowSeq": 2,
+      "kind": "WRITTEN",
+      "instructionBn": "অঙ্কে লেখ",
+      "count": 6, "marksEach": 1, "total": 6,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s2-1", "text": "তেতাল্লিশ", "answer": "৪৩", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ১", "bookRef": "অধ্যায় ১৪, পৃষ্ঠা ৯২", "needsPicture": false },
+        { "key": "s2-2", "text": "সাতান্ন", "answer": "৫৭", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ১", "bookRef": "অধ্যায় ১৪, পৃষ্ঠা ৯২", "needsPicture": false, "note": "সংখ্যা বদলে ৪১–১০০ এর মধ্যে নেওয়া হয়েছে" },
+        { "key": "s2-3", "text": "পঁয়ষট্টি", "answer": "৬৫", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ১", "bookRef": "অধ্যায় ১৪, পৃষ্ঠা ৯২", "needsPicture": false, "note": "সংখ্যা বদলে ৪১–১০০ এর মধ্যে নেওয়া হয়েছে" },
+        { "key": "s2-4", "text": "একাত্তর", "answer": "৭১", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ১", "bookRef": "অধ্যায় ১৪, পৃষ্ঠা ৯২", "needsPicture": false, "note": "সংখ্যা বদলে ৪১–১০০ এর মধ্যে নেওয়া হয়েছে" },
+        { "key": "s2-5", "text": "ঊননব্বই", "answer": "৮৯", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ১", "bookRef": "অধ্যায় ১৪, পৃষ্ঠা ৯২", "needsPicture": false, "note": "সংখ্যা বদলে ৪১–১০০ এর মধ্যে নেওয়া হয়েছে" },
+        { "key": "s2-6", "text": "বিরানব্বই", "answer": "৯২", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ১", "bookRef": "অধ্যায় ১৪, পৃষ্ঠা ৯২", "needsPicture": false, "note": "সংখ্যা বদলে ৪১–১০০ এর মধ্যে নেওয়া হয়েছে" }
+      ]
+    },
+    {
+      "seq": 3,
+      "syllabusRowSeq": 3,
+      "kind": "WRITTEN",
+      "instructionBn": "সংখ্যাগুলো কথায় লেখ",
+      "count": 6, "marksEach": 1, "total": 6,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s3-1", "text": "৫২", "answer": "বায়ান্ন", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১", "bookRef": "অধ্যায় ১৪, পৃষ্ঠা ৯২", "needsPicture": false },
+        { "key": "s3-2", "text": "৬৬", "answer": "ছেষট্টি", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১", "bookRef": "অধ্যায় ১৪, পৃষ্ঠা ৯২", "needsPicture": false },
+        { "key": "s3-3", "text": "৪২", "answer": "বিয়াল্লিশ", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১", "bookRef": "অধ্যায় ১৪, পৃষ্ঠা ৯২", "needsPicture": false },
+        { "key": "s3-4", "text": "৮১", "answer": "একাশি", "marks": 1, "source": "MP2026_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ২ (Write in Words)", "bookRef": "অধ্যায় ১৪, পৃষ্ঠা ৯২", "needsPicture": false, "note": "ইংরেজিতে কথায় লেখার সংখ্যা বাংলায় কথায় লেখার জন্য নেওয়া হয়েছে" },
+        { "key": "s3-5", "text": "৫৫", "answer": "পঞ্চান্ন", "marks": 1, "source": "MP2026_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ২ (Write in Words)", "bookRef": "অধ্যায় ১৪, পৃষ্ঠা ৯২", "needsPicture": false, "note": "ইংরেজিতে কথায় লেখার সংখ্যা বাংলায় কথায় লেখার জন্য নেওয়া হয়েছে" },
+        { "key": "s3-6", "text": "১০০", "answer": "একশত", "marks": 1, "source": "MP2026_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ২ (Write in Words)", "bookRef": "অধ্যায় ১৪, পৃষ্ঠা ৯২", "needsPicture": false, "note": "ইংরেজিতে কথায় লেখার সংখ্যা বাংলায় কথায় লেখার জন্য নেওয়া হয়েছে" }
+      ]
+    },
+    {
+      "seq": 4,
+      "syllabusRowSeq": 4,
+      "kind": "WRITTEN",
+      "instructionBn": "তুলনা কর — খালি ঘরে <, > অথবা = বসাও",
+      "count": 6, "marksEach": 1, "total": 6,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s4-1", "text": "৭৫ ☐ ৫৭", "answer": ">", "marks": 1, "source": "NEW", "bookRef": "অধ্যায় ১৮ নিজে করি, পৃষ্ঠা ১১০ (ক্রম ৭)", "needsPicture": false },
+        { "key": "s4-2", "text": "৬৯ ☐ ৯৬", "answer": "<", "marks": 1, "source": "NEW", "bookRef": "অধ্যায় ১৮ নিজে করি, পৃষ্ঠা ১১০ (ক্রম ৭)", "needsPicture": false },
+        { "key": "s4-3", "text": "৮৭ ☐ ৭৮", "answer": ">", "marks": 1, "source": "NEW", "bookRef": "অধ্যায় ১৮ নিজে করি, পৃষ্ঠা ১১০ (ক্রম ৭)", "needsPicture": false },
+        { "key": "s4-4", "text": "৭০ ☐ ৮০", "answer": "<", "marks": 1, "source": "NEW", "bookRef": "অধ্যায় ১৮ নিজে করি, পৃষ্ঠা ১১০ (ক্রম ৮)", "needsPicture": false },
+        { "key": "s4-5", "text": "৬৫ ☐ ৬৫", "answer": "=", "marks": 1, "source": "NEW", "bookRef": "অধ্যায় ১০ স্থানীয় মান, পৃষ্ঠা ৭৭", "needsPicture": false },
+        { "key": "s4-6", "text": "৮৯ ☐ ৯৮", "answer": "<", "marks": 1, "source": "NEW", "bookRef": "অধ্যায় ১৮ নিজে করি, পৃষ্ঠা ১১০ (ক্রম ৮)", "needsPicture": false }
+      ]
+    },
+    {
+      "seq": 5,
+      "syllabusRowSeq": 5,
+      "kind": "WRITTEN",
+      "instructionBn": "সংখ্যাগুলো ছোট থেকে বড় ও বড় থেকে ছোট ক্রমে সাজাও",
+      "count": 3, "marksEach": 2, "total": 6,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": "| সংখ্যা | ছোট থেকে বড় | বড় থেকে ছোট |\n|---|---|---|\n| ৫১, ৬৪, ৪২, ৭৩, ৮০ |  |  |\n| ৬৫, ৪৭, ৭৮, ৯৯, ৫০ |  |  |\n| ৭২, ৭৯, ৬৯, ৫৯, ৮৯ |  |  |",
+      "matchRight": null,
+      "items": [
+        { "key": "s5-1", "text": "৫১, ৬৪, ৪২, ৭৩, ৮০", "answer": "ছোট থেকে বড়: ৪২, ৫১, ৬৪, ৭৩, ৮০ · বড় থেকে ছোট: ৮০, ৭৩, ৬৪, ৫১, ৪২ (প্রতিটি ক্রম ১ নম্বর)", "marks": 2, "source": "MP2026_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৩", "bookRef": "অধ্যায় ১৮ নিজে করি, পৃষ্ঠা ১১০–১১১", "needsPicture": false, "note": "১০টি সংখ্যার বদলে ৫টি; দুই ক্রমেই সাজাতে হবে" },
+        { "key": "s5-2", "text": "৬৫, ৪৭, ৭৮, ৯৯, ৫০", "answer": "ছোট থেকে বড়: ৪৭, ৫০, ৬৫, ৭৮, ৯৯ · বড় থেকে ছোট: ৯৯, ৭৮, ৬৫, ৫০, ৪৭ (প্রতিটি ক্রম ১ নম্বর)", "marks": 2, "source": "MP2026_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৩ ও ৪", "bookRef": "অধ্যায় ১৮ নিজে করি, পৃষ্ঠা ১১০–১১১", "needsPicture": false, "note": "প্রশ্ন ৩ ও ৪ এর সংখ্যা থেকে ৫টি; দুই ক্রমেই সাজাতে হবে" },
+        { "key": "s5-3", "text": "৭২, ৭৯, ৬৯, ৫৯, ৮৯", "answer": "ছোট থেকে বড়: ৫৯, ৬৯, ৭২, ৭৯, ৮৯ · বড় থেকে ছোট: ৮৯, ৭৯, ৭২, ৬৯, ৫৯ (প্রতিটি ক্রম ১ নম্বর)", "marks": 2, "source": "NEW", "bookRef": "অধ্যায় ১৮ নিজে করি, পৃষ্ঠা ১১১ (ক্রম ১১)", "needsPicture": false }
+      ]
+    },
+    {
+      "seq": 6,
+      "syllabusRowSeq": 6,
+      "kind": "WRITTEN",
+      "instructionBn": "এক ঘর বাদ দিয়ে খালিঘর পূরণ কর",
+      "count": 5, "marksEach": 1, "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": "| ৭২ | (ক) | ৭৪ | (খ) | ৭৬ | (গ) | ৭৮ | (ঘ) | ৮০ | (ঙ) |\n|---|---|---|---|---|---|---|---|---|---|",
+      "matchRight": null,
+      "items": [
+        { "key": "s6-1", "text": "খালিঘর (ক)", "answer": "৭৩", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৪", "bookRef": "অধ্যায় ১৪, পৃষ্ঠা ৯৪", "needsPicture": false, "note": "একই ধরন; সংখ্যা ২৭–৩৫ থেকে ৭২–৮১ করা হয়েছে" },
+        { "key": "s6-2", "text": "খালিঘর (খ)", "answer": "৭৫", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৪", "bookRef": "অধ্যায় ১৪, পৃষ্ঠা ৯৪", "needsPicture": false, "note": "একই ধরন; সংখ্যা ২৭–৩৫ থেকে ৭২–৮১ করা হয়েছে" },
+        { "key": "s6-3", "text": "খালিঘর (গ)", "answer": "৭৭", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৪", "bookRef": "অধ্যায় ১৪, পৃষ্ঠা ৯৪", "needsPicture": false, "note": "একই ধরন; সংখ্যা ২৭–৩৫ থেকে ৭২–৮১ করা হয়েছে" },
+        { "key": "s6-4", "text": "খালিঘর (ঘ)", "answer": "৭৯", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৪", "bookRef": "অধ্যায় ১৪, পৃষ্ঠা ৯৪", "needsPicture": false, "note": "একই ধরন; সংখ্যা ২৭–৩৫ থেকে ৭২–৮১ করা হয়েছে" },
+        { "key": "s6-5", "text": "খালিঘর (ঙ)", "answer": "৮১", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৪", "bookRef": "অধ্যায় ১৪, পৃষ্ঠা ৯৪", "needsPicture": false, "note": "একই ধরন; সংখ্যা ২৭–৩৫ থেকে ৭২–৮১ করা হয়েছে" }
+      ]
+    },
+    {
+      "seq": 7,
+      "syllabusRowSeq": 7,
+      "kind": "WRITTEN",
+      "instructionBn": "একক ও দশকের স্থানীয় মান নির্ণয় কর",
+      "count": 5, "marksEach": 2, "total": 10,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s7-1", "text": "২৮", "answer": "দশকের ঘরে ২ → স্থানীয় মান ২০; এককের ঘরে ৮ → স্থানীয় মান ৮", "marks": 2, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৬", "bookRef": "অধ্যায় ১০ স্থানীয় মান, পৃষ্ঠা ৭৫–৭৬", "needsPicture": false },
+        { "key": "s7-2", "text": "৫০", "answer": "দশকের ঘরে ৫ → স্থানীয় মান ৫০; এককের ঘরে ০ → স্থানীয় মান ০", "marks": 2, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৬", "bookRef": "অধ্যায় ১০ স্থানীয় মান, পৃষ্ঠা ৭৫", "needsPicture": false },
+        { "key": "s7-3", "text": "২৬", "answer": "দশকের ঘরে ২ → স্থানীয় মান ২০; এককের ঘরে ৬ → স্থানীয় মান ৬", "marks": 2, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৪", "bookRef": "অধ্যায় ১০ স্থানীয় মান, পৃষ্ঠা ৭৫–৭৬", "needsPicture": false },
+        { "key": "s7-4", "text": "৭৩", "answer": "দশকের ঘরে ৭ → স্থানীয় মান ৭০; এককের ঘরে ৩ → স্থানীয় মান ৩", "marks": 2, "source": "NEW", "bookRef": "অধ্যায় ১০ স্থানীয় মান, পৃষ্ঠা ৭৬; অধ্যায় ১৮, পৃষ্ঠা ১০৯", "needsPicture": false },
+        { "key": "s7-5", "text": "৯৫", "answer": "দশকের ঘরে ৯ → স্থানীয় মান ৯০; এককের ঘরে ৫ → স্থানীয় মান ৫", "marks": 2, "source": "NEW", "bookRef": "অধ্যায় ১৮ নিজে করি, পৃষ্ঠা ১০৯ (৯ দশ ৫)", "needsPicture": false }
+      ]
+    },
+    {
+      "seq": 8,
+      "syllabusRowSeq": 8,
+      "kind": "WRITTEN",
+      "instructionBn": "যোগ কর",
+      "count": 8, "marksEach": 1, "total": 8,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s8-1", "text": "১২ + ৪", "answer": "১৬", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৭", "bookRef": "অধ্যায় ১৫ যোগ, পৃষ্ঠা ৯৯", "needsPicture": false },
+        { "key": "s8-2", "text": "২৫ + ১০", "answer": "৩৫", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৭", "bookRef": "অধ্যায় ১৫ যোগ, পৃষ্ঠা ৯৮", "needsPicture": false },
+        { "key": "s8-3", "text": "৪২ + ৭", "answer": "৪৯", "marks": 1, "source": "MP2026_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৭", "bookRef": "অধ্যায় ১৫ যোগ, পৃষ্ঠা ৯৯–১০০", "needsPicture": false, "note": "৪২ + ৮ এ হাতে রাখতে হয়, তাই ৮ বদলে ৭" },
+        { "key": "s8-4", "text": "৬৪ + ১৫", "answer": "৭৯", "marks": 1, "source": "MP2026_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৭", "bookRef": "অধ্যায় ১৫ যোগ, পৃষ্ঠা ৯৮", "needsPicture": false, "note": "৬৪ + ১৮ এ হাতে রাখতে হয়, তাই ১৮ বদলে ১৫" },
+        { "key": "s8-5", "text": "৭২ + ২৭", "answer": "৯৯", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৭", "bookRef": "অধ্যায় ১৫ যোগ, পৃষ্ঠা ৯৮", "needsPicture": false },
+        { "key": "s8-6", "text": "৫৫ + ২২", "answer": "৭৭", "marks": 1, "source": "NEW", "bookRef": "অধ্যায় ১৫ যোগ, পৃষ্ঠা ১০০", "needsPicture": false },
+        { "key": "s8-7", "text": "৫৩ + ৩৫", "answer": "৮৮", "marks": 1, "source": "NEW", "bookRef": "অধ্যায় ১৫ যোগ, পৃষ্ঠা ১০০", "needsPicture": false },
+        { "key": "s8-8", "text": "৪ + ৮১", "answer": "৮৫", "marks": 1, "source": "NEW", "bookRef": "অধ্যায় ১৫ যোগ, পৃষ্ঠা ১০০", "needsPicture": false }
+      ]
+    },
+    {
+      "seq": 9,
+      "syllabusRowSeq": 9,
+      "kind": "WRITTEN",
+      "instructionBn": "বিয়োগ কর",
+      "count": 8, "marksEach": 1, "total": 8,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s9-1", "text": "২৮ − ৮", "answer": "২০", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৮", "bookRef": "অধ্যায় ১৬ বিয়োগ, পৃষ্ঠা ১০২", "needsPicture": false },
+        { "key": "s9-2", "text": "৫৭ − ১৪", "answer": "৪৩", "marks": 1, "source": "MP2026_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৮", "bookRef": "অধ্যায় ১৬ বিয়োগ, পৃষ্ঠা ১০৪", "needsPicture": false, "note": "৫৪ − ১৭ এ ধার করতে হয়, তাই ৫৭ − ১৪" },
+        { "key": "s9-3", "text": "৩৬ − ১২", "answer": "২৪", "marks": 1, "source": "MP2026_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৮", "bookRef": "অধ্যায় ১৬ বিয়োগ, পৃষ্ঠা ১০২", "needsPicture": false, "note": "৩২ − ১৬ এ ধার করতে হয়, তাই ৩৬ − ১২" },
+        { "key": "s9-4", "text": "৭০ − ৫০", "answer": "২০", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৮", "bookRef": "অধ্যায় ১৮ নিজে করি, পৃষ্ঠা ১১৩", "needsPicture": false },
+        { "key": "s9-5", "text": "৯৮ − ৫৮", "answer": "৪০", "marks": 1, "source": "MP2026_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৮", "bookRef": "অধ্যায় ১৬ বিয়োগ, পৃষ্ঠা ১০৪", "needsPicture": false, "note": "৯০ − ৫৮ এ ধার করতে হয়, তাই ৯৮ − ৫৮" },
+        { "key": "s9-6", "text": "৮৩ − ২১", "answer": "৬২", "marks": 1, "source": "NEW", "bookRef": "অধ্যায় ১৬ বিয়োগ, পৃষ্ঠা ১০৪", "needsPicture": false },
+        { "key": "s9-7", "text": "৯৯ − ৩৩", "answer": "৬৬", "marks": 1, "source": "NEW", "bookRef": "অধ্যায় ১৬ বিয়োগ, পৃষ্ঠা ১০৪", "needsPicture": false },
+        { "key": "s9-8", "text": "৮৯ − ৩৪", "answer": "৫৫", "marks": 1, "source": "NEW", "bookRef": "অধ্যায় ১৬ বিয়োগ, পৃষ্ঠা ১০৪", "needsPicture": false }
+      ]
+    },
+    {
+      "seq": 10,
+      "syllabusRowSeq": 10,
+      "kind": "WRITTEN",
+      "instructionBn": "প্যাটার্ন দেখে পরের সংখ্যা বা আকৃতি লেখ",
+      "count": 6, "marksEach": 1, "total": 6,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s10-1", "text": "৫, ৬, ৫, ৬, ৫, ____", "answer": "৬", "marks": 1, "source": "NEW", "bookRef": "অধ্যায় ১৩ প্যাটার্ন, পৃষ্ঠা ৮৮", "needsPicture": false },
+        { "key": "s10-2", "text": "১, ৩, ৫, ১, ৩, ৫, ১, ৩, ____", "answer": "৫", "marks": 1, "source": "NEW", "bookRef": "অধ্যায় ১৩ প্যাটার্ন, পৃষ্ঠা ৯০", "needsPicture": false },
+        { "key": "s10-3", "text": "৭, ৯, ৪, ৭, ৯, ৪, ৭, ৯, ____", "answer": "৪", "marks": 1, "source": "NEW", "bookRef": "অধ্যায় ১৮ নিজে করি, পৃষ্ঠা ১১৪ (ক্রম ২৮)", "needsPicture": false },
+        { "key": "s10-4", "text": "ক, খ, ক, খ, ক, খ, ক, ____", "answer": "খ", "marks": 1, "source": "NEW", "bookRef": "অধ্যায় ১৩ প্যাটার্ন, পৃষ্ঠা ৯০", "needsPicture": false },
+        { "key": "s10-5", "text": "পরের আকৃতিটি কী হবে? এঁকে দেখাও।\n[ছবি: চারকোনা, তিনকোনা, চারকোনা, তিনকোনা, চারকোনা, তারপর একটি ফাঁকা ঘর]", "answer": "তিনকোনা", "marks": 1, "source": "NEW", "bookRef": "অধ্যায় ১৩ প্যাটার্ন, পৃষ্ঠা ৮৬", "needsPicture": true },
+        { "key": "s10-6", "text": "পরের আকৃতিটি কী হবে? এঁকে দেখাও।\n[ছবি: গোল, তারা, তারা, গোল, তারা, তারা, গোল, তারপর একটি ফাঁকা ঘর]", "answer": "তারা", "marks": 1, "source": "NEW", "bookRef": "অধ্যায় ১৮ নিজে করি, পৃষ্ঠা ১১৪ (ক্রম ২৮ঘ)", "needsPicture": true }
+      ]
+    },
+    {
+      "seq": 11,
+      "syllabusRowSeq": 11,
+      "kind": "WRITTEN",
+      "instructionBn": "আকৃতিগুলোর নাম লেখ ও আঁক",
+      "count": 6, "marksEach": 1, "total": 6,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s11-1", "text": "ঘড়ি [ছবি: একটি গোল দেয়ালঘড়ি] — আকৃতির নাম লেখ।", "answer": "গোল", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১১", "bookRef": "অধ্যায় ১২ জ্যামিতি, পৃষ্ঠা ৮২–৮৪", "needsPicture": true },
+        { "key": "s11-2", "text": "পিৎজার টুকরো [ছবি: একটি তিনকোনা পিৎজার টুকরো] — আকৃতির নাম লেখ।", "answer": "তিনকোনা", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১১", "bookRef": "অধ্যায় ১২ জ্যামিতি, পৃষ্ঠা ৮৪", "needsPicture": true },
+        { "key": "s11-3", "text": "টেবিলের উপরের অংশ [ছবি: একটি চারকোনা টেবিল] — আকৃতির নাম লেখ।", "answer": "চারকোনা", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১১", "bookRef": "অধ্যায় ১২ জ্যামিতি, পৃষ্ঠা ৮৪", "needsPicture": true },
+        { "key": "s11-4", "text": "বই [ছবি: একটি বই] — আকৃতির নাম লেখ।", "answer": "চারকোনা", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১১", "bookRef": "অধ্যায় ১২ জ্যামিতি, পৃষ্ঠা ৮২", "needsPicture": true },
+        { "key": "s11-5", "text": "বল [ছবি: একটি বল] — আকৃতির নাম লেখ।", "answer": "গোল", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১১", "bookRef": "অধ্যায় ১২ জ্যামিতি, পৃষ্ঠা ৮৪", "needsPicture": true },
+        { "key": "s11-6", "text": "একটি তিনকোনা আকৃতি আঁক।", "answer": "তিনটি সোজা দাগ ও তিনটি কোনাযুক্ত যেকোনো আকৃতি", "marks": 1, "source": "NEW", "bookRef": "অধ্যায় ১২ জ্যামিতি, পৃষ্ঠা ৮৩, ৮৫", "needsPicture": false }
+      ]
+    },
+    {
+      "seq": 12,
+      "syllabusRowSeq": 12,
+      "kind": "WRITTEN",
+      "instructionBn": "ছবি দেখে টাকা চেনো ও উত্তর লেখ",
+      "count": 5, "marksEach": 1, "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s12-1", "text": "[ছবি: একটি ১০০ টাকার নোট] নোটটি কত টাকার?", "answer": "১০০ টাকা", "marks": 1, "source": "NEW", "bookRef": "অধ্যায় ১৭ বাংলাদেশি মুদ্রা, পৃষ্ঠা ১০৬", "needsPicture": true },
+        { "key": "s12-2", "text": "[ছবি: ১ টাকা, ২ টাকা ও ৫ টাকার তিনটি কয়েন] তিনটি কয়েন মিলে কত টাকা?", "answer": "৮ টাকা", "marks": 1, "source": "NEW", "bookRef": "অধ্যায় ১৭ বাংলাদেশি মুদ্রা, পৃষ্ঠা ১০৫", "needsPicture": true },
+        { "key": "s12-3", "text": "[ছবি: একটি ৫০ টাকার নোট ও একটি ৫ টাকার নোট] রেজার কাছে নিচের নোটগুলো আছে। তার কাছে কত টাকা আছে?", "answer": "৫৫ টাকা", "marks": 1, "source": "NEW", "bookRef": "অধ্যায় ১৭ বাংলাদেশি মুদ্রা, পৃষ্ঠা ১০৮", "needsPicture": true },
+        { "key": "s12-4", "text": "[ছবি: একটি পেনসিল-বাক্স, পাশে একটি ৫০ টাকার নোট ও একটি ১০ টাকার নোট] পেনসিল-বাক্সটির দাম কত?", "answer": "৬০ টাকা", "marks": 1, "source": "NEW", "bookRef": "অধ্যায় ১৭ বাংলাদেশি মুদ্রা, পৃষ্ঠা ১০৮", "needsPicture": true },
+        { "key": "s12-5", "text": "[ছবি: একটি বই, পাশে একটি ২০ টাকার নোট ও একটি ১০ টাকার নোট] বইটির দাম কত?", "answer": "৩০ টাকা", "marks": 1, "source": "NEW", "bookRef": "অধ্যায় ১৭ বাংলাদেশি মুদ্রা, পৃষ্ঠা ১০৮", "needsPicture": true }
+      ]
+    },
+    {
+      "seq": 13,
+      "syllabusRowSeq": 13,
+      "kind": "WRITTEN",
+      "instructionBn": "নিচের সমস্যাগুলোর সমাধান কর",
+      "count": 4, "marksEach": 3, "total": 12,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s13-1", "text": "তিথির কাছে ৩৬টি রঙিন কাগজ আছে। মা তাকে আরও ২৩টি রঙিন কাগজ কিনে দিলেন। তার কাছে এখন মোট কতটি রঙিন কাগজ হলো?", "answer": "৩৬ + ২৩ = ৫৯; মোট ৫৯টি রঙিন কাগজ।", "marks": 3, "source": "MP2026_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১০(ক)", "bookRef": "অধ্যায় ১৫ যোগ, পৃষ্ঠা ১০০", "needsPicture": false, "note": "৩৬ + ২৫ এ হাতে রাখতে হয়, তাই ২৫ বদলে ২৩; নাম বদলে বইয়ের নাম ‘তিথি’" },
+        { "key": "s13-2", "text": "রবি ৭০ টাকা নিয়ে বাজারে গেল। সে ৫০ টাকা দিয়ে বাজার করল। তার কাছে আর কত টাকা রইল?", "answer": "৭০ − ৫০ = ২০; তার কাছে ২০ টাকা রইল।", "marks": 3, "source": "MP2026_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১০(খ)", "bookRef": "অধ্যায় ১৮ নিজে করি, পৃষ্ঠা ১১৩ (ক্রম ২৩)", "needsPicture": false, "note": "শুধু নাম বদলে বইয়ের নাম ‘রবি’" },
+        { "key": "s13-3", "text": "আবদুল্লাহ সাহেবের নার্সারিতে ৯০টি গোলাপের চারা ও ৪০টি বেলি ফুলের চারা ছিল। তাঁর নার্সারিতে কোন ফুলের চারা বেশি ছিল এবং কতটি বেশি ছিল?", "answer": "গোলাপের চারা বেশি; ৯০ − ৪০ = ৫০টি বেশি।", "marks": 3, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৮(খ)", "bookRef": "অধ্যায় ১৮ নিজে করি, পৃষ্ঠা ১১৩ (ক্রম ২৪)", "needsPicture": false },
+        { "key": "s13-4", "text": "হালিমার ২৫টি গল্পের বই ছিল। সে মেলা থেকে আরও ১২টি বই কিনল। এখন তার কতগুলো বই হলো?", "answer": "২৫ + ১২ = ৩৭; এখন তার ৩৭টি বই।", "marks": 3, "source": "NEW", "bookRef": "অধ্যায় ১৮ নিজে করি, পৃষ্ঠা ১১২ (ক্রম ১৭)", "needsPicture": false }
+      ]
+    },
+    {
+      "seq": 14,
+      "syllabusRowSeq": 14,
+      "kind": "WRITTEN",
+      "instructionBn": "৮ এর ঘরের নামতা লেখ",
+      "count": 10, "marksEach": 1, "total": 10,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s14-1", "text": "৮ × ১ = ____", "answer": "৮", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৭", "needsPicture": false },
+        { "key": "s14-2", "text": "৮ × ২ = ____", "answer": "১৬", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৭", "needsPicture": false },
+        { "key": "s14-3", "text": "৮ × ৩ = ____", "answer": "২৪", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৭", "needsPicture": false },
+        { "key": "s14-4", "text": "৮ × ৪ = ____", "answer": "৩২", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৭", "needsPicture": false },
+        { "key": "s14-5", "text": "৮ × ৫ = ____", "answer": "৪০", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৭", "needsPicture": false },
+        { "key": "s14-6", "text": "৮ × ৬ = ____", "answer": "৪৮", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৭", "needsPicture": false },
+        { "key": "s14-7", "text": "৮ × ৭ = ____", "answer": "৫৬", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৭", "needsPicture": false },
+        { "key": "s14-8", "text": "৮ × ৮ = ____", "answer": "৬৪", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৭", "needsPicture": false },
+        { "key": "s14-9", "text": "৮ × ৯ = ____", "answer": "৭২", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৭", "needsPicture": false },
+        { "key": "s14-10", "text": "৮ × ১০ = ____", "answer": "৮০", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৭", "needsPicture": false }
+      ]
+    }
+  ],
+  "authorNotes": "Textbook: Class 1 প্রাথমিক গণিত (md in Downloads/md book/C1 Math md file). The md files number the chapters differently from the published syllabus (the single-chapter files call নিজে করি '11' and have no জ্যামিতি file; the 11–17 combined file has জ্যামিতি as 11). I used the SYLLABUS numbering in every bookRef and added the printed page, which is unambiguous: স্থানীয় মান pp74–78, নিজে করি pp79–81, জ্যামিতি pp82–85, প্যাটার্ন pp86–91, সংখ্যা ৪১–১০০ pp92–96, যোগ pp97–100, বিয়োগ pp101–104, মুদ্রা pp105–108, নিজে করি pp109–114. Reused from MP Annual 2026: number-to-words (3 + 3 taken from its English 'Write in Words' row), ascending/descending sets, place value (28, 50), 5 additions and 5 subtractions (MP's 42+8, 64+18, 54−17, 32−16, 90−58 need carrying/borrowing, which the Sylhet row forbids, so their numbers were changed), both word problems (36+25 changed to 36+23 to avoid carrying; names changed to textbook names), and all 5 shape-naming items. MP 2026 had no MCQ, words-to-digits, comparison (<, >, =), skip-a-box, pattern or money rows: MCQ/compare/pattern/money are new from the book; words-to-digits and skip-a-box follow MP Half-yearly 2026's format with numbers moved into 41–100. Doubts: (1) নামতা is not in the Class 1 book — I used the 8-times table (MP Annual 2025 asked exactly this; MP HY 2026 asked the 4-times table; MP 2026 instead asked 10 mixed facts like ৫×৩, ৭×৮). Please confirm which table Sylhet Class 1 has learned; (2) row 11 asks 'চেনা ও আঁকা', so 5 items name a shape and 1 asks the child to draw a তিনকোনা; the book only uses গোল / তিনকোনা / চারকোনা (accept বৃত্ত / ত্রিভুজ / চতুর্ভুজ too); (3) 13 items need pictures (shapes, notes/coins, two shape patterns); (4) duration not published — used 2 hours like MP."
+}

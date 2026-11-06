@@ -129,7 +129,7 @@ export function shapePortion(p: IRevisionPortion): RevisionPortionShape {
   };
 }
 
-function shape(d: IRevisionEntry): RevisionEntryShape {
+export function shape(d: IRevisionEntry): RevisionEntryShape {
   return {
     id: d._id.toString(),
     groupId: d.groupId.toString(),
@@ -174,7 +174,7 @@ export interface PortionInput {
 
 /** One portion (SR-5, D-#833/#835): a valid mushaf-order range — or, for NOT_DONE only,
  *  no range at all (all four fields absent; a half-filled range is refused). */
-function validatePortion(input: PortionInput): IRevisionPortion {
+export function validatePortion(input: PortionInput): IRevisionPortion {
   if (!(REVISION_CATEGORIES as readonly string[]).includes(input.category)) {
     throw new RevisionError(`category must be one of: ${REVISION_CATEGORIES.join(", ")}`);
   }
@@ -297,9 +297,10 @@ export async function recordEntry(input: RecordEntryInput): Promise<RevisionEntr
     date,
   })) as IRevisionEntry | null;
 
-  // Immutable once delivered — a correction is a new Saturday / pre-delivery edit (D-#242).
+  // Sealed once delivered (D-#242); since D-#1002 a sent entry changes only through
+  // correctDeliveredEntry, which keeps the old version and tells the family.
   if (existing?.deliveredAt) {
-    throw new RevisionError("A delivered entry is immutable — record next Saturday to correct it");
+    throw new RevisionError("A delivered entry is immutable — use Correct to change it");
   }
 
   let doc: IRevisionEntry;
@@ -361,7 +362,7 @@ export async function editEntry(input: EditEntryInput): Promise<RevisionEntrySha
     .lean()) as { groupId: Types.ObjectId; studentId: Types.ObjectId; date: Date; deliveredAt?: Date } | null;
   if (!doc) throw new RevisionError("Entry not found");
   if (doc.deliveredAt) {
-    throw new RevisionError("A delivered entry is immutable — record next Saturday to correct it");
+    throw new RevisionError("A delivered entry is immutable — use Correct to change it");
   }
   return recordEntry({
     groupId: doc.groupId.toString(),

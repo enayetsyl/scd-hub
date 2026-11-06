@@ -1,0 +1,103 @@
+{
+  "id": "family-guardian-engagement",
+  "category": "admin_access",
+  "order": 40,
+  "title": "অভিভাবকেরা অ্যাপ কতটা ব্যবহার করছেন দেখা",
+  "intro": "কোন পরিবার নিয়মিত অ্যাপ খোলেন, কে লগইন পেয়েও ব্যবহার করেননি, আর কোন পর্দা কেউ দেখে না, এখানে দেখা যায়।",
+  "keywords": [
+    "অভিভাবকদের ব্যবহার",
+    "লগইন",
+    "নিয়মিত",
+    "নিষ্ক্রিয়",
+    "অ্যাপ ব্যবহার"
+  ],
+  "perms": [
+    "guardian_engagement:view",
+    "reports:guardian_engagement"
+  ],
+  "screens": [
+    "ReportsTab/GuardianEngagement",
+    "AdminTab/GuardianEngagement"
+  ],
+  "goTo": {
+    "route": "ReportsTab",
+    "screen": "GuardianEngagement"
+  },
+  "rows": [
+    {
+      "heading": "রিপোর্টের পাতা খোলা",
+      "shot": "family-guardian-engagement/1.jpg",
+      "size": [
+        824,
+        1720
+      ],
+      "steps": [
+        {
+          "text": "আজ পাতার নিচে <b>রিপোর্ট</b> চাপুন।",
+          "box": [
+            0.1498,
+            0.9151,
+            0.7352,
+            0.0372
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "অভিভাবকদের ব্যবহার",
+      "shot": "family-guardian-engagement/2.jpg",
+      "size": [
+        824,
+        1720
+      ],
+      "steps": [
+        {
+          "text": "<b>অভিভাবকদের ব্যবহার</b> চাপুন।",
+          "box": [
+            0.0704,
+            0.3593,
+            0.8592,
+            0.0372
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "সময় ও পরিবার",
+      "shot": "family-guardian-engagement/3.jpg",
+      "size": [
+        824,
+        1720
+      ],
+      "steps": [
+        {
+          "text": "<b>সময়সীমা</b> থেকে ৩০ দিন, ৯০ দিন বা ১ বছর বেছে নিন।",
+          "box": [
+            0.0291,
+            0.236,
+            0.9417,
+            0.0337
+          ]
+        },
+        {
+          "text": "<b>পরিবার</b> ট্যাবে প্রতিটি পরিবারের শেষ লগইন ও সক্রিয় দিন দেখুন।",
+          "box": [
+            0.0607,
+            0.3488,
+            0.1248,
+            0.0326
+          ]
+        },
+        {
+          "text": "কোন পর্দা কতজন খোলেন দেখতে <b>পর্দা</b> ট্যাব চাপুন।",
+          "box": [
+            0.2486,
+            0.3488,
+            0.0745,
+            0.0326
+          ]
+        }
+      ]
+    }
+  ]
+}

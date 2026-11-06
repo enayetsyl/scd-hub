@@ -1,0 +1,1232 @@
+{
+  "schema": "scd.exam-paper-draft/v1",
+  "key": "annual-2026-L1-ENG",
+  "exam": {
+    "term": "ANNUAL",
+    "year": 2026,
+    "nameBn": "বার্ষিক পরীক্ষা ২০২৬"
+  },
+  "classLevel": 1,
+  "subject": "ENG",
+  "titleBn": "বার্ষিক পরীক্ষা ২০২৬ · প্রথম শ্রেণি · ইংরেজি",
+  "fullMarks": 100,
+  "durationBn": "২ ঘণ্টা ৩০ মিনিট",
+  "syllabusRows": [
+    {
+      "seq": 1,
+      "label": "Paragraph Writing",
+      "itemType": "descriptive",
+      "component": null,
+      "count": 1,
+      "marksEach": 10,
+      "total": 10
+    },
+    {
+      "seq": 2,
+      "label": "Word Meaning",
+      "itemType": "short_answer",
+      "component": null,
+      "count": 10,
+      "marksEach": 1,
+      "total": 10
+    },
+    {
+      "seq": 3,
+      "label": "Noun — Singular and Plural",
+      "itemType": "other",
+      "component": null,
+      "count": 5,
+      "marksEach": 1,
+      "total": 5
+    },
+    {
+      "seq": 4,
+      "label": "Pronouns",
+      "itemType": "fill_blank",
+      "component": null,
+      "count": 10,
+      "marksEach": 1,
+      "total": 10
+    },
+    {
+      "seq": 5,
+      "label": "Adjectives",
+      "itemType": "fill_blank",
+      "component": null,
+      "count": 5,
+      "marksEach": 1,
+      "total": 5
+    },
+    {
+      "seq": 6,
+      "label": "Article (a / an)",
+      "itemType": "fill_blank",
+      "component": null,
+      "count": 5,
+      "marksEach": 1,
+      "total": 5
+    },
+    {
+      "seq": 7,
+      "label": "Gender",
+      "itemType": "other",
+      "component": null,
+      "count": 10,
+      "marksEach": 1,
+      "total": 10
+    },
+    {
+      "seq": 8,
+      "label": "Uses of am / is / are",
+      "itemType": "fill_blank",
+      "component": null,
+      "count": 7,
+      "marksEach": 1,
+      "total": 7
+    },
+    {
+      "seq": 9,
+      "label": "Uses of This / That / These / Those",
+      "itemType": "fill_blank",
+      "component": null,
+      "count": 5,
+      "marksEach": 1,
+      "total": 5
+    },
+    {
+      "seq": 10,
+      "label": "Prepositions — in / on / under",
+      "itemType": "fill_blank",
+      "component": null,
+      "count": 5,
+      "marksEach": 1,
+      "total": 5
+    },
+    {
+      "seq": 11,
+      "label": "Conjunction — and / but",
+      "itemType": "fill_blank",
+      "component": null,
+      "count": 7,
+      "marksEach": 1,
+      "total": 7
+    },
+    {
+      "seq": 12,
+      "label": "Capitalization & Punctuation",
+      "itemType": "other",
+      "component": null,
+      "count": 10,
+      "marksEach": 1,
+      "total": 10
+    },
+    {
+      "seq": 13,
+      "label": "Rearranging Words / Sentence Making",
+      "itemType": "other",
+      "component": null,
+      "count": 5,
+      "marksEach": 1,
+      "total": 5
+    },
+    {
+      "seq": 14,
+      "label": "Short Questions — Animals & Their Homes",
+      "itemType": "short_answer",
+      "component": null,
+      "count": 6,
+      "marksEach": 1,
+      "total": 6
+    }
+  ],
+  "sections": [
+    {
+      "seq": 1,
+      "syllabusRowSeq": 1,
+      "kind": "WRITTEN",
+      "instructionBn": "Write a paragraph",
+      "count": 1,
+      "marksEach": 10,
+      "total": 10,
+      "choiceNoteBn": "Write a paragraph on any one topic.",
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        {
+          "key": "s1-1",
+          "text": "My School",
+          "answer": "Points: name of the school and where it is; class; teachers; friends; what we learn and do there; why I like my school. (About 5–7 simple sentences.)",
+          "marks": 10,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১৪",
+          "needsPicture": false,
+          "note": "শিরোনাম ‘your school’ থেকে ‘My School’ (সিলেটের সিলেবাসের নাম অনুযায়ী)"
+        },
+        {
+          "key": "s1-2",
+          "text": "My Country",
+          "answer": "Points: My country is Bangladesh; it has many rivers; boats on the rivers; green fields; the national bird is the doyel; it is a beautiful country; I love my country. (About 5–7 simple sentences.)",
+          "marks": 10,
+          "source": "MP_OTHER_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১",
+          "needsPicture": false,
+          "note": "শিরোনাম ‘Your Country’ থেকে ‘My Country’ (সিলেটের সিলেবাসের নাম অনুযায়ী)"
+        }
+      ]
+    },
+    {
+      "seq": 2,
+      "syllabusRowSeq": 2,
+      "kind": "WRITTEN",
+      "instructionBn": "Write the meaning of the following words in Bangla",
+      "count": 10,
+      "marksEach": 1,
+      "total": 10,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        {
+          "key": "s2-1",
+          "text": "Come",
+          "answer": "আসা / এসো",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১",
+          "bookRef": "Unit 3, Lesson 1–2 (p. 65–68)",
+          "needsPicture": false
+        },
+        {
+          "key": "s2-2",
+          "text": "Know",
+          "answer": "জানা",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১",
+          "bookRef": "Unit 5, Lesson 1 (p. 86)",
+          "needsPicture": false
+        },
+        {
+          "key": "s2-3",
+          "text": "Student",
+          "answer": "ছাত্র / শিক্ষার্থী",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১",
+          "bookRef": "Unit 3, Lesson 1 (p. 65–66)",
+          "needsPicture": false
+        },
+        {
+          "key": "s2-4",
+          "text": "Live",
+          "answer": "বাস করা / থাকা",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ২",
+          "bookRef": "Unit 5, Lesson 2 (p. 89–90)",
+          "needsPicture": false
+        },
+        {
+          "key": "s2-5",
+          "text": "Listen",
+          "answer": "শোনা",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ২",
+          "bookRef": "Unit 3, Lesson 1 (p. 66)",
+          "needsPicture": false
+        },
+        {
+          "key": "s2-6",
+          "text": "Teacher",
+          "answer": "শিক্ষক",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ২",
+          "bookRef": "Unit 3, Lesson 1 (p. 65)",
+          "needsPicture": false
+        },
+        {
+          "key": "s2-7",
+          "text": "Say",
+          "answer": "বলা",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ২",
+          "bookRef": "Unit 3, Lesson 3 (p. 70)",
+          "needsPicture": false
+        },
+        {
+          "key": "s2-8",
+          "text": "Look",
+          "answer": "দেখা / তাকানো",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর ক্লাস টেস্ট ২০২৫ (অর্ধ-বার্ষিক ফোল্ডার) · প্রশ্ন ২",
+          "bookRef": "Unit 3, Lesson 3 (p. 70)",
+          "needsPicture": false
+        },
+        {
+          "key": "s2-9",
+          "text": "Write",
+          "answer": "লেখা",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর ক্লাস টেস্ট ২০২৫ (অর্ধ-বার্ষিক ফোল্ডার) · প্রশ্ন ২",
+          "bookRef": "Unit 3, Lesson 3 (p. 70)",
+          "needsPicture": false
+        },
+        {
+          "key": "s2-10",
+          "text": "Open",
+          "answer": "খোলা",
+          "marks": 1,
+          "source": "NEW",
+          "bookRef": "Unit 3, Lesson 2 (p. 67–68)",
+          "needsPicture": false
+        }
+      ]
+    },
+    {
+      "seq": 3,
+      "syllabusRowSeq": 3,
+      "kind": "WRITTEN",
+      "instructionBn": "Write the plural / singular forms of the following words",
+      "count": 5,
+      "marksEach": 1,
+      "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": "| Singular | Plural |\n|---|---|\n| Student |  |\n|  | Lions |\n| Parrot |  |\n|  | Rivers |\n| Book |  |",
+      "matchRight": null,
+      "items": [
+        {
+          "key": "s3-1",
+          "text": "Student → ______ (plural)",
+          "answer": "Students",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৭",
+          "needsPicture": false
+        },
+        {
+          "key": "s3-2",
+          "text": "______ ← Lions (singular)",
+          "answer": "Lion",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৭",
+          "needsPicture": false
+        },
+        {
+          "key": "s3-3",
+          "text": "Parrot → ______ (plural)",
+          "answer": "Parrots",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৭",
+          "needsPicture": false
+        },
+        {
+          "key": "s3-4",
+          "text": "______ ← Rivers (singular)",
+          "answer": "River",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৭",
+          "needsPicture": false
+        },
+        {
+          "key": "s3-5",
+          "text": "Book → ______ (plural)",
+          "answer": "Books",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৭",
+          "needsPicture": false
+        }
+      ]
+    },
+    {
+      "seq": 4,
+      "syllabusRowSeq": 4,
+      "kind": "WRITTEN",
+      "instructionBn": "Fill in the blanks with the correct pronoun",
+      "count": 10,
+      "marksEach": 1,
+      "total": 10,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": "Use: He / She / It / We / They",
+      "matchRight": null,
+      "items": [
+        {
+          "key": "s4-1",
+          "text": "My mother is a teacher. → ______ is a teacher.",
+          "answer": "She",
+          "marks": 1,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৬(ক)",
+          "needsPicture": false,
+          "note": "সর্বনাম দিয়ে পুনর্লিখন থেকে শূন্যস্থান পূরণ"
+        },
+        {
+          "key": "s4-2",
+          "text": "Dhaka is a small city. → ______ is a small city.",
+          "answer": "It",
+          "marks": 1,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৬(খ)",
+          "needsPicture": false,
+          "note": "শূন্যস্থান পূরণে রূপান্তর; ‘a’ যোগ করা হয়েছে"
+        },
+        {
+          "key": "s4-3",
+          "text": "The children go to a park. → ______ go to a park.",
+          "answer": "They",
+          "marks": 1,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৬(গ)",
+          "needsPicture": false,
+          "note": "সর্বনাম দিয়ে পুনর্লিখন থেকে শূন্যস্থান পূরণ"
+        },
+        {
+          "key": "s4-4",
+          "text": "Mohammad and I are going to the Masjid. → ______ are going to the Masjid.",
+          "answer": "We",
+          "marks": 1,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৬(ঘ)",
+          "needsPicture": false,
+          "note": "সর্বনাম দিয়ে পুনর্লিখন থেকে শূন্যস্থান পূরণ"
+        },
+        {
+          "key": "s4-5",
+          "text": "Father prays Fajr salah. → ______ prays Fajr salah.",
+          "answer": "He",
+          "marks": 1,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৬(ঙ)",
+          "needsPicture": false,
+          "note": "সর্বনাম দিয়ে পুনর্লিখন থেকে শূন্যস্থান পূরণ"
+        },
+        {
+          "key": "s4-6",
+          "text": "Sarah and Sabah are two sisters. → ______ are two sisters.",
+          "answer": "They",
+          "marks": 1,
+          "source": "MP_OTHER_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৩(ক)",
+          "needsPicture": false,
+          "note": "সর্বনাম দিয়ে পুনর্লিখন থেকে শূন্যস্থান পূরণ"
+        },
+        {
+          "key": "s4-7",
+          "text": "Mother loves me very much. → ______ loves me very much.",
+          "answer": "She",
+          "marks": 1,
+          "source": "MP_OTHER_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৩(খ)",
+          "needsPicture": false,
+          "note": "সর্বনাম দিয়ে পুনর্লিখন থেকে শূন্যস্থান পূরণ"
+        },
+        {
+          "key": "s4-8",
+          "text": "The tree has red flowers. → ______ has red flowers.",
+          "answer": "It",
+          "marks": 1,
+          "source": "MP_OTHER_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৩(গ)",
+          "needsPicture": false,
+          "note": "সর্বনাম দিয়ে পুনর্লিখন থেকে শূন্যস্থান পূরণ"
+        },
+        {
+          "key": "s4-9",
+          "text": "The rabbit lives in a burrow. → ______ lives in a burrow.",
+          "answer": "It",
+          "marks": 1,
+          "source": "NEW",
+          "bookRef": "Unit 5, Lesson 2 (p. 89)",
+          "needsPicture": false
+        },
+        {
+          "key": "s4-10",
+          "text": "My brother is a student. → ______ is a student.",
+          "answer": "He",
+          "marks": 1,
+          "source": "NEW",
+          "bookRef": "Unit 5, Lesson 3 (p. 91)",
+          "needsPicture": false
+        }
+      ]
+    },
+    {
+      "seq": 5,
+      "syllabusRowSeq": 5,
+      "kind": "WRITTEN",
+      "instructionBn": "Fill in the blanks with the correct adjective",
+      "count": 5,
+      "marksEach": 1,
+      "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        {
+          "key": "s5-1",
+          "text": "Lemons are ______ . (sweet / sour)",
+          "answer": "sour",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৭(ক)",
+          "needsPicture": false
+        },
+        {
+          "key": "s5-2",
+          "text": "A tortoise is a ______ animal. (fast / slow)",
+          "answer": "slow",
+          "marks": 1,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৭(খ)",
+          "needsPicture": false,
+          "note": "শুধু ব্যাকরণ ঠিক করা হয়েছে (A / mangoes যোগ)"
+        },
+        {
+          "key": "s5-3",
+          "text": "I like ______ mangoes. (ripe / green)",
+          "answer": "ripe",
+          "marks": 1,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৭(গ)",
+          "needsPicture": false,
+          "note": "শুধু ব্যাকরণ ঠিক করা হয়েছে (A / mangoes যোগ)"
+        },
+        {
+          "key": "s5-4",
+          "text": "A peacock is a ______ bird. (beautiful / ugly)",
+          "answer": "beautiful",
+          "marks": 1,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৭(ঘ)",
+          "needsPicture": false,
+          "note": "শুধু ব্যাকরণ ঠিক করা হয়েছে (A / mangoes যোগ)"
+        },
+        {
+          "key": "s5-5",
+          "text": "A tiger is a ______ animal. (weak / strong)",
+          "answer": "strong",
+          "marks": 1,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৭(ঙ)",
+          "needsPicture": false,
+          "note": "শুধু ব্যাকরণ ঠিক করা হয়েছে (A / mangoes যোগ)"
+        }
+      ]
+    },
+    {
+      "seq": 6,
+      "syllabusRowSeq": 6,
+      "kind": "WRITTEN",
+      "instructionBn": "Fill in the blanks with ‘a’ or ‘an’",
+      "count": 5,
+      "marksEach": 1,
+      "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        {
+          "key": "s6-1",
+          "text": "Fatima has ______ uncle.",
+          "answer": "an",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর ক্লাস টেস্ট ২০২৫ (অর্ধ-বার্ষিক ফোল্ডার) · প্রশ্ন ৬",
+          "needsPicture": false
+        },
+        {
+          "key": "s6-2",
+          "text": "She has ______ aunt too.",
+          "answer": "an",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর ক্লাস টেস্ট ২০২৫ (অর্ধ-বার্ষিক ফোল্ডার) · প্রশ্ন ৬",
+          "needsPicture": false
+        },
+        {
+          "key": "s6-3",
+          "text": "I eat ______ egg every day in the morning.",
+          "answer": "an",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর ক্লাস টেস্ট ২০২৫ (অর্ধ-বার্ষিক ফোল্ডার) · প্রশ্ন ৬",
+          "needsPicture": false
+        },
+        {
+          "key": "s6-4",
+          "text": "He is ______ doctor.",
+          "answer": "a",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর ক্লাস টেস্ট ২০২৫ (অর্ধ-বার্ষিক ফোল্ডার) · প্রশ্ন ৬",
+          "needsPicture": false
+        },
+        {
+          "key": "s6-5",
+          "text": "This is ______ rabbit.",
+          "answer": "a",
+          "marks": 1,
+          "source": "MP_OTHER_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৬",
+          "bookRef": "Unit 5, Lesson 2 (p. 89)",
+          "needsPicture": false,
+          "note": "জোড়া শূন্যস্থান থেকে একটি শূন্যস্থান"
+        }
+      ]
+    },
+    {
+      "seq": 7,
+      "syllabusRowSeq": 7,
+      "kind": "WRITTEN",
+      "instructionBn": "Complete the table by writing the correct gender",
+      "count": 10,
+      "marksEach": 1,
+      "total": 10,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": "| Masculine Gender | Feminine Gender |\n|---|---|\n| Uncle |  |\n|  | Ustazah |\n|  | Woman |\n| King |  |\n|  | Grandmother |\n| Peacock |  |\n|  | Hen |\n|  | Mare |\n| Nephew |  |\n| Son |  |",
+      "matchRight": null,
+      "items": [
+        {
+          "key": "s7-1",
+          "text": "Uncle → ______",
+          "answer": "Aunt",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৮",
+          "needsPicture": false
+        },
+        {
+          "key": "s7-2",
+          "text": "______ ← Ustazah",
+          "answer": "Ustaz",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৮",
+          "needsPicture": false
+        },
+        {
+          "key": "s7-3",
+          "text": "______ ← Woman",
+          "answer": "Man",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৮",
+          "needsPicture": false
+        },
+        {
+          "key": "s7-4",
+          "text": "King → ______",
+          "answer": "Queen",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৮",
+          "needsPicture": false
+        },
+        {
+          "key": "s7-5",
+          "text": "______ ← Grandmother",
+          "answer": "Grandfather",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৮",
+          "bookRef": "Unit 5, Lesson 3 (p. 91)",
+          "needsPicture": false
+        },
+        {
+          "key": "s7-6",
+          "text": "Peacock → ______",
+          "answer": "Peahen",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৮",
+          "needsPicture": false
+        },
+        {
+          "key": "s7-7",
+          "text": "______ ← Hen",
+          "answer": "Cock",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৮",
+          "needsPicture": false
+        },
+        {
+          "key": "s7-8",
+          "text": "______ ← Mare",
+          "answer": "Horse",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৮",
+          "needsPicture": false
+        },
+        {
+          "key": "s7-9",
+          "text": "Nephew → ______",
+          "answer": "Niece",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৮",
+          "needsPicture": false
+        },
+        {
+          "key": "s7-10",
+          "text": "Son → ______",
+          "answer": "Daughter",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৮",
+          "needsPicture": false
+        }
+      ]
+    },
+    {
+      "seq": 8,
+      "syllabusRowSeq": 8,
+      "kind": "WRITTEN",
+      "instructionBn": "Fill in the blanks using ‘am’, ‘is’ or ‘are’",
+      "count": 7,
+      "marksEach": 1,
+      "total": 7,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        {
+          "key": "s8-1",
+          "text": "I ______ a Muslim boy / girl.",
+          "answer": "am",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৮(ক)",
+          "needsPicture": false
+        },
+        {
+          "key": "s8-2",
+          "text": "He ______ a doctor.",
+          "answer": "is",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৮(খ)",
+          "needsPicture": false
+        },
+        {
+          "key": "s8-3",
+          "text": "All the schools ______ open today.",
+          "answer": "are",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৮(গ)",
+          "needsPicture": false
+        },
+        {
+          "key": "s8-4",
+          "text": "His father ______ sick.",
+          "answer": "is",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৮(ঘ)",
+          "needsPicture": false
+        },
+        {
+          "key": "s8-5",
+          "text": "We ______ hungry.",
+          "answer": "are",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৮(ঙ)",
+          "needsPicture": false
+        },
+        {
+          "key": "s8-6",
+          "text": "The flower ______ red.",
+          "answer": "is",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৫(খ)",
+          "needsPicture": false
+        },
+        {
+          "key": "s8-7",
+          "text": "You ______ a kind boy.",
+          "answer": "are",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৫(গ)",
+          "needsPicture": false
+        }
+      ]
+    },
+    {
+      "seq": 9,
+      "syllabusRowSeq": 9,
+      "kind": "WRITTEN",
+      "instructionBn": "Fill in the blanks using This, That, These or Those",
+      "count": 5,
+      "marksEach": 1,
+      "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": "near = কাছে · far = দূরে",
+      "matchRight": null,
+      "items": [
+        {
+          "key": "s9-1",
+          "text": "______ is a book. (near, one)",
+          "answer": "This",
+          "marks": 1,
+          "source": "MP_OTHER_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৬",
+          "bookRef": "Unit 4, Lesson 5 (p. 83)",
+          "needsPicture": false,
+          "note": "ছবি দেখে বাক্য লেখার বদলে near/far সংকেত দিয়ে শূন্যস্থান"
+        },
+        {
+          "key": "s9-2",
+          "text": "______ is a bus. (far, one)",
+          "answer": "That",
+          "marks": 1,
+          "source": "MP_OTHER_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৬",
+          "bookRef": "Unit 4, Lesson 3 (p. 79)",
+          "needsPicture": false,
+          "note": "ছবি দেখে বাক্য লেখার বদলে near/far সংকেত দিয়ে শূন্যস্থান"
+        },
+        {
+          "key": "s9-3",
+          "text": "______ are pens. (near, many)",
+          "answer": "These",
+          "marks": 1,
+          "source": "MP_OTHER_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৬",
+          "bookRef": "Unit 4, Lesson 5 (p. 83)",
+          "needsPicture": false,
+          "note": "ছবি দেখে বাক্য লেখার বদলে near/far সংকেত দিয়ে শূন্যস্থান"
+        },
+        {
+          "key": "s9-4",
+          "text": "______ are boats. (far, many)",
+          "answer": "Those",
+          "marks": 1,
+          "source": "MP_OTHER_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৬",
+          "bookRef": "Unit 4, Lesson 2 (p. 77)",
+          "needsPicture": false,
+          "note": "ছবি দেখে বাক্য লেখার বদলে near/far সংকেত দিয়ে শূন্যস্থান"
+        },
+        {
+          "key": "s9-5",
+          "text": "______ is a star. (far, one)",
+          "answer": "That",
+          "marks": 1,
+          "source": "MP_OTHER_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১০(ঙ)",
+          "needsPicture": false,
+          "note": "পুনর্বিন্যাসের বাক্য ‘That is a star’ থেকে শূন্যস্থান"
+        }
+      ]
+    },
+    {
+      "seq": 10,
+      "syllabusRowSeq": 10,
+      "kind": "WRITTEN",
+      "instructionBn": "Fill in the blanks using in, on or under",
+      "count": 5,
+      "marksEach": 1,
+      "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        {
+          "key": "s10-1",
+          "text": "The duster is ______ the table. [ছবি: টেবিলের উপরে একটি ডাস্টার]",
+          "answer": "on",
+          "marks": 1,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১০(ক)",
+          "needsPicture": true,
+          "note": "উত্তর একটিই হয় সে জন্য ছবি যোগ করা হয়েছে"
+        },
+        {
+          "key": "s10-2",
+          "text": "The cow is ______ the shed.",
+          "answer": "in",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১০(খ)",
+          "bookRef": "Unit 5, Lesson 2 (p. 89, cowshed)",
+          "needsPicture": false
+        },
+        {
+          "key": "s10-3",
+          "text": "The ball is ______ the table. [ছবি: টেবিলের নিচে একটি বল]",
+          "answer": "under",
+          "marks": 1,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১০(গ)",
+          "needsPicture": true,
+          "note": "উত্তর একটিই হয় সে জন্য ছবি যোগ করা হয়েছে"
+        },
+        {
+          "key": "s10-4",
+          "text": "The picture is ______ the wall.",
+          "answer": "on",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১০(ঘ)",
+          "needsPicture": false
+        },
+        {
+          "key": "s10-5",
+          "text": "He is ______ his room.",
+          "answer": "in",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১০(ঙ)",
+          "needsPicture": false
+        }
+      ]
+    },
+    {
+      "seq": 11,
+      "syllabusRowSeq": 11,
+      "kind": "WRITTEN",
+      "instructionBn": "Put ‘and’ or ‘but’ in the gaps",
+      "count": 7,
+      "marksEach": 1,
+      "total": 7,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        {
+          "key": "s11-1",
+          "text": "Rita ______ Mouri are good friends.",
+          "answer": "and",
+          "marks": 1,
+          "source": "MP_OTHER_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৮(ক)",
+          "needsPicture": false,
+          "note": "নাম বদলে পাঠ্যবইয়ের নাম দেওয়া হয়েছে"
+        },
+        {
+          "key": "s11-2",
+          "text": "Nafis is sick ______ he wants to go to school.",
+          "answer": "but",
+          "marks": 1,
+          "source": "MP_OTHER_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৮(খ)",
+          "needsPicture": false,
+          "note": "নাম বদলে পাঠ্যবইয়ের নাম দেওয়া হয়েছে"
+        },
+        {
+          "key": "s11-3",
+          "text": "The boy is small ______ strong.",
+          "answer": "but",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৮(গ)",
+          "needsPicture": false
+        },
+        {
+          "key": "s11-4",
+          "text": "Our school is small ______ beautiful.",
+          "answer": "but",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৮(ঘ)",
+          "needsPicture": false
+        },
+        {
+          "key": "s11-5",
+          "text": "Kazi lives with his father ______ mother.",
+          "answer": "and",
+          "marks": 1,
+          "source": "MP_OTHER_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৮(ঙ)",
+          "needsPicture": false,
+          "note": "নাম বদলে পাঠ্যবইয়ের নাম দেওয়া হয়েছে"
+        },
+        {
+          "key": "s11-6",
+          "text": "Father buys a pencil ______ an eraser for me.",
+          "answer": "and",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৮(চ)",
+          "needsPicture": false
+        },
+        {
+          "key": "s11-7",
+          "text": "Nafis is short ______ his brother is tall.",
+          "answer": "but",
+          "marks": 1,
+          "source": "MP_OTHER_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৮(ছ)",
+          "needsPicture": false,
+          "note": "নাম বদলে পাঠ্যবইয়ের নাম দেওয়া হয়েছে"
+        }
+      ]
+    },
+    {
+      "seq": 12,
+      "syllabusRowSeq": 12,
+      "kind": "WRITTEN",
+      "instructionBn": "Rewrite the sentences using capital letters, commas, full stops and question marks",
+      "count": 10,
+      "marksEach": 1,
+      "total": 10,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        {
+          "key": "s12-1",
+          "text": "i read in scd",
+          "answer": "I read in SCD.",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১২(ক)",
+          "needsPicture": false
+        },
+        {
+          "key": "s12-2",
+          "text": "how are you",
+          "answer": "How are you?",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১২(খ)",
+          "bookRef": "Unit 3, Lesson 1 (p. 66)",
+          "needsPicture": false
+        },
+        {
+          "key": "s12-3",
+          "text": "my mother is a teacher",
+          "answer": "My mother is a teacher.",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১২(গ)",
+          "needsPicture": false
+        },
+        {
+          "key": "s12-4",
+          "text": "rita mouri and nafis are my friends",
+          "answer": "Rita, Mouri and Nafis are my friends.",
+          "marks": 1,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১২(ঘ)",
+          "needsPicture": false,
+          "note": "ছেলে/মেয়ে দুই বিকল্পের নামের বদলে পাঠ্যবইয়ের ৩টি নাম"
+        },
+        {
+          "key": "s12-5",
+          "text": "dhaka is a small city",
+          "answer": "Dhaka is a small city.",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১২(ঙ)",
+          "needsPicture": false
+        },
+        {
+          "key": "s12-6",
+          "text": "i have red blue green and orange pencils",
+          "answer": "I have red, blue, green and orange pencils.",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৯(ক)",
+          "needsPicture": false
+        },
+        {
+          "key": "s12-7",
+          "text": "the boy plays in the field",
+          "answer": "The boy plays in the field.",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৯(খ)",
+          "needsPicture": false
+        },
+        {
+          "key": "s12-8",
+          "text": "can you give me a pencil",
+          "answer": "Can you give me a pencil?",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৯(গ)",
+          "needsPicture": false
+        },
+        {
+          "key": "s12-9",
+          "text": "she lives in sylhet",
+          "answer": "She lives in Sylhet.",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৯(ঘ)",
+          "needsPicture": false
+        },
+        {
+          "key": "s12-10",
+          "text": "i like to eat chicken egg and potato",
+          "answer": "I like to eat chicken, egg and potato.",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৯(ঙ)",
+          "needsPicture": false
+        }
+      ]
+    },
+    {
+      "seq": 13,
+      "syllabusRowSeq": 13,
+      "kind": "WRITTEN",
+      "instructionBn": "Rearrange the words to make sentences",
+      "count": 5,
+      "marksEach": 1,
+      "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        {
+          "key": "s13-1",
+          "text": "am, I, Muslim, a, girl / boy",
+          "answer": "I am a Muslim girl / boy.",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১১(ক)",
+          "needsPicture": false
+        },
+        {
+          "key": "s13-2",
+          "text": "Quran, he, the, reads",
+          "answer": "He reads the Quran.",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১১(খ)",
+          "needsPicture": false
+        },
+        {
+          "key": "s13-3",
+          "text": "kind, Allah, is",
+          "answer": "Allah is kind.",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১১(গ)",
+          "needsPicture": false
+        },
+        {
+          "key": "s13-4",
+          "text": "country, a, Bangladesh, small, is",
+          "answer": "Bangladesh is a small country.",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১১(ঘ)",
+          "needsPicture": false
+        },
+        {
+          "key": "s13-5",
+          "text": "Muslims, we, are",
+          "answer": "We are Muslims.",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১১(ঙ)",
+          "needsPicture": false
+        }
+      ]
+    },
+    {
+      "seq": 14,
+      "syllabusRowSeq": 14,
+      "kind": "WRITTEN",
+      "instructionBn": "Answer the following questions",
+      "count": 6,
+      "marksEach": 1,
+      "total": 6,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        {
+          "key": "s14-1",
+          "text": "Where does a rabbit live?",
+          "answer": "A rabbit lives in a burrow.",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৪(ক)",
+          "bookRef": "Unit 5, Lesson 2 (p. 89)",
+          "needsPicture": false
+        },
+        {
+          "key": "s14-2",
+          "text": "Where does a parrot live?",
+          "answer": "A parrot lives in a nest.",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৪(খ)",
+          "bookRef": "Unit 5, Lesson 2 (p. 90)",
+          "needsPicture": false
+        },
+        {
+          "key": "s14-3",
+          "text": "Where do you live?",
+          "answer": "I live in a house. (I live in our house.)",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৪(গ)",
+          "bookRef": "Unit 5, Lesson 2 (p. 90)",
+          "needsPicture": false
+        },
+        {
+          "key": "s14-4",
+          "text": "Where does a cow live?",
+          "answer": "A cow lives in a cowshed.",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১১(ক)",
+          "bookRef": "Unit 5, Lesson 2 (p. 89)",
+          "needsPicture": false
+        },
+        {
+          "key": "s14-5",
+          "text": "Where does a lion live?",
+          "answer": "A lion lives in a den.",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১১(গ)",
+          "bookRef": "Unit 5, Lesson 2 (p. 90)",
+          "needsPicture": false
+        },
+        {
+          "key": "s14-6",
+          "text": "Where does a spider live?",
+          "answer": "A spider lives in a web.",
+          "marks": 1,
+          "source": "NEW",
+          "bookRef": "Unit 5, Lesson 2 (p. 90)",
+          "needsPicture": false
+        }
+      ]
+    }
+  ],
+  "authorNotes": "Textbook: English For Today Class 1 (md transcription in Downloads/md book/C1 Eng md file), Units 3–5 = classroom instructions, questions & answers (village/city/home/classroom), rhymes (animal sounds, 'Where do you live?', family tree). The book has no grammar, so every grammar row comes from Mohammadpur papers. Reused from MP Annual 2026: paragraph 'your school', 3 word meanings, 5 pronoun sentences (turned from 'rewrite' into fill-in-the-blank to match the row type), all 5 adjectives, 5 am/is/are, 5 prepositions, 5 capitalization, all 5 rearranging, 3 animal-home questions. Word meanings: 7 of MP 2026's 10 words (Children, Think, Go away, Again, Put on, Missing, Take) do not appear in EFT Units 3–5 (most are not in the EFT book at all), so I kept only Come, Know, Student and filled the rest with Unit 3–5 words already used in other MP papers (Live, Listen, Teacher, Say, Look, Write) + 1 new (Open). Singular/plural, gender and one article item come from MP Half-yearly 2026; four article items come from a Mohammadpur 2025 Class Test file that sits in the Half-yearly 2025 folder (header says 'Class Test - 2025'). Paragraph row offers My School OR My Country (the published syllabus names both) — choose one if only one should be printed. Doubts: (1) duration not published — used 2 h 30 min like MP 2026; (2) This/That/These/Those uses '(near, one)' cues instead of pictures — the Office can switch to pictures; (3) two preposition items now need a small picture so the answer is not ambiguous; (4) names in the and/but and comma items were changed to textbook names (Rita, Mouri, Nafis, Kazi); 'Fatima', 'Sarah and Sabah', 'Mohammad' kept from MP — swap if any is a real Sylhet student."
+}

@@ -135,6 +135,10 @@ const STAFF_NAV: NavSection[] = [
       { route: "SyllabusTab", labelKey: "syExamManage", icon: "🗓️", screen: "SyllabusExams", perms: ["exam_syllabus:settings"] },
       { route: "SyllabusTab", labelKey: "syEntry", icon: "✍️", screen: "SyllabusEntry", perms: ["exam_syllabus:edit"] },
       { route: "SyllabusTab", labelKey: "syApprovals", icon: "✅", screen: "SyllabusApprovals" },
+      // D-#1031: draft papers — every staff member may be a reviewer (their list is just their own).
+      { route: "ExamPapersTab", labelKey: "epNav", icon: "📝", screen: "ExamPapersHome", perms: ["exam_papers:review", "exam_papers:view", "exam_papers:manage"] },
+      // D-#1030: Mohammadpur's past papers (Office by default).
+      { route: "ExamPapersTab", labelKey: "epRefNav", icon: "📂", screen: "ReferencePapers", perms: ["exam_papers:view_reference", "exam_papers:manage_reference"] },
     ],
   },
   {
@@ -218,6 +222,10 @@ const STAFF_NAV: NavSection[] = [
   { type: "item", route: "ObservationTab", labelKey: "tabObservation", icon: "👁️" },
   { type: "item", route: "FreeMixingTab", labelKey: "tabFreeMixing", icon: "🎥", hidden: true },
   { type: "item", route: "LibraryTab", labelKey: "tabLibrary", icon: "📖" },
+  // SB-1 (D-#980): the storybook series catalogue (library:view; Office manages it).
+  { type: "item", route: "StorybooksTab", labelKey: "stbNav", icon: "🧸" },
+  // AS-1 (D-#988): activity sheets (activity_sheets:view; Office manages banks and the corner).
+  { type: "item", route: "ActivityTab", labelKey: "actNav", icon: "🧩" },
   // D-#870: class books (staff read every class's; the Office uploads).
   { type: "item", route: "ClassBooksTab", labelKey: "cbTitle", icon: "📚" },
   { type: "item", route: "ChatTab", labelKey: "tabChat", icon: "💬" },
@@ -265,6 +273,8 @@ const STAFF_NAV: NavSection[] = [
       { route: "ReportsTab", labelKey: "geTitle", icon: "👪", screen: "GuardianEngagement", perms: REPORT_LEAF_ACTIONS.GuardianEngagement },
       { route: "ReportsTab", labelKey: "mdTitle", icon: "🎯", screen: "MarksDrivers", perms: REPORT_LEAF_ACTIONS.MarksDrivers },
       { route: "ReportsTab", labelKey: "bcTitle", icon: "🧩", screen: "MasteryBankCoverage", perms: REPORT_LEAF_ACTIONS.MasteryBankCoverage },
+      { route: "ReportsTab", labelKey: "stbRepTitle", icon: "🧸", screen: "StorybookReport", perms: REPORT_LEAF_ACTIONS.StorybookReport },
+      { route: "ReportsTab", labelKey: "actRepTitle", icon: "🧩", screen: "ActivityReport", perms: REPORT_LEAF_ACTIONS.ActivityReport },
     ],
   },
   /**
@@ -346,6 +356,10 @@ const GUARDIAN_NAV: NavSection[] = [
   { type: "item", route: "GuardianHomeTab", labelKey: "gpToday", icon: "🏠" },
   // D-#870 (owner ask): the classroom books, right under Today so families find them.
   { type: "item", route: "GuardianBooksTab", labelKey: "cbNav", icon: "📚" },
+  // SB-1 (D-#980): the school's storybooks for the child's age band.
+  { type: "item", route: "GuardianStoriesTab", labelKey: "stbNav", icon: "🧸" },
+  // AS-3 (D-#988): activity sheets for the child's class — choose one, see how it went.
+  { type: "item", route: "GuardianActivityTab", labelKey: "actNav", icon: "🧩" },
   {
     type: "group",
     titleKey: "drawerGroupAcademics",

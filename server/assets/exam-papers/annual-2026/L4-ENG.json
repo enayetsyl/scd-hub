@@ -1,0 +1,265 @@
+{
+  "schema": "scd.exam-paper-draft/v1",
+  "key": "annual-2026-L4-ENG",
+  "exam": { "term": "ANNUAL", "year": 2026, "nameBn": "বার্ষিক পরীক্ষা ২০২৬" },
+  "classLevel": 4,
+  "subject": "ENG",
+  "titleBn": "বার্ষিক পরীক্ষা ২০২৬ · চতুর্থ শ্রেণি · ইংরেজি",
+  "fullMarks": 100,
+  "durationBn": "৩ ঘণ্টা",
+  "syllabusRows": [
+    { "seq": 1, "label": "Seen passage — MCQ", "itemType": "mcq", "component": null, "count": 5, "marksEach": 1, "total": 5 },
+    { "seq": 2, "label": "Seen passage — Short Questions", "itemType": "short_answer", "component": null, "count": 5, "marksEach": 1, "total": 5 },
+    { "seq": 3, "label": "Yes/No & Wh-questions", "itemType": "short_answer", "component": null, "count": 10, "marksEach": 1, "total": 10 },
+    { "seq": 4, "label": "Parts of Speech (noun, verb, adjective, adverb, pronoun) — identification", "itemType": "other", "component": null, "count": 10, "marksEach": 1, "total": 10 },
+    { "seq": 5, "label": "Sentence Types (assertive, interrogative, imperative, exclamatory, optative) — identification", "itemType": "other", "component": null, "count": 10, "marksEach": 1, "total": 10 },
+    { "seq": 6, "label": "Article (a / an / the / x)", "itemType": "fill_blank", "component": null, "count": 5, "marksEach": 1, "total": 5 },
+    { "seq": 7, "label": "Preposition", "itemType": "fill_blank", "component": null, "count": 5, "marksEach": 1, "total": 5 },
+    { "seq": 8, "label": "Right Form of Verb (simple/indefinite, continuous and present perfect)", "itemType": "fill_blank", "component": null, "count": 10, "marksEach": 1, "total": 10 },
+    { "seq": 9, "label": "Capitalization & Punctuation", "itemType": "other", "component": null, "count": 10, "marksEach": 1, "total": 10 },
+    { "seq": 10, "label": "Paragraph Writing", "itemType": "descriptive", "component": null, "count": 1, "marksEach": 10, "total": 10 },
+    { "seq": 11, "label": "Letter Writing", "itemType": "descriptive", "component": null, "count": 1, "marksEach": 10, "total": 10 },
+    { "seq": 12, "label": "Word Meaning", "itemType": "short_answer", "component": null, "count": 10, "marksEach": 1, "total": 10 }
+  ],
+  "sections": [
+    {
+      "seq": 1,
+      "syllabusRowSeq": 1,
+      "kind": "WRITTEN",
+      "instructionBn": "Read the text and choose the correct answer. Write only the answer.",
+      "count": 5, "marksEach": 1, "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": "Nusair and Samin are two friends. They go to Armanitola Government Primary School located in Old Dhaka. Every morning, they walk to school along the river Buriganga. On their way, they see people throwing trash and waste into the river. Dirty water from drains also flows into it. The river water looks black and smells bad. They know this water is polluted. It is not safe for the fish, the plants or for people. Nusair and Samin feel sad and wonder, \"Why do people make the river so dirty?\"\n\nAs they walk, many cars and buses pass by. They see black smoke coming from the vehicles. This smoke pollutes the air. Breathing this polluted air can make people sick. The vehicles also honk their horns very loudly. It hurts their ears. Very often, they cover their ears with their hands. They feel uneasy for this sound pollution. They ask each other, \"Why are the vehicles so loud?\"\n\nNusair and Samin know that the world around us is very important. Clean air and water help us stay healthy. However, living a healthy life becomes impossible when people pollute the air, water, and make too much noise. They make a promise to each other. They will do their best to keep their environment clean and peaceful for everyone.",
+      "matchRight": null,
+      "items": [
+        { "key": "s1-1", "text": "Nusair and Samin are ______ about environment pollution.", "options": ["happy", "worried", "careless", "proud"], "answer": "worried", "marks": 1, "source": "MP2026_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১(a)", "bookRef": "Unit 15, p. 67–68", "needsPicture": false, "note": "শব্দছক থেকে শূন্যস্থান পূরণকে ৪ বিকল্পের MCQ করা হয়েছে" },
+        { "key": "s1-2", "text": "The water of the river Buriganga is ______.", "options": ["clean", "blue", "polluted", "safe"], "answer": "polluted", "marks": 1, "source": "MP2026_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১(b)", "bookRef": "Unit 15, p. 67", "needsPicture": false, "note": "শূন্যস্থান পূরণকে ৪ বিকল্পের MCQ করা হয়েছে" },
+        { "key": "s1-3", "text": "Polluted water is not ______ for fish and people.", "options": ["dirty", "safe", "black", "loud"], "answer": "safe", "marks": 1, "source": "MP2026_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১(c)", "bookRef": "Unit 15, p. 67", "needsPicture": false, "note": "শূন্যস্থান পূরণকে ৪ বিকল্পের MCQ করা হয়েছে" },
+        { "key": "s1-4", "text": "Which one causes sound pollution?", "options": ["black smoke", "dirty water", "loud horns", "trash"], "answer": "loud horns", "marks": 1, "source": "MP2026_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ২(a, d)", "bookRef": "Unit 15, p. 68", "needsPicture": false, "note": "True/False বাক্য থেকে MCQ করা হয়েছে" },
+        { "key": "s1-5", "text": "Nusair and Samin promise to keep their ______ clean and peaceful.", "options": ["river only", "environment", "vehicles", "drains"], "answer": "environment", "marks": 1, "source": "MP2026_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১(e)", "bookRef": "Unit 15, p. 68", "needsPicture": false, "note": "শূন্যস্থান পূরণকে ৪ বিকল্পের MCQ করা হয়েছে" }
+      ]
+    },
+    {
+      "seq": 2,
+      "syllabusRowSeq": 2,
+      "kind": "WRITTEN",
+      "instructionBn": "Read the text again and answer the following questions in a sentence or sentences.",
+      "count": 5, "marksEach": 1, "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s2-1", "text": "Where and how do Nusair and Samin go every morning?", "answer": "Every morning they go to Armanitola Government Primary School on foot (they walk) along the river Buriganga.", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৩(a)", "bookRef": "Unit 15, p. 67", "needsPicture": false, "note": "নম্বর ২ থেকে ১; অনুচ্ছেদ সেকশন ১-এ" },
+        { "key": "s2-2", "text": "Why do Nusair and Samin feel sad?", "answer": "They feel sad because people throw trash and waste into the river and make the water polluted.", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৩(b)", "bookRef": "Unit 15, p. 67", "needsPicture": false, "note": "নম্বর ২ থেকে ১" },
+        { "key": "s2-3", "text": "What can polluted air do to people?", "answer": "Breathing polluted air can make people sick.", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৩(c)", "bookRef": "Unit 15, p. 68", "needsPicture": false, "note": "নম্বর ২ থেকে ১" },
+        { "key": "s2-4", "text": "How does sound pollution happen?", "answer": "Sound pollution happens when vehicles honk their horns very loudly.", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৩(d)", "bookRef": "Unit 15, p. 68", "needsPicture": false, "note": "নম্বর ২ থেকে ১" },
+        { "key": "s2-5", "text": "What do Samin and Nusair promise to each other?", "answer": "They promise to do their best to keep their environment clean and peaceful for everyone.", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৩(e)", "bookRef": "Unit 15, p. 68", "needsPicture": false, "note": "নম্বর ২ থেকে ১" }
+      ]
+    },
+    {
+      "seq": 3,
+      "syllabusRowSeq": 3,
+      "kind": "WRITTEN",
+      "instructionBn": "Make Yes/No questions or Wh-questions as directed.",
+      "count": 10, "marksEach": 1, "total": 10,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s3-1", "text": "Rahim recites the Quran beautifully. (Make a Yes/No question)", "answer": "Does Rahim recite the Quran beautifully?", "marks": 1, "source": "MP2026_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৫(b)", "bookRef": "Unit 16, Language Focus 4.1, p. 75", "needsPicture": false, "note": "‘Interrogative’ নির্দেশনা বদলে ‘Yes/No question’ লেখা হয়েছে" },
+        { "key": "s3-2", "text": "We enjoyed the school picnic. (Make a Yes/No question)", "answer": "Did we enjoy the school picnic? (Did you enjoy the school picnic? — also correct)", "marks": 1, "source": "MP2026_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৫(d)", "bookRef": "Unit 16, Language Focus 4.1, p. 75", "needsPicture": false, "note": "‘Interrogative’ নির্দেশনা বদলে ‘Yes/No question’ লেখা হয়েছে" },
+        { "key": "s3-3", "text": "Response: Yes, Dashain is a famous festival in Nepal. (Make a Yes/No question)", "answer": "Is Dashain a famous festival in Nepal?", "marks": 1, "source": "NEW", "bookRef": "Unit 16, activity 4.2 b, p. 76", "needsPicture": false, "note": null },
+        { "key": "s3-4", "text": "Response: Yes, Kathmandu is the capital of Nepal. (Make a Yes/No question)", "answer": "Is Kathmandu the capital of Nepal?", "marks": 1, "source": "NEW", "bookRef": "Unit 16, activity 4.2 d, p. 76", "needsPicture": false, "note": null },
+        { "key": "s3-5", "text": "Response: Yes, I love mountains. (Make a Yes/No question)", "answer": "Do you love mountains?", "marks": 1, "source": "NEW", "bookRef": "Unit 16, activity 4.2 c, p. 76", "needsPicture": false, "note": null },
+        { "key": "s3-6", "text": "Response: Razib comes from Dhaka. (Make a Wh-question)", "answer": "Where does Razib come from?", "marks": 1, "source": "NEW", "bookRef": "Unit 16, activity 4.2 f, p. 76", "needsPicture": false, "note": null },
+        { "key": "s3-7", "text": "Response: I arrive at school at 9 a.m. (Make a Wh-question)", "answer": "When do you arrive at school? / What time do you arrive at school?", "marks": 1, "source": "NEW", "bookRef": "Unit 16, activity 4.2 g, p. 76", "needsPicture": false, "note": null },
+        { "key": "s3-8", "text": "Response: I like eating khichuri. (Make a Wh-question)", "answer": "What do you like eating? / Which food do you like to eat?", "marks": 1, "source": "NEW", "bookRef": "Unit 16, activity 4.2 h, p. 76", "needsPicture": false, "note": null },
+        { "key": "s3-9", "text": "Response: Mount Everest is the highest mountain in the world. (Make a Wh-question)", "answer": "Which is the highest mountain in the world? / What is the highest mountain in the world?", "marks": 1, "source": "NEW", "bookRef": "Unit 16, activity 2.2 b, p. 73; Unit 17, p. 77", "needsPicture": false, "note": null },
+        { "key": "s3-10", "text": "Response: Many foreign tourists visit Nepal to see Mount Everest. (Make a Wh-question)", "answer": "Why do many foreign tourists visit Nepal? (Who visits Nepal to see Mount Everest? — also accept)", "marks": 1, "source": "NEW", "bookRef": "Unit 16, p. 71; activity 2.2 d, p. 73", "needsPicture": false, "note": null }
+      ]
+    },
+    {
+      "seq": 4,
+      "syllabusRowSeq": 4,
+      "kind": "WRITTEN",
+      "instructionBn": "Identify the parts of speech of the bold words.",
+      "count": 10, "marksEach": 1, "total": 10,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s4-1", "text": "Abdullah woke up **early** and prepared for Fajr prayer.", "answer": "adverb", "marks": 1, "source": "MP2026_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৯(a)", "bookRef": null, "needsPicture": false, "note": "‘adverb খুঁজে লেখ’ থেকে চিহ্নিত শব্দের পদ নির্ণয় করা হয়েছে" },
+        { "key": "s4-2", "text": "**Suddenly**, he noticed a little bird.", "answer": "adverb", "marks": 1, "source": "MP2026_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৯(c)", "bookRef": null, "needsPicture": false, "note": "‘adverb খুঁজে লেখ’ থেকে চিহ্নিত শব্দের পদ নির্ণয় করা হয়েছে" },
+        { "key": "s4-3", "text": "He gently **picked** up a small bowl.", "answer": "verb", "marks": 1, "source": "MP2026_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৯(e)", "bookRef": null, "needsPicture": false, "note": "একই বাক্যে চিহ্নিত শব্দ বদলে verb করা হয়েছে" },
+        { "key": "s4-4", "text": "The **brave** soldier helped the villagers.", "answer": "adjective", "marks": 1, "source": "MP2026_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৭(b)", "bookRef": "Unit 16, Language Focus 3.1, p. 74", "needsPicture": false, "note": "adjective-এর প্রকার জিজ্ঞাসা বাদ; শুধু পদ নির্ণয়" },
+        { "key": "s4-5", "text": "The honest man returned the lost **wallet**.", "answer": "noun", "marks": 1, "source": "MP2026_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৭(c)", "bookRef": null, "needsPicture": false, "note": "একই বাক্যে চিহ্নিত শব্দ বদলে noun করা হয়েছে" },
+        { "key": "s4-6", "text": "My mother cooks food for us. Yesterday, **she** made biryani.", "answer": "pronoun", "marks": 1, "source": "MP2026_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৬(d)", "bookRef": null, "needsPicture": false, "note": "pronoun দিয়ে শূন্যস্থান পূরণ থেকে পদ নির্ণয় করা হয়েছে" },
+        { "key": "s4-7", "text": "**Islam** teaches us to be kind to all creatures.", "answer": "noun", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৪(a)", "bookRef": null, "needsPicture": false, "note": null },
+        { "key": "s4-8", "text": "**They** went to the mosque for Zuhr prayer.", "answer": "pronoun", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৪(b)", "bookRef": null, "needsPicture": false, "note": null },
+        { "key": "s4-9", "text": "The tiger is a **strong** animal.", "answer": "adjective", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৪(c)", "bookRef": null, "needsPicture": false, "note": null },
+        { "key": "s4-10", "text": "We should **help** the poor.", "answer": "verb", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৪(j)", "bookRef": null, "needsPicture": false, "note": null }
+      ]
+    },
+    {
+      "seq": 5,
+      "syllabusRowSeq": 5,
+      "kind": "WRITTEN",
+      "instructionBn": "Identify the type of the following sentences. Write only the answer.",
+      "count": 10, "marksEach": 1, "total": 10,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s5-1", "text": "We must pray five times a day.", "answer": "assertive", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৫(a)", "bookRef": null, "needsPicture": false, "note": null },
+        { "key": "s5-2", "text": "What a beautiful view this is!", "answer": "exclamatory", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৫(b)", "bookRef": null, "needsPicture": false, "note": null },
+        { "key": "s5-3", "text": "Do not make noise in the class.", "answer": "imperative", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৫(c)", "bookRef": null, "needsPicture": false, "note": null },
+        { "key": "s5-4", "text": "When does the school close?", "answer": "interrogative", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৫(d)", "bookRef": null, "needsPicture": false, "note": null },
+        { "key": "s5-5", "text": "May Allah grant you peace.", "answer": "optative", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৫(e)", "bookRef": null, "needsPicture": false, "note": null },
+        { "key": "s5-6", "text": "How beautiful the bird is!", "answer": "exclamatory", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৫(a)", "bookRef": null, "needsPicture": false, "note": null },
+        { "key": "s5-7", "text": "Rahat plays with his friend.", "answer": "assertive", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৫(b)", "bookRef": null, "needsPicture": false, "note": null },
+        { "key": "s5-8", "text": "Where does the old man stay?", "answer": "interrogative", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৫(c)", "bookRef": null, "needsPicture": false, "note": null },
+        { "key": "s5-9", "text": "Take care of your health.", "answer": "imperative", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৫(d)", "bookRef": null, "needsPicture": false, "note": null },
+        { "key": "s5-10", "text": "May Allah save you.", "answer": "optative", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৫(e)", "bookRef": null, "needsPicture": false, "note": null }
+      ]
+    },
+    {
+      "seq": 6,
+      "syllabusRowSeq": 6,
+      "kind": "WRITTEN",
+      "instructionBn": "Fill in the blanks with a / an / the. Write x if no article is needed.",
+      "count": 5, "marksEach": 1, "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s6-1", "text": "He is _____ excellent student in his class.", "answer": "an", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৩(a)", "bookRef": null, "needsPicture": false, "note": null },
+        { "key": "s6-2", "text": "We went to _____ Cox's Bazar last weekend.", "answer": "x", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৩(b)", "bookRef": null, "needsPicture": false, "note": null },
+        { "key": "s6-3", "text": "I need _____ one-taka note.", "answer": "a", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৩(c)", "bookRef": null, "needsPicture": false, "note": null },
+        { "key": "s6-4", "text": "_____ water in the pot is clean for Wudu.", "answer": "The", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৩(d)", "bookRef": null, "needsPicture": false, "note": null },
+        { "key": "s6-5", "text": "My father is _____ M.P. (Member of Parliament).", "answer": "an", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৩(e)", "bookRef": null, "needsPicture": false, "note": null }
+      ]
+    },
+    {
+      "seq": 7,
+      "syllabusRowSeq": 7,
+      "kind": "WRITTEN",
+      "instructionBn": "Fill in the blanks with suitable prepositions.",
+      "count": 5, "marksEach": 1, "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s7-1", "text": "The train arrived _____ the station early.", "answer": "at", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৮(a)", "bookRef": null, "needsPicture": false, "note": null },
+        { "key": "s7-2", "text": "The keys fell _____ his pocket.", "answer": "from / out of", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৮(b)", "bookRef": null, "needsPicture": false, "note": null },
+        { "key": "s7-3", "text": "She shared her lunch _____ her classmates.", "answer": "with", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৮(c)", "bookRef": null, "needsPicture": false, "note": null },
+        { "key": "s7-4", "text": "My father goes to work _____ 8:00 a.m.", "answer": "at", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৮(d)", "bookRef": null, "needsPicture": false, "note": null },
+        { "key": "s7-5", "text": "The dog jumped _____ the fence.", "answer": "over", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৮(e)", "bookRef": null, "needsPicture": false, "note": null }
+      ]
+    },
+    {
+      "seq": 8,
+      "syllabusRowSeq": 8,
+      "kind": "WRITTEN",
+      "instructionBn": "Complete the following sentences using the right form of the verbs in brackets.",
+      "count": 10, "marksEach": 1, "total": 10,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s8-1", "text": "My father ______ (take) us to the zoo yesterday.", "answer": "took", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১১(a)", "bookRef": null, "needsPicture": false, "note": "নম্বর ২ থেকে ১" },
+        { "key": "s8-2", "text": "I ______ (meet) my friend next week.", "answer": "will meet", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১১(b)", "bookRef": null, "needsPicture": false, "note": "নম্বর ২ থেকে ১" },
+        { "key": "s8-3", "text": "The children ______ (play) in the field now.", "answer": "are playing", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১১(c)", "bookRef": "Unit 15, Language Focus 3.1, p. 69", "needsPicture": false, "note": "নম্বর ২ থেকে ১" },
+        { "key": "s8-4", "text": "Every day he ______ (go) to school on time.", "answer": "goes", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১১(d)", "bookRef": null, "needsPicture": false, "note": "নম্বর ২ থেকে ১" },
+        { "key": "s8-5", "text": "We ______ (read) the Quran after Maghrib.", "answer": "read", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১১(e)", "bookRef": null, "needsPicture": false, "note": "নম্বর ২ থেকে ১" },
+        { "key": "s8-6", "text": "Birds ______ (fly) in the sky.", "answer": "fly", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১১(f)", "bookRef": null, "needsPicture": false, "note": "নম্বর ২ থেকে ১" },
+        { "key": "s8-7", "text": "Recently, Tarek ______ (visit) the Safari Park with his parents.", "answer": "has visited", "marks": 1, "source": "NEW", "bookRef": "Unit 11, Language Focus 3.1, p. 48", "needsPicture": false, "note": "present perfect — মোহাম্মদপুরের প্রশ্নে ছিল না" },
+        { "key": "s8-8", "text": "I ______ already ______ (finish) my homework.", "answer": "have … finished (I have already finished my homework.)","marks": 1, "source": "NEW", "bookRef": "Unit 11, Language Focus 3.1, p. 48", "needsPicture": false, "note": "present perfect" },
+        { "key": "s8-9", "text": "Look! Black smoke of the vehicles ______ (pollute) the air.", "answer": "is polluting", "marks": 1, "source": "NEW", "bookRef": "Unit 15, activity 3.1.1 a, p. 70", "needsPicture": false, "note": "present continuous" },
+        { "key": "s8-10", "text": "The little girl ______ (walk) very fast when she met the old woman.", "answer": "was walking", "marks": 1, "source": "NEW", "bookRef": "Unit 18, Language Focus 3.1, p. 90", "needsPicture": false, "note": "past continuous" }
+      ]
+    },
+    {
+      "seq": 9,
+      "syllabusRowSeq": 9,
+      "kind": "WRITTEN",
+      "instructionBn": "Rewrite the sentences using capital letters and punctuation marks.",
+      "count": 10, "marksEach": 1, "total": 10,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s9-1", "text": "sara bought apples bananas and oranges", "answer": "Sara bought apples, bananas and oranges.", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১২(a)", "bookRef": "Unit 17, Language Focus 3.1, p. 79", "needsPicture": false, "note": null },
+        { "key": "s9-2", "text": "yes i can help you", "answer": "Yes, I can help you.", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১২(b)", "bookRef": "Unit 17, Language Focus 3.1, p. 79", "needsPicture": false, "note": null },
+        { "key": "s9-3", "text": "subhanallah what a beautiful bird", "answer": "Subhanallah! What a beautiful bird!", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১২(c)", "bookRef": null, "needsPicture": false, "note": null },
+        { "key": "s9-4", "text": "my father brother and i went to the park", "answer": "My father, brother and I went to the park.", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১২(d)", "bookRef": "Unit 17, Language Focus 3.1, p. 79", "needsPicture": false, "note": null },
+        { "key": "s9-5", "text": "where are you going ali", "answer": "Where are you going, Ali?", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১২(e)", "bookRef": "Unit 17, Language Focus 3.1, p. 79", "needsPicture": false, "note": null },
+        { "key": "s9-6", "text": "my name is abdur rahim", "answer": "My name is Abdur Rahim.", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৫ · প্রশ্ন ৩(a)", "bookRef": "Unit 17, Language Focus 3.1, p. 79", "needsPicture": false, "note": null },
+        { "key": "s9-7", "text": "we are going to sylhet in december", "answer": "We are going to Sylhet in December.", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৫ · প্রশ্ন ৩(b)", "bookRef": null, "needsPicture": false, "note": null },
+        { "key": "s9-8", "text": "the quran is the holy book of the muslims", "answer": "The Quran is the holy book of the Muslims.", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৫ · প্রশ্ন ৩(f)", "bookRef": null, "needsPicture": false, "note": null },
+        { "key": "s9-9", "text": "yesterday we visited lalbagh fort", "answer": "Yesterday, we visited Lalbagh Fort. (comma after ‘Yesterday’ optional)", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৫ · প্রশ্ন ৩(h)", "bookRef": null, "needsPicture": false, "note": null },
+        { "key": "s9-10", "text": "do you know where my bag is", "answer": "Do you know where my bag is?", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৫ · প্রশ্ন ৩(i)", "bookRef": null, "needsPicture": false, "note": null }
+      ]
+    },
+    {
+      "seq": 10,
+      "syllabusRowSeq": 10,
+      "kind": "WRITTEN",
+      "instructionBn": "Write a paragraph.",
+      "count": 1, "marksEach": 10, "total": 10,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s10-1", "text": "Write a paragraph about the importance of reading books.", "answer": "Marking points: a topic sentence; books give knowledge and joy; many kinds of books (story, science, religious, poetry); reading improves writing and speaking; reading regularly keeps body and mind healthy; good habit for free time; a library / book fair helps; a concluding sentence. About 8–10 simple, correct sentences.", "marks": 10, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১৩", "bookRef": "Unit 13 (book fair, library form), p. 57–63", "needsPicture": false, "note": "সিলেবাসের অনুচ্ছেদ (a) — ‘Importance of Reading Books’" }
+      ]
+    },
+    {
+      "seq": 11,
+      "syllabusRowSeq": 11,
+      "kind": "WRITTEN",
+      "instructionBn": "Write a letter.",
+      "count": 1, "marksEach": 10, "total": 10,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s11-1", "text": "Write a letter to your friend describing your hobby.", "answer": "Marking points (book’s letter format, Unit 10): address and date at the top right; salutation ‘Dear …,’; first paragraph — why you are writing; body — what the hobby is, when and how you do it, why you like it, what you have learnt; last paragraph — ask about the friend’s hobby / ask for a reply; closing (‘Your friend,’ / ‘Lots of love,’) and name.", "marks": 10, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১৪", "bookRef": "Unit 10, Language Focus 3.1, p. 44", "needsPicture": false, "note": "সিলেবাসের চিঠি (a)" }
+      ]
+    },
+    {
+      "seq": 12,
+      "syllabusRowSeq": 12,
+      "kind": "WRITTEN",
+      "instructionBn": "Write the meanings of the following words.",
+      "count": 10, "marksEach": 1, "total": 10,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s12-1", "text": "Recently", "answer": "not long ago / সম্প্রতি", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৪", "bookRef": "Unit 11, p. 47", "needsPicture": false, "note": "মূলে ১২টি শব্দ থেকে ‘যেকোনো ১০টি’ ছিল; সিলেবাসে বিকল্প নেই, তাই ১০টি রাখা হয়েছে" },
+        { "key": "s12-2", "text": "Friendly", "answer": "kind and pleasant like a friend / বন্ধুত্বপূর্ণ", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৪", "bookRef": "Unit 12, p. 52", "needsPicture": false, "note": null },
+        { "key": "s12-3", "text": "Siblings", "answer": "brothers and sisters / ভাইবোন", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৪", "bookRef": "Unit 12, Language Focus 3.1, p. 54", "needsPicture": false, "note": null },
+        { "key": "s12-4", "text": "Politeness", "answer": "good and gentle manners / ভদ্রতা", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৪", "bookRef": "Unit 12, activity 2.1, p. 53", "needsPicture": false, "note": null },
+        { "key": "s12-5", "text": "Preparation", "answer": "getting ready for something / প্রস্তুতি", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৪", "bookRef": "Unit 13, activity 4.1, p. 60", "needsPicture": false, "note": null },
+        { "key": "s12-6", "text": "Waste", "answer": "rubbish; things thrown away / বর্জ্য, আবর্জনা", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৪", "bookRef": "Unit 15, p. 67", "needsPicture": false, "note": null },
+        { "key": "s12-7", "text": "Polluted", "answer": "made dirty and harmful / দূষিত", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৪", "bookRef": "Unit 15, p. 67", "needsPicture": false, "note": null },
+        { "key": "s12-8", "text": "Honk", "answer": "to sound a vehicle’s horn / হর্ন বাজানো", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৪", "bookRef": "Unit 15, p. 68", "needsPicture": false, "note": null },
+        { "key": "s12-9", "text": "Tourist", "answer": "a person who visits a place / পর্যটক", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৪", "bookRef": "Unit 16, activity 2.1, p. 72", "needsPicture": false, "note": null },
+        { "key": "s12-10", "text": "Festival", "answer": "a day of celebration / উৎসব", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৪", "bookRef": "Unit 16, activity 2.1, p. 72", "needsPicture": false, "note": null }
+      ]
+    }
+  ],
+  "authorNotes": "Header check: the MP 2026 final file named \"English_5.docx\" prints \"Class: Four\" (the real Class 5 file prints \"Class: Five\" and has a different passage), so it IS the Class 4 annual paper and was used as the primary source. Its reading text is the Unit 15 ‘Environment Pollution’ text word for word, so it is a valid seen passage (Units 10–18). Reused from MP2026: the passage; its fill-in/true-false items turned into the 5 MCQs; its 5 short questions (2 marks → 1 mark); prepositions (Q8, verbatim); 6 verb-form items (Q11); 5 capitalization items (Q12); the paragraph (Q13) and the letter (Q14) — both are exactly topic (a) on the published lists; 10 of its 12 word meanings (Q4 — all 12 words are from Units 11–16; ‘Newspaper’ and ‘Welcome’ were dropped because the syllabus allows no ‘any ten’ choice). From other MP papers: sentence types (Final 2025 Q5 + HY 2026 Q5 — five types, two of each), articles with ‘x’ (Final 2025 Q3), 4 parts-of-speech items (Final 2025 Q4; its ‘on’, ‘and’, ‘Alas’ items were skipped because the row lists only noun, verb, adjective, adverb, pronoun), 5 capitalization items (HY 2025 Q3). NEW: 8 question-making items from Unit 16 activity 4.2 / Unit 17, and 4 verb items for present perfect, present continuous and past continuous (Units 11, 15, 18). MP2026 sections with no Sylhet row (Bangla→English translation, sentence transformation) were not used except two interrogative items moved into the Yes/No row. Doubts for the owner: (1) Row 8 says ‘simple/indefinite, continuous and present perfect’; I read ‘continuous’ as present and past continuous (both are taught in Units 15 and 18) and kept MP’s simple past/future items as ‘simple/indefinite’. (2) Paragraph and letter are given as one fixed topic each (topic a), with no choice; if the school wants students to choose, add topic (b) and a choice note. (3) The passage sits only in section 1; section 2 refers back to it. (4) Duration not published; set to ৩ ঘণ্টা (MP printed 2 h 30 min)."
+}

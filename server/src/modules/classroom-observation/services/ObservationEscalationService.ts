@@ -35,6 +35,7 @@ import { emit } from "../../notifications/services/NotificationService";
 import { writeAudit } from "../../platform/services/AuditService";
 import { ClassroomObservationError } from "./ClassroomObservationService";
 import { actingAsFilter } from "../../foundation/services/RoleScope";
+import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
 
 // ---------------------------------------------------------------------------
 // Config (admin-tunable thresholds; read-time defaults, no seed write — D-#97)
@@ -217,6 +218,11 @@ export async function runObservationEscalation(now: Date = new Date()): Promise<
     if (stage === "PRINCIPAL_FLAG") {
       if (principals === null) principals = await principalRecipientIds();
       recipientIds = principals;
+      // D-#955: the teacher never answered the released observation.
+      await recordPlaceMistake({
+        kind: "OBSERVATION_NO_RESPONSE", tier: 3, refKey: obsId, ownerId: doc.teacherId, correctedBy: "system", at: now,
+        oncePerRef: true, line: `${daysSince} দিনেও পর্যবেক্ষণের উত্তর দেওয়া হয়নি`,
+      });
     } else {
       recipientIds = [doc.teacherId.toString()];
     }

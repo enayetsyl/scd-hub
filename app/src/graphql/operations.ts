@@ -3538,12 +3538,17 @@ export interface HwSubmitPassEntry {
   recordId: string;
   submitted: boolean;
 }
+/** The reason picked when a pass corrects a same-day chase (D-#937). */
+export interface CorrectionReasonVar {
+  code: string;
+  text?: string | null;
+}
 export const HOMEWORK_SUBMIT_PASS = gql<
   { homeworkSubmitPass: { submittedCount: number; chasedCount: number; unchangedCount: number; correctedCount: number } },
-  { sectionId: string; itemId: string; entries: HwSubmitPassEntry[] }
+  { sectionId: string; itemId: string; entries: HwSubmitPassEntry[]; correctionReason?: CorrectionReasonVar | null }
 >`
-  mutation HomeworkSubmitPass($sectionId: String!, $itemId: String!, $entries: [HwSubmitPassEntryInput!]!) {
-    homeworkSubmitPass(sectionId: $sectionId, itemId: $itemId, entries: $entries) {
+  mutation HomeworkSubmitPass($sectionId: String!, $itemId: String!, $entries: [HwSubmitPassEntryInput!]!, $correctionReason: CorrectionReasonInput) {
+    homeworkSubmitPass(sectionId: $sectionId, itemId: $itemId, entries: $entries, correctionReason: $correctionReason) {
       submittedCount chasedCount unchangedCount correctedCount
     }
   }
@@ -5667,10 +5672,10 @@ export const ATTENDANCE_UNIT_DAY = gql<
 
 export const MARK_ATTENDANCE_UNIT = gql<
   { markAttendanceUnit: StudentAttendanceDayT },
-  { unitType: string; unitId: string; dateKey: string; absentStudentIds: string[] }
+  { unitType: string; unitId: string; dateKey: string; absentStudentIds: string[]; correctionReason?: CorrectionReasonVar | null }
 >`
-  mutation MarkAttendanceUnit($unitType: String!, $unitId: String!, $dateKey: String!, $absentStudentIds: [String!]!) {
-    markAttendanceUnit(unitType: $unitType, unitId: $unitId, dateKey: $dateKey, absentStudentIds: $absentStudentIds) {
+  mutation MarkAttendanceUnit($unitType: String!, $unitId: String!, $dateKey: String!, $absentStudentIds: [String!]!, $correctionReason: CorrectionReasonInput) {
+    markAttendanceUnit(unitType: $unitType, unitId: $unitId, dateKey: $dateKey, absentStudentIds: $absentStudentIds, correctionReason: $correctionReason) {
       id sectionId dateKey absentStudentIds markedBy markedAt amendedBy amendedAt
     }
   }
@@ -5679,10 +5684,10 @@ export const MARK_ATTENDANCE_UNIT = gql<
 /** D-#292: Principal/Office unlock-amend of any unit's day (past or today) — audited. */
 export const AMEND_ATTENDANCE_UNIT = gql<
   { amendAttendanceUnit: StudentAttendanceDayT },
-  { unitType: string; unitId: string; dateKey: string; absentStudentIds: string[] }
+  { unitType: string; unitId: string; dateKey: string; absentStudentIds: string[]; correctionReason?: CorrectionReasonVar | null }
 >`
-  mutation AmendAttendanceUnit($unitType: String!, $unitId: String!, $dateKey: String!, $absentStudentIds: [String!]!) {
-    amendAttendanceUnit(unitType: $unitType, unitId: $unitId, dateKey: $dateKey, absentStudentIds: $absentStudentIds) {
+  mutation AmendAttendanceUnit($unitType: String!, $unitId: String!, $dateKey: String!, $absentStudentIds: [String!]!, $correctionReason: CorrectionReasonInput) {
+    amendAttendanceUnit(unitType: $unitType, unitId: $unitId, dateKey: $dateKey, absentStudentIds: $absentStudentIds, correctionReason: $correctionReason) {
       id sectionId dateKey absentStudentIds markedBy markedAt amendedBy amendedAt
     }
   }
@@ -6317,10 +6322,10 @@ export interface AsSubmitPassEntry {
 }
 export const ASSIGNMENT_SUBMIT_PASS = gql<
   { assignmentSubmitPass: { submittedCount: number; chasedCount: number; unchangedCount: number; correctedCount: number } },
-  { sectionId: string; itemId: string; entries: AsSubmitPassEntry[] }
+  { sectionId: string; itemId: string; entries: AsSubmitPassEntry[]; correctionReason?: CorrectionReasonVar | null }
 >`
-  mutation AssignmentSubmitPass($sectionId: String!, $itemId: String!, $entries: [AsSubmitPassEntryInput!]!) {
-    assignmentSubmitPass(sectionId: $sectionId, itemId: $itemId, entries: $entries) {
+  mutation AssignmentSubmitPass($sectionId: String!, $itemId: String!, $entries: [AsSubmitPassEntryInput!]!, $correctionReason: CorrectionReasonInput) {
+    assignmentSubmitPass(sectionId: $sectionId, itemId: $itemId, entries: $entries, correctionReason: $correctionReason) {
       submittedCount chasedCount unchangedCount correctedCount
     }
   }
@@ -7009,6 +7014,8 @@ export interface NotificationRefsT {
   masteryActionId: string | null;
   /** OT-2 — deep-links the reviewer / Principal to the objective-list review round. */
   masteryReviewId: string | null;
+  /** D-#1032 — the exam paper to review ("list" when one notice covers several). */
+  examPaperId: string | null;
 }
 
 export interface NotificationT {
@@ -7030,7 +7037,7 @@ const NOTIFICATION_FIELDS = `
     workClaimId workClaimTracker
     classTestId ctId taskId
     syllabusId examId classId subject
-    improvementActionId masteryActionId masteryReviewId
+    improvementActionId masteryActionId masteryReviewId examPaperId
   }
 `;
 

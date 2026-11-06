@@ -169,9 +169,11 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
       studentId: openId,
       status,
       marks: status === "PRESENT" && marks.trim() ? Number(marks) : null,
-      weakness: weakness.trim() || null,
-      teacherAction: teacherAction.trim() || null,
-      guardianAction: guardianAction.trim() || null,
+      // An absent child gets no comments — the server refuses them and clears any
+      // left over from a PRESENT entry (owner report 2026-11-06).
+      weakness: status === "PRESENT" ? weakness.trim() || null : null,
+      teacherAction: status === "PRESENT" ? teacherAction.trim() || null : null,
+      guardianAction: status === "PRESENT" ? guardianAction.trim() || null : null,
     });
     setBusy(false);
     if (res.error) {
@@ -422,7 +424,7 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
                   ) : null}
                 </View>
 
-                {isAdmin && !isOpen && existing && (existing.weakness || existing.teacherAction || existing.guardianAction) ? (
+                {isAdmin && !isOpen && existing && existing.status !== "ABSENT" && (existing.weakness || existing.teacherAction || existing.guardianAction) ? (
                   // Admin read-only view of the teacher's comments (owner ask 2026-07-21).
                   // Teacher entry behavior below is unchanged — this block is display-only.
                   <View style={{ marginTop: space(2) }}>
@@ -462,11 +464,15 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
                       <Chip label={STR.ctAbsent} selected={status === "ABSENT"} onPress={() => setStatus("ABSENT")} />
                     </View>
                     {status === "PRESENT" ? (
-                      <Field label={`${STR.ctMarks} (0–${bnNum(test.totalMarks)})`} value={marks} onChangeText={setMarks} keyboardType="number-pad" />
-                    ) : null}
-                    <Field label={STR.ctWeakness} value={weakness} onChangeText={setWeakness} />
-                    <Field label={STR.ctTeacherAction} value={teacherAction} onChangeText={setTeacherAction} helper={STR.ctTeacherActionHint} />
-                    <Field label={STR.ctGuardianAction} value={guardianAction} onChangeText={setGuardianAction} />
+                      <>
+                        <Field label={`${STR.ctMarks} (0–${bnNum(test.totalMarks)})`} value={marks} onChangeText={setMarks} keyboardType="number-pad" />
+                        <Field label={STR.ctWeakness} value={weakness} onChangeText={setWeakness} />
+                        <Field label={STR.ctTeacherAction} value={teacherAction} onChangeText={setTeacherAction} helper={STR.ctTeacherActionHint} />
+                        <Field label={STR.ctGuardianAction} value={guardianAction} onChangeText={setGuardianAction} />
+                      </>
+                    ) : (
+                      <Muted>{STR.ctAbsentNoComments}</Muted>
+                    )}
                     {error ? <Notice message={error} tone="danger" /> : null}
                     <View style={{ flexDirection: "row", gap: space(2), marginTop: space(2) }}>
                       <Button title={STR.ctSaveResult} onPress={onSave} loading={busy} disabled={busy} />

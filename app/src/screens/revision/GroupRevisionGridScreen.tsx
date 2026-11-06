@@ -6,7 +6,9 @@
  * and a teacher comment. The paper's three rows start pre-laid; the recent-lesson row
  * is pre-filled from last Saturday's new lesson. Saves via recordRevisionEntry, or
  * editRevisionEntry when the row already has an entry. A row whose entry.deliveredAt
- * is set is locked read-only (the server re-enforces this; the lock is just UX).
+ * is set is locked read-only (the server re-enforces this; the lock is just UX) — unless the
+ * caller holds saturday_revision:correct and taps সংশোধন করুন (D-#1002): then the same form
+ * sends a correction with a required reason, and the family gets a সংশোধনী.
  */
 import React, { useMemo, useState } from "react";
 import { ScrollView, View } from "react-native";
@@ -28,6 +30,7 @@ import {
   GROUP_REVISION_SATURDAY_QUERY,
   RECORD_REVISION_ENTRY,
   EDIT_REVISION_ENTRY,
+  CORRECT_REVISION_ENTRY,
   type RevisionGridRowT,
   type RevisionPortionInput,
   type RevisionPortionT,
@@ -35,6 +38,7 @@ import {
 import { Screen, Card, Body, Muted, Button, Field, Select, Chip, Badge, Notice, Loader, EmptyState } from "../../components/ui";
 import { STR, bnNum, revCategoryLabel, revStatusLabel } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
+import { useAuth } from "../../auth/AuthContext";
 import { space } from "../../theme/tokens";
 import type { RevisionStackParamList } from "../../navigation/types";
 
@@ -297,7 +301,11 @@ function StudentRow({
   groupId: string;
   date: string;
 }): React.ReactElement {
-  const locked = !!row.entry?.deliveredAt;
+  const { can } = useAuth();
+  const delivered = !!row.entry?.deliveredAt;
+  const [correcting, setCorrecting] = useState(false);
+  const [note, setNote] = useState("");
+  const locked = delivered && !correcting;
   const initial = useMemo(() => initialDrafts(row), [row]);
   const [present, setPresent] = useState<boolean>(row.entry?.present ?? true);
   const [portions, setPortions] = useState<DraftPortion[]>(initial.drafts);
@@ -308,6 +316,16 @@ function StudentRow({
 
   const [, record] = useMutation(RECORD_REVISION_ENTRY);
   const [, edit] = useMutation(EDIT_REVISION_ENTRY);
+  const [, correct] = useMutation(CORRECT_REVISION_ENTRY);
+
+  function cancelCorrection(): void {
+    setCorrecting(false);
+    setNote("");
+    setPresent(row.entry?.present ?? true);
+    setPortions(initial.drafts);
+    setComment(row.entry?.teacherComment ?? "");
+    setError(null);
+  }
 
   function patchAt(i: number, patch: Partial<DraftPortion>): void {
     setPortions((prev) => prev.map((p, k) => (k === i ? { ...p, ...patch } : p)));
@@ -324,6 +342,23 @@ function StudentRow({
       return setError(STR.revRangeIncomplete);
     }
     const inputs = filled.map(draftToInput);
+    if (correcting && row.entry) {
+      if (!note.trim()) return setError(STR.revCorrectNoteFirst);
+      setBusy(true);
+      const res = await correct({
+        entryId: row.entry.id,
+        groupId,
+        present,
+        portions: inputs,
+        teacherComment: comment.trim() || null,
+        note: note.trim(),
+      });
+      setBusy(false);
+      if (res.error) return setError(friendlyError(res.error));
+      setCorrecting(false);
+      setNote("");
+      return setOk(STR.revCorrected);
+    }
     setBusy(true);
     const res = row.entry
       ? await edit({ entryId: row.entry.id, groupId, present, portions: inputs, teacherComment: comment.trim() || null })
@@ -341,6 +376,10 @@ function StudentRow({
       </View>
 
       {locked ? <Notice message={STR.revDelivered} tone="info" /> : null}
+      {locked && can("saturday_revision:correct") ? (
+        <Button title={STR.revCorrect} variant="secondary" onPress={() => { setOk(null); setCorrecting(true); }} style={{ marginTop: space(2) }} />
+      ) : null}
+      {correcting ? <Notice message={STR.revCorrectingHelp} tone="info" /> : null}
 
       <View style={{ flexDirection: "row", gap: space(2), marginTop: space(2) }}>
         <Chip label={STR.revPresent} selected={present} onPress={() => !locked && setPresent(true)} />
@@ -372,9 +411,13 @@ function StudentRow({
 
       {ok ? <Notice message={ok} tone="ok" /> : null}
       {error ? <Notice message={error} tone="danger" /> : null}
+      {correcting ? (
+        <Field label={STR.revCorrectNote} value={note} onChangeText={setNote} multiline autoCapitalize="sentences" />
+      ) : null}
       {!locked ? (
-        <View style={{ marginTop: space(2) }}>
-          <Button title={STR.revSave} onPress={onSave} loading={busy} disabled={busy} />
+        <View style={{ marginTop: space(2), gap: space(2) }}>
+          <Button title={correcting ? STR.revCorrectSend : STR.revSave} onPress={onSave} loading={busy} disabled={busy} />
+          {correcting ? <Button title={STR.cancel} variant="ghost" onPress={cancelCorrection} disabled={busy} /> : null}
         </View>
       ) : null}
     </Card>

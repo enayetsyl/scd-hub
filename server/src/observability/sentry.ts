@@ -103,6 +103,10 @@ export const EXPECTED_ERROR_NAMES: ReadonlySet<string> = new Set([
   "LessonProgressError",
   "LetterError",
   "LibraryError",
+  // Activity sheets (AS-1..AS-4, D-#988): a CSV with no sheets, a level the bank lacks, a
+  // child over the weekly limit, a copy already in another child's hands — sentences for
+  // the Office or the guardian.
+  "ActivityError",
   // Mastery tracker catalogue (M-0, D-#775–#787): an import that would re-code a locked
   // outcome, a routing tag whose strand is missing, an inconsistent policy — sentences for
   // the Principal, never faults.
@@ -142,6 +146,10 @@ export const EXPECTED_ERROR_NAMES: ReadonlySet<string> = new Set([
   "QuranExamError",
   // Exam routine (D-#883): a bad date/time or a duplicate slot — the Office's input.
   "ExamRoutineError",
+  // Staff mistake record (D-#936–#939): not your entry, decided already, bad reason.
+  "StaffMistakeError",
+  // Warning ladder (D-#940–#942): not your warning, bad meeting time/place.
+  "StaffWarningError",
   "QuranValidationError",
   "ReviewError",
   "RevisionError",

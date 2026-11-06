@@ -64,7 +64,20 @@ export type StoredFileKind =
   /** One page image of a class book (D-#870, docs/prd-class-books.md). The book PDF is
    *  rendered to JPEG pages at upload and is never stored or served; readers get pages.
    *  Staff read via class_books:view/manage; a guardian only for their own child's class. */
-  | "class_book_page";
+  | "class_book_page"
+  /** A storybook cover / preview page (SB-1, D-#986, docs/prd-storybook-reading.md). Only
+   *  the cover and up to 3 preview pages of a book are kept — never the whole book. Staff
+   *  read via library:view; a guardian only for a published book of their child's age band. */
+  | "storybook_page"
+  /** Activity sheets (AS-1, D-#988): a bank's sheet PDF / answer PDF (server-only — pages are copied
+   *  out at print time, never served whole) and a rendered sample / answer page. */
+  | "activity_bank_pdf"
+  | "activity_answer_pdf"
+  | "activity_page"
+  /** Another branch's past paper (D-#1030, docs/prd-exam-paper-bank.md §4): a rendered page and the
+   *  original upload (docx/pdf). Staff read via exam_papers:view_reference / manage_reference. */
+  | "reference_paper_page"
+  | "reference_paper_source";
 
 export const STORED_FILE_KINDS: readonly StoredFileKind[] = [
   "hw_question",
@@ -90,6 +103,12 @@ export const STORED_FILE_KINDS: readonly StoredFileKind[] = [
   "archive_photo",
   "classtest_script",
   "class_book_page",
+  "storybook_page",
+  "activity_bank_pdf",
+  "activity_answer_pdf",
+  "activity_page",
+  "reference_paper_page",
+  "reference_paper_source",
 ];
 
 /** The chat-attachment subset (M-4) — the read gate routes these to chat. */

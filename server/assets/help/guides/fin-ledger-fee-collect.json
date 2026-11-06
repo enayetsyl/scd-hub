@@ -1,0 +1,67 @@
+{
+  "id": "fin-ledger-fee-collect",
+  "category": "payroll_finance",
+  "order": 44,
+  "draft": true,
+  "title": "শিক্ষার্থীর ফি আদায় লেখা",
+  "intro": "একজন শিক্ষার্থীর কাছ থেকে নেওয়া ফি (টিউশন, সেশন ইত্যাদি) খাত অনুযায়ী লেখার নিয়ম।",
+  "keywords": [
+    "ফি আদায়",
+    "টিউশন ফি",
+    "দৈনিক এন্ট্রি"
+  ],
+  "perms": [
+    "finance_ledger:create"
+  ],
+  "screens": [
+    "FinanceTab/DailyEntry"
+  ],
+  "goTo": {
+    "route": "FinanceTab",
+    "screen": "DailyEntry"
+  },
+  "rows": [
+    {
+      "heading": "পাতাটি খোলা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "ওপরে বাম কোণের <b>☰</b> চেপে মেনু খুলুন, তারপর অর্থ চাপুন।",
+          "box": null
+        },
+        {
+          "text": "<b>দৈনিক এন্ট্রি</b> চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "ফির তথ্য",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "<b>ধরন</b> ঘরে ‘ফি আদায়’ বেছে নিন।",
+          "box": null
+        },
+        {
+          "text": "<b>মাধ্যম</b> বেছে নিন।",
+          "box": null
+        },
+        {
+          "text": "<b>শিক্ষার্থী আইডি</b> লিখুন।",
+          "box": null
+        },
+        {
+          "text": "<b>খাত</b> বেছে অঙ্ক লিখুন; আরেক খাতের জন্য ‘ফি লাইন যোগ করুন’ চাপুন।",
+          "box": null
+        },
+        {
+          "text": "<b>জমা দিন</b> চাপুন।",
+          "box": null
+        }
+      ]
+    }
+  ]
+}

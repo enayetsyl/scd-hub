@@ -40,6 +40,7 @@ import {
   type AsItemTallyT,
 } from "../../graphql/operations";
 import { useConfirm } from "../../state/ConfirmContext";
+import { useMistakeReason } from "../../state/MistakeReasonContext";
 import { confirmMarkPass } from "../../lib/markGuard";
 import { RosterChipPass } from "../../components/RosterChipPass";
 import { CardGrid } from "../../components/CardGrid";
@@ -432,6 +433,7 @@ function ItemCard({
   const { can } = useAuth();
   const canRevertPrior = can("assignment:undo_any"); // PM: was role P/O (the server's admin flag)
   const { confirmAction } = useConfirm();
+  const { askMistakeReason } = useMistakeReason();
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const submitRows = group.rows.filter((r) => SUBMIT_STATES.has(r.state));
@@ -463,9 +465,11 @@ function ItemCard({
 
   async function onSubmitCommit(entries: { id: string; on: boolean }[]): Promise<void> {
     // D-#892: warn before the first marking, and harder before a same-day correction.
-    if (!(await confirmMarkPass(confirmAction, group.rows, entries))) return;
+    const go = await confirmMarkPass(confirmAction, askMistakeReason, group.rows, entries, can("staff_mistakes:view_own"));
+    if (!go.ok) return;
     setSubmitBusy(true);
     const res = await submitPass({
+      correctionReason: go.reason,
       sectionId,
       itemId: group.asItemId,
       entries: entries.map((e) => ({ recordId: e.id, submitted: e.on })),
@@ -474,7 +478,10 @@ function ItemCard({
     const r = res.data?.assignmentSubmitPass;
     if (res.error || !r) return onNotify(null, friendlyError(res.error));
     const done = `${STR.asCollectDone} · ${STR.asSubmitted} ${bnNum(r.submittedCount)} · ${STR.asNotSubmitted} ${bnNum(r.chasedCount)}`;
-    onNotify(r.correctedCount > 0 ? `${done}\n${STR.msgFixDone}` : done, null);
+    // D-#937: "MINE" is counted at once; any other reason waits for review.
+    // D-#1020: someone who is not told reads only that the guardians got a correction.
+    const fixLine = !can("staff_mistakes:view_own") ? STR.msgFixDoneQuiet : go.reason?.code === "MINE" ? STR.msgFixDone : STR.smrFixPending;
+    onNotify(r.correctedCount > 0 ? `${done}\n${fixLine}` : done, null);
     onDone();
   }
 

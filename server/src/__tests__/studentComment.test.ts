@@ -38,6 +38,10 @@ const leanChain = (val: unknown) => {
 const mockCreate = jest.fn();
 const mockFindById = jest.fn();
 const mockFind = jest.fn();
+// D-#953: the mistake recorder reaches real models; this suite is DB-free.
+jest.mock("../modules/staff-mistakes/services/StaffMistakeNoteService", () => ({
+  recordPlaceMistake: jest.fn().mockResolvedValue(false),
+}));
 jest.mock("../modules/comments/models/StudentComment", () => ({
   StudentComment: {
     create: (doc: unknown) => mockCreate(doc),

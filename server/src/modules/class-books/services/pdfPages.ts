@@ -45,6 +45,45 @@ export async function renderPdfPages(pdf: Buffer): Promise<Buffer[]> {
   }
 }
 
+function run(cmd: string, args: string[]): Promise<string> {
+  return new Promise((resolve, reject) => {
+    execFile(cmd, args, { timeout: RENDER_TIMEOUT_MS, maxBuffer: 10 * 1024 * 1024 }, (err, stdout, stderr) => {
+      if (err) reject(new Error(`${cmd} failed: ${stderr || err.message}`));
+      else resolve(String(stdout));
+    });
+  });
+}
+
+/**
+ * Storybook shelf (SB-1, D-#986): render ONLY the chosen pages, scaled so the long edge
+ * is `longEdgePx`. `pick` receives the page count (from `pdfinfo`) and returns 1-based
+ * page numbers; out-of-range numbers are dropped. The rest of the book is never rendered.
+ */
+export async function renderPdfPicks(
+  pdf: Buffer,
+  pick: (pageCount: number) => number[],
+  longEdgePx: number,
+): Promise<{ pageCount: number; pages: Map<number, Buffer> }> {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "storybook-"));
+  try {
+    const input = path.join(dir, "book.pdf");
+    await fs.writeFile(input, pdf);
+    const info = await run("pdfinfo", [input]);
+    const pageCount = Number(info.match(/^Pages:\s+(\d+)/m)?.[1] ?? 0);
+    if (!pageCount) throw new Error("the PDF has no pages");
+    const wanted = [...new Set(pick(pageCount))].filter((p) => Number.isInteger(p) && p >= 1 && p <= pageCount);
+    const pages = new Map<number, Buffer>();
+    for (const p of wanted) {
+      const prefix = path.join(dir, `p${p}`);
+      await run("pdftoppm", ["-f", String(p), "-l", String(p), "-scale-to", String(longEdgePx), "-jpeg", "-jpegopt", `quality=${PAGE_JPEG_QUALITY}`, "-singlefile", input, prefix]);
+      pages.set(p, await fs.readFile(`${prefix}.jpg`));
+    }
+    return { pageCount, pages };
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true }).catch(() => undefined);
+  }
+}
+
 /** Width/height of a baseline or progressive JPEG, read from its SOF marker; null if absent. */
 export function jpegSize(buf: Buffer): { width: number; height: number } | null {
   let i = 2; // past SOI

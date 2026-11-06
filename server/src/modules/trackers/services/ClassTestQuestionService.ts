@@ -37,6 +37,7 @@ import { emitClassTestUpcoming } from "../../notifications/services/emitters";
 import { bnNum } from "../../../lib/bnNum";
 import { dhakaDayKey } from "../../../lib/dhakaDay";
 import { normalizePage, type Page, type PageArgs } from "../../../lib/paging";
+import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
 
 export interface CtQuestionRoundShape {
   fileId: string;
@@ -296,6 +297,10 @@ export async function reviewCtQuestion(input: ReviewCtQuestionInput): Promise<Ct
     targetKind: "ClassTestQuestionRequest",
     meta: { approve: input.approve, comment: input.approve ? undefined : (input.comment ?? "").trim() },
   });
+  // D-#953: the teacher sent the Office's typed paper back — the typist's correction.
+  if (!input.approve && last?.sentBy) {
+    await recordPlaceMistake({ kind: "CT_PAPER_SENT_BACK", tier: 2, refKey: String(doc._id), ownerId: last.sentBy, correctedBy: input.actorId, at: new Date(), line: `প্রশ্নপত্র সংশোধনের জন্য ফেরত (দফা ${doc.rounds.length}): "${(input.comment ?? "").trim()}"` });
+  }
 
   // D-#342 notify: the office learns the verdict — a change request is new work;
   // a confirm means the paper is locked and the print request will follow.
@@ -440,6 +445,10 @@ export async function editCtQuestionRequest(input: EditCtQuestionInput): Promise
     targetKind: "ClassTestQuestionRequest",
     meta: { before, after },
   });
+  // D-#953: the Office had already typed a version against the old details.
+  if (doc.rounds.length > 0) {
+    await recordPlaceMistake({ kind: "CT_REQUEST_CHANGED", tier: 2, refKey: String(doc._id), ownerId: doc.requestedBy, correctedBy: input.actorId, at: new Date(), line: "অফিস টাইপ করার পরে প্রশ্নের অনুরোধ বদলানো হয়েছে" });
+  }
 
   // The office may be part-way through typing the paper against the OLD spec —
   // a correction they are not told about is worse than no correction at all.
@@ -505,6 +514,9 @@ export async function cancelCtQuestionRequest(
     targetKind: "ClassTestQuestionRequest",
     meta: { previousStatus: previous, reason },
   });
+  if (doc.rounds.length > 0) {
+    await recordPlaceMistake({ kind: "CT_REQUEST_CHANGED", tier: 2, refKey: String(doc._id), ownerId: doc.requestedBy, correctedBy: input.actorId, at: new Date(), line: `অফিস টাইপ করার পরে অনুরোধ বাতিল${reason ? `: "${reason}"` : ""}` });
+  }
 
   const subjectBn = HW_SUBJECT_LABELS_BN[doc.subject as HwSubject] ?? doc.subject;
   await emitCtQuestionOffice({

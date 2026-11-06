@@ -58,7 +58,7 @@ import { runDueOffboardingRevocations } from "../../hr/services/OffboardingServi
 import { runObservationEscalation } from "../../classroom-observation/services/ObservationEscalationService";
 import { pendingHomeworkSections } from "../../trackers/services/HomeworkReconciliationService";
 import { sweepHomeworkDue } from "../../trackers/services/HomeworkDueSweepService";
-import { overdueCounts } from "../../trackers/services/ClassTestSummaryService";
+import { overdueCounts, recordLateClassTestMarks } from "../../trackers/services/ClassTestSummaryService";
 import {
   runWorkClaimDigest,
   expireStaleWorkClaims,
@@ -107,6 +107,8 @@ import { emit } from "./NotificationService";
 import { renderTemplate } from "../../templates/services/MessageTemplateService";
 import { actingAsFilter } from "../../foundation/services/RoleScope";
 import { holderIdsOf } from "../../access-control/services/holders";
+import { settleOverdueMistakes } from "../../staff-mistakes/services/StaffMistakeService";
+import { dispatchStaffMistakeDaily, STAFF_MISTAKE_DAILY_MINUTES } from "../../staff-mistakes/services/StaffMistakeDailyService";
 
 type IdLike = { toString(): string };
 
@@ -262,6 +264,8 @@ export interface TickSummary {
   taskOverdueEmitted: number;
   /** D-#966: 08:00 / 17:00 "tasks you gave" summaries emitted. */
   taskGivenSummaryEmitted: number;
+  /** D-#1020: 18:00 end-of-day staff mistake reports sent. */
+  staffMistakeDailySent: number;
   /** 11:00 improvement sweep (SP-4, D-#738): Office/Principal digests + class-teacher guardian alerts. */
   improvementPendingEmitted: number;
   improvementMissedEmitted: number;
@@ -312,6 +316,7 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
     taskDigestsEmitted: 0,
     taskOverdueEmitted: 0,
     taskGivenSummaryEmitted: 0,
+    staffMistakeDailySent: 0,
     improvementPendingEmitted: 0,
     improvementMissedEmitted: 0,
     meetingNoteRemindersEmitted: 0,
@@ -326,6 +331,22 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
   await family("observation escalation", async () => {
     summary.observationEscalationRan = await runOnce(dateKey, "OBSESC", async () => {
       await runObservationEscalation(now);
+    });
+  });
+
+  // --- Staff mistake record (D-#940): explanations past their deadline become counted
+  // mistakes and the person is checked against the warning ladder. Every tick, every
+  // calendar day (a deadline can pass over a weekend); one cheap query when nothing is due.
+  await family("staff mistake settle", async () => {
+    await settleOverdueMistakes(now);
+  });
+  // D-#1020: the end-of-day report — who made which mistake today — once, at 18:00, any day.
+  // minutesOfDay(now), not `nowMin`: this runs before the school-day gate where `nowMin` is
+  // declared, and reading it here threw (TDZ) on every tick — family() swallowed it.
+  await family("staff mistake daily", async () => {
+    if (!windowOpen(minutesOfDay(now), STAFF_MISTAKE_DAILY_MINUTES)) return;
+    await runOnce(dateKey, "SMDAILY", async () => {
+      summary.staffMistakeDailySent = await dispatchStaffMistakeDaily(now);
     });
   });
 
@@ -679,6 +700,8 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
       await runOnce(dateKey, "CTOD", async () => {
         const counts = await overdueCounts({ asOf: now });
         if (counts.overdue === 0) return; // nothing late ⇒ say nothing
+        // D-#1003: the digest names nobody; the staff mistake record does, once per test.
+        if (counts.awaitingSubmit > 0) await recordLateClassTestMarks(now);
 
         const titleBn = await renderTemplate("class_test.overdue_digest.title");
         const bodyBn = await renderTemplate("class_test.overdue_digest.body", {

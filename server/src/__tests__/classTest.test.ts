@@ -39,6 +39,10 @@ const findByIdResult = (doc: unknown) => {
 };
 
 const mockSeqUpdate = jest.fn();
+// D-#953: the mistake recorder reaches real models; this suite is DB-free.
+jest.mock("../modules/staff-mistakes/services/StaffMistakeNoteService", () => ({
+  recordPlaceMistake: jest.fn().mockResolvedValue(false),
+}));
 jest.mock("../modules/trackers/models/ClassTestSequence", () => ({
   ClassTestSequence: { findOneAndUpdate: (...a: unknown[]) => mockSeqUpdate(...a) },
 }));

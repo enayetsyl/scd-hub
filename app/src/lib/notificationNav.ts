@@ -55,6 +55,11 @@ export function notificationTarget(
     case "REVIEW_ASSIGNED":
       // OT-2: the objective-list review shares this review-duty kind; its rows carry masteryReviewId.
       if (refs?.masteryReviewId) return { tab: "MasteryTab", screen: "MasteryReview", params: { reviewId: refs.masteryReviewId } };
+      // D-#1032: a draft exam paper to review ("list" = several papers in one notice).
+      if (refs?.examPaperId)
+        return refs.examPaperId === "list"
+          ? { tab: "ExamPapersTab", screen: "ExamPapersHome" }
+          : { tab: "ExamPapersTab", screen: "ExamPaperDraft", params: { paperId: refs.examPaperId } };
       return refs?.reviewAssignmentId && refs?.artifactId
         ? {
             tab: "ReviewTab",
@@ -68,6 +73,16 @@ export function notificationTarget(
       return guardian
         ? { tab: "GuardianHomeTab", screen: "GuardianHome" }
         : { tab: "LibraryTab", screen: "LibraryHome" };
+    // SB-3 (D-#982): a waitlisted storybook is held at the office — the family's storybook shelf.
+    case "LIBRARY_HOLD_READY":
+      return guardian ? { tab: "GuardianStoriesTab", screen: "StoryShelf" } : { tab: "StorybooksTab", screen: "StoryDesk" };
+    // SB-4 (D-#984): a storybook lent / a sticker earned — the child's books.
+    case "STORYBOOK_ISSUED":
+    case "STORYBOOK_STICKER":
+      return guardian ? { tab: "GuardianStoriesTab", screen: "StoryChildBooks" } : { tab: "StorybooksTab", screen: "StoryDesk" };
+    // AS-4 (D-#988): an activity sheet came back checked — the child's sheets (answer page there).
+    case "ACTIVITY_SHEET_CHECKED":
+      return guardian ? { tab: "GuardianActivityTab", screen: "ActivityChildSheets" } : { tab: "ActivityTab", screen: "ActivityDesk" };
     // D-#296: a filed/finished print job lands the operator/teacher on the queue.
     case "PRINT_REQUESTED":
     case "PRINT_DELIVERED":
@@ -235,6 +250,20 @@ export function notificationTarget(
       return { tab: "AssignmentTab", screen: "AssignmentHome" };
     case "MARK_CORRECTION":
       return { tab: "HrTab", screen: "MarkCorrections", params: { all: true } };
+    case "STAFF_MISTAKE_EXPLAIN":
+    case "STAFF_MISTAKE_DECIDED":
+      // D-#937/#939 — both open the person's own আমার ভুল ও ব্যাখ্যা list.
+      return { tab: "HrTab", screen: "MyMistakes" };
+    case "STAFF_MISTAKE_WARNING":
+    case "STAFF_MISTAKE_MEETING":
+      // D-#940/#941 — the person's own list, which shows their warnings and meetings.
+      return { tab: "HrTab", screen: "MyMistakes" };
+    case "STAFF_MISTAKE_STEP":
+      // D-#941 — reviewers / the Principal: who reached which step.
+      return { tab: "HrTab", screen: "StaffMistakeSummary" };
+    case "STAFF_MISTAKE_DAILY":
+      // D-#1020 — the 18:00 report opens that day's list (refs.date).
+      return { tab: "HrTab", screen: "MistakeReview", params: refs?.date ? { dateKey: refs.date } : undefined };
     case "STAFF_LETTER_SENT":
       // D-#902 — the letter waits in the staff member's own আমার চিঠি list.
       return { tab: "HrTab", screen: "MyLetters" };

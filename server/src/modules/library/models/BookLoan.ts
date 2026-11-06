@@ -25,6 +25,12 @@ export interface IBookLoan extends Document {
   status: LoanStatus;
   /** Replacement record for a lost copy — text only, no money (D-#27). */
   lostNote?: string;
+  /** Storybook desk (SB-2, D-#983): did the child read it? Ticked by the desk at return. */
+  readAtReturn?: boolean;
+  /** A sticker was handed over for a read book (D-#983). */
+  stickerGiven?: boolean;
+  /** The holiday rule in force when it was issued (D-#982), if any. */
+  holidayRuleId?: Types.ObjectId;
   issuedBy: Types.ObjectId;
   returnedBy?: Types.ObjectId;
   createdAt: Date;
@@ -45,6 +51,9 @@ const BookLoanSchema = new Schema<IBookLoan>(
     returnedAt: { type: Date },
     status: { type: String, enum: LOAN_STATUSES, required: true, default: "ACTIVE" },
     lostNote: { type: String, trim: true },
+    readAtReturn: { type: Boolean },
+    stickerGiven: { type: Boolean },
+    holidayRuleId: { type: Schema.Types.ObjectId, ref: "LibraryHolidayRule" },
     issuedBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
     returnedBy: { type: Schema.Types.ObjectId, ref: "User" },
   },

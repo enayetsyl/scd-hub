@@ -284,9 +284,45 @@ export type HelpStackParamList = {
   HelpHome: { screenKey?: string } | undefined;
   HelpGuide: { guideId: string };
 };
+/** D-#1030–#1033 — exam paper bank. ExamPapersHome stays first: the initial route takes no params. */
+export type ExamPapersStackParamList = {
+  ExamPapersHome: undefined;
+  ExamPaperDraft: { paperId: string };
+  ReferencePapers: undefined;
+  ReferencePaperReader: { paperId: string; title: string; pageCount: number; pageAspect: number; sourceFileId: string | null };
+};
 export type ClassBooksStackParamList = {
   ClassBooks: undefined;
   ClassBookReader: { bookId: string; title: string; pageCount: number; pageAspect: number };
+};
+/** SB-1 (D-#980) — the storybook shelf. StoryShelf stays first: the initial route takes no params. */
+/** AS-1 (D-#988) — activity sheets. ActivityBanks stays first: the initial route takes no params. */
+export type ActivityStackParamList = {
+  ActivityBanks: undefined;
+  /** D-#1011: which guardians see activity sheets. */
+  ActivityGuardianAccess: undefined;
+  ActivityBank: { bankId: string; title: string };
+  ActivityCorner: undefined;
+  ActivityDesk: undefined;
+  /** AS-3: the guardian stack starts here (no params). */
+  ActivityChoose: undefined;
+  ActivityChildSheets: undefined;
+  ActivityBatch: undefined;
+  ActivityHandOut: undefined;
+  ActivityStickers: undefined;
+};
+
+export type StorybooksStackParamList = {
+  StoryShelf: undefined;
+  StorySeries: { seriesId: string; title: string };
+  StoryBook: { titleId: string; title: string };
+  StoryManage: undefined;
+  /** SB-2: the desk — lend / take back by copy code. */
+  StoryDesk: undefined;
+  /** SB-4: a guardian's "my child's books" (the selected child). */
+  StoryChildBooks: undefined;
+  /** D-#1011: which guardians see the shelf. */
+  StoryGuardianAccess: undefined;
 };
 /** D-#873 — Quran oral exam. QuranExamHome stays first: the initial route takes no params. */
 export type QuranExamStackParamList = {
@@ -352,6 +388,13 @@ export type HrStackParamList = {
   StaffCpd: { staffProfileId: string; name: string };
   /** D-#893 "নম্বর জমায় ভুল": none = own notes; staffProfileId = one file; all = the school. */
   MarkCorrections: { staffProfileId?: string; name?: string; all?: boolean } | undefined;
+  // Staff mistake record (D-#936–#939).
+  MyMistakes: undefined;
+  /** D-#1020: dateKey (YYYY-MM-DD) opens that day's list — the daily report's tap. */
+  MistakeReview: { dateKey?: string } | undefined;
+  StaffMistakeSummary: undefined;
+  PersonMistakes: { staffUserId: string; name?: string };
+  StaffMistakeSettings: undefined;
   GrievanceInbox: undefined;
   // SH-8: the school-wide HR numbers (payroll:manage). Param-free, so its
   // position in this stack is safe either way.
@@ -716,6 +759,10 @@ export type ReportsStackParamList = {
   DailySnapshot: undefined;
   GuardianEngagement: undefined;
   MarksDrivers: undefined;
+  /** SB-6 — storybook reports (series / books / readers). */
+  StorybookReport: undefined;
+  /** AS-5 — activity-sheet reports (skills / banks / children). */
+  ActivityReport: undefined;
   /** OT-4 (prd-objective-tree §8.2): question-bank coverage — the screen picks the class × subject. */
   MasteryBankCoverage: { classToken?: string; subject?: string } | undefined;
 };
@@ -776,7 +823,14 @@ export type TabParamList = {
   /** D-#870 — class books: the staff shelf and the guardian's (same stack, two routes so
    *  each sidebar lists it once in its own place). */
   ClassBooksTab: NavigatorScreenParams<ClassBooksStackParamList>;
+  /** D-#1030–#1033 — exam paper bank: draft papers + item review, and Mohammadpur's papers. */
+  ExamPapersTab: NavigatorScreenParams<ExamPapersStackParamList>;
   GuardianBooksTab: NavigatorScreenParams<ClassBooksStackParamList>;
+  /** SB-1 — storybooks: staff (library:view) and guardians share one stack. */
+  StorybooksTab: NavigatorScreenParams<StorybooksStackParamList>;
+  GuardianStoriesTab: NavigatorScreenParams<StorybooksStackParamList>;
+  ActivityTab: NavigatorScreenParams<ActivityStackParamList>;
+  GuardianActivityTab: NavigatorScreenParams<ActivityStackParamList>;
   HelpTab: NavigatorScreenParams<HelpStackParamList>;
   /** D-#873 — Quran oral exam (Office plan + examiners' marks). */
   QuranExamTab: NavigatorScreenParams<QuranExamStackParamList>;

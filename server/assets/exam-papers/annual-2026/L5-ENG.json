@@ -1,0 +1,279 @@
+{
+  "schema": "scd.exam-paper-draft/v1",
+  "key": "annual-2026-L5-ENG",
+  "exam": { "term": "ANNUAL", "year": 2026, "nameBn": "বার্ষিক পরীক্ষা ২০২৬" },
+  "classLevel": 5,
+  "subject": "ENG",
+  "titleBn": "বার্ষিক পরীক্ষা ২০২৬ · পঞ্চম শ্রেণি · ইংরেজি",
+  "fullMarks": 100,
+  "durationBn": "৩ ঘণ্টা",
+  "syllabusRows": [
+    { "seq": 1, "label": "Match the given words with their meanings / indicate True-False", "itemType": "matching", "component": null, "count": 5, "marksEach": 1, "total": 5 },
+    { "seq": 2, "label": "Make meaningful sentence with the given word", "itemType": "short_answer", "component": null, "count": 5, "marksEach": 1, "total": 5 },
+    { "seq": 3, "label": "Answer the following questions in sentences (Text 1 — from the textbook)", "itemType": "descriptive", "component": null, "count": 6, "marksEach": 3, "total": 18 },
+    { "seq": 4, "label": "Fill in the blanks with the appropriate words from the box (Text 2 — unseen)", "itemType": "fill_blank", "component": null, "count": 5, "marksEach": 1, "total": 5 },
+    { "seq": 5, "label": "Answer the following questions in sentences (Text 2 — unseen)", "itemType": "descriptive", "component": null, "count": 3, "marksEach": 3, "total": 9 },
+    { "seq": 6, "label": "Identify the Parts of Speech / change the tenses as directed", "itemType": "short_answer", "component": null, "count": 5, "marksEach": 1, "total": 5 },
+    { "seq": 7, "label": "Complete the text adding suffixes and prefixes / fill in the gaps with a, an, the", "itemType": "fill_blank", "component": null, "count": 6, "marksEach": 1, "total": 6 },
+    { "seq": 8, "label": "Make WH questions from the given statements", "itemType": "short_answer", "component": null, "count": 5, "marksEach": 1, "total": 5 },
+    { "seq": 9, "label": "Rearrange the given words in the correct order to make meaningful sentences/ rearrange the given sentences to form a meaningful text/story", "itemType": "short_answer", "component": null, "count": 7, "marksEach": 1, "total": 7 },
+    { "seq": 10, "label": "Rewrite the sentences using correct capitalization and punctuation", "itemType": "short_answer", "component": null, "count": 1, "marksEach": 5, "total": 5 },
+    { "seq": 11, "label": "Fill out the Form / fill in the blanks (time, cardinal and ordinal numbers)", "itemType": "fill_blank", "component": null, "count": 5, "marksEach": 1, "total": 5 },
+    { "seq": 12, "label": "Complete the sentences / text using the correct forms of verbs", "itemType": "short_answer", "component": null, "count": 5, "marksEach": 1, "total": 5 },
+    { "seq": 13, "label": "Write a letter / application / email", "itemType": "descriptive", "component": null, "count": 1, "marksEach": 10, "total": 10 },
+    { "seq": 14, "label": "Write a short composition (free writing or guided)", "itemType": "descriptive", "component": null, "count": 1, "marksEach": 10, "total": 10 }
+  ],
+  "sections": [
+    {
+      "seq": 1,
+      "syllabusRowSeq": 1,
+      "kind": "WRITTEN",
+      "instructionBn": "Match the words in Column A with their meanings in Column B. Two extra meanings are given in Column B.",
+      "count": 5, "marksEach": 1, "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": [
+        "i) shaking slightly because of cold or fear",
+        "ii) a large area covered chiefly with trees",
+        "iii) unable to find one's way",
+        "iv) the place where one lives",
+        "v) moving very quickly",
+        "vi) feeling extremely tired",
+        "vii) a living animal or person"
+      ],
+      "items": [
+        { "key": "s1-1", "text": "a) Forest", "answer": "ii) a large area covered chiefly with trees", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৪", "needsPicture": false },
+        { "key": "s1-2", "text": "b) Shivering", "answer": "i) shaking slightly because of cold or fear", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৪", "needsPicture": false },
+        { "key": "s1-3", "text": "c) Creature", "answer": "vii) a living animal or person", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৪", "needsPicture": false },
+        { "key": "s1-4", "text": "d) Lost", "answer": "iii) unable to find one's way", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৪", "needsPicture": false },
+        { "key": "s1-5", "text": "e) Home", "answer": "iv) the place where one lives", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৪", "needsPicture": false }
+      ]
+    },
+    {
+      "seq": 2,
+      "syllabusRowSeq": 2,
+      "kind": "WRITTEN",
+      "instructionBn": "Make meaningful sentences with the given words.",
+      "count": 5, "marksEach": 1, "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s2-1", "text": "sunset", "answer": "Sample: We watched the beautiful sunset from the river bank.", "marks": 1, "source": "NEW", "bookRef": "Unit 15, 4.1, p. 81", "needsPicture": false },
+        { "key": "s2-2", "text": "tasty", "answer": "Sample: My mother makes tasty vegetable soup.", "marks": 1, "source": "NEW", "bookRef": "Unit 12, 3.1.2, p. 65", "needsPicture": false },
+        { "key": "s2-3", "text": "promise", "answer": "Sample: I promise to finish my homework on time.", "marks": 1, "source": "NEW", "bookRef": "Unit 13, 2.1, p. 71", "needsPicture": false },
+        { "key": "s2-4", "text": "champion", "answer": "Sample: She became the champion of the school race.", "marks": 1, "source": "NEW", "bookRef": "Unit 14, p. 74", "needsPicture": false },
+        { "key": "s2-5", "text": "pollution", "answer": "Sample: Air pollution can make us sick.", "marks": 1, "source": "NEW", "bookRef": "Unit 17, p. 91", "needsPicture": false }
+      ]
+    },
+    {
+      "seq": 3,
+      "syllabusRowSeq": 3,
+      "kind": "WRITTEN",
+      "instructionBn": "Read the text (Text 1) and answer the following questions in sentences.",
+      "count": 6, "marksEach": 3, "total": 18,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": "Naima and Masuk were twins. They were in Class Five. Naima loved to play badminton, and Masuk loved to play football. They were also very good students at school. Their parents, Naeem Hasan and Mina Begum, loved them very much. Naima and Masuk often played with their parents when they had free time. Their home was always full of happiness!\n\nOne day, a special box arrived. It was from their close relative, Mr. Rakib, who lived in Italy. There was a black tablet inside the box. When they turned it on, the screen showed many bright colours. 'Wow!' They were both surprised.\n\nAt first, the tablet was so much fun. They played video games after finishing their study. And soon, the tablet became more exciting than playing outside. 'Naima! Masuk!' their friend Rana called from the gate. 'Let's play!'\n\n'Not now!' Naima replied. Her eyes were stuck to a YouTube video. Masuk was also watching the video with his sister.\n\nThe twins slowly started to change. Often they became grumpy and got angry. 'Time for dinner!' their mom called one evening. 'Just five more minutes, Ma!' Masuk shouted. His voice was sharp and annoying. Mother noticed it and took the tablet away. Then, Masuk started to cry. 'You're so unfair!' he screamed.\n\nThe situation became worse. At night, they couldn't sleep properly. Naima rubbed her eyes all the time, and Masuk felt sleepy all day long. Their parents, Naeem Hasan and Mina Begum, were very worried and unhappy. They understood that their children were spending too much time on screens. So, they decided to talk to Naima and Masuk.\n\n'This tablet is wasting your precious time,' their dad said softly. 'It's taking away your sleep, affecting your schoolwork, and keeping you away from your friends.' The twins saw the sadness in their parents' eyes. They felt ashamed. They realised that they were using the tablet too much and became tired and grumpy.\n\nThen, they promised not to use the tablet without their parents' permission. Every weekend, the family members used to sit together and share funny stories. Naima and Masuk also started playing outside with their friends again. Their home became full of joy!",
+      "matchRight": null,
+      "items": [
+        { "key": "s3-1", "text": "a) Who sent the special box? Where did he live? What was inside the box?", "answer": "Their close relative, Mr. Rakib, sent the special box. He lived in Italy. There was a black tablet inside the box.", "marks": 3, "source": "MP2026_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৩(ক)", "bookRef": "Unit 13, 1.1, p. 69", "needsPicture": false, "note": "এক অংশের প্রশ্নকে ৩ নম্বরের জন্য তিন অংশ করা হয়েছে" },
+        { "key": "s3-2", "text": "b) Why were Naima and Masuk surprised when they turned on the tablet?", "answer": "When they turned on the tablet, the screen showed many bright colours. They had never seen such a thing, so they were surprised and said, 'Wow!'", "marks": 3, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৩(খ)", "bookRef": "Unit 13, 2.3(b), p. 72", "needsPicture": false, "note": "নম্বর ১ থেকে ৩" },
+        { "key": "s3-3", "text": "c) How did the twins' behaviour change after they started using the tablet?", "answer": "The tablet became more exciting to them than playing outside, so they stopped playing with their friend Rana. They often became grumpy and got angry. Masuk shouted at his mother and cried when the tablet was taken away.", "marks": 3, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৩(গ)", "bookRef": "Unit 13, 2.3(c), p. 72", "needsPicture": false, "note": "নম্বর ১ থেকে ৩" },
+        { "key": "s3-4", "text": "d) What did Masuk do when his mother took away the tablet?", "answer": "When his mother took away the tablet, Masuk started to cry. He screamed, 'You're so unfair!' His voice was sharp and annoying.", "marks": 3, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৩(ঘ)", "bookRef": "Unit 13, 1.1, p. 70", "needsPicture": false, "note": "নম্বর ১ থেকে ৩" },
+        { "key": "s3-5", "text": "e) What problems did Naima and Masuk face because of using the tablet?", "answer": "They could not sleep properly at night. Naima rubbed her eyes all the time and Masuk felt sleepy all day long. The tablet wasted their time, affected their schoolwork and kept them away from their friends; they became tired and grumpy.", "marks": 3, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৩(ঙ)", "bookRef": "Unit 13, 2.3(d), p. 72", "needsPicture": false, "note": "নম্বর ১ থেকে ৩" },
+        { "key": "s3-6", "text": "f) What did the twins promise? How did their home become full of joy again?", "answer": "They promised not to use the tablet without their parents' permission. Every weekend the family sat together and shared funny stories. Naima and Masuk also started playing outside with their friends again, so their home became full of joy.", "marks": 3, "source": "MP2026_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ২(ঙ)", "bookRef": "Unit 13, 1.1, p. 70", "needsPicture": false, "note": "MP-এর শূন্যস্থান (ঙ)-এর বিষয় থেকে উত্তরমূলক প্রশ্ন বানানো হয়েছে" }
+      ]
+    },
+    {
+      "seq": 4,
+      "syllabusRowSeq": 4,
+      "kind": "WRITTEN",
+      "instructionBn": "Read the text (Text 2) and fill in the blanks with the appropriate words from the box. There are three extra words that you need not use.",
+      "count": 5, "marksEach": 1, "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": "Once upon a time, a little boy named Roni lived near a green forest. Every afternoon, Roni liked to walk along the edge of the woods to collect dry twigs and colourful autumn leaves. One sunny afternoon, while searching near a large banyan tree, he noticed a tiny baby rabbit shivering under a bush. The poor creature looked lost and hungry, and its small leg was gently caught in a fallen branch. Roni carefully lifted the heavy branch, picked up the little rabbit in his arms, and brought it safely back to his home. He fed it some fresh green grass and clean water until it felt better. The next morning, Roni took the healthy little rabbit back to the edge of the forest and let it go near the same banyan tree where its family quickly welcomed it back with joyful hops.\n\n**Box:** twigs · shivering · branch · grass · family · forest · hungry · banyan",
+      "matchRight": null,
+      "items": [
+        { "key": "s4-1", "text": "a) Every afternoon, Roni collected dry ______ and colourful leaves.", "answer": "twigs", "marks": 1, "source": "MP2026_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · দ্বিতীয় অনুচ্ছেদ (প্রশ্ন ৪–৫)", "needsPicture": false, "note": "MP-এর অদেখা অনুচ্ছেদ রাখা হয়েছে; বক্সের শূন্যস্থান নতুন করে লেখা (MP-এ এই কাজটি টেক্সট ১-এ ছিল)" },
+        { "key": "s4-2", "text": "b) Roni noticed a tiny baby rabbit ______ under a bush.", "answer": "shivering", "marks": 1, "source": "MP2026_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · দ্বিতীয় অনুচ্ছেদ (প্রশ্ন ৪–৫)", "needsPicture": false, "note": "অনুচ্ছেদ থেকে নতুন শূন্যস্থান" },
+        { "key": "s4-3", "text": "c) The rabbit's small leg was caught in a fallen ______.", "answer": "branch", "marks": 1, "source": "MP2026_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · দ্বিতীয় অনুচ্ছেদ (প্রশ্ন ৪–৫)", "needsPicture": false, "note": "অনুচ্ছেদ থেকে নতুন শূন্যস্থান" },
+        { "key": "s4-4", "text": "d) Roni fed the rabbit some fresh green ______ and clean water.", "answer": "grass", "marks": 1, "source": "MP2026_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · দ্বিতীয় অনুচ্ছেদ (প্রশ্ন ৪–৫)", "needsPicture": false, "note": "অনুচ্ছেদ থেকে নতুন শূন্যস্থান" },
+        { "key": "s4-5", "text": "e) The rabbit's ______ welcomed it back with joyful hops.", "answer": "family", "marks": 1, "source": "MP2026_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · দ্বিতীয় অনুচ্ছেদ (প্রশ্ন ৪–৫)", "needsPicture": false, "note": "অনুচ্ছেদ থেকে নতুন শূন্যস্থান" }
+      ]
+    },
+    {
+      "seq": 5,
+      "syllabusRowSeq": 5,
+      "kind": "WRITTEN",
+      "instructionBn": "Read Text 2 again and answer the following questions in sentences.",
+      "count": 3, "marksEach": 3, "total": 9,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s5-1", "text": "a) Where did Roni like to walk every afternoon? What did he collect there?", "answer": "Roni liked to walk along the edge of the woods near his home every afternoon. He collected dry twigs and colourful autumn leaves there.", "marks": 3, "source": "MP2026_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৫(ক)", "needsPicture": false, "note": "৩ নম্বরের জন্য দ্বিতীয় অংশ যোগ; নম্বর ১ থেকে ৩" },
+        { "key": "s5-2", "text": "b) What did Roni find under the bush near the banyan tree? What condition was it in?", "answer": "Roni found a tiny baby rabbit shivering under the bush. It looked lost and hungry, and its small leg was caught in a fallen branch.", "marks": 3, "source": "MP2026_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৫(খ)", "needsPicture": false, "note": "অবস্থার অংশ যোগ; নম্বর ২ থেকে ৩" },
+        { "key": "s5-3", "text": "c) Write three sentences about how Roni helped the little animal and what he did the next morning.", "answer": "Roni carefully lifted the heavy branch and picked up the rabbit. He brought it home and fed it fresh green grass and clean water until it felt better. The next morning, he took it back to the edge of the forest and let it go near the same banyan tree.", "marks": 3, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৫(গ)", "needsPicture": false, "note": "নম্বর ২ থেকে ৩" }
+      ]
+    },
+    {
+      "seq": 6,
+      "syllabusRowSeq": 6,
+      "kind": "WRITTEN",
+      "instructionBn": "Identify the adjective and the adverb in each sentence.",
+      "count": 5, "marksEach": 1, "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s6-1", "text": "a) The happy dog barked loudly at his owner.", "answer": "Adjective: happy; Adverb: loudly", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১০(ক)", "bookRef": "Unit 12, 3.1 & 3.2, pp. 64–66", "needsPicture": false },
+        { "key": "s6-2", "text": "b) She ate the sweet mango quickly.", "answer": "Adjective: sweet; Adverb: quickly", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১০(খ)", "bookRef": "Unit 12, 3.1 & 3.2, pp. 64–66", "needsPicture": false },
+        { "key": "s6-3", "text": "c) My brave brother climbed the mountain easily.", "answer": "Adjective: brave; Adverb: easily", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১০(গ)", "bookRef": "Unit 12, 3.1 & 3.2, pp. 64–66", "needsPicture": false },
+        { "key": "s6-4", "text": "d) The lazy cat slept peacefully on the rug.", "answer": "Adjective: lazy; Adverb: peacefully", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১০(ঘ)", "bookRef": "Unit 12, 3.1 & 3.2, pp. 64–66", "needsPicture": false },
+        { "key": "s6-5", "text": "e) He wrote an important letter yesterday.", "answer": "Adjective: important; Adverb: yesterday", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১০(ঙ)", "bookRef": "Unit 12, 3.1 & 3.2, pp. 64–66", "needsPicture": false }
+      ]
+    },
+    {
+      "seq": 7,
+      "syllabusRowSeq": 7,
+      "kind": "WRITTEN",
+      "instructionBn": "Complete the sentences by adding suffixes or prefixes to the words in brackets.",
+      "count": 6, "marksEach": 1, "total": 6,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s7-1", "text": "a) The teacher praised the boy for his ______. (honest)", "answer": "honesty", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৮(ক)", "bookRef": "Unit 13, 3.1, p. 72", "needsPicture": false },
+        { "key": "s7-2", "text": "b) She completed her homework ______. (successful)", "answer": "successfully", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৮(খ)", "bookRef": "Unit 13, 3.1, p. 72", "needsPicture": false },
+        { "key": "s7-3", "text": "c) His ______ made everyone happy. (kind)", "answer": "kindness", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৮(গ)", "bookRef": "Unit 13, 3.1, p. 72", "needsPicture": false },
+        { "key": "s7-4", "text": "d) The villagers were very ______ during the flood. (help)", "answer": "helpful", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৮(ঘ)", "bookRef": "Unit 13, 3.1, p. 72", "needsPicture": false },
+        { "key": "s7-5", "text": "e) The old machine is no longer ______. (use)", "answer": "useful", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৮(ঙ)", "bookRef": "Unit 13, 3.1, p. 72", "needsPicture": false },
+        { "key": "s7-6", "text": "f) Masuk was ______ when his mother took the tablet away. (happy)", "answer": "unhappy", "marks": 1, "source": "NEW", "bookRef": "Unit 13, 3.1.1(a), p. 73", "needsPicture": false, "note": "MP-এ ৫টি ছিল; সিলেবাসে ৬টি লাগে, তাই একটি উপসর্গের (prefix) বাক্য যোগ" }
+      ]
+    },
+    {
+      "seq": 8,
+      "syllabusRowSeq": 8,
+      "kind": "WRITTEN",
+      "instructionBn": "Make WH questions from the given statements using the underlined word(s).",
+      "count": 5, "marksEach": 1, "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s8-1", "text": "a) <u>Alex</u> is going to Chattogram.", "answer": "Who is going to Chattogram?", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৮(ক)", "bookRef": "Unit 16, 3.1, p. 87", "needsPicture": false },
+        { "key": "s8-2", "text": "b) Alex is from <u>the United Kingdom</u>.", "answer": "Where is Alex from?", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৮(খ)", "bookRef": "Unit 16, 3.1, p. 87", "needsPicture": false },
+        { "key": "s8-3", "text": "c) He has come <u>to explore Bangladesh</u>.", "answer": "Why has he come?", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৮(গ)", "bookRef": "Unit 16, 3.1, p. 87", "needsPicture": false },
+        { "key": "s8-4", "text": "d) The journey was <u>wonderful</u>.", "answer": "How was the journey?", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৮(ঘ)", "bookRef": "Unit 16, 3.1, p. 87", "needsPicture": false },
+        { "key": "s8-5", "text": "e) They will depart <u>at 10 o'clock</u>.", "answer": "When will they depart?", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৮(ঙ)", "bookRef": "Unit 16, 3.1, p. 87", "needsPicture": false }
+      ]
+    },
+    {
+      "seq": 9,
+      "syllabusRowSeq": 9,
+      "kind": "WRITTEN",
+      "instructionBn": "Rearrange the given words in the correct order to make meaningful sentences. Put a capital letter at the start and a full stop or question mark at the end.",
+      "count": 7, "marksEach": 1, "total": 7,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s9-1", "text": "a) play / don't / long / for / too", "answer": "Don't play for too long.", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৫(ক)", "needsPicture": false },
+        { "key": "s9-2", "text": "b) you / late / are / why", "answer": "Why are you late?", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৫(খ)", "needsPicture": false, "note": "প্রশ্নচিহ্ন শব্দতালিকা থেকে সরানো হয়েছে, শিক্ষার্থী নিজে বসাবে" },
+        { "key": "s9-3", "text": "c) coral / in / island / Bangladesh / the / Saint Martin / only / is", "answer": "Saint Martin is the only coral island in Bangladesh.", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৫(গ)", "needsPicture": false },
+        { "key": "s9-4", "text": "d) for / us / was / a / guide / waiting", "answer": "A guide was waiting for us.", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৫(ঘ)", "needsPicture": false },
+        { "key": "s9-5", "text": "e) the / race / wins / but / steady / slow", "answer": "Slow but steady wins the race.", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৫(ঙ)", "needsPicture": false },
+        { "key": "s9-6", "text": "f) you / fine / are / hope / I", "answer": "I hope you are fine.", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১০(গ)", "needsPicture": false },
+        { "key": "s9-7", "text": "g) we / every day / new / love / things / learning", "answer": "We love learning new things every day.", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১০(ঙ)", "needsPicture": false }
+      ]
+    },
+    {
+      "seq": 10,
+      "syllabusRowSeq": 10,
+      "kind": "WRITTEN",
+      "instructionBn": "Rewrite the following text using capital letters and punctuation marks.",
+      "count": 1, "marksEach": 5, "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s10-1", "text": "then one day the boy came to the tree the tree said come boy come and climb up my trunk swing from my branches and eat apples play in my shade and be happy i am too big to climb and play said the boy i want to buy things i want some money can you give me some money", "answer": "Then one day the boy came to the tree. The tree said, 'Come, Boy, come and climb up my trunk. Swing from my branches and eat apples. Play in my shade and be happy.' 'I am too big to climb and play,' said the boy. 'I want to buy things. I want some money. Can you give me some money?' (½ mark for each of 10 correct capital/punctuation points)", "marks": 5, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৬", "bookRef": "Unit 16 (The Giving Tree), p. 83", "needsPicture": false }
+      ]
+    },
+    {
+      "seq": 11,
+      "syllabusRowSeq": 11,
+      "kind": "WRITTEN",
+      "instructionBn": "Fill in the blanks with the correct time, cardinal or ordinal number.",
+      "count": 5, "marksEach": 1, "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s11-1", "text": "a) It is 8:45 at night. It is 8:45 ______.", "answer": "p.m.", "marks": 1, "source": "NEW", "bookRef": "Unit 8, 3.1.1(c), p. 43", "needsPicture": false },
+        { "key": "s11-2", "text": "b) 10:30 means ______ ten.", "answer": "half past", "marks": 1, "source": "NEW", "bookRef": "Unit 8, 3.1, p. 43", "needsPicture": false },
+        { "key": "s11-3", "text": "c) 10:45 means ______ eleven.", "answer": "quarter to", "marks": 1, "source": "NEW", "bookRef": "Unit 8, 3.1, p. 43", "needsPicture": false },
+        { "key": "s11-4", "text": "d) There are ______ months in a year. (Write the number in words.)", "answer": "twelve", "marks": 1, "source": "NEW", "bookRef": "cardinal numbers (general)", "needsPicture": false },
+        { "key": "s11-5", "text": "e) December is the ______ month of the year. (Write the ordinal number in words.)", "answer": "twelfth", "marks": 1, "source": "NEW", "bookRef": "ordinal numbers (general)", "needsPicture": false }
+      ]
+    },
+    {
+      "seq": 12,
+      "syllabusRowSeq": 12,
+      "kind": "WRITTEN",
+      "instructionBn": "Complete the sentences using the correct forms of the verbs in brackets.",
+      "count": 5, "marksEach": 1, "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s12-1", "text": "a) The three brothers ______ (quarrel) with each other every day.", "answer": "quarrel", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৯(ক)", "needsPicture": false, "note": "১০টির মধ্যে ৫টি নেওয়া হয়েছে" },
+        { "key": "s12-2", "text": "b) The farmer ______ (tie) the sticks into a bundle yesterday.", "answer": "tied", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৯(খ)", "needsPicture": false },
+        { "key": "s12-3", "text": "c) Look! The boy ______ (climb) up the tall tree right now.", "answer": "is climbing", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৯(গ)", "needsPicture": false },
+        { "key": "s12-4", "text": "d) He already ______ (finish) reading his book.", "answer": "has already finished", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৯(ঘ)", "needsPicture": false },
+        { "key": "s12-5", "text": "e) I ______ (meet) my cousin next Sunday.", "answer": "will meet", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৯(জ)", "needsPicture": false }
+      ]
+    },
+    {
+      "seq": 13,
+      "syllabusRowSeq": 13,
+      "kind": "WRITTEN",
+      "instructionBn": "Write a letter.",
+      "count": 1, "marksEach": 10, "total": 10,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s13-1", "text": "Write a letter to your friend about the benefits of eating healthy food.", "answer": "Marking points: date, address and salutation; healthy foods named (fruits, vegetables, fish, eggs, milk, rice) and why they help (energy, strength, fewer illnesses, good for study); advice using should/shouldn't (eat on time, avoid junk food, drink enough water); closing and signature; at least 8–10 correct sentences with capital letters and punctuation.", "marks": 10, "source": "MP2026_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১২", "bookRef": "Unit 12 (Eating Healthy), 3.3.1 & 4.1, pp. 67–68", "needsPicture": false, "note": "‘Or, application for a transfer certificate’ অংশ বাদ — সিলেবাসে বাছাই নেই" }
+      ]
+    },
+    {
+      "seq": 14,
+      "syllabusRowSeq": 14,
+      "kind": "WRITTEN",
+      "instructionBn": "Write a short composition.",
+      "count": 1, "marksEach": 10, "total": 10,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s14-1", "text": "Write a composition on the topic “Tree Plantation”.", "answer": "Marking points: what tree plantation is; why trees are important (oxygen, shade, fruit, wood, homes for birds, clean air — Unit 17); when and how to plant and care for trees (rainy season, watering, fencing); our duty to plant trees; conclusion; at least 10 correct sentences with good spelling and punctuation.", "marks": 10, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১৪", "bookRef": "Unit 17 (The Air We Share), Unit 16 (The Giving Tree)", "needsPicture": false }
+      ]
+    }
+  ],
+  "authorNotes": "Class 5 English (English for Today, Class V — whole book). The MP 2026 Class 5 English file (English_5.docx, header 'Class: Five') is a genuine Class 5 annual paper. Its Text 1 (Naima and Masuk) is word-for-word Unit 13 'Quality Time Together', so it is used as Text 1 (from the textbook) with its five questions plus one more built from the story's ending (6 × 3 marks; one-fact questions were widened so they are worth 3 marks). Its Text 2 (Roni and the rabbit) is not in the textbook, so it serves as the unseen Text 2: the box fill-in for row 4 is new (MP's box exercise was on Text 1) and its three questions are reused, two widened to 3 marks. Also reused from MP 2026: the word matching (verbatim, 5 + 2 extra meanings), adjectives/adverbs (5 of its 10), suffix/prefix (all 5 + one new prefix item from Unit 13 to reach 6), the Giving Tree capitalisation text (Unit 16), 5 of its 10 verb items, the healthy-food letter (Unit 12) without the 'Or' application, and 'Tree Plantation'. From other MP papers: WH questions (HY 2026 Q8 — underlines checked in the original .docx and shown with <u> tags) and rearranging (HY 2026 Q5 + Final 2025 Q10). New from the book: row 2 words and row 11 time/number blanks (Unit 8 Telling Time). Not used from MP 2026: Bangla→English translation, prepositions and the crow story (no matching Sylhet row), and the MCQ/box items on Text 1. Choices made on either/or rows: matching (not True/False), parts of speech, suffix/prefix (not articles), word rearranging, time/number blanks (not form filling), letter. Doubt: row 1 matching words come from Text 2, which the child reads later in the paper — harmless, but the reviewer may prefer Unit 13 words (twins, tablet, grumpy, ashamed, promise)."
+}
