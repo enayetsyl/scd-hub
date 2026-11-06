@@ -161,4 +161,5 @@ import "./modules/lesson-progress/resolvers/lessonObjectives";
 import "./modules/worksheets/resolvers/worksheet";
 import "./modules/popup-notices/resolvers/popupNotice";
 import "./modules/class-books/resolvers/classBooks";
+import "./modules/exam-papers/resolvers/examPapers";
 import "./modules/quran-exam/resolvers/quranExam";

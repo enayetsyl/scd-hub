@@ -351,6 +351,16 @@ export type AuditEventKind =
   | "CLASS_BOOK_UPLOADED"     // a class book PDF uploaded and queued for page rendering (D-#870) — meta.classLevel/title
   | "CLASS_BOOK_EDITED"       // a class book renamed / moved class / reordered / hidden or shown (D-#870) — meta before/after
   | "CLASS_BOOK_DELETED"      // a class book removed with its page images (D-#870)
+  | "REFERENCE_PAPER_UPLOADED" // another branch's paper uploaded for reading (D-#1030) — meta term/year/classLevel/subject
+  | "REFERENCE_PAPER_EDITED"   // its class / subject / term / title corrected (D-#1030) — meta before/after
+  | "REFERENCE_PAPER_DELETED"  // removed with its pages and original (D-#1030)
+  | "EXAM_PAPER_DRAFT_IMPORTED"      // a draft paper imported for review (D-#1031) — meta key
+  | "EXAM_PAPER_REVIEWER_ASSIGNED"   // reviewer chosen for one or more draft papers (D-#1032) — meta reviewerUserId/paperIds
+  | "EXAM_PAPER_SUGGESTION_MADE"     // reviewer suggested an edit / deletion / new question (D-#1032)
+  | "EXAM_PAPER_SUGGESTION_RESOLVED" // a suggestion accepted (applied) or rejected (D-#1032) — meta accepted
+  | "EXAM_PAPER_REVIEW_SUBMITTED"    // reviewer said the review is done (D-#1032)
+  | "EXAM_PAPER_FINALIZED"           // a draft paper marked final (D-#1033)
+  | "EXAM_PAPER_REOPENED"            // a final paper opened again (D-#1033)
   | "QURAN_EXAM_PAPER_SAVED"      // a Quran exam paper created/edited (D-#874) — meta.level/scheme/fullMarks
   | "QURAN_EXAM_SITTINGS_LOADED"  // sittings created in bulk for an exam (D-#875) — meta.count
   | "QURAN_EXAM_SITTING_MOVED"    // a sitting moved to another examiner (D-#875) — meta.from/to + times

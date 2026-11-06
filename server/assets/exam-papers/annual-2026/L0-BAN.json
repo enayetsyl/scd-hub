@@ -1,0 +1,264 @@
+{
+  "schema": "scd.exam-paper-draft/v1",
+  "key": "annual-2026-L0-BAN",
+  "exam": { "term": "ANNUAL", "year": 2026, "nameBn": "বার্ষিক পরীক্ষা ২০২৬" },
+  "classLevel": 0,
+  "subject": "BAN",
+  "titleBn": "বার্ষিক পরীক্ষা ২০২৬ · কেজি · বাংলা",
+  "fullMarks": 100,
+  "durationBn": "২ ঘণ্টা",
+  "syllabusRows": [
+    { "seq": 1, "label": "হারিয়ে যাওয়া স্বরবর্ণ ও ব্যঞ্জনবর্ণ লেখ", "itemType": "fill_blank", "component": null, "count": 5, "marksEach": 1, "total": 5 },
+    { "seq": 2, "label": "বর্ণ দিয়ে ৩টি করে শব্দ লেখ (৬টি বর্ণ)", "itemType": "short_answer", "component": null, "count": 6, "marksEach": 3, "total": 18 },
+    { "seq": 3, "label": "কার চিহ্ন দিয়ে ৩টি করে শব্দ লেখ (৫টি কার)", "itemType": "short_answer", "component": null, "count": 5, "marksEach": 3, "total": 15 },
+    { "seq": 4, "label": "এলোমেলো শব্দ সাজিয়ে লেখ — ০.৫ × ৬ = ৩", "itemType": "other", "component": null, "count": 1, "marksEach": 3, "total": 3 },
+    { "seq": 5, "label": "যুক্তবর্ণ ভেঙে লেখ ও ২টি করে শব্দ তৈরি কর (৩টি যুক্তবর্ণ × [১ ভাঙা + ২ শব্দ])", "itemType": "short_answer", "component": null, "count": 3, "marksEach": 3, "total": 9 },
+    { "seq": 6, "label": "বিপরীত শব্দ লেখ", "itemType": "short_answer", "component": null, "count": 5, "marksEach": 1, "total": 5 },
+    { "seq": 7, "label": "শূন্যস্থান পূরণ কর (বর্ণ)", "itemType": "fill_blank", "component": null, "count": 5, "marksEach": 1, "total": 5 },
+    { "seq": 8, "label": "বাক্য গঠন কর", "itemType": "short_answer", "component": null, "count": 5, "marksEach": 2, "total": 10 },
+    { "seq": 9, "label": "৫টি করে নাম লেখ — ক (ফুল / ফল) ও খ (রং / মাছ / সবজি) — ০.৫ × ১০ = ৫", "itemType": "other", "component": null, "count": 1, "marksEach": 5, "total": 5 },
+    { "seq": 10, "label": "৪ দিকের নাম লেখ — ০.৫ × ৪ = ২", "itemType": "other", "component": null, "count": 1, "marksEach": 2, "total": 2 },
+    { "seq": 11, "label": "৭ দিনের নাম লেখ", "itemType": "other", "component": null, "count": 7, "marksEach": 1, "total": 7 },
+    { "seq": 12, "label": "১২ মাসের নাম লেখ (১২টিই লিখতে হবে) — ০.৫ × ১২ = ৬", "itemType": "other", "component": null, "count": 1, "marksEach": 6, "total": 6 },
+    { "seq": 13, "label": "আমার পরিচয় — ছাঁচ দেওয়া ৫টি বাক্য পূরণ কর", "itemType": "descriptive", "component": null, "count": 5, "marksEach": 2, "total": 10 }
+  ],
+  "sections": [
+    {
+      "seq": 1,
+      "syllabusRowSeq": 1,
+      "kind": "WRITTEN",
+      "instructionBn": "খালি ঘরে হারিয়ে যাওয়া স্বরবর্ণ ও ব্যঞ্জনবর্ণগুলো লেখ",
+      "count": 5, "marksEach": 1, "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s1-1", "text": "অ  ___  ই  ___  উ", "answer": "আ, ঈ", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৫ · প্রশ্ন ১(ক)", "bookRef": "পৃষ্ঠা ১", "needsPicture": false, "note": null },
+        { "key": "s1-2", "text": "ক  ___  গ  ___  ঙ", "answer": "খ, ঘ", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৫ · প্রশ্ন ১(খ)", "bookRef": "পৃষ্ঠা ১", "needsPicture": false, "note": null },
+        { "key": "s1-3", "text": "ট  ___  ড  ___  ণ", "answer": "ঠ, ঢ", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৫ · প্রশ্ন ১(ঘ)", "bookRef": "পৃষ্ঠা ১", "needsPicture": false, "note": null },
+        { "key": "s1-4", "text": "প  ___  ব  ___  ম", "answer": "ফ, ভ", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৫ · প্রশ্ন ১(ঙ)", "bookRef": "পৃষ্ঠা ১", "needsPicture": false, "note": "ত–ন সারির বদলে প–ম সারি দেওয়া হয়েছে (বার্ষিকে পুরো বর্ণমালা)" },
+        { "key": "s1-5", "text": "ঋ  ___  ঐ  ___  ঔ", "answer": "এ, ও", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৫ · প্রশ্ন ১(গ)", "bookRef": "পৃষ্ঠা ১", "needsPicture": false, "note": "চ–ঞ সারির বদলে শেষের স্বরবর্ণের সারি দেওয়া হয়েছে" }
+      ]
+    },
+    {
+      "seq": 2,
+      "syllabusRowSeq": 2,
+      "kind": "WRITTEN",
+      "instructionBn": "নিচের বর্ণগুলো দিয়ে ৩টি করে শব্দ লেখ",
+      "count": 6, "marksEach": 3, "total": 18,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s2-1", "text": "গ =", "answer": "যেমন: গরু, গাছ, গাজর (বর্ণটি দিয়ে শুরু যেকোনো সঠিক শব্দ)", "marks": 3, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১", "bookRef": "পৃষ্ঠা ১৯, ৩০", "needsPicture": false, "note": null },
+        { "key": "s2-2", "text": "ট =", "answer": "যেমন: টিয়া, টগর, টমেটো", "marks": 3, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১", "bookRef": "পৃষ্ঠা ২১, ৩০", "needsPicture": false, "note": null },
+        { "key": "s2-3", "text": "প =", "answer": "যেমন: পাখি, পাতা, পান", "marks": 3, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১", "bookRef": "পৃষ্ঠা ২৪, ৩১", "needsPicture": false, "note": null },
+        { "key": "s2-4", "text": "র =", "answer": "যেমন: রাত, রাজা, রশি", "marks": 3, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১", "bookRef": "পৃষ্ঠা ২৫, ৩১", "needsPicture": false, "note": null },
+        { "key": "s2-5", "text": "স =", "answer": "যেমন: সাদা, সবুজ, সুতা", "marks": 3, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১", "bookRef": "পৃষ্ঠা ২৬, ৩২", "needsPicture": false, "note": null },
+        { "key": "s2-6", "text": "আ =", "answer": "যেমন: আম, আতা, আকাশ", "marks": 3, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৫ · প্রশ্ন ৬", "bookRef": "পৃষ্ঠা ১৫, ২৯", "needsPicture": false, "note": null }
+      ]
+    },
+    {
+      "seq": 3,
+      "syllabusRowSeq": 3,
+      "kind": "WRITTEN",
+      "instructionBn": "নিচের কার চিহ্নগুলো দিয়ে ৩টি করে শব্দ লেখ",
+      "count": 5, "marksEach": 3, "total": 15,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s3-1", "text": "া =", "answer": "যেমন: আম, জাম, কলা", "marks": 3, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৫ · প্রশ্ন ৩", "bookRef": "পৃষ্ঠা ১২", "needsPicture": false, "note": null },
+        { "key": "s3-2", "text": "ি =", "answer": "যেমন: বাড়ি, গাড়ি, ছবি", "marks": 3, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৫ · প্রশ্ন ৩", "bookRef": "পৃষ্ঠা ১২", "needsPicture": false, "note": null },
+        { "key": "s3-3", "text": "ু =", "answer": "যেমন: ফুল, মধু, চুল", "marks": 3, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৫ · প্রশ্ন ৩", "bookRef": "পৃষ্ঠা ১২", "needsPicture": false, "note": null },
+        { "key": "s3-4", "text": "ে =", "answer": "যেমন: ছেলে, মেয়ে, জেলে", "marks": 3, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৫ · প্রশ্ন ৩", "bookRef": "পৃষ্ঠা ১৪", "needsPicture": false, "note": null },
+        { "key": "s3-5", "text": "ো =", "answer": "যেমন: বোন, কোল, চোখ", "marks": 3, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৫ · প্রশ্ন ৩", "bookRef": "পৃষ্ঠা ১৪", "needsPicture": false, "note": null }
+      ]
+    },
+    {
+      "seq": 4,
+      "syllabusRowSeq": 4,
+      "kind": "WRITTEN",
+      "instructionBn": "এলোমেলো শব্দ সাজিয়ে লেখ",
+      "count": 1, "marksEach": 3, "total": 3,
+      "choiceNoteBn": null,
+      "splitMarks": true,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s4-1", "text": "ইখ", "answer": "খই", "marks": 0.5, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৫ · প্রশ্ন ২", "bookRef": "পৃষ্ঠা ৩৪", "needsPicture": false, "note": null },
+        { "key": "s4-2", "text": "জবুস", "answer": "সবুজ", "marks": 0.5, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৫ · প্রশ্ন ২", "bookRef": "পৃষ্ঠা ৩৪", "needsPicture": false, "note": null },
+        { "key": "s4-3", "text": "তিহা", "answer": "হাতি", "marks": 0.5, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৫ · প্রশ্ন ২", "bookRef": "পৃষ্ঠা ৩৪", "needsPicture": false, "note": null },
+        { "key": "s4-4", "text": "শইলি", "answer": "ইলিশ", "marks": 0.5, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৫ · প্রশ্ন ২", "bookRef": "পৃষ্ঠা ৩৪", "needsPicture": false, "note": null },
+        { "key": "s4-5", "text": "চমাশ", "answer": "চশমা", "marks": 0.5, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৫ · প্রশ্ন ২", "bookRef": "পৃষ্ঠা ৩৪", "needsPicture": false, "note": null },
+        { "key": "s4-6", "text": "মজা", "answer": "জামা", "marks": 0.5, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৫ · প্রশ্ন ২", "bookRef": "পৃষ্ঠা ৩৪", "needsPicture": false, "note": null }
+      ]
+    },
+    {
+      "seq": 5,
+      "syllabusRowSeq": 5,
+      "kind": "WRITTEN",
+      "instructionBn": "যুক্তবর্ণ ভেঙে লেখ ও ২টি করে শব্দ তৈরি কর",
+      "count": 3, "marksEach": 3, "total": 9,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s5-1", "text": "ল্ল =  ___ + ___", "answer": "ল + ল; যেমন: আল্লাহ, চল্লিশ", "marks": 3, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১০", "bookRef": "পৃষ্ঠা ৩৬", "needsPicture": false, "note": null },
+        { "key": "s5-2", "text": "ক্ষ =  ___ + ___", "answer": "ক + ষ; যেমন: শিক্ষা, দক্ষ", "marks": 3, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১০", "bookRef": "পৃষ্ঠা ৩৬", "needsPicture": false, "note": null },
+        { "key": "s5-3", "text": "ঞ্চ =  ___ + ___", "answer": "ঞ + চ; যেমন: পঞ্চাশ, অঞ্চল", "marks": 3, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১০", "bookRef": "পৃষ্ঠা ৩৬", "needsPicture": false, "note": null }
+      ]
+    },
+    {
+      "seq": 6,
+      "syllabusRowSeq": 6,
+      "kind": "WRITTEN",
+      "instructionBn": "বিপরীত শব্দ লেখ",
+      "count": 5, "marksEach": 1, "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s6-1", "text": "দেশ", "answer": "বিদেশ", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ২", "bookRef": "পৃষ্ঠা ৩৭", "needsPicture": false, "note": null },
+        { "key": "s6-2", "text": "কাছে", "answer": "দূরে", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ২", "bookRef": "পৃষ্ঠা ৩৭", "needsPicture": false, "note": null },
+        { "key": "s6-3", "text": "ফুল", "answer": "ফল", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ২", "bookRef": "পৃষ্ঠা ৩৭", "needsPicture": false, "note": null },
+        { "key": "s6-4", "text": "গ্রাম", "answer": "শহর", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ২", "bookRef": "পৃষ্ঠা ৩৭", "needsPicture": false, "note": null },
+        { "key": "s6-5", "text": "ডান", "answer": "বাম", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ২", "bookRef": "পৃষ্ঠা ৩৭", "needsPicture": false, "note": null }
+      ]
+    },
+    {
+      "seq": 7,
+      "syllabusRowSeq": 7,
+      "kind": "WRITTEN",
+      "instructionBn": "খালি ঘরে সঠিক বর্ণটি লিখে শব্দ গঠন কর",
+      "count": 5, "marksEach": 1, "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s7-1", "text": "শ ___ র", "answer": "হ (শহর)", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৪", "bookRef": "পৃষ্ঠা ৩৩", "needsPicture": false, "note": null },
+        { "key": "s7-2", "text": "শা ___ লা", "answer": "প (শাপলা)", "marks": 1, "source": "NEW", "sourceRef": null, "bookRef": "পৃষ্ঠা ৩৩", "needsPicture": false, "note": null },
+        { "key": "s7-3", "text": "___ শমা", "answer": "চ (চশমা)", "marks": 1, "source": "NEW", "sourceRef": null, "bookRef": "পৃষ্ঠা ৩৩", "needsPicture": false, "note": null },
+        { "key": "s7-4", "text": "ক ___ স", "answer": "ল (কলস)", "marks": 1, "source": "NEW", "sourceRef": null, "bookRef": "পৃষ্ঠা ৩৩, ৬", "needsPicture": false, "note": null },
+        { "key": "s7-5", "text": "ফ ___ ল", "answer": "স (ফসল)", "marks": 1, "source": "NEW", "sourceRef": null, "bookRef": "পৃষ্ঠা ৬", "needsPicture": false, "note": null }
+      ]
+    },
+    {
+      "seq": 8,
+      "syllabusRowSeq": 8,
+      "kind": "WRITTEN",
+      "instructionBn": "নিচের শব্দগুলো দিয়ে বাক্য গঠন কর",
+      "count": 5, "marksEach": 2, "total": 10,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s8-1", "text": "মা =", "answer": "যেমন: মা আমাকে ভালোবাসেন। (শব্দটি থাকা একটি সঠিক ছোট বাক্য, শেষে দাঁড়ি)", "marks": 2, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৩", "bookRef": "পৃষ্ঠা ৪৪", "needsPicture": false, "note": null },
+        { "key": "s8-2", "text": "মুসলিম =", "answer": "যেমন: আমি একজন মুসলিম।", "marks": 2, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৩", "bookRef": "পৃষ্ঠা ৪৪", "needsPicture": false, "note": null },
+        { "key": "s8-3", "text": "গরু =", "answer": "যেমন: গরু আমাদের দুধ দেয়।", "marks": 2, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৩", "bookRef": "পৃষ্ঠা ৪৫, ৪৭", "needsPicture": false, "note": null },
+        { "key": "s8-4", "text": "গাছ =", "answer": "যেমন: গাছে পাকা পাকা আম।", "marks": 2, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৩", "bookRef": "পৃষ্ঠা ৪৫, ৪৬", "needsPicture": false, "note": null },
+        { "key": "s8-5", "text": "ভোর =", "answer": "যেমন: রোজ ভোরে মোরগ ডাকে।", "marks": 2, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৩", "bookRef": "পৃষ্ঠা ৪৫, ৪৭", "needsPicture": false, "note": null }
+      ]
+    },
+    {
+      "seq": 9,
+      "syllabusRowSeq": 9,
+      "kind": "WRITTEN",
+      "instructionBn": "৫টি করে নাম লেখ",
+      "count": 1, "marksEach": 5, "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": true,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s9-1", "text": "ক) ৫টি ফুলের নাম লেখ।", "answer": "যেমন: শাপলা, গোলাপ, কদম, জবা, গাঁদা (প্রতিটি সঠিক নাম ০.৫)", "marks": 2.5, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৫ · প্রশ্ন ৭", "bookRef": "পৃষ্ঠা ৩৯", "needsPicture": false, "note": null },
+        { "key": "s9-2", "text": "খ) ৫টি মাছের নাম লেখ।", "answer": "যেমন: ইলিশ, কাতল, রুই, বোয়াল, পাবদা (প্রতিটি সঠিক নাম ০.৫)", "marks": 2.5, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৫ · প্রশ্ন ৮", "bookRef": "পৃষ্ঠা ৪১", "needsPicture": false, "note": null }
+      ]
+    },
+    {
+      "seq": 10,
+      "syllabusRowSeq": 10,
+      "kind": "WRITTEN",
+      "instructionBn": "চার দিকের নাম লেখ",
+      "count": 1, "marksEach": 2, "total": 2,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s10-1", "text": "চার দিকের নাম লেখ: ক) ___  খ) ___  গ) ___  ঘ) ___", "answer": "পূর্ব, পশ্চিম, উত্তর, দক্ষিণ (প্রতিটি ০.৫)", "marks": 2, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৫ · প্রশ্ন ১০", "bookRef": "পৃষ্ঠা ৪৩", "needsPicture": false, "note": null }
+      ]
+    },
+    {
+      "seq": 11,
+      "syllabusRowSeq": 11,
+      "kind": "WRITTEN",
+      "instructionBn": "বাংলা ৭ দিনের নাম লেখ",
+      "count": 7, "marksEach": 1, "total": 7,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s11-1", "text": "১ম দিন: ___", "answer": "শনিবার", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৫", "bookRef": "পৃষ্ঠা ৪২", "needsPicture": false, "note": "মোহাম্মদপুরে শনিবার ও বুধবার লেখা ছিল; এখানে ৭টি নামই শিক্ষার্থী লিখবে" },
+        { "key": "s11-2", "text": "২য় দিন: ___", "answer": "রবিবার", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৫", "bookRef": "পৃষ্ঠা ৪২", "needsPicture": false, "note": null },
+        { "key": "s11-3", "text": "৩য় দিন: ___", "answer": "সোমবার", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৫", "bookRef": "পৃষ্ঠা ৪২", "needsPicture": false, "note": null },
+        { "key": "s11-4", "text": "৪র্থ দিন: ___", "answer": "মঙ্গলবার", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৫", "bookRef": "পৃষ্ঠা ৪২", "needsPicture": false, "note": null },
+        { "key": "s11-5", "text": "৫ম দিন: ___", "answer": "বুধবার", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৫", "bookRef": "পৃষ্ঠা ৪২", "needsPicture": false, "note": null },
+        { "key": "s11-6", "text": "৬ষ্ঠ দিন: ___", "answer": "বৃহস্পতিবার", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৫", "bookRef": "পৃষ্ঠা ৪২", "needsPicture": false, "note": null },
+        { "key": "s11-7", "text": "৭ম দিন: ___", "answer": "শুক্রবার", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৫", "bookRef": "পৃষ্ঠা ৪২", "needsPicture": false, "note": null }
+      ]
+    },
+    {
+      "seq": 12,
+      "syllabusRowSeq": 12,
+      "kind": "WRITTEN",
+      "instructionBn": "বাংলা ১২ মাসের নাম লেখ",
+      "count": 1, "marksEach": 6, "total": 6,
+      "choiceNoteBn": null,
+      "splitMarks": true,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s12-1", "text": "১ম মাস: ___", "answer": "বৈশাখ", "marks": 0.5, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৮", "bookRef": "পৃষ্ঠা ৪৩", "needsPicture": false, "note": "মোহাম্মদপুরে ৪টি নাম লেখা ছিল; সিলেবাস অনুযায়ী ১২টিই শিক্ষার্থী লিখবে" },
+        { "key": "s12-2", "text": "২য় মাস: ___", "answer": "জ্যৈষ্ঠ", "marks": 0.5, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৮", "bookRef": "পৃষ্ঠা ৪৩", "needsPicture": false, "note": null },
+        { "key": "s12-3", "text": "৩য় মাস: ___", "answer": "আষাঢ়", "marks": 0.5, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৮", "bookRef": "পৃষ্ঠা ৪৩", "needsPicture": false, "note": null },
+        { "key": "s12-4", "text": "৪র্থ মাস: ___", "answer": "শ্রাবণ", "marks": 0.5, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৮", "bookRef": "পৃষ্ঠা ৪৩", "needsPicture": false, "note": null },
+        { "key": "s12-5", "text": "৫ম মাস: ___", "answer": "ভাদ্র", "marks": 0.5, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৮", "bookRef": "পৃষ্ঠা ৪৩", "needsPicture": false, "note": null },
+        { "key": "s12-6", "text": "৬ষ্ঠ মাস: ___", "answer": "আশ্বিন", "marks": 0.5, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৮", "bookRef": "পৃষ্ঠা ৪৩", "needsPicture": false, "note": null },
+        { "key": "s12-7", "text": "৭ম মাস: ___", "answer": "কার্তিক", "marks": 0.5, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৮", "bookRef": "পৃষ্ঠা ৪৩", "needsPicture": false, "note": null },
+        { "key": "s12-8", "text": "৮ম মাস: ___", "answer": "অগ্রহায়ণ", "marks": 0.5, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৮", "bookRef": "পৃষ্ঠা ৪৩", "needsPicture": false, "note": null },
+        { "key": "s12-9", "text": "৯ম মাস: ___", "answer": "পৌষ", "marks": 0.5, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৮", "bookRef": "পৃষ্ঠা ৪৩", "needsPicture": false, "note": null },
+        { "key": "s12-10", "text": "১০ম মাস: ___", "answer": "মাঘ", "marks": 0.5, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৮", "bookRef": "পৃষ্ঠা ৪৩", "needsPicture": false, "note": null },
+        { "key": "s12-11", "text": "১১শ মাস: ___", "answer": "ফাল্গুন", "marks": 0.5, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৮", "bookRef": "পৃষ্ঠা ৪৩", "needsPicture": false, "note": null },
+        { "key": "s12-12", "text": "১২শ মাস: ___", "answer": "চৈত্র", "marks": 0.5, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৮", "bookRef": "পৃষ্ঠা ৪৩", "needsPicture": false, "note": null }
+      ]
+    },
+    {
+      "seq": 13,
+      "syllabusRowSeq": 13,
+      "kind": "WRITTEN",
+      "instructionBn": "আমার পরিচয় — খালি জায়গা পূরণ করে বাক্যগুলো লেখ",
+      "count": 5, "marksEach": 2, "total": 10,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s13-1", "text": "আমার নাম ______________।", "answer": "শিক্ষার্থীর নিজের পুরো নাম, শেষে দাঁড়ি", "marks": 2, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১২", "bookRef": "পৃষ্ঠা ৫০", "needsPicture": false, "note": "মোহাম্মদপুরে খোলা ‘আমার পরিচয় লেখ’ ছিল; সিলেবাস অনুযায়ী ছাঁচ দেওয়া ৫টি বাক্য করা হয়েছে" },
+        { "key": "s13-2", "text": "আমার বাবার নাম ______________।", "answer": "বাবার নাম", "marks": 2, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১২", "bookRef": "পৃষ্ঠা ৫০", "needsPicture": false, "note": null },
+        { "key": "s13-3", "text": "আমার মায়ের নাম ______________।", "answer": "মায়ের নাম", "marks": 2, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১২", "bookRef": "পৃষ্ঠা ৫০", "needsPicture": false, "note": null },
+        { "key": "s13-4", "text": "আমার বয়স ______ বছর।", "answer": "নিজের বয়স (যেমন: ছয়/সাত)", "marks": 2, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১২", "bookRef": "পৃষ্ঠা ৫০", "needsPicture": false, "note": null },
+        { "key": "s13-5", "text": "আমি ______ শ্রেণিতে পড়ি।", "answer": "কেজি", "marks": 2, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১২", "bookRef": "পৃষ্ঠা ৫০", "needsPicture": false, "note": null }
+      ]
+    }
+  ],
+  "authorNotes": "KG Bangla, 13 sections = 13 syllabus rows, 100 marks. No Mohammadpur 2026 KG final exists, so the guides were MP Final 2025 KG (Q1 letter-words, Q2 opposites, Q3 sentences, Q4 fill-in, Q5 days, Q8 months, Q10 conjuncts, Q12 'Amar porichoy') and MP Half-yearly 2025 KG (Q1 missing letters, Q2 jumbled words, Q3 kar words, Q6 letter-words, Q7/Q8 flower and fish names, Q10 directions). Choices the owner may want to check: (1) Row 2 letters: used গ ট প র স from MP Final Q1 and আ from MP HY Q6; skipped MP's ঢ য় ৎ because a KG child can hardly find three words for them. (2) Row 7 '(বর্ণ)': most MP Final Q4 blanks need a letter plus a kar (লা_ম = টি, হ_ণ = রি), so only শ_র was kept; the other four are single-letter blanks taken from book pages 33 and 6. (3) Row 9: set ক = flowers, খ = fish (split 2.5 + 2.5); swap to fruits / colours / vegetables if preferred. (4) Rows 11 and 12: all names left blank for the child (MP pre-filled some), as the syllabus says all 12 months must be written. (5) Duration '২ ঘণ্টা' is taken from the MP KG paper; the Sylhet syllabus does not state one. Book page numbers are the printed page numbers of KG (Bengali) 2026."
+}

@@ -1,0 +1,244 @@
+{
+  "schema": "scd.exam-paper-draft/v1",
+  "key": "annual-2026-L0-ENG",
+  "exam": { "term": "ANNUAL", "year": 2026, "nameBn": "বার্ষিক পরীক্ষা ২০২৬" },
+  "classLevel": 0,
+  "subject": "ENG",
+  "titleBn": "বার্ষিক পরীক্ষা ২০২৬ · কেজি · ইংরেজি",
+  "fullMarks": 100,
+  "durationBn": "২ ঘণ্টা",
+  "syllabusRows": [
+    { "seq": 1, "label": "Write three words with the given letter (6 letters)", "itemType": "short_answer", "component": null, "count": 9, "marksEach": 3, "total": 27 },
+    { "seq": 2, "label": "Fill in the missing letters — 0.5 × 10 = 5", "itemType": "fill_blank", "component": null, "count": 1, "marksEach": 5, "total": 5 },
+    { "seq": 3, "label": "Rearrange the jumbled letters to make words", "itemType": "other", "component": null, "count": 5, "marksEach": 1, "total": 5 },
+    { "seq": 4, "label": "Write the English meaning of the Bangla words", "itemType": "short_answer", "component": null, "count": 8, "marksEach": 1, "total": 8 },
+    { "seq": 5, "label": "Write the Bangla meaning of the English words", "itemType": "short_answer", "component": null, "count": 8, "marksEach": 1, "total": 8 },
+    { "seq": 6, "label": "Write the opposite", "itemType": "short_answer", "component": null, "count": 5, "marksEach": 1, "total": 5 },
+    { "seq": 7, "label": "Fill in the blanks with a / an", "itemType": "fill_blank", "component": null, "count": 5, "marksEach": 1, "total": 5 },
+    { "seq": 8, "label": "Name five — set A (Animal/Bird Names) and set B (fruits / vegetables)", "itemType": "other", "component": null, "count": 2, "marksEach": 5, "total": 10 },
+    { "seq": 9, "label": "Write the days of the week", "itemType": "other", "component": null, "count": 7, "marksEach": 1, "total": 7 },
+    { "seq": 10, "label": "Write the months of the year", "itemType": "other", "component": null, "count": 12, "marksEach": 1, "total": 12 },
+    { "seq": 11, "label": "Myself — complete the six framed sentences", "itemType": "descriptive", "component": null, "count": 4, "marksEach": 2, "total": 8 }
+  ],
+  "sections": [
+    {
+      "seq": 1,
+      "syllabusRowSeq": 1,
+      "kind": "WRITTEN",
+      "instructionBn": "Write three words that start with the given letters",
+      "count": 9, "marksEach": 3, "total": 27,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s1-1", "text": "M =", "answer": "e.g. Mango, Moon, Milk (any correct word starting with M)", "marks": 3, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ (docx সংস্করণ) · প্রশ্ন ১", "bookRef": "page 13", "needsPicture": false, "note": null },
+        { "key": "s1-2", "text": "O =", "answer": "e.g. Ox, Owl, Orange", "marks": 3, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১", "bookRef": "page 14", "needsPicture": false, "note": null },
+        { "key": "s1-3", "text": "P =", "answer": "e.g. Pen, Pot, Parrot", "marks": 3, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১", "bookRef": "page 14", "needsPicture": false, "note": "একই ধরনের প্রশ্ন, বর্ণ বদলে P দেওয়া হয়েছে (M–Z সিলেবাস)" },
+        { "key": "s1-4", "text": "R =", "answer": "e.g. Rat, Rose, Rope", "marks": 3, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১", "bookRef": "page 15", "needsPicture": false, "note": null },
+        { "key": "s1-5", "text": "S =", "answer": "e.g. Sun, Sky, Sheep", "marks": 3, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১", "bookRef": "page 16", "needsPicture": false, "note": "একই ধরনের প্রশ্ন, বর্ণ বদলে S দেওয়া হয়েছে (M–Z সিলেবাস)" },
+        { "key": "s1-6", "text": "T =", "answer": "e.g. Tiger, Tree, Tomato", "marks": 3, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ (docx সংস্করণ) · প্রশ্ন ১", "bookRef": "page 16", "needsPicture": false, "note": null },
+        { "key": "s1-7", "text": "W =", "answer": "e.g. Wall, Water, Watch", "marks": 3, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১", "bookRef": "page 18", "needsPicture": false, "note": null },
+        { "key": "s1-8", "text": "Z =", "answer": "e.g. Zoo, Zebra, Zero", "marks": 3, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১", "bookRef": "page 19", "needsPicture": false, "note": null },
+        { "key": "s1-9", "text": "H =", "answer": "e.g. Hen, Hut, Hajj", "marks": 3, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১", "bookRef": "page 10", "needsPicture": false, "note": "A–L রিভিশন অংশ থেকে" }
+      ]
+    },
+    {
+      "seq": 2,
+      "syllabusRowSeq": 2,
+      "kind": "WRITTEN",
+      "instructionBn": "Fill in the missing letters to make words",
+      "count": 1, "marksEach": 5, "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": true,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s2-1", "text": "Mi __ k", "answer": "l (Milk)", "marks": 0.5, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৫(a)", "bookRef": "page 55", "needsPicture": false, "note": null },
+        { "key": "s2-2", "text": "Yo __ k", "answer": "l (Yolk)", "marks": 0.5, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৫(b)", "bookRef": "page 54", "needsPicture": false, "note": null },
+        { "key": "s2-3", "text": "Wat __ r", "answer": "e (Water)", "marks": 0.5, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৫(c)", "bookRef": "page 54", "needsPicture": false, "note": null },
+        { "key": "s2-4", "text": "She __ p", "answer": "e (Sheep)", "marks": 0.5, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৫(d)", "bookRef": "page 54", "needsPicture": false, "note": null },
+        { "key": "s2-5", "text": "Ro __ e", "answer": "s (Rose)", "marks": 0.5, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৫(e)", "bookRef": "page 54", "needsPicture": false, "note": null },
+        { "key": "s2-6", "text": "T __ ee", "answer": "r (Tree)", "marks": 0.5, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৫(f)", "bookRef": "page 55", "needsPicture": false, "note": null },
+        { "key": "s2-7", "text": "Qur __ n", "answer": "a (Quran)", "marks": 0.5, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৫(g)", "bookRef": "page 54", "needsPicture": false, "note": null },
+        { "key": "s2-8", "text": "C __ w", "answer": "o (Cow)", "marks": 0.5, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৫(h)", "bookRef": "page 55", "needsPicture": false, "note": null },
+        { "key": "s2-9", "text": "Wa __ ch", "answer": "t (Watch)", "marks": 0.5, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৫(i)", "bookRef": "page 55", "needsPicture": false, "note": null },
+        { "key": "s2-10", "text": "Und __ r", "answer": "e (Under)", "marks": 0.5, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৫(j)", "bookRef": "page 54", "needsPicture": false, "note": null }
+      ]
+    },
+    {
+      "seq": 3,
+      "syllabusRowSeq": 3,
+      "kind": "WRITTEN",
+      "instructionBn": "Rearrange the jumbled letters to make words",
+      "count": 5, "marksEach": 1, "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s3-1", "text": "vsae", "answer": "vase", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ২", "bookRef": "page 57", "needsPicture": false, "note": null },
+        { "key": "s3-2", "text": "taebl", "answer": "table", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ২", "bookRef": "page 57", "needsPicture": false, "note": null },
+        { "key": "s3-3", "text": "clod", "answer": "cold", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ২", "bookRef": "page 58", "needsPicture": false, "note": null },
+        { "key": "s3-4", "text": "loni", "answer": "lion", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ২", "bookRef": "page 57", "needsPicture": false, "note": null },
+        { "key": "s3-5", "text": "ornage", "answer": "orange", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ২", "bookRef": "page 58", "needsPicture": false, "note": null }
+      ]
+    },
+    {
+      "seq": 4,
+      "syllabusRowSeq": 4,
+      "kind": "WRITTEN",
+      "instructionBn": "Write the English meaning of the words",
+      "count": 8, "marksEach": 1, "total": 8,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s4-1", "text": "লেবু =", "answer": "Lemon", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৩", "bookRef": "page 36", "needsPicture": false, "note": null },
+        { "key": "s4-2", "text": "কালো =", "answer": "Black", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৩", "bookRef": "page 34", "needsPicture": false, "note": null },
+        { "key": "s4-3", "text": "ঘড়ি =", "answer": "Watch", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৩", "bookRef": "page 38", "needsPicture": false, "note": null },
+        { "key": "s4-4", "text": "জানালা =", "answer": "Window", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৩", "bookRef": "page 34", "needsPicture": false, "note": null },
+        { "key": "s4-5", "text": "লিচু =", "answer": "Lichi", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৩", "bookRef": "page 36", "needsPicture": false, "note": null },
+        { "key": "s4-6", "text": "আলু =", "answer": "Potato", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৩", "bookRef": "page 36", "needsPicture": false, "note": null },
+        { "key": "s4-7", "text": "নতুন =", "answer": "New", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৩", "bookRef": "page 38", "needsPicture": false, "note": null },
+        { "key": "s4-8", "text": "রশি =", "answer": "Rope", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৩", "bookRef": "page 38", "needsPicture": false, "note": null }
+      ]
+    },
+    {
+      "seq": 5,
+      "syllabusRowSeq": 5,
+      "kind": "WRITTEN",
+      "instructionBn": "Write the Bangla meaning of the words",
+      "count": 8, "marksEach": 1, "total": 8,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s5-1", "text": "Sky =", "answer": "আকাশ", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৬", "bookRef": "page 48", "needsPicture": false, "note": null },
+        { "key": "s5-2", "text": "Umbrella =", "answer": "ছাতা", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৬", "bookRef": "page 46", "needsPicture": false, "note": null },
+        { "key": "s5-3", "text": "Owl =", "answer": "পেঁচা", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৬", "bookRef": "page 50", "needsPicture": false, "note": null },
+        { "key": "s5-4", "text": "Zoo =", "answer": "চিড়িয়াখানা", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৬", "bookRef": "page 48", "needsPicture": false, "note": null },
+        { "key": "s5-5", "text": "Nest =", "answer": "পাখির বাসা", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৬", "bookRef": "page 50", "needsPicture": false, "note": null },
+        { "key": "s5-6", "text": "Leaf =", "answer": "পাতা", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৬", "bookRef": "page 46", "needsPicture": false, "note": null },
+        { "key": "s5-7", "text": "Rose =", "answer": "গোলাপ", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৬", "bookRef": "page 50", "needsPicture": false, "note": null },
+        { "key": "s5-8", "text": "Water =", "answer": "পানি", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৬", "bookRef": "page 46", "needsPicture": false, "note": null }
+      ]
+    },
+    {
+      "seq": 6,
+      "syllabusRowSeq": 6,
+      "kind": "WRITTEN",
+      "instructionBn": "Write the opposite of the given words",
+      "count": 5, "marksEach": 1, "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s6-1", "text": "Open", "answer": "Close", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৪", "bookRef": "page 62", "needsPicture": false, "note": null },
+        { "key": "s6-2", "text": "In", "answer": "Out", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৪", "bookRef": "page 62", "needsPicture": false, "note": null },
+        { "key": "s6-3", "text": "Day", "answer": "Night", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৪", "bookRef": "page 62", "needsPicture": false, "note": null },
+        { "key": "s6-4", "text": "Good", "answer": "Bad", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৪", "bookRef": "page 62", "needsPicture": false, "note": null },
+        { "key": "s6-5", "text": "New", "answer": "Old", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৪", "bookRef": "page 62", "needsPicture": false, "note": null }
+      ]
+    },
+    {
+      "seq": 7,
+      "syllabusRowSeq": 7,
+      "kind": "WRITTEN",
+      "instructionBn": "Fill in the blanks with a / an",
+      "count": 5, "marksEach": 1, "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s7-1", "text": "___ box", "answer": "a", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৭", "bookRef": "page 26", "needsPicture": false, "note": "‘A/An বৃত্ত কর’ থেকে শূন্যস্থান পূরণে বদলানো হয়েছে" },
+        { "key": "s7-2", "text": "___ apple", "answer": "an", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৭", "bookRef": "page 25", "needsPicture": false, "note": "শূন্যস্থান পূরণে বদলানো" },
+        { "key": "s7-3", "text": "___ star", "answer": "a", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৭", "bookRef": "page 25", "needsPicture": false, "note": "শূন্যস্থান পূরণে বদলানো" },
+        { "key": "s7-4", "text": "___ umbrella", "answer": "an", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৭", "bookRef": "page 25", "needsPicture": false, "note": "শূন্যস্থান পূরণে বদলানো" },
+        { "key": "s7-5", "text": "___ egg", "answer": "an", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৭", "bookRef": "page 25", "needsPicture": false, "note": "‘eagle’ বইয়ের ২৫–২৭ পৃষ্ঠায় নেই, তাই ‘egg’ দেওয়া হয়েছে" }
+      ]
+    },
+    {
+      "seq": 8,
+      "syllabusRowSeq": 8,
+      "kind": "WRITTEN",
+      "instructionBn": "Write the names of five",
+      "count": 2, "marksEach": 5, "total": 10,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s8-1", "text": "A) Write the names of five animals.", "answer": "e.g. Lion, Tiger, Cow, Goat, Cat (1 mark each)", "marks": 5, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৯", "bookRef": null, "needsPicture": false, "note": null },
+        { "key": "s8-2", "text": "B) Write the names of five vegetables.", "answer": "e.g. Potato, Carrot, Tomato, Onion, Brinjal (1 mark each)", "marks": 5, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৮", "bookRef": null, "needsPicture": false, "note": null }
+      ]
+    },
+    {
+      "seq": 9,
+      "syllabusRowSeq": 9,
+      "kind": "WRITTEN",
+      "instructionBn": "Write the names of the days of the week",
+      "count": 7, "marksEach": 1, "total": 7,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s9-1", "text": "1. ________", "answer": "Saturday", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১০", "bookRef": "page 106", "needsPicture": false, "note": "মোহাম্মদপুরে Saturday ও Thursday লেখা ছিল; এখানে ৭টিই শিক্ষার্থী লিখবে" },
+        { "key": "s9-2", "text": "2. ________", "answer": "Sunday", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১০", "bookRef": "page 106", "needsPicture": false, "note": null },
+        { "key": "s9-3", "text": "3. ________", "answer": "Monday", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১০", "bookRef": "page 106", "needsPicture": false, "note": null },
+        { "key": "s9-4", "text": "4. ________", "answer": "Tuesday", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১০", "bookRef": "page 106", "needsPicture": false, "note": null },
+        { "key": "s9-5", "text": "5. ________", "answer": "Wednesday", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১০", "bookRef": "page 106", "needsPicture": false, "note": null },
+        { "key": "s9-6", "text": "6. ________", "answer": "Thursday", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১০", "bookRef": "page 106", "needsPicture": false, "note": null },
+        { "key": "s9-7", "text": "7. ________", "answer": "Friday", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১০", "bookRef": "page 106", "needsPicture": false, "note": null }
+      ]
+    },
+    {
+      "seq": 10,
+      "syllabusRowSeq": 10,
+      "kind": "WRITTEN",
+      "instructionBn": "Write the names of the twelve months of the year",
+      "count": 12, "marksEach": 1, "total": 12,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s10-1", "text": "1. ________", "answer": "January", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১১", "bookRef": "page 107", "needsPicture": false, "note": "মোহাম্মদপুরে ৪টি মাস লেখা ছিল; এখানে ১২টিই শিক্ষার্থী লিখবে" },
+        { "key": "s10-2", "text": "2. ________", "answer": "February", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১১", "bookRef": "page 107", "needsPicture": false, "note": null },
+        { "key": "s10-3", "text": "3. ________", "answer": "March", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১১", "bookRef": "page 107", "needsPicture": false, "note": null },
+        { "key": "s10-4", "text": "4. ________", "answer": "April", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১১", "bookRef": "page 107", "needsPicture": false, "note": null },
+        { "key": "s10-5", "text": "5. ________", "answer": "May", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১১", "bookRef": "page 107", "needsPicture": false, "note": null },
+        { "key": "s10-6", "text": "6. ________", "answer": "June", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১১", "bookRef": "page 107", "needsPicture": false, "note": null },
+        { "key": "s10-7", "text": "7. ________", "answer": "July", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১১", "bookRef": "page 107", "needsPicture": false, "note": null },
+        { "key": "s10-8", "text": "8. ________", "answer": "August", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১১", "bookRef": "page 107", "needsPicture": false, "note": null },
+        { "key": "s10-9", "text": "9. ________", "answer": "September", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১১", "bookRef": "page 107", "needsPicture": false, "note": null },
+        { "key": "s10-10", "text": "10. ________", "answer": "October", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১১", "bookRef": "page 107", "needsPicture": false, "note": null },
+        { "key": "s10-11", "text": "11. ________", "answer": "November", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১১", "bookRef": "page 107", "needsPicture": false, "note": null },
+        { "key": "s10-12", "text": "12. ________", "answer": "December", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১১", "bookRef": "page 107", "needsPicture": false, "note": null }
+      ]
+    },
+    {
+      "seq": 11,
+      "syllabusRowSeq": 11,
+      "kind": "WRITTEN",
+      "instructionBn": "Myself — complete the sentences",
+      "count": 4, "marksEach": 2, "total": 8,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s11-1", "text": "My name is ______________.", "answer": "The child's own name, full stop at the end", "marks": 2, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১২ (Myself)", "bookRef": "page 110", "needsPicture": false, "note": "খোলা ‘Myself লেখ’ থেকে ছাঁচ দেওয়া বাক্যে বদলানো হয়েছে" },
+        { "key": "s11-2", "text": "I am ______ years old.", "answer": "six / seven", "marks": 2, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১২ (Myself)", "bookRef": "page 110", "needsPicture": false, "note": null },
+        { "key": "s11-3", "text": "I read in class ______.", "answer": "KG", "marks": 2, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১২ (Myself)", "bookRef": "page 110", "needsPicture": false, "note": null },
+        { "key": "s11-4", "text": "My father's name is ______________.", "answer": "The father's name", "marks": 2, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১২ (Myself)", "bookRef": "page 110", "needsPicture": false, "note": null }
+      ]
+    }
+  ],
+  "authorNotes": "KG English, 11 sections = 11 syllabus rows, 100 written marks. No Mohammadpur 2026 KG final exists; the main guide was MP Final 2025 KG English (PDF), and almost every item is reused from it because its words sit exactly on the Sylhet book pages: missing letters (p54-55), jumbled words (p57-58), Bangla-to-English (p34-39), English-to-Bangla (p46-51), opposites (p62-64). Note: the file 'KG-Eng 2025.docx' in the MP Half-yearly 2025 folder is actually a Final 2025 variant (header says 'Final Examination 2025'); used it only for letters M and T and cited it as the docx version. Doubts for the owner: (1) Row 1 label says '6 letters' but the published count is 9 x 3 = 27; I followed the count and gave 9 letters (M O P R S T W Z from M-Z, plus H as A-L revision). If 6 was meant, the marks table needs fixing. (2) Row 11 label says 'six framed sentences' but the count is 4 x 2 = 8; I gave 4 sentences (name, age, class, father's name). (3) Row 7: MP's 'circle A/An' turned into fill-in blanks; 'eagle' replaced by 'egg' because eagle is not on the a/an pages. (4) Row 8: set A = animals, set B = vegetables (MP's choice); swap to birds / fruits if preferred. (5) Oral 10, dictation 5 and handwriting 2 are outside the 100 per the syllabus, so no oral section was added. Oral prompts, if wanted: question-answer (page 100), months, seasons, five flower names, five bird names. (6) Duration '2 hours' taken from the MP paper. Book page numbers are printed page numbers of KG - ENGLISH (2026)."
+}

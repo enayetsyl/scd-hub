@@ -73,7 +73,11 @@ export type StoredFileKind =
    *  out at print time, never served whole) and a rendered sample / answer page. */
   | "activity_bank_pdf"
   | "activity_answer_pdf"
-  | "activity_page";
+  | "activity_page"
+  /** Another branch's past paper (D-#1030, docs/prd-exam-paper-bank.md §4): a rendered page and the
+   *  original upload (docx/pdf). Staff read via exam_papers:view_reference / manage_reference. */
+  | "reference_paper_page"
+  | "reference_paper_source";
 
 export const STORED_FILE_KINDS: readonly StoredFileKind[] = [
   "hw_question",
@@ -103,6 +107,8 @@ export const STORED_FILE_KINDS: readonly StoredFileKind[] = [
   "activity_bank_pdf",
   "activity_answer_pdf",
   "activity_page",
+  "reference_paper_page",
+  "reference_paper_source",
 ];
 
 /** The chat-attachment subset (M-4) — the read gate routes these to chat. */

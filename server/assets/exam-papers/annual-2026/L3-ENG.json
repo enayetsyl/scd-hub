@@ -1,0 +1,231 @@
+{
+  "schema": "scd.exam-paper-draft/v1",
+  "key": "annual-2026-L3-ENG",
+  "exam": { "term": "ANNUAL", "year": 2026, "nameBn": "বার্ষিক পরীক্ষা ২০২৬" },
+  "classLevel": 3,
+  "subject": "ENG",
+  "titleBn": "বার্ষিক পরীক্ষা ২০২৬ · তৃতীয় শ্রেণি · ইংরেজি",
+  "fullMarks": 100,
+  "durationBn": "৩ ঘণ্টা",
+  "syllabusRows": [
+    { "seq": 1, "label": "Seen passage — Short Questions", "itemType": "short_answer", "component": null, "count": 5, "marksEach": 1, "total": 5 },
+    { "seq": 2, "label": "Seen passage — True / False + correction", "itemType": "true_false", "component": null, "count": 5, "marksEach": 1, "total": 5 },
+    { "seq": 3, "label": "Noun Identification & Gender (masculine / feminine / common / neuter)", "itemType": "other", "component": null, "count": 10, "marksEach": 1, "total": 10 },
+    { "seq": 4, "label": "Article (use of 'the' and 'a', 'an', with exceptions)", "itemType": "fill_blank", "component": null, "count": 5, "marksEach": 1, "total": 5 },
+    { "seq": 5, "label": "Adjective", "itemType": "other", "component": null, "count": 5, "marksEach": 1, "total": 5 },
+    { "seq": 6, "label": "Pronoun", "itemType": "other", "component": null, "count": 5, "marksEach": 1, "total": 5 },
+    { "seq": 7, "label": "Adverb", "itemType": "other", "component": null, "count": 5, "marksEach": 1, "total": 5 },
+    { "seq": 8, "label": "Right Form of Verbs (Present Simple and Present Continuous)", "itemType": "fill_blank", "component": null, "count": 5, "marksEach": 1, "total": 5 },
+    { "seq": 9, "label": "Preposition", "itemType": "fill_blank", "component": null, "count": 10, "marksEach": 1, "total": 10 },
+    { "seq": 10, "label": "Conjunction", "itemType": "fill_blank", "component": null, "count": 5, "marksEach": 1, "total": 5 },
+    { "seq": 11, "label": "Punctuation & Capitalization", "itemType": "other", "component": null, "count": 10, "marksEach": 1, "total": 10 },
+    { "seq": 12, "label": "Dialogue Writing", "itemType": "descriptive", "component": null, "count": 1, "marksEach": 10, "total": 10 },
+    { "seq": 13, "label": "Paragraph Writing", "itemType": "descriptive", "component": null, "count": 1, "marksEach": 10, "total": 10 },
+    { "seq": 14, "label": "Word Meaning", "itemType": "short_answer", "component": null, "count": 10, "marksEach": 1, "total": 10 }
+  ],
+  "sections": [
+    {
+      "seq": 1, "syllabusRowSeq": 1, "kind": "WRITTEN",
+      "instructionBn": "Read the passage and answer the following questions.",
+      "count": 5, "marksEach": 1, "total": 5,
+      "choiceNoteBn": null, "splitMarks": false,
+      "stimulusMd": "**Water pollution**\n\nShihab and Kaniz are walking to school along the river. At one place, they stop to see something. Some people are bathing in the river. Some are washing their clothes. A man throws some rubbish into the river. Shihab and Kaniz become upset. They request the man, “Please, don’t throw the rubbish into the river. It pollutes the water.”\n\nShihab and Kaniz also see some polythene bags, plastic bottles and some other things floating on the river. They start talking about it.\n\nKaniz: Look, Shihab, the water is so dirty!\nShihab: Yes, Kaniz. We can’t bathe in this polluted water.\nKaniz: Fish also can’t swim easily.\nShihab: Yes. Sometimes, the fish gets caught into polythene bags. It puts them in danger.\nKaniz: You are right. We should save them.\nShihab: Sure. We must keep the water clean.\n\nKaniz and Shihab reach their school and share this story with their friends. They discuss how to keep the water clean and safe.",
+      "matchRight": null,
+      "items": [
+        { "key": "s1-1", "text": "Where are Shihab and Kaniz walking?", "answer": "They are walking to school along the river.", "marks": 1, "source": "NEW", "bookRef": "EFT Unit 7, Lesson 1 (Water pollution), p. 98", "needsPicture": false, "note": null },
+        { "key": "s1-2", "text": "What does the man throw into the river?", "answer": "He throws some rubbish into the river.", "marks": 1, "source": "NEW", "bookRef": "EFT Unit 7, Lesson 1, p. 98", "needsPicture": false, "note": null },
+        { "key": "s1-3", "text": "What things do they see floating on the river?", "answer": "They see polythene bags, plastic bottles and some other things floating on the river.", "marks": 1, "source": "NEW", "bookRef": "EFT Unit 7, Lesson 1, p. 98–99 (activity F-c)", "needsPicture": false, "note": null },
+        { "key": "s1-4", "text": "Why is the fish in danger?", "answer": "Sometimes the fish gets caught in polythene bags. It puts them in danger.", "marks": 1, "source": "NEW", "bookRef": "EFT Unit 7, Lesson 1, p. 98–99 (activity F-d)", "needsPicture": false, "note": null },
+        { "key": "s1-5", "text": "Who do Shihab and Kaniz share the story with?", "answer": "They share the story with their friends at school.", "marks": 1, "source": "NEW", "bookRef": "EFT Unit 7, Lesson 1, p. 98", "needsPicture": false, "note": null }
+      ]
+    },
+    {
+      "seq": 2, "syllabusRowSeq": 2, "kind": "WRITTEN",
+      "instructionBn": "Read the passage in question 1 again. Write True if the statement is correct. If the statement is false, write False and then give the correct answer.",
+      "count": 5, "marksEach": 1, "total": 5,
+      "choiceNoteBn": null, "splitMarks": false, "stimulusMd": null, "matchRight": null,
+      "items": [
+        { "key": "s2-1", "text": "Shihab and Kaniz are walking to the market.", "answer": "False. Shihab and Kaniz are walking to school.", "marks": 1, "source": "NEW", "bookRef": "EFT Unit 7, Lesson 1, p. 98", "needsPicture": false, "note": null },
+        { "key": "s2-2", "text": "Some people are washing their clothes in the river.", "answer": "True", "marks": 1, "source": "NEW", "bookRef": "EFT Unit 7, Lesson 1, p. 98", "needsPicture": false, "note": null },
+        { "key": "s2-3", "text": "Shihab and Kaniz become happy when the man throws rubbish into the river.", "answer": "False. Shihab and Kaniz become upset.", "marks": 1, "source": "NEW", "bookRef": "EFT Unit 7, Lesson 1, p. 98", "needsPicture": false, "note": null },
+        { "key": "s2-4", "text": "Fish can swim easily in the dirty water.", "answer": "False. Fish can’t swim easily in the dirty water.", "marks": 1, "source": "NEW", "bookRef": "EFT Unit 7, Lesson 1, activity D(e), p. 99", "needsPicture": false, "note": null },
+        { "key": "s2-5", "text": "Shihab and Kaniz discuss with their friends how to keep the water clean and safe.", "answer": "True", "marks": 1, "source": "NEW", "bookRef": "EFT Unit 7, Lesson 1, p. 98", "needsPicture": false, "note": null }
+      ]
+    },
+    {
+      "seq": 3, "syllabusRowSeq": 3, "kind": "WRITTEN",
+      "instructionBn": "Find the noun in each sentence and write its gender (masculine / feminine / common / neuter).",
+      "count": 10, "marksEach": 1, "total": 10,
+      "choiceNoteBn": null, "splitMarks": false, "stimulusMd": null, "matchRight": null,
+      "items": [
+        { "key": "s3-1", "text": "The teacher helps us.", "answer": "teacher — common gender", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৭", "bookRef": "EFT Unit 5, Lesson 2 (Grammar focus: Noun), p. 69", "needsPicture": false, "note": "১ নম্বরের জন্য বাক্যে একটিই বিশেষ্য রাখা হয়েছে" },
+        { "key": "s3-2", "text": "My sister is very kind.", "answer": "sister — feminine gender", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৫ · প্রশ্ন ৭(খ)", "bookRef": "EFT Unit 5, Lesson 2, p. 69", "needsPicture": false, "note": "বাক্য ছোট করে একটিই বিশেষ্য রাখা হয়েছে" },
+        { "key": "s3-3", "text": "My uncle is happy.", "answer": "uncle — masculine gender", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৭", "bookRef": "EFT Unit 5, Lesson 2, p. 69", "needsPicture": false, "note": "মূল বাক্য ‘My aunt gave me the mirror’; লিঙ্গের ভারসাম্যের জন্য aunt → uncle, একটিই বিশেষ্য" },
+        { "key": "s3-4", "text": "The table is brown.", "answer": "table — neuter gender", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৭", "bookRef": "EFT Unit 5, Lesson 2, p. 69", "needsPicture": false, "note": "একটিই বিশেষ্য রাখা হয়েছে" },
+        { "key": "s3-5", "text": "My friend is clever.", "answer": "friend — common gender", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৭", "bookRef": "EFT Unit 5, Lesson 2, p. 69", "needsPicture": false, "note": "একটিই বিশেষ্য রাখা হয়েছে" },
+        { "key": "s3-6", "text": "The hen is sitting quietly.", "answer": "hen — feminine gender", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৭", "bookRef": "EFT Unit 5, Lesson 2, p. 69", "needsPicture": false, "note": "‘on the eggs’ বাদ দিয়ে একটিই বিশেষ্য" },
+        { "key": "s3-7", "text": "The boy is running fast.", "answer": "boy — masculine gender", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৫ · প্রশ্ন ৭(গ)", "bookRef": "EFT Unit 5, Lesson 2, p. 69", "needsPicture": false, "note": "একটিই বিশেষ্য রাখা হয়েছে" },
+        { "key": "s3-8", "text": "The mirror is clean.", "answer": "mirror — neuter gender", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৭", "bookRef": "EFT Unit 5, Lesson 2, p. 69", "needsPicture": false, "note": "একটিই বিশেষ্য রাখা হয়েছে" },
+        { "key": "s3-9", "text": "I am a student.", "answer": "student — common gender", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৫ · প্রশ্ন ৭(ঙ)", "bookRef": "EFT Unit 5, Lesson 2, p. 69", "needsPicture": false, "note": "‘of class three’ বাদ দিয়ে একটিই বিশেষ্য" },
+        { "key": "s3-10", "text": "The mother is smiling.", "answer": "mother — feminine gender", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৫ · প্রশ্ন ৭(ক)", "bookRef": "EFT Unit 5, Lesson 2, p. 69", "needsPicture": false, "note": "একটিই বিশেষ্য রাখা হয়েছে" }
+      ]
+    },
+    {
+      "seq": 4, "syllabusRowSeq": 4, "kind": "WRITTEN",
+      "instructionBn": "Fill in the blanks with suitable articles (a, an, the).",
+      "count": 5, "marksEach": 1, "total": 5,
+      "choiceNoteBn": null, "splitMarks": false, "stimulusMd": null, "matchRight": null,
+      "items": [
+        { "key": "s4-1", "text": "Osman saw ___ owl in the zoo.", "answer": "an", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৬", "bookRef": "EFT Unit 5 (Osman’s village life)", "needsPicture": false, "note": "দুটি শূন্যস্থানের বদলে একটি" },
+        { "key": "s4-2", "text": "Mother gave me ___ one taka note.", "answer": "a (exception: ‘one’ begins with a ‘w’ sound)", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৬", "bookRef": "Syllabus: article exceptions", "needsPicture": false, "note": "দুটি শূন্যস্থানের বদলে একটি" },
+        { "key": "s4-3", "text": "___ Quran is our holy book.", "answer": "The", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৬", "bookRef": "Syllabus: use of ‘the’", "needsPicture": false, "note": "দ্বিতীয় শূন্যস্থান (a holy book) বাদ" },
+        { "key": "s4-4", "text": "___ Padma is a big river.", "answer": "The", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৫ · প্রশ্ন ৬(ঙ)", "bookRef": "Syllabus: use of ‘the’", "needsPicture": false, "note": "দ্বিতীয় শূন্যস্থান বাদ" },
+        { "key": "s4-5", "text": "Rafi is ___ honest boy.", "answer": "an (exception: the ‘h’ in ‘honest’ is silent)", "marks": 1, "source": "NEW", "bookRef": "Syllabus: article exceptions", "needsPicture": false, "note": null }
+      ]
+    },
+    {
+      "seq": 5, "syllabusRowSeq": 5, "kind": "WRITTEN",
+      "instructionBn": "Put suitable adjectives in the blanks.",
+      "count": 5, "marksEach": 1, "total": 5,
+      "choiceNoteBn": null, "splitMarks": false,
+      "stimulusMd": "Word Bank: bright, heavy, green, kind, red",
+      "matchRight": null,
+      "items": [
+        { "key": "s5-1", "text": "The grass is ________.", "answer": "green", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৭", "bookRef": null, "needsPicture": false, "note": null },
+        { "key": "s5-2", "text": "An elephant carries a ________ load.", "answer": "heavy", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৭", "bookRef": null, "needsPicture": false, "note": null },
+        { "key": "s5-3", "text": "She bought a ________ rose.", "answer": "red", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৭", "bookRef": null, "needsPicture": false, "note": null },
+        { "key": "s5-4", "text": "The moon is ________ at night.", "answer": "bright", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৭", "bookRef": null, "needsPicture": false, "note": null },
+        { "key": "s5-5", "text": "My teacher is a ________ person.", "answer": "kind", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৭", "bookRef": null, "needsPicture": false, "note": null }
+      ]
+    },
+    {
+      "seq": 6, "syllabusRowSeq": 6, "kind": "WRITTEN",
+      "instructionBn": "Fill in the blanks with appropriate pronouns.",
+      "count": 5, "marksEach": 1, "total": 5,
+      "choiceNoteBn": null, "splitMarks": false, "stimulusMd": null, "matchRight": null,
+      "items": [
+        { "key": "s6-1", "text": "Omar is a good boy. ______ goes to the mosque every day.", "answer": "He", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৬", "bookRef": "EFT Unit 5, Lesson 2 (Grammar focus: Pronoun), p. 69", "needsPicture": false, "note": null },
+        { "key": "s6-2", "text": "Bilal and Omar are friends. ______ read the Quran together.", "answer": "They", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৬", "bookRef": "EFT Unit 5, Lesson 2, p. 69", "needsPicture": false, "note": "‘the’ যোগ (read the Quran)" },
+        { "key": "s6-3", "text": "Omar's father gave ______ a prayer mat.", "answer": "him", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৬", "bookRef": "EFT Unit 5, Lesson 2, p. 69", "needsPicture": false, "note": null },
+        { "key": "s6-4", "text": "Omar showed the mat to Bilal. Bilal said, \"______ is very nice.\"", "answer": "It", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৬", "bookRef": "EFT Unit 5, Lesson 2, p. 69", "needsPicture": false, "note": null },
+        { "key": "s6-5", "text": "Omar thanked his father and said, \"______ are so thoughtful!\"", "answer": "You", "marks": 1, "source": "MP2026_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৬", "bookRef": "EFT Unit 5, Lesson 2, p. 69", "needsPicture": false, "note": "মূলে ‘mother’ ছিল, কিন্তু জায়নামাজ দিয়েছিলেন বাবা — তাই ‘father’" }
+      ]
+    },
+    {
+      "seq": 7, "syllabusRowSeq": 7, "kind": "WRITTEN",
+      "instructionBn": "Fill in the blanks using the appropriate adverbs from the box.",
+      "count": 5, "marksEach": 1, "total": 5,
+      "choiceNoteBn": null, "splitMarks": false,
+      "stimulusMd": "Word Bank: kindly, slowly, happily, carefully, politely",
+      "matchRight": null,
+      "items": [
+        { "key": "s7-1", "text": "The old turtle walked ________ across the garden.", "answer": "slowly", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৯", "bookRef": null, "needsPicture": false, "note": null },
+        { "key": "s7-2", "text": "The children played ________ in the playground.", "answer": "happily", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৯", "bookRef": null, "needsPicture": false, "note": null },
+        { "key": "s7-3", "text": "You should handle the glass vase ________.", "answer": "carefully", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৯", "bookRef": null, "needsPicture": false, "note": null },
+        { "key": "s7-4", "text": "Tarin spoke ________ to her teacher.", "answer": "politely", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৯", "bookRef": null, "needsPicture": false, "note": null },
+        { "key": "s7-5", "text": "The kind doctor treated the patient ________.", "answer": "kindly", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৯", "bookRef": null, "needsPicture": false, "note": null }
+      ]
+    },
+    {
+      "seq": 8, "syllabusRowSeq": 8, "kind": "WRITTEN",
+      "instructionBn": "Fill in the blanks with the right form of verbs (Present Simple or Present Continuous).",
+      "count": 5, "marksEach": 1, "total": 5,
+      "choiceNoteBn": null, "splitMarks": false, "stimulusMd": null, "matchRight": null,
+      "items": [
+        { "key": "s8-1", "text": "Every day, I ______ (wake) up early in the morning.", "answer": "wake", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৪(ক)", "bookRef": "EFT Unit 8, Lesson 2 (Grammar focus: Simple present), p. 121", "needsPicture": false, "note": null },
+        { "key": "s8-2", "text": "My mother ______ (make) breakfast for the family every morning.", "answer": "makes", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৪(ঘ)", "bookRef": "EFT Unit 8, Lesson 2, p. 121", "needsPicture": false, "note": "‘every morning’ যোগ করে Present Simple স্পষ্ট করা হয়েছে" },
+        { "key": "s8-3", "text": "Rani ______ (go) to school with Porshi every day.", "answer": "goes", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৪(ঙ)", "bookRef": "EFT Unit 5, Lesson 2, p. 68", "needsPicture": false, "note": "কর্তা ‘I’ থেকে ‘Rani’ (বইয়ের চরিত্র), যাতে -es যোগ পরীক্ষা হয়" },
+        { "key": "s8-4", "text": "Look! The grasshopper ______ (dance) in the sun.", "answer": "is dancing", "marks": 1, "source": "NEW", "bookRef": "EFT Unit 8, Lesson 1, p. 109; Grammar focus (Continuous tenses), p. 120", "needsPicture": false, "note": null },
+        { "key": "s8-5", "text": "Now the ant ______ (carry) an ear of corn to her house.", "answer": "is carrying", "marks": 1, "source": "NEW", "bookRef": "EFT Unit 8, Lesson 1, p. 110; Grammar focus (Continuous tenses), p. 120", "needsPicture": false, "note": null }
+      ]
+    },
+    {
+      "seq": 9, "syllabusRowSeq": 9, "kind": "WRITTEN",
+      "instructionBn": "Fill in the blanks with appropriate prepositions from the box. A word may be used more than once.",
+      "count": 10, "marksEach": 1, "total": 10,
+      "choiceNoteBn": null, "splitMarks": false,
+      "stimulusMd": "Word Bank: to, on, in, under, with, along, from",
+      "matchRight": null,
+      "items": [
+        { "key": "s9-1", "text": "The book is ________ the table.", "answer": "on", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১০", "bookRef": null, "needsPicture": false, "note": "শব্দ-বাক্সে along ও from যোগ হয়েছে" },
+        { "key": "s9-2", "text": "She goes ________ school every morning.", "answer": "to", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১০", "bookRef": null, "needsPicture": false, "note": null },
+        { "key": "s9-3", "text": "The cat is sleeping ________ the bed.", "answer": "under (‘on’ is also acceptable)", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১০", "bookRef": null, "needsPicture": false, "note": "এখানে ‘on’-ও শুদ্ধ — দুটোই গ্রহণযোগ্য" },
+        { "key": "s9-4", "text": "The fish swim ________ the water.", "answer": "in", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১০", "bookRef": null, "needsPicture": false, "note": null },
+        { "key": "s9-5", "text": "Nusair plays ________ his friends in the park.", "answer": "with", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১০", "bookRef": "EFT Unit 6, Lesson 1, p. 84", "needsPicture": false, "note": null },
+        { "key": "s9-6", "text": "I woke up early ________ the morning.", "answer": "in", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৫(ক)", "bookRef": null, "needsPicture": false, "note": "অনুচ্ছেদ থেকে আলাদা বাক্য করা হয়েছে" },
+        { "key": "s9-7", "text": "We walked slowly ________ the path.", "answer": "along", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৫(গ)", "bookRef": "EFT Unit 7, Lesson 1 (‘walking to school along the river’), p. 98", "needsPicture": false, "note": "অনুচ্ছেদ থেকে আলাদা বাক্য করা হয়েছে" },
+        { "key": "s9-8", "text": "I drank water ________ a small well.", "answer": "from", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৫(চ)", "bookRef": null, "needsPicture": false, "note": "অনুচ্ছেদ থেকে আলাদা বাক্য করা হয়েছে" },
+        { "key": "s9-9", "text": "My grandmother cooked food ________ the kitchen.", "answer": "in", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৫(ছ)", "bookRef": null, "needsPicture": false, "note": "অনুচ্ছেদ থেকে আলাদা বাক্য করা হয়েছে" },
+        { "key": "s9-10", "text": "I returned home ________ great happiness.", "answer": "with", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৫(ঞ)", "bookRef": null, "needsPicture": false, "note": "অনুচ্ছেদ থেকে আলাদা বাক্য; ‘and fresh mind’ বাদ" }
+      ]
+    },
+    {
+      "seq": 10, "syllabusRowSeq": 10, "kind": "WRITTEN",
+      "instructionBn": "Fill in the blanks with appropriate conjunctions.",
+      "count": 5, "marksEach": 1, "total": 5,
+      "choiceNoteBn": null, "splitMarks": false, "stimulusMd": null, "matchRight": null,
+      "items": [
+        { "key": "s10-1", "text": "I wanted to read storybooks, ______ my friend wanted comics.", "answer": "but", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৬(ক)", "bookRef": null, "needsPicture": false, "note": "অনুচ্ছেদের বাক্যগুলো আলাদা করে দেওয়া হয়েছে" },
+        { "key": "s10-2", "text": "The library was quiet, ______ we could concentrate.", "answer": "so", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৬(খ)", "bookRef": null, "needsPicture": false, "note": null },
+        { "key": "s10-3", "text": "I borrowed a book, ______ my friend borrowed two.", "answer": "and (‘but’ also acceptable)", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৬(গ)", "bookRef": null, "needsPicture": false, "note": null },
+        { "key": "s10-4", "text": "I wanted to ask the librarian a question, ______ she was busy.", "answer": "but", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৬(ঘ)", "bookRef": null, "needsPicture": false, "note": null },
+        { "key": "s10-5", "text": "I returned home ______ did my homework.", "answer": "and", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৬(ঙ)", "bookRef": null, "needsPicture": false, "note": "মূলে ‘home, ______ did’ — কমা বাদ" }
+      ]
+    },
+    {
+      "seq": 11, "syllabusRowSeq": 11, "kind": "WRITTEN",
+      "instructionBn": "Rewrite the following sentences using capital letters and punctuation marks.",
+      "count": 10, "marksEach": 1, "total": 10,
+      "choiceNoteBn": null, "splitMarks": false, "stimulusMd": null, "matchRight": null,
+      "items": [
+        { "key": "s11-1", "text": "we live in dhaka", "answer": "We live in Dhaka.", "marks": 1, "source": "MP2026_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১১", "bookRef": "EFT Unit 5, Lesson 1 (Grammar focus: capital letters), p. 66", "needsPicture": false, "note": "মান ২ থেকে ১" },
+        { "key": "s11-2", "text": "is it monday", "answer": "Is it Monday?", "marks": 1, "source": "MP2026_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১১", "bookRef": "EFT Unit 8, Lesson 1 (Grammar focus: punctuation), p. 113", "needsPicture": false, "note": "মান ২ থেকে ১" },
+        { "key": "s11-3", "text": "can you help me find rahims lost cat", "answer": "Can you help me find Rahim’s lost cat?", "marks": 1, "source": "MP2026_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১১", "bookRef": "EFT Unit 8, Lesson 1, p. 113", "needsPicture": false, "note": "মান ২ থেকে ১" },
+        { "key": "s11-4", "text": "tanim asif and rahat play cricket every saturday", "answer": "Tanim, Asif and Rahat play cricket every Saturday.", "marks": 1, "source": "MP2026_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১১", "bookRef": "EFT Unit 8, Lesson 1, p. 113", "needsPicture": false, "note": "মান ২ থেকে ১" },
+        { "key": "s11-5", "text": "how amazing this garden is", "answer": "How amazing this garden is!", "marks": 1, "source": "MP2026_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১১", "bookRef": "EFT Unit 8, Lesson 1, p. 113", "needsPicture": false, "note": "মান ২ থেকে ১" },
+        { "key": "s11-6", "text": "i like to eat mango in summer", "answer": "I like to eat mango in summer.", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৯(ক)", "bookRef": "EFT Unit 5, Lesson 1, p. 66", "needsPicture": false, "note": null },
+        { "key": "s11-7", "text": "where is your book", "answer": "Where is your book?", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৯(খ)", "bookRef": "EFT Unit 8, Lesson 1, p. 113", "needsPicture": false, "note": null },
+        { "key": "s11-8", "text": "my brothers name is abdur rahim he lives in dhaka", "answer": "My brother’s name is Abdur Rahim. He lives in Dhaka.", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৯(গ)", "bookRef": "EFT Unit 5, Lesson 1, p. 66", "needsPicture": false, "note": null },
+        { "key": "s11-9", "text": "she said i am happy", "answer": "She said, “I am happy.”", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৯(ঘ)", "bookRef": "EFT Unit 8, Lesson 1, p. 113", "needsPicture": false, "note": "মূলে ‘I’ বড় হাতে ছাপা ছিল; ছোট হাতের ‘i’ করা হয়েছে যাতে বড় হাতের অক্ষরও পরীক্ষা হয়" },
+        { "key": "s11-10", "text": "the sun is big bright and hot", "answer": "The sun is big, bright and hot.", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৯(ঙ)", "bookRef": "EFT Unit 8, Lesson 1, p. 113", "needsPicture": false, "note": null }
+      ]
+    },
+    {
+      "seq": 12, "syllabusRowSeq": 12, "kind": "WRITTEN",
+      "instructionBn": "Write a dialogue.",
+      "count": 1, "marksEach": 10, "total": 10,
+      "choiceNoteBn": null, "splitMarks": false, "stimulusMd": null, "matchRight": null,
+      "items": [
+        { "key": "s12-1", "text": "Write a dialogue about Islamic greetings and conversation with the shopkeeper for buying necessary things.", "answer": "Points to look for: opens with ‘Assalamu Alaikum’ and the reply ‘Wa Alaikumus Salam’; asks for the things needed (e.g. rice, pulses, soap, pencils); asks the price; shopkeeper gives the price; pays and takes the change; says ‘JazakAllahu khairan’ / thanks; closes with Salam. About 8–10 exchanges, correct names on each line, correct punctuation.", "marks": 10, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · শেষ প্রশ্ন (ডায়ালগ)", "bookRef": "Syllabus dialogue topic 2", "needsPicture": false, "note": null }
+      ]
+    },
+    {
+      "seq": 13, "syllabusRowSeq": 13, "kind": "WRITTEN",
+      "instructionBn": "Write a paragraph.",
+      "count": 1, "marksEach": 10, "total": 10,
+      "choiceNoteBn": null, "splitMarks": false, "stimulusMd": null, "matchRight": null,
+      "items": [
+        { "key": "s13-1", "text": "Write a paragraph about “The Importance of Water”.", "answer": "Points to look for: water is called life; humans, animals and plants need water to live; main sources — oceans, rivers, rain, ponds; we use water for drinking, cooking, bathing and cleaning; plants take water from the soil, farmers use water to grow crops; polluted water is dangerous, so we must not throw rubbish into water; we should save water (turn off the tap). About 8–10 sentences.", "marks": 10, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্যারাগ্রাফ প্রশ্ন", "bookRef": "EFT Unit 7, Lessons 2–3, pp. 101–106", "needsPicture": false, "note": null }
+      ]
+    },
+    {
+      "seq": 14, "syllabusRowSeq": 14, "kind": "WRITTEN",
+      "instructionBn": "Write the meanings of the following words.",
+      "count": 10, "marksEach": 1, "total": 10,
+      "choiceNoteBn": null, "splitMarks": false, "stimulusMd": null, "matchRight": null,
+      "items": [
+        { "key": "s14-1", "text": "Enjoy", "answer": "উপভোগ করা (to like something)", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · Word meaning", "bookRef": "EFT Unit 6, Lesson 1, p. 84 & p. 88", "needsPicture": false, "note": null },
+        { "key": "s14-2", "text": "Dirty", "answer": "নোংরা (not clean)", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · Word meaning", "bookRef": "EFT Unit 6, Lesson 1, p. 84 & p. 88", "needsPicture": false, "note": null },
+        { "key": "s14-3", "text": "Germs", "answer": "জীবাণু (very small living things that cause illness)", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · Word meaning", "bookRef": "EFT Unit 6, Lesson 1, p. 84", "needsPicture": false, "note": null },
+        { "key": "s14-4", "text": "Properly", "answer": "সঠিকভাবে (correctly)", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · Word meaning", "bookRef": "EFT Unit 6, Lesson 1, p. 84", "needsPicture": false, "note": null },
+        { "key": "s14-5", "text": "Sick", "answer": "অসুস্থ (ill)", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · Word meaning", "bookRef": "EFT Unit 6, Lesson 1, p. 84", "needsPicture": false, "note": null },
+        { "key": "s14-6", "text": "Notice", "answer": "লক্ষ করা (to see)", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · Word meaning", "bookRef": "EFT Unit 6, Lesson 1 (‘notices’), p. 84", "needsPicture": false, "note": null },
+        { "key": "s14-7", "text": "Habit", "answer": "অভ্যাস (something we do regularly)", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · Word meaning", "bookRef": "EFT Unit 6, Lesson 1, p. 84", "needsPicture": false, "note": null },
+        { "key": "s14-8", "text": "Healthy", "answer": "সুস্থ (well, not sick)", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · Word meaning", "bookRef": "EFT Unit 6, Lesson 1, p. 84", "needsPicture": false, "note": null },
+        { "key": "s14-9", "text": "Regularly", "answer": "নিয়মিত (every time / every day)", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · Word meaning", "bookRef": "EFT Unit 6, Lesson 1, p. 84", "needsPicture": false, "note": null },
+        { "key": "s14-10", "text": "Forget", "answer": "ভুলে যাওয়া (not remember)", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · Word meaning", "bookRef": "EFT Unit 6, Lesson 1 (‘forgets’), p. 84", "needsPicture": false, "note": null }
+      ]
+    }
+  ],
+  "authorNotes": "Scope: English for Today Units 4-8. The Mohammadpur Final 2026 seen passage (Nusair washing hands, Unit 6) is in the book but is NOT one of the four seen passages Sylhet published, so rows 1-2 use 'Water pollution' (Unit 7, Lesson 1), one of the listed passages, with new questions (no MP paper uses a listed passage). Row 1 and row 2 share that one passage; it is printed once in row 1. Reused from MP 2026 as-is: adjectives, pronouns (one story slip fixed: the father, not the mother, gave the prayer mat), adverbs, the 10 word meanings (they come from Unit 6, so they are in scope), the dialogue topic (shopkeeper) and the paragraph (Importance of Water). MP 2026's 'rewrite in Simple Present' and 'rearrange words' questions were not used because Sylhet has no such row. Noun & gender, articles, conjunctions and the other half of prepositions and punctuation came from MP Final 2025 and the Half-yearly papers; noun sentences were cut down to one noun each so each is worth exactly 1 mark. Right form of verbs: 3 Present Simple (MP 2025) + 2 Present Continuous (new, from the Ant and Grasshopper story), as the syllabus asks for both. Word meanings: answer key gives the Bangla meaning plus a simple English meaning — please tell teachers which one you expect. Two items accept two answers (cat 'under/on' the bed; 'and/but' in conjunction 3) — noted in the key. Duration '৩ ঘণ্টা' copied from the brief example; MP's paper is 2 hours 30 minutes — please confirm. Names in sentences (Omar, Bilal, Tarin, Rahim, Tanim, Asif, Rahat, Rafi) come from the MP papers or are generic — check none matches a Sylhet Class 3 child."
+}

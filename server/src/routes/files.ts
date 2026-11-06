@@ -84,6 +84,13 @@ import {
   validateClassBookUpload,
 } from "../modules/class-books/services/ClassBookService";
 import {
+  REFERENCE_PAPER_ERRORS_BN,
+  REFERENCE_PAPER_MAX_BYTES,
+  assertReferencePaperFileReadAccess,
+  startReferencePaperUpload,
+  validateReferenceUpload,
+} from "../modules/exam-papers/services/ReferencePaperService";
+import {
   STORYBOOK_ERRORS_BN,
   STORYBOOK_MAX_PDF_BYTES,
   assertStorybookFileReadAccess,
@@ -1219,6 +1226,70 @@ filesRouter.post("/class-book", parseClassBookUpload, async (req: Request, res: 
 });
 
 // ---------------------------------------------------------------------------
+// POST /files/reference-paper — another branch's past paper (D-#1030). Multipart `file`
+// (the PDF the reader shows, required) + optional `source` (the original, usually .docx) +
+// fields term, year, classLevel?, subject, title. exam_papers:manage_reference, ≤ 40 MB each.
+// Answers once the row exists; pages render in the background (PROCESSING → READY).
+// ---------------------------------------------------------------------------
+
+const uploadReferencePaper = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: REFERENCE_PAPER_MAX_BYTES + 1 },
+});
+
+const parseReferencePaperUpload: express.RequestHandler = (req, res, next) => {
+  uploadReferencePaper.fields([{ name: "file", maxCount: 1 }, { name: "source", maxCount: 1 }])(req, res, (err: unknown) => {
+    if (err) {
+      res.status(422).json({ error: REFERENCE_PAPER_ERRORS_BN.tooLarge });
+      return;
+    }
+    next();
+  });
+};
+
+filesRouter.post("/reference-paper", parseReferencePaperUpload, async (req: Request, res: Response) => {
+  const ctx = buildContext(req, res);
+  if (!ctx.auth || !callerHasPermission(ctx.auth, "exam_papers:manage_reference")) {
+    res.status(403).json({ error: FILE_ERRORS_BN.forbidden });
+    return;
+  }
+  const files = (req.files ?? {}) as Record<string, Express.Multer.File[]>;
+  const pdf = files.file?.[0];
+  const source = files.source?.[0] ?? null;
+  if (!pdf) {
+    res.status(400).json({ error: "file field missing" });
+    return;
+  }
+  const rejection = validateReferenceUpload(pdf.mimetype, pdf.size, source?.mimetype ?? null, source?.size ?? null);
+  if (rejection) {
+    res.status(422).json({ error: rejection });
+    return;
+  }
+  const rawClass = req.body?.classLevel;
+  try {
+    const { paper, done } = await startReferencePaperUpload({
+      actorId: ctx.auth.userId,
+      term: String(req.body?.term ?? ""),
+      year: Number(req.body?.year),
+      classLevel: rawClass === undefined || rawClass === "" || rawClass === "null" ? null : Number(rawClass),
+      subject: String(req.body?.subject ?? ""),
+      title: String(req.body?.title ?? ""),
+      pdf: pdf.buffer,
+      pdfName: decodeUploadName(pdf.originalname),
+      source: source ? { data: source.buffer, name: decodeUploadName(source.originalname), mime: source.mimetype } : null,
+    });
+    done.catch((e) => console.warn("reference paper render crashed:", (e as Error)?.message));
+    res.json({ paperId: paper.id, status: paper.status });
+  } catch (e) {
+    if ((e as Error)?.constructor === Error) {
+      res.status(422).json({ error: (e as Error).message });
+      return;
+    }
+    throw e;
+  }
+});
+
+// ---------------------------------------------------------------------------
 // POST /files/storybook — a storybook PDF (SB-1, D-#986). library:edit, PDF ≤ 60 MB.
 // Fields: seriesId + optional seriesNo, titleBn, titleEn, previewPages ("3,4,16") → a new
 // DRAFT book; or titleId (+ previewPages) → replace that book's cover / previews. Only the
@@ -1392,6 +1463,10 @@ filesRouter.get("/:id", async (req: Request, res: Response) => {
       // A class book page (D-#870): the book's own read gate — staff by class_books:view,
       // a guardian only for a READY, visible book of their child's class.
       await assertClassBookFileReadAccess(ctx, file._id.toString());
+    } else if (file.kind === "reference_paper_page" || file.kind === "reference_paper_source") {
+      // Another branch's past paper (D-#1030): staff with exam_papers:view_reference /
+      // manage_reference, and only for a file that belongs to a paper.
+      await assertReferencePaperFileReadAccess(ctx, file._id.toString());
     } else if (file.kind === "storybook_page") {
       // A storybook cover / preview (SB-1, D-#986): staff by library:view, a guardian only
       // for a published book of their child's age band.
