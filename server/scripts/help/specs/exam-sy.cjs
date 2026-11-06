@@ -58,7 +58,9 @@ async function teacher2(h) {
 async function principal(h) {
   const P = await L.login(h, "principal@help.test");
   await L.menuShots(h, P, ["exam-sy-publish"], SY, "অনুমোদন");
-  await h.shot(P, "exam-sy-publish", 1, [{ text: "প্রকাশ করুন" }, { text: "ফেরত দেওয়ার কারণ" }]);
+  await h.shot(P, "exam-sy-publish", 1, [{ text: "প্র" }]);
+  await h.tap(P, "প্র", 2500);
+  await h.shot(P, "exam-sy-publish", 2, [{ text: "প্রকাশ করুন" }, { text: "ফেরত দেওয়ার কারণ" }]);
   await h.tap(P, "প্রকাশ করুন", 3000);
   await P.context().close();
 }

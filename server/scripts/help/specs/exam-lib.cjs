@@ -51,7 +51,9 @@ async function fillDateAfter(page, label, value, { last = false } = {}) {
 /** Pick an option in an inline Select: tap its shown value/placeholder, then the option. */
 async function pick(h, page, shown, option) {
   await h.tap(page, shown, 900);
-  await h.tap(page, option, 1200);
+  // The open list sits below the field, so the option is the LAST match (the field may
+  // already show the same text).
+  await h.tap(page, typeof option === "string" ? { text: option, last: true } : option, 1200);
 }
 
 /** Go back one screen: tap the header's ← (top-left; the topmost screen's header wins the hit). */

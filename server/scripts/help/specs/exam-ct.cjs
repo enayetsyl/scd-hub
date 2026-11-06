@@ -12,7 +12,12 @@ const CT = "ক্লাস টেস্ট";
 
 async function teacher(h) {
   const T = await L.login(h, "teacher@help.test");
-  await L.menuShots(h, T, ["exam-ct-register", "exam-ct-change-date", "exam-ct-enter-marks"], TRACKERS, CT);
+  await L.menuShots(h, T, ["exam-ct-register", "exam-ct-change-date", "exam-ct-enter-marks", "exam-ct-view-results"], TRACKERS, CT);
+  // ফলাফল দেখুন of বাংলা টেস্ট ১ (all marks in): the second printed test in the list.
+  await h.shot(T, "exam-ct-view-results", 1, [{ css: 'text="ফলাফল দেখুন" >> nth=1' }]);
+  await h.tap(T, { css: 'text="ফলাফল দেখুন" >> nth=1' }, 3500);
+  await h.shot(T, "exam-ct-view-results", 2, [{ re: "/২০ · পাস$" }]);
+  await L.back(T, 2500);
 
   // Hub: the buttons and the tests' own actions.
   await h.shot(T, "exam-ct-request", 0, [{ text: "নতুন প্রিন্ট অনুরোধ", minY: 80 }]);
@@ -110,6 +115,7 @@ async function principal(h) {
   await h.tap(P, "ফেরত পাঠান", 1200);
   await h.shot(P, "exam-ct-approve", 2, [{ text: "অনুমোদন ও প্রকাশ" }, { text: "ফেরত পাঠান" }, { text: "ফেরত পাঠানোর কারণ" }]);
   await h.tap(P, "অনুমোদন ও প্রকাশ", 4000);
+  await h.shot(P, "exam-ct-unpublish", 0, [{ text: "সব প্রকাশ বাতিল" }, { text: "প্রকাশ বাতিল" }]);
   await P.context().close();
 }
 
