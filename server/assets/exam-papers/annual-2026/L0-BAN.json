@@ -6,7 +6,7 @@
   "subject": "BAN",
   "titleBn": "বার্ষিক পরীক্ষা ২০২৬ · কেজি · বাংলা",
   "fullMarks": 100,
-  "durationBn": "২ ঘণ্টা",
+  "durationBn": "৩ ঘণ্টা",
   "syllabusRows": [
     { "seq": 1, "label": "হারিয়ে যাওয়া স্বরবর্ণ ও ব্যঞ্জনবর্ণ লেখ", "itemType": "fill_blank", "component": null, "count": 5, "marksEach": 1, "total": 5 },
     { "seq": 2, "label": "বর্ণ দিয়ে ৩টি করে শব্দ লেখ (৬টি বর্ণ)", "itemType": "short_answer", "component": null, "count": 6, "marksEach": 3, "total": 18 },

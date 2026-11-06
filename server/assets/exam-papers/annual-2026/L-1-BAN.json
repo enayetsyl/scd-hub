@@ -6,7 +6,7 @@
   "subject": "BAN",
   "titleBn": "বার্ষিক পরীক্ষা ২০২৬ · নার্সারি · বাংলা",
   "fullMarks": 100,
-  "durationBn": "১ ঘণ্টা ৩০ মিনিট",
+  "durationBn": "৩ ঘণ্টা",
   "syllabusRows": [
     { "seq": 1, "label": "সম্পূর্ণ বর্ণমালা ক্রমে লেখ — স্বরবর্ণ ১১ + ব্যঞ্জনবর্ণ ৩৯", "itemType": "other", "component": null, "count": 1, "marksEach": 15, "total": 15 },
     { "seq": 2, "label": "খালি ঘরে সঠিক বর্ণ লেখ", "itemType": "fill_blank", "component": null, "count": 5, "marksEach": 1, "total": 5 },

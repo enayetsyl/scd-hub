@@ -6,7 +6,7 @@
   "subject": "MATH",
   "titleBn": "বার্ষিক পরীক্ষা ২০২৬ · প্রথম শ্রেণি · গণিত",
   "fullMarks": 100,
-  "durationBn": "২ ঘণ্টা",
+  "durationBn": "৩ ঘণ্টা",
   "syllabusRows": [
     { "seq": 1, "label": "সঠিক উত্তর নির্বাচন কর", "itemType": "mcq", "component": null, "count": 6, "marksEach": 1, "total": 6 },
     { "seq": 2, "label": "অঙ্কে লেখ", "itemType": "other", "component": null, "count": 6, "marksEach": 1, "total": 6 },

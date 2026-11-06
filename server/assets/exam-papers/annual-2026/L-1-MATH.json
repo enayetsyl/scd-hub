@@ -6,7 +6,7 @@
   "subject": "MATH",
   "titleBn": "বার্ষিক পরীক্ষা ২০২৬ · নার্সারি · গণিত",
   "fullMarks": 100,
-  "durationBn": "২ ঘণ্টা",
+  "durationBn": "৩ ঘণ্টা",
   "syllabusRows": [
     { "seq": 1, "label": "সংখ্যা লেখ — বাংলা", "itemType": "other", "component": null, "count": 15, "marksEach": 1, "total": 15 },
     { "seq": 2, "label": "সংখ্যা লেখ — English", "itemType": "other", "component": null, "count": 15, "marksEach": 1, "total": 15 },
