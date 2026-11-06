@@ -270,7 +270,7 @@ describe("enterResult", () => {
     );
   });
 
-  test("ABSENT: $unset marks, derives null percent/pass", async () => {
+  test("ABSENT: $unset marks AND comments, derives null percent/pass", async () => {
     const res = await enterResult({
       testId: TEST_OID.toString(),
       studentId: oid().toString(),
@@ -279,11 +279,25 @@ describe("enterResult", () => {
       now: onExamDay,
     });
     expect(res).toMatchObject({ status: "ABSENT", marks: null, percent: null, pass: null });
+    // An edit PRESENT→ABSENT must not leave the old comments behind (2026-11-06).
     expect(mockResUpsert).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ $unset: { marks: "" } }),
+      expect.objectContaining({ $unset: { marks: "", weakness: "", teacherAction: "", guardianAction: "" } }),
       expect.anything(),
     );
+    const update = mockResUpsert.mock.calls[0][1] as { $set: Record<string, unknown> };
+    expect(update.$set).not.toHaveProperty("weakness");
+    expect(update.$set).not.toHaveProperty("teacherAction");
+    expect(update.$set).not.toHaveProperty("guardianAction");
+  });
+
+  test("ABSENT rejects any comment; blank/whitespace comments are allowed (2026-11-06)", async () => {
+    const base = { testId: TEST_OID.toString(), studentId: oid().toString(), status: "ABSENT", actorId: TEACHER_ID, now: onExamDay };
+    await expect(enterResult({ ...base, weakness: "MCQ-তে ভুল" })).rejects.toThrow(/মন্তব্য লেখা যাবে না/);
+    await expect(enterResult({ ...base, teacherAction: "অনুশীলন" })).rejects.toThrow(/মন্তব্য লেখা যাবে না/);
+    await expect(enterResult({ ...base, guardianAction: "বাসায় পড়ান" })).rejects.toThrow(/মন্তব্য লেখা যাবে না/);
+    expect(mockResUpsert).not.toHaveBeenCalled();
+    await expect(enterResult({ ...base, weakness: "   ", teacherAction: "" })).resolves.toMatchObject({ status: "ABSENT" });
   });
 
   test("rejects marks > totalMarks and negative marks", async () => {

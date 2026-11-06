@@ -151,6 +151,13 @@ export async function enterResult(input: EnterResultInput): Promise<ClassTestRes
       throw new ClassTestResultError("an ABSENT student carries no marks");
     }
     marks = undefined;
+    // An absent child sat no paper, so there is nothing to comment on — the
+    // weakness / teacher / guardian notes would describe an exam that never
+    // happened (owner report 2026-11-06: comments saved on অনুপস্থিত rows).
+    const hasText = (v: string | null | undefined): boolean => !!v && v.trim().length > 0;
+    if (hasText(input.weakness) || hasText(input.teacherAction) || hasText(input.guardianAction)) {
+      throw new ClassTestResultError("অনুপস্থিত শিক্ষার্থীর জন্য মন্তব্য লেখা যাবে না");
+    }
   }
 
   const testOid = new Types.ObjectId(input.testId);
@@ -175,18 +182,26 @@ export async function enterResult(input: EnterResultInput): Promise<ClassTestRes
     );
   }
 
-  // Upsert one row per (student × exam). $unset marks on ABSENT so an edit
-  // PRESENT→ABSENT does not leave a stale score behind. publishedVersion stays
-  // on its existing value (default 0; the CT-3 publish flow owns it).
-  const set: Record<string, unknown> = {
-    status,
-    weakness: input.weakness ?? undefined,
-    teacherAction: input.teacherAction ?? undefined,
-    guardianAction: input.guardianAction ?? undefined,
-    enteredBy: new Types.ObjectId(input.actorId),
-  };
+  // Upsert one row per (student × exam). $unset marks AND the comments on ABSENT so
+  // an edit PRESENT→ABSENT does not leave a stale score or stale notes behind.
+  // publishedVersion stays on its existing value (default 0; the CT-3 publish flow
+  // owns it).
   const update: Record<string, unknown> =
-    marks === undefined ? { $set: set, $unset: { marks: "" } } : { $set: { ...set, marks } };
+    status === "ABSENT"
+      ? {
+          $set: { status, enteredBy: new Types.ObjectId(input.actorId) },
+          $unset: { marks: "", weakness: "", teacherAction: "", guardianAction: "" },
+        }
+      : {
+          $set: {
+            status,
+            weakness: input.weakness ?? undefined,
+            teacherAction: input.teacherAction ?? undefined,
+            guardianAction: input.guardianAction ?? undefined,
+            enteredBy: new Types.ObjectId(input.actorId),
+            marks,
+          },
+        };
 
   const doc = (await ClassTestResult.findOneAndUpdate(
     { testId: testOid, studentId: studentOid },
