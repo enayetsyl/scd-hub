@@ -124,6 +124,22 @@ async function guard(context) {
 }
 
 // ── Locating the button a step names ─────────────────────────────────────────
+// Bangla ড় ঢ় য় can be one code point or two (ড + ়), and the app's labels use both. An exact
+// string match then fails silently, so a { text } with two forms becomes an anchored pattern
+// that accepts either.
+// (NFC does not help: these three are composition exclusions, so both normal forms decompose.)
+const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const NUKTA_PAIRS = [["ড়", "ড়"], ["ঢ়", "ঢ়"], ["য়", "য়"]];
+const composed = (t) => NUKTA_PAIRS.reduce((s, [one, two]) => s.split(two).join(one), t);
+const decomposed = (t) => NUKTA_PAIRS.reduce((s, [one, two]) => s.split(one).join(two), t);
+const hasTwoForms = (t) => typeof t === "string" && composed(t) !== decomposed(t);
+function textPattern(target) {
+  if (target.re) return new RegExp(target.re);
+  if (!hasTwoForms(target.text)) return target.text;
+  const forms = [...new Set([composed(target.text), decomposed(target.text)])].map(escapeRe).join("|");
+  return target.exact === false ? new RegExp(`(${forms})`) : new RegExp(`^\\s*(${forms})\\s*$`);
+}
+
 /** The visible match that is really on top (hidden stack screens stay mounted). */
 async function topmost(page, target, { scroll }) {
   // A target is { text } (exact), { re } (pattern), { placeholder } or { css }; `last` prefers
@@ -132,7 +148,7 @@ async function topmost(page, target, { scroll }) {
     ? page.locator(target.css)
     : target.placeholder
       ? page.getByPlaceholder(target.placeholder, { exact: target.exact ?? false })
-      : page.getByText(target.re ? new RegExp(target.re) : target.text, { exact: target.exact ?? !target.re });
+      : page.getByText(textPattern(target), { exact: target.re ? undefined : (target.exact ?? true) && !hasTwoForms(target.text) });
   const all = loc.locator("visible=true");
   const n = await all.count();
   const order = target.last ? [...Array(n).keys()].reverse() : [...Array(n).keys()];
@@ -156,6 +172,11 @@ const results = {};
 
 async function shot(page, guideId, rowIndex, targets, { anchor } = {}) {
   if (ONLY && ONLY !== guideId) return;
+  // A guide removed from the repo (e.g. a duplicate) may still be named by an older spec.
+  if (!fs.existsSync(path.join(OUT, "guides", `${guideId}.json`))) {
+    console.log(`skip ${guideId} row ${rowIndex + 1}: no guide file`);
+    return;
+  }
   await page.waitForTimeout(800);
   if (anchor) {
     const a = await topmost(page, anchor, { scroll: false });
@@ -172,15 +193,42 @@ async function shot(page, guideId, rowIndex, targets, { anchor } = {}) {
     });
     await page.waitForTimeout(300);
   }
+  const measure = async () => {
+    const out = [];
+    for (let i = 0; i < targets.length; i++) {
+      const el = await topmost(page, targets[i], { scroll: i === 0 && !anchor });
+      const b = await el.boundingBox();
+      if (!b) throw new Error(`${guideId} row ${rowIndex + 1}: no box for ${JSON.stringify(targets[i])}`);
+      out.push({ el, b });
+    }
+    return out;
+  };
+  let found = await measure();
+  // Near the end of a page the anchor's room-above can push the last button off the bottom:
+  // scroll down just enough, if the first target still stays on screen.
+  const lowest = Math.max(...found.map(({ b }) => b.y + b.height));
+  if (lowest > VIEWPORT.height - 4) {
+    const delta = Math.ceil(lowest - VIEWPORT.height + 12);
+    if (found[0].b.y - delta >= 0) {
+      await found[0].el.evaluate((e, d) => {
+        for (let p = e.parentElement; p; p = p.parentElement) {
+          const s = getComputedStyle(p);
+          if (/(auto|scroll)/.test(s.overflowY) && p.scrollHeight > p.clientHeight) return void p.scrollBy(0, d);
+        }
+        window.scrollBy(0, d);
+      }, delta);
+      await page.waitForTimeout(300);
+      found = await measure();
+    }
+  }
   const boxes = [];
-  for (let i = 0; i < targets.length; i++) {
-    const el = await topmost(page, targets[i], { scroll: i === 0 && !anchor });
-    const b = await el.boundingBox();
-    if (!b) throw new Error(`${guideId} row ${rowIndex + 1}: no box for ${JSON.stringify(targets[i])}`);
+  for (const [i, { b }] of found.entries()) {
+    if (b.y < 0 || b.y + b.height > VIEWPORT.height + 1) {
+      throw new Error(`${guideId} row ${rowIndex + 1}: step ${i + 1} is off screen; split the row or set an anchor`);
+    }
     const pad = targets[i].pad ?? 4;
     const x = Math.max(0, b.x - pad), y = Math.max(0, b.y - pad);
     const w = Math.min(VIEWPORT.width - x, b.width + 2 * pad), h = Math.min(VIEWPORT.height - y, b.height + 2 * pad);
-    if (y + h > VIEWPORT.height + 1 || b.y < 0) throw new Error(`${guideId} row ${rowIndex + 1}: step ${i + 1} is off screen; split the row or set an anchor`);
     boxes.push([x / VIEWPORT.width, y / VIEWPORT.height, w / VIEWPORT.width, h / VIEWPORT.height].map((v) => Math.round(v * 10000) / 10000));
   }
   if (PROD) {
