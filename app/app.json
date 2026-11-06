@@ -2,7 +2,7 @@
   "expo": {
     "name": "SCD Hub",
     "slug": "scd-hub",
-    "version": "1.1.6",
+    "version": "1.1.7",
     "runtimeVersion": "1.1.0",
     "updates": {
       "url": "https://u.expo.dev/ef69db4d-e518-4334-955f-d0abf69ec8d9",
@@ -31,9 +31,11 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.scd.hub",
-      "versionCode": 9,
+      "versionCode": 10,
       "permissions": [
-        "android.permission.REQUEST_INSTALL_PACKAGES"
+        "android.permission.REQUEST_INSTALL_PACKAGES",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
@@ -53,7 +55,13 @@
         "expo-camera",
         {
           "cameraPermission": "SCD Hub uses the camera to scan the QR code on a storybook or activity sheet at the office desk.",
-          "recordAudioAndroid": false
+          "recordAudioAndroid": true
+        }
+      ],
+      [
+        "expo-av",
+        {
+          "microphonePermission": "SCD Hub uses the microphone when you speak a task on the work board."
         }
       ]
     ],
