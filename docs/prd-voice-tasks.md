@@ -42,7 +42,7 @@ Saving re-checks everything server-side through `createTask` / `createTaskTempla
 1. Work board → **🎤 কণ্ঠে কাজ দিন** (beside "নতুন কাজ"). Opens `VoiceTaskScreen`.
 2. Tap to record, tap to stop (max **90 s**). Web: browser `MediaRecorder` → decoded and
    re-encoded in the browser to **16 kHz mono WAV** (D-#965; WAV is on Gemini's supported list,
-   WebM is not). Android: VT-5.
+   WebM is not). Android (VT-5, APK 1.1.7): expo-av records 16 kHz mono AAC/ADTS → `audio/aac`.
 3. App calls `parseVoiceTasks(audioBase64, mimeType, priorDraftJson?)`. **Nothing is written.**
 4. Server sends Gemini: the rules prompt (today's date + weekday in Asia/Dhaka, Bangla relative
    dates), the allowed staff (id | English name | Bangla name | designation), the JSON schema,
@@ -100,7 +100,7 @@ School days only (the existing task gate), one notification per assigner per run
 | VT-4 | 08:00 / 17:00 assigner summaries | server |
 | VT-5 | Android mic: `expo-av`, mic permission, runtime bump → **APK 1.1.7** | APK |
 
-VT-1..VT-4 build in one branch (`feat/voice-tasks`); VT-5 waits for the next APK.
+VT-1..VT-4 build in one branch (`feat/voice-tasks`); VT-5 built 2026-11-06 (D-#1037) without a runtime bump: the recorder is `require`d only after `requireOptionalNativeModule("ExponentAV")`, so one OTA serves APK 1.1.6 (notice) and 1.1.7 (mic).
 
 ## 8. Acceptance criteria
 - **AC-1** `parseVoiceTasks` is refused without `work_board:voice`; writes no Task/TaskTemplate/audit.
