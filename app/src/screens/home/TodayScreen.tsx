@@ -32,7 +32,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Pressable, RefreshControl, View } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { useMutation, useQuery } from "urql";
-import type { Role } from "@scd/shared";
+import { DAILY_REPORT_SECTION_PERMISSION, type Role } from "@scd/shared";
 import {
   MY_DAY_QUERY,
   MY_WORK_CLAIMS_QUERY,
@@ -65,6 +65,7 @@ import { MeetingSummaryTeacherCard } from "../../components/MeetingSummaryTeache
 import { ImprovementTasksOfficeCard } from "../../components/ImprovementTasksOfficeCard";
 import { GiftHandoverCard } from "../../components/GiftHandoverCard";
 import { LiveClassCard } from "../../components/LiveClassCard";
+import { DailyReportTodayCard } from "../../components/DailyReportTodayCard";
 import { MyPeriodsStrip } from "../../components/MyPeriodsStrip";
 import { QuranExamTodayCard } from "../../components/QuranExamTodayCard";
 import { UnissuedHomeworkCard } from "../../components/UnissuedHomeworkCard";
@@ -533,6 +534,9 @@ export default function TodayScreen(): React.ReactElement {
 
       {/* Quran oral exam (D-#876): today's sittings for an examiner. Own query → outside the gate. */}
       {can("quran_exam:examine") ? <QuranExamTodayCard /> : null}
+
+      {/* D-#1052 — a shared daily school report, until it is opened. Own query → outside the gate. */}
+      {Object.values(DAILY_REPORT_SECTION_PERMISSION).some((p) => can(p)) ? <DailyReportTodayCard /> : null}
 
       {/* HW-VOID (D-#741) — 0-question homework confirm never issues, for a per-user
           homework:void grant. Outside the QueryGate for the same reason as above. */}

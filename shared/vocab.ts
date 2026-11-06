@@ -1520,6 +1520,9 @@ export const NOTIFICATION_KINDS = [
   "STAFF_MISTAKE_MEETING",
   // Quiet record (D-#1020): DAILY → holders of staff_mistakes:view_all: the day's entries, 18:00
   "STAFF_MISTAKE_DAILY",
+  // Daily school report (D-#1050, docs/prd-daily-report.md; app-native, NO wire twin): the
+  // 18:00 school-day summary to the Principal and to anyone it is shared with, opening that day.
+  "DAILY_REPORT",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
@@ -1603,6 +1606,7 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   STAFF_MISTAKE_STEP: "কর্মীর ভুলের সীমা",
   STAFF_MISTAKE_MEETING: "আলোচনার সময়",
   STAFF_MISTAKE_DAILY: "আজকের কর্মীর ভুল",
+  DAILY_REPORT: "দৈনিক প্রতিবেদন",
 };
 export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   BELL_REMINDER: "Bell reminder",
@@ -1684,6 +1688,7 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   STAFF_MISTAKE_STEP: "A staff member reached a warning step",
   STAFF_MISTAKE_MEETING: "Meeting booked",
   STAFF_MISTAKE_DAILY: "Today's staff mistakes",
+  DAILY_REPORT: "Daily school report",
 };
 
 /**

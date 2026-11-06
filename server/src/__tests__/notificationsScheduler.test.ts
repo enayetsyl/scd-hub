@@ -88,6 +88,17 @@ jest.mock("../modules/trackers/services/HomeworkReconciliationService", () => ({
 jest.mock("../modules/staff-mistakes/services/StaffMistakeService", () => ({
   settleOverdueMistakes: jest.fn().mockResolvedValue(0),
 }));
+// D-#1052/#1054: the daily report + share-expiry families (own tests in dailyReport.test.ts).
+const mockRunDailyReport = jest.fn((_now: Date) => Promise.resolve(0));
+const mockDailyReportSettings = jest.fn(() => Promise.resolve({ sendMinutes: 18 * 60, headlineSections: [] as string[], notifyPrincipal: true }));
+const mockSweepShares = jest.fn((_key: string) => Promise.resolve(0));
+jest.mock("../modules/daily-report/services/DailyReportService", () => ({
+  getSettings: () => mockDailyReportSettings(),
+  runDailyReport: (now: Date) => mockRunDailyReport(now),
+}));
+jest.mock("../modules/daily-report/services/DailyReportShareService", () => ({
+  sweepExpiredShares: (key: string) => mockSweepShares(key),
+}));
 // D-#1020: the 18:00 end-of-day mistake report.
 jest.mock("../modules/staff-mistakes/services/StaffMistakeDailyService", () => ({
   dispatchStaffMistakeDaily: jest.fn().mockResolvedValue(0),
@@ -215,6 +226,9 @@ beforeEach(() => {
   mockIsDigestDay.mockResolvedValue(false);
   mockDispatchDigest.mockResolvedValue({ students: 0, notified: 0 });
   mockEmit.mockResolvedValue({ created: true, dedupeKey: "x" });
+  mockRunDailyReport.mockResolvedValue(0);
+  mockDailyReportSettings.mockResolvedValue({ sendMinutes: 18 * 60, headlineSections: [], notifyPrincipal: true });
+  mockSweepShares.mockResolvedValue(0);
 });
 
 // ---------------------------------------------------------------------------
@@ -271,6 +285,42 @@ describe("homework weekly digest family", () => {
     const s2 = await runSchedulerTick(at(17, 1));
     expect(mockDispatchDigest).toHaveBeenCalledTimes(1);
     expect(s2.hwWeeklyDigestEmitted).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Daily school report (D-#1050/#1052/#1054)
+// ---------------------------------------------------------------------------
+
+describe("daily school report family", () => {
+  it("18:00 on a school day — makes the report once and counts the notifications", async () => {
+    mockRunDailyReport.mockResolvedValue(2);
+    const s = await runSchedulerTick(at(18, 0));
+    expect(s.dailyReportEmitted).toBe(2);
+    await runSchedulerTick(at(18, 1));
+    expect(mockRunDailyReport).toHaveBeenCalledTimes(1);
+  });
+
+  it("17:59 — not yet; the morning never even reads the settings", async () => {
+    await runSchedulerTick(at(17, 59));
+    expect(mockRunDailyReport).not.toHaveBeenCalled();
+    await runSchedulerTick(at(9, 0));
+    expect(mockDailyReportSettings).toHaveBeenCalledTimes(1);
+  });
+
+  it("follows the send time in settings and is made up to 4 hours late after a restart", async () => {
+    mockDailyReportSettings.mockResolvedValue({ sendMinutes: 19 * 60, headlineSections: [], notifyPrincipal: true });
+    await runSchedulerTick(at(18, 30));
+    expect(mockRunDailyReport).not.toHaveBeenCalled();
+    await runSchedulerTick(at(22, 59));
+    expect(mockRunDailyReport).toHaveBeenCalledTimes(1);
+  });
+
+  it("OFF/HOLIDAY — no report, but expired shares are still swept (calendar cadence)", async () => {
+    mockResolveDayType.mockResolvedValue("HOLIDAY");
+    await runSchedulerTick(at(18, 0));
+    expect(mockRunDailyReport).not.toHaveBeenCalled();
+    expect(mockSweepShares).toHaveBeenCalledWith(DATE);
   });
 });
 
