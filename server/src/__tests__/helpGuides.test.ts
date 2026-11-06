@@ -10,6 +10,7 @@
  *   view-as    reads the borrowed set, never writes the seen-list or feedback
  *   feedback   one answer per person per guide, changeable
  *   shots      only a listed picture of a visible guide; the route refuses no login
+ *   feature    a guardian guide naming a released feature (D-#1011) shows only once it is on for them
  *
  * In-memory MongoDB, real services, a fixture help folder in the OS temp dir.
  */
@@ -33,6 +34,7 @@ import {
   shotPathFor,
 } from "../modules/help/services/HelpGuideService";
 import { helpShotsRouter } from "../modules/help/routes/helpShots";
+import { GuardianFeatureAccess } from "../modules/guardian-access/models/GuardianFeatureAccess";
 
 let mongo: MongoMemoryServer;
 let dir: string;
@@ -75,6 +77,7 @@ function writeFixture(): string {
     guide("o-approve", { perms: ["leave:approve"] }, { category: "attendance_leave", order: 1 }),
     guide("all-leave", { audience: "ALL_STAFF" }, { category: "attendance_leave" }),
     guide("g-hw", { audience: "GUARDIAN" }, { category: "child" }),
+    guide("g-story", { audience: "GUARDIAN" }, { category: "child", guardianFeature: "STORYBOOKS" }),
     { ...guide("d-draft", { perms: ["homework:declare"] }), draft: true, rows: [{ heading: "ধাপ", shot: null, size: null, steps: [{ text: "খসড়া", box: null }] }] },
     guide("bad", { perms: ["nope:nothing"] }),
   ];
@@ -106,7 +109,7 @@ afterAll(async () => {
 });
 
 afterEach(async () => {
-  await Promise.all([HelpGuideSeen.deleteMany({}), HelpGuideFeedback.deleteMany({})]);
+  await Promise.all([HelpGuideSeen.deleteMany({}), HelpGuideFeedback.deleteMany({}), GuardianFeatureAccess.deleteMany({})]);
 });
 
 const auth = (role: string, extra: Partial<AuthPayload> = {}): AuthPayload =>
@@ -151,6 +154,13 @@ describe("checkHelpGuide (shared)", () => {
     const draft = { ...ok, draft: true, rows: [{ heading: "h", shot: null, size: null, steps: [{ text: "ক", box: null }] }] };
     expect(checkHelpGuide(draft, env)).toEqual([]);
     expect(checkHelpGuide({ ...draft, draft: false }, env).length).toBeGreaterThan(0);
+  });
+
+  it("a guardianFeature needs a known feature and the GUARDIAN audience (D-#1011)", () => {
+    const g = guide("t-1", { audience: "GUARDIAN" });
+    expect(checkHelpGuide({ ...g, guardianFeature: "STORYBOOKS" }, env)).toEqual([]);
+    expect(checkHelpGuide({ ...g, guardianFeature: "NOPE" }, env).join()).toMatch(/guardianFeature must be one of/);
+    expect(checkHelpGuide({ ...ok, guardianFeature: "STORYBOOKS" }, env).join()).toMatch(/needs audience "GUARDIAN"/);
   });
 });
 
@@ -252,14 +262,30 @@ describe("feedback", () => {
   });
 });
 
+describe("guardian feature guides (D-#1011)", () => {
+  it("stay hidden until the feature is on for that guardian, for one or for all", async () => {
+    const a = auth("GUARDIAN");
+    const b = auth("GUARDIAN");
+    expect(await ids(a)).toEqual(["g-hw"]);
+    expect(await shotPathFor(a, "g-story", "1.png")).toBeNull();
+    await GuardianFeatureAccess.create({ feature: "STORYBOOKS", onForAll: false, guardianIds: [new Types.ObjectId(a.userId)] });
+    expect(await ids(a)).toEqual(["g-hw", "g-story"]);
+    expect(await shotPathFor(a, "g-story", "1.png")).not.toBeNull();
+    expect(await ids(b)).toEqual(["g-hw"]);
+    await GuardianFeatureAccess.updateOne({ feature: "STORYBOOKS" }, { onForAll: true });
+    expect(await ids(b)).toEqual(["g-hw", "g-story"]);
+    expect(await ids(auth("PRINCIPAL"))).not.toContain("g-story");
+  });
+});
+
 describe("screenshots", () => {
-  it("serves only a listed picture of a guide the caller can see", () => {
+  it("serves only a listed picture of a guide the caller can see", async () => {
     const teacher = auth("TEACHER");
-    expect(shotPathFor(teacher, "t-declare", "1.png")).toBe(path.resolve(dir, "shots", "t-declare", "1.png"));
-    expect(shotPathFor(teacher, "t-declare", "2.png")).toBeNull();
-    expect(shotPathFor(teacher, "o-approve", "1.png")).toBeNull();
-    expect(shotPathFor(teacher, "t-declare", "..%2F..%2Fcategories.json")).toBeNull();
-    expect(shotPathFor(auth("OFFICE"), "o-approve", "1.png")).not.toBeNull();
+    expect(await shotPathFor(teacher, "t-declare", "1.png")).toBe(path.resolve(dir, "shots", "t-declare", "1.png"));
+    expect(await shotPathFor(teacher, "t-declare", "2.png")).toBeNull();
+    expect(await shotPathFor(teacher, "o-approve", "1.png")).toBeNull();
+    expect(await shotPathFor(teacher, "t-declare", "..%2F..%2Fcategories.json")).toBeNull();
+    expect(await shotPathFor(auth("OFFICE"), "o-approve", "1.png")).not.toBeNull();
   });
 
   it("the route refuses a request with no login", async () => {
