@@ -117,10 +117,11 @@ function sectionDay(day: DayOfWeek): Record<"c3Boys" | "c3Girls" | "c5", Cell[]>
       [7, "BAN", "reviewer"],
       [8, "ISLAM", "islam"],
     ],
+    // ৫ম ক has no 7th period on Sunday yet: the "add a period" guide fills it.
     c5: [
       [5, bgsDay ? "BGS" : "SCI", "science"],
       [6, "BAN", "reviewer"],
-      [7, "ENG", "teacher2"],
+      ...(day === "SUN" ? [] : ([[7, "ENG", "teacher2"]] as Cell[])),
       [8, "MATH", "teacher"],
     ],
   };
