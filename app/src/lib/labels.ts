@@ -8270,7 +8270,7 @@ const STR_BN = {
   msgFirstBack: "আবার দেখি",
   msgFirstGo: "জমা দিন",
   msgFixTitle: "এটি ভুল হিসেবে লেখা হতে পারে",
-  // D-#1016: the same sheet for someone who is not told about mistakes — no file, no "who knows".
+  // D-#1020: the same sheet for someone who is not told about mistakes — no file, no "who knows".
   msgFixBodyQuiet: "{n} জন শিক্ষার্থীকে আজ \"জমা দেয়নি\" চিহ্নিত করা হয়েছিল এবং তাদের অভিভাবক সেই বার্তা পেয়েছেন। বদলানোর আগে কী হয়েছিল জানান — অভিভাবক সেই অনুযায়ী সংশোধনী বার্তা পাবেন।",
   msgFixBody: "{n} জন শিক্ষার্থীকে আজ \"জমা দেয়নি\" চিহ্নিত করা হয়েছিল এবং তাদের অভিভাবক সেই বার্তা পেয়েছেন। বদলানোর আগে কী হয়েছিল জানান — কারণ গ্রহণযোগ্য হলে এটি আপনার ভুল হিসেবে গণ্য হবে না। প্রধান শিক্ষক ও অফিস জানবেন।",
   msgFixCancel: "বাতিল",
@@ -8296,7 +8296,7 @@ const STR_BN = {
   smrReviewEmpty: "যাচাইয়ের মতো কিছু নেই।",
   smrTabQueue: "বিবেচনাধীন",
   smrTabAll: "সব এন্ট্রি",
-  // D-#1016 — the day's list (the 18:00 report opens it).
+  // D-#1020 — the day's list (the 18:00 report opens it).
   smrTabDay: "দিনের তালিকা",
   smrDayHelp: "এই দিনে কার কোন ভুল ধরা পড়েছে। কর্মীদের এ বিষয়ে কিছু জানানো হয় না।",
   smrDayEmpty: "এই দিনে কোনো ভুল ধরা পড়েনি।",
@@ -15450,7 +15450,7 @@ const STR_EN: StrTable = {
   msgFirstBack: "Check again",
   msgFirstGo: "Submit",
   msgFixTitle: "This may be recorded as a mistake",
-  // D-#1016: the same sheet for someone who is not told about mistakes.
+  // D-#1020: the same sheet for someone who is not told about mistakes.
   msgFixBodyQuiet: "{n} student(s) were marked \"not submitted\" today and their guardians received that message. Before changing it, say what happened — the guardians get a matching correction.",
   msgFixBody: "{n} student(s) were marked \"not submitted\" today and their guardians received that message. Before changing it, say what happened — an accepted reason is not counted as your mistake. The Principal and the Office are told.",
   msgFixCancel: "Cancel",
@@ -15476,7 +15476,7 @@ const STR_EN: StrTable = {
   smrReviewEmpty: "Nothing to review.",
   smrTabQueue: "Waiting",
   smrTabAll: "All entries",
-  // D-#1016 — the day's list (the 18:00 report opens it).
+  // D-#1020 — the day's list (the 18:00 report opens it).
   smrTabDay: "Day's list",
   smrDayHelp: "Whose mistakes were caught on this day. Staff are not told about any of this.",
   smrDayEmpty: "No mistakes were caught on this day.",

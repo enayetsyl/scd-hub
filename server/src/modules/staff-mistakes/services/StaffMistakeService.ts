@@ -62,7 +62,7 @@ export function explainDeadline(now: Date, rule: StaffMistakeDeadline = "NEXT_SC
 
 /**
  * A mistake just became COUNTED: check the warning ladder (D-#940). Never throws.
- * D-#1016: someone who is not told about their mistakes never reaches a warning step.
+ * D-#1020: someone who is not told about their mistakes never reaches a warning step.
  */
 async function afterCounted(staffUserId: string, now: Date): Promise<void> {
   try {
@@ -162,7 +162,7 @@ export async function recordMistakeFromSource(input: RecordMistakeInput): Promis
     status: "EXPLANATION_DUE",
     explainDueAt: explainDeadline(input.at, settings.deadline),
   });
-  // D-#1016: a person who is not told cannot explain — with no reason, it counts at once.
+  // D-#1020: a person who is not told cannot explain — with no reason, it counts at once.
   const told = await isToldAboutMistakes(staffUserId);
   if (reason) applyReason(row, reason, input.at);
   else if (!told) {
@@ -277,7 +277,7 @@ export async function decideMistake(input: {
     if (!principal && (await ownedByPrincipal(target.toString()))) {
       throw new StaffMistakeError("প্রধান শিক্ষকের নামে সরানো যায় না।");
     }
-    // D-#1016: moved onto someone who is not told — the reviewer's move is the decision.
+    // D-#1020: moved onto someone who is not told — the reviewer's move is the decision.
     const targetTold = await isToldAboutMistakes(target);
     try {
       moved = await StaffMistake.create({
@@ -357,7 +357,7 @@ export interface StaffMistakeShape {
   explainedAt: Date | null;
   explainDueAt: Date;
   autoCounted: boolean;
-  /** D-#1016: recorded quietly — the person was not told, so there is no reason to wait for. */
+  /** D-#1020: recorded quietly — the person was not told, so there is no reason to wait for. */
   quiet: boolean;
   decidedByName: string | null;
   decidedAt: Date | null;
@@ -387,7 +387,7 @@ export async function listStaffMistakes(opts: {
     filter.staffUserId = oid(opts.staffUserId);
   } else if (hidden.length) filter.staffUserId = { $nin: hidden.map(oid) };
   if (opts.statuses?.length) filter.status = { $in: opts.statuses };
-  // D-#1016: one day's entries (the daily report's list).
+  // D-#1020: one day's entries (the daily report's list).
   if (opts.dateKey) filter.dateKey = opts.dateKey;
   const rows = await StaffMistake.find(filter)
     .sort({ createdAt: -1 })
@@ -430,7 +430,7 @@ export async function listStaffMistakes(opts: {
     explainedAt: r.explainedAt ?? null,
     explainDueAt: r.explainDueAt,
     autoCounted: !!r.autoCounted,
-    // D-#1016: counted on its own BEFORE the explain deadline = the person was never asked.
+    // D-#1020: counted on its own BEFORE the explain deadline = the person was never asked.
     quiet: !!r.autoCounted && !r.explainedAt && !!r.decidedAt && new Date(r.decidedAt) < new Date(r.explainDueAt),
     decidedByName: r.decidedBy ? (name.get(String(r.decidedBy)) ?? null) : null,
     decidedAt: r.decidedAt ?? null,

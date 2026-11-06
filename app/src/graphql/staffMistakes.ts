@@ -21,7 +21,7 @@ export interface StaffMistakeT {
   explainedAt: string | null;
   explainDueAt: string;
   autoCounted: boolean;
-  /** D-#1016: recorded quietly — the person was never asked. */
+  /** D-#1020: recorded quietly — the person was never asked. */
   quiet: boolean;
   decidedByName: string | null;
   decidedAt: string | null;

@@ -1,5 +1,5 @@
 /**
- * Capture spec — the end-of-day mistake report (D-#1016, docs/prd-staff-mistakes.md §18).
+ * Capture spec — the end-of-day mistake report (D-#1020, docs/prd-staff-mistakes.md §18).
  *
  * LOCAL ONLY: it needs the example school (fixture.ts) plus a few quiet mistake entries and one
  * STAFF_MISTAKE_DAILY notice for the Principal (seed them with the staff-mistake services and

@@ -96,7 +96,7 @@ export default function MarkAttendanceScreen({ route, navigation }: Props): Reac
         correctionReason = await askMistakeReason({
           kind: "ATTENDANCE_CORRECTION",
           title: STR.smrAttFixTitle,
-          // D-#1016: someone who is not told reads no "counted as a mistake" line.
+          // D-#1020: someone who is not told reads no "counted as a mistake" line.
           message: (can("staff_mistakes:view_own") ? STR.smrAttFixBody : STR.smrAttFixBodyQuiet).replace("{n}", bnNum(changed)),
           hideHint: !can("staff_mistakes:view_own"),
           submitLabel: STR.smrSendAndChange,

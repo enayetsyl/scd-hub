@@ -264,7 +264,7 @@ export interface TickSummary {
   taskOverdueEmitted: number;
   /** D-#966: 08:00 / 17:00 "tasks you gave" summaries emitted. */
   taskGivenSummaryEmitted: number;
-  /** D-#1016: 18:00 end-of-day staff mistake reports sent. */
+  /** D-#1020: 18:00 end-of-day staff mistake reports sent. */
   staffMistakeDailySent: number;
   /** 11:00 improvement sweep (SP-4, D-#738): Office/Principal digests + class-teacher guardian alerts. */
   improvementPendingEmitted: number;
@@ -340,7 +340,7 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
   await family("staff mistake settle", async () => {
     await settleOverdueMistakes(now);
   });
-  // D-#1016: the end-of-day report — who made which mistake today — once, at 18:00, any day.
+  // D-#1020: the end-of-day report — who made which mistake today — once, at 18:00, any day.
   await family("staff mistake daily", async () => {
     if (!windowOpen(nowMin, STAFF_MISTAKE_DAILY_MINUTES)) return;
     await runOnce(dateKey, "SMDAILY", async () => {

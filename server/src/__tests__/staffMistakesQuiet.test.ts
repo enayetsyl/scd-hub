@@ -1,5 +1,5 @@
 /**
- * Quiet record (D-#1016, docs/prd-staff-mistakes.md §18) on a real in-memory Mongo: a person
+ * Quiet record (D-#1020, docs/prd-staff-mistakes.md §18) on a real in-memory Mongo: a person
  * without staff_mistakes:view_own is never told — the entry counts at once, no explain or
  * decision notice, no warning step — and holders of staff_mistakes:view_all get one 18:00
  * report naming who made which mistake that day.
@@ -55,7 +55,7 @@ const record = (owner: string, by: string, ref: string, when = at("10:00")) =>
 
 const kinds = async (kind: string) => Notification.find({ kind }).lean();
 
-describe("D-#1016 — nobody is told unless they hold staff_mistakes:view_own", () => {
+describe("D-#1020 — nobody is told unless they hold staff_mistakes:view_own", () => {
   it("is off by default for teachers and the Office; the Principal holds it", async () => {
     expect(await isToldAboutMistakes(await user("Rahima"))).toBe(false);
     expect(await isToldAboutMistakes(await user("Akmol", "OFFICE"))).toBe(false);
@@ -106,7 +106,7 @@ describe("D-#1016 — nobody is told unless they hold staff_mistakes:view_own", 
   });
 });
 
-describe("D-#1016 — the 18:00 daily report", () => {
+describe("D-#1020 — the 18:00 daily report", () => {
   it("one notification per view_all holder naming who and where; the Principal's own entries stay private", async () => {
     const rahima = await user("Rahima");
     const karim = await user("Karim");

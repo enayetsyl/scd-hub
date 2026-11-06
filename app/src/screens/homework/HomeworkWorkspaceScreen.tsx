@@ -529,7 +529,7 @@ function ItemCard({
     if (res.error || !r) return onNotify(null, friendlyError(res.error));
     const done = `${STR.hwPassSubmitDone} · ${STR.hwPassSubmitted} ${bnNum(r.submittedCount)} · ${STR.hwPassNotSubmitted} ${bnNum(r.chasedCount)}`;
     // D-#937: "MINE" is counted at once; any other reason waits for review.
-    // D-#1016: someone who is not told reads only that the guardians got a correction.
+    // D-#1020: someone who is not told reads only that the guardians got a correction.
     const fixLine = !can("staff_mistakes:view_own") ? STR.msgFixDoneQuiet : go.reason?.code === "MINE" ? STR.msgFixDone : STR.smrFixPending;
     onNotify(r.correctedCount > 0 ? `${done}\n${fixLine}` : done, null);
     onDone();

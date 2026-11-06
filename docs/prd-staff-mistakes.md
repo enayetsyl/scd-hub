@@ -289,7 +289,7 @@ reviewer can move it to the register's marker.
 Owner-unconfirmed defaults: the owners above, the 30-day link window, the instalment button, that own
 re-uploads / own restores are not mistakes, and that only "register present, given absent" counts.
 
-## 18. Quiet record and the daily report (D-#1016, owner 2026-11-06)
+## 18. Quiet record and the daily report (D-#1020, owner 2026-11-06)
 
 The owner uses the record to understand who makes which mistake, then talks to the person face to
 face. It is not a warning system. Staff were afraid of what "added to your file" would lead to.

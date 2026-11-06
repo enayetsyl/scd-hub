@@ -88,7 +88,7 @@ jest.mock("../modules/trackers/services/HomeworkReconciliationService", () => ({
 jest.mock("../modules/staff-mistakes/services/StaffMistakeService", () => ({
   settleOverdueMistakes: jest.fn().mockResolvedValue(0),
 }));
-// D-#1016: the 18:00 end-of-day mistake report.
+// D-#1020: the 18:00 end-of-day mistake report.
 jest.mock("../modules/staff-mistakes/services/StaffMistakeDailyService", () => ({
   dispatchStaffMistakeDaily: jest.fn().mockResolvedValue(0),
   STAFF_MISTAKE_DAILY_MINUTES: 18 * 60,

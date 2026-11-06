@@ -1,5 +1,5 @@
 /**
- * The end-of-day mistake report (D-#1016, docs/prd-staff-mistakes.md §18).
+ * The end-of-day mistake report (D-#1020, docs/prd-staff-mistakes.md §18).
  *
  * At 18:00 Dhaka every holder of `staff_mistakes:view_all` (the Principal by default, and
  * whoever the Principal gives it to) gets ONE notification naming who made which mistake that

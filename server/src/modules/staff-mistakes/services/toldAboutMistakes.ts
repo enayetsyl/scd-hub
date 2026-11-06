@@ -1,5 +1,5 @@
 /**
- * Quiet record (D-#1016): a person is told about their own mistakes ONLY while they hold
+ * Quiet record (D-#1020): a person is told about their own mistakes ONLY while they hold
  * `staff_mistakes:view_own` (off by default; the Principal switches it on per role or per
  * person). Someone who is not told gets no "please explain" notice, no decision notice and
  * no warning step — the entry is counted at once and lands in the Principal's daily report.

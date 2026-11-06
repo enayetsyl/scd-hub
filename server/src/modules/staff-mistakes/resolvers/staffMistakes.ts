@@ -248,7 +248,7 @@ builder.queryField("staffMistakes", (t) =>
     args: {
       staffProfileId: t.arg.string({ required: false }),
       staffUserId: t.arg.string({ required: false }),
-      /** D-#1016: one day (YYYY-MM-DD), the daily report's list. */
+      /** D-#1020: one day (YYYY-MM-DD), the daily report's list. */
       dateKey: t.arg.string({ required: false }),
     },
     resolve: async (_r, args, ctx) => {

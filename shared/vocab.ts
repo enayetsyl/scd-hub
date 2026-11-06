@@ -1518,7 +1518,7 @@ export const NOTIFICATION_KINDS = [
   "STAFF_MISTAKE_WARNING",
   "STAFF_MISTAKE_STEP",
   "STAFF_MISTAKE_MEETING",
-  // Quiet record (D-#1016): DAILY → holders of staff_mistakes:view_all: the day's entries, 18:00
+  // Quiet record (D-#1020): DAILY → holders of staff_mistakes:view_all: the day's entries, 18:00
   "STAFF_MISTAKE_DAILY",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];

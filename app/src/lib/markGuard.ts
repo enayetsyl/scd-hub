@@ -34,7 +34,7 @@ export async function confirmMarkPass(
   askMistakeReason: (r: MistakeReasonRequest) => Promise<MistakeReasonPick | null>,
   rows: readonly PassRow[],
   entries: readonly { id: string; on: boolean }[],
-  /** D-#1016: the teacher holds staff_mistakes:view_own. If not, the sheet says nothing about
+  /** D-#1020: the teacher holds staff_mistakes:view_own. If not, the sheet says nothing about
    *  mistakes or who is told — it only asks what happened, for the guardian's correction. */
   told = false,
 ): Promise<MarkPassGo> {

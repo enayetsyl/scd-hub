@@ -26,7 +26,7 @@ export interface MistakeReasonRequest {
   /** Show what the guardian will receive for the picked reason (the submit pass). */
   guardianPreview?: boolean;
   submitLabel?: string;
-  /** D-#1016: the person is not told about mistakes — no "counts / who reviews" hint. */
+  /** D-#1020: the person is not told about mistakes — no "counts / who reviews" hint. */
   hideHint?: boolean;
   /** Pre-select (re-explaining an entry). */
   initial?: MistakeReasonPick | null;

@@ -121,7 +121,7 @@ export function StaffMistakeCard({
             {m.reasonText ? ` — "${m.reasonText}"` : ""}
           </Body>
         ) : m.quiet ? (
-          // D-#1016: recorded quietly — the person was never asked, so no "no reason yet".
+          // D-#1020: recorded quietly — the person was never asked, so no "no reason yet".
           <Muted>{STR.smrQuiet}</Muted>
         ) : m.status === "EXPLANATION_DUE" ? (
           <Muted>{STR.smrDueBy.replace("{when}", dhakaWhen(m.explainDueAt))}</Muted>

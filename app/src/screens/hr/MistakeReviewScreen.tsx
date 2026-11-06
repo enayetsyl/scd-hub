@@ -2,7 +2,7 @@
  * MistakeReviewScreen — ব্যাখ্যা যাচাই (D-#939, docs/prd-staff-mistakes.md §5): entries
  * waiting for a decision (never the caller's own), and every entry in the school. A
  * reviewer accepts the reason (not counted), counts it, or moves it to the person at fault,
- * with an optional note the staff member reads. D-#1016: the দিনের তালিকা tab is the
+ * with an optional note the staff member reads. D-#1020: the দিনের তালিকা tab is the
  * day's list the 18:00 report opens (route param dateKey); people who are not told
  * (no staff_mistakes:view_own) never read the note.
  */
@@ -77,7 +77,7 @@ export default function MistakeReviewScreen({ route }: Props): React.ReactElemen
   const canSeeAll = can("staff_mistakes:view_all");
   const canReview = can("staff_mistakes:review");
   const today = dhakaDateKey();
-  // D-#1016: the day's list is the daily report's page — the notification opens its date.
+  // D-#1020: the day's list is the daily report's page — the notification opens its date.
   const [tab, setTab] = React.useState<"day" | "queue" | "all">(canSeeAll ? "day" : "queue");
   const [day, setDay] = React.useState<string>(route.params?.dateKey ?? today);
   React.useEffect(() => {
