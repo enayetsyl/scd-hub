@@ -1,0 +1,91 @@
+{
+  "id": "family-meeting-attendance",
+  "category": "students_families",
+  "order": 34,
+  "title": "সভার দিনে উপস্থিতি দেওয়া",
+  "intro": "সভার দিনে কোন পরিবার এসেছেন আর কে আসেননি, স্লট ধরে চিহ্ন দিন। সারসংক্ষেপে মোট সংখ্যা দেখা যায়।",
+  "keywords": [
+    "সভার উপস্থিতি",
+    "উপস্থিত",
+    "অনুপস্থিত",
+    "অভিভাবক সভা"
+  ],
+  "perms": [
+    "parents_meeting:mark_attendance"
+  ],
+  "screens": [
+    "CommentsTab/MeetingAdmin"
+  ],
+  "goTo": {
+    "route": "CommentsTab",
+    "screen": "MeetingsList"
+  },
+  "rows": [
+    {
+      "heading": "সভা খোলা",
+      "shot": "family-meeting-attendance/1.jpg",
+      "size": [
+        824,
+        1720
+      ],
+      "steps": [
+        {
+          "text": "তালিকা থেকে <b>সভার নাম</b> চাপুন, যেমন ২০২৬ — ২য় অভিভাবক সভা।",
+          "box": [
+            0.1117,
+            0.7023,
+            0.6233,
+            0.0372
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "উপস্থিতি",
+      "shot": "family-meeting-attendance/2.jpg",
+      "size": [
+        824,
+        1720
+      ],
+      "steps": [
+        {
+          "text": "পরিবার এলে তাঁদের স্লটে <b>উপস্থিত</b> চাপুন।",
+          "box": [
+            0.1529,
+            0.2267,
+            0.1426,
+            0.0372
+          ]
+        },
+        {
+          "text": "না এলে <b>অনুপস্থিত</b> চাপুন।",
+          "box": [
+            0.378,
+            0.2267,
+            0.1738,
+            0.0372
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "সারসংক্ষেপ",
+      "shot": "family-meeting-attendance/3.jpg",
+      "size": [
+        824,
+        1720
+      ],
+      "steps": [
+        {
+          "text": "<b>সারসংক্ষেপ</b>-এ মোট, উপস্থিত, অনুপস্থিত ও বাকি পরিবারের সংখ্যা দেখুন।",
+          "box": [
+            0.0704,
+            0.1512,
+            0.8592,
+            0.0372
+          ]
+        }
+      ]
+    }
+  ]
+}

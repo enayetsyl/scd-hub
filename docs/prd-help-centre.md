@@ -36,7 +36,9 @@ follows their permissions as they change.
     permissions, the same set `myPermissions` returns). Every key must exist in
     `shared/permissionCatalogue.ts`.
   - `audience: "ALL_STAFF"`: SELF actions every staff member has (own leave, own attendance).
-  - `audience: "GUARDIAN"`: every guardian login.
+  - `audience: "GUARDIAN"`: every guardian login. A guardian guide for a feature released per
+    guardian (D-#1011) adds `guardianFeature: "STORYBOOKS" | "ACTIVITY_SHEETS"` and then reaches
+    only guardians with that feature switched on (D-#1021).
   The **server** filters. The app never receives a guide the person may not see. Grant → the guide
   appears on the next Help open. Revoke → it is gone. View-as sees the borrowed person's guides.
 - **R3 — content is code.** Guides live in the repo (`server/assets/help/guides/<id>.json`) and are reviewed in a PR.

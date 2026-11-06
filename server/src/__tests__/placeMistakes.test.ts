@@ -4,7 +4,9 @@
  */
 import mongoose, { Types } from "mongoose";
 import { MongoMemoryServer } from "mongodb-memory-server";
-import { FINANCE_EXPENSE_HEADS } from "@scd/shared";
+import { FINANCE_EXPENSE_HEADS, STAFF_MISTAKE_DEFAULT_SETTINGS } from "@scd/shared";
+import { StaffMistakeSettings } from "../modules/staff-mistakes/models/StaffMistakeSettings";
+import { setStaffMistakeSettings } from "../modules/staff-mistakes/services/StaffMistakeSettingsService";
 import { User } from "../modules/foundation/models/User";
 import { Notification } from "../modules/notifications/models/Notification";
 import { StaffMistake } from "../modules/staff-mistakes/models/StaffMistake";
@@ -38,7 +40,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await Promise.all(
-    [User, Notification, StaffMistake, StaffMistakeNote, FinancePosting, Task, StaffProfile, StaffLeaveApplication].map((m) => (m as unknown as mongoose.Model<unknown>).deleteMany({})),
+    [User, Notification, StaffMistake, StaffMistakeNote, StaffMistakeSettings, FinancePosting, Task, StaffProfile, StaffLeaveApplication].map((m) => (m as unknown as mongoose.Model<unknown>).deleteMany({})),
   );
 });
 
@@ -46,7 +48,8 @@ async function user(name: string, role = "OFFICE"): Promise<string> {
   seq += 1;
   const r = await User.collection.insertOne({
     name, role, active: true, phone: `8801766000${seq}`, passwordHash: "x",
-    grantedPermissions: [], revokedPermissions: [], additionalTemplates: [],
+    // D-#1020: these suites test the told flow (explain notice, decisions, warnings).
+    grantedPermissions: ["staff_mistakes:view_own"], revokedPermissions: [], additionalTemplates: [],
   });
   return r.insertedId.toString();
 }
@@ -113,9 +116,18 @@ describe("D-#953 — tier 2: a task reopened by someone else", () => {
 });
 
 describe("D-#955 — tier 3: missed duties", () => {
+  it("an overdue task records nothing while the check is off (the default, D-#1015)", async () => {
+    const assignee = await user("Rahima", "TEACHER");
+    const assigner = await user("Principal", "PRINCIPAL");
+    await Task.create({ titleBn: "রিপোর্ট জমা", assigneeUserId: new Types.ObjectId(assignee), assignedBy: new Types.ObjectId(assigner), dueKey: "2026-11-05", effortMin: 30 });
+    await dispatchTaskOverdue(new Date("2026-11-08T08:00:00+06:00"));
+    expect(await StaffMistake.countDocuments()).toBe(0);
+  });
+
   it("an overdue task is recorded once, however many days the sweep runs", async () => {
     const assignee = await user("Rahima", "TEACHER");
     const assigner = await user("Principal", "PRINCIPAL");
+    await setStaffMistakeSettings({ ...STAFF_MISTAKE_DEFAULT_SETTINGS, disabledKinds: [] }, assigner); // switched on
     await Task.create({ titleBn: "রিপোর্ট জমা", assigneeUserId: new Types.ObjectId(assignee), assignedBy: new Types.ObjectId(assigner), dueKey: "2026-11-05", effortMin: 30 });
     await Task.create({ titleBn: "আজকের কাজ", assigneeUserId: new Types.ObjectId(assignee), assignedBy: new Types.ObjectId(assigner), dueKey: "2026-11-10", effortMin: 30 });
     await dispatchTaskOverdue(new Date("2026-11-08T08:00:00+06:00"));
