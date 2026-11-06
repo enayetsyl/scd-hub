@@ -1,0 +1,272 @@
+{
+  "schema": "scd.exam-paper-draft/v1",
+  "key": "annual-2026-L0-MATH",
+  "exam": { "term": "ANNUAL", "year": 2026, "nameBn": "বার্ষিক পরীক্ষা ২০২৬" },
+  "classLevel": 0,
+  "subject": "MATH",
+  "titleBn": "বার্ষিক পরীক্ষা ২০২৬ · কেজি · গণিত",
+  "fullMarks": 100,
+  "durationBn": "২ ঘণ্টা",
+  "syllabusRows": [
+    { "seq": 1, "label": "বাংলা অঙ্কে লেখ (৬১–৮০) — ০.৫ × ২০ = ১০", "itemType": "other", "component": null, "count": 1, "marksEach": 10, "total": 10 },
+    { "seq": 2, "label": "Write in numbers (81–100) — 0.5 × 20 = 10", "itemType": "other", "component": null, "count": 1, "marksEach": 10, "total": 10 },
+    { "seq": 3, "label": "কথায় লেখ (বাংলা)", "itemType": "other", "component": null, "count": 10, "marksEach": 1, "total": 10 },
+    { "seq": 4, "label": "Write in words (English)", "itemType": "other", "component": null, "count": 10, "marksEach": 1, "total": 10 },
+    { "seq": 5, "label": "জোড় ও বিজোড় সংখ্যা আলাদা কর (৪টি সেট)", "itemType": "short_answer", "component": null, "count": 4, "marksEach": 2, "total": 8 },
+    { "seq": 6, "label": "ছোট থেকে বড় ও বড় থেকে ছোট সাজাও (৫টি সেট)", "itemType": "other", "component": null, "count": 5, "marksEach": 2, "total": 10 },
+    { "seq": 7, "label": "উপরে-নিচে যোগ কর", "itemType": "other", "component": null, "count": 5, "marksEach": 1, "total": 5 },
+    { "seq": 8, "label": "উপরে-নিচে বিয়োগ কর", "itemType": "other", "component": null, "count": 5, "marksEach": 1, "total": 5 },
+    { "seq": 9, "label": "দাগ টেনে যোগ কর", "itemType": "other", "component": null, "count": 5, "marksEach": 1, "total": 5 },
+    { "seq": 10, "label": "দাগ টেনে বিয়োগ কর", "itemType": "other", "component": null, "count": 5, "marksEach": 1, "total": 5 },
+    { "seq": 11, "label": "দাগ টেনে যোগ/বিয়োগফল মিলকরণ কর", "itemType": "matching", "component": null, "count": 5, "marksEach": 1, "total": 5 },
+    { "seq": 12, "label": "নামতা লেখ", "itemType": "other", "component": null, "count": 1, "marksEach": 10, "total": 10 },
+    { "seq": 13, "label": "ঘরে সংখ্যা লেখ — আগের, পরের ও মাঝের সংখ্যা", "itemType": "fill_blank", "component": null, "count": 7, "marksEach": 1, "total": 7 }
+  ],
+  "sections": [
+    {
+      "seq": 1,
+      "syllabusRowSeq": 1,
+      "kind": "WRITTEN",
+      "instructionBn": "বাংলা অঙ্কে লেখ (৬১–৮০)",
+      "count": 1, "marksEach": 10, "total": 10,
+      "choiceNoteBn": null,
+      "splitMarks": true,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s1-1", "text": "৬১ থেকে ৭০ পর্যন্ত সংখ্যাগুলো অঙ্কে লেখ।", "answer": "৬১, ৬২, ৬৩, ৬৪, ৬৫, ৬৬, ৬৭, ৬৮, ৬৯, ৭০ (প্রতিটি ০.৫)", "marks": 5, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১", "bookRef": "পৃষ্ঠা ২১, ২৩", "needsPicture": false, "note": "পর্যালোচনার সুবিধায় দুই ভাগে ভাগ করা" },
+        { "key": "s1-2", "text": "৭১ থেকে ৮০ পর্যন্ত সংখ্যাগুলো অঙ্কে লেখ।", "answer": "৭১, ৭২, ৭৩, ৭৪, ৭৫, ৭৬, ৭৭, ৭৮, ৭৯, ৮০ (প্রতিটি ০.৫)", "marks": 5, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১", "bookRef": "পৃষ্ঠা ২১, ২৪", "needsPicture": false, "note": null }
+      ]
+    },
+    {
+      "seq": 2,
+      "syllabusRowSeq": 2,
+      "kind": "WRITTEN",
+      "instructionBn": "Write in numbers (81–100)",
+      "count": 1, "marksEach": 10, "total": 10,
+      "choiceNoteBn": null,
+      "splitMarks": true,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s2-1", "text": "Write the numbers from 81 to 90.", "answer": "81, 82, 83, 84, 85, 86, 87, 88, 89, 90 (0.5 each)", "marks": 5, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ২", "bookRef": "Math (English) page 24", "needsPicture": false, "note": "পর্যালোচনার সুবিধায় দুই ভাগে ভাগ করা" },
+        { "key": "s2-2", "text": "Write the numbers from 91 to 100.", "answer": "91, 92, 93, 94, 95, 96, 97, 98, 99, 100 (0.5 each)", "marks": 5, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ২", "bookRef": "Math (English) pages 25–27", "needsPicture": false, "note": null }
+      ]
+    },
+    {
+      "seq": 3,
+      "syllabusRowSeq": 3,
+      "kind": "WRITTEN",
+      "instructionBn": "কথায় লেখ",
+      "count": 10, "marksEach": 1, "total": 10,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s3-1", "text": "২২ =", "answer": "বাইশ", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৩", "bookRef": null, "needsPicture": false, "note": null },
+        { "key": "s3-2", "text": "২৭ =", "answer": "সাতাশ", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৩", "bookRef": null, "needsPicture": false, "note": null },
+        { "key": "s3-3", "text": "৩৩ =", "answer": "তেত্রিশ", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৩", "bookRef": null, "needsPicture": false, "note": null },
+        { "key": "s3-4", "text": "৩৭ =", "answer": "সাঁইত্রিশ", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৩", "bookRef": null, "needsPicture": false, "note": null },
+        { "key": "s3-5", "text": "৩৯ =", "answer": "ঊনচল্লিশ", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৩", "bookRef": null, "needsPicture": false, "note": null },
+        { "key": "s3-6", "text": "৪২ =", "answer": "বিয়াল্লিশ", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৩", "bookRef": null, "needsPicture": false, "note": null },
+        { "key": "s3-7", "text": "৪৪ =", "answer": "চুয়াল্লিশ", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৩", "bookRef": null, "needsPicture": false, "note": null },
+        { "key": "s3-8", "text": "৪৬ =", "answer": "ছেচল্লিশ", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৩", "bookRef": null, "needsPicture": false, "note": null },
+        { "key": "s3-9", "text": "৪৯ =", "answer": "ঊনপঞ্চাশ", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৩", "bookRef": null, "needsPicture": false, "note": null },
+        { "key": "s3-10", "text": "৫০ =", "answer": "পঞ্চাশ", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৩", "bookRef": null, "needsPicture": false, "note": null }
+      ]
+    },
+    {
+      "seq": 4,
+      "syllabusRowSeq": 4,
+      "kind": "WRITTEN",
+      "instructionBn": "Write in words",
+      "count": 10, "marksEach": 1, "total": 10,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s4-1", "text": "23 =", "answer": "Twenty-three", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৪", "bookRef": null, "needsPicture": false, "note": null },
+        { "key": "s4-2", "text": "25 =", "answer": "Twenty-five", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৪", "bookRef": null, "needsPicture": false, "note": null },
+        { "key": "s4-3", "text": "28 =", "answer": "Twenty-eight", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৪", "bookRef": null, "needsPicture": false, "note": null },
+        { "key": "s4-4", "text": "32 =", "answer": "Thirty-two", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৪", "bookRef": "Math (English) page 11", "needsPicture": false, "note": null },
+        { "key": "s4-5", "text": "35 =", "answer": "Thirty-five", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৪", "bookRef": "Math (English) page 11", "needsPicture": false, "note": null },
+        { "key": "s4-6", "text": "39 =", "answer": "Thirty-nine", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৪", "bookRef": "Math (English) page 11", "needsPicture": false, "note": null },
+        { "key": "s4-7", "text": "41 =", "answer": "Forty-one", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৪", "bookRef": "Math (English) page 12", "needsPicture": false, "note": null },
+        { "key": "s4-8", "text": "44 =", "answer": "Forty-four", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৪", "bookRef": "Math (English) page 12", "needsPicture": false, "note": null },
+        { "key": "s4-9", "text": "46 =", "answer": "Forty-six", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৪", "bookRef": "Math (English) page 12", "needsPicture": false, "note": null },
+        { "key": "s4-10", "text": "50 =", "answer": "Fifty", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৪", "bookRef": "Math (English) page 12", "needsPicture": false, "note": null }
+      ]
+    },
+    {
+      "seq": 5,
+      "syllabusRowSeq": 5,
+      "kind": "WRITTEN",
+      "instructionBn": "জোড় ও বিজোড় সংখ্যা আলাদা কর",
+      "count": 4, "marksEach": 2, "total": 8,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s5-1", "text": "ক) ২৩, ১৩, ২৬, ৩৪, ৩৩, ৩০\nজোড়: ________  বিজোড়: ________", "answer": "জোড়: ২৬, ৩৪, ৩০; বিজোড়: ২৩, ১৩, ৩৩", "marks": 2, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৫(ক)", "bookRef": "পৃষ্ঠা ১১, ২৯", "needsPicture": false, "note": null },
+        { "key": "s5-2", "text": "খ) ৪০, ৩৫, ৪৪, ৩৭, ৩৯, ৪২\nজোড়: ________  বিজোড়: ________", "answer": "জোড়: ৪০, ৪৪, ৪২; বিজোড়: ৩৫, ৩৭, ৩৯", "marks": 2, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৫(খ)", "bookRef": "পৃষ্ঠা ১১, ২৯", "needsPicture": false, "note": null },
+        { "key": "s5-3", "text": "গ) ৩৩, ২৮, ৪৪, ৩৭, ২২, ৪৯\nজোড়: ________  বিজোড়: ________", "answer": "জোড়: ২৮, ৪৪, ২২; বিজোড়: ৩৩, ৩৭, ৪৯", "marks": 2, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৫(গ)", "bookRef": "পৃষ্ঠা ১১, ২৯", "needsPicture": false, "note": null },
+        { "key": "s5-4", "text": "ঘ) ১৬, ২, ৫, ১৯, ২৪, ২৭\nজোড়: ________  বিজোড়: ________", "answer": "জোড়: ১৬, ২, ২৪; বিজোড়: ৫, ১৯, ২৭", "marks": 2, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৫(ঘ)", "bookRef": "পৃষ্ঠা ১১, ১৪", "needsPicture": false, "note": "১–২০ রিভিশন অংশও এই সেটে আছে" }
+      ]
+    },
+    {
+      "seq": 6,
+      "syllabusRowSeq": 6,
+      "kind": "WRITTEN",
+      "instructionBn": "নির্দেশ অনুযায়ী ছোট থেকে বড় বা বড় থেকে ছোট সাজিয়ে লেখ",
+      "count": 5, "marksEach": 2, "total": 10,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s6-1", "text": "ক) বড় থেকে ছোট: ৮, ৩, ৫, ১০, ১৩, ৬, ১৫, ১", "answer": "১৫, ১৩, ১০, ৮, ৬, ৫, ৩, ১", "marks": 2, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৬(ক)", "bookRef": "পৃষ্ঠা ৩০", "needsPicture": false, "note": null },
+        { "key": "s6-2", "text": "খ) ছোট থেকে বড়: ১২, ৯, ১৬, ১১, ২০, ৭, ১৮, ১৪", "answer": "৭, ৯, ১১, ১২, ১৪, ১৬, ১৮, ২০", "marks": 2, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৬(খ)", "bookRef": "পৃষ্ঠা ১৫", "needsPicture": false, "note": "একই সংখ্যা, দিক বদলে ছোট থেকে বড় করা হয়েছে (সিলেবাসে দুই দিকই আছে)" },
+        { "key": "s6-3", "text": "গ) বড় থেকে ছোট: ২২, ২৫, ১৭, ২৭, ১৯, ১৫, ৩০, ২৯", "answer": "৩০, ২৯, ২৭, ২৫, ২২, ১৯, ১৭, ১৫", "marks": 2, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৬(গ)", "bookRef": "পৃষ্ঠা ৩০", "needsPicture": false, "note": null },
+        { "key": "s6-4", "text": "ঘ) ছোট থেকে বড়: ৩৬, ৩৩, ৩৯, ৩১, ৩৮, ৪১, ৪০, ৩৪", "answer": "৩১, ৩৩, ৩৪, ৩৬, ৩৮, ৩৯, ৪০, ৪১", "marks": 2, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৬(ঘ)", "bookRef": "পৃষ্ঠা ১৫", "needsPicture": false, "note": "একই সংখ্যা, দিক বদলে ছোট থেকে বড় করা হয়েছে" },
+        { "key": "s6-5", "text": "ঙ) বড় থেকে ছোট: ৪৫, ৩৭, ৪৩, ৩৫, ৫০, ৪৭, ৪২, ৪৯", "answer": "৫০, ৪৯, ৪৭, ৪৫, ৪৩, ৪২, ৩৭, ৩৫", "marks": 2, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৬(ঙ)", "bookRef": "পৃষ্ঠা ৩০", "needsPicture": false, "note": null }
+      ]
+    },
+    {
+      "seq": 7,
+      "syllabusRowSeq": 7,
+      "kind": "WRITTEN",
+      "instructionBn": "উপরে-নিচে যোগ কর",
+      "count": 5, "marksEach": 1, "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s7-1", "text": "ক)   ১২\n    + ৩", "answer": "১৫", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৭(ক)", "bookRef": "পৃষ্ঠা ৩৭", "needsPicture": false, "note": null },
+        { "key": "s7-2", "text": "খ)   ১০\n    + ৪", "answer": "১৪", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৭(খ)", "bookRef": "পৃষ্ঠা ৩৭", "needsPicture": false, "note": null },
+        { "key": "s7-3", "text": "গ)   ২১\n    + ২", "answer": "২৩", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৭(গ)", "bookRef": "পৃষ্ঠা ৩৭", "needsPicture": false, "note": null },
+        { "key": "s7-4", "text": "ঘ)   ২২\n    + ৫", "answer": "২৭", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৭(ঘ)", "bookRef": "পৃষ্ঠা ৩৭", "needsPicture": false, "note": null },
+        { "key": "s7-5", "text": "ঙ)   ১৪\n    + ৩", "answer": "১৭", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৭(ঙ)", "bookRef": "পৃষ্ঠা ৩৭", "needsPicture": false, "note": null }
+      ]
+    },
+    {
+      "seq": 8,
+      "syllabusRowSeq": 8,
+      "kind": "WRITTEN",
+      "instructionBn": "উপরে-নিচে বিয়োগ কর",
+      "count": 5, "marksEach": 1, "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s8-1", "text": "ক)   ৫\n    − ১", "answer": "৪", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৮(ক)", "bookRef": "পৃষ্ঠা ৩৪, ৩৭", "needsPicture": false, "note": null },
+        { "key": "s8-2", "text": "খ)   ৭\n    − ৪", "answer": "৩", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৮(খ)", "bookRef": "পৃষ্ঠা ৩৪, ৩৭", "needsPicture": false, "note": null },
+        { "key": "s8-3", "text": "গ)   ৪\n    − ৩", "answer": "১", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৮(গ)", "bookRef": "পৃষ্ঠা ৩৪, ৩৭", "needsPicture": false, "note": null },
+        { "key": "s8-4", "text": "ঘ)   ৯\n    − ৬", "answer": "৩", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৮(ঘ)", "bookRef": "পৃষ্ঠা ৩৪, ৩৭", "needsPicture": false, "note": null },
+        { "key": "s8-5", "text": "ঙ)   ৮\n    − ৫", "answer": "৩", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৮(ঙ)", "bookRef": "পৃষ্ঠা ৩৪, ৩৭", "needsPicture": false, "note": null }
+      ]
+    },
+    {
+      "seq": 9,
+      "syllabusRowSeq": 9,
+      "kind": "WRITTEN",
+      "instructionBn": "দাগ টেনে যোগ কর",
+      "count": 5, "marksEach": 1, "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s9-1", "text": "ক) ৩ + ২ =", "answer": "৫", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৫ · প্রশ্ন ৯", "bookRef": "পৃষ্ঠা ১৯", "needsPicture": false, "note": null },
+        { "key": "s9-2", "text": "খ) ৪ + ১ =", "answer": "৫", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৫ · প্রশ্ন ৯", "bookRef": "পৃষ্ঠা ১৯", "needsPicture": false, "note": null },
+        { "key": "s9-3", "text": "গ) ৫ + ২ =", "answer": "৭", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৫ · প্রশ্ন ৯", "bookRef": "পৃষ্ঠা ১৯", "needsPicture": false, "note": null },
+        { "key": "s9-4", "text": "ঘ) ৭ + ২ =", "answer": "৯", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৫ · প্রশ্ন ৯", "bookRef": "পৃষ্ঠা ১৯", "needsPicture": false, "note": null },
+        { "key": "s9-5", "text": "ঙ) ৪ + ৩ =", "answer": "৭", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৫ · প্রশ্ন ৯", "bookRef": "পৃষ্ঠা ১৯", "needsPicture": false, "note": null }
+      ]
+    },
+    {
+      "seq": 10,
+      "syllabusRowSeq": 10,
+      "kind": "WRITTEN",
+      "instructionBn": "দাগ টেনে বিয়োগ কর",
+      "count": 5, "marksEach": 1, "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s10-1", "text": "ক) ৬ − ৩ =", "answer": "৩", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৯(ক)", "bookRef": "পৃষ্ঠা ৩৩, ৩৬", "needsPicture": false, "note": null },
+        { "key": "s10-2", "text": "খ) ৭ − ২ =", "answer": "৫", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৯(খ)", "bookRef": "পৃষ্ঠা ৩৩, ৩৬", "needsPicture": false, "note": null },
+        { "key": "s10-3", "text": "গ) ৮ − ৪ =", "answer": "৪", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৯(গ)", "bookRef": "পৃষ্ঠা ৩৩, ৩৬", "needsPicture": false, "note": null },
+        { "key": "s10-4", "text": "ঘ) ৯ − ৪ =", "answer": "৫", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৯(ঘ)", "bookRef": "পৃষ্ঠা ৩৩, ৩৬", "needsPicture": false, "note": null },
+        { "key": "s10-5", "text": "ঙ) ৫ − ৫ =", "answer": "০", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৯(ঙ)", "bookRef": "পৃষ্ঠা ৩৩, ৩৬", "needsPicture": false, "note": null }
+      ]
+    },
+    {
+      "seq": 11,
+      "syllabusRowSeq": 11,
+      "kind": "WRITTEN",
+      "instructionBn": "যোগফল ও বিয়োগফল বের করে দাগ টেনে মিল কর",
+      "count": 5, "marksEach": 1, "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": ["৭", "২", "৫", "৩", "৪"],
+      "items": [
+        { "key": "s11-1", "text": "ক) ৫ − ২ =", "answer": "৩", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১০(ক)", "bookRef": "পৃষ্ঠা ৩৫", "needsPicture": false, "note": null },
+        { "key": "s11-2", "text": "খ) ৬ + ১ =", "answer": "৭", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৫ · প্রশ্ন ১০", "bookRef": "পৃষ্ঠা ২০", "needsPicture": false, "note": "সিলেবাসে যোগ/বিয়োগ দুটোই থাকায় অর্ধ-বার্ষিকের যোগফল মিলকরণ থেকে নেওয়া" },
+        { "key": "s11-3", "text": "গ) ৭ − ৫ =", "answer": "২", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১০(গ)", "bookRef": "পৃষ্ঠা ৩৫", "needsPicture": false, "note": null },
+        { "key": "s11-4", "text": "ঘ) ৪ + ১ =", "answer": "৫", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৫ · প্রশ্ন ১০", "bookRef": "পৃষ্ঠা ২০", "needsPicture": false, "note": null },
+        { "key": "s11-5", "text": "ঙ) ৬ − ২ =", "answer": "৪", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১০(খ)", "bookRef": "পৃষ্ঠা ৩৫", "needsPicture": false, "note": null }
+      ]
+    },
+    {
+      "seq": 12,
+      "syllabusRowSeq": 12,
+      "kind": "WRITTEN",
+      "instructionBn": "৪ এর নামতা লেখ",
+      "count": 1, "marksEach": 10, "total": 10,
+      "choiceNoteBn": null,
+      "splitMarks": true,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s12-1", "text": "৪ × ১ = ___", "answer": "৪", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১১", "bookRef": "পৃষ্ঠা ৩২", "needsPicture": false, "note": "মোহাম্মদপুরে শুধু × চিহ্ন ছাপা খালি ছক ছিল; এখানে গুণ্য ও গুণক ছাপা, শিশু গুণফল লিখবে। প্রতিটি লাইন ১ নম্বর। পুরো লাইন শিশুকে দিয়ে লেখাতে চাইলে খালি ছক রাখুন" },
+        { "key": "s12-2", "text": "৪ × ২ = ___", "answer": "৮", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১১", "bookRef": "পৃষ্ঠা ৩২", "needsPicture": false, "note": null },
+        { "key": "s12-3", "text": "৪ × ৩ = ___", "answer": "১২", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১১", "bookRef": "পৃষ্ঠা ৩২", "needsPicture": false, "note": null },
+        { "key": "s12-4", "text": "৪ × ৪ = ___", "answer": "১৬", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১১", "bookRef": "পৃষ্ঠা ৩২", "needsPicture": false, "note": null },
+        { "key": "s12-5", "text": "৪ × ৫ = ___", "answer": "২০", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১১", "bookRef": "পৃষ্ঠা ৩২", "needsPicture": false, "note": null },
+        { "key": "s12-6", "text": "৪ × ৬ = ___", "answer": "২৪", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১১", "bookRef": "পৃষ্ঠা ৩২", "needsPicture": false, "note": null },
+        { "key": "s12-7", "text": "৪ × ৭ = ___", "answer": "২৮", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১১", "bookRef": "পৃষ্ঠা ৩২", "needsPicture": false, "note": null },
+        { "key": "s12-8", "text": "৪ × ৮ = ___", "answer": "৩২", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১১", "bookRef": "পৃষ্ঠা ৩২", "needsPicture": false, "note": null },
+        { "key": "s12-9", "text": "৪ × ৯ = ___", "answer": "৩৬", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১১", "bookRef": "পৃষ্ঠা ৩২", "needsPicture": false, "note": null },
+        { "key": "s12-10", "text": "৪ × ১০ = ___", "answer": "৪০", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১১", "bookRef": "পৃষ্ঠা ৩২", "needsPicture": false, "note": null }
+      ]
+    },
+    {
+      "seq": 13,
+      "syllabusRowSeq": 13,
+      "kind": "WRITTEN",
+      "instructionBn": "খালি ঘরে আগের, পরের ও মাঝের সংখ্যা লেখ",
+      "count": 7, "marksEach": 1, "total": 7,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s13-1", "text": "ক) ৩৫  ___  ৩৭", "answer": "৩৬", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৫ · প্রশ্ন ৫(ঘ)", "bookRef": "পৃষ্ঠা ২৭", "needsPicture": false, "note": null },
+        { "key": "s13-2", "text": "খ) ৪০  ___  ৪২", "answer": "৪১", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৫ · প্রশ্ন ৫(ঙ)", "bookRef": "পৃষ্ঠা ২৭", "needsPicture": false, "note": null },
+        { "key": "s13-3", "text": "গ) ___  ৬২  ৬৩", "answer": "৬১", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৫ · প্রশ্ন ৫(খ)", "bookRef": "পৃষ্ঠা ২৭", "needsPicture": false, "note": "১১–১২ এর বদলে ৬২–৬৩ (বার্ষিকে ১–১০০)" },
+        { "key": "s13-4", "text": "ঘ) ৭৮  ৭৯  ___", "answer": "৮০", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৫ · প্রশ্ন ৫(গ)", "bookRef": "পৃষ্ঠা ২৭", "needsPicture": false, "note": "২১–২২ এর বদলে ৭৮–৭৯ (বার্ষিকে ১–১০০)" },
+        { "key": "s13-5", "text": "ঙ) ৮৩  ___  ৮৫", "answer": "৮৪", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৫ · প্রশ্ন ৫(ক)", "bookRef": "পৃষ্ঠা ২৭", "needsPicture": false, "note": "৭–৯ এর বদলে ৮৩–৮৫" },
+        { "key": "s13-6", "text": "চ) ___  ৯২  ৯৩", "answer": "৯১", "marks": 1, "source": "NEW", "sourceRef": null, "bookRef": "পৃষ্ঠা ২৭, ২৮", "needsPicture": false, "note": null },
+        { "key": "s13-7", "text": "ছ) ৯৮  ৯৯  ___", "answer": "১০০", "marks": 1, "source": "NEW", "sourceRef": null, "bookRef": "পৃষ্ঠা ২৮", "needsPicture": false, "note": null }
+      ]
+    }
+  ],
+  "authorNotes": "KG Maths, 13 sections = 13 syllabus rows, 100 marks. No Mohammadpur 2026 KG final exists; the guide was MP Final 2025 KG Maths, whose questions 1-11 line up almost exactly with the Sylhet rows, so most items are reused verbatim (61-80 in Bangla digits, 81-100 in English, number names 21-50, even/odd sets, ordering sets, column add/subtract, subtraction with lines, matching, 4-times table). MP Half-yearly 2025 KG supplied 'দাগ কেটে যোগ' (row 9), two addition sums for the matching row, and the before/between/after pattern (row 13). Choices the owner may want to check: (1) Rows 1 and 2 (1 x 10) are split into two 5-mark halves (61-70 / 71-80, 81-90 / 91-100) for easier review. (2) Row 6 says both directions: sets ক, গ, ঙ are big-to-small exactly as MP; sets খ and ঘ use MP's numbers but ask small-to-big. Each set has 8 numbers as in MP; trim to 6 if that is too long for KG. (3) Row 11 mixes 3 subtraction and 2 addition sums because the label says যোগ/বিয়োগফল; right-hand column has exactly 5 answers, no extras. (4) Row 12 uses the 4-times table (MP Final 2025 used 4, MP HY used 3); any table 1-5 is in scope. It is split into 10 one-mark lines printed as '৪ × ১ = ___' (the child writes only the product); MP printed an empty grid with just the × sign, so the child wrote the whole line. Pick whichever the school prefers. (5) Row 13 moved most numbers up into 61-100 because the annual scope is 1-100; the last two items are new from book pages 27-28. (6) Rows 2 and 4 are written in English because the syllabus row is in English. Duration '২ ঘণ্টা' is from the MP paper. Book page numbers are printed pages of KG গণিত (2026) unless marked Math (English)."
+}

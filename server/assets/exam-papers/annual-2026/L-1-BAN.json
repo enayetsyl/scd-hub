@@ -1,0 +1,226 @@
+{
+  "schema": "scd.exam-paper-draft/v1",
+  "key": "annual-2026-L-1-BAN",
+  "exam": { "term": "ANNUAL", "year": 2026, "nameBn": "বার্ষিক পরীক্ষা ২০২৬" },
+  "classLevel": -1,
+  "subject": "BAN",
+  "titleBn": "বার্ষিক পরীক্ষা ২০২৬ · নার্সারি · বাংলা",
+  "fullMarks": 100,
+  "durationBn": "১ ঘণ্টা ৩০ মিনিট",
+  "syllabusRows": [
+    { "seq": 1, "label": "সম্পূর্ণ বর্ণমালা ক্রমে লেখ — স্বরবর্ণ ১১ + ব্যঞ্জনবর্ণ ৩৯", "itemType": "other", "component": null, "count": 1, "marksEach": 15, "total": 15 },
+    { "seq": 2, "label": "খালি ঘরে সঠিক বর্ণ লেখ", "itemType": "fill_blank", "component": null, "count": 5, "marksEach": 1, "total": 5 },
+    { "seq": 3, "label": "এলোমেলো ব্যঞ্জনবর্ণ সাজিয়ে লেখ", "itemType": "other", "component": null, "count": 5, "marksEach": 2, "total": 10 },
+    { "seq": 4, "label": "এলোমেলো স্বরবর্ণ সাজিয়ে লেখ", "itemType": "other", "component": null, "count": 5, "marksEach": 2, "total": 10 },
+    { "seq": 5, "label": "আগের বর্ণ লেখ", "itemType": "fill_blank", "component": null, "count": 10, "marksEach": 1, "total": 10 },
+    { "seq": 6, "label": "পরের বর্ণ লেখ", "itemType": "fill_blank", "component": null, "count": 10, "marksEach": 1, "total": 10 },
+    { "seq": 7, "label": "ছবি দেখে সঠিক বর্ণ লেখ", "itemType": "short_answer", "component": null, "count": 10, "marksEach": 1, "total": 10 },
+    { "seq": 8, "label": "ছবির সাথে বর্ণের মিল কর", "itemType": "matching", "component": null, "count": 10, "marksEach": 1, "total": 10 },
+    { "seq": 9, "label": "দাগ টেনে ছবির সাথে শব্দ মিলাও", "itemType": "matching", "component": null, "count": 5, "marksEach": 2, "total": 10 },
+    { "seq": 10, "label": "মৌখিক", "itemType": "oral", "component": null, "count": 1, "marksEach": 10, "total": 10 }
+  ],
+  "sections": [
+    {
+      "seq": 1,
+      "syllabusRowSeq": 1,
+      "kind": "WRITTEN",
+      "instructionBn": "সম্পূর্ণ বর্ণমালা ক্রমে লেখ (স্বরবর্ণ ১১টি + ব্যঞ্জনবর্ণ ৩৯টি)",
+      "count": 1, "marksEach": 15, "total": 15,
+      "choiceNoteBn": null,
+      "splitMarks": true,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s1-1", "text": "স্বরবর্ণ: অ থেকে ঔ পর্যন্ত (১১টি) ক্রমে লেখ।", "answer": "অ আ ই ঈ উ ঊ ঋ এ ঐ ও ঔ", "marks": 4, "source": "NEW", "bookRef": "পৃষ্ঠা ৭৬ (স্বরবর্ণের পরিচয়)", "needsPicture": false },
+        { "key": "s1-2", "text": "ব্যঞ্জনবর্ণ: ক থেকে ণ পর্যন্ত (১৫টি) ক্রমে লেখ।", "answer": "ক খ গ ঘ ঙ চ ছ জ ঝ ঞ ট ঠ ড ঢ ণ", "marks": 4, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১", "bookRef": "পৃষ্ঠা ৭৬ (ব্যঞ্জনবর্ণের পরিচয়)", "needsPicture": false, "note": "মোহাম্মদপুরে শুধু ক–ন (১৫ নম্বর) ছিল; সিলেবাস অনুযায়ী সম্পূর্ণ বর্ণমালা চার ভাগে ভাগ করা হয়েছে" },
+        { "key": "s1-3", "text": "ব্যঞ্জনবর্ণ: ত থেকে ল পর্যন্ত (১৩টি) ক্রমে লেখ।", "answer": "ত থ দ ধ ন প ফ ব ভ ম য র ল", "marks": 4, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১", "bookRef": "পৃষ্ঠা ৭৬ (ব্যঞ্জনবর্ণের পরিচয়)", "needsPicture": false, "note": "মোহাম্মদপুরে ক–ন পর্যন্ত ছিল; এখানে ত–ল অংশ, সম্পূর্ণ বর্ণমালার তৃতীয় ভাগ" },
+        { "key": "s1-4", "text": "ব্যঞ্জনবর্ণ: শ থেকে ঁ (চন্দ্রবিন্দু) পর্যন্ত (১১টি) ক্রমে লেখ।", "answer": "শ ষ স হ ড় ঢ় য় ৎ ং ঃ ঁ", "marks": 3, "source": "NEW", "bookRef": "পৃষ্ঠা ৭৬ (ব্যঞ্জনবর্ণের পরিচয়)", "needsPicture": false }
+      ]
+    },
+    {
+      "seq": 2,
+      "syllabusRowSeq": 2,
+      "kind": "WRITTEN",
+      "instructionBn": "খালি ঘরে সঠিক বর্ণ লেখ",
+      "count": 5, "marksEach": 1, "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": "| অ | (১) | ই | ঈ | (২) | ঊ |\n|---|---|---|---|---|---|\n| (৩) | এ | ঐ | (৪) | (৫) | |",
+      "matchRight": null,
+      "items": [
+        { "key": "s2-1", "text": "খালি ঘর (১)", "answer": "আ", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ২", "bookRef": "পৃষ্ঠা ১৯ (শূন্যস্থান পূরণ কর)", "needsPicture": false, "note": "মোহাম্মদপুরে ৬টি খালি ঘর ছিল; সিলেবাস অনুযায়ী ৫টি করা হয়েছে, খালি ঘরের জায়গা বদলানো হয়েছে" },
+        { "key": "s2-2", "text": "খালি ঘর (২)", "answer": "উ", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ২", "bookRef": "পৃষ্ঠা ১৯", "needsPicture": false, "note": "৬টি থেকে ৫টি খালি ঘর" },
+        { "key": "s2-3", "text": "খালি ঘর (৩)", "answer": "ঋ", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ২", "bookRef": "পৃষ্ঠা ১৯", "needsPicture": false, "note": "৬টি থেকে ৫টি খালি ঘর" },
+        { "key": "s2-4", "text": "খালি ঘর (৪)", "answer": "ও", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ২", "bookRef": "পৃষ্ঠা ১৯", "needsPicture": false, "note": "৬টি থেকে ৫টি খালি ঘর" },
+        { "key": "s2-5", "text": "খালি ঘর (৫)", "answer": "ঔ", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ২", "bookRef": "পৃষ্ঠা ১৯", "needsPicture": false, "note": "৬টি থেকে ৫টি খালি ঘর" }
+      ]
+    },
+    {
+      "seq": 3,
+      "syllabusRowSeq": 3,
+      "kind": "WRITTEN",
+      "instructionBn": "এলোমেলো ব্যঞ্জনবর্ণ সাজিয়ে লেখ",
+      "count": 5, "marksEach": 2, "total": 10,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s3-1", "text": "ল   ষ   য   শ   র", "answer": "য র ল শ ষ", "marks": 2, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৩", "bookRef": "পৃষ্ঠা ৭৫ (সাজিয়ে লেখ)", "needsPicture": false },
+        { "key": "s3-2", "text": "ঘ   ক   ঙ   খ   গ", "answer": "ক খ গ ঘ ঙ", "marks": 2, "source": "NEW", "bookRef": "পৃষ্ঠা ৭৫ (সাজিয়ে লেখ)", "needsPicture": false },
+        { "key": "s3-3", "text": "ঞ   জ   চ   ঝ   ছ", "answer": "চ ছ জ ঝ ঞ", "marks": 2, "source": "NEW", "bookRef": "পৃষ্ঠা ৭৫ (সাজিয়ে লেখ)", "needsPicture": false },
+        { "key": "s3-4", "text": "ণ   ঢ   ট   ড   ঠ", "answer": "ট ঠ ড ঢ ণ", "marks": 2, "source": "NEW", "bookRef": "পৃষ্ঠা ৭৫ (সাজিয়ে লেখ)", "needsPicture": false },
+        { "key": "s3-5", "text": "ম   প   ভ   ফ   ব", "answer": "প ফ ব ভ ম", "marks": 2, "source": "NEW", "bookRef": "পৃষ্ঠা ৭৫ (সাজিয়ে লেখ)", "needsPicture": false }
+      ]
+    },
+    {
+      "seq": 4,
+      "syllabusRowSeq": 4,
+      "kind": "WRITTEN",
+      "instructionBn": "এলোমেলো স্বরবর্ণ সাজিয়ে লেখ",
+      "count": 5, "marksEach": 2, "total": 10,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s4-1", "text": "উ   ই   ঊ   আ   ঈ", "answer": "আ ই ঈ উ ঊ", "marks": 2, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৪", "bookRef": "পৃষ্ঠা ১৮ (সাজিয়ে লেখ)", "needsPicture": false },
+        { "key": "s4-2", "text": "ঋ   এ   উ   ঊ   ঐ", "answer": "উ ঊ ঋ এ ঐ", "marks": 2, "source": "NEW", "bookRef": "পৃষ্ঠা ১৮ (সাজিয়ে লেখ)", "needsPicture": false },
+        { "key": "s4-3", "text": "ঔ   ঐ   ও   এ   ঋ", "answer": "ঋ এ ঐ ও ঔ", "marks": 2, "source": "NEW", "bookRef": "পৃষ্ঠা ১৮ (সাজিয়ে লেখ)", "needsPicture": false },
+        { "key": "s4-4", "text": "ই   অ   ঈ   আ   উ", "answer": "অ আ ই ঈ উ", "marks": 2, "source": "NEW", "bookRef": "পৃষ্ঠা ১৮ (সাজিয়ে লেখ)", "needsPicture": false },
+        { "key": "s4-5", "text": "ও   ঊ   ঐ   ঋ   এ", "answer": "ঊ ঋ এ ঐ ও", "marks": 2, "source": "NEW", "bookRef": "পৃষ্ঠা ১৮ (সাজিয়ে লেখ)", "needsPicture": false }
+      ]
+    },
+    {
+      "seq": 5,
+      "syllabusRowSeq": 5,
+      "kind": "WRITTEN",
+      "instructionBn": "আগের বর্ণ লেখ",
+      "count": 10, "marksEach": 1, "total": 10,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s5-1", "text": "______ আ", "answer": "অ", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৫", "bookRef": "পৃষ্ঠা ৬৯ (আগের অক্ষর লিখি)", "needsPicture": false },
+        { "key": "s5-2", "text": "______ এ", "answer": "ঋ", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৫", "bookRef": "পৃষ্ঠা ৬৯", "needsPicture": false },
+        { "key": "s5-3", "text": "______ ঔ", "answer": "ও", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৫", "bookRef": "পৃষ্ঠা ৬৯", "needsPicture": false },
+        { "key": "s5-4", "text": "______ ঘ", "answer": "গ", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৫", "bookRef": "পৃষ্ঠা ৬৯", "needsPicture": false },
+        { "key": "s5-5", "text": "______ জ", "answer": "ছ", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৫", "bookRef": "পৃষ্ঠা ৬৯", "needsPicture": false },
+        { "key": "s5-6", "text": "______ ঠ", "answer": "ট", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৫", "bookRef": "পৃষ্ঠা ৬৯", "needsPicture": false },
+        { "key": "s5-7", "text": "______ দ", "answer": "থ", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৫", "bookRef": "পৃষ্ঠা ৬৯", "needsPicture": false },
+        { "key": "s5-8", "text": "______ ফ", "answer": "প", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৫", "bookRef": "পৃষ্ঠা ৬৯", "needsPicture": false },
+        { "key": "s5-9", "text": "______ ষ", "answer": "শ", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৫", "bookRef": "পৃষ্ঠা ৬৯", "needsPicture": false },
+        { "key": "s5-10", "text": "______ ঁ (চন্দ্রবিন্দু)", "answer": "ঃ", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৫", "bookRef": "পৃষ্ঠা ৭৬ (বর্ণমালার ক্রম)", "needsPicture": false }
+      ]
+    },
+    {
+      "seq": 6,
+      "syllabusRowSeq": 6,
+      "kind": "WRITTEN",
+      "instructionBn": "পরের বর্ণ লেখ",
+      "count": 10, "marksEach": 1, "total": 10,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s6-1", "text": "ই ______", "answer": "ঈ", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৬", "bookRef": "পৃষ্ঠা ৬৮ (পরের অক্ষর লিখি)", "needsPicture": false },
+        { "key": "s6-2", "text": "ঋ ______", "answer": "এ", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৬", "bookRef": "পৃষ্ঠা ৬৮", "needsPicture": false },
+        { "key": "s6-3", "text": "ঐ ______", "answer": "ও", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৬", "bookRef": "পৃষ্ঠা ৬৮", "needsPicture": false },
+        { "key": "s6-4", "text": "ঙ ______", "answer": "চ", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৬", "bookRef": "পৃষ্ঠা ৬৮", "needsPicture": false },
+        { "key": "s6-5", "text": "ট ______", "answer": "ঠ", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৬", "bookRef": "পৃষ্ঠা ৬৮", "needsPicture": false },
+        { "key": "s6-6", "text": "ণ ______", "answer": "ত", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৬", "bookRef": "পৃষ্ঠা ৬৮", "needsPicture": false },
+        { "key": "s6-7", "text": "ব ______", "answer": "ভ", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৬", "bookRef": "পৃষ্ঠা ৬৮", "needsPicture": false },
+        { "key": "s6-8", "text": "ৎ ______", "answer": "ং", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৬", "bookRef": "পৃষ্ঠা ৬৮", "needsPicture": false },
+        { "key": "s6-9", "text": "ড় ______", "answer": "ঢ়", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৬", "bookRef": "পৃষ্ঠা ৬৮", "needsPicture": false },
+        { "key": "s6-10", "text": "হ ______", "answer": "ড়", "marks": 1, "source": "NEW", "bookRef": "পৃষ্ঠা ৬৮ (পরের অক্ষর লিখি)", "needsPicture": false, "note": "মোহাম্মদপুরে ৯টি ছিল; সিলেবাসের ১০টি পূরণে ১টি নতুন" }
+      ]
+    },
+    {
+      "seq": 7,
+      "syllabusRowSeq": 7,
+      "kind": "WRITTEN",
+      "instructionBn": "ছবি দেখে সঠিক বর্ণ লেখ",
+      "count": 10, "marksEach": 1, "total": 10,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s7-1", "text": "[ছবি: আম] ______", "answer": "আ (আম)", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৭", "bookRef": "পৃষ্ঠা ৪", "needsPicture": true },
+        { "key": "s7-2", "text": "[ছবি: উট] ______", "answer": "উ (উট)", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৭", "bookRef": "পৃষ্ঠা ৮", "needsPicture": true },
+        { "key": "s7-3", "text": "[ছবি: খরগোশ] ______", "answer": "খ (খরগোশ)", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৭", "bookRef": "পৃষ্ঠা ২১", "needsPicture": true },
+        { "key": "s7-4", "text": "[ছবি: জাহাজ] ______", "answer": "জ (জাহাজ)", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৭", "bookRef": "পৃষ্ঠা ২৮", "needsPicture": true },
+        { "key": "s7-5", "text": "[ছবি: শাপলা ফুল] ______", "answer": "শ (শাপলা)", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৭", "bookRef": "পৃষ্ঠা ৫৩", "needsPicture": true, "note": "মোহাম্মদপুরের ছবিটি পদ্মের মতো দেখায়; বইয়ে শ-এর ছবি শাপলা, তাই স্পষ্ট শাপলার ছবি দিতে হবে" },
+        { "key": "s7-6", "text": "[ছবি: এক ছড়া কলা] ______", "answer": "ক (কলা)", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৭", "bookRef": "পৃষ্ঠা ২০", "needsPicture": true },
+        { "key": "s7-7", "text": "[ছবি: ছাতা] ______", "answer": "ছ (ছাতা)", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৭", "bookRef": "পৃষ্ঠা ২৭", "needsPicture": true },
+        { "key": "s7-8", "text": "[ছবি: টমেটো] ______", "answer": "ট (টমেটো)", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৭", "bookRef": "পৃষ্ঠা ৩২", "needsPicture": true },
+        { "key": "s7-9", "text": "[ছবি: নৌকা] ______", "answer": "ন (নৌকা)", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৭", "bookRef": "পৃষ্ঠা ৪২", "needsPicture": true },
+        { "key": "s7-10", "text": "[ছবি: ঢেঁড়স] ______", "answer": "ঢ (ঢেঁড়স)", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৭", "bookRef": "পৃষ্ঠা ৩৫", "needsPicture": true }
+      ]
+    },
+    {
+      "seq": 8,
+      "syllabusRowSeq": 8,
+      "kind": "WRITTEN",
+      "instructionBn": "ছবির সাথে বর্ণের মিল কর",
+      "count": 10, "marksEach": 1, "total": 10,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": ["ঙ", "এ", "র", "ঔ", "গ", "স", "ং", "ঃ", "ম", "ধ"],
+      "items": [
+        { "key": "s8-1", "text": "[ছবি: বাংলা অঙ্ক ১ (এক)]", "answer": "এ", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৮", "bookRef": "পৃষ্ঠা ১২", "needsPicture": true },
+        { "key": "s8-2", "text": "[ছবি: ঔষধের বোতল ও বড়ি]", "answer": "ঔ", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৮", "bookRef": "পৃষ্ঠা ১৫", "needsPicture": true },
+        { "key": "s8-3", "text": "[ছবি: ব্যাঙ]", "answer": "ঙ", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৮", "bookRef": "পৃষ্ঠা ২৪", "needsPicture": true },
+        { "key": "s8-4", "text": "[ছবি: চিংড়ি মাছ]", "answer": "ং", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৮", "bookRef": "পৃষ্ঠা ৬৩", "needsPicture": true },
+        { "key": "s8-5", "text": "[ছবি: সিংহ]", "answer": "স", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৮", "bookRef": "পৃষ্ঠা ৫৬", "needsPicture": true },
+        { "key": "s8-6", "text": "[ছবি: তীর-ধনুক]", "answer": "ধ", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৮", "bookRef": "পৃষ্ঠা ৪১", "needsPicture": true },
+        { "key": "s8-7", "text": "[ছবি: রেলগাড়ি]", "answer": "র", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৮", "bookRef": "পৃষ্ঠা ৫১", "needsPicture": true },
+        { "key": "s8-8", "text": "[ছবি: গাড়ি]", "answer": "গ", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৮", "bookRef": "পৃষ্ঠা ৫৮", "needsPicture": true },
+        { "key": "s8-9", "text": "[ছবি: কান্নারত দুঃখী মুখ]", "answer": "ঃ", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৮", "bookRef": "পৃষ্ঠা ৬৪", "needsPicture": true },
+        { "key": "s8-10", "text": "[ছবি: মই]", "answer": "ম", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৮", "bookRef": "পৃষ্ঠা ৪৮", "needsPicture": true }
+      ]
+    },
+    {
+      "seq": 9,
+      "syllabusRowSeq": 9,
+      "kind": "WRITTEN",
+      "instructionBn": "দাগ টেনে ছবির সাথে শব্দ মিলাও",
+      "count": 5, "marksEach": 2, "total": 10,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": ["বই", "ঘর", "কলম", "ফল", "মই"],
+      "items": [
+        { "key": "s9-1", "text": "[ছবি: মই]", "answer": "মই", "marks": 2, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৯", "bookRef": "পৃষ্ঠা ৭২ (দাগ টেনে ছবির সাথে শব্দ মিলাই)", "needsPicture": true, "note": "মোহাম্মদপুরে ৬ জোড়া ছিল; সিলেবাস অনুযায়ী ৫ জোড়া (কলস বাদ)" },
+        { "key": "s9-2", "text": "[ছবি: এক ঝুড়ি ফল]", "answer": "ফল", "marks": 2, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৯", "bookRef": "পৃষ্ঠা ৭২", "needsPicture": true, "note": "৬ জোড়া থেকে ৫ জোড়া" },
+        { "key": "s9-3", "text": "[ছবি: খোলা বই]", "answer": "বই", "marks": 2, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৯", "bookRef": "পৃষ্ঠা ৭২", "needsPicture": true, "note": "৬ জোড়া থেকে ৫ জোড়া" },
+        { "key": "s9-4", "text": "[ছবি: খড়ের চালের ঘর]", "answer": "ঘর", "marks": 2, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৯", "bookRef": "পৃষ্ঠা ৭২", "needsPicture": true, "note": "৬ জোড়া থেকে ৫ জোড়া" },
+        { "key": "s9-5", "text": "[ছবি: কলম]", "answer": "কলম", "marks": 2, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৯", "bookRef": "পৃষ্ঠা ৭২", "needsPicture": true, "note": "৬ জোড়া থেকে ৫ জোড়া" }
+      ]
+    },
+    {
+      "seq": 10,
+      "syllabusRowSeq": 10,
+      "kind": "ORAL",
+      "instructionBn": "মৌখিক",
+      "count": 1, "marksEach": 10, "total": 10,
+      "choiceNoteBn": null,
+      "splitMarks": true,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s10-1", "text": "অ থেকে ঁ পর্যন্ত সব বর্ণ ক্রমে বলো।", "marks": 2, "source": "NEW", "bookRef": "পৃষ্ঠা ৭৬; সিলেবাস (মৌখিক)", "needsPicture": false },
+        { "key": "s10-2", "text": "পরীক্ষক যেকোনো ৫টি বর্ণ দেখাবেন — প্রতিটি বর্ণ দিয়ে ২টি করে শব্দ বলো।", "marks": 2, "source": "NEW", "bookRef": "সিলেবাস (মৌখিক)", "needsPicture": false },
+        { "key": "s10-3", "text": "ফল, ফুল, রং, সবজি, পাখি, পশু ও মাছ — পরীক্ষক যেকোনো ২টি দল বেছে নেবেন; প্রতিটি দলের ১০টি করে নাম বলো।", "marks": 2, "source": "NEW", "bookRef": "সিলেবাস (মৌখিক)", "needsPicture": false },
+        { "key": "s10-4", "text": "৪ দিকের নাম বলো।", "answer": "পূর্ব, পশ্চিম, উত্তর, দক্ষিণ", "marks": 1, "source": "NEW", "bookRef": "সিলেবাস (মৌখিক)", "needsPicture": false },
+        { "key": "s10-5", "text": "সপ্তাহের ৭ দিনের নাম বলো।", "answer": "শনিবার, রবিবার, সোমবার, মঙ্গলবার, বুধবার, বৃহস্পতিবার, শুক্রবার", "marks": 1, "source": "NEW", "bookRef": "সিলেবাস (মৌখিক)", "needsPicture": false },
+        { "key": "s10-6", "text": "৬ ঋতুর নাম বলো।", "answer": "গ্রীষ্ম, বর্ষা, শরৎ, হেমন্ত, শীত, বসন্ত", "marks": 1, "source": "NEW", "bookRef": "সিলেবাস (মৌখিক)", "needsPicture": false },
+        { "key": "s10-7", "text": "বাংলা ১২ মাসের নাম বলো।", "answer": "বৈশাখ, জ্যৈষ্ঠ, আষাঢ়, শ্রাবণ, ভাদ্র, আশ্বিন, কার্তিক, অগ্রহায়ণ, পৌষ, মাঘ, ফাল্গুন, চৈত্র", "marks": 1, "source": "NEW", "bookRef": "সিলেবাস (মৌখিক)", "needsPicture": false }
+      ]
+    }
+  ],
+  "authorNotes": "Nursery Bangla. No Mohammadpur 2026 final exists for Nursery, so the guide is the Mohammadpur Annual 2025 Nursery Bangla paper (all MP items are MP_OTHER / MP_OTHER_ADAPTED). Its rows line up closely with the Sylhet syllabus and its content comes straight from the 2026 Nursery Bangla book (e.g. the word-matching set is book p.72, the jumbled sets are from book pp.18 and 75), so most of it was reused. Changes: Q1 Mohammadpur asked only ক–ন; the Sylhet row asks the whole alphabet, so it is split into 4 parts (vowels 4, ক–ণ 4, ত–ল 4, শ–ঁ 3 = 15). Q2 had 6 blanks in Mohammadpur; cut to 5. Q3/Q4 Mohammadpur had one jumbled set each; the other 4 sets in each are new, using the same letter groups as the book but jumbled differently. Q6 Mohammadpur had 9 items; one new item added (হ → ড়). Q9 Mohammadpur had 6 pairs; কলস was dropped to make 5. Q7 item 5: the Mohammadpur picture looks like a lotus, but the book's শ word is শাপলা, so the Office should use a clear water-lily picture. Things to check: (a) Q8 uses the book's letter pictures where the letter is not the first sound (ব্যাঙ → ঙ, চিংড়ি → ং, দুঃখী → ঃ, গাড়ি → গ) — this is exactly what Mohammadpur did and what the book teaches, but the reviewer may want to confirm. (b) Oral: the 10 marks are split across 7 prompts (2+2+2+1+1+1+1); '১২ মাসের নাম' was taken as the Bangla months. (c) Duration 1 h 30 min is copied from the Mohammadpur paper; the Sylhet time was not given. (d) Mohammadpur also had dictation (10) and cleanliness/class-work (4); the Sylhet syllabus has no such rows, so they are left out. Page numbers in bookRef are the printed page numbers of the 2026 Nursery Bangla book."
+}

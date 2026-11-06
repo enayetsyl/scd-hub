@@ -108,6 +108,9 @@ export interface NotificationRefs {
   masteryActionId?: string;
   /** Objective-list review round (OT-2, prd-objective-tree §7) — deep-link: MasteryReview. */
   masteryReviewId?: string;
+  /** Exam paper review (D-#1032, prd-exam-paper-bank §5.4) — deep-link: ExamPaperDraft;
+   *  the literal "list" when one notice covers several papers (deep-link: the paper list). */
+  examPaperId?: string;
 }
 
 export interface INotification extends Document {
@@ -181,6 +184,8 @@ const RefsSchema = new Schema<NotificationRefs>(
     masteryActionId: { type: String },
     // OT-2 — same lockstep rule: model, resolver, app query.
     masteryReviewId: { type: String },
+    // D-#1032 — same lockstep rule: model, resolver, app query.
+    examPaperId: { type: String },
   },
   { _id: false },
 );

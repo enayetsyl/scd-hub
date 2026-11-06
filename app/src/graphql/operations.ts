@@ -7014,6 +7014,8 @@ export interface NotificationRefsT {
   masteryActionId: string | null;
   /** OT-2 — deep-links the reviewer / Principal to the objective-list review round. */
   masteryReviewId: string | null;
+  /** D-#1032 — the exam paper to review ("list" when one notice covers several). */
+  examPaperId: string | null;
 }
 
 export interface NotificationT {
@@ -7035,7 +7037,7 @@ const NOTIFICATION_FIELDS = `
     workClaimId workClaimTracker
     classTestId ctId taskId
     syllabusId examId classId subject
-    improvementActionId masteryActionId masteryReviewId
+    improvementActionId masteryActionId masteryReviewId examPaperId
   }
 `;
 
