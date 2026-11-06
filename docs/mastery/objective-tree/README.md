@@ -64,10 +64,15 @@ structure; those stay as the history and as a source Claude reuses (question typ
 ## Coverage
 | Class | BAN | ENG | MATH | BGS | SCI | ISLAM | ARABIC |
 |---|---|---|---|---|---|---|---|
-| C1 | — | — | draft (pilot) | | | book pending | book pending |
-| C2 | — | — | draft | | | book pending | book pending |
-| C3 | — | — | draft (pilot) | — | — | book pending | book pending |
-| C4 | — | — | draft | — | — | book pending | book pending |
+| C1 | in review | in review | in review (pilot) | | | book pending | book pending |
+| C2 | in review | in review | in review | | | book pending | book pending |
+| C3 | in review | in review | in review (pilot) | in review | in review | book pending | book pending |
+| C4 | in review | in review | in review | in review | — (book pending) | book pending | book pending |
+| C5 | in review | — | — | — | — | book pending | book pending |
+
+"In review" = drafted from the final print, imported on prod 2026-11-05 (one OPEN round each, reviewer Mahzabin);
+lock follows her review. Not drafted yet: C4 Science and C5 Math/English/BGS/Science (only Word copies, no final
+print), C6, Nursery/KG, Islam, Arabic.
 
 Cross-class prerequisites (C2 → C1 codes, …) resolve at import against the earlier class's live rows, so a class
 is imported after the class below it. The repo CLI `skills/_tools/verify_objective_tree.mjs` has no flag for
