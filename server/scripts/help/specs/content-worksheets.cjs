@@ -45,6 +45,7 @@ async function openPrint(h, page) {
 
 exports.run = async (h) => {
   if (h.PROD) throw new Error("the content-worksheets spec is for the local example school (see its header)");
+  L.soft(h);
 
   // ── teacher: make a class test, read a class book ────────────────────────
   const T = await L.login(h, "teacher@help.test");
@@ -58,11 +59,12 @@ exports.run = async (h) => {
   await T.waitForTimeout(2500);
   await L.scrollTo(h, T, { text: "যে বর্ণগুলো পড়ানো হয়েছে — টিক দিন" }, 60);
   await h.shot(T, "content-ws-make", 2, [{ css: '[role="checkbox"][aria-label="ক"]' }, { text: "প্রশ্নের সারি" }]);
-  await L.scrollTo(h, T, { text: "প্রিভিউ", exact: true }, 60);
-  await h.shot(T, "content-ws-make", 3, [{ text: "প্রিভিউ", exact: true }, { text: "নতুন সংস্করণ" }]);
-  await h.shot(T, "content-ws-print", 0, [{ text: "PDF — প্রশ্নপত্র" }, { text: "উত্তরপত্র দেখুন" }]);
-  await L.scrollTo(h, T, { text: "কোন শ্রেণি / শাখার জন্য" }, 60);
-  await h.shot(T, "content-ws-print", 1, [{ text: "কোন শ্রেণি / শাখার জন্য" }, { text: "কপি সংখ্যা" }, { text: "প্রিন্টে পাঠান", last: true }]);
+  await L.scrollTo(h, T, { re: "নতুন সংস্করণ$" }, 60);
+  await h.shot(T, "content-ws-make", 3, [{ re: "নতুন সংস্করণ$" }, { re: "^প্রিভিউ · সংস্করণ" }]);
+  await h.shot(T, "content-ws-print", 0, [{ text: "PDF — প্রশ্নপত্র" }, { text: "উত্তরপত্র দেখুন" }, { re: "প্রিন্টে পাঠান$" }]);
+  await h.tap(T, { re: "প্রিন্টে পাঠান$" }, 2000);
+  await L.scrollTo(h, T, { re: "^কোন শ্রেণি / শাখার জন্য" }, 60);
+  await h.shot(T, "content-ws-print", 1, [{ re: "^কোন শ্রেণি / শাখার জন্য" }, { re: "^কপি সংখ্যা" }, { text: "প্রিন্টে পাঠান", last: true }]);
 
   await L.home(T);
   await servePages(T);
@@ -83,12 +85,13 @@ exports.run = async (h) => {
   await h.tap(O, { re: "ছবির ভাণ্ডার$" }, 4000);
   await h.shot(O, "content-ws-bank", 1, [{ text: "শব্দ বা বর্ণ দিয়ে খুঁজুন" }, { text: "আম", exact: true }]);
   await h.tap(O, { text: "আম", exact: true }, 2500);
+  await L.scrollTo(h, O, { text: "শব্দ", exact: true }, 60);
   await h.shot(O, "content-ws-bank", 2, [
     { text: "শব্দ", exact: true },
     { text: "প্রথম বর্ণ", exact: true },
     { text: "শুধু বার্ষিক পরীক্ষার জন্য রাখুন" },
     { text: "সংরক্ষণ", exact: true },
-  ]);
+  ], { anchor: { text: "শব্দ", exact: true } });
   await L.back(O);
   await h.tap(O, { re: "প্রশ্ন-পরিকল্পনা$" }, 4000);
   await h.shot(O, "content-ws-plan", 1, [{ text: "শ্রেণি", exact: true, minY: 80 }, { text: "প্রশ্নের ধরন" }]);
@@ -115,8 +118,8 @@ exports.run = async (h) => {
   const G = await L.login(h, "01800000001");
   await servePages(G);
   await L.openItem(h, G, null, null);
-  await h.shot(G, "content-cb-guardian", 0, [{ text: "শ্রেণির বই" }]);
-  await h.tap(G, "শ্রেণির বই", 4000);
+  await h.shot(G, "content-cb-guardian", 0, [{ text: "বই", exact: true }]);
+  await h.tap(G, { text: "বই", exact: true }, 4000);
   await h.shot(G, "content-cb-guardian", 1, [{ text: "পড়ুন" }]);
   await h.tap(G, "পড়ুন", 4000);
   await h.tap(G, "পরের ›", 2500);

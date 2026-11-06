@@ -1,0 +1,83 @@
+{
+  "id": "content-tn-feedback",
+  "category": "content_books",
+  "order": 24,
+  "title": "নোটের বাকি পরামর্শ সামলানো",
+  "intro": "শিক্ষকদের দেওয়া যে পরামর্শগুলোর এখনো সমাধান হয়নি, সেগুলো এক তালিকায় দেখুন এবং নোট ঠিক করার পর সমাধান হয়েছে চিহ্ন দিন।",
+  "keywords": [
+    "নোট",
+    "পরামর্শ",
+    "বাকি",
+    "সমাধান"
+  ],
+  "perms": [
+    "teaching_notes:review"
+  ],
+  "screens": [
+    "TeachingNotesTab/TeachingNoteOpenComments",
+    "ReportsTab/TeachingNoteOpenComments"
+  ],
+  "goTo": {
+    "route": "TeachingNotesTab",
+    "screen": "TeachingNoteOpenComments"
+  },
+  "rows": [
+    {
+      "heading": "তালিকা খোলা",
+      "shot": "content-tn-feedback/1.jpg",
+      "size": [
+        824,
+        1720
+      ],
+      "steps": [
+        {
+          "text": "নোট ও গাইড পাতায় <b>বাকি পরামর্শ</b> চাপুন।",
+          "box": [
+            0.3581,
+            0.1674,
+            0.2837,
+            0.0372
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "পরামর্শ পড়া",
+      "shot": "content-tn-feedback/2.jpg",
+      "size": [
+        824,
+        1720
+      ],
+      "steps": [
+        {
+          "text": "কোন নোটে কে কী লিখেছেন দেখুন। <b>পরামর্শে</b> চাপলে নোটটি খুলবে।",
+          "box": [
+            0.0704,
+            0.2023,
+            0.8592,
+            0.0651
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "সমাধান চিহ্ন দেওয়া",
+      "shot": "content-tn-feedback/3.jpg",
+      "size": [
+        824,
+        1720
+      ],
+      "steps": [
+        {
+          "text": "নোট ঠিক করা হলে পরামর্শের নিচে <b>সমাধান হয়েছে</b> চাপুন। ভুল করে চাপলে আবার খুলুন চেপে ফেরানো যায়।",
+          "box": [
+            0.1117,
+            0.5616,
+            0.2508,
+            0.0372
+          ]
+        }
+      ]
+    }
+  ]
+}

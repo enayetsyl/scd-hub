@@ -27,6 +27,7 @@ const DRIVE_MD = `# Block 2 — Homework 1
 
 exports.run = async (h) => {
   if (h.PROD) throw new Error("the content-notes spec saves while it walks; run it locally (see its header)");
+  L.soft(h);
 
   // ── teacher: read, suggest, print card ───────────────────────────────────
   const T = await L.login(h, "teacher@help.test");
@@ -48,11 +49,11 @@ exports.run = async (h) => {
   await L.scrollTo(h, T, { re: "প্রিন্টে পাঠান$" }, 200);
   await h.shot(T, "content-tn-print", 0, [{ re: "প্রিন্টে পাঠান$" }]);
   await h.tap(T, { re: "প্রিন্টে পাঠান$" }, 2000);
-  await L.scrollTo(h, T, { text: "কোন শ্রেণি / শাখার জন্য" }, 60);
+  await L.scrollTo(h, T, { re: "^কোন শ্রেণি / শাখার জন্য" }, 60);
   await h.shot(T, "content-tn-print", 1, [
-    { text: "কোন শ্রেণি / শাখার জন্য" },
-    { text: "কপি সংখ্যা" },
-    { text: "যেদিন প্রিন্ট ব্যবহার হবে" },
+    { re: "^কোন শ্রেণি / শাখার জন্য" },
+    { re: "^কপি সংখ্যা" },
+    { re: "^যেদিন প্রিন্ট ব্যবহার হবে" },
     { text: "প্রিন্টে পাঠান", last: true },
   ]);
   await T.context().close();
@@ -66,7 +67,7 @@ exports.run = async (h) => {
   await L.chooseFiles(h, O, "ফাইল বাছুন (.md / PDF / Word)", [L.tmpFile("biyog-niyom.md", NOTE_MD)]);
   await L.pick(h, O, { text: "শ্রেণি", exact: true, minY: 80 }, "শ্রেণি ৩");
   await L.pick(h, O, { text: "বিষয়", exact: true, minY: 80 }, "গণিত");
-  await L.pick(h, O, { text: "ধরন", exact: true, minY: 80 }, "উত্তর লেখার গাইড");
+  await L.pick(h, O, { text: "ধরন", exact: true, minY: 80 }, "পাঠ নোট");
   await h.shot(O, "content-tn-upload", 1, [
     { text: "ফাইল বাছুন (.md / PDF / Word)" },
     { text: "শ্রেণি", exact: true, last: true, minY: 80 },
@@ -83,7 +84,7 @@ exports.run = async (h) => {
   await h.tap(O, { re: "বাকি পরামর্শ$" }, 3500);
   await h.shot(O, "content-tn-feedback", 1, [{ re: "^শেষে দুটি অনুশীলনীর" }]);
   await h.tap(O, { re: "^শেষে দুটি অনুশীলনীর" }, 4000);
-  await L.scrollTo(h, O, { text: "পরামর্শ", exact: true });
+  await L.scrollTo(h, O, { re: "^পরামর্শ \\(" });
   await h.shot(O, "content-tn-feedback", 2, [{ text: "সমাধান হয়েছে", last: true }]);
   await h.tap(O, { text: "সমাধান হয়েছে", last: true }, 2500);
 
@@ -92,6 +93,7 @@ exports.run = async (h) => {
   await h.shot(O, "content-ed-upload", 0, [{ re: "ডকুমেন্ট আপলোড$" }]);
   await h.tap(O, { re: "ডকুমেন্ট আপলোড$" }, 3500);
   await L.chooseFiles(h, O, "ফাইল বাছাই (.md / PDF / DOCX)", [L.tmpFile("Block2-HW1.md", DRIVE_MD)]);
+  await L.pick(h, O, { text: "শ্রেণি", exact: true, minY: 80 }, "শ্রেণি ৫");
   await h.shot(O, "content-ed-upload", 1, [
     { text: "ফাইল বাছাই (.md / PDF / DOCX)" },
     { text: "শ্রেণি", exact: true, minY: 80 },
@@ -106,13 +108,10 @@ exports.run = async (h) => {
   const T2 = await L.login(h, "teacher2@help.test");
   await L.menuShot(h, T2, "content-ed-read", 0, "একাডেমিক", "ইংরেজি ড্রাইভ");
   await L.pick(h, T2, { text: "শ্রেণি", exact: true, minY: 80 }, "শ্রেণি ৫");
-  await h.shot(T2, "content-ed-read", 1, [{ text: "শ্রেণি", exact: true, minY: 80 }, { re: "ব্লক ১$" }, { text: "Greetings and names" }]);
+  await h.shot(T2, "content-ed-read", 1, [{ text: "শ্রেণি ৫", minY: 80 }, { re: "ব্লক ১$" }, { text: "Greetings and names" }]);
   await h.tap(T2, "Greetings and names", 4000);
-  await h.shot(T2, "content-ed-print", 0, [{ text: "সম্পাদনা করে প্রিন্ট" }, { text: "PDF প্রিভিউ" }, { re: "প্রিন্টে পাঠান$" }]);
-  await h.tap(T2, "সম্পাদনা করে প্রিন্ট", 2000);
-  await L.scrollTo(h, T2, { text: "লেখার আকার" }, 60);
-  await h.shot(T2, "content-ed-print", 1, [{ text: "লেখার আকার" }, { text: "বিষয়বস্তু (মার্কডাউন)" }]);
+  await h.shot(T2, "content-ed-print", 0, [{ re: "সম্পাদনা করে প্রিন্ট$" }, { re: "প্রিন্টে পাঠান$" }]);
   await h.tap(T2, { re: "প্রিন্টে পাঠান$" }, 2000);
-  await L.scrollTo(h, T2, { text: "কোন শ্রেণি / শাখার জন্য" }, 60);
-  await h.shot(T2, "content-ed-print", 2, [{ text: "কোন শ্রেণি / শাখার জন্য" }, { text: "কপি সংখ্যা" }, { text: "প্রিন্টে পাঠান", last: true }]);
+  await L.scrollTo(h, T2, { re: "^কোন শ্রেণি / শাখার জন্য" }, 60);
+  await h.shot(T2, "content-ed-print", 1, [{ re: "^কোন শ্রেণি / শাখার জন্য" }, { re: "^কপি সংখ্যা" }, { text: "প্রিন্টে পাঠান", last: true }]);
 };

@@ -44,14 +44,24 @@ async function back(page, wait = 2500) {
 
 /** Fill the on-top element matching `target`. */
 async function fill(h, page, target, value, wait = 1000) {
-  const el = await h.topmost(page, target, { scroll: true });
-  await el.fill(value);
+  try {
+    const el = await h.topmost(page, target, { scroll: true });
+    await el.fill(value);
+  } catch (e) {
+    if (!h.missed) throw e;
+    console.error(`FILL MISS ${JSON.stringify(target)}: ${String(e.message).split("\n")[0]}`);
+  }
   await page.waitForTimeout(wait);
 }
 
 /** Scroll the first on-top match of `target` to the top of its scroller (room for the box above). */
 async function scrollTo(h, page, target, gap = 80) {
-  const el = await h.topmost(page, target, { scroll: true });
+  const el = await h.topmost(page, target, { scroll: true }).catch((e) => {
+    // A missing scroll anchor costs at most the next picture (soft mode), not the whole walk.
+    console.error(`SCROLL MISS ${JSON.stringify(target)}: ${String(e.message).split("\n")[0]}`);
+    return null;
+  });
+  if (!el) return;
   await el.evaluate((e, g) => {
     e.scrollIntoView({ block: "start" });
     for (let p = e.parentElement; p; p = p.parentElement) {
@@ -102,4 +112,29 @@ async function waitText(page, text, timeout = 60000) {
   await page.waitForTimeout(800);
 }
 
-module.exports = { PASSWORD, waitText, pick, login, openItem, menuShot, home, back, fill, scrollTo, select, tmpFile, chooseFiles };
+/**
+ * Make a failed picture non-fatal: the guide stays a draft (reported at the end) and the rest of
+ * the walk still writes its guides. capture.cjs writes guide files only when the whole run ends.
+ */
+function soft(h) {
+  const shot = h.shot;
+  h.missed = [];
+  h.shot = async (page, guide, row, targets, opts) => {
+    try {
+      await shot(page, guide, row, targets, opts);
+    } catch (e) {
+      h.missed.push(`${guide} row ${row + 1}`);
+      console.error(`MISSED ${guide} row ${row + 1}: ${String(e.message).split("\n")[0]}`);
+    }
+  };
+  const tap = h.tap;
+  h.tap = async (page, target, wait) => {
+    try {
+      await tap(page, target, wait);
+    } catch (e) {
+      console.error(`TAP MISS ${JSON.stringify(target)}: ${String(e.message).split("\n")[0]}`);
+    }
+  };
+}
+
+module.exports = { PASSWORD, soft, waitText, pick, login, openItem, menuShot, home, back, fill, scrollTo, select, tmpFile, chooseFiles };
