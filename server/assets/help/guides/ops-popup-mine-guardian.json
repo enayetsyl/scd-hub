@@ -2,7 +2,6 @@
   "id": "ops-popup-mine-guardian",
   "category": "messages_popups",
   "order": 7,
-  "draft": true,
   "title": "আমার বার্তা: স্কুলের আগের পপ-আপ আবার পড়া",
   "intro": "স্কুল যে পপ-আপ বার্তা পাঠিয়েছে, বন্ধ করে দিলেও তা “আমার বার্তা”-তে থেকে যায়।",
   "keywords": [
@@ -22,23 +21,39 @@
   "rows": [
     {
       "heading": "পাতাটি খোলা",
-      "shot": null,
-      "size": null,
+      "shot": "ops-popup-mine-guardian/1.jpg",
+      "size": [
+        824,
+        1720
+      ],
       "steps": [
         {
           "text": "☰ চেপে মেনু থেকে <b>আমার বার্তা</b> চাপুন।",
-          "box": null
+          "box": [
+            0.1377,
+            0.8884,
+            0.5419,
+            0.0372
+          ]
         }
       ]
     },
     {
       "heading": "আবার পড়া",
-      "shot": null,
-      "size": null,
+      "shot": "ops-popup-mine-guardian/2.jpg",
+      "size": [
+        824,
+        1720
+      ],
       "steps": [
         {
           "text": "গত ৯০ দিনের পপ-আপ বার্তা এখানে থাকে। আবার পড়তে বার্তায় চাপুন, যেমন <b>অভিভাবক সমাবেশ</b>।",
-          "box": null
+          "box": [
+            0.0704,
+            0.1733,
+            0.6743,
+            0.0372
+          ]
         }
       ]
     }

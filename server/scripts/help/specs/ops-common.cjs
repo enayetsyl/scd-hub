@@ -54,11 +54,21 @@ async function closePopups(h, page) {
   }
 }
 
-/** Scroll the last visible match of `target` into view (an anchor must already be on screen). */
+/**
+ * Scroll the last visible match of `target` into view (an anchor must already be on screen).
+ * Matches that sit off to the side (the closed drawer's items) are skipped.
+ */
 async function reveal(page, target) {
   const loc = target.css ? page.locator(target.css) : target.re ? page.getByText(new RegExp(target.re)) : page.getByText(target.text, { exact: true });
-  await loc.locator("visible=true").last().evaluate((e) => e.scrollIntoView({ block: "center" }));
-  await page.waitForTimeout(600);
+  const all = loc.locator("visible=true");
+  for (let i = (await all.count()) - 1; i >= 0; i--) {
+    const b = await all.nth(i).boundingBox();
+    if (!b || b.x < 0 || b.width === 0) continue;
+    await all.nth(i).evaluate((e) => e.scrollIntoView({ block: "center" }));
+    await page.waitForTimeout(600);
+    return;
+  }
+  throw new Error(`reveal: nothing on screen matches ${JSON.stringify(target)}`);
 }
 
 module.exports = { PASSWORD, reveal, menu, menuShot, back, tapOutside, home, fill, closePopups };

@@ -25,26 +25,34 @@ exports.run = async (h) => {
   // ── Permissions: by role, then one person ────────────────────────────────
   await admin(h, P, "অনুমতি পরিচালনা", "ops-access-person");
   await h.tap(P, "সবাইকে দিন (ভূমিকা অনুযায়ী)", 3000);
+  // A failed earlier run may have left the teacher role changed: put it back first.
+  await h.tap(P, { re: "^ডিফল্টে ফেরত নিন" }, 3500).catch(() => {});
   await h.shot(P, "ops-access-role", 0, [{ text: "সবাইকে দিন (ভূমিকা অনুযায়ী)" }, { text: "শিক্ষক" }]);
-  await fill(h, P, { placeholder: "খুঁজুন (সুবিধা বা কাজ)" }, "প্রিন্ট", 1500).catch(() => {});
-  await h.shot(P, "ops-access-role", 1, [{ text: "প্রিন্ট", minY: 80 }]);
-  await reveal(P, { text: "ডিফল্টে ফেরত নিন" });
-  await h.shot(P, "ops-access-role", 2, [{ text: "ডিফল্টে ফেরত নিন" }]);
+  await fill(h, P, { placeholder: "খুঁজুন (সুবিধা বা কাজ)" }, "প্রিন্ট", 2000);
+  await reveal(P, { text: "প্রিন্ট" });
+  await h.shot(P, "ops-access-role", 1, [{ text: "প্রিন্ট", minY: 80 }, { text: "বন্ধ" }], { anchor: { text: "প্রিন্ট", minY: 80 } });
+  // Switch one action on for every teacher, shoot the reset, then reset (back to the default).
+  await (await h.topmost(P, { text: "বন্ধ" }, { scroll: false })).click();
+  await P.waitForTimeout(3000);
+  const RESET = { re: "^ডিফল্টে ফেরত নিন" };
+  await reveal(P, RESET);
+  await h.shot(P, "ops-access-role", 2, [RESET]);
+  await h.tap(P, RESET, 3500);
 
   await h.tap(P, "একজনকে দিন (ব্যক্তি অনুযায়ী)", 3000);
   await h.shot(P, "ops-access-person", 1, [{ text: "একজনকে দিন (ব্যক্তি অনুযায়ী)" }]);
   await h.tap(P, { text: "উদাহরণ শ্রেণি শিক্ষক", minY: 80 }, 4000);
   await fill(h, P, { placeholder: "খুঁজুন (সুবিধা বা কাজ)" }, "প্রিন্ট", 1500);
-  await h.shot(P, "ops-access-person", 2, [{ placeholder: "খুঁজুন (সুবিধা বা কাজ)" }, { text: "প্রিন্ট", minY: 80 }]);
-  await h.tap(P, { text: "প্রিন্ট", minY: 80 }, 1500);
-  await h.shot(P, "ops-access-person", 3, [{ text: "বন্ধ" }]);
+  await h.shot(P, "ops-access-person", 2, [{ placeholder: "খুঁজুন (সুবিধা বা কাজ)" }]);
+  await reveal(P, { text: "প্রিন্ট" });
+  await h.shot(P, "ops-access-person", 3, [{ text: "প্রিন্ট", minY: 80 }, { text: "বন্ধ" }], { anchor: { text: "প্রিন্ট", minY: 80 } });
 
   // ── View as ──────────────────────────────────────────────────────────────
   await home(P);
   await h.shot(P, "ops-view-as", 0, [{ text: "👤" }]);
   await h.tap(P, "👤", 1500);
   await h.tap(P, "কার হয়ে দেখবেন", 3000);
-  await h.shot(P, "ops-view-as", 1, [{ text: "শিক্ষক ও অফিস" }, { placeholder: "নাম, ফোন বা শিক্ষার্থীর নাম" }]);
+  await h.shot(P, "ops-view-as", 1, [{ text: "শিক্ষক ও অফিস" }, { css: "input" }]);
   await h.tap(P, { text: "উদাহরণ শ্রেণি শিক্ষক", minY: 80 }, 7000);
   await h.shot(P, "ops-view-as", 2, [{ text: "ফিরে যান" }]);
   await h.tap(P, "ফিরে যান", 7000);
@@ -55,14 +63,14 @@ exports.run = async (h) => {
   await fill(h, P, nth(1), "উদাহরণ নতুন শিক্ষক", 300);
   await fill(h, P, nth(2), "newteacher@help.test", 300);
   await fill(h, P, { css: 'input[type="password"]' }, PASSWORD, 300);
-  await h.tap(P, "TEACHER", 800);
-  await h.shot(P, "ops-staff-login-create", 1, [nth(1), nth(2), { css: 'input[type="password"]' }, { text: "TEACHER" }, { text: "ব্যবহারকারী তৈরি", last: true }]);
+  await h.tap(P, { text: "TEACHER", last: true }, 800);
+  await h.shot(P, "ops-staff-login-create", 1, [nth(1), nth(2), { css: 'input[type="password"]' }, { text: "TEACHER", last: true }, { text: "ব্যবহারকারী তৈরি", last: true }]);
   await h.tap(P, { text: "ব্যবহারকারী তৈরি", last: true }, 3500);
 
   await home(P);
   await menu(h, P, "প্রশাসন");
   await h.tap(P, "ব্যবহারকারী", 3500);
-  await fill(h, P, { placeholder: "নাম, ইমেইল বা ফোন দিয়ে খুঁজুন" }, "শ্রেণি শিক্ষক", 1500);
+  await fill(h, P, { placeholder: "নাম, ইমেইল বা ফোন দিয়ে খুঁজুন" }, "নতুন শিক্ষক", 1500);
   await h.shot(P, "ops-staff-password-reset", 0, [{ placeholder: "নাম, ইমেইল বা ফোন দিয়ে খুঁজুন" }]);
   await h.tap(P, "নতুন পাসওয়ার্ড তৈরি", 3500);
   await h.shot(P, "ops-staff-password-reset", 1, [{ text: "নতুন পাসওয়ার্ড তৈরি" }, { re: "^লগইন আইডি" }]);
@@ -82,14 +90,14 @@ exports.run = async (h) => {
   await admin(h, P, "সিস্টেমের অবস্থা", "ops-system-health");
   await h.shot(P, "ops-system-health", 1, [{ text: "ডেটাবেজ" }]);
   await reveal(P, { text: "ব্যাকআপ" });
-  await h.shot(P, "ops-system-health", 2, [{ text: "ব্যাকআপ" }, { re: "^স্বয়ংক্রিয় কাজ" }]);
+  await h.shot(P, "ops-system-health", 2, [{ re: "^স্বয়ংক্রিয় কাজ" }, { text: "ব্যাকআপ" }]);
 
   await admin(h, P, "এআই (Gemini) কী ও মডেল", "ops-ai-key");
   await h.shot(P, "ops-ai-key", 1, [{ css: ":nth-match(input, 1)" }, { css: ":nth-match(input, 2)" }, { text: "পরীক্ষা করে সংরক্ষণ করুন" }]);
 
   // ── Message templates ────────────────────────────────────────────────────
   await admin(h, P, "বার্তা টেমপ্লেট", "ops-message-templates");
-  await h.shot(P, "ops-message-templates", 1, [{ text: "পাঠ নোট প্রকাশিত — শিরোনাম" }]);
-  await h.tap(P, "পাঠ নোট প্রকাশিত — শিরোনাম", 3500);
+  await h.shot(P, "ops-message-templates", 1, [{ text: "পাঠ নোট প্রকাশিত — বার্তা" }]);
+  await h.tap(P, "পাঠ নোট প্রকাশিত — বার্তা", 3500);
   await h.shot(P, "ops-message-templates", 2, [{ text: "বাংলা বার্তা" }, { text: "অনুমোদিত প্লেসহোল্ডার (চেপে যোগ করুন)" }, { text: "সংরক্ষণ করুন" }]);
 };

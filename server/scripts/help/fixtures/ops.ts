@@ -11,7 +11,7 @@
  *   - notifications for the class teacher (teacher@help.test) and the base guardian;
  *   - three library books with copies (LIB-001 … LIB-004) and one loan (LIB-003 to তানভীর);
  *   - print requests from both teachers (৩য় বালক, ৩য় বালিকা, ৫ম, one with no class), one printed;
- *   - one script-archive box;
+ *   - one script-archive box; a family phone on every student row (for the WhatsApp notice);
  *   - the automatic chat groups (school, sections), so বার্তা lists colleagues;
  *   - a staff record with no login yet ("উদাহরণ নতুন শিক্ষক"), for the create-login guide.
  */
@@ -23,6 +23,7 @@ import { issueBook } from "../../../src/modules/library/services/LibraryCirculat
 import { createPrintRequest, markPrinted } from "../../../src/modules/printing/services/PrintRequestService";
 import { createBox } from "../../../src/modules/archive/services/ArchiveService";
 import { StaffProfile } from "../../../src/modules/foundation/models/StaffProfile";
+import { Student } from "../../../src/modules/foundation/models/Student";
 import { resyncAllChatGroups } from "../../../src/modules/chat/services/ChatGroupService";
 
 const uri = process.env.MONGODB_URI ?? "";
@@ -106,6 +107,13 @@ export async function seedOps() {
 
   // ── Script archive ────────────────────────────────────────────────────────
   await createBox({ label: "৫ম শ্রেণি · ২০২৬", locationNote: "অফিস আলমারি, তাক ২", actorId: office });
+
+  // ── Family phones on the student rows (the guardian WhatsApp notice builds its links from them) ──
+  let p = 10;
+  for (const sid of [...students.c3Boys, ...students.c3Girls, ...students.c5]) {
+    p += 1;
+    await Student.updateOne({ _id: sid }, { $set: { phone: `018100000${p}` } });
+  }
 
   // ── Chat: the school, section and subject groups every staff login starts with ──
   await resyncAllChatGroups(id(users.principal));
