@@ -1,0 +1,68 @@
+{
+  "id": "fin-qard-outstanding",
+  "category": "payroll_finance",
+  "order": 62,
+  "draft": true,
+  "title": "কর্জের বকেয়া ও মেয়াদোত্তীর্ণ তালিকা দেখা",
+  "intro": "একজন পক্ষের কাছে কত কর্জ বাকি, আর কাদের ফেরতের তারিখ পার হয়ে গেছে, তা দেখার নিয়ম।",
+  "keywords": [
+    "কর্জ",
+    "বকেয়া",
+    "মেয়াদোত্তীর্ণ",
+    "IOU",
+    "বাকি"
+  ],
+  "perms": [
+    "qard:view"
+  ],
+  "screens": [
+    "FinanceTab/QardIou"
+  ],
+  "goTo": {
+    "route": "FinanceTab",
+    "screen": "QardIou"
+  },
+  "rows": [
+    {
+      "heading": "পাতাটি খোলা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "মেনু (☰) থেকে অর্থ খুলে <b>কর্জ/IOU</b> চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "একজনের বকেয়া",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "নিচে <b>বকেয়া</b> অংশে পক্ষ আইডি ঘরে চেপে নাম বেছে নিন।",
+          "box": null
+        },
+        {
+          "text": "ধরন অনুযায়ী বাকি টাকা দেখাবে, যেমন <b>কর্জে হাসানা</b>।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "মেয়াদোত্তীর্ণ",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "<b>মেয়াদোত্তীর্ণ দেখুন</b> চাপুন।",
+          "box": null
+        },
+        {
+          "text": "যাঁদের ফেরতের তারিখ পার হয়েছে, তাঁদের বাকি টাকা ও <b>কত দিন বিলম্ব</b> দেখাবে।",
+          "box": null
+        }
+      ]
+    }
+  ]
+}

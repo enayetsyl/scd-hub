@@ -1,0 +1,83 @@
+{
+  "id": "fin-payroll-lateness-charge",
+  "category": "payroll_finance",
+  "order": 4,
+  "draft": true,
+  "title": "দেরির জন্য বেতন বা ছুটি কাটা",
+  "intro": "মাসে বারবার দেরি হলে (৩টি দেরি = ১ দিন) একজন একজন করে বেতন বা ছুটির জমা থেকে কাটার নিয়ম। হ্যাঁ না দিলে কিছুই কাটা হয় না।",
+  "keywords": [
+    "দেরি",
+    "বিলম্ব",
+    "কর্তন",
+    "লেট",
+    "ছুটির জমা"
+  ],
+  "perms": [
+    "payroll:prepare"
+  ],
+  "screens": [
+    "HrTab/PreparePayroll"
+  ],
+  "goTo": {
+    "route": "HrTab",
+    "screen": "PreparePayroll"
+  },
+  "rows": [
+    {
+      "heading": "নতুন রান খোলা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "মেনু থেকে কর্মী → বেতন খুলে <b>নতুন রান প্রস্তুত করুন</b> চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "মাস লেখা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "<b>মাস (YYYY-MM)</b> ঘরে মাস লিখুন। লিখলেই দেরির তালিকা আসবে।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "কার কত দিন কাটবে",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "<b>বিলম্বের কর্তন (একজন একজন করে)</b> অংশে নাম, দেরির দিন ও কত দিন কাটা যায় দেখুন।",
+          "box": null
+        },
+        {
+          "text": "কাটতে চাইলে ওই নামের নিচে <b>হ্যাঁ</b> চাপুন।",
+          "box": null
+        },
+        {
+          "text": "<b>কত দিন কাটবেন</b> ঘরে দিন কমাতে পারেন।",
+          "box": null
+        },
+        {
+          "text": "<b>বেতন থেকে</b> অথবা ‘ছুটির জমা থেকে’ বেছে নিন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "প্রস্তুত করা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "নিচের <b>প্রস্তুত করুন</b> চাপুন।",
+          "box": null
+        }
+      ]
+    }
+  ]
+}

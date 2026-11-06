@@ -1,0 +1,62 @@
+{
+  "id": "fin-payroll-payslips",
+  "category": "payroll_finance",
+  "order": 8,
+  "draft": true,
+  "title": "কর্মীদের পে-স্লিপ দেখা",
+  "intro": "কোনো মাসে কে কত মোট বেতন পেলেন, কী কাটা গেল, কী যোগ হলো এবং হাতে কত পেলেন — তা দেখার নিয়ম।",
+  "keywords": [
+    "পে-স্লিপ",
+    "বেতন",
+    "নিট বেতন",
+    "কর্তন",
+    "সংযোজন"
+  ],
+  "perms": [
+    "payroll:view"
+  ],
+  "screens": [
+    "HrTab/PayrollHome",
+    "HrTab/PayrollRunDetail"
+  ],
+  "goTo": {
+    "route": "HrTab",
+    "screen": "PayrollHome"
+  },
+  "rows": [
+    {
+      "heading": "মাস খোলা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "মেনু থেকে কর্মী → বেতন খুলে মাসটি (যেমন <b>২০২৬-১০</b>) চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "একজনের হিসাব",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "নিচে নামুন: পে-স্লিপ অংশে প্রত্যেক কর্মীর আলাদা কার্ড আছে, ওপরে কর্মীর <b>নাম</b>।",
+          "box": null
+        },
+        {
+          "text": "<b>মোট বেতন</b> ও দৈনিক হার ওপরে থাকে।",
+          "box": null
+        },
+        {
+          "text": "<b>কর্তন</b> ও সংযোজন অংশে প্রতিটি লাইন কারণসহ দেখাবে।",
+          "box": null
+        },
+        {
+          "text": "<b>নিট বেতন</b> হলো কর্মী হাতে যা পাবেন।",
+          "box": null
+        }
+      ]
+    }
+  ]
+}

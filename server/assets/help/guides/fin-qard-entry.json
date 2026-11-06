@@ -1,0 +1,80 @@
+{
+  "id": "fin-qard-entry",
+  "category": "payroll_finance",
+  "order": 61,
+  "draft": true,
+  "title": "কর্জ দেওয়া বা ফেরত পাওয়া লেখা",
+  "intro": "কাউকে কর্জে হাসানা/আইওইউ দেওয়া হলে, অথবা কিছু ফেরত পাওয়া গেলে তা রেজিস্টারে লেখার নিয়ম।",
+  "keywords": [
+    "কর্জ",
+    "কর্জে হাসানা",
+    "IOU",
+    "ফেরত",
+    "এন্ট্রি"
+  ],
+  "perms": [
+    "qard:create"
+  ],
+  "screens": [
+    "FinanceTab/QardIou"
+  ],
+  "goTo": {
+    "route": "FinanceTab",
+    "screen": "QardIou"
+  },
+  "rows": [
+    {
+      "heading": "পাতাটি খোলা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "মেনু (☰) থেকে অর্থ খুলে <b>কর্জ/IOU</b> চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "কে, কী, কত",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "এন্ট্রি রেকর্ড করুন অংশে <b>পক্ষ আইডি</b> ঘরে চেপে নাম বেছে নিন।",
+          "box": null
+        },
+        {
+          "text": "<b>ধরন</b> বেছে নিন: কর্জে হাসানা বা আইওইউ।",
+          "box": null
+        },
+        {
+          "text": "<b>দিক</b> বেছে নিন: নতুন প্রদান, না ফেরত গৃহীত।",
+          "box": null
+        },
+        {
+          "text": "<b>পরিমাণ</b> লিখুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "তারিখ ও জমা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "<b>তারিখ</b> বেছে নিন।",
+          "box": null
+        },
+        {
+          "text": "<b>মাধ্যম</b> বেছে নিন। নতুন প্রদান হলে ফেরতের তারিখও দিতে পারেন।",
+          "box": null
+        },
+        {
+          "text": "<b>এন্ট্রি রেকর্ড করুন</b> চাপুন।",
+          "box": null
+        }
+      ]
+    }
+  ]
+}

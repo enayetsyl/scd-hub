@@ -1,0 +1,67 @@
+{
+  "id": "fin-fee-allocation",
+  "category": "payroll_finance",
+  "order": 52,
+  "draft": true,
+  "title": "শিক্ষার্থীর ফি সহায়তা বরাদ্দ করা",
+  "intro": "কোন শিক্ষার্থীর কোন ফি কোন সহায়তাদাতা দেবেন (পুরোটা বা নির্দিষ্ট অঙ্ক), তা ঠিক করার নিয়ম।",
+  "keywords": [
+    "বরাদ্দ",
+    "যাকাত",
+    "ফি সহায়তা"
+  ],
+  "perms": [
+    "fee_support:edit"
+  ],
+  "screens": [
+    "FinanceTab/FeesZakat"
+  ],
+  "goTo": {
+    "route": "FinanceTab",
+    "screen": "FeesZakat"
+  },
+  "rows": [
+    {
+      "heading": "পাতাটি খোলা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "ওপরে বাম কোণের <b>☰</b> চেপে মেনু খুলুন, তারপর অর্থ চাপুন।",
+          "box": null
+        },
+        {
+          "text": "<b>ফি ও যাকাত/সহায়তা</b> চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "বরাদ্দ",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "<b>শিক্ষার্থী আইডি</b> লিখুন।",
+          "box": null
+        },
+        {
+          "text": "<b>সহায়তাদাতা আইডি</b> ঘরে দাতা বেছে নিন।",
+          "box": null
+        },
+        {
+          "text": "<b>কার্যকর তারিখ</b> বেছে নিন।",
+          "box": null
+        },
+        {
+          "text": "<b>খাত</b> ও কভারেজ ধরন বেছে নিন।",
+          "box": null
+        },
+        {
+          "text": "<b>বরাদ্দ নির্ধারণ করুন</b> চাপুন।",
+          "box": null
+        }
+      ]
+    }
+  ]
+}

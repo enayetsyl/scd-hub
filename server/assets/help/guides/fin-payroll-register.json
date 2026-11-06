@@ -1,0 +1,50 @@
+{
+  "id": "fin-payroll-register",
+  "category": "payroll_finance",
+  "order": 9,
+  "draft": true,
+  "title": "বেতনের হিসাবের রেজিস্টার (Excel) নামানো",
+  "intro": "হিসাবরক্ষণের জন্য সবার মোট বেতন, কর্তন, সংযোজন ও নিট বেতন এক Excel ফাইলে নামানোর নিয়ম। অনুমোদনের আগেও নামানো যায়, যাচাই করার জন্য।",
+  "keywords": [
+    "রেজিস্টার",
+    "Excel",
+    "হিসাব",
+    "বেতন",
+    "ডাউনলোড"
+  ],
+  "perms": [
+    "payroll:view"
+  ],
+  "screens": [
+    "HrTab/PayrollHome",
+    "HrTab/PayrollRunDetail"
+  ],
+  "goTo": {
+    "route": "HrTab",
+    "screen": "PayrollHome"
+  },
+  "rows": [
+    {
+      "heading": "মাস খোলা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "মেনু থেকে কর্মী → বেতন খুলে মাসটি (যেমন <b>২০২৬-০৯</b>) চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "ফাইল নামানো",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "<b>হিসাবের রেজিস্টার (Excel)</b> বোতাম চাপুন। ফাইলটি আপনার ডাউনলোডে আসবে (ওয়েব ব্রাউজারে)।",
+          "box": null
+        }
+      ]
+    }
+  ]
+}

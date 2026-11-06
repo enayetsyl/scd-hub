@@ -1,0 +1,60 @@
+{
+  "id": "fin-fee-statement",
+  "category": "payroll_finance",
+  "order": 51,
+  "draft": true,
+  "title": "সহায়তাদাতার বিবরণী দেখা",
+  "intro": "একজন সহায়তাদাতার ভাগে কত ফি ধার্য হয়েছে, তিনি কত দিয়েছেন এবং কত বাকি, তা দেখার নিয়ম।",
+  "keywords": [
+    "সহায়তাদাতা",
+    "বিবরণী",
+    "যাকাত",
+    "বকেয়া"
+  ],
+  "perms": [
+    "fee_support:view"
+  ],
+  "screens": [
+    "FinanceTab/FeesZakat"
+  ],
+  "goTo": {
+    "route": "FinanceTab",
+    "screen": "FeesZakat"
+  },
+  "rows": [
+    {
+      "heading": "পাতাটি খোলা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "ওপরে বাম কোণের <b>☰</b> চেপে মেনু খুলুন, তারপর অর্থ চাপুন।",
+          "box": null
+        },
+        {
+          "text": "<b>ফি ও যাকাত/সহায়তা</b> চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "বিবরণী দেখা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "নিচে নেমে <b>সহায়তাদাতা বিবরণী</b> অংশে যান।",
+          "box": null
+        },
+        {
+          "text": "<b>সহায়তাদাতা আইডি</b> ঘরে চেপে দাতার নাম বেছে নিন।",
+          "box": null
+        },
+        {
+          "text": "<b>ধার্যকৃত</b>, গৃহীত ও বকেয়া টাকা দেখাবে।",
+          "box": null
+        }
+      ]
+    }
+  ]
+}

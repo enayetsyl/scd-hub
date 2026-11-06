@@ -1,0 +1,75 @@
+{
+  "id": "fin-ledger-transfer",
+  "category": "payroll_finance",
+  "order": 42,
+  "draft": true,
+  "title": "নগদ টাকা ব্যাংকে জমা (স্থানান্তর) লেখা",
+  "intro": "স্কুলের এক হিসাব থেকে অন্য হিসাবে টাকা নেওয়া (যেমন নগদ টাকা ব্যাংকে জমা) লেখার নিয়ম। এটি আয় বা ব্যয় নয়, তাই মোট হিসাব বদলায় না।",
+  "keywords": [
+    "স্থানান্তর",
+    "ব্যাংকে জমা",
+    "নগদ",
+    "লেজার"
+  ],
+  "perms": [
+    "finance_ledger:create"
+  ],
+  "screens": [
+    "FinanceTab/DailyEntry"
+  ],
+  "goTo": {
+    "route": "FinanceTab",
+    "screen": "DailyEntry"
+  },
+  "rows": [
+    {
+      "heading": "পাতাটি খোলা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "ওপরে বাম কোণের <b>☰</b> চেপে মেনু খুলুন, তারপর অর্থ চাপুন।",
+          "box": null
+        },
+        {
+          "text": "<b>দৈনিক এন্ট্রি</b> চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "স্থানান্তরের তথ্য",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "<b>ধরন</b> ঘরে ‘স্থানান্তর’ বেছে নিন।",
+          "box": null
+        },
+        {
+          "text": "<b>পরিমাণ</b> লিখুন।",
+          "box": null
+        },
+        {
+          "text": "টাকা যেখান থেকে যাচ্ছে, <b>মাধ্যম</b> ঘরে তা বেছে নিন (যেমন নগদ)।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "গন্তব্য ও জমা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "<b>গন্তব্য লেজার</b> বেছে নিন (যেমন ব্যাংক)।",
+          "box": null
+        },
+        {
+          "text": "<b>জমা দিন</b> চাপুন।",
+          "box": null
+        }
+      ]
+    }
+  ]
+}

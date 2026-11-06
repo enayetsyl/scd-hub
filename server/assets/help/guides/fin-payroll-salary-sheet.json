@@ -1,0 +1,49 @@
+{
+  "id": "fin-payroll-salary-sheet",
+  "category": "payroll_finance",
+  "order": 10,
+  "draft": true,
+  "title": "বেতন শিট (PDF) খোলা",
+  "intro": "ভাউচারের সঙ্গে রাখার বেতন শিট খোলার নিয়ম: প্রত্যেকের মোট বেতন, কর্তন, সংযোজন ও নিট বেতন — ব্যাংক, BEFTN ও নগদ আলাদা ভাগে। লক হওয়ার আগের শিটে ‘খসড়া’ লেখা থাকে।",
+  "keywords": [
+    "বেতন শিট",
+    "PDF",
+    "ভাউচার",
+    "প্রিন্ট"
+  ],
+  "perms": [
+    "payroll:export"
+  ],
+  "screens": [
+    "HrTab/PayrollHome",
+    "HrTab/PayrollRunDetail"
+  ],
+  "goTo": {
+    "route": "HrTab",
+    "screen": "PayrollHome"
+  },
+  "rows": [
+    {
+      "heading": "মাস খোলা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "মেনু থেকে কর্মী → বেতন খুলে মাসটি (যেমন <b>২০২৬-০৯</b>) চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "শিট খোলা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "<b>বেতন শিট (PDF)</b> বোতাম চাপুন। PDF আলাদা পাতায় খুলবে; সেখান থেকে প্রিন্ট বা সংরক্ষণ করুন।",
+          "box": null
+        }
+      ]
+    }
+  ]
+}

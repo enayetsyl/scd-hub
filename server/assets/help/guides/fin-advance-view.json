@@ -1,0 +1,53 @@
+{
+  "id": "fin-advance-view",
+  "category": "payroll_finance",
+  "order": 30,
+  "draft": true,
+  "title": "কর্মীর অগ্রিম বেতনের হিসাব দেখা",
+  "intro": "কোনো কর্মীকে কত অগ্রিম (কর্জে হাসানা) দেওয়া হয়েছে এবং কত বাকি আছে, তা দেখার নিয়ম। কিস্তি প্রতি মাসের বেতন থেকে নিজে কাটা হয়।",
+  "keywords": [
+    "অগ্রিম",
+    "ঋণ",
+    "কর্জে হাসানা",
+    "কিস্তি",
+    "বাকি"
+  ],
+  "perms": [
+    "salary_advance:view"
+  ],
+  "screens": [
+    "HrTab/Advances"
+  ],
+  "goTo": {
+    "route": "HrTab",
+    "screen": "Advances"
+  },
+  "rows": [
+    {
+      "heading": "পাতাটি খোলা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "মেনু থেকে কর্মী → বেতন খুলে <b>অগ্রিম / ঋণ</b> চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "কর্মী বেছে দেখা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "<b>কর্মী</b> ঘরে নাম বেছে নিন।",
+          "box": null
+        },
+        {
+          "text": "কার্ডে অগ্রিমের মূল পরিমাণ, অবস্থা ও <b>বাকি</b> টাকা দেখাবে।",
+          "box": null
+        }
+      ]
+    }
+  ]
+}

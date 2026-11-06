@@ -1,0 +1,80 @@
+{
+  "id": "fin-payroll-approve-lock",
+  "category": "payroll_finance",
+  "order": 7,
+  "draft": true,
+  "title": "মাসের বেতন অনুমোদন ও লক করা",
+  "intro": "অফিসের প্রস্তুত করা বেতনের হিসাব যাচাই করে অনুমোদন দেওয়ার নিয়ম। লক করার পর কর্মীরা নিজের পে-স্লিপ দেখতে পান এবং ব্যাংকের ফাইল নামানো যায়।",
+  "keywords": [
+    "অনুমোদন",
+    "লক",
+    "বেতন",
+    "রান",
+    "প্রধান শিক্ষক"
+  ],
+  "perms": [
+    "payroll:approve"
+  ],
+  "screens": [
+    "HrTab/PayrollHome",
+    "HrTab/PayrollRunDetail"
+  ],
+  "goTo": {
+    "route": "HrTab",
+    "screen": "PayrollHome"
+  },
+  "rows": [
+    {
+      "heading": "পাতাটি খোলা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "ওপরে বাম কোণের <b>☰</b> চেপে মেনু খুলুন, তারপর কর্মী চাপুন।",
+          "box": null
+        },
+        {
+          "text": "<b>বেতন</b> চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "রান খোলা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "‘প্রস্তুত’ লেখা মাসটি (যেমন <b>২০২৬-১০</b>) চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "যাচাই ও লক",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "চাইলে <b>হিসাবের রেজিস্টার (Excel)</b> নামিয়ে বা নিচের পে-স্লিপগুলো দেখে হিসাব মিলিয়ে নিন।",
+          "box": null
+        },
+        {
+          "text": "সব ঠিক থাকলে <b>অনুমোদন ও লক</b> চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "লক হয়েছে",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "ওপরে <b>অনুমোদিত ও লকড</b> দেখাবে। এখন অগ্রিমের কিস্তিও কাটা হয়ে যায়।",
+          "box": null
+        }
+      ]
+    }
+  ]
+}

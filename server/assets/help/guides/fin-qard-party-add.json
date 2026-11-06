@@ -1,0 +1,69 @@
+{
+  "id": "fin-qard-party-add",
+  "category": "payroll_finance",
+  "order": 60,
+  "draft": true,
+  "title": "কর্জগ্রহীতা (পক্ষ) যোগ করা",
+  "intro": "স্কুল যাঁকে কর্জে হাসানা বা আইওইউ দেয় (কর্মী ছাড়া), তাঁকে পক্ষ হিসেবে যোগ করার নিয়ম। কর্মীর অগ্রিম আলাদা, বেতনের পাতা থেকে হয়।",
+  "keywords": [
+    "কর্জ",
+    "কর্জে হাসানা",
+    "IOU",
+    "পক্ষ",
+    "কর্জগ্রহীতা"
+  ],
+  "perms": [
+    "qard:edit"
+  ],
+  "screens": [
+    "FinanceTab/QardIou"
+  ],
+  "goTo": {
+    "route": "FinanceTab",
+    "screen": "QardIou"
+  },
+  "rows": [
+    {
+      "heading": "পাতাটি খোলা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "ওপরে বাম কোণের <b>☰</b> চেপে মেনু খুলুন, তারপর অর্থ চাপুন।",
+          "box": null
+        },
+        {
+          "text": "<b>কর্জ/IOU</b> চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "পক্ষের তথ্য",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "<b>নাম</b> ঘরে ইংরেজিতে নাম লিখুন।",
+          "box": null
+        },
+        {
+          "text": "<b>নাম (বাংলা)</b> লিখুন।",
+          "box": null
+        },
+        {
+          "text": "<b>ধরন</b> বেছে নিন: কমিউনিটি, ব্যক্তি বা সংস্থা।",
+          "box": null
+        },
+        {
+          "text": "<b>যোগাযোগ</b> নম্বর লিখুন।",
+          "box": null
+        },
+        {
+          "text": "<b>পক্ষ যোগ করুন</b> চাপুন।",
+          "box": null
+        }
+      ]
+    }
+  ]
+}

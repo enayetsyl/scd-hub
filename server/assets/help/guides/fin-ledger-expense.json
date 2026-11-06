@@ -1,0 +1,81 @@
+{
+  "id": "fin-ledger-expense",
+  "category": "payroll_finance",
+  "order": 41,
+  "draft": true,
+  "title": "ব্যয় লেখা",
+  "intro": "বিদ্যুৎ বিল, স্টেশনারি, ভাড়া ইত্যাদি খরচ দৈনিক হিসাবে লেখার নিয়ম।",
+  "keywords": [
+    "ব্যয়",
+    "খরচ",
+    "দৈনিক এন্ট্রি",
+    "বিল",
+    "হিসাব"
+  ],
+  "perms": [
+    "finance_ledger:create"
+  ],
+  "screens": [
+    "FinanceTab/DailyEntry",
+    "FinanceTab/FinanceHome"
+  ],
+  "goTo": {
+    "route": "FinanceTab",
+    "screen": "DailyEntry"
+  },
+  "rows": [
+    {
+      "heading": "পাতাটি খোলা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "ওপরে বাম কোণের <b>☰</b> চেপে মেনু খুলুন, তারপর অর্থ চাপুন।",
+          "box": null
+        },
+        {
+          "text": "<b>দৈনিক এন্ট্রি</b> চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "ব্যয়ের তথ্য",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "<b>ধরন</b> ঘরে ‘ব্যয়’ বেছে নিন।",
+          "box": null
+        },
+        {
+          "text": "<b>পরিমাণ</b> লিখুন।",
+          "box": null
+        },
+        {
+          "text": "কোথা থেকে টাকা গেল, <b>মাধ্যম</b> ঘরে বেছে নিন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "খাত ও জমা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "<b>ব্যয়ের খাত</b> বেছে নিন, যেমন ইউটিলিটি।",
+          "box": null
+        },
+        {
+          "text": "<b>নোট</b> ঘরে কী খরচ তা লিখুন, যেমন অক্টোবরের বিদ্যুৎ বিল।",
+          "box": null
+        },
+        {
+          "text": "<b>জমা দিন</b> চাপুন।",
+          "box": null
+        }
+      ]
+    }
+  ]
+}

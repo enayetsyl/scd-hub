@@ -1,0 +1,72 @@
+{
+  "id": "fin-ledger-snapshot",
+  "category": "payroll_finance",
+  "order": 43,
+  "draft": true,
+  "title": "একদিনের হিসাব (দৈনিক স্ন্যাপশট) দেখা",
+  "intro": "কোনো দিনে নগদ, ব্যাংক ও অনলাইন হিসাবে শুরুতে কত ছিল, কত এল, কত গেল এবং দিনশেষে কত থাকল, তা দেখার নিয়ম।",
+  "keywords": [
+    "স্ন্যাপশট",
+    "দৈনিক হিসাব",
+    "ব্যালান্স",
+    "নগদ",
+    "ব্যাংক"
+  ],
+  "perms": [
+    "finance_ledger:view"
+  ],
+  "screens": [
+    "FinanceTab/DailySnapshot"
+  ],
+  "goTo": {
+    "route": "FinanceTab",
+    "screen": "DailySnapshot"
+  },
+  "rows": [
+    {
+      "heading": "পাতাটি খোলা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "ওপরে বাম কোণের <b>☰</b> চেপে মেনু খুলুন, তারপর অর্থ চাপুন।",
+          "box": null
+        },
+        {
+          "text": "<b>দৈনিক স্ন্যাপশট</b> চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "দিন বেছে দেখা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "<b>তারিখ</b> ঘরে দিনটি বেছে নিন।",
+          "box": null
+        },
+        {
+          "text": "<b>লোড করুন</b> চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "হিসাব পড়া",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "প্রতিটি হিসাবের (যেমন <b>নগদ</b>) নিচে প্রারম্ভিক, আয় ও ব্যয় দেখাবে।",
+          "box": null
+        },
+        {
+          "text": "<b>সমাপনী</b> হলো দিনশেষে যা থাকার কথা।",
+          "box": null
+        }
+      ]
+    }
+  ]
+}
