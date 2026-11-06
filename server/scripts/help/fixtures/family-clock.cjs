@@ -1,16 +1,20 @@
 /**
- * Preload for the family capture run: moves this Node process's clock to HELP_CLOCK
- * (default Thursday 2026-11-05 10:30 Dhaka) and lets it run on from there, so the
- * guardian app shows a school day (the routine, today's class notes, the homework
- * claim window). Used for BOTH the fixture and the local server:
+ * Preload for the family capture run: moves this Node process's calendar to HELP_DAY
+ * (default Thursday 2026-11-05, Asia/Dhaka) by a whole number of days, keeping the real
+ * time of day, so the guardian app shows a school day (the routine, today's class notes,
+ * the homework claim window). Used for BOTH the fixture and the local server:
  *
  *   $env:NODE_OPTIONS='--require ./scripts/help/fixtures/family-clock.cjs'
  *
- * The capture spec moves the browser clock to the same moment. Local runs only.
+ * specs/family-lib.cjs moves the browser clock by the same rule, so the server and the
+ * browser agree whenever each was started. Local runs only.
  */
-const target = Date.parse(process.env.HELP_CLOCK || "2026-11-05T10:30:00+06:00");
 const RealDate = Date;
-const offset = target - RealDate.now();
+const DAY = 86400000;
+const DHAKA = 6 * 3600000;
+const day = process.env.HELP_DAY || "2026-11-05";
+const realToday = Math.floor((RealDate.now() + DHAKA) / DAY) * DAY - DHAKA; // Dhaka midnight, real
+const offset = RealDate.parse(`${day}T00:00:00+06:00`) - realToday;
 
 class ShiftedDate extends RealDate {
   constructor(...args) {

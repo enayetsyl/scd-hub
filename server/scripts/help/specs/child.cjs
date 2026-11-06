@@ -35,7 +35,7 @@ exports.run = async (h0) => {
 
   // ── নাফিসা: the school's task for today ──
   await h.tap(G, "নাফিসা রহমান", 3500);
-  await h.shot(G, "child-school-task", 0, [{ text: "নাফিসা রহমান" }]);
+  await h.shot(G, "child-school-task", 0, [{ text: "নাফিসা রহমান", last: true }]);
   await shotAt(h, G, "child-school-task", 1, [{ text: "স্কুল থেকে আজকের কাজ" }, { text: "আজ করেছি" }], { text: "স্কুল থেকে আজকের কাজ" });
   await h.tap(G, "আজ করেছি", 3000);
   await G.evaluate(() => window.scrollTo(0, 0));

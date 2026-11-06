@@ -862,7 +862,7 @@ export async function seedFamily(b: Base): Promise<void> {
       { _id: r._id },
       {
         $set: {
-          commentDraft: { text: para(names[i]), source: "MODEL", model: "example", promptVersion: "example", promptHash: "-", generatedAt: at("2026-11-03"), fallback: false },
+          commentDraft: { text: para(names[i]), source: "MODEL", model: "gemini-2.5-flash", promptVersion: "mr4-6", promptHash: "-", generatedAt: at("2026-11-03"), fallback: false },
         },
       },
     );

@@ -3,7 +3,7 @@
  *
  * The family fixture (scripts/help/fixtures/family.ts) is dated Thursday 2026-11-05 and the
  * local server runs with fixtures/family-clock.cjs, so `session()` moves the browser clock
- * to the same moment after signing in.
+ * to the same day (real time of day) after signing in.
  *
  * Each spec starts with `h = wrap(h)`: Bangla nukta letters have two spellings
  * (ড় = ড + ় or one code point) and the app's labels mix them, so every text target is
@@ -45,15 +45,29 @@ function wrap(h) {
   };
 }
 
-const CLOCK = process.env.HELP_CLOCK || "2026-11-05T10:30:00+06:00";
+// Same rule as fixtures/family-clock.cjs: HELP_DAY (Dhaka) at the real time of day.
+const DAY = 86400000;
+const DHAKA = 6 * 3600000;
+function shiftedNow() {
+  const realToday = Math.floor((Date.now() + DHAKA) / DAY) * DAY - DHAKA;
+  return Date.now() + Date.parse(`${process.env.HELP_DAY || "2026-11-05"}T00:00:00+06:00`) - realToday;
+}
 const PASSWORD = "Help@123";
 
 /** Sign in, move the browser clock to the fixture's day, and close any start-up pop-up. */
 async function session(h, login) {
   const { context, page } = await h.login(login, PASSWORD);
-  await context.clock.install({ time: new Date(CLOCK) });
+  await context.clock.install({ time: new Date(shiftedNow()) });
   await page.reload({ waitUntil: "load" });
   await page.waitForTimeout(6000);
+  // A slow first sign-in can leave the login page up; sign in again on the moved clock.
+  const field = page.getByPlaceholder("you@school.edu / 01XXXXXXXXX");
+  if (await field.isVisible().catch(() => false)) {
+    await field.fill(login);
+    await page.locator('input[type="password"]').fill(PASSWORD);
+    await page.getByText("লগইন", { exact: true }).last().click();
+    await page.waitForTimeout(7000);
+  }
   await dismiss(h, page);
   return { context, page };
 }
@@ -116,4 +130,12 @@ async function shotAt(h, page, guide, row, targets, anchor) {
   await h.shot(page, guide, row, targets, { anchor });
 }
 
-module.exports = { wrap, norm, session, fresh, reveal, shotAt, onTop, dismiss, openDrawer, menuShot, go, PASSWORD };
+/** Type into the first input or text box that follows the label `label` on the page. */
+async function fillAfter(page, label, value) {
+  const t = norm(typeof label === "string" ? { text: label } : label);
+  const el = page.getByText(new RegExp(t.re)).locator("visible=true").first();
+  await el.locator("xpath=following::*[self::input or self::textarea][1]").fill(value);
+  await page.waitForTimeout(300);
+}
+
+module.exports = { fillAfter, wrap, norm, session, fresh, reveal, shotAt, onTop, dismiss, openDrawer, menuShot, go, PASSWORD };
