@@ -26,6 +26,27 @@ const t = (text, extra = {}) => ({ text, ...extra });
 async function fresh(page) {
   await page.reload({ waitUntil: "load" });
   await page.waitForTimeout(5500);
+  await relogin(page);
+}
+/** A long walk can land back on the sign-in page; sign in again as the same example login. */
+async function relogin(page) {
+  const box = page.getByPlaceholder("you@school.edu / 01XXXXXXXXX");
+  if (!page.__hrUser) return;
+  const formShown = async () =>
+    (await box.count()) > 0 &&
+    (await box.first().evaluate((e) => {
+      const r = e.getBoundingClientRect();
+      if (!r.width) return false;
+      const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      return !!hit && (hit === e || e.contains(hit));
+    }).catch(() => false));
+  // A sign-in still in flight also shows the form: give it time before typing again.
+  for (let i = 0; i < 20 && (await formShown()); i++) await page.waitForTimeout(1000);
+  if (!(await formShown())) return;
+  await box.first().fill(page.__hrUser);
+  await page.locator('input[type="password"]').fill(PASSWORD);
+  await page.getByText("লগইন", { exact: true }).last().click({ timeout: 10000 }).catch(() => {});
+  await page.waitForTimeout(7000);
 }
 /** Open a Select and choose an option from ITS menu (the chosen label also shows in other
  *  triggers, so a plain text match can land on the wrong one). `contains` matches part of the label. */
@@ -246,8 +267,12 @@ const DOMAIN_NOTES = [
 ];
 async function observerReview(h, T2) {
   // teacher2 has a booked warning meeting: the pop-up greets them first.
-  await h.shot(T2, "hr-mistake-warning", 0, [t("সতর্কবার্তা"), t("বুঝেছি — সময়টা ঠিক আছে"), t("অন্য সময় চাই")]);
-  await h.tap(T2, "বুঝেছি — সময়টা ঠিক আছে", 2500);
+  const okBtn = T2.getByText("বুঝেছি — সময়টা ঠিক আছে", { exact: true });
+  await okBtn.first().waitFor({ timeout: 20000 }).catch(() => {});
+  if (await okBtn.count()) {
+    await h.shot(T2, "hr-mistake-warning", 0, [t("সতর্কবার্তা"), t("বুঝেছি — সময়টা ঠিক আছে"), t("অন্য সময় চাই")]);
+    await h.tap(T2, "বুঝেছি — সময়টা ঠিক আছে", 2500);
+  }
   await fresh(T2);
   await menu(h, T2, "পর্যবেক্ষণ");
   await h.tap(T2, { text: "আমার রিভিউ কিউ", minY: 100 }, 3500);
@@ -260,10 +285,11 @@ async function observerReview(h, T2) {
   await h.shot(T2, "hr-obs-review", 1, [sel(DOMAINS[0]), fld(DOMAINS[0])], { anchor: t("ডোমেইন স্কোর (১–৪)") });
   await pick(h, T2, "নিরাপদ ও সম্মানজনক পরিবেশ", "উত্তীর্ণ");
   await pick(h, T2, "অন্তর্ভুক্তি ও ন্যায্য আচরণ", "উত্তীর্ণ");
-  await h.shot(T2, "hr-obs-review", 2, [sel("নিরাপদ ও সম্মানজনক পরিবেশ")], { anchor: t("গেট", { exact: true }) });
-  await fill(h, T2, "একটি ভালো দিক", "জোড়ায় কাজের নির্দেশনা খুব পরিষ্কার ছিল।");
-  await fill(h, T2, "উন্নতির লক্ষ্য", "প্রশ্নের পর একটু অপেক্ষা করুন, যাতে সবাই ভাবার সময় পায়।");
-  await h.shot(T2, "hr-obs-review", 3, [fld("একটি ভালো দিক"), fld("উন্নতির লক্ষ্য"), t("রিভিউ জমা দিন")], { bottom: true });
+  await (await h.topmost(T2, fldIn("একটি ভালো দিক"), { scroll: true })).fill("জোড়ায় কাজের নির্দেশনা খুব পরিষ্কার ছিল।");
+  await (await h.topmost(T2, fldIn("উন্নতির লক্ষ্য"), { scroll: true })).fill("প্রশ্নের পর একটু অপেক্ষা করুন, যাতে সবাই ভাবার সময় পায়।");
+  await T2.waitForTimeout(600);
+  await h.shot(T2, "hr-obs-review", 2, [sel("নিরাপদ ও সম্মানজনক পরিবেশ"), fldIn("একটি ভালো দিক"), fldIn("উন্নতির লক্ষ্য")], { anchor: t("গেট", { exact: true }) });
+  await h.shot(T2, "hr-obs-review", 3, [t("রিভিউ জমা দিন")], { bottom: true });
   await h.tap(T2, "রিভিউ জমা দিন", 4000);
 }
 
@@ -309,8 +335,9 @@ async function principalStaffRecords(h, P) {
   await h.shot(P, "hr-staff-edit", 3, [t("সংরক্ষণ")], { bottom: true });
   await back(h, P);
   await h.tap(P, t("স্থায়ীকরণ", { minY: 100 }), 3500);
-  await fill(h, P, "স্থায়ীকরণের তারিখ", "2026-11-01");
-  await h.shot(P, "hr-staff-confirm", 2, [fld("স্থায়ীকরণের তারিখ"), t("যা যা বদলাবে"), t("হ্যাঁ"), t("নিশ্চিত করুন")], { bottom: true });
+  await (await h.topmost(P, fldIn("স্থায়ীকরণের তারিখ"), { scroll: true })).fill("2026-11-01");
+  await h.shot(P, "hr-staff-confirm", 2, [fldIn("স্থায়ীকরণের তারিখ"), t("যা যা বদলাবে")], { anchor: t("স্থায়ীকরণের তারিখ") });
+  await h.shot(P, "hr-staff-confirm", 3, [t("হ্যাঁ"), t("নিশ্চিত করুন")], { bottom: true });
 }
 
 async function principalStaffAdd(h, P) {
@@ -322,8 +349,10 @@ async function principalStaffAdd(h, P) {
   await fill(h, P, "নাম *", "Example New Teacher");
   await fill(h, P, "বাংলা নাম", "উদাহরণ নতুন শিক্ষক");
   await fill(h, P, "পদবি *", "সহকারী শিক্ষক");
-  await h.tap(P, "শিক্ষক", 500);
-  await h.tap(P, "পূর্ণকালীন", 500);
+  const idBox = await h.topmost(P, fldIn("আইডি *"), { scroll: true });
+  if (!(await idBox.inputValue())) await idBox.fill("S-08");
+  await h.tap(P, { css: 'xpath=//*[text()="ক্যাটাগরি *"]/following::*[text()="শিক্ষক"][1]' }, 500);
+  await h.tap(P, { css: 'xpath=//*[text()="চাকরির ধরন *"]/following::*[text()="পূর্ণকালীন"][1]' }, 500);
   await h.shot(P, "hr-staff-add", 1, [fld("নাম *"), fld("পদবি *"), t("ক্যাটাগরি *")], { anchor: t("নাম *") });
   await (await h.topmost(P, fldIn("ফোন"), { scroll: true })).fill("01700000008");
   await h.shot(P, "hr-staff-add", 2, [fldIn("ফোন"), t("পরবর্তী: বেতন")], { bottom: true });
@@ -421,9 +450,11 @@ async function principalObservation(h, P) {
   await h.shot(P, "hr-obs-publish", 0, [t("সকল পর্যবেক্ষণ")]);
   await h.tap(P, "সকল পর্যবেক্ষণ", 3500);
   await h.tap(P, "প্রকাশের অপেক্ষায়", 3500);
-  const detail = { css: 'xpath=//*[text()="২০২৬-১১-০২"]/following::*[text()="পর্যবেক্ষণ বিবরণ"][1]' };
+  // newest class date first: the fixture's reviewed English class (2026-11-02) is the last card
+  const detail = t("পর্যবেক্ষণ বিবরণ", { last: true });
   await h.shot(P, "hr-obs-publish", 1, [t("প্রকাশের অপেক্ষায়")], { anchor: t("প্রকাশ অবস্থা") });
-  await h.shot(P, "hr-obs-publish", 2, [detail], { anchor: t("২০২৬-১১-০২") });
+  await P.waitForTimeout(2500);
+  await h.shot(P, "hr-obs-publish", 2, [detail], { bottom: true });
   await h.tap(P, detail, 4500);
   await h.shot(P, "hr-obs-publish", 3, [t("শিক্ষকের কাছে প্রকাশ করুন"), t("প্রকাশ স্থগিত করুন")], { anchor: t("শিক্ষকের কাছে প্রকাশ করুন") });
   await h.tap(P, "শিক্ষকের কাছে প্রকাশ করুন", 3500);
@@ -482,16 +513,22 @@ ${String(e.stack || e).slice(0, 1500)}`);
     }
   };
   const failures = [];
-  const T = (await h.login("teacher@help.test", PASSWORD)).page;
+  const as = async (user) => {
+    const page = (await h.login(user, PASSWORD)).page;
+    page.__hrUser = user;
+    await relogin(page);
+    return page;
+  };
+  const T = await as("teacher@help.test");
   await safe("teacherLeave", () => teacherLeave(h, T));
   await safe("teacherMistake", () => teacherMistake(h, T));
   await safe("teacherSelf", () => teacherSelf(h, T));
   await safe("teacherObservation", () => teacherObservation(h, T));
 
-  const T2 = (await h.login("teacher2@help.test", PASSWORD)).page;
+  const T2 = await as("teacher2@help.test");
   await safe("observerReview", () => observerReview(h, T2));
 
-  const P = (await h.login("principal@help.test", PASSWORD)).page;
+  const P = await as("principal@help.test");
   await safe("principalCover", () => principalCover(h, P));
   await safe("principalLeave", () => principalLeave(h, P));
   await safe("principalStaff", () => principalStaff(h, P));
