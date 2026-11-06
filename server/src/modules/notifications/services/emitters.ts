@@ -212,6 +212,8 @@ const dedupeKeys = {
   staffWarningStep: (warningId: string, recipientId: string, variant: string) => `SMST:${warningId}:${recipientId}:${variant}`,
   /** Per warning + recipient + write (D-#941): a re-booked time or the summary is a new notice. */
   staffWarningMeeting: (warningId: string, recipientId: string, at: number) => `SMMT:${warningId}:${recipientId}:${at}`,
+  /** Per day + recipient (D-#1016): one end-of-day mistake report each. */
+  staffMistakeDaily: (dateKey: string, recipientId: string) => `SMDAY:${dateKey}:${recipientId}`,
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -2527,6 +2529,28 @@ export async function emitStaffWarningMeeting(ev: {
       bodyBn: ev.summary ? `সংশোধনের পদক্ষেপ: ${ev.summary}` : `সতর্কবার্তা নিয়ে আলোচনা: ${when}, ${ev.place ?? ""}`,
       refs: {},
       dedupeKey: dedupeKeys.staffWarningMeeting(ev.warningId.toString(), ev.recipientUserId.toString(), ev.stamp),
+    });
+  });
+}
+
+/**
+ * D-#1016 — the end-of-day mistake report to a holder of staff_mistakes:view_all. `refs.date`
+ * (YYYY-MM-DD) opens that day's list. The people named are never told (quiet record).
+ */
+export async function emitStaffMistakeDaily(ev: {
+  recipientUserId: IdLike;
+  dateKey: string;
+  titleBn: string;
+  bodyBn: string;
+}): Promise<void> {
+  return bestEffort("staff mistake daily", async () => {
+    await emit({
+      recipientUserId: ev.recipientUserId.toString(),
+      kind: "STAFF_MISTAKE_DAILY",
+      titleBn: ev.titleBn,
+      bodyBn: ev.bodyBn,
+      refs: { date: ev.dateKey },
+      dedupeKey: dedupeKeys.staffMistakeDaily(ev.dateKey, ev.recipientUserId.toString()),
     });
   });
 }

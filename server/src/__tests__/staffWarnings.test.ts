@@ -60,7 +60,8 @@ async function user(name: string, role = "TEACHER"): Promise<string> {
   seq += 1;
   const r = await User.collection.insertOne({
     name, role, active: true, phone: `8801722000${seq}`, passwordHash: "x",
-    grantedPermissions: [], revokedPermissions: [], additionalTemplates: [],
+    // D-#1016: these suites test the told flow (explain notice, decisions, warnings).
+    grantedPermissions: ["staff_mistakes:view_own"], revokedPermissions: [], additionalTemplates: [],
   });
   return r.insertedId.toString();
 }

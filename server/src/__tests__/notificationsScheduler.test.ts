@@ -88,6 +88,11 @@ jest.mock("../modules/trackers/services/HomeworkReconciliationService", () => ({
 jest.mock("../modules/staff-mistakes/services/StaffMistakeService", () => ({
   settleOverdueMistakes: jest.fn().mockResolvedValue(0),
 }));
+// D-#1016: the 18:00 end-of-day mistake report.
+jest.mock("../modules/staff-mistakes/services/StaffMistakeDailyService", () => ({
+  dispatchStaffMistakeDaily: jest.fn().mockResolvedValue(0),
+  STAFF_MISTAKE_DAILY_MINUTES: 18 * 60,
+}));
 jest.mock("../modules/trackers/services/WorkClaimSweepService", () => ({
   runWorkClaimDigest: jest.fn().mockResolvedValue({ openCount: 0, notified: 0 }),
   expireStaleWorkClaims: jest.fn().mockResolvedValue(0),

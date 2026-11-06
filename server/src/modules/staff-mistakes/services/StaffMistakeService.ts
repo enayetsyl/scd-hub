@@ -32,6 +32,7 @@ import type { StaffMistakeDeadline } from "@scd/shared";
 import { getStaffMistakeSettings } from "./StaffMistakeSettingsService";
 import { evaluateLadder } from "./StaffWarningService";
 import { ownedByPrincipal } from "./principalPrivacy";
+import { isToldAboutMistakes } from "./toldAboutMistakes";
 
 import { StaffMistakeError } from "./errors";
 export { StaffMistakeError };
@@ -59,9 +60,13 @@ export function explainDeadline(now: Date, rule: StaffMistakeDeadline = "NEXT_SC
   return new Date(`${d.toISOString().slice(0, 10)}T17:00:00+06:00`);
 }
 
-/** A mistake just became COUNTED: check the warning ladder (D-#940). Never throws. */
+/**
+ * A mistake just became COUNTED: check the warning ladder (D-#940). Never throws.
+ * D-#1016: someone who is not told about their mistakes never reaches a warning step.
+ */
 async function afterCounted(staffUserId: string, now: Date): Promise<void> {
   try {
+    if (!(await isToldAboutMistakes(staffUserId))) return;
     await evaluateLadder(staffUserId, now);
   } catch (err) {
     console.error("[StaffMistakeService] warning ladder failed (the mistake is still recorded):", err);
@@ -157,7 +162,14 @@ export async function recordMistakeFromSource(input: RecordMistakeInput): Promis
     status: "EXPLANATION_DUE",
     explainDueAt: explainDeadline(input.at, settings.deadline),
   });
+  // D-#1016: a person who is not told cannot explain — with no reason, it counts at once.
+  const told = await isToldAboutMistakes(staffUserId);
   if (reason) applyReason(row, reason, input.at);
+  else if (!told) {
+    row.status = "COUNTED";
+    row.autoCounted = true;
+    row.decidedAt = input.at;
+  }
   try {
     await row.save();
   } catch (err) {
@@ -166,7 +178,7 @@ export async function recordMistakeFromSource(input: RecordMistakeInput): Promis
     return StaffMistake.findOne({ kind: input.kind, sourceId, staffUserId });
   }
   if (reason) await auditExplained(row, staffUserId.toString());
-  else
+  else if (told)
     await emitStaffMistakeExplain({
       mistakeId: row._id,
       recipientUserId: staffUserId,
@@ -265,6 +277,8 @@ export async function decideMistake(input: {
     if (!principal && (await ownedByPrincipal(target.toString()))) {
       throw new StaffMistakeError("প্রধান শিক্ষকের নামে সরানো যায় না।");
     }
+    // D-#1016: moved onto someone who is not told — the reviewer's move is the decision.
+    const targetTold = await isToldAboutMistakes(target);
     try {
       moved = await StaffMistake.create({
         staffUserId: target,
@@ -272,9 +286,10 @@ export async function decideMistake(input: {
         tier: row.tier,
         sourceId: row.sourceId,
         dateKey: row.dateKey,
-        status: "EXPLANATION_DUE",
+        status: targetTold ? "EXPLANATION_DUE" : "COUNTED",
         explainDueAt: explainDeadline(now, (await getStaffMistakeSettings()).deadline),
         movedFromId: row._id,
+        ...(targetTold ? {} : { decidedBy: new Types.ObjectId(input.actorId), decidedAt: now }),
       });
     } catch (err) {
       if ((err as { code?: number }).code === 11000) {
@@ -302,7 +317,7 @@ export async function decideMistake(input: {
     targetKind: "StaffMistake",
     meta: { kind: row.kind, decision: input.decision, movedToUserId: moved ? moved.staffUserId.toString() : undefined },
   });
-  if (!own) {
+  if (!own && (await isToldAboutMistakes(row.staffUserId))) {
     await emitStaffMistakeDecided({
       mistakeId: row._id,
       recipientUserId: row.staffUserId,
@@ -311,7 +326,8 @@ export async function decideMistake(input: {
     });
   }
   if (nowCounted) await afterCounted(row.staffUserId.toString(), now);
-  if (moved) {
+  if (moved && moved.status === "COUNTED") await afterCounted(moved.staffUserId.toString(), now);
+  if (moved && moved.status === "EXPLANATION_DUE") {
     await emitStaffMistakeExplain({
       mistakeId: moved._id,
       recipientUserId: moved.staffUserId,
@@ -356,6 +372,8 @@ export async function listStaffMistakes(opts: {
   excludeStaffUserId?: string | null;
   /** People the caller may not see (D-#1000: the Principal, for Office). */
   hideStaffUserIds?: readonly string[];
+  /** YYYY-MM-DD (Dhaka): only that day's entries. */
+  dateKey?: string | null;
   limit?: number;
   now?: Date;
 }): Promise<StaffMistakeShape[]> {
@@ -367,6 +385,8 @@ export async function listStaffMistakes(opts: {
     filter.staffUserId = oid(opts.staffUserId);
   } else if (hidden.length) filter.staffUserId = { $nin: hidden.map(oid) };
   if (opts.statuses?.length) filter.status = { $in: opts.statuses };
+  // D-#1016: one day's entries (the daily report's list).
+  if (opts.dateKey) filter.dateKey = opts.dateKey;
   const rows = await StaffMistake.find(filter)
     .sort({ createdAt: -1 })
     .limit(Math.min(Math.max(opts.limit ?? 200, 1), 500))
