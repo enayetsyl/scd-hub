@@ -3,9 +3,10 @@
  * closing for a chosen date (financeDailySnapshot). The snapshot's `in` field is a JS
  * keyword aliased to `moneyIn` in the gql query.
  */
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ScrollView, View } from "react-native";
 import { useQuery } from "urql";
+import { useRoute } from "@react-navigation/native";
 import { FINANCE_DAILY_SNAPSHOT_QUERY } from "../../graphql/finance";
 import { Screen, Card, Body, Muted, Button, Row, Divider, Loader } from "../../components/ui";
 import { DateField } from "../../components/DateField";
@@ -14,8 +15,16 @@ import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
 
 export default function DailySnapshotScreen(): React.ReactElement {
-  const [date, setDate] = useState("");
-  const [active, setActive] = useState("");
+  // D-#1055: a jump from the daily report opens that day already loaded (optional param).
+  const route = useRoute();
+  const jumpDay = (route.params as { date?: string } | undefined)?.date ?? "";
+  const [date, setDate] = useState(jumpDay);
+  const [active, setActive] = useState(jumpDay);
+  useEffect(() => {
+    if (!jumpDay) return;
+    setDate(jumpDay);
+    setActive(jumpDay);
+  }, [jumpDay]);
 
   const [snapQ] = useQuery({
     query: FINANCE_DAILY_SNAPSHOT_QUERY,
