@@ -14,7 +14,7 @@ async function walk(h, page, guide, screenWithHelp) {
   await h.shot(page, guide, 1, [{ placeholder: "কী করতে চান লিখুন…" }, { text: "নোটিফিকেশন দেখা" }]);
   await h.tap(page, "নোটিফিকেশন দেখা", 4000);
   await reveal(page, { text: "এই পাতায় যান →" });
-  await h.shot(page, guide, 2, [{ re: "^সবগুলো একবারে" }, { text: "এই পাতায় যান →" }, { text: "হ্যাঁ" }]);
+  await h.shot(page, guide, 2, [{ text: "এই পাতায় যান →" }, { text: "হ্যাঁ" }]);
   await home(page);
   await closePopups(h, page);
   if (screenWithHelp) await screenWithHelp(page);

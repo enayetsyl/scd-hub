@@ -77,7 +77,7 @@ exports.run = async (h) => {
 
   // ── Audit log, activity ──────────────────────────────────────────────────
   await admin(h, P, "অডিট লগ", "ops-audit-log");
-  await h.shot(P, "ops-audit-log", 1, [{ css: "input" }, { text: "সব" }, { text: "উদাহরণ অফিস কর্মী" }]);
+  await h.shot(P, "ops-audit-log", 1, [{ css: "input" }, { text: "সব" }, { text: "উদাহরণ অধ্যক্ষ" }]);
 
   await admin(h, P, "কার্যক্রম", "ops-person-activity");
   await fill(h, P, { css: "input" }, "শ্রেণি", 1500);
@@ -88,6 +88,8 @@ exports.run = async (h) => {
 
   // ── System health, AI key ────────────────────────────────────────────────
   await admin(h, P, "সিস্টেমের অবস্থা", "ops-system-health");
+  // The health read measures the disk and database: give it time.
+  await P.getByText("ডেটাবেজ", { exact: true }).locator("visible=true").first().waitFor({ timeout: 120000 });
   await h.shot(P, "ops-system-health", 1, [{ text: "ডেটাবেজ" }]);
   await reveal(P, { text: "ব্যাকআপ" });
   await h.shot(P, "ops-system-health", 2, [{ re: "^স্বয়ংক্রিয় কাজ" }, { text: "ব্যাকআপ" }]);
