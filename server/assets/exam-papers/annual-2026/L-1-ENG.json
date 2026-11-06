@@ -6,7 +6,7 @@
   "subject": "ENG",
   "titleBn": "বার্ষিক পরীক্ষা ২০২৬ · নার্সারি · ইংরেজি",
   "fullMarks": 100,
-  "durationBn": "১ ঘণ্টা ৩০ মিনিট",
+  "durationBn": "৩ ঘণ্টা",
   "syllabusRows": [
     { "seq": 1, "label": "Write the capital letters A–Z", "itemType": "other", "component": null, "count": 1, "marksEach": 15, "total": 15 },
     { "seq": 2, "label": "Rearrange the jumbled letters (2 sets × 5)", "itemType": "other", "component": null, "count": 2, "marksEach": 5, "total": 10 },
