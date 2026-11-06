@@ -68,8 +68,15 @@ async function session(h, login) {
     await page.getByText("লগইন", { exact: true }).last().click();
     await page.waitForTimeout(7000);
   }
+  await ready(page);
   await dismiss(h, page);
   return { context, page };
+}
+
+/** Wait for the app shell (the ☰ button) after a load; the local server can be slow. */
+async function ready(page) {
+  await page.getByText("☰", { exact: true }).locator("visible=true").first().waitFor({ timeout: 120000 }).catch(() => {});
+  await page.waitForTimeout(1500);
 }
 
 /** Is this target visible and on top right now? */
@@ -111,6 +118,7 @@ async function go(h, page, item, group) {
 async function fresh(h, page) {
   await page.reload({ waitUntil: "load" });
   await page.waitForTimeout(6000);
+  await ready(page);
   await dismiss(h, page);
 }
 
@@ -119,15 +127,27 @@ async function reveal(page, target) {
   const t = norm(target);
   const all = page.getByText(new RegExp(t.re)).locator("visible=true");
   const n = await all.count();
-  if (n === 0) throw new Error(`reveal: nothing matches ${JSON.stringify(target)}`);
-  await all.nth(t.last ? n - 1 : 0).evaluate((e) => e.scrollIntoView({ block: "center" }));
+  // Skip matches parked off to the side (the closed drawer keeps its items mounted).
+  const onPage = [];
+  for (let i = 0; i < n; i++) {
+    if (await all.nth(i).evaluate((e) => { const r = e.getBoundingClientRect(); return r.right > 0 && r.left < innerWidth; })) onPage.push(i);
+  }
+  if (onPage.length === 0) throw new Error(`reveal: nothing matches ${JSON.stringify(target)}`);
+  await all.nth(t.last ? onPage[onPage.length - 1] : onPage[0]).evaluate((e) => e.scrollIntoView({ block: "center" }));
   await page.waitForTimeout(500);
 }
 
 /** shot() with its anchor scrolled into view first. */
 async function shotAt(h, page, guide, row, targets, anchor) {
   await reveal(page, anchor);
-  await h.shot(page, guide, row, targets, { anchor });
+  try {
+    await h.shot(page, guide, row, targets, { anchor });
+  } catch (e) {
+    // Near the end of a page the anchor cannot reach the top, and capture's 70px headroom
+    // pushes the last button off the bottom; then let shot() centre the first target instead.
+    if (!/not found on top|off screen/.test(String(e))) throw e;
+    await h.shot(page, guide, row, targets);
+  }
 }
 
 /** Type into the first input or text box that follows the label `label` on the page. */
