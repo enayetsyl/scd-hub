@@ -1518,6 +1518,8 @@ export const NOTIFICATION_KINDS = [
   "STAFF_MISTAKE_WARNING",
   "STAFF_MISTAKE_STEP",
   "STAFF_MISTAKE_MEETING",
+  // Quiet record (D-#1020): DAILY → holders of staff_mistakes:view_all: the day's entries, 18:00
+  "STAFF_MISTAKE_DAILY",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
@@ -1600,6 +1602,7 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   STAFF_MISTAKE_WARNING: "সতর্কবার্তা",
   STAFF_MISTAKE_STEP: "কর্মীর ভুলের সীমা",
   STAFF_MISTAKE_MEETING: "আলোচনার সময়",
+  STAFF_MISTAKE_DAILY: "আজকের কর্মীর ভুল",
 };
 export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   BELL_REMINDER: "Bell reminder",
@@ -1680,6 +1683,7 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   STAFF_MISTAKE_WARNING: "Warning",
   STAFF_MISTAKE_STEP: "A staff member reached a warning step",
   STAFF_MISTAKE_MEETING: "Meeting booked",
+  STAFF_MISTAKE_DAILY: "Today's staff mistakes",
 };
 
 /**

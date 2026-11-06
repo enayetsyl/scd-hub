@@ -17,6 +17,7 @@ import { useMasteryLevelLabels } from "../../lib/useMasteryLevelLabels";
 import { space } from "../../theme";
 import { fill } from "./masteryStateUi";
 import { ReviewThreads, TapText, codeTail, formatExerciseRef, reviewStateLabel, reviewStateTone, useReviewAction, useReviewQueue } from "./masteryReviewUi";
+import { AddCard } from "./MasteryReviewAddCard";
 import type { MasteryStackParamList } from "../../navigation/types";
 
 type Props = NativeStackScreenProps<MasteryStackParamList, "MasteryReviewRow">;
@@ -124,6 +125,7 @@ export default function MasteryReviewRowScreen({ navigation, route }: Props): Re
   const [mode, setMode] = useState<Mode>(null);
   const [target, setTarget] = useState<string | null>(null);
   const [reason, setReason] = useState("");
+  const [adding, setAdding] = useState(false);
   const r = q?.rows.find((x) => x.code === code) ?? null;
   React.useLayoutEffect(() => {
     navigation.setOptions({ title: r?.level === "SUB" ? levels.sub : levels.objective });
@@ -139,6 +141,10 @@ export default function MasteryReviewRowScreen({ navigation, route }: Props): Re
   const qtLabel = new Map(q.questionTypes.map((t) => [t.code, t.labelBn || t.code]));
   const editable = q.canWrite && r.status === "DRAFT" && !r.mergedInto;
   const live = editable && r.reviewState !== "REJECTED";
+  // D-#1016: add a step where the reviewer is reading — on an objective that already has steps (a leaf
+  // objective is split instead, never given one lone child), or on a step, under its own objective.
+  const addParent = r.level !== "SUB" ? (kids.length > 0 ? r : null) : parent && parent.status === "DRAFT" && !isOut(parent) ? parent : null;
+  const canAddHere = q.canWrite && !!addParent && addParent.status === "DRAFT" && !isOut(addParent);
   const run = (input: ReviewDecisionInput) =>
     void act.run({ reviewId: q.id, input }, STR.msRvSaved).then((ok) => {
       if (!ok) return;
@@ -213,6 +219,14 @@ export default function MasteryReviewRowScreen({ navigation, route }: Props): Re
             </TapText>
           ))}
         </Card>
+      ) : null}
+
+      {canAddHere && addParent ? (
+        adding ? (
+          <AddCard key={addParent.code} q={q} fixedParent={addParent} onDone={() => setAdding(false)} />
+        ) : (
+          <Button title={fill(STR.msRvAddSubHereTpl, { sub: levels.sub })} variant="secondary" onPress={() => setAdding(true)} />
+        )
       ) : null}
 
       {r.mergedInto && byCode.has(r.mergedInto) ? (

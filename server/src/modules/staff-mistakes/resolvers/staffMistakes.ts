@@ -190,6 +190,7 @@ const StaffMistakeRef = builder.objectRef<Row>("StaffMistake").implement({
     explainedAt: t.string({ nullable: true, resolve: (r) => iso(r.explainedAt) }),
     explainDueAt: t.string({ resolve: (r) => new Date(r.explainDueAt).toISOString() }),
     autoCounted: t.exposeBoolean("autoCounted"),
+    quiet: t.exposeBoolean("quiet"),
     decidedByName: t.string({ nullable: true, resolve: (r) => r.decidedByName }),
     decidedAt: t.string({ nullable: true, resolve: (r) => iso(r.decidedAt) }),
     decisionNote: t.string({ nullable: true, resolve: (r) => r.decisionNote }),
@@ -244,9 +245,18 @@ builder.queryField("staffMistakes", (t) =>
     type: [StaffMistakeRef],
     // One staff file (staffProfileId) or the whole school.
     authScopes: { hasPermission: "staff_mistakes:view_all" },
-    args: { staffProfileId: t.arg.string({ required: false }), staffUserId: t.arg.string({ required: false }) },
+    args: {
+      staffProfileId: t.arg.string({ required: false }),
+      staffUserId: t.arg.string({ required: false }),
+      /** D-#1020: one day (YYYY-MM-DD), the daily report's list. */
+      dateKey: t.arg.string({ required: false }),
+    },
     resolve: async (_r, args, ctx) => {
       const hideStaffUserIds = await hiddenOwnersFor(mayHandlePrincipal(ctx));
+      if (args.dateKey) {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(args.dateKey)) throw new Error("তারিখ ঠিক নেই।");
+        return withDetail(await listStaffMistakes({ dateKey: args.dateKey, hideStaffUserIds }));
+      }
       if (args.staffUserId) return withDetail(await listStaffMistakes({ staffUserId: args.staffUserId, hideStaffUserIds }));
       if (args.staffProfileId) {
         const target = await resolveUserIdForStaff(args.staffProfileId);
