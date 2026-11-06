@@ -10,7 +10,7 @@
  * no class), subject from the path or the file name (OVERRIDES below for the odd ones).
  * A .docx and a .pdf with the same name in one folder are ONE paper (docx = original,
  * pdf = pages). A .docx with no pdf twin gets `pdf` = <pdf-cache>/<hash>.pdf and is listed
- * in `toConvert` — run convert-docx-to-pdf.ps1 on the manifest before importing.
+ * in `toConvert` — run convert-docx-to-pdf.mjs on the manifest before importing.
  * Byte-identical files are kept once.
  */
 import crypto from "node:crypto";

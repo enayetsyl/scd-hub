@@ -7,7 +7,7 @@
  *   SCD_IMPORT_EMAIL=office@… SCD_IMPORT_PASSWORD=… node server/scripts/exam-papers/import-reference-papers.mjs \
  *     --api https://<host> --manifest <manifest.json> [--dry-run]
  *
- * The manifest comes from build-reference-manifest.mjs (+ convert-docx-to-pdf.ps1 for docx
+ * The manifest comes from build-reference-manifest.mjs (+ convert-docx-to-pdf.mjs for docx
  * originals without a PDF twin). Needs an Office / Principal login (exam_papers:manage_reference).
  */
 import fs from "node:fs";
@@ -78,7 +78,7 @@ async function upload(e) {
   for (const e of manifest.entries) {
     const label = `${e.year} ${e.term} ${e.classLevel ?? "-"} ${e.subject} — ${path.basename(e.source)}`;
     if (!fs.existsSync(e.pdf)) {
-      console.log(`MISSING PDF  ${label} (run convert-docx-to-pdf.ps1)`);
+      console.log(`MISSING PDF  ${label} (run convert-docx-to-pdf.mjs)`);
       failed++;
       continue;
     }

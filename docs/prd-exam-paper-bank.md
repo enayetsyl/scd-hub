@@ -36,7 +36,7 @@ Status: BUILT 2026-11-06 (branch `feat/exam-paper-bank`). Owner ask, 2026-11-06:
   original — one gate for both file kinds (view_reference/manage_reference + the file belongs to a paper).
 - Bulk load from the laptop: `build-reference-manifest.mjs` (folders → manifest; class from the path, subject
   from path/name, docx+pdf twins = one paper, byte-identical files once, OVERRIDES for misfiled files) →
-  `convert-docx-to-pdf.ps1` (Word) → `import-reference-papers.mjs` (API, idempotent by sha1).
+  `convert-docx-to-pdf.mjs` (docx → HTML → headless Chrome; Word 2013 scrambles Bangla) → `import-reference-papers.mjs` (API, idempotent by sha1).
 - First load: 128 papers — Final 2025 (39 incl. 5 Arabic levels), HY 2025 (28; the "Half Yearly 2025" folder in
   `Mohammadpur Materials` is a byte copy of Final 2025, the real one is under `Sylhet Final Question 2026
   Material/…/Other/`), HY 2026 (35), Final 2026 (28). Skipped: 2 misfiled files and the Bijoy-font C3 BGS /80
