@@ -41,6 +41,7 @@ import {
   useReviewAction,
   useReviewQueue,
 } from "./masteryReviewUi";
+import { AddCard } from "./MasteryReviewAddCard";
 import type { MasteryStackParamList } from "../../navigation/types";
 
 type Props = NativeStackScreenProps<MasteryStackParamList, "MasteryReview">;
@@ -272,91 +273,6 @@ function UnmappedCard({ q }: { q: ReviewQueue }): React.ReactElement | null {
           ) : null}
         </View>
       ))}
-      {act.error ? <Notice message={act.error} tone="danger" /> : null}
-    </Card>
-  );
-}
-
-const splitList = (t: string) =>
-  t
-    .split(/[\n,]/)
-    .map((x) => x.trim())
-    .filter(Boolean);
-
-function AddCard({ q, onDone }: { q: ReviewQueue; onDone: () => void }): React.ReactElement {
-  const levels = useMasteryLevelLabels();
-  const act = useReviewAction(MASTERY_REVIEW_DECIDE);
-  const [level, setLevel] = useState<"OBJECTIVE" | "SUB">("SUB");
-  const [parent, setParent] = useState<string | null>(null);
-  const [chapter, setChapter] = useState<string | null>(null);
-  const [strand, setStrand] = useState("");
-  const [domain, setDomain] = useState<string | null>(null);
-  const [label, setLabel] = useState("");
-  const [qts, setQts] = useState<string[]>([]);
-  const [exercises, setExercises] = useState("");
-  const [reason, setReason] = useState("");
-  const [tip, setTip] = useState("");
-  const parents = q.rows.filter((r) => r.level !== "SUB" && r.status === "DRAFT" && !isOut(r)).map((r) => ({ label: `${codeTail(r.code)} · ${r.labelBn}`, value: r.code }));
-  return (
-    <Card>
-      <Body style={{ fontWeight: "700" }}>{STR.msRvAddNew}</Body>
-      <Muted>{STR.msRvLevel}</Muted>
-      <ChipRow>
-        <Chip label={levels.sub} selected={level === "SUB"} onPress={() => setLevel("SUB")} />
-        <Chip label={levels.objective} selected={level === "OBJECTIVE"} onPress={() => setLevel("OBJECTIVE")} />
-      </ChipRow>
-      {level === "SUB" ? (
-        <Select label={levels.objective} value={parent} options={parents} onChange={setParent} searchable />
-      ) : (
-        <View style={{ gap: space(1) }}>
-          <Select
-            label={STR.msRvChapterPick}
-            value={chapter}
-            options={q.chapters.map((c) => ({ label: `${bnNum(c.number)} · ${c.titleBn}`, value: String(c.number) }))}
-            onChange={setChapter}
-          />
-          <Field label={STR.msRvStrandCode} value={strand} onChangeText={(t) => setStrand(t.toUpperCase())} />
-          <Select label={levels.domain} value={domain} options={q.domains.map((d) => ({ label: d.labelBn, value: d.code }))} onChange={setDomain} />
-          <Field label={STR.msRvHomeTipField} value={tip} onChangeText={setTip} multiline />
-        </View>
-      )}
-      <Field label={STR.msRvLabel} value={label} onChangeText={setLabel} />
-      <Muted>{STR.msQuestionTypes}</Muted>
-      <ChipRow>
-        {q.questionTypes.map((t) => (
-          <Chip key={t.code} label={t.labelBn || t.code} selected={qts.includes(t.code)} onPress={() => setQts((p) => (p.includes(t.code) ? p.filter((x) => x !== t.code) : [...p, t.code]))} />
-        ))}
-      </ChipRow>
-      <Field label={STR.msRvExercises} value={exercises} onChangeText={setExercises} multiline />
-      <Field label={STR.msRvAddReasonField} value={reason} onChangeText={setReason} />
-      <Button
-        title={STR.msRvSave}
-        loading={act.busy}
-        disabled={!label.trim()}
-        onPress={() =>
-          void act
-            .run(
-              {
-                reviewId: q.id,
-                input: {
-                  action: "ADD",
-                  level,
-                  parentCode: level === "SUB" ? parent : null,
-                  chapterNumber: level === "OBJECTIVE" && !strand.trim() && chapter ? Number(chapter) : null,
-                  strand: level === "OBJECTIVE" && strand.trim() ? strand.trim() : null,
-                  domainCode: level === "OBJECTIVE" ? domain : null,
-                  homeTipBn: level === "OBJECTIVE" ? tip : null,
-                  labelBn: label,
-                  questionTypeCodes: qts,
-                  exercises: splitList(exercises),
-                  reason,
-                },
-              },
-              STR.msRvSaved,
-            )
-            .then((ok) => ok && onDone())
-        }
-      />
       {act.error ? <Notice message={act.error} tone="danger" /> : null}
     </Card>
   );
