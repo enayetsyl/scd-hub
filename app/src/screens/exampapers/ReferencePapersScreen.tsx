@@ -173,6 +173,7 @@ export default function ReferencePapersScreen({ navigation }: Props): React.Reac
                   <Muted>
                     {bnNum(p.year)} · {termLabel(p.term)} · {p.classLabelBn ?? STR.epCrossClass} · {subjectLabel(p.subject)}
                   </Muted>
+                  {p.sourceName ? <Muted>📄 {p.sourceName}</Muted> : null}
                   <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(1), marginTop: space(1) }}>
                     {p.status === "READY" ? <Badge text={fill(STR.epPages, { n: bnNum(p.pageCount) })} tone="muted" /> : null}
                     {p.status === "PROCESSING" ? <Badge text={STR.epRefProcessing} tone="warn" /> : null}
