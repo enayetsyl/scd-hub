@@ -65,7 +65,11 @@ function statLine(p: DailyReportPartT): string {
   if (p.status === "NA") return STR.drpNA;
   if (p.status === "ERROR") return STR.drpError;
   const keep = p.key === "FINANCE" ? p.stats : p.stats.filter((s) => s.value > 0 && s.key !== "staffSheetMissing");
-  const parts = keep.slice(0, 4).map((s) => `${statLabel(s.key)} ${num(s.value)}`);
+  // The problem count leads, so a line with a red stripe never reads "no problems".
+  const parts: string[] = [];
+  if (p.problems > 0) parts.push(`${STR.drpProblems} ${num(p.problems)}`);
+  if (p.onTime > 0 && p.key !== "SYSTEM") parts.push(`${STR.drpOnTime} ${num(p.onTime)}`);
+  parts.push(...keep.slice(0, 3).map((s) => `${statLabel(s.key)} ${num(s.value)}`));
   if (p.stats.some((s) => s.key === "staffSheetMissing" && s.value > 0)) parts.push(statLabel("staffSheetMissing"));
   return parts.length ? parts.join(" · ") : STR.drpNoProblems;
 }
@@ -291,19 +295,10 @@ export default function DailyReportScreen({ navigation, route }: Props): React.R
   const canOpen = useMemo(() => (l: DailyReportLinkT | null) => !!l && (l.perms.length === 0 || l.perms.some((p) => can(p))), [can]);
   const view = q.data?.dailyReport ?? null;
 
-  React.useLayoutEffect(() => {
-    const share = can("reports:daily_share");
-    const settings = can("reports:daily_settings");
-    if (!share && !settings) return;
-    navigation.setOptions({
-      headerRight: () => (
-        <View style={{ flexDirection: "row", gap: space(1) }}>
-          {share ? <Button title={STR.drpShare} variant="ghost" onPress={() => navigation.navigate("DailyReportShare")} /> : null}
-          {settings ? <Button title={STR.drpSettings} variant="ghost" onPress={() => navigation.navigate("DailyReportSettings")} /> : null}
-        </View>
-      ),
-    });
-  }, [navigation, can]);
+  // Share / settings sit in the page, not the header: the stack's header already carries the
+  // help + bell buttons, and overriding headerRight from here re-rendered the screen in a loop.
+  const share = can("reports:daily_share");
+  const settings = can("reports:daily_settings");
 
   const time = (iso: string | null) =>
     iso ? new Date(iso).toLocaleTimeString(getActiveLang() === "en" ? "en-GB" : "bn-BD", { hour: "numeric", minute: "2-digit" }) : "";
@@ -311,6 +306,12 @@ export default function DailyReportScreen({ navigation, route }: Props): React.R
   return (
     <Screen scroll>
       <View style={{ gap: space(3) }}>
+        {share || settings ? (
+          <View style={{ flexDirection: "row", gap: space(2), justifyContent: "flex-end", flexWrap: "wrap" }}>
+            {share ? <Button title={STR.drpShare} variant="secondary" onPress={() => navigation.navigate("DailyReportShare")} /> : null}
+            {settings ? <Button title={STR.drpSettings} variant="ghost" onPress={() => navigation.navigate("DailyReportSettings")} /> : null}
+          </View>
+        ) : null}
         <ChipRow>
           {(["DAY", "WEEK", "MONTH", "YEAR"] as Mode[]).map((m) => (
             <Chip

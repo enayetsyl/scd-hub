@@ -150,7 +150,8 @@ describe("the saved day", () => {
     const t1 = await user("Kamrul");
     await task("রিপোর্ট জমা", t1, principal, DAY1, null);
     await makeDailyReport(DAY1, at(DAY1));
-    await Task.updateOne({ titleBn: "রিপোর্ট জমা" }, { $set: { status: "DONE", doneAt: at(DAY1, 17) } });
+    // Done the NEXT morning — after the first report, and after that day ended.
+    await Task.updateOne({ titleBn: "রিপোর্ট জমা" }, { $set: { status: "DONE", doneAt: at(DAY2, 9) } });
     const { report } = await makeDailyReport(DAY2, at(DAY2));
     expect(report.previousDateKey).toBe(DAY1);
     expect(part(report.parts, "WORK_BOARD").fixedLater).toBe(1);

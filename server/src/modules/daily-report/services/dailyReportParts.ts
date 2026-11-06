@@ -57,6 +57,9 @@ export interface PartContext {
   asOf: Date;
   /** Shared by HOMEWORK and ASSIGNMENT — fetched once per build. */
   recon: () => Promise<ReconReport>;
+  /** The "fixed later" re-run of an earlier day: a duty done SINCE (on any day) no longer counts
+   *  as a problem. False for the saved report, where only work done by the end of the day counts. */
+  replay?: boolean;
 }
 
 export interface PartDraft {
@@ -421,8 +424,9 @@ const mistakes: PartBuilder = {
 const workBoard: PartBuilder = {
   key: "WORK_BOARD",
   replayable: true,
-  build: async ({ dateKey }) => {
-    const { end } = dayBounds(dateKey);
+  build: async ({ dateKey, replay }) => {
+    // A replay asks "is it done now?", so a task finished the next morning counts as fixed later.
+    const end = replay ? new Date(8.64e15) : dayBounds(dateKey).end;
     const [due, olderOpen] = await Promise.all([
       Task.find({ dueKey: dateKey, cancelledAt: null }).select("titleBn assigneeUserId status doneAt").lean(),
       Task.countDocuments({ dueKey: { $lt: dateKey }, cancelledAt: null, status: { $ne: "DONE" } }),

@@ -106,10 +106,10 @@ function reconOnce(dateKey: string, asOf: Date): () => Promise<ReconReport> {
 export async function buildParts(
   dateKey: string,
   asOf: Date,
-  opts: { only?: (key: DailyReportSection) => boolean } = {},
+  opts: { only?: (key: DailyReportSection) => boolean; replay?: boolean } = {},
 ): Promise<{ dayType: string; parts: IDailyReportPart[] }> {
   const dayType = await resolveDayType(parseDateKey(dateKey));
-  const ctx: PartContext = { dateKey, dayType, asOf, recon: reconOnce(dateKey, asOf) };
+  const ctx: PartContext = { dateKey, dayType, asOf, recon: reconOnce(dateKey, asOf), replay: opts.replay ?? false };
   const builders = PART_BUILDERS.filter((b) => !opts.only || opts.only(b.key));
   const parts = await Promise.all(builders.map((b) => runPart(b, ctx)));
   return { dayType, parts };
@@ -119,7 +119,7 @@ export async function buildParts(
 async function fixedSince(prev: IDailyReport): Promise<Map<DailyReportSection, number>> {
   const replayable = new Set(PART_BUILDERS.filter((b) => b.replayable).map((b) => b.key));
   const out = new Map<DailyReportSection, number>();
-  const { parts } = await buildParts(prev.dateKey, prev.generatedAt, { only: (k) => replayable.has(k) });
+  const { parts } = await buildParts(prev.dateKey, prev.generatedAt, { only: (k) => replayable.has(k), replay: true });
   for (const now of parts) {
     const then = prev.parts.find((p) => p.key === now.key);
     if (!then || now.status === "ERROR" || then.status === "ERROR") continue;
