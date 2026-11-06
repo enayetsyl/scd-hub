@@ -6,3 +6,4 @@ export * from "./quran";
 export * from "./staffMistakes";
 export * from "./objectiveTree";
 export * from "./helpGuides";
+export * from "./dailyReport";

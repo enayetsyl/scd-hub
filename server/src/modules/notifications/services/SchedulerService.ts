@@ -109,6 +109,12 @@ import { actingAsFilter } from "../../foundation/services/RoleScope";
 import { holderIdsOf } from "../../access-control/services/holders";
 import { settleOverdueMistakes } from "../../staff-mistakes/services/StaffMistakeService";
 import { dispatchStaffMistakeDaily, STAFF_MISTAKE_DAILY_MINUTES } from "../../staff-mistakes/services/StaffMistakeDailyService";
+import { getSettings as getDailyReportSettings, runDailyReport } from "../../daily-report/services/DailyReportService";
+import { sweepExpiredShares } from "../../daily-report/services/DailyReportShareService";
+
+/** D-#1052: the daily report fires at settings.sendMinutes (18:00) and may still be made up to
+ *  4 hours late after a restart — makeDailyReport is idempotent on the day. */
+export const DAILY_REPORT_STALE_MINUTES = 240;
 
 type IdLike = { toString(): string };
 
@@ -274,6 +280,10 @@ export interface TickSummary {
   meetingSummaryRemindersEmitted: number;
   /** 09:30 unmarked-assignment pushes to Office/Principal (D-#890). */
   markEscalationEmitted: number;
+  /** D-#1052: 18:00 daily-report notifications emitted (0 when the day's report already existed). */
+  dailyReportEmitted: number;
+  /** D-#1054: report shares removed because their end day passed. */
+  dailyReportSharesExpired: number;
 }
 
 const subjectBn = (subject: string): string =>
@@ -322,6 +332,8 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
     meetingNoteRemindersEmitted: 0,
     meetingSummaryRemindersEmitted: 0,
     markEscalationEmitted: 0,
+    dailyReportEmitted: 0,
+    dailyReportSharesExpired: 0,
   };
 
   // --- Classroom-observation response escalation (CO-3) — the teacher-response ladder
@@ -379,10 +391,29 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
     });
   });
 
+  // --- Daily-report shares past their end day (D-#1054) — calendar cadence (an end day can
+  // fall on a holiday), before the school-day gate; takes back exactly the share's own grants.
+  await family("daily report share expiry", async () => {
+    await runOnce(dateKey, "DRSHARE", async () => {
+      summary.dailyReportSharesExpired = await sweepExpiredShares(dateKey);
+    });
+  });
+
   const dayType = await resolveDayType(now);
   summary.dayType = dayType;
   if (dayType === "OFF" || dayType === "HOLIDAY") return summary; // N2.5 — silent
   const nowMin = minutesOfDay(now);
+
+  // --- Daily school report (D-#1050/#1052) — saved once at the send time on a school day,
+  // then the Principal + shared people are notified. No report on OFF/HOLIDAY (gate above).
+  await family("daily report", async () => {
+    if (nowMin < 14 * 60) return; // never before the earliest allowed send time — no settings read all morning
+    const settings = await getDailyReportSettings();
+    if (!windowOpen(nowMin, settings.sendMinutes, DAILY_REPORT_STALE_MINUTES)) return;
+    await runOnce(dateKey, "DAILYREPORT", async () => {
+      summary.dailyReportEmitted = await runDailyReport(now);
+    });
+  });
 
   // --- Homework auto-DUE — every GIVEN record whose due morning has arrived flips
   // to DUE, once per school day (the manual "Mark due" stays valid; the sweep's

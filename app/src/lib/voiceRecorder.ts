@@ -1,13 +1,19 @@
 /**
- * Voice recorder for the 🎤 on the work board (VT-2, D-#965) — WEB ONLY for now.
+ * Voice recorder for the 🎤 on the work board (VT-2, D-#965; Android VT-5).
  *
- * The browser records in its own format (Chrome: WebM/Opus, Safari: MP4/AAC). WebM is
+ * WEB: the browser records in its own format (Chrome: WebM/Opus, Safari: MP4/AAC). WebM is
  * not on Gemini's documented audio list and the server has no transcoder, so the
  * recording is decoded here and re-encoded as 16 kHz mono 16-bit WAV — small enough
- * (~32 KB/s) and a format every model accepts. The native app needs a recorder module
- * in a new APK (VT-5); until then `canRecordHere()` is false there.
+ * (~32 KB/s) and a format every model accepts.
+ *
+ * ANDROID (VT-5): expo-av records 16 kHz mono AAC in an ADTS stream (`audio/aac`, on
+ * Gemini's list, ~4 KB/s). expo-av is a NATIVE module: an APK built before 1.1.7 has no
+ * `ExponentAV`, and importing the package there throws at load. The same JS reaches old
+ * phones by OTA, so the package is only `require`d after `requireOptionalNativeModule`
+ * confirms it — old APKs keep `canRecordHere() === false` and show the "new app" notice.
  */
 import { Platform } from "react-native";
+import { requireOptionalNativeModule } from "expo";
 
 export const MAX_RECORD_SECONDS = 90;
 const RATE = 16000;
@@ -25,9 +31,12 @@ export interface Recorder {
   cancel(): void;
 }
 
+/** The phone has the recorder module (APK 1.1.7+). */
+const nativeAudio: boolean = Platform.OS === "android" && !!requireOptionalNativeModule("ExponentAV");
+
 export function canRecordHere(): boolean {
+  if (Platform.OS !== "web") return nativeAudio;
   return (
-    Platform.OS === "web" &&
     typeof navigator !== "undefined" &&
     !!navigator.mediaDevices?.getUserMedia &&
     typeof MediaRecorder !== "undefined" &&
@@ -86,8 +95,61 @@ async function toWav(blob: Blob): Promise<Recording> {
   }
 }
 
+type AvLib = typeof import("expo-av");
+type FsLib = typeof import("expo-file-system");
+
+/** Android: record AAC with expo-av, hand it over as base64. */
+async function startNativeRecording(): Promise<Recorder> {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { Audio } = require("expo-av") as AvLib;
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const FileSystem = require("expo-file-system") as FsLib;
+  const perm = await Audio.requestPermissionsAsync();
+  if (!perm.granted) throw new Error("microphone refused");
+  await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
+  const rec = new Audio.Recording();
+  await rec.prepareToRecordAsync({
+    isMeteringEnabled: false,
+    android: {
+      extension: ".aac",
+      outputFormat: Audio.AndroidOutputFormat.AAC_ADTS,
+      audioEncoder: Audio.AndroidAudioEncoder.AAC,
+      sampleRate: RATE,
+      numberOfChannels: 1,
+      bitRate: 32000,
+    },
+    ios: Audio.RecordingOptionsPresets.LOW_QUALITY.ios,
+    web: {},
+  });
+  await rec.startAsync();
+  const discard = async (uri: string | null) => {
+    if (uri) await FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => undefined);
+  };
+  return {
+    async stop() {
+      const status = await rec.stopAndUnloadAsync();
+      const uri = rec.getURI();
+      if (!uri) throw new Error("no recording");
+      try {
+        const base64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+        const seconds = Math.min((status.durationMillis ?? 0) / 1000, MAX_RECORD_SECONDS);
+        return { base64, mimeType: "audio/aac", seconds };
+      } finally {
+        await discard(uri);
+      }
+    },
+    cancel() {
+      void rec
+        .stopAndUnloadAsync()
+        .catch(() => undefined)
+        .then(() => discard(rec.getURI()));
+    },
+  };
+}
+
 /** Ask for the microphone and start recording. Throws if the person refuses it. */
 export async function startRecording(): Promise<Recorder> {
+  if (Platform.OS !== "web") return startNativeRecording();
   const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
   const rec = new MediaRecorder(stream);
   const chunks: Blob[] = [];
