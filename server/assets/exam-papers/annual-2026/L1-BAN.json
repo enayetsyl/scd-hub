@@ -1,0 +1,262 @@
+{
+  "schema": "scd.exam-paper-draft/v1",
+  "key": "annual-2026-L1-BAN",
+  "exam": { "term": "ANNUAL", "year": 2026, "nameBn": "বার্ষিক পরীক্ষা ২০২৬" },
+  "classLevel": 1,
+  "subject": "BAN",
+  "titleBn": "বার্ষিক পরীক্ষা ২০২৬ · প্রথম শ্রেণি · বাংলা",
+  "fullMarks": 100,
+  "durationBn": "২ ঘণ্টা",
+  "syllabusRows": [
+    { "seq": 1, "label": "মিলকরণ কর", "itemType": "matching", "component": null, "count": 5, "marksEach": 1, "total": 5 },
+    { "seq": 2, "label": "সঠিক উত্তর নির্বাচন কর", "itemType": "mcq", "component": null, "count": 5, "marksEach": 1, "total": 5 },
+    { "seq": 3, "label": "শব্দার্থ লেখ", "itemType": "short_answer", "component": null, "count": 6, "marksEach": 2, "total": 12 },
+    { "seq": 4, "label": "বাক্য গঠন কর", "itemType": "short_answer", "component": null, "count": 5, "marksEach": 1, "total": 5 },
+    { "seq": 5, "label": "বর্ণ দিয়ে ১টি শব্দ ও ১টি বাক্য লেখ", "itemType": "short_answer", "component": null, "count": 6, "marksEach": 2, "total": 12 },
+    { "seq": 6, "label": "কারচিহ্ন দিয়ে ২টি করে শব্দ লেখ", "itemType": "short_answer", "component": null, "count": 5, "marksEach": 2, "total": 10 },
+    { "seq": 7, "label": "যুক্তবর্ণ দিয়ে ২টি করে শব্দ লেখ (যুক্তবর্ণ গোটা একক হিসেবে)", "itemType": "short_answer", "component": null, "count": 4, "marksEach": 2, "total": 8 },
+    { "seq": 8, "label": "বিপরীত শব্দ লেখ", "itemType": "short_answer", "component": null, "count": 5, "marksEach": 1, "total": 5 },
+    { "seq": 9, "label": "শূন্যস্থান পূরণ কর", "itemType": "fill_blank", "component": null, "count": 5, "marksEach": 1, "total": 5 },
+    { "seq": 10, "label": "প্রশ্নোত্তর লেখ", "itemType": "short_answer", "component": null, "count": 6, "marksEach": 1, "total": 6 },
+    { "seq": 11, "label": "পাঠ্যবই থেকে শব্দভান্ডার (ঋতু / দিক / অন্যান্য)", "itemType": "other", "component": null, "count": 10, "marksEach": 1, "total": 10 },
+    { "seq": 12, "label": "ছক পূরণ কর", "itemType": "fill_blank", "component": null, "count": 1, "marksEach": 5, "total": 5 },
+    { "seq": 13, "label": "নিজের মতো করে লেখ (ছবি বা শব্দভান্ডার + ৫টি বাক্য)", "itemType": "descriptive", "component": null, "count": 2, "marksEach": 6, "total": 12 }
+  ],
+  "sections": [
+    {
+      "seq": 1,
+      "syllabusRowSeq": 1,
+      "kind": "WRITTEN",
+      "instructionBn": "বাম পাশের শব্দের সাথে ডান পাশের শব্দ মিল কর",
+      "count": 5, "marksEach": 1, "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": ["বাতাস", "গান", "বিছানা", "নৌকা", "পাতা"],
+      "items": [
+        { "key": "s1-1", "text": "নদী", "answer": "নৌকা", "marks": 1, "source": "NEW", "bookRef": "পাঠ ৪৭, পৃষ্ঠা ৬৯", "needsPicture": false },
+        { "key": "s1-2", "text": "পাখি", "answer": "গান", "marks": 1, "source": "NEW", "bookRef": "পাঠ ৪৭, পৃষ্ঠা ৬৯", "needsPicture": false },
+        { "key": "s1-3", "text": "সবুজ", "answer": "পাতা", "marks": 1, "source": "NEW", "bookRef": "পাঠ ৪৭, পৃষ্ঠা ৬৯", "needsPicture": false },
+        { "key": "s1-4", "text": "ঝড়", "answer": "বাতাস", "marks": 1, "source": "NEW", "bookRef": "পাঠ ৪৭, পৃষ্ঠা ৬৯", "needsPicture": false },
+        { "key": "s1-5", "text": "ঘুম", "answer": "বিছানা", "marks": 1, "source": "NEW", "bookRef": "পাঠ ৪৭, পৃষ্ঠা ৬৯", "needsPicture": false }
+      ]
+    },
+    {
+      "seq": 2,
+      "syllabusRowSeq": 2,
+      "kind": "WRITTEN",
+      "instructionBn": "সঠিক উত্তর নির্বাচন কর",
+      "count": 5, "marksEach": 1, "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s2-1", "text": "ইলিশ মাছ কোথায় থাকে?", "options": ["পুকুরে", "সাগরে", "বিলে"], "answer": "সাগরে", "marks": 1, "source": "NEW", "bookRef": "পাঠ ৫০, পৃষ্ঠা ৭৩", "needsPicture": false },
+        { "key": "s2-2", "text": "কত দিনে এক সপ্তাহ?", "options": ["পাঁচ দিনে", "সাত দিনে", "দশ দিনে"], "answer": "সাত দিনে", "marks": 1, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১১(ঙ)", "bookRef": "পাঠ ৪৫, পৃষ্ঠা ৬৫", "needsPicture": false, "note": "এক কথায় উত্তরের প্রশ্নকে ৩ বিকল্পের বহুনির্বাচনি করা হয়েছে" },
+        { "key": "s2-3", "text": "‘ভোর হলো’ কবিতাটি কে লিখেছেন?", "options": ["রবীন্দ্রনাথ ঠাকুর", "কাজী নজরুল ইসলাম", "জসীমউদ্‌দীন"], "answer": "কাজী নজরুল ইসলাম", "marks": 1, "source": "NEW", "bookRef": "পাঠ ৪২, পৃষ্ঠা ৬০", "needsPicture": false },
+        { "key": "s2-4", "text": "আমাদের স্বাধীনতা দিবস কোনটি?", "options": ["২৬শে মার্চ", "১৬ই ডিসেম্বর", "২১শে ফেব্রুয়ারি"], "answer": "২৬শে মার্চ", "marks": 1, "source": "NEW", "bookRef": "পাঠ ৫২, পৃষ্ঠা ৭৭–৭৮", "needsPicture": false },
+        { "key": "s2-5", "text": "ইলিশকে কী বলা হয়?", "options": ["মাছের রাজা", "মাছের রানি", "মাছের উজির"], "answer": "মাছের রাজা", "marks": 1, "source": "NEW", "bookRef": "পাঠ ৫০, পৃষ্ঠা ৭৩", "needsPicture": false }
+      ]
+    },
+    {
+      "seq": 3,
+      "syllabusRowSeq": 3,
+      "kind": "WRITTEN",
+      "instructionBn": "শব্দার্থ লেখ",
+      "count": 6, "marksEach": 2, "total": 12,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s3-1", "text": "জুটি", "answer": "একসাথে মিলিত হওয়া / জড়ো হওয়া", "marks": 2, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১", "bookRef": "পাঠ ৪৮ ‘ছুটি’, পৃষ্ঠা ৭০", "needsPicture": false },
+        { "key": "s3-2", "text": "বাদল", "answer": "বৃষ্টি / মেঘ", "marks": 2, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১", "bookRef": "পাঠ ৪৮ ‘ছুটি’, পৃষ্ঠা ৭০", "needsPicture": false },
+        { "key": "s3-3", "text": "তরি", "answer": "নৌকা", "marks": 2, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১", "bookRef": "পাঠ ৪২ ‘ভোর হলো’, পৃষ্ঠা ৬০", "needsPicture": false },
+        { "key": "s3-4", "text": "শাখায়", "answer": "ডালে", "marks": 2, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১", "bookRef": "পাঠ ৪০ ‘মামার বাড়ি’, পৃষ্ঠা ৫৭", "needsPicture": false },
+        { "key": "s3-5", "text": "আলসে", "answer": "অলস / কুঁড়ে", "marks": 2, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১", "bookRef": "পাঠ ৪২ ‘ভোর হলো’, পৃষ্ঠা ৬০", "needsPicture": false },
+        { "key": "s3-6", "text": "দোর", "answer": "দরজা", "marks": 2, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১", "bookRef": "পাঠ ৪২ ‘ভোর হলো’, পৃষ্ঠা ৬০", "needsPicture": false }
+      ]
+    },
+    {
+      "seq": 4,
+      "syllabusRowSeq": 4,
+      "kind": "WRITTEN",
+      "instructionBn": "বাক্য গঠন কর",
+      "count": 5, "marksEach": 1, "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s4-1", "text": "ঝড়", "answer": "যেমন: ঝড় হলে লাগে ভয়।", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ২", "bookRef": "পাঠ ৩৩, পৃষ্ঠা ৪৭", "needsPicture": false, "note": "প্রতিটির নম্বর ২ থেকে ১ (সিলেবাস অনুযায়ী)" },
+        { "key": "s4-2", "text": "রোদ", "answer": "যেমন: আজ অনেক রোদ।", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ২", "bookRef": "পাঠ ৪৭, পৃষ্ঠা ৬৮", "needsPicture": false, "note": "প্রতিটির নম্বর ২ থেকে ১ (সিলেবাস অনুযায়ী)" },
+        { "key": "s4-3", "text": "ভোর", "answer": "যেমন: ভোর হয়েছে।", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ২", "bookRef": "পাঠ ৩৮, পৃষ্ঠা ৫৪", "needsPicture": false, "note": "প্রতিটির নম্বর ২ থেকে ১ (সিলেবাস অনুযায়ী)" },
+        { "key": "s4-4", "text": "পথ", "answer": "যেমন: পথ দিয়ে চলে গাড়ি।", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ২", "bookRef": "পাঠ ২৬, পৃষ্ঠা ৩৭", "needsPicture": false, "note": "প্রতিটির নম্বর ২ থেকে ১ (সিলেবাস অনুযায়ী)" },
+        { "key": "s4-5", "text": "নদী", "answer": "যেমন: আমি নদী দেখি।", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ২", "bookRef": "পাঠ ৩৬, পৃষ্ঠা ৫২", "needsPicture": false, "note": "প্রতিটির নম্বর ২ থেকে ১ (সিলেবাস অনুযায়ী)" }
+      ]
+    },
+    {
+      "seq": 5,
+      "syllabusRowSeq": 5,
+      "kind": "WRITTEN",
+      "instructionBn": "বর্ণ দিয়ে ১টি শব্দ ও ১টি বাক্য লেখ",
+      "count": 6, "marksEach": 2, "total": 12,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": "| বর্ণ | শব্দ | বাক্য |\n|---|---|---|\n| হ |  |  |\n| ধ |  |  |\n| ঠ |  |  |\n| ণ |  |  |\n| ভ |  |  |\n| থ |  |  |",
+      "matchRight": null,
+      "items": [
+        { "key": "s5-1", "text": "হ", "answer": "যেমন: হাত — হাত ধোও খাওয়ার আগে।", "marks": 2, "source": "MP2026_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৯", "bookRef": "পাঠ ৩২, পৃষ্ঠা ৪৫", "needsPicture": false, "note": "২টি শব্দের বদলে ১টি শব্দ ও ১টি বাক্য" },
+        { "key": "s5-2", "text": "ধ", "answer": "যেমন: ধান — আমাদের অনেক রকম ধান আছে।", "marks": 2, "source": "MP2026_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৯", "bookRef": "পাঠ ২৪, পৃষ্ঠা ৩৪–৩৫", "needsPicture": false, "note": "২টি শব্দের বদলে ১টি শব্দ ও ১টি বাক্য" },
+        { "key": "s5-3", "text": "ঠ", "answer": "যেমন: ঠোঁট — টিয়া পাখির ঠোঁট লাল।", "marks": 2, "source": "MP2026_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৯", "bookRef": "পাঠ ২৩, পৃষ্ঠা ৩২–৩৩", "needsPicture": false, "note": "২টি শব্দের বদলে ১টি শব্দ ও ১টি বাক্য" },
+        { "key": "s5-4", "text": "ণ", "answer": "যেমন: হরিণ — হরিণ দেখতে খুব সুন্দর। (ণ শব্দের শুরুতে না থাকলেও চলবে)", "marks": 2, "source": "MP2026_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৯", "bookRef": "পাঠ ২৩, পৃষ্ঠা ৩২–৩৩", "needsPicture": false, "note": "২টি শব্দের বদলে ১টি শব্দ ও ১টি বাক্য" },
+        { "key": "s5-5", "text": "ভ", "answer": "যেমন: ভাত — ভাইবোন ভাত খায়।", "marks": 2, "source": "MP2026_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৯", "bookRef": "পাঠ ২৬, পৃষ্ঠা ৩৭", "needsPicture": false, "note": "২টি শব্দের বদলে ১টি শব্দ ও ১টি বাক্য" },
+        { "key": "s5-6", "text": "থ", "answer": "যেমন: থালা — আমি থালায় ভাত খাই।", "marks": 2, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৪", "bookRef": "পাঠ ২৪, পৃষ্ঠা ৩৪–৩৫", "needsPicture": false }
+      ]
+    },
+    {
+      "seq": 6,
+      "syllabusRowSeq": 6,
+      "kind": "WRITTEN",
+      "instructionBn": "কারচিহ্ন দিয়ে ২টি করে শব্দ লেখ",
+      "count": 5, "marksEach": 2, "total": 10,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": "| কারচিহ্ন | শব্দ | শব্দ |\n|---|---|---|\n| ৈ (ঐ-কার) |  |  |\n| ী (ঈ-কার) |  |  |\n| ূ (ঊ-কার) |  |  |\n| ো (ও-কার) |  |  |\n| ৃ (ঋ-কার) |  |  |",
+      "matchRight": null,
+      "items": [
+        { "key": "s6-1", "text": "ৈ (ঐ-কার)", "answer": "যেমন: বৈঠা, শৈবাল", "marks": 2, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৫", "bookRef": "পাঠ ২৯, পৃষ্ঠা ৪১", "needsPicture": false },
+        { "key": "s6-2", "text": "ী (ঈ-কার)", "answer": "যেমন: কীট, নীল", "marks": 2, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৫", "bookRef": "পাঠ ২২, পৃষ্ঠা ৩১", "needsPicture": false },
+        { "key": "s6-3", "text": "ূ (ঊ-কার)", "answer": "যেমন: কূপ, ময়ূর", "marks": 2, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৫", "bookRef": "পাঠ ২৭, পৃষ্ঠা ৩৯", "needsPicture": false },
+        { "key": "s6-4", "text": "ো (ও-কার)", "answer": "যেমন: চোখ, ভোর", "marks": 2, "source": "NEW", "bookRef": "পাঠ ৩১, পৃষ্ঠা ৪৪", "needsPicture": false },
+        { "key": "s6-5", "text": "ৃ (ঋ-কার)", "answer": "যেমন: ঘৃত, তৃণ", "marks": 2, "source": "NEW", "bookRef": "পাঠ ২৮, পৃষ্ঠা ৪০", "needsPicture": false }
+      ]
+    },
+    {
+      "seq": 7,
+      "syllabusRowSeq": 7,
+      "kind": "WRITTEN",
+      "instructionBn": "যুক্তবর্ণ দিয়ে ২টি করে শব্দ লেখ",
+      "count": 4, "marksEach": 2, "total": 8,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": "| যুক্তবর্ণ | শব্দ | শব্দ |\n|---|---|---|\n| প্ত |  |  |\n| ট্র |  |  |\n| ষ্ট |  |  |\n| ক্ত |  |  |",
+      "matchRight": null,
+      "items": [
+        { "key": "s7-1", "text": "প্ত", "answer": "যেমন: সপ্তাহ, সপ্তম", "marks": 2, "source": "MP2026_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৮", "bookRef": "পাঠ ৪৫, পৃষ্ঠা ৬৫", "needsPicture": false, "note": "যুক্তবর্ণ ভাঙার অংশ বাদ; শুধু ২টি শব্দ" },
+        { "key": "s7-2", "text": "ট্র", "answer": "যেমন: ট্রেন, ট্রাক", "marks": 2, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৭", "bookRef": "পাঠ ৪৫, পৃষ্ঠা ৬৫", "needsPicture": false, "note": "যুক্তবর্ণ ভাঙার অংশ বাদ; ১টির বদলে ২টি শব্দ" },
+        { "key": "s7-3", "text": "ষ্ট", "answer": "যেমন: কষ্ট, মিষ্টি", "marks": 2, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৬", "bookRef": "পাঠ ৫২, পৃষ্ঠা ৭৮", "needsPicture": false, "note": "যুক্তবর্ণ ভাঙার অংশ বাদ; শুধু ২টি শব্দ" },
+        { "key": "s7-4", "text": "ক্ত", "answer": "যেমন: মুক্তি, শক্ত", "marks": 2, "source": "MP_OTHER_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৭", "bookRef": "পাঠ ৫২, পৃষ্ঠা ৭৮", "needsPicture": false, "note": "যুক্তবর্ণ ভাঙার অংশ বাদ; ১টির বদলে ২টি শব্দ" }
+      ]
+    },
+    {
+      "seq": 8,
+      "syllabusRowSeq": 8,
+      "kind": "WRITTEN",
+      "instructionBn": "বিপরীত শব্দ লেখ",
+      "count": 5, "marksEach": 1, "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s8-1", "text": "উপস্থিত", "answer": "অনুপস্থিত", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৭", "needsPicture": false },
+        { "key": "s8-2", "text": "আলো", "answer": "আঁধার / অন্ধকার", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৭", "needsPicture": false },
+        { "key": "s8-3", "text": "ভিতর", "answer": "বাহির / বাইরে", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৭", "needsPicture": false },
+        { "key": "s8-4", "text": "বন্ধু", "answer": "শত্রু", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৭", "bookRef": "পাঠ ৪৬, পৃষ্ঠা ৬৭", "needsPicture": false },
+        { "key": "s8-5", "text": "রোদ", "answer": "ছায়া", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৭", "bookRef": "পাঠ ৪৭, পৃষ্ঠা ৬৮", "needsPicture": false }
+      ]
+    },
+    {
+      "seq": 9,
+      "syllabusRowSeq": 9,
+      "kind": "WRITTEN",
+      "instructionBn": "শূন্যস্থান পূরণ কর",
+      "count": 5, "marksEach": 1, "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s9-1", "text": "ওঠে ________ সকালে।", "answer": "রোজ", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১০(ক)", "bookRef": "পাঠ ৪২, পৃষ্ঠা ৬০", "needsPicture": false },
+        { "key": "s9-2", "text": "আম ________ সুখ।", "answer": "কুড়াতে", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১০(খ)", "bookRef": "পাঠ ৪০, পৃষ্ঠা ৫৭", "needsPicture": false },
+        { "key": "s9-3", "text": "ঐ ডাকে ________ শাখে।", "answer": "জুঁই", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১০(গ)", "bookRef": "পাঠ ৪২, পৃষ্ঠা ৬০", "needsPicture": false },
+        { "key": "s9-4", "text": "পথ হারিয়ে কোন ________ যাই।", "answer": "বনে", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১০(ঘ)", "bookRef": "পাঠ ৪৮, পৃষ্ঠা ৭০", "needsPicture": false },
+        { "key": "s9-5", "text": "মেঘের কোলে ________ হেসেছে।", "answer": "রোদ", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১০(ঙ)", "bookRef": "পাঠ ৪৮, পৃষ্ঠা ৭০", "needsPicture": false }
+      ]
+    },
+    {
+      "seq": 10,
+      "syllabusRowSeq": 10,
+      "kind": "WRITTEN",
+      "instructionBn": "প্রশ্নোত্তর লেখ",
+      "count": 6, "marksEach": 1, "total": 6,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s10-1", "text": "‘ভোর হলো’ কবিতায় কোন ফুলের কথা বলা হয়েছে?", "answer": "জুঁই ফুলের কথা বলা হয়েছে।", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১১(ক)", "bookRef": "পাঠ ৪২, পৃষ্ঠা ৬০", "needsPicture": false },
+        { "key": "s10-2", "text": "এদেশের জাতীয় পাখির নাম কী?", "answer": "এদেশের জাতীয় পাখির নাম দোয়েল।", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১১(খ)", "bookRef": "পাঠ ৪৯, পৃষ্ঠা ৭১", "needsPicture": false },
+        { "key": "s10-3", "text": "আমাদের জাতীয় মাছ কোনটি?", "answer": "আমাদের জাতীয় মাছ ইলিশ।", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১১(গ)", "bookRef": "পাঠ ৫০, পৃষ্ঠা ৭৩", "needsPicture": false },
+        { "key": "s10-4", "text": "আমাদের দেশ কীসের দেশ?", "answer": "আমাদের দেশ নদীর দেশ। (এ দেশে অনেক নদী আছে।)", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১১(ঘ)", "bookRef": "পাঠ ৪৯, পৃষ্ঠা ৭১", "needsPicture": false },
+        { "key": "s10-5", "text": "পিঁপড়া কেমন করে বাঁচতে পারল?", "answer": "পায়রা গাছ থেকে একটি পাতা ফেলে দিল; পিঁপড়াটি পাতার উপর উঠে বসে ডাঙায় চলে এল, এভাবে বাঁচল।", "marks": 1, "source": "MP2026", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১১(ঙ)", "bookRef": "পাঠ ৪৬, পৃষ্ঠা ৬৭", "needsPicture": false },
+        { "key": "s10-6", "text": "কখন আম কুড়াতে সুখ?", "answer": "ঝড়ের দিনে আম কুড়াতে সুখ।", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ১১(ক)", "bookRef": "পাঠ ৪০, পৃষ্ঠা ৫৭", "needsPicture": false }
+      ]
+    },
+    {
+      "seq": 11,
+      "syllabusRowSeq": 11,
+      "kind": "WRITTEN",
+      "instructionBn": "ছয় ঋতুর নাম ও চার দিকের নাম লেখ",
+      "count": 10, "marksEach": 1, "total": 10,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": "**ক) ছয় ঋতুর নাম লেখ:** ১. ____ ২. ____ ৩. ____ ৪. ____ ৫. ____ ৬. ____\n\n**খ) চার দিকের নাম লেখ:** ১. ____ ২. ____ ৩. ____ ৪. ____",
+      "matchRight": null,
+      "items": [
+        { "key": "s11-1", "text": "ঋতু ১", "answer": "গ্রীষ্ম (যেকোনো ক্রমে ছয়টি ঋতু লিখলে নম্বর)", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৩", "bookRef": "পাঠ ৫১ ‘ছয় ঋতুর বাংলাদেশ’, পৃষ্ঠা ৭৪", "needsPicture": false },
+        { "key": "s11-2", "text": "ঋতু ২", "answer": "বর্ষা", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৩", "bookRef": "পাঠ ৫১, পৃষ্ঠা ৭৪", "needsPicture": false },
+        { "key": "s11-3", "text": "ঋতু ৩", "answer": "শরৎ", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৩", "bookRef": "পাঠ ৩৩, পৃষ্ঠা ৪৮", "needsPicture": false },
+        { "key": "s11-4", "text": "ঋতু ৪", "answer": "হেমন্ত", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৩", "bookRef": "পাঠ ৫১, পৃষ্ঠা ৭৪", "needsPicture": false },
+        { "key": "s11-5", "text": "ঋতু ৫", "answer": "শীত", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৩", "bookRef": "পাঠ ৪৭, পৃষ্ঠা ৬৮", "needsPicture": false },
+        { "key": "s11-6", "text": "ঋতু ৬", "answer": "বসন্ত", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৩", "bookRef": "পাঠ ৫১, পৃষ্ঠা ৭৪", "needsPicture": false },
+        { "key": "s11-7", "text": "দিক ১", "answer": "পূর্ব / পুব (যেকোনো ক্রমে চারটি দিক লিখলে নম্বর)", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৮", "bookRef": "পাঠ ৩০, পৃষ্ঠা ৪৩ (পুব আকাশে রবি ওঠে)", "needsPicture": false },
+        { "key": "s11-8", "text": "দিক ২", "answer": "পশ্চিম", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৮", "needsPicture": false },
+        { "key": "s11-9", "text": "দিক ৩", "answer": "উত্তর", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৮", "needsPicture": false },
+        { "key": "s11-10", "text": "দিক ৪", "answer": "দক্ষিণ", "marks": 1, "source": "MP_OTHER", "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৮", "needsPicture": false }
+      ]
+    },
+    {
+      "seq": 12,
+      "syllabusRowSeq": 12,
+      "kind": "WRITTEN",
+      "instructionBn": "ফাঁকা ঘরে সঠিক সংখ্যাটি বানান করে লিখে ছক পূরণ কর",
+      "count": 1, "marksEach": 5, "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": "| তিন |  | পাঁচ |  | সাত |\n|---|---|---|---|---|\n|  | নয় |  | এগারো |  |",
+      "matchRight": null,
+      "items": [
+        { "key": "s12-1", "text": "ছকের পাঁচটি ফাঁকা ঘরে সংখ্যার নাম বানান করে লেখ।", "answer": "চার, ছয়, আট, দশ, বারো (প্রতিটি ঘর ১ নম্বর)", "marks": 5, "source": "NEW", "bookRef": "পাঠ ৫১ ‘সংখ্যা শিখি’, পৃষ্ঠা ৭৪–৭৬", "needsPicture": false }
+      ]
+    },
+    {
+      "seq": 13,
+      "syllabusRowSeq": 13,
+      "kind": "WRITTEN",
+      "instructionBn": "নিজের মতো করে ৫টি বাক্য লেখ",
+      "count": 2, "marksEach": 6, "total": 12,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        { "key": "s13-1", "text": "শব্দভান্ডারের সাহায্যে ‘আমাদের দেশ’ নিয়ে ৫টি বাক্য লেখ।\nশব্দভান্ডার: বাংলাদেশ, নদী, নৌকা, দোয়েল, ফসলের মাঠ, সবুজ, সুন্দর", "answer": "যেমন: আমাদের দেশের নাম বাংলাদেশ। এ দেশে অনেক নদী আছে। নদীতে নৌকা চলে। দোয়েল আমাদের জাতীয় পাখি। ফসলের মাঠ সবুজ। আমাদের দেশ খুব সুন্দর। (৫টি শুদ্ধ বাক্যে পূর্ণ নম্বর)", "marks": 6, "source": "MP2026_ADAPTED", "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১২ (অনুচ্ছেদ: আমাদের দেশ)", "bookRef": "পাঠ ৪৯, পৃষ্ঠা ৭১–৭২", "needsPicture": false, "note": "অনুচ্ছেদের বদলে শব্দভান্ডার দিয়ে ৫টি বাক্য" },
+        { "key": "s13-2", "text": "ছবিটি দেখে ৫টি বাক্য লেখ।\n[ছবি: নদীতে পাল তোলা নৌকা চলছে, তীরে সবুজ গাছ, গাছে পাখি বসে আছে, আকাশে সাদা মেঘ]", "answer": "যেমন: ছবিতে একটি নদী আছে। নদীতে নৌকা চলে। নদীর পাড়ে সবুজ গাছ। গাছে পাখি বসে আছে। আকাশে সাদা মেঘ উড়ে বেড়ায়। (৫টি শুদ্ধ বাক্যে পূর্ণ নম্বর)", "marks": 6, "source": "NEW", "bookRef": "পাঠ ৪৭, পৃষ্ঠা ৬৯ ও পাঠ ৪৯, পৃষ্ঠা ৭১ (ছবি)", "needsPicture": true }
+      ]
+    }
+  ],
+  "authorNotes": "Book: the 2026 'আমার বাংলা বই' (Class 1) PDF from Downloads/Board Book and TG 2026/Book/Class 1 Bangla.pdf; I read pages 30–80 (পাঠ ২১–৫৪) as images, so every bookRef is a real page. Reused from MP Annual 2026: word meanings (6 of its 10), sentence-making words (all 5), letters for row 5 (5, changed from '2 words' to '1 word + 1 sentence'), antonyms (5 of its 8; skipped 'আয়' because in 'মামার বাড়ি' it means 'come', not income), all 5 fill-in-the-blanks, 5 of 6 short questions, and its 'আমাদের দেশ' paragraph turned into a word-bank 5-sentence task. MP 2026's conjunct row asked children to BREAK the conjunct, which the Sylhet rule forbids, so row 7 asks only for 2 words; of its conjuncts only প্ত is in pp30–80 (ন্ত and ন্ধ are not taught there), the other three come from MP 2025 / HY 2026 and all appear in the book. MP 2026 had no matching, MCQ, কারচিহ্ন or table rows: matching is the book's own p69 exercise, MCQs are new from the book (one adapted from MP 2025), কারচিহ্ন takes 3 from MP HY 2026 + 2 new. Row 11 (vocabulary) = six seasons + four directions, both taken verbatim from MP HY 2026 — the label also allows 'অন্যান্য', so the 12 Bangla months (MP 2026 Q4, book p75) could replace them if the owner prefers. Row 12 table = number-spelling table modelled on the book's p76 exercise. Doubts: (1) no duration was published — I used 2 hours like MP; (2) row 5 includes ণ (from MP), which children can only use mid-word (হরিণ, লবণ) — the answer key says that is acceptable; (3) row 13 item 2 needs a picture (river, boat, trees, birds) added by the Office. MP HY 2026 items on রাখাল/ডালিম/টগর were not used — they are before পাঠ ২১."
+}

@@ -109,6 +109,8 @@ auto-deploys (`.github/workflows`, `scripts/deploy.sh`). So:
   prd-plan-review.md  ← Plan review/approval loop: assign→review→re-import→sign-off, slices PR-1..3 (D-#38–#40)
   prd-routine.md      ← Routine/Timetable module build contract: rooms+period-defs+slots+conflict-engine, slices R-1..3 (D-#46/#47)
   prd-class-teacher.md ← Class-teacher → section daily-coordinator gate (attendance/leave/report-card/comms), slice CT-1 now (D-#45)
+  prd-exam-paper-bank.md ← Mohammadpur reference papers + Sylhet draft papers reviewed item by item (D-#1030–#1034)
+  exam-paper-generation-brief.md ← how the draft papers (server/assets/exam-papers/) are generated + validated
   prd-staff-mistakes.md ← Staff mistake record: reason per caught mistake → review → per-person record, slices MR-1..8 (D-#936–#943+)
   prd-class-books.md  ← Class books: guardians read the classroom books page by page, view only (PDF → page images) (D-#870)
   prd-lesson-progress.md ← Lesson-plan progress: session marked on the class note → শাখা tracker, Office overview, student presence + mastery link, LP-1..3 (D-#820–#826)

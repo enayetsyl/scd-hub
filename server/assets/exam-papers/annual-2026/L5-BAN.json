@@ -1,0 +1,1005 @@
+{
+  "schema": "scd.exam-paper-draft/v1",
+  "key": "annual-2026-L5-BAN",
+  "exam": {
+    "term": "ANNUAL",
+    "year": 2026,
+    "nameBn": "বার্ষিক পরীক্ষা ২০২৬"
+  },
+  "classLevel": 5,
+  "subject": "BAN",
+  "titleBn": "বার্ষিক পরীক্ষা ২০২৬ · পঞ্চম শ্রেণি · বাংলা",
+  "fullMarks": 100,
+  "durationBn": "৩ ঘণ্টা",
+  "syllabusRows": [
+    {
+      "seq": 1,
+      "label": "কবি ও কবিতার নামসহ কবিতার প্রথম ৮ পঙ্‌ক্তি লিখন (১+১+৮)",
+      "itemType": "other",
+      "component": null,
+      "count": 1,
+      "marksEach": 10,
+      "total": 10
+    },
+    {
+      "seq": 2,
+      "label": "শব্দার্থ লিখন",
+      "itemType": "short_answer",
+      "component": null,
+      "count": 5,
+      "marksEach": 1,
+      "total": 5
+    },
+    {
+      "seq": 3,
+      "label": "বাক্য গঠন",
+      "itemType": "short_answer",
+      "component": null,
+      "count": 5,
+      "marksEach": 1,
+      "total": 5
+    },
+    {
+      "seq": 4,
+      "label": "শূন্যস্থান পূরণ",
+      "itemType": "fill_blank",
+      "component": null,
+      "count": 5,
+      "marksEach": 1,
+      "total": 5
+    },
+    {
+      "seq": 5,
+      "label": "বহুনির্বাচনি প্রশ্নের উত্তর লিখন",
+      "itemType": "mcq",
+      "component": null,
+      "count": 5,
+      "marksEach": 1,
+      "total": 5
+    },
+    {
+      "seq": 6,
+      "label": "বিপরীত শব্দ / সমার্থক শব্দ লিখন",
+      "itemType": "short_answer",
+      "component": null,
+      "count": 5,
+      "marksEach": 1,
+      "total": 5
+    },
+    {
+      "seq": 7,
+      "label": "সংক্ষিপ্ত-উত্তর প্রশ্ন",
+      "itemType": "short_answer",
+      "component": null,
+      "count": 4,
+      "marksEach": 2,
+      "total": 8
+    },
+    {
+      "seq": 8,
+      "label": "বিস্তৃত-উত্তর প্রশ্ন",
+      "itemType": "descriptive",
+      "component": null,
+      "count": 3,
+      "marksEach": 5,
+      "total": 15
+    },
+    {
+      "seq": 9,
+      "label": "কবিতা / গদ্য অনুচ্ছেদের মূলভাব লিখন",
+      "itemType": "descriptive",
+      "component": null,
+      "count": 1,
+      "marksEach": 5,
+      "total": 5
+    },
+    {
+      "seq": 10,
+      "label": "ভাষারীতি পরিবর্তন / পদ নির্ণয় / ক্রিয়ার কাল",
+      "itemType": "short_answer",
+      "component": null,
+      "count": 5,
+      "marksEach": 1,
+      "total": 5
+    },
+    {
+      "seq": 11,
+      "label": "অনুচ্ছেদ পড়ে নির্দেশনা অনুসারে প্রশ্ন তৈরিকরণ / প্রদত্ত অনুচ্ছেদে বিরামচিহ্ন প্রয়োগ",
+      "itemType": "creative",
+      "component": null,
+      "count": 5,
+      "marksEach": 1,
+      "total": 5
+    },
+    {
+      "seq": 12,
+      "label": "যুক্তবর্ণ বিভাজন ও শব্দ গঠন",
+      "itemType": "short_answer",
+      "component": null,
+      "count": 5,
+      "marksEach": 1,
+      "total": 5
+    },
+    {
+      "seq": 13,
+      "label": "এককথায় প্রকাশ",
+      "itemType": "short_answer",
+      "component": null,
+      "count": 5,
+      "marksEach": 1,
+      "total": 5
+    },
+    {
+      "seq": 14,
+      "label": "ফরম পূরণ / আবেদনপত্র লিখন",
+      "itemType": "descriptive",
+      "component": null,
+      "count": 1,
+      "marksEach": 5,
+      "total": 5
+    },
+    {
+      "seq": 15,
+      "label": "রচনা লিখন (সূত্রসহ / অনুমুক্ত)",
+      "itemType": "descriptive",
+      "component": null,
+      "count": 1,
+      "marksEach": 12,
+      "total": 12
+    }
+  ],
+  "sections": [
+    {
+      "seq": 1,
+      "syllabusRowSeq": 1,
+      "kind": "WRITTEN",
+      "instructionBn": "ঝড়ে সবকিছু উড়ে যাওয়ার ছবি আঁকা হয়েছে যে কবিতায়, সেই কবিতার নাম, কবির নাম এবং কবিতার প্রথম ৮ পঙ্‌ক্তি লেখ",
+      "count": 1,
+      "marksEach": 10,
+      "total": 10,
+      "choiceNoteBn": null,
+      "splitMarks": true,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        {
+          "key": "s1-1",
+          "text": "কবিতার নাম লেখ।",
+          "answer": "সাইক্লোন",
+          "marks": 1,
+          "source": "NEW",
+          "bookRef": "পাঠ ৭, পৃষ্ঠা ৩৮",
+          "needsPicture": false
+        },
+        {
+          "key": "s1-2",
+          "text": "কবির নাম লেখ।",
+          "answer": "শামসুর রাহমান",
+          "marks": 1,
+          "source": "NEW",
+          "bookRef": "পাঠ ৭, পৃষ্ঠা ৩৮",
+          "needsPicture": false
+        },
+        {
+          "key": "s1-3",
+          "text": "কবিতার প্রথম ৮ পঙ্‌ক্তি লেখ।",
+          "answer": "চাল উড়ছে, ডাল উড়ছে / উড়ছে গরু, উড়ছে মোষ। / খই উড়ছে, বই উড়ছে / উড়ছে পাঁজি, বিশ্বকোষ। / ময়লা চাদর, ফরসা জামা, / উড়ছে খেতের সরষে, যব। / লক্ষ্মীপ্যাঁচা, পক্ষীছানা / ঘুরছে, যেন চরকি সব।",
+          "marks": 8,
+          "source": "NEW",
+          "bookRef": "পাঠ ৭, পৃষ্ঠা ৩৮",
+          "needsPicture": false,
+          "note": "প্রতি পঙ্‌ক্তি ১ নম্বর"
+        }
+      ]
+    },
+    {
+      "seq": 2,
+      "syllabusRowSeq": 2,
+      "kind": "WRITTEN",
+      "instructionBn": "শব্দার্থ লেখ",
+      "count": 5,
+      "marksEach": 1,
+      "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        {
+          "key": "s2-1",
+          "text": "অরণ্য",
+          "answer": "বন",
+          "marks": 1,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ২",
+          "bookRef": "পাঠ ১৪, পৃষ্ঠা ৮০",
+          "needsPicture": false,
+          "note": "১১টি শব্দ থেকে ৫টি নেওয়া হয়েছে; বাছাই নেই"
+        },
+        {
+          "key": "s2-2",
+          "text": "পরিতাপ",
+          "answer": "দুঃখ",
+          "marks": 1,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ২",
+          "bookRef": "পাঠ ১৪, পৃষ্ঠা ৮১",
+          "needsPicture": false,
+          "note": "১১টি শব্দ থেকে ৫টি নেওয়া হয়েছে; বাছাই নেই"
+        },
+        {
+          "key": "s2-3",
+          "text": "ঘূর্ণিপাক",
+          "answer": "পানি বা বাতাসের প্রচণ্ড ঘূর্ণন",
+          "marks": 1,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ২",
+          "bookRef": "পাঠ ১৫, পৃষ্ঠা ৮৫",
+          "needsPicture": false,
+          "note": "১১টি শব্দ থেকে ৫টি নেওয়া হয়েছে; বাছাই নেই"
+        },
+        {
+          "key": "s2-4",
+          "text": "নিস্তার",
+          "answer": "রক্ষা",
+          "marks": 1,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ২",
+          "bookRef": "পাঠ ২০, পৃষ্ঠা ১১৫",
+          "needsPicture": false,
+          "note": "১১টি শব্দ থেকে ৫টি নেওয়া হয়েছে; বাছাই নেই"
+        },
+        {
+          "key": "s2-5",
+          "text": "বৈষম্য",
+          "answer": "পার্থক্য; অসমতা",
+          "marks": 1,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ২",
+          "bookRef": "পাঠ ২১, পৃষ্ঠা ১২০; পাঠ ২২",
+          "needsPicture": false,
+          "note": "১১টি শব্দ থেকে ৫টি নেওয়া হয়েছে; বাছাই নেই"
+        }
+      ]
+    },
+    {
+      "seq": 3,
+      "syllabusRowSeq": 3,
+      "kind": "WRITTEN",
+      "instructionBn": "প্রথম বাক্যের সাথে মিলিয়ে পরের বাক্য গঠন কর",
+      "count": 5,
+      "marksEach": 1,
+      "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        {
+          "key": "s3-1",
+          "text": "অনেকক্ষণ পড়ালেখা করেছি। তাই…",
+          "answer": "নমুনা: তাই এখন একটু খেলতে যাব।",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৪(ক)",
+          "bookRef": "পাঠ ১৬, অনুশীলনী ৬, পৃষ্ঠা ৯৬",
+          "needsPicture": false
+        },
+        {
+          "key": "s3-2",
+          "text": "আজ স্কুলে যাব না। কারণ…",
+          "answer": "নমুনা: কারণ আমার জ্বর হয়েছে।",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৪(খ)",
+          "bookRef": "পাঠ ১৬, অনুশীলনী ৬, পৃষ্ঠা ৯৬",
+          "needsPicture": false
+        },
+        {
+          "key": "s3-3",
+          "text": "আমার দাদী আমাকে অনেক ভালোবাসেন। এবং…",
+          "answer": "নমুনা: এবং আমিও দাদীকে খুব ভালোবাসি।",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৪(গ)",
+          "bookRef": "পাঠ ১৬, অনুশীলনী ৬, পৃষ্ঠা ৯৬",
+          "needsPicture": false
+        },
+        {
+          "key": "s3-4",
+          "text": "তার গোলাম নিজের যোগ্যতায় আমির হয়েছে। অথচ…",
+          "answer": "নমুনা: অথচ সে একসময় সাধারণ গোলাম ছিল।",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৪(ঘ)",
+          "bookRef": "পাঠ ২১, পৃষ্ঠা ১২০",
+          "needsPicture": false
+        },
+        {
+          "key": "s3-5",
+          "text": "সামান্য পাপ থেকেও নিজেকে দূরে সরিয়ে রাখবে। এবং…",
+          "answer": "নমুনা: এবং কখনো অন্যায় ও অবিচার করবে না।",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৪(ঙ)",
+          "bookRef": "পাঠ ২১, পৃষ্ঠা ১২০",
+          "needsPicture": false
+        }
+      ]
+    },
+    {
+      "seq": 4,
+      "syllabusRowSeq": 4,
+      "kind": "WRITTEN",
+      "instructionBn": "বন্ধনীর প্রশ্ন অনুযায়ী বিশেষণ পদ বসিয়ে শূন্যস্থান পূরণ কর",
+      "count": 5,
+      "marksEach": 1,
+      "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        {
+          "key": "s4-1",
+          "text": "......... চড়ুই আমার বারান্দায় বসে আছে। (কয়টি চড়ুই?)",
+          "answer": "দুটি (যেকোনো সংখ্যাবাচক শব্দ)",
+          "marks": 1,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৬(ক)",
+          "bookRef": "পাঠ ১৯, অনুশীলনী ২, পৃষ্ঠা ১০৭",
+          "needsPicture": false,
+          "note": "বইয়ের বন্ধনীর প্রশ্ন যোগ করা হয়েছে; বানান 'চড়ই' থেকে 'চড়ুই'"
+        },
+        {
+          "key": "s4-2",
+          "text": "লোকটি .........। (লোকটি কেমন?)",
+          "answer": "সৎ / ভালো / লম্বা (যেকোনো গুণবাচক শব্দ)",
+          "marks": 1,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৬(খ)",
+          "bookRef": "পাঠ ১৯, অনুশীলনী ২, পৃষ্ঠা ১০৭",
+          "needsPicture": false,
+          "note": "বইয়ের বন্ধনীর প্রশ্ন যোগ করা হয়েছে"
+        },
+        {
+          "key": "s4-3",
+          "text": "শরৎকালে আকাশে ......... মেঘ দেখা যায়। (কেমন মেঘ?)",
+          "answer": "সাদা",
+          "marks": 1,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৬(গ)",
+          "bookRef": "পাঠ ১৯, অনুশীলনী ২, পৃষ্ঠা ১০৭",
+          "needsPicture": false,
+          "note": "বইয়ের বন্ধনীর প্রশ্ন যোগ করা হয়েছে"
+        },
+        {
+          "key": "s4-4",
+          "text": "কচ্ছপটি ......... এগিয়ে চলেছে। (কীভাবে এগিয়ে চলেছে?)",
+          "answer": "ধীরে ধীরে",
+          "marks": 1,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৬(ঘ)",
+          "bookRef": "পাঠ ১৯, অনুশীলনী ২, পৃষ্ঠা ১০৭",
+          "needsPicture": false,
+          "note": "বইয়ের বন্ধনীর প্রশ্ন যোগ করা হয়েছে"
+        },
+        {
+          "key": "s4-5",
+          "text": "সে ......... ট্রেনে উঠল। (কীভাবে ট্রেনে উঠল?)",
+          "answer": "তাড়াতাড়ি / দৌড়ে",
+          "marks": 1,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৬(ঙ)",
+          "bookRef": "পাঠ ১৯, অনুশীলনী ২, পৃষ্ঠা ১০৭",
+          "needsPicture": false,
+          "note": "বইয়ের বন্ধনীর প্রশ্ন যোগ করা হয়েছে"
+        }
+      ]
+    },
+    {
+      "seq": 5,
+      "syllabusRowSeq": 5,
+      "kind": "WRITTEN",
+      "instructionBn": "সঠিক উত্তরটি লেখ",
+      "count": 5,
+      "marksEach": 1,
+      "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        {
+          "key": "s5-1",
+          "text": "‘দূরের পাল্লা’ কবিতায় কয়জন মাঝির কথা বলা হয়েছে?",
+          "options": [
+            "পাঁচজন",
+            "চারজন",
+            "তিনজন",
+            "দুইজন"
+          ],
+          "answer": "তিনজন",
+          "marks": 1,
+          "source": "NEW",
+          "bookRef": "পাঠ ৩, অনুশীলনী ২(ক), পৃষ্ঠা ২১",
+          "needsPicture": false
+        },
+        {
+          "key": "s5-2",
+          "text": "টুকটুক বাগানের কোণে বিড়ালছানাটিকে কী অবস্থায় দেখতে পেল?",
+          "options": [
+            "খিদেয় কাঁপছে",
+            "ভয়ে কাঁপছে",
+            "ঠান্ডায় কাঁপছে",
+            "জ্বরে কাঁপছে"
+          ],
+          "answer": "ভয়ে কাঁপছে",
+          "marks": 1,
+          "source": "NEW",
+          "bookRef": "পাঠ ৯, অনুশীলনী ৩(খ), পৃষ্ঠা ৫০",
+          "needsPicture": false
+        },
+        {
+          "key": "s5-3",
+          "text": "প্রতিবছর ১৪ই ডিসেম্বর পালন করা হয় —",
+          "options": [
+            "স্বাধীনতা দিবস",
+            "মাতৃভাষা দিবস",
+            "শহিদ বুদ্ধিজীবী দিবস",
+            "বিজয় দিবস"
+          ],
+          "answer": "শহিদ বুদ্ধিজীবী দিবস",
+          "marks": 1,
+          "source": "NEW",
+          "bookRef": "পাঠ ১৬, অনুশীলনী ৪(খ), পৃষ্ঠা ৯৫",
+          "needsPicture": false
+        },
+        {
+          "key": "s5-4",
+          "text": "১৯৬৯ সালের গণ-অভ্যুত্থানে কোন ছাত্রনেতা শহিদ হন?",
+          "options": [
+            "আসাদ",
+            "জব্বার",
+            "নূর হোসেন",
+            "আবু সাঈদ"
+          ],
+          "answer": "আসাদ",
+          "marks": 1,
+          "source": "NEW",
+          "bookRef": "পাঠ ২২, অনুশীলনী ৪(গ), পৃষ্ঠা ১২৯",
+          "needsPicture": false,
+          "note": "বইয়ের বিকল্প 'মতিয়ুর' বদলে 'আবু সাঈদ' রাখা হয়েছে, যাতে একাধিক সঠিক উত্তরের সন্দেহ না থাকে"
+        },
+        {
+          "key": "s5-5",
+          "text": "মহানবি হজরত মুহাম্মদ (স) বিদায় হজের ভাষণ কোথায় দিয়েছিলেন?",
+          "options": [
+            "মদিনার মসজিদে",
+            "আরাফাতের ময়দানে",
+            "কাবা ঘরের সামনে",
+            "ওহুদ পাহাড়ে"
+          ],
+          "answer": "আরাফাতের ময়দানে",
+          "marks": 1,
+          "source": "NEW",
+          "bookRef": "পাঠ ২১, পৃষ্ঠা ১১৯",
+          "needsPicture": false
+        }
+      ]
+    },
+    {
+      "seq": 6,
+      "syllabusRowSeq": 6,
+      "kind": "WRITTEN",
+      "instructionBn": "সমার্থক শব্দ লেখ (২টি করে)",
+      "count": 5,
+      "marksEach": 1,
+      "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        {
+          "key": "s6-1",
+          "text": "পৃথিবী",
+          "answer": "ধরা, জগৎ, ভুবন, বিশ্ব (যেকোনো ২টি)",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৫",
+          "bookRef": "পাঠ ১৫, অনুশীলনী ৪, পৃষ্ঠা ৮৭",
+          "needsPicture": false
+        },
+        {
+          "key": "s6-2",
+          "text": "সমুদ্র",
+          "answer": "সাগর, সিন্ধু, জলধি (যেকোনো ২টি)",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৫",
+          "bookRef": "পাঠ ১৫, অনুশীলনী ৪, পৃষ্ঠা ৮৭",
+          "needsPicture": false
+        },
+        {
+          "key": "s6-3",
+          "text": "অরণ্য",
+          "answer": "বন, জঙ্গল, কানন (যেকোনো ২টি)",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৫",
+          "bookRef": "পাঠ ১৪, পৃষ্ঠা ৮০",
+          "needsPicture": false
+        },
+        {
+          "key": "s6-4",
+          "text": "ঘর",
+          "answer": "বাড়ি, গৃহ, আলয় (যেকোনো ২টি)",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৫",
+          "bookRef": "পাঠ ১৯, অনুশীলনী ৬, পৃষ্ঠা ১০৯",
+          "needsPicture": false
+        },
+        {
+          "key": "s6-5",
+          "text": "নদী",
+          "answer": "তটিনী, তরঙ্গিণী, স্রোতস্বিনী (যেকোনো ২টি)",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৫",
+          "bookRef": "পাঠ ৩, ১৮ (নদীর কবিতা)",
+          "needsPicture": false
+        }
+      ]
+    },
+    {
+      "seq": 7,
+      "syllabusRowSeq": 7,
+      "kind": "WRITTEN",
+      "instructionBn": "সংক্ষেপে উত্তর দাও",
+      "count": 4,
+      "marksEach": 2,
+      "total": 8,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        {
+          "key": "s7-1",
+          "text": "‘পাখির মতো’ কবিতায় সবাই কোথায় ঘুমিয়ে পড়ে?",
+          "answer": "সবাই কর্ণফুলী নদীর কূলে (তীরে) ঘুমিয়ে পড়ে; তখন পূর্ণিমার চাঁদ (দুধভরা চাঁদের বাটি) আকাশে থাকে।",
+          "marks": 2,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৭(ক)",
+          "bookRef": "পাঠ ১৩, পৃষ্ঠা ৭০",
+          "needsPicture": false,
+          "note": "নম্বর ৩ থেকে ২; বাছাই বাদ (৫টির ৪টি)"
+        },
+        {
+          "key": "s7-2",
+          "text": "কীসের আশায় মানুষ মৃত্যুকে হাসিমুখে বরণ করে নিচ্ছে?",
+          "answer": "দেশ ও মানুষের কল্যাণ, নতুন কিছু জয় ও আবিষ্কার করার আশায় বীরেরা লাখে লাখে মরণ-যন্ত্রণাকে বরণ করে নিচ্ছে (‘সংকল্প’ কবিতা)।",
+          "marks": 2,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৭(খ)",
+          "bookRef": "পাঠ ১৫, পৃষ্ঠা ৮৪",
+          "needsPicture": false,
+          "note": "নম্বর ৩ থেকে ২; বানান 'কিসের' থেকে 'কীসের'"
+        },
+        {
+          "key": "s7-3",
+          "text": "শিক্ষকের উচ্ছ্বাসের কারণ কী?",
+          "answer": "বাদশাহ আলমগীর শিক্ষককে শাস্তি না দিয়ে দুঃখ করলেন যে তাঁর ছেলে নিজ হাতে গুরুর পা ধুয়ে দেয়নি। বাদশাহর মুখে শিক্ষকের এমন মর্যাদার কথা শুনে শিক্ষক উচ্ছ্বসিত হলেন—শিক্ষাগুরুর শির চির উন্নত হলো।",
+          "marks": 2,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৭(গ)",
+          "bookRef": "পাঠ ২০, পৃষ্ঠা ১১৪",
+          "needsPicture": false,
+          "note": "নম্বর ৩ থেকে ২"
+        },
+        {
+          "key": "s7-4",
+          "text": "ধর্ম বিষয়ে মুহাম্মদ (স) কী বলেছেন?",
+          "answer": "তোমরা ধর্ম নিয়ে বাড়াবাড়ি করবে না; নিজ নিজ ধর্ম পালন করবে; অন্য ধর্মের মানুষের উপর নিজের ধর্ম চাপিয়ে দেবে না।",
+          "marks": 2,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৭(ঙ)",
+          "bookRef": "পাঠ ২১, পৃষ্ঠা ১২০",
+          "needsPicture": false,
+          "note": "নম্বর ৩ থেকে ২; 'মুহাম্মাদ (সাঃ)' বইয়ের মতো 'মুহাম্মদ (স)' করা হয়েছে"
+        }
+      ]
+    },
+    {
+      "seq": 8,
+      "syllabusRowSeq": 8,
+      "kind": "WRITTEN",
+      "instructionBn": "নিচের প্রশ্নগুলোর বিস্তারিত উত্তর দাও",
+      "count": 3,
+      "marksEach": 5,
+      "total": 15,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        {
+          "key": "s8-1",
+          "text": "‘সংকল্প’ কবিতায় কবি কোথায় কোথায় যেতে চান তা বর্ণনা কর।",
+          "answer": "কবি বন্ধ ঘরে থাকবেন না, জগৎটাকে দেখবেন; দেশ থেকে দেশান্তরে মানুষ কেমন করে ছুটছে তা দেখবেন; ডুবুরির মতো সাগরতলে, দুঃসাহসীর মতো আকাশে; আকাশ-বাতাস, চন্দ্র-তারা, সাগর-জল ও পাহাড়-চূড়ায় ঘুরবেন; সীমার বাঁধন ভেঙে দশ দিকে ছড়িয়ে পড়বেন; পাতাল ফেড়ে নিচে নামবেন, আকাশ ফুঁড়ে উপরে উঠবেন; বিশ্বজগৎ নিজের হাতের মুঠোয় দেখবেন।",
+          "marks": 5,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৮(খ)",
+          "bookRef": "পাঠ ১৫, পৃষ্ঠা ৮৪–৮৫",
+          "needsPicture": false,
+          "note": "বাছাই বাদ (৫টির ৩টি)"
+        },
+        {
+          "key": "s8-2",
+          "text": "‘ইচ্ছামতী’ কবিতার দিন ও রাতের সৌন্দর্য বর্ণনা কর।",
+          "answer": "নদীর দখিন ধারে সূর্য ওঠে, বাঁ ধারে সন্ধ্যায় অন্ধকার নামে; দিনের বেলায় গাঁয়ের মানুষ নাইতে আসে, গোরু-মহিষ নিয়ে সাঁতরে ওপারে যায়; জলের উপর ঝলোমলো আলোর রাশি, ঢেউয়ে ঢেউয়ে পরীর নাচন; একধারে সবুজ মাঠ-ঘাট, অন্যধারে বালুর চরে রোদ ধু ধু করে; নদী আধেক কথা দিনে, আধেক কথা রাতে বলে; রাতে চারদিক থমথমে, ডাঙার দিকে চেয়ে গা ছমছম করে।",
+          "marks": 5,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৮(ঘ)",
+          "bookRef": "পাঠ ১৮, পৃষ্ঠা ১০২–১০৪",
+          "needsPicture": false
+        },
+        {
+          "key": "s8-3",
+          "text": "মহানবি (স)-এর বিদায় হজের ভাষণ থেকে আমাদের জন্য শিক্ষণীয় বিষয়গুলো আলোচনা কর।",
+          "answer": "একদিন আল্লাহর কাছে সব কাজের হিসাব দিতে হবে; অধীনদের (গোলাম) সাথে নিষ্ঠুর ব্যবহার না করা, নিজে যা খাবে-পরবে তাদেরও তা দেওয়া; যোগ্য গোলাম আমির হলে তাকে মেনে চলা; অন্যায়-অবিচার না করা, সামান্য পাপ থেকেও দূরে থাকা; অন্যের সম্পত্তি দখল না করা; ধর্ম নিয়ে বাড়াবাড়ি না করা; মেয়েদের অধিকারকে সম্মান করা; ধনী-গরিবের বৈষম্য না করা; কুরআন ও মহানবির (স) জীবনের আদর্শ মেনে চলা।",
+          "marks": 5,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৮(ঙ)",
+          "bookRef": "পাঠ ২১, পৃষ্ঠা ১১৯–১২০",
+          "needsPicture": false,
+          "note": "'মহানবী (সাঃ) এর' বইয়ের বানানে 'মহানবি (স)-এর' করা হয়েছে"
+        }
+      ]
+    },
+    {
+      "seq": 9,
+      "syllabusRowSeq": 9,
+      "kind": "WRITTEN",
+      "instructionBn": "নিচের কবিতাংশটুকু পড়ে এর মূলভাব লেখ",
+      "count": 1,
+      "marksEach": 5,
+      "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": "ঘুম হতে আজ জেগেই দেখি শিশির-ঝরা ঘাসে,\nসারা রাতের স্বপন আমার মিঠেল রোদে হাসে।\nআমার সাথে করতে খেলা প্রভাত হাওয়া ভাই,\nসরষে ফুলের পাপড়ি নাড়ি ডাকছে মোরে তাই।\nচলতে পথে মটরশুঁটি জড়িয়ে দু-খান পা,\nবলছে ডেকে, ‘গাঁয়ের রাখাল একটু খেলে যা!’\nসারা মাঠের ডাক এসেছে, খেলতে হবে ভাই!\nসাঁঝের বেলা কইব কথা এখন তবে যাই!",
+      "matchRight": null,
+      "items": [
+        {
+          "key": "s9-1",
+          "text": "ওপরের কবিতাংশের মূলভাব লেখ।",
+          "answer": "মূলভাবের বিন্দু: সকালে ঘুম ভেঙে রাখাল ছেলে দেখে শিশিরভেজা ঘাস আর কোমল রোদ; প্রভাতের হাওয়া, সরষে ফুল, পথের মটরশুঁটি—গ্রামের সব প্রকৃতি যেন তাকে খেলতে ডাকছে; সারা মাঠের ডাকে সে খেলতে ছুটে যায়, কথা বলবে সন্ধ্যায়। গ্রামবাংলার সকালের সৌন্দর্য ও প্রকৃতির সাথে রাখাল ছেলের আনন্দময় বন্ধুত্ব এখানে ফুটে উঠেছে।",
+          "marks": 5,
+          "source": "NEW",
+          "bookRef": "পাঠ ১০ (রাখাল ছেলে), পৃষ্ঠা ৫৪",
+          "needsPicture": false
+        }
+      ]
+    },
+    {
+      "seq": 10,
+      "syllabusRowSeq": 10,
+      "kind": "WRITTEN",
+      "instructionBn": "নিচের ক্রিয়াপদগুলোর চলিত রূপ লেখ",
+      "count": 5,
+      "marksEach": 1,
+      "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        {
+          "key": "s10-1",
+          "text": "খাইতেছি",
+          "answer": "খাচ্ছি",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৫ · প্রশ্ন ৬",
+          "bookRef": "পাঠ ২০, অনুশীলনী ১, পৃষ্ঠা ১১৬",
+          "needsPicture": false
+        },
+        {
+          "key": "s10-2",
+          "text": "পড়িয়াছি",
+          "answer": "পড়েছি",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৫ · প্রশ্ন ৬",
+          "bookRef": "পাঠ ২০, অনুশীলনী ১, পৃষ্ঠা ১১৬",
+          "needsPicture": false
+        },
+        {
+          "key": "s10-3",
+          "text": "ধরিতেছি",
+          "answer": "ধরছি",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৫ · প্রশ্ন ৬",
+          "bookRef": "পাঠ ২০, অনুশীলনী ১, পৃষ্ঠা ১১৬",
+          "needsPicture": false
+        },
+        {
+          "key": "s10-4",
+          "text": "ফিরিয়াছি",
+          "answer": "ফিরেছি",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৫ · প্রশ্ন ৬",
+          "bookRef": "পাঠ ২০, অনুশীলনী ১, পৃষ্ঠা ১১৬",
+          "needsPicture": false
+        },
+        {
+          "key": "s10-5",
+          "text": "করিতেছি",
+          "answer": "করছি",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৫ · প্রশ্ন ৬",
+          "bookRef": "পাঠ ২০, অনুশীলনী ১, পৃষ্ঠা ১১৬",
+          "needsPicture": false
+        }
+      ]
+    },
+    {
+      "seq": 11,
+      "syllabusRowSeq": 11,
+      "kind": "WRITTEN",
+      "instructionBn": "নিচের অনুচ্ছেদটি পড়ে নির্দেশনা অনুসারে প্রশ্ন তৈরি কর",
+      "count": 5,
+      "marksEach": 1,
+      "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": "বিশ্বের প্রাচীনতম সভ্যতাগুলোর মধ্যে একটি হচ্ছে মিশর। প্রাচীন কাল থেকে মিশরের নীল নদকে ঘিরে গড়ে উঠেছিল ওই সভ্যতা। চারদিকে মরুভূমি-ঘেরা মিশরের ঐতিহাসিক কায়রো শহর। কায়রোর অদূরে গিজা অঞ্চলে অবস্থিত মিশরের ভুবন বিখ্যাত পিরামিড। কায়রো শহর আলোয় ভরে যায় রাতের বেলায়। সবচেয়ে সুন্দর দেখায় মসজিদের মিনারগুলো। মসজিদে যে নিপুণ মোলায়েম কারুকার্য আছে, সে রকম করবার মতো হাত আজকের দিনে কারও নেই।",
+      "matchRight": null,
+      "items": [
+        {
+          "key": "s11-1",
+          "text": "‘কী’ ব্যবহার করে একটি প্রশ্ন তৈরি কর।",
+          "answer": "নমুনা: প্রাচীন মিশরের সভ্যতা কী ঘিরে গড়ে উঠেছিল?",
+          "marks": 1,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১ (অনুচ্ছেদ)",
+          "bookRef": "পাঠ ১৭, অনুশীলনী ৩, পৃষ্ঠা ১০০",
+          "needsPicture": false,
+          "note": "MP-এর অনুচ্ছেদ রাখা হয়েছে, কাজ বদলে প্রশ্ন তৈরি করা হয়েছে; গিজায় 'মসজিদ' ভুল তথ্য, 'পিরামিড' করা হয়েছে"
+        },
+        {
+          "key": "s11-2",
+          "text": "‘কোথায়’ ব্যবহার করে একটি প্রশ্ন তৈরি কর।",
+          "answer": "নমুনা: মিশরের ভুবন বিখ্যাত পিরামিড কোথায় অবস্থিত?",
+          "marks": 1,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১ (অনুচ্ছেদ)",
+          "bookRef": "পাঠ ১৭, অনুশীলনী ৩, পৃষ্ঠা ১০০",
+          "needsPicture": false,
+          "note": "অনুচ্ছেদ থেকে প্রশ্ন তৈরি"
+        },
+        {
+          "key": "s11-3",
+          "text": "‘কখন’ ব্যবহার করে একটি প্রশ্ন তৈরি কর।",
+          "answer": "নমুনা: কায়রো শহর কখন আলোয় ভরে যায়?",
+          "marks": 1,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১ (অনুচ্ছেদ)",
+          "bookRef": "পাঠ ১৭, অনুশীলনী ৩, পৃষ্ঠা ১০০",
+          "needsPicture": false,
+          "note": "অনুচ্ছেদ থেকে প্রশ্ন তৈরি"
+        },
+        {
+          "key": "s11-4",
+          "text": "‘কেমন’ ব্যবহার করে একটি প্রশ্ন তৈরি কর।",
+          "answer": "নমুনা: মসজিদে কেমন কারুকার্য আছে?",
+          "marks": 1,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১ (অনুচ্ছেদ)",
+          "bookRef": "পাঠ ১৭, অনুশীলনী ৩, পৃষ্ঠা ১০০",
+          "needsPicture": false,
+          "note": "অনুচ্ছেদ থেকে প্রশ্ন তৈরি"
+        },
+        {
+          "key": "s11-5",
+          "text": "‘কোন’ ব্যবহার করে একটি প্রশ্ন তৈরি কর।",
+          "answer": "নমুনা: কোন নদকে ঘিরে মিশরের সভ্যতা গড়ে উঠেছিল?",
+          "marks": 1,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১ (অনুচ্ছেদ)",
+          "bookRef": "পাঠ ১৭, অনুশীলনী ৩, পৃষ্ঠা ১০০",
+          "needsPicture": false,
+          "note": "অনুচ্ছেদ থেকে প্রশ্ন তৈরি"
+        }
+      ]
+    },
+    {
+      "seq": 12,
+      "syllabusRowSeq": 12,
+      "kind": "WRITTEN",
+      "instructionBn": "যুক্তবর্ণগুলো ভেঙে লেখ ও ১টি করে শব্দ তৈরি কর",
+      "count": 5,
+      "marksEach": 1,
+      "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        {
+          "key": "s12-1",
+          "text": "ক্ষ",
+          "answer": "ক্ষ = ক + ষ; শব্দ: পক্ষী / রক্ষা",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৩",
+          "bookRef": "পাঠ ২০, অনুশীলনী ৩, পৃষ্ঠা ১১৭",
+          "needsPicture": false
+        },
+        {
+          "key": "s12-2",
+          "text": "ষ্ণ",
+          "answer": "ষ্ণ = ষ + ণ; শব্দ: উষ্ণ / কৃষ্ণ",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৩",
+          "bookRef": "পাঠ ১৫, অনুশীলনী ২, পৃষ্ঠা ৮৬ (যুক্তবর্ণ ভাঙা)",
+          "needsPicture": false
+        },
+        {
+          "key": "s12-3",
+          "text": "জ্ঞ",
+          "answer": "জ্ঞ = জ + ঞ; শব্দ: জ্ঞান / বিজ্ঞান",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৩",
+          "bookRef": "পাঠ ১৫, অনুশীলনী ২, পৃষ্ঠা ৮৬ (যুক্তবর্ণ ভাঙা)",
+          "needsPicture": false
+        },
+        {
+          "key": "s12-4",
+          "text": "ন্দ",
+          "answer": "ন্দ = ন + দ; শব্দ: সুন্দর / আনন্দ",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৩",
+          "bookRef": "পাঠ ১৫, অনুশীলনী ২, পৃষ্ঠা ৮৬ (যুক্তবর্ণ ভাঙা)",
+          "needsPicture": false
+        },
+        {
+          "key": "s12-5",
+          "text": "স্ত্র",
+          "answer": "স্ত্র = স + ত + র; শব্দ: অস্ত্র / শাস্ত্র",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৩",
+          "bookRef": "পাঠ ১৫, অনুশীলনী ২, পৃষ্ঠা ৮৬ (যুক্তবর্ণ ভাঙা)",
+          "needsPicture": false
+        }
+      ]
+    },
+    {
+      "seq": 13,
+      "syllabusRowSeq": 13,
+      "kind": "WRITTEN",
+      "instructionBn": "এক কথায় প্রকাশ কর",
+      "count": 5,
+      "marksEach": 1,
+      "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        {
+          "key": "s13-1",
+          "text": "পরের জন্য নিজের জীবন দিয়ে দেওয়া।",
+          "answer": "আত্মত্যাগ",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৩(ক)",
+          "bookRef": "পাঠ ১৪, পৃষ্ঠা ৮১",
+          "needsPicture": false
+        },
+        {
+          "key": "s13-2",
+          "text": "যে বুঝতে চায় না।",
+          "answer": "অবুঝ",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৩(খ)",
+          "bookRef": "পাঠ ১৪, পৃষ্ঠা ৮০",
+          "needsPicture": false
+        },
+        {
+          "key": "s13-3",
+          "text": "ইতিহাস বিষয়ে অভিজ্ঞ যিনি।",
+          "answer": "ইতিহাসবিদ",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৩(গ)",
+          "bookRef": "পাঠ ১৭, পৃষ্ঠা ৯৯",
+          "needsPicture": false
+        },
+        {
+          "key": "s13-4",
+          "text": "সম্রাটের শাসনাধীন রাজ্য।",
+          "answer": "সাম্রাজ্য",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৩(ঘ)",
+          "bookRef": "পাঠ ১৭, পৃষ্ঠা ৯৯",
+          "needsPicture": false
+        },
+        {
+          "key": "s13-5",
+          "text": "বাছ-বিচার না করে।",
+          "answer": "নির্বিচারে",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৩(ঙ)",
+          "bookRef": "পাঠ ১৬, পৃষ্ঠা ৯৩",
+          "needsPicture": false
+        }
+      ]
+    },
+    {
+      "seq": 14,
+      "syllabusRowSeq": 14,
+      "kind": "WRITTEN",
+      "instructionBn": "আবেদনপত্র লেখ",
+      "count": 1,
+      "marksEach": 5,
+      "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        {
+          "key": "s14-1",
+          "text": "বিদ্যালয় পরিবর্তনের প্রয়োজনে ছাড়পত্রের জন্য প্রধান শিক্ষকের নিকট একটি আবেদনপত্র লেখ।",
+          "answer": "আবেদনপত্রের অংশ (বই পাঠ ৪): তারিখ; বরাবর—প্রধান শিক্ষক ও বিদ্যালয়ের নাম-ঠিকানা; বিষয়: ছাড়পত্রের জন্য আবেদন; সম্বোধন—জনাব; বক্তব্য—পঞ্চম শ্রেণির শিক্ষার্থী, বাবার বদলি/বাসা পরিবর্তনের কারণে অন্য বিদ্যালয়ে ভর্তি হওয়া দরকার; অনুরোধ—ছাড়পত্র দেওয়ার অনুরোধ; নিবেদক—নাম, শ্রেণি, রোল নম্বর। প্রতিটি অংশ ঠিক থাকলে পূর্ণ নম্বর।",
+          "marks": 5,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ৯",
+          "bookRef": "পাঠ ৪ (পত্র লিখি), পৃষ্ঠা ২৪–২৬",
+          "needsPicture": false,
+          "note": "‘অথবা’ চিঠির অংশ বাদ; নম্বর ১০ থেকে ৫"
+        }
+      ]
+    },
+    {
+      "seq": 15,
+      "syllabusRowSeq": 15,
+      "kind": "WRITTEN",
+      "instructionBn": "সংকেত অনুসরণ করে রচনা লেখ",
+      "count": 1,
+      "marksEach": 12,
+      "total": 12,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        {
+          "key": "s15-1",
+          "text": "মুসলিম ছাত্রের দায়িত্ব ও কর্তব্য\nসংকেত: ভূমিকা — ছাত্রজীবনের গুরুত্ব — আল্লাহ ও রাসুলের (স) প্রতি দায়িত্ব — পড়ালেখায় মনোযোগ — মা-বাবা ও শিক্ষকের প্রতি কর্তব্য — সহপাঠী ও প্রতিবেশীর প্রতি কর্তব্য — দেশ ও সমাজের প্রতি কর্তব্য — উপসংহার।",
+          "answer": "মূল্যায়নের বিন্দু: প্রতিটি সংকেতের উপর ১–২টি অনুচ্ছেদ; নামাজ, সত্য কথা বলা, অন্যায় থেকে দূরে থাকা (পাঠ ২১); শিক্ষককে সম্মান (পাঠ ২০); নিয়মিত পড়া, সময়ের মূল্য; মা-বাবার কথা মানা; সহপাঠীকে সাহায্য; দেশকে ভালোবাসা, সমাজের উপকার; গুছিয়ে লেখা, বানান ও ভাষা শুদ্ধ।",
+          "marks": 12,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ১০",
+          "bookRef": "পাঠ ২০, ২১ (সংশ্লিষ্ট ভাব)",
+          "needsPicture": false,
+          "note": "সিলেবাসের 'সূত্রসহ' অনুযায়ী সংকেত যোগ; নম্বর ১৫ থেকে ১২"
+        }
+      ]
+    }
+  ],
+  "authorNotes": "Class 5 Bangla, built from the published Sylhet syllabus (whole book except lesson 12 'শিষ্যের সাধনা' — nothing is taken from lesson 12). The textbook is the national 'আমার বাংলা বই' 2026 (23 lessons), the same book the Mohammadpur 2026 final uses. Reused from MP Annual 2026: word meanings (5 of its 11 words), the 'complete the next sentence' exercise (Q4, used for row 3 বাক্য গঠন), the adjective fill-in (Q6, with the book's bracket hints added), synonyms (Q5, verbatim), 4 of its 5 short questions, 3 of its 5 long questions (all three are in the book: সংকল্প, ইচ্ছামতী, বিদায় হজ), the one-word items (Q3, verbatim), the transfer-certificate application (Q9, without the 'অথবা' letter) and the essay topic (Q10, with সংকেত added because the row says সূত্রসহ). MP's passage (Q1, Egypt) is reused for row 11 as a question-making passage; I corrected one factual slip in it — MP's text says Giza has a world-famous 'মসজিদ', which should be the pyramids. From other MP papers: চলিত রূপ (HY 2025 Q6) and যুক্তবর্ণ (Final 2025 Q3). New from the book: row 1 poem (সাইক্লোন — clued by its subject so the poem/poet names are actually tested; if the owner prefers 'any poem from the book', change the instruction), the 5 MCQs and the মূলভাব stanza (রাখাল ছেলে). MP items not used: Q8(ক) 'মুসলিম হিসেবে আপনি কী হতে চান' and Q8(গ) (not textbook-based), Q7(ঘ). Doubts: (1) For row 3 I read 'বাক্য গঠন' as MP's sentence-completion; if the owner means 'make a sentence with the word', swap in words like নিদর্শন, সমবেত, মন্থর. (2) Row 6/10/11/14/15 are either/or rows; I chose সমার্থক শব্দ, ভাষারীতি (চলিত রূপ), প্রশ্ন তৈরি, আবেদনপত্র and a সূত্রসহ রচনা. (3) MP's synonym row asks 2 synonyms per word for 1 mark; kept as MP wrote it."
+}

@@ -1,0 +1,1115 @@
+{
+  "schema": "scd.exam-paper-draft/v1",
+  "key": "annual-2026-L2-BAN",
+  "exam": {
+    "term": "ANNUAL",
+    "year": 2026,
+    "nameBn": "বার্ষিক পরীক্ষা ২০২৬"
+  },
+  "classLevel": 2,
+  "subject": "BAN",
+  "titleBn": "বার্ষিক পরীক্ষা ২০২৬ · দ্বিতীয় শ্রেণি · বাংলা",
+  "fullMarks": 100,
+  "durationBn": "৩ ঘণ্টা",
+  "syllabusRows": [
+    {
+      "seq": 1,
+      "label": "শব্দের অর্থ লেখ",
+      "itemType": "short_answer",
+      "component": null,
+      "count": 10,
+      "marksEach": 1,
+      "total": 10
+    },
+    {
+      "seq": 2,
+      "label": "শব্দ দিয়ে বাক্য গঠন কর",
+      "itemType": "short_answer",
+      "component": null,
+      "count": 8,
+      "marksEach": 1,
+      "total": 8
+    },
+    {
+      "seq": 3,
+      "label": "যুক্তবর্ণ ভেঙে শব্দ লেখ",
+      "itemType": "short_answer",
+      "component": null,
+      "count": 7,
+      "marksEach": 1,
+      "total": 7
+    },
+    {
+      "seq": 4,
+      "label": "ফলা ও রেফ দিয়ে শব্দ লেখ",
+      "itemType": "short_answer",
+      "component": null,
+      "count": 5,
+      "marksEach": 1,
+      "total": 5
+    },
+    {
+      "seq": 5,
+      "label": "সঠিক কারচিহ্ন দিয়ে শব্দ তৈরি কর",
+      "itemType": "short_answer",
+      "component": null,
+      "count": 7,
+      "marksEach": 1,
+      "total": 7
+    },
+    {
+      "seq": 6,
+      "label": "শূন্যস্থান পূরণ কর",
+      "itemType": "fill_blank",
+      "component": null,
+      "count": 5,
+      "marksEach": 1,
+      "total": 5
+    },
+    {
+      "seq": 7,
+      "label": "সঠিক শব্দ বসিয়ে বাক্য তৈরি কর (ক্রিয়ার রূপ)",
+      "itemType": "fill_blank",
+      "component": null,
+      "count": 5,
+      "marksEach": 1,
+      "total": 5
+    },
+    {
+      "seq": 8,
+      "label": "সঠিক উত্তর নির্বাচন কর",
+      "itemType": "mcq",
+      "component": null,
+      "count": 5,
+      "marksEach": 1,
+      "total": 5
+    },
+    {
+      "seq": 9,
+      "label": "বিরামচিহ্ন বসাও",
+      "itemType": "fill_blank",
+      "component": null,
+      "count": 5,
+      "marksEach": 1,
+      "total": 5
+    },
+    {
+      "seq": 10,
+      "label": "সংক্ষিপ্ত প্রশ্নের উত্তর লেখ",
+      "itemType": "short_answer",
+      "component": null,
+      "count": 6,
+      "marksEach": 2,
+      "total": 12
+    },
+    {
+      "seq": 11,
+      "label": "বড় প্রশ্নের উত্তর লেখ (গল্পের ভিতর থেকে)",
+      "itemType": "descriptive",
+      "component": null,
+      "count": 4,
+      "marksEach": 5,
+      "total": 20
+    },
+    {
+      "seq": 12,
+      "label": "ছক পূরণ কর",
+      "itemType": "fill_blank",
+      "component": null,
+      "count": 1,
+      "marksEach": 5,
+      "total": 5
+    },
+    {
+      "seq": 13,
+      "label": "অনুচ্ছেদ লেখ (শিরোনাম + ৫টি নির্দেশক প্রশ্ন বা শব্দভান্ডার)",
+      "itemType": "descriptive",
+      "component": null,
+      "count": 1,
+      "marksEach": 6,
+      "total": 6
+    }
+  ],
+  "sections": [
+    {
+      "seq": 1,
+      "syllabusRowSeq": 1,
+      "kind": "WRITTEN",
+      "instructionBn": "শব্দের অর্থ লেখ",
+      "count": 10,
+      "marksEach": 1,
+      "total": 10,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        {
+          "key": "s1-1",
+          "text": "চিড়িয়াখানা",
+          "answer": "যেখানে দেখানোর জন্য পশুপাখি রাখা হয়",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ক",
+          "bookRef": "পাঠ ১৮, পৃষ্ঠা ৩৬",
+          "needsPicture": false,
+          "note": null
+        },
+        {
+          "key": "s1-2",
+          "text": "হাঁটুজল",
+          "answer": "হাঁটু সমান পানি",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ক",
+          "bookRef": "পাঠ ২৩, পৃষ্ঠা ৫১",
+          "needsPicture": false,
+          "note": null
+        },
+        {
+          "key": "s1-3",
+          "text": "ধার",
+          "answer": "তীর",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ক",
+          "bookRef": "পাঠ ২৩, পৃষ্ঠা ৫১",
+          "needsPicture": false,
+          "note": null
+        },
+        {
+          "key": "s1-4",
+          "text": "ঝাঁক",
+          "answer": "দল",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ক",
+          "bookRef": "পাঠ ২৩, পৃষ্ঠা ৫১",
+          "needsPicture": false,
+          "note": null
+        },
+        {
+          "key": "s1-5",
+          "text": "হাঁক",
+          "answer": "ডাক",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ক",
+          "bookRef": "পাঠ ২৩, পৃষ্ঠা ৫১",
+          "needsPicture": false,
+          "note": null
+        },
+        {
+          "key": "s1-6",
+          "text": "মদিনা",
+          "answer": "আরবের একটি শহর",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ক",
+          "bookRef": "পাঠ ২৫, পৃষ্ঠা ৫৫",
+          "needsPicture": false,
+          "note": null
+        },
+        {
+          "key": "s1-7",
+          "text": "হামলা",
+          "answer": "আক্রমণ",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ক",
+          "bookRef": "পাঠ ২৫, পৃষ্ঠা ৫৫",
+          "needsPicture": false,
+          "note": null
+        },
+        {
+          "key": "s1-8",
+          "text": "মাতৃভূমি",
+          "answer": "স্বদেশ",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ক",
+          "bookRef": "পাঠ ২৬, পৃষ্ঠা ৫৭",
+          "needsPicture": false,
+          "note": null
+        },
+        {
+          "key": "s1-9",
+          "text": "অস্ত্র",
+          "answer": "যুদ্ধ করার হাতিয়ার",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ক",
+          "bookRef": "পাঠ ২৬, পৃষ্ঠা ৫৭",
+          "needsPicture": false,
+          "note": null
+        },
+        {
+          "key": "s1-10",
+          "text": "পণ্য",
+          "answer": "কেনা যায় এমন জিনিস",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ক",
+          "bookRef": "পাঠ ২৬, পৃষ্ঠা ৫৭",
+          "needsPicture": false,
+          "note": null
+        }
+      ]
+    },
+    {
+      "seq": 2,
+      "syllabusRowSeq": 2,
+      "kind": "WRITTEN",
+      "instructionBn": "শব্দ দিয়ে বাক্য গঠন কর",
+      "count": 8,
+      "marksEach": 1,
+      "total": 8,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        {
+          "key": "s2-1",
+          "text": "দারুণ",
+          "answer": "নমুনা: গ্রামের পরিবেশ তিথির দারুণ ভালো লাগে।",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন গ",
+          "bookRef": "পাঠ ১৮, পৃষ্ঠা ৩৬",
+          "needsPicture": false,
+          "note": "মোহাম্মদপুরে প্রতিটি ২ নম্বর ছিল; এখানে সিলেট অনুযায়ী ১"
+        },
+        {
+          "key": "s2-2",
+          "text": "উৎসব",
+          "answer": "নমুনা: হেমন্ত ঋতুতে নবান্ন উৎসব হয়।",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন গ",
+          "bookRef": "পাঠ ২১, পৃষ্ঠা ৪৪",
+          "needsPicture": false,
+          "note": "মোহাম্মদপুরে প্রতিটি ২ নম্বর ছিল; এখানে ১"
+        },
+        {
+          "key": "s2-3",
+          "text": "ঢালু",
+          "answer": "নমুনা: নদীর পাড় ঢালু।",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন গ",
+          "bookRef": "পাঠ ২৩, পৃষ্ঠা ৫০",
+          "needsPicture": false,
+          "note": "মোহাম্মদপুরে প্রতিটি ২ নম্বর ছিল; এখানে ১"
+        },
+        {
+          "key": "s2-4",
+          "text": "ওড়ে",
+          "answer": "নমুনা: অনেক রঙের ঘুড়ি আকাশে ওড়ে।",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন গ",
+          "bookRef": "পাঠ ২২, পৃষ্ঠা ৪৮",
+          "needsPicture": false,
+          "note": "মোহাম্মদপুরে প্রতিটি ২ নম্বর ছিল; এখানে ১"
+        },
+        {
+          "key": "s2-5",
+          "text": "দল",
+          "answer": "নমুনা: দশজন দশজন করে দল গড়া হলো।",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন গ",
+          "bookRef": "পাঠ ২৫, পৃষ্ঠা ৫৪",
+          "needsPicture": false,
+          "note": "মোহাম্মদপুরে প্রতিটি ২ নম্বর ছিল; এখানে ১"
+        },
+        {
+          "key": "s2-6",
+          "text": "আনন্দ",
+          "answer": "নমুনা: পুকুরে হাঁস দেখে তিথির আনন্দ হয়।",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৩",
+          "bookRef": "পাঠ ১৮, পৃষ্ঠা ৩৬",
+          "needsPicture": false,
+          "note": null
+        },
+        {
+          "key": "s2-7",
+          "text": "প্রতিযোগিতা",
+          "answer": "নমুনা: নববর্ষে ঘুড়ি ওড়ানোর প্রতিযোগিতা হয়।",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৩",
+          "bookRef": "পাঠ ২২, পৃষ্ঠা ৪৮; পাঠ ২৮",
+          "needsPicture": false,
+          "note": null
+        },
+        {
+          "key": "s2-8",
+          "text": "পুকুর",
+          "answer": "নমুনা: তিথির মামার বাড়ির পাশে একটি পুকুর আছে।",
+          "marks": 1,
+          "source": "NEW",
+          "sourceRef": null,
+          "bookRef": "পাঠ ১৮, পৃষ্ঠা ৩৭ (বাক্য লিখি)",
+          "needsPicture": false,
+          "note": null
+        }
+      ]
+    },
+    {
+      "seq": 3,
+      "syllabusRowSeq": 3,
+      "kind": "WRITTEN",
+      "instructionBn": "যুক্তবর্ণ ভেঙে দেখাও এবং তা দিয়ে একটি শব্দ লেখ",
+      "count": 7,
+      "marksEach": 1,
+      "total": 7,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        {
+          "key": "s3-1",
+          "text": "স্ক",
+          "answer": "স্ক = স + ক; শব্দ: স্কুল",
+          "marks": 1,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ছ",
+          "bookRef": "পাঠ ২৮ (স্কুলের মাঠে)",
+          "needsPicture": false,
+          "note": "দুটি শব্দ ও একটি বাক্যের বদলে ভেঙে দেখানো ও একটি শব্দ; ৫ নম্বরের জায়গায় ১"
+        },
+        {
+          "key": "s3-2",
+          "text": "ক্ত",
+          "answer": "ক্ত = ক + ত; শব্দ: মুক্তিসেনা",
+          "marks": 1,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ছ",
+          "bookRef": "পাঠ ২৬ (মুক্তিসেনা)",
+          "needsPicture": false,
+          "note": "দুটি শব্দ ও একটি বাক্যের বদলে ভেঙে দেখানো ও একটি শব্দ; ১ নম্বর"
+        },
+        {
+          "key": "s3-3",
+          "text": "ন্ম",
+          "answer": "ন্ম = ন + ম; শব্দ: জন্ম",
+          "marks": 1,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ছ",
+          "bookRef": "পাঠ ২৭, পৃষ্ঠা ৫৮",
+          "needsPicture": false,
+          "note": "দুটি শব্দ ও একটি বাক্যের বদলে ভেঙে দেখানো ও একটি শব্দ; ১ নম্বর"
+        },
+        {
+          "key": "s3-4",
+          "text": "দ্ধ",
+          "answer": "দ্ধ = দ + ধ; শব্দ: যুদ্ধ",
+          "marks": 1,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ছ",
+          "bookRef": "পাঠ ২৬, পৃষ্ঠা ৫৬",
+          "needsPicture": false,
+          "note": "দুটি শব্দ ও একটি বাক্যের বদলে ভেঙে দেখানো ও একটি শব্দ; ১ নম্বর"
+        },
+        {
+          "key": "s3-5",
+          "text": "ষ্ট",
+          "answer": "ষ্ট = ষ + ট; শব্দ: মিষ্টি / কষ্ট",
+          "marks": 1,
+          "source": "MP_OTHER_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ২",
+          "bookRef": "পাঠ ২০, পৃষ্ঠা ৪১; পাঠ ২২",
+          "needsPicture": false,
+          "note": "ভেঙে বাক্য গঠনের বদলে ভেঙে একটি শব্দ লেখা"
+        },
+        {
+          "key": "s3-6",
+          "text": "ন্ত",
+          "answer": "ন্ত = ন + ত; শব্দ: বসন্ত",
+          "marks": 1,
+          "source": "MP_OTHER_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ২",
+          "bookRef": "পাঠ ২১, পৃষ্ঠা ৪৫",
+          "needsPicture": false,
+          "note": "ভেঙে বাক্য গঠনের বদলে ভেঙে একটি শব্দ লেখা"
+        },
+        {
+          "key": "s3-7",
+          "text": "ন্ধ",
+          "answer": "ন্ধ = ন + ধ; শব্দ: বন্ধু",
+          "marks": 1,
+          "source": "MP_OTHER_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ২",
+          "bookRef": "পাঠ ১৯, পৃষ্ঠা ৩৮; পাঠ ২০",
+          "needsPicture": false,
+          "note": "ভেঙে বাক্য গঠনের বদলে ভেঙে একটি শব্দ লেখা"
+        }
+      ]
+    },
+    {
+      "seq": 4,
+      "syllabusRowSeq": 4,
+      "kind": "WRITTEN",
+      "instructionBn": "ফলা ও রেফ দিয়ে শব্দ লেখ",
+      "count": 5,
+      "marksEach": 1,
+      "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        {
+          "key": "s4-1",
+          "text": "ম-ফলা",
+          "answer": "যেমন: পদ্ম",
+          "marks": 1,
+          "source": "MP_OTHER_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৫",
+          "bookRef": null,
+          "needsPicture": false,
+          "note": "শব্দ ও বাক্যের বদলে শুধু একটি শব্দ"
+        },
+        {
+          "key": "s4-2",
+          "text": "য-ফলা",
+          "answer": "যেমন: ব্যাঙ / জ্যৈষ্ঠ",
+          "marks": 1,
+          "source": "MP_OTHER_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৫",
+          "bookRef": "পাঠ ২১, পৃষ্ঠা ৪৩",
+          "needsPicture": false,
+          "note": "শব্দ ও বাক্যের বদলে শুধু একটি শব্দ"
+        },
+        {
+          "key": "s4-3",
+          "text": "ব-ফলা",
+          "answer": "যেমন: বন্ধুত্ব / বিশ্ববিদ্যালয়",
+          "marks": 1,
+          "source": "MP_OTHER_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৫",
+          "bookRef": "পাঠ ২০, পৃষ্ঠা ৪০; পাঠ ২৭",
+          "needsPicture": false,
+          "note": "শব্দ ও বাক্যের বদলে শুধু একটি শব্দ"
+        },
+        {
+          "key": "s4-4",
+          "text": "র-ফলা",
+          "answer": "যেমন: প্রজাপতি / প্রথম",
+          "marks": 1,
+          "source": "MP_OTHER_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৫",
+          "bookRef": "পাঠ ১৯; পাঠ ২২",
+          "needsPicture": false,
+          "note": "শব্দ ও বাক্যের বদলে শুধু একটি শব্দ"
+        },
+        {
+          "key": "s4-5",
+          "text": "রেফ",
+          "answer": "যেমন: বর্ষা / সূর্য",
+          "marks": 1,
+          "source": "MP_OTHER_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৫",
+          "bookRef": "পাঠ ২১; পাঠ ২৪",
+          "needsPicture": false,
+          "note": "শব্দ ও বাক্যের বদলে শুধু একটি শব্দ"
+        }
+      ]
+    },
+    {
+      "seq": 5,
+      "syllabusRowSeq": 5,
+      "kind": "WRITTEN",
+      "instructionBn": "সঠিক কারচিহ্ন দিয়ে শব্দ তৈরি কর",
+      "count": 7,
+      "marksEach": 1,
+      "total": 7,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        {
+          "key": "s5-1",
+          "text": "বড়ল",
+          "answer": "বিড়াল",
+          "marks": 1,
+          "source": "NEW",
+          "sourceRef": null,
+          "bookRef": "পাঠ ২০, পৃষ্ঠা ৪০",
+          "needsPicture": false,
+          "note": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬-এর একই ধরন (প্রশ্ন ৬), কিন্তু সেখানকার শব্দগুলো পাঠ ১৮–২৯-এর বাইরে, তাই নতুন শব্দ"
+        },
+        {
+          "key": "s5-2",
+          "text": "শলক",
+          "answer": "শালিক",
+          "marks": 1,
+          "source": "NEW",
+          "sourceRef": null,
+          "bookRef": "পাঠ ২৩, পৃষ্ঠা ৫০",
+          "needsPicture": false,
+          "note": null
+        },
+        {
+          "key": "s5-3",
+          "text": "কশফল",
+          "answer": "কাশফুল",
+          "marks": 1,
+          "source": "NEW",
+          "sourceRef": null,
+          "bookRef": "পাঠ ২১, পৃষ্ঠা ৪৪",
+          "needsPicture": false,
+          "note": null
+        },
+        {
+          "key": "s5-4",
+          "text": "কয়শ",
+          "answer": "কুয়াশা",
+          "marks": 1,
+          "source": "NEW",
+          "sourceRef": null,
+          "bookRef": "পাঠ ২১, পৃষ্ঠা ৪৫",
+          "needsPicture": false,
+          "note": null
+        },
+        {
+          "key": "s5-5",
+          "text": "নগরদল",
+          "answer": "নাগরদোলা",
+          "marks": 1,
+          "source": "NEW",
+          "sourceRef": null,
+          "bookRef": "পাঠ ২২, পৃষ্ঠা ৪৯",
+          "needsPicture": false,
+          "note": null
+        },
+        {
+          "key": "s5-6",
+          "text": "জরফ",
+          "answer": "জিরাফ",
+          "marks": 1,
+          "source": "NEW",
+          "sourceRef": null,
+          "bookRef": "পাঠ ১৮, পৃষ্ঠা ৩৫",
+          "needsPicture": false,
+          "note": null
+        },
+        {
+          "key": "s5-7",
+          "text": "বসখ",
+          "answer": "বৈশাখ",
+          "marks": 1,
+          "source": "NEW",
+          "sourceRef": null,
+          "bookRef": "পাঠ ২১, পৃষ্ঠা ৪৩; পাঠ ২২",
+          "needsPicture": false,
+          "note": null
+        }
+      ]
+    },
+    {
+      "seq": 6,
+      "syllabusRowSeq": 6,
+      "kind": "WRITTEN",
+      "instructionBn": "শূন্যস্থান পূরণ কর",
+      "count": 5,
+      "marksEach": 1,
+      "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        {
+          "key": "s6-1",
+          "text": "কোথায় পেলে ভাই এমন ________ পাখা!",
+          "answer": "রঙিন",
+          "marks": 1,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন খ(৩)",
+          "bookRef": "পাঠ ১৯, পৃষ্ঠা ৩৮",
+          "needsPicture": false,
+          "note": "মূল প্রশ্নে ‘এমন’-এর দুই পাশে দুটি ফাঁকা ছিল; এখন একটি ফাঁকা (রঙিন)"
+        },
+        {
+          "key": "s6-2",
+          "text": "________ কত রঙের ফুল ফুটেছে।",
+          "answer": "বনে",
+          "marks": 1,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন খ(৪)",
+          "bookRef": "পাঠ ১৯, পৃষ্ঠা ৩৯",
+          "needsPicture": false,
+          "note": null
+        },
+        {
+          "key": "s6-3",
+          "text": "আকাশে ________ মতো সাদা মেঘ ভেসে বেড়ায়।",
+          "answer": "তুলার",
+          "marks": 1,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন খ(৬)",
+          "bookRef": "পাঠ ২১, পৃষ্ঠা ৪৪",
+          "needsPicture": false,
+          "note": "মূল ‘আকাশের.... মত..... মেঘ’ বইয়ের বাক্যের সাথে মিলিয়ে একটি ফাঁকা করা হয়েছে"
+        },
+        {
+          "key": "s6-4",
+          "text": "এক ধারে ________ ফুলে ফুলে সাদা।",
+          "answer": "কাশবন",
+          "marks": 1,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন খ(৭)",
+          "bookRef": "পাঠ ২৩, পৃষ্ঠা ৫০",
+          "needsPicture": false,
+          "note": "মূলে দুটি ফাঁকা (কাশবন, সাদা) ছিল; ১ নম্বরের জন্য একটি ফাঁকা রাখা হয়েছে"
+        },
+        {
+          "key": "s6-5",
+          "text": "একদিন হঠাৎ করে কালো বিড়ালটা ________ ।",
+          "answer": "উধাও",
+          "marks": 1,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৩(গ)",
+          "bookRef": "পাঠ ২০, পৃষ্ঠা ৪০",
+          "needsPicture": false,
+          "note": null
+        }
+      ]
+    },
+    {
+      "seq": 7,
+      "syllabusRowSeq": 7,
+      "kind": "WRITTEN",
+      "instructionBn": "সঠিক শব্দ বসিয়ে বাক্য তৈরি কর",
+      "count": 5,
+      "marksEach": 1,
+      "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        {
+          "key": "s7-1",
+          "text": "তিথি মাটি দিয়ে হাঁড়ি বানানোর চেষ্টা ________ । (করি / করো / করে)",
+          "answer": "করে",
+          "marks": 1,
+          "source": "MP_OTHER_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৮",
+          "bookRef": "পাঠ ১৮, পৃষ্ঠা ৩৬",
+          "needsPicture": false,
+          "note": "একই ধরন (তিনটি ক্রিয়ারূপ থেকে বাছাই); বাক্য পাঠ ১৮–২৯ থেকে নেওয়া"
+        },
+        {
+          "key": "s7-2",
+          "text": "তুমি টুলটুলে বন-ফুলে মধু ________ । (খাই / খাও / খায়)",
+          "answer": "খাও",
+          "marks": 1,
+          "source": "MP_OTHER_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৮",
+          "bookRef": "পাঠ ১৯, পৃষ্ঠা ৩৮",
+          "needsPicture": false,
+          "note": "একই ধরন; বাক্য বই থেকে নেওয়া"
+        },
+        {
+          "key": "s7-3",
+          "text": "বাবা বললেন, চিন্তা কোরো না। আমি ওষুধ লাগিয়ে ________ । (দিচ্ছি / দিচ্ছ / দিচ্ছেন)",
+          "answer": "দিচ্ছি",
+          "marks": 1,
+          "source": "MP_OTHER_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৮",
+          "bookRef": "পাঠ ২০, পৃষ্ঠা ৪০",
+          "needsPicture": false,
+          "note": "একই ধরন; বাক্য বই থেকে নেওয়া"
+        },
+        {
+          "key": "s7-4",
+          "text": "মহানবি হজরত মুহম্মদ (স) তখন মদিনায় ________ । (থাকত / থাকতাম / থাকতেন)",
+          "answer": "থাকতেন",
+          "marks": 1,
+          "source": "MP_OTHER_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৮",
+          "bookRef": "পাঠ ২৫, পৃষ্ঠা ৫৪",
+          "needsPicture": false,
+          "note": "একই ধরন; বাক্য বই থেকে নেওয়া"
+        },
+        {
+          "key": "s7-5",
+          "text": "আমরা সবাই মিলে শ্রেণিকক্ষ পরিষ্কার ________ । (করি / করো / করেন)",
+          "answer": "করি",
+          "marks": 1,
+          "source": "MP_OTHER_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৮",
+          "bookRef": "পাঠ ২৫, পৃষ্ঠা ৫৫",
+          "needsPicture": false,
+          "note": "একই ধরন; বাক্য বই থেকে নেওয়া"
+        }
+      ]
+    },
+    {
+      "seq": 8,
+      "syllabusRowSeq": 8,
+      "kind": "WRITTEN",
+      "instructionBn": "সঠিক উত্তর নির্বাচন কর",
+      "count": 5,
+      "marksEach": 1,
+      "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        {
+          "key": "s8-1",
+          "text": "‘প্রজাপতি’ কবিতাটি কে লিখেছেন?",
+          "options": [
+            "রবীন্দ্রনাথ ঠাকুর",
+            "কাজী নজরুল ইসলাম",
+            "সুকুমার বড়ুয়া"
+          ],
+          "answer": "কাজী নজরুল ইসলাম",
+          "marks": 1,
+          "source": "MP_OTHER_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর অর্ধ-বার্ষিক ২০২৬ · প্রশ্ন ৯(ক)",
+          "bookRef": "পাঠ ১৯, পৃষ্ঠা ৩৮",
+          "needsPicture": false,
+          "note": "সংক্ষিপ্ত প্রশ্নকে ৩ বিকল্পের বহুনির্বাচনী করা হয়েছে"
+        },
+        {
+          "key": "s8-2",
+          "text": "নবান্ন উৎসব হয় কোন ঋতুতে?",
+          "options": [
+            "শরৎ",
+            "হেমন্ত",
+            "শীত"
+          ],
+          "answer": "হেমন্ত",
+          "marks": 1,
+          "source": "NEW",
+          "sourceRef": null,
+          "bookRef": "পাঠ ২১, পৃষ্ঠা ৪৪",
+          "needsPicture": false,
+          "note": null
+        },
+        {
+          "key": "s8-3",
+          "text": "কালো বিড়ালের পায়ে কে ওষুধ লাগিয়ে দিলেন?",
+          "options": [
+            "মা",
+            "বাবা",
+            "মিলি"
+          ],
+          "answer": "বাবা",
+          "marks": 1,
+          "source": "NEW",
+          "sourceRef": null,
+          "bookRef": "পাঠ ২০, পৃষ্ঠা ৪০–৪২",
+          "needsPicture": false,
+          "note": null
+        },
+        {
+          "key": "s8-4",
+          "text": "‘পহেলা’ শব্দের অর্থ কী?",
+          "options": [
+            "প্রথম",
+            "নতুন",
+            "শেষ"
+          ],
+          "answer": "প্রথম",
+          "marks": 1,
+          "source": "NEW",
+          "sourceRef": null,
+          "bookRef": "পাঠ ২২, পৃষ্ঠা ৪৯",
+          "needsPicture": false,
+          "note": null
+        },
+        {
+          "key": "s8-5",
+          "text": "কাজী নজরুল ইসলাম কোন গ্রামে জন্মগ্রহণ করেন?",
+          "options": [
+            "চুরুলিয়া",
+            "আসানসোল",
+            "ময়মনসিংহ"
+          ],
+          "answer": "চুরুলিয়া",
+          "marks": 1,
+          "source": "NEW",
+          "sourceRef": null,
+          "bookRef": "পাঠ ২৭, পৃষ্ঠা ৫৯",
+          "needsPicture": false,
+          "note": null
+        }
+      ]
+    },
+    {
+      "seq": 9,
+      "syllabusRowSeq": 9,
+      "kind": "WRITTEN",
+      "instructionBn": "বিরামচিহ্ন বসাও",
+      "count": 5,
+      "marksEach": 1,
+      "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        {
+          "key": "s9-1",
+          "text": "বহুদিন আগের কথা",
+          "answer": "বহুদিন আগের কথা।",
+          "marks": 1,
+          "source": "NEW",
+          "sourceRef": null,
+          "bookRef": "পাঠ ২৫, পৃষ্ঠা ৫৫ (বিরাম চিহ্ন বসাই)",
+          "needsPicture": false,
+          "note": null
+        },
+        {
+          "key": "s9-2",
+          "text": "সবাই বলল আপনি কেন এ কাজ করবেন",
+          "answer": "সবাই বলল, আপনি কেন এ কাজ করবেন?",
+          "marks": 1,
+          "source": "NEW",
+          "sourceRef": null,
+          "bookRef": "পাঠ ২৫, পৃষ্ঠা ৫৫ (বিরাম চিহ্ন বসাই)",
+          "needsPicture": false,
+          "note": null
+        },
+        {
+          "key": "s9-3",
+          "text": "সবাই বুঝল একসাথে করলে কাজ সহজ হয়",
+          "answer": "সবাই বুঝল, একসাথে করলে কাজ সহজ হয়।",
+          "marks": 1,
+          "source": "NEW",
+          "sourceRef": null,
+          "bookRef": "পাঠ ২৫, পৃষ্ঠা ৫৫ (বিরাম চিহ্ন বসাই)",
+          "needsPicture": false,
+          "note": null
+        },
+        {
+          "key": "s9-4",
+          "text": "দুজন কী খুশি",
+          "answer": "দুজন কী খুশি!",
+          "marks": 1,
+          "source": "NEW",
+          "sourceRef": null,
+          "bookRef": "পাঠ ২০, পৃষ্ঠা ৪০",
+          "needsPicture": false,
+          "note": null
+        },
+        {
+          "key": "s9-5",
+          "text": "কালো বিড়াল খুঁড়িয়ে খুঁড়িয়ে হাঁটছে কেন",
+          "answer": "কালো বিড়াল খুঁড়িয়ে খুঁড়িয়ে হাঁটছে কেন?",
+          "marks": 1,
+          "source": "NEW",
+          "sourceRef": null,
+          "bookRef": "পাঠ ২০, পৃষ্ঠা ৪০",
+          "needsPicture": false,
+          "note": null
+        }
+      ]
+    },
+    {
+      "seq": 10,
+      "syllabusRowSeq": 10,
+      "kind": "WRITTEN",
+      "instructionBn": "সংক্ষিপ্ত প্রশ্নের উত্তর লেখ",
+      "count": 6,
+      "marksEach": 2,
+      "total": 12,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        {
+          "key": "s10-1",
+          "text": "বর্ষাকালে কী কী ফুল ফোটে?",
+          "answer": "বর্ষাকালে কদম ও দোলনচাঁপা ফোটে।",
+          "marks": 2,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ঘ(১)",
+          "bookRef": "পাঠ ২১, পৃষ্ঠা ৪৩",
+          "needsPicture": false,
+          "note": null
+        },
+        {
+          "key": "s10-2",
+          "text": "‘আমাদের ছোটো নদী’ কবিতাটি কে লিখেছেন?",
+          "answer": "‘আমাদের ছোটো নদী’ কবিতাটি রবীন্দ্রনাথ ঠাকুর লিখেছেন।",
+          "marks": 2,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ঘ(২)",
+          "bookRef": "পাঠ ২৩, পৃষ্ঠা ৫০",
+          "needsPicture": false,
+          "note": "বানান বইয়ের মতো ‘ছোটো’ করা ও উদ্ধৃতিচিহ্ন দেওয়া হয়েছে"
+        },
+        {
+          "key": "s10-3",
+          "text": "হাঁক ছেড়ে রাতে কে ডাকে?",
+          "answer": "হাঁক ছেড়ে রাতে শেয়াল ডাকে।",
+          "marks": 2,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ঘ(৩)",
+          "bookRef": "পাঠ ২৩, পৃষ্ঠা ৫০",
+          "needsPicture": false,
+          "note": null
+        },
+        {
+          "key": "s10-4",
+          "text": "কী করলে শত্রুরা শহরে আসতে পারবে না?",
+          "answer": "শহরের চারপাশে পরিখা খুঁড়লে শত্রুরা শহরে আসতে পারবে না।",
+          "marks": 2,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ঘ(৪)",
+          "bookRef": "পাঠ ২৫, পৃষ্ঠা ৫৪",
+          "needsPicture": false,
+          "note": "বানান ঠিক করা হয়েছে (কি → কী)"
+        },
+        {
+          "key": "s10-5",
+          "text": "দুখু মিয়া নাম কেন রাখা হয়েছিল?",
+          "answer": "অনেক দুঃখকষ্টের মাঝে তাঁর জন্ম হয়েছিল বলে পরিবারের লোকজন তাঁকে দুখু মিয়া বলে ডাকত।",
+          "marks": 2,
+          "source": "MP2026",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ঘ(৫)",
+          "bookRef": "পাঠ ২৭, পৃষ্ঠা ৫৮",
+          "needsPicture": false,
+          "note": null
+        },
+        {
+          "key": "s10-6",
+          "text": "‘বিড়াল ছানা’ গল্পের দুই বোনের নাম কী?",
+          "answer": "‘বিড়াল ছানা’ গল্পের দুই বোনের নাম ঝিলি ও মিলি।",
+          "marks": 2,
+          "source": "MP_OTHER",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৮(ক)",
+          "bookRef": "পাঠ ২০, পৃষ্ঠা ৪০",
+          "needsPicture": false,
+          "note": null
+        }
+      ]
+    },
+    {
+      "seq": 11,
+      "syllabusRowSeq": 11,
+      "kind": "WRITTEN",
+      "instructionBn": "বড় প্রশ্নের উত্তর লেখ",
+      "count": 4,
+      "marksEach": 5,
+      "total": 20,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        {
+          "key": "s11-1",
+          "text": "আমিনদের গ্রাম এক রকম, তিথিদের শহর আরেক রকম — কথাটি ব্যাখ্যা কর।",
+          "answer": "উত্তরের মূল কথা: শহরে অনেক গাড়ি ও মানুষ, নানা রকম দোকান; মানুষ বড়ো দালানে অনেক পরিবার একসাথে থাকে; চিড়িয়াখানা ও শিশুপার্ক আছে। গ্রামে বাড়ির পাশে পুকুর ও হাঁস; কুমোরপাড়ায় মাটির হাঁড়ি-পাতিল ও পুতুল বানানো হয়; অনেক গাছ ও পাখি; রাস্তার দুপাশে ফসলের খেত, চাষি চাষ করে। তাই গ্রাম ও শহর দুই রকম।",
+          "marks": 5,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ঙ(২)",
+          "bookRef": "পাঠ ১৮, পৃষ্ঠা ৩৫–৩৬",
+          "needsPicture": false,
+          "note": "বাক্যটি বইয়ের ছাপা রূপের সাথে মেলানো হয়েছে (‘আমিনের গ্রাম একরকম…’ → ‘আমিনদের গ্রাম এক রকম…’)"
+        },
+        {
+          "key": "s11-2",
+          "text": "গ্রীষ্মকাল ও বর্ষাকালের চারটি পার্থক্য লেখ।",
+          "answer": "১. গ্রীষ্ম বৈশাখ ও জ্যৈষ্ঠ মাস নিয়ে; বর্ষা আষাঢ় ও শ্রাবণ মাস নিয়ে। ২. গ্রীষ্মে খুব গরম পড়ে; বর্ষায় ঝরঝর করে বৃষ্টি ঝরে, আকাশে কালো মেঘ জমে। ৩. গ্রীষ্মে খাল-বিল শুকিয়ে যায়; বর্ষায় খাল-বিল পানিতে ভরে যায়। ৪. গ্রীষ্মে আম, জাম, কাঁঠাল পাকে ও কালবৈশাখি ঝড় হয়; বর্ষায় কদম ও দোলনচাঁপা ফোটে, ব্যাঙ ডাকে।",
+          "marks": 5,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ঙ(৪)",
+          "bookRef": "পাঠ ২১, পৃষ্ঠা ৪৩",
+          "needsPicture": false,
+          "note": "বানান ঠিক করা হয়েছে (লিখ → লেখ)"
+        },
+        {
+          "key": "s11-3",
+          "text": "মহানবি (স) সবাইকে কী খুঁড়তে বললেন এবং কেন? তিনি নিজে কী করলেন? এ গল্প থেকে আমরা কী শিখলাম?",
+          "answer": "উত্তরের মূল কথা: শত্রুরা মদিনায় হামলা করবে শুনে মহানবি (স) শহরের চারপাশে পরিখা খুঁড়তে বললেন, যাতে শত্রুরা শহরে আসতে না পারে। দশজন করে দল গড়া হলো; একটি দলে নয় জন দেখে তিনি সেই দলে যোগ দিলেন এবং নিজের মাথায় মাটির ঝুড়ি তুলে নিলেন। কয়েক দিনের মধ্যে পরিখা খোঁড়া শেষ হলো। শিক্ষা: সবাই মিলে কাজ করলে কোনো কাজই কঠিন নয়; একসাথে করলে কাজ সহজ হয়।",
+          "marks": 5,
+          "source": "MP_OTHER_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৫(ক)",
+          "bookRef": "পাঠ ২৫, পৃষ্ঠা ৫৪–৫৫",
+          "needsPicture": false,
+          "note": "২ নম্বরের প্রশ্নকে ৫ নম্বরের করতে ‘তিনি নিজে কী করলেন’ ও ‘কী শিখলাম’ যোগ করা হয়েছে"
+        },
+        {
+          "key": "s11-4",
+          "text": "কালো বিড়ালটির কী হয়েছিল? তার পা কীভাবে ঠিক হলো? পশুপাখির সাথে আমরা কেমন আচরণ করব?",
+          "answer": "উত্তরের মূল কথা: একদিন কালো বিড়ালটি হঠাৎ উধাও হয়ে যায়; দুদিন পর সন্ধ্যায় ফিরে আসে, খুঁড়িয়ে খুঁড়িয়ে হাঁটছিল — পায়ে ক্ষত, হয়তো কেউ মেরেছে। বাবা ওষুধ লাগিয়ে দেন, কয়েক দিন পর পা ঠিক হয়ে যায়। পশুপাখিকে মারব না, আদর করব, খেতে দেব, অসুস্থ হলে যত্ন নেব।",
+          "marks": 5,
+          "source": "MP_OTHER_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৫ · প্রশ্ন ৫(খ)",
+          "bookRef": "পাঠ ২০, পৃষ্ঠা ৪০–৪১",
+          "needsPicture": false,
+          "note": "‘কালো বিড়ালের পা কীভাবে ঠিক হলো?’ প্রশ্নের সাথে বইয়ের ‘বলি’ অংশের দুটি প্রশ্ন যোগ করে ৫ নম্বরের করা হয়েছে"
+        }
+      ]
+    },
+    {
+      "seq": 12,
+      "syllabusRowSeq": 12,
+      "kind": "WRITTEN",
+      "instructionBn": "ছক পূরণ কর",
+      "count": 1,
+      "marksEach": 5,
+      "total": 5,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": "| ঋতু | মাস |\n|---|---|\n| গ্রীষ্ম | বৈশাখ ও জ্যৈষ্ঠ |\n| বর্ষা | (ক) ________ |\n| শরৎ | (খ) ________ |\n| (গ) ________ | কার্তিক ও অগ্রহায়ণ |\n| শীত | (ঘ) ________ |\n| (ঙ) ________ | ফাল্গুন ও চৈত্র |",
+      "matchRight": null,
+      "items": [
+        {
+          "key": "s12-1",
+          "text": "ঋতু ও মাসের ছকের খালি ঘরগুলো পূরণ কর।",
+          "answer": "(ক) আষাঢ় ও শ্রাবণ (খ) ভাদ্র ও আশ্বিন (গ) হেমন্ত (ঘ) পৌষ ও মাঘ (ঙ) বসন্ত — প্রতিটি ঘর ১ নম্বর",
+          "marks": 5,
+          "source": "NEW",
+          "sourceRef": null,
+          "bookRef": "পাঠ ২১, পৃষ্ঠা ৪৩–৪৬ (মাস ও ঋতুর নাম লিখি)",
+          "needsPicture": false,
+          "note": null
+        }
+      ]
+    },
+    {
+      "seq": 13,
+      "syllabusRowSeq": 13,
+      "kind": "WRITTEN",
+      "instructionBn": "নিচের প্রশ্নগুলোর সাহায্যে অনুচ্ছেদ লেখ",
+      "count": 1,
+      "marksEach": 6,
+      "total": 6,
+      "choiceNoteBn": null,
+      "splitMarks": false,
+      "stimulusMd": null,
+      "matchRight": null,
+      "items": [
+        {
+          "key": "s13-1",
+          "text": "গ্রাম ও শহর\n১. গ্রামে কী কী দেখা যায়?\n২. শহরে কী কী দেখা যায়?\n৩. গ্রামের মানুষ কী কাজ করে?\n৪. গ্রাম ও শহরের একটি অমিল কী?\n৫. তোমার কোনটি বেশি ভালো লাগে এবং কেন?",
+          "answer": "নমুনা কথা: গ্রামে গাছপালা, পুকুর, ফসলের খেত, পাখি; শহরে বড়ো দালান, অনেক গাড়ি ও মানুষ, দোকান, চিড়িয়াখানা, শিশুপার্ক; গ্রামের মানুষ চাষ করে, কুমোর মাটির জিনিস বানায়; গ্রামের পরিবেশ খোলামেলা, শহরে ভিড় বেশি; নিজের পছন্দ ও কারণ। পাঁচটি প্রশ্নের উত্তর মিলিয়ে গোছানো অনুচ্ছেদ।",
+          "marks": 6,
+          "source": "MP2026_ADAPTED",
+          "sourceRef": "মোহাম্মদপুর বার্ষিক ২০২৬ · প্রশ্ন ঝ",
+          "bookRef": "পাঠ ১৮",
+          "needsPicture": false,
+          "note": "শুধু শিরোনাম ছিল; সিলেবাস অনুযায়ী ৫টি নির্দেশক প্রশ্ন যোগ করা হয়েছে; ১০ নম্বরের জায়গায় ৬"
+        }
+      ]
+    }
+  ],
+  "authorNotes": "Scope: lessons 18–29 of the 2026 book. The Mohammadpur 2026 final is the same book, so much of it was reusable: all 10 word meanings, 5 of 8 sentence-making words, the 4 conjuncts, 5 short questions, 2 long questions and the paragraph title. MP items from lesson 15 (কাজের আনন্দ: 'দল বেঁধে চলে', 'আহরণ', 'তৃণলতা') and the poem-based long question ('ছোট নদী সম্পর্কে চারটি বাক্য') were left out: lesson 15 is outside the syllabus and long questions must come from stories. The MP Final 2025 paper is also the same book (lessons 18+), so it was used as the second source. No Mohammadpur paper has an MCQ or punctuation section in Bangla, so those are NEW (the punctuation items are the book's own exercise on p.55). Doubts: (1) Row 3 'যুক্তবর্ণ ভেঙে শব্দ লেখ' was read as 'break the conjunct into its letters and write one word with it' — please confirm. (2) Row 5 words with the vowel signs removed have a single intended answer, but a child may find another real word; accept any correct word. (3) Row 11 item 2 (ছয় ঋতু) is a prose lesson but not a story in the narrow sense; swap for an item from 'দুখু মিয়ার জীবন' or 'নববর্ষ' if the school reads 'গল্প' strictly. (4) Duration '৩ ঘণ্টা' is copied from the MP paper; the syllabus does not give one."
+}

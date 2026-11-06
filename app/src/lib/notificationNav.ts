@@ -55,6 +55,11 @@ export function notificationTarget(
     case "REVIEW_ASSIGNED":
       // OT-2: the objective-list review shares this review-duty kind; its rows carry masteryReviewId.
       if (refs?.masteryReviewId) return { tab: "MasteryTab", screen: "MasteryReview", params: { reviewId: refs.masteryReviewId } };
+      // D-#1032: a draft exam paper to review ("list" = several papers in one notice).
+      if (refs?.examPaperId)
+        return refs.examPaperId === "list"
+          ? { tab: "ExamPapersTab", screen: "ExamPapersHome" }
+          : { tab: "ExamPapersTab", screen: "ExamPaperDraft", params: { paperId: refs.examPaperId } };
       return refs?.reviewAssignmentId && refs?.artifactId
         ? {
             tab: "ReviewTab",
