@@ -357,6 +357,8 @@ export interface StaffMistakeShape {
   explainedAt: Date | null;
   explainDueAt: Date;
   autoCounted: boolean;
+  /** D-#1016: recorded quietly — the person was not told, so there is no reason to wait for. */
+  quiet: boolean;
   decidedByName: string | null;
   decidedAt: Date | null;
   decisionNote: string | null;
@@ -428,6 +430,8 @@ export async function listStaffMistakes(opts: {
     explainedAt: r.explainedAt ?? null,
     explainDueAt: r.explainDueAt,
     autoCounted: !!r.autoCounted,
+    // D-#1016: counted on its own BEFORE the explain deadline = the person was never asked.
+    quiet: !!r.autoCounted && !r.explainedAt && !!r.decidedAt && new Date(r.decidedAt) < new Date(r.explainDueAt),
     decidedByName: r.decidedBy ? (name.get(String(r.decidedBy)) ?? null) : null,
     decidedAt: r.decidedAt ?? null,
     decisionNote: r.decisionNote ?? null,

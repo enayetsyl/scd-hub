@@ -69,6 +69,8 @@ describe("D-#1016 — nobody is told unless they hold staff_mistakes:view_own", 
     const rows = await StaffMistake.find({}).lean();
     expect(rows).toHaveLength(5);
     expect(rows.every((r) => r.status === "COUNTED" && r.autoCounted)).toBe(true);
+    // The list marks them quiet (never asked), not "no explanation in time".
+    expect((await listStaffMistakes({ now: at("11:00") })).every((r) => r.quiet)).toBe(true);
     expect(await kinds("STAFF_MISTAKE_EXPLAIN")).toHaveLength(0);
     expect(await StaffWarning.countDocuments()).toBe(0);
     expect(await Notification.countDocuments({ kind: { $in: ["STAFF_MISTAKE_WARNING", "STAFF_MISTAKE_STEP"] } })).toBe(0);
@@ -79,6 +81,8 @@ describe("D-#1016 — nobody is told unless they hold staff_mistakes:view_own", 
     await record(teacher, await user("Akmol", "OFFICE"), "s1");
     expect((await StaffMistake.findOne({}).lean())!.status).toBe("EXPLANATION_DUE");
     expect(await kinds("STAFF_MISTAKE_EXPLAIN")).toHaveLength(1);
+    // Left to run past its deadline it counts on its own — that is not quiet.
+    expect((await listStaffMistakes({ now: at("18:00", "2026-11-09") })).map((r) => [r.status, r.quiet])).toEqual([["COUNTED", false]]);
   });
 
   it("a move onto a quiet person is the decision: counted, and neither side is told", async () => {

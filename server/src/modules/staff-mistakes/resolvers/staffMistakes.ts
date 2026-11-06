@@ -190,6 +190,7 @@ const StaffMistakeRef = builder.objectRef<Row>("StaffMistake").implement({
     explainedAt: t.string({ nullable: true, resolve: (r) => iso(r.explainedAt) }),
     explainDueAt: t.string({ resolve: (r) => new Date(r.explainDueAt).toISOString() }),
     autoCounted: t.exposeBoolean("autoCounted"),
+    quiet: t.exposeBoolean("quiet"),
     decidedByName: t.string({ nullable: true, resolve: (r) => r.decidedByName }),
     decidedAt: t.string({ nullable: true, resolve: (r) => iso(r.decidedAt) }),
     decisionNote: t.string({ nullable: true, resolve: (r) => r.decisionNote }),

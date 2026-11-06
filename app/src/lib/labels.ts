@@ -8308,6 +8308,7 @@ const STR_BN = {
   smrStExcused: "কারণ গ্রহণযোগ্য",
   smrStMoved: "দায় সরানো",
   smrAutoCounted: "সময়ের মধ্যে ব্যাখ্যা না দেওয়ায় নিজে থেকে গণ্য হয়েছে",
+  smrQuiet: "কর্মীকে জানানো হয়নি — সরাসরি তালিকায় উঠেছে",
   smrDueBy: "{when}-এর মধ্যে ব্যাখ্যা দিন — না দিলে গণ্য হবে",
   smrExplain: "ব্যাখ্যা দিন",
   smrChangeExplain: "ব্যাখ্যা বদলান",
@@ -8522,7 +8523,7 @@ const STR_BN = {
   smxSaved: "নিয়ম সংরক্ষিত হয়েছে",
   smxBadNumber: "সংখ্যাগুলো ঠিকভাবে লিখুন",
   smrCardMineHelp: "যে কাজে ভুল ধরা পড়েছে, তার কারণ জানান",
-  smrCardReviewHelp: "কর্মীদের দেওয়া কারণ গ্রহণ, গণ্য বা অন্যের কাছে সরান",
+  smrCardReviewHelp: "দিনের ভুলের তালিকা; ভুল না হলে বাদ দিন বা অন্যের কাছে সরান",
   // In-app help (prd-help-centre, D-#968).
   hcNav: "সাহায্য ও নির্দেশিকা",
   hcGuideTitle: "নির্দেশিকা",
@@ -15486,6 +15487,7 @@ const STR_EN: StrTable = {
   smrStExcused: "Reason accepted",
   smrStMoved: "Moved",
   smrAutoCounted: "Counted automatically — no explanation in time",
+  smrQuiet: "Not told to the staff member — recorded straight away",
   smrDueBy: "Explain by {when} — otherwise it counts",
   smrExplain: "Explain",
   smrChangeExplain: "Change explanation",
@@ -15700,7 +15702,7 @@ const STR_EN: StrTable = {
   smxSaved: "Rules saved",
   smxBadNumber: "Check the numbers",
   smrCardMineHelp: "Give the reason for work where a mistake was caught",
-  smrCardReviewHelp: "Accept, count or move the reasons staff gave",
+  smrCardReviewHelp: "The day's list of mistakes; drop one that was not a mistake, or move it",
   // In-app help (prd-help-centre, D-#968).
   hcNav: "Help & guides",
   hcGuideTitle: "Guide",

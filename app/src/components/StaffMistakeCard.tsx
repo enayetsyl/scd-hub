@@ -120,12 +120,15 @@ export function StaffMistakeCard({
             {STR.smrReason}: {reasonLabel(m.kind, m.reasonCode)}
             {m.reasonText ? ` — "${m.reasonText}"` : ""}
           </Body>
+        ) : m.quiet ? (
+          // D-#1016: recorded quietly — the person was never asked, so no "no reason yet".
+          <Muted>{STR.smrQuiet}</Muted>
         ) : m.status === "EXPLANATION_DUE" ? (
           <Muted>{STR.smrDueBy.replace("{when}", dhakaWhen(m.explainDueAt))}</Muted>
         ) : (
           <Muted>{STR.smrNoReasonYet}</Muted>
         )}
-        {m.autoCounted ? <Muted>{STR.smrAutoCounted}</Muted> : null}
+        {m.autoCounted && !m.quiet ? <Muted>{STR.smrAutoCounted}</Muted> : null}
         {m.movedToName ? <Muted>{STR.smrMovedTo.replace("{name}", m.movedToName)}</Muted> : null}
         {m.decidedByName ? (
           <Muted>
