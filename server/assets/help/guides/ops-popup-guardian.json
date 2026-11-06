@@ -1,0 +1,88 @@
+{
+  "id": "ops-popup-guardian",
+  "category": "messages_popups",
+  "order": 5,
+  "draft": true,
+  "title": "অভিভাবকদের পপ-আপ বার্তা পাঠানো",
+  "intro": "অভিভাবকেরা অ্যাপ খুললেই পপ-আপ বার্তাটি দেখেন। যাঁদের অ্যাপ লগইন নেই, পাঠানোর পরে রিপোর্টে তাঁদের হোয়াটসঅ্যাপ তালিকা পাবেন।",
+  "keywords": [
+    "পপ-আপ",
+    "অভিভাবক",
+    "পপ-আপ বার্তা",
+    "নোটিশ",
+    "সমাবেশ"
+  ],
+  "perms": [
+    "popup_notice:send_guardian"
+  ],
+  "screens": [
+    "PopupNoticesTab/PopupNoticeList",
+    "PopupNoticesTab/PopupCompose"
+  ],
+  "goTo": {
+    "route": "PopupNoticesTab",
+    "screen": "PopupNoticeList"
+  },
+  "rows": [
+    {
+      "heading": "নতুন বার্তা শুরু",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "মেনু থেকে পপ-আপ বার্তা খুলে <b>＋ নতুন পপ-আপ বার্তা</b> চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "প্রাপক বাছাই",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "সব পরিবারকে দিতে <b>সব অভিভাবক</b> চাপুন; কোনো শ্রেণির জন্য সেই দলটি বেছে নিন।",
+          "box": null
+        },
+        {
+          "text": "<b>পরের ধাপ →</b> চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "বার্তা লেখা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "<b>শিরোনাম</b> ঘরে ছোট করে বিষয়টি লিখুন, যেমন অভিভাবক সমাবেশ।",
+          "box": null
+        },
+        {
+          "text": "<b>বার্তা</b> ঘরে পুরো কথা লিখুন।",
+          "box": null
+        },
+        {
+          "text": "প্রত্যেক পরিবারের বার্তায় তার সন্তানের নাম বসাতে <b>＋ {সন্তান}</b> চাপুন।",
+          "box": null
+        },
+        {
+          "text": "ওপরের <b>৫ · পাঠান</b> ধাপে চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "পাঠানো",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "কতজন পাবেন মিলিয়ে নিয়ে <b>পাঠান</b> চাপুন, তারপর নিশ্চিত করুন।",
+          "box": null
+        }
+      ]
+    }
+  ]
+}

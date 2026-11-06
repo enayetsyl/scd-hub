@@ -1,0 +1,48 @@
+{
+  "id": "ops-report-hw-declare",
+  "category": "reports",
+  "order": 4,
+  "draft": true,
+  "title": "বাড়ির কাজ ঘোষণা বাকির রিপোর্ট দেখা",
+  "intro": "রুটিনে ক্লাস ছিল কিন্তু সেদিন সেই বিষয়ের বাড়ির কাজ ঘোষণা হয়নি, এমন শাখা ও বিষয়গুলো এখানে থাকে।",
+  "keywords": [
+    "বাড়ির কাজ",
+    "ঘোষণা বাকি",
+    "রিপোর্ট",
+    "বাকি"
+  ],
+  "perms": [
+    "reports:hw_declare_pending"
+  ],
+  "screens": [
+    "ReportsTab/HwDeclarePending"
+  ],
+  "goTo": {
+    "route": "ReportsTab",
+    "screen": "HwDeclarePending"
+  },
+  "rows": [
+    {
+      "heading": "রিপোর্ট খোলা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "মেনুর রিপোর্ট দল থেকে <b>বাড়ির কাজ ঘোষণা বাকি</b> চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "যা দেখবেন",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "প্রতিটি সারিতে দিন, শাখা আর বিষয় থাকে, আর <b>দায়িত্বে</b> কে আছেন তা লেখা থাকে। সব ঠিক থাকলে “এই ফিল্টারে কিছু নেই ✓” দেখাবে।",
+          "box": null
+        }
+      ]
+    }
+  ]
+}

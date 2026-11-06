@@ -1,0 +1,63 @@
+{
+  "id": "ops-person-activity",
+  "category": "admin_access",
+  "order": 7,
+  "draft": true,
+  "title": "একজনের কাজের ইতিহাস দেখা",
+  "intro": "একজন কর্মী কোন দিন কী কী করেছেন — অডিট লগের ঘটনা, বাড়ির কাজ ও অ্যাসাইনমেন্টের ধাপ — সব এক জায়গায় দেখা যায়।",
+  "keywords": [
+    "কার্যক্রম",
+    "কাজের ইতিহাস",
+    "একজনের কাজ",
+    "টাইমলাইন"
+  ],
+  "perms": [
+    "audit_log:view_activity"
+  ],
+  "screens": [
+    "AdminTab/PersonActivity"
+  ],
+  "goTo": {
+    "route": "AdminTab",
+    "screen": "PersonActivity"
+  },
+  "rows": [
+    {
+      "heading": "পাতাটি খোলা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "মেনু থেকে প্রশাসন খুলে <b>কার্যক্রম</b> চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "ব্যক্তি বাছাই",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "<b>নাম দিয়ে খুঁজুন</b> ঘরে নাম লিখে ফল থেকে নামে চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "সময় বাছাই",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "কত দিনের কাজ দেখবেন বেছে নিন, যেমন <b>৩০ দিন</b>।",
+          "box": null
+        },
+        {
+          "text": "অন্য কারও কাজ দেখতে <b>অন্য কাউকে দেখুন</b> চাপুন।",
+          "box": null
+        }
+      ]
+    }
+  ]
+}

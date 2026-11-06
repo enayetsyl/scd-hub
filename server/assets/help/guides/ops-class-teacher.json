@@ -1,0 +1,64 @@
+{
+  "id": "ops-class-teacher",
+  "category": "school_operations",
+  "order": 7,
+  "draft": true,
+  "title": "শ্রেণি শিক্ষক নির্ধারণ করা",
+  "intro": "প্রতিটি শাখার একজন শ্রেণি শিক্ষক থাকেন; তিনি শাখার উপস্থিতি, ছুটি ও প্রতিদিনের সমন্বয় দেখেন। দরকার হলে সহকারী শিক্ষকও দেওয়া যায়।",
+  "keywords": [
+    "শ্রেণি শিক্ষক",
+    "শাখা",
+    "নির্ধারণ",
+    "সহকারী শিক্ষক",
+    "বরাদ্দ"
+  ],
+  "perms": [
+    "teaching_assignments:assign_class_teacher"
+  ],
+  "screens": [
+    "AdminTab/AssignClassTeacher"
+  ],
+  "goTo": {
+    "route": "AdminTab",
+    "screen": "AssignClassTeacher"
+  },
+  "rows": [
+    {
+      "heading": "পাতাটি খোলা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "মেনু থেকে প্রশাসন খুলে <b>শ্রেণি শিক্ষক নির্ধারণ</b> চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "শাখা বাছাই",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "তালিকায় যে শাখার শ্রেণি শিক্ষক নেই সেখানে নির্ধারিত হয়নি লেখা থাকে। শাখাটিতে চাপুন, যেমন <b>শ্রেণি ৫ — ক</b>।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "শিক্ষক বেছে নির্ধারণ",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "<b>শিক্ষক</b> তালিকা থেকে শিক্ষকের নাম বেছে নিন।",
+          "box": null
+        },
+        {
+          "text": "<b>নির্ধারণ করুন</b> চাপুন। আগের শিক্ষক থাকলে তাঁর জায়গায় নতুনজন বসবেন।",
+          "box": null
+        }
+      ]
+    }
+  ]
+}

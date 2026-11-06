@@ -1,0 +1,57 @@
+{
+  "id": "ops-archive-box",
+  "category": "school_operations",
+  "order": 5,
+  "draft": true,
+  "title": "খাতা রাখার বাক্স তৈরি করা",
+  "intro": "পরীক্ষার খাতা যে বাক্সে রাখা হবে, আগে অ্যাপে সেই বাক্সটি তৈরি করুন। অ্যাপ বাক্সের একটি কোড দেয়; সেটি বাক্সের গায়ে লিখে রাখুন।",
+  "keywords": [
+    "আর্কাইভ",
+    "খাতা",
+    "বাক্স",
+    "খাতা আর্কাইভ",
+    "সংরক্ষণ"
+  ],
+  "perms": [
+    "archive:settings"
+  ],
+  "screens": [
+    "ClassTestTab/ArchiveHome"
+  ],
+  "goTo": {
+    "route": "ClassTestTab",
+    "screen": "ArchiveHome"
+  },
+  "rows": [
+    {
+      "heading": "আর্কাইভ খোলা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "ক্লাস টেস্টের পাতা থেকে <b>খাতা আর্কাইভ</b> চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "বাক্সের তথ্য",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "<b>বাক্সের নাম</b> ঘরে নাম দিন, যেমন ৫ম শ্রেণি · ২০২৬।",
+          "box": null
+        },
+        {
+          "text": "<b>অবস্থান</b> ঘরে বাক্সটি কোথায় থাকবে লিখুন, যেমন অফিস আলমারি, তাক ২।",
+          "box": null
+        },
+        {
+          "text": "<b>বাক্স তৈরি করুন</b> চাপুন।",
+          "box": null
+        }
+      ]
+    }
+  ]
+}

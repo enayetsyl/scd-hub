@@ -1,0 +1,88 @@
+{
+  "id": "ops-popup-staff",
+  "category": "messages_popups",
+  "order": 4,
+  "draft": true,
+  "title": "কর্মীদের পপ-আপ বার্তা পাঠানো",
+  "intro": "পপ-আপ বার্তা প্রাপক অ্যাপ খুললেই পর্দার মাঝখানে দেখেন। কে দেখেছেন, পড়েছেন বা উত্তর দিয়েছেন তা পরে রিপোর্টে দেখা যায়।",
+  "keywords": [
+    "পপ-আপ",
+    "পপ-আপ বার্তা",
+    "কর্মী",
+    "শিক্ষক",
+    "নোটিশ"
+  ],
+  "perms": [
+    "popup_notice:send_staff"
+  ],
+  "screens": [
+    "PopupNoticesTab/PopupNoticeList",
+    "PopupNoticesTab/PopupCompose"
+  ],
+  "goTo": {
+    "route": "PopupNoticesTab",
+    "screen": "PopupNoticeList"
+  },
+  "rows": [
+    {
+      "heading": "নতুন বার্তা শুরু",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "মেনু থেকে পপ-আপ বার্তা খুলে <b>＋ নতুন পপ-আপ বার্তা</b> চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "প্রাপক বাছাই",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "সবাইকে একসাথে দিতে <b>সব শিক্ষক</b> এর মতো কোনো দলে চাপুন।",
+          "box": null
+        },
+        {
+          "text": "নির্দিষ্ট কয়েকজনকে দিতে <b>নাম বা আইডি লিখুন…</b> ঘরে নাম লিখে খুঁজুন, তারপর নামের পাশে যোগ করুন চাপুন।",
+          "box": null
+        },
+        {
+          "text": "<b>পরের ধাপ →</b> চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "বার্তা লেখা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "<b>শিরোনাম</b> ঘরে ছোট করে বিষয়টি লিখুন।",
+          "box": null
+        },
+        {
+          "text": "<b>বার্তা</b> ঘরে পুরো কথা লিখুন।",
+          "box": null
+        },
+        {
+          "text": "আচরণ ও সময় আগে থেকেই ঠিক করা থাকে। বদলাতে না চাইলে ওপরের <b>৫ · পাঠান</b> ধাপে চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "পাঠানো",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "সারাংশ মিলিয়ে <b>পাঠান</b> চাপুন, তারপর নিশ্চিত করুন।",
+          "box": null
+        }
+      ]
+    }
+  ]
+}

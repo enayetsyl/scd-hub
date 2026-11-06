@@ -1,0 +1,88 @@
+{
+  "id": "ops-print-request",
+  "category": "printing",
+  "order": 2,
+  "draft": true,
+  "title": "প্রিন্টের অনুরোধ পাঠানো",
+  "intro": "ক্লাসের কাগজ, বাড়ির কাজ বা নোটিশ ছাপাতে অফিসে অনুরোধ পাঠান। অফিস ছাপিয়ে দিলে আপনার অনুরোধের অবস্থা বদলে যাবে।",
+  "keywords": [
+    "প্রিন্ট",
+    "প্রিন্টের অনুরোধ",
+    "ছাপা",
+    "কপি",
+    "অফিস"
+  ],
+  "perms": [
+    "printing:create"
+  ],
+  "screens": [
+    "PrintTab/NewPrintRequest",
+    "PrintTab/PrintHome"
+  ],
+  "goTo": {
+    "route": "PrintTab",
+    "screen": "NewPrintRequest"
+  },
+  "rows": [
+    {
+      "heading": "অনুরোধ শুরু",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "মেনু থেকে প্রিন্ট খুলে <b>➕ নতুন অনুরোধ</b> চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "কী ছাপাবেন",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "<b>শিরোনাম</b> ঘরে কাগজটির নাম লিখুন, যেমন গণিত অনুশীলনী — দশমিক।",
+          "box": null
+        },
+        {
+          "text": "কীসের জন্য ছাপাবেন তা বেছে নিন, যেমন <b>Classwork</b>।",
+          "box": null
+        },
+        {
+          "text": "শ্রেণি বেছে নিন, যেমন <b>শ্রেণি ৩</b>; তারপর শাখা ও বিষয় বেছে নিন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "ফাইল ও ছাপার ধরন",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "<b>ফাইল যোগ করুন</b> চেপে ফাইল দিন; ফাইল অনলাইনে থাকলে লিংক বেছে লিংকটি দিন।",
+          "box": null
+        },
+        {
+          "text": "<b>Black & white</b> না Colour, আর এক পৃষ্ঠায় (Single side) না দুই পৃষ্ঠায় (Both sides) ছাপা হবে তা বেছে নিন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "কপি, তারিখ ও পাঠানো",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "কপি সংখ্যা লিখুন, তারপর <b>Choose a date</b> চেপে যেদিন কাগজটি লাগবে সেই তারিখ দিন।",
+          "box": null
+        },
+        {
+          "text": "<b>প্রিন্টে পাঠান</b> চাপুন। অফিস ছাপালে আমার অনুরোধ তালিকায় অবস্থা বদলে যাবে।",
+          "box": null
+        }
+      ]
+    }
+  ]
+}

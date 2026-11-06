@@ -1,0 +1,57 @@
+{
+  "id": "ops-ai-key",
+  "category": "admin_access",
+  "order": 9,
+  "draft": true,
+  "title": "এআই (Gemini) কী ও মডেল বদলানো",
+  "intro": "কণ্ঠে কাজ, মাসিক মন্তব্য আর পর্যবেক্ষণ রোটা এই কী দিয়ে চলে। কী-টি টাকার সঙ্গে জড়িত, তাই শুধু প্রধান শিক্ষক এটি বদলাতে পারেন।",
+  "keywords": [
+    "এআই",
+    "Gemini",
+    "কী",
+    "মডেল",
+    "API key"
+  ],
+  "perms": [
+    "system_health:ai_key"
+  ],
+  "screens": [
+    "AdminTab/AiSettings"
+  ],
+  "goTo": {
+    "route": "AdminTab",
+    "screen": "AiSettings"
+  },
+  "rows": [
+    {
+      "heading": "পাতাটি খোলা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "মেনু থেকে প্রশাসন খুলে <b>এআই (Gemini) কী ও মডেল</b> চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "কী ও মডেল দেওয়া",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "<b>নতুন কী</b> ঘরে Google AI Studio থেকে কপি করা কী বসান।",
+          "box": null
+        },
+        {
+          "text": "<b>মডেল</b> ঘর খালি রাখলে সাধারণ মডেল চলবে; পুরোনো মডেল বন্ধ হয়ে গেলে এখানে নতুন নাম লিখুন।",
+          "box": null
+        },
+        {
+          "text": "<b>পরীক্ষা করে সংরক্ষণ করুন</b> চাপুন। কী কাজ করলে তবেই সংরক্ষণ হবে।",
+          "box": null
+        }
+      ]
+    }
+  ]
+}

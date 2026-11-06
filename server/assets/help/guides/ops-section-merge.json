@@ -1,0 +1,64 @@
+{
+  "id": "ops-section-merge",
+  "category": "school_operations",
+  "order": 9,
+  "draft": true,
+  "title": "বালক ও বালিকা শাখা একত্র বা আলাদা করা",
+  "intro": "একই শ্রেণির বালক ও বালিকা শাখা কিছুদিনের জন্য এক শাখায় বসাতে চাইলে এখান থেকে একত্র করুন; পরে আবার আলাদা করা যায়।",
+  "keywords": [
+    "শাখা",
+    "একত্র",
+    "আলাদা",
+    "শাখা বিন্যাস",
+    "সম্মিলিত"
+  ],
+  "perms": [
+    "classes_sections:merge_split"
+  ],
+  "screens": [
+    "AdminTab/SectionConfig"
+  ],
+  "goTo": {
+    "route": "AdminTab",
+    "screen": "SectionConfig"
+  },
+  "rows": [
+    {
+      "heading": "পাতাটি খোলা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "মেনু থেকে প্রশাসন খুলে <b>শাখা বিন্যাস</b> চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "একত্র করা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "<b>একত্রিত শাখার নাম</b> ঘরে নতুন শাখার নাম দিন, যেমন সম্মিলিত।",
+          "box": null
+        },
+        {
+          "text": "<b>শাখা একত্র করুন</b> চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "আবার আলাদা করা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "একত্র করা শাখার পাশে একত্রিত লেখা থাকে। আগের মতো দুই শাখায় ফেরাতে <b>আবার আলাদা করুন</b> চাপুন।",
+          "box": null
+        }
+      ]
+    }
+  ]
+}

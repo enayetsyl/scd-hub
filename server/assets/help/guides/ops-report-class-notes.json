@@ -1,0 +1,53 @@
+{
+  "id": "ops-report-class-notes",
+  "category": "reports",
+  "order": 3,
+  "draft": true,
+  "title": "ক্লাস নোট জমার রিপোর্ট দেখা",
+  "intro": "কোনো দিনে কোন শাখার কোন বিষয়ের ক্লাস নোট প্রকাশ হয়েছে আর কোনটি বাকি, তা শিক্ষকের নামসহ দেখা যায়।",
+  "keywords": [
+    "ক্লাস নোট",
+    "ক্লাস নোট জমা",
+    "বাকি বিষয়",
+    "রিপোর্ট"
+  ],
+  "perms": [
+    "reports:class_note"
+  ],
+  "screens": [
+    "ReportsTab/ClassNoteReport",
+    "RoutineTab/ClassNoteReport"
+  ],
+  "goTo": {
+    "route": "ReportsTab",
+    "screen": "ClassNoteReport"
+  },
+  "rows": [
+    {
+      "heading": "রিপোর্ট খোলা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "মেনুর রিপোর্ট দল থেকে <b>ক্লাস নোট জমা</b> চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "দিন ও অবস্থা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "<b>তারিখ (YYYY-MM-DD)</b> ঘরে দিন লিখুন।",
+          "box": null
+        },
+        {
+          "text": "শুধু যেগুলো বাকি দেখতে <b>অবস্থা</b> থেকে বাকি আছে বেছে নিন।",
+          "box": null
+        }
+      ]
+    }
+  ]
+}

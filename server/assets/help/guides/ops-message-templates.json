@@ -1,0 +1,68 @@
+{
+  "id": "ops-message-templates",
+  "category": "messages_popups",
+  "order": 8,
+  "draft": true,
+  "title": "স্বয়ংক্রিয় বার্তার লেখা বদলানো",
+  "intro": "অ্যাপ নিজে যে বার্তাগুলো পাঠায় (যেমন বাড়ির কাজের রিমাইন্ডার), সেগুলোর শব্দ এখানে বদলানো যায়। শুধু প্রধান শিক্ষক পারেন।",
+  "keywords": [
+    "বার্তা টেমপ্লেট",
+    "টেমপ্লেট",
+    "স্বয়ংক্রিয় বার্তা",
+    "রিমাইন্ডার"
+  ],
+  "perms": [
+    "message_templates:edit"
+  ],
+  "screens": [
+    "AdminTab/MessageTemplates",
+    "AdminTab/MessageTemplateEdit"
+  ],
+  "goTo": {
+    "route": "AdminTab",
+    "screen": "MessageTemplates"
+  },
+  "rows": [
+    {
+      "heading": "টেমপ্লেট খোলা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "মেনু থেকে প্রশাসন খুলে <b>বার্তা টেমপ্লেট</b> চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "কোন বার্তা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "যে বার্তার লেখা বদলাবেন তাতে চাপুন। বদলানো বার্তার পাশে <b>সম্পাদিত</b>, না বদলানোর পাশে ডিফল্ট লেখা থাকে।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "লেখা বদলানো",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "<b>বাংলা বার্তা</b> ঘরে নতুন লেখা দিন।",
+          "box": null
+        },
+        {
+          "text": "শিক্ষার্থীর নামের মতো তথ্য বসাতে <b>অনুমোদিত প্লেসহোল্ডার</b> থেকে একটিতে চাপুন।",
+          "box": null
+        },
+        {
+          "text": "<b>সংরক্ষণ করুন</b> চাপুন। আগের লেখায় ফিরতে ডিফল্টে ফিরে যান চাপুন।",
+          "box": null
+        }
+      ]
+    }
+  ]
+}

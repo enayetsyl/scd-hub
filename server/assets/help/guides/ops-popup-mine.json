@@ -1,0 +1,46 @@
+{
+  "id": "ops-popup-mine",
+  "category": "messages_popups",
+  "order": 7,
+  "draft": true,
+  "title": "আমার বার্তা: আগের পপ-আপ আবার পড়া",
+  "intro": "স্কুল যে পপ-আপ বার্তা পাঠিয়েছে, বন্ধ করে দিলেও তা “আমার বার্তা”-তে থেকে যায়।",
+  "keywords": [
+    "আমার বার্তা",
+    "পপ-আপ",
+    "আগের বার্তা",
+    "নোটিশ"
+  ],
+  "audience": "ALL_STAFF",
+  "screens": [
+    "HomeTab/MyPopups"
+  ],
+  "goTo": {
+    "route": "HomeTab",
+    "screen": "MyPopups"
+  },
+  "rows": [
+    {
+      "heading": "পাতাটি খোলা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "☰ চেপে মেনু থেকে <b>আমার বার্তা</b> চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "আবার পড়া",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "গত ৯০ দিনের পপ-আপ বার্তা এখানে থাকে। আবার পড়তে বার্তায় চাপুন, যেমন <b>শিক্ষক সভা</b>।",
+          "box": null
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,68 @@
+{
+  "id": "ops-library-add-book",
+  "category": "school_operations",
+  "order": 4,
+  "draft": true,
+  "title": "লাইব্রেরিতে নতুন বই যোগ করা",
+  "intro": "নতুন বই এলে আগে বইটির নাম যোগ করুন, তারপর প্রতিটি কপির জন্য আলাদা অ্যাকসেশন নম্বর দিন।",
+  "keywords": [
+    "লাইব্রেরি",
+    "নতুন বই",
+    "ক্যাটালগ",
+    "কপি",
+    "অ্যাকসেশন নম্বর"
+  ],
+  "perms": [
+    "library:edit"
+  ],
+  "screens": [
+    "LibraryTab/CatalogManage"
+  ],
+  "goTo": {
+    "route": "LibraryTab",
+    "screen": "CatalogManage"
+  },
+  "rows": [
+    {
+      "heading": "ক্যাটালগ খোলা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "মেনু থেকে লাইব্রেরি খুলে <b>ক্যাটালগ ব্যবস্থাপনা</b> চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "বইয়ের তথ্য",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "<b>শিরোনাম (বাংলা)</b> ঘরে বইয়ের নাম লিখুন। লেখক, বিভাগ আর তাক জানা থাকলে সেগুলোও দিন।",
+          "box": null
+        },
+        {
+          "text": "<b>নতুন বই যোগ করুন</b> চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "কপি যোগ করা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "তালিকায় বইটিতে চাপুন, তারপর <b>অ্যাকসেশন নম্বর</b> ঘরে কপির নম্বর লিখুন।",
+          "box": null
+        },
+        {
+          "text": "<b>কপি যোগ করুন</b> চাপুন। প্রতিটি কপির জন্য একই কাজ করুন।",
+          "box": null
+        }
+      ]
+    }
+  ]
+}

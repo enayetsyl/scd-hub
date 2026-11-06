@@ -1,0 +1,57 @@
+{
+  "id": "ops-subject-teacher",
+  "category": "school_operations",
+  "order": 8,
+  "draft": true,
+  "title": "বিষয় শিক্ষক নিয়োগ দেওয়া",
+  "intro": "কোন শাখায় কোন বিষয় কে পড়াবেন তা এখানে ঠিক হয়। এতে শিক্ষক সেই শাখার বাড়ির কাজ, ক্লাস নোট ও নম্বর দিতে পারেন।",
+  "keywords": [
+    "বিষয় শিক্ষক",
+    "নিয়োগ",
+    "বরাদ্দ",
+    "শাখা",
+    "বিষয়"
+  ],
+  "perms": [
+    "teaching_assignments:assign_subject_teacher"
+  ],
+  "screens": [
+    "AdminTab/AssignSubjectTeacher"
+  ],
+  "goTo": {
+    "route": "AdminTab",
+    "screen": "AssignSubjectTeacher"
+  },
+  "rows": [
+    {
+      "heading": "পাতাটি খোলা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "মেনু থেকে প্রশাসন খুলে <b>বিষয়শিক্ষক নিয়োগ</b> চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "নিয়োগ দেওয়া",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "শাখা বেছে নিন, যেমন <b>শ্রেণি ৫ — ক</b>।",
+          "box": null
+        },
+        {
+          "text": "<b>বিষয়</b> ও শিক্ষক বেছে নিন।",
+          "box": null
+        },
+        {
+          "text": "<b>নিয়োগ দিন</b> চাপুন। রুটিনে অন্য শিক্ষক থাকলে অ্যাপ রুটিনও বদলাতে চাইবে।",
+          "box": null
+        }
+      ]
+    }
+  ]
+}

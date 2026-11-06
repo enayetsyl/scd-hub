@@ -1,0 +1,69 @@
+{
+  "id": "ops-chat-send",
+  "category": "messages_popups",
+  "order": 1,
+  "draft": true,
+  "title": "সহকর্মীকে বার্তা পাঠানো",
+  "intro": "অ্যাপের বার্তায় যেকোনো শিক্ষক বা অফিস কর্মীকে আলাদাভাবে লেখা যায়। স্কুল ও শাখার গ্রুপগুলো অ্যাপ নিজেই তৈরি করে রাখে।",
+  "keywords": [
+    "বার্তা",
+    "চ্যাট",
+    "মেসেজ",
+    "সহকর্মী",
+    "গ্রুপ"
+  ],
+  "perms": [
+    "chat:send"
+  ],
+  "screens": [
+    "ChatTab/ChatHome",
+    "ChatTab/NewChat"
+  ],
+  "goTo": {
+    "route": "ChatTab",
+    "screen": "ChatHome"
+  },
+  "rows": [
+    {
+      "heading": "নতুন বার্তা শুরু",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "☰ চেপে মেনু থেকে বার্তা খুলুন, তারপর <b>নতুন বার্তা</b> চাপুন।",
+          "box": null
+        },
+        {
+          "text": "গ্রুপে লিখতে তালিকার গ্রুপে চাপুন, যেমন <b>স্কুল-ব্যাপী</b>।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "কাকে লিখবেন",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "যাকে লিখবেন তাঁর নামে চাপুন, যেমন <b>উদাহরণ অধ্যক্ষ</b>।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "লিখে পাঠানো",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "<b>বার্তা লিখুন…</b> ঘরে আপনার কথা লিখুন।",
+          "box": null
+        },
+        {
+          "text": "<b>পাঠান</b> চাপুন।",
+          "box": null
+        }
+      ]
+    }
+  ]
+}

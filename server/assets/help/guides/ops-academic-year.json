@@ -1,0 +1,67 @@
+{
+  "id": "ops-academic-year",
+  "category": "school_operations",
+  "order": 10,
+  "draft": true,
+  "title": "নতুন শিক্ষাবর্ষ যোগ ও চালু করা",
+  "intro": "চলতি শিক্ষাবর্ষ একবার ঠিক করলে অ্যাপের সব পাতা সেটি ব্যবহার করে। নতুন বছরের প্রস্তুতির জন্য আগে বছরটি যোগ করে রাখা যায়।",
+  "keywords": [
+    "শিক্ষাবর্ষ",
+    "নতুন বছর",
+    "চলতি বছর",
+    "বছর"
+  ],
+  "perms": [
+    "classes_sections:settings"
+  ],
+  "screens": [
+    "AdminTab/AcademicYear"
+  ],
+  "goTo": {
+    "route": "AdminTab",
+    "screen": "AcademicYear"
+  },
+  "rows": [
+    {
+      "heading": "পাতাটি খোলা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "মেনু থেকে প্রশাসন খুলে <b>শিক্ষাবর্ষ ব্যবস্থাপনা</b> চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "বছর যোগ করা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "<b>বছর (যেমন ২০২৭)</b> ঘরে নতুন বছর লিখুন।",
+          "box": null
+        },
+        {
+          "text": "এখনই সেটি চালু করতে চাইলে <b>এটিকে চলতি বছর করুন</b> চাপুন; শুধু যোগ করে রাখতে চাইলে চাপবেন না।",
+          "box": null
+        },
+        {
+          "text": "<b>নতুন শিক্ষাবর্ষ যোগ করুন</b> চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "পরে চালু করা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "নতুন বছর শুরু হলে তালিকায় সেই বছরের পাশে <b>চলতি করুন</b> চাপুন।",
+          "box": null
+        }
+      ]
+    }
+  ]
+}

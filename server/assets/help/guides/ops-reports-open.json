@@ -1,0 +1,81 @@
+{
+  "id": "ops-reports-open",
+  "category": "reports",
+  "order": 1,
+  "draft": true,
+  "title": "রিপোর্ট খুঁজে খোলা",
+  "intro": "প্রতিটি রিপোর্ট পুরো স্কুলের তথ্য দেখায়। প্রধান শিক্ষক যে রিপোর্টগুলো আপনাকে দিয়েছেন, শুধু সেগুলোই আপনার মেনুতে থাকবে।",
+  "keywords": [
+    "রিপোর্ট",
+    "প্রতিবেদন",
+    "রিপোর্ট খোঁজা"
+  ],
+  "perms": [
+    "reports:hw_declare_pending",
+    "reports:hw_issue_pending",
+    "reports:hw_lifecycle",
+    "reports:hw_weekly_unsubmitted",
+    "reports:as_declare_pending",
+    "reports:as_deliver_pending",
+    "reports:as_print_pending",
+    "reports:reconciliation",
+    "reports:assignment_load",
+    "reports:class_note",
+    "reports:class_test",
+    "reports:attendance",
+    "reports:class_load",
+    "reports:attendance_ranking",
+    "reports:guardian_claims",
+    "reports:workload",
+    "reports:live_classes",
+    "reports:class_test_dashboard",
+    "reports:student_progress",
+    "reports:revision_dashboard",
+    "reports:lesson_progress",
+    "reports:review_progress",
+    "reports:reviewer_effectiveness",
+    "reports:teaching_note_comments",
+    "reports:finance_dashboard",
+    "reports:daily_snapshot",
+    "reports:guardian_engagement",
+    "reports:marks_drivers",
+    "reports:bank_coverage",
+    "reports:storybook_series",
+    "reports:storybook_books",
+    "reports:storybook_readers",
+    "reports:activity_skills",
+    "reports:activity_sheets",
+    "reports:activity_students"
+  ],
+  "screens": [
+    "ReportsTab/ReportsHome"
+  ],
+  "goTo": {
+    "route": "ReportsTab",
+    "screen": "ReportsHome"
+  },
+  "rows": [
+    {
+      "heading": "রিপোর্টের দল খোলা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "☰ চেপে মেনু খুলুন, তারপর <b>রিপোর্ট</b> চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "রিপোর্ট বাছাই",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "যে রিপোর্ট দেখবেন তাতে চাপুন, যেমন <b>অনুপস্থিতির প্রতিবেদন</b>।",
+          "box": null
+        }
+      ]
+    }
+  ]
+}
