@@ -293,7 +293,7 @@ exports.run = async (h) => {
   {
     const total = await mark(O, "মোট");
     await h.shot(O, "fin-payroll-advice", 2, [total, { text: "ব্যাংকের চিঠি ও শিট (PDF)" }, { text: "CSV ফাইল ডাউনলোড" }]);
-    const why = await mark(O, "রাউটিং", { re: true });
+    const why = await mark(O, "রাউটিং নম্বর নেই");
     await h.shot(O, "fin-payroll-advice", 3, [why]);
   }
   await O.context().close();

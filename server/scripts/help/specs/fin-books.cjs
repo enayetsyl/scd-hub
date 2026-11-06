@@ -84,7 +84,7 @@ exports.run = async (h) => {
     const who = await pick(h, O, "সহায়তাদাতা আইডি", "উদাহরণ যাকাত তহবিল", { below: title });
     await O.waitForTimeout(1500);
     const raised = await mark(O, "ধার্যকৃত", { below: title });
-    await h.shot(O, "fin-fee-statement", 1, [{ text: title }, who, raised], { anchor: { text: title } });
+    await h.shot(O, "fin-fee-statement", 1, [who, raised], { anchor: { text: title } });
   }
   await back(h, O);
 
@@ -130,7 +130,7 @@ exports.run = async (h) => {
   {
     const date = await setDate(O, "তারিখ", "2026-11-05");
     const bank = await fill(O, "ব্যাংক স্টেটমেন্ট ব্যালেন্স", "203800");
-    const cash = await fill(O, "এক্সিমাস নগদ", "39650");
+    const cash = await fill(O, "এক্সিমাস নগদ", "41650");
     await fill(O, "এক্সিমাস ব্যাংক", "203800");
     await fill(O, "এক্সিমাস অনলাইন", "12400");
     await h.shot(O, "fin-recon-record", 1, [date, bank, cash, { text: "জমা দিন" }]);
@@ -138,12 +138,11 @@ exports.run = async (h) => {
     await h.shot(O, "fin-recon-record", 2, [{ text: "ব্যাংক পার্থক্য" }]);
   }
   {
-    const title = "হিসাব মিলানোর ইতিহাস";
     const from = await field(O, "শুরুর তারিখ");
     // The page ends here: scroll to the end and take the shot without an anchor.
     await O.mouse.wheel(0, 3000);
     await O.waitForTimeout(600);
-    await h.shot(O, "fin-recon-history", 1, [{ text: title }, from, { text: "লোড করুন" }]);
+    await h.shot(O, "fin-recon-history", 1, [from, { text: "লোড করুন" }]);
   }
   await O.context().close();
 };
