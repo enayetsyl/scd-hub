@@ -226,6 +226,9 @@ Explained later with the duty reasons (ছুটিতে ছিলাম, প�
 | TASK_OVERDUE | the morning task sweep finds a task past its due day and still open | the assignee | the due day |
 | WORK_CLAIM_UNANSWERED | a guardian's "done at home" claim expires unanswered | the claim's teacher | — |
 
+**TASK_OVERDUE starts off (D-#1015, owner 2026-11-06).** It is in the default `disabledKinds`; the
+Principal switches it on in the rules screen. A school that already saved its rules keeps what it saved.
+
 **Approved leave:** where a duty day is known, an approved staff leave covering it (matched through the
 staff profile) accepts the entry at once as ছুটিতে ছিলাম — no explain notice is sent.
 
