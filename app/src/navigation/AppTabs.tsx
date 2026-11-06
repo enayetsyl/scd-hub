@@ -54,6 +54,7 @@ import type {
   GuardianAssignmentsStackParamList,
   GuardianClassTestStackParamList,
   ClassBooksStackParamList,
+  ExamPapersStackParamList,
   StorybooksStackParamList,
   ActivityStackParamList,
   QuranExamStackParamList,
@@ -128,6 +129,10 @@ import AssignmentGiftScreen from "../screens/assignment/AssignmentGiftScreen";
 import ChildAssignmentsScreen from "../screens/guardian/ChildAssignmentsScreen";
 import ChildClassTestsScreen from "../screens/guardian/ChildClassTestsScreen";
 import ClassBooksScreen from "../screens/classbooks/ClassBooksScreen";
+import ExamPapersHomeScreen from "../screens/exampapers/ExamPapersHomeScreen";
+import ExamPaperDraftScreen from "../screens/exampapers/ExamPaperDraftScreen";
+import ReferencePapersScreen from "../screens/exampapers/ReferencePapersScreen";
+import ReferencePaperReaderScreen from "../screens/exampapers/ReferencePaperReaderScreen";
 import StoryShelfScreen from "../screens/storybooks/StoryShelfScreen";
 import StorySeriesScreen from "../screens/storybooks/StorySeriesScreen";
 import StoryBookScreen from "../screens/storybooks/StoryBookScreen";
@@ -1772,6 +1777,20 @@ function QuranExamNavigator(): React.ReactElement {
   );
 }
 
+// D-#1030–#1033 — exam paper bank. ExamPapersHome is first: the initial route takes no params.
+const ExamPapersStack = createNativeStackNavigator<ExamPapersStackParamList>();
+function ExamPapersNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    <ExamPapersStack.Navigator screenOptions={stackOptions}>
+      <ExamPapersStack.Screen name="ExamPapersHome" component={ExamPapersHomeScreen} options={{ title: STR.epHomeTitle }} />
+      <ExamPapersStack.Screen name="ExamPaperDraft" component={ExamPaperDraftScreen} options={{ title: STR.epHomeTitle }} />
+      <ExamPapersStack.Screen name="ReferencePapers" component={ReferencePapersScreen} options={{ title: STR.epRefTitle }} />
+      <ExamPapersStack.Screen name="ReferencePaperReader" component={ReferencePaperReaderScreen} options={{ title: STR.epRefTitle }} />
+    </ExamPapersStack.Navigator>
+  );
+}
+
 const ClassBooksStack = createNativeStackNavigator<ClassBooksStackParamList>();
 function ClassBooksNavigator(): React.ReactElement {
   const stackOptions = useStackOptions();
@@ -2068,6 +2087,9 @@ export function AppTabs(): React.ReactElement {
   const guardianFeatures = useGuardianFeatures();
   // D-#870: class books — staff by action; guardians get their own tab (GuardianBooksTab).
   const canClassBooks = any("class_books:view", "class_books:manage");
+  // D-#1030–#1033: exam paper bank — every staff member may be given a paper to review
+  // (exam_papers:review is SELF), so the stack mounts for any of its actions.
+  const canExamPapers = any("exam_papers:review", "exam_papers:view", "exam_papers:manage", "exam_papers:view_reference", "exam_papers:manage_reference");
   const canQuranExam = any("quran_exam:view", "quran_exam:manage", "quran_exam:examine");
 
   // Defensive (D-#369): a role-less / unrecognised authed session makes EVERY tab
@@ -2080,7 +2102,7 @@ export function AppTabs(): React.ReactElement {
     canAssignment || canReview || canRoutine || canClassNotes || canAttendance || canPrint || canLibrary ||
     canChat || canPopup || canVocab || canClassTest || canComments || canObservation || canFreeMixing ||
     canEnglishDrive || canTeachingNotes || canRevision || canFinance || canHr || canReports ||
-    canSupportBook || canAdmin || canGuardian || canSyllabus || canScholarship || canMastery || canClassBooks || canQuranExam;
+    canSupportBook || canAdmin || canGuardian || canSyllabus || canScholarship || canMastery || canClassBooks || canQuranExam || canExamPapers;
   if (!hasAnyTab) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: space(6), backgroundColor: colors.bg }}>
@@ -2149,6 +2171,7 @@ export function AppTabs(): React.ReactElement {
         {canLibrary ? <Drawer.Screen name="StorybooksTab" component={StorybooksNavigator} /> : null}
         {canActivity ? <Drawer.Screen name="ActivityTab" component={ActivityNavigator} /> : null}
         {canClassBooks ? <Drawer.Screen name="ClassBooksTab" component={ClassBooksNavigator} /> : null}
+        {canExamPapers ? <Drawer.Screen name="ExamPapersTab" component={ExamPapersNavigator} /> : null}
         {canQuranExam ? <Drawer.Screen name="QuranExamTab" component={QuranExamNavigator} /> : null}
         {canChat ? <Drawer.Screen name="ChatTab" component={ChatNavigator} /> : null}
         {canPopup ? <Drawer.Screen name="PopupNoticesTab" component={PopupNavigator} /> : null}

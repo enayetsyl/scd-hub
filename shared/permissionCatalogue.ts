@@ -297,10 +297,10 @@ export const FEATURE_CATALOGUE = {
     en: "Exam paper bank",
     bn: "প্রশ্নপত্র ভান্ডার",
     actions: {
-      view_reference: { en: "Read other branches' papers", bn: "অন্য শাখার প্রশ্নপত্র দেখা", desc: "Mohammadpur half-yearly and annual papers, page by page, and the original file", teacher: false, office: true, flags: [] },
-      manage_reference: { en: "Upload other branches' papers", bn: "অন্য শাখার প্রশ্নপত্র আপলোড ও সম্পাদনা", desc: "Upload a paper (PDF + original file), fix its class/subject/term, delete", teacher: false, office: true, flags: [] },
+      view_reference: { en: "Read other branches' papers", bn: "মোহাম্মদপুরের প্রশ্নপত্র দেখা", desc: "Mohammadpur half-yearly and annual papers, page by page, and the original file", teacher: false, office: true, flags: [] },
+      manage_reference: { en: "Upload other branches' papers", bn: "মোহাম্মদপুরের প্রশ্নপত্র আপলোড ও সম্পাদনা", desc: "Upload a paper (PDF + original file), fix its class/subject/term, delete", teacher: false, office: true, flags: [] },
       view: { en: "See draft papers", bn: "খসড়া প্রশ্নপত্র দেখা", desc: "Every draft paper, its review progress and every suggestion (read only)", teacher: false, office: true, flags: [] },
-      manage: { en: "Manage draft papers", bn: "খসড়া প্রশ্নপত্র পরিচালনা", desc: "Import drafts, choose the reviewer, accept or reject suggestions, mark a paper final", teacher: false, office: false, flags: ["PRINCIPAL_DEFAULT"] },
+      manage: { en: "Manage draft papers", bn: "খসড়া প্রশ্নপত্র পরিচালনা", desc: "Import drafts, assign the reviewer, accept or reject suggestions, mark a paper final", teacher: false, office: false, flags: ["PRINCIPAL_DEFAULT"] },
       review: { en: "Review a paper given to me", bn: "আমাকে দেওয়া প্রশ্নপত্র রিভিউ করা", desc: "Confirm each item matches the syllabus; suggest an edit, a deletion or a new question", teacher: true, office: true, flags: ["SELF"] },
     },
   },
