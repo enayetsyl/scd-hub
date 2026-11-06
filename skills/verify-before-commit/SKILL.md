@@ -9,6 +9,10 @@ Run the checks relevant to what changed and PASTE THE REAL OUTPUT:
 - Import contract / harness changed → `python3 server/import/validate_import.py docs/examples/envelope_C5_ENG_U09_S01.json --envelope-schema docs/import-contract.schema.json`
 - TypeScript changed → `npx tsc --noEmit`
 - App/server code → the package tests (Jest; add Maestro e2e when present)
+- A new feature, or a changed screen / flow / permission → its help guide in `server/assets/help/guides/`
+  is added or updated in the SAME commit (D-#973; re-shoot the picture with
+  `server/scripts/help/capture.cjs` when a step's button moved or was renamed), then
+  `node skills/_tools/verify_help_guides.mjs` must print ALL CHECKS PASSED. No guide change = not done.
 
 Rules:
 - If a check can't be run, say so explicitly — do not assert success.
