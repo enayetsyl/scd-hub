@@ -71,6 +71,15 @@ async function select(h, page, placeholder, option, wait = 1200) {
   await h.tap(page, { text: option, last: true }, wait);
 }
 
+/** Open the app's Select whose field label matches `label` (it opens below the label) and pick `option`. */
+async function pick(h, page, label, option, wait = 1500) {
+  const el = await h.topmost(page, label, { scroll: true });
+  const b = await el.boundingBox();
+  await page.mouse.click(b.x + 60, b.y + b.height + 24);
+  await page.waitForTimeout(1000);
+  await h.tap(page, { text: option, last: true }, wait);
+}
+
 /** A scratch file for a file picker; returns its path. */
 function tmpFile(name, content) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "help-content-"));
@@ -87,4 +96,10 @@ async function chooseFiles(h, page, target, files, wait = 2500) {
   await page.waitForTimeout(wait);
 }
 
-module.exports = { PASSWORD, login, openItem, menuShot, home, back, fill, scrollTo, select, tmpFile, chooseFiles };
+/** Wait until `text` (exact) is on the page. */
+async function waitText(page, text, timeout = 60000) {
+  await page.getByText(text, { exact: true }).locator("visible=true").first().waitFor({ timeout });
+  await page.waitForTimeout(800);
+}
+
+module.exports = { PASSWORD, waitText, pick, login, openItem, menuShot, home, back, fill, scrollTo, select, tmpFile, chooseFiles };

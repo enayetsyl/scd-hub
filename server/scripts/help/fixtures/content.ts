@@ -6,7 +6,9 @@
  * Create-only, built on the base school (../fixture.ts), and it refuses any database that is
  * not a local in-memory one. Every name is an example; no real person appears.
  *
- *   MONGODB_URI=mongodb://127.0.0.1:<port>/hc npx tsx scripts/help/fixtures/content.ts [--reset]
+ *   PLAYWRIGHT_CORE=<playwright-core folder> MONGODB_URI=mongodb://127.0.0.1:<port>/hc \
+ *     npx tsx scripts/help/fixtures/content.ts [--reset]
+ * (PLAYWRIGHT_CORE + Chrome draw the example pictures; see content-pictures.cjs.)
  *
  * Adds, through the app's own services (the real import gate, review and publish paths):
  *   - four session plans, ৫ম শ্রেণি English Unit 9 periods 1–4 (from docs/examples), imported as
@@ -18,11 +20,16 @@
  *     বাংলা Q01 approved by the teacher (waits for publish); Q02/Q03 assigned to the teacher,
  *     not reviewed; Q04/Q05 have no reviewer;
  *   - notes & guides for ৩য় শ্রেণি গণিত / বাংলা (markdown), one with a comment from the teacher;
- *   - English drive documents for ৫ম শ্রেণি Block 1 (markdown).
- * Worksheets and class books are added by the later parts of this file.
+ *   - English drive documents for ৫ম শ্রেণি Block 1 (markdown);
+ *   - worksheets: a নার্সারি class, the PUBLISHED annual বাংলা মানবন্টন, 12 example pictures
+ *     (an emoji and its word, drawn by content-pictures.cjs) in the বাংলা picture bank;
+ *   - class books: three READY books for নার্সারি / ৩য়, one hidden, one still PROCESSING. Page rows point
+ *     at no real Drive file; the spec answers the page query with the example pages.
  */
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
+import { execFileSync } from "node:child_process";
 import mongoose, { Types } from "mongoose";
 import type { AppContext } from "../../../src/context";
 import { seedBaseSchool } from "../fixture";
@@ -35,6 +42,13 @@ import {
 } from "../../../src/modules/questions/services/QuestionReviewService";
 import { ContentArtifact } from "../../../src/modules/content/models/ContentArtifact";
 import { ScopeGrant } from "../../../src/modules/foundation/models/ScopeGrant";
+import { Class } from "../../../src/modules/foundation/models/Class";
+import { Section } from "../../../src/modules/foundation/models/Section";
+import { Exam } from "../../../src/modules/exams/models/Exam";
+import { ExamSyllabus } from "../../../src/modules/exams/models/ExamSyllabus";
+import { WorksheetPicture } from "../../../src/modules/worksheets/models/WorksheetPicture";
+import { ClassBook } from "../../../src/modules/class-books/models/ClassBook";
+import { StoredFile } from "../../../src/modules/platform/models/StoredFile";
 import { uploadTeachingNote } from "../../../src/modules/teaching-notes/services/TeachingNoteService";
 import { addTeachingNoteComment } from "../../../src/modules/teaching-notes/services/TeachingNoteCommentService";
 import { uploadEnglishDriveDoc } from "../../../src/modules/english-drive/services/EnglishDriveService";
@@ -188,6 +202,84 @@ export async function seedContent() {
   await uploadEnglishDriveDoc({ classLevel: 5, blockNumber: 1, kind: "TN", seq: 1, title: "Greetings and names", version: 1, format: "MD", contentMd: DRIVE_TN, actorId: O, actorRole: "OFFICE" });
   await uploadEnglishDriveDoc({ classLevel: 5, blockNumber: 1, kind: "HW", seq: 1, title: "My best friend", version: 1, format: "MD", contentMd: DRIVE_HW, actorId: O, actorRole: "OFFICE" });
 
+  // ── Pictures (worksheet bank + an example Nursery book), drawn by content-pictures.cjs ──
+  const picDir = path.join(os.tmpdir(), "help-content-pictures");
+  execFileSync(process.execPath, [path.join(__dirname, "content-pictures.cjs"), picDir], { stdio: "inherit" });
+  const manifest = JSON.parse(fs.readFileSync(path.join(picDir, "manifest.json"), "utf8")) as {
+    pictures: Array<{ letter: string; word: string; wordEn: string; image: string; thumb: string }>;
+    pages: string[];
+  };
+
+  // ── Worksheets: নার্সারি, the published annual বাংলা মানবন্টন, the picture bank ─────
+  const nursery = await Class.create({ level: -1, nameBn: "নার্সারি", academicYearId: base.yearId, active: true });
+  await Section.create({ classId: nursery._id, code: "Main", nameBn: "ক", active: true });
+  const exam = await Exam.create({
+    academicYearId: base.yearId, term: "ANNUAL", name: "বার্ষিক পরীক্ষা ২০২৬", startDateKey: "2026-12-01", endDateKey: "2026-12-10", createdBy: users.principal,
+  });
+  await ExamSyllabus.create({
+    examId: exam._id,
+    classId: nursery._id,
+    subject: "BAN",
+    fullMarks: 50,
+    status: "PUBLISHED",
+    publishedBy: users.principal,
+    publishedAt: new Date(),
+    createdBy: users.principal,
+    updatedBy: users.principal,
+    marks: [
+      { seq: 1, label: "আগের বর্ণ লেখ", itemType: "fill_blank", count: 10, marksEach: 1, total: 10 },
+      { seq: 2, label: "পরের বর্ণ লেখ", itemType: "fill_blank", count: 10, marksEach: 1, total: 10 },
+      { seq: 3, label: "ছবি দেখে সঠিক বর্ণ লেখ", itemType: "short_answer", count: 5, marksEach: 2, total: 10 },
+      { seq: 4, label: "ছবির সাথে বর্ণের মিল কর", itemType: "matching", count: 5, marksEach: 2, total: 10 },
+      { seq: 5, label: "শূন্যস্থানে হারিয়ে যাওয়া বর্ণ বসাও", itemType: "fill_blank", count: 10, marksEach: 1, total: 10 },
+    ],
+  });
+  for (const [i, p] of manifest.pictures.entries()) {
+    await WorksheetPicture.create({
+      book: "BAN",
+      page: i + 3,
+      imageIndex: 0,
+      sourceKey: `BAN:${i + 3}:0`,
+      word: p.word,
+      letter: p.letter,
+      pageLetter: p.letter,
+      uses: ["FIRST_LETTER", "MATCH", "WORD"],
+      active: true,
+      image: fs.readFileSync(p.image),
+      thumb: fs.readFileSync(p.thumb),
+      mime: "image/jpeg",
+      width: 600,
+      height: 600,
+    });
+  }
+
+  // ── Class books: page rows point at local example files (the spec serves the pictures) ──
+  const pageIds: Types.ObjectId[] = [];
+  for (const [i] of manifest.pages.entries()) {
+    const f = await StoredFile.create({
+      kind: "class_book_page",
+      mime: "image/jpeg",
+      sizeBytes: 90_000,
+      originalName: `উদাহরণ বর্ণমালা — ${i + 1}.jpg`,
+      driveFileId: `local-example-page-${i + 1}`,
+      uploadedBy: users.office,
+    });
+    pageIds.push(f._id);
+  }
+  const book = (classLevel: number, title: string, sortOrder: number, active = true) =>
+    ClassBook.create({
+      classLevel, title, sortOrder, status: "READY", pageFileIds: pageIds, pageCount: pageIds.length, pageAspect: 1086 / 800,
+      active, sourceName: `${title}.pdf`, uploadedBy: users.office,
+    });
+  await book(-1, "উদাহরণ বর্ণমালা", 1);
+  await book(-1, "উদাহরণ ছবি ও ছড়া", 2);
+  await book(3, "উদাহরণ বাংলা অনুশীলন", 1);
+  await book(3, "উদাহরণ পুরোনো বই", 9, false);
+  // One upload still turning into pages, so the list shows the হালনাগাদ link.
+  await ClassBook.create({
+    classLevel: -1, title: "উদাহরণ নতুন বই", sortOrder: 3, status: "PROCESSING", pageFileIds: [], sourceName: "উদাহরণ নতুন বই.pdf", uploadedBy: users.office,
+  });
+
   return { ...base, planIds };
 }
 
@@ -196,7 +288,7 @@ if (require.main === module) {
     await mongoose.connect(uri);
     if (process.argv.includes("--reset")) await mongoose.connection.dropDatabase();
     const ids = await seedContent();
-    console.log("fixture: content (4 plans, 9 questions, 2 notes, 2 drive documents)");
+    console.log("fixture: content (4 plans, 9 questions, 2 notes, 2 drive documents, নার্সারি worksheets, 4 class books)");
     console.log(JSON.stringify({ planIds: ids.planIds }));
     await mongoose.disconnect();
   })().catch((e) => {
