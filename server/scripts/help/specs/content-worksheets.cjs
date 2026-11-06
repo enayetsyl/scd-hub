@@ -55,13 +55,17 @@ exports.run = async (h) => {
   await h.tap(T, { text: "বাংলা", minY: 80 }, 1500);
   await h.tap(T, "ক্লাস টেস্ট", 2000);
   await h.shot(T, "content-ws-make", 1, [{ text: "শ্রেণি", exact: true, minY: 80 }, { text: "বিষয়", exact: true, minY: 80 }, { text: "কী তৈরি করবেন" }]);
+  // Every letter starts ticked: clear both groups, then tick the ones the example bank has pictures for.
+  await h.tap(T, { text: "কোনোটিই না" }, 800);
+  await h.tap(T, { text: "কোনোটিই না", last: true }, 800);
   for (const l of LETTERS) await h.tap(T, { css: `[role="checkbox"][aria-label="${l}"]` }, 300);
   await T.waitForTimeout(2500);
   await L.scrollTo(h, T, { text: "যে বর্ণগুলো পড়ানো হয়েছে — টিক দিন" }, 60);
   await h.shot(T, "content-ws-make", 2, [{ css: '[role="checkbox"][aria-label="ক"]' }, { text: "প্রশ্নের সারি" }]);
+  await L.scrollTo(h, T, { re: "^প্রিভিউ · সংস্করণ" }, 60);
+  await h.shot(T, "content-ws-make", 3, [{ re: "^প্রিভিউ · সংস্করণ" }], { anchor: { re: "^প্রিভিউ · সংস্করণ" } });
   await L.scrollTo(h, T, { re: "নতুন সংস্করণ$" }, 60);
-  await h.shot(T, "content-ws-make", 3, [{ re: "নতুন সংস্করণ$" }, { re: "^প্রিভিউ · সংস্করণ" }]);
-  await h.shot(T, "content-ws-print", 0, [{ text: "PDF — প্রশ্নপত্র" }, { text: "উত্তরপত্র দেখুন" }, { re: "প্রিন্টে পাঠান$" }]);
+  await h.shot(T, "content-ws-print", 0, [{ re: "নতুন সংস্করণ$" }, { text: "PDF — প্রশ্নপত্র" }, { text: "উত্তরপত্র দেখুন" }, { re: "প্রিন্টে পাঠান$" }]);
   await h.tap(T, { re: "প্রিন্টে পাঠান$" }, 2000);
   await L.scrollTo(h, T, { re: "^কোন শ্রেণি / শাখার জন্য" }, 60);
   await h.shot(T, "content-ws-print", 1, [{ re: "^কোন শ্রেণি / শাখার জন্য" }, { re: "^কপি সংখ্যা" }, { text: "প্রিন্টে পাঠান", last: true }]);
@@ -74,7 +78,7 @@ exports.run = async (h) => {
   await h.tap(T, { text: "নার্সারি", minY: 80 }, 2500);
   await h.shot(T, "content-cb-read", 1, [{ text: "নার্সারি", minY: 80 }, { text: "পড়ুন" }]);
   await h.tap(T, "পড়ুন", 4000);
-  await h.shot(T, "content-cb-read", 2, [{ text: "পরের ›" }, { placeholder: "পৃষ্ঠা নং" }, { text: "বড়" }]);
+  await h.shot(T, "content-cb-read", 2, [{ text: "পরের ›" }, { placeholder: "পৃষ্ঠা নং" }, { re: "বড়$" }]);
   await T.context().close();
 
   // ── office: picture bank, plan, class books ──────────────────────────────
@@ -95,8 +99,8 @@ exports.run = async (h) => {
   await L.back(O);
   await h.tap(O, { re: "প্রশ্ন-পরিকল্পনা$" }, 4000);
   await h.shot(O, "content-ws-plan", 1, [{ text: "শ্রেণি", exact: true, minY: 80 }, { text: "প্রশ্নের ধরন" }]);
-  await L.scrollTo(h, O, { text: "অ্যাসাইনমেন্ট প্রিসেট" }, 60);
-  await h.shot(O, "content-ws-plan", 2, [{ text: "অ্যাসাইনমেন্ট প্রিসেট" }, { text: "পরিকল্পনা সংরক্ষণ" }]);
+  await L.scrollTo(h, O, { text: "ক্লাস টেস্ট প্রিসেট" }, 60);
+  await h.shot(O, "content-ws-plan", 2, [{ text: "ক্লাস টেস্ট প্রিসেট" }, { text: "পরিকল্পনা সংরক্ষণ" }]);
 
   await L.home(O);
   await servePages(O);

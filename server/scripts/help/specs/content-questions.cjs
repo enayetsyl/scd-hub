@@ -156,7 +156,7 @@ exports.run = async (h) => {
   await h.tap(T2, "সেট তৈরি করুন", 2500);
   await L.fill(h, T2, { placeholder: "সেটের নাম (ঐচ্ছিক)" }, "অধ্যায় ১৩ ক্লাস টেস্ট");
   await h.tap(T2, "শ্রেণি পরীক্ষা", 1000);
-  await h.shot(T2, "content-qb-set", 1, [{ placeholder: "সেটের নাম (ঐচ্ছিক)" }, { text: "শ্রেণি পরীক্ষা" }, { text: "শাখা নির্বাচন করুন" }]);
+  await h.shot(T2, "content-qb-set", 1, [{ placeholder: "সেটের নাম (ঐচ্ছিক)" }, { text: "সেটের ধরন" }, { text: "শাখা নির্বাচন করুন" }]);
   await h.tap(T2, "শাখা নির্বাচন করুন", 3000);
   await h.shot(T2, "content-qb-set", 2, [{ re: "^৫ম শ্রেণি · ক" }]);
   await h.tap(T2, { re: "^৫ম শ্রেণি · ক" }, 3000);
