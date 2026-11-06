@@ -2606,6 +2606,7 @@ const STR_BN = {
   agNoWinnersThisWeek: "এই সপ্তাহে এখনো কোনো বিজয়ী নেই",
   agAllStudents: "সব শিক্ষার্থী",
   agSelectSection: "শাখা নির্বাচন করুন",
+  agPickSectionHint: "উপহারের তালিকা দেখতে ওপরে শ্রেণি ও শাখা বেছে নিন।",
   asPresent: "উপস্থিত",
   asAbsent: "অনুপস্থিত",
   asTotalMarks: "পূর্ণমান (ঐচ্ছিক)",
@@ -4650,6 +4651,7 @@ const STR_BN = {
   ctNotSubmittedBadge: "জমা হয়নি",
   ctFilterPublishTitle: "প্রকাশ অবস্থা",
   ctTeacherComments: "শিক্ষকের মন্তব্য",
+  ctAbsentNoComments: "অনুপস্থিত শিক্ষার্থীর জন্য নম্বর বা মন্তব্য দেওয়া যায় না।",
   // D-#340: Today pending-results alert + Reports-hub class-test report
   tdCtResultPending: "ফলাফল এন্ট্রি বাকি",
   ctReportTitle: "ক্লাস টেস্ট রিপোর্ট",
@@ -9930,6 +9932,7 @@ const STR_EN: StrTable = {
   agNoWinnersThisWeek: "No winners yet this week",
   agAllStudents: "All students",
   agSelectSection: "Choose a section",
+  agPickSectionHint: "Choose a class and section above to see the gift list.",
   asPresent: "Present",
   asAbsent: "Absent",
   asTotalMarks: "Total marks (optional)",
@@ -11966,6 +11969,7 @@ const STR_EN: StrTable = {
   ctNotSubmittedBadge: "Not submitted",
   ctFilterPublishTitle: "Publish status",
   ctTeacherComments: "Teacher's comments",
+  ctAbsentNoComments: "An absent student gets no marks or comments.",
   // D-#340: Today pending-results alert + Reports-hub class-test report
   tdCtResultPending: "Results entry pending",
   ctReportTitle: "Class-test report",

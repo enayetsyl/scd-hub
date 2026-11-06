@@ -32,6 +32,7 @@ import type { AppContext, AuthPayload } from "../../../context";
 import { ForbiddenError } from "../../../middleware/authz";
 import { HelpGuideSeen } from "../models/HelpGuideSeen";
 import { HelpGuideFeedback } from "../models/HelpGuideFeedback";
+import { guardianFeaturesFor } from "../../guardian-access/services/GuardianFeatureService";
 
 const DEFAULT_HELP_DIR = path.resolve(__dirname, "../../../../assets/help");
 /** Screenshots are served under the existing /files prefix (no new Caddy @api path). */
@@ -104,9 +105,16 @@ function heldPermissions(auth: AuthPayload): Set<string> {
   return new Set([...effectivePermissions(auth)].filter((p) => isPermissionActive(p)));
 }
 
-/** The first permission (in the guide's own order) that unlocks it, or null for an audience guide. */
-function unlockingPermission(g: HelpGuideFile, auth: AuthPayload, held: Set<string>): string | null | false {
-  if (auth.role === "GUARDIAN") return g.audience === "GUARDIAN" ? null : false;
+/**
+ * The first permission (in the guide's own order) that unlocks it, or null for an audience guide.
+ * `guardianOn` = the features switched on for this guardian (D-#1011); a guide naming a
+ * `guardianFeature` the guardian does not have stays hidden, like the feature itself.
+ */
+function unlockingPermission(g: HelpGuideFile, auth: AuthPayload, held: Set<string>, guardianOn: Set<string>): string | null | false {
+  if (auth.role === "GUARDIAN") {
+    if (g.audience !== "GUARDIAN") return false;
+    return g.guardianFeature && !guardianOn.has(g.guardianFeature) ? false : null;
+  }
   if (g.audience === "ALL_STAFF") return null;
   if (g.audience === "GUARDIAN") return false;
   return g.perms!.find((p) => held.has(p)) ?? false;
@@ -117,24 +125,29 @@ interface Visible {
   unlockedBy: string | null;
 }
 
-function visibleGuides(auth: AuthPayload): Visible[] {
-  const held = auth.role === "GUARDIAN" ? new Set<string>() : heldPermissions(auth);
+async function visibleGuides(auth: AuthPayload): Promise<Visible[]> {
+  const guardian = auth.role === "GUARDIAN";
+  const held = guardian ? new Set<string>() : heldPermissions(auth);
+  const guides = loadRegistry().guides;
+  const guardianOn = new Set<string>(
+    guardian && guides.some((g) => g.guardianFeature) ? await guardianFeaturesFor(auth.userId) : [],
+  );
   const out: Visible[] = [];
-  for (const guide of loadRegistry().guides) {
-    const by = unlockingPermission(guide, auth, held);
+  for (const guide of guides) {
+    const by = unlockingPermission(guide, auth, held, guardianOn);
     if (by !== false) out.push({ guide, unlockedBy: by });
   }
   return out;
 }
 
 /** The guide, if the caller may see it; null otherwise (unknown, draft, or not theirs). */
-export function visibleGuide(auth: AuthPayload, id: string): HelpGuideFile | null {
-  return visibleGuides(auth).find((v) => v.guide.id === id)?.guide ?? null;
+export async function visibleGuide(auth: AuthPayload, id: string): Promise<HelpGuideFile | null> {
+  return (await visibleGuides(auth)).find((v) => v.guide.id === id)?.guide ?? null;
 }
 
 /** Absolute path of a screenshot the caller may load, or null. Only shots the guide lists. */
-export function shotPathFor(auth: AuthPayload, guideId: string, file: string): string | null {
-  const guide = visibleGuide(auth, guideId);
+export async function shotPathFor(auth: AuthPayload, guideId: string, file: string): Promise<string | null> {
+  const guide = await visibleGuide(auth, guideId);
   const rel = `${guideId}/${file}`;
   if (!guide || !guide.rows.some((r) => r.shot === rel)) return null;
   const shots = path.join(loadRegistry().dir, "shots");
@@ -208,7 +221,7 @@ function toView(v: Visible, seen: Set<string> | null): HelpGuideView {
 
 export async function myHelpGuides(ctx: AppContext): Promise<MyHelpView> {
   const owner = ownerOf(ctx);
-  const visible = visibleGuides(ctx.auth!);
+  const visible = await visibleGuides(ctx.auth!);
   const row = await HelpGuideSeen.findOne(owner, { guideIds: 1 }).lean();
   const seen = row ? new Set(row.guideIds ?? []) : null;
   const used = new Set(visible.map((v) => v.guide.category));
@@ -222,7 +235,7 @@ export async function myHelpGuides(ctx: AppContext): Promise<MyHelpView> {
 /** Create the seen-list on first open with everything visible now (no badge on day one). */
 async function ensureBaseline(ctx: AppContext): Promise<void> {
   const owner = ownerOf(ctx);
-  const ids = visibleGuides(ctx.auth!).map((v) => v.guide.id);
+  const ids = (await visibleGuides(ctx.auth!)).map((v) => v.guide.id);
   try {
     await HelpGuideSeen.updateOne(owner, { $setOnInsert: { guideIds: ids } }, { upsert: true });
   } catch (e) {
@@ -242,7 +255,7 @@ export async function markHelpOpened(ctx: AppContext): Promise<boolean> {
 /** One guide was opened: its নতুন badge clears. False for a guide the caller cannot see, or under View-as. */
 export async function markHelpGuideRead(ctx: AppContext, guideId: string): Promise<boolean> {
   const owner = ownerOf(ctx);
-  if (ctx.auth!.impersonatorId || !visibleGuide(ctx.auth!, guideId)) return false;
+  if (ctx.auth!.impersonatorId || !(await visibleGuide(ctx.auth!, guideId))) return false;
   await ensureBaseline(ctx);
   await HelpGuideSeen.updateOne(owner, { $addToSet: { guideIds: guideId } });
   return true;
@@ -251,7 +264,7 @@ export async function markHelpGuideRead(ctx: AppContext, guideId: string): Promi
 /** কাজে লেগেছে? হ্যাঁ / না: one answer per person per guide, changeable. */
 export async function recordHelpFeedback(ctx: AppContext, guideId: string, helpful: boolean): Promise<boolean> {
   const owner = ownerOf(ctx);
-  if (ctx.auth!.impersonatorId || !visibleGuide(ctx.auth!, guideId)) return false;
+  if (ctx.auth!.impersonatorId || !(await visibleGuide(ctx.auth!, guideId))) return false;
   await HelpGuideFeedback.updateOne({ guideId, ...owner }, { $set: { helpful } }, { upsert: true });
   return true;
 }

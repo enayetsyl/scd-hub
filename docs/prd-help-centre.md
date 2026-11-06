@@ -36,7 +36,9 @@ follows their permissions as they change.
     permissions, the same set `myPermissions` returns). Every key must exist in
     `shared/permissionCatalogue.ts`.
   - `audience: "ALL_STAFF"`: SELF actions every staff member has (own leave, own attendance).
-  - `audience: "GUARDIAN"`: every guardian login.
+  - `audience: "GUARDIAN"`: every guardian login. A guardian guide for a feature released per
+    guardian (D-#1011) adds `guardianFeature: "STORYBOOKS" | "ACTIVITY_SHEETS"` and then reaches
+    only guardians with that feature switched on (D-#1021).
   The **server** filters. The app never receives a guide the person may not see. Grant → the guide
   appears on the next Help open. Revoke → it is gone. View-as sees the borrowed person's guides.
 - **R3 — content is code.** Guides live in the repo (`server/assets/help/guides/<id>.json`) and are reviewed in a PR.
@@ -138,6 +140,35 @@ can be re-run with `--prod` once the pilot list is locked there.
 
 Moved to the next batch: প্রশ্নভিত্তিক নম্বর তোলা (`mastery:enter_results`). It needs a paper,
 a শাখা and students; the fixture would have to grow for it.
+
+## 7b. Whole-app set (HC-5, 2026-11-06, D-#1022)
+
+The owner asked for guides for the whole app. Eight area walks ran in parallel, one PR each, on
+a shared example school (`server/scripts/help/fixture.ts` → `seedBaseSchool()`, plus
+`fixtures/<area>.ts`), using one prebuilt web build served by `serve-web.cjs`:
+
+| Area | Prefix | PR |
+|---|---|---|
+| Operations: getting started, messages, pop-ups, library, archive, print, reports, admin | `ops-` (+ `print-queue-class-order`) | #1361 |
+| HR: leave, cover, staff records, letters, appraisal, conduct, grievance, offboarding, observation, staff mistakes | `hr-`, `staff-mistakes-*` | #1362 |
+| Class notes, lesson progress, routine, bell, holidays, live board, cover | `notes-` | #1365 |
+| Students, guardians, comments, parents' meeting, monthly report, improvement plan; the guardian app | `family-`, `child-` | #1367 |
+| Payroll, advances, ledger, fee support, qard, reconciliation | `fin-` | #1369 |
+| Class tests, question papers, scripts, question sets, syllabus, exam routine, scholarship, Quran exam | `exam-` | #1370 |
+| Homework, assignment, gifts, attendance, daily tracker, revision, vocab, work board | `teach-` (+ `revision-correct-sent`) | #1371 |
+| Lesson plans, plan review, question bank and review, teaching notes, English drive, worksheets, class books | `content-` | #1374 |
+| Storybooks and activity sheets (another session) | `storybook-`, `activity-`, `child-storybook-`, `child-activity-` | #1363 |
+
+Rules that came out of it:
+- **One guide per task.** When two areas wrote the same task, the later copy was dropped. A spec
+  that still names a dropped guide is skipped by `capture.cjs`.
+- **A guide whose screen needs a raw id** (e.g. "শিক্ষার্থী আইডি") stays a draft until the screen
+  gets a picker. 6 finance guides are waiting on this.
+- **Clock:** day-dependent screens (routine, homework, assignment) are shot with the server clock
+  moved to a school Thursday (`fixtures/*-clock.cjs` preload + Playwright `clock.setFixedTime`).
+- **Secrets:** capture runs set `GEMINI_API_KEY=dummy`, because the AI key screen shows the key's last four characters.
+
+What the walks saw that looks wrong in the app is listed in `docs/help-guides-app-findings.md`.
 
 ## 8. Out of scope (v1)
 

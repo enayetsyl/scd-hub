@@ -341,8 +341,10 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
     await settleOverdueMistakes(now);
   });
   // D-#1020: the end-of-day report — who made which mistake today — once, at 18:00, any day.
+  // minutesOfDay(now), not `nowMin`: this runs before the school-day gate where `nowMin` is
+  // declared, and reading it here threw (TDZ) on every tick — family() swallowed it.
   await family("staff mistake daily", async () => {
-    if (!windowOpen(nowMin, STAFF_MISTAKE_DAILY_MINUTES)) return;
+    if (!windowOpen(minutesOfDay(now), STAFF_MISTAKE_DAILY_MINUTES)) return;
     await runOnce(dateKey, "SMDAILY", async () => {
       summary.staffMistakeDailySent = await dispatchStaffMistakeDaily(now);
     });
