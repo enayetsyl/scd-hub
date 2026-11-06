@@ -1,4 +1,4 @@
-# Daily school report — build contract (D-#1030–#1035)
+# Daily school report — build contract (D-#1050–#1055)
 
 Owner ask 2026-11-06: at the end of each day the Principal gets a notification summing up the whole
 day (what went well, what went wrong, mistakes, other numbers). The same report is in the Reports
@@ -21,7 +21,7 @@ Plan + mockups the owner approved: https://claude.ai/artifact/KiJtX6qpHYrEY2B3gv
 | 7 | Finance / guardians / system | Principal only by default, shareable with a warning (mistakes treated the same) |
 | 8 | Notification or pop-up | Notification, plus an unread card on Today |
 
-## 2. The parts (D-#1030)
+## 2. The parts (D-#1050)
 
 Server: `server/src/modules/daily-report/services/dailyReportParts.ts`. Each part READS the services
 the existing reports use; a part that throws becomes an ERROR line and the report is still saved.
@@ -44,7 +44,7 @@ the existing reports use; a part that throws becomes an ERROR line and the repor
 Status per line: OK (no problems), WARN, BAD (problems ≥ a third of the part's duties, or a critical
 backup), NA (nothing due), ERROR. On-time rate = onTime ÷ (onTime + problems).
 
-## 3. The saved day (D-#1030)
+## 3. The saved day (D-#1050)
 
 - `DailyReport` (one per `dateKey`, unique) is made by the scheduler at `settings.sendMinutes`
   (18:00) on a school day (`resolveDayType` not OFF/HOLIDAY), and up to 4 hours late after a restart.
@@ -55,7 +55,7 @@ backup), NA (nothing due), ERROR. On-time rate = onTime ÷ (onTime + problems).
   `fixedLater = max(0, then.problems − now.problems)` per part on the NEW report.
 - Today before the send time, the screen shows a live "so far" view (built, not saved).
 
-## 4. Who sees what (D-#1031)
+## 4. Who sees what (D-#1051)
 
 - One switch per part, `reports:daily_<part>`, Principal only by default. Holding any one opens the
   Reports hub tile; the report shows only those parts and the headline counts only those parts.
@@ -63,7 +63,7 @@ backup), NA (nothing due), ERROR. On-time rate = onTime ÷ (onTime + problems).
 - A Principal's own staff-mistake entries are removed (rows, count, tier stats) for anyone without
   `staff_mistakes:review_principal` (D-#1000).
 
-## 5. Notification + Today card (D-#1032)
+## 5. Notification + Today card (D-#1052)
 
 - `DAILY_REPORT` notification "আজকের দৈনিক প্রতিবেদন", body
   `সময়মতো N · সমস্যা N · ভুল N` + `সময়মতো কাজ R% (আগের ৫ দিনে P%)`. No names. Opens that day.
@@ -74,14 +74,14 @@ backup), NA (nothing due), ERROR. On-time rate = onTime ÷ (onTime + problems).
   its notification read.
 - Settings: send time 14:00–22:00, which parts count in the headline, Principal notified on/off.
 
-## 6. History (D-#1033)
+## 6. History (D-#1053)
 
 Day / week (7 days) / month (to date) / year (to date) from the saved days: totals, the same span
 before, problems per day, each part's rate against the span before, and "repeated problems" — a
 part + place that went wrong on 3+ saved days. Places and duties only: MISTAKES and WORK_BOARD rows
 (people) are never grouped (owner Q4).
 
-## 7. Sharing (D-#1034)
+## 7. Sharing (D-#1054)
 
 - `shareDailyReport(userId, sections, notify, untilKey?)`: grants each chosen switch the person does
   not hold yet (ordinary per-person grant, audited USER_ACCESS_CHANGED) and records WHICH grants the
@@ -92,7 +92,7 @@ part + place that went wrong on 3+ saved days. Places and duties only: MISTAKES 
 - Mistakes, guardians, finance and system need a second press ("সাধারণত শুধু প্রধান শিক্ষক").
 - New access shows in the person's app the next time they open it (permissions come with the login).
 
-## 8. Exact jumps (D-#1035)
+## 8. Exact jumps (D-#1055)
 
 - Absentee report: optional `{date, sectionId}` (section listed first and marked).
 - Reconciliation: optional `{date}` (opens a one-day custom range; `useReportRange({initialDay})`).

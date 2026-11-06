@@ -1,5 +1,5 @@
 /**
- * Daily school report (D-#1030–#1035, docs/prd-daily-report.md) — the parts of the report
+ * Daily school report (D-#1050–#1055, docs/prd-daily-report.md) — the parts of the report
  * and the switch that shows each one. Shared so the server's builders, the share sheet and
  * the app's labels name the same keys.
  */
@@ -20,7 +20,7 @@ export const DAILY_REPORT_SECTIONS = [
 ] as const;
 export type DailyReportSection = (typeof DAILY_REPORT_SECTIONS)[number];
 
-/** Part → the catalogue switch that shows it (one switch per part, D-#1031). */
+/** Part → the catalogue switch that shows it (one switch per part, D-#1051). */
 export const DAILY_REPORT_SECTION_PERMISSION: Record<DailyReportSection, `reports:daily_${string}`> = {
   ATTENDANCE: "reports:daily_attendance",
   STAFF: "reports:daily_staff",
@@ -69,7 +69,7 @@ export const DAILY_REPORT_SECTION_LABELS_EN: Record<DailyReportSection, string> 
   SYSTEM: "System",
 };
 
-/** 18:00 Dhaka (owner 2026-11-06, D-#1032). The Principal can move it in settings. */
+/** 18:00 Dhaka (owner 2026-11-06, D-#1052). The Principal can move it in settings. */
 export const DAILY_REPORT_DEFAULT_SEND_MINUTES = 18 * 60;
 
 /** Line status: OK (no problems), WARN (some), BAD (≥ a third of the part's duties missed or

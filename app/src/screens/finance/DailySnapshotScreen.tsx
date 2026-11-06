@@ -15,7 +15,7 @@ import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
 
 export default function DailySnapshotScreen(): React.ReactElement {
-  // D-#1035: a jump from the daily report opens that day already loaded (optional param).
+  // D-#1055: a jump from the daily report opens that day already loaded (optional param).
   const route = useRoute();
   const jumpDay = (route.params as { date?: string } | undefined)?.date ?? "";
   const [date, setDate] = useState(jumpDay);

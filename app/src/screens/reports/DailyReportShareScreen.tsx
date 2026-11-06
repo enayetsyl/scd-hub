@@ -1,5 +1,5 @@
 /**
- * DailyReportShareScreen (D-#1034) — give one person the whole daily report or some parts, with
+ * DailyReportShareScreen (D-#1054) — give one person the whole daily report or some parts, with
  * the 18:00 notification on or off and an optional end date; list who has what; remove.
  * Parts usually kept for the Principal (mistakes, guardians, finance, system) ask a second press
  * (owner 2026-11-06: shareable with a warning). Gated `reports:daily_share` on the server.

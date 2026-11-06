@@ -1520,7 +1520,7 @@ export const NOTIFICATION_KINDS = [
   "STAFF_MISTAKE_MEETING",
   // Quiet record (D-#1020): DAILY → holders of staff_mistakes:view_all: the day's entries, 18:00
   "STAFF_MISTAKE_DAILY",
-  // Daily school report (D-#1030, docs/prd-daily-report.md; app-native, NO wire twin): the
+  // Daily school report (D-#1050, docs/prd-daily-report.md; app-native, NO wire twin): the
   // 18:00 school-day summary to the Principal and to anyone it is shared with, opening that day.
   "DAILY_REPORT",
 ] as const;

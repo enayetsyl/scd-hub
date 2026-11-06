@@ -1,10 +1,10 @@
 /**
- * DailyReportScreen (D-#1030–#1035, docs/prd-daily-report.md) — the end-of-day school report.
+ * DailyReportScreen (D-#1050–#1055, docs/prd-daily-report.md) — the end-of-day school report.
  *
  *   দিন   one saved day (today before the send time: "so far", not saved). Three counts, the
  *         on-time rate against the previous 5 days, one line per part; tap a line for its problem
  *         rows, tap a row to open that record, or the part's arrow to open the full report set
- *         to this day. A jump shows only when the viewer holds a switch that opens it (D-#1035).
+ *         to this day. A jump shows only when the viewer holds a switch that opens it (D-#1055).
  *   সপ্তাহ / মাস / বছর   totals from the saved days, against the same span before, problems per
  *         day, the places that went wrong on 3+ days (never people), and each part's rate.
  */

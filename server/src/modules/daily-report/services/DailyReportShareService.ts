@@ -1,5 +1,5 @@
 /**
- * DailyReportShareService (D-#1034) — the share sheet behind the report's share button.
+ * DailyReportShareService (D-#1054) — the share sheet behind the report's share button.
  *
  * A share is the ordinary per-person grant of each chosen part's `reports:daily_*` switch
  * (AccessControlService, audited as USER_ACCESS_CHANGED like any matrix edit) plus a

@@ -112,7 +112,7 @@ import { dispatchStaffMistakeDaily, STAFF_MISTAKE_DAILY_MINUTES } from "../../st
 import { getSettings as getDailyReportSettings, runDailyReport } from "../../daily-report/services/DailyReportService";
 import { sweepExpiredShares } from "../../daily-report/services/DailyReportShareService";
 
-/** D-#1032: the daily report fires at settings.sendMinutes (18:00) and may still be made up to
+/** D-#1052: the daily report fires at settings.sendMinutes (18:00) and may still be made up to
  *  4 hours late after a restart — makeDailyReport is idempotent on the day. */
 export const DAILY_REPORT_STALE_MINUTES = 240;
 
@@ -280,9 +280,9 @@ export interface TickSummary {
   meetingSummaryRemindersEmitted: number;
   /** 09:30 unmarked-assignment pushes to Office/Principal (D-#890). */
   markEscalationEmitted: number;
-  /** D-#1032: 18:00 daily-report notifications emitted (0 when the day's report already existed). */
+  /** D-#1052: 18:00 daily-report notifications emitted (0 when the day's report already existed). */
   dailyReportEmitted: number;
-  /** D-#1034: report shares removed because their end day passed. */
+  /** D-#1054: report shares removed because their end day passed. */
   dailyReportSharesExpired: number;
 }
 
@@ -389,7 +389,7 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
     });
   });
 
-  // --- Daily-report shares past their end day (D-#1034) — calendar cadence (an end day can
+  // --- Daily-report shares past their end day (D-#1054) — calendar cadence (an end day can
   // fall on a holiday), before the school-day gate; takes back exactly the share's own grants.
   await family("daily report share expiry", async () => {
     await runOnce(dateKey, "DRSHARE", async () => {
@@ -402,7 +402,7 @@ export async function runSchedulerTick(now = new Date()): Promise<TickSummary> {
   if (dayType === "OFF" || dayType === "HOLIDAY") return summary; // N2.5 — silent
   const nowMin = minutesOfDay(now);
 
-  // --- Daily school report (D-#1030/#1032) — saved once at the send time on a school day,
+  // --- Daily school report (D-#1050/#1052) — saved once at the send time on a school day,
   // then the Principal + shared people are notified. No report on OFF/HOLIDAY (gate above).
   await family("daily report", async () => {
     if (nowMin < 14 * 60) return; // never before the earliest allowed send time — no settings read all morning

@@ -2,7 +2,7 @@ import { Schema, model, Document, Types } from "mongoose";
 import { DAILY_REPORT_SECTIONS, type DailyReportSection } from "@scd/shared";
 
 /**
- * DailyReportShare (D-#1034) — the Principal gave one person some parts of the daily report.
+ * DailyReportShare (D-#1054) — the Principal gave one person some parts of the daily report.
  *
  * Access itself is the ordinary per-person grant of each part's `reports:daily_*` switch, so
  * the permission matrix shows it and the Reports hub opens. This row remembers WHICH grants

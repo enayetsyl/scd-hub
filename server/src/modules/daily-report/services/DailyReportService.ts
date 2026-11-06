@@ -1,5 +1,5 @@
 /**
- * DailyReportService (D-#1030–#1035, docs/prd-daily-report.md) — the end-of-day school report.
+ * DailyReportService (D-#1050–#1055, docs/prd-daily-report.md) — the end-of-day school report.
  *
  *   makeDailyReport   18:00 on a school day (settings.sendMinutes): build every part, compare
  *                     yesterday's saved problems with a re-run ("fixed later"), save ONCE, then
@@ -115,7 +115,7 @@ export async function buildParts(
   return { dayType, parts };
 }
 
-/** Re-run yesterday's replayable parts now; how many of its problems are gone (D-#1030). */
+/** Re-run yesterday's replayable parts now; how many of its problems are gone (D-#1050). */
 async function fixedSince(prev: IDailyReport): Promise<Map<DailyReportSection, number>> {
   const replayable = new Set(PART_BUILDERS.filter((b) => b.replayable).map((b) => b.key));
   const out = new Map<DailyReportSection, number>();
@@ -307,7 +307,7 @@ export async function liveReport(viewer: DailyReportViewer, now = new Date()): P
 }
 
 // ---------------------------------------------------------------------------
-// History (D-#1033)
+// History (D-#1053)
 // ---------------------------------------------------------------------------
 
 export interface HistoryDay {
@@ -433,7 +433,7 @@ export async function reportHistory(fromKey: string, toKey: string, viewer: Dail
 }
 
 // ---------------------------------------------------------------------------
-// The 18:00 notification (D-#1032) + the unread Today card
+// The 18:00 notification (D-#1052) + the unread Today card
 // ---------------------------------------------------------------------------
 
 const bn = (n: number): string => String(n).replace(/\d/g, (d) => "০১২৩৪৫৬৭৮৯"[Number(d)]);

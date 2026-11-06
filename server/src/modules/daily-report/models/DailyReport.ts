@@ -2,8 +2,8 @@ import { Schema, model, Document, Types } from "mongoose";
 import { DAILY_REPORT_SECTIONS, DAILY_REPORT_STATUSES, type DailyReportSection, type DailyReportStatus } from "@scd/shared";
 
 /**
- * DailyReport (D-#1030, docs/prd-daily-report.md §3) — one school day's report, saved ONCE at
- * the send time (18:00 by default) and never changed afterwards (D-#1030): a fix made later
+ * DailyReport (D-#1050, docs/prd-daily-report.md §3) — one school day's report, saved ONCE at
+ * the send time (18:00 by default) and never changed afterwards (D-#1050): a fix made later
  * shows up as "fixed later" on the NEXT day's report, so a month's totals are stable.
  *
  * It keeps counts plus a capped problem list per part, each row carrying where it leads
@@ -19,7 +19,7 @@ export interface IDailyReportLink {
   screen: string;
   /** JSON object of route params (strings only). */
   params: string;
-  /** Any of these permissions opens the target; the app hides the jump otherwise (D-#1035). */
+  /** Any of these permissions opens the target; the app hides the jump otherwise (D-#1055). */
   perms: string[];
 }
 

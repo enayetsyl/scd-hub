@@ -88,7 +88,7 @@ jest.mock("../modules/trackers/services/HomeworkReconciliationService", () => ({
 jest.mock("../modules/staff-mistakes/services/StaffMistakeService", () => ({
   settleOverdueMistakes: jest.fn().mockResolvedValue(0),
 }));
-// D-#1032/#1034: the daily report + share-expiry families (own tests in dailyReport.test.ts).
+// D-#1052/#1054: the daily report + share-expiry families (own tests in dailyReport.test.ts).
 const mockRunDailyReport = jest.fn((_now: Date) => Promise.resolve(0));
 const mockDailyReportSettings = jest.fn(() => Promise.resolve({ sendMinutes: 18 * 60, headlineSections: [] as string[], notifyPrincipal: true }));
 const mockSweepShares = jest.fn((_key: string) => Promise.resolve(0));
@@ -288,7 +288,7 @@ describe("homework weekly digest family", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Daily school report (D-#1030/#1032/#1034)
+// Daily school report (D-#1050/#1052/#1054)
 // ---------------------------------------------------------------------------
 
 describe("daily school report family", () => {

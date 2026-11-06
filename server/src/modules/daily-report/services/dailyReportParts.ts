@@ -1,15 +1,15 @@
 /**
- * The parts of the daily school report (D-#1030, docs/prd-daily-report.md §2). One builder per
+ * The parts of the daily school report (D-#1050, docs/prd-daily-report.md §2). One builder per
  * part, each READING the module services the existing reports already use — no part keeps its
  * own copy of a rule. Each builder is best-effort: a throw becomes an ERROR line, never a
  * missing report (the AdminTodayService posture).
  *
- * Counting (D-#1030): every part lists the day's duties; each lands in onTime (done by its usual
+ * Counting (D-#1050): every part lists the day's duties; each lands in onTime (done by its usual
  * time) or problems (late, or still not done when the report is made). `mistakes` is only the
  * staff mistake record's new entries. A part with nothing due shows NA, never a problem.
  *
  * `replayable` parts can be re-run later for the SAME day: the next day's report compares the
- * re-run with what was saved to show "fixed later" (D-#1030). The saved day never changes.
+ * re-run with what was saved to show "fixed later" (D-#1050). The saved day never changes.
  */
 import {
   DAILY_REPORT_SECTION_PERMISSION,

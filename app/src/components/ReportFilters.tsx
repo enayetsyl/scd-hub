@@ -40,7 +40,7 @@ export function useReportRange(
   defaultDays = 7,
   opts?: {
     withAll?: boolean;
-    /** D-#1035: open on exactly this day (a jump from the daily report) — a custom range of one day.
+    /** D-#1055: open on exactly this day (a jump from the daily report) — a custom range of one day.
      *  Unset = the usual default; a new value (another jump) moves the range again. */
     initialDay?: string;
   },

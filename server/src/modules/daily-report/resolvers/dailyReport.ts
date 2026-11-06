@@ -1,5 +1,5 @@
 /**
- * Daily school report (D-#1030–#1035, docs/prd-daily-report.md). Reads open to anyone holding
+ * Daily school report (D-#1050–#1055, docs/prd-daily-report.md). Reads open to anyone holding
  * at least one part's switch; the service then shows only the parts that person holds. Sharing
  * is `reports:daily_share`, settings `reports:daily_settings` (both Principal by default).
  */

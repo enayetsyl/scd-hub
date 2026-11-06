@@ -41,7 +41,7 @@ const daysAgoKey = (n: number): string => {
 };
 
 export default function AttendanceReportScreen({ route }: Props): React.ReactElement {
-  // D-#1035: a jump from the daily report opens on that day with that section first
+  // D-#1055: a jump from the daily report opens on that day with that section first
   // (optional params — opened from the menu it behaves exactly as before).
   const jumpDay = route.params?.date;
   const jumpSection = route.params?.sectionId;

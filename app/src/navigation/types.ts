@@ -756,7 +756,7 @@ export type ReportsStackParamList = {
   StorybookReport: undefined;
   /** AS-5 — activity-sheet reports (skills / banks / children). */
   ActivityReport: undefined;
-  /** D-#1030–#1035 — the daily school report; `date` opens that day (the 18:00 notification, the Today card). */
+  /** D-#1050–#1055 — the daily school report; `date` opens that day (the 18:00 notification, the Today card). */
   DailyReport: { date?: string } | undefined;
   DailyReportShare: undefined;
   DailyReportSettings: undefined;
