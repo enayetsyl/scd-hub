@@ -21,6 +21,8 @@ export interface StaffMistakeT {
   explainedAt: string | null;
   explainDueAt: string;
   autoCounted: boolean;
+  /** D-#1020: recorded quietly — the person was never asked. */
+  quiet: boolean;
   decidedByName: string | null;
   decidedAt: string | null;
   decisionNote: string | null;
@@ -59,7 +61,7 @@ export interface StaffMistakeT {
 
 const FIELDS = `
   id staffUserId staffName kind tier dateKey status reasonCode reasonText explainedAt explainDueAt
-  autoCounted decidedByName decidedAt decisionNote movedFromName movedToName createdAt
+  autoCounted quiet decidedByName decidedAt decisionNote movedFromName movedToName createdAt
   markNote {
     id tracker itemCode subject dateKey sectionLabel staffUserId staffName createdAt
     students { studentId studentName chasedAt correctedAt correctedByName via }
@@ -78,8 +80,8 @@ export const STAFF_MISTAKE_QUEUE = gql<{ staffMistakeQueue: StaffMistakeT[] }>`
   query StaffMistakeQueue { staffMistakeQueue { ${FIELDS} } }
 `;
 
-export const STAFF_MISTAKES = gql<{ staffMistakes: StaffMistakeT[] }, { staffProfileId?: string | null }>`
-  query StaffMistakes($staffProfileId: String) { staffMistakes(staffProfileId: $staffProfileId) { ${FIELDS} } }
+export const STAFF_MISTAKES = gql<{ staffMistakes: StaffMistakeT[] }, { staffProfileId?: string | null; dateKey?: string | null }>`
+  query StaffMistakes($staffProfileId: String, $dateKey: String) { staffMistakes(staffProfileId: $staffProfileId, dateKey: $dateKey) { ${FIELDS} } }
 `;
 
 export const STAFF_MISTAKE_MOVE_TARGETS = gql<{ staffMistakeMoveTargets: { userId: string; name: string }[] }>`

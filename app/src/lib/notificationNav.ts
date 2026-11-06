@@ -256,6 +256,9 @@ export function notificationTarget(
     case "STAFF_MISTAKE_STEP":
       // D-#941 — reviewers / the Principal: who reached which step.
       return { tab: "HrTab", screen: "StaffMistakeSummary" };
+    case "STAFF_MISTAKE_DAILY":
+      // D-#1020 — the 18:00 report opens that day's list (refs.date).
+      return { tab: "HrTab", screen: "MistakeReview", params: refs?.date ? { dateKey: refs.date } : undefined };
     case "STAFF_LETTER_SENT":
       // D-#902 — the letter waits in the staff member's own আমার চিঠি list.
       return { tab: "HrTab", screen: "MyLetters" };
