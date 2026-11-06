@@ -38,7 +38,8 @@ async function office(h) {
 
   // Monitor and reminders.
   await h.tap(O, "অগ্রগতি ও নম্বর বাকি", 4000);
-  await h.shot(O, "exam-qx-monitor", 1, [{ text: "রিমাইন্ডার" }, { text: "বাকি সবাইকে রিমাইন্ডার" }]);
+  await h.shot(O, "exam-qx-monitor", 1, [{ text: "রিমাইন্ডার" }]);
+  await h.shot(O, "exam-qx-monitor", 2, [{ text: "বাকি সবাইকে রিমাইন্ডার" }]);
   await h.tap(O, "রিমাইন্ডার", 3000);
   await O.context().close();
 }

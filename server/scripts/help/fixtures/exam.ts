@@ -346,7 +346,13 @@ export async function seedExam() {
   await Sch.enterScores(String(p1._id), st.c5.map((sid, i) => ({
     studentId: String(sid), status: "PRESENT", itemMarks: scores[i].map((m, k) => ({ itemNo: k + 1, marks: m })),
   })) as never, desk);
-  await Sch.declarePaper({ sectionId: String(S.c5), subjects: ["ENG"], name: "ইংরেজি অনুশীলন ২", paperDate: new Date("2026-11-03"), totalMarks: 30, items: items as never }, desk);
+  const p2 = await Sch.declarePaper({ sectionId: String(S.c5), subjects: ["ENG"], name: "ইংরেজি অনুশীলন ২", paperDate: new Date("2026-11-01"), totalMarks: 30, items: items as never }, desk);
+  const scores2 = [[9, 4, 2, 8], [5, 4, 3, 4], [10, 5, 4, 9], [3, 1, 2, 2], [8, 3, 4, 7], [6, 2, 1, 5]];
+  await Sch.enterScores(String(p2._id), st.c5.map((sid, i) => ({
+    studentId: String(sid), status: "PRESENT", itemMarks: scores2[i].map((m, k) => ({ itemNo: k + 1, marks: m })),
+  })) as never, desk);
+  // Paper 3 waits for marks (the marks walk).
+  await Sch.declarePaper({ sectionId: String(S.c5), subjects: ["ENG"], name: "ইংরেজি অনুশীলন ৩", paperDate: new Date("2026-11-04"), totalMarks: 30, items: items as never }, desk);
 
   return { ...base, examId, t1: t1.id, t2: t2.id, t4: t4.id, s2, s3, s4, s5 };
 }

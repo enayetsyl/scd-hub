@@ -115,7 +115,8 @@ async function principal(h) {
   await h.tap(P, "ফেরত পাঠান", 1200);
   await h.shot(P, "exam-ct-approve", 2, [{ text: "অনুমোদন ও প্রকাশ" }, { text: "ফেরত পাঠান" }, { text: "ফেরত পাঠানোর কারণ" }]);
   await h.tap(P, "অনুমোদন ও প্রকাশ", 4000);
-  await h.shot(P, "exam-ct-unpublish", 0, [{ text: "সব প্রকাশ বাতিল" }, { text: "প্রকাশ বাতিল" }]);
+  await h.shot(P, "exam-ct-unpublish", 0, [{ text: "সব প্রকাশ বাতিল" }]);
+  await h.shot(P, "exam-ct-unpublish", 1, [{ text: "প্রকাশ বাতিল" }]);
   await P.context().close();
 }
 
