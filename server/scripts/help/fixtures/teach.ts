@@ -234,7 +234,77 @@ export async function seedTeach() {
     { $set: { state: "DUE" }, $push: { stateDates: { state: "DUE", at: at("2026-11-01T08:00:00+06:00") } } },
   );
 
-  return { ...base, lastWeek };
+  // ── Saturday revision: a Hifz group (৫ম শ্রেণি) the class teacher leads on Saturdays ──
+  const { SubjectGroup } = await import("../../../src/modules/routine/models/SubjectGroup");
+  const { SubjectGroupMembership } = await import("../../../src/modules/routine/models/SubjectGroupMembership");
+  const hifz = await SubjectGroup.create({ track: "quran", level: "Hifz 1", gender: "mixed", code: "HIFZ1", nameBn: "হিফজ ১", active: true });
+  for (const studentId of base.students.c5) {
+    await SubjectGroupMembership.create({ groupId: hifz._id, studentId, track: "quran", active: true });
+  }
+  await RoutineSlot.create({
+    groupType: "subjectgroup",
+    groupId: hifz._id,
+    dayOfWeek: "SAT",
+    periodNumber: 1,
+    subject: "QURAN",
+    track: "quran",
+    isBreak: false,
+    teacherId: T,
+    effectiveFrom: new Date("2026-01-01"),
+    active: true,
+    createdBy: P,
+  });
+  // Last Saturday (10-31): four entries written, three of them already sent to the family.
+  const { recordEntry } = await import("../../../src/modules/saturday-revision/services/RevisionService");
+  const { RevisionEntry } = await import("../../../src/modules/saturday-revision/models/RevisionEntry");
+  const sat = new Date("2026-10-31"); // UTC midnight, as the app sends a date key
+  const portions: Array<[number, number, number, number]> = [
+    [78, 1, 78, 20],
+    [79, 1, 79, 26],
+    [80, 1, 80, 42],
+    [81, 1, 81, 29],
+  ];
+  for (const [i, [fs, fa, ts, ta]] of portions.entries()) {
+    const e = await recordEntry({
+      groupId: String(hifz._id),
+      studentId: String(base.students.c5[i]),
+      date: sat,
+      present: true,
+      portions: [{ category: "SABAQ", status: "COMPLETED", fromSurah: fs, fromAyah: fa, toSurah: ts, toAyah: ta, tanbih: i % 2, fath: 0 }],
+      teacherComment: i === 0 ? "তিলাওয়াত সুন্দর হয়েছে" : undefined,
+      actorId: String(T),
+    });
+    if (i < 3) {
+      // Sent: the family has it (deliverEntry renders message templates a bare test database lacks).
+      await RevisionEntry.updateOne({ _id: e.id }, { $set: { deliveredAt: at("2026-10-31T13:00:00+06:00"), deliveryChannels: ["inbox"] } });
+    }
+  }
+
+  // ── Daily tracker (legacy set tracker): one assembled homework set for ৩য় বালক গণিত ──
+  const { AssessmentSet } = await import("../../../src/modules/assessment/models/AssessmentSet");
+  await AssessmentSet.create({
+    setType: "HW",
+    name: "গুণের অনুশীলন সেট ১",
+    sectionId: sections.c3Boys,
+    classId: classes.c3,
+    subjectId: base.subjects.MATH,
+    status: "assembled",
+    totalMarks: 10,
+    createdBy: T,
+    assembledBy: T,
+    assembledAt: at("2026-11-04T12:00:00+06:00"),
+  });
+
+  // ── Vocabulary: a small ৩য় শ্রেণি English word bank ───────────────────────────
+  const { VocabWord } = await import("../../../src/modules/vocab/models/VocabWord");
+  for (const [headword, banglaMeaning] of [
+    ["apple", "আপেল"], ["book", "বই"], ["river", "নদী"], ["mother", "মা"], ["school", "বিদ্যালয়"],
+    ["water", "পানি"], ["flower", "ফুল"], ["sun", "সূর্য"], ["friend", "বন্ধু"], ["teacher", "শিক্ষক"],
+  ]) {
+    await VocabWord.create({ program: "ENGLISH", classLevel: 3, headword, banglaMeaning, active: true, addedBy: T2 });
+  }
+
+  return { ...base, lastWeek, hifzGroupId: hifz._id };
 }
 
 async function declareHomeworkItemNil(classId: string, sectionId: string, date: string, actorId: string) {
