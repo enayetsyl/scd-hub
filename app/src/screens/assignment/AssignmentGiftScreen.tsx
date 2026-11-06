@@ -23,7 +23,8 @@ import {
   UNDO_GIFT_HANDOVER,
   type GiftStudentRowT,
 } from "../../graphql/assignmentGift";
-import { CLASSES_QUERY } from "../../graphql/operations";
+import { CLASSES_QUERY, MY_SECTIONS_AS_CLASS_TEACHER_QUERY } from "../../graphql/operations";
+import { useAuth } from "../../auth/AuthContext";
 import type { AssignmentStackParamList } from "../../navigation/types";
 import {
   Screen,
@@ -133,6 +134,26 @@ export default function AssignmentGiftScreen({ route }: Props): React.ReactEleme
   // D-#724: not the emptied সম্মিলিত — a section view is its CURRENT students, so it is empty.
   const sections = classId ? pickableSections(classes.find((c) => c.id === classId)?.sections ?? []) : [];
 
+  // Only a view_all holder (Principal/Office) may read the whole school; a teacher must name
+  // a শাখা or the server refuses. Start a class teacher on their own শাখা, and never ask for
+  // the report until a teacher has one (the refusal used to replace the pickers entirely).
+  const { can } = useAuth();
+  const canWholeSchool = can("assignment_gift:view_all");
+  const [ctQ] = useQuery({ query: MY_SECTIONS_AS_CLASS_TEACHER_QUERY, pause: canWholeSchool });
+  React.useEffect(() => {
+    if (canWholeSchool || sectionId || classes.length === 0) return;
+    const own = (ctQ.data?.mySectionsAsClassTeacher ?? []).find((s) =>
+      classes.some((c) => c.sections.some((cs) => cs.id === s.id)),
+    );
+    if (!own) return;
+    const cls = classes.find((c) => c.sections.some((cs) => cs.id === own.id));
+    if (cls) {
+      setClassId(cls.id);
+      setSectionId(own.id);
+    }
+  }, [canWholeSchool, sectionId, classes, ctQ.data]);
+  const needsSection = !canWholeSchool && !sectionId;
+
   const [reportQ, refetchReport] = useQuery({
     query: ASSIGNMENT_GIFT_REPORT,
     variables: {
@@ -142,7 +163,7 @@ export default function AssignmentGiftScreen({ route }: Props): React.ReactEleme
       classId,
       sectionId,
     },
-    pause: !academicYearId,
+    pause: !academicYearId || needsSection,
   });
 
   const [, recordHandover] = useMutation(RECORD_GIFT_HANDOVER);
@@ -213,7 +234,32 @@ export default function AssignmentGiftScreen({ route }: Props): React.ReactEleme
   return (
     <Screen padded={false}>
       <ScrollView contentContainerStyle={{ flexGrow: 1, padding: space(4) }}>
-        {reportQ.fetching && !report ? (
+        {/* Filters, shown in every state. Principal/Office may leave both blank for the
+            whole school; a teacher must name a section (the server enforces it). */}
+        <Card>
+          <Select
+            label={canWholeSchool ? STR.agAllStudents : STR.vbPickClass}
+            value={classId}
+            options={classes.map((c) => ({ label: c.nameBn, value: c.id }))}
+            onChange={(v) => {
+              setClassId(v);
+              setSectionId(null);
+            }}
+            placeholder={canWholeSchool ? STR.agAllStudents : STR.vbPickClass}
+          />
+          {sections.length > 0 ? (
+            <Select
+              label={STR.agSelectSection}
+              value={sectionId}
+              options={sections.map((s) => ({ label: s.nameBn, value: s.id }))}
+              onChange={setSectionId}
+              placeholder={STR.agSelectSection}
+            />
+          ) : null}
+        </Card>
+        {needsSection ? (
+          <Notice message={STR.agPickSectionHint} tone="info" />
+        ) : reportQ.fetching && !report ? (
           <Loader label={STR.loading} />
         ) : reportQ.error ? (
           <Notice message={friendlyError(reportQ.error)} tone="danger" />
@@ -221,30 +267,6 @@ export default function AssignmentGiftScreen({ route }: Props): React.ReactEleme
           <EmptyState message={STR.empty} />
         ) : (
           <>
-            {/* Filters — Principal/Office may leave both blank for the whole school;
-                a teacher must name a section (the server enforces it). */}
-            <Card>
-              <Select
-                label={STR.agAllStudents}
-                value={classId}
-                options={classes.map((c) => ({ label: c.nameBn, value: c.id }))}
-                onChange={(v) => {
-                  setClassId(v);
-                  setSectionId(null);
-                }}
-                placeholder={STR.agAllStudents}
-              />
-              {sections.length > 0 ? (
-                <Select
-                  label={STR.agSelectSection}
-                  value={sectionId}
-                  options={sections.map((s) => ({ label: s.nameBn, value: s.id }))}
-                  onChange={setSectionId}
-                  placeholder={STR.agSelectSection}
-                />
-              ) : null}
-            </Card>
-
             {/* The 4-week block + the week picker inside it. */}
             <Card>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>

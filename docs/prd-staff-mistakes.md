@@ -226,6 +226,9 @@ Explained later with the duty reasons (ছুটিতে ছিলাম, প�
 | TASK_OVERDUE | the morning task sweep finds a task past its due day and still open | the assignee | the due day |
 | WORK_CLAIM_UNANSWERED | a guardian's "done at home" claim expires unanswered | the claim's teacher | — |
 
+**TASK_OVERDUE starts off (D-#1015, owner 2026-11-06).** It is in the default `disabledKinds`; the
+Principal switches it on in the rules screen. A school that already saved its rules keeps what it saved.
+
 **Approved leave:** where a duty day is known, an approved staff leave covering it (matched through the
 staff profile) accepts the entry at once as ছুটিতে ছিলাম — no explain notice is sent.
 
@@ -285,3 +288,43 @@ reviewer can move it to the register's marker.
 
 Owner-unconfirmed defaults: the owners above, the 30-day link window, the instalment button, that own
 re-uploads / own restores are not mistakes, and that only "register present, given absent" counts.
+
+## 18. Quiet record and the daily report (D-#1020, owner 2026-11-06)
+
+The owner uses the record to understand who makes which mistake, then talks to the person face to
+face. It is not a warning system. Staff were afraid of what "added to your file" would lead to.
+
+- **Nobody is told unless they hold `staff_mistakes:view_own`.** The action is no longer SELF. It
+  is OFF for Teacher and Office by default, and the Principal switches it on per role or per person
+  in the permission matrix. Without it, a person gets:
+  - no "please explain" notice and no decision notice;
+  - no warning step: the ladder is skipped, so there is no pop-up, no STEP notice and no meeting;
+  - no আমার ভুল ও ব্যাখ্যা card. The server refuses `myStaffMistakes` / `myStaffWarning`, and the
+    app hides the card and the warning pop-up.
+
+  A new entry with no reason counts at once (`COUNTED`, `autoCounted`). A move onto such a person is
+  the reviewer's decision (`COUNTED`, `decidedBy` = the reviewer). Approved leave still accepts
+  the entry at once.
+- **The correction sheets stay, worded neutrally.** A same-day homework/assignment flip and an
+  attendance change still ask "কী হয়েছিল?", because the reason picks the guardian's correction.
+  For someone who is not told, the sheet and the after-save line say nothing about mistakes, files,
+  review or who is told (`msgFixBodyQuiet`, `msgFixDoneQuiet`, `smrAttFixBodyQuiet`, no hint). The
+  revision correction help no longer mentions the old author's record.
+- **Who sees.** `view_all` and `review` are PRINCIPAL-DEFAULT, off for Office. The Principal grants
+  them to anyone. A Principal's own entries still reach only holders of `review_principal`
+  (D-#1000).
+- **The daily report.** At 18:00 Dhaka, every day, each `view_all` holder gets one
+  `STAFF_MISTAKE_DAILY` notification:
+  - title: আজকের কর্মীর ভুল: Nটি (M জন);
+  - body: one line per person, most first, up to 8 people, e.g. "রহিমা (২): <place> ×২";
+  - only waiting/counted entries; accepted and moved-away rows are left out;
+  - a day with nothing sends nothing.
+
+  Tapping it opens ব্যাখ্যা যাচাই → **দিনের তালিকা** for that day (`refs.date`), with
+  previous/next-day buttons. The list is live: entries caught after 18:00 are in it but not in that
+  evening's notice.
+- **Running total.** কর্মীর ভুলের হিসাব (30 / 90 days per person, by place), unchanged.
+
+Owner-unconfirmed defaults: 18:00 (17:30 would race the homework chase sweep, which records at
+17:30); up to 8 people per notice; existing explain notices already sent stay in inboxes, and
+those entries count at their old deadline.

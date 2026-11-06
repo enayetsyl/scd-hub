@@ -420,7 +420,8 @@ export const STAFF_MISTAKE_DEFAULT_SETTINGS: StaffMistakeSettingsShape = {
   ],
   tierWeights: { 1: 1, 2: 0.5, 3: 0.5 },
   deadline: "NEXT_SCHOOL_DAY",
-  disabledKinds: [],
+  // D-#1015: the overdue-task check starts off; the Principal switches it on in the rules.
+  disabledKinds: ["TASK_OVERDUE"],
 };
 
 /** Bangla error for a bad settings write, or null. */

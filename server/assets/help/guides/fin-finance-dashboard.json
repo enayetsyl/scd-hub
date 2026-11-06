@@ -1,0 +1,60 @@
+{
+  "id": "fin-finance-dashboard",
+  "category": "payroll_finance",
+  "order": 90,
+  "draft": true,
+  "title": "অর্থ ড্যাশবোর্ড দেখা",
+  "intro": "বছরের নগদ অবস্থা, আয়-ব্যয়, কর্জ ও ফি বকেয়া এবং মাসভিত্তিক প্রবণতা এক পাতায় দেখার নিয়ম।",
+  "keywords": [
+    "ড্যাশবোর্ড",
+    "আয়-ব্যয়",
+    "রিপোর্ট",
+    "প্রবণতা"
+  ],
+  "perms": [
+    "finance_reports:view"
+  ],
+  "screens": [
+    "FinanceTab/FinanceDashboard"
+  ],
+  "goTo": {
+    "route": "FinanceTab",
+    "screen": "FinanceDashboard"
+  },
+  "rows": [
+    {
+      "heading": "পাতাটি খোলা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "ওপরে বাম কোণের <b>☰</b> চেপে মেনু খুলুন, তারপর অর্থ চাপুন।",
+          "box": null
+        },
+        {
+          "text": "<b>ড্যাশবোর্ড</b> চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "বছরের হিসাব",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "<b>শিক্ষাবর্ষ আইডি</b> লিখুন।",
+          "box": null
+        },
+        {
+          "text": "<b>লোড করুন</b> চাপুন।",
+          "box": null
+        },
+        {
+          "text": "<b>অর্থ ড্যাশবোর্ড</b>, আয়-ব্যয় বিবরণী ও প্রবণতা অংশ দেখুন।",
+          "box": null
+        }
+      ]
+    }
+  ]
+}

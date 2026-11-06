@@ -12,13 +12,20 @@ import { shotPathFor } from "../services/HelpGuideService";
 
 export const helpShotsRouter = Router();
 
-helpShotsRouter.get("/:guideId/:file", (req: Request, res: Response) => {
+helpShotsRouter.get("/:guideId/:file", async (req: Request, res: Response) => {
   const ctx = buildContext(req, res);
   if (!ctx.auth) {
     res.status(403).json({ error: "লগইন করা নেই" });
     return;
   }
-  const abs = shotPathFor(ctx.auth, String(req.params.guideId), String(req.params.file));
+  let abs: string | null;
+  try {
+    // Async since D-#1011: a guardian's guides depend on the features switched on for them.
+    abs = await shotPathFor(ctx.auth, String(req.params.guideId), String(req.params.file));
+  } catch {
+    res.status(500).json({ error: "ছবিটি খোলা যায়নি" });
+    return;
+  }
   if (!abs) {
     res.status(404).json({ error: "ছবিটি পাওয়া যায়নি" });
     return;

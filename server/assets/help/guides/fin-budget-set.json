@@ -1,0 +1,67 @@
+{
+  "id": "fin-budget-set",
+  "category": "payroll_finance",
+  "order": 80,
+  "draft": true,
+  "title": "বছরের বাজেট লাইন ঠিক করা",
+  "intro": "শিক্ষাবর্ষের জন্য প্রতিটি আয় বা ব্যয়ের খাতে বার্ষিক বাজেট লিখে রাখার নিয়ম।",
+  "keywords": [
+    "বাজেট",
+    "বার্ষিক",
+    "খাত"
+  ],
+  "perms": [
+    "budget:edit"
+  ],
+  "screens": [
+    "FinanceTab/Budget"
+  ],
+  "goTo": {
+    "route": "FinanceTab",
+    "screen": "Budget"
+  },
+  "rows": [
+    {
+      "heading": "পাতাটি খোলা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "ওপরে বাম কোণের <b>☰</b> চেপে মেনু খুলুন, তারপর অর্থ চাপুন।",
+          "box": null
+        },
+        {
+          "text": "<b>বাজেট</b> চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "বাজেট লাইন",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "<b>শিক্ষাবর্ষ আইডি</b> লিখুন।",
+          "box": null
+        },
+        {
+          "text": "<b>ধরন</b> বেছে নিন: আয় বা ব্যয়।",
+          "box": null
+        },
+        {
+          "text": "<b>খাত</b> বেছে নিন।",
+          "box": null
+        },
+        {
+          "text": "<b>বার্ষিক পরিমাণ</b> লিখুন।",
+          "box": null
+        },
+        {
+          "text": "<b>সংরক্ষণ</b> চাপুন।",
+          "box": null
+        }
+      ]
+    }
+  ]
+}

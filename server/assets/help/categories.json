@@ -4,32 +4,60 @@
     "title": "অ্যাপ ব্যবহার শুরু"
   },
   {
-    "id": "mastery",
-    "title": "শিখনফল ও শিখন-দক্ষতা"
+    "id": "homework_assignment",
+    "title": "বাড়ির কাজ ও অ্যাসাইনমেন্ট"
+  },
+  {
+    "id": "class_notes_routine",
+    "title": "ক্লাস নোট ও রুটিন"
   },
   {
     "id": "attendance_leave",
     "title": "উপস্থিতি ও ছুটি"
   },
   {
-    "id": "homework_assignment",
-    "title": "বাড়ির কাজ ও অ্যাসাইনমেন্ট"
-  },
-  {
     "id": "class_tests_exams",
     "title": "ক্লাস টেস্ট ও পরীক্ষা"
+  },
+  {
+    "id": "mastery",
+    "title": "শিখনফল ও শিখন-দক্ষতা"
+  },
+  {
+    "id": "students_families",
+    "title": "শিক্ষার্থী ও অভিভাবক"
+  },
+  {
+    "id": "content_books",
+    "title": "পাঠ পরিকল্পনা, প্রশ্ন ও বই"
   },
   {
     "id": "messages_popups",
     "title": "বার্তা ও পপ-আপ"
   },
   {
+    "id": "staff_hr",
+    "title": "শিক্ষক-কর্মী ও এইচআর"
+  },
+  {
+    "id": "payroll_finance",
+    "title": "বেতন ও হিসাব"
+  },
+  {
     "id": "printing",
     "title": "প্রিন্ট"
   },
   {
-    "id": "staff_hr",
-    "title": "কর্মী ও বেতন"
+    "id": "school_operations",
+    "title": "স্কুল পরিচালনা"
+  },
+  {
+    "id": "reports",
+    "title": "রিপোর্ট"
+  },
+  {
+    "id": "admin_access",
+    "title": "প্রশাসন ও অনুমতি"
   },
   {
     "id": "child",

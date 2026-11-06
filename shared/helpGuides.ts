@@ -8,7 +8,8 @@
 //
 // A guide is ONE small task: 1–4 screen rows, at most 8 steps, one red box per step.
 // Who sees it is declared once: `perms` (any-of, catalogue keys) OR `audience`
-// (ALL_STAFF for SELF actions, GUARDIAN for every guardian login). The server filters;
+// (ALL_STAFF for SELF actions, GUARDIAN for every guardian login; a GUARDIAN guide that
+// names a `guardianFeature` reaches only guardians with it switched on). The server filters;
 // the app never receives a guide the person may not see (D-#969).
 //
 // Boxes are FRACTIONS of the screenshot ([x, y, w, h], 0–1), recorded by the capture
@@ -16,6 +17,7 @@
 // its own box. A `draft` guide may lack shots and boxes and is never shown to anyone.
 
 import { FEATURE_CATALOGUE } from "./permissionCatalogue";
+import { GUARDIAN_FEATURES, type GuardianFeature } from "./vocab";
 
 export const HELP_AUDIENCES = ["ALL_STAFF", "GUARDIAN"] as const;
 export type HelpAudience = (typeof HELP_AUDIENCES)[number];
@@ -48,6 +50,11 @@ export interface HelpGuideFile {
   keywords: string[];
   perms?: string[];
   audience?: HelpAudience;
+  /**
+   * D-#1011: a GUARDIAN guide for a feature released per guardian (storybooks, activity
+   * sheets). Only guardians who have that feature switched on see it.
+   */
+  guardianFeature?: GuardianFeature;
   /** `<Route>/<Screen>` addresses whose header ? opens this guide. */
   screens?: string[];
   /** Where এই পাতায় যান goes. */
@@ -121,6 +128,11 @@ export function checkHelpGuide(raw: unknown, env: HelpCheckEnv): string[] {
   }
   if (hasAudience && !(HELP_AUDIENCES as readonly unknown[]).includes(g.audience)) {
     p.push(`audience must be one of ${HELP_AUDIENCES.join(", ")}`);
+  }
+  if (g.guardianFeature !== undefined) {
+    if (!(GUARDIAN_FEATURES as readonly unknown[]).includes(g.guardianFeature)) {
+      p.push(`guardianFeature must be one of ${GUARDIAN_FEATURES.join(", ")}`);
+    } else if (g.audience !== "GUARDIAN") p.push('guardianFeature needs audience "GUARDIAN"');
   }
 
   if (g.screens !== undefined && (!Array.isArray(g.screens) || !g.screens.every((s) => isStr(s) && SCREEN_RE.test(s)))) {
