@@ -56,6 +56,12 @@ export const REPORT_LEAF_ACTIONS: Record<string, string[]> = {
   StorybookReport: ["reports:storybook_series", "reports:storybook_books", "reports:storybook_readers"],
   // AS-5: one switch per tab of the activity-sheet report.
   ActivityReport: ["reports:activity_skills", "reports:activity_sheets", "reports:activity_students"],
+  // D-#1050–#1055: one switch per part of the daily school report; any one opens it.
+  DailyReport: [
+    "reports:daily_attendance", "reports:daily_staff", "reports:daily_teaching", "reports:daily_homework",
+    "reports:daily_assignment", "reports:daily_class_test", "reports:daily_mistakes", "reports:daily_work_board",
+    "reports:daily_office", "reports:daily_guardians", "reports:daily_finance", "reports:daily_system",
+  ],
 };
 
 /** Any of these opens the Reports tab. */
