@@ -6,7 +6,7 @@
   "subject": "BAN",
   "titleBn": "বার্ষিক পরীক্ষা ২০২৬ · প্রথম শ্রেণি · বাংলা",
   "fullMarks": 100,
-  "durationBn": "২ ঘণ্টা",
+  "durationBn": "৩ ঘণ্টা",
   "syllabusRows": [
     { "seq": 1, "label": "মিলকরণ কর", "itemType": "matching", "component": null, "count": 5, "marksEach": 1, "total": 5 },
     { "seq": 2, "label": "সঠিক উত্তর নির্বাচন কর", "itemType": "mcq", "component": null, "count": 5, "marksEach": 1, "total": 5 },
