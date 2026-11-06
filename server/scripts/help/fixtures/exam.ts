@@ -45,6 +45,8 @@ if (!/^mongodb:\/\/127\.0\.0\.1:\d+\//.test(uri)) {
 
 /** The StoredFile the spec's faked upload answers with (no Drive locally). */
 export const FAKE_PAPER_FILE_ID = "6600000000000000000000a1";
+/** Scanned script pages the faked /files/ctscript upload hands out, in order. */
+export const FAKE_SCRIPT_FILE_IDS = ["6600000000000000000000b1", "6600000000000000000000b2", "6600000000000000000000b3", "6600000000000000000000b4", "6600000000000000000000b5", "6600000000000000000000b6"];
 
 type Role = "PRINCIPAL" | "OFFICE" | "TEACHER";
 const ctxOf = (userId: Types.ObjectId, role: Role): AppContext =>
@@ -92,6 +94,7 @@ export async function seedExam() {
   await RoutineSlot.create([
     ...slot(S.c3Boys, C.c3, "MATH", U.teacher, 1),
     ...slot(S.c3Boys, C.c3, "BAN", U.teacher, 2),
+    ...slot(S.c3Boys, C.c3, "SCI", U.teacher, 3),
     ...slot(S.c3Girls, C.c3, "ENG", U.teacher2, 1),
     ...slot(S.c3Girls, C.c3, "MATH", U.teacher2, 2),
     ...slot(S.c5, C.c5, "ENG", U.teacher2, 1),
@@ -205,6 +208,7 @@ export async function seedExam() {
   await CTQ.reviewCtQuestion({ id: q3.id, approve: true, actorId: String(U.teacher) });
   // The Office's prepared paper the spec's faked upload hands back.
   await fakeFile("classtest_question", "গণিত-অধ্যায়-৫.pdf", U.office, FAKE_PAPER_FILE_ID);
+  for (const [i, id] of FAKE_SCRIPT_FILE_IDS.entries()) await fakeFile("classtest_script", `scan-${i + 1}.jpg`, U.office, id);
 
   // ── Published questions (the question-set walk) ─────────────────────────
   const QS = [
