@@ -1,0 +1,84 @@
+{
+  "id": "family-student-profile",
+  "category": "students_families",
+  "order": 2,
+  "title": "শিক্ষার্থীর প্রোফাইল দেখা",
+  "intro": "একজন শিক্ষার্থীর উপস্থিতি, বাড়ির কাজ, অ্যাসাইনমেন্ট, ক্লাস টেস্ট ও মন্তব্য এক পাতায় দেখুন। দরকার হলে প্রোফাইল PDF করে প্রিন্ট নিন।",
+  "keywords": [
+    "শিক্ষার্থীর প্রোফাইল",
+    "প্রোফাইল",
+    "PDF",
+    "ড্যাশবোর্ড"
+  ],
+  "perms": [
+    "student_profile:view_all"
+  ],
+  "screens": [
+    "AdminTab/StudentProfile",
+    "HomeworkTab/StudentProfile",
+    "AttendanceTab/StudentProfile",
+    "ClassTestTab/StudentProfile"
+  ],
+  "goTo": {
+    "route": "AdminTab",
+    "screen": "Roster"
+  },
+  "rows": [
+    {
+      "heading": "শিক্ষার্থী বাছাই",
+      "shot": "family-student-profile/1.jpg",
+      "size": [
+        824,
+        1720
+      ],
+      "steps": [
+        {
+          "text": "শিক্ষার্থী তালিকায় শিক্ষার্থীর <b>নাম</b> চাপুন।",
+          "box": [
+            0.4005,
+            0.4169,
+            0.5388,
+            0.0372
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "প্রোফাইলের অংশ",
+      "shot": "family-student-profile/2.jpg",
+      "size": [
+        824,
+        1720
+      ],
+      "steps": [
+        {
+          "text": "<b>ড্যাশবোর্ড</b>-এ গত ৯০ দিনের উপস্থিতি, বাড়ির কাজ, অ্যাসাইনমেন্ট ও ক্লাস টেস্টের সারাংশ থাকে।",
+          "box": [
+            0.0583,
+            0.5209,
+            0.1904,
+            0.0326
+          ]
+        },
+        {
+          "text": "বিস্তারিত দেখতে ওপরের ট্যাব চাপুন, যেমন <b>উপস্থিতি</b>।",
+          "box": [
+            0.5082,
+            0.5209,
+            0.1673,
+            0.0326
+          ]
+        },
+        {
+          "text": "প্রিন্ট করতে <b>প্রোফাইল প্রিন্ট (PDF)</b> চাপুন।",
+          "box": [
+            0.3158,
+            0.4465,
+            0.3685,
+            0.0372
+          ]
+        }
+      ]
+    }
+  ]
+}

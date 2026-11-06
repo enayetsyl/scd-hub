@@ -1,0 +1,56 @@
+{
+  "id": "fin-fee-reminder",
+  "category": "payroll_finance",
+  "order": 53,
+  "draft": true,
+  "title": "বকেয়া ফির রিমাইন্ডার পাঠানো",
+  "intro": "অভিভাবকের ভাগের বকেয়া ফি দেখে তাঁকে রিমাইন্ডার (অ্যাপ ও হোয়াটসঅ্যাপ লিংক) পাঠানোর নিয়ম।",
+  "keywords": [
+    "রিমাইন্ডার",
+    "বকেয়া ফি",
+    "অভিভাবক",
+    "হোয়াটসঅ্যাপ"
+  ],
+  "perms": [
+    "finance_ledger:remind"
+  ],
+  "screens": [
+    "FinanceTab/FeesZakat"
+  ],
+  "goTo": {
+    "route": "FinanceTab",
+    "screen": "FeesZakat"
+  },
+  "rows": [
+    {
+      "heading": "পাতাটি খোলা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "ওপরে বাম কোণের <b>☰</b> চেপে মেনু খুলুন, তারপর অর্থ চাপুন।",
+          "box": null
+        },
+        {
+          "text": "<b>ফি ও যাকাত/সহায়তা</b> চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "রিমাইন্ডার",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "<b>ফি বকেয়া রিমাইন্ডার</b> অংশে শিক্ষার্থী আইডি লিখুন।",
+          "box": null
+        },
+        {
+          "text": "<b>রিমাইন্ডার পাঠান</b> চাপুন। অভিভাবকের বকেয়া ও হোয়াটসঅ্যাপ লিংক দেখাবে।",
+          "box": null
+        }
+      ]
+    }
+  ]
+}

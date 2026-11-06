@@ -1,0 +1,61 @@
+{
+  "id": "child-routine",
+  "category": "child",
+  "order": 10,
+  "title": "সাপ্তাহিক রুটিন দেখা",
+  "intro": "সন্তানের পুরো সপ্তাহের ক্লাস রুটিন দিন অনুযায়ী দেখুন।",
+  "keywords": [
+    "রুটিন",
+    "ক্লাস রুটিন",
+    "পিরিয়ড",
+    "সাপ্তাহিক"
+  ],
+  "audience": "GUARDIAN",
+  "screens": [
+    "GuardianRoutineTab/ChildRoutine"
+  ],
+  "goTo": {
+    "route": "GuardianRoutineTab",
+    "screen": "ChildRoutine"
+  },
+  "rows": [
+    {
+      "heading": "রুটিন খোলা",
+      "shot": "child-routine/1.jpg",
+      "size": [
+        824,
+        1720
+      ],
+      "steps": [
+        {
+          "text": "ওপরে বাম কোণের ☰ চেপে মেনু খুলুন, তারপর <b>রুটিন</b> চাপুন।",
+          "box": [
+            0.1668,
+            0.2872,
+            0.5128,
+            0.0372
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "দিনের রুটিন",
+      "shot": "child-routine/2.jpg",
+      "size": [
+        824,
+        1720
+      ],
+      "steps": [
+        {
+          "text": "দিনের নাম চাপুন, যেমন <b>রবিবার</b>। ওই দিনের পিরিয়ড, বিষয় ও সময় খুলবে; আবার চাপলে বন্ধ হবে।",
+          "box": [
+            0.0704,
+            0.2895,
+            0.1407,
+            0.0372
+          ]
+        }
+      ]
+    }
+  ]
+}

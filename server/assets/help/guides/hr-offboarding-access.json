@@ -1,0 +1,43 @@
+{
+  "id": "hr-offboarding-access",
+  "category": "staff_hr",
+  "order": 63,
+  "title": "চলে যাওয়া কর্মীর লগইন বন্ধ করা",
+  "intro": "শেষ কর্মদিবসের পর কর্মীর অ্যাপ লগইন ও সব দায়িত্বের অনুমতি একসাথে বন্ধ করুন। ☰ → কর্মী → অফবোর্ডিং থেকে কর্মীর নাম চাপুন।",
+  "keywords": [
+    "লগইন বন্ধ",
+    "অ্যাক্সেস বাতিল",
+    "অফবোর্ডিং"
+  ],
+  "perms": [
+    "offboarding:revoke"
+  ],
+  "screens": [
+    "HrTab/OffboardingCase"
+  ],
+  "goTo": {
+    "route": "HrTab",
+    "screen": "OffboardingHome"
+  },
+  "rows": [
+    {
+      "heading": "লগইন বন্ধ",
+      "shot": "hr-offboarding-access/1.jpg",
+      "size": [
+        824,
+        1720
+      ],
+      "steps": [
+        {
+          "text": "সিস্টেম অ্যাক্সেস অংশে <b>এখনই অ্যাক্সেস বাতিল করুন</b> চাপুন ও নিশ্চিত করুন।",
+          "box": [
+            0.263,
+            0.264,
+            0.4739,
+            0.0372
+          ]
+        }
+      ]
+    }
+  ]
+}
