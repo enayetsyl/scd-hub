@@ -1,5 +1,5 @@
 /**
- * DailyReportSettingsScreen (D-#1018) — when the daily report is saved and sent, which parts count
+ * DailyReportSettingsScreen (D-#1032) — when the daily report is saved and sent, which parts count
  * in the three headline numbers, and whether the Principal is notified. Gated
  * `reports:daily_settings` on the server (Principal by default).
  */

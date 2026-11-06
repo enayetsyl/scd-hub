@@ -1518,7 +1518,7 @@ export const NOTIFICATION_KINDS = [
   "STAFF_MISTAKE_WARNING",
   "STAFF_MISTAKE_STEP",
   "STAFF_MISTAKE_MEETING",
-  // Daily school report (D-#1013, docs/prd-daily-report.md; app-native, NO wire twin): the
+  // Daily school report (D-#1030, docs/prd-daily-report.md; app-native, NO wire twin): the
   // 18:00 school-day summary to the Principal and to anyone it is shared with, opening that day.
   "DAILY_REPORT",
 ] as const;

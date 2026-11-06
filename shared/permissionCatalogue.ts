@@ -1036,7 +1036,7 @@ export const FEATURE_CATALOGUE = {
       activity_skills: { en: "Activity sheets by skill", bn: "দক্ষতা অনুযায়ী অ্যাক্টিভিটি শিট", desc: "Sheets done per skill area and level over a window", teacher: false, office: true, flags: [] },
       activity_sheets: { en: "Activity sheets by bank and sheet", bn: "ব্যাংক ও শিট অনুযায়ী", desc: "Popularity and completion per bank / level; sheets often returned incomplete", teacher: false, office: true, flags: [] },
       activity_students: { en: "Activity sheet students", bn: "শিক্ষার্থী অনুযায়ী অ্যাক্টিভিটি শিট", desc: "Each child's sheets, skill spread and level; sheets not returned (names children)", teacher: false, office: true, flags: [] },
-      // Daily school report (D-#1013–#1018, docs/prd-daily-report.md): one switch per PART of
+      // Daily school report (D-#1030–#1035, docs/prd-daily-report.md): one switch per PART of
       // the 18:00 report, so the Principal can hand someone the whole report or only some parts.
       // Principal only by default (owner 2026-11-06); the share sheet grants them per person.
       daily_attendance: { en: "Daily report — attendance", bn: "দৈনিক প্রতিবেদন — উপস্থিতি", desc: "The attendance part of the daily report: present/absent, unmarked units (whole school)", teacher: false, office: false, flags: [] },

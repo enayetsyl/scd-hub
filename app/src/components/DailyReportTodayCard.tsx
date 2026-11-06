@@ -1,5 +1,5 @@
 /**
- * DailyReportTodayCard (D-#1015, owner 2026-11-06: notification plus an unread Today card) —
+ * DailyReportTodayCard (D-#1032, owner 2026-11-06: notification plus an unread Today card) —
  * the newest daily school report whose notification this person has not opened. Opening the
  * report marks it read, so the card goes away. Own query: mount OUTSIDE Today's QueryGate.
  */

@@ -1,5 +1,5 @@
 /**
- * Daily school report (D-#1013–#1018, docs/prd-daily-report.md) on a real in-memory Mongo:
+ * Daily school report (D-#1030–#1035, docs/prd-daily-report.md) on a real in-memory Mongo:
  * the saved day, who sees which parts, the Principal's own mistakes, the 18:00 notification,
  * the unread Today card, "fixed later", history + repeated problems, and sharing with an end day.
  *
@@ -137,7 +137,7 @@ describe("the saved day", () => {
     expect(JSON.parse(wb.items[0].link!.params)).toHaveProperty("taskId");
     const ms = part(first.report.parts, "MISTAKES");
     expect([ms.mistakes, ms.principalOwnMistakes]).toEqual([2, 1]);
-    // The attendance jump carries the report's day (D-#1017).
+    // The attendance jump carries the report's day (D-#1035).
     expect(JSON.parse(part(first.report.parts, "ATTENDANCE").link!.params)).toEqual({ date: DAY1 });
 
     const again = await makeDailyReport(DAY1, at(DAY1, 19));
@@ -244,7 +244,7 @@ describe("the 18:00 notification and the Today card", () => {
   });
 });
 
-describe("sharing with an optional end day (D-#1017)", () => {
+describe("sharing with an optional end day (D-#1034)", () => {
   test("grants only what the person lacks and takes back only the share's own grants", async () => {
     const principal = await user("Principal", "PRINCIPAL");
     const office = await user("Kamrul", "OFFICE", ["reports:daily_homework"]);

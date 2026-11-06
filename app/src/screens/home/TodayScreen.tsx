@@ -535,7 +535,7 @@ export default function TodayScreen(): React.ReactElement {
       {/* Quran oral exam (D-#876): today's sittings for an examiner. Own query → outside the gate. */}
       {can("quran_exam:examine") ? <QuranExamTodayCard /> : null}
 
-      {/* D-#1015 — a shared daily school report, until it is opened. Own query → outside the gate. */}
+      {/* D-#1032 — a shared daily school report, until it is opened. Own query → outside the gate. */}
       {Object.values(DAILY_REPORT_SECTION_PERMISSION).some((p) => can(p)) ? <DailyReportTodayCard /> : null}
 
       {/* HW-VOID (D-#741) — 0-question homework confirm never issues, for a per-user

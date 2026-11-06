@@ -8542,7 +8542,7 @@ const STR_BN = {
   hcShotFailed: "ছবিটি আনা যায়নি",
   hcGuideMissing: "এই নির্দেশিকাটি আপনার জন্য নেই।",
   hcHeaderButton: "এই পাতার সাহায্য",
-  // Daily school report (D-#1013–#1018)
+  // Daily school report (D-#1030–#1035)
   drpTitle: "দৈনিক প্রতিবেদন",
   drpHubSub: "প্রতিদিন সন্ধ্যার সারাংশ: কী সময়মতো হয়েছে, কী বাকি, কী ভুল",
   drpDay: "দিন",
@@ -15824,7 +15824,7 @@ const STR_EN: StrTable = {
   hcShotFailed: "Could not load the picture",
   hcGuideMissing: "This guide is not available to you.",
   hcHeaderButton: "Help for this screen",
-  // Daily school report (D-#1013–#1018)
+  // Daily school report (D-#1030–#1035)
   drpTitle: "Daily school report",
   drpHubSub: "Every evening: what was done on time, what is left, what went wrong",
   drpDay: "Day",

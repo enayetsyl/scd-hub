@@ -21,7 +21,7 @@ import { space } from "../../theme/tokens";
 
 export default function ReconciliationReportScreen(): React.ReactElement {
   const colors = useColors();
-  // D-#1017: a jump from the daily report opens on that one day (optional param; it is
+  // D-#1035: a jump from the daily report opens on that one day (optional param; it is
   // registered in two stacks, so the route is read loosely).
   const route = useRoute();
   const jumpDay = (route.params as { date?: string } | undefined)?.date;

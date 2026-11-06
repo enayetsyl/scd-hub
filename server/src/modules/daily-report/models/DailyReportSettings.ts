@@ -2,7 +2,7 @@ import { Schema, model, Document, Types } from "mongoose";
 import { DAILY_REPORT_SECTIONS, DAILY_REPORT_DEFAULT_SEND_MINUTES, type DailyReportSection } from "@scd/shared";
 
 /**
- * DailyReportSettings (D-#1018) — one row: when the report is saved and sent, which parts count
+ * DailyReportSettings (D-#1032) — one row: when the report is saved and sent, which parts count
  * in the headline numbers, and whether the Principal(s) get the notification. Missing row =
  * the defaults (18:00, every part, Principal notified).
  */

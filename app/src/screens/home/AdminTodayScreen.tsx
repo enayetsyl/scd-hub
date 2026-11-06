@@ -254,7 +254,7 @@ export default function AdminTodayScreen(): React.ReactElement {
             that needs a decision within the hour. */}
         {canLiveBoard ? <LiveClassCard /> : null}
 
-        {/* D-#1015 — the last evening's school report, until it is opened. Own query. */}
+        {/* D-#1032 — the last evening's school report, until it is opened. Own query. */}
         {Object.values(DAILY_REPORT_SECTION_PERMISSION).some((p) => can(p)) ? <DailyReportTodayCard /> : null}
 
         {/* D-#918 — আমার পিরিয়ড for an admin who also teaches (TodayScreen's strip).

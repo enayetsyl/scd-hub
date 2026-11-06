@@ -1,5 +1,5 @@
 /**
- * Daily school report (D-#1013–#1018, docs/prd-daily-report.md): the saved day, today so far,
+ * Daily school report (D-#1030–#1035, docs/prd-daily-report.md): the saved day, today so far,
  * history, the Today card, sharing and settings.
  */
 import { gql } from "urql";
