@@ -7,14 +7,16 @@
  *   MONGODB_URI=mongodb://127.0.0.1:<port>/hc npx tsx scripts/help/fixtures/exam.ts [--reset]
  *
  * What it adds, mostly through the app's own services so the screens show real states:
- *   - a routine (teacher: ৩য় বালক গণিত + বাংলা; teacher2: ৩য় বালিকা ইংরেজি + গণিত, ৫ম ক ইংরেজি);
+ *   - a routine (teacher: ৩য় বালক গণিত + বাংলা + বিজ্ঞান; teacher2: ৩য় বালিকা ইংরেজি + গণিত, ৫ম ক ইংরেজি);
  *   - class tests at every step: printed with no marks, marks submitted for approval,
  *     one still waiting to print, and five whose answer scripts sit at each script stage;
  *   - three question-paper requests to the Office (new, in review, final);
- *   - eight published গণিত questions for ৩য় শ্রেণি (the question-set walk builds a set);
+ *   - eight published গণিত questions for ৩য় শ্রেণি and one draft set;
  *   - the 2026 annual exam: syllabus rows at each approval stage, a draft exam routine,
  *     and a draft Quran oral exam with papers and sittings;
- *   - Class 5 scholarship practice: topics, one scored paper and one waiting for marks.
+ *   - Class 5 scholarship practice: topics, two scored papers and one waiting for marks.
+ *   - StoredFile rows standing in for uploads (a local run has no Google Drive): papers,
+ *     scanned pages, and the fixed ids the specs' faked uploads answer with.
  * Fixed ids the spec needs are exported as constants below.
  */
 import mongoose, { Types } from "mongoose";

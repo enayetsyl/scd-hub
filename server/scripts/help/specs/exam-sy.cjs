@@ -35,7 +35,7 @@ async function office(h) {
   await h.shot(O, "exam-er-edit", 0, [{ text: "রুটিন সম্পাদনা" }]);
   await h.shot(O, "exam-er-publish", 1, [{ text: "রুটিন প্রকাশ করুন" }]);
   await h.tap(O, "রুটিন সম্পাদনা", 3500);
-  await L.pick(h, O, { text: "শ্রেণি বাছাই করুন", last: true }, "৩য় শ্রেণি");
+  // The first class (৩য় শ্রেণি) is already chosen.
   await O.waitForTimeout(1500);
   await h.shot(O, "exam-er-edit", 1, [{ text: "শ্রেণি বাছাই করুন" }, { re: "^তারিখ" }], { anchor: { text: "শ্রেণি বাছাই করুন" } });
   await h.shot(O, "exam-er-edit", 2, [{ text: "+ বিষয় যোগ করুন" }, { text: "এই শ্রেণির রুটিন সংরক্ষণ" }]);
