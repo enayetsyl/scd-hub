@@ -919,10 +919,14 @@ const ROLE_CHECK_DEFAULTS = {
     // Exam routine (D-#883): every teacher reads the published routine.
     "exam_routine:view",
     // AI Assist rules (AI-3, D-#1093): every teacher reads the active comment standard.
-    "ai_assist:read_rules"],
+    "ai_assist:read_rules",
+    // AI comment checker (AI-5, D-#1095): every teacher may check a comment before saving.
+    "ai_assist:check_comment"],
   OFFICE: ["homework:view_all", "homework:undo_any",
     // AI Assist rules (AI-3, D-#1093): the Office reads the active standard too.
     "ai_assist:read_rules",
+    // AI comment checker (AI-5, D-#1095): the Office writes comments too.
+    "ai_assist:check_comment",
     // One switch per report (D-#846) — the Office read every report by role before the matrix.
     "reports:hw_declare_pending", "reports:hw_issue_pending", "reports:hw_lifecycle", "reports:hw_weekly_unsubmitted",
     "reports:as_declare_pending", "reports:as_deliver_pending", "reports:as_print_pending", "reports:reconciliation",

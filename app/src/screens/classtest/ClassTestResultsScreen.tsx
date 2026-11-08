@@ -29,6 +29,7 @@ import { useAuth } from "../../auth/AuthContext";
 import { useToast } from "../../state/ToastContext";
 import { space } from "../../theme/tokens";
 import type { ClassTestStackParamList } from "../../navigation/types";
+import { AiCheckPanel, useAiCommentCheck } from "../../components/AiCommentCheck";
 
 type Props = NativeStackScreenProps<ClassTestStackParamList, "ClassTestResults">;
 type Nav = NativeStackNavigationProp<ClassTestStackParamList>;
@@ -148,9 +149,12 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
   const [guardianAction, setGuardianAction] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // AI-5 (D-#1095): the class-test comment check (weakness / teacher / guardian action).
+  const ai = useAiCommentCheck("CT");
 
   function openStudent(studentId: string): void {
     setError(null);
+    ai.reset();
     const existing = byStudent.get(studentId);
     setOpenId(studentId);
     setStatus((existing?.status as "PRESENT" | "ABSENT") ?? "PRESENT");
@@ -160,11 +164,30 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
     setGuardianAction(existing?.guardianAction ?? "");
   }
 
-  async function onSave(): Promise<void> {
+  const ctFields = [
+    { field: "weakness", text: weakness },
+    { field: "guardianAction", text: guardianAction },
+    { field: "teacherAction", text: teacherAction },
+  ];
+  const markPct = test && marks.trim() && Number.isFinite(Number(marks)) && test.totalMarks > 0 ? (Number(marks) / test.totalMarks) * 100 : null;
+
+  async function onSave(force = false): Promise<void> {
     if (!openId) return;
     setError(null);
+    // AI-5: unchecked comments are checked first; suggestions stop the save until the
+    // teacher accepts or keeps their own. A failed check never blocks (D-#1100).
+    const hasComment = status === "PRESENT" && ctFields.some((f) => f.text.trim());
+    if (!force && hasComment && ai.available && !ai.isCurrent(ctFields)) {
+      const r = await ai.check(openId, ctFields, { markPct });
+      if (r && r.status === "CHECKED" && r.issues.length > 0) {
+        toast.show(STR.aicReviewFirst, "info");
+        return;
+      }
+    }
+    const claim = hasComment && ai.available ? ai.claim() : {};
     setBusy(true);
     const res = await enter({
+      ...claim,
       testId,
       studentId: openId,
       status,
@@ -469,13 +492,23 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
                         <Field label={STR.ctWeakness} value={weakness} onChangeText={setWeakness} />
                         <Field label={STR.ctTeacherAction} value={teacherAction} onChangeText={setTeacherAction} helper={STR.ctTeacherActionHint} />
                         <Field label={STR.ctGuardianAction} value={guardianAction} onChangeText={setGuardianAction} />
+                        <AiCheckPanel
+                          ai={ai}
+                          studentId={s.id}
+                          fields={ctFields}
+                          fieldLabels={{ weakness: STR.ctWeakness, guardianAction: STR.ctGuardianAction, teacherAction: STR.ctTeacherAction }}
+                          extra={{ markPct }}
+                          onChange={(field, t) => (field === "weakness" ? setWeakness(t) : field === "guardianAction" ? setGuardianAction(t) : setTeacherAction(t))}
+                          onKeepMine={() => void onSave(true)}
+                          disabled={busy}
+                        />
                       </>
                     ) : (
                       <Muted>{STR.ctAbsentNoComments}</Muted>
                     )}
                     {error ? <Notice message={error} tone="danger" /> : null}
                     <View style={{ flexDirection: "row", gap: space(2), marginTop: space(2) }}>
-                      <Button title={STR.ctSaveResult} onPress={onSave} loading={busy} disabled={busy} />
+                      <Button title={STR.ctSaveResult} onPress={() => void onSave()} loading={busy} disabled={busy} />
                       <Button title={STR.cancel} variant="ghost" onPress={() => setOpenId(null)} />
                     </View>
                   </View>

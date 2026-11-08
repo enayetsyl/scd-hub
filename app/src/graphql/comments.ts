@@ -142,13 +142,16 @@ export const RECORD_STUDENT_COMMENT = gql<
     sentiment: string;
     text: string;
     attachmentIds?: string[] | null;
+    aiCheckToken?: string | null;
+    aiIssuesAccepted?: number | null;
+    aiTeacherOverrode?: boolean | null;
   }
 >`
   mutation RecordStudentComment(
-    $studentId: String!, $type: String!, $sentiment: String!, $text: String!, $attachmentIds: [String!]
+    $studentId: String!, $type: String!, $sentiment: String!, $text: String!, $attachmentIds: [String!], $aiCheckToken: String, $aiIssuesAccepted: Int, $aiTeacherOverrode: Boolean
   ) {
     recordStudentComment(
-      studentId: $studentId, type: $type, sentiment: $sentiment, text: $text, attachmentIds: $attachmentIds
+      studentId: $studentId, type: $type, sentiment: $sentiment, text: $text, attachmentIds: $attachmentIds, aiCheckToken: $aiCheckToken, aiIssuesAccepted: $aiIssuesAccepted, aiTeacherOverrode: $aiTeacherOverrode
     ) { ${STUDENT_COMMENT_FIELDS} }
   }
 `;
@@ -161,13 +164,16 @@ export const EDIT_STUDENT_COMMENT = gql<
     sentiment?: string | null;
     text?: string | null;
     attachmentIds?: string[] | null;
+    aiCheckToken?: string | null;
+    aiIssuesAccepted?: number | null;
+    aiTeacherOverrode?: boolean | null;
   }
 >`
   mutation EditStudentComment(
-    $commentId: String!, $type: String, $sentiment: String, $text: String, $attachmentIds: [String!]
+    $commentId: String!, $type: String, $sentiment: String, $text: String, $attachmentIds: [String!], $aiCheckToken: String, $aiIssuesAccepted: Int, $aiTeacherOverrode: Boolean
   ) {
     editStudentComment(
-      commentId: $commentId, type: $type, sentiment: $sentiment, text: $text, attachmentIds: $attachmentIds
+      commentId: $commentId, type: $type, sentiment: $sentiment, text: $text, attachmentIds: $attachmentIds, aiCheckToken: $aiCheckToken, aiIssuesAccepted: $aiIssuesAccepted, aiTeacherOverrode: $aiTeacherOverrode
     ) { ${STUDENT_COMMENT_FIELDS} }
   }
 `;

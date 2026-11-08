@@ -279,10 +279,11 @@ describe("enterResult", () => {
       now: onExamDay,
     });
     expect(res).toMatchObject({ status: "ABSENT", marks: null, percent: null, pass: null });
-    // An edit PRESENT→ABSENT must not leave the old comments behind (2026-11-06).
+    // An edit PRESENT→ABSENT must not leave the old comments behind (2026-11-06) — nor
+    // their AI check stamp (AI-5, D-#1133).
     expect(mockResUpsert).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ $unset: { marks: "", weakness: "", teacherAction: "", guardianAction: "" } }),
+      expect.objectContaining({ $unset: { marks: "", weakness: "", teacherAction: "", guardianAction: "", aiCheck: "" } }),
       expect.anything(),
     );
     const update = mockResUpsert.mock.calls[0][1] as { $set: Record<string, unknown> };

@@ -31,6 +31,7 @@ import { StoredFile } from "../../platform/models/StoredFile";
 import { writeAudit } from "../../platform/services/AuditService";
 import { queryPage, type Page, type PageArgs } from "../../../lib/paging";
 import { recordPlaceMistake } from "../../staff-mistakes/services/StaffMistakeNoteService";
+import type { IAiCheck } from "../../platform/models/aiCheckSchema";
 
 /** A surfaced service error (Bangla-friendly message), mirroring the tracker pattern. */
 export class StudentCommentError extends Error {}
@@ -142,6 +143,8 @@ export interface RecordCommentInput {
   attachmentIds?: string[];
   /** The authenticated teacher (ctx.auth.userId). */
   actorId: string;
+  /** AI-5 (D-#1095): the comment-check stamp the resolver worked out. */
+  aiCheck?: IAiCheck;
 }
 
 export async function recordComment(input: RecordCommentInput): Promise<StudentCommentShape> {
@@ -159,6 +162,7 @@ export async function recordComment(input: RecordCommentInput): Promise<StudentC
     text,
     attachmentIds,
     deliveryChannels: [],
+    ...(input.aiCheck ? { aiCheck: input.aiCheck } : {}),
   });
 
   await writeAudit({
@@ -187,6 +191,8 @@ export interface EditCommentInput {
   /** True when the actor is a reviewer (Principal/Office) who may edit ANY undelivered
    *  comment before releasing it (D-#264); otherwise edit is author-only (D-#115). */
   actorIsReviewer?: boolean;
+  /** AI-5 (D-#1095): a new stamp when the text changed. */
+  aiCheck?: IAiCheck;
 }
 
 export async function editComment(input: EditCommentInput): Promise<StudentCommentShape> {
@@ -212,6 +218,7 @@ export async function editComment(input: EditCommentInput): Promise<StudentComme
   if (input.sentiment !== undefined) doc.sentiment = assertSentiment(input.sentiment);
   if (input.text !== undefined) doc.text = assertText(input.text);
   if (input.attachmentIds !== undefined) doc.attachmentIds = toObjectIds(input.attachmentIds);
+  if (input.aiCheck) doc.aiCheck = input.aiCheck;
 
   await doc.save();
 
