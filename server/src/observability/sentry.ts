@@ -30,6 +30,9 @@ import type { AppContext } from "../context";
  * are NOT sent to GlitchTip. Add new domain error classes here as modules grow.
  */
 export const EXPECTED_ERROR_NAMES: ReadonlySet<string> = new Set([
+  // An AI feature that is switched off (AI-1, D-#1122): "এই এআই সুবিধাটি এখন বন্ধ আছে".
+  // The Principal's switch working, never a fault; callers fail open (D-#1100).
+  "AiFeatureOffError",
   // A login refused by the lockout (D-#765): too many wrong passwords on the account or
   // from the network. A Bangla sentence telling the person how long to wait — the lockout
   // working, not a fault.

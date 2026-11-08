@@ -224,6 +224,8 @@ export interface MarkEscalationRowShape {
   asItemId: string;
   asId: string;
   subject: HwSubject;
+  sectionId: string;
+  classId: string;
   sectionLabel: string;
   teacherNames: string[];
   /** Marked after the 09:30 snapshot. */
@@ -236,31 +238,78 @@ export interface MyMarkEscalationShape {
   rows: MarkEscalationRowShape[];
 }
 
+/** Rows of one snapshot, with names, labels and "marked since". */
+async function escalationShape(snap: {
+  dateKey: string;
+  createdAt: Date;
+  rows: { asItemId: Types.ObjectId; asId: string; sectionId: Types.ObjectId; subject: HwSubject; teacherIds: Types.ObjectId[] }[];
+}): Promise<MyMarkEscalationShape> {
+  const open = await unmarkedIds(snap.rows.map((r) => r.asItemId));
+  const sectionIds = [...new Set(snap.rows.map((r) => String(r.sectionId)))];
+  const labels = await sectionLabels(sectionIds);
+  const sections = await Section.find({ _id: { $in: sectionIds } }).select("classId").lean();
+  const classOf = new Map(sections.map((s) => [String(s._id), String(s.classId)]));
+  const users = await User.find({ _id: { $in: snap.rows.flatMap((r) => r.teacherIds) } })
+    .select("name nameBn")
+    .lean();
+  const name = new Map(users.map((u) => [String(u._id), personName(u)]));
+  return {
+    dateKey: snap.dateKey,
+    createdAt: snap.createdAt,
+    rows: snap.rows.map((r) => ({
+      asItemId: String(r.asItemId),
+      asId: r.asId,
+      subject: r.subject,
+      sectionId: String(r.sectionId),
+      classId: classOf.get(String(r.sectionId)) ?? "",
+      sectionLabel: labels.get(String(r.sectionId)) ?? "",
+      teacherNames: r.teacherIds.map((t) => name.get(String(t)) ?? "").filter(Boolean),
+      markedNow: !open.has(String(r.asItemId)),
+    })),
+  };
+}
+
 /** Today's 09:30 list for an alert holder who has not closed it yet. */
 export async function myMarkEscalation(userId: string, now: Date = new Date()): Promise<MyMarkEscalationShape | null> {
   const dateKey = dhakaDayKey(now);
   const snap = await MarkEscalation.findOne({ dateKey }).lean();
   if (!snap || snap.rows.length === 0) return null;
   if (await MarkReminderAck.exists({ userId: new Types.ObjectId(userId), dateKey, stage: "ESCALATION" })) return null;
+  return escalationShape(snap);
+}
 
-  const open = await unmarkedIds(snap.rows.map((r) => r.asItemId));
-  const labels = await sectionLabels([...new Set(snap.rows.map((r) => String(r.sectionId)))]);
-  const users = await User.find({ _id: { $in: snap.rows.flatMap((r) => r.teacherIds) } })
-    .select("name nameBn")
+/**
+ * D-#1106 — the 09:30 list reopened from a button, whether or not "বুঝেছি" was tapped.
+ * `dateKey` omitted ⇒ the newest snapshot. Null when that day had none (nothing was late).
+ */
+export async function markEscalationFor(dateKey?: string | null): Promise<MyMarkEscalationShape | null> {
+  const snap = dateKey
+    ? await MarkEscalation.findOne({ dateKey }).lean()
+    : await MarkEscalation.findOne({}).sort({ dateKey: -1 }).lean();
+  if (!snap) return null;
+  return escalationShape(snap);
+}
+
+export interface MarkEscalationDayShape {
+  dateKey: string;
+  itemCount: number;
+  /** Rows still unmarked right now. */
+  openCount: number;
+}
+
+/** D-#1106 — the days that had a 09:30 list, newest first, for the day picker. */
+export async function markEscalationDays(limit = 26): Promise<MarkEscalationDayShape[]> {
+  const snaps = await MarkEscalation.find({})
+    .sort({ dateKey: -1 })
+    .limit(Math.min(Math.max(limit, 1), 100))
+    .select("dateKey rows.asItemId")
     .lean();
-  const name = new Map(users.map((u) => [String(u._id), personName(u)]));
-  return {
-    dateKey,
-    createdAt: snap.createdAt,
-    rows: snap.rows.map((r) => ({
-      asItemId: String(r.asItemId),
-      asId: r.asId,
-      subject: r.subject,
-      sectionLabel: labels.get(String(r.sectionId)) ?? "",
-      teacherNames: r.teacherIds.map((t) => name.get(String(t)) ?? "").filter(Boolean),
-      markedNow: !open.has(String(r.asItemId)),
-    })),
-  };
+  const open = await unmarkedIds(snaps.flatMap((s) => s.rows.map((r) => r.asItemId)));
+  return snaps.map((s) => ({
+    dateKey: s.dateKey,
+    itemCount: s.rows.length,
+    openCount: s.rows.filter((r) => open.has(String(r.asItemId))).length,
+  }));
 }
 
 export async function acknowledgeMarkEscalation(userId: string, now: Date = new Date()): Promise<boolean> {

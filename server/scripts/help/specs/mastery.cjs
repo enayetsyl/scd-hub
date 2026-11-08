@@ -98,6 +98,17 @@ exports.run = async (h) => {
     anchor: { text: "এখানে নতুন উপ-শিখনফল যোগ করুন" },
   });
 
+  // One objective, written questions + the rubric on different subs (D-#1110). Not saved.
+  await openMastery(h, R, "তালিকা পর্যালোচনা");
+  await h.tap(R, "তালিকা পর্যালোচনা", 3000);
+  await openRound(h, R, null);
+  await h.tap(R, { re: "নামতা ১ থেকে ৫" }, 3000);
+  await h.shot(R, "mastery-review-assess", 0, [{ text: "যাচাই" }, { re: "গুণের খালি ঘরে গুণফল লেখা \\(১–৫" }], { anchor: { text: "যাচাই" } });
+  await h.tap(R, { re: "গুণের খালি ঘরে গুণফল লেখা \\(১–৫" }, 3000);
+  await h.shot(R, "mastery-review-assess", 1, [{ re: "^একই শিখনফল-এর সব উপ-শিখনফল$" }, { text: "সম্পাদনা" }], {
+    anchor: { re: "^একই শিখনফল-এর সব উপ-শিখনফল$" },
+  });
+
   await openMastery(h, R, "তালিকা পর্যালোচনা");
   await h.tap(R, "তালিকা পর্যালোচনা", 3000);
   await openRound(h, R, null);

@@ -994,7 +994,8 @@ export const FEATURE_CATALOGUE = {
       view: { en: "System health", bn: "সার্ভার ও স্টোরেজের অবস্থা দেখা", desc: "Storage, disk, egress, ticker, backups", teacher: false, office: false, flags: [] },
       // D-#967: the Gemini key + model every AI feature uses, set in the app instead of .env.
       // LOCKED: a key is a paid credential — Principal only, never delegable.
-      ai_key: { en: "AI key & model", bn: "এআই (Gemini) কী ও মডেল বদলানো", desc: "Save or clear the Gemini key and model used by voice tasks, monthly comments, the observation rota and the book author", teacher: false, office: false, flags: ["LOCKED"] },
+      // D-#1090 (AI-1): also the DeepSeek key + model and the per-feature AI settings.
+      ai_key: { en: "AI keys, models & features", bn: "এআই কী, মডেল ও সুবিধা বদলানো", desc: "Save or clear the Gemini and DeepSeek keys and models, and choose which AI answers each AI feature and whether it is switched on", teacher: false, office: false, flags: ["LOCKED"] },
     },
   },
   guardian_engagement: {

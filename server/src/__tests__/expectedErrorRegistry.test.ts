@@ -33,6 +33,11 @@ const DELIBERATE_FAULTS = new Set([
   // The whole point of the named error is that a missing URI is LOUD rather than a
   // silent fallback onto the identity connection.
   "BookDbNotConfiguredError",
+  // An AI provider call that failed (AI-1, D-#1123): busy, timeout, cut-off, bad JSON.
+  // Every caller must catch it and fail open (D-#1100) — the AI-2 ledger records the
+  // outage. One that ESCAPES to a resolver is a caller bug, so it should page, and its
+  // English technical message must stay masked from the teacher.
+  "AiProviderError",
 ]);
 
 function findErrorClasses(): Map<string, string> {

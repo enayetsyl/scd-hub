@@ -915,7 +915,7 @@ D-#861 (owner 2026-10-26: "all reports seen from one place, all report permissio
 | `audit_log:view` | Audit log | অডিট লগ দেখা | The school-wide event log | — | — | | audit:read |
 | `audit_log:view_activity` | One person's activity | একজনের কাজের ইতিহাস দেখা | A person's timeline | — | — | | audit:read |
 | `system_health:view` | System health | সার্ভার ও স্টোরেজের অবস্থা দেখা | Storage, disk, egress, ticker, backups | — | — | | audit:read |
-| `system_health:ai_key` | AI key & model | এআই (Gemini) কী ও মডেল বদলানো | Save or clear the Gemini key and model used by voice tasks, monthly comments, the observation rota and the book author (D-#967) | — | — | LOCKED | (new; was the VM .env) |
+| `system_health:ai_key` | AI keys, models & features | এআই কী, মডেল ও সুবিধা বদলানো | Save or clear the Gemini and DeepSeek keys and models, and choose which AI answers each AI feature and whether it is switched on (D-#967; widened by D-#1090) | — | — | LOCKED | (new; was the VM .env) |
 | `guardian_engagement:view` | Guardian app usage | অভিভাবকদের অ্যাপ ব্যবহারের রিপোর্ট দেখা | Logins, views, inbox reads per family | — | — | | audit:read |
 | `my_account:view` | My account | আমার অ্যাকাউন্ট | me, my permissions/templates/scopes, my শ্রেণি শিক্ষক শাখা, session refresh, end View-as | on | on | SELF | authenticated, own token |
 
