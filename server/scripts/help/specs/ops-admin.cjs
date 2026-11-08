@@ -100,6 +100,20 @@ exports.run = async (h) => {
   await h.tap(P, "DeepSeek", 3000);
   await h.shot(P, "ops-ai-key", 2, [{ text: "DeepSeek" }, { css: ":nth-match(input, 1)" }, { re: "^DeepSeek শুধু নতুন এআই সুবিধায়" }]);
 
+  // AI-5 (D-#1122/#1126): features & limits, further down the same AI settings screen.
+  await admin(h, P, "এআই কী ও মডেল", null);
+  // `reveal` first: an anchor is looked up without scrolling, so it must already be on screen.
+  await reveal(P, { text: "এআই সুবিধা ও খরচের সীমা" });
+  await h.shot(P, "ops-ai-features", 0, [{ text: "এআই সুবিধা ও খরচের সীমা" }, { re: "^বাংলা নাম আছে|^সব শিক্ষার্থীর বাংলা নাম" }], { anchor: { text: "এআই সুবিধা ও খরচের সীমা" } });
+  await reveal(P, { text: "মন্তব্য যাচাই" });
+  await h.shot(P, "ops-ai-features", 1, [{ text: "মন্তব্য যাচাই" }, { text: "একজন দিনে সর্বোচ্চ কতবার" }], { anchor: { text: "মন্তব্য যাচাই" } });
+  // Both feature cards share these labels and `reveal` picks the LAST match, so centre the
+  // assistant's title: the checker card's limit and buttons then sit just above it.
+  await reveal(P, { text: "শিক্ষকের সহকারী" });
+  await h.shot(P, "ops-ai-features", 2, [{ text: "এই সুবিধার মাসিক খরচের সীমা (ডলার)" }, { text: "চালু করুন" }]);
+  await reveal(P, { text: "মোট মাসিক খরচের সীমা" });
+  await h.shot(P, "ops-ai-features", 3, [{ text: "মাসিক সীমা (ডলার)" }, { text: "সতর্কবার্তা কত শতাংশে" }], { anchor: { text: "মোট মাসিক খরচের সীমা" } });
+
   // AI-3 (D-#1093): the AI rules — the server seeds the proposed standards as OFF v1 on boot.
   await admin(h, P, "এআই-এর নিয়ম ও মানদণ্ড", "ops-ai-rules");
   await h.shot(P, "ops-ai-rules", 1, [{ text: "দৈনিক মন্তব্যের মানদণ্ড" }]);

@@ -253,15 +253,18 @@ export const ENTER_CLASS_TEST_RESULT = gql<
     weakness?: string | null;
     teacherAction?: string | null;
     guardianAction?: string | null;
+    aiCheckToken?: string | null;
+    aiIssuesAccepted?: number | null;
+    aiTeacherOverrode?: boolean | null;
   }
 >`
   mutation EnterClassTestResult(
     $testId: String!, $studentId: String!, $status: String!, $marks: Float,
-    $weakness: String, $teacherAction: String, $guardianAction: String
+    $weakness: String, $teacherAction: String, $guardianAction: String, $aiCheckToken: String, $aiIssuesAccepted: Int, $aiTeacherOverrode: Boolean
   ) {
     enterClassTestResult(
       testId: $testId, studentId: $studentId, status: $status, marks: $marks,
-      weakness: $weakness, teacherAction: $teacherAction, guardianAction: $guardianAction
+      weakness: $weakness, teacherAction: $teacherAction, guardianAction: $guardianAction, aiCheckToken: $aiCheckToken, aiIssuesAccepted: $aiIssuesAccepted, aiTeacherOverrode: $aiTeacherOverrode
     ) { ${CLASS_TEST_RESULT_FIELDS} }
   }
 `;

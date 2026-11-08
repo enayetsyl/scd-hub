@@ -31,6 +31,7 @@ import { rosterCount } from "../classTestAnchor";
 import { deriveScore, type DerivedScore } from "../classTestScoring";
 import { resolveClassTestDeadline, resolveClassTestOverdue, atMidnight } from "../classTestCalendar";
 import { pageOf, type Page, type PageArgs } from "../../../lib/paging";
+import type { IAiCheck } from "../../platform/models/aiCheckSchema";
 
 /** A surfaced service error (Bangla-friendly message), mirroring the tracker pattern. */
 export class ClassTestResultError extends Error {}
@@ -49,6 +50,8 @@ export interface EnterResultInput {
   teacherAction?: string;
   guardianAction?: string;
   actorId: string;
+  /** AI-5 (D-#1095): the comment-check stamp the resolver worked out (PRESENT only). */
+  aiCheck?: IAiCheck;
   /** Injectable for tests; defaults to the live clock. The exam-date gate (J3). */
   now?: Date;
 }
@@ -190,7 +193,7 @@ export async function enterResult(input: EnterResultInput): Promise<ClassTestRes
     status === "ABSENT"
       ? {
           $set: { status, enteredBy: new Types.ObjectId(input.actorId) },
-          $unset: { marks: "", weakness: "", teacherAction: "", guardianAction: "" },
+          $unset: { marks: "", weakness: "", teacherAction: "", guardianAction: "", aiCheck: "" },
         }
       : {
           $set: {
@@ -200,6 +203,7 @@ export async function enterResult(input: EnterResultInput): Promise<ClassTestRes
             guardianAction: input.guardianAction ?? undefined,
             enteredBy: new Types.ObjectId(input.actorId),
             marks,
+            ...(input.aiCheck ? { aiCheck: input.aiCheck } : {}),
           },
         };
 

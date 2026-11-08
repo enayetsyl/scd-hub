@@ -22,6 +22,7 @@
 import { Schema, model, Document, Types } from "mongoose";
 import { CLASS_TEST_ATTENDANCE_STATUSES } from "@scd/shared";
 import type { ClassTestAttendanceStatus } from "@scd/shared";
+import { AiCheckSchema, type IAiCheck } from "../../platform/models/aiCheckSchema";
 
 export interface IClassTestResult extends Document {
   _id: Types.ObjectId;
@@ -43,6 +44,8 @@ export interface IClassTestResult extends Document {
   sendBackReason?: string;
   sendBackAt?: Date;
   sendBackBy?: Types.ObjectId;
+  /** AI-5 (D-#1095): the comment-check stamp for weakness / guardianAction / teacherAction — no text. */
+  aiCheck?: IAiCheck;
   /** Set on APPROVE (CT-8) — the guardian-visible flag (was: CT-3 teacher publish). */
   publishedAt?: Date;
   /** Bumped on each (re)publish so CT-3's dedupeKey re-notifies (default 0 = unpublished). */
@@ -77,6 +80,7 @@ const ClassTestResultSchema = new Schema<IClassTestResult>(
     sendBackReason: { type: String, trim: true },
     sendBackAt: { type: Date },
     sendBackBy: { type: Schema.Types.ObjectId },
+    aiCheck: { type: AiCheckSchema },
     publishedAt: { type: Date },
     publishedVersion: { type: Number, required: true, default: 0, min: 0 },
     enteredBy: { type: Schema.Types.ObjectId, required: true },

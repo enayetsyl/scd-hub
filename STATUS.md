@@ -1,5 +1,9 @@
 # STATUS
 
+- 2026-11-08: **BUILT — AI Assist AI-5, comment checker (D-#1132–#1135)** (branch `feat/ai5-checker`). Teachers get "এআই দিয়ে যাচাই করুন" in the daily comment box and the class-test result form, plus an automatic check on Save; suggestions are only applied when the teacher taps Accept; if the AI fails the comment saves unchecked. Each comment stores a no-text `aiCheck` stamp (CHECKED / NOT_CHECKED). The AI settings screen gains features & limits (switches, AI + model, fallback, caps, budget). The checker runs only when: the `comment_check` feature is ON, a DeepSeek (or Gemini) key is saved, and the standards are switched on.
+  - **Owner, to switch on:** (1) Office fills every child's Bangla name; (2) edit + switch on both standards (Admin → এআই-এর নিয়ম ও মানদণ্ড); (3) save a DeepSeek key; (4) run the AI-8 bake-off; (5) switch মন্তব্য যাচাই on. Then capture the `family-comment-ai-check` guide pictures and clear its draft flag.
+  - **Open (owner):** the check covers teacherAction too (PRD P1, built as recommended) — say if it should not.
+  - **Now / next:** PR → dev. Then AI-8 (bake-off script), AI-6 (assistant), AI-7 (analytics).
 - 2026-11-08: **BUILT — AI Assist AI-4, de-identification + students' Bangla names (D-#1130/#1131)** (branch `feat/ai4-deid`). Names, phones and ids become tokens before any prompt leaves the VM; a fail-closed gate refuses to send if a known name is left. Admin → শিক্ষার্থীর বাংলা নাম lets the Office write each child's Bangla name (with a "done x / y" count) — teachers write names in Bangla and only 17 of 91 children had one (PRD P11).
   - **Office (before AI-8 switch-on):** fill every child's Bangla name on that screen.
   - **Now / next:** PR → dev. Then AI-5 (comment checker).
