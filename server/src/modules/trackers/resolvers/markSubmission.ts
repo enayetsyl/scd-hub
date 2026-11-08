@@ -4,7 +4,8 @@
  *
  *   myMarkReminder / acknowledgeMarkReminder       a teacher's own MORNING / NINE pop-up (SELF)
  *   myMarkEscalation / acknowledgeMarkEscalation   the 09:30 list (mark_submission:alerts)
- *   markCorrectionNotes                            own notes (SELF); anyone's needs view_notes
+ *   markEscalation / markEscalationDays            the same list reopened, any day (D-#1106)
+ *   markCorrectionNotes                           own notes (SELF); anyone's needs view_notes
  */
 import { callerHasPermission } from "@scd/shared";
 import { builder } from "../../../schema";
@@ -12,9 +13,12 @@ import { resolveUserIdForStaff } from "../../hr/services/staffMatch";
 import {
   acknowledgeMarkEscalation,
   acknowledgeMarkReminder,
+  markEscalationDays,
+  markEscalationFor,
   myMarkEscalation,
   myMarkReminder,
   type DueItemShape,
+  type MarkEscalationDayShape,
   type MarkEscalationRowShape,
   type MyMarkEscalationShape,
   type MyMarkReminderShape,
@@ -48,6 +52,8 @@ const EscalationRowRef = builder.objectRef<MarkEscalationRowShape>("MarkEscalati
     asItemId: t.exposeString("asItemId"),
     asId: t.exposeString("asId"),
     subject: t.exposeString("subject"),
+    sectionId: t.exposeString("sectionId"),
+    classId: t.exposeString("classId"),
     sectionLabel: t.exposeString("sectionLabel"),
     teacherNames: t.exposeStringList("teacherNames"),
     markedNow: t.exposeBoolean("markedNow"),
@@ -117,6 +123,37 @@ builder.queryField("myMarkEscalation", (t) =>
     nullable: true,
     authScopes: { hasPermission: "mark_submission:alerts" },
     resolve: (_r, _a, ctx) => myMarkEscalation(ctx.auth!.userId),
+  }),
+);
+
+const EscalationDayRef = builder.objectRef<MarkEscalationDayShape>("MarkEscalationDay").implement({
+  fields: (t) => ({
+    dateKey: t.exposeString("dateKey"),
+    itemCount: t.exposeInt("itemCount"),
+    openCount: t.exposeInt("openCount"),
+  }),
+});
+
+// D-#1106 — the 09:30 list reopened from the অ্যাসাইনমেন্ট page, after "বুঝেছি" too.
+builder.queryField("markEscalation", (t) =>
+  t.field({
+    type: EscalationRef,
+    nullable: true,
+    args: { dateKey: t.arg.string({ required: false }) },
+    authScopes: { hasPermission: "mark_submission:alerts" },
+    resolve: (_r, a) => {
+      if (a.dateKey && !/^\d{4}-\d{2}-\d{2}$/.test(a.dateKey)) throw new Error("তারিখটি ঠিক নয়");
+      return markEscalationFor(a.dateKey);
+    },
+  }),
+);
+
+builder.queryField("markEscalationDays", (t) =>
+  t.field({
+    type: [EscalationDayRef],
+    args: { limit: t.arg.int({ required: false }) },
+    authScopes: { hasPermission: "mark_submission:alerts" },
+    resolve: (_r, a) => markEscalationDays(a.limit ?? undefined),
   }),
 );
 

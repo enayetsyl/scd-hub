@@ -179,6 +179,8 @@ export type AssignmentStackParamList = {
     weekOfMonth?: number;
   };
   AssignmentChase: undefined;
+  /** D-#1106 — the 09:30 unmarked list reopened; `dateKey` omitted = the newest day. */
+  MarkEscalationList: { dateKey?: string } | undefined;
   AssignmentRollups: { academicYearId: string };
   /** AG-3 (D-#479): weekly gift winners + 4-week streaks, with the handover tick. */
   AssignmentGift: { academicYearId: string };
