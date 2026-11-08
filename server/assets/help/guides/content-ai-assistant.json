@@ -1,0 +1,58 @@
+{
+  "id": "content-ai-assistant",
+  "category": "content_books",
+  "order": 30,
+  "draft": true,
+  "title": "এআই সহকারীকে পাঠ নিয়ে প্রশ্ন করা",
+  "intro": "শ্রেণি, বিষয় আর অধ্যায় বেছে প্রশ্ন করুন — এআই সেই অধ্যায়ের পাঠ পরিকল্পনা দেখে উত্তর দেয়। আপনার আলাপ শুধু আপনি আর প্রধান শিক্ষক দেখতে পারেন।",
+  "keywords": [
+    "এআই",
+    "সহকারী",
+    "পাঠ পরিকল্পনা",
+    "প্রশ্ন"
+  ],
+  "perms": [
+    "ai_assist:chat"
+  ],
+  "screens": [
+    "AiAssistTab/AiAssistHome",
+    "AiAssistTab/AiAssistNew",
+    "AiAssistTab/AiAssistChat"
+  ],
+  "goTo": {
+    "route": "AiAssistTab",
+    "screen": "AiAssistHome"
+  },
+  "rows": [
+    {
+      "heading": "আলাপ শুরু করা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "মেনু থেকে <b>এআই সহকারী</b> খুলে <b>নতুন আলাপ শুরু করুন</b> চাপুন।",
+          "box": null
+        },
+        {
+          "text": "শ্রেণি ও বিষয়, তারপর অধ্যায় বাছুন। চাইলে একটি সেশনও বাছতে পারেন; তারপর <b>আলাপ শুরু করুন</b> চাপুন।",
+          "box": null
+        }
+      ]
+    },
+    {
+      "heading": "প্রশ্ন করা",
+      "shot": null,
+      "size": null,
+      "steps": [
+        {
+          "text": "<b>আপনার প্রশ্ন</b> ঘরে লিখে <b>জিজ্ঞেস করুন</b> চাপুন। একই আলাপে পরের প্রশ্নগুলো আগের কথা মনে রেখে উত্তর পায়।",
+          "box": null
+        },
+        {
+          "text": "ইসলামি বিধান বা হাদিসের উত্তর আলেমের সাথে মিলিয়ে নিন।",
+          "box": null
+        }
+      ]
+    }
+  ]
+}

@@ -1010,6 +1010,10 @@ export const FEATURE_CATALOGUE = {
       edit_rules: { en: "Write AI rules", bn: "এআই-এর নিয়ম লেখা ও চালু করা", desc: "Write a new version of an AI rules document, switch one on, or switch a document off", teacher: false, office: false, flags: [] },
       // AI-5 (D-#1095): the comment checker — suggestions only; the writer decides what is saved.
       check_comment: { en: "AI comment check", bn: "এআই দিয়ে মন্তব্য যাচাই", desc: "Check a daily or class-test comment against the active standard before saving", teacher: true, office: true, flags: [] },
+      // AI-6 (D-#1096/#1104): the teacher assistant — own conversations only.
+      chat: { en: "AI teacher assistant", bn: "এআই সহকারীর সাথে আলাপ", desc: "Ask the AI about a chapter's lesson plan; see only your own conversations", teacher: true, office: true, flags: [] },
+      // LOCKED (D-#1104): every teacher's conversations — the Principal, nobody else.
+      read_all_chats: { en: "Read every assistant conversation", bn: "সব শিক্ষকের এআই আলাপ পড়া", desc: "Read any teacher's AI assistant conversation (teachers are told this on first use)", teacher: false, office: false, flags: ["LOCKED"] },
     },
   },
   guardian_engagement: {

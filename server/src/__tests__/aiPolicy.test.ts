@@ -47,20 +47,21 @@ const RULES = "## নিয়ম\n\n- সম্মানসূচক রূপ 
 
 describe("the seed (AI-3s)", () => {
   test("loads the two proposed standards as INACTIVE v1, once", async () => {
-    expect((await seedAiPolicies()).sort()).toEqual(["comment_standard", "ct_comment_standard"]);
+    expect((await seedAiPolicies()).sort()).toEqual(["assistant_rules", "comment_standard", "ct_comment_standard"]);
     const rows = await AiPolicy.find({}).lean();
     expect(rows.map((r) => [r.key, r.version, r.active, r.createdBy ?? null]).sort()).toEqual([
+      ["assistant_rules", 1, false, null],
       ["comment_standard", 1, false, null],
       ["ct_comment_standard", 1, false, null],
     ]);
     expect(await activeAiPolicy("comment_standard")).toBeNull();
     expect(await seedAiPolicies()).toEqual([]);
-    expect(await AiPolicy.countDocuments()).toBe(2);
+    expect(await AiPolicy.countDocuments()).toBe(3);
   });
 
   test("never seeds over a key that already has a version", async () => {
     await saveAiPolicyVersion(principal, { key: "comment_standard", body: RULES });
-    expect(await seedAiPolicies()).toEqual(["ct_comment_standard"]);
+    expect((await seedAiPolicies()).sort()).toEqual(["assistant_rules", "ct_comment_standard"]);
     const cs = await AiPolicy.find({ key: "comment_standard" }).lean();
     expect(cs).toHaveLength(1);
     expect(cs[0].body).toBe(RULES);

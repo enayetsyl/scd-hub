@@ -1,5 +1,8 @@
 # STATUS
 
+- 2026-11-08: **BUILT — AI Assist AI-6, teacher assistant (D-#1137–#1139)** (branch `feat/ai6-assistant`). Drawer → 🤖 এআই সহকারী: a teacher picks class, subject and chapter (and optionally a session) and asks; answers come from that chapter's lesson plans; questions are de-identified; capped at 40 turns per conversation and 30 a day; the Principal can read every conversation, teachers only their own.
+  - **Owner, to switch on:** edit + switch on "শিক্ষকের সহকারীর নিয়ম" (seeded as an OFF draft), then switch শিক্ষকের সহকারী on (Admin → এআই কী ও মডেল → features). Then capture the `content-ai-assistant` guide pictures and clear its draft flag.
+  - **Now / next:** PR → dev. Then AI-7 (Principal analytics).
 - 2026-11-08: **BUILT — AI Assist AI-8, the bake-off (D-#1136)** (branch `feat/ai8-bakeoff`). A runner the owner starts on the VM before switching the checker on: ~50 real comments, de-identified, through DeepSeek and Gemini with the live prompt; prints issues per dollar, cost and latency, and writes a de-identified side-by-side to read.
   - **Owner, when the preconditions are met** (Bangla names filled, both standards on, both keys saved): `cd /opt/scdhub/prod && node server/scripts/ai-bakeoff.cjs --count 50` → read `side-by-side.md` → pick the model on the AI settings screen → switch মন্তব্য যাচাই on → delete the bake-off folder. Costs a few US cents.
   - **Now / next:** PR → dev. Then AI-6 (teacher assistant), AI-7 (analytics).
