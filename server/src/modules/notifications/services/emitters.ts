@@ -2447,34 +2447,10 @@ export async function emitStaffMistakeDecided(ev: {
 // Warning ladder (D-#940–#942): the person, the reviewers, and the booked meeting.
 // ---------------------------------------------------------------------------
 
-const WARNING_STEP_PERSON_BN: Record<string, string> = {
-  WARNING: "এটি আপনার কর্মী ফাইলে লেখা থাকবে। এটি শাস্তিমূলক ধাপ নয় — শুধরে নেওয়ার সুযোগ।",
-  MEETING: "প্রধান শিক্ষক / অফিস আপনার সাথে সামনাসামনি কথা বলবেন — সময় জানানো হবে।",
-  CONDUCT: "প্রধান শিক্ষককে বিষয়টি জানানো হয়েছে।",
-};
-
-/** D-#940 — the person reached a rung; the pop-up shows on their next app open too. */
-export async function emitStaffWarningReached(ev: {
-  warningId: IdLike;
-  recipientUserId: IdLike;
-  step: string;
-  count: number;
-  windowDays: number;
-}): Promise<void> {
-  return bestEffort("staff warning reached", async () => {
-    await emit({
-      recipientUserId: ev.recipientUserId.toString(),
-      kind: "STAFF_MISTAKE_WARNING",
-      titleBn: "সতর্কবার্তা",
-      bodyBn: `গত ${bnNum(ev.windowDays)} দিনে আপনার ${bnNum(ev.count)}টি ভুল গণ্য হয়েছে। ${WARNING_STEP_PERSON_BN[ev.step] ?? ""}`,
-      refs: {},
-      dedupeKey: dedupeKeys.staffWarningReached(ev.warningId.toString(), ev.recipientUserId.toString()),
-    });
-  });
-}
+// D-#1150: the person is never told they reached a warning step (no notice, no pop-up).
 
 const WARNING_STEP_REVIEWER_BN: Record<string, string> = {
-  WARNING: "তাঁকে স্বয়ংক্রিয় সতর্কবার্তা পাঠানো হয়েছে।",
+  WARNING: "তাঁকে কিছু জানানো হয়নি — দরকার হলে সামনাসামনি কথা বলুন।",
   MEETING: "সামনাসামনি আলোচনার সময় ঠিক করুন।",
   CONDUCT: "শৃঙ্খলার ধাপ খোলার কথা বিবেচনা করুন (নিজে থেকে খোলা হয়নি)।",
 };
@@ -2526,7 +2502,7 @@ export async function emitStaffWarningMeeting(ev: {
       recipientUserId: ev.recipientUserId.toString(),
       kind: "STAFF_MISTAKE_MEETING",
       titleBn: ev.summary ? "আলোচনার সারাংশ" : "আলোচনার সময়",
-      bodyBn: ev.summary ? `সংশোধনের পদক্ষেপ: ${ev.summary}` : `সতর্কবার্তা নিয়ে আলোচনা: ${when}, ${ev.place ?? ""}`,
+      bodyBn: ev.summary ? `সংশোধনের পদক্ষেপ: ${ev.summary}` : `আলোচনা: ${when}, ${ev.place ?? ""}`,
       refs: {},
       dedupeKey: dedupeKeys.staffWarningMeeting(ev.warningId.toString(), ev.recipientUserId.toString(), ev.stamp),
     });

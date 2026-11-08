@@ -10,6 +10,8 @@
   - **Owner, to switch on:** (1) Office fills every child's Bangla name; (2) edit + switch on both standards (Admin → এআই-এর নিয়ম ও মানদণ্ড); (3) save a DeepSeek key; (4) run the AI-8 bake-off; (5) switch মন্তব্য যাচাই on. Then capture the `family-comment-ai-check` guide pictures and clear its draft flag.
   - **Open (owner):** the check covers teacherAction too (PRD P1, built as recommended) — say if it should not.
   - **Now / next:** PR → dev. Then AI-8 (bake-off script), AI-6 (assistant), AI-7 (analytics).
+- 2026-11-08: **BUILT — staff never see a warning step (D-#1150) + the 09:30 unmarked list scrolls** (branch `fix/escalation-scroll-quiet-warnings`). The সতর্কবার্তা pop-up is gone for everyone (server answers null at once on deploy, so old phones stop showing it too); the ladder still informs Principal/Office. The 09:30 list (D-#1106) was cut off on web — now scrolls.
+  - **Now / next:** PR → dev → promote → OTA.
 - 2026-11-08: **BUILT — AI Assist AI-4, de-identification + students' Bangla names (D-#1130/#1131)** (branch `feat/ai4-deid`). Names, phones and ids become tokens before any prompt leaves the VM; a fail-closed gate refuses to send if a known name is left. Admin → শিক্ষার্থীর বাংলা নাম lets the Office write each child's Bangla name (with a "done x / y" count) — teachers write names in Bangla and only 17 of 91 children had one (PRD P11).
   - **Office (before AI-8 switch-on):** fill every child's Bangla name on that screen.
   - **Now / next:** PR → dev. Then AI-5 (comment checker).
