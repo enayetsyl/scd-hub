@@ -1,5 +1,9 @@
 # STATUS
 
+- 2026-11-08: **PROPOSED — AI Assist seed comment standards (AI-3s, D-#1102)**: `docs/ai-assist/comment-standard.md` (daily comments) + `ct-comment-standard.md` (class-test comments), each with rules + 10 rewritten examples, and the evidence memo `seed-standard-memo.md`, drafted from a read-only, de-identified prod sample (105 daily comments, 200 class-test results with mark %). INACTIVE until the owner approves; they load as the first `AiPolicy` versions when AI-3 is built.
+  - **Owner:** review the two drafts and answer the 7 questions in the memo §5.
+  - **Blocker found for AI-4:** only 17 of 91 students have a Bangla name on file, so a roster swap leaks children's Bangla first names (PRD P11). Office must fill `nameBn` (and nicknames) before the checker is switched on.
+  - **Cleanup:** delete the scratchpad export after approval (it still holds some first names).
 - 2026-11-08: **BUILT — school notice notification (D-#1072)** (branch `feat/school-notice`, worktree `C:/w/notice`). New kind `SCHOOL_NOTICE`; `notifyPopupRecipients` notifies a published pop-up notice's people.
   - **Now / next:** PR → dev → promote → OTA, then publish the help-centre pop-ups (current Teacher + Office; all guardians) on prod and notify their recipients.
 - 2026-11-08: **PLANNED — AI Assist (D-#1090–#1105)**, contract `docs/prd-ai-assist.md` (from the Claude Desktop planning handoff, docs only). DeepSeek joins Gemini behind one provider interface; every AI call is metered in one `AiUsage` ledger with caps that refuse before sending ($3 checker / $5 assistant / $8 global a month, 70 % alert); versioned Principal-edited AI rules; de-identification before any prompt leaves the VM; a comment checker on daily comments and class-test comments (teacher always chooses, fail-open); a separate `ai-assist` teacher chat; Principal analytics. Sylhet only, one switch per feature (the repo has no branch model).
