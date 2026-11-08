@@ -29,7 +29,7 @@ finished can be shown it again, and families without an app login get a WhatsApp
 |---|---|---|
 | 1 | "Current teachers" | Everybody on **probation or confirmed** (D-#853). |
 | 2 | Approval before Office sends | **None** — Office sends directly (D-#857). |
-| 3 | Phone notification nudge | **No.** Only the pop-up (D-#858). |
+| 3 | Phone notification nudge | **No.** Only the pop-up (D-#858). Exception (2026-11-08, D-#1072): an announcement the owner asks to send both ways also gets a `SCHOOL_NOTICE` notification to the same frozen recipients (`notifyPopupRecipients`; server-side only, not in the composer). |
 | 4 | Guardian male/female | **Not needed** — father and mother share one login. Guardians are targeted by child's class and section (the বালক/বালিকা sections cover the split) (D-#853). |
 | 5 | Guardian changes an answer later | **Configured per notice by the sender** (Office/Principal); off by default (D-#856). |
 | 6 | Class teachers sending pop-ups | **No** (D-#857). |

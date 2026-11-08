@@ -111,6 +111,9 @@ export interface NotificationRefs {
   /** Exam paper review (D-#1032, prd-exam-paper-bank §5.4) — deep-link: ExamPaperDraft;
    *  the literal "list" when one notice covers several papers (deep-link: the paper list). */
   examPaperId?: string;
+  /** School notice (D-#1072) — the page it opens, as "Tab/Screen" (the pop-up OPEN_SCREEN
+   *  convention, so a notice and its pop-up name the same page the same way). */
+  screenTarget?: string;
 }
 
 export interface INotification extends Document {
@@ -186,6 +189,8 @@ const RefsSchema = new Schema<NotificationRefs>(
     masteryReviewId: { type: String },
     // D-#1032 — same lockstep rule: model, resolver, app query.
     examPaperId: { type: String },
+    // D-#1072 — same lockstep rule: model, resolver, app query.
+    screenTarget: { type: String },
   },
   { _id: false },
 );
