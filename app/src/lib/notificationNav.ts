@@ -244,10 +244,12 @@ export function notificationTarget(
       return guardian
         ? { tab: "GuardianAssignmentsTab", screen: "ChildAssignments" }
         : { tab: "MasteryTab", screen: "MasteryWork" };
-    // Mark-submission guard (D-#889–#893). The 09:30 list itself is a pop-up on app open;
-    // the row lands where the unmarked work is.
+    // Mark-submission guard (D-#889–#893). The 09:30 list is a pop-up on app open; the
+    // row reopens that day's list (D-#1106), which links on to each section's work.
     case "MARK_SUBMISSION_ESCALATION":
-      return { tab: "AssignmentTab", screen: "AssignmentHome" };
+      return refs?.date
+        ? { tab: "AssignmentTab", screen: "MarkEscalationList", params: { dateKey: refs.date } }
+        : { tab: "AssignmentTab", screen: "MarkEscalationList" };
     case "MARK_CORRECTION":
       return { tab: "HrTab", screen: "MarkCorrections", params: { all: true } };
     case "STAFF_MISTAKE_EXPLAIN":

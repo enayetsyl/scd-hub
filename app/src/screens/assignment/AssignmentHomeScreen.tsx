@@ -444,6 +444,10 @@ export default function AssignmentHomeScreen({ navigation }: Props): React.React
                 {isFollowUpAdmin ? (
                   <Chip label={`📣 ${STR.asChaseTitle}`} onPress={() => navigation.navigate("AssignmentChase")} />
                 ) : null}
+                {/* D-#1106: the 09:30 unmarked list, reopened after the pop-up's বুঝেছি. */}
+                {can("mark_submission:alerts") ? (
+                  <Chip label={`⏰ ${STR.mesTitle}`} onPress={() => navigation.navigate("MarkEscalationList")} />
+                ) : null}
                 {canView ? (
                   <Chip
                     label={`📊 ${STR.asRollupsTitle}`}

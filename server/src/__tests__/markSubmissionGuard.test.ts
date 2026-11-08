@@ -31,6 +31,8 @@ import { listMarkCorrectionNotes } from "../modules/trackers/services/MarkCorrec
 import {
   acknowledgeMarkEscalation,
   acknowledgeMarkReminder,
+  markEscalationDays,
+  markEscalationFor,
   myMarkEscalation,
   myMarkReminder,
   runMarkEscalation,
@@ -373,5 +375,27 @@ describe("D-#889/#890 — the Sunday ladder", () => {
     await asSubmitPass(item, [{ recordId: rec, submitted: true }], teacher, at("08:00", "2026-11-09"));
     expect(await runMarkEscalation(at("09:30", "2026-11-09"))).toBe(0);
     expect(await MarkEscalation.countDocuments()).toBe(0);
+  });
+
+  it("D-#1106: the list reopens from the button after বুঝেছি, for any day, with the day picker counts", async () => {
+    const t = await dueDay();
+    expect(await markEscalationFor()).toBeNull(); // no 09:30 list yet
+    expect(await markEscalationDays()).toEqual([]);
+
+    await runMarkEscalation(at("09:30"));
+    await acknowledgeMarkEscalation(t.office, at("09:40"));
+    expect(await myMarkEscalation(t.office, at("09:41"))).toBeNull(); // the pop-up is closed…
+
+    const reopened = await markEscalationFor(); // …but the button still shows the newest list
+    expect(reopened?.dateKey).toBe("2026-11-08");
+    expect(reopened!.rows[0]!.sectionId).toBe(String(t.where.sectionId));
+    expect(reopened!.rows[0]!.classId).toBe(String(t.where.classId));
+    expect(reopened!.rows[0]!.markedNow).toBe(false);
+    expect(await markEscalationDays()).toEqual([{ dateKey: "2026-11-08", itemCount: 1, openCount: 1 }]);
+
+    await asSubmitPass(t.item, [{ recordId: t.rec, submitted: true }], t.teacher, at("10:15"));
+    expect((await markEscalationFor("2026-11-08"))!.rows[0]!.markedNow).toBe(true);
+    expect(await markEscalationDays()).toEqual([{ dateKey: "2026-11-08", itemCount: 1, openCount: 0 }]);
+    expect(await markEscalationFor("2026-11-01")).toBeNull(); // a day with no list
   });
 });

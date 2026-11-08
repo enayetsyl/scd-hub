@@ -125,6 +125,7 @@ import DeliverAssignmentScreen from "../screens/assignment/DeliverAssignmentScre
 import AssignmentWorkspaceScreen from "../screens/assignment/AssignmentWorkspaceScreen";
 import AssignmentReconcileScreen from "../screens/assignment/AssignmentReconcileScreen";
 import AssignmentChaseScreen from "../screens/assignment/AssignmentChaseScreen";
+import MarkEscalationListScreen from "../screens/assignment/MarkEscalationListScreen";
 import AssignmentRollupsScreen from "../screens/assignment/AssignmentRollupsScreen";
 import AssignmentGiftScreen from "../screens/assignment/AssignmentGiftScreen";
 import ChildAssignmentsScreen from "../screens/guardian/ChildAssignmentsScreen";
@@ -927,6 +928,7 @@ function AssignmentNavigator(): React.ReactElement {
       <AssignmentStack.Screen name="AssignmentWorkspace" component={AssignmentWorkspaceScreen} options={{ title: STR.asWorkspaceTitle }} />
       <AssignmentStack.Screen name="AssignmentReconcile" component={AssignmentReconcileScreen} options={{ title: STR.asReconcileTitle }} />
       <AssignmentStack.Screen name="AssignmentChase" component={AssignmentChaseScreen} options={{ title: STR.asChaseTitle }} />
+      <AssignmentStack.Screen name="MarkEscalationList" component={MarkEscalationListScreen} options={{ title: STR.mesTitle }} />
       <AssignmentStack.Screen name="AssignmentRollups" component={AssignmentRollupsScreen} options={{ title: STR.asRollupsTitle }} />
       <AssignmentStack.Screen name="AssignmentGift" component={AssignmentGiftScreen} options={{ title: STR.agTitle }} />
       <AssignmentStack.Screen name="StudentProfile" component={StudentProfileScreen} options={{ title: STR.spTitle }} />

@@ -42,6 +42,15 @@ The 09:30 list is a snapshot taken at 09:30; the pop-up marks a row "এখন �
 was marked after the snapshot. Pop-ups refetch when the app comes back to the foreground and
 every 5 minutes, so a teacher who opened the app at 07:30 still gets pop-up 2 at 09:00.
 
+**Reopening the list (D-#1106).** After "বুঝেছি" the pop-up is gone for that day, so the
+অ্যাসাইনমেন্ট page has a **⏰ ০৯:৩০-এর জমার হিসাব বাকি** button (same `mark_submission:alerts`
+gate) that opens screen `MarkEscalationList`: a day picker over every saved snapshot (newest
+first, each with how many are still unmarked) and the same rows as the pop-up. For a login that
+also holds `assignment:view` (the workspace's gate; Office is off by default) a row opens that
+section's অ্যাসাইনমেন্ট কাজ; otherwise it is a plain row. Opening it acknowledges nothing. The 09:30 inbox row opens this
+screen on its own day (`refs.date`). Server: `markEscalation(dateKey)` /
+`markEscalationDays(limit)`.
+
 D-#890 is the first system pop-up that **also pushes**: the composed pop-up notices stay
 pop-up-only (D-#858), but the owner asked for push here.
 
