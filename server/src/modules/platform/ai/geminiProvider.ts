@@ -87,7 +87,9 @@ export class GeminiProvider implements AiProvider {
       usage: {
         cacheHitTokens: cached,
         cacheMissTokens: Math.max(0, (u.promptTokenCount ?? 0) - cached),
-        outputTokens: u.candidatesTokenCount ?? 0,
+        // Gemini counts thinking apart from the answer but bills both as output; DeepSeek's
+        // completion_tokens already includes reasoning. One meaning on the ledger: billed output.
+        outputTokens: (u.candidatesTokenCount ?? 0) + (u.thoughtsTokenCount ?? 0),
         reasoningTokens: u.thoughtsTokenCount ?? null,
       },
       finishReason: "stop",

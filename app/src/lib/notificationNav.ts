@@ -363,6 +363,9 @@ export function notificationTarget(
     // D-#1052: the 18:00 daily school report opens THAT day's report.
     case "DAILY_REPORT":
       return { tab: "ReportsTab", screen: "DailyReport", params: refs?.date ? { date: refs.date } : undefined };
+    // AI-2 (D-#1103): an AI budget alert opens the AI keys & caps screen.
+    case "AI_BUDGET_ALERT":
+      return { tab: "AdminTab", screen: "AiSettings" };
     case "SCHOOL_NOTICE": {
       // D-#1072 — the page the school named, "Tab/Screen" like a pop-up's OPEN_SCREEN button.
       // No page = a plain message: the detail screen shows it whole with no button.

@@ -35,6 +35,7 @@ import { dateKeyOf } from "../../attendance/dates";
 import { writeAudit } from "../../platform/services/AuditService";
 import { ObservationRota, type IObservationRota } from "../models/ObservationRota";
 import { geminiKey, geminiModel } from "../../platform/services/AiSettingService";
+import { meteredGeminiFetch } from "../../platform/ai/meteredFetch";
 import {
   candidatesForDate,
   datesInRange,
@@ -218,7 +219,7 @@ export class GeminiRotaProvider implements RotaProvider {
   }
 
   async generate(prompt: string): Promise<string> {
-    const res = await fetch(
+    const res = await meteredGeminiFetch("observation_rota", this.model,
       `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent`,
       {
         method: "POST",

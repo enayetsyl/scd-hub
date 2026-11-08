@@ -17,6 +17,10 @@ export interface IAiFeatureSetting extends Document {
   /** Absent = the provider's own model (saved → .env → default). */
   modelName?: string;
   fallback: boolean;
+  /** AI-2 caps (D-#1092/#1103); absent = the feature's default in AI_FEATURES. */
+  dailyPerUser?: number;
+  monthlyUsd?: number;
+  perSessionTurns?: number;
   updatedBy?: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -29,6 +33,9 @@ const AiFeatureSettingSchema = new Schema<IAiFeatureSetting>(
     provider: { type: String, required: true, enum: ["deepseek", "gemini"], default: "deepseek" },
     modelName: { type: String, trim: true, maxlength: 80 },
     fallback: { type: Boolean, required: true, default: true },
+    dailyPerUser: { type: Number, min: 0 },
+    monthlyUsd: { type: Number, min: 0 },
+    perSessionTurns: { type: Number, min: 0 },
     updatedBy: { type: Schema.Types.ObjectId, ref: "User" },
   },
   { timestamps: true },

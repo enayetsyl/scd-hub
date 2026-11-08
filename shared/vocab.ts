@@ -1560,6 +1560,10 @@ export const NOTIFICATION_KINDS = [
   // School notice (D-#1072; app-native, NO wire twin): a one-off announcement from the school,
   // sent to the people of a published pop-up notice; refs.screenTarget ("Tab/Screen") is the page it opens.
   "SCHOOL_NOTICE",
+  // AI budget alert (AI-2, D-#1103; app-native, NO wire twin): to every holder of
+  // system_health:ai_key when a monthly AI cap first reaches the alert percent (default 70 %)
+  // and again at 100 %, once per cap per month. Opens Admin → এআই কী ও মডেল.
+  "AI_BUDGET_ALERT",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
@@ -1645,6 +1649,7 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   STAFF_MISTAKE_DAILY: "আজকের কর্মীর ভুল",
   DAILY_REPORT: "দৈনিক প্রতিবেদন",
   SCHOOL_NOTICE: "স্কুলের বার্তা",
+  AI_BUDGET_ALERT: "এআই খরচের সতর্কবার্তা",
 };
 export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   BELL_REMINDER: "Bell reminder",
@@ -1728,6 +1733,7 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   STAFF_MISTAKE_DAILY: "Today's staff mistakes",
   DAILY_REPORT: "Daily school report",
   SCHOOL_NOTICE: "School notice",
+  AI_BUDGET_ALERT: "AI spending alert",
 };
 
 /**
