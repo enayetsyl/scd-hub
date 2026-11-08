@@ -1,16 +1,18 @@
 import { Schema, model, Document, Types } from "mongoose";
 
 /**
- * AiSetting (D-#967) — the Gemini key + model the Principal sets in the app, so a key can
- * be changed without editing the VM's .env and restarting. ONE row (`name: "gemini"`).
+ * AiSetting (D-#967, D-#1090) — the key + model the Principal sets in the app for each AI
+ * provider, so a key can be changed without editing the VM's .env and restarting. ONE row
+ * per provider (`name: "gemini"` | `"deepseek"`).
  *
  * The key is stored ENCRYPTED (AES-256-GCM, AiSettingService) and is never sent back to
  * any client — only its last 4 characters. No row, or no key on the row, falls back to
- * GEMINI_API_KEY / GEMINI_MODEL from .env, so nothing changes until someone saves here.
+ * GEMINI_API_KEY / GEMINI_MODEL (or DEEPSEEK_API_KEY / DEEPSEEK_MODEL) from .env, so
+ * nothing changes until someone saves here.
  */
 export interface IAiSetting extends Document {
   _id: Types.ObjectId;
-  name: "gemini";
+  name: "gemini" | "deepseek";
   /** base64(iv | tag | ciphertext); absent = use the .env key. */
   keyEnc?: string;
   keyLast4?: string;
@@ -23,7 +25,7 @@ export interface IAiSetting extends Document {
 
 const AiSettingSchema = new Schema<IAiSetting>(
   {
-    name: { type: String, required: true, unique: true, enum: ["gemini"] },
+    name: { type: String, required: true, unique: true, enum: ["gemini", "deepseek"] },
     keyEnc: { type: String },
     keyLast4: { type: String, maxlength: 4 },
     modelName: { type: String, trim: true, maxlength: 80 },

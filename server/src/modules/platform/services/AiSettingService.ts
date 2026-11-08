@@ -1,16 +1,20 @@
 /**
- * AiSettingService (D-#967) — where every Gemini caller gets its key and model.
+ * AiSettingService (D-#967, D-#1090) — where every AI caller gets its key and model.
  *
- *   key:   the Principal's saved key (decrypted) → GEMINI_API_KEY → none
- *   model: the saved model → GEMINI_MODEL → "gemini-flash-latest"
+ *   Gemini:   key = the saved key → GEMINI_API_KEY → none;  model = saved → GEMINI_MODEL → "gemini-flash-latest"
+ *   DeepSeek: key = the saved key → DEEPSEEK_API_KEY → none; model = saved → DEEPSEEK_MODEL → "deepseek-flash"
  *
- * The callers (monthly comments, observation rota, support-book author, voice tasks)
- * build their provider synchronously, so the saved row is held in memory: loaded at
- * boot, reloaded on every save, and re-read by `refreshAiConfig()` when it is older than
- * a minute. The server is ONE process (systemd), so a save is seen at once.
+ * The existing Gemini callers (monthly comments, observation rota, support-book author,
+ * voice tasks) build their provider synchronously, so the saved rows are held in memory:
+ * loaded at boot, reloaded on every save, and re-read by `refreshAiConfig()` when older
+ * than a minute. The server is ONE process (systemd), so a save is seen at once.
  *
- * Saving TESTS the key + model with a one-line request first — a wrong key or a model
- * Google has retired (the gemini-2.5-flash 404) is refused before it can break anything.
+ * Saving TESTS the key + model with a one-line request first — a wrong key or a retired
+ * model is refused before it can break anything.
+ *
+ * AI-1 adds the per-FEATURE settings (`AiFeatureSetting`): which provider + model answers
+ * each new AI feature, whether it is switched on (default OFF, D-#1101), and whether it may
+ * fall back to the other provider once. The router (`ai/aiRouter.ts`) reads them.
  */
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "crypto";
 import { Types } from "mongoose";
@@ -19,7 +23,10 @@ import { callerHasPermission } from "@scd/shared";
 import { ForbiddenError } from "../../../middleware/authz";
 import { User } from "../../foundation/models/User";
 import { AiSetting } from "../models/AiSetting";
+import { AiFeatureSetting } from "../models/AiFeatureSetting";
 import { writeAudit } from "./AuditService";
+import { AI_PROVIDERS, type AiProviderName } from "../ai/provider";
+import { DEEPSEEK_BASE_URL, DEEPSEEK_DEFAULT_MODEL } from "../ai/deepseekProvider";
 
 /** The alias Google keeps pointed at the current Flash — never retired. */
 export const GEMINI_DEFAULT_MODEL = "gemini-flash-latest";
@@ -34,7 +41,12 @@ interface Cached {
   updatedBy: string | null;
   loadedAt: number;
 }
-let cache: Cached | null = null;
+const cache: Record<AiProviderName, Cached | null> = { gemini: null, deepseek: null };
+
+const ENV_KEY: Record<AiProviderName, string> = { gemini: "GEMINI_API_KEY", deepseek: "DEEPSEEK_API_KEY" };
+const ENV_MODEL: Record<AiProviderName, string> = { gemini: "GEMINI_MODEL", deepseek: "DEEPSEEK_MODEL" };
+const DEFAULT_MODEL: Record<AiProviderName, string> = { gemini: GEMINI_DEFAULT_MODEL, deepseek: DEEPSEEK_DEFAULT_MODEL };
+const LABEL: Record<AiProviderName, string> = { gemini: "Gemini", deepseek: "DeepSeek" };
 
 function cipherKey(): Buffer {
   return createHash("sha256")
@@ -61,35 +73,60 @@ export function decryptSecret(enc: string): string | null {
   }
 }
 
-export async function refreshAiConfig(force = false): Promise<void> {
-  if (!force && cache && Date.now() - cache.loadedAt < 60_000) return;
-  const row = await AiSetting.findOne({ name: "gemini" }).lean();
-  cache = {
-    key: row?.keyEnc ? decryptSecret(row.keyEnc) : null,
-    last4: row?.keyLast4 ?? null,
-    model: row?.modelName || null,
-    updatedAt: row?.updatedAt ?? null,
-    updatedBy: row?.updatedBy?.toString() ?? null,
+async function loadProvider(p: AiProviderName): Promise<void> {
+  const row = await AiSetting.findOne({ name: p }).lean();
+  // The model allows one row per provider; a row whose name is not this provider's is not ours.
+  const mine = row && (row as { name?: string }).name && (row as { name?: string }).name !== p ? null : row;
+  cache[p] = {
+    key: mine?.keyEnc ? decryptSecret(mine.keyEnc) : null,
+    last4: mine?.keyLast4 ?? null,
+    model: mine?.modelName || null,
+    updatedAt: mine?.updatedAt ?? null,
+    updatedBy: mine?.updatedBy?.toString() ?? null,
     loadedAt: Date.now(),
   };
-  if (row?.keyEnc && !cache.key) console.error("[ai-settings] the saved Gemini key cannot be decrypted (server secret changed?) — using .env");
+  if (mine?.keyEnc && !cache[p]!.key) console.error(`[ai-settings] the saved ${LABEL[p]} key cannot be decrypted (server secret changed?) — using .env`);
+}
+
+export async function refreshAiConfig(force = false): Promise<void> {
+  for (const p of AI_PROVIDERS) {
+    const c = cache[p];
+    if (!force && c && Date.now() - c.loadedAt < 60_000) continue;
+    await loadProvider(p);
+  }
+}
+
+/** The key a provider's callers use; null = none configured. */
+export function providerKey(p: AiProviderName): string | null {
+  return cache[p]?.key || process.env[ENV_KEY[p]] || null;
+}
+
+export function providerModel(p: AiProviderName): string {
+  return cache[p]?.model || process.env[ENV_MODEL[p]] || DEFAULT_MODEL[p];
 }
 
 /** The key every Gemini caller uses; null = none configured. */
 export function geminiKey(): string | null {
-  return cache?.key || process.env.GEMINI_API_KEY || null;
+  return providerKey("gemini");
 }
 
 export function geminiModel(): string {
-  return cache?.model || process.env.GEMINI_MODEL || GEMINI_DEFAULT_MODEL;
+  return providerModel("gemini");
+}
+
+export function deepseekKey(): string | null {
+  return providerKey("deepseek");
 }
 
 export interface AiSettingsView {
+  provider: AiProviderName;
   /** SETTING = saved in the app; ENV = from the server's .env; NONE = no key at all. */
   source: "SETTING" | "ENV" | "NONE";
   keyLast4: string | null;
   model: string;
   modelSaved: string | null;
+  /** The model used when nothing is saved — the screen shows it as the hint. */
+  defaultModel: string;
   updatedAt: Date | null;
   updatedByName: string | null;
 }
@@ -100,17 +137,27 @@ function assertCanEdit(auth: AuthPayload | null): AuthPayload {
   return auth;
 }
 
-export async function aiSettingsView(authIn: AuthPayload | null): Promise<AiSettingsView> {
+function parseProvider(p: string | null | undefined): AiProviderName {
+  if (p === undefined || p === null || p === "") return "gemini"; // the D-#967 screen sends no provider
+  if ((AI_PROVIDERS as readonly string[]).includes(p)) return p as AiProviderName;
+  throw new Error("এআই সেবাটি চেনা যায়নি");
+}
+
+export async function aiSettingsView(authIn: AuthPayload | null, providerIn?: string | null): Promise<AiSettingsView> {
   assertCanEdit(authIn);
+  const p = parseProvider(providerIn);
   await refreshAiConfig(true);
-  const envKey = process.env.GEMINI_API_KEY || null;
-  const name = cache?.updatedBy ? (await User.findById(cache.updatedBy).select("name").lean())?.name ?? null : null;
+  const c = cache[p];
+  const envKey = process.env[ENV_KEY[p]] || null;
+  const name = c?.updatedBy ? (await User.findById(c.updatedBy).select("name").lean())?.name ?? null : null;
   return {
-    source: cache?.key ? "SETTING" : envKey ? "ENV" : "NONE",
-    keyLast4: cache?.key ? cache.last4 : envKey ? envKey.slice(-4) : null,
-    model: geminiModel(),
-    modelSaved: cache?.model ?? null,
-    updatedAt: cache?.updatedAt ?? null,
+    provider: p,
+    source: c?.key ? "SETTING" : envKey ? "ENV" : "NONE",
+    keyLast4: c?.key ? c.last4 : envKey ? envKey.slice(-4) : null,
+    model: providerModel(p),
+    modelSaved: c?.model ?? null,
+    defaultModel: process.env[ENV_MODEL[p]] || DEFAULT_MODEL[p],
+    updatedAt: c?.updatedAt ?? null,
     updatedByName: name,
   };
 }
@@ -125,6 +172,24 @@ async function pingGemini(key: string, modelName: string): Promise<number> {
     return res.status;
   } catch {
     throw new Error("Gemini-তে পৌঁছানো যায়নি — ইন্টারনেট সংযোগ দেখুন");
+  }
+}
+
+async function pingDeepseek(key: string, modelName: string): Promise<number> {
+  try {
+    const res = await fetch(`${DEEPSEEK_BASE_URL}/chat/completions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+      body: JSON.stringify({
+        model: modelName,
+        messages: [{ role: "user", content: "Reply with the single word OK." }],
+        max_tokens: 16,
+        reasoning_effort: "none",
+      }),
+    });
+    return res.status;
+  } catch {
+    throw new Error("DeepSeek-এ পৌঁছানো যায়নি — ইন্টারনেট সংযোগ দেখুন");
   }
 }
 
@@ -154,29 +219,50 @@ export async function testGemini(key: string, modelName: string, ping: (k: strin
 }
 
 /**
- * Save a new key and/or model (each optional; an empty model = back to the default).
- * Tested first; audited WITHOUT the key. `test` is injectable for tests.
+ * DeepSeek's answers (api-docs.deepseek.com): 401 wrong key, 402 no balance, 400 / 422 a bad
+ * request (an unknown model lands here), 429 rate limit, 5xx busy.
+ */
+export async function testDeepseek(key: string, modelName: string, ping: (k: string, m: string) => Promise<number> = pingDeepseek): Promise<void> {
+  const status = await ping(key, modelName);
+  if (status >= 200 && status < 300) return;
+  if (status === 401 || status === 403) throw new Error("কী (key) সঠিক নয় — DeepSeek প্ল্যাটফর্ম থেকে আবার কপি করুন");
+  if (status === 402) throw new Error("DeepSeek অ্যাকাউন্টে টাকা নেই (402) — ব্যালান্স যোগ করে আবার চেষ্টা করুন");
+  if (status === 400 || status === 404 || status === 422) throw new Error(`"${modelName}" মডেলটি DeepSeek চেনে না — ${DEEPSEEK_DEFAULT_MODEL} দিন`);
+  if (status === 429) throw new Error("এই কী-র সীমা শেষ (429) — পরে আবার চেষ্টা করুন");
+  throw new Error(`DeepSeek সাড়া দেয়নি (${status}) — একটু পরে আবার চেষ্টা করুন`);
+}
+
+const TESTERS: Record<AiProviderName, (key: string, model: string) => Promise<void>> = {
+  gemini: (k, m) => testGemini(k, m),
+  deepseek: (k, m) => testDeepseek(k, m),
+};
+
+/**
+ * Save a new key and/or model for one provider (each optional; an empty model = back to
+ * the default). Tested first; audited WITHOUT the key. `test` is injectable for tests.
+ * No `provider` = Gemini, so the D-#967 screen on old phone bundles keeps working.
  */
 export async function setAiSettings(
   authIn: AuthPayload | null,
-  input: { apiKey?: string | null; model?: string | null },
-  test: (key: string, model: string) => Promise<void> = testGemini,
+  input: { apiKey?: string | null; model?: string | null; provider?: string | null },
+  test?: (key: string, model: string) => Promise<void>,
 ): Promise<AiSettingsView> {
   const auth = assertCanEdit(authIn);
+  const p = parseProvider(input.provider);
   await refreshAiConfig(true);
   const newKey = input.apiKey?.trim() || null;
-  // Shape only — Google's own test below is the real check. Keys are not one format:
-  // classic "AIza…" (39 chars) and the newer AI Studio "AQ.…" keys, which carry dots.
+  // Shape only — the provider's own test below is the real check. Keys are not one format:
+  // classic "AIza…" (39 chars), the newer AI Studio "AQ.…" keys with dots, DeepSeek "sk-…".
   if (newKey && /\s/.test(newKey)) throw new Error("কী-র মাঝে ফাঁকা জায়গা আছে — আবার কপি করে বসান");
   if (newKey && !/^[\x21-\x7E]{20,300}$/.test(newKey)) throw new Error("কী (key) দেখতে সঠিক নয়");
   const modelChanged = input.model !== undefined && input.model !== null;
-  const newModel = modelChanged ? input.model!.trim() || null : cache?.model ?? null;
+  const newModel = modelChanged ? input.model!.trim() || null : cache[p]?.model ?? null;
   if (newModel && !/^[a-z0-9.\-]{3,80}$/.test(newModel)) throw new Error("মডেলের নাম সঠিক নয়");
   if (!newKey && !modelChanged) throw new Error("নতুন কী বা মডেল দিন");
 
-  const keyToUse = newKey ?? geminiKey();
+  const keyToUse = newKey ?? providerKey(p);
   if (!keyToUse) throw new Error("আগে একটি কী দিন");
-  await test(keyToUse, newModel || process.env.GEMINI_MODEL || GEMINI_DEFAULT_MODEL);
+  await (test ?? TESTERS[p])(keyToUse, newModel || process.env[ENV_MODEL[p]] || DEFAULT_MODEL[p]);
 
   const set: Record<string, unknown> = { updatedBy: new Types.ObjectId(auth.userId) };
   const unset: Record<string, 1> = {};
@@ -188,21 +274,159 @@ export async function setAiSettings(
     if (newModel) set.modelName = newModel;
     else unset.modelName = 1;
   }
-  await AiSetting.updateOne({ name: "gemini" }, { $set: set, ...(Object.keys(unset).length ? { $unset: unset } : {}) }, { upsert: true });
+  await AiSetting.updateOne({ name: p }, { $set: set, ...(Object.keys(unset).length ? { $unset: unset } : {}) }, { upsert: true });
   await writeAudit({
     eventKind: "AI_SETTINGS_CHANGED",
     actorId: auth.userId,
     actorRole: auth.role,
     targetKind: "AiSetting",
-    meta: { keyChanged: !!newKey, keyLast4: newKey ? newKey.slice(-4) : undefined, model: modelChanged ? newModel ?? "(default)" : undefined },
+    meta: { provider: p, keyChanged: !!newKey, keyLast4: newKey ? newKey.slice(-4) : undefined, model: modelChanged ? newModel ?? "(default)" : undefined },
   });
-  return aiSettingsView(auth);
+  return aiSettingsView(auth, p);
 }
 
 /** Forget the saved key — the server's .env key (if any) is used again. Audited. */
-export async function clearAiKey(authIn: AuthPayload | null): Promise<AiSettingsView> {
+export async function clearAiKey(authIn: AuthPayload | null, providerIn?: string | null): Promise<AiSettingsView> {
   const auth = assertCanEdit(authIn);
-  await AiSetting.updateOne({ name: "gemini" }, { $unset: { keyEnc: 1, keyLast4: 1 }, $set: { updatedBy: new Types.ObjectId(auth.userId) } });
-  await writeAudit({ eventKind: "AI_SETTINGS_CHANGED", actorId: auth.userId, actorRole: auth.role, targetKind: "AiSetting", meta: { keyCleared: true } });
-  return aiSettingsView(auth);
+  const p = parseProvider(providerIn);
+  await AiSetting.updateOne({ name: p }, { $unset: { keyEnc: 1, keyLast4: 1 }, $set: { updatedBy: new Types.ObjectId(auth.userId) } });
+  await writeAudit({ eventKind: "AI_SETTINGS_CHANGED", actorId: auth.userId, actorRole: auth.role, targetKind: "AiSetting", meta: { provider: p, keyCleared: true } });
+  return aiSettingsView(auth, p);
+}
+
+// ---------------------------------------------------------------------------
+// Per-feature settings (AI-1)
+// ---------------------------------------------------------------------------
+
+/**
+ * The AI features this server knows. A feature joins this list in the slice that builds it;
+ * AI-1 lists the two the PRD plans so their settings can be prepared. Labels are what the
+ * Principal reads on the settings screen.
+ */
+export const AI_FEATURES = [
+  { key: "comment_check", bn: "মন্তব্য যাচাই", en: "Comment checker" },
+  { key: "assistant", bn: "শিক্ষকের সহকারী", en: "Teacher assistant" },
+] as const;
+export type AiFeatureKey = (typeof AI_FEATURES)[number]["key"];
+
+export interface AiFeatureView {
+  feature: AiFeatureKey;
+  labelBn: string;
+  labelEn: string;
+  enabled: boolean;
+  provider: AiProviderName;
+  /** Saved model for this feature; null = the provider's own model. */
+  modelSaved: string | null;
+  /** The model that will answer. */
+  model: string;
+  fallback: boolean;
+  /** Whether the chosen provider has a key at all. */
+  providerReady: boolean;
+  updatedAt: Date | null;
+}
+
+interface FeatureRow {
+  feature: string;
+  enabled?: boolean;
+  provider?: AiProviderName;
+  modelName?: string | null;
+  fallback?: boolean;
+  updatedAt?: Date;
+}
+
+function featureView(f: (typeof AI_FEATURES)[number], row: FeatureRow | null): AiFeatureView {
+  const provider = row?.provider ?? "deepseek";
+  return {
+    feature: f.key,
+    labelBn: f.bn,
+    labelEn: f.en,
+    enabled: row?.enabled ?? false,
+    provider,
+    modelSaved: row?.modelName || null,
+    model: row?.modelName || providerModel(provider),
+    fallback: row?.fallback ?? true,
+    providerReady: !!providerKey(provider),
+    updatedAt: row?.updatedAt ?? null,
+  };
+}
+
+function findFeature(key: string): (typeof AI_FEATURES)[number] {
+  const f = AI_FEATURES.find((x) => x.key === key);
+  if (!f) throw new Error("এই এআই সুবিধাটি চেনা যায়নি");
+  return f;
+}
+
+export async function aiFeatureSettings(authIn: AuthPayload | null): Promise<AiFeatureView[]> {
+  assertCanEdit(authIn);
+  await refreshAiConfig(true);
+  const rows = (await AiFeatureSetting.find({ feature: { $in: AI_FEATURES.map((f) => f.key) } }).lean()) as FeatureRow[];
+  return AI_FEATURES.map((f) => featureView(f, rows.find((r) => r.feature === f.key) ?? null));
+}
+
+/**
+ * Change one feature's switch / provider / model / fallback. Switching a feature ON, or
+ * changing its provider or model while it is on, tests that provider's key with that model
+ * first — a feature is never left pointing at a model that cannot answer.
+ */
+export async function setAiFeatureSetting(
+  authIn: AuthPayload | null,
+  input: { feature: string; enabled?: boolean | null; provider?: string | null; model?: string | null; fallback?: boolean | null },
+  test?: (provider: AiProviderName, key: string, model: string) => Promise<void>,
+): Promise<AiFeatureView> {
+  const auth = assertCanEdit(authIn);
+  const f = findFeature(input.feature);
+  await refreshAiConfig(true);
+  const before = ((await AiFeatureSetting.findOne({ feature: f.key }).lean()) as FeatureRow | null) ?? null;
+
+  const enabled = input.enabled ?? before?.enabled ?? false;
+  const provider = input.provider ? parseProvider(input.provider) : before?.provider ?? "deepseek";
+  const modelChanged = input.model !== undefined && input.model !== null;
+  const modelName = modelChanged ? input.model!.trim() || null : before?.modelName || null;
+  if (modelName && !/^[a-z0-9.\-]{3,80}$/.test(modelName)) throw new Error("মডেলের নাম সঠিক নয়");
+  const fallback = input.fallback ?? before?.fallback ?? true;
+
+  const needsTest = enabled && (!before?.enabled || provider !== (before?.provider ?? "deepseek") || modelChanged);
+  if (needsTest) {
+    const key = providerKey(provider);
+    if (!key) throw new Error(`আগে ${LABEL[provider]}-এর কী দিন`);
+    const m = modelName || providerModel(provider);
+    await (test ? test(provider, key, m) : TESTERS[provider](key, m));
+  }
+
+  const set: Record<string, unknown> = { enabled, provider, fallback, updatedBy: new Types.ObjectId(auth.userId) };
+  const unset: Record<string, 1> = {};
+  if (modelName) set.modelName = modelName;
+  else unset.modelName = 1;
+  await AiFeatureSetting.updateOne({ feature: f.key }, { $set: set, ...(Object.keys(unset).length ? { $unset: unset } : {}) }, { upsert: true });
+  await writeAudit({
+    eventKind: "AI_SETTINGS_CHANGED",
+    actorId: auth.userId,
+    actorRole: auth.role,
+    targetKind: "AiFeatureSetting",
+    meta: { feature: f.key, enabled, provider, model: modelName ?? "(provider default)", fallback },
+  });
+  const row = ((await AiFeatureSetting.findOne({ feature: f.key }).lean()) as FeatureRow | null) ?? null;
+  return featureView(f, row);
+}
+
+export interface AiRoute {
+  enabled: boolean;
+  primary: { provider: AiProviderName; model: string; key: string | null };
+  /** The other provider, when fallback is on and it has a key. */
+  fallback: { provider: AiProviderName; model: string; key: string } | null;
+}
+
+/** Internal (no caller check): how the router answers one feature right now. */
+export async function aiRouteFor(featureKey: string): Promise<AiRoute> {
+  const f = findFeature(featureKey);
+  await refreshAiConfig();
+  const row = ((await AiFeatureSetting.findOne({ feature: f.key }).lean()) as FeatureRow | null) ?? null;
+  const v = featureView(f, row);
+  const other: AiProviderName = v.provider === "deepseek" ? "gemini" : "deepseek";
+  const otherKey = providerKey(other);
+  return {
+    enabled: v.enabled,
+    primary: { provider: v.provider, model: v.model, key: providerKey(v.provider) },
+    fallback: v.fallback && otherKey ? { provider: other, model: providerModel(other), key: otherKey } : null,
+  };
 }
