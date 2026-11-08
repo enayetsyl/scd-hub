@@ -1,46 +1,107 @@
 /**
- * AI key & model (D-#967) — the Principal sets the Gemini key + model in the app instead
- * of the VM's .env. `system_health:ai_key` (LOCKED). The key is write-only: reads return
- * its last 4 characters and where it comes from, never the key.
+ * AI keys, models and feature settings (D-#967, D-#1090) — the Principal sets each AI
+ * provider's key + model in the app instead of the VM's .env, and chooses which provider
+ * answers each AI feature. `system_health:ai_key` (LOCKED). Keys are write-only: reads
+ * return the last 4 characters and where the key comes from, never the key.
+ *
+ * `provider` is optional everywhere and means Gemini when absent, so the D-#967 screen on
+ * phones still running the previous bundle keeps working unchanged.
  */
 import { builder } from "../../../schema";
-import { aiSettingsView, clearAiKey, setAiSettings, type AiSettingsView } from "../services/AiSettingService";
+import {
+  aiFeatureSettings,
+  aiSettingsView,
+  clearAiKey,
+  setAiFeatureSetting,
+  setAiSettings,
+  type AiFeatureView,
+  type AiSettingsView,
+} from "../services/AiSettingService";
 
 const AiSettingsRef = builder.objectRef<AiSettingsView>("AiSettings").implement({
   fields: (t) => ({
+    provider: t.string({ description: "gemini | deepseek", resolve: (v) => v.provider }),
     source: t.string({ description: "SETTING (saved here) | ENV (server .env) | NONE", resolve: (v) => v.source }),
     keyLast4: t.string({ nullable: true, resolve: (v) => v.keyLast4 }),
-    model: t.string({ description: "The model in use (saved → GEMINI_MODEL → the alias).", resolve: (v) => v.model }),
+    model: t.string({ description: "The model in use (saved → .env → the default).", resolve: (v) => v.model }),
     modelSaved: t.string({ nullable: true, resolve: (v) => v.modelSaved }),
+    defaultModel: t.string({ description: "The model used when none is saved.", resolve: (v) => v.defaultModel }),
     updatedAt: t.string({ nullable: true, resolve: (v) => (v.updatedAt ? new Date(v.updatedAt).toISOString() : null) }),
     updatedByName: t.string({ nullable: true, resolve: (v) => v.updatedByName }),
+  }),
+});
+
+const AiFeatureRef = builder.objectRef<AiFeatureView>("AiFeatureSetting").implement({
+  fields: (t) => ({
+    feature: t.string({ resolve: (v) => v.feature }),
+    labelBn: t.string({ resolve: (v) => v.labelBn }),
+    labelEn: t.string({ resolve: (v) => v.labelEn }),
+    enabled: t.boolean({ description: "Switched on (default OFF, D-#1101).", resolve: (v) => v.enabled }),
+    provider: t.string({ description: "deepseek | gemini", resolve: (v) => v.provider }),
+    modelSaved: t.string({ nullable: true, resolve: (v) => v.modelSaved }),
+    model: t.string({ description: "The model that will answer.", resolve: (v) => v.model }),
+    fallback: t.boolean({ description: "May try the other provider once.", resolve: (v) => v.fallback }),
+    providerReady: t.boolean({ description: "The chosen provider has a key.", resolve: (v) => v.providerReady }),
+    updatedAt: t.string({ nullable: true, resolve: (v) => (v.updatedAt ? new Date(v.updatedAt).toISOString() : null) }),
   }),
 });
 
 builder.queryField("aiSettings", (t) =>
   t.field({
     type: AiSettingsRef,
-    description: "Where the Gemini key comes from, its last 4 characters, and the model. system_health:ai_key.",
+    description: "Where a provider's key comes from, its last 4 characters, and the model. No provider = Gemini. system_health:ai_key.",
     authScopes: { hasPermission: "system_health:ai_key" },
-    resolve: (_root, _args, ctx) => aiSettingsView(ctx.auth),
+    args: { provider: t.arg.string({ required: false }) },
+    resolve: (_root, args, ctx) => aiSettingsView(ctx.auth, args.provider),
   }),
 );
 
 builder.mutationField("setAiSettings", (t) =>
   t.field({
     type: AiSettingsRef,
-    description: "Save a new Gemini key and/or model (empty model = the default alias). Tested with Google first; audited without the key.",
+    description: "Save a new key and/or model for one provider (empty model = the default). Tested first; audited without the key.",
     authScopes: { hasPermission: "system_health:ai_key" },
-    args: { apiKey: t.arg.string({ required: false }), model: t.arg.string({ required: false }) },
-    resolve: (_root, args, ctx) => setAiSettings(ctx.auth, { apiKey: args.apiKey, model: args.model }),
+    args: {
+      apiKey: t.arg.string({ required: false }),
+      model: t.arg.string({ required: false }),
+      provider: t.arg.string({ required: false }),
+    },
+    resolve: (_root, args, ctx) => setAiSettings(ctx.auth, { apiKey: args.apiKey, model: args.model, provider: args.provider }),
   }),
 );
 
 builder.mutationField("clearAiKey", (t) =>
   t.field({
     type: AiSettingsRef,
-    description: "Forget the key saved in the app — the server's .env key is used again. Audited.",
+    description: "Forget the key saved in the app for one provider — the server's .env key is used again. Audited.",
     authScopes: { hasPermission: "system_health:ai_key" },
-    resolve: (_root, _args, ctx) => clearAiKey(ctx.auth),
+    args: { provider: t.arg.string({ required: false }) },
+    resolve: (_root, args, ctx) => clearAiKey(ctx.auth, args.provider),
+  }),
+);
+
+builder.queryField("aiFeatureSettings", (t) =>
+  t.field({
+    type: [AiFeatureRef],
+    description: "Each AI feature: switched on, provider + model, fallback (AI-1). system_health:ai_key.",
+    authScopes: { hasPermission: "system_health:ai_key" },
+    resolve: (_root, _args, ctx) => aiFeatureSettings(ctx.auth),
+  }),
+);
+
+builder.mutationField("setAiFeatureSetting", (t) =>
+  t.field({
+    type: AiFeatureRef,
+    description: "Change one AI feature's switch, provider, model or fallback. Switching on tests the provider first. Audited.",
+    authScopes: { hasPermission: "system_health:ai_key" },
+    args: {
+      feature: t.arg.string({ required: true }),
+      enabled: t.arg.boolean({ required: false }),
+      provider: t.arg.string({ required: false }),
+      model: t.arg.string({ required: false }),
+      fallback: t.arg.boolean({ required: false }),
+    },
+    resolve: (_root, args, ctx) =>
+      setAiFeatureSetting(ctx.auth, { feature: args.feature, enabled: args.enabled, provider: args.provider, model: args.model, fallback: args.fallback }),
   }),
 );

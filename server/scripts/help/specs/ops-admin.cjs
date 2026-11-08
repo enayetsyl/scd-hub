@@ -94,8 +94,11 @@ exports.run = async (h) => {
   await reveal(P, { text: "ব্যাকআপ" });
   await h.shot(P, "ops-system-health", 2, [{ re: "^স্বয়ংক্রিয় কাজ" }, { text: "ব্যাকআপ" }]);
 
-  await admin(h, P, "এআই (Gemini) কী ও মডেল", "ops-ai-key");
-  await h.shot(P, "ops-ai-key", 1, [{ css: ":nth-match(input, 1)" }, { css: ":nth-match(input, 2)" }, { text: "পরীক্ষা করে সংরক্ষণ করুন" }]);
+  // D-#1090: one key + model per AI service — Gemini first, then the DeepSeek chip.
+  await admin(h, P, "এআই কী ও মডেল", "ops-ai-key");
+  await h.shot(P, "ops-ai-key", 1, [{ text: "Gemini" }, { css: ":nth-match(input, 1)" }, { css: ":nth-match(input, 2)" }, { text: "পরীক্ষা করে সংরক্ষণ করুন" }]);
+  await h.tap(P, "DeepSeek", 3000);
+  await h.shot(P, "ops-ai-key", 2, [{ text: "DeepSeek" }, { css: ":nth-match(input, 1)" }, { re: "^DeepSeek শুধু নতুন এআই সুবিধায়" }]);
 
   // ── Message templates ────────────────────────────────────────────────────
   await admin(h, P, "বার্তা টেমপ্লেট", "ops-message-templates");

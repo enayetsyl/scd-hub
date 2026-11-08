@@ -86,7 +86,7 @@ Counts: 58 mutations (46 in (a), 12 in (e)), 71 queries (48 in (b), 23 in (e)), 
 | `server/src/modules/platform/resolvers/activity.ts:206` | activityGroups | audit:read | `audit_log:view_activity` (static list; `audit_log:view` also fits) |
 | `server/src/modules/platform/resolvers/activity.ts:220` | activitySources | audit:read | `audit_log:view_activity` (static list) |
 | `server/src/modules/platform/resolvers/systemHealth.ts:207` | systemHealth | audit:read | `system_health:view` |
-| `server/src/modules/platform/resolvers/aiSettings.ts` | aiSettings / setAiSettings / clearAiKey | (new, D-#967) | `system_health:ai_key` (LOCKED); the key is write-only |
+| `server/src/modules/platform/resolvers/aiSettings.ts` | aiSettings / setAiSettings / clearAiKey (optional `provider`, D-#1090) / aiFeatureSettings / setAiFeatureSetting (AI-1) | (new, D-#967) | `system_health:ai_key` (LOCKED); the key is write-only |
 | `server/src/modules/templates/resolvers/messageTemplates.ts:76` | messageTemplates | template:manage (RESERVED) | `message_templates:view` (LOCKED) |
 | `server/src/modules/templates/resolvers/messageTemplates.ts:85` | messageTemplate | template:manage | `message_templates:view` (LOCKED) |
 | `server/src/modules/templates/resolvers/messageTemplates.ts:100` | messageTemplateHistory | template:manage | `message_templates:view` (LOCKED) |
