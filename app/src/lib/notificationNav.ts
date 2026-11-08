@@ -363,6 +363,12 @@ export function notificationTarget(
     // D-#1052: the 18:00 daily school report opens THAT day's report.
     case "DAILY_REPORT":
       return { tab: "ReportsTab", screen: "DailyReport", params: refs?.date ? { date: refs.date } : undefined };
+    case "SCHOOL_NOTICE": {
+      // D-#1072 — the page the school named, "Tab/Screen" like a pop-up's OPEN_SCREEN button.
+      // No page = a plain message: the detail screen shows it whole with no button.
+      const [tab, screen] = (refs?.screenTarget ?? "").split("/");
+      return tab && screen ? { tab, screen } : null;
+    }
 
     default:
       return null;

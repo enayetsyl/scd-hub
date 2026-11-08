@@ -66,6 +66,7 @@ const NotificationRefsRef = builder.objectRef<NotificationRefs>("NotificationRef
     masteryActionId: t.string({ nullable: true, resolve: (r) => r.masteryActionId ?? null }),
     masteryReviewId: t.string({ nullable: true, resolve: (r) => r.masteryReviewId ?? null }),
     examPaperId: t.string({ nullable: true, resolve: (r) => r.examPaperId ?? null }),
+    screenTarget: t.string({ nullable: true, resolve: (r) => r.screenTarget ?? null }),
   }),
 });
 

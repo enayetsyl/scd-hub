@@ -1,5 +1,7 @@
 # STATUS
 
+- 2026-11-08: **BUILT — school notice notification (D-#1072)** (branch `feat/school-notice`, worktree `C:/w/notice`). New kind `SCHOOL_NOTICE`; `notifyPopupRecipients` notifies a published pop-up notice's people.
+  - **Now / next:** PR → dev → promote → OTA, then publish the help-centre pop-ups (current Teacher + Office; all guardians) on prod and notify their recipients.
 - 2026-11-08: **BUILT — reopen the 09:30 unmarked-assignment list (D-#1106)** (branch `feat/mark-escalation-reopen`, worktree `C:/w/mesc`). After "বুঝেছি" the 09:30 pop-up could not be opened again; now অ্যাসাইনমেন্ট → **⏰ ০৯:৩০-এর জমার হিসাব বাকি** shows any day's saved list, and the inbox row opens it.
   - **Verified:** server + app tsc 0; markSubmissionGuard 11/11 (new reopen case); permission gates + notification-nav coverage 24/24; help verifier PASS; local web walk on in-memory Mongo (Office: button → list shows Sunday 11-01, ৩য় বালক গণিত বাকি), pictures captured; row tap verified for the Principal, and Office rows are plain (no `assignment:view`).
   - **Now / next:** PR → dev → dev-site check → promote → **OTA** (app change). Days before this ships keep their snapshots, so earlier Sundays' lists will be there.
