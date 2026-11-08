@@ -49,14 +49,16 @@ Where the planning document and the live repo disagreed, the live repo wins; the
 - **P10 — Unverified vendor facts.** The DeepSeek model ids (`deepseek-flash`, `deepseek-v4-pro`), the cache-token field names and the peak/off-peak prices are from the planning session and were NOT checked against DeepSeek's live documentation here. AI-1 confirms them before writing the price table.
 
 ## 0. One-screen summary (checklist)
-- [ ] **AI-1 Provider foundation (D-#1090):** add DeepSeek next to Gemini behind ONE provider interface; keys and model are set by the Principal in the app (extends D-#967). Gemini stays as the fallback.
-- [ ] **AI-2 Usage ledger and caps (D-#1091, D-#1092):** every AI call in the app writes one `AiUsage` row (who, feature, model, tokens, cost). Caps are per teacher per day, per feature per month, and global per month. Nothing ships unmetered, including the four existing Gemini callers (P4).
-- [ ] **AI-3 AI rules store (D-#1093):** versioned Principal-edited rule documents ("comment standard", "assistant rules"). Every AI result stamps the version hash.
-- [ ] **AI-4 De-identification (D-#1094):** one helper that swaps roster names, phones and roll numbers for tokens before sending and restores them after.
-- [ ] **AI-5 Comment checker (D-#1095):** a "Check" step on the daily `StudentComment` (complaints = `sentiment: CONCERN`, D-#400) and on the class-test comment fields on `ClassTestResult` (P1). DeepSeek returns issues plus a corrected version; the teacher accepts or edits.
-- [ ] **AI-6 Teacher assistant chat (D-#1096):** a new `ai-assist` module, separate from the human `chat` module. Teachers pick class, subject and chapter, then ask; answers are grounded in that chapter's session plan and source text.
-- [ ] **AI-7 Principal analytics:** usage and cost by teacher, feature, day and model; cache-hit rate; cap hits; comment-quality trends per teacher.
-- [ ] **AI-8 Bake-off and switch-on (D-#1098):** 50 real past comments through DeepSeek Flash vs Gemini Flash; pick per feature by issues caught per dollar, then enable.
+> **Build status 2026-11-08:** every slice is built (PRs #1411 #1413 #1414 #1415 #1417 #1418 #1419 + AI-7). Nothing spends money until the owner works through the switch-on list in STATUS.md.
+
+- [x] **AI-1 Provider foundation (D-#1090):** add DeepSeek next to Gemini behind ONE provider interface; keys and model are set by the Principal in the app (extends D-#967). Gemini stays as the fallback. — **built 2026-11-08 (D-#1120–#1123).**
+- [x] **AI-2 Usage ledger and caps (D-#1091, D-#1092):** every AI call in the app writes one `AiUsage` row (who, feature, model, tokens, cost). Caps are per teacher per day, per feature per month, and global per month. Nothing ships unmetered, including the four existing Gemini callers (P4). — **built 2026-11-08 (D-#1124–#1127).**
+- [x] **AI-3 AI rules store (D-#1093):** versioned Principal-edited rule documents ("comment standard", "assistant rules"). Every AI result stamps the version hash. — **built 2026-11-08 (D-#1128/#1129, with AI-3s).**
+- [x] **AI-4 De-identification (D-#1094):** one helper that swaps roster names, phones and roll numbers for tokens before sending and restores them after. — **built 2026-11-08 (D-#1130/#1131).**
+- [x] **AI-5 Comment checker (D-#1095):** a "Check" step on the daily `StudentComment` (complaints = `sentiment: CONCERN`, D-#400) and on the class-test comment fields on `ClassTestResult` (P1). DeepSeek returns issues plus a corrected version; the teacher accepts or edits. — **built 2026-11-08 (D-#1132–#1135).**
+- [x] **AI-6 Teacher assistant chat (D-#1096):** a new `ai-assist` module, separate from the human `chat` module. Teachers pick class, subject and chapter, then ask; answers are grounded in that chapter's session plan and source text. — **built 2026-11-08 (D-#1137–#1139).**
+- [x] **AI-7 Principal analytics:** usage and cost by teacher, feature, day and model; cache-hit rate; cap hits; comment-quality trends per teacher. — **built 2026-11-08 (D-#1140/#1141).**
+- [x] **AI-8 Bake-off and switch-on (D-#1098):** 50 real past comments through DeepSeek Flash vs Gemini Flash; pick per feature by issues caught per dollar, then enable. — **built 2026-11-08 (D-#1136; the run itself is the owner's, before switch-on).**
 - [ ] Every slice: help guide in the same PR (D-#973); growing lists paged from v1 (D-#761); permissions registered (D-#799, P3); one CHANGELOG line per change.
 
 ## 1. Goal

@@ -105,6 +105,8 @@ interface TokenClaims {
   policyHash: string;
   model: string;
   issuesFound: number;
+  /** AI-7: issues per type. */
+  types?: Record<string, number>;
   at: number;
 }
 
@@ -251,7 +253,15 @@ export function finishCheck(p: PreparedCheck, json: unknown, model: string): Che
     model,
     issues,
     corrected,
-    token: signCheckToken({ sid: p.studentId, kind: p.kind, policyHash: p.policyHash, model, issuesFound: issues.length, at: Date.now() }),
+    token: signCheckToken({
+      sid: p.studentId,
+      kind: p.kind,
+      policyHash: p.policyHash,
+      model,
+      issuesFound: issues.length,
+      types: issues.reduce<Record<string, number>>((m, i) => ((m[i.type] = (m[i.type] ?? 0) + 1), m), {}),
+      at: Date.now(),
+    }),
   };
 }
 
@@ -294,6 +304,7 @@ export async function aiCheckStamp(
       policyHash: c.policyHash,
       model: c.model,
       issuesFound: c.issuesFound,
+      ...(c.types && Object.keys(c.types).length ? { issueTypes: c.types } : {}),
       issuesAccepted: accepted,
       teacherOverrode: c.issuesFound > 0 && (claim?.teacherOverrode ?? accepted === 0),
       checkedAt: new Date(c.at),

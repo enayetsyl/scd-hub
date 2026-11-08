@@ -21,6 +21,8 @@ export interface IAiCheck {
   policyHash?: string;
   model?: string;
   issuesFound?: number;
+  /** AI-7: issues found per type (punctuation, tone, …) — counts only, for the Principal's analytics. */
+  issueTypes?: Record<string, number>;
   issuesAccepted?: number;
   /** True when the teacher sent their own text although the AI found issues. */
   teacherOverrode?: boolean;
@@ -34,6 +36,7 @@ export const AiCheckSchema = new Schema<IAiCheck>(
     policyHash: { type: String },
     model: { type: String },
     issuesFound: { type: Number, min: 0 },
+    issueTypes: { type: Schema.Types.Mixed },
     issuesAccepted: { type: Number, min: 0 },
     teacherOverrode: { type: Boolean },
     checkedAt: { type: Date },

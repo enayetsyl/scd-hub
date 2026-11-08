@@ -173,6 +173,7 @@ describe("the stamp on save", () => {
     expect(await aiCheckStamp({ token: r.token, issuesAccepted: 1, teacherOverrode: false }, studentId, "DAILY")).toMatchObject({
       status: "CHECKED",
       issuesFound: 2,
+      issueTypes: { tone: 1, punctuation: 1 },
       issuesAccepted: 1,
       teacherOverrode: false,
       model: "deepseek-flash",

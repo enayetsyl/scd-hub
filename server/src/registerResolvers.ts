@@ -113,6 +113,7 @@ import "./modules/platform/resolvers/aiPolicies";
 import "./modules/foundation/resolvers/studentBanglaName";
 import "./modules/platform/resolvers/commentCheck";
 import "./modules/ai-assist/resolvers/aiAssist";
+import "./modules/platform/resolvers/aiUsageReport";
 import "./modules/platform/resolvers/navPreference";
 import "./modules/help/resolvers/help";
 import "./modules/engagement/resolvers/guardianView";

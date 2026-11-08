@@ -276,6 +276,7 @@ const STAFF_NAV: NavSection[] = [
       { route: "ReportsTab", labelKey: "finSnapshotTitle", icon: "🧾", screen: "DailySnapshot", perms: REPORT_LEAF_ACTIONS.DailySnapshot },
       { route: "ReportsTab", labelKey: "geTitle", icon: "👪", screen: "GuardianEngagement", perms: REPORT_LEAF_ACTIONS.GuardianEngagement },
       { route: "ReportsTab", labelKey: "mdTitle", icon: "🎯", screen: "MarksDrivers", perms: REPORT_LEAF_ACTIONS.MarksDrivers },
+      { route: "ReportsTab", labelKey: "aurTitle", icon: "🤖", screen: "AiUsageReport", perms: REPORT_LEAF_ACTIONS.AiUsageReport },
       { route: "ReportsTab", labelKey: "bcTitle", icon: "🧩", screen: "MasteryBankCoverage", perms: REPORT_LEAF_ACTIONS.MasteryBankCoverage },
       { route: "ReportsTab", labelKey: "stbRepTitle", icon: "🧸", screen: "StorybookReport", perms: REPORT_LEAF_ACTIONS.StorybookReport },
       { route: "ReportsTab", labelKey: "actRepTitle", icon: "🧩", screen: "ActivityReport", perms: REPORT_LEAF_ACTIONS.ActivityReport },

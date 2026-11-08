@@ -1071,6 +1071,8 @@ export const FEATURE_CATALOGUE = {
       // D-#905: the 23-Sep "What moves the marks" study, live. Principal by default — the
       // scatter carries one (unnamed) dot per child.
       marks_drivers: { en: "What moves the marks", bn: "নম্বর কীসে বাড়ে", desc: "Homework, assignments and attendance against class-test results, live over a rolling window (whole school)", teacher: false, office: false, flags: [] },
+      // AI-7 (D-#1140): AI spend and comment-check quality per person — names staff and money, so Principal only.
+      ai_usage: { en: "AI usage & comment quality", bn: "এআই ব্যবহার ও মন্তব্যের মান", desc: "AI spend by person, feature and model, the monthly budget, and each writer's comment-check results (whole school)", teacher: false, office: false, flags: [] },
       // Objective tree OT-4 (prd-objective-tree §8.2, mock 5): gold questions per tagged row; the
       // gaps become the brief for the next question batch. Principal + Office by default (owner
       // 2026-11-04); the module doors mastery:settings / mastery:review open it too.

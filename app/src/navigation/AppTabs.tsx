@@ -400,6 +400,7 @@ import PersonActivityScreen from "../screens/admin/PersonActivityScreen";
 import WorkClaimQueueScreen from "../screens/admin/WorkClaimQueueScreen";
 import GuardianEngagementScreen from "../screens/admin/GuardianEngagementScreen";
 import MarksDriversScreen from "../screens/reports/MarksDriversScreen";
+import AiUsageReportScreen from "../screens/reports/AiUsageReportScreen";
 import StorybookReportScreen from "../screens/reports/StorybookReportScreen";
 import ActivityReportScreen from "../screens/reports/ActivityReportScreen";
 import DailyReportScreen from "../screens/reports/DailyReportScreen";
@@ -1617,6 +1618,7 @@ function ReportsNavigator(): React.ReactElement {
       <ReportsStack.Screen name="DailySnapshot" component={DailySnapshotScreen} options={{ title: STR.finSnapshotTitle }} />
       <ReportsStack.Screen name="GuardianEngagement" component={GuardianEngagementScreen} options={{ title: STR.geTitle }} />
       <ReportsStack.Screen name="MarksDrivers" component={MarksDriversScreen} options={{ title: STR.mdTitle }} />
+      <ReportsStack.Screen name="AiUsageReport" component={AiUsageReportScreen} options={{ title: STR.aurTitle }} />
       <ReportsStack.Screen name="StorybookReport" component={StorybookReportScreen} options={{ title: STR.stbRepTitle }} />
       <ReportsStack.Screen name="ActivityReport" component={ActivityReportScreen} options={{ title: STR.actRepTitle }} />
       <ReportsStack.Screen name="DailyReport" component={DailyReportScreen} options={{ title: STR.drpTitle }} />
