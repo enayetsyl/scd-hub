@@ -45,7 +45,6 @@ const mayHandlePrincipal = (ctx: { auth?: Parameters<typeof callerHasPermission>
 import {
   acknowledgeWarning,
   listWarnings,
-  myOpenWarning,
   recordMeeting,
   scheduleMeeting,
   staffMistakeSummary,
@@ -426,7 +425,8 @@ builder.queryField("myStaffWarning", (t) =>
     type: StaffWarningRef,
     nullable: true,
     authScopes: { hasPermission: "staff_mistakes:view_own" },
-    resolve: (_r, _a, ctx) => myOpenWarning(ctx.auth!.userId),
+    // D-#1150: staff never see a warning. Kept (always null) so older app builds stay quiet.
+    resolve: () => null,
   }),
 );
 
@@ -443,7 +443,7 @@ builder.queryField("myStaffWarnings", (t) =>
   t.field({
     type: [StaffWarningRef],
     authScopes: { hasPermission: "staff_mistakes:view_own" },
-    resolve: (_r, _a, ctx) => listWarnings(ctx.auth!.userId),
+    resolve: () => [], // D-#1150: a person never sees their own warning steps
   }),
 );
 

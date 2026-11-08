@@ -45,7 +45,7 @@ export default function MarkEscalationListScreen({ navigation, route }: Props): 
   }
 
   return (
-    <Screen>
+    <Screen scroll>
       <Muted style={{ marginBottom: space(3) }}>{STR.mesIntro}</Muted>
       <QueryGate
         results={dateKey ? [daysQ, listQ] : [daysQ]}

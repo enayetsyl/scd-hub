@@ -301,6 +301,13 @@ face. It is not a warning system. Staff were afraid of what "added to your file"
   - no warning step: the ladder is skipped, so there is no pop-up, no STEP notice and no meeting;
   - no আমার ভুল ও ব্যাখ্যা card. The server refuses `myStaffMistakes` / `myStaffWarning`, and the
     app hides the card and the warning pop-up.
+- **Nobody ever sees a warning step (D-#1150, owner 2026-11-08), not even with `view_own`.** The
+  warning pop-up is gone from the app, `myStaffWarning` always answers null (older app builds stay
+  quiet) and `myStaffWarnings` an empty list, and the ladder no longer sends the person
+  `STAFF_MISTAKE_WARNING`. The ladder still records the step and tells the meeting / conduct
+  holders (`STAFF_MISTAKE_STEP`, worded "তাঁকে কিছু জানানো হয়নি"), so the summary's meeting card
+  works. A booked meeting still sends the person its time, worded "আলোচনা: …" (no "সতর্কবার্তা").
+  `view_own` now means only: the explain notice, decisions and আমার ভুল ও ব্যাখ্যা.
 
   A new entry with no reason counts at once (`COUNTED`, `autoCounted`). A move onto such a person is
   the reviewer's decision (`COUNTED`, `decidedBy` = the reviewer). Approved leave still accepts

@@ -80,7 +80,7 @@ async function counted(staffUserId: string, decidedAt: Date, tier = 1, status = 
 const kinds = async (kind: string) => Notification.find({ kind }).lean();
 
 describe("D-#940 — the warning ladder", () => {
-  it("3 counted in 30 days → one WARNING, the person and reviewers told; it never repeats in the window", async () => {
+  it("3 counted in 30 days → one WARNING, reviewers told (never the person, D-#1150); it never repeats in the window", async () => {
     const t = await user("Rashed");
     const office = await user("Kamrul", "OFFICE");
     await counted(t, daysAgo(20));
@@ -91,9 +91,7 @@ describe("D-#940 — the warning ladder", () => {
     expect(made.map((w) => w.step)).toEqual(["WARNING"]);
     expect(made[0]!.mistakeIds).toHaveLength(3);
 
-    const toPerson = await kinds("STAFF_MISTAKE_WARNING");
-    expect(toPerson.map((n) => String(n.recipientUserId))).toEqual([t]);
-    expect(toPerson[0]!.bodyBn).toContain("৩টি");
+    expect(await kinds("STAFF_MISTAKE_WARNING")).toHaveLength(0); // D-#1150: the person is told nothing
     const toOffice = await kinds("STAFF_MISTAKE_STEP");
     expect(toOffice.map((n) => String(n.recipientUserId))).toContain(office);
 
@@ -113,14 +111,13 @@ describe("D-#940 — the warning ladder", () => {
     expect((await evaluateLadder(t, NOW)).map((w) => w.step)).toEqual(["WARNING"]); // 3
   });
 
-  it("jumping straight to 5 gives WARNING and MEETING; the person hears once, about the meeting", async () => {
+  it("jumping straight to 5 gives WARNING and MEETING; the person hears nothing (D-#1150)", async () => {
     const t = await user("Rashed");
     for (let i = 1; i <= 5; i++) await counted(t, daysAgo(i));
     const made = await evaluateLadder(t, NOW);
     expect(made.map((w) => w.step).sort()).toEqual(["MEETING", "WARNING"]);
-    const toPerson = await kinds("STAFF_MISTAKE_WARNING");
-    expect(toPerson).toHaveLength(1);
-    expect(toPerson[0]!.bodyBn).toContain("সামনাসামনি");
+    expect(await kinds("STAFF_MISTAKE_WARNING")).toHaveLength(0);
+    expect((await kinds("STAFF_MISTAKE_STEP")).some((n) => n.bodyBn.includes("সতর্কবার্তা পাঠানো"))).toBe(false);
   });
 
   it("CONDUCT tells conduct holders (the Principal), and opens nothing", async () => {
