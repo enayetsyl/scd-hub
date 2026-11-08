@@ -242,6 +242,7 @@ export const AUDIT_KIND_LABELS: Record<AuditEventKind, AuditKindLabel> = {
   POPUP_NOTICE_WITHDRAWN: { bn: "পপ-আপ বার্তা বন্ধ করেছেন", en: "Withdrew a pop-up notice", group: "MESSAGING" },
   POPUP_NOTICE_ANSWERED: { bn: "পপ-আপ বার্তার উত্তর দিয়েছেন", en: "Answered a pop-up notice", group: "MESSAGING" },
   POPUP_NOTICE_FOLLOW_UP: { bn: "পপ-আপ বার্তা আবার দেখিয়েছেন / নতুন প্রাপক যোগ করেছেন", en: "Followed up a pop-up notice", group: "MESSAGING" },
+  POPUP_NOTICE_NOTIFIED: { bn: "পপ-আপ বার্তার প্রাপকদের নোটিফিকেশন পাঠিয়েছেন", en: "Sent a pop-up notice's people a notification", group: "MESSAGING" },
   MEETING_COMMENT_SAVED: { bn: "সভার জন্য মন্তব্য লিখেছেন", en: "Saved a meeting comment", group: "MESSAGING" },
   MEETING_COMMENTS_OPENED: { bn: "সভার মন্তব্য সংগ্রহ শুরু করেছেন", en: "Opened meeting comment collection", group: "MESSAGING" },
   MEETING_COMMENT_ROSTER_REFRESHED: { bn: "সভার মন্তব্যের শিক্ষক তালিকা হালনাগাদ করেছেন", en: "Refreshed the meeting comment teacher list", group: "MESSAGING" },
