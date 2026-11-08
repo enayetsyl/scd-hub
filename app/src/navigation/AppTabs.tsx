@@ -58,6 +58,7 @@ import type {
   StorybooksStackParamList,
   ActivityStackParamList,
   QuranExamStackParamList,
+  VivaStackParamList,
   GuardianClassNotesStackParamList,
   TabParamList,
 } from "./types";
@@ -157,6 +158,11 @@ import QuranExamSittingScreen from "../screens/quranExam/QuranExamSittingScreen"
 import QuranExamResultsScreen from "../screens/quranExam/QuranExamResultsScreen";
 import QuranExamMonitorScreen from "../screens/quranExam/QuranExamMonitorScreen";
 import QuranExamPaperScreen from "../screens/quranExam/QuranExamPaperScreen";
+import VivaHomeScreen from "../screens/viva/VivaHomeScreen";
+import VivaSheetScreen from "../screens/viva/VivaSheetScreen";
+import VivaPaperScreen from "../screens/viva/VivaPaperScreen";
+import VivaExaminersScreen from "../screens/viva/VivaExaminersScreen";
+import VivaResultsScreen from "../screens/viva/VivaResultsScreen";
 import ClassBookReaderScreen from "../screens/classbooks/ClassBookReaderScreen";
 import ReviewHomeScreen from "../screens/review/ReviewHomeScreen";
 import ReviewSubmitScreen from "../screens/review/ReviewSubmitScreen";
@@ -1783,6 +1789,21 @@ function QuranExamNavigator(): React.ReactElement {
   );
 }
 
+/** D-#1080 — Nursery & KG oral exam (viva). VivaHome is first (no params) — see the initial-route trap. */
+const VivaStack = createNativeStackNavigator<VivaStackParamList>();
+function VivaNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    <VivaStack.Navigator screenOptions={stackOptions}>
+      <VivaStack.Screen name="VivaHome" component={VivaHomeScreen} options={{ title: STR.vivaTitle }} />
+      <VivaStack.Screen name="VivaSheet" component={VivaSheetScreen} options={{ title: STR.vivaSheetTitle }} />
+      <VivaStack.Screen name="VivaPaper" component={VivaPaperScreen} options={{ title: STR.vivaPaperTitle }} />
+      <VivaStack.Screen name="VivaExaminers" component={VivaExaminersScreen} options={{ title: STR.vivaExaminersTitle }} />
+      <VivaStack.Screen name="VivaResults" component={VivaResultsScreen} options={{ title: STR.vivaResultsTitle }} />
+    </VivaStack.Navigator>
+  );
+}
+
 // D-#1030–#1033 — exam paper bank. ExamPapersHome is first: the initial route takes no params.
 const ExamPapersStack = createNativeStackNavigator<ExamPapersStackParamList>();
 function ExamPapersNavigator(): React.ReactElement {
@@ -2097,6 +2118,7 @@ export function AppTabs(): React.ReactElement {
   // (exam_papers:review is SELF), so the stack mounts for any of its actions.
   const canExamPapers = any("exam_papers:review", "exam_papers:view", "exam_papers:manage", "exam_papers:view_reference", "exam_papers:manage_reference");
   const canQuranExam = any("quran_exam:view", "quran_exam:manage", "quran_exam:examine");
+  const canViva = any("viva:view", "viva:manage", "viva:examine");
 
   // Defensive (D-#369): a role-less / unrecognised authed session makes EVERY tab
   // gate false, which would mount an empty Drawer.Navigator and hard-crash the app
@@ -2108,7 +2130,7 @@ export function AppTabs(): React.ReactElement {
     canAssignment || canReview || canRoutine || canClassNotes || canAttendance || canPrint || canLibrary ||
     canChat || canPopup || canVocab || canClassTest || canComments || canObservation || canFreeMixing ||
     canEnglishDrive || canTeachingNotes || canRevision || canFinance || canHr || canReports ||
-    canSupportBook || canAdmin || canGuardian || canSyllabus || canScholarship || canMastery || canClassBooks || canQuranExam || canExamPapers;
+    canSupportBook || canAdmin || canGuardian || canSyllabus || canScholarship || canMastery || canClassBooks || canQuranExam || canViva || canExamPapers;
   if (!hasAnyTab) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: space(6), backgroundColor: colors.bg }}>
@@ -2179,6 +2201,7 @@ export function AppTabs(): React.ReactElement {
         {canClassBooks ? <Drawer.Screen name="ClassBooksTab" component={ClassBooksNavigator} /> : null}
         {canExamPapers ? <Drawer.Screen name="ExamPapersTab" component={ExamPapersNavigator} /> : null}
         {canQuranExam ? <Drawer.Screen name="QuranExamTab" component={QuranExamNavigator} /> : null}
+        {canViva ? <Drawer.Screen name="VivaTab" component={VivaNavigator} /> : null}
         {canChat ? <Drawer.Screen name="ChatTab" component={ChatNavigator} /> : null}
         {canPopup ? <Drawer.Screen name="PopupNoticesTab" component={PopupNavigator} /> : null}
         {canVocab ? <Drawer.Screen name="VocabTab" component={VocabNavigator} /> : null}

@@ -333,6 +333,19 @@ export const FEATURE_CATALOGUE = {
       remind: { en: "Remind examiners", bn: "পরীক্ষককে নম্বরের রিমাইন্ডার পাঠানো", desc: "Pending-marks reminder as a staff pop-up", teacher: false, office: true, flags: [] },
     },
   },
+  // Nursery & KG oral exam (viva) — one paper per ORAL routine slot (D-#1080, docs/prd-viva.md).
+  viva: {
+    group: "assessment_and_exams",
+    en: "Oral exam (viva)",
+    bn: "মৌখিক পরীক্ষা",
+    actions: {
+      view: { en: "Oral exam progress & marks", bn: "মৌখিক পরীক্ষার অগ্রগতি ও নম্বর দেখা", desc: "Every oral paper, examiner and mark; live progress; results", teacher: false, office: true, flags: [] },
+      manage: { en: "Oral papers & examiners", bn: "মৌখিক প্রশ্নপত্র ও পরীক্ষক ঠিক করা", desc: "Questions and marks of each oral paper; who examines which child", teacher: false, office: true, flags: [] },
+      examine: { en: "Examine own children", bn: "নিজের ভাগের শিশুর মৌখিক নম্বর দেওয়া", desc: "Own children only: tap marks per question, mark absent", teacher: true, office: false, flags: ["SELF"] },
+      edit_all: { en: "Enter any oral mark", bn: "যেকোনো শিশুর মৌখিক নম্বর দেওয়া ও ঠিক করা", desc: "Enter or correct any child's oral marks", teacher: false, office: true, flags: [] },
+      lock: { en: "Lock oral marks", bn: "মৌখিক নম্বর লক করা", desc: "Lock or unlock one oral paper's marks", teacher: false, office: true, flags: [] },
+    },
+  },
   students: {
     group: "students_and_families",
     en: "Students",
