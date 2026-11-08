@@ -884,10 +884,10 @@ check("PERMISSIONS = legacy ∪ catalogue, no duplicates",
   new Set(V.PERMISSIONS).size === V.PERMISSIONS.length && V.PERMISSIONS.length === new Set([...V.LEGACY_PERMISSIONS, ...CAT]).size);
 check("PERMISSION_LABELS_BN / _EN and PERMISSION_BUILD_STATUS are total over PERMISSIONS",
   V.PERMISSIONS.every((p) => V.PERMISSION_LABELS_BN[p]?.name && V.PERMISSION_LABELS_EN[p]?.name && V.PERMISSION_BUILD_STATUS[p] === "build"));
-check("LOCKED actions are exactly the thirteen reserved catalogue actions (D-#797; +payroll:reopen D-#904; +system_health:ai_key D-#967)",
+check("LOCKED actions are exactly the fourteen reserved catalogue actions (D-#797; +payroll:reopen D-#904; +system_health:ai_key D-#967; +ai_assist:read_all_chats D-#1104/#1138)",
   eq(flagged("LOCKED"), ["payroll:approve", "payroll:reopen", "salary_advance:issue", "salary_advance:settle", "offboarding:settle",
     "appraisal:sign_off", "conduct:sign_off", "chat:view_all", "message_templates:view", "message_templates:edit",
-    "access_control:edit", "access_control:delegate", "system_health:ai_key"]));
+    "access_control:edit", "access_control:delegate", "system_health:ai_key", "ai_assist:read_all_chats"]));
 check("RESERVED_PERMISSIONS = the legacy five ∪ every LOCKED action",
   eq(V.RESERVED_PERMISSIONS, [...new Set([...V.LEGACY_RESERVED_PERMISSIONS, ...flagged("LOCKED")])]));
 check("no LOCKED / PRINCIPAL_DEFAULT / ESCALATION action is on by default for TEACHER or OFFICE",
@@ -921,12 +921,16 @@ const ROLE_CHECK_DEFAULTS = {
     // AI Assist rules (AI-3, D-#1093): every teacher reads the active comment standard.
     "ai_assist:read_rules",
     // AI comment checker (AI-5, D-#1095): every teacher may check a comment before saving.
-    "ai_assist:check_comment"],
+    "ai_assist:check_comment",
+    // AI teacher assistant (AI-6, D-#1096): every teacher may ask about their lesson.
+    "ai_assist:chat"],
   OFFICE: ["homework:view_all", "homework:undo_any",
     // AI Assist rules (AI-3, D-#1093): the Office reads the active standard too.
     "ai_assist:read_rules",
     // AI comment checker (AI-5, D-#1095): the Office writes comments too.
     "ai_assist:check_comment",
+    // AI teacher assistant (AI-6, D-#1096): the Office may use it too.
+    "ai_assist:chat",
     // One switch per report (D-#846) — the Office read every report by role before the matrix.
     "reports:hw_declare_pending", "reports:hw_issue_pending", "reports:hw_lifecycle", "reports:hw_weekly_unsubmitted",
     "reports:as_declare_pending", "reports:as_deliver_pending", "reports:as_print_pending", "reports:reconciliation",

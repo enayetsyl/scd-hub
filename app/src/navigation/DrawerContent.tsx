@@ -161,6 +161,8 @@ const STAFF_NAV: NavSection[] = [
   { type: "item", route: "QuranExamTab", labelKey: "qxNav", icon: "🕋", perms: ["quran_exam:view", "quran_exam:manage", "quran_exam:examine"] },
   // Nursery & KG oral exam (D-#1080): papers, examiners, live marks — one tab for Office and examiners.
   { type: "item", route: "VivaTab", labelKey: "vivaNav", icon: "🗣️", perms: ["viva:view", "viva:manage", "viva:examine"] },
+  // AI-6 (D-#1096): the AI teacher assistant — own conversations; the Principal reads all.
+  { type: "item", route: "AiAssistTab", labelKey: "aasNav", icon: "🤖", perms: ["ai_assist:chat", "ai_assist:read_all_chats"] },
   // Mastery tracker (M-0, docs/prd-mastery.md): catalogue + marks, import, tags, policy & switch.
   {
     type: "group",

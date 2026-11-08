@@ -39,6 +39,9 @@ export const EXPECTED_ERROR_NAMES: ReadonlySet<string> = new Set([
   // The de-identification gate refused to send (AI-4, D-#1130): a known name was still in
   // the text. A Bangla sentence; the caller marks the comment "not checked" (fail-open).
   "DeidentifyError",
+  // The AI assistant could not answer (AI-6, D-#1096): rules off, a cap, the AI down, a name
+  // left after de-identification. A Bangla sentence for the teacher, never a fault.
+  "AiAssistError",
   // A login refused by the lockout (D-#765): too many wrong passwords on the account or
   // from the network. A Bangla sentence telling the person how long to wait — the lockout
   // working, not a fault.

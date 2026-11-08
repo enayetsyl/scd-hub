@@ -59,6 +59,7 @@ import type {
   ActivityStackParamList,
   QuranExamStackParamList,
   VivaStackParamList,
+  AiAssistStackParamList,
   GuardianClassNotesStackParamList,
   TabParamList,
 } from "./types";
@@ -160,6 +161,9 @@ import QuranExamResultsScreen from "../screens/quranExam/QuranExamResultsScreen"
 import QuranExamMonitorScreen from "../screens/quranExam/QuranExamMonitorScreen";
 import QuranExamPaperScreen from "../screens/quranExam/QuranExamPaperScreen";
 import VivaHomeScreen from "../screens/viva/VivaHomeScreen";
+import AiAssistHomeScreen from "../screens/aiAssist/AiAssistHomeScreen";
+import AiAssistNewScreen from "../screens/aiAssist/AiAssistNewScreen";
+import AiAssistChatScreen from "../screens/aiAssist/AiAssistChatScreen";
 import VivaSheetScreen from "../screens/viva/VivaSheetScreen";
 import VivaPaperScreen from "../screens/viva/VivaPaperScreen";
 import VivaExaminersScreen from "../screens/viva/VivaExaminersScreen";
@@ -1799,6 +1803,19 @@ function QuranExamNavigator(): React.ReactElement {
   );
 }
 
+/** AI-6 (D-#1096) — the AI teacher assistant. AiAssistHome is first (no params) — see the initial-route trap. */
+const AiAssistStack = createNativeStackNavigator<AiAssistStackParamList>();
+function AiAssistNavigator(): React.ReactElement {
+  const stackOptions = useStackOptions();
+  return (
+    <AiAssistStack.Navigator screenOptions={stackOptions}>
+      <AiAssistStack.Screen name="AiAssistHome" component={AiAssistHomeScreen} options={{ title: STR.aasTitle }} />
+      <AiAssistStack.Screen name="AiAssistNew" component={AiAssistNewScreen} options={{ title: STR.aasNewTitle }} />
+      <AiAssistStack.Screen name="AiAssistChat" component={AiAssistChatScreen} options={{ title: STR.aasChatTitle }} />
+    </AiAssistStack.Navigator>
+  );
+}
+
 /** D-#1080 — Nursery & KG oral exam (viva). VivaHome is first (no params) — see the initial-route trap. */
 const VivaStack = createNativeStackNavigator<VivaStackParamList>();
 function VivaNavigator(): React.ReactElement {
@@ -2129,6 +2146,8 @@ export function AppTabs(): React.ReactElement {
   const canExamPapers = any("exam_papers:review", "exam_papers:view", "exam_papers:manage", "exam_papers:view_reference", "exam_papers:manage_reference");
   const canQuranExam = any("quran_exam:view", "quran_exam:manage", "quran_exam:examine");
   const canViva = any("viva:view", "viva:manage", "viva:examine");
+  // AI-6 (D-#1096/#1104): teachers chat; the Principal also reads every conversation.
+  const canAiAssist = any("ai_assist:chat", "ai_assist:read_all_chats");
 
   // Defensive (D-#369): a role-less / unrecognised authed session makes EVERY tab
   // gate false, which would mount an empty Drawer.Navigator and hard-crash the app
@@ -2140,7 +2159,7 @@ export function AppTabs(): React.ReactElement {
     canAssignment || canReview || canRoutine || canClassNotes || canAttendance || canPrint || canLibrary ||
     canChat || canPopup || canVocab || canClassTest || canComments || canObservation || canFreeMixing ||
     canEnglishDrive || canTeachingNotes || canRevision || canFinance || canHr || canReports ||
-    canSupportBook || canAdmin || canGuardian || canSyllabus || canScholarship || canMastery || canClassBooks || canQuranExam || canViva || canExamPapers;
+    canSupportBook || canAdmin || canGuardian || canSyllabus || canScholarship || canMastery || canClassBooks || canQuranExam || canViva || canAiAssist || canExamPapers;
   if (!hasAnyTab) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: space(6), backgroundColor: colors.bg }}>
@@ -2212,6 +2231,7 @@ export function AppTabs(): React.ReactElement {
         {canExamPapers ? <Drawer.Screen name="ExamPapersTab" component={ExamPapersNavigator} /> : null}
         {canQuranExam ? <Drawer.Screen name="QuranExamTab" component={QuranExamNavigator} /> : null}
         {canViva ? <Drawer.Screen name="VivaTab" component={VivaNavigator} /> : null}
+        {canAiAssist ? <Drawer.Screen name="AiAssistTab" component={AiAssistNavigator} /> : null}
         {canChat ? <Drawer.Screen name="ChatTab" component={ChatNavigator} /> : null}
         {canPopup ? <Drawer.Screen name="PopupNoticesTab" component={PopupNavigator} /> : null}
         {canVocab ? <Drawer.Screen name="VocabTab" component={VocabNavigator} /> : null}

@@ -337,6 +337,13 @@ export type QuranExamStackParamList = {
   QuranExamPaper: { examId: string; level: string };
 };
 /** D-#1080 — Nursery & KG oral exam (viva). VivaHome stays first: the initial route takes no params. */
+/** AI-6 (D-#1096) — the AI teacher assistant. AiAssistHome stays first: the initial route takes no params. */
+export type AiAssistStackParamList = {
+  AiAssistHome: undefined;
+  AiAssistNew: undefined;
+  AiAssistChat: { sessionId: string };
+};
+
 export type VivaStackParamList = {
   VivaHome: undefined;
   VivaSheet: { paperId: string };
@@ -855,4 +862,5 @@ export type TabParamList = {
   /** D-#873 — Quran oral exam (Office plan + examiners' marks). */
   QuranExamTab: NavigatorScreenParams<QuranExamStackParamList>;
   VivaTab: NavigatorScreenParams<VivaStackParamList>;
+  AiAssistTab: NavigatorScreenParams<AiAssistStackParamList>;
 };
