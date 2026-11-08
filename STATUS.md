@@ -1,5 +1,9 @@
 # STATUS
 
+- 2026-11-08: **PROPOSED — AI Assist seed comment standards (AI-3s, D-#1102)**: `docs/ai-assist/comment-standard.md` (daily comments) + `ct-comment-standard.md` (class-test comments), each with rules + 10 rewritten examples, and the evidence memo `seed-standard-memo.md`, drafted from a read-only, de-identified prod sample (105 daily comments, 200 class-test results with mark %). INACTIVE until the owner approves; they load as the first `AiPolicy` versions when AI-3 is built.
+  - **Owner:** review the two drafts and answer the 7 questions in the memo §5.
+  - **Blocker found for AI-4:** only 17 of 91 students have a Bangla name on file, so a roster swap leaks children's Bangla first names (PRD P11). Office must fill `nameBn` (and nicknames) before the checker is switched on.
+  - **Cleanup:** delete the scratchpad export after approval (it still holds some first names).
 - 2026-11-08: **LIVE + OTA — Nursery & KG oral exam (viva), D-#1080–#1084**: #1397 → dev, promoted in #1398 (prod `5f782f6c`, deploy green); OTA group `a204265c` (runtime 1.1.0; prod URL, no localhost, GlitchTip host; source maps 1 of 2).
   - **Now / next:** Office opens **মৌখিক পরীক্ষা** on prod (papers create themselves from the routine) and types the real questions before Thu 26 Nov — Nursery Bangla/English questions are in the ORAL sections of `server/assets/exam-papers/annual-2026/L-1-BAN.json` / `L-1-ENG.json`; check each paper's examiner. Help guides `exam-viva-*` are drafts until screenshots. The printed Nursery Bangla/English written papers should drop their oral section. Owner-deferred: questions not asked to a child, per-child questions.
 - 2026-11-08: **BUILT — school notice notification (D-#1072)** (branch `feat/school-notice`, worktree `C:/w/notice`). New kind `SCHOOL_NOTICE`; `notifyPopupRecipients` notifies a published pop-up notice's people.
