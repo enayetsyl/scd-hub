@@ -109,6 +109,7 @@ import "./modules/platform/resolvers/audit";
 import "./modules/platform/resolvers/activity";
 import "./modules/platform/resolvers/systemHealth";
 import "./modules/platform/resolvers/aiSettings";
+import "./modules/platform/resolvers/aiPolicies";
 import "./modules/platform/resolvers/navPreference";
 import "./modules/help/resolvers/help";
 import "./modules/engagement/resolvers/guardianView";

@@ -692,6 +692,10 @@ export type AdminStackParamList = {
   SystemHealth: undefined;
   // D-#967: the Gemini key + model (system_health:ai_key, LOCKED).
   AiSettings: undefined;
+  // AI-3 (D-#1093): versioned AI rules (ai_assist:edit_rules / read_rules).
+  AiRules: undefined;
+  AiRule: { key: "comment_standard" | "ct_comment_standard" | "assistant_rules" };
+  AiRuleEdit: { key: "comment_standard" | "ct_comment_standard" | "assistant_rules"; fromId?: string };
   // D-#290: who didn't submit reconciliation (Principal/Office).
   ReconciliationReport: { date?: string } | undefined;
   // D-#300: per subject × class homework lifecycle report (Principal/Office).

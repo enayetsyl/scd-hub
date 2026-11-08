@@ -14,6 +14,7 @@ import { clientIpFrom } from "./clientIp";
 import { graphqlDevToolsOptions } from "./graphqlDevTools";
 import { connectDb } from "./db";
 import { refreshAiConfig } from "./modules/platform/services/AiSettingService";
+import { seedAiPolicies } from "./modules/platform/services/AiPolicyService";
 import { loadRoleTemplateOverrides, startRoleTemplateRefresh } from "./modules/access-control/services/RoleTemplateService";
 import { connectBookDb, BookDbNotConfiguredError } from "./bookDb";
 import { buildContext, verifyTokenFromRequest } from "./context";
@@ -226,6 +227,10 @@ async function start() {
   startRoleTemplateRefresh();
   // D-#967: the Gemini key/model the Principal saved in the app (falls back to .env).
   await refreshAiConfig(true).catch((err) => console.error("[ai-settings] load failed — using .env:", err));
+  // AI-3s (D-#1102): the proposed AI rules as INACTIVE v1 for any key with no version yet.
+  await seedAiPolicies()
+    .then((keys) => keys.length && console.log(`[ai-policy] seeded inactive v1: ${keys.join(", ")}`))
+    .catch((err) => console.error("[ai-policy] seed failed (no AI rules loaded):", err));
   // The BOOK plane (D-#404) — a SECOND connection, opened here so the API can serve
   // book production once it is provisioned. Until this ran, setting BOOK_MONGODB_URI
   // did nothing at all: only the render worker opened the connection, so every

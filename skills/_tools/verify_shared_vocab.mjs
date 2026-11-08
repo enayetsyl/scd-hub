@@ -917,8 +917,12 @@ const ROLE_CHECK_DEFAULTS = {
     // Activity sheets (D-#988): teachers browse and, as class teachers, hand out / take back.
     "activity_sheets:view", "activity_sheets:check",
     // Exam routine (D-#883): every teacher reads the published routine.
-    "exam_routine:view"],
+    "exam_routine:view",
+    // AI Assist rules (AI-3, D-#1093): every teacher reads the active comment standard.
+    "ai_assist:read_rules"],
   OFFICE: ["homework:view_all", "homework:undo_any",
+    // AI Assist rules (AI-3, D-#1093): the Office reads the active standard too.
+    "ai_assist:read_rules",
     // One switch per report (D-#846) — the Office read every report by role before the matrix.
     "reports:hw_declare_pending", "reports:hw_issue_pending", "reports:hw_lifecycle", "reports:hw_weekly_unsubmitted",
     "reports:as_declare_pending", "reports:as_deliver_pending", "reports:as_print_pending", "reports:reconciliation",
