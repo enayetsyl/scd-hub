@@ -947,6 +947,8 @@ const ROLE_CHECK_DEFAULTS = {
     "class_books:view", "class_books:manage", "activity_sheets:view", "activity_sheets:issue", "activity_sheets:check", "activity_sheets:manage", "activity_sheets:settings",
     // Quran oral exam (D-#873): the Office plans, publishes, watches and locks it; teachers only examine (SELF).
     "quran_exam:view", "quran_exam:manage", "quran_exam:publish", "quran_exam:edit_all", "quran_exam:lock", "quran_exam:remind",
+    // Nursery & KG oral exam (D-#1084): the Office sets papers and examiners, watches and locks; teachers only examine (SELF).
+    "viva:view", "viva:manage", "viva:edit_all", "viva:lock",
     // Exam routine (D-#883): the Office writes and publishes it; everyone reads it.
     "exam_routine:view", "exam_routine:manage", "exam_routine:publish",
     // Exam paper bank (D-#1030): owner 2026-11-06 — "office can see" the Mohammadpur papers; the
