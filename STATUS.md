@@ -1,5 +1,7 @@
 # STATUS
 
+- 2026-11-08: **LIVE + OTA — Nursery & KG oral exam (viva), D-#1080–#1084**: #1397 → dev, promoted in #1398 (prod `5f782f6c`, deploy green); OTA group `a204265c` (runtime 1.1.0; prod URL, no localhost, GlitchTip host; source maps 1 of 2).
+  - **Now / next:** Office opens **মৌখিক পরীক্ষা** on prod (papers create themselves from the routine) and types the real questions before Thu 26 Nov — Nursery Bangla/English questions are in the ORAL sections of `server/assets/exam-papers/annual-2026/L-1-BAN.json` / `L-1-ENG.json`; check each paper's examiner. Help guides `exam-viva-*` are drafts until screenshots. The printed Nursery Bangla/English written papers should drop their oral section. Owner-deferred: questions not asked to a child, per-child questions.
 - 2026-11-08: **BUILT — school notice notification (D-#1072)** (branch `feat/school-notice`, worktree `C:/w/notice`). New kind `SCHOOL_NOTICE`; `notifyPopupRecipients` notifies a published pop-up notice's people.
   - **Now / next:** PR → dev → promote → OTA, then publish the help-centre pop-ups (current Teacher + Office; all guardians) on prod and notify their recipients.
 - 2026-11-08: **BUILT — reopen the 09:30 unmarked-assignment list (D-#1106)** (branch `feat/mark-escalation-reopen`, worktree `C:/w/mesc`). After "বুঝেছি" the 09:30 pop-up could not be opened again; now অ্যাসাইনমেন্ট → **⏰ ০৯:৩০-এর জমার হিসাব বাকি** shows any day's saved list, and the inbox row opens it.
