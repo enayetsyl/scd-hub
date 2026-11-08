@@ -1,5 +1,8 @@
 # STATUS
 
+- 2026-11-08: **BUILT — AI Assist AI-4, de-identification + students' Bangla names (D-#1130/#1131)** (branch `feat/ai4-deid`). Names, phones and ids become tokens before any prompt leaves the VM; a fail-closed gate refuses to send if a known name is left. Admin → শিক্ষার্থীর বাংলা নাম lets the Office write each child's Bangla name (with a "done x / y" count) — teachers write names in Bangla and only 17 of 91 children had one (PRD P11).
+  - **Office (before AI-8 switch-on):** fill every child's Bangla name on that screen.
+  - **Now / next:** PR → dev. Then AI-5 (comment checker).
 - 2026-11-08: **BUILT — AI Assist AI-3, rules store + seed standards (D-#1128/#1129)** (branch `feat/ai3-rules`). Versioned AI rules (`AiPolicy`): Admin → এআই-এর নিয়ম ও মানদণ্ড lists the three documents, each version's text, switch a version on / a document off, write a new version (saved OFF). The two proposed standards (`docs/ai-assist/*`) load on boot as OFF v1. New permissions `ai_assist:read_rules` (teachers + Office) and `ai_assist:edit_rules` (Principal). Help guide `ops-ai-rules` captured.
   - **Owner:** read the two v1 drafts in the app, edit them (that is where the seed memo's 7 questions get answered), then switch them on. Nothing checks comments until AI-5 is built AND a version is on.
   - **Now / next:** PR → dev. Then AI-4 (de-identification).

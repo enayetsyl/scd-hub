@@ -430,7 +430,7 @@ Learning-outcome mastery tracker (`docs/prd-mastery.md`, D-#775–#787). Registe
 |---|---|---|---|---|---|---|---|
 | `students:view_all` | Whole-school student list | সব শিক্ষার্থীর তালিকা দেখা | Student directory (class, শাখা, groups, guardian phones) | — | on | F-1 | roster:manage |
 | `students:create` | Add a student | নতুন শিক্ষার্থী যোগ করা | Add to a class/শাখা | — | on | | roster:manage |
-| `students:edit` | Edit student details | শিক্ষার্থীর তথ্য ঠিক করা | Set/clear roll number | — | on | | roster:manage |
+| `students:edit` | Edit student details | শিক্ষার্থীর তথ্য ঠিক করা | Set/clear roll number; set the Bangla name (AI-4, D-#1131) | — | on | | roster:manage |
 
 #### `guardians` — অভিভাবক
 | permission | EN | BN | what it allows | T | O | flags | replaces |

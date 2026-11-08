@@ -108,6 +108,11 @@ exports.run = async (h) => {
   await h.tap(P, "এটি বদলে নতুন সংস্করণ লিখুন", 3500);
   await h.shot(P, "ops-ai-rules", 3, [{ css: "textarea" }, { text: "নতুন সংস্করণ সংরক্ষণ করুন" }]);
 
+  // AI-4 (D-#1131): students' Bangla names — "সবাই" so a row shows whatever the fixture holds.
+  await admin(h, P, "শিক্ষার্থীর বাংলা নাম", "ops-bangla-names");
+  await h.tap(P, "সবাই", 3000);
+  await h.shot(P, "ops-bangla-names", 1, [{ re: "^বাংলা নাম আছে" }, { text: "যাদের বাকি" }, { css: ":nth-match(input, 1)" }, { text: "সংরক্ষণ করুন" }]);
+
   // ── Message templates ────────────────────────────────────────────────────
   await admin(h, P, "বার্তা টেমপ্লেট", "ops-message-templates");
   await h.shot(P, "ops-message-templates", 1, [{ text: "পাঠ নোট প্রকাশিত — বার্তা" }]);
