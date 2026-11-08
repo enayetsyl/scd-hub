@@ -345,7 +345,10 @@ export type AuditEventKind =
   | "IMPERSONATION_START"     // Principal opened someone else's account view; target = the account
   | "IMPERSONATION_END"       // returned to their own account (or the borrowed token expired)
   | "TASK_WRITE"              // work board (WB-1, D-#701): a manual task/template created, moved, re-statused, reassigned, blocked, cancelled — meta.action
-  | "AI_SETTINGS_CHANGED"     // the Gemini key / model saved or cleared in the app (D-#967) — meta.keyChanged/keyLast4/model/keyCleared; never the key
+  | "AI_SETTINGS_CHANGED"     // an AI key / model / feature / cap / budget saved or cleared in the app (D-#967, D-#1121–#1126) — meta.provider/keyChanged/keyLast4/model/keyCleared/feature/…; never the key
+  | "AI_POLICY_SAVED"         // a new version of an AI rules document (AI-3, D-#1093) — meta.key/version/hash/chars; never the text
+  | "AI_POLICY_ACTIVATED"     // one AI rules version switched on (others of its key off) — meta.key/version/hash
+  | "AI_POLICY_DEACTIVATED"   // an AI rules key switched off (no version active) — meta.key
   | "WORKSHEET_SENT_TO_PRINT" // a generated Nursery/KG paper filed to the print queue (D-#747) — meta.kind/subject/seed
   | "WORKSHEET_PLAN_SAVED"    // how a class level × subject's মানবন্টন rows are generated, + presets (D-#745)
   | "WORKSHEET_PICTURE_EDITED" // a picture-bank row re-tagged / hidden / reserved for the final (D-#746)

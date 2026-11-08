@@ -998,6 +998,18 @@ export const FEATURE_CATALOGUE = {
       ai_key: { en: "AI keys, models & features", bn: "এআই কী, মডেল ও সুবিধা বদলানো", desc: "Save or clear the Gemini and DeepSeek keys and models, and choose which AI answers each AI feature and whether it is switched on", teacher: false, office: false, flags: ["LOCKED"] },
     },
   },
+  // AI Assist (docs/prd-ai-assist.md). AI-3 (D-#1093): the AI rules — teachers read the
+  // active standard (their training sheet); only the Principal writes and switches them.
+  // AI-5 / AI-6 add the comment checker and the assistant actions here.
+  ai_assist: {
+    group: "teaching_and_trackers",
+    en: "AI assist",
+    bn: "এআই সহায়তা",
+    actions: {
+      read_rules: { en: "Read the AI comment standard", bn: "এআই-এর মন্তব্যের মানদণ্ড পড়া", desc: "The active comment standard and assistant rules (a training sheet)", teacher: true, office: true, flags: [] },
+      edit_rules: { en: "Write AI rules", bn: "এআই-এর নিয়ম লেখা ও চালু করা", desc: "Write a new version of an AI rules document, switch one on, or switch a document off", teacher: false, office: false, flags: [] },
+    },
+  },
   guardian_engagement: {
     group: "admin_and_access",
     en: "Guardian app usage",

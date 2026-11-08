@@ -100,6 +100,14 @@ exports.run = async (h) => {
   await h.tap(P, "DeepSeek", 3000);
   await h.shot(P, "ops-ai-key", 2, [{ text: "DeepSeek" }, { css: ":nth-match(input, 1)" }, { re: "^DeepSeek শুধু নতুন এআই সুবিধায়" }]);
 
+  // AI-3 (D-#1093): the AI rules — the server seeds the proposed standards as OFF v1 on boot.
+  await admin(h, P, "এআই-এর নিয়ম ও মানদণ্ড", "ops-ai-rules");
+  await h.shot(P, "ops-ai-rules", 1, [{ text: "দৈনিক মন্তব্যের মানদণ্ড" }]);
+  await h.tap(P, "দৈনিক মন্তব্যের মানদণ্ড", 3500);
+  await h.shot(P, "ops-ai-rules", 2, [{ re: "^সংস্করণ ১ · খসড়া|^সংস্করণ 1 · খসড়া" }, { text: "এই সংস্করণ চালু করুন" }, { text: "এটি বদলে নতুন সংস্করণ লিখুন" }]);
+  await h.tap(P, "এটি বদলে নতুন সংস্করণ লিখুন", 3500);
+  await h.shot(P, "ops-ai-rules", 3, [{ css: "textarea" }, { text: "নতুন সংস্করণ সংরক্ষণ করুন" }]);
+
   // ── Message templates ────────────────────────────────────────────────────
   await admin(h, P, "বার্তা টেমপ্লেট", "ops-message-templates");
   await h.shot(P, "ops-message-templates", 1, [{ text: "পাঠ নোট প্রকাশিত — বার্তা" }]);
