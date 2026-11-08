@@ -40,6 +40,7 @@ import { confirmHomeworkDay } from "../../../src/modules/trackers/services/Homew
 import { upsertAssignmentSchedule, addScheduleEntry } from "../../../src/modules/trackers/services/AssignmentScheduleService";
 import { deliverAssignmentItem, confirmAssignmentWeek } from "../../../src/modules/trackers/services/AssignmentService";
 import { AssignmentStudentRecord } from "../../../src/modules/trackers/models/AssignmentStudentRecord";
+import { AssignmentItem } from "../../../src/modules/trackers/models/AssignmentItem";
 import { weekNumberFor } from "../../../src/modules/trackers/assignmentCalendar";
 
 const uri = process.env.MONGODB_URI ?? "";
@@ -233,6 +234,14 @@ export async function seedTeach() {
     { sectionId: sections.c3Boys, state: "GIVEN" },
     { $set: { state: "DUE" }, $push: { stateDates: { state: "DUE", at: at("2026-11-01T08:00:00+06:00") } } },
   );
+  // D-#1106: Sunday 11-01's 09:30 list (রাফি and সাকিব still due), for the Office guide
+  // that reopens it. A past day, so no 09:30 pop-up interrupts the other walks.
+  const { MarkEscalation } = await import("../../../src/modules/trackers/models/MarkReminder");
+  const item = await AssignmentItem.findById(recs[0].asItemId).lean();
+  await MarkEscalation.create({
+    dateKey: "2026-11-01",
+    rows: [{ asItemId: item!._id, asId: item!.asId, sectionId: sections.c3Boys, subject: "MATH", teacherIds: [T] }],
+  });
 
   // ── Saturday revision: a Hifz group (৫ম শ্রেণি) the class teacher leads on Saturdays ──
   const { SubjectGroup } = await import("../../../src/modules/routine/models/SubjectGroup");

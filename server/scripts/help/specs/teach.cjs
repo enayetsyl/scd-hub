@@ -599,6 +599,19 @@ async function office(h) {
 }
 
 // ── Daily tracker + Saturday revision (teacher) ─────────────────────────────
+// ── Office: the 09:30 unmarked list, reopened (D-#1106; the fixture's Sunday 11-01 list) ──
+async function markEscalation(h) {
+  const O = await loginAt(h, "office@help.test");
+  const CHIP = { text: "⏰ ০৯:৩০-এর জমার হিসাব বাকি", minY: 120 };
+  await menuRow(h, O, "teach-mark-escalation", 0, "ট্র্যাকার", "অ্যাসাইনমেন্ট");
+  await waitFor(h, O, CHIP);
+  await h.shot(O, "teach-mark-escalation", 1, [CHIP]);
+  await h.tap(O, CHIP, 4000);
+  await dump(O, "mark escalation list");
+  await h.shot(O, "teach-mark-escalation", 2, [{ text: "দিন", minY: 120 }, { re: "^AS-|\\(AS-", minY: 120 }]);
+  await O.context().close();
+}
+
 async function trackers(h) {
   const T = await loginAt(h, "teacher@help.test");
   await h.shot(T, "teach-trk-run", 0, [{ text: "ট্র্যাকার", minY: 300 }]);
@@ -782,7 +795,7 @@ exports.run = async (hh) => {
   };
   if (h.PROD) throw new Error("the teach spec saves while it walks; run it locally (see its header)");
   // Each part runs on its own: a failed part is reported and the others still save their pictures.
-  const parts = { hw: homework, fix: markfix, gift, as: assignment, att: attendance, wb: workboard, off: office, trk: trackers, voc: vocab };
+  const parts = { hw: homework, fix: markfix, gift, as: assignment, att: attendance, wb: workboard, off: office, mes: markEscalation, trk: trackers, voc: vocab };
   const failed = [];
   for (const [name, part] of Object.entries(parts)) {
     if (!want(name)) continue;
