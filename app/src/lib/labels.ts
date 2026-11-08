@@ -8185,7 +8185,7 @@ const STR_BN = {
   actRepSections: "শাখা অনুযায়ী",
   actRepSectionLine: "{n} জন · শেষ করেছে {f}টি",
   qxNav: "কুরআন পরীক্ষা",
-  // Nursery & KG oral exam (viva, D-#1070–#1074)
+  // Nursery & KG oral exam (viva, D-#1080–#1084)
   vivaNav: "মৌখিক পরীক্ষা",
   vivaTitle: "মৌখিক পরীক্ষা",
   vivaMyDuties: "আমার মৌখিক পরীক্ষা",
@@ -15648,7 +15648,7 @@ const STR_EN: StrTable = {
   actRepSections: "By section",
   actRepSectionLine: "{n} children · finished {f}",
   qxNav: "Quran exam",
-  // Nursery & KG oral exam (viva, D-#1070–#1074)
+  // Nursery & KG oral exam (viva, D-#1080–#1084)
   vivaNav: "Oral exam",
   vivaTitle: "Oral exam",
   vivaMyDuties: "My oral exams",

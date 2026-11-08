@@ -1,5 +1,5 @@
 /**
- * VivaPaperScreen (D-#1071, mockup screen 3) — the Office writes one oral paper: each
+ * VivaPaperScreen (D-#1081, mockup screen 3) — the Office writes one oral paper: each
  * question, its marks (halves allowed) and an optional book page (pictures are shown from
  * the book). The questions' sum is checked against the syllabus oral marks. Read-only once
  * a mark exists or the paper is locked.

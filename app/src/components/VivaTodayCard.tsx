@@ -1,5 +1,5 @@
 /**
- * VivaTodayCard (D-#1072, mockup screen 5) — on an examiner's Today screen: today's oral
+ * VivaTodayCard (D-#1082, mockup screen 5) — on an examiner's Today screen: today's oral
  * papers with the caller's progress; a tap opens the mark sheet. Renders nothing on a day
  * with no oral. Has its own query, so it is mounted OUTSIDE Today's QueryGate (an empty
  * Today would otherwise swallow it).

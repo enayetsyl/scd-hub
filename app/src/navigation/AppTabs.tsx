@@ -1789,7 +1789,7 @@ function QuranExamNavigator(): React.ReactElement {
   );
 }
 
-/** D-#1070 — Nursery & KG oral exam (viva). VivaHome is first (no params) — see the initial-route trap. */
+/** D-#1080 — Nursery & KG oral exam (viva). VivaHome is first (no params) — see the initial-route trap. */
 const VivaStack = createNativeStackNavigator<VivaStackParamList>();
 function VivaNavigator(): React.ReactElement {
   const stackOptions = useStackOptions();

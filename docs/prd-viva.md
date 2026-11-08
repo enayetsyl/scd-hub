@@ -1,6 +1,6 @@
 # PRD — Nursery & KG oral exam (viva): papers, examiners, live marks
 
-Owner ask, 2026-11-06. Decisions D-#1070–#1074. Mockup (9 screens, owner-reviewed):
+Owner ask, 2026-11-06. Decisions D-#1080–#1084. Mockup (9 screens, owner-reviewed):
 https://claude.ai/artifact/5GQFzrs2kHymJVFB2NkAmr
 
 Like the Quran exam (`docs/prd-quran-exam.md`), the oral part of a subject is heard one
@@ -27,8 +27,8 @@ The paper's full marks are the sum of the syllabus mark rows that are oral (`ite
 "oral"`, or a row labelled মৌখিক / Oral when the type was left blank). A subject with no
 written row is all oral.
 
-## 2. The paper (D-#1071)
-A flat list of questions, each with marks (halves allowed, D-#1072). The questions'
+## 2. The paper (D-#1081)
+A flat list of questions, each with marks (halves allowed, D-#1082). The questions'
 marks must add up to the paper's full marks.
 - **Seeded** from the syllabus oral rows the first time Office opens the paper: a row of
   `count × marksEach` becomes `count` questions (`<row label> ১`, `… ২`); a single row
@@ -41,7 +41,7 @@ marks must add up to the paper's full marks.
 - **Deferred (owner, 2026-11-06):** a question not asked to a particular child, and
   changing questions for one child. Every child is marked on the whole paper for now.
 
-## 3. Examiners (D-#1073)
+## 3. Examiners (D-#1083)
 - Default: the teacher who teaches that subject to that class in the live routine (most
   periods); if none, the section's class teacher.
 - Office (`viva:manage`) sets one or more examiners per paper and which children each
@@ -62,7 +62,7 @@ Per paper: each child's oral total (absent = 0, shown "অনু."). `viva:lock`
 nobody edits a locked paper (Office can unlock; both audited). Joining the oral total with
 the written marks waits for written-mark entry (prd-exams.md EX-2/EX-3).
 
-## 6. Permissions (`viva`, D-#1074)
+## 6. Permissions (`viva`, D-#1084)
 | Action | Default | What |
 |---|---|---|
 | `viva:view` | Office | every paper, examiner and mark; live progress |

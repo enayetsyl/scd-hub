@@ -333,7 +333,7 @@ export const FEATURE_CATALOGUE = {
       remind: { en: "Remind examiners", bn: "পরীক্ষককে নম্বরের রিমাইন্ডার পাঠানো", desc: "Pending-marks reminder as a staff pop-up", teacher: false, office: true, flags: [] },
     },
   },
-  // Nursery & KG oral exam (viva) — one paper per ORAL routine slot (D-#1070, docs/prd-viva.md).
+  // Nursery & KG oral exam (viva) — one paper per ORAL routine slot (D-#1080, docs/prd-viva.md).
   viva: {
     group: "assessment_and_exams",
     en: "Oral exam (viva)",

@@ -396,7 +396,7 @@ App gates: drawer leaf + syllabus-home button on any of the three actions; Edit 
 
 App gates: tab `QuranExamTab` = any of view / manage / examine; publish / lock / manage / remind buttons each check their own action; the Today card checks `examine`; the guardian card and pop-ups are GUARDIAN-only.
 
-## (j2) `viva` — Nursery & KG oral exam (added 2026-11-06, D-#1070–#1074)
+## (j2) `viva` — Nursery & KG oral exam (added 2026-11-06, D-#1080–#1084)
 
 All in `server/src/modules/viva/resolvers/viva.ts`. Row scope lives in `VivaService`: `examine` reads and marks only the children whose examiner is the caller; `edit_all` marks any child; a locked paper refuses every write.
 

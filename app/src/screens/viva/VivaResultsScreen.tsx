@@ -1,5 +1,5 @@
 /**
- * VivaResultsScreen (D-#1072/#1074, mockup screen 9) — every child's oral total on one
+ * VivaResultsScreen (D-#1082/#1084, mockup screen 9) — every child's oral total on one
  * paper: absent counts 0 and shows "অনু.", unfinished shows "—". Live: refreshes every
  * 15 s. Joining the oral with the written marks waits for written-mark entry (EX-2/EX-3).
  */

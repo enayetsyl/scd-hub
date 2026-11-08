@@ -1,5 +1,5 @@
 /**
- * D-#1070–#1074 — Nursery & KG oral exam (docs/prd-viva.md), real services on in-memory Mongo.
+ * D-#1080–#1084 — Nursery & KG oral exam (docs/prd-viva.md), real services on in-memory Mongo.
  *
  *   sync       one paper per ORAL routine slot, seeded from the syllabus oral rows
  *              (count × marksEach → questions; a blank-type "Oral" row counts); the default

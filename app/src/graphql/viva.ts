@@ -1,5 +1,5 @@
 /**
- * Nursery & KG oral exam (viva) operations — D-#1070–#1074, docs/prd-viva.md.
+ * Nursery & KG oral exam (viva) operations — D-#1080–#1084, docs/prd-viva.md.
  * Marks are saved one tap at a time (setVivaMark / setVivaAbsent); halves are allowed.
  */
 import { gql } from "urql";
@@ -133,7 +133,7 @@ export function vivaNum(n: number): string {
   return d(whole) + (half ? "½" : "");
 }
 
-/** The mark buttons of a question: 0, ½, 1 … max (halves allowed, D-#1072). */
+/** The mark buttons of a question: 0, ½, 1 … max (halves allowed, D-#1082). */
 export function vivaSteps(max: number): number[] {
   const out: number[] = [];
   for (let x = 0; x <= max + 1e-9; x += 0.5) out.push(Math.round(x * 2) / 2);

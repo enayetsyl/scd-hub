@@ -1,5 +1,5 @@
 /**
- * Nursery & KG oral exam (viva) — VV-1, docs/prd-viva.md, D-#1070–#1074.
+ * Nursery & KG oral exam (viva) — VV-1, docs/prd-viva.md, D-#1080–#1084.
  *
  * One VivaPaper per ORAL slot of an exam routine (D-#883). Papers are created (and their
  * date re-synced) whenever the oral list is read, so a routine edit shows up without a
@@ -42,7 +42,7 @@ const has = (ctx: AppContext, p: Permission): boolean => !!ctx.auth && callerHas
 const seesAll = (ctx: AppContext): boolean =>
   has(ctx, "viva:view") || has(ctx, "viva:manage") || has(ctx, "viva:edit_all") || has(ctx, "viva:lock");
 
-/** A mark is 0, a whole number or a half, within [0, max] (D-#1072). */
+/** A mark is 0, a whole number or a half, within [0, max] (D-#1082). */
 export function isValidMark(value: number, max: number): boolean {
   return Number.isFinite(value) && value >= 0 && value <= max && Number.isInteger(value * 2);
 }
@@ -99,7 +99,7 @@ export interface VivaPaperShape {
   syllabusMarks: number | null;
   items: VivaItemShape[];
   examiners: VivaExaminerShape[];
-  /** Any mark entered — questions can no longer change (D-#1071). */
+  /** Any mark entered — questions can no longer change (D-#1081). */
   frozen: boolean;
   lockedAt: string | null;
   progress: VivaProgressShape;
@@ -143,7 +143,7 @@ interface SyllabusRow {
   total: number;
 }
 
-/** The oral rows of a syllabus mark table (D-#1070): itemType "oral", or a row labelled
+/** The oral rows of a syllabus mark table (D-#1080): itemType "oral", or a row labelled
  *  মৌখিক / Oral whose type was left blank (Nursery English's row 9 on prod). */
 export function oralRows<T extends SyllabusRow>(rows: T[]): T[] {
   return rows.filter((r) => r.itemType === "oral" || (!r.itemType && /মৌখিক|\boral\b/i.test(r.label)));
@@ -166,7 +166,7 @@ export function seedItems(rows: SyllabusRow[]): Omit<IVivaItem, "key">[] {
 const keyed = (items: Omit<IVivaItem, "key">[]): IVivaItem[] => items.map((it, i) => ({ ...it, key: `q${i + 1}` }));
 const sumMarks = (items: { marks: number }[]): number => Math.round(items.reduce((a, x) => a + x.marks, 0) * 2) / 2;
 
-// ── Default examiner (D-#1073) ────────────────────────────────────────────────
+// ── Default examiner (D-#1083) ────────────────────────────────────────────────
 
 /** The teacher who teaches this subject to this class in the live routine (most periods);
  *  else the class teacher of the class's (largest) section; else nobody. */
@@ -462,7 +462,7 @@ export interface VivaItemInput {
   ref?: string | null;
 }
 
-/** Office: the questions and their marks. Refused once any mark is entered (D-#1071). */
+/** Office: the questions and their marks. Refused once any mark is entered (D-#1081). */
 export async function saveVivaPaper(ctx: AppContext, paperId: string, input: VivaItemInput[]): Promise<VivaPaperShape> {
   const p = await mustPaper(paperId);
   if (p.lockedAt) throw new VivaError("নম্বর লক করা হয়েছে — প্রশ্নপত্র বদলানো যাবে না।");
@@ -509,7 +509,7 @@ export interface VivaExaminerInput {
   studentIds: string[];
 }
 
-/** Office: who hears which child (D-#1073). A child may appear in one list only. */
+/** Office: who hears which child (D-#1083). A child may appear in one list only. */
 export async function saveVivaExaminers(ctx: AppContext, paperId: string, input: VivaExaminerInput[]): Promise<VivaPaperShape> {
   const p = await mustPaper(paperId);
   if (p.lockedAt) throw new VivaError("নম্বর লক করা হয়েছে — পরীক্ষক বদলানো যাবে না।");

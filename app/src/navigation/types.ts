@@ -334,7 +334,7 @@ export type QuranExamStackParamList = {
   QuranExamMonitor: { examId: string };
   QuranExamPaper: { examId: string; level: string };
 };
-/** D-#1070 — Nursery & KG oral exam (viva). VivaHome stays first: the initial route takes no params. */
+/** D-#1080 — Nursery & KG oral exam (viva). VivaHome stays first: the initial route takes no params. */
 export type VivaStackParamList = {
   VivaHome: undefined;
   VivaSheet: { paperId: string };

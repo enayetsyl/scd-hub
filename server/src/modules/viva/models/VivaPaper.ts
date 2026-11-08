@@ -1,15 +1,15 @@
 import { Schema, model, Document, Types } from "mongoose";
 
 /**
- * VivaPaper — the oral (viva) paper of one class × one subject in one exam (VV-1, D-#1070,
+ * VivaPaper — the oral (viva) paper of one class × one subject in one exam (VV-1, D-#1080,
  * docs/prd-viva.md). One per ORAL slot of the exam routine (D-#883): the oral is heard in
  * the class's usual period on `dateKey`, one child at a time.
  *
  * `items` is a flat question list. Each question keeps a stable `key`, and marks are stored
  * against that key (VivaMark), so reordering never moves a mark. Marks may be halves
- * (D-#1072). The paper is edited by Office until the first mark is entered (D-#1071).
+ * (D-#1082). The paper is edited by Office until the first mark is entered (D-#1081).
  *
- * `examiners` says who hears which child (D-#1073). A child in no list falls to the first
+ * `examiners` says who hears which child (D-#1083). A child in no list falls to the first
  * examiner, so a child admitted after the split is never orphaned. An empty list means no
  * examiner yet: only `viva:edit_all` can mark.
  *

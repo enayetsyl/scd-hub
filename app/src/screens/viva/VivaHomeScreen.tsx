@@ -1,5 +1,5 @@
 /**
- * VivaHomeScreen (D-#1070–#1074, mockup screens 1, 5, 8) — the মৌখিক পরীক্ষা screen.
+ * VivaHomeScreen (D-#1080–#1084, mockup screens 1, 5, 8) — the মৌখিক পরীক্ষা screen.
  *
  *  - Office (viva:view / manage): every oral paper of the exam in date order, with live
  *    progress (refreshed every 15 s), its examiners, and buttons for the paper, the

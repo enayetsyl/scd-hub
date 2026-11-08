@@ -371,10 +371,10 @@ export type AuditEventKind =
   | "QURAN_EXAM_PUBLISHED"        // the schedule published or withdrawn (D-#877) — meta.status
   | "QURAN_EXAM_LOCKED"           // marks locked or unlocked (D-#876) — meta.locked
   | "QURAN_EXAM_REMINDED"         // pending-marks reminder pop-ups re-armed (D-#878) — meta.examiners
-  | "VIVA_PAPER_SAVED"            // a Nursery/KG oral paper's questions saved (D-#1071) — meta.before/after
-  | "VIVA_EXAMINERS_SAVED"        // who examines which child on an oral paper (D-#1073) — meta.before/after
-  | "VIVA_MARKS_LOCKED"           // an oral paper's marks locked (D-#1074) — meta.classId/subject/dateKey
-  | "VIVA_MARKS_UNLOCKED"         // an oral paper's marks unlocked (D-#1074)
+  | "VIVA_PAPER_SAVED"            // a Nursery/KG oral paper's questions saved (D-#1081) — meta.before/after
+  | "VIVA_EXAMINERS_SAVED"        // who examines which child on an oral paper (D-#1083) — meta.before/after
+  | "VIVA_MARKS_LOCKED"           // an oral paper's marks locked (D-#1084) — meta.classId/subject/dateKey
+  | "VIVA_MARKS_UNLOCKED"         // an oral paper's marks unlocked (D-#1084)
   | "EXAM_ROUTINE_SAVED"          // one class's exam routine saved (D-#883) — meta.classId/slots
   | "EXAM_ROUTINE_PUBLISHED"      // the exam routine published or withdrawn (D-#883) — meta.published
   | "GUARDIAN_FEATURE_SET"        // a guardian feature switched on/off for all or one guardian (D-#1011) — meta.feature/onForAll/guardianId/on

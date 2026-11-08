@@ -536,7 +536,7 @@ export default function TodayScreen(): React.ReactElement {
       {/* Quran oral exam (D-#876): today's sittings for an examiner. Own query → outside the gate. */}
       {can("quran_exam:examine") ? <QuranExamTodayCard /> : null}
 
-      {/* Nursery & KG oral exam (D-#1072): today's orals for an examiner. Own query → outside the gate. */}
+      {/* Nursery & KG oral exam (D-#1082): today's orals for an examiner. Own query → outside the gate. */}
       {can("viva:examine") ? <VivaTodayCard /> : null}
 
       {/* D-#1052 — a shared daily school report, until it is opened. Own query → outside the gate. */}

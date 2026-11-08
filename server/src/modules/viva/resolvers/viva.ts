@@ -1,5 +1,5 @@
 /**
- * Nursery & KG oral exam (viva) resolvers — VV-1, docs/prd-viva.md, D-#1070–#1074.
+ * Nursery & KG oral exam (viva) resolvers — VV-1, docs/prd-viva.md, D-#1080–#1084.
  *
  *   vivaOverview            — view|manage: every exam's oral papers with live progress.
  *   myVivaPapers            — examine (SELF): papers where the caller hears at least one child.

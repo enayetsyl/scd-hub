@@ -1,5 +1,5 @@
 /**
- * VivaSheetScreen (D-#1072, mockup screens 6–7) — one oral paper's children, every question
+ * VivaSheetScreen (D-#1082, mockup screens 6–7) — one oral paper's children, every question
  * under each child's name. One tap = one mark, saved at once (live); tapping the chosen
  * mark again clears it. অনুপস্থিত hides the questions and counts the oral 0.
  *
