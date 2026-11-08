@@ -7016,6 +7016,8 @@ export interface NotificationRefsT {
   masteryReviewId: string | null;
   /** D-#1032 — the exam paper to review ("list" when one notice covers several). */
   examPaperId: string | null;
+  /** D-#1072 — a school notice's page, "Tab/Screen" (the pop-up OPEN_SCREEN convention). */
+  screenTarget: string | null;
 }
 
 export interface NotificationT {
@@ -7038,6 +7040,7 @@ const NOTIFICATION_FIELDS = `
     classTestId ctId taskId
     syllabusId examId classId subject
     improvementActionId masteryActionId masteryReviewId examPaperId
+    screenTarget
   }
 `;
 

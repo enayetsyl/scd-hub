@@ -1557,6 +1557,9 @@ export const NOTIFICATION_KINDS = [
   // Daily school report (D-#1050, docs/prd-daily-report.md; app-native, NO wire twin): the
   // 18:00 school-day summary to the Principal and to anyone it is shared with, opening that day.
   "DAILY_REPORT",
+  // School notice (D-#1072; app-native, NO wire twin): a one-off announcement from the school,
+  // sent to the people of a published pop-up notice; refs.screenTarget ("Tab/Screen") is the page it opens.
+  "SCHOOL_NOTICE",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
@@ -1641,6 +1644,7 @@ export const NOTIFICATION_KIND_LABELS_BN: Record<NotificationKind, string> = {
   STAFF_MISTAKE_MEETING: "আলোচনার সময়",
   STAFF_MISTAKE_DAILY: "আজকের কর্মীর ভুল",
   DAILY_REPORT: "দৈনিক প্রতিবেদন",
+  SCHOOL_NOTICE: "স্কুলের বার্তা",
 };
 export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   BELL_REMINDER: "Bell reminder",
@@ -1723,6 +1727,7 @@ export const NOTIFICATION_KIND_LABELS_EN: Record<NotificationKind, string> = {
   STAFF_MISTAKE_MEETING: "Meeting booked",
   STAFF_MISTAKE_DAILY: "Today's staff mistakes",
   DAILY_REPORT: "Daily school report",
+  SCHOOL_NOTICE: "School notice",
 };
 
 /**

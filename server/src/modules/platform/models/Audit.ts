@@ -202,6 +202,7 @@ export type AuditEventKind =
   | "POPUP_NOTICE_WITHDRAWN"    // a sent notice stopped — gone from every screen, report kept
   | "POPUP_NOTICE_ANSWERED"     // a recipient tapped an answer button (meta.previous on a changed answer)
   | "POPUP_NOTICE_FOLLOW_UP"    // the sender re-showed it to the rest, or added new matches (meta.action + count)
+  | "POPUP_NOTICE_NOTIFIED"     // a sent notice's people also got a phone notification, SCHOOL_NOTICE (D-#1072; counts in meta)
   | "MEETING_COMMENT_SAVED"     // a class teacher saved a (student × meeting) positive+concern note (CM-5, §3/§6/J-CM6, D-#124)
   // Parents'-meeting comment chain (MC-1..MC-4, docs/prd-meeting-comments.md, D-#752..#756)
   | "MEETING_COMMENTS_OPENED"          // collection opened (roster counts in meta) or its due dates changed (meta.datesOnly)
