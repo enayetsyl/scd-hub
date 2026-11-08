@@ -1,5 +1,9 @@
 # STATUS
 
+- 2026-11-08: **BUILT — AI Assist AI-7, Principal analytics (D-#1140/#1141); every AI Assist slice is now built** (branch `feat/ai7-analytics`). Reports → 🤖 এআই ব্যবহার ও মন্তব্যের মান (Principal only): this month's spend against every cap with a month-end projection; usage by day, person, feature and model; each writer's comment-check results (issues by type, accepted, kept own text, saved unchecked); CSV on the web.
+  - **Now / next:** PR → dev. Then promote the AI Assist batch (AI-1…AI-7, server + app) → **OTA**. Nothing spends money until the owner switches a feature on.
+  - **Owner, the switch-on list (in order):** (1) Office fills every child's Bangla name; (2) read, edit and switch on the three AI rules documents; (3) save a DeepSeek key; (4) check `ai/aiPrices.ts` against the consoles; (5) run the AI-8 bake-off on the VM and pick the model; (6) switch মন্তব্য যাচাই and শিক্ষকের সহকারী on; (7) capture the three draft help guides (`family-comment-ai-check`, `content-ai-assistant`, `reports-ai-usage` if it stays draft) and clear their draft flags.
+  - **Follow-ups (not built):** jump links from the report rows into the records; the Principal's delete-by-month/teacher/range for assistant chats (D-#1105); Bangla names for staff.
 - 2026-11-08: **BUILT — AI Assist AI-6, teacher assistant (D-#1137–#1139)** (branch `feat/ai6-assistant`). Drawer → 🤖 এআই সহকারী: a teacher picks class, subject and chapter (and optionally a session) and asks; answers come from that chapter's lesson plans; questions are de-identified; capped at 40 turns per conversation and 30 a day; the Principal can read every conversation, teachers only their own.
   - **Owner, to switch on:** edit + switch on "শিক্ষকের সহকারীর নিয়ম" (seeded as an OFF draft), then switch শিক্ষকের সহকারী on (Admin → এআই কী ও মডেল → features). Then capture the `content-ai-assistant` guide pictures and clear its draft flag.
   - **Now / next:** PR → dev. Then AI-7 (Principal analytics).

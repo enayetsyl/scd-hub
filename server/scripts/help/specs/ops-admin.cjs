@@ -114,6 +114,19 @@ exports.run = async (h) => {
   await reveal(P, { text: "মোট মাসিক খরচের সীমা" });
   await h.shot(P, "ops-ai-features", 3, [{ text: "মাসিক সীমা (ডলার)" }, { text: "সতর্কবার্তা কত শতাংশে" }], { anchor: { text: "মোট মাসিক খরচের সীমা" } });
 
+  // AI-7 (D-#1140): the Principal's AI report (Reports group in the menu).
+  await h.openMenu(P);
+  await h.tap(P, "রিপোর্ট", 1500);
+  await h.shot(P, "reports-ai-usage", 0, [{ text: "এআই ব্যবহার ও মন্তব্যের মান" }]);
+  await h.tap(P, "এআই ব্যবহার ও মন্তব্যের মান", 3500);
+  await h.shot(P, "reports-ai-usage", 1, [{ text: "এ মাসের খরচ ও সীমা" }]);
+  await reveal(P, { text: "মন্তব্য যাচাইয়ের ফল" });
+  await h.shot(P, "reports-ai-usage", 2, [{ text: "মন্তব্য যাচাইয়ের ফল" }, { text: "CSV নামান" }]);
+  // AI-6 (D-#1137) render check, no picture: the assistant's home opens with its privacy notice.
+  await h.openMenu(P);
+  await h.tap(P, "এআই সহকারী", 3000);
+  await h.topmost(P, { re: "^পাঠ পরিকল্পনা নিয়ে প্রশ্ন করুন" }, { scroll: false });
+
   // AI-3 (D-#1093): the AI rules — the server seeds the proposed standards as OFF v1 on boot.
   await admin(h, P, "এআই-এর নিয়ম ও মানদণ্ড", "ops-ai-rules");
   await h.shot(P, "ops-ai-rules", 1, [{ text: "দৈনিক মন্তব্যের মানদণ্ড" }]);

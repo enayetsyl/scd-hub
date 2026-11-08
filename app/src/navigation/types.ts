@@ -782,6 +782,8 @@ export type ReportsStackParamList = {
   DailySnapshot: { date?: string } | undefined;
   GuardianEngagement: undefined;
   MarksDrivers: undefined;
+  // AI-7 (D-#1140): AI spend + comment-check quality (reports:ai_usage).
+  AiUsageReport: undefined;
   /** SB-6 — storybook reports (series / books / readers). */
   StorybookReport: undefined;
   /** AS-5 — activity-sheet reports (skills / banks / children). */
