@@ -1008,6 +1008,8 @@ export const FEATURE_CATALOGUE = {
     actions: {
       read_rules: { en: "Read the AI comment standard", bn: "এআই-এর মন্তব্যের মানদণ্ড পড়া", desc: "The active comment standard and assistant rules (a training sheet)", teacher: true, office: true, flags: [] },
       edit_rules: { en: "Write AI rules", bn: "এআই-এর নিয়ম লেখা ও চালু করা", desc: "Write a new version of an AI rules document, switch one on, or switch a document off", teacher: false, office: false, flags: [] },
+      // AI-5 (D-#1095): the comment checker — suggestions only; the writer decides what is saved.
+      check_comment: { en: "AI comment check", bn: "এআই দিয়ে মন্তব্য যাচাই", desc: "Check a daily or class-test comment against the active standard before saving", teacher: true, office: true, flags: [] },
     },
   },
   guardian_engagement: {

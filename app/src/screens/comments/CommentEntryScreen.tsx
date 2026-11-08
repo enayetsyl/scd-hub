@@ -44,6 +44,7 @@ import { UploadDropZone } from "../../components/UploadDropZone";
 import { useFileOpen } from "../../lib/useFileOpen";
 import { space } from "../../theme/tokens";
 import type { CommentsStackParamList } from "../../navigation/types";
+import { AiCheckPanel, useAiCommentCheck } from "../../components/AiCommentCheck";
 
 type Props = NativeStackScreenProps<CommentsStackParamList, "CommentEntry">;
 
@@ -54,6 +55,8 @@ export default function CommentEntryScreen({ route }: Props): React.ReactElement
   const { role, can } = useAuth();
   const { confirmAction } = useConfirm();
   const toast = useToast();
+  // AI-5 (D-#1095/#1099/#1100): Check button + an automatic check on Save of unchecked text.
+  const ai = useAiCommentCheck("DAILY");
   const canDeliver = can("student_comments:send"); // PM: was roster:manage
 
   // The edit/deliver path needs the live comment row. Load it from BOTH the section
@@ -111,7 +114,7 @@ export default function CommentEntryScreen({ route }: Props): React.ReactElement
 
   const attachmentIds = existing?.attachmentIds ?? [];
 
-  async function onSave(): Promise<void> {
+  async function onSave(force = false): Promise<void> {
     setTextError(undefined);
     if (!text.trim()) {
       const msg = `${STR.cmText} — ${STR.fieldRequired}`;
@@ -119,15 +122,26 @@ export default function CommentEntryScreen({ route }: Props): React.ReactElement
       toast.show(msg, "danger");
       return;
     }
+    // AI-5: unchecked text is checked first; suggestions stop the save until the writer
+    // accepts or keeps their own. A failed check never blocks (fail-open, D-#1100).
+    const fields = [{ field: "text", text }];
+    if (!force && ai.available && !ai.isCurrent(fields)) {
+      const r = await ai.check(studentId, fields, { commentType: type, sentiment });
+      if (r && r.status === "CHECKED" && r.issues.length > 0) {
+        toast.show(STR.aicReviewFirst, "info");
+        return;
+      }
+    }
+    const claim = ai.available ? ai.claim() : {};
     setBusy(true);
     if (commentId) {
-      const res = await editComment({ commentId, type, sentiment, text: text.trim() });
+      const res = await editComment({ commentId, type, sentiment, text: text.trim(), ...claim });
       setBusy(false);
       if (res.error) return toast.show(friendlyError(res.error), "danger");
       toast.show(STR.cmSaved, "ok");
       refetchComment();
     } else {
-      const res = await recordComment({ studentId, type, sentiment, text: text.trim() });
+      const res = await recordComment({ studentId, type, sentiment, text: text.trim(), ...claim });
       setBusy(false);
       if (res.error) return toast.show(friendlyError(res.error), "danger");
       const created = res.data?.recordStudentComment;
@@ -273,9 +287,21 @@ export default function CommentEntryScreen({ route }: Props): React.ReactElement
           </View>
 
           {!delivered ? (
+            <AiCheckPanel
+              ai={ai}
+              studentId={studentId}
+              fields={[{ field: "text", text }]}
+              extra={{ commentType: type, sentiment }}
+              onChange={(_field, t) => setText(t)}
+              onKeepMine={() => void onSave(true)}
+              disabled={busy}
+            />
+          ) : null}
+
+          {!delivered ? (
             <Button
               title={commentId ? STR.cmEditComment : STR.cmSave}
-              onPress={onSave}
+              onPress={() => void onSave()}
               loading={busy}
               disabled={busy}
             />

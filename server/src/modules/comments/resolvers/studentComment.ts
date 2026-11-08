@@ -38,6 +38,8 @@ import { Section } from "../../foundation/models/Section";
 import { assertCanRead, ForbiddenError } from "../../../middleware/authz";
 import { callerHasPermission } from "@scd/shared";
 import { canSeeReadStatus } from "./commentRead";
+import { aiCheckStamp } from "../../platform/services/CommentCheckService";
+import { StudentComment } from "../models/StudentComment";
 
 /** True when the caller holds `student_comments:review` (the comment-delivery desk,
  *  D-#264; PM — was the isAdminStaff role check) — they may edit any undelivered comment. */
@@ -103,6 +105,10 @@ builder.mutationField("recordStudentComment", (t) =>
       sentiment: t.arg.string({ required: true }),
       text: t.arg.string({ required: true }),
       attachmentIds: t.arg.stringList({ required: false }),
+      // AI-5 (D-#1095): the comment-check claim — a token from checkComment + the writer's choices.
+      aiCheckToken: t.arg.string({ required: false }),
+      aiIssuesAccepted: t.arg.int({ required: false }),
+      aiTeacherOverrode: t.arg.boolean({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
@@ -119,6 +125,7 @@ builder.mutationField("recordStudentComment", (t) =>
         text: args.text,
         attachmentIds: args.attachmentIds ?? undefined,
         actorId: ctx.auth.userId as string,
+        aiCheck: await aiCheckStamp({ token: args.aiCheckToken, issuesAccepted: args.aiIssuesAccepted, teacherOverrode: args.aiTeacherOverrode }, args.studentId, "DAILY"),
       });
     },
   }),
@@ -137,9 +144,15 @@ builder.mutationField("editStudentComment", (t) =>
       sentiment: t.arg.string({ required: false }),
       text: t.arg.string({ required: false }),
       attachmentIds: t.arg.stringList({ required: false }),
+      // AI-5 (D-#1095): the comment-check claim — a token from checkComment + the writer's choices.
+      aiCheckToken: t.arg.string({ required: false }),
+      aiIssuesAccepted: t.arg.int({ required: false }),
+      aiTeacherOverrode: t.arg.boolean({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
+      // AI-5: a new stamp only when the text changes (the stamp describes that text).
+      const aiCheck = args.text != null ? await stampForComment(args.commentId, { token: args.aiCheckToken, issuesAccepted: args.aiIssuesAccepted, teacherOverrode: args.aiTeacherOverrode }) : undefined;
       // The service enforces author-only UNLESS the actor is a reviewer (Principal/Office).
       return editComment({
         commentId: args.commentId,
@@ -149,6 +162,7 @@ builder.mutationField("editStudentComment", (t) =>
         attachmentIds: args.attachmentIds ?? undefined,
         actorId: ctx.auth.userId as string,
         actorIsReviewer: isReviewer(ctx),
+        aiCheck,
       });
     },
   }),
@@ -381,3 +395,13 @@ builder.queryField("commentReviewCount", (t) =>
     },
   }),
 );
+
+/** AI-5: the stamp for an edited comment — the token must be for THIS comment's student. */
+async function stampForComment(
+  commentId: string,
+  claim: { token?: string | null; issuesAccepted?: number | null; teacherOverrode?: boolean | null },
+) {
+  const doc = (await StudentComment.findById(commentId).select("studentId").lean()) as { studentId?: { toString(): string } } | null;
+  if (!doc?.studentId) return undefined;
+  return aiCheckStamp(claim, doc.studentId.toString(), "DAILY");
+}

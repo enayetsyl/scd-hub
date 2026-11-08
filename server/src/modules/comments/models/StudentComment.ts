@@ -28,6 +28,7 @@
 import { Schema, model, Document, Types } from "mongoose";
 import { COMMENT_TYPES, COMMENT_SENTIMENTS } from "@scd/shared";
 import type { CommentType, CommentSentiment } from "@scd/shared";
+import { AiCheckSchema, type IAiCheck } from "../../platform/models/aiCheckSchema";
 
 export interface IStudentComment extends Document {
   _id: Types.ObjectId;
@@ -62,6 +63,8 @@ export interface IStudentComment extends Document {
   guardianReadAt?: Date;
   /** D-#886: the Guardian who confirmed. */
   guardianReadBy?: Types.ObjectId;
+  /** AI-5 (D-#1095): the comment-check stamp — no text. Absent = checker was off. */
+  aiCheck?: IAiCheck;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -83,6 +86,7 @@ const StudentCommentSchema = new Schema<IStudentComment>(
     readConfirmRequired: { type: Boolean },
     guardianReadAt: { type: Date },
     guardianReadBy: { type: Schema.Types.ObjectId, ref: "Guardian" },
+    aiCheck: { type: AiCheckSchema },
   },
   { timestamps: true },
 );
