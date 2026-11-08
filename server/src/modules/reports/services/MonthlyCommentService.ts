@@ -23,6 +23,7 @@ import { createHash } from "crypto";
 import { renderTemplate } from "../../templates/services/MessageTemplateService";
 import type { MonthlySnapshot } from "./MonthlyReportService";
 import { geminiKey, geminiModel } from "../../platform/services/AiSettingService";
+import { meteredGeminiFetch } from "../../platform/ai/meteredFetch";
 
 /** Bumped whenever the prompt's wording or the facts' shape changes — stored on every
  *  draft so a bad batch is traceable to the prompt that produced it. Bumped to mr4-3
@@ -477,7 +478,7 @@ export class GeminiCommentProvider implements CommentProvider {
   resolvedModel: string | null = null;
 
   async generate(prompt: string): Promise<string> {
-    const res = await fetch(
+    const res = await meteredGeminiFetch("monthly_comment", this.model,
       `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent`,
       {
         method: "POST",

@@ -353,7 +353,7 @@ export const FEATURE_CATALOGUE = {
     actions: {
       view_all: { en: "Whole-school student list", bn: "সব শিক্ষার্থীর তালিকা দেখা", desc: "Student directory (class, section, groups, guardian phones)", teacher: false, office: true, flags: [] },
       create: { en: "Add a student", bn: "নতুন শিক্ষার্থী যোগ করা", desc: "Add to a class/section", teacher: false, office: true, flags: [] },
-      edit: { en: "Edit student details", bn: "শিক্ষার্থীর তথ্য ঠিক করা", desc: "Set/clear roll number", teacher: false, office: true, flags: [] },
+      edit: { en: "Edit student details", bn: "শিক্ষার্থীর তথ্য ঠিক করা", desc: "Set/clear roll number; set the Bangla name (AI-4)", teacher: false, office: true, flags: [] },
     },
   },
   guardians: {
@@ -996,6 +996,24 @@ export const FEATURE_CATALOGUE = {
       // LOCKED: a key is a paid credential — Principal only, never delegable.
       // D-#1090 (AI-1): also the DeepSeek key + model and the per-feature AI settings.
       ai_key: { en: "AI keys, models & features", bn: "এআই কী, মডেল ও সুবিধা বদলানো", desc: "Save or clear the Gemini and DeepSeek keys and models, and choose which AI answers each AI feature and whether it is switched on", teacher: false, office: false, flags: ["LOCKED"] },
+    },
+  },
+  // AI Assist (docs/prd-ai-assist.md). AI-3 (D-#1093): the AI rules — teachers read the
+  // active standard (their training sheet); only the Principal writes and switches them.
+  // AI-5 / AI-6 add the comment checker and the assistant actions here.
+  ai_assist: {
+    group: "teaching_and_trackers",
+    en: "AI assist",
+    bn: "এআই সহায়তা",
+    actions: {
+      read_rules: { en: "Read the AI comment standard", bn: "এআই-এর মন্তব্যের মানদণ্ড পড়া", desc: "The active comment standard and assistant rules (a training sheet)", teacher: true, office: true, flags: [] },
+      edit_rules: { en: "Write AI rules", bn: "এআই-এর নিয়ম লেখা ও চালু করা", desc: "Write a new version of an AI rules document, switch one on, or switch a document off", teacher: false, office: false, flags: [] },
+      // AI-5 (D-#1095): the comment checker — suggestions only; the writer decides what is saved.
+      check_comment: { en: "AI comment check", bn: "এআই দিয়ে মন্তব্য যাচাই", desc: "Check a daily or class-test comment against the active standard before saving", teacher: true, office: true, flags: [] },
+      // AI-6 (D-#1096/#1104): the teacher assistant — own conversations only.
+      chat: { en: "AI teacher assistant", bn: "এআই সহকারীর সাথে আলাপ", desc: "Ask the AI about a chapter's lesson plan; see only your own conversations", teacher: true, office: true, flags: [] },
+      // LOCKED (D-#1104): every teacher's conversations — the Principal, nobody else.
+      read_all_chats: { en: "Read every assistant conversation", bn: "সব শিক্ষকের এআই আলাপ পড়া", desc: "Read any teacher's AI assistant conversation (teachers are told this on first use)", teacher: false, office: false, flags: ["LOCKED"] },
     },
   },
   guardian_engagement: {

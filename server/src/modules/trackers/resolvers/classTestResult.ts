@@ -39,6 +39,7 @@ import {
   type SubmitOutcome,
 } from "../services/ClassTestPublishService";
 import { ForbiddenError } from "../../../middleware/authz";
+import { aiCheckStamp } from "../../platform/services/CommentCheckService";
 import {
   assertAnchorRead,
   assertAnchorWrite,
@@ -149,6 +150,10 @@ builder.mutationField("enterClassTestResult", (t) =>
       weakness: t.arg.string({ required: false }),
       teacherAction: t.arg.string({ required: false }),
       guardianAction: t.arg.string({ required: false }),
+      // AI-5 (D-#1095): the comment-check claim — a token from checkComment + the writer's choices.
+      aiCheckToken: t.arg.string({ required: false }),
+      aiIssuesAccepted: t.arg.int({ required: false }),
+      aiTeacherOverrode: t.arg.boolean({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
       if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
@@ -170,6 +175,11 @@ builder.mutationField("enterClassTestResult", (t) =>
         teacherAction: args.teacherAction ?? undefined,
         guardianAction: args.guardianAction ?? undefined,
         actorId: ctx.auth.userId as string,
+        // AI-5 (D-#1095): stamp only a PRESENT row that has comment text.
+        aiCheck:
+          args.status === "PRESENT" && [args.weakness, args.guardianAction, args.teacherAction].some((v) => !!v && v.trim())
+            ? await aiCheckStamp({ token: args.aiCheckToken, issuesAccepted: args.aiIssuesAccepted, teacherOverrode: args.aiTeacherOverrode }, args.studentId, "CT")
+            : undefined,
       });
     },
   }),

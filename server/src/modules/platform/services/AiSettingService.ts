@@ -24,6 +24,7 @@ import { ForbiddenError } from "../../../middleware/authz";
 import { User } from "../../foundation/models/User";
 import { AiSetting } from "../models/AiSetting";
 import { AiFeatureSetting } from "../models/AiFeatureSetting";
+import { AiBudgetSetting } from "../models/AiBudgetSetting";
 import { writeAudit } from "./AuditService";
 import { AI_PROVIDERS, type AiProviderName } from "../ai/provider";
 import { DEEPSEEK_BASE_URL, DEEPSEEK_DEFAULT_MODEL } from "../ai/deepseekProvider";
@@ -304,10 +305,16 @@ export async function clearAiKey(authIn: AuthPayload | null, providerIn?: string
  * Principal reads on the settings screen.
  */
 export const AI_FEATURES = [
-  { key: "comment_check", bn: "মন্তব্য যাচাই", en: "Comment checker" },
-  { key: "assistant", bn: "শিক্ষকের সহকারী", en: "Teacher assistant" },
+  // Default caps = the owner's rulings of 2026-11-08 (D-#1103); each is changeable in the app.
+  { key: "comment_check", bn: "মন্তব্য যাচাই", en: "Comment checker", dailyPerUser: 80, monthlyUsd: 3, perSessionTurns: null },
+  { key: "assistant", bn: "শিক্ষকের সহকারী", en: "Teacher assistant", dailyPerUser: 30, monthlyUsd: 5, perSessionTurns: 40 },
 ] as const;
 export type AiFeatureKey = (typeof AI_FEATURES)[number]["key"];
+
+/** The features the caps and the global budget cover. Older Gemini features are metered, not capped (D-#1124). */
+export const CAPPED_AI_FEATURES: readonly string[] = AI_FEATURES.map((f) => f.key);
+
+export const AI_BUDGET_DEFAULTS = { monthlyUsd: 8, alertPct: 70 } as const;
 
 export interface AiFeatureView {
   feature: AiFeatureKey;
@@ -322,6 +329,12 @@ export interface AiFeatureView {
   fallback: boolean;
   /** Whether the chosen provider has a key at all. */
   providerReady: boolean;
+  /** Calls one person may make per Dhaka day (AI-2). */
+  dailyPerUser: number;
+  /** USD this feature may spend per Dhaka month (AI-2). */
+  monthlyUsd: number;
+  /** Turns per assistant session; null = no per-session cap. */
+  perSessionTurns: number | null;
   updatedAt: Date | null;
 }
 
@@ -331,6 +344,9 @@ interface FeatureRow {
   provider?: AiProviderName;
   modelName?: string | null;
   fallback?: boolean;
+  dailyPerUser?: number | null;
+  monthlyUsd?: number | null;
+  perSessionTurns?: number | null;
   updatedAt?: Date;
 }
 
@@ -346,8 +362,23 @@ function featureView(f: (typeof AI_FEATURES)[number], row: FeatureRow | null): A
     model: row?.modelName || providerModel(provider),
     fallback: row?.fallback ?? true,
     providerReady: !!providerKey(provider),
+    dailyPerUser: row?.dailyPerUser ?? f.dailyPerUser,
+    monthlyUsd: row?.monthlyUsd ?? f.monthlyUsd,
+    perSessionTurns: row?.perSessionTurns ?? f.perSessionTurns,
     updatedAt: row?.updatedAt ?? null,
   };
+}
+
+/** Internal (no caller check): one feature's current settings, defaults filled in. */
+export async function aiFeatureConfig(featureKey: string): Promise<AiFeatureView> {
+  const f = findFeature(featureKey);
+  const row = ((await AiFeatureSetting.findOne({ feature: f.key }).lean()) as FeatureRow | null) ?? null;
+  return featureView(f, row);
+}
+
+function checkCap(value: number | null | undefined, label: string, max: number): void {
+  if (value === null || value === undefined) return;
+  if (!Number.isFinite(value) || value < 0 || value > max) throw new Error(`${label} ০ থেকে ${max}-এর মধ্যে দিন`);
 }
 
 function findFeature(key: string): (typeof AI_FEATURES)[number] {
@@ -370,11 +401,25 @@ export async function aiFeatureSettings(authIn: AuthPayload | null): Promise<AiF
  */
 export async function setAiFeatureSetting(
   authIn: AuthPayload | null,
-  input: { feature: string; enabled?: boolean | null; provider?: string | null; model?: string | null; fallback?: boolean | null },
+  input: {
+    feature: string;
+    enabled?: boolean | null;
+    provider?: string | null;
+    model?: string | null;
+    fallback?: boolean | null;
+    dailyPerUser?: number | null;
+    monthlyUsd?: number | null;
+    perSessionTurns?: number | null;
+  },
   test?: (provider: AiProviderName, key: string, model: string) => Promise<void>,
 ): Promise<AiFeatureView> {
   const auth = assertCanEdit(authIn);
   const f = findFeature(input.feature);
+  checkCap(input.dailyPerUser, "দৈনিক সীমা", 10_000);
+  checkCap(input.monthlyUsd, "মাসিক খরচের সীমা (ডলার)", 1_000);
+  checkCap(input.perSessionTurns, "এক আলাপে সর্বোচ্চ প্রশ্ন", 1_000);
+  if (input.dailyPerUser !== null && input.dailyPerUser !== undefined && !Number.isInteger(input.dailyPerUser)) throw new Error("দৈনিক সীমা পূর্ণ সংখ্যা দিন");
+  if (input.perSessionTurns !== null && input.perSessionTurns !== undefined && !Number.isInteger(input.perSessionTurns)) throw new Error("এক আলাপে সর্বোচ্চ প্রশ্ন পূর্ণ সংখ্যা দিন");
   await refreshAiConfig(true);
   const before = ((await AiFeatureSetting.findOne({ feature: f.key }).lean()) as FeatureRow | null) ?? null;
 
@@ -397,13 +442,19 @@ export async function setAiFeatureSetting(
   const unset: Record<string, 1> = {};
   if (modelName) set.modelName = modelName;
   else unset.modelName = 1;
+  const caps: Record<string, number> = {};
+  for (const k of ["dailyPerUser", "monthlyUsd", "perSessionTurns"] as const) {
+    const v = input[k];
+    if (v !== null && v !== undefined) caps[k] = v;
+  }
+  Object.assign(set, caps);
   await AiFeatureSetting.updateOne({ feature: f.key }, { $set: set, ...(Object.keys(unset).length ? { $unset: unset } : {}) }, { upsert: true });
   await writeAudit({
     eventKind: "AI_SETTINGS_CHANGED",
     actorId: auth.userId,
     actorRole: auth.role,
     targetKind: "AiFeatureSetting",
-    meta: { feature: f.key, enabled, provider, model: modelName ?? "(provider default)", fallback },
+    meta: { feature: f.key, enabled, provider, model: modelName ?? "(provider default)", fallback, ...caps },
   });
   const row = ((await AiFeatureSetting.findOne({ feature: f.key }).lean()) as FeatureRow | null) ?? null;
   return featureView(f, row);
@@ -429,4 +480,44 @@ export async function aiRouteFor(featureKey: string): Promise<AiRoute> {
     primary: { provider: v.provider, model: v.model, key: providerKey(v.provider) },
     fallback: v.fallback && otherKey ? { provider: other, model: providerModel(other), key: otherKey } : null,
   };
+}
+
+// ---------------------------------------------------------------------------
+// The school-wide AI budget (AI-2, D-#1103)
+// ---------------------------------------------------------------------------
+
+export interface AiBudgetView {
+  /** USD per Dhaka month across the capped AI features. */
+  monthlyUsd: number;
+  /** The Principal is alerted when any monthly cap reaches this percent. */
+  alertPct: number;
+  updatedAt: Date | null;
+}
+
+/** Internal (no caller check): the budget with defaults filled in. */
+export async function aiBudgetConfig(): Promise<AiBudgetView> {
+  const row = (await AiBudgetSetting.findOne({ name: "global" }).lean()) as { monthlyUsd?: number; alertPct?: number; updatedAt?: Date } | null;
+  return {
+    monthlyUsd: row?.monthlyUsd ?? AI_BUDGET_DEFAULTS.monthlyUsd,
+    alertPct: row?.alertPct ?? AI_BUDGET_DEFAULTS.alertPct,
+    updatedAt: row?.updatedAt ?? null,
+  };
+}
+
+export async function aiBudgetView(authIn: AuthPayload | null): Promise<AiBudgetView> {
+  assertCanEdit(authIn);
+  return aiBudgetConfig();
+}
+
+export async function setAiBudget(authIn: AuthPayload | null, input: { monthlyUsd?: number | null; alertPct?: number | null }): Promise<AiBudgetView> {
+  const auth = assertCanEdit(authIn);
+  checkCap(input.monthlyUsd, "মাসিক মোট খরচের সীমা (ডলার)", 1_000);
+  if (input.alertPct !== null && input.alertPct !== undefined && (!Number.isInteger(input.alertPct) || input.alertPct < 1 || input.alertPct > 100)) {
+    throw new Error("সতর্কবার্তার শতাংশ ১ থেকে ১০০-এর মধ্যে পূর্ণ সংখ্যা দিন");
+  }
+  const now = await aiBudgetConfig();
+  const next = { monthlyUsd: input.monthlyUsd ?? now.monthlyUsd, alertPct: input.alertPct ?? now.alertPct };
+  await AiBudgetSetting.updateOne({ name: "global" }, { $set: { ...next, updatedBy: new Types.ObjectId(auth.userId) } }, { upsert: true });
+  await writeAudit({ eventKind: "AI_SETTINGS_CHANGED", actorId: auth.userId, actorRole: auth.role, targetKind: "AiBudgetSetting", meta: next });
+  return aiBudgetConfig();
 }

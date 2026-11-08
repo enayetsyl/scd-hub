@@ -30,6 +30,7 @@ import { submitPatch, type PatchEnvelope } from "./MergeService";
 import { writeBookEvent } from "../models/BookEvent";
 import type { ValidatorReport } from "./validator/index";
 import { geminiKey } from "../../platform/services/AiSettingService";
+import { meteredGeminiFetch } from "../../platform/ai/meteredFetch";
 
 export class AuthorChatError extends Error {
   constructor(message: string) {
@@ -96,7 +97,7 @@ export class GeminiAuthorProvider implements AuthorProvider {
     expectPatch: boolean;
     schema: typeof PATCH_RESPONSE_SCHEMA;
   }): Promise<ProviderReply> {
-    const res = await fetch(
+    const res = await meteredGeminiFetch("book_author", this.model,
       `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent`,
       {
         method: "POST",

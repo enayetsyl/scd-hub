@@ -14,6 +14,7 @@ import { AI_SETTINGS_QUERY, CLEAR_AI_KEY, SET_AI_SETTINGS, type AiProviderT } fr
 import type { AdminStackParamList } from "../../navigation/types";
 import { Screen, Card, Body, Muted, Button, Field, Notice, Loader, ErrorBanner, Chip, ChipRow } from "../../components/ui";
 import { ConfirmSheet } from "../../components/ConfirmSheet";
+import { AiFeaturesSection } from "../../components/AiFeaturesSection";
 import { STR } from "../../lib/labels";
 import { friendlyError } from "../../lib/errors";
 import { space } from "../../theme/tokens";
@@ -139,6 +140,9 @@ export default function AiSettingsScreen(_props: Props): React.ReactElement {
           </View>
         ) : null}
       </Card>
+
+      {/* AI-5 (D-#1122/#1126): which AI answers each feature, the switches and the limits. */}
+      <AiFeaturesSection />
 
       <ConfirmSheet
         visible={confirmClear}

@@ -337,6 +337,13 @@ export type QuranExamStackParamList = {
   QuranExamPaper: { examId: string; level: string };
 };
 /** D-#1080 — Nursery & KG oral exam (viva). VivaHome stays first: the initial route takes no params. */
+/** AI-6 (D-#1096) — the AI teacher assistant. AiAssistHome stays first: the initial route takes no params. */
+export type AiAssistStackParamList = {
+  AiAssistHome: undefined;
+  AiAssistNew: undefined;
+  AiAssistChat: { sessionId: string };
+};
+
 export type VivaStackParamList = {
   VivaHome: undefined;
   VivaSheet: { paperId: string };
@@ -692,6 +699,12 @@ export type AdminStackParamList = {
   SystemHealth: undefined;
   // D-#967: the Gemini key + model (system_health:ai_key, LOCKED).
   AiSettings: undefined;
+  // AI-3 (D-#1093): versioned AI rules (ai_assist:edit_rules / read_rules).
+  AiRules: undefined;
+  AiRule: { key: "comment_standard" | "ct_comment_standard" | "assistant_rules" };
+  AiRuleEdit: { key: "comment_standard" | "ct_comment_standard" | "assistant_rules"; fromId?: string };
+  // AI-4 (D-#1131): students' Bangla names (students:edit).
+  StudentBanglaNames: undefined;
   // D-#290: who didn't submit reconciliation (Principal/Office).
   ReconciliationReport: { date?: string } | undefined;
   // D-#300: per subject × class homework lifecycle report (Principal/Office).
@@ -849,4 +862,5 @@ export type TabParamList = {
   /** D-#873 — Quran oral exam (Office plan + examiners' marks). */
   QuranExamTab: NavigatorScreenParams<QuranExamStackParamList>;
   VivaTab: NavigatorScreenParams<VivaStackParamList>;
+  AiAssistTab: NavigatorScreenParams<AiAssistStackParamList>;
 };

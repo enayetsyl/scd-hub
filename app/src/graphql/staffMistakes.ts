@@ -142,18 +142,6 @@ const WARNING_FIELDS = `
   meetingRecordedByName meetingWho meetingDiscussion meetingActions followUpDateKey createdAt
 `;
 
-export const MY_STAFF_WARNING = gql<{ myStaffWarning: StaffWarningT | null }>`
-  query MyStaffWarning { myStaffWarning { ${WARNING_FIELDS} } }
-`;
-
-export const ACK_STAFF_WARNING = gql<{ acknowledgeStaffWarning: boolean }, { id: string; otherTime?: boolean | null }>`
-  mutation AcknowledgeStaffWarning($id: String!, $otherTime: Boolean) { acknowledgeStaffWarning(id: $id, otherTime: $otherTime) }
-`;
-
-export const MY_STAFF_WARNINGS = gql<{ myStaffWarnings: StaffWarningT[] }>`
-  query MyStaffWarnings { myStaffWarnings { ${WARNING_FIELDS} } }
-`;
-
 export const STAFF_WARNINGS = gql<{ staffWarnings: StaffWarningT[] }, { staffUserId: string }>`
   query StaffWarnings($staffUserId: String!) { staffWarnings(staffUserId: $staffUserId) { ${WARNING_FIELDS} } }
 `;

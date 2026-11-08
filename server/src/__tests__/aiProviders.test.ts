@@ -114,7 +114,7 @@ describe("Gemini", () => {
     const { fn, sent } = fakeFetch([gOk([{ text: "ভাবনা…", thought: true }, { text: "উত্তর।" }])]);
     const r = await new GeminiProvider("g", fn).send(base("x"), "gemini-flash-latest");
     expect(r.text).toBe("উত্তর।");
-    expect(r.usage).toEqual({ cacheHitTokens: 4000, cacheMissTokens: 2000, outputTokens: 300, reasoningTokens: 900 });
+    expect(r.usage).toEqual({ cacheHitTokens: 4000, cacheMissTokens: 2000, outputTokens: 1200, reasoningTokens: 900 });
     expect(r.resolvedModel).toBe("gemini-3.6-flash-001");
     expect(sent[0].url).toContain("/models/gemini-flash-latest:generateContent");
   });
@@ -129,6 +129,9 @@ describe("Gemini", () => {
     await expect(new GeminiProvider("g", fn).send(base("x"), "gemini-flash-latest")).rejects.toMatchObject({ kind: "truncated" });
   });
 });
+
+/** No database: caps always pass, rows are dropped. The ledger itself is tested in aiUsage.test.ts. */
+const nullLedger = { assertWithinCaps: async () => {}, record: async () => {}, afterCall: async () => 0 };
 
 describe("the router", () => {
   const route = (r: Partial<AiRoute> = {}): (() => Promise<AiRoute>) => async () => ({
@@ -161,13 +164,13 @@ describe("the router", () => {
 
   test("a switched-off feature sends nothing", async () => {
     const { make, calls } = factory({ deepseek: "ok" });
-    await expect(aiSend("comment_check", base("x"), { route: route({ enabled: false }), makeProvider: make })).rejects.toBeInstanceOf(AiFeatureOffError);
+    await expect(aiSend("comment_check", base("x"), {}, { ledger: nullLedger,  route: route({ enabled: false }), makeProvider: make })).rejects.toBeInstanceOf(AiFeatureOffError);
     expect(calls).toEqual([]);
   });
 
   test("the chosen provider answers → one attempt", async () => {
     const { make, calls } = factory({ deepseek: "ok" });
-    const out = await aiSend("comment_check", base("x"), { route: route(), makeProvider: make });
+    const out = await aiSend("comment_check", base("x"), {}, { ledger: nullLedger,  route: route(), makeProvider: make });
     expect(calls).toEqual(["deepseek"]);
     expect(out.attempts).toHaveLength(1);
     expect(out.result.provider).toBe("deepseek");
@@ -175,7 +178,7 @@ describe("the router", () => {
 
   test("the chosen provider fails → the other is tried ONCE, both attempts returned", async () => {
     const { make, calls } = factory({ deepseek: "busy", gemini: "ok" });
-    const out = await aiSend("comment_check", base("x"), { route: route(), makeProvider: make });
+    const out = await aiSend("comment_check", base("x"), {}, { ledger: nullLedger,  route: route(), makeProvider: make });
     expect(calls).toEqual(["deepseek", "gemini"]);
     expect(out.attempts.map((a) => [a.provider, a.outcome, a.errorKind ?? null, a.fallback])).toEqual([
       ["deepseek", "error", "busy", false],
@@ -185,7 +188,7 @@ describe("the router", () => {
 
   test("both fail → the last error, carrying both attempts; no third try", async () => {
     const { make, calls } = factory({ deepseek: "busy", gemini: "busy" });
-    const err = await aiSend("comment_check", base("x"), { route: route(), makeProvider: make }).catch((e) => e);
+    const err = await aiSend("comment_check", base("x"), {}, { ledger: nullLedger,  route: route(), makeProvider: make }).catch((e) => e);
     expect(err).toBeInstanceOf(AiProviderError);
     expect((err as { attempts: unknown[] }).attempts).toHaveLength(2);
     expect(calls).toEqual(["deepseek", "gemini"]);
@@ -193,11 +196,11 @@ describe("the router", () => {
 
   test("no fallback configured → one attempt; no key for the chosen provider → not_configured", async () => {
     const one = factory({ deepseek: "busy" });
-    await expect(aiSend("comment_check", base("x"), { route: route({ fallback: null }), makeProvider: one.make })).rejects.toMatchObject({ kind: "busy" });
+    await expect(aiSend("comment_check", base("x"), {}, { ledger: nullLedger,  route: route({ fallback: null }), makeProvider: one.make })).rejects.toMatchObject({ kind: "busy" });
     expect(one.calls).toEqual(["deepseek"]);
     const none = factory({});
     await expect(
-      aiSend("comment_check", base("x"), { route: route({ primary: { provider: "deepseek", model: "deepseek-flash", key: null }, fallback: null }), makeProvider: none.make }),
+      aiSend("comment_check", base("x"), {}, { ledger: nullLedger,  route: route({ primary: { provider: "deepseek", model: "deepseek-flash", key: null }, fallback: null }), makeProvider: none.make }),
     ).rejects.toMatchObject({ kind: "not_configured" });
     expect(none.calls).toEqual([]);
   });
