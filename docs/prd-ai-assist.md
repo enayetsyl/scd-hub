@@ -45,6 +45,7 @@ Where the planning document and the live repo disagreed, the live repo wins; the
 - **P7 — The SB-6 prefix precedent is live.** `AuthorProvider.send({ policyPrefix, variablePart, … })` already splits the stable prefix from the variable part, and `supportBookAuthorChat.test.ts` ("the policy prefix — cacheability is the feature") asserts prefix stability. AI-1's interface mirrors that split.
 - **P8 — `AiPolicy` vs support-book `PolicyDoc` (D-#403).** `PolicyDoc` is the support-book programme's governance store with its own `POLICY_DOC_KEYS`. AI-3 uses a separate `AiPolicy` collection (different readers, editors and keys); it may copy `PolicyDoc`'s versioning pattern.
 - **P9 — Comment shapes.** A new field on `StudentComment` must also appear on the GraphQL shapes `StudentCommentShape` / `AuthoredCommentShape` (`StudentCommentService`); the D-#886 lesson was that adding it to one but not the other breaks part of the app.
+- **P11 — The roster alone cannot de-identify (found 2026-11-08 while drafting the seed standard).** Only 17 of 91 active students have a Bangla name (`nameBn`), and teachers write children's first names and nicknames in Bangla, so a roster swap left a child's first name in about 19 of 105 sampled daily comments (staff have English names only, too). AI-4 must not ship on the roster as it stands: before AI-8 switch-on, Office fills `nameBn` (plus any Bangla nickname) for students and staff, and the outbound check also looks for first names from the section roster. Details: `docs/ai-assist/seed-standard-memo.md` §4.
 - **P10 — Unverified vendor facts.** The DeepSeek model ids (`deepseek-flash`, `deepseek-v4-pro`), the cache-token field names and the peak/off-peak prices are from the planning session and were NOT checked against DeepSeek's live documentation here. AI-1 confirms them before writing the price table.
 
 ## 0. One-screen summary (checklist)
@@ -110,6 +111,7 @@ Each slice is its own branch off `dev`, its own PR, and its own D-# rows. AI-7's
 - **`deidentify(text, scope)`** replaces roster names (student, guardian, staff, including known spelling variants), phone numbers, roll numbers and tracker ids with stable tokens (`[S1]`, `[G1]`, `[T1]`). It returns `{ text, map }`. `reidentify(text, map)` restores them.
 - **Fail-closed (P6):** after the swap, a final check looks for any in-scope roster name left in the outbound text; if one is found, the call is refused, not sent.
 - **Scope** comes from the record being checked (that student and that section) or, in the assistant, the teacher's sections.
+- **Roster coverage (P11):** the roster today lacks most Bangla names, so a roster-only swap leaks first names. Filling `nameBn` (and Bangla nicknames) for students and staff is a precondition of switch-on.
 - **The map never leaves the server and is never logged with the prompt.**
 - **Tests:** Bangla and English names, ব/ভ and ী/ি spelling variants, phone formats, and a name inside a longer word that must NOT be replaced.
 
