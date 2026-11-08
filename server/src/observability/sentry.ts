@@ -144,6 +144,8 @@ export const EXPECTED_ERROR_NAMES: ReadonlySet<string> = new Set([
   // Quran oral exam (D-#873): a mark out of range, an overlapping sitting, a locked exam —
   // the Office's or examiner's input, never a fault.
   "QuranExamError",
+  // Nursery & KG oral exam (D-#1080): a mark out of range, a locked paper, not your child.
+  "VivaError",
   // Exam routine (D-#883): a bad date/time or a duplicate slot — the Office's input.
   "ExamRoutineError",
   // Staff mistake record (D-#936–#939): not your entry, decided already, bad reason.

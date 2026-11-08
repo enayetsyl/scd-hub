@@ -1,6 +1,6 @@
 # Content, questions, sets, exams, scholarship & books — build checklist
 
-Features: `lesson_plans`, `plan_review`, `question_bank`, `question_review`, `question_sets`, `exam_syllabus`, `scholarship_practice`, `quran_exam`, `exam_routine`, `mastery`, `book_production` (owner rows: see README). Source: inventory F, origin/dev 2026-10-20.
+Features: `lesson_plans`, `plan_review`, `question_bank`, `question_review`, `question_sets`, `exam_syllabus`, `scholarship_practice`, `quran_exam`, `viva`, `exam_routine`, `mastery`, `book_production` (owner rows: see README). Source: inventory F, origin/dev 2026-10-20.
 Counts: 56 mutations, 73 queries, 7 REST/SSE.
 
 ## (a) Mutations
@@ -395,6 +395,21 @@ All in `server/src/modules/quran-exam/resolvers/quranExam.ts`. Row scope lives i
 App gates: drawer leaf + syllabus-home button on any of the three actions; Edit on `manage`; Publish on `publish`.
 
 App gates: tab `QuranExamTab` = any of view / manage / examine; publish / lock / manage / remind buttons each check their own action; the Today card checks `examine`; the guardian card and pop-ups are GUARDIAN-only.
+
+## (j2) `viva` — Nursery & KG oral exam (added 2026-11-06, D-#1080–#1084)
+
+All in `server/src/modules/viva/resolvers/viva.ts`. Row scope lives in `VivaService`: `examine` reads and marks only the children whose examiner is the caller; `edit_all` marks any child; a locked paper refuses every write.
+
+| resolver | gate |
+|---|---|
+| vivaOverview | hasAnyPermission(`viva:view`, `viva:manage`) |
+| myVivaPapers | `viva:examine` (SELF: papers where the caller hears at least one child) |
+| vivaSheet | hasAnyPermission(view, manage, edit_all, lock, examine); svc: examine = own children only |
+| vivaExaminerCandidates, saveVivaPaper, saveVivaExaminers | `viva:manage` |
+| setVivaMark, setVivaAbsent | hasAnyPermission(`viva:examine`, `viva:edit_all`); svc: examine = own child only; refused when locked |
+| lockVivaPaper | `viva:lock` |
+
+App gates: tab `VivaTab` = any of view / manage / examine; question and examiner edits on `manage`; lock on `lock`; the Today card on `examine`.
 
 ## (k) `exam_papers` — exam paper bank (added 2026-11-06, D-#1030–#1034)
 
