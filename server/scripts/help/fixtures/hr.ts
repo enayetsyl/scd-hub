@@ -226,7 +226,7 @@ async function seedHr() {
     });
     if (m) await explainMistake({ mistakeId: m._id.toString(), actorId: users.teacher2.toString(), reasonCode: "WRONG_DETAIL", reasonText: "", now: at(day) });
   }
-  // The face-to-face step is booked, so teacher2 sees the warning pop-up with the time.
+  // The face-to-face step is booked (the summary's meeting card). Staff never see a warning (D-#1150).
   const meetingStep = await StaffWarning.findOne({ staffUserId: users.teacher2, step: "MEETING" });
   if (meetingStep) {
     await scheduleMeeting({ warningId: meetingStep._id.toString(), actorId: P, at: "2026-11-10T12:30:00+06:00", place: "প্রধান শিক্ষকের কক্ষ" });

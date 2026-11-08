@@ -266,13 +266,6 @@ const DOMAIN_NOTES = [
   "শ্রেণিকক্ষ শান্ত ছিল।",
 ];
 async function observerReview(h, T2) {
-  // teacher2 has a booked warning meeting: the pop-up greets them first.
-  const okBtn = T2.getByText("বুঝেছি — সময়টা ঠিক আছে", { exact: true });
-  await okBtn.first().waitFor({ timeout: 20000 }).catch(() => {});
-  if (await okBtn.count()) {
-    await h.shot(T2, "hr-mistake-warning", 0, [t("সতর্কবার্তা"), t("বুঝেছি — সময়টা ঠিক আছে"), t("অন্য সময় চাই")]);
-    await h.tap(T2, "বুঝেছি — সময়টা ঠিক আছে", 2500);
-  }
   await fresh(T2);
   await menu(h, T2, "পর্যবেক্ষণ");
   await h.tap(T2, { text: "আমার রিভিউ কিউ", minY: 100 }, 3500);

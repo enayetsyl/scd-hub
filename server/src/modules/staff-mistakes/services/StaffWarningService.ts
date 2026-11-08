@@ -2,7 +2,7 @@
  * The warning ladder (D-#940–#942, docs/prd-staff-mistakes.md §9).
  *
  *   evaluateLadder     after a mistake is counted: has the person reached a rung?
- *   myOpenWarning      the person's unseen warning (the pop-up)
+ *   myOpenWarning      the person's unseen warning (the old pop-up; no longer served, D-#1150)
  *   acknowledgeWarning "বুঝেছি", or "অন্য সময় চাই" for a booked meeting
  *   scheduleMeeting    Office / the Principal book the face-to-face talk
  *   recordMeeting      …and write down what was said and agreed
@@ -23,7 +23,6 @@ import { holderIdsOf } from "../../access-control/services/holders";
 import { ownedByPrincipal, warningAudience } from "./principalPrivacy";
 import {
   emitStaffWarningMeeting,
-  emitStaffWarningReached,
   emitStaffWarningStep,
 } from "../../notifications/services/emitters";
 import { getStaffMistakeSettings } from "./StaffMistakeSettingsService";
@@ -67,11 +66,9 @@ export async function evaluateLadder(staffUserId: string, now: Date = new Date()
   }
   if (created.length === 0) return created;
 
-  const top = [...created].sort((a, b) => STEP_ORDER[b.step] - STEP_ORDER[a.step])[0]!;
   const user = await User.findById(person).select("name nameBn").lean();
   const name = personName(user, "একজন কর্মী");
-  // The person hears once (the highest step); the pop-up shows on their next app open.
-  await emitStaffWarningReached({ warningId: top._id, recipientUserId: person, step: top.step, count: top.weightedCount, windowDays: top.windowDays });
+  // D-#1150: the person is told nothing — only the Principal / meeting holders hear.
   for (const w of created) {
     await writeAudit({
       eventKind: "STAFF_WARNING_REACHED",
