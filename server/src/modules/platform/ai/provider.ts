@@ -42,8 +42,9 @@ export interface AiSendInput {
 export interface AiTokenUsage {
   cacheHitTokens: number;
   cacheMissTokens: number;
+  /** Billed output tokens — INCLUDES any reasoning/thinking tokens. */
   outputTokens: number;
-  /** Null when the provider does not report it. */
+  /** The reasoning part of `outputTokens`; null when the provider does not report it. */
   reasoningTokens: number | null;
 }
 

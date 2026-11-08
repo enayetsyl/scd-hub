@@ -18,6 +18,7 @@ import { normalizePhone } from "../../foundation/services/credentials";
 import { GEMINI_DEFAULT_MODEL, GEMINI_LITE_MODEL, geminiKey, geminiModel, refreshAiConfig } from "../../platform/services/AiSettingService";
 import { allStaffUsers, type BoardUser } from "../services/WorkBoardService";
 import { buildDraft, buildVoicePrompt, VOICE_TASK_SCHEMA, type RawVoiceReply, type VoiceStaff, type VoiceTaskDraft } from "./voiceTaskDraft";
+import { meteredGeminiFetch } from "../../platform/ai/meteredFetch";
 
 /** 90 s of 16 kHz mono 16-bit WAV is ~2.9 MB → ~3.9 MB base64; room for other formats. */
 export const MAX_AUDIO_BASE64 = 6_000_000;
@@ -73,7 +74,7 @@ export class GeminiVoiceModel implements VoiceModel {
     const started = Date.now();
     const left = () => TOTAL_BUDGET_MS - (Date.now() - started);
     const attempt = (model: string, ms: number) =>
-      fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+      meteredGeminiFetch("voice_task", model, `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-goog-api-key": this.apiKey },
         body,

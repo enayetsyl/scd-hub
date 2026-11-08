@@ -1,17 +1,20 @@
 /**
- * aiSend — the single entry point for every NEW AI feature (AI-1, D-#1090).
+ * aiSend — the single entry point for every NEW AI feature (AI-1 D-#1120, metered by AI-2).
  *
  *   1. read the feature's route (switch, provider + model, fallback) from AiSettingService;
- *   2. a switched-off feature throws `AiFeatureOffError` before anything is sent — callers
- *      fail open (D-#1100): the teacher can always save without a check;
- *   3. try the chosen provider; on ANY failure try the other provider ONCE (if fallback is
+ *   2. a switched-off feature throws `AiFeatureOffError` before anything is sent;
+ *   3. the caps are checked BEFORE sending (D-#1092) — a refusal is `AiCapError` and one
+ *      `capped` ledger row; callers fail open (D-#1100): a teacher can always save unchecked;
+ *   4. try the chosen provider; on ANY failure try the other provider ONCE (if fallback is
  *      on and it has a key);
- *   4. return the result plus every attempt.
- *
- * `attempts` exists for AI-2: the usage ledger (D-#1091) is written here, in this one
- * place, so no caller can skip it. Until AI-2 lands, nothing is recorded.
+ *   5. write one `AiUsage` row per attempt, with its cost (D-#1091) — this is the ONE place
+ *      the new features are metered, so no caller can skip it — then check the budget
+ *      alert in the background.
  */
+import { randomUUID } from "crypto";
 import { aiRouteFor } from "../services/AiSettingService";
+import { alertIfBudget, assertWithinCaps, recordAiUsage, type AiUsageRowInput, type CapContext } from "../services/AiUsageService";
+import { costUsd } from "./aiPrices";
 import { DeepseekProvider } from "./deepseekProvider";
 import { GeminiProvider } from "./geminiProvider";
 import {
@@ -44,9 +47,38 @@ export interface AiAttempt {
 export interface AiSendOutcome {
   result: AiSendResult;
   attempts: AiAttempt[];
+  /** Groups this call's ledger rows. */
+  callId: string;
+}
+
+/** Who asked, and about what — stamped on every ledger row. No text, ever. */
+export interface AiCallContext {
+  /** Absent for a scheduler / system call. */
+  userId?: string | null;
+  role?: string | null;
+  /** The record the call is about (e.g. "StudentComment" + its id). */
+  refType?: string | null;
+  refId?: string | null;
+  /** The assistant session, for the per-session cap; stored as refId when no refId is given. */
+  sessionId?: string | null;
+  /** The AiPolicy version the prompt was built from (AI-3). */
+  policyHash?: string | null;
 }
 
 export type ProviderFactory = (provider: AiProviderName, key: string) => AiProvider;
+
+export interface AiLedger {
+  assertWithinCaps(ctx: CapContext): Promise<void>;
+  record(rows: AiUsageRowInput[]): Promise<void>;
+  /** Runs after the call, not awaited; must never throw. */
+  afterCall(feature: string): Promise<unknown>;
+}
+
+export const defaultLedger: AiLedger = {
+  assertWithinCaps,
+  record: recordAiUsage,
+  afterCall: (feature) => alertIfBudget(feature),
+};
 
 export const defaultProviderFactory: ProviderFactory = (provider, key) =>
   provider === "deepseek" ? new DeepseekProvider(key) : new GeminiProvider(key);
@@ -54,11 +86,29 @@ export const defaultProviderFactory: ProviderFactory = (provider, key) =>
 export async function aiSend(
   feature: string,
   input: AiSendInput,
-  deps: { makeProvider?: ProviderFactory; route?: typeof aiRouteFor } = {},
+  ctx: AiCallContext,
+  deps: { makeProvider?: ProviderFactory; route?: typeof aiRouteFor; ledger?: AiLedger; now?: () => Date } = {},
 ): Promise<AiSendOutcome> {
   const route = await (deps.route ?? aiRouteFor)(feature);
   if (!route.enabled) throw new AiFeatureOffError(feature);
   const make = deps.makeProvider ?? defaultProviderFactory;
+  const ledger = deps.ledger ?? defaultLedger;
+  const now = deps.now ?? (() => new Date());
+  const callId = randomUUID();
+  const refId = ctx.refId ?? ctx.sessionId ?? null;
+
+  await ledger.assertWithinCaps({
+    feature,
+    userId: ctx.userId,
+    role: ctx.role,
+    sessionId: ctx.sessionId,
+    callId,
+    provider: route.primary.provider,
+    model: route.primary.model,
+    refType: ctx.refType,
+    refId,
+    at: now(),
+  });
 
   const plan: Array<{ provider: AiProviderName; model: string; key: string | null; fallback: boolean }> = [
     { ...route.primary, fallback: false },
@@ -66,23 +116,58 @@ export async function aiSend(
   ];
 
   const attempts: AiAttempt[] = [];
+  const rows: AiUsageRowInput[] = [];
+  const row = (step: (typeof plan)[number], attempt: AiAttempt, at: Date): AiUsageRowInput => ({
+    at,
+    userId: ctx.userId,
+    role: ctx.role,
+    feature,
+    callId,
+    attempt: attempts.length,
+    refType: ctx.refType,
+    refId,
+    policyHash: ctx.policyHash,
+    provider: step.provider,
+    model: step.model,
+    resolvedModel: attempt.result?.resolvedModel ?? null,
+    cacheHitTokens: attempt.result?.usage.cacheHitTokens ?? 0,
+    cacheMissTokens: attempt.result?.usage.cacheMissTokens ?? 0,
+    outputTokens: attempt.result?.usage.outputTokens ?? 0,
+    reasoningTokens: attempt.result?.usage.reasoningTokens ?? null,
+    costUsd: attempt.result ? costUsd(step.provider, step.model, attempt.result.usage, at) : 0,
+    latencyMs: attempt.latencyMs,
+    outcome: attempt.outcome === "error" ? "error" : step.fallback ? "fallback" : "ok",
+    errorKind: attempt.errorKind ?? null,
+  });
+
   let lastError: AiProviderError | null = null;
+  let answer: AiSendResult | null = null;
   for (const step of plan) {
-    const started = Date.now();
+    const started = now();
+    let attempt: AiAttempt;
     if (!step.key) {
       lastError = new AiProviderError("not_configured", `no key for ${step.provider}`, step.provider);
-      attempts.push({ provider: step.provider, model: step.model, outcome: "error", errorKind: "not_configured", fallback: step.fallback, latencyMs: 0 });
-      continue;
+      attempt = { provider: step.provider, model: step.model, outcome: "error", errorKind: "not_configured", fallback: step.fallback, latencyMs: 0 };
+    } else {
+      try {
+        const result = await make(step.provider, step.key).send(input, step.model);
+        attempt = { provider: step.provider, model: step.model, outcome: "ok", fallback: step.fallback, latencyMs: result.latencyMs, result };
+        answer = result;
+      } catch (e) {
+        const err = e instanceof AiProviderError ? e : new AiProviderError("network", (e as Error)?.message ?? "unknown error", step.provider);
+        lastError = err;
+        attempt = { provider: step.provider, model: step.model, outcome: "error", errorKind: err.kind, fallback: step.fallback, latencyMs: now().getTime() - started.getTime() };
+      }
     }
-    try {
-      const result = await make(step.provider, step.key).send(input, step.model);
-      attempts.push({ provider: step.provider, model: step.model, outcome: "ok", fallback: step.fallback, latencyMs: result.latencyMs, result });
-      return { result, attempts };
-    } catch (e) {
-      const err = e instanceof AiProviderError ? e : new AiProviderError("network", (e as Error)?.message ?? "unknown error", step.provider);
-      lastError = err;
-      attempts.push({ provider: step.provider, model: step.model, outcome: "error", errorKind: err.kind, fallback: step.fallback, latencyMs: Date.now() - started });
-    }
+    attempts.push(attempt);
+    // A not_configured step sent nothing, so it costs nothing and is not a provider call.
+    if (attempt.errorKind !== "not_configured") rows.push(row(step, attempt, started));
+    if (answer) break;
   }
-  throw Object.assign(lastError ?? new AiProviderError("not_configured", "no provider", route.primary.provider), { attempts });
+
+  await ledger.record(rows);
+  void ledger.afterCall(feature).catch(() => undefined);
+
+  if (answer) return { result: answer, attempts, callId };
+  throw Object.assign(lastError ?? new AiProviderError("not_configured", "no provider", route.primary.provider), { attempts, callId });
 }

@@ -9,11 +9,14 @@
  */
 import { builder } from "../../../schema";
 import {
+  aiBudgetView,
   aiFeatureSettings,
   aiSettingsView,
   clearAiKey,
+  setAiBudget,
   setAiFeatureSetting,
   setAiSettings,
+  type AiBudgetView,
   type AiFeatureView,
   type AiSettingsView,
 } from "../services/AiSettingService";
@@ -42,9 +45,39 @@ const AiFeatureRef = builder.objectRef<AiFeatureView>("AiFeatureSetting").implem
     model: t.string({ description: "The model that will answer.", resolve: (v) => v.model }),
     fallback: t.boolean({ description: "May try the other provider once.", resolve: (v) => v.fallback }),
     providerReady: t.boolean({ description: "The chosen provider has a key.", resolve: (v) => v.providerReady }),
+    dailyPerUser: t.int({ description: "Calls one person may make per Dhaka day (AI-2).", resolve: (v) => v.dailyPerUser }),
+    monthlyUsd: t.float({ description: "USD this feature may spend per Dhaka month (AI-2).", resolve: (v) => v.monthlyUsd }),
+    perSessionTurns: t.int({ nullable: true, description: "Turns per assistant session; null = none.", resolve: (v) => v.perSessionTurns }),
     updatedAt: t.string({ nullable: true, resolve: (v) => (v.updatedAt ? new Date(v.updatedAt).toISOString() : null) }),
   }),
 });
+
+const AiBudgetRef = builder.objectRef<AiBudgetView>("AiBudget").implement({
+  fields: (t) => ({
+    monthlyUsd: t.float({ description: "USD per Dhaka month across the capped AI features.", resolve: (v) => v.monthlyUsd }),
+    alertPct: t.int({ description: "Alert the Principal when a monthly cap reaches this percent.", resolve: (v) => v.alertPct }),
+    updatedAt: t.string({ nullable: true, resolve: (v) => (v.updatedAt ? new Date(v.updatedAt).toISOString() : null) }),
+  }),
+});
+
+builder.queryField("aiBudget", (t) =>
+  t.field({
+    type: AiBudgetRef,
+    description: "The school-wide AI budget and alert percent (AI-2). system_health:ai_key.",
+    authScopes: { hasPermission: "system_health:ai_key" },
+    resolve: (_root, _args, ctx) => aiBudgetView(ctx.auth),
+  }),
+);
+
+builder.mutationField("setAiBudget", (t) =>
+  t.field({
+    type: AiBudgetRef,
+    description: "Change the school-wide AI budget and/or the alert percent. Audited.",
+    authScopes: { hasPermission: "system_health:ai_key" },
+    args: { monthlyUsd: t.arg.float({ required: false }), alertPct: t.arg.int({ required: false }) },
+    resolve: (_root, args, ctx) => setAiBudget(ctx.auth, { monthlyUsd: args.monthlyUsd, alertPct: args.alertPct }),
+  }),
+);
 
 builder.queryField("aiSettings", (t) =>
   t.field({
@@ -100,8 +133,20 @@ builder.mutationField("setAiFeatureSetting", (t) =>
       provider: t.arg.string({ required: false }),
       model: t.arg.string({ required: false }),
       fallback: t.arg.boolean({ required: false }),
+      dailyPerUser: t.arg.int({ required: false }),
+      monthlyUsd: t.arg.float({ required: false }),
+      perSessionTurns: t.arg.int({ required: false }),
     },
     resolve: (_root, args, ctx) =>
-      setAiFeatureSetting(ctx.auth, { feature: args.feature, enabled: args.enabled, provider: args.provider, model: args.model, fallback: args.fallback }),
+      setAiFeatureSetting(ctx.auth, {
+        feature: args.feature,
+        enabled: args.enabled,
+        provider: args.provider,
+        model: args.model,
+        fallback: args.fallback,
+        dailyPerUser: args.dailyPerUser,
+        monthlyUsd: args.monthlyUsd,
+        perSessionTurns: args.perSessionTurns,
+      }),
   }),
 );

@@ -33,6 +33,9 @@ export const EXPECTED_ERROR_NAMES: ReadonlySet<string> = new Set([
   // An AI feature that is switched off (AI-1, D-#1122): "এই এআই সুবিধাটি এখন বন্ধ আছে".
   // The Principal's switch working, never a fault; callers fail open (D-#1100).
   "AiFeatureOffError",
+  // An AI call refused by a cap (AI-2, D-#1092): a person's daily limit, a session's turns,
+  // a feature's or the school's monthly budget. A Bangla sentence; callers fail open.
+  "AiCapError",
   // A login refused by the lockout (D-#765): too many wrong passwords on the account or
   // from the network. A Bangla sentence telling the person how long to wait — the lockout
   // working, not a fault.
