@@ -143,7 +143,7 @@ export async function commentCheckAvailability(auth: AuthPayload | null): Promis
   return { daily: !!cs, ct: !!cs && !!ct };
 }
 
-function parseReply(json: unknown, allowed: Set<string>): { issues: CheckIssue[]; corrected: Record<string, string> } {
+export function parseReply(json: unknown, allowed: Set<string>): { issues: CheckIssue[]; corrected: Record<string, string> } {
   const o = (json ?? {}) as { issues?: unknown; corrected?: unknown };
   const issues: CheckIssue[] = [];
   if (Array.isArray(o.issues)) {
@@ -165,9 +165,24 @@ function parseReply(json: unknown, allowed: Set<string>): { issues: CheckIssue[]
   return { issues, corrected };
 }
 
-export async function checkComment(auth: AuthPayload | null, input: CheckInput): Promise<CheckResult> {
-  if (!auth) throw new ForbiddenError("Unauthenticated");
-  if (!callerHasPermission(auth, "ai_assist:check_comment")) throw new ForbiddenError("মন্তব্য যাচাইয়ের অনুমতি নেই");
+/** A check ready to send: the de-identified prompt plus what is needed to read the answer. */
+export interface PreparedCheck {
+  kind: CheckKind;
+  studentId: string;
+  fields: Array<{ field: string; text: string }>;
+  deid: Array<{ field: string; text: string }>;
+  map: Record<string, string>;
+  policyHash: string;
+  stablePrefix: string;
+  variablePart: string;
+}
+
+/**
+ * Everything before the AI call: the active standard(s), the de-identified fields, the
+ * fail-closed gate, the prompt. Shared by the live checker and the AI-8 bake-off, so the
+ * bake-off measures exactly what teachers will get.
+ */
+export async function prepareCheck(input: CheckInput): Promise<PreparedCheck | CheckResult> {
   const kind: CheckKind = input.kind === "CT" ? "CT" : "DAILY";
   const allowedFields = kind === "DAILY" ? ["text"] : [...CT_FIELDS];
   const fields = input.fields
@@ -206,13 +221,52 @@ export async function checkComment(auth: AuthPayload | null, input: CheckInput):
     variable.markPct = Math.max(0, Math.min(100, Math.round(input.markPct)));
     variable.note = "teacherAction is INTERNAL (the guardian never sees it); weakness and guardianAction reach the guardian.";
   }
+  return {
+    kind,
+    studentId: input.studentId,
+    fields,
+    deid: deid.map((d) => ({ field: d.field, text: d.text })),
+    map,
+    policyHash,
+    stablePrefix,
+    variablePart: JSON.stringify(variable),
+  };
+}
+
+export const isPrepared = (p: PreparedCheck | CheckResult): p is PreparedCheck => (p as PreparedCheck).stablePrefix !== undefined;
+
+/** The send settings every comment check uses (D-#1132). */
+export const CHECK_SEND = { json: true, maxOutputTokens: 800, reasoning: "off" as const };
+
+/** Reads the AI's JSON answer into issues + corrected text, names restored. */
+export function finishCheck(p: PreparedCheck, json: unknown, model: string): CheckResult {
+  const parsed = parseReply(json, new Set(p.fields.map((f) => f.field)));
+  const issues = parsed.issues.map((i) => ({ ...i, quote: reidentify(i.quote, p.map), suggestion: reidentify(i.suggestion, p.map) }));
+  const corrected = p.fields.map((f) => ({ field: f.field, text: reidentify(parsed.corrected[f.field] ?? p.deid.find((d) => d.field === f.field)!.text, p.map) }));
+  return {
+    status: "CHECKED",
+    reason: null,
+    message: null,
+    policyHash: p.policyHash,
+    model,
+    issues,
+    corrected,
+    token: signCheckToken({ sid: p.studentId, kind: p.kind, policyHash: p.policyHash, model, issuesFound: issues.length, at: Date.now() }),
+  };
+}
+
+export async function checkComment(auth: AuthPayload | null, input: CheckInput): Promise<CheckResult> {
+  if (!auth) throw new ForbiddenError("Unauthenticated");
+  if (!callerHasPermission(auth, "ai_assist:check_comment")) throw new ForbiddenError("মন্তব্য যাচাইয়ের অনুমতি নেই");
+  const p = await prepareCheck(input);
+  if (!isPrepared(p)) return p;
 
   let out;
   try {
     out = await aiSend(
       "comment_check",
-      { stablePrefix, variablePart: JSON.stringify(variable), json: true, maxOutputTokens: 800, reasoning: "off" },
-      { userId: auth.userId, role: auth.role, refType: kind === "DAILY" ? "StudentComment" : "ClassTestResult", refId: input.studentId, policyHash },
+      { stablePrefix: p.stablePrefix, variablePart: p.variablePart, ...CHECK_SEND },
+      { userId: auth.userId, role: auth.role, refType: p.kind === "DAILY" ? "StudentComment" : "ClassTestResult", refId: p.studentId, policyHash: p.policyHash },
     );
   } catch (e) {
     if (e instanceof AiFeatureOffError) return notChecked("FEATURE_OFF", "মন্তব্য যাচাই এখন বন্ধ আছে");
@@ -220,22 +274,7 @@ export async function checkComment(auth: AuthPayload | null, input: CheckInput):
     if (e instanceof AiProviderError) return notChecked("AI_ERROR", "এআই এখন সাড়া দিচ্ছে না — যাচাই ছাড়াই সংরক্ষণ করতে পারেন");
     throw e;
   }
-
-  const allowed = new Set(fields.map((f) => f.field));
-  const parsed = parseReply(out.result.json, allowed);
-  const issues = parsed.issues.map((i) => ({ ...i, quote: reidentify(i.quote, map), suggestion: reidentify(i.suggestion, map) }));
-  const corrected = fields.map((f) => ({ field: f.field, text: reidentify(parsed.corrected[f.field] ?? deid.find((d) => d.field === f.field)!.text, map) }));
-  const model = out.result.resolvedModel || out.result.model;
-  return {
-    status: "CHECKED",
-    reason: null,
-    message: null,
-    policyHash,
-    model,
-    issues,
-    corrected,
-    token: signCheckToken({ sid: input.studentId, kind, policyHash, model, issuesFound: issues.length, at: Date.now() }),
-  };
+  return finishCheck(p, out.result.json, out.result.resolvedModel || out.result.model);
 }
 
 /**
