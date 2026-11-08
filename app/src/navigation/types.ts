@@ -696,6 +696,8 @@ export type AdminStackParamList = {
   AiRules: undefined;
   AiRule: { key: "comment_standard" | "ct_comment_standard" | "assistant_rules" };
   AiRuleEdit: { key: "comment_standard" | "ct_comment_standard" | "assistant_rules"; fromId?: string };
+  // AI-4 (D-#1131): students' Bangla names (students:edit).
+  StudentBanglaNames: undefined;
   // D-#290: who didn't submit reconciliation (Principal/Office).
   ReconciliationReport: { date?: string } | undefined;
   // D-#300: per subject × class homework lifecycle report (Principal/Office).

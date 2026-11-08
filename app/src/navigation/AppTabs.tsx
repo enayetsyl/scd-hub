@@ -407,6 +407,7 @@ import AiSettingsScreen from "../screens/admin/AiSettingsScreen";
 import AiRulesScreen from "../screens/admin/AiRulesScreen";
 import AiRuleScreen from "../screens/admin/AiRuleScreen";
 import AiRuleEditScreen from "../screens/admin/AiRuleEditScreen";
+import StudentBanglaNamesScreen from "../screens/admin/StudentBanglaNamesScreen";
 import ReportsHomeScreen from "../screens/reports/ReportsHomeScreen";
 import PendingReportScreen from "../screens/reports/PendingReportScreen";
 import TeacherClassLoadScreen from "../screens/reports/TeacherClassLoadScreen";
@@ -1675,6 +1676,7 @@ function AdminNavigator(): React.ReactElement {
       <AdminStack.Screen name="AiRules" component={AiRulesScreen} options={{ title: STR.airTitle }} />
       <AdminStack.Screen name="AiRule" component={AiRuleScreen} options={{ title: STR.airTitle }} />
       <AdminStack.Screen name="AiRuleEdit" component={AiRuleEditScreen} options={{ title: STR.airEditTitle }} />
+      <AdminStack.Screen name="StudentBanglaNames" component={StudentBanglaNamesScreen} options={{ title: STR.sbnTitle }} />
       <AdminStack.Screen name="ReconciliationReport" component={ReconciliationReportScreen} options={{ title: STR.rrTitle }} />
       <AdminStack.Screen name="HwLifecycleReport" component={HwLifecycleReportScreen} options={{ title: STR.hlrTitle }} />
       <AdminStack.Screen name="AttendanceRanking" component={AttendanceRankingScreen} options={{ title: STR.arTitle }} />

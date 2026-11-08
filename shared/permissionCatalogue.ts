@@ -353,7 +353,7 @@ export const FEATURE_CATALOGUE = {
     actions: {
       view_all: { en: "Whole-school student list", bn: "সব শিক্ষার্থীর তালিকা দেখা", desc: "Student directory (class, section, groups, guardian phones)", teacher: false, office: true, flags: [] },
       create: { en: "Add a student", bn: "নতুন শিক্ষার্থী যোগ করা", desc: "Add to a class/section", teacher: false, office: true, flags: [] },
-      edit: { en: "Edit student details", bn: "শিক্ষার্থীর তথ্য ঠিক করা", desc: "Set/clear roll number", teacher: false, office: true, flags: [] },
+      edit: { en: "Edit student details", bn: "শিক্ষার্থীর তথ্য ঠিক করা", desc: "Set/clear roll number; set the Bangla name (AI-4)", teacher: false, office: true, flags: [] },
     },
   },
   guardians: {

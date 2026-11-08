@@ -36,6 +36,9 @@ export const EXPECTED_ERROR_NAMES: ReadonlySet<string> = new Set([
   // An AI call refused by a cap (AI-2, D-#1092): a person's daily limit, a session's turns,
   // a feature's or the school's monthly budget. A Bangla sentence; callers fail open.
   "AiCapError",
+  // The de-identification gate refused to send (AI-4, D-#1130): a known name was still in
+  // the text. A Bangla sentence; the caller marks the comment "not checked" (fail-open).
+  "DeidentifyError",
   // A login refused by the lockout (D-#765): too many wrong passwords on the account or
   // from the network. A Bangla sentence telling the person how long to wait — the lockout
   // working, not a fault.
