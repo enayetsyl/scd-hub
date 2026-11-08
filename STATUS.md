@@ -1,5 +1,7 @@
 # STATUS
 
+- 2026-11-06: **BUILT — pre-primary ids lettered CK/CN (D-#1071, PR #801 re-landed on current dev)** (branch `fix/preprimary-ck-cn`, worktree `C:/w/ptok`).
+  - **Now / next:** dev → promote → THEN run `server/scripts/backfill-preprimary-class-token.ts` on prod (dry run, `--apply`, dry run again = 0). Order matters: the old code would keep minting `C0`/`C-1` behind the migration.
 - 2026-11-06: **LIVE — APK 1.1.7 (c10) + voice tasks on Android (VT-5, D-#1037).** Built from main `9942d009` (= OTA `3bbe917a`) plus the #1388 build fix (on dev `eb213730`, rides the next promotion). `downloads/version.json` = 1.1.7/c10, so phones are walled to update on next launch. APK checked: 4 ABIs, ExponentAV + ExpoCamera, CAMERA + RECORD_AUDIO, prod URL, no localhost. Later OTAs (`5d55155a`, runtime 1.1.0) run on it.
   - **Verified on the emulator (test build, local server):** the 🎤 records and comes back as a draft task card; the desk's 📷 QR camera opens. A real sticker decode is still untested; try one on a phone.
   - **Owner:** switch `work_board:voice` on for staff who should speak tasks.
