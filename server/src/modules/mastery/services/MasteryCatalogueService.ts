@@ -35,6 +35,7 @@ import {
 } from "@scd/shared";
 import { MasteryDomain } from "../models/MasteryDomain";
 import { MasteryCatalogueReview } from "../models/MasteryCatalogueReview";
+import { MasteryEvidence } from "../models/MasteryEvidence";
 import { outcomeBookRef, treeShapeOf } from "../models/MasteryOutcome";
 import {
   appendReviewEvents,
@@ -790,13 +791,27 @@ export interface OutcomeEdit {
   homeTipBn?: string | null;
   sourceText?: string | null;
   questionTypeCodes?: string[] | null;
+  /** D-#1161: set after the review (the review judges tags only, D-#1160); refused once evidence exists. */
+  assess?: string | null;
 }
 
-/** Edit what may change on any live outcome: label, home tip, source text, question types. */
+/**
+ * Edit what may change on any live outcome: label, home tip, source text, question types, and —
+ * on a tagged row with no evidence yet — Question / Rubric (D-#1161).
+ */
 export async function saveOutcome(code: string, edit: OutcomeEdit, actor: Actor): Promise<OutcomeView> {
   const o = await MasteryOutcome.findOne({ code });
   if (!o) throw new MasteryCatalogueError("এই শিখনফল পাওয়া যায়নি।");
   if (o.status === "RETIRED") throw new MasteryCatalogueError("অবসরে যাওয়া শিখনফল বদলানো যায় না।");
+  if (edit.assess !== undefined && edit.assess !== null && edit.assess !== o.assess) {
+    if (edit.assess !== "QUESTION" && edit.assess !== "RUBRIC") throw new MasteryCatalogueError("যাচাই হবে প্রশ্ন বা রুব্রিক।");
+    if (o.tagged === false) throw new MasteryCatalogueError("এটি দলের শিরোনাম — প্রশ্ন না রুব্রিক তা এর ভেতরের প্রতিটি সারিতে ঠিক হয়।");
+    // Marks and rubric steps are different scales; one code must never hold both (D-#1161).
+    if (await MasteryEvidence.exists({ loCode: code, supersededAt: { $exists: false } })) {
+      throw new MasteryCatalogueError("এই শিখনফলে ছাত্রছাত্রীদের ফল জমা আছে — এখন প্রশ্ন/রুব্রিক বদলানো যায় না।");
+    }
+    o.assess = edit.assess;
+  }
   if (edit.labelBn !== undefined && edit.labelBn !== null) {
     if (!edit.labelBn.trim()) throw new MasteryCatalogueError("লেবেল খালি রাখা যায় না।");
     o.labelBn = edit.labelBn.trim();
@@ -805,11 +820,15 @@ export async function saveOutcome(code: string, edit: OutcomeEdit, actor: Actor)
   if (edit.homeTipBn !== undefined) o.homeTipBn = edit.homeTipBn?.trim() || undefined;
   if (edit.sourceText !== undefined && edit.sourceText !== null) o.sourceText = edit.sourceText.trim();
   if (edit.questionTypeCodes) {
-    const defined = new Set(
-      (await MasteryQuestionType.find({ classToken: o.classToken, subject: o.subject }).select("code").lean()).map((q) => q.code),
-    );
+    const table = await MasteryQuestionType.find({ classToken: o.classToken, subject: o.subject }).select("code active").lean();
+    const defined = new Set(table.map((q) => q.code));
     const missing = edit.questionTypeCodes.filter((q) => !defined.has(q));
     if (missing.length > 0) throw new MasteryCatalogueError(`এই প্রশ্নের ধরন তালিকায় নেই: ${missing.join(", ")}`);
+    // A switched-off type stays where it already is, but is never newly given (owner rule 2026-11-08).
+    const off = new Set(table.filter((q) => q.active === false).map((q) => q.code));
+    const had = new Set(o.questionTypeCodes ?? []);
+    const newlyOff = edit.questionTypeCodes.filter((q) => off.has(q) && !had.has(q));
+    if (newlyOff.length > 0) throw new MasteryCatalogueError(`এই প্রশ্নের ধরন বন্ধ আছে: ${newlyOff.join(", ")}`);
     o.questionTypeCodes = [...new Set(edit.questionTypeCodes)];
   }
   await o.save();

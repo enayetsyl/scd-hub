@@ -50,6 +50,9 @@ export const MASTERY_CATALOGUE_QUERY = gql`
         homeTipBn
         order
         status
+        level
+        parentCode
+        tagged
       }
       questionTypes {
         code
@@ -190,12 +193,13 @@ export const LOCK_MASTERY_CATALOGUE = gql`
 `;
 
 export const SAVE_MASTERY_OUTCOME = gql`
-  mutation SaveMasteryOutcome($code: String!, $labelBn: String, $homeTipBn: String, $questionTypeCodes: [String!]) {
-    saveMasteryOutcome(code: $code, labelBn: $labelBn, homeTipBn: $homeTipBn, questionTypeCodes: $questionTypeCodes) {
+  mutation SaveMasteryOutcome($code: String!, $labelBn: String, $homeTipBn: String, $questionTypeCodes: [String!], $assess: String) {
+    saveMasteryOutcome(code: $code, labelBn: $labelBn, homeTipBn: $homeTipBn, questionTypeCodes: $questionTypeCodes, assess: $assess) {
       code
       labelBn
       homeTipBn
       questionTypeCodes
+      assess
     }
   }
 `;
@@ -341,6 +345,10 @@ export type MasteryOutcomeRow = {
   homeTipBn: string | null;
   order: number;
   status: string;
+  /** OBJECTIVE | SUB; tagged=false is a grouping parent (Question/Rubric is set on its tagged rows). */
+  level: string;
+  parentCode: string | null;
+  tagged: boolean;
 };
 
 export type MasteryQuestionTypeRow = {

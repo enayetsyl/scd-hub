@@ -22,6 +22,7 @@ import { callerHasPermission } from "@scd/shared";
 import { AcademicYear } from "../modules/foundation/models/AcademicYear";
 import { MasteryOutcome } from "../modules/mastery/models/MasteryOutcome";
 import { MasteryQuestionType } from "../modules/mastery/models/MasteryQuestionType";
+import { MasteryEvidence } from "../modules/mastery/models/MasteryEvidence";
 import {
   getCatalogue,
   getPolicy,
@@ -206,6 +207,29 @@ describe("import / lock / retire (DB)", () => {
     const v = await saveOutcome("LO-C3-MATH-07-03", { labelBn: "লম্বা ভাগ", homeTipBn: "প্রতিদিন ২টি ভাগ।" }, actor);
     expect(v.labelBn).toBe("লম্বা ভাগ");
     await expect(saveOutcome("LO-C3-MATH-07-03", { questionTypeCodes: ["QT-NOPE"] }, actor)).rejects.toThrow(/QT-NOPE/);
+  });
+
+  it("D-#1161: Question/Rubric is set on the catalogue until evidence exists; a switched-off type is never newly given", async () => {
+    await importCatalogue(JSON.stringify(catalogue()), true, actor);
+    // Settable after the review, on a tagged row with no results yet.
+    expect((await saveOutcome("LO-C3-MATH-10-01", { assess: "RUBRIC" }, actor)).assess).toBe("RUBRIC");
+    expect((await saveOutcome("LO-C3-MATH-10-01", { assess: "QUESTION", questionTypeCodes: ["QT-SHORT"] }, actor)).assess).toBe("QUESTION");
+    await expect(saveOutcome("LO-C3-MATH-10-01", { assess: "MAYBE" }, actor)).rejects.toThrow(/প্রশ্ন বা রুব্রিক/);
+    // A grouping parent has no Question/Rubric of its own.
+    await MasteryOutcome.updateOne({ code: "LO-C3-MATH-07-02" }, { $set: { tagged: false } });
+    await expect(saveOutcome("LO-C3-MATH-07-02", { assess: "RUBRIC" }, actor)).rejects.toThrow(/দলের শিরোনাম/);
+    // Once a result is on the code, marks and rubric steps must not mix: refused.
+    const oid = () => new Types.ObjectId();
+    await MasteryEvidence.create({
+      studentId: oid(), sectionId: oid(), academicYearId: oid(), classToken: "C3", subject: "MATH", loCode: "LO-C3-MATH-10-01",
+      source: "HOMEWORK", paperId: oid(), earned: 1, available: 1, at: new Date(), week: "2026-W45",
+    });
+    await expect(saveOutcome("LO-C3-MATH-10-01", { assess: "RUBRIC" }, actor)).rejects.toThrow(/ফল জমা আছে/);
+    expect((await saveOutcome("LO-C3-MATH-10-01", { assess: "QUESTION", labelBn: "ভগ্নাংশ লেখা" }, actor)).labelBn).toBe("ভগ্নাংশ লেখা");
+    // A switched-off type: kept where it already is, refused where it is new.
+    await MasteryQuestionType.updateOne({ classToken: "C3", subject: "MATH", code: "QT-SHORT" }, { $set: { active: false } });
+    expect((await saveOutcome("LO-C3-MATH-10-01", { questionTypeCodes: ["QT-SHORT"] }, actor)).questionTypeCodes).toEqual(["QT-SHORT"]);
+    await expect(saveOutcome("LO-C3-MATH-07-03", { questionTypeCodes: ["QT-SOLVE", "QT-SHORT"] }, actor)).rejects.toThrow(/বন্ধ আছে: QT-SHORT/);
   });
 });
 

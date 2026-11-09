@@ -583,7 +583,9 @@ builder.mutationFields((t) => ({
 
   saveMasteryOutcome: t.field({
     type: OutcomeRef,
-    description: "Edit an outcome's label, home tip, source text or question types (never its code or assessment mode).",
+    description:
+      "Edit an outcome's label, home tip, source text, question types, or — on a tagged row with no evidence yet — " +
+      "its assessment mode (D-#1161; the review round judges tags only, D-#1160). Never its code.",
     authScopes: { hasPermission: "mastery:settings" },
     args: {
       code: t.arg.string({ required: true }),
@@ -592,6 +594,7 @@ builder.mutationFields((t) => ({
       homeTipBn: t.arg.string({ required: false }),
       sourceText: t.arg.string({ required: false }),
       questionTypeCodes: t.arg.stringList({ required: false }),
+      assess: t.arg.string({ required: false }),
     },
     resolve: async (_r, args, ctx) =>
       saveOutcome(
@@ -602,6 +605,7 @@ builder.mutationFields((t) => ({
           homeTipBn: args.homeTipBn,
           sourceText: args.sourceText,
           questionTypeCodes: args.questionTypeCodes,
+          assess: args.assess,
         },
         actorOf(ctx),
       ),

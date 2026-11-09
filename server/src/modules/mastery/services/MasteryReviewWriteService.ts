@@ -1050,9 +1050,13 @@ export async function reviewDecide(reviewId: string, input: ReviewDecisionInput,
       const level = input.level === "SUB" ? "SUB" : input.level === "OBJECTIVE" ? "OBJECTIVE" : fail("স্তর বাছাই করুন।");
       const label = trimOrNull(input.labelBn);
       if (!label) fail("লেবেল লিখুন।");
-      const assess = checkAssess(input.assess ?? "QUESTION");
-      const qts = checkQts(ws, cleanList(input.questionTypeCodes));
-      if (qts.length === 0) fail("অন্তত একটি প্রশ্নের ধরন দিন।");
+      // D-#1160: the review judges tags only — Question/Rubric and types are set later on the
+      // catalogue (D-#1161). Given nothing, a sub-objective inherits its objective's values (as SPLIT
+      // does) and a new objective starts as QUESTION with no type yet.
+      const given = checkQts(ws, cleanList(input.questionTypeCodes));
+      const parentRow = level === "SUB" ? ws.liveDraft(input.parentCode) : null;
+      const assess = input.assess ? checkAssess(input.assess) : (parentRow?.assess ?? "QUESTION");
+      const qts = given.length > 0 || input.assess ? given : [...(parentRow?.questionTypeCodes ?? [])];
       let exercises = cleanList(input.exercises);
       const reason = trimOrNull(input.reason);
       if (exercises.length === 0 && !reason) fail("বইয়ের অনুশীলনী (যেমন 7/হাতে রাখি/2) বা নতুন যোগের কারণ লিখুন।");
