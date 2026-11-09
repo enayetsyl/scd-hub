@@ -9,11 +9,14 @@
  *      on and it has a key);
  *   5. write one `AiUsage` row per attempt, with its cost (D-#1091) — this is the ONE place
  *      the new features are metered, so no caller can skip it — then check the budget
- *      alert in the background.
+ *      alert in the background;
+ *   6. log the de-identified request and the reply (`AiExchange`, D-#1179) for the
+ *      Principal's study of the model — the input is already de-identified by the caller.
  */
 import { randomUUID } from "crypto";
 import { aiRouteFor } from "../services/AiSettingService";
 import { alertIfBudget, assertWithinCaps, recordAiUsage, type AiUsageRowInput, type CapContext } from "../services/AiUsageService";
+import { recordAiExchange, type AiExchangeInput } from "../services/AiExchangeService";
 import { costUsd } from "./aiPrices";
 import { DeepseekProvider } from "./deepseekProvider";
 import { GeminiProvider } from "./geminiProvider";
@@ -72,12 +75,15 @@ export interface AiLedger {
   record(rows: AiUsageRowInput[]): Promise<void>;
   /** Runs after the call, not awaited; must never throw. */
   afterCall(feature: string): Promise<unknown>;
+  /** The request / reply log (D-#1179); must never throw. Absent = not logged. */
+  exchange?(x: AiExchangeInput): Promise<void>;
 }
 
 export const defaultLedger: AiLedger = {
   assertWithinCaps,
   record: recordAiUsage,
   afterCall: (feature) => alertIfBudget(feature),
+  exchange: recordAiExchange,
 };
 
 export const defaultProviderFactory: ProviderFactory = (provider, key) =>
@@ -167,6 +173,32 @@ export async function aiSend(
 
   await ledger.record(rows);
   void ledger.afterCall(feature).catch(() => undefined);
+  if (rows.length > 0 && ledger.exchange) {
+    await ledger.exchange({
+      at: rows[0].at ?? now(),
+      feature,
+      callId,
+      userId: ctx.userId,
+      role: ctx.role,
+      refType: ctx.refType,
+      refId,
+      policyHash: ctx.policyHash,
+      stablePrefix: input.stablePrefix,
+      context: input.context ?? null,
+      history: (input.history ?? []).map((h) => ({ role: h.role, text: h.text })),
+      request: input.variablePart,
+      reply: answer?.text ?? "",
+      attempts: rows.map((r) => ({
+        provider: r.provider,
+        modelName: r.resolvedModel || r.model,
+        outcome: r.outcome === "error" ? "error" : "ok",
+        ...(r.errorKind ? { errorKind: r.errorKind } : {}),
+        fallback: (r.attempt ?? 1) > 1,
+        latencyMs: r.latencyMs ?? 0,
+        costUsd: r.costUsd ?? 0,
+      })),
+    }).catch(() => undefined);
+  }
 
   if (answer) return { result: answer, attempts, callId };
   throw Object.assign(lastError ?? new AiProviderError("not_configured", "no provider", route.primary.provider), { attempts, callId });

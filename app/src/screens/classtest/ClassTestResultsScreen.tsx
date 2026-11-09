@@ -29,7 +29,7 @@ import { useAuth } from "../../auth/AuthContext";
 import { useToast } from "../../state/ToastContext";
 import { space } from "../../theme/tokens";
 import type { ClassTestStackParamList } from "../../navigation/types";
-import { AiCheckPanel, useAiCommentCheck } from "../../components/AiCommentCheck";
+import { AiCheckPanel, gateMessage, useAiCommentCheck } from "../../components/AiCommentCheck";
 
 type Props = NativeStackScreenProps<ClassTestStackParamList, "ClassTestResults">;
 type Nav = NativeStackNavigationProp<ClassTestStackParamList>;
@@ -162,6 +162,12 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
     setWeakness(existing?.weakness ?? "");
     setTeacherAction(existing?.teacherAction ?? "");
     setGuardianAction(existing?.guardianAction ?? "");
+    // D-#1175: comments loaded from an earlier save may be re-saved unchanged without a check.
+    ai.settle([
+      { field: "weakness", text: existing?.weakness ?? "" },
+      { field: "guardianAction", text: existing?.guardianAction ?? "" },
+      { field: "teacherAction", text: existing?.teacherAction ?? "" },
+    ]);
   }
 
   const ctFields = [
@@ -174,15 +180,13 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
   async function onSave(force = false): Promise<void> {
     if (!openId) return;
     setError(null);
-    // AI-5: unchecked comments are checked first; suggestions stop the save until the
-    // teacher accepts or keeps their own. A failed check never blocks (D-#1100).
+    // D-#1175: the AI check is required first for any comment text (fail-open: a check
+    // that could not run unlocks the save). "Keep my text" (force) saves as written.
     const hasComment = status === "PRESENT" && ctFields.some((f) => f.text.trim());
-    if (!force && hasComment && ai.available && !ai.isCurrent(ctFields)) {
-      const r = await ai.check(openId, ctFields, { markPct });
-      if (r && r.status === "CHECKED" && r.issues.length > 0) {
-        toast.show(STR.aicReviewFirst, "info");
-        return;
-      }
+    const gate = force || !hasComment ? null : ai.gate(ctFields);
+    if (gate) {
+      toast.show(gateMessage(gate) ?? STR.aicReviewFirst, "info");
+      return;
     }
     const claim = hasComment && ai.available ? ai.claim() : {};
     setBusy(true);
@@ -508,7 +512,7 @@ export default function ClassTestResultsScreen({ route }: Props): React.ReactEle
                     )}
                     {error ? <Notice message={error} tone="danger" /> : null}
                     <View style={{ flexDirection: "row", gap: space(2), marginTop: space(2) }}>
-                      <Button title={STR.ctSaveResult} onPress={() => void onSave()} loading={busy} disabled={busy} />
+                      <Button title={STR.ctSaveResult} onPress={() => void onSave()} loading={busy} disabled={busy || (status === "PRESENT" && !!ai.gate(ctFields))} />
                       <Button title={STR.cancel} variant="ghost" onPress={() => setOpenId(null)} />
                     </View>
                   </View>

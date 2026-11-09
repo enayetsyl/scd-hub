@@ -58,7 +58,8 @@ beforeAll(async () => {
 test("a comment's scope: the child, the section's children, their guardians, staff — not other sections", async () => {
   const scope = await scopeForStudent(ownId);
   const byKind = (k: string) => scope.people.filter((p) => p.kind === k);
-  expect(byKind("S").find((p) => p.own)!.names).toEqual(["Tahsin Karim"]);
+  // D-#1151: the Bangla guess from the English name rides along.
+  expect(byKind("S").find((p) => p.own)!.names).toEqual(["Tahsin Karim", "তাহসিন করিম"]);
   expect(byKind("S").map((p) => p.names[0]).sort()).toEqual(["Arif Hossain", "Tahsin Karim"]);
   expect(byKind("S").some((p) => p.id === otherSectionChild)).toBe(false);
   expect(byKind("G").map((p) => p.names[0])).toEqual(["Farzana Akter"]);
@@ -67,16 +68,16 @@ test("a comment's scope: the child, the section's children, their guardians, sta
   expect(r.text).toBe("[S] আর [S1] আজ ঝগড়া করেছে; [G1]-কে জানানো হয়েছে।");
 });
 
-test("PRD P11: a Bangla first name is missed until the Office fills it, then hidden and the gate passes", async () => {
+test("D-#1151: the guess hides a Bangla first name before the Office types it; the Office's name is kept too", async () => {
   const before = await scopeForStudent(ownId);
-  expect(deidentify("আজ তাহসিন ভালো পড়েছেন।", before).text).toBe("আজ তাহসিন ভালো পড়েছেন।");
+  expect(deidentify("আজ তাহসীন ভালো পড়েছেন।", before).text).toBe("আজ [S] ভালো পড়েছেন।");
 
   const readyBefore = await deidReadiness();
   expect(readyBefore).toMatchObject({ activeStudents: 3, withBanglaName: 1, missingBanglaName: 2 });
   const page = await studentBanglaNamesPage(office, {});
-  expect(page.rows.map((r) => [r.name, r.placeBn])).toEqual([
-    ["Tahsin Karim", "তৃতীয় শ্রেণি · বালক"],
-    ["Nabiha Sultana", "তৃতীয় শ্রেণি · বালিকা"],
+  expect(page.rows.map((r) => [r.name, r.placeBn, r.guessBn])).toEqual([
+    ["Tahsin Karim", "তৃতীয় শ্রেণি · বালক", "তাহসিন করিম"],
+    ["Nabiha Sultana", "তৃতীয় শ্রেণি · বালিকা", "নাবিহা সুলতানা"],
   ]);
 
   const row = await setStudentBanglaName(office, ownId, "  তাহসিন  করিম ");

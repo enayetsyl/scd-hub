@@ -642,6 +642,12 @@ export type RevisionStackParamList = {
   StudentRevisionHistory: { studentId: string; studentName: string };
   DeliverRevision: { groupId: string; code: string; nameBn: string; date: string };
   RevisionDashboard: { groupId?: string; code?: string; nameBn?: string; date?: string } | undefined;
+  // SR-6 (D-#1170–#1173)
+  RevisionTarget: { date: string };
+  RevisionListeners: undefined;
+  RevisionListening: { date: string };
+  ListenStudent: { studentId: string; date: string };
+  RevisionRelease: { date: string };
 };
 
 /** Finance / Accounting (FIN-6B app surfaces over FIN-1..FIN-6A) — staff stack
@@ -703,6 +709,9 @@ export type AdminStackParamList = {
   AiRules: undefined;
   AiRule: { key: "comment_standard" | "ct_comment_standard" | "assistant_rules" };
   AiRuleEdit: { key: "comment_standard" | "ct_comment_standard" | "assistant_rules"; fromId?: string };
+  // D-#1179: the AI request & reply log (ai_assist:read_ai_log, LOCKED).
+  AiExchanges: undefined;
+  AiExchange: { id: string };
   // AI-4 (D-#1131): students' Bangla names (students:edit).
   StudentBanglaNames: undefined;
   // D-#290: who didn't submit reconciliation (Principal/Office).

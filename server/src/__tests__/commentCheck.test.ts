@@ -103,7 +103,7 @@ describe("the check", () => {
     expect(Buffer.from(input1.stablePrefix).equals(Buffer.from(input2.stablePrefix))).toBe(true);
     expect(input1).toMatchObject({ json: true, maxOutputTokens: 800, reasoning: "off" });
     for (const leak of ["তাহসিন", "আরিফ", "01712345678"]) expect(input1.variablePart).not.toContain(leak);
-    expect(JSON.parse(input1.variablePart)).toMatchObject({ fields: { text: "[S] আজ বই আনে নাই, [S1]ের বই দেখে পড়ছে। ফোন [PHONE]" }, commentType: "STUDY_HOMEWORK", sentiment: "CONCERN" });
+    expect(JSON.parse(input1.variablePart)).toMatchObject({ fields: { text: "[S] আজ বই আনে নাই, [S1]ের বই দেখে পড়ছে। ফোন [PHONE]" }, commentType: { code: "STUDY_HOMEWORK" }, sentiment: { code: "CONCERN", bn: "উদ্বেগ" } });
     expect(ctx).toMatchObject({ userId: teacher.userId, role: "TEACHER", refType: "StudentComment", refId: studentId });
     expect(ctx.policyHash).toMatch(/^comment_standard@v1#/);
 

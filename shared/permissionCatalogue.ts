@@ -175,7 +175,10 @@ export const FEATURE_CATALOGUE = {
     actions: {
       view: { en: "See my groups' revision", bn: "নিজের গ্রুপের রিভিশন দেখা", desc: "Group grid, history, heatmap, coverage, trend, dashboards", teacher: true, office: true, flags: [], designation: "group_lead" },
       view_all: { en: "See all groups", bn: "সব গ্রুপের রিভিশন দেখা", desc: "Unscoped reads; Saturday completeness status", teacher: false, office: true, flags: [] },
-      enter_results: { en: "Record revision results", bn: "রিভিশনের ফল লেখা", desc: "Record or edit a Saturday entry", teacher: true, office: true, flags: [], designation: "group_lead" },
+      enter_results: { en: "Record revision results", bn: "রিভিশনের ফল লেখা", desc: "Record or edit a Saturday entry — for a group you lead, or a student you are the listener of (D-#1172)", teacher: true, office: true, flags: [], designation: "group_lead/assigned_listener" },
+      set_target: { en: "Declare the weekly target", bn: "সাপ্তাহিক রিভিশন লক্ষ্য ঘোষণা", desc: "Set a Hifz level's ranges for a Saturday — the same for every student of the level (D-#1170)", teacher: true, office: true, flags: [], designation: "group_lead", waiver: "saturday_revision:edit_all" },
+      assign_listeners: { en: "Assign listeners", bn: "শ্রোতা বরাদ্দ", desc: "Give each Hifz student to the teacher who hears their revision; holds every Saturday until changed (D-#1171)", teacher: false, office: true, flags: [] },
+      release: { en: "Release to guardians", bn: "মন্তব্য রিলিজ", desc: "Send every recorded entry of a Saturday to the families at once (D-#1173)", teacher: false, office: true, flags: [] },
       edit_all: { en: "Any group", bn: "যেকোনো গ্রুপের রিভিশন লেখা ও পাঠানো", desc: "Write/send outside own groups", teacher: false, office: true, flags: [] },
       correct: { en: "Correct a sent entry", bn: "পাঠানো রিভিশন সংশোধন", desc: "Change an entry the family already received; they get a correction and the old author a mistake entry (D-#1002)", teacher: true, office: true, flags: [], designation: "group_lead" },
       send: { en: "Send to guardians", bn: "অভিভাবককে রিভিশন পাঠানো", desc: "Send one entry or a group's Saturday (seals it, runs escalation)", teacher: true, office: true, flags: [], designation: "group_lead" },
@@ -1014,6 +1017,10 @@ export const FEATURE_CATALOGUE = {
       chat: { en: "AI teacher assistant", bn: "এআই সহকারীর সাথে আলাপ", desc: "Ask the AI about a chapter's lesson plan; see only your own conversations", teacher: true, office: true, flags: [] },
       // LOCKED (D-#1104): every teacher's conversations — the Principal, nobody else.
       read_all_chats: { en: "Read every assistant conversation", bn: "সব শিক্ষকের এআই আলাপ পড়া", desc: "Read any teacher's AI assistant conversation (teachers are told this on first use)", teacher: false, office: false, flags: ["LOCKED"] },
+      // LOCKED (D-#1179): the de-identified log of every AI request and reply, for improving
+      // the instructions / rules / standards — the Principal only; deleting it is manual.
+      read_ai_log: { en: "Read the AI request & reply log", bn: "এআই-এর অনুরোধ ও উত্তরের লগ দেখা", desc: "Every comment check and assistant question as sent to the AI (names hidden) and its reply; export", teacher: false, office: false, flags: ["LOCKED"] },
+      delete_ai_log: { en: "Delete AI log entries", bn: "এআই-এর লগ মুছে ফেলা", desc: "Delete one AI log entry, or every entry of a month / feature (audited)", teacher: false, office: false, flags: ["LOCKED"] },
     },
   },
   guardian_engagement: {

@@ -8,6 +8,8 @@ export interface BanglaNameRowT {
   schoolId: string;
   name: string;
   nameBn: string | null;
+  /** Guessed from the English name (D-#1151); "" when none. */
+  guessBn: string;
   placeBn: string;
 }
 
@@ -17,7 +19,7 @@ export interface BanglaNameReadinessT {
   missingBanglaName: number;
 }
 
-const ROW = "studentId schoolId name nameBn placeBn";
+const ROW = "studentId schoolId name nameBn guessBn placeBn";
 
 export const STUDENT_BANGLA_NAMES_PAGE = gql<
   { studentBanglaNamesPage: { rows: BanglaNameRowT[]; total: number; page: number; pageSize: number } },

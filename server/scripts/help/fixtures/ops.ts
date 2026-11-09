@@ -25,6 +25,7 @@ import { createBox } from "../../../src/modules/archive/services/ArchiveService"
 import { StaffProfile } from "../../../src/modules/foundation/models/StaffProfile";
 import { Student } from "../../../src/modules/foundation/models/Student";
 import { resyncAllChatGroups } from "../../../src/modules/chat/services/ChatGroupService";
+import { noteCheckShown, recordAiExchange } from "../../../src/modules/platform/services/AiExchangeService";
 
 const uri = process.env.MONGODB_URI ?? "";
 if (!/^mongodb:\/\/127\.0\.0\.1:\d+\//.test(uri)) {
@@ -128,6 +129,40 @@ export async function seedOps() {
     employmentStatus: "probation",
     gender: "female",
     active: true,
+  });
+
+  // ── The AI request & reply log (D-#1179): two invented, de-identified exchanges ──
+  const prefix = "You check comments that teachers of a Bangladeshi school write about a child …\n\nTHE STANDARD:\n## দৈনিক মন্তব্যের মানদণ্ড (উদাহরণ)";
+  const attempt = { provider: "deepseek", modelName: "deepseek-v4-flash", outcome: "ok" as const, fallback: false, latencyMs: 2100, costUsd: 0.0004 };
+  const teacherId = (base as { users?: { teacher?: string } }).users?.teacher ?? null;
+  await recordAiExchange({
+    at: new Date(),
+    feature: "comment_check",
+    callId: "help-fixture-check-1",
+    userId: teacherId,
+    role: "TEACHER",
+    refType: "StudentComment",
+    policyHash: "comment_standard@v1#a1b2c3d4e5f6",
+    stablePrefix: prefix,
+    request: JSON.stringify({ kind: "daily comment to the guardian", fields: { text: "[S] আজ বাড়ির কাজ আনেননি" }, sentiment: { code: "CONCERN", bn: "উদ্বেগ" } }),
+    reply: JSON.stringify({ issues: [{ field: "text", type: "structure", quote: "[S] আজ বাড়ির কাজ আনেননি", suggestion: "আসসালামু আলাইকুম। উনি আজ বাড়ির কাজ আনেননি।" }], corrected: { text: "আসসালামু আলাইকুম। উনি আজ বাড়ির কাজ আনেননি।" } }),
+    attempts: [attempt],
+  });
+  await noteCheckShown("help-fixture-check-1", 1, { structure: 1 });
+  await recordAiExchange({
+    at: new Date(Date.now() - 3600_000),
+    feature: "assistant",
+    callId: "help-fixture-assistant-1",
+    userId: teacherId,
+    role: "TEACHER",
+    refType: "AiAssistSession",
+    refId: "help-fixture-session",
+    policyHash: "assistant_rules@v1#f6e5d4c3b2a1",
+    stablePrefix: "You are the teaching assistant of a Bangladeshi Islamic school …",
+    context: "CHAPTER 3 (class 3, MATH)\n\n## Session 1: ভাগ",
+    request: "ভাগের প্রথম পাঠ কীভাবে শুরু করব?",
+    reply: "পাঠ পরিকল্পনা অনুযায়ী শুরুতে ১২টি পেনসিল ৩ জনে ভাগ করে দেখান …",
+    attempts: [{ ...attempt, latencyMs: 5400, costUsd: 0.0012 }],
   });
 
   return base;

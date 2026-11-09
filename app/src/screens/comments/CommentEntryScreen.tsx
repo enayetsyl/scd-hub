@@ -44,7 +44,7 @@ import { UploadDropZone } from "../../components/UploadDropZone";
 import { useFileOpen } from "../../lib/useFileOpen";
 import { space } from "../../theme/tokens";
 import type { CommentsStackParamList } from "../../navigation/types";
-import { AiCheckPanel, useAiCommentCheck } from "../../components/AiCommentCheck";
+import { AiCheckPanel, gateMessage, useAiCommentCheck } from "../../components/AiCommentCheck";
 
 type Props = NativeStackScreenProps<CommentsStackParamList, "CommentEntry">;
 
@@ -55,7 +55,8 @@ export default function CommentEntryScreen({ route }: Props): React.ReactElement
   const { role, can } = useAuth();
   const { confirmAction } = useConfirm();
   const toast = useToast();
-  // AI-5 (D-#1095/#1099/#1100): Check button + an automatic check on Save of unchecked text.
+  // AI-5 (D-#1095/#1099/#1100): the Check button; D-#1175: Save stays locked until the
+  // current text is checked (every edit needs a new check; a failed check never blocks).
   const ai = useAiCommentCheck("DAILY");
   const canDeliver = can("student_comments:send"); // PM: was roster:manage
 
@@ -109,6 +110,8 @@ export default function CommentEntryScreen({ route }: Props): React.ReactElement
       setType(existing.type);
       setSentiment(existing.sentiment);
       setText(existing.text);
+      // Text loaded from an earlier save may be re-saved unchanged without a new check.
+      ai.settle([{ field: "text", text: existing.text }]);
     }
   }, [existing]);
 
@@ -122,15 +125,12 @@ export default function CommentEntryScreen({ route }: Props): React.ReactElement
       toast.show(msg, "danger");
       return;
     }
-    // AI-5: unchecked text is checked first; suggestions stop the save until the writer
-    // accepts or keeps their own. A failed check never blocks (fail-open, D-#1100).
-    const fields = [{ field: "text", text }];
-    if (!force && ai.available && !ai.isCurrent(fields)) {
-      const r = await ai.check(studentId, fields, { commentType: type, sentiment });
-      if (r && r.status === "CHECKED" && r.issues.length > 0) {
-        toast.show(STR.aicReviewFirst, "info");
-        return;
-      }
+    // D-#1175: the AI check is required first (fail-open: a check that could not run
+    // unlocks the save). "Keep my text" (force) saves exactly what was written.
+    const gate = force ? null : ai.gate([{ field: "text", text }]);
+    if (gate) {
+      toast.show(gateMessage(gate) ?? STR.aicReviewFirst, "info");
+      return;
     }
     const claim = ai.available ? ai.claim() : {};
     setBusy(true);
@@ -303,7 +303,7 @@ export default function CommentEntryScreen({ route }: Props): React.ReactElement
               title={commentId ? STR.cmEditComment : STR.cmSave}
               onPress={() => void onSave()}
               loading={busy}
-              disabled={busy}
+              disabled={busy || !!ai.gate([{ field: "text", text }])}
             />
           ) : null}
         </Card>

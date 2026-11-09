@@ -158,6 +158,17 @@ describe("buildDigestSummary", () => {
     expect(s).toMatch(/মন্তব্য: ভালো/);
   });
 
+  test("a section's own comment rides under its line (SR-6, D-#1172)", () => {
+    const s = buildDigestSummary([
+      { category: "SABAQ", status: "PARTIAL", fromSurah: 2, fromAyah: 173, toSurah: 2, toAyah: 181, tanbih: 0, fath: 0, mistakes: { harf: 0, ghunnah: 0, madd: 0, other: 0 }, note: " শেষ দুই আয়াত বাকি " },
+      { category: "MANZIL", status: "COMPLETED", fromSurah: 46, fromAyah: 1, toSurah: 51, toAyah: 30, tanbih: 0, fath: 0, mistakes: { harf: 0, ghunnah: 0, madd: 0, other: 0 } },
+    ]);
+    const lines = s.split("\n");
+    expect(lines[0]).toMatch(/^নতুন মুখস্ত: /);
+    expect(lines[1]).toBe("  ↳ শেষ দুই আয়াত বাকি");
+    expect(lines[2]).toMatch(/^পুরনো রিভিশন: /);
+  });
+
   test("an empty record list falls back to the comment / dash", () => {
     expect(buildDigestSummary([], "মন্তব্য")).toBe("মন্তব্য");
     expect(buildDigestSummary([])).toBe("—");

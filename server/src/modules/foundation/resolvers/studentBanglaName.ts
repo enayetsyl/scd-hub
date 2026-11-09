@@ -13,6 +13,7 @@ const BanglaNameRowRef = builder.objectRef<BanglaNameRow>("StudentBanglaNameRow"
     schoolId: t.string({ resolve: (r) => r.schoolId }),
     name: t.string({ resolve: (r) => r.name }),
     nameBn: t.string({ nullable: true, resolve: (r) => r.nameBn }),
+    guessBn: t.string({ description: "Bangla spelling guessed from the English name (D-#1151); empty when none.", resolve: (r) => r.guessBn }),
     placeBn: t.string({ description: "Class · section, in Bangla.", resolve: (r) => r.placeBn }),
   }),
 });

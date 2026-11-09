@@ -324,6 +324,11 @@ import GroupRevisionGridScreen from "../screens/revision/GroupRevisionGridScreen
 import StudentRevisionHistoryScreen from "../screens/revision/StudentRevisionHistoryScreen";
 import DeliverRevisionScreen from "../screens/revision/DeliverRevisionScreen";
 import RevisionDashboardScreen from "../screens/revision/RevisionDashboardScreen";
+import RevisionTargetScreen from "../screens/revision/RevisionTargetScreen";
+import RevisionListenersScreen from "../screens/revision/RevisionListenersScreen";
+import RevisionListeningScreen from "../screens/revision/RevisionListeningScreen";
+import ListenStudentScreen from "../screens/revision/ListenStudentScreen";
+import RevisionReleaseScreen from "../screens/revision/RevisionReleaseScreen";
 import FinanceHomeScreen from "../screens/finance/FinanceHomeScreen";
 import DailyEntryScreen from "../screens/finance/DailyEntryScreen";
 import DailySnapshotScreen from "../screens/finance/DailySnapshotScreen";
@@ -410,6 +415,8 @@ import MasteryBankCoverageScreen from "../screens/mastery/MasteryBankCoverageScr
 import SystemHealthScreen from "../screens/admin/SystemHealthScreen";
 import AiSettingsScreen from "../screens/admin/AiSettingsScreen";
 import AiRulesScreen from "../screens/admin/AiRulesScreen";
+import AiExchangesScreen from "../screens/admin/AiExchangesScreen";
+import AiExchangeScreen from "../screens/admin/AiExchangeScreen";
 import AiRuleScreen from "../screens/admin/AiRuleScreen";
 import AiRuleEditScreen from "../screens/admin/AiRuleEditScreen";
 import StudentBanglaNamesScreen from "../screens/admin/StudentBanglaNamesScreen";
@@ -1493,6 +1500,11 @@ function RevisionNavigator(): React.ReactElement {
         options={({ route }) => ({ title: route.params.nameBn || STR.revDeliverTitle })}
       />
       <RevisionStack.Screen name="RevisionDashboard" component={RevisionDashboardScreen} options={{ title: STR.revDashTitle }} />
+      <RevisionStack.Screen name="RevisionTarget" component={RevisionTargetScreen} options={{ title: STR.revTargetTitle }} />
+      <RevisionStack.Screen name="RevisionListeners" component={RevisionListenersScreen} options={{ title: STR.revListenersTitle }} />
+      <RevisionStack.Screen name="RevisionListening" component={RevisionListeningScreen} options={{ title: STR.revListenTitle }} />
+      <RevisionStack.Screen name="ListenStudent" component={ListenStudentScreen} options={{ title: STR.revListenTitle }} />
+      <RevisionStack.Screen name="RevisionRelease" component={RevisionReleaseScreen} options={{ title: STR.revReleaseTitle }} />
     </RevisionStack.Navigator>
   );
 }
@@ -1680,6 +1692,8 @@ function AdminNavigator(): React.ReactElement {
       <AdminStack.Screen name="SystemHealth" component={SystemHealthScreen} options={{ title: STR.shTitle }} />
       <AdminStack.Screen name="AiSettings" component={AiSettingsScreen} options={{ title: STR.aiTitle }} />
       <AdminStack.Screen name="AiRules" component={AiRulesScreen} options={{ title: STR.airTitle }} />
+      <AdminStack.Screen name="AiExchanges" component={AiExchangesScreen} options={{ title: STR.axlTitle }} />
+      <AdminStack.Screen name="AiExchange" component={AiExchangeScreen} options={{ title: STR.axlDetailTitle }} />
       <AdminStack.Screen name="AiRule" component={AiRuleScreen} options={{ title: STR.airTitle }} />
       <AdminStack.Screen name="AiRuleEdit" component={AiRuleEditScreen} options={{ title: STR.airEditTitle }} />
       <AdminStack.Screen name="StudentBanglaNames" component={StudentBanglaNamesScreen} options={{ title: STR.sbnTitle }} />

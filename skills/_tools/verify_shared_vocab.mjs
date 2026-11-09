@@ -884,10 +884,10 @@ check("PERMISSIONS = legacy ∪ catalogue, no duplicates",
   new Set(V.PERMISSIONS).size === V.PERMISSIONS.length && V.PERMISSIONS.length === new Set([...V.LEGACY_PERMISSIONS, ...CAT]).size);
 check("PERMISSION_LABELS_BN / _EN and PERMISSION_BUILD_STATUS are total over PERMISSIONS",
   V.PERMISSIONS.every((p) => V.PERMISSION_LABELS_BN[p]?.name && V.PERMISSION_LABELS_EN[p]?.name && V.PERMISSION_BUILD_STATUS[p] === "build"));
-check("LOCKED actions are exactly the fourteen reserved catalogue actions (D-#797; +payroll:reopen D-#904; +system_health:ai_key D-#967; +ai_assist:read_all_chats D-#1104/#1138)",
+check("LOCKED actions are exactly the sixteen reserved catalogue actions (D-#797; +payroll:reopen D-#904; +system_health:ai_key D-#967; +ai_assist:read_all_chats D-#1104/#1138; +ai_assist:read_ai_log/delete_ai_log D-#1179)",
   eq(flagged("LOCKED"), ["payroll:approve", "payroll:reopen", "salary_advance:issue", "salary_advance:settle", "offboarding:settle",
     "appraisal:sign_off", "conduct:sign_off", "chat:view_all", "message_templates:view", "message_templates:edit",
-    "access_control:edit", "access_control:delegate", "system_health:ai_key", "ai_assist:read_all_chats"]));
+    "access_control:edit", "access_control:delegate", "system_health:ai_key", "ai_assist:read_all_chats", "ai_assist:read_ai_log", "ai_assist:delete_ai_log"]));
 check("RESERVED_PERMISSIONS = the legacy five ∪ every LOCKED action",
   eq(V.RESERVED_PERMISSIONS, [...new Set([...V.LEGACY_RESERVED_PERMISSIONS, ...flagged("LOCKED")])]));
 check("no LOCKED / PRINCIPAL_DEFAULT / ESCALATION action is on by default for TEACHER or OFFICE",
@@ -923,7 +923,9 @@ const ROLE_CHECK_DEFAULTS = {
     // AI comment checker (AI-5, D-#1095): every teacher may check a comment before saving.
     "ai_assist:check_comment",
     // AI teacher assistant (AI-6, D-#1096): every teacher may ask about their lesson.
-    "ai_assist:chat"],
+    "ai_assist:chat",
+    // Saturday revision SR-6 (D-#1174): a group lead declares the weekly target of their level.
+    "saturday_revision:set_target"],
   OFFICE: ["homework:view_all", "homework:undo_any",
     // AI Assist rules (AI-3, D-#1093): the Office reads the active standard too.
     "ai_assist:read_rules",
@@ -947,6 +949,8 @@ const ROLE_CHECK_DEFAULTS = {
     "assignment:view_all", "assignment:undo_any", "work_claim:view_all", "work_claim:remind", "set_tracker:view_all",
     "saturday_revision:view", "saturday_revision:view_all", "saturday_revision:enter_results", "saturday_revision:edit_all",
     "saturday_revision:send", "saturday_revision:correct", "saturday_revision:settings", "class_test:view_all", "class_test:register",
+    // Saturday revision SR-6 (D-#1174): the Office declares targets, assigns listeners and releases.
+    "saturday_revision:set_target", "saturday_revision:assign_listeners", "saturday_revision:release",
     "question_sets:view_all", "student_profile:view", "student_profile:view_all", "student_profile:export",
     "student_comments:view", "student_comments:view_all", "monthly_report:view", "monthly_report:review",
     "staff_records:view_sensitive", "lesson_plans:view_all", "question_bank:view_all", "teaching_notes:view",
