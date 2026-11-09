@@ -42,6 +42,8 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
   const canAiKey = can("system_health:ai_key");
   // AI-3 (D-#1093): the Principal writes the AI rules; the Office (and teachers) read them.
   const canAiRules = can("ai_assist:edit_rules") || can("ai_assist:read_rules");
+  // D-#1179: the AI request & reply log — the Principal only (LOCKED).
+  const canAiLog = can("ai_assist:read_ai_log");
   // AI-4 (D-#1131): the Office writes children's Bangla names so the AI can hide them.
   const canBanglaNames = can("students:edit");
   // GC-5: the guardian-claim queue is an Office/Principal screen and rides the
@@ -147,6 +149,13 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
         </Card>
       ) : null}
 
+      {canAiLog ? (
+        <Card onPress={() => navigation.navigate("AiExchanges")}>
+          <Body style={{ fontWeight: "700" }}>{STR.axlTitle}</Body>
+          <Muted>{STR.axlSubtitle}</Muted>
+        </Card>
+      ) : null}
+
       {canBanglaNames ? (
         <Card onPress={() => navigation.navigate("StudentBanglaNames")}>
           <Body style={{ fontWeight: "700" }}>{STR.sbnTitle}</Body>
@@ -220,7 +229,7 @@ export default function AdminHomeScreen({ navigation }: Props): React.ReactEleme
 
       {![
         canImport, canStaffLogins, canProxy, canAssignSubject, canAssignSupervisor, canStudents,
-        canAuditLog, canActivity, canHealth, canAiKey, canAiRules, canBanglaNames, canStaff,
+        canAuditLog, canActivity, canHealth, canAiKey, canAiRules, canAiLog, canBanglaNames, canStaff,
         canAssignClassTeacher, canRoutine, canSections, canYears, canGuardianCreds, canTemplates, canAccess,
       ].some(Boolean) ? (
         <Notice message={STR.noPermission} tone="warn" />

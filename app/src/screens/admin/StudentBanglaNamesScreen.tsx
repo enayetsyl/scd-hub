@@ -1,7 +1,9 @@
 /**
  * StudentBanglaNamesScreen (AI-4, D-#1131; PRD P11) — the Office writes each child's name
- * in Bangla. The AI can hide only a name it knows, and teachers write names in Bangla, so
- * the comment checker is switched on only after this list is done. `students:edit`.
+ * in Bangla. The AI can hide only a name it knows, and teachers write names in Bangla.
+ * `students:edit`.
+ * D-#1151: no longer a switch-on prerequisite — a row with no Bangla name opens with the app's guess from the English name, so a
+ * right guess is checked with one tap (the guess already hides names before it is saved).
  */
 import React from "react";
 import { View } from "react-native";
@@ -19,10 +21,11 @@ const fill = (tpl: string, vars: Record<string, string | number>) => tpl.replace
 
 function Row({ row, onSaved }: { row: BanglaNameRowT; onSaved: () => void }): React.ReactElement {
   const [, save] = useMutation(SET_STUDENT_BANGLA_NAME);
-  const [value, setValue] = React.useState(row.nameBn ?? "");
+  const [value, setValue] = React.useState(row.nameBn ?? row.guessBn ?? "");
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [done, setDone] = React.useState(false);
+  const showingGuess = !row.nameBn && !!row.guessBn && value === row.guessBn && !done;
   async function onSave(): Promise<void> {
     setBusy(true);
     setError(null);
@@ -40,6 +43,7 @@ function Row({ row, onSaved }: { row: BanglaNameRowT; onSaved: () => void }): Re
       <Body style={{ fontWeight: "700" }}>{row.name}</Body>
       <Muted>{`${row.placeBn} · ${fill(STR.sbnId, { id: row.schoolId })}`}</Muted>
       <Field label={STR.sbnField} value={value} onChangeText={(t) => { setValue(t); setDone(false); }} placeholder={STR.sbnPlaceholder} />
+      {showingGuess ? <Muted>{STR.sbnGuessHint}</Muted> : null}
       {error ? <Notice tone="danger" message={error} /> : null}
       {done ? <Notice tone="ok" message={STR.sbnSaved} /> : null}
       <View style={{ marginTop: space(1) }}>

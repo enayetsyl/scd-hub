@@ -155,7 +155,10 @@ export async function assertWithinCaps(ctx: CapContext): Promise<void> {
 
   if (ctx.userId && cfg.dailyPerUser >= 0) {
     const used = await callsSince({ feature: ctx.feature, userId: new Types.ObjectId(ctx.userId) }, dhakaDayStart(at));
-    if (used >= cfg.dailyPerUser) refusal = new AiCapError(`আজ ${label}-এর সীমা (${cfg.dailyPerUser} বার) শেষ — কাল আবার পারবেন। এখনকার লেখাটি যাচাই ছাড়াই পাঠাতে পারেন।`, "daily");
+    // D-#1178: the second sentence fits the feature — a comment can still be saved without
+    // a check; an assistant question simply waits for tomorrow.
+    const after = ctx.feature === "comment_check" ? " এখনকার লেখাটি যাচাই ছাড়াই সংরক্ষণ করতে পারেন।" : "";
+    if (used >= cfg.dailyPerUser) refusal = new AiCapError(`আজ ${label}-এর সীমা (${cfg.dailyPerUser} বার) শেষ — কাল আবার পারবেন।${after}`, "daily");
   }
   if (!refusal && ctx.sessionId && cfg.perSessionTurns !== null) {
     const used = await callsSince({ feature: ctx.feature, refId: ctx.sessionId }, new Date(0));

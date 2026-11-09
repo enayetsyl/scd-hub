@@ -5,9 +5,11 @@
  * section, the guardians linked to any of them, and every active staff login. Inactive
  * links count too: a separated parent's name is still a name.
  *
- * Every spelling we hold is used: English name, Bangla name (`nameBn`). PRD P11: most
- * children have no Bangla name yet, so the Office fills them (AI-4's Bangla-name screen)
- * before the checker is switched on — `deidReadiness()` reports how far that has got.
+ * Every spelling we hold is used: English name, Bangla name (`nameBn`), and a Bangla GUESS
+ * from the English name (D-#1151, `banglaGuess.ts`) — for children, guardians and staff.
+ * With the guess plus the loose match for the child the text is about, a typed Bangla name
+ * is no longer needed before switch-on; the Office's checked names (AI-4's screen) make
+ * classmates' names safer too. `deidReadiness()` reports how many have been checked.
  */
 import { Types } from "mongoose";
 import { Student } from "../../foundation/models/Student";
@@ -15,8 +17,11 @@ import { Guardian } from "../../foundation/models/Guardian";
 import { GuardianLink } from "../../foundation/models/GuardianLink";
 import { User } from "../../foundation/models/User";
 import type { DeidPerson, DeidScope } from "../ai/deidentify";
+import { guessBanglaName } from "../ai/banglaGuess";
 
-const names = (...xs: Array<string | null | undefined>) => xs.filter((x): x is string => !!x && x.trim().length > 0);
+/** Every spelling: the given ones plus the Bangla guess from the first (English) name. */
+const names = (english: string | null | undefined, ...xs: Array<string | null | undefined>) =>
+  [...new Set([english, ...xs, guessBanglaName(english)].filter((x): x is string => !!x && x.trim().length > 0))];
 
 async function staffPeople(): Promise<DeidPerson[]> {
   const staff = await User.find({ active: true, role: { $ne: "GUARDIAN" } }).select("name").lean();
