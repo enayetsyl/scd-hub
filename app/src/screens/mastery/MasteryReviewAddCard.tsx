@@ -4,6 +4,9 @@
  * Used twice: at the foot of the round page (any level, any parent), and on a row's own page with
  * `fixedParent` (D-#1016) — the level is then the sub-objective and the parent is that objective,
  * so a reviewer adds a step where she is reading instead of hunting for the button below 70 rows.
+ *
+ * D-#1160: no question-type choice here — the review judges tags only. The server gives a new
+ * sub-objective its objective's Question/Rubric and types; both are set later on the catalogue.
  */
 import React, { useState } from "react";
 import { View } from "react-native";
@@ -32,7 +35,6 @@ export function AddCard({ q, onDone, fixedParent }: { q: ReviewQueue; onDone: ()
   const [strand, setStrand] = useState("");
   const [domain, setDomain] = useState<string | null>(null);
   const [label, setLabel] = useState("");
-  const [qts, setQts] = useState<string[]>([]);
   const [exercises, setExercises] = useState("");
   const [reason, setReason] = useState("");
   const [tip, setTip] = useState("");
@@ -72,12 +74,6 @@ export function AddCard({ q, onDone, fixedParent }: { q: ReviewQueue; onDone: ()
         </View>
       )}
       <Field label={STR.msRvLabel} value={label} onChangeText={setLabel} />
-      <Muted>{STR.msQuestionTypes}</Muted>
-      <ChipRow>
-        {q.questionTypes.map((t) => (
-          <Chip key={t.code} label={t.labelBn || t.code} selected={qts.includes(t.code)} onPress={() => setQts((p) => (p.includes(t.code) ? p.filter((x) => x !== t.code) : [...p, t.code]))} />
-        ))}
-      </ChipRow>
       <Field label={STR.msRvExercises} value={exercises} onChangeText={setExercises} multiline />
       <Field label={STR.msRvAddReasonField} value={reason} onChangeText={setReason} />
       <Button
@@ -98,7 +94,6 @@ export function AddCard({ q, onDone, fixedParent }: { q: ReviewQueue; onDone: ()
                   domainCode: level === "OBJECTIVE" ? domain : null,
                   homeTipBn: level === "OBJECTIVE" ? tip : null,
                   labelBn: label,
-                  questionTypeCodes: qts,
                   exercises: splitList(exercises),
                   reason,
                 },

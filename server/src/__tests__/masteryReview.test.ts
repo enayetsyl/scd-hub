@@ -296,6 +296,17 @@ describe("move / reject / add", () => {
     );
     expect((await row("LO-C1-MATH-07-05"))!.tagged).toBe(true);
   });
+
+  it("D-#1160: ADD without a question type — a sub takes its objective's assess + types, an objective starts with none", async () => {
+    await setup();
+    const parent = (await row("LO-C1-MATH-07-01"))!;
+    await oneEvent(() => decide({ action: "ADD", level: "SUB", parentCode: "LO-C1-MATH-07-01", labelBn: "দশ বানিয়ে যোগ", exercises: ["7/যোগ/3"] }));
+    const sub = (await row("LO-C1-MATH-07-01.6"))!;
+    expect([sub.assess, sub.questionTypeCodes]).toEqual([parent.assess, parent.questionTypeCodes]);
+    await oneEvent(() => decide({ action: "ADD", level: "OBJECTIVE", chapterNumber: 7, domainCode: "DOM-MATH-ADD", labelBn: "তিনটি সংখ্যা যোগ", exercises: ["7/যোগ/9"] }));
+    const obj = (await row("LO-C1-MATH-07-05"))!;
+    expect([obj.assess, obj.questionTypeCodes, obj.tagged]).toEqual(["QUESTION", [], true]);
+  });
 });
 
 describe("comments", () => {
