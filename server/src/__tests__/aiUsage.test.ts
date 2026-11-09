@@ -144,7 +144,7 @@ describe("caps refuse before sending", () => {
     const err = await send(TEACHER, { route: route(), makeProvider: p.make }).catch((e) => e);
     expect(err).toBeInstanceOf(AiCapError);
     expect((err as AiCapError).cap).toBe("daily");
-    expect((err as Error).message).toContain("যাচাই ছাড়াই পাঠাতে পারেন");
+    expect((err as Error).message).toContain("যাচাই ছাড়াই সংরক্ষণ করতে পারেন");
     expect(p.calls).toHaveLength(2);
     expect(await AiUsage.countDocuments({ outcome: "capped" })).toBe(1);
     await expect(send(TEACHER, { route: route(), makeProvider: p.make })).rejects.toBeInstanceOf(AiCapError);

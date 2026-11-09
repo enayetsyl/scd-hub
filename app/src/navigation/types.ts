@@ -709,6 +709,9 @@ export type AdminStackParamList = {
   AiRules: undefined;
   AiRule: { key: "comment_standard" | "ct_comment_standard" | "assistant_rules" };
   AiRuleEdit: { key: "comment_standard" | "ct_comment_standard" | "assistant_rules"; fromId?: string };
+  // D-#1179: the AI request & reply log (ai_assist:read_ai_log, LOCKED).
+  AiExchanges: undefined;
+  AiExchange: { id: string };
   // AI-4 (D-#1131): students' Bangla names (students:edit).
   StudentBanglaNames: undefined;
   // D-#290: who didn't submit reconciliation (Principal/Office).

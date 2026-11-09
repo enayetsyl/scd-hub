@@ -352,6 +352,7 @@ export type AuditEventKind =
   | "AI_POLICY_SAVED"         // a new version of an AI rules document (AI-3, D-#1093) — meta.key/version/hash/chars; never the text
   | "AI_POLICY_ACTIVATED"     // one AI rules version switched on (others of its key off) — meta.key/version/hash
   | "AI_POLICY_DEACTIVATED"   // an AI rules key switched off (no version active) — meta.key
+  | "AI_EXCHANGES_DELETED"    // AI request/reply log rows deleted by hand (D-#1179) — meta.count + feature/month or one row
   | "STUDENT_BANGLA_NAME_SET" // a student's Bangla name set (AI-4, D-#1131) — meta.before/after
   | "WORKSHEET_SENT_TO_PRINT" // a generated Nursery/KG paper filed to the print queue (D-#747) — meta.kind/subject/seed
   | "WORKSHEET_PLAN_SAVED"    // how a class level × subject's মানবন্টন rows are generated, + presets (D-#745)

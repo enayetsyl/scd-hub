@@ -415,6 +415,8 @@ import MasteryBankCoverageScreen from "../screens/mastery/MasteryBankCoverageScr
 import SystemHealthScreen from "../screens/admin/SystemHealthScreen";
 import AiSettingsScreen from "../screens/admin/AiSettingsScreen";
 import AiRulesScreen from "../screens/admin/AiRulesScreen";
+import AiExchangesScreen from "../screens/admin/AiExchangesScreen";
+import AiExchangeScreen from "../screens/admin/AiExchangeScreen";
 import AiRuleScreen from "../screens/admin/AiRuleScreen";
 import AiRuleEditScreen from "../screens/admin/AiRuleEditScreen";
 import StudentBanglaNamesScreen from "../screens/admin/StudentBanglaNamesScreen";
@@ -1690,6 +1692,8 @@ function AdminNavigator(): React.ReactElement {
       <AdminStack.Screen name="SystemHealth" component={SystemHealthScreen} options={{ title: STR.shTitle }} />
       <AdminStack.Screen name="AiSettings" component={AiSettingsScreen} options={{ title: STR.aiTitle }} />
       <AdminStack.Screen name="AiRules" component={AiRulesScreen} options={{ title: STR.airTitle }} />
+      <AdminStack.Screen name="AiExchanges" component={AiExchangesScreen} options={{ title: STR.axlTitle }} />
+      <AdminStack.Screen name="AiExchange" component={AiExchangeScreen} options={{ title: STR.axlDetailTitle }} />
       <AdminStack.Screen name="AiRule" component={AiRuleScreen} options={{ title: STR.airTitle }} />
       <AdminStack.Screen name="AiRuleEdit" component={AiRuleEditScreen} options={{ title: STR.airEditTitle }} />
       <AdminStack.Screen name="StudentBanglaNames" component={StudentBanglaNamesScreen} options={{ title: STR.sbnTitle }} />

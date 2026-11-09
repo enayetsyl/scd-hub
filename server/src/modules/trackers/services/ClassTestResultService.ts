@@ -40,6 +40,25 @@ export class ClassTestResultError extends Error {}
 // enterResult (teacher records / edits one student's result — J3)
 // ---------------------------------------------------------------------------
 
+interface ExistingCt {
+  publishedAt?: Date | null;
+  submittedAt?: Date | null;
+  weakness?: string | null;
+  teacherAction?: string | null;
+  guardianAction?: string | null;
+  aiCheck?: IAiCheck | null;
+}
+
+/**
+ * D-#1175: re-saving UNCHANGED comments needs no new check — keep the earlier CHECKED
+ * stamp instead of overwriting it with "saved unchecked".
+ */
+function keepCtStamp(existing: ExistingCt | null, input: EnterResultInput): boolean {
+  if (!existing || existing.aiCheck?.status !== "CHECKED" || input.aiCheck?.status !== "NOT_CHECKED") return false;
+  const same = (a?: string | null, b?: string | null) => (a ?? "").trim() === (b ?? "").trim();
+  return same(existing.weakness, input.weakness) && same(existing.teacherAction, input.teacherAction) && same(existing.guardianAction, input.guardianAction);
+}
+
 export interface EnterResultInput {
   testId: string;
   studentId: string;
@@ -170,8 +189,8 @@ export async function enterResult(input: EnterResultInput): Promise<ClassTestRes
   // so a silent edit would change what they see with no re-notify/version bump. The
   // teacher must Unpublish first, then edit, then Re-publish. Pre-publish stays open.
   const existing = (await ClassTestResult.findOne({ testId: testOid, studentId: studentOid })
-    .select("publishedAt submittedAt")
-    .lean()) as { publishedAt?: Date | null; submittedAt?: Date | null } | null;
+    .select("publishedAt submittedAt weakness teacherAction guardianAction aiCheck")
+    .lean()) as ExistingCt | null;
   if (existing?.publishedAt) {
     throw new ClassTestResultError(
       "This result is published — unpublish it before editing (guardians have already been notified)",
@@ -203,7 +222,7 @@ export async function enterResult(input: EnterResultInput): Promise<ClassTestRes
             guardianAction: input.guardianAction ?? undefined,
             enteredBy: new Types.ObjectId(input.actorId),
             marks,
-            ...(input.aiCheck ? { aiCheck: input.aiCheck } : {}),
+            ...(input.aiCheck && !keepCtStamp(existing, input) ? { aiCheck: input.aiCheck } : {}),
           },
         };
 

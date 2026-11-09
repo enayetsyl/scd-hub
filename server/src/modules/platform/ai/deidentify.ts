@@ -46,6 +46,12 @@ export interface DeidResult {
   text: string;
   /** token → the original text it replaced (first spelling seen). Server-only. */
   map: Record<string, string>;
+  /**
+   * The phones / numbers / ids in the order they were hidden (D-#1176). Server-only. The
+   * comment checker puts them back into a suggestion (`restoreNumbers`), so accepting one
+   * never pastes "[PHONE]" into a comment; the assistant leaves them hidden.
+   */
+  seq?: { PHONE: string[]; NUM: string[]; ID: string[] };
 }
 
 export class DeidentifyError extends Error {
@@ -287,8 +293,20 @@ export function deidentify(textIn: string, scope: DeidScope): DeidResult {
   for (const [t, spellings] of Object.entries(seen)) {
     map[t] = spellings.reduce((best, s) => (original.indexOf(s) < original.indexOf(best) ? s : best));
   }
-  text = text.replace(PHONE, "[PHONE]").replace(LONG_NUMBER, "[NUM]").replace(ROLL_OR_ID, "$1 [NUM]").replace(TRACKER_ID, "[ID]");
-  return { text, map };
+  const seq = { PHONE: [] as string[], NUM: [] as string[], ID: [] as string[] };
+  text = text
+    .replace(PHONE, (m: string) => (seq.PHONE.push(m), "[PHONE]"))
+    .replace(LONG_NUMBER, (m: string) => (seq.NUM.push(m), "[NUM]"))
+    .replace(ROLL_OR_ID, (m: string, label: string) => (seq.NUM.push(m.slice(label.length).trim()), `${label} [NUM]`))
+    .replace(TRACKER_ID, (m: string) => (seq.ID.push(m), "[ID]"));
+  return { text, map, seq };
+}
+
+/** Puts hidden phones / numbers / ids back, in order (the nth [PHONE] gets the nth phone). */
+export function restoreNumbers(text: string, seq: DeidResult["seq"]): string {
+  if (!seq) return text;
+  const next = { PHONE: 0, NUM: 0, ID: 0 };
+  return text.replace(/\[(PHONE|NUM|ID)\]/g, (tok, kind: "PHONE" | "NUM" | "ID") => seq[kind][next[kind]++] ?? tok);
 }
 
 /** Puts the people back. Tokens the model invented or mangled are left as they are. */

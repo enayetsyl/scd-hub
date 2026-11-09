@@ -140,6 +140,13 @@ exports.run = async (h) => {
   await h.tap(P, "সবাই", 3000);
   await h.shot(P, "ops-bangla-names", 1, [{ re: "^বাংলা নাম আছে" }, { text: "যাদের বাকি" }, { css: ":nth-match(input, 1)" }, { text: "সংরক্ষণ করুন" }]);
 
+  // ── The AI request & reply log (D-#1179) ──────────────────────────────────
+  await admin(h, P, "এআই-এর অনুরোধ ও উত্তর", "ops-ai-log");
+  await h.shot(P, "ops-ai-log", 1, [{ text: "মন্তব্য যাচাই" }, { text: "CSV নামান" }]);
+  await h.tap(P, "ভাগের প্রথম পাঠ কীভাবে শুরু করব?", 3500);
+  await h.shot(P, "ops-ai-log", 2, [{ text: "যা পাঠানো হয়েছে (নাম লুকানো)" }, { text: "এআই-এর উত্তর" }]);
+  await h.shot(P, "ops-ai-log", 3, [{ text: "এই লগটি মুছুন" }]);
+
   // ── Message templates ────────────────────────────────────────────────────
   await admin(h, P, "বার্তা টেমপ্লেট", "ops-message-templates");
   await h.shot(P, "ops-message-templates", 1, [{ text: "পাঠ নোট প্রকাশিত — বার্তা" }]);

@@ -1017,6 +1017,10 @@ export const FEATURE_CATALOGUE = {
       chat: { en: "AI teacher assistant", bn: "এআই সহকারীর সাথে আলাপ", desc: "Ask the AI about a chapter's lesson plan; see only your own conversations", teacher: true, office: true, flags: [] },
       // LOCKED (D-#1104): every teacher's conversations — the Principal, nobody else.
       read_all_chats: { en: "Read every assistant conversation", bn: "সব শিক্ষকের এআই আলাপ পড়া", desc: "Read any teacher's AI assistant conversation (teachers are told this on first use)", teacher: false, office: false, flags: ["LOCKED"] },
+      // LOCKED (D-#1179): the de-identified log of every AI request and reply, for improving
+      // the instructions / rules / standards — the Principal only; deleting it is manual.
+      read_ai_log: { en: "Read the AI request & reply log", bn: "এআই-এর অনুরোধ ও উত্তরের লগ দেখা", desc: "Every comment check and assistant question as sent to the AI (names hidden) and its reply; export", teacher: false, office: false, flags: ["LOCKED"] },
+      delete_ai_log: { en: "Delete AI log entries", bn: "এআই-এর লগ মুছে ফেলা", desc: "Delete one AI log entry, or every entry of a month / feature (audited)", teacher: false, office: false, flags: ["LOCKED"] },
     },
   },
   guardian_engagement: {
