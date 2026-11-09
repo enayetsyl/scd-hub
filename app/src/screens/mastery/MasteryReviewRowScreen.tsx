@@ -1,15 +1,15 @@
 /**
  * MasteryReviewRowScreen (OT-2, prd-objective-tree §7, mock 3) — one row with its evidence:
- * code, path (domain › objective), label, book wording, book ref with exercises, assess + question
- * types, earlier steps, home tip (objective), Claude's note. Actions: গ্রহণ, সম্পাদনা, ভাগ করুন,
- * অন্যটির সাথে মেলান, সরান, বাদ দিন — each one event on the server, refused with the broken tree
- * rule named. The row's comment threads sit underneath.
+ * code, path (domain › objective), label, book wording, book ref with exercises, earlier steps, home
+ * tip (objective), Claude's note. Actions: গ্রহণ, সম্পাদনা, ভাগ করুন, অন্যটির সাথে মেলান, সরান,
+ * বাদ দিন — each one event on the server, refused with the broken tree rule named. The row's
+ * comment threads sit underneath.
  *
  * The screen title is the row's level word from useMasteryLevelLabels (D-#923).
  *
- * D-#1110: an objective with sub-objectives has no Question/Rubric of its own — the card shows which
- * subs are questions and which are rubric, the edit form hides the choice, and a sub lists all its
- * siblings (with their assess + question types) so a written sibling of an oral step is visible.
+ * D-#1160: the review judges TAGS only — Question/Rubric and question types are neither shown nor
+ * edited here; they are set later on the catalogue (D-#1161). A sub lists all its siblings so the
+ * reviewer sees the whole objective's split while reading one step.
  */
 import React, { useState } from "react";
 import { View } from "react-native";
@@ -18,7 +18,6 @@ import { MASTERY_REVIEW_DECIDE, type ReviewDecisionInput, type ReviewQueue, type
 import { Screen, Card, Body, Muted, Badge, Button, Chip, ChipRow, Field, Loader, Notice, Row, Select } from "../../components/ui";
 import { STR, bnNum } from "../../lib/labels";
 import { useMasteryLevelLabels } from "../../lib/useMasteryLevelLabels";
-import { childAssessMix } from "@scd/shared";
 import { space } from "../../theme";
 import { fill } from "./masteryStateUi";
 import { ReviewThreads, TapText, codeTail, formatExerciseRef, reviewStateLabel, reviewStateTone, useReviewAction, useReviewQueue } from "./masteryReviewUi";
@@ -35,12 +34,10 @@ const lines = (t: string) =>
     .map((x) => x.trim())
     .filter(Boolean);
 
-function EditForm({ q, r, run, busy, hasKids }: { q: ReviewQueue; r: ReviewRow; run: (i: ReviewDecisionInput) => void; busy: boolean; hasKids: boolean }): React.ReactElement {
+function EditForm({ q, r, run, busy }: { q: ReviewQueue; r: ReviewRow; run: (i: ReviewDecisionInput) => void; busy: boolean }): React.ReactElement {
   const levels = useMasteryLevelLabels();
   const [label, setLabel] = useState(r.labelBn);
   const [labelEn, setLabelEn] = useState(r.labelEn ?? "");
-  const [assess, setAssess] = useState(r.assess);
-  const [qts, setQts] = useState<string[]>(r.questionTypeCodes);
   const [prereqs, setPrereqs] = useState(r.prereqCodes.join(", "));
   const [tip, setTip] = useState(r.homeTipBn ?? "");
   const [domain, setDomain] = useState<string | null>(r.domainCode);
@@ -49,26 +46,6 @@ function EditForm({ q, r, run, busy, hasKids }: { q: ReviewQueue; r: ReviewRow; 
     <View style={{ gap: space(2) }}>
       <Field label={STR.msRvLabel} value={label} onChangeText={setLabel} multiline />
       <Field label={STR.msRvLabelEn} value={labelEn} onChangeText={setLabelEn} />
-      {hasKids ? (
-        // D-#1110: an objective with sub-objectives has no Question/Rubric of its own — each sub sets it.
-        <Muted>
-          {STR.msRvAssess}: {fill(STR.msRvAssessOnSubsTpl, { sub: levels.sub })}
-        </Muted>
-      ) : (
-        <>
-          <Muted>{STR.msRvAssess}</Muted>
-          <ChipRow>
-            <Chip label={STR.msRvAssessQ} selected={assess === "QUESTION"} onPress={() => setAssess("QUESTION")} />
-            <Chip label={STR.msRvAssessR} selected={assess === "RUBRIC"} onPress={() => setAssess("RUBRIC")} />
-          </ChipRow>
-          <Muted>{STR.msQuestionTypes}</Muted>
-          <ChipRow>
-            {q.questionTypes.map((t) => (
-              <Chip key={t.code} label={t.labelBn || t.code} selected={qts.includes(t.code)} onPress={() => setQts((p) => (p.includes(t.code) ? p.filter((x) => x !== t.code) : [...p, t.code]))} />
-            ))}
-          </ChipRow>
-        </>
-      )}
       <Field label={STR.msRvPrereqCodes} value={prereqs} onChangeText={setPrereqs} multiline />
       {r.level !== "SUB" ? (
         <>
@@ -86,8 +63,6 @@ function EditForm({ q, r, run, busy, hasKids }: { q: ReviewQueue; r: ReviewRow; 
             code: r.code,
             labelBn: label,
             labelEn,
-            assess: hasKids ? undefined : assess,
-            questionTypeCodes: hasKids ? undefined : qts,
             prereqCodes: lines(prereqs),
             homeTipBn: r.level !== "SUB" ? tip : undefined,
             domainCode: r.level !== "SUB" ? domain : undefined,
@@ -152,15 +127,9 @@ export default function MasteryReviewRowScreen({ navigation, route }: Props): Re
   const parent = r.parentCode ? byCode.get(r.parentCode) : undefined;
   const domain = q.domains.find((d) => d.code === r.domainCode);
   const kids = q.rows.filter((x) => x.parentCode === r.code && !isOut(x));
-  const qtLabel = new Map(q.questionTypes.map((t) => [t.code, t.labelBn || t.code]));
-  const assessLine = (x: ReviewRow) =>
-    `${x.assess === "RUBRIC" ? STR.msRvAssessR : STR.msRvAssessQ} · ${x.questionTypeCodes.map((c) => qtLabel.get(c) ?? c).join(", ")}`;
-  // D-#1110: an objective with sub-objectives shows the mix its subs set, not its own single value;
-  // a sub lists every sub of its objective so a written sibling of an oral step is in plain sight.
-  const mix = kids.length > 0 ? childAssessMix(kids) : null;
-  const tails = (codes: string[]) => (codes.length ? codes.map(codeTail).join(", ") : STR.msRvNone);
+  // A sub lists every sub of its objective, so the reviewer sees the whole split while reading one step.
   const siblings = r.level === "SUB" && parent ? q.rows.filter((x) => x.parentCode === parent.code && !isOut(x)) : [];
-  const stepLine = (k: ReviewRow) => `${codeTail(k.code)} · ${k.labelBn} — ${assessLine(k)} — ${reviewStateLabel(k.reviewState)}`;
+  const stepLine = (k: ReviewRow) => `${codeTail(k.code)} · ${k.labelBn} — ${reviewStateLabel(k.reviewState)}`;
   const editable = q.canWrite && r.status === "DRAFT" && !r.mergedInto;
   const live = editable && r.reviewState !== "REJECTED";
   // D-#1016: add a step where the reviewer is reading — on an objective that already has steps (a leaf
@@ -211,10 +180,6 @@ export default function MasteryReviewRowScreen({ navigation, route }: Props): Re
             .join(" · ")}
         />
         {r.sourceText ? <Row label={STR.msRvBookWording} value={r.sourceText} /> : null}
-        <Row
-          label={STR.msRvAssess}
-          value={mix ? fill(STR.msRvAssessBySubTpl, { sub: levels.sub, q: tails(mix.question), r: tails(mix.rubric) }) : assessLine(r)}
-        />
         {r.prereqCodes.length ? (
           <Row label={STR.msRvPrereq} value={r.prereqCodes.map((c) => `${byCode.get(c)?.labelBn ?? ""} (${codeTail(c)})`).join("\n")} />
         ) : null}
@@ -286,7 +251,7 @@ export default function MasteryReviewRowScreen({ navigation, route }: Props): Re
             {live ? <Button title={STR.msRvMove} variant={mode === "MOVE" ? "primary" : "secondary"} onPress={() => setMode(mode === "MOVE" ? null : "MOVE")} /> : null}
             {live ? <Button title={STR.msRvRejectFull} variant="ghost" onPress={() => setMode(mode === "REJECT" ? null : "REJECT")} /> : null}
           </View>
-          {mode === "EDIT" ? <EditForm q={q} r={r} run={run} busy={act.busy} hasKids={kids.length > 0} /> : null}
+          {mode === "EDIT" ? <EditForm q={q} r={r} run={run} busy={act.busy} /> : null}
           {mode === "SPLIT" ? <SplitForm r={r} run={run} busy={act.busy} /> : null}
           {mode === "MERGE" ? (
             <View style={{ gap: space(2) }}>
