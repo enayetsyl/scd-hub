@@ -5,6 +5,10 @@
  *
  * Grouped by chapter in book order; strands (no chapter) come last under their own head.
  * Writes are shown only to mastery:manage — the server re-gates every one.
+ *
+ * D-#1161: this is where Question/Rubric and the question types are set — the review round judges
+ * tags only (D-#1160). Only tagged rows carry them (a grouping parent shows দল); types offered are
+ * the class-subject's active marks-table types, plus any the row already holds.
  */
 import React, { useLayoutEffect, useMemo, useState } from "react";
 import { View } from "react-native";
@@ -16,8 +20,9 @@ import {
   RETIRE_MASTERY_OUTCOME,
   SAVE_MASTERY_OUTCOME,
   type MasteryOutcomeRow,
+  type MasteryQuestionTypeRow,
 } from "../../graphql/mastery";
-import { Screen, Card, Body, Muted, Badge, Button, Field, Loader, EmptyState, Notice, H2 } from "../../components/ui";
+import { Screen, Card, Body, Muted, Badge, Button, Chip, ChipRow, Field, Loader, EmptyState, Notice, H2 } from "../../components/ui";
 import { ConfirmSheet } from "../../components/ConfirmSheet";
 import { useMasteryLevelLabels } from "../../lib/useMasteryLevelLabels";
 import { levelFill } from "./masteryStateUi";
@@ -46,6 +51,8 @@ export default function MasteryCatalogueScreen({ route, navigation }: Props): Re
   const [editing, setEditing] = useState<string | null>(null);
   const [label, setLabel] = useState("");
   const [tip, setTip] = useState("");
+  const [assess, setAssess] = useState("QUESTION");
+  const [qts, setQts] = useState<string[]>([]);
   const [confirm, setConfirm] = useState<{ kind: "lock" } | { kind: "retire"; code: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -58,8 +65,16 @@ export default function MasteryCatalogueScreen({ route, navigation }: Props): Re
   const [save, saveOutcome] = useMutation(SAVE_MASTERY_OUTCOME);
 
   const cat = data?.masteryCatalogue as
-    | { chapters: Chapter[]; outcomes: MasteryOutcomeRow[]; draftCount: number; lockedCount: number; retiredCount: number }
+    | {
+        chapters: Chapter[];
+        outcomes: MasteryOutcomeRow[];
+        questionTypes: MasteryQuestionTypeRow[];
+        draftCount: number;
+        lockedCount: number;
+        retiredCount: number;
+      }
     | undefined;
+  const qtLabel = useMemo(() => new Map((cat?.questionTypes ?? []).map((t) => [t.code, t.labelBn || t.code])), [cat]);
   const byChapter = useMemo(() => {
     const m = new Map<number, MasteryOutcomeRow[]>();
     for (const o of cat?.outcomes ?? []) {
@@ -87,9 +102,14 @@ export default function MasteryCatalogueScreen({ route, navigation }: Props): Re
     reload();
   }
 
-  async function onSave(code: string): Promise<void> {
+  async function onSave(o: MasteryOutcomeRow): Promise<void> {
     setError(null);
-    const res = await saveOutcome({ code, labelBn: label.trim(), homeTipBn: tip.trim() });
+    const res = await saveOutcome({
+      code: o.code,
+      labelBn: label.trim(),
+      homeTipBn: tip.trim(),
+      ...(o.tagged ? { assess, questionTypeCodes: qts } : {}),
+    });
     if (res.error) {
       setError(friendlyError(res.error));
       return;
@@ -101,21 +121,53 @@ export default function MasteryCatalogueScreen({ route, navigation }: Props): Re
 
   function outcomeCard(o: MasteryOutcomeRow): React.ReactElement {
     const isEditing = editing === o.code;
+    // Offer the active marks-table types, plus any this row already holds (a switched-off type
+    // stays where it is but is never newly given — the server refuses it).
+    const offered = (cat?.questionTypes ?? []).filter((t) => t.active || o.questionTypeCodes.includes(t.code));
+    const noTypes = o.tagged && o.assess === "QUESTION" && o.questionTypeCodes.length === 0;
     return (
       <Card key={o.code}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", gap: space(2), flexWrap: "wrap" }}>
           <Muted>{o.code}</Muted>
-          <View style={{ flexDirection: "row", gap: space(1) }}>
-            <Badge text={o.assess === "RUBRIC" ? STR.msAssessRubric : STR.msAssessQuestion} tone={o.assess === "RUBRIC" ? "info" : "brand"} />
+          <View style={{ flexDirection: "row", gap: space(1), flexWrap: "wrap" }}>
+            {o.tagged ? (
+              <Badge text={o.assess === "RUBRIC" ? STR.msAssessRubric : STR.msAssessQuestion} tone={o.assess === "RUBRIC" ? "info" : "brand"} />
+            ) : (
+              <Badge text={STR.msCatGroup} tone="muted" />
+            )}
+            {noTypes ? <Badge text={STR.msCatNoTypes} tone="gold" /> : null}
             <Badge text={statusText(o.status)} tone={statusTone(o.status)} />
           </View>
         </View>
         {isEditing ? (
           <>
             <Field label={STR.msLabel} value={label} onChangeText={setLabel} />
-            <Field label={STR.msHomeTip} value={tip} onChangeText={setTip} multiline />
+            {o.level !== "SUB" ? <Field label={STR.msHomeTip} value={tip} onChangeText={setTip} multiline /> : null}
+            {o.tagged ? (
+              <>
+                <Muted>{STR.msCatAssessField}</Muted>
+                <ChipRow>
+                  <Chip label={STR.msAssessQuestion} selected={assess === "QUESTION"} onPress={() => setAssess("QUESTION")} />
+                  <Chip label={STR.msAssessRubric} selected={assess === "RUBRIC"} onPress={() => setAssess("RUBRIC")} />
+                </ChipRow>
+                <Muted>{STR.msCatAssessHint}</Muted>
+                <Muted>
+                  {STR.msQuestionTypes} — {STR.msCatTypesHint}
+                </Muted>
+                <ChipRow>
+                  {offered.map((t) => (
+                    <Chip
+                      key={t.code}
+                      label={t.labelBn || t.code}
+                      selected={qts.includes(t.code)}
+                      onPress={() => setQts((p) => (p.includes(t.code) ? p.filter((x) => x !== t.code) : [...p, t.code]))}
+                    />
+                  ))}
+                </ChipRow>
+              </>
+            ) : null}
             <View style={{ flexDirection: "row", gap: space(2), flexWrap: "wrap" }}>
-              <Button title={STR.msSave} onPress={() => void onSave(o.code)} loading={save.fetching} disabled={!label.trim()} />
+              <Button title={STR.msSave} onPress={() => void onSave(o)} loading={save.fetching} disabled={!label.trim()} />
               <Button title={STR.msCancel} variant="secondary" onPress={() => setEditing(null)} />
             </View>
           </>
@@ -123,7 +175,11 @@ export default function MasteryCatalogueScreen({ route, navigation }: Props): Re
           <>
             <Body style={{ fontWeight: "700" }}>{o.labelBn}</Body>
             {o.sourceText ? <Muted>{STR.msSourceText}: {o.sourceText}</Muted> : null}
-            {o.questionTypeCodes.length > 0 ? <Muted>{o.questionTypeCodes.join(", ")}</Muted> : null}
+            {o.tagged && o.questionTypeCodes.length > 0 ? (
+              <Muted>
+                {STR.msQuestionTypes}: {o.questionTypeCodes.map((c) => qtLabel.get(c) ?? c).join(", ")}
+              </Muted>
+            ) : null}
             {o.homeTipBn ? <Muted>{STR.msHomeTip}: {o.homeTipBn}</Muted> : null}
             {canManage && o.status !== "RETIRED" ? (
               <View style={{ flexDirection: "row", gap: space(2), flexWrap: "wrap" }}>
@@ -134,6 +190,8 @@ export default function MasteryCatalogueScreen({ route, navigation }: Props): Re
                     setEditing(o.code);
                     setLabel(o.labelBn);
                     setTip(o.homeTipBn ?? "");
+                    setAssess(o.assess === "RUBRIC" ? "RUBRIC" : "QUESTION");
+                    setQts(o.questionTypeCodes);
                   }}
                 />
                 <Button title={STR.msRetire} variant="ghost" onPress={() => setConfirm({ kind: "retire", code: o.code })} />

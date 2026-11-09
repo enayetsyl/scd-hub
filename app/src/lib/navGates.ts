@@ -50,6 +50,8 @@ export const REPORT_LEAF_ACTIONS: Record<string, string[]> = {
   DailySnapshot: ["reports:daily_snapshot", "finance_ledger:view"],
   GuardianEngagement: ["reports:guardian_engagement", "guardian_engagement:view"],
   MarksDrivers: ["reports:marks_drivers"],
+  // AI-7 (D-#1140): AI spend + comment-check quality — Principal by default.
+  AiUsageReport: ["reports:ai_usage"],
   // OT-4: its own switch, or the objective-list doors (the Principal who locks, the reviewer).
   MasteryBankCoverage: ["reports:bank_coverage", "mastery:settings", "mastery:review"],
   // SB-6: one switch per tab of the storybook report.

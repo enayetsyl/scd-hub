@@ -27,7 +27,6 @@ import {
 import { Screen, Card, Body, Muted, Badge, Button, Chip, ChipRow, Field, Loader, Notice, Select } from "../../components/ui";
 import { STR, bnNum, hwSubjectLabel, masteryClassLabel } from "../../lib/labels";
 import { useMasteryLevelLabels } from "../../lib/useMasteryLevelLabels";
-import { childAssessMix } from "@scd/shared";
 import { space, useColors } from "../../theme";
 import { fill } from "./masteryStateUi";
 import {
@@ -190,8 +189,6 @@ function GroupCard({ q, g, onOpen, pendingOnly }: { q: ReviewQueue; g: Group; on
   const shown = pendingOnly ? proposed : all;
   const live = g.children.filter((c) => !isOut(c));
   const liveKids = live.length;
-  // D-#1110: an objective whose subs mix written questions and the rubric says so on the card.
-  const mixed = childAssessMix(live).mixed;
   return (
     <Card>
       <View style={{ flexDirection: "row", justifyContent: "space-between", gap: space(2), flexWrap: "wrap" }}>
@@ -204,7 +201,6 @@ function GroupCard({ q, g, onOpen, pendingOnly }: { q: ReviewQueue; g: Group; on
         <View style={{ flexDirection: "row", gap: space(1), flexWrap: "wrap" }}>
           <Badge text={levels.objective} tone="info" />
           {liveKids > 0 ? <Badge text={fill(STR.msRvChildrenTpl, { n: bnNum(liveKids), sub: levels.sub })} tone="muted" /> : null}
-          {mixed ? <Badge text={STR.msRvAssessMixed} tone="gold" /> : null}
         </View>
       </View>
       {shown.map((r) => (

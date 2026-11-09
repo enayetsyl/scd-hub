@@ -91,22 +91,11 @@ exports.run = async (h) => {
   await h.tap(R, "এখানে নতুন উপ-শিখনফল যোগ করুন", 1500);
   const inputUnder = (label) => R.getByText(label, { exact: typeof label === "string" }).locator("visible=true").first().locator("xpath=ancestor::div[.//input or .//textarea][1]").locator("input, textarea").first();
   await inputUnder("লেবেল").fill("৪১ থেকে ৬০ কথায় লেখা");
-  await h.tap(R, "কথায় লেখ (১–১০০)", 600);
   await inputUnder(/^অনুশীলনী \(/).fill("3/কথায় লিখি: ৪১ থেকে ৬০/1");
   await h.topmost(R, { text: "এখানে নতুন উপ-শিখনফল যোগ করুন" }, { scroll: true });
-  await h.shot(R, "mastery-review-add-sub", 1, [{ text: "লেবেল" }, { text: "প্রশ্নের ধরন" }, { re: "^অনুশীলনী \\(" }], {
+  // D-#1160: no question-type choice in the review — the form is label + exercises + reason.
+  await h.shot(R, "mastery-review-add-sub", 1, [{ text: "লেবেল" }, { re: "^অনুশীলনী \\(" }], {
     anchor: { text: "এখানে নতুন উপ-শিখনফল যোগ করুন" },
-  });
-
-  // One objective, written questions + the rubric on different subs (D-#1110). Not saved.
-  await openMastery(h, R, "তালিকা পর্যালোচনা");
-  await h.tap(R, "তালিকা পর্যালোচনা", 3000);
-  await openRound(h, R, null);
-  await h.tap(R, { re: "নামতা ১ থেকে ৫" }, 3000);
-  await h.shot(R, "mastery-review-assess", 0, [{ text: "যাচাই" }, { re: "গুণের খালি ঘরে গুণফল লেখা \\(১–৫" }], { anchor: { text: "যাচাই" } });
-  await h.tap(R, { re: "গুণের খালি ঘরে গুণফল লেখা \\(১–৫" }, 3000);
-  await h.shot(R, "mastery-review-assess", 1, [{ re: "^একই শিখনফল-এর সব উপ-শিখনফল$" }, { text: "সম্পাদনা" }], {
-    anchor: { re: "^একই শিখনফল-এর সব উপ-শিখনফল$" },
   });
 
   await openMastery(h, R, "তালিকা পর্যালোচনা");
@@ -130,4 +119,6 @@ exports.run = async (h) => {
   await h.shot(P, "mastery-review-lock", 2, [{ text: "সিদ্ধান্তের ফাইল (Claude-এর জন্য)" }]);
 
   await require("./mastery-catalogue.cjs").catalogue(h, P);
+  // D-#1161: Question/Rubric + question types are set on the catalogue, after the review. Not saved.
+  await require("./mastery-catalogue.cjs").assess(h, P);
 };

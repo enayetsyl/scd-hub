@@ -52,6 +52,7 @@ export default function ReportsHomeScreen({ navigation }: Props): React.ReactEle
     { screen: "DailySnapshot", icon: "🧾", title: STR.finSnapshotTitle, onPress: () => navigation.navigate("DailySnapshot") },
     { screen: "GuardianEngagement", icon: "👪", title: STR.geTitle, sub: STR.geSubtitle, onPress: () => navigation.navigate("GuardianEngagement") },
     { screen: "MarksDrivers", icon: "🎯", title: STR.mdTitle, sub: STR.mdHubSub, onPress: () => navigation.navigate("MarksDrivers") },
+    { screen: "AiUsageReport", icon: "🤖", title: STR.aurTitle, sub: STR.aurHubSub, onPress: () => navigation.navigate("AiUsageReport") },
     { screen: "MasteryBankCoverage", icon: "🧩", title: STR.bcTitle, sub: STR.bcHubSub, onPress: () => navigation.navigate("MasteryBankCoverage") },
     { screen: "StorybookReport", icon: "🧸", title: STR.stbRepTitle, sub: STR.stbRepHubSub, onPress: () => navigation.navigate("StorybookReport") },
     { screen: "ActivityReport", icon: "🧩", title: STR.actRepTitle, sub: STR.actRepHubSub, onPress: () => navigation.navigate("ActivityReport") },

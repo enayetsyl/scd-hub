@@ -425,32 +425,3 @@ export function readDomainsFile(raw: unknown): { ok: true; domains: DomainsFile 
   if (errors.length > 0) return { ok: false, errors };
   return { ok: true, domains: { format: OBJECTIVE_DOMAINS_FORMAT, subject, domains } };
 }
-
-// ---------------------------------------------------------------------------
-// D-#1110: an objective with sub-objectives takes Question / Rubric from them
-// ---------------------------------------------------------------------------
-
-export interface AssessChild {
-  code: string;
-  assess: string | null | undefined;
-  tagged: boolean;
-}
-
-export interface ChildAssessMix {
-  /** Tagged children set to QUESTION, in the order given. */
-  question: string[];
-  /** Tagged children set to RUBRIC, in the order given. */
-  rubric: string[];
-  /** Both kinds present: the objective is checked partly by written questions, partly by the rubric. */
-  mixed: boolean;
-}
-
-/** How an objective with sub-objectives is assessed (D-#1110). Each tagged child carries its own
- *  Question/Rubric choice; the objective's own `assess` value no longer applies once it has
- *  children. The caller passes live children only (rejected / merged-away rows left out). */
-export function childAssessMix(children: AssessChild[]): ChildAssessMix {
-  const tagged = children.filter((c) => c.tagged);
-  const question = tagged.filter((c) => c.assess !== "RUBRIC").map((c) => c.code);
-  const rubric = tagged.filter((c) => c.assess === "RUBRIC").map((c) => c.code);
-  return { question, rubric, mixed: question.length > 0 && rubric.length > 0 };
-}
