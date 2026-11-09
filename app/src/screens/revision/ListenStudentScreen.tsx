@@ -7,13 +7,14 @@
  * record/edit path (the server lets the assigned listener write). Nothing reaches the
  * family until a lead / the Office / the Principal releases it.
  */
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useMutation, useQuery } from "urql";
 import { REVISION_PORTION_STATUSES } from "@scd/shared";
+import { useAuth } from "../../auth/AuthContext";
+import { getItem, setItem, removeItem } from "../../lib/storage";
 import {
-  EDIT_REVISION_ENTRY,
   MY_REVISION_LISTENING_QUERY,
   RECORD_REVISION_ENTRY,
   type RevisionListeningRowT,
@@ -100,7 +101,22 @@ function toInput(s: Section): RevisionPortionInput {
   };
 }
 
+/** What is kept on the phone and sent to the server on every change (D-#1180). */
+interface MarkSnapshot {
+  present: boolean;
+  sections: Section[];
+  comment: string;
+}
+
+type SaveState = "idle" | "saving" | "saved" | "failed";
+
+/** Wait after a tap before sending — several quick taps go out as one save. */
+const SAVE_DELAY_MS = 500;
+/** Retry a failed save (no internet) this often while marks are unsent. */
+const RETRY_MS = 5000;
+
 function Marking({ row, date, onDone }: { row: RevisionListeningRowT; date: string; onDone: () => void }): React.ReactElement {
+  const { user } = useAuth();
   const locked = !!row.entry?.deliveredAt;
   const initial = useMemo(() => initialSections(row), [row]);
   const [present, setPresent] = useState<boolean>(row.entry?.present ?? true);
@@ -108,27 +124,139 @@ function Marking({ row, date, onDone }: { row: RevisionListeningRowT; date: stri
   const [comment, setComment] = useState(row.entry?.teacherComment ?? "");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [restored, setRestored] = useState(false);
   const [, record] = useMutation(RECORD_REVISION_ENTRY);
-  const [, edit] = useMutation(EDIT_REVISION_ENTRY);
 
-  const patch = (i: number, p: Partial<Section>) => setSections((prev) => prev.map((s, k) => (k === i ? { ...s, ...p } : s)));
+  // ---- the phone copy + the server save (D-#1180) --------------------------------
+  // Every change bumps `version`, is written to the phone at once, and is sent to the
+  // server after a short pause. The phone copy is removed only when the server holds that
+  // same version, so a reload, a closed app or a dead connection never loses a tap.
+  const draftKey = user ? `draft:v1:rev-listen:${user.id}:${row.studentId}:${date}` : null;
+  const latest = useRef<MarkSnapshot>({ present, sections, comment });
+  latest.current = { present, sections, comment };
+  const version = useRef(0);
+  const savedVersion = useRef(0);
+  const inFlight = useRef<Promise<boolean> | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const send = React.useCallback(
+    async (finish: boolean): Promise<boolean> => {
+      // One save at a time; a change made meanwhile goes out right after.
+      while (inFlight.current) await inFlight.current;
+      const v = version.current;
+      const snap = latest.current;
+      if (!finish && v === savedVersion.current) return true;
+      setSaveState("saving");
+      const run = (async () => {
+        const res = await record({
+          groupId: row.groupId,
+          studentId: row.studentId,
+          date,
+          present: snap.present,
+          portions: snap.present ? snap.sections.map(toInput) : [],
+          teacherComment: snap.comment.trim() || null,
+          inProgress: !finish,
+        });
+        if (res.error) {
+          setSaveState("failed");
+          if (finish) setError(STR.revListenFinishFailed);
+          return false;
+        }
+        savedVersion.current = Math.max(savedVersion.current, v);
+        if (savedVersion.current === version.current && draftKey) void removeItem(draftKey).catch(() => undefined);
+        setSaveState("saved");
+        return true;
+      })();
+      inFlight.current = run;
+      try {
+        return await run;
+      } finally {
+        inFlight.current = null;
+      }
+    },
+    [record, row.groupId, row.studentId, date, draftKey],
+  );
+
+  /** A tap happened: keep it on the phone now, send it shortly. */
+  const changed = React.useCallback(() => {
+    if (locked) return;
+    version.current += 1;
+    if (draftKey) {
+      // The state update has not landed yet — write on the next tick, from the ref.
+      setTimeout(() => void setItem(draftKey, JSON.stringify(latest.current)).catch(() => undefined), 0);
+    }
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => void send(false), SAVE_DELAY_MS);
+  }, [locked, draftKey, send]);
+
+  // Retry while something is unsent and the last try failed (no internet).
+  useEffect(() => {
+    if (saveState !== "failed") return;
+    const t = setInterval(() => {
+      if (version.current > savedVersion.current) void send(false);
+    }, RETRY_MS);
+    return () => clearInterval(t);
+  }, [saveState, send]);
+
+  // On open: a copy left on the phone (never reached the server) wins over the server's.
+  const triedRestore = useRef(false);
+  useEffect(() => {
+    if (!draftKey || locked || triedRestore.current) return;
+    triedRestore.current = true;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const raw = await getItem(draftKey);
+        if (!raw || cancelled) return;
+        const d = JSON.parse(raw) as MarkSnapshot;
+        setPresent(d.present);
+        setSections(d.sections);
+        setComment(d.comment);
+        setRestored(true);
+        latest.current = d;
+        version.current += 1;
+        void send(false);
+      } catch {
+        /* a broken copy is ignored */
+      }
+    })();
+    return () => {
+      // Unmounted before the read finished (React's dev double-mount): let the next mount try.
+      cancelled = true;
+      triedRestore.current = false;
+    };
+  }, [draftKey, locked, send]);
+
+  useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current);
+    },
+    [],
+  );
+
+  const patch = (i: number, p: Partial<Section>) => {
+    setSections((prev) => prev.map((s, k) => (k === i ? { ...s, ...p } : s)));
+    changed();
+  };
   const counter = (i: number, key: CountKey, label: string) => (
     <Counter label={label} value={sections[i][key]} onChange={(v) => patch(i, { [key]: v } as Partial<Section>)} disabled={locked} />
   );
 
-  async function onSave(): Promise<void> {
+  async function onFinish(): Promise<void> {
     setError(null);
     if (present && sections.length === 0) return setError(STR.revListenNoTarget);
-    const portions = present ? sections.map(toInput) : [];
-    const teacherComment = comment.trim() || null;
+    if (timer.current) clearTimeout(timer.current);
     setBusy(true);
-    const res = row.entry
-      ? await edit({ entryId: row.entry.id, groupId: row.groupId, present, portions, teacherComment })
-      : await record({ groupId: row.groupId, studentId: row.studentId, date, present, portions, teacherComment });
+    const ok = await send(true);
     setBusy(false);
-    if (res.error) return setError(friendlyError(res.error));
+    if (!ok) return;
+    if (draftKey) await removeItem(draftKey).catch(() => undefined);
     onDone();
   }
+
+  const saveLine =
+    saveState === "saving" ? STR.revAutoSaving : saveState === "saved" ? STR.revAutoSaved : saveState === "failed" ? STR.revAutoFailed : null;
 
   return (
     <>
@@ -138,10 +266,30 @@ function Marking({ row, date, onDone }: { row: RevisionListeningRowT; date: stri
           {hifzLevelLabel(row.level)} · {row.groupNameBn} · {bnNum(date)}
         </Muted>
         {locked ? <Notice message={STR.revListenLocked} tone="info" /> : null}
+        {restored ? <Notice message={STR.revAutoRestored} tone="info" /> : null}
         <View style={{ flexDirection: "row", gap: space(2), marginTop: space(2) }}>
-          <Chip label={STR.revPresent} selected={present} onPress={() => !locked && setPresent(true)} />
-          <Chip label={STR.revAbsent} selected={!present} onPress={() => !locked && setPresent(false)} />
+          <Chip
+            label={STR.revPresent}
+            selected={present}
+            onPress={() => {
+              if (locked) return;
+              setPresent(true);
+              changed();
+            }}
+          />
+          <Chip
+            label={STR.revAbsent}
+            selected={!present}
+            onPress={() => {
+              if (locked) return;
+              setPresent(false);
+              changed();
+            }}
+          />
         </View>
+        {saveLine && !locked ? (
+          <Muted style={{ marginTop: space(2), color: saveState === "failed" ? "#B3261E" : undefined }}>{saveLine}</Muted>
+        ) : null}
       </Card>
 
       {!present ? (
@@ -171,16 +319,28 @@ function Marking({ row, date, onDone }: { row: RevisionListeningRowT; date: stri
             {counter(i, "madd", STR.revMadd)}
             {counter(i, "other", STR.revOther)}
             <Field label={STR.revSectionComment} value={s.note} onChangeText={(t) => patch(i, { note: t })} multiline editable={!locked} />
+            {saveLine && !locked ? (
+              <Muted style={{ marginTop: space(1), color: saveState === "failed" ? "#B3261E" : undefined }}>{saveLine}</Muted>
+            ) : null}
           </Card>
         ))
       )}
 
       <Card>
-        <Field label={STR.revComment} value={comment} onChangeText={setComment} multiline editable={!locked} />
+        <Field
+          label={STR.revComment}
+          value={comment}
+          onChangeText={(t) => {
+            setComment(t);
+            changed();
+          }}
+          multiline
+          editable={!locked}
+        />
         {error ? <Notice message={error} tone="danger" /> : null}
         {!locked ? (
           <View style={{ marginTop: space(2) }}>
-            <Button title={STR.revListenSave} onPress={onSave} loading={busy} disabled={busy} />
+            <Button title={STR.revListenSave} onPress={onFinish} loading={busy} disabled={busy} />
             <Muted style={{ marginTop: space(1), textAlign: "center" }}>{STR.revListenBeforeRelease}</Muted>
           </View>
         ) : null}
@@ -204,7 +364,9 @@ export default function ListenStudentScreen({ route, navigation }: Props): React
         ) : !row ? (
           <EmptyState message={STR.revListenNone} />
         ) : (
-          <Marking key={`${row.studentId}-${row.entry?.updatedAt ?? "new"}`} row={row} date={date} onDone={() => navigation.goBack()} />
+          // Keyed by student only: every autosave refetches the list, and a remount would
+          // throw away taps made while the save was on its way (D-#1180).
+          <Marking key={`${row.studentId}-${date}`} row={row} date={date} onDone={() => navigation.goBack()} />
         )}
       </ScrollView>
     </Screen>

@@ -41,6 +41,11 @@ _Builds on SR-1 (entry), SR-2 (delivery), SR-5 (surah:ayah ranges). Identity pla
   - The section comment is stored in the existing portion `note`.
   - The overall comment stays `teacherComment`.
   - With no target this week, a present student cannot be saved: the screen asks for the target first. Absent can always be saved.
+- **Every tap is saved, to the server and to the phone (D-#1180, owner 2026-11-09).**
+  - Each change is sent about 0.5 s later with `inProgress: true`, and is kept on the device until the server holds that version.
+  - Reopening the student restores an unsent copy from the phone and saves it. A failed save retries every 5 s.
+  - The student shows **চলছে** until the listener taps **শেষ — ফিরে যান**.
+  - An in-progress entry is never released or delivered. Autosaves write no audit row; finishing does.
 - **Listener assignment is standing.**
   - It holds every Saturday until it is changed.
   - Setting the listener to null takes the student away from their listener.

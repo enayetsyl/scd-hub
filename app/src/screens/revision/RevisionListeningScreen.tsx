@@ -22,6 +22,7 @@ type Nav = NativeStackNavigationProp<RevisionStackParamList>;
 function rowState(r: RevisionListeningRowT): { text: string; tone: "brand" | "muted" | "warn" } {
   if (!r.entry) return { text: STR.revListenPending, tone: "warn" };
   if (r.entry.deliveredAt) return { text: STR.revListenSent, tone: "muted" };
+  if (r.entry.inProgress) return { text: STR.revListenInProgress, tone: "warn" };
   if (!r.entry.present) return { text: STR.revAbsent, tone: "muted" };
   return { text: STR.revListenDone, tone: "brand" };
 }
@@ -37,7 +38,7 @@ export default function RevisionListeningScreen({ route }: Props): React.ReactEl
     }, [refetch]),
   );
   const rows = q.data?.myRevisionListening ?? [];
-  const done = rows.filter((r) => r.entry).length;
+  const done = rows.filter((r) => r.entry && !r.entry.inProgress).length;
 
   // One target line per level among my students.
   const targets = new Map<string, RevisionListeningRowT["target"]>();
