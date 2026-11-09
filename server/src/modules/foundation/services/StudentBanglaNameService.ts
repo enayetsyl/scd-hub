@@ -2,6 +2,9 @@
  * Students' Bangla names (AI-4, D-#1131; PRD P11) — the AI de-identification can only hide
  * a name it knows, and teachers write children's names in Bangla while most children have
  * only an English name on file. The Office fills them here. `students:edit`.
+ * D-#1151: each row carries a guess from the English name (`guessBn`) — the screen offers
+ * it pre-filled, so checking a right guess is one tap. The guess is already used for
+ * hiding without being saved; saving makes it the checked spelling.
  */
 import { Types } from "mongoose";
 import type { AuthPayload } from "../../../context";
@@ -13,12 +16,15 @@ import { Section } from "../models/Section";
 import { Class } from "../models/Class";
 import { writeAudit } from "../../platform/services/AuditService";
 import { deidReadiness, type DeidReadiness } from "../../platform/services/DeidScopeService";
+import { guessBanglaName } from "../../platform/ai/banglaGuess";
 
 export interface BanglaNameRow {
   studentId: string;
   schoolId: string;
   name: string;
   nameBn: string | null;
+  /** Bangla spelling guessed from `name` (D-#1151); "" when none. */
+  guessBn: string;
   /** "শ্রেণি ৩ · বালক" */
   placeBn: string;
 }
@@ -52,6 +58,7 @@ export async function studentBanglaNamesPage(authIn: AuthPayload | null, args: P
           schoolId: s.schoolId,
           name: s.name,
           nameBn: s.nameBn || null,
+          guessBn: guessBanglaName(s.name),
           placeBn: [c?.nameBn, se?.nameBn].filter(Boolean).join(" · "),
         },
       };
@@ -82,7 +89,7 @@ export async function setStudentBanglaName(authIn: AuthPayload | null, studentId
     meta: { before, after: nameBn },
   });
   const [c, se] = await Promise.all([Class.findById(s.classId).select("nameBn").lean(), Section.findById(s.sectionId).select("nameBn").lean()]);
-  return { studentId: s._id.toString(), schoolId: s.schoolId, name: s.name, nameBn, placeBn: [c?.nameBn, se?.nameBn].filter(Boolean).join(" · ") };
+  return { studentId: s._id.toString(), schoolId: s.schoolId, name: s.name, nameBn, guessBn: guessBanglaName(s.name), placeBn: [c?.nameBn, se?.nameBn].filter(Boolean).join(" · ") };
 }
 
 export async function banglaNameReadiness(authIn: AuthPayload | null): Promise<DeidReadiness> {

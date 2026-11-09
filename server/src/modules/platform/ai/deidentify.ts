@@ -16,6 +16,12 @@
  * ending from the list). Common words that are also name parts (ইসলাম, নূর, Islam, Md …)
  * are never matched on their own — only inside a full name.
  *
+ * LOOSE match for the child the text is about (D-#1151): every Bangla word is also compared
+ * by its "skeleton" — vowel length, a/o, aspiration, hasant, doubled letters and য় ignored —
+ * against that child's Bangla spellings (typed by the Office, or guessed from the English
+ * name by `banglaGuess.ts`). So রাফি / রাফী / রাফিকে all hide even when nobody typed
+ * the Bangla name. Only the own child: a wrongly hidden word costs a placeholder, not a name.
+ *
  * The map NEVER leaves the server and is never logged with the prompt (D-#1094).
  * Pure: no database. `DeidScopeService` builds a scope from the roster.
  */
@@ -57,6 +63,9 @@ const STOP = new Set([
   "মোঃ", "মো", "মোছাঃ", "মোসাঃ", "মুহাম্মদ", "মোহাম্মদ", "মুহাম্মাদ", "আব্দুল", "আবদুল", "আবু", "বিনতে", "ইসলাম", "নূর", "নুর", "আশা", "আলো",
   "হাসান", "হোসেন", "হোসাইন", "আহমেদ", "আহমদ", "আক্তার", "আখতার", "খাতুন", "বেগম", "রহমান", "উদ্দিন", "আলী", "মিয়া", "খান", "সোনা",
   "মনি", "মণি", "সুলতানা", "জাহান", "চৌধুরী", "হক", "আলম", "কবির", "করিম", "উস্তায", "উস্তাদ", "উস্তাযা", "আপা", "স্যার", "ম্যাম",
+  // Everyday words that are rarely a child's own first name (Kader → কাদের "whose") — D-#1151.
+  // Real first names (সীমা, সারা, জারা ≈ যারা …) stay matchable: a hidden word costs less than a name.
+  "কাদের", "অংশ", "মেনু", "যেদিন", "দেন", "সুর", "সূরা", "সুদ", "অক্ষর", "আজকে", "জানতে",
 ]);
 
 // Bangla spelling-variant classes.
@@ -109,6 +118,129 @@ function entriesOf(scope: DeidScope): Entry[] {
   return out.sort((a, b) => [...b.text].length - [...a.text].length);
 }
 
+// Loose (skeleton) match — own child only -------------------------------------------------
+
+const SKEL: Record<string, string> = {
+  "ি": "i", "ী": "i", "ই": "i", "ঈ": "i", "ু": "u", "ূ": "u", "উ": "u", "ঊ": "u", "ে": "e", "ৈ": "e", "এ": "e", "ঐ": "e",
+  "ৃ": "ri", "ঋ": "ri",
+  "খ": "ক", "ঘ": "গ", "ছ": "চ", "ঝ": "জ", "য": "জ", "ঠ": "ত", "থ": "ত", "ট": "ত", "ৎ": "ত", "ঢ": "দ", "ড": "দ", "ধ": "দ",
+  "ভ": "ব", "শ": "স", "ষ": "স", "ণ": "ন", "ং": "ন", "ঙ": "ন",
+};
+/** Dropped: া ো ৌ ্ ঁ ঃ ় and joiners; অ আ ও ঔ count as a vowel only at the start. */
+const SKEL_DROP = new Set(["া", "ো", "ৌ", "্", "ঁ", "ঃ", "়", "‌", "‍"]);
+const SKEL_START = new Set(["অ", "আ", "ও", "ঔ"]);
+
+/** The spelling-blind shape of one Bangla word (exported for tests). */
+export function skeleton(word: string): string {
+  // NFC keeps য় ড় ঢ় decomposed (letter + nukta): য় is a glide (dropped), ড় / ঢ় sound as র.
+  // য-ফলা (রাইয়্যান) adds no sound of its own in a name: dropped too.
+  const flat = nfc(word)
+    .replace(/্য(?!়)/g, "")
+    .replace(/[য়]|য়/g, "")
+    .replace(/[ড়ঢ়]|[ডঢ]়/g, "র");
+  const chars = [...flat];
+  let out = "";
+  chars.forEach((ch, i) => {
+    if (SKEL_DROP.has(ch)) return;
+    if (SKEL_START.has(ch)) {
+      if (i === 0) out += "A";
+      return;
+    }
+    const m = SKEL[ch] ?? ch;
+    if (!out.endsWith(m)) out += m; // doubled letters (ব্ব) count once
+  });
+  return out;
+}
+
+const BN_WORD = /[ঀ-৿‌‍]+/gu;
+const LOOSE_ENDINGS = ["দের", "য়ের", "এর", "ের", "কে", "রা", "র", "ও", "ই"];
+/**
+ * Skeletons shorter than this match ordinary words (অংশ ≈ আনাস, সীমা ≈ সিমা); the exact,
+ * variant-tolerant match above still covers short names. Measured 2026-11-08 on 2,396
+ * distinct words of the help guides: 3 → 14 ordinary words hit, 4 → none.
+ */
+const LOOSE_MIN = 4;
+
+function within1(a: string, b: string): boolean {
+  const x = [...a];
+  const y = [...b];
+  if (Math.abs(x.length - y.length) > 1) return false;
+  let i = 0;
+  let j = 0;
+  let edits = 0;
+  while (i < x.length && j < y.length) {
+    if (x[i] === y[j]) {
+      i += 1;
+      j += 1;
+      continue;
+    }
+    if (++edits > 1) return false;
+    if (x.length > y.length) i += 1;
+    else if (y.length > x.length) j += 1;
+    else {
+      i += 1;
+      j += 1;
+    }
+  }
+  return edits + (x.length - i) + (y.length - j) <= 1;
+}
+
+interface LooseTargets {
+  /** Vowel-aware skeletons (≥ LOOSE_MIN symbols). */
+  skel: Set<string>;
+  /** Long skeletons (≥ 6) also match one edit away (মুবতাসিম / মোবতাসীম). */
+  long: string[];
+}
+
+function isLooseHit(word: string, t: LooseTargets): boolean {
+  const k = skeleton(word);
+  if ([...k].length < LOOSE_MIN) return false;
+  if (t.skel.has(k)) return true;
+  return [...k].length >= 5 && t.long.some((l) => within1(k, l));
+}
+
+/** The own child's Bangla name parts as loose targets (STOP words left out). */
+function ownTargets(scope: DeidScope): LooseTargets {
+  const skel = ownSkeletons(scope);
+  // ≥ 5 hid an ordinary word (মেনুর) for a 5-letter name; ≥ 6 hid none (2026-11-08 measurement).
+  return { skel, long: [...skel].filter((k) => [...k].length >= 6) };
+}
+
+/** The own child's Bangla name parts as skeletons (STOP words left out). */
+function ownSkeletons(scope: DeidScope): Set<string> {
+  const out = new Set<string>();
+  const stop = new Set([...STOP].filter(isBangla).map(skeleton));
+  for (const p of scope.people) {
+    if (!p.own) continue;
+    for (const raw of p.names) {
+      if (!isBangla(raw)) continue;
+      for (const part of nfc(raw).split(/[\s.\-]+/)) {
+        const w = part.replace(/[ঃ:]$/, "");
+        if (!w || STOP.has(w)) continue;
+        const k = skeleton(w);
+        if ([...k].length >= LOOSE_MIN && !stop.has(k)) out.add(k);
+      }
+    }
+  }
+  return out;
+}
+
+/** Each Bangla word whose stem (an ending allowed) has an own-child skeleton → callback. */
+function looseReplace(text: string, scope: DeidScope, onHit: (stem: string) => string): string {
+  const targets = ownTargets(scope);
+  if (targets.skel.size === 0) return text;
+  return text.replace(BN_WORD, (word) => {
+    if (isLooseHit(word, targets)) return onHit(word);
+    for (const end of LOOSE_ENDINGS) {
+      if (word.length > end.length && word.endsWith(end)) {
+        const stem = word.slice(0, -end.length);
+        if (isLooseHit(stem, targets)) return onHit(stem) + end;
+      }
+    }
+    return word;
+  });
+}
+
 function tokenFor(scope: DeidScope): (p: DeidPerson) => string {
   const counters: Record<DeidKind, number> = { S: 0, G: 0, T: 0 };
   const tokens = new Map<string, string>();
@@ -141,6 +273,15 @@ export function deidentify(textIn: string, scope: DeidScope): DeidResult {
       return `${pre}${t}`;
     });
   }
+  // Loose pass for the own child — whatever the exact pass missed.
+  const own = scope.people.find((p) => p.own);
+  if (own) {
+    text = looseReplace(text, scope, (stem) => {
+      const t = token(own);
+      (seen[t] ??= []).push(stem);
+      return t;
+    });
+  }
   // A token restores the spelling the writer used FIRST in the text.
   const map: Record<string, string> = {};
   for (const [t, spellings] of Object.entries(seen)) {
@@ -168,7 +309,7 @@ export function remainingNames(text: string, scope: DeidScope): number {
 
 /**
  * FAIL-CLOSED gate before anything is sent: any in-scope full name OR the own child's
- * first name still present → DeidentifyError. Use on the text that is about to leave.
+ * first name (exact or loose) still present → DeidentifyError. Use on the text that is about to leave.
  */
 export function assertDeidentified(text: string, scope: DeidScope): void {
   let found = remainingNames(text, scope);
@@ -177,5 +318,9 @@ export function assertDeidentified(text: string, scope: DeidScope): void {
     e.re.lastIndex = 0;
     if (!e.full && e.re.test(nfc(text))) found += 1;
   }
+  looseReplace(nfc(text), scope, (stem) => {
+    found += 1;
+    return stem;
+  });
   if (found > 0) throw new DeidentifyError(found);
 }
