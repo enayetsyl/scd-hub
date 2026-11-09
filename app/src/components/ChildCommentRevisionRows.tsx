@@ -81,11 +81,15 @@ export function ChildRevisionRows({ rows }: { rows: GuardianRevisionEntryT[] }):
           </View>
           {e.present
             ? e.portions.map((r, i) => (
-                <Muted key={i} style={{ marginTop: space(1) }}>
-                  {revCategoryLabel(r.category)} · {r.rangeBn ?? "—"} · {revStatusLabel(r.status)} · {STR.revTanbih}{" "}
-                  {bnNum(r.tanbih)} · {STR.revFath} {bnNum(r.fath)} · {STR.revMistakes}{" "}
-                  {bnNum(r.mistakes.harf + r.mistakes.ghunnah + r.mistakes.madd + r.mistakes.other)}
-                </Muted>
+                <View key={i} style={{ marginTop: space(1) }}>
+                  <Muted>
+                    {revCategoryLabel(r.category)} · {r.rangeBn ?? "—"} · {revStatusLabel(r.status)} · {STR.revTanbih}{" "}
+                    {bnNum(r.tanbih)} · {STR.revFath} {bnNum(r.fath)} · {STR.revMistakes}{" "}
+                    {bnNum(r.mistakes.harf + r.mistakes.ghunnah + r.mistakes.madd + r.mistakes.other)}
+                  </Muted>
+                  {/* SR-6 (D-#1172): the listener's comment on this section. */}
+                  {r.note ? <Body>{r.note}</Body> : null}
+                </View>
               ))
             : null}
           {e.teacherComment ? (

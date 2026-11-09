@@ -144,6 +144,7 @@ import "./modules/saturday-revision/resolvers/revision";
 import "./modules/saturday-revision/resolvers/revisionDelivery";
 import "./modules/saturday-revision/resolvers/revisionSummary";
 import "./modules/saturday-revision/resolvers/revisionGuardian";
+import "./modules/saturday-revision/resolvers/revisionListeners";
 import "./modules/english-drive/resolvers/englishDrive";
 import "./modules/teaching-notes/resolvers/teachingNotes";
 import "./modules/teaching-notes/resolvers/teachingNoteComments";

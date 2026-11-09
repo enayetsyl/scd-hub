@@ -14,11 +14,10 @@ import React, { useMemo, useState } from "react";
 import { ScrollView, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useMutation } from "urql";
+import { Counter, SurahAyahPicker, JUZ_OPTIONS } from "../../components/RevisionInputs";
 import {
   REVISION_CATEGORIES,
   REVISION_PORTION_STATUSES,
-  SURAHS,
-  JUZ_COUNT,
   formatRangeBn,
   rangeAyahCount,
   rangeError,
@@ -139,79 +138,6 @@ function draftToInput(d: DraftPortion): RevisionPortionInput {
     mistakes: { harf: d.harf, ghunnah: d.ghunnah, madd: d.madd, other: d.other },
     note: d.note.trim() || null,
   };
-}
-
-const SURAH_OPTIONS = SURAHS.map((s) => ({ label: `${bnNum(s.n)}. ${s.bn}`, value: String(s.n), hint: `${s.n} ${s.ar}` }));
-const JUZ_OPTIONS = Array.from({ length: JUZ_COUNT }, (_, i) => ({
-  label: `${STR.revJuz} ${bnNum(i + 1)}`,
-  value: String(i + 1),
-  hint: String(i + 1),
-}));
-
-function ayahOptions(surah: string | null): { label: string; value: string; hint: string }[] {
-  const s = surah ? SURAHS[Number(surah) - 1] : undefined;
-  if (!s) return [];
-  return Array.from({ length: s.ayahs }, (_, i) => ({ label: bnNum(i + 1), value: String(i + 1), hint: String(i + 1) }));
-}
-
-/** A one-tap +1 / −1 counter (D-#836). */
-function Counter({
-  label,
-  value,
-  onChange,
-  disabled,
-}: {
-  label: string;
-  value: number;
-  onChange: (v: number) => void;
-  disabled: boolean;
-}): React.ReactElement {
-  return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: space(2), marginTop: space(1) }}>
-      <Body style={{ flex: 1 }}>{label}</Body>
-      {!disabled ? <Chip label="−" onPress={() => onChange(Math.max(0, value - 1))} /> : null}
-      <Body style={{ minWidth: 28, textAlign: "center", fontWeight: "700" }}>{bnNum(value)}</Body>
-      {!disabled ? <Chip label="+" onPress={() => onChange(value + 1)} /> : null}
-    </View>
-  );
-}
-
-/** Start or end of a range: surah + ayah dropdowns. */
-function SurahAyahPicker({
-  label,
-  surah,
-  ayah,
-  onChange,
-}: {
-  label: string;
-  surah: string | null;
-  ayah: string | null;
-  onChange: (surah: string | null, ayah: string | null) => void;
-}): React.ReactElement {
-  return (
-    <View style={{ flexDirection: "row", gap: space(2) }}>
-      <View style={{ flex: 2 }}>
-        <Select
-          label={label}
-          value={surah}
-          options={SURAH_OPTIONS}
-          onChange={(v) => onChange(v, null)}
-          placeholder={STR.revPickSurah}
-          searchable
-        />
-      </View>
-      <View style={{ flex: 1 }}>
-        <Select
-          label={STR.revPickAyah}
-          value={ayah}
-          options={ayahOptions(surah)}
-          onChange={(v) => onChange(surah, v)}
-          placeholder={STR.revPickAyah}
-          searchable
-        />
-      </View>
-    </View>
-  );
 }
 
 function PortionEditor({

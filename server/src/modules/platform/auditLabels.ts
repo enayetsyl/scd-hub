@@ -310,6 +310,9 @@ export const AUDIT_KIND_LABELS: Record<AuditEventKind, AuditKindLabel> = {
   SR_ENTRY_DELIVERED: { bn: "রিভিশনের খবর পরিবারে পাঠিয়েছেন", en: "Delivered a revision entry", group: "REVISION" },
   SR_ABSENCE_ESCALATED: { bn: "টানা অনুপস্থিতি জানিয়েছেন", en: "Escalated a revision absence", group: "REVISION" },
   SR_ESCALATION_CONFIG_SET: { bn: "রিভিশনের অনুপস্থিতির সীমা বদলেছেন", en: "Set the revision escalation threshold", group: "REVISION" },
+  SR_TARGET_SET: { bn: "সাপ্তাহিক রিভিশন লক্ষ্য ঘোষণা করেছেন", en: "Set a weekly revision target", group: "REVISION" },
+  SR_LISTENER_SET: { bn: "রিভিশনের শ্রোতা বরাদ্দ বদলেছেন", en: "Changed a revision listener", group: "REVISION" },
+  SR_SATURDAY_RELEASED: { bn: "শনিবারের রিভিশন রিলিজ করেছেন", en: "Released a Saturday's revision", group: "REVISION" },
 
   // --- Library --------------------------------------------------------------
   BOOK_ISSUED: { bn: "বই ইস্যু করেছেন", en: "Issued a book", group: "LIBRARY" },

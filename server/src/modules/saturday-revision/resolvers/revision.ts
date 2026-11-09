@@ -20,6 +20,9 @@ import { pageRef } from "../../../pageRef";
 import type { AppContext } from "../../../context";
 import { callerHasPermission } from "@scd/shared";
 import { ForbiddenError } from "../../../middleware/authz";
+import { Types } from "mongoose";
+import { RevisionEntry } from "../models/RevisionEntry";
+import { isAssignedListener } from "../services/RevisionListenerService";
 import {
   recordEntry,
   editEntry,
@@ -50,16 +53,23 @@ function canEditAll(ctx: AppContext): boolean {
   return !!ctx.auth && callerHasPermission(ctx.auth, "saturday_revision:edit_all");
 }
 
-/** Write scope: edit_all; else enter_results + the teacher leads the group. */
-async function assertCanWriteGroup(ctx: AppContext, groupId: string): Promise<void> {
+/** Write scope: edit_all; else enter_results + the teacher leads the group — or, for a
+ *  plain record/edit (never a correction), is the student's standing listener (D-#1172). */
+async function assertCanWriteGroup(ctx: AppContext, groupId: string, listenerOf?: string): Promise<void> {
   if (!ctx.auth) throw new ForbiddenError("Unauthenticated");
   if (canEditAll(ctx)) return;
   if (ctx.auth.role === "GUARDIAN" || !callerHasPermission(ctx.auth, "saturday_revision:enter_results")) {
     throw new ForbiddenError("You cannot record revision for this group");
   }
-  if (!(await teacherTeachesGroup(ctx.auth.userId as string, groupId))) {
-    throw new ForbiddenError("You do not lead this Qur'an group");
-  }
+  if (await teacherTeachesGroup(ctx.auth.userId as string, groupId)) return;
+  if (listenerOf && (await isAssignedListener(ctx.auth.userId as string, listenerOf))) return;
+  throw new ForbiddenError("You do not lead this Qur'an group");
+}
+
+async function studentOfEntry(entryId: string): Promise<string | undefined> {
+  if (!Types.ObjectId.isValid(entryId)) return undefined;
+  const e = (await RevisionEntry.findById(entryId).select("studentId").lean()) as { studentId?: Types.ObjectId } | null;
+  return e?.studentId?.toString();
 }
 
 /** Read scope for a group grid: view_all unscoped; else view + leads the group. */
@@ -256,7 +266,7 @@ builder.mutationField("recordRevisionEntry", (t) =>
       teacherComment: t.arg.string({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
-      await assertCanWriteGroup(ctx, args.groupId);
+      await assertCanWriteGroup(ctx, args.groupId, args.studentId);
       return recordEntry({
         groupId: args.groupId,
         studentId: args.studentId,
@@ -285,7 +295,7 @@ builder.mutationField("editRevisionEntry", (t) =>
       teacherComment: t.arg.string({ required: false }),
     },
     resolve: async (_root, args, ctx) => {
-      await assertCanWriteGroup(ctx, args.groupId);
+      await assertCanWriteGroup(ctx, args.groupId, await studentOfEntry(args.entryId));
       return editEntry({
         entryId: args.entryId,
         present: args.present,

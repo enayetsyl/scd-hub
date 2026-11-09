@@ -54,7 +54,7 @@ async function groupOfEntry(entryId: string): Promise<string> {
 // GraphQL shapes
 // ---------------------------------------------------------------------------
 
-const RevisionDeliveryOutcomeRef = builder.objectRef<RevisionDeliveryOutcome>("RevisionDeliveryOutcome");
+export const RevisionDeliveryOutcomeRef = builder.objectRef<RevisionDeliveryOutcome>("RevisionDeliveryOutcome");
 RevisionDeliveryOutcomeRef.implement({
   description:
     "The result of delivering one revision entry (SR-2): the rendered message, the wa.me link, " +

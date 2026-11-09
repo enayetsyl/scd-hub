@@ -87,6 +87,8 @@ export function buildDigestSummary(portions: IRevisionPortion[], teacherComment?
       `${REVISION_CATEGORY_LABELS_BN[p.category]}: ${what} (${REVISION_PORTION_STATUS_LABELS_BN[p.status]}) · ` +
         `তানবিহ ${p.tanbih ?? 0} · ফাতহ ${p.fath ?? 0}`,
     );
+    // SR-6 (D-#1172): the listener's comment on this section rides under its line.
+    if (p.note?.trim()) lines.push(`  ↳ ${p.note.trim()}`);
     mistakeTotals.HARF += p.mistakes?.harf ?? 0;
     mistakeTotals.GHUNNAH += p.mistakes?.ghunnah ?? 0;
     mistakeTotals.MADD += p.mistakes?.madd ?? 0;
