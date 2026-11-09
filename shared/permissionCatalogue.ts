@@ -175,7 +175,10 @@ export const FEATURE_CATALOGUE = {
     actions: {
       view: { en: "See my groups' revision", bn: "নিজের গ্রুপের রিভিশন দেখা", desc: "Group grid, history, heatmap, coverage, trend, dashboards", teacher: true, office: true, flags: [], designation: "group_lead" },
       view_all: { en: "See all groups", bn: "সব গ্রুপের রিভিশন দেখা", desc: "Unscoped reads; Saturday completeness status", teacher: false, office: true, flags: [] },
-      enter_results: { en: "Record revision results", bn: "রিভিশনের ফল লেখা", desc: "Record or edit a Saturday entry", teacher: true, office: true, flags: [], designation: "group_lead" },
+      enter_results: { en: "Record revision results", bn: "রিভিশনের ফল লেখা", desc: "Record or edit a Saturday entry — for a group you lead, or a student you are the listener of (D-#1172)", teacher: true, office: true, flags: [], designation: "group_lead/assigned_listener" },
+      set_target: { en: "Declare the weekly target", bn: "সাপ্তাহিক রিভিশন লক্ষ্য ঘোষণা", desc: "Set a Hifz level's ranges for a Saturday — the same for every student of the level (D-#1170)", teacher: true, office: true, flags: [], designation: "group_lead", waiver: "saturday_revision:edit_all" },
+      assign_listeners: { en: "Assign listeners", bn: "শ্রোতা বরাদ্দ", desc: "Give each Hifz student to the teacher who hears their revision; holds every Saturday until changed (D-#1171)", teacher: false, office: true, flags: [] },
+      release: { en: "Release to guardians", bn: "মন্তব্য রিলিজ", desc: "Send every recorded entry of a Saturday to the families at once (D-#1173)", teacher: false, office: true, flags: [] },
       edit_all: { en: "Any group", bn: "যেকোনো গ্রুপের রিভিশন লেখা ও পাঠানো", desc: "Write/send outside own groups", teacher: false, office: true, flags: [] },
       correct: { en: "Correct a sent entry", bn: "পাঠানো রিভিশন সংশোধন", desc: "Change an entry the family already received; they get a correction and the old author a mistake entry (D-#1002)", teacher: true, office: true, flags: [], designation: "group_lead" },
       send: { en: "Send to guardians", bn: "অভিভাবককে রিভিশন পাঠানো", desc: "Send one entry or a group's Saturday (seals it, runs escalation)", teacher: true, office: true, flags: [], designation: "group_lead" },

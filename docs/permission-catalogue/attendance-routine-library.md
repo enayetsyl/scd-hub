@@ -110,6 +110,18 @@ Designation names used below: `marker_of_the_day`, `class_teacher`, `slot_teache
 | revision.ts:213 | recordRevisionEntry | authenticated + assertCanWriteGroup (isAdminStaff OR tracker:write + teacherTeachesGroup) | hasAnyPermission(`saturday_revision:enter_results`, `saturday_revision:edit_all`); `enter_results` + designation group_lead (stays); `saturday_revision:edit_all` lifts the designation |
 | revision.ts:244 | editRevisionEntry | authenticated + same | same as recordRevisionEntry |
 
+SR-6 (D-#1172): `assertCanWriteGroup` also passes `enter_results` when the caller is the student's standing listener (RevisionListener) — record/edit only, never `correctRevisionEntry`.
+
+#### `server/src/modules/saturday-revision/resolvers/revisionListeners.ts` (SR-6, D-#1170–#1174)
+| resolver | gate |
+|---|---|
+| revisionTargets | hasAnyPermission(`saturday_revision:view`, `:view_all`, `:set_target`, `:enter_results`) |
+| myRevisionTargetLevels | hasAnyPermission(`saturday_revision:set_target`, `:edit_all`); edit_all → every level, else the levels of the groups the caller leads |
+| setRevisionTarget | hasAnyPermission(`saturday_revision:set_target`, `:edit_all`); `set_target` + designation group_lead of a group of that level; `edit_all` lifts the designation |
+| revisionListenerBoard / setRevisionListener | `saturday_revision:assign_listeners` |
+| myRevisionListening | `saturday_revision:enter_results` (self-scoped) |
+| revisionReleaseBoard / releaseRevisionSaturday | `saturday_revision:release` |
+
 #### `server/src/modules/saturday-revision/resolvers/revisionDelivery.ts`
 | file:line | resolver | today's gate (authScopes + extra) | → new gate (permission, plus extra gates that stay) |
 |---|---|---|---|

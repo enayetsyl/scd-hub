@@ -229,6 +229,9 @@ export type AuditEventKind =
   | "SR_ENTRY_DELIVERED"          // a revision entry delivered to the family — absent alert / weekly digest, sealed (Saturday-Revision SR-2, §3/J-SR2-1/2/3, D-#244)
   | "SR_ABSENCE_ESCALATED"        // a consecutive-absence streak escalated to guardian + Principal (Saturday-Revision SR-2, §3/J-SR2-4, D-#245)
   | "SR_ESCALATION_CONFIG_SET"    // the consecutive-absence threshold edited (Saturday-Revision SR-2, message:dispatch)
+  | "SR_TARGET_SET"               // a Hifz level's weekly revision target declared/changed (SR-6, D-#1170) — meta.level/date/categories
+  | "SR_LISTENER_SET"             // a student given to / taken from a revision listener (SR-6, D-#1171) — meta.from/to
+  | "SR_SATURDAY_RELEASED"        // a Saturday's recorded revision entries released to families (SR-6, D-#1173) — meta.date/released
   | "HOMEWORK_SUPERVISOR_SET"     // a school-wide homework supervisor toggled on/off (roster:manage)
   | "VIDEO_REVIEW_ASSIGNED"       // a class-session YouTube video logged + assigned to a teacher (owner ask 2026-07-20; observation:upload)
   | "VIDEO_REVIEW_REVIEWED"       // the assigned teacher's OK / NOT_OK-with-comment verdict (observation:review)

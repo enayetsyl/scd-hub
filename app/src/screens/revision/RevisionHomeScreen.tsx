@@ -45,6 +45,21 @@ export default function RevisionHomeScreen(): React.ReactElement {
         <Card>
           <Body style={{ fontWeight: "700" }}>{STR.revHomeTitle}</Body>
           <DateField label={STR.revSaturdayDate} value={date} onChange={setDate} />
+          {/* SR-6 (D-#1170–#1173): the Saturday flow — target → listeners → listen → release. */}
+          <View style={{ marginTop: space(2), gap: space(2) }}>
+            {can("saturday_revision:enter_results") ? (
+              <Button title={STR.revListenTitle} onPress={() => nav.navigate("RevisionListening", { date })} />
+            ) : null}
+            {can("saturday_revision:set_target") || can("saturday_revision:edit_all") ? (
+              <Button title={STR.revTargetTitle} variant="secondary" onPress={() => nav.navigate("RevisionTarget", { date })} />
+            ) : null}
+            {can("saturday_revision:assign_listeners") ? (
+              <Button title={STR.revListenersTitle} variant="secondary" onPress={() => nav.navigate("RevisionListeners")} />
+            ) : null}
+            {can("saturday_revision:release") ? (
+              <Button title={STR.revReleaseTitle} variant="secondary" onPress={() => nav.navigate("RevisionRelease", { date })} />
+            ) : null}
+          </View>
           {canManage ? (
             <View style={{ marginTop: space(2) }}>
               <Button

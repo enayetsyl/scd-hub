@@ -486,3 +486,162 @@ export const CHILD_REVISION_QUERY = gql<
     }
   }
 `;
+
+// ---------------------------------------------------------------------------
+// SR-6 (D-#1170–#1174) — weekly target per level, listeners, listening, release
+// ---------------------------------------------------------------------------
+
+export interface RevisionTargetPortionT {
+  category: string;
+  fromSurah: number;
+  fromAyah: number;
+  toSurah: number;
+  toAyah: number;
+  rangeBn: string;
+}
+export interface RevisionTargetT {
+  level: string;
+  date: string;
+  portions: RevisionTargetPortionT[];
+  setByName: string | null;
+  updatedAt: string;
+}
+export interface RevisionLevelTargetT {
+  level: string;
+  groupNames: string[];
+  studentCount: number;
+  target: RevisionTargetT | null;
+  previous: RevisionTargetT | null;
+}
+
+const TARGET_FIELDS = `level date portions { category fromSurah fromAyah toSurah toAyah rangeBn } setByName updatedAt`;
+
+export const REVISION_TARGETS_QUERY = gql<{ revisionTargets: RevisionLevelTargetT[] }, { date: string }>`
+  query RevisionTargets($date: String!) {
+    revisionTargets(date: $date) {
+      level groupNames studentCount
+      target { ${TARGET_FIELDS} }
+      previous { ${TARGET_FIELDS} }
+    }
+  }
+`;
+
+export const MY_REVISION_TARGET_LEVELS_QUERY = gql<{ myRevisionTargetLevels: string[] }, NoVars>`
+  query MyRevisionTargetLevels {
+    myRevisionTargetLevels
+  }
+`;
+
+export interface RevisionTargetPortionInput {
+  category: string;
+  fromSurah: number;
+  fromAyah: number;
+  toSurah: number;
+  toAyah: number;
+}
+
+export const SET_REVISION_TARGET = gql<
+  { setRevisionTarget: RevisionTargetT },
+  { level: string; date: string; portions: RevisionTargetPortionInput[] }
+>`
+  mutation SetRevisionTarget($level: String!, $date: String!, $portions: [RevisionTargetPortionInput!]!) {
+    setRevisionTarget(level: $level, date: $date, portions: $portions) { ${TARGET_FIELDS} }
+  }
+`;
+
+export interface RevisionListenerStudentT {
+  studentId: string;
+  studentName: string;
+  groupId: string;
+  groupNameBn: string;
+  level: string;
+  listenerUserId: string | null;
+}
+export interface RevisionListenerCandidateT {
+  userId: string;
+  name: string;
+}
+
+export const REVISION_LISTENER_BOARD_QUERY = gql<
+  { revisionListenerBoard: { students: RevisionListenerStudentT[]; listeners: RevisionListenerCandidateT[] } },
+  NoVars
+>`
+  query RevisionListenerBoard {
+    revisionListenerBoard {
+      students { studentId studentName groupId groupNameBn level listenerUserId }
+      listeners { userId name }
+    }
+  }
+`;
+
+export const SET_REVISION_LISTENER = gql<
+  { setRevisionListener: RevisionListenerStudentT },
+  { studentId: string; listenerUserId?: string | null }
+>`
+  mutation SetRevisionListener($studentId: String!, $listenerUserId: String) {
+    setRevisionListener(studentId: $studentId, listenerUserId: $listenerUserId) {
+      studentId studentName groupId groupNameBn level listenerUserId
+    }
+  }
+`;
+
+/** The entry fields the SR-6 listening + release screens read. */
+export interface RevisionListenEntryT {
+  id: string;
+  groupId: string;
+  studentId: string;
+  date: string;
+  present: boolean;
+  portions: RevisionPortionT[];
+  teacherComment: string | null;
+  deliveredAt: string | null;
+  updatedAt: string;
+}
+const LISTEN_ENTRY_FIELDS = `id groupId studentId date present portions { ${PORTION_FIELDS} } teacherComment deliveredAt updatedAt`;
+
+export interface RevisionListeningRowT {
+  studentId: string;
+  studentName: string;
+  groupId: string;
+  groupNameBn: string;
+  level: string;
+  entry: RevisionListenEntryT | null;
+  target: RevisionTargetT | null;
+}
+
+export const MY_REVISION_LISTENING_QUERY = gql<{ myRevisionListening: RevisionListeningRowT[] }, { date: string }>`
+  query MyRevisionListening($date: String!) {
+    myRevisionListening(date: $date) {
+      studentId studentName groupId groupNameBn level
+      entry { ${LISTEN_ENTRY_FIELDS} }
+      target { ${TARGET_FIELDS} }
+    }
+  }
+`;
+
+export interface RevisionReleaseBoardT {
+  listeners: { userId: string; name: string; assigned: number; recorded: number }[];
+  ready: { entry: RevisionListenEntryT; studentName: string; groupNameBn: string; recordedByName: string }[];
+  pending: { studentId: string; studentName: string; groupNameBn: string; listenerName: string | null }[];
+  releasedCount: number;
+}
+
+export const REVISION_RELEASE_BOARD_QUERY = gql<{ revisionReleaseBoard: RevisionReleaseBoardT }, { date: string }>`
+  query RevisionReleaseBoard($date: String!) {
+    revisionReleaseBoard(date: $date) {
+      listeners { userId name assigned recorded }
+      ready { entry { ${LISTEN_ENTRY_FIELDS} } studentName groupNameBn recordedByName }
+      pending { studentId studentName groupNameBn listenerName }
+      releasedCount
+    }
+  }
+`;
+
+export const RELEASE_REVISION_SATURDAY = gql<
+  { releaseRevisionSaturday: RevisionDeliveryOutcomeT[] },
+  { date: string; entryIds?: string[] | null }
+>`
+  mutation ReleaseRevisionSaturday($date: String!, $entryIds: [String!]) {
+    releaseRevisionSaturday(date: $date, entryIds: $entryIds) { ${DELIVERY_OUTCOME_FIELDS} }
+  }
+`;

@@ -923,7 +923,9 @@ const ROLE_CHECK_DEFAULTS = {
     // AI comment checker (AI-5, D-#1095): every teacher may check a comment before saving.
     "ai_assist:check_comment",
     // AI teacher assistant (AI-6, D-#1096): every teacher may ask about their lesson.
-    "ai_assist:chat"],
+    "ai_assist:chat",
+    // Saturday revision SR-6 (D-#1174): a group lead declares the weekly target of their level.
+    "saturday_revision:set_target"],
   OFFICE: ["homework:view_all", "homework:undo_any",
     // AI Assist rules (AI-3, D-#1093): the Office reads the active standard too.
     "ai_assist:read_rules",
@@ -947,6 +949,8 @@ const ROLE_CHECK_DEFAULTS = {
     "assignment:view_all", "assignment:undo_any", "work_claim:view_all", "work_claim:remind", "set_tracker:view_all",
     "saturday_revision:view", "saturday_revision:view_all", "saturday_revision:enter_results", "saturday_revision:edit_all",
     "saturday_revision:send", "saturday_revision:correct", "saturday_revision:settings", "class_test:view_all", "class_test:register",
+    // Saturday revision SR-6 (D-#1174): the Office declares targets, assigns listeners and releases.
+    "saturday_revision:set_target", "saturday_revision:assign_listeners", "saturday_revision:release",
     "question_sets:view_all", "student_profile:view", "student_profile:view_all", "student_profile:export",
     "student_comments:view", "student_comments:view_all", "monthly_report:view", "monthly_report:review",
     "staff_records:view_sensitive", "lesson_plans:view_all", "question_bank:view_all", "teaching_notes:view",
